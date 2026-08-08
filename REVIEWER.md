@@ -88,7 +88,7 @@ anche se il codice è logicamente corretto.
 
 | # | Invariante | Cosa cerchi |
 |---|-----------|-------------|
-| I1 | La banda è un pavimento | Ogni logica che risparmi banda sotto il valore dichiarato, o che la tratti come un budget. |
+| I1 | Il ritmo cala solo per misura, e non si stacca mai | Ogni logica che riduca qualità o ritmo per prudenza, per risparmio o perché la scena è ferma. Ogni percorso che, quando la linea non porta, **chiuda la connessione** invece di continuare a calare i fotogrammi. Ogni degradazione che avvenga **senza una riga nel registro**: una discesa silenziosa e una discesa decisa hanno lo stesso aspetto. |
 | I2 | Una sessione grafica per utente | Ogni percorso che permetta una seconda sessione grafica o che non rifiuti la seconda connessione. |
 | I3 | La guardia parte da negato | Ogni percorso che porti a un pixel o a un evento di input senza passare dal validatore. |
 | I4 | Il palco appartiene alla sessione | Ogni codice che smonti il palco alla disconnessione, o che lo leghi alla connessione. |

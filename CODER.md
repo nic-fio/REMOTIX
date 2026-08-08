@@ -39,14 +39,46 @@ peggio di nessun riferimento.
 
 |         | Valore                                     |
 |---------|--------------------------------------------|
-| MINIMO  | 30 fps a 1080p, profondità colore 24 bit   |
-| DESIDERATO | 60 fps a 4K, profondità colore 32 bit   |
+| MINIMO  | 25 fps a 480p, profondità colore 24 bit    |
+| DESIDERATO | 60 fps a 4K, 10 bit per canale          |
 
-Da questo discende la regola di lavoro che governa tutto il resto:
+> ⚠ **Il minimo è stato abbassato l'8 agosto 2026, per decisione dell'utente.** Diceva
+> «30 fps a 1080p», ed era il numero di v1. Il cambiamento non è solo di valore, è di
+> **natura**: a 1080p30 il minimo era un traguardo da inseguire — e v1 lo superava già,
+> con 37 fotogrammi consegnati dalla cattura di Mutter e 60 da KWin. A 480p25 diventa
+> una **garanzia di servizio**: il livello sotto cui non si scende e non si stacca, per
+> quanto brutta sia la linea.
 
-**Una scelta tecnica si giustifica mostrando che avvicina uno dei due numeri qui
-sopra. Una scelta che li lascia dove sono non si fa, per quanto sia elegante il
-guadagno che porta altrove.**
+> ⚠ **E il colore è stato riscritto lo stesso giorno.** Il desiderato diceva «profondità
+> colore 32 bit», che non è una grandezza esistente: 32 bpp sono 24 bit di colore più 8
+> di alfa, e l'alfa non si trasmette. L'intenzione dell'utente era «massima qualità»,
+> e sotto quella parola stavano **due leve distinte** che il numero confondeva:
+>
+> | Leva | Che difetto cura | Prezzo |
+> |---|---|---|
+> | **10 bit per canale** | le strisce sulle sfumature morbide | quasi nulla, e in hardware ovunque — decoder Android compreso |
+> | **4:4:4** (colore a piena risoluzione) | il testo colorato sfrangiato — il difetto misurato in v1, `SPECIFICA.md` §5.2 | ~50 % di banda, **nessun decoder Android in hardware**: rimetterebbe il telefono in software, cioè il muro che V2 nasce per abbattere |
+>
+> **Scelto il 10 bit** — la massima qualità ottenibile su entrambi i client insieme, in
+> hardware, senza compromessi.
+>
+> ⚠ **Il 4:4:4 resta una `[?]`, non una promessa.** Sarebbe un'opzione per il solo client
+> Linux su GPU capaci (NVIDIA sì, Intel a volte, AMD no), ma **nessuno ha misurato quanto
+> si veda davvero la differenza** sul desktop dell'utente. Vale `LEZIONI.md` §2.3-quater —
+> una ragione non misurata rende la decisione presa a metà — e §2.4: sta dietro un
+> interruttore spento finché l'utente non l'ha guardata. Si decide su un banco che metta
+> le due immagini a confronto, e a giudicare è lui (§7.3).
+
+Da questo discende la regola di lavoro che governa tutto il resto. Va letta in **due
+tempi**, perché un'asticella che ogni scelta supera non filtra più niente:
+
+**Verso l'alto filtra il desiderato: una scelta tecnica si giustifica mostrando che
+avvicina i 60 fps a 4K. Una scelta che lascia quel numero dove sta non si fa, per
+quanto sia elegante il guadagno che porta altrove.**
+
+**Verso il basso vincola il minimo: una scelta non si fa se può portare l'utente sotto
+i 480p a 25 fps — e nemmeno se, per non scendere sotto, gli toglie la sessione. Una
+sessione brutta vale più di una sessione chiusa.**
 
 E la banda dichiarata è un **pavimento, non un budget**. Si spende, non si risparmia:
 la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
@@ -62,7 +94,7 @@ logicamente corretto.
 
 | # | Invariante | Dove sta scritto |
 |---|-----------|------------------|
-| I1 | La banda dichiarata è un pavimento. Un adattamento può salire, mai scendere sotto il valore dichiarato senza una degradazione dichiarata. | `SPECIFICA.md` §3.1 |
+| I1 | Il ritmo non cala mai per prudenza, per risparmio o perché la scena è ferma: cala **solo** quando la misura dimostra che la linea non porta, e ogni discesa è dichiarata nel registro. Sotto il minimo si continua a calare i **fotogrammi** — mai a sgranare l'immagine, e **mai a staccare**. | `SPECIFICHE.md`, deciso l'8 agosto 2026 |
 | I2 | Una sola sessione grafica per utente; la sessione locale vince sull'RDP; la seconda connessione è rifiutata con messaggio esplicito. | `SPECIFICA.md` §3.4 |
 | I3 | La guardia dell'autenticazione parte da negato. Chi non passa dal validatore non riceve un pixel e non comanda nulla. | `REFERENCE.md` R14 |
 | I4 | Il palco (cattura, controllo, monitor virtuale) appartiene alla sessione, non alla connessione. Sopravvive al distacco. | `SPECIFICA.md` §3.3-ter |
