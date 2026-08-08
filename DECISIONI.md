@@ -391,6 +391,38 @@ Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings`
 ⚠ È una misura di primo livello: contare gli `#include` dice chi *tocca* FreeRDP, non chi
 *dipende* da RDP. `scambio.c` e `codificatore.c` vanno letti prima di dare il 79 % per buono.
 
+### 6.3 ✅ Il server si scrive in C
+
+*8 agosto 2026. «Confermo il C».*
+
+⚠ **Non è un'eredità: è una decisione nuova che ripete la vecchia.** Il vincolo di v1
+(`v1/documenti/SPECIFICA.md` §8-bis) aveva una ragione sola — *«gnome-remote-desktop smette di
+essere un riferimento da cui trarre ispirazione e diventa un riferimento da cui trarre
+codice»* — e **quella ragione è morta con RDP**: non c'è più niente da trapiantare, perché
+nessuno ha scritto FILO prima di noi. La questione è stata riaperta a occhi aperti e richiusa
+per un motivo diverso.
+
+**Il motivo nuovo è il conto di §6.2**: circa 14.000 righe sopravvivono, con i loro banchi già
+tarati. Il pezzo QUIC ne vale forse 2.000. Riscrivere quattordicimila righe misurate per
+guadagnare l'ergonomia di duemila è uno scambio pessimo — ed è anche `LEZIONI.md` §10 in
+azione, perché fra le cose che si butterebbero ci sono **4.563 righe di banchi**, e questo
+progetto non è mai morto sul codice: è morto sulle misure.
+
+**Che cosa questa decisione NON decide:** i client. Quello Android è Kotlin comunque, per via
+di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `libfilo` col server, che
+è un argomento a favore ma non una conclusione.
+
+### 6.4 🔸 QUIC via `quiche`
+
+Era l'unico argomento serio a favore di Rust, e si risolve con una libreria invece che con un
+linguaggio: **`quiche`** di Cloudflare ha un'**API C**, licenza **BSD-2**, ed è in produzione
+da anni. Si prende il QUIC finito senza cucire ngtcp2 a mano e senza toccare la libertà di
+licenza (§7.6).
+
+L'alternativa in C puro è `ngtcp2` (MIT), che però richiede di portarsi il TLS e montare più
+pezzi. **Da confermare quando si aprirà il trasporto**, non prima: è il tipo di scelta che si
+fa con un banco davanti, non su carta.
+
 ---
 
 ## 7. ❓ Le domande aperte
@@ -423,10 +455,9 @@ Credo si risponda da sé — allungare deforma il testo e lo rende illeggibile �
 client, all'attacco le proporzioni **combaciano sempre**. Il caso resta solo in due punti: il
 ridimensionamento della finestra durante la sessione, e il ripiego di §5.0-bis su KDE vecchio.
 
-### 7.5 Il linguaggio del server
-Raccomandato **C**, per non buttare le ~14.000 righe che sopravvivono, con **`quiche`**
-(API C, licenza BSD-2) per il QUIC — che era l'unico argomento serio a favore di Rust.
-**Non confermato dall'utente**: sta qui perché non venga dato per deciso.
+### 7.5 ~~Il linguaggio del server~~ → **chiusa l'8 agosto, vedi §6.3**
+C, confermato. Non per eredità: la ragione di v1 era FreeRDP ed è morta con RDP. La ragione
+nuova è il conto del riuso, banchi compresi.
 
 ### 7.6 La licenza
 Da decidere. Un vincolo è già emerso: **niente x265** (GPL-only) come ripiego software, per
