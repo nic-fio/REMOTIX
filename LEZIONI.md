@@ -2,6 +2,39 @@
 
 *Scritto il 7 agosto 2026, chiudendo il supporto a GNOME (fasi 0–10), prima di aprire la fase 11.*
 
+> ## ⛔ Portato in REMOTIX_V2 l'8 agosto 2026 — si legge prima di tutto il resto
+>
+> Questo e' il **fondamento condiviso** di [`CODER.md`](CODER.md) e [`REVIEWER.md`](REVIEWER.md), che
+> lo citano **29 volte su 20 sezioni diverse**. Arriva qui **senza una sola rinumerazione**: ogni
+> `§x.y` citato altrove punta ancora dove puntava.
+>
+> **Che cosa resta vero, ed e' quasi tutto.** V2 cambia il filo — protocollo nostro (**FILO**) al
+> posto di RDP, niente Windows, niente FreeRDP, HEVC e AV1 al posto dell'H.264, e i due soli client
+> sono nostri. Non cambia **niente** di come si misura. Le sezioni 1 e 2, che sono il cuore, parlano
+> di scene dichiarate, banchi certificati, controlli positivi e mittenti chiesti invece che dedotti:
+> un banco verde mentre il difetto e' vivo mente allo stesso modo qualunque protocollo gli passi
+> sopra. E la sezione 10 vale parola per parola — il progetto non si e' fermato sui problemi
+> difficili, si e' fermato sulle misure che non misuravano quel che credevamo, e cambiare protocollo
+> non regala nessuna immunita'.
+>
+> **Che cosa cambia forma** e' marcato dove capita, con la data, e sono tre punti soli: la regola dei
+> tre client (§2.1), due dei vicoli ciechi (§8) e il conto del client Android (§7.4).
+>
+> **Dove stanno i documenti citati.** Il progetto v1 vive sotto `v1/`, e i rimandi qui sotto vanno
+> letti con questa tabella accanto:
+>
+> | Citato come | Sta in | Quanto vale in V2 |
+> |---|---|---|
+> | `REFERENCE.md` | `v1/documenti/REFERENCE.md` | erano le regole di compatibilita' con i client RDP altrui. **In V2 decade quasi per intero**, perche' i client sono nostri. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
+> | `PIANO.md`, `SPECIFICA.md` | `v1/documenti/` | il piano e la specifica di v1, chiusi alla fase 11 |
+> | `kde.md`, `gnome.md`, `xfce.md`, `lxqt.md` | qui, al livello di V2 | intatti: parlano di compositori, non di protocollo |
+> | i banchi e i programmi di misura | `v1/banchi/` | intatti, e sono la cosa piu' riutilizzabile che v1 lascia |
+>
+> ⚠ **E una avvertenza sul riuso**, che e' §1.11 rivolta a noi: che una lezione sia scritta qui non
+> vuol dire che sia stata verificata su FILO. Una lezione di **metodo** si riusa senza ridiscuterla;
+> una lezione che nomina un numero, un client o un codec e' `[M]` **su v1**, e in V2 torna `[?]`
+> finche' qualcuno non la rimisura.
+
 ## Perché questo documento esiste, e in che cosa è diverso dagli altri
 
 `REFERENCE.md` dice **che cosa fare con Mutter**: è un elenco di regole, e quando cambieremo
@@ -253,6 +286,20 @@ Ma la regola ha almeno tre forme, e le abbiamo pagate tutte:
 | sul **numero** di connessioni | un certificato TLS condiviso uccideva il server **alla seconda** connessione; una prova a connessione singola resta verde per sempre |
 | su **chi collauda** | una correzione validata su un banco che il difetto non mostrava, e fatta collaudare all'utente |
 
+> ⚠ **In V2 questa regola cambia forma, non valore** *(8 agosto 2026)*. I client di riferimento non
+> sono piu' tre e non sono piu' di altri: sono **due, e nostri** — Linux e Android, sopra lo stesso
+> `libfilo`. Sparisce il client indulgente che supplisce in silenzio un'informazione omessa dal
+> server, ed e' la forma che ha prodotto i difetti peggiori.
+>
+> ⛔ **Ma sparisce anche l'avvertimento gratis, e questa e' la perdita da sorvegliare.** Quando due
+> client scritti dalla stessa mano, sullo stesso codice di protocollo, sono d'accordo, **non stanno
+> confermando niente**: stanno ripetendo lo stesso presupposto. In v1 il disaccordo fra mstsc e
+> `xfreerdp3` era un difetto che si dichiarava da solo; in V2 quel difetto resta muto.
+>
+> Da cui, in concreto: le altre due forme della regola — sul **numero** di connessioni e su **chi
+> collauda** — restano intatte e vanno pesate di piu'; e dove il protocollo lascia una scelta, la si
+> prova **contro la specifica scritta**, non contro l'altro nostro client.
+
 ### 2.2 Una prova può essere verde per tutto il tempo in cui il difetto è vivo
 
 Ed è la peggiore delle prove, perché dà fiducia.
@@ -428,6 +475,12 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 | **13** *(nuova)* | ⭐ **Uno schermo virtuale si RIDIMENSIONA a caldo?** | **sì**: la misura si concorda nella negoziazione PipeWire, cambiarla è una rinegoziazione | ⛔ **no su 6.3.6**: il modo è `const`, l'elenco è fissato nel costruttore, e `kde_output_management_v2` sa solo *scegliere* fra i modi annunciati. Risolto a monte (`kwin!7932`, milestone **6.8**) — **e per la stessa strada nostra**, la negoziazione PipeWire | `wlr_output_state_set_custom_mode` esiste e il backend headless la usa già [lettura, **da misurare**] |
 | **14** *(nuova)* | ⭐ **La clipboard di chi è?** | **della sessione remota**: sta sull'oggetto RemoteDesktop, si accende con `EnableClipboard`, e senza sessione non esiste | **del compositore**: `zwlr_data_control_manager_v1` v2, **nessun permesso**, e c'è anche se REMOTIX non c'è | lo stesso protocollo: `appunti_wlr.c` **è già scritto per questa famiglia** |
 
+> ⚠ **La colonna wlroots e' stata riempita dopo** *(8 agosto 2026)*. Le celle «da misurare» qui sopra
+> hanno una risposta in **`xfce.md` §12**, che rifa' queste quattordici domande con la colonna
+> wlroots piena, e in **`lxqt.md` §4** per il caso in cui il compositore lo scegliamo noi. Questa
+> tabella non e' stata riscritta di proposito: le due letture stanno bene una accanto all'altra, e
+> ciascuna porta la data della propria misura.
+
 ⭐ **La 13 e la 14 sono la stessa domanda in due vesti: *chi possiede la cosa?***  È la differenza
 che ha deciso metà del lavoro su KDE — non «come si fa», ma «di chi è». Dove la cosa appartiene al
 compositore invece che alla nostra sessione, cambia chi comanda: la misura la **subiamo**, la
@@ -463,8 +516,9 @@ librerie ha caricato — non fidarsi di quel che il compositore scrive nel propr
 > **no**: un output virtuale ha un solo modo, immutabile, e va chiuso e ricreato (`kde.md` §8). È la
 > **dodicesima domanda**, e chi apre il prossimo desktop la faccia insieme alla quinta.
 
-**Gli strumenti per rispondere esistono già** e stanno in `/media/REMOTIX/tmp/banco-compositori`,
-fuori dal prodotto:
+**Gli strumenti per rispondere esistono già** e stanno in `v1/banchi/banco-compositori/` — portati
+qui dal server l'8 agosto 2026, quando la macchina di prova è stata ripulita: sorgenti, script e
+binari già compilati, fuori dal prodotto:
 
 | | |
 |---|---|
@@ -582,6 +636,12 @@ Il ragionamento era giusto e la conclusione no, perché partiva da un presuppost
 qualcuno dei due lati fosse al limite. Non lo era nessuno dei due: **lo era il numero che
 dichiaravamo.**
 
+> ⚠ **E in V2 il presupposto va rifatto da capo** *(8 agosto 2026)*. Il lato che qui non era stato
+> verificato — «qualcuno dei due lati e' al limite» — cambia del tutto: `aFreeRDP` decodificava in
+> software un codec che nessuno avrebbe scelto, mentre il client di V2 e' nostro e chiama MediaCodec
+> su HEVC. **Il numero di v1 non era un tetto di Android: era il tetto di quel client.** Vale sia per
+> la previsione sbagliata sia per il giudizio che l'ha smentita — nessuno dei due si eredita.
+
 ---
 
 ## 8. I vicoli ciechi già percorsi — da non rifare
@@ -595,6 +655,20 @@ dichiaravamo.**
 | Dichiarare alla cattura una cadenza **fissa** invece di «quando cambia» | Mutter la rifiuta: nessun formato negoziato, zero fotogrammi |
 | Alzare la cadenza dichiarata **oltre 60** | non dà niente: 120 dichiarati, 37 consegnati come con 60 |
 | Cercare il collo di bottiglia dei fotogrammi nel codificatore, nel protocollo o nella rete | era nella nostra costante |
+
+⚠ **Due di queste righe erano di RDP, non del problema** *(8 agosto 2026)*, e vanno lette con
+attenzione perche' le altre cinque valgono ancora per intero.
+
+| Riga | In V2 |
+|---|---|
+| la versione EGFX abbassata per mstsc | **decade**: non esiste ne' EGFX ne' mstsc |
+| adattare la **risoluzione** alla banda | **decade a meta'**. Il primo motivo era che lo *scaled output* lo rendeva un client su tre — e i client ora sono nostri, quindi la scalatura lato client si puo' avere. Il **secondo motivo resta intero**: ridimensionare il monitor virtuale ridispone le finestre dell'utente, e quello non lo cambia nessun protocollo |
+| le altre cinque | **restano**: parlano di thread, di *fence*, di Mutter e della nostra costante — nessuna di loro nominava RDP |
+
+⛔ **E nessuna riga si cancella.** Un vicolo cieco documentato costa meno di uno riscoperto: il
+giorno in cui qualcuno riproporra' «adattiamo la risoluzione alla banda», questa tabella dira' che
+in v1 non si poteva e **obblighera' a dimostrare che in V2 si puo'** — che e' esattamente il lavoro
+che la riga deve far fare.
 
 ---
 
