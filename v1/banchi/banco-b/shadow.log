@@ -1,0 +1,23 @@
+[06:25:21:162] [2735:00000ae3] [WARN][com.freerdp.server.shadow.x11] - [x11_shadow_input_synchronize_event]: not implemented
+[06:25:21:162] [2735:00000ae3] [WARN][com.freerdp.server.shadow.x11] - [x11_shadow_input_synchronize_event]: not implemented
+[aac @ 0x7fda10003000] Too many bits 32768.000000 > 12288 per frame requested, clamping to max
+[libx264 @ 0x7fda197fc1c0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0x7fda197fc1c0] profile High, level 3.2, 4:2:0, 8-bit
+[06:25:21:263] [2735:00000aec] [ERROR][com.freerdp.channels.audin.server] - [audin_server_thread_func]: WTSVirtualChannelQuery failed
+[06:25:33:053] [2735:00000ae3] [ERROR][com.freerdp.core.peer] - [rdp_set_error_info]: ERRINFO_LOGOFF_BY_USER [0x0001000C]
+[06:25:33:053] [2735:00000ae3] [ERROR][com.freerdp.api] - [shadow_client_thread]: Failed to check FreeRDP file descriptor
+[aac @ 0x7fda10003000] Qavg: nan
+[libx264 @ 0x7fda197fc1c0] frame I:1     Avg QP: 3.47  size:  4354
+[libx264 @ 0x7fda197fc1c0] frame P:11    Avg QP: 1.99  size:  1033
+[libx264 @ 0x7fda197fc1c0] mb I  I16..4: 79.2% 19.4%  1.4%
+[libx264 @ 0x7fda197fc1c0] mb P  I16..4:  0.1%  0.0%  0.0%  P16..4:  0.4%  0.1%  0.1%  0.0%  0.0%    skip:99.4%
+[libx264 @ 0x7fda197fc1c0] final ratefactor: -7.05
+[libx264 @ 0x7fda197fc1c0] 8x8 transform intra:19.3% inter:12.2%
+[libx264 @ 0x7fda197fc1c0] coded y,uvDC,uvAC intra: 0.9% 0.2% 0.0% inter: 0.3% 0.0% 0.0%
+[libx264 @ 0x7fda197fc1c0] i16 v,h,dc,p: 77%  1% 22%  0%
+[libx264 @ 0x7fda197fc1c0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 85%  0% 15%  0%  0%  0%  0%  0%  0%
+[libx264 @ 0x7fda197fc1c0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 49% 19% 16%  2%  4%  4%  3%  2%  1%
+[libx264 @ 0x7fda197fc1c0] i8c dc,h,v,p: 99%  1%  0%  0%
+[libx264 @ 0x7fda197fc1c0] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 0x7fda197fc1c0] ref P L0: 87.4%  2.9%  6.7%  2.9%
+[libx264 @ 0x7fda197fc1c0] kb/s:314.24

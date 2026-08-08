@@ -1,0 +1,7 @@
+== cadenza--fissa: 1920x1080, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  monitor virtuale 1920x1080 montato, nodo PipeWire 46
+  fotogrammi 0 in 0.00 s  →  0.00 al secondo
+  buffer: ?, 0 distinti, stride 0
+  danno: pieno 0, parziale 0, assente 0
+  salti di sequenza 0, disegno non finito 0
+  intervalli ms: min 0.0  mediana 0.0  p95 0.0  max 0.0

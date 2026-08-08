@@ -1,0 +1,2 @@
+strada=in-memoria durata=10s fotogrammi=125 cpu_centesimi_di_core=2360 cpu_ms_per_fotogramma=18
+strada=copia-zero durata=11s fotogrammi=137 cpu_centesimi_di_core=790 cpu_ms_per_fotogramma=6

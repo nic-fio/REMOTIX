@@ -1,0 +1,10 @@
+== controllo-scena-1080: 1920x1080, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  monitor virtuale 1920x1080 montato, nodo PipeWire 46
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 736 in 19.98 s  →  36.79 al secondo
+  buffer: DMA-BUF, 4 distinti, stride 7680
+  danno: pieno 6, parziale 862, assente 0
+  salti di sequenza 0, disegno non finito 868
+  intervalli ms: min 16.3  mediana 33.3  p95 33.5  max 49.1

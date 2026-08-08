@@ -1,0 +1,1 @@
+RIGA	controllo-scena-1080	1920x1080	BGRx	60	dmabuf	DMA-BUF	36.79	736	19.98	4	6	862	0	0	868	16.3	33.3	33.5	49.1

@@ -1,0 +1,668 @@
+08:51:04.895  INFO    REMOTIX 0.1.0 — FreeRDP 3.15.0
+08:51:04.895  DIAGN   livello del registro: traccia
+08:51:04.895  AVVISO  mando la SCENA SINTETICA, non il desktop: e' il banco di prova del protocollo
+08:51:04.896  INFO    in ascolto su *:3390
+08:51:08.934  INFO    connessione da 
+08:51:08.940  AVVISO  autenticazione DISATTIVATA da riga di comando: e' un banco, non un server
+08:51:08.940  DIAGN   dimensione fisica scartata: 1282x802 px su 1000x1000 mm fanno 33 x 20 DPI, fuori da 30..600
+08:51:08.940  INFO    client «NIC-OS», desktop 1282x802, dimensione fisica non dichiarata, scala 100, orizzontale
+08:51:08.940  DIAGN   stato di drdynvc: 0
+08:51:08.940  INFO    misura della rete attiva: il client dichiara di saperla fare
+08:51:08.940  DIAGN   rete: RTT 0.1 ms (minimo 0.1), banda 0 kbit/s, in volo 0 di 2
+08:51:08.940  DIAGN   stato di drdynvc: 1
+08:51:08.948  DIAGN   stato di drdynvc: 2
+08:51:08.948  DIAGN   canale EGFX aperto, aspetto CapsAdvertise
+08:51:08.948  DIAGN   canale DISP: identificativo 2
+08:51:08.948  DIAGN   canale DISP aperto, aspetto che il client lo confermi
+08:51:08.961  INFO    canale DISP aperto: al massimo 1 monitor, 8192x8192 per lato
+08:51:08.961  INFO    EGFX negoziato: versione 0x00080105, flag 0x12 → AVC disponibile
+08:51:08.963  INFO    tela pronta: desktop 1282x802, superficie 1296x832, codec AVC420
+[libx264 @ 0x7f0bf4107d80] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0x7f0bf4107d80] profile High, level 3.2, 4:2:0, 8-bit
+08:51:08.986  TRACC   fotogramma da 18347 byte: ci si puo' misurare la banda
+08:51:08.986  TRACC   fotogramma 1 spedito
+08:51:08.986  TRACC   banda misurata: 18533 byte in 1 ms → 148264 kbit/s
+08:51:08.993  TRACC   riscontro fotogramma 1, in volo 0
+08:51:09.005  TRACC   fotogramma 2 spedito
+08:51:09.007  TRACC   riscontro fotogramma 2, in volo 0
+08:51:09.048  TRACC   fotogramma 3 spedito
+08:51:09.055  TRACC   riscontro fotogramma 3, in volo 0
+08:51:09.084  TRACC   fotogramma 4 spedito
+08:51:09.096  TRACC   riscontro fotogramma 4, in volo 0
+08:51:09.118  TRACC   fotogramma da 10718 byte: ci si puo' misurare la banda
+08:51:09.118  TRACC   fotogramma 5 spedito
+08:51:09.118  TRACC   banda misurata: 10728 byte in 1 ms → 85824 kbit/s
+08:51:09.145  TRACC   fotogramma 6 spedito
+08:51:09.145  TRACC   riscontro fotogramma 5, in volo 1
+08:51:09.150  TRACC   riscontro fotogramma 6, in volo 0
+08:51:09.182  TRACC   fotogramma 7 spedito
+08:51:09.195  TRACC   riscontro fotogramma 7, in volo 0
+08:51:09.210  TRACC   fotogramma 8 spedito
+08:51:09.223  TRACC   riscontro fotogramma 8, in volo 0
+08:51:09.245  TRACC   fotogramma 9 spedito
+08:51:09.255  TRACC   riscontro fotogramma 9, in volo 0
+08:51:09.281  TRACC   fotogramma 10 spedito
+08:51:09.295  TRACC   riscontro fotogramma 10, in volo 0
+08:51:09.309  TRACC   fotogramma 11 spedito
+08:51:09.319  TRACC   riscontro fotogramma 11, in volo 0
+08:51:09.347  TRACC   fotogramma 12 spedito
+08:51:09.362  TRACC   riscontro fotogramma 12, in volo 0
+08:51:09.379  TRACC   fotogramma 13 spedito
+08:51:09.393  TRACC   riscontro fotogramma 13, in volo 0
+08:51:09.412  TRACC   fotogramma 14 spedito
+08:51:09.422  TRACC   riscontro fotogramma 14, in volo 0
+08:51:09.442  TRACC   fotogramma 15 spedito
+08:51:09.458  TRACC   riscontro fotogramma 15, in volo 0
+08:51:09.479  TRACC   fotogramma 16 spedito
+08:51:09.491  TRACC   riscontro fotogramma 16, in volo 0
+08:51:09.508  TRACC   fotogramma 17 spedito
+08:51:09.520  TRACC   riscontro fotogramma 17, in volo 0
+08:51:09.538  TRACC   fotogramma 18 spedito
+08:51:09.542  TRACC   riscontro fotogramma 18, in volo 0
+08:51:09.574  TRACC   fotogramma 19 spedito
+08:51:09.579  TRACC   riscontro fotogramma 19, in volo 0
+08:51:09.606  TRACC   fotogramma 20 spedito
+08:51:09.611  TRACC   riscontro fotogramma 20, in volo 0
+08:51:09.645  TRACC   fotogramma 21 spedito
+08:51:09.659  TRACC   riscontro fotogramma 21, in volo 0
+08:51:09.674  TRACC   fotogramma 22 spedito
+08:51:09.684  TRACC   riscontro fotogramma 22, in volo 0
+08:51:09.704  TRACC   fotogramma 23 spedito
+08:51:09.709  TRACC   riscontro fotogramma 23, in volo 0
+08:51:09.739  TRACC   fotogramma 24 spedito
+08:51:09.743  TRACC   riscontro fotogramma 24, in volo 0
+08:51:09.773  TRACC   fotogramma 25 spedito
+08:51:09.778  TRACC   riscontro fotogramma 25, in volo 0
+08:51:09.803  TRACC   fotogramma 26 spedito
+08:51:09.806  TRACC   riscontro fotogramma 26, in volo 0
+08:51:09.836  TRACC   fotogramma 27 spedito
+08:51:09.840  TRACC   riscontro fotogramma 27, in volo 0
+08:51:09.871  TRACC   fotogramma 28 spedito
+08:51:09.884  TRACC   riscontro fotogramma 28, in volo 0
+08:51:09.903  TRACC   fotogramma 29 spedito
+08:51:09.909  TRACC   riscontro fotogramma 29, in volo 0
+08:51:09.940  TRACC   fotogramma 30 spedito
+08:51:09.952  TRACC   riscontro fotogramma 30, in volo 0
+08:51:09.972  TRACC   fotogramma 31 spedito
+08:51:10.000  TRACC   fotogramma 32 spedito
+08:51:10.001  TRACC   riscontro fotogramma 31, in volo 1
+08:51:10.004  TRACC   riscontro fotogramma 32, in volo 0
+08:51:10.034  TRACC   fotogramma 33 spedito
+08:51:10.039  TRACC   riscontro fotogramma 33, in volo 0
+08:51:10.068  TRACC   fotogramma 34 spedito
+08:51:10.072  TRACC   riscontro fotogramma 34, in volo 0
+08:51:10.106  TRACC   fotogramma 35 spedito
+08:51:10.121  TRACC   riscontro fotogramma 35, in volo 0
+08:51:10.133  TRACC   fotogramma 36 spedito
+08:51:10.138  TRACC   riscontro fotogramma 36, in volo 0
+08:51:10.167  TRACC   fotogramma 37 spedito
+08:51:10.171  TRACC   riscontro fotogramma 37, in volo 0
+08:51:10.204  TRACC   fotogramma 38 spedito
+08:51:10.219  TRACC   riscontro fotogramma 38, in volo 0
+08:51:10.230  TRACC   fotogramma 39 spedito
+08:51:10.234  TRACC   riscontro fotogramma 39, in volo 0
+08:51:10.266  TRACC   fotogramma 40 spedito
+08:51:10.270  TRACC   riscontro fotogramma 40, in volo 0
+08:51:10.297  TRACC   fotogramma 41 spedito
+08:51:10.302  TRACC   riscontro fotogramma 41, in volo 0
+08:51:10.336  TRACC   fotogramma 42 spedito
+08:51:10.365  TRACC   fotogramma 43 spedito
+08:51:10.366  TRACC   riscontro fotogramma 42, in volo 1
+08:51:10.372  TRACC   riscontro fotogramma 43, in volo 0
+08:51:10.400  TRACC   fotogramma 44 spedito
+08:51:10.415  TRACC   riscontro fotogramma 44, in volo 0
+08:51:10.430  TRACC   fotogramma 45 spedito
+08:51:10.433  TRACC   riscontro fotogramma 45, in volo 0
+08:51:10.463  TRACC   fotogramma 46 spedito
+08:51:10.468  TRACC   riscontro fotogramma 46, in volo 0
+08:51:10.500  TRACC   fotogramma 47 spedito
+08:51:10.513  TRACC   riscontro fotogramma 47, in volo 0
+08:51:10.531  TRACC   fotogramma 48 spedito
+08:51:10.541  TRACC   riscontro fotogramma 48, in volo 0
+08:51:10.563  TRACC   fotogramma 49 spedito
+08:51:10.570  TRACC   riscontro fotogramma 49, in volo 0
+08:51:10.598  TRACC   fotogramma 50 spedito
+08:51:10.633  TRACC   fotogramma 51 spedito
+08:51:10.633  TRACC   riscontro fotogramma 50, in volo 1
+08:51:10.649  TRACC   riscontro fotogramma 51, in volo 0
+08:51:10.663  TRACC   fotogramma 52 spedito
+08:51:10.680  TRACC   riscontro fotogramma 52, in volo 0
+08:51:10.695  TRACC   fotogramma 53 spedito
+08:51:10.705  TRACC   riscontro fotogramma 53, in volo 0
+08:51:10.728  TRACC   fotogramma 54 spedito
+08:51:10.737  TRACC   riscontro fotogramma 54, in volo 0
+08:51:10.762  TRACC   fotogramma 55 spedito
+08:51:10.771  TRACC   riscontro fotogramma 55, in volo 0
+08:51:10.794  TRACC   fotogramma 56 spedito
+08:51:10.801  TRACC   riscontro fotogramma 56, in volo 0
+08:51:10.827  TRACC   fotogramma 57 spedito
+08:51:10.837  TRACC   riscontro fotogramma 57, in volo 0
+08:51:10.860  TRACC   fotogramma 58 spedito
+08:51:10.868  TRACC   riscontro fotogramma 58, in volo 0
+08:51:10.891  TRACC   fotogramma 59 spedito
+08:51:10.895  TRACC   riscontro fotogramma 59, in volo 0
+08:51:10.931  TRACC   fotogramma 60 spedito
+08:51:10.946  DIAGN   rete: RTT 0.4 ms (minimo 0.2), banda 85824 kbit/s, in volo 1 di 2
+08:51:10.962  TRACC   fotogramma 61 spedito
+08:51:10.962  TRACC   riscontro fotogramma 60, in volo 1
+08:51:10.979  TRACC   riscontro fotogramma 61, in volo 0
+08:51:10.993  TRACC   fotogramma 62 spedito
+08:51:11.004  TRACC   riscontro fotogramma 62, in volo 0
+08:51:11.025  TRACC   fotogramma 63 spedito
+08:51:11.036  TRACC   riscontro fotogramma 63, in volo 0
+08:51:11.060  TRACC   fotogramma 64 spedito
+08:51:11.079  TRACC   riscontro fotogramma 64, in volo 0
+08:51:11.092  TRACC   fotogramma 65 spedito
+08:51:11.108  TRACC   riscontro fotogramma 65, in volo 0
+08:51:11.124  TRACC   fotogramma 66 spedito
+08:51:11.131  TRACC   riscontro fotogramma 66, in volo 0
+08:51:11.162  TRACC   fotogramma 67 spedito
+08:51:11.175  TRACC   riscontro fotogramma 67, in volo 0
+08:51:11.191  TRACC   fotogramma 68 spedito
+08:51:11.204  TRACC   riscontro fotogramma 68, in volo 0
+08:51:11.225  TRACC   fotogramma 69 spedito
+08:51:11.236  TRACC   riscontro fotogramma 69, in volo 0
+08:51:11.258  TRACC   fotogramma 70 spedito
+08:51:11.273  TRACC   riscontro fotogramma 70, in volo 0
+08:51:11.291  TRACC   fotogramma 71 spedito
+08:51:11.300  TRACC   riscontro fotogramma 71, in volo 0
+08:51:11.323  TRACC   fotogramma 72 spedito
+08:51:11.332  TRACC   riscontro fotogramma 72, in volo 0
+08:51:11.357  TRACC   fotogramma 73 spedito
+08:51:11.372  TRACC   riscontro fotogramma 73, in volo 0
+08:51:11.387  TRACC   fotogramma 74 spedito
+08:51:11.390  TRACC   riscontro fotogramma 74, in volo 0
+08:51:11.426  TRACC   fotogramma 75 spedito
+08:51:11.441  TRACC   riscontro fotogramma 75, in volo 0
+08:51:11.452  TRACC   fotogramma 76 spedito
+08:51:11.457  TRACC   riscontro fotogramma 76, in volo 0
+08:51:11.492  TRACC   fotogramma 77 spedito
+08:51:11.524  TRACC   fotogramma 78 spedito
+08:51:11.524  TRACC   riscontro fotogramma 77, in volo 1
+08:51:11.538  TRACC   riscontro fotogramma 78, in volo 0
+08:51:11.553  TRACC   fotogramma 79 spedito
+08:51:11.561  TRACC   riscontro fotogramma 79, in volo 0
+08:51:11.588  TRACC   fotogramma 80 spedito
+08:51:11.606  TRACC   riscontro fotogramma 80, in volo 0
+08:51:11.620  TRACC   fotogramma 81 spedito
+08:51:11.638  TRACC   riscontro fotogramma 81, in volo 0
+08:51:11.654  TRACC   fotogramma 82 spedito
+08:51:11.672  TRACC   riscontro fotogramma 82, in volo 0
+08:51:11.689  TRACC   fotogramma 83 spedito
+08:51:11.706  TRACC   riscontro fotogramma 83, in volo 0
+08:51:11.721  TRACC   fotogramma 84 spedito
+08:51:11.738  TRACC   riscontro fotogramma 84, in volo 0
+08:51:11.751  TRACC   fotogramma 85 spedito
+08:51:11.756  TRACC   riscontro fotogramma 85, in volo 0
+08:51:11.788  TRACC   fotogramma 86 spedito
+08:51:11.803  TRACC   riscontro fotogramma 86, in volo 0
+08:51:11.817  TRACC   fotogramma 87 spedito
+08:51:11.828  TRACC   riscontro fotogramma 87, in volo 0
+08:51:11.850  TRACC   fotogramma 88 spedito
+08:51:11.861  TRACC   riscontro fotogramma 88, in volo 0
+08:51:11.884  TRACC   fotogramma 89 spedito
+08:51:11.892  TRACC   riscontro fotogramma 89, in volo 0
+08:51:11.915  TRACC   fotogramma 90 spedito
+08:51:11.918  TRACC   riscontro fotogramma 90, in volo 0
+08:51:11.954  TRACC   fotogramma 91 spedito
+08:51:11.966  TRACC   riscontro fotogramma 91, in volo 0
+08:51:11.982  TRACC   fotogramma 92 spedito
+08:51:11.986  TRACC   riscontro fotogramma 92, in volo 0
+08:51:12.018  TRACC   fotogramma 93 spedito
+08:51:12.034  TRACC   riscontro fotogramma 93, in volo 0
+08:51:12.051  TRACC   fotogramma 94 spedito
+08:51:12.062  TRACC   riscontro fotogramma 94, in volo 0
+08:51:12.082  TRACC   fotogramma 95 spedito
+08:51:12.094  TRACC   riscontro fotogramma 95, in volo 0
+08:51:12.112  TRACC   fotogramma 96 spedito
+08:51:12.116  TRACC   riscontro fotogramma 96, in volo 0
+08:51:12.152  TRACC   fotogramma 97 spedito
+08:51:12.164  TRACC   riscontro fotogramma 97, in volo 0
+08:51:12.181  TRACC   fotogramma 98 spedito
+08:51:12.190  TRACC   riscontro fotogramma 98, in volo 0
+08:51:12.215  TRACC   fotogramma 99 spedito
+08:51:12.232  TRACC   riscontro fotogramma 99, in volo 0
+08:51:12.251  TRACC   fotogramma 100 spedito
+08:51:12.280  TRACC   fotogramma 101 spedito
+08:51:12.280  TRACC   riscontro fotogramma 100, in volo 1
+08:51:12.294  TRACC   riscontro fotogramma 101, in volo 0
+08:51:12.312  TRACC   fotogramma 102 spedito
+08:51:12.325  TRACC   riscontro fotogramma 102, in volo 0
+08:51:12.346  TRACC   fotogramma 103 spedito
+08:51:12.360  TRACC   riscontro fotogramma 103, in volo 0
+08:51:12.378  TRACC   fotogramma 104 spedito
+08:51:12.383  TRACC   riscontro fotogramma 104, in volo 0
+08:51:12.413  TRACC   fotogramma 105 spedito
+08:51:12.419  TRACC   riscontro fotogramma 105, in volo 0
+08:51:12.447  TRACC   fotogramma 106 spedito
+08:51:12.460  TRACC   riscontro fotogramma 106, in volo 0
+08:51:12.480  TRACC   fotogramma 107 spedito
+08:51:12.495  TRACC   riscontro fotogramma 107, in volo 0
+08:51:12.507  TRACC   fotogramma 108 spedito
+08:51:12.510  TRACC   riscontro fotogramma 108, in volo 0
+08:51:12.548  TRACC   fotogramma 109 spedito
+08:51:12.564  TRACC   riscontro fotogramma 109, in volo 0
+08:51:12.579  TRACC   fotogramma 110 spedito
+08:51:12.594  TRACC   riscontro fotogramma 110, in volo 0
+08:51:12.614  TRACC   fotogramma 111 spedito
+08:51:12.629  TRACC   riscontro fotogramma 111, in volo 0
+08:51:12.641  TRACC   fotogramma 112 spedito
+08:51:12.653  TRACC   riscontro fotogramma 112, in volo 0
+08:51:12.680  TRACC   fotogramma 113 spedito
+08:51:12.694  TRACC   riscontro fotogramma 113, in volo 0
+08:51:12.707  TRACC   fotogramma 114 spedito
+08:51:12.711  TRACC   riscontro fotogramma 114, in volo 0
+08:51:12.741  TRACC   fotogramma 115 spedito
+08:51:12.748  TRACC   riscontro fotogramma 115, in volo 0
+08:51:12.774  TRACC   fotogramma 116 spedito
+08:51:12.781  TRACC   riscontro fotogramma 116, in volo 0
+08:51:12.806  TRACC   fotogramma 117 spedito
+08:51:12.810  TRACC   riscontro fotogramma 117, in volo 0
+08:51:12.841  TRACC   fotogramma 118 spedito
+08:51:12.846  TRACC   riscontro fotogramma 118, in volo 0
+08:51:12.879  TRACC   fotogramma 119 spedito
+08:51:12.909  TRACC   fotogramma 120 spedito
+08:51:12.909  TRACC   riscontro fotogramma 119, in volo 1
+08:51:12.919  TRACC   riscontro fotogramma 120, in volo 0
+08:51:12.940  TRACC   fotogramma 121 spedito
+08:51:12.950  TRACC   riscontro fotogramma 121, in volo 0
+08:51:12.950  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 85824 kbit/s, in volo 1 di 2
+08:51:12.976  TRACC   fotogramma 122 spedito
+08:51:12.991  TRACC   riscontro fotogramma 122, in volo 0
+08:51:13.006  TRACC   fotogramma 123 spedito
+08:51:13.016  TRACC   riscontro fotogramma 123, in volo 0
+08:51:13.040  TRACC   fotogramma 124 spedito
+08:51:13.058  TRACC   riscontro fotogramma 124, in volo 0
+08:51:13.073  TRACC   fotogramma 125 spedito
+08:51:13.092  TRACC   riscontro fotogramma 125, in volo 0
+08:51:13.105  TRACC   fotogramma 126 spedito
+08:51:13.122  TRACC   riscontro fotogramma 126, in volo 0
+08:51:13.140  TRACC   fotogramma 127 spedito
+08:51:13.157  TRACC   riscontro fotogramma 127, in volo 0
+08:51:13.169  TRACC   fotogramma 128 spedito
+08:51:13.176  TRACC   riscontro fotogramma 128, in volo 0
+08:51:13.208  TRACC   fotogramma 129 spedito
+08:51:13.220  TRACC   riscontro fotogramma 129, in volo 0
+08:51:13.236  TRACC   fotogramma 130 spedito
+08:51:13.246  TRACC   riscontro fotogramma 130, in volo 0
+08:51:13.270  TRACC   fotogramma 131 spedito
+08:51:13.280  TRACC   riscontro fotogramma 131, in volo 0
+08:51:13.305  TRACC   fotogramma 132 spedito
+08:51:13.314  TRACC   riscontro fotogramma 132, in volo 0
+08:51:13.335  TRACC   fotogramma 133 spedito
+08:51:13.341  TRACC   riscontro fotogramma 133, in volo 0
+08:51:13.369  TRACC   fotogramma 134 spedito
+08:51:13.375  TRACC   riscontro fotogramma 134, in volo 0
+08:51:13.401  TRACC   fotogramma 135 spedito
+08:51:13.408  TRACC   riscontro fotogramma 135, in volo 0
+08:51:13.437  TRACC   fotogramma 136 spedito
+08:51:13.453  TRACC   riscontro fotogramma 136, in volo 0
+08:51:13.466  TRACC   fotogramma 137 spedito
+08:51:13.470  TRACC   riscontro fotogramma 137, in volo 0
+08:51:13.500  TRACC   fotogramma 138 spedito
+08:51:13.504  TRACC   riscontro fotogramma 138, in volo 0
+08:51:13.537  TRACC   fotogramma 139 spedito
+08:51:13.541  TRACC   riscontro fotogramma 139, in volo 0
+08:51:13.571  TRACC   fotogramma 140 spedito
+08:51:13.587  TRACC   riscontro fotogramma 140, in volo 0
+08:51:13.604  TRACC   fotogramma 141 spedito
+08:51:13.619  TRACC   riscontro fotogramma 141, in volo 0
+08:51:13.635  TRACC   fotogramma 142 spedito
+08:51:13.645  TRACC   riscontro fotogramma 142, in volo 0
+08:51:13.666  TRACC   fotogramma 143 spedito
+08:51:13.672  TRACC   riscontro fotogramma 143, in volo 0
+08:51:13.699  TRACC   fotogramma 144 spedito
+08:51:13.706  TRACC   riscontro fotogramma 144, in volo 0
+08:51:13.733  TRACC   fotogramma 145 spedito
+08:51:13.742  TRACC   riscontro fotogramma 145, in volo 0
+08:51:13.763  TRACC   fotogramma 146 spedito
+08:51:13.769  TRACC   riscontro fotogramma 146, in volo 0
+08:51:13.799  TRACC   fotogramma 147 spedito
+08:51:13.806  TRACC   riscontro fotogramma 147, in volo 0
+08:51:13.833  TRACC   fotogramma 148 spedito
+08:51:13.848  TRACC   riscontro fotogramma 148, in volo 0
+08:51:13.864  TRACC   fotogramma 149 spedito
+08:51:13.877  TRACC   riscontro fotogramma 149, in volo 0
+08:51:13.896  TRACC   fotogramma 150 spedito
+08:51:13.900  TRACC   riscontro fotogramma 150, in volo 0
+08:51:13.933  TRACC   fotogramma 151 spedito
+08:51:13.949  TRACC   riscontro fotogramma 151, in volo 0
+08:51:13.963  TRACC   fotogramma 152 spedito
+08:51:13.973  TRACC   riscontro fotogramma 152, in volo 0
+08:51:13.998  TRACC   fotogramma 153 spedito
+08:51:14.009  TRACC   riscontro fotogramma 153, in volo 0
+08:51:14.033  TRACC   fotogramma 154 spedito
+08:51:14.049  TRACC   riscontro fotogramma 154, in volo 0
+08:51:14.066  TRACC   fotogramma 155 spedito
+08:51:14.081  TRACC   riscontro fotogramma 155, in volo 0
+08:51:14.097  TRACC   fotogramma 156 spedito
+08:51:14.107  TRACC   riscontro fotogramma 156, in volo 0
+08:51:14.128  TRACC   fotogramma 157 spedito
+08:51:14.137  TRACC   riscontro fotogramma 157, in volo 0
+08:51:14.162  TRACC   fotogramma 158 spedito
+08:51:14.173  TRACC   riscontro fotogramma 158, in volo 0
+08:51:14.194  TRACC   fotogramma 159 spedito
+08:51:14.205  TRACC   riscontro fotogramma 159, in volo 0
+08:51:14.230  TRACC   fotogramma 160 spedito
+08:51:14.246  TRACC   riscontro fotogramma 160, in volo 0
+08:51:14.264  TRACC   fotogramma 161 spedito
+08:51:14.272  TRACC   riscontro fotogramma 161, in volo 0
+08:51:14.293  TRACC   fotogramma 162 spedito
+08:51:14.305  TRACC   riscontro fotogramma 162, in volo 0
+08:51:14.325  TRACC   fotogramma 163 spedito
+08:51:14.332  TRACC   riscontro fotogramma 163, in volo 0
+08:51:14.364  TRACC   fotogramma 164 spedito
+08:51:14.395  TRACC   fotogramma 165 spedito
+08:51:14.395  TRACC   riscontro fotogramma 164, in volo 1
+08:51:14.412  TRACC   riscontro fotogramma 165, in volo 0
+08:51:14.429  TRACC   fotogramma 166 spedito
+08:51:14.445  TRACC   riscontro fotogramma 166, in volo 0
+08:51:14.460  TRACC   fotogramma 167 spedito
+08:51:14.475  TRACC   riscontro fotogramma 167, in volo 0
+08:51:14.489  TRACC   fotogramma 168 spedito
+08:51:14.491  TRACC   riscontro fotogramma 168, in volo 0
+08:51:14.522  TRACC   fotogramma 169 spedito
+08:51:14.526  TRACC   riscontro fotogramma 169, in volo 0
+08:51:14.561  TRACC   fotogramma 170 spedito
+08:51:14.594  TRACC   fotogramma 171 spedito
+08:51:14.594  TRACC   riscontro fotogramma 170, in volo 1
+08:51:14.622  TRACC   fotogramma 172 spedito
+08:51:14.623  TRACC   riscontro fotogramma 171, in volo 1
+08:51:14.632  TRACC   riscontro fotogramma 172, in volo 0
+08:51:14.659  TRACC   fotogramma 173 spedito
+08:51:14.668  TRACC   riscontro fotogramma 173, in volo 0
+08:51:14.690  TRACC   fotogramma 174 spedito
+08:51:14.705  TRACC   riscontro fotogramma 174, in volo 0
+08:51:14.725  TRACC   fotogramma 175 spedito
+08:51:14.743  TRACC   riscontro fotogramma 175, in volo 0
+08:51:14.759  TRACC   fotogramma 176 spedito
+08:51:14.787  TRACC   fotogramma 177 spedito
+08:51:14.788  TRACC   riscontro fotogramma 176, in volo 1
+08:51:14.793  TRACC   riscontro fotogramma 177, in volo 0
+08:51:14.824  TRACC   fotogramma 178 spedito
+08:51:14.841  TRACC   riscontro fotogramma 178, in volo 0
+08:51:14.854  TRACC   fotogramma 179 spedito
+08:51:14.864  TRACC   riscontro fotogramma 179, in volo 0
+08:51:14.887  TRACC   fotogramma 180 spedito
+08:51:14.897  TRACC   riscontro fotogramma 180, in volo 0
+08:51:14.924  TRACC   fotogramma 181 spedito
+08:51:14.937  TRACC   riscontro fotogramma 181, in volo 0
+08:51:14.952  TRACC   fotogramma 182 spedito
+08:51:14.952  DIAGN   rete: RTT 4.2 ms (minimo 0.2), banda 85824 kbit/s, in volo 1 di 2
+08:51:14.958  TRACC   riscontro fotogramma 182, in volo 0
+08:51:14.984  TRACC   fotogramma 183 spedito
+08:51:14.989  TRACC   riscontro fotogramma 183, in volo 0
+08:51:15.018  TRACC   fotogramma 184 spedito
+08:51:15.022  TRACC   riscontro fotogramma 184, in volo 0
+08:51:15.057  TRACC   fotogramma 185 spedito
+08:51:15.092  TRACC   fotogramma 186 spedito
+08:51:15.092  TRACC   riscontro fotogramma 185, in volo 1
+08:51:15.118  TRACC   fotogramma 187 spedito
+08:51:15.118  TRACC   riscontro fotogramma 186, in volo 1
+08:51:15.124  TRACC   riscontro fotogramma 187, in volo 0
+08:51:15.156  TRACC   fotogramma 188 spedito
+08:51:15.184  TRACC   fotogramma 189 spedito
+08:51:15.184  TRACC   riscontro fotogramma 188, in volo 1
+08:51:15.192  TRACC   riscontro fotogramma 189, in volo 0
+08:51:15.224  TRACC   fotogramma 190 spedito
+08:51:15.254  TRACC   fotogramma 191 spedito
+08:51:15.254  TRACC   riscontro fotogramma 190, in volo 1
+08:51:15.270  TRACC   riscontro fotogramma 191, in volo 0
+08:51:15.286  TRACC   fotogramma 192 spedito
+08:51:15.302  TRACC   riscontro fotogramma 192, in volo 0
+08:51:15.317  TRACC   fotogramma 193 spedito
+08:51:15.330  TRACC   riscontro fotogramma 193, in volo 0
+08:51:15.349  TRACC   fotogramma 194 spedito
+08:51:15.358  TRACC   riscontro fotogramma 194, in volo 0
+08:51:15.382  TRACC   fotogramma 195 spedito
+08:51:15.390  TRACC   riscontro fotogramma 195, in volo 0
+08:51:15.418  TRACC   fotogramma 196 spedito
+08:51:15.435  TRACC   riscontro fotogramma 196, in volo 0
+08:51:15.454  TRACC   fotogramma 197 spedito
+08:51:15.479  TRACC   fotogramma 198 spedito
+08:51:15.479  TRACC   riscontro fotogramma 197, in volo 1
+08:51:15.485  TRACC   riscontro fotogramma 198, in volo 0
+08:51:15.516  TRACC   fotogramma 199 spedito
+08:51:15.532  TRACC   riscontro fotogramma 199, in volo 0
+08:51:15.549  TRACC   fotogramma 200 spedito
+08:51:15.563  TRACC   riscontro fotogramma 200, in volo 0
+08:51:15.584  TRACC   fotogramma 201 spedito
+08:51:15.598  TRACC   riscontro fotogramma 201, in volo 0
+08:51:15.611  TRACC   fotogramma 202 spedito
+08:51:15.615  TRACC   riscontro fotogramma 202, in volo 0
+08:51:15.650  TRACC   fotogramma 203 spedito
+08:51:15.665  TRACC   riscontro fotogramma 203, in volo 0
+08:51:15.682  TRACC   fotogramma 204 spedito
+08:51:15.696  TRACC   riscontro fotogramma 204, in volo 0
+08:51:15.716  TRACC   fotogramma 205 spedito
+08:51:15.728  TRACC   riscontro fotogramma 205, in volo 0
+08:51:15.745  TRACC   fotogramma 206 spedito
+08:51:15.761  TRACC   riscontro fotogramma 206, in volo 0
+08:51:15.782  TRACC   fotogramma 207 spedito
+08:51:15.794  TRACC   riscontro fotogramma 207, in volo 0
+08:51:15.817  TRACC   fotogramma 208 spedito
+08:51:15.830  TRACC   riscontro fotogramma 208, in volo 0
+08:51:15.848  TRACC   fotogramma 209 spedito
+08:51:15.876  TRACC   fotogramma 210 spedito
+08:51:15.876  TRACC   riscontro fotogramma 209, in volo 1
+08:51:15.880  TRACC   riscontro fotogramma 210, in volo 0
+08:51:15.911  TRACC   fotogramma 211 spedito
+08:51:15.919  TRACC   riscontro fotogramma 211, in volo 0
+08:51:15.941  TRACC   fotogramma 212 spedito
+08:51:15.944  TRACC   riscontro fotogramma 212, in volo 0
+08:51:15.977  TRACC   fotogramma 213 spedito
+08:51:15.983  TRACC   riscontro fotogramma 213, in volo 0
+08:51:16.008  TRACC   fotogramma 214 spedito
+08:51:16.012  TRACC   riscontro fotogramma 214, in volo 0
+08:51:16.047  TRACC   fotogramma 215 spedito
+08:51:16.080  TRACC   fotogramma 216 spedito
+08:51:16.080  TRACC   riscontro fotogramma 215, in volo 1
+08:51:16.108  TRACC   fotogramma 217 spedito
+08:51:16.108  TRACC   riscontro fotogramma 216, in volo 1
+08:51:16.112  TRACC   riscontro fotogramma 217, in volo 0
+08:51:16.142  TRACC   fotogramma 218 spedito
+08:51:16.147  TRACC   riscontro fotogramma 218, in volo 0
+08:51:16.174  TRACC   fotogramma 219 spedito
+08:51:16.181  TRACC   riscontro fotogramma 219, in volo 0
+08:51:16.207  TRACC   fotogramma 220 spedito
+08:51:16.218  TRACC   riscontro fotogramma 220, in volo 0
+08:51:16.240  TRACC   fotogramma 221 spedito
+08:51:16.250  TRACC   riscontro fotogramma 221, in volo 0
+08:51:16.276  TRACC   fotogramma 222 spedito
+08:51:16.287  TRACC   riscontro fotogramma 222, in volo 0
+08:51:16.308  TRACC   fotogramma 223 spedito
+08:51:16.324  TRACC   riscontro fotogramma 223, in volo 0
+08:51:16.342  TRACC   fotogramma 224 spedito
+08:51:16.354  TRACC   riscontro fotogramma 224, in volo 0
+08:51:16.372  TRACC   fotogramma 225 spedito
+08:51:16.384  TRACC   riscontro fotogramma 225, in volo 0
+08:51:16.404  TRACC   fotogramma 226 spedito
+08:51:16.409  TRACC   riscontro fotogramma 226, in volo 0
+08:51:16.438  TRACC   fotogramma 227 spedito
+08:51:16.449  TRACC   riscontro fotogramma 227, in volo 0
+08:51:16.474  TRACC   fotogramma 228 spedito
+08:51:16.491  TRACC   riscontro fotogramma 228, in volo 0
+08:51:16.504  TRACC   fotogramma 229 spedito
+08:51:16.509  TRACC   riscontro fotogramma 229, in volo 0
+08:51:16.538  TRACC   fotogramma 230 spedito
+08:51:16.550  TRACC   riscontro fotogramma 230, in volo 0
+08:51:16.574  TRACC   fotogramma 231 spedito
+08:51:16.583  TRACC   riscontro fotogramma 231, in volo 0
+08:51:16.604  TRACC   fotogramma 232 spedito
+08:51:16.616  TRACC   riscontro fotogramma 232, in volo 0
+08:51:16.639  TRACC   fotogramma 233 spedito
+08:51:16.649  TRACC   riscontro fotogramma 233, in volo 0
+08:51:16.672  TRACC   fotogramma 234 spedito
+08:51:16.686  TRACC   riscontro fotogramma 234, in volo 0
+08:51:16.702  TRACC   fotogramma 235 spedito
+08:51:16.710  TRACC   riscontro fotogramma 235, in volo 0
+08:51:16.736  TRACC   fotogramma 236 spedito
+08:51:16.749  TRACC   riscontro fotogramma 236, in volo 0
+08:51:16.768  TRACC   fotogramma 237 spedito
+08:51:16.774  TRACC   riscontro fotogramma 237, in volo 0
+08:51:16.800  TRACC   fotogramma 238 spedito
+08:51:16.804  TRACC   riscontro fotogramma 238, in volo 0
+08:51:16.838  TRACC   fotogramma 239 spedito
+08:51:16.855  TRACC   riscontro fotogramma 239, in volo 0
+08:51:16.869  TRACC   fotogramma 240 spedito
+08:51:16.886  TRACC   riscontro fotogramma 240, in volo 0
+08:51:16.902  TRACC   fotogramma 241 spedito
+08:51:16.913  TRACC   riscontro fotogramma 241, in volo 0
+08:51:16.938  TRACC   fotogramma 242 spedito
+08:51:16.952  TRACC   riscontro fotogramma 242, in volo 0
+08:51:16.954  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 85824 kbit/s, in volo 0 di 2
+08:51:16.971  TRACC   fotogramma 243 spedito
+08:51:16.979  TRACC   riscontro fotogramma 243, in volo 0
+08:51:17.001  TRACC   fotogramma 244 spedito
+08:51:17.010  TRACC   riscontro fotogramma 244, in volo 0
+08:51:17.035  TRACC   fotogramma 245 spedito
+08:51:17.049  TRACC   riscontro fotogramma 245, in volo 0
+08:51:17.064  TRACC   fotogramma 246 spedito
+08:51:17.070  TRACC   riscontro fotogramma 246, in volo 0
+08:51:17.099  TRACC   fotogramma 247 spedito
+08:51:17.114  TRACC   riscontro fotogramma 247, in volo 0
+08:51:17.132  TRACC   fotogramma 248 spedito
+08:51:17.150  TRACC   riscontro fotogramma 248, in volo 0
+08:51:17.165  TRACC   fotogramma 249 spedito
+08:51:17.177  TRACC   riscontro fotogramma 249, in volo 0
+08:51:17.199  TRACC   fotogramma 250 spedito
+08:51:17.208  TRACC   riscontro fotogramma 250, in volo 0
+08:51:17.236  TRACC   fotogramma da 30847 byte: ci si puo' misurare la banda
+08:51:17.236  TRACC   fotogramma 251 spedito
+08:51:17.237  TRACC   banda misurata: 31058 byte in 0 ms → 248464 kbit/s
+08:51:17.259  TRACC   fotogramma 252 spedito
+08:51:17.259  TRACC   riscontro fotogramma 251, in volo 1
+08:51:17.268  TRACC   riscontro fotogramma 252, in volo 0
+08:51:17.298  TRACC   fotogramma 253 spedito
+08:51:17.309  TRACC   riscontro fotogramma 253, in volo 0
+08:51:17.331  TRACC   fotogramma 254 spedito
+08:51:17.368  TRACC   fotogramma 255 spedito
+08:51:17.368  TRACC   riscontro fotogramma 254, in volo 1
+08:51:17.379  TRACC   riscontro fotogramma 255, in volo 0
+08:51:17.396  TRACC   fotogramma 256 spedito
+08:51:17.408  TRACC   riscontro fotogramma 256, in volo 0
+08:51:17.429  TRACC   fotogramma 257 spedito
+08:51:17.435  TRACC   riscontro fotogramma 257, in volo 0
+08:51:17.465  TRACC   fotogramma 258 spedito
+08:51:17.472  TRACC   riscontro fotogramma 258, in volo 0
+08:51:17.498  TRACC   fotogramma 259 spedito
+08:51:17.514  TRACC   riscontro fotogramma 259, in volo 0
+08:51:17.526  TRACC   fotogramma 260 spedito
+08:51:17.529  TRACC   riscontro fotogramma 260, in volo 0
+08:51:17.566  TRACC   fotogramma 261 spedito
+08:51:17.579  TRACC   riscontro fotogramma 261, in volo 0
+08:51:17.596  TRACC   fotogramma 262 spedito
+08:51:17.607  TRACC   riscontro fotogramma 262, in volo 0
+08:51:17.628  TRACC   fotogramma 263 spedito
+08:51:17.640  TRACC   riscontro fotogramma 263, in volo 0
+08:51:17.660  TRACC   fotogramma 264 spedito
+08:51:17.670  TRACC   riscontro fotogramma 264, in volo 0
+08:51:17.693  TRACC   fotogramma 265 spedito
+08:51:17.705  TRACC   riscontro fotogramma 265, in volo 0
+08:51:17.726  TRACC   fotogramma 266 spedito
+08:51:17.731  TRACC   riscontro fotogramma 266, in volo 0
+08:51:17.763  TRACC   fotogramma 267 spedito
+08:51:17.778  TRACC   riscontro fotogramma 267, in volo 0
+08:51:17.795  TRACC   fotogramma 268 spedito
+08:51:17.807  TRACC   riscontro fotogramma 268, in volo 0
+08:51:17.830  TRACC   fotogramma 269 spedito
+08:51:17.860  TRACC   fotogramma 270 spedito
+08:51:17.860  TRACC   riscontro fotogramma 269, in volo 1
+08:51:17.867  TRACC   riscontro fotogramma 270, in volo 0
+08:51:17.891  TRACC   fotogramma 271 spedito
+08:51:17.901  TRACC   riscontro fotogramma 271, in volo 0
+08:51:17.927  TRACC   fotogramma 272 spedito
+08:51:17.938  TRACC   riscontro fotogramma 272, in volo 0
+08:51:17.958  TRACC   fotogramma 273 spedito
+08:51:17.967  TRACC   riscontro fotogramma 273, in volo 0
+08:51:17.994  TRACC   fotogramma 274 spedito
+08:51:18.007  TRACC   riscontro fotogramma 274, in volo 0
+08:51:18.026  TRACC   fotogramma 275 spedito
+08:51:18.055  TRACC   fotogramma 276 spedito
+08:51:18.055  TRACC   riscontro fotogramma 275, in volo 1
+08:51:18.061  TRACC   riscontro fotogramma 276, in volo 0
+08:51:18.093  TRACC   fotogramma 277 spedito
+08:51:18.108  TRACC   riscontro fotogramma 277, in volo 0
+08:51:18.120  TRACC   fotogramma 278 spedito
+08:51:18.124  TRACC   riscontro fotogramma 278, in volo 0
+08:51:18.157  TRACC   fotogramma 279 spedito
+08:51:18.173  TRACC   riscontro fotogramma 279, in volo 0
+08:51:18.192  TRACC   fotogramma 280 spedito
+08:51:18.207  TRACC   riscontro fotogramma 280, in volo 0
+08:51:18.223  TRACC   fotogramma 281 spedito
+08:51:18.232  TRACC   riscontro fotogramma 281, in volo 0
+08:51:18.255  TRACC   fotogramma 282 spedito
+08:51:18.263  TRACC   riscontro fotogramma 282, in volo 0
+08:51:18.286  TRACC   fotogramma 283 spedito
+08:51:18.292  TRACC   riscontro fotogramma 283, in volo 0
+08:51:18.318  TRACC   fotogramma 284 spedito
+08:51:18.323  TRACC   riscontro fotogramma 284, in volo 0
+08:51:18.355  TRACC   fotogramma 285 spedito
+08:51:18.390  TRACC   fotogramma 286 spedito
+08:51:18.390  TRACC   riscontro fotogramma 285, in volo 1
+08:51:18.418  TRACC   fotogramma 287 spedito
+08:51:18.418  TRACC   riscontro fotogramma 286, in volo 1
+08:51:18.428  TRACC   riscontro fotogramma 287, in volo 0
+08:51:18.452  TRACC   fotogramma 288 spedito
+08:51:18.465  TRACC   riscontro fotogramma 288, in volo 0
+08:51:18.483  TRACC   fotogramma 289 spedito
+08:51:18.487  TRACC   riscontro fotogramma 289, in volo 0
+08:51:18.522  TRACC   fotogramma 290 spedito
+08:51:18.552  TRACC   fotogramma 291 spedito
+08:51:18.552  TRACC   riscontro fotogramma 290, in volo 1
+08:51:18.566  TRACC   riscontro fotogramma 291, in volo 0
+08:51:18.583  TRACC   fotogramma 292 spedito
+08:51:18.589  TRACC   riscontro fotogramma 292, in volo 0
+08:51:18.617  TRACC   fotogramma 293 spedito
+08:51:18.627  TRACC   riscontro fotogramma 293, in volo 0
+08:51:18.654  TRACC   fotogramma 294 spedito
+08:51:18.666  TRACC   riscontro fotogramma 294, in volo 0
+08:51:18.687  TRACC   fotogramma 295 spedito
+08:51:18.699  TRACC   riscontro fotogramma 295, in volo 0
+08:51:18.719  TRACC   fotogramma 296 spedito
+08:51:18.734  TRACC   riscontro fotogramma 296, in volo 0
+08:51:18.748  TRACC   fotogramma 297 spedito
+08:51:18.755  TRACC   riscontro fotogramma 297, in volo 0
+08:51:18.783  TRACC   fotogramma 298 spedito
+08:51:18.797  TRACC   riscontro fotogramma 298, in volo 0
+08:51:18.815  TRACC   fotogramma 299 spedito
+08:51:18.829  TRACC   riscontro fotogramma 299, in volo 0
+08:51:18.846  TRACC   fotogramma 300 spedito
+08:51:18.854  TRACC   riscontro fotogramma 300, in volo 0
+08:51:18.884  TRACC   fotogramma 301 spedito
+08:51:18.897  TRACC   riscontro fotogramma 301, in volo 0
+08:51:18.912  TRACC   fotogramma 302 spedito
+08:51:18.914  TRACC   riscontro fotogramma 302, in volo 0
+[08:51:18:916] [64198:0000fafa] [ERROR][com.freerdp.core.peer] - [rdp_set_error_info]: ERRINFO_LOGOFF_BY_USER [0x0001000C]
+08:51:18.916  INFO    il client se n'e' andato
+[libx264 @ 0x7f0bf4107d80] frame I:2     Avg QP: 4.83  size: 24280
+[libx264 @ 0x7f0bf4107d80] frame P:300   Avg QP: 4.21  size:  1863
+[libx264 @ 0x7f0bf4107d80] mb I  I16..4: 74.7% 14.5% 10.8%
+[libx264 @ 0x7f0bf4107d80] mb P  I16..4:  2.2%  0.0%  0.1%  P16..4:  7.6%  0.1%  0.1%  0.0%  0.0%    skip:89.9%
+[libx264 @ 0x7f0bf4107d80] final ratefactor: -20.14
+[libx264 @ 0x7f0bf4107d80] 8x8 transform intra:4.1% inter:41.9%
+[libx264 @ 0x7f0bf4107d80] coded y,uvDC,uvAC intra: 2.7% 5.2% 4.8% inter: 0.2% 1.1% 1.0%
+[libx264 @ 0x7f0bf4107d80] i16 v,h,dc,p: 41% 49% 10%  0%
+[libx264 @ 0x7f0bf4107d80] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 39%  1% 60%  0%  0%  0%  0%  0%  0%
+[libx264 @ 0x7f0bf4107d80] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 46% 29% 21%  1%  1%  1%  1%  0%  1%
+[libx264 @ 0x7f0bf4107d80] i8c dc,h,v,p: 39% 54%  7%  0%
+[libx264 @ 0x7f0bf4107d80] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 0x7f0bf4107d80] ref P L0: 15.1%  0.0% 60.3% 24.6%
+[libx264 @ 0x7f0bf4107d80] kb/s:482.75
+08:51:18.919  INFO    connessione conclusa
+08:51:18.924  INFO    SIGTERM mandato da pid 64390 (gia' sparito), uid 1000 — si_code 0: kill() da un altro processo
+08:51:18.924  INFO      pila #0  /srv/src/remotix-c/build/src/remotix(+0x12ce4) [0x55e6424acce4]
+08:51:18.924  INFO      pila #1  /lib/x86_64-linux-gnu/libc.so.6(+0x3fdf0) [0x7f0c0f08edf0]
+08:51:18.924  INFO      pila #2  /lib/x86_64-linux-gnu/libc.so.6(+0x9a9ee) [0x7f0c0f0e99ee]
+08:51:18.924  INFO      pila #3  /lib/x86_64-linux-gnu/libc.so.6(+0x8f668) [0x7f0c0f0de668]
+08:51:18.924  INFO      pila #4  /lib/x86_64-linux-gnu/libc.so.6(+0x8f6ad) [0x7f0c0f0de6ad]
+08:51:18.924  INFO      pila #5  /lib/x86_64-linux-gnu/libc.so.6(ppoll+0x3e) [0x7f0c0f152eae]
+08:51:18.924  INFO      pila #6  /lib/x86_64-linux-gnu/libglib-2.0.so.0(+0x5e6cc) [0x7f0c0f5d66cc]
+08:51:18.924  INFO      pila #7  /lib/x86_64-linux-gnu/libglib-2.0.so.0(g_main_loop_run+0x12f) [0x7f0c0f5d705f]
+08:51:18.924  INFO      pila #8  /srv/src/remotix-c/build/src/remotix(main+0x35c) [0x55e6424a37dc]
+08:51:18.924  INFO      pila #9  /lib/x86_64-linux-gnu/libc.so.6(+0x29ca8) [0x7f0c0f078ca8]
+08:51:18.924  INFO      pila #10  /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85) [0x7f0c0f078d65]
+08:51:18.924  INFO      pila #11  /srv/src/remotix-c/build/src/remotix(_start+0x21) [0x55e6424a3ad1]
+08:51:18.924  INFO    arrivato SIGTERM: chiudo
+08:51:18.924  INFO    chiuso
+[08:51:18:916] [64198:0000fafa] [INFO][com.freerdp.core] - [rdp_print_errinfo]: ERRINFO_LOGOFF_BY_USER (0x0000000C):The disconnection was initiated by the user logging off their session on the server.

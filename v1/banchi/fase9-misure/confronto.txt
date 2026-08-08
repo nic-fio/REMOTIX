@@ -1,0 +1,10 @@
+# scheda presa il 2026-08-06 17:56:31
+vcpu=4
+kernel=6.12.100+deb13-amd64
+gpu=by-path card0 renderD128 
+vainfo=15
+remotix=REMOTIX 0.1.0
+codec=AVC420 codificatore=freerdp misura=2560x984 finestra=20s fotogrammi=609 fps=30.4 cpu_centesimi_di_core=12825 cpu_ms_per_fotogramma=42
+codec=AVC420 codificatore=libx264 misura=2560x984 finestra=21s fotogrammi=537 fps=25.5 cpu_centesimi_di_core=6904 cpu_ms_per_fotogramma=27
+codec=AVC420 codificatore=h264_vaapi misura=2560x984 finestra=20s fotogrammi=467 fps=23.3 cpu_centesimi_di_core=4740 cpu_ms_per_fotogramma=20
+codec=RFX codificatore=auto misura=2560x984 finestra=20s fotogrammi=607 fps=30.3 cpu_centesimi_di_core=11970 cpu_ms_per_fotogramma=39

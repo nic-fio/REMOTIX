@@ -1,0 +1,17 @@
+# etichetta misura colore fps_dichiarato strada tipo fps_misurati fotogrammi secondi buffer danno_pieno danno_parziale danno_assente salti fence min p50 p95 max
+RIGA	kwin-1920x1080-memoria	1920x1080	BGRx	60	memoria	MemFd	43.27	520	11.99	4	1	735	0	0	0	21.4	23.2	23.8	24.1
+# client su KWin 1920x1080: 54.200001 fps
+RIGA	kwin-2560x1440-memoria	2560x1440	BGRx	60	memoria	MemFd	36.81	442	11.98	4	1	623	0	0	0	24.8	27.2	28.0	28.4
+# client su KWin 2560x1440: 45.799999 fps
+RIGA	kwin-3840x2160-memoria	3840x2160	BGRx	60	memoria	MemFd	27.71	333	11.98	4	1	469	0	0	0	29.5	35.9	40.2	44.4
+# client su KWin 3840x2160: 34.599998 fps
+RIGA	kwin-1920x1080-dmabuf--dmabuf	1920x1080	BGRx	60	dmabuf	DMA-BUF	59.50	716	12.02	4	1	1009	0	0	1010	16.1	16.7	17.5	18.6
+# client su KWin 1920x1080: 60.200001 fps
+RIGA	sway-1920x1080-shm	1920x1080	shm	-	memoria	wl_shm	60.97	733	12.01	1	6	1031	0	0	0	14.2	16.5	16.7	17.3
+# client su sway 1920x1080: 61.200001 fps
+RIGA	sway-2560x1440-shm	2560x1440	shm	-	memoria	wl_shm	61.46	738	11.99	1	6	1037	0	0	0	12.7	16.2	16.8	20.1
+# client su sway 2560x1440: 61.599998 fps
+RIGA	sway-3840x2160-shm	3840x2160	shm	-	memoria	wl_shm	40.27	484	12.00	1	504	184	0	0	0	11.7	20.1	37.7	45.3
+# client su sway 3840x2160: 57.599998 fps
+RIGA	labwc-1920x1080-shm	1280x720	shm	-	memoria	wl_shm	60.82	731	12.00	1	1	1032	0	0	0	14.6	16.5	16.7	17.2
+# client su labwc 1920x1080: 61.400002 fps

@@ -1,0 +1,4 @@
+fotogramma 1  superficie 1296x832  byte 17752  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 2  superficie 1296x832  byte 16531  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)

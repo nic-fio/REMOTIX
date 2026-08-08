@@ -1,0 +1,6 @@
+Using config: r8g8b8a0
+has EGL_EXT_buffer_age and EGL_EXT_swap_buffers_with_damage
+has EGL_EXT_surface_compression
+303 frames in 5 seconds: 60.599998 fps
+300 frames in 5 seconds: 60.000000 fps
+300 frames in 5 seconds: 60.000000 fps

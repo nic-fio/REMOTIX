@@ -1,0 +1,7 @@
+[21:04:13:645] [162019:000278e5] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x08 -> no RDP scancode found
+[21:04:13:645] [162019:000278e5] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x5d -> no RDP scancode found
+[21:04:13:670] [162019:000278e5] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+[21:04:13:670] [162019:000278e5] [WARN][com.freerdp.core.license] - [license_read_binary_blob_data]: license binary blob::type BB_ERROR_BLOB, length=0, skipping.
+[21:04:13:670] [162019:000278e5] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+On calling fusermount posix_spawn failed: No such file or directory
+posix_spawn(p)() for fusermount3 failed: No such file or directory[21:04:13:698] [162019:00027916] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f2c7d876190

@@ -1,0 +1,10 @@
+== mutter-riprova-1920x1080-dmabuf: 1920x1080, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  monitor virtuale 1920x1080 montato, nodo PipeWire 47
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 424 in 11.97 s  →  35.35 al secondo
+  buffer: DMA-BUF, 4 distinti, stride 7680
+  danno: pieno 7, parziale 499, assente 0
+  salti di sequenza 0, disegno non finito 506
+  intervalli ms: min 16.4  mediana 33.3  p95 33.5  max 57.9

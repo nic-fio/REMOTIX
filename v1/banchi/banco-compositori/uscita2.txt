@@ -1,0 +1,1 @@
+RIGA	controllo-scena	3840x2160	BGRx	60	dmabuf	DMA-BUF	36.22	508	14.00	4	6	638	0	0	644	16.3	33.3	33.6	34.2

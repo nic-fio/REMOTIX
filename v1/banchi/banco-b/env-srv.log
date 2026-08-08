@@ -1,0 +1,19 @@
+11:48:22.762  INFO    REMOTIX 0.1.0 — FreeRDP 3.15.0
+11:48:22.763  DIAGN   livello del registro: diagnostica
+11:48:22.763  AVVISO  mando la SCENA SINTETICA, non il desktop: e' il banco di prova del protocollo
+11:48:22.764  INFO    in ascolto su *:3390
+11:48:24.769  INFO    SIGTERM mandato da pid 317514 (gia' sparito), uid 1000 — si_code 0: kill() da un altro processo
+11:48:24.769  INFO      pila #0  /home/nicfio/remotix-f10(+0x1b3e4) [0x55c4ca76d3e4]
+11:48:24.769  INFO      pila #1  /lib/x86_64-linux-gnu/libc.so.6(+0x3fdf0) [0x7f1c9d909df0]
+11:48:24.769  INFO      pila #2  /lib/x86_64-linux-gnu/libc.so.6(+0x9a9ee) [0x7f1c9d9649ee]
+11:48:24.769  INFO      pila #3  /lib/x86_64-linux-gnu/libc.so.6(+0x8f668) [0x7f1c9d959668]
+11:48:24.769  INFO      pila #4  /lib/x86_64-linux-gnu/libc.so.6(+0x8f6ad) [0x7f1c9d9596ad]
+11:48:24.769  INFO      pila #5  /lib/x86_64-linux-gnu/libc.so.6(ppoll+0x3e) [0x7f1c9d9cdeae]
+11:48:24.769  INFO      pila #6  /lib/x86_64-linux-gnu/libglib-2.0.so.0(+0x5e6cc) [0x7f1ca14706cc]
+11:48:24.769  INFO      pila #7  /lib/x86_64-linux-gnu/libglib-2.0.so.0(g_main_loop_run+0x12f) [0x7f1ca147105f]
+11:48:24.769  INFO      pila #8  /home/nicfio/remotix-f10(main+0x38a) [0x55c4ca75ee8a]
+11:48:24.769  INFO      pila #9  /lib/x86_64-linux-gnu/libc.so.6(+0x29ca8) [0x7f1c9d8f3ca8]
+11:48:24.769  INFO      pila #10  /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85) [0x7f1c9d8f3d65]
+11:48:24.769  INFO      pila #11  /home/nicfio/remotix-f10(_start+0x21) [0x55c4ca75f191]
+11:48:24.769  INFO    arrivato SIGTERM: chiudo
+11:48:24.769  INFO    chiuso

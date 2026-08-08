@@ -1,0 +1,49 @@
+
+[1;34m==> Cartelle di lavoro su /media/REMOTIX[0m
+    [1;32mOK[0m  pronte (TMPDIR confinato in /media/REMOTIX/tmp)
+
+[1;34m==> Strumenti di bootstrap (confinati in /media/REMOTIX/hosttools)[0m
+    [1;32mOK[0m  mmdebstrap gia' disponibile (mmdebstrap 1.5.7)
+
+[1;34m==> Contenitore Debian trixie[0m
+    [1;32mOK[0m  gia' presente (3.3G)
+
+[1;34m==> Bind mount di servizio[0m
+    [1;32mOK[0m  proc, sys, dev, src collegati
+
+[1;34m==> Utente di sviluppo nel contenitore (uid 0)[0m
+    [1;32mOK[0m  utente 'dev' gia' presente
+
+[1;34m==> Dipendenze di compilazione nel contenitore[0m
+    [1;32mOK[0m  gia' presenti (41 pacchetti)
+
+[1;34m==> Toolchain C e FreeRDP 3[0m
+    --  gcc      14
+    --  meson    1.7.0
+    --  freerdp3 3.15.0
+    [1;32mOK[0m  tutte le dipendenze sono visibili a pkg-config
+
+[1;34m==> Profilo di shell nel contenitore[0m
+    [1;32mOK[0m  /etc/profile.d/remotix.sh
+
+[1;34m==> Script di ingresso[0m
+    [1;32mOK[0m  /media/REMOTIX/enter.sh
+
+[1;34m==> Ambiente pronto[0m
+
+    contenitore   /media/REMOTIX/devroot
+    sorgenti      /media/REMOTIX/src   ->  /srv/src
+    progetto      /media/REMOTIX/src/remotix-c   ->  /srv/src/remotix-c
+    ingresso      bash /media/REMOTIX/enter.sh
+
+    gcc:        14
+    meson:      1.7.0
+    FreeRDP:    3.15.0
+
+    Si costruisce cosi':
+        bash /media/REMOTIX/enter.sh "meson setup \$REMOTIX_BUILD \$REMOTIX_SRC"
+        bash /media/REMOTIX/enter.sh "ninja -C \$REMOTIX_BUILD"
+
+    Nulla e' stato installato nel sistema host.
+
+ESITO=0

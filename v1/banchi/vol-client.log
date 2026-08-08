@@ -1,0 +1,18 @@
+[17:14:28:512] [11455:00002cc0] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x08 -> no RDP scancode found
+[17:14:28:512] [11455:00002cc0] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x5d -> no RDP scancode found
+[17:14:28:554] [11455:00002cc0] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+[17:14:28:554] [11455:00002cc0] [WARN][com.freerdp.core.license] - [license_read_binary_blob_data]: license binary blob::type BB_ERROR_BLOB, length=0, skipping.
+[17:14:28:554] [11455:00002cc0] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+On calling fusermount posix_spawn failed: No such file or directory
+posix_spawn(p)() for fusermount3 failed: No such file or directory[17:14:28:566] [11455:00002cc0] [WARN][com.freerdp.channels.rdpsnd.client] - [rdpsnd_check_pulse]: pulse->context=(nil)
+[17:14:28:566] [11455:00002cc0] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_load_device_plugin]: [static] pulse entry returns error 12
+[17:14:28:566] [11455:00002cc0] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_process_connect]: [static] Unable to load sound playback subsystem pulse because of error 12
+[17:14:28:604] [11455:00002cf3] [WARN][com.freerdp.channels.rdpsnd.client] - [rdpsnd_check_pulse]: pulse->context=(nil)
+[17:14:28:604] [11455:00002cf3] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_load_device_plugin]: [dynamic] pulse entry returns error 12
+[17:14:28:604] [11455:00002cf3] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_process_connect]: [dynamic] Unable to load sound playback subsystem pulse because of error 12
+[17:14:28:604] [11455:00002cf3] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f4a9127d190
+[17:14:28:612] [11455:00002cf2] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_alsa_open_mixer]: snd_mixer_attach failed
+[17:14:28:686] [11455:00002cf2] [ERROR][com.freerdp.channels.rdpsnd.client] - [rdpsnd_alsa_open]: snd_pcm_open failed
+[17:14:41:498] [11455:00002cbf] [ERROR][com.freerdp.utils.signal] - [term_handler]: Caught signal 'Terminated' [15]
+[17:14:41:498] [11455:00002cbf] [ERROR][com.freerdp.core] - [freerdp_abort_connect_context]: ERRCONNECT_CONNECT_CANCELLED [0x0002000B]
+[17:14:41:509] [11455:00002cf3] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f4a9127d190

@@ -1,0 +1,929 @@
+17:34:44.420  INFO    REMOTIX 0.1.0 — FreeRDP 3.15.0
+17:34:44.421  DIAGN   livello del registro: diagnostica
+17:34:44.421  INFO    servo la sessione di «nicfio»
+17:34:44.422  INFO    in ascolto su *:3392
+17:34:44.424  DIAGN   sentinella pronta: uid 1000, la nostra sessione e' «nessuna»
+17:34:44.424  INFO    nessuna sessione grafica locale: si puo' entrare
+17:34:51.486  INFO    connessione da 
+17:34:51.522  INFO    autenticato: nicfio
+17:34:51.522  DIAGN   dimensione fisica scartata: 1920x1080 px su 1000x1000 mm fanno 49 x 27 DPI, fuori da 30..600
+17:34:51.522  INFO    client «NIC-OS», desktop 1920x1080, dimensione fisica non dichiarata, scala 100, orizzontale
+17:34:51.523  INFO    nessuna sessione grafica: la avvio
+17:34:51.523  INFO    avvio la sessione grafica: exec gnome-session --session=gnome (registro in /run/user/1000/remotix-sessione.log)
+17:34:52.053  INFO    sessione grafica pronta
+17:34:52.056  INFO    registrati con gnome-session (/org/gnome/SessionManager/Client1): l'uscita si sapra' subito
+17:34:52.070  DIAGN   canale EIS aperto (descrittore 22)
+17:34:52.253  INFO    monitor virtuale montato: nodo PipeWire 34, flusso /org/gnome/Mutter/ScreenCast/Stream/u1
+17:34:52.258  DIAGN   stato del flusso di cattura: unconnected → connecting
+17:34:52.259  DIAGN   stato del flusso di cattura: connecting → paused
+17:34:52.259  INFO    cattura avviata sul nodo 34
+17:34:52.259  INFO    canale di input aperto verso il compositore (libei)
+17:34:52.260  INFO    sink audio «remotix» montato nella sessione: nodo 46
+17:34:52.293  INFO    formato negoziato con Mutter: 1920x1080, BGRx
+17:34:52.293  DIAGN   modificatore del formato: 0x0
+17:34:52.293  INFO    appunti della sessione accesi
+17:34:52.293  INFO    palco montato: desktop 1920x1080, pixel in memoria, input acceso, suono pronto, appunti accesi
+17:34:52.294  DIAGN   posto «mutter default seat»: capacita' richieste
+17:34:52.314  DIAGN   dispositivo «remotix virtual pointer»: puntatore no, tastiera no
+17:34:52.314  DIAGN   dispositivo «remotix virtual pointer» pronto
+17:34:52.315  DIAGN   dispositivo «remotix virtual keyboard»: puntatore no, tastiera si
+17:34:52.318  DIAGN   stato del flusso di cattura: paused → streaming
+17:34:52.321  INFO    disposizione della sessione letta da libei: English (US), English (US)
+17:34:52.321  DIAGN   dispositivo «remotix virtual keyboard» pronto
+17:34:52.322  DIAGN   dispositivo «remotix shared virtual absolute pointer»: puntatore si, tastiera no
+17:34:52.322  DIAGN   regione del puntatore: 0,0 1920x1080 (mapping-id «bd5fd368-9df4-422e-8844-4227363e303a»)
+17:34:52.322  DIAGN   regione del puntatore: 0,0 1920x1080 (mapping-id «bd5fd368-9df4-422e-8844-4227363e303a»)
+17:34:52.322  DIAGN   dispositivo «remotix shared virtual absolute pointer» pronto
+17:34:52.416  INFO    i fotogrammi arrivano come memoria condivisa (MemFd) (1 piani)
+17:34:52.416  DIAGN   fotogramma 1: buffer fd 60, seq 1, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.416  INFO    primo fotogramma dal desktop: 1920x1080, passo 7680
+17:34:52.454  DIAGN   fotogramma 2: buffer fd 61, seq 2, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.455  DIAGN   atteso il ridisegno alla misura nuova: 2 fotogrammi raccolti
+17:34:52.455  INFO    tastiera e mouse collegati alla sessione
+17:34:52.455  DIAGN   stato di drdynvc: 0
+17:34:52.455  INFO    misura della rete attiva: il client dichiara di saperla fare
+17:34:52.455  DIAGN   rete: RTT 0.0 ms (minimo 0.0), banda 0 kbit/s, in volo 0 di 2, spediti 0
+17:34:52.455  DIAGN   canale degli appunti aperto
+17:34:52.455  INFO    appunti collegati alla sessione
+17:34:52.456  DIAGN   stato di drdynvc: 1
+17:34:52.456  DIAGN   sincronizzazione: BlocMaiusc spento, BlocNum spento
+17:34:52.456  DIAGN   sincronizzazione: BlocMaiusc spento, BlocNum spento
+17:34:52.456  DIAGN   stato di drdynvc: 2
+17:34:52.456  DIAGN   canale EGFX aperto, aspetto CapsAdvertise
+17:34:52.456  DIAGN   canale DISP: identificativo 2
+17:34:52.456  DIAGN   canale DISP aperto, aspetto che il client lo confermi
+17:34:52.456  DIAGN   canale audio: identificativo 3
+17:34:52.456  DIAGN   canale audio aperto, aspetto che il client dichiari i formati
+17:34:52.456  INFO    appunti del client: versione 2, nomi lunghi si, file no, blocco dati no
+17:34:52.456  DIAGN   appunti: il client ha copiato solo formati che non sappiamo tradurre
+17:34:52.475  INFO    canale DISP aperto: al massimo 1 monitor, 8192x8192 per lato
+17:34:52.475  INFO    EGFX negoziato: versione 0x00080105, flag 0x12 → AVC disponibile
+17:34:52.475  INFO    formati audio del client: 3 — AAC no, Opus no, PCM SI
+17:34:52.475  DIAGN   formati audio, uno per uno: 0x0001 48000 Hz 2 ch 16 bit, 0x0001 44100 Hz 2 ch 16 bit, 0x0001 22050 Hz 2 ch 16 bit
+17:34:52.475  INFO    audio negoziato: PCM 44100 Hz, 2 canali, 16 bit (formato 1 di 3), versione del canale 8 — WAVE2 senza DSP
+17:34:52.475  DIAGN   stato della cattura audio: unconnected → connecting
+17:34:52.475  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] libva: VA-API version 1.22.0
+17:34:52.475  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] libva: Trying to open /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so
+17:34:52.477  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] libva: Found init function __vaDriverInit_1_22
+17:34:52.478  DIAGN   stato della cattura audio: connecting → paused
+17:34:52.478  INFO    cattura audio avviata: 44100 Hz, 2 canali, dal monitor di «remotix»
+17:34:52.478  INFO    suono collegato alla sessione: 44100 Hz, 2 canali
+17:34:52.478  DIAGN   audio: 0 fotogrammi in 0 blocchi spediti, 0 blocchi riscontrati dal client, 0 di silenzio taciuto, 0 buttati, in coda 0 byte
+17:34:52.480  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] libva: va_openDriver() returns 0
+17:34:52.480  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] Initialised VAAPI connection: version 1.22
+17:34:52.480  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] VAAPI driver: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ().
+17:34:52.480  DIAGN   libav: [AVHWDeviceContext @ 0x7fcce40036c0] Driver not found in known nonstandard list, using standard behaviour.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Input surface format is nv12.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Using VAAPI profile VAProfileH264High (7).
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Using VAAPI entrypoint VAEntrypointEncSliceLP (8).
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Using VAAPI render target format YUV420 (0x1).
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] RC mode: CBR.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Block Level bitrate control: OFF.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] RC target: 100% of 10000000 bps over 500 ms.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] RC buffer: 5000000 bits, initial fullness 3750000 bits.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] RC framerate: 60/1 (60.00 fps).
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Driver does not report any additional prediction constraints.
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Using intra and P-frames (supported references: 3 / 0).
+17:34:52.480  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] All wanted packed headers available (wanted 0xd, found 0x1f).
+17:34:52.482  INFO    formato audio negoziato con PipeWire: S16, 44100 Hz, 2 canali
+17:34:52.483  DIAGN   stato della cattura audio: paused → streaming
+17:34:52.483  INFO    primo blocco di suono dalla sessione: 207 fotogrammi
+17:34:52.483  DIAGN   libav: [h264_vaapi @ 0x7fcce4000cc0] Using level 4.2.
+17:34:52.483  DIAGN   codificatore h264_vaapi aperto su /dev/dri/renderD128
+17:34:52.484  INFO    codificatore: AVC420 via h264_vaapi (in GPU)
+17:34:52.484  INFO    tela pronta: desktop 1920x1080, superficie 1920x1088, codec AVC420 via h264_vaapi (in GPU)
+17:34:52.491  DIAGN   fotogramma 3: buffer fd 62, seq 3, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.514  DIAGN   fotogramma 4: buffer fd 63, seq 4, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.519  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:34:52.529  DIAGN   fotogramma 5: buffer fd 60, seq 5, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.535  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:34:52.548  DIAGN   fotogramma 6: buffer fd 61, seq 6, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.563  DIAGN   fotogramma 7: buffer fd 62, seq 7, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.596  DIAGN   fotogramma 8: buffer fd 63, seq 8, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.612  DIAGN   fotogramma 9: buffer fd 60, seq 9, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.629  DIAGN   fotogramma 10: buffer fd 61, seq 10, disegno non interrogabile, danno 1 regioni, copre tutto
+17:34:52.664  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:34:52.680  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:34:52.719  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:34:52.735  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:34:52.759  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:34:52.775  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:34:54.456  DIAGN   rete: RTT 0.4 ms (minimo 0.3), banda 174192 kbit/s, in volo 0 di 2, spediti 13
+17:34:56.457  DIAGN   rete: RTT 0.4 ms (minimo 0.4), banda 174192 kbit/s, in volo 0 di 2, spediti 13
+17:34:57.482  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 195687 di silenzio taciuto, 0 buttati, in coda 8468 byte
+17:34:57.482  DIAGN   audio, viaggio dei riscontri su 9 blocchi: minimo 0 ms, medio 12 ms, MASSIMO 41 ms
+17:34:58.458  DIAGN   rete: RTT 0.4 ms (minimo 0.4), banda 174192 kbit/s, in volo 0 di 2, spediti 13
+17:35:00.464  DIAGN   rete: RTT 0.3 ms (minimo 0.3), banda 174192 kbit/s, in volo 0 di 2, spediti 14
+17:35:02.465  DIAGN   rete: RTT 0.4 ms (minimo 0.4), banda 174192 kbit/s, in volo 0 di 2, spediti 14
+17:35:02.497  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 418186 di silenzio taciuto, 0 buttati, in coda 2824 byte
+17:35:04.467  DIAGN   rete: RTT 0.3 ms (minimo 0.3), banda 174192 kbit/s, in volo 0 di 2, spediti 14
+17:35:06.467  DIAGN   rete: RTT 0.5 ms (minimo 0.5), banda 174192 kbit/s, in volo 0 di 2, spediti 14
+17:35:06.648  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:06.664  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:06.739  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:06.755  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:06.836  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:06.852  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.010  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.026  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.050  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.082  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.115  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.147  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.198  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.214  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.230  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.246  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.276  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.292  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.362  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.378  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.504  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 638333 di silenzio taciuto, 0 buttati, in coda 5644 byte
+17:35:07.555  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.571  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.657  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.673  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.739  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.771  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:07.814  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.830  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.867  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.883  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:07.920  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:07.936  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:07.977  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.009  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.043  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.075  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.092  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.108  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.141  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.157  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.195  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.211  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.313  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.329  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.369  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.401  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.420  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.436  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.455  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.470  DIAGN   rete: RTT 5.6 ms (minimo 0.1), banda 168440 kbit/s, in volo 1 di 2, spediti 79
+17:35:08.471  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.528  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.544  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.592  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.624  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.652  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.668  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.711  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.743  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.763  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.779  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.818  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.834  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.856  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.872  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.891  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.907  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:08.953  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:08.969  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.049  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.081  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.121  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.137  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.153  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.169  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.477  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.493  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.515  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.547  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.574  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.590  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.611  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.643  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.666  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.682  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.719  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.735  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.771  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.803  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.827  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.843  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.880  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.896  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.919  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.951  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:09.982  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:09.998  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.021  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.037  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.073  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.105  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.129  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.145  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.179  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.195  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.234  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.250  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.284  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.300  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.334  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.350  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.367  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.383  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.431  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.447  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.497  DIAGN   rete: RTT 7.5 ms (minimo 0.2), banda 168440 kbit/s, in volo 2 di 2, spediti 143
+17:35:10.497  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.513  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.573  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.589  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.623  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.639  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.684  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.700  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.716  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.732  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:10.748  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.764  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.799  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.815  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.855  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.871  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:10.935  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:10.951  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.022  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.038  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.070  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.086  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.122  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.138  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.158  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.190  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.231  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.263  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.284  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.316  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.355  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.387  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.426  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.458  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.501  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.517  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.549  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.565  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.693  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.725  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.765  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.781  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:11.892  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:11.924  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.020  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.036  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.122  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.138  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.156  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.188  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.229  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.245  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.311  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.327  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.380  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.412  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.434  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.450  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.474  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.490  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.511  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 858951 di silenzio taciuto, 0 buttati, in coda 6584 byte
+17:35:12.511  DIAGN   rete: RTT 2.7 ms (minimo 0.1), banda 168424 kbit/s, in volo 1 di 2, spediti 210
+17:35:12.527  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.559  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.598  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.614  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.633  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.665  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.729  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.745  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.764  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.780  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:12.941  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:12.957  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.054  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.070  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.168  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.200  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.238  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.254  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.279  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.295  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.316  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.332  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.369  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.401  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.442  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.458  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.474  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.490  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:13.802  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.834  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.854  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.870  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.876  DIAGN   cattura su 300 fotogrammi: 0 buffer distinti, disegno non finito 0, danno parziale 283, senza intestazione 0
+17:35:13.893  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.909  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.933  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.949  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:13.981  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:13.997  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.095  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.127  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.159  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.175  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:14.212  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.228  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.263  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.279  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.311  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.327  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.359  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.375  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.472  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.488  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.511  DIAGN   rete: RTT 0.1 ms (minimo 0.0), banda 168440 kbit/s, in volo 2 di 2, spediti 277
+17:35:14.511  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.527  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.554  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.570  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.592  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.608  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.631  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.647  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.692  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.708  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.739  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.755  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.798  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.814  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.839  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.856  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.897  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.913  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:14.976  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:14.992  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.032  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.048  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.088  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.104  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.121  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.137  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.158  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.174  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.196  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.212  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.241  DIAGN   tempo per fotogramma: conversione 8.5 ms, caricamento 2.4 ms, codifica 3.2 ms (media su 300)
+17:35:15.261  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.277  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.330  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.346  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.396  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.412  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.444  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.460  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.498  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.514  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.530  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.546  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.562  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.578  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.746  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.762  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.778  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.794  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:15.842  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.858  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:15.963  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:15.979  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.028  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.044  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.063  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.079  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.111  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.127  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.165  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.181  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:16.289  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.321  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.353  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.369  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.404  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.420  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.451  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.467  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.491  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.507  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.516  DIAGN   rete: RTT 1.7 ms (minimo 0.1), banda 168440 kbit/s, in volo 1 di 2, spediti 344
+17:35:16.575  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.591  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.664  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.696  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.721  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.737  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.771  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.787  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:16.835  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.851  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.873  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.889  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.913  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.929  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:16.961  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:16.977  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.094  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.110  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.142  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.158  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.177  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.193  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.282  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.298  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.314  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.330  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.450  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.466  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.503  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.518  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 1080744 di silenzio taciuto, 0 buttati, in coda 2824 byte
+17:35:17.519  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.535  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.551  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.651  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.683  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.721  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.737  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.775  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.791  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.871  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.887  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:17.920  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:17.936  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.004  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.020  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.062  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.078  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.094  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.110  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:18.145  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.161  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:18.198  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.214  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.248  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.264  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.315  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.331  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.434  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.450  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:18.488  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.504  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:18.520  DIAGN   rete: RTT 0.3 ms (minimo 0.0), banda 168440 kbit/s, in volo 1 di 2, spediti 415
+17:35:18.539  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.555  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.613  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.629  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.665  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.681  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.701  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.717  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.751  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.783  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.811  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.827  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.848  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.864  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.888  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.904  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:18.939  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:18.955  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.051  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.067  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.165  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.197  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.221  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.237  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.271  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.287  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.415  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.431  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.447  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.479  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.505  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.521  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.560  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.576  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:19.664  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.680  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.699  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.715  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.748  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.764  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.781  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.797  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.836  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.852  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.879  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.895  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.942  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.958  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:19.974  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:19.990  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.026  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.058  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.104  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.120  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.188  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.204  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.229  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.245  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.284  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.316  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.363  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.379  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.416  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.432  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.476  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.492  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.512  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.526  DIAGN   rete: RTT 6.1 ms (minimo 0.1), banda 168424 kbit/s, in volo 2 di 2, spediti 479
+17:35:20.528  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.557  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.573  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.609  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.641  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:20.970  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:20.986  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.011  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.027  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.043  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.059  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.082  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.114  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.141  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.157  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.203  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.219  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.254  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.286  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.321  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.353  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.388  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.404  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.453  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.485  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.566  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.598  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.619  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.627  DIAGN   cattura su 600 fotogrammi: 0 buffer distinti, disegno non finito 0, danno parziale 583, senza intestazione 0
+17:35:21.635  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.658  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.674  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.771  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.787  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.809  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.825  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:21.901  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.917  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:21.972  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:21.988  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.015  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.031  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.047  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.063  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.079  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.095  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.279  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.295  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.319  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.335  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.359  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.375  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.419  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.451  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.499  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.521  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 1300186 di silenzio taciuto, 0 buttati, in coda 7528 byte
+17:35:22.531  DIAGN   rete: RTT 3.9 ms (minimo 0.1), banda 168440 kbit/s, in volo 1 di 2, spediti 541
+17:35:22.531  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.567  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.599  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.633  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.649  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.722  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.738  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.771  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.803  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:22.859  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.875  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:22.955  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:22.971  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.042  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.058  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.084  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.100  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.138  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.170  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.197  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.213  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.240  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.256  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.281  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.297  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.326  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.342  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.408  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.440  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.469  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.485  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.525  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.541  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.580  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.596  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.713  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.729  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.761  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.777  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.864  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.880  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:23.969  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:23.985  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:24.019  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.035  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.068  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.084  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.116  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.132  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.167  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.183  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.232  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.248  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.279  DIAGN   tempo per fotogramma: conversione 8.4 ms, caricamento 2.3 ms, codifica 3.1 ms (media su 300)
+17:35:24.280  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.296  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.345  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.361  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.397  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.413  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:24.446  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.462  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.500  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.516  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.533  DIAGN   rete: RTT 1.9 ms (minimo 0.1), banda 168440 kbit/s, in volo 2 di 2, spediti 610
+17:35:24.533  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.549  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:24.581  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.597  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.647  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.663  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:24.702  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.718  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.750  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.766  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.809  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.841  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.862  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.878  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.927  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.943  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:24.960  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:24.976  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.125  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.141  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:25.206  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.222  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.238  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.254  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.289  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.305  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.376  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.392  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.408  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.424  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.440  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.456  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:25.508  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.524  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.644  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.660  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.688  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.704  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.801  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.817  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:25.852  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.868  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:25.901  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:25.917  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.045  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.061  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.101  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.117  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.149  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.165  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:26.200  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.216  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.264  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.280  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.299  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.315  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.347  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.363  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:26.400  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.416  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:26.454  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.470  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.494  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.510  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.542  DIAGN   rete: RTT 2.2 ms (minimo 0.0), banda 168440 kbit/s, in volo 1 di 2, spediti 681
+17:35:26.594  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.610  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.642  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.658  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.757  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.789  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.813  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.845  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.869  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.885  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.910  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.926  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.950  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:26.966  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:26.991  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.007  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.041  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.073  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.137  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.153  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.203  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.219  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.381  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.397  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.430  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.446  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.478  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.494  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.524  DIAGN   audio: 22786 fotogrammi in 9 blocchi spediti, 18 blocchi riscontrati dal client, 1521274 di silenzio taciuto, 0 buttati, in coda 5644 byte
+17:35:27.598  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.630  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.653  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.669  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.717  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.733  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.768  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.784  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.816  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.832  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.868  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.884  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.906  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.938  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:27.964  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:27.980  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.005  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.021  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.053  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.069  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.142  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.158  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.195  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.211  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.235  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.251  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.288  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.304  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.326  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.342  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.358  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.374  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.396  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.412  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.449  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.465  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.495  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.511  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.528  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.544  DIAGN   rete: RTT 0.5 ms (minimo 0.1), banda 168424 kbit/s, in volo 1 di 2, spediti 745
+17:35:28.544  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.575  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.591  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.627  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.659  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.698  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.730  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.771  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.803  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.833  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.849  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.875  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.891  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:28.964  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:28.980  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.008  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.024  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.056  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.072  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.157  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.173  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.189  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.205  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.221  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.237  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:29.333  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.349  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.397  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.413  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.445  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.461  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:29.541  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.557  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.577  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.593  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.614  DIAGN   cattura su 900 fotogrammi: 0 buffer distinti, disegno non finito 0, danno parziale 883, senza intestazione 0
+17:35:29.616  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.632  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.648  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.680  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.706  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.722  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.748  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.764  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.803  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.819  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.918  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.934  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.956  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:29.972  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:29.988  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.004  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.024  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.040  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.078  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.094  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.206  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.222  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.238  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.270  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.294  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.310  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.335  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.351  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.390  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.422  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.449  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.465  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.507  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.539  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.565  DIAGN   rete: RTT 5.4 ms (minimo 0.1), banda 168440 kbit/s, in volo 1 di 2, spediti 809
+17:35:30.581  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.597  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.613  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.629  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.670  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.702  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.728  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.744  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.779  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.795  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.828  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.844  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.886  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.902  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.928  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.944  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:30.983  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:30.999  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:31.031  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.047  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:31.085  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.101  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:31.213  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.229  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:31.245  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.277  DIAGN   riprendo: 1 fotogrammi non riscontrati, soglia 2
+17:35:31.325  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.341  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:31.423  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+17:35:31.439  DIAGN   riprendo: 0 fotogrammi non riscontrati, soglia 2
+17:35:31.503  DIAGN   strozzo: 2 fotogrammi non riscontrati, soglia 2
+[17:35:31:515] [363385:00058bc8] [ERROR][com.freerdp.core.peer] - [rdp_set_error_info]: ERRINFO_LOGOFF_BY_USER [0x0001000C]
+17:35:31.515  INFO    il client se n'e' andato
+17:35:31.515  DIAGN   stato della cattura audio: streaming → paused
+17:35:31.515  DIAGN   stato della cattura audio: paused → unconnected
+17:35:31.516  INFO    cattura audio fermata
+17:35:31.516  INFO    audio: 22786 fotogrammi spediti, 1697909 di silenzio taciuto, 0 buttati, 18 blocchi riscontrati dal client
+17:35:31.517  INFO    connessione conclusa
+17:36:25.731  DIAGN   gnome-session chiede se si puo' uscire
+17:36:25.735  INFO    la sessione grafica sta uscendo: lo si sa subito, non fra cinque secondi
+17:36:25.735  DIAGN   disiscritti da gnome-session: la nostra vita torna nostra
+17:36:25.735  DIAGN   thread di input chiuso
+17:36:25.738  DIAGN   stato del flusso di cattura: streaming → paused
+17:36:25.740  DIAGN   stato del flusso di cattura: paused → unconnected
+17:36:25.740  INFO    il flusso di cattura si e' staccato
+17:36:25.790  INFO    palco smontato
+17:36:26.048  DIAGN   il bus di sessione si e' chiuso: se ne apre uno nuovo

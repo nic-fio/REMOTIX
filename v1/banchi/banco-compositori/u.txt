@@ -1,0 +1,1 @@
+RIGA	cadenza--fissa	1920x1080	BGRx	60	dmabuf	?	0.00	0	0.00	0	0	0	0	0	0	0.0	0.0	0.0	0.0

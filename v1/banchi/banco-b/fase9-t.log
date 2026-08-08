@@ -1,0 +1,20 @@
+[05:57:55:867] [102291:00018f95] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x08 -> no RDP scancode found
+[05:57:55:867] [102291:00018f95] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x5d -> no RDP scancode found
+[05:57:55:898] [102291:00018f95] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+[05:57:55:898] [102291:00018f95] [WARN][com.freerdp.core.license] - [license_read_binary_blob_data]: license binary blob::type BB_ERROR_BLOB, length=0, skipping.
+[05:57:55:898] [102291:00018f95] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+On calling fusermount posix_spawn failed: No such file or directory
+posix_spawn(p)() for fusermount3 failed: No such file or directory[05:57:55:938] [102291:00018fc5] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f3be8c64190
+[05:58:21:233] [102291:00018f93] [ERROR][com.freerdp.utils.signal] - [term_handler]: Caught signal 'Terminated' [15]
+[05:58:21:233] [102291:00018f93] [ERROR][com.freerdp.core] - [freerdp_abort_connect_context]: ERRCONNECT_CONNECT_CANCELLED [0x0002000B]
+[05:58:21:252] [102291:00018fc5] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f3be8c64190
+X connection to :112 broken (explicit kill or server shutdown).
+[05:57:55:904] [102291:00018f95] [INFO][com.freerdp.gdi] - [gdi_init_ex]: Local framebuffer format  PIXEL_FORMAT_BGRX32
+[05:57:55:904] [102291:00018f95] [INFO][com.freerdp.gdi] - [gdi_init_ex]: Remote framebuffer format PIXEL_FORMAT_BGRA32
+[05:57:55:907] [102291:00018f95] [INFO][com.freerdp.channels.rdpsnd.client] - [rdpsnd_load_device_plugin]: [static] Loaded fake backend for rdpsnd
+[05:57:55:908] [102291:00018f95] [INFO][com.freerdp.channels.drdynvc.client] - [dvcman_load_addin]: Loading Dynamic Virtual Channel ainput
+[05:57:55:908] [102291:00018f95] [INFO][com.freerdp.channels.drdynvc.client] - [dvcman_load_addin]: Loading Dynamic Virtual Channel rdpgfx
+[05:57:55:908] [102291:00018f95] [INFO][com.freerdp.channels.drdynvc.client] - [dvcman_load_addin]: Loading Dynamic Virtual Channel disp
+[05:57:55:908] [102291:00018f95] [INFO][com.freerdp.channels.drdynvc.client] - [dvcman_load_addin]: Loading Dynamic Virtual Channel rdpsnd
+[05:58:21:233] [102291:00018f93] [INFO][com.freerdp.core] - [sig_abort_connect]: Signal Terminated [15], terminating session 0x5638109f8230
+[05:58:21:233] [102291:00018f95] [INFO][com.freerdp.client.common] - [client_auto_reconnect_ex]: Network disconnect!

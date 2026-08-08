@@ -1,0 +1,8 @@
+# scheda presa il 2026-08-06 05:03:29
+vcpu=4
+kernel=6.12.100+deb13-amd64
+gpu=by-path card0 card1 renderD128 
+vainfo=0
+remotix=REMOTIX 0.1.0
+codec=AVC420 misura=2560x984 finestra=20s fotogrammi=610 fps=30.5 cpu_centesimi_di_core=12555 cpu_ms_per_fotogramma=41
+codec=RFX misura=2560x984 finestra=20s fotogrammi=608 fps=30.4 cpu_centesimi_di_core=11790 cpu_ms_per_fotogramma=38

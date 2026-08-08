@@ -1,0 +1,143 @@
+[10:29:56:473] [76791:00012bf9] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x08 -> no RDP scancode found
+[10:29:56:473] [76791:00012bf9] [WARN][com.freerdp.client.x11] - [load_map_from_xkbfile]:     : keycode: 0x5d -> no RDP scancode found
+[10:29:56:501] [76791:00012bf9] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+[10:29:56:501] [76791:00012bf9] [WARN][com.freerdp.core.license] - [license_read_binary_blob_data]: license binary blob::type BB_ERROR_BLOB, length=0, skipping.
+[10:29:56:501] [76791:00012bf9] [WARN][com.freerdp.core.connection] - [rdp_client_connect_auto_detect]: expected messageChannelId=1008, got 1003
+On calling fusermount posix_spawn failed: No such file or directory
+posix_spawn(p)() for fusermount3 failed: No such file or directory[10:29:56:534] [76791:00012c2a] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f6d13284190
+[10:29:56:516] [76791:00012bf9] [INFO][com.freerdp.channels.rdpsnd.client] - [rdpsnd_load_device_plugin]: [static] Loaded pulse backend for rdpsnd
+[10:29:56:534] [76791:00012c2a] [INFO][com.freerdp.channels.rdpsnd.client] - [rdpsnd_load_device_plugin]: [dynamic] Loaded pulse backend for rdpsnd
+[10:29:56:534] [76791:00012c29] [TRACE][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_server_audio_formats_pdu]: IFCALLRESULT(rdpsnd->device->ServerFormatAnnounce) == NULL
+[10:29:56:534] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_server_audio_formats_pdu]: [dynamic] Server Audio Formats
+[10:29:56:534] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_send_client_audio_formats]: [dynamic] Client Audio Formats
+[10:29:56:534] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_send_quality_mode_pdu]: [dynamic] QualityMode: 2
+[10:29:56:547] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_volume_pdu]: [dynamic] Volume: 0xFFFFFFFF
+[10:30:04:743] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 0 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x12c5, dwAudioTimeStamp=0x000012c5
+[10:30:04:743] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_ensure_device_is_open]: [dynamic] Opening device with format WAVE_FORMAT_PCM [backend WAVE_FORMAT_PCM]
+[10:30:04:759] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 0 wTimeStamp: 4805, size: 8820
+[10:30:04:759] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:04:761] [76791:00012c67] [INFO][com.freerdp.channels.rdpsnd.client] - [rdpsnd_set_volume_success_cb]: 1
+[10:30:04:777] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 1 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x12e7, dwAudioTimeStamp=0x000012e7
+[10:30:04:777] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 1 wTimeStamp: 4839, size: 8820
+[10:30:04:777] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:04:842] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 2 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1328, dwAudioTimeStamp=0x00001328
+[10:30:04:843] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 2 wTimeStamp: 4904, size: 8820
+[10:30:04:843] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:04:875] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 3 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1349, dwAudioTimeStamp=0x00001349
+[10:30:04:875] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 3 wTimeStamp: 4937, size: 8820
+[10:30:04:875] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:04:941] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 4 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x138b, dwAudioTimeStamp=0x0000138b
+[10:30:04:941] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 4 wTimeStamp: 5003, size: 8820
+[10:30:04:941] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:04:975] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 5 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x13ad, dwAudioTimeStamp=0x000013ad
+[10:30:04:975] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 5 wTimeStamp: 5037, size: 8820
+[10:30:04:975] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:041] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 6 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x13ee, dwAudioTimeStamp=0x000013ee
+[10:30:05:041] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 6 wTimeStamp: 5102, size: 8820
+[10:30:05:041] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:074] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 7 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x140f, dwAudioTimeStamp=0x0000140f
+[10:30:05:074] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 7 wTimeStamp: 5135, size: 8820
+[10:30:05:074] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:140] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 8 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1451, dwAudioTimeStamp=0x00001451
+[10:30:05:140] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 8 wTimeStamp: 5201, size: 8820
+[10:30:05:140] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:173] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 9 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1473, dwAudioTimeStamp=0x00001473
+[10:30:05:173] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 9 wTimeStamp: 5235, size: 8820
+[10:30:05:173] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:239] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 10 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x14b4, dwAudioTimeStamp=0x000014b4
+[10:30:05:239] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 10 wTimeStamp: 5300, size: 8820
+[10:30:05:239] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:272] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 11 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x14d6, dwAudioTimeStamp=0x000014d6
+[10:30:05:272] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 11 wTimeStamp: 5334, size: 8820
+[10:30:05:272] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:338] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 12 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1517, dwAudioTimeStamp=0x00001517
+[10:30:05:338] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 12 wTimeStamp: 5399, size: 8820
+[10:30:05:338] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:371] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 13 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1539, dwAudioTimeStamp=0x00001539
+[10:30:05:371] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 13 wTimeStamp: 5433, size: 8820
+[10:30:05:371] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:438] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 14 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x157b, dwAudioTimeStamp=0x0000157b
+[10:30:05:438] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 14 wTimeStamp: 5499, size: 8820
+[10:30:05:438] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:470] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 15 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x159c, dwAudioTimeStamp=0x0000159c
+[10:30:05:470] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 15 wTimeStamp: 5532, size: 8820
+[10:30:05:470] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:536] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 16 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x15de, dwAudioTimeStamp=0x000015de
+[10:30:05:536] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 16 wTimeStamp: 5598, size: 8820
+[10:30:05:536] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:570] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 17 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x15ff, dwAudioTimeStamp=0x000015ff
+[10:30:05:570] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 17 wTimeStamp: 5631, size: 8820
+[10:30:05:570] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:635] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 18 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1641, dwAudioTimeStamp=0x00001641
+[10:30:05:635] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 18 wTimeStamp: 5697, size: 8820
+[10:30:05:635] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:668] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 19 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1662, dwAudioTimeStamp=0x00001662
+[10:30:05:668] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 19 wTimeStamp: 5730, size: 8820
+[10:30:05:668] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:734] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 20 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x16a4, dwAudioTimeStamp=0x000016a4
+[10:30:05:734] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 20 wTimeStamp: 5796, size: 8820
+[10:30:05:734] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:767] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 21 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x16c5, dwAudioTimeStamp=0x000016c5
+[10:30:05:767] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 21 wTimeStamp: 5829, size: 8820
+[10:30:05:767] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:833] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 22 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1707, dwAudioTimeStamp=0x00001707
+[10:30:05:833] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 22 wTimeStamp: 5895, size: 8820
+[10:30:05:833] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:866] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 23 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1728, dwAudioTimeStamp=0x00001728
+[10:30:05:866] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 23 wTimeStamp: 5928, size: 8820
+[10:30:05:866] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:932] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 24 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x176a, dwAudioTimeStamp=0x0000176a
+[10:30:05:932] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 24 wTimeStamp: 5994, size: 8820
+[10:30:05:932] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:05:966] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 25 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x178c, dwAudioTimeStamp=0x0000178c
+[10:30:05:966] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 25 wTimeStamp: 6028, size: 8820
+[10:30:05:966] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:031] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 26 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x17cd, dwAudioTimeStamp=0x000017cd
+[10:30:06:031] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 26 wTimeStamp: 6093, size: 8820
+[10:30:06:032] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:065] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 27 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x17ee, dwAudioTimeStamp=0x000017ee
+[10:30:06:065] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 27 wTimeStamp: 6126, size: 8820
+[10:30:06:065] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:131] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 28 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1831, dwAudioTimeStamp=0x00001831
+[10:30:06:131] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 28 wTimeStamp: 6193, size: 8820
+[10:30:06:131] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:164] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 29 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1852, dwAudioTimeStamp=0x00001852
+[10:30:06:164] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 29 wTimeStamp: 6226, size: 8820
+[10:30:06:164] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:230] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 30 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1893, dwAudioTimeStamp=0x00001893
+[10:30:06:230] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 30 wTimeStamp: 6291, size: 8820
+[10:30:06:230] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:296] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 31 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x18d5, dwAudioTimeStamp=0x000018d5
+[10:30:06:296] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 31 wTimeStamp: 6357, size: 8820
+[10:30:06:296] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:329] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 32 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x18f6, dwAudioTimeStamp=0x000018f6
+[10:30:06:329] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 32 wTimeStamp: 6390, size: 8820
+[10:30:06:329] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:362] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 33 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1917, dwAudioTimeStamp=0x00001917
+[10:30:06:362] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 33 wTimeStamp: 6423, size: 8820
+[10:30:06:362] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:428] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 34 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1959, dwAudioTimeStamp=0x00001959
+[10:30:06:428] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 34 wTimeStamp: 6489, size: 8820
+[10:30:06:428] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:494] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 35 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x199b, dwAudioTimeStamp=0x0000199b
+[10:30:06:494] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 35 wTimeStamp: 6555, size: 8820
+[10:30:06:494] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:528] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 36 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x19bd, dwAudioTimeStamp=0x000019bd
+[10:30:06:528] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 36 wTimeStamp: 6589, size: 8820
+[10:30:06:528] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:593] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 37 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x19ff, dwAudioTimeStamp=0x000019ff
+[10:30:06:593] [76791:00012c29] [DEBUG][com.freerdp.channels.[10:30:08:970] [76791:00012bf7] [ERROR][com.freerdp.utils.signal] - [term_handler]: Caught signal 'Terminated' [15]
+[10:30:08:970] [76791:00012bf7] [ERROR][com.freerdp.core] - [freerdp_abort_connect_context]: ERRCONNECT_CONNECT_CANCELLED [0x0002000B]
+[10:30:08:973] [76791:00012c2a] [WARN][com.freerdp.channels.drdynvc.client] - [check_open_close_receive]: {Microsoft::Windows::RDS::DisplayControl:2} OnOpen=(nil), OnClose=0x7f6d13284190
+[10:30:09:070] [76791:00012c2a] [WARN][com.freerdp.channels.rdpsnd.client] - [rdpsnd_check_pulse]: pulse->stream=(nil)
+rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 37 wTimeStamp: 6655, size: 8820
+[10:30:06:593] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:626] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 38 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1a20, dwAudioTimeStamp=0x00001a20
+[10:30:06:626] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 38 wTimeStamp: 6688, size: 8820
+[10:30:06:626] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:692] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 39 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1a62, dwAudioTimeStamp=0x00001a62
+[10:30:06:692] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 39 wTimeStamp: 6754, size: 8820
+[10:30:06:692] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+[10:30:06:725] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_recv_wave2_pdu]: [dynamic] Wave2PDU: cBlockNo: 40 wFormatNo: 1 [WAVE_FORMAT_PCM] , align=4 wTimeStamp=0x1a83, dwAudioTimeStamp=0x00001a83
+[10:30:06:725] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [rdpsnd_treat_wave]: [dynamic] Wave: cBlockNo: 40 wTimeStamp: 6787, size: 8820
+[10:30:06:725] [76791:00012c29] [DEBUG][com.freerdp.channels.rdpsnd.client] - [audio_format_print]: WAVE_FORMAT_PCM:	 wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0

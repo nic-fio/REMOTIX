@@ -1,0 +1,60 @@
+fotogramma 1  superficie 1920x1088  byte 30043  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 2  superficie 1920x1088  byte 5273  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 3  superficie 1920x1088  byte 5641  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 4  superficie 1920x1088  byte 8459  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 5  superficie 1920x1088  byte 5495  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 6  superficie 1920x1088  byte 4922  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 7  superficie 1920x1088  byte 4601  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 8  superficie 1920x1088  byte 4614  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 9  superficie 1920x1088  byte 4431  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 10  superficie 1920x1088  byte 4544  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 11  superficie 1920x1088  byte 4404  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 12  superficie 1920x1088  byte 11354  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 13  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 14  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 15  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 16  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 17  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 18  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 19  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 20  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 21  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 22  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 23  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 24  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 25  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 26  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 27  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 28  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 29  superficie 1920x1088  byte 20832  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI
+fotogramma 30  superficie 1920x1088  byte 20834  rettangoli 1
+   rect[0]  left=0 top=0 right=1920 bottom=1080   (right-left=1920, bottom-top=1080)   <-- right == larghezza: ESCLUSIVI

@@ -1,0 +1,15 @@
+=======================================================
+    glmark2 2023.01
+=======================================================
+    OpenGL Information
+    GL_VENDOR:      Intel
+    GL_RENDERER:    Mesa Intel(R) UHD Graphics 770 (ADL-S GT1)
+    GL_VERSION:     4.6 (Compatibility Profile) Mesa 25.0.7-2+deb13u1
+    Surface Config: buf=32 r=8 g=8 b=8 a=8 depth=24 stencil=0 samples=0
+    Surface Size:   3840x2160 fullscreen
+=======================================================
+[build] <default>: FPS: 2694 FrameTime: 0.371 ms
+[build] <default>: FPS: 2632 FrameTime: 0.380 ms
+=======================================================
+                                  glmark2 Score: 2662 
+=======================================================

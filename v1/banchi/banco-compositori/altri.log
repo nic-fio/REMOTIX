@@ -1,0 +1,49 @@
+== kwin-1920x1080-memoria: 1920x1080, BGRx, tetto dichiarato 60 fps, memoria ==
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 520 in 11.99 s  →  43.27 al secondo
+  buffer: MemFd, 4 distinti, stride 7680
+  danno: pieno 1, parziale 735, assente 0
+  salti di sequenza 0, disegno non finito 0
+  intervalli ms: min 21.4  mediana 23.2  p95 23.8  max 24.1
+== kwin-2560x1440-memoria: 2560x1440, BGRx, tetto dichiarato 60 fps, memoria ==
+  formato negoziato: 2560x1440 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 442 in 11.98 s  →  36.81 al secondo
+  buffer: MemFd, 4 distinti, stride 10240
+  danno: pieno 1, parziale 623, assente 0
+  salti di sequenza 0, disegno non finito 0
+  intervalli ms: min 24.8  mediana 27.2  p95 28.0  max 28.4
+== kwin-3840x2160-memoria: 3840x2160, BGRx, tetto dichiarato 60 fps, memoria ==
+  formato negoziato: 3840x2160 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 333 in 11.98 s  →  27.71 al secondo
+  buffer: MemFd, 4 distinti, stride 15360
+  danno: pieno 1, parziale 469, assente 0
+  salti di sequenza 0, disegno non finito 0
+  intervalli ms: min 29.5  mediana 35.9  p95 40.2  max 44.4
+== kwin-1920x1080-dmabuf--dmabuf: 1920x1080, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  formato negoziato: 1920x1080 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 716 in 12.02 s  →  59.50 al secondo
+  buffer: DMA-BUF, 4 distinti, stride 7680
+  danno: pieno 1, parziale 1009, assente 0
+  salti di sequenza 0, disegno non finito 1010
+  intervalli ms: min 16.1  mediana 16.7  p95 17.5  max 18.6
+  1920x1080, passo 7680
+  fotogrammi 733 in 12.01 s  →  60.97 al secondo
+  danno: pieno 6, parziale 1031, assente 0
+  intervalli ms: min 14.2  mediana 16.5  p95 16.7  max 17.3
+  2560x1440, passo 10240
+  fotogrammi 738 in 11.99 s  →  61.46 al secondo
+  danno: pieno 6, parziale 1037, assente 0
+  intervalli ms: min 12.7  mediana 16.2  p95 16.8  max 20.1
+  3840x2160, passo 15360
+  fotogrammi 484 in 12.00 s  →  40.27 al secondo
+  danno: pieno 504, parziale 184, assente 0
+  intervalli ms: min 11.7  mediana 20.1  p95 37.7  max 45.3
+  1280x720, passo 5120
+  fotogrammi 731 in 12.00 s  →  60.82 al secondo
+  danno: pieno 1, parziale 1032, assente 0
+  intervalli ms: min 14.6  mediana 16.5  p95 16.7  max 17.2

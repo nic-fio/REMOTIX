@@ -1,0 +1,10 @@
+== controllo-scena: 3840x2160, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  monitor virtuale 3840x2160 montato, nodo PipeWire 46
+  formato negoziato: 3840x2160 BGRx, modificatore 0x0
+  formato negoziato: 3840x2160 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 508 in 14.00 s  →  36.22 al secondo
+  buffer: DMA-BUF, 4 distinti, stride 15360
+  danno: pieno 6, parziale 638, assente 0
+  salti di sequenza 0, disegno non finito 644
+  intervalli ms: min 16.3  mediana 33.3  p95 33.6  max 34.2

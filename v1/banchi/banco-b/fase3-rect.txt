@@ -1,0 +1,16 @@
+fotogramma 1  superficie 1296x832  byte 3845  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 2  superficie 1296x832  byte 4097  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 3  superficie 1296x832  byte 11163  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 4  superficie 1296x832  byte 15618  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 5  superficie 1296x832  byte 20242  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 6  superficie 1296x832  byte 38816  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 7  superficie 1296x832  byte 41666  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)
+fotogramma 8  superficie 1296x832  byte 41668  rettangoli 1
+   rect[0]  left=0 top=0 right=1282 bottom=802   (right-left=1282, bottom-top=802)

@@ -1,0 +1,10 @@
+== carico-3840x2160-dmabuf-60: 3840x2160, BGRx, tetto dichiarato 60 fps, DMA-BUF ==
+  monitor virtuale 3840x2160 montato, nodo PipeWire 46
+  formato negoziato: 3840x2160 BGRx, modificatore 0x0
+  formato negoziato: 3840x2160 BGRx, modificatore 0x0
+  flusso attivo
+  fotogrammi 606 in 15.03 s  →  40.24 al secondo
+  buffer: DMA-BUF, 4 distinti, stride 15360
+  danno: pieno 789, parziale 3, assente 0
+  salti di sequenza 0, disegno non finito 792
+  intervalli ms: min 16.3  mediana 17.2  p95 33.4  max 34.2

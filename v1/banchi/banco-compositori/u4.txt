@@ -1,0 +1,1 @@
+RIGA	mutter-riprova-1920x1080-dmabuf	1920x1080	BGRx	60	dmabuf	DMA-BUF	35.35	424	11.97	4	7	499	0	0	506	16.4	33.3	33.5	57.9

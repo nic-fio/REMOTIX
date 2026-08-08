@@ -1,0 +1,4 @@
+Using config: r8g8b8a0
+has EGL_EXT_buffer_age and EGL_EXT_swap_buffers_with_damage
+has EGL_EXT_surface_compression
+Failed to create EGLSurface, error 0x300b

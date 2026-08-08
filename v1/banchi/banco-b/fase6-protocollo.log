@@ -1,0 +1,146 @@
+21:04:08.477  INFO    REMOTIX 0.1.0 — FreeRDP 3.15.0
+21:04:08.477  DIAGN   livello del registro: diagnostica
+21:04:08.477  AVVISO  mando la SCENA SINTETICA, non il desktop: e' il banco di prova del protocollo
+21:04:08.479  INFO    in ascolto su *:3390
+21:04:13.662  INFO    connessione da 
+21:04:13.671  AVVISO  autenticazione DISATTIVATA da riga di comando: e' un banco, non un server
+21:04:13.671  DIAGN   dimensione fisica scartata: 1282x802 px su 1000x1000 mm fanno 33 x 20 DPI, fuori da 30..600
+21:04:13.671  INFO    client «NIC-OS», desktop 1282x802, dimensione fisica non dichiarata, scala 100, orizzontale
+21:04:13.671  DIAGN   stato di drdynvc: 0
+21:04:13.671  INFO    misura della rete attiva: il client dichiara di saperla fare
+21:04:13.671  DIAGN   rete: RTT 0.1 ms (minimo 0.1), banda 0 kbit/s, in volo 0 di 2, spediti 0
+21:04:13.671  DIAGN   stato di drdynvc: 1
+21:04:13.683  DIAGN   stato di drdynvc: 2
+21:04:13.684  DIAGN   canale EGFX aperto, aspetto CapsAdvertise
+21:04:13.684  DIAGN   canale DISP: identificativo 2
+21:04:13.684  DIAGN   canale DISP aperto, aspetto che il client lo confermi
+21:04:13.698  INFO    canale DISP aperto: al massimo 1 monitor, 8192x8192 per lato
+21:04:13.698  INFO    EGFX negoziato: versione 0x00080105, flag 0x12 → AVC disponibile
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106740] Failed to open /dev/dri/renderD128 as DRM device node.
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106740] Cannot open X11 display /dev/dri/renderD128.
+21:04:13.699  ERRORE  libav: [AVHWDeviceContext @ 0x7fac64106740] No VA display found for device /dev/dri/renderD128.
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60003740] Failed to open /dev/dri/renderD129 as DRM device node.
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60003740] Cannot open X11 display /dev/dri/renderD129.
+21:04:13.699  ERRORE  libav: [AVHWDeviceContext @ 0x7fac60003740] No VA display found for device /dev/dri/renderD129.
+21:04:13.699  DIAGN   codificatore h264_vaapi non disponibile, provo il prossimo
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60001d80] Cannot open DRM render node for device 0.
+21:04:13.699  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60001d80] Cannot open a VA display from DRM device (null).
+21:04:13.699  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Encoder: input is system memory surface
+21:04:13.699  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Use Intel(R) oneVPL to create MFX session, the required implementation version is 1.1
+21:04:13.700  ERRORE  libav: [h264_qsv @ 0x7fac60000cc0] Error creating a MFX session: -9.
+21:04:13.700  DIAGN   codificatore h264_qsv non disponibile, provo il prossimo
+21:04:13.700  ERRORE  libav: [h264_nvenc @ 0x7fac60000cc0] Cannot load libcuda.so.1
+21:04:13.700  DIAGN   libav: [h264_nvenc @ 0x7fac60000cc0] Nvenc unloaded
+21:04:13.700  DIAGN   codificatore h264_nvenc non disponibile, provo il prossimo
+21:04:13.700  DIAGN   libav: [libx264 @ 0x7fac60000cc0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+21:04:13.702  DIAGN   libav: [libx264 @ 0x7fac60000cc0] profile High, level 3.2, 4:2:0, 8-bit
+21:04:13.702  INFO    codificatore: AVC420 via libx264 (in CPU)
+21:04:13.702  INFO    tela pronta: desktop 1282x802, superficie 1296x832, codec AVC420 via libx264 (in CPU)
+21:04:14.019  DIAGN   la misura chiesta (1282x802) e' gia' quella in uso: niente da fare
+21:04:15.674  DIAGN   rete: RTT 0.1 ms (minimo 0.1), banda 94184 kbit/s, in volo 1 di 2, spediti 59
+21:04:17.683  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 94184 kbit/s, in volo 1 di 2, spediti 120
+21:04:19.702  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 94184 kbit/s, in volo 1 di 2, spediti 181
+21:04:21.715  DIAGN   rete: RTT 0.1 ms (minimo 0.1), banda 94184 kbit/s, in volo 0 di 2, spediti 242
+21:04:22.343  INFO    il client chiede una misura nuova: 1600x902, 542x305 mm (75 DPI), scala 100, orizzontale
+21:04:22.344  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame I:1     Avg QP: 4.51  size: 18559
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame P:260   Avg QP: 3.69  size:  1877
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb I  I16..4: 89.0%  0.2% 10.8%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb P  I16..4:  0.6%  0.0%  0.1%  P16..4:  1.6%  0.2%  0.1%  0.0%  0.0%    skip:97.4%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] 8x8 transform intra:0.1% inter:1.0%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] coded y,uvDC,uvAC intra: 6.2% 14.0% 12.7% inter: 0.6% 0.3% 0.2%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i16 v,h,dc,p: 61% 31%  8%  0%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 46% 18% 36%  0%  0%  0%  0%  0%  0%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 51% 29% 16%  1%  1%  1%  1%  0%  1%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8c dc,h,v,p: 72%  8% 20%  0%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] Weighted P-Frames: Y:0.0% UV:0.0%
+21:04:22.345  DIAGN   libav: [libx264 @ 0x7fac60000cc0] kb/s:465.70
+21:04:22.346  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60001d80] Failed to open /dev/dri/renderD128 as DRM device node.
+21:04:22.346  DIAGN   libav: [AVHWDeviceContext @ 0x7fac60001d80] Cannot open X11 display /dev/dri/renderD128.
+21:04:22.346  ERRORE  libav: [AVHWDeviceContext @ 0x7fac60001d80] No VA display found for device /dev/dri/renderD128.
+21:04:22.347  DIAGN   libav: [AVHWDeviceContext @ 0x7fac600013c0] Failed to open /dev/dri/renderD129 as DRM device node.
+21:04:22.347  DIAGN   libav: [AVHWDeviceContext @ 0x7fac600013c0] Cannot open X11 display /dev/dri/renderD129.
+21:04:22.347  ERRORE  libav: [AVHWDeviceContext @ 0x7fac600013c0] No VA display found for device /dev/dri/renderD129.
+21:04:22.347  DIAGN   codificatore h264_vaapi non disponibile, provo il prossimo
+21:04:22.347  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106700] Cannot open DRM render node for device 0.
+21:04:22.347  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106700] Cannot open a VA display from DRM device (null).
+21:04:22.347  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Encoder: input is system memory surface
+21:04:22.347  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Use Intel(R) oneVPL to create MFX session, the required implementation version is 1.1
+21:04:22.348  ERRORE  libav: [h264_qsv @ 0x7fac60000cc0] Error creating a MFX session: -9.
+21:04:22.348  DIAGN   codificatore h264_qsv non disponibile, provo il prossimo
+21:04:22.348  ERRORE  libav: [h264_nvenc @ 0x7fac60000cc0] Cannot load libcuda.so.1
+21:04:22.348  DIAGN   libav: [h264_nvenc @ 0x7fac60000cc0] Nvenc unloaded
+21:04:22.348  DIAGN   codificatore h264_nvenc non disponibile, provo il prossimo
+21:04:22.348  DIAGN   libav: [libx264 @ 0x7fac60000cc0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+21:04:22.351  DIAGN   libav: [libx264 @ 0x7fac60000cc0] profile High, level 4.0, 4:2:0, 8-bit
+21:04:22.352  INFO    codificatore: AVC420 via libx264 (in CPU)
+21:04:22.352  INFO    ridimensiono la tela grafica: 1282x802 → 1600x902, 542x305 mm (75 DPI), scala 100, orizzontale, superficie 1600x960
+21:04:23.729  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 96824 kbit/s, in volo 1 di 2, spediti 302
+21:04:25.742  DIAGN   rete: RTT 0.2 ms (minimo 0.1), banda 96824 kbit/s, in volo 1 di 2, spediti 363
+21:04:27.543  INFO    il client chiede una misura nuova: 1100x700, 373x237 mm (75 DPI), scala 100, orizzontale
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame I:1     Avg QP: 6.32  size: 15841
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame P:156   Avg QP: 3.49  size:  1047
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb I  I16..4: 88.5%  0.9% 10.5%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb P  I16..4:  1.1%  0.0%  0.0%  P16..4:  1.1%  0.1%  0.1%  0.0%  0.0%    skip:97.5%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] 8x8 transform intra:0.3% inter:3.6%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] coded y,uvDC,uvAC intra: 3.1% 6.8% 5.5% inter: 0.2% 0.2% 0.2%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i16 v,h,dc,p: 78% 15%  7%  0%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 49%  2% 48%  1%  0%  0%  0%  0%  0%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 49% 20% 30%  0%  0%  0%  0%  0%  0%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8c dc,h,v,p: 77%  7% 17%  0%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] Weighted P-Frames: Y:0.0% UV:0.0%
+21:04:27.544  DIAGN   libav: [libx264 @ 0x7fac60000cc0] kb/s:273.90
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64107080] Failed to open /dev/dri/renderD128 as DRM device node.
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64107080] Cannot open X11 display /dev/dri/renderD128.
+21:04:27.545  ERRORE  libav: [AVHWDeviceContext @ 0x7fac64107080] No VA display found for device /dev/dri/renderD128.
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106700] Failed to open /dev/dri/renderD129 as DRM device node.
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac64106700] Cannot open X11 display /dev/dri/renderD129.
+21:04:27.545  ERRORE  libav: [AVHWDeviceContext @ 0x7fac64106700] No VA display found for device /dev/dri/renderD129.
+21:04:27.545  DIAGN   codificatore h264_vaapi non disponibile, provo il prossimo
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac667f5400] Cannot open DRM render node for device 0.
+21:04:27.545  DIAGN   libav: [AVHWDeviceContext @ 0x7fac667f5400] Cannot open a VA display from DRM device (null).
+21:04:27.545  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Encoder: input is system memory surface
+21:04:27.545  DIAGN   libav: [h264_qsv @ 0x7fac60000cc0] Use Intel(R) oneVPL to create MFX session, the required implementation version is 1.1
+21:04:27.545  ERRORE  libav: [h264_qsv @ 0x7fac60000cc0] Error creating a MFX session: -9.
+21:04:27.545  DIAGN   codificatore h264_qsv non disponibile, provo il prossimo
+21:04:27.545  ERRORE  libav: [h264_nvenc @ 0x7fac60000cc0] Cannot load libcuda.so.1
+21:04:27.545  DIAGN   libav: [h264_nvenc @ 0x7fac60000cc0] Nvenc unloaded
+21:04:27.545  DIAGN   codificatore h264_nvenc non disponibile, provo il prossimo
+21:04:27.546  DIAGN   libav: [libx264 @ 0x7fac60000cc0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+21:04:27.547  DIAGN   libav: [libx264 @ 0x7fac60000cc0] profile High, level 3.1, 4:2:0, 8-bit
+21:04:27.547  INFO    codificatore: AVC420 via libx264 (in CPU)
+21:04:27.547  INFO    ridimensiono la tela grafica: 1600x902 → 1100x700, 373x237 mm (75 DPI), scala 100, orizzontale, superficie 1104x704
+21:04:27.744  DIAGN   rete: RTT 1.0 ms (minimo 0.1), banda 137952 kbit/s, in volo 1 di 2, spediti 424
+21:04:29.745  DIAGN   rete: RTT 0.1 ms (minimo 0.1), banda 137952 kbit/s, in volo 1 di 2, spediti 485
+21:04:31.749  DIAGN   rete: RTT 2.1 ms (minimo 0.1), banda 137952 kbit/s, in volo 0 di 2, spediti 545
+[21:04:32:535] [161985:0002790f] [ERROR][com.freerdp.core.peer] - [rdp_set_error_info]: ERRINFO_LOGOFF_BY_USER [0x0001000C]
+21:04:32.535  INFO    il client se n'e' andato
+[21:04:32:535] [161985:0002790f] [ERROR][com.freerdp.core.transport] - [transport_default_write]: BIO_should_retry returned an error: error:80000020:system library::Broken pipe
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame I:1     Avg QP: 4.25  size: 17053
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] frame P:150   Avg QP: 3.78  size:  1208
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb I  I16..4: 86.9%  0.1% 13.1%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] mb P  I16..4:  0.8%  0.0%  0.1%  P16..4:  1.6%  0.2%  0.2%  0.0%  0.0%    skip:97.3%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] 8x8 transform intra:0.1% inter:1.1%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] coded y,uvDC,uvAC intra: 5.7% 12.0% 10.6% inter: 0.4% 0.6% 0.4%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i16 v,h,dc,p: 75% 15% 10%  0%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 44% 19% 38%  0%  0%  0%  0%  0%  0%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 50% 26% 21%  1%  1%  1%  1%  0%  0%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] i8c dc,h,v,p: 75%  7% 18%  0%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] Weighted P-Frames: Y:0.0% UV:0.0%
+21:04:32.536  DIAGN   libav: [libx264 @ 0x7fac60000cc0] kb/s:315.18
+21:04:32.537  INFO    connessione conclusa
+21:04:32.550  INFO    SIGTERM mandato da pid 162399 (gia' sparito), uid 1000 — si_code 0: kill() da un altro processo
+21:04:32.551  INFO      pila #0  /srv/src/remotix-c/build/src/remotix(+0x1a664) [0x5607eea28664]
+21:04:32.551  INFO      pila #1  /lib/x86_64-linux-gnu/libc.so.6(+0x3fdf0) [0x7fac7f44bdf0]
+21:04:32.551  INFO      pila #2  /lib/x86_64-linux-gnu/libc.so.6(+0x9a9ee) [0x7fac7f4a69ee]
+21:04:32.551  INFO      pila #3  /lib/x86_64-linux-gnu/libc.so.6(+0x8f668) [0x7fac7f49b668]
+21:04:32.551  INFO      pila #4  /lib/x86_64-linux-gnu/libc.so.6(+0x8f6ad) [0x7fac7f49b6ad]
+21:04:32.551  INFO      pila #5  /lib/x86_64-linux-gnu/libc.so.6(ppoll+0x3e) [0x7fac7f50feae]
+21:04:32.551  INFO      pila #6  /lib/x86_64-linux-gnu/libglib-2.0.so.0(+0x5e6cc) [0x7fac831056cc]
+21:04:32.551  INFO      pila #7  /lib/x86_64-linux-gnu/libglib-2.0.so.0(g_main_loop_run+0x12f) [0x7fac8310605f]
+21:04:32.551  INFO      pila #8  /srv/src/remotix-c/build/src/remotix(main+0x376) [0x5607eea1adb6]
+21:04:32.551  INFO      pila #9  /lib/x86_64-linux-gnu/libc.so.6(+0x29ca8) [0x7fac7f435ca8]
+21:04:32.551  INFO      pila #10  /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85) [0x7fac7f435d65]
+21:04:32.551  INFO      pila #11  /srv/src/remotix-c/build/src/remotix(_start+0x21) [0x5607eea1b0b1]
+21:04:32.551  INFO    arrivato SIGTERM: chiudo
+21:04:32.551  INFO    chiuso
+[21:04:32:535] [161985:0002790f] [INFO][com.freerdp.core] - [rdp_print_errinfo]: ERRINFO_LOGOFF_BY_USER (0x0000000C):The disconnection was initiated by the user logging off their session on the server.
