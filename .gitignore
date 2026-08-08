@@ -1,0 +1,11 @@
+# Cloni upstream dei progetti di riferimento (~630 MB): sono versionati a monte,
+# si ricreano con `git clone`. Qui servono da leggere, non da conservare.
+reference-gnome/
+reference-kde/
+reference-lxqt/
+reference-xfce/
+
+# Artefatti di compilazione
+build/
+target/
+*.o

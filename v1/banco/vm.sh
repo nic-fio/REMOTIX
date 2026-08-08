@@ -1,0 +1,583 @@
+#!/bin/bash
+#
+# REMOTIX - gestione della macchina virtuale di runtime
+# =====================================================
+#
+# La VM e' la macchina su cui GIRA REMOTIX, distinta da quella su cui lo si
+# sviluppa. E' effimera: si puo' azzerare e ricostruire in qualunque momento.
+#
+#   bash vm.sh setup      prepara immagine, disco e configurazione iniziale
+#   bash vm.sh start      avvia la VM (in secondo piano)
+#   bash vm.sh provision  installa il software di runtime dentro la VM
+#   bash vm.sh stop       la arresta
+#   bash vm.sh ssh [cmd]  apre una shell nella VM, o vi esegue un comando
+#   bash vm.sh copia F [D] copia un file dentro la VM (predefinito: ~)
+#   bash vm.sh status     mostra lo stato
+#   bash vm.sh reset      riporta la VM allo stato iniziale
+#   bash vm.sh console    mostra la console seriale
+#   bash vm.sh gpu prendi|restituisci|stato   cede la grafica Intel alla VM, o la rende
+#
+#
+# SCELTE DI PROGETTO
+# ------------------
+#
+# QEMU diretto, senza libvirt: non serve installare nulla nel sistema host.
+# L'utente e' nel gruppo kvm, quindi non servono privilegi di amministratore.
+#
+# Rete in modalita' utente (SLIRP) con inoltro di porte: nessuna configurazione
+# di rete sull'host, nessun bridge, nessun privilegio. Dal notebook la VM si
+# raggiunge sulle porte inoltrate dal server.
+#
+# Il disco e' una sovrapposizione (overlay) sull'immagine di base, che resta
+# intatta: azzerare la VM significa cancellare la sovrapposizione e ricrearla,
+# operazione istantanea.
+#
+# PASSTHROUGH DELLA GRAFICA INTEGRATA INTEL, dalla fase 9 e solo su richiesta.
+# Fino alla fase 8 la scheda video era soltanto virtuale. Il comando `gpu` cede
+# la iGPU (00:02.0) alla VM legandola a vfio-pci, e `gpu restituisci` la ridà
+# all'host: nulla e' permanente, e un riavvio del server la ridà comunque,
+# perche' il suo rootfs vive in RAM. Vedi cmd_gpu per il perche' di ogni passo.
+#
+# Tutto risiede sotto /media/REMOTIX. Nulla viene installato nel sistema host.
+#
+set -euo pipefail
+export LC_ALL=C
+
+BASE=/media/REMOTIX
+VMDIR="$BASE/vm"
+TOOLS="$BASE/hosttools"
+TMP="$BASE/tmp"
+
+SUITE=trixie
+IMG_NAME=debian-13-generic-amd64.qcow2
+IMG_URL="https://cloud.debian.org/images/cloud/$SUITE/latest/$IMG_NAME"
+BASE_IMG="$VMDIR/base/$IMG_NAME"
+
+DISK="$VMDIR/remotix.qcow2"
+DISK_SIZE=40G
+SEED="$VMDIR/seed.iso"
+PIDFILE="$VMDIR/qemu.pid"
+MONITOR="$VMDIR/monitor.sock"
+CONSOLE_LOG="$VMDIR/console.log"
+KEY="$VMDIR/ssh/id_ed25519"
+
+VM_USER=nicfio
+VM_HOST=remotix-vm
+VM_CPUS=4
+VM_RAM=8192
+
+SSH_PORT=2222     # sul server: ssh -p 2222 nicfio@localhost
+RDP_PORT=3389     # sul server: porta RDP della VM
+
+QEMU=qemu-system-x86_64
+QEMU_IMG="$TOOLS/root/usr/bin/qemu-img"
+
+# La grafica integrata dell'i5-13500T. Misurato il 6 agosto: sta DA SOLA nel
+# gruppo IOMMU 0, che e' la condizione senza la quale il passthrough non si puo'
+# fare — un gruppo si cede tutto intero, e un gruppo affollato porterebbe con se'
+# dispositivi che servono all'host.
+IGD=0000:00:02.0
+IGD_SYS=/sys/bus/pci/devices/$IGD
+
+log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
+ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
+inf() { printf '    --  %s\n' "$*"; }
+die() { printf '\n\033[1;31mERRORE\033[0m %s\n' "$*" >&2; exit 1; }
+
+mkdir -p "$VMDIR/base" "$VMDIR/ssh" "$VMDIR/seed" "$TMP"
+export TMPDIR="$TMP"
+
+# ---------------------------------------------------------------------------
+# qemu-img, confinato in hosttools invece che installato nel sistema
+# ---------------------------------------------------------------------------
+ensure_qemu_img() {
+    if [ -x "$QEMU_IMG" ]; then return; fi
+    inf "recupero qemu-img (confinato in $TOOLS)"
+    mkdir -p "$TOOLS/debs" "$TOOLS/root"
+    ( cd "$TOOLS/debs" && apt-get download qemu-utils >/dev/null 2>&1 ) \
+        || die "impossibile scaricare qemu-utils"
+    for d in "$TOOLS"/debs/qemu-utils*.deb; do dpkg-deb -x "$d" "$TOOLS/root"; done
+    [ -x "$QEMU_IMG" ] || die "qemu-img non trovato dopo l'estrazione"
+    ok "qemu-img pronto"
+}
+
+vm_running() {
+    [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+# ===========================================================================
+# setup
+# ===========================================================================
+cmd_setup() {
+    ensure_qemu_img
+
+    # --- chiave SSH dedicata alla VM ---------------------------------------
+    log "Chiave SSH per la VM"
+    if [ -f "$KEY" ]; then
+        ok "gia' presente"
+    else
+        ssh-keygen -t ed25519 -N '' -C "remotix-vm" -f "$KEY" >/dev/null
+        ok "generata in $KEY"
+    fi
+
+    # --- immagine di base ---------------------------------------------------
+    log "Immagine Debian $SUITE"
+    if [ -f "$BASE_IMG" ]; then
+        ok "gia' scaricata ($(du -h "$BASE_IMG" | cut -f1))"
+    else
+        inf "scarico da cloud.debian.org, circa 400 MB..."
+        curl -fL -sS -o "$BASE_IMG.parte" "$IMG_URL" \
+            || die "scaricamento fallito"
+        mv "$BASE_IMG.parte" "$BASE_IMG"
+        ok "scaricata ($(du -h "$BASE_IMG" | cut -f1))"
+    fi
+
+    # --- configurazione iniziale (cloud-init) -------------------------------
+    log "Configurazione iniziale"
+    cat > "$VMDIR/seed/meta-data" <<META
+instance-id: remotix-vm-1
+local-hostname: $VM_HOST
+META
+
+    cat > "$VMDIR/seed/user-data" <<USERDATA
+#cloud-config
+hostname: $VM_HOST
+manage_etc_hosts: true
+
+users:
+  - name: $VM_USER
+    groups: [sudo, video, render, input]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: false
+    ssh_authorized_keys:
+      - $(cat "$KEY.pub")
+
+# password per la console seriale, in caso di necessita'
+chpasswd:
+  list: |
+    $VM_USER:$VM_USER
+  expire: false
+
+ssh_pwauth: false
+
+package_update: true
+packages:
+  - openssh-server
+  - sudo
+  - ca-certificates
+
+final_message: "REMOTIX VM pronta dopo \$UPTIME secondi"
+USERDATA
+
+    # L'immagine ISO va costruita con xorriso, che non e' nel sistema host.
+    # La si costruisce dentro il contenitore di sviluppo, dove si puo'
+    # installare liberamente: resta comunque tutto sotto /media/REMOTIX,
+    # visibile nel contenitore come /srv/remotix.
+    # xorriso non e' nel sistema host e non lo si puo' installare li'. Viene
+    # dal contenitore di sviluppo, che vede l'area di lavoro come /srv/remotix.
+    # E' fra i pacchetti installati da provision.sh.
+    inf "costruisco l'immagine di configurazione"
+    bash "$BASE/enter.sh" "
+        command -v xorriso >/dev/null 2>&1 || {
+            echo 'xorriso assente nel contenitore: esegui provision.sh' >&2; exit 1; }
+        xorriso -as mkisofs -quiet -o /srv/remotix/vm/seed.iso \
+                -volid cidata -joliet -rock /srv/remotix/vm/seed/
+    " >/dev/null || die "costruzione dell'immagine di configurazione fallita"
+    [ -f "$SEED" ] || die "seed.iso non prodotto"
+    ok "seed.iso costruito ($(du -h "$SEED" | cut -f1))"
+
+    # --- disco della VM -----------------------------------------------------
+    log "Disco della VM"
+    if [ -f "$DISK" ]; then
+        ok "gia' presente ($(du -h "$DISK" | cut -f1) usati)"
+    else
+        "$QEMU_IMG" create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISK" "$DISK_SIZE"
+        ok "creato come sovrapposizione sull'immagine di base ($DISK_SIZE)"
+    fi
+
+    log "Pronto"
+    printf '
+    Avvio:      bash %s/vm.sh start
+    Accesso:    bash %s/vm.sh ssh
+    Console:    bash %s/vm.sh console
+
+    Dal notebook, tramite il server:
+      ssh -J nicfio@192.168.0.2 -p %s -i <chiave> %s@localhost
+      RDP:  192.168.0.2:%s   (una volta avviato REMOTIX nella VM)
+
+' "$BASE" "$BASE" "$BASE" "$SSH_PORT" "$VM_USER" "$RDP_PORT"
+}
+
+# ===========================================================================
+# start
+# ===========================================================================
+cmd_start() {
+    vm_running && { ok "gia' in esecuzione (pid $(cat "$PIDFILE"))"; return; }
+    [ -f "$DISK" ] || die "disco assente: esegui prima 'vm.sh setup'"
+
+    log "Avvio della VM"
+    rm -f "$MONITOR"
+
+    # --- la grafica, se e' stata ceduta -------------------------------------
+    #
+    # Non c'e' un interruttore da ricordare: si guarda A CHI E' LEGATA la
+    # scheda. Se e' vfio-pci, e' stata ceduta apposta e la VM la prende; se e'
+    # i915, e' dell'host e non la si tocca. Un'opzione separata sarebbe una
+    # seconda verita' da tenere allineata alla prima, e sarebbe quella sbagliata
+    # il giorno in cui divergono.
+    local qemu_gpu=() qemu_video=(-device virtio-gpu-pci) lancio=() macchina="q35,accel=kvm"
+    if [ "$(basename "$(readlink -f "$IGD_SYS/driver" 2>/dev/null)" 2>/dev/null)" = vfio-pci ]; then
+        # `igd-passthru=on` fa allestire a QEMU l'OpRegion e i pezzi di corredo
+        # che il driver i915 dell'ospite cerca all'avvio: senza, la scheda
+        # compare sul bus e il driver non la prende — e il sintomo e' un
+        # /dev/dri che non nasce, cioe' «la fase 9 non funziona» invece di «manca
+        # una riga di configurazione».
+        macchina="q35,accel=kvm,igd-passthru=on"
+        # L'indirizzo 02.0 anche DENTRO l'ospite: il codice IGD di QEMU lo
+        # pretende, ed e' anche dove i915 si aspetta di trovarsi.
+        #
+        # ⛔ E VA DICHIARATA PER PRIMA sulla riga di comando, prima dei dischi e
+        #    della rete: QEMU assegna gli slot liberi nell'ordine in cui legge i
+        #    dispositivi, e alla seconda posizione ci arriva gia' la scheda di
+        #    rete. Il sintomo e' netto — «slot 2 function 0 not available, in
+        #    use by virtio-net-pci» — ma solo perche' l'indirizzo era imposto:
+        #    lasciandolo scegliere a QEMU, la scheda sarebbe finita altrove e il
+        #    driver dell'ospite non l'avrebbe presa, in silenzio.
+        qemu_gpu=(-device "vfio-pci,host=$IGD,id=igd,bus=pcie.0,addr=02.0")
+        # ⛔ E LA SCHEDA FINTA SE NE VA, che non e' pulizia: e' la condizione
+        #    perche' la cattura possa essere a copia zero.
+        #
+        #    Con virtio-gpu presente, Mutter ci disegna sopra — e i fotogrammi
+        #    che consegna a PipeWire sono buffer di QUELLA scheda. Un DMA-BUF di
+        #    virtio-gpu importato dalla Intel non e' zero-copy: nel migliore dei
+        #    casi e' una copia fra due dispositivi, nel peggiore l'importazione
+        #    fallisce e si ripiega sulla memoria ordinaria senza dirlo.
+        #
+        #    Restando la sola Intel, GNOME disegna li' — e in dote arriva la cosa
+        #    che §8.6-bis di REFERENCE.md elencava come falsante: la composizione
+        #    smette di essere in software.
+        #
+        #    ⚠ LA VGA DI RIPIEGO RESTA, e non e' una contraddizione: serve solo
+        #      all'avvio.  Provato il 6 agosto a toglierla con `-vga none`: GRUB
+        #      annuncia «Booting Debian GNU/Linux» e poi la macchina non arriva
+        #      mai a rispondere — nessun kernel sulla seriale, nessuna diagnosi.
+        #      Il driver `bochs` che la guiderebbe dentro Linux si spegne invece
+        #      dal lato dell'ospite, con `modprobe.blacklist` (provision-vm.sh):
+        #      cosi' l'avvio ha il suo schermo e Linux ha una sola scheda DRM.
+        qemu_video=()
+        # ⛔ DUE PERMESSI, ED ENTRAMBI SERVONO.
+        #
+        #  1. VFIO INCHIODA IN MEMORIA TUTTA LA RAM DELL'OSPITE: otto gigabyte,
+        #     contro un tetto predefinito di otto MEGAbyte. Senza alzarlo QEMU
+        #     esce con «VFIO_MAP_DMA failed: Cannot allocate memory», che
+        #     nomina la memoria e non il limite.
+        #  2. il nodo del gruppo IOMMU e' di root. Lo si cede all'utente in
+        #     `gpu prendi`, non qui.
+        #
+        # Si alza il limite e si torna SUBITO all'utente con setpriv: QEMU non
+        # gira da root, e i file che crea — pidfile, socket del monitor,
+        # console — restano di chi poi li deve leggere.
+        #
+        # La credenziale di sudo si valida PRIMA, come fa enter.sh: cosi' la
+        # richiesta di password arriva quando qualcuno la sta ancora ascoltando,
+        # e non a meta' di una riga di comando lunga trenta parole.
+        sudo -v -S -p 'Password sudo: ' || die "servono i privilegi per alzare il limite di memoria bloccata"
+        lancio=(sudo -n prlimit --memlock=unlimited --
+                setpriv --reuid="$(id -u)" --regid="$(id -g)" --init-groups --)
+        inf "grafica Intel $IGD ceduta alla VM (vfio-pci)"
+    fi
+
+    # -nographic con console seriale su file: nessuna finestra, tutto
+    # tracciato in console.log per poter diagnosticare gli avvii falliti.
+    "${lancio[@]}" "$QEMU" \
+        -name remotix-vm \
+        -machine "$macchina" \
+        -cpu host \
+        -smp "$VM_CPUS" \
+        -m "$VM_RAM" \
+        "${qemu_gpu[@]}" \
+        -drive if=virtio,file="$DISK",format=qcow2,cache=writeback,discard=unmap \
+        -drive if=virtio,file="$SEED",format=raw,readonly=on \
+        -device virtio-net-pci,netdev=net0 \
+        -netdev user,id=net0,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$RDP_PORT-:3389 \
+        "${qemu_video[@]}" \
+        -device virtio-rng-pci \
+        -display none \
+        -serial file:"$CONSOLE_LOG" \
+        -monitor unix:"$MONITOR",server,nowait \
+        -pidfile "$PIDFILE" \
+        -daemonize
+
+    sleep 2
+    vm_running || die "avvio fallito, vedi $CONSOLE_LOG"
+    ok "avviata (pid $(cat "$PIDFILE"))"
+    inf "il primo avvio applica la configurazione iniziale: attendi un minuto"
+    inf "console: $CONSOLE_LOG"
+}
+
+# ===========================================================================
+# stop
+# ===========================================================================
+cmd_stop() {
+    vm_running || { ok "gia' ferma"; return; }
+    log "Arresto della VM"
+    # spegnimento ordinato dall'interno; se non risponde si passa al monitor
+    cmd_ssh "sudo systemctl poweroff" >/dev/null 2>&1 || true
+    for _ in $(seq 30); do
+        vm_running || break
+        sleep 1
+    done
+    if vm_running; then
+        inf "non risponde, la termino"
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        sleep 2
+    fi
+    rm -f "$PIDFILE"
+    ok "ferma"
+}
+
+# ===========================================================================
+# ssh
+# ===========================================================================
+# Esegue un comando dentro la VM.
+#
+# ⚠ `env -u LC_ALL` non e' un dettaglio. Questo script esporta LC_ALL=C per avere
+# messaggi stabili, `ssh` di Debian manda LANG e LC_* al server (`SendEnv`) e la
+# VM li accetta (`AcceptEnv`): ogni comando eseguito qui dentro girerebbe quindi
+# con una locale **non UTF-8**.
+#
+# Finche' di qui passava solo `gnome-shell` il danno era invisibile. Dal momento
+# in cui si avvia una **sessione intera**, quell'ambiente viene esportato al
+# gestore systemd dell'utente e all'attivazione D-Bus — dove sopravvive al
+# compositore — e ogni applicazione lanciata dal desktop eredita LC_ALL=C.
+# `gnome-terminal-server` si rifiuta di partire («Non UTF-8 locale ... is not
+# supported!», uscita 8) e all'utente le applicazioni semplicemente non si
+# aprono, senza che il registro di REMOTIX dica nulla.
+#
+# E' il caso da manuale di SPECIFICA.md §5.6: il guasto non si presenta come
+# «manca una variabile», si presenta come un programma che si comporta in modo
+# assurdo, e si finisce a cercarlo altrove.
+cmd_ssh() {
+    vm_running || die "la VM non e' in esecuzione"
+    local opts=(-i "$KEY" -p "$SSH_PORT"
+                -o StrictHostKeyChecking=no
+                -o UserKnownHostsFile=/dev/null
+                -o LogLevel=ERROR
+                -o ConnectTimeout=5)
+    if [ $# -eq 0 ]; then
+        env -u LC_ALL ssh "${opts[@]}" "$VM_USER@localhost"
+    else
+        env -u LC_ALL ssh "${opts[@]}" "$VM_USER@localhost" "$@"
+    fi
+}
+
+# ===========================================================================
+# provision - installa il software di runtime DENTRO la VM
+# ===========================================================================
+cmd_provision() {
+    vm_running || die "la VM non e' in esecuzione: esegui prima 'vm.sh start'"
+    [ -f "$BASE/provision-vm.sh" ] || die "manca $BASE/provision-vm.sh"
+
+    log "Provisioning della VM"
+    scp -q -i "$KEY" -P "$SSH_PORT" \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o LogLevel=ERROR \
+        "$BASE/provision-vm.sh" "$VM_USER@localhost:/tmp/provision-vm.sh" \
+        || die "copia dello script fallita"
+    cmd_ssh "bash /tmp/provision-vm.sh"
+}
+
+# ===========================================================================
+# status
+# ===========================================================================
+cmd_status() {
+    log "Stato"
+    if vm_running; then
+        ok "in esecuzione (pid $(cat "$PIDFILE"))"
+        if cmd_ssh true 2>/dev/null; then
+            ok "SSH raggiungibile"
+            printf '    sistema: %s\n' "$(cmd_ssh 'grep -oP "(?<=PRETTY_NAME=\").*(?=\")" /etc/os-release' 2>/dev/null)"
+            printf '    uptime:  %s\n'  "$(cmd_ssh 'uptime -p' 2>/dev/null)"
+            printf '    memoria: %s\n'  "$(cmd_ssh 'free -h | awk "/^Mem:/{print \$2}"' 2>/dev/null)"
+        else
+            inf "SSH non ancora raggiungibile (avvio in corso?)"
+        fi
+    else
+        inf "ferma"
+    fi
+    printf '\n    disco:   %s\n    base:    %s\n    console: %s\n\n' \
+        "$([ -f "$DISK" ] && du -h "$DISK" | cut -f1 || echo assente)" \
+        "$([ -f "$BASE_IMG" ] && du -h "$BASE_IMG" | cut -f1 || echo assente)" \
+        "$CONSOLE_LOG"
+}
+
+# ===========================================================================
+# reset
+# ===========================================================================
+cmd_reset() {
+    log "Azzeramento della VM"
+    vm_running && cmd_stop
+    rm -f "$DISK"
+    ensure_qemu_img
+    "$QEMU_IMG" create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISK" "$DISK_SIZE"
+    ok "disco ricreato dallo stato iniziale"
+    inf "l'immagine di base non e' stata toccata"
+}
+
+# ===========================================================================
+# gpu — cede la grafica integrata alla VM, e la restituisce
+# ===========================================================================
+#
+# Serve alla fase 9: dentro la VM non c'e' alcun motore di codifica, quindi
+# AVC420 e RemoteFX Progressive costano CPU piena (§8.6-bis di REFERENCE.md).
+#
+# ⚠ CHE COSA COSTA ALL'HOST, detto prima di farlo.
+#   La console locale del server scrive su un framebuffer che sta su QUESTA
+#   scheda (`fb0` si chiama `i915drmfb`). Cedendola, quella console smette di
+#   mostrare qualcosa finche' non la si restituisce. SSH, rete e dischi non
+#   sono toccati, e la Radeon resta all'host: e' il motivo per cui si cede
+#   l'integrata e non lei.
+#
+# ⚠ PERCHE' NON SR-IOV, che sarebbe stato meglio.  Provato il 6 agosto: la
+#   scheda dichiara `sriov_totalvfs = 7`, ma i915 non implementa
+#   `sriov_configure` e la scrittura su `sriov_numvfs` risponde ENOENT. Con una
+#   VF l'host avrebbe tenuto la propria; senza, si cede tutta.
+#
+# ⚠ NULLA DI QUESTO E' PERMANENTE: il legame vive in memoria, e il rootfs
+#   dell'host vive in RAM. Un riavvio del server restituisce la scheda da se'.
+cmd_gpu() {
+    local azione="${1:-stato}"
+    local drv; drv=$(basename "$(readlink -f "$IGD_SYS/driver" 2>/dev/null)" 2>/dev/null)
+
+    case "$azione" in
+    stato)
+        log "Grafica integrata $IGD"
+        inf "driver attuale: ${drv:-nessuno}"
+        inf "gruppo IOMMU:   $(basename "$(readlink -f "$IGD_SYS/iommu_group" 2>/dev/null)" 2>/dev/null) \
+($(ls "$IGD_SYS/iommu_group/devices" 2>/dev/null | tr '\n' ' '))"
+        if [ "$drv" = vfio-pci ]; then
+            ok "ceduta: la prossima 'vm.sh start' la aggancia alla VM"
+        else
+            inf "dell'host: la VM parte senza accelerazione"
+        fi
+        ;;
+
+    prendi)
+        [ "$drv" = vfio-pci ] && { ok "gia' ceduta"; return; }
+        vm_running && die "ferma prima la VM: il legame si cambia a macchina spenta"
+
+        log "Cedo la grafica integrata alla VM"
+        sudo -v -S -p 'Password sudo: ' || die "servono i privilegi di amministratore"
+        sudo -n modprobe vfio-pci || die "vfio-pci non si carica"
+
+        # 1. La console di testo lascia il framebuffer.
+        #    Se non lo fa, i915 resta occupato e il distacco al passo 2
+        #    fallisce con «Device or resource busy» — che nomina il dispositivo
+        #    e non chi lo tiene.
+        local v
+        for v in /sys/class/vtconsole/*; do
+            if grep -q 'frame buffer device' "$v/name" 2>/dev/null && \
+               [ "$(cat "$v/bind" 2>/dev/null)" = 1 ]; then
+                echo 0 | sudo -n tee "$v/bind" >/dev/null && inf "console staccata dal framebuffer ($(basename "$v"))"
+            fi
+        done
+
+        # 2. i915 lascia la scheda.
+        if [ "$drv" = i915 ]; then
+            echo "$IGD" | sudo -n tee /sys/bus/pci/drivers/i915/unbind >/dev/null \
+                || die "i915 non molla la scheda"
+            inf "i915 ha lasciato $IGD"
+        fi
+
+        # 3. vfio-pci la prende. `driver_override` invece di `new_id`: quello
+        #    vincola QUESTA scheda e nessun'altra, mentre `new_id` prenderebbe
+        #    ogni dispositivo con lo stesso identificativo.
+        echo vfio-pci | sudo -n tee "$IGD_SYS/driver_override" >/dev/null
+        echo "$IGD"   | sudo -n tee /sys/bus/pci/drivers_probe >/dev/null
+        drv=$(basename "$(readlink -f "$IGD_SYS/driver" 2>/dev/null)" 2>/dev/null)
+        [ "$drv" = vfio-pci ] || die "la scheda e' rimasta a '${drv:-nessuno}'"
+
+        # 4. Il nodo del gruppo IOMMU e' di root: lo si cede all'utente, cosi'
+        #    QEMU gira come utente e non come amministratore.
+        local grp; grp=$(basename "$(readlink -f "$IGD_SYS/iommu_group")")
+        sudo -n chown "$(id -u):$(id -g)" "/dev/vfio/$grp" \
+            && inf "nodo /dev/vfio/$grp ceduto a $(id -un)"
+
+        ok "ceduta: avvia la VM con 'vm.sh start'"
+        ;;
+
+    restituisci)
+        vm_running && die "ferma prima la VM: la sta usando"
+        [ "$drv" != vfio-pci ] && { ok "gia' dell'host (driver: ${drv:-nessuno})"; return; }
+
+        log "Restituisco la grafica integrata all'host"
+        sudo -v -S -p 'Password sudo: ' || die "servono i privilegi di amministratore"
+        echo "$IGD" | sudo -n tee /sys/bus/pci/drivers/vfio-pci/unbind >/dev/null 2>&1
+        echo ''     | sudo -n tee "$IGD_SYS/driver_override" >/dev/null
+        echo "$IGD" | sudo -n tee /sys/bus/pci/drivers_probe >/dev/null 2>&1
+
+        local v
+        for v in /sys/class/vtconsole/*; do
+            grep -q 'frame buffer device' "$v/name" 2>/dev/null \
+                && echo 1 | sudo -n tee "$v/bind" >/dev/null 2>&1
+        done
+
+        drv=$(basename "$(readlink -f "$IGD_SYS/driver" 2>/dev/null)" 2>/dev/null)
+        [ "$drv" = i915 ] && ok "restituita a i915" || inf "driver ora: ${drv:-nessuno}"
+        ;;
+
+    *) die "uso: vm.sh gpu prendi|restituisci|stato" ;;
+    esac
+}
+
+# ===========================================================================
+# console
+# ===========================================================================
+cmd_console() {
+    [ -f "$CONSOLE_LOG" ] || die "nessuna console registrata"
+    tail -f "$CONSOLE_LOG"
+}
+
+# ===========================================================================
+# ---------------------------------------------------------------------------
+# copia: porta un file dentro la VM
+#
+# Il binario di REMOTIX si costruisce nel contenitore di sviluppo e si esegue
+# nella VM: sono due macchine distinte per vincolo (§6.2 di SPECIFICA.md), e
+# fra le due serve un trasporto. Questo e' quello, e usa la stessa chiave con
+# cui `vm.sh ssh` entra.
+#
+#   bash vm.sh copia <locale> [destinazione]     destinazione predefinita: ~
+# ---------------------------------------------------------------------------
+cmd_copia() {
+    local sorgente="${1:-}" destinazione="${2:-}"
+    if [ -z "$sorgente" ] || [ ! -e "$sorgente" ]; then
+        printf '\n\033[1;31mERRORE\033[0m file da copiare mancante o inesistente: %s\n' \
+            "${sorgente:-<nessuno>}" >&2
+        return 1
+    fi
+
+    scp -q -i "$KEY" -P "$SSH_PORT" \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o LogLevel=ERROR \
+        "$sorgente" "$VM_USER@localhost:${destinazione:-}"
+    ok "copiato $(basename "$sorgente") -> ${destinazione:-~} nella VM"
+}
+
+case "${1:-}" in
+    setup)     shift; cmd_setup     "$@" ;;
+    start)     shift; cmd_start     "$@" ;;
+    stop)      shift; cmd_stop      "$@" ;;
+    provision) shift; cmd_provision "$@" ;;
+    ssh)       shift; cmd_ssh       "$@" ;;
+    copia)     shift; cmd_copia     "$@" ;;
+    status)    shift; cmd_status    "$@" ;;
+    reset)     shift; cmd_reset     "$@" ;;
+    console)   shift; cmd_console   "$@" ;;
+    gpu)       shift; cmd_gpu       "$@" ;;
+    *)
+        sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+        exit 1
+        ;;
+esac

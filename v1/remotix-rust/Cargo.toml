@@ -1,0 +1,61 @@
+[package]
+name = "remotix"
+version = "0.1.0"
+edition = "2024"
+description = "Server RDP per Linux"
+
+[dependencies]
+# Implementazione del protocollo RDP.
+#   helper  fornisce TlsIdentityCtx, che carica certificato e chiave
+#   egfx    abilita la pipeline grafica moderna, unico percorso di rendering previsto
+ironrdp-server = { version = "0.13", features = ["helper", "egfx"] }
+# Serve per configurare i codec dichiarati e per leggere la richiesta di
+# ridimensionamento; le versioni devono restare allineate a ironrdp-server.
+ironrdp-pdu = "0.9"
+ironrdp-displaycontrol = "0.8"
+# Pipeline grafica EGFX: percorso di rendering previsto dalla specifica.
+ironrdp-egfx = "0.3"
+ironrdp-dvc = "0.8"
+ironrdp-svc = "0.8"
+
+# «process» serve a interrogare e impostare `gsettings`: la disposizione della
+# tastiera vive nelle impostazioni di GNOME, non in un'interfaccia D-Bus nostra.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "signal", "net", "process"] }
+# Opzioni del socket che tokio non espone: keepalive stretti e TCP_USER_TIMEOUT,
+# per accorgersi in mezzo minuto di un client sparito invece che in quindici.
+# La caratteristica «all» serve a `set_tcp_user_timeout`, che senza non c'e'.
+socket2 = { version = "0.6", features = ["all"] }
+async-trait = "0.1"
+anyhow = "1"
+bytes = "1"
+
+# Generazione del certificato autofirmato al primo avvio.
+rcgen = "0.14"
+
+# Codifica H.264 per la pipeline EGFX.
+# OpenH264 produce Constrained Baseline, che e' il profilo richiesto da
+# MS-RDPEGFX, e si porta dietro la propria implementazione: nessuna dipendenza
+# di sistema. L'astrazione via libavcodec e' prevista per la fase 9.
+openh264 = "0.9"
+
+# Cattura del desktop.
+#   zbus       parla con le interfacce D-Bus del compositore
+#   pipewire   riceve i fotogrammi dal nodo aperto da Mutter
+#   png        serve solo agli strumenti di prova, per guardare cosa si cattura
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+futures-util = "0.3"
+pipewire = "0.8"
+png = "0.17"
+
+# Autenticazione locale via PAM.
+# Wrapper per applicazioni — non per moduli PAM — che e' il nostro caso: REMOTIX
+# e' l'applicazione che chiede a PAM se una credenziale e' buona. La conversazione
+# la si serve da noi, perche' non c'e' nessuno seduto davanti a un terminale.
+pam-client2 = "0.5"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
