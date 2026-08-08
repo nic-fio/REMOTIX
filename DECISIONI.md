@@ -71,16 +71,28 @@ scritti da zero — quello Android è un progetto a sé, non una funzionalità.
 CredSSP, MS-RDPEDISP, `ERRINFO_*`, FreeRDP 3 come vincolo, la matrice dei tre client altrui,
 e `v1/documenti/REFERENCE.md` quasi per intero.
 
-### 1.2 🔸 Il protocollo si chiama FILO
+### 1.2 ✅ Il protocollo si chiama RCP — *Remotix Control Protocol*
 
-*8 agosto 2026, per delega: «rinominalo in quello che ti pare».*
+*8 agosto 2026, scelto dall'utente.*
 
-È la parola che i documenti usano già per il protocollo (`CODER.md` §0: «per chi tocca il
-filo»). Corta, greppabile in maiuscolo, nella lingua del progetto, e significa quel che è.
-In codice: `libfilo`, `filo_frame_t`, `FILO/1`.
+```
+librcp.so
+rcp_frame_t · rcp_connect() · rcp_session_t
+stretta di mano:  RCP/1
+```
 
-L'alternativa offerta e non scelta era **RXP** (*Remotix eXchange Protocol*). Cambiare nome
-adesso costa niente; fra un mese costa un `sed` su tutto.
+Due nomi provvisori l'hanno preceduto nello stesso pomeriggio e sono stati scartati: **FILO**
+(«proprio non si può sentire») e **RXP**. Sono citati qui solo perché chi ritrova quei nomi in
+un appunto sappia che si parlava di questo, e non di altro.
+
+⚠ **Una collisione minore, da sapere prima di battezzare i binari**: `rcp` è il nome di un
+comando Unix storico — la copia remota della famiglia `rsh` — oggi quasi ovunque disinstallato
+e mai attivo di suo. Non tocca né il protocollo né la libreria; riguarda solo l'eventuale
+comando a riga di comando, che conviene chiamare `remotix` e non `rcp`.
+
+⭐ **E il nome dice una cosa giusta**: *Control*, non *Display*. Il protocollo non porta solo
+pixel — porta input, appunti, geometria, congedo e stato della sessione, e il video è uno dei
+suoi canali. È la differenza fra RCP e ciò che RDP faceva credere di essere.
 
 ### 1.3 🔸 La sessione non conosce il codec: lo negozia la connessione
 
@@ -222,7 +234,7 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
    esattamente quando è passato l'ultimo. Col modo A dovremmo fidarci che il rilevatore di
    inattività di ciascun desktop veda gli eventi di `libei` — su KDE è `[R]` che sì
    (EIS → `simulateUserActivity`), sugli altri tre sarebbe da misurare;
-3. **la sicurezza è la stessa**: l'unica strada per quel desktop passa da FILO, e FILO passa
+3. **la sicurezza è la stessa**: l'unica strada per quel desktop passa da RCP, e RCP passa
    da PAM. La schermata di blocco chiederebbe la medesima password.
 
 > ⚠ **E questa decisione ha una condizione di scadenza, posta dall'utente lo stesso giorno:**
@@ -230,7 +242,7 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
 > della semplice password, ma per il momento va bene solo questa»*.
 >
 > Il ragionamento del punto 3 **regge solo finché la password PAM è l'unica chiave**. Il giorno
-> in cui FILO autenticasse con qualcosa di diverso — un gettone sul dispositivo, una chiave, un
+> in cui RCP autenticasse con qualcosa di diverso — un gettone sul dispositivo, una chiave, un
 > secondo fattore — il blocco del desktop smetterebbe di essere ridondante e diventerebbe una
 > difesa vera, perché chiederebbe una chiave **che chi ha rubato la prima non ha**.
 >
@@ -399,7 +411,7 @@ Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings`
 (`v1/documenti/SPECIFICA.md` §8-bis) aveva una ragione sola — *«gnome-remote-desktop smette di
 essere un riferimento da cui trarre ispirazione e diventa un riferimento da cui trarre
 codice»* — e **quella ragione è morta con RDP**: non c'è più niente da trapiantare, perché
-nessuno ha scritto FILO prima di noi. La questione è stata riaperta a occhi aperti e richiusa
+nessuno ha scritto RCP prima di noi. La questione è stata riaperta a occhi aperti e richiusa
 per un motivo diverso.
 
 **Il motivo nuovo è il conto di §6.2**: circa 14.000 righe sopravvivono, con i loro banchi già
@@ -409,7 +421,7 @@ azione, perché fra le cose che si butterebbero ci sono **4.563 righe di banchi*
 progetto non è mai morto sul codice: è morto sulle misure.
 
 **Che cosa questa decisione NON decide:** i client. Quello Android è Kotlin comunque, per via
-di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `libfilo` col server, che
+di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `librcp` col server, che
 è un argomento a favore ma non una conclusione.
 
 ### 6.4 🔸 QUIC via `quiche`
@@ -480,7 +492,7 @@ fiducia al primo incontro? Impronta da confrontare? Senza, la prima connessione 
 uomo-in-mezzo gratuito.
 
 ### 7.10 Il touch da Android: mouse emulato o touch vero?
-Questione aperta n.1 di v1, mai chiusa. Va decisa **prima** di scrivere FILO: sono due canali
+Questione aperta n.1 di v1, mai chiusa. Va decisa **prima** di scrivere RCP: sono due canali
 di input diversi.
 
 ### 7.11 La clipboard: bidirezionale?

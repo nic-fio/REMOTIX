@@ -8,7 +8,7 @@
 > lo citano **29 volte su 20 sezioni diverse**. Arriva qui **senza una sola rinumerazione**: ogni
 > `§x.y` citato altrove punta ancora dove puntava.
 >
-> **Che cosa resta vero, ed e' quasi tutto.** V2 cambia il filo — protocollo nostro (**FILO**) al
+> **Che cosa resta vero, ed e' quasi tutto.** V2 cambia il filo — protocollo nostro (**RCP**) al
 > posto di RDP, niente Windows, niente FreeRDP, HEVC e AV1 al posto dell'H.264, e i due soli client
 > sono nostri. Non cambia **niente** di come si misura. Le sezioni 1 e 2, che sono il cuore, parlano
 > di scene dichiarate, banchi certificati, controlli positivi e mittenti chiesti invece che dedotti:
@@ -31,7 +31,7 @@
 > | i banchi e i programmi di misura | `v1/banchi/` | intatti, e sono la cosa piu' riutilizzabile che v1 lascia |
 >
 > ⚠ **E una avvertenza sul riuso**, che e' §1.11 rivolta a noi: che una lezione sia scritta qui non
-> vuol dire che sia stata verificata su FILO. Una lezione di **metodo** si riusa senza ridiscuterla;
+> vuol dire che sia stata verificata su RCP. Una lezione di **metodo** si riusa senza ridiscuterla;
 > una lezione che nomina un numero, un client o un codec e' `[M]` **su v1**, e in V2 torna `[?]`
 > finche' qualcuno non la rimisura.
 
@@ -288,7 +288,7 @@ Ma la regola ha almeno tre forme, e le abbiamo pagate tutte:
 
 > ⚠ **In V2 questa regola cambia forma, non valore** *(8 agosto 2026)*. I client di riferimento non
 > sono piu' tre e non sono piu' di altri: sono **due, e nostri** — Linux e Android, sopra lo stesso
-> `libfilo`. Sparisce il client indulgente che supplisce in silenzio un'informazione omessa dal
+> `librcp`. Sparisce il client indulgente che supplisce in silenzio un'informazione omessa dal
 > server, ed e' la forma che ha prodotto i difetti peggiori.
 >
 > ⛔ **Ma sparisce anche l'avvertimento gratis, e questa e' la perdita da sorvegliare.** Quando due
