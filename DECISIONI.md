@@ -461,6 +461,56 @@ gestiscono male, e andrebbe verificato che l'EIS di Mutter e KWin espongano la c
 «touch» — `libei` la prevede, che i due la offrano è `[?]`. Il **posto riservato** costa niente
 adesso e fa risparmiare una riscrittura se un giorno servisse.
 
+### 5-bis.6 ✅ Le lettere viaggiano come lettere, i tasti che non sono lettere come posizioni
+
+*8 agosto 2026.*
+
+| Che cosa | Come viaggia |
+|---|---|
+| lettere, numeri, segni — tutto ciò che si stampa | **come lettere** (carattere) |
+| Invio, Tab, Esc, frecce, F1-F12, Ctrl, Alt, Maiusc, Super | **come posizioni** — non sono lettere, e stanno nello stesso posto su ogni tastiera |
+
+**Il problema che questa scelta scioglie**, ed è quello che l'utente ha isolato da sé: una
+tastiera fisica non manda lettere, manda **posizioni** — il tasto a destra della L dice «tasto
+39», ed è il desktop a decidere se significa «ò» (disposizione italiana) o «;» (americana). Se
+sul filo viaggiassero le posizioni, un client con tastiera americana attaccato a una sessione
+italiana produrrebbe **le lettere sbagliate**: è il difetto classico di ogni desktop remoto.
+
+Facendo viaggiare le lettere, la disposizione del *client* la applica il sistema del client, e
+la nostra sessione non deve indovinare niente. Vale per **entrambi** i client, non solo per
+Android — dove però è obbligatorio comunque, perché una tastiera Android non ha posizioni:
+è un IME che produce testo.
+
+⚠ **Resta la sola raggiungibilità.** Se nella disposizione della sessione un carattere non
+esiste su nessun tasto — un'emoji, un alfabeto diverso — non esce **niente**, e il server lo
+**dichiara nel registro**: mai una lettera diversa, mai un silenzio (`LEZIONI.md` §1.8).
+
+**In dote**: i modificatori non sono mai stati il problema e si emulano normalmente (per «A»:
+premi Maiusc, premi 30, rilascia 30, rilascia Maiusc); la ripetizione non è nostra (wlroots
+scarta i tasti ripetuti, a ripetere è l'applicazione); e la disposizione dichiarata dal client
+— la «questione n.7» di v1 — non serve più per *interpretare*, solo per *scegliere* (5-bis.7).
+
+### 5-bis.7 ✅ La disposizione si rinegozia all'attacco e al riattacco, come la risoluzione
+
+*8 agosto 2026. «Per le tastiere vale il discorso delle risoluzioni: alla creazione della
+sessione o re-attach viene rinegoziata anche la tastiera».*
+
+Stessa forma di §5.0 — il client dichiara, la sessione si adegua — ma **con due differenze che
+giocano a favore**:
+
+1. **non costa niente di visibile.** Cambiare la misura dello schermo rimescola le finestre
+   dell'utente e su KWin < 6.8 non si può proprio; cambiare la disposizione non sposta nulla,
+   non riavvia la cattura, non si vede;
+2. **e se fallisse, la degradazione è morbida.** Grazie a 5-bis.6 una disposizione vecchia non
+   produce mai caratteri sbagliati — al massimo rende irraggiungibili un paio di accenti. Una
+   misura vecchia, invece, la si vede per tutta la sessione.
+
+`[?]` **Da misurare, due cose, e nessuna è urgente:** se il cambio di disposizione a sessione
+viva riesca su tutti e quattro i desktop (la nascita è certa, il cambio a caldo no); e se
+convenga dare alla sessione **più disposizioni insieme** — il sistema ne accetta fino a quattro
+— per coprire il caso di chi passa da un telefono italiano a un portatile americano, che
+sospetto sia raro ma non l'ha misurato nessuno.
+
 ---
 
 ## 6. Il codice che si eredita
@@ -584,7 +634,11 @@ uomo-in-mezzo gratuito.
 Era la questione aperta n.1 di v1, mai chiusa in un anno. Risposta: trackpad con puntatore
 disegnato dal client; tocco nativo con il posto riservato ma non implementato.
 
-### 7.10-bis ❓ La tastiera di Android: Unicode o scancode?
+### 7.10-bis ~~La tastiera di Android: Unicode o scancode?~~ → **chiusa l'8 agosto, vedi §5-bis.6 e §5-bis.7**
+Tutt'e due, ma non come pari: le **lettere** viaggiano come lettere, e solo i tasti che lettere
+non sono viaggiano come posizioni. E la domanda si è allargata da Android a entrambi i client.
+Quel che segue è il ragionamento che ci ha portati lì, tenuto perché la conclusione da sola non
+si capisce.
 Il passeggero del touch, e pesa di più. *«Una tastiera Android non è una tastiera fisica: non
 ha scancode, ha un IME che produce testo»* (`v1/documenti/client-android.md` §5.2). Il client
 manda quindi **Unicode** per i caratteri stampabili e **scancode** per i tasti di controllo —
