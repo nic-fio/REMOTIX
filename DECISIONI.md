@@ -374,6 +374,95 @@ misura iniziale della tela conta — vedi la domanda aperta §7.1.
 
 ---
 
+## 5-bis. L'input
+
+### 5-bis.1 ✅ Il puntatore lo disegna il client, non il desktop
+
+*8 agosto 2026, proposta dall'utente.*
+
+Il dito trascina un puntatore **disegnato dal client**; un tap fa il clic sinistro sulla
+posizione del puntatore, un tap a due dita il destro. Non è il «tocco diretto», dove il dito
+è il puntatore: è il trackpad, e si vede dove si sta per cliccare **prima** di cliccare.
+
+**Tre problemi diversi che questa scelta chiude insieme:**
+
+1. ⭐ **la latenza percepita.** Il puntatore si muove alla velocità del dito, non a quella
+   della rete. Su un collegamento mobile con 150 ms di ritardo è la differenza fra usabile e
+   frustrante — e pesa più dei fotogrammi al secondo, che è la grandezza che di solito si
+   guarda;
+2. **le scie e le posizioni vecchie** del puntatore, che nascono proprio dal fatto che il
+   puntatore viaggi *dentro il video* e arrivi in ritardo;
+3. **la precisione.** Un dito è largo ~10 mm, i bersagli di un desktop ne misurano ~4, e nel
+   tocco diretto il dito **copre il bersaglio** mentre lo si cerca. In più il passaggio del
+   puntatore — da cui dipendono suggerimenti e menu — esiste solo se un puntatore c'è davvero.
+
+### 5-bis.2 🔸 Il cursore non deve MAI essere dentro l'immagine catturata — e va verificato
+
+Discende da 5-bis.1: se lo disegna il client e c'è anche in quel che arriva, se ne vedono
+**due**. v1 aveva incontrato il problema tre volte senza collegarle, e la cura è la sua:
+*«non nasconderlo: renderlo invisibile»* — un tema con un cursore 1×1 ad alfa zero.
+
+| Desktop | Il cursore è nella cattura? | Il canale della cura |
+|---|---|---|
+| GNOME / Mutter | **no**, lo esclude di suo (`inhibit_cursor_overlay`) | ⚠ e se servisse, **non** `XCURSOR_THEME`: Mutter non la legge, legge `org.gnome.desktop.interface cursor-theme` |
+| KDE / KWin `--virtual` | **sì** `[M]` — niente piano cursore ⇒ dipinto nel framebuffer | `XCURSOR_THEME` (+ `XCURSOR_SIZE`, che KWin pretende) |
+| wlroots — XFCE, LXQt | **sì, sempre** su headless; `overlay_cursor` non lo toglie, lo **forza software** | `XCURSOR_THEME`; su labwc `XCURSOR_SIZE` non è obbligatoria |
+
+⛔ **La trappola, e va verificata invece che sperata**: su wlroots un tema che carica **zero**
+cursori fa ripiegare la libreria su un tema **incorporato e visibile** — cioè due puntatori,
+per un ripiego silenzioso (`REVIEWER.md` E2). Serve almeno un cursore valido, `index.theme`
+**senza `Inherits=`**, e i dieci nomi che labwc chiede. E l'esito si **controlla dopo l'avvio
+della sessione**: che il tema sia stato scritto non è che sia stato caricato.
+
+*Il posto dove metterlo c'è già: l'ambiente della sessione si compone da zero, una variabile
+per volta (`CODER.md` §4.5) — quindi la cura sta nel programma e non in un file, come vuole I7.*
+
+### 5-bis.3 🔸 Il ventaglio dei gesti
+
+I tre dell'utente più quattro che ne discendono per convenzione. Da confermare, i proposti.
+
+| Gesto | Effetto | |
+|---|---|---|
+| 1 dito trascina | muove il puntatore | ✅ utente |
+| 1 dito tap | clic sinistro | ✅ utente |
+| 2 dita tap | clic destro | ✅ utente |
+| 2 dita trascina | rotella / scorrimento | 🔸 proposto |
+| tap-e-mezzo (tap, poi premi e trascina) | trascinamento e selezione | 🔸 proposto |
+| 3 dita tap | clic centrale | 🔸 proposto |
+| pizzico | ingrandisce la **vista** del client, non l'applicazione | 🔸 proposto |
+
+⚠ Il *tap-e-mezzo* non è un lusso: senza, non si sposta una finestra e non si seleziona del
+testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fermo.
+
+### 5-bis.4 🔸 Il canale del cursore, e il suo compromesso
+
+Il client deve sapere **che forma** disegnare: barretta sul testo, doppia freccia sui bordi,
+mano sui collegamenti. Serve quindi un canale che porti **forma e punto attivo** quando
+cambiano.
+
+Il compromesso, accettato: la **posizione** è immediata perché locale, la **forma** arriva con
+un giro di rete di ritardo. Muovendo in fretta sopra un bordo, la doppia freccia compare un
+attimo dopo. È il verso giusto del compromesso — il ritardo di una forma non lo nota nessuno,
+quello di una posizione lo notano tutti.
+
+### 5-bis.5 🔸 Che cosa porta il canale di input
+
+| | |
+|---|---|
+| puntatore **assoluto** | sì — è il modo del trackpad di 5-bis.1 |
+| puntatore **relativo** | sì — mouse veri via *Pointer Capture* di Android, che consegna delta e non posizioni |
+| **scancode** | sì — tasti di controllo e tastiere fisiche |
+| **Unicode** | sì, e su Android è la **strada principale** (vedi §7.10-bis) |
+| **tocco multi-dito** | posto riservato, **non implementato** `[?]` |
+| **stilo** (pressione, inclinazione) | fuori, per ora |
+
+Il tocco nativo non entra perché non risolve la precisione, le applicazioni desktop lo
+gestiscono male, e andrebbe verificato che l'EIS di Mutter e KWin espongano la capacità
+«touch» — `libei` la prevede, che i due la offrano è `[?]`. Il **posto riservato** costa niente
+adesso e fa risparmiare una riscrittura se un giorno servisse.
+
+---
+
 ## 6. Il codice che si eredita
 
 ### 6.1 ✅ Il patrimonio di v1 è qui, e versionato
@@ -491,9 +580,22 @@ PAM autentica l'utente verso il server; niente fa il contrario. Certificato auto
 fiducia al primo incontro? Impronta da confrontare? Senza, la prima connessione è un
 uomo-in-mezzo gratuito.
 
-### 7.10 Il touch da Android: mouse emulato o touch vero?
-Questione aperta n.1 di v1, mai chiusa. Va decisa **prima** di scrivere RCP: sono due canali
-di input diversi.
+### 7.10 ~~Il touch da Android~~ → **chiusa l'8 agosto, vedi §5-bis**
+Era la questione aperta n.1 di v1, mai chiusa in un anno. Risposta: trackpad con puntatore
+disegnato dal client; tocco nativo con il posto riservato ma non implementato.
+
+### 7.10-bis ❓ La tastiera di Android: Unicode o scancode?
+Il passeggero del touch, e pesa di più. *«Una tastiera Android non è una tastiera fisica: non
+ha scancode, ha un IME che produce testo»* (`v1/documenti/client-android.md` §5.2). Il client
+manda quindi **Unicode** per i caratteri stampabili e **scancode** per i tasti di controllo —
+Invio, Tab, frecce, modificatori.
+
+**Proposto: tutti e due, e l'Unicode non come ripiego ma come strada principale.** In dote
+arriva la chiusura della questione n.7 di v1: la disposizione di tastiera dichiarata dal
+client, su Android, **non serve** — quello che arriva è già il carattere finale.
+
+Resta da confermare, ed è la parte che costa: la conversione da carattere a **posizione fisica
+nella disposizione della sessione**, con i modificatori applicati intorno.
 
 ### 7.11 La clipboard: bidirezionale?
 `SPECIFICHE.md` dice «server-client», che si legge in un verso solo. E su KDE la clipboard
