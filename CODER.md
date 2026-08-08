@@ -174,6 +174,37 @@ Queste governano la forma del codice, indipendentemente da cosa misura.
 Ogni componente che scriviamo è un componente da mantenere per sempre. Si usano i
 meccanismi di sistema esistenti. (`SPECIFICA.md` §2.)
 
+### 4.1-bis Si dipende dal compositore, non dal suo contorno
+*Posta dall'utente l'8 agosto 2026: «voglio evitare di smettere di correre dietro ai
+compositor e cominciare a dover inseguire i display manager».*
+
+La 4.1 dice di appoggiarsi ai meccanismi che ci sono. Questa dice **quali**, perché
+presi alla lettera insieme si contraddicono.
+
+**Il compositore si insegue per forza**: solo lui consegna i fotogrammi e accetta
+l'input. `mutter.c` e `kwin.c` esistono per questo, e continueranno a esistere.
+
+**Il contorno no.** Blocca-schermo, demoni di inattività, gestori dell'energia,
+display manager: fanno la stessa cosa in quattro modi diversi, con quattro
+configurazioni diverse che si riscrivono da sole. Inseguirli è una tassa che si paga
+per sempre e non compra niente che non sappiamo fare noi una volta sola.
+
+**La prova da fare, prima di appoggiarsi a un meccanismo:**
+
+> *Quante implementazioni diverse di questa cosa dovrei inseguire, e quanto mi costa
+> farla da me?*
+
+Quattro implementazioni divergenti e un costo nostro piccolo ⇒ **si fa da noi, una
+volta.** Un'implementazione sola, o standard fra i desktop ⇒ vale la 4.1 per intero.
+
+⚠ **E questo non è un permesso di riscrivere.** `logind`, PAM, PipeWire, `libei`,
+`xkbcommon`, QUIC: uno solo ciascuno, uguale ovunque. Lì la 4.1 vale senza sconti, e
+scrivere il nostro sarebbe il difetto che la 4.1 vieta.
+
+*Applicata in `DECISIONI.md` §4.3 (il blocco è nostro), dove il conto era: quattro cure
+diverse — e tre delle quattro erano righe di configurazione, cioè I7 — contro un
+contatore e un congedo.*
+
 ### 4.2 Degradare, non fallire
 Ogni dipendenza mancante ha un ripiego. Il servizio funziona comunque, con meno.
 Ma il ripiego si dichiara: un ripiego silenzioso produce due comportamenti sotto la

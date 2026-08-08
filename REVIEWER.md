@@ -77,6 +77,7 @@ già pagati. Le usi come lista di caccia. Ciascuna ha accanto dove si è già pr
 | E8 | Il silenzio scambiato per zero | «Vuoto» e «proibito» hanno lo stesso aspetto. Una lettura negata letta come «non c'è niente». | `LEZIONI.md` §1.9, `REFERENCE.md` R32 |
 | E9 | Un campione dell'avvio preso per il regime | La distribuzione del danno sui primi fotogrammi non è quella del regime. | `LEZIONI.md` §1.4, `REFERENCE.md` R29 |
 | E10 | Una prova verde sul client sbagliato | Una prova che non riproduce il difetto, o che collauda l'unico client che lo tollera. | `LEZIONI.md` §0.3, §2.1, `SPECIFICA.md` §5.9 |
+| E11 | Ci si appoggia a un meccanismo che esiste in quattro versioni | Una dipendenza presa dal **contorno** del desktop — blocca-schermo, demone di inattività, gestore dell'energia, display manager — invece che dal compositore. Il sintomo che la smaschera: la cura è una **riga di configurazione**, diversa su ciascun desktop, e su almeno uno viene riscritta dal demone stesso al primo avvio. | `CODER.md` §4.1-bis, `DECISIONI.md` §4.3, `lxqt.md` (`enableIdlenessWatcher`) |
 
 ---
 

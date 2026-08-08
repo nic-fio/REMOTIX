@@ -21,6 +21,38 @@ codice, `[S]` letto in una specifica, `[?]` ipotizzato.
 
 ---
 
+## 0. Il principio che ha prodotto le altre
+
+### 0.1 ✅ Si dipende dal compositore, non dal suo contorno
+
+*8 agosto 2026. «Voglio evitare di smettere di correre dietro ai compositor e cominciare a
+dover inseguire i display manager».*
+
+Sta in cima perché non è una decisione fra le altre: è il criterio con cui se ne prendono
+diverse, e almeno tre di quelle scritte qui sotto discendono da questa.
+
+| | |
+|---|---|
+| **si insegue** | il **compositore**, perché solo lui consegna i fotogrammi e accetta l'input. `mutter.c` e `kwin.c` esistono per questo e continueranno a esistere |
+| **non si insegue** | il **contorno**: blocca-schermo, demoni di inattività, gestori dell'energia, display manager. Fanno la stessa cosa in quattro modi, con quattro configurazioni che si riscrivono da sole |
+
+**La prova, prima di appoggiarsi a un meccanismo:** *quante implementazioni diverse dovrei
+inseguire, e quanto mi costa farla da me?* Quattro divergenti e un costo piccolo ⇒ si fa da
+noi, una volta sola.
+
+⚠ **Non è un permesso di riscrivere.** `logind`, PAM, PipeWire, `libei`, `xkbcommon`, QUIC:
+uno solo ciascuno, uguale ovunque. Lì vale `CODER.md` §4.1 senza sconti, e scrivere il nostro
+sarebbe il difetto che quella regola vieta.
+
+**Dove ha già deciso:** §4.3 (il blocco è nostro invece di quello dei desktop), §5.1
+(ridimensionare non tocca il compositore), e in negativo §1.1 — smettere di inseguire i client
+altrui era lo stesso ragionamento applicato al filo.
+
+*Scritta anche in `CODER.md` §4.1-bis, con la verifica corrispondente in `REVIEWER.md` E11 —
+le due devono restare in coppia, altrimenti è una regola non verificata.*
+
+---
+
 ## 1. Il protocollo
 
 ### 1.1 ✅ RDP muore. Il protocollo è nostro.
