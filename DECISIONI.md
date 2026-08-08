@@ -159,9 +159,81 @@ da dettaglio implementativo a **comportamento promesso all'utente**.
 
 ### 4.2 ✅ Dopo 6 ore senza segni di vita la sessione viene chiusa
 
-*8 agosto 2026, proposta dall'utente.* Il valore resta. **Ma il perché è stato contestato e
-la contestazione non ha ancora risposta** — vedi §7.2: il pericolo non è che la sessione sia
-aperta, è che sia *sbloccata*, e uccidere butta via il lavoro dell'utente.
+*8 agosto 2026, proposta dall'utente.* Il valore resta, e con §4.3 il suo mestiere è chiarito:
+**raccogliere le risorse**, non difendere la sicurezza — di quella si occupa lo stacco a 30
+minuti. Su un server multi-utente ogni sessione dimenticata tiene memoria, GPU e un
+codificatore.
+
+### 4.3 ✅ Il blocco è di REMOTIX, non del desktop — 30 minuti senza input, poi stacco
+
+*8 agosto 2026. «Se non arriva input dall'utente per 30 minuti la sessione si blocca:
+l'utente dovrà fare il re-attach con user e password».*
+
+Dopo 30 minuti senza input, REMOTIX **stacca il client**. Il desktop resta com'era, ma non lo
+vede più nessuno: per rivederlo serve un attacco nuovo, con utente e password.
+
+⛔ **Il blocco schermo dei desktop resta spento**, com'era in v1 — `--no-lockscreen` su KWin e
+gli equivalenti sugli altri tre. Non è una svista ereditata: è una dipendenza, e ora ha una
+ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
+
+| Desktop | Che cosa succede bloccando davvero |
+|---|---|
+| **GNOME** | ⛔ **la revoca.** Entrando nel dialogo di sblocco, gnome-shell chiama `inhibit_remote_access()` e Mutter **chiude ScreenCast, RemoteDesktop e InputCapture, rifiutando di ricrearli** (`gnome.md` §4). C'è l'eccezione `is_headless()`, che è il nostro caso — ma è letta nel codice e **mai misurata** |
+| **KDE** | ⛔ **la catena che si morde la coda.** A blocco attivo la nostra inibizione è ignorata (`powerdevilpolicyagent.cpp:509`); powerdevil spegne lo schermo a 10 minuti; con zero uscite KWin monta un output fittizio **con un filtro che inghiotte tutto l'input** (`kde.md` §10.2-10.3). Ci si blocca e non si sblocca più |
+| **XFCE, LXQt** | i loro demoni di inattività, e su LXQt `enableIdlenessWatcher=false` **viene riscritto a `true`** dal demone al primo avvio (`lxqt.md`) |
+
+**Le tre ragioni della scelta**, in ordine di peso:
+
+1. **un comportamento solo per quattro desktop**, invece di quattro cure fragili — e tre di
+   quelle cure sarebbero righe di configurazione, cioè ciò che l'invariante **I7** vieta;
+2. **il conteggio è nostro e non ha incognite**: l'input lo iniettiamo noi, quindi sappiamo
+   esattamente quando è passato l'ultimo. Col modo A dovremmo fidarci che il rilevatore di
+   inattività di ciascun desktop veda gli eventi di `libei` — su KDE è `[R]` che sì
+   (EIS → `simulateUserActivity`), sugli altri tre sarebbe da misurare;
+3. **la sicurezza è la stessa**: l'unica strada per quel desktop passa da FILO, e FILO passa
+   da PAM. La schermata di blocco chiederebbe la medesima password.
+
+> ⚠ **E questa decisione ha una condizione di scadenza, posta dall'utente lo stesso giorno:**
+> *«non escludo che un domani potremmo implementare un metodo di autenticazione molto più forte
+> della semplice password, ma per il momento va bene solo questa»*.
+>
+> Il ragionamento del punto 3 **regge solo finché la password PAM è l'unica chiave**. Il giorno
+> in cui FILO autenticasse con qualcosa di diverso — un gettone sul dispositivo, una chiave, un
+> secondo fattore — il blocco del desktop smetterebbe di essere ridondante e diventerebbe una
+> difesa vera, perché chiederebbe una chiave **che chi ha rubato la prima non ha**.
+>
+> **Chi implementa l'autenticazione forte rilegge questa voce**, e non la dà per acquisita.
+
+### 4.4 ✅ Un client che tace è un client che si è staccato
+
+*8 agosto 2026. «Fantasma: lo trattiamo come nel caso in cui l'utente chiude il client».*
+
+Nessuna connessione «tiene il posto». Chi tace è staccato, chi arriva entra — senza timeout da
+aspettare, senza subentro da negoziare, senza il caso «il telefono è morto in galleria e ora
+non posso rientrare dalla mia sessione» che v1 aveva dovuto tamponare con keepalive stretti.
+
+Sparisce così anche il bivio *subentro contro attesa*: non esiste più, perché non esiste il
+posto occupato.
+
+### 4.5 🔸 I tre orologi della sessione
+
+Le decisioni 4.1-4.4 mettono in fila tre tempi diversi, che vanno tenuti distinti perché
+misurano cose diverse:
+
+| Orologio | Quanto | Che cosa scatta | Deciso in |
+|---|---|---|---|
+| **silenzio del client** | ❓ da fissare | il client si considera staccato | §4.4 |
+| **inattività dell'utente** | **30 minuti** senza input | REMOTIX stacca il client | §4.3 |
+| **abbandono della sessione** | **6 ore** senza alcun attacco | la sessione viene chiusa, con congedo pulito | §4.2 |
+
+Sono in scala: il primo si misura in secondi, il secondo in minuti, il terzo in ore. Un utente
+che lascia il client aperto e va a pranzo viene staccato dopo mezz'ora e ritrova tutto
+riattaccandosi; se non torna entro le sei ore successive, la sessione viene raccolta.
+
+⚠ **Una conseguenza da tenere d'occhio**: «input» è quel che l'utente manda, non quel che
+guarda. Chi resta mezz'ora a guardare un video senza toccare nulla viene staccato. Il costo è
+piccolo — riattaccarsi è rapido — ma se emergesse come fastidio, la cura è un cenno di
+presenza dal client, non l'allungamento della soglia.
 
 ---
 
@@ -296,20 +368,21 @@ Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings`
 ### 7.1 ~~La misura della tela alla nascita~~ → **chiusa l'8 agosto, vedi §5.0**
 La detta il client a ogni attacco. Niente predefiniti, niente preferenze.
 
-### 7.2 Blocco schermo alla disconnessione — contro-proposta a §4.2
-Il rischio di una sessione persistente non è che sia aperta (per entrare serve PAM), è che sia
-**sbloccata**. Bloccare lo schermo appena il client se ne va chiude il pericolo in dieci
-secondi invece che in sei ore, e **non butta via il lavoro dell'utente**. Le sei ore
-resterebbero, con un altro mestiere: raccogliere le risorse, non difendere la sicurezza — e
-allora diventano una politica configurabile, con quel valore come predefinito, e con un
-**congedo pulito** invece di un colpo secco.
+### 7.2 ~~Blocco schermo alla disconnessione~~ → **chiusa l'8 agosto, vedi §4.3**
+Il blocco è di REMOTIX, non del desktop: 30 minuti senza input e il client viene staccato. Con
+una condizione di scadenza scritta, da rileggere se arriverà un'autenticazione più forte.
 
-### 7.3 Il fantasma: subentro o attesa?
-Se il telefono muore in galleria e un'ora dopo apro il portatile, la connessione morta mi
-tiene fuori dalla mia sessione? **Subentro** (chi arriva ha ragione, stesso utente
-autenticato), **attesa** (la vecchia tiene il posto per un tempo dichiarato), o **insieme**
-(due client sullo stesso desktop — costa poco con un palco persistente, ma cambia il
-protocollo e va deciso prima, non dopo).
+### 7.3 ~~Il fantasma: subentro o attesa?~~ → **chiusa l'8 agosto, vedi §4.4**
+Nessuna delle due: chi tace è staccato, e il posto non lo tiene nessuno. Il bivio non esiste
+più. ⚠ Resta fuori, e non è stata chiesta, la terza possibilità — **due client sullo stesso
+desktop insieme**: costerebbe poco con un palco persistente, ma cambia il protocollo e andrebbe
+decisa prima di scriverlo, non dopo.
+
+### 7.3-bis ❓ Dopo quanti secondi di silenzio un client è staccato?
+Il primo dei tre orologi di §4.5, ed è l'unico senza un numero. Con QUIC il passaggio
+WiFi → LTE **non** conta come silenzio — la connessione si porta dietro il cambio di indirizzo
+— quindi la soglia deve coprire solo le interruzioni vere: la galleria, il telefono che si
+spegne, la batteria che finisce.
 
 ### 7.4 Proporzioni: bande o allungamento?
 Credo si risponda da sé — allungare deforma il testo e lo rende illeggibile — ma va detto.
