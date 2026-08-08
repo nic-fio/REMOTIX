@@ -167,6 +167,52 @@ aperta, è che sia *sbloccata*, e uccidere butta via il lavoro dell'utente.
 
 ## 5. La geometria — la tela e la vista
 
+### 5.0 ✅ La tela nasce a ogni attacco, e sta ferma finché il client resta
+
+*8 agosto 2026, modello dettato dall'utente.*
+
+| Momento | Chi decide la misura | Chi adatta |
+|---|---|---|
+| **attacco** | il client: la sessione legge la sua risoluzione e usa quella | nessuno — è 1:1 |
+| **durante la sessione** | nessuno: la tela non si muove | il **client** riscala l'immagine |
+| **riattacco** da un altro dispositivo | il nuovo client, con la sua risoluzione | nessuno — di nuovo 1:1 |
+
+Chiude la domanda che era aperta in §7.1: la tela **non** ha un valore predefinito né una
+preferenza dell'utente. La detta il client, a ogni attacco.
+
+**La virtù del modello è il caso mobile**, e viene giusto da solo: il telefono si attacca e la
+tela nasce della forma del telefono — pixel veri, niente bande, niente scalatura. Nessuna
+delle alternative discusse (tela fissa generosa, tela con vista scorrevole) faceva altrettanto
+bene senza logica aggiuntiva.
+
+**L'attacco funziona su tutti e quattro i desktop**, KDE compreso: la misura si scrive nella
+riga di avvio del compositore (`--virtual --width W --height H`) **prima** che la sessione
+parta, e la sessione parte al primo attacco.
+
+### 5.0-bis 🔸 Il riattacco a misura diversa su KDE < 6.8: degradazione dichiarata
+
+È l'unico punto in cui il modello non può essere servito. A sessione viva KWin 6.3.6 non
+cambia misura `[M]`, e riavviarlo significherebbe uccidere la sessione — cioè distruggere
+proprio il distacco che il modello offre.
+
+**Ripiego: si tiene la tela vecchia e riscala il client.** Non costa una riga in più, perché è
+lo stesso codice del punto «durante la sessione». Su Debian stabile, riattaccandosi da un
+dispositivo di forma diversa, si vede il desktop della forma precedente riscalato, finché la
+sessione non viene chiusa. Su GNOME, wlroots e KDE ≥ 6.8 si vede la forma nuova.
+
+Il ripiego **si dichiara nel registro** (`CODER.md` §4.2): un ripiego silenzioso produce due
+comportamenti sotto la stessa etichetta.
+
+### 5.0-ter 🔸 `[?]` Ridurre anche la misura codificata quando la finestra è piccola
+
+Se l'utente restringe molto la finestra, il server continua a codificare la tela intera e il
+client la rimpicciolisce: quei pixel si pagano in banda senza vederli. Si **potrebbe** far
+scendere anche la misura codificata sotto una certa soglia, con assestamento.
+
+⚠ **Non è nel modello, ed è volutamente fuori**: prima va misurato se il problema esiste
+davvero, e quanto pesa. Un'ottimizzazione decisa prima della misura è §7.2 di `LEZIONI.md` —
+ottimizzare nella direzione sbagliata.
+
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 
 *8 agosto 2026. «Tagliamo la testa al toro. Anziché correre dietro ai compositor, una scelta
@@ -247,9 +293,8 @@ Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings`
 
 **Non sono decisioni.** Sono buchi, elencati perché non si perdano.
 
-### 7.1 La misura della tela alla nascita
-Siccome non cambia da sola (§5.1), la scelta iniziale pesa. Le opzioni: la misura del primo
-client che si collega, un predefinito abbondante (2560×1440?), o una preferenza dell'utente.
+### 7.1 ~~La misura della tela alla nascita~~ → **chiusa l'8 agosto, vedi §5.0**
+La detta il client a ogni attacco. Niente predefiniti, niente preferenze.
 
 ### 7.2 Blocco schermo alla disconnessione — contro-proposta a §4.2
 Il rischio di una sessione persistente non è che sia aperta (per entrare serve PAM), è che sia
@@ -267,8 +312,11 @@ autenticato), **attesa** (la vecchia tiene il posto per un tempo dichiarato), o 
 protocollo e va deciso prima, non dopo).
 
 ### 7.4 Proporzioni: bande o allungamento?
-Discende da §5.1 e credo si risponda da sé — allungare deforma il testo — ma va detto. E sul
-telefono in verticale le bande sono enormi: serve lo zoom con scorrimento nel client.
+Credo si risponda da sé — allungare deforma il testo e lo rende illeggibile — ma va detto.
+
+⚠ **Il modello di §5.0 la rimpicciolisce parecchio**: siccome la tela nasce della forma del
+client, all'attacco le proporzioni **combaciano sempre**. Il caso resta solo in due punti: il
+ridimensionamento della finestra durante la sessione, e il ripiego di §5.0-bis su KDE vecchio.
 
 ### 7.5 Il linguaggio del server
 Raccomandato **C**, per non buttare le ~14.000 righe che sopravvivono, con **`quiche`**
