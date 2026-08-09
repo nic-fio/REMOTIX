@@ -26,6 +26,22 @@ Il fondamento condiviso, che qui si richiama ma non si riscrive:
 - `SPECIFICA.md` §3.1 — i due numeri che ogni scelta tecnica deve avvicinare.
 - `REFERENCE.md` — le regole di compatibilità con i client, per chi tocca il filo.
 
+> ## ⛔ Dove stanno i documenti citati — si legge prima di andare a cercarli
+>
+> *Aggiunto il 9 agosto 2026: questo documento è arrivato da v1 **senza rinumerazione**, come
+> `LEZIONI.md`, e come quello cita i nomi vecchi. Chi cercasse `SPECIFICA.md` nella cartella di
+> V2 non lo troverebbe, ed è precisamente il primo documento che §0 gli obbliga a leggere.*
+>
+> | Citato qui come | Sta in | Quanto vale in V2 |
+> |---|---|---|
+> | `SPECIFICA.md` | `v1/documenti/SPECIFICA.md` | ⛔ **si legge `SPECIFICHE.md`**, al livello di V2, che la sostituisce per intero. I §x.y citati qui sotto puntano alla vecchia, e la corrispondenza va cercata per argomento |
+> | `REFERENCE.md` | `v1/documenti/REFERENCE.md` | erano le regole di compatibilità con i client RDP altrui. **In V2 decade quasi per intero**: i client sono nostri e l'arbitro è `RCP.md`. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
+> | `PIANO.md` di v1 | `v1/documenti/PIANO.md` | chiuso alla fase 11. Il piano vivo è `PIANO.md` al livello di V2 |
+>
+> ⚠ **E i tre documenti che in V2 non esistevano affatto**, e che qui non sono citati perché sono
+> nati dopo: `RCP.md` (l'arbitro del filo), `DECISIONI.md` (il perché di ogni scelta, con la
+> data e chi l'ha presa) e `SPECIFICHE.md`. Chi tocca il filo legge `RCP.md`, non `REFERENCE.md`.
+
 Quando una misura nuova contraddice questo documento, si aggiorna il documento nello
 stesso momento, con la data e la fonte. Un riferimento che invecchia in silenzio è
 peggio di nessun riferimento.

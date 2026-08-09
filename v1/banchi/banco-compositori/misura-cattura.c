@@ -679,6 +679,45 @@ int main(int argc, char **argv)
 	while (g_get_monotonic_time() < m.fine)
 		g_usleep(50000);
 
+	/*
+	 * ⛔ ZERO FOTOGRAMMI NON E' LA STESSA COSA DI «NON HO MAI GUARDATO».
+	 *
+	 * Aggiunto il 9 agosto 2026, alla certificazione del banco della fase 0, e
+	 * il difetto e' stato trovato dal controllo C3: puntando questo programma su
+	 * un nodo che NON ESISTE rispondeva
+	 *
+	 *     fotogrammi 0 in 0.00 s  →  0.00 al secondo        (uscita 0)
+	 *
+	 * cioe' esattamente quel che risponde una scena ferma, che e' un risultato
+	 * legittimo.  Due cose opposte sotto la stessa faccia: `LEZIONI.md` §1.9,
+	 * «una misura che puo' dire zero deve poter distinguere lo zero dal
+	 * fallimento», e la domanda 4 che `REVIEWER.md` §1 fa a ogni banco.
+	 *
+	 * ⚠ E il difetto era nello strumento che deve certificare tutti gli altri:
+	 *   un solo giro andato storto — un nodo sbagliato, un permesso negato, il
+	 *   compositore non ancora in piedi — sarebbe entrato in una tabella come
+	 *   «il compositore non consegna niente».
+	 *
+	 * Il discrimine e' `t_inizio`, che si scrive quando il flusso diventa
+	 * ATTIVO: la scena ferma ci arriva e consegna zero; il nodo inesistente non
+	 * ci arriva mai.  In quel caso non si stampa nessuna RIGA — una riga di
+	 * misura che non e' una misura e' peggio di nessuna riga — ma un GUASTO, e
+	 * si esce con 2.
+	 */
+	if (m.t_inizio == 0)
+	{
+		printf("GUASTO\t%s\tflusso mai attivo\n", etichetta);
+		fprintf(stderr,
+		        "⛔ FALLITO (non «zero»): il flusso non e' mai diventato attivo.\n"
+		        "   stato finale: %d%s%s\n"
+		        "   Non c'e' nessun numero da leggere qui: la cattura non e' mai\n"
+		        "   cominciata.  Zero fotogrammi si dichiara solo se il flusso e'\n"
+		        "   stato attivo davvero (LEZIONI.md §1.9).\n",
+		        (int) m.stato, m.guasto ? ", guasto: " : "", m.guasto ? m.guasto : "");
+		palco_smonta(palco);
+		return 2;
+	}
+
 	/* --- il conto ---------------------------------------------------- */
 	secondi = m.contati > 1 ? (double) (m.t_ultimo - m.t_primo) / G_USEC_PER_SEC : 0.0;
 	fps_misurati = secondi > 0.1 ? (double) (m.contati - 1) / secondi : 0.0;

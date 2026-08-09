@@ -24,6 +24,18 @@ CLIENT=(freerdp3-x11 xvfb)                          # il client di prova
 COMPOSITORI=(kwin-wayland kwin-common sway labwc)   # i termini di paragone
 PROTOCOLLI=(plasma-wayland-protocols libwayland-dev wayland-protocols)
 
+# ⛔ Le credenziali si prendono UNA VOLTA, e con `-S`.
+#
+#    `provision-server.sh` lo fa dalla prima riga; questo no, e il 9 agosto 2026 —
+#    al primo riavvio vero del server — si e' fermato subito con «sudo: a terminal
+#    is required».  Due script di ripristino della stessa macchina che trattano
+#    `sudo` in due modi diversi: quello che funziona da solo e quello che pretende
+#    un terminale.  La richiesta NON va lasciata vuota, o chi fornisce la parola
+#    d'ordine da standard input non ha niente da riconoscere e aspetta per sempre.
+if ! sudo -n true 2>/dev/null; then
+    sudo -v -S -p 'Password sudo: '
+fi
+
 echo "==> pacchetti del banco"
 sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \

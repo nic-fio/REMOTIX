@@ -466,14 +466,43 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 | 10-bis | **Che cosa costa la risoluzione, per davvero?** | niente fino a 4K | **niente a copia zero** (59 fps da 720p a 4K su una Intel integrata), **tutto in memoria** (49,6 → 27,0) [M, 8 ago] | a 4K sì |
 | 5 | **Si può chiedere uno schermo virtuale della misura voluta?** | sì, `RecordVirtual` | ⛔ **NO, e il codice diceva di sì** [M, 8 ago]: `stream_virtual_output` col backend `--virtual` risponde **`Could not find output`**, per ogni misura. E `--drm`, che gli output veri ce l'ha, da una sessione senza seat non parte. L'output lo crea la riga di comando del compositore, e noi ci attacchiamo | sì, backend headless |
 | 6 | **Quanto consegna, con una scena che cambia a ogni ridisegno?** | **~37 su 60** | **59–60** | **61** (40 a 4K, per il costo della copia) |
-| 7 | **La cadenza dichiarata come si comporta?** | se ne ottengono **sei decimi**; oltre 60 non sale; **cadenza fissa rifiutata** | **fissa rifiutata anche qui** (`framerate` deve valere `0/1`); il tetto è `maxFramerate`, e lo **onora il server** [R] | da misurare |
-| 8 | **Consegna fotogrammi interi o «diff»?** | in memoria interi; **a copia zero è un diff** su quattro buffer riciclati | **interi, sempre**, su 2–4 buffer, con il danno dichiarato a parte [R] | da misurare |
+| 7 | **La cadenza dichiarata come si comporta?** | se ne ottengono **sei decimi**; oltre 60 non sale; **cadenza fissa rifiutata**. ⭐ **E ora si sa perché** `[R]` **9 ago**: `maxFramerate` fa **due mestieri insieme** — è il freno della cattura *ed* è la frequenza del monitor virtuale; stesso numero da tutt'e due le parti ⇒ battimento ⇒ 0,61. **C'è un candidato per disaccoppiarli**, vedi il riquadro sotto la tabella | **fissa rifiutata anche qui** (`framerate` deve valere `0/1`); il tetto è `maxFramerate`, e lo **onora il server** [R] | da misurare |
+| 8 | **Consegna fotogrammi interi o «diff»?** | ⛔ **interi anche a copia zero** — `[R]` **9 ago**, e per due anni abbiamo creduto il contrario: il blit copia l'**intero** framebuffer di vista, Cogl **svuota deliberatamente** lo stack di clip, e per un CRTC virtuale la vista è un `CoglOffscreen` **singolo e persistente**, non uno swapchain. I quattro buffer li chiedevamo noi | **interi, sempre**, su 2–4 buffer, con il danno dichiarato a parte [R] | da misurare |
 | 9 | **Il buffer arriva già disegnato?** | **no**: a copia zero il 100 % arriva con il disegno in corso | **sì**: KWin fa `glFlush()`, e `glFinish()` su NVidia e llvmpipe [R] | da misurare |
 | 10 | **Che cosa costa la risoluzione?** | **niente** fino a 4K | niente | a 4K sì, ed è la copia in memoria |
 | 11 | **Che cosa costa la profondità di colore?** | **niente**, e non esiste un percorso a 24 bit impacchettati | — | — |
 
 | **13** *(nuova)* | ⭐ **Uno schermo virtuale si RIDIMENSIONA a caldo?** | **sì**: la misura si concorda nella negoziazione PipeWire, cambiarla è una rinegoziazione | ⛔ **no su 6.3.6**: il modo è `const`, l'elenco è fissato nel costruttore, e `kde_output_management_v2` sa solo *scegliere* fra i modi annunciati. Risolto a monte (`kwin!7932`, milestone **6.8**) — **e per la stessa strada nostra**, la negoziazione PipeWire | `wlr_output_state_set_custom_mode` esiste e il backend headless la usa già [lettura, **da misurare**] |
-| **14** *(nuova)* | ⭐ **La clipboard di chi è?** | **della sessione remota**: sta sull'oggetto RemoteDesktop, si accende con `EnableClipboard`, e senza sessione non esiste | **del compositore**: `zwlr_data_control_manager_v1` v2, **nessun permesso**, e c'è anche se REMOTIX non c'è | lo stesso protocollo: `appunti_wlr.c` **è già scritto per questa famiglia** |
+| **14** *(nuova)* | ⭐ **La clipboard di chi è?** | ⚠ **del compositore anche qui** — è `MetaSelection` `[R]` **9 ago**. Della sessione remota è solo la **porta** (`EnableClipboard`), e ⛔ **senza sessione la clipboard esiste lo stesso**: la sponda X11 è incondizionata nei due versi, `xclip` funziona | **del compositore**: `zwlr_data_control_manager_v1` v2, **nessun permesso**, e c'è anche se REMOTIX non c'è | lo stesso protocollo: `appunti_wlr.c` **è già scritto per questa famiglia** |
+| **15** *(nuova)* | ⭐ **C'è uno stato in cui il compositore REVOCA quel che ha già concesso, e chi ha il dito su quel pulsante?** | ⛔ **sì, ed è l'unico dei tre**: entrando nel dialogo di sblocco gnome-shell chiama `inhibit_remote_access()` e Mutter chiude ScreenCast, RemoteDesktop e InputCapture **rifiutando di ricrearli**. L'eccezione è `is_headless()` `[R]` — la nostra condizione, e **non l'abbiamo chiesta** (`gnome.md` §4) | `[?]` da verificare | `[?]` da verificare |
+
+> ⭐ **La 15 è la domanda che questa lista non aveva**, ed è arrivata dallo studio di GNOME
+> *(`gnome.md` §14, dove è chiamata «la domanda 16» contando le righe `-bis`; qui prende il primo
+> numero libero, perché in questo documento **non si rinumera**)*. La 3 chiede se esiste un
+> permesso; questa chiede se il permesso **può essere ritirato a caldo**, che è una cosa diversa e
+> più pericolosa: si va a chiedere il permesso una volta sola, all'inizio, e nessuno torna a
+> guardare. Si fa insieme alla 3.
+
+> ## ⭐ I sei decimi di Mutter hanno un candidato di cura, e va provato per primo
+>
+> *Scritto il 9 agosto 2026, leggendo `gnome.md` §8.2. È `[R]`, non una misura.*
+>
+> Per tutto v1 i 37 fotogrammi sono stati un muro senza spiegazione, e da lì discendono due
+> righe che oggi stanno in tre documenti: *«nessuna leva nostra lo sposta»* e *«il traguardo dei
+> 40 ms su GNOME probabilmente non si raggiunge»* (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
+>
+> La lettura del codice dà la causa: `maxFramerate` **è il freno della cattura e insieme la
+> frequenza del monitor virtuale**. Due orologi allo stesso numero battono fra loro, e il
+> battimento vale 0,61. E `ensure_virtual_monitor` **esce prima se la misura non cambia**: quindi
+> negoziare alto e poi rinegoziare **la sola cadenza** dovrebbe lasciare il monitor dov'è e
+> muovere solo il freno.
+>
+> ⛔ **Costa tre celle e zero righe di prodotto** (è la misura M3 di `gnome.md` §13), e se
+> riesce porta i 60 su GNOME — con essi il traguardo dei 40 ms. Va provata **prima** di scrivere
+> qualunque cosa che dia quel muro per acquisito.
+>
+> ⚠ **E finché non è misurata resta una `[?]`**: una spiegazione che torna non è una cura che
+> funziona. Vale §1.11 — sapere *perché* una cosa succede non dimostra di saperla fermare.
 
 > ⚠ **La colonna wlroots e' stata riempita dopo** *(8 agosto 2026)*. Le celle «da misurare» qui sopra
 > hanno una risposta in **`xfce.md` §12**, che rifa' queste quattordici domande con la colonna
@@ -650,10 +679,10 @@ dichiaravamo.**
 |---|---|
 | Limitare il server a una versione EGFX più bassa per confronto con mstsc | vicolo cieco: su quella versione mstsc spegne l'H.264 |
 | Dare più thread alla conversione di colore in CPU | rumore: 13,8 ms contro 12,5. Quel tempo non è di calcolo, è di memoria |
-| Aspettare la *fence* implicita del DMA-BUF | non cambia niente: è quella sbagliata. La esplicita viaggia in un metadato che non chiedevamo |
+| Aspettare la *fence* implicita del DMA-BUF | non cambia niente: è quella sbagliata. La esplicita viaggia in un metadato che non chiedevamo. ⚠ **Corretta il 9 agosto**: questa riga copre metà del contratto — l'*acquire*. Quel che manca è il **release**, e sta dall'altra parte (vedi il riquadro qui sotto) |
 | Adattare la **risoluzione** alla banda | non realizzabile: lo scaled output lo rende un client su tre, e ridimensionare il monitor virtuale ridispone le finestre dell'utente |
 | Dichiarare alla cattura una cadenza **fissa** invece di «quando cambia» | Mutter la rifiuta: nessun formato negoziato, zero fotogrammi |
-| Alzare la cadenza dichiarata **oltre 60** | non dà niente: 120 dichiarati, 37 consegnati come con 60 |
+| Alzare la cadenza dichiarata **oltre 60** | non dà niente: 120 dichiarati, 37 consegnati come con 60. ⚠ **Non chiude la strada della cadenza**: alzare il numero *una volta sola* alza tutt'e due gli orologi insieme, ed è il battimento a mangiare il guadagno. Il candidato di §3 è un'altra mossa — **rinegoziare la sola cadenza, a monitor fermo** |
 | Cercare il collo di bottiglia dei fotogrammi nel codificatore, nel protocollo o nella rete | era nella nostra costante |
 
 ⚠ **Due di queste righe erano di RDP, non del problema** *(8 agosto 2026)*, e vanno lette con
@@ -670,6 +699,27 @@ giorno in cui qualcuno riproporra' «adattiamo la risoluzione alla banda», ques
 in v1 non si poteva e **obblighera' a dimostrare che in V2 si puo'** — che e' esattamente il lavoro
 che la riga deve far fare.
 
+> ## ⭐ Un vicolo cieco che non era un vicolo cieco: la caccia della fase 9, nel posto sbagliato
+>
+> *Scritto il 9 agosto 2026 da `gnome.md` §1.3 e §8.1. `[R]`, e riapre una caccia chiusa male.*
+>
+> Le due schermate che si alternavano sono state inseguite per due fasi come un problema di
+> **acquire**: il buffer arriva col disegno in corso, quindi si aspetta la fence. La lettura del
+> codice dice che il difetto è dall'altra parte, ed è un **release**: `can_reuse_pw_buffer` —
+> l'unico punto in cui Mutter aspetta noi — **si arrende alla prima riga** se manca
+> `SPA_META_SyncTimeline`, e riusa il buffer **mentre VA-API lo sta ancora leggendo**.
+>
+> ⛔ **E spiega perché la cura peggiorava le cose**: la superficie di accumulo copiava i soli
+> rettangoli danneggiati da un buffer che conteneva **già il fotogramma intero** (domanda 8).
+>
+> **Due cure candidate, entrambe piccole**: chiedere `SPA_META_SyncTimeline` — che Mutter
+> **offre**, e che oggi non chiediamo — oppure **trattenere** il `pw_buffer` fino a lettura
+> finita, che è quel che fa il riferimento, cioè il contrario di quel che avevamo concluso.
+>
+> ⚠ **È una lettura, non una misura**, ed è la lezione 4 di `gnome.md` §14: *una misura giusta
+> con una spiegazione inventata è più pericolosa di una misura sbagliata*, perché nessuno la
+> rimette in discussione. R29 è rimasta in piedi due fasi per questo.
+
 ---
 
 ## 9. La ricetta, per aprire il supporto a un desktop nuovo
@@ -682,8 +732,11 @@ Nell'ordine, e ogni passo è una lezione delle sezioni precedenti messa in fila.
    server RDP di KDE, stessa libreria, stesso compositore, 4 200 righe — stava in un nono repository,
    e a trovarlo è stata una domanda dell'utente. **La domanda giusta non è «c'è nei repo che ho?» ma
    «chi, al mondo, fa questa cosa su questo desktop?»** — e si fa prima di leggere, non dopo.
-1. **Rispondere alle undici domande della sezione 3**, con gli strumenti che ci sono già. Un
-   pomeriggio, prima di scrivere una riga di prodotto. Le domande 4 e 6 per prime.
+1. **Rispondere alle quindici domande della sezione 3**, con gli strumenti che ci sono già. Un
+   pomeriggio, prima di scrivere una riga di prodotto. Le domande 4 e 6 per prime, e la 3 insieme
+   alla 15 — *«c'è un permesso?»* e *«può essere ritirato a caldo?»* sono la stessa indagine.
+   *(Diceva «undici»: erano quelle del 7 agosto, prima che gli studi ne aggiungessero quattro —
+   9 agosto 2026.)*
 2. **Accertare come disegna senza monitor** (GPU o software): decide se i suoi numeri sono
    confrontabili con quelli di GNOME, e se quel desktop è servibile su una macchina da server.
 3. **Trovare la strada diretta al compositore**, senza portale — e scoprire subito se è dietro un

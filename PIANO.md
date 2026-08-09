@@ -200,8 +200,17 @@ scene con `ffmpeg -f lavfi -i testsrc2`.
 
 **Si riusa**: tutto `v1/banchi/` (262 file), `v1/banco/` per il provisioning.
 
+⛔ **Passo zero, e senza di questo la fase non parte: GNOME non è più installato sul server**
+`[M]` — `dpkg-query` dice *not-installed*, non c'è una `gnome.desktop` (`gnome.md` §2). Il
+controllo positivo di tutto il progetto è la riproduzione dei ~37 fotogrammi di Mutter, e oggi
+non è eseguibile. Si rimette GNOME **prima** di credere a qualunque numero.
+
 ⚠ Da fare qui e non dopo: installare `vainfo` sul ferro di prova e **confermare** le capacità del
 codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DECISIONI.md` §4.6).
+
+⚠ **E il ripristino si prova riavviando**, non rileggendo lo script: in v1 il primo riavvio vero
+ha mostrato due pezzi mancanti che nessun documento dichiarava (`LEZIONI.md` §2.5-bis). Vale
+adesso, non solo alla fase 13 — perché è adesso che la macchina viene rimessa in piedi.
 
 **E qui entra anche l'ambiente Android**, benché il binario B cominci molto dopo: SDK, emulatore
 (AVD), `adb`, e il collegamento al telefono vero sulla rete locale. Si mette adesso perché la
@@ -292,6 +301,17 @@ crollato»: **i pixel**.
 ⚠ Qui la codifica è **software**, di proposito. L'accelerazione è la fase 8, e metterla prima
 significherebbe non sapere quale dei due pezzi sbaglia.
 
+⛔ **E qui nasce la sessione GNOME, che v1 avviava senza mai averla studiata** — le trappole sono
+in `gnome.md` §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
+`gnome-session` si ri-esegue dentro una shell di login e si riporta dentro `~/.profile` `[R]`;
+`--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
+**viva, completa e nera**; il drop-in dell'unità della Shell oggi si scrive **solo per KWin**
+(`src/sessione.c:671`), quindi su GNOME va scritto adesso.
+
+⭐ E una prova da fare **guasta di proposito** (M9 di `gnome.md` §13): senza `--virtual-monitor`,
+per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
+scambia per un difetto di cattura, e si cerca per mezza giornata dalla parte sbagliata.
+
 ⛔ **E qui va la sonda Android** (§1.2), che è la sola cosa del binario B che non può aspettare: un
 file HEVC Main10 dato a MediaCodec, per sapere **adesso** se il telefono lo decodifica in hardware.
 È il muro contro cui è morto v1, e scoprirlo qui costa due fasi invece di nove.
@@ -330,6 +350,14 @@ un emulatore non sa dare, perché il suo MediaCodec non è il silicio del telefo
 raggiunge**, per il muro dei 37 fotogrammi di Mutter. Se la misura lo confermasse, non è un difetto
 nostro — ed è una ragione in più per la fase 10.
 
+⭐ **Ma prima di dichiararlo si prova la cadenza disaccoppiata**, ed è la prima cosa da fare in
+questa fase perché costa **tre celle e zero righe di prodotto**: `maxFramerate` fa da freno alla
+cattura **e** da frequenza al monitor virtuale, e due orologi allo stesso numero battono fra loro
+`[R]` (`LEZIONI.md` §3, il riquadro dei sei decimi; misura M3 di `gnome.md` §13). Si negozia alto
+e poi si rinegozia **la sola cadenza**, a monitor fermo. Se riesce, GNOME entra nel traguardo e
+questa riga va riscritta; se non riesce, il muro diventa `[M]` invece di `[?]` — che è un
+guadagno comunque, perché oggi è una stima che tre documenti citano come se fosse un fatto.
+
 ---
 
 ## Fase 4 — Si comanda
@@ -346,6 +374,18 @@ nostro — ed è una ragione in più per la fase 10.
   sessione con la disposizione sbagliata: la seconda **deve** finire nel registro come non
   producibile, non uscire diversa;
 - `Ctrl+C` che copia invece di scrivere una c.
+
+⛔ **E qui si scopre che il cursore non arriva affatto**, il che rende `CURSORE_FORMA` (`RCP.md`
+§7.2) un canale senza sorgente: su Mutter chiediamo `cursor-mode=2` — cioè «dammi il cursore
+come metadato» — **ma non chiediamo `SPA_META_Cursor`**, quindi forma, posizione e punto attivo
+non vengono consegnati `[R]` (`gnome.md` §1.1 punto 6 e §5.2). Da chiedere qui, dove il canale
+nasce. ⭐ **Il verso è quello giusto per noi**: pixel puliti nell'immagine *e* la forma in banda
+laterale, che è esattamente ciò che serve al puntatore disegnato dal client.
+
+⚠ **Due ricambi silenziosi di libei**, che mordono qui e alla fase 6: un cambio di **keymap**
+distrugge e ricrea il dispositivo tastiera, un cambio di **geometria** tutti i dispositivi
+assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza errore** `[R]`
+(`gnome.md` §9). Keymap e regioni si rileggono a **ogni** `DEVICE_ADDED`, non una volta all'avvio.
 
 **Si riusa**: `input.c` (906 righe, libei), `tastiera.c` (372, xkbcommon).
 
@@ -368,6 +408,18 @@ grafica per utente.
 - l'apertura di una sessione locale mentre la remota è viva → la remota **deve** cadere con
   `SESSIONE_LOCALE_PREVALSA`, e il motivo si verifica **dal lato che lo riceve**.
 
+⛔ **E due difetti che l'utente incontrerebbe lasciando la sessione ferma venti minuti**, tutt'e
+due su GNOME e tutt'e due mai affrontati in v1 (`gnome.md` §4 e §7):
+
+| | |
+|---|---|
+| **la revoca** | il blocca-schermo di GNOME non mostra un blocco: **ci stacca**. Ci salva `is_headless()`, che però **non abbiamo mai chiesto** — Mutter ci si mette da solo quando la sessione logind non ha un seat. Qui l'headless si **dichiara** e si **verifica dopo l'avvio**, e se non c'è si fallisce dichiarandolo (`DECISIONI.md` §4.3-bis, misura M2) |
+| **la macchina si addormenta** | `sleep-inactive-ac-type` vale `suspend` a 900 s, upstream **e** Debian `[R]`. Oggi non morde solo per accidente. La cura è una chiamata sola — `SessionManager.Inhibit(…, 12)`, cioè `SUSPEND\|IDLE` **insieme** — e `energia_inibisci()` su Mutter oggi **ritorna NULL** (`src/energia.c:112-113`). ⛔ Mai il bit `LOGOUT` |
+
+⚠ **Il banco dei tre orologi li incrocia**: sei ore di abbandono su una macchina che si sospende
+a quindici minuti non si misurano affatto — e il banco resterebbe verde, perché la sessione al
+risveglio c'è ancora.
+
 **Si riusa**: `palco.c` (1545 righe — la più preziosa), `sessione.c` (797), `sentinella.c` (307,
 logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
@@ -382,6 +434,13 @@ si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la
 
 **Il banco**: il ripiego su KWin < 6.8 **dichiarato nel registro** — si verifica che la riga ci
 sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
+
+⛔ **E il riattacco rinegozia anche la disposizione di tastiera** (`SPECIFICHE.md` §7.3), che su
+Mutter **distrugge e ricrea il dispositivo tastiera**; un cambio di geometria ricrea tutti i
+dispositivi assoluti. Il puntatore al dispositivo vecchio smette di funzionare **senza errore**
+`[R]` (`gnome.md` §9). Il banco del riattacco **deve battere un tasto e muovere il puntatore
+dopo**, non solo verificare che la sessione ci sia: è la forma «una prova verde col difetto vivo»
+esattamente dove si presenta.
 
 ---
 
@@ -399,6 +458,17 @@ sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
   (`LEZIONI.md` §2.3-quinquies);
 - ⚠ e la clipboard si **svuota all'inizio** di ogni giro: quel che resta dal giro prima viene
   annunciato alla connessione e sembra un risultato.
+
+⭐ **Il lato indipendente del banco degli appunti c'è già, ed è gratis**: su GNOME la sponda X11
+di Mutter è incondizionata nei due versi, quindi **`xclip` funziona senza una nostra sessione**
+`[R]` (`gnome.md` §10). Copiare con `xclip` e leggere col client — invece di far parlare fra loro
+due pezzi nostri — è l'arbitro esterno che a questa fase serviva e che non credevamo di avere.
+
+⛔ **Tre trappole di Mutter, che il banco non vede e il prodotto sì**: `DisableClipboard` è **a
+senso unico** (dopo, gli annunci non tornano più — non si chiama mai: per lasciare la clipboard
+si usa `SetSelection` senza tipi); la firma di `mime-types` è **asimmetrica** fra ingresso `as` e
+uscita `(as)`, e chi legge col tipo sbagliato ottiene `NULL` **senza errore**; il gestore interno
+degli appunti tiene **un solo tipo MIME**.
 
 **Si riusa**: `altoparlante.c` (892), `suono.c` (582), `appunti_mutter.c` (450), `appunti.c` (115).
 
@@ -420,6 +490,14 @@ sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
   ripiega in CPU credendosi in GPU produce due misure sotto la stessa etichetta. Se non obbedisce,
   si dichiara il fallimento (`LEZIONI.md` §1.8);
 - ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11).
+
+⛔ **E la copia zero si riapre dal lato giusto**: le due schermate che si alternavano non erano un
+problema di *acquire* ma di **release** — `can_reuse_pw_buffer` si arrende se manca
+`SPA_META_SyncTimeline` e Mutter riusa il buffer **mentre VA-API lo sta ancora leggendo** `[R]`
+(`LEZIONI.md` §8, il riquadro della caccia sbagliata). Due cure candidate, entrambe piccole:
+chiedere la timeline — che Mutter offre — oppure **trattenere** il `pw_buffer` fino a lettura
+finita. ⚠ E **il DMA-BUF di Mutter non è un diff**: chi riprendesse la superficie di accumulo
+rifarebbe la cura che peggiorava le cose.
 
 ⚠ Qui vive la trappola della GPU: con due schede, il compositore che disegna su quella sbagliata dà
 composizione in software **senza un errore**. La regola udev di `v1/banco/gpu-udev.sh` va applicata

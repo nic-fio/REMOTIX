@@ -234,7 +234,16 @@ allora si rilegge lì.
 
 ### 2.3 🔸 Il 4:4:4 resta una `[?]`, non una promessa
 
-Sarebbe un'opzione per il solo client Linux su GPU capaci (NVIDIA sì, Intel a volte, AMD no).
+Sarebbe un'opzione per il solo client Linux su GPU capaci — ⭐ **e sul nostro ferro la GPU capace
+c'è**: `[M]` 9 agosto, l'Intel UHD 730 codifica **HEVC Main444 e Main444_10**, cioè 4:4:4 a 8
+**e a 10 bit**, in hardware (la Radeon no). Il «Intel a volte» che questa riga diceva era una
+`[?]`, e sul ferro di riferimento la risposta è **sì**.
+
+⛔ **Ma non riapre la decisione, e va detto perché**: il 4:4:4 era stato messo da parte per il
+lato **Android**, dove nessun decodificatore lo fa in hardware — e quel lato non è cambiato. Resta
+quel che era: un'opzione per il solo client Linux, dietro un interruttore spento. Quel che cambia è
+che ora **si può misurare senza comprare niente**.
+
 Ma **nessuno ha misurato quanto si veda davvero la differenza** sul desktop dell'utente:
 vale `LEZIONI.md` §2.3-quater. Si decide su un banco che metta le due immagini a confronto, e
 a giudicare è l'utente (§7.3), dietro un interruttore spento di suo (§2.4).
@@ -271,13 +280,51 @@ Il conto, sommando i pezzi che v1 ha misurato:
 | **totale** | **~48 ms** — dentro il tetto, fuori dal traguardo | **~37 ms** — dentro tutti e due |
 
 ⭐ **È lo stesso muro dei 60 fotogrammi a 4K, e per la stessa ragione**: Mutter consegna sei
-decimi di quel che gli si chiede e nessuna leva nostra lo sposta (`LEZIONI.md` §3, domanda 6).
-Il tetto del ritardo, come quello del ritmo, **in buona parte lo pone il compositore**.
+decimi di quel che gli si chiede (`LEZIONI.md` §3, domanda 6). Il tetto del ritardo, come quello
+del ritmo, **in buona parte lo pone il compositore**.
+
+> ⭐ **E il «nessuna leva nostra lo sposta» che questa voce diceva è stato tolto il 9 agosto
+> 2026.** `gnome.md` §8.2 ha trovato la causa dei sei decimi `[R]`: `maxFramerate` fa **due
+> mestieri insieme** — freno della cattura e frequenza del monitor virtuale — e due orologi allo
+> stesso numero battono fra loro. Da cui un candidato che costa **tre celle e zero righe di
+> prodotto**: negoziare alto e poi rinegoziare **la sola cadenza**, a monitor fermo.
+>
+> ⚠ **Non cambia la decisione**, che è dell'utente e sta sui numeri: 50 di tetto, 40 di
+> traguardo. Cambia che il traguardo **non si dà più per perso su GNOME prima di aver provato**,
+> e la prova va fatta presto — se riesce, tutta la riga della cattura in questa tabella scende da
+> ~27 ms a ~16, e GNOME entra nel traguardo come KDE.
 
 ⚠⚠ **E questa tabella è una stima, non una misura — marcata `[?]`.** È la somma di componenti
 misurati separatamente, che è *precisamente* ciò contro cui mette in guardia `LEZIONI.md` §1.7:
 sommare i registri di chi manda non dice che il byte è arrivato. Serve per orientarsi, **non per
 concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
+
+### 2.5-bis ✅ Il tetto di Mutter è accettato: su GNOME il desiderato non si promette
+
+*9 agosto 2026, alla chiusura della fase 0, guardando i numeri misurati.* «Sappiamo che tra tutti i
+compositor dei 4 DE Mutter è quello che performa peggio […] GNOME non è in grado di garantire 4K/60
+fps, ma va bene. Non sarà adatto per il gaming ma consente comunque una soddisfacente esperienza
+desktop e multimedia.»
+
+`[M]` 9 agosto: **36 ± 2 fotogrammi al secondo** su sei giri (33,7-37,8), scena dichiarata,
+1080p, copia zero — mentre il client ne disegna **60**. Il tetto è del compositore.
+
+| | |
+|---|---|
+| **il minimo** (`§2.1`) | lontanissimo, mai in discussione |
+| **il desiderato** (`§2.2`) | ⛔ **su GNOME non si promette**. Resta il traguardo dove il compositore lo consente — KWin consegna 58,9 `[M]` sulla stessa macchina, nello stesso pomeriggio |
+| il gaming | **fuori**, e non era mai stato dentro |
+
+⚠ **Due cose che questa decisione NON dice**, e vanno tenute accanto o si attribuisce il tetto alla
+cosa sbagliata:
+
+1. ⛔ **non è un limite del 4K.** Il costo della risoluzione sulla cattura di Mutter è **zero** fino
+   a 4K (`LEZIONI.md` §3, domanda 10): i 36 sono a 1080p, e a 4K sono gli stessi. «GNOME consegna
+   ~36 a qualunque misura» è la frase giusta;
+2. ⏳ **non chiude M3.** La firma degli intervalli misurata oggi — mediana 33,3 ms, minimo 16,2, mai
+   valori intermedi — è quella di due orologi a 60 che battono fra loro, cioè la lettura di
+   `gnome.md` §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
+   riuscisse, questa voce si riscrive.
 
 ### 2.6 🔸 Il banco della latenza esiste solo perché il client è nostro
 
@@ -400,6 +447,37 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
 >
 > **Chi implementa l'autenticazione forte rilegge questa voce**, e non la dà per acquisita.
 
+### 4.3-bis 🔸 ⛔ Essere *headless* su GNOME è un requisito, non una fortuna
+
+*Scritta il 9 agosto 2026, leggendo `gnome.md` §4 e la lezione 3 del suo §14.*
+
+§4.3 dice che il blocca-schermo dei desktop resta spento, e per GNOME la ragione è la **revoca**:
+entrando nel dialogo di sblocco, Mutter chiude cattura, controllo e input **e rifiuta di
+ricrearli**. L'unica eccezione è `is_headless()` — e quella eccezione è la nostra condizione.
+
+⛔ **Ma non è una condizione che abbiamo chiesto.** Mutter si mette in headless **da solo** quando
+la sessione logind è di tipo `wayland`, attiva e **senza seat** `[R]`. Nessuna nostra riga la
+chiede, nessuna la verifica, e il giorno in cui la sessione nascesse con un seat — un `gdm3`
+configurato diversamente, una prova fatta a mano, un ripristino incompleto — perderemmo cattura e
+input **senza che nessuno colleghi le due cose**.
+
+**Da cui, e sono tre obblighi distinti:**
+
+1. la sessione si compone **dichiarando** che deve essere headless, non sperando che lo diventi;
+2. l'esito si **verifica dopo l'avvio**, come per il tema del cursore trasparente di §5-bis.2 —
+   che il presupposto sia scritto non è che sia stato ottenuto (`REVIEWER.md` E1: necessario non
+   è sufficiente);
+3. se non lo è, si **dichiara il fallimento** invece di proseguire: sarebbe una sessione che
+   funziona finché nessuno blocca lo schermo (`CODER.md` §3.9, §4.2).
+
+⭐ **È l'invariante I7 in una forma che non avevamo previsto.** I7 dice che la protezione di un
+difetto noto non sta in una riga di configurazione che si può perdere; qui non sta **da nessuna
+parte** — sta in un comportamento di ripiego di Mutter. `gnome.md` §14 lo scrive meglio: *una
+condizione che ci salva per accidente va scritta come requisito.*
+
+⚠ E la misura che la chiude è **M2** di `gnome.md` §13: headless sì/no contro
+`inhibit_remote_access`. Fino ad allora la clausola di scadenza di §4.3 vale anche qui.
+
 ### 4.4 ✅ Un client che tace è un client che si è staccato
 
 *8 agosto 2026. «Fantasma: lo trattiamo come nel caso in cui l'utente chiude il client».*
@@ -418,7 +496,7 @@ misurano cose diverse:
 
 | Orologio | Quanto | Che cosa scatta | Deciso in |
 |---|---|---|---|
-| **silenzio del client** | ❓ da fissare | il client si considera staccato | §4.4 |
+| **silenzio del client** | **30 secondi** | il client si considera staccato | §4.4, valore in §7.3-bis |
 | **inattività dell'utente** | **30 minuti** senza input | REMOTIX stacca il client | §4.3 |
 | **abbandono della sessione** | **6 ore** senza alcun attacco | la sessione viene chiusa, con congedo pulito | §4.2 |
 
@@ -449,8 +527,31 @@ Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agos
 | 1080p · 30 fps | ~620 Mpixel/s | ✅ giusto al limite |
 | 4K · 60 fps *(il desiderato)* | ~5 Gpixel/s | ⛔ **una sola sessione** |
 
-`[?]` Le capacità del codificatore sono ricavate dalla generazione del chip, **non misurate**:
-`vainfo` non è installato sulla macchina di prova. Vanno confermate lì.
+> ### ✅ Confermate `[M]` il 9 agosto 2026 — `vainfo` installato ed eseguito sul ferro
+>
+> *Erano `[?]`, ricavate dalla generazione del chip. Ora sono lette dal driver, sui due nodi.*
+>
+> | | Intel UHD 730 — `renderD128`, iHD 25.2.3 | Radeon RX 6800 — `renderD129`, radeonsi navi21 |
+> |---|---|---|
+> | **HEVC Main10 in codifica** | ✅ **sì** (`EncSliceLP`) | ✅ sì (`EncSlice`) |
+> | HEVC Main **4:4:4**, 8 e 10 bit | ⭐ ✅ **sì** — vedi §2.3 | ⛔ no |
+> | H.264, VP9, JPEG in codifica | sì | H.264 sì |
+> | **AV1** | ⛔ **nessun profilo, nemmeno in decodifica** | solo **decodifica** (`AV1Profile0`, `VLD`) |
+>
+> ⛔ **Il desiderato a 10 bit ha la sua strada in hardware su tutt'e due le schede**, e passa da
+> HEVC Main10 come `SPECIFICHE.md` §11.4 prevedeva. La scala di preferenza di §11.4 resta valida:
+> `hevc_vaapi` è la prima voce e la macchina ce l'ha.
+>
+> ⚠ **Un dettaglio da non perdere, che tocca la fase 8**: sull'Intel l'unico ingresso di codifica è
+> `EncSliceLP` — il percorso *low power*. Non è un ripiego, è il solo che quel chip espone; ma è
+> un percorso con opzioni di controllo del bitrate proprie, ed è precisamente il posto dove v1 si
+> è fatto male due volte (`LEZIONI.md` §1.8: il driver che deduceva il modo di controllo da come
+> erano riempiti due campi, banda costante senza che nessuno l'avesse scelta). **Si chiede per
+> nome e si verifica che abbia obbedito.**
+>
+> ⭐ E la tabella del budget qui sopra resta `[?]` per un'altra ragione: `vainfo` dice **quali
+> profili** ci sono, non **quanti pixel al secondo**. Il numero di sessioni va misurato saturando,
+> ed è la fase 12.
 
 **Da cui il disegno**: nessun numero cablato nel programma. Il server tiene un **budget** — sa
 quanto sta già codificando e quanto può — e il dieci è il valore predefinito di un massimo
@@ -492,6 +593,26 @@ la Radeon, la causa è questo file, e nessuno la collegherebbe da solo.
 ⭐ E l'avvertenza di `LEZIONI.md` §4 trappola 6 — *«il compositore deve disegnare sulla scheda
 giusta; un buffer di un'altra scheda non è importabile, e il sintomo è composizione in software
 senza un errore»* — su una macchina a **due** GPU smette di essere teorica.
+
+> ### ⭐ Su Mutter il meccanismo è un altro, e per ora gioca a favore — `[M]` 9 agosto 2026
+>
+> Questa voce è scritta su KWin, che *«prende la prima scheda che riesce ad aprire»*. Mutter no:
+> alla fase 0, con tutt'e due i nodi visibili, ha dichiarato da sé
+>
+> > `Added device '/dev/dri/renderD129' (amdgpu)` · `Added device '/dev/dri/renderD128' (i915)` ·
+> > **`Boot VGA GPU /dev/dri/renderD128 selected as primary`**
+>
+> — cioè ha scelto **l'Intel**, che è quella che vogliamo, con un criterio suo (*Boot VGA*) e
+> senza che nessuno gliel'abbia chiesto. **Sul ferro attuale la regola udev non serve a GNOME.**
+>
+> ⛔ **Ma non si conclude che non serva.** È di nuovo una condizione che ci salva senza che
+> l'abbiamo chiesta (§4.3-bis): dipende da quale scheda è la *Boot VGA* del BIOS, che è fuori dal
+> nostro controllo e cambia spostando un cavo. La regola udev resta la **leva dichiarata**; questa
+> misura dice solo che oggi, su GNOME, non è lei a decidere.
+>
+> ⚠ E una riga da capire, non ancora capita: `amdgpu_cs_ctx_create2 failed. (-13)` — la Radeon è
+> vista e **non apribile** (permesso negato). `[?]` Se sia già la regola udev di questo file o
+> altro, non è stato accertato. Non ostacola: il primario è quello giusto.
 
 ---
 
@@ -750,9 +871,6 @@ testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fe
 > giudica leggendolo, si giudica usandolo. Questa tabella è quindi un **punto di partenza
 > dichiarato**, non un impegno: chi la trova diversa fra sei mesi non ha trovato un difetto.
 
-⚠ Il *tap-e-mezzo* non è un lusso: senza, non si sposta una finestra e non si seleziona del
-testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fermo.
-
 ### 5-bis.4 🔸 Il canale del cursore, e il suo compromesso
 
 Il client deve sapere **che forma** disegnare: barretta sul testo, doppia freccia sui bordi,
@@ -914,8 +1032,24 @@ canale RDP che li trasportava, non il modo di parlare col desktop.
 
 | | |
 |---|---|
-| **GNOME** | della **sessione remota**: sta sull'oggetto RemoteDesktop, si accende con `EnableClipboard`, e senza sessione non esiste |
+| **GNOME** | ⚠ **anche qui del compositore** — vedi la correzione qui sotto: è `MetaSelection`; della sessione remota è solo **la porta** (`EnableClipboard` sull'oggetto RemoteDesktop) |
 | **KDE, wlroots** | del **compositore**: nessun permesso, e c'è anche se REMOTIX non c'è |
+
+> ⛔ **Corretta il 9 agosto 2026**, leggendo `gnome.md` §10, che lo aveva già scritto l'8 e che
+> nessuno aveva riportato qui. Diceva: *«della sessione remota: sta sull'oggetto RemoteDesktop, si
+> accende con `EnableClipboard`, e senza sessione non esiste»*. `[R]` Le prime due mezze frasi
+> descrivono la **porta**, non la proprietà; l'ultima è **falsa**: la sponda X11 di Mutter è
+> incondizionata nei due versi, senza un solo controllo sul fuoco.
+>
+> ⭐ **E la conseguenza è un regalo per la fase 7**: `xclip` funziona su GNOME **senza** una nostra
+> sessione, quindi il banco degli appunti può usarlo come lato indipendente — invece di far
+> parlare fra loro due pezzi nostri, che è ciò che `PIANO.md` §0.4 chiama non confermare niente.
+>
+> ⚠ **Tre trappole di Mutter, tutte `[R]` in `gnome.md` §10**, che chi scrive la fase 7 legge lì e
+> non qui: `DisableClipboard` è **a senso unico** (dopo, gli annunci non tornano più — non si
+> chiama mai); la firma di `mime-types` è **asimmetrica** fra ingresso e uscita, e chi legge col
+> tipo sbagliato ottiene `NULL` **senza errore**; e il gestore interno degli appunti tiene **un
+> solo tipo MIME**.
 
 ⚠ **La trappola di GNOME, e perché non ci tocca più**: *«gnome-shell azzera la clipboard a ogni
 blocco schermo: ci strappa la proprietà in silenzio»* (`gnome.md`). Con §4.3 — il blocco è

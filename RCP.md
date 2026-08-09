@@ -253,11 +253,20 @@ lunghezza incoerente con quel che il tipo prevede **DEVE** chiudere con `ERRORE_
 Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine del fotogramma**.
 
 ```
- 0        2        4        8        12       16       24       32   32+…
+ 0        2        4        8        12       16       24       28   28+…
  ├────────┼────────┼────────┼────────┼────────┼────────┼────────┼─────┤
  │ tipo   │ codec  │ largh. │ altezza│ numero │ istante│ input  │ dati│
  │ u16    │ u16    │ u32    │ u32    │ u32    │ u64    │ u32    │     │
 ```
+
+⛔ **L'intestazione è di 28 byte esatti, senza riempimento**, e i dati del fotogramma cominciano
+all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
+
+> ⚠ *Corretta il 9 agosto 2026, prima di qualunque implementazione.* Il disegno dava `… 24 │ 32`,
+> cioè otto byte a un campo dichiarato `u32`: quattro byte di riempimento non dichiarati, e due
+> implementazioni che potevano indovinare uguale senza che nessuno se ne accorgesse — il difetto
+> muto contro cui questo documento è stato scritto (§0). Scelto **28** dall'utente: un riempimento
+> va giustificato, e qui non lo giustificava niente.
 
 | Campo | |
 |---|---|

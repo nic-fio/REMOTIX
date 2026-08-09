@@ -60,7 +60,15 @@ avvia_scena()
 	case $scena in
 	fermo) echo 0 ;;
 	tetto)
-		weston-simple-egl -f -o >"$QUI/scena.log" 2>&1 &
+		# ⛔ `stdbuf -oL`, e non e' un vezzo: senza, l'uscita del client verso un
+		#    FILE e' bufferizzata a blocchi, e alla chiusura della scena i suoi
+		#    fotogrammi al secondo si perdono nel buffer.  Il registro resta
+		#    vuoto, e il controllo di `LEZIONI.md` §1.1 — «quanto disegna il
+		#    client», l'unico che dice se il tetto e' del compositore o della
+		#    scena — sembra dire «zero» quando in realta' non e' stato sentito.
+		#    Trovato il 9 agosto 2026 alla fase 0, confrontando con
+		#    `banco-altri.sh`, che lo `stdbuf` ce l'aveva gia'.
+		stdbuf -oL weston-simple-egl -f -o >"$QUI/scena.log" 2>&1 &
 		echo $!
 		;;
 	carico)
@@ -82,7 +90,7 @@ cella()
 	local scena=$1 w=$2 h=$3 fps=$4 strada=$5 colore=$6 durata=$7 etichetta=$8
 	local opzioni=(--mutter --larghezza "$w" --altezza "$h" --fps "$fps"
 	               --durata "$durata" --scarto 7 --etichetta "$etichetta")
-	local pid_scena pid_misura
+	local pid_scena pid_misura stato_scena
 
 	[ "$strada" = dmabuf ] && opzioni+=(--dmabuf)
 	[ "$colore" = bgra ] && opzioni+=(--bgra)
@@ -93,7 +101,43 @@ cella()
 	# La scena si accende DOPO il monitor virtuale: senza uno schermo non c'e'
 	# dove aprirsi.  I sette secondi di scarto del misuratore coprono l'avvio.
 	sleep 2.5
+	: >"$QUI/scena.log"
 	pid_scena=$(avvia_scena "$scena" "$w" "$h")
+
+	# ⛔ E SI VERIFICA CHE LA SCENA SIA VIVA, PRIMA DI CREDERE AL NUMERO.
+	#
+	#    Il 9 agosto 2026, al primo riavvio vero del server, questa cella ha
+	#    stampato tre righe di misura con `fps=0.00` — che con la cattura attiva
+	#    e' uno ZERO LEGITTIMO, cioe' «il compositore non ha niente da
+	#    consegnare».  Era vero, e la ragione non era il compositore: mancava il
+	#    pacchetto `weston`, e `weston-simple-egl` non esisteva affatto.  Il
+	#    registro lo diceva («failed to run command»), ma la RIGA usciva lo
+	#    stesso, e in una tabella avrebbe avuto l'aspetto di un compositore muto.
+	#
+	# ⚠ E' la terza faccia dello stesso difetto: `misura-cattura` ora distingue
+	#   «flusso mai attivo» da «zero», ma «flusso attivo e SCENA MORTA» produce
+	#   ancora uno zero che sembra una misura.  La scena e' parte dello strumento
+	#   e va certificata come il resto (`LEZIONI.md` §1.2, §1.9).
+	#
+	# ⛔ E NON SI USA `kill -0`: un figlio morto subito resta ZOMBIE finche'
+	#    nessuno lo raccoglie, e `kill -0` su uno zombie RIESCE — «il pid esiste»
+	#    non e' «il processo e' vivo».  Provato il 9 agosto 2026: la guardia
+	#    scritta con `kill -0` non e' scattata su una scena che non era mai
+	#    partita.  Si guarda lo STATO in `ps`, che dice `Z` per gli zombie.
+	sleep 1
+	stato_scena=$(ps -o stat= -p "${pid_scena:-0}" 2>/dev/null | tr -d ' ')
+	if [ "${pid_scena:-0}" != 0 ] && { [ -z "$stato_scena" ] || [ "${stato_scena#Z}" != "$stato_scena" ]; }; then
+		kill $pid_misura 2>/dev/null
+		wait $pid_misura 2>/dev/null
+		echo "GUASTO	$etichetta	scena '$scena' morta subito dopo l'avvio"
+		{
+			echo "⛔ FALLITO (non «zero»): la scena non e' partita."
+			echo "   Non c'e' nessun numero da leggere: non c'era niente da catturare."
+			echo "   Il registro della scena dice:"
+			sed 's/^/     /' "$QUI/scena.log"
+		} >&2
+		return 2
+	fi
 
 	wait $pid_misura
 	[ "${pid_scena:-0}" != 0 ] && kill "$pid_scena" 2>/dev/null

@@ -27,11 +27,16 @@ E per chi scrive o revisiona, prima di toccare qualcosa:
 
 ## Gli studi dei desktop
 
-Letture del codice dei compositori, fatte prima di scrivere. Rispondono alle quattordici domande
+Letture del codice dei compositori, fatte prima di scrivere. Rispondono alle **quindici** domande
 di `LEZIONI.md` §3.
 
 [`gnome.md`](gnome.md) · [`kde.md`](kde.md) · [`xfce.md`](xfce.md) · [`lxqt.md`](lxqt.md) ·
-[`cinnamon.md`](cinnamon.md) · [`gnome-remote-desktop.md`](gnome-remote-desktop.md)
+[`cinnamon.md`](cinnamon.md)
+
+⚠ **`gnome-remote-desktop.md` non è uno di questi** *(chiarito il 9 agosto 2026)*. Studia **il
+server RDP di GNOME**, cioè un concorrente sul filo che abbiamo buttato — non il desktop. Con RDP
+morto decade quasi per intero, ed è scritto su una versione che Trixie non ha (51.alpha contro
+48.1). **Su GNOME si legge [`gnome.md`](gnome.md)**, che parla di Mutter e resta valido.
 
 ---
 

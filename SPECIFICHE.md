@@ -105,8 +105,12 @@ uno scambio che si presenta di continuo, perché **ogni memoria intermedia compr
 risposta**. (`DECISIONI.md` §2.4)
 
 `[?]` Il traguardo dei 40 ms probabilmente **non è raggiungibile su GNOME**, per lo stesso muro
-dei 60 fotogrammi: Mutter ne consegna 37 al secondo e nessuna leva nostra lo sposta. Stima, non
-misura. (`DECISIONI.md` §2.5)
+dei 60 fotogrammi: Mutter ne consegna 37 al secondo. Stima, non misura. (`DECISIONI.md` §2.5)
+
+⭐ **Ma «nessuna leva nostra lo sposta» non si può più scrivere** *(9 agosto 2026)*: `gnome.md`
+§8.2 dà la causa del muro `[R]` — un solo numero che fa da freno alla cattura **e** da frequenza
+al monitor virtuale — e con essa un candidato di cura che costa zero righe di prodotto. Va
+provato prima di dare il muro per acquisito (`LEZIONI.md` §3, il riquadro dei sei decimi).
 
 ---
 
@@ -418,8 +422,10 @@ pochi byte e non ha negoziazione, mentre le immagini aprono la questione dei for
 di **chi paga la banda** quando si copia una schermata da 8 MB su un collegamento che stiamo
 faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
 
-⚠ Su GNOME gli appunti appartengono alla sessione remota; su KDE e wlroots **al compositore**, e
-ci sono anche senza di noi.
+⚠ **Su tutti e tre gli stack gli appunti appartengono al compositore**, e ci sono anche senza di
+noi. Su GNOME la sessione remota non li possiede: possiede solo **la porta** per raggiungerli
+(`EnableClipboard`). *Corretto il 9 agosto 2026 da `gnome.md` §10 `[R]`; questa riga diceva il
+contrario, ed è la stessa correzione di `DECISIONI.md` §5-ter.3 e `LEZIONI.md` §3 domanda 14.*
 
 ---
 
@@ -481,8 +487,13 @@ costruttore. La scala di preferenza:
 3. ripiego software: **SVT-AV1** (BSD-3) — ⛔ **mai x265**, che è GPL-only e incatenerebbe tutto
    il server
 
-⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** (RDNA2 e Alder Lake lo
-decodificano soltanto): il desiderato a 10 bit passa da **HEVC Main10**.
+⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
+a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
+
+⛔ **E la parentesi «RDNA2 e Alder Lake lo decodificano soltanto» era sbagliata a metà**, corretta
+lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`AV1Profile0`,
+`VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
+delle capacità delle due schede sta in `DECISIONI.md` §4.6.
 
 `[?]` Vulkan Video resta una delle opzioni fra cui `libavcodec` può scegliere. Non è la prima
 perché non porta il controllo del bitrate — che è precisamente la parte che decide se i Mbps
