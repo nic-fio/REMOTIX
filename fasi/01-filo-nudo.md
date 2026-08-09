@@ -72,6 +72,7 @@ Apple no**.*
 |---|---|---|
 | S2, S5, S3a | ⭐ **il telefono Android** con Chrome | ✅ **sì** — e non va configurato: si apre un indirizzo |
 | S3a, S5 | ⭐ un dispositivo **DeX** (la lock esiste solo da **Android 16 QPR1**) | ✅ **sì** — ⚠ `[?]` **da verificare che sia almeno Android 16 QPR1**, o S3a misura l'assenza della lock e la scambia per una perdita di scorciatoie |
+| ⛔ **S3a su Firefox** | **Firefox ≥ 151**: `requestFullscreen({keyboardLock})` è entrato nello standard l'8 maggio 2026 e Gecko l'ha spedito **nella 151** `[S]` | ⛔ **no**: il Firefox della macchina da cui si prova è la **140.0** `[M]` 9 ago. ⭐ *Trovato dalla regola B0.6 — annotare la versione esatta — al primo giro in cui è servita: `web.md` §2 dichiara di aver letto Gecko **151-153**, e su questa macchina c'è tre versioni indietro. Chi misurasse S3a qui misurerebbe **l'assenza della lock**, e la scambierebbe per scorciatoie perdute* |
 | S2 | un **PC collegato** per `chrome://inspect` — il controllo C, l'unico canale che risponde davvero | ✅ sì |
 | S7 | sessione GNOME e `libei` | ✅ `banchi/00-sessione-gnome.sh`, `libei1` 1.3.901 `[M]` |
 | tutti | il `devroot`, la macchina di prova, la cache dei pacchetti | ✅ fase 0 |
@@ -560,7 +561,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | **B2** — i due certificati, quattro controlli | 4 su 4 | ✅ **4 su 4** — e i due sono davvero due | 9 ago |
 | ⭐ **B2** — **il controllo positivo d'ambiente** (senza browser) | sessione accettata **e** byte che tornano | ⭐ **`:status = 200`, `b'ciao'` torna identico** `[M]` | 9 ago |
 | ⭐ **B2** — **la sessione si apre da un BROWSER VERO** | si apre, e i byte tornano | ⭐ **APERTA in 30,2 ms** su **Chrome 151.0.0.0** (X11, Linux), `"ciao"` torna identico `[M]` | 9 ago |
-| **B2** — lo stesso su Firefox | si apre | ⏳ | |
+| ⭐ **B2** — lo stesso su **Firefox** | si apre | ⭐ **APERTA in 52,0 ms** su **Firefox 140.0**, `"ciao"` torna identico `[M]` | 9 ago |
 | **B2** — la sessione si apre, **per candidata** | 2 motori su 2, **e le sei proprietà** | ⏳ *serve il server minimo su una candidata* | |
 | **B2** — righe di collante, per candidata | *si conta, non si stima* | | |
 | **B3** — 1ª · 2ª · 2ª in parallelo · 35 s a timeout 120 · 3ª con chiave ruotata | passa · passa · **rifiutata `0x0F`** · **entra** · passa | | |
