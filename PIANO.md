@@ -203,6 +203,33 @@ scene con `ffmpeg -f lavfi -i testsrc2`.
 ⚠ Da fare qui e non dopo: installare `vainfo` sul ferro di prova e **confermare** le capacità del
 codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DECISIONI.md` §4.6).
 
+**E qui entra anche l'ambiente Android**, benché il binario B cominci molto dopo: SDK, emulatore
+(AVD), `adb`, e il collegamento al telefono vero sulla rete locale. Si mette adesso perché la
+**sonda della fase 2** lo richiede già.
+
+> ### ⛔ Sull'emulatore si sviluppa. Non si misura.
+>
+> **Nessun numero di questo progetto viene dichiarato su un emulatore.**
+>
+> L'emulatore è ottimo per il ciclo di sviluppo — interfaccia, logica dei gesti, IME, la stretta
+> di mano — ed è veloce, scriptabile e automatizzabile. Ma **non può misurare le due cose che
+> decidono il binario Android**:
+>
+> | | |
+> |---|---|
+> | **la decodifica in hardware** | il MediaCodec dell'emulatore non è il silicio del telefono |
+> | **DeX** | non esiste sull'emulatore. Si può avvicinare con schermo grande, mouse e tastiera dell'ospite, ma quello è il *modello di interazione*, non DeX: il gestore di finestre e le regole d'input sono suoi |
+>
+> E non attendibili nemmeno: il ritardo vero, la batteria, la rete che cambia.
+>
+> ⚠ È `REVIEWER.md` **E10** — *una prova verde sul client sbagliato*. Un emulatore che dice
+> «funziona» mentre il telefono no è un banco verde col difetto vivo, ed è la forma che a v1 è
+> costata di più: una correzione scritta su un banco che non riproduceva il difetto, spedita
+> all'utente, **che ha peggiorato le cose**.
+>
+> **Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro.** Due mestieri, e
+> il primo non si delega al secondo.
+
 ---
 
 ## Fase 1 — Il filo nudo
@@ -254,6 +281,9 @@ significherebbe non sapere quale dei due pezzi sbaglia.
 ⛔ **E qui va la sonda Android** (§1.2), che è la sola cosa del binario B che non può aspettare: un
 file HEVC Main10 dato a MediaCodec, per sapere **adesso** se il telefono lo decodifica in hardware.
 È il muro contro cui è morto v1, e scoprirlo qui costa due fasi invece di nove.
+
+⛔ **La sonda gira sul telefono vero, mai sull'emulatore** (fase 0): è precisamente la misura che
+un emulatore non sa dare, perché il suo MediaCodec non è il silicio del telefono.
 
 ---
 

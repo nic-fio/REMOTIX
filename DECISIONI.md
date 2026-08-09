@@ -653,6 +653,26 @@ a quello Linux di quanto previsto — stesso modello di interazione, diverso sol
 decodifica. Riduce il rischio segnalato in §0.3 spostando Android in fondo: il protocollo non è
 stato progettato per il client sbagliato, perché i due client si somigliano.
 
+### 5-bis.0-ter ✅ L'emulatore Android è banco di lavoro, non strumento di misura
+
+*9 agosto 2026. «Per android forse dovremmo ricorrere a degli emulatori (che entrerebbero a far
+parte dell'ambiente di sviluppo).»*
+
+Accettato: SDK, emulatore, `adb` e il collegamento al telefono entrano nell'ambiente, e si mettono
+già alla **fase 0** perché la sonda della fase 2 li richiede.
+
+⛔ **Con un confine**: *sull'emulatore si sviluppa, non si misura.* **Nessun numero di questo
+progetto viene dichiarato su un emulatore.** Le due cose che non può dare sono esattamente le due
+che decidono il binario Android — la **decodifica in hardware** (il suo MediaCodec non è il silicio
+del telefono) e **DeX**, che sull'emulatore non esiste e si può solo avvicinare.
+
+⚠ È `REVIEWER.md` **E10**, *una prova verde sul client sbagliato*: un emulatore che dice «funziona»
+mentre il telefono no è un banco verde col difetto vivo — la forma che a v1 è costata di più, con
+una correzione scritta su un banco che non riproduceva il difetto e spedita all'utente, **che ha
+peggiorato le cose**.
+
+**Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro.**
+
 ### 5-bis.0-bis ✅ RDM è un riferimento da cui **ispirarsi**, non un prodotto da rifare
 
 *9 agosto 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
