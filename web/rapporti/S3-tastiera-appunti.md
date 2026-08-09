@@ -18,18 +18,20 @@ di riferimento letto (`[R]`) e di ipotesi dichiarate (`[?]`). Le misure sul ferr
    gennaio 2026** e la sua motivazione dichiarata è *«remote desktop applications»* — cioè si può
    sorvegliare gli appunti del dispositivo, **su Chromium, e solo mentre la pagina ha il fuoco**.
    Su Firefox e Safari **no**, ed è verificato, non dedotto.
-3. ⛔ **Quel che resta perso è perso davvero e non si recupera**: `Ctrl+Alt+Canc`, l'uscita da
-   schermo intero (`F11`, `⌘⌃F`, Esc tenuto premuto), **tutta la keyboard lock fuori da schermo
-   intero**, **tutta la keyboard lock su mobile — DeX compreso** — e quel che il compositore Wayland
-   *locale* si tiene prima ancora che il browser lo veda. ⭐ **Il canale delle posizioni invece è
-   sano**: `code` → evdev copre **senza un buco** l'intera tastiera a 105 tasti (`evdev 1…94`).
-4. ⛔ **Il difetto più grave non sono le scorciatoie: è il modificatore rimasto giù.** La specifica
+3. ⭐ **E si perde molto meno di quanto §7.3-bis tema**: letta nel sorgente, la lista riservata di
+   Chrome è di **dodici comandi**, ⭐ **a schermo intero si riduce a due** (`F11` e «esci»)
+   **senza chiamare nessuna API**, e ⭐ **in una PWA installata è vuota**. Firefox ne ha **sei**.
+   Safari **zero**. E `code` → evdev copre **senza un buco** l'intera tastiera a 105 tasti.
+4. ⛔ **Quel che resta perso è perso davvero**: `Ctrl+Alt+Canc`; l'uscita da schermo intero; su
+   **macOS** tutte le scorciatoie di sistema (`⌘Spazio`, `⌘Tab`, gli screenshot) — perché su macOS
+   **non esiste un hook**, `keyboard_hook_mac.mm` restituisce `nullptr`; su **Android e DeX**
+   ⛔ **qualunque combinazione con Meta, per regola generale**; e quel che il compositore Wayland
+   *locale* si tiene prima ancora che il browser lo veda.
+5. ⛔ **Il difetto più grave non sono le scorciatoie: è il modificatore rimasto giù.** La specifica
    **non garantisce** il `keyup` alla perdita del fuoco, su macOS con `Cmd` premuto non arriva mai,
    su iOS non arriva mai — e da noi la sessione remota **sopravvive alla connessione**: un `Ctrl`
-   incollato rende il desktop inservibile e non si ripara riconnettendosi.
-5. ⛔ **Quel che la pagina deve dichiarare spento** è nella tabella del §2, ed è **una tabella per
-   motore *e per sistema***, non per motore: quel che si perde su Chrome/Linux non è quel che si
-   perde su Chrome/DeX.
+   incollato rende il desktop inservibile e non si ripara riconnettendosi. ⛔ **Quel che la pagina
+   deve dichiarare spento** è nelle tabelle del §2 — **per motore *e per sistema***, non per motore.
 
 ---
 
@@ -45,7 +47,7 @@ funziona costa un avviso di troppo, mentre il contrario è una bugia.*
 | Capacità | Chrome/Edge desktop | Firefox desktop | Safari macOS | **Chrome su DeX** | Safari iPadOS |
 |---|---|---|---|---|---|
 | **schermo intero** avviato da JS | ✅ | ✅ | ✅ | ✅ | ⚠ **parziale** `[S]` |
-| **keyboard lock** — quale API | `navigator.keyboard.lock()` **68+** `[S]` | `requestFullscreen({keyboardLock})` **151+** `[S]` — ⛔ **spenta su Android** | idem, **26.4+** `[S]` | ⛔ **`[?]` da misurare: dichiarata *«a no-op on mobile platforms»* all'atto dell'implementazione** `[S]` | ⚠ `[?]` — Safari 26.4 l'ha aggiunta, ma la Fullscreen API su iOS/iPadOS è a **supporto parziale**: senza schermo intero non c'è lock |
+| **keyboard lock** — quale API | `navigator.keyboard.lock()` **68+** `[S]` | `requestFullscreen({keyboardLock})` **151+** `[S]` — ⛔ **spenta su Android** | idem, **26.4+** — ⛔ **agisce solo su Esc**, e vuole una **tastiera hardware** `[R]` | ⚠ **c'è, ma solo da Android 16 QPR1** (`BAKLAVA_1`): sotto quella versione il codice **restituisce `false`** `[R]`. `[?]` da misurare su DeX | ⚠ **su iPad sì** (con tastiera hardware), **su iPhone no** `[R]` |
 | lock **con elenco di tasti** | ✅ | ⛔ tutto-o-niente | ⛔ tutto-o-niente | ⛔ | ⛔ |
 | lock **fuori** da schermo intero | ⛔ **mai** `[S]` | ⛔ **mai** `[S]` | ⛔ **mai** `[S]` | ⛔ | ⛔ |
 | lock con schermo intero da **`F11`** | ⛔ **mai** — *«During F11 fullscreen, no Keyboard Lock processing […] will take place»* `[S]` | ⛔ | ⛔ | — | — |
@@ -76,6 +78,178 @@ funziona costa un avviso di troppo, mentre il contrario è una bugia.*
 ⛔ **La pagina non dichiara «le scorciatoie»: dichiara *questa riga di questa tabella*.** Il testo
 che l'utente vede si compone da tre dati che la pagina conosce a runtime — **motore, sistema,
 stato dello schermo intero** — e cambia quando cambia il terzo. Il dettaglio in §5.3.
+
+### 2.4 ⭐ L'elenco concreto — letto nel sorgente dei tre browser
+
+*Non «alcune scorciatoie»: **l'elenco**, con file e riga. ⭐ **E la notizia è molto migliore del
+previsto.** Revisioni lette il 9 agosto 2026: Chromium `bfa42e3d`, Gecko `5836a062`, WebKit
+`399d0492`, AOSP `1cdfff55`.*
+
+**Il fatto strutturale, uguale su tutti e tre**: ogni motore ha **due** liste, non una. C'è un
+punto del codice che decide **prima** di consegnare l'evento se la combinazione è *riservata*; le
+riservate non arrivano alla pagina **nemmeno come `keydown`**, tutte le altre arrivano e
+`preventDefault()` le ferma. Sono gli stati **C** e **A** del §3.A.2 `[R]`:
+
+| Motore | Dove sta il bivio |
+|---|---|
+| Blink | `BrowserView::PreHandleKeyboardEvent` → `HANDLED` (riservata) contro `NOT_HANDLED_IS_SHORTCUT` |
+| Gecko | `GlobalKeyListener::HandleEventOnCaptureInDefaultEventGroup` → `MarkAsReservedByChrome()` |
+| WebKit | ⭐ **non esiste una lista riservata nel motore**: la pagina vede l'evento **per prima**, e il menu agisce solo dopo, per ri-consegna |
+
+#### Chrome / Edge — ⭐ **la lista riservata è di dodici comandi, e basta**
+
+`chrome/browser/ui/browser_command_controller.cc:520-527` `[R]` — è **tutto**, verbatim:
+
+```cpp
+  return command_id == IDC_CLOSE_TAB || command_id == IDC_CLOSE_WINDOW ||
+         command_id == IDC_NEW_INCOGNITO_WINDOW ||
+         command_id == IDC_NEW_ISOLATED_WINDOW || command_id == IDC_NEW_TAB ||
+         command_id == IDC_NEW_WINDOW || command_id == IDC_RESTORE_TAB ||
+         command_id == IDC_SELECT_NEXT_TAB ||
+         command_id == IDC_SELECT_PREVIOUS_TAB ||
+         command_id == IDC_CYCLE_TO_NEXT_TAB ||
+         command_id == IDC_CYCLE_TO_PREV_TAB || command_id == IDC_EXIT;
+```
+
+| Stato **C** — mai consegnate (finestra normale) | Recuperabile |
+|---|---|
+| `Ctrl+T`, `Ctrl+N`, `Ctrl+Maiusc+N`, `Ctrl+W`, `Ctrl+F4`, `Ctrl+Maiusc+W`, `Alt+F4`, `Ctrl+Maiusc+T`, `Ctrl+PagGiù`, `Ctrl+PagSu`, `Ctrl+Tab`, `Ctrl+Maiusc+Tab` — su macOS gli equivalenti con `⌘`, più `⌘Q`, `⌘⇧]`/`⌘⇧[`, `⌘⌥→`/`⌘⌥←`, `⌃Tab`, `⌃⇧Tab` | ⭐ **sì, con la lock — e anche solo con lo schermo intero** |
+
+⛔ **Tutto il resto è stato A, cioè annullabile con `preventDefault()`** — e sono molte più di
+quante ci si aspetti: `Esc`, `F1`, `F3`, `F5`, `F6`, `F7`, `F10`, **`F11`**, `F12`, `Alt` da solo,
+`Ctrl+D/F/G/L/O/P/R/S/U/H/J/E/K`, `Ctrl+Maiusc+I/J/C/A/B/O/M/D/Canc`, **`Ctrl+1`…`Ctrl+9`**,
+`Ctrl+0`, `Ctrl++`, `Ctrl+-`, `Alt+←/→/Home/D/E/F`. ⚠ **Controintuitivo e importante: `Ctrl+1`…`9`
+e `F11` si annullano, `Ctrl+Tab` no.**
+
+⭐⭐ **E le due eccezioni che valgono più di tutto il rapporto**, entrambe `[R]`:
+
+1. **A schermo intero restano riservati solo due comandi** —
+   `browser_command_controller.cc:484-505`, verbatim:
+   ```cpp
+     if (window()->IsFullscreen()) {
+       // In fullscreen, all commands except for IDC_FULLSCREEN and IDC_EXIT should
+       // be delivered to the web page. The intent to implement and ship can be
+       // found in http://crbug.com/40501396.
+   ```
+   ⭐ **Quindi `Ctrl+T`, `Ctrl+W`, `Ctrl+N` e `Ctrl+Tab` diventano annullabili con il solo
+   `preventDefault()`, senza chiamare nessuna lock.** ⛔ **Questo chiude la `[?]` che avevo lasciato
+   sull'*intent* del 2017: non è un ricordo, è il codice di oggi.**
+2. ⭐ **In una finestra «app» (PWA installata) non c'è nessuna riservata, punto** —
+   `browser_command_controller.cc:465-469` `[R]`: `// In Apps mode, no keys are reserved.` →
+   `return false;` per `TYPE_APP` e `TYPE_APP_POPUP`. E `browser_view.cc:3172-3178`: *«Let all keys
+   fall through to a v1 app's web content, even accelerators»*.
+
+⚠ **E una terza, che riguarda proprio la nostra macchina**: su Linux, se il tasto è registrato nel
+tema di modifica testo di GTK, **non è riservato** (`browser_command_controller.cc:507-517` `[R]`).
+
+#### Firefox — ⛔ sei riservate, e una trappola di stato **B**
+
+Il difetto predefinito è **generoso**: `reserved="pref"` è il valore di partenza, e diventa
+riservato solo se l'utente mette il sito su *Blocca* per il permesso `shortcuts`
+(`GlobalKeyListener.cpp:74-82`, `419-433`, `nsContentUtils.cpp:11450-11463` `[R]`). Le marcate
+`reserved="true"` in `browser/base/content/browser-sets.inc` `[R]` sono **sei**:
+
+| Combinazione | Windows / Linux / macOS | Recuperabile |
+|---|---|---|
+| nuova finestra | `Ctrl+N` / `Ctrl+N` / `⌘N` | ⚠ **`[?]`** — con `keyboardLock` di Firefox 151, da misurare |
+| nuova scheda | `Ctrl+T` / `Ctrl+T` / `⌘T` | idem |
+| chiudi scheda | `Ctrl+W` / `Ctrl+W` / `⌘W` | idem |
+| chiudi finestra | `Ctrl+Maiusc+W` / … / `⌘⇧W` | idem |
+| navigazione anonima | `Ctrl+Maiusc+P` / … / `⌘⇧P` | idem |
+| esci | `Ctrl+Maiusc+Q` / `Ctrl+Q` / `⌘Q` | idem |
+
+più **`F11` (e `⌘⌃F` su macOS) quando si è *già* a schermo intero** — ⛔ **cioè in Firefox `F11`
+entra in modo annullabile ma non esce**, che è esattamente il vincolo della specifica.
+
+⛔ **La trappola: `Ctrl+Tab` è stato B.** `browser-ctrlTab.js:565-572` e `:775` `[R]`: il listener è
+registrato con `{ mozSystemGroup: true }` e **non consulta `defaultPrevented`** — quindi la pagina
+**riceve** il `keydown` e annullarlo **non impedisce** il cambio scheda. ⭐ **È il caso peggiore
+possibile: sembra intercettabile e non lo è.** Stessa cosa per `Ctrl+PagSu`/`PagGiù`.
+
+⚠ Al contrario, su macOS Firefox è **più permissivo di Chrome**: disattiva l'esecuzione dei comandi
+di menu durante `performKeyEquivalent:` e li riesegue solo dopo (`nsMenuBarX.mm:944-968`,
+`nsCocoaWindow.mm:617-647` `[R]`), quindi `⌘H`, `⌘M`, `⌘L`, `⌘F`, `⌘1`…`9` sono **tutte
+annullabili**.
+
+#### Safari / WebKit — nessuna riservata nel motore, ma un filtro a schermo intero
+
+⭐ **Tutte le scorciatoie di menu di Safari — `⌘T`, `⌘W`, `⌘L`, `⌘R`, `⌘F`, `⌘1`…`9`, perfino `⌘Q`
+— arrivano alla pagina e si annullano**, perché WebKit consegna alla pagina *per primo*
+(`WebViewImpl.mm:6759-6771`, e `doneWithKeyEvent` a `:5859-5878` che rimanda al menu solo se la
+pagina non ha consumato) `[R]`.
+
+⛔ **Ma a schermo intero WebKit filtra i tasti per intervalli di codice**, se non è stato concesso
+l'accesso completo da tastiera — `EventHandler::isKeyEventAllowedInFullScreen`,
+`page/EventHandler.cpp:4150-4168` `[R]`:
+
+```cpp
+    int keyCode = keyEvent.windowsVirtualKeyCode();
+    return (keyCode >= VK_BACK && keyCode <= VK_CAPITAL)
+        || (keyCode >= VK_SPACE && keyCode <= VK_DELETE)
+        || (keyCode >= VK_OEM_1 && keyCode <= VK_OEM_PLUS)
+        || (keyCode >= VK_MULTIPLY && keyCode <= VK_OEM_8);
+```
+
+⭐ **Questa riga spiega il commento di noVNC** citato al §3.B.6 — *«Safari doesn't support
+alphanumerical input while in fullscreen»*: non è un difetto misterioso, è **questo filtro**.
+
+⛔ **E la `keyboardLock` di WebKit fa molto meno di quanto il nome prometta**: `FullscreenOptions.idl`
+dichiara tre valori (`"none"`, `"browser"`, `"system"`) `[R]`, ma l'unico ramo implementato è
+`"browser"` e ⛔ **agisce solo su Esc** (`EventHandler.cpp` ~4228-4246: timer di **1500 ms** sulla
+pressione lunga) `[R]`. `[?]` **`"system"` è dichiarato e non ha implementazione** in questa
+revisione: nessuna riga tocca `⌘Tab`, `⌘Spazio` o gli screenshot. ⚠ E il gate: serve una **tastiera
+hardware collegata**, e su iOS l'*idiom* dev'essere `Desktop` — ⭐ **quindi su iPad con tastiera
+sì, su iPhone no** (`Element::requestFullscreen` `[R]`).
+
+#### Il sistema operativo — quel che nessun browser recupera
+
+| Sistema | Che cosa si tiene | Recuperabile con la lock? |
+|---|---|---|
+| **Windows** | `Alt+Tab`, `Win`, `Alt+Esc`, `Ctrl+Esc`, `Alt+F4` | ⭐ **sì** — Chromium usa un hook di basso livello `WH_KEYBOARD_LL` che *«intercepts system key combinations such as Alt + Tab»*, catturando **solo i modificatori** e lasciando passare gli altri tasti `[R]` |
+| **Windows** | ⛔ `Ctrl+Alt+Canc` | ⛔ **no, mai** `[S]` |
+| **Linux / X11** | `Super`, `Alt+Tab`, tutto il WM | ⚠ **parzialmente**: `x11_keyboard_hook.cc:39-45` `[R]` mostra che «bloccare tutti i tasti» significa in realtà **dieci soli `DomCode`**: `Escape`, `ContextMenu`, e i sei modificatori sinistra/destra |
+| **Linux / Wayland** | dipende dal compositore | *«under no obligation to disable all of its shortcuts»* `[S]` |
+| ⛔ **macOS** | `⌘Spazio`, `⌘Tab`, `⌘\``, `⌘⇧3/4/5`, `⌃frecce`, Exposé | ⛔ **no.** ⭐ **Il motivo, letto nel codice**: `ui/events/mac/keyboard_hook_mac.mm` `[R]` **restituisce `nullptr`** — su macOS **non esiste un hook di sistema**; e in `render_widget_host_view_cocoa.mm` il controllo `EventIsReservedBySystem` (riga 1434) viene **prima** di `isKeyLocked` (riga 1455) |
+| ⛔ **Android / DeX** | ⭐ **qualunque combinazione con Meta**, per regola generale | ⛔ vedi sotto |
+| **iPadOS** | `⌘Spazio`, `⌘Tab`, `⌘⇧3/4`, `Globe-A/C/H/M/N/F`, `⌃Globe-frecce`, `⌘W`, `⌘M` | ⛔ **no** `[S]` |
+
+#### ⛔ Android e DeX — la regola più dura del rapporto
+
+`PhoneWindowManager.java` `[R]`, presente **due volte** (righe 4010 e 4056, le due pipeline),
+verbatim:
+
+```java
+        // Reserve all the META modifier combos for system behavior
+        return (metaState & KeyEvent.META_META_ON) != 0;
+```
+
+⛔ **Non è una lista di eccezioni: è una regola.** Qualunque combinazione contenga il tasto
+Meta/Windows/Search **è persa prima del browser**. E `KEYCODE_HOME` è documentato come *«handled by
+the framework and is never delivered to applications»* `[R]`.
+
+Chrome per Android ha poi **due** livelli propri, e il codice li dichiara `[R]`
+(`KeyboardShortcuts.java`):
+
+| Livello | Commento verbatim nel sorgente | Che cosa contiene |
+|---|---|---|
+| **prima della pagina** (stato C) | *«dispatchKeyEvent() is called before the active view or web page gets a chance to handle the key event. So the keys handled here cannot be overridden by any view or web page»* | `SEARCH`, `MENU`, `Esc`, `F6`, `F7`, `Ctrl+Tab`, `Ctrl+Maiusc+Tab`, `Ctrl+PagSu/PagGiù` |
+| **dopo la pagina** (stato A) | *«onKeyDown() is called after the active view or web page has had a chance to handle the key event. So the keys handled here *can* be overridden»* | ⭐ `Ctrl+T`, `Ctrl+N`, `Ctrl+W`, `Ctrl+Maiusc+T/N`, `Ctrl+R/L/F/D/P/S/U/H/J`, `Ctrl+1`…`9`, `Alt+←/→/Home`, `F1`, `F10` |
+
+⭐ **E una notizia che ribalta la riga «no-op su mobile»**: la Keyboard Lock su Android **esiste**,
+ma solo da **Android 16 QPR1** — `WindowAndroid.java:1803-1815` `[R]` chiama
+`params.setKeyboardCaptureEnabled(hasCapture)` sotto la guardia
+`Build.VERSION_CODES_FULL.BAKLAVA_1`, e **su tutto ciò che è più vecchio restituisce `false`**.
+⛔ `[?]` **Resta da misurare se scavalchi anche la regola «tutti i Meta sono riservati» del
+sistema.** ⭐ **È la domanda più importante del banco**, perché DeX è l'uso primario.
+
+⚠ **Su DeX in particolare**: ⛔ **non ho trovato** un elenco Samsung ufficiale delle scorciatoie
+riservate — quattro URL provati, tutti 404. `[?]` Vale la regola AOSP più un *overlay* del
+produttore che non è pubblico. **L'unica verifica certa è sul dispositivo.**
+
+⚠ **E la nota metodologica che vale per tutta questa sezione**: ⛔ **la mappatura tasto → azione è
+modificabile dall'utente su tutti i sistemi** — `AppleSymbolicHotKeys` su macOS, *Modifier Keys* su
+iPadOS, il tema tasti GTK su Linux, l'*overlay* del produttore su Android. **Queste tabelle
+descrivono il codice e la configurazione predefinita. Un banco onesto misura sul dispositivo.**
 
 ---
 
@@ -112,7 +286,8 @@ riga che cambia quali browser conviene consigliare.
 | Safari | ⛔ no | ✅ **26.4+** |
 | granularità | elenco di `code`, o tutti | tutto o niente (`"browser"` / `"none"`) |
 | valori dell'enum | — | `"browser"`, `"none"`. ⚠ Era stato proposto anche `"system"`, **tolto prima del merge** |
-| uscita di sicurezza | Esc tenuto **2 s** (Chrome) | Esc tenuto **1,5 s** (Safari); su Firefox un avviso compare al triplo clic rapido o alla pressione lunga |
+| uscita di sicurezza | ⚠ **la documentazione Chrome dice 2 s** `[S]`, **il sorgente dice 1,5 s** — `keyboard_lock_controller.cc:28` `[R]`: `kHoldEscapeTime = base::Milliseconds(1500)`. ⛔ **Da misurare: è una contraddizione fra due fonti nostre** | Esc tenuto **1,5 s** (Safari, `[S]` e `[R]` concordi); su Firefox un avviso compare al triplo clic rapido o alla pressione lunga |
+| ⛔ **Esc si può bloccare del tutto?** | ⛔ **no, mai** — `render_widget_host_view_event_handler.cc:953-958` `[R]`: *«We never consider 'ESC' to be locked as we don't want to prevent it from being handled by the browser»* | ⛔ no: Esc arriva alla pagina, ma l'uscita resta sulla pressione lunga |
 | rilascio | `unlock()`, o l'uscita da schermo intero | automatico all'uscita da schermo intero **o al cambio di scheda** |
 
 **Che cosa la lock consegna e che cosa non consegna mai.** La specifica WHATWG è deliberatamente
@@ -152,7 +327,12 @@ sull'incertezza:
 - **transient user activation** per `lock()` (MDN); e `requestFullscreen` la richiede comunque;
 - **contesto di navigazione di primo livello**: `lock()` rigetta con `InvalidStateError` se non è
   *«in the currently active top-level browsing context»* `[S]`. ⛔ **La pagina non può stare in un
-  `<iframe>`**;
+  `<iframe>`** — e Chromium lo verifica in codice, `keyboard_lock.cc:109-115` `[R]`:
+  `IsOutermostMainFrame() && context->IsSecureContext()`;
+- ⛔ **e il fuoco**: `render_widget_host_impl.cc:4178-4180` `[R]` —
+  `if (!delegate_->IsFullscreen() || !is_focused_) { return; }`. **La lock si spegne da sola quando
+  la pagina perde il fuoco**, il che si intreccia con il §3.A.7: nello stesso istante in cui i
+  tasti tornano al browser, i nostri modificatori restano giù;
 - ⚠ **il permesso che non c'è più**: Chrome 131 aveva introdotto una richiesta di permesso, **e
   Chrome l'ha ritirata il 17 marzo 2026** `[S]`. ⛔ **Chi scrive il codice guardando un articolo del
   2024 o del 2025 troverà una richiesta di permesso che oggi non esiste.**
@@ -183,10 +363,11 @@ lo dice esplicitamente `[S]`
 > buttons» sarebbero inviati all'applicazione web a schermo intero, con l'eccezione: «**Escape and
 > F11 remain reserved to the browser**».
 
-⚠ `[?]` **Ma quell'*intent* è del gennaio 2017 e non ho trovato conferma che il comportamento sia
-ancora quello nel 2026.** ⛔ È una riga del banco, non una riga della specifica: si prova
-`Ctrl+W` a schermo intero **senza** lock, e si guarda se la scheda si chiude. **Se questo è ancora
-vero, metà del prezzo di `SPECIFICHE.md` §7.3-bis si paga solo a finestra, non a schermo intero.**
+⭐ **E non è un ricordo del 2017: è il codice di oggi.** `browser_command_controller.cc:484-505`
+`[R]` (revisione `bfa42e3d`, 9 agosto 2026) — *«In fullscreen, all commands except for
+IDC_FULLSCREEN and IDC_EXIT should be delivered to the web page»*. ⛔ **Quindi su Chrome metà del
+prezzo di `SPECIFICHE.md` §7.3-bis si paga solo a finestra**, e a schermo intero sparisce **senza
+chiamare nessuna API**. Il dettaglio nel §2.4.
 
 **E il ripiego che tutti hanno accettato**: bottoni nella pagina. noVNC ha una barra con
 Ctrl/Alt/Windows/Tab/Esc/Ctrl-Alt-Canc come *interruttori* di modificatore (`app/ui.js:1766-1832`,
@@ -788,7 +969,9 @@ una per volta**, perché quelle in fondo chiudono la scheda e portano via il reg
    `Ctrl+Maiusc+M`, `Ctrl+Maiusc+P`, `Ctrl+Maiusc+N`, `Ctrl+Maiusc+T`, `Ctrl+Maiusc+W`,
    `Ctrl+Maiusc+Q`;
 5. `Alt+Freccia sinistra`, `Alt+Freccia destra`, `Alt+Home`, `Alt+D`, `Alt+E`, `Alt+F`;
-6. **`Escape`** — da solo, e **tenuto premuto** (si cronometra: 1,5 s su Safari, 2 s su Chrome);
+6. **`Escape`** — da solo, e **tenuto premuto**. ⛔ **Si cronometra**, perché qui due fonti nostre si
+   contraddicono: la documentazione Chrome dice **2 s**, il sorgente Chromium dice **1,5 s**
+   (§3.A.1). Safari: 1,5 s da entrambe;
 7. `Ctrl+Tab`, `Ctrl+Maiusc+Tab`, `Ctrl+1`…`Ctrl+9`;
 8. ⛔ **le tre che chiudono**: `Ctrl+T`, `Ctrl+N`, **`Ctrl+W`** — **ultime**, e con il registro già
    copiato fuori;
@@ -799,13 +982,16 @@ una per volta**, perché quelle in fondo chiudono la scheda e portano via il reg
 11. su iPadOS, `Cmd+H`, `Cmd+Spazio`, `Cmd+Tab`, e **`Cmd` tenuto premuto**, che apre il foglio
     delle scorciatoie di sistema.
 
-**Ogni combinazione va provata in tre stati**, ed è la sola forma che dà una risposta utile:
+⛔ **Ogni combinazione va provata in QUATTRO modi**, ed è la sola forma che dà una risposta utile.
+⭐ **E il banco non scopre più: conferma** — il §2.4 dice già che cosa il codice fa, e il banco serve
+a smentirlo dove l'ambiente lo cambia (mappature dell'utente, *overlay* del produttore, versioni):
 
-| Stato | Che cosa si scrive nella tabella |
-|---|---|
-| **a finestra**, senza schermo intero | arriva? il `preventDefault()` ferma l'azione del browser? |
-| **a schermo intero**, senza lock | cambia qualcosa? (⚠ Chromium consegna in schermo intero alcune scorciatoie che a finestra si tiene) |
-| **a schermo intero, con la lock** del motore | arriva? |
+| Modo | Che cosa si scrive nella tabella | Che cosa ci aspettiamo, dal §2.4 |
+|---|---|---|
+| **a finestra**, scheda normale | arriva? il `preventDefault()` ferma l'azione del browser? | le **dodici** riservate di Chrome non arrivano; tutto il resto sì e si annulla |
+| **a schermo intero**, senza lock | cambia qualcosa? | ⭐ su Chrome **restano riservati solo `F11` e «esci»** |
+| **a schermo intero, con la lock** del motore | arriva? | Esc **mai** bloccabile del tutto |
+| ⭐ **installata come PWA**, a finestra | arriva? | ⭐ su Chrome **niente è riservato**: se qui qualcosa non arriva, il §5.1-bis è sbagliato |
 
 **Gruppo C — la ripetizione e il modificatore rimasto giù** (per noi è il gruppo più grave, perché
 la sessione remota sopravvive alla connessione):
@@ -878,6 +1064,9 @@ non è quello**: la riga 4 non si deduce dalla riga 1. È la forma d'errore **E1
 | «su Firefox il menu «Incolla» non fa cadere lo schermo intero» | dopo aver scelto «Incolla», `document.fullscreenElement` è ancora l'elemento nostro | c'è un `fullscreenchange` **prima** che il menu compaia, e la pagina torna a finestra |
 | «la tastiera a schermo di Android non manda posizioni» | ogni battuta è un `keydown` con `code:""` e `keyCode:229`, e il testo esce da `beforeinput` | arrivano `code` valorizzati — allora la strada delle posizioni è aperta anche là, e §5-bis.6 va rivista |
 | «il compositore Wayland locale si tiene `Super`» | il registro non ha nessuna riga per `Super`, **e** il menu del desktop locale si apre | il registro scrive `MetaLeft`, e il menu locale **non** si apre |
+| ⭐ «in una PWA installata Chrome non riserva niente» | `Ctrl+W` arriva alla pagina **e la finestra resta aperta** | non arriva nessuna riga, **oppure** arriva e la finestra si chiude lo stesso — e il §5.1-bis va cancellato |
+| ⭐ «su DeX la keyboard lock funziona» | `navigator.keyboard.lock()` **non rigetta**, e almeno una fra `Alt+Tab` e `Super` arriva alla pagina | la promessa rigetta, oppure si risolve e **non cambia niente** — ⛔ **sono due esiti diversi**: «l'API non c'è» contro «l'API c'è e non serve a niente» |
+| «su Android le combinazioni con Meta sono perse» | nessuna riga per `Super+`qualunque cosa, **e** l'azione di sistema avviene | arriva una riga con `metaKey:true` — e la regola AOSP letta nel sorgente non vale su questo dispositivo |
 
 ⛔ **E la trappola di banco che abbiamo già pagato tre volte** (`LEZIONI.md` §2.3-bis): quando un
 controllo è rosso e la cosa che misura *sembra* funzionare, **il primo sospetto è il controllo**.
@@ -918,12 +1107,31 @@ fallisce**, semplicemente non blocca niente. ⛔ **Il banco deve provare l'effet
 l'esistenza** — è la stessa lezione di `KWIN_COMPOSE=O2`, l'interruttore inerte (`LEZIONI.md`
 §1.11).
 
+### 5.1-bis ⭐⭐ Due leve che costano quasi niente e valgono più della lock
+
+*Escono dalla lettura del sorgente di Chromium, e nessuna delle due era nel piano.*
+
+1. ⭐ **Lo schermo intero, da solo, recupera quasi tutto su Chrome.** A schermo intero restano
+   riservati **solo** `F11` e «esci»: `Ctrl+T`, `Ctrl+W`, `Ctrl+N`, `Ctrl+Tab` arrivano alla pagina
+   e si fermano con `preventDefault()` `[R]`. ⛔ **Quindi il bottone «schermo intero» non è
+   l'anticamera della lock: è già metà del guadagno**, e va offerto anche dove la lock non c'è.
+2. ⭐⭐ **Se la pagina è installata come PWA, in Chrome non c'è nessuna scorciatoia riservata.**
+   `// In Apps mode, no keys are reserved.` → `return false` `[R]`. ⛔ **È la leva più economica di
+   tutto il rapporto**: un *manifest* e un'installazione, e il prezzo di §7.3-bis va a zero su
+   Chrome — **senza schermo intero, in una finestra ridimensionabile.**
+
+   ⭐ **E la finestra ridimensionabile è esattamente il modo d'uso di DeX** (`DECISIONI.md`
+   §5-bis.0), dove lo schermo intero è scomodo e la lock `[?]`. ⛔ **Va in `SPECIFICHE.md` come
+   requisito, non come nota**: `[?]` **resta da misurare se valga anche per Chrome per Android**,
+   ed è una riga del banco.
+
 ### 5.2 Quali browser conviene consigliare
 
 | Posto | Consigliato | Perché |
 |---|---|---|
 | **Linux, Windows, macOS** | ⭐ **Chrome o Edge** | sono i soli con **`clipboardchange`** e con il permesso `clipboard-read` **che persiste**: è il solo modo di rendere invisibile il verso «dispositivo → sessione», che `DECISIONI.md` §5-ter.1 dichiara il più usato. La keyboard lock ce l'hanno da otto anni |
-| **Linux, Windows, macOS** — alternativa vera | **Firefox ≥ 151** / **Safari ≥ 26.4** | ⭐ **da quest'anno sono un'alternativa, non un ripiego**, per la tastiera. ⛔ Restano indietro **solo** sugli appunti, e in un punto solo: il menu «Incolla» a ogni lettura |
+| **Linux, Windows, macOS** — alternativa vera | **Firefox ≥ 151** / **Safari ≥ 26.4** | ⭐ **da quest'anno sono un'alternativa, non un ripiego.** ⭐ **Safari è perfino il più permissivo dei tre**: nessuna scorciatoia riservata nel motore. ⛔ Restano indietro sugli appunti (il menu «Incolla» a ogni lettura), e Firefox ha **`Ctrl+Tab` in stato B** — arriva e non si annulla |
+| ⛔ **macOS**, se le scorciatoie contano | ⚠ **nessuno dei tre basta** | su macOS **non esiste un hook di sistema** e le scorciatoie del pannello `AppleSymbolicHotKeys` sono controllate **prima** della lock `[R]`. ⛔ `⌘Spazio`, `⌘Tab`, `⌘\``, gli screenshot: **irrecuperabili su qualunque browser** |
 | **Samsung DeX** | ⭐ **Chrome per Android** | ⚠ ma con l'avvertenza del §3.A: sui sistemi mobili la keyboard lock di Chromium era dichiarata *«a no-op on mobile platforms»* `[S]` all'atto dell'implementazione, e Firefox 151 la disabilita esplicitamente su Android `[S]`. ⛔ **Su DeX il prezzo va misurato, non dedotto**: è la riga 4 del §4.4 |
 | **iPhone / iPad** | ⚠ **si serve, ma si dichiara** | Safari non ha `clipboardchange`, non ha i permessi degli appunti, e su iPhone lo schermo intero è parziale `[S]`. È il posto dove il §5.3 si vede di più |
 
@@ -1007,7 +1215,8 @@ per noi è la conferma che è una trappola facile, non che sia giusta.**
 |---|---|---|---|
 | `SPECIFICHE.md` §7.3-bis | *«la Keyboard Lock […] `[S]` solo su Chrome ed Edge»* | ⛔ **falso dal 2026**: c'è su tutti e tre, con **due API diverse** — §3.A.1, §5.1 | `[S]` |
 | `SPECIFICHE.md` §9 | *«non si può sorvegliare la clipboard in silenzio»* + la `[?]` sul verso dispositivo → sessione | ⭐ **si può, su Chromium, dal gennaio 2026**, con `clipboardchange` — e **solo mentre la pagina ha il fuoco**. Su Firefox/Safari resta vero — §3.B.3 | `[S]` |
-| `SPECIFICHE.md` §7.3-bis | la `[?]` *«quante e quali si perdano davvero su ciascun motore non l'ha misurato nessuno»* | ⚠ **resta aperta**, ma si restringe: la tabella del §2 dice **le capacità**; l'elenco tasto-per-tasto è un esito del banco §4, non della lettura | `[?]` |
+| `SPECIFICHE.md` §7.3-bis | *«`Ctrl+W` chiude la scheda. `Ctrl+T`, `Ctrl+N`, `F11`, `Ctrl+Shift+I` e le altre sono del browser»* | ⛔ **metà è sbagliata**: `F11` e `Ctrl+Maiusc+I` **sono annullabili** su Chrome; `Ctrl+T/N/W` lo diventano **a schermo intero**, e in una **PWA installata** non c'è nessuna riservata — §2.4, §5.1-bis | `[R]` |
+| `SPECIFICHE.md` §7.3-bis | la `[?]` *«quante e quali si perdano davvero su ciascun motore non l'ha misurato nessuno»* | ⭐ **si chiude in gran parte con la lettura**, non con la misura: l'elenco è nel §2.4, letto nel sorgente dei tre browser. ⚠ Resta da **misurare** solo dove il codice non decide: DeX, e la mappatura che l'utente può cambiare | `[R]` + `[?]` |
 | `PIANO.md` §1.2, misura S3 | *«quante scorciatoie si perdono, motore per motore»* | ⛔ **la domanda va riformulata**: non «quante», ma **in quale dei tre stati A/B/C** cade ciascuna, e **in quale dei tre modi** (finestra / schermo intero / schermo intero con lock) — §3.A.2 | `[S]` |
 
 ⚠ **E una `[?]` nuova, che prima non c'era**: se su **DeX** la keyboard lock sia davvero un no-op.
@@ -1048,7 +1257,7 @@ del banco.
 | `clipboardchange`, *Intent to Ship* | https://groups.google.com/a/chromium.org/g/blink-dev/c/UgYnldQ0-VY | Mozilla e WebKit: **«No signal»** |
 | `clipboardchange`, la guida Chrome | https://developer.chrome.com/blog/clipboardchange | |
 | Chrome, keyboard lock e i permessi | https://developer.chrome.com/blog/keyboard-lock-pointer-lock-permission | ⛔ aggiornato **17 marzo 2026**: *«We have decided not to launch the Keyboard Lock and Pointer Lock permissions»* |
-| Chrome, la guida alla keyboard lock | https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock | l'Esc a 2 s |
+| Chrome, la guida alla keyboard lock | https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock | ⚠ dice **2 s** per l'Esc — **il sorgente dice 1,5 s** (§3.A.1) |
 | Chrome Platform Status, *Keyboard Lock* | https://chromestatus.com/feature/5642959835889664 | Chrome **68**, *«While in fullscreen, this API allows apps to receive keys normally handled by the system or the browser like Cmd/Alt-Tab, or Esc»* |
 | Chromium, *Browser Shortcuts in Fullscreen* | https://groups.google.com/a/chromium.org/g/blink-dev/c/wlRDnLbyVlk | `Ctrl/Cmd+(T\|W\|N)` in schermo intero; **Esc e F11 restano al browser** |
 | Firefox esce da schermo intero sulle richieste di permesso | https://bugzilla.mozilla.org/show_bug.cgi?id=1522120 | RESOLVED FIXED in **Firefox 70** |
@@ -1104,6 +1313,35 @@ punto 3): si chiamano tutte e due e si guarda quale delle due blocca davvero.
 | Microsoft, gli scan code | https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input |
 | BlocMaiusc su macOS, **WONTFIX** | https://bugzilla.mozilla.org/show_bug.cgi?id=712535 |
 
+### 6.4-ter Il sorgente dei browser — le scorciatoie riservate `[R]`
+
+*È la fonte del §2.4. Revisioni lette il 9 agosto 2026: Chromium `bfa42e3d`, Gecko `5836a062`,
+WebKit `399d0492`, AOSP `1cdfff55`.*
+
+| Che cosa | File |
+|---|---|
+| ⭐ **Chrome, la lista riservata** e le due eccezioni (schermo intero, PWA) | `chrome/browser/ui/browser_command_controller.cc` (righe 465-527) |
+| Chrome, il bivio | `chrome/browser/ui/views/frame/browser_view.cc:3163-3227` |
+| Chrome, la tabella degli acceleratori | `chrome/browser/ui/accelerator_table.cc` ⚠ **spostato**: il vecchio `.../ui/views/accelerator_table.cc` dà 404 |
+| Chrome su macOS | `chrome/browser/ui/cocoa/chrome_command_dispatcher_delegate.mm`, `.../views/frame/browser_native_widget_mac.mm`, `ui/base/cocoa/command_dispatcher.mm` |
+| ⛔ **macOS: gli hotkey di sistema, controllati prima della lock** | `content/browser/cocoa/system_hotkey_map.mm`, `content/app_shim_remote_cocoa/render_widget_host_view_cocoa.mm` (riga 1434 prima della 1455) |
+| ⛔ **macOS: l'hook che non c'è** | `ui/events/mac/keyboard_hook_mac.mm` — `return nullptr;` |
+| Windows: l'hook di basso livello | `ui/events/win/modifier_keyboard_hook_win.cc` |
+| Linux/X11: i dieci soli tasti afferrati | `ui/ozone/platform/x11/x11_keyboard_hook.cc:39-45` |
+| i vincoli della lock | `third_party/blink/renderer/modules/keyboard/keyboard_lock.cc:109-115`, `content/browser/renderer_host/render_widget_host_impl.cc:4178-4180`, `.../render_widget_host_view_event_handler.cc:272-275, 953-958`, `.../keyboard_lock_controller.cc:28` |
+| **Gecko**, il marchio di «riservato» | `widget/BasicEvents.h:352-368`, `dom/events/GlobalKeyListener.cpp:74-82, 419-433`, `dom/base/nsContentUtils.cpp:11450-11463` |
+| **Gecko**, le sei riservate | `browser/base/content/browser-sets.inc`, `browser/locales/en-US/browser/browserSets.ftl` |
+| ⛔ **Gecko, `Ctrl+Tab` non annullabile** | `browser/components/tabbrowser/content/browser-ctrlTab.js:565-572, 775` |
+| Gecko su macOS: il menu dopo la pagina | `widget/cocoa/nsMenuBarX.mm:944-968`, `widget/cocoa/nsCocoaWindow.mm:617-647` |
+| **WebKit**, la pagina prima del menu | `Source/WebKit/UIProcess/mac/WebViewImpl.mm:5859-5878, 6759-6771`, `Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm:7847-7860` |
+| ⛔ **WebKit, il filtro dei tasti a schermo intero** | `Source/WebCore/page/EventHandler.cpp:4150-4168` — spiega il commento di noVNC |
+| WebKit, la `keyboardLock` | `Source/WebCore/dom/FullscreenOptions.idl`, `Source/WebCore/dom/Element.cpp` (`requestFullscreen`), `Source/WebCore/page/EventHandler.cpp` ~4228-4246 |
+| ⛔ **AOSP, «tutti i Meta sono riservati»** | `services/core/java/com/android/server/policy/PhoneWindowManager.java` righe **4010** e **4056**; `core/java/android/view/KeyEvent.java:110-112`; `core/res/res/xml/bookmarks.xml` |
+| Chrome per Android, i due livelli | `chrome/android/java/src/org/chromium/chrome/browser/KeyboardShortcuts.java:809-816, 1053-1057` |
+| ⭐ **Chrome per Android, la lock da Android 16 QPR1** | `ui/android/java/src/org/chromium/ui/base/WindowAndroid.java:1803-1815`, `content/browser/renderer_host/render_widget_host_view_android.cc:2742-2760` |
+| Apple, le scorciatoie di iPad | https://support.apple.com/en-us/102393 · https://support.apple.com/guide/ipad/use-shortcuts-ipaddf61a0c2/26/ipados/26 |
+| Apple, le scorciatoie di Safari su Mac | https://support.apple.com/guide/safari/keyboard-and-other-shortcuts-cpsh003/mac |
+
 ### 6.5 Codice di riferimento letto `[R]`
 
 *I tre cloni stanno fuori dal repository, come da `README.md` («`reference-*/` — non versionati»).
@@ -1138,7 +1376,7 @@ assenze di risultati.*
 | **noVNC non ascolta `paste`/`copy`/`cut`/`beforeinput`/composizione** | `grep -rn "addEventListener(['\"](paste\|copy\|cut\|beforeinput\|composition…)" core/ app/` → zero righe | la stessa forma trova `'blur'` in `keyboard.js:277` e `'input'` in `app/ui.js:273` |
 | **Guacamole non usa `event.code`** | `grep -n "\.code\b" Keyboard.js` → zero righe; su tutti i moduli le sole occorrenze sono `Status.js:50` e `Tunnel.js:1005` | quelle due occorrenze **sono** il controllo positivo: la grep funziona |
 | **Guacamole non interroga i permessi** | `grep -rn "navigator.permissions\|clipboard-read\|clipboard-write"` → zero righe | la stessa grep su `navigator.clipboard` trova le 4 occorrenze di `clipboardService.js` |
-| **Guacamole non ha nulla di specifico per Android** | `grep -rni "android"` su `guacamole-common-js/src` e sul frontend → zero righe | la stessa grep su `ipad|iphone|ipod` trova `Keyboard.js:1616`, e su `^mac` trova `Keyboard.js:1624` |
+| **Guacamole non ha nulla di specifico per Android** | `grep -rni "android"` su `guacamole-common-js/src` e sul frontend → zero righe | la stessa grep su `ipad\|iphone\|ipod` trova `Keyboard.js:1616`, e su `^mac` trova `Keyboard.js:1624` |
 | **Xpra non gestisce la ripetizione** | `grep -rni "repeat"` su `Client.js`, `Keycodes.js`, `index.html` → zero righe | la stessa grep su `setInterval` trova `Client.js:2643` e `:3021` |
 | **Xpra non usa composizione né `beforeinput`** | `grep -rni "inputmode\|contenteditable\|beforeinput\|compositionstart\|compositionend\|isComposing"` su `html5/js/*.js` e `html5/*.html` → zero righe | la stessa grep trova `oninput`/`"input"` in `index.html:1028` |
 | ⛔ **la specifica `uievents-code` NON contiene la corrispondenza evdev** | estratto tutto il testo del documento (152 967 byte) e cercato: `evdev` → **0**, `linux` → **0** | ⭐ **il controllo positivo è nella stessa ricerca**: `scancode` dà 2 occorrenze e `USB HID` ne dà 3 — **lo strumento sa trovare quel che c'è**, quindi lo zero è uno zero vero |
@@ -1146,3 +1384,8 @@ assenze di risultati.*
 | **`getLayoutMap()` e `keyboard.lock()` non esistono fuori da Chromium** | `browser-compat-data` dice **`false`** per `firefox` e `safari` — ⛔ che in BCD significa *«verificato non supportato»*, **non** `null` = «sconosciuto» | la stessa fonte dà `68`/`69` per Chrome |
 | **Firefox e Safari non hanno `clipboardchange`** | ⛔ **non è una grep**: la voce **esiste** nella specifica e in `browser-compat-data`, e la tabella dice `false` per Gecko e WebKit; l'*intent to ship* registra **«No signal»** da entrambi | la stessa tabella dà `144` per Chrome: **la fonte sa dire di sì quando è sì** |
 | **Firefox e Safari non hanno i permessi `clipboard-read`/`clipboard-write`** | MDN lo scrive in forma positiva: *«not supported (and not planned to be supported) by Firefox or Safari»* — è **una dichiarazione**, non un'assenza | la stessa pagina elenca i permessi che Chromium **ha** |
+| **Gecko non espone `navigator.keyboard`** | elencato il contenuto di `dom/webidl`: l'unico file con «keyboard» nel nome è `KeyboardEvent.webidl`; e `grep -i keyboard` su `Navigator.webidl` **esce a vuoto** | ⭐ **il controllo positivo è il file trovato**: la ricerca *sa* trovare i file quando ci sono |
+| **WebKit non espone `navigator.keyboard`** | `grep -i keyboard` su `Navigator.idl` → vuoto; nessun modulo «keyboard» in `Source/WebCore/Modules` | ⭐ **e il controprova migliore**: la stessa ricerca **ha trovato** `FullscreenOptions.idl` con `FullscreenKeyboardLock` — quindi WebKit **ha** un keyboard lock, solo non quello |
+| ⛔ **su macOS non esiste un hook di tastiera in Chromium** | `ui/events/mac/keyboard_hook_mac.mm` **restituisce `nullptr`** — non è un file mancante, è un file che dice di no | il file gemello per Windows (`modifier_keyboard_hook_win.cc`) restituisce un hook vero |
+| ⚠ **l'elenco Samsung delle scorciatoie riservate da DeX** | ⛔ **«non l'ho trovato», NON «non c'è»**: quattro URL ufficiali provati, tutti 404 o senza contenuto. Samsung rimanda al pannello sul dispositivo (`F1`) | — |
+| ⚠ **una tabella di hotkey di sistema lato WebKit** (l'equivalente di `system_hotkey_map.mm`) | ⛔ **«non l'ho trovato»**. E ⛔ **Safari è chiuso**: quel che si è letto è WebKit, il motore, non l'applicazione | — |

@@ -32,13 +32,17 @@ E per chi scrive o revisiona, prima di toccare qualcosa:
 
 ---
 
-## Gli studi dei desktop
+## Gli studi
 
-Letture del codice dei compositori, fatte prima di scrivere. Rispondono alle **quindici** domande
-di `LEZIONI.md` §3.
+Letture del codice, fatte prima di scrivere. I cinque dei desktop rispondono alle **quindici**
+domande di `LEZIONI.md` §3.
 
 [`gnome.md`](gnome.md) · [`kde.md`](kde.md) · [`xfce.md`](xfce.md) · [`lxqt.md`](lxqt.md) ·
 [`cinnamon.md`](cinnamon.md)
+
+⭐ **E il sesto, che non parla di un compositore**: [`web.md`](web.md) — il browser come client,
+con i quattro rapporti di dettaglio in `web/rapporti/`. ⚠ **È quello che invecchia più in fretta**:
+i compositori li congela Debian, i browser si aggiornano da soli.
 
 ⚠ **`gnome-remote-desktop.md` non è uno di questi** *(chiarito il 9 agosto 2026)*. Studia **il
 server RDP di GNOME**, cioè un concorrente sul filo che abbiamo buttato — non il desktop. Con RDP

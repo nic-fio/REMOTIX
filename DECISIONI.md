@@ -397,6 +397,19 @@ fosse vero è un clic ricorrente, non uno solo.
 | Chi ha un dominio | mette un **certificato vero** (Let's Encrypt con sfida DNS, che non richiede di esporre niente): **una riga di configurazione, non una strada diversa**, e l'avviso non compare mai |
 |---|---|
 
+> ### ⭐ E un certificato vero compra molto più di quel che sembra — trovato incrociando S1 e S3
+>
+> Nessuno dei due rapporti poteva vederlo da solo:
+>
+> - **S1**: dietro un'eccezione di certificato, su Chrome **il Service Worker non si installa**
+>   `[R]` ⇒ niente applicazione installabile;
+> - **S3**: in una **PWA installata** la lista dei tasti riservati di Chrome è **vuota** `[R]` ⇒
+>   arrivano alla sessione **tutte** le scorciatoie.
+>
+> ⛔ **Messe insieme: chi ha un dominio non compra l'assenza di un avviso, compra la tastiera
+> intera.** È una differenza di **prodotto**, non di comodità, e va detta a chi installa — perché
+> nessuno la dedurrebbe da sé. *(Dettaglio in `web.md` §1.2 B.)*
+
 ⛔ **Scartata: la «via Plex»** — un dominio nostro che risolve agli indirizzi privati dei server,
 cioè certificato vero e zero fatica per l'utente. Sarebbe **un servizio da tenere in piedi per
 sempre**, e il giorno in cui non ci fosse più smetterebbero di funzionare tutti i server

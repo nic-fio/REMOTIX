@@ -409,19 +409,31 @@ scorciatoie (su una tastiera tedesca la Z sta dove da noi sta la Y).
 nessun tasto della disposizione — un'emoji, un alfabeto diverso — non esce **niente**, e il server
 lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md` §5-bis.6-7)
 
-### 7.3-bis ⛔ Le scorciatoie che il browser si tiene — il prezzo dichiarato del client web
+### 7.3-bis Le scorciatoie che il browser si tiene — molto meno di quanto sembrava
 
-`Ctrl+W` chiude la scheda. `Ctrl+T`, `Ctrl+N`, `F11`, `Ctrl+Shift+I` e le altre sono **del
-browser**, non nostre: non arrivano alla sessione remota, e non c'è protocollo che le recuperi.
+> ⛔ **Riscritta la sera del 9 agosto 2026 dalla misura S3** (`web.md` §5). Questa sezione diceva
+> che la Keyboard Lock esiste *«solo su Chrome ed Edge»* e che `F11` e `Ctrl+Shift+I` sono perduti.
+> **Era sbagliata su tre punti**, e in meglio.
 
 | | |
 |---|---|
-| **la leva che esiste** | la **Keyboard Lock**, che consegna alla pagina anche quelle — `[S]` **solo su Chrome ed Edge, e solo a schermo intero** |
-| **dove si sente** | `DECISIONI.md` §5-bis.0: con DeX e con il modo classico *«le scorciatoie sono metà del lavoro»* |
-| **che cosa si fa** | ⛔ **si dichiara**, come ogni ripiego: la pagina dice quali scorciatoie **non** può consegnare, su quel browser. NON si finge che funzionino, e non si inventa una scorciatoia sostitutiva senza dirlo |
+| **la leva** | ⭐ **non è più solo di Chrome**: `keyboardLock` è entrato nello standard WHATWG l'**8 maggio 2026** e l'hanno spedito Safari 26.4 e Firefox 151 `[S]`. Chrome ed Edge restano sulla forma vecchia — ⚠ **la pagina deve saperle entrambe** |
+| **quanto si perde** | `[R]` la lista riservata di Chrome è di **dodici** comandi; **a schermo intero scende a due** — `F11` e l'uscita — **senza chiamare nessuna API**. Firefox ne ha **sei**, Safari **zero** |
+| ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`web.md` §1.2 B) |
 
-`[?]` **Quante e quali si perdano davvero su ciascun motore non l'ha misurato nessuno**: è una
-domanda della sonda del browser, e la risposta cambia quali browser conviene consigliare.
+**Quel che si perde davvero, e non si recupera:**
+
+| | |
+|---|---|
+| `Ctrl+Alt+Canc` · l'uscita da schermo intero | ovunque, per costruzione |
+| ⛔ **su macOS, tutte le scorciatoie di sistema** | non esiste un aggancio: la funzione che dovrebbe fornirlo **restituisce `nullptr`** `[R]` |
+| ⛔ **su Android e DeX, ogni combinazione con Meta** | per regola AOSP — ⚠ e DeX è l'uso primario (`DECISIONI.md` §5-bis.0) |
+
+⛔ **Che cosa si fa**: la pagina **dichiara** quali scorciatoie non può consegnare su quel browser.
+NON si finge che funzionino, e non si inventa una scorciatoia sostitutiva senza dirlo.
+
+`[?]` **Restano due domande, e sono le due che pesano di più**: se la Keyboard Lock funzioni su
+**DeX**, e se la PWA valga anche su **Chrome per Android**.
 
 ### 7.4 Mouse e tastiera fisici — su Android è la strada principale
 
@@ -492,12 +504,19 @@ pochi byte e non ha negoziazione, mentre le immagini aprono la questione dei for
 di **chi paga la banda** quando si copia una schermata da 8 MB su un collegamento che stiamo
 faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
 
-⛔ **E dalla parte del browser gli appunti non sono nostri**, il che tocca proprio il verso più
-usato. Leggere quel che l'utente ha copiato sul dispositivo richiede **un permesso o un gesto**
-`[S]`, e non si può sorvegliare la clipboard in silenzio come farebbe un'applicazione installata.
-`[?]` Quanto pesi davvero — e se il gesto naturale (`Ctrl+V` dentro la pagina) copra il caso
-frequente senza che l'utente se ne accorga — è una domanda della sonda. La regola resta quella di
-sempre: **si dichiara quel che non si può fare**, non si fa finta.
+**Dalla parte del browser gli appunti non sono nostri**, il che tocca proprio il verso più usato —
+ma meno di quanto si temeva *(misura S3, 9 agosto 2026, `web.md` §5.3)*:
+
+| | |
+|---|---|
+| ⭐ **si può sorvegliare, su Chrome** | l'evento `clipboardchange` è arrivato con **Chrome 144**, il 13 gennaio 2026 — e la motivazione scritta nella proposta sono **i client di desktop remoto** `[S]`. Porta i soli tipi MIME, e vuole il fuoco |
+| ⛔ **su Firefox e Safari no** | verificato, non dedotto. Là ogni lettura costa il menu «Incolla», con un secondo di attesa |
+
+⚠ E una trappola che **tutti e tre** i riferimenti letti disinnescano a mano: la corsa fra `Ctrl+V`
+e la lettura degli appunti. Xpra la risolve ritardando **ogni battuta di 100 ms** `[R]` — ⛔ per noi
+sono **due volte il tetto del ritardo**: quella cura non si copia, si sostituisce.
+
+La regola resta quella di sempre: **si dichiara quel che non si può fare**, non si fa finta.
 
 ⚠ **Su tutti e tre gli stack gli appunti appartengono al compositore**, e ci sono anche senza di
 noi. Su GNOME la sessione remota non li possiede: possiede solo **la porta** per raggiungerli
