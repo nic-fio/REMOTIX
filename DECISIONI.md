@@ -548,12 +548,17 @@ sospetto sia raro ma non l'ha misurato nessuno.
 
 ## 5-ter. Gli appunti
 
-### 5-ter.1 ✅ Solo testo
+### 5-ter.1 ✅ Solo testo, nei due versi
 
-*9 agosto 2026. «Per la clipboard ho idea precisa: solo testo».*
+*9 agosto 2026. «Per la clipboard ho idea precisa: solo testo». «Clipboard bi-direzionale. Dal
+server al client e viceversa».*
 
-Niente immagini, niente file, niente formati ricchi. È anche quel che diceva `SPECIFICHE.md`
-riga 28, qui confermato invece che ereditato.
+**Solo testo**: niente immagini, niente file, niente formati ricchi.
+
+**Nei due versi**: si copia sul desktop remoto e si incolla sul dispositivo in mano, e
+viceversa. ⚠ Corregge `SPECIFICHE.md` riga 28, che diceva «clipboard testuale **server-client**»
+e si leggeva in un verso solo — mentre il verso client → server (copio un indirizzo sul
+telefono, lo incollo nel browser remoto) è quello che si usa di più dei due.
 
 **Perché è la scelta giusta e non una rinuncia**, scritto perché nessuno la riapra per
 distrazione: il testo copre il 95 % degli usi, costa una manciata di byte, e non ha
@@ -725,9 +730,9 @@ client, su Android, **non serve** — quello che arriva è già il carattere fin
 Resta da confermare, ed è la parte che costa: la conversione da carattere a **posizione fisica
 nella disposizione della sessione**, con i modificatori applicati intorno.
 
-### 7.11 La clipboard: bidirezionale?
-`SPECIFICHE.md` dice «server-client», che si legge in un verso solo. E su KDE la clipboard
-**appartiene al compositore** e c'è anche senza di noi (`LEZIONI.md` §3, domanda 14).
+### 7.11 ~~La clipboard: bidirezionale?~~ → **chiusa il 9 agosto, vedi §5-ter**
+Sì, nei due versi, e solo testo. La domanda era nata perché `SPECIFICHE.md` diceva
+«server-client», che si legge in un verso solo.
 
 ### 7.12 Il «fuori scope»
 V1 aveva un §4 che diceva cosa **non** si fa — dischi, stampanti, X11, multi-monitor — ed è il
