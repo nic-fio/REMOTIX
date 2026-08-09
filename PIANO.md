@@ -456,6 +456,11 @@ senza dichiararli (`LEZIONI.md` §2.5-bis).
 >
 > ⚠ DeX vale come **caso di prova a sé, non come variante del telefono**: è dove il
 > ridimensionamento della finestra viene esercitato sul serio, perché la finestra si trascina.
+>
+> ⭐ **Una applicazione, due interfacce.** Il passaggio fra il modo classico (A3) e il tocco (A4) è
+> **automatico sul contesto** — schermo esterno e mouse collegati, oppure telefono in mano — non
+> un'impostazione da cercare. È l'unica cosa che si prende da RDM come disegno
+> (`DECISIONI.md` §5-bis.0-bis); il resto è ispirazione, non un prodotto da rifare.
 
 *Si innesta **dopo la fase 9**, quando l'esperienza su Linux è completa e giudicata, e il
 protocollo è stato esercitato dalla stretta di mano fino alla rete cattiva. Può procedere **in

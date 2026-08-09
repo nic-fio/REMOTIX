@@ -653,6 +653,35 @@ a quello Linux di quanto previsto — stesso modello di interazione, diverso sol
 decodifica. Riduce il rischio segnalato in §0.3 spostando Android in fondo: il protocollo non è
 stato progettato per il client sbagliato, perché i due client si somigliano.
 
+### 5-bis.0-bis ✅ RDM è un riferimento da cui **ispirarsi**, non un prodotto da rifare
+
+*9 agosto 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
+
+⚠ **In v1 RDM aveva un ruolo diverso**: era il **client da servire** — *«se non funziona qui, non
+funziona»* (`v1/documenti/client-android.md` §1.2). In V2 il client lo scriviamo noi, quindi
+cambia mestiere: da **vincolo** a **riferimento**.
+
+⛔ **E il confine è netto, perché RDM è proprietario** (Devolutions,
+`com.devolutions.remotedesktopmanager`): si studia **come si comporta e come si sente all'uso**,
+mai come è fatto dentro. La fonte migliore non è comunque il codice: è l'utente, che lo usa tutti
+i giorni.
+
+⭐ **Che cosa se ne prende, e viene da una frase sola**: *«funziona bene sia con interfaccia mobile
+sia in modalità desktop»*. Non è il video che si adatta — sono **due interfacce**, e
+l'applicazione sceglie da sé quale mostrare.
+
+🔸 Da cui, per il nostro client Android: **una sola applicazione, due interfacce**, e il passaggio
+è **automatico sul contesto** — schermo esterno e mouse collegati, oppure telefono in mano — non
+un'impostazione che l'utente deve andare a cercare. È la forma che le fasi **A3** (il modo
+classico) e **A4** (il tocco) hanno già preso.
+
+**Che cosa invece NON se ne prende:**
+
+| | Perché |
+|---|---|
+| l'essere un **gestore di connessioni** — RDP, VNC, ARD, SSH, FTP e una cinquantina d'altro | è un pregio per loro e un fuori scope per noi: REMOTIX è un prodotto solo, e `SPECIFICHE.md` §12 esclude la compatibilità con altri protocolli |
+| la sua **scelta di codec** (RemoteFX Progressive) | era ingegneria giusta *per RDP e per un telefono senza decodifica hardware*. Noi puntiamo su HEVC in hardware — ⚠ e se la sonda della fase 2 dicesse no, è **questa** la riga da rileggere |
+
 ### 5-bis.3 ✅ Il ventaglio dei gesti — **il ripiego, non la strada principale**
 
 *9 agosto 2026, confermati tutti e sette. ⚠ E ridimensionati lo stesso giorno da 5-bis.0: su
