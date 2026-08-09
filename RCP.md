@@ -106,8 +106,24 @@ era punita con un errore diverso e nessuno diceva «hai sbagliato l'ordine»: qu
 
 ## 2. Il trasporto
 
-**QUIC**, versione 1 (RFC 9000), con **TLS 1.3 obbligatorio**. Non esiste un modo in chiaro e non
-esiste un ripiego su TCP.
+**WebTransport su HTTP/3**, cioè **QUIC** versione 1 (RFC 9000) con **TLS 1.3 obbligatorio**. Non
+esiste un modo in chiaro, e RCP non scorre mai su TCP.
+
+> ### ⭐ Cambiato il 9 agosto 2026 — e il protocollo non ha perso una riga
+>
+> `DECISIONI.md` §1.6: **niente client dedicati, il client è il browser**. Una pagina non può
+> aprire una connessione QUIC nuda, ma **WebTransport le dà gli stessi mattoni** su cui §5.1 era
+> stato disegnato: stream unidirezionali indipendenti, l'abbandono di uno stream, i datagram,
+> la migrazione della connessione.
+>
+> ⭐ **Quel che cambia sta tutto in questo capitolo e in §4.1**: come si arriva alla connessione e
+> chi si fida di chi. **I messaggi, l'inquadratura, i canali e i corpi non cambiano di un byte** —
+> §3 e da §5 in poi valgono identici.
+>
+> ⚠ **E il server acquista un mestiere**: prima ascoltava QUIC e basta, adesso **serve anche la
+> pagina**. Sono due ascoltatori con lo stesso numero di porta — **UDP** per HTTP/3 e WebTransport,
+> **TCP** per il primo caricamento — perché un browser che apre `https://…` parte in TCP e passa a
+> QUIC solo se il server glielo annuncia con `Alt-Svc`.
 
 ### 2.1 Come si usano i pezzi di QUIC
 
@@ -127,37 +143,57 @@ deliberatamente, e che vanno usate **invece** di reimplementarle (`SPECIFICHE.md
 
 | Parametro | Valore | Perché |
 |---|---|---|
-| `max_idle_timeout` | **30 s**, dichiarato da entrambi | è l'orologio del silenzio: scaduto, il client è staccato |
-| `max_datagram_frame_size` | ≥ **1200**, dichiarato da entrambi | l'audio |
-| ALPN | `rcp/1` | ⛔ **DEVE** essere negoziato; una connessione senza è rifiutata |
+| `max_idle_timeout` | **30 s**, imposto dal server | è l'orologio del silenzio: scaduto, il client è staccato |
+| datagram | **DEVONO** essere abilitati sulla connessione HTTP/3 | l'audio |
+| ALPN | `h3` | ⛔ lo negozia il browser, non noi: una pagina non sceglie l'ALPN |
+| **l'indirizzo della sessione** | `https://<host>:<porta>/rcp/1` | ⭐ **è qui che vive l'identità del protocollo**, al posto dell'ALPN: il numero dopo la barra è la **versione maggiore** |
+
+⛔ **Il server NON DEVE accettare una sessione WebTransport su un percorso diverso.** Un percorso
+sconosciuto si rifiuta con lo stato HTTP di rifiuto, e si scrive nel registro: è §3 applicata al
+primo byte, prima ancora che RCP cominci.
+
+⚠ **Perché la versione sta nel percorso e non solo nel `CIAO`.** Con l'ALPN il rifiuto arrivava
+prima di spendere una connessione; qui l'ALPN è `h3` e non è nostro, quindi il posto più a monte in
+cui possiamo dire «questa versione non la parlo» è il percorso. ⛔ Resta comunque obbligatorio il
+controllo di versione in `CIAO`/`ECCOMI` (§9): **il percorso non lo sostituisce** — un percorso si
+può digitare a mano, e un controllo che si può aggirare digitando non è un controllo.
 
 ⛔ **NON DEVE esistere un battito applicativo.** Il tempo di inattività di QUIC fa già quel
 mestiere, e un secondo meccanismo produrrebbe due verità sullo stesso fatto.
 
-### 2.3 ⭐ Che cosa il protocollo pretende dal trasporto
+### 2.3 ⭐ Il credito degli stream, e che cosa non possiamo più pretendere
 
-*Aggiunta il 9 agosto 2026. Senza questi numeri due implementazioni conformi possono comunque
-non parlarsi — o parlarsi male in un modo che si vede solo sotto carico, che è il momento peggiore.*
+*Aggiunta il 9 agosto 2026 e riscritta lo stesso giorno, dopo `DECISIONI.md` §1.6.*
 
-| | Valore | Perché proprio questo |
-|---|---|---|
-| `initial_max_streams_uni` | il client **DEVE** dichiarare ≥ **256**, e **DEVE** mantenere credito disponibile | il video consuma **uno stream per fotogramma**: a 60 al secondo, un credito piccolo strozza il video e il sintomo è «il server non consegna», cioè la colpa attribuita al posto sbagliato |
-| `initial_max_stream_data_uni` | ≥ **4 MiB** | un fotogramma chiave a 4K ci sta dentro; sotto, il fotogramma si ferma a metà stream e aspetta |
-| `initial_max_data` | ≥ **16 MiB** | quattro fotogrammi in volo senza che la finestra di connessione diventi il freno |
-| e nell'altro verso | il **server** dichiara `initial_max_streams_uni` ≥ **16** | il client apre uno stream di input e uno per ogni trasferimento di appunti: pochi, ma se il credito fosse zero **l'input non partirebbe affatto**, e il sintomo sarebbe «il desktop non risponde» |
-| `disable_active_migration` | ⛔ **NON DEVE** essere inviato da nessuno dei due | la migrazione WiFi → rete mobile è la ragione per cui QUIC è stato scelto (`SPECIFICHE.md` §8.4). Dichiararla disabilitata la toglie **in silenzio** |
-| **0-RTT** | ⛔ **NON DEVE** essere usato, né offerto dal server | i dati 0-RTT si possono **ripetere**, e il primo messaggio dopo la stretta di mano è `CIAO`, seguito da `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore |
+⛔ **La prima stesura di questo paragrafo dettava al client i parametri di trasporto QUIC** —
+quanti stream, quanta finestra, niente 0-RTT, niente `disable_active_migration`. **Con un browser
+non si può: quei parametri li sceglie lui**, e nessuna riga di questo documento glieli cambia. Ciò
+che resta normativo è quel che tocca a **noi** — il server — e quel che va **misurato invece che
+preteso**.
 
-⚠ **Il credito degli stream non è «impostare un numero all'inizio».** `initial_max_streams_uni` è
-la dotazione iniziale: dopo 256 fotogrammi è finita, e chi riceve **DEVE** continuare a emettere
-`MAX_STREAMS` mano a mano che gli stream si chiudono. Un'implementazione che imposta il valore e
-non rinnova il credito funziona **quattro secondi** e poi si ferma — ed è la forma di difetto che
-un banco corto non vede (`LEZIONI.md` §1.4).
+| | |
+|---|---|
+| **il server DEVE concedere credito** al client per i suoi stream unidirezionali: almeno **16** disponibili in ogni momento | il client apre uno stream di input e uno per ogni trasferimento di appunti. Se il credito finisse, **l'input non partirebbe affatto** e il sintomo sarebbe «il desktop non risponde» |
+| **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta e viene rinnovato mano a mano che gli stream si chiudono |
+| ⛔ **e quando il credito manca, si BUTTA il fotogramma, non si aspetta** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Il fotogramma vecchio non serve più: ne sta già arrivando uno nuovo. È §5.1 applicata a monte |
+| **il server NON DEVE offrire 0-RTT** | i dati 0-RTT si possono **ripetere**, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore |
+| **il server NON DEVE disabilitare la migrazione** | è la ragione per cui QUIC è stato scelto (`SPECIFICHE.md` §8.4): il telefono che passa da WiFi a rete mobile |
+
+`[?]` **Quanti stream al secondo regga davvero ciascun browser non lo sa nessuno**, e non si legge:
+si misura. ⚠ È la forma di difetto che un banco corto **non vede** — funziona per i primi secondi e
+si ferma dopo (`LEZIONI.md` §1.4) — ed è per questo che §11 ha un banco apposta, che tiene la
+sessione viva **oltre i primi 256 fotogrammi**.
 
 ### 2.4 🔸 La porta
 
-**UDP 7447.** È il valore predefinito, e **PUÒ** essere cambiato dalla configurazione del server e
-digitato nel client (`SPECIFICHE.md` §4.1: si digitano indirizzo, porta, utente e password).
+**7447**, e sono **due ascoltatori con lo stesso numero**: **UDP** per HTTP/3 e WebTransport,
+**TCP** per il primo caricamento della pagina. È il valore predefinito, e **PUÒ** essere cambiato
+dalla configurazione del server: l'utente digita `https://indirizzo:7447` nel browser, e poi utente
+e password nella pagina.
+
+⛔ **Il server DEVE annunciare `Alt-Svc: h3=":7447"` sulla risposta TCP**, o il browser non passerà
+mai a QUIC e la pagina resterà su TCP — dove RCP non scorre. ⚠ Il sintomo di quella riga dimenticata
+non è un errore: è **una pagina che si apre e un desktop che non arriva mai**.
 
 ⚠ Scelta il 9 agosto 2026 verificando che sia libera in `/etc/services` di Debian Trixie `[M]`.
 `[?]` **Non è stata verificata la registrazione IANA**: se un giorno servisse un numero
@@ -171,7 +207,7 @@ nessuna parte.*
 
 | Stream | Chi lo apre | Quanti |
 |---|---|---|
-| **controllo** — bidirezionale, identificatore **0** | il client | uno solo, per tutta la connessione |
+| **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la connessione |
 | **video** — unidirezionale | il server | uno **per fotogramma** |
 | **input** — unidirezionale | il client | **uno solo**, aperto all'attacco e tenuto aperto |
 | **appunti** — unidirezionale | entrambi | uno **per trasferimento** |
@@ -245,32 +281,51 @@ usato: ogni chiusura ha un motivo di §8.2.
 
 ### 4.1 Prima ancora: il certificato
 
-Terminata la stretta di mano TLS, e **prima di aprire qualunque stream**, il client:
+> ### ⭐ Riscritta il 9 agosto 2026 — questa parte **non la implementiamo più**
+>
+> La prima stesura dettava al client i quattro passi della fiducia al primo incontro: calcola
+> l'impronta, confronta col ricordo, interrompi se cambia, accetta in silenzio se non c'è.
+>
+> ⭐ **Con un browser quei quattro passi ci sono già, e li fa lui**: accetta per quell'indirizzo,
+> se lo ricorda, e riavvisa se il certificato cambia. **Il modello era giusto — semplicemente non
+> è più codice nostro.** Quel che cambia è il prezzo: l'accettazione **non è silenziosa**, è un
+> avviso con un clic, la prima volta su ogni dispositivo (`DECISIONI.md` §1.7).
 
-1. calcola l'impronta SHA-256 della chiave pubblica del server;
-2. se ha un ricordo per quell'indirizzo e **coincide** → prosegue;
-3. se ha un ricordo e **non coincide** → ⛔ **DEVE** interrompere e avvisare l'utente. NON DEVE
-   proseguire da sé;
-4. se non ha un ricordo → **PUÒ** proseguire in silenzio e annotare l'impronta.
-
-Il punto 4 è la fiducia al primo incontro, con il rischio dichiarato e accettato in
-`SPECIFICHE.md` §4.1.
-
-### 4.1-bis Il certificato, il ricordo e l'impronta — in dettaglio
-
-*Aggiunta il 9 agosto 2026. Senza queste righe due implementazioni calcolano due impronte diverse
-sullo stesso certificato, e la fiducia al primo incontro diventa un avviso a ogni collegamento.*
+**Quel che resta normativo, ed è tutto dalla parte del server:**
 
 | | |
 |---|---|
-| **su che cosa si calcola l'impronta** | ⛔ sulla **SubjectPublicKeyInfo** in forma DER della **foglia** — non sul certificato intero, non sulla catena. Un certificato riemesso con la stessa chiave **non DEVE** far scattare l'avviso: è quel che succede a ogni rinnovo |
-| **la chiave del ricordo** | la coppia **indirizzo e porta come li ha digitati l'utente**. `192.168.0.2:7447` e `server.casa:7447` sono due ricordi distinti, e va bene così: è quel che fa SSH |
-| **che cosa il client NON DEVE fare** | ⛔ **non DEVE rifiutare** il certificato perché autofirmato, perché scaduto, perché il nome non combacia. Sono i controlli X.509 di serie di ogni libreria TLS, e qui **vanno spenti deliberatamente**: la fiducia è quella di §4.1, non quella delle autorità. ⚠ Chi li lascia accesi ottiene un prodotto che non si collega mai, e la causa è nella libreria, non nel nostro codice |
-| **la chiave del server** | **DEVE** essere ECDSA P-256 oppure Ed25519. Il server se la genera all'installazione e la tiene con permessi `0600` |
+| **la chiave** | **DEVE** essere **ECDSA P-256**. ⛔ Non Ed25519 e **mai RSA**: P-256 è l'unica che tiene aperta anche la strada di `serverCertificateHashes` `[S]`, e una chiave scelta oggi per comodità chiuderebbe quella porta senza che nessuno se ne accorga |
+| **la generazione** | il server se lo genera all'installazione, e tiene la chiave privata con permessi `0600` |
+| **il nome** | il certificato **DEVE** portare come `subjectAltName` l'indirizzo su cui il server risponde — nome o indirizzo IP. ⚠ Un browser che trova un `SAN` che non combacia mostra **un avviso diverso**, e alcuni non offrono nemmeno il clic per proseguire |
+| **il certificato vero** | se l'amministratore ne installa uno emesso da un'autorità, il server **DEVE** usarlo e **non DEVE** rigenerare il proprio. È la strada senza avvisi (`SPECIFICHE.md` §4.1) |
 
-⚠ **E la conseguenza sul collaudo**, che è dove questa scelta si può fare male: un banco che prova
-la fiducia al primo incontro **DEVE** provare anche il **secondo** collegamento, e il terzo con la
-chiave cambiata. La prova a collegamento singolo resta verde per sempre (`LEZIONI.md` §2.1).
+⛔ **E una cosa che il server DEVE fare e che con un client nostro non esisteva**: la pagina e la
+sessione WebTransport **devono presentare lo stesso certificato**. Sono due connessioni — una TCP e
+una UDP (§2.4) — e se portassero due certificati diversi l'utente si troverebbe **due avvisi**, o
+un avviso e un fallimento muto.
+
+`[?]` **La misura che decide la forma del predefinito**, e non si risponde leggendo: l'eccezione
+che l'utente concede sul caricamento della pagina **copre anche la sessione WebTransport**? Se non
+la coprisse, servirebbe `serverCertificateHashes` — che WebKit **ha dichiarato che non
+implementerà** `[S]`, e su Safari resterebbe solo il certificato vero. È la prima domanda della
+sonda del browser.
+
+### 4.1-bis Se un giorno servisse `serverCertificateHashes`
+
+*Tenuto qui perché la scelta della chiave in §4.1 è già fatta per non chiudere questa porta.*
+
+| | |
+|---|---|
+| **che cos'è** | l'impronta SHA-256 del certificato viaggia **dentro la pagina**, e il browser si fida senza avvisi — cioè il nostro modello, fatto bene |
+| **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, e `allowPooling` a `false` |
+| ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato quando scade e ci scrive dentro l'impronta corrente. L'utente non tocca niente |
+| ⛔ **che cosa non copre** | **il caricamento della pagina**. Vale solo per la sessione WebTransport, quindi da sola questa strada non basta mai: il primo `https://` resta da risolvere con l'avviso o con il certificato vero |
+| ⛔ **chi resta fuori** | Safari e tutto ciò che è WebKit — **iPhone e iPad compresi** |
+
+⚠ **E la conseguenza sul collaudo, che vale in ogni caso**: un banco che prova la fiducia **DEVE**
+provare anche il **secondo** collegamento, e un terzo con la chiave cambiata. La prova a
+collegamento singolo resta verde per sempre (`LEZIONI.md` §2.1).
 
 ### 4.2 Il canale di controllo
 

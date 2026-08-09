@@ -15,14 +15,24 @@
 
 ## 1. Che cos'è
 
-REMOTIX_V2 è un sistema di **desktop remoto per Linux**, composto da un server e da due client,
-che parlano un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*.
+REMOTIX_V2 è un sistema di **desktop remoto per Linux**, composto da un server e da **una pagina
+web**, che parlano un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*.
 
 | | |
 |---|---|
 | **server** | esclusivamente Linux |
-| **client** | Linux e Android |
-| **Windows** | ⛔ **fuori, in entrambi i ruoli** |
+| **client** | ⭐ **nessuno da installare: un browser moderno**. Il server serve la pagina, la pagina parla RCP su **WebTransport** |
+| **Windows come server** | ⛔ **fuori**, ed è la leva di §1.1 |
+| **Windows come posto da cui ci si collega** | ✅ **dentro, e gratis**: un browser su Windows non è codice nostro. Vale per macOS, iPhone, iPad, Chromebook e qualunque altra cosa abbia un browser |
+
+⭐ **Niente client dedicati** *(deciso il 9 agosto 2026, `DECISIONI.md` §1.6)*. Sparisce il client
+Android — con esso cinque fasi di piano — e sparisce il client Linux. Restano **un server e una
+pagina**.
+
+⚠ **E il protocollo non è cambiato di una riga.** WebTransport porta a un browser esattamente i
+mattoni su cui RCP era stato disegnato: stream QUIC indipendenti, l'abbandono di un fotogramma,
+i datagram per l'audio. Se il filo fosse stato progettato su TCP, questa decisione sarebbe costata
+il protocollo intero.
 
 È l'evoluzione di REMOTIX v1, che si è fermato alla fase 11 dopo aver servito GNOME e KDE
 parlando RDP. Il patrimonio di v1 — 17.481 righe di C, 4.563 righe di banchi, cinque studi dei
@@ -34,7 +44,11 @@ desktop e il registro delle lezioni — sta sotto `v1/` ed è la base su cui V2 
 I tre muri contro cui v1 si è fermato — il tetto a H.264, il client Android che decodificava in
 software, il colore pieno irraggiungibile — **erano tutti e tre di RDP, non del problema**. La
 riga «niente Windows» è la leva che li toglie insieme. Il prezzo, accettato: il protocollo va
-progettato oltre che scritto, e i due client vanno scritti da zero. (`DECISIONI.md` §1.1)
+progettato oltre che scritto, e i client vanno scritti da zero. (`DECISIONI.md` §1.1)
+
+⭐ **E metà di quel prezzo è stato restituito il 9 agosto 2026**: i client da scrivere non sono più
+due, è **una pagina sola** (§1). Resta intero il primo pezzo — il protocollo va progettato — ed è
+il motivo per cui `RCP.md` esiste prima del codice.
 
 ---
 
@@ -61,6 +75,12 @@ progettato oltre che scritto, e i due client vanno scritti da zero. (`DECISIONI.
 
 Sono i numeri che l'utente pone e a cui la tecnica si adegua, non il contrario. Ogni scelta
 tecnica si giustifica mostrando che avvicina uno di questi. (`CODER.md` §1 e §1-bis)
+
+⭐ **E tutti e tre misurano il pezzo che è nostro** *(`DECISIONI.md` §2.7, 9 agosto 2026)*: REMOTIX
+promette quel che **produce e consegna sulla linea**. Che cosa il dispositivo dall'altra parte
+riesca a decodificare e dipingere **si misura e si dichiara, non si promette** — non è codice
+nostro. ⚠ Con un confine: un client che non tiene il minimo va **detto**, con la ragione. Un
+ripiego silenzioso resta vietato anche quando la colpa non è nostra.
 
 ### 3.1 Qualità dell'immagine
 
@@ -127,10 +147,14 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 
 | | |
 |---|---|
-| **trasporto** | QUIC, con TLS 1.3 obbligatorio — **UDP 7447** di serie, configurabile |
+| **trasporto** | **WebTransport su HTTP/3**, cioè QUIC con TLS 1.3 obbligatorio — **porta 7447** di serie, configurabile |
 | **codec video** | HEVC, con AV1 dove l'hardware lo codifica |
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
+
+⚠ **Il server ascolta su due porte con lo stesso numero**: **UDP** per HTTP/3 e WebTransport, e
+**TCP** per il primo caricamento della pagina — un browser che apre `https://…` parte in TCP e
+passa a QUIC solo se il server glielo annuncia (`Alt-Svc`).
 
 ⚠ **Il protocollo non è un dettaglio implementativo: è l'arbitro.** In v1 l'oracolo era `mstsc` —
 se disegnava, era giusto. In V2 client e server sono nostri, e **due programmi scritti dalla
@@ -141,16 +165,29 @@ si può, serve un validatore che legga il filo.
 
 ### 4.1 La fiducia
 
-Il server si genera un certificato autofirmato all'installazione. Il client, al primo
-collegamento, **lo accetta in silenzio e se lo ricorda**; dalle volte successive, se cambia,
-avvisa. Nessuna impronta da confrontare, nessuna autorità, nessun dominio: si digitano indirizzo,
-porta, utente e password, e basta.
+Il server si genera un certificato autofirmato all'installazione.
+
+⭐ **La fiducia al primo incontro non la scriviamo noi: la fa il browser**, ed è esattamente il
+meccanismo che avevamo disegnato — accetta per quell'indirizzo, se lo ricorda, e riavvisa se il
+certificato cambia. Cambia il prezzo: **l'accettazione non è silenziosa**, è un avviso con un clic,
+la prima volta su ogni dispositivo.
+
+| | |
+|---|---|
+| **predefinito** | autofirmato, **un clic la prima volta**, zero configurazione sul server |
+| **dichiarato** | chi ha un nome di dominio mette un **certificato vero** — Let's Encrypt con la sfida DNS, che non richiede di esporre niente su Internet — e **l'avviso non compare mai**, iPhone compreso |
 
 **La password non parte prima** che il server abbia dimostrato di essere quello di ieri —
 l'invariante I3 applicata all'ordine della stretta di mano.
 
-⚠ La prima connessione resta scoperta a un uomo-in-mezzo. **Rischio valutato e accettato** per lo
-scenario previsto: server proprio, rete propria o VPN. (`DECISIONI.md` §1.3)
+⚠ La prima connessione **su ogni dispositivo** resta scoperta a un uomo-in-mezzo. **Rischio
+valutato e accettato** per lo scenario previsto: server proprio, rete propria o VPN. ⛔ E con il
+client web la **conseguenza** di quel rischio è più grossa — chi si mette in mezzo non intercetta
+la pagina, **la riscrive**. (`DECISIONI.md` §1.3 e §1.7)
+
+⏳ **Rinviato per decisione dell'utente**: la messa in sicurezza vera — MFA e quel che la tecnologia
+offre — è **un'evoluzione da fare a progetto completato**, non un pezzo di questo. Sta in evidenza
+in `DECISIONI.md` §1.7, con le tre voci da rileggere quel giorno.
 
 ### 4.2 L'autenticazione
 
@@ -316,6 +353,10 @@ altrimenti se ne vedono due. Su GNOME è già escluso; su KDE e wlroots ci finis
 libreria su uno **incorporato e visibile** `[R]`. L'esito si controlla dopo l'avvio della
 sessione. (`DECISIONI.md` §5-bis.1-2)
 
+**Nella pagina**: il puntatore è disegnato sopra il video, quello del browser si nasconde
+(`cursor: none`), e il mouse fisico arriva da **Pointer Lock** — che è l'equivalente esatto del
+*Pointer Capture* di Android e ha lo stesso motivo: senza, se ne vedrebbero **due**.
+
 ### 7.2 I gesti — per il telefono in mano
 
 ⚠ **Su Android l'uso primario è Samsung DeX**, con mouse e tastiera veri: là vale §7.4, e questi
@@ -359,6 +400,20 @@ scorciatoie (su una tastiera tedesca la Z sta dove da noi sta la Y).
 ⚠ **Quel che non è scrivibile viene dichiarato, non falsificato.** Se un carattere non esiste su
 nessun tasto della disposizione — un'emoji, un alfabeto diverso — non esce **niente**, e il server
 lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md` §5-bis.6-7)
+
+### 7.3-bis ⛔ Le scorciatoie che il browser si tiene — il prezzo dichiarato del client web
+
+`Ctrl+W` chiude la scheda. `Ctrl+T`, `Ctrl+N`, `F11`, `Ctrl+Shift+I` e le altre sono **del
+browser**, non nostre: non arrivano alla sessione remota, e non c'è protocollo che le recuperi.
+
+| | |
+|---|---|
+| **la leva che esiste** | la **Keyboard Lock**, che consegna alla pagina anche quelle — `[S]` **solo su Chrome ed Edge, e solo a schermo intero** |
+| **dove si sente** | `DECISIONI.md` §5-bis.0: con DeX e con il modo classico *«le scorciatoie sono metà del lavoro»* |
+| **che cosa si fa** | ⛔ **si dichiara**, come ogni ripiego: la pagina dice quali scorciatoie **non** può consegnare, su quel browser. NON si finge che funzionino, e non si inventa una scorciatoia sostitutiva senza dirlo |
+
+`[?]` **Quante e quali si perdano davvero su ciascun motore non l'ha misurato nessuno**: è una
+domanda della sonda del browser, e la risposta cambia quali browser conviene consigliare.
 
 ### 7.4 Mouse e tastiera fisici — su Android è la strada principale
 
@@ -428,6 +483,13 @@ Niente immagini, niente file, niente formati ricchi: il testo copre quasi tutti 
 pochi byte e non ha negoziazione, mentre le immagini aprono la questione dei formati e soprattutto
 di **chi paga la banda** quando si copia una schermata da 8 MB su un collegamento che stiamo
 faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
+
+⛔ **E dalla parte del browser gli appunti non sono nostri**, il che tocca proprio il verso più
+usato. Leggere quel che l'utente ha copiato sul dispositivo richiede **un permesso o un gesto**
+`[S]`, e non si può sorvegliare la clipboard in silenzio come farebbe un'applicazione installata.
+`[?]` Quanto pesi davvero — e se il gesto naturale (`Ctrl+V` dentro la pagina) copra il caso
+frequente senza che l'utente se ne accorga — è una domanda della sonda. La regola resta quella di
+sempre: **si dichiara quel che non si può fare**, non si fa finta.
 
 ⚠ **Su tutti e tre gli stack gli appunti appartengono al compositore**, e ci sono anche senza di
 noi. Su GNOME la sessione remota non li possiede: possiede solo **la porta** per raggiungerli
@@ -506,6 +568,24 @@ delle capacità delle due schede sta in `DECISIONI.md` §4.6.
 perché non porta il controllo del bitrate — che è precisamente la parte che decide se i Mbps
 risultino guardabili.
 
+### 11.5 I browser serviti, e perché vanno dichiarati
+
+⭐ **La regola dei tre client non decade con il client unico: cambia forma** (`LEZIONI.md` §2.1).
+Una pagina gira su **tre motori scritti da tre squadre che non ci conoscono** — Blink (Chrome,
+Edge, Samsung Internet), WebKit (Safari), Gecko (Firefox) — e questo ci restituisce un pezzo
+dell'arbitro esterno perso con `mstsc`: quando due sono d'accordo e il terzo no, il difetto si
+dichiara da solo.
+
+| | |
+|---|---|
+| **il minimo tecnico** | WebTransport **e** WebCodecs. `[S]` Entrambi presenti su Chrome/Edge, Firefox e Safari 26+ — WebTransport è Baseline da marzo 2026 |
+| **si collauda su** | ⛔ **almeno due motori diversi**, sempre. Un solo motore è un client solo, cioè il caso che questa regola vieta |
+| **si dichiara** | quali browser sono serviti, e **che cosa si perde su ciascuno** — le scorciatoie (§7.3-bis), gli appunti (§9), il certificato su Safari (`DECISIONI.md` §1.7) |
+
+⚠ **E le versioni contano più che sui desktop**: qui il pavimento non lo pone Debian, lo pone il
+dispositivo dell'utente. Un telefono fermo a una versione vecchia di Chrome non ha WebCodecs, e
+il sintomo va detto in una frase — non «non funziona».
+
 ---
 
 ## 12. Fuori scope
@@ -515,7 +595,8 @@ deliberatamente**, non dimenticata.
 
 | Che cosa | Perché |
 |---|---|
-| **Windows**, come server e come client | è la leva di §1.1 |
+| **Windows come server** | è la leva di §1.1. ⚠ *Corretta il 9 agosto 2026*: questa riga diceva «come server **e come client**», e la seconda metà è decaduta con §1.6 — non scriviamo un client per Windows, ma **chi ha Windows si collega dal suo browser**, e non ci costa niente |
+| **applicazioni da installare**, su qualunque sistema | §1: il client è la pagina. Un'applicazione nativa sarebbe un secondo prodotto da mantenere per sempre, per guadagnare quel che il browser già dà |
 | **desktop X11** come tipo di sessione | le applicazioni X11 restano, via XWayland |
 | **redirezione di dischi, stampanti, porte seriali, smart card** | non serve al mestiere di questo prodotto |
 | **trasferimento file** | idem — e la clipboard testuale copre il caso frequente |
@@ -541,6 +622,11 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 | ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto**, §4.2 |
 | `[?]` **il tocco nativo multi-dito** | §7.5 |
 | `[?]` **il puntatore relativo** per le applicazioni che catturano il puntatore | segnalato dal server, non dal client |
+| `[?]` **l'eccezione del certificato copre WebTransport?** | §4.1 — è la misura che decide se il predefinito «un clic» funziona ovunque o solo su Chrome e Firefox |
+| `[?]` **quanto si perde delle scorciatoie**, motore per motore | §7.3-bis |
+| `[?]` **gli appunti nel verso dispositivo → sessione** senza gesto dell'utente | §9 |
+| `[?]` **HEVC Main10 in hardware nel browser del telefono** | `[S]` documentato da Chrome 108; da misurare sul dispositivo vero — e con §3 non è più un muro, è una cosa da dichiarare |
+| ⏳ **la sicurezza forte (MFA)** | rinviata a progetto completato, per decisione dell'utente — `DECISIONI.md` §1.7 |
 | `[?]` **codificare più piccolo quando la finestra è piccola** | oggi il server codifica la **tela** e il client riscala. Ridurre anche la misura codificata è `DECISIONI.md` §5.0-ter, volutamente fuori dal modello finché nessuno ha misurato quanto pesa |
 
 ---

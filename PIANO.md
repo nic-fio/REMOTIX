@@ -127,64 +127,76 @@ di misurare al suo posto, e non riscrive il codice su un `[?]` senza prima misur
 
 ---
 
-## 1. I due binari
+## 1. Un binario solo
 
-Il server si scrive avendo in mente **tutti e due** i client. Ma il **client Linux viene prima**,
-e non per gerarchia: **per il costo delle prove**. Ogni giro su Android costa compilazione,
-installazione, un dispositivo o un emulatore, strumentazione più difficile e automazione peggiore.
-Farlo in parallelo a un server che si muove ancora moltiplica quel costo per ogni giro.
+*Riscritto il 9 agosto 2026: `DECISIONI.md` §1.6 toglie i client dedicati, e con essi il binario B.*
+
+⛔ **Il piano aveva due binari perché i client erano due.** Adesso il client è **una pagina web**,
+servita dal server, e le cinque fasi Android — A1-A5 — **non esistono più**: quel che portavano
+dentro è diventato lavoro dentro le fasi del binario unico, ed è scritto qui sotto perché nessuno
+lo perda.
 
 ```
-  binario A — server + client Linux
+  server + pagina web
   0 ─ 1 ─ 2 ─ 3 ─ 4 ─ 5 ─ 6 ─ 7 ─ 8 ─ 9 ─ 10 ─ 11 ─ 12 ─ 13
-      │       ·                      │
-      │       · sonda Android        └──▶ binario B — client Android
-      │       ·  (50 righe)                A1 ─ A2 ─ A3 ─ A4 ─ A5
-      │                                    ↑ in parallelo a 10-11, che non toccano il filo
+      │
+      ├─ sonda del BROWSER  ⭐ prima di tutto, e decide la forma del resto
       └─ cliente di prova, scritto dalla SPECIFICA
 ```
 
-### 1.1 ⛔ Che cosa costa spostare Android in fondo, e come si compensa
+### 1.1 ⛔ Il cliente di prova adesso vale il doppio
 
-*Deciso il 9 agosto 2026, dopo che il piano lo innestava alla fase 4.*
+*Scritto il 9 agosto 2026 quando Android fu spostato in fondo, e rimasto vero quando Android è
+sparito del tutto — per una ragione più forte.*
 
-Nella prima stesura Android stava alla fase 4 **non** per fare prima: era il **secondo lettore del
-protocollo**, l'unica cosa capace di accorgersi che server e client condividono lo *stesso*
-fraintendimento (§0.4). Spostandolo in fondo, tutto ciò che si costruisce fra la 4 e la 12
-poggerebbe su un protocollo validato da **una sola** implementazione — e un difetto di disegno
-scoperto alla fase 12 presenterebbe il conto tutto insieme.
-
-⭐ **Ma quel mestiere non deve farlo Android.** Lo può fare un lettore molto più economico, purché
-abbia la proprietà che conta: **essere scritto dalla specifica, non dal codice**.
+Il secondo client serviva a una cosa sola: accorgersi che **server e client condividono lo stesso
+fraintendimento** (§0.4). Prima ce n'erano due e la difesa era debole; adesso **ce n'è uno solo**,
+e senza un secondo lettore il protocollo sarebbe validato da **una sola** implementazione, scritta
+dalla stessa mano che ha scritto il server.
 
 | | |
 |---|---|
-| **il cliente di prova** | poche centinaia di righe, **in un linguaggio diverso dal server**, scritto leggendo `RCP.md` e **mai** il C. Aggiunto alla **fase 1**, cresce con le fasi |
+| **il cliente di prova** | poche centinaia di righe, **in un linguaggio diverso dal server e dalla pagina**, scritto leggendo `RCP.md` e **mai** il codice. Aggiunto alla **fase 1**, cresce con le fasi |
 | perché non basta il validatore | il validatore dice «questo byte non è conforme»; il cliente di prova dice **«voi due vi siete capiti su una cosa che la specifica non dice»** |
+| ⭐ **e una difesa che arriva gratis** | la pagina gira su **tre motori** scritti da tre squadre che non ci conoscono. Quando due sono d'accordo e il terzo no, quel difetto **si dichiara da solo** — è il pezzo di arbitro che avevamo perso con `mstsc` (`DECISIONI.md` §1.6) |
 
-⚠ **Il rischio residuo, dichiarato e accettato**: restano cose che solo Android può rivelare e che
-nessun lettore sostituisce — il comportamento di MediaCodec, il tocco vero sotto le dita, l'IME, la
-batteria, la rete che cambia in tasca. Quelle arrivano tardi, e va bene così **tranne una**.
+### 1.2 ⭐ La sonda del browser — prima di tutto, perché decide la forma del resto
 
-### 1.2 La sonda Android, presto e a poco prezzo
+*Sostituisce la sonda Android, e cambia di natura: quella rispondeva a una domanda sola, questa a
+quattro, e tre di esse cambiano quel che si scrive.*
 
-L'unica incognita di Android che **non** può aspettare è quella che ha ucciso v1: **che il telefono
-decodifichi in hardware quel che produciamo**.
+⛔ **Va fatta prima di scegliere la libreria QUIC e prima di scrivere il filo**, non alla fase 2:
+`DECISIONI.md` §6.4 dipende dal suo esito, perché il server deve portare HTTP/3 e WebTransport.
 
-Non serve un client per saperlo. Servono ~50 righe che diano un file **HEVC Main10** a MediaCodec e
-dicano se è stato decodificato **in hardware** e a che ritmo. Va nella **fase 2**, appena il primo
-fotogramma esiste.
+| # | La domanda | Che cosa decide |
+|---|---|---|
+| **S1** | ⛔ l'eccezione che l'utente concede sul certificato della **pagina** (TCP) **copre anche la sessione WebTransport** (UDP)? | se il predefinito «un clic» funziona ovunque, o se serve `serverCertificateHashes` — e allora **su iPhone resta solo il certificato vero** (`DECISIONI.md` §1.7) |
+| **S2** | il browser del **telefono vero** decodifica **HEVC Main10 in hardware**? | `[S]` documentato da Chrome 108, mai misurato da noi. ⚠ **Non è più un muro** ma una cosa da dichiarare (`DECISIONI.md` §2.7) |
+| **S3** | quante **scorciatoie** si perdono, motore per motore — e la clipboard nel verso dispositivo → sessione? | che cosa la pagina deve **dichiarare spento**, e quali browser conviene consigliare (`SPECIFICHE.md` §7.3-bis, §9) |
+| **S4** | quanto costa in **ritardo** dipingere: dal fotogramma decodificato al pixel sullo schermo | è metà del tetto dei 50 ms, e dipende dalla strada scelta per la GPU |
 
-⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero**, non perché il file si è
-aperto: «ha istanziato un decoder ⇒ è in hardware» è la forma d'errore E1, una condizione
-necessaria presa per sufficiente. Si guarda il **nome** del decoder scelto (`c2.` contro `OMX.`
-software) **e** il ritmo, e i due devono concordare.
+⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero.** Nel browser **il nome del
+decodificatore non c'è**: la prova indiretta va costruita con cura — ritmo sostenuto, occupazione
+della CPU, e il caso opposto scritto prima (`LEZIONI.md` §1.11: per ogni prova indiretta si scrive
+che aspetto avrebbe il contrario, o la prova non distingue).
 
-Se la risposta fosse **no**, è molto meglio saperlo con due fasi costruite che con nove.
+⛔ **Sul dispositivo vero, mai su un browser di comodo.** «Il Chrome del portatile decodifica in
+hardware» non dice **niente** del Chrome del telefono: è la forma d'errore **E10** con un
+travestimento nuovo (`DECISIONI.md` §5-bis.0-ter).
+
+### 1.3 📖 E prima della pagina, uno studio: XPRA
+
+*Aggiunto il 9 agosto 2026, ed è il **punto 0 della ricetta** di `LEZIONI.md` §9 — «chi, al mondo,
+fa già questa cosa?» — applicato al client web.*
+
+Xpra ha un client HTML5 che fa questo mestiere da anni, e l'utente lo ha usato. Si studia **come si
+comporta**, non come è fatto dentro: come dipinge, la tastiera nel browser, gli appunti, il
+cursore, il ridimensionamento, il ritardo. ⚠ Il **trasporto no**: Xpra è su WebSocket, noi su
+WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` §1.6.
 
 ---
 
-# BINARIO A — il server e il client Linux
+# IL SERVER E LA PAGINA
 
 ## Fase 0 — L'ambiente e i banchi
 
@@ -212,9 +224,19 @@ codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DE
 ha mostrato due pezzi mancanti che nessun documento dichiarava (`LEZIONI.md` §2.5-bis). Vale
 adesso, non solo alla fase 13 — perché è adesso che la macchina viene rimessa in piedi.
 
-**E qui entra anche l'ambiente Android**, benché il binario B cominci molto dopo: SDK, emulatore
-(AVD), `adb`, e il collegamento al telefono vero sulla rete locale. Si mette adesso perché la
-**sonda della fase 2** lo richiede già.
+> ## ⛔ L'ambiente Android decade — 9 agosto 2026
+>
+> Questa fase prevedeva SDK, emulatore (AVD), `adb` e il collegamento al telefono, per la sonda
+> della fase 2. **Con `DECISIONI.md` §1.6 non serve più niente di tutto questo**: non c'è
+> un'applicazione da costruire, e la sonda è **una pagina web**.
+>
+> ⭐ **Il telefono vero resta**, ed è più importante di prima: è lo strumento di misura di **S2** e
+> **S4** (§1.2). Ma ci si arriva **aprendo un indirizzo nel browser**, che è la cosa più economica
+> che questo progetto abbia mai chiesto a un dispositivo di prova.
+>
+> ⚠ *Il riquadro sull'emulatore che segue è tenuto per storia: la sua conclusione — «nessun numero
+> si dichiara su un emulatore» — sopravvive nella forma «nessun numero si dichiara su un browser
+> che non sia quello del dispositivo vero».*
 
 > ### L'emulatore copre più di quanto sembri — ma non la decodifica
 >
@@ -257,10 +279,20 @@ adesso, non solo alla fase 13 — perché è adesso che la macchina viene rimess
 
 ## Fase 1 — Il filo nudo
 
-**Produce**: la stretta di mano di RCP su QUIC, dai due lati. Niente video, niente input.
+**Produce**: la stretta di mano di RCP su **WebTransport**, dai due lati. Niente video, niente
+input.
 
-**L'utente vede**: si collega da riga di comando, e il programma dice *«ammesso, sessione nuova,
-tela 1920×1080, desktop GNOME»*. O dice perché no.
+**L'utente vede**: ⭐ **apre un indirizzo nel browser**, digita utente e password, e la pagina dice
+*«ammesso, sessione nuova, tela 1920×1080, desktop GNOME»*. O dice perché no.
+
+⛔ **E prima di tutto il resto, la sonda del browser** (§1.2): quattro misure che decidono la forma
+di quel che si scrive dopo — a cominciare da **quale libreria QUIC**, che adesso deve portare
+HTTP/3 e WebTransport (`DECISIONI.md` §6.4).
+
+⚠ **Il server acquista qui il suo secondo mestiere**: servire la pagina. Due ascoltatori con lo
+stesso numero di porta — **TCP** per il primo caricamento, **UDP** per HTTP/3 e WebTransport — e
+l'annuncio `Alt-Svc` che li lega. ⛔ Dimenticarlo non dà errore: dà **una pagina che si apre e un
+desktop che non arriva mai** (`RCP.md` §2.4).
 
 **Il banco**:
 - ⛔ **la stretta di mano su DUE connessioni, mai una**: in v1 un certificato condiviso uccideva il
@@ -276,21 +308,28 @@ tela 1920×1080, desktop GNOME»*. O dice perché no.
 verifica che lo veda. Uno strumento che non ha mai trovato niente non è pulito: è non certificato.
 
 ⭐ **E qui nasce il cliente di prova** (§1.1): la stretta di mano scritta **una seconda volta**, in
-un linguaggio diverso, **leggendo solo `RCP.md`**. Chi lo scrive non guarda il C — se lo guardasse
-ne erediterebbe i fraintendimenti, e non servirebbe più a niente. Cresce di fase in fase insieme al
-protocollo.
+un linguaggio diverso, **leggendo solo `RCP.md`**. Chi lo scrive non guarda il C né la pagina — se
+li guardasse ne erediterebbe i fraintendimenti, e non servirebbe più a niente. Cresce di fase in
+fase insieme al protocollo.
 
 **Si riusa**: `autenticazione.c` (144 righe, PAM), `registro.c` (140).
+
+⛔ **Ma `autenticazione.c` va cambiato in un punto, e non è un dettaglio**: rifiuta chiunque non
+sia l'utente che possiede il processo (`autenticazione_utente_atteso()`, dall'uid effettivo). Era
+giusto in v1, dove il server girava dentro la sessione di una persona; **contraddice il
+multi-tenant** di `SPECIFICHE.md` §5.5, dove il servizio è di sistema e serve dieci utenti diversi.
+Chi lo riusa senza toglierlo ottiene un server che funziona **solo per sé** — e il sintomo, per
+tutti gli altri, è «credenziali errate».
 
 ---
 
 ## Fase 2 — Il primo fotogramma
 
-**Produce**: cattura da una sessione GNOME vera → codifica → filo → decodifica → finestra.
-Un'immagine ferma.
+**Produce**: cattura da una sessione GNOME vera → codifica → filo → **`VideoDecoder`** → tela della
+pagina. Un'immagine ferma.
 
-**L'utente vede**: ⭐ **il proprio desktop**, dentro una finestra, sull'altro computer. Fermo, ma
-suo.
+**L'utente vede**: ⭐ **il proprio desktop, dentro una scheda del browser**. Fermo, ma suo — e da
+qualunque dispositivo, che è la cosa che alla fase 2 di v1 non c'era.
 
 **Il banco**: il fotogramma decodificato confrontato con quello catturato. Non «il programma non è
 crollato»: **i pixel**.
@@ -312,19 +351,20 @@ in `gnome.md` §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **v
 per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
 scambia per un difetto di cattura, e si cerca per mezza giornata dalla parte sbagliata.
 
-⛔ **E qui va la sonda Android** (§1.2), che è la sola cosa del binario B che non può aspettare: un
-file HEVC Main10 dato a MediaCodec, per sapere **adesso** se il telefono lo decodifica in hardware.
-È il muro contro cui è morto v1, e scoprirlo qui costa due fasi invece di nove.
-
-⛔ **La sonda gira sul telefono vero, mai sull'emulatore** (fase 0): è precisamente la misura che
-un emulatore non sa dare, perché il suo MediaCodec non è il silicio del telefono.
-
-⛔ **E chiede DUE cose, non una** — la seconda è quella che può smentire una decisione già presa:
+⛔ **E qui la sonda del browser torna, sul serio invece che in prova** (§1.2): il primo fotogramma
+vero dato a `VideoDecoder` **sul telefono**, per sapere se lo decodifica in hardware e se
+restituisce davvero **10 bit**.
 
 | | |
 |---|---|
-| 1 | il telefono decodifica **HEVC Main10 in hardware**? Si guarda il **nome** del decodificatore scelto (`c2.` contro il software) **e** il ritmo, e i due devono concordare (E1) |
-| 2 | ⛔ **e restituisce davvero 10 bit?** `[?]` Una segnalazione dalla documentazione di mpv dice che sul percorso `mediacodec` il supporto a 10 bit è **limitato e l'uscita torna a 8 bit**. Non è una prova su MediaCodec in generale — è il percorso di mpv — ma è **la prima indicazione contraria al desiderato** di `SPECIFICHE.md` §3.1, e arriva dal lato dove non abbiamo margine |
+| 1 | decodifica **HEVC Main10 in hardware**? `[S]` Chrome lo documenta dalla 108; nel browser **il nome del decodificatore non c'è**, quindi la prova è indiretta e va costruita col caso opposto scritto prima (`LEZIONI.md` §1.11) |
+| 2 | ⛔ **e restituisce davvero 10 bit?** `[?]` La documentazione di mpv segnala che sul percorso `mediacodec` il supporto a 10 bit è **limitato e l'uscita torna a 8 bit** — è la prima indicazione contraria al desiderato di `SPECIFICHE.md` §3.1, e arriva dal lato dove non abbiamo margine (`DECISIONI.md` §2.3-bis) |
+
+⚠ **Che cosa cambia se la risposta fosse no**, ed è cambiato il 9 agosto: **non è più un muro**. Il
+massimo lo offre il server, l'altezza la mette il client (`DECISIONI.md` §2.7): un dispositivo che
+decodifica in software è un fatto da **misurare e dichiarare**, non un difetto nostro. ⛔ Ma
+dichiarato **va dichiarato**: un ripiego silenzioso resta vietato anche quando la colpa è di
+qualcun altro.
 
 ---
 
@@ -362,9 +402,17 @@ guadagno comunque, perché oggi è una stima che tre documenti citano come se fo
 
 ## Fase 4 — Si comanda
 
-**Produce**: il canale di input, il puntatore disegnato dal client, le lettere e le posizioni.
+**Produce**: il canale di input, il puntatore disegnato dalla pagina, le lettere e le posizioni —
+⭐ **e le due disposizioni della pagina**, che è il lavoro ereditato dalle fasi A3 e A4 sciolte: il
+modo classico con `Pointer Lock`, e il tocco con i sette gesti, **con il passaggio automatico sul
+contesto** e non un'impostazione da cercare (`DECISIONI.md` §5-bis.0-bis).
 
 **L'utente vede**: ⭐ **usa il desktop**. È il momento in cui smette di essere una dimostrazione.
+
+⛔ **E qui si scopre che cosa il browser si tiene**: `Ctrl+W`, `Ctrl+T`, `F11`. La pagina **DEVE
+dichiarare** quali scorciatoie non può consegnare su quel motore, invece di lasciar credere che
+siano arrivate (`SPECIFICHE.md` §7.3-bis). ⚠ La misura è **S3** della sonda, e va fatta su almeno
+due motori: quel che si perde su Chrome non è quel che si perde su Safari.
 
 **Il banco**:
 - ⛔ **il cursore del desktop non deve comparire nell'immagine**: si guarda un fotogramma. E su
@@ -569,6 +617,15 @@ che **dice perché**.
 **Produce**: unità systemd, confezionamento, installazione, il certificato generato all'avvio,
 la limitazione dei tentativi.
 
+⭐ **E qui il client web si ripaga la seconda volta**: la pagina sta **dentro lo stesso pacchetto**
+del server. Niente APK, niente store, nessuna versione del client da inseguire — ⛔ e nessun caso
+«client vecchio contro server nuovo», che è precisamente quello che `RCP.md` §9 dice di temere.
+Il client si aggiorna **ricaricando**.
+
+⚠ **Con un caso che resta e va provato**: la **scheda già aperta** mentre il server viene
+aggiornato. Lì il client vecchio contro il server nuovo esiste davvero, per il tempo di un
+ricaricamento — ed è il solo posto dove la negoziazione di versione serve a qualcosa.
+
 **Il banco**: ⛔ **il ripristino si prova riavviando**, non rileggendo lo script. In v1 il primo
 riavvio vero ha mostrato che mancavano due pezzi, e nessuno dei due era nei documenti: il disco che
 non si montava da solo, e i pacchetti installati a mano mesi prima che il provisioning ereditava
@@ -576,54 +633,25 @@ senza dichiararli (`LEZIONI.md` §2.5-bis).
 
 ---
 
-# BINARIO B — il client Android
+# ⛔ BINARIO B — sciolto il 9 agosto 2026
 
-> ⭐ **Il bersaglio primario di questo binario è Samsung DeX**, non il telefono in mano
-> (`DECISIONI.md` §5-bis.0). Il che lo rende **più vicino al client Linux** di quanto sembri:
-> stesso modello di interazione — puntatore, tastiera, finestra ridimensionabile — e diverso solo
-> nello stack di decodifica. Il telefono in mano è il caso **secondo**, e il suo posto è la fase A4.
->
-> ⚠ DeX vale come **caso di prova a sé, non come variante del telefono**: è dove il
-> ridimensionamento della finestra viene esercitato sul serio, perché la finestra si trascina.
->
-> ⭐ **Una applicazione, due interfacce.** Il passaggio fra il modo classico (A3) e il tocco (A4) è
-> **automatico sul contesto** — schermo esterno e mouse collegati, oppure telefono in mano — non
-> un'impostazione da cercare. È l'unica cosa che si prende da RDM come disegno
-> (`DECISIONI.md` §5-bis.0-bis); il resto è ispirazione, non un prodotto da rifare.
+*Erano cinque fasi — A1-A5, il client Android in Kotlin. `DECISIONI.md` §1.6 le ha cancellate: il
+client è una pagina web, e non c'è più un secondo prodotto da costruire.*
 
-*Si innesta **dopo la fase 9**, quando l'esperienza su Linux è completa e giudicata, e il
-protocollo è stato esercitato dalla stretta di mano fino alla rete cattiva. Può procedere **in
-parallelo alle fasi 10-11**, che sono lavoro di server e non toccano il filo.*
+⛔ **Ma niente di quel che quelle fasi dovevano fare è sparito insieme a loro.** Questa tabella
+esiste perché nessuno lo perda, ed è l'unico posto in cui è scritto dove è finito ciascun pezzo:
 
-*Kotlin, e MediaCodec per la decodifica. La domanda che di solito apre questo binario — «il
-telefono ce la fa?» — a questo punto ha già risposta, perché l'ha data la sonda della fase 2.*
+| Fase sciolta | Dove è finito il suo lavoro |
+|---|---|
+| **A1** — il filo su Android | **fase 1**: la pagina *è* il client, e la stretta di mano si scrive una volta sola. Il mestiere di secondo lettore passa al **cliente di prova** (§1.1) |
+| **A2** — il video, MediaCodec | **fase 2**, con `VideoDecoder` al posto di MediaCodec — e la domanda *«il telefono ce la fa?»* la risolve la sonda (§1.2, misura **S2**) |
+| **A3** — mouse e tastiera, il modo classico | **fase 4**, che diventa la fase dove si scrive **l'interfaccia classica della pagina**: `Pointer Lock` al posto di *Pointer Capture*, e le scorciatoie con il loro limite dichiarato (`SPECIFICHE.md` §7.3-bis) |
+| **A4** — il tocco e la tastiera a schermo | **fase 4** anch'essa, come **seconda disposizione della stessa pagina**: i sette gesti restano quelli, e il passaggio fra le due resta **automatico sul contesto** (`DECISIONI.md` §5-bis.0-bis) |
+| **A5** — la vita dell'applicazione | ⚠ **si sparpaglia, e una parte va sorvegliata**: la migrazione QUIC da WiFi a rete mobile è **fase 9** (è la ragione migliore per cui QUIC è stato scelto); il riattacco è **fase 5**. ⛔ **Quel che cambia natura è lo sfondo**: una scheda del browser che finisce dietro viene rallentata o congelata dal sistema, e non è più un ciclo di vita che governiamo noi — è una cosa da **misurare e dichiarare** |
 
-## Fase A1 — Il filo su Android
-La stretta di mano e l'attacco. L'utente vede: *«ammesso, sessione ripresa»* sul telefono.
-⭐ **Ed è qui che il protocollo viene messo alla prova per davvero**: la seconda implementazione è
-l'unica cosa che somiglia a un arbitro esterno, anche se scritta dalla stessa mano.
-
-## Fase A2 — Il video
-MediaCodec, HEVC, 10 bit. L'utente vede il proprio desktop sul telefono.
-⚠ È il muro contro cui è morto v1 — lì il client decodificava in software. Il banco misura
-**i fotogrammi decodificati in hardware**, e la prova che lo siano davvero.
-
-## Fase A3 — Mouse e tastiera: il modo classico
-⭐ **È la strada principale, non un accessorio** (`DECISIONI.md` §5-bis.0): l'uso primario di
-Android è **Samsung DeX**, dove il telefono pilota uno schermo esterno con mouse e tastiera veri.
-Il puntatore disegnato dal client mosso da *Pointer Capture*, le scorciatoie di comando, la
-finestra che si trascina.
-
-**L'utente vede**: lavora come su un desktop, e giudica se il puntatore «segue la mano».
-
-## Fase A4 — Il tocco, e la tastiera a schermo
-Il ripiego per il telefono in mano: i sette gesti (`SPECIFICHE.md` §7.2) e l'IME che produce testo.
-⚠ La tabella dei gesti è **un punto di partenza dichiarato**: qui si scopre quali sono giusti, e si
-cambia.
-
-## Fase A5 — La vita dell'applicazione
-Lo sfondo, la rete che cambia — ⭐ **la migrazione QUIC da WiFi a rete mobile senza distacco**, che
-è la ragione migliore per cui QUIC è stato scelto — il riattacco, la batteria.
+⭐ **E DeX non sparisce come caso di prova** (`DECISIONI.md` §5-bis.0): resta il posto in cui il
+ridimensionamento della finestra viene esercitato sul serio, perché la finestra si trascina. Cambia
+che a trascinarla è il browser.
 
 ---
 
@@ -641,12 +669,17 @@ e affrontarla prima di avere qualcosa da guardare significa non sapere se il pal
 **Un desktop solo fino alla 9**: gli altri tre si aprono quando la catena è chiusa, altrimenti si
 inseguono differenze di compositore e difetti nostri nello stesso momento.
 
-**Android dopo la 9**, e non dopo la 4 come diceva la prima stesura: **le prove su Android costano
-dieci volte quelle su Linux**, e farle contro un server che si muove ancora moltiplica il costo per
-ogni giro. Il mestiere di secondo lettore che Android doveva fare passa al **cliente di prova**
-della fase 1 — più economico, e con la stessa proprietà che conta: **è scritto dalla specifica, non
-dal codice**. Resta presto solo la **sonda** della fase 2, perché la decodifica in hardware sul
-telefono è l'unica incognita che non si può rimandare.
+⛔ ~~**Android dopo la 9**~~ → **Android non c'è più** *(9 agosto 2026)*. La ragione che lo
+spostava in fondo — *«le prove su Android costano dieci volte quelle su Linux»* — è stata risolta
+alla radice invece che riorganizzata: **non esiste più un secondo prodotto da provare**. Il
+mestiere di secondo lettore resta al **cliente di prova** della fase 1, che è più economico e ha la
+proprietà che conta: **è scritto dalla specifica, non dal codice**.
+
+⭐ **E una cosa arriva prima di tutto il resto, che prima non c'era**: la **sonda del browser**
+(§1.2). Non perché sia urgente in sé, ma perché **decide che cosa si scrive**: la libreria QUIC
+dipende da WebTransport, il predefinito del certificato dipende da una misura, e quel che la pagina
+deve dichiarare spento dipende dal motore. Una fase che comincia prima di quelle risposte scrive
+codice che poi si butta.
 
 ---
 

@@ -1,10 +1,17 @@
 # REMOTIX_V2
 
-Desktop remoto per Linux: un **server**, due **client** (Linux e Android), e un protocollo nostro
-chiamato **RCP** — *Remotix Control Protocol*. Niente Windows, in nessuno dei due ruoli.
+Desktop remoto per Linux: un **server**, **nessun client da installare** — basta un browser
+moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
+**WebTransport**.
 
-> **Stato al 9 agosto 2026**: specifica, protocollo e piano scritti; **nessuna riga di codice
-> ancora scritta**. Il prossimo passo è la **fase 0**.
+> **Stato al 9 agosto 2026**: fase 0 chiusa (i banchi riproducono i numeri di v1); specifica,
+> protocollo e piano scritti; **nessuna riga di codice di prodotto ancora scritta**. Il prossimo
+> passo è la **fase 1**, e comincia con la **sonda del browser**.
+
+⭐ **Il client è una pagina web** *(deciso il 9 agosto 2026 — `DECISIONI.md` §1.6)*. Cadono i due
+client nativi e con essi cinque fasi di piano; **Windows torna dentro come posto da cui ci si
+collega**, senza che scriviamo una riga per lui e senza sottostare alle sue regole. Resta fuori
+come **server**, che era la leva vera.
 
 ---
 
@@ -85,6 +92,10 @@ documento prima della chiusura (`PIANO.md` §0.4).
 ⭐ **Perché la revisione qui pesa più del solito**: buttando RDP abbiamo perso l'arbitro esterno —
 `mstsc` protestava gratis quando sbagliavamo. Ora client e server sono nostri, e **due programmi
 scritti dalla stessa mano che vanno d'accordo non confermano niente**.
+
+⚠ Con il client web ne torna indietro **un pezzo**: la pagina gira su tre motori scritti da tre
+squadre che non ci conoscono, e il loro disaccordo è un difetto che si dichiara da solo. Non basta,
+ma non è niente.
 
 ---
 

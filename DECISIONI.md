@@ -102,6 +102,20 @@ fra la 4 e la 12 poggerebbe su un protocollo validato da **una sola** implementa
 nessun lettore sostituisce — MediaCodec sotto carico, il tocco vero sotto le dita, l'IME, la
 batteria, la rete che cambia in tasca. Quelle arrivano tardi.
 
+> ⛔ **Superata il 9 agosto 2026 da §1.6**: non esistono più due client, quindi non esiste più
+> l'ordine fra loro. ⭐ **Ma le due compensazioni sopravvivono, e una vale di più di prima**:
+>
+> - **il cliente di prova** resta, ed è **più necessario**, non meno. Prima era il secondo lettore
+>   accanto a due implementazioni; adesso il client è **uno solo**, quindi è l'**unica** cosa
+>   scritta dalla specifica invece che dal codice;
+> - **la sonda** resta e cambia bersaglio: da «il telefono decodifica HEVC in hardware?» a
+>   **«il browser del telefono lo decodifica in hardware?»** — stessa domanda, uno strato più in
+>   là, e **senza APK**. Ci si aggiungono le altre due incognite del browser (§1.7 e §1.6).
+>
+> ⚠ E il rischio residuo qui sopra **non decade, si sposta**: MediaCodec sotto carico, l'IME, la
+> batteria e la rete in tasca restano cose che solo il telefono vero rivela. Cambia che ora le
+> rivela **aprendo una pagina**, che costa mezza giornata invece di una fase.
+
 ---
 
 ## 1. Il protocollo
@@ -178,6 +192,13 @@ dall'utente per lo scenario previsto — server proprio, rete propria o VPN.
 server alla seconda connessione; una prova a connessione singola resta verde per sempre»*
 (`LEZIONI.md` §2.1). Il banco della stretta di mano si fa **con due connessioni**, non con una.
 
+> ⚠ **Riletta il 9 agosto 2026, dopo §1.6.** Il meccanismo descritto qui — accetta in silenzio la
+> prima volta, ricorda, avvisa se cambia — **resta esatto e non lo scriviamo più noi: lo fa il
+> browser**. Quel che cambia è il prezzo: l'accettazione della prima volta **non è silenziosa**,
+> è un avviso con un clic (§1.7). E il *«zero interazione»* promesso qui vale ancora solo per chi
+> mette un certificato vero, cioè per il caso che questa voce chiamava già «roba
+> dell'amministratore».
+
 ### 1.4 🔸 La sessione non conosce il codec: lo negozia la connessione
 
 Discende da 1.1 e da §4. Il palco produce fotogrammi; ogni connessione ci attacca il proprio
@@ -232,6 +253,175 @@ scritto in poi vale la regola senza sconti.
 
 ⏳ Quel che RCP/1 lascia **volutamente** aperto — microfono, puntatore relativo, tocco, 4:4:4, più
 schermi — sta in `RCP.md` §12, dichiarato invece che dimenticato.
+
+### 1.6 ✅ ⭐ Niente client dedicati: il client è il browser
+
+*9 agosto 2026. «Perché impazzire a sviluppare 2 client separati quando un client, e in aggiunta
+universale, lo abbiamo già bello pronto? il WEB!» — e, alla precisazione: «Non una seconda: Remotix
+funzionerà senza client dedicati, basterà avere un browser moderno».*
+
+⛔ **È la decisione più grossa presa dopo la morte di RDP**, e va letta accanto a quella: §1.1
+toglieva Windows per togliere i tre muri di RDP; questa toglie **i client** per togliere il costo
+di scriverli due volte e il muro su cui v1 è morto davvero — un telefono che decodifica in
+software.
+
+| | Prima | Adesso |
+|---|---|---|
+| i client | Linux (C) e Android (Kotlin), scritti da noi | **una pagina web**, servita dal server |
+| il binario B | cinque fasi, A1-A5 | ⛔ **non esiste più** |
+| chi può collegarsi | due sistemi | **qualunque cosa abbia un browser moderno** |
+
+**I fatti su cui poggia, tutti `[S]` e nessuno misurato da noi** — verificati il 9 agosto perché la
+mia conoscenza si fermava a maggio e questa roba si muove in fretta:
+
+| | |
+|---|---|
+| **WebTransport** | ⭐ **Baseline da marzo 2026**, con Safari 26.4. Dà a una pagina esattamente quel che RCP usa: stream QUIC indipendenti, `RESET_STREAM`, datagram, migrazione |
+| **WebCodecs** | Chrome 94+, Firefox 130+, Safari 26+, Chrome per Android dalla **147** |
+| **HEVC in hardware su Android** | via WebCodecs: 8 bit dalla Chrome 107, **10 bit dalla 108** — cioè il muro di v1 risulta **passabile**, e la sonda che lo verifica è una pagina invece di un APK |
+
+⭐ **Che cosa il protocollo ci guadagna, ed è la ragione per cui l'idea si poteva accettare**: RCP
+non cambia. WebTransport porta gli stessi mattoni su cui `RCP.md` §5.1 è stato disegnato — un
+fotogramma per stream, l'abbandono, i datagram per l'audio. Se il filo fosse stato progettato su
+TCP, questa idea sarebbe costata il protocollo intero.
+
+⭐ **E Windows torna dentro senza sottostare alle sue regole** *(osservazione dell'utente)*. §1.1 e
+`SPECIFICHE.md` §12 buttavano fuori Windows **come server** e **come client da servire con RDP** —
+non le persone che lo usano. Un browser su Windows non è codice nostro, non è FreeRDP, non è
+`mstsc`: è lo stesso client di tutti gli altri, e non costa una riga.
+
+⭐⭐ **E ci restituisce un pezzo dell'arbitro perduto.** `PIANO.md` §0.4 dice che buttando RDP
+abbiamo perso `mstsc`, che protestava gratis. Una pagina gira su **tre motori scritti da tre
+squadre che non ci conoscono** — Blink, WebKit, Gecko: quando due sono d'accordo e il terzo no,
+quello è un difetto che si dichiara da solo. ⚠ **Il rovescio va scritto insieme**: la matrice dei
+client non sparisce, **cambia forma**, e i browser serviti vanno **dichiarati** e collaudati su
+almeno due motori diversi — `LEZIONI.md` §2.1 non decade, si trasferisce.
+
+⛔ **Che cosa costa, e non è «un piccolo aggravio»:**
+
+1. il server acquista **un secondo mestiere**: servire una pagina. Non più solo QUIC nudo, ma
+   **HTTP/3 con WebTransport** — più un ascoltatore **TCP** per il primo caricamento, perché un
+   browser che apre `https://…` parte in TCP e passa a QUIC solo se il server glielo annuncia
+   (`Alt-Svc`). Due porte in ascolto sullo stesso numero, una TCP e una UDP;
+2. ⛔ **cambia il criterio con cui si sceglie la libreria QUIC** (§6.4): non basta più che parli
+   QUIC, deve portare **HTTP/3 e WebTransport lato server**. È diventata la prima domanda, non
+   l'ultima;
+3. tre cose che con un client nostro decidevamo noi passano al browser: **il certificato** (§1.7),
+   **le scorciatoie di tastiera** — `Ctrl+W` chiude la scheda, e la Keyboard Lock è `[S]` solo su
+   Chrome e solo a schermo intero — e **gli appunti**, che richiedono permesso o gesto
+   dell'utente proprio nel verso che `§5-ter.1` dice essere il più usato.
+
+⚠ **Il rischio residuo, dichiarato**: la decodifica in hardware non la comandiamo più. Con un
+client nostro guardavamo **il nome del decodificatore scelto** (`c2.` contro software); in un
+browser quel nome non c'è, e se un dispositivo decodificasse in software **non avremmo leva** — si
+misura e si dichiara. È il motivo per cui la sonda del browser va fatta **prima** di scrivere il
+filo, non alla fase 2.
+
+*Conseguenze già scritte dove vanno: `SPECIFICHE.md` §1, §4, §7.3, §9; `RCP.md` §2 e §4.1;
+`PIANO.md`, dove il binario B sparisce e la sonda cambia natura.*
+
+> ### ⭐ Da dove è venuta l'idea, e il riferimento che ne discende: **XPRA**
+>
+> *9 agosto 2026. «Ti spiego perché mi è venuto in mente il discorso WEB. In passato ho avuto modo
+> di usare XPRA, e devo dire di essere rimasto molto sorpreso».*
+>
+> ⛔ **Non è un aneddoto: è il punto 0 della ricetta di `LEZIONI.md` §9** — *«cercare chi l'ha già
+> fatto»*, che su KDE ci aveva fatto trovare `KRdp` **dopo** che lo studio lo aveva dato per
+> inesistente, e a trovarlo era stata una domanda dell'utente. È successo di nuovo, e alla stessa
+> maniera.
+>
+> **Xpra ha un client HTML5 che fa questo mestiere da anni**, e la sorpresa dell'utente all'uso è
+> il dato più utile che abbiamo: dice che la strada **si percorre**, non che la nostra sarà uguale.
+>
+> 🔸 **Da cui uno studio, prima di scrivere la pagina** — piccolo, sulla forma degli altri:
+> `reference-web/`, e le domande sono quelle del client, non del trasporto (Xpra è su WebSocket,
+> noi su WebTransport, e quel pezzo non si eredita): **come dipinge**, come tratta la tastiera nel
+> browser, come risolve gli appunti e il cursore, che cosa fa quando la finestra cambia misura,
+> e quanto costa in ritardo.
+>
+> ⚠ **Con il confine di `§5-bis.0-bis`, che vale identico**: si studia **come si comporta e come si
+> sente all'uso**, non si copia il codice — la licenza del progetto è rinviata a fine lavori (§7.6),
+> e un pezzo preso da un progetto altrui la deciderebbe al posto nostro.
+
+### 1.7 ✅ Il certificato: un clic la prima volta, e il certificato vero per chi ha un nome
+
+*9 agosto 2026. «Per la parte che riguarda certificato, sicurezza, ecc riflettiamo: ribadisco il
+principio che qui non dobbiamo rispettare standard militari».*
+
+⛔ **La premessa che cambia tutto**: §1.3 prometteva **zero interazione** — *«si digitano
+indirizzo, porta, utente e password, e basta»*. Con un client nostro quella riga la decidevamo noi.
+Con un browser **non è più una nostra scelta**: la regola è di Chrome e di Safari, e «niente
+standard militari» non la tocca.
+
+| | |
+|---|---|
+| **predefinito** | certificato **autofirmato**, e la prima volta su ogni dispositivo il browser mostra l'avviso: **un clic**. ⭐ Quel clic **è** il ricordo di `RCP.md` §4.1 — il browser lo memorizza per quell'indirizzo e riavvisa se il certificato cambia. **La fiducia al primo incontro non la scriviamo: la fa il browser, esattamente come l'avevamo disegnata** |
+| **dichiarato** | chi ha un nome di dominio mette un **certificato vero** (Let's Encrypt con la sfida DNS, che non richiede di esporre niente su Internet) e l'avviso non compare mai, iPhone compreso. Era già previsto da §1.3: *«roba dell'amministratore, non dell'utente»* |
+| **rete di sicurezza** | `serverCertificateHashes`, se la misura dicesse che il clic non basta per WebTransport. ⛔ Ma **WebKit ha dichiarato che non lo implementerà**: su quella strada iPhone e iPad avrebbero **solo** il certificato vero. E il certificato dovrebbe durare **meno di 14 giorni**, quindi rigenerato dal server e con l'impronta iniettata nella pagina che il server stesso serve `[S]` |
+
+> ### ⛔ La proposta di far installare un'autorità nostra, e perché è stata scartata
+>
+> *Proposta dall'utente lo stesso giorno: «e se Remotix generasse il suo certificato e lo facesse
+> installare al client alla prima connessione?». Tenuta scritta perché non venga riproposta senza
+> le due ragioni.*
+>
+> Funziona, ed è la strada che **sembra** più pulita: si installa una volta e poi nessun avviso.
+> Ma:
+>
+> 1. ⛔ **non toglie il rischio che vorrebbe togliere.** Per installare quel certificato bisogna
+>    prima **scaricarlo dal server**, cioè attraverso la prima connessione — quella di cui non ci
+>    si fida ancora. Chi si mette in mezzo ti fa installare **la sua** autorità;
+> 2. ⛔ **e il danno peggiora invece di ridursi.** Un'eccezione su certificato autofirmato vale
+>    **solo per il nostro indirizzo**; un'autorità installata vale per **qualunque sito**, su quel
+>    dispositivo, per sempre. La strada che toglie l'avviso spaventoso è quella che l'avviso se lo
+>    meriterebbe di più;
+> 3. ⚠ più il costo vero: quattro o sette passi **nelle impostazioni di sistema**, diversi su ogni
+>    sistema operativo, con un avviso permanente *«la rete potrebbe essere monitorata»* su Android
+>    e due schermate separate su iPhone. E la chiave privata di quell'autorità vivrebbe **sul
+>    server**.
+>
+> ⭐ **E quel che la proposta voleva ce l'abbiamo già**: «installalo una volta e non pensarci più»
+> **è il clic sull'avviso** — un clic, dentro il browser, nessun amministratore, uguale su tutti i
+> sistemi, e valido solo per noi.
+
+⚠ **Una cosa sulla sicurezza che cambia di natura, e va scritta accanto al rischio già accettato in
+§1.3.** Con un client nostro, chi si mette in mezzo alla prima connessione **intercetta dei byte**.
+Con un client web **il client arriva dal server a ogni visita**: chi si mette in mezzo non
+intercetta, **riscrive la pagina in cui si digita la password**. Il rischio è lo stesso — *la prima
+connessione su ogni dispositivo* — ma **la conseguenza è più grossa**. Dopo il primo clic il
+certificato è appuntato e uno diverso fa ricomparire l'avviso; con il certificato vero il caso non
+si presenta.
+
+`[?]` **La misura che decide la forma**: l'eccezione che l'utente concede sul caricamento della
+pagina (TCP) **copre anche la connessione WebTransport (UDP) allo stesso indirizzo?** Se sì, il
+predefinito funziona ovunque. Se no, serve `serverCertificateHashes` — e iPhone resta al solo
+certificato vero. **È la prima domanda della sonda del browser**, e non c'è modo di rispondere
+leggendo: si prova.
+
+> ## ⏳⏳ Il debito di sicurezza, dichiarato dall'utente e messo in evidenza
+>
+> *9 agosto 2026. «Il tuo timore del "man in the middle" lo appunto bene in evidenza: prima
+> completiamo il progetto, poi svilupperemo una sua evoluzione per mettere in sicurezza il server
+> con i sistemi più solidi che la moderna tecnologia offre (es. MFA)».*
+>
+> ⛔ **Non è una svista da segnalare di nuovo fra sei mesi: è un rinvio deciso, con la sua data.**
+> Va qui, in evidenza, perché chi riprenderà il progetto trovi scritto **che cosa si era accettato
+> e in cambio di che cosa** — e non lo scopra da un difetto.
+>
+> **Quel che è accettato oggi**, e vale finché il prodotto non è completo:
+>
+> | | |
+> |---|---|
+> | la prima connessione su ogni dispositivo | scoperta a un uomo-in-mezzo (§1.3, rischio valutato e accettato) |
+> | e con il client web | chi si mette in mezzo **riscrive la pagina** invece di intercettarla |
+> | l'unica chiave | la **password PAM**, con la limitazione dei tentativi di `RCP.md` §4.4-bis |
+>
+> ⭐ **E questa nota chiude un cerchio che era già stato aperto**: `DECISIONI.md` §4.3 — il blocco è
+> di REMOTIX, non del desktop — ha una **clausola di scadenza scritta l'8 agosto** con queste
+> parole: *«il ragionamento regge solo finché la password PAM è l'unica chiave. Chi implementa
+> l'autenticazione forte rilegge questa voce»*. L'MFA è precisamente quell'evento. **Quando si
+> aprirà l'evoluzione, le voci da rileggere sono tre e sono queste**: §1.3 (la fiducia), §1.7
+> (questa), §4.3 (il blocco schermo, che con una seconda chiave tornerebbe a difendere qualcosa).
 
 ---
 
@@ -295,6 +485,12 @@ che ora **si può misurare senza comprare niente**.
 Ma **nessuno ha misurato quanto si veda davvero la differenza** sul desktop dell'utente:
 vale `LEZIONI.md` §2.3-quater. Si decide su un banco che metta le due immagini a confronto, e
 a giudicare è l'utente (§7.3), dietro un interruttore spento di suo (§2.4).
+
+> ⚠ **Riletta il 9 agosto 2026 dopo §1.6**: «un'opzione per il solo client Linux» non ha più un
+> soggetto — i client sono spariti. La sostanza però non cambia, **cambia chi decide**: il 4:4:4
+> resterebbe un'opzione per i **dispositivi il cui browser lo decodifica**, e questo lo si scopre
+> **a runtime** invece che a tavolino. ⭐ È §2.7 in azione: il server offre il massimo, e chi non
+> arriva riceve il 4:2:0 — **con la ragione dichiarata**, non in silenzio.
 
 ### 2.4 ✅ Il ritardo: 50 ms di tetto, 40 di traguardo — e solo per il pezzo che è nostro
 
@@ -374,6 +570,37 @@ cosa sbagliata:
    `gnome.md` §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
    riuscisse, questa voce si riscrive.
 
+### 2.7 ✅ ⭐ Il massimo lo offre il server; l'altezza la mette il client
+
+*9 agosto 2026, sul client web. «Meglio così, vorrà dire che una parte delle performance non sarà
+più nostro compito. Remotix offrirà il massimo, sarà il client a dover essere all'altezza».*
+
+⭐ **È la regola di §2.4 estesa a una seconda grandezza.** Lì l'utente aveva già stabilito che **si
+promette solo il pezzo che è nostro** — la rete non è nostra, quindi si dichiara e non si promette.
+Qui lo stesso criterio passa alla **decodifica**: il browser e il silicio del dispositivo non sono
+nostri.
+
+| | Di chi è |
+|---|---|
+| produrre fotogrammi buoni, in tempo, e spingerli sul filo | ⭐ **nostro, e ci si misura** |
+| decodificarli e dipingerli | del **dispositivo**: si misura, si dichiara, **non si promette** |
+
+⛔ **E questo toglie alla sonda del browser il potere di uccidere il progetto** (§1.6): se un
+telefono decodificasse HEVC in software, non è un difetto di REMOTIX ed è un fatto da scrivere —
+non un muro come quello di v1, dove il client lento **era il nostro**.
+
+⚠ **Il confine, e va scritto adesso perché non diventi un alibi**, sono tre righe:
+
+1. ⛔ **il minimo garantito resta una promessa nostra** (§2.1: 480p·25·24 bit), ma è una promessa su
+   quel che il **server consegna sulla linea** — non su quel che un browser riesce a dipingere. Un
+   client che non tiene il minimo va **detto**, non subìto in silenzio;
+2. ⛔ **un ripiego silenzioso resta vietato** (`CODER.md` §4.2): «il client non ce la fa» è
+   un'informazione che l'utente deve **vedere**, con la ragione. Due comportamenti sotto la stessa
+   etichetta sono la forma d'errore **E2** anche quando la colpa è di qualcun altro;
+3. ⚠ **e non ci esonera dal misurare.** «Non è compito nostro» vale per **promettere**, non per
+   **sapere**: senza la misura non sapremmo nemmeno che cosa dichiarare, e `LEZIONI.md` §7.4 dice
+   che le previsioni non contano — nemmeno quelle che ci fanno comodo.
+
 ### 2.6 🔸 Il banco della latenza esiste solo perché il client è nostro
 
 Misurare il ritardo di un desktop remoto richiede di solito **una telecamera** che filma lo
@@ -388,6 +615,11 @@ finché non vede il colore nuovo. La differenza fra i due istanti è la latenza 
 Automatico, ripetibile, senza telecamere e senza nessuno che guardi. È il caso concreto di quel
 che l'utente aveva osservato l'8 agosto: possedere il client non toglie solo lezioni, ne rende
 alcune **molto più economiche da rispettare**.
+
+> ✅ **Sopravvive intatto al client web** *(9 agosto 2026, §1.6)*: la pagina la scriviamo noi, quindi
+> l'anello si chiude come prima — inietta l'input e guarda i fotogrammi che `VideoDecoder` le
+> consegna. ⭐ E in dote arriva una cosa che con due client nativi non avevamo: **lo stesso banco
+> gira su ogni dispositivo che ha un browser**, telefono compreso, senza compilare niente.
 
 ---
 
@@ -494,6 +726,9 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
 > difesa vera, perché chiederebbe una chiave **che chi ha rubato la prima non ha**.
 >
 > **Chi implementa l'autenticazione forte rilegge questa voce**, e non la dà per acquisita.
+>
+> ⏳ **E quel giorno ha una data di apertura, decisa il 9 agosto 2026**: l'evoluzione con l'MFA,
+> rinviata a progetto completato — §1.7, il riquadro del debito di sicurezza.
 
 ### 4.3-bis 🔸 ⛔ Essere *headless* su GNOME è un requisito, non una fortuna
 
@@ -854,6 +1089,13 @@ a quello Linux di quanto previsto — stesso modello di interazione, diverso sol
 decodifica. Riduce il rischio segnalato in §0.3 spostando Android in fondo: il protocollo non è
 stato progettato per il client sbagliato, perché i due client si somigliano.
 
+> ⭐ **Confermata e resa più forte dal 9 agosto 2026 (§1.6).** La decisione resta intera — l'uso
+> primario su Android è DeX, il tocco è il ripiego — e cambia solo che il programma è **il browser
+> su DeX** invece di un'applicazione nostra. ⚠ Da cui una domanda nuova che non c'era, e che va
+> alla sonda: **su DeX, in una finestra ridimensionabile, il browser dà `Pointer Lock` e le
+> scorciatoie?** Senza il primo si vedono due puntatori (5-bis.8), senza le seconde metà del lavoro
+> se ne va nel browser invece che nella sessione.
+
 ### 5-bis.0-ter ✅ L'emulatore Android è banco di lavoro, non strumento di misura
 
 *9 agosto 2026. «Per android forse dovremmo ricorrere a degli emulatori (che entrerebbero a far
@@ -883,6 +1125,16 @@ peggiorato le cose**.
 
 **Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro.**
 
+> ⛔ **Decade quasi per intero il 9 agosto 2026, con §1.6**: non c'è più un'applicazione Android da
+> costruire, quindi non servono né SDK né APK né Desktop AVD — **il banco di lavoro è il browser
+> del portatile**, che è più comodo di qualunque emulatore.
+>
+> ⭐ **Ma la riga che conta sopravvive parola per parola, e vale ancora di più**:
+> *«nessun numero di questo progetto viene dichiarato su un emulatore»* diventa **«nessun numero si
+> dichiara su un browser che non sia quello del dispositivo vero»**. Un Chrome su portatile che
+> decodifica HEVC in hardware **non dice niente** del Chrome del telefono: è la stessa forma
+> d'errore **E10**, con un travestimento nuovo.
+
 ### 5-bis.0-bis ✅ RDM è un riferimento da cui **ispirarsi**, non un prodotto da rifare
 
 *9 agosto 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
@@ -904,6 +1156,12 @@ l'applicazione sceglie da sé quale mostrare.
 è **automatico sul contesto** — schermo esterno e mouse collegati, oppure telefono in mano — non
 un'impostazione che l'utente deve andare a cercare. È la forma che le fasi **A3** (il modo
 classico) e **A4** (il tocco) hanno già preso.
+
+> ⭐ **Sopravvive intatta al 9 agosto 2026 (§1.6), e diventa più facile**: «una applicazione, due
+> interfacce» è **una pagina, due disposizioni**, e il passaggio automatico sul contesto è la cosa
+> che una pagina sa fare meglio di qualunque altra tecnologia — si guarda se c'è un puntatore fine
+> e quanto è grande la finestra, non «è Android o è Linux». ⚠ La sostanza però non cambia: **due
+> disposizioni vere, non una che si stira**, ed è la lezione che si prende da RDM.
 
 **Che cosa invece NON se ne prende:**
 
@@ -1186,6 +1444,20 @@ licenza (§7.6).
 L'alternativa in C puro è `ngtcp2` (MIT), che però richiede di portarsi il TLS e montare più
 pezzi. **Da confermare quando si aprirà il trasporto**, non prima: è il tipo di scelta che si
 fa con un banco davanti, non su carta.
+
+> ⛔ **Il criterio è cambiato il 9 agosto 2026 con §1.6, e va riscritto prima di scegliere.** Non
+> basta più che la libreria parli QUIC: il client è un browser, quindi il server deve portare
+> **HTTP/3 e WebTransport**, più un ascoltatore **TCP** per il primo caricamento della pagina
+> (`Alt-Svc`). La domanda non è più «quale QUIC», è **«quale delle due arriva fino a
+> WebTransport lato server, e quanto collante resta a noi»**.
+>
+> `[M]` 9 agosto, sul ferro: Trixie ha `libngtcp2-dev` 1.11 **e** `libnghttp3-dev` 1.8 come
+> pacchetti, `cargo`/`rustc` 1.85 per compilare `quiche`, e `python3-aioquic` 1.2 — che serve al
+> cliente di prova, non al server.
+>
+> ⚠ **E questa scelta è diventata critica invece che secondaria**: prima decideva quante righe di
+> collante scrivere, adesso decide **se il prodotto esiste**. Va chiusa con la sonda del browser
+> davanti, non dopo.
 
 ---
 
