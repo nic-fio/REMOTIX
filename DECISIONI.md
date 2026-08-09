@@ -876,9 +876,37 @@ Poi le altre dodici di `LEZIONI.md` §3, e la ricetta di §9 — a partire dal p
 l'ha già fatto*, che su KDE aveva fatto trovare `KRdp` in un nono repository dopo che lo studio
 lo aveva dato per inesistente.
 
-**Materiale da procurarsi**: `cinnamon`, `muffin`, `cinnamon-session`,
-`cinnamon-settings-daemon`, `cinnamon-screensaver`, `xapp` — cioè una `reference-cinnamon/`
-accanto alle altre quattro.
+> ## ✅ Lo studio è stato fatto il 9 agosto 2026 — sta in [`cinnamon.md`](cinnamon.md)
+>
+> Su `muffin` e `cinnamon` **6.7.4**, in `reference-cinnamon/`. **Tutto `[R]`, niente misurato.**
+>
+> **L'ipotesi del fork è confermata**: il binario `cinnamon` *è* il compositore, chiama
+> `meta_init()` e `meta_run()` come gnome-shell. `ScreenCast` e `RemoteDesktop` sono le
+> interfacce di Mutter rinominate, e **non c'è cancello** sul permesso di cattura.
+>
+> ⛔ **Ma tre cose che diamo per acquisite non esistono affatto** — verificate con lo strumento
+> certificato prima su Mutter:
+>
+> | | Muffin 6.7.4 |
+> |---|---|
+> | `RecordVirtual` e `virtual_monitor` | **0 file** su tutto l'albero |
+> | `ConnectToEIS` — l'input via libei | **0 file** |
+> | `EnableClipboard` — gli appunti | **0 file**, e nemmeno `zwlr_data_control` |
+> | un backend *headless* | solo in `src/tests/` |
+>
+> ⭐ **La via che resta**, ed è la ragione per non chiudere la voce: `META_DUMMY_MONITORS` +
+> `MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60` forzano un monitor **fittizio** su qualunque
+> backend, con la misura decisa all'avvio — l'equivalente del `--virtual --width W` di KWin, che
+> il modello della tela (§5.0) già assorbe.
+>
+> ⚠ **Se regga davvero è `[?]`, ed è la misura M1 del §9 di `cinnamon.md`**: che il gestore dei
+> monitor sia finto non dice che il renderer lo sia. Può anche riuscire **consegnando zero
+> fotogrammi**, che è il modo peggiore perché sembra funzionare (`REVIEWER.md` E1).
+>
+> **Il giudizio provvisorio**: Cinnamon costa più di tutti e cinque, e le due difficoltà — un
+> secondo percorso di input, e appunti che **oggi non hanno strada** — non sono difficoltà di
+> lettura ma funzionalità mancanti a monte. **Va messo ultimo**, e la decisione si prende sulle
+> misure, non su questo documento.
 
 ---
 

@@ -4,6 +4,7 @@ reference-gnome/
 reference-kde/
 reference-lxqt/
 reference-xfce/
+reference-cinnamon/
 
 # Artefatti di compilazione
 build/
