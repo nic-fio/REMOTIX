@@ -546,6 +546,48 @@ sospetto sia raro ma non l'ha misurato nessuno.
 
 ---
 
+## 5-ter. Gli appunti
+
+### 5-ter.1 ✅ Solo testo
+
+*9 agosto 2026. «Per la clipboard ho idea precisa: solo testo».*
+
+Niente immagini, niente file, niente formati ricchi. È anche quel che diceva `SPECIFICHE.md`
+riga 28, qui confermato invece che ereditato.
+
+**Perché è la scelta giusta e non una rinuncia**, scritto perché nessuno la riapra per
+distrazione: il testo copre il 95 % degli usi, costa una manciata di byte, e non ha
+negoziazione — una stringa è una stringa. Le immagini aprono invece una scatola intera:
+quali formati, chi converte, e soprattutto **chi paga la banda** quando si copia una schermata
+da 8 MB su un collegamento mobile che stiamo faticando a tenere a 480p (§3.1).
+
+### 5-ter.2 🔸 Il codice c'è già, e copre tre desktop su quattro con un file solo
+
+Fra le cose che sopravvivono alla morte di RDP, gli appunti sono le più intatte: muore solo il
+canale RDP che li trasportava, non il modo di parlare col desktop.
+
+| | Righe | Copre |
+|---|---|---|
+| `v1/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `xfce.md` §8 lo dà per funzionante così com'è |
+| `v1/remotix-c/src/appunti_mutter.c` | 450 | GNOME, che ha una via sua |
+
+### 5-ter.3 🔸 Di chi sono gli appunti cambia per desktop, e una trappola è già disinnescata
+
+`LEZIONI.md` §3, domanda 14 — *«la clipboard di chi è?»*:
+
+| | |
+|---|---|
+| **GNOME** | della **sessione remota**: sta sull'oggetto RemoteDesktop, si accende con `EnableClipboard`, e senza sessione non esiste |
+| **KDE, wlroots** | del **compositore**: nessun permesso, e c'è anche se REMOTIX non c'è |
+
+⚠ **La trappola di GNOME, e perché non ci tocca più**: *«gnome-shell azzera la clipboard a ogni
+blocco schermo: ci strappa la proprietà in silenzio»* (`gnome.md`). Con §4.3 — il blocco è
+nostro e quello dei desktop resta spento — il caso non si presenta. **Ma torna il giorno in cui
+qualcuno rimettesse il blocco del desktop**, ed è un'altra ragione per cui quella decisione va
+riletta e non data per scontata.
+
+---
+
 ## 6. Il codice che si eredita
 
 ### 6.1 ✅ Il patrimonio di v1 è qui, e versionato
