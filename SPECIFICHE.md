@@ -127,7 +127,7 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 
 | | |
 |---|---|
-| **trasporto** | QUIC, con TLS 1.3 obbligatorio |
+| **trasporto** | QUIC, con TLS 1.3 obbligatorio — **UDP 7447** di serie, configurabile |
 | **codec video** | HEVC, con AV1 dove l'hardware lo codifica |
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
@@ -156,8 +156,15 @@ scenario previsto: server proprio, rete propria o VPN. (`DECISIONI.md` §1.3)
 
 **PAM locale**, servizio `remotix`, con limitazione della frequenza dei tentativi.
 
-`[?]` La forma della limitazione — quanti tentativi, in quanto tempo, con che attesa crescente —
-non è ancora decisa.
+✅ **La forma della limitazione è decisa** *(9 agosto 2026, `RCP.md` §4.4-bis e `DECISIONI.md`
+§1.5)*: cinque tentativi falliti in cinque minuti, poi un'attesa che parte da 30 secondi e
+raddoppia fino a un tetto di 15 minuti, con due contatori — uno per nome utente e uno per
+indirizzo — e l'azzeramento su un accesso riuscito.
+
+⭐ **E un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso».** Non serve a
+rallentare chi indovina: serve a togliere il **tempismo** come canale. Senza, «utente inesistente»
+risponde in un millisecondo e «password sbagliata» in cinquanta — e la distinzione che il
+protocollo vieta di scrivere nel motivo la si legge col cronometro.
 
 ---
 
@@ -531,9 +538,10 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 | ⏳ **la licenza** | rinviata a fine progetto. Fino ad allora vale il solo vincolo di §11.4: niente x265 |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
-| `[?]` **la forma della limitazione dei tentativi** PAM | §4.2 |
+| ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto**, §4.2 |
 | `[?]` **il tocco nativo multi-dito** | §7.5 |
 | `[?]` **il puntatore relativo** per le applicazioni che catturano il puntatore | segnalato dal server, non dal client |
+| `[?]` **codificare più piccolo quando la finestra è piccola** | oggi il server codifica la **tela** e il client riscala. Ridurre anche la misura codificata è `DECISIONI.md` §5.0-ter, volutamente fuori dal modello finché nessuno ha misurato quanto pesa |
 
 ---
 

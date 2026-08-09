@@ -185,6 +185,54 @@ codificatore con le capacità del **suo** client. Se il codec fosse una propriet
 sessione, riprendere da un dispositivo diverso — telefono la mattina, portatile il pomeriggio
 — richiederebbe di rifare la sessione, che è esattamente ciò che la persistenza deve evitare.
 
+### 1.5 🔸 Le chiusure di RCP/1 — venticinque buchi tappati prima della prima riga di codice
+
+*9 agosto 2026, all'apertura della fase 1. Sono conseguenze scritte da me leggendo `RCP.md` con una
+domanda sola — **due persone che lo leggono da sole scrivono lo stesso byte?** — e la risposta era
+no. Tutte 🔸: si correggono senza discussione.*
+
+⛔ **Il censimento in una riga**: dei ventidue messaggi del protocollo, **due** erano definiti byte
+per byte — il fotogramma e il datagram audio. Gli altri venti avevano un nome e una descrizione a
+parole. Il canale meno specificato era proprio quello della **stretta di mano**, cioè quello che la
+fase 1 deve scrivere. Il dettaglio sta in `RCP.md` §0-bis; qui stanno solo le scelte che avrebbero
+potuto essere prese altrimenti.
+
+| # | La scelta | Perché così | Dove |
+|---|---|---|---|
+| 1 | **la porta è UDP 7447** | libera in `/etc/services` di Trixie `[M]`. `[?]` IANA non verificata | `RCP.md` §2.4 |
+| 2 | le **stringhe** sono `u16` di lunghezza più UTF-8, senza terminatore | il terminatore invita a passare la stringa a `printf` senza copiarla, e un byte nullo in mezzo diventa un troncamento silenzioso | §6.0 |
+| 3 | **il byte alto del `tipo` dice il canale** di uno stream | chi riceve uno stream unidirezionale deve sapere che cosa c'è dentro **prima** di leggerlo, e non era scritto da nessuna parte | §2.5 |
+| 4 | **niente 0-RTT** | i dati 0-RTT si ripetono, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore | §2.3 |
+| 5 | `disable_active_migration` **non si manda** | dichiararla spegne in silenzio la ragione per cui QUIC è stato scelto | §2.3 |
+| 6 | **credito degli stream ≥ 256, e va rinnovato** | il video consuma uno stream per fotogramma: chi imposta il numero e non rinnova il credito funziona **quattro secondi** | §2.3 |
+| 7 | l'impronta si calcola sulla **chiave pubblica**, non sul certificato | un certificato riemesso con la stessa chiave non deve far scattare l'avviso | §4.1-bis |
+| 8 | il client **spegne** i controlli X.509 di serie | altrimenti rifiuta il nostro autofirmato e la causa sta nella libreria, non nel nostro codice | §4.1-bis |
+| 9 | **`RESPINTO` è il congedo dell'autenticazione**, e non ne segue un altro | §4.4 e §8.2 si sovrapponevano: due implementazioni potevano indovinare diverso, o **uguale perché scritte dalla stessa mano** | §4.4 |
+| 10 | **un solo tentativo di credenziali per connessione** | il limitatore conta una cosa sola, e non serve una macchina a stati per i tentativi ripetuti | §4.4 |
+| 11 | ⭐ **la limitazione: 5 in 5 minuti, poi attesa da 30 s che raddoppia fino a 15 min** — più **un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso»** | chiude la `[?]` di `SPECIFICHE.md` §4.2. Il ritardo fisso toglie il **tempismo** come canale: senza, la distinzione fra «utente inesistente» e «password sbagliata» che §4.4 vieta di scrivere la si legge col cronometro | §4.4-bis |
+| 12 | **la tela DEVE avere lati pari**, fra 320×240 e 7680×4320 | una misura dispari la arrotonda **il codificatore, in silenzio**: due misure sotto la stessa etichetta, cioè la forma d'errore **E2** | §4.5 |
+| 13 | **tre tetti di tempo sulla stretta di mano** (5 s, 60 s, 10 s) | una connessione ferma a metà tiene un posto; e i 30 s di QUIC misurano il **silenzio della rete**, non un client che non fa il suo mestiere | §4.6 |
+| 14 | ⛔ **i fotogrammi chiave**: `tipo` `0x0301`/`0x0302` e il messaggio `RICHIEDI_CHIAVE` | **non era una lacuna, era un difetto di disegno**: §5.1 concede di abbandonare un fotogramma, e il video è compresso con predizione — abbandonarne uno lascia il decodificatore rotto finché non arriva una chiave, e non c'era modo né di dirlo né di chiederla. Costa **zero byte**: entra nei valori di un campo che c'era già | §5.2 |
+| 15 | l'audio è **48 kHz, 2 canali, blocchi da 20 ms**, e il PCM è **s16 little-endian** | «Opus, con PCM come base» non è un formato. E l'endianness del carico utile è l'unica eccezione all'ordine di rete: dichiararla è ciò che impedisce a due implementazioni di divergere in silenzio | §5.3 |
+| 16 | gli appunti si fermano a **1 000 000 byte**, e oltre **non si annunciano** | troncare un testo e incollarlo in un terminale è peggio che non averlo | §5.4 |
+| 17 | il cursore si ferma a **256×256**, e `larghezza = 0` vuol dire nascosto | serviva un modo di dire «nessun cursore» che non fosse un messaggio in meno | §5.5, §7.2 |
+| 18 | **un fotogramma non supera 16 MiB**, e la lunghezza si controlla **prima di allocare** | senza tetto, sei byte scritti a mano si portano via la memoria del server | §6.1, §6.2 |
+| 19 | i fotogrammi **possono arrivare fuori ordine**, e il client scarta i vecchi con aritmetica **modulo 2³²** | gli stream sono indipendenti: è una conseguenza di §5.1 che nessuno aveva scritto. A 60 al secondo il contatore gira in due anni, e una sessione può durare di più | §6.2 |
+| 20 | **i codici di tasti e pulsanti sono quelli di evdev**, la rotella in **unità da 120** | è quel che vuole `libei`, cioè l'unico modo che abbiamo di iniettare input. Ogni altra convenzione aggiunge una tabella di traduzione che sbaglia in silenzio — e in v1 quella tabella è costata il banco della rotella (`LEZIONI.md` §2.3) | §7.3 |
+| 21 | l'`id` dell'input è **uno solo per tutto il canale**, non uno per tipo | è quello che torna nel campo `input` del fotogramma: con contatori separati non tornerebbe niente | §7.3 |
+| 22 | ⛔ **al distacco si rilasciano tutti i tasti e i pulsanti** | un Ctrl rimasto giù in una sessione che sopravvive al client rende il desktop inservibile al riattacco, e nessuno collega le due cose | §7.3 |
+| 23 | **`TELA` è la risposta obbligatoria ad `ADATTA_TELA`** | §7.1 imponeva un «rifiuto motivato» e non esisteva un messaggio per dirlo: il client sarebbe rimasto ad aspettare per sempre | §7.1 |
+| 24 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie | è l'unico momento in cui i due lati hanno legittimamente due verità diverse. Dichiarata come eccezione a §3, non lasciata all'improvvisazione | §7.1 |
+| 25 | il motivo del congedo viaggia **anche nel codice d'errore della chiusura QUIC** | se il congedo non arriva — stream rotto, messaggio illeggibile — il motivo passa comunque. È la ferita di `LEZIONI.md` §1.7 curata con due strade invece che con una | §3.1 |
+
+⚠ **E due tipi di messaggio sono stati aggiunti** (`RICHIEDI_CHIAVE`, `TELA`) più due motivi di
+congedo (`TEMPO_SCADUTO`, `SESSIONE_NON_SERVIBILE`). §9 lo vieta **dentro** una versione maggiore,
+e la clausola che lo permette è che **oggi non esiste nessuna implementazione**. Dal primo byte
+scritto in poi vale la regola senza sconti.
+
+⏳ Quel che RCP/1 lascia **volutamente** aperto — microfono, puntatore relativo, tocco, 4:4:4, più
+schermi — sta in `RCP.md` §12, dichiarato invece che dimenticato.
+
 ---
 
 ## 2. I numeri
@@ -696,10 +744,29 @@ Le tre ragioni, e la terza è quella che ha deciso:
   (`kde.md` §8.2-bis): senza, la rinegoziazione si morde la coda. Il difetto **non si vede su
   Trixie** e compare il giorno dell'aggiornamento a 6.8, quando nessuno lo sta più cercando.
 
-### 5.2 🔸 Il codificatore lavora alla misura della finestra, non della tela
+### 5.2 🔸 ⛔ ~~Il codificatore lavora alla misura della finestra~~ → **no: lavora alla misura della tela**
 
-Regalo che arriva gratis da 5.1: finestra piccola ⇒ meno pixel da codificare ⇒ **la stessa
-banda rende di più**. Sul telefono in rete mobile aiuta da solo, senza logica aggiuntiva.
+> ⛔ **Corretta il 9 agosto 2026, scrivendo `RCP.md` §6.2.** Questa voce diceva: *«Regalo che
+> arriva gratis da 5.1: finestra piccola ⇒ meno pixel da codificare ⇒ la stessa banda rende di
+> più»*. **Contraddiceva §5.0-ter**, che è a due voci di distanza e dice il contrario — *«il server
+> continua a codificare la tela intera e il client la rimpicciolisce»* — mettendo l'ottimizzazione
+> **volutamente fuori dal modello**, come `[?]` da misurare prima.
+>
+> **Vince §5.0-ter**, e non per anzianità: è quella che regge insieme al resto. `SPECIFICHE.md`
+> §6.1 dice che durante la sessione **è il client a riscalare**, e §6.3 dice che il ripiego su KDE
+> *«non costa una riga in più, perché è lo stesso codice del punto durante la sessione»* — cioè la
+> riscalatura nel client. Se il server codificasse alla misura della finestra, quel codice non
+> esisterebbe e il ripiego costerebbe eccome.
+>
+> ⚠ **Il regalo non era gratis**: cambiare la misura codificata a ogni trascinamento del bordo
+> significa rinegoziare il codificatore — e con `DECISIONI.md` §5-bis.0 il bordo si trascina
+> **dieci volte al giorno**, perché su DeX la finestra è ridimensionabile. Era una `[?]` travestita
+> da conseguenza, cioè la forma d'errore **E5** di `REVIEWER.md`.
+
+**Quel che vale adesso**: il server codifica alla misura della **tela**, il client riscala. Il
+messaggio `VISTA` di RCP esiste lo stesso e serve a scegliere **quanti bit spendere**, non quanti
+pixel produrre; e l'intestazione del fotogramma porta la misura come campo, così che il giorno in
+cui §5.0-ter venisse chiusa **il protocollo non cambi** (`RCP.md` §6.2, §7.1).
 
 ### 5.3 🔸 Il prezzo di 5.1, dichiarato
 
