@@ -33,46 +33,93 @@ il primo che non parla di un compositore.*
 |---|---|---|
 | 1 | ⛔ **L'eccezione del certificato NON copre WebTransport** | né su Chrome né su Firefox `[R]`. Il predefinito «un clic e vai» che era stato proposto **non funziona**, e la strada diventa `serverCertificateHashes` — §3 |
 | 2 | ⛔ **`prefer-hardware` non prova niente su Android** | Chromium sceglie **di proposito** un decodificatore HEVC software quando non ne trova uno hardware `[R]`. È la forma d'errore **E1**, cioè il muro di v1, **ricomparso un livello più in alto** — §4 |
-| 3 | ⭐ **Si perde molto meno tastiera del temuto** | a schermo intero la lista riservata di Chrome scende da dodici comandi a **due**, e in una **PWA installata è vuota** `[R]` — §5 |
+| 3 | ⭐ **Si perde molto meno tastiera del temuto** | a schermo intero la lista riservata di Chrome scende da dodici comandi a **due** `[R]` — §5. ⚠ Ma quel che il **sistema operativo** si tiene non lo recupera nessun browser |
 | 4 | ⭐ **La clipboard si può sorvegliare, da gennaio 2026** | `clipboardchange` è in Chrome 144, ed è stato motivato **esplicitamente dai client di desktop remoto** `[S]` — §5 |
-| 5 | ⛔ **Il compositore del browser costa 16-40 ms** | `[?]` fra il disegno e il pixel acceso, cioè **quanto tutto il nostro tetto**. E nessuna API JavaScript lo vede — §6 |
+| 5 | ⛔ **Il compositore del browser costa 25-42 ms a 60 Hz** | `[?]` 1,5-2,5 intervalli di quadro fra il disegno e il pixel acceso — **più di tutto il nostro tetto**. E nessuna API JavaScript lo vede — §6 |
 
-### 1.2 ⛔ E le tre convergenze fra rapporti, che nessuno dei quattro poteva vedere da solo
+### 1.2 ⛔ E le quattro convergenze fra rapporti, che nessuno dei quattro poteva vedere da solo
 
 Sono la ragione per cui questo documento esiste oltre ai quattro rapporti.
+
+> ⚠ **E sono la parte più fragile, per costruzione**: nessuno dei due autori le ha validate.
+> *Riviste il 9 agosto 2026 dalla revisione **R2** (`web/rapporti/R2-revisione-web.md`), che ne ha
+> indebolita una, ridimensionata un'altra, aggiunte due che mancavano, e stabilito che una terza
+> **non era dei rapporti**: era una mia tesi presentata come derivata.*
 
 **A. I 10 bit hanno tre indizi contrari, e nessuno è una misura.**
 
 | Da dove | Che cosa dice |
 |---|---|
 | `DECISIONI.md` §2.3-bis | sul percorso `mediacodec` di Android il supporto a 10 bit è limitato e **l'uscita torna a 8** `[S]` |
-| **S2** | sui fotogrammi decodificati in hardware `VideoFrame.format` è **null** e `copyTo()` è negato `[R]`; uno sviluppatore di Chromium scrive che quei percorsi *«possono subire una conversione a 8 bit»* `[S]` |
+| **S2** | ⚠ `[S]` **non `[R]`, e non verificato**: che sui fotogrammi decodificati in hardware `VideoFrame.format` sia **null** viene da una discussione W3C di **gennaio 2023**, e S2 §3.7 dichiara di **non aver potuto stabilire lo stato di Chromium ad agosto 2026**. *Marca corretta da R2: era stata promossa a `[R]`* |
 | **S4** | la condizione di zero-copy di WebGPU è letteralmente `format == PIXEL_FORMAT_NV12` `[R]`: **P010 non passa**. E il canvas 2D ha un aiutante che si chiama `DownShiftHighbitVideoFrame` `[R]` |
 
-⛔ **Da cui `DECISIONI.md` §2.2 — il desiderato a 10 bit, deciso dall'utente l'8 agosto — va scritta
-provvisoria**, che è la regola già in vigore (`LEZIONI.md` §2.3-quater: una decisione che poggia su
-una `[?]` è presa a metà). ⚠ E la difficoltà si chiude su sé stessa: **dal browser i 10 bit non
-sono leggibili**, quindi la prova finale è **guardare una sfumatura**, cioè `LEZIONI.md` §2.4 — il
-metro è quel che si vede.
+⚠ **Sono tre catene diverse** — il codec, l'API, il disegno — e R2 ha provato a farle collassare in
+una sola senza riuscirci. ⛔ **Ma reggono su due gambe e mezza, non su tre**: l'indizio di mezzo è
+una fonte di tre anni fa.
 
-**B. ⭐ La PWA lega S1 e S3, e cambia quanto vale un certificato vero.**
+**Da cui, e la forma conta**: `DECISIONI.md` §2.2 — il desiderato a 10 bit, deciso dall'utente
+l'8 agosto — **si segnala come da verificare**, e la verifica è la prima cosa che il banco della
+fase 2 accerta. ⛔ Non si riscrive provvisoria su questa base: R2 ha ragione a dire che *«una
+decisione dell'utente si sposta con tre indizi, non con due indizi e una fonte di tre anni fa
+promossa di marca»* — ed è la stessa `LEZIONI.md` §2.3-quater che avevo citato a sostegno.
+
+⚠ E la difficoltà si chiude su sé stessa: **dal browser i 10 bit non sono leggibili**, quindi la
+prova finale è **guardare una sfumatura**, cioè `LEZIONI.md` §2.4 — il metro è quel che si vede.
+
+**B. La PWA lega S1 e S3 — e vale meno di quanto avevo scritto.**
 
 | | |
 |---|---|
 | **S1** | dietro un'eccezione di certificato, su Chrome **il Service Worker non si installa** `[R]` ⇒ niente PWA |
-| **S3** | in una **PWA installata** la lista dei tasti riservati di Chrome è **vuota** `[R]` ⇒ tutte le scorciatoie arrivano alla sessione |
+| **S3** | in una **PWA installata** la lista dei tasti riservati di Chrome è **vuota** `[R]` |
 
-⛔ **Messe insieme**: il certificato vero non compra solo «nessun avviso». **Compra la tastiera
-intera.** Chi ha un dominio ha un prodotto migliore, non solo più comodo — e questa riga va detta a
-chi installa, perché nessuno la dedurrebbe.
+> ⛔ **Avevo concluso «compra la tastiera intera». È troppo forte, su quattro punti** *(R2)*:
+>
+> 1. la lista vuota è quella **del browser**, non del sistema: su macOS `⌘Spazio` e `⌘Tab`, su
+>    Android e DeX **ogni combinazione con Meta**, restano perse su qualunque configurazione `[R]`;
+> 2. il guadagno marginale è **piccolo**: a schermo intero le riservate di Chrome sono già solo due,
+>    e una delle due — l'uscita — la **specifica obbliga** a riservarla. Fra «schermo intero + lock»
+>    e «PWA» ballano `F11` e poco altro;
+> 3. vale **solo su Chrome**: su Firefox restano le sei riservate, su Safari la PWA non c'entra;
+> 4. ⛔ **e sull'uso primario è una `[?]`**: se valga anche per Chrome per Android non lo sa nessuno
+>    — lo dichiara §5.5 di questo stesso documento, e in §1.2 l'avevo dato per acquisito.
+>
+> **Quel che resta vero**: il certificato vero toglie l'avviso **e** apre la strada della PWA, che
+> su Chrome desktop recupera qualche scorciatoia in più. È un vantaggio, non una categoria diversa.
 
-**C. Il decodificatore invisibile obbliga il prodotto a diagnosticarsi da sé.**
+**C. ⛔ La forma della pagina è decisa da due vincoli che si scontrano** *(aggiunta da R2)*.
 
-`DECISIONI.md` §2.7 dice che il massimo lo offre il server e l'altezza la mette il client, **ma che
-un ripiego va dichiarato**. S2 dimostra che **da JavaScript la verità non è leggibile** `[R]`.
-⛔ Quindi la diagnosi non può stare in un banco di laboratorio: **deve stare nel prodotto**, perché
-il dispositivo dell'utente è l'unico posto dove la domanda ha una risposta. La pagina misura la
-propria portata e **lo dice** — è I7 in una forma nuova: la protezione sta nel programma.
+| Da dove | Il vincolo |
+|---|---|
+| **S3** | le lettere devono uscire da `beforeinput`, e questo obbliga la pagina ad avere **un elemento modificabile con il fuoco** — anche su desktop, non solo su Android. Senza, **accenti e tasti morti non si producono** `[R]` |
+| **S4** | ⛔ **niente elementi sopra la tela**, o cadono il percorso overlay e il canvas desincronizzato `[S]` `[R]` |
+
+**Il caso concreto**: si scrive la pagina con la sola tela, si arriva alla fase 4, si scopre che
+`^`+`e` non produce `ê` su nessun motore, si aggiunge il campo nascosto sopra la tela — e **si
+perde la strada di disegno su cui tutto §6 è costruito**. ⭐ È precisamente la riscrittura che §6.1
+dice di voler evitare, e **la sintesi era l'unico posto dove si poteva vedere**.
+
+**D. ⛔ La scheda in secondo piano si congela dopo cinque minuti** *(aggiunta da R2; era in S2 §3.8
+e non l'avevo riportata)*.
+
+Un gruppo di pagine viene **congelato** se resta nascosto e silenzioso per oltre **cinque minuti**,
+e l'esenzione documentata richiede un canale WebRTC aperto o una traccia multimediale viva `[S]`.
+⛔ **L'architettura di §6.1 — WebTransport e basta — non rientra nell'esenzione.** S2 la marca come
+*«decisione di architettura da prendere adesso, non quando ci accorgeremo che la sessione muore
+dopo cinque minuti»*.
+
+⚠ **E tocca una promessa**: `SPECIFICHE.md` §5.3 dice che un client che tace 30 secondi **è
+staccato**. Una scheda congelata tace — quindi il telefono in tasca si stacca da sé. Non è un
+difetto (la sessione sopravvive, `DECISIONI.md` §4.1), **ma è un comportamento da dichiarare**, e
+oggi non è scritto da nessuna parte.
+
+**E una tesi mia, che va attribuita invece che spacciata per conclusione dei rapporti** *(R17)*:
+`DECISIONI.md` §2.7 obbliga a dichiarare un ripiego, e S2 dimostra che da JavaScript la verità sul
+decodificatore non è leggibile `[R]` — **da cui propongo** che la diagnosi viva **nel prodotto**,
+perché il dispositivo dell'utente è l'unico posto dove la domanda ha risposta. ⚠ In S2
+l'autodiagnosi compare **dentro un solo esito su cinque**, non come conclusione generale: la tesi è
+difendibile, ma è mia, ed è la forma d'errore **E5** applicata al ragionamento invece che al dato.
 
 ---
 
@@ -83,8 +130,9 @@ propria portata e **lo dice** — è I7 in una forma nuova: la protezione sta ne
 | **Chromium / Blink** | 151 |
 | **Gecko / Firefox** | 151-153 |
 | **WebKit / Safari** | 26.4 |
-| WebTransport | Baseline **marzo 2026**, con Safari 26.4 |
-| WebCodecs | Chrome 94+ · Firefox 130+ · Safari 26+ · **Chrome per Android 147** |
+| WebTransport | Safari 26.4, **24 marzo 2026** — con essa ci sono tutti e tre i motori. ⚠ *La parola «Baseline» che questa riga portava non viene da nessuno dei quattro rapporti: era della ricerca del 9 agosto, ed è stata tolta perché è un termine tecnico con un significato preciso (R2)* |
+| WebCodecs `VideoDecoder` | Chrome **94+** su tutte le piattaforme, **Android compreso** · Firefox 130+ · Safari 26+. ⚠ *La cifra «Chrome per Android 147» era una contaminazione fra due rapporti: 147 è la versione di un'altra cosa (R2)* |
+| ⛔ **Firefox su Android** | `VideoDecoder` **assente in release** (solo Nightly), HEVC assente `[S]` ⇒ **non può essere un client**. Manca in tutto il resto di questo documento, che altrove tratta Firefox come uno dei tre motori serviti |
 | Fullscreen Standard, `keyboardLock` | entrato nello standard WHATWG l'**8 maggio 2026** |
 | `clipboardchange` | **Chrome 144**, 13 gennaio 2026 |
 | I riferimenti letti | Guacamole, noVNC, Xpra html5, Selkies, moonlight-web |
@@ -108,6 +156,25 @@ questo file fra sei mesi **rifaccia le ricerche prima di fidarsi**.
 | **Firefox** | ⛔ **no**, per una ragione diversa: l'eccezione **viene** consultata anche su HTTP/3, e subito dopo la sessione si chiude se la radice non è incorporata `[R]`. L'unica deroga scritta nel codice è, testualmente, `serverCertificateHashes` |
 | **Safari** | `[?]` **il caso aperto**: la sua eccezione non aggira niente, mette il certificato **nel portachiavi**, e WebTransport passa di lì. Potrebbe essere l'unico dove la risposta è sì. **Nessuno l'ha documentato** |
 
+> ## ⛔ E Safari **ha** `serverCertificateHashes` — la correzione che avevo perso per strada
+>
+> *Rilievo R2, ed è il più caro dei diciassette perché era già passato in un documento di
+> decisione.* WebKit l'ha implementato il **2 ottobre 2025** (bug 300057, `RESOLVED FIXED`),
+> l'implementazione sta in `NetworkTransportSessionCocoa.mm` `[R]`, ed è spedita in **Safari 26.4**.
+>
+> ⛔ Il rapporto S1 dedicava un riquadro apposta a correggere l'affermazione contraria — *«vera nel
+> 2024, ripetuta nel 2026»* — e io **non l'ho riportata**, scrivendo invece in `DECISIONI.md` §1.7
+> che *«WebKit non implementa `serverCertificateHashes`»*. Corretto lì lo stesso giorno.
+>
+> **Le due conseguenze:**
+>
+> 1. ⭐ **iPhone e iPad hanno già una strada senza dominio**, ed è **la stessa** degli altri due
+>    motori. Non è una piattaforma da salvare: è una piattaforma servita;
+> 2. la misura **S1a** perde il primo posto. Non decide più *«se iPhone ha una strada»* — decide
+>    **una comodità**: se su Safari l'eccezione basti da sola, cioè se lì si possa fare a meno di
+>    pubblicare l'impronta. S1 §5.8 lo scrive: l'impronta si usa **sempre**, e un'eventuale
+>    tolleranza di Safari sarebbe **un ripiego in più, non un percorso diverso**.
+
 ⛔ **E questo chiude, con una ragione tecnica dura, la proposta di far installare un'autorità
 nostra** (`DECISIONI.md` §1.7): su Chrome **non basta nemmeno il magazzino di sistema**, perché
 quella radice non è *incorporata nel browser*.
@@ -116,21 +183,29 @@ quella radice non è *incorporata nel browser*.
 
 | | |
 |---|---|
-| **la strada** | `serverCertificateHashes`, promosso da rete di sicurezza a **strada normale** (`RCP.md` §4.1-bis) |
-| ⛔ **due certificati, non uno** | uno **longevo** per la pagina — è quello su cui vive l'eccezione dell'utente e **non deve cambiare** — e uno **breve, ≤14 giorni**, per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire l'avviso ogni due settimane, e nessuno collegherebbe le due cose |
+| **la strada** | `serverCertificateHashes`, promosso da rete di sicurezza a **strada normale** (`RCP.md` §4.1-bis) — ⭐ **e vale su tutti e tre i motori**, Safari 26.4 compreso |
+| ⛔ **due certificati, non uno** | uno **longevo** per la pagina — è quello su cui vive l'eccezione dell'utente — e uno **breve, ≤14 giorni**, per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire l'avviso ogni due settimane |
+| ⛔ **e l'avviso torna comunque ogni sette giorni** | `[R]` `kCertErrorBypassExpirationInSeconds = 604800`, con il commento *«Certificate error bypasses are remembered for one week»*. ⚠ *Questa riga mancava, e con essa la conseguenza: **anche tenendo il certificato della pagina fermo, su Chrome il clic si rifà ogni settimana**. Cambia la frase che si dice all'utente (R2)* |
 | ⭐ **una cosa che cade e semplifica** | `Alt-Svc` **non c'entra**: WebTransport apre la sua connessione da sé `[S]`. Il ripiego silenzioso su TCP che era stato dichiarato come pericolo **non può accadere** |
 | ⛔ **il prezzo dell'eccezione** | dietro di essa, su Chrome, **il Service Worker non si installa** `[R]` — e vedi §1.2 B |
+| ⏳ **due cose che S1 lascia da decidere, e che avevo taciuto** | **(1)** Safari è l'unico motore con WebTransport anche su **HTTP/2 e TCP**: il nostro server non lo parla, quindi il suo ripiego finirebbe in errore — *va deciso* se implementarlo o dichiarare Safari fuori dal ripiego. **(2)** una pagina già aperta ha in mano **un'impronta che invecchia**: alla riconnessione dopo la rotazione va ricaricata o va richiesta l'impronta corrente — *va deciso dove sta questo aggiornamento in `RCP.md`* |
 
 ### 3.3 Il banco
 
-⛔ **La prima misura del progetto, e non ne serve nessun'altra prima**: Safari. Si prova se
-l'eccezione concessa alla pagina lasci passare la sessione WebTransport, su macOS **e su iOS
-separatamente**. Il controllo positivo è ovvio e va fatto lo stesso: **la stessa prova su Chrome
-deve fallire** — se passasse, il banco non sta misurando quel che crede.
+⛔ **Il controllo positivo che avevo scritto era cieco, ed è il rilievo più grave della revisione**
+(R2, rilievo R1). Diceva: *«la stessa prova su Chrome deve fallire»*. Con **la porta UDP 7447
+chiusa nel firewall**, la prova fallisce su Safari *e* fallisce su Chrome — cioè **il controllo è
+verde** — e il banco conclude «l'eccezione di Safari non copre», che è la conclusione sbagliata su
+un dato mancante. È «vuoto» e «proibito» con lo stesso aspetto (`LEZIONI.md` §1.9), messo al primo
+posto del progetto.
 
-`[?]` **La seconda**: quanto dura l'eccezione su Chrome. Il rapporto dice **circa sette giorni** —
-se fosse vero, il clic non è «una volta per dispositivo» ma **una volta a settimana**, ed è
-un'informazione che cambia la frase che si dice all'utente.
+**Il controllo giusto, che S1 aveva scritto e che avevo sostituito**: sullo **stesso browser**,
+sulla **stessa pagina**, nello **stesso giro** — si prova l'eccezione da sola *e* si prova la
+connessione con l'impronta pubblicata. La seconda **deve riuscire**: se fallisce anche quella, non
+si sta misurando l'eccezione, **si sta misurando un server che non risponde**.
+
+⚠ **E la misura ha perso il primo posto**: con Safari che ha `serverCertificateHashes` (§3.1), S1a
+non decide più se una piattaforma è servibile — decide se lì l'impronta si possa risparmiare.
 
 ---
 
