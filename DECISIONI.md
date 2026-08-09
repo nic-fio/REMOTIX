@@ -367,6 +367,68 @@ guarda. Chi resta mezz'ora a guardare un video senza toccare nulla viene staccat
 piccolo — riattaccarsi è rapido — ma se emergesse come fastidio, la cura è un cenno di
 presenza dal client, non l'allungamento della soglia.
 
+### 4.6 ✅ Dieci sessioni grafiche come tetto — ma il limite è un budget, non un conteggio
+
+*9 agosto 2026. «Quante sessioni grafiche può reggere contemporaneamente il sistema fra locali e
+remote? […] credo che 10 potrebbe essere un numero molto comodo». E poi: «il mio è un tetto: non
+capiterà mai che ci sono 10 utenti contemporaneamente che si collegano con client in 4K».*
+
+⛔ **Dieci non è il limite: è il tetto amministrativo.** Il limite vero lo pone il
+**codificatore**, e si misura in pixel al secondo — con lo stesso ferro, le stesse dieci sessioni
+sono facilissime o impossibili a seconda della qualità che ciascuna chiede.
+
+Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agosto:
+
+| 10 sessioni a… | Da codificare | Sulla sola Intel |
+|---|---|---|
+| 480p · 25 fps *(il minimo)* | ~100 Mpixel/s | ⭐ larghissimo, una cinquantina |
+| 1080p · 30 fps | ~620 Mpixel/s | ✅ giusto al limite |
+| 4K · 60 fps *(il desiderato)* | ~5 Gpixel/s | ⛔ **una sola sessione** |
+
+`[?]` Le capacità del codificatore sono ricavate dalla generazione del chip, **non misurate**:
+`vainfo` non è installato sulla macchina di prova. Vanno confermate lì.
+
+**Da cui il disegno**: nessun numero cablato nel programma. Il server tiene un **budget** — sa
+quanto sta già codificando e quanto può — e il dieci è il valore predefinito di un massimo
+configurabile, come le sei ore di §4.2. La RAM non è il collo: dieci sessioni GNOME ferme sono
+~12 GB dei 31, dieci LXQt ~5.
+
+### 4.6-bis 🔸 Quando il budget è pieno si rifiuta, dichiarando il motivo
+
+Non si fa degradare chi sta già lavorando per far entrare chi arriva. Sarebbe la scelta
+apparentemente gentile, ma punisce in silenzio chi non ha fatto niente — ed è precisamente ciò
+che I1 vieta: una discesa che non nasce da una misura della linea, ma da una decisione presa
+altrove e mai dichiarata.
+
+Il rifiuto dice **perché**: «questa macchina non ha più capacità di codifica». Non «riprova più
+tardi» e basta.
+
+### 4.6-ter 🔸 ⛔ La GPU si sceglie con una regola udev, e ha un prezzo da sapere prima
+
+*Sul ferro dell'utente REMOTIX usa **l'Intel**; la Radeon RX 6800 è riservata all'inferenza.*
+
+Il meccanismo esiste già: `v1/banco/gpu-udev.sh`, e la sua intestazione spiega perché non ce ne
+sono di più semplici:
+
+- **KWin prende la prima scheda che riesce ad aprire** e non guarda nessuna variabile
+  (`KWIN_DRM_DEVICES` vale solo per il backend `drm`). L'unico modo di sceglierne una è rendere
+  l'altra **non apribile**;
+- ⛔ **e la via ovvia è una trappola**: `InaccessiblePaths=` nell'unità del compositore dà la
+  scheda giusta e **chiude il cancello della cattura** — 0 righe di registro sui permessi contro
+  13 (`kde.md` §3.3-bis). Si passa dai permessi del **nodo**;
+- ⚠ **per id PCI, non per numero di nodo**: `renderD128` e `renderD129` si scambiano fra un
+  avvio e l'altro, l'indirizzo PCI no.
+
+⚠⚠ **Il prezzo, che lo script dichiarava già prima che l'inferenza esistesse**: negare il nodo
+coi permessi lo nega a **tutta la sessione dell'utente**, non solo al compositore. Sul ferro
+attuale questo significa che **l'utente che fa inferenza va messo nel gruppo** della regola, e
+gli utenti delle sessioni remote no. Funziona — ma se un giorno l'inferenza smettesse di vedere
+la Radeon, la causa è questo file, e nessuno la collegherebbe da solo.
+
+⭐ E l'avvertenza di `LEZIONI.md` §4 trappola 6 — *«il compositore deve disegnare sulla scheda
+giusta; un buffer di un'altra scheda non è importabile, e il sintomo è composizione in software
+senza un errore»* — su una macchina a **due** GPU smette di essere teorica.
+
 ---
 
 ## 5. La geometria — la tela e la vista
@@ -807,10 +869,9 @@ per non trovarsela decisa da sola: **niente x265** (GPL-only) come ripiego softw
 SVT-AV1 (BSD-3) e FFmpeg compilato senza `--enable-gpl` la scelta resta interamente aperta.
 
 
-### 7.7 Multi-tenant: quanti utenti insieme?
-In v1 era **fuori scope** (§4.2); in V2 entra in una riga. Non è un problema di protocollo, è
-di GPU: quattro sessioni a 4K60 non stanno su un'integrata. Il numero decide se serve una coda
-di codifica condivisa.
+### 7.7 ~~Multi-tenant: quanti utenti insieme?~~ → **chiusa il 9 agosto, vedi §4.6**
+Dieci come tetto configurabile. Ma il limite vero non è un conteggio: è un budget di pixel al
+secondo, e su una macchina sola lo pone il codificatore.
 
 ### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
 50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. Con l'avvertenza che il
