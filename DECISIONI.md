@@ -1626,6 +1626,37 @@ fa con un banco davanti, non su carta.
 > collante scrivere, adesso decide **se il prodotto esiste**. Va chiusa con la sonda del browser
 > davanti, non dopo.
 
+> ### ⭐ Il censimento del 9 agosto notte — i candidati non erano due, e nessuno dei due originali porta WebTransport
+>
+> *Fatto prima di scrivere una riga di B2, come punto 0 della ricetta (`LEZIONI.md` §9): **chi, al
+> mondo, fa già questa cosa?** Tutto quel che segue è `[S]` e `[R]` — **letto, non misurato**. La
+> misura è B2, e serve proprio perché queste righe non bastano.*
+>
+> | Candidata | Lingua e API | WebTransport **lato server** | Che collante resta a noi |
+> |---|---|---|---|
+> | **`quiche`** | Rust con **API C** | ⛔ **no** — ma ha `h3::Config::enable_extended_connect()` (`SETTINGS_ENABLE_CONNECT_PROTOCOL`) `[R]` e i datagram QUIC completi (`dgram_send`/`dgram_recv`) `[R]` | **tutto lo strato WebTransport** |
+> | **`ngtcp2` + `nghttp3`** | **C** | ⛔ **no** — ma nghttp3 implementa **RFC 9220** (l'extended CONNECT di HTTP/3) `[S]` **e** sa mandare e ricevere `SETTINGS_H3_DATAGRAM` con il **Capsule Protocol** `[S]` | lo strato WebTransport, ⭐ **con le fondamenta più complete delle quattro** |
+> | ⭐ **`lsquic`** (LiteSpeed) | **C** | ⭐ **SÌ**: `OPTION(LSQUIC_WEBTRANSPORT "Enable WebTransport support" OFF)` → `-DLSQUIC_WEBTRANSPORT_SERVER_SUPPORT=1` `[R]`, letto nel `CMakeLists.txt` | poco — **se funziona** |
+> | **`libwtf`** | C, ma **su MsQuic** | ⭐ sì, negozia draft-15/07/02 `[S]` | poco, ⚠ ma porta dentro **una seconda pila QUIC** |
+> | ~~`web-transport-quiche`~~ | ⛔ **Rust puro, nessuna API C** | sì | ⛔ **escluso**: il server è in C (§6.3) |
+>
+> ⛔ **Il fatto che riordina tutto**: *«quale delle due arriva fino a WebTransport»* aveva una
+> risposta sola — **nessuna delle due**. Le due candidate originali danno le **fondamenta**
+> (extended CONNECT, datagram, capsule) e non lo strato di sopra: le impostazioni della sessione, il
+> tipo di stream unidirezionale, il segnale sui bidirezionali, il prefisso dei datagram, la capsula
+> di chiusura. La domanda vera è sempre stata la seconda — **quanto collante** — e adesso ha una
+> forma elencabile.
+>
+> ⚠ **E i due nuovi arrivati vanno guardati con sospetto, non con sollievo:**
+>
+> | | |
+> |---|---|
+> | **`lsquic`** | ⛔ la funzione è **spenta per difetto** e **non compare nella documentazione della 4.9.3** `[R]`. «Implementato ma spento e non documentato» è la firma di un pezzo che **nessuno esercita**: va provato, non creduto |
+> | **`libwtf`** | ⚠ 70 stelle, 51 commit, un autore — e ⛔ **la licenza si contraddice da sola**: il README dice MIT, il piè di pagina Apache-2.0. Su una libreria che entrerebbe nel cuore del prodotto è un difetto di per sé (§7.6) |
+>
+> ⛔ **Nessuna di queste righe è una misura.** Sono la lente che dice **a chi vale la pena scrivere
+> le cinquanta righe** di B2, e a chi no.
+
 ---
 
 ## 7. ❓ Le domande aperte

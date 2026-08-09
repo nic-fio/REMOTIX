@@ -226,10 +226,23 @@ portare **HTTP/3 e WebTransport lato server**, più un ascoltatore **TCP** per l
 **La prova**: un server minimo — cinquanta righe, che si buttano — che accetta una sessione
 WebTransport su `/rcp/1`, aperta da **un browser vero**, con l'impronta pubblicata nella pagina.
 
-| Candidata | Sul ferro `[M]` 9 ago | Da provare |
+> ### ⭐ Il censimento del 9 agosto notte, prima di scrivere una riga
+>
+> *Punto 0 della ricetta, e ha cambiato la domanda.* ⛔ **Nessuna delle due candidate originali
+> porta WebTransport lato server**: danno le fondamenta — extended CONNECT, datagram, capsule — e
+> non lo strato di sopra. ⭐ **E sono spuntate due candidate che non erano nell'elenco**, una delle
+> quali (`lsquic`, in C) **ha WebTransport server dietro un flag di compilazione**.
+>
+> Il censimento completo, con le marche, sta in `DECISIONI.md` §6.4 — qui non si copia.
+> ⛔ **Ed è tutto `[S]` e `[R]`: letto, non misurato.** Serve solo a decidere **a chi vale la pena
+> scrivere le cinquanta righe**.
+
+| Candidata | Sul ferro | Che cosa si prova |
 |---|---|---|
-| **`quiche`** (BSD-2, API C) | `cargo`/`rustc` 1.85 | `[?]` fino a dove arriva **lato server**: HTTP/3 sì, WebTransport da verificare |
-| **`ngtcp2` + `nghttp3`** (MIT) | `libngtcp2-dev` 1.11, `libnghttp3-dev` 1.8 | `[?]` quanto collante resta a noi, e il TLS da montare |
+| **`ngtcp2` + `nghttp3`** (MIT, C) | `libngtcp2-dev` 1.11, `libnghttp3-dev` 1.8 `[M]` — ⛔ **non installati** | le fondamenta più complete: quanto pesa lo strato WebTransport sopra |
+| **`quiche`** (BSD-2, API C) | `cargo`/`rustc` 1.85 `[M]` | idem, più il TLS che si porta dietro |
+| ⭐ **`lsquic`** (C) | ⛔ **da compilare**, con `-DLSQUIC_WEBTRANSPORT=ON` | ⛔ **se quel flag regge una sessione vera**: è spento per difetto e **non documentato**, cioè un pezzo che forse nessuno esercita |
+| ⚠ **`libwtf`** (C su MsQuic) | ⛔ niente | *ultima della fila*: porta dentro una seconda pila QUIC, e ha una **licenza che si contraddice** |
 
 **L'atteso, che la prima stesura lasciava vuoto** (R3.23):
 
