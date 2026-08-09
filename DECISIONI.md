@@ -53,6 +53,29 @@ le due devono restare in coppia, altrimenti è una regola non verificata.*
 
 ---
 
+### 0.2 ✅ Sviluppo agentico, con revisione avversariale a tre momenti
+
+*9 agosto 2026. «Ricorda inoltre il metodo di lavoro: sviluppo agentico e review avversariali».*
+
+Il lavoro è fatto da due tipi di agenti — `CODER.md` e `REVIEWER.md` — e il **quando** interviene
+il revisore sta in `PIANO.md` §0.4: sul **banco** prima che il prodotto esista, sul **codice**
+prima che venga misurato, sul **documento di fase** prima della chiusura.
+
+⭐ **E qui la revisione ha un mestiere in più che in un progetto normale.** Buttando RDP abbiamo
+perso l'arbitro esterno: in v1 `mstsc` protestava gratis quando sbagliavamo a capire la specifica.
+Ora client e server sono nostri, e **due programmi scritti dalla stessa mano che vanno d'accordo
+non confermano niente**. Le tre cose che sostituiscono quell'arbitro sono `RCP.md` (scritto), il
+validatore del filo (meccanico) e **la revisione avversariale** — che è l'unica delle tre capace
+di accorgersi che i due lati condividono lo **stesso** fraintendimento.
+
+Le quattro pratiche che rendono la postura avversariale una cosa concreta invece che un tono: il
+revisore riceve il codice e la specifica **ma non il ragionamento** di chi l'ha scritto, che
+altrimenti àncora; si prova a **rompere**, costruendo l'ingresso che violerebbe l'invariante; un
+rilievo si chiude con **una misura**, non con una discussione; e una revisione verde è **«non ho
+trovato niente»**, mai «è giusto».
+
+---
+
 ## 1. Il protocollo
 
 ### 1.1 ✅ RDP muore. Il protocollo è nostro.

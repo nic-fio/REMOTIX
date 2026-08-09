@@ -76,6 +76,55 @@ La frase vera, con la data.
 4. ⛔ **Il banco si certifica prima di essere creduto.** Ogni fase, prima di dichiarare un numero,
    dimostra che il suo banco sa vedere il difetto che cerca (`LEZIONI.md` §1.2 e §1.9).
 
+### 0.4 Il metodo: sviluppo agentico e revisione avversariale
+
+Il lavoro è fatto da due tipi di agenti, con le regole nei loro documenti — [`CODER.md`](CODER.md)
+e [`REVIEWER.md`](REVIEWER.md). Qui sta **quando** intervengono dentro una fase, che è la parte che
+quei documenti non dicono.
+
+#### Il revisore è uno dei tre sostituti dell'arbitro che abbiamo perso
+
+⭐ È la ragione per cui la revisione qui pesa più che in un progetto normale. In v1 l'arbitro era
+**mstsc**: quando sbagliavamo a capire la specifica, un client altrui protestava — gratis, subito,
+senza che nessuno dovesse accorgersene. Buttando RDP quel segnale è sparito, e **due programmi
+scritti dalla stessa mano che vanno d'accordo non confermano niente**.
+
+Le tre cose che lo sostituiscono, e nessuna basta da sola:
+
+| | |
+|---|---|
+| **`RCP.md`** | l'arbitro **scritto**: dice chi ha torto, ma solo se qualcuno lo consulta |
+| **il validatore del filo** | l'arbitro **meccanico**: vede i byte non conformi, ma solo quelli |
+| **la revisione avversariale** | l'arbitro **che ragiona**: è l'unico che può accorgersi che server e client condividono lo **stesso** fraintendimento |
+
+#### I tre momenti in cui il revisore interviene
+
+⛔ **Non uno solo, e il primo non è sul prodotto.**
+
+| Quando | Su che cosa | Perché lì |
+|---|---|---|
+| **1. appena il banco esiste**, prima di scrivere il prodotto | il **banco** | `REVIEWER.md` §1: *il banco è il primo imputato*. Un difetto nel prodotto lo trova un banco buono; un difetto nel banco non lo trova niente, e avvelena ogni misura successiva **perché dà fiducia** |
+| **2. quando il codice c'è**, prima di misurarlo | il **prodotto** | misurare codice che contraddice già una regola scritta è tempo speso per sapere una cosa che si sapeva |
+| **3. prima della chiusura** | il **documento di fase** | che ogni numero abbia la sua scena dichiarata, che i fallimenti ci siano, che le `[?]` non siano state promosse a fatti in silenzio |
+
+#### La postura avversariale, in concreto
+
+Non è un tono: sono quattro pratiche.
+
+1. ⛔ **Il revisore riceve il codice e la specifica, non il ragionamento di chi l'ha scritto.** Una
+   spiegazione del perché è giusto **àncora** chi legge, e trasforma la ricerca di contraddizioni
+   in una verifica di coerenza con la spiegazione.
+2. ⛔ **Si prova a rompere, non a confermare.** Per ogni invariante che la modifica tocca, il
+   revisore costruisce **l'ingresso concreto** che lo violerebbe. Se non riesce a costruirlo, lo
+   dichiara — è informazione anche quella.
+3. ⛔ **Un rilievo si chiude con una misura, non con una discussione.** `[R]` si corregge; `[?]` si
+   **misura**, e la misura è del coder, sul ferro. Il revisore non misura e non riscrive.
+4. ⛔ **Una revisione verde non è un'approvazione.** È «non ho trovato niente», e va dichiarata con
+   quelle parole. Il verdetto ha sempre la forma *«questo contraddice X»*, mai *«questo è giusto»*.
+
+⚠ **E la separazione dei mestieri va difesa in tutt'e due i versi**: il coder non chiede al revisore
+di misurare al suo posto, e non riscrive il codice su un `[?]` senza prima misurarlo.
+
 ---
 
 ## 1. I due binari
@@ -396,10 +445,13 @@ prima che si sia costruito troppo sopra i suoi difetti.
 
 ---
 
-## Il metodo, in quattro righe
+## Il metodo, in sei righe
 
 1. Il documento di fase si apre **prima** di sviluppare, e contiene il banco.
-2. Il banco si certifica **prima** di essere creduto.
-3. Quel che non ha funzionato si scrive **anche** quando fa una brutta figura.
-4. La fase si chiude quando **l'utente ha guardato e ha detto la sua** — non quando il documento è
+2. Il banco si certifica **prima** di essere creduto — e **si fa revisionare per primo**, prima
+   del prodotto.
+3. Si prova a **rompere**, non a confermare. Una revisione verde è «non ho trovato niente».
+4. Quel che non ha funzionato si scrive **anche** quando fa una brutta figura.
+5. Un rilievo si chiude con **una misura**, non con una discussione.
+6. La fase si chiude quando **l'utente ha guardato e ha detto la sua** — non quando il documento è
    pieno.
