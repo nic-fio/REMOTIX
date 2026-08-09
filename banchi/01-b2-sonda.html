@@ -64,6 +64,33 @@ function scrivi(testo, buono) {
   esito.className = buono === undefined ? "" : (buono ? "ok" : "no");
 }
 
+// ⛔ L'esito lo registra il banco, non chi guarda.
+//
+//    Prima finiva negli occhi di chi premeva il bottone, che poi lo
+//    ricopiava: e' quel che la regola B0.4 vieta, ed e' il difetto 11 della
+//    fase 0 (un numero confrontato a memoria con la colonna sbagliata).
+//    ⚠ E soprattutto: la VERSIONE ESATTA DEL BROWSER e' il campo che una
+//      trascrizione a mano dimentica sempre, e senza quella «fra sei mesi il
+//      risultato non vale niente» (S1 §4.5).  Qui parte da sola.
+async function registra(stato, dettaglio) {
+  try {
+    await fetch("/esito", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        esito: stato,
+        motore: navigator.userAgent,
+        indirizzo: $("url").value.trim(),
+        impronta_presente: !!$("impronta").value.trim(),
+        dettaglio: dettaglio,
+      }),
+    });
+  } catch (e) {
+    // ⚠ Se il raccoglitore non c'e', il banco NON deve fingere: si dice.
+    esito.textContent += "\n\n⚠ esito NON registrato (raccoglitore assente): " + e;
+  }
+}
+
 function base64ToBytes(b64) {
   const bin = atob(b64.trim());
   const out = new Uint8Array(bin.length);
@@ -84,6 +111,7 @@ $("vai").onclick = async () => {
     righe.push("");
     righe.push("⛔ questo motore non espone WebTransport affatto.");
     scrivi(righe.join("\n"), false);
+    await registra("NIENTE-WEBTRANSPORT", righe.join("\n"));
     return;
   }
 
@@ -127,6 +155,7 @@ $("vai").onclick = async () => {
     }
 
     scrivi(righe.join("\n"), true);
+    await registra("APERTA", righe.join("\n"));
   } catch (e) {
     righe.push("");
     righe.push("⛔ NON si apre: " + e);
@@ -137,6 +166,7 @@ $("vai").onclick = async () => {
     righe.push("   2. l'impronta non e' quella del certificato servito");
     righe.push("   3. il certificato della sessione supera i 14 giorni");
     scrivi(righe.join("\n"), false);
+    await registra("NON-APERTA", righe.join("\n"));
   }
 };
 </script>

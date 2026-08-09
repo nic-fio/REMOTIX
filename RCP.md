@@ -393,6 +393,7 @@ dominio.*
 | | |
 |---|---|
 | **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta |
+| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni** si è aperta in **30,2 ms** su **Chrome 151**, con l'impronta pubblicata nella pagina e **nessun avviso**, e i byte sono tornati identici. Banco `banchi/01-b2-*`, documento `fasi/01-filo-nudo.md`. ⚠ Misurato su **un motore**: Firefox e Safari restano da fare |
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
 | ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
 | ⛔ **che cosa non copre** | **il caricamento della pagina**, che è una connessione TCP a sé. Lì resta l'avviso con il clic — o il certificato vero, per chi ha un dominio |
