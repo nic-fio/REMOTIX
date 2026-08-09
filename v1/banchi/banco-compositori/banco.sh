@@ -39,6 +39,30 @@ export LANG=C.UTF-8
 
 MISURE=(1920x1080 2560x1440 3840x2160)
 
+# ---------------------------------------------------------------------------
+# ⛔ IL BINARIO CHE SI ESEGUE DEVE ESSERE PIU' NUOVO DEL SORGENTE.
+#
+# La protezione di un difetto noto sta nel PROGRAMMA (invariante I7) — ma il
+# programma che gira e' il binario, non il sorgente.  Il 9 agosto 2026 la
+# revisione ha trovato in casa un `misura-cattura` dell'8 agosto, cioe' senza le
+# cure scritte il giorno dopo: chi lo avesse lanciato avrebbe ripreso difetti che
+# i documenti dichiarano chiusi, senza una riga che glielo dicesse.
+#
+# Non si ricompila da qui — la compilazione sta in `provision-banco.sh`, dentro
+# il contenitore — ci si RIFIUTA di misurare, che e' l'unica cosa onesta.
+# ---------------------------------------------------------------------------
+controlla_binario()
+{
+	[ -x "$MISURA" ] || { echo "⛔ manca $MISURA: compilalo con provision-banco.sh" >&2; return 1; }
+	if [ "$MISURA.c" -nt "$MISURA" ]; then
+		echo "⛔ $MISURA e' PIU' VECCHIO del suo sorgente." >&2
+		echo "   Misurare adesso vorrebbe dire eseguire codice diverso da quello letto." >&2
+		echo "   Ricompila:  bash $QUI/provision-banco.sh" >&2
+		return 1
+	fi
+	return 0
+}
+
 prepara()
 {
 	mkdir -p "$SCENE"
@@ -82,6 +106,17 @@ avvia_scena()
 		    "$SCENE/${w}x${h}.mp4" >"$QUI/scena.log" 2>&1 &
 		echo $!
 		;;
+	# ⛔ E UN NOME DI SCENA SCONOSCIUTO NON E' «NESSUNA SCENA».
+	#
+	#    Senza questo ramo, `cella tetti …` (una lettera sbagliata) non trovava
+	#    nessun caso, `avvia_scena` non stampava niente, e `pid_scena` restava
+	#    VUOTO — che e' la stessa sentinella che la scena `fermo` usa di
+	#    proposito.  La guardia qui sotto si disattivava da se' e uscivano venti
+	#    secondi di misura su uno schermo su cui non aveva disegnato nessuno,
+	#    con uscita 0.  Trovato dalla revisione avversariale del 9 agosto 2026.
+	*)
+		echo "IGNOTA"
+		;;
 	esac
 }
 
@@ -90,7 +125,7 @@ cella()
 	local scena=$1 w=$2 h=$3 fps=$4 strada=$5 colore=$6 durata=$7 etichetta=$8
 	local opzioni=(--mutter --larghezza "$w" --altezza "$h" --fps "$fps"
 	               --durata "$durata" --scarto 7 --etichetta "$etichetta")
-	local pid_scena pid_misura stato_scena
+	local pid_scena pid_misura stato_scena morta
 
 	[ "$strada" = dmabuf ] && opzioni+=(--dmabuf)
 	[ "$colore" = bgra ] && opzioni+=(--bgra)
@@ -124,15 +159,44 @@ cella()
 	#    non e' «il processo e' vivo».  Provato il 9 agosto 2026: la guardia
 	#    scritta con `kill -0` non e' scattata su una scena che non era mai
 	#    partita.  Si guarda lo STATO in `ps`, che dice `Z` per gli zombie.
-	sleep 1
-	stato_scena=$(ps -o stat= -p "${pid_scena:-0}" 2>/dev/null | tr -d ' ')
-	if [ "${pid_scena:-0}" != 0 ] && { [ -z "$stato_scena" ] || [ "${stato_scena#Z}" != "$stato_scena" ]; }; then
+	if [ "$pid_scena" = IGNOTA ]; then
 		kill $pid_misura 2>/dev/null
 		wait $pid_misura 2>/dev/null
-		echo "GUASTO	$etichetta	scena '$scena' morta subito dopo l'avvio"
+		echo "GUASTO	$etichetta	scena sconosciuta: '$scena'"
+		echo "⛔ FALLITO: '$scena' non e' una scena. Sono: fermo, tetto, video, carico." >&2
+		return 2
+	fi
+
+	# ⛔ E LA SCENA SI SORVEGLIA PER TUTTA LA MISURA, NON SOLO AL PRIMO SECONDO.
+	#
+	#    La prima stesura la guardava una volta, un secondo dopo l'avvio, e poi
+	#    aspettava venti secondi senza piu' guardare: una scena che muore al
+	#    quinto secondo faceva uscire un numero basso attribuito al compositore.
+	#    Trovato dalla revisione avversariale del 9 agosto 2026 — e' lo stesso
+	#    difetto della guardia precedente, spostato nel tempo.
+	#
+	# ⚠ E NON con `kill -0`, che riesce sugli zombie: si legge lo stato in `ps`,
+	#   che dice `Z` per chi e' morto e non ancora raccolto.
+	morta=
+	while kill -0 $pid_misura 2>/dev/null; do
+		if [ "${pid_scena:-0}" != 0 ]; then
+			stato_scena=$(ps -o stat= -p "$pid_scena" 2>/dev/null | tr -d ' ')
+			if [ -z "$stato_scena" ] || [ "${stato_scena#Z}" != "$stato_scena" ]; then
+				morta=si
+				break
+			fi
+		fi
+		sleep 0.5
+	done
+
+	if [ -n "$morta" ]; then
+		kill $pid_misura 2>/dev/null
+		wait $pid_misura 2>/dev/null
+		echo "GUASTO	$etichetta	scena '$scena' morta durante la misura"
 		{
-			echo "⛔ FALLITO (non «zero»): la scena non e' partita."
-			echo "   Non c'e' nessun numero da leggere: non c'era niente da catturare."
+			echo "⛔ FALLITO (non «zero»): la scena e' morta prima della fine."
+			echo "   Non c'e' nessun numero da leggere: quel che si sarebbe misurato"
+			echo "   dopo non e' il compositore, e' l'assenza di qualcosa da catturare."
 			echo "   Il registro della scena dice:"
 			sed 's/^/     /' "$QUI/scena.log"
 		} >&2
@@ -151,7 +215,10 @@ tabella_mutter()
 {
 	local d=${1:-20}
 
-	echo "# etichetta misura colore fps_dichiarato strada tipo fps_misurati fotogrammi secondi buffer danno_pieno danno_parziale danno_assente salti fence_non_pronta min p50 p95 max"
+	# ⛔ L'intestazione si separa con TABULAZIONI come i dati: con gli spazi
+	#    `cut -f7` dava una colonna sola sull'intestazione e la settima sui dati
+	#    (revisione del 9 agosto 2026).  E porta `arrivati`, la colonna nuova.
+	printf '#etichetta\tmisura\tcolore\tfps_dichiarato\tstrada\ttipo\tfps_misurati\tcontati\tarrivati\tsecondi\tbuffer\tdanno_pieno\tdanno_parziale\tdanno_assente\tsalti\tfence_non_pronta\tmin\tp50\tp95\tmax\n' 
 
 	cella fermo 1920 1080 60 memoria bgrx 8 "controllo-desktop-fermo"
 
@@ -190,7 +257,7 @@ tabella_mutter()
 
 case "${1:-}" in
 prepara) prepara ;;
-cella) shift; cella "$@" ;;
-mutter) shift; tabella_mutter "$@" ;;
+cella) controlla_binario || exit 1; shift; cella "$@" ;;
+mutter) controlla_binario || exit 1; shift; tabella_mutter "$@" ;;
 *) echo "uso: $0 {prepara|cella …|mutter [durata]}" >&2; exit 2 ;;
 esac

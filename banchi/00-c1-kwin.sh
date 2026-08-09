@@ -138,9 +138,42 @@ echo "  nodo PipeWire $NODO"
 WAYLAND_DISPLAY=$SOCKET stdbuf -oL weston-simple-egl -f -o >"$QUI/c1-scena.log" 2>&1 &
 PID_SCENA=$!
 sleep 2
+STATO=$(ps -o stat= -p "$PID_SCENA" 2>/dev/null | tr -d ' ')
+if [ -z "$STATO" ] || [ "${STATO#Z}" != "$STATO" ]; then
+	echo "⛔ FALLITO: la scena non e' partita. Il suo registro dice:"
+	sed 's/^/    /' "$QUI/c1-scena.log"
+	exit 1
+fi
 
+# ⛔ E LA SCENA SI SORVEGLIA PER TUTTA LA MISURA.
+#
+#    Questo banco non la guardava affatto — mentre `banco.sh` e
+#    `00-c1-wlroots.sh` lo facevano, con la lezione citata accanto.  Trovato
+#    dalla revisione avversariale del 9 agosto 2026: bastava che
+#    `weston-simple-egl` non esistesse (il caso gia' pagato lo stesso giorno,
+#    quando mancava il pacchetto `weston`) perche' la CERTIFICAZIONE uscisse
+#    verde con ~0 fps e un «IGNOTO» che non toccava lo stato d'uscita.
+#
+# ⚠ Non con `kill -0`, che riesce sugli zombie: si legge lo stato in `ps`.
 "$QUI/misura-cattura" --nodo "$NODO" --larghezza "$LARGHEZZA" --altezza "$ALTEZZA" \
-    --fps 60 --durata "$DURATA" --scarto 5 $STRADA --etichetta "c1-kwin-${LARGHEZZA}x${ALTEZZA}-${4:-memoria}"
+    --fps 60 --durata "$DURATA" --scarto 5 $STRADA --etichetta "c1-kwin-${LARGHEZZA}x${ALTEZZA}-${STRADA_NOME}" &
+PID_MISURA=$!
+
+SCENA_MORTA=
+while kill -0 $PID_MISURA 2>/dev/null; do
+	STATO=$(ps -o stat= -p "$PID_SCENA" 2>/dev/null | tr -d ' ')
+	if [ -z "$STATO" ] || [ "${STATO#Z}" != "$STATO" ]; then SCENA_MORTA=si; break; fi
+	sleep 0.5
+done
+
+if [ -n "$SCENA_MORTA" ]; then
+	kill $PID_MISURA 2>/dev/null; wait $PID_MISURA 2>/dev/null
+	echo "⛔ FALLITO: la scena e' morta durante la misura. Il suo registro dice:"
+	sed 's/^/    /' "$QUI/c1-scena.log"
+	exit 1
+fi
+
+wait $PID_MISURA
 USCITA=$?
 
 echo

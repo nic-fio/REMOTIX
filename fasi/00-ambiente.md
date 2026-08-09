@@ -192,7 +192,7 @@ resta l'esperimento M3 della fase 3.
 
 | | |
 |---|---|
-| `disegno non finito 944` su 757 fotogrammi | conferma la domanda 9: a copia zero il **100 %** arriva col disegno in corso |
+| `disegno non finito` su **tutti** i fotogrammi contati | conferma la domanda 9: a copia zero il **100 %** arriva col disegno in corso. ⚠ *Riscritto il 9 agosto dopo la revisione: questa riga diceva «944 su 757», che è un rapporto fra due popolazioni diverse — il 944 era sugli arrivati, non sui contati. La conclusione regge (944 su 944), la frase no. Rimisurato col banco corretto: **749 su 749**, e ora le due colonne condividono il denominatore* |
 | `danno: pieno 15, parziale 929` | il danno **parziale è la regola**, il pieno l'eccezione — come `LEZIONI.md` §1.4 (282 su 300) |
 | `Boot VGA GPU /dev/dri/renderD128 selected as primary` | ⭐ **Mutter sceglie l'Intel da sé**, per «Boot VGA» — non come KWin, che prende la prima che riesce ad aprire. Vedi `DECISIONI.md` §4.6-ter |
 | `amdgpu: amdgpu_cs_ctx_create2 failed. (-13)` | la Radeon è vista ma non usabile (permesso negato): `[?]` da capire se è la regola udev o altro. **Non ci ostacola**: il primario è quello giusto |
@@ -465,6 +465,88 @@ scritte perché **non sono state pagate dal codice: sono state pagate mentre lo 
 | ⏳ **l'ambiente Android** | SDK, `adb`, Desktop AVD e il telefono vero: non ancora toccati. Servono alla sonda della fase 2, non prima |
 | **il budget in pixel al secondo** | `vainfo` dice **quali** profili, non **quanti** pixel: il numero di sessioni è fase 12 |
 | **il decodificatore HEVC dell'emulatore** | non si è riusciti a stabilire che ne esponga uno hardware — e non importa, perché nessun numero si dichiara lì |
+
+---
+
+## La revisione avversariale del banco
+
+*Chiesta dall'utente il 9 agosto 2026, **dopo** la chiusura della fase, e con un mandato stretto:
+non la fase — che è chiusa e le cui misure verranno rifatte cento volte — ma i **quattro file del
+banco**, che sono l'unica cosa di questa fase che sopravvive alla fase.*
+
+> «La fase 0 è stata una fase in cui si sono misurate le performance. Non sono sicuro che sia
+> necessaria una review avversariale.»
+
+⭐ **L'obiezione era per metà giusta, e va scritta.** La revisione avversariale nasce come
+sostituto dell'arbitro perduto (`PIANO.md` §0.4): serve ad accorgersi che client e server
+condividono lo stesso fraintendimento. Qui non c'è protocollo, non ci sono due implementazioni,
+non c'è prodotto — quell'argomento **non vale**. Vale l'altro, che sta in `REVIEWER.md` §1: *il
+banco è il primo imputato*, perché un difetto nel banco non lo trova niente **e dà fiducia**.
+
+⛔ **Il conto: 22 rilievi `[R]`, 5 `[?]`, su un banco che era stato appena certificato con quattro
+controlli.** E il revisore non ha ricevuto il ragionamento di chi l'aveva scritto — solo il codice
+e le regole (`PIANO.md` §0.4, pratica 1).
+
+### Le sette cose corrette subito, e sono quelle che fanno mentire il banco in silenzio
+
+| # | Il difetto | La cura |
+|---|---|---|
+| 1 | ⛔ **la riga metteva insieme due popolazioni**: danno, fence, salti e buffer contavano dal primo istante, fotogrammi e ritmo dopo lo scarto — e `arrivati` non era stampato, quindi non si poteva vedere | i contatori si aggiornano **dentro** il campione, e `arrivati` è una colonna: la differenza **è** il riscaldamento |
+| 2 | ⛔ **morte a metà misura**: il flusso *era stato* attivo, quindi la guardia non scattava. Uccidendo il compositore al dodicesimo secondo uscivano ~59 fps su 5 secondi sotto l'etichetta di una cella da 20 | si guarda lo stato del flusso **alla fine**, non solo all'inizio |
+| 3 | ⛔ **`--dmabuf` poteva consegnare memoria**: la maschera dei tipi conteneva sempre anche MemFd, e la colonna diceva la strada **chiesta**. A 1080p sono 59,2 contro 43,3 | si confronta chiesto e ottenuto, e si fallisce dichiarandolo (`LEZIONI.md` §1.8, corollario) |
+| 4 | ⛔ **una scena dal nome sbagliato** (`tetti` invece di `tetto`) lasciava `pid_scena` vuoto — la stessa sentinella che la scena `fermo` usa di proposito — e la guardia si disattivava da sé | un ramo di difetto che dice `GUASTO` |
+| 5 | ⛔ **la scena era controllata una volta sola**, un secondo dopo l'avvio | si sorveglia per tutta la misura |
+| 6 | ⛔ **`00-c1-kwin.sh` non la controllava affatto**, e `misura-wlroots` **ritorna 0 in ogni percorso**: le due certificazioni potevano uscire verdi su un compositore morto | la scena sorvegliata anche lì; e per wlroots il verdetto lo costruisce lo script, ⚠ **dichiarando che è un ripiego** e non una cura nel sorgente |
+| 7 | ⛔ **il binario versionato era dell'8 agosto**, senza le cure del 9: chi clonasse il progetto riprenderebbe difetti che questo documento dichiara chiusi | `banco.sh` **si rifiuta di misurare** se il sorgente è più recente del binario — I7: la protezione sta nel programma |
+
+⭐ **E la settima si è dimostrata da sé**: appena scritta, la guardia ha bloccato la prima
+esecuzione con *«misura-cattura è più vecchio del suo sorgente»* — cioè ha intercettato in tre
+secondi il difetto che al revisore era costato una lettura di `strings`.
+
+### Un `[?]` del revisore chiuso a nostro favore
+
+Sospettava che il **49,67** di KWin in memoria fosse una cattura a 720p etichettata 1080p —
+ipotesi acuta, perché 49,6 è esattamente la cella 720p di `kde.md` §5.7. **Smentita da un dato già
+registrato**: quella corsa aveva stampato `formato negoziato: 1920x1080`. Il `[?]` sul 49,67 resta
+aperto, ma con una causa candidata in meno invece che una in più.
+
+### Che cosa il revisore ha provato a rompere senza riuscirci
+
+Vale quanto i rilievi, e va scritto: la guardia `t_inizio` **tiene** (nessun ingresso le fa
+stampare una riga senza flusso attivo); il riconoscimento del socket nuovo di `00-c1-wlroots.sh`
+non si lascia ingannare da GNOME, da KWin né da uno sway superstite; la trappola dei 15 caratteri
+di `pgrep -x` non si ripaga in nessuno dei quattro file; e `sudo` con lo stderr rediretto non
+compare da nessuna parte.
+
+### ⏳ I sedici rilievi non ancora curati, dichiarati invece che dimenticati
+
+Nessuno di questi produce un numero sbagliato in silenzio — sono falsi rossi, etichette imprecise
+o rumore — e si prendono quando la fase che li usa li tocca:
+
+| | |
+|---|---|
+| `fence_non_pronta = 0` non distingue «tutte pronte» da «non l'ho mai chiesto» — sul percorso `memoria` è **sempre** 0 | fase 8 |
+| la riga porta la misura **chiesta**, non quella negoziata (che pure è nota) | fase 8 |
+| `00-c1-wlroots.sh` uccide un processo prima di validare il nome dell'argomento, e i due banchi C1 prendono gli argomenti in **ordine diverso** | prossimo giro |
+| i socket residui su disco fanno bocciare un compositore vivo (falso rosso) | prossimo giro |
+| `banco.sh` sincronizza i due lati con `sleep 2.5` invece che con un marcatore (`LEZIONI.md` §2.3-quinquies) | fase 3 |
+| il riscaldamento parte da `PAUSED`, non da quando il flusso è attivo | fase 3 |
+| una cella fallita sparisce dalla tabella senza lasciare traccia sullo stdout | fase 3 |
+| l'atteso di `00-c1-kwin.sh` è **stampato e non confrontato**, ed è scritto con la virgola mentre il misuratore stampa il punto | prossimo giro |
+| `prepara` salta ogni file non vuoto: una scena troncata non viene mai rifatta | fase 3 |
+| fra una cella e l'altra si uccide e si riparte dopo 1,5 s fissi, e non c'è `trap` | fase 3 |
+| `banco.sh` scrive `scena.log` e **non lo legge**: nella tabella di venti celle il controllo di §1.1 non compare, e il file è sovrascritto a ogni cella | fase 3 |
+| più cinque rilievi minori e i `[?]` su `quanti_fd`, sul tipo dell'ultimo fotogramma e sul `pkill -x` di una sessione reale | — |
+
+### ⚠ E un difetto che ho fatto io mentre applicavo le cure
+
+Ho caricato i quattro file corretti sul ferro con `... | tail -0` per non stampare il rumore di
+`scp`: `tail -0` chiude la pipe subito, `scp` muore di SIGPIPE, **nessun file è partito** — e il
+mio `echo "caricati"` lo ha dichiarato fatto. Il giro successivo ha misurato col binario vecchio e
+i conti non tornavano. È la stessa forma delle due che avevo già scritto qui sopra — `$?` dopo una
+pipe e `set -e` con `grep -c` — alla terza occorrenza in un giorno. ⛔ **La lezione non è
+«ricordarsela»: è che il trasferimento va verificato dal lato che riceve** (`LEZIONI.md` §1.7),
+che è esattamente quel che ho fatto subito dopo e che ha trovato il guasto in dieci secondi.
 
 ---
 

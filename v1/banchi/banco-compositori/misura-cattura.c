@@ -241,18 +241,6 @@ static void su_processo(void *dati)
 	intestazione = spa_buffer_find_meta_data(pacco->buffer, SPA_META_Header, sizeof *intestazione);
 	if (!intestazione)
 		m->senza_header++;
-	else
-	{
-		if (m->seq_noto && intestazione->seq > m->ultimo_seq + 1)
-			m->salti_seq += intestazione->seq - m->ultimo_seq - 1;
-		m->ultimo_seq = intestazione->seq;
-		m->seq_noto = TRUE;
-	}
-
-	guarda_danno(m, pacco);
-
-	if (piano->type == SPA_DATA_DmaBuf && piano->fd >= 0 && fence_pronta(piano->fd) == 0)
-		m->fence_non_pronta++;
 
 	/* Il riscaldamento non si conta: i primi fotogrammi dopo il montaggio del
 	 * monitor virtuale sono il ridisegno, non il regime (R10, e la lezione di
@@ -262,6 +250,52 @@ static void su_processo(void *dati)
 		m->conta = TRUE;
 		m->t_primo = adesso;
 	}
+
+	/*
+	 * ⛔ LA SEQUENZA SI SEGUE SEMPRE, MA I SALTI SI CONTANO SOLO NEL CAMPIONE.
+	 *
+	 * Seguirla anche durante il riscaldamento serve — altrimenti il primo
+	 * fotogramma contato sembrerebbe sempre un salto — ma sommarli fuori dal
+	 * campione mette nella stessa riga due popolazioni diverse (vedi il
+	 * riquadro qui sotto).
+	 */
+	if (intestazione)
+	{
+		if (m->seq_noto && intestazione->seq > m->ultimo_seq + 1 && m->conta)
+			m->salti_seq += intestazione->seq - m->ultimo_seq - 1;
+		m->ultimo_seq = intestazione->seq;
+		m->seq_noto = TRUE;
+	}
+
+	/*
+	 * ⛔ IL DANNO E LA FENCE SI CONTANO **DENTRO** IL CAMPIONE, NON DA SUBITO.
+	 *
+	 * Corretto il 9 agosto 2026, dopo la revisione avversariale del banco della
+	 * fase 0.  Prima stavano qui sopra, fuori dalla guardia del riscaldamento:
+	 * il danno, la fence, i salti e i buffer contavano DA SUBITO mentre i
+	 * fotogrammi e il ritmo contavano DOPO lo scarto.  Una riga sola con due
+	 * denominatori diversi, e `arrivati` non era nemmeno stampato — quindi chi
+	 * leggeva non poteva accorgersene.
+	 *
+	 * ⚠ E non e' teorico: dal giro del 9 agosto su Mutter era gia' uscita la
+	 *   frase «disegno non finito 944 su 757 fotogrammi», che non e' una
+	 *   percentuale ma un rapporto fra due popolazioni.  Il 944 era su 944
+	 *   ARRIVATI — la conclusione («il 100 % arriva col disegno in corso»)
+	 *   regge, il rapporto scritto no.  E' la forma d'errore **E2**, e
+	 *   `LEZIONI.md` §1.4 dice proprio che sull'avvio la distribuzione del danno
+	 *   e' l'opposto di quella a regime: 282 su 300 contro 9 su 10.
+	 *
+	 * ⭐ E `arrivati` adesso e' una colonna: la differenza fra arrivati e contati
+	 *    **e'** il riscaldamento, e va vista invece che dedotta.
+	 */
+	if (m->conta)
+	{
+		guarda_danno(m, pacco);
+
+		if (piano->type == SPA_DATA_DmaBuf && piano->fd >= 0 && fence_pronta(piano->fd) == 0)
+			m->fence_non_pronta++;
+	}
+
 	if (m->conta)
 	{
 		if (m->contati > 0 && m->n_intervalli < INTERVALLI_MAX)
@@ -718,6 +752,64 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	/*
+	 * ⛔ E «E' STATO ATTIVO» NON E' «LO E' ANCORA»: la morte a meta' misura.
+	 *
+	 * Aggiunto il 9 agosto 2026, e trovato dalla revisione avversariale, che ha
+	 * costruito il caso: si lancia una cella da 20 secondi e al terzo si uccide
+	 * il compositore.  Il flusso E' STATO attivo, quindi la guardia qui sopra
+	 * non scatta; `contati` resta 0 perche' lo scarto non e' ancora passato; e
+	 * usciva **RIGA … 0.00 …** con stato 0 — cioe' di nuovo la faccia che la
+	 * guardia sopra dice di aver tolto, spostata di tre secondi.
+	 *
+	 * ⚠ E la variante peggiore e' l'altra: ucciderlo al dodicesimo secondo dava
+	 *   ~59 fps misurati su 5 secondi, sotto l'etichetta di una cella da 20.  Un
+	 *   numero **giusto** per una domanda che nessuno aveva fatto.
+	 *
+	 * Due controlli, e nessuno dei due indovina: si guarda lo stato del flusso
+	 * ALLA FINE, e si confronta quanto si e' misurato con quanto si era chiesto.
+	 */
+	if (m.stato != PW_STREAM_STATE_STREAMING)
+	{
+		printf("GUASTO\t%s\tflusso caduto durante la misura\n", etichetta);
+		fprintf(stderr,
+		        "⛔ FALLITO (non «zero»): il flusso era attivo ed e' caduto durante la misura.\n"
+		        "   stato finale: %d%s%s\n"
+		        "   Fotogrammi raccolti prima di cadere: %" PRIu64 ".  Non sono una misura:\n"
+		        "   sono un pezzo di misura sotto l'etichetta di una intera.\n",
+		        (int) m.stato, m.guasto ? ", guasto: " : "", m.guasto ? m.guasto : "",
+		        m.contati);
+		palco_smonta(palco);
+		return 2;
+	}
+
+	/*
+	 * ⛔ E LA STRADA DEI PIXEL SI VERIFICA, NON SI DA' PER CHIESTA.
+	 *
+	 * `LEZIONI.md` §1.8, corollario alla lettera: «quando si chiede un componente
+	 * per nome, non si ripiega su un altro.  Si fallisce dichiarandolo».
+	 *
+	 * Con `--dmabuf` questo programma offre DUE formati e la maschera dei tipi
+	 * contiene comunque MemFd: se il produttore non sa dare DMA-BUF, la
+	 * negoziazione **riesce** in memoria e la riga esce con `strada = dmabuf` e
+	 * `tipo = MemFd`.  A 1080p le due strade valgono 59,2 contro 43,3 su KWin
+	 * (`kde.md` §5.7): sedici fotogrammi di differenza sotto la stessa etichetta,
+	 * che e' la forma d'errore **E2** e insieme la **E1** di R27 — il
+	 * codificatore che ripiegava in CPU credendosi in GPU.
+	 */
+	if (vuole_dmabuf && m.tipo_dati != SPA_DATA_DmaBuf)
+	{
+		printf("GUASTO\t%s\tchiesto DMA-BUF, ottenuta memoria\n", etichetta);
+		fprintf(stderr,
+		        "⛔ FALLITO: e' stato chiesto DMA-BUF e il produttore ha consegnato\n"
+		        "   un'altra strada (tipo %d).  Non si ripiega in silenzio: il numero\n"
+		        "   che ne uscirebbe risponderebbe a una domanda diversa da quella\n"
+		        "   posta (LEZIONI.md §1.8, corollario).\n",
+		        (int) m.tipo_dati);
+		palco_smonta(palco);
+		return 2;
+	}
+
 	/* --- il conto ---------------------------------------------------- */
 	secondi = m.contati > 1 ? (double) (m.t_ultimo - m.t_primo) / G_USEC_PER_SEC : 0.0;
 	fps_misurati = secondi > 0.1 ? (double) (m.contati - 1) / secondi : 0.0;
@@ -738,21 +830,26 @@ int main(int argc, char **argv)
 			massimo = m.intervalli[m.n_intervalli - 1];
 		}
 
-		printf("RIGA\t%s\t%ux%u\t%s\t%u\t%s\t%s\t%.2f\t%" PRIu64 "\t%.2f\t%u\t%" PRIu64
+		/* \u2b50 `arrivati` e' una colonna, non un dato interno: la differenza fra
+		 *    arrivati e contati **e'** il riscaldamento, e chi legge la riga deve
+		 *    poter vedere su quale popolazione sono calcolate le altre colonne
+		 *    invece di doverlo dedurre (9 agosto 2026, dopo la revisione). */
+		printf("RIGA\t%s\t%ux%u\t%s\t%u\t%s\t%s\t%.2f\t%" PRIu64 "\t%" PRIu64 "\t%.2f\t%u\t%" PRIu64
 		       "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%.1f\t%.1f\t%.1f\t%.1f\n",
 		       etichetta, larghezza, altezza,
 		       colore == SPA_VIDEO_FORMAT_BGRx ? "BGRx" : "BGRA", fps,
-		       vuole_dmabuf ? "dmabuf" : "memoria", nome_tipo, fps_misurati, m.contati, secondi,
-		       m.quanti_fd, m.danno_pieno, m.danno_parziale, m.danno_assente, m.salti_seq,
+		       vuole_dmabuf ? "dmabuf" : "memoria", nome_tipo, fps_misurati, m.contati, m.arrivati,
+		       secondi, m.quanti_fd, m.danno_pieno, m.danno_parziale, m.danno_assente, m.salti_seq,
 		       m.fence_non_pronta, minimo / 1000.0, p50 / 1000.0, p95 / 1000.0, massimo / 1000.0);
 
 		fprintf(stderr,
 		        "  fotogrammi %" PRIu64 " in %.2f s  →  %.2f al secondo\n"
+		        "  (arrivati in tutto %" PRIu64 "; danno e fence sono sui %" PRIu64 " contati)\n"
 		        "  buffer: %s, %u distinti, stride %u\n"
 		        "  danno: pieno %" PRIu64 ", parziale %" PRIu64 ", assente %" PRIu64 "\n"
 		        "  salti di sequenza %" PRIu64 ", disegno non finito %" PRIu64 "\n"
 		        "  intervalli ms: min %.1f  mediana %.1f  p95 %.1f  max %.1f\n",
-		        m.contati, secondi, fps_misurati, nome_tipo, m.quanti_fd, m.stride, m.danno_pieno,
+		        m.contati, secondi, fps_misurati, m.arrivati, m.contati, nome_tipo, m.quanti_fd, m.stride, m.danno_pieno,
 		        m.danno_parziale, m.danno_assente, m.salti_seq, m.fence_non_pronta, minimo / 1000.0,
 		        p50 / 1000.0, p95 / 1000.0, massimo / 1000.0);
 	}

@@ -31,7 +31,10 @@ COMPOSITORE=${1:-labwc}
 LARGHEZZA=${2:-1920}
 ALTEZZA=${3:-1080}
 DURATA=${4:-20}
-ATTESO=61
+case "${LARGHEZZA}x${ALTEZZA}" in
+3840x2160) ATTESO="~40" ;;   # LEZIONI.md §3 domanda 6: «61 (40 a 4K, per il costo della copia)»
+*)         ATTESO="~61" ;;
+esac
 
 export XDG_RUNTIME_DIR=/run/user/1000
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
@@ -60,7 +63,10 @@ labwc) ETICHETTA_MISURA=""
        echo "   ⚠ labwc non accetta una misura: il backend headless nasce a 1280x720."
        echo "     La misura vera la stampa lo strumento, e non la dichiaro io." ;;
 esac
-echo "   atteso da LEZIONI.md §3 domanda 6: ~$ATTESO fps"
+echo "   atteso da LEZIONI.md §3 domanda 6: $ATTESO fps"
+if [ "$COMPOSITORE" = labwc ]; then
+	echo "   ⚠ e per labwc quell'atteso viene da una misura a 720p: non e' un atteso a 1080p"
+fi
 
 # I socket che ci sono GIA', per non confondere il nostro con quello di un'altra
 # sessione: `wayland-0` e' di GNOME, `wayland-kwin` e' del banco di KWin.
@@ -123,9 +129,43 @@ if [ -z "$STATO" ] || [ "${STATO#Z}" != "$STATO" ]; then
 	exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# ⛔ `misura-wlroots` RITORNA 0 IN OGNI PERCORSO CHE ARRIVA ALLA STAMPA.
+#
+# Trovato dalla revisione avversariale del 9 agosto 2026, leggendo il suo
+# sorgente: se il compositore rifiuta la copia, se muore a meta', o se la
+# preparazione fallisce, il programma esce dal ciclo, stampa una RIGA con i
+# numeri parziali e **ritorna 0**.  Questo banco faceva `exit $USCITA`, quindi
+# la CERTIFICAZIONE del terzo strumento usciva verde su un compositore ucciso
+# al terzo secondo.
+#
+# ⚠ La cura giusta sarebbe nel sorgente di `misura-wlroots`, come e' stata
+#   fatta in `misura-cattura.c`.  Finche' non c'e', il verdetto lo costruisce
+#   qui chi lo legge — e si dichiara che e' un ripiego, non una cura
+#   (`CODER.md` §4.2: un ripiego silenzioso produce due comportamenti sotto la
+#   stessa etichetta).
+# ---------------------------------------------------------------------------
+USCITA_FILE=$(mktemp)
 WAYLAND_DISPLAY=$SOCKET "$QUI/misura-wlroots" --durata "$DURATA" --scarto 5 \
-    --etichetta "c1-$COMPOSITORE$ETICHETTA_MISURA"
+    --etichetta "c1-$COMPOSITORE$ETICHETTA_MISURA" | tee "$USCITA_FILE"
 USCITA=$?
+
+# Tre domande che lo strumento non fa, e senza le quali il suo 0 non vale.
+FPS=$(awk -F'\t' '/^RIGA/{print $8}' "$USCITA_FILE" | head -1)
+rm -f "$USCITA_FILE"
+
+if [ -z "$FPS" ]; then
+	echo "⛔ FALLITO: nessuna RIGA di misura."
+	USCITA=2
+elif awk -v f="${FPS:-0}" 'BEGIN{exit !(f+0 <= 0)}'; then
+	echo "⛔ FALLITO: $FPS fotogrammi al secondo."
+	echo "   Non e' «il compositore non consegna»: e' che non c'e' stata una misura."
+	USCITA=2
+elif ! pgrep -x "$COMPOSITORE" >/dev/null; then
+	echo "⛔ FALLITO: $COMPOSITORE non e' piu' vivo alla fine della misura."
+	echo "   Il numero qui sopra copre solo il tratto prima che cadesse."
+	USCITA=2
+fi
 
 echo
 echo "  ⭐ quanto ha disegnato il CLIENT (il controllo di LEZIONI.md §1.1):"
