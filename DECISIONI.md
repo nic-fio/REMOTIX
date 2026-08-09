@@ -450,19 +450,28 @@ della sessione**: che il tema sia stato scritto non è che sia stato caricato.
 *Il posto dove metterlo c'è già: l'ambiente della sessione si compone da zero, una variabile
 per volta (`CODER.md` §4.5) — quindi la cura sta nel programma e non in un file, come vuole I7.*
 
-### 5-bis.3 🔸 Il ventaglio dei gesti
+### 5-bis.3 ✅ Il ventaglio dei gesti
 
-I tre dell'utente più quattro che ne discendono per convenzione. Da confermare, i proposti.
+*9 agosto 2026, confermati tutti e sette.*
 
-| Gesto | Effetto | |
-|---|---|---|
-| 1 dito trascina | muove il puntatore | ✅ utente |
-| 1 dito tap | clic sinistro | ✅ utente |
-| 2 dita tap | clic destro | ✅ utente |
-| 2 dita trascina | rotella / scorrimento | 🔸 proposto |
-| tap-e-mezzo (tap, poi premi e trascina) | trascinamento e selezione | 🔸 proposto |
-| 3 dita tap | clic centrale | 🔸 proposto |
-| pizzico | ingrandisce la **vista** del client, non l'applicazione | 🔸 proposto |
+| Gesto | Effetto |
+|---|---|
+| 1 dito trascina | muove il puntatore |
+| 1 dito tap | clic sinistro |
+| 2 dita tap | clic destro |
+| 2 dita trascina | rotella / scorrimento |
+| tap-e-mezzo (tap, poi premi e trascina) | trascinamento e selezione |
+| 3 dita tap | clic centrale |
+| pizzico | ingrandisce la **vista** del client, non l'applicazione |
+
+⚠ Il *tap-e-mezzo* non è un lusso: senza, non si sposta una finestra e non si seleziona del
+testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fermo.
+
+> ⭐ **E con quale riserva sono stati confermati**, che vale più della tabella: *«tanto poi sono
+> sicuro che su alcune specifiche ci torneremo quando avremo il sistema funzionante sotto
+> mano»*. È `LEZIONI.md` §7.3 applicata ai gesti, e sui gesti vale doppio — un gesto non si
+> giudica leggendolo, si giudica usandolo. Questa tabella è quindi un **punto di partenza
+> dichiarato**, non un impegno: chi la trova diversa fra sei mesi non ha trovato un difetto.
 
 ⚠ Il *tap-e-mezzo* non è un lusso: senza, non si sposta una finestra e non si seleziona del
 testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fermo.
@@ -482,8 +491,8 @@ quello di una posizione lo notano tutti.
 
 | | |
 |---|---|
-| puntatore **assoluto** | sì — è il modo del trackpad di 5-bis.1 |
-| puntatore **relativo** | sì — mouse veri via *Pointer Capture* di Android, che consegna delta e non posizioni |
+| puntatore **assoluto** | sì — ed è **l'unico** percorso del puntatore (vedi 5-bis.8) |
+| ~~puntatore relativo~~ | ⛔ **tolto il 9 agosto**: era motivato con *Pointer Capture*, e la motivazione era sbagliata. Vedi 5-bis.8 |
 | **scancode** | sì — tasti di controllo e tastiere fisiche |
 | **Unicode** | sì, e su Android è la **strada principale** (vedi §7.10-bis) |
 | **tocco multi-dito** | posto riservato, **non implementato** `[?]` |
@@ -514,6 +523,20 @@ la nostra sessione non deve indovinare niente. Vale per **entrambi** i client, n
 Android — dove però è obbligatorio comunque, perché una tastiera Android non ha posizioni:
 è un IME che produce testo.
 
+⛔ **La precisazione che manca alla riga di sopra, aggiunta il 9 agosto: `Ctrl+C` non è testo,
+è un comando.** Mandato come «lettera c», l'applicazione remota riceverebbe una c da scrivere
+invece di una copia da fare. Quindi la regola completa è:
+
+> Una battuta viaggia **come lettera** quando sta scrivendo del testo. Quando è tenuto premuto
+> un modificatore **di comando** — Ctrl, Alt, Super — viaggia **come posizione**, perché in quel
+> momento non è una lettera. Maiusc e AltGr non contano: quelli servono a *fare* la lettera, e
+> restano dentro il percorso del testo.
+
+⭐ **E questo dà una seconda ragione a 5-bis.7**, che era stata decisa per un motivo diverso: le
+scorciatoie viaggiano come posizioni, e le posizioni combaciano solo se le due disposizioni
+sono la stessa. Su una tastiera tedesca la Z sta dove sulla nostra sta la Y — senza
+rinegoziare la disposizione all'attacco, `Ctrl+Z` finirebbe su un altro tasto.
+
 ⚠ **Resta la sola raggiungibilità.** Se nella disposizione della sessione un carattere non
 esiste su nessun tasto — un'emoji, un alfabeto diverso — non esce **niente**, e il server lo
 **dichiara nel registro**: mai una lettera diversa, mai un silenzio (`LEZIONI.md` §1.8).
@@ -543,6 +566,38 @@ viva riesca su tutti e quattro i desktop (la nascita è certa, il cambio a caldo
 convenga dare alla sessione **più disposizioni insieme** — il sistema ne accetta fino a quattro
 — per coprire il caso di chi passa da un telefono italiano a un portatile americano, che
 sospetto sia raro ma non l'ha misurato nessuno.
+
+### 5-bis.8 🔸 Mouse e tastiera fisici collegati al telefono
+
+*Domanda posta dall'utente il 9 agosto. La risposta è che il disegno già scelto li assorbe
+entrambi, e in un caso lo semplifica.*
+
+**Il mouse.** Android offre due modi: quello normale mostra **il cursore di sistema** e
+consegna posizioni — inservibile per noi, perché si vedrebbero **due puntatori**. Quello giusto
+è **Pointer Capture**: il client dichiara di gestirlo lui, il cursore di Android sparisce, e
+arrivano **spostamenti** più tasti e rotella.
+
+⭐ E lì si chiude da sé: **quegli spostamenti muovono lo stesso puntatore che muove il dito.**
+Una freccia sola, due modi di spingerla; si stacca il mouse e si continua col dito senza che
+cambi niente. È il dividendo di 5-bis.1 — avendo il puntatore in casa, non importa da dove
+arrivi la spinta.
+
+⛔ **E da qui la correzione a 5-bis.5.** Avevo messo il «puntatore relativo» fra le cose che il
+protocollo deve portare, **motivandolo con Pointer Capture**: è sbagliato. Se il puntatore lo
+disegna il client, è il client a fare i conti, e sul filo continua a viaggiare solo la
+**posizione**. Un percorso in meno.
+
+`[?]` Il relativo servirà semmai per un motivo diverso — le applicazioni remote che
+**catturano** il puntatore (un programma 3D, un gioco) — e quel caso lo segnala il **server**,
+non il client. Da riprendere se e quando si presenta.
+
+🔸 **L'accelerazione la applica il client**, non il server: si regola dove sta la mano ed è la
+stessa per qualunque sessione. Applicata da tutt'e due si sommerebbe, e il puntatore
+diventerebbe imprevedibile.
+
+**La tastiera.** Android la gestisce e consegna comunque **il carattere**, applicando la
+disposizione impostata nelle sue preferenze: la regola di 5-bis.6 vale identica, e non importa
+che la tastiera sia disegnata o di plastica.
 
 ---
 
