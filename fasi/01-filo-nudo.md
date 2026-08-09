@@ -339,6 +339,8 @@ Un **terzo programma** che legge una registrazione e dice **quale byte** non è 
 | tela `1921×1080`, `319×240`, `7682×4320` | `ERRORE_PROTOCOLLO` (§4.5) |
 | ⛔ **vista `300×801`, e vista `1×1`** | ⛔ **DEVONO PASSARE**: §7.1 dice che la vista non ha i vincoli della tela — *«qualunque misura da 1×1 in su è legale, dispari compresa»*. Chi scrive `ATTACCA` in C scrive **una** `valida_misura()` e la chiama quattro volte: è la cosa naturale da fare, e produce un server che chiude la sessione perché l'utente ha stretto la finestra. Su un telefono a fattore 2,75 la vista è **dispari quasi sempre** (R4.10) |
 | `disposizione` malformata / ben formata ma sconosciuta | ⛔ **due guasti diversi**: `ERRORE_PROTOCOLLO` · `SESSIONE_NON_SERVIBILE` `0x0E` ⛔ **col dettaglio nel corpo** (§8.2) |
+| ⭐ **`BANCO_MARCA` a funzione spenta** | ⛔ **`BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — non un silenzio, non una chiusura** (§7.5). ⚠ È lo stato **predefinito** di ogni server, quindi si prova qui anche se la marca la userà la fase 3: un silenzio lascerebbe il banco della fase 3 ad aspettare per sempre, e il sintomo sarebbe «il banco si è piantato» |
+| **`BANCO_MARCA` con `ritardo_ms = 20000`** | `BANCO_ESITO(RIFIUTATA, RITARDO_FUORI_LIMITI)` — ⛔ **non** `ERRORE_PROTOCOLLO`: far cadere la sessione al banco che si sta tarando è la cattiva idea che §7.1 evita per le misure fuori limite |
 | ⚠ **e la scelta del codec** | `RCP.md` §4.3 la rende **obbligatoria nel registro del server**: si verifica che ci sia |
 
 ⚠ **La chiusura si verifica nei tre punti di §3.1** — registro, `CONGEDO`, codice della sessione —
@@ -572,7 +574,7 @@ costano meno.
 | ⏳ `DECISIONI.md` §5.0-quater | S5 dice se il numero dichiarato è quello vero |
 | ⏳ `RCP.md` §7.3 | S7 toglie il segno dalla rotella dal `[?]` |
 | ⏳ `RCP.md` §5.3 | S6 dice se i 5 ms del PCM reggono |
-| ⏳ `RCP.md` §12 | ⛔ **la funzione di banco di S4** — un messaggio in più, ⛔ **da chiudere prima del primo byte** (§9) |
+| ✅ `RCP.md` §7.5 | ⭐ **chiusa la notte del 9 agosto**: la funzione di banco — `BANCO_MARCA` e `BANCO_ESITO` — è entrata **prima del primo byte**, sotto la clausola di §9. ⚠ La usa la fase 3; qui se ne prova solo il **rifiuto a funzione spenta** (B5) |
 | ⏳ `RCP.md` §4.6 | `[?]` se il tetto parta dal TLS o dall'apertura della sessione (B6) |
 | ⏳ `SPECIFICHE.md` §11.5 | l'isolamento fra origini: è un vincolo che questa fase deve rispettare |
 

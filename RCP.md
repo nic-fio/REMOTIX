@@ -36,7 +36,7 @@ specificato di tutti.
 
 | | Prima | Adesso |
 |---|---|---|
-| corpi di messaggio definiti byte per byte | 2 su 22 | **24 su 24** (§6, §7) — ⚠ *diceva «22 su 22», e il conto era della prima stesura: i due tipi aggiunti il 9 agosto portano il totale a 24. Corretto dal rilievo **R1.29**, e non è pedanteria — quella casella è **l'unica prova che il documento porta di essere completo**, e chi la verificava contando ne trovava due in più* |
+| corpi di messaggio definiti byte per byte | 2 su 22 | **26 su 26** (§6, §7) — ⚠ *diceva «22 su 22», e il conto era della prima stesura: i due tipi aggiunti il 9 agosto portavano il totale a 24, e i **due della funzione di banco** (§7.5, la notte del 9) a **26**. Corretto dal rilievo **R1.29**, e non è pedanteria — quella casella è **l'unica prova che il documento porta di essere completo**, e chi la verificava contando ne trovava di più* |
 | tipi elementari (numeri, stringhe, elenchi) | — | §6.0 |
 | come si riconosce a quale canale appartiene uno stream | — | §2.5 |
 | che cosa pretende il trasporto (finestre, stream, migrazione, 0-RTT) | 3 parametri | §2.3 |
@@ -468,6 +468,7 @@ definiti in RCP/1:
 | `input.tocco` | client | `si`, `no` — riservato, in RCP/1 vale sempre `no` |
 | `appunti.testo` | entrambi | `si`, `no` |
 | `client.nome` | client | testo libero per il registro, es. `remotix-linux 0.1.0` |
+| `banco.marca` | server | `si`, `no` — ⭐ *nuova, 9 ago notte*: la **funzione di banco** di §7.5 è accesa. ⛔ Vale `no` in ogni installazione normale, e un server che la dichiarasse `si` per errore lo **scrive nel registro a ogni avvio** |
 
 ⛔ **La forma dei nomi e dei valori è vincolata**, o «ignorare quel che non si conosce» diventa
 «indovinare»:
@@ -968,6 +969,8 @@ non del mittente.
 | `0x000C` | `CONGEDO` | ↔ | motivo |
 | `0x000D` | `RICHIEDI_CHIAVE` | → | ⭐ *nuovo, 9 ago*: serve un fotogramma chiave (§5.2) |
 | `0x000E` | `TELA` | ← | ⭐ *nuovo, 9 ago*: l'esito di `ADATTA_TELA` |
+| `0x000F` | `BANCO_MARCA` | → | ⭐ *nuovo, 9 ago notte*: **funzione di banco** — cambia la marca, con un ritardo noto (§7.5) |
+| `0x0010` | `BANCO_ESITO` | ← | ⭐ *nuovo, 9 ago notte*: l'esito di `BANCO_MARCA` (§7.5) |
 
 **I corpi** (`CIAO`, `ECCOMI`, `CREDENZIALI`, `AMMESSO`, `RESPINTO`, `ATTACCA`, `SESSIONE` stanno
 in §4.3-4.5):
@@ -1207,6 +1210,76 @@ l'elenco lì.
 ⛔ Un `APPUNTI_TESTO` che nessuno ha chiesto è `ERRORE_PROTOCOLLO`: gli appunti si tirano, non si
 spingono.
 
+### 7.5 ⭐ La funzione di banco: la marca, e il ritardo noto
+
+*Aggiunta la notte del 9 agosto 2026, rilievo **R3.4** della revisione del banco della fase 1, e
+**prima del primo byte di codice** — §9 chiude la finestra dei tipi nuovi da lì in poi, e la
+clausola che la tiene aperta è che oggi non esiste nessuna implementazione.*
+
+> ⛔ **Perché una funzione di banco sta nel protocollo e non nel codice di prova.** L'anello del
+> ritardo di `DECISIONI.md` §2.6 misura **dal lato che riceve**: il client provoca un cambiamento
+> visivo inequivocabile e guarda i fotogrammi che decodifica finché non lo vede. Perché quel numero
+> valga, il banco deve poter **iniettare un ritardo noto** e verificare che la mediana salga di
+> esattamente quello — ⛔ *«un banco che non lo fa non sa di misurare»*
+> (`web/rapporti/S4-ritardo-disegno.md` §4.2, controllo P1).
+>
+> Quel comando **attraversa il filo**. Improvvisarlo nel codice di prova significa due
+> implementazioni che se lo inventano diverso, cioè il difetto muto contro cui §0 esiste — e S4
+> §5.3 lo dice con queste parole: *«va scritto in `RCP.md` come funzione di banco, non improvvisato
+> nel codice di prova»*.
+
+**I due messaggi, in byte:**
+
+```
+BANCO_MARCA                                          client → server
+ ├── u32 id            ⛔ cresce di almeno uno a ogni messaggio; 0 è riservato
+ ├── u32 colore        0x00RRGGBB — il colore a cui portare la marca
+ └── u32 ritardo_ms    ⛔ il ritardo NOTO che il server DEVE aspettare prima di
+                       dipingere. 0 = subito. È il controllo del banco
+
+BANCO_ESITO                                          server → client
+ ├── u32 id            quello di BANCO_MARCA
+ ├── u8  esito         1 = ACCETTATA, 2 = RIFIUTATA
+ ├── u8  motivo        0 se accettata; altrimenti:
+ │                       1 = FUNZIONE_SPENTA
+ │                       2 = RITARDO_FUORI_LIMITI
+ └── u64 istante       microsecondi dell'orologio monotono del server, del momento
+                       in cui la marca è stata dipinta. ⛔ 0 se rifiutata, ed è
+                       l'unico significato di «assente» per questo campo (§6.0)
+```
+
+**Dove sta la marca, e chi la dipinge:**
+
+| | |
+|---|---|
+| **la misura** | **16×16 pixel della tela**, nell'angolo in alto a sinistra: da `0,0` a `15,15` |
+| ⛔ **perché 16 e non 1** | il video è codificato in **4:2:0**, quindi la crominanza è a metà risoluzione, e i codificatori lavorano a blocchi. Un quadratino piccolo o a cavallo di un bordo di blocco viene **spalmato**, e il banco leggerebbe un colore che non è stato mandato. ⚠ E chi riceve **DEVE** leggere la **mediana** dei 256 pixel, con tolleranza, non il pixel centrale |
+| ⛔ **chi la dipinge** | **il server**, nel fotogramma che sta per codificare — **dopo la cattura**. ⚠ *Quindi la misura che ne esce **esclude il compositore**, e questo va dichiarato accanto a ogni numero: è il ritardo di* codifica → filo → decodifica → disegno*, non quello che l'utente sente. Il pezzo del compositore lo misura l'anello completo di `DECISIONI.md` §2.6, che passa dall'input vero* |
+| ⚠ **e nella tela, non nella vista** | il client riscala: se vista e tela non coincidono, i 16×16 della tela diventano un'altra misura sul suo disegno, e **il calcolo è suo** |
+
+**Le regole, e sono cinque:**
+
+1. ⛔ **La funzione è SPENTA salvo che l'amministratore non l'accenda nella configurazione del
+   server.** È l'invariante **I6** alla lettera — *ciò che cambia quel che si vede sta dietro un
+   interruttore spento di suo* — e qui letteralmente dipinge sopra il desktop di qualcuno;
+2. ⛔ **spenta, il server risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`. NON DEVE tacere e NON
+   DEVE chiudere**: un silenzio lascia il banco ad aspettare per sempre, ed è lo stesso difetto che
+   §7.1 vieta per `ADATTA_TELA`. Un client che chiede una funzione spenta non ha violato niente;
+3. ⛔ **il server DEVE dichiararla**: la capacità `banco.marca` di §4.3. Un client che la chiede
+   senza che sia stata dichiarata riceve comunque `FUNZIONE_SPENTA`, non un errore di protocollo;
+4. `ritardo_ms` **DEVE** stare fra **0 e 10 000**; fuori è `BANCO_ESITO(RIFIUTATA,
+   RITARDO_FUORI_LIMITI)` — ⚠ **non** `ERRORE_PROTOCOLLO`: è un parametro di banco sbagliato, e far
+   cadere la sessione al banco che si sta tarando è la stessa cattiva idea di §7.1 per le misure
+   fuori limite;
+5. ⛔ **ogni accensione e ogni `BANCO_MARCA` servito si scrivono nel registro del server.** Una
+   sessione che dipinge quadratini colorati sul desktop di una persona **deve poterlo dimostrare
+   dal registro**, o il giorno in cui qualcuno se ne lamenterà non ci sarà modo di sapere se è
+   stata accesa.
+
+⚠ **E `istante` non serve a misurare il ritardo**: serve al banco per **distinguere il ritardo che
+ha chiesto lui da quello che ha trovato**. Il ritardo lo misura il client, dal lato che riceve, come
+dice `DECISIONI.md` §2.6 — questo campo dice soltanto quando il server ha obbedito.
+
 ---
 
 ## 8. Il congedo
@@ -1334,6 +1407,8 @@ l'altro**: si collaudano contro questo documento.
 | ⭐ **gli appunti** | i tre messaggi, l'identificatore di trasferimento, e **due trasferimenti aperti insieme nei due versi**: è il caso in cui senza identificatore i testi si scambiavano |
 | ⭐ **il secondo fisso** | si cronometra la risposta a `CREDENZIALI` — **anche quella riuscita** (§4.4-bis). È una proprietà di sicurezza che nessun altro banco vede, e una regressione che la togliesse non farebbe fallire niente |
 | **l'anello del ritardo** | il client manda un input che cambia colore allo schermo e guarda i fotogrammi decodificati finché non lo vede (`DECISIONI.md` §2.6) |
+| ⭐ **il ritardo noto** | si chiede `BANCO_MARCA` con `ritardo_ms = N` e **la mediana DEVE salire di esattamente N** (§7.5). ⛔ *È il controllo che rende credibile ogni numero di ritardo di questo progetto: un banco che non lo fa non sa di misurare* |
+| ⭐ **la funzione di banco spenta** | ⛔ con `banco.marca = no`, un `BANCO_MARCA` **DEVE** ricevere `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — **non un silenzio e non una chiusura**. ⚠ E si verifica **dal lato che riceve**: un server che tace lascia il banco ad aspettare per sempre, e il sintomo è «il banco si è piantato» |
 | **il rigore** | si manda di proposito un tipo sconosciuto, una lunghezza sbagliata, un messaggio nello stato sbagliato: ⛔ **la connessione deve cadere ogni volta**. Un banco che non prova a violare il protocollo non prova il protocollo |
 | ⭐ **il fotogramma abbandonato** | si abbandona un delta di proposito e si verifica che **arrivi una chiave** e che il client non mostri niente di rotto nel frattempo (§5.2). ⚠ Senza questo banco l'abbandono si prova solo su una rete cattiva, cioè quando non lo si sta guardando |
 | ⭐ **il credito degli stream** | si tiene una sessione viva **oltre i primi 256 fotogrammi** — cioè oltre i primi quattro secondi — e si verifica che il video non si fermi (§2.3) |
@@ -1358,7 +1433,7 @@ non certificato (`LEZIONI.md` §1.9).
 | **il 4:4:4** | è una capacità in più (`video.sottocampionamento`), e la decisione di prodotto è `[?]` (`DECISIONI.md` §2.3) | quando l'utente avrà guardato le due immagini |
 | **più schermi** | la tela è una sola. La forma del multi-monitor è «due viste sulla stessa tela», che il protocollo già regge per la tela; mancherebbe solo dire **dove** sta ciascuna vista | mai, finché resta fuori scope |
 | `[?]` **la registrazione IANA della porta** | §2.4 | se e quando servirà un numero registrato |
-| ⛔ **la funzione di banco dell'anello del ritardo** | ⭐ *aperta la notte del 9 agosto 2026, rilievo **R3.4***. Il banco di `DECISIONI.md` §2.6 ha bisogno di **un rettangolo di 16×16 sullo schermo e di un comando che lo cambi**, con un **ritardo `N` iniettabile** che ne è il controllo decisivo (`web/rapporti/S4-ritardo-disegno.md` §5.3). Non è codice di prova da improvvisare: è **un messaggio in più**, e va scritto qui | ⛔ **prima del primo byte scritto**, perché §9 chiude la finestra dei tipi nuovi da lì in poi. Dopo, entrerebbe come **deroga** alla regola che protegge le implementazioni — cioè il primo strappo, fatto da noi, a una regola nostra |
+| ~~la funzione di banco dell'anello del ritardo~~ | ⭐ **chiusa la notte del 9 agosto 2026, poche ore dopo essere stata aperta** dal rilievo **R3.4**: è **§7.5**, due tipi nuovi — `BANCO_MARCA` e `BANCO_ESITO` | ⭐ *È entrata sotto la clausola di §9 — «oggi non esiste nessuna implementazione» — e **quella era l'ultima occasione**: dal primo byte di codice in poi sarebbe stata una deroga, cioè il primo strappo fatto da noi a una regola nostra* |
 
 ⛔ **E una cosa che non è aperta e va detta perché non venga riaperta per distrazione**: il
 **battito applicativo** non manca, è **vietato** (§2.2). Chi lo trova assente e pensa di aggiungerlo
