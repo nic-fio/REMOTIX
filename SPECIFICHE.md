@@ -305,7 +305,10 @@ altrimenti se ne vedono due. Su GNOME è già escluso; su KDE e wlroots ci finis
 libreria su uno **incorporato e visibile** `[R]`. L'esito si controlla dopo l'avvio della
 sessione. (`DECISIONI.md` §5-bis.1-2)
 
-### 7.2 I gesti
+### 7.2 I gesti — per il telefono in mano
+
+⚠ **Su Android l'uso primario è Samsung DeX**, con mouse e tastiera veri: là vale §7.4, e questi
+gesti non si usano. Servono al telefono in mano, che è il ripiego d'emergenza.
 
 | Gesto | Effetto |
 |---|---|
@@ -346,7 +349,7 @@ scorciatoie (su una tastiera tedesca la Z sta dove da noi sta la Y).
 nessun tasto della disposizione — un'emoji, un alfabeto diverso — non esce **niente**, e il server
 lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md` §5-bis.6-7)
 
-### 7.4 Mouse e tastiera fisici sul telefono
+### 7.4 Mouse e tastiera fisici — su Android è la strada principale
 
 Il mouse passa da *Pointer Capture*: il cursore di Android sparisce — altrimenti se ne vedrebbero
 due — e i suoi spostamenti muovono **lo stesso puntatore che muove il dito**. Una freccia sola,

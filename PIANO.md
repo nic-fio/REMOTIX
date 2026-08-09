@@ -449,6 +449,14 @@ senza dichiararli (`LEZIONI.md` §2.5-bis).
 
 # BINARIO B — il client Android
 
+> ⭐ **Il bersaglio primario di questo binario è Samsung DeX**, non il telefono in mano
+> (`DECISIONI.md` §5-bis.0). Il che lo rende **più vicino al client Linux** di quanto sembri:
+> stesso modello di interazione — puntatore, tastiera, finestra ridimensionabile — e diverso solo
+> nello stack di decodifica. Il telefono in mano è il caso **secondo**, e il suo posto è la fase A4.
+>
+> ⚠ DeX vale come **caso di prova a sé, non come variante del telefono**: è dove il
+> ridimensionamento della finestra viene esercitato sul serio, perché la finestra si trascina.
+
 *Si innesta **dopo la fase 9**, quando l'esperienza su Linux è completa e giudicata, e il
 protocollo è stato esercitato dalla stretta di mano fino alla rete cattiva. Può procedere **in
 parallelo alle fasi 10-11**, che sono lavoro di server e non toccano il filo.*
@@ -466,13 +474,18 @@ MediaCodec, HEVC, 10 bit. L'utente vede il proprio desktop sul telefono.
 ⚠ È il muro contro cui è morto v1 — lì il client decodificava in software. Il banco misura
 **i fotogrammi decodificati in hardware**, e la prova che lo siano davvero.
 
-## Fase A3 — Il tocco
-Il puntatore disegnato dal client e i sette gesti (`SPECIFICHE.md` §7.2).
-⚠ Questa tabella è **un punto di partenza dichiarato**: qui si scopre quali gesti sono giusti, e
-si cambia.
+## Fase A3 — Mouse e tastiera: il modo classico
+⭐ **È la strada principale, non un accessorio** (`DECISIONI.md` §5-bis.0): l'uso primario di
+Android è **Samsung DeX**, dove il telefono pilota uno schermo esterno con mouse e tastiera veri.
+Il puntatore disegnato dal client mosso da *Pointer Capture*, le scorciatoie di comando, la
+finestra che si trascina.
 
-## Fase A4 — La tastiera
-L'IME che produce testo, le lettere che viaggiano come lettere, i comandi come posizioni.
+**L'utente vede**: lavora come su un desktop, e giudica se il puntatore «segue la mano».
+
+## Fase A4 — Il tocco, e la tastiera a schermo
+Il ripiego per il telefono in mano: i sette gesti (`SPECIFICHE.md` §7.2) e l'IME che produce testo.
+⚠ La tabella dei gesti è **un punto di partenza dichiarato**: qui si scopre quali sono giusti, e si
+cambia.
 
 ## Fase A5 — La vita dell'applicazione
 Lo sfondo, la rete che cambia — ⭐ **la migrazione QUIC da WiFi a rete mobile senza distacco**, che

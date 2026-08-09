@@ -618,9 +618,47 @@ della sessione**: che il tema sia stato scritto non è che sia stato caricato.
 *Il posto dove metterlo c'è già: l'ambiente della sessione si compone da zero, una variabile
 per volta (`CODER.md` §4.5) — quindi la cura sta nel programma e non in un file, come vuole I7.*
 
-### 5-bis.3 ✅ Il ventaglio dei gesti
+### 5-bis.0 ✅ Su Android l'uso primario è **Samsung DeX**, e il tocco è il ripiego
 
-*9 agosto 2026, confermati tutti e sette.*
+*9 agosto 2026. «DeX assolutamente. È l'uso primario che faccio quando uso android perché la
+verità è che usare certi programmi con il touch anziché nel modo classico è un ripiego di
+emergenza, non la normalità.»*
+
+⛔ **Ribalta la priorità con cui era stato progettato l'input Android**, che era tutto attorno al
+telefono in mano — cioè al caso che l'utente quasi non usa.
+
+| | Prima | Adesso |
+|---|---|---|
+| mouse e tastiera fisici (5-bis.8) | un passeggero | **la strada principale** |
+| i sette gesti (5-bis.3) | il modello di input | **il ripiego d'emergenza** |
+| ridimensionare la finestra (§5.1) | un caso limite | **quel che si fa di continuo** |
+
+Con DeX il telefono pilota uno schermo esterno con mouse e tastiera veri: la tela nasce di forma
+**desktop** e non di forma telefono, e la finestra si trascina.
+
+⭐ **Tre decisioni ne escono rafforzate, non indebolite:**
+
+1. **il puntatore disegnato dal client** (5-bis.1) era giusto col dito; con un mouse vero diventa
+   non negoziabile — un puntatore che insegue la mano mentre si lavora «nel modo classico» è la
+   differenza fra usarlo e chiuderlo;
+2. **il ridimensionamento che non tocca il compositore** (§5.1) passa da scelta prudente a scelta
+   obbligata: se trascinando il bordo dieci volte al giorno le finestre *dentro* la sessione si
+   rimescolassero, il prodotto sarebbe inservibile. Era stato deciso per il muro di KWin; si
+   scopre che era giusto anche per l'uso vero;
+3. **la regola sui modificatori di comando** (5-bis.6) era una precisazione; lavorando col
+   classico diventa **portante**, perché le scorciatoie sono metà del lavoro.
+
+⭐ **E una buona notizia sul costo**: se l'uso primario è DeX, il client Android somiglia molto più
+a quello Linux di quanto previsto — stesso modello di interazione, diverso solo nello stack di
+decodifica. Riduce il rischio segnalato in §0.3 spostando Android in fondo: il protocollo non è
+stato progettato per il client sbagliato, perché i due client si somigliano.
+
+### 5-bis.3 ✅ Il ventaglio dei gesti — **il ripiego, non la strada principale**
+
+*9 agosto 2026, confermati tutti e sette. ⚠ E ridimensionati lo stesso giorno da 5-bis.0: su
+Android l'uso primario è DeX, con mouse e tastiera veri. Questi gesti servono al telefono in
+mano, che è il ripiego d'emergenza — restano necessari, ma non sono la cosa da azzeccare per
+prima.*
 
 | Gesto | Effetto |
 |---|---|
