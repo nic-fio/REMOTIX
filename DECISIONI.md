@@ -907,6 +907,14 @@ lo aveva dato per inesistente.
 > secondo percorso di input, e appunti che **oggi non hanno strada** — non sono difficoltà di
 > lettura ma funzionalità mancanti a monte. **Va messo ultimo**, e la decisione si prende sulle
 > misure, non su questo documento.
+>
+> ⏳ **E ha una data di scadenza, posta dall'utente il 9 agosto:** *«tanto Cinnamon sarà l'ultimo
+> DE ad essere supportato, e le cose potrebbero cambiare»*. È la clausola giusta: le tre assenze
+> che pesano — `RecordVirtual`, libei, la clipboard — sono **funzionalità che Mint può portare in
+> qualunque momento**, esattamente come KDE ha portato il ridimensionamento con `kwin!7932`. Chi
+> riapre questa voce **ricloni `muffin` e rifaccia le quattro ricerche** prima di fidarsi di
+> `cinnamon.md`: un riferimento che invecchia in silenzio è peggio di nessun riferimento
+> (`LEZIONI.md` §9.8).
 
 ---
 
