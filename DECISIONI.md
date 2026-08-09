@@ -845,18 +845,17 @@ più. ⚠ Resta fuori, e non è stata chiesta, la terza possibilità — **due c
 desktop insieme**: costerebbe poco con un palco persistente, ma cambia il protocollo e andrebbe
 decisa prima di scriverlo, non dopo.
 
-### 7.3-bis ❓ Dopo quanti secondi di silenzio un client è staccato?
-Il primo dei tre orologi di §4.5, ed è l'unico senza un numero. Con QUIC il passaggio
-WiFi → LTE **non** conta come silenzio — la connessione si porta dietro il cambio di indirizzo
-— quindi la soglia deve coprire solo le interruzioni vere: la galleria, il telefono che si
-spegne, la batteria che finisce.
+### 7.3-bis ~~Dopo quanti secondi di silenzio un client è staccato?~~ → **chiusa il 9 agosto**
+🔸 **30 secondi**, scritti in `SPECIFICHE.md` §5.3 — proposta mia, non pronunciata dall'utente.
+La soglia decide **quando si libera il codificatore**, e non ha altri costi: essere dichiarati
+staccati non fa perdere niente, perché nessuno tiene il posto (§4.4). Con QUIC il passaggio
+WiFi → LTE non conta come silenzio, quindi i 30 secondi coprono solo le interruzioni vere.
 
-### 7.4 Proporzioni: bande o allungamento?
-Credo si risponda da sé — allungare deforma il testo e lo rende illeggibile — ma va detto.
-
-⚠ **Il modello di §5.0 la rimpicciolisce parecchio**: siccome la tela nasce della forma del
-client, all'attacco le proporzioni **combaciano sempre**. Il caso resta solo in due punti: il
-ridimensionamento della finestra durante la sessione, e il ripiego di §5.0-bis su KDE vecchio.
+### 7.4 ~~Proporzioni: bande o allungamento?~~ → **chiusa il 9 agosto**
+🔸 **Si impagina, non si stira** — `SPECIFICHE.md` §6.2. Allungare deforma il testo e lo rende
+illeggibile, che è l'unica cosa che un desktop non può permettersi. Il caso è raro per
+costruzione: all'attacco le proporzioni combaciano sempre, e resta solo durante il
+ridimensionamento e nel ripiego su KDE vecchio.
 
 ### 7.5 ~~Il linguaggio del server~~ → **chiusa l'8 agosto, vedi §6.3**
 C, confermato. Non per eredità: la ragione di v1 era FreeRDP ed è morta con RDP. La ragione
@@ -906,9 +905,11 @@ nella disposizione della sessione**, con i modificatori applicati intorno.
 Sì, nei due versi, e solo testo. La domanda era nata perché `SPECIFICHE.md` diceva
 «server-client», che si legge in un verso solo.
 
-### 7.12 Il «fuori scope»
-V1 aveva un §4 che diceva cosa **non** si fa — dischi, stampanti, X11, multi-monitor — ed è il
-paragrafo che protegge dallo scivolamento. Qui c'è solo `NO WINDOWS`.
+### 7.12 ~~Il «fuori scope»~~ → **chiusa il 9 agosto**
+🔸 Scritto in `SPECIFICHE.md` §12, dieci voci, ciascuna esclusa **deliberatamente** e non
+dimenticata: Windows, i desktop X11, la redirezione di dischi/stampanti/porte/smart card, il
+trasferimento file, immagini e file negli appunti, il multi-monitor come funzione, lo stilo, il
+tocco nativo, la registrazione della sessione, e la compatibilità con client RDP/VNC/SPICE.
 
 ### 7.13 📖 Cinnamon — non si decide, **si studia**
 

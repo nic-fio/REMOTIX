@@ -1,39 +1,539 @@
-REMOTIX_V2 e' l'evoluzione naturale del precedente progetto REMOTIX, ne eredita alcune caratteristiche (alcune gia' sviluppate) e ne sviluppa di nuove ed inedite.
-REMOTIX_V2 e' composto da 2 parti: una parte server e una client. Il server supporta esclusivamente SO Linux. Il client sara' destinato ad ambienti Linux e Adroid. == NO WINDOWS ==
+# SPECIFICHE — che cosa è REMOTIX_V2, e che cosa promette
 
-Ecco le funzionalita' di Remotix-server:
-- Distro agnostic
-- Protocollo RDP proprietario
-- Supporto nativo Wayland (no X11) e supporto per le applicazioni scritte per X11 (tramite Xwayland)
-- Supporto per i seguenti DE:
-  > GNOME
-  > KDE
-  > XFCE
-  > LXQT
-  > CINNAMON (?)
-- Supporto Systemd
-- Accelerazione HW (HEVC e AV1) tramite librerie Mesa/Vulkan (GPU agnostic) e encoder FFMPEG
-- Audio Opus e PCM
-- Supporto Microfono (non urgente)
-- Trasporto: supporto QUIC/TLS
-- Risoluzione schermo fino a 4K
-- Sessioni persistenti (anche in multi-res, ovvero se chiudo una sessione in 720P devo poterla riprendere anche in 4K (e viceversa) e la risoluzione si adatta).
-- sessioni multi-tenant (ogni utente del sistema puo' avere la sua connessione RDP separata dagli altri)
-- Autenticazione PAM (rate limiting)
-- Supporto per connessioni con queste tipologie:
-  > banda minima 30 mbps
-  > Valori di ping, jitter e perdita pacchetti abbastanza importanti
-- Performance audio/video: minimo accettabile 480P, 25 fps, colore 24 bit, target 4K, 60 fps, colore 32 bit (best effort)
-- Predisposizione futura al supporto multi-monitor
-- Supporto alla clipboard testuale server-client
+*Riscritta il 9 agosto 2026, incorporando le 44 decisioni prese l'8 e il 9 agosto.*
 
-VINCOLI.
-Un utente del sistema puo' avere innumerevoli sessioni testuali (ssh/tty) attive contemporaneamente, ma solo 1 grafica attiva (locale/remota) - Sessioni testuali e grafiche convivono contemporaneamente
-Se un utente con sessione grafica locale attiva avvia anche una sessione RDP, la sessione RDP viene rifiutata con un messaggio di errore
-Se un utente con sessione grafica RDP attiva avvia una sessione grafica locale, questa ha la priorita' e la sessione RDP viene killata
+> **Come si legge questo documento.** Qui c'è **che cosa** il prodotto fa. Il **perché** di ogni
+> scelta, con la data e chi l'ha presa, sta in [`DECISIONI.md`](DECISIONI.md), e ogni paragrafo
+> rimanda alla voce corrispondente. Il **come si misura** sta in [`LEZIONI.md`](LEZIONI.md); le
+> regole di chi scrive e di chi revisiona in [`CODER.md`](CODER.md) e [`REVIEWER.md`](REVIEWER.md).
+>
+> Le marche sono quelle di `CODER.md` §5: `[M]` misurato da noi, `[R]` letto nel codice,
+> `[S]` letto in una specifica, `[?]` ipotizzato e non ancora verificato. **Una riga senza marca
+> è una decisione di prodotto, non un fatto tecnico.**
 
-METODOLOGIA
-Lo sviluppo del progetto dovra' essere portato avanti da 2 tipologie di agenti: Coder e Reviewer. Ho preparato 2 documenti in cui vengono riportate le regole che coder e reviewer devono seguire per svolgere il proprio lavoro. I documenti sono nella mia home
+---
 
-LICENZA
-Da decidere sotto che tipo di licenza sviluppare il progetto
+## 1. Che cos'è
+
+REMOTIX_V2 è un sistema di **desktop remoto per Linux**, composto da un server e da due client,
+che parlano un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*.
+
+| | |
+|---|---|
+| **server** | esclusivamente Linux |
+| **client** | Linux e Android |
+| **Windows** | ⛔ **fuori, in entrambi i ruoli** |
+
+È l'evoluzione di REMOTIX v1, che si è fermato alla fase 11 dopo aver servito GNOME e KDE
+parlando RDP. Il patrimonio di v1 — 17.481 righe di C, 4.563 righe di banchi, cinque studi dei
+desktop e il registro delle lezioni — sta sotto `v1/` ed è la base su cui V2 poggia
+(`DECISIONI.md` §6).
+
+### 1.1 Perché RDP muore, in una riga
+
+I tre muri contro cui v1 si è fermato — il tetto a H.264, il client Android che decodificava in
+software, il colore pieno irraggiungibile — **erano tutti e tre di RDP, non del problema**. La
+riga «niente Windows» è la leva che li toglie insieme. Il prezzo, accettato: il protocollo va
+progettato oltre che scritto, e i due client vanno scritti da zero. (`DECISIONI.md` §1.1)
+
+---
+
+## 2. I principi guida
+
+1. **Rilevare le capacità, non la distribuzione.** All'avvio si verifica cosa c'è, si sceglie il
+   percorso migliore e si **dichiara** cosa manca.
+2. **Degradare, non fallire.** Ogni dipendenza mancante ha un ripiego. Il servizio funziona
+   comunque, con meno — ma il ripiego si dichiara nel registro: uno silenzioso produce due
+   comportamenti sotto la stessa etichetta.
+3. **Dipendere, non riscrivere.** Ogni componente che scriviamo è un componente da mantenere per
+   sempre.
+4. ⭐ **Si dipende dal compositore, non dal suo contorno.** Il compositore si insegue per forza:
+   solo lui consegna i fotogrammi e accetta l'input. Blocca-schermo, demoni di inattività,
+   gestori dell'energia e display manager fanno la stessa cosa in quattro modi diversi, con
+   quattro configurazioni che si riscrivono da sole: quelli **non** si inseguono.
+   (`DECISIONI.md` §0.1 — è il principio che ha prodotto diverse delle scelte che seguono)
+5. **Parlare direttamente al compositore**, mai attraverso portali che chiedano autorizzazione a
+   video: un servizio non presidiato non ha nessuno che clicchi.
+
+---
+
+## 3. I tre numeri
+
+Sono i numeri che l'utente pone e a cui la tecnica si adegua, non il contrario. Ogni scelta
+tecnica si giustifica mostrando che avvicina uno di questi. (`CODER.md` §1 e §1-bis)
+
+### 3.1 Qualità dell'immagine
+
+| | |
+|---|---|
+| **MINIMO** | 480p · 25 fps · 24 bit |
+| **DESIDERATO** | 4K · 60 fps · **10 bit per canale** |
+
+⭐ **Il minimo è una garanzia, non un traguardo.** Non è un'asticella da inseguire — v1 la
+superava già `[M]` — ma **il livello sotto cui non si scende e non si stacca**, per quanto brutta
+sia la linea. Nasce dal caso della rete mobile (§8), non da una rinuncia sulla qualità.
+(`DECISIONI.md` §2.1)
+
+**Il desiderato è a 10 bit, non a «32 bit».** Trentadue bit non sono una grandezza esistente: sono
+24 di colore più 8 di trasparenza, e la trasparenza non si trasmette. Dietro l'intenzione
+«massima qualità» stavano due leve distinte, e ne è stata scelta una:
+
+| Leva | Cura | Prezzo |
+|---|---|---|
+| **10 bit per canale** ✅ | le strisce sulle sfumature | quasi nulla, e in hardware ovunque — decoder Android compreso |
+| 4:4:4 `[?]` | il testo colorato sfrangiato `[M]` v1 | ~50 % di banda, e **nessun decoder Android in hardware** |
+
+Il 4:4:4 resta una `[?]` da misurare, non una promessa: sarebbe un'opzione per il solo client
+Linux su GPU capaci, e nessuno ha ancora misurato quanto si veda la differenza.
+(`DECISIONI.md` §2.2-2.3)
+
+### 3.2 Il ritardo
+
+| | Dall'input che arriva al fotogramma che parte |
+|---|---|
+| **TETTO** | 50 ms |
+| **TRAGUARDO** | 40 ms |
+
+⛔ **Si misura solo il pezzo che è nostro.** La rete non è nostra e cambia da un minuto all'altro:
+un requisito «100 ms end-to-end» si fallirebbe stando fermi, per colpa di una galleria — e un
+requisito che si può fallire senza aver sbagliato niente **non viene misurato da nessuno**. Il
+totale che l'utente sente è questo più la rete: si **dichiara**, non si promette.
+
+⚠ **Il ritardo pesa più dei fotogrammi**: 30 al secondo con 40 ms si usano benissimo, 60 con
+200 ms sono insopportabili. Una scelta che alza il ritmo peggiorando il ritardo non si fa — ed è
+uno scambio che si presenta di continuo, perché **ogni memoria intermedia compra fluidità e vende
+risposta**. (`DECISIONI.md` §2.4)
+
+`[?]` Il traguardo dei 40 ms probabilmente **non è raggiungibile su GNOME**, per lo stesso muro
+dei 60 fotogrammi: Mutter ne consegna 37 al secondo e nessuna leva nostra lo sposta. Stima, non
+misura. (`DECISIONI.md` §2.5)
+
+---
+
+## 4. Il protocollo RCP
+
+```
+librcp.so
+rcp_frame_t · rcp_connect() · rcp_session_t
+stretta di mano:  RCP/1
+```
+
+Il nome dice *Control*, non *Display*: il protocollo non porta solo pixel — porta input, appunti,
+geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali.
+
+| | |
+|---|---|
+| **trasporto** | QUIC, con TLS 1.3 obbligatorio |
+| **codec video** | HEVC, con AV1 dove l'hardware lo codifica |
+| **audio** | Opus, con PCM come base sempre disponibile |
+| **canali** | video · audio · input · cursore · appunti · controllo |
+
+⚠ **Il protocollo non è un dettaglio implementativo: è l'arbitro.** In v1 l'oracolo era `mstsc` —
+se disegnava, era giusto. In V2 client e server sono nostri, e **due programmi scritti dalla
+stessa mano che vanno d'accordo non confermano niente**: ripetono lo stesso presupposto. Da cui
+tre obblighi: `RCP.md` si scrive **prima** del codice e abbastanza preciso da poter dare torto a
+qualcuno; client e server si collaudano **contro la specifica**, non l'uno contro l'altro; e dove
+si può, serve un validatore che legga il filo.
+
+### 4.1 La fiducia
+
+Il server si genera un certificato autofirmato all'installazione. Il client, al primo
+collegamento, **lo accetta in silenzio e se lo ricorda**; dalle volte successive, se cambia,
+avvisa. Nessuna impronta da confrontare, nessuna autorità, nessun dominio: si digitano indirizzo,
+porta, utente e password, e basta.
+
+**La password non parte prima** che il server abbia dimostrato di essere quello di ieri —
+l'invariante I3 applicata all'ordine della stretta di mano.
+
+⚠ La prima connessione resta scoperta a un uomo-in-mezzo. **Rischio valutato e accettato** per lo
+scenario previsto: server proprio, rete propria o VPN. (`DECISIONI.md` §1.3)
+
+### 4.2 L'autenticazione
+
+**PAM locale**, servizio `remotix`, con limitazione della frequenza dei tentativi.
+
+`[?]` La forma della limitazione — quanti tentativi, in quanto tempo, con che attesa crescente —
+non è ancora decisa.
+
+---
+
+## 5. La sessione
+
+### 5.1 Una sola sessione grafica per utente
+
+Un utente può avere **innumerevoli** sessioni testuali (ssh, tty) contemporaneamente, ma **una
+sola** grafica — locale o remota. Testuali e grafiche convivono.
+
+| Situazione | Esito |
+|---|---|
+| ha una sessione grafica **locale** attiva e apre una remota | ⛔ la remota è **rifiutata**, con messaggio esplicito |
+| ha una sessione grafica **remota** attiva e ne apre una locale | ⛔ **la locale vince**: la remota viene chiusa |
+
+### 5.2 La sessione sopravvive al client
+
+Il palco — cattura, controllo e schermo virtuale — **appartiene alla sessione, non alla
+connessione**. Si chiude il client e la sessione resta viva; ci si ricollega, anche da un altro
+dispositivo, e si ritrova tutto. È l'invariante I4, ed è il difetto che in v1 rendeva la sessione
+inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
+
+### 5.3 I tre orologi
+
+| Orologio | Quanto | Che cosa scatta |
+|---|---|---|
+| **silenzio del client** | 30 secondi | il client si considera **staccato**, e il codificatore si libera |
+| **inattività dell'utente** | 30 minuti senza input | REMOTIX **stacca** il client: per rientrare servono utente e password |
+| **abbandono della sessione** | 6 ore senza alcun attacco | la sessione si chiude, **con congedo pulito** |
+
+Sono in scala: secondi, minuti, ore. Il secondo e il terzo sono **configurabili**, con quei
+valori come predefiniti.
+
+⭐ **Un client che tace è un client che si è staccato**, e nessuna connessione «tiene il posto».
+Chi arriva entra, senza timeout da aspettare: sparisce il caso «il telefono è morto in galleria e
+ora non posso rientrare nella mia sessione». (`DECISIONI.md` §4.4)
+
+⚠ Con QUIC il passaggio WiFi → LTE **non** conta come silenzio: la connessione si porta dietro il
+cambio di indirizzo. I 30 secondi coprono solo le interruzioni vere.
+
+⚠ «Input» è quel che l'utente manda, non quel che guarda: chi resta mezz'ora a guardare un video
+senza toccare nulla viene staccato. Il costo è piccolo — riattaccarsi è rapido.
+
+### 5.4 Il blocco è di REMOTIX, non del desktop
+
+⛔ **Il blocca-schermo dei desktop resta spento**, com'era in v1. Non è una svista ereditata: è
+una dipendenza, e ha una ragione misurata. Bloccando davvero, su GNOME Mutter **revoca** cattura
+e input `[R]`; su KDE si apre la catena che spegne lo schermo e monta un output fittizio **con un
+filtro che inghiotte tutto l'input** `[R]`; su XFCE e LXQt le cure sarebbero righe di
+configurazione, e su LXQt il demone ne riscrive una da sé.
+
+La sicurezza è la stessa: l'unica strada per quel desktop passa da RCP, e RCP passa da PAM.
+(`DECISIONI.md` §4.3)
+
+⏳ **Con una scadenza dichiarata**: quel ragionamento regge **finché la password è l'unica
+chiave**. Chi un giorno aggiungesse un'autenticazione più forte deve rileggere questa scelta,
+perché allora il blocco del desktop tornerebbe a difendere qualcosa.
+
+### 5.5 Multi-tenant
+
+Più utenti possono avere ciascuno la propria sessione grafica remota, indipendenti.
+
+**Tetto predefinito: 10 sessioni**, configurabile. ⛔ Ma il limite vero non è un conteggio: è un
+**budget** di pixel al secondo, e lo pone il codificatore. Con lo stesso ferro le stesse dieci
+sessioni sono facilissime o impossibili secondo la qualità che ciascuna chiede.
+
+Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — la sola integrata regge
+`[?]` una cinquantina di sessioni al minimo, **8-10 a 1080p30**, **una sola a 4K60**.
+
+**Quando il budget è pieno si rifiuta, dichiarando il motivo.** Non si fa degradare chi sta già
+lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,
+cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
+
+---
+
+## 6. La geometria: la tela e la vista
+
+Sono due cose distinte, ed è la separazione che tiene in piedi sia il riaggancio da dispositivi
+diversi sia il futuro multi-monitor.
+
+| | Di chi è | Quanto cambia |
+|---|---|---|
+| **la tela** — la misura del desktop, quella che le finestre vedono | della **sessione** | si fissa a ogni attacco, e non si muove finché il client resta |
+| **la vista** — che cosa di quella tela vede questo client, e quanto grande | della **connessione** | liberamente |
+
+### 6.1 Il modello
+
+| Momento | Chi decide la misura |
+|---|---|
+| **attacco** | il client: la sessione legge la sua risoluzione e usa quella. È 1:1 |
+| **durante la sessione** | nessuno: se l'utente ridimensiona la finestra, **il client riscala l'immagine** |
+| **riattacco** da un altro dispositivo | il nuovo client, con la sua risoluzione |
+
+⭐ Il caso mobile viene giusto da solo: il telefono si attacca e la tela nasce della forma del
+telefono — pixel veri, niente bande, niente scalatura.
+
+**Ridimensionare la finestra del client non tocca mai il desktop**, su nessuno dei quattro
+compositori. Le ragioni, in ordine di peso: su KDE 6.3.6 — cioè Debian stabile — **non si può**
+`[M]`; la correzione a monte esiste ma Debian non aggiorna Plasma; e ⛔ **anche dove funziona fa
+una cosa peggiore**, perché ridimensionare un output **ridispone le finestre dell'utente** `[R]`.
+La versione «giusta» scompiglia il lavoro, quella «rotta» lo lascia fermo. (`DECISIONI.md` §5.1)
+
+### 6.2 Le proporzioni
+
+**Si impagina, non si stira.** Se la finestra ha proporzioni diverse dalla tela si conservano le
+proporzioni e si mettono le bande: allungare deforma il testo e lo rende illeggibile.
+
+Il caso è raro per costruzione — all'attacco le proporzioni **combaciano sempre** — e resta solo
+durante il ridimensionamento e nel ripiego di §6.3. Sul telefono in verticale la banda sarebbe
+enorme: lì serve lo zoom con scorrimento, che è nel ventaglio dei gesti (§7.2).
+
+### 6.3 Il ripiego su KDE, dichiarato
+
+Al riattacco a misura diversa su KWin < 6.8 la tela **non può** cambiare. Si tiene quella vecchia
+e riscala il client — e non costa una riga in più, perché è lo stesso codice del punto
+«durante la sessione». **Il ripiego si dichiara nel registro.**
+
+### 6.4 «Adatta il desktop a questa finestra»
+
+Il ridimensionamento vero della tela resta come **scelta esplicita dell'utente**, mai come
+automatismo. Dove il compositore non lo sa fare la voce è **spenta, con la ragione dichiarata**.
+Quando si scriverà, si scriverà nella forma della **negoziazione PipeWire** — una strada sola per
+GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.
+
+### 6.5 Multi-monitor
+
+**Fuori scope come funzione**, ma l'implementazione resta parametrica su N: una tela più grande di
+quel che un singolo schermo mostra **è già** la forma del multi-monitor — due viste sulla stessa
+tela invece di una.
+
+---
+
+## 7. L'input
+
+### 7.1 Il puntatore lo disegna il client
+
+Il dito trascina un puntatore **disegnato dal client**. Non è il tocco diretto, dove il dito è il
+puntatore: è il trackpad, e si vede dove si sta per cliccare **prima** di cliccare.
+
+Tre problemi chiusi insieme: ⭐ **la latenza percepita** — il puntatore si muove alla velocità del
+dito, non della rete; **le scie e le posizioni vecchie**, che nascono dal puntatore che viaggia
+dentro il video; e **la precisione**, perché un dito è largo ~10 mm e i bersagli ~4.
+
+⛔ **Da cui un obbligo**: il cursore del desktop **non deve mai finire nell'immagine catturata**,
+altrimenti se ne vedono due. Su GNOME è già escluso; su KDE e wlroots ci finisce `[M]`, e la cura
+è un tema con un cursore 1×1 a trasparenza piena.
+
+⚠ **E va verificata, non sperata**: su wlroots un tema che carica **zero** cursori fa ripiegare la
+libreria su uno **incorporato e visibile** `[R]`. L'esito si controlla dopo l'avvio della
+sessione. (`DECISIONI.md` §5-bis.1-2)
+
+### 7.2 I gesti
+
+| Gesto | Effetto |
+|---|---|
+| 1 dito trascina | muove il puntatore |
+| 1 dito tap | clic sinistro |
+| 2 dita tap | clic destro |
+| 2 dita trascina | rotella / scorrimento |
+| tap-e-mezzo | trascinamento e selezione |
+| 3 dita tap | clic centrale |
+| pizzico | ingrandisce la **vista** del client |
+
+⭐ **È un punto di partenza dichiarato, non un impegno.** I gesti si giudicano usandoli, non
+leggendoli: chi trova questa tabella diversa fra sei mesi non ha trovato un difetto.
+
+### 7.3 La tastiera
+
+**Le lettere viaggiano come lettere; i tasti che lettere non sono viaggiano come posizioni.**
+
+| Che cosa | Come |
+|---|---|
+| lettere, numeri, segni | **come lettere** |
+| Invio, Tab, Esc, frecce, F1-F12, Ctrl, Alt, Maiusc, Super | **come posizioni** — stanno nello stesso posto su ogni tastiera |
+
+Il motivo: una tastiera fisica non manda lettere, manda **posizioni**, ed è il desktop a decidere
+che lettera sia. Se sul filo viaggiassero le posizioni, un client con tastiera americana attaccato
+a una sessione italiana produrrebbe **le lettere sbagliate**. E su Android una tastiera non ha
+posizioni affatto: è un metodo di inserimento che produce testo.
+
+⛔ **Con una precisazione**: `Ctrl+C` non è testo, è un comando. Una battuta viaggia come lettera
+quando **scrive del testo**; quando è premuto un modificatore di comando — Ctrl, Alt, Super —
+viaggia come posizione. Maiusc e AltGr non contano: servono a *fare* la lettera.
+
+**La disposizione della sessione si rinegozia a ogni attacco e riattacco**, come la risoluzione —
+e serve a due cose: rendere *raggiungibili* i caratteri, e far combaciare le posizioni delle
+scorciatoie (su una tastiera tedesca la Z sta dove da noi sta la Y).
+
+⚠ **Quel che non è scrivibile viene dichiarato, non falsificato.** Se un carattere non esiste su
+nessun tasto della disposizione — un'emoji, un alfabeto diverso — non esce **niente**, e il server
+lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md` §5-bis.6-7)
+
+### 7.4 Mouse e tastiera fisici sul telefono
+
+Il mouse passa da *Pointer Capture*: il cursore di Android sparisce — altrimenti se ne vedrebbero
+due — e i suoi spostamenti muovono **lo stesso puntatore che muove il dito**. Una freccia sola,
+due modi di spingerla. L'accelerazione la applica il **client**: applicata da entrambi si
+sommerebbe.
+
+### 7.5 Che cosa porta il canale di input
+
+| | |
+|---|---|
+| puntatore **assoluto** | sì — è l'unico percorso del puntatore |
+| **posizioni** di tasto | sì |
+| **lettere** | sì, ed è la strada principale |
+| tocco multi-dito | **posto riservato**, non implementato `[?]` |
+| stilo (pressione, inclinazione) | fuori |
+
+---
+
+## 8. La rete e la degradazione
+
+### 8.1 Gli scenari da servire
+
+Il requisito è **l'adattamento**, non una soglia di banda:
+
+| Collegamento | Banda | Ritardo e perdita | Che cosa fa il server |
+|---|---|---|---|
+| fisso buono | 30+ Mbps | bassi | punta al desiderato |
+| fisso modesto, WiFi | 5–15 Mbps | medi | **spende tutto quel che c'è** |
+| **mobile critico** | sotto i 2 Mbps, variabile | alti, con perdita | tiene il minimo, **e non stacca** |
+
+### 8.2 La regola dell'adattamento — invariante I1
+
+> **Il ritmo non cala mai per prudenza, per risparmio o perché la scena è ferma. Cala solo quando
+> la misura dimostra che la linea non porta, e ogni discesa è dichiarata nel registro.**
+
+Vietata l'euristica prudente, obbligatorio l'adattamento misurato. Il risparmio di banda **non è
+un obiettivo di questo prodotto**: la banda non spesa non torna utile a nessuno, e la qualità
+persa si vede.
+
+### 8.3 Sotto il minimo
+
+**Si calano i fotogrammi. Mai sgranare l'immagine, mai staccare.**
+
+Su un desktop degradare nel tempo è meglio che degradare nello spazio: a pochi fotogrammi al
+secondo ognuno resta nitido e il testo si legge — è lento ma ci si lavora. Sgranando, il testo
+diventa illeggibile. E a ritmo basso si possono spendere più bit su ciascun fotogramma.
+
+⭐ È l'utente a decidere quando chiudere il client; la sessione resta e si riprende quando la
+linea migliora.
+
+### 8.4 QUIC
+
+Oltre alla cifratura, due cose che il trasporto regala e che vanno sfruttate: la **misura
+continua** di quanto porta la linea, che in v1 andava ricavata a mano; e la **migrazione della
+connessione**, che tiene viva la sessione quando il telefono passa da WiFi a rete mobile.
+
+---
+
+## 9. Gli appunti
+
+**Solo testo, nei due versi.** Si copia sul desktop remoto e si incolla sul dispositivo in mano, e
+viceversa — ed è il secondo verso quello che si usa di più.
+
+Niente immagini, niente file, niente formati ricchi: il testo copre quasi tutti gli usi, costa
+pochi byte e non ha negoziazione, mentre le immagini aprono la questione dei formati e soprattutto
+di **chi paga la banda** quando si copia una schermata da 8 MB su un collegamento che stiamo
+faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
+
+⚠ Su GNOME gli appunti appartengono alla sessione remota; su KDE e wlroots **al compositore**, e
+ci sono anche senza di noi.
+
+---
+
+## 10. L'audio
+
+| | |
+|---|---|
+| **uscita** | **Opus**, con **PCM** come base sempre disponibile |
+| **microfono** | dal client alla sessione — **non urgente**, e può slittare |
+| sorgente e destinazione | **PipeWire** |
+
+⚠ Invariante I5: **il volume appartiene alla sessione.** Chi si collega trova il livello al
+massimo; un cursore lasciato in basso non sopravvive alla riconnessione.
+
+⚠ E una trappola misurata da v1: un nodo audio applica il volume **a valle della presa del
+monitor**, quindi chi cattura il monitor riceve il segnale a fondo scala qualunque cosa dica il
+cursore, **muto compreso**. La proprietà che sposta la presa esiste ma è spenta di suo.
+
+---
+
+## 11. I desktop e il sistema
+
+### 11.1 Wayland, e le applicazioni X11
+
+**Solo sessioni Wayland.** Le applicazioni scritte per X11 restano supportate **via XWayland**.
+I desktop X11 come tipo di sessione sono fuori scope.
+
+### 11.2 I desktop supportati, in ordine
+
+| | Stato |
+|---|---|
+| **GNOME** | servito in v1 `[M]` |
+| **KDE Plasma** | servito in v1 `[M]` |
+| **XFCE** (labwc) | studiato, non ancora servito |
+| **LXQt** (labwc) | studiato, non ancora servito |
+| **Cinnamon** | 📖 **studiato il 9 agosto, ultimo della fila** — vedi [`cinnamon.md`](cinnamon.md) |
+
+⛔ **Su Cinnamon tre cose non esistono a monte**: `RecordVirtual`, libei, e **gli appunti** — né la
+via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, e la decisione
+«dentro o fuori» si prende su quella, non sullo studio. (`DECISIONI.md` §7.13)
+
+### 11.3 Il sistema attorno
+
+| | |
+|---|---|
+| **init** | systemd |
+| **distribuzioni** | rilevamento delle capacità e degradazione dichiarata; **Debian e Ubuntu** come riferimento |
+| **spegnimento, riavvio, sospensione** | **tolti** alla sessione remota |
+| **GPU** | scelta per **id PCI** con una regola udev. ⚠ Negare il nodo lo nega a **tutta la sessione dell'utente**: chi usa l'altra scheda per altro va messo nel gruppo della regola |
+
+### 11.4 L'accelerazione hardware
+
+**L'astrazione è `libavcodec`**, non le API dei costruttori: si sceglie il codificatore **per
+nome, a runtime**, in base a cosa si trova. Un solo percorso di codice, nessuna riga specifica per
+costruttore. La scala di preferenza:
+
+1. `hevc_vaapi` · `hevc_qsv` · `hevc_nvenc` — la strada normale
+2. `av1_*` dove c'è — Intel Arc/Xe2, AMD RDNA3+, NVIDIA Ada+
+3. ripiego software: **SVT-AV1** (BSD-3) — ⛔ **mai x265**, che è GPL-only e incatenerebbe tutto
+   il server
+
+⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** (RDNA2 e Alder Lake lo
+decodificano soltanto): il desiderato a 10 bit passa da **HEVC Main10**.
+
+`[?]` Vulkan Video resta una delle opzioni fra cui `libavcodec` può scegliere. Non è la prima
+perché non porta il controllo del bitrate — che è precisamente la parte che decide se i Mbps
+risultino guardabili.
+
+---
+
+## 12. Fuori scope
+
+Il paragrafo che protegge il progetto dallo scivolamento. Ciascuna riga è **esclusa
+deliberatamente**, non dimenticata.
+
+| Che cosa | Perché |
+|---|---|
+| **Windows**, come server e come client | è la leva di §1.1 |
+| **desktop X11** come tipo di sessione | le applicazioni X11 restano, via XWayland |
+| **redirezione di dischi, stampanti, porte seriali, smart card** | non serve al mestiere di questo prodotto |
+| **trasferimento file** | idem — e la clipboard testuale copre il caso frequente |
+| **immagini e file negli appunti** | §9 |
+| **multi-monitor** come funzione | §6.5: predisposizione sì, funzione no |
+| **stilo** con pressione e inclinazione | §7.5 |
+| **tocco nativo multi-dito** | posto riservato nel protocollo, non implementato |
+| **registrazione della sessione** su file | mai chiesto |
+| **compatibilità con client RDP, VNC o SPICE** | è il contrario di §1.1 |
+
+---
+
+## 13. Le questioni aperte
+
+Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo stato stanno in
+`DECISIONI.md` §7.
+
+| | |
+|---|---|
+| ⏳ **la licenza** | rinviata a fine progetto. Fino ad allora vale il solo vincolo di §11.4: niente x265 |
+| 📖 **Cinnamon** | studiato, da misurare — §11.2 |
+| `[?]` **il 4:4:4** | §3.1 |
+| `[?]` **la forma della limitazione dei tentativi** PAM | §4.2 |
+| `[?]` **il tocco nativo multi-dito** | §7.5 |
+| `[?]` **il puntatore relativo** per le applicazioni che catturano il puntatore | segnalato dal server, non dal client |
+
+---
+
+## 14. Il modo di lavorare
+
+Lo sviluppo è portato avanti da due tipi di agenti, con le regole scritte nei loro documenti:
+
+| | |
+|---|---|
+| [`CODER.md`](CODER.md) | che cosa costruire e come — con i tre numeri, gli invarianti e le regole di misura |
+| [`REVIEWER.md`](REVIEWER.md) | come si cercano le **contraddizioni**. Il verdetto è sempre «questo contraddice X», mai «questo è giusto» |
+| [`LEZIONI.md`](LEZIONI.md) | il fondamento condiviso: come si misura, come si prova, come si impara. **Si legge prima di tutto** |
+| [`DECISIONI.md`](DECISIONI.md) | che cosa è stato deciso, quando, da chi, e con che grado di certezza |
+
+⛔ **E la regola che tiene insieme tutto**: quando una misura contraddice questo documento, lo si
+aggiorna **nello stesso momento**, con la data e la marca della fonte. Un riferimento che
+invecchia in silenzio è peggio di nessun riferimento.
