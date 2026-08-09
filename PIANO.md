@@ -129,18 +129,58 @@ di misurare al suo posto, e non riscrive il codice su un `[?]` senza prima misur
 
 ## 1. I due binari
 
-Il **client Android non è una fase**: è un secondo binario che attraversa metà del piano. Si
-innesta **dopo la fase 4**, quando il protocollo è stato esercitato da capo a fondo su un client
-solo — abbastanza tardi da non inseguire un bersaglio mobile, abbastanza presto da scoprire i
-difetti del protocollo prima che ci si costruisca sopra.
+Il server si scrive avendo in mente **tutti e due** i client. Ma il **client Linux viene prima**,
+e non per gerarchia: **per il costo delle prove**. Ogni giro su Android costa compilazione,
+installazione, un dispositivo o un emulatore, strumentazione più difficile e automazione peggiore.
+Farlo in parallelo a un server che si muove ancora moltiplica quel costo per ogni giro.
 
 ```
   binario A — server + client Linux
   0 ─ 1 ─ 2 ─ 3 ─ 4 ─ 5 ─ 6 ─ 7 ─ 8 ─ 9 ─ 10 ─ 11 ─ 12 ─ 13
-                      │
-                      └──▶ binario B — client Android
-                            A1 ─ A2 ─ A3 ─ A4 ─ A5
+      │       ·                      │
+      │       · sonda Android        └──▶ binario B — client Android
+      │       ·  (50 righe)                A1 ─ A2 ─ A3 ─ A4 ─ A5
+      │                                    ↑ in parallelo a 10-11, che non toccano il filo
+      └─ cliente di prova, scritto dalla SPECIFICA
 ```
+
+### 1.1 ⛔ Che cosa costa spostare Android in fondo, e come si compensa
+
+*Deciso il 9 agosto 2026, dopo che il piano lo innestava alla fase 4.*
+
+Nella prima stesura Android stava alla fase 4 **non** per fare prima: era il **secondo lettore del
+protocollo**, l'unica cosa capace di accorgersi che server e client condividono lo *stesso*
+fraintendimento (§0.4). Spostandolo in fondo, tutto ciò che si costruisce fra la 4 e la 12
+poggerebbe su un protocollo validato da **una sola** implementazione — e un difetto di disegno
+scoperto alla fase 12 presenterebbe il conto tutto insieme.
+
+⭐ **Ma quel mestiere non deve farlo Android.** Lo può fare un lettore molto più economico, purché
+abbia la proprietà che conta: **essere scritto dalla specifica, non dal codice**.
+
+| | |
+|---|---|
+| **il cliente di prova** | poche centinaia di righe, **in un linguaggio diverso dal server**, scritto leggendo `RCP.md` e **mai** il C. Aggiunto alla **fase 1**, cresce con le fasi |
+| perché non basta il validatore | il validatore dice «questo byte non è conforme»; il cliente di prova dice **«voi due vi siete capiti su una cosa che la specifica non dice»** |
+
+⚠ **Il rischio residuo, dichiarato e accettato**: restano cose che solo Android può rivelare e che
+nessun lettore sostituisce — il comportamento di MediaCodec, il tocco vero sotto le dita, l'IME, la
+batteria, la rete che cambia in tasca. Quelle arrivano tardi, e va bene così **tranne una**.
+
+### 1.2 La sonda Android, presto e a poco prezzo
+
+L'unica incognita di Android che **non** può aspettare è quella che ha ucciso v1: **che il telefono
+decodifichi in hardware quel che produciamo**.
+
+Non serve un client per saperlo. Servono ~50 righe che diano un file **HEVC Main10** a MediaCodec e
+dicano se è stato decodificato **in hardware** e a che ritmo. Va nella **fase 2**, appena il primo
+fotogramma esiste.
+
+⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero**, non perché il file si è
+aperto: «ha istanziato un decoder ⇒ è in hardware» è la forma d'errore E1, una condizione
+necessaria presa per sufficiente. Si guarda il **nome** del decoder scelto (`c2.` contro `OMX.`
+software) **e** il ritmo, e i due devono concordare.
+
+Se la risposta fosse **no**, è molto meglio saperlo con due fasi costruite che con nove.
 
 ---
 
@@ -185,6 +225,11 @@ tela 1920×1080, desktop GNOME»*. O dice perché no.
 **Controllo positivo del validatore**: gli si dà una registrazione **con un errore dentro** e si
 verifica che lo veda. Uno strumento che non ha mai trovato niente non è pulito: è non certificato.
 
+⭐ **E qui nasce il cliente di prova** (§1.1): la stretta di mano scritta **una seconda volta**, in
+un linguaggio diverso, **leggendo solo `RCP.md`**. Chi lo scrive non guarda il C — se lo guardasse
+ne erediterebbe i fraintendimenti, e non servirebbe più a niente. Cresce di fase in fase insieme al
+protocollo.
+
 **Si riusa**: `autenticazione.c` (144 righe, PAM), `registro.c` (140).
 
 ---
@@ -205,6 +250,10 @@ crollato»: **i pixel**.
 
 ⚠ Qui la codifica è **software**, di proposito. L'accelerazione è la fase 8, e metterla prima
 significherebbe non sapere quale dei due pezzi sbaglia.
+
+⛔ **E qui va la sonda Android** (§1.2), che è la sola cosa del binario B che non può aspettare: un
+file HEVC Main10 dato a MediaCodec, per sapere **adesso** se il telefono lo decodifica in hardware.
+È il muro contro cui è morto v1, e scoprirlo qui costa due fasi invece di nove.
 
 ---
 
@@ -400,7 +449,12 @@ senza dichiararli (`LEZIONI.md` §2.5-bis).
 
 # BINARIO B — il client Android
 
-*Si innesta dopo la fase 4. Kotlin, e MediaCodec per la decodifica.*
+*Si innesta **dopo la fase 9**, quando l'esperienza su Linux è completa e giudicata, e il
+protocollo è stato esercitato dalla stretta di mano fino alla rete cattiva. Può procedere **in
+parallelo alle fasi 10-11**, che sono lavoro di server e non toccano il filo.*
+
+*Kotlin, e MediaCodec per la decodifica. La domanda che di solito apre questo binario — «il
+telefono ce la fa?» — a questo punto ha già risposta, perché l'ha data la sonda della fase 2.*
 
 ## Fase A1 — Il filo su Android
 La stretta di mano e l'attacco. L'utente vede: *«ammesso, sessione ripresa»* sul telefono.
@@ -440,8 +494,12 @@ e affrontarla prima di avere qualcosa da guardare significa non sapere se il pal
 **Un desktop solo fino alla 9**: gli altri tre si aprono quando la catena è chiusa, altrimenti si
 inseguono differenze di compositore e difetti nostri nello stesso momento.
 
-**Android dopo la 4**: quando il protocollo è stato esercitato dalla stretta di mano all'input, ma
-prima che si sia costruito troppo sopra i suoi difetti.
+**Android dopo la 9**, e non dopo la 4 come diceva la prima stesura: **le prove su Android costano
+dieci volte quelle su Linux**, e farle contro un server che si muove ancora moltiplica il costo per
+ogni giro. Il mestiere di secondo lettore che Android doveva fare passa al **cliente di prova**
+della fase 1 — più economico, e con la stessa proprietà che conta: **è scritto dalla specifica, non
+dal codice**. Resta presto solo la **sonda** della fase 2, perché la decodifica in hardware sul
+telefono è l'unica incognita che non si può rimandare.
 
 ---
 

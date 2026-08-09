@@ -74,6 +74,34 @@ altrimenti àncora; si prova a **rompere**, costruendo l'ingresso che violerebbe
 rilievo si chiude con **una misura**, non con una discussione; e una revisione verde è **«non ho
 trovato niente»**, mai «è giusto».
 
+### 0.3 ✅ Il client Linux prima di quello Android — per il costo delle prove
+
+*9 agosto 2026. «Il server lo si sviluppa ovviamente avendo in mente i 2 client, ma resta il
+problema dei test: per android è molto più complicato, mentre lo è meno per linux».*
+
+Il binario Android si sposta **da dopo la fase 4 a dopo la fase 9**, e può poi procedere in
+parallelo alle fasi 10-11, che sono lavoro di server e non toccano il filo.
+
+⛔ **Ma lo spostamento porta via una difesa**, e va compensata. Android non stava alla fase 4 per
+fare prima: era il **secondo lettore del protocollo**, l'unica cosa capace di accorgersi che
+server e client condividono lo *stesso* fraintendimento (§0.2). Senza, tutto ciò che si costruisce
+fra la 4 e la 12 poggerebbe su un protocollo validato da **una sola** implementazione.
+
+🔸 **Le due compensazioni:**
+
+1. **il cliente di prova**, aggiunto alla fase 1 — poche centinaia di righe, **in un linguaggio
+   diverso dal server**, scritto leggendo `RCP.md` e **mai** il C. Fa lo stesso mestiere a un
+   decimo del costo. Il validatore dice «questo byte non è conforme»; il cliente di prova dice
+   **«voi due vi siete capiti su una cosa che la specifica non dice»**;
+2. **la sonda Android**, nella fase 2 — ~50 righe che danno un file HEVC Main10 a MediaCodec e
+   dicono se il telefono lo decodifica **in hardware**. È l'unica incognita di Android che non può
+   aspettare, perché è il muro contro cui è morto v1. E si dichiara riuscita solo con la prova che
+   sia hardware davvero: «ha istanziato un decoder ⇒ è in hardware» è la forma d'errore **E1**.
+
+⚠ **Il rischio residuo, dichiarato e accettato**: restano cose che solo Android può rivelare e che
+nessun lettore sostituisce — MediaCodec sotto carico, il tocco vero sotto le dita, l'IME, la
+batteria, la rete che cambia in tasca. Quelle arrivano tardi.
+
 ---
 
 ## 1. Il protocollo
