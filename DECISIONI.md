@@ -225,9 +225,9 @@ potuto essere prese altrimenti.
 | 3 | **il byte alto del `tipo` dice il canale** di uno stream | chi riceve uno stream unidirezionale deve sapere che cosa c'è dentro **prima** di leggerlo, e non era scritto da nessuna parte | §2.5 |
 | 4 | **niente 0-RTT** | i dati 0-RTT si ripetono, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore | §2.3 |
 | 5 | `disable_active_migration` **non si manda** | dichiararla spegne in silenzio la ragione per cui QUIC è stato scelto | §2.3 |
-| 6 | **credito degli stream ≥ 256, e va rinnovato** | il video consuma uno stream per fotogramma: chi imposta il numero e non rinnova il credito funziona **quattro secondi** | §2.3 |
-| 7 | l'impronta si calcola sulla **chiave pubblica**, non sul certificato | un certificato riemesso con la stessa chiave non deve far scattare l'avviso | §4.1-bis |
-| 8 | il client **spegne** i controlli X.509 di serie | altrimenti rifiuta il nostro autofirmato e la causa sta nella libreria, non nel nostro codice | §4.1-bis |
+| 6 | ⛔ ~~credito degli stream ≥ 256~~ → **il server ne concede ≥ 16 al client** | *corretta il 9 agosto sera (**R1.14**): il 256 era un parametro che pretendevamo dal client, e **con un browser lo sceglie lui**. Chi implementava leggendo questa riga scriveva 256 dove `RCP.md` dice 16* | §2.3 |
+| 7 | ⛔ ~~l'impronta si calcola sulla chiave pubblica~~ → **sul certificato in forma DER** | *corretta il 9 agosto sera (**R1.14**): `serverCertificateHashes` confronta l'impronta **del certificato**. Chi pubblicava quella della chiave otteneva un confronto che **non combacia mai**, con il sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta. ⚠ E la ragione che ci stava accanto — «un certificato riemesso con la stessa chiave non deve far scattare l'avviso» — **è decaduta**: con l'impronta pubblicata dalla pagina, ogni riemissione la cambia comunque* | §4.1-bis |
+| 8 | ⛔ ~~il client spegne i controlli X.509 di serie~~ | *caduta il 9 agosto sera (**R1.14**): il client è una pagina, e non ha nessun controllo X.509 da spegnere. Era un resto della stesura con un client nostro, rimasto nel documento che dice che cosa è stato deciso* | — |
 | 9 | **`RESPINTO` è il congedo dell'autenticazione**, e non ne segue un altro | §4.4 e §8.2 si sovrapponevano: due implementazioni potevano indovinare diverso, o **uguale perché scritte dalla stessa mano** | §4.4 |
 | 10 | **un solo tentativo di credenziali per connessione** | il limitatore conta una cosa sola, e non serve una macchina a stati per i tentativi ripetuti | §4.4 |
 | 11 | ⭐ **la limitazione: 5 in 5 minuti, poi attesa da 30 s che raddoppia fino a 15 min** — più **un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso»** | chiude la `[?]` di `SPECIFICHE.md` §4.2. Il ritardo fisso toglie il **tempismo** come canale: senza, la distinzione fra «utente inesistente» e «password sbagliata» che §4.4 vieta di scrivere la si legge col cronometro | §4.4-bis |
@@ -832,6 +832,29 @@ non posso rientrare dalla mia sessione» che v1 aveva dovuto tamponare con keepa
 
 Sparisce così anche il bivio *subentro contro attesa*: non esiste più, perché non esiste il
 posto occupato.
+
+> ### ⛔ Precisata la sera del 9 agosto 2026 — questa voce parlava solo del **fantasma**
+>
+> *«Se un utente ha già una sessione grafica remota attiva, e ne vuole attivare una seconda da un
+> secondo device, la seconda connessione viene rifiutata.»*
+>
+> La revisione di `RCP.md` ha trovato che il protocollo non sapeva esprimere il caso **remoto
+> contro remoto** — sei attaccato dal portatile e apri dal telefono — e che i motivi disponibili
+> dicevano tutti «locale», cioè avrebbero mostrato all'utente una frase falsa.
+>
+> ⭐ **La regola completa sono due righe, e il discrimine è l'orologio del silenzio:**
+>
+> | Il client che c'era | Che cosa succede a chi arriva |
+> |---|---|
+> | **tace da 30 secondi** — il fantasma di questa voce | è **staccato**, non occupa niente: chi arriva **entra** |
+> | **è vivo e attaccato** | chi arriva è **rifiutato**, con `GIA_ATTIVA_REMOTA` (`RCP.md` §8.2) |
+>
+> ⭐ **La seconda riga non è nuova: è l'invariante I2** — *«la seconda connessione è rifiutata con
+> messaggio esplicito»* — che nessuno aveva collegato a questa voce. E il nuovo motivo è il gemello
+> remoto di `GIA_ATTIVA_LOCALE`, così come `SPECIFICHE.md` §5.1 ha già la coppia locale.
+>
+> ⚠ **Il prezzo, dichiarato**: se il portatile si spegne di colpo senza congedarsi, dal telefono si
+> entra **dopo trenta secondi**. È lo stesso orologio di §4.5, e nessuno l'ha spostato.
 
 ### 4.5 🔸 I tre orologi della sessione
 

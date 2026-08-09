@@ -36,7 +36,7 @@ specificato di tutti.
 
 | | Prima | Adesso |
 |---|---|---|
-| corpi di messaggio definiti byte per byte | 2 su 22 | **22 su 22** (§6, §7) |
+| corpi di messaggio definiti byte per byte | 2 su 22 | **24 su 24** (§6, §7) — ⚠ *diceva «22 su 22», e il conto era della prima stesura: i due tipi aggiunti il 9 agosto portano il totale a 24. Corretto dal rilievo **R1.29**, e non è pedanteria — quella casella è **l'unica prova che il documento porta di essere completo**, e chi la verificava contando ne trovava due in più* |
 | tipi elementari (numeri, stringhe, elenchi) | — | §6.0 |
 | come si riconosce a quale canale appartiene uno stream | — | §2.5 |
 | che cosa pretende il trasporto (finestre, stream, migrazione, 0-RTT) | 3 parametri | §2.3 |
@@ -68,10 +68,13 @@ nessuna**. Dal primo byte scritto in poi, questo documento si tocca solo come di
 ```
         CLIENT                                            SERVER
           │                                                 │
-          │  ①  QUIC + TLS 1.3        UDP 7447               │
+          │  ⓪  la PAGINA, in TCP     porta 7447             │
+          │◀──── e qui l'utente vede l'avviso, una volta ────│
+          │                                                 │
+          │  ①  WebTransport su HTTP/3   UDP 7447            │
           │────────────────────────────────────────────────▶│
-          │◀──── certificato ───────────────────────────────│
-          │  ② il client CONFRONTA col ricordo               │
+          │  ② il BROWSER verifica l'impronta che            │
+          │     la pagina gli ha dichiarato                  │
           │                                                 │
           │  ③  CIAO  (versione, capacità del client)        │
           │────────────────────────────────────────────────▶│
@@ -158,6 +161,16 @@ cui possiamo dire «questa versione non la parlo» è il percorso. ⛔ Resta com
 controllo di versione in `CIAO`/`ECCOMI` (§9): **il percorso non lo sostituisce** — un percorso si
 può digitare a mano, e un controllo che si può aggirare digitando non è un controllo.
 
+⛔ **E le due DEVONO coincidere**: un `CIAO(versione=2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`, non
+una negoziazione da risolvere. Un percorso sconosciuto si rifiuta con **404**.
+
+> ⚠ *Le due righe qui sopra sono della sera del 9 agosto 2026, rilievo **R1.24**.* Il documento
+> diceva che il percorso «non sostituisce» il controllo, e **non diceva che i due dovessero
+> concordare**: §9 fa scegliere al server la versione più alta che non superi quella del `CIAO`,
+> quindi un `CIAO(2)` su `/rcp/1` produceva tre esiti tutti difendibili — `ECCOMI(2)`,
+> `ERRORE_PROTOCOLLO`, `VERSIONE_INCOMPATIBILE`. E lo stato HTTP del rifiuto non era scritto: 404,
+> 400 e 421 erano tutti leciti, e la pagina non li distingue.
+
 ⛔ **NON DEVE esistere un battito applicativo.** Il tempo di inattività di QUIC fa già quel
 mestiere, e un secondo meccanismo produrrebbe due verità sullo stesso fatto.
 
@@ -175,7 +188,18 @@ preteso**.
 |---|---|
 | **il server DEVE concedere credito** al client per i suoi stream unidirezionali: almeno **16** disponibili in ogni momento | il client apre uno stream di input e uno per ogni trasferimento di appunti. Se il credito finisse, **l'input non partirebbe affatto** e il sintomo sarebbe «il desktop non risponde» |
 | **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta e viene rinnovato mano a mano che gli stream si chiudono |
-| ⛔ **e quando il credito manca, si BUTTA il fotogramma, non si aspetta** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Il fotogramma vecchio non serve più: ne sta già arrivando uno nuovo. È §5.1 applicata a monte |
+| ⛔ **e quando il credito manca si butta il fotogramma — ma MAI una chiave** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Un **delta** vecchio non serve più: ne sta già arrivando uno nuovo. ⛔ Un fotogramma **chiave** invece si aspetta, perché è l'unica cosa che rimette in piedi il decodificatore (§5.2). E in tutt'e due i casi **si scrive nel registro** |
+
+> ⛔ *Corretta la sera del 9 agosto 2026, rilievo **R1.9**, e la sequenza che la rompeva è questa.*
+> La linea peggiora, il server abbandona un delta e — come §5.2 gli impone — prepara subito una
+> **chiave**. In quel momento il credito è esaurito, perché è la stessa condizione che ha prodotto
+> l'abbandono. La riga vecchia ordinava di **buttare**: il fotogramma buttato era la chiave, che
+> §5.2 vieta di abbandonare con un ⛔. Due righe normative opposte, e nessuna citava l'altra.
+>
+> ⚠ E il caso si richiudeva su sé stesso: il client chiede una chiave, il server la produce, il
+> credito manca ancora, la butta ancora — **schermo fermo, e nessuna riga nel registro che dica
+> perché**, perché l'obbligo di registro di §5.1 parla di *abbandono* e lì lo stream non era mai
+> nato. Ora l'obbligo copre tutt'e due i casi.
 | **il server NON DEVE offrire 0-RTT** | i dati 0-RTT si possono **ripetere**, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore |
 | **il server NON DEVE disabilitare la migrazione** | è la ragione per cui QUIC è stato scelto (`SPECIFICHE.md` §8.4): il telefono che passa da WiFi a rete mobile |
 
@@ -216,9 +240,9 @@ nessuna parte.*
 
 | Stream | Chi lo apre | Quanti |
 |---|---|---|
-| **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la connessione |
+| **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la sessione |
 | **video** — unidirezionale | il server | uno **per fotogramma** |
-| **input** — unidirezionale | il client | **uno solo**, aperto all'attacco e tenuto aperto |
+| **input** — unidirezionale | il client | **uno solo**, aperto ⛔ **dopo aver ricevuto `SESSIONE`** e tenuto aperto |
 | **appunti** — unidirezionale | entrambi | uno **per trasferimento** |
 
 ⛔ **Il client NON DEVE aprire stream bidirezionali oltre lo 0. Il server NON DEVE aprire stream
@@ -257,9 +281,18 @@ protesti (§0), non lo vedrà nessuno finché non produrrà un sintomo lontano e
 È `REVIEWER.md` §5 applicata al filo: *«l'indulgenza che nasconde è esattamente ciò che devi
 togliere»*.
 
-⚠ **L'unica eccezione, e ha una forma precisa**: le **capacità** dichiarate nella stretta di mano
-(§4.3). Lì una voce sconosciuta si ignora, perché è il meccanismo con cui le versioni future si
-capiscono. Ma è ignorare *un'offerta*, non *un comando*.
+⚠ **Le eccezioni sono cinque, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
+
+| # | Dove | Che cosa si tollera, e perché |
+|---|---|---|
+| 1 | §4.3 | una **capacità** sconosciuta — nome o valore — si ignora: è il meccanismo con cui le versioni future si capiscono. ⚠ È ignorare *un'offerta*, non *un comando* |
+| 2 | §6.3 | un **datagram** corrotto o troppo corto si scarta invece di chiudere: è per definizione inaffidabile, e punirlo punirebbe la rete |
+| 3 | §7.1 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie: è l'unico momento in cui i due lati hanno legittimamente due verità |
+| 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere. ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
+| 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
+
+⛔ **E ogni tolleranza va scritta nel registro.** Una tolleranza silenziosa è indistinguibile da un
+difetto, ed è precisamente l'indulgenza che questa sezione esiste per togliere.
 
 ### 3.1 Che cosa vuol dire «chiudere», in byte
 
@@ -272,17 +305,25 @@ Chi rileva la violazione, **in quest'ordine**:
    stato in cui si trovava. Non «errore di protocollo»;
 2. **DEVE** mandare `CONGEDO` (§8) con il motivo, sul canale di controllo, **se il canale di
    controllo è ancora utilizzabile**;
-3. **DEVE** chiudere la connessione QUIC con `CONNECTION_CLOSE` di tipo applicativo, e il codice
-   d'errore applicativo **DEVE** essere il **codice del motivo** di §8.2.
+3. **DEVE** chiudere la **sessione WebTransport** con il codice d'errore applicativo pari al
+   **codice del motivo** di §8.2.
+
+> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.4**.* Questa riga diceva «la connessione QUIC
+> con `CONNECTION_CLOSE` di tipo applicativo». **Una pagina non lo può fare**: l'API espone la
+> chiusura *della sessione*, con il proprio codice, non quella della connessione HTTP/3 sotto — che
+> può reggere altro. Erano due piani diversi, e §8.1 imponeva la regola anche al client, cioè a chi
+> non ha l'API. Un programmatore chiudeva la sessione e dichiarava assolta la regola; l'altro
+> cercava l'API della connessione, non la trovava, e lasciava il punto 3 non implementato — **ed era
+> conforme al testo quanto il primo**.
 
 ⭐ **Il terzo punto è quello che salva le diagnosi**: se il congedo non arriva — perché lo stream
 era rotto, perché il messaggio era illeggibile — il motivo viaggia comunque, dentro la chiusura
-QUIC. In v1 il server scriveva «congedo il client» e il client leggeva «errore di rete» per **tre
-fasi** (`LEZIONI.md` §1.7): qui i due lati hanno due strade per dirsi la stessa cosa, e il collaudo
-di §11 verifica **dal lato che riceve** che almeno una delle due sia arrivata.
+della sessione. In v1 il server scriveva «congedo il client» e il client leggeva «errore di rete»
+per **tre fasi** (`LEZIONI.md` §1.7): qui i due lati hanno due strade per dirsi la stessa cosa, e
+il collaudo di §11 verifica **dal lato che riceve** che almeno una delle due sia arrivata.
 
-⚠ Il codice d'errore applicativo **0** significa «chiusura senza motivo» e **NON DEVE** essere
-usato: ogni chiusura ha un motivo di §8.2.
+⚠ Il codice **0** significa «chiusura senza motivo» e **NON DEVE** essere usato: ogni chiusura ha
+un motivo di §8.2.
 
 ---
 
@@ -311,16 +352,25 @@ usato: ogni chiusura ha un motivo di §8.2.
 | **il nome** | il certificato **DEVE** portare come `subjectAltName` l'indirizzo su cui il server risponde — nome o indirizzo IP. ⚠ Un browser che trova un `SAN` che non combacia mostra **un avviso diverso**, e alcuni non offrono nemmeno il clic per proseguire |
 | **il certificato vero** | se l'amministratore ne installa uno emesso da un'autorità, il server **DEVE** usarlo e **non DEVE** rigenerare il proprio. È la strada senza avvisi (`SPECIFICHE.md` §4.1) |
 
-⛔ **E una cosa che il server DEVE fare e che con un client nostro non esisteva**: la pagina e la
-sessione WebTransport **devono presentare lo stesso certificato**. Sono due connessioni — una TCP e
-una UDP (§2.4) — e se portassero due certificati diversi l'utente si troverebbe **due avvisi**, o
-un avviso e un fallimento muto.
+⛔ **E due certificati, non uno** — la regola sta in §4.1-bis, e va letta prima di scrivere il
+server.
 
-`[?]` **La misura che decide la forma del predefinito**, e non si risponde leggendo: l'eccezione
-che l'utente concede sul caricamento della pagina **copre anche la sessione WebTransport**? Se non
-la coprisse, servirebbe `serverCertificateHashes` — che WebKit **ha dichiarato che non
-implementerà** `[S]`, e su Safari resterebbe solo il certificato vero. È la prima domanda della
-sonda del browser.
+> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.2**.* Qui c'era scritto, con un ⛔, che *«la
+> pagina e la sessione WebTransport devono presentare **lo stesso** certificato»*, mentre §4.1-bis
+> ne impone **due** con un altro ⛔. Due righe normative che si contraddicono, e nessuna citava
+> l'altra: chi obbediva a questa serviva alla pagina un certificato che l'altra obbliga a
+> rigenerare ogni quattordici giorni, **facendo ricomparire l'avviso ogni due settimane** — cioè
+> il sintomo che §4.1-bis dichiara come conseguenza dell'errore opposto.
+>
+> ⭐ **Il fatto che scioglie il nodo** era già in casa, in `web/rapporti/S1-certificato.md`: con
+> `serverCertificateHashes` il browser **non guarda l'eccezione**, guarda l'impronta. Quindi i due
+> certificati non devono essere «lo stesso» — devono essere **dichiarati in due modi diversi**, e
+> l'utente vede un avviso solo, quello della pagina.
+
+`[?]` **Quel che resta da misurare è solo Safari**: se lì l'eccezione basti da sola, cioè se si
+possa fare a meno di pubblicare l'impronta. ⚠ *La domanda generale che stava qui — «l'eccezione
+copre WebTransport?» — **ha già risposta per due motori su tre**, ed è no: la dà il riquadro in cima
+a questa sezione. Tenerla aperta faceva pianificare una misura già fatta (rilievo **R1.25**).*
 
 ### 4.1-bis ⛔ `serverCertificateHashes` — **la strada normale**, non una rete di sicurezza
 
@@ -347,13 +397,18 @@ collegamento singolo resta verde per sempre (`LEZIONI.md` §2.1).
 
 ### 4.2 Il canale di controllo
 
-Il client apre il **primo stream bidirezionale** (identificatore 0). Quello è il canale di
-controllo, resta aperto per tutta la connessione, e il suo chiudersi **è** la fine della
-connessione.
+Il client apre il **primo stream bidirezionale della sessione WebTransport**. Quello è il canale di
+controllo, resta aperto per tutta la sessione, e il suo chiudersi **è** la fine della sessione.
 
-⛔ **In byte**: un FIN sullo stream 0, da una qualunque delle due parti, chiude la connessione.
-Chi lo riceve **DEVE** considerare finita la connessione e chiudere quella QUIC; **NON DEVE**
-continuare a spedire sugli altri canali.
+> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.5**: qui c'era «(identificatore 0)», ed è un
+> resto della stesura a QUIC nudo.* In una connessione HTTP/3 lo stream QUIC numero 0 è già
+> occupato — è quello della richiesta che **stabilisce la sessione WebTransport stessa** — e l'API
+> non espone nessun numero: apre uno stream e restituisce un oggetto. Chi leggeva «0» alla lettera
+> cercava il canale di controllo dove non arriverà mai, con la diagnosi «il client non apre il
+> canale» **mentre il client lo ha aperto**.
+
+⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, chiude la sessione.
+Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire sugli altri canali.
 
 ### 4.3 `CIAO` e `ECCOMI`
 
@@ -397,7 +452,23 @@ definiti in RCP/1:
 - ⛔ **un nome ripetuto due volte è `ERRORE_PROTOCOLLO`.** «Vince l'ultimo» e «vince il primo» sono
   due implementazioni diverse dello stesso documento, che è precisamente ciò che questo documento
   esiste per impedire;
-- ⛔ un valore **vuoto** è `ERRORE_PROTOCOLLO`: chi non ha niente da dire non manda la capacità.
+- ⛔ un valore **vuoto** è `ERRORE_PROTOCOLLO`: chi non ha niente da dire non manda la capacità;
+- ⛔ **una voce sconosciuta DENTRO un elenco si scarta**, come si scarta un nome sconosciuto: un
+  `video.codec` che vale `hevc,vp9` si legge come `hevc`. È la stessa eccezione di §3, ed è il
+  meccanismo con cui un client di domani parlerà a un server di oggi. ⚠ Ma se **dopo lo scarto
+  l'elenco resta vuoto**, si congeda con `NIENTE_IN_COMUNE`;
+- ⛔ **una capacità mandata dal lato sbagliato** — `video.misura_massima` che arriva dal server — è
+  `ERRORE_PROTOCOLLO`: il nome è conosciuto, quindi l'eccezione dei nomi non la copre;
+- ⛔ e chi **non dichiara** `pcm` o `8`, che §4.3 impone a entrambi, si congeda con
+  `NIENTE_IN_COMUNE`, non con `ERRORE_PROTOCOLLO`: non ha sbagliato a scrivere, non ha di che
+  parlare.
+
+> ⚠ *Le ultime tre righe sono della sera del 9 agosto 2026, rilievo **R1.12**.* La regola diceva
+> «un **nome** sconosciuto si ignora» e taceva su tutto il resto: un valore sconosciuto dentro un
+> nome conosciuto aveva **due letture entrambe difendibili** — si scarta, oppure è un campo fuori
+> intervallo e la connessione cade — e le due producono **byte diversi sul filo per lo stesso
+> ingresso**. Il giorno in cui esisterà un RCP/2 che parla un codec nuovo, il server vecchio o
+> continua o cade, e il documento non diceva quale.
 
 ⛔ Se l'intersezione di `video.codec` è **vuota**, il server **DEVE** congedare con
 `NIENTE_IN_COMUNE`. NON DEVE ripiegare su un codec non dichiarato. Lo stesso vale per
@@ -422,8 +493,8 @@ Un solo messaggio `CREDENZIALI` con utente e parola d'ordine. Il server le passa
 
 ```
 CREDENZIALI
- ├── stringa utente         (≤ 256 byte)
- └── stringa parola         (≤ 1024 byte)
+ ├── stringa utente         da 1 a 256 byte    ⛔ vuota = ERRORE_PROTOCOLLO
+ └── stringa parola         da 1 a 1024 byte   ⛔ vuota = ERRORE_PROTOCOLLO
 
 AMMESSO      corpo vuoto
 RESPINTO
@@ -449,6 +520,12 @@ tentativo se ne apre una nuova.
 > il secondo. Due implementazioni potevano indovinare diverso — o, peggio, **indovinare uguale
 > perché scritte dalla stessa mano**, che è il difetto muto contro cui questo documento esiste.
 
+> ⚠ *Gli intervalli sono della sera del 9 agosto 2026, rilievo **R1.28**: §6.0 dichiara legale la
+> stringa vuota, quindi `CREDENZIALI` con utente e parola di zero byte era **conforme**. Le due
+> letture — «si passa a PAM e si consuma un tentativo» contro «è errore di protocollo e la
+> connessione cade» — danno due profili di robustezza diversi, perché nella seconda un attaccante
+> che manda credenziali vuote **non incrementa nessuno dei due contatori** di §4.4-bis.*
+
 ⚠ **Una nota che non è normativa e che vale il tempo di scriverla**: la parola d'ordine sta in
 chiaro nella memoria di chi la riceve. Va azzerata appena PAM ha risposto, e **non** deve comparire
 in nessun registro a nessun livello — nemmeno in `traccia`, che in v1 è un registratore di battitura
@@ -465,7 +542,20 @@ Il server tiene due contatori dei **tentativi falliti**, uno per **nome utente**
 | | |
 |---|---|
 | **soglia** | 5 tentativi falliti in 5 minuti |
-| **oltre la soglia** | ogni nuovo tentativo riceve `TROPPI_TENTATIVI` **senza che PAM venga interrogata**, per un'attesa che parte da **30 secondi** e **raddoppia** a ogni tentativo fino a un tetto di **15 minuti** |
+| **oltre la soglia** | ogni nuovo tentativo riceve **`RESPINTO` con motivo `TROPPI_TENTATIVI`** — subito, e **senza che PAM venga interrogata** — per una **finestra** che parte da **30 secondi** e **raddoppia** a ogni tentativo fino a un tetto di **15 minuti** |
+
+> ⛔ *Due ambiguità chiuse la sera del 9 agosto 2026, rilievo **R1.13**, ed erano la stessa forma che
+> §4.4 dichiarava di aver già chiuso per `CREDENZIALI_ERRATE`.*
+>
+> **Dentro quale messaggio.** `TROPPI_TENTATIVI` è un *motivo*, non un messaggio: viaggiava in
+> `RESPINTO` o in `CONGEDO` secondo chi leggeva. Sul filo sono due tipi diversi e due corpi di
+> lunghezza diversa — e il client che aspetta l'uno e riceve l'altro applica §3 e chiude per errore
+> di protocollo. ⛔ **Il limitatore dei tentativi sarebbe diventato un errore di protocollo**, e la
+> diagnosi avrebbe puntato ovunque tranne che lì.
+>
+> **Che cosa è «l'attesa».** Non è un ritardo della risposta: con un solo tentativo per connessione
+> (§4.4) e il tempo di inattività a 30 secondi (§2.2), un server che ritardasse di quindici minuti
+> **non consegnerebbe mai il rifiuto**. È una **finestra** durante la quale si rifiuta subito.
 | **azzeramento** | un'autenticazione riuscita azzera entrambi i contatori di quel nome; il contatore per indirizzo scade da sé dopo 30 minuti di quiete |
 | ⛔ **il ritardo fisso** | il server **NON DEVE** rispondere a `CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è `AMMESSO`** |
 
@@ -545,6 +635,19 @@ non lo dichiara a nessuno.*
 secondi del tempo di inattività di QUIC: quello misura il **silenzio della rete**, questo misura un
 **client che non fa il suo mestiere**, e confonderli fa sembrare un difetto nostro una rete lenta.
 
+> ⛔ **E i 60 secondi della parola d'ordine erano irraggiungibili** — rilievo **R1.8**. Mentre
+> l'utente digita, sul filo non passa **niente**: §2.2 vieta un battito applicativo e non c'è
+> nessun altro canale attivo prima dell'attacco. Al trentesimo secondo scatta il tempo di
+> inattività di QUIC e **la connessione muore in silenzio**, senza motivo, prima che il tetto dei
+> 60 possa mai scadere. Il banco di §11 avrebbe misurato 30 dove il documento dice 60, e il
+> programmatore avrebbe dato la colpa al banco.
+>
+> ⛔ **La cura, ed è del server**: finché aspetta le credenziali, il server **DEVE** tenere viva la
+> connessione con i **PING del trasporto**, che non sono un battito applicativo — non portano
+> informazione, non hanno una risposta da interpretare, e non creano una seconda verità sul silenzio
+> (§2.2). ⚠ Senza questa riga un'implementazione li manda e l'altra no, e la seconda **perde gli
+> utenti che digitano piano**: difetto intermittente, il peggiore da diagnosticare.
+
 ---
 
 ## 5. Il quadro dei canali
@@ -605,9 +708,12 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   dei `numero`, o quando il decodificatore rifiuta un fotogramma;
 - ⛔ finché non arriva una chiave, il client **NON DEVE** mostrare fotogrammi che sa incompleti:
   tiene l'ultimo buono. Un'immagine sfasciata è peggio di un'immagine ferma per un decimo di secondo;
-- ⚠ il server **PUÒ** ignorare `RICHIEDI_CHIAVE` ripetute entro **200 ms** l'una dall'altra: durante
-  una raffica di perdite ne arriverebbero decine, e ogni chiave costa dieci volte un delta — cioè
-  peggiorerebbe esattamente la condizione che l'ha provocata.
+- ⚠ il server **PUÒ** ignorare una `RICHIEDI_CHIAVE` che arrivi entro **200 ms dall'ultima chiave
+  che ha spedito** — ⛔ non dall'ultima richiesta ricevuta, e la differenza non è una sfumatura:
+  contando dalle richieste, due client insistenti spostano l'orologio all'infinito e la chiave non
+  parte mai. Durante una raffica di perdite le richieste arrivano a decine, e ogni chiave costa
+  dieci volte un delta: assecondarle peggiorerebbe esattamente la condizione che le ha provocate.
+  ⭐ **È l'eccezione 5 di §3, ed è dichiarata lì.**
 
 ⚠ **E una conseguenza che tocca la fase 9**: se la linea è così cattiva da far abbandonare in
 continuazione, il rimedio **non** è mandare chiavi in continuazione — è **calare i fotogrammi**,
@@ -624,7 +730,24 @@ rete.*
 | frequenza | **48 000 Hz**, sempre, per entrambi i codec |
 | canali | **2**, interlacciati |
 | **Opus** | un pacchetto Opus per datagram, blocchi da **20 ms** |
-| **PCM** | campioni **s16, little-endian**, 20 ms per datagram (1920 campioni, 3840 byte) |
+| **PCM** | campioni **s16, little-endian**, ⛔ **5 ms per datagram** — 480 campioni, **960 byte**, che con i 12 dell'intestazione fanno **972** |
+
+> ### ⛔ Corretto la sera del 9 agosto 2026 — rilievo **R1.1**, il più grave della revisione
+>
+> Questa riga diceva **20 ms anche per il PCM**: 1920 campioni, **3840 byte**, più 12 di
+> intestazione = **3852**. ⛔ Un datagram QUIC **non è frammentabile** — deve stare in un pacchetto
+> solo — e su un percorso vero il carico utile disponibile è **~1200 byte** `[S]`.
+>
+> **Quindi l'audio PCM non sarebbe partito mai, su nessuna rete.** E il danno era doppio, perché
+> §4.3 fa del PCM **il controllo positivo di Opus**: il giorno in cui Opus non si negozia, si
+> ripiega su una strada che non esiste — e il banco cercherebbe il difetto in Opus.
+>
+> ⚠ **La forma dell'errore è quella di `LEZIONI.md` §2.2**, dove il banco contava i blocchi mentre
+> l'audio era rumore a fondo scala. Qui non sarebbe arrivato nemmeno il rumore.
+>
+> `[?]` **Quanto porti davvero un datagram su ciascun motore va misurato**, non dedotto: è una riga
+> della sonda del browser, e la pagina lo sa chiedere in una chiamata. Se il numero fosse più basso
+> di 972, il PCM scende ancora — è per questo che i 5 ms sono scritti qui e non dedotti altrove.
 
 ⛔ **Il little-endian del PCM è l'unica eccezione all'ordine di rete di §6, ed è deliberata**: sono
 un carico utile, come i byte di HEVC, non un campo di protocollo. Scritta qui perché un'eccezione
@@ -647,7 +770,8 @@ non dichiarata è una divergenza silenziosa fra due implementazioni.
 |---|---|
 | misura massima | **256×256** |
 | formato | **BGRA premoltiplicato**, riga per riga senza riempimento: `larghezza × altezza × 4` byte |
-| cursore nascosto | `larghezza = altezza = 0`, e nessun byte d'immagine |
+| cursore nascosto | ⛔ `larghezza = 0` **e** `altezza = 0`, tutt'e due, e nessun byte d'immagine. Una sola delle due a zero è `ERRORE_PROTOCOLLO` |
+| il punto attivo | ⛔ **DEVE** stare dentro l'immagine: `0 ≤ attivo_x < larghezza`, `0 ≤ attivo_y < altezza`. ⚠ *Il tipo resta `i16` e la riga «può essere negativo» è caduta: senza un intervallo, `attivo_x = -32768` era legale secondo ogni riga del documento, e due client avrebbero disegnato il puntatore in due posti diversi (rilievo **R1.21**)* |
 
 ---
 
@@ -693,7 +817,22 @@ verifica ha già regalato un megabyte a chiunque sappia scrivere sei byte.
 
 ### 6.2 Sugli stream del video
 
-Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine del fotogramma**.
+Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine del fotogramma** —
+⛔ **ma solo se lo stream è finito con un FIN**.
+
+> ⛔ *Aggiunte due parole la sera del 9 agosto 2026, rilievo **R1.7**, e senza di esse il documento
+> era rotto proprio dove §5.1 concede di abbandonare.* Il server apre lo stream del fotogramma 101,
+> spedisce l'intestazione e 40 KB su 60, poi lo **azzera** perché è partito il 102. Il client ha in
+> mano 40 KB e uno stream «finito»: consegnandoli al decodificatore ottiene un rifiuto o — peggio —
+> mezza immagine. **Un fotogramma abbandonato e uno completo avevano lo stesso aspetto**, ed è la
+> forma d'errore **E8**.
+
+⛔ **La regola, in due righe:**
+
+- uno stream chiuso con **FIN** porta un fotogramma **completo**;
+- uno stream **azzerato** (`RESET_STREAM`) porta un fotogramma **incompleto**: il client **DEVE**
+  buttare quel che ha ricevuto, **NON DEVE** consegnarlo al decodificatore, e **DEVE** trattarlo
+  come un buco (§5.2).
 
 ```
  0        2        4        8        12       16       24       28   28+…
@@ -716,12 +855,23 @@ all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
 | `tipo` | ⭐ `0x0301` **fotogramma chiave**, `0x0302` **fotogramma delta** (§5.2). Altri valori: `ERRORE_PROTOCOLLO` |
 | `codec` | `1` = HEVC, `2` = AV1. **DEVE** essere quello negoziato in §4.3 |
 | `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 è **sempre quella della tela**, e il client riscala (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia** |
-| `numero` | contatore del fotogramma, crescente, senza buchi voluti |
+| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave |
 | `istante` | microsecondi dell'orologio **monotono del server** alla cattura |
 | `input` | ⭐ **l'identificatore dell'ultimo input iniettato prima della cattura**; **0** se nessuno |
 
-⛔ **Il tetto**: un fotogramma **NON DEVE** superare **16 MiB**. Chi ne riceve uno più lungo chiude
+⛔ **Il tetto vincola prima di tutto chi spedisce**: il server **NON DEVE** produrre un fotogramma
+più lungo di **16 MiB**. Se la codifica ne producesse uno più grande, **DEVE** ricodificarlo a
+qualità inferiore e **scriverlo nel registro** — mai spedirlo. Chi ne riceve uno più lungo chiude
 con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
+
+> ⚠ *La prima metà è della sera del 9 agosto 2026, rilievo **R1.23**: il tetto vincolava solo il
+> **ricevente**, cioè era una punizione per chi subisce.* Una tela 7680×4320 è legale (§4.5) e il
+> desiderato è a 10 bit: un fotogramma chiave di una scena complessa a quella misura può superare i
+> 16 MiB. Il client avrebbe staccato la sessione perché il server ha fatto una cosa che §4.5 gli
+> permette — e §5.2 gli vieta pure di abbandonare le chiavi, quindi non aveva vie d'uscita.
+>
+> `[?]` **Quanto pesi davvero una chiave 8K a 10 bit va misurato**, ed è una riga del banco della
+> fase 8. Se stesse sempre sotto i 16 MiB il difetto di forma resterebbe comunque.
 
 ⛔ **L'ordine, e chi lo rimette a posto.** Gli stream sono indipendenti, quindi i fotogrammi
 **possono arrivare fuori ordine**. Il client:
@@ -843,8 +993,22 @@ DEVE fingere che sia riuscito.
 lascia il client ad aspettare per sempre una risposta che non arriverà, e il sintomo è
 «l'applicazione si è piantata».
 
-⛔ **La vista DEVE stare dentro i limiti di §4.5** — pari, e fra 320×240 e 7680×4320 — e la sua
-misura non ha nessun vincolo di proporzione con la tela: se le proporzioni non combaciano, si
+⛔ **La vista non ha i vincoli della tela**, e va detto perché la riga precedente diceva il
+contrario: qualunque misura da **1×1 in su** è legale, dispari compresa.
+
+> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.17**.* Qui c'era scritto che la vista deve
+> stare fra 320×240 e 7680×4320 **con i lati pari**, cioè i limiti della tela — e i limiti della
+> tela esistono per una ragione che alla vista **non si applica**: i blocchi del codificatore. In
+> RCP/1 la vista **non tocca nessun codificatore** (lo dice questa stessa sezione due righe sopra).
+>
+> Il caso concreto: l'utente stringe la finestra del browser a 300 pixel, o apre la pagina
+> affiancata sul telefono. Con la riga vecchia il client aveva tre scelte, tutte cattive — mandare
+> `VISTA(300×800)` e **farsi chiudere la sessione perché ha ridimensionato una finestra**; mentire
+> arrotondando a 320, che è la forma d'errore **E2**; o tacere, e lasciare che il server spenda bit
+> per una vista che non esiste più. ⚠ Su un telefono con fattore di scala 2,75 nessun
+> arrotondamento è innocente: 393 pixel logici valgono 1080,75 fisici.
+
+⚠ La vista non ha nessun vincolo di proporzione con la tela: se le proporzioni non combaciano, si
 impagina con le bande (`SPECIFICHE.md` §6.2).
 
 ⚠ **Il cambio di tela e le coordinate in volo.** Dopo aver mandato `TELA(ADATTATA)` il server
@@ -860,9 +1024,9 @@ che la risposta arrivasse non sono un difetto del client.
 
 ```
 CURSORE_FORMA
- ├── u16 larghezza          0 = cursore nascosto
+ ├── u16 larghezza          0 con altezza 0 = cursore nascosto (§5.5)
  ├── u16 altezza
- ├── i16 attivo_x           il punto che «punta»; può essere negativo
+ ├── i16 attivo_x           il punto che «punta», dentro l'immagine
  ├── i16 attivo_y
  └── immagine               larghezza × altezza × 4 byte, BGRA premoltiplicato
 ```
@@ -902,14 +1066,38 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 | | |
 |---|---|
 | **i codici dei pulsanti e dei tasti** | ⛔ sono quelli di **evdev** (`linux/input-event-codes.h`): `BTN_LEFT` = `0x110`, `KEY_A` = `30`. ⭐ Non è una scelta di comodo: `libei` — cioè l'unico modo che abbiamo di iniettare input in un compositore Wayland — lavora in evdev, e ogni altra convenzione aggiungerebbe una tabella di traduzione che sbaglia in silenzio |
-| **la rotella** | ⛔ unità da **120 per scatto**, positive verso l'alto e verso sinistra. È l'unità di `wl_pointer.axis_value120`, quindi non si converte niente. ⚠ E i mezzi scatti esistono: `60` è mezzo scatto e **non DEVE** essere arrotondato a zero |
+| **la rotella** | ⛔ unità da **120 per scatto**, ⚠ e i mezzi scatti esistono: `60` è mezzo scatto e **non DEVE** essere arrotondato a zero. `[?]` **Il segno è da misurare, non da decidere** — vedi il riquadro |
 | **il carattere** | ⛔ un **valore scalare Unicode**: da `0` a `0x10FFFF`, esclusi i surrogati `0xD800`-`0xDFFF`. Fuori intervallo è `ERRORE_PROTOCOLLO` |
 | **l'identificatore** | ⛔ cresce di **almeno uno** a ogni messaggio, su tutto il canale di input — non uno per tipo. È quello che torna nel campo `input` dei fotogrammi (§6.2), e con contatori separati non tornerebbe niente |
+| **l'`istante`** | ⚠ **nessuna regola di questo documento lo consuma**: il ritardo lo misura l'anello chiuso di `DECISIONI.md` §2.6, e il fotogramma porta indietro l'`id`, non l'istante. Resta perché è l'unico modo di sapere **quando l'utente ha mosso la mano** invece di quando il byte è arrivato, e serve alla diagnosi. ⛔ In una pagina l'orologio monotono è in **millisecondi** e la sua grana è deliberatamente ingrossata: il client scrive `millisecondi × 1000` e **NON DEVE** far credere a una precisione che non ha *(rilievo **R1.27**)* |
 
-⛔ **Le coordinate sono sulla tela.** Il client conosce la tela (§4.5) e sa dov'è la sua vista
-dentro di essa: la conversione è sua. Il server **NON DEVE** applicare nessuna trasformazione alle
-coordinate ricevute, e **DEVE** rifiutare con `ERRORE_PROTOCOLLO` una coordinata fuori dalla tela —
-salvo il secondo di grazia di §7.1.
+> ### `[?]` Il segno della rotella — rilievo **R1.26**, e va misurato
+>
+> Questa riga diceva *«positive verso l'alto e verso sinistra. È l'unità di
+> `wl_pointer.axis_value120`, quindi non si converte niente»*. ⛔ **Le due metà citano due
+> convenzioni con segni opposti**: in evdev la rotella è positiva verso l'alto, in `wl_pointer` il
+> valore è positivo nel verso in cui **scorre il contenuto**, cioè verso il basso. E
+> «positive verso sinistra» non corrisponde a nessuna delle due.
+>
+> Il caso concreto: il client manda `+120` perché l'utente ha girato la rotella in su. Un server
+> inietta `+120` e la pagina **sale**; l'altro inietta `-120` e la pagina **scende**. Nessuno dei
+> due ha sbagliato a leggere.
+>
+> ⭐ **Si misura in dieci minuti** — si inietta con `libei` e si guarda da che parte va la pagina — e
+> ⚠ **il precedente è in casa**: in v1 questa esatta tabella di conversione è costata il banco della
+> rotella (`LEZIONI.md` §2.3). Finché non è misurata, questa riga resta `[?]`.
+
+⛔ **Le coordinate sono sulla tela, e sono indici di pixel**: `0 ≤ x < tela_larghezza`,
+`0 ≤ y < tela_altezza`. Su una tela 1920×1080 l'angolo in basso a destra è **1919, 1079**. Il client
+conosce la tela (§4.5) e sa dov'è la sua vista dentro di essa: la conversione è sua, **arrotondando
+per difetto**. Il server **NON DEVE** applicare nessuna trasformazione alle coordinate ricevute, e
+**DEVE** rifiutare con `ERRORE_PROTOCOLLO` una coordinata fuori intervallo — salvo il secondo di
+grazia di §7.1, dove satura all'ultimo pixel valido.
+
+> ⚠ *L'intervallo mancava, e la riga diceva solo «fuori dalla tela» (rilievo **R1.16**). Una pagina
+> che divide la posizione del mouse per il fattore di scala e arrotonda per eccesso produce 1920 su
+> una tela di 1920: una lettura lo inietta, l'altra **chiude la sessione**. E chiudere la sessione
+> per un arrotondamento è la cosa che `SPECIFICHE.md` §8.3 vieta — «mai staccare».*
 
 ⛔ **`LETTERA` si usa quando si scrive del testo; `POSIZIONE_TASTO` quando è premuto un
 modificatore di comando** — Ctrl, Alt, Super. Maiusc e AltGr **non** contano come comando: servono
@@ -933,24 +1121,47 @@ che sopravvive al client rende il desktop inservibile al riattacco, e nessuno co
 
 ```
 APPUNTI_ANNUNCIO
- └── u32 lunghezza          quanti byte ha il testo disponibile
+ ├── u32 trasferimento       ⭐ l'identificatore, scelto da chi annuncia
+ └── u32 lunghezza           quanti byte ha il testo disponibile
 
-APPUNTI_CHIEDI               corpo vuoto
+APPUNTI_CHIEDI
+ └── u32 trasferimento       quello dell'annuncio a cui si risponde
 
 APPUNTI_TESTO
- ├── u32 lunghezza
- └── byte                    esattamente `lunghezza` byte di UTF-8 valido
+ ├── u32 trasferimento       quello della richiesta che si sta servendo
+ └── byte                    fino alla fine dello stream, UTF-8 valido
 ```
+
+> ### ⛔ Due correzioni della sera del 9 agosto 2026 — rilievi **R1.11** e **R1.20**
+>
+> **L'identificatore mancava del tutto.** La regola *«ogni trasferimento va sul suo stream»* non era
+> soddisfacibile: i tre messaggi viaggiano in **due versi** e gli stream sono **unidirezionali**,
+> quindi un trasferimento ne occupa almeno due. E senza un campo che li leghi, con due annunci
+> aperti nei due versi — *l'utente copia di qua mentre incolla di là* — le due implementazioni
+> appaiano le richieste agli annunci **in ordine diverso e si scambiano i testi**.
+>
+> ⛔ Ciascun lato numera **i propri** trasferimenti, da 1 e crescendo. Un `APPUNTI_CHIEDI` con un
+> identificatore che non corrisponde a nessun annuncio vivo è `ERRORE_PROTOCOLLO`.
+>
+> **E la seconda lunghezza è stata tolta.** `APPUNTI_TESTO` portava `u32 lunghezza` *dentro* un
+> messaggio che ha già la sua lunghezza nell'inquadratura di §6.1: due verità sullo stesso fatto,
+> cioè il difetto che §2.2 vieta con quelle parole. ⚠ Con una conseguenza sull'implementazione:
+> il testo si legge **fino alla fine del messaggio**, e il tetto è quello di §5.4.
 
 Bidirezionale. Si annuncia e si chiede, invece di spingere: chi copia un documento intero non lo
 spedisce a nessuno finché qualcuno non incolla.
 
-⛔ Solo `text/plain;charset=utf-8`. Un tipo diverso è `ERRORE_PROTOCOLLO`.
+⛔ **Il contenuto è sempre e solo testo semplice in UTF-8**, e non c'è nessun campo che dichiari un
+tipo: non esiste perché non c'è niente da scegliere. ⚠ *Questa riga diceva «un tipo diverso è
+`ERRORE_PROTOCOLLO`», e nessun messaggio portava un campo di tipo — una regola che nessuna
+implementazione poteva violare e nessun banco vedere fallire, e che invitava chi legge ad aggiungere
+un campo inesistente (rilievo **R1.20**).*
 
-⛔ **Ogni trasferimento va sul suo stream**, e i tre messaggi **non DEVONO** essere mescolati con
-quelli di un altro trasferimento. ⚠ Un `APPUNTI_CHIEDI` che arriva quando l'annuncio è già stato
-superato da uno più recente si serve **con il testo attuale**, e il mittente lo scrive nel registro:
-è la corsa normale fra due persone che copiano, non un errore.
+⛔ **Ogni trasferimento ha il suo identificatore**, e i messaggi di trasferimenti diversi non si
+mescolano. ⚠ Un `APPUNTI_CHIEDI` che arriva quando l'annuncio è già stato superato da uno più
+recente si serve **con il testo attuale**, e il mittente lo scrive nel registro: è la corsa normale
+fra due persone che copiano, non un errore. ⭐ **Ed è la quinta eccezione dichiarata a §3** — vedi
+l'elenco lì.
 
 ⛔ Un `APPUNTI_TESTO` che nessuno ha chiesto è `ERRORE_PROTOCOLLO`: gli appunti si tirano, non si
 spingono.
@@ -989,6 +1200,32 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x0C` | `SERVER_IN_CHIUSURA` | |
 | `0x0D` | `TEMPO_SCADUTO` | ⭐ *nuovo, 9 ago*: un tetto di §4.6 è scaduto |
 | `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *nuovo, 9 ago*: l'attacco è ben formato ma non si può servire — un compositore che non parte, una disposizione che il sistema non conosce. **DEVE** portare il dettaglio nel corpo |
+| `0x0F` | `GIA_ATTIVA_REMOTA` | ⭐ *nuovo, 9 ago sera*: **c'è già un client attaccato a questa sessione**, e questa connessione viene **rifiutata** |
+
+> ### ⛔ Perché `0x0F` è stato aggiunto, e perché adesso — rilievo **R1.3**
+>
+> I quattordici motivi precedenti coprivano **locale contro remoto** (`SPECIFICHE.md` §5.1) e non
+> **remoto contro remoto**: sei attaccato dal portatile e apri la stessa sessione dal telefono.
+>
+> **La scelta, dell'utente, il 9 agosto 2026**: *«se un utente ha già una sessione grafica remota
+> attiva, e ne vuole attivare una seconda da un secondo device, la seconda connessione viene
+> rifiutata»*. ⭐ È l'invariante **I2** applicata alla lettera — *«la seconda connessione è rifiutata
+> con messaggio esplicito»* — e `0x0F` è il gemello remoto di `0x05 GIA_ATTIVA_LOCALE`.
+>
+> ⛔ **Chi viene rifiutato è chi arriva, non chi c'era.** Nessun client attaccato e vivo viene mai
+> spodestato da un altro.
+>
+> ⚠ **E il confine con `DECISIONI.md` §4.4 va letto bene**, perché le due regole sembrano cozzare e
+> non cozzano: *«chi tace è staccato, chi arriva entra»* parla del client **fantasma** — il telefono
+> morto in galleria. Un client **silenzioso da 30 secondi** (`SPECIFICHE.md` §5.3) non è più
+> attaccato, quindi non occupa niente e il nuovo entra. Un client **vivo** occupa, e il nuovo è
+> rifiutato. ⛔ Il discrimine è **l'orologio del silenzio**, non l'intenzione di chi arriva.
+>
+> ⚠ **Il prezzo, dichiarato**: se il portatile si spegne di colpo senza congedarsi, dal telefono si
+> entra **dopo trenta secondi**, non subito.
+>
+> ⚠ E la finestra per aggiungere un motivo si chiudeva subito: §9 lo vieta dentro una versione
+> maggiore, e la clausola che lo permette è che **oggi non esiste nessuna implementazione**.
 
 ⛔ Ogni motivo **DEVE** essere mostrabile all'utente in una frase comprensibile. `BUDGET_PIENO`
 non è «errore 6»: è «questa macchina non ha più capacità di codifica».
@@ -1050,7 +1287,11 @@ l'altro**: si collaudano contro questo documento.
 |---|---|
 | **il validatore del filo** | un terzo programma che legge una registrazione della connessione e dice quale byte non è conforme. È l'unico arbitro esterno che avremo |
 | **la stretta di mano su due connessioni** | ⛔ **due, mai una**: in v1 un certificato condiviso uccideva il server **alla seconda** connessione, e una prova a connessione singola resta verde per sempre (`LEZIONI.md` §2.1) |
-| **il congedo** | verificato **dal lato che riceve**, per ciascuno dei **quattordici** motivi — e per ciascuno si verifica **anche il codice nella chiusura QUIC** (§3.1) |
+| **il congedo** | verificato **dal lato che riceve**, per ciascuno dei motivi **che viaggiano in un `CONGEDO`** — e per ciascuno si verifica **anche il codice nella chiusura della sessione** (§3.1). ⚠ *Diceva «per ciascuno dei quattordici»: ma `CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in `RESPINTO`, che §4.4 vieta di far seguire da un congedo — il banco sarebbe fallito su due motivi per costruzione, e chi lo scriveva avrebbe pensato di aver sbagliato lui (rilievo **R1.18**)* |
+| ⭐ **il rilascio dei tasti al distacco** | si stacca una connessione **con un tasto premuto** e si riattacca a verificare che non sia rimasto giù (§7.3). ⛔ **È la regola con il rapporto danno/costo più alto del documento**: un Ctrl rimasto premuto rende inservibile una sessione che sopravvive al client, e nessuno collega le due cose |
+| ⭐ **l'audio, ascoltato** | si apre un datagram e si guardano i byte: frequenza, canali, ordine dei byte del PCM. ⛔ Un server che spedisse 44 100 Hz, o PCM big-endian, resterebbe **verde su tutti gli altri banchi** — e il sintomo, come in v1, «sembra un difetto di rete» (`LEZIONI.md` §2.2) |
+| ⭐ **gli appunti** | i tre messaggi, l'identificatore di trasferimento, e **due trasferimenti aperti insieme nei due versi**: è il caso in cui senza identificatore i testi si scambiavano |
+| ⭐ **il secondo fisso** | si cronometra la risposta a `CREDENZIALI` — **anche quella riuscita** (§4.4-bis). È una proprietà di sicurezza che nessun altro banco vede, e una regressione che la togliesse non farebbe fallire niente |
 | **l'anello del ritardo** | il client manda un input che cambia colore allo schermo e guarda i fotogrammi decodificati finché non lo vede (`DECISIONI.md` §2.6) |
 | **il rigore** | si manda di proposito un tipo sconosciuto, una lunghezza sbagliata, un messaggio nello stato sbagliato: ⛔ **la connessione deve cadere ogni volta**. Un banco che non prova a violare il protocollo non prova il protocollo |
 | ⭐ **il fotogramma abbandonato** | si abbandona un delta di proposito e si verifica che **arrivi una chiave** e che il client non mostri niente di rotto nel frattempo (§5.2). ⚠ Senza questo banco l'abbandono si prova solo su una rete cattiva, cioè quando non lo si sta guardando |

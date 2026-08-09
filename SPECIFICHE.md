@@ -224,6 +224,12 @@ sola** grafica — locale o remota. Testuali e grafiche convivono.
 |---|---|
 | ha una sessione grafica **locale** attiva e apre una remota | ⛔ la remota è **rifiutata**, con messaggio esplicito |
 | ha una sessione grafica **remota** attiva e ne apre una locale | ⛔ **la locale vince**: la remota viene chiusa |
+| ⭐ ha una remota **attiva e viva** e si collega da un **secondo dispositivo** | ⛔ **la seconda connessione è rifiutata** *(deciso il 9 agosto 2026)* — è l'invariante I2, e il motivo è `GIA_ATTIVA_REMOTA` |
+| ha una remota il cui client **tace da 30 secondi** | quel client è **staccato** (§5.3): non tiene il posto, e il nuovo dispositivo **entra** |
+
+⚠ **Le ultime due righe non si contraddicono, e il discrimine è l'orologio del silenzio**: un client
+vivo occupa, un client muto no. ⛔ Il prezzo, dichiarato: se il portatile si spegne di colpo senza
+congedarsi, dal telefono si entra **dopo trenta secondi**, non subito.
 
 ### 5.2 La sessione sopravvive al client
 
