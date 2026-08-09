@@ -1721,6 +1721,36 @@ fa con un banco davanti, non su carta.
 > il ritratto di un pezzo che **nessuno esercita**. `CODER.md` §4.1 dice di dipendere invece di
 > riscrivere — ma dipendere da codice che nessuno esercita è riscriverlo **con un ritardo**.
 >
+> ### ⛔⭐ `lsquic` è fuori, e per una ragione che nessuno aveva previsto — `[M]` 9 agosto 2026
+>
+> *Scritto il collante (`banchi/01-b2-lsquic-wt.c`, **333 righe**, di cui 236 di codice), compilato
+> e messo in ascolto. Il cliente di prova si è collegato, e il server ha registrato questo:*
+>
+> ```
+> handshake: for QUIC version 00000001, ALPN is h3
+> handshake: SNI is not set, but is required in HTTP/3: fail certificate lookup
+> handshake failed  ·  sending CONNECTION_CLOSE, error code: 336, reason: TLS alert 80
+> ```
+>
+> `[R]` `lsquic_enc_sess_ietf.c:1326-1336`: in **modalità HTTP/3**, se il client non manda SNI,
+> lsquic **fallisce la ricerca del certificato e chiude**. C'è una scappatoia — `esi_sni_bypass` —
+> ⛔ **ma è dentro `#ifndef NDEBUG`**, cioè esiste solo nelle build di debug.
+>
+> ⛔ **E questo colpisce il caso primario del prodotto, non un caso limite.** `SPECIFICHE.md` e §1.7
+> descrivono un server **senza dominio**, a cui l'utente arriva digitando `https://<indirizzo>:7447`
+> — cioè **un indirizzo IP**. Un client che si collega a un IP **non manda SNI**: la specifica del
+> TLS vieta gli indirizzi letterali in quel campo. Quindi:
+>
+> | | |
+> |---|---|
+> | ⛔ **`lsquic` non può servire un certificato a chi si collega per indirizzo** | ed è il modo in cui REMOTIX viene usato |
+> | ⚠ **la previsione sulla bozza 02 resta APERTA** | non è stata né confermata né smentita: **non ci siamo mai arrivati**. Scriverla come «avevo ragione» sarebbe confermare una previsione con una prova che parla d'altro |
+> | ⭐ **e il modello non è in discussione** | `aioquic`, sullo stesso indirizzo e con lo stesso certificato, serve **due browser** senza SNI. Il difetto è della libreria, non del disegno |
+>
+> ⭐ **Da cui un criterio nuovo per questa decisione, che nessuno aveva scritto perché nessuno lo
+> immaginava**: la libreria **DEVE servire un certificato senza SNI**. Va provato per prima cosa su
+> ogni candidata — costa una connessione, e qui ha eliminato una candidata dopo 333 righe.
+>
 > ⚠ *E il banco che ha prodotto questo `4 su 4` **aveva prima detto `0 su 4`**, per un difetto suo —
 > `set -o pipefail` più `grep -q`. La cronaca sta in `fasi/01-filo-nudo.md`, «che cosa NON ha
 > funzionato», ed è il motivo per cui questa riga porta la data e il nome dello script.*

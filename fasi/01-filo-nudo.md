@@ -242,7 +242,7 @@ WebTransport su `/rcp/1`, aperta da **un browser vero**, con l'impronta pubblica
 |---|---|---|
 | **`ngtcp2` + `nghttp3`** (MIT, C) | `libngtcp2-dev` 1.11, `libnghttp3-dev` 1.8 `[M]` — ⛔ **non installati** | le fondamenta più complete: quanto pesa lo strato WebTransport sopra |
 | **`quiche`** (BSD-2, API C) | `cargo`/`rustc` 1.85 `[M]` | idem, più il TLS che si porta dietro |
-| ⚠ **`lsquic`** (C) | ✅ **compilato** `[M]` 9 ago, 4 simboli WT su 4 | ⛔ **la previsione è che NON regga una sessione vera**: scrive le impostazioni della **bozza 02** e mai `SETTINGS_WT_MAX_SESSIONS` `[R]`. ⭐ **Scritta prima della misura**, e la misura serve a falsificarla — `DECISIONI.md` §6.4 |
+| ⛔ **`lsquic`** (C) | ✅ compilato, **e il collante scritto** (333 righe) `[M]` | ⛔ **ELIMINATA**: in modalità HTTP/3 pretende **SNI** per trovare il certificato, e chi si collega a un **indirizzo IP** non lo manda. È il caso primario del prodotto — `DECISIONI.md` §6.4 |
 | ⚠ **`libwtf`** (C su MsQuic) | ⛔ niente | *ultima della fila*: porta dentro una seconda pila QUIC, e ha una **licenza che si contraddice** |
 
 **L'atteso, che la prima stesura lasciava vuoto** (R3.23):
