@@ -152,9 +152,10 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
 
-⚠ **Il server ascolta su due porte con lo stesso numero**: **UDP** per HTTP/3 e WebTransport, e
-**TCP** per il primo caricamento della pagina — un browser che apre `https://…` parte in TCP e
-passa a QUIC solo se il server glielo annuncia (`Alt-Svc`).
+⚠ **Il server ascolta su due porte con lo stesso numero**: **TCP** per consegnare la pagina, **UDP**
+per HTTP/3 e WebTransport. ⭐ *Corretto il 9 agosto 2026 dalla misura S1*: le due cose sono
+**indipendenti** — WebTransport non passa da `Alt-Svc`, apre la sua connessione da sé — e questo
+toglie di mezzo il ripiego silenzioso su TCP che avevo dichiarato come pericolo.
 
 ⚠ **Il protocollo non è un dettaglio implementativo: è l'arbitro.** In v1 l'oracolo era `mstsc` —
 se disegnava, era giusto. In V2 client e server sono nostri, e **due programmi scritti dalla
@@ -163,19 +164,26 @@ tre obblighi: `RCP.md` si scrive **prima** del codice e abbastanza preciso da po
 qualcuno; client e server si collaudano **contro la specifica**, non l'uno contro l'altro; e dove
 si può, serve un validatore che legga il filo.
 
-### 4.1 La fiducia
+### 4.1 La fiducia — due livelli, e non di più
 
-Il server si genera un certificato autofirmato all'installazione.
+*Posti dall'utente il 9 agosto 2026: «Abbiamo 2 livelli per la sicurezza: il trasporto e l'accesso».*
 
-⭐ **La fiducia al primo incontro non la scriviamo noi: la fa il browser**, ed è esattamente il
-meccanismo che avevamo disegnato — accetta per quell'indirizzo, se lo ricorda, e riavvisa se il
-certificato cambia. Cambia il prezzo: **l'accettazione non è silenziosa**, è un avviso con un clic,
-la prima volta su ogni dispositivo.
+| Livello | Che cos'è | Come si risolve |
+|---|---|---|
+| **il trasporto** | che nessuno legga o riscriva quel che passa | **TLS**, sempre e senza alternative. Il certificato **se lo fa il server**, e la pagina passa al browser la sua impronta |
+| **l'accesso** | chi è ammesso a quella macchina | **indirizzo, porta, utente e password**. Niente altro — §4.2 |
 
-| | |
-|---|---|
-| **predefinito** | autofirmato, **un clic la prima volta**, zero configurazione sul server |
-| **dichiarato** | chi ha un nome di dominio mette un **certificato vero** — Let's Encrypt con la sfida DNS, che non richiede di esporre niente su Internet — e **l'avviso non compare mai**, iPhone compreso |
+⛔ **Non c'è un terzo livello, ed è una decisione**: niente autorità da installare, niente impronte
+da confrontare a mano, niente servizio nostro in mezzo. Le strade che aggiungevano un livello sono
+state guardate e **scartate**, con le ragioni in `DECISIONI.md` §1.7.
+
+**Che cosa vede l'utente**: apre `https://indirizzo:7447`, **clicca l'avviso la prima volta su
+quel dispositivo**, digita utente e password. ⭐ Tutto il resto — rigenerare il certificato prima
+che scada, pubblicarne l'impronta nella pagina — sta **dentro il server** e non si vede.
+
+⚠ **Il clic resta, ed è il prezzo dichiarato di non avere un dominio.** Chi ne ha uno mette un
+**certificato vero** — una riga di configurazione, non una strada diversa — e l'avviso non compare
+mai, iPhone compreso.
 
 **La password non parte prima** che il server abbia dimostrato di essere quello di ieri —
 l'invariante I3 applicata all'ordine della stretta di mano.

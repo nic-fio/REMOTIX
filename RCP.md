@@ -191,9 +191,18 @@ sessione viva **oltre i primi 256 fotogrammi**.
 dalla configurazione del server: l'utente digita `https://indirizzo:7447` nel browser, e poi utente
 e password nella pagina.
 
-⛔ **Il server DEVE annunciare `Alt-Svc: h3=":7447"` sulla risposta TCP**, o il browser non passerà
-mai a QUIC e la pagina resterà su TCP — dove RCP non scorre. ⚠ Il sintomo di quella riga dimenticata
-non è un errore: è **una pagina che si apre e un desktop che non arriva mai**.
+> ⛔ **Corretto il 9 agosto 2026 dalla misura S1** — questa riga diceva: *«il server DEVE annunciare
+> `Alt-Svc: h3=":7447"` sulla risposta TCP, o il browser non passerà mai a QUIC»*. **È falsa**, ed
+> era mia: **WebTransport non usa `Alt-Svc` affatto** — zero occorrenze nelle tre specifiche, con
+> controllo positivo `[S]`. Una sessione WebTransport apre **la sua** connessione HTTP/3 verso
+> l'indirizzo che le si dà, senza scoperta e senza negoziazione a monte.
+>
+> ⭐ **E toglie di mezzo un pericolo che avevo dichiarato**: il ripiego silenzioso su TCP — «la
+> pagina si apre e il desktop non arriva mai» — **non può accadere**, perché non c'è nessun ripiego
+> da fare.
+
+⚠ **Il TCP serve solo a consegnare la pagina**, e le basta HTTP/1.1. Da lì in poi il browser apre
+la sessione WebTransport per conto suo, sull'UDP.
 
 ⚠ Scelta il 9 agosto 2026 verificando che sia libera in `/etc/services` di Debian Trixie `[M]`.
 `[?]` **Non è stata verificata la registrazione IANA**: se un giorno servisse un numero
@@ -281,15 +290,17 @@ usato: ogni chiusura ha un motivo di §8.2.
 
 ### 4.1 Prima ancora: il certificato
 
-> ### ⭐ Riscritta il 9 agosto 2026 — questa parte **non la implementiamo più**
+> ### ⭐ Riscritta due volte il 9 agosto 2026 — e la seconda volta da una misura
 >
-> La prima stesura dettava al client i quattro passi della fiducia al primo incontro: calcola
-> l'impronta, confronta col ricordo, interrompi se cambia, accetta in silenzio se non c'è.
+> **Prima stesura**: quattro passi che il client doveva implementare — calcola l'impronta,
+> confronta col ricordo, interrompi se cambia, accetta in silenzio se non c'è.
 >
-> ⭐ **Con un browser quei quattro passi ci sono già, e li fa lui**: accetta per quell'indirizzo,
-> se lo ricorda, e riavvisa se il certificato cambia. **Il modello era giusto — semplicemente non
-> è più codice nostro.** Quel che cambia è il prezzo: l'accettazione **non è silenziosa**, è un
-> avviso con un clic, la prima volta su ogni dispositivo (`DECISIONI.md` §1.7).
+> **Seconda**: «quei passi li fa già il browser, non è più codice nostro».
+>
+> ⛔ **Terza, ed è quella buona**: per il caricamento della **pagina** è vero, per la sessione
+> **WebTransport no** — l'eccezione dell'utente non la copre né su Chrome né su Firefox `[R]`
+> (misura **S1**, `web/rapporti/S1-certificato.md`). Quindi il certificato della sessione
+> **si dichiara**, e il posto dove dichiararlo è la pagina.
 
 **Quel che resta normativo, ed è tutto dalla parte del server:**
 
@@ -311,17 +322,24 @@ la coprisse, servirebbe `serverCertificateHashes` — che WebKit **ha dichiarato
 implementerà** `[S]`, e su Safari resterebbe solo il certificato vero. È la prima domanda della
 sonda del browser.
 
-### 4.1-bis Se un giorno servisse `serverCertificateHashes`
+### 4.1-bis ⛔ `serverCertificateHashes` — **la strada normale**, non una rete di sicurezza
 
-*Tenuto qui perché la scelta della chiave in §4.1 è già fatta per non chiudere questa porta.*
+*Promossa da rete di sicurezza a strada principale la sera del 9 agosto 2026, dopo la misura S1:
+non era un'alternativa, è **l'unico meccanismo** che i due motori maggiori espongono per un server
+senza dominio.*
 
 | | |
 |---|---|
-| **che cos'è** | l'impronta SHA-256 del certificato viaggia **dentro la pagina**, e il browser si fida senza avvisi — cioè il nostro modello, fatto bene |
-| **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, e `allowPooling` a `false` |
-| ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato quando scade e ci scrive dentro l'impronta corrente. L'utente non tocca niente |
-| ⛔ **che cosa non copre** | **il caricamento della pagina**. Vale solo per la sessione WebTransport, quindi da sola questa strada non basta mai: il primo `https://` resta da risolvere con l'avviso o con il certificato vero |
-| ⛔ **chi resta fuori** | Safari e tutto ciò che è WebKit — **iPhone e iPad compresi** |
+| **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta |
+| **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
+| ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
+| ⛔ **che cosa non copre** | **il caricamento della pagina**, che è una connessione TCP a sé. Lì resta l'avviso con il clic — o il certificato vero, per chi ha un dominio |
+| ⛔ **chi resta fuori** | `[S]` WebKit non lo implementa: su **Safari, iPhone e iPad** la strada è l'eccezione — `[?]` **se funziona**, ed è la prima misura di S1 — oppure il certificato vero |
+
+⛔ **Da cui due certificati, e vanno tenuti distinti nel codice**: uno **longevo** per la pagina, che
+è quello su cui l'utente concede l'eccezione e che quindi **non deve cambiare** più spesso del
+necessario; uno **a scadenza breve** per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire
+l'avviso ogni due settimane, e nessuno collegherebbe le due cose.
 
 ⚠ **E la conseguenza sul collaudo, che vale in ogni caso**: un banco che prova la fiducia **DEVE**
 provare anche il **secondo** collegamento, e un terzo con la chiave cambiata. La prova a

@@ -353,11 +353,59 @@ indirizzo, porta, utente e password, e basta»*. Con un client nostro quella rig
 Con un browser **non è più una nostra scelta**: la regola è di Chrome e di Safari, e «niente
 standard militari» non la tocca.
 
-| | |
+> ## ⛔ Riscritta la sera del 9 agosto, dopo la misura S1 — il predefinito che avevo proposto **non funziona**
+>
+> *L'indagine sta in `web/rapporti/S1-certificato.md`, ed è lettura di codice con file e riga, non
+> un'impressione.*
+>
+> Avevo scritto che l'eccezione concessa dall'utente sul certificato della pagina sarebbe valsa
+> anche per la sessione WebTransport, e che quel clic **era** la fiducia al primo incontro di
+> `RCP.md` §4.1. **È falso su due motori su tre:**
+>
+> | | Perché |
+> |---|---|
+> | **Chrome/Edge** | l'eccezione la consulta **un solo punto**, alimentato dagli errori delle richieste normali; il client WebTransport **non la interroga mai** `[R]` — assenza verificata con controllo positivo. ⛔ E c'è un **secondo muro indipendente**: il QUIC di Chrome pretende una radice **incorporata nel browser** |
+> | **Firefox** | l'eccezione **viene** consultata anche su HTTP/3, e poi la sessione si chiude se la radice non è incorporata `[R]`. L'unica deroga scritta nel codice è, testualmente, `serverCertificateHashes` |
+> | **Safari** | `[?]` **il caso aperto**: la sua eccezione mette il certificato **nel portachiavi**, e WebTransport passa di lì — potrebbe essere l'unico dove funziona. Nessuno l'ha documentato |
+>
+> ⛔ **E la proposta dell'autorità da installare (qui sotto) aveva una terza ragione per non
+> funzionare, più dura delle due già scritte**: su Chrome **non basta nemmeno metterla nel
+> magazzino di sistema**, perché quella radice non è *incorporata nel browser* e non lo diventa.
+>
+> ⭐ **Una cosa cade e semplifica**: `Alt-Svc` non c'entra — WebTransport apre la sua connessione da
+> sé `[S]`. Il ripiego silenzioso su TCP che avevo dichiarato come pericolo **non può accadere**.
+
+**Quel che vale, deciso dall'utente la sera del 9 agosto**: *«Stiamo complicando le cose. Abbiamo 2
+livelli per la sicurezza: il trasporto e l'accesso. Per il trasporto usiamo quello che già oggi i
+browser supportano senza problemi: tls. Per l'accesso: al momento restiamo fermi su ip:porta con
+userid e password»*.
+
+| Livello | Come |
 |---|---|
-| **predefinito** | certificato **autofirmato**, e la prima volta su ogni dispositivo il browser mostra l'avviso: **un clic**. ⭐ Quel clic **è** il ricordo di `RCP.md` §4.1 — il browser lo memorizza per quell'indirizzo e riavvisa se il certificato cambia. **La fiducia al primo incontro non la scriviamo: la fa il browser, esattamente come l'avevamo disegnata** |
-| **dichiarato** | chi ha un nome di dominio mette un **certificato vero** (Let's Encrypt con la sfida DNS, che non richiede di esporre niente su Internet) e l'avviso non compare mai, iPhone compreso. Era già previsto da §1.3: *«roba dell'amministratore, non dell'utente»* |
-| **rete di sicurezza** | `serverCertificateHashes`, se la misura dicesse che il clic non basta per WebTransport. ⛔ Ma **WebKit ha dichiarato che non lo implementerà**: su quella strada iPhone e iPad avrebbero **solo** il certificato vero. E il certificato dovrebbe durare **meno di 14 giorni**, quindi rigenerato dal server e con l'impronta iniettata nella pagina che il server stesso serve `[S]` |
+| **trasporto** | **TLS**, sempre. Il certificato se lo fa il server, e ⭐ **la pagina passa al browser la sua impronta** (`serverCertificateHashes`) — che è il meccanismo che i browser espongono **proprio per i server senza dominio**, non un aggiramento |
+| **accesso** | **indirizzo, porta, utente e password**. Niente altro |
+
+⭐ **Perché questo non è la «strada complicata» che sembrava**: la rotazione del certificato ogni
+14 giorni e la pubblicazione dell'impronta stanno **dentro il server** — è lui che serve la pagina,
+quindi ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista.
+
+⚠ **Quel che resta a carico dell'utente, ed è il prezzo dichiarato di non avere un dominio**: il
+**clic sull'avviso** al caricamento della pagina, la prima volta su ogni dispositivo. `[?]` Su
+Chrome l'eccezione potrebbe durare **circa una settimana** e non per sempre — da misurare, e se
+fosse vero è un clic ricorrente, non uno solo.
+
+| Chi ha un dominio | mette un **certificato vero** (Let's Encrypt con sfida DNS, che non richiede di esporre niente): **una riga di configurazione, non una strada diversa**, e l'avviso non compare mai |
+|---|---|
+
+⛔ **Scartata: la «via Plex»** — un dominio nostro che risolve agli indirizzi privati dei server,
+cioè certificato vero e zero fatica per l'utente. Sarebbe **un servizio da tenere in piedi per
+sempre**, e il giorno in cui non ci fosse più smetterebbero di funzionare tutti i server
+installati. È la dipendenza più pesante che il progetto abbia preso in considerazione, ed è stata
+respinta dall'utente insieme al resto della complicazione.
+
+`[?]` **Safari e iPhone restano il buco dichiarato**: WebKit non implementa `serverCertificateHashes`
+`[S]`, quindi lì la strada è l'eccezione — se funziona, e non lo sa nessuno — oppure il certificato
+vero. **È la prima misura di S1.**
 
 > ### ⛔ La proposta di far installare un'autorità nostra, e perché è stata scartata
 >
