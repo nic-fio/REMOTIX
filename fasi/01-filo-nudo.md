@@ -627,6 +627,22 @@ migliore** con un `[M]` falso contro un `[R]`.*
 > virgolette, restituendo `grep: ...: No such file or directory`. La regola della fase 0 vale qui:
 > **le righe di comando si mettono in un file, non si ricordano**.
 
+### ⛔ E il terzo difetto della stessa famiglia, che ha stampato un VERDE
+
+*9 agosto, banco di `ngtcp2`.* Il controllo diceva **«nessuna traccia di `SETTINGS_WT_MAX_SESSIONS`:
+la previsione regge»** — ⛔ **da una ricerca mai eseguita**. I due alberi erano passati a `grep` come
+**una stringa sola**, quindi cercava in un percorso con uno spazio dentro che non esiste; e
+`2>/dev/null` nascondeva il «No such file or directory» che l'avrebbe detto subito.
+
+⛔ **È il peggiore dei tre, perché gli altri due davano rosso e questo ha dato verde** — e un verde
+non lo si va a verificare. A insospettirmi non è stato il banco: è stato **un numero impossibile**
+nella riga accanto — «extended CONNECT in 0 file» su una libreria che implementa RFC 9220.
+
+⭐ **La cura è diventata una regola generale**, ed è entrata in `LEZIONI.md` §1.9 come **quarta
+regola**: *una misura deve dichiarare su che cosa ha guardato — il denominatore, non solo il
+risultato*. Adesso il banco stampa «dentro 447 file di 2 alberi» e **cerca una cosa che deve
+esserci** (`nghttp3`, trovata in 110 file) prima di credere a uno zero.
+
 ### ⚠ `aioquic` sa creare uno stream WebTransport e non sa riconoscerlo quando risponde
 
 *Trovato costruendo il controllo positivo, 9 agosto 2026, ed è del **cliente di prova** — quindi

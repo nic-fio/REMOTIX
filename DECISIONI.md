@@ -1729,8 +1729,29 @@ fa con un banco davanti, non su carta.
 > datagram extension for http3 server»* — cioè **documenta un'altra cosa**. Un campo la cui
 > documentazione parla d'altro è un campo che nessuno ha riletto.
 >
-> ⛔ **Nessuna di queste righe è una misura.** Sono la lente che dice **a chi vale la pena scrivere
-> le cinquanta righe** di B2, e a chi no.
+> ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
+>
+> *Banco `banchi/01-b2-costruisci-ngtcp2.sh`. Cercato dentro **447 file** dei due alberi, ⛔ **con il
+> controllo positivo della ricerca**: la parola `nghttp3` compare in **110 file**, quindi il grep sta
+> leggendo davvero.*
+>
+> | Che cosa | File |
+> |---|---|
+> | `SETTINGS_WT_MAX_SESSIONS` (`0xc671706a`) | ⛔ **0** |
+> | il token `webtransport` | ⛔ **0** |
+> | l'extended CONNECT (`:protocol`, `ENABLE_CONNECT_PROTOCOL`) | ✅ **9** |
+>
+> ⭐ **La previsione regge, e adesso è misurata**: le fondamenta ci sono, **lo strato WebTransport
+> non c'è affatto**. Da cui il numero che B2 deve produrre — *quante righe di collante* — che si
+> **conta**, non si stima.
+>
+> ⚠ *Il primo giro di questo stesso controllo aveva stampato «la previsione regge» da una ricerca
+> **mai eseguita** — due alberi passati come una stringa sola, con `2>/dev/null` a nascondere
+> l'errore. Il numero qui sopra vale perché il banco adesso dichiara il proprio denominatore. È la
+> quarta regola di `LEZIONI.md` §1.9, nata da quell'errore.*
+>
+> ⛔ **Nessuna delle righe di questo riquadro è una misura del PRODOTTO.** Sono la lente che dice
+> **a chi vale la pena scrivere il collante**, e quanto ne servirà.
 
 ---
 

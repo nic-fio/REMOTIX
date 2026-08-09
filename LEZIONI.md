@@ -204,6 +204,33 @@ risultato entra nel documento come un fatto misurato.
 
 *Dettaglio: `REFERENCE.md` R32 (il riquadro di chiusura) e `kde.md` §5.1.*
 
+> ### ⭐ La quarta regola, e l'ha imposta la fase 1 ripetendo l'errore tre volte in un'ora
+>
+> *9 agosto 2026, primo giorno di banchi di V2. Le tre regole qui sopra erano scritte, lette e
+> citate — e il difetto è tornato **tre volte nella stessa sera**, sempre nel banco, mai nel
+> prodotto:*
+>
+> | | Che cosa ha detto il banco | Che cosa era |
+> |---|---|---|
+> | 1 | «0 simboli su 4» | `grep -q` con `pipefail`: il **riscontro riuscito** letto come fallimento |
+> | 2 | «uscita 0» su un clone fallito | un `\| tail` in coda al comando: lo stato d'uscita era di `tail` |
+> | 3 | «nessuna traccia: la previsione regge» | due alberi passati come **una** stringa: grep non ha cercato **da nessuna parte** |
+>
+> ⛔ **Il terzo è il peggiore, perché ha stampato un verde**: *«la previsione regge»* da una ricerca
+> mai eseguita, con `2>/dev/null` a nascondere il «No such file or directory» che l'avrebbe detto.
+>
+> 4. ⛔ **Una misura DEVE dichiarare su che cosa ha guardato — il denominatore, non solo il
+>    risultato.** «Zero occorrenze» non è un dato finché non è accompagnato da *«dentro 447 file di
+>    2 alberi»* e da un controllo che cerca **una cosa che deve esserci** (*«"nghttp3" trovato in 110
+>    file»*). Un conteggio senza denominatore non è una misura: è una speranza con un numero
+>    davanti.
+>
+> ⚠ **E la ragione per cui questa regola nasce qui e non prima**: le prime tre parlano di come si
+> *interpreta* un risultato. Questa dice che **il risultato va accompagnato da quel che lo rende
+> leggibile**, e si applica quando lo strumento è scritto da chi misura — cioè sempre, in un
+> progetto dove i banchi sono nostri. In tutt'e tre i casi la cura è stata **la stessa**: far dire
+> allo strumento che cosa stava guardando, e in tutt'e tre ha trovato il difetto in un minuto.
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque
