@@ -1,0 +1,405 @@
+# PIANO — le fasi, in ordine, e come si chiudono
+
+*Aperto il 9 agosto 2026, dopo `SPECIFICHE.md` e `RCP.md` e prima di qualunque riga di codice.*
+
+---
+
+## 0. Come è fatto questo piano
+
+**Una fase è una cosa sola che si può mostrare.** Se a fine fase non c'è niente che l'utente possa
+guardare e giudicare, la fase è divisa male.
+
+Ogni fase ha quattro cose, e la terza è quella che di solito si dimentica:
+
+| | |
+|---|---|
+| **che cosa produce** | in una riga |
+| **che cosa vede l'utente** | e giudica — è il criterio di chiusura, non il documento |
+| **il banco** | ⛔ **scritto prima di sviluppare**, non dopo |
+| **il documento** | `fasi/NN-nome.md`, **aperto quando si apre la fase** |
+
+### 0.1 La regola che tiene in piedi il resto
+
+> ⛔ **Il documento di fase si apre all'inizio e si riempie strada facendo. Non si scrive alla
+> fine.**
+
+Un documento scritto dopo è un **resoconto**, e in un resoconto le misure si *ricordano* invece di
+essere *registrate*. È `LEZIONI.md` §9.8: si aggiorna nello stesso momento, con la data e la
+fonte.
+
+⭐ E ha un effetto collaterale che vale da solo: **se non sai scrivere il banco all'inizio, non hai
+ancora capito la fase.** Una fase che non sa dire come si misurerà non è pronta ad aprirsi.
+
+### 0.2 Il modello del documento di fase
+
+```markdown
+# Fase N — <titolo>
+Aperta il <data> · Chiusa il <data>
+
+## Che cosa deve produrre
+Una riga. E: che cosa l'utente vede e giudica alla fine.
+
+## Il banco                      ← scritto PRIMA di sviluppare
+Come si misura, con quale scena, quale numero ci aspettiamo.
+E il controllo positivo: come so che questo banco sa vedere il difetto?
+
+## Che cosa è stato sviluppato
+File, righe, a cosa servono.
+
+## Le misure                     ← riempito strada facendo
+| che cosa | atteso | misurato | data |
+La scena dichiarata accanto a ogni numero.
+
+## ⛔ Che cosa NON ha funzionato
+I vicoli ciechi, con il motivo. Anche quelli imbarazzanti.
+
+## Le decisioni prodotte
+Collegamenti a DECISIONI.md §x.y — **non copie**.
+
+## Che cosa resta [?]
+Quel che la fase lascia aperto, dichiarato invece che dimenticato.
+
+## Il giudizio dell'utente
+La frase vera, con la data.
+```
+
+### 0.3 Le quattro regole del piano
+
+1. ⛔ **Le decisioni stanno in `DECISIONI.md`, una sola volta.** Il documento di fase **rimanda**,
+   non copia. Undici registri delle decisioni sono undici posti dove cercare, e prima o poi due si
+   contraddicono.
+2. ⛔ **«Che cosa non ha funzionato» si riempie anche quando fa una brutta figura.** Il capitolo
+   più utile di v1 — i sette vicoli ciechi di `LEZIONI.md` §8 — esiste solo perché i fallimenti
+   erano stati scritti. Un vicolo cieco documentato costa meno di uno riscoperto.
+3. ⛔ **Una fase si chiude su una misura giudicata dall'utente**, non su un documento completo. È
+   l'invariante I8.
+4. ⛔ **Il banco si certifica prima di essere creduto.** Ogni fase, prima di dichiarare un numero,
+   dimostra che il suo banco sa vedere il difetto che cerca (`LEZIONI.md` §1.2 e §1.9).
+
+---
+
+## 1. I due binari
+
+Il **client Android non è una fase**: è un secondo binario che attraversa metà del piano. Si
+innesta **dopo la fase 4**, quando il protocollo è stato esercitato da capo a fondo su un client
+solo — abbastanza tardi da non inseguire un bersaglio mobile, abbastanza presto da scoprire i
+difetti del protocollo prima che ci si costruisca sopra.
+
+```
+  binario A — server + client Linux
+  0 ─ 1 ─ 2 ─ 3 ─ 4 ─ 5 ─ 6 ─ 7 ─ 8 ─ 9 ─ 10 ─ 11 ─ 12 ─ 13
+                      │
+                      └──▶ binario B — client Android
+                            A1 ─ A2 ─ A3 ─ A4 ─ A5
+```
+
+---
+
+# BINARIO A — il server e il client Linux
+
+## Fase 0 — L'ambiente e i banchi
+
+**Produce**: la macchina che compila, e i banchi di v1 rimessi in funzione.
+
+**L'utente vede**: i numeri di v1 **riprodotti** — la cattura di Mutter che consegna ~37
+fotogrammi al secondo, KWin ~60. Non è un risultato di prodotto: è il **controllo positivo di
+tutto il progetto**. Se il banco non sa riprodurre un numero che sappiamo vero, ogni misura futura
+è sospetta.
+
+**Il banco**: `v1/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
+scene con `ffmpeg -f lavfi -i testsrc2`.
+
+**Si riusa**: tutto `v1/banchi/` (262 file), `v1/banco/` per il provisioning.
+
+⚠ Da fare qui e non dopo: installare `vainfo` sul ferro di prova e **confermare** le capacità del
+codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DECISIONI.md` §4.6).
+
+---
+
+## Fase 1 — Il filo nudo
+
+**Produce**: la stretta di mano di RCP su QUIC, dai due lati. Niente video, niente input.
+
+**L'utente vede**: si collega da riga di comando, e il programma dice *«ammesso, sessione nuova,
+tela 1920×1080, desktop GNOME»*. O dice perché no.
+
+**Il banco**:
+- ⛔ **la stretta di mano su DUE connessioni, mai una**: in v1 un certificato condiviso uccideva il
+  server **alla seconda**, e una prova a connessione singola resta verde per sempre
+  (`LEZIONI.md` §2.1);
+- il **validatore del filo** nella sua prima forma: legge una registrazione e dice quale byte non è
+  conforme a `RCP.md` §6;
+- ⛔ **e le prove di violazione**: tipo sconosciuto, lunghezza sbagliata, messaggio nello stato
+  sbagliato. La connessione **deve cadere ogni volta**. Un banco che non prova a violare il
+  protocollo non prova il protocollo (`RCP.md` §11).
+
+**Controllo positivo del validatore**: gli si dà una registrazione **con un errore dentro** e si
+verifica che lo veda. Uno strumento che non ha mai trovato niente non è pulito: è non certificato.
+
+**Si riusa**: `autenticazione.c` (144 righe, PAM), `registro.c` (140).
+
+---
+
+## Fase 2 — Il primo fotogramma
+
+**Produce**: cattura da una sessione GNOME vera → codifica → filo → decodifica → finestra.
+Un'immagine ferma.
+
+**L'utente vede**: ⭐ **il proprio desktop**, dentro una finestra, sull'altro computer. Fermo, ma
+suo.
+
+**Il banco**: il fotogramma decodificato confrontato con quello catturato. Non «il programma non è
+crollato»: **i pixel**.
+
+**Si riusa**: `cattura.c` (1060 righe), `mutter.c` (353), `superficie.c` (675), `immagine.c` (273),
+`codificatore.c` (889, da riportare a HEVC), `palco.c` per la parte di montaggio.
+
+⚠ Qui la codifica è **software**, di proposito. L'accelerazione è la fase 8, e metterla prima
+significherebbe non sapere quale dei due pezzi sbaglia.
+
+---
+
+## Fase 3 — Il movimento
+
+**Produce**: uno stream per fotogramma, l'abbandono con `RESET_STREAM`, la cadenza.
+
+**L'utente vede**: il desktop **che si muove**, e dice se è fluido.
+
+**Il banco**, ed è il cuore:
+- ⛔ **la scena si dichiara e si muove sempre** — un client a schermo intero che ridisegna a ogni
+  richiamo del compositore. Tutte le misure di ritmo delle fasi 3-9 di v1 sono state buttate per
+  questo (`LEZIONI.md` §1.1);
+- **i fotogrammi consegnati all'utente**, non quelli elaborati. Il numero che in v1 nessuno aveva
+  mai contato, e che era 18 mentre si ottimizzava altro;
+- ⭐ **l'anello del ritardo**: il client manda un input che cambia colore allo schermo e guarda i
+  fotogrammi decodificati finché non lo vede. Misurato **dal lato che riceve**
+  (`DECISIONI.md` §2.6).
+
+**I numeri da raggiungere**: ritardo ≤ 50 ms, traguardo 40 (`SPECIFICHE.md` §3.2).
+
+⚠ **Attesa dichiarata in anticipo**: su GNOME il traguardo dei 40 ms probabilmente **non si
+raggiunge**, per il muro dei 37 fotogrammi di Mutter. Se la misura lo confermasse, non è un difetto
+nostro — ed è una ragione in più per la fase 10.
+
+---
+
+## Fase 4 — Si comanda
+
+**Produce**: il canale di input, il puntatore disegnato dal client, le lettere e le posizioni.
+
+**L'utente vede**: ⭐ **usa il desktop**. È il momento in cui smette di essere una dimostrazione.
+
+**Il banco**:
+- ⛔ **il cursore del desktop non deve comparire nell'immagine**: si guarda un fotogramma. E su
+  wlroots si verifica che il tema trasparente sia stato **caricato**, non solo scritto — un tema
+  che carica zero cursori fa ripiegare su uno visibile (`SPECIFICHE.md` §7.1);
+- una lettera accentata scritta in una sessione con la disposizione giusta, e una in una
+  sessione con la disposizione sbagliata: la seconda **deve** finire nel registro come non
+  producibile, non uscire diversa;
+- `Ctrl+C` che copia invece di scrivere una c.
+
+**Si riusa**: `input.c` (906 righe, libei), `tastiera.c` (372, xkbcommon).
+
+---
+
+## Fase 5 — La sessione
+
+**Produce**: PAM per intero, il palco che sopravvive al distacco, i tre orologi, una sola sessione
+grafica per utente.
+
+**L'utente vede**: chiude il client, va a pranzo, riapre — **e ritrova tutto com'era**.
+
+**Il banco**:
+- distacco e riaggancio, **due volte di fila**: un banco che passa solo da macchina pulita non è un
+  banco, è una dimostrazione (`LEZIONI.md` §2.3-ter);
+- ⛔ **la sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
+  `libmutter` andava in asserzione fallita, con le applicazioni che perdevano la connessione
+  Wayland. È il difetto che rende la sessione inutilizzabile dopo il primo stacco;
+- i tre orologi, ciascuno con la sua prova;
+- l'apertura di una sessione locale mentre la remota è viva → la remota **deve** cadere con
+  `SESSIONE_LOCALE_PREVALSA`, e il motivo si verifica **dal lato che lo riceve**.
+
+**Si riusa**: `palco.c` (1545 righe — la più preziosa), `sessione.c` (797), `sentinella.c` (307,
+logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
+
+---
+
+## Fase 6 — La tela e la vista
+
+**Produce**: la tela concordata all'attacco, la vista che riscala, il riattacco a misura diversa.
+
+**L'utente vede**: ridimensiona la finestra e l'immagine si adatta **senza che le finestre dentro
+si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la sessione adattata.
+
+**Il banco**: il ripiego su KWin < 6.8 **dichiarato nel registro** — si verifica che la riga ci
+sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
+
+---
+
+## Fase 7 — Audio e appunti
+
+**Produce**: Opus e PCM in uscita; appunti testuali nei due versi.
+
+**L'utente sente e vede**: la musica, e il copia-incolla che funziona in tutt'e due i versi.
+
+**Il banco**:
+- ⛔ **si ascolta**, non si contano i blocchi: in v1 il banco contava i campioni mentre l'audio era
+  **rumore a fondo scala**, e restava verde;
+- ⛔ **i due lati si sincronizzano con marcatori, non con `sleep`**: al banco degli appunti di KDE i
+  due lati erano sfasati di **tredici secondi** e il controllo dava rosso su codice che funzionava
+  (`LEZIONI.md` §2.3-quinquies);
+- ⚠ e la clipboard si **svuota all'inizio** di ogni giro: quel che resta dal giro prima viene
+  annunciato alla connessione e sembra un risultato.
+
+**Si riusa**: `altoparlante.c` (892), `suono.c` (582), `appunti_mutter.c` (450), `appunti.c` (115).
+
+⚠ Invariante I5: il volume appartiene alla sessione, e chi si collega lo trova **al massimo**.
+
+---
+
+## Fase 8 — L'accelerazione
+
+**Produce**: HEVC in hardware su Intel, 10 bit, e la copia zero.
+
+**L'utente vede**: **la stessa immagine di prima**, e giudica che non sia peggiorata.
+
+**Il banco**, ed è la lezione che è costata di più:
+- ⛔ **si misurano i fotogrammi consegnati, non i millisecondi di CPU.** La fase 9 di v1 ha portato
+  il costo per fotogramma da 41 ms a 6 mentre i fotogrammi consegnati **scendevano** da 29 a 22,7.
+  Un guadagno che si paga in fluidità non è un guadagno (`LEZIONI.md` §6.2);
+- ⛔ **chiedere il codificatore per nome e verificare che abbia obbedito**: un codificatore che
+  ripiega in CPU credendosi in GPU produce due misure sotto la stessa etichetta. Se non obbedisce,
+  si dichiara il fallimento (`LEZIONI.md` §1.8);
+- ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11).
+
+⚠ Qui vive la trappola della GPU: con due schede, il compositore che disegna su quella sbagliata dà
+composizione in software **senza un errore**. La regola udev di `v1/banco/gpu-udev.sh` va applicata
+e verificata (`DECISIONI.md` §4.6-ter).
+
+---
+
+## Fase 9 — La qualità e la degradazione
+
+**Produce**: il controllo del ritmo, la scala di degradazione, il comportamento su rete cattiva.
+
+**L'utente vede e giudica**: l'immagine. ⛔ **Ed è l'unico giudizio che conta**: in v1 questa fase
+era stata validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio dell'utente sul
+desktop vero fu *«siamo tornati indietro»*. La fase fu azzerata.
+
+**Il banco**: la rete strozzata a valori veri — 2 Mbit/s con perdita e giro lungo — e la verifica
+che il ritmo cali **senza mai bloccarsi** e senza mai staccare.
+
+⛔ **La cosa che si verifica per prima**: che il ritmo **non** cali quando la scena è ferma. È
+l'invariante I1, ed è la ferita da cui nasce.
+
+⚠ E ciò che cambia quel che si vede sta **dietro un interruttore spento** finché l'utente non l'ha
+guardato (I6).
+
+---
+
+## Fase 10 — KDE
+
+**Produce**: il secondo desktop.
+
+**L'utente vede**: la stessa cosa su Plasma.
+
+⭐ **E qui si insegue il numero desiderato**: KWin consegna 60 fotogrammi al secondo dove Mutter ne
+dà 37 `[M]`. La fase 10 non è solo «servire più desktop»: è la strada per i 60 a 4K e per il
+traguardo dei 40 ms.
+
+**Si riusa**: `kwin.c` (822 righe), `appunti_wlr.c` (796).
+
+⚠ Le trappole sono già scritte in `kde.md`: `XDG_MENU_PREFIX` senza cui il cancello della cattura
+non si apre; niente `InaccessiblePaths=` nel drop-in; il ridimensionamento **nella forma della
+negoziazione**, con la guardia contro il ciclo infinito che **non si vede su Trixie** e compare il
+giorno dell'aggiornamento a 6.8.
+
+---
+
+## Fase 11 — XFCE e LXQt
+
+**Produce**: il terzo e il quarto desktop, che condividono wlroots e quindi quasi tutto.
+
+**Si riusa**: `appunti_wlr.c` già scritto per questa famiglia; le risposte alle quattordici domande
+sono già in `xfce.md` §12 e `lxqt.md`.
+
+---
+
+## Fase 12 — Multi-tenant e il budget
+
+**Produce**: più utenti insieme, il budget del codificatore, il rifiuto motivato.
+
+**L'utente vede**: due sessioni vere in contemporanea; e quando la macchina è piena, un messaggio
+che **dice perché**.
+
+**Il banco**: si satura il codificatore di proposito e si verifica che l'undicesimo riceva
+`BUDGET_PIENO` — e che **i dieci che stavano lavorando non peggiorino** (`DECISIONI.md` §4.6-bis).
+
+---
+
+## Fase 13 — Il servizio
+
+**Produce**: unità systemd, confezionamento, installazione, il certificato generato all'avvio,
+la limitazione dei tentativi.
+
+**Il banco**: ⛔ **il ripristino si prova riavviando**, non rileggendo lo script. In v1 il primo
+riavvio vero ha mostrato che mancavano due pezzi, e nessuno dei due era nei documenti: il disco che
+non si montava da solo, e i pacchetti installati a mano mesi prima che il provisioning ereditava
+senza dichiararli (`LEZIONI.md` §2.5-bis).
+
+---
+
+# BINARIO B — il client Android
+
+*Si innesta dopo la fase 4. Kotlin, e MediaCodec per la decodifica.*
+
+## Fase A1 — Il filo su Android
+La stretta di mano e l'attacco. L'utente vede: *«ammesso, sessione ripresa»* sul telefono.
+⭐ **Ed è qui che il protocollo viene messo alla prova per davvero**: la seconda implementazione è
+l'unica cosa che somiglia a un arbitro esterno, anche se scritta dalla stessa mano.
+
+## Fase A2 — Il video
+MediaCodec, HEVC, 10 bit. L'utente vede il proprio desktop sul telefono.
+⚠ È il muro contro cui è morto v1 — lì il client decodificava in software. Il banco misura
+**i fotogrammi decodificati in hardware**, e la prova che lo siano davvero.
+
+## Fase A3 — Il tocco
+Il puntatore disegnato dal client e i sette gesti (`SPECIFICHE.md` §7.2).
+⚠ Questa tabella è **un punto di partenza dichiarato**: qui si scopre quali gesti sono giusti, e
+si cambia.
+
+## Fase A4 — La tastiera
+L'IME che produce testo, le lettere che viaggiano come lettere, i comandi come posizioni.
+
+## Fase A5 — La vita dell'applicazione
+Lo sfondo, la rete che cambia — ⭐ **la migrazione QUIC da WiFi a rete mobile senza distacco**, che
+è la ragione migliore per cui QUIC è stato scelto — il riattacco, la batteria.
+
+---
+
+## L'ordine, e perché
+
+**Il filo prima del contenuto** (1 prima di 2): un canale che non si sa aprire non si sa nemmeno
+riempire, e i difetti di protocollo trovati con dentro il video sono tre volte più cari.
+
+**Il software prima dell'hardware** (2-3 prima di 8): con la codifica accelerata dall'inizio, un
+difetto d'immagine ha due sospetti invece di uno.
+
+**La sessione dopo il movimento** (5 dopo 3): la persistenza è la cosa più difficile del progetto,
+e affrontarla prima di avere qualcosa da guardare significa non sapere se il palco regge.
+
+**Un desktop solo fino alla 9**: gli altri tre si aprono quando la catena è chiusa, altrimenti si
+inseguono differenze di compositore e difetti nostri nello stesso momento.
+
+**Android dopo la 4**: quando il protocollo è stato esercitato dalla stretta di mano all'input, ma
+prima che si sia costruito troppo sopra i suoi difetti.
+
+---
+
+## Il metodo, in quattro righe
+
+1. Il documento di fase si apre **prima** di sviluppare, e contiene il banco.
+2. Il banco si certifica **prima** di essere creduto.
+3. Quel che non ha funzionato si scrive **anche** quando fa una brutta figura.
+4. La fase si chiude quando **l'utente ha guardato e ha detto la sua** — non quando il documento è
+   pieno.
