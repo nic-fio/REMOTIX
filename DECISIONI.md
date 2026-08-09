@@ -175,6 +175,61 @@ Ma **nessuno ha misurato quanto si veda davvero la differenza** sul desktop dell
 vale `LEZIONI.md` §2.3-quater. Si decide su un banco che metta le due immagini a confronto, e
 a giudicare è l'utente (§7.3), dietro un interruttore spento di suo (§2.4).
 
+### 2.4 ✅ Il ritardo: 50 ms di tetto, 40 di traguardo — e solo per il pezzo che è nostro
+
+*9 agosto 2026. «Per quello che è sotto il nostro controllo 50 ms (o anche 40) va bene, su
+altre cose non possiamo agire».*
+
+È il **terzo numero**, e prima di oggi non esisteva: né `SPECIFICHE.md` né la specifica di v1
+nominavano la latenza, che è la grandezza che decide se un desktop remoto è piacevole. Trenta
+fotogrammi con 40 ms si usano benissimo; sessanta con 200 ms sono insopportabili.
+
+| | Dall'input che arriva al fotogramma che parte |
+|---|---|
+| **TETTO** | 50 ms |
+| **TRAGUARDO** | 40 ms |
+
+**Si misura solo il pezzo nostro**, e la ragione è che un requisito che si può fallire senza
+aver sbagliato niente — per colpa di una galleria — non viene misurato da nessuno. Il totale
+che l'utente sente è questo più la rete: si dichiara, non si promette.
+
+*Scritto in `CODER.md` §1-bis, accanto agli altri due numeri.*
+
+### 2.5 🔸 ⛔ Il traguardo dei 40 ms non è raggiungibile su GNOME — stesso muro dei 60 fps
+
+Il conto, sommando i pezzi che v1 ha misurato:
+
+| | GNOME (Mutter) | KDE (KWin) |
+|---|---|---|
+| il desktop reagisce e ridisegna | ~16 ms | ~16 ms |
+| **la cattura ci consegna il fotogramma** | **~27 ms** (37 al secondo `[M]`) | **~16 ms** (60 al secondo `[M]`) |
+| la codifica | 3-6 ms `[M]` fase 9 | 3-6 ms |
+| **totale** | **~48 ms** — dentro il tetto, fuori dal traguardo | **~37 ms** — dentro tutti e due |
+
+⭐ **È lo stesso muro dei 60 fotogrammi a 4K, e per la stessa ragione**: Mutter consegna sei
+decimi di quel che gli si chiede e nessuna leva nostra lo sposta (`LEZIONI.md` §3, domanda 6).
+Il tetto del ritardo, come quello del ritmo, **in buona parte lo pone il compositore**.
+
+⚠⚠ **E questa tabella è una stima, non una misura — marcata `[?]`.** È la somma di componenti
+misurati separatamente, che è *precisamente* ciò contro cui mette in guardia `LEZIONI.md` §1.7:
+sommare i registri di chi manda non dice che il byte è arrivato. Serve per orientarsi, **non per
+concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
+
+### 2.6 🔸 Il banco della latenza esiste solo perché il client è nostro
+
+Misurare il ritardo di un desktop remoto richiede di solito **una telecamera** che filma lo
+schermo con un cronometro sopra. Qui no: l'input lo iniettiamo noi **e** il client lo scriviamo
+noi.
+
+**L'anello chiuso**: il client manda un input che provoca un cambiamento visivo enorme e
+inequivocabile — lo schermo che cambia colore — e poi **guarda i fotogrammi che decodifica**
+finché non vede il colore nuovo. La differenza fra i due istanti è la latenza vera, misurata
+**dal lato che riceve** — la lezione che a v1 è costata tre fasi (`LEZIONI.md` §1.7).
+
+Automatico, ripetibile, senza telecamere e senza nessuno che guardi. È il caso concreto di quel
+che l'utente aveva osservato l'8 agosto: possedere il client non toglie solo lezioni, ne rende
+alcune **molto più economiche da rispettare**.
+
 ---
 
 ## 3. La rete e la degradazione
@@ -755,10 +810,9 @@ In v1 era **fuori scope** (§4.2); in V2 entra in una riga. Non è un problema d
 di GPU: quattro sessioni a 4K60 non stanno su un'integrata. Il numero decide se serve una coda
 di codifica condivisa.
 
-### 7.8 La latenza
-**Non è nominata in `SPECIFICHE.md`**, ed è *la* metrica di un desktop remoto — più dei
-fotogrammi. 60 fps con 200 ms sono inusabili; 30 fps con 40 ms sono ottimi. Serve un numero da
-tasto a pixel, misurato dal lato che riceve (`LEZIONI.md` §1.7).
+### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
+50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. Con l'avvertenza che il
+traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi.
 
 ### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
 Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio

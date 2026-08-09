@@ -80,6 +80,28 @@ quanto sia elegante il guadagno che porta altrove.**
 i 480p a 25 fps — e nemmeno se, per non scendere sotto, gli toglie la sessione. Una
 sessione brutta vale più di una sessione chiusa.**
 
+### 1-bis. Il terzo numero: il ritardo
+
+*Posto dall'utente il 9 agosto 2026, e prima di quel giorno non esisteva: né
+`SPECIFICHE.md` né la specifica di v1 nominavano la latenza.*
+
+|         | Dall'input che arriva al fotogramma che parte |
+|---------|------------------------------------------------|
+| TETTO   | **50 ms** — non si supera                      |
+| TRAGUARDO | **40 ms** — dove si punta                    |
+
+⛔ **Si misura solo il pezzo che è nostro, e non è una furbizia: è l'unico modo di
+avere un requisito difendibile.** La rete non è nostra e cambia da un minuto
+all'altro; un requisito «100 ms end-to-end» si fallisce stando fermi, per colpa di
+una galleria, e un requisito che si può fallire senza aver sbagliato niente **non
+viene misurato da nessuno**. Il totale che l'utente sente è questo più la rete:
+si **dichiara**, non si promette.
+
+⚠ **E il ritardo pesa più dei fotogrammi**: 30 fotogrammi al secondo con 40 ms si
+usano benissimo, 60 con 200 ms sono insopportabili. Una scelta tecnica che alza il
+ritmo peggiorando il ritardo **non si fa**, ed è il tipo di scambio che si presenta
+di continuo — ogni memoria intermedia che aggiungi compra fluidità e vende risposta.
+
 E la banda dichiarata è un **pavimento, non un budget**. Si spende, non si risparmia:
 la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
 (`LEZIONI.md` §7.2 — ottimizzare nella direzione sbagliata è peggio che non ottimizzare.)
