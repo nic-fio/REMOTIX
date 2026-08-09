@@ -94,7 +94,40 @@ comando a riga di comando, che conviene chiamare `remotix` e non `rcp`.
 pixel — porta input, appunti, geometria, congedo e stato della sessione, e il video è uno dei
 suoi canali. È la differenza fra RCP e ciò che RDP faceva credere di essere.
 
-### 1.3 🔸 La sessione non conosce il codec: lo negozia la connessione
+### 1.3 ✅ La fiducia nel server: ricordata in silenzio, mai confermata a mano
+
+*9 agosto 2026. «Se inserisco i dati fondamentali (ip, porta, userid e password) so che quel
+server è mio. La sicurezza va bene, ma qui non stiamo costruendo un sistema basato su standard
+militari».*
+
+**Nessun confronto di impronte, nessuna autorità di certificazione, nessun dominio.** L'utente
+digita indirizzo, porta, utente e password, e basta.
+
+Il certificato serve comunque — QUIC pretende TLS, non esiste l'opzione «senza» — quindi il
+server se ne genera uno autofirmato all'installazione. Il client, al primo collegamento, lo
+**accetta in silenzio e se lo ricorda**; dalle volte successive, se cambia, avvisa. È quel che
+fa SSH, e non si vede finché non serve: costa **zero interazione** e copre tutti i collegamenti
+tranne il primo.
+
+⚠ **La precisazione che è stata fatta e respinta, tenuta perché la decisione si capisca:** il
+rischio non è digitare l'indirizzo sbagliato, è che qualcuno intercetti la connessione verso
+quello giusto. La prima connessione resta scoperta. **Il rischio è stato valutato e accettato**
+dall'utente per lo scenario previsto — server proprio, rete propria o VPN.
+
+🔸 **Due conseguenze che non costano niente e non si vedono:**
+
+1. **la password non parte prima** che il server abbia dimostrato di essere quello di ieri. È
+   l'invariante I3 — la guardia parte da negato — applicata all'ordine della stretta di mano.
+   Con RDP le credenziali partono presto e l'avviso sul certificato arriva quando ormai le hai
+   date; qui è solo questione di cosa si scrive per primo sul filo;
+2. **un certificato vero, se c'è, si usa e vale di più** — roba dell'amministratore, non
+   dell'utente, e non aggiunge un passaggio a nessuno.
+
+⚠ E una trappola già pagata da v1, da non ripetere: *«un certificato TLS condiviso uccideva il
+server alla seconda connessione; una prova a connessione singola resta verde per sempre»*
+(`LEZIONI.md` §2.1). Il banco della stretta di mano si fa **con due connessioni**, non con una.
+
+### 1.4 🔸 La sessione non conosce il codec: lo negozia la connessione
 
 Discende da 1.1 e da §4. Il palco produce fotogrammi; ogni connessione ci attacca il proprio
 codificatore con le capacità del **suo** client. Se il codec fosse una proprietà della
@@ -625,10 +658,9 @@ di codifica condivisa.
 fotogrammi. 60 fps con 200 ms sono inusabili; 30 fps con 40 ms sono ottimi. Serve un numero da
 tasto a pixel, misurato dal lato che riceve (`LEZIONI.md` §1.7).
 
-### 7.9 La fiducia: chi autentica il server verso l'utente?
-PAM autentica l'utente verso il server; niente fa il contrario. Certificato autofirmato con
-fiducia al primo incontro? Impronta da confrontare? Senza, la prima connessione è un
-uomo-in-mezzo gratuito.
+### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
+Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio
+sulla prima connessione è stato valutato e accettato per lo scenario previsto.
 
 ### 7.10 ~~Il touch da Android~~ → **chiusa l'8 agosto, vedi §5-bis**
 Era la questione aperta n.1 di v1, mai chiusa in un anno. Risposta: trackpad con puntatore
