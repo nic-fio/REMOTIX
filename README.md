@@ -4,9 +4,31 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> **Stato al 9 agosto 2026**: fase 0 chiusa (i banchi riproducono i numeri di v1); specifica,
-> protocollo e piano scritti; **nessuna riga di codice di prodotto ancora scritta**. Il prossimo
-> passo è la **fase 1**, e comincia con la **sonda del browser**.
+> ## Stato alla sera del 9 agosto 2026 — ⭐ **si riparte da qui**
+>
+> **Fase 0 chiusa**: i banchi riproducono i numeri di v1 (`fasi/00-ambiente.md`).
+> **Nessuna riga di codice di prodotto ancora scritta.**
+>
+> La giornata ha cambiato il prodotto e poi ha controllato il cambiamento:
+>
+> | | |
+> |---|---|
+> | ⭐ **il client è il browser** | cadono i due client nativi e cinque fasi di piano — `DECISIONI.md` §1.6 |
+> | **la sicurezza è a due livelli** | TLS per il trasporto, indirizzo/porta/utente/password per l'accesso — §1.7 |
+> | **la seconda connessione remota si rifiuta** | `RCP.md` §8.2, motivo `0x0F` |
+> | 📖 **il sesto studio** | [`web.md`](web.md), con quattro rapporti in `web/rapporti/` |
+> | ⛔ **due revisioni avversariali** | **51 contraddizioni** trovate e curate **prima del primo byte**: i verdetti sono `web/rapporti/R1-` e `R2-` |
+>
+> ### Il prossimo passo, e non è ancora scritto
+>
+> ⛔ **Aprire `fasi/01-filo-nudo.md`** — il documento si apre *prima* di sviluppare e contiene i
+> banchi (`PIANO.md` §0.1). Dentro vanno: il banco del filo (la stretta di mano su **due**
+> connessioni, il validatore, le prove di violazione — `RCP.md` §11), i **quattro banchi della
+> sonda del browser** (`PIANO.md` §1.2), e le `[?]` che oggi hanno trovato un posto: da che parte
+> gira la rotella, se lo zoom della pagina falsi la misura della tela, quanto porta un datagram.
+>
+> ⚠ **E la scelta della libreria QUIC è ancora aperta**, ora col criterio cambiato: deve portare
+> HTTP/3 e WebTransport lato server (`DECISIONI.md` §6.4).
 
 ⭐ **Il client è una pagina web** *(deciso il 9 agosto 2026 — `DECISIONI.md` §1.6)*. Cadono i due
 client nativi e con essi cinque fasi di piano; **Windows torna dentro come posto da cui ci si
