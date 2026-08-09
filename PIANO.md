@@ -207,28 +207,42 @@ codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DE
 (AVD), `adb`, e il collegamento al telefono vero sulla rete locale. Si mette adesso perché la
 **sonda della fase 2** lo richiede già.
 
-> ### ⛔ Sull'emulatore si sviluppa. Non si misura.
+> ### L'emulatore copre più di quanto sembri — ma non la decodifica
 >
-> **Nessun numero di questo progetto viene dichiarato su un emulatore.**
+> *Verificato il 9 agosto 2026, dopo che una prima stesura lo aveva liquidato troppo in fretta.*
 >
-> L'emulatore è ottimo per il ciclo di sviluppo — interfaccia, logica dei gesti, IME, la stretta
-> di mano — ed è veloce, scriptabile e automatizzabile. Ma **non può misurare le due cose che
-> decidono il binario Android**:
+> ⭐ **Esiste il Desktop AVD**, profilo hardware «13.5" Freeform», da Android 11 in su; la
+> versione Android 13 ha aggiunto **scorciatoie da tastiera e supporto mouse** oltre al
+> ridimensionamento a trascinamento e al drag-and-drop. E **Samsung stessa documenta
+> l'emulatore per DeX**: *«If you don't have the DeX Station, you can test your app resize
+> behavior in Android Studio using Android Virtual Device»*, alla densità e risoluzione
+> equivalenti a DeX (160 dpi, 1080×1920).
+>
+> Quindi **il modello di interazione è testabile lì**: finestra freeform, mouse vero, tastiera
+> vera, bordi che si trascinano. È gran parte delle fasi **A1** e **A3**.
+>
+> ⚠ Con l'avvertenza che Samsung mette nella stessa pagina: l'emulatore **simula, non replica**
+> — la modalità freeform si abilita da riga di comando ed è *«not reflective of actual DeX
+> hardware behavior»*.
+>
+> ⛔ **Quel che l'emulatore NON dà, e va tenuto fermo:**
 >
 > | | |
 > |---|---|
-> | **la decodifica in hardware** | il MediaCodec dell'emulatore non è il silicio del telefono |
-> | **DeX** | non esiste sull'emulatore. Si può avvicinare con schermo grande, mouse e tastiera dell'ospite, ma quello è il *modello di interazione*, non DeX: il gestore di finestre e le regole d'input sono suoi |
+> | **la decodifica in hardware** | il suo MediaCodec non è il silicio del telefono. `[?]` Non si è riusciti a stabilire che esponga un decodificatore HEVC hardware; l'unico riscontro trovato è chi sull'emulatore **non trova profili HEVC 4K** |
+> | il ritardo vero, la batteria, la rete che cambia | non attendibili |
+> | la parità con DeX vero | approssimazione, non replica |
 >
-> E non attendibili nemmeno: il ritardo vero, la batteria, la rete che cambia.
+> > ⛔ **Da cui la regola, che resta:** *si sviluppa sull'emulatore, si misura sul telefono.*
+> > **Nessun numero di questo progetto viene dichiarato su un emulatore.**
 >
 > ⚠ È `REVIEWER.md` **E10** — *una prova verde sul client sbagliato*. Un emulatore che dice
 > «funziona» mentre il telefono no è un banco verde col difetto vivo, ed è la forma che a v1 è
 > costata di più: una correzione scritta su un banco che non riproduceva il difetto, spedita
 > all'utente, **che ha peggiorato le cose**.
 >
-> **Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro.** Due mestieri, e
-> il primo non si delega al secondo.
+> **Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro** — e il banco di
+> lavoro è più largo di quanto la prima stesura dicesse.
 
 ---
 
@@ -284,6 +298,13 @@ file HEVC Main10 dato a MediaCodec, per sapere **adesso** se il telefono lo deco
 
 ⛔ **La sonda gira sul telefono vero, mai sull'emulatore** (fase 0): è precisamente la misura che
 un emulatore non sa dare, perché il suo MediaCodec non è il silicio del telefono.
+
+⛔ **E chiede DUE cose, non una** — la seconda è quella che può smentire una decisione già presa:
+
+| | |
+|---|---|
+| 1 | il telefono decodifica **HEVC Main10 in hardware**? Si guarda il **nome** del decodificatore scelto (`c2.` contro il software) **e** il ritmo, e i due devono concordare (E1) |
+| 2 | ⛔ **e restituisce davvero 10 bit?** `[?]` Una segnalazione dalla documentazione di mpv dice che sul percorso `mediacodec` il supporto a 10 bit è **limitato e l'uscita torna a 8 bit**. Non è una prova su MediaCodec in generale — è il percorso di mpv — ma è **la prima indicazione contraria al desiderato** di `SPECIFICHE.md` §3.1, e arriva dal lato dove non abbiamo margine |
 
 ---
 

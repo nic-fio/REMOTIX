@@ -219,6 +219,19 @@ qualità»*, e sotto quella parola stavano due leve distinte:
 
 Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme**, in hardware.
 
+### 2.3-bis 🔸 ⛔ Il primo indizio contrario ai 10 bit, e viene da Android
+
+*9 agosto 2026.* La documentazione di **mpv** riporta che sul percorso `mediacodec` di Android il
+supporto a **10 bit è limitato, e l'uscita viene riportata a 8 bit**.
+
+⚠ **Non è una prova**: è il percorso di mpv, non il nostro, e MediaCodec in generale non è quello.
+Ma è **la prima cosa che punta contro il desiderato di §2.2**, e arriva dal lato dove non abbiamo
+margine.
+
+**Da cui la sonda della fase 2 chiede due cose invece di una**: che il telefono decodifichi HEVC
+**Main10** in hardware, **e** che restituisca davvero 10 bit. La seconda può smentire §2.2, e
+allora si rilegge lì.
+
 ### 2.3 🔸 Il 4:4:4 resta una `[?]`, non una promessa
 
 Sarebbe un'opzione per il solo client Linux su GPU capaci (NVIDIA sì, Intel a volte, AMD no).
@@ -661,10 +674,19 @@ parte dell'ambiente di sviluppo).»*
 Accettato: SDK, emulatore, `adb` e il collegamento al telefono entrano nell'ambiente, e si mettono
 già alla **fase 0** perché la sonda della fase 2 li richiede.
 
-⛔ **Con un confine**: *sull'emulatore si sviluppa, non si misura.* **Nessun numero di questo
-progetto viene dichiarato su un emulatore.** Le due cose che non può dare sono esattamente le due
-che decidono il binario Android — la **decodifica in hardware** (il suo MediaCodec non è il silicio
-del telefono) e **DeX**, che sull'emulatore non esiste e si può solo avvicinare.
+⚠ **Corretto lo stesso giorno, dopo che l'utente ha chiesto di cercare meglio.** La prima
+stesura diceva che DeX «sull'emulatore non esiste»: **è falso**. Esiste il **Desktop AVD**
+(profilo «13.5" Freeform», da Android 11; la versione Android 13 aggiunge scorciatoie da tastiera
+e supporto mouse), e **Samsung stessa documenta l'emulatore per DeX** — *«If you don't have the
+DeX Station, you can test your app resize behavior in Android Studio using Android Virtual
+Device»*, a 160 dpi e 1080×1920. Il modello di interazione che ci interessa **è testabile lì**, ed
+è gran parte delle fasi A1 e A3. Samsung avverte però che l'emulatore **simula, non replica**.
+
+⛔ **Il confine resta, ma è più stretto e più netto**: *sull'emulatore si sviluppa, non si misura.*
+**Nessun numero di questo progetto viene dichiarato su un emulatore.** Quel che non dà è la
+**decodifica in hardware** — il suo MediaCodec non è il silicio del telefono, e `[?]` non si è
+riusciti a stabilire che esponga un decodificatore HEVC hardware — più il ritardo vero, la
+batteria e la rete che cambia.
 
 ⚠ È `REVIEWER.md` **E10**, *una prova verde sul client sbagliato*: un emulatore che dice «funziona»
 mentre il telefono no è un banco verde col difetto vivo — la forma che a v1 è costata di più, con
