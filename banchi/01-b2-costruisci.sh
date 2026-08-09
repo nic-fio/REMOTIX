@@ -126,6 +126,15 @@ cmake -B "$SRC/lsquic/build" -S "$SRC/lsquic" -GNinja \
 	-DLSQUIC_TESTS=OFF \
 	|| { ko "cmake fallito"; exit 4; }
 ninja -C "$SRC/lsquic/build" lsquic || { ko "compilazione fallita"; exit 4; }
+# ⭐ E i programmi d'esempio, che sono la strada piu' economica per avere un
+#    server HTTP/3 VERO da puntare contro un browser vero.  Vogliono libevent:
+#    senza, cmake avverte «binaries won't be built» e tira dritto — cioe' il
+#    banco resterebbe senza il pezzo che serve, e con esito zero.
+if ninja -C "$SRC/lsquic/build" http_server 2>/dev/null; then
+	ok "http_server d'esempio costruito"
+else
+	inf "http_server non costruito (manca libevent?) — non blocca il controllo"
+fi
 LIB=$(find "$SRC/lsquic/build" -name 'liblsquic.a' | head -1)
 [ -n "$LIB" ] && ok "liblsquic.a costruita" || { ko "liblsquic.a non trovata"; exit 4; }
 

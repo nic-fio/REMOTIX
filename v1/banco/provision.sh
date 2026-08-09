@@ -132,6 +132,10 @@ CONTAINER_PKGS=(
     # §2.5-bis: le dipendenze installate a mano diventano invisibili in un
     # giorno).
     golang-go
+    # libevent: `lsquic` la vuole per costruire i suoi programmi d'esempio, che
+    # sono il modo piu' economico di avere un server HTTP/3 vero da puntare
+    # contro un browser vero.  Serve al banco, non al prodotto.
+    libevent-dev
 )
 
 # pacchetti scaricati e scompattati in $TOOLS, per non installarli sull'host

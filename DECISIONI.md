@@ -1689,8 +1689,37 @@ fa con un banco davanti, non su carta.
 > HTTP/3** — dove vivono le impostazioni. È un'implementazione distribuita nei punti giusti.
 >
 > ⛔ **Ma «i simboli ci sono» non è «la sessione si apre»**: è il gradino successivo di E1, e la
-> misura che conta resta **un browser vero che apre una sessione**. Questa riga dice soltanto che
-> vale la pena scrivere quelle righe per `lsquic` per prima.
+> misura che conta resta **un browser vero che apre una sessione**.
+>
+> ### ⛔ E leggendo oltre i simboli: `lsquic` parla la bozza **02**, i browser di oggi no
+>
+> *`[R]` `src/liblsquic/lsquic_hcso_writer.c`, dove il server scrive le impostazioni sullo stream di
+> controllo HTTP/3.* Ecco **tutte** quelle che emette:
+>
+> | Impostazione | Valore | |
+> |---|---|---|
+> | `SETTINGS_ENABLE_WEBTRANSPORT` | `0x2b603742` | ⛔ **è della bozza 02** |
+> | `WEBTRANSPORT_MAX_SESSIONS` | `0x2b603743` | ⛔ **idem** |
+> | `H3_DATAGRAM_ENABLED` | `0x33` | ✅ corrente |
+> | `SETTINGS_ENABLE_CONNECT_PROTOCOL` | `0x08` | ✅ corrente |
+>
+> ⛔ **E non emette mai `SETTINGS_WT_MAX_SESSIONS` (`0xc671706a`)**, che è l'impostazione con cui un
+> server dichiara WebTransport dalla bozza 07 in poi — cioè quella che Chrome, Firefox e Safari
+> cercano oggi.
+>
+> ⭐ **Da cui una previsione falsificabile, scritta PRIMA della misura** (`LEZIONI.md` §1.11: per
+> ogni prova indiretta si scrive che aspetto avrebbe il contrario):
+>
+> | | |
+> |---|---|
+> | **la previsione** | un browser di oggi **non stabilirà** la sessione con `lsquic`: non vede la dichiarazione che cerca, e la `CONNECT` estesa viene rifiutata |
+> | ⭐ **che aspetto avrebbe il contrario** | la sessione si apre lo stesso ⇒ **o** i browser accettano ancora le impostazioni della bozza 02, **o** ho letto male questo file. In tutt'e due i casi la previsione è sbagliata e va scritto perché |
+> | **come si falsifica** | è la misura di B2: un browser vero contro un server minimo. **Costa quanto costa scrivere quel server** |
+>
+> ⚠ **Il che riporta `lsquic` in fondo alla fila invece che in testa**, e non per il difetto in sé:
+> «implementato, spento per difetto, non documentato, **e fermo a una bozza di tre versioni fa**» è
+> il ritratto di un pezzo che **nessuno esercita**. `CODER.md` §4.1 dice di dipendere invece di
+> riscrivere — ma dipendere da codice che nessuno esercita è riscriverlo **con un ritardo**.
 >
 > ⚠ *E il banco che ha prodotto questo `4 su 4` **aveva prima detto `0 su 4`**, per un difetto suo —
 > `set -o pipefail` più `grep -q`. La cronaca sta in `fasi/01-filo-nudo.md`, «che cosa NON ha
