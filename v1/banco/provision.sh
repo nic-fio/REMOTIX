@@ -136,6 +136,17 @@ CONTAINER_PKGS=(
     # sono il modo piu' economico di avere un server HTTP/3 vero da puntare
     # contro un browser vero.  Serve al banco, non al prodotto.
     libevent-dev
+    # ⭐ aioquic: due mestieri, e nessuno dei due e' il prodotto.
+    #   1. e' il CONTROLLO POSITIVO di B2 — una sessione WebTransport che DEVE
+    #      riuscire, senza la quale «la candidata non apre la sessione» e «il
+    #      banco non sa aprirne nessuna» hanno lo stesso aspetto;
+    #   2. e' il CLIENTE DI PROVA della fase 1 (B9), cioe' il secondo lettore
+    #      di `RCP.md` — in un linguaggio diverso dal server e dalla pagina.
+    # `[M]` 9 agosto 2026: la 1.2.0 porta WebTransport (29 occorrenze nel
+    # modulo h3, l'evento WebTransportStreamDataReceived e
+    # create_webtransport_stream).  Era una `[?]` del rilievo R3.21, e se
+    # fosse stata «no» sarebbe caduto l'arbitro.
+    python3-aioquic
 )
 
 # pacchetti scaricati e scompattati in $TOOLS, per non installarli sull'host

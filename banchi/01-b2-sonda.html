@@ -1,0 +1,142 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>B2 — la sonda della sessione WebTransport</title>
+<!--
+  01-b2-sonda.html — la pagina del banco B2 della fase 1.
+
+  ⛔ SI SERVE DA localhost, E NON E' UN DETTAGLIO DI COMODO.
+
+  Una pagina che apre WebTransport dev'essere in «contesto sicuro».  Le due
+  strade sono `https://` con un certificato, oppure `http://localhost`, che
+  la specifica considera sicuro per costruzione.
+
+  Servendola da localhost non c'e' nessun avviso di certificato da concedere
+  — e quindi quel che questo banco misura e' **la sessione**, non il clic
+  dell'utente.  Le due cose sono separate apposta: l'eccezione sul
+  certificato della pagina e' un'altra misura (S1b), e mescolarle darebbe due
+  cause per lo stesso rosso.
+
+  ⚠ Il certificato della SESSIONE resta autofirmato: lo si fa accettare con
+    `serverCertificateHashes`, che e' la strada normale del prodotto
+    (`RCP.md` §4.1-bis) — non una scorciatoia da banco.
+-->
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.6 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.3rem; }
+  label { display: block; margin: .8rem 0 .2rem; font-weight: 600; }
+  input { width: 100%; padding: .4rem; font: inherit; font-family: ui-monospace, monospace; }
+  button { margin-top: 1rem; padding: .5rem 1rem; font: inherit; font-weight: 600; }
+  #esito { margin-top: 1.4rem; padding: 1rem; border-radius: .4rem; white-space: pre-wrap;
+           font-family: ui-monospace, monospace; font-size: 13px; background: #8881; }
+  .ok   { border-left: 4px solid #2a2; }
+  .no   { border-left: 4px solid #c33; }
+</style>
+
+<h1>B2 — la sessione WebTransport si apre?</h1>
+<p>Banco della fase 1. Misura <b>una cosa sola</b>: se il motore di questo browser
+stabilisce una sessione WebTransport con il server indicato, accettandone il
+certificato tramite l'impronta pubblicata qui dentro.</p>
+
+<label>Indirizzo della sessione</label>
+<input id="url" value="https://192.168.0.2:7447/rcp/1">
+
+<label>Impronta SHA-256 del certificato della sessione (base64)</label>
+<input id="impronta" value="">
+
+<button id="vai">Apri la sessione</button>
+<div id="esito">in attesa.</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esito = $("esito");
+
+// L'impronta puo' arrivare dalla query: cosi' il banco si lancia con un
+// indirizzo solo e non si copia niente a mano — che e' la regola della fase 0
+// («le righe di comando si copiano da un banco che funziona, non si
+// ricordano»).
+const q = new URLSearchParams(location.search);
+if (q.get("impronta")) $("impronta").value = q.get("impronta");
+if (q.get("url")) $("url").value = q.get("url");
+
+function scrivi(testo, buono) {
+  esito.textContent = testo;
+  esito.className = buono === undefined ? "" : (buono ? "ok" : "no");
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64.trim());
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+$("vai").onclick = async () => {
+  const url = $("url").value.trim();
+  const b64 = $("impronta").value.trim();
+  const righe = [];
+  const t0 = performance.now();
+
+  righe.push("motore:   " + navigator.userAgent);
+  righe.push("indirizzo: " + url);
+
+  if (!("WebTransport" in window)) {
+    righe.push("");
+    righe.push("⛔ questo motore non espone WebTransport affatto.");
+    scrivi(righe.join("\n"), false);
+    return;
+  }
+
+  let opzioni = {};
+  if (b64) {
+    try {
+      opzioni = { serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }] };
+      righe.push("impronta:  pubblicata (" + b64.slice(0, 12) + "…)");
+    } catch (e) {
+      scrivi(righe.join("\n") + "\n\n⛔ l'impronta non e' base64 valido: " + e, false);
+      return;
+    }
+  } else {
+    righe.push("impronta:  NESSUNA — si conta sull'eccezione del certificato");
+  }
+  scrivi(righe.join("\n") + "\n\napertura in corso…");
+
+  try {
+    const wt = new WebTransport(url, opzioni);
+    await wt.ready;
+    const ms = (performance.now() - t0).toFixed(1);
+    righe.push("");
+    righe.push("⭐ SESSIONE APERTA in " + ms + " ms");
+
+    // ⛔ «ready» non basta: si manda un byte e si aspetta che torni.  Una
+    //    sessione che si apre e non trasporta niente e' la forma di verde
+    //    che questo banco esiste per non produrre — ed e' esattamente il
+    //    difetto che il controllo P3 di S1a cerca su un altro piano.
+    try {
+      const s = await wt.createBidirectionalStream();
+      const w = s.writable.getWriter();
+      await w.write(new TextEncoder().encode("ciao"));
+      await w.close();
+      const r = s.readable.getReader();
+      const { value } = await r.read();
+      const tornato = value ? new TextDecoder().decode(value) : "(niente)";
+      righe.push("andata e ritorno su stream: " + JSON.stringify(tornato));
+      righe.push(tornato === "ciao" ? "✅ i byte tornano identici" : "⚠ i byte tornano DIVERSI");
+    } catch (e) {
+      righe.push("⚠ sessione aperta ma lo stream non ha funzionato: " + e);
+    }
+
+    scrivi(righe.join("\n"), true);
+  } catch (e) {
+    righe.push("");
+    righe.push("⛔ NON si apre: " + e);
+    // Il motivo vero sta spesso nella chiusura, non nell'eccezione.
+    righe.push("");
+    righe.push("⚠ tre cause con lo stesso aspetto, e vanno distinte a mano:");
+    righe.push("   1. UDP filtrato (il TCP risponde lo stesso)");
+    righe.push("   2. l'impronta non e' quella del certificato servito");
+    righe.push("   3. il certificato della sessione supera i 14 giorni");
+    scrivi(righe.join("\n"), false);
+  }
+};
+</script>

@@ -520,6 +520,10 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | | |
 |---|---|
 | ⭐ `banchi/01-b2-costruisci.sh` | **nuovo**: costruisce BoringSSL e `lsquic` con `-DLSQUIC_WEBTRANSPORT=ON`, e ⛔ **verifica che il flag abbia prodotto i simboli** — non che compili |
+| ⭐ `banchi/01-b2-certificati.sh` | **nuovo**: i **due** certificati di `RCP.md` §4.1-bis con quattro controlli — curva, `subjectAltName`, durata sotto i 14 giorni, e ⛔ **che i due siano davvero due** (il difetto di B13.1, colto alla nascita invece che due settimane dopo) |
+| ⭐ `banchi/01-b2-controllo-aioquic.py` | **nuovo**: ⛔ **il controllo positivo di B2** — una sessione WebTransport che *deve* riuscire. Senza, «la candidata non apre la sessione» e «il banco non sa aprirne nessuna» hanno lo stesso aspetto (R3.17) |
+| ⭐ `banchi/01-b2-cliente-aioquic.py` | **nuovo**: il germe del **cliente di prova** (B9), e il controllo d'ambiente che separa «il server non regge» da «il browser non accetta» |
+| ⭐ `banchi/01-b2-sonda.html` | **nuovo**: la pagina, ⛔ **servita da `localhost`** — contesto sicuro senza avvisi, così quel che si misura è **la sessione** e non il clic dell'utente |
 | `v1/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
 
 **Si riusa** (`PIANO.md` fase 1): `autenticazione.c` (144 righe, PAM) — ⛔ **con la cura di B10** — e
@@ -552,7 +556,10 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | **B2** — BoringSSL compila nel `devroot` | sì | ✅ **sì** — ramo predefinito, `libssl.a` e `libcrypto.a` | 9 ago |
 | **B2** — `lsquic` compila con `-DLSQUIC_WEBTRANSPORT=ON` | sì | ✅ **sì**, v4.9.3, e la define è nei `FLAGS` di `build.ninja` | 9 ago |
 | ⛔ **B2** — **il flag ha prodotto i simboli?** | **4 su 4** | ⭐ **4 su 4** `[M]` — dopo aver curato il banco, vedi sotto | 9 ago |
-| **B2** — la sessione si apre su Chrome e Firefox, per candidata | 2 motori su 2, **e le sei proprietà** | | |
+| **B9** — `aioquic` porta WebTransport? | `[?]` | ⭐ **sì** `[M]` 1.2.0: 29 occorrenze nel modulo h3, l'evento e `create_webtransport_stream`. *Era la `[?]` di R3.21: se fosse stata «no», cadeva l'arbitro* | 9 ago |
+| **B2** — i due certificati, quattro controlli | 4 su 4 | ✅ **4 su 4** — e i due sono davvero due | 9 ago |
+| ⭐ **B2** — **il controllo positivo d'ambiente** (senza browser) | sessione accettata **e** byte che tornano | ⭐ **`:status = 200`, `b'ciao'` torna identico** `[M]` | 9 ago |
+| **B2** — la sessione si apre su Chrome e Firefox, per candidata | 2 motori su 2, **e le sei proprietà** | ⏳ *manca il passo del browser* | |
 | **B2** — righe di collante, per candidata | *si conta, non si stima* | | |
 | **B3** — 1ª · 2ª · 2ª in parallelo · 35 s a timeout 120 · 3ª con chiave ruotata | passa · passa · **rifiutata `0x0F`** · **entra** · passa | | |
 | **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | | |
@@ -616,6 +623,24 @@ migliore** con un `[M]` falso contro un `[R]`.*
 > passata attraverso **tre shell annidate** (locale → ssh → `enter.sh` → chroot) e si è rotta sulle
 > virgolette, restituendo `grep: ...: No such file or directory`. La regola della fase 0 vale qui:
 > **le righe di comando si mettono in un file, non si ricordano**.
+
+### ⚠ `aioquic` sa creare uno stream WebTransport e non sa riconoscerlo quando risponde
+
+*Trovato costruendo il controllo positivo, 9 agosto 2026, ed è del **cliente di prova** — quindi
+tornerà a mordere a ogni fase in cui quello cresce.*
+
+Il primo giro andava in **timeout aspettando il ritorno**, mentre il server dichiarava di averlo
+spedito. `[R]` `H3Connection.create_webtransport_stream` di aioquic 1.2 scrive l'intestazione dello
+stream e **non registra lo stream in ricezione**: i byte tornano — si vedono a livello QUIC — e il
+livello H3 non emette nessun `WebTransportStreamDataReceived`.
+
+⛔ **Che cosa l'ha distinto**: due righe che stampano gli eventi **a tutt'e due i livelli**. Senza,
+*«i byte non arrivano»* e *«i byte arrivano e nessuno li riconosce»* sono lo stesso rosso — e sono
+due difetti in due posti diversi. È la seconda volta in un'ora che la strumentazione batte
+l'intuito.
+
+⚠ **La cura è dichiarata, non nascosta**: il ritorno si legge a livello QUIC, **scrivendo perché**.
+Fingere che l'abbia riconosciuto il livello H3 sarebbe stato comodo e falso.
 
 ---
 
