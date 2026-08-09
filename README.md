@@ -19,16 +19,29 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | 📖 **il sesto studio** | [`web.md`](web.md), con quattro rapporti in `web/rapporti/` |
 > | ⛔ **due revisioni avversariali** | **51 contraddizioni** trovate e curate **prima del primo byte**: i verdetti sono `web/rapporti/R1-` e `R2-` |
 >
-> ### Il prossimo passo, e non è ancora scritto
+> ### Il prossimo passo
 >
-> ⛔ **Aprire `fasi/01-filo-nudo.md`** — il documento si apre *prima* di sviluppare e contiene i
-> banchi (`PIANO.md` §0.1). Dentro vanno: il banco del filo (la stretta di mano su **due**
-> connessioni, il validatore, le prove di violazione — `RCP.md` §11), i **quattro banchi della
-> sonda del browser** (`PIANO.md` §1.2), e le `[?]` che oggi hanno trovato un posto: da che parte
-> gira la rotella, se lo zoom della pagina falsi la misura della tela, quanto porta un datagram.
+> ⭐ **`fasi/01-filo-nudo.md` è aperto e già revisionato**, con i banchi e **nessuna riga di
+> prodotto scritta** — il documento si apre *prima* di sviluppare (`PIANO.md` §0.1).
 >
-> ⚠ **E la scelta della libreria QUIC è ancora aperta**, ora col criterio cambiato: deve portare
-> HTTP/3 e WebTransport lato server (`DECISIONI.md` §6.4).
+> ⛔ **Due revisioni avversariali sul banco, prima del prodotto: 44 rilievi — 38 `[R]`, 6 `[?]`.**
+> Nessuna delle due verde, e il documento è stato **riscritto**, non rattoppato. I verdetti stanno
+> in `fasi/rapporti/R3-` (il banco come strumento) e `R4-` (la coerenza con quel che è scritto).
+> La forma che si ripeteva: **cadeva sempre il controllo che dice *no***, e tre volte era già stato
+> scritto da chi ci era passato prima.
+>
+> ⚠ **E la cura è uscita da quel file**: `RCP.md` §4.1-bis diceva ancora che WebKit non implementa
+> `serverCertificateHashes` — ed è **l'arbitro**; `web.md` ha riavuto i controlli negativi che i
+> rapporti prescrivevano; `PIANO.md` ha l'ordine corretto e due banchi ricollocati.
+>
+> ⭐ **E una decisione dell'utente ha chiuso il conto dei dispositivi**: **Apple è un di più, non un
+> obiettivo** — `DECISIONI.md` §1.8. Telefono e DeX ci sono, il Mac no e non si procura: **S1a esce
+> dalla fase**, la libreria QUIC si sceglie su **due motori su tre**, e la riga sta scritta accanto
+> alla scelta. ⛔ Safari resta **servito**, non **verificato**: sono due cose diverse, e la seconda
+> non si scrive nella documentazione finché nessuno l'ha misurata.
+>
+> ⚠ **La libreria QUIC resta aperta** e la chiude un banco, non la carta (`DECISIONI.md` §6.4) —
+> ed è il **primo** banco da eseguire, non più il secondo.
 
 ⭐ **Il client è una pagina web** *(deciso il 9 agosto 2026 — `DECISIONI.md` §1.6)*. Cadono i due
 client nativi e con essi cinque fasi di piano; **Windows torna dentro come posto da cui ci si

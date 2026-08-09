@@ -175,6 +175,26 @@ quattro, e tre di esse cambiano quel che si scrive.*
 | **S3** | quante **scorciatoie** si perdono, motore per motore — e la clipboard nel verso dispositivo → sessione? | che cosa la pagina deve **dichiarare spento**, e quali browser conviene consigliare (`SPECIFICHE.md` §7.3-bis, §9) |
 | **S4** | quanto costa in **ritardo** dipingere: dal fotogramma decodificato al pixel sullo schermo | è metà del tetto dei 50 ms, e dipende dalla strada scelta per la GPU |
 
+> ### ⛔ Corretto la notte del 9 agosto 2026 — rilievi **R3.4** e **R4.3**, e l'ordine era circolare
+>
+> Questo paragrafo dice *«prima di scegliere la libreria QUIC e prima di scrivere il filo»*, e
+> `web.md` §7 aggiunge *«nessuna richiede una riga di prodotto»*. **Tre delle misure non stanno in
+> piedi senza un server WebTransport**, cioè senza la libreria che si sta scegliendo:
+>
+> | | |
+> |---|---|
+> | **S1** | il controllo positivo è *«la connessione con l'impronta pubblicata **deve riuscire**»* |
+> | ⛔ **S4** | vuole un server che **spedisca fotogrammi codificati** e un decodificatore che li accetti: non è «senza prodotto», è **la fase 3** — e pretende pure **una riga di protocollo** (`RCP.md` §12) |
+> | la misura del **datagram** | vuole un ricevente |
+>
+> ⭐ **L'ordine onesto**: prima le misure che non toccano il filo — la durata dell'eccezione, la
+> decodifica, la tastiera, la tela dichiarata, il segno della rotella — poi **il banco della
+> libreria**, che produce un server minimo da cinquanta righe, e **sopra quello** il certificato e
+> il datagram. ⚠ E se la candidata cambia, **quelle due si rifanno**: un controllo positivo preso su
+> un motore diverso da quello del prodotto è la forma **E10**.
+>
+> Il conto completo, con i dispositivi che ciascuna pretende, sta in `fasi/01-filo-nudo.md`.
+
 ⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero.** Nel browser **il nome del
 decodificatore non c'è**: la prova indiretta va costruita con cura — ritmo sostenuto, occupazione
 della CPU, e il caso opposto scritto prima (`LEZIONI.md` §1.11: per ogni prova indiretta si scrive
@@ -382,7 +402,11 @@ qualcun altro.
   mai contato, e che era 18 mentre si ottimizzava altro;
 - ⭐ **l'anello del ritardo**: il client manda un input che cambia colore allo schermo e guarda i
   fotogrammi decodificati finché non lo vede. Misurato **dal lato che riceve**
-  (`DECISIONI.md` §2.6).
+  (`DECISIONI.md` §2.6). ⛔ **E qui arriva anche S4**, la misura del ritardo del *disegno* nel
+  browser, che §1.2 metteva nella sonda: senza codifica, trasporto e decodifica non è eseguibile
+  *(9 agosto 2026, rilievo **R3.4**)*. I suoi sette controlli e il **pezzo cieco** — 16-40 ms fra
+  il disegno e il pixel acceso, che nessuna API vede e che **si dichiara accanto a ogni numero** —
+  stanno in `web.md` §6.3.
 
 **I numeri da raggiungere**: ritardo ≤ 50 ms, traguardo 40 (`SPECIFICHE.md` §3.2).
 
@@ -454,7 +478,15 @@ grafica per utente.
   Wayland. È il difetto che rende la sessione inutilizzabile dopo il primo stacco;
 - i tre orologi, ciascuno con la sua prova;
 - l'apertura di una sessione locale mentre la remota è viva → la remota **deve** cadere con
-  `SESSIONE_LOCALE_PREVALSA`, e il motivo si verifica **dal lato che lo riceve**.
+  `SESSIONE_LOCALE_PREVALSA`, e il motivo si verifica **dal lato che lo riceve**;
+- ⭐ **e il gemello che mancava**: una sessione locale **già attiva** e una remota che arriva →
+  `GIA_ATTIVA_LOCALE` `0x05` (`SPECIFICHE.md` §5.1). *Aggiunto il 9 agosto 2026, rilievo **R4.16**:
+  era di `RCP.md` §8.2 e di nessuna fase, e sarebbe caduto fra le fasi;*
+- ⛔ **il rilascio dei tasti al distacco**, che `RCP.md` §11 chiama *«la regola col rapporto
+  danno/costo più alto del documento»*: si stacca con un tasto premuto **e si riattacca** a
+  verificare che non sia rimasto giù. *Portato qui dalla fase 4 il 9 agosto 2026, rilievo **R4.7**:
+  alla fase 4 non esiste una sessione a cui riattaccarsi — la sessione muore con la connessione —
+  quindi quel banco lì o non si scrive o **si scrive verde per costruzione**.*
 
 ⛔ **E due difetti che l'utente incontrerebbe lasciando la sessione ferma venti minuti**, tutt'e
 due su GNOME e tutt'e due mai affrontati in v1 (`gnome.md` §4 e §7):

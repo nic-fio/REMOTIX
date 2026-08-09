@@ -204,6 +204,27 @@ sulla **stessa pagina**, nello **stesso giro** — si prova l'eccezione da sola 
 connessione con l'impronta pubblicata. La seconda **deve riuscire**: se fallisce anche quella, non
 si sta misurando l'eccezione, **si sta misurando un server che non risponde**.
 
+> ### ⛔ E i controlli sono tre, non uno — la cura era rimasta a metà
+>
+> *Aggiunti la notte del 9 agosto 2026, rilievo **R3.1** della revisione del banco della fase 1.
+> La cura del rilievo R1 aveva rimesso il controllo che dice **sì** (P2) e non quelli che dicono
+> **no** — ed è la stessa forma, un livello più in basso.*
+>
+> | | |
+> |---|---|
+> | **P2** | la connessione con **l'impronta pubblicata** deve **riuscire** |
+> | ⛔ **P3** | la connessione con l'impronta **sbagliata di un byte** deve **fallire** |
+> | ⛔ **P4** | un certificato rigenerato a **30 giorni**, con la sua impronta giusta, deve fallire **per durata** |
+>
+> S1 §4.4, testualmente: *«**solo con P2 verde e P3 rosso** il risultato di P1 significa
+> qualcosa»*, e su P3: *«**se riesce, il banco non distingue nulla**»*.
+>
+> ⛔ **Il caso concreto che chiude solo P3**: una pagina che considera «riuscita» la costruzione
+> dell'oggetto `WebTransport` invece di attendere `ready` — o che guarda la promessa sbagliata —
+> fa riuscire **anche** la prova con l'impronta storpiata. Il banco scrive `[M]` *«su Safari
+> l'eccezione copre WebTransport»*, che è un `[M]` **falso** contro due `[R]` letti nel codice di
+> Chromium e di Gecko. P2 da solo non lo vede: è verde in tutti e due i mondi.
+
 ⚠ **E la misura ha perso il primo posto**: con Safari che ha `serverCertificateHashes` (§3.1), S1a
 non decide più se una piattaforma è servibile — decide se lì l'impronta si possa risparmiare.
 
@@ -249,7 +270,10 @@ Un decodificatore software **supera le prime cinque prove** e cade solo su tre:
 | **portata a saturazione** | 4K60 Main10, e si guarda dove si ferma |
 | **una canarina di CPU** | un lavoro noto dentro un worker, che rallenta se la CPU sta decodificando |
 | **il decadimento su dieci minuti** | il silicio tiene, la CPU scalda e cala |
-| ⛔ **il controllo positivo** | VP9 forzato in software — **software per costruzione**. Se il banco non lo dichiara tale, il suo verdetto su HEVC va buttato |
+| ⛔ **controllo A** | VP9 forzato **in software** — software per costruzione. Se il banco non lo dichiara tale, il suo verdetto su HEVC va buttato |
+| ⛔ **controllo B** | ⭐ VP9 in **`prefer-hardware`** — **deve essere dichiarato hardware**. *Mancava, ed è quello che dice **no**: senza, una soglia tarata larga fa passare per hardware l'HEVC **software di MediaCodec**, cioè proprio quel che Chromium sceglie di proposito su Android (§4.1). S2 §4.4: «il banco è valido se, sullo stesso telefono, dichiara **software** il controllo A **e hardware** il controllo B. Finché non lo fa, **non pubblica verdetti**». Ripristinato dal rilievo **R3.1***, 9 ago |
+| ⭐ **controllo C** | **`is_software_codec` letto via `chrome://inspect`**, in parallelo alle prove indirette. ⛔ Il dato **esiste** in `media_codec_video_decoder.cc`, col nome che arriva da `MediaCodec.getName()`: *«il browser sa e non risponde»* è vero **da JavaScript**, e il banco non è JavaScript. Rinunciarci sull'uso primario era una scelta non dichiarata (**R3.13**) |
+| ⛔ **e gli esiti sono TRE** | ≥ 90 fps ⇒ hardware · ≤ 30 ⇒ software · **in mezzo: verdetto sospeso**. Un banco a due uscite promuove la banda incerta a certezza |
 
 ⚠ **E questo banco non resta in laboratorio** (§1.2 C): la stessa misura, ridotta, vive **nel
 prodotto**, perché il dispositivo dell'utente è l'unico posto dove la domanda ha risposta.
@@ -342,9 +366,13 @@ GPU, e falserebbe la misura che sta prendendo.
 
 | | |
 |---|---|
-| ⛔ **il controllo decisivo** | il server ritarda di **N millisecondi noti**, e la mediana **deve salire di esattamente N**. Un banco che non lo fa non sa di misurare |
+| ⛔ **P1, il controllo decisivo** | il server ritarda di **N millisecondi noti**, e la mediana **deve salire di esattamente N**. Un banco che non lo fa non sa di misurare |
+| ⛔ **P2 e P3, e P3 era caduto** | **P2**: il rilevatore trova il colore **che c'è**. ⛔ **P3**: **non** trova quello che **non c'è**. *S4 §4.2: «se dice sempre sì, si sta misurando zero e si è felici a torto» — e un rilevatore che dice sempre «ho visto la marca» **passa anche P1**, perché i N ms si sommano identici. Ripristinato dal rilievo **R3.1***, 9 ago |
+| ⛔ **P5, il fuori ordine** | i fotogrammi arrivano su stream indipendenti: un anello che non lo regge misura la coda invece del ritardo |
+| ⛔ **P6, la grana dell'orologio** | senza le due intestazioni di isolamento fra origini, su Firefox e Safari i cronometri cadono su una griglia da **1 ms** — su un tetto di **50**. ⚠ E `SPECIFICHE.md` §11.5 ne fa un **vincolo di prodotto**, non una taratura del banco (O11) |
+| ⛔ **P7, il ritmo come controllo del percorso** | il ritmo consegnato dice se si sta misurando la strada che si crede |
 | ⛔ **il pezzo cieco** | la misura finisce alla callback; il pixel si accende `[?]` 16-40 ms dopo, e **nessuna API JavaScript lo vede**. Si stima, e **la stima si dichiara accanto a ogni numero** invece di far finta che il numero sia il totale |
-| ⚠ **e il righello va tarato** | senza le due intestazioni di isolamento fra origini, su Firefox e Safari i cronometri hanno grana **1 ms** — su un tetto di 50 |
+| ⚠ **e una misura singola non vale nulla** | si lavora **a distribuzioni**, non a campioni |
 
 ---
 
@@ -374,7 +402,7 @@ voci che toccano una decisione.*
 | | |
 |---|---|
 | `[?]` Safari e WebTransport dietro eccezione | §3.1 — **e Apple non documenta nemmeno se l'eccezione si possa concedere su iOS** |
-| `[?]` la durata dell'eccezione su Chrome | §3.3 |
+| ~~`[?]` la durata dell'eccezione su Chrome~~ | ⛔ **non era `[?]`, e questo documento si contraddiceva**: §3.2 la dà `[R]` da `kCertErrorBypassExpirationInSeconds = 604800`, cioè **sette giorni**. *Corretto la notte del 9 agosto 2026, rilievo **R4.14**: chi leggeva §8 pianificava una misura per **sapere** il numero, chi leggeva §3.2 per **confermarlo**, e a un banco che deve aspettare una settimana la differenza cambia la soglia di pazienza.* Resta da misurare **quanto quel `[R]` regga sul campo**, che è la misura S1b della fase 1 |
 | `[?]` i 10 bit fino allo schermo | §1.2 A — e **non è verificabile da JavaScript** |
 | `[?]` la Keyboard Lock su DeX, e la PWA su Android | §5.5 |
 | `[?]` i 16-40 ms del compositore | §6.2 — nessuna API li espone |

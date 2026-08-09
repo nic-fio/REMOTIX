@@ -375,8 +375,20 @@ a questa sezione. Tenerla aperta faceva pianificare una misura già fatta (rilie
 ### 4.1-bis ⛔ `serverCertificateHashes` — **la strada normale**, non una rete di sicurezza
 
 *Promossa da rete di sicurezza a strada principale la sera del 9 agosto 2026, dopo la misura S1:
-non era un'alternativa, è **l'unico meccanismo** che i due motori maggiori espongono per un server
-senza dominio.*
+non era un'alternativa, è **l'unico meccanismo** che i browser espongono per un server senza
+dominio.*
+
+> ⛔ *Corretta la notte del 9 agosto 2026, rilievo **R4.4** della revisione del banco della fase 1.*
+> La riga «chi resta fuori» diceva *«`[S]` WebKit non lo implementa: su Safari, iPhone e iPad la
+> strada è l'eccezione»*. **È falsa da ottobre 2025**, e `web.md` §3.1 e `DECISIONI.md` §1.7 erano
+> già stati corretti **lo stesso 9 agosto**: questo documento no.
+>
+> ⛔ **E il danno era di quelli che non fanno rumore, perché questo file è l'arbitro.** Chi lo
+> leggeva alla lettera scriveva il ramo *«su Safari l'impronta non serve, si va di eccezione o di
+> certificato vero»* — e lo scriveva **conforme alla specifica**, mentre chi leggeva `web.md`
+> pubblicava l'impronta per tutti e tre. Due implementazioni divergenti, entrambe con ragione.
+> ⚠ E un banco che avesse applicato il criterio *«una libreria che va con Chrome e non con Safari
+> non è una libreria che va»* avrebbe **bocciato entrambe le candidate**.
 
 | | |
 |---|---|
@@ -384,7 +396,7 @@ senza dominio.*
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
 | ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
 | ⛔ **che cosa non copre** | **il caricamento della pagina**, che è una connessione TCP a sé. Lì resta l'avviso con il clic — o il certificato vero, per chi ha un dominio |
-| ⛔ **chi resta fuori** | `[S]` WebKit non lo implementa: su **Safari, iPhone e iPad** la strada è l'eccezione — `[?]` **se funziona**, ed è la prima misura di S1 — oppure il certificato vero |
+| ⭐ **e vale su tutti e tre i motori** | `[R]` **WebKit lo ha implementato il 2 ottobre 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) ed è spedito in **Safari 26.4**: iPhone e iPad hanno **la stessa** strada degli altri due, non una da salvare |
 
 ⛔ **Da cui due certificati, e vanno tenuti distinti nel codice**: uno **longevo** per la pagina, che
 è quello su cui l'utente concede l'eccezione e che quindi **non deve cambiare** più spesso del
@@ -1103,9 +1115,18 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 > inietta `+120` e la pagina **sale**; l'altro inietta `-120` e la pagina **scende**. Nessuno dei
 > due ha sbagliato a leggere.
 >
-> ⭐ **Si misura in dieci minuti** — si inietta con `libei` e si guarda da che parte va la pagina — e
-> ⚠ **il precedente è in casa**: in v1 questa esatta tabella di conversione è costata il banco della
-> rotella (`LEZIONI.md` §2.3). Finché non è misurata, questa riga resta `[?]`.
+> ⭐ **Si misura in dieci minuti** — si inietta con `libei` e si guarda da che parte va la pagina.
+> ⛔ **E si misura con `natural-scroll` nei due stati**: se il segno cambia con la gsetting della
+> sessione di prova, il numero scritto qui sarebbe **il segno di una configurazione del desktop**, e
+> il sintomo per l'utente sarebbe *«la rotella va al contrario»* su metà delle installazioni — forma
+> **E11**. Finché non è misurata, questa riga resta `[?]`.
+>
+> ⚠ *Il precedente che questa riga citava era sbagliato, ed è stato corretto la notte del 9 agosto
+> 2026 (rilievo **R4.15**): diceva che «in v1 questa esatta tabella di conversione è costata il
+> banco della rotella». `LEZIONI.md` §2.3 dice un'altra cosa — il banco della rotella cercava
+> `asse dy=-10` mentre il registro scriveva `asse dx=0 dy=-10`: **rosso, col codice corretto**. È
+> una stringa cercata male, non una conversione col segno sbagliato, e citando la lezione sbagliata
+> la si perde nel punto in cui si applicherebbe.*
 
 ⛔ **Le coordinate sono sulla tela, e sono indici di pixel**: `0 ≤ x < tela_larghezza`,
 `0 ≤ y < tela_altezza`. Su una tela 1920×1080 l'angolo in basso a destra è **1919, 1079**. Il client
@@ -1337,6 +1358,7 @@ non certificato (`LEZIONI.md` §1.9).
 | **il 4:4:4** | è una capacità in più (`video.sottocampionamento`), e la decisione di prodotto è `[?]` (`DECISIONI.md` §2.3) | quando l'utente avrà guardato le due immagini |
 | **più schermi** | la tela è una sola. La forma del multi-monitor è «due viste sulla stessa tela», che il protocollo già regge per la tela; mancherebbe solo dire **dove** sta ciascuna vista | mai, finché resta fuori scope |
 | `[?]` **la registrazione IANA della porta** | §2.4 | se e quando servirà un numero registrato |
+| ⛔ **la funzione di banco dell'anello del ritardo** | ⭐ *aperta la notte del 9 agosto 2026, rilievo **R3.4***. Il banco di `DECISIONI.md` §2.6 ha bisogno di **un rettangolo di 16×16 sullo schermo e di un comando che lo cambi**, con un **ritardo `N` iniettabile** che ne è il controllo decisivo (`web/rapporti/S4-ritardo-disegno.md` §5.3). Non è codice di prova da improvvisare: è **un messaggio in più**, e va scritto qui | ⛔ **prima del primo byte scritto**, perché §9 chiude la finestra dei tipi nuovi da lì in poi. Dopo, entrerebbe come **deroga** alla regola che protegge le implementazioni — cioè il primo strappo, fatto da noi, a una regola nostra |
 
 ⛔ **E una cosa che non è aperta e va detta perché non venga riaperta per distrazione**: il
 **battito applicativo** non manca, è **vietato** (§2.2). Chi lo trova assente e pensa di aggiungerlo

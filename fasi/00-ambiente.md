@@ -241,7 +241,7 @@ numero coerente su due modelli opposti non era scontato: è un'informazione, non
 |---|---|
 | le **tabelle per risoluzione** (720p → 4K) di Mutter e KWin | esistono già `[M]` in `kde.md` §5.7 e in `LEZIONI.md` §3. Rifarle adesso sarebbe misurare prima di avere la domanda: servono alla fase 8 (l'accelerazione) e alla 10 (KDE) |
 | le scene `video` e `carico` | idem: rispondono a domande delle fasi 3 e 9 |
-| `adb`, Desktop AVD, il telefono vero | l'ambiente Android serve alla **sonda della fase 2**, e l'utente ha chiesto di lasciarlo stare per ora |
+| `adb`, Desktop AVD, il telefono vero | l'ambiente Android serve alla **sonda della fase 2**, e l'utente ha chiesto di lasciarlo stare per ora. ⚠ *Riletto il 9 agosto sera: `adb` e l'AVD **non servono più affatto** (non c'è più un'applicazione Android), e **il telefono vero serve alla fase 1**. Vedi la voce corretta in «Che cosa resta `[?]`»* |
 
 ---
 
@@ -462,7 +462,7 @@ scritte perché **non sono state pagate dal codice: sono state pagate mentre lo 
 | `[?]` **il 49,67 di KWin in memoria** | contro il 43,3 dell'8 agosto. Tre differenze note, nessuna verificata come causa |
 | `[?]` **la coda di Mutter** | la mediana degli intervalli è ferma a 33,3 ms su sei giri, ma il massimo va da 33,6 a 75,0. Da dove venga quella coda non è stato guardato |
 | `[?]` **la Radeon negata** | `amdgpu_cs_ctx_create2 failed (-13)`: da capire se sia la regola udev di `DECISIONI.md` §4.6-ter. Non ostacola |
-| ⏳ **l'ambiente Android** | SDK, `adb`, Desktop AVD e il telefono vero: non ancora toccati. Servono alla sonda della fase 2, non prima |
+| ⏳ **l'ambiente Android** | SDK, `adb`, Desktop AVD e il telefono vero: non ancora toccati. ⛔ *Diceva «servono alla sonda della **fase 2**, non prima». **Corretto la notte del 9 agosto 2026**, rilievo **R3.14** della revisione del banco della fase 1: `DECISIONI.md` §1.6 ha tolto l'applicazione Android — quindi **SDK, `adb` e l'emulatore non servono più a niente** — e `PIANO.md` §1.2 ha spostato la sonda alla **fase 1**, «prima di tutto». **Il telefono vero invece serve, e serve prima**: è lo strumento di misura di S2, S3a e S5. Il censimento completo di quel che manca sta in `fasi/01-filo-nudo.md`, «Le dipendenze»* |
 | **il budget in pixel al secondo** | `vainfo` dice **quali** profili, non **quanti** pixel: il numero di sessioni è fase 12 |
 | **il decodificatore HEVC dell'emulatore** | non si è riusciti a stabilire che ne esponga uno hardware — e non importa, perché nessun numero si dichiara lì |
 

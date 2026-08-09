@@ -276,7 +276,7 @@ mia conoscenza si fermava a maggio e questa roba si muove in fretta:
 
 | | |
 |---|---|
-| **WebTransport** | ⭐ **Baseline da marzo 2026**, con Safari 26.4. Dà a una pagina esattamente quel che RCP usa: stream QUIC indipendenti, `RESET_STREAM`, datagram, migrazione |
+| **WebTransport** | ⭐ **su tutti e tre i motori da marzo 2026**, con Safari 26.4. Dà a una pagina esattamente quel che RCP usa: stream QUIC indipendenti, `RESET_STREAM`, datagram, migrazione. ⚠ *«Baseline» tolto il 9 agosto sera: è un termine tecnico con un significato preciso, e non veniva da nessuno dei quattro rapporti (R2)* |
 | **WebCodecs** | Chrome 94+, Firefox 130+, Safari 26+, Chrome per Android dalla **147** |
 | **HEVC in hardware su Android** | via WebCodecs: 8 bit dalla Chrome 107, **10 bit dalla 108** — cioè il muro di v1 risulta **passabile**, e la sonda che lo verifica è una pagina invece di un APK |
 
@@ -416,9 +416,19 @@ sempre**, e il giorno in cui non ci fosse più smetterebbero di funzionare tutti
 installati. È la dipendenza più pesante che il progetto abbia preso in considerazione, ed è stata
 respinta dall'utente insieme al resto della complicazione.
 
-`[?]` **Safari e iPhone restano il buco dichiarato**: WebKit non implementa `serverCertificateHashes`
-`[S]`, quindi lì la strada è l'eccezione — se funziona, e non lo sa nessuno — oppure il certificato
-vero. **È la prima misura di S1.**
+⭐ **Safari e iPhone NON sono un buco: sono serviti come gli altri due.** `[R]` WebKit ha
+implementato `serverCertificateHashes` il **2 ottobre 2025** (bug 300057,
+`NetworkTransportSessionCocoa.mm`) e l'ha spedito in **Safari 26.4**. Quel che resta da misurare è
+solo **una comodità** — se lì l'eccezione basti da sola, cioè se si possa fare a meno di pubblicare
+l'impronta: l'impronta si usa comunque (`RCP.md` §4.1-bis).
+
+> ⛔ *Corretto la notte del 9 agosto 2026, rilievo **R4.4** della revisione del banco della fase 1.*
+> Qui c'era scritto *«`[?]` Safari e iPhone restano il buco dichiarato: WebKit non implementa
+> `serverCertificateHashes` `[S]`»*. `web.md` §3.1 dichiarava di aver corretto **questo paragrafo**
+> lo stesso 9 agosto — ⛔ **e la correzione non era mai arrivata qui**, né in `RCP.md` §4.1-bis.
+> Tre documenti con la stessa frase falsa, uno dei quali è l'arbitro, e un rapporto che li dava per
+> curati. È la forma della voce 6 di `fasi/00-ambiente.md`: *la lezione era già scritta, la cura è
+> rimasta una nota in un documento.*
 
 > ### ⛔ La proposta di far installare un'autorità nostra, e perché è stata scartata
 >
@@ -453,11 +463,18 @@ connessione su ogni dispositivo* — ma **la conseguenza è più grossa**. Dopo 
 certificato è appuntato e uno diverso fa ricomparire l'avviso; con il certificato vero il caso non
 si presenta.
 
-`[?]` **La misura che decide la forma**: l'eccezione che l'utente concede sul caricamento della
-pagina (TCP) **copre anche la connessione WebTransport (UDP) allo stesso indirizzo?** Se sì, il
-predefinito funziona ovunque. Se no, serve `serverCertificateHashes` — e iPhone resta al solo
-certificato vero. **È la prima domanda della sonda del browser**, e non c'è modo di rispondere
-leggendo: si prova.
+~~`[?]` **La misura che decide la forma**: l'eccezione che l'utente concede sul caricamento della
+pagina (TCP) copre anche la connessione WebTransport (UDP) allo stesso indirizzo?~~
+
+⛔ **Chiusa leggendo, il 9 agosto 2026, per due motori su tre: la risposta è NO.** L'eccezione non
+copre WebTransport né su Chrome né su Firefox `[R]`, per due ragioni tecniche indipendenti
+(`web.md` §3.1). ⭐ **Quindi `serverCertificateHashes` non è un ripiego: è la strada**, su tutti e
+tre i motori. Resta da misurare **solo Safari**, e solo per sapere se lì l'impronta si possa
+risparmiare — che è una comodità, non una piattaforma.
+
+> ⚠ *Riscritta la notte del 9 agosto 2026, rilievo **R4.4**. La domanda era ancora aperta in questa
+> pagina mentre `web.md` §3.1 l'aveva già chiusa con due `[R]` letti nel codice: tenerla aperta
+> faceva **pianificare una misura già fatta**, che è la forma del rilievo R1.25 di `RCP.md`.*
 
 > ## ⏳⏳ Il debito di sicurezza, dichiarato dall'utente e messo in evidenza
 >
@@ -483,6 +500,39 @@ leggendo: si prova.
 > l'autenticazione forte rilegge questa voce»*. L'MFA è precisamente quell'evento. **Quando si
 > aprirà l'evoluzione, le voci da rileggere sono tre e sono queste**: §1.3 (la fiducia), §1.7
 > (questa), §4.3 (il blocco schermo, che con una seconda chiave tornerebbe a difendere qualcosa).
+
+---
+
+### 1.8 ✅ ⭐ Apple è un di più, non un obiettivo — e la sterzata sul browser è il motivo
+
+*9 agosto 2026, dall'utente, chiudendo la domanda «serve procurare un Mac per misurare Safari?».*
+
+> *«Apple copre il 4-5% dell'utenza; con la sterzata che ho impresso supportando il browser come
+> client abbiamo recuperato Windows e la platea di potenziali utilizzatori sale al 95%. Apple è un
+> di più: se capiterà l'occasione di testarlo bene, altrimenti pazienza.»*
+
+⭐ **È §1.6 che si paga la terza volta.** Il client-pagina aveva già tolto due client nativi e
+cinque fasi di piano, e riportato dentro **Windows come posto da cui ci si collega**. Qui fa una
+cosa in più: **rende Apple una piattaforma che non costa niente non misurare**, perché il codice è
+lo stesso per tutti e tre i motori.
+
+⛔ **E la distinzione che va tenuta ferma, o questa voce verrà letta al contrario fra sei mesi:**
+
+| | |
+|---|---|
+| **che cosa NON cambia** | Safari, iPhone e iPad **restano serviti**: `serverCertificateHashes` è spedito in **Safari 26.4** `[R]`, ed è la stessa strada degli altri due motori (§1.7, `RCP.md` §4.1-bis). Non si scrive una riga di codice in meno |
+| **che cosa cambia** | non si **spende** per verificarlo: niente Mac da procurare, niente dispositivi in affitto, niente tunnel. La misura **S1a** esce dalla fase 1 e resta `[?]` |
+| ⛔ **e che cosa non si può dire** | finché nessuno l'ha provato, *«funziona su iPhone»* è **una deduzione, non una misura** — forma **E5**. Il posto dove non deve comparire è la **documentazione del prodotto** |
+| **il prezzo, dichiarato** | la scelta della libreria QUIC (§6.4) si fa su **due motori su tre**, e la riga sta scritta accanto alla scelta |
+
+⚠ **Le percentuali sono una stima dell'utente**, non una misura di questo progetto: `[?]` 4-5% e
+95%. Non cambiano la decisione — che è di **priorità**, non di tecnica — ma la marca si mette
+comunque, perché una decisione presa citando un numero non misurato va sapendo di esserlo
+(`LEZIONI.md` §2.3-quater).
+
+⭐ **La porta resta aperta a costo zero**: i tre controlli di S1a sono già scritti in
+`fasi/01-filo-nudo.md` e la pagina sonda è la stessa. Il giorno in cui passasse di mano un Mac o un
+iPhone, **la misura è un pomeriggio**.
 
 ---
 
