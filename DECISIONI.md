@@ -800,10 +800,12 @@ ridimensionamento della finestra durante la sessione, e il ripiego di §5.0-bis 
 C, confermato. Non per eredità: la ragione di v1 era FreeRDP ed è morta con RDP. La ragione
 nuova è il conto del riuso, banchi compresi.
 
-### 7.6 La licenza
-Da decidere. Un vincolo è già emerso: **niente x265** (GPL-only) come ripiego software, per
-non incatenare tutto il server. Con SVT-AV1 (BSD-3) e FFmpeg senza `--enable-gpl` la scelta
-resta libera.
+### 7.6 ⏳ La licenza — **rinviata a fine progetto**, per decisione dell'utente (9 agosto 2026)
+Non è più una domanda in attesa di risposta: è una decisione **programmata**, e la si prende
+quando il progetto è finito. Fino ad allora vale il solo vincolo già emerso, che va rispettato
+per non trovarsela decisa da sola: **niente x265** (GPL-only) come ripiego software. Con
+SVT-AV1 (BSD-3) e FFmpeg compilato senza `--enable-gpl` la scelta resta interamente aperta.
+
 
 ### 7.7 Multi-tenant: quanti utenti insieme?
 In v1 era **fuori scope** (§4.2); in V2 entra in una riga. Non è un problema di protocollo, è
@@ -847,9 +849,36 @@ Sì, nei due versi, e solo testo. La domanda era nata perché `SPECIFICHE.md` di
 V1 aveva un §4 che diceva cosa **non** si fa — dischi, stampanti, X11, multi-monitor — ed è il
 paragrafo che protegge dallo scivolamento. Qui c'è solo `NO WINDOWS`.
 
-### 7.13 Cinnamon
-Nell'elenco con un punto interrogativo, ben messo: su Wayland è ancora sperimentale e Muffin
-eredita i difetti di Mutter senza le sue correzioni. Proposto **fuori scope rivalutabile**.
+### 7.13 📖 Cinnamon — non si decide, **si studia**
+
+*9 agosto 2026. «Va fatto uno studio simile a quanto fatto per gli altri DE: Cinnamon è in fase
+di migrazione verso Wayland ma il processo è iniziato da poco, quindi non conosco lo stato in
+cui è».*
+
+⚠ **La proposta di dichiararlo fuori scope è stata respinta**, e la ragione è giusta: dentro o
+fuori non si decide su un'impressione. Gli altri quattro desktop hanno uno studio ciascuno,
+questo non ce l'ha, e finché non ce l'ha ogni giudizio è `[?]`.
+
+⭐ **Ma lo studio costa molto meno degli altri quattro, e va detto perché non venga rimandato
+per paura della mole.** Muffin **non è un compositore indipendente**: è un fork di Mutter,
+staccato ai tempi di GNOME 3, e ne eredita l'architettura. Quindi `cinnamon.md` non parte dal
+foglio bianco — **parte da `gnome.md` e cerca le differenze**. È una lettura in negativo:
+*questo pezzo di Mutter c'è ancora? è stato rinominato? è rimasto fermo a cinque anni fa?*
+
+**Le due domande che decidono, e vanno fatte per prime:**
+
+1. **si può creare uno schermo virtuale senza monitor?** Su GNOME è `RecordVirtual`; su KDE la
+   risposta negativa è stata il risultato più costoso di tutto lo studio (`kde.md` §8.1);
+2. **quanti fotogrammi consegna la cattura, con una scena dichiarata e sempre in movimento?**
+   Mutter 37, KWin 60, wlroots 61 `[M]`.
+
+Poi le altre dodici di `LEZIONI.md` §3, e la ricetta di §9 — a partire dal punto 0, *cercare chi
+l'ha già fatto*, che su KDE aveva fatto trovare `KRdp` in un nono repository dopo che lo studio
+lo aveva dato per inesistente.
+
+**Materiale da procurarsi**: `cinnamon`, `muffin`, `cinnamon-session`,
+`cinnamon-settings-daemon`, `cinnamon-screensaver`, `xapp` — cioè una `reference-cinnamon/`
+accanto alle altre quattro.
 
 ---
 
