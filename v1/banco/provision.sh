@@ -123,6 +123,15 @@ CONTAINER_PKGS=(
 
     # driver VA-API per Intel e AMD, usati dalle prove di codifica
     intel-media-va-driver mesa-va-drivers
+
+    # ⭐ REMOTIX V2, banco B2 della fase 1 — 9 agosto 2026.
+    # Go serve a compilare BoringSSL, che e' la sola pila TLS con cui
+    # `lsquic` e `quiche` sanno parlare QUIC.  Non e' una dipendenza del
+    # prodotto: e' una dipendenza di COSTRUZIONE delle candidate, e sta qui
+    # invece che nella memoria di chi ha lanciato il banco (`LEZIONI.md`
+    # §2.5-bis: le dipendenze installate a mano diventano invisibili in un
+    # giorno).
+    golang-go
 )
 
 # pacchetti scaricati e scompattati in $TOOLS, per non installarli sull'host

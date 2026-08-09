@@ -515,7 +515,12 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 
 # Che cosa è stato sviluppato
 
-*Vuoto: nessuna riga di prodotto scritta.*
+*Nessuna riga di **prodotto** scritta. Quel che c'è è banco.*
+
+| | |
+|---|---|
+| ⭐ `banchi/01-b2-costruisci.sh` | **nuovo**: costruisce BoringSSL e `lsquic` con `-DLSQUIC_WEBTRANSPORT=ON`, e ⛔ **verifica che il flag abbia prodotto i simboli** — non che compili |
+| `v1/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
 
 **Si riusa** (`PIANO.md` fase 1): `autenticazione.c` (144 righe, PAM) — ⛔ **con la cura di B10** — e
 `registro.c` (140) — ⚠ **con l'obbligo di B13.2**.
@@ -544,7 +549,10 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 
 | Che cosa | Atteso | Misurato | Data |
 |---|---|---|---|
-| **B2** — la sessione si apre sui tre motori, per candidata | 3 motori su 3, **e le sei proprietà** | | |
+| **B2** — BoringSSL compila nel `devroot` | sì | ✅ **sì** — ramo predefinito, `libssl.a` e `libcrypto.a` | 9 ago |
+| **B2** — `lsquic` compila con `-DLSQUIC_WEBTRANSPORT=ON` | sì | ✅ **sì**, v4.9.3, e la define è nei `FLAGS` di `build.ninja` | 9 ago |
+| ⛔ **B2** — **il flag ha prodotto i simboli?** | **4 su 4** | ⭐ **4 su 4** `[M]` — dopo aver curato il banco, vedi sotto | 9 ago |
+| **B2** — la sessione si apre su Chrome e Firefox, per candidata | 2 motori su 2, **e le sei proprietà** | | |
 | **B2** — righe di collante, per candidata | *si conta, non si stima* | | |
 | **B3** — 1ª · 2ª · 2ª in parallelo · 35 s a timeout 120 · 3ª con chiave ruotata | passa · passa · **rifiutata `0x0F`** · **entra** · passa | | |
 | **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | | |
@@ -571,6 +579,43 @@ costano meno.
 | | |
 |---|---|
 | ⛔ **la prima stesura del banco, 9 agosto** | 44 rilievi su due revisioni. La forma che si ripete: **cadeva sempre il controllo che dice *no***, e in tre casi era già stato scritto da chi ci era passato prima. ⚠ *Due delle tre amputazioni erano state bocciate da `R2` poche ore prima, con l'istruzione «curare prima di scrivere una riga di banco»: il documento che le doveva ereditare curate le ha ereditate intatte* |
+
+### ⛔ Tre difetti di banco pagati in un'ora, sul primo banco eseguito — 9 agosto 2026
+
+*E il terzo è il più istruttivo del progetto finora, perché **stava per cancellare la candidata
+migliore** con un `[M]` falso contro un `[R]`.*
+
+| # | Che cosa è successo | Che cosa insegna |
+|---|---|---|
+| **1** | `git clone -b master` di BoringSSL: *«Remote branch master not found»*. Google l'ha rinominato | ⚠ **un ramo scritto a mano è una dipendenza dal nome di qualcun altro**. Tolto: si prende il predefinito |
+| **2** | ⛔ il fallimento è arrivato **con «uscita 0»** a chi guardava, perché avevo messo `\| tail` in coda al comando remoto: lo stato d'uscita era quello di `tail` | `LEZIONI.md` §1.9 — *zero e fallimento con la stessa faccia* — **presa nell'invocazione invece che nello script**. Il banco era innocente; chi lo lanciava no |
+| **3** | ⛔⭐ il banco ha dichiarato **«0 simboli su 4»** stampando **i quattro simboli tre righe sopra** | vedi il riquadro |
+
+> #### ⛔ Il terzo: `set -o pipefail` più `grep -q`, cioè un falso rosso garantito
+>
+> Il controllo era `nm -g --defined-only "$LIB" \| grep -q " $s$"`. **`grep -q` esce al primo
+> riscontro** e chiude il tubo; `nm` sta ancora scrivendo, prende `SIGPIPE`, muore con **141**; e
+> `set -o pipefail`, in cima allo script, fa valere **quel 141** come esito della pipeline.
+>
+> ⛔ **Il riscontro riuscito veniva letto come fallimento** — e la perversione è che *più il simbolo
+> era facile da trovare, prima `grep` usciva, più sicuro era il falso rosso.*
+>
+> ⚠ **Che cosa avrebbe prodotto se nessuno avesse guardato**: la riga *«il flag di `lsquic` non
+> produce niente»* in `DECISIONI.md` §6.4 — cioè **la candidata con più WebTransport dentro,
+> cancellata da un difetto del banco**, con un `[M]` falso che avrebbe battuto un `[R]` letto nel
+> codice. È `LEZIONI.md` §2.3 (*una prova che boccia il codice giusto costa quanto una che promuove
+> quello sbagliato*) e `CODER.md` §3.11 (*quando codice letto e misura si contraddicono, il sospetto
+> va prima sulla misura*) nello stesso difetto.
+>
+> ⭐ **Che cosa l'ha fatto emergere**: non l'intuito — **tre righe di strumentazione nel banco**, che
+> dichiarano su quale archivio si sta guardando e quanti simboli si vedono *prima* di dire quali
+> mancano. Ora sono permanenti: erano la differenza fra «chi dei due mente» e mezza giornata di
+> supposizioni.
+>
+> ⚠ **E una quarta, che non è un difetto ma un'abitudine da prendere**: la diagnosi a mano era
+> passata attraverso **tre shell annidate** (locale → ssh → `enter.sh` → chroot) e si è rotta sulle
+> virgolette, restituendo `grep: ...: No such file or directory`. La regola della fase 0 vale qui:
+> **le righe di comando si mettono in un file, non si ricordano**.
 
 ---
 

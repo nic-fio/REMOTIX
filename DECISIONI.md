@@ -1636,7 +1636,7 @@ fa con un banco davanti, non su carta.
 > |---|---|---|---|
 > | **`quiche`** | Rust con **API C** | ⛔ **no** — ma ha `h3::Config::enable_extended_connect()` (`SETTINGS_ENABLE_CONNECT_PROTOCOL`) `[R]` e i datagram QUIC completi (`dgram_send`/`dgram_recv`) `[R]` | **tutto lo strato WebTransport** |
 > | **`ngtcp2` + `nghttp3`** | **C** | ⛔ **no** — ma nghttp3 implementa **RFC 9220** (l'extended CONNECT di HTTP/3) `[S]` **e** sa mandare e ricevere `SETTINGS_H3_DATAGRAM` con il **Capsule Protocol** `[S]` | lo strato WebTransport, ⭐ **con le fondamenta più complete delle quattro** |
-> | ⭐ **`lsquic`** (LiteSpeed) | **C** | ⭐ **SÌ**: `OPTION(LSQUIC_WEBTRANSPORT "Enable WebTransport support" OFF)` → `-DLSQUIC_WEBTRANSPORT_SERVER_SUPPORT=1` `[R]`, letto nel `CMakeLists.txt` | poco — **se funziona** |
+> | ⭐ **`lsquic`** (LiteSpeed) | **C** | ⚠ **in parte** — vedi il riquadro qui sotto: il flag c'è, l'API pubblica è molto più magra del nome | **meno delle altre due, ma non «poco»** |
 > | **`libwtf`** | C, ma **su MsQuic** | ⭐ sì, negozia draft-15/07/02 `[S]` | poco, ⚠ ma porta dentro **una seconda pila QUIC** |
 > | ~~`web-transport-quiche`~~ | ⛔ **Rust puro, nessuna API C** | sì | ⛔ **escluso**: il server è in C (§6.3) |
 >
@@ -1653,6 +1653,52 @@ fa con un banco davanti, non su carta.
 > |---|---|
 > | **`lsquic`** | ⛔ la funzione è **spenta per difetto** e **non compare nella documentazione della 4.9.3** `[R]`. «Implementato ma spento e non documentato» è la firma di un pezzo che **nessuno esercita**: va provato, non creduto |
 > | **`libwtf`** | ⚠ 70 stelle, 51 commit, un autore — e ⛔ **la licenza si contraddice da sola**: il README dice MIT, il piè di pagina Apache-2.0. Su una libreria che entrerebbe nel cuore del prodotto è un difetto di per sé (§7.6) |
+>
+> ### ⛔ E `lsquic` è il caso da manuale di E1: il flag era necessario, non sufficiente
+>
+> *Letta l'intestazione pubblica `include/lsquic.h` invece di fidarsi del `CMakeLists.txt`.* Dietro
+> `LSQUIC_WEBTRANSPORT_SERVER_SUPPORT` c'è **tutto quel che segue, e nient'altro** `[R]`:
+>
+> | | |
+> |---|---|
+> | due impostazioni | `es_webtransport_server`, `es_max_webtransport_server_streams` |
+> | quattro funzioni, **tutte di classificazione** | `lsquic_stream_set_webtransport_session` · `..._is_webtransport_session` · `..._is_webtransport_client_bidi_stream` · `..._get_webtransport_session_stream_id` |
+>
+> ⛔ **Non c'è nessuna API per stabilire una sessione, per aprire uno stream WebTransport, per
+> mandare un datagram WebTransport.** *«Il `CMakeLists` ha un flag che si chiama
+> `WEBTRANSPORT_SERVER_SUPPORT`»* ⇒ *«lsquic fa WebTransport»* è **esattamente** la forma **E1**, la
+> stessa che ha ucciso v1 e che `web.md` §9 punto 1 aveva già visto ricomparire travestita da API
+> (`prefer-hardware`). ⭐ **Terza volta in tre giorni, e stavolta l'ha fermata la lettura.**
+>
+> ⚠ **Quel che quelle quattro funzioni implicano, però, è più di quel che dicono**: per rispondere
+> *«questo stream appartiene alla sessione WebTransport numero N»* lsquic **deve** già leggere le
+> intestazioni degli stream WT e associarli — che è la parte noiosa. È un indizio a favore, non una
+> prova: **si misura**.
+>
+> ### ⭐ E la prima misura c'è — `[M]` 9 agosto 2026, `banchi/01-b2-costruisci.sh`
+>
+> | Che cosa | Atteso | Misurato |
+> |---|---|---|
+> | BoringSSL compila nel `devroot` | sì | ✅ sì |
+> | `lsquic` **v4.9.3** compila con `-DLSQUIC_WEBTRANSPORT=ON` | sì | ✅ sì, e la define compare nei `FLAGS` di `build.ninja` |
+> | ⛔ **il flag ha prodotto i simboli** | 4 su 4 | ⭐ **4 su 4** |
+>
+> ⭐ **E il codice non è un moncone**: `webtransport` compare in **sei file** — `include/lsquic.h`,
+> `lsquic_stream.c/.h`, `lsquic_engine.c`, `lsquic_full_conn_ietf.c`, `lsquic_hcso_writer.c` `[R]`.
+> Cioè tocca il motore, gli stream, la connessione IETF **e lo scrittore dello stream di controllo
+> HTTP/3** — dove vivono le impostazioni. È un'implementazione distribuita nei punti giusti.
+>
+> ⛔ **Ma «i simboli ci sono» non è «la sessione si apre»**: è il gradino successivo di E1, e la
+> misura che conta resta **un browser vero che apre una sessione**. Questa riga dice soltanto che
+> vale la pena scrivere quelle righe per `lsquic` per prima.
+>
+> ⚠ *E il banco che ha prodotto questo `4 su 4` **aveva prima detto `0 su 4`**, per un difetto suo —
+> `set -o pipefail` più `grep -q`. La cronaca sta in `fasi/01-filo-nudo.md`, «che cosa NON ha
+> funzionato», ed è il motivo per cui questa riga porta la data e il nome dello script.*
+>
+> ⚠ **E un dettaglio che vale come odore**: il commento di `es_webtransport_server` dice *«Enable
+> datagram extension for http3 server»* — cioè **documenta un'altra cosa**. Un campo la cui
+> documentazione parla d'altro è un campo che nessuno ha riletto.
 >
 > ⛔ **Nessuna di queste righe è una misura.** Sono la lente che dice **a chi vale la pena scrivere
 > le cinquanta righe** di B2, e a chi no.
