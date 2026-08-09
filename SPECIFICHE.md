@@ -256,6 +256,14 @@ ora non posso rientrare nella mia sessione». (`DECISIONI.md` §4.4)
 ⚠ Con QUIC il passaggio WiFi → LTE **non** conta come silenzio: la connessione si porta dietro il
 cambio di indirizzo. I 30 secondi coprono solo le interruzioni vere.
 
+⛔ **E una cosa che il client web aggiunge, dichiarata invece che scoperta** *(9 agosto 2026,
+`web.md` §1.2 D)*: una **scheda in secondo piano viene congelata dal browser dopo circa cinque
+minuti** `[S]`. Una scheda congelata tace, quindi **si stacca**, e la sessione resta viva ad
+aspettare — che è il comportamento giusto, ma va detto all'utente invece di sembrare un difetto.
+⚠ L'esenzione documentata richiede un canale che WebTransport da solo non fornisce: chi volesse
+tenere viva la scheda dovrebbe aggiungere **un secondo meccanismo di rete solo per quello**, e non
+si fa senza una ragione misurata.
+
 ⚠ «Input» è quel che l'utente manda, non quel che guarda: chi resta mezz'ora a guardare un video
 senza toccare nulla viene staccato. Il costo è piccolo — riattaccarsi è rapido.
 
@@ -311,6 +319,47 @@ diversi sia il futuro multi-monitor.
 
 ⭐ Il caso mobile viene giusto da solo: il telefono si attacca e la tela nasce della forma del
 telefono — pixel veri, niente bande, niente scalatura.
+
+### 6.1-bis ⛔ «La risoluzione del client», quando il client è una finestra
+
+*Chiarito il 9 agosto 2026. Il modello di §6.1 diceva «la sessione legge la risoluzione del
+client», e con un programma a schermo intero non c'era altro da dire. **Un browser è una finestra
+dentro uno schermo**, e le due misure sono diverse — a volte molto.*
+
+| | Che cosa è | Chi la usa |
+|---|---|---|
+| **la tela** | ⛔ **lo schermo del dispositivo, in pixel fisici** — non la finestra, e non i pixel logici del browser, che su un telefono sono meno di un terzo di quelli veri | si fissa **all'attacco** e non si muove |
+| **la vista** | **la finestra**, cioè quanto la pagina ha davvero da disegnare, sempre in pixel fisici | si rinegozia a ogni ridimensionamento |
+
+⭐ **Perché lo schermo e non la finestra**, che era l'altra scelta possibile: la tela è **il desktop**,
+e un desktop grande quanto la finestra che avevi aperta per caso al primo collegamento resterebbe
+tale per tutta la sessione — piccolo per sempre, e morbido appena ingrandisci (§6.3 ne dichiara già
+il prezzo). Prendendo lo schermo, la finestra piccola mostra il desktop **rimpicciolito e intero**,
+e appena vai a schermo intero torna **1:1 e nitido**.
+
+⭐ **E c'è una seconda ragione, che arriva dalla tastiera**: la Keyboard Lock esiste **solo a schermo
+intero** (§7.3-bis). Cioè il modo in cui questo prodotto si usa davvero *è* lo schermo intero — ed è
+esattamente la condizione in cui vista e tela coincidono e non si scala niente.
+
+⚠ **Quel che si accetta, dichiarato:**
+
+| | |
+|---|---|
+| il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
+| **ruotare il telefono** dopo l'attacco | la tela **non gira**: si vedono le bande, o si riscala. Per cambiarla davvero c'è «adatta il desktop a questa finestra» (§6.4) |
+| uno schermo 4K | la tela nasce 4K, e sono **cinque volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
+
+`[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
+cambiano il numero che il client dichiara:
+
+1. ⛔ **lo zoom della pagina falsa il conto.** Il fattore che converte i pixel logici in fisici
+   **cambia quando l'utente preme `Ctrl +`**, e un utente che ha zoomato *prima* di collegarsi
+   dichiarerebbe una tela sbagliata — che poi resta per tutta la sessione. Va misurato quanto e su
+   quali motori, e se esista un modo di leggere la misura vera invece di quella zoomata;
+2. **su DeX, `screen` risponde con lo schermo esterno o con quello del telefono?** È l'uso primario,
+   e la risposta decide se la tela nasce giusta o grande quanto un telefono;
+3. i browser **arrotondano** queste misure per non far riconoscere il dispositivo: quanto, e se
+   l'arrotondamento possa produrre un numero **dispari** — che `RCP.md` §4.5 rifiuta.
 
 **Ridimensionare la finestra del client non tocca mai il desktop**, su nessuno dei quattro
 compositori. Le ragioni, in ordine di peso: su KDE 6.3.6 — cioè Debian stabile — **non si può**
@@ -427,16 +476,35 @@ lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md
 | **quanto si perde** | `[R]` la lista riservata di Chrome è di **dodici** comandi; **a schermo intero scende a due** — `F11` e l'uscita — **senza chiamare nessuna API**. Firefox ne ha **sei**, Safari **zero** |
 | ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`web.md` §1.2 B) |
 
+⛔ **Gli stati sono tre, non due**, e il secondo è il peggiore *(`web.md` §8-bis, O8)*:
+
+| | |
+|---|---|
+| **consegnata** | arriva alla sessione remota, e basta |
+| ⛔ **consegnata *e* riservata** | la sessione remota riceve la battuta **e** il browser esegue il suo comando — su Firefox `Ctrl+Tab` è qui: *sembra intercettabile e non lo è* |
+| **non consegnata** | il browser se la tiene |
+
+⚠ **Da cui la misura non è «arriva?» ma «arriva *e basta*?»** — una prova che guarda solo il lato
+della sessione dichiara verde proprio il caso peggiore.
+
 **Quel che si perde davvero, e non si recupera:**
 
 | | |
 |---|---|
-| `Ctrl+Alt+Canc` · l'uscita da schermo intero | ovunque, per costruzione |
+| `Ctrl+Alt+Canc` | ⭐ **non dal filo, ma dall'interfaccia**: si dà all'utente un **bottone a schermo**. Tre riferimenti maturi su tre lo fanno, ed è **un requisito, non un ripiego di fortuna** *(O7)* |
+| l'uscita da schermo intero | ovunque, per costruzione: è la via di fuga dell'utente |
+| ⛔ **su iPhone, tutto** | lo schermo intero è **parziale in tutte le versioni** `[S]`, e senza schermo intero **non c'è keyboard lock** *(O9)*. Su iPhone si perde l'intera partita della tastiera, non qualche scorciatoia |
 | ⛔ **su macOS, tutte le scorciatoie di sistema** | non esiste un aggancio: la funzione che dovrebbe fornirlo **restituisce `nullptr`** `[R]` |
 | ⛔ **su Android e DeX, ogni combinazione con Meta** | per regola AOSP — ⚠ e DeX è l'uso primario (`DECISIONI.md` §5-bis.0) |
 
 ⛔ **Che cosa si fa**: la pagina **dichiara** quali scorciatoie non può consegnare su quel browser.
 NON si finge che funzionino, e non si inventa una scorciatoia sostitutiva senza dirlo.
+
+⚠ **Due trappole della lock, e la seconda morde dove fa più male** *(O10)*: non esiste se lo
+schermo intero è stato aperto con `F11` — **e non lo dice** — e **si spegne da sola quando la pagina
+perde il fuoco**, cioè esattamente nell'istante in cui un modificatore resta premuto. ⭐ La cura non
+tocca il protocollo: **la pagina rilascia tutto quel che ha premuto quando perde il fuoco**, e al
+riattacco ci pensa `RCP.md` §7.3, che obbliga il server a rilasciare tutto al distacco.
 
 `[?]` **Restano due domande, e sono le due che pesano di più**: se la Keyboard Lock funzioni su
 **DeX**, e se la PWA valga anche su **Chrome per Android**.
@@ -592,6 +660,20 @@ costruttore. La scala di preferenza:
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
 
+⛔ **E con il client web l'AV1 è chiuso anche dall'altro lato** *(`web.md` §8-bis, O2)*: in
+decodifica non porta niente che HEVC non dia già. Resta al secondo posto della scala **come porta
+aperta per l'hardware di domani**, non come strada da provare — e chi la riaprisse deve rimisurare
+entrambi i lati.
+
+⛔ **Si codifica in BT.709, e l'HDR non si promette** `[S]` *(O3)*: BT.2020/PQ fa cadere il percorso
+a zero copie nel browser, e quello a una copia converte con un risultato slavato. È una scelta del
+**server**, non del client, e va scritta qui perché nessuno la prenda per una dimenticanza.
+
+⚠ **E due parametri che il server deve emettere e che nessuno indovina** *(O12)*: la stringa di
+livello per il traguardo è **5.1**, non 5.0, e oltre i 40 Mbit/s serve il **tier High**. Un livello
+dichiarato troppo basso non dà un errore: **fa rifiutare la configurazione dal decodificatore**, e
+il sintomo è «il browser non apre il flusso».
+
 ⛔ **E la parentesi «RDNA2 e Alder Lake lo decodificano soltanto» era sbagliata a metà**, corretta
 lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`AV1Profile0`,
 `VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
@@ -614,6 +696,12 @@ dichiara da solo.
 | **il minimo tecnico** | WebTransport **e** WebCodecs. `[S]` Entrambi presenti su Chrome/Edge, Firefox e Safari 26+ — WebTransport è Baseline da marzo 2026 |
 | **si collauda su** | ⛔ **almeno due motori diversi**, sempre. Un solo motore è un client solo, cioè il caso che questa regola vieta |
 | **si dichiara** | quali browser sono serviti, e **che cosa si perde su ciascuno** — le scorciatoie (§7.3-bis), gli appunti (§9), il certificato su Safari (`DECISIONI.md` §1.7) |
+
+⛔ **E come la pagina viene servita è un vincolo di prodotto, non un dettaglio** *(`web.md` §8-bis,
+O11)*: va consegnata **isolata fra origini** — le due intestazioni che il browser pretende per dare
+alla pagina i cronometri a piena risoluzione e la memoria condivisa. ⚠ Non è una taratura del banco:
+**cambia come il server serve ogni risorsa della pagina**, e deciderlo dopo significa riscrivere il
+modo in cui la pagina è confezionata.
 
 ⚠ **E le versioni contano più che sui desktop**: qui il pavimento non lo pone Debian, lo pone il
 dispositivo dell'utente. Un telefono fermo a una versione vecchia di Chrome non ha WebCodecs, e

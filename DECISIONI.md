@@ -1031,6 +1031,39 @@ scendere anche la misura codificata sotto una certa soglia, con assestamento.
 davvero, e quanto pesa. Un'ottimizzazione decisa prima della misura è §7.2 di `LEZIONI.md` —
 ottimizzare nella direzione sbagliata.
 
+### 5.0-quater 🔸 Con il browser, «la risoluzione del client» sono due misure diverse
+
+*9 agosto 2026, chiedendolo l'utente dopo il passaggio al client web: «resta da chiarire il
+comportamento della risoluzione avendo adesso come client un browser».*
+
+§5.0 dice *«la sessione legge la risoluzione del client e usa quella»*, e con un programma nostro a
+schermo intero non c'era altro da dire. ⛔ **Un browser è una finestra dentro uno schermo**, e le due
+misure differiscono — su un telefono di un fattore tre, per via dei pixel logici.
+
+| | |
+|---|---|
+| **la tela** | 🔸 **lo schermo del dispositivo, in pixel fisici** |
+| **la vista** | la finestra, in pixel fisici |
+
+**Le due ragioni, e la seconda non l'aveva vista nessuno:**
+
+1. la tela **è il desktop**: prendendola dalla finestra, un collegamento aperto per caso in una
+   finestrella darebbe un desktop piccolo **per tutta la sessione** — e §5.3 ha già dichiarato che
+   ingrandire non inventa dettaglio;
+2. ⭐ **la Keyboard Lock esiste solo a schermo intero** (`web.md` §5). Cioè il modo in cui questo
+   prodotto si usa davvero *è* lo schermo intero, che è **esattamente la condizione in cui vista e
+   tela coincidono**. Il modello non ha un caso normale e un caso degradato: ha un caso normale che
+   coincide con quello ottimo.
+
+⚠ **Non cambia nessuna decisione presa**: §5.0 resta (la tela la detta il client, all'attacco), §5.1
+resta (ridimensionare la finestra non tocca il desktop), §5.2 resta come corretta oggi (si codifica
+la tela, il client riscala). Cambia **che cosa il client legge** per rispondere.
+
+`[?]` **E tre cose da misurare prima di crederci**, tutte in `SPECIFICHE.md` §6.1-bis: che lo zoom
+della pagina non falsi il conto — ⛔ *l'utente che ha premuto `Ctrl +` prima di collegarsi
+dichiarerebbe una tela sbagliata, e resterebbe per tutta la sessione* — che cosa risponde DeX, e se
+l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.5 rifiuta.
+
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 
 *8 agosto 2026. «Tagliamo la testa al toro. Anziché correre dietro ai compositor, una scelta

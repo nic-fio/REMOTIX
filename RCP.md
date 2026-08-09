@@ -391,6 +391,19 @@ senza dominio.*
 necessario; uno **a scadenza breve** per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire
 l'avviso ogni due settimane, e nessuno collegherebbe le due cose.
 
+⛔ **E l'impronta che la pagina ha in mano invecchia.** Una scheda lasciata aperta due settimane
+tiene l'impronta di un certificato che nel frattempo è stato ruotato: alla riconnessione il browser
+rifiuta, e il sintomo è *«non si collega più e non dice perché»*. Le due cure, e **la seconda è
+quella scelta**:
+
+| | |
+|---|---|
+| ricaricare la pagina | funziona e butta via lo stato: l'utente perde quel che stava guardando |
+| ⭐ **chiedere l'impronta corrente** | ⛔ **e non passa da RCP**: la sessione non è ancora aperta, quindi non c'è un canale su cui chiedere. La pagina la ritira **dal server che l'ha servita**, con una richiesta ordinaria, e riprova |
+
+⚠ *Riportata la sera del 9 agosto 2026 dal rapporto S1 (rilievo **O6**), che la dichiarava come
+«va deciso dove sta questo aggiornamento in RCP». La risposta è: **fuori** da RCP.*
+
 ⚠ **E la conseguenza sul collaudo, che vale in ogni caso**: un banco che prova la fiducia **DEVE**
 provare anche il **secondo** collegamento, e un terzo con la chiave cambiata. La prova a
 collegamento singolo resta verde per sempre (`LEZIONI.md` §2.1).
@@ -437,6 +450,7 @@ definiti in RCP/1:
 |---|---|---|
 | `video.codec` | entrambi | elenco fra `hevc`, `av1`, in ordine di preferenza |
 | `video.profondita` | entrambi | elenco fra `8`, `10` |
+| `video.livello` | client | il livello massimo che sa decodificare, es. `5.1`. ⛔ Il server **DEVE** emettere un flusso di livello non superiore, e **non lo indovina**: un livello dichiarato troppo basso non dà un errore di rete, **fa rifiutare la configurazione dal decodificatore** e il sintomo è «il browser non apre il flusso» *(rilievo **O12**)* |
 | `video.misura_massima` | client | `LARGHEZZAxALTEZZA` che sa decodificare, es. `3840x2160` |
 | `audio.codec` | entrambi | elenco fra `opus`, `pcm` |
 | `input.tocco` | client | `si`, `no` — riservato, in RCP/1 vale sempre `no` |
@@ -703,7 +717,13 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
 
 - ⛔ il server **NON DEVE** abbandonare un fotogramma **chiave**. Abbandonare la cura non è una cura;
 - ⛔ quando il server abbandona un delta, **DEVE** mandare un fotogramma chiave **appena può** —
-  senza aspettare che il client lo chieda, perché il client se ne accorge un giro di rete più tardi;
+  senza aspettare che il client lo chieda, perché il client se ne accorge un giro di rete più tardi.
+  ⭐ **E questo obbligo non è una prudenza: è l'unica cura che abbiamo** `[S]` — a un delta mancante
+  il decodificatore **non solleva nessun errore**, si limita a produrre immagini via via più
+  sfasciate fino alla chiave successiva. `[?]` L'alternativa vera sarebbero i **sotto-livelli
+  temporali**, che permettono di buttare certi fotogrammi senza rompere niente: se `EncSliceLP`
+  dell'Intel li sappia produrre **non lo sa nessuno**, ed è una misura della fase 8. Finché non lo
+  si sa, **ogni abbandono costa una chiave**;
 - ⛔ il client **DEVE** mandare `RICHIEDI_CHIAVE` quando si accorge di un **buco** nella successione
   dei `numero`, o quando il decodificatore rifiuta un fotogramma;
 - ⛔ finché non arriva una chiave, il client **NON DEVE** mostrare fotogrammi che sa incompleti:

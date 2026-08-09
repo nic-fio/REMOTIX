@@ -382,6 +382,30 @@ voci che toccano una decisione.*
 
 ---
 
+## 8-bis. ⛔ Le dodici cose che i rapporti dicevano e questa sintesi taceva
+
+*Riportate la sera del 9 agosto 2026, rilievi **O1-O12** della revisione R2. ⭐ È la parte che
+nessun controllo delle citazioni trova, perché non c'è niente da controllare: la riga non c'era.*
+
+| # | Che cosa | Dove va, e che cosa cambia |
+|---|---|---|
+| **O1** | ⛔ **la scheda in secondo piano si congela dopo 5 minuti**, e l'esenzione vuole un canale WebRTC o una traccia multimediale viva `[S]` — che WebTransport da solo non è | §1.2 D, e `SPECIFICHE.md` §5.3: **un client congelato tace, quindi si stacca**. Va dichiarato, non scoperto |
+| **O2** | ⛔ **AV1 è un vicolo cieco da entrambi i lati** — il nostro ferro non lo codifica `[M]`, e in decodifica non aggiunge niente che HEVC non dia | `SPECIFICHE.md` §11.4: resta nella scala di preferenza **come porta per l'hardware di domani**, non come strada da provare. ⚠ Un vicolo cieco non trascritto è un vicolo cieco che si ripercorre (`LEZIONI.md` §8) |
+| **O3** | ⚠ **l'HDR non si promette**: BT.2020/PQ fa cadere lo zero-copy, e il percorso a una copia converte con un risultato slavato `[S]` | `SPECIFICHE.md` §11.4: ⛔ **si codifica BT.709**, ed è una scelta del server, non del client |
+| **O4** | ⛔ **buttare un delta non dà nessun errore al decodificatore**: la corruzione si propaga in silenzio fino alla chiave successiva, e per abbandonare senza rompere servirebbero i **sotto-livelli temporali** `[?]` — da verificare su `EncSliceLP` dell'Intel | `RCP.md` §5.2, che già impone la chiave dopo un abbandono: la riga nuova è **perché** quell'obbligo non è facoltativo |
+| **O5** | Safari è l'unico motore con WebTransport anche su **HTTP/2 e TCP**, e il nostro server non lo parla: il suo ripiego finirebbe in errore | §3.2 — **va deciso** se implementarlo o dichiarare Safari fuori dal ripiego ✅ *riportata* |
+| **O6** | la pagina già aperta ha in mano **un'impronta che invecchia**: dopo la rotazione va ricaricata, o va chiesta l'impronta corrente | §3.2, e serve una riga in `RCP.md` su **dove sta quell'aggiornamento** ✅ *riportata* |
+| **O7** | ⭐ **i bottoni a schermo sono un requisito, non un ripiego di fortuna**: tre riferimenti maturi su tre danno all'utente un modo di mandare quel che il browser non lascia passare | `SPECIFICHE.md` §7.3-bis: `Ctrl+Alt+Canc` non è «non recuperabile», è **recuperabile in un altro modo** |
+| **O8** | ⛔ **gli stati sono tre, non due**: consegnata · **consegnata *e* riservata** · non consegnata. Il secondo è il peggiore — la sessione riceve la battuta **e** la scheda si chiude | §5.2, e riformula la misura **S3**: la domanda non è «arriva?» ma «arriva **e basta**?» |
+| **O9** | ⛔ **su iPhone lo schermo intero è parziale in tutte le versioni** `[S]`, e senza schermo intero **non c'è keyboard lock** | §5.2: su iPhone si perde **tutta** la partita della tastiera, non qualche scorciatoia |
+| **O10** | ⚠ la lock **non esiste se lo schermo intero è entrato con `F11`**, e **si spegne da sola alla perdita del fuoco** — cioè proprio nell'istante in cui i modificatori restano giù | §5.4: ⭐ e la cura **non richiede protocollo** — il client manda il rilascio di tutto quel che ha premuto quando perde il fuoco, e al riattacco ci pensa `RCP.md` §7.3 |
+| **O11** | l'isolamento fra origini (COOP+COEP) è una **regola di prodotto**, non una taratura del banco: cambia come si servono le risorse | §6.3 lo degradava a «tarare il righello». Va in `SPECIFICHE.md` come vincolo di come il server serve la pagina |
+| **O12** | la stringa di livello corretta per il traguardo è **5.1**, non 5.0 — e oltre 40 Mbit/s serve il tier **High** | è il parametro che **il server deve emettere**: `RCP.md` §4.3, accanto al codec |
+
+⛔ **E la lezione che le tiene insieme**: una sintesi fedele in novanta punti che tace un vincolo
+produce **un piano che lo scopre a metà lavoro**. Non è un difetto di accuratezza — le dodici righe
+qui sopra non contraddicono niente di quel che era scritto: **non c'erano**.
+
 ## 9. Le lezioni che questo studio aggiunge
 
 1. ⭐ **Una lezione vecchia è ricomparsa un livello più in alto.** `LEZIONI.md` §1.11 dice che una
