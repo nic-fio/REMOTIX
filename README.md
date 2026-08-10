@@ -26,11 +26,19 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⛔⭐ **e `quiche` non arriva a WebTransport dal C** | dichiara **4** impostazioni sul filo e **nessuna delle due di WebTransport**. `h3::Config::set_additional_settings` **esiste in Rust e non nell'FFI**, e il trucco usato su `ngtcp2` lì non c'è: quei byte un'applicazione in C non li vede mai. ⇒ **§6.4 è chiusa** |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile. ⚠ Ma parla la **bozza 02**, e i browser la **07**: il server manda tutt'e due le dichiarazioni, o metà degli strumenti direbbe di sì per il motivo sbagliato |
 >
+> | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato a **1074-1085 ms** |
+> | ⭐ **B4: il validatore è certificato** | **7 su 7** — sei registrazioni guaste accusate **ciascuna sul byte dichiarato in anticipo**, e la settima, conforme, accettata. ⭐ E alla prima esecuzione ha trovato **una contraddizione in `RCP.md`**: §4.3 vietava un carattere che §4.3 stessa usa |
+>
 > ### ⛔ Il prossimo passo
 >
-> ⭐ **B2 è finito**: le sei proprietà sono **6 su 6**, lette dal pari. La fase entra nel filo
-> vero — **B3** (la stretta di mano su due connessioni, la seconda rifiutata con `0x0F`) e **B4**
-> (il validatore), cioè le prime righe di RCP.
+> **Il terzo giro di B3, che oggi è rosso**: la seconda connessione, mentre la prima è attaccata,
+> viene **accettata** invece che rifiutata con `GIA_ATTIVA_REMOTA`. ⭐ La metà giusta c'è — la prima
+> non viene spodestata — ma il rifiuto non arriva, e **la causa non è diagnosticata**: potrebbe
+> essere il server oppure il banco (la prima che non resta attaccata come crede). Due cause opposte
+> con lo stesso rosso.
+>
+> Poi le due prove di B3 che restano — 35 s a `max_idle_timeout` 120, e la terza connessione con il
+> certificato ruotato — e **B5**, le prove di violazione.
 >
 > ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va

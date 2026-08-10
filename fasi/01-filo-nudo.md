@@ -528,6 +528,11 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ `banchi/01-b2-sni-ngtcp2.sh` | **nuovo, 10 agosto**: costruisce `bsslserver`, il server d'esempio di `ngtcp2`, che è il bersaglio della prova SNI. ⛔ **Non guarda l'uscita di `ninja`: guarda se il binario c'è** — `examples/CMakeLists.txt` costruisce quel blocco solo `if(LIBEV_FOUND AND HAVE_BORINGSSL AND LIBNGHTTP3_FOUND)`, e se una manca cmake **salta in silenzio** |
 | ⭐ `banchi/01-b2-sonda-sni.py` | **nuovo, 10 agosto**: la sonda del criterio nuovo di `DECISIONI.md` §6.4. Due gambe (senza SNI · con SNI), e ⛔ **due gradini per gamba**: la stretta di mano riesce **e** l'impronta del certificato ricevuto combacia con quella del file |
 | ⭐ `banchi/01-b2-sni-quiche.sh` | **nuovo, 10 agosto**: la terza candidata. ⛔ **Due azioni separate — `leggi` e `costruisci`** — perché se leggere e misurare stanno nello stesso comando la previsione la si scrive **dopo** aver visto il risultato, cioè non la si scrive. ⭐ E **sceglie la versione**: confronta il `rust-version` di ogni etichetta col compilatore presente, e dice quale e perché |
+| ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **nuovo, 10 agosto**: ⭐ **la stretta di mano di RCP/1, in C** — 807 righe, 662 di codice. ⛔ **Non sa che sotto c'è QUIC**: riceve byte, restituisce byte, e il tempo glielo passa chi lo ospita. È la ragione per cui potrà passare al server vero senza riscritture, e per cui §6.4 — se si riaprisse — non porterebbe via il protocollo |
+| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: PAM, derivato da `v1/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
+| ⭐ `banchi/01-b3-rcp-innesta.py` | **nuovo, 10 agosto**: ⛔ **un innesto SEPARATO da quello di B2**, perché quel numero misura WebTransport e farlo crescere con RCP dentro renderebbe due misure diverse sotto la stessa etichetta (E2) |
+| ⭐ `banchi/01-b3-cliente.py` | **nuovo, 10 agosto**: **il cliente di prova** — la stretta di mano scritta una seconda volta, in un linguaggio diverso, e **registra** nel formato di §11.1 con la parola d'ordine oscurata |
+| ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **nuovi, 10 agosto**: le tre connessioni di B3, e ⛔ **ogni traccia passa dal validatore di B4** — non si collauda il server contro il client |
 | ⭐⭐ `banchi/01-b4-validatore.py` | **nuovo, 10 agosto**: ⭐ **il validatore del filo** — un terzo programma che legge una registrazione e dice **quale byte** non è conforme a `RCP.md`. ⛔ Scritto leggendo **solo la specifica**, prima che esistesse un byte di server. Ha **tre** esiti, non due: conforme · non conforme · ⚠ *registrazione malformata*, perché «il file è rotto» e «il filo non era conforme» sono due fatti con due cure |
 | ⭐ `banchi/01-b4-registrazioni.py` + `01-b4-lancia.py` | **nuovi, 10 agosto**: le **sette** registrazioni, ciascuna col **byte offensivo dichiarato in anticipo** in un manifesto — e il confronto lo fa il banco, non chi guarda |
 | ⭐ `banchi/01-b2-sonda-trasporto.py` + `01-b2-lancia-trasporto.sh` | **nuovi, 10 agosto**: le sei proprietà, lette **dal pari** con una spia dichiarata su `pull_quic_transport_parameters` di `aioquic`. ⛔ Hanno trovato due difetti che nessun banco funzionale vedeva, e il secondo giro (`--timeout=10s`) misura la proprietà che serve a **B3** |
@@ -593,7 +598,12 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | **B2** — la sessione si apre, **per candidata** | 2 motori su 2, **e le sei proprietà** | ⭐ **fatto su `ngtcp2`**; su `quiche` **non si arriva a provarlo**: cade al cancello prima | 10 ago |
 | ⭐ **B2** — righe di collante **per lo strato WebTransport** | *si conta, non si stima* | ⭐ **`ngtcp2`: 456 righe aggiunte, di cui 329 di CODICE** `[M]`, in 4 file del loro esempio. ⚠ Su `quiche` il numero **non esiste e non esisterà**: la candidata cade prima, ed è il lavoro che non abbiamo speso | 10 ago |
 | **B2** — quanto pesa il loro esempio (il punto di partenza) | *si conta* | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++, 13 file) · `quiche` **614** (esempio minimo, C, 1 file) `[M]`. ⛔ Due etichette diverse: non si sottraggono | 10 ago |
-| **B3** — 1ª · 2ª · 2ª in parallelo · 35 s a timeout 120 · 3ª con chiave ruotata | passa · passa · **rifiutata `0x0F`** · **entra** · passa | | |
+| ⭐ **B3** — la **1ª** connessione, fino a `SESSIONE` | passa | ⭐ **passa** `[M]` 10 ago: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, e ⛔ **la traccia è dichiarata CONFORME dal validatore di B4** | 10 ago |
+| ⭐ **B3** — la **2ª dopo la chiusura della 1ª** | **identica alla prima** | ⭐ **passa** `[M]`, e anche la sua traccia è conforme. ⛔ **Non lo era al primo giro**: vedi il difetto qui sotto | 10 ago |
+| ⛔ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⛔ **NON passa** `[M]`: la seconda **entra**. ⭐ La 1ª sopravvive (metà giusta), ma il rifiuto non arriva — **causa non ancora diagnosticata** | 10 ago |
+| ⏳ **B3** — 35 s a `max_idle_timeout` 120 · 3ª con chiave ruotata | **entra** · passa | *non ancora eseguite* | |
+| ⭐ **B3** — il **secondo fisso** di §4.4-bis, cronometrato | ≥ 1000 ms **anche su `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` su tre connessioni. È una proprietà che nessun altro banco vede | 10 ago |
+| ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
 | ⭐ **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | ⭐ **7 su 7** `[M]` 10 ago: ciascuna guasta accusata sul **byte dichiarato in anticipo**, e la conforme accettata. Il validatore è **certificato** | 10 ago |
 | ⭐⭐ **B4** — e ha trovato una contraddizione in `RCP.md` | *non era un atteso* | ⛔ §4.3 vietava il trattino basso nei nomi di capacità **e ne definisce uno che ce l'ha** (`video.misura_massima`). Curato in `RCP.md` §4.3 | 10 ago |
 | **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | | |
@@ -822,6 +832,50 @@ cura, non un verde da uno strumento cieco — che è la differenza fra i due che
 restituisce la stringa intatta. La proprietà era nel codice ma non nell'esito registrato — cioè
 affermata dal sorgente e non vista da nessuno. `01-b2-ngtcp2-wt-innesta.py` questo controllo ce
 l'ha (l'appiglio dev'essere **uno**); le modifiche fatte a mano no, finché non l'ho aggiunto.
+
+### ⭐⛔ B3: due difetti veri, e il primo è **esattamente** quello che B3 esiste per trovare
+
+> #### ⛔ La stretta di mano funzionava **una volta sola**
+>
+> Al primo giro di B3 la **prima** connessione veniva rifiutata con
+> `GIA_ATTIVA_REMOTA` — cioè il server diceva *«c'è già qualcuno»* a un client che era solo.
+>
+> La causa: `rcp_libera()`, che libera il posto nel registro delle sessioni, **non la chiamava
+> nessuno**. Ogni connessione occupava un posto per sempre; dopo la prima riuscita, il server
+> rispondeva `0x0F` a chiunque, per sempre.
+>
+> ⭐ **È la forma di `LEZIONI.md` §2.1 alla lettera**: *in v1 un certificato condiviso uccideva il
+> server alla seconda connessione, e una prova a collegamento singolo resta verde per sempre*. Il
+> banco che B3 impone — **due, mai una** — l'ha preso al primo giro. Una prova a connessione
+> singola sarebbe stata verde e sarebbe rimasta verde fino alla fase 5.
+>
+> ⚠ E si noti dove **non** si sarebbe visto: la traccia della prima connessione è *conforme* a
+> `RCP.md`. Il validatore non poteva dire niente — il difetto non è nei byte, è nello stato del
+> server fra una connessione e l'altra.
+
+⛔ **E il secondo difetto è ancora aperto**: la seconda connessione, che arriva **mentre la prima è
+attaccata**, viene **accettata** invece che rifiutata con `0x0F`. ⭐ La metà giusta c'è — la prima
+sopravvive, e nessun client vivo viene spodestato — ma il rifiuto non arriva. **La causa non è
+diagnosticata**, e la riga resta rossa finché non lo sarà: `SPECIFICHE.md` I2 dice *«la seconda
+connessione è rifiutata con messaggio esplicito»*, e oggi non lo è.
+
+> ⚠ **Perché è scritto così invece che curato in fretta**: il registro del server mostra che ogni
+> connessione si chiude prima che arrivi la successiva, il che vorrebbe dire che il posto viene
+> liberato *prima* che la seconda chieda. Se fosse questo, il difetto sarebbe nel **banco** — la
+> prima non resta attaccata come crede — e non nel server. ⛔ Due cause opposte con lo stesso
+> rosso: si distinguono con una misura, non con una correzione a occhio.
+
+### ⛔ E tre trappole di shell in una sera, tutte la stessa
+
+Il terzo giro di B3 si è impiccato **tre volte**, e ogni volta per lo stesso motivo in una veste
+diversa: una **sottoshell in secondo piano**, una **sostituzione di comando**, e un
+**`nohup ... &` con le virgolette annidate** — tutt'e tre attorno a `enter.sh`, e tutt'e tre si
+portano via la richiesta di password di `sudo`. Lo script resta ad aspettare una domanda che
+nessuno vede.
+
+⭐ **La cura è la regola che il progetto aveva già**: le righe di comando si mettono in un file. Il
+terzo giro adesso è `01-b3-terzo-giro.sh`, e gira **dentro** il contenitore, dove non c'è nessun
+`sudo` e nessuna shell annidata.
 
 ⚠ **E un'ultima, a mio carico**: fermando i banchi ho scritto `pkill -f "01-b2-raccogli.py"`, e il
 comando **ha ucciso la shell che lo eseguiva** — il modello compariva nella sua stessa riga di

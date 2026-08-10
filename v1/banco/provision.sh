@@ -136,6 +136,12 @@ CONTAINER_PKGS=(
     # sono il modo piu' economico di avere un server HTTP/3 vero da puntare
     # contro un browser vero.  Serve al banco, non al prodotto.
     libevent-dev
+    # ⭐ pamtester: il CONTROLLO POSITIVO dell'autenticazione (banco B10).
+    # ⛔ Senza, «PAM rifiuta» e «il nostro codice sbaglia a chiamare PAM» hanno
+    # lo stesso aspetto — e il secondo si diagnostica sulla password.
+    pamtester
+    # PAM da sviluppo: `rcp.c` ci si appoggia per CREDENZIALI (RCP.md §4.4).
+    libpam0g-dev
     # ⭐ cargo (che si porta dietro rustc): serve a costruire `quiche`, la
     # quarta candidata di B2 — che e' scritta in Rust e si usa dalla sua API C.
     # ⚠ Il 9 agosto si era misurato che Trixie LI OFFRE (1.85.0); il 10 si e'
