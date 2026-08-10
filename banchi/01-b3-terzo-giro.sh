@@ -135,18 +135,57 @@ VIVA=$?
 #
 # ⭐ Adesso sono due letture indipendenti: il cliente esce 4 se qualcosa e'
 #    caduto, e il suo registro dice CHE COSA.
-SPODESTATA=
-if grep -q "sessione chiusa dal server" "$QUI/b3-viva.log"; then
-	SPODESTATA="il server le ha chiuso la sessione"
-elif grep -q "connessione TERMINATA" "$QUI/b3-viva.log"; then
-	SPODESTATA="la connessione e' stata terminata"
-fi
-if [ "$VIVA" -eq 0 ] && [ -z "$SPODESTATA" ]; then
+#
+# ⛔ MA «CHE COSA» SI LEGGE DAL VERDETTO, NON DALLA TRACCIA DEGLI EVENTI —
+#    `[M]` 10 agosto 2026, ed e' il difetto che questo controllo aveva ADDOSSO
+#    DALLA NASCITA, cioe' dalla cura di R8.4 di poche ore prima.
+#
+#    Qui si cercava `connessione TERMINATA` su TUTTO il registro della prima.
+#    ⚠ Ma quella riga il cliente la stampa ANCHE quando la finestra di
+#    `--resta` finisce bene: esce, `connect()` chiude la connessione, e
+#    aioquic alza `ConnectionTerminated` codice 0.  Il registro del giro
+#    diceva, in quest'ordine:
+#        ⭐ ancora attaccato dopo 25.0 s: niente e' caduto
+#        [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+#    e il banco leggeva la seconda riga come una prova contro il server.
+#
+# ⛔ IL SERVER AVEVA RAGIONE, e il suo registro lo dimostra: `posto PRESO`
+#    (:48499), `posto NEGATO` alla seconda con `congedo motivo=0x0f`, cinque
+#    PING di trasporto per tenere viva la prima, e `posto LASCIATO` **solo
+#    dopo** aver RICEVUTO il `CONNECTION_CLOSE` della prima.  Tre cause con lo
+#    stesso aspetto — il server che chiude, QUIC che scade, il cliente che
+#    esce da se' — e questo grep le confondeva tutt'e tre.
+#
+# ⭐ La cura: si chiede al cliente il suo VERDETTO, che e' una riga sola e
+#    dice chi e' caduto e quando.  E si pretende il controllo positivo
+#    (`CODER.md` §3.10): non «non trovo niente di brutto», ma «il cliente ha
+#    vegliato per tutta la finestra e dichiara che niente e' caduto».
+SOPRAVVISSUTA=no
+grep -q "ancora attaccato dopo" "$QUI/b3-viva.log" && SOPRAVVISSUTA=si
+CADUTA=$(grep -m1 "NON sono rimasto attaccato" "$QUI/b3-viva.log" \
+         | sed 's/.*NON sono rimasto attaccato: //')
+if [ "$VIVA" -eq 0 ] && [ "$SOPRAVVISSUTA" = si ] && [ -z "$CADUTA" ]; then
 	ok "⭐ e la PRIMA e' sopravvissuta: nessun client vivo viene spodestato"
-	inf "   (uscita 0, e nel suo registro non c'e' nessuna caduta)"
+	inf "   (uscita 0, e il cliente dichiara di aver vegliato senza cadute)"
+elif [ -n "$CADUTA" ]; then
+	# ⛔ E NON SI ACCUSA IL SERVER SENZA AVERLO RICONOSCIUTO: solo la sessione
+	#    WebTransport chiusa da lui e' uno spodestamento.  Una connessione
+	#    caduta da se' e' un'altra cosa, e darla al server e' il rosso puntato
+	#    sull'imputato sbagliato — il difetto piu' caro che questo progetto ha
+	#    pagato.
+	ko "⛔ la prima NON e' sopravvissuta (uscita $VIVA): $CADUTA"
+	case "$CADUTA" in
+	*"chiusa dal server"*)
+		ko "   il server ha spodestato chi c'era, ed e' il contrario di I2" ;;
+	*)
+		ko "   ⚠ ma NON e' il server ad aver chiuso la sessione: prima di dare"
+		ko "     il rosso al prodotto, si guarda il registro del server" ;;
+	esac
+	tail -5 "$QUI/b3-viva.log" | sed 's/^/        /'
+	ESITO=1
 else
-	ko "⛔ la prima NON e' sopravvissuta (uscita $VIVA): ${SPODESTATA:-uscita non zero}"
-	ko "   il server ha spodestato chi c'era, ed e' il contrario di I2"
+	ko "⛔ la prima non ha dichiarato niente (uscita $VIVA): il giro non prova"
+	ko "   niente, e il verde sarebbe da assenza di prove"
 	tail -5 "$QUI/b3-viva.log" | sed 's/^/        /'
 	ESITO=1
 fi

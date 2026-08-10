@@ -304,6 +304,15 @@ INNESTI = [
         "    //   di scrittura, che col keep-alive a 100 ms sono mezzo secondo —\n"
         "    //   niente, per un banco, e toglie di mezzo la corsa fra il\n"
         "    //   CONGEDO e la capsula che chiude la sessione.\n"
+        "    //\n"
+        "    // ⛔ E CHE LE CINQUE PASSATE AVVENGANO lo garantisce il keep-alive\n"
+        "    //    che `wt_chiudi_sessione` arma nello stesso istante in cui\n"
+        "    //    scrive `wt_chiusura_`: senza, su una violazione trovata al\n"
+        "    //    primo messaggio il client tace, nessuno percorre piu' questo\n"
+        "    //    punto e il contatore si ferma a uno o due per sempre.  ⚠ E'\n"
+        "    //    il difetto misurato da B5 il 10 agosto 2026 — 22 su 36 —, e\n"
+        "    //    il registro del server lo diceva per intero: il `congedo`\n"
+        "    //    c'era, la «chiusa la sessione WebTransport» no.\n"
         "    wt_chiusura_attesa_ = wt_uscita_.empty() ? wt_chiusura_attesa_ + 1 : 0;\n"
         "    if (wt_chiusura_attesa_ >= 5) {\n"
         "      auto m = static_cast<uint8_t>(wt_chiusura_);\n"
@@ -608,8 +617,18 @@ void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
   } else if (stato == "attiva") {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 5 * NGTCP2_SECONDS);
   } else {
-    // ⚠ Anche dopo la fine il percorso di scrittura deve continuare a
-    //   passare: la capsula che chiude la sessione parte di li'.
+    // ⚠ Gli stati di mezzo della stretta di mano — `attesa-attacca` e simili:
+    //   il battito resta fitto perche' la stretta non e' ancora finita.
+    //
+    // ⛔ E QUI C'ERA SCRITTO «anche dopo la fine il percorso di scrittura deve
+    //    continuare a passare: la capsula che chiude la sessione parte di
+    //    li'».  ⚠ Era FALSO, ed e' costato i quattordici casi di B5 del 10
+    //    agosto 2026: dopo la fine questa riga NON si raggiunge, perche'
+    //    venti righe piu' su `rcp_ricevi` restituisce false — «la sessione e'
+    //    finita» — e si esce.  Il battito che fa maturare l'attesa della
+    //    capsula lo arma `wt_chiudi_sessione`, che e' l'unico punto
+    //    attraversato da TUTTE le strade della chiusura, comprese le due che
+    //    da qui non passano affatto.
     ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   }
 }
@@ -796,13 +815,63 @@ void ProtoCodec::wt_chiudi_sessione(uint8_t motivo) {
   //   comunque, dentro il codice di chiusura — ma il punto 2 era perduto, e
   //   §3.1 li vuole tutt'e due quando il canale e' utilizzabile.
   //
+  // ⛔ E ACCODARE LA CAPSULA DIETRO AL `CONGEDO`, NELLA STESSA CODA, NON E'
+  //    LA CURA: E' ESATTAMENTE IL CODICE CHE B11 HA TROVATO ROTTO.  La coda
+  //    e' ordinata e serve un elemento per passata, quindi l'ordine sul filo
+  //    ci sarebbe — ⚠ ma l'ordine sul filo non e' quel che manca.  I due
+  //    finiscono comunque nello stesso volo, il browser processa la capsula
+  //    prima di consegnare i byte dello stream alla pagina, e la pagina non
+  //    vede il `CONGEDO`.  Quel che serve e' TEMPO fra i due, ed e' quel che
+  //    l'attesa compra.
+  //
   // ⭐ Qui si segna soltanto l'intenzione: la capsula la accoda il ciclo di
   //    scrittura quando la coda e' vuota, cioe' quando i byte del `CONGEDO`
   //    sono gia' stati consegnati a ngtcp2.
   wt_chiusura_ = motivo;
+  // ⛔ E l'attesa riparte da ZERO: le cinque passate si contano da QUESTA
+  //    chiusura.  Senza, una seconda chiusura sulla stessa connessione
+  //    troverebbe il contatore gia' oltre il cinque e manderebbe la capsula
+  //    nella stessa passata del suo `CONGEDO` — cioe' il difetto che l'attesa
+  //    esiste per togliere, ricomparso al secondo giro.
+  wt_chiusura_attesa_ = 0;
+  // ══ ⛔⭐ REMOTIX B5 — E QUI SI ARMA L'OROLOGIO CHE FA MATURARE L'ATTESA ══
+  //
+  //    `[M]` 10 agosto 2026: «§3.1 punto 3 — motivo nella chiusura WT» dava
+  //    22 su 36, e i quattordici mancanti erano TUTTI violazioni trovate al
+  //    primo messaggio.  Nel registro del server, per `versione-2`, c'era
+  //    `congedo motivo=0x0a` e NON c'era «chiusa la sessione WebTransport»:
+  //    la capsula non e' mai partita.
+  //
+  // ⛔ E il difetto non era l'attesa: erano le passate, che non arrivavano.
+  //    Il keep-alive lo armava soltanto `rcp_passa`, e solo DOPO
+  //    `rcp_ricevi` — che su una violazione restituisce false, perche' la
+  //    sessione e' finita.  Su una violazione al PRIMO messaggio quel punto
+  //    non veniva mai raggiunto nemmeno una volta: il client non spediva
+  //    piu' niente, il percorso di scrittura non veniva piu' percorso, e
+  //    `wt_chiusura_attesa_` restava fermo a uno o due per sempre.  ⚠ E le
+  //    altre due strade della chiusura — `wt_smista` per il secondo stream
+  //    bidirezionale, `wt_smista_uni` quando un canale di controllo non c'e'
+  //    ancora — da `rcp_passa` non passano affatto.
+  //
+  // ⭐ Per questo l'orologio si arma QUI, dove l'intenzione viene segnata:
+  //    e' l'unico punto che tutte le strade attraversano, e ⛔ chi rimanda un
+  //    lavoro deve accendere anche cio' che lo fara' maturare — un lavoro
+  //    rimandato a una condizione che nessuno fa piu' avvenire non e'
+  //    rimandato, e' perduto, e nel registro somiglia a un lavoro non
+  //    chiesto.
+  //
+  // ⚠ L'ordine fra il `CONGEDO` e la capsula NON cambia: restano le cinque
+  //   passate a coda vuota, che a 100 ms sono mezzo secondo.  Qui non si
+  //   accorcia e non si toglie niente — si fa solo esistere il tempo che
+  //   l'attesa gia' pretendeva.
+  //
+  // ⚠ E resta un filo dell'OSPITE, come gli altri tre: un server vero armera'
+  //   un proprio timer e non mettera' niente sul filo (§2.2).
+  ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   std::println(stderr,
                "REMOTIX B3: chiusura della sessione RIMANDATA, codice {:#04x} "
-               "(in coda: {})",
+               "(in coda: {}; keep-alive a 100 ms perche' le cinque passate "
+               "maturino)",
                motivo, wt_uscita_.size());
 }
 

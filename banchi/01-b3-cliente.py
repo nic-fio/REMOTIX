@@ -182,6 +182,19 @@ class Cliente(QuicConnectionProtocol):
         #    due imputati che il quarto giro esiste per separare.
         self.caduta = None
         self.caduto = asyncio.Event()
+        # ⛔ E LA TERZA CAUSA: CHE LA CONNESSIONE L'ABBIAMO CHIUSA NOI.
+        #
+        #    `[M]` 10 agosto 2026, terzo giro: la finestra di `--resta` scade,
+        #    questo programma esce 0, e `connect()` chiude la connessione
+        #    uscendo dal suo contesto — aioquic alza `ConnectionTerminated`
+        #    codice 0 senza motivo, e la riga qui sotto finiva nel registro
+        #    IDENTICA a quella di un server che ti spodesta.  Il banco la
+        #    trovava con un grep sull'intero file e dava il rosso al server,
+        #    che aveva appena tenuto viva la sessione con i PING per 25 s.
+        #
+        # ⭐ «Terminata da noi» e «terminata da qualcun altro» sono due fatti
+        #    diversi e adesso hanno due righe diverse (CODER.md §3.9, §4.2).
+        self.chiusa_da_noi = False
 
     def _cade(self, perche: str) -> None:
         """La prima causa vince: le successive sono conseguenze, non cause."""
@@ -223,9 +236,11 @@ class Cliente(QuicConnectionProtocol):
         #    guardando /proc, che dice soltanto che un processo che dorme non
         #    e' morto (R8.2).
         if nome == "ConnectionTerminated":
+            da_noi = " — CHIUSA DA NOI, a finestra finita" if self.chiusa_da_noi else ""
             print(f"   [quic] connessione TERMINATA: codice "
                   f"{getattr(event, 'error_code', '?')} · "
-                  f"{getattr(event, 'reason_phrase', '') or '(nessun motivo)'}")
+                  f"{getattr(event, 'reason_phrase', '') or '(nessun motivo)'}"
+                  f"{da_noi}")
             self._cade(f"connessione TERMINATA ({getattr(event, 'reason_phrase', '') or 'senza motivo'})")
             self.messaggi.put_nowait(None)
             return
@@ -458,6 +473,10 @@ async def principale(a) -> int:
             try:
                 await asyncio.wait_for(cli.caduto.wait(), timeout=a.resta)
             except asyncio.TimeoutError:
+                # ⛔ La bandiera si alza PRIMA di uscire: uscendo di qui
+                #    `connect()` chiude la connessione, e l'evento che ne segue
+                #    dev'essere gia' riconoscibile come nostro.
+                cli.chiusa_da_noi = True
                 print(f"   ⭐ ancora attaccato dopo {a.resta} s: niente e' caduto")
                 return 0
             print(f"   ⛔ NON sono rimasto attaccato: {cli.caduta}")

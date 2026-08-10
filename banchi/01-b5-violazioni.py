@@ -146,19 +146,77 @@ PORTATORE = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
 class Cliente(b3.Cliente):
     """Il cliente di B3, piu' quel che serve a violare (§2.5)."""
 
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        # ⛔ GLI STREAM CHE APRE QUESTO BANCO, e vanno tenuti lontani dallo
+        #    strato HTTP/3 di aioquic: vedi `quic_event_received`.
+        self.miei_stream = set()
+        self.eco = {}
+
     def apri_uni(self):
         # aioquic scrive da se' l'intestazione dello stream unidirezionale
         # WebTransport: il tipo 0x54 e l'identificatore della sessione.
-        return self._http.create_webtransport_stream(
+        s_id = self._http.create_webtransport_stream(
             self.sessione, is_unidirectional=True)
+        self.miei_stream.add(s_id)
+        return s_id
 
     def apri_bidi(self):
-        return self._http.create_webtransport_stream(
+        s_id = self._http.create_webtransport_stream(
             self.sessione, is_unidirectional=False)
+        self.miei_stream.add(s_id)
+        return s_id
 
     def manda_su(self, stream, dati, fine=False):
         self._quic.send_stream_data(stream, dati, end_stream=fine)
         self.transmit()
+
+    def quic_event_received(self, event):
+        # ⛔⭐ QUEL CHE TORNA SUGLI STREAM CHE ABBIAMO APERTO NOI NON VA DATO
+        #     AD AIOQUIC — ed e' un difetto DEL BANCO, misurato `[M]` il 10
+        #     agosto 2026 sul registro del server.
+        #
+        #     Il caso `secondo-bidirezionale` dava «chiusura-wt=(assente)»
+        #     mentre il server faceva tutto giusto.  Il registro, alle righe
+        #     32355-32359 di `b5-server.log`:
+        #
+        #       REMOTIX B5: ⛔ due stream bidirezionali dal client dentro la
+        #                     sessione: il controllo e' il 4, e il 8 e' di troppo
+        #       REMOTIX B3: congedo motivo=0x0b …
+        #       REMOTIX B3: chiusura della sessione RIMANDATA, codice 0x0b
+        #                   (in coda: 1; keep-alive a 100 ms …)
+        #       frm tx … STREAM id=0x4 len=71   ← il CONGEDO
+        #       frm tx … STREAM id=0x8 len=30   ← l'eco di B2 sullo stream di troppo
+        #       frm rx … CONNECTION_CLOSE error_code=0x105
+        #                reason=[DATA frame is not allowed in this state]
+        #       ngtcp2_conn_read_pkt: ERR_DRAINING
+        #
+        # ⛔ Il `CONNECTION_CLOSE` e' RICEVUTO dal server: ad andarsene e' il
+        #    CLIENTE, un pacchetto dopo il `CONGEDO` e mezzo secondo prima che
+        #    le cinque passate facciano maturare la capsula.  Il codice 0x105
+        #    e' `H3_FRAME_UNEXPECTED` di aioquic: i 30 byte tornati sullo
+        #    stream 8 finivano in `self._http.handle_event`, che di uno stream
+        #    WebTransport aperto da noi non sa niente e li legge come un frame
+        #    `DATA` su uno stream di richiesta.  ⚠ E' la stessa asimmetria gia'
+        #    misurata in `01-b3-cliente.py` — aioquic 1.2 sa CREARE uno stream
+        #    WebTransport e non sa RICONOSCERLO quando ci risponde — curata la'
+        #    per il canale di controllo e mai per gli stream che apre B5.
+        #
+        # ⭐ Quindi il banco misurava la propria fretta, non il server: un
+        #    browser vero quei byte li consegna alla pagina e resta collegato.
+        #    Qui si scartano, DICHIARANDOLI (§3: nessuna tolleranza silenziosa).
+        if (type(event).__name__ == "StreamDataReceived"
+                and event.stream_id in self.miei_stream):
+            if event.data and event.stream_id not in self.eco:
+                self.eco[event.stream_id] = len(event.data)
+                print(f"   [wt]   ⚠ {len(event.data)} byte tornati dal server "
+                      f"sullo stream {event.stream_id}, quello aperto per "
+                      f"violare: e' l'eco di B2 sui byte gia' in volo mentre "
+                      f"la sessione cade.  Il banco li scarta senza darli "
+                      f"allo strato HTTP/3 di aioquic, che ci ucciderebbe la "
+                      f"connessione con 0x105 prima della capsula di chiusura")
+            return
+        super().quic_event_received(event)
 
 
 # ---------------------------------------------------------------------------
