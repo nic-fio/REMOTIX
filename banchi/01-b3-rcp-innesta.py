@@ -25,11 +25,16 @@ cioe' la forma **E2**.
 **anche quando la risposta e' AMMESSO**.  Un secondo in cui il server non ha
 niente da spedire: se nessun timer scatta, la risposta non parte mai.
 
-⚠ Per questo, quando `rcp.c` entra nello stato «attesa-verdetto», l'ospite
-  accende il **keep-alive di QUIC a 100 ms**: cosi' il percorso di scrittura
-  viene percorso comunque, e `rcp_tempo()` ha modo di far scadere il ritardo.
-  E' un filo dell'ospite, non una regola del protocollo — per questo sta qui e
-  non in `rcp.c`.
+⚠ Per questo l'ospite accende il **keep-alive di QUIC a 100 ms**: cosi' il
+  percorso di scrittura viene percorso comunque, e `rcp_tempo()` ha modo di
+  far scadere ritardi e tetti.  E' un filo dell'ospite, non una regola del
+  protocollo — per questo sta qui e non in `rcp.c`.
+
+⛔ E si accende in `rcp_avvia`, cioe' **quando la sessione RCP nasce**, non al
+   primo byte che arriva.  `[M]` 10 agosto 2026, B6: armato solo dentro
+   `rcp_passa`, il tetto del `CIAO` (§4.6 riga 1) non scadeva mai — nello
+   stato «attesa-ciao» di byte non ne e' ancora arrivato nessuno, quindi
+   nessuno armava niente, quindi `rcp_tempo()` non lo chiamava piu' nessuno.
 """
 import os
 import shutil
@@ -582,6 +587,47 @@ void ProtoCodec::rcp_avvia(int64_t stream_id) {
 
   rcp_ = rcp_apri(&g, da.data(),
                   ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS);
+
+  // ══ ⛔⭐ E QUI SI ARMA L'OROLOGIO DEL PRIMO TETTO — §4.6 riga 1 ═══════════
+  //
+  //    `[M]` 10 agosto 2026, banco B6: `ciao-tetto` dava «non e' successo
+  //    niente per 20 s».  Gli altri due tetti scattavano — 60 s e 10 s, con
+  //    `TEMPO_SCADUTO` — e il primo no: un client che apre il canale di
+  //    controllo e poi tace restava appeso per sempre.
+  //
+  // ⛔ E il difetto non era in `rcp.c`: il tetto del `CIAO` ce l'ha, in
+  //    `rcp_tempo()`, accanto agli altri due.  Era che `rcp_tempo()` non lo
+  //    chiamava PIU' NESSUNO.  Scorre dal percorso di scrittura, e il
+  //    percorso di scrittura in silenzio lo fa passare solo il keep-alive:
+  //    che veniva armato soltanto dentro `rcp_passa`, cioe' **solo quando
+  //    arrivano dei byte**.  Nello stato `attesa-ciao` di byte non ne e'
+  //    arrivato ancora nessuno — l'apertura del canale porta l'intestazione
+  //    dello stream WebTransport e basta, e con `resto` vuoto `rcp_passa`
+  //    non viene invocata affatto — quindi non lo armava nessuno.
+  //
+  // ⚠ E' la STESSA FORMA del difetto curato poche ore prima in
+  //   `wt_chiudi_sessione`: il segnale che fa scorrere il tempo era armato in
+  //   un punto che quel caso non attraversa.  ⛔ Chi mette un tetto deve
+  //   accendere anche cio' che lo fara' scadere, e nell'istante in cui il
+  //   tetto comincia — non alla prima occasione utile che capita dopo.
+  //
+  // ⭐ L'istante e' QUESTO: `rcp_apri` mette lo stato a `attesa-ciao` e
+  //    `s->da_quando` a adesso.  Il cronometro del server e l'orologio che lo
+  //    fa girare partono cosi' dalla stessa riga.
+  //
+  // ⚠ NON si spegne qui, e nemmeno all'arrivo del `CIAO`: gli altri due
+  //   tetti della stretta di mano vogliono lo stesso battito, e `rcp_passa`
+  //   lo rimette a ogni messaggio — 100 ms per tutta la stretta, 5 s una
+  //   volta `attiva`, che e' l'unico punto in cui si allarga.  Spegnerlo
+  //   prima sarebbe rifare il difetto appena curato, un tetto piu' in la'.
+  //
+  // ⚠ E resta un filo dell'OSPITE, come gli altri: e' il keep-alive del
+  //   TRASPORTO, non un battito applicativo (§2.2 lo vieta, e questo non lo
+  //   e'), e un server vero armera' un proprio timer senza mettere niente sul
+  //   filo.
+  if (rcp_) {
+    ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
+  }
   std::println(stderr, "REMOTIX B3: canale di controllo = stream {}", stream_id);
 }
 
@@ -605,6 +651,13 @@ void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
   //   attiva           l'OROLOGIO DEL SILENZIO di §5.3 va valutato mentre il
   //                    client tace — e mentre tace il percorso di scrittura
   //                    non lo percorre nessuno.
+  //
+  // ⛔ E IL PRIMO ARMO NON STA QUI: sta in `rcp_avvia`, dove la sessione RCP
+  //    nasce.  Qui si arriva solo quando dei byte sono arrivati, e nello stato
+  //    `attesa-ciao` non ne e' arrivato ancora nessuno: armarlo soltanto di
+  //    qui lasciava il tetto del `CIAO` senza nessuno che lo facesse scadere
+  //    (`[M]` 10 agosto 2026, B6).  Queste righe non ACCENDONO il battito:
+  //    lo REGOLANO mano a mano che lo stato cambia.
   //
   // ⚠ E' un battito del TRASPORTO (il keep-alive di QUIC), non un battito
   //   applicativo: §2.2 vieta il secondo, e questo non lo e'.  ⛔ Resta pero'
