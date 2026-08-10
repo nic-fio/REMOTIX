@@ -41,7 +41,43 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** |
 > | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.2 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.2; §9 adesso la nomina. ⚠ *La cura del 10 agosto mandava a §2.4, che è «La porta» e non nomina né percorsi né versioni: corretta lo stesso giorno, rilievo **R11.2*** |
 >
-> ### ⛔ Il prossimo passo
+> ### ⛔ SI RIPARTE DA QUI — la sera del 10 agosto 2026
+>
+> **Otto banchi scritti, sei verdi.** B2 · B3 (cinque giri su cinque) · B4 (13 su 13, quattro
+> esiti) · B5 (36 violazioni su 36 + 8 verdi attesi) · B7 (7 motivi su 7, 15 frasi su 15) · B11
+> (13 casi su 13 sui due motori). ⚠ **B6 è giallo** e **B8 non ha finito**.
+>
+> #### ⛔ Il primo passo della prossima sessione, e sono trenta minuti
+>
+> **La parola d'ordine GIUSTA sembra rifiutata dopo quattro sbagliate.** `[M]` 10 agosto, giro
+> corto di B8 (`bash /media/REMOTIX/src/01-b8-lancia.sh 2`): il controllo prevede *quattro
+> falliti · uno **riuscito** · altri quattro*, e sul filo il **quinto** — quello con le credenziali
+> buone — ha ricevuto `CREDENZIALI_ERRATE`, non `AMMESSO`; dal sesto in poi `TROPPI_TENTATIVI`.
+> ⇒ il caso «parola giusta» ha **zero campioni** e le tre mediane non si calcolano.
+>
+> ⛔ **Due imputati, e si separano con una misura sola**: o il server rifiuta una parola valida
+> quando il contatore di §4.4-bis è già oltre la soglia — e allora è una **decisione di prodotto**,
+> perché il sintomo è *«l'ho scritta giusta e non mi fa entrare»* — oppure è la gamba del banco a
+> mandare credenziali sbagliate anche al quinto passo. ⚠ Il banco stesso avverte di guardare prima
+> **quanti indirizzi** ha visto il server (ne ha visti due, `127.0.0.1` e `192.168.0.2`: B0.3 è
+> rispettato, quindi la spiegazione «è il contatore per indirizzo» **non basta da sola**).
+> Il primo posto dove guardare è `banchi/01-b8-cronometro.py`, la funzione che costruisce le due
+> gambe del controllo, e `banchi/rcp/rcp.c` §4.4-bis.
+>
+> #### ⚠ E due cose che vanno con lui
+>
+> | | |
+> |---|---|
+> | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` mediana **2636 ms** su 42 tentativi respinti, dove §4.4-bis vuole ~1000. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
+> | ⚠ **il giro pieno di B8 si pianta al nono blocco su dieci** | resta fermo su qualcosa che nessuno gli dà. Il giro corto (`… 01-b8-lancia.sh 2`) arriva in fondo. ⛔ Va lanciato **staccato** dalla sessione di chi lo comanda, non attraverso di essa |
+> | ⚠ **B6 è giallo per una parola** | i tre tetti scattano a **5,0 · 60,1 · 10,0 s**, ma §4.6 riga 1 fa partire il cronometro dalla **fine del TLS** mentre il codice lo fa partire dall'**apertura del canale di controllo**. ⛔ Nel mezzo c'è un caso vero: chi apre una sessione WebTransport e **non apre mai il canale** non ha nessun tetto addosso e resta lì |
+>
+> ⚠ **E tre decisioni aperte, tutte dell'utente**, in `fasi/rapporti/R11-documenti.md`: la lettura
+> di §4.2 sul FIN · la condizione di §8.1 · e se §7.5 fosse davvero sua (intanto è 🔸).
+>
+> ---
+>
+> ### Il passo appena chiuso
 >
 > ⭐⭐ **B3, B5 e adesso B11 sono chiusi. Tredici casi su tredici su TUTT'E DUE i motori** —
 > Firefox 140 e Chrome 151 — più le due proprietà negative, più il controllo che dice di no, e
