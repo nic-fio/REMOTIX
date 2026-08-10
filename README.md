@@ -29,16 +29,15 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato a **1074-1085 ms** |
 > | ⭐ **B4: il validatore è certificato** | **7 su 7** — sei registrazioni guaste accusate **ciascuna sul byte dichiarato in anticipo**, e la settima, conforme, accettata. ⭐ E alla prima esecuzione ha trovato **una contraddizione in `RCP.md`**: §4.3 vietava un carattere che §4.3 stessa usa |
 >
+> | ⭐ **B3: tre giri su tre** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`**, per tutt'e due le strade di §3.1 — `CONGEDO` sul controllo *e* il codice nella chiusura della sessione — e la prima **non viene spodestata**. ⛔ *Il terzo giro era rosso, e il colpevole era il banco* |
+>
 > ### ⛔ Il prossimo passo
 >
-> **Il terzo giro di B3, che oggi è rosso**: la seconda connessione, mentre la prima è attaccata,
-> viene **accettata** invece che rifiutata con `GIA_ATTIVA_REMOTA`. ⭐ La metà giusta c'è — la prima
-> non viene spodestata — ma il rifiuto non arriva, e **la causa non è diagnosticata**: potrebbe
-> essere il server oppure il banco (la prima che non resta attaccata come crede). Due cause opposte
-> con lo stesso rosso.
->
-> Poi le due prove di B3 che restano — 35 s a `max_idle_timeout` 120, e la terza connessione con il
-> certificato ruotato — e **B5**, le prove di violazione.
+> Le due prove di B3 che restano — **35 s a `max_idle_timeout` 120** (che distingue «il server sa
+> che una sessione è staccata» da «QUIC ha chiuso da sé») e la **terza connessione con il
+> certificato ruotato** — poi **B5**, le prove di violazione: tipo sconosciuto, lunghezza sbagliata,
+> messaggio nello stato sbagliato. ⛔ *Un banco che non prova a violare il protocollo non prova il
+> protocollo.*
 >
 > ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va
@@ -71,7 +70,15 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > tenute da server di ieri · `>/dev/null` che inghiotte la **richiesta di password** · `setsid` che
 > forca e falsa il PID · `kill -0` che confonde *proibito* con *morto* · un'impronta tagliata di
 > **una lettera**, che avrebbe bocciato una candidata · una cartella di profilo mancante, e nessuno
-> dei due lati che lo dicesse.
+> dei due lati che lo dicesse · ⛔ **e il buffer di Python, che ha fatto accusare al banco un server
+> innocente**.
+>
+> ⛔ **Quest'ultima è la settima veste, ed è la peggiore**: non un falso rosso, ma **un rosso
+> puntato sull'imputato sbagliato**. Il banco aspettava una riga di registro per sapere quando il
+> primo client era attaccato, e quella riga usciva dal buffer solo quando il client **si
+> staccava** — cioè dichiarava «attaccata» una verità appena scaduta. `LEZIONI.md` §1.9 punto 7:
+> *un file scritto e chiuso è un fatto; una riga stampata è una speranza sul momento in cui
+> qualcuno la vedrà.*
 >
 > ⭐ Da cui la **quarta regola** di `LEZIONI.md` §1.9 — *una misura deve dichiarare su che cosa ha
 > guardato* — e il suo **corollario del 10 agosto**, nato dal difetto più grave finora:
