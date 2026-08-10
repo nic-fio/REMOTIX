@@ -52,6 +52,11 @@ ok "sudo validato"
 cliente() # $1 = etichetta, $2.. = opzioni in piu'
 {
 	local et=$1; shift
+	# ⛔ La registrazione vecchia si BUTTA prima.  Il 10 agosto 2026 il
+	#    validatore ha dichiarato «conforme» un file rimasto da un giro
+	#    precedente, mentre il cliente di QUESTO giro non si era nemmeno
+	#    collegato: un verde da un file stantio.
+	rm -f "$FUORI/b3-$et.rcpreg"
 	bash "$ENTRA" --root \
 		"python3 $DENTRO/01-b3-cliente.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --registra $DENTRO/b3-$et.rcpreg $*"
 }
@@ -59,6 +64,12 @@ cliente() # $1 = etichetta, $2.. = opzioni in piu'
 valida() # $1 = etichetta
 {
 	local et=$1
+	# ⛔ E se la registrazione non c'e', lo si DICE: «non ho niente da
+	#    giudicare» e «conforme» sono due cose diverse.
+	if [ ! -f "$FUORI/b3-$et.rcpreg" ]; then
+		ko "nessuna registrazione da giudicare per «$et»"
+		return 1
+	fi
 	bash "$ENTRA" --root "python3 $DENTRO/01-b4-validatore.py $DENTRO/b3-$et.rcpreg" \
 		| tail -3 | sed 's/^/        /'
 }

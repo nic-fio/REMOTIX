@@ -79,6 +79,13 @@ trap spegni EXIT
 #    combacia — cioe' «ngtcp2 non parla coi browser» invece di «il banco ha
 #    tagliato una lettera».  Il controllo qui sotto la conta.
 IMPRONTA=$(grep -oE '[A-Za-z0-9+/]{43}=' "$TEMP/acceso.log" | tail -1)
+# ⛔ `IMPRONTA_FORZATA` serve al quinto giro di B3: si punta la pagina a una
+#    impronta VECCHIA e la sessione NON deve aprirsi.  Senza quel controllo,
+#    «funziona con l'impronta nuova» non dimostra che il browser la guardi.
+if [ -n "${IMPRONTA_FORZATA:-}" ]; then
+	IMPRONTA=$IMPRONTA_FORZATA
+	inf "⚠ impronta FORZATA dal chiamante (controllo negativo)"
+fi
 if [ ${#IMPRONTA} -ne 44 ]; then
 	ko "l'impronta ha ${#IMPRONTA} caratteri invece di 44: e' tagliata"
 	exit 4
@@ -169,7 +176,25 @@ prova_motore()
 		tail -5 "$TEMP/$nome.log" | sed 's/^/        /'
 		return 1
 	fi
-	ok "$nome ha registrato il suo esito dopo $i secondi:"
+	# ⛔ «Registrato» non e' «aperta»: l'esito si legge e si confronta con
+	#    l'atteso, e il confronto lo fa il banco.
+	local visto
+	visto=$(python3 -c '
+import json,sys
+print(json.loads(open(sys.argv[1]).read().splitlines()[-1]).get("esito"))
+' "$QUI/b2-esiti.jsonl")
+	if [ "$visto" != "${ATTESO:-APERTA}" ]; then
+		ko "$nome: esito $visto, atteso ${ATTESO:-APERTA}"
+		tail -1 "$QUI/b2-esiti.jsonl" | python3 -c '
+import json,sys
+d=json.loads(sys.stdin.read())
+for r in d.get("dettaglio","").splitlines():
+    print("        ", r)
+'
+		PRIMA=$((PRIMA + 1))
+		return 1
+	fi
+	ok "$nome ha registrato il suo esito dopo $i secondi (atteso ${ATTESO:-APERTA}):"
 	tail -1 "$QUI/b2-esiti.jsonl" | python3 -c '
 import json,sys
 d=json.loads(sys.stdin.read())

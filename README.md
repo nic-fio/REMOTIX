@@ -29,15 +29,19 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato a **1074-1085 ms** |
 > | ⭐ **B4: il validatore è certificato** | **7 su 7** — sei registrazioni guaste accusate **ciascuna sul byte dichiarato in anticipo**, e la settima, conforme, accettata. ⭐ E alla prima esecuzione ha trovato **una contraddizione in `RCP.md`**: §4.3 vietava un carattere che §4.3 stessa usa |
 >
-> | ⭐ **B3: tre giri su tre** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`**, per tutt'e due le strade di §3.1 — `CONGEDO` sul controllo *e* il codice nella chiusura della sessione — e la prima **non viene spodestata**. ⛔ *Il terzo giro era rosso, e il colpevole era il banco* |
+> | ⭐ **B3: cinque giri su cinque** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⭐ **la 3ª con il certificato ruotato**: la pagina ritira l'impronta corrente e apre, e ⛔ **con la vecchia i due motori rifiutano** |
 >
 > ### ⛔ Il prossimo passo
 >
-> Le due prove di B3 che restano — **35 s a `max_idle_timeout` 120** (che distingue «il server sa
-> che una sessione è staccata» da «QUIC ha chiuso da sé») e la **terza connessione con il
-> certificato ruotato** — poi **B5**, le prove di violazione: tipo sconosciuto, lunghezza sbagliata,
-> messaggio nello stato sbagliato. ⛔ *Un banco che non prova a violare il protocollo non prova il
-> protocollo.*
+> ⭐ **B3 è chiuso.** Restano **B5** — le prove di violazione: tipo sconosciuto, lunghezza
+> sbagliata, messaggio nello stato sbagliato, e ⛔ *la connessione deve cadere ogni volta* — e
+> **B11**, le stesse verso la **pagina**. *Un banco che non prova a violare il protocollo non prova
+> il protocollo.*
+>
+> ⚠ **E una cosa che B3 NON prova, scritta perché non sembri provata**: la rotazione **automatica**
+> del certificato a quattordici giorni. Cambiarlo a mano dimostra che la pagina sa ritirare
+> l'impronta; che il server rigeneri **prima** della scadenza resta senza banco, e il suo sintomo
+> — *«non si collega più e non dice perché»* — arriva due settimane dopo la consegna.
 >
 > ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va

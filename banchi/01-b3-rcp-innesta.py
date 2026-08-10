@@ -274,8 +274,24 @@ void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
   //    partirebbe mai.  Il keep-alive di QUIC fa passare il percorso di
   //    scrittura ogni 100 ms — e' un filo dell'ospite, non una regola del
   //    protocollo, e per questo sta qui e non in rcp.c.
-  if (std::string_view{rcp_stato_nome(rcp_)} == "attesa-verdetto") {
+  // ⛔ Due stati vogliono un battito, e per due ragioni diverse:
+  //
+  //   attesa-verdetto  il ritardo fisso di §4.4-bis dura un secondo, e in
+  //                    quel secondo non c'e' niente da spedire;
+  //   attiva           l'OROLOGIO DEL SILENZIO di §5.3 va valutato mentre il
+  //                    client tace — e mentre tace il percorso di scrittura
+  //                    non lo percorre nessuno.
+  //
+  // ⚠ E' un battito del TRASPORTO (il keep-alive di QUIC), non un battito
+  //   applicativo: §2.2 vieta il secondo, e questo non lo e'.  ⛔ Resta pero'
+  //   un filo dell'OSPITE: un server vero armera' un proprio timer e non
+  //   mettera' niente sul filo.  Sta scritto perche' non venga ereditato per
+  //   distrazione.
+  auto stato = std::string_view{rcp_stato_nome(rcp_)};
+  if (stato == "attesa-verdetto") {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
+  } else if (stato == "attiva") {
+    ngtcp2_conn_set_keep_alive_timeout(conn_, 5 * NGTCP2_SECONDS);
   } else {
     ngtcp2_conn_set_keep_alive_timeout(conn_, UINT64_MAX);
   }

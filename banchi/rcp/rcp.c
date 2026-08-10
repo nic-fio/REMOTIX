@@ -31,6 +31,26 @@ enum {
 /* §4.4-bis: il ritardo fisso, e vale ANCHE per AMMESSO. */
 #define RITARDO_FISSO 1000
 
+/* ⛔ L'OROLOGIO DEL SILENZIO — `SPECIFICHE.md` §5.3, `DECISIONI.md` §4.4.
+ *
+ * Trenta secondi senza un byte DAL CLIENT e il client «si considera staccato»:
+ * non occupa piu' il posto, e chi arriva entra.  E' la regola che fa sparire
+ * il caso «il telefono e' morto in galleria e ora non posso rientrare».
+ *
+ * ⭐ E si misura **sui byte di RCP**, non su quelli di QUIC: il trasporto manda
+ *    riscontri e battiti per conto suo, e un orologio appoggiato a quelli
+ *    direbbe «vivo» di un client che non parla da un'ora.  E' esattamente la
+ *    distinzione che il banco di B3 esiste per fare (rilievo R3.19): con
+ *    `max_idle_timeout` a 120 secondi, un server SENZA questa nozione
+ *    resterebbe verde perche' a chiudere sarebbe QUIC.
+ *
+ * ⚠ E che cosa succede alla connessione di chi tace, il documento NON lo dice.
+ *   Qui si sceglie di **lasciarla aperta** e liberare solo il posto: chiuderla
+ *   sarebbe un congedo, e §8.2 non ha un motivo che voglia dire «taci da un
+ *   po'».  La scelta e' dichiarata in `fasi/01-filo-nudo.md`, perche' e' un
+ *   punto in cui RCP.md ammette due letture. */
+#define SILENZIO 30000
+
 #define MAX_MESSAGGIO (1024u * 1024u) /* §6.1 */
 #define MAX_ACCUMULO (64u * 1024u)    /* quanto si tiene in attesa di un corpo */
 
@@ -53,6 +73,7 @@ struct rcp_sessione {
 	char provenienza[64];
 	char utente[257];
 	uint64_t da_quando;   /* quando e' cominciato lo stato corrente */
+	uint64_t ultimo_byte; /* l'ultimo byte arrivato DAL CLIENT (§5.3) */
 	uint64_t cred_arrivo; /* quando e' arrivato CREDENZIALI */
 	bool cred_buone;      /* il verdetto, gia' calcolato ma non ancora detto */
 	uint8_t cred_motivo;  /* se non buone */
@@ -676,6 +697,7 @@ rcp_sessione *rcp_apri(const rcp_ganci *g, const char *provenienza,
 	s->g = *g;
 	s->stato = S_ATTESA_CIAO;
 	s->da_quando = ora_ms;
+	s->ultimo_byte = ora_ms;
 	snprintf(s->provenienza, sizeof s->provenienza, "%s",
 	         provenienza ? provenienza : "?");
 	reg(s, "canale di controllo aperto da %s", s->provenienza);
@@ -705,6 +727,8 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 {
 	if (s->stato == S_FINITA)
 		return false;
+	/* ⭐ L'orologio del silenzio si azzera QUI, sui byte di RCP. */
+	s->ultimo_byte = ora;
 	if (s->acc_len + len > MAX_ACCUMULO) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "troppi byte in attesa di un corpo");
 		return false;
@@ -811,6 +835,18 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		}
 		respingi(s, s->cred_motivo);
 		return false;
+	}
+
+	/* ⛔ Il silenzio: chi tace da trenta secondi non occupa piu' il posto.
+	 * ⚠ La connessione resta aperta — vedi il riquadro in cima. */
+	if (s->stato == S_ATTIVA && s->attaccata &&
+	    ora - s->ultimo_byte > SILENZIO) {
+		posto_lascia(s->utente);
+		s->attaccata = false;
+		reg(s, "STACCATO per silenzio: %llu ms senza un byte da %s "
+		       "(posti occupati adesso: %d)",
+		    (unsigned long long)(ora - s->ultimo_byte), s->provenienza,
+		    posti_occupati());
 	}
 
 	uint64_t tetto = 0;

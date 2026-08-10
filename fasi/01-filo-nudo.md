@@ -533,6 +533,8 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ `banchi/01-b3-rcp-innesta.py` | **nuovo, 10 agosto**: ⛔ **un innesto SEPARATO da quello di B2**, perché quel numero misura WebTransport e farlo crescere con RCP dentro renderebbe due misure diverse sotto la stessa etichetta (E2) |
 | ⭐ `banchi/01-b3-cliente.py` | **nuovo, 10 agosto**: **il cliente di prova** — la stretta di mano scritta una seconda volta, in un linguaggio diverso, e **registra** nel formato di §11.1 con la parola d'ordine oscurata |
 | ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **nuovi, 10 agosto**: le tre connessioni di B3, e ⛔ **ogni traccia passa dal validatore di B4** — non si collauda il server contro il client |
+| ⭐⭐ `banchi/01-b3-quarto-giro.sh` | **nuovo, 10 agosto**: l'**orologio del silenzio** — 35 s a `max_idle_timeout` 120, con il controllo a +6 s che dice **no**. ⛔ Senza quel primo tempo, «dopo 35 s la seconda entra» è compatibile con «la seconda entra sempre» |
+| ⭐⭐ `banchi/01-b3-quinto-giro.sh` | **nuovo, 10 agosto**: ⚠ **gira da questa parte del filo** — ruota il certificato, riavvia, e prova che la pagina ritira l'**impronta corrente**. ⛔ E che con la **vecchia** non si apre: senza quel controllo, «funziona con la nuova» è compatibile con un browser che l'impronta non la guarda |
 | ⭐⭐ `banchi/01-b4-validatore.py` | **nuovo, 10 agosto**: ⭐ **il validatore del filo** — un terzo programma che legge una registrazione e dice **quale byte** non è conforme a `RCP.md`. ⛔ Scritto leggendo **solo la specifica**, prima che esistesse un byte di server. Ha **tre** esiti, non due: conforme · non conforme · ⚠ *registrazione malformata*, perché «il file è rotto» e «il filo non era conforme» sono due fatti con due cure |
 | ⭐ `banchi/01-b4-registrazioni.py` + `01-b4-lancia.py` | **nuovi, 10 agosto**: le **sette** registrazioni, ciascuna col **byte offensivo dichiarato in anticipo** in un manifesto — e il confronto lo fa il banco, non chi guarda |
 | ⭐ `banchi/01-b2-sonda-trasporto.py` + `01-b2-lancia-trasporto.sh` | **nuovi, 10 agosto**: le sei proprietà, lette **dal pari** con una spia dichiarata su `pull_quic_transport_parameters` di `aioquic`. ⛔ Hanno trovato due difetti che nessun banco funzionale vedeva, e il secondo giro (`--timeout=10s`) misura la proprietà che serve a **B3** |
@@ -601,7 +603,8 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ **B3** — la **1ª** connessione, fino a `SESSIONE` | passa | ⭐ **passa** `[M]` 10 ago: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, e ⛔ **la traccia è dichiarata CONFORME dal validatore di B4** | 10 ago |
 | ⭐ **B3** — la **2ª dopo la chiusura della 1ª** | **identica alla prima** | ⭐ **passa** `[M]`, e anche la sua traccia è conforme. ⛔ **Non lo era al primo giro**: vedi il difetto qui sotto | 10 ago |
 | ⭐ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⭐ **passa** `[M]`: la seconda riceve `GIA_ATTIVA_REMOTA` **per tutt'e due le strade di §3.1** — `CONGEDO` sul controllo *e* codice `0x0f` nella chiusura della sessione — e la prima sopravvive. ⚠ *Era rossa al primo giro, e il difetto era del banco* |
-| ⏳ **B3** — 35 s a `max_idle_timeout` 120 · 3ª con chiave ruotata | **entra** · passa | *non ancora eseguite* | |
+| ⭐⭐ **B3** — la 2ª **dopo il silenzio** della 1ª, 35 s a `max_idle_timeout` **120** | **entra** | ⭐ **entra** `[M]`, e ⛔ **con il controllo che dice no**: a **+6 s** la seconda è **rifiutata** con `0x0F`, a **+35 s** la terza **entra**. Il registro: `STACCATO per silenzio: 30072 ms`. ⭐ E la connessione della prima è **ancora viva**: a liberare il posto è stato **il server**, non QUIC |
+| ⭐⭐ **B3** — la 3ª con il certificato **ruotato a mano** | passa | ⭐ **passa** `[M]`: impronta nuova ⇒ **Chrome 151 e Firefox 140 aprono**; ⛔ **impronta vecchia ⇒ rifiutata da tutt'e due** (`WebTransport connection rejected`). Il browser **confronta** davvero |
 | ⭐ **B3** — il **secondo fisso** di §4.4-bis, cronometrato | ≥ 1000 ms **anche su `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` su tre connessioni. È una proprietà che nessun altro banco vede | 10 ago |
 | ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
 | ⭐ **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | ⭐ **7 su 7** `[M]` 10 ago: ciascuna guasta accusata sul **byte dichiarato in anticipo**, e la conforme accettata. Il validatore è **certificato** | 10 ago |
@@ -893,6 +896,23 @@ l'ha (l'appiglio dev'essere **uno**); le modifiche fatte a mano no, finché non 
 > ⚠ E vale la pena dire **come non si è visto prima**: il controllo «la prima è attaccata» c'era, ed
 > era proprio quello che doveva impedire questo errore. Era scritto giusto e misurava l'istante
 > sbagliato.
+
+### ⛔ E due difetti di banco degli ultimi due giri, uno dei quali ha dato un VERDE
+
+| | Che cosa è successo | |
+|---|---|---|
+| **1** | ⛔ Il validatore ha dichiarato **«conforme»** una registrazione mentre il cliente di *quel* giro non si era nemmeno collegato | Stava giudicando il **file rimasto dal giro precedente**. ⚠ Un verde da un file stantio: la registrazione ora si **butta prima**, e se manca il banco dice *«non ho niente da giudicare»* — che non è «conforme» |
+| **2** | Il cliente «non si collegava», e il colpevole ero io | `shift 3` con **meno di tre argomenti non sposta niente e non fallisce**: `$*` restava `accendi`, il server riceveva il nome dell'azione come opzione e moriva con *«port: invalid port number»*. ⛔ **Di nuovo il rosso sull'imputato sbagliato**, e stavolta a una manciata d'ore dalla lezione che l'aveva appena nominato |
+
+> ⚠ **E una scelta di documento, dichiarata invece che nascosta**: `SPECIFICHE.md` §5.3 dice che un
+> client silenzioso da trenta secondi «si considera staccato», e **non dice che cosa succede alla
+> sua connessione**. Qui si è scelto di **lasciarla aperta** e liberare solo il posto: chiuderla
+> sarebbe un congedo, e §8.2 non ha un motivo che voglia dire *«taci da un po'»*. È uno dei punti
+> in cui `RCP.md` ammette due letture, ed è quel che questa sezione esiste per raccogliere.
+>
+> ⚠ **E un filo dell'ospite, non del protocollo**: per valutare l'orologio mentre il client tace, il
+> server accende il **keep-alive di QUIC a 5 s** — è un battito del *trasporto*, che §2.2 non
+> vieta, ma un server vero armerà un proprio timer e non metterà niente sul filo.
 
 ### ⛔ E tre trappole di shell in una sera, tutte la stessa
 

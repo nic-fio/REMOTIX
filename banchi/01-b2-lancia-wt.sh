@@ -39,6 +39,20 @@ inf()  { printf '    --  %s\n' "$*"; }
 AZIONE=${1:-misura}
 IND=${2:-192.168.0.2}
 PORTA=${3:-7447}
+# ⚠ Le opzioni in piu' del server: servono a B3, che alza `max_idle_timeout` a
+#   120 s per distinguere «il server sa che una sessione e' staccata» da «QUIC
+#   ha chiuso da se'» (rilievo R3.19).
+# ⛔ `shift 3` con MENO di tre argomenti non sposta niente e non fallisce in
+#    modo utile: `$*` restava «accendi», il server riceveva il nome
+#    dell'azione come opzione e moriva con «port: invalid port number».
+#    Visto il 10 agosto 2026 — e il sintomo era un cliente che «non si
+#    collega», cioe' il rosso di nuovo sull'imputato sbagliato.
+if [ $# -gt 3 ]; then
+	shift 3
+	OPZIONI="$*"
+else
+	OPZIONI=""
+fi
 
 if [ "$AZIONE" = spegni ]; then
 	P=$(cat /media/REMOTIX/src/b2-wt.pid 2>/dev/null)
@@ -75,7 +89,7 @@ ok "porta $PORTA libera"
 log "Il server minimo (l'esempio di ngtcp2 con lo strato WebTransport innestato)"
 rm -f "$FUORI/b2-wt.log" "$FUORI/b2-wt.pid"
 bash "$ENTRA" --root \
-	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b2-wt.log 2>&1 & echo \$! > $DENTRO/b2-wt.pid"
+	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER $OPZIONI $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b2-wt.log 2>&1 & echo \$! > $DENTRO/b2-wt.pid"
 sleep 2
 PID=$(cat "$FUORI/b2-wt.pid" 2>/dev/null)
 # ⛔ `/proc`, non `kill -0`: il server e' di root e questo script no — e da
