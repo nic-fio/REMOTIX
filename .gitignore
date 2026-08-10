@@ -10,3 +10,7 @@ reference-cinnamon/
 build/
 target/
 *.o
+
+# Le registrazioni di B4 le rigenera `01-b4-registrazioni.py`: la fonte e'
+# il generatore, non i file binari.
+banchi/b4-registrazioni/

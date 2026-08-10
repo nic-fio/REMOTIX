@@ -475,7 +475,24 @@ definiti in RCP/1:
 ⛔ **La forma dei nomi e dei valori è vincolata**, o «ignorare quel che non si conosce» diventa
 «indovinare»:
 
-- un **nome** è fatto di `a-z`, `0-9` e `.`, da 1 a 64 byte;
+- un **nome** è fatto di `a-z`, `0-9`, `.` e `_`, da 1 a 64 byte;
+
+> ### ⛔⭐ Il trattino basso è del 10 agosto 2026, e l'ha trovato **il validatore**
+>
+> Questa riga diceva *«`a-z`, `0-9` e `.`»* — e tre righe sotto la tabella definisce
+> **`video.misura_massima`**, che quel carattere lo contiene. ⛔ **La specifica si contraddiceva
+> da sola**: un'implementazione che avesse applicato la regola alla lettera avrebbe chiuso con
+> `ERRORE_PROTOCOLLO` una capacità **definita da questo stesso documento**, e il sintomo — *«il
+> client cade appena manda `CIAO`»* — non avrebbe nominato né la regola né il nome.
+>
+> ⭐ **L'ha trovata `banchi/01-b4-validatore.py` alla sua prima esecuzione**, cioè un programma
+> scritto leggendo solo questo file, prima che esistesse un byte di server. È precisamente il
+> mestiere che §11 gli assegna: *«client e server non si collaudano l'uno contro l'altro»*.
+>
+> ⚠ **Delle due cure si è scelta questa**, ed è 🔸 derivata: ammettere `_` invece di rinominare la
+> capacità. Rinominare toccherebbe un nome già citato in `web.md` e in `SPECIFICHE.md`, e il
+> trattino basso è la convenzione che il resto del documento usa nei nomi di campo
+> (`tela_larghezza`, `max_idle_timeout`).
 - un **valore** è testo UTF-8 stampabile, al massimo 256 byte;
 - un **elenco** dentro un valore si scrive separato da virgole, senza spazi: `hevc,av1`;
 - ⛔ **un nome ripetuto due volte è `ERRORE_PROTOCOLLO`.** «Vince l'ultimo» e «vince il primo» sono
@@ -1420,6 +1437,55 @@ l'altro**: si collaudano contro questo documento.
 validatore non trova errori, gli si dà una registrazione **con un errore dentro** e si verifica che
 lo veda. Uno strumento che non ha mai trovato niente non è uno strumento pulito: è uno strumento
 non certificato (`LEZIONI.md` §1.9).
+
+### 11.1 ⛔ Il formato della registrazione
+
+*Scritto il 10 agosto 2026, **prima** del registratore — rilievo R3.6. Il formato è **uno solo**:
+due registratori, uno nel C e uno nella pagina, che scrivessero lo stesso fatto in due modi
+sarebbero il difetto muto contro cui §0 è stato scritto.*
+
+⛔ **Il problema che questo formato risolve.** Registrare i byte com'erano metterebbe la parola
+d'ordine in chiaro in un file, che §4.4 vieta *«a nessun livello»*. Sostituirla lasciando la
+`lunghezza` darebbe un corpo che non combacia più, cioè **un falso rosso perpetuo** su ogni traccia
+con una stretta di mano riuscita. Sostituirla **e** riscrivere la lunghezza farebbe convalidare al
+validatore un documento riscritto dal banco — e allora non è più un arbitro.
+
+⭐ **La quarta strada**: si registra **la lunghezza vera**, si sostituiscono i soli byte segreti con
+altrettanti byte di riempimento, e il formato **dichiara quali intervalli sono oscurati**, con
+l'impronta di quel che c'era. La lunghezza torna, il validatore sa dove non deve guardare, la
+parola non c'è.
+
+```
+intestazione (16 byte)
+ ├── 8 byte   magia          "RCPREG" 0x00 0x01
+ ├── u32      quanti_blocchi
+ └── u32      riservato      DEVE essere 0
+
+poi `quanti_blocchi` blocchi, ciascuno:
+ ├── u8       verso          1 = client → server, 2 = server → client
+ ├── u8       canale         il byte alto di `tipo` (§2.5)
+ ├── u64      stream         l'identificatore dello stream QUIC
+ ├── u32      lunghezza      quanti byte di carico seguono — ⛔ la lunghezza VERA
+ ├── u16      quanti_oscurati
+ │     per ciascuno:
+ │       ├── u32   inizio        scostamento dentro il carico di questo blocco
+ │       ├── u32   quanti        ⛔ la lunghezza VERA dei byte sostituiti
+ │       └── 32 B  impronta      SHA-256 dei byte veri
+ └── `lunghezza` byte di carico
+```
+
+⛔ **Gli intervalli oscurati contengono `0x2A` ripetuto**, non zeri: uno zero è un valore che i
+campi possono avere davvero, e un intervallo di zeri che «per caso» combacia con un corpo legittimo
+è un modo di non accorgersi che l'oscuramento c'è.
+
+⛔ **Il validatore NON DEVE leggere dentro un intervallo oscurato**, e **DEVE** rifiutare una
+registrazione in cui un intervallo oscurato cade fuori dal carico o si sovrappone a un altro: una
+registrazione malformata e un filo non conforme sono due cose diverse, e vanno dette con due frasi
+diverse.
+
+⛔ **E il validatore riferisce lo scostamento del byte offensivo in due modi**: assoluto nel file, e
+relativo al carico del blocco. Il primo serve a chi guarda il file con un editor, il secondo a chi
+legge questa specifica.
 
 ---
 
