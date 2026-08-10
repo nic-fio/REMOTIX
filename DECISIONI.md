@@ -1601,7 +1601,25 @@ progetto non è mai morto sul codice: è morto sulle misure.
 di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `librcp` col server, che
 è un argomento a favore ma non una conclusione.
 
-### 6.4 🔸 QUIC via `quiche`
+### 6.4 🔸 QUIC via `ngtcp2` + `nghttp3` — **chiusa il 10 agosto 2026, con un banco**
+
+> ⭐ **La decisione, in tre righe.** Delle quattro candidate ne resta **una**: `ngtcp2`+`nghttp3`.
+> `lsquic` è uscita perché **pretende l'SNI** e il prodotto si usa per indirizzo; `libwtf` era
+> ultima in fila (seconda pila QUIC, licenza che si contraddice); e ⛔ **`quiche`, usata dal C, non
+> riesce a dichiarare WebTransport** — la misura è qui sotto. `ngtcp2` invece regge: **due browser
+> veri aprono la sessione**, e lo strato che manca costa **329 righe di codice** nostro.
+>
+> ⚠ **Il prezzo, dichiarato**: quelle 329 righe includono la **riscrittura del frame SETTINGS che
+> nghttp3 sta scrivendo**, perché la sua API pubblica non permette di annunciare un'impostazione
+> arbitraria. È collante che dipende dalla forma dei byte di una libreria, non da una sua promessa:
+> ⛔ **va riprovato a ogni aggiornamento di nghttp3**, e il banco che lo riprova esiste.
+>
+> 🔸 *Derivata, correggibile senza discussione: se un giorno `quiche` esporrà
+> `set_additional_settings` nell'FFI e Debian avrà `rustc` ≥ 1.88, la scelta si riapre — e i due
+> banchi per rifare il confronto sono scritti.*
+
+*Il testo qui sotto è la cronaca, e si legge in ordine: la decisione è nata come «`quiche`» su
+carta, ed è finita all'opposto con tre misure.*
 
 Era l'unico argomento serio a favore di Rust, e si risolve con una libreria invece che con un
 linguaggio: **`quiche`** di Cloudflare ha un'**API C**, licenza **BSD-2**, ed è in produzione
@@ -1898,6 +1916,47 @@ fa con un banco davanti, non su carta.
 > | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, «329» è un numero **senza il suo paragone** |
 > | ⚠ **due proprietà su sei** | delle sei che B2 doveva verificare qui, sono misurate **datagram abilitati** e **`max_idle_timeout` 30 s**. Restano `[?]`: niente 0-RTT, migrazione non disabilitata, `allowPooling` a `false`, e che il banco possa cambiare il tetto d'inattività (serve a B3) |
 > | ⚠ **i millisecondi non si confrontano** | 118,6 ms (Chrome) e 140,0 ms (Firefox) sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato 22,2 ms in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà questi numeri accanto ai 30,2 ms del 9 agosto confronterà due cose diverse |
+
+> ### ⛔⭐ E `quiche` non arriva a WebTransport dal C: la dichiarazione non si può fare — `[M]` 10 agosto 2026
+>
+> *La regola delle 333 righe, applicata una seconda volta: **si prova per prima la cosa che può
+> uccidere la candidata**. Qui è costata la lettura di due file e una connessione, invece di un
+> secondo strato WebTransport scritto per intero.*
+>
+> **La lettura, e la previsione scritta prima** `[R]`:
+>
+> | | |
+> |---|---|
+> | ⭐ **`quiche` HA la funzione che a `nghttp3` manca** | `h3::Config::set_additional_settings(Vec<(u64,u64)>)` — `quiche/src/h3/mod.rs:644`. Un modo pulito e sostenuto di mettere un'impostazione arbitraria nel proprio SETTINGS |
+> | ⛔ **ma non arriva all'API C** | **zero** occorrenze di `additional_settings` in `h3/ffi.rs` e **zero** in `include/quiche.h`. Il `quiche_h3_config` esporta **quattro** setter, e nessuno è quello |
+> | ⛔ **e il trucco di `ngtcp2` lì non esiste** | su `ngtcp2` nghttp3 **consegna all'applicazione** i byte dello stream di controllo da scrivere, e li abbiamo riscritti al volo. `quiche` scrive dentro la connessione da sé: un'applicazione in C quei byte **non li vede mai** |
+>
+> ⇒ **previsione: `quiche`, dal C, non dichiarerà WebTransport.**
+>
+> **La misura** — `banchi/01-b2-sonda-impostazioni.py`, che legge `received_settings` di `aioquic`,
+> cioè **quel che è arrivato sul filo**, non quel che la configurazione dice:
+>
+> | Server | Impostazioni dichiarate |
+> |---|---|
+> | ⭐ **`ngtcp2` col nostro strato** *(controllo positivo)* | **7**, fra cui `ENABLE_WEBTRANSPORT` **e** `WT_MAX_SESSIONS` |
+> | ⛔ **`quiche`**, con tutto acceso | **4**: `ENABLE_CONNECT_PROTOCOL`, `H3_DATAGRAM`, `H3_DATAGRAM_00`, e una GREASE. ⛔ **Nessuna delle due dichiarazioni di WebTransport** |
+>
+> ⛔ **Quindi un browser non aprirebbe la sessione, e non c'è riga di codice nostro che rimedi**:
+> quel frame lo scrive la libreria, e dal C non c'è modo di toccarlo.
+>
+> ⚠ **E la riga onesta accanto al verdetto**: *«impossibile»* sarebbe troppo. La funzione **esiste**,
+> è solo non esposta — cioè **una decina di righe di FFI**, da mandare a monte o da portarsi dietro
+> come patch. Sommata al `rustc` 1.88 contro 1.85, però, diventa: *per usare `quiche` bisogna
+> toccare `quiche`*. Con `ngtcp2` non serve toccare niente, ed è C.
+>
+> ⚠ **E quel che questa misura NON dice**: **quante righe** costerebbe lo strato WebTransport su
+> `quiche`. Non si sa, perché non si è arrivati a scriverlo — la candidata cade a un cancello
+> precedente. ⭐ Ed è esattamente il punto della regola: il numero che non abbiamo è anche il
+> lavoro che non abbiamo speso.
+>
+> ⭐ **Un dettaglio che vale come indizio di cura**: `quiche` manda una **GREASE**
+> (`0x28d3890f99ed6413`), cioè un'impostazione inventata apposta perché i pari non si abituino a
+> un elenco fisso (RFC 9114 §7.2.4.1). `ngtcp2`+`nghttp3`, col nostro strato, no.
 >
 > ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
 >

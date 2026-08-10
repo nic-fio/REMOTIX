@@ -7,7 +7,9 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ## Stato al 10 agosto 2026 — ⭐ **si riparte da qui**
 >
 > **Fase 1 aperta**, banco scritto e **revisionato prima del prodotto** (44 rilievi, 38 `[R]`,
-> tutti curati). Il banco **B2 — quale libreria QUIC** è in corso, e ha già prodotto misure.
+> tutti curati). ⭐ **Il banco B2 ha chiuso `DECISIONI.md` §6.4: la libreria QUIC è
+> `ngtcp2`+`nghttp3`** — con un banco, non su carta, e con le altre tre eliminate ciascuna da una
+> misura.
 >
 > ### Che cosa è misurato `[M]`
 >
@@ -19,17 +21,21 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
 > | ⭐⭐ **il server minimo su `ngtcp2` esiste, e un BROWSER VERO apre la sessione** | **Chrome 151** e **Firefox 140**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, `"ciao"` che torna identico. ⛔ E `/rcp/9` **rifiutato con 404**, come impone `RCP.md` §2.2 |
 > | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`: **456 righe aggiunte, di cui 329 di codice**, misurate con `git diff` e non stimate |
+> | ⛔⭐ **e `quiche` non arriva a WebTransport dal C** | dichiara **4** impostazioni sul filo e **nessuna delle due di WebTransport**. `h3::Config::set_additional_settings` **esiste in Rust e non nell'FFI**, e il trucco usato su `ngtcp2` lì non c'è: quei byte un'applicazione in C non li vede mai. ⇒ **§6.4 è chiusa** |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile. ⚠ Ma parla la **bozza 02**, e i browser la **07**: il server manda tutt'e due le dichiarazioni, o metà degli strumenti direbbe di sì per il motivo sbagliato |
 >
 > ### ⛔ Il prossimo passo
 >
-> **Lo stesso strato su `quiche`, per avere il paragone.** Il numero `329` da solo non decide
-> niente: è un numero senza il suo confronto, e §6.4 chiede *quale delle due costa meno*. Poi la
-> scelta si scrive, con accanto la riga sulla catena di strumenti di Rust.
+> **Le quattro proprietà che restano di B2**, su `ngtcp2`: niente 0-RTT, migrazione non
+> disabilitata, `allowPooling` a `false`, e il tetto d'inattività **cambiabile** — quest'ultimo
+> serve a **B3**, che senza non distingue i suoi 30 secondi dal trasporto.
 >
-> ⚠ **E B2 non è chiuso**: delle sei proprietà che doveva verificare ne sono misurate **due** —
-> `max_idle_timeout` 30 s e i datagram abilitati. Restano `[?]` niente 0-RTT, migrazione non
-> disabilitata, `allowPooling`, e il tetto d'inattività cambiabile (serve a B3).
+> Poi la fase entra nel filo vero: **B3** (la stretta di mano su due connessioni) e **B4** (il
+> validatore), cioè le prime righe di RCP.
+>
+> ⚠ **E una manutenzione che ha una data**: le 329 righe includono la **riscrittura del frame
+> SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va
+> riprovata a ogni aggiornamento di nghttp3 — e il banco che la riprova esiste.
 >
 > ⚠ **E una previsione resta aperta dopo due misure**: `lsquic` scrive le impostazioni della **bozza
 > 02** e mai `SETTINGS_WT_MAX_SESSIONS`. Nemmeno con l'SNI ci si arriva — la connessione muore
@@ -40,7 +46,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
 > `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-sni-quiche.sh` (`leggi`, poi
 > `costruisci`) · `01-b2-lancia-sni.sh` (**la prova SNI sui tre bersagli**: `costruisci`, poi
-> `misura`) · ⭐ `01-b2-ngtcp2-wt-innesta.py` (**lo strato WebTransport**) + `01-b2-lancia-wt.sh`
+> `misura`) · `01-b2-lancia-impostazioni.sh` (**chi dichiara WebTransport sul filo**) ·
+> ⭐ `01-b2-ngtcp2-wt-innesta.py` (**lo strato WebTransport**) + `01-b2-lancia-wt.sh`
 > (il cliente di prova, e il rifiuto di `/rcp/9`) + ⚠ `01-b2-lancia-sonda.sh` — **quest'ultimo si
 > lancia da QUI, non dal server: i browser stanno da questa parte** · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
 > pagina) · `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
