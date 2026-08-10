@@ -1811,6 +1811,54 @@ fa con un banco davanti, non su carta.
 >
 > ⚠ **E la previsione sulla bozza 02 resta APERTA anche dopo questa misura**: nemmeno stavolta ci
 > siamo arrivati — la connessione con l'SNI muore prima delle impostazioni HTTP/3.
+
+> ### ⭐ `quiche` passa lo stesso criterio, e porta con sé un costo che non c'entra col QUIC — `[M]` 10 agosto 2026
+>
+> *`banchi/01-b2-sni-quiche.sh` (`leggi`, poi `costruisci`) · misurata dallo stesso conduttore e
+> dalla stessa sonda delle altre due, nella stessa esecuzione.*
+>
+> **La previsione, scritta prima di costruire** (`LEZIONI.md` §1.11), su **81 file** di 3 alberi con
+> il controllo positivo che risponde (*«quiche»* in 33 file): `select_certificate_cb` in **0** file,
+> `servername` in **1**. ⭐ E quell'uno è un **lettore**: `quiche/src/tls/mod.rs:510-526` espone
+> `server_name() -> Option<&str>` — che al C arriva come `quiche_conn_server_name()` — cioè *dice*
+> che cosa ha mandato il pari, non *sceglie* niente. **Restituisce `Option`**: «nessun SNI» è uno
+> stato che la firma sa rappresentare, non un errore. ⇒ **previsione: passa**.
+>
+> | La misura | Atteso | Misurato |
+> |---|---|---|
+> | ⭐ **senza SNI sul filo** | la sessione si stabilisce | ⭐ **sì** |
+> | ⛔ **e il certificato è QUELLO** | l'impronta del file | ⭐ **`35wqjGTOmKSj…` combacia** |
+> | con SNI (`remotix.prova`), il controllo | idem | ✅ sì |
+>
+> ⛔ **Quindi il criterio dell'SNI non separa più le due candidate**: `ngtcp2` e `quiche` lo passano
+> tutt'e due, e la scelta si sposta su quel che resta — **quanto collante** e a che prezzo.
+>
+> ### ⛔ E il prezzo di `quiche` è emerso prima della misura, ed è una catena di strumenti
+>
+> | | |
+> |---|---|
+> | ⛔ **la versione più recente non si costruisce** | `quiche` **0.29.3** pretende **rustc 1.88**; Trixie ne ha **1.85** `[M]`. Non è un'opinione: cargo si ferma e non compila |
+> | **la più recente che si costruisce è la 0.28.0** | il banco la sceglie da sé, confrontando il `rust-version` di ogni etichetta col compilatore presente, ⭐ **e stampa quale e perché** — la misura vale per *quella* versione |
+> | ⚠ **e nemmeno la 0.28.0 basta da sola** | il loro deposito è un `workspace`: `tokio-quiche`, `h3i`, `qlog-dancer` tirano dentro `tonic`, `icu`, `time`, `image`, che pretendono fino a 1.88. Si costruisce **`-p quiche`**, cioè il solo pacchetto che useremmo |
+> | ⛔ **la scelta che ne discende, e va fatta consapevolmente** | scegliendo `quiche` si sceglie **o** di restare sulla 0.28.0 finché Debian non aggiorna `rustc`, **o** di portarsi una catena Rust fuori dai pacchetti (`rustup`) dentro la costruzione del prodotto. `ngtcp2` non pone la domanda: è C, e Trixie ha tutto |
+>
+> ⚠ **Questo non elimina `quiche`**: è un costo, non un difetto, e va scritto **accanto alla
+> scelta** invece che scoperto da chi costruirà il prodotto fra un mese.
+>
+> ### ⚠ I due numeri di «quanto collante», e perché NON si sottraggono
+>
+> | Candidata | Il loro esempio | Che cos'è |
+> |---|---|---|
+> | `ngtcp2`+`nghttp3` | **7.041 righe**, 13 file `.cc` | il loro **HTTP/3 completo** in C++: file, migrazione, retry, qlog |
+> | `quiche` | **614 righe**, 1 file `.c` | un esempio **minimo** in C, che però fa già HTTP/3 |
+>
+> ⛔ **Confrontarli così sarebbe E1**: non misurano la stessa cosa. Quel che il confronto dice
+> davvero è che `quiche` **espone HTTP/3 dalla sua API C** e ci si arriva in 614 righe, mentre su
+> `ngtcp2` l'HTTP/3 lo monta `nghttp3` e l'esempio che lo fa è quello grosso. ⭐ **Il numero che
+> conta resta quello del nostro server minimo**, e si conterà quando esisterà — su tutt'e due.
+>
+> ⚠ **E su tutt'e due manca ancora la stessa cosa**: lo strato **WebTransport**, che nessuna delle
+> due porta (censimento del 9 agosto, ancora valido).
 >
 > ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
 >

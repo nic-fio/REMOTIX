@@ -136,6 +136,16 @@ CONTAINER_PKGS=(
     # sono il modo piu' economico di avere un server HTTP/3 vero da puntare
     # contro un browser vero.  Serve al banco, non al prodotto.
     libevent-dev
+    # ⭐ cargo (che si porta dietro rustc): serve a costruire `quiche`, la
+    # quarta candidata di B2 — che e' scritta in Rust e si usa dalla sua API C.
+    # ⚠ Il 9 agosto si era misurato che Trixie LI OFFRE (1.85.0); il 10 si e'
+    #   scoperto che nel contenitore non c'erano.  «Disponibile come pacchetto»
+    #   e «installato» sono due cose diverse, e la seconda si scrive qui.
+    cargo
+    # uthash: le tabelle a dispersione che il loro esempio HTTP/3 in C usa per
+    # tenere le connessioni.  E' un'intestazione sola, e senza quella il loro
+    # esempio non compila — cioe' e' una dipendenza del BANCO di quiche.
+    uthash-dev
     # libev: la stessa cosa per `ngtcp2`.  ⚠ E' UN'ALTRA libreria, non una
     # variante del nome: `ngtcp2/examples/CMakeLists.txt` cerca `libev`, e con
     # la sola `libevent-dev` installata il cmake mette

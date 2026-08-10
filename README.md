@@ -14,16 +14,20 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | |
 > |---|---|
 > | ⭐ **il modello di fiducia regge** | una sessione WebTransport verso un certificato **autofirmato P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**: **Chrome 151** (30,2 ms) e **Firefox 140** (52,0 ms). `RCP.md` §4.1-bis passa da `[S]` a `[M]` su **due motori** |
-> | ⭐ **`ngtcp2` passa il criterio dell'SNI** | **10 agosto**: il loro server d'esempio serve il certificato a chi **non manda SNI**, e ⛔ **l'impronta ricevuta combacia con quella del file** — la stretta di mano che riesce non basta. `ngtcp2` resta in gara con `quiche` |
-> | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera** |
+> | ⭐ **`ngtcp2` e `quiche` passano il criterio dell'SNI** | **10 agosto**: i loro server d'esempio servono il certificato a chi **non manda SNI**, e ⛔ **l'impronta ricevuta combacia con quella del file** — la stretta di mano che riesce non basta. ⇒ **il criterio non separa più le due candidate** |
+> | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera**. E resta in coda a ogni esecuzione come **controllo negativo**: dimostra che la sonda sa vedere un rifiuto |
+> | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile |
-> | **`ngtcp2`+`nghttp3`** | costruite con lo stesso BoringSSL. Dentro 447 file: extended CONNECT in **9**, WebTransport in **0** ⇒ lo strato è tutto nostro. ⚠ Il loro server d'esempio pesa **7.041 righe**: è un **tetto**, non una stima |
+> | **quanto collante** | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++) · `quiche` **614** (esempio minimo, C). ⛔ **Due etichette diverse: non si sottraggono.** E a nessuna delle due manca di meno: **lo strato WebTransport non ce l'ha nessuna** |
 >
 > ### ⛔ Il prossimo passo
 >
-> **La stessa prova su `quiche`**, prima del collante — è la regola che il 9 agosto è costata 333
-> righe e che il 10 ha promosso `ngtcp2` in una connessione. Poi il **server minimo** sulla
-> candidata scelta, che è quel che apre le sei proprietà di B2 e le due misure del gruppo 3.
+> **Il server minimo**, su `ngtcp2` o su `quiche`. Il criterio dell'SNI le ha promosse tutt'e due,
+> quindi la scelta si gioca su quel che resta — quante righe di **WebTransport** restano a noi, e se
+> vale la catena di strumenti di Rust. ⭐ E il numero che conta è quello del **nostro** minimo, non
+> del loro esempio: si conta quando esiste, su tutt'e due se serve.
+>
+> È anche quel che apre le sei proprietà di B2 e le due misure del gruppo 3.
 >
 > ⚠ **E una previsione resta aperta dopo due misure**: `lsquic` scrive le impostazioni della **bozza
 > 02** e mai `SETTINGS_WT_MAX_SESSIONS`. Nemmeno con l'SNI ci si arriva — la connessione muore
@@ -32,7 +36,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ### Come si rimette in piedi il banco
 >
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
-> `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-lancia-sni.sh` (**conduce la prova SNI**:
+> `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-sni-quiche.sh` (`leggi`, poi
+> `costruisci`) · `01-b2-lancia-sni.sh` (**conduce la prova SNI sui tre bersagli**:
 > `costruisci`, poi `misura`) · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
 > pagina) · `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
 > `01-b2-raccogli.py` + `01-b2-sonda.html` (la pagina, da `localhost`).

@@ -53,6 +53,8 @@ fi
 
 NGTCP2="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
 LSQUIC="$DENTRO/b2/lsquic/build/bin/b2_wt_server"
+QUICHE="$DENTRO/b2/quiche/quiche/examples/http3-server"
+DIRQ="$CERT/quiche"
 
 porta_libera()
 {
@@ -195,7 +197,52 @@ tail -6 "$FUORI/b2-sni-bsslserver.log" | sed 's/^/        /'
 ferma bsslserver
 
 # ---------------------------------------------------------------------------
-log "2. lsquic — il CONTROLLO NEGATIVO"
+log "2. quiche — la terza candidata"
+inf "atteso: PASSA senza SNI.  La previsione sta in 01-b2-sni-quiche.sh, scritta"
+inf "        dopo la lettura e PRIMA della costruzione: l'unico punto che nomina"
+inf "        l'SNI e' un LETTORE (tls/mod.rs:510), non una ricerca."
+
+# ⛔ IL CERTIFICATO, E UNA TRAPPOLA DEL LORO ESEMPIO.
+#
+# `http3-server.c:524-565` prende ospite e porta dagli argomenti, ⛔ ma legge
+# il certificato da `./cert.crt` e `./cert.key` — cioe' dalla cartella
+# CORRENTE — e **non controlla l'esito** di
+# `quiche_config_load_cert_chain_from_pem_file` [R].
+#
+# ⚠ Con i file assenti il server parte lo stesso e ogni stretta di mano
+#   fallisce: alla sonda somiglia esattamente a «quiche pretende l'SNI».
+#   Sarebbe stato il terzo falso rosso attribuito a una libreria in due
+#   giorni.  Quindi i file si mettono, e si CONTROLLA che ci siano.
+PREP=$(bash "$ENTRA" --root "mkdir -p $DIRQ; cp -f $CERT/sessione.pem $DIRQ/cert.crt; cp -f $CERT/sessione.key $DIRQ/cert.key; ls $DIRQ")
+# ⚠ `case` e non `grep -q` in un tubo: con `pipefail`, `grep -q` esce al primo
+#   riscontro, chi scrive prende SIGPIPE e il riscontro RIUSCITO diventa un
+#   errore.  E' il difetto del 9 agosto, e qui non si ripete.
+case "$PREP" in
+*cert.crt*) ;;
+*) ko "cert.crt non e' finito in $DIRQ: la misura non parte"; exit 3 ;;
+esac
+case "$PREP" in
+*cert.key*) ;;
+*) ko "cert.key non e' finito in $DIRQ: la misura non parte"; exit 3 ;;
+esac
+ok "certificato e chiave in $DIRQ (nomi che il loro esempio pretende)"
+
+ferma http3-server
+porta_libera 7449 || exit 3
+if avvia http3-server "env -C $DIRQ $QUICHE $IND 7449"; then
+	bash "$ENTRA" --root \
+		"python3 $DENTRO/01-b2-sonda-sni.py --indirizzo $IND --porta 7449 --etichetta quiche --atteso passa --certificato $CERT/sessione.pem"
+	ESITO_QU=$?
+else
+	ESITO_QU=4
+fi
+inf "sonda quiche: uscita $ESITO_QU"
+inf "che cosa ha visto il server (ultime righe del suo registro):"
+tail -6 "$FUORI/b2-sni-http3-server.log" | sed 's/^/        /'
+ferma http3-server
+
+# ---------------------------------------------------------------------------
+log "3. lsquic — il CONTROLLO NEGATIVO"
 inf "atteso: FALLISCE senza SNI.  Se passasse, il 9 agosto l'abbiamo eliminata"
 inf "        a torto — e sarebbe la sonda ad aver trovato un errore NOSTRO."
 inf "⭐ e la gamba CON SNI e' l'unica misura nuova su lsquic: «fallisce senza»"
@@ -258,9 +305,10 @@ ferma b2_wt_server
 # ---------------------------------------------------------------------------
 log "Riepilogo"
 inf "ngtcp2: $([ "${ESITO_NG:-9}" -eq 0 ] && echo 'come atteso' || echo "NON come atteso (uscita ${ESITO_NG:-9})")"
+inf "quiche: $([ "${ESITO_QU:-9}" -eq 0 ] && echo 'come atteso' || echo "NON come atteso (uscita ${ESITO_QU:-9})")"
 inf "lsquic: $([ "${ESITO_LS:-9}" -eq 0 ] && echo 'come atteso' || echo "NON come atteso (uscita ${ESITO_LS:-9})")"
 inf "i registri restano in $FUORI/b2-sni-*.log"
-if [ "${ESITO_NG:-9}" -eq 0 ] && [ "${ESITO_LS:-9}" -eq 0 ]; then
+if [ "${ESITO_NG:-9}" -eq 0 ] && [ "${ESITO_QU:-9}" -eq 0 ] && [ "${ESITO_LS:-9}" -eq 0 ]; then
 	exit 0
 fi
 exit 1
