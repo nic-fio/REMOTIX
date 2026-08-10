@@ -561,6 +561,22 @@ la connessione come dice §3.1 — con lo stesso motivo nel `CONNECTION_CLOSE` �
 mandare anche `CONGEDO`. Il client **NON DEVE** riprovare sulla stessa connessione: per un secondo
 tentativo se ne apre una nuova.
 
+⛔ **E dopo `RESPINTO` al client resta una cosa sola che può dire: `CONGEDO`.** Il divieto di §4.4
+è di **riprovare**, non di congedarsi. Se il server sbaglia *dopo* aver mandato `RESPINTO` — un
+altro messaggio sullo stesso canale di controllo — il client applica §3 e chiude, e §8.1 gli
+**IMPONE** di dire perché: quel `CONGEDO` è **conforme**, anche se per il server la sessione era già
+finita. ⛔ Qualunque **altro** messaggio, e in particolare un secondo `CREDENZIALI`, è la violazione
+che §4.4 vieta.
+
+> ⛔ 🔸 *Chiarita il 10 agosto 2026 dal banco **B11**, e la forma è mia: si corregge senza
+> discussione.* La regola era già decidibile leggendo §4.4 e §8.1 insieme — ma il **server** non la
+> leggeva così: contava come «byte spediti dopo la fine» **tutto** quel che arrivava, e il caso
+> `respinto-poi-congedo` ha messo un rosso addosso alla pagina **mentre faceva quel che §8.1 le
+> impone**. ⚠ Il canale di controllo non aveva nessun `FIN`: §4.2 non era in gioco, e la sola regola
+> che lo era parla di **tentativi**, non di commiati. ⭐ Adesso il server nomina le due cose
+> separatamente, e B11 pretende il congedo **una volta per motore** invece di limitarsi a non
+> trovare byte di troppo — *un'assenza non è una prova* (`LEZIONI.md` §1.9).
+
 > ⚠ *Chiarita il 9 agosto 2026.* La prima stesura aveva `RESPINTO(motivo)` in §4.4 e
 > `CREDENZIALI_ERRATE` fra i motivi di congedo di §8.2, senza dire se dopo il primo arrivasse anche
 > il secondo. Due implementazioni potevano indovinare diverso — o, peggio, **indovinare uguale

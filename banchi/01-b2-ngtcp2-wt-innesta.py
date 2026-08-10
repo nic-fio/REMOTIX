@@ -111,6 +111,24 @@ def innesti():
                     std::vector<uint8_t> &riunito);
   void wt_accoda(int64_t stream_id, std::span<const uint8_t> dati);
 
+ public:
+  // ⛔⭐ LA CAPSULA CON CUI IL CLIENT CHIUDE LA SESSIONE.
+  //
+  //    Una sessione WebTransport non finisce solo quando muore la
+  //    connessione: il client la chiude mandando `CLOSE_WEBTRANSPORT_SESSION`
+  //    (capsula 0x2843) sullo stream della CONNECT, **con un codice e una
+  //    ragione dentro**.  ⚠ Fino al 10 agosto 2026 questo server non la
+  //    leggeva: quei byte finivano nel corpo HTTP e nessuno li guardava.
+  //
+  // ⭐ E' pubblica perche' la chiama `http_recv_data`, che sta in uno spazio
+  //    anonimo fuori dalla classe.
+  void wt_capsula(int64_t stream_id, std::span<const uint8_t> dati);
+
+ private:
+  // ⚠ Che cosa SIGNIFICHI la chiusura del client non lo decide questo strato:
+  //   qui il corpo e' vuoto, e B3 ci innesta la riga di RCP.
+  void wt_chiusa_dal_client(uint8_t codice);
+
   Handler *handler_;
   ngtcp2_conn *conn_;
   ngtcp2_ccerr &last_error_;
@@ -129,6 +147,8 @@ def innesti():
   std::unordered_map<int64_t, bool> wt_nonwt_;
   std::deque<WtUscita> wt_uscita_;
   int64_t wt_sessione_{-1};
+  // i byte della CONNECT che non compongono ancora una capsula intera
+  std::vector<uint8_t> wt_capsbuf_;
 };
 """,
             "lo stato dello strato WebTransport",
@@ -332,6 +352,28 @@ def innesti():
             "\n"
             "  auto nconsumed = nghttp3_conn_read_stream2(\n",
             "lo smistamento in lettura",
+        ),
+        # ── 9-bis. ⛔⭐ LA CAPSULA CON CUI IL CLIENT CHIUDE LA SESSIONE ───────
+        #    Il corpo della CONNECT non e' un corpo: e' un flusso di capsule
+        #    (RFC 9297), e dentro ci viaggia `CLOSE_WEBTRANSPORT_SESSION` con
+        #    il codice e la ragione.  ⚠ Qui finiva nel registro di debug e
+        #    nient'altro — cioe' il server non sapeva **perche'** il client se
+        #    ne fosse andato, e `RCP.md` §3.1 punto 3 fa viaggiare il motivo
+        #    proprio di li'.
+        #
+        # ⭐ Trovato dal banco B11 il 10 agosto 2026: Firefox **azzera** lo
+        #    stream di controllo buttando il `CONGEDO` gia' in coda, e il
+        #    motivo arriva solo dentro la capsula.  Senza leggerla, di quel
+        #    motore si sarebbe detto «non si congeda» — che e' falso.
+        (
+            "http3_server_proto_codec.cc",
+            "  auto pc = static_cast<ProtoCodec *>(user_data);\n"
+            "  pc->http_consume(stream_id, datalen);\n",
+            "  auto pc = static_cast<ProtoCodec *>(user_data);\n"
+            "  // ⭐ REMOTIX B2 — il corpo della CONNECT e' un flusso di capsule.\n"
+            "  pc->wt_capsula(stream_id, {data, datalen});\n"
+            "  pc->http_consume(stream_id, datalen);\n",
+            "la capsula di chiusura in lettura",
         ),
         # ── 10. L'intestazione :protocol ────────────────────────────────────
         (
@@ -602,6 +644,55 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
 
   return orig.size();
 }
+
+// ⛔⭐ LE CAPSULE DELLA CONNECT, E LA SOLA CHE CI RIGUARDA.
+//
+// Il corpo di una CONNECT estesa e' un flusso di capsule (RFC 9297): varint
+// tipo, varint lunghezza, corpo.  Di tutte, qui se ne guarda **una**:
+// `CLOSE_WEBTRANSPORT_SESSION` (0x2843), che porta un codice a 32 bit e una
+// ragione in UTF-8 — ed e' la SECONDA STRADA di `RCP.md` §3.1 punto 3, quella
+// per cui il motivo arriva anche quando i byte del canale non partono.
+//
+// ⚠ Si accumula, perche' una capsula puo' arrivare a pezzi; e si scarta il
+//   resto senza rumore, perche' un flusso di capsule sconosciute non e' un
+//   errore (RFC 9297 §3.2 dice di ignorarle).
+void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
+  if (stream_id != wt_sessione_ || dati.empty()) {
+    return;
+  }
+  wt_capsbuf_.insert(wt_capsbuf_.end(), dati.begin(), dati.end());
+  for (;;) {
+    uint64_t tipo = 0, lung = 0;
+    auto a = wt_leggi_varint(&tipo, wt_capsbuf_.data(), wt_capsbuf_.size());
+    if (a == 0) {
+      return;
+    }
+    auto b = wt_leggi_varint(&lung, wt_capsbuf_.data() + a,
+                             wt_capsbuf_.size() - a);
+    if (b == 0 || wt_capsbuf_.size() < a + b + lung) {
+      return;
+    }
+    const uint8_t *corpo = wt_capsbuf_.data() + a + b;
+    if (tipo == 0x2843 && lung >= 4) {
+      uint32_t codice = (static_cast<uint32_t>(corpo[0]) << 24) |
+                        (static_cast<uint32_t>(corpo[1]) << 16) |
+                        (static_cast<uint32_t>(corpo[2]) << 8) |
+                        static_cast<uint32_t>(corpo[3]);
+      std::string ragione{corpo + 4, corpo + lung};
+      std::println(stderr,
+                   "REMOTIX B2: la pagina ha CHIUSO la sessione WebTransport: "
+                   "codice {:#04x} «{}»",
+                   codice, ragione);
+      wt_chiusa_dal_client(static_cast<uint8_t>(codice));
+    }
+    wt_capsbuf_.erase(wt_capsbuf_.begin(),
+                      wt_capsbuf_.begin() + static_cast<long>(a + b + lung));
+  }
+}
+
+// ⚠ Vuota apposta: quel che la chiusura del client SIGNIFICHI non lo sa lo
+//   strato WebTransport — lo sa il protocollo, e RCP arriva con B3.
+void ProtoCodec::wt_chiusa_dal_client(uint8_t codice) { (void)codice; }
 
 void ProtoCodec::wt_accoda(int64_t stream_id, std::span<const uint8_t> dati) {
   wt_uscita_.push_back(

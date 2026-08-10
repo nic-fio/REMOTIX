@@ -228,6 +228,55 @@ else
 	ESITO=1
 fi
 
+# ⛔⭐ E IL TESTIMONE POSITIVO, che il 10 agosto 2026 mancava.
+#
+#    «zero byte dopo la fine» e' vero anche per una pagina che, davanti a un
+#    server che sbaglia dopo `RESPINTO`, se ne va in silenzio — cioe' che viola
+#    §8.1 invece di §4.4.  ⚠ E' la forma di verde piu' vuota che ci sia: quella
+#    che non ha bisogno che qualcosa vada bene.
+#
+# ⭐ Il caso `respinto-poi-congedo` obbliga la pagina a un `CONGEDO` quando per
+#    il server la sessione e' gia' finita, e il server lo scrive nominandolo.
+#    Se ne aspetta UNO per ogni motore provato contro il GUASTO — cioe' tutti
+#    tranne il controllo, che gira contro il server sano e li' quel messaggio
+#    non arriva.
+#
+# ⛔ E SI CONTANO LE DUE STRADE DI §3.1, non una: il congedo puo' arrivare come
+#    byte sul canale di controllo **oppure** dentro il codice di chiusura della
+#    sessione — e il 10 agosto 2026 i due motori ne hanno usata una per uno.
+#    ⚠ Pretendere la prima sola avrebbe scritto «Firefox non si congeda», che
+#    e' falso: Firefox azzera il canale e mette il motivo nella capsula.
+#
+# ⛔ E SI CONTA DENTRO IL CASO, non su tutto il registro.  Un commiato in fondo
+#    al giro non dice niente su QUEL caso: il registro e' in ordine, e ogni
+#    «guasto chiesto» apre il blocco del suo.  ⚠ Contarli tutti insieme dava 15
+#    con 2 attesi, ed era un numero senza significato.
+ATTESI=$((PROVATI - 1))
+eval "$(awk '
+  /guasto chiesto dal client:/ { caso = $NF; if (caso == "respinto-poi-congedo") casi++; visto = 0 }
+  /CONGEDO di commiato/ {
+    if (caso == "respinto-poi-congedo" && !visto) {
+      visto = 1; con++
+      if (index($0, "seconda strada")) chiusura++; else canale++
+    }
+  }
+  END { printf "CASI=%d CON=%d CANALE=%d CHIUSURA=%d\n", casi, con, canale, chiusura }
+' "$TEMP/registro.txt")"
+inf "il caso «respinto-poi-congedo» e' stato servito $CASI volte"
+inf "commiato per il canale di controllo: $CANALE — per il codice di chiusura: $CHIUSURA"
+if [ "$CASI" -ne "$ATTESI" ]; then
+	ko "⛔ il caso e' stato servito $CASI volte, e i motori contro il guasto sono"
+	ko "   $ATTESI: il conto qui sotto non avrebbe denominatore"
+	ESITO=1
+elif [ "$CON" -eq "$ATTESI" ]; then
+	ok "⭐ il congedo di §8.1 arriva ogni volta: $CON su $ATTESI, e ⛔ per DUE"
+	ok "   strade diverse — §3.1 punto 3 non e' ridondanza, e' l'altra strada"
+else
+	ko "⛔ solo $CON commiati su $ATTESI: c'e' un motore che chiude e NON dice"
+	ko "   perche', ne' sul canale ne' nel codice di chiusura (§8.1)"
+	ESITO=1
+fi
+
 log "Esito"
 inf "motori effettivamente provati: $PROVATI (controllo compreso)"
 if [ "$PROVATI" -eq 0 ]; then

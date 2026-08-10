@@ -977,6 +977,40 @@ void rcp_libera(rcp_sessione *s)
 	free(s);
 }
 
+bool rcp_e_finita(const rcp_sessione *s) { return s && s->stato == S_FINITA; }
+
+/* ⛔⭐ §4.2 — LA SESSIONE E' FINITA PERCHE' LO DICE IL CLIENT, E IL POSTO SI
+ * LASCIA ADESSO, NON QUANDO IL TRASPORTO AVRA' FINITO DI SMONTARSI.
+ *
+ * Il client chiude la sessione WebTransport con una capsula che porta il
+ * motivo (§3.1 punto 3).  ⚠ Aspettare la chiusura degli stream per liberare il
+ * posto (§8.2 motivo 0x0F) significa tenerlo occupato per tutto il tempo dello
+ * smontaggio — e chi si ricollega **subito** si sente rispondere che c'e' gia'
+ * una sessione.
+ *
+ * ⭐ Trovato da B11 il 10 agosto 2026: due casi consecutivi, il secondo
+ *    respinto con `GIA_ATTIVA_REMOTA` perche' il primo non aveva ancora finito
+ *    di andarsene.  ⛔ Sul banco e' un caso rosso ogni tanto; per chi usa il
+ *    prodotto e' «mi dice che sono gia' collegato, e non e' vero».            */
+void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice)
+{
+	/* ⚠ Nessuna guardia sullo stato: il posto lo si lascia anche se la
+	 *   sessione era gia' finita per altra via — `attaccata` impedisce da
+	 *   sola di lasciarlo due volte, ed e' l'unica cosa che conta. */
+	if (!s)
+		return;
+	reg(s, "la pagina ha chiuso la sessione, motivo %#04x: §4.2, la sessione "
+	       "e' finita (stato: %s)",
+	    codice, NOMI_STATO[s->stato]);
+	if (s->attaccata) {
+		posto_lascia(s->utente);
+		s->attaccata = false;
+		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		    s->provenienza, posti_occupati());
+	}
+	s->stato = S_FINITA;
+}
+
 const char *rcp_stato_nome(const rcp_sessione *s)
 {
 	return s ? NOMI_STATO[s->stato] : "?";
@@ -993,7 +1027,39 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 		 * l'unico posto da cui si possono osservare e' qui.  ⚠ Senza questa
 		 * riga un client che riprova e' indistinguibile da uno che si e'
 		 * fermato — B11 misurerebbe il silenzio del server invece del
-		 * comportamento della pagina. */
+		 * comportamento della pagina.
+		 *
+		 * ⛔⭐ MA NON TUTTO QUEL CHE ARRIVA DOPO LA FINE E' UNA VIOLAZIONE, e
+		 *    contarlo tutto insieme ha puntato un rosso sull'imputato
+		 *    sbagliato — la settima veste di `LEZIONI.md` §1.9.
+		 *
+		 * §4.4 vieta al client UNA cosa: **riprovare**.  §8.1 gliene impone
+		 * un'altra: chi chiude **DEVE** mandare `CONGEDO` col motivo.  ⭐ Le
+		 * due si incontrano quando il server sbaglia DOPO `RESPINTO` — il caso
+		 * `respinto-poi-congedo` di B11: la pagina vede un messaggio che non
+		 * doveva arrivare, chiude come impone §3, e il suo `CONGEDO` parte
+		 * quando per noi la sessione e' gia' finita.
+		 *
+		 * ⚠ Il 10 agosto 2026 quel `CONGEDO` di 69 byte e' stato contato come
+		 *   «spedito dopo la fine», e il rosso e' andato sulla pagina che stava
+		 *   facendo **esattamente** quel che §8.1 le impone.  ⛔ Il canale di
+		 *   controllo non aveva nessun FIN: §4.2 non c'entrava, e la sola
+		 *   regola in gioco — §4.4 — parla di tentativi, non di commiati.
+		 *
+		 * ⭐ Quindi si distingue, e si distingue **sul tipo letto dai byte**:
+		 *    un `CONGEDO` e' l'ultima parola di chi se ne va, qualunque altra
+		 *    cosa e' il DEVE che B11 deve poter accusare. */
+		if (len >= 6) {
+			lettore fin = {dati, len, 0, false};
+			uint16_t tipo = le_u16(&fin);
+			if (tipo == T_CONGEDO) {
+				reg(s, "⭐ CONGEDO di commiato da %s a sessione gia' finita: "
+				       "§8.1 lo IMPONE a chi chiude, e §4.4 vieta i tentativi, "
+				       "non i commiati — %zu byte, e non sono di troppo",
+				    s->provenienza, len);
+				return false;
+			}
+		}
 		reg(s, "⛔ %zu byte arrivati DOPO la fine della sessione da %s", len,
 		    s->provenienza);
 		return false;
@@ -1131,6 +1197,41 @@ void rcp_violazione(rcp_sessione *s, const char *dettaglio)
 	if (!s)
 		return;
 	congeda(s, RCP_ERRORE_PROTOCOLLO, dettaglio);
+}
+
+/* ⛔⭐ §4.2 — IL CANALE DI CONTROLLO CHE SI CHIUDE E' LA FINE DELLA SESSIONE,
+ * E VALE ANCHE QUANDO A CHIUDERLO E' IL SERVER.
+ *
+ * Da quell'istante nessun messaggio del client puo' piu' arrivare — §4.2 gli
+ * vieta di spedire su qualunque canale — quindi il posto (§8.2 motivo 0x0F)
+ * non lo libererebbe piu' NESSUNO fino alla morte della connessione.  E una
+ * connessione, un browser, la tiene viva.
+ *
+ * ⭐ Trovato da B11 il 10 agosto 2026, e solo su Chrome: dopo il caso in cui
+ *    il server chiude il canale con un FIN, i tre casi successivi ricevevano
+ *    `GIA_ATTIVA_REMOTA`.  Su Firefox no — li' il trasporto chiudeva lo stream
+ *    in tempo e `rcp_libera()` arrivava lo stesso.  ⛔ Il difetto viveva nella
+ *    differenza fra due motori, e nessun cliente di prova poteva vederlo.
+ *
+ * ⚠ La sessione non si libera e non si congeda: mandare un `CONGEDO` su un
+ *   canale che abbiamo appena chiuso non ha senso, e il motivo — se ce n'era
+ *   uno — e' gia' viaggiato nel codice di chiusura (§3.1 punto 3).  Resta viva
+ *   perche' e' l'unico punto da cui si osserva un client che spedisce dopo la
+ *   fine, che e' il DEVE di §4.2.                                            */
+void rcp_canale_chiuso(rcp_sessione *s)
+{
+	if (!s || s->stato == S_FINITA)
+		return;
+	reg(s, "il canale di controllo si e' chiuso dal lato del server: "
+	       "§4.2, la sessione e' finita (stato: %s)",
+	    NOMI_STATO[s->stato]);
+	if (s->attaccata) {
+		posto_lascia(s->utente);
+		s->attaccata = false;
+		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		    s->provenienza, posti_occupati());
+	}
+	s->stato = S_FINITA;
 }
 
 bool rcp_tempo(rcp_sessione *s, uint64_t ora)

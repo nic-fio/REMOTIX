@@ -98,6 +98,26 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora_ms);
  * stream; il modo di chiudere lo sa solo questo modulo. */
 void rcp_violazione(rcp_sessione *s, const char *dettaglio);
 
+/* ⛔ §4.2: il canale di controllo si e' chiuso, e il suo chiudersi E' la fine
+ * della sessione — ANCHE quando a chiuderlo e' stato il server.  L'ospite e'
+ * l'unico che vede il FIN; che cosa comporti lo sa solo questo modulo.
+ *
+ * ⚠ La sessione NON si libera: resta viva per osservare i byte che §4.2 vieta
+ *   al client di spedire dopo la fine.  Quel che si lascia e' il POSTO. */
+void rcp_canale_chiuso(rcp_sessione *s);
+
+/* ⭐ §3.1 punto 3: il motivo viaggia anche nel codice di chiusura, e quella
+ * strada la vede solo l'ospite.  Per giudicarla serve sapere se la sessione
+ * era gia' finita quando il codice e' arrivato — perche' e' esattamente li'
+ * che il `CONGEDO` del client non poteva piu' passare dal canale. */
+bool rcp_e_finita(const rcp_sessione *s);
+
+/* ⛔ §4.2: la pagina ha chiuso la sessione WebTransport, e lo ha detto col
+ * motivo dentro la chiusura.  Il posto (§8.2 motivo 0x0F) si lascia QUI:
+ * aspettare che il trasporto finisca di smontarsi lo tiene occupato addosso a
+ * chi si ricollega subito. */
+void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice);
+
 /* Per il banco e per il registro. */
 const char *rcp_stato_nome(const rcp_sessione *s);
 const char *rcp_utente(const rcp_sessione *s);

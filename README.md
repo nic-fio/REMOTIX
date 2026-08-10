@@ -38,10 +38,11 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ### ⛔ Il prossimo passo
 >
-> ⭐ **B3 e B5 sono chiusi. B11 passa 12 su 12 su Firefox 140**, più le due proprietà negative — e
-> ⛔ **9 su 12 su Chrome 151**, che è un dato, non un contrattempo.
+> ⭐⭐ **B3, B5 e adesso B11 sono chiusi. Tredici casi su tredici su TUTT'E DUE i motori** —
+> Firefox 140 e Chrome 151 — più le due proprietà negative, più il controllo che dice di no, e
+> ⛔ **il secondo testimone verde**. *(10 agosto 2026, sera, e ripetuto)*
 >
-> ⭐ **B11 ha trovato tre difetti veri, e tutt'e tre erano invisibili al cliente di prova**:
+> ⭐ **B11 ha trovato sei difetti veri, e nessuno era visibile al cliente di prova**:
 >
 > 1. il **posto** (§8.2 `0x0F`) si liberava solo alla morte della *connessione* — e un browser
 >    chiude la *sessione* tenendo viva la connessione. Ora si libera alla chiusura del canale di
@@ -51,17 +52,47 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    motivo dentro il codice di chiusura* — **non è ridondanza**. Curato dai due lati;
 > 3. ⛔ la pagina **chiudeva senza congedarsi**, e §8.1 dice che chi chiude *DEVE* mandare `CONGEDO`
 >    con un motivo — anche quando è una chiusura volontaria. Aggiunto: su Chrome i falliti sono
->    passati da 8 a 4.
+>    passati da 8 a 4;
+> 4. ⛔ **il posto non si liberava quando a chiudere il canale era il SERVER.** Da lì in poi non
+>    arrivava più un byte che potesse liberarlo, e la pagina non poteva rimediare: §4.2 le vieta di
+>    spedire dopo la fine. Visto **solo su Chrome** — su Firefox il trasporto chiudeva lo stream in
+>    tempo e il posto se ne andava lo stesso. ⭐ **Il difetto viveva nella differenza fra due
+>    motori**, ed è quello che chiude i tre casi rossi di Chrome;
+> 5. ⛔ **il server contava come «byte spediti dopo la fine» anche il `CONGEDO`** che §8.1 *impone*
+>    a chi chiude. Il rosso finiva sulla pagina mentre faceva quel che deve. ⭐ Da lì il
+>    chiarimento di `RCP.md` §4.4: dopo `RESPINTO` il divieto è di **riprovare**, non di
+>    congedarsi;
+> 6. ⛔ **il posto restava occupato per tutto lo smontaggio del trasporto**, e chi si ricollegava
+>    subito si sentiva rispondere `GIA_ATTIVA_REMOTA`. ⚠ Sul banco era un caso rosso ogni tanto;
+>    per chi usa il prodotto è *«mi dice che sono già collegato, e non è vero»*. Ora il server
+>    **legge la capsula con cui la pagina chiude** e lascia il posto in quell'istante.
 >
-> ⚠ **E quel che resta rosso, detto e non arrotondato**: su **Chrome**, dopo il caso in cui è il
-> *server* a chiudere il canale di controllo con un FIN, il posto resta occupato — la pagina non ha
-> nessun congedo da mandare (§4.2 glielo vieta), e il trasporto non arriva in tempo. ⛔ **Il server
-> deve liberare il posto anche quando è lui a chiudere**, e quella riga non c'è ancora.
+> ⭐⭐ **E il congedo arriva per DUE STRADE DIVERSE, una per motore.** Chrome lo manda come byte sul
+> canale di controllo; **Firefox azzera il canale e butta quei byte**, e il motivo arriva solo
+> dentro il codice di chiusura della sessione. ⛔ Fino a stasera il server **quella capsula non la
+> leggeva**: di Firefox si sarebbe detto *«non si congeda»*, che è falso. È la prova, misurata, che
+> il punto 3 di §3.1 non è ridondanza — **è l'altra strada**, e senza di essa metà dei browser
+> sembrerebbe scortese.
+>
+> ⛔ **E due trappole nuove nel banco, tutt'e due sui denominatori**: il registro del server era
+> tagliato a `tail -60`, e **aggiungere una riga al filtro ha fatto scendere «i guasti serviti» da
+> 26 a 21** senza che il server cambiasse niente — un denominatore che dipende da quanto si parla.
+> E il caso `respinto-poi-congedo` faceva **correre** la chiusura di §3.1 contro la risposta della
+> pagina: Chrome ha perso la corsa in un giro su cinque. ⭐ Adesso quel guasto **non chiude**, e a
+> chiudere è la pagina — che è proprio la cosa che il caso vuole vedere.
 >
 > ⚠ **E una cosa che B3 NON prova, scritta perché non sembri provata**: la rotazione **automatica**
 > del certificato a quattordici giorni. Cambiarlo a mano dimostra che la pagina sa ritirare
 > l'impronta; che il server rigeneri **prima** della scadenza resta senza banco, e il suo sintomo
 > — *«non si collega più e non dice perché»* — arriva due settimane dopo la consegna.
+>
+> ⚠ **E un numero che stasera è invecchiato**: le **482 righe / 333 di codice** dello strato
+> WebTransport sono di prima della **lettura della capsula di chiusura**, che è cresciuta lì dentro.
+> ⛔ Non lo si riscrive a occhio: il 10 agosto `01-b3-rcp-innesta.py --togli` **non ha tolto niente**
+> — ha detto di sì e ha lasciato l'innesto dov'era — quindi la misura «B2 da solo» adesso non si sa
+> prendere. Con tutt'e due gli innesti l'esempio porta **972 righe aggiunte, 618 di codice** `[M]`.
+> ⚠ *E quel `--togli` che non toglie va guardato: `ricostruisci` in `01-b11-guasto.sh` ci si appoggia
+> per rimettere il server sano.*
 >
 > ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va

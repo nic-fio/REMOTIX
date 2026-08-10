@@ -339,6 +339,71 @@ INNESTI = [
         "      fin = u.fin ? 1 : 0;\n",
         "il FIN in scrittura",
     ),
+    # ── 6. ⛔⭐ IL POSTO SI LIBERA ANCHE QUANDO A CHIUDERE E' IL SERVER ───────
+    #    `RCP.md` §4.2: il canale di controllo che si chiude E' la fine della
+    #    sessione.  Il verso in cui lo si chiude non cambia la regola — ma il
+    #    codice conosceva un verso solo, perche' l'altro non l'aveva mai
+    #    percorso nessuno.
+    #
+    # ⭐ Trovato da B11 il 10 agosto 2026, e SOLO su Chrome: dopo il caso in
+    #    cui il server chiude il canale con un FIN, i tre casi successivi
+    #    ricevevano `GIA_ATTIVA_REMOTA`.  Su Firefox il trasporto chiudeva lo
+    #    stream in tempo e `on_stream_close` liberava il posto lo stesso: il
+    #    difetto viveva nella DIFFERENZA fra i due motori.
+    #
+    # ⚠ E la pagina non poteva rimediare: §4.2 le vieta di spedire dopo la
+    #   fine del canale, quindi il `CONGEDO` che libera il posto — la cura del
+    #   terzo difetto di B11 — li' e' proprio quel che non deve mandare.
+    (
+        "http3_server_proto_codec.cc",
+        "        if (u.off >= u.dati.size()) {\n"
+        "          wt_uscita_.pop_front();\n"
+        "        }\n",
+        "        if (u.off >= u.dati.size()) {\n"
+        "          // ⛔⭐ REMOTIX B3 — RCP.md §4.2: il canale di controllo che si\n"
+        "          //    chiude e' la fine della sessione, ANCHE dal lato nostro.\n"
+        "          //    Il posto (§8.2 motivo 0x0F) va lasciato QUI, perche' da\n"
+        "          //    adesso in poi non arrivera' piu' un byte che lo liberi.\n"
+        "          if (u.fin && rcp_ && u.stream_id == rcp_stream_) {\n"
+        "            rcp_canale_chiuso(rcp_);\n"
+        "          }\n"
+        "          wt_uscita_.pop_front();\n"
+        "        }\n",
+        "il posto che si libera quando chiude il server",
+    ),
+    # ── 7. ⛔⭐ LA SECONDA STRADA DI §3.1, CHE FINO A OGGI NESSUNO GUARDAVA ──
+    #    §3.1 punto 3: il motivo del congedo viaggia **anche** nel codice di
+    #    chiusura.  B2 adesso legge la capsula che lo porta; qui si dice che
+    #    cosa significa — ed e' l'unico posto che lo sa, perche' «era gia'
+    #    finita» e' uno stato di RCP, non del trasporto.
+    #
+    # ⭐ Senza questa riga, di Firefox si sarebbe detto «non si congeda»:
+    #    azzera lo stream di controllo e butta il `CONGEDO` gia' in coda — il
+    #    secondo difetto trovato da B11 — e il motivo gli arriva **solo** di
+    #    qui.  ⚠ Due motori, due strade, e una regola sola rispettata da
+    #    tutt'e due: e' la ragione per cui §3.1 punto 3 non e' ridondanza.
+    (
+        "http3_server_proto_codec.cc",
+        "void ProtoCodec::wt_chiusa_dal_client(uint8_t codice) { (void)codice; }\n",
+        "void ProtoCodec::wt_chiusa_dal_client(uint8_t codice) {\n"
+        "  // ⭐ REMOTIX B3 — RCP.md §3.1 punto 3: il motivo nel codice di\n"
+        "  //    chiusura e' la seconda strada, e vale quando la prima e' chiusa.\n"
+        "  if (rcp_ && rcp_e_finita(rcp_)) {\n"
+        "    std::println(stderr,\n"
+        "                 \"REMOTIX B3: ⭐ CONGEDO di commiato per la seconda \"\n"
+        "                 \"strada di §3.1 (il codice di chiusura): motivo {:#04x} \"\n"
+        "                 \"— i byte sul canale non erano piu' spedibili\",\n"
+        "                 codice);\n"
+        "  }\n"
+        "  // ⛔ E il POSTO si lascia adesso: §4.2, la sessione e' finita perche'\n"
+        "  //    lo dice il client.  Aspettare lo smontaggio del trasporto vuol\n"
+        "  //    dire tenerlo occupato addosso a chi si ricollega subito.\n"
+        "  if (rcp_) {\n"
+        "    rcp_chiusa_dal_client(rcp_, codice);\n"
+        "  }\n"
+        "}\n",
+        "il commiato che viaggia nel codice di chiusura",
+    ),
 ]
 
 

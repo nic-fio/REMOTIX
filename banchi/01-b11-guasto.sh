@@ -73,8 +73,24 @@ registro)
 	#    dodici righe sono proprieta' NEGATIVE della pagina — «dopo RESPINTO
 	#    non riprova», «nessun battito applicativo» — e una proprieta'
 	#    negativa non si vede da dentro la pagina.
-	grep -E "B11|DOPO la fine|congedo motivo|canale di controllo aperto" \
-		"$FUORI/b11-server.log" 2>/dev/null | tail -60
+	# ⭐ E il «CONGEDO di commiato» viaggia con loro: e' il testimone POSITIVO
+	#    della stessa regola — senza, «zero byte dopo la fine» sarebbe vero
+	#    anche per una pagina che non si e' mai congedata.
+	#
+	# ⛔⭐ E IL TAGLIO IN CODA E' UN DENOMINATORE CHE MENTE.
+	#
+	#    Era `tail -60`.  Il 10 agosto 2026, aggiungendo UNA riga in piu' a
+	#    questo filtro, i «guasti serviti» sono passati da 26 a 21 — e il
+	#    server non aveva cambiato niente: erano le righe vecchie, spinte
+	#    fuori dalla finestra dalle nuove.  ⚠ Un banco che conta dentro una
+	#    coda tagliata dichiara un denominatore che dipende da quanto parla,
+	#    non da quanto e' successo (`LEZIONI.md` §1.9, quarta regola).
+	#
+	# ⭐ Due motori per tredici casi stanno in poche centinaia di righe: il
+	#    tetto c'e' ancora, ma sta sopra a quel che il banco produce, e se un
+	#    giorno lo tocca il conto dei casi se ne accorge da se'.
+	grep -E "B11|DOPO la fine|CONGEDO di commiato|congedo motivo|canale di controllo aperto" \
+		"$FUORI/b11-server.log" 2>/dev/null | tail -600
 	exit 0
 	;;
 spegni)
