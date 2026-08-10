@@ -32,7 +32,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > vero — **B3** (la stretta di mano su due connessioni, la seconda rifiutata con `0x0F`) e **B4**
 > (il validatore), cioè le prime righe di RCP.
 >
-> ⚠ **E una manutenzione che ha una data**: le 329 righe includono la **riscrittura del frame
+> ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va
 > riprovata a ogni aggiornamento di nghttp3 — e il banco che la riprova esiste.
 >

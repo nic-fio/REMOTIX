@@ -103,7 +103,11 @@ if [ ! -d "/proc/$PID_RACC" ]; then
 	exit 5
 fi
 ok "raccoglitore in ascolto, PID $PID_RACC"
-trap 'kill $PID_RACC 2>/dev/null; spegni' EXIT
+# ⛔ E il profilo usa-e-getta si BUTTA davvero.  Il 10 agosto sei esecuzioni
+#    hanno lasciato in /tmp 740 MB di profili di Chrome e Firefox — il disco
+#    e' arrivato al 99% e si e' fermato un `git commit`.  «Usa-e-getta» era
+#    solo la prima meta'.
+trap 'kill $PID_RACC 2>/dev/null; spegni; rm -rf "$TEMP"' EXIT
 
 URL="http://127.0.0.1:$PORTA_PAGINA/01-b2-sonda.html?avvia=1&url=https://$IND:$PORTA/rcp/1&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$IMPRONTA")"
 inf "indirizzo della sonda:"
