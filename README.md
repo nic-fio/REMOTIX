@@ -31,12 +31,32 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | ⭐ **B3: cinque giri su cinque** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⭐ **la 3ª con il certificato ruotato**: la pagina ritira l'impronta corrente e apre, e ⛔ **con la vecchia i due motori rifiutano** |
 >
+> | ⭐⭐ **B5: quarantaquattro violazioni su quarantaquattro** | tipo sconosciuto · lunghezza in più e in meno · **4 GiB annunciati** · oltre 1 MiB · stato sbagliato · versione · nomi e valori di capacità · credenziali fuori intervallo · tela dispari e fuori limiti · disposizione malformata **contro** disposizione ignota (`SESSIONE_NON_SERVIBILE`) · secondo stream bidirezionale · tre canali nel verso sbagliato su stream unidirezionali. ⛔ Il motivo giusto ogni volta, **per tutt'e due le strade di §3.1**, e dopo **ciascuna** una connessione nuova arriva a `ECCOMI` |
+> | ⭐ **e i cinque casi che DEVONO passare** | `hevc,vp9` → si sceglie `hevc` e **lo scarto si scrive** · **vista 300×801** e **1×1** (§7.1) · `BANCO_MARCA` a funzione spenta → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **senza chiudere** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Senza di loro, «il server chiude su tutto» darebbe 44 verdi su 44 |
+> | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** |
+> | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.4 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.4; §9 adesso la nomina |
+>
 > ### ⛔ Il prossimo passo
 >
-> ⭐ **B3 è chiuso.** Restano **B5** — le prove di violazione: tipo sconosciuto, lunghezza
-> sbagliata, messaggio nello stato sbagliato, e ⛔ *la connessione deve cadere ogni volta* — e
-> **B11**, le stesse verso la **pagina**. *Un banco che non prova a violare il protocollo non prova
-> il protocollo.*
+> ⭐ **B3 e B5 sono chiusi. B11 passa 12 su 12 su Firefox 140**, più le due proprietà negative — e
+> ⛔ **9 su 12 su Chrome 151**, che è un dato, non un contrattempo.
+>
+> ⭐ **B11 ha trovato tre difetti veri, e tutt'e tre erano invisibili al cliente di prova**:
+>
+> 1. il **posto** (§8.2 `0x0F`) si liberava solo alla morte della *connessione* — e un browser
+>    chiude la *sessione* tenendo viva la connessione. Ora si libera alla chiusura del canale di
+>    controllo;
+> 2. un messaggio spedito **subito prima** di chiudere la sessione, **il browser lo butta**: la
+>    pagina non vedeva `RESPINTO`, vedeva silenzio. ⭐ È la prova che il punto 3 di §3.1 — *il
+>    motivo dentro il codice di chiusura* — **non è ridondanza**. Curato dai due lati;
+> 3. ⛔ la pagina **chiudeva senza congedarsi**, e §8.1 dice che chi chiude *DEVE* mandare `CONGEDO`
+>    con un motivo — anche quando è una chiusura volontaria. Aggiunto: su Chrome i falliti sono
+>    passati da 8 a 4.
+>
+> ⚠ **E quel che resta rosso, detto e non arrotondato**: su **Chrome**, dopo il caso in cui è il
+> *server* a chiudere il canale di controllo con un FIN, il posto resta occupato — la pagina non ha
+> nessun congedo da mandare (§4.2 glielo vieta), e il trasporto non arriva in tempo. ⛔ **Il server
+> deve liberare il posto anche quando è lui a chiudere**, e quella riga non c'è ancora.
 >
 > ⚠ **E una cosa che B3 NON prova, scritta perché non sembri provata**: la rotazione **automatica**
 > del certificato a quattordici giorni. Cambiarlo a mano dimostra che la pagina sa ritirare

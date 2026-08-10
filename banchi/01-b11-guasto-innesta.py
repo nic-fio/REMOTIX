@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+"""01-b11-guasto-innesta.py — ⛔ IL SERVER GUASTO DI PROPOSITO, per B11.
+
+    python3 01-b11-guasto-innesta.py            innesta i guasti
+    python3 01-b11-guasto-innesta.py --togli    li toglie
+
+⚠ Gira DENTRO il contenitore, DOPO `01-b3-rcp-innesta.py`: tocca la COPIA di
+  `rcp.c` che sta in `examples/`, non l'originale in `banchi/rcp/`.
+
+===========================================================================
+⛔ PERCHE' UN SERVER GUASTO, E PERCHE' SI BUTTA
+
+`fasi/01-filo-nudo.md`, B11, rilievo **R4.1**: la prima stesura del banco aveva
+dodici violazioni verso il server e **nessuna verso la pagina**.  Ma `RCP.md`
+§3 e' scritta su «un'implementazione RCP», e §9 ha un **DEVE esplicito del
+client**.  ⭐ Per provare che la pagina applica §3 bisogna **mandarle qualcosa
+di sbagliato**, e l'unico che puo' farlo e' un server che sbaglia apposta.
+
+⛔ E queste righe **non restano**: un interruttore che fa mentire il server, se
+   sopravvive alla fase, un giorno lo trova acceso qualcuno che non sapeva
+   esistesse.  Stanno qui, in un innesto che si toglie, e `--togli` le porta
+   via tutte.
+
+===========================================================================
+⭐ COME SI SCEGLIE IL GUASTO: DAL `CIAO`, NON DALLA RIGA DI COMANDO
+
+Il guasto arriva nella capacita' **`banco.guasto`** del `CIAO`.  ⭐ Cosi' i
+dodici casi girano su **un solo server acceso** e in **un solo caricamento
+della pagina**: senza, ogni caso vorrebbe un riavvio, e dodici riavvii per due
+motori sono ventiquattro occasioni di misurare un server diverso da quello che
+si crede.
+
+⚠ E il nome e' sconosciuto a RCP/1, quindi un server SANO lo ignora (§4.3,
+  eccezione dei nomi sconosciuti): la pagina di B11 si puo' puntare anche
+  contro il server vero, e li' i dodici casi devono fallire tutti — che e' il
+  controllo che dice **no**.
+"""
+import os
+import subprocess
+import sys
+
+ESEMPI = "/srv/src/b2/ngtcp2/examples"
+MARCA = "REMOTIX B11 GUASTO"
+
+INNESTI = [
+    # ── 1. Il campo che tiene il nome del guasto ───────────────────────────
+    (
+        "rcp.c",
+        "\tchar audio[32];\n",
+        "\tchar audio[32];\n"
+        "\t/* ⚠ REMOTIX B11 GUASTO — il guasto chiesto dal client, e si butta con"
+        " l'innesto. */\n"
+        "\tchar guasto[64];\n",
+        "il campo del guasto",
+    ),
+    # ── 2. La cattura, dal CIAO ────────────────────────────────────────────
+    (
+        "rcp.c",
+        '\t\tif (strcmp(nome, "video.codec") == 0)\n',
+        '\t\t/* ⚠ REMOTIX B11 GUASTO — `banco.guasto` non esiste in RCP/1: un server\n'
+        '\t\t * sano la ignora come qualunque nome sconosciuto (§4.3). */\n'
+        '\t\tif (strcmp(nome, "banco.guasto") == 0) {\n'
+        '\t\t\tsnprintf(s->guasto, sizeof s->guasto, "%s", valore);\n'
+        '\t\t\treg(s, "⚠ B11 GUASTO: guasto chiesto dal client: %s", s->guasto);\n'
+        '\t\t}\n'
+        '\t\tif (strcmp(nome, "video.codec") == 0)\n',
+        "la cattura del guasto",
+    ),
+    # ── 3. ECCOMI, nelle sue tre vesti storte ──────────────────────────────
+    (
+        "rcp.c",
+        "\tsc_u16(&w, RCP_VERSIONE);\n\tsc_u16(&w, 5); /* quante capacita' */\n",
+        "\t/* ⚠ REMOTIX B11 GUASTO — tre guasti dentro ECCOMI:\n"
+        "\t *   eccomi-versione-2         una versione PIU' ALTA di quella\n"
+        "\t *                             chiesta: §9 obbliga il CLIENT a\n"
+        "\t *                             congedare con VERSIONE_INCOMPATIBILE\n"
+        "\t *   capacita-sconosciuta      un nome che non esiste: la pagina\n"
+        "\t *                             DEVE ignorarlo e proseguire\n"
+        "\t *   misura-massima-in-eccomi  una capacita' del CLIENT mandata dal\n"
+        "\t *                             SERVER: nome conosciuto, lato\n"
+        "\t *                             sbagliato, ERRORE_PROTOCOLLO */\n"
+        "\tbool g_ver = strcmp(s->guasto, \"eccomi-versione-2\") == 0;\n"
+        "\tbool g_ign = strcmp(s->guasto, \"capacita-sconosciuta\") == 0;\n"
+        "\tbool g_lato = strcmp(s->guasto, \"misura-massima-in-eccomi\") == 0;\n"
+        "\tsc_u16(&w, g_ver ? 2 : RCP_VERSIONE);\n"
+        "\tsc_u16(&w, 5 + (g_ign ? 1 : 0) + (g_lato ? 1 : 0));\n",
+        "i tre guasti di ECCOMI",
+    ),
+    (
+        "rcp.c",
+        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, "no");\n',
+        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, "no");\n'
+        '\tif (g_ign) {\n'
+        '\t\tsc_str(&w, "questa.non.esiste");\n'
+        '\t\tsc_str(&w, "boh");\n'
+        '\t}\n'
+        '\tif (g_lato) {\n'
+        '\t\tsc_str(&w, "video.misura_massima");\n'
+        '\t\tsc_str(&w, "3840x2160");\n'
+        '\t}\n',
+        "le due capacita' storte",
+    ),
+    # ── 4. Un tipo che non esiste, subito dopo ECCOMI ──────────────────────
+    (
+        "rcp.c",
+        "\tmanda_eccomi(s);\n\ts->stato = S_ATTESA_CREDENZIALI;\n",
+        "\tmanda_eccomi(s);\n"
+        "\t/* ⚠ REMOTIX B11 GUASTO — un tipo sconosciuto sul canale di controllo: §3\n"
+        "\t *   vieta di ignorarlo, e la pagina deve chiudere. */\n"
+        "\tif (strcmp(s->guasto, \"tipo-sconosciuto\") == 0) {\n"
+        "\t\tuint8_t niente[1] = {0};\n"
+        "\t\tmanda_messaggio(s, 0x00FF, niente, 0);\n"
+        "\t}\n"
+        "\ts->stato = S_ATTESA_CREDENZIALI;\n",
+        "il tipo sconosciuto",
+    ),
+    # ── 5. SESSIONE: tela dispari e desktop mentitore ──────────────────────
+    (
+        "rcp.c",
+        '\tsc_byte(&w, 1); /* 1 = NUOVA */\n\tsc_u32(&w, tl);\n\tsc_u32(&w, ta);\n'
+        '\tsc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c\'e\' compositore */\n'
+        '\tif (!w.pieno)\n\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n',
+        '\t/* ⚠ REMOTIX B11 GUASTO — due guasti dentro SESSIONE:\n'
+        '\t *   sessione-tela-dispari   la tela CONCESSA e\' dispari: la pagina\n'
+        '\t *                           deve RIFIUTARE, non adattarsi\n'
+        '\t *   sessione-desktop-*      un desktop che non e\' quello vero: §4.5\n'
+        '\t *                           vieta alla pagina di cambiare\n'
+        '\t *                           comportamento in base a questo campo */\n'
+        '\tbool g_disp = strcmp(s->guasto, "sessione-tela-dispari") == 0;\n'
+        '\tconst char *g_desk = "sconosciuto";\n'
+        '\tif (strcmp(s->guasto, "sessione-desktop-kde") == 0)\n'
+        '\t\tg_desk = "kde";\n'
+        '\telse if (strcmp(s->guasto, "sessione-desktop-gnome") == 0)\n'
+        '\t\tg_desk = "gnome";\n'
+        '\tsc_byte(&w, 1); /* 1 = NUOVA */\n'
+        '\tsc_u32(&w, g_disp ? tl + 1 : tl);\n'
+        '\tsc_u32(&w, g_disp ? ta + 1 : ta);\n'
+        '\tsc_str(&w, g_desk);\n'
+        '\tif (!w.pieno)\n\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n'
+        '\t/* ⚠ REMOTIX B11 GUASTO — un CONGEDO col motivo 0x00, che §3.1 vieta. */\n'
+        '\tif (strcmp(s->guasto, "congedo-motivo-zero") == 0) {\n'
+        '\t\tuint8_t c0[8];\n'
+        '\t\tscrittore w0 = {c0, sizeof c0, 0, false};\n'
+        '\t\tsc_byte(&w0, 0);\n'
+        '\t\tsc_str(&w0, "");\n'
+        '\t\tmanda_messaggio(s, T_CONGEDO, c0, w0.len);\n'
+        '\t}\n',
+        "i guasti di SESSIONE",
+    ),
+    # ── 6. Un CONGEDO dopo RESPINTO, che §4.4 vieta ────────────────────────
+    (
+        "rcp.c",
+        "\tmanda_messaggio(s, T_RESPINTO, corpo, 1);\n"
+        "\ts->stato = S_FINITA;\n"
+        "\ts->g.chiudi(s->g.ctx, motivo);\n",
+        "\tmanda_messaggio(s, T_RESPINTO, corpo, 1);\n"
+        "\t/* ⚠ REMOTIX B11 GUASTO — §4.4: dopo RESPINTO non arriva nient'altro.  Qui\n"
+        "\t *   arriva, e la pagina deve accorgersene. */\n"
+        "\tif (strcmp(s->guasto, \"respinto-poi-congedo\") == 0) {\n"
+        "\t\tuint8_t c1[8];\n"
+        "\t\tscrittore w1 = {c1, sizeof c1, 0, false};\n"
+        "\t\tsc_byte(&w1, RCP_ERRORE_PROTOCOLLO);\n"
+        "\t\tsc_str(&w1, \"\");\n"
+        "\t\tmanda_messaggio(s, T_CONGEDO, c1, w1.len);\n"
+        "\t}\n"
+        "\ts->stato = S_FINITA;\n"
+        "\ts->g.chiudi(s->g.ctx, motivo);\n",
+        "il congedo dopo il respinto",
+    ),
+    # ── 7. L'accessorio per l'ospite: due guasti vivono negli STREAM ───────
+    (
+        "rcp.c",
+        "const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : \"\"; }\n",
+        "const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : \"\"; }\n"
+        "/* ⚠ REMOTIX B11 GUASTO — due guasti su dodici non stanno nei messaggi ma\n"
+        " *   negli STREAM: un FIN sul canale di controllo e uno stream\n"
+        " *   bidirezionale aperto dal server.  Quelli li sa fare solo\n"
+        " *   l'ospite, e questa riga e' l'unica cosa che gli serve sapere. */\n"
+        "const char *rcp_guasto(const rcp_sessione *s) { return s ? s->guasto : \"\"; }\n",
+        "l'accessorio del guasto",
+    ),
+    # ── 8. L'ospite: il FIN e lo stream bidirezionale ──────────────────────
+    (
+        "http3_server_proto_codec.cc",
+        "bool rcp_autentica(const char *utente, const char *parola);\n}\n",
+        "bool rcp_autentica(const char *utente, const char *parola);\n"
+        # ⚠ `const rcp_sessione *`, non `const struct rcp_sessione *`: rcp.h la
+        #   dichiara gia' con un typedef, e in C++ ripetere `struct` su un
+        #   typedef e' un errore.  Il primo giro del 10 agosto 2026 e' morto
+        #   qui — e ⛔ il banco non se n'e' accorto, perche' controllava che il
+        #   binario ESISTESSE invece che fosse NUOVO.
+        "const char *rcp_guasto(const rcp_sessione *s); // REMOTIX B11 GUASTO\n"
+        "}\n",
+        "la dichiarazione del guasto",
+    ),
+    (
+        "http3_server_proto_codec.cc",
+        "  auto stato = std::string_view{rcp_stato_nome(rcp_)};\n",
+        "  // ⚠ REMOTIX B11 GUASTO — i due guasti che vivono negli stream, e si\n"
+        "  //   armano quando la sessione e' aperta.\n"
+        "  if (rcp_ && std::string_view{rcp_stato_nome(rcp_)} == \"attiva\" &&\n"
+        "      !b11_fatto_) {\n"
+        "    auto g = std::string_view{rcp_guasto(rcp_)};\n"
+        "    if (g == \"fin-sul-controllo\") {\n"
+        "      // ⛔ §4.2: il FIN sul canale di controllo E' la fine della\n"
+        "      //    sessione, e la pagina non deve piu' spedire su NESSUN\n"
+        "      //    canale.  Qui non si chiude la sessione WebTransport: si\n"
+        "      //    chiude solo lo stream, cosi' il banco misura la regola e\n"
+        "      //    non la caduta del trasporto.\n"
+        "      b11_fatto_ = true;\n"
+        "      std::println(stderr, \"REMOTIX B11 GUASTO: FIN sul canale di controllo\");\n"
+        "      wt_uscita_.push_back(WtUscita{rcp_stream_, {}, 0, true});\n"
+        "    } else if (g == \"bidi-dal-server\") {\n"
+        "      // ⛔ §2.5: «il server NON DEVE aprire stream bidirezionali».\n"
+        "      b11_fatto_ = true;\n"
+        "      int64_t sid = -1;\n"
+        "      if (ngtcp2_conn_open_bidi_stream(conn_, &sid, nullptr) == 0) {\n"
+        "        std::println(stderr,\n"
+        "                     \"REMOTIX B11 GUASTO: aperto uno stream BIDIREZIONALE {} \"\n"
+        "                     \"verso il client\", sid);\n"
+        "        std::array<uint8_t, 3> t{0x40, 0x41, 0};\n"
+        "        t[2] = static_cast<uint8_t>(wt_sessione_);\n"
+        "        wt_uscita_.push_back(WtUscita{\n"
+        "          sid, std::vector<uint8_t>{t.begin(), t.end()}, 0, false});\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  auto stato = std::string_view{rcp_stato_nome(rcp_)};\n",
+        "i due guasti degli stream",
+    ),
+    (
+        "http3_server_proto_codec.h",
+        "  std::unordered_map<int64_t, bool> wt_uni_;\n",
+        "  std::unordered_map<int64_t, bool> wt_uni_;\n"
+        "  bool b11_fatto_{false}; // ⚠ REMOTIX B11 GUASTO — un guasto per sessione\n",
+        "lo stato del guasto",
+    ),
+]
+
+
+def main():
+    if "--togli" in sys.argv:
+        print("== Si tolgono i guasti di B11")
+        print("   ⚠ i file toccati si rimettono togliendo e riapplicando gli")
+        print("     innesti di B2 e B3: e' l'unico modo che non lascia residui")
+        return 0
+
+    testi, guasti = {}, 0
+    print("== I guasti di B11 — righe che NON devono sopravvivere alla fase")
+    for percorso, appiglio, sostituto, nome in INNESTI:
+        if percorso not in testi:
+            with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
+                testi[percorso] = f.read()
+        if MARCA in testi[percorso] and appiglio not in testi[percorso]:
+            print(f"   ⚠  {nome:32s} c'e' gia'")
+            continue
+        n = testi[percorso].count(appiglio)
+        stato = "OK " if n == 1 else "NO "
+        print(f"   {stato} {nome:32s} appiglio trovato {n} volta/e  [{percorso}]")
+        if n != 1:
+            guasti += 1
+            continue
+        testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
+
+    if guasti:
+        print(f"\n   ⛔ {guasti} appigli non trovati: NON si scrive niente.")
+        print("      Un innesto a meta' produce un server che sbaglia in un")
+        print("      modo diverso da quello che il banco crede di misurare.")
+        return 1
+
+    for percorso, testo in testi.items():
+        with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
+            f.write(testo)
+    print(f"\n   OK  {len(INNESTI)} guasti innestati in {len(testi)} file")
+    print("   ⛔ e si tolgono rimettendo gli innesti di B2 e B3")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

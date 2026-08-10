@@ -89,6 +89,11 @@ class Cliente(QuicConnectionProtocol):
         self.arrivati = bytearray()
         self.messaggi = asyncio.Queue()
         self.finito = False
+        # ⛔ §3.1 punto 3: il motivo viaggia ANCHE nel codice d'errore
+        #    applicativo con cui si chiude la sessione WebTransport.  Si
+        #    conserva, perche' e' la seconda delle due strade — e il giorno in
+        #    cui il `CONGEDO` non arriva e' l'unica.
+        self.codice_chiusura = None
 
     def apri_sessione(self, autorita, percorso):
         sid = self._quic.get_next_available_stream_id(is_unidirectional=False)
@@ -140,6 +145,7 @@ class Cliente(QuicConnectionProtocol):
             # la capsula di chiusura della sessione (§3.1 punto 3)
             if len(event.data) >= 7 and event.data[0] == 0x68 and event.data[1] == 0x43:
                 codice = event.data[6]
+                self.codice_chiusura = codice
                 print(f"   [wt]   sessione chiusa dal server, codice {codice:#04x}"
                       f" = {MOTIVI.get(codice, '?')}")
             if event.end_stream:

@@ -1374,10 +1374,30 @@ mostrato all'utente: è per il registro, e contiene quel che serve a chi diagnos
 Se non c'è una versione comune, `VERSIONE_INCOMPATIBILE`.
 
 ⛔ **In concreto**: il server sceglie la versione più alta che sa parlare e che non superi quella
-del `CIAO`. Se non ne ha nessuna, congeda. Il client **DEVE** verificare che la versione di
-`ECCOMI` sia una che sa parlare, e congedare con `VERSIONE_INCOMPATIBILE` se non lo è — un server
-che risponde con una versione più alta di quella chiesta sta sbagliando, e accettarla in silenzio
-è l'indulgenza che §3 vieta.
+del `CIAO`, ⛔ **fra quelle che il percorso ammette (§2.4)**. Se non ne ha nessuna, congeda. Il
+client **DEVE** verificare che la versione di `ECCOMI` sia una che sa parlare, e congedare con
+`VERSIONE_INCOMPATIBILE` se non lo è — un server che risponde con una versione più alta di quella
+chiesta sta sbagliando, e accettarla in silenzio è l'indulgenza che §3 vieta.
+
+> ### ⛔⭐ Le sette parole di §2.4 sono del 10 agosto 2026, e le ha trovate **B5**
+>
+> Questo paragrafo diceva soltanto *«la più alta che non superi quella del `CIAO`»*. §2.4 dice che
+> un `CIAO(versione=2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`. ⛔ **Le due regole danno byte
+> diversi sul filo per lo stesso ingresso** — `ECCOMI(1)` contro `CONGEDO(0x0A)` — e **nessuna
+> delle due citava l'altra**.
+>
+> ⚠ Non è un caso di scuola: chi scrive il server legge §9, che è il paragrafo intitolato *«Le
+> versioni»*, e scrive `if (versione < LA_MIA) congeda;`. È esattamente quel che è successo — la
+> prima stesura di `banchi/rcp/rcp.c` **accettava un `CIAO(2)`** e rispondeva `ECCOMI(1)`, ed era
+> conforme a §9 alla lettera.
+>
+> ⭐ **Vince §2.4**, perché è la più specifica e perché è stata scritta per risolvere proprio questo
+> caso (rilievo R1.24). Questa riga adesso la nomina, così chi legge solo una delle due trova
+> l'altra.
+>
+> ⚠ È la **seconda** contraddizione interna trovata da un banco in due giorni: la prima fu il
+> trattino basso di §4.3, trovato dal validatore di B4. ⭐ Tutt'e due sono state trovate da
+> programmi che leggevano **solo questo documento**, e nessuna delle due da chi lo rileggeva.
 
 **Dentro una versione maggiore si cresce solo per capacità** (§4.3), mai aggiungendo campi a
 messaggi esistenti né tipi nuovi che il vecchio dovrebbe ignorare — perché ignorare è vietato

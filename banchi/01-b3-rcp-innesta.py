@@ -91,7 +91,21 @@ INNESTI = [
         "  struct rcp_sessione *rcp_{nullptr};\n"
         "  int64_t rcp_stream_{-1};\n"
         "  void rcp_avvia(int64_t stream_id);\n"
-        "  void rcp_passa(int64_t stream_id, std::span<const uint8_t> dati);\n",
+        "  void rcp_passa(int64_t stream_id, std::span<const uint8_t> dati);\n"
+        "\n"
+        "  // ⛔ RCP.md §2.5 — gli stream unidirezionali aperti dal CLIENT.  Il\n"
+        "  //    canale si legge dai primi due byte, e tre dei cinque valori\n"
+        "  //    sono violazioni: 0x00 (il controllo vive solo sullo stream 0),\n"
+        "  //    0x03 (il video va dal server al client), 0x04 (l'audio vive\n"
+        "  //    solo sui datagram).\n"
+        "  std::unordered_map<int64_t, bool> wt_uni_;\n"
+        "\n"
+        "  // ⛔ REMOTIX B11 — la chiusura della sessione ASPETTA che la coda\n"
+        "  //    d'uscita si sia svuotata: vedi `wt_chiudi_sessione`.\n"
+        "  int wt_chiusura_{-1};\n"
+        "  int wt_chiusura_attesa_{0};\n"
+        "  WtEsito wt_smista_uni(int64_t stream_id, std::span<const uint8_t> data,\n"
+        "                        std::vector<uint8_t> &riunito);\n",
         "lo stato di RCP",
     ),
     # ── 3. Il FIN nella coda d'uscita ───────────────────────────────────────
@@ -146,8 +160,51 @@ INNESTI = [
         "    //    client apre nella sessione e' il canale di controllo.\n"
         "    if (rcp_stream_ == -1) {\n"
         "      rcp_avvia(stream_id);\n"
+        "    } else {\n"
+        "      // ⛔ REMOTIX B5 — RCP.md §2.5: «il client NON DEVE aprire stream\n"
+        "      //    bidirezionali oltre lo 0».  Il canale di controllo e' UNO\n"
+        "      //    SOLO per tutta la sessione, e un secondo bidirezionale non\n"
+        "      //    e' un canale nuovo: e' una violazione.\n"
+        "      //\n"
+        "      // ⚠ Senza questa riga il secondo stream finiva nell'ECO di B2 e\n"
+        "      //   i byte tornavano indietro: il client avrebbe visto un server\n"
+        "      //   che gli risponde, e la violazione sarebbe passata per una\n"
+        "      //   funzione.\n"
+        "      std::println(stderr,\n"
+        "                   \"REMOTIX B5: ⛔ secondo stream bidirezionale {} \"\n"
+        "                   \"(il controllo e' il {})\",\n"
+        "                   stream_id, rcp_stream_);\n"
+        "      rcp_violazione(rcp_,\n"
+        "                     \"un secondo stream bidirezionale dal client (§2.5)\");\n"
         "    }\n",
         "il primo stream e' il controllo",
+    ),
+    # ── 4-quater. ⛔ GLI STREAM UNIDIREZIONALI DEL CLIENT — §2.5 ─────────────
+    #    B2 mandava a nghttp3 tutto quel che non era un bidirezionale del
+    #    client, e nghttp3 di uno stream di tipo 0x54 non sa che farsene: lo
+    #    scarta in silenzio.  ⛔ Il risultato era che un client poteva mandare
+    #    il canale di controllo, il video o l'audio su uno stream
+    #    unidirezionale e **non succedeva niente** — cioe' esattamente
+    #    l'indulgenza che §3 vieta, in un punto dove nessun banco guardava.
+    (
+        "http3_server_proto_codec.cc",
+        "  // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli\n"
+        "  // stream WebTransport arrivano tutti di li'.\n"
+        "  if ((stream_id & 0x03) != 0x00) {\n"
+        "    return WtEsito::HTTP3;\n"
+        "  }\n",
+        "  // ⛔ REMOTIX B5 — gli unidirezionali APERTI DAL CLIENT (§2.5) passano\n"
+        "  //    di qui prima di tutto: fra loro c'e' il canale di controllo di\n"
+        "  //    HTTP/3 e i due di QPACK, che sono di nghttp3 e non nostri.\n"
+        "  if ((stream_id & 0x03) == 0x02) {\n"
+        "    return wt_smista_uni(stream_id, data, riunito);\n"
+        "  }\n"
+        "  // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli\n"
+        "  // stream WebTransport arrivano tutti di li'.\n"
+        "  if ((stream_id & 0x03) != 0x00) {\n"
+        "    return WtEsito::HTTP3;\n"
+        "  }\n",
+        "gli unidirezionali del client",
     ),
     (
         "http3_server_proto_codec.cc",
@@ -176,6 +233,22 @@ INNESTI = [
         "  if (rcp_) {\n"
         "    rcp_tempo(rcp_, ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS);\n"
         "  }\n"
+        "  // ⛔ REMOTIX B11 — la capsula di chiusura parte SOLO quando la coda\n"
+        "  //    d'uscita e' vuota: il `CONGEDO` deve essere gia' partito, o il\n"
+        "  //    browser lo butta insieme alla sessione.\n"
+        "  if (wt_chiusura_ >= 0) {\n"
+        "    // ⚠ Non basta che la coda sia vuota UNA VOLTA: «consegnato a\n"
+        "    //   ngtcp2» non e' «uscito sul filo».  Si aspettano cinque passate\n"
+        "    //   di scrittura, che col keep-alive a 100 ms sono mezzo secondo —\n"
+        "    //   niente, per un banco, e toglie di mezzo la corsa fra il\n"
+        "    //   CONGEDO e la capsula che chiude la sessione.\n"
+        "    wt_chiusura_attesa_ = wt_uscita_.empty() ? wt_chiusura_attesa_ + 1 : 0;\n"
+        "    if (wt_chiusura_attesa_ >= 5) {\n"
+        "      auto m = static_cast<uint8_t>(wt_chiusura_);\n"
+        "      wt_chiusura_ = -1;\n"
+        "      wt_chiudi_adesso(m);\n"
+        "    }\n"
+        "  }\n"
         "\n  for (;;) {\n",
         "il tempo che scorre",
     ),
@@ -201,6 +274,48 @@ INNESTI = [
         "    rcp_ = nullptr;\n"
         "  }\n",
         "il posto che si libera",
+    ),
+    # ── 4-quinquies. ⛔⭐ IL POSTO SI LIBERA QUANDO FINISCE LA SESSIONE,
+    #                     NON QUANDO MUORE LA CONNESSIONE — trovato da B11
+    (
+        "http3_server_proto_codec.cc",
+        "ProtoCodec::on_stream_close(int64_t stream_id,\n"
+        "                            std::optional<uint64_t> rx_app_error_code,\n"
+        "                            std::optional<uint64_t> tx_app_error_code) {\n"
+        "  if (!httpconn_) {\n    return {};\n  }\n",
+        "ProtoCodec::on_stream_close(int64_t stream_id,\n"
+        "                            std::optional<uint64_t> rx_app_error_code,\n"
+        "                            std::optional<uint64_t> tx_app_error_code) {\n"
+        "  // ⛔⭐ REMOTIX B3 — RCP.md §4.2: il canale di controllo si chiude, e\n"
+        "  //    **il suo chiudersi E\' la fine della sessione**.  Il posto nel\n"
+        "  //    registro (§8.2 motivo 0x0F) va liberato QUI — e anche quando a\n"
+        "  //    chiudersi e\' lo stream della CONNECT estesa, che porta la\n"
+        "  //    sessione WebTransport.\n"
+        "  //\n"
+        "  // ⚠ Prima il posto si liberava solo in `~ProtoCodec`, che e\' il\n"
+        "  //   distruttore della CONNESSIONE.  Con `aioquic` i due istanti\n"
+        "  //   coincidono — il cliente di prova chiude tutto — e B3 e\' rimasto\n"
+        "  //   verde per cinque giri.  ⛔ Un BROWSER no: chiude la sessione e\n"
+        "  //   **tiene viva la connessione**, e da quel momento il posto resta\n"
+        "  //   occupato da una sessione che non esiste piu\'.\n"
+        "  //\n"
+        "  // ⭐ Trovato da B11 il 10 agosto 2026: con Chrome, SETTE `posto\n"
+        "  //    NEGATO` su nove tentativi, e la pagina non vedeva altro che\n"
+        "  //    silenzio.  E\' la stessa forma del difetto che B3 aveva trovato\n"
+        "  //    il giorno prima — il posto che non si libera — in un altro\n"
+        "  //    punto, e ⛔ **una prova con un solo tipo di client non poteva\n"
+        "  //    vederla**: il difetto vive nella differenza fra i due.\n"
+        "  if (rcp_ && (stream_id == rcp_stream_ || stream_id == wt_sessione_)) {\n"
+        "    std::println(stderr,\n"
+        "                 \"REMOTIX B3: chiuso lo stream {}: la sessione e\' finita, \"\n"
+        "                 \"il posto si libera\",\n"
+        "                 stream_id);\n"
+        "    rcp_libera(rcp_);\n"
+        "    rcp_ = nullptr;\n"
+        "    rcp_stream_ = -1;\n"
+        "  }\n"
+        "  if (!httpconn_) {\n    return {};\n  }\n",
+        "il posto che si libera con la sessione",
     ),
     # ── 5. wt_accoda con il FIN ─────────────────────────────────────────────
     (
@@ -293,7 +408,9 @@ void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
   } else if (stato == "attiva") {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 5 * NGTCP2_SECONDS);
   } else {
-    ngtcp2_conn_set_keep_alive_timeout(conn_, UINT64_MAX);
+    // ⚠ Anche dopo la fine il percorso di scrittura deve continuare a
+    //   passare: la capsula che chiude la sessione parte di li'.
+    ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   }
 }
 
@@ -322,6 +439,104 @@ bool rcp_gancio_verifica(void *ctx, const char *utente, const char *parola) {
 }
 } // namespace
 
+// ⛔ REMOTIX B5 — RCP.md §2.5: gli stream unidirezionali aperti dal CLIENT.
+//
+// ⭐ Come si riconosce il canale: «si leggono i primi due byte dello stream,
+//    che sono in ogni caso un campo `tipo`».  Il byte alto dice il canale, e
+//    di cinque valori leciti **tre sono violazioni quando arrivano di qui**:
+//
+//    0x00  controllo  ⛔ «il controllo vive solo sullo stream 0»
+//    0x01  input      ✓  legale: e' l'unico unidirezionale che il client apre
+//    0x02  appunti    ✓  legale, uno per trasferimento
+//    0x03  video      ⛔ verso sbagliato: il video va dal server al client
+//    0x04  audio      ⛔ «solo su datagram.  Su uno stream e' ERRORE_PROTOCOLLO»
+//
+// ⚠ E prima ancora bisogna sapere se lo stream e' NOSTRO: fra gli
+//   unidirezionali del client ci sono il canale di controllo di HTTP/3 e i due
+//   di QPACK, che sono di nghttp3.  Uno stream WebTransport si riconosce dal
+//   suo tipo, 0x54 — che come 0x41 non sta in un byte: sul filo sono 0x40 0x54.
+ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
+                                              std::span<const uint8_t> data,
+                                              std::vector<uint8_t> &riunito) {
+  if (wt_nonwt_.contains(stream_id)) {
+    return WtEsito::HTTP3;
+  }
+  if (wt_uni_.contains(stream_id)) {
+    // Gia' giudicato.  I byte che continuano ad arrivare si contano nel
+    // credito e non si guardano: la sessione e' gia' caduta.
+    if (!data.empty()) {
+      ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, data.size());
+      ngtcp2_conn_extend_max_offset(conn_, data.size());
+    }
+    return WtEsito::MIO;
+  }
+
+  auto &pref = wt_incerti_[stream_id];
+  pref.insert(pref.end(), data.begin(), data.end());
+  if (pref.size() < 2) {
+    return WtEsito::ATTENDI;
+  }
+  if (!(pref[0] == 0x40 && pref[1] == 0x54)) {
+    // Non e' WebTransport: e' di nghttp3, e i byte vanno consegnati interi.
+    riunito = pref;
+    wt_incerti_.erase(stream_id);
+    wt_nonwt_[stream_id] = true;
+    return WtEsito::HTTP3;
+  }
+  uint64_t sessione = 0;
+  auto n = wt_leggi_varint(&sessione, pref.data() + 2, pref.size() - 2);
+  if (n == 0 || pref.size() < 2 + n + 2) {
+    return WtEsito::ATTENDI; // il campo `tipo` non e' ancora tutto arrivato
+  }
+  auto consumati = pref.size();
+  uint16_t tipo = static_cast<uint16_t>(pref[2 + n] << 8 | pref[2 + n + 1]);
+  auto canale = static_cast<uint8_t>(tipo >> 8);
+  wt_uni_[stream_id] = true;
+  wt_incerti_.erase(stream_id);
+  ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, consumati);
+  ngtcp2_conn_extend_max_offset(conn_, consumati);
+
+  const char *guasto = nullptr;
+  switch (canale) {
+  case 0x00:
+    guasto = "il canale di CONTROLLO su uno stream unidirezionale: "
+             "il controllo vive solo sullo stream 0 (§2.5)";
+    break;
+  case 0x03:
+    guasto = "il canale VIDEO dal client: e' del server, verso sbagliato (§2.5)";
+    break;
+  case 0x04:
+    guasto = "il canale AUDIO su uno stream: l'audio vive solo sui datagram "
+             "(§2.5, §6.3)";
+    break;
+  case 0x01:
+  case 0x02:
+    break;
+  default:
+    guasto = "byte alto del tipo sconosciuto su uno stream unidirezionale (§2.5)";
+    break;
+  }
+  std::println(stderr,
+               "REMOTIX B5: stream unidirezionale {} del client, sessione {}, "
+               "tipo {:#06x}, canale {:#04x} — {}",
+               stream_id, sessione, tipo, canale, guasto ? "VIOLAZIONE" : "lecito");
+  if (guasto) {
+    if (rcp_) {
+      rcp_violazione(rcp_, guasto);
+    } else {
+      // ⚠ Nessun canale di controllo ancora aperto: il `CONGEDO` non ha una
+      //   strada, e resta il punto 3 di §3.1 — il motivo dentro la chiusura
+      //   della sessione.  ⭐ E' il secondo condizionale di §3.1 all'opera:
+      //   pretendere tutt'e tre i punti sempre darebbe rosso sul codice
+      //   giusto (rilievo R3.3).
+      std::println(stderr, "REMOTIX B5: ⚠ nessun canale di controllo: il motivo "
+                           "viaggia solo nella chiusura della sessione");
+      wt_chiudi_sessione(0x0B);
+    }
+  }
+  return WtEsito::MIO;
+}
+
 void ProtoCodec::wt_manda_controllo(const uint8_t *dati, size_t len) {
   if (rcp_stream_ == -1) {
     return;
@@ -339,6 +554,31 @@ void ProtoCodec::wt_chiudi_sessione(uint8_t motivo) {
   if (wt_sessione_ == -1) {
     return;
   }
+  // ⛔⭐ E LA CAPSULA SI RIMANDA, invece di accodarla adesso — trovato da B11
+  //    il 10 agosto 2026, con browser veri.
+  //
+  //    `respingi()` manda `RESPINTO` sul canale di controllo e chiude la
+  //    sessione **nella riga dopo**.  I due finivano nella stessa passata di
+  //    scrittura, cioe' spesso nello stesso volo di pacchetti — e il browser
+  //    processa la capsula `CLOSE_WEBTRANSPORT_SESSION` **prima** dei byte
+  //    dello stream, che a quel punto butta.  ⛔ La pagina non ha mai visto
+  //    `RESPINTO`: ha visto **silenzio**.
+  //
+  // ⚠ E il punto 3 di §3.1 ha fatto il suo mestiere — il motivo e' arrivato
+  //   comunque, dentro il codice di chiusura — ma il punto 2 era perduto, e
+  //   §3.1 li vuole tutt'e due quando il canale e' utilizzabile.
+  //
+  // ⭐ Qui si segna soltanto l'intenzione: la capsula la accoda il ciclo di
+  //    scrittura quando la coda e' vuota, cioe' quando i byte del `CONGEDO`
+  //    sono gia' stati consegnati a ngtcp2.
+  wt_chiusura_ = motivo;
+  std::println(stderr,
+               "REMOTIX B3: chiusura della sessione RIMANDATA, codice {:#04x} "
+               "(in coda: {})",
+               motivo, wt_uscita_.size());
+}
+
+void ProtoCodec::wt_chiudi_adesso(uint8_t motivo) {
   std::array<uint8_t, 64> b{};
   size_t n = 0;
   b[n++] = 0x68; // 0x2843 in intero variabile, primo byte
@@ -416,6 +656,7 @@ def main():
                    "  //    stanno in uno spazio anonimo fuori dalla classe: e' il\n"
                    "  //    prezzo di tenere `rcp.c` in C, e si paga in due righe.\n"
                    "  void wt_manda_controllo(const uint8_t *dati, size_t len);\n"
+                   "  void wt_chiudi_adesso(uint8_t motivo);\n"
                    "  void wt_chiudi_sessione(uint8_t motivo);\n"
                    "\n"
                    " private:\n", 1)

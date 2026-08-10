@@ -22,7 +22,26 @@ enum {
 	T_ATTACCA = 0x0006,
 	T_SESSIONE = 0x0007,
 	T_CONGEDO = 0x000C,
+	T_BANCO_MARCA = 0x000F,
+	T_BANCO_ESITO = 0x0010,
 };
+
+/* §7.5 — l'esito della funzione di banco. */
+enum {
+	BANCO_ACCETTATA = 1,
+	BANCO_RIFIUTATA = 2,
+	BANCO_FUNZIONE_SPENTA = 1,
+	BANCO_RITARDO_FUORI_LIMITI = 2,
+};
+
+/* ⛔ §7.5 regola 1: la funzione di banco e' SPENTA salvo che l'amministratore
+ * non l'accenda — invariante I6, e qui letteralmente dipinge sopra il desktop
+ * di qualcuno.  In fase 1 non esiste ancora una configurazione, quindi e'
+ * spenta e basta: e' lo stato predefinito di ogni server, ed e' quello che B5
+ * mette alla prova. */
+#define BANCO_ACCESO 0
+/* §7.5 regola 4: `ritardo_ms` DEVE stare fra 0 e 10 000. */
+#define BANCO_RITARDO_MAX 10000
 
 /* I tetti di §4.6, in millisecondi. */
 #define TETTO_CIAO 5000
@@ -71,6 +90,9 @@ struct rcp_sessione {
 	rcp_ganci g;
 	enum stato stato;
 	char provenienza[64];
+	/* ⛔ L'INDIRIZZO SENZA LA PORTA, e non e' un dettaglio: vedi il riquadro
+	 * sopra `solo_indirizzo()`. */
+	char indirizzo[64];
 	char utente[257];
 	uint64_t da_quando;   /* quando e' cominciato lo stato corrente */
 	uint64_t ultimo_byte; /* l'ultimo byte arrivato DAL CLIENT (§5.3) */
@@ -159,6 +181,35 @@ static struct {
 	uint64_t bloccato_fino;
 	uint64_t blocco_corrente;
 } tentativi[MAX_TENTATIVI];
+
+/* ⛔⭐ L'INDIRIZZO SENZA LA PORTA — trovato da B5 il 10 agosto 2026
+ *
+ * §4.4-bis vuole «un contatore per **indirizzo di provenienza**».  La prima
+ * stesura di questo modulo gli passava `s->provenienza`, che e'
+ * `192.168.0.2:44661` — **con la porta**.  E §4.4 ammette **un solo tentativo
+ * per connessione**, quindi la porta cambia a ogni tentativo: quel contatore
+ * valeva **sempre 1**, e non ha mai bloccato nessuno.
+ *
+ * ⚠ E' la forma peggiore di difetto: il codice c'era, sembrava giusto, si
+ *   leggeva bene, e **non faceva niente**.  Nessuna prova a connessione
+ *   singola lo vede; nessun registro lo nomina; il sintomo — «si puo' provare
+ *   una parola d'ordine all'infinito» — non arriva mai da solo.
+ *
+ * ⭐ L'ha trovato il controllo di B5 che prova SETTE tentativi falliti con
+ *    SETTE NOMI DIVERSI dallo stesso indirizzo: coi nomi uguali il contatore
+ *    per **nome** copriva il buco, e il banco sarebbe stato verde.
+ *
+ * ⚠ Si taglia agli ULTIMI due punti, non ai primi: un indirizzo IPv6 e'
+ *   `[fe80::1]:44661`, e tagliare al primo produrrebbe `[fe80`. */
+static void solo_indirizzo(const char *da, char *fuori, size_t cap)
+{
+	const char *due = strrchr(da, ':');
+	size_t n = due ? (size_t)(due - da) : strlen(da);
+	if (n >= cap)
+		n = cap - 1;
+	memcpy(fuori, da, n);
+	fuori[n] = 0;
+}
 
 static int trova_o_crea(const char *chiave)
 {
@@ -418,39 +469,71 @@ static bool nome_lecito(const char *n, size_t len)
 	return true;
 }
 
+/* Una voce dentro un elenco separato da virgole. */
+static bool voce_presente(const char *elenco, const char *voce)
+{
+	size_t n = strlen(voce);
+	const char *p = elenco;
+	while (*p) {
+		const char *virgola = strchr(p, ',');
+		size_t m = virgola ? (size_t)(virgola - p) : strlen(p);
+		if (m == n && strncmp(p, voce, n) == 0)
+			return true;
+		p = virgola ? virgola + 1 : p + m;
+	}
+	return false;
+}
+
 /* Interseca due elenchi separati da virgole, nell'ordine del CLIENT (§4.3:
  * «chi sceglie e' il server, dentro l'intersezione, seguendo l'ordine di
- * preferenza del client»).  Restituisce la prima voce comune, o NULL. */
+ * preferenza del client»).  Restituisce la prima voce comune, o NULL.
+ *
+ * ⛔ `scarti` raccoglie le voci che si buttano perche' non le conosciamo.  §4.3
+ *    dice che si scartano; ⚠ ma uno scarto che non si scrive e' una
+ *    negoziazione riuscita con dentro il contrario di quel che si voleva —
+ *    trappola 4 di `LEZIONI.md` §4 — e il sintomo arriva mesi dopo, sotto forma
+ *    di «va piano e non si capisce perche'». */
 static const char *prima_comune(const char *elenco_client, const char *nostro,
-                                char *fuori, size_t cap)
+                                char *fuori, size_t cap, char *scarti,
+                                size_t cap_scarti)
 {
+	if (scarti && cap_scarti)
+		scarti[0] = 0;
+	const char *scelta = NULL;
 	const char *p = elenco_client;
 	while (*p) {
 		const char *virgola = strchr(p, ',');
 		size_t n = virgola ? (size_t)(virgola - p) : strlen(p);
-		if (n && n + 1 < cap) {
-			char voce[64];
-			if (n < sizeof voce) {
-				memcpy(voce, p, n);
-				voce[n] = 0;
-				/* ⛔ Una voce sconosciuta DENTRO un elenco si scarta, come si
-				 * scarta un nome sconosciuto: e' il meccanismo con cui un
-				 * client di domani parlera' a un server di oggi. */
-				const char *q = nostro;
-				while (*q) {
-					const char *v2 = strchr(q, ',');
-					size_t m = v2 ? (size_t)(v2 - q) : strlen(q);
-					if (m == n && strncmp(q, voce, n) == 0) {
-						snprintf(fuori, cap, "%s", voce);
-						return fuori;
-					}
-					q = v2 ? v2 + 1 : q + m;
+		char voce[64];
+		if (n && n < sizeof voce && n + 1 < cap) {
+			memcpy(voce, p, n);
+			voce[n] = 0;
+			/* ⛔ Una voce sconosciuta DENTRO un elenco si scarta, come si
+			 * scarta un nome sconosciuto: e' il meccanismo con cui un
+			 * client di domani parlera' a un server di oggi. */
+			if (voce_presente(nostro, voce)) {
+				/* ⚠ Si tiene la PRIMA comune, ma non si esce: le voci dopo
+				 *   vanno comunque classificate, o lo scarto che si scrive
+				 *   sarebbe solo quello che precede la scelta. */
+				if (!scelta) {
+					/* ⚠ `%.*s` e non `%s`: al compilatore la lunghezza di
+					 *   `voce` e' ignota, e con `%s` avverte di una
+					 *   troncatura che la guardia qui sopra ha gia' escluso.
+					 *   Un avviso che si sa innocuo e' un avviso che il
+					 *   giorno dopo si smette di leggere. */
+					snprintf(fuori, cap, "%.*s", (int)n, voce);
+					scelta = fuori;
 				}
+			} else if (scarti && cap_scarti) {
+				size_t g = strlen(scarti);
+				if (g + n + 2 < cap_scarti)
+					snprintf(scarti + g, cap_scarti - g, "%s%s",
+					         g ? "," : "", voce);
 			}
 		}
 		p = virgola ? virgola + 1 : p + n;
 	}
-	return NULL;
+	return scelta;
 }
 
 /* Quel che questo server dichiara. */
@@ -489,9 +572,29 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO senza versione");
 		return false;
 	}
-	/* §9: il server sceglie la piu' alta che non superi quella del client. */
-	if (versione < RCP_VERSIONE) {
-		congeda(s, RCP_VERSIONE_INCOMPATIBILE, "il client parla una versione piu' vecchia");
+	/* ⛔ §2.4: «le due DEVONO coincidere» — il percorso `/rcp/1` dice 1, e un
+	 * `CIAO(2)` su quel percorso e' VERSIONE_INCOMPATIBILE, **non una
+	 * negoziazione da risolvere**.
+	 *
+	 * ⚠ E qui `RCP.md` si contraddice, ed e' la seconda contraddizione trovata
+	 *   in questo documento da un banco (la prima fu il trattino basso di §4.3,
+	 *   trovata dal validatore di B4).  §9 dice: *«il server sceglie la piu'
+	 *   alta che sa parlare e che non superi quella del CIAO»* — cioe' 1, e un
+	 *   `ECCOMI(1)`.  §2.4 dice `VERSIONE_INCOMPATIBILE`.  Le due regole danno
+	 *   **byte diversi sul filo per lo stesso ingresso**, e nessuna delle due
+	 *   cita l'altra.
+	 *
+	 * ⭐ Vince §2.4, perche' e' la piu' specifica e perche' e' quella scritta
+	 *    per risolvere proprio questo caso (rilievo R1.24).  ⚠ Il primo giro di
+	 *    questo modulo aveva applicato §9 alla lettera e ACCETTAVA un CIAO(2):
+	 *    lo ha trovato B5.  Sta in `fasi/01-filo-nudo.md`.
+	 *
+	 * ⚠ E il confronto e' con la versione del PERCORSO, che qui e' l'unica che
+	 *   il server serve.  Un server che servisse `/rcp/1` e `/rcp/2` passerebbe
+	 *   di qui la versione del percorso, non una costante. */
+	if (versione != RCP_VERSIONE) {
+		congeda(s, RCP_VERSIONE_INCOMPATIBILE,
+		        "la versione del CIAO non e' quella del percorso");
 		return false;
 	}
 	uint16_t quante = le_u16(l);
@@ -540,11 +643,32 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		else if (strcmp(nome, "audio.codec") == 0)
 			snprintf(c_audio, sizeof c_audio, "%s", valore);
 	}
+	/* ⛔ §4.3: `pcm` e `8` DEVONO essere dichiarati da ENTRAMBI — `pcm` e' la
+	 * base sempre disponibile, e serve da controllo positivo quando Opus non si
+	 * negozia.  ⚠ E chi non li dichiara si congeda con NIENTE_IN_COMUNE, **non**
+	 * con ERRORE_PROTOCOLLO: non ha sbagliato a scrivere, non ha di che
+	 * parlare.  Senza questo controllo l'intersezione basta a se stessa — un
+	 * client che offre solo `opus` passa — e la riga di §4.3 non la applica
+	 * nessuno. */
+	if (!voce_presente(c_audio, "pcm")) {
+		congeda(s, RCP_NIENTE_IN_COMUNE,
+		        "il client non dichiara pcm in audio.codec");
+		return false;
+	}
+	if (!voce_presente(c_prof, "8")) {
+		congeda(s, RCP_NIENTE_IN_COMUNE,
+		        "il client non dichiara 8 in video.profondita");
+		return false;
+	}
 	/* ⛔ Se l'intersezione e' vuota si congeda con NIENTE_IN_COMUNE, non con
 	 * ERRORE_PROTOCOLLO: non ha sbagliato a scrivere, non ha di che parlare. */
-	if (!prima_comune(c_codec, NOSTRO_CODEC, s->codec, sizeof s->codec) ||
-	    !prima_comune(c_prof, NOSTRA_PROFONDITA, s->profondita, sizeof s->profondita) ||
-	    !prima_comune(c_audio, NOSTRO_AUDIO, s->audio, sizeof s->audio)) {
+	char sc_codec[257], sc_prof[257], sc_audio[257];
+	if (!prima_comune(c_codec, NOSTRO_CODEC, s->codec, sizeof s->codec,
+	                  sc_codec, sizeof sc_codec) ||
+	    !prima_comune(c_prof, NOSTRA_PROFONDITA, s->profondita,
+	                  sizeof s->profondita, sc_prof, sizeof sc_prof) ||
+	    !prima_comune(c_audio, NOSTRO_AUDIO, s->audio, sizeof s->audio,
+	                  sc_audio, sizeof sc_audio)) {
 		congeda(s, RCP_NIENTE_IN_COMUNE, "nessun codec condiviso");
 		return false;
 	}
@@ -552,6 +676,14 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 * contrario di quel che si voleva si vede solo se qualcuno la scrive. */
 	reg(s, "negoziato video.codec=%s video.profondita=%s audio.codec=%s",
 	    s->codec, s->profondita, s->audio);
+	/* ⛔ E lo SCARTO si scrive a sua volta: «ho scelto hevc» non dice che vp9
+	 * e' stato buttato, e il giorno in cui il client di domani offrira' un
+	 * codec che questo server non conosce, il registro e' l'unico posto in cui
+	 * quel fatto compare. */
+	if (sc_codec[0] || sc_prof[0] || sc_audio[0])
+		reg(s, "scartate voci sconosciute: video.codec=[%s] "
+		       "video.profondita=[%s] audio.codec=[%s]",
+		    sc_codec, sc_prof, sc_audio);
 	manda_eccomi(s);
 	s->stato = S_ATTESA_CREDENZIALI;
 	return true;
@@ -588,7 +720,7 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	 * l'attesa e' una FINESTRA in cui si rifiuta, non un ritardo — con un solo
 	 * tentativo per connessione, un server che ritardasse di quindici minuti
 	 * non consegnerebbe mai il rifiuto. */
-	if (bloccato(s->utente, ora) || bloccato(s->provenienza, ora)) {
+	if (bloccato(s->utente, ora) || bloccato(s->indirizzo, ora)) {
 		s->cred_buone = false;
 		s->cred_motivo = RCP_TROPPI_TENTATIVI;
 	} else {
@@ -600,7 +732,7 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 			azzera_tentativi(s->utente);
 		} else {
 			segna_fallito(s->utente, ora);
-			segna_fallito(s->provenienza, ora);
+			segna_fallito(s->indirizzo, ora);
 		}
 	}
 	/* ⛔ La parola si azzera appena PAM ha risposto, e non compare in nessun
@@ -634,11 +766,54 @@ static bool disposizione_ben_formata(const char *d, size_t n)
 	return true;
 }
 
+/* ⛔ §4.5 distingue DUE guasti, e vuole due motivi diversi:
+ *
+ *   fuori forma            ERRORE_PROTOCOLLO     — ha sbagliato a scrivere
+ *   ben formata, ignota    SESSIONE_NON_SERVIBILE — ha scritto bene una cosa
+ *                                                   che questa macchina non ha
+ *
+ * ⚠ Un server che li unisse darebbe `ERRORE_PROTOCOLLO` a chi ha una tastiera
+ *   svedese su una macchina senza il pacchetto XKB svedese, e il sintomo
+ *   sarebbe «il client e' rotto» invece di «alla macchina manca una
+ *   disposizione».
+ *
+ * `[?]` ⚠ **E l'elenco qui sotto e' della fase 1, e va dichiarato.** «Che cosa
+ *   il sistema conosce» lo sa il sistema, non RCP: un server vero lo chiede a
+ *   XKB.  In fase 1 non c'e' nessun compositore (`SESSIONE` dichiara
+ *   `desktop=sconosciuto`), quindi non c'e' nessuno a cui chiedere, e la
+ *   scelta e' un elenco fisso.  ⛔ Quel che il banco prova e' **che i due
+ *   guasti siano distinti**, non quali disposizioni esistano: il giorno in cui
+ *   la domanda andra' a XKB, questa funzione cambia e B5 resta com'e'. */
+static bool disposizione_conosciuta(const char *d)
+{
+	static const char *NOTE[] = {"it", "us", "gb", "de", "fr", "es", "pt",
+	                             "ru", "se", "no", "dk", "fi", "pl", "cz",
+	                             "ch", "at", "be", "nl", "br", "jp", NULL};
+	/* La variante fra parentesi non cambia la disposizione: `de(neo)` e' `de`
+	 * con un'altra mappa, e chi ha `de` ha le due. */
+	size_t n = 0;
+	while (d[n] && d[n] != '(')
+		n++;
+	for (int i = 0; NOTE[i]; i++)
+		if (strlen(NOTE[i]) == n && strncmp(NOTE[i], d, n) == 0)
+			return true;
+	return false;
+}
+
 static bool tratta_attacca(rcp_sessione *s, lettore *l)
 {
 	uint32_t tl = le_u32(l), ta = le_u32(l);
-	le_u32(l); /* vista_larghezza: RCP/1 non la usa, ma DEVE esserci */
-	le_u32(l); /* vista_altezza */
+	/* ⛔ §7.1: la vista NON ha i vincoli della tela — «qualunque misura da 1x1
+	 * in su e' legale, dispari compresa» (rilievo R1.17).  Qui non si controlla
+	 * NIENTE, ed e' voluto.
+	 *
+	 * ⚠ Chi scrive `ATTACCA` in C scrive UNA `valida_misura()` e la chiama
+	 *   quattro volte: e' la cosa naturale da fare, e produce un server che
+	 *   **chiude la sessione perche' l'utente ha stretto la finestra**.  Su un
+	 *   telefono a fattore 2,75 la vista e' dispari quasi sempre — 393 pixel
+	 *   logici valgono 1080,75 fisici (rilievo R4.10).  B5 lo prova con
+	 *   `300x801` e `1x1`, che DEVONO passare. */
+	uint32_t vl = le_u32(l), va = le_u32(l);
 	char disp[65];
 	size_t ld = le_str(l, disp, sizeof disp);
 	if (l->corto) {
@@ -654,6 +829,16 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	}
 	if (!disposizione_ben_formata(disp, ld)) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "disposizione fuori forma");
+		return false;
+	}
+	if (!disposizione_conosciuta(disp)) {
+		/* ⛔ §8.2: SESSIONE_NON_SERVIBILE «DEVE portare il dettaglio nel
+		 * corpo», e `congeda()` ce lo mette.  Il dettaglio NON si mostra
+		 * all'utente (§8.2): la frase la costruisce il client dal codice. */
+		char d[128];
+		snprintf(d, sizeof d, "disposizione sconosciuta a questa macchina: %s",
+		         disp);
+		congeda(s, RCP_SESSIONE_NON_SERVIBILE, d);
 		return false;
 	}
 
@@ -681,9 +866,83 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c'e' compositore */
 	if (!w.pieno)
 		manda_messaggio(s, T_SESSIONE, corpo, w.len);
-	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u disposizione=%s",
-	    s->utente, s->provenienza, tl, ta, disp);
+	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u vista=%ux%u "
+	       "disposizione=%s",
+	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
+	return true;
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ §7.5 — LA FUNZIONE DI BANCO, E IL CASO CHE NON DEVE FAR CADERE NIENTE
+ *
+ * ⛔ Questo e' l'unico messaggio del canale di controllo a cui un server
+ *    conforme risponde **rifiutando senza chiudere**.  Le due regole:
+ *
+ *    regola 2  spenta -> `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`.  ⛔ NON
+ *              DEVE tacere e NON DEVE chiudere: «un client che chiede una
+ *              funzione spenta non ha violato niente», e un silenzio lascia il
+ *              banco della fase 3 ad aspettare per sempre — il sintomo sarebbe
+ *              «il banco si e' piantato», che non nomina ne' la funzione ne'
+ *              l'interruttore;
+ *    regola 4  `ritardo_ms` fuori da 0..10 000 -> `RITARDO_FUORI_LIMITI`, e
+ *              ⛔ **non** `ERRORE_PROTOCOLLO`: far cadere la sessione al banco
+ *              che si sta tarando e' la stessa cattiva idea che §7.1 evita per
+ *              le misure fuori limite.
+ *
+ * ⚠ E l'ORDINE fra le due `RCP.md` non lo dice: con la funzione spenta E il
+ *   ritardo fuori limite, i motivi difendibili sono due.  ⭐ Qui si controlla
+ *   PRIMA il parametro, perche' e' quello che il banco puo' correggere: dirgli
+ *   «spenta» quando ha anche sbagliato il numero gli fa accendere la funzione e
+ *   ritrovarsi lo stesso rifiuto, con un motivo diverso, al secondo giro.  La
+ *   scelta e' dichiarata in `fasi/01-filo-nudo.md`.
+ *
+ * ⛔ Regola 5: ogni `BANCO_MARCA` si scrive nel registro — anche i rifiuti.
+ *    «Una sessione che dipinge quadratini colorati sul desktop di una persona
+ *    deve poterlo dimostrare dal registro.» */
+static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
+{
+	uint32_t id = le_u32(l), colore = le_u32(l), ritardo = le_u32(l);
+	if (l->corto) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA troncato");
+		return false;
+	}
+	/* ⛔ §7.5: «0 e' riservato».  Un id zero non e' un parametro di banco
+	 * sbagliato, e' un messaggio malformato: qui la sessione cade.
+	 * ⚠ Scelta nostra — il documento dice «riservato» e non dice l'esito. */
+	if (id == 0) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA con id 0, che e' riservato");
+		return false;
+	}
+
+	uint8_t esito = BANCO_RIFIUTATA, motivo;
+	if (ritardo > BANCO_RITARDO_MAX) {
+		motivo = BANCO_RITARDO_FUORI_LIMITI;
+	} else if (!BANCO_ACCESO) {
+		motivo = BANCO_FUNZIONE_SPENTA;
+	} else {
+		/* In fase 1 non c'e' nessun fotogramma su cui dipingere: la funzione
+		 * resta spenta, e questo ramo esiste per non far dimenticare che
+		 * l'accensione va scritta nel registro (regola 5). */
+		esito = BANCO_ACCETTATA;
+		motivo = 0;
+	}
+	reg(s, "BANCO_MARCA id=%u colore=%#08x ritardo=%u ms -> %s motivo=%u",
+	    id, colore, ritardo,
+	    esito == BANCO_ACCETTATA ? "ACCETTATA" : "RIFIUTATA", motivo);
+
+	uint8_t corpo[32];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+	sc_u32(&w, id);
+	sc_byte(&w, esito);
+	sc_byte(&w, motivo);
+	/* ⛔ `istante`: 0 se rifiutata, «ed e' l'unico significato di *assente*
+	 * per questo campo» (§6.0). */
+	for (int i = 0; i < 8; i++)
+		sc_byte(&w, 0);
+	if (!w.pieno)
+		manda_messaggio(s, T_BANCO_ESITO, corpo, w.len);
+	/* ⭐ E la sessione RESTA APERTA. */
 	return true;
 }
 
@@ -700,7 +959,9 @@ rcp_sessione *rcp_apri(const rcp_ganci *g, const char *provenienza,
 	s->ultimo_byte = ora_ms;
 	snprintf(s->provenienza, sizeof s->provenienza, "%s",
 	         provenienza ? provenienza : "?");
-	reg(s, "canale di controllo aperto da %s", s->provenienza);
+	solo_indirizzo(s->provenienza, s->indirizzo, sizeof s->indirizzo);
+	reg(s, "canale di controllo aperto da %s (indirizzo per §4.4-bis: %s)",
+	    s->provenienza, s->indirizzo);
 	return s;
 }
 
@@ -725,8 +986,18 @@ const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : ""; }
 
 bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 {
-	if (s->stato == S_FINITA)
+	if (s->stato == S_FINITA) {
+		/* ⛔ E si SCRIVE.  §4.4 dice che dopo `RESPINTO` il client non deve
+		 * riprovare sulla stessa connessione, e §4.2 che dopo la fine della
+		 * sessione non si spedisce piu' niente: sono due DEVE del CLIENT, e
+		 * l'unico posto da cui si possono osservare e' qui.  ⚠ Senza questa
+		 * riga un client che riprova e' indistinguibile da uno che si e'
+		 * fermato — B11 misurerebbe il silenzio del server invece del
+		 * comportamento della pagina. */
+		reg(s, "⛔ %zu byte arrivati DOPO la fine della sessione da %s", len,
+		    s->provenienza);
 		return false;
+	}
 	/* ⭐ L'orologio del silenzio si azzera QUI, sui byte di RCP. */
 	s->ultimo_byte = ora;
 	if (s->acc_len + len > MAX_ACCUMULO) {
@@ -780,6 +1051,17 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 			}
 			avanti = tratta_attacca(s, &l);
 			break;
+		case T_BANCO_MARCA:
+			/* §7.5: la marca si dipinge su un fotogramma, e i fotogrammi
+			 * cominciano con `SESSIONE`.  Prima, e' un messaggio nello stato
+			 * sbagliato come tutti gli altri. */
+			if (s->stato != S_ATTIVA) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "BANCO_MARCA nello stato sbagliato");
+				return false;
+			}
+			avanti = tratta_banco_marca(s, &l);
+			break;
 		case T_CONGEDO: {
 			uint8_t motivo = le_u8(&l);
 			reg(s, "il client si congeda, motivo=%#04x", motivo);
@@ -791,11 +1073,29 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 			s->g.chiudi(s->g.ctx, motivo ? motivo : RCP_CHIUSO_DALL_UTENTE);
 			return false;
 		}
-		default:
+		default: {
 			/* §7.1 + §3: un tipo sconosciuto sul canale di controllo non si
-			 * ignora — la connessione cade. */
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "tipo sconosciuto sul controllo");
+			 * ignora — la connessione cade.
+			 *
+			 * ⛔ Ma §3.1 punto 1 chiede di scrivere CHE COSA non si e' capito,
+			 * e «sconosciuto» sarebbe falso per meta' dei casi: `ECCOMI`,
+			 * `AMMESSO`, `RESPINTO`, `SESSIONE`, `CURSORE_FORMA`, `TELA` e
+			 * `BANCO_ESITO` sono tipi CONOSCIUTI che viaggiano nell'altro verso
+			 * (§7.1).  Un client che ne manda uno ha un difetto diverso da chi
+			 * inventa un tipo, e il registro deve distinguerli. */
+			bool del_server = tipo == T_ECCOMI || tipo == T_AMMESSO ||
+			                  tipo == T_RESPINTO || tipo == T_SESSIONE ||
+			                  tipo == 0x000A /* CURSORE_FORMA */ ||
+			                  tipo == 0x000E /* TELA */ ||
+			                  tipo == T_BANCO_ESITO;
+			char d[96];
+			snprintf(d, sizeof d,
+			         del_server ? "tipo %#06x: e' del server, non del client"
+			                    : "tipo %#06x sconosciuto sul controllo",
+			         tipo);
+			congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 			return false;
+		}
 		}
 		if (!avanti)
 			return false;
@@ -811,6 +1111,26 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 		s->acc_len -= 6 + lung;
 		s->da_quando = ora;
 	}
+}
+
+/* ⛔ §2.5 — la violazione che NON arriva dal canale di controllo.
+ *
+ * Chi apre uno stream in piu', o ci mette dentro il canale sbagliato, non ha
+ * mandato nessun messaggio di controllo: la violazione la rileva l'OSPITE, che
+ * e' l'unico a vedere gli stream.  ⛔ Ma la chiusura deve restare quella di
+ * §3.1 — registro, `CONGEDO` sul canale di controllo se e' ancora utilizzabile,
+ * e il codice del motivo nella chiusura della sessione — e quelle tre cose le
+ * sa fare solo questo modulo.
+ *
+ * ⚠ E' il **secondo condizionale di §3.1** a rendere il caso interessante: qui
+ *   il canale di controllo di solito e' ancora buono, quindi il `CONGEDO`
+ *   parte davvero.  Un banco che pretendesse tutt'e tre i punti SEMPRE darebbe
+ *   rosso sul codice giusto il giorno in cui non lo fosse (rilievo R3.3). */
+void rcp_violazione(rcp_sessione *s, const char *dettaglio)
+{
+	if (!s)
+		return;
+	congeda(s, RCP_ERRORE_PROTOCOLLO, dettaglio);
 }
 
 bool rcp_tempo(rcp_sessione *s, uint64_t ora)

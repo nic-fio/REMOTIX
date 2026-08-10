@@ -305,6 +305,30 @@ risultato entra nel documento come un fatto misurato.
 > sul momento in cui qualcuno la vedrà.* Un banco che sincronizza due processi non lo faccia
 > leggendo registri.
 
+> ### ⛔ 8. «Il file c'è» e «il file è quello che ho appena costruito» sono due domande diverse
+>
+> *L'ottava veste, del 10 agosto 2026, e questa aveva già acceso il server sbagliato.*
+>
+> Il banco di B11 costruiva un server **guasto di proposito** e poi controllava di poterlo
+> accendere: `test -x bsslserver`. La compilazione era **fallita** — un `struct` di troppo davanti
+> a un typedef — ma il binario di due ore prima era ancora sul disco, eseguibile. ⛔ **Il banco ha
+> acceso il server SANO dichiarando di aver acceso quello guasto**, e tutti e dodici i casi
+> sarebbero falliti col rosso sulla **pagina**, che non c'entrava niente.
+>
+> ⚠ La forma è quella di §1.9 punto 1 — *una misura che può dire «zero» deve poter distinguere lo
+> zero dal fallimento* — applicata a un **artefatto invece che a un numero**. Un file di ieri
+> risponde «sì» a *esiste?* esattamente come uno di adesso.
+>
+> ⭐ **La regola**: dopo aver costruito qualcosa si guarda **l'esito del costruttore**, non la
+> presenza del risultato. E quando il risultato ha una marca — qui `REMOTIX B11` nel sorgente —
+> si controlla **anche quella**, perché risponde alla domanda giusta: *è dentro quel che ci doveva
+> essere?*
+>
+> ⚠ **E lo ha trovato una prova di fumo**, non il banco: otto connessioni che chiedevano otto
+> guasti e stampavano i byte dell'`ECCOMI`. Erano **tutte identiche**, compresa quella che chiedeva
+> «nessun guasto». *Un banco che confronta ogni caso con un caso di controllo identico a sé
+> distingue «il guasto non c'è» da «la pagina non lo vede» prima di accusare qualcuno.*
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque

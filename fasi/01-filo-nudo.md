@@ -609,8 +609,12 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
 | ⭐ **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | ⭐ **7 su 7** `[M]` 10 ago: ciascuna guasta accusata sul **byte dichiarato in anticipo**, e la conforme accettata. Il validatore è **certificato** | 10 ago |
 | ⭐⭐ **B4** — e ha trovato una contraddizione in `RCP.md` | *non era un atteso* | ⛔ §4.3 vietava il trattino basso nei nomi di capacità **e ne definisce uno che ce l'ha** (`video.misura_massima`). Curato in `RCP.md` §4.3 | 10 ago |
-| **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | | |
-| **B11** — le violazioni verso la pagina | 12 su 12 | | |
+| ⭐⭐ **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | ⭐ **44 su 44** `[M]` 10 ago, e per **tutt'e due le strade di §3.1** ogni volta: `CONGEDO` sul controllo *e* il codice del motivo nella chiusura della sessione. ⛔ E dopo **ciascuna** una connessione nuova arriva a `ECCOMI`: il server è sempre lì | 10 ago |
+| ⭐ **B5** — i cinque casi che **devono passare** | *nessuna caduta* | ⭐ **5 su 5** `[M]`: `hevc,vp9` sceglie `hevc` e scrive lo scarto · **vista 300×801** e **1×1** passano (§7.1, R4.10) · `BANCO_MARCA` a funzione spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` e **la sessione regge** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`, **non** `ERRORE_PROTOCOLLO`. ⛔ Senza di loro «il server chiude su tutto» darebbe 44 verdi su 44 | 10 ago |
+| ⭐⭐ **B5** — e ha trovato **un difetto che nessun altro banco vedeva** | *non era un atteso* | ⛔ il contatore **per indirizzo** di §4.4-bis era chiavato sulla `provenienza`, che contiene **la porta**: con un solo tentativo per connessione (§4.4) la porta cambia ogni volta, e quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Curato, e ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** | 10 ago |
+| ⭐ **B5** — e una **seconda contraddizione in `RCP.md`** | *non era un atteso* | ⛔ §2.4 dice che un `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice che il server sceglie *«la più alta che non superi quella del `CIAO`»*, cioè `ECCOMI(1)`. **Byte diversi sul filo per lo stesso ingresso**, e nessuna delle due cita l'altra. Vince §2.4 (la più specifica); `RCP.md` §9 curata | 10 ago |
+| ⭐⭐ **B11** — le violazioni verso la pagina | 12 su 12 | ⭐ **12 su 12 su Firefox 140** `[M]` 10 ago, **più le due proprietà negative** (`desktop` non cambia i byte usciti · nessun battito applicativo). ⛔ **Su Chrome 151: 9 su 12** — i tre che restano ricevono `GIA_ATTIVA_REMOTA` perché **il posto non si libera in tempo**, e la causa è misurata (sotto) | 10 ago |
+| ⛔ **B11** — e il controllo che dice **no** | la pagina contro un server **SANO** deve dire NON-CONFORME | ⭐ **NON-CONFORME** `[M]`, 9 casi su 13 falliti. Senza, «dodici verdi» sarebbe compatibile con una pagina che approva qualunque cosa | 10 ago |
 | **B6** — i tre tetti | 5 s · 60 s · 10 s, **col motivo giusto** | | |
 | **B7** — otto motivi dal lato che riceve, frasi distinte, nessun numero | 8 su 8 **+ 8 frasi distinte** | | |
 | **B8** — ≥ 1 s per campione, **e le tre mediane indistinguibili** | | | |
@@ -930,6 +934,83 @@ terzo giro adesso è `01-b3-terzo-giro.sh`, e gira **dentro** il contenitore, do
 comando **ha ucciso la shell che lo eseguiva** — il modello compariva nella sua stessa riga di
 comando. È la trappola del 9 agosto, scritta nel README di questo progetto, ripetuta il giorno dopo
 da chi l'aveva appena documentata. Si ferma **per PID**.
+
+⛔ **E la quarta veste, la sera dopo, su `01-b5-lancia.sh`**: `bash enter.sh --root "ninja …" > log
+2>&1`. Nessuna sottoshell, nessun `&`, nessuna virgoletta annidata — **solo una redirezione**, e
+`sudo` si è fermato lo stesso. Sei minuti a guardare un processo senza figli e un registro vuoto.
+⭐ **La regola è più larga di come era stata scritta**: *non è `>/dev/null`, è **qualunque
+redirezione attorno a `enter.sh`***. Dentro le virgolette invece è del comando remoto, e la
+richiesta resta sul filo dove qualcuno la vede.
+
+### ⭐⛔ B5: quarantaquattro violazioni, e **un difetto che nessun altro banco poteva vedere**
+
+*Il banco è passato al primo giro su tutte le violazioni. Il rosso è arrivato da un **controllo**,
+ed era stato **previsto per iscritto dentro il banco prima di misurare**.*
+
+⛔ **Il contatore per indirizzo di §4.4-bis non ha mai bloccato nessuno.** La chiave era
+`s->provenienza`, cioè `192.168.0.2:44661` — **con la porta**. E §4.4 ammette **un solo tentativo
+per connessione**: la porta cambia ogni volta, quindi quel contatore valeva **sempre 1**.
+
+⚠ **È la forma peggiore**: il codice c'era, si leggeva bene, sembrava giusto, e **non faceva
+niente**. Nessun registro lo nominava; il sintomo — *«si può provare una parola d'ordine
+all'infinito»* — non arriva mai da solo.
+
+⭐ **E il controllo che l'ha trovato è preciso**: sette tentativi falliti con **sette nomi diversi**
+dallo stesso indirizzo. Con lo stesso nome, il contatore **per nome** copriva il buco e il banco
+sarebbe stato verde. Curato; ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — ⛔ **anche per
+la parola d'ordine giusta**, che è il secondo controllo, quello che distingue un contatore da un
+blocco.
+
+⚠ **E un ordine che è una misura**: il giro completo buono si esegue **prima** del limitatore. Dopo,
+l'indirizzo è bloccato per trenta secondi, e un banco che mettesse la stretta di mano in coda
+leggerebbe quel rifiuto come *«il server è rotto»* — cioè darebbe rosso **proprio quando la regola
+funziona**.
+
+### ⭐⛔ B11: il difetto che serviva **un browser vero** per esistere
+
+*E che B3 non poteva vedere, per cinque giri, con nessun cliente di prova.*
+
+⛔ **Il posto nel registro delle sessioni si liberava solo alla morte della CONNESSIONE.**
+`rcp_libera()` stava in `~ProtoCodec`. Con `aioquic` i due istanti coincidono — il cliente di prova
+chiude tutto — e B3 è rimasto verde. ⭐ **Un browser no**: chiude la *sessione* e **tiene viva la
+connessione**, e da quel momento il posto resta occupato da una sessione che non esiste più.
+Con Chrome: **sette `posto NEGATO` su nove tentativi**, e alla pagina arrivava solo silenzio.
+
+⚠ È **la stessa forma** del difetto che B3 aveva trovato il giorno prima — il posto che non si
+libera — in un altro punto. ⛔ *Il difetto viveva nella differenza fra i due client, quindi nessuna
+prova con un client solo poteva trovarlo.* È `LEZIONI.md` §2.1, la regola dei tre client, applicata
+a una cosa che sembrava già provata.
+
+⛔ **E il secondo, che riguarda §3.1 alla lettera.** `respingi()` manda `RESPINTO` sul canale di
+controllo e chiude la sessione **nella riga dopo**: i due finivano nello stesso volo di pacchetti, e
+il browser processa la capsula `CLOSE_WEBTRANSPORT_SESSION` **prima** dei byte dello stream, che a
+quel punto butta. ⛔ **La pagina non ha mai visto `RESPINTO`: ha visto silenzio.**
+
+⭐ **Ed è la dimostrazione che il punto 3 di §3.1 non è ridondanza**: il motivo è arrivato comunque,
+dentro il codice d'errore della chiusura. *«Se il congedo non arriva — perché lo stream era rotto,
+perché il messaggio era illeggibile — il motivo viaggia comunque»* è vero alla lettera, e questo è
+il caso che lo prova. ⚠ Curato lo stesso da tutt'e due i lati: il server **rimanda** la capsula
+finché la coda d'uscita non è vuota, e la pagina **legge `wt.closed`**.
+
+⛔ **E il terzo, che è della PAGINA e lo ha reso visibile la differenza fra due motori.** La pagina
+**chiudeva senza congedarsi**: chiamava `close()` e basta. Ma §8.1 dice che chi chiude *DEVE*
+mandare `CONGEDO` con un motivo **prima** di chiudere — e vale anche per una chiusura volontaria
+(`CHIUSO_DALL_UTENTE`). ⚠ Con Firefox non si vedeva: il trasporto chiudeva gli stream in tempo e il
+posto si liberava lo stesso. ⛔ Con **Chrome** no, e otto casi su dodici ricevevano
+`GIA_ATTIVA_REMOTA`. ⭐ *Non è una cura per Chrome: è §8.1 applicata, e la pagina non se ne era
+accorta perché nessuno gliel'aveva chiesto.* Aggiunta: i falliti su Chrome sono passati **da 8 a 4**.
+
+⛔ **E quel che resta rosso, misurato e non arrotondato.** Su Chrome, dopo il caso in cui è il
+**server** a chiudere il canale di controllo con un `FIN`, il posto resta occupato: la pagina non ha
+nessun congedo da mandare — §4.2 le vieta di spedire ancora — e il trasporto non arriva in tempo.
+⛔ **Il server deve liberare il posto anche quando a chiudere è lui**, e quella riga non c'è ancora.
+Firefox 140 fa **12 su 12**; Chrome 151 **9 su 12**, e i tre sono questi.
+
+⛔ **E un difetto di banco che avrebbe accusato la pagina**: il confronto *«`desktop` non cambia
+niente»* metteva a paragone **tutti** i byte usciti nei due giri — compreso il `CIAO`, che porta
+`banco.guasto=…kde` contro `…gnome`, due stringhe di lunghezza diversa. Il denominatore conteneva
+**il byte che il banco stesso aveva cambiato**, e avrebbe detto «DIVERSI» anche su una pagina
+perfetta.
 
 ---
 

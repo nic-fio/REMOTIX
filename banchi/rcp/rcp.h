@@ -93,6 +93,11 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len,
  * Restituisce false se la sessione e' finita. */
 bool rcp_tempo(rcp_sessione *s, uint64_t ora_ms);
 
+/* ⛔ §2.5: una violazione rilevata da chi ospita — uno stream di troppo, un
+ * canale nel verso sbagliato — chiusa come dice §3.1.  L'ospite vede gli
+ * stream; il modo di chiudere lo sa solo questo modulo. */
+void rcp_violazione(rcp_sessione *s, const char *dettaglio);
+
 /* Per il banco e per il registro. */
 const char *rcp_stato_nome(const rcp_sessione *s);
 const char *rcp_utente(const rcp_sessione *s);
