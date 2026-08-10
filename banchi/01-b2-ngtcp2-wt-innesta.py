@@ -16,7 +16,16 @@ misurarlo e' aggiungere quello strato a un HTTP/3 che gia' funziona e contare
 le righe.
 
 ⭐ E il conto viene da se': dopo l'innesto, `git diff --stat` nell'albero di
-   ngtcp2 dice esattamente quante righe sono nostre.  Non e' una stima.
+   ngtcp2 dice quante righe sono cambiate sotto `examples/`.
+
+⚠ **«Cambiate» non e' «nostre», e qui c'era scritto che non era una stima.**
+  `git diff` non sa attribuire una riga: misura tutto quel che e' cambiato in
+  quella cartella, **da chiunque**.  Vale come conto NOSTRO solo se l'albero
+  era pulito prima — e per questo lo script adesso lo **guarda e lo dice**,
+  invece di darlo per acquisito (`LEZIONI.md` §1.9, quarta regola: un
+  denominatore si legge dove la cosa succede).
+  ⚠ E una riga **modificata** compare fra le aggiunte: «aggiunte» e' un limite
+  superiore di «nostre», non il loro numero esatto.
 
 ---------------------------------------------------------------------------
 ⛔ CHE COSA MANCA A `ngtcp2`+`nghttp3`, IN CONCRETO
@@ -56,11 +65,30 @@ denominatore, non solo un risultato.  ⚠ Un innesto che «non trova l'appiglio�
 e tira dritto produrrebbe un server che compila, non fa WebTransport, e non lo
 dice.
 """
+import os
 import subprocess
 import sys
 
+ALBERO = "/srv/src/b2/ngtcp2"
 ESEMPI = "/srv/src/b2/ngtcp2/examples"
 MARCA = "REMOTIX B2"
+MARCA_B3 = "REMOTIX B3"
+MARCA_B11 = "REMOTIX B11 GUASTO"
+
+# ⛔ I file che questo innesto tocca.  Servono a `--togli` per VERIFICARE di
+#    aver tolto: lo stato d'uscita di `git` dice che git non ha protestato, non
+#    che la marca sia sparita.
+FILE_TOCCATI = [
+    "http3_server_proto_codec.h",
+    "http3_server_proto_codec.cc",
+    "server.h",
+    "server.cc",
+    "tls_server_session_boringssl.cc",
+]
+
+# ⛔ I file che B3 copia dentro `examples/`.  Git non tocca i file non
+#    tracciati, quindi dopo `--togli` restano li' e nessuno lo dice.
+FILE_DI_B3 = ["rcp.c", "rcp.h", "autenticazione.c"]
 
 # ---------------------------------------------------------------------------
 # I pezzi di codice, in fondo al file per non spezzare la lettura.
@@ -107,7 +135,11 @@ def innesti():
 
   std::expected<void, Error> wt_apri_sessione(Stream *stream);
   size_t wt_riscrivi_impostazioni(const nghttp3_vec *vec, size_t veccnt);
-  WtEsito wt_smista(int64_t stream_id, std::span<const uint8_t> data,
+  // ⛔ `fin` non e' un di piu': RCP.md §4.2 dice che «un FIN su quello stream,
+  //    da una qualunque delle due parti, chiude la sessione», e senza questo
+  //    parametro l'informazione non entra qui in nessun modo — per gli stream
+  //    che riconosciamo noi nemmeno nghttp3 la vede, perche' torniamo prima.
+  WtEsito wt_smista(int64_t stream_id, std::span<const uint8_t> data, bool fin,
                     std::vector<uint8_t> &riunito);
   void wt_accoda(int64_t stream_id, std::span<const uint8_t> dati);
 
@@ -127,7 +159,26 @@ def innesti():
  private:
   // ⚠ Che cosa SIGNIFICHI la chiusura del client non lo decide questo strato:
   //   qui il corpo e' vuoto, e B3 ci innesta la riga di RCP.
-  void wt_chiusa_dal_client(uint8_t codice);
+  //
+  // ⛔ E IL CODICE ARRIVA SU 32 BIT, NON SU 8.  La capsula ne porta quattro di
+  //    byte, e troncarlo al byte basso faceva entrare a verbale `0x0100` come
+  //    `0x00` — cioe' come il **solo** valore che RCP.md §3.1 vieta
+  //    esplicitamente («chiusura senza motivo … NON DEVE essere usato»).  Chi
+  //    lo riceve controlla che sia uno dei motivi di §8.2, e se non lo e' lo
+  //    dice: §3 chiede di scrivere che cosa non si e' capito, non di supplire.
+  void wt_chiusa_dal_client(uint32_t codice);
+
+  // ⛔ IL FIN DEL CLIENT SUL CANALE DI CONTROLLO.  RCP.md §4.2: «un FIN su
+  //    quello stream, da una qualunque delle due parti, chiude la sessione.
+  //    Chi lo riceve DEVE considerarla finita».  ⚠ Era l'unica delle due
+  //    direzioni che nessuno aveva percorso: la pagina che chiude la parte
+  //    scrivente del canale e tiene viva la connessione lasciava il posto del
+  //    registro occupato finche' non moriva la connessione — e una connessione
+  //    un browser la tiene viva.
+  //
+  // ⚠ Vuota qui per la stessa ragione di sopra: che cosa sia «finita» lo sa
+  //   RCP, non il trasporto.  B3 ci innesta la riga.
+  void wt_fin_dal_client(int64_t stream_id);
 
   Handler *handler_;
   ngtcp2_conn *conn_;
@@ -140,6 +191,13 @@ def innesti():
   bool wt_guasto_{false};
   std::array<uint8_t, 256> wt_impbuf_;
   size_t wt_impbuf_len_{0};
+  // ⛔ Quanti byte del SETTINGS riscritto sono GIA' USCITI, e quanti byte di
+  //    nghttp3 quel buffer sostituisce.  Servono perche' una scrittura
+  //    **parziale** e' un esito normale di `ngtcp2_conn_writev_stream` — non
+  //    un guasto — e prima uccideva la connessione: adesso si riprende dal
+  //    punto in cui si era arrivati, come si fa da sempre per `wt_uscita_`.
+  size_t wt_impbuf_off_{0};
+  size_t wt_impbuf_orig_{0};
   // gli stream bidirezionali del client: quelli di cui non si sa ancora che
   // cosa siano, quelli che sono WebTransport, quelli che non lo sono
   std::unordered_map<int64_t, std::vector<uint8_t>> wt_incerti_;
@@ -147,8 +205,17 @@ def innesti():
   std::unordered_map<int64_t, bool> wt_nonwt_;
   std::deque<WtUscita> wt_uscita_;
   int64_t wt_sessione_{-1};
+  // ⛔ La coda nostra e' bloccata per QUESTA passata di scrittura: ngtcp2 ha
+  //    detto STREAM_DATA_BLOCKED, e riprovare dentro la stessa passata
+  //    sarebbe un ciclo che non avanza.  Si azzera in cima a `write_pkt`.
+  bool wt_coda_bloccata_{false};
   // i byte della CONNECT che non compongono ancora una capsula intera
   std::vector<uint8_t> wt_capsbuf_;
+  // ⛔ Quanti byte di una capsula gia' giudicata TROPPO GRANDE restano da
+  //    buttare mentre passano.  RCP.md §6.1: «la lunghezza si controlla prima
+  //    di allocare» — e aspettare i byte invece di allocarli e' lo stesso
+  //    regalo, fatto piu' lentamente.
+  uint64_t wt_capsalta_{0};
 };
 """,
             "lo stato dello strato WebTransport",
@@ -182,10 +249,21 @@ def innesti():
         (
             "http3_server_proto_codec.cc",
             "  std::array<nghttp3_vec, 16> vec;\n\n  for (;;) {\n",
-            "  std::array<nghttp3_vec, 16> vec;\n\n  for (;;) {\n"
-            "    // ⭐ REMOTIX B2 — se la riscrittura delle impostazioni e' andata\n"
-            "    //    storta, ci si ferma: uno stream di controllo mezzo scritto\n"
-            "    //    e' peggio di una connessione chiusa.\n"
+            "  std::array<nghttp3_vec, 16> vec;\n"
+            "\n"
+            "  // ⭐ REMOTIX B2 — una passata di scrittura comincia qui, e la coda\n"
+            "  //    nostra riparte SBLOCCATA: `wt_coda_bloccata_` vale per una\n"
+            "  //    passata sola.  ⚠ Sta fuori dal ciclo apposta — azzerarlo\n"
+            "  //    dentro rimetterebbe in gioco lo stesso elemento a ogni giro,\n"
+            "  //    che e' precisamente il ciclo che non avanza.\n"
+            "  wt_coda_bloccata_ = false;\n"
+            "\n"
+            "  for (;;) {\n"
+            "    // ⭐ REMOTIX B2 — se la riscrittura delle impostazioni ha perso il\n"
+            "    //    conto, ci si ferma: uno stream di controllo sfasato e' peggio\n"
+            "    //    di una connessione chiusa.\n"
+            "    // ⚠ NON e' il caso della scrittura PARZIALE, che e' un esito\n"
+            "    //   normale e si riprende alla passata dopo: vedi `wt_conta`.\n"
             "    if (wt_guasto_) {\n"
             "      return NGTCP2_ERR_CALLBACK_FAILURE;\n"
             "    }\n"
@@ -209,11 +287,21 @@ def innesti():
     bool wt_mio = false;
 
     if (sveccnt > 0 && stream_id == wt_ctrl_id_ && !wt_impostazioni_scritte_) {
-      wt_orig =
-        wt_riscrivi_impostazioni(vec.data(), static_cast<size_t>(sveccnt));
+      // ⛔ La riscrittura si fa UNA VOLTA SOLA.  Se la passata di prima ne ha
+      //    spedito solo un pezzo (`wt_impbuf_off_ > 0`), nghttp3 ci rioffre
+      //    gli stessi byte — non gli abbiamo ancora detto di averli consumati
+      //    — e ricomporre il buffer da capo rispedirebbe il pezzo gia' uscito.
+      if (wt_impbuf_off_ == 0) {
+        wt_impbuf_orig_ =
+          wt_riscrivi_impostazioni(vec.data(), static_cast<size_t>(sveccnt));
+      }
+      wt_orig = wt_impbuf_orig_;
     }
 
-    if (sveccnt <= 0 && !wt_uscita_.empty()) {
+    // ⛔ E la coda nostra si SALTA per tutta questa passata se ngtcp2 ha gia'
+    //    detto «bloccato» su di lei: vedi il ramo STREAM_DATA_BLOCKED piu'
+    //    sotto.  Riprovare adesso non farebbe avanzare il ciclo.
+    if (sveccnt <= 0 && !wt_coda_bloccata_ && !wt_uscita_.empty()) {
       auto &u = wt_uscita_.front();
       stream_id = u.stream_id;
       fin = 0;
@@ -227,8 +315,8 @@ def innesti():
     auto vcnt = static_cast<size_t>(sveccnt);
 
     if (wt_orig) {
-      wt_vec[0].base = wt_impbuf_.data();
-      wt_vec[0].len = wt_impbuf_len_;
+      wt_vec[0].base = wt_impbuf_.data() + wt_impbuf_off_;
+      wt_vec[0].len = wt_impbuf_len_ - wt_impbuf_off_;
       v = wt_vec.data();
       vcnt = 1;
     } else if (wt_mio) {
@@ -244,11 +332,39 @@ def innesti():
       if (!wt_orig) {
         return c;
       }
-      if (c != wt_impbuf_len_) {
+      // ⛔⭐ E UNA SCRITTURA PARZIALE NON E' UN GUASTO.
+      //
+      //    `ndatalen` minore della lunghezza offerta e' un esito NORMALE di
+      //    `ngtcp2_conn_writev_stream`: nello stream frame ci va quel che
+      //    avanza nel pacchetto.  I ~24 byte del SETTINGS riscritto viaggiano
+      //    nel primo volo dopo la stretta di mano, quello che porta anche
+      //    HANDSHAKE_DONE, i NEW_CONNECTION_ID e l'eventuale NEW_TOKEN: con un
+      //    client che annuncia `max_udp_payload_size` vicino a 1200 e una
+      //    connection id di 20 byte, li' dentro 24 byte non ci stanno.
+      //
+      // ⛔ Prima qui MORIVA LA CONNESSIONE, mentre dieci righe piu' sotto la
+      //    coda nostra la stessa scrittura parziale la gestiva con `u.off`.
+      //    Due politiche opposte per lo stesso esito, nello stesso modulo.
+      if (c > wt_impbuf_len_ - wt_impbuf_off_) {
+        // ⛔ Questo si': ngtcp2 dichiara di aver preso PIU' di quel che gli e'
+        //    stato offerto.  Non e' recuperabile e non e' distinguibile da un
+        //    conto sbagliato nostro: lo stream di controllo sarebbe sfasato.
         std::println(stderr,
-                     "REMOTIX B2: impostazioni scritte a meta' ({} di {})", c,
-                     wt_impbuf_len_);
+                     "REMOTIX B2: impostazioni, conto impossibile ({} presi su "
+                     "{} offerti)",
+                     c, wt_impbuf_len_ - wt_impbuf_off_);
         wt_guasto_ = true;
+        return 0;
+      }
+      wt_impbuf_off_ += static_cast<size_t>(c);
+      if (wt_impbuf_off_ < wt_impbuf_len_) {
+        // Si riprende dalla passata dopo, e a nghttp3 non si dice ancora
+        // niente: i suoi byte li avra' consumati soltanto quando il buffer
+        // riscritto sara' uscito tutto.
+        std::println(stderr,
+                     "REMOTIX B2: impostazioni, {} byte su {} — il resto alla "
+                     "passata dopo",
+                     wt_impbuf_off_, wt_impbuf_len_);
         return 0;
       }
       wt_impostazioni_scritte_ = true;
@@ -284,12 +400,33 @@ def innesti():
             "        assert(ndatalen == -1);\n"
             "        // ⭐ REMOTIX B2 — nghttp3 non conosce gli stream WebTransport:\n"
             "        //    dirgli di bloccarne uno sarebbe un errore su uno stream che\n"
-            "        //    per lui non esiste.  I byte si buttano, E SI DICE.\n"
+            "        //    per lui non esiste.\n"
+            "        //\n"
+            "        // ⛔⭐ E I BYTE NON SI BUTTANO: QUESTO E' UN CANALE AFFIDABILE.\n"
+            "        //\n"
+            "        //    Qui c'era `pop_front()`, che scartava l'elemento INTERO —\n"
+            "        //    compreso il caso `u.off > 0`, cioe' quando una parte era\n"
+            "        //    gia' uscita sul filo.  Il messaggio dopo si saldava a quei\n"
+            "        //    byte monchi, e il client leggeva un `tipo`/`lunghezza`\n"
+            "        //    inventato: RCP.md §6.1 gli impone di chiudere con\n"
+            "        //    ERRORE_PROTOCOLLO.  ⛔ Era il SERVER a fabbricare la\n"
+            "        //    violazione del client, e nel registro c'era scritto «byte\n"
+            "        //    buttati» — che descriveva la perdita senza dire che aveva\n"
+            "        //    corrotto lo stream, e senza avvisare RCP di niente.\n"
+            "        //\n"
+            "        // ⚠ E STREAM_DATA_BLOCKED non e' un guasto: e' la condizione\n"
+            "        //   normale e transitoria che si scioglie col primo\n"
+            "        //   MAX_STREAM_DATA.  Si salta la coda nostra per questa\n"
+            "        //   passata e si riprova alla prossima — che arriva col\n"
+            "        //   pacchetto che porta il credito.\n"
             "        if (wt_mio) {\n"
+            "          auto &u = wt_uscita_.front();\n"
             "          std::println(stderr,\n"
-            "                       \"REMOTIX B2: stream {} bloccato, byte buttati\",\n"
-            "                       stream_id);\n"
-            "          wt_uscita_.pop_front();\n"
+            "                       \"REMOTIX B2: stream {} bloccato: {} byte RESTANO \"\n"
+            "                       \"in coda ({} gia' usciti), si riprova alla \"\n"
+            "                       \"passata dopo\",\n"
+            "                       stream_id, u.dati.size() - u.off, u.off);\n"
+            "          wt_coda_bloccata_ = true;\n"
             "          continue;\n"
             "        }\n"
             "        nghttp3_conn_block_stream(httpconn_, stream_id);\n"
@@ -338,8 +475,15 @@ def innesti():
             "  // ⭐ REMOTIX B2 — gli stream WebTransport non sono affari di nghttp3:\n"
             "  //    leggerebbe 0x41 come un tipo di frame sconosciuto e poi il numero\n"
             "  //    della sessione come una LUNGHEZZA, sballando tutto il resto.\n"
+            "  //    ⛔ E il FIN viaggia con loro: RCP.md §4.2 lo rende la fine\n"
+            "  //       della sessione, e per uno stream che gestiamo noi qui e'\n"
+            "  //       l'ULTIMO posto in cui si puo' vedere — sotto si torna\n"
+            "  //       prima di `nghttp3_conn_read_stream2`, quindi nemmeno\n"
+            "  //       nghttp3 lo incontra.\n"
             "  std::vector<uint8_t> wt_riunito;\n"
-            "  switch (wt_smista(stream_id, data, wt_riunito)) {\n"
+            "  switch (wt_smista(stream_id, data,\n"
+            "                    (flags & NGTCP2_STREAM_DATA_FLAG_FIN) != 0,\n"
+            "                    wt_riunito)) {\n"
             "  case WtEsito::MIO:\n"
             "  case WtEsito::ATTENDI:\n"
             "    return {};\n"
@@ -541,6 +685,19 @@ size_t wt_leggi_varint(uint64_t *v, const uint8_t *src, size_t len) {
 constexpr uint64_t WT_ENABLE_WEBTRANSPORT = 0x2b603742ULL;
 constexpr uint64_t WT_MAX_SESSIONS = 0xc671706aULL;
 
+// ⛔⭐ IL TETTO DI UNA CAPSULA, E SI CONTROLLA PRIMA DI TENERE I BYTE.
+//
+// `RCP.md` §6.1: «un ricevente che alloca `lunghezza` byte e poi verifica ha
+// gia' regalato un megabyte a chiunque sappia scrivere sei byte».  ⚠ Qui non
+// si allocava: si **aspettava** — che e' lo stesso regalo fatto piu'
+// lentamente, e senza nemmeno un tetto.
+//
+// ⭐ Il numero e' quel che serve alla sola capsula che ci riguarda:
+// `CLOSE_WEBTRANSPORT_SESSION` porta un codice a 32 bit e una ragione che
+// WebTransport limita a **1024 byte**.  Piu' i due interi variabili di testa,
+// che al massimo sono otto ciascuno.
+constexpr uint64_t WT_CAPSULA_MAX = 1024 + 4;
+
 nghttp3_ssize wt_niente_dati(nghttp3_conn *conn, int64_t stream_id,
                              nghttp3_vec *vec, size_t veccnt, uint32_t *pflags,
                              void *user_data, void *stream_user_data) {
@@ -660,17 +817,67 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
   if (stream_id != wt_sessione_ || dati.empty()) {
     return;
   }
+  // ⛔ I byte di una capsula gia' giudicata troppo grande si buttano MENTRE
+  //    PASSANO, senza tenerli: e' l'unico modo di non farsi riempire la
+  //    memoria da chi sa scrivere due interi variabili.
+  if (wt_capsalta_ > 0) {
+    uint64_t n = wt_capsalta_ < dati.size()
+                   ? wt_capsalta_
+                   : static_cast<uint64_t>(dati.size());
+    wt_capsalta_ -= n;
+    dati = dati.subspan(static_cast<size_t>(n));
+    if (dati.empty()) {
+      return;
+    }
+  }
   wt_capsbuf_.insert(wt_capsbuf_.end(), dati.begin(), dati.end());
   for (;;) {
     uint64_t tipo = 0, lung = 0;
+    // ⚠ Qui il buffer non puo' crescere senza fine: un intero variabile e' al
+    //   massimo 8 byte, quindi con 8 byte il tipo si legge sempre e con 16 si
+    //   legge sempre anche la lunghezza.
     auto a = wt_leggi_varint(&tipo, wt_capsbuf_.data(), wt_capsbuf_.size());
     if (a == 0) {
       return;
     }
     auto b = wt_leggi_varint(&lung, wt_capsbuf_.data() + a,
                              wt_capsbuf_.size() - a);
-    if (b == 0 || wt_capsbuf_.size() < a + b + lung) {
+    if (b == 0) {
       return;
+    }
+    // ⛔⭐ E LA LUNGHEZZA SI CONTROLLA QUI, PRIMA DI ASPETTARE I BYTE.
+    //
+    //    L'ingresso che questo chiude: la pagina manda, sullo stream della
+    //    CONNECT, un tipo di capsula sconosciuto e una lunghezza di 2^62-1;
+    //    poi manda dati, all'infinito.  Nessuna capsula si completava mai,
+    //    quindi `erase` non veniva mai chiamata, `wt_capsbuf_` cresceva di
+    //    ogni byte che arrivava — e `http_consume` continuava ad allargare il
+    //    credito, quindi il client poteva spedire senza fine.  ⛔ Su una
+    //    connessione che non ha ancora superato la stretta di mano di RCP.
+    //
+    // ⚠ E la variante non ostile e' altrettanto vera: una capsula legittima
+    //   ma sconosciuta di mezzo gigabyte veniva bufferizzata TUTTA per poi
+    //   essere scartata.  RFC 9297 §3.2 permette di saltarla senza tenerla, ed
+    //   e' quel che si fa adesso.
+    if (lung > WT_CAPSULA_MAX) {
+      std::println(stderr,
+                   "REMOTIX B2: capsula {:#x} lunga {} byte, oltre il tetto di "
+                   "{}: si SALTA senza tenerla (RFC 9297 §3.2; RCP.md §6.1, la "
+                   "lunghezza si controlla prima di allocare)",
+                   tipo, lung, WT_CAPSULA_MAX);
+      uint64_t qui = wt_capsbuf_.size() - a - b;
+      uint64_t presi = qui < lung ? qui : lung;
+      wt_capsalta_ = lung - presi;
+      wt_capsbuf_.erase(wt_capsbuf_.begin(),
+                        wt_capsbuf_.begin() +
+                          static_cast<long>(a + b + static_cast<size_t>(presi)));
+      if (wt_capsalta_ > 0) {
+        return;
+      }
+      continue;
+    }
+    if (wt_capsbuf_.size() < a + b + lung) {
+      return; // sta sotto il tetto: si puo' aspettare che arrivi tutta
     }
     const uint8_t *corpo = wt_capsbuf_.data() + a + b;
     if (tipo == 0x2843 && lung >= 4) {
@@ -681,18 +888,25 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
       std::string ragione{corpo + 4, corpo + lung};
       std::println(stderr,
                    "REMOTIX B2: la pagina ha CHIUSO la sessione WebTransport: "
-                   "codice {:#04x} «{}»",
+                   "codice {:#x} «{}»",
                    codice, ragione);
-      wt_chiusa_dal_client(static_cast<uint8_t>(codice));
+      // ⛔ Il codice si consegna INTERO.  Troncarlo al byte basso faceva
+      //    entrare `0x0100` a verbale come `0x00`, cioe' come il solo valore
+      //    che RCP.md §3.1 vieta — e i due registri della stessa chiusura si
+      //    contraddicevano a due righe di distanza.
+      wt_chiusa_dal_client(codice);
     }
     wt_capsbuf_.erase(wt_capsbuf_.begin(),
                       wt_capsbuf_.begin() + static_cast<long>(a + b + lung));
   }
 }
 
-// ⚠ Vuota apposta: quel che la chiusura del client SIGNIFICHI non lo sa lo
-//   strato WebTransport — lo sa il protocollo, e RCP arriva con B3.
-void ProtoCodec::wt_chiusa_dal_client(uint8_t codice) { (void)codice; }
+// ⚠ Vuote apposta: quel che la chiusura del client e la fine del canale
+//   SIGNIFICHINO non lo sa lo strato WebTransport — lo sa il protocollo, e RCP
+//   arriva con B3.
+void ProtoCodec::wt_chiusa_dal_client(uint32_t codice) { (void)codice; }
+
+void ProtoCodec::wt_fin_dal_client(int64_t stream_id) { (void)stream_id; }
 
 void ProtoCodec::wt_accoda(int64_t stream_id, std::span<const uint8_t> dati) {
   wt_uscita_.push_back(
@@ -701,6 +915,7 @@ void ProtoCodec::wt_accoda(int64_t stream_id, std::span<const uint8_t> dati) {
 
 ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
                                           std::span<const uint8_t> data,
+                                          bool fin,
                                           std::vector<uint8_t> &riunito) {
   // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli
   // stream WebTransport arrivano tutti di li'.
@@ -721,6 +936,13 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
       wt_accoda(stream_id, data);
       ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, data.size());
       ngtcp2_conn_extend_max_offset(conn_, data.size());
+    }
+    // ⛔ E IL FIN SI GUARDA DOPO I BYTE, non prima: gli ultimi byte sono
+    //    arrivati **insieme** a lui e vanno consegnati mentre la sessione e'
+    //    ancora viva, o chi li riceve li leggerebbe come byte spediti dopo la
+    //    fine — cioe' come una violazione del client che non c'e' stata.
+    if (fin) {
+      wt_fin_dal_client(stream_id);
     }
     return WtEsito::MIO;
   }
@@ -755,6 +977,11 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
     }
     ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, consumati);
     ngtcp2_conn_extend_max_offset(conn_, consumati);
+    // ⛔ Anche qui: lo stream puo' essere riconosciuto e finito nello stesso
+    //    pacchetto (RCP.md §4.2, il FIN da una qualunque delle due parti).
+    if (fin) {
+      wt_fin_dal_client(stream_id);
+    }
     return WtEsito::MIO;
   }
 
@@ -815,13 +1042,86 @@ def scrivi(percorso, testo):
         f.write(testo)
 
 
+def righe_di_commento(righe):
+    """⛔ UNA REGOLA SOLA PER I COMMENTI, E LA STESSA NEI TRE INNESTI.
+
+    Il 10 agosto 2026 i tre script ne avevano tre diverse sulla stessa
+    grandezza — `//` qui, `//`+`/*`+`*` in B3, `*`+`/*` in quello di quiche —
+    e la seconda classificava come COMMENTO due righe di C++ vero che stanno
+    nel corpo innestato da questo file:
+
+        *v = src[0] & 0x3f;
+        *v = (*v << 8) | src[i];
+
+    ⚠ Sono dereferenziazioni, e cominciano per `*`.  Qui l'asterisco vale come
+      commento solo quando e' la continuazione di un blocco `/* … */`, cioe'
+      quando e' seguito da uno spazio o quando chiude il blocco.
+    """
+    return sum(1 for r in righe
+               if r.strip().startswith(("//", "/*", "* ", "*/"))
+               or r.strip() == "*")
+
+
+def togli():
+    # ⛔ E SI DICE CHE COSA SI PORTA VIA.
+    #
+    #    `git checkout -- examples` rimette a posto TUTTA la cartella: se sopra
+    #    c'e' l'innesto di B3, o i guasti di B11, o una prova fatta a mano,
+    #    spariscono anche quelli.  Il messaggio di prima diceva soltanto «si
+    #    rimette l'esempio com'era», cioe' meno di quel che il comando fa.
+    print("== Si rimette l'esempio com'era")
+    prima = ""
+    for f in FILE_TOCCATI:
+        try:
+            prima += leggi(f"{ESEMPI}/{f}")
+        except FileNotFoundError:
+            pass
+    for marca, chi in ((MARCA_B3, "l'innesto di B3"),
+                       (MARCA_B11, "i guasti di B11")):
+        if marca in prima:
+            print(f"   ⚠ c'e' anche {chi}: sparisce insieme a questo.")
+    r = subprocess.run(["git", "-C", ALBERO, "checkout", "--", "examples"])
+    if r.returncode != 0:
+        print(f"   ⛔ git checkout e' fallito (uscita {r.returncode}):"
+              " non si e' tolto niente.")
+        return r.returncode
+
+    # ⛔ E SI VERIFICA DI AVER TOLTO.
+    #
+    #    Lo stato d'uscita di git dice che git non ha protestato, non che la
+    #    marca sia sparita: e' la quarta regola di `LEZIONI.md` §1.9 — «zero» e
+    #    «sono fallita» non devono avere la stessa faccia.  L'unica lettura che
+    #    vale e' rileggere i file.  `01-b11-guasto.sh` questo controllo lo fa
+    #    gia' per la propria marca; qui mancava.
+    resta = 0
+    for f in FILE_TOCCATI:
+        try:
+            n = leggi(f"{ESEMPI}/{f}").count(MARCA)
+        except FileNotFoundError:
+            n = 0
+        if n:
+            print(f"   NO  restano {n} righe con «{MARCA}» in {f}")
+            resta += n
+    if resta:
+        print(f"   ⛔ {resta} tracce di «{MARCA}» sopravvivono:"
+              " l'esempio NON e' com'era.")
+        return 3
+    print(f"   OK  nessuna traccia di «{MARCA}» nei {len(FILE_TOCCATI)}"
+          " file toccati")
+
+    # ⚠ E i file NON TRACCIATI git non li tocca: se B3 e' passato di qui, i
+    #   suoi tre file restano orfani dentro un esempio «com'era».
+    orfani = [f for f in FILE_DI_B3 if os.path.exists(f"{ESEMPI}/{f}")]
+    if orfani:
+        print(f"   ⚠ restano in examples/ i file di B3: {', '.join(orfani)}")
+        print("     git checkout non tocca i file non tracciati; li porta via"
+              " 01-b3-rcp-innesta.py --togli")
+    return 0
+
+
 def main():
     if "--togli" in sys.argv:
-        print("== Si rimette l'esempio com'era")
-        r = subprocess.run(
-            ["git", "-C", "/srv/src/b2/ngtcp2", "checkout", "--", "examples"],
-        )
-        return r.returncode
+        return togli()
 
     lista = innesti()
     # Il pezzo 12 e' il corpo, che sta in una costante a parte per leggibilita'.
@@ -838,6 +1138,21 @@ def main():
         print("   ⚠ l'innesto c'e' gia': non si tocca niente.")
         print("     per rifarlo da capo: --togli, poi di nuovo questo comando")
         return 0
+
+    # ⛔ IL DENOMINATORE DEL CONTO DELLE RIGHE, LETTO PRIMA DI TOCCARE NIENTE.
+    #
+    #    `git diff -- examples` misura tutto quel che e' cambiato in quella
+    #    cartella, da chiunque: e' il conto NOSTRO solo se prima non c'era
+    #    nient'altro.  Si guarda adesso, non dopo, perche' dopo la nostra
+    #    modifica c'e' dentro e non si distingue piu'.
+    #    ⚠ I file non tracciati (`??`) non entrano nel diff, quindi non
+    #      sporcano il conto: si ignorano qui.
+    sporchi = [
+        r for r in subprocess.run(
+            ["git", "-C", ALBERO, "status", "--porcelain", "--", "examples"],
+            capture_output=True, text=True).stdout.splitlines()
+        if not r.startswith("??")
+    ]
 
     testi = {}
     guasti = 0
@@ -870,22 +1185,36 @@ def main():
     #   primo tentativo del 10 agosto passava `grep -c` attraverso tre shell
     #   annidate, le virgolette si sono rotte, e ha stampato «0 commenti, 0
     #   righe vuote» su un file che ne ha 85 e 42.  Un altro falso zero.
-    print("\n== Quante righe sono NOSTRE — il dato di DECISIONI.md §6.4")
+    print("\n== Quante righe sono cambiate sotto examples/ — il dato di §6.4")
     subprocess.run(
-        ["git", "-C", "/srv/src/b2/ngtcp2", "diff", "--stat", "--", "examples"],
+        ["git", "-C", ALBERO, "diff", "--stat", "--", "examples"],
     )
     d = subprocess.run(
-        ["git", "-C", "/srv/src/b2/ngtcp2", "diff", "-U0", "--", "examples"],
+        ["git", "-C", ALBERO, "diff", "-U0", "--", "examples"],
         capture_output=True,
         text=True,
     ).stdout.splitlines()
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
     vuote = sum(1 for r in agg if not r.strip())
-    comm = sum(1 for r in agg if r.strip().startswith("//"))
+    comm = righe_di_commento(agg)
     print(f"\n   righe aggiunte : {len(agg)}")
     print(f"     vuote        : {vuote}")
     print(f"     di commento  : {comm}")
     print(f"     ⭐ di CODICE  : {len(agg) - vuote - comm}")
+
+    # ⛔ E IL DENOMINATORE SI STAMPA ACCANTO AL NUMERO, non si sottintende.
+    if sporchi:
+        print("\n   ⛔ E QUESTO CONTO NON E' ATTRIBUIBILE A NOI: prima")
+        print("      dell'innesto questi file erano gia' modificati —")
+        for r in sporchi:
+            print(f"        {r}")
+        print("      git diff non sa di chi sia una riga: misura la cartella.")
+    else:
+        print("\n   ⭐ e l'albero era PULITO prima dell'innesto (git status)")
+        print("      — che e' l'unica cosa che rende «cambiate» = «nostre».")
+    print("\n   ⚠ «aggiunte» resta un limite superiore: una riga MODIFICATA")
+    print("     (per esempio SSL_set_early_data_enabled a 0) compare fra le")
+    print("     aggiunte, e la sua riga vecchia fra le tolte.")
     print("\n   ⚠ E' lo strato WebTransport, NON un server: sotto c'e' il loro")
     print("     HTTP/3 completo.  Il numero risponde a «quanto collante resta a")
     print("     noi», che e' la domanda di §6.4 — non a «quanto pesa il server».")

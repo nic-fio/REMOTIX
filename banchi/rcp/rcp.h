@@ -118,7 +118,17 @@ bool rcp_e_finita(const rcp_sessione *s);
  * chi si ricollega subito. */
 void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice);
 
-/* Per il banco e per il registro. */
+/* Per il banco e per il registro.
+ *
+ * ⚠ I nomi sono: `attesa-ciao` · `attesa-credenziali` · `attesa-verdetto` ·
+ *   `attesa-attacca` · `attiva` · `staccata-per-silenzio` · `finita`.
+ *
+ * ⛔ `staccata-per-silenzio` e' del 10 agosto 2026, rilievo R9.2: una sessione
+ *    che ha taciuto trenta secondi ha lasciato il posto (§8.2 motivo 0x0F) e
+ *    **non e' piu' attiva**.  Prima restava `attiva`, e il server finiva con due
+ *    sessioni «attiva» per lo stesso utente — quel che l'invariante I2 vieta.
+ *    Chi confronta questa stringa deve sapere che il caso esiste; se torna a
+ *    parlare e il posto e' libero, la sessione torna `attiva` da sola. */
 const char *rcp_stato_nome(const rcp_sessione *s);
 const char *rcp_utente(const rcp_sessione *s);
 

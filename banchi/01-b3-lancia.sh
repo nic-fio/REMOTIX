@@ -68,10 +68,32 @@ valida() # $1 = etichetta
 	#    giudicare» e «conforme» sono due cose diverse.
 	if [ ! -f "$FUORI/b3-$et.rcpreg" ]; then
 		ko "nessuna registrazione da giudicare per «$et»"
+		BENE=1
 		return 1
 	fi
-	bash "$ENTRA" --root "python3 $DENTRO/01-b4-validatore.py $DENTRO/b3-$et.rcpreg" \
-		| tail -3 | sed 's/^/        /'
+	# ⛔ IL VERDETTO DELL'ARBITRO ENTRA NELL'ESITO — rilievo R8.6.
+	#
+	#    Fino al 10 agosto 2026 questa riga finiva in `| tail -3 | sed …`, e
+	#    con `pipefail` senza `set -e` il valore che ne usciva era quello di
+	#    `sed`, cioe' 0 sempre; per giunta nessuno lo leggeva.  ⛔ Il
+	#    validatore poteva stampare «NON CONFORME» su tutt'e tre le tracce e
+	#    questo script stampava lo stesso «⭐ B3: tre giri su tre» ed usciva 0.
+	#    E il `tail -3` tagliava per giunta l'elenco delle violazioni: si
+	#    vedeva la coda, non il verdetto.
+	#
+	# ⚠ Niente pipe e niente sostituzione di comando attorno a `enter.sh`: il
+	#   suo stato d'uscita e' quello del programma remoto (non c'e' `exec`), e
+	#   una sottoshell o una redirezione qui si porterebbero via la richiesta
+	#   di password di sudo.  L'uscita va a terminale come esce.
+	bash "$ENTRA" --root "python3 $DENTRO/01-b4-validatore.py $DENTRO/b3-$et.rcpreg"
+	local giudizio=$?
+	if [ "$giudizio" -eq 0 ]; then
+		ok "⭐ l'arbitro di B4 dichiara CONFORME la traccia «$et»"
+	else
+		ko "⛔ l'arbitro di B4 RIFIUTA la traccia «$et» (uscita $giudizio)"
+		BENE=1
+	fi
+	return "$giudizio"
 }
 
 # ---------------------------------------------------------------------------
@@ -108,7 +130,14 @@ E3=$?
 inf "terzo giro: uscita $E3"
 [ "$E3" -eq 0 ] || BENE=1
 inf "e il validatore di B4 sulle due tracce del terzo giro:"
+# ⛔ DUE, non una — rilievo R8.9.  La riga diceva «sulle due tracce» e ne
+#    validava una: `b3-terza.rcpreg`, cioe' la traccia di chi ha RICEVUTO il
+#    `CONGEDO(GIA_ATTIVA_REMOTA)` — l'unico oggetto che il terzo giro esiste per
+#    produrre — non arrivava all'arbitro da nessuna parte.  Il solo controllo su
+#    quel rifiuto restava un `grep` su una stringa stampata, che non distingue
+#    nemmeno un `CONGEDO(0x0F)` da un `RESPINTO(0x0F)`: i byte li guarda B4.
 valida viva
+valida terza
 
 # ---------------------------------------------------------------------------
 log "Esito"

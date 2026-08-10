@@ -8,9 +8,15 @@
   .no  { color: #c00; font-weight: bold; }
 </style>
 <h1>B11 — le prove di violazione verso la <em>pagina</em></h1>
-<p>Un server <strong>guasto di proposito</strong> manda alla pagina dodici cose
-sbagliate. Quel che si misura non è il server: è se <strong>la pagina applica
+<p>Un server <strong>guasto di proposito</strong> manda alla pagina cose
+sbagliate — e qualcuna giusta, per vedere che la pagina <em>non</em> reagisca.
+Quel che si misura non è il server: è se <strong>la pagina applica
 §3</strong> — o se la ingoia in silenzio.</p>
+<!-- ⛔ Il conto lo scrive il programma, non chi ha scritto la frase.  Questa
+     riga diceva «dodici» mentre i casi erano tredici, ed è il rilievo R1.29 di
+     `RCP.md` §0-bis fatto in casa: quel numero è l'unica prova di completezza
+     che il documento porta, e chi lo verificava contando ne trovava di più. -->
+<p id="quadro">in attesa…</p>
 <pre id="uscita">in attesa…</pre>
 
 <script>
@@ -49,21 +55,105 @@ const IMPRONTA   = P.get("impronta") || "";
 const UTENTE     = P.get("utente") || "prova";
 const PAROLA     = P.get("parola") || "parola-di-prova";
 
+// ⛔ La versione che questa pagina sa parlare, e sta scritta UNA volta sola.
+//    §2.2: «e le due DEVONO coincidere» — quella del percorso `/rcp/<n>` e
+//    quella del `CIAO`.  ⚠ Erano due numeri che non si guardavano: la
+//    costante qui sotto e la stringa che l'operatore digita nella query, e un
+//    `CIAO(1)` su `/rcp/2` — la combinazione che §2.2 dichiara illegale —
+//    partiva senza una riga di registro (rilievo R6.19).  Il confronto sta
+//    all'avvio, in `parti()`.
+const VERSIONE = 1;
+
 const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
             RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007,
             CONGEDO: 0x000C };
 const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
-const MOTIVO = { 0x07: "CREDENZIALI_ERRATE", 0x08: "TROPPI_TENTATIVI",
-                 0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
-                 0x0B: "ERRORE_PROTOCOLLO", 0x0D: "TEMPO_SCADUTO",
-                 0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA" };
-const ERRORE_PROTOCOLLO = 0x0B, VERSIONE_INCOMPATIBILE = 0x0A;
+
+// ⛔ §8.2 PER INTERO — quindici motivi, e la pagina li sa nominare tutti.
+//    ⚠ Questa tabella partiva da `0x07`: mancavano sette motivi su quindici,
+//      fra cui lo `0x01` che la pagina spedisce lei stessa — e il proprio
+//      registro diceva «motivo 1 = ?», cioe' non sapeva il nome del motivo
+//      che mandava (rilievo R6.9).
+//
+// ⛔ E la seconda colonna e' §8.2 alla lettera: «ogni motivo DEVE essere
+//    mostrabile all'utente in una frase comprensibile — `BUDGET_PIENO` non e'
+//    "errore 6" — e **la frase la costruisce il client, dal codice**».  Il
+//    campo `dettaglio` invece NON si mostra all'utente: e' per il registro.
+const MOTIVO = new Map([
+  [0x01, ["CHIUSO_DALL_UTENTE",       "il client e' stato chiuso"]],
+  [0x02, ["INATTIVITA",               "nessun input per trenta minuti"]],
+  [0x03, ["SESSIONE_ABBANDONATA",     "la sessione e' rimasta sei ore senza nessuno attaccato"]],
+  [0x04, ["SESSIONE_LOCALE_PREVALSA", "qualcuno si e' seduto davanti alla macchina"]],
+  [0x05, ["GIA_ATTIVA_LOCALE",        "sulla macchina c'e' gia' una sessione grafica locale"]],
+  [0x06, ["BUDGET_PIENO",             "questa macchina non ha piu' capacita' di codifica"]],
+  [0x07, ["CREDENZIALI_ERRATE",       "utente o parola d'ordine sbagliati"]],
+  [0x08, ["TROPPI_TENTATIVI",         "troppi tentativi: si riprova fra qualche minuto"]],
+  [0x09, ["NIENTE_IN_COMUNE",         "il server non parla nessuno dei formati di questo client"]],
+  [0x0A, ["VERSIONE_INCOMPATIBILE",   "il server parla una versione del protocollo che questo client non conosce"]],
+  [0x0B, ["ERRORE_PROTOCOLLO",        "il server ha mandato qualcosa che il protocollo non ammette"]],
+  [0x0C, ["SERVER_IN_CHIUSURA",       "il server si sta spegnendo"]],
+  [0x0D, ["TEMPO_SCADUTO",            "il tempo di attesa e' scaduto"]],
+  [0x0E, ["SESSIONE_NON_SERVIBILE",   "la sessione grafica non si e' potuta avviare"]],
+  [0x0F, ["GIA_ATTIVA_REMOTA",        "c'e' gia' un altro client attaccato a questa sessione"]],
+]);
+const nome_motivo  = (m) => (MOTIVO.get(m) || ["?"])[0];
+const frase_motivo = (m) => MOTIVO.has(m) ? MOTIVO.get(m)[1]
+  : `motivo ${m} (0x${m.toString(16)}), che §8.2 non definisce`;
+
+const ERRORE_PROTOCOLLO = 0x0B, VERSIONE_INCOMPATIBILE = 0x0A,
+      NIENTE_IN_COMUNE = 0x09, TEMPO_SCADUTO = 0x0D;
 
 // ⛔ I nomi di capacita' che RCP/1 dichiara DEL CLIENT (§4.3).  Se uno di
 //    questi arriva in `ECCOMI`, e' il lato sbagliato: il nome e' conosciuto,
 //    quindi l'eccezione dei nomi sconosciuti non lo copre.
 const SOLO_DEL_CLIENT = new Set(["video.livello", "video.misura_massima",
                                  "input.tocco", "client.nome"]);
+// ⛔ I nomi che RCP/1 definisce e che questa pagina conosce (§4.3).  ⚠ Era un
+//    oggetto letterale interrogato con `n in { … }`, e l'operatore `in` risale
+//    `Object.prototype`: la capacita' `__proto__` — nove byte di `a-z` e `_`,
+//    cioe' un nome PERFETTAMENTE LEGALE per §4.3 — risultava conosciuta, la
+//    riga di registro obbligatoria non veniva scritta, e `cap["__proto__"]=…`
+//    non memorizzava niente.  Un `Set` non ha catena, e `cap` e' una `Map`
+//    (rilievo R6.10).
+const NOMI_NOTI = new Set(["video.codec", "video.profondita", "audio.codec",
+                           "appunti.testo", "banco.marca"]);
+
+// ⭐ Le capacita' di QUESTA pagina, scritte una volta sola: le legge il `CIAO`
+//    che si spedisce e le rilegge il controllo di §4.3 sull'`ECCOMI` che
+//    torna.  Due copie che non si guardano sono la forma esatta del rilievo
+//    R6.19, e §4.3 impone `pcm` e `8` a ENTRAMBI i lati.
+const NOSTRE = new Map([["video.codec", "hevc,av1"],
+                        ["video.profondita", "8,10"],
+                        ["audio.codec", "opus,pcm"],
+                        ["client.nome", "pagina-b11 0.1.0"]]);
+
+// ⛔ §6.1: «un ricevente che legge una lunghezza incoerente con quel che il
+//    tipo prevede DEVE chiudere con ERRORE_PROTOCOLLO».  §4.4 da' ad
+//    `AMMESSO` un corpo VUOTO e a `RESPINTO` un solo `u8`.
+//    ⚠ Nessun corpo veniva misurato: un `AMMESSO` con 1024 byte dentro
+//      passava, e un `RESPINTO` con il corpo vuoto dava `m.corpo[0] ===
+//      undefined` — cioe' un esito che il banco non sapeva leggere invece di
+//      un `ERRORE_PROTOCOLLO` (rilievo R6.7).
+const CORPO_ESATTO = new Map([[T.AMMESSO, 0], [T.RESPINTO, 1]]);
+
+// ⛔ Il tetto di attesa di una risposta del server, ed e' NOSTRO: va detto,
+//    perche' RCP non ne da' nessuno al server.  §4.6 fissa TRE tetti e sono
+//    tutti sul CLIENT — «`CIAO` ricevuto», «`CREDENZIALI` ricevute»,
+//    «`ATTACCA` ricevuto»; al server §4.5 impone soltanto di non rispondere
+//    «mai con un silenzio».
+//
+// ⚠ Il valore era 12 s, e alla scadenza la pagina accusava il server di una
+//   violazione che non esiste: l'avvio di un compositore su una macchina
+//   carica supera i dodici secondi senza che nessuno abbia sbagliato — §8.2
+//   ha un motivo apposta, `SESSIONE_NON_SERVIBILE` = «un compositore che non
+//   parte» — e un PAM su LDAP con il secondo fisso di §4.4-bis pure
+//   (rilievo R6.4).
+//
+// ⭐ L'unico orologio che RCP mette su questa attesa e' quello del TRASPORTO:
+//    `max_idle_timeout` = 30 s (§2.2), «scaduto, il client e' staccato».  Il
+//    tetto sta appena sopra, cosi' a parlare per primo e' il trasporto — e la
+//    pagina non pronuncia un verdetto che non ha osservato.
+const TETTO_RISPOSTA = 32000;
 
 // ── i byte ─────────────────────────────────────────────────────────────────
 function str(t) {
@@ -90,6 +180,14 @@ function inquadra(tipo, corpo) {
 function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
 function u32(n) { const a = new Uint8Array(4); new DataView(a.buffer).setUint32(0, n); return a; }
 
+// ⛔ Il decodificatore e' `fatal`, e non e' un dettaglio: senza
+//    `{ fatal: true }` `TextDecoder` NON solleva davanti a UTF-8 illegale —
+//    sostituisce e restituisce `U+FFFD`.  §6.0 dice «⛔ UTF-8 non valido e'
+//    `ERRORE_PROTOCOLLO`» e §3 «NON DEVE indovinare»: due byte illegali che
+//    diventano due caratteri legali sono indovinare **e** tacere, e nessuno
+//    dei due lati puo' piu' sapere che cosa era stato spedito (rilievo R6.6).
+const DECODIFICA = new TextDecoder("utf-8", { fatal: true });
+
 class Lettore {
   constructor(b) { this.b = b; this.i = 0; this.v = new DataView(b.buffer, b.byteOffset, b.length); this.corto = false; }
   u8()  { if (this.i + 1 > this.b.length) { this.corto = true; return 0; } return this.b[this.i++]; }
@@ -98,10 +196,20 @@ class Lettore {
   str() {
     const n = this.u16();
     if (this.corto || this.i + n > this.b.length) { this.corto = true; return ""; }
-    const s = new TextDecoder().decode(this.b.subarray(this.i, this.i + n));
+    const grezzo = this.b.subarray(this.i, this.i + n);
+    let s;
+    try { s = DECODIFICA.decode(grezzo); }
+    catch (e) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `stringa di ${n} byte che non e' UTF-8 valido, allo scostamento ${this.i} del corpo (§6.0)`);
+    }
     this.i += n;
     return s;
   }
+  // ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del corpo».
+  //    Chi legge un corpo deve poter dire se ne e' avanzato: senza, un
+  //    `ECCOMI` con `quante = 0` e cinquecento byte di coda passa (R6.7).
+  avanzati() { return this.b.length - this.i; }
 }
 
 // ⛔ La violazione, dal lato della pagina.  Chiuderla e' §3.1 alla lettera, e
@@ -120,6 +228,15 @@ class Rcp {
     this.coda = [];
     this.attesa = null;
     this.fine = false;             // FIN sul canale di controllo (§4.2)
+    // ⛔ E «rotto» NON e' «finito», anche se tutt'e due fermano la sessione.
+    //    §4.2 dice «⛔ in byte: **un FIN** su quello stream»: il FIN e' un
+    //    fatto preciso, non «la lettura e' finita in qualunque modo».  ⚠ Il
+    //    ramo d'errore poneva la STESSA `fine = true` e non scriveva niente:
+    //    un `RESET_STREAM` sul canale di controllo produceva `muta` e un
+    //    registro vuoto, cioe' il caso `fin-sul-controllo` restava verde
+    //    senza distinguere il fatto che dichiara di misurare — la forma
+    //    d'errore E8 di `REVIEWER.md` §2 (rilievo R6.12).
+    this.rotto = false;
     // ⛔ §3.1 punto 3: il motivo viaggia ANCHE nel codice d'errore applicativo
     //    con cui si chiude la sessione WebTransport.  ⭐ E non e' ridondanza:
     //    il 10 agosto 2026 questo banco ha misurato un caso in cui e' l'UNICA
@@ -143,6 +260,116 @@ class Rcp {
     //    riceve uno chiude con ERRORE_PROTOCOLLO — e la pagina se ne accorge
     //    solo se STA A GUARDARE questo flusso.
     this._sorveglia();
+    // ⛔ E QUESTA E' L'ALTRA META' DI §2.5, che mancava.
+    //
+    //    Dei cinque canali di §2.5 la pagina ne sorvegliava UNO.  Quattro
+    //    vivono su stream unidirezionali e uno sui datagram, e su quei flussi
+    //    non c'era nessun lettore: un server che avesse aperto uno stream
+    //    unidirezionale con dentro `0x04` (audio, che §2.5 da' ai soli
+    //    datagram) o `0x01` (input, che §2.5 da' al CLIENT) non avrebbe
+    //    trovato nessuno ad accorgersene — lo stream restava li', il caso
+    //    arrivava in fondo e dichiarava `prosegue`.  ⚠ E il commento qui
+    //    sopra lo dice da sempre: «la pagina se ne accorge solo se STA A
+    //    GUARDARE questo flusso» (rilievo R6.3).
+    this._sorveglia_uni();
+    this._sorveglia_datagram();
+  }
+
+  async _sorveglia_uni() {
+    try {
+      const rr = this.wt.incomingUnidirectionalStreams.getReader();
+      while (true) {
+        const { value, done } = await rr.read();
+        if (done) return;
+        // ⚠ Senza `await`: uno stream che si apre e non scrive niente non deve
+        //   accecare la sorveglianza su quelli che vengono dopo.
+        this._giudica_uni(value).catch(() => {});
+      }
+    } catch (e) { /* la sessione e' finita: non e' un fatto di questo controllo */ }
+  }
+
+  // ⛔ §2.5: «si leggono i PRIMI DUE BYTE dello stream, che sono in ogni caso
+  //    un campo `tipo`.  Il byte alto dice il canale».
+  async _giudica_uni(s) {
+    let alto = null;
+    try {
+      const r = s.getReader();
+      const { value } = await r.read();
+      if (value && value.length >= 1) alto = value[0];
+      r.cancel().catch(() => {});
+    } catch (e) {
+      this.reg("⚠ stream unidirezionale dal server, illeggibile: " + e.message);
+      return;
+    }
+    if (alto === null) {
+      // ⛔ E ogni tolleranza si scrive (§3, ultima riga): uno stream aperto e
+      //    chiuso senza un byte non e' giudicabile, e va detto invece che
+      //    ignorato.
+      this.reg("⚠ stream unidirezionale dal server senza nemmeno un byte: " +
+               "§2.5 vuole un `tipo`, e qui non c'e' niente da leggere");
+      return;
+    }
+    const NOMI = { 0x00: "controllo", 0x01: "input", 0x02: "appunti",
+                   0x03: "video", 0x04: "audio" };
+    const perche = {
+      // ⛔ «`0x00` controllo — su uno stream unidirezionale e' ERRORE_PROTOCOLLO:
+      //    il controllo vive solo sullo stream 0»
+      0x00: "il canale di controllo vive SOLO sullo stream 0 (§2.5)",
+      // ⛔ «un canale usato nel verso sbagliato — un `0x01` che arriva dal
+      //    server … lo e' a sua volta»
+      0x01: "il canale di input e' del CLIENT: verso sbagliato (§2.5)",
+      // ⛔ «`0x04` audio — solo su datagram.  Su uno stream e' ERRORE_PROTOCOLLO»
+      0x04: "l'audio viaggia SOLO su datagram (§2.5, §6.3)",
+    };
+    if (perche[alto] !== undefined) {
+      this.reg(`⛔ stream unidirezionale dal server con byte alto 0x` +
+               `${alto.toString(16).padStart(2, "0")} (${NOMI[alto]}): ${perche[alto]}`);
+      this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
+        `stream unidirezionale con canale ${NOMI[alto]}: ${perche[alto]}`) });
+      this._sveglia();
+      return;
+    }
+    if (alto === 0x02 || alto === 0x03) {
+      // ⚠ Verso giusto e canale legale, ma il CONTENUTO e' di una fase che
+      //   non e' questa: gli appunti sono §7.4 e i fotogrammi §6.2.  Qui si
+      //   registra e non si giudica — e' un punto aperto, non una tolleranza
+      //   silenziosa (§3, ultima riga).
+      this.reg(`⚠ stream unidirezionale dal server, canale ${NOMI[alto]} ` +
+               `(0x0${alto}): verso legale per §2.5, ma il suo contenuto ` +
+               `appartiene a una fase successiva — si registra e non si giudica`);
+      return;
+    }
+    // ⛔ «Un byte alto diverso da questi cinque e' ERRORE_PROTOCOLLO».
+    this.reg(`⛔ stream unidirezionale con byte alto 0x` +
+             `${alto.toString(16).padStart(2, "0")}: non e' nessuno dei cinque canali di §2.5`);
+    this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
+      `byte alto 0x${alto.toString(16).padStart(2, "0")} sconosciuto: §2.5 ne definisce cinque`) });
+    this._sveglia();
+  }
+
+  // ⛔ §6.3 ed eccezione 2 di §3: un datagram corrotto o troppo corto si
+  //    SCARTA invece di chiudere — «scartandolo **nel registro**».  Una
+  //    tolleranza silenziosa e' indistinguibile da un difetto.
+  // ⚠ In fase 1 non ne deve arrivare nessuno: l'audio e' di una fase
+  //   successiva.  Questa sorveglianza serve a poterlo DIRE.
+  async _sorveglia_datagram() {
+    try {
+      const r = this.wt.datagrams.readable.getReader();
+      while (true) {
+        const { value, done } = await r.read();
+        if (done) return;
+        const tipo = value.length >= 2 ? (value[0] << 8) | value[1] : -1;
+        if (value.length < 12 || tipo !== 0x0401) {
+          this.reg(`⚠ datagram scartato: ${value.length} byte, tipo 0x` +
+                   `${tipo < 0 ? "??" : tipo.toString(16)} — §6.3 lo scarta ` +
+                   `invece di chiudere (eccezione 2 di §3), E LO SCRIVE`);
+        } else {
+          this.reg(`⚠ datagram audio (0x0401) di ${value.length} byte in fase 1: ` +
+                   `il canale e' legale per §2.5, il suo contenuto e' di una ` +
+                   `fase successiva — si registra e non si giudica`);
+        }
+      }
+    } catch (e) { /* la sessione e' finita */ }
   }
 
   async _sorveglia() {
@@ -176,7 +403,22 @@ class Rcp {
         this.arrivati = n;
         this._sfoglia();
       }
-    } catch (e) { this.fine = true; this._sveglia(); }
+    } catch (e) {
+      // ⛔ E QUI NON C'E' NESSUN FIN.  Questo ramo scatta su un
+      //    `RESET_STREAM`, su uno `STOP_SENDING` o sulla caduta della
+      //    sessione: fatti diversi da quello di §4.2, e la pagina non li deve
+      //    confondere ne' tacere (§3, ultima riga).
+      // ⚠ Se a chiudere siamo stati noi, il rifiuto della lettura e' atteso e
+      //   non e' un fatto del server: non si registra e non si accusa
+      //   nessuno.
+      if (!this.fine && !this.congedato && !this.chiudendo) {
+        this.rotto = true;
+        this.reg("⛔ il canale di controllo si e' ROTTO — non e' il FIN di §4.2: " +
+                 e.name + ": " + e.message);
+      }
+      this.fine = true;
+      this._sveglia();
+    }
   }
 
   _sfoglia() {
@@ -201,7 +443,10 @@ class Rcp {
 
   _sveglia() { if (this.attesa) { const a = this.attesa; this.attesa = null; a(); } }
 
-  async prossimo(attesa_ms = 12000) {
+  // ⚠ `attesa_ms` e' «quanto si sta ad ascoltare», e NON e' un tetto imposto
+  //   al server: chi lo usa come tetto lo dichiara, e la dichiarazione sta in
+  //   `attendi()` accanto a `TETTO_RISPOSTA` (rilievo R6.4).
+  async prossimo(attesa_ms = TETTO_RISPOSTA) {
     while (this.coda.length === 0 && !this.fine) {
       let scaduto = false;
       await new Promise((ris) => {
@@ -216,7 +461,7 @@ class Rcp {
     return m;
   }
 
-  async manda(tipo, corpo) {
+  async manda(tipo, corpo, oscura) {
     // ⛔ §4.2: dopo la fine della sessione non si spedisce piu' niente.  E dopo
     //    `RESPINTO` non si riprova sulla stessa connessione (§4.4).  Le due
     //    regole si applicano QUI, in un punto solo: sparse fra i chiamanti,
@@ -225,17 +470,49 @@ class Rcp {
       this.reg("⛔ non si spedisce: la sessione e' finita (§4.2)");
       return false;
     }
-    // ⛔ §4.4: «dopo RESPINTO il client non riprova sulla stessa connessione».
-    //    ⚠ Si blocca SOLO `CREDENZIALI`, non tutto: un `CONGEDO` che segnala
-    //      una violazione del server e' un'altra cosa, e §3.1 lo impone.  Un
-    //      client che si zittisse del tutto perderebbe il punto 2 di §3.1
-    //      proprio nel caso in cui il server ha appena sbagliato.
-    if (this.respinto && tipo === T.CREDENZIALI) {
-      this.reg("⛔ non si riprova dopo RESPINTO (§4.4)");
+    // ⛔ §4.4, il riquadro del 10 agosto 2026: «dopo `RESPINTO` al client resta
+    //    UNA COSA SOLA che puo' dire: `CONGEDO`. … Qualunque **altro**
+    //    messaggio, **e in particolare** un secondo `CREDENZIALI`, e' la
+    //    violazione che §4.4 vieta».
+    //
+    // ⚠ La guardia era scritta come un elenco di uno — bloccava il solo
+    //   `CREDENZIALI` — mentre «in particolare» dice che `CREDENZIALI` e' UN
+    //   caso, non IL caso: un `ATTACCA` o un `VISTA` spediti dopo `RESPINTO`
+    //   passavano, e il registro del server li avrebbe contati come byte dopo
+    //   la fine (rilievo R6.17).
+    //
+    // ⭐ E il `CONGEDO` resta permesso, che e' il punto: un client che si
+    //    zittisse del tutto perderebbe il punto 2 di §3.1 proprio nel caso in
+    //    cui il server ha appena sbagliato — ed e' il caso
+    //    `respinto-poi-congedo`.
+    if (this.respinto && tipo !== T.CONGEDO) {
+      this.reg(`⛔ dopo RESPINTO si puo' mandare solo CONGEDO: ` +
+               `${NOME_T[tipo] || tipo} non parte (§4.4)`);
       return false;
     }
     const b = inquadra(tipo, corpo);
-    this.usciti.push(Array.from(b).map(x => x.toString(16).padStart(2, "0")).join(""));
+    // ⛔ §4.4: la parola d'ordine «non deve comparire in nessun registro a
+    //    nessun livello — nemmeno in `traccia`».  ⚠ E `usciti` E' un registro:
+    //    finisce sullo schermo, dentro `dettaglio`, e da li' in
+    //    `b2-esiti.jsonl` e sul terminale di chi lancia il banco.  Con
+    //    `?parola=segreta` in quel file compariva `…0773656772657461…`
+    //    (rilievo R6.2).
+    //
+    // ⭐ La cura e' quella di §11.1, scritta **per intero** per questo identico
+    //    problema: si tiene la LUNGHEZZA VERA, si sostituiscono i SOLI byte
+    //    segreti con altrettanti byte di riempimento `0x2A` — non zeri, che
+    //    sono un valore che i campi possono avere davvero — e si dichiara
+    //    l'intervallo oscurato.  Cosi' il confronto
+    //    `desktop-non-cambia-niente` continua a confrontare byte per byte, e
+    //    la parola non c'e'.
+    const q = Array.from(b).map((x) => x.toString(16).padStart(2, "0"));
+    if (oscura) {
+      for (let i = oscura.inizio; i < oscura.inizio + oscura.quanti; i++) q[i] = "2a";
+      this.reg(`⭐ ${oscura.quanti} byte oscurati in ${NOME_T[tipo]} allo ` +
+               `scostamento ${oscura.inizio}: la lunghezza e' quella vera, i ` +
+               `byte segreti no (§4.4, §11.1)`);
+    }
+    this.usciti.push(q.join(""));
     await this.w.write(b);
     return true;
   }
@@ -244,62 +521,198 @@ class Rcp {
    *    diagnosi: se il congedo non arriva, il motivo viaggia dentro la
    *    chiusura della sessione. */
   async chiudi(motivo, dettaglio) {
-    this.reg(`chiusura: motivo ${motivo.toString(16)} = ${MOTIVO[motivo] || "?"} — ${dettaglio}`);
+    // ⚠ Da qui in poi il canale di lettura puo' cadere perche' lo stiamo
+    //   chiudendo NOI: non e' il canale che si rompe, e non si accusa nessuno.
+    this.chiudendo = true;
+    // ⛔ E IL MOTIVO 0 NON ESISTE.  §3.1, ultima riga: «⚠ il codice **0**
+    //    significa "chiusura senza motivo" e **NON DEVE** essere usato: ogni
+    //    chiusura ha un motivo di §8.2».  ⚠ La pagina lo spediva — dieci
+    //    righe dopo aver dichiarato quello stesso byte una violazione del
+    //    server — perche' il silenzio del server produceva `Violazione(0)`:
+    //    era indulgente con se' stessa nel punto esatto in cui era severa con
+    //    l'altro, cioe' `REVIEWER.md` §5 (rilievo R6.1).  Qui non passa.
+    if (!MOTIVO.has(motivo)) {
+      this.reg(`⛔ motivo di congedo 0x${motivo.toString(16)} fuori da §8.2: ` +
+               `si chiude con ERRORE_PROTOCOLLO, e questa riga e' un difetto ` +
+               `di questa pagina, non del server`);
+      motivo = ERRORE_PROTOCOLLO;
+    }
+    this.reg(`chiusura: motivo ${motivo.toString(16)} = ${nome_motivo(motivo)} — ${dettaglio}`);
+    // ⛔ §8.2: «ogni motivo DEVE essere mostrabile all'utente in una frase
+    //    comprensibile … e la frase la costruisce il client, dal codice».  Il
+    //    `dettaglio` qui sopra e' l'altra cosa: sta nel registro, e all'utente
+    //    non si mostra.
+    this.reg(`  e all'utente si direbbe: «${frase_motivo(motivo)}»`);
     if (!this.fine) {
-      try { await this.manda(T.CONGEDO, unisci([new Uint8Array([motivo]), str(dettaglio)])); }
-      catch (e) { this.reg("il CONGEDO non e' partito: " + e.message); }
+      try {
+        if (await this.manda(T.CONGEDO, unisci([new Uint8Array([motivo]), str(dettaglio)])))
+          await this._svuota();
+      } catch (e) { this.reg("il CONGEDO non e' partito: " + e.message); }
     }
     this.congedato = true;
     try { this.wt.close({ closeCode: motivo, reason: dettaglio.slice(0, 100) }); }
+    catch (e) { this.reg("la chiusura della sessione non e' riuscita: " + e.message); }
+  }
+
+  /* ⛔ E I DUE PASSI DI §3.1 SONO IN ORDINE, non nello stesso volo.
+   *
+   *    §3.1 e' un elenco **numerato e ordinato**: «2. DEVE mandare `CONGEDO`
+   *    … 3. DEVE chiudere la sessione WebTransport», e §8.1 dice «**prima**
+   *    di chiudere».  ⚠ `await w.write(b)` si risolve quando il pezzo e'
+   *    ACCODATO allo stream, non quando e' sul filo: la riga dopo abbatteva
+   *    la sessione — e con essa lo stream e i byte non ancora spediti
+   *    (rilievo R6.11).
+   *
+   * ⭐ Che la corsa esista non e' un'ipotesi, sta scritta in questo file: il
+   *    10 agosto 2026 un `RESPINTO` «spedito» e' stato «buttato insieme alla
+   *    sessione che si chiudeva nello stesso volo».  La pagina aveva
+   *    riconosciuto la corsa nel server e l'aveva lasciata in se' stessa.
+   *
+   * ⚠ E l'attesa e' col tetto, perche' se il server e' gia' andato via
+   *   `close()` non si risolve mai — e allora si DICE che non e' dimostrato
+   *   che il congedo sia partito, invece di darlo per buono.  §3.1 punto 3 e'
+   *   la seconda strada, e resta.
+   */
+  async _svuota() {
+    let partito = false;
+    try {
+      await Promise.race([
+        this.w.close().then(() => { partito = true; }).catch(() => {}),
+        new Promise((r) => setTimeout(r, 1500)),
+      ]);
+    } catch (e) { /* lo stream era gia' rotto: lo dice la riga qui sotto */ }
+    if (partito) this.reg("⭐ il CONGEDO e' sul filo: lo stream di controllo si e' chiuso");
+    else this.reg("⚠ non e' dimostrato che il CONGEDO sia partito: lo stream " +
+                  "non si e' chiuso entro 1,5 s — resta la seconda strada di §3.1 punto 3");
+  }
+
+  /* ⛔ Quando a congedarsi e' il SERVER, la sessione e' finita e la pagina non
+   *    ha piu' niente da dire.
+   *
+   * ⚠ Prima non chiamava nessuno: `congedato` restava falso, `fine` pure — il
+   *   `CONGEDO` del server non porta un FIN — e in fondo al caso la pagina
+   *   rispondeva `CONGEDO(0x01 CHIUSO_DALL_UTENTE)`, cioe' spediva **dopo la
+   *   fine** (§4.2) e con un motivo **che non aveva osservato**: nessun utente
+   *   aveva chiuso niente (rilievo R6.18).
+   *
+   * ⭐ Il codice della chiusura e' quello RICEVUTO, e va detto: non e' un
+   *    verdetto della pagina, e' l'eco del motivo del server.
+   */
+  chiudi_perche_congedato(motivo) {
+    this.congedato = true;
+    this.reg(`la sessione e' finita: il server si e' congedato con ` +
+             `${nome_motivo(motivo)}.  ⛔ Da qui la pagina non spedisce piu' ` +
+             `niente (§4.2), e chiude la sessione con il motivo RICEVUTO — ` +
+             `non con uno suo`);
+    try { this.wt.close({ closeCode: motivo, reason: "congedo del server" }); }
     catch (e) { this.reg("la chiusura della sessione non e' riuscita: " + e.message); }
   }
 }
 
 // ── la stretta di mano, con il rigore di §3 ────────────────────────────────
 function corpo_ciao(guasto) {
-  const voci = [["video.codec", "hevc,av1"], ["video.profondita", "8,10"],
-                ["audio.codec", "opus,pcm"], ["client.nome", "pagina-b11 0.1.0"],
-                ["banco.guasto", guasto]];
-  return unisci([u16(1), u16(voci.length),
+  const voci = [...NOSTRE, ["banco.guasto", guasto]];
+  return unisci([u16(VERSIONE), u16(voci.length),
                  ...voci.flatMap(([n, v]) => [str(n), str(v)])]);
 }
 
+/* ⛔ `CONGEDO` e `RESPINTO` possono arrivare in QUALUNQUE momento, e si leggono
+ *    allo stesso modo ovunque arrivino: qui, una volta sola.
+ *
+ * ⚠ Il controllo dopo `SESSIONE` non li leggeva affatto — un `CONGEDO(0x00)`
+ *   finiva in «messaggio non richiesto dopo SESSIONE», cioe' il caso
+ *   `congedo-motivo-zero` passava **per un motivo diverso da quello che
+ *   dichiara di misurare**.
+ */
+function interpreta(rcp, m) {
+  // ⛔ §6.1: la lunghezza del corpo si misura contro quel che il tipo prevede.
+  const esatto = CORPO_ESATTO.get(m.tipo);
+  if (esatto !== undefined && m.corpo.length !== esatto) {
+    throw new Violazione(ERRORE_PROTOCOLLO,
+      `${NOME_T[m.tipo]} con un corpo di ${m.corpo.length} byte invece di ` +
+      `${esatto} (§4.4, §6.1)`);
+  }
+  if (m.tipo === T.CONGEDO) {
+    const l = new Lettore(m.corpo);
+    const mot = l.u8();
+    const det = l.str();
+    if (l.corto) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `CONGEDO troncato: ${m.corpo.length} byte, e §8 ne vuole un u8 piu' una stringa`);
+    }
+    if (l.avanzati() !== 0) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `CONGEDO con ${l.avanzati()} byte di troppo su ${m.corpo.length} (§6.1)`);
+    }
+    // ⛔ §3.1: il codice 0 «non deve essere usato», e chi lo riceve non lo
+    //    ingoia.
+    if (mot === 0) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        "CONGEDO con motivo 0x00, che §3.1 vieta");
+    }
+    // ⛔ §3: «un campo fuori intervallo» impone la chiusura, e §8.2 obbliga il
+    //    client a costruire una FRASE dal codice.  ⚠ Un motivo che §8.2 non
+    //    definisce veniva accettato come congedo legittimo — `0x99` diventava
+    //    `congedato-dal-server:0x99` — e per quel codice non esiste nessuna
+    //    frase da mostrare: un motivo inventato non e' un motivo
+    //    (rilievo R6.9).
+    if (!MOTIVO.has(mot)) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `CONGEDO con motivo 0x${mot.toString(16).padStart(2, "0")}, che §8.2 non definisce`);
+    }
+    const e = new Error(`CONGEDO ${mot.toString(16)} = ${nome_motivo(mot)} «${det}»`);
+    e.congedo = mot;
+    throw e;
+  }
+  if (m.tipo === T.RESPINTO) {
+    rcp.respinto = true;
+    const e = new Error(`RESPINTO motivo ${m.corpo[0]} = ${nome_motivo(m.corpo[0])}`);
+    e.respinto = m.corpo[0];
+    throw e;
+  }
+}
+
 async function attendi(rcp, quale) {
-  const m = await rcp.prossimo();
+  const m = await rcp.prossimo(TETTO_RISPOSTA);
   if (m === null) {
+    // ⛔ §4.2: se il canale di controllo si e' chiuso, la sessione E' finita.
+    //    Non e' un silenzio del server ed e' un fatto diverso: da qui non si
+    //    spedisce piu' niente, nemmeno un CONGEDO.
+    if (rcp.fine) {
+      const e = new Error(rcp.rotto
+        ? `il canale di controllo si e' rotto prima di ${quale}`
+        : `FIN sul canale di controllo prima di ${quale} (§4.2)`);
+      e.finita = true;
+      throw e;
+    }
     // ⛔ Prima di dire «silenzio» si guarda la TERZA strada di §3.1.
     await new Promise((r) => setTimeout(r, 600));
     if (rcp.codice_chiusura !== null && rcp.codice_chiusura !== undefined &&
         rcp.codice_chiusura !== 0) {
       const c = rcp.codice_chiusura;
       rcp.reg(`⚠ nessun CONGEDO sul controllo, ma la sessione si e' chiusa con ` +
-              `il codice ${c.toString(16)} = ${MOTIVO[c] || "?"} (§3.1 punto 3)`);
+              `il codice ${c.toString(16)} = ${nome_motivo(c)} (§3.1 punto 3)`);
+      if (!MOTIVO.has(c)) {
+        rcp.reg(`⛔ e quel codice §8.2 non lo definisce: la sessione si e' ` +
+                `chiusa con un motivo che non esiste`);
+      }
       const e = new Error(`chiusura della sessione, codice ${c.toString(16)}`);
       e.congedo = c;
       throw e;
     }
-    throw new Violazione(0, `niente invece di ${quale} (silenzio)`);
+    // ⛔ E QUI LA PAGINA NON ACCUSA IL SERVER.  Il tetto e' suo — RCP non ne
+    //    da' nessuno al server (§4.6 li da' tutti al client) — quindi quel che
+    //    scade e' un'attesa del banco, non un DEVE del server.  Si chiude
+    //    perche' un client non puo' aspettare per sempre, col motivo di §8.2
+    //    che dice quel che e' successo, e si scrive di chi era il tetto.
+    rcp.reg(`⚠ ${quale} non e' arrivato entro ${TETTO_RISPOSTA / 1000} s.  ` +
+            `⛔ Il tetto e' del BANCO, non di RCP: §4.6 fissa tre tetti e sono ` +
+            `tutti sul client, e al server nessuna riga impone un tempo di ` +
+            `risposta.  Questa non e' una violazione del server`);
+    throw new Violazione(TEMPO_SCADUTO,
+      `niente invece di ${quale} entro ${TETTO_RISPOSTA / 1000} s: tetto del banco, non di §4.6`);
   }
-  // ⛔ §3.1: il codice 0 «non deve essere usato», e chi lo riceve non lo
-  //    ingoia.
-  if (m.tipo === T.CONGEDO) {
-    const l = new Lettore(m.corpo);
-    const mot = l.u8();
-    const det = l.str();
-    if (mot === 0) {
-      throw new Violazione(ERRORE_PROTOCOLLO,
-        "CONGEDO con motivo 0x00, che §3.1 vieta");
-    }
-    const e = new Error(`CONGEDO ${mot.toString(16)} = ${MOTIVO[mot] || "?"} «${det}»`);
-    e.congedo = mot;
-    throw e;
-  }
-  if (m.tipo === T.RESPINTO) {
-    rcp.respinto = true;
-    const e = new Error(`RESPINTO motivo ${m.corpo[0]} = ${MOTIVO[m.corpo[0]] || "?"}`);
-    e.respinto = m.corpo[0];
-    throw e;
-  }
+  interpreta(rcp, m);
   if (NOME_T[m.tipo] !== quale) {
     // ⛔ Un tipo sconosciuto sul canale di controllo non si ignora (§3).
     throw new Violazione(ERRORE_PROTOCOLLO,
@@ -315,33 +728,133 @@ function leggi_eccomi(corpo, reg) {
   //    parlare, e congedare con VERSIONE_INCOMPATIBILE se non lo e' — un
   //    server che risponde con una versione piu' alta di quella chiesta sta
   //    sbagliando, e accettarla in silenzio e' l'indulgenza che §3 vieta».
-  if (versione !== 1) {
+  if (versione !== VERSIONE) {
     throw new Violazione(VERSIONE_INCOMPATIBILE,
-      `ECCOMI dichiara la versione ${versione}, il CIAO chiedeva 1`);
+      `ECCOMI dichiara la versione ${versione}, il CIAO chiedeva ${VERSIONE}`);
   }
   const quante = l.u16();
-  const cap = {};
+  // ⛔ Una `Map`, non un oggetto: `cap["__proto__"] = "abc"` non memorizza
+  //    niente — un no-op silenzioso — e `__proto__` e' un nome di capacita'
+  //    perfettamente legale per §4.3 (rilievo R6.10).
+  const cap = new Map();
   for (let i = 0; i < quante; i++) {
     const n = l.str(), v = l.str();
-    if (l.corto) throw new Violazione(ERRORE_PROTOCOLLO, "ECCOMI troncato");
+    if (l.corto) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `ECCOMI troncato alla capacita' ${i + 1} di ${quante}: ${corpo.length} byte ricevuti`);
+    }
+    // ⛔ §4.3: «un **nome** e' fatto di `a-z`, `0-9`, `.` e `_`, da 1 a 64
+    //    byte».  ⚠ Senza questo controllo `VIDEO.CODEC=hevc` veniva solo
+    //    registrato come «nome sconosciuto», cioe' trattato con l'eccezione
+    //    che §4.3 dice di non estendergli (rilievo R6.8).
+    if (!/^[a-z0-9._]{1,64}$/.test(n)) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `nome di capacita' «${n}»: §4.3 vuole da 1 a 64 byte fra a-z, 0-9, «.» e «_»`);
+    }
+    // ⛔ §4.3: «un **valore** e' testo UTF-8 stampabile, al massimo 256 byte»,
+    //    e «⛔ un valore **vuoto** e' ERRORE_PROTOCOLLO: chi non ha niente da
+    //    dire non manda la capacita'».
+    const byte_v = new TextEncoder().encode(v).length;
+    if (byte_v === 0) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `la capacita' «${n}» ha valore vuoto, che §4.3 vieta`);
+    }
+    if (byte_v > 256) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `il valore di «${n}» e' di ${byte_v} byte: §4.3 ne ammette al massimo 256`);
+    }
+    if ([...v].some((c) => c.codePointAt(0) < 0x20 || c.codePointAt(0) === 0x7F)) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `il valore di «${n}» non e' testo stampabile (§4.3)`);
+    }
+    // ⛔ §4.3: «un nome ripetuto due volte e' ERRORE_PROTOCOLLO.  "Vince
+    //    l'ultimo" e "vince il primo" sono due implementazioni diverse dello
+    //    stesso documento, che e' precisamente cio' che questo documento
+    //    esiste per impedire».  ⚠ La riga `cap[n] = v` aveva implementato
+    //    «vince l'ultimo», cioe' UNA delle due letture che §4.3 vieta
+    //    entrambe (rilievo R6.5).
+    if (cap.has(n)) {
+      throw new Violazione(ERRORE_PROTOCOLLO,
+        `la capacita' «${n}» arriva due volte in ECCOMI, che §4.3 vieta`);
+    }
     if (SOLO_DEL_CLIENT.has(n)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
         `«${n}» arriva dal server: §4.3 la dichiara del client, e il nome e' conosciuto`);
     }
-    if (!(n in { "video.codec": 1, "video.profondita": 1, "audio.codec": 1,
-                 "appunti.testo": 1, "banco.marca": 1 })) {
+    if (!NOMI_NOTI.has(n)) {
       // ⭐ Eccezione 1 di §3: un nome sconosciuto si ignora — E SI SCRIVE.
       reg(`⭐ capacita' sconosciuta ignorata: ${n}=${v} (§3, eccezione 1)`);
     }
-    cap[n] = v;
+    cap.set(n, v);
+  }
+  // ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del corpo».
+  //    ⚠ Con `quante = 0` e cinquecento byte di coda il ciclo non girava,
+  //      `l.corto` restava falso e nessuno confrontava quel che aveva letto
+  //      con quel che era arrivato (rilievo R6.7).
+  if (l.avanzati() !== 0) {
+    throw new Violazione(ERRORE_PROTOCOLLO,
+      `ECCOMI con ${l.avanzati()} byte di troppo su ${corpo.length}: ` +
+      `${quante} capacita' dichiarate, lette tutte (§6.1)`);
+  }
+  // ⛔ E QUI SI NEGOZIA, che e' l'altra meta' di §4.3 e viveva solo nella
+  //    tabella dei motivi.  ⚠ Il motivo `0x09 NIENTE_IN_COMUNE` era scritto
+  //    fra i motivi e non lo sollevava NESSUNA riga del file: era un motivo
+  //    che questa pagina non poteva emettere (rilievo R6.8).
+  for (const [nome, nostro] of NOSTRE) {
+    if (!NOMI_NOTI.has(nome)) continue;      // `client.nome` non si negozia
+    const suo = cap.get(nome);
+    if (suo === undefined) {
+      // ⚠ §4.3: «chi non dichiara `pcm` o `8` … si congeda con
+      //   NIENTE_IN_COMUNE, non con ERRORE_PROTOCOLLO: non ha sbagliato a
+      //   scrivere, non ha di che parlare».
+      throw new Violazione(NIENTE_IN_COMUNE,
+        `il server non dichiara «${nome}», che §4.3 impone a entrambi`);
+    }
+    // ⛔ «Una voce sconosciuta DENTRO un elenco si scarta»: un `hevc,vp9` si
+    //    legge come `hevc`.  ⚠ «Ma se dopo lo scarto l'elenco resta vuoto, si
+    //    congeda con NIENTE_IN_COMUNE».
+    const miei = nostro.split(",");
+    const comuni = suo.split(",").filter((x) => miei.includes(x));
+    if (comuni.length === 0) {
+      throw new Violazione(NIENTE_IN_COMUNE,
+        `«${nome}»: il server offre ${suo}, questa pagina ${nostro}, e dopo lo scarto non resta niente`);
+    }
+    reg(`⭐ §4.3 ${nome}: il server offre ${suo}, in comune ${comuni.join(",")}`);
+  }
+  // ⚠ §4.3: «`pcm` DEVE essere dichiarato da entrambi: e' la base sempre
+  //   disponibile … allo stesso modo `8` DEVE comparire in
+  //   `video.profondita` di entrambi».
+  for (const [nome, voce] of [["audio.codec", "pcm"], ["video.profondita", "8"]]) {
+    if (!cap.get(nome).split(",").includes(voce)) {
+      throw new Violazione(NIENTE_IN_COMUNE,
+        `il server non dichiara «${voce}» in «${nome}», che §4.3 impone a entrambi`);
+    }
   }
   return { versione, cap };
 }
 
-function leggi_sessione(corpo) {
+function leggi_sessione(corpo, reg) {
   const l = new Lettore(corpo);
   const stato = l.u8(), lar = l.u32(), alt = l.u32(), desktop = l.str();
-  if (l.corto) throw new Violazione(ERRORE_PROTOCOLLO, "SESSIONE troncato");
+  if (l.corto) {
+    throw new Violazione(ERRORE_PROTOCOLLO,
+      `SESSIONE troncato: ${corpo.length} byte, e §4.5 ne vuole un u8, due u32 e una stringa`);
+  }
+  if (l.avanzati() !== 0) {
+    throw new Violazione(ERRORE_PROTOCOLLO,
+      `SESSIONE con ${l.avanzati()} byte di troppo su ${corpo.length} (§6.1)`);
+  }
+  // ⛔ §4.5: «`u8 stato   1 = NUOVA, 2 = RIPRESA`», e §3 chiude su «un campo
+  //    fuori intervallo».  ⚠ Lo `stato` veniva letto e non piu' guardato: un
+  //    terzo stato inesistente entrava senza che nessuno lo nominasse, ed e'
+  //    la coppia esatta del caso `sessione-tela-dispari` che invece la pagina
+  //    rifiuta — due campi dello stesso messaggio, due rigori diversi
+  //    (rilievo R6.16).
+  if (stato !== 1 && stato !== 2) {
+    throw new Violazione(ERRORE_PROTOCOLLO,
+      `SESSIONE con stato ${stato}: §4.5 ne definisce due, 1 = NUOVA e 2 = RIPRESA`);
+  }
+  reg(`SESSIONE stato ${stato} = ${stato === 1 ? "NUOVA" : "RIPRESA"}`);
   // ⛔ §4.5: i limiti e la parita' sono normativi, e valgono sulla tela
   //    CONCESSA.  Una pagina che si adattasse invece di rifiutare
   //    riscalerebbe da una misura che il codificatore ha gia' arrotondato.
@@ -353,12 +866,26 @@ function leggi_sessione(corpo) {
 }
 
 // ===========================================================================
-// I DODICI CASI.  ⛔ Ognuno dichiara la sua ATTESA prima di misurare.
+// I CASI.  ⛔ Ognuno dichiara la sua ATTESA prima di misurare, e ⛔ chi non e'
+// una violazione del server lo dichiara con `conforme: true`.
+//
+// ⚠ Il titolo diceva «I DODICI CASI» e le voci erano tredici; e il testo che
+//   l'utente legge diceva «dodici cose sbagliate» mentre quattro di quelle
+//   tredici sono casi in cui il server e' CONFORME e si misura che la pagina
+//   non reagisca.  ⛔ Non e' pedanteria — e' il rilievo R1.29 di `RCP.md`
+//   §0-bis: «quella casella e' l'unica prova che il documento porta di essere
+//   completo, e chi la verificava contando ne trovava di piu'» (R6.20).
+//   Adesso il conto lo fa `CASI.length`, e nessuno lo puo' piu' scrivere a
+//   mano sbagliato.
+//
+// ⚠ Il conto e' ripetuto anche in `01-b11-lancia.sh` e in
+//   `01-b11-guasto-innesta.py`, che questa pagina non tocca: li' dice ancora
+//   «dodici».
 // ===========================================================================
 const CASI = [
   { nome: "eccomi-versione-2", atteso: "congedo:0x0a",
     che: "⛔ ECCOMI(versione=2) a un CIAO(versione=1): §9 lo impone al CLIENT con un DEVE, e accettarla in silenzio e' l'indulgenza che §3 vieta" },
-  { nome: "capacita-sconosciuta", atteso: "prosegue+registra",
+  { nome: "capacita-sconosciuta", atteso: "prosegue+registra", conforme: true,
     che: "⭐ una capacita' SCONOSCIUTA in ECCOMI: si ignora e si prosegue (eccezione 1 di §3), e si scrive nel registro" },
   { nome: "misura-massima-in-eccomi", atteso: "congedo:0x0b",
     che: "`video.misura_massima` in ECCOMI: lato sbagliato, e il nome e' conosciuto" },
@@ -375,22 +902,55 @@ const CASI = [
   { nome: "respinto-poi-congedo", atteso: "congedo:0x0b", parola: "sbagliata",
     che: "RESPINTO seguito da CONGEDO: il secondo e' una violazione (§4.4)" },
   { nome: "respinto-non-riprovare", atteso: "muta", parola: "sbagliata",
+    // ⛔ E QUESTA RIGA E' MEZZO VERDETTO, e va detto sulla riga stessa.
+    //    Quel che la pagina puo' osservare e' di non aver CHIESTO di
+    //    spedire; che sul filo non sia passato niente lo vede solo il
+    //    registro del server (§8.1: «si verifica dal lato che lo riceve, mai
+    //    dal registro di chi lo manda»).  ⚠ Prima l'`ok` era calcolato dal
+    //    solo stato interno della pagina, che dichiarava verde una proprieta'
+    //    che dichiara di non poter osservare — la forma E7 di `REVIEWER.md`
+    //    §2 (rilievo R6.13).
+    testimone: "il registro del SERVER (01-b11-lancia.sh §5): §8.1 vuole il lato che RICEVE",
     che: "⛔ dopo RESPINTO la pagina NON deve riprovare sulla stessa connessione (§4.4) — lo verifica il registro del SERVER" },
-  { nome: "sessione-desktop-kde", atteso: "prosegue",
+  { nome: "sessione-desktop-kde", atteso: "prosegue", conforme: true,
     che: "un SESSIONE con desktop=kde mentre il ferro non e' KDE: la pagina NON cambia comportamento (§4.5)" },
-  { nome: "sessione-desktop-gnome", atteso: "prosegue",
+  { nome: "sessione-desktop-gnome", atteso: "prosegue", conforme: true,
     che: "⭐ lo stesso caso con desktop=gnome: i byte usciti dalla pagina DEVONO essere identici a quelli del caso precedente" },
-  { nome: "silenzio", atteso: "prosegue",
+  { nome: "silenzio", atteso: "prosegue", conforme: true,
     che: "⛔ §2.2 vieta un battito applicativo: si tace otto secondi, e la pagina non deve ne' mandarne uno ne' aspettarne uno" },
 ];
 
-async function gira(caso, reg) {
-  const wt = new WebTransport(URL_SERVER, IMPRONTA ? {
-    serverCertificateHashes: [{ algorithm: "sha-256",
-      value: Uint8Array.from(atob(IMPRONTA), c => c.charCodeAt(0)) }],
-    allowPooling: false,
-  } : { allowPooling: false });
-  await wt.ready;
+// ⛔ Quando la sessione non si apre, a sbagliare NON e' la pagina.  Le cause
+//    hanno tutte lo stesso aspetto e vanno elencate, come fa `01-b2-sonda.html`
+//    davanti allo stesso guasto (rilievo R6.14).
+class GuastoAmbiente extends Error {}
+const CAUSE_DI_UNA_SESSIONE_CHE_NON_SI_APRE = [
+  "1. UDP filtrato (il TCP risponde lo stesso, e la pagina si carica)",
+  "2. l'impronta non e' quella del certificato servito, o manca (§4.1-bis: la",
+  "   misura S1 dice che l'eccezione dell'utente NON copre WebTransport ne' su",
+  "   Chrome ne' su Firefox)",
+  "3. il certificato della sessione supera i 14 giorni (§4.1-bis)",
+  "4. il server non c'e', o non e' quello che si crede",
+];
+
+async function gira(caso, reg, opzioni) {
+  // ⛔ L'APERTURA STA IN UN TRY SUO, e non e' una finezza di stile.
+  //
+  //    Se la sessione non si apre, la pagina non ha violato niente: non ha
+  //    nemmeno parlato.  ⚠ Prima ogni caso finiva in `errore:…`, `guasti`
+  //    valeva 15 e il campo che il banco legge era `esito: "NON-CONFORME"` —
+  //    ⛔ una riga IDENTICA a quella di una pagina che ha davvero violato §3
+  //    tredici volte.  `01-b2-sonda.html`, davanti allo stesso ingresso,
+  //    scrive `NON-APERTA` ed elenca le cause: qui la distinzione era stata
+  //    persa (rilievo R6.14, `LEZIONI.md` §1.9 — «una misura che puo' dire
+  //    "zero" deve poter dire anche "sono fallito"»).
+  let wt;
+  try {
+    wt = new WebTransport(URL_SERVER, opzioni);
+    await wt.ready;
+  } catch (e) {
+    throw new GuastoAmbiente(e.name + ": " + e.message);
+  }
   const rcp = new Rcp(wt, reg);
   await rcp.apri();
   let fatto = "prosegue";
@@ -399,12 +959,17 @@ async function gira(caso, reg) {
     const ec = await attendi(rcp, "ECCOMI");
     leggi_eccomi(ec, reg);
 
-    await rcp.manda(T.CREDENZIALI, unisci([str(UTENTE), str(caso.parola || PAROLA)]));
+    // ⛔ L'intervallo dei byte segreti si calcola qui, dove si sa dove sono:
+    //    6 byte d'inquadratura, la stringa `utente`, i 2 byte di lunghezza
+    //    della `parola`, e poi la parola.  §4.4 e §11.1.
+    const bu = str(UTENTE), bp = str(caso.parola || PAROLA);
+    await rcp.manda(T.CREDENZIALI, unisci([bu, bp]),
+                    { inizio: 6 + bu.length + 2, quanti: bp.length - 2 });
     await attendi(rcp, "AMMESSO");
 
     await rcp.manda(T.ATTACCA, unisci([u32(1920), u32(1080), u32(1920), u32(1080), str("it")]));
     const se = await attendi(rcp, "SESSIONE");
-    const s = leggi_sessione(se);
+    const s = leggi_sessione(se, reg);
     reg(`SESSIONE: tela ${s.lar}x${s.alt}, desktop=${s.desktop}`);
 
     // ⛔ Dopo SESSIONE si TACE, e si guarda.  §2.2 vieta un battito
@@ -412,17 +977,33 @@ async function gira(caso, reg) {
     const quanto = caso.nome === "silenzio" ? 8000 : 2500;
     const m = await rcp.prossimo(quanto);
     if (m !== null) {
+      // ⛔ E un CONGEDO si legge come un CONGEDO anche qui: e' l'ultima parola
+      //    del server, non «un messaggio non richiesto».  ⚠ Senza questa
+      //    riga il caso `congedo-motivo-zero` passava per il motivo sbagliato.
+      interpreta(rcp, m);
       throw new Violazione(ERRORE_PROTOCOLLO,
         `messaggio non richiesto dopo SESSIONE: tipo ${m.tipo.toString(16)}`);
     }
-    if (rcp.fine) fatto = "muta";
+    // ⛔ «Muta» e «rotta» sono due fatti diversi (§4.2): il FIN e' un fatto
+    //    preciso, la caduta dello stream un altro, e il caso `fin-sul-controllo`
+    //    esiste per distinguerli.
+    if (rcp.rotto) fatto = "canale-rotto";
+    else if (rcp.fine) fatto = "muta";
   } catch (e) {
     if (e instanceof Violazione) {
       await rcp.chiudi(e.motivo, e.message);
       fatto = "congedo:0x" + e.motivo.toString(16).padStart(2, "0");
     } else if (e.congedo !== undefined) {
       reg("il server si e' congedato: " + e.message);
+      reg(`⭐ e la frase per l'utente la costruisce il client (§8.2): ` +
+          `«${frase_motivo(e.congedo)}»`);
+      // ⛔ Da qui la sessione e' finita: la pagina non risponde al congedo del
+      //    server con un congedo suo (rilievo R6.18).
+      rcp.chiudi_perche_congedato(e.congedo);
       fatto = "congedato-dal-server:0x" + e.congedo.toString(16).padStart(2, "0");
+    } else if (e.finita) {
+      reg("la sessione e' finita prima della risposta attesa: " + e.message);
+      fatto = rcp.rotto ? "canale-rotto" : "muta";
     } else if (e.respinto !== undefined) {
       reg("RESPINTO: " + e.message);
       // ⛔ §4.4: dopo RESPINTO non si riprova.  Si aspetta comunque, perche' un
@@ -465,12 +1046,23 @@ async function gira(caso, reg) {
   // ⭐ Non e' una cura per Chrome: e' §8.1 applicata. La pagina non se ne era
   //    accorta perche' nessuno gliel'aveva chiesto — e questo banco esiste
   //    proprio per chiederglielo.
+  //
+  // ⛔ MA SOLO SE LA SESSIONE E' ANCORA VIVA.  Se il server si e' gia'
+  //    congedato — o ha mandato il FIN di §4.2 — rispondergli e' spedire dopo
+  //    la fine, e il motivo `CHIUSO_DALL_UTENTE` sarebbe per giunta falso:
+  //    nessun utente ha chiuso niente (rilievo R6.18).  `chiudi()` fa i tre
+  //    punti di §3.1 nell'ordine, e aspetta che il CONGEDO sia partito prima
+  //    di abbattere la sessione (R6.11).
+  //
+  // ⚠ E `0x01` resta il motivo, dichiarando quel che vale: §8.2 non ha un
+  //   codice per «il banco ha finito il caso», e chi guida questo client e'
+  //   il banco.  E' il piu' vicino dei quindici, non una misura.
   if (!rcp.congedato && !rcp.fine) {
-    try {
-      await rcp.manda(T.CONGEDO, unisci([new Uint8Array([0x01]), str("fine del caso")]));
-    } catch (e) {}
+    try { await rcp.chiudi(0x01, "fine del caso: chiude il banco, che di questo client e' l'utente"); }
+    catch (e) { reg("⚠ il congedo di fine caso non e' partito: " + e.message); }
+  } else {
+    try { wt.close({ closeCode: 0x01, reason: "fine del caso" }); } catch (e) {}
   }
-  try { wt.close({ closeCode: 0x01, reason: "fine del caso" }); } catch (e) {}
   // ⛔ E SI ASPETTA CHE LA SESSIONE SIA DAVVERO CHIUSA prima del caso dopo.
   //
   //    `close()` ritorna subito; il server se ne accorge un giro di rete piu'
@@ -484,20 +1076,116 @@ async function gira(caso, reg) {
 }
 
 // ===========================================================================
+const out = document.getElementById("uscita");
+const righe = [];
+const scrivi = (t) => { righe.push(t); out.textContent = righe.join("\n"); };
+
+/* ⛔ L'esito si spedisce, E SI GUARDA SE E' ARRIVATO.
+ *
+ *    `LEZIONI.md` §1.9, quarta regola, citata da `01-b2-raccogli.py`: «la
+ *    richiesta E' il denominatore dell'esito».  ⚠ Questa chiamata non aveva
+ *    ne' `try` ne' controllo dello stato:
+ *      · col raccoglitore fermo, `fetch` veniva rifiutata, la promessa moriva
+ *        come *unhandled rejection*, lo schermo mostrava il verdetto completo
+ *        e il file non aveva niente — indistinguibile, per
+ *        `01-b11-lancia.sh`, da «la pagina si e' piantata a metà»;
+ *      · con un 404 o un 500 `fetch` NON rifiuta, e la pagina considerava
+ *        consegnato un esito che nessuno aveva scritto (rilievo R6.15).
+ *
+ * ⭐ E se non e' arrivato **si dice sullo schermo**, come fa la sonda di B2:
+ *    «se il raccoglitore non c'e', il banco NON deve fingere».
+ */
+async function consegna(dati) {
+  try {
+    const r = await fetch("/esito", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dati),
+    });
+    if (!r.ok) {
+      scrivi(`⛔ l'esito NON e' stato registrato: il raccoglitore ha risposto ` +
+             `${r.status}.  Quel che si vede qui sopra non e' in b2-esiti.jsonl`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    scrivi(`⛔ l'esito NON e' stato registrato (raccoglitore assente?): ${e}.  ` +
+           `Quel che si vede qui sopra non e' in b2-esiti.jsonl`);
+    return false;
+  }
+}
+
 (async () => {
-  const out = document.getElementById("uscita");
-  const righe = [];
-  const scrivi = (t) => { righe.push(t); out.textContent = righe.join("\n"); };
+  // ⛔ Il quadro lo conta il programma (R6.20).
+  const sbagliate = CASI.filter((c) => !c.conforme).length;
+  document.getElementById("quadro").textContent =
+    `${CASI.length} casi in tutto: ${sbagliate} in cui il server sbaglia — e la pagina ` +
+    `deve accorgersene — e ${CASI.length - sbagliate} in cui il server è conforme, ` +
+    `dove si misura che la pagina non reagisca. Più le due proprietà negative.`;
 
   if (!("WebTransport" in window)) {
     scrivi("⛔ questo motore non ha WebTransport: non c'e' niente da misurare");
-    await fetch("/esito", { method: "POST", body: JSON.stringify(
-      { banco: "B11", esito: "SENZA-WEBTRANSPORT", motore: navigator.userAgent }) });
+    await consegna({ banco: "B11", esito: "SENZA-WEBTRANSPORT",
+                     motore: navigator.userAgent, dettaglio: righe.join("\n") });
     return;
   }
 
   scrivi(`motore: ${navigator.userAgent}`);
   scrivi(`server: ${URL_SERVER}`);
+
+  // ⛔ §2.2: «e le due DEVONO coincidere» — la versione del PERCORSO e quella
+  //    del `CIAO`.  «Un `CIAO(versione=2)` su `/rcp/1` e' VERSIONE_INCOMPATIBILE,
+  //    non una negoziazione da risolvere», e il rovescio vale identico: questa
+  //    pagina parla RCP/1 e non ha niente da dire su `/rcp/2`.
+  // ⚠ E' il caso che B5 ha gia' trovato dal lato del server; dal lato del
+  //   client non lo guardava nessuno (rilievo R6.19).
+  let percorso = null;
+  try { percorso = new URL(URL_SERVER, location.href).pathname.match(/^\/rcp\/(\d+)$/); }
+  catch (e) { percorso = null; }
+  if (!percorso) {
+    scrivi(`⛔ «${URL_SERVER}» non ha la forma «https://host:porta/rcp/<versione>» (§2.2): ` +
+           `non si apre niente`);
+    await consegna({ banco: "B11", esito: "URL-NON-VALIDO",
+                     motore: navigator.userAgent, dettaglio: righe.join("\n") });
+    return;
+  }
+  if (Number(percorso[1]) !== VERSIONE) {
+    scrivi(`⛔ il percorso dice RCP/${percorso[1]} e questa pagina parla RCP/${VERSIONE}: ` +
+           `§2.2 vuole che le due coincidano, e un CIAO(${VERSIONE}) su ` +
+           `/rcp/${percorso[1]} e' la combinazione che dichiara illegale — ` +
+           `non una negoziazione da risolvere.  Non si spedisce niente`);
+    await consegna({ banco: "B11", esito: "VERSIONE-NON-COINCIDE",
+                     motore: navigator.userAgent, dettaglio: righe.join("\n") });
+    return;
+  }
+  scrivi(`versione: RCP/${VERSIONE} nel percorso e nel CIAO, e §2.2 vuole che coincidano`);
+
+  // ⛔ L'impronta si valida PRIMA, e fuori dai tredici casi: `atob()` di una
+  //    stringa che non e' base64 solleva, e prima sollevava dentro `gira()`
+  //    tredici volte, una per caso, sotto l'etichetta «NON-CONFORME»
+  //    (rilievo R6.14).
+  let opzioni = { allowPooling: false };
+  if (IMPRONTA) {
+    try {
+      opzioni = { allowPooling: false, serverCertificateHashes: [{
+        algorithm: "sha-256",
+        value: Uint8Array.from(atob(IMPRONTA), (c) => c.charCodeAt(0)) }] };
+      scrivi(`impronta: pubblicata (${IMPRONTA.slice(0, 12)}…), allowPooling: false (§4.1-bis)`);
+    } catch (e) {
+      scrivi("⛔ l'impronta non e' base64 valido: " + e);
+      await consegna({ banco: "B11", esito: "IMPRONTA-NON-VALIDA",
+                       motore: navigator.userAgent, dettaglio: righe.join("\n") });
+      return;
+    }
+  } else {
+    // ⚠ §4.1-bis e la misura S1: l'eccezione dell'utente NON copre
+    //   WebTransport ne' su Chrome ne' su Firefox.  Senza impronta la sessione
+    //   non si aprira', e si dice PRIMA invece di dedurlo da tredici
+    //   fallimenti uguali.
+    scrivi("⚠ NESSUNA impronta: §4.1-bis e la misura S1 dicono che l'eccezione " +
+           "dell'utente non copre WebTransport — su Chrome e Firefox la sessione " +
+           "non si aprira', e l'esito sara' NON-APERTA, non NON-CONFORME");
+  }
   scrivi("");
 
   const esiti = [];
@@ -505,15 +1193,28 @@ async function gira(caso, reg) {
     const reg = [];
     let r;
     try {
-      r = await gira(caso, (t) => reg.push("      " + t));
+      r = await gira(caso, (t) => reg.push("      " + t), opzioni);
     } catch (e) {
-      r = { fatto: "errore:" + e.name + ":" + e.message, usciti: "" };
+      if (e instanceof GuastoAmbiente) {
+        // ⛔ Qui non ha sbagliato la pagina: non e' arrivata a parlare.
+        r = { fatto: "non-aperta", usciti: "", aperta: false };
+        reg.push("      ⛔ la sessione non si e' aperta: " + e.message);
+        for (const c of CAUSE_DI_UNA_SESSIONE_CHE_NON_SI_APRE) reg.push("      " + c);
+      } else {
+        r = { fatto: "errore:" + e.name + ":" + e.message, usciti: "" };
+      }
     }
     const ok = r.fatto === caso.atteso ||
                (caso.atteso === "prosegue+registra" && r.fatto === "prosegue" &&
                 reg.some((x) => x.includes("capacita' sconosciuta ignorata")));
-    esiti.push({ ...caso, fatto: r.fatto, usciti: r.usciti, ok, registro: reg });
+    esiti.push({ ...caso, fatto: r.fatto, usciti: r.usciti, ok,
+                 aperta: r.aperta !== false, registro: reg });
     scrivi(`${ok ? "OK " : "NO "} ${caso.nome.padEnd(26)} ${r.fatto}   (atteso ${caso.atteso})`);
+    // ⛔ E un OK che vale mezzo verdetto lo dichiara sulla riga stessa (R6.13).
+    if (caso.testimone) {
+      scrivi(`      ⚠ questo e' MEZZO verdetto: la pagina puo' dire solo di non ` +
+             `aver CHIESTO di spedire.  L'altra meta' la da' ${caso.testimone}`);
+    }
     for (const x of reg) scrivi(x);
   }
 
@@ -545,22 +1246,46 @@ async function gira(caso, reg) {
   const senza_battito = battiti === 3;   // CIAO, CREDENZIALI, ATTACCA e basta
   scrivi(`${senza_battito ? "OK " : "NO "} nessun-battito-applicativo  messaggi usciti in tutto: ${battiti} (attesi 3: CIAO, CREDENZIALI, ATTACCA)`);
 
+  // ⛔⚠ E QUI SI DICE DA CHE LATO SONO MISURATE LE DUE RIGHE QUI SOPRA.
+  //
+  //    `usciti` e' alimentato SOLO da `manda()`, ed e' scritto **prima** di
+  //    `await this.w.write(b)`: e' il registro di quel che la pagina HA
+  //    DECISO di spedire — il lato che INVIA, cioe' la forma d'errore **E7**
+  //    di `REVIEWER.md` §2, e §8.1 dice «mai dal registro di chi lo manda».
+  //    Un battito scritto direttamente su `this.w`, o su uno stream
+  //    unidirezionale, non comparirebbe qui e queste due righe resterebbero
+  //    verdi.  ⚠ Il conto `battiti === 3` prova il codice di oggi, non §2.2
+  //    (rilievo R6.13).
+  scrivi("      ⚠ le due righe qui sopra guardano `usciti`, cioe' il lato che SPEDISCE (E7):");
+  scrivi("        provano che la pagina non ha CHIESTO di spedire altro.  Che sul filo non");
+  scrivi("        sia passato niente lo vede il registro del SERVER — 01-b11-lancia.sh §5.");
+
+  // ⛔ E un caso che non si e' aperto non e' un caso che ha detto no: si conta
+  //    a parte, e cambia il NOME dell'esito (rilievo R6.14).
+  const non_aperti = esiti.filter((e) => !e.aperta).length;
   const guasti = esiti.filter((e) => !e.ok).length + (uguali ? 0 : 1) + (senza_battito ? 0 : 1);
   scrivi("");
+  if (non_aperti) {
+    scrivi(`⛔ ${non_aperti} casi su ${esiti.length} non hanno nemmeno APERTO la sessione: ` +
+           `quei casi non hanno un denominatore, e questa non e' una misura della pagina`);
+  }
   scrivi(guasti === 0
     ? `⭐ B11: ${esiti.length} casi su ${esiti.length}, piu' le due proprieta' negative`
     : `⛔ B11: ${guasti} punti non passano`);
 
-  await fetch("/esito", {
-    method: "POST",
-    body: JSON.stringify({
-      banco: "B11",
-      esito: guasti === 0 ? "CONFORME" : "NON-CONFORME",
-      motore: navigator.userAgent,
-      guasti,
-      dettaglio: righe.join("\n"),
-      casi: esiti.map((e) => ({ nome: e.nome, atteso: e.atteso, fatto: e.fatto, ok: e.ok })),
-    }),
+  const esito = non_aperti === esiti.length ? "NON-APERTA"
+              : non_aperti > 0 ? "NON-APERTA-PARZIALE"
+              : guasti === 0 ? "CONFORME" : "NON-CONFORME";
+  await consegna({
+    banco: "B11",
+    esito,
+    motore: navigator.userAgent,
+    guasti,
+    non_aperti,
+    casi_totali: esiti.length,
+    dettaglio: righe.join("\n"),
+    casi: esiti.map((e) => ({ nome: e.nome, atteso: e.atteso, fatto: e.fatto,
+                              ok: e.ok, aperta: e.aperta })),
   });
 })();
 </script>

@@ -89,6 +89,23 @@ INNESTI = [
 ]
 
 
+def righe_di_commento(righe):
+    """⛔ UNA REGOLA SOLA PER I COMMENTI, E LA STESSA NEI TRE INNESTI.
+
+    Qui la regola era «comincia per * oppure /*», e non riconosceva `//`; in
+    `01-b3-rcp-innesta.py` era «//, /* oppure *», e classificava come commento
+    le dereferenziazioni `*v = …` del C++ innestato da B2.  ⛔ Tre regole
+    diverse sulla stessa grandezza sono tre numeri diversi sotto la stessa
+    etichetta, ed e' con uno di quei numeri che `DECISIONI.md` §6.4 ha chiuso.
+
+    ⚠ L'asterisco vale come commento solo quando continua o chiude un blocco
+      `/* … */`, cioe' quando e' seguito da uno spazio o e' `*/`.
+    """
+    return sum(1 for r in righe
+               if r.strip().startswith(("//", "/*", "* ", "*/"))
+               or r.strip() == "*")
+
+
 def main():
     if "--togli" in sys.argv:
         print("== Si rimette l'esempio com'era")
@@ -134,12 +151,17 @@ def main():
     ).stdout.splitlines()
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
     vuote = sum(1 for r in agg if not r.strip())
-    comm = sum(1 for r in agg if r.strip().startswith(("*", "/*")))
+    comm = righe_di_commento(agg)
     print(f"   righe aggiunte : {len(agg)}")
     print(f"     ⭐ di CODICE  : {len(agg) - vuote - comm}")
     print("\n   ⚠ E' l'innesto MINIMO — accende quel che c'e', non aggiunge lo")
-    print("     strato.  Il paragone con le 329 righe di ngtcp2 si fa solo se e")
-    print("     quando lo strato su quiche si puo' scrivere.")
+    print("     strato.  Il paragone con ngtcp2 si fa solo se e quando lo")
+    print("     strato su quiche si puo' scrivere.")
+    print("\n   ⛔ E il numero di ngtcp2 NON si copia qui a mano: lo stampa")
+    print("      01-b2-ngtcp2-wt-innesta.py, con la stessa regola di conteggio")
+    print("      di questo script.  Qui c'era scritto «329», ed e' uno dei DUE")
+    print("      numeri che circolano per la stessa grandezza — l'altro e' 333,")
+    print("      in README.md.  Un numero copiato invecchia dove nessuno guarda.")
     return 0
 
 

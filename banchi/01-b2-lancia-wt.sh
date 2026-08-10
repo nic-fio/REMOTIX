@@ -54,16 +54,66 @@ else
 	OPZIONI=""
 fi
 
-if [ "$AZIONE" = spegni ]; then
-	P=$(cat /media/REMOTIX/src/b2-wt.pid 2>/dev/null)
-	if [ -n "$P" ]; then
-		bash "$ENTRA" --root "kill $P || true"
-		rm -f /media/REMOTIX/src/b2-wt.pid
-		printf '    --  fermato il server (PID %s)\n' "$P"
-	else
+# ---------------------------------------------------------------------------
+# ⛔ FERMARE PER PID VUOL DIRE PRIMA GUARDARE CHE PID E' — rilievo R8.13.
+#
+# Il file del PID puo' essere di ieri: lo cancella solo chi ferma per bene, e
+# un'esecuzione interrotta lo lascia li'.  Il rootfs del server vive in RAM e si
+# riavvia, mentre `/media/REMOTIX/src` sopravvive: al riavvio i PID ripartono
+# dal basso e quel numero indica **un processo di sistema**.  ⛔ Poi si faceva
+# `kill` da root dentro il contenitore, con `|| true` a nascondere anche
+# l'errore.
+#
+# ⭐ La cura costa una lettura: `/proc/<pid>/comm` dice il nome del programma, e
+#    `enter.sh` usa `chroot` e non uno spazio dei nomi dei PID — i numeri sono
+#    gli stessi da tutt'e due i lati, quindi si legge da qui senza sudo.
+# ⚠ E dopo il `kill` si CONTROLLA che sia morto, prima di buttare il file:
+#    cancellarlo prima e' perdere l'unico appiglio che si aveva.
+ferma_per_pid() # $1 = file del PID, $2 = nome atteso del programma
+{
+	local file=$1 atteso=$2 p="" comm=""
+	[ -f "$file" ] && p=$(cat "$file" 2>/dev/null)
+	if [ -z "$p" ]; then
 		printf '    --  nessun server da fermare\n'
+		return 0
 	fi
-	exit 0
+	if [ ! -d "/proc/$p" ]; then
+		printf "    --  il PID %s non esiste piu': butto il file\n" "$p"
+		rm -f "$file"
+		return 0
+	fi
+	comm=$(cat "/proc/$p/comm" 2>/dev/null)
+	if [ "$comm" != "$atteso" ]; then
+		ko "⛔ il PID $p adesso e' «$comm», non «$atteso»: NON lo ammazzo."
+		ko "   Il file $file e' di un'esecuzione precedente, e i PID si"
+		ko "   riusano.  Lo butto e basta — guarda tu che cos'e' quel processo."
+		rm -f "$file"
+		return 1
+	fi
+	bash "$ENTRA" --root "kill $p"
+	local esito=$?
+	if [ "$esito" -ne 0 ]; then
+		ko "il kill del PID $p ($comm) e' fallito (uscita $esito)"
+		return 1
+	fi
+	# ⚠ Un `kill` riuscito e' un segnale consegnato, non un processo morto.
+	local n=0
+	while [ -d "/proc/$p" ] && [ "$n" -lt 10 ]; do
+		sleep 1
+		n=$((n + 1))
+	done
+	if [ -d "/proc/$p" ]; then
+		ko "il PID $p ($comm) e' ancora vivo dopo $n secondi: non butto il file"
+		return 1
+	fi
+	rm -f "$file"
+	printf '    --  fermato il server (PID %s, %s)\n' "$p" "$comm"
+	return 0
+}
+
+if [ "$AZIONE" = spegni ]; then
+	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
+	exit $?
 fi
 if [ "$AZIONE" != misura ] && [ "$AZIONE" != accendi ]; then
 	ko "azione sconosciuta: $AZIONE  (misura | accendi | spegni)"
@@ -75,11 +125,56 @@ bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
 ok "sudo validato"
 
 # ---------------------------------------------------------------------------
+# ⛔ «PORTA LIBERA» E «NON HO POTUTO GUARDARE» NON SONO LA STESSA COSA — R8.15.
+#
+# `CHI=$(bash enter.sh --root "ss | grep …")` cattura solo lo standard output, e
+# QUATTRO esiti diversi danno la stessa stringa vuota: `enter.sh` fallito su un
+# mount o su una credenziale scaduta, `ss` assente nel chroot, `grep` che non
+# trova, e la porta davvero libera.  ⛔ Il banco leggeva «non ho potuto
+# guardare» come «non c'e' niente», lanciava un secondo server sopra il primo, e
+# il rosso che seguiva arrivava su un imputato sbagliato.  E' la stessa forma che
+# questo file combatte poco piu' sotto scegliendo `/proc` invece di `kill -0`.
+#
+# ⭐ La cura: l'elenco si scrive in un FILE, e la redirezione sta dentro le
+#    virgolette del comando remoto — mai attorno a `enter.sh`, che se ne
+#    porterebbe via la richiesta di password di sudo.  Poi si guardano tre cose
+#    distinte: lo stato di `enter.sh`, lo stato di `ss`, e il contenuto.
+#
+# Esce 0 = occupata · 1 = libera · 2 = non ho potuto guardare.
+guarda_porta() # $1 = porta
+{
+	local p=$1
+	rm -f "$FUORI/b2-porte.txt" "$FUORI/b2-porte.stato"
+	bash "$ENTRA" --root \
+		"ss -ulnp > $DENTRO/b2-porte.txt 2>&1; echo \$? > $DENTRO/b2-porte.stato"
+	local entrata=$?
+	if [ "$entrata" -ne 0 ]; then
+		ko "non si e' potuto guardare le porte: enter.sh e' uscito $entrata"
+		return 2
+	fi
+	if [ ! -f "$FUORI/b2-porte.stato" ] || [ ! -f "$FUORI/b2-porte.txt" ]; then
+		ko "non si e' potuto guardare le porte: l'elenco non e' stato scritto"
+		return 2
+	fi
+	local stato_ss
+	stato_ss=$(cat "$FUORI/b2-porte.stato")
+	if [ "$stato_ss" != 0 ]; then
+		ko "«ss» dentro il contenitore e' uscito $stato_ss:"
+		sed 's/^/        /' "$FUORI/b2-porte.txt"
+		return 2
+	fi
+	grep ":$p " "$FUORI/b2-porte.txt" | sed 's/^/        /' && return 0
+	return 1
+}
+
 log "La porta"
-CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")
-if [ -n "$CHI" ]; then
-	ko "la porta $PORTA e' gia' occupata:"
-	printf '%s\n' "$CHI" | sed 's/^/        /'
+guarda_porta "$PORTA"
+LIBERA=$?
+if [ "$LIBERA" -eq 2 ]; then
+	exit 3
+fi
+if [ "$LIBERA" -eq 0 ]; then
+	ko "la porta $PORTA e' gia' occupata (l'elenco e' qui sopra)"
 	ko "fermalo per PID (mai con pkill -f) e rilancia"
 	exit 3
 fi
@@ -100,20 +195,31 @@ if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
 	sed 's/^/        /' "$FUORI/b2-wt.log"
 	exit 4
 fi
-ASC=$(bash "$ENTRA" --root "ss -ulnp | grep 'pid=$PID,'")
-if [ -z "$ASC" ]; then
-	ko "il server e' vivo ma non tiene nessuna porta UDP:"
+# ⛔ «IN ASCOLTO» VUOL DIRE «SU QUESTA PORTA» — rilievo R8.14.
+#
+#    `grep 'pid=$PID,'` e' vero per QUALUNQUE porta UDP tenuta da quel
+#    processo: un server che ignorasse i suoi argomenti posizionali e si legasse
+#    alla propria porta predefinita passava il controllo, e il banco stampava
+#    «in ascolto» su un fatto falso.  E' il necessario preso per sufficiente
+#    (E1), proprio nel file che racconta il difetto degli argomenti storti.
+guarda_porta "$PORTA"
+TIENE=$?
+if [ "$TIENE" -eq 2 ]; then
+	exit 4
+fi
+if [ "$TIENE" -ne 0 ] || ! grep ":$PORTA " "$FUORI/b2-porte.txt" | grep -q "pid=$PID,"; then
+	ko "il server e' vivo ma NON tiene la porta $PORTA (l'elenco e' qui sopra)"
 	sed 's/^/        /' "$FUORI/b2-wt.log"
 	exit 4
 fi
-ok "in ascolto, PID $PID"
-printf '%s\n' "$ASC" | sed 's/^/        /'
+ok "in ascolto sulla porta $PORTA, PID $PID"
 inf "quel che ha detto all'avvio:"
 grep "REMOTIX B2" "$FUORI/b2-wt.log" | head -4 | sed 's/^/        /'
 
 fermare() {
-	bash "$ENTRA" --root "kill $PID || true"
-	rm -f "$FUORI/b2-wt.pid"
+	# ⚠ Stessa strada dello spegnimento: si guarda che PID sia, e si controlla
+	#   che sia morto prima di buttare il file (R8.13).
+	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
 }
 
 if [ "$AZIONE" = accendi ]; then
@@ -135,12 +241,17 @@ inf "cliente di prova: uscita $ESITO_SI"
 
 # ---------------------------------------------------------------------------
 log "2. ⛔ Il percorso SBAGLIATO — /rcp/9, il controllo che dice NO"
-inf "atteso: NON 200.  RCP.md §2.2: un percorso sconosciuto si rifiuta, e"
+inf "atteso: 404.  RCP.md §2.2: un percorso sconosciuto si rifiuta, e"
 inf "        il rilievo R1.24 ha scelto 404 fra i tre stati che erano leciti."
+# ⛔ Il numero si passa al cliente e il confronto lo fa lui — rilievo R8.8.
+#    Prima si teneva solo «uscita diversa da zero», e un timeout della CONNECT,
+#    l'UDP filtrato o un server gia' morto davano lo stesso verde: il controllo
+#    che dice NO non distingueva il rifiuto dal fallimento.  Adesso l'atteso e'
+#    **404**, cioe' quel che il documento chiede, e ogni altro esito e' rosso.
 bash "$ENTRA" --root \
-	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/9"
+	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/9 404"
 ESITO_NO=$?
-inf "cliente di prova: uscita $ESITO_NO (atteso: DIVERSA da 0)"
+inf "cliente di prova: uscita $ESITO_NO (atteso: 0, cioe' «rifiutato con 404»)"
 
 # ---------------------------------------------------------------------------
 log "Che cosa ha visto il server"
@@ -156,11 +267,13 @@ else
 	ko "/rcp/1: NON ha funzionato (uscita $ESITO_SI)"
 	BENE=1
 fi
-if [ "$ESITO_NO" -ne 0 ]; then
-	ok "/rcp/9: RIFIUTATO, come impone §2.2"
+if [ "$ESITO_NO" -eq 0 ]; then
+	ok "/rcp/9: RIFIUTATO con 404, come impone §2.2"
 else
-	ko "⛔ /rcp/9 e' stato ACCETTATO: il server non controlla il percorso."
-	ko "   E' una violazione di RCP.md §2.2, non un dettaglio del banco."
+	ko "⛔ /rcp/9 NON e' stato rifiutato con 404 (uscita $ESITO_NO):"
+	ko "   o il server lo accetta — e allora e' una violazione di RCP.md"
+	ko "   §2.2 — o il rifiuto e' arrivato con un altro stato, o la prova"
+	ko "   non e' nemmeno partita.  Il registro qui sopra dice quale."
 	BENE=1
 fi
 inf "il registro completo resta in $FUORI/b2-wt.log"

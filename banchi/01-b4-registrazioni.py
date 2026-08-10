@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""01-b4-registrazioni.py — le sette registrazioni di B4, e che cosa il validatore DEVE dire.
+"""01-b4-registrazioni.py — le registrazioni di B4, e che cosa il validatore DEVE dire.
 
     python3 01-b4-registrazioni.py [cartella]     predefinita: ./b4-registrazioni
 
+⛔ **Quante sono non sta scritto qui**: le costruisce `costruisci()`, le conta
+   il programma e le stampa insieme al manifesto.  Un numero scritto a mano in
+   un commento e' il numero che nessuno ricalcola.
+
 ---------------------------------------------------------------------------
-⛔ SEI GUASTE E UNA CONFORME, E LA SETTIMA E' QUELLA CHE CONTA
+⛔ UNA CONFORME, E LE ALTRE SONO I QUATTRO MODI DI NON ESSERLO
 
 `fasi/01-filo-nudo.md` B4: senza la registrazione **conforme**, «6 su 6» e'
 compatibile con un validatore che **boccia tutto** — basta leggere `lunghezza`
@@ -17,6 +21,30 @@ difetto e' nello strumento (rilievo R3.5).
    costruisce.  Un validatore che desse rosso sul byte sbagliato — tipico di
    chi non conosce §6.0 e legge di traverso il messaggio SUCCESSIVO — passerebbe
    un banco che guardasse solo il colore.
+
+---------------------------------------------------------------------------
+⛔ E GLI ESITI SONO QUATTRO, QUINDI I CONTROLLI POSITIVI SONO QUATTRO
+
+*Aggiunti il 10 agosto 2026, rilievi R7.12 e R7.13.*
+
+Il validatore dichiara quattro esiti — conforme, non conforme, registrazione
+rotta, niente da giudicare — e fino a qui le registrazioni ne esercitavano
+**due**.  ⚠ L'esito che il validatore dichiara essere *la ragione per cui gli
+esiti non sono due* non era mai stato osservato dal banco che lo certifica:
+si poteva rompere `Malformata` — farla diventare un `NonConforme` — e questo
+banco continuava a stampare «e' certificato», perche' nessuna registrazione
+era rotta.
+
+Le nuove, e ciascuna copre un buco dichiarato:
+
+| | |
+|---|---|
+| `7-tela-dispari` | ⛔ **nessuna registrazione esercitava §4.5**, ed e' proprio li' che il validatore accusava il byte sbagliato — `le.base, 0`, due scostamenti che indicano due byte diversi.  Il banco che esiste per prendere «rosso giusto, byte sbagliato» non copriva la famiglia in cui il difetto c'era davvero (R7.12) |
+| `8-carico-troncato` | il primo controllo positivo dell'**esito 2** |
+| `9-oscurati-sovrapposti` | il caso che §11.1 nomina per esteso: *«DEVE rifiutare una registrazione in cui un intervallo oscurato … si sovrappone a un altro»* |
+| `10-coda-di-spazzatura` | byte dopo l'ultimo blocco dichiarato |
+| `11-quanti-sotto-dichiarato` | ⛔ il piu' insidioso: si scrive 4 dove i blocchi sono 6, e il file resta **valido per ogni altra riga di §11.1** mentre due blocchi spariscono dal giudizio |
+| `12-niente-da-giudicare` | l'**esito 3**: soli blocchi video, zero messaggi di controllo |
 
 ---------------------------------------------------------------------------
 ⚠ E LA PAROLA D'ORDINE NON C'E'
@@ -35,6 +63,11 @@ import sys
 MAGIA = b"RCPREG\x00\x01"
 RIEMPIMENTO = 0x2A
 CLIENT, SERVER = 1, 2
+
+# I quattro esiti di `01-b4-validatore.py`, con il loro nome — scritti qui una
+# volta perche' il manifesto li porti per esteso e non per numero.
+ESITI = {0: "conforme", 1: "non-conforme", 2: "registrazione-rotta",
+         3: "niente-da-giudicare"}
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +133,13 @@ class Registrazione:
 
     def __init__(self):
         self.blocchi = []
+        # ⛔ I tre modi di rompere il FILE invece del filo, e vivono qui perche'
+        #    una registrazione malformata si costruisce **di proposito**: senza
+        #    di essi l'esito 2 del validatore non ha nessun controllo positivo
+        #    (rilievo R7.13).
+        self.dichiarate = {}    # indice -> lunghezza DICHIARATA, diversa dalla vera
+        self.dichiara_quanti = None   # `quanti_blocchi` diverso da quelli scritti
+        self.coda = b""         # byte dopo l'ultimo blocco
 
     def blocco(self, verso, carico, canale=0x00, stream=0, oscurati=()):
         self.blocchi.append((verso, canale, stream, carico, list(oscurati)))
@@ -116,13 +156,16 @@ class Registrazione:
         raise IndexError(indice_blocco)
 
     def byte(self):
-        out = bytearray(MAGIA + struct.pack("!II", len(self.blocchi), 0))
-        for verso, canale, stream, carico, osc in self.blocchi:
-            out += struct.pack("!BBQIH", verso, canale, stream, len(carico), len(osc))
+        quanti = (len(self.blocchi) if self.dichiara_quanti is None
+                  else self.dichiara_quanti)
+        out = bytearray(MAGIA + struct.pack("!II", quanti, 0))
+        for i, (verso, canale, stream, carico, osc) in enumerate(self.blocchi):
+            lung = self.dichiarate.get(i, len(carico))
+            out += struct.pack("!BBQIH", verso, canale, stream, lung, len(osc))
             for ini, qua, imp in osc:
                 out += struct.pack("!II", ini, qua) + imp
             out += carico
-        return bytes(out)
+        return bytes(out) + self.coda
 
 
 def conforme():
@@ -144,11 +187,19 @@ def conforme():
 
 # ---------------------------------------------------------------------------
 def costruisci():
-    """Le sette, ciascuna col suo atteso."""
+    """Ciascuna col suo atteso: `(nome, registrazione, uscita, atteso, che)`.
+
+    ⛔ `uscita` e' il codice che il validatore DEVE restituire — 0 conforme,
+       1 non conforme, 2 registrazione rotta, 3 niente da giudicare — e
+       `atteso` porta regola e byte **solo** quando l'uscita e' 1.  Prima qui
+       c'erano due esiti su quattro, e i due mancanti erano proprio quelli che
+       il validatore dichiara di avere per non confondere un difetto di banco
+       con un difetto di protocollo (rilievo R7.13).
+    """
     casi = []
 
     # ── 7. la conforme — si costruisce per prima perche' e' la base delle altre
-    casi.append(("conforme", conforme(), None,
+    casi.append(("conforme", conforme(), 0, None,
                  "la stretta di mano intera, con la parola oscurata"))
 
     # ── 1. lunghezza incoerente col tipo (§6.1) ─────────────────────────────
@@ -164,7 +215,7 @@ def costruisci():
     #      byte da mostrare a chi diagnostica e' quello da cui la lettura non
     #      prosegue, non quello dove i dati finiscono.  E' la terza volta in un
     #      giorno che l'ATTESO sbaglia e lo strumento no.
-    casi.append(("1-lunghezza-incoerente", r,
+    casi.append(("1-lunghezza-incoerente", r, 1,
                  ("RCP.md §6.1", r.scostamento(4, 6 + 12)),
                  "ATTACCA dichiara meno byte di quanti i suoi campi ne vogliono"))
 
@@ -189,7 +240,7 @@ def costruisci():
         corpo_c += s(n) + s(v)
     r = conforme()
     r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [])
-    casi.append(("2-utf8-non-valido", r,
+    casi.append(("2-utf8-non-valido", r, 1,
                  ("RCP.md §6.0", r.scostamento(0, 6 + scost)),
                  "client.nome contiene una sequenza UTF-8 rotta"))
 
@@ -204,7 +255,7 @@ def costruisci():
         corpo_c += s(n) + s(v)
     r = conforme()
     r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [])
-    casi.append(("3-capacita-ripetuta", r,
+    casi.append(("3-capacita-ripetuta", r, 1,
                  ("RCP.md §4.3", r.scostamento(0, 6 + scost)),
                  "video.codec compare due volte"))
 
@@ -212,7 +263,7 @@ def costruisci():
     #    Un tipo 0x0701: il byte alto vale 7, e i canali sono cinque.
     r = conforme()
     r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0701, b""), [])
-    casi.append(("4-canale-sconosciuto", r,
+    casi.append(("4-canale-sconosciuto", r, 1,
                  ("RCP.md §2.5", r.scostamento(3, 0)),
                  "un tipo il cui byte alto non e' uno dei cinque canali"))
 
@@ -222,7 +273,7 @@ def costruisci():
     r.blocco(CLIENT, CIAO)
     r.blocco(SERVER, ECCOMI)
     r.blocco(CLIENT, ATTACCA)
-    casi.append(("5-stato-sbagliato", r,
+    casi.append(("5-stato-sbagliato", r, 1,
                  ("RCP.md §4 (l'ordine della stretta di mano)", r.scostamento(2, 0)),
                  "ATTACCA prima di CREDENZIALI"))
 
@@ -233,9 +284,73 @@ def costruisci():
     #       leggerebbe di traverso QUELLO, e darebbe rosso sul byte sbagliato.
     r = conforme()
     r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0004, b"\x00\x00\x00\x00"), [])
-    casi.append(("6-riempimento", r,
+    casi.append(("6-riempimento", r, 1,
                  ("RCP.md §6.0", r.scostamento(3, 6)),
                  "AMMESSO con quattro byte di riempimento, e un messaggio dopo"))
+
+    # ── 7. ⛔ tela DISPARI (§4.5) — la famiglia che nessuna registrazione
+    #        esercitava, ed e' quella in cui il validatore accusava il byte
+    #        sbagliato: `le.base, 0`, cioe' l'inizio del CORPO come assoluto e
+    #        ZERO come relativo — due byte diversi per lo stesso guasto, mentre
+    #        §11.1 chiede due modi di dire lo STESSO byte (rilievo R7.12).
+    #        L'atteso e' il primo byte di `tela_larghezza`, che sta all'inizio
+    #        del corpo di ATTACCA, cioe' sei byte dopo l'inizio del blocco.
+    r = conforme()
+    r.blocchi[4] = (CLIENT, 0x00, 0,
+                    msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
+                        + s("it")), [])
+    casi.append(("7-tela-dispari", r, 1,
+                 ("RCP.md §4.5", r.scostamento(4, 6)),
+                 "ATTACCA con tela_larghezza = 1921, dispari"))
+
+    # ── 8. ⛔ il carico TRONCATO — controllo positivo dell'esito 2.
+    #        Il blocco dichiara piu' byte di quanti ne porta: e' il file a
+    #        essere rotto, non il filo a essere non conforme, e le due cose
+    #        vogliono due frasi diverse.  ⚠ Se `Malformata` diventasse un
+    #        `NonConforme`, questa registrazione lo grida; prima non lo
+    #        gridava nessuna, e B4 continuava a stampare «e' certificato».
+    r = conforme()
+    r.dichiarate[5] = len(r.blocchi[5][3]) + 8
+    casi.append(("8-carico-troncato", r, 2, None,
+                 "l'ultimo blocco dichiara otto byte che non ci sono"))
+
+    # ── 9. ⛔ due intervalli oscurati che SI SOVRAPPONGONO — §11.1 lo nomina
+    #        per esteso, e nessuna registrazione lo esercitava.
+    r = conforme()
+    v, c, st, carico, osc = r.blocchi[2]
+    ini_osc = osc[0][0]
+    r.blocchi[2] = (v, c, st, carico,
+                    [(ini_osc, 4, osc[0][2]), (ini_osc + 2, 4, osc[0][2])])
+    casi.append(("9-oscurati-sovrapposti", r, 2, None,
+                 "due intervalli oscurati che si accavallano di due byte"))
+
+    # ── 10. ⛔ una CODA dopo l'ultimo blocco dichiarato.
+    r = conforme()
+    r.coda = b"\xff" * 16
+    casi.append(("10-coda-di-spazzatura", r, 2, None,
+                 "sedici byte dopo l'ultimo blocco: non sono del formato"))
+
+    # ── 11. ⛔ `quanti_blocchi` SOTTO-DICHIARATO, ed e' il piu' insidioso:
+    #         il file resta valido per ogni altra riga di §11.1, e i due
+    #         blocchi in coda non vengono mai letti.  Qui il quinto blocco
+    #         porta un ATTACCA con la tela dispari — cioe' una violazione
+    #         vera — che sotto-dichiarando sparisce dal giudizio.
+    r = conforme()
+    r.blocchi[4] = (CLIENT, 0x00, 0,
+                    msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
+                        + s("it")), [])
+    r.dichiara_quanti = 4
+    casi.append(("11-quanti-sotto-dichiarato", r, 2, None,
+                 "quanti_blocchi dice 4 e i blocchi sono 6: la violazione "
+                 "sta nel quinto"))
+
+    # ── 12. ⛔ NIENTE DA GIUDICARE — l'esito 3.  Un file ben formato in cui
+    #         non c'e' un solo messaggio di controllo: «conforme» qui sarebbe
+    #         vero e vuoto (LEZIONI.md §1.9).
+    r = Registrazione()
+    r.blocco(SERVER, b"\x03\x01" + b"\x00" * 26, canale=0x03, stream=7)
+    casi.append(("12-niente-da-giudicare", r, 3, None,
+                 "un solo blocco video: zero messaggi di controllo"))
 
     return casi
 
@@ -245,22 +360,33 @@ def main():
     os.makedirs(dove, exist_ok=True)
     casi = costruisci()
     manifesto = []
+    # ⛔ Il conteggio per esito, CALCOLATO: «tredici registrazioni» non dice
+    #    quanti esiti diversi coprono, ed e' la copertura che conta.
+    per_esito = {}
     print(f"== le {len(casi)} registrazioni di B4  ->  {dove}/")
-    for nome, r, atteso, che in casi:
+    for nome, r, uscita, atteso, che in casi:
         percorso = os.path.join(dove, f"{nome}.rcpreg")
         with open(percorso, "wb") as f:
             f.write(r.byte())
         manifesto.append({
             "file": f"{nome}.rcpreg",
             "che": che,
-            "atteso": "conforme" if atteso is None else "non-conforme",
+            "uscita": uscita,
+            "atteso": ESITI[uscita],
             "regola": None if atteso is None else atteso[0],
             "byte": None if atteso is None else atteso[1],
         })
+        per_esito[uscita] = per_esito.get(uscita, 0) + 1
         if atteso is None:
-            print(f"   {nome:<24s} atteso: CONFORME          — {che}")
+            print(f"   {nome:<26s} attesa uscita {uscita} = {ESITI[uscita]:<20s} — {che}")
         else:
-            print(f"   {nome:<24s} atteso: byte {atteso[1]:<5} {atteso[0]:<28s} — {che}")
+            print(f"   {nome:<26s} attesa uscita {uscita}, byte {atteso[1]:<5} "
+                  f"{atteso[0]:<28s} — {che}")
+    print()
+    for u in sorted(ESITI):
+        print(f"   uscita {u} = {ESITI[u]:<20s} coperta da "
+              f"{per_esito.get(u, 0)} registrazioni"
+              + ("   ⛔ NESSUNA" if not per_esito.get(u) else ""))
     with open(os.path.join(dove, "manifesto.json"), "w") as f:
         json.dump(manifesto, f, indent=1, ensure_ascii=False)
     print(f"\n   il manifesto — cioe' l'ATTESO, scritto qui e non nella testa di")

@@ -528,8 +528,8 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ `banchi/01-b2-sni-ngtcp2.sh` | **nuovo, 10 agosto**: costruisce `bsslserver`, il server d'esempio di `ngtcp2`, che è il bersaglio della prova SNI. ⛔ **Non guarda l'uscita di `ninja`: guarda se il binario c'è** — `examples/CMakeLists.txt` costruisce quel blocco solo `if(LIBEV_FOUND AND HAVE_BORINGSSL AND LIBNGHTTP3_FOUND)`, e se una manca cmake **salta in silenzio** |
 | ⭐ `banchi/01-b2-sonda-sni.py` | **nuovo, 10 agosto**: la sonda del criterio nuovo di `DECISIONI.md` §6.4. Due gambe (senza SNI · con SNI), e ⛔ **due gradini per gamba**: la stretta di mano riesce **e** l'impronta del certificato ricevuto combacia con quella del file |
 | ⭐ `banchi/01-b2-sni-quiche.sh` | **nuovo, 10 agosto**: la terza candidata. ⛔ **Due azioni separate — `leggi` e `costruisci`** — perché se leggere e misurare stanno nello stesso comando la previsione la si scrive **dopo** aver visto il risultato, cioè non la si scrive. ⭐ E **sceglie la versione**: confronta il `rust-version` di ogni etichetta col compilatore presente, e dice quale e perché |
-| ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **nuovo, 10 agosto**: ⭐ **la stretta di mano di RCP/1, in C** — 807 righe, 662 di codice. ⛔ **Non sa che sotto c'è QUIC**: riceve byte, restituisce byte, e il tempo glielo passa chi lo ospita. È la ragione per cui potrà passare al server vero senza riscritture, e per cui §6.4 — se si riaprisse — non porterebbe via il protocollo |
-| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: PAM, derivato da `v1/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
+| ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **nuovo, 10 agosto**: ⭐ **la stretta di mano di RCP/1, in C** — `[M]` **ore 16:30**: `rcp.c` **1292 righe / 875 di codice**, `rcp.h` **131 / 49**. ⚠ *Diceva «807 righe, 662 di codice» ed era il conto della mattina, prima delle cure di B5 e B11.* ⛔ **E questo numero non c'entra con quello dello strato WebTransport**: il protocollo **non dipende da ngtcp2** — riceve byte, restituisce byte, e non entra in nessuna delle misure di collante di B2. ⛔ **Non sa che sotto c'è QUIC**: riceve byte, restituisce byte, e il tempo glielo passa chi lo ospita. È la ragione per cui potrà passare al server vero senza riscritture, e per cui §6.4 — se si riaprisse — non porterebbe via il protocollo |
+| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: `[M]` **99 righe / 52 di codice** (ore 16:30) — PAM, derivato da `v1/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
 | ⭐ `banchi/01-b3-rcp-innesta.py` | **nuovo, 10 agosto**: ⛔ **un innesto SEPARATO da quello di B2**, perché quel numero misura WebTransport e farlo crescere con RCP dentro renderebbe due misure diverse sotto la stessa etichetta (E2) |
 | ⭐ `banchi/01-b3-cliente.py` | **nuovo, 10 agosto**: **il cliente di prova** — la stretta di mano scritta una seconda volta, in un linguaggio diverso, e **registra** nel formato di §11.1 con la parola d'ordine oscurata |
 | ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **nuovi, 10 agosto**: le tre connessioni di B3, e ⛔ **ogni traccia passa dal validatore di B4** — non si collauda il server contro il client |
@@ -549,8 +549,9 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | `v1/banco/provision.sh` | **corretto**: `libev-dev` fra i pacchetti — è quel che serve agli esempi di `ngtcp2`, ed è **un'altra libreria** da `libevent-dev` che c'era già. ⚠ Senza, cmake mette `LIBEV_LIBRARY-NOTFOUND` e **salta gli esempi senza dire niente** |
 | `v1/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
 
-**Si riusa** (`PIANO.md` fase 1): `autenticazione.c` (144 righe, PAM) — ⛔ **con la cura di B10** — e
-`registro.c` (140) — ⚠ **con l'obbligo di B13.2**.
+**Si riusa** (`PIANO.md` fase 1): `autenticazione.c` di v1 (144 righe) — ⛔ **con la cura di B10**,
+e quel che ne è uscito misura **99 righe / 52 di codice** `[M]` — e `registro.c` (140) — ⚠ **con
+l'obbligo di B13.2**.
 
 ---
 
@@ -598,13 +599,13 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⛔ **B2** — ⭐ **due difetti trovati proprio da queste misure** | *nessuno era atteso* | ⛔ il server offriva **0-RTT** (2 biglietti, `max_early_data_size` 0xffffffff) e concedeva **3** stream unidirezionali invece di 16. **Nessuno dei due ha un sintomo funzionale**: la sessione si apriva uguale | 10 ago |
 | ⛔⭐ **B2** — **`quiche` riesce a dichiarare WebTransport dal C?** | **no** (previsione scritta prima: `set_additional_settings` esiste in Rust, **non nell'FFI**) | ⛔ **no** `[M]`: 4 impostazioni sul filo, **nessuna** delle due di WebTransport. Il controllo positivo (`ngtcp2`) ne dichiara 7 | 10 ago |
 | **B2** — la sessione si apre, **per candidata** | 2 motori su 2, **e le sei proprietà** | ⭐ **fatto su `ngtcp2`**; su `quiche` **non si arriva a provarlo**: cade al cancello prima | 10 ago |
-| ⭐ **B2** — righe di collante **per lo strato WebTransport** | *si conta, non si stima* | ⭐ **`ngtcp2`: 456 righe aggiunte, di cui 329 di CODICE** `[M]`, in 4 file del loro esempio. ⚠ Su `quiche` il numero **non esiste e non esisterà**: la candidata cade prima, ed è il lavoro che non abbiamo speso | 10 ago |
+| ⭐ **B2** — righe di collante **per lo strato WebTransport** | *si conta, non si stima* | ⭐ **`ngtcp2`, lo strato di B2 da solo: 553 righe aggiunte — 373 di CODICE, 134 di commento, 46 vuote** `[M]` **ore 16:30**, su albero pulito dopo i due `--togli` e riapplicando il solo innesto di B2. ⚠ *Alle 08:00 la stessa misura dava **456 / 329**: la lettura della capsula di chiusura è cresciuta lì dentro. La successione sta in `DECISIONI.md` §6.4, non qui.* ⛔ **I 972 / 618 dei due innesti insieme non vanno in questa riga.** ⚠ Su `quiche` il numero **non esiste e non esisterà**: la candidata cade prima, ed è il lavoro che non abbiamo speso | 10 ago |
 | **B2** — quanto pesa il loro esempio (il punto di partenza) | *si conta* | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++, 13 file) · `quiche` **614** (esempio minimo, C, 1 file) `[M]`. ⛔ Due etichette diverse: non si sottraggono | 10 ago |
 | ⭐ **B3** — la **1ª** connessione, fino a `SESSIONE` | passa | ⭐ **passa** `[M]` 10 ago: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, e ⛔ **la traccia è dichiarata CONFORME dal validatore di B4** | 10 ago |
 | ⭐ **B3** — la **2ª dopo la chiusura della 1ª** | **identica alla prima** | ⭐ **passa** `[M]`, e anche la sua traccia è conforme. ⛔ **Non lo era al primo giro**: vedi il difetto qui sotto | 10 ago |
-| ⭐ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⭐ **passa** `[M]`: la seconda riceve `GIA_ATTIVA_REMOTA` **per tutt'e due le strade di §3.1** — `CONGEDO` sul controllo *e* codice `0x0f` nella chiusura della sessione — e la prima sopravvive. ⚠ *Era rossa al primo giro, e il difetto era del banco* |
-| ⭐⭐ **B3** — la 2ª **dopo il silenzio** della 1ª, 35 s a `max_idle_timeout` **120** | **entra** | ⭐ **entra** `[M]`, e ⛔ **con il controllo che dice no**: a **+6 s** la seconda è **rifiutata** con `0x0F`, a **+35 s** la terza **entra**. Il registro: `STACCATO per silenzio: 30072 ms`. ⭐ E la connessione della prima è **ancora viva**: a liberare il posto è stato **il server**, non QUIC |
-| ⭐⭐ **B3** — la 3ª con il certificato **ruotato a mano** | passa | ⭐ **passa** `[M]`: impronta nuova ⇒ **Chrome 151 e Firefox 140 aprono**; ⛔ **impronta vecchia ⇒ rifiutata da tutt'e due** (`WebTransport connection rejected`). Il browser **confronta** davvero |
+| ⭐ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⭐ **passa** `[M]`: la seconda riceve `GIA_ATTIVA_REMOTA` **per tutt'e due le strade di §3.1** — `CONGEDO` sul controllo *e* codice `0x0f` nella chiusura della sessione — e la prima sopravvive. ⚠ *Era rossa al primo giro, e il difetto era del banco* | 10 ago |
+| ⭐⭐ **B3** — la 2ª **dopo il silenzio** della 1ª, 35 s a `max_idle_timeout` **120** | **entra** | ⭐ **entra** `[M]`, e ⛔ **con il controllo che dice no**: a **+6 s** la seconda è **rifiutata** con `0x0F`, a **+35 s** la terza **entra**. Il registro: `STACCATO per silenzio: 30072 ms`. ⭐ E la connessione della prima è **ancora viva**: a liberare il posto è stato **il server**, non QUIC | 10 ago |
+| ⚠ **B3** — la 3ª con il certificato **ruotato a mano** | passa | ⛔ **NON è un «passa» pieno, ed è la metà che manca** `[M]` **2026-08-10 09:36**, Chrome **151.0.0.0** e Firefox **140.0**: con l'impronta corrente (`5o99/7rSTJER…`) la **sessione si apre** su tutt'e due — 149,0 ms Firefox, 180,0 ms Chrome — ⛔ **ma lo stream non ha funzionato in nessuno dei due** (`remote WebTransport close` · `The session is closed.`), e il criterio di B2 vuole *«la sessione si apre su Chrome e Firefox, **e la pagina riceve un byte dal server**»*. ⚠ Con l'impronta vecchia (`35wqjGTOmKSj…`) **tutt'e due rifiutano** — Firefox `WebTransport connection rejected`, ⚠ Chrome `Opening handshake failed.`, *due frasi diverse* — ma `[?]` **che a rifiutare sia il confronto dell'impronta non è dimostrato**: l'esito registrato dichiara di suo **tre cause con lo stesso aspetto** (UDP filtrato · impronta non del certificato servito · certificato oltre i 14 giorni), e nessuno le ha distinte. È la forma **E1**, e il banco l'aveva già dichiarata | 10 ago |
 | ⭐ **B3** — il **secondo fisso** di §4.4-bis, cronometrato | ≥ 1000 ms **anche su `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` su tre connessioni. È una proprietà che nessun altro banco vede | 10 ago |
 | ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
 | ⭐ **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | ⭐ **7 su 7** `[M]` 10 ago: ciascuna guasta accusata sul **byte dichiarato in anticipo**, e la conforme accettata. Il validatore è **certificato** | 10 ago |
@@ -612,9 +613,9 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐⭐ **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | ⭐ **44 su 44** `[M]` 10 ago, e per **tutt'e due le strade di §3.1** ogni volta: `CONGEDO` sul controllo *e* il codice del motivo nella chiusura della sessione. ⛔ E dopo **ciascuna** una connessione nuova arriva a `ECCOMI`: il server è sempre lì | 10 ago |
 | ⭐ **B5** — i cinque casi che **devono passare** | *nessuna caduta* | ⭐ **5 su 5** `[M]`: `hevc,vp9` sceglie `hevc` e scrive lo scarto · **vista 300×801** e **1×1** passano (§7.1, R4.10) · `BANCO_MARCA` a funzione spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` e **la sessione regge** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`, **non** `ERRORE_PROTOCOLLO`. ⛔ Senza di loro «il server chiude su tutto» darebbe 44 verdi su 44 | 10 ago |
 | ⭐⭐ **B5** — e ha trovato **un difetto che nessun altro banco vedeva** | *non era un atteso* | ⛔ il contatore **per indirizzo** di §4.4-bis era chiavato sulla `provenienza`, che contiene **la porta**: con un solo tentativo per connessione (§4.4) la porta cambia ogni volta, e quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Curato, e ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** | 10 ago |
-| ⭐ **B5** — e una **seconda contraddizione in `RCP.md`** | *non era un atteso* | ⛔ §2.4 dice che un `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice che il server sceglie *«la più alta che non superi quella del `CIAO`»*, cioè `ECCOMI(1)`. **Byte diversi sul filo per lo stesso ingresso**, e nessuna delle due cita l'altra. Vince §2.4 (la più specifica); `RCP.md` §9 curata | 10 ago |
-| ⭐⭐ **B11** — le violazioni verso la pagina | 12 su 12 | ⭐ **12 su 12 su Firefox 140** `[M]` 10 ago, **più le due proprietà negative** (`desktop` non cambia i byte usciti · nessun battito applicativo). ⛔ **Su Chrome 151: 9 su 12** — i tre che restano ricevono `GIA_ATTIVA_REMOTA` perché **il posto non si libera in tempo**, e la causa è misurata (sotto) | 10 ago |
-| ⛔ **B11** — e il controllo che dice **no** | la pagina contro un server **SANO** deve dire NON-CONFORME | ⭐ **NON-CONFORME** `[M]`, 9 casi su 13 falliti. Senza, «dodici verdi» sarebbe compatibile con una pagina che approva qualunque cosa | 10 ago |
+| ⭐ **B5** — e una **seconda contraddizione in `RCP.md`** | *non era un atteso* | ⛔ §2.2 dice che un `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice che il server sceglie *«la più alta che non superi quella del `CIAO`»*, cioè `ECCOMI(1)`. **Byte diversi sul filo per lo stesso ingresso**, e nessuna delle due cita l'altra. Vince §2.2 (la più specifica); `RCP.md` §9 curata. ⚠ *La cura citava **§2.4**, che è «La porta»: numero corretto lo stesso giorno, rilievo **R11.2*** | 10 ago |
+| ⭐⭐ **B11** — le violazioni verso la pagina | 13 su 13 | ⭐ **13 su 13 su TUTT'E DUE i motori** `[M]` 10 ago sera — Firefox **140.0** e Chrome **151.0.0.0**, `CONFORME` con **0 guasti** — **più le due proprietà negative** (`desktop` non cambia i byte usciti · nessun battito applicativo). ⭐ **E ripetuto**: due giri completi conformi, `15:51:54`+`15:52:28` e `15:54:51`+`15:55:24`. ⚠ *Alle 11 questa riga diceva «12 su 12 su Firefox, 9 su 12 su Chrome»: i tre rossi di Chrome sono stati chiusi la sera stessa, e questo documento era rimasto indietro fino al rilievo **R11.4** del 10 agosto* | 10 ago |
+| ⛔ **B11** — e il controllo che dice **no** | la pagina contro un server **SANO** deve dire NON-CONFORME | ⭐ **NON-CONFORME** `[M]`, **9 casi su 13** falliti. Senza, «tredici verdi» sarebbe compatibile con una pagina che approva qualunque cosa. ⚠ `[?]` **gira su un motore solo** (Firefox), e il banco lo dichiara di suo: rilievo aperto R11.24 | 10 ago |
 | **B6** — i tre tetti | 5 s · 60 s · 10 s, **col motivo giusto** | | |
 | **B7** — otto motivi dal lato che riceve, frasi distinte, nessun numero | 8 su 8 **+ 8 frasi distinte** | | |
 | **B8** — ≥ 1 s per campione, **e le tre mediane indistinguibili** | | | |
@@ -1000,11 +1001,27 @@ posto si liberava lo stesso. ⛔ Con **Chrome** no, e otto casi su dodici riceve
 `GIA_ATTIVA_REMOTA`. ⭐ *Non è una cura per Chrome: è §8.1 applicata, e la pagina non se ne era
 accorta perché nessuno gliel'aveva chiesto.* Aggiunta: i falliti su Chrome sono passati **da 8 a 4**.
 
-⛔ **E quel che resta rosso, misurato e non arrotondato.** Su Chrome, dopo il caso in cui è il
-**server** a chiudere il canale di controllo con un `FIN`, il posto resta occupato: la pagina non ha
-nessun congedo da mandare — §4.2 le vieta di spedire ancora — e il trasporto non arriva in tempo.
-⛔ **Il server deve liberare il posto anche quando a chiudere è lui**, e quella riga non c'è ancora.
-Firefox 140 fa **12 su 12**; Chrome 151 **9 su 12**, e i tre sono questi.
+⛔ **E il quarto, che è stato l'ultimo a cadere.** Su Chrome, dopo il caso in cui è il **server** a
+chiudere il canale di controllo con un `FIN`, il posto restava occupato: da lì in poi non arrivava
+più un byte che potesse liberarlo, e la pagina non poteva rimediare. ⭐ **Il difetto viveva nella
+differenza fra i due motori** — su Firefox il trasporto chiudeva lo stream in tempo e il posto se ne
+andava lo stesso, quindi con un motore solo non esisteva. ⭐ **Curato la sera del 10 agosto: il
+server libera il posto anche quando a chiudere è lui**, ed è quello che ha chiuso i tre casi rossi
+di Chrome. Da lì Firefox 140 e Chrome 151 fanno **13 su 13** tutt'e due, `CONFORME` con zero
+guasti, e il giro è stato **ripetuto**.
+
+⚠ *Fino al rilievo **R11.4** del 10 agosto questo paragrafo diceva «quella riga non c'è ancora», e
+la tabella delle misure «12 su 12 su Firefox, 9 su 12 su Chrome»: il commit che ha chiuso B11 ha
+toccato `README.md`, `RCP.md`, cinque file di banco e `b2-esiti.jsonl`, e **non questo documento** —
+che è quello che `PIANO.md` §0.1 fa leggere per primo alla ripresa. Chi riprendeva domani
+riscopriva come aperto un difetto curato, e cercava una riga che c'è.*
+
+⚠ **E la giustificazione che si dava a quel rosso è a sua volta `[?]`**: si diceva che la pagina non
+poteva mandare il congedo perché *«§4.2 le vieta di spedire ancora»*. §4.2 vieta di continuare a
+spedire **sugli altri canali**, e su uno stream bidirezionale il `FIN` del server non chiude il
+verso della pagina — che quindi **potrebbe** mandare il `CONGEDO` che §8.1 le impone. Le due letture
+danno byte diversi, il banco ha scelto il silenzio, e `RCP.md` **non dice quale sia giusta**:
+rilievo aperto **R11.22**.
 
 ⛔ **E un difetto di banco che avrebbe accusato la pagina**: il confronto *«`desktop` non cambia
 niente»* metteva a paragone **tutti** i byte usciti nei due giri — compreso il `CIAO`, che porta
@@ -1021,13 +1038,13 @@ perfetta.
 
 | | |
 |---|---|
-| ⭐ `DECISIONI.md` §6.4 | 🔸 **CHIUSA il 10 agosto 2026, con un banco**: **`ngtcp2`+`nghttp3`**. `lsquic` fuori sull'SNI, `quiche` fuori perché **dal C non riesce a dichiarare WebTransport**, `ngtcp2` dentro perché **due browser veri aprono la sessione**. ⚠ Il prezzo — 329 righe, di cui la riscrittura del SETTINGS di nghttp3 — è scritto accanto alla scelta |
+| ⭐ `DECISIONI.md` §6.4 | 🔸 **CHIUSA il 10 agosto 2026, con un banco**: **`ngtcp2`+`nghttp3`**. `lsquic` fuori sull'SNI, `quiche` fuori perché **dal C non riesce a dichiarare WebTransport**, `ngtcp2` dentro perché **due browser veri aprono la sessione**. ⚠ Il prezzo — **373 righe di codice** `[M]` ore 16:30, di cui la riscrittura del SETTINGS di nghttp3 — è scritto accanto alla scelta |
 | ✅ `DECISIONI.md` §1.8 | ⭐ **Apple è un di più, non un obiettivo** — 9 agosto 2026, dall'utente: S1a esce dalla fase, e la libreria si sceglie su due motori su tre |
 | ⏳ `DECISIONI.md` §1.7 | resta aperta solo la comodità su Safari, e nessuno la misurerà per ora |
 | ⏳ `DECISIONI.md` §5.0-quater | S5 dice se il numero dichiarato è quello vero |
 | ⏳ `RCP.md` §7.3 | S7 toglie il segno dalla rotella dal `[?]` |
 | ⏳ `RCP.md` §5.3 | S6 dice se i 5 ms del PCM reggono |
-| ✅ `RCP.md` §7.5 | ⭐ **chiusa la notte del 9 agosto**: la funzione di banco — `BANCO_MARCA` e `BANCO_ESITO` — è entrata **prima del primo byte**, sotto la clausola di §9. ⚠ La usa la fase 3; qui se ne prova solo il **rifiuto a funzione spenta** (B5) |
+| 🔸 `RCP.md` §7.5 | ⭐ **chiusa la notte del 9 agosto**: la funzione di banco — `BANCO_MARCA` e `BANCO_ESITO` — è entrata **prima del primo byte**, sotto la clausola di §9. ⚠ La usa la fase 3; qui se ne prova solo il **rifiuto a funzione spenta** (B5). ⚠ *Era marcata ✅, cioè «deciso dall'utente» (`README.md`), e non risulta presa dall'utente: §7.5 dichiara di venire dal **rilievo R3.4** e la motivazione da `web/rapporti/S4-ritardo-disegno.md` §5.3 — non c'è né frase né voce, come invece l'hanno §1.6 e §1.8. Corretta il 10 agosto 2026, rilievo **R11.15**, e **registrata dove le decisioni stanno**: `DECISIONI.md` §1.5 riga 26* |
 | ⏳ `RCP.md` §4.6 | `[?]` se il tetto parta dal TLS o dall'apertura della sessione (B6) |
 | ⏳ `SPECIFICHE.md` §11.5 | l'isolamento fra origini: è un vincolo che questa fase deve rispettare |
 
@@ -1042,6 +1059,8 @@ perfetta.
 | ⭐ **S1a — l'eccezione su Safari e su iOS** | ✅ **resta `[?]` per decisione**, non per dimenticanza (`DECISIONI.md` §1.8). ⛔ E finché è `[?]`, *«funziona su iPhone»* **non si scrive nella documentazione del prodotto** |
 | i **10 bit** fino allo schermo | tre indizi contrari, nessuno è una misura (`web.md` §1.2 A). Verifica alla **fase 2**, e la prova finale è **guardare una sfumatura** |
 | il **pezzo cieco** di S4 | 16-40 ms fra il disegno e il pixel acceso, e nessuna API JavaScript lo vede: la stima **si dichiara accanto a ogni numero** |
+| ⚠ **che a rifiutare l'impronta vecchia sia il CONFRONTO dell'impronta** | il terzo giro di B3 lo dava per dimostrato, e non lo è: l'esito registrato dichiara **tre cause con lo stesso aspetto** — UDP filtrato, impronta non del certificato servito, certificato oltre i 14 giorni — e nessuno le ha distinte. ⛔ Si chiude con un controllo che le separi, non con la frase *«il browser confronta davvero»* (R11.3) |
+| ⚠ **e la seconda metà del criterio di B2 sul terzo giro** | la sessione si apre su tutt'e due i motori con l'impronta corrente, **ma lo stream non ha funzionato**: o si rifà il giro, o si dichiara per iscritto che per quel giro il criterio è solo *«si apre»* (R11.3) |
 | ⭐ **il segno della rotella su più di un compositore** | R3.25: §7.3 vincola cinque desktop, la misura è su Mutter |
 | ⭐ **l'istante da cui parte il primo tetto** | R3.27 |
 | ⭐ **la pila PAM per un utente diverso dal proprietario del processo** | R3.26 |

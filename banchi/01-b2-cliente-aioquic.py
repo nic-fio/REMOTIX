@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """01-b2-cliente-aioquic.py — il cliente di prova, e il controllo d'ambiente di B2.
 
-    python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1]
+    python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1] [:status atteso]
+    python3 01-b2-cliente-aioquic.py https://192.168.0.2:7447/rcp/9 404
 
 ---------------------------------------------------------------------------
 ⛔ CHE COSA MISURA, E SOPRATTUTTO CHE COSA NON MISURA
@@ -125,7 +126,7 @@ class ClienteWebTransport(QuicConnectionProtocol):
                     self.tornato.set_result(ev.data)
 
 
-async def principale(url: str) -> int:
+async def principale(url: str, atteso: str = "200") -> int:
     u = urlparse(url)
     autorita = f"{u.hostname}:{u.port or 443}"
 
@@ -152,6 +153,29 @@ async def principale(url: str) -> int:
         cliente.apri_sessione(autorita, u.path or "/")
         stato = await asyncio.wait_for(cliente.accettata, timeout=8)
         print(f"   risposta alla CONNECT estesa: :status = {stato}")
+
+        # ⛔ IL RIFIUTO SI MISURA SUL NUMERO, NON SU «e' andata male» — R8.8.
+        #
+        #    Il banco del percorso sbagliato concludeva «RIFIUTATO, come impone
+        #    §2.2» da un codice d'uscita diverso da zero.  Ma questo programma
+        #    esce 1 per QUALUNQUE `:status` diverso da 200 e 2 per QUALUNQUE
+        #    eccezione: un timeout della CONNECT, l'UDP filtrato, il server gia'
+        #    morto e un traceback davano tutti lo stesso verde.  ⛔ E `RCP.md`
+        #    §2.2 non chiede «non 200»: chiede **404** (rilievo R1.24).
+        #
+        # ⭐ Il numero passava sotto gli occhi e non si catturava: adesso chi
+        #    chiama dice quale aspetta, e il confronto lo fa il banco.
+        if atteso != "200":
+            if stato == atteso:
+                print(f"\n   ✅ rifiutata con :status {stato}, come atteso")
+                return 0
+            if stato == "200":
+                print(f"\n   ⛔ ACCETTATA (200) dove ci si aspettava {atteso}:"
+                      " il server non controlla il percorso")
+                return 1
+            print(f"\n   ⛔ rifiutata, ma con {stato} invece di {atteso}:"
+                  " e' un rifiuto che RCP.md §2.2 non prevede")
+            return 1
         if stato != "200":
             print(f"\n   ⛔ la sessione NON e' stata accettata (atteso 200, avuto {stato})")
             return 1
@@ -172,8 +196,12 @@ async def principale(url: str) -> int:
 
 if __name__ == "__main__":
     url = sys.argv[1] if len(sys.argv) > 1 else "https://192.168.0.2:7447/rcp/1"
+    # ⚠ Il secondo argomento e' lo `:status` ATTESO: senza, e' 200 e vale la
+    #   strada di sempre.  Con «404» il programma prova il controllo che dice
+    #   NO, e un fallimento qualunque non passa piu' per un rifiuto (R8.8).
+    atteso = sys.argv[2] if len(sys.argv) > 2 else "200"
     try:
-        sys.exit(asyncio.run(principale(url)))
+        sys.exit(asyncio.run(principale(url, atteso)))
     except Exception as e:
         print(f"\n   ⛔ fallito: {type(e).__name__}: {e}")
         sys.exit(2)

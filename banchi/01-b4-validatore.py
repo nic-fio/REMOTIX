@@ -3,9 +3,10 @@
 
     python3 01-b4-validatore.py registrazione.rcpreg
 
-    uscita 0  la registrazione è conforme
+    uscita 0  la registrazione è conforme — e si dice SU QUANTI messaggi
     uscita 1  non è conforme — e si dice QUALE byte e QUALE regola
-    uscita 2  la REGISTRAZIONE è malformata (non è un giudizio sul filo)
+    uscita 2  la REGISTRAZIONE è rotta, o non si legge (non è un giudizio sul filo)
+    uscita 3  ⛔ non c'è NIENTE DA GIUDICARE (non è un giudizio sul filo)
 
 ---------------------------------------------------------------------------
 ⛔ CHE COS'E', E PERCHE' E' UN TERZO PROGRAMMA
@@ -18,15 +19,34 @@ erediterebbe i fraintendimenti, e due programmi scritti dalla stessa mano che
 vanno d'accordo non confermano niente (`README.md`).
 
 ---------------------------------------------------------------------------
-⛔ TRE ESITI, NON DUE
+⛔ QUATTRO ESITI, E TRE DI ESSI DICONO «NON E' UN GIUDIZIO SUL FILO»
 
-  0  conforme
+  0  conforme — ⛔ e con il DENOMINATORE: quanti blocchi, quanti sul canale di
+     controllo, quanti messaggi letti, quanti con il corpo davvero giudicato
   1  NON conforme — con lo scostamento del byte e la regola violata
-  2  ⛔ la REGISTRAZIONE e' malformata
+  2  ⛔ la REGISTRAZIONE e' rotta, **o non si legge**
+  3  ⛔ non c'e' NIENTE DA GIUDICARE: zero messaggi di controllo
 
-Il terzo esiste perche' «il file e' rotto» e «il filo non era conforme» sono
+Il **2** esiste perche' «il file e' rotto» e «il filo non era conforme» sono
 due fatti diversi con due cure diverse, e un validatore che li confondesse
 manderebbe a cercare un difetto di protocollo dentro un difetto di banco.
+
+⛔ **E ci finisce anche il file che non si apre** — 10 agosto 2026, rilievo
+R7.5.  Un `OSError` risaliva fuori da `main` e il processo usciva **1**, cioe'
+diceva *«il filo non e' conforme»* per un file che non esisteva o di cui non
+si avevano i permessi.  Questo validatore gira anche **dentro il contenitore**,
+su registrazioni scritte da un server lanciato come root: il giorno in cui i
+permessi non tornano, l'arbitro mandava la diagnosi a leggere il protocollo.
+E' la forma d'errore **E8** alla lettera: «vuoto» e «proibito» hanno lo stesso
+aspetto.
+
+⛔ **E il 3 e' nuovo, dallo stesso rilievo (R7.4)**, e cura la faccia opposta:
+una registrazione con **zero blocchi**, o fatta di soli blocchi video, usciva
+**0** con la frase *«⭐ conforme: 0 blocchi, nessuna violazione»*.  «Non ho
+niente da giudicare» e «ho giudicato tutto e va bene» sono due fatti diversi
+con lo stesso colore, ed e' `LEZIONI.md` §1.9: *un conteggio senza
+denominatore*.  ⚠ Un arbitro che assolve senza aver guardato e' peggio di un
+arbitro che sbaglia: sopra il suo verde ci si costruisce.
 
 ---------------------------------------------------------------------------
 ⛔ E RIFERISCE **QUALE** BYTE, NON SOLO CHE E' ROSSO
@@ -107,6 +127,15 @@ class Malformata(Exception):
     """La REGISTRAZIONE e' rotta: non e' un giudizio sul filo."""
 
 
+class NienteDaGiudicare(Exception):
+    """⛔ Nel file non c'e' nessun messaggio di controllo da giudicare.
+
+    Non e' «conforme» e non e' «non conforme»: e' l'assenza dell'oggetto del
+    giudizio, e ha un codice d'uscita suo perche' la cura e' un'altra —
+    si guarda il registratore, non il protocollo (rilievo R7.4).
+    """
+
+
 # ---------------------------------------------------------------------------
 class Lettore:
     """Legge campi dal carico di un blocco, e sa dove NON deve guardare.
@@ -150,18 +179,26 @@ class Lettore:
         return any(not (inizio + quanti <= o or inizio >= o + q)
                    for o, q in self.oscurati)
 
-    def stringa(self, che, minimo=0, massimo=None):
-        """RCP.md §6.0: u16 lunghezza + quella lunghezza di UTF-8, senza terminatore."""
+    def stringa(self, che, minimo=0, massimo=None, regola="RCP.md §4.4"):
+        """RCP.md §6.0: u16 lunghezza + quella lunghezza di UTF-8, senza terminatore.
+
+        ⛔ `regola` si passa da fuori.  Gli intervalli dell'utente e della
+           parola d'ordine stanno in §4.4, quelli dei nomi e dei valori di
+           capacita' in §4.3 — e qui si citava §4.4 per tutti.  Un rosso con
+           la sezione sbagliata accanto passa il controllo di
+           `01-b4-lancia.py` senza che nessuno se ne accorga, perche' il
+           colore e' quello giusto (rilievo R7.12).
+        """
         inizio_campo = self.i
         n = self.u16(f"la lunghezza di {che}")
         dati_inizio = self.i
         b = self._prendi(n, che)
         if n < minimo:
-            raise NonConforme("RCP.md §4.4",
+            raise NonConforme(regola,
                               f"{che} e' lunga {n} byte, il minimo e' {minimo}",
                               self.base + inizio_campo, inizio_campo)
         if massimo is not None and n > massimo:
-            raise NonConforme("RCP.md §4.3",
+            raise NonConforme(regola,
                               f"{che} e' lunga {n} byte, il massimo e' {massimo}",
                               self.base + inizio_campo, inizio_campo)
         # ⛔ Dentro un intervallo oscurato NON si guarda: quei byte sono
@@ -193,8 +230,10 @@ def leggi_capacita(le, nome_messaggio, lato):
     visti = {}
     for k in range(quante):
         inizio = le.i
-        nome = le.stringa(f"il nome della capacita' {k}", minimo=1, massimo=64)
-        valore = le.stringa(f"il valore della capacita' {k}", massimo=256)
+        nome = le.stringa(f"il nome della capacita' {k}", minimo=1, massimo=64,
+                          regola="RCP.md §4.3")
+        valore = le.stringa(f"il valore della capacita' {k}", massimo=256,
+                            regola="RCP.md §4.3")
         if nome is None:
             continue  # oscurata: non si giudica
         if not nome or any(c not in NOME_LECITO for c in nome):
@@ -231,8 +270,8 @@ def corpo(tipo, nome, le, lato):
         le.u16("la versione")
         leggi_capacita(le, nome, lato)
     elif nome == "CREDENZIALI":
-        le.stringa("l'utente", minimo=1, massimo=256)
-        le.stringa("la parola", minimo=1, massimo=1024)
+        le.stringa("l'utente", minimo=1, massimo=256, regola="RCP.md §4.4")
+        le.stringa("la parola", minimo=1, massimo=1024, regola="RCP.md §4.4")
     elif nome == "AMMESSO":
         pass
     elif nome == "RESPINTO":
@@ -241,20 +280,33 @@ def corpo(tipo, nome, le, lato):
             raise NonConforme("RCP.md §8.2", f"motivo {m:#04x} sconosciuto",
                               le.ass(-1) if False else le.base + le.i - 1, le.i - 1)
     elif nome == "ATTACCA":
-        lar, alt = le.u32("tela_larghezza"), le.u32("tela_altezza")
+        # ⛔ LO SCOSTAMENTO DEL CAMPO SI PRENDE PRIMA DI LEGGERLO.
+        #
+        #    Questi quattro `raise` passavano `le.base, 0`: l'inizio del CORPO
+        #    come assoluto e ZERO come relativo, cioe' **due byte diversi**.
+        #    §11.1 chiede due modi di dire lo **stesso** byte — «assoluto nel
+        #    file, e relativo al carico del blocco» — e chi apre il file con un
+        #    editor e chi legge la specifica finivano a guardare due punti
+        #    diversi.  E su `tela_altezza` il byte accusato era comunque quello
+        #    della larghezza (rilievo R7.12).
+        off_lar = le.i
+        lar = le.u32("tela_larghezza")
+        off_alt = le.i
+        alt = le.u32("tela_altezza")
         le.u32("vista_larghezza")
         le.u32("vista_altezza")
-        le.stringa("la disposizione", massimo=64)
+        le.stringa("la disposizione", massimo=64, regola="RCP.md §4.5")
         # ⛔ I limiti sono normativi, e la parita' non e' pignoleria: una
         #    misura dispari la arrotonda il codificatore, in silenzio.
-        for eti, v, mi, ma in (("tela_larghezza", lar, 320, 7680),
-                               ("tela_altezza", alt, 240, 4320)):
+        for eti, v, off, mi, ma in (("tela_larghezza", lar, off_lar, 320, 7680),
+                                    ("tela_altezza", alt, off_alt, 240, 4320)):
             if not (mi <= v <= ma):
                 raise NonConforme("RCP.md §4.5",
-                                  f"{eti} = {v}, fuori da {mi}..{ma}", le.base, 0)
+                                  f"{eti} = {v}, fuori da {mi}..{ma}",
+                                  le.base + off, off)
             if v % 2:
                 raise NonConforme("RCP.md §4.5", f"{eti} = {v} e' dispari",
-                                  le.base, 0)
+                                  le.base + off, off)
     elif nome == "SESSIONE":
         st = le.u8("lo stato")
         if st not in (1, 2):
@@ -263,7 +315,7 @@ def corpo(tipo, nome, le, lato):
                               le.base + le.i - 1, le.i - 1)
         le.u32("tela_larghezza")
         le.u32("tela_altezza")
-        le.stringa("il desktop", massimo=64)
+        le.stringa("il desktop", massimo=64, regola="RCP.md §4.5")
     elif nome == "CONGEDO":
         m = le.u8("il motivo")
         if m not in MOTIVI:
@@ -271,12 +323,12 @@ def corpo(tipo, nome, le, lato):
                               f"motivo {m:#04x} sconosciuto — e il codice 0 "
                               "NON DEVE essere usato (§3.1)",
                               le.base + le.i - 1, le.i - 1)
-        le.stringa("il dettaglio")
+        le.stringa("il dettaglio", regola="RCP.md §7.1")
     elif nome in ("VISTA", "ADATTA_TELA"):
         le.u32("larghezza")
         le.u32("altezza")
     elif nome == "DISPOSIZIONE":
-        le.stringa("la disposizione", massimo=64)
+        le.stringa("la disposizione", massimo=64, regola="RCP.md §4.5")
     elif nome == "RICHIEDI_CHIAVE":
         le.u32("ultimo_numero")
     else:
@@ -291,21 +343,58 @@ def corpo(tipo, nome, le, lato):
 # La macchina degli stati della stretta di mano — RCP.md §1 e §4.
 ORDINE = ["CIAO", "ECCOMI", "CREDENZIALI", "AMMESSO", "ATTACCA", "SESSIONE"]
 
+# ⛔ I messaggi che vivono DOPO `SESSIONE`, e sono questi e basta (§7.1).
+#    La stretta di mano non ci sta dentro: §1 dice che «l'ordine dei cinque
+#    passi non ammette permute», e non che dopo il quinto tutto sia permesso.
+DOPO_SESSIONE = {"VISTA", "DISPOSIZIONE", "CURSORE_FORMA", "ADATTA_TELA",
+                 "RICHIEDI_CHIAVE", "TELA", "BANCO_MARCA", "BANCO_ESITO"}
+
 
 class Stato:
+    """La macchina della stretta di mano — RCP.md §1, §4, §4.4.
+
+    ⛔ Aveva **tre** buchi nella stessa funzione (rilievo R7.10), e sul più
+       grosso i due arbitri del progetto si contraddicevano:
+
+       1. `RESPINTO` non veniva **segnato**, quindi dopo un rifiuto la
+          macchina credeva ancora di aspettare `AMMESSO`.  ⇒ `CIAO · ECCOMI ·
+          CREDENZIALI · RESPINTO · RESPINTO · AMMESSO · ATTACCA · SESSIONE`
+          era dichiarato **conforme**: un server che rifiuta le credenziali,
+          lo ripete, poi ammette l'utente e apre la sessione;
+       2. a sessione aperta `ammette` diceva sì a **qualunque** nome, quindi
+          un secondo `CREDENZIALI` passava — ed e' la violazione che §4.4
+          nomina per esteso e che B5 prova con `credenziali-due-volte`.  ⛔ I
+          due arbitri davano verdetti opposti sulla stessa regola;
+       3. il commento diceva *«a sessione aperta l'ordine non e' piu'
+          vincolato»*, che `RCP.md` non autorizza — un commento che spiega
+          perche' una riga e' giusta non e' una prova che lo sia.
+    """
+
     def __init__(self):
         self.fatti = []
         self.attiva = False
+        self.respinto = False
 
     def ammette(self, nome):
         """Il messaggio puo' arrivare adesso?  Restituisce None o il perche' no."""
-        if nome in ("CONGEDO",):
+        # ⛔ Dopo `RESPINTO` al client resta una cosa sola che puo' dire, ed e'
+        #    `CONGEDO` (§4.4).  Qualunque altro messaggio — «e in particolare
+        #    un secondo `CREDENZIALI`» — e' la violazione che §4.4 vieta.
+        if self.respinto:
+            return None if nome == "CONGEDO" else \
+                f"dopo RESPINTO al client resta solo CONGEDO, e' arrivato {nome}"
+        if nome == "CONGEDO":
             return None  # ↔ in qualunque momento
         if nome == "RESPINTO":
             return None if self.fatti[-1:] == ["CREDENZIALI"] else \
                 "RESPINTO risponde a CREDENZIALI"
         if self.attiva:
-            return None  # a sessione aperta l'ordine non e' piu' vincolato
+            # ⛔ A sessione aperta l'ordine dei messaggi DI SESSIONE e' libero;
+            #    quelli della stretta di mano no: ripeterli e' una permuta dei
+            #    cinque passi, che §1 vieta.
+            if nome in DOPO_SESSIONE:
+                return None
+            return f"{nome} appartiene alla stretta di mano, gia' conclusa"
         if nome not in ORDINE:
             return f"{nome} non fa parte della stretta di mano"
         atteso = ORDINE[len(self.fatti)] if len(self.fatti) < len(ORDINE) else None
@@ -314,10 +403,53 @@ class Stato:
         return None
 
     def segna(self, nome):
+        if nome == "RESPINTO":
+            self.respinto = True
+            return
         if nome in ORDINE and not self.attiva:
             self.fatti.append(nome)
             if self.fatti == ORDINE:
                 self.attiva = True
+
+
+# ---------------------------------------------------------------------------
+# ⛔ L'IMPRONTA DI §11.1: QUEL CHE SI PUO' VERIFICARE, E QUEL CHE NON SI PUO'.
+#
+#    Trentadue byte per intervallo oscurato viaggiano nel formato per legare
+#    quel che il registratore dichiara di aver nascosto a quel che c'era.  Qui
+#    venivano letti in una variabile e cancellati con `del` alla riga dopo, e
+#    `hashlib` era importato e mai usato (rilievo R7.11).
+#
+# ⛔ **Ma verificarla contro i byte veri e' impossibile da questo lato, per
+#    costruzione**: i byte veri sono precisamente quelli che il formato esiste
+#    per NON far arrivare fin qui.  Chi puo' farlo e' solo chi li ha — il
+#    registratore, con un banco suo.  Dirlo e' parte del mestiere di un
+#    arbitro: un controllo che non si puo' fare va dichiarato, non simulato.
+#
+# ⭐ Quel che si puo' verificare, e da qui in poi si verifica, e' che
+#    l'impronta non sia una delle **impronte finte** che un registratore
+#    sbagliato produce da se':
+#      · trentadue zeri — il campo mai riempito;
+#      · SHA-256 del riempimento `0x2A` × quanti — ha impronto il RIEMPIMENTO
+#        invece dei byte veri, cioe' ha certificato la propria sostituzione;
+#      · SHA-256 del vuoto — ha impronto una stringa che non aveva.
+#    ⚠ Sono difetti del REGISTRATORE, non del filo: escono con l'esito 2.
+FINTE = {
+    b"\x00" * 32: "trentadue zeri: il campo non e' mai stato riempito",
+    hashlib.sha256(b"").digest(): "SHA-256 del vuoto",
+}
+
+
+def controlla_impronta(nb, ini, qua, impronta):
+    perche = FINTE.get(impronta)
+    if perche is None and impronta == hashlib.sha256(
+            bytes([RIEMPIMENTO]) * qua).digest():
+        perche = ("SHA-256 del RIEMPIMENTO 0x2A: il registratore ha impronto "
+                  "quel che ha messo, non quel che ha tolto")
+    if perche:
+        raise Malformata(
+            f"blocco {nb}: l'intervallo oscurato [{ini},{ini + qua}) porta "
+            f"un'impronta finta — {perche}")
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +468,13 @@ def valida(percorso):
 
     p = 16
     stato = Stato()
-    visti = 0
+    # ⛔ I DENOMINATORI DEL VERDETTO, e sono quattro perche' le cose che si
+    #    possono NON aver guardato sono quattro.  «Nessuna violazione» senza
+    #    di essi era vero anche su un file di zero blocchi (rilievo R7.4).
+    visti = 0        # blocchi letti
+    di_controllo = 0  # blocchi sul canale 0x00
+    messaggi = 0     # messaggi di controllo letti
+    giudicati = 0    # ... di cui con il corpo davvero giudicato
     for nb in range(quanti):
         if p + 16 > len(d):
             raise Malformata(f"il blocco {nb} comincia oltre la fine del file")
@@ -357,7 +495,7 @@ def valida(percorso):
                 if not (ini + qua <= o or ini >= o + q):
                     raise Malformata(f"blocco {nb}: due intervalli oscurati si sovrappongono")
             oscurati.append((ini, qua))
-            del impronta
+            controlla_impronta(nb, ini, qua, impronta)
         if p + lung > len(d):
             raise Malformata(f"blocco {nb}: il carico e' troncato")
         carico, base = d[p:p + lung], p
@@ -384,6 +522,7 @@ def valida(percorso):
             print(f"   blocco {nb}: canale {CANALI[canale]} dal {chi}, "
                   f"{lung} byte — non giudicato da questo validatore")
             continue
+        di_controllo += 1
 
         # Il canale di controllo vive solo sullo stream 0 della sessione (§2.5).
         le = Lettore(carico, base, oscurati)
@@ -423,14 +562,38 @@ def valida(percorso):
                             [(o - le.i, q) for o, q in oscurati
                              if o + q > le.i and o < le.i + lung_msg])
             giudicato = corpo(tipo, nome, sotto, verso)
+            messaggi += 1
+            giudicati += int(bool(giudicato))
             print(f"   blocco {nb}: {nome:<14s} dal {chi:<6s} {lung_msg:>5} byte"
                   + ("" if giudicato else "   (corpo non giudicato)"))
             stato.segna(nome)
             le.i += lung_msg
 
-    if visti != quanti:
-        raise Malformata(f"dichiarati {quanti} blocchi, letti {visti}")
-    print(f"\n   ⭐ conforme: {visti} blocchi, nessuna violazione")
+    # ⛔ IL CONTROLLO CHE C'ERA NON POTEVA FALLIRE, E MANCAVA QUELLO CHE SERVE.
+    #
+    #    Qui stava `if visti != quanti: raise Malformata(...)`.  `visti` viene
+    #    incrementato una volta per iterazione di un `for nb in range(quanti)`
+    #    che o completa o solleva: era **codice morto**, in piedi al posto del
+    #    controllo che copre i due modi veri di far sparire dei byte dal
+    #    giudizio (rilievo R7.4):
+    #      · `quanti_blocchi` sotto-dichiarato — si scrive 4 dove sono 6 e i
+    #        due blocchi offensivi non vengono mai letti;
+    #      · una coda di spazzatura dopo l'ultimo blocco dichiarato.
+    #    In tutt'e due i casi il file usciva «⭐ conforme».
+    if p != len(d):
+        raise Malformata(
+            f"restano {len(d) - p} byte dopo i {quanti} blocchi dichiarati: "
+            f"o `quanti_blocchi` e' sotto-dichiarato — e allora c'e' del filo "
+            f"che nessuno ha giudicato — o c'e' una coda che non e' del formato")
+
+    # ⛔ E «CONFORME» SI DICE CON IL DENOMINATORE, O NON SI DICE.
+    print(f"\n   guardati: {visti} blocchi, di cui {di_controllo} sul canale di "
+          f"controllo · {messaggi} messaggi letti, {giudicati} col corpo giudicato")
+    if messaggi == 0:
+        raise NienteDaGiudicare(
+            f"{visti} blocchi, {di_controllo} sul canale di controllo, "
+            f"ZERO messaggi di controllo")
+    print(f"   ⭐ conforme: nessuna violazione in {messaggi} messaggi")
     return 0
 
 
@@ -449,6 +612,21 @@ def main():
         print(f"\n   ⚠ REGISTRAZIONE MALFORMATA: {e}")
         print("      ⛔ Non e' un giudizio sul filo: e' un difetto del file.")
         return 2
+    except OSError as e:
+        # ⛔ E8: «vuoto» e «proibito» hanno lo stesso aspetto.  Prima questo
+        #    risaliva fuori da `main` e il processo usciva **1**, cioe' «il
+        #    filo non e' conforme», su un file che non si era nemmeno aperto —
+        #    e la diagnosi partiva dal protocollo (rilievo R7.5).
+        print(f"\n   ⚠ LA REGISTRAZIONE NON SI LEGGE: {e}")
+        print("      ⛔ Non e' un giudizio sul filo, e non e' «il file e' rotto»:")
+        print("         e' che non si e' potuto aprire.  Si guardano permessi,")
+        print("         percorso e volume — non RCP.md.")
+        return 2
+    except NienteDaGiudicare as e:
+        print(f"\n   ⛔ NIENTE DA GIUDICARE: {e}")
+        print("      Non e' «conforme»: e' l'assenza dell'oggetto del giudizio.")
+        print("      Si guarda il registratore — chi doveva scrivere quei byte.")
+        return 3
 
 
 if __name__ == "__main__":

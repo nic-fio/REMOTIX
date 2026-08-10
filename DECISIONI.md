@@ -206,17 +206,25 @@ codificatore con le capacità del **suo** client. Se il codec fosse una propriet
 sessione, riprendere da un dispositivo diverso — telefono la mattina, portatile il pomeriggio
 — richiederebbe di rifare la sessione, che è esattamente ciò che la persistenza deve evitare.
 
-### 1.5 🔸 Le chiusure di RCP/1 — venticinque buchi tappati prima della prima riga di codice
+### 1.5 🔸 Le chiusure di RCP/1 — ventisei buchi tappati prima della prima riga di codice
 
 *9 agosto 2026, all'apertura della fase 1. Sono conseguenze scritte da me leggendo `RCP.md` con una
 domanda sola — **due persone che lo leggono da sole scrivono lo stesso byte?** — e la risposta era
 no. Tutte 🔸: si correggono senza discussione.*
 
-⛔ **Il censimento in una riga**: dei ventidue messaggi del protocollo, **due** erano definiti byte
-per byte — il fotogramma e il datagram audio. Gli altri venti avevano un nome e una descrizione a
-parole. Il canale meno specificato era proprio quello della **stretta di mano**, cioè quello che la
-fase 1 deve scrivere. Il dettaglio sta in `RCP.md` §0-bis; qui stanno solo le scelte che avrebbero
-potuto essere prese altrimenti.
+⛔ **Il censimento in una riga**: dei **ventidue** messaggi che il protocollo aveva alla prima
+stesura, **due** erano definiti byte per byte — il fotogramma e il datagram audio. Gli altri venti
+avevano un nome e una descrizione a parole. Il canale meno specificato era proprio quello della
+**stretta di mano**, cioè quello che la fase 1 deve scrivere. Il dettaglio sta in `RCP.md` §0-bis;
+qui stanno solo le scelte che avrebbero potuto essere prese altrimenti.
+
+⚠ **E il totale di oggi non è più ventidue: è ventisei**, tutti definiti byte per byte (`RCP.md`
+§0-bis, casella corretta dal rilievo **R1.29**). I quattro aggiunti il 9 agosto sono
+`RICHIEDI_CHIAVE` e `TELA` (§5.2, §7.1) e ⭐ **`BANCO_MARCA` e `BANCO_ESITO`** (§7.5, la notte del
+9). *La distinzione fra i due totali è del 10 agosto 2026, rilievo **R11.13**: questa riga diceva
+«dei ventidue messaggi del protocollo» al presente, e un lettore che verificasse la completezza
+contando da qui — come R1.29 dichiara di aver fatto su §0-bis — ne trovava quattro in meno di
+quelli che esistono.*
 
 | # | La scelta | Perché così | Dove |
 |---|---|---|---|
@@ -234,22 +242,44 @@ potuto essere prese altrimenti.
 | 12 | **la tela DEVE avere lati pari**, fra 320×240 e 7680×4320 | una misura dispari la arrotonda **il codificatore, in silenzio**: due misure sotto la stessa etichetta, cioè la forma d'errore **E2** | §4.5 |
 | 13 | **tre tetti di tempo sulla stretta di mano** (5 s, 60 s, 10 s) | una connessione ferma a metà tiene un posto; e i 30 s di QUIC misurano il **silenzio della rete**, non un client che non fa il suo mestiere | §4.6 |
 | 14 | ⛔ **i fotogrammi chiave**: `tipo` `0x0301`/`0x0302` e il messaggio `RICHIEDI_CHIAVE` | **non era una lacuna, era un difetto di disegno**: §5.1 concede di abbandonare un fotogramma, e il video è compresso con predizione — abbandonarne uno lascia il decodificatore rotto finché non arriva una chiave, e non c'era modo né di dirlo né di chiederla. Costa **zero byte**: entra nei valori di un campo che c'era già | §5.2 |
-| 15 | l'audio è **48 kHz, 2 canali, blocchi da 20 ms**, e il PCM è **s16 little-endian** | «Opus, con PCM come base» non è un formato. E l'endianness del carico utile è l'unica eccezione all'ordine di rete: dichiararla è ciò che impedisce a due implementazioni di divergere in silenzio | §5.3 |
+| 15 | l'audio è **48 kHz, 2 canali**; ⛔ **i blocchi sono da 20 ms per Opus e da 5 ms per il PCM**, e il PCM è **s16 little-endian** | «Opus, con PCM come base» non è un formato. E l'endianness del carico utile è l'unica eccezione all'ordine di rete: dichiararla è ciò che impedisce a due implementazioni di divergere in silenzio. ⛔ *Questa riga diceva «blocchi da 20 ms» per **l'audio** e riservava al PCM il solo endianness: è la lettura che il rilievo **R1.1** — il più grave della revisione del 9 agosto — dichiara **letale**, perché 20 ms di PCM fanno 1920 campioni, 3840 byte, più 12 = **3852**, e un datagram QUIC non è frammentabile su un percorso da ~1200 byte. **L'audio PCM non sarebbe partito mai, su nessuna rete** — e il PCM è il controllo positivo di Opus. `RCP.md` §5.3 era stato corretto la sera del 9; questa riga no. Allineata il 10 agosto 2026, rilievo **R11.12*** | §5.3 |
 | 16 | gli appunti si fermano a **1 000 000 byte**, e oltre **non si annunciano** | troncare un testo e incollarlo in un terminale è peggio che non averlo | §5.4 |
-| 17 | il cursore si ferma a **256×256**, e `larghezza = 0` vuol dire nascosto | serviva un modo di dire «nessun cursore» che non fosse un messaggio in meno | §5.5, §7.2 |
+| 17 | il cursore si ferma a **256×256**, e ⛔ **`larghezza = 0` *e* `altezza = 0` insieme** vogliono dire nascosto — una sola delle due a zero è `ERRORE_PROTOCOLLO`, e in quel caso il **punto attivo DEVE valere `0,0`** | serviva un modo di dire «nessun cursore» che non fosse un messaggio in meno. ⚠ *Questa riga diceva «`larghezza = 0` vuol dire nascosto», senza l'altezza: chi implementava di qui mandava `larghezza=0, altezza=16` e §5.5 gliela dichiarava `ERRORE_PROTOCOLLO`. Allineata il 10 agosto 2026, rilievo **R11.11**, insieme all'eccezione sul punto attivo che §5.5 non aveva* | §5.5, §7.2 |
 | 18 | **un fotogramma non supera 16 MiB**, e la lunghezza si controlla **prima di allocare** | senza tetto, sei byte scritti a mano si portano via la memoria del server | §6.1, §6.2 |
 | 19 | i fotogrammi **possono arrivare fuori ordine**, e il client scarta i vecchi con aritmetica **modulo 2³²** | gli stream sono indipendenti: è una conseguenza di §5.1 che nessuno aveva scritto. A 60 al secondo il contatore gira in due anni, e una sessione può durare di più | §6.2 |
-| 20 | **i codici di tasti e pulsanti sono quelli di evdev**, la rotella in **unità da 120** | è quel che vuole `libei`, cioè l'unico modo che abbiamo di iniettare input. Ogni altra convenzione aggiunge una tabella di traduzione che sbaglia in silenzio — e in v1 quella tabella è costata il banco della rotella (`LEZIONI.md` §2.3) | §7.3 |
+| 20 | **i codici di tasti e pulsanti sono quelli di evdev**, la rotella in **unità da 120** | è quel che vuole `libei`, cioè l'unico modo che abbiamo di iniettare input. Ogni altra convenzione aggiunge una tabella di traduzione che sbaglia in silenzio. ⚠ *Qui c'era anche «e in v1 quella tabella è costata il banco della rotella (`LEZIONI.md` §2.3)», ed è **falso**: §2.3 racconta che il banco della rotella cercava `asse dy=-10` mentre il registro scriveva `asse dx=0 dy=-10` — **rosso, col codice corretto**. È una stringa cercata male, non una conversione col segno sbagliato. `RCP.md` §7.3 era stato corretto la notte del 9 agosto (rilievo **R4.15**); questa riga no, ed è quella che il progetto designa come fonte. Allineata il 10 agosto 2026, rilievo **R11.14** — e conta perché citando la lezione sbagliata **la si perde nel punto in cui si applicherebbe**, cioè S7, che è ancora da misurare* | §7.3 |
 | 21 | l'`id` dell'input è **uno solo per tutto il canale**, non uno per tipo | è quello che torna nel campo `input` del fotogramma: con contatori separati non tornerebbe niente | §7.3 |
 | 22 | ⛔ **al distacco si rilasciano tutti i tasti e i pulsanti** | un Ctrl rimasto giù in una sessione che sopravvive al client rende il desktop inservibile al riattacco, e nessuno collega le due cose | §7.3 |
 | 23 | **`TELA` è la risposta obbligatoria ad `ADATTA_TELA`** | §7.1 imponeva un «rifiuto motivato» e non esisteva un messaggio per dirlo: il client sarebbe rimasto ad aspettare per sempre | §7.1 |
 | 24 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie | è l'unico momento in cui i due lati hanno legittimamente due verità diverse. Dichiarata come eccezione a §3, non lasciata all'improvvisazione | §7.1 |
-| 25 | il motivo del congedo viaggia **anche nel codice d'errore della chiusura QUIC** | se il congedo non arriva — stream rotto, messaggio illeggibile — il motivo passa comunque. È la ferita di `LEZIONI.md` §1.7 curata con due strade invece che con una | §3.1 |
+| 25 | il motivo del congedo viaggia **anche nel codice d'errore applicativo della chiusura della sessione WebTransport** | se il congedo non arriva — stream rotto, messaggio illeggibile — il motivo passa comunque. È la ferita di `LEZIONI.md` §1.7 curata con due strade invece che con una. ⚠ *Diceva «chiusura QUIC», ed è la lettura che il rilievo **R1.4** ha dichiarato impossibile per la pagina: l'API espone la chiusura **della sessione**, non quella della connessione HTTP/3 sotto. Allineata il 10 agosto 2026, rilievo **R11.8*** | §3.1 |
+| 26 | ⭐ **la funzione di banco entra nel protocollo**: due tipi nuovi, `BANCO_MARCA` (`0x000F`) e `BANCO_ESITO` (`0x0010`) — il rettangolo 16×16, il colore, e il **ritardo `N` iniettabile** | l'anello del ritardo di §2.6 misura dal lato che riceve, e perché quel numero valga il banco deve poter **iniettare un ritardo noto** e verificare che la mediana salga di esattamente quello — *«un banco che non lo fa non sa di misurare»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). Quel comando **attraversa il filo**: improvvisarlo nel codice di prova sarebbe il difetto muto contro cui `RCP.md` §0 esiste. ⛔ **La funzione è spenta di suo** (invariante I6) e spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, mai un silenzio | §7.5 |
 
-⚠ **E due tipi di messaggio sono stati aggiunti** (`RICHIEDI_CHIAVE`, `TELA`) più due motivi di
-congedo (`TEMPO_SCADUTO`, `SESSIONE_NON_SERVIBILE`). §9 lo vieta **dentro** una versione maggiore,
-e la clausola che lo permette è che **oggi non esiste nessuna implementazione**. Dal primo byte
-scritto in poi vale la regola senza sconti.
+> ⭐ *La riga 26 è **della notte del 9 agosto 2026** e stava soltanto in `RCP.md` §7.5; è registrata
+> qui il 10 agosto, rilievo **R11.13** e **R11.15**.* ⛔ **È 🔸, non ✅**: la provenienza dichiarata
+> da §7.5 stessa è il **rilievo R3.4 della revisione del banco della fase 1**, e la motivazione
+> viene da `web/rapporti/S4-ritardo-disegno.md` §5.3 — **non da una frase dell'utente**. Le
+> decisioni che l'utente ha davvero pronunciato (§1.6, §1.8) portano qui la **frase virgolettata
+> con la data**; questa non ha né frase né voce, e `fasi/01-filo-nudo.md` la marcava ✅.
+>
+> ⚠ **Perché la marca conta proprio su questa**: §7.5 aggiunge **due tipi di messaggio** e con essi
+> consuma la clausola di §9 che `RCP.md` §12 dichiara essere stata *«l'ultima occasione»*.
+> Marcata ✅ diventerebbe non correggibile senza tornare dall'utente; marcata per quel che è — 🔸
+> derivata da una revisione — resta *«correggibile senza discussione»*, che è la condizione in cui
+> la si vuole se un giorno quei due tipi dessero fastidio.
+
+⚠ **E QUATTRO tipi di messaggio sono stati aggiunti** — `RICHIEDI_CHIAVE` e `TELA` il 9 agosto,
+⭐ **`BANCO_MARCA` e `BANCO_ESITO` la notte del 9** (riga 26 qui sopra) — più **tre** motivi di
+congedo (`TEMPO_SCADUTO`, `SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). §9 lo vieta **dentro** una
+versione maggiore, e la clausola che lo permette è che **oggi non esiste nessuna implementazione**.
+Dal primo byte scritto in poi vale la regola senza sconti.
+
+> ⚠ *Corretta il 10 agosto 2026, rilievo **R11.13**: questa riga diceva «due tipi … più due motivi»,
+> e i due della funzione di banco non comparivano in **nessun punto** di questo documento — mentre
+> `RCP.md` §12 dichiara che sono entrati «sotto la clausola di §9, e **quella era l'ultima
+> occasione**». `RCP.md` §0-bis rimanda proprio qui per le chiusure marcate 🔸: due tipi che
+> consumano una finestra irripetibile non possono mancare dal documento che il progetto designa
+> come fonte unica.*
 
 ⏳ Quel che RCP/1 lascia **volutamente** aperto — microfono, puntatore relativo, tocco, 4:4:4, più
 schermi — sta in `RCP.md` §12, dichiarato invece che dimenticato.
@@ -1607,9 +1637,11 @@ di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `libr
 > `lsquic` è uscita perché **pretende l'SNI** e il prodotto si usa per indirizzo; `libwtf` era
 > ultima in fila (seconda pila QUIC, licenza che si contraddice); e ⛔ **`quiche`, usata dal C, non
 > riesce a dichiarare WebTransport** — la misura è qui sotto. `ngtcp2` invece regge: **due browser
-> veri aprono la sessione**, e lo strato che manca costa **329 righe di codice** nostro.
+> veri aprono la sessione**, e lo strato che manca costa **373 righe di codice** nostro
+> (`[M]` 10 agosto 2026, ore 16:30 — la scomposizione e la successione delle misure stanno nel
+> riquadro «Quante righe sono nostre, e a che ora» più sotto).
 >
-> ⚠ **Il prezzo, dichiarato**: quelle 329 righe includono la **riscrittura del frame SETTINGS che
+> ⚠ **Il prezzo, dichiarato**: quelle righe includono la **riscrittura del frame SETTINGS che
 > nghttp3 sta scrivendo**, perché la sua API pubblica non permette di annunciare un'impostazione
 > arbitraria. È collante che dipende dalla forma dei byte di una libreria, non da una sua promessa:
 > ⛔ **va riprovato a ogni aggiornamento di nghttp3**, e il banco che lo riprova esiste.
@@ -1888,8 +1920,17 @@ fa con un banco davanti, non su carta.
 > |---|---|
 > | ⭐ **la sessione si apre da un BROWSER VERO** | **Chrome 151.0.0.0** e **Firefox 140.0**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, e `"ciao"` torna identico |
 > | ⛔ **e il percorso sbagliato si RIFIUTA** | `/rcp/9` ⇒ **404**, come impone `RCP.md` §2.2 con il rilievo R1.24. È il controllo che dice *no*, ed è nel banco |
-> | **i due parametri di §2.2** | `max_idle_timeout` **30 000 ms** e `max_datagram_frame_size` **65 536**, stampati dal server all'avvio |
-> | ⭐ **quante righe sono NOSTRE** | **456 aggiunte** in 4 file — di cui **329 di codice**, 85 di commento, 42 vuote |
+> | **i due parametri di §2.2** | `max_idle_timeout` **30 000 ms** e `max_datagram_frame_size` **65 536**, ⛔ **letti dal pari** con `01-b2-sonda-trasporto.py` |
+> | ⭐ **quante righe sono NOSTRE** | vedi il riquadro «Quante righe sono nostre, e a che ora» qui sotto: la misura di questa mattina era **456 aggiunte / 329 di codice**, ed è stata rifatta alle 16:30 |
+>
+> > ⛔ *La prima riga è stata corretta il 10 agosto 2026, rilievo **R11.6**.* Diceva **«stampati dal
+> > server all'avvio»**, cioè portava la provenienza sbagliata scritta accanto al numero giusto: è
+> > la **configurazione** del server — che cosa ha *chiesto* a ngtcp2 — non che cosa è *arrivato* al
+> > pari. ⛔ **È il corollario di `LEZIONI.md` §1.9 punto 5** — *un denominatore si legge dove la
+> > cosa succede* — contraddetto nel documento che lo cita, e `fasi/01-filo-nudo.md` la dichiara
+> > **il difetto peggiore della giornata** (*«l'ho violato io, quel pomeriggio, su una misura
+> > mia»*). ⭐ La cura non è togliere il numero: è **prenderlo dalla fonte giusta**, e la fonte
+> > giusta esisteva già — la sonda del trasporto ha letto gli stessi due valori dal pari.
 >
 > ⛔ **E adesso si sa in che cosa consiste «lo strato non c'è», perché sono i tre punti che
 > l'innesto tocca:**
@@ -1913,9 +1954,68 @@ fa con un banco davanti, non su carta.
 >
 > | | |
 > |---|---|
-> | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, «329» è un numero **senza il suo paragone** |
-> | ⚠ **due proprietà su sei** | delle sei che B2 doveva verificare qui, sono misurate **datagram abilitati** e **`max_idle_timeout` 30 s**. Restano `[?]`: niente 0-RTT, migrazione non disabilitata, `allowPooling` a `false`, e che il banco possa cambiare il tetto d'inattività (serve a B3) |
+> | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, il nostro è un numero **senza il suo paragone** |
+> | ⚠ **due proprietà su sei**, *alle 08:00* | delle sei che B2 doveva verificare qui, questa misura ne portava due — **datagram abilitati** e **`max_idle_timeout` 30 s**. ⭐ **Le altre quattro sono state chiuse mezz'ora dopo**, riquadro qui sotto: non restano `[?]` |
 > | ⚠ **i millisecondi non si confrontano** | 118,6 ms (Chrome) e 140,0 ms (Firefox) sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato 22,2 ms in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà questi numeri accanto ai 30,2 ms del 9 agosto confronterà due cose diverse |
+
+> ### ⭐ Le sei proprietà del trasporto: **6 su 6**, lette dal pari — `[M]` 10 agosto 2026, mattina
+>
+> *`banchi/01-b2-sonda-trasporto.py`, con una spia dichiarata su `pull_quic_transport_parameters` di
+> `aioquic`. ⛔ **Dal pari, non dal registro del server**: è la fonte che il riquadro qui sopra
+> aveva sbagliato.*
+>
+> | | |
+> |---|---|
+> | `max_idle_timeout` | **30 000 ms** |
+> | datagram | abilitati, `max_datagram_frame_size` **65 536** |
+> | credito stream unidirezionali | **16** |
+> | migrazione | **non** disabilitata |
+> | 0-RTT | **non offerto** |
+> | `allowPooling` | **`false`**, e dichiarato nell'esito registrato |
+> | ⛔ **e la settima, che serve a B3** | il tetto d'inattività **si può cambiare**: con `--timeout=10s` il pari legge **10 000 ms** |
+>
+> ⛔ **E leggerle dal pari ha trovato due difetti che nessun banco funzionale vedeva**: il server
+> **offriva 0-RTT** (due biglietti, `max_early_data_size` `0xffffffff`), che §2.3 vieta perché i
+> dati 0-RTT si possono ripetere e il secondo messaggio di RCP è `CREDENZIALI`; e concedeva **3**
+> stream unidirezionali invece dei 16 che §2.3 impone. ⚠ *Nessuno dei due ha un sintomo: la
+> sessione si apriva uguale. `fasi/01-filo-nudo.md` l'aveva previsto per il primo — «il sintomo di
+> 0-RTT acceso non esiste».*
+>
+> ⚠ *Questo riquadro è stato aggiunto il 10 agosto 2026, rilievo **R11.5**: la misura c'era e stava
+> in `README.md` e in `fasi/01-filo-nudo.md`, ma **non qui** — e §6.4 continuava a dichiararne
+> quattro su sei ancora `[?]`. Tre righe dello stesso giorno e dello stesso banco che dicevano cose
+> diverse, e quella che un lettore ha diritto di prendere per buona è questa (`README.md`: «le
+> decisioni stanno in `DECISIONI.md`, una sola volta»). ⛔ **E non era simmetrica**: con la riga
+> vecchia il divieto di 0-RTT di `RCP.md` §2.3 risultava non verificato mentre due documenti lo
+> dichiaravano verificato.*
+
+> ### ⭐ Quante righe sono nostre, e a che ora — `[M]` 10 agosto 2026
+>
+> ⛔ **Il numero è cresciuto tre volte in un giorno, e le tre misure non si confrontano se non si
+> dice a che ora sono state prese.** Sono tutte `git diff` nell'albero di `ngtcp2`, mai stime.
+>
+> | Ora | Che cosa è stato misurato | Aggiunte | Codice | Commento | Vuote |
+> |---|---|---|---|---|---|
+> | **08:00** | lo strato WebTransport di B2, prima delle cure sul trasporto | **456** | **329** | 85 | 42 |
+> | ~08:30~ | ⚠ `[?]` un numero **482 / 333** è entrato in `README.md` con il commit delle sei proprietà, e **nessun documento ne registra la scomposizione né il comando che l'ha prodotto**. Non lo si promuove e non lo si cancella: sta qui, dichiarato per quel che si sa | ~482~ | ~333~ | — | — |
+> | ⭐ **16:30** | lo strato WebTransport di B2 **da solo**, dopo la lettura della capsula di chiusura | **553** | **373** | **134** | **46** |
+>
+> ⭐ **Come è stata presa quella delle 16:30, ed è il punto che la rende ripetibile**: su albero
+> pulito, dopo `01-b3-rcp-innesta.py --togli` e `01-b2-ngtcp2-wt-innesta.py --togli`, riapplicando
+> **il solo** `01-b2-ngtcp2-wt-innesta.py`. È la sequenza che `ricostruisci()` di
+> `banchi/01-b11-guasto.sh` esegue già.
+>
+> ⛔ **E un numero che NON va in questa colonna**: con **tutt'e due** gli innesti applicati — B2 più
+> i fili di B3 — l'esempio porta **972 righe aggiunte, 618 di codice** `[M]`, stessa ora. ⚠ *Non è
+> confrontabile con i tre di sopra: misura due cose invece che una, ed è precisamente la ragione per
+> cui `01-b3-rcp-innesta.py` è un innesto **separato** — «farlo crescere con RCP dentro renderebbe
+> due misure diverse sotto la stessa etichetta» (forma **E2**).*
+>
+> ⚠ *Il riquadro è del 10 agosto 2026, rilievo **R11.1**. `README.md` portava 482/333 sotto il
+> titolo «Che cosa è misurato `[M]`» — il posto in cui un numero senza provenienza pesa di più —
+> mentre questo documento e `fasi/01-filo-nudo.md` portavano 456/329 dello stesso giorno. ⛔ E la
+> giustificazione che il README dava per non rimisurare era falsa: la misura si sa prendere, e
+> adesso è presa.*
 
 > ### ⛔⭐ E `quiche` non arriva a WebTransport dal C: la dichiarazione non si può fare — `[M]` 10 agosto 2026
 >

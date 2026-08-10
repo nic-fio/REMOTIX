@@ -46,17 +46,56 @@ ok "sudo validato"
 #   «unexpected EOF while looking for matching quote».  E' la stessa famiglia
 #   del difetto del 9 agosto: le righe di comando si mettono in un file, e i
 #   valori che le attraversano si tengono semplici.
+# ⛔ «PORTA LIBERA» E «NON HO POTUTO GUARDARE» NON SONO LA STESSA COSA — R8.15.
+#
+# `chi=$(bash enter.sh --root "ss | grep …")` cattura solo lo standard output:
+# `enter.sh` fallito su un mount o su una credenziale scaduta, `ss` assente nel
+# chroot, `grep` che non trova e la porta davvero libera davano tutt'e quattro
+# la stessa stringa vuota, e il banco leggeva «non ho potuto guardare» come
+# «non c'e' niente».
+#
+# ⚠ La redirezione sta DENTRO le virgolette del comando remoto: attorno a
+#   `enter.sh` si porterebbe via la richiesta di password di sudo.
+# Esce 0 = occupata · 1 = libera · 2 = non ho potuto guardare.
+guarda_porta()
+{
+	local p=$1
+	rm -f "$FUORI/b2-tra-porte.txt" "$FUORI/b2-tra-porte.stato"
+	bash "$ENTRA" --root \
+		"ss -ulnp > $DENTRO/b2-tra-porte.txt 2>&1; echo \$? > $DENTRO/b2-tra-porte.stato"
+	local entrata=$?
+	if [ "$entrata" -ne 0 ]; then
+		ko "non si e' potuto guardare le porte: enter.sh e' uscito $entrata"
+		return 2
+	fi
+	if [ ! -f "$FUORI/b2-tra-porte.stato" ] || [ ! -f "$FUORI/b2-tra-porte.txt" ]; then
+		ko "non si e' potuto guardare le porte: l'elenco non e' stato scritto"
+		return 2
+	fi
+	local stato_ss
+	stato_ss=$(cat "$FUORI/b2-tra-porte.stato")
+	if [ "$stato_ss" != 0 ]; then
+		ko "«ss» dentro il contenitore e' uscito $stato_ss:"
+		sed 's/^/        /' "$FUORI/b2-tra-porte.txt"
+		return 2
+	fi
+	grep ":$p " "$FUORI/b2-tra-porte.txt" | sed 's/^/        /' && return 0
+	return 1
+}
+
 giro()
 {
 	# $1 = etichetta breve, $2 = tetto atteso in ms, $3.. = opzioni in piu'
 	local ETICHETTA=$1 atteso=$2; shift 2
 	local et="$ETICHETTA"
 	log "$et"
-	local chi
-	chi=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")
-	if [ -n "$chi" ]; then
-		ko "la porta $PORTA e' occupata:"
-		printf '%s\n' "$chi" | sed 's/^/        /'
+	guarda_porta "$PORTA"
+	local libera=$?
+	if [ "$libera" -eq 2 ]; then
+		return 3
+	fi
+	if [ "$libera" -eq 0 ]; then
+		ko "la porta $PORTA e' occupata (l'elenco e' qui sopra)"
 		return 3
 	fi
 	rm -f "$FUORI/b2-tra.log" "$FUORI/b2-tra.pid"

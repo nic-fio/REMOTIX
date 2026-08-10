@@ -6,8 +6,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 
 > ## Stato al 10 agosto 2026 — ⭐ **si riparte da qui**
 >
-> **Fase 1 aperta**, banco scritto e **revisionato prima del prodotto** (44 rilievi, 38 `[R]`,
-> tutti curati). ⭐ **Il banco B2 ha chiuso `DECISIONI.md` §6.4: la libreria QUIC è
+> **Fase 1 aperta**, banco scritto e **revisionato prima del prodotto**: 44 rilievi — **38 `[R]`,
+> tutti curati**, e **6 `[?]`, di cui tre ancora aperte per nome** (R3.25 il segno della rotella su
+> più di un compositore · R3.26 la pila PAM per un utente diverso dal proprietario del processo ·
+> R3.27 l'istante da cui parte il primo tetto — `fasi/01-filo-nudo.md`). ⚠ *Questa riga diceva «44
+> rilievi, 38 `[R]`, tutti curati», e sommava i 38 ai 44: una `[?]` non si cura, **si misura**
+> (`REVIEWER.md` §4). Corretta il 10 agosto 2026, rilievo **R11.19**.*
+> ⭐ **Il banco B2 ha chiuso `DECISIONI.md` §6.4: la libreria QUIC è
 > `ngtcp2`+`nghttp3`** — con un banco, non su carta, e con le altre tre eliminate ciascuna da una
 > misura.
 >
@@ -20,7 +25,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera**. E resta in coda a ogni esecuzione come **controllo negativo**: dimostra che la sonda sa vedere un rifiuto |
 > | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
 > | ⭐⭐ **il server minimo su `ngtcp2` esiste, e un BROWSER VERO apre la sessione** | **Chrome 151** e **Firefox 140**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, `"ciao"` che torna identico. ⛔ E `/rcp/9` **rifiutato con 404**, come impone `RCP.md` §2.2 |
-> | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`: **482 righe aggiunte, di cui 333 di codice**, misurate con `git diff` e non stimate |
+> | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`, **da solo**: **553 righe aggiunte — 373 di codice, 134 di commento, 46 vuote** `[M]` **10 agosto, ore 16:30**, con `git diff` su albero pulito e non stimate. ⚠ La successione delle misure della giornata sta in `DECISIONI.md` §6.4, riquadro «Quante righe sono nostre, e a che ora» — qui non si copia |
 > | ⭐ **le sei proprietà di B2: 6 su 6** | tetto 30 s · datagram · credito **16** stream uni · migrazione **non** disabilitata · **niente 0-RTT** · `allowPooling: false`. ⛔ **Lette dal pari**, non dal registro del server — e proprio per questo hanno trovato **due difetti senza sintomo**: il server offriva 0-RTT (che §2.3 vieta) e concedeva 3 stream unidirezionali invece di 16 |
 > | ⭐ **e il tetto si può cambiare** | con `--timeout=10s` il pari legge 10 000 ms: **B3** potrà distinguere il tetto del protocollo da quello del trasporto |
 > | ⛔⭐ **e `quiche` non arriva a WebTransport dal C** | dichiara **4** impostazioni sul filo e **nessuna delle due di WebTransport**. `h3::Config::set_additional_settings` **esiste in Rust e non nell'FFI**, e il trucco usato su `ngtcp2` lì non c'è: quei byte un'applicazione in C non li vede mai. ⇒ **§6.4 è chiusa** |
@@ -29,12 +34,12 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato a **1074-1085 ms** |
 > | ⭐ **B4: il validatore è certificato** | **7 su 7** — sei registrazioni guaste accusate **ciascuna sul byte dichiarato in anticipo**, e la settima, conforme, accettata. ⭐ E alla prima esecuzione ha trovato **una contraddizione in `RCP.md`**: §4.3 vietava un carattere che §4.3 stessa usa |
 >
-> | ⭐ **B3: cinque giri su cinque** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⭐ **la 3ª con il certificato ruotato**: la pagina ritira l'impronta corrente e apre, e ⛔ **con la vecchia i due motori rifiutano** |
+> | ⭐ **B3: quattro giri su cinque, e il quinto dichiarato** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⚠ **la 3ª con il certificato ruotato: non è un giro pieno**, vedi `fasi/01-filo-nudo.md` — la sessione si apre con l'impronta corrente su tutt'e due i motori, ⛔ **ma lo stream non ha funzionato in nessuno dei due**, e la seconda metà del criterio di B2 (*«la pagina riceve un byte dal server»*) non è soddisfatta |
 >
 > | ⭐⭐ **B5: quarantaquattro violazioni su quarantaquattro** | tipo sconosciuto · lunghezza in più e in meno · **4 GiB annunciati** · oltre 1 MiB · stato sbagliato · versione · nomi e valori di capacità · credenziali fuori intervallo · tela dispari e fuori limiti · disposizione malformata **contro** disposizione ignota (`SESSIONE_NON_SERVIBILE`) · secondo stream bidirezionale · tre canali nel verso sbagliato su stream unidirezionali. ⛔ Il motivo giusto ogni volta, **per tutt'e due le strade di §3.1**, e dopo **ciascuna** una connessione nuova arriva a `ECCOMI` |
 > | ⭐ **e i cinque casi che DEVONO passare** | `hevc,vp9` → si sceglie `hevc` e **lo scarto si scrive** · **vista 300×801** e **1×1** (§7.1) · `BANCO_MARCA` a funzione spenta → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **senza chiudere** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Senza di loro, «il server chiude su tutto» darebbe 44 verdi su 44 |
 > | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** |
-> | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.4 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.4; §9 adesso la nomina |
+> | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.2 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.2; §9 adesso la nomina. ⚠ *La cura del 10 agosto mandava a §2.4, che è «La porta» e non nomina né percorsi né versioni: corretta lo stesso giorno, rilievo **R11.2*** |
 >
 > ### ⛔ Il prossimo passo
 >
@@ -86,15 +91,29 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > l'impronta; che il server rigeneri **prima** della scadenza resta senza banco, e il suo sintomo
 > — *«non si collega più e non dice perché»* — arriva due settimane dopo la consegna.
 >
-> ⚠ **E un numero che stasera è invecchiato**: le **482 righe / 333 di codice** dello strato
-> WebTransport sono di prima della **lettura della capsula di chiusura**, che è cresciuta lì dentro.
-> ⛔ Non lo si riscrive a occhio: il 10 agosto `01-b3-rcp-innesta.py --togli` **non ha tolto niente**
-> — ha detto di sì e ha lasciato l'innesto dov'era — quindi la misura «B2 da solo» adesso non si sa
-> prendere. Con tutt'e due gli innesti l'esempio porta **972 righe aggiunte, 618 di codice** `[M]`.
-> ⚠ *E quel `--togli` che non toglie va guardato: `ricostruisci` in `01-b11-guasto.sh` ci si appoggia
-> per rimettere il server sano.*
+> ⭐ **E il numero invecchiato è stato rimisurato, non riscritto a occhio** — `[M]` **10 agosto, ore
+> 16:30**. La **lettura della capsula di chiusura** è cresciuta dentro lo strato WebTransport, e la
+> misura si prende così: su albero pulito, `01-b3-rcp-innesta.py --togli`, poi
+> `01-b2-ngtcp2-wt-innesta.py --togli`, poi si riapplica **il solo** innesto di B2. Risultato:
+> **553 righe aggiunte, 373 di codice, 134 di commento, 46 vuote**.
+> ⛔ **E i 972 / 618 sono un'altra cosa**: sono l'albero con **tutt'e due** gli innesti, B2 più i
+> fili di B3. Non si mettono in fila con i 553 e non vanno dove sta quel numero — è la ragione per
+> cui i due innesti sono separati (forma **E2**).
 >
-> ⚠ **E una manutenzione che ha una data**: le 333 righe includono la **riscrittura del frame
+> ⚠ *Questo paragrafo diceva tre cose false, ed è stato riscritto il 10 agosto 2026 — rilievo
+> **R11.7**, con **R11.1**.* Diceva che `01-b3-rcp-innesta.py --togli` *«non ha tolto niente, ha
+> detto di sì e ha lasciato l'innesto dov'era»*, che *«la misura B2 da solo adesso non si sa
+> prendere»*, e metteva in allarme su `ricostruisci`. ⛔ **Il comando fa una rimozione parziale e la
+> dichiara a schermo**: toglie i file nostri, rimette `examples/CMakeLists.txt`, e stampa *«i file
+> .cc/.h toccati da B3 vanno rimessi con `01-b2-ngtcp2-wt-innesta.py --togli` e riapplicati»*. ⛔ E
+> `ricostruisci()` in `01-b11-guasto.sh` esegue **i due `--togli` nell'ordine prescritto** e poi
+> riapplica: non si appoggia al primo da solo.
+>
+> ⚠ **Quel che resta vero, e resta aperto**: `--togli` **esce con 0 su un albero che in quello stato
+> non compila** — chi si fermasse lì crederebbe di avere un albero sano. È un rilievo del banco, non
+> di questo documento, e si cura là.
+>
+> ⚠ **E una manutenzione che ha una data**: quelle righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va
 > riprovata a ogni aggiornamento di nghttp3 — e il banco che la riprova esiste.
 >

@@ -254,21 +254,124 @@ INNESTI = [
 ]
 
 
-def main():
-    if "--togli" in sys.argv:
-        print("== Si tolgono i guasti di B11")
-        print("   ⚠ i file toccati si rimettono togliendo e riapplicando gli")
-        print("     innesti di B2 e B3: e' l'unico modo che non lascia residui")
-        return 0
+def leggi(percorso):
+    """Il testo di un file di `examples/`, oppure `None` se non c'e'.
 
-    testi, guasti = {}, 0
-    print("== I guasti di B11 — righe che NON devono sopravvivere alla fase")
-    for percorso, appiglio, sostituto, nome in INNESTI:
+    ⛔ «Non c'e'» e «non l'ho potuto leggere» non sono la stessa cosa.  Il
+       primo e' un fatto legittimo — `01-b3-rcp-innesta.py --togli` cancella
+       `rcp.c` da `examples/` — il secondo e' un errore, e deve arrivare al
+       banco invece di somigliare a uno zero.
+    """
+    try:
+        with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+
+
+def scrivi(percorso, testo):
+    with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
+        f.write(testo)
+
+
+def marche_attese():
+    """Quante volte la marca deve comparire in ciascun file a innesto fatto.
+
+    ⭐ Il numero lo CALCOLA la tabella, non lo scrive una mano: e' il
+       denominatore che `01-b11-guasto.sh` confronta col disco dopo la
+       compilazione, e un denominatore scritto a mano invecchia col primo
+       innesto che qualcuno aggiunge.
+    """
+    conto = {}
+    for percorso, _appiglio, sostituto, _nome in INNESTI:
+        conto[percorso] = conto.get(percorso, 0) + sostituto.count(MARCA)
+    return conto
+
+
+def togli():
+    """⛔ E TOGLIE DAVVERO.
+
+    Fino al 10 agosto 2026 questo ramo stampava tre righe e restituiva **0**
+    senza aprire un file: `--togli && grep -c 'REMOTIX B11 GUASTO'
+    examples/rcp.c` usciva 0 e stampava 7.  ⚠ E' il difetto gia' pagato su
+    `01-b3-rcp-innesta.py --togli` — un comando che dichiara di togliere, non
+    toglie, e restituisce successo — riscritto qui in forma pura.  Che nessuno
+    lo chiamasse non lo rendeva innocuo: la riga d'uso in cima a questo file e'
+    quel che leggera' chi lo trovera' fra sei mesi.
+    """
+    print("== Si tolgono i guasti di B11")
+    testi, originali, tolti = {}, {}, 0
+    # ⛔ In ordine INVERSO a come sono stati messi: un sostituto puo' contenere
+    #    l'appiglio di un altro, e disfare al contrario e' l'unico ordine che
+    #    non lascia mezzi innesti.
+    for percorso, appiglio, sostituto, nome in reversed(INNESTI):
         if percorso not in testi:
-            with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
-                testi[percorso] = f.read()
-        if MARCA in testi[percorso] and appiglio not in testi[percorso]:
-            print(f"   ⚠  {nome:32s} c'e' gia'")
+            testi[percorso] = originali[percorso] = leggi(percorso)
+        if testi[percorso] is None:
+            print(f"   --  {nome:32s} {percorso} non c'e': niente da togliere")
+            continue
+        n = testi[percorso].count(sostituto)
+        if n == 0:
+            print(f"   --  {nome:32s} non c'era")
+            continue
+        testi[percorso] = testi[percorso].replace(sostituto, appiglio)
+        tolti += 1
+        print(f"   OK  {nome:32s} tolto {n} volta/e  [{percorso}]")
+
+    scritti = 0
+    for percorso, testo in testi.items():
+        if testo is not None and testo != originali[percorso]:
+            scrivi(percorso, testo)
+            scritti += 1
+
+    # ⛔ E SI VERIFICA DAL LATO CHE CONTA: il file sul disco, non l'intenzione
+    #    di chi ha scritto la sostituzione.
+    resti = {}
+    for percorso in testi:
+        testo = leggi(percorso)
+        if testo and MARCA in testo:
+            resti[percorso] = testo.count(MARCA)
+    print(f"\n   {tolti} innesti tolti, {scritti} file riscritti")
+    if resti:
+        for percorso, n in resti.items():
+            print(f"   NO  {percorso}: restano {n} marche «{MARCA}»")
+        print("   ⛔ un server che mente di proposito NON deve sopravvivere")
+        print("      alla fase: si rimettono gli innesti di B2 e di B3 da capo.")
+        return 1
+    print(f"   ⭐ nessuna marca «{MARCA}» nei file di examples/")
+    return 0
+
+
+def innesta():
+    print("== I guasti di B11 — righe che NON devono sopravvivere alla fase")
+    testi = {}
+    for percorso in dict.fromkeys(p for p, *_ in INNESTI):
+        testi[percorso] = leggi(percorso)
+        if testi[percorso] is None:
+            print(f"   ⛔ {percorso} non c'e' in {ESEMPI}: gli innesti di B2 e")
+            print("      di B3 vanno applicati PRIMA di questo.")
+            return 1
+    originali = dict(testi)
+
+    applicati, gia, guasti = 0, 0, 0
+    for percorso, appiglio, sostituto, nome in INNESTI:
+        # ⛔ LA GUARDIA CHIEDE SE C'E' QUESTO INNESTO, non se c'e' UNA marca.
+        #
+        #    Era `MARCA in testo and appiglio not in testo`, e tre innesti su
+        #    undici conservano il proprio appiglio DENTRO il sostituto, per
+        #    costruzione: il campo del guasto, la cattura dal `CIAO` e
+        #    l'accessorio `rcp_guasto`.  Su un `rcp.c` gia' guasto l'appiglio
+        #    c'era ancora, la guardia era falsa, `n` valeva 1 e l'innesto **si
+        #    riapplicava**: `char guasto[64];` dichiarato due volte (errore di
+        #    compilazione, cioe' un rosso senza nome), oppure — se passava — la
+        #    riga «guasto chiesto dal client» scritta due volte per caso, che
+        #    raddoppia i conteggi di `01-b11-lancia.sh` e addossa alla PAGINA
+        #    un rosso che e' dell'innesto.
+        # ⭐ Il sostituto e' l'unica cosa che sappia dire «questo innesto c'e'
+        #    gia'», perche' e' esattamente quel che si e' scritto sul disco.
+        if sostituto in testi[percorso]:
+            gia += 1
+            print(f"   ⚠  {nome:32s} c'e' gia'  [{percorso}]")
             continue
         n = testi[percorso].count(appiglio)
         stato = "OK " if n == 1 else "NO "
@@ -277,6 +380,7 @@ def main():
             guasti += 1
             continue
         testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
+        applicati += 1
 
     if guasti:
         print(f"\n   ⛔ {guasti} appigli non trovati: NON si scrive niente.")
@@ -284,12 +388,44 @@ def main():
         print("      modo diverso da quello che il banco crede di misurare.")
         return 1
 
-    for percorso, testo in testi.items():
-        with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
-            f.write(testo)
-    print(f"\n   OK  {len(INNESTI)} guasti innestati in {len(testi)} file")
-    print("   ⛔ e si tolgono rimettendo gli innesti di B2 e B3")
+    scritti = [p for p in testi if testi[p] != originali[p]]
+    for percorso in scritti:
+        scrivi(percorso, testi[percorso])
+
+    # ⛔ E SI CONTA QUEL CHE C'E' SUL DISCO, non quel che dice la tabella.
+    #
+    #    `print(f"OK {len(INNESTI)} guasti innestati in {len(testi)} file")`
+    #    stampava una COSTANTE (11) e il numero di file **letti**: su un albero
+    #    in cui tutti gli innesti prendevano il ramo «c'e' gia'» dichiarava «OK
+    #    11 guasti innestati in 3 file» con zero sostituzioni, e restituiva 0.
+    #    ⚠ Un conteggio che non puo' valere zero non e' un conteggio: e' una
+    #      didascalia (`LEZIONI.md` §1.9).
+    attese = marche_attese()
+    male = 0
+    for percorso, atteso in attese.items():
+        vero = (leggi(percorso) or "").count(MARCA)
+        stato = "OK " if vero == atteso else "NO "
+        print(f"   {stato} {percorso:34s} marche sul disco: {vero}  (attese {atteso})")
+        if vero != atteso:
+            male += 1
+    print(f"\n   {applicati} innesti applicati, {gia} c'erano gia', su"
+          f" {len(INNESTI)}; {len(scritti)} file riscritti")
+    if male:
+        print("   ⛔ il disco non dice quel che la tabella dichiara: non si")
+        print("      accende niente, o si misura un server diverso da quello")
+        print("      che il banco crede di aver costruito.")
+        return 1
+    # ⭐ Il numero che `01-b11-guasto.sh` confronta col disco dopo la
+    #    compilazione: calcolato qui, stampato qui, e mai scritto a mano di la'.
+    print(f"== B11-MARCHE-ATTESE: {sum(attese.values())}")
+    print("   ⛔ e si tolgono con --togli, o rimettendo gli innesti di B2 e B3")
     return 0
+
+
+def main():
+    if "--togli" in sys.argv:
+        return togli()
+    return innesta()
 
 
 if __name__ == "__main__":

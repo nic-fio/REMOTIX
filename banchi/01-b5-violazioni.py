@@ -19,17 +19,33 @@ e quel giorno non c'e' un banco a guardare.
 ⛔ *Un banco che non prova a violare il protocollo non prova il protocollo.*
 
 ===========================================================================
-⛔ LE TRE COSE CHE OGNI CASO VERIFICA, E LA TERZA E' QUELLA CHE SI DIMENTICA
+⛔ LE CINQUE COSE CHE OGNI CASO VERIFICA, E LE ULTIME DUE SI DIMENTICANO
 
-  1. **il motivo giusto**, letto DAL LATO CHE RICEVE (§8.1) — non dal registro
-     del server, che e' la stessa mano che ha scritto il codice;
-  2. **le due strade di §3.1** — il `CONGEDO` sul canale di controllo *e* il
-     codice d'errore applicativo nella chiusura della sessione WebTransport.
-     ⚠ §3.1 dice «se il canale di controllo e' ancora utilizzabile»: qui si
-     registra **quale delle due e' arrivata**, e non si pretendono sempre
-     tutt'e due (rilievo R3.3 — un banco che lo pretendesse darebbe rosso sul
-     codice giusto);
-  3. ⛔ **e che il server sia ancora li' dopo** (B0.5).  Un server ucciso dal
+  1. ⛔ **che la violazione sia DAVVERO partita.**  Un caso la cui
+     *preparazione* fallisce — l'`ATTACCA` fisso rifiutato, l'`ECCOMI` che non
+     arriva — non ha provato niente, e finche' il motivo si raschiava dal testo
+     dell'eccezione diventava **verde** proprio per quello (rilievo R7.1).  Qui
+     ogni caso porta `provocato`, e senza quello e' rosso;
+  2. **il motivo giusto**, letto DAL LATO CHE RICEVE (§8.1) — non dal registro
+     del server, che e' la stessa mano che ha scritto il codice, e ⛔ **non dal
+     testo di un'eccezione**: `raccogli` lo prende da un messaggio arrivato sul
+     filo, o non lo prende;
+  3. ⛔ **in quale MESSAGGIO** e' arrivato.  §11 lo dice per esteso:
+     `CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in `RESPINTO`, tutti
+     gli altri in `CONGEDO`, e §4.4 vieta di mandare tutt'e due.  Sono **due
+     macchine a stati diverse** — dopo `RESPINTO` il client non puo' riprovare
+     — e contarle sotto la stessa etichetta e' la forma E3 (rilievo R7.9);
+  4. **le due strade di §3.1**, e ⛔ **non sono facoltative allo stesso modo**:
+     il **punto 2** (il `CONGEDO`) e' condizionato — *«se il canale di
+     controllo e' ancora utilizzabile»* — il **punto 3** (il codice del motivo
+     nella chiusura della sessione WebTransport) e' un **DEVE incondizionato**,
+     ed e' quello che §3.1 chiama *«quello che salva le diagnosi»*.
+     ⚠ Il rilievo R3.3 diceva che pretenderle sempre tutt'e due darebbe rosso
+     sul codice giusto: vale per il punto 2, **non** per il punto 3, e averli
+     scambiati aveva reso facoltativo proprio l'ultimo appiglio (rilievo R7.3).
+     Qui il punto 3 si **conta**, con il suo denominatore, invece di essere
+     stampato;
+  5. ⛔ **e che il server sia ancora li' dopo** (B0.5).  Un server ucciso dal
      nucleo *«fa cadere la connessione»* esattamente come uno che congeda —
      e si porta via **tutte le sessioni degli altri utenti**.  Dopo ogni caso
      si apre una connessione nuova e si arriva a `ECCOMI`: e' la meta' del
@@ -39,18 +55,49 @@ e quel giorno non c'e' un banco a guardare.
 ===========================================================================
 ⭐ E I CASI CHE DEVONO PASSARE
 
-Cinque casi qui dentro sono ⭐ **verdi attesi**, e non sono riempitivo: sono il
-controllo che dice *no* a «questo server chiude tutto».
+I casi con `atteso = None` sono ⭐ **verdi attesi**, e non sono riempitivo:
+sono il controllo che dice *no* a «questo server chiude tutto».
 
-  hevc-e-vp9        una voce sconosciuta dentro un elenco si SCARTA (§4.3)
-  vista-300x801     la vista non ha i vincoli della tela (§7.1, R4.10)
-  vista-1x1         idem, al limite
-  banco-spento      ⛔ `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, non una
-                    chiusura e non un silenzio (§7.5 regola 2)
-  banco-ritardo     `RITARDO_FUORI_LIMITI`, e la sessione RESTA APERTA
+  nome-con-trattino-basso    `video.misura_massima`: il `_` e' LECITO (§4.3)
+  capacita-sconosciuta       un NOME che non esiste si ignora (§3, eccezione 1)
+  hevc-e-vp9                 una voce sconosciuta DENTRO un elenco si SCARTA
+  vista-300x801              la vista non ha i vincoli della tela (§7.1, R4.10)
+  vista-1x1                  idem, al limite
+  disposizione-con-variante  `de(neo)`: la variante fra parentesi e' lecita
+  banco-spento               ⛔ `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, non
+                             una chiusura e non un silenzio (§7.5 regola 2)
+  banco-ritardo-20000        `RITARDO_FUORI_LIMITI`, e la sessione RESTA APERTA
 
-Senza di loro, «il server chiude su tutto quel che gli mando» darebbe
-trentacinque verdi su trentacinque.
+⛔ **E QUANTI SONO NON STA SCRITTO QUI.**  Il numero lo conta `conta()` e lo
+stampano `--elenco` e la riga finale, ciascuno con il suo denominatore.  Un
+numero scritto a mano in un commento e' il numero che nessuno ricalcola: il
+rilievo R7.14 ne ha trovati **tre** — «cinque casi qui dentro», «trentacinque
+verdi su trentacinque», «44 violazioni su 44» — e **nessuno dei tre tornava con
+il file**.  ⚠ Il terzo, per giunta, contava fra le violazioni anche i casi che
+DEVONO passare, su cui «il motivo giusto ogni volta» e' falso per costruzione:
+su quelli non deve arrivare nessun motivo.
+
+===========================================================================
+⛔ QUEL CHE QUESTO BANCO NON PROVA, E VA DETTO — rilievo R7.8
+
+`RCP.md` §3 dichiara **cinque** eccezioni alla regola di rigore e dice che
+«fuori da questo elenco non se ne inventano».  Qui se ne prova **una**: la
+prima, con `capacita-sconosciuta` e `hevc-e-vp9`.  Le altre quattro sono
+**tolleranze** — posti in cui il server DEVE *non* chiudere — e un server che
+chiudesse a ogni sorpresa passerebbe questo banco al completo.
+
+| eccezione di §3 | il caso che manca | perche' non e' qui |
+|---|---|---|
+| 2 (§6.3) | un datagram di 4 byte, o con `tipo` != `0x0401`, si **scarta** | l'audio non esiste prima della **fase 7** |
+| 3 (§7.1) | il **secondo di grazia** sulle coordinate vecchie dopo `TELA(ADATTATA)` | `ADATTA_TELA` e l'input non esistono prima della **fase 6** |
+| 4 (§7.1) | `ADATTA_TELA(1921, 1081)` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **con la sessione ancora aperta** | idem — e il server della fase 1 il tipo `0x000B` non lo conosce affatto: cade nel ramo `default` di `banchi/rcp/rcp.c` come un tipo inventato |
+| 5 (§5.2, §7.4) | due `RICHIEDI_CHIAVE` a meno di 200 ms: la seconda **si puo' ignorare** | `RICHIEDI_CHIAVE` non esiste prima della **fase 3** |
+
+⚠ **Scriverli qui oggi darebbe rosso su un messaggio che nessuno ha ancora
+scritto**, cioe' su una regola che il server non ha mai avuto occasione di
+applicare — il difetto che `01-b5-lancia.sh` dichiara di temere per l'innesto.
+Vanno nei banchi delle fasi 3, 6 e 7, e questa tabella e' il posto da cui
+riprenderli.
 """
 import argparse
 import asyncio
@@ -83,7 +130,17 @@ NIENTE_IN_COMUNE = 0x09
 VERSIONE_INCOMPATIBILE = 0x0A
 SESSIONE_NON_SERVIBILE = 0x0E
 TROPPI_TENTATIVI = 0x08
-CONGEDO, BANCO_ESITO = 0x000C, 0x0010
+CREDENZIALI_ERRATE = 0x07
+CONGEDO, RESPINTO, BANCO_ESITO = 0x000C, 0x0005, 0x0010
+
+# ⛔ IN QUALE MESSAGGIO DEVE ARRIVARE IL MOTIVO — `RCP.md` §11, riga «il
+#    congedo»: «`CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in
+#    `RESPINTO`», tutti gli altri in `CONGEDO`, e §4.4 vieta di far seguire
+#    `RESPINTO` da un `CONGEDO`.  ⚠ Non e' una formalita': dopo `RESPINTO` il
+#    client NON DEVE riprovare sulla stessa connessione (§4.4), dopo un
+#    `CONGEDO` la connessione e' finita e basta — due macchine a stati diverse
+#    sotto lo stesso numero (rilievo R7.9).
+PORTATORE = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
 
 
 class Cliente(b3.Cliente):
@@ -115,6 +172,13 @@ def capacita(voci, versione=1):
 
 BUONE = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
          ("audio.codec", "opus,pcm"), ("client.nome", "banco-b5 0.1.0")]
+
+# ⛔ `BUONE` senza `client.nome`, per i casi che devono violare **una regola
+#    sola** su quel nome.  `BUONE + [("client.nome", ...)]` porta `client.nome`
+#    DUE VOLTE, e §4.3 da' due ragioni distinte per chiudere — il duplicato e
+#    il valore — quindi un server che implementasse solo la prima dava verde
+#    senza aver mai guardato la lunghezza di un valore (rilievo R7.6).
+SENZA_NOME = [v for v in BUONE if v[0] != "client.nome"]
 
 
 def ciao(voci=None, versione=1):
@@ -159,22 +223,33 @@ class Esito:
     """Che cosa e' successo, dal lato che riceve."""
 
     def __init__(self):
-        self.motivo = None        # dal CONGEDO / RESPINTO
+        self.motivo = None        # dal CONGEDO / RESPINTO — MAI dedotto
+        self.tipo_motivo = None   # ⛔ IN QUALE messaggio e' arrivato (§11, §4.4)
         self.dettaglio = ""
         self.codice_wt = None     # dalla chiusura della sessione (§3.1 punto 3)
         self.stato_http = None    # per il caso del percorso
         self.messaggi = []        # i tipi arrivati, in ordine
         self.viva = False         # la sessione e' ancora aperta alla fine
+        # ⛔ La violazione e' partita davvero?  Vedi il punto 1 del docstring:
+        #    senza questa marca un caso che cade nella PREPARAZIONE conta come
+        #    verde (rilievo R7.1).
+        self.provocato = False
+        self.fase = "apertura"    # dove si e' fermato, se si e' fermato
         self.errore = None
 
     def __str__(self):
         p = []
         if self.stato_http and self.stato_http != "200":
             p.append(f":status={self.stato_http}")
+        if not self.provocato:
+            p.append(f"⛔ violazione MAI SPEDITA (fermo in «{self.fase}»)")
         if self.motivo is not None:
-            p.append(f"motivo={self.motivo:#04x}={MOTIVI.get(self.motivo, '?')}")
-        if self.codice_wt is not None:
-            p.append(f"chiusura-wt={self.codice_wt:#04x}")
+            p.append(f"motivo={self.motivo:#04x}={MOTIVI.get(self.motivo, '?')}"
+                     f" in {self.tipo_motivo}")
+        elif self.tipo_motivo is not None:
+            p.append(f"{self.tipo_motivo} senza motivo leggibile")
+        p.append("chiusura-wt=" + ("(assente)" if self.codice_wt is None
+                                   else f"{self.codice_wt:#04x}"))
         if self.viva:
             p.append("sessione VIVA")
         if self.errore:
@@ -182,8 +257,12 @@ class Esito:
         return "  ".join(p) if p else "niente"
 
 
-async def raccogli(cli, es, attesa):
-    """Aspetta il congedo, o la fine dell'attesa se la sessione regge."""
+async def raccogli(cli, es, attesa, grazia=1.5):
+    """Aspetta il congedo, o la fine dell'attesa se la sessione regge.
+
+    ⛔ **Questo e' l'unico posto in cui `es.motivo` viene scritto**, e lo
+       scrive da un messaggio arrivato sul filo (§8.1: dal lato che riceve).
+    """
     scadenza = asyncio.get_event_loop().time() + attesa
     while True:
         resta = scadenza - asyncio.get_event_loop().time()
@@ -197,16 +276,49 @@ async def raccogli(cli, es, attesa):
             break
         tipo, corpo, _ = m
         es.messaggi.append(tipo)
-        if tipo == CONGEDO or tipo == 0x0005:
-            es.motivo = corpo[0] if corpo else None
+        if tipo in (CONGEDO, RESPINTO):
+            # ⛔ Si ricorda QUALE dei due, perche' §4.4 e §11 li distinguono e
+            #    il verdetto lo chiede (rilievo R7.9).
+            es.tipo_motivo = "CONGEDO" if tipo == CONGEDO else "RESPINTO"
+            # ⛔ E un corpo VUOTO non e' «nessun motivo»: §7.1 vuole `u8
+            #    motivo` (piu' `stringa dettaglio` nel `CONGEDO`) e §3.1 vieta
+            #    il codice 0.  Con `corpo[0] if corpo else None` un server che
+            #    chiude MALE era piu' facile da far passare di uno che chiude
+            #    bene, perche' lasciava `motivo = None` (rilievo R7.2).
+            if not corpo:
+                es.errore = (f"{es.tipo_motivo} con corpo VUOTO: §7.1 ne vuole "
+                             "almeno il byte del motivo")
+                break
+            es.motivo = corpo[0]
             if tipo == CONGEDO and len(corpo) >= 3:
                 n = struct.unpack("!H", corpo[1:3])[0]
                 es.dettaglio = corpo[3:3 + n].decode("utf-8", "replace")
             break
         if tipo == BANCO_ESITO:
             break
+    # ⛔ §3.1 PUNTO 3, E PERCHE' SI ASPETTA.
+    #
+    #    Il `CONGEDO` viaggia sul canale di controllo, la chiusura della
+    #    sessione e' una capsula sullo stream della sessione: sono due strade
+    #    diverse e arrivano in due momenti diversi.  Leggere `codice_chiusura`
+    #    nell'istante esatto in cui il `CONGEDO` e' stato letto misurerebbe
+    #    «la seconda strada non e' arrivata» ogni volta che il server la manda
+    #    un millisecondo dopo — cioe' misurerebbe la nostra fretta.
+    #    ⚠ La finestra e' DICHIARATA e limitata: se scade, il valore resta
+    #      `None` e il verdetto lo conta come mancato, non lo nasconde.
+    if es.motivo is not None or es.errore is not None:
+        fine = asyncio.get_event_loop().time() + grazia
+        while (cli.codice_chiusura is None and not cli.finito
+               and asyncio.get_event_loop().time() < fine):
+            await asyncio.sleep(0.02)
     es.codice_wt = cli.codice_chiusura
-    es.viva = not cli.finito and es.motivo is None
+    # ⛔ «Viva» vuol dire viva.  Prima bastava che non fosse arrivato un
+    #    motivo, e un server che mandava `ECCOMI` e poi CHIUDEVA la sessione
+    #    senza congedo dava la riga «la sessione regge» mentre era morta
+    #    (rilievo R7.2): la chiusura WebTransport e il `FIN` sul canale di
+    #    controllo entrano nel giudizio, non solo nella stampa.
+    es.viva = (not cli.finito and es.motivo is None
+               and es.codice_wt is None and es.errore is None)
 
 
 async def apri(a, percorso="/rcp/1"):
@@ -361,17 +473,19 @@ async def _(cli, a, es):
 
 
 @caso("valore-vuoto", ERRORE_PROTOCOLLO,
-      "un valore vuoto: «chi non ha niente da dire non manda la capacita'»")
+      "un valore vuoto: «chi non ha niente da dire non manda la capacita'».  "
+      "⛔ UNA violazione sola: `client.nome` compare una volta e basta")
 async def _(cli, a, es):
     cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("client.nome", "")]))
+    cli.manda(ciao(SENZA_NOME + [("client.nome", "")]))
 
 
 @caso("valore-257-byte", ERRORE_PROTOCOLLO,
-      "un valore da 257 byte: il limite di §4.3 e' 256")
+      "un valore da 257 byte: il limite di §4.3 e' 256.  ⛔ UNA violazione "
+      "sola, per la stessa ragione del caso di sopra")
 async def _(cli, a, es):
     cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("client.nome", "x" * 257)]))
+    cli.manda(ciao(SENZA_NOME + [("client.nome", "x" * 257)]))
 
 
 @caso("capacita-ripetuta", ERRORE_PROTOCOLLO,
@@ -571,40 +685,59 @@ async def _(cli, a, es):
 
 
 # ── Gli stream (§2.5) ──────────────────────────────────────────────────────
+#
+# ⛔ QUI DENTRO IL CARICO E' BEN FORMATO APPOSTA, e non e' un dettaglio.
+#
+#    La violazione che questi quattro casi provano e' **lo stream**: quanti ce
+#    ne sono, in che verso va il canale, su che tipo di stream vive.  Se dentro
+#    ci si mette anche un messaggio storto — un `CIAO` con corpo di zero byte,
+#    un `tipo` che non esiste — un server che non conta gli stream congeda
+#    ugualmente, per l'altra ragione, e il caso e' **verde senza aver provato
+#    niente** (rilievo R7.7).  Ogni carico qui sotto e' legale *in se'* e nello
+#    stato in cui viene mandato: l'unica cosa storta e' lo stream.
 @caso("secondo-bidirezionale", ERRORE_PROTOCOLLO,
       "⛔ «il client NON DEVE aprire stream bidirezionali oltre lo 0»: il "
-      "canale di controllo e' UNO SOLO per tutta la sessione")
+      "canale di controllo e' UNO SOLO per tutta la sessione.  Il carico e' "
+      "un CREDENZIALI ben formato, che dopo ECCOMI e' il messaggio giusto: "
+      "l'unica violazione e' lo stream in piu'")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     altro = cli.apri_bidi()
-    cli.manda_su(altro, b"\x00\x01\x00\x00\x00\x00")
+    cli.manda_su(altro, inquadra(0x0003, s(a.utente) + s(a.parola)))
 
 
 @caso("uni-controllo", ERRORE_PROTOCOLLO,
       "il canale di CONTROLLO (byte alto 0x00) su uno stream unidirezionale: "
-      "«il controllo vive solo sullo stream 0» (§2.5)")
+      "«il controllo vive solo sullo stream 0» (§2.5).  ⚠ CREDENZIALI e non "
+      "CIAO: un secondo CIAO sarebbe anche uno stato sbagliato, cioe' una "
+      "seconda ragione per congedare")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
-    cli.manda_su(u, struct.pack("!HI", 0x0001, 0))
+    cli.manda_su(u, inquadra(0x0003, s(a.utente) + s(a.parola)))
 
 
 @caso("uni-video", ERRORE_PROTOCOLLO,
       "il canale VIDEO (0x03) DAL CLIENT: verso sbagliato — il video va dal "
-      "server al client (§2.5)")
+      "server al client (§2.5).  ⛔ `0x0301` = fotogramma chiave, che §6.2 "
+      "dichiara LEGALE: con `0x0300` l'unica regola applicabile era «altri "
+      "valori: ERRORE_PROTOCOLLO», e il verso non veniva mai messo alla prova")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
-    cli.manda_su(u, struct.pack("!H", 0x0300) + b"\x00" * 26)
+    # l'intestazione di 28 byte esatti di §6.2: tipo, codec, largh., altezza,
+    # numero, istante, input — tutti valori dentro i limiti
+    cli.manda_su(u, struct.pack("!HHIIIQI", 0x0301, 1, 1920, 1080, 1, 0, 0))
 
 
 @caso("uni-audio", ERRORE_PROTOCOLLO,
       "il canale AUDIO (0x04) su uno STREAM: l'audio vive solo sui datagram "
-      "(§2.5, §6.3)")
+      "(§2.5, §6.3).  Il carico e' l'intestazione di §6.3 ben formata — "
+      "`tipo = 0x0401`, `codec = 2` (PCM): l'unica violazione e' lo stream")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
-    cli.manda_su(u, struct.pack("!HI", 0x0401, 4) + b"\x00\x00\x00\x00")
+    cli.manda_su(u, struct.pack("!HHQ", 0x0401, 2, 0))
 
 
 @caso("uni-byte-alto-ignoto", ERRORE_PROTOCOLLO,
@@ -625,17 +758,36 @@ async def gira_caso(a, nome, atteso, spiega, f):
         if stato != "200":
             es.errore = f"la CONNECT estesa ha risposto {stato}"
             return es
+        es.fase = "preparazione+violazione"
         await f(cli, a, es)
+        # ⛔ QUI, E NON PRIMA.  Tutti i casi con un `atteso` finiscono con
+        #    l'invio del byte storto e non aspettano niente dopo: se `f` torna,
+        #    la violazione e' partita davvero.  Se invece si e' fermata prima —
+        #    l'`ATTACCA` fisso rifiutato, l'`ECCOMI` che non arriva, PAM che
+        #    dice di no — il caso non ha provato niente e `provocato` resta
+        #    falso, che e' quel che il verdetto guarda (rilievo R7.1).
+        es.provocato = True
+        es.fase = "raccolta"
         # ⚠ Sui casi che DEVONO passare si aspetta lo stesso: «non e' caduta
         #   subito» non e' «non e' caduta».
         await raccogli(cli, es, attesa=3.0 if atteso is None else 12.0)
     except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
         es.errore = f"{type(e).__name__}: {e}"
-        # il congedo puo' essere arrivato come eccezione dentro `attendi`
-        for c, n in MOTIVI.items():
-            if n in str(e):
-                es.motivo = c
-                break
+        # ⛔ E IL MOTIVO NON SI RASCHIA DAL TESTO DELL'ECCEZIONE.
+        #
+        #    Qui c'era un giro su `MOTIVI` che cercava il nome di un motivo di
+        #    §8.2 dentro `str(e)` e lo prendeva per «motivo arrivato».  Il
+        #    difetto: `b3.attendi` solleva `RuntimeError("CONGEDO invece di
+        #    SESSIONE: motivo 0x0b = ERRORE_PROTOCOLLO")` anche quando a
+        #    cadere e' la PREPARAZIONE — e quella stringa contiene esattamente
+        #    il nome del motivo atteso.  R7.1 ne ha contati **dodici** che
+        #    potevano essere verdi col byte storto mai spedito, e ⚠ **si
+        #    richiudeva su se' stesso**: piu' il server era rotto a monte, piu'
+        #    quei casi diventavano verdi (rilievo R7.1, forme E6 ed E7).
+        #
+        # ⭐ Il motivo lo legge `raccogli`, da un messaggio arrivato sul filo.
+        #    Il testo dell'eccezione resta quel che e': una diagnosi da
+        #    stampare, non un verdetto.
     finally:
         if gestore is not None:
             try:
@@ -802,10 +954,56 @@ def riga(ok, nome, testo):
           f"{nome:26s} {testo}")
 
 
+def esito_finale(conti, guasti, parziale):
+    """⛔ Ogni conteggio con il suo denominatore, e il denominatore CALCOLATO.
+
+    La riga vecchia stampava `N su N` — la stessa espressione due volte — e
+    solo quando `guasti == 0`, cioe' non portava nessuna informazione che il
+    colore non portasse gia' (rilievo R7.14).  ⚠ E un denominatore a **zero**
+    si dice, non si nasconde: «0 su 0» non e' un verde.
+    """
+    print()
+    print("    == quel che questo giro ha davvero guardato")
+    for che, (buoni, tot) in conti.items():
+        if tot == 0:
+            # ⛔ Un denominatore zero si DICHIARA: «nessuno ha guardato» e
+            #    «tutti passati» hanno lo stesso aspetto se si tace.
+            print(f"    --  {che:44s} nessun caso lo ha sollecitato")
+            continue
+        col = VERDE if buoni == tot else ROSSO
+        print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}")
+    print()
+    if guasti:
+        print(f"    {ROSSO}⛔ B5: {guasti} punti non passano{GRIGIO}")
+        return 1
+    if parziale:
+        print(f"    {VERDE}⭐ i casi selezionati passano{GRIGIO} — ⚠ e questo "
+              f"NON e' «B5 passa»: il giro era parziale")
+        return 0
+    print(f"    {VERDE}⭐ B5 passa, e i numeri qui sopra dicono su che cosa"
+          f"{GRIGIO}")
+    return 0
+
+
+def conta(casi):
+    """⛔ I due numeri, CALCOLATI — e sono due, non uno.
+
+    «44 violazioni su 44» stampava la stessa espressione come numeratore e
+    come denominatore, e ci contava dentro anche gli otto casi che DEVONO
+    passare, su cui «il motivo giusto ogni volta» e' falso per costruzione
+    (rilievo R7.14).  Da qui in poi il numero lo produce questa funzione, e
+    nessun commento lo riscrive a mano.
+    """
+    violazioni = sum(1 for c in casi if c[1] is not None)
+    return violazioni, len(casi) - violazioni
+
+
 async def principale(a):
     casi = [c for c in CASI if not a.solo or a.solo in c[0]]
+    tot_v, tot_verdi = conta(CASI)
     if a.elenco:
-        print(f"== B5: {len(CASI)} casi, e ogni riga e' una PREVISIONE\n")
+        print(f"== B5: {len(CASI)} casi — {tot_v} violazioni e {tot_verdi} "
+              f"⭐ verdi attesi.  Ogni riga e' una PREVISIONE\n")
         for nome, atteso, spiega, dove, _ in CASI:
             att = (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
                    else "⭐ DEVE PASSARE")
@@ -813,18 +1011,63 @@ async def principale(a):
             print(f"  {'':26s}   {spiega}")
         return 0
 
-    print(f"== B5 — le prove di violazione verso il server ({len(casi)} casi)")
-    print("   ⛔ ogni caso: il motivo giusto, le due strade di §3.1, e il "
-          "server ancora vivo dopo\n")
+    # ⛔ ZERO CASI NON E' «TUTTI PASSATI».
+    #
+    #    `--solo pippo` non combaciava con nessun nome, il ciclo non girava, e
+    #    il banco stampava «0 violazioni su 0» e usciva 0: un errore di
+    #    battitura nel filtro era indistinguibile da un banco verde (rilievo
+    #    R7.15).  ⭐ Sono TRE esiti — non ho niente da misurare, non passa,
+    #    passa — e vogliono tre codici d'uscita diversi.
+    if not casi:
+        print(f"    {ROSSO}⛔ «--solo {a.solo}» ha selezionato ZERO casi su "
+              f"{len(CASI)}: non c'e' niente da misurare{GRIGIO}")
+        print("       Questo NON e' un verde.  I nomi si leggono con --elenco.")
+        return 2
 
+    sel_v, sel_verdi = conta(casi)
+    print(f"== B5 — le prove di violazione verso il server")
+    print(f"   {len(casi)} casi su {len(CASI)} selezionati: {sel_v} violazioni "
+          f"e {sel_verdi} ⭐ verdi attesi")
+    print("   ⛔ ogni caso: la violazione spedita davvero, il motivo giusto nel "
+          "messaggio giusto,")
+    print("      le due strade di §3.1, e il server ancora vivo dopo\n")
+    if a.solo:
+        print(f"    ⚠ GIRO PARZIALE.  Il percorso (§2.2), il giro completo e il")
+        print(f"      limitatore (§4.4-bis) NON si eseguono: non dipendono dai")
+        print(f"      casi selezionati, e girarli qui direbbe «passa» su una")
+        print(f"      parte del banco che nessuno ha chiesto di misurare.\n")
+
+    # ⛔ OGNI CONTEGGIO CON IL SUO DENOMINATORE, e i denominatori sono diversi
+    #    perche' le proprieta' misurate sono diverse.
+    conti = {
+        "violazioni col motivo atteso": [0, 0],
+        "⭐ verdi attesi, sessione viva": [0, 0],
+        "§3.1 punto 3 — motivo nella chiusura WT": [0, 0],
+        "§11 — motivo nel messaggio giusto": [0, 0],
+    }
     guasti, morto = 0, False
     for nome, atteso, spiega, dove, f in casi:
         es = await gira_caso(a, nome, atteso, spiega, f)
         if atteso is None:
-            ok = es.motivo is None and es.errore is None
+            conti["⭐ verdi attesi, sessione viva"][1] += 1
+            # ⛔ `viva` si CALCOLAVA e non si guardava: bastava che non fosse
+            #    arrivato un motivo, quindi un server che manda ECCOMI e poi
+            #    chiude la sessione WebTransport dava la riga «la sessione
+            #    regge» mentre la sessione era morta (rilievo R7.2).
+            ok = es.viva and es.errore is None
             testo = ("la sessione regge" if ok else str(es))
+            conti["⭐ verdi attesi, sessione viva"][0] += int(ok)
         else:
-            ok = es.motivo == atteso
+            conti["violazioni col motivo atteso"][1] += 1
+            atteso_in = PORTATORE.get(atteso, "CONGEDO")
+            # §11: «almeno una delle due strade» deve aver portato il motivo.
+            strade = []
+            if es.motivo == atteso and es.tipo_motivo == atteso_in:
+                strade.append(atteso_in)
+            if es.codice_wt == atteso:
+                strade.append("chiusura-WT")
+            ok = es.provocato and bool(strade)
+            conti["violazioni col motivo atteso"][0] += int(ok)
             testo = str(es)
         riga(ok, nome, testo)
         if not ok:
@@ -833,20 +1076,47 @@ async def principale(a):
                   + (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
                      else "⭐ nessuna caduta"))
             print(f"        {spiega}")
+            if atteso is not None and not es.provocato:
+                print(f"        ⛔ e la violazione NON E' MAI PARTITA: il caso "
+                      f"si e' fermato in «{es.fase}».  Non e' una prova "
+                      f"fallita, e' una prova non fatta")
         if es.dettaglio:
             print(f"        dettaglio dal corpo: «{es.dettaglio}»")
         if getattr(es, "banco", None):
             print(f"        BANCO_ESITO: {es.banco}")
-        if atteso is not None and es.motivo == atteso:
-            # §3.1: quale delle due strade ha portato il motivo
-            vie = []
-            if es.motivo is not None:
-                vie.append("CONGEDO")
+        if atteso is not None and es.provocato:
+            # ⛔ §3.1 PUNTO 3 SI CONTA, NON SI STAMPA.
+            #
+            #    Qui c'era una riga che diceva «il motivo e' arrivato per
+            #    CONGEDO» anche quando la seconda strada non era arrivata
+            #    affatto — vera, e capace di far credere il contrario — e
+            #    `guasti` non veniva toccato in nessuno dei tre rami: R7.3 ha
+            #    mostrato che TUTTE le violazioni restavano verdi con il punto
+            #    3 mai implementato.
+            #    Il punto 3 e' un DEVE **incondizionato**: la condizione di
+            #    §3.1 sta sul punto 2, ed e' il punto 3 che il documento chiama
+            #    «quello che salva le diagnosi».
+            conti["§3.1 punto 3 — motivo nella chiusura WT"][1] += 1
             if es.codice_wt == atteso:
-                vie.append("chiusura-WT")
-            elif es.codice_wt is not None:
-                vie.append(f"chiusura-WT={es.codice_wt:#04x} ⛔ DIVERSA")
-            print(f"        §3.1: il motivo e' arrivato per {' + '.join(vie)}")
+                conti["§3.1 punto 3 — motivo nella chiusura WT"][0] += 1
+            else:
+                guasti += 1
+                visto = ("assente" if es.codice_wt is None
+                         else f"{es.codice_wt:#04x}")
+                riga(False, "", f"   §3.1 punto 3 su «{nome}»: la chiusura "
+                                f"della sessione porta {visto}, atteso "
+                                f"{atteso:#04x}")
+            # ⛔ E IN QUALE MESSAGGIO (§11, §4.4).
+            if es.motivo is not None:
+                conti["§11 — motivo nel messaggio giusto"][1] += 1
+                if es.tipo_motivo == PORTATORE.get(atteso, "CONGEDO"):
+                    conti["§11 — motivo nel messaggio giusto"][0] += 1
+                else:
+                    guasti += 1
+                    riga(False, "", f"   §11 su «{nome}»: il motivo e' arrivato "
+                                    f"in {es.tipo_motivo}, e §11 lo vuole in "
+                                    f"{PORTATORE.get(atteso, 'CONGEDO')} — sono "
+                                    f"due macchine a stati diverse")
         # ⛔ e il server dopo?
         vivo, perche = await ancora_vivo(a)
         if not vivo:
@@ -858,7 +1128,22 @@ async def principale(a):
     if morto:
         print(f"\n    {ROSSO}⛔ il banco si ferma: senza un server non c'e' "
               f"niente da misurare{GRIGIO}")
-        return 1
+        # ⚠ E si stampa lo stesso quel che si era guardato FIN LI': un banco
+        #   che si ferma senza dire quanto aveva coperto lascia credere che
+        #   avesse coperto tutto.
+        return esito_finale(conti, guasti, parziale=True)
+
+    # ⛔ SOTTO UN FILTRO QUESTE TRE SEZIONI NON SI ESEGUONO, ed e' dichiarato.
+    #
+    #    Non dipendono dai casi selezionati: girarle su una selezione parziale
+    #    fa passare per «B5 passa» una misura che nessuno ha chiesto — e nel
+    #    caso del limitatore blocca l'indirizzo per trenta secondi a chi stava
+    #    solo riprovando un caso.  E' il gemello di R7.15(b), che nello script
+    #    di lancio dava rosso su una regola mai sollecitata.
+    if a.solo:
+        print(f"\n    ⚠ giro parziale: percorso, giro completo e limitatore "
+              f"saltati (vedi sopra)")
+        return esito_finale(conti, guasti, parziale=True)
 
     print("\n== ⛔ Il percorso della sessione (§2.2), che viene prima di RCP")
     for percorso, atteso, stato, ok in await il_percorso(a):
@@ -888,13 +1173,7 @@ async def principale(a):
         if not ok:
             guasti += 1
 
-    print()
-    if guasti == 0:
-        print(f"    {VERDE}⭐ B5: {len(casi)} violazioni su {len(casi)}, il "
-              f"motivo giusto ogni volta, e il server vivo dopo ciascuna{GRIGIO}")
-    else:
-        print(f"    {ROSSO}⛔ B5: {guasti} punti non passano{GRIGIO}")
-    return 1 if guasti else 0
+    return esito_finale(conti, guasti, parziale=False)
 
 
 if __name__ == "__main__":

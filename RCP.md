@@ -3,7 +3,12 @@
 *Scritto il 9 agosto 2026, prima di qualunque riga di codice.*
 *Completato il 9 agosto 2026, dopo il censimento di §0-bis — sempre prima di qualunque riga di codice.*
 
-> ## ⛔ Perché questo documento esiste, e perché viene prima
+> ## 0. ⛔ Perché questo documento esiste, e perché viene prima
+>
+> *⚠ Il numero è del 10 agosto 2026, rilievo **R11.18**: quattro righe di questo documento
+> (§3, §5.2, §7.5, §11.1) e una di `fasi/01-filo-nudo.md` citavano «§0» come l'argomento portante,
+> e §0 non esisteva — la numerazione cominciava da §0-bis. Adesso esiste, e non cambia una parola
+> del testo.*
 >
 > In v1 l'arbitro era **mstsc**: se disegnava, era giusto. Quando il nostro server sbagliava a
 > capire la specifica RDP, un client altrui lo diceva subito, gratis.
@@ -131,7 +136,9 @@ esiste un modo in chiaro, e RCP non scorre mai su TCP.
 ### 2.1 Come si usano i pezzi di QUIC
 
 QUIC non è «TCP che va più veloce»: porta quattro cose che questo protocollo usa
-deliberatamente, e che vanno usate **invece** di reimplementarle (`SPECIFICHE.md` §2.3).
+deliberatamente, e che vanno usate **invece** di reimplementarle (`SPECIFICHE.md` §2 punto 3,
+*«dipendere, non riscrivere»* — ⚠ *questa riga citava un «§2.3» che in `SPECIFICHE.md` non esiste:
+§2 non ha sottosezioni. Corretto il 10 agosto 2026, rilievo **R11.18***).
 
 | Pezzo di QUIC | A che serve qui |
 |---|---|
@@ -253,7 +260,7 @@ caso un campo `tipo` (§6). Il byte alto dice il canale:
 
 | Byte alto di `tipo` | Canale | Che cosa segue |
 |---|---|---|
-| `0x00` | controllo | l'inquadratura di §6.1 — e su uno stream unidirezionale è `ERRORE_PROTOCOLLO`: il controllo vive solo sullo stream 0 |
+| `0x00` | controllo | l'inquadratura di §6.1 — e su uno stream unidirezionale è `ERRORE_PROTOCOLLO`: il controllo vive solo sul **primo stream bidirezionale della sessione** (§4.2) |
 | `0x01` | input | l'inquadratura di §6.1, un messaggio dopo l'altro |
 | `0x02` | appunti | l'inquadratura di §6.1 |
 | `0x03` | video | l'intestazione di 28 byte di §6.2, **senza** inquadratura |
@@ -261,6 +268,18 @@ caso un campo `tipo` (§6). Il byte alto dice il canale:
 
 ⛔ Un byte alto diverso da questi cinque è `ERRORE_PROTOCOLLO`. E un canale usato **nel verso
 sbagliato** — un `0x01` che arriva dal server, un `0x03` che arriva dal client — lo è a sua volta.
+
+> ⛔ *Corretto il 10 agosto 2026, rilievo **R11.9**: la riga del `0x00` diceva «il controllo vive
+> solo sullo **stream 0**», ed era il resto della stesura a QUIC nudo che §4.2 aveva già tolto la
+> sera del 9 agosto (rilievo R1.5). Il rilievo R1.5 nominava **anche** questa sezione, e la cura
+> era stata applicata a uno solo dei due luoghi.*
+>
+> ⛔ **Il canale si riconosce dal byte alto di `tipo`, mai dal numero dello stream**, e la seconda
+> risposta alla stessa domanda era rimasta qui dentro — cioè nella sezione che §0-bis presenta come
+> la cura del «buco più insidioso». Chi implementava §2.5 alla lettera scriveva un ricevente che
+> cerca il canale di controllo per numero, e la diagnosi che ne usciva era *«il client non apre il
+> canale»* **mentre il client lo aveva aperto**. ⚠ *La stessa parola sopravviveva nella tabella di
+> §5, ed è stata tolta lì insieme a questa.*
 
 ---
 
@@ -398,7 +417,7 @@ dominio.*
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
 | ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
 | ⛔ **che cosa non copre** | **il caricamento della pagina**, che è una connessione TCP a sé. Lì resta l'avviso con il clic — o il certificato vero, per chi ha un dominio |
-| ⭐ **e vale su tutti e tre i motori** | `[R]` **WebKit lo ha implementato il 2 ottobre 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) ed è spedito in **Safari 26.4**: iPhone e iPad hanno **la stessa** strada degli altri due, non una da salvare |
+| ⭐ **e la stessa strada è DISPONIBILE su tutti e tre i motori** | `[R]` **WebKit lo ha implementato il 2 ottobre 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) ed è spedito in **Safari 26.4**: iPhone e iPad hanno **la stessa** strada degli altri due, non una da salvare. ⛔ **Disponibile, non verificata**: su Safari nessuno l'ha provata (riga sopra, `DECISIONI.md` §1.8), e *«vale su»* sarebbe un'affermazione di funzionamento sostenuta da `[R]`, cioè dalla lettura di un commit — forma **E1**. ⚠ *Corretto il 10 agosto 2026, rilievo **R11.16**: questa riga e quella sopra dicevano, nella stessa tabella, che vale su tre motori e che Safari resta fuori. Questo file è l'**arbitro**, cioè il posto in cui una deduzione pesa più che nella documentazione del prodotto* |
 
 ⛔ **Da cui due certificati, e vanno tenuti distinti nel codice**: uno **longevo** per la pagina, che
 è quello su cui l'utente concede l'eccezione e che quindi **non deve cambiare** più spesso del
@@ -557,8 +576,9 @@ sbagliata»: entrambi sono `CREDENZIALI_ERRATE`. E **DEVE** applicare la limitaz
 frequenza dei tentativi prima di rispondere (§4.4-bis).
 
 ⛔ **`RESPINTO` è il congedo dell'autenticazione.** Dopo averlo mandato il server **DEVE** chiudere
-la connessione come dice §3.1 — con lo stesso motivo nel `CONNECTION_CLOSE` — e **NON DEVE**
-mandare anche `CONGEDO`. Il client **NON DEVE** riprovare sulla stessa connessione: per un secondo
+la **sessione WebTransport** come dice §3.1 — con lo stesso motivo nel **codice d'errore
+applicativo della chiusura**, non in un `CONNECTION_CLOSE` di trasporto — e **NON DEVE** mandare
+anche `CONGEDO`. Il client **NON DEVE** riprovare sulla stessa connessione: per un secondo
 tentativo se ne apre una nuova.
 
 ⛔ **E dopo `RESPINTO` al client resta una cosa sola che può dire: `CONGEDO`.** Il divieto di §4.4
@@ -604,7 +624,7 @@ Il server tiene due contatori dei **tentativi falliti**, uno per **nome utente**
 | | |
 |---|---|
 | **soglia** | 5 tentativi falliti in 5 minuti |
-| **oltre la soglia** | ogni nuovo tentativo riceve **`RESPINTO` con motivo `TROPPI_TENTATIVI`** — subito, e **senza che PAM venga interrogata** — per una **finestra** che parte da **30 secondi** e **raddoppia** a ogni tentativo fino a un tetto di **15 minuti** |
+| **oltre la soglia** | ogni nuovo tentativo riceve **`RESPINTO` con motivo `TROPPI_TENTATIVI`**, **senza che PAM venga interrogata**, per una **finestra** che parte da **30 secondi** e **raddoppia** a ogni tentativo fino a un tetto di **15 minuti**. ⛔ **Il rifiuto si decide subito; la risposta parte lo stesso non prima del secondo fisso** della riga in fondo a questa tabella |
 
 > ⛔ *Due ambiguità chiuse la sera del 9 agosto 2026, rilievo **R1.13**, ed erano la stessa forma che
 > §4.4 dichiarava di aver già chiuso per `CREDENZIALI_ERRATE`.*
@@ -617,9 +637,26 @@ Il server tiene due contatori dei **tentativi falliti**, uno per **nome utente**
 >
 > **Che cosa è «l'attesa».** Non è un ritardo della risposta: con un solo tentativo per connessione
 > (§4.4) e il tempo di inattività a 30 secondi (§2.2), un server che ritardasse di quindici minuti
-> **non consegnerebbe mai il rifiuto**. È una **finestra** durante la quale si rifiuta subito.
+> **non consegnerebbe mai il rifiuto**. È una **finestra** durante la quale si rifiuta **senza
+> interrogare PAM** — non un'attesa che si aggiunge al secondo fisso.
 | **azzeramento** | un'autenticazione riuscita azzera entrambi i contatori di quel nome; il contatore per indirizzo scade da sé dopo 30 minuti di quiete |
-| ⛔ **il ritardo fisso** | il server **NON DEVE** rispondere a `CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è `AMMESSO`** |
+| ⛔ **il ritardo fisso** | il server **NON DEVE** rispondere a `CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è `AMMESSO`** e ⛔ **anche quando è `TROPPI_TENTATIVI`**: non esiste una risposta a `CREDENZIALI` che parta prima di un secondo |
+
+> ⛔ *L'ultima riga di ciascuna delle due caselle è del 10 agosto 2026, rilievo **R11.10**, e chiude
+> una contraddizione interna a questa stessa tabella.* La riga «oltre la soglia» diceva **subito**,
+> il ritardo fisso dice **non prima di un secondo** — e un sesto tentativo dentro la finestra è un
+> `CREDENZIALI`, cioè **lo stesso ingresso**. Due implementazioni scrivevano il byte a t=0 e a
+> t=1000, tutt'e due conformi a una riga e in violazione dell'altra: è la definizione di difetto
+> che §0 si assegna.
+>
+> ⛔ **E non è cosmetico: è la proprietà di sicurezza che questa sezione esiste per proteggere.** Un
+> rifiuto immediato dentro la finestra e uno ritardato fuori dalla finestra rimettono il
+> **tempismo** come canale, dal lato opposto a quello che il ritardo fisso toglie.
+>
+> ⚠ *La cura era già scritta nel **banco** — `fasi/01-filo-nudo.md`, B8: «e "subito" vale un
+> secondo … chi cronometra "subito" e si aspetta zero **dà rosso sul codice giusto**» — e non
+> nell'arbitro, che è l'ordine sbagliato: il banco si collauda contro `RCP.md` (§11), non
+> viceversa.*
 
 ⭐ **Il ritardo fisso è la riga che conta**, e non serve a rallentare chi indovina: serve a togliere
 il **tempismo** come canale. Senza, «utente inesistente» risponde in un millisecondo e «password
@@ -716,7 +753,7 @@ secondi del tempo di inattività di QUIC: quello misura il **silenzio della rete
 
 | Canale | Trasporto | Verso | Affidabile? |
 |---|---|---|---|
-| **controllo** | stream bidirezionale 0 | ↔ | sì |
+| **controllo** | il **primo** stream bidirezionale della sessione (§4.2) | ↔ | sì |
 | **video** | **uno stream unidirezionale per fotogramma** | server → client | sì, ma abbandonabile |
 | **audio** | datagram | server → client, e ↑ per il microfono | no |
 | **input** | uno stream unidirezionale riservato | client → server | sì |
@@ -839,7 +876,21 @@ non dichiarata è una divergenza silenziosa fra due implementazioni.
 | misura massima | **256×256** |
 | formato | **BGRA premoltiplicato**, riga per riga senza riempimento: `larghezza × altezza × 4` byte |
 | cursore nascosto | ⛔ `larghezza = 0` **e** `altezza = 0`, tutt'e due, e nessun byte d'immagine. Una sola delle due a zero è `ERRORE_PROTOCOLLO` |
-| il punto attivo | ⛔ **DEVE** stare dentro l'immagine: `0 ≤ attivo_x < larghezza`, `0 ≤ attivo_y < altezza`. ⚠ *Il tipo resta `i16` e la riga «può essere negativo» è caduta: senza un intervallo, `attivo_x = -32768` era legale secondo ogni riga del documento, e due client avrebbero disegnato il puntatore in due posti diversi (rilievo **R1.21**)* |
+| il punto attivo | ⛔ **DEVE** stare dentro l'immagine: `0 ≤ attivo_x < larghezza`, `0 ≤ attivo_y < altezza`. ⛔ **Unica eccezione, il cursore nascosto**: con `larghezza = altezza = 0` l'intervallo è vuoto, e allora `attivo_x` e `attivo_y` **DEVONO** valere `0`; qualunque altro valore è `ERRORE_PROTOCOLLO`. ⚠ *Il tipo resta `i16` e la riga «può essere negativo» è caduta: senza un intervallo, `attivo_x = -32768` era legale secondo ogni riga del documento, e due client avrebbero disegnato il puntatore in due posti diversi (rilievo **R1.21**)* |
+
+> ⛔ *L'eccezione è del 10 agosto 2026, rilievo **R11.11**, ed è 🔸 derivata: si corregge senza
+> discussione.* La riga sopra dichiara **obbligatorio** `larghezza = 0` **e** `altezza = 0` per il
+> cursore nascosto; la riga sotto pretende `0 ≤ attivo_x < larghezza`, e con `larghezza = 0`
+> quell'intervallo è **vuoto**: nessun valore di un `i16` lo soddisfa. ⛔ **Un `CURSORE_FORMA` di
+> cursore nascosto violava la riga accanto sempre, qualunque cosa il mittente ci mettesse** — e un
+> ricevente che applicasse §5.5 alla lettera chiudeva con `ERRORE_PROTOCOLLO` ogni volta che il
+> puntatore sparisce, con il sintomo *«la sessione cade quando entro in un campo di testo»*, che
+> non nomina né il cursore né la regola.
+>
+> ⚠ È la stessa forma del trattino basso di §4.3 trovato dal validatore di B4: **una regola che
+> vieta un caso che il documento stesso definisce**. E R1.21 dichiarava di aver chiuso proprio
+> questo — *«larghezza 0 con altezza diversa da 0, e un punto attivo senza intervallo»*: l'intervallo
+> era stato aggiunto **senza eccettuare il caso che la riga accanto rende obbligatorio**.
 
 ---
 
@@ -1096,7 +1147,7 @@ che la risposta arrivasse non sono un difetto del client.
 CURSORE_FORMA
  ├── u16 larghezza          0 con altezza 0 = cursore nascosto (§5.5)
  ├── u16 altezza
- ├── i16 attivo_x           il punto che «punta», dentro l'immagine
+ ├── i16 attivo_x           il punto che «punta», dentro l'immagine — ⛔ 0 se nascosto (§5.5)
  ├── i16 attivo_y
  └── immagine               larghezza × altezza × 4 byte, BGRA premoltiplicato
 ```
@@ -1321,8 +1372,21 @@ dice `DECISIONI.md` §2.6 — questo campo dice soltanto quando il server ha obb
 
 ### 8.1 Si dice, e si verifica dal lato che riceve
 
-⛔ Chi chiude **DEVE** mandare `CONGEDO` con un motivo **prima** di chiudere la connessione QUIC, e
-**DEVE** ripetere il motivo nel codice d'errore applicativo della chiusura (§3.1).
+⛔ Chi chiude **DEVE** mandare `CONGEDO` con un motivo **prima** di chiudere la **sessione
+WebTransport**, e **DEVE** ripetere il motivo nel codice d'errore applicativo della chiusura (§3.1).
+
+> ⛔ *Corretto il 10 agosto 2026, rilievo **R11.8**: qui c'era «prima di chiudere la **connessione
+> QUIC**», e in §4.4 «con lo stesso motivo nel **`CONNECTION_CLOSE`**». Sono i due resti che la
+> correzione R1.4 di §3.1 non aveva raggiunto, e §8.1 è il paragrafo che detta l'obbligo a **chi
+> chiude** — che è spesso la pagina, cioè il lato che R1.4 dichiara **incapace** di chiudere la
+> connessione HTTP/3 sotto.*
+>
+> ⛔ **È lo stesso ingresso con due byte diversi** — un `CONNECTION_CLOSE` di trasporto contro una
+> `CLOSE_WEBTRANSPORT_SESSION` — cioè la forma esatta che R1.4 dichiarava di aver chiuso: *«un
+> programmatore chiudeva la sessione e dichiarava assolta la regola; l'altro cercava l'API della
+> connessione, non la trovava, e lasciava il punto 3 non implementato — ed era conforme al testo
+> quanto il primo»*. ⚠ E §4.4 lo imponeva proprio sul percorso `RESPINTO`, quello che B11 ha
+> riaperto il 10 agosto.
 
 ⚠ **E questa riga ha un prezzo già pagato.** In v1, per **tre fasi**, il server scriveva compìto
 «congedo il client» mentre il client, alla stessa ora, scriveva «errore di rete»: mancava una
@@ -1390,14 +1454,22 @@ mostrato all'utente: è per il registro, e contiene quel che serve a chi diagnos
 Se non c'è una versione comune, `VERSIONE_INCOMPATIBILE`.
 
 ⛔ **In concreto**: il server sceglie la versione più alta che sa parlare e che non superi quella
-del `CIAO`, ⛔ **fra quelle che il percorso ammette (§2.4)**. Se non ne ha nessuna, congeda. Il
+del `CIAO`, ⛔ **fra quelle che il percorso ammette (§2.2)**. Se non ne ha nessuna, congeda. Il
 client **DEVE** verificare che la versione di `ECCOMI` sia una che sa parlare, e congedare con
 `VERSIONE_INCOMPATIBILE` se non lo è — un server che risponde con una versione più alta di quella
 chiesta sta sbagliando, e accettarla in silenzio è l'indulgenza che §3 vieta.
 
-> ### ⛔⭐ Le sette parole di §2.4 sono del 10 agosto 2026, e le ha trovate **B5**
+> ### ⛔⭐ Le sette parole di §2.2 sono del 10 agosto 2026, e le ha trovate **B5**
 >
-> Questo paragrafo diceva soltanto *«la più alta che non superi quella del `CIAO`»*. §2.4 dice che
+> ⚠ *Il numero di sezione è stato corretto lo stesso giorno, rilievo **R11.18-bis** (R11.2): queste
+> tre righe mandavano a **§2.4**, che è «La porta» — 7447, TCP e UDP — e non nomina né i percorsi
+> né le versioni. La regola vive in **§2.2**, righe «l'indirizzo della sessione … il numero dopo la
+> barra è la versione maggiore» e «le due DEVONO coincidere», ed è lì che R1.24 l'ha scritta.*
+> ⛔ **Chi leggeva §9 e andava a §2.4 come gli si diceva trovava la porta, nessun vincolo, e
+> tornava a §9** — cioè ricostruiva esattamente la lettura che aveva prodotto la prima stesura di
+> `banchi/rcp/rcp.c`. La cura di una contraddizione fra due sezioni mandava a una terza.
+>
+> Questo paragrafo diceva soltanto *«la più alta che non superi quella del `CIAO`»*. §2.2 dice che
 > un `CIAO(versione=2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`. ⛔ **Le due regole danno byte
 > diversi sul filo per lo stesso ingresso** — `ECCOMI(1)` contro `CONGEDO(0x0A)` — e **nessuna
 > delle due citava l'altra**.
@@ -1407,7 +1479,7 @@ chiesta sta sbagliando, e accettarla in silenzio è l'indulgenza che §3 vieta.
 > prima stesura di `banchi/rcp/rcp.c` **accettava un `CIAO(2)`** e rispondeva `ECCOMI(1)`, ed era
 > conforme a §9 alla lettera.
 >
-> ⭐ **Vince §2.4**, perché è la più specifica e perché è stata scritta per risolvere proprio questo
+> ⭐ **Vince §2.2**, perché è la più specifica e perché è stata scritta per risolvere proprio questo
 > caso (rilievo R1.24). Questa riga adesso la nomina, così chi legge solo una delle due trova
 > l'altra.
 >

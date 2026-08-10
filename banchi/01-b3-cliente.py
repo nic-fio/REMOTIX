@@ -24,6 +24,15 @@ Ogni byte che passa sul canale di controllo finisce in una registrazione che
 oscurata come impone §11.1 — lunghezza vera, byte sostituiti con `0x2A`,
 impronta di quel che c'era.  Cosi' il validatore vede l'inquadratura intera e
 la parola non finisce in un file.
+
+⛔ **E si registra anche quando la stretta di mano NON riesce.**  Un
+`CONGEDO(GIA_ATTIVA_REMOTA)` e' l'oggetto che il terzo giro di B3 esiste per
+produrre: se la traccia si scrivesse solo lungo la strada che riesce, l'unico
+banco dell'invariante I2 non consegnerebbe niente all'arbitro (rilievo R8.9).
+
+⛔ **E il codice d'uscita dice CHE COSA e' successo alla connessione**: `0` sono
+rimasto attaccato per tutto il tempo chiesto, `4` la connessione o la sessione
+sono cadute prima — e il registro dice quale delle due (rilievi R8.2, R8.4).
 """
 import argparse
 import asyncio
@@ -64,6 +73,7 @@ class Registratore:
 
     def __init__(self):
         self.blocchi = []
+        self.scritta = False
 
     def aggiungi(self, verso, carico, oscurati=()):
         self.blocchi.append((verso, carico, list(oscurati)))
@@ -94,6 +104,28 @@ class Cliente(QuicConnectionProtocol):
         #    conserva, perche' e' la seconda delle due strade — e il giorno in
         #    cui il `CONGEDO` non arriva e' l'unica.
         self.codice_chiusura = None
+        # ⛔ CHE COSA E' CADUTO, E QUANDO — rilievi R8.2 e R8.4 del 10 agosto 2026.
+        #
+        #    B3 chiede due volte «la prima e' ancora attaccata?», e tutt'e due
+        #    le volte lo leggeva dall'ESISTENZA DEL PROCESSO o dal suo codice
+        #    d'uscita.  ⚠ Ma questo programma, dopo SESSIONE, dormiva e basta:
+        #    la connessione poteva morire per il tetto d'inattivita' di QUIC, o
+        #    la sessione poteva essere chiusa dal server, e il processo restava
+        #    vivo e usciva 0 lo stesso.  Il banco leggeva «viva» da un fatto che
+        #    non aveva osservato (E7: si verifica dal lato che invia).
+        #
+        # ⭐ Qui si osserva dal lato che riceve: chi cade lo dice, con il nome
+        #    di CHE COSA e' caduto — e i due casi non si confondono, perche'
+        #    «QUIC ha chiuso da se'» e «il server ha chiuso la sessione» sono i
+        #    due imputati che il quarto giro esiste per separare.
+        self.caduta = None
+        self.caduto = asyncio.Event()
+
+    def _cade(self, perche: str) -> None:
+        """La prima causa vince: le successive sono conseguenze, non cause."""
+        if self.caduta is None:
+            self.caduta = perche
+            self.caduto.set()
 
     def apri_sessione(self, autorita, percorso):
         sid = self._quic.get_next_available_stream_id(is_unidirectional=False)
@@ -121,11 +153,26 @@ class Cliente(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent) -> None:
         nome = type(event).__name__
+        # ⛔ LA FINE DELLA CONNESSIONE SI STAMPA, SEMPRE.
+        #
+        #    E' l'unica riga che distingue «il tetto d'inattivita' di QUIC ha
+        #    chiuso» da «il server ha liberato il posto lasciando aperta la
+        #    connessione».  Senza, il quarto giro di B3 concludeva la seconda
+        #    guardando /proc, che dice soltanto che un processo che dorme non
+        #    e' morto (R8.2).
+        if nome == "ConnectionTerminated":
+            print(f"   [quic] connessione TERMINATA: codice "
+                  f"{getattr(event, 'error_code', '?')} · "
+                  f"{getattr(event, 'reason_phrase', '') or '(nessun motivo)'}")
+            self._cade(f"connessione TERMINATA ({getattr(event, 'reason_phrase', '') or 'senza motivo'})")
+            self.messaggi.put_nowait(None)
+            return
         if nome == "StreamDataReceived" and event.stream_id == self.controllo:
             self.arrivati += event.data
             self._sfoglia()
             if event.end_stream:
                 self.finito = True
+                self._cade("il canale di controllo si e' chiuso")
                 self.messaggi.put_nowait(None)
             # ⛔ E NON si passa l'evento allo strato H3 di `aioquic`.
             #
@@ -148,8 +195,11 @@ class Cliente(QuicConnectionProtocol):
                 self.codice_chiusura = codice
                 print(f"   [wt]   sessione chiusa dal server, codice {codice:#04x}"
                       f" = {MOTIVI.get(codice, '?')}")
+                self._cade(f"sessione chiusa dal server, codice {codice:#04x}"
+                           f" = {MOTIVI.get(codice, '?')}")
             if event.end_stream:
                 self.finito = True
+                self._cade("la sessione WebTransport si e' chiusa")
                 self.messaggi.put_nowait(None)
         for ev in self._http.handle_event(event):
             if isinstance(ev, HeadersReceived) and not self.accettata.done():
@@ -167,12 +217,21 @@ class Cliente(QuicConnectionProtocol):
             self.messaggi.put_nowait((tipo, corpo, grezzo))
 
 
-async def attendi(cli, quale, attesa=10.0):
+async def attendi(cli, quale, attesa=10.0, reg=None):
     m = await asyncio.wait_for(cli.messaggi.get(), timeout=attesa)
     if m is None:
-        raise RuntimeError("il canale di controllo si e' chiuso")
+        raise RuntimeError(f"il canale di controllo si e' chiuso: {cli.caduta}")
     tipo, corpo, grezzo = m
     nome = NOME.get(tipo, f"{tipo:#06x}")
+    # ⛔ SI REGISTRA QUEL CHE ARRIVA, NON QUEL CHE SI SPERAVA — rilievo R8.9.
+    #
+    #    La registrazione si scriveva solo lungo la strada che riesce: un
+    #    `CONGEDO(GIA_ATTIVA_REMOTA)` faceva sollevare l'eccezione qui sotto
+    #    PRIMA di essere messo nella traccia, e `b3-terza.rcpreg` — cioe'
+    #    l'unico oggetto che il terzo giro esiste per produrre — non arrivava
+    #    mai all'arbitro di B4.  ⭐ Il rifiuto e' una misura, non un incidente.
+    if reg is not None:
+        reg.aggiungi(SERVER, grezzo)
     if quale and nome != quale:
         if nome == "CONGEDO":
             motivo = corpo[0] if corpo else 0
@@ -185,6 +244,19 @@ async def attendi(cli, quale, attesa=10.0):
                 f"RESPINTO: motivo {motivo:#04x} = {MOTIVI.get(motivo, '?')}")
         raise RuntimeError(f"atteso {quale}, arrivato {nome}")
     return nome, corpo, grezzo
+
+
+def scrivi_traccia(a, reg):
+    """La registrazione si scrive UNA volta sola, e anche se si e' fallito.
+
+    ⛔ «Non ho niente da giudicare» e «conforme» sono due cose diverse: un file
+       vuoto non si scrive, cosi' chi lo cerca vede che non c'e' invece di
+       giudicare zero blocchi.
+    """
+    if a.registra and reg.blocchi and not getattr(reg, "scritta", False):
+        reg.scrivi(a.registra)
+        reg.scritta = True
+        print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
 
 
 def corpo_ciao():
@@ -216,56 +288,62 @@ async def principale(a) -> int:
             return 1
         cli.apri_controllo()
 
-        # ── CIAO ────────────────────────────────────────────────────────────
-        b = inquadra(T["CIAO"], corpo_ciao())
-        cli.manda(b)
-        reg.aggiungi(CLIENT, b)
-        nome, corpo, grezzo = await attendi(cli, "ECCOMI")
-        reg.aggiungi(SERVER, grezzo)
-        versione = struct.unpack("!H", corpo[:2])[0]
-        print(f"   ECCOMI: versione {versione}")
+        # ⛔ LA TRACCIA SI SCRIVE ANCHE QUANDO LA STRETTA DI MANO NON RIESCE.
+        #
+        #    Rilievo R8.9: il terzo giro di B3 esiste per produrre UN oggetto —
+        #    la registrazione di chi ha ricevuto il `CONGEDO(0x0F)` — e quella
+        #    registrazione non veniva scritta mai, perche' l'eccezione partiva
+        #    prima.  ⭐ Il validatore di B4 e' l'arbitro anche del rifiuto.
+        try:
+            # ── CIAO ────────────────────────────────────────────────────────
+            b = inquadra(T["CIAO"], corpo_ciao())
+            cli.manda(b)
+            reg.aggiungi(CLIENT, b)
+            nome, corpo, grezzo = await attendi(cli, "ECCOMI", reg=reg)
+            versione = struct.unpack("!H", corpo[:2])[0]
+            print(f"   ECCOMI: versione {versione}")
 
-        # ── CREDENZIALI ─────────────────────────────────────────────────────
-        corpo_c = s(a.utente) + s(a.parola)
-        b = inquadra(T["CREDENZIALI"], corpo_c)
-        # §11.1: la parola si oscura, la lunghezza resta vera
-        ini = 6 + 2 + len(a.utente.encode()) + 2
-        qua = len(a.parola.encode())
-        imp = hashlib.sha256(a.parola.encode()).digest()
-        cli.manda(b)
-        reg.aggiungi(CLIENT,
-                     b[:ini] + bytes([0x2A]) * qua + b[ini + qua:],
-                     [(ini, qua, imp)])
-        t0 = time.monotonic()
-        nome, corpo, grezzo = await attendi(cli, "AMMESSO", attesa=20)
-        ms = (time.monotonic() - t0) * 1000
-        reg.aggiungi(SERVER, grezzo)
-        # ⭐ §4.4-bis: il ritardo fisso vale ANCHE per AMMESSO.  Si cronometra
-        #    qui perche' nessun altro banco lo vede, e una regressione che lo
-        #    togliesse non farebbe fallire niente.
-        print(f"   AMMESSO dopo {ms:.0f} ms"
-              + ("   ⭐ il secondo fisso c'e'" if ms >= 1000 else
-                 "   ⛔ MENO DI UN SECONDO: §4.4-bis violata"))
-        if ms < 1000:
-            return 1
+            # ── CREDENZIALI ─────────────────────────────────────────────────
+            corpo_c = s(a.utente) + s(a.parola)
+            b = inquadra(T["CREDENZIALI"], corpo_c)
+            # §11.1: la parola si oscura, la lunghezza resta vera
+            ini = 6 + 2 + len(a.utente.encode()) + 2
+            qua = len(a.parola.encode())
+            imp = hashlib.sha256(a.parola.encode()).digest()
+            cli.manda(b)
+            reg.aggiungi(CLIENT,
+                         b[:ini] + bytes([0x2A]) * qua + b[ini + qua:],
+                         [(ini, qua, imp)])
+            t0 = time.monotonic()
+            nome, corpo, grezzo = await attendi(cli, "AMMESSO", attesa=20, reg=reg)
+            ms = (time.monotonic() - t0) * 1000
+            # ⭐ §4.4-bis: il ritardo fisso vale ANCHE per AMMESSO.  Si
+            #    cronometra qui perche' nessun altro banco lo vede, e una
+            #    regressione che lo togliesse non farebbe fallire niente.
+            print(f"   AMMESSO dopo {ms:.0f} ms"
+                  + ("   ⭐ il secondo fisso c'e'" if ms >= 1000 else
+                     "   ⛔ MENO DI UN SECONDO: §4.4-bis violata"))
+            if ms < 1000:
+                scrivi_traccia(a, reg)
+                return 1
 
-        # ── ATTACCA ─────────────────────────────────────────────────────────
-        b = inquadra(T["ATTACCA"],
-                     struct.pack("!IIII", a.larghezza, a.altezza,
-                                 a.larghezza, a.altezza) + s(a.disposizione))
-        cli.manda(b)
-        reg.aggiungi(CLIENT, b)
-        nome, corpo, grezzo = await attendi(cli, "SESSIONE")
-        reg.aggiungi(SERVER, grezzo)
+            # ── ATTACCA ─────────────────────────────────────────────────────
+            b = inquadra(T["ATTACCA"],
+                         struct.pack("!IIII", a.larghezza, a.altezza,
+                                     a.larghezza, a.altezza) + s(a.disposizione))
+            cli.manda(b)
+            reg.aggiungi(CLIENT, b)
+            nome, corpo, grezzo = await attendi(cli, "SESSIONE", reg=reg)
+        except Exception:
+            scrivi_traccia(a, reg)
+            raise
         stato_s = corpo[0]
         lar, alt = struct.unpack("!II", corpo[1:9])
         n = struct.unpack("!H", corpo[9:11])[0]
         desktop = corpo[11:11 + n].decode()
         print(f"   ⭐ SESSIONE: stato={stato_s} tela={lar}x{alt} desktop={desktop}")
 
-        if a.registra:
-            reg.scrivi(a.registra)
-            print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
+        scrivi_traccia(a, reg)
 
         # ⛔ IL SEGNALE DI «ATTACCATO», E PERCHE' NON BASTA UNA RIGA STAMPATA.
         #
@@ -286,8 +364,26 @@ async def principale(a) -> int:
             with open(a.segnale, "w") as f:
                 f.write("attaccato\n")
         if a.resta:
+            # ⛔ SI RESTA CON GLI OCCHI APERTI, NON DORMENDO — rilievi R8.2/R8.4.
+            #
+            #    Un `asyncio.sleep` non si accorge di niente: la connessione
+            #    poteva cadere per il tetto d'inattivita' di QUIC, o la sessione
+            #    poteva essere chiusa dal server per far posto a un altro, e
+            #    questo programma usciva 0 dicendo «sono rimasto attaccato».
+            #    Su quel codice d'uscita il terzo giro concludeva «nessun client
+            #    vivo viene spodestato», che e' l'invariante I2 alla lettera.
+            #
+            # ⚠ NON si manda niente per accertarsene: il quarto giro misura
+            #   l'orologio del SILENZIO, e un byte lo azzererebbe.  Si ascolta e
+            #   basta — che e' precisamente il lato che riceve.
             print(f"   resto attaccato per {a.resta} s")
-            await asyncio.sleep(a.resta)
+            try:
+                await asyncio.wait_for(cli.caduto.wait(), timeout=a.resta)
+            except asyncio.TimeoutError:
+                print(f"   ⭐ ancora attaccato dopo {a.resta} s: niente e' caduto")
+                return 0
+            print(f"   ⛔ NON sono rimasto attaccato: {cli.caduta}")
+            return 4
         return 0
 
 
