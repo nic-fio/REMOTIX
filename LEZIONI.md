@@ -280,6 +280,31 @@ risultato entra nel documento come un fatto misurato.
 > giorni, stavolta su un controllo di sanità: la cura è `[ -d /proc/<pid> ]`, che tutti possono
 > leggere.
 
+> ### ⛔⭐ E la settima veste, che punta il dito sull'imputato sbagliato
+>
+> *10 agosto 2026, sera, banco B3.* Il banco dichiarava che il server violava un'invariante:
+> accettava una seconda connessione che avrebbe dovuto rifiutare. **Il server aveva ragione dal
+> primo istante.**
+>
+> Il banco aspettava una parola nel registro del primo client per sapere quando era attaccato — e
+> **Python bufferizza lo stdout quando è rediretto su un file**. Quella riga compariva solo
+> all'uscita del processo, cioè **nell'istante esatto in cui il client si staccava**. Il controllo
+> stampava *«la prima è attaccata»* leggendo una verità appena scaduta.
+>
+> ⛔ **Non è un falso rosso: è un rosso puntato sul colpevole sbagliato.** Le altre sei vesti di
+> questo difetto fermano il lavoro o lo benedicono a torto; questa manda a cercare in un posto in
+> cui non c'è niente, e più il posto è plausibile — un'invariante appena scritta, un modulo appena
+> nato — più a lungo ci si resta.
+>
+> 7. ⛔ **Quando un banco accusa il codice, il primo sospetto resta sulla misura** (§1.9 punto 3), e
+>    il modo di toglierlo è **chiedere allo strumento l'istante, non il fatto**: chi ha preso il
+>    posto, quando, e quanti ne restano. Due righe di strumentazione e i timestamp del trasporto
+>    hanno chiuso il caso in un giro.
+>
+> ⭐ **E la regola pratica**: *un file scritto e chiuso è un fatto; una riga stampata è una speranza
+> sul momento in cui qualcuno la vedrà.* Un banco che sincronizza due processi non lo faccia
+> leggendo registri.
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque

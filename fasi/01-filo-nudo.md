@@ -600,7 +600,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | **B2** — quanto pesa il loro esempio (il punto di partenza) | *si conta* | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++, 13 file) · `quiche` **614** (esempio minimo, C, 1 file) `[M]`. ⛔ Due etichette diverse: non si sottraggono | 10 ago |
 | ⭐ **B3** — la **1ª** connessione, fino a `SESSIONE` | passa | ⭐ **passa** `[M]` 10 ago: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, e ⛔ **la traccia è dichiarata CONFORME dal validatore di B4** | 10 ago |
 | ⭐ **B3** — la **2ª dopo la chiusura della 1ª** | **identica alla prima** | ⭐ **passa** `[M]`, e anche la sua traccia è conforme. ⛔ **Non lo era al primo giro**: vedi il difetto qui sotto | 10 ago |
-| ⛔ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⛔ **NON passa** `[M]`: la seconda **entra**. ⭐ La 1ª sopravvive (metà giusta), ma il rifiuto non arriva — **causa non ancora diagnosticata** | 10 ago |
+| ⭐ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⭐ **passa** `[M]`: la seconda riceve `GIA_ATTIVA_REMOTA` **per tutt'e due le strade di §3.1** — `CONGEDO` sul controllo *e* codice `0x0f` nella chiusura della sessione — e la prima sopravvive. ⚠ *Era rossa al primo giro, e il difetto era del banco* |
 | ⏳ **B3** — 35 s a `max_idle_timeout` 120 · 3ª con chiave ruotata | **entra** · passa | *non ancora eseguite* | |
 | ⭐ **B3** — il **secondo fisso** di §4.4-bis, cronometrato | ≥ 1000 ms **anche su `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` su tre connessioni. È una proprietà che nessun altro banco vede | 10 ago |
 | ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
@@ -853,17 +853,46 @@ l'ha (l'appiglio dev'essere **uno**); le modifiche fatte a mano no, finché non 
 > `RCP.md`. Il validatore non poteva dire niente — il difetto non è nei byte, è nello stato del
 > server fra una connessione e l'altra.
 
-⛔ **E il secondo difetto è ancora aperto**: la seconda connessione, che arriva **mentre la prima è
-attaccata**, viene **accettata** invece che rifiutata con `0x0F`. ⭐ La metà giusta c'è — la prima
-sopravvive, e nessun client vivo viene spodestato — ma il rifiuto non arriva. **La causa non è
-diagnosticata**, e la riga resta rossa finché non lo sarà: `SPECIFICHE.md` I2 dice *«la seconda
-connessione è rifiutata con messaggio esplicito»*, e oggi non lo è.
-
-> ⚠ **Perché è scritto così invece che curato in fretta**: il registro del server mostra che ogni
-> connessione si chiude prima che arrivi la successiva, il che vorrebbe dire che il posto viene
-> liberato *prima* che la seconda chieda. Se fosse questo, il difetto sarebbe nel **banco** — la
-> prima non resta attaccata come crede — e non nel server. ⛔ Due cause opposte con lo stesso
-> rosso: si distinguono con una misura, non con una correzione a occhio.
+> #### ⭐⛔ Il secondo: il banco accusava il server, e il colpevole era il buffer di Python
+>
+> Il terzo giro dava **rosso sul server**: la seconda connessione, che arriva mentre la prima è
+> attaccata, veniva **accettata** invece che rifiutata con `0x0F`. Sembrava una violazione
+> dell'invariante **I2** — *«la seconda connessione è rifiutata con messaggio esplicito»*.
+>
+> ⛔ **Non lo era. Il server aveva ragione dal primo istante.**
+>
+> La diagnosi, e sono state due righe di strumentazione — *chi prende il posto, chi lo lascia, e
+> quanti ne restano occupati*:
+>
+> ```
+> posto PRESO da prova via [..]:39390 (occupati adesso: 1)
+> sessione aperta utente=prova via=[..]:39390
+> posto LASCIATO da prova via [..]:39390 (occupati adesso: 0)   ← prima che la 2ª arrivi
+> ```
+>
+> E i **timestamp** di ngtcp2 hanno chiuso il caso: la prima connessione si chiude a **t≈13,1 s**
+> con `CONNECTION_CLOSE 0x0` — cioè ha retto i suoi dodici secondi — e la seconda arriva **dopo**.
+> Le due non erano mai state contemporanee.
+>
+> ⭐ **La causa**: il banco aspettava la parola `SESSIONE` nel registro della prima connessione, e
+> **Python bufferizza lo stdout quando è rediretto su un file**. Quella riga compariva solo
+> all'uscita del processo — cioè **nell'istante esatto in cui il client si staccava**. Il controllo
+> stampava `OK la prima è attaccata` leggendo una verità appena scaduta, e la seconda trovava
+> sempre il posto libero.
+>
+> ⛔ **È la forma peggiore di difetto di banco**: non un rosso su un verde, ma **un rosso puntato
+> sull'imputato sbagliato**. Il server rispettava §3.1 alla lettera — manda `CONGEDO(0x0F)` sul
+> canale di controllo *e* chiude la sessione col codice `0x0f` — e il banco lo dichiarava in
+> violazione di un'invariante.
+>
+> ⭐ **La cura, e la regola che ne esce**: il client scrive un **file** quando la sessione è aperta,
+> e il banco aspetta quel file. *Un file scritto e chiuso è un fatto; una riga stampata è una
+> speranza sul momento in cui qualcuno la vedrà.* (E `python3 -u`, che toglie l'altra metà della
+> causa.)
+>
+> ⚠ E vale la pena dire **come non si è visto prima**: il controllo «la prima è attaccata» c'era, ed
+> era proprio quello che doveva impedire questo errore. Era scritto giusto e misurava l'istante
+> sbagliato.
 
 ### ⛔ E tre trappole di shell in una sera, tutte la stessa
 

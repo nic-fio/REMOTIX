@@ -260,6 +260,25 @@ async def principale(a) -> int:
         if a.registra:
             reg.scrivi(a.registra)
             print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
+
+        # ⛔ IL SEGNALE DI «ATTACCATO», E PERCHE' NON BASTA UNA RIGA STAMPATA.
+        #
+        #    Il 10 agosto 2026 il terzo giro di B3 aspettava la parola
+        #    «SESSIONE» nel registro di questo programma — e Python **bufferizza
+        #    lo stdout quando e' rediretto su un file**: quella riga compariva
+        #    solo all'uscita del processo, cioe' **nell'istante esatto in cui il
+        #    client si staccava**.
+        #
+        # ⚠ Il banco diceva «la prima e' attaccata» leggendo una verita' appena
+        #   scaduta, e la seconda connessione arrivava sempre a posto libero.
+        #   ⛔ Un controllo che sembra giusto e misura l'istante sbagliato: il
+        #      rosso finiva sul server, che non c'entrava niente.
+        #
+        # ⭐ Un file scritto e chiuso e' un fatto; una riga stampata e' una
+        #    speranza sul momento in cui qualcuno la vedra'.
+        if a.segnale:
+            with open(a.segnale, "w") as f:
+                f.write("attaccato\n")
         if a.resta:
             print(f"   resto attaccato per {a.resta} s")
             await asyncio.sleep(a.resta)
@@ -278,6 +297,8 @@ if __name__ == "__main__":
     p.add_argument("--disposizione", default="it")
     p.add_argument("--registra")
     p.add_argument("--resta", type=float, default=0)
+    p.add_argument("--segnale",
+                   help="file da scrivere quando la sessione e' aperta")
     a = p.parse_args()
     try:
         sys.exit(asyncio.run(principale(a)))

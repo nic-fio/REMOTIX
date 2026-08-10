@@ -101,6 +101,15 @@ static bool posto_prendi(const char *utente)
 	return false;
 }
 
+static int posti_occupati(void)
+{
+	int n = 0;
+	for (int i = 0; i < MAX_ATTACCATE; i++)
+		if (attaccate[i].usato)
+			n++;
+	return n;
+}
+
 static void posto_lascia(const char *utente)
 {
 	for (int i = 0; i < MAX_ATTACCATE; i++)
@@ -628,12 +637,20 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	}
 
 	/* ⛔ §8.2 motivo 0x0F: chi viene rifiutato e' chi ARRIVA, non chi c'era. */
+	/* ⛔ Il posto si CHIEDE, e l'esito si scrive con quanti erano occupati.
+	 * ⚠ Il 10 agosto 2026 il terzo giro di B3 non riusciva a distinguere «il
+	 *   server non guarda il registro» da «il posto era gia' stato liberato»:
+	 *   sono due difetti opposti, e senza questa riga danno lo stesso rosso. */
 	if (!posto_prendi(s->utente)) {
+		reg(s, "posto NEGATO a %s da %s (occupati: %d)", s->utente,
+		    s->provenienza, posti_occupati());
 		congeda(s, RCP_GIA_ATTIVA_REMOTA,
 		        "c'e' gia' un client attaccato a questa sessione");
 		return false;
 	}
 	s->attaccata = true;
+	reg(s, "posto PRESO da %s via %s (occupati adesso: %d)", s->utente,
+	    s->provenienza, posti_occupati());
 
 	uint8_t corpo[128];
 	scrittore w = {corpo, sizeof corpo, 0, false};
@@ -643,8 +660,8 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c'e' compositore */
 	if (!w.pieno)
 		manda_messaggio(s, T_SESSIONE, corpo, w.len);
-	reg(s, "sessione aperta utente=%s tela=%ux%u disposizione=%s", s->utente, tl,
-	    ta, disp);
+	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u disposizione=%s",
+	    s->utente, s->provenienza, tl, ta, disp);
 	s->stato = S_ATTIVA;
 	return true;
 }
@@ -669,8 +686,11 @@ void rcp_libera(rcp_sessione *s)
 {
 	if (!s)
 		return;
-	if (s->attaccata)
+	if (s->attaccata) {
 		posto_lascia(s->utente);
+		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		    s->provenienza, posti_occupati());
+	}
 	free(s);
 }
 

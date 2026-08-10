@@ -36,18 +36,30 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-rm -f "$QUI/b3-viva.log" "$QUI/b3-terza.log"
+rm -f "$QUI/b3-viva.log" "$QUI/b3-terza.log" "$QUI/b3-viva.attaccato"
 
-python3 "$QUI/01-b3-cliente.py" --indirizzo "$IND" --porta "$PORTA" \
+# ⚠ `python3 -u`: senza, lo stdout rediretto su file resta nel buffer fino
+#   all'uscita del processo.  E' meta' della causa del difetto qui sotto.
+python3 -u "$QUI/01-b3-cliente.py" --indirizzo "$IND" --porta "$PORTA" \
 	--utente "$UTENTE" --parola "$PAROLA" \
-	--registra "$QUI/b3-viva.rcpreg" --resta 12 > "$QUI/b3-viva.log" 2>&1 &
+	--registra "$QUI/b3-viva.rcpreg" --resta 12 \
+	--segnale "$QUI/b3-viva.attaccato" > "$QUI/b3-viva.log" 2>&1 &
 PRIMA=$!
 
-# Si aspetta che la PRIMA sia davvero attaccata, non un tempo fisso: «ho
-# aspettato abbastanza» e «e' attaccata» sono due cose diverse.
+# ⛔ Si aspetta un FILE, non una riga di registro.
+#
+#    Il primo giro del 10 agosto cercava la parola «SESSIONE» nel registro
+#    della prima connessione — e Python bufferizza lo stdout su file: quella
+#    riga compariva solo all'uscita del processo, cioe' **nell'istante in cui
+#    la prima si staccava**.  Il banco diceva «la prima e' attaccata» leggendo
+#    una verita' appena scaduta, la seconda arrivava sempre a posto libero, e
+#    ⛔ **il rosso finiva sul server, che non c'entrava niente**.
+#
+# ⭐ Un file scritto e chiuso e' un fatto; una riga stampata e' una speranza
+#    sul momento in cui qualcuno la vedra'.
 ATTACCATA=no
 for _ in $(seq 1 15); do
-	if grep -q "SESSIONE" "$QUI/b3-viva.log" 2>/dev/null; then
+	if [ -f "$QUI/b3-viva.attaccato" ]; then
 		ATTACCATA=si
 		break
 	fi
