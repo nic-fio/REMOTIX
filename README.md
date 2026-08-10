@@ -17,17 +17,19 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐ **`ngtcp2` e `quiche` passano il criterio dell'SNI** | **10 agosto**: i loro server d'esempio servono il certificato a chi **non manda SNI**, e ⛔ **l'impronta ricevuta combacia con quella del file** — la stretta di mano che riesce non basta. ⇒ **il criterio non separa più le due candidate** |
 > | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera**. E resta in coda a ogni esecuzione come **controllo negativo**: dimostra che la sonda sa vedere un rifiuto |
 > | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
-> | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile |
-> | **quanto collante** | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++) · `quiche` **614** (esempio minimo, C). ⛔ **Due etichette diverse: non si sottraggono.** E a nessuna delle due manca di meno: **lo strato WebTransport non ce l'ha nessuna** |
+> | ⭐⭐ **il server minimo su `ngtcp2` esiste, e un BROWSER VERO apre la sessione** | **Chrome 151** e **Firefox 140**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, `"ciao"` che torna identico. ⛔ E `/rcp/9` **rifiutato con 404**, come impone `RCP.md` §2.2 |
+> | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`: **456 righe aggiunte, di cui 329 di codice**, misurate con `git diff` e non stimate |
+> | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile. ⚠ Ma parla la **bozza 02**, e i browser la **07**: il server manda tutt'e due le dichiarazioni, o metà degli strumenti direbbe di sì per il motivo sbagliato |
 >
 > ### ⛔ Il prossimo passo
 >
-> **Il server minimo**, su `ngtcp2` o su `quiche`. Il criterio dell'SNI le ha promosse tutt'e due,
-> quindi la scelta si gioca su quel che resta — quante righe di **WebTransport** restano a noi, e se
-> vale la catena di strumenti di Rust. ⭐ E il numero che conta è quello del **nostro** minimo, non
-> del loro esempio: si conta quando esiste, su tutt'e due se serve.
+> **Lo stesso strato su `quiche`, per avere il paragone.** Il numero `329` da solo non decide
+> niente: è un numero senza il suo confronto, e §6.4 chiede *quale delle due costa meno*. Poi la
+> scelta si scrive, con accanto la riga sulla catena di strumenti di Rust.
 >
-> È anche quel che apre le sei proprietà di B2 e le due misure del gruppo 3.
+> ⚠ **E B2 non è chiuso**: delle sei proprietà che doveva verificare ne sono misurate **due** —
+> `max_idle_timeout` 30 s e i datagram abilitati. Restano `[?]` niente 0-RTT, migrazione non
+> disabilitata, `allowPooling`, e il tetto d'inattività cambiabile (serve a B3).
 >
 > ⚠ **E una previsione resta aperta dopo due misure**: `lsquic` scrive le impostazioni della **bozza
 > 02** e mai `SETTINGS_WT_MAX_SESSIONS`. Nemmeno con l'SNI ci si arriva — la connessione muore
@@ -37,28 +39,39 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
 > `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-sni-quiche.sh` (`leggi`, poi
-> `costruisci`) · `01-b2-lancia-sni.sh` (**conduce la prova SNI sui tre bersagli**:
-> `costruisci`, poi `misura`) · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
+> `costruisci`) · `01-b2-lancia-sni.sh` (**la prova SNI sui tre bersagli**: `costruisci`, poi
+> `misura`) · ⭐ `01-b2-ngtcp2-wt-innesta.py` (**lo strato WebTransport**) + `01-b2-lancia-wt.sh`
+> (il cliente di prova, e il rifiuto di `/rcp/9`) + ⚠ `01-b2-lancia-sonda.sh` — **quest'ultimo si
+> lancia da QUI, non dal server: i browser stanno da questa parte** · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
 > pagina) · `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
 > `01-b2-raccogli.py` + `01-b2-sonda.html` (la pagina, da `localhost`).
 > ⚠ Tutto sotto `/media/REMOTIX` sopravvive al riavvio; il rootfs del server no —
 > ⛔ **e per questo i server dei banchi sopravvivono anche loro**: il 10 agosto due di essi tenevano
 > le porte otto ore dopo. Il banco adesso lo controlla prima di partire.
 >
-> ### ⛔ Dieci trappole in due sere, tutte nel banco e nessuna nel prodotto
+> ### ⛔ Quindici trappole in due giorni, tutte nel banco e nessuna nel prodotto
 >
 > `grep -q` con `pipefail` · `| tail` che mangia lo stato d'uscita **(rifatto il giorno dopo)** ·
 > due percorsi passati come una stringa, con `2>/dev/null` a nascondere l'errore — **e quello ha
-> stampato un verde** · `pkill -f` che uccide chi lo esegue · porte tenute da server di ieri ·
-> `>/dev/null` che inghiotte la **richiesta di password** · `setsid` che forca e falsa il PID ·
-> `kill -0` che confonde *proibito* con *morto*.
+> stampato un verde** · `pkill -f` che uccide chi lo esegue **(rifatto anche questo)** · porte
+> tenute da server di ieri · `>/dev/null` che inghiotte la **richiesta di password** · `setsid` che
+> forca e falsa il PID · `kill -0` che confonde *proibito* con *morto* · un'impronta tagliata di
+> **una lettera**, che avrebbe bocciato una candidata · una cartella di profilo mancante, e nessuno
+> dei due lati che lo dicesse.
 >
 > ⭐ Da cui la **quarta regola** di `LEZIONI.md` §1.9 — *una misura deve dichiarare su che cosa ha
-> guardato* — e il suo **corollario del 10 agosto**, che è nato dal difetto più grave finora:
+> guardato* — e il suo **corollario del 10 agosto**, nato dal difetto più grave finora:
 > ⛔ **la sonda dichiarava un denominatore falso**, e le sue due gambe misuravano la stessa cosa
 > mentre diceva che erano opposte. *Un denominatore si legge **dove la cosa succede** — sul filo,
 > non nella configurazione — e chi non può leggerlo lì se lo fa confermare da un programma che non
 > è suo.*
+>
+> ⛔ **E il corollario del corollario, che vale per i verdetti**: un giro ha stampato *«OK — i motori
+> provati hanno registrato il loro esito»* con **zero motori provati**. *«Tutti quelli provati sono
+> andati bene»* è vero anche quando i provati sono zero — ed è la forma di verde più vuota che ci
+> sia, perché non ha nemmeno bisogno che qualcosa vada storto. **Il denominatore di
+> un'approvazione è quante cose ha approvato**, e adesso il banco lo stampa e si rifiuta di
+> concludere se è zero.
 >
 > ---
 >

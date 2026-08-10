@@ -169,4 +169,14 @@ $("vai").onclick = async () => {
     await registra("NON-APERTA", righe.join("\n"));
   }
 };
+
+// ⭐ L'avvio automatico: `?avvia=1` fa partire la prova senza che nessuno
+//    prema niente.
+//
+// ⛔ Non e' una comodita': un banco che ha bisogno di una mano **non si puo'
+//    rifare uguale**, e rifarlo uguale e' l'unico modo di sapere se una
+//    misura e' cambiata perche' e' cambiato il server.  Il 9 agosto questa
+//    pagina ha misurato due browser contro `aioquic`; il 10 deve misurarli
+//    contro `ngtcp2`, e le due misure valgono solo se la mano e' la stessa.
+if (q.get("avvia")) $("vai").click();
 </script>

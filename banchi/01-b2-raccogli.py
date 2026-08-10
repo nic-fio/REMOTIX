@@ -65,8 +65,18 @@ class Raccoglitore(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
-    def log_message(self, *a):
-        pass  # il rumore delle richieste non serve: serve l'esito
+    def log_message(self, formato, *a):
+        # ⛔ Il 10 agosto 2026 questa riga diceva `pass`, con la spiegazione
+        #    «il rumore delle richieste non serve: serve l'esito».  Era falsa,
+        #    e l'ha dimostrato la prima misura col browser: la pagina non
+        #    registrava niente, e non c'era modo di sapere se il browser
+        #    l'avesse **chiesta** o no — cioe' se il difetto fosse nel browser
+        #    o nella pagina.  Due cause opposte, lo stesso silenzio.
+        #
+        # ⭐ La richiesta E' il denominatore dell'esito (`LEZIONI.md` §1.9,
+        #    quarta regola): senza, «nessun esito» non e' un dato.
+        sys.stderr.write("richiesta: " + (formato % a) + "\n")
+        sys.stderr.flush()
 
 
 if __name__ == "__main__":

@@ -1859,6 +1859,45 @@ fa con un banco davanti, non su carta.
 >
 > ⚠ **E su tutt'e due manca ancora la stessa cosa**: lo strato **WebTransport**, che nessuna delle
 > due porta (censimento del 9 agosto, ancora valido).
+
+> ### ⭐⭐ Il server minimo su `ngtcp2` esiste, e un browser vero apre la sessione — `[M]` 10 agosto 2026
+>
+> *`banchi/01-b2-ngtcp2-wt-innesta.py` innesta lo strato WebTransport nel loro server d'esempio;
+> `01-b2-lancia-wt.sh` lo misura col cliente di prova; `01-b2-lancia-sonda.sh` lo misura **da un
+> browser**. Il numero di righe non è una stima: è `git diff` nel loro albero.*
+>
+> | Che cosa | Misurato |
+> |---|---|
+> | ⭐ **la sessione si apre da un BROWSER VERO** | **Chrome 151.0.0.0** e **Firefox 140.0**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, e `"ciao"` torna identico |
+> | ⛔ **e il percorso sbagliato si RIFIUTA** | `/rcp/9` ⇒ **404**, come impone `RCP.md` §2.2 con il rilievo R1.24. È il controllo che dice *no*, ed è nel banco |
+> | **i due parametri di §2.2** | `max_idle_timeout` **30 000 ms** e `max_datagram_frame_size` **65 536**, stampati dal server all'avvio |
+> | ⭐ **quante righe sono NOSTRE** | **456 aggiunte** in 4 file — di cui **329 di codice**, 85 di commento, 42 vuote |
+>
+> ⛔ **E adesso si sa in che cosa consiste «lo strato non c'è», perché sono i tre punti che
+> l'innesto tocca:**
+>
+> | | |
+> |---|---|
+> | **1. non si può annunciare WebTransport** | `nghttp3_settings` ha `enable_connect_protocol` e `h3_datagram` — le due che stanno negli RFC — e l'API pubblica offre `submit_request/info/response/trailers/shutdown_notice`. ⛔ **Nessun modo di mettere un'impostazione arbitraria** sullo stream di controllo, e `SETTINGS_WT_MAX_SESSIONS` è quel che i browser cercano. Si riscrive il `SETTINGS` di nghttp3 **mentre lo scrive** |
+> | **2. gli stream WebTransport vanno sottratti a nghttp3** | cominciano col tipo di frame `0x41` seguito dal numero di sessione, e nghttp3 leggerebbe quel numero come una **lunghezza** |
+> | **3. i byte di ritorno non hanno una strada** | nghttp3 non conosce quegli stream, quindi non li metterà mai fra i vettori da scrivere: la coda d'uscita è nostra |
+>
+> ⚠ **Nessuno dei tre è un difetto delle due librerie**: fanno HTTP/3, e WebTransport non è HTTP/3.
+> È esattamente il prezzo che questa decisione voleva conoscere prima di scegliere.
+>
+> ⚠ **E le due bozze mordono davvero.** Il server manda **tutt'e due** le dichiarazioni —
+> `0x2b603742` (bozza 02) e `0xc671706a` (bozza 07+) — perché `aioquic` 1.2, il **nostro cliente di
+> prova**, implementa la **02** `[R]` `h3/connection.py:90`, e i browser cercano la 07. ⛔ Un server
+> che ne mandasse una sola funzionerebbe con metà dei nostri strumenti, e la metà che funziona
+> sarebbe quella sbagliata da cui trarre conclusioni.
+>
+> ### ⛔ Che cosa questa misura NON dice
+>
+> | | |
+> |---|---|
+> | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, «329» è un numero **senza il suo paragone** |
+> | ⚠ **due proprietà su sei** | delle sei che B2 doveva verificare qui, sono misurate **datagram abilitati** e **`max_idle_timeout` 30 s**. Restano `[?]`: niente 0-RTT, migrazione non disabilitata, `allowPooling` a `false`, e che il banco possa cambiare il tetto d'inattività (serve a B3) |
+> | ⚠ **i millisecondi non si confrontano** | 118,6 ms (Chrome) e 140,0 ms (Firefox) sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato 22,2 ms in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà questi numeri accanto ai 30,2 ms del 9 agosto confronterà due cose diverse |
 >
 > ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
 >

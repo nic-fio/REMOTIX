@@ -258,6 +258,21 @@ risultato entra nel documento come un fatto misurato.
 > nessun denominatore, perché dà alla misura l'aria di essere già stata controllata. Nessuno
 > verifica due volte la riga che dice *«ecco su che cosa ho guardato»*.
 >
+> ### ⛔ E il corollario del corollario, che vale per i **verdetti** e non per le misure
+>
+> *Stesso giorno, la misura col browser.* Il banco ha stampato **`OK — i motori provati hanno
+> registrato il loro esito`**, e i motori provati erano **zero**: il controllo di presenza guardava
+> l'argomento sbagliato e li saltava tutt'e due, dicendolo in una riga di avviso che il verdetto
+> finale contraddiceva.
+>
+> ⛔ ***«Tutti quelli provati sono andati bene» è vero anche quando i provati sono zero.*** Ed è la
+> forma di verde più insidiosa di tutte, perché **non ha bisogno che qualcosa vada storto**: le
+> altre nascono da un errore, questa nasce da un insieme vuoto. Un banco che non misura niente
+> supera qualunque criterio scritto come *«tutti i risultati sono buoni»*.
+>
+> 6. ⛔ **Anche un verdetto ha un denominatore, ed è quante cose ha approvato.** Si stampa accanto
+>    all'esito, e se è zero non si dà nessun esito.
+>
 > ⚠ **E la stessa sera, la prima regola è tornata in una veste nuova**: il banco dichiarava
 > **morti** due server che stavano ascoltando, perché li controllava con `kill -0` da utente
 > normale su processi di **root** — dove la risposta è *«operazione non permessa»*, cioè un errore,
