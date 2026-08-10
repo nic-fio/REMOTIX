@@ -106,6 +106,10 @@ $("vai").onclick = async () => {
 
   righe.push("motore:   " + navigator.userAgent);
   righe.push("indirizzo: " + url);
+  // ⛔ Si DICHIARA nell'esito, non solo nel codice: una proprieta'
+  //    affermata dal sorgente e non dal registro e' una proprieta'
+  //    che nessuno ha visto (LEZIONI.md §1.9).
+  righe.push("allowPooling: false   (RCP.md §4.1-bis)");
 
   if (!("WebTransport" in window)) {
     righe.push("");
@@ -115,10 +119,25 @@ $("vai").onclick = async () => {
     return;
   }
 
-  let opzioni = {};
+  // ⛔ `allowPooling: false` — RCP.md §4.1-bis lo mette fra i vincoli, accanto
+  //    al certificato di meno di 14 giorni e alla chiave P-256.
+  //
+  //    Con `serverCertificateHashes` la sessione ha verificato il certificato
+  //    per IMPRONTA, non per catena: riusare quella connessione per un'altra
+  //    origine significherebbe estendere a quell'origine una fiducia che
+  //    nessuno le ha dato.  ⚠ Metterlo a `true` non darebbe nessun sintomo
+  //    visibile qui — la sessione si aprirebbe uguale — ed e' per questo che
+  //    il vincolo va SCRITTO e non lasciato al valore predefinito del motore.
+  //
+  // ⚠ Mancava fino al 10 agosto 2026: la pagina misurava la sessione e non
+  //   questo, e i due browser avevano gia' dato verde senza di lui.
+  let opzioni = { allowPooling: false };
   if (b64) {
     try {
-      opzioni = { serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }] };
+      opzioni = {
+        allowPooling: false,
+        serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }],
+      };
       righe.push("impronta:  pubblicata (" + b64.slice(0, 12) + "…)");
     } catch (e) {
       scrivi(righe.join("\n") + "\n\n⛔ l'impronta non e' base64 valido: " + e, false);

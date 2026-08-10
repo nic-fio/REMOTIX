@@ -389,6 +389,18 @@ def innesti():
             "server.cc",
             "  params.max_idle_timeout = config.timeout;\n",
             "  params.max_idle_timeout = config.timeout;\n"
+            "  // ⛔ REMOTIX B2 — RCP.md §2.3: il server DEVE concedere al client\n"
+            "  //    almeno **16** stream unidirezionali «in ogni momento».  Il\n"
+            "  //    loro esempio ne concede 3 — quanti ne vuole HTTP/3 per il\n"
+            "  //    controllo e QPACK — e con quel credito il client non\n"
+            "  //    aprirebbe nemmeno lo stream di input: il sintomo sarebbe\n"
+            "  //    «il desktop non risponde», non «credito esaurito».\n"
+            "  //    ⚠ Trovato il 10 agosto misurando le proprieta' che restavano,\n"
+            "  //      e NON dalla sessione che si apriva lo stesso: la sessione\n"
+            "  //      si apre benissimo con 3.\n"
+            "  if (params.initial_max_streams_uni < 16) {\n"
+            "    params.initial_max_streams_uni = 16;\n"
+            "  }\n"
             "  // ⭐ REMOTIX B2 — RCP.md §2.2: i datagram DEVONO essere abilitati\n"
             "  //    sulla connessione HTTP/3 (e' l'audio).  ⛔ E senza QUESTO\n"
             "  //    parametro di trasporto, annunciare SETTINGS_H3_DATAGRAM=1 e' un\n"
@@ -403,6 +415,26 @@ def innesti():
             "               params.initial_max_streams_bidi,\n"
             "               params.initial_max_streams_uni);\n",
             "i parametri di trasporto",
+        ),
+        # ── 15. ⛔ Il 0-RTT, che il loro esempio accende ─────────────────────
+        (
+            "tls_server_session_boringssl.cc",
+            "  SSL_set_early_data_enabled(ssl_, 1);\n",
+            "  // ⛔ REMOTIX B2 — RCP.md §2.3: il server NON DEVE offrire 0-RTT.\n"
+            "  //\n"
+            "  //    I dati 0-RTT si possono RIPETERE, e il secondo messaggio di\n"
+            "  //    RCP e' `CREDENZIALI`.  Il guadagno sarebbe un giro di rete su\n"
+            "  //    una sessione che dura ore.\n"
+            "  //\n"
+            "  // ⚠ Il loro esempio lo accende, ed e' la norma: `fasi/01-filo-nudo.md`\n"
+            "  //   lo aveva PREVISTO — «le librerie QUIC lo offrono per impostazione\n"
+            "  //   predefinita» — e aveva anche scritto perche' nessun banco\n"
+            "  //   funzionale se ne accorgerebbe: **il sintomo non esiste**.  La\n"
+            "  //   sessione si apre uguale, i byte tornano uguali.  Si vede solo\n"
+            "  //   guardando i biglietti di sessione sul filo, ed e' cosi' che e'\n"
+            "  //   saltato fuori il 10 agosto 2026 `[M]`.\n"
+            "  SSL_set_early_data_enabled(ssl_, 0);\n",
+            "il 0-RTT, spento",
         ),
     ]
 

@@ -20,18 +20,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera**. E resta in coda a ogni esecuzione come **controllo negativo**: dimostra che la sonda sa vedere un rifiuto |
 > | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
 > | ⭐⭐ **il server minimo su `ngtcp2` esiste, e un BROWSER VERO apre la sessione** | **Chrome 151** e **Firefox 140**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, `"ciao"` che torna identico. ⛔ E `/rcp/9` **rifiutato con 404**, come impone `RCP.md` §2.2 |
-> | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`: **456 righe aggiunte, di cui 329 di codice**, misurate con `git diff` e non stimate |
+> | ⭐ **e adesso «quanto collante» ha un numero** | lo strato WebTransport su `ngtcp2`+`nghttp3`: **482 righe aggiunte, di cui 333 di codice**, misurate con `git diff` e non stimate |
+> | ⭐ **le sei proprietà di B2: 6 su 6** | tetto 30 s · datagram · credito **16** stream uni · migrazione **non** disabilitata · **niente 0-RTT** · `allowPooling: false`. ⛔ **Lette dal pari**, non dal registro del server — e proprio per questo hanno trovato **due difetti senza sintomo**: il server offriva 0-RTT (che §2.3 vieta) e concedeva 3 stream unidirezionali invece di 16 |
+> | ⭐ **e il tetto si può cambiare** | con `--timeout=10s` il pari legge 10 000 ms: **B3** potrà distinguere il tetto del protocollo da quello del trasporto |
 > | ⛔⭐ **e `quiche` non arriva a WebTransport dal C** | dichiara **4** impostazioni sul filo e **nessuna delle due di WebTransport**. `h3::Config::set_additional_settings` **esiste in Rust e non nell'FFI**, e il trucco usato su `ngtcp2` lì non c'è: quei byte un'applicazione in C non li vede mai. ⇒ **§6.4 è chiusa** |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile. ⚠ Ma parla la **bozza 02**, e i browser la **07**: il server manda tutt'e due le dichiarazioni, o metà degli strumenti direbbe di sì per il motivo sbagliato |
 >
 > ### ⛔ Il prossimo passo
 >
-> **Le quattro proprietà che restano di B2**, su `ngtcp2`: niente 0-RTT, migrazione non
-> disabilitata, `allowPooling` a `false`, e il tetto d'inattività **cambiabile** — quest'ultimo
-> serve a **B3**, che senza non distingue i suoi 30 secondi dal trasporto.
->
-> Poi la fase entra nel filo vero: **B3** (la stretta di mano su due connessioni) e **B4** (il
-> validatore), cioè le prime righe di RCP.
+> ⭐ **B2 è finito**: le sei proprietà sono **6 su 6**, lette dal pari. La fase entra nel filo
+> vero — **B3** (la stretta di mano su due connessioni, la seconda rifiutata con `0x0F`) e **B4**
+> (il validatore), cioè le prime righe di RCP.
 >
 > ⚠ **E una manutenzione che ha una data**: le 329 righe includono la **riscrittura del frame
 > SETTINGS di nghttp3**, che dipende dalla forma dei suoi byte e non da una sua promessa. ⛔ Va
