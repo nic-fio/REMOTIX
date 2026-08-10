@@ -88,8 +88,14 @@ INNESTI = [
     ),
     (
         "rcp.c",
-        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, "no");\n',
-        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, "no");\n'
+        # ⚠ L'appiglio e' cambiato il 10 agosto 2026, con la cura del rilievo
+        #   R9.14: `ECCOMI` non dichiara piu' `banco.marca=no` scritto a mano,
+        #   ma legge `BANCO_ACCESO`.  ⛔ E il banco se n'e' accorto da se': ha
+        #   contato ZERO occorrenze e si e' rifiutato di costruire un server
+        #   guasto a meta' — che e' esattamente quel che la cura di R5.17 ha
+        #   aggiunto perche' succedesse.
+        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, BANCO_ACCESO ? "si" : "no");\n',
+        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, BANCO_ACCESO ? "si" : "no");\n'
         '\tif (g_ign) {\n'
         '\t\tsc_str(&w, "questa.non.esiste");\n'
         '\t\tsc_str(&w, "boh");\n'

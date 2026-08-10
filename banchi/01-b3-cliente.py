@@ -68,6 +68,68 @@ def inquadra(tipo, corpo):
     return struct.pack("!HI", tipo, len(corpo)) + corpo
 
 
+def _varint(d, i):
+    """Legge un intero variabile QUIC da `d` a partire da `i`.
+
+    Restituisce (valore, prossimo indice), oppure (None, i) se i byte non
+    bastano.  ⚠ La lunghezza sta nei due bit alti del primo byte, e il valore
+    e' quel che resta: leggere il primo byte per intero e' l'errore che fa
+    scambiare 0x40 0x41 per due frame."""
+    if i >= len(d):
+        return None, i
+    n = 1 << (d[i] >> 6)
+    if i + n > len(d):
+        return None, i
+    v = d[i] & 0x3F
+    for k in range(1, n):
+        v = (v << 8) | d[i + k]
+    return v, i + n
+
+
+def _capsula_chiusura(d):
+    """Cerca `CLOSE_WEBTRANSPORT_SESSION` (0x2843) e ne torna il codice.
+
+    ⛔ Sul filo della CONNECT le capsule viaggiano **dentro i frame DATA**
+       (RFC 9297), quindi il caso normale e' `DATA(0x00) → capsula`.  Il caso
+       in cui la capsula arriva **nuda** e' un difetto del server — un browser
+       leggerebbe `0x2843` come un tipo di frame HTTP/3 sconosciuto e la
+       butterebbe (RFC 9114 §9) — e questo lettore lo riconosce per poterlo
+       DIRE, non per perdonarlo.
+
+    Restituisce (codice, nuda) oppure (None, False)."""
+    def dentro(b):
+        i = 0
+        while i < len(b):
+            tipo, j = _varint(b, i)
+            if tipo is None:
+                return None
+            lung, j = _varint(b, j)
+            if lung is None or j + lung > len(b):
+                return None
+            if tipo == 0x2843 and lung >= 4:
+                return b[j + 3]      # i quattro byte del codice, il piu' basso
+            i = j + lung
+        return None
+
+    # 1. la forma giusta: uno o piu' frame DATA, e le capsule dentro
+    i = 0
+    while i < len(d):
+        tipo, j = _varint(d, i)
+        if tipo is None:
+            break
+        lung, j = _varint(d, j)
+        if lung is None or j + lung > len(d):
+            break
+        if tipo == 0x00:             # DATA
+            c = dentro(d[j:j + lung])
+            if c is not None:
+                return c, False
+        i = j + lung
+    # 2. la forma sbagliata: la capsula senza il frame che la porta
+    c = dentro(d)
+    return (c, True) if c is not None else (None, False)
+
+
 class Registratore:
     """Il formato di RCP.md §11.1, scritto una volta sola."""
 
@@ -190,8 +252,24 @@ class Cliente(QuicConnectionProtocol):
             return
         if nome == "StreamDataReceived" and event.stream_id == self.sessione:
             # la capsula di chiusura della sessione (§3.1 punto 3)
-            if len(event.data) >= 7 and event.data[0] == 0x68 and event.data[1] == 0x43:
-                codice = event.data[6]
+            codice, nuda = _capsula_chiusura(event.data)
+            if codice is not None:
+                if nuda:
+                    # ⛔ La capsula NUDA, senza il frame DATA che la porta.
+                    #
+                    #    E' quel che questo server faceva fino al 10 agosto 2026
+                    #    (rilievo R10.1): sul filo della CONNECT le capsule
+                    #    viaggiano DENTRO i frame DATA (RFC 9297), e un browser
+                    #    che legge `0x2843` come tipo di frame HTTP/3 lo trova
+                    #    sconosciuto e lo **ignora** (RFC 9114 §9).  Il motivo
+                    #    non arrivava, e restava solo il FIN — cioe' `codice 0`.
+                    #
+                    # ⭐ Il banco lo legge lo stesso, ma lo DICHIARA: un cliente
+                    #    indulgente che accettasse le due forme senza dire
+                    #    quale ha visto nasconderebbe di nuovo quel difetto, ed
+                    #    e' l'indulgenza che `REVIEWER.md` §5 vieta.
+                    print("   [wt]   ⛔ capsula di chiusura NUDA, senza frame "
+                          "DATA: un browser la ignorerebbe (RFC 9297)")
                 self.codice_chiusura = codice
                 print(f"   [wt]   sessione chiusa dal server, codice {codice:#04x}"
                       f" = {MOTIVI.get(codice, '?')}")
