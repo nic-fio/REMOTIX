@@ -19,6 +19,51 @@
   ⚠ Il certificato della SESSIONE resta autofirmato: lo si fa accettare con
     `serverCertificateHashes`, che e' la strada normale del prodotto
     (`RCP.md` §4.1-bis) — non una scorciatoia da banco.
+
+  ---------------------------------------------------------------------------
+  ⭐ IL CRITERIO DI B2, RISCRITTO IL 10 AGOSTO 2026 SUL SERVER CHE ABBIAMO
+
+  «La sessione si apre **E** il server risponde sul filo.»
+
+  Fino a questa mattina la seconda meta' era un'eco: la pagina apriva uno
+  stream, ci scriveva la parola `ciao` e aspettava che tornasse indietro.
+  Era vera quando sotto c'era il solo strato WebTransport di B2, quando il
+  server non parlava ancora RCP.
+
+  ⛔ Oggi il server parla RCP, e quel primo stream bidirezionale **e' il
+     canale di controllo** (`RCP.md` §4.2).  `ciao` non e' un messaggio
+     valido: il server ne aspetta il resto e non risponde mai, la pagina
+     resta appesa e il banco non registra niente.  `[M]` 10 agosto 2026,
+     quinto giro di B3: 200 nel registro del raccoglitore e nessun esito in
+     40 secondi, su tutt'e due i motori.
+
+  ⭐ Quindi adesso la sonda dice una frase vera: un `CIAO` conforme (§4.3,
+     §6.1, §7.1) sul canale di controllo, e aspetta l'`ECCOMI`.
+
+  ⚠ **E si ferma li', di proposito.**  La stretta di mano intera —
+    `CREDENZIALI`, `AMMESSO`, `ATTACCA`, `SESSIONE` — non serve a quel che
+    questo banco prova, che e' il **modello di fiducia**: il certificato
+    della sessione, la sua impronta, la sua rotazione (§4.1-bis).  Il
+    PROTOCOLLO lo provano altri tre banchi, che esistono apposta — B3 (il
+    filo intero), B5 (le violazioni verso il server), B11 (le violazioni
+    verso la pagina).  Rifarne qui un quarto pezzo darebbe due misure diverse
+    sotto la stessa etichetta, che e' `CODER.md` §3.9.
+
+  ⚠ Per la stessa ragione la pagina NON giudica il contenuto dell'`ECCOMI` —
+    versione, capacita', byte avanzati — e non manda `CONGEDO` alla fine: lo
+    fa B11, riga per riga.  Qui l'`ECCOMI` conta come **prova che il filo
+    porta nei due versi**, e basta.
+
+  ---------------------------------------------------------------------------
+  ⛔ E LA SONDA REGISTRA SEMPRE, ANCHE QUANDO NON SUCCEDE NIENTE
+
+  Il difetto di stamattina non e' stato solo l'eco: e' stato il **silenzio**.
+  Senza una riga nel registro, il banco non sa distinguere «il browser non e'
+  partito» da «la sessione non si e' aperta» da «il server non ha risposto» —
+  tre cause opposte con lo stesso aspetto (`CODER.md` §3.10).
+
+  Ogni attesa ha adesso un tetto dichiarato, e a ogni scadenza parte lo
+  stesso la riga, con la causa scritta dentro.
 -->
 <style>
   :root { color-scheme: light dark; }
@@ -33,10 +78,14 @@
   .no   { border-left: 4px solid #c33; }
 </style>
 
-<h1>B2 — la sessione WebTransport si apre?</h1>
+<h1>B2 — la sessione WebTransport si apre, e il server risponde?</h1>
 <p>Banco della fase 1. Misura <b>una cosa sola</b>: se il motore di questo browser
 stabilisce una sessione WebTransport con il server indicato, accettandone il
-certificato tramite l'impronta pubblicata qui dentro.</p>
+certificato tramite l'impronta pubblicata qui dentro — e se su quella sessione
+il server <b>risponde</b>, cioè se al <code>CIAO</code> sul canale di controllo
+torna un <code>ECCOMI</code> (<code>RCP.md</code> §4.2, §4.3). Il resto della
+stretta di mano è di B3, B5 e B11: qui si prova il <b>modello di fiducia</b>,
+non il protocollo.</p>
 
 <label>Indirizzo della sessione</label>
 <input id="url" value="https://192.168.0.2:7447/rcp/1">
@@ -50,6 +99,132 @@ certificato tramite l'impronta pubblicata qui dentro.</p>
 <script>
 const $ = (id) => document.getElementById(id);
 const esito = $("esito");
+
+// ⛔ I TETTI D'ATTESA — dichiarati qui, e ripetuti dentro l'esito.
+//
+//    Sono NOSTRI, e va detto: `RCP.md` §4.6 fissa tre tetti alla stretta di
+//    mano e sono tutti sul CLIENT («`CIAO` ricevuto» entro 5 s, e cosi' via);
+//    al server non impone nessun tempo di risposta.  Quindi alla scadenza la
+//    pagina **non accusa il server di aver violato niente**: scrive «entro N
+//    secondi non e' arrivato nulla», che e' un fatto della misura.
+//
+// ⚠ I numeri sono scelti sul conduttore, non a caso.  `01-b2-lancia-sonda.sh`
+//   aspetta la riga per **40 secondi**: 10 + 10 di attesa, piu' la rete di
+//   sicurezza a 25, stanno dentro quella finestra con la POST compresa.  I
+//   32 s di B11 — scelti li' per stare appena sopra il `max_idle_timeout` di
+//   §2.2, cosi' a parlare per primo e' il trasporto — qui non ci starebbero
+//   due volte, e il banco tornerebbe al silenzio che questa pagina cura.
+const TETTO_APERTURA = 10000;   // `wt.ready`: ne' aperta ne' rifiutata
+const TETTO_ECCOMI   = 10000;   // dal `CIAO` spedito all'`ECCOMI` completo
+const TETTO_TOTALE   = 25000;   // la rete di sicurezza: oltre questo si registra comunque
+
+// ⛔ La versione che questa pagina sa parlare, scritta una volta sola: §2.2
+//    vuole che quella del percorso `/rcp/<n>` e quella del `CIAO` coincidano.
+// ⚠ Qui NON si confrontano — l'indirizzo arriva dalla query e il banco lo
+//   prende com'e'.  Il confronto e' un controllo di protocollo, e sta in
+//   `01-b11-pagina.html` (rilievo R6.19), non in un banco sul certificato.
+const VERSIONE = 1;
+
+const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
+            RESPINTO: 0x0005, SESSIONE: 0x0007, CONGEDO: 0x000C };
+const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+
+// ⛔ I nomi dei motivi di §8.2, perche' «motivo 9» non e' una diagnosi: se il
+//    server si congeda invece di rispondere, l'esito deve dire PERCHE'.
+// ⚠ Qui ci sono i soli NOMI.  §8.2 vuole anche una frase comprensibile per
+//   l'utente, costruita dal client: quella tabella e' in `01-b11-pagina.html`,
+//   ed e' li' che si misura che ci sia.  Questa pagina scrive in un registro,
+//   non parla a nessuno.
+const MOTIVO = { 0x01: "CHIUSO_DALL_UTENTE", 0x02: "INATTIVITA",
+  0x03: "SESSIONE_ABBANDONATA", 0x04: "SESSIONE_LOCALE_PREVALSA",
+  0x05: "GIA_ATTIVA_LOCALE", 0x06: "BUDGET_PIENO", 0x07: "CREDENZIALI_ERRATE",
+  0x08: "TROPPI_TENTATIVI", 0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
+  0x0B: "ERRORE_PROTOCOLLO", 0x0C: "SERVER_IN_CHIUSURA", 0x0D: "TEMPO_SCADUTO",
+  0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA" };
+
+// ⭐ Le capacita' di questa pagina.  ⛔ `pcm` in `audio.codec` e `8` in
+//    `video.profondita` non sono decorazioni: §4.3 li impone a ENTRAMBI i
+//    lati, e il server congeda con `NIENTE_IN_COMUNE` — non con un errore di
+//    protocollo — chi non li dichiara.  Un `CIAO` senza di essi darebbe un
+//    congedo al posto dell'`ECCOMI`, e questo banco stamperebbe rosso su un
+//    difetto suo.
+const NOSTRE = [["video.codec", "hevc,av1"], ["video.profondita", "8,10"],
+                ["audio.codec", "opus,pcm"], ["client.nome", "sonda-b2 0.1.0"]];
+
+// ── i byte (§6.0, §6.1) ────────────────────────────────────────────────────
+function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
+function str(t) {
+  const b = new TextEncoder().encode(t);
+  const o = new Uint8Array(2 + b.length);
+  new DataView(o.buffer).setUint16(0, b.length);
+  o.set(b, 2);
+  return o;
+}
+function unisci(pezzi) {
+  const o = new Uint8Array(pezzi.reduce((a, p) => a + p.length, 0));
+  let i = 0;
+  for (const p of pezzi) { o.set(p, i); i += p.length; }
+  return o;
+}
+function inquadra(tipo, corpo) {
+  const t = new Uint8Array(6);
+  const v = new DataView(t.buffer);
+  v.setUint16(0, tipo);
+  v.setUint32(2, corpo.length);   // ⛔ §6.1: il numero ESATTO dei byte del corpo
+  return unisci([t, corpo]);
+}
+function corpo_ciao() {
+  return unisci([u16(VERSIONE), u16(NOSTRE.length),
+                 ...NOSTRE.flatMap(([n, v]) => [str(n), str(v)])]);
+}
+
+// ── l'attesa con il tetto ──────────────────────────────────────────────────
+// ⛔ Una promessa senza tetto e' il difetto del 10 agosto 2026 in una riga:
+//    `await r.read()` su un server che non risponde non torna mai, e da li'
+//    in poi la pagina non fa piu' niente — nemmeno dire che non fa niente.
+class Scaduto extends Error {
+  constructor(cosa, ms) {
+    super(cosa + ": niente entro " + (ms / 1000).toFixed(0) + " s");
+    this.cosa = cosa; this.ms = ms;
+  }
+}
+// ⭐ La scadenza si fissa UNA volta per tutta l'attesa, non a ogni pezzo.  Un
+//    tetto rimesso a zero a ogni pezzo ricevuto non scade mai davanti a un
+//    server che manda un byte al secondo — cioe' proprio il caso in cui
+//    serve.
+function attesa(tetto, cosa) {
+  const fine = performance.now() + tetto;
+  return (promessa) => Promise.race([
+    promessa,
+    new Promise((_, rifiuta) =>
+      setTimeout(() => rifiuta(new Scaduto(cosa, tetto)),
+                 Math.max(0, fine - performance.now()))),
+  ]);
+}
+
+// ⛔ Legge UN messaggio inquadrato dal canale di controllo (§6.1), dentro la
+//    scadenza che gli si passa.  ⚠ Un pezzo ricevuto non e' un messaggio: si
+//    accumula finche' i 6 byte d'intestazione e i `lunghezza` byte di corpo
+//    non ci sono tutti.
+async function leggi_messaggio(r, entro) {
+  let arrivati = new Uint8Array(0);
+  for (;;) {
+    const { value, done } = await entro(r.read());
+    if (done) return { fine: true };
+    const n = new Uint8Array(arrivati.length + value.length);
+    n.set(arrivati); n.set(value, arrivati.length);
+    arrivati = n;
+    if (arrivati.length < 6) continue;
+    const v = new DataView(arrivati.buffer, arrivati.byteOffset);
+    const tipo = v.getUint16(0), lung = v.getUint32(2);
+    // ⛔ §6.1: il tetto e' 1 MiB, «e la lunghezza si controlla PRIMA di
+    //    allocare».  Qui non si alloca niente, ma la riga vale lo stesso:
+    //    senza, la pagina aspetterebbe per sempre un corpo che non arrivera'.
+    if (lung > 1024 * 1024) return { tipo, troppo_lungo: lung };
+    if (arrivati.length < 6 + lung) continue;
+    return { tipo, corpo: arrivati.slice(6, 6 + lung) };
+  }
+}
 
 // L'impronta puo' arrivare dalla query: cosi' il banco si lancia con un
 // indirizzo solo e non si copia niente a mano — che e' la regola della fase 0
@@ -72,9 +247,17 @@ function scrivi(testo, buono) {
 //    ⚠ E soprattutto: la VERSIONE ESATTA DEL BROWSER e' il campo che una
 //      trascrizione a mano dimentica sempre, e senza quella «fra sei mesi il
 //      risultato non vale niente» (S1 §4.5).  Qui parte da sola.
+//
+// ⛔ E SI REGISTRA UNA VOLTA SOLA.  La rete di sicurezza qui sotto e il
+//    percorso normale possono arrivare tutt'e due in fondo; due righe per una
+//    esecuzione rimetterebbero il conduttore a indovinare quale sia la sua
+//    (rilievo R8.10, la strada (a)).
+let registrato = false;
 async function registra(stato, dettaglio) {
+  if (registrato) return;
+  registrato = true;
   try {
-    await fetch("/esito", {
+    const r = await fetch("/esito", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -85,6 +268,14 @@ async function registra(stato, dettaglio) {
         dettaglio: dettaglio,
       }),
     });
+    // ⚠ Con un 404 o un 500 `fetch` NON rifiuta: senza questo controllo la
+    //   pagina darebbe per consegnato un esito che nessuno ha scritto
+    //   (rilievo R6.15, trovato su `01-b11-pagina.html`).
+    if (!r.ok) {
+      esito.textContent += "\n\n⚠ esito NON registrato: il raccoglitore ha " +
+                           "risposto " + r.status + " — quel che si vede qui " +
+                           "sopra non e' in b2-esiti.jsonl";
+    }
   } catch (e) {
     // ⚠ Se il raccoglitore non c'e', il banco NON deve fingere: si dice.
     esito.textContent += "\n\n⚠ esito NON registrato (raccoglitore assente): " + e;
@@ -110,6 +301,32 @@ $("vai").onclick = async () => {
   //    affermata dal sorgente e non dal registro e' una proprieta'
   //    che nessuno ha visto (LEZIONI.md §1.9).
   righe.push("allowPooling: false   (RCP.md §4.1-bis)");
+  righe.push("tetti d'attesa di QUESTA sonda: apertura " + TETTO_APERTURA / 1000 +
+             " s · ECCOMI " + TETTO_ECCOMI / 1000 + " s · rete di sicurezza " +
+             TETTO_TOTALE / 1000 + " s   (⚠ nostri, non di RCP: §4.6 non da' " +
+             "nessun tetto al server)");
+
+  // ⛔ LA RETE DI SICUREZZA, e si arma PRIMA di qualunque altra cosa.
+  //
+  //    I due tetti qui sotto coprono le attese che conosciamo.  Questo copre
+  //    quelle che non conosciamo: un `createBidirectionalStream()` che non
+  //    torna, una `write` che resta accodata, un guasto del motore.  ⭐ La
+  //    proprieta' da tenere e' una sola e non ammette eccezioni: **una
+  //    esecuzione, una riga nel registro**.  Se manca la riga, la causa e'
+  //    fuori dalla pagina — il browser non e' partito, o non ha nemmeno
+  //    chiesto il file — e il conduttore lo sa distinguere dal registro del
+  //    raccoglitore.
+  setTimeout(() => {
+    if (registrato) return;
+    righe.push("");
+    righe.push("⛔ SILENZIO: la sonda non e' arrivata in fondo entro " +
+               TETTO_TOTALE / 1000 + " s, e nessuno dei tetti dichiarati e'" +
+               " scattato.  L'attesa e' rimasta in un punto che questa pagina" +
+               " non prevede: la riga parte lo stesso, perche' «nessuna riga»" +
+               " e' l'unico esito che non si sa leggere.");
+    scrivi(righe.join("\n"), false);
+    registra("SILENZIO", righe.join("\n"));
+  }, TETTO_TOTALE);
 
   if (!("WebTransport" in window)) {
     righe.push("");
@@ -140,7 +357,14 @@ $("vai").onclick = async () => {
       };
       righe.push("impronta:  pubblicata (" + b64.slice(0, 12) + "…)");
     } catch (e) {
-      scrivi(righe.join("\n") + "\n\n⛔ l'impronta non e' base64 valido: " + e, false);
+      // ⛔ E ANCHE QUI SI REGISTRA.  Questo ramo usciva in silenzio: chi
+      //    lanciava il banco vedeva «non ha registrato niente in 40 secondi»
+      //    — la stessa frase del browser che non parte — per un'impronta
+      //    scritta male, cioe' un difetto del conduttore, non del server.
+      righe.push("");
+      righe.push("⛔ l'impronta non e' base64 valido: " + e);
+      scrivi(righe.join("\n"), false);
+      await registra("IMPRONTA-ILLEGGIBILE", righe.join("\n"));
       return;
     }
   } else {
@@ -149,43 +373,135 @@ $("vai").onclick = async () => {
   scrivi(righe.join("\n") + "\n\napertura in corso…");
 
   try {
+    // ── 1. la sessione ────────────────────────────────────────────────────
     const wt = new WebTransport(url, opzioni);
-    await wt.ready;
+    try {
+      await attesa(TETTO_APERTURA, "apertura della sessione")(wt.ready);
+    } catch (e) {
+      righe.push("");
+      if (e instanceof Scaduto) {
+        // ⛔ «NE' APERTA NE' RIFIUTATA» E' UN TERZO ESITO, e porta un nome
+        //    suo.  Chiamarlo `NON-APERTA` lo renderebbe indistinguibile dal
+        //    rifiuto del certificato — e il controllo negativo del quinto
+        //    giro di B3, che pretende `NON-APERTA`, passerebbe con un motore
+        //    appeso invece che con un motore che confronta l'impronta: il
+        //    verde falso esatto che quel controllo esiste per non produrre.
+        righe.push("⛔ SILENZIO all'apertura: " + e.message);
+        righe.push("   la sessione non si e' aperta e nemmeno e' stata rifiutata.");
+        righe.push("   ⚠ e' l'aspetto tipico dell'UDP buttato via senza risposta:");
+        righe.push("      i pacchetti partono, non torna niente, e nessuno dice no.");
+        scrivi(righe.join("\n"), false);
+        await registra("SILENZIO", righe.join("\n"));
+        return;
+      }
+      righe.push("⛔ NON si apre: " + e);
+      // Il motivo vero sta spesso nella chiusura, non nell'eccezione.
+      righe.push("");
+      righe.push("⚠ tre cause con lo stesso aspetto, e vanno distinte a mano:");
+      righe.push("   1. UDP filtrato (il TCP risponde lo stesso)");
+      righe.push("   2. l'impronta non e' quella del certificato servito");
+      righe.push("   3. il certificato della sessione supera i 14 giorni");
+      scrivi(righe.join("\n"), false);
+      await registra("NON-APERTA", righe.join("\n"));
+      return;
+    }
     const ms = (performance.now() - t0).toFixed(1);
     righe.push("");
     righe.push("⭐ SESSIONE APERTA in " + ms + " ms");
+    scrivi(righe.join("\n") + "\n\nCIAO spedito, si aspetta ECCOMI…");
 
-    // ⛔ «ready» non basta: si manda un byte e si aspetta che torni.  Una
-    //    sessione che si apre e non trasporta niente e' la forma di verde
-    //    che questo banco esiste per non produrre — ed e' esattamente il
-    //    difetto che il controllo P3 di S1a cerca su un altro piano.
+    // ── 2. il filo porta? ─────────────────────────────────────────────────
+    // ⛔ «ready» non basta: si manda un messaggio VERO e si aspetta la
+    //    risposta.  Una sessione che si apre e non trasporta niente e' la
+    //    forma di verde che questo banco esiste per non produrre — ed e'
+    //    esattamente il difetto che il controllo P3 di S1a cerca su un altro
+    //    piano.
     try {
       const s = await wt.createBidirectionalStream();
       const w = s.writable.getWriter();
-      await w.write(new TextEncoder().encode("ciao"));
-      await w.close();
       const r = s.readable.getReader();
-      const { value } = await r.read();
-      const tornato = value ? new TextDecoder().decode(value) : "(niente)";
-      righe.push("andata e ritorno su stream: " + JSON.stringify(tornato));
-      righe.push(tornato === "ciao" ? "✅ i byte tornano identici" : "⚠ i byte tornano DIVERSI");
+      await w.write(inquadra(T.CIAO, corpo_ciao()));
+      // ⛔ E IL WRITER NON SI CHIUDE.  Qui c'era `await w.close()`, ereditato
+      //    da quando lo stream era un'eco: oggi quel FIN sul primo stream
+      //    bidirezionale **e' la fine della sessione** (§4.2, «un FIN su
+      //    quello stream, da una qualunque delle due parti, chiude la
+      //    sessione»).  Si chiuderebbe la porta nel secondo esatto in cui si
+      //    aspetta che ne esca qualcuno.
+      const m = await leggi_messaggio(r, attesa(TETTO_ECCOMI, "risposta del server"));
+      if (m.fine) {
+        righe.push("⛔ il canale di controllo si e' chiuso (FIN) senza rispondere:");
+        righe.push("   §4.2 — quel FIN E' la fine della sessione.");
+      } else if (m.troppo_lungo) {
+        righe.push("⛔ il server annuncia un messaggio di " + m.troppo_lungo +
+                   " byte: oltre il tetto di 1 MiB di §6.1");
+      } else if (m.tipo === T.ECCOMI) {
+        const v = new DataView(m.corpo.buffer, m.corpo.byteOffset);
+        const versione = m.corpo.length >= 2 ? v.getUint16(0) : -1;
+        const quante   = m.corpo.length >= 4 ? v.getUint16(2) : -1;
+        // ⚠ Versione e capacita' si RIPORTANO e non si giudicano: §9 e §4.3
+        //   sono controlli di protocollo, e li fa B11 riga per riga.  Qui
+        //   servono a rendere leggibile l'esito, non a dare un verdetto.
+        righe.push("risposta sul canale di controllo: ECCOMI (0x0002), " +
+                   m.corpo.length + " byte — versione " + versione +
+                   ", capacita' dichiarate " + quante);
+        // ⛔ QUESTA FRASE LA CERCA IL CONDUTTORE, ALLA LETTERA.
+        //
+        //    `01-b2-lancia-sonda.sh`, dentro `cerca_riga`: cerca «i byte
+        //    tornano identici» nel campo `dettaglio`, ed e' il controllo del
+        //    rilievo R8.7 — «APERTA non vuol dire che i byte tornano».  Le due
+        //    meta' del controllo stanno in due file: cambiare le parole qui
+        //    dentro fa diventare rosso un banco senza che niente sia
+        //    peggiorato, e il conduttore non si tocca.
+        //
+        // ⚠ «Identici» oggi vuol dire «identici a quel che §7.1 prescrive» —
+        //   il tipo 0x0002 — non «uguali a quel che abbiamo mandato»: quella
+        //   era l'eco, e l'eco non esiste piu'.  Il fatto provato e' lo
+        //   stesso di prima, e piu' forte: il filo porta nei due versi, e
+        //   dall'altra parte c'e' qualcuno che capisce quel che gli si dice.
+        righe.push("✅ i byte tornano identici a quel che §7.1 prescrive: " +
+                   "tipo 0x0002 = ECCOMI, in risposta al nostro CIAO");
+      } else if (m.tipo === T.CONGEDO) {
+        const mot = m.corpo.length >= 1 ? m.corpo[0] : -1;
+        righe.push("⛔ il server si e' CONGEDATO invece di rispondere: motivo " +
+                   mot + " = " + (MOTIVO[mot] || "fuori da §8.2"));
+        righe.push("   ⚠ e' una risposta, quindi il filo porta — ma non e'" +
+                   " l'ECCOMI che B2 pretende: la causa e' nel CIAO di questa" +
+                   " pagina o nel server, e la nomina il registro del server.");
+      } else {
+        righe.push("⛔ sul canale di controllo e' tornato " +
+                   (NOME_T[m.tipo] || "il tipo 0x" + m.tipo.toString(16).padStart(4, "0")) +
+                   " invece di ECCOMI");
+      }
     } catch (e) {
-      righe.push("⚠ sessione aperta ma lo stream non ha funzionato: " + e);
+      if (e instanceof Scaduto) {
+        // ⛔ IL DIFETTO DEL 10 AGOSTO, ADESSO DETTO AD ALTA VOCE.  La sessione
+        //    e' aperta — e l'esito resta `APERTA`, perche' e' un fatto — ma
+        //    la frase che il conduttore cerca NON viene scritta: la riga sara'
+        //    rossa per il controllo R8.7, con questa causa sotto gli occhi.
+        righe.push("⛔ nessun ECCOMI: " + e.message);
+        righe.push("   la sessione E' aperta, il CIAO e' partito, e il server tace.");
+        righe.push("   ⚠ non e' una violazione di RCP: §4.6 non da' nessun" +
+                   " tetto alla risposta del server.  E' il tetto di questo banco.");
+      } else {
+        righe.push("⚠ sessione aperta ma il canale di controllo non ha funzionato: " + e);
+      }
     }
 
+    // ⚠ Qui la sonda si ferma: nessun `CONGEDO`, nessuna chiusura ordinata.
+    //   §3.1 e §8.1 sono obblighi di un client vero, e li misura B11; questa
+    //   pagina si ferma prima delle credenziali, quindi non ha preso nessun
+    //   posto nel registro delle sessioni del server (§4.5) e non ne lascia
+    //   occupato nessuno al motore che gira dopo di lei.
     scrivi(righe.join("\n"), true);
     await registra("APERTA", righe.join("\n"));
   } catch (e) {
+    // ⛔ E se a rompersi e' la sonda, lo dice la sonda.  Un guasto della
+    //    pagina che uscisse in silenzio tornerebbe a somigliare a «il browser
+    //    non e' partito», che e' la confusione curata oggi.
     righe.push("");
-    righe.push("⛔ NON si apre: " + e);
-    // Il motivo vero sta spesso nella chiusura, non nell'eccezione.
-    righe.push("");
-    righe.push("⚠ tre cause con lo stesso aspetto, e vanno distinte a mano:");
-    righe.push("   1. UDP filtrato (il TCP risponde lo stesso)");
-    righe.push("   2. l'impronta non e' quella del certificato servito");
-    righe.push("   3. il certificato della sessione supera i 14 giorni");
+    righe.push("⛔ GUASTO DELLA SONDA (non del server): " + e);
     scrivi(righe.join("\n"), false);
-    await registra("NON-APERTA", righe.join("\n"));
+    await registra("GUASTO-SONDA", righe.join("\n"));
   }
 };
 
