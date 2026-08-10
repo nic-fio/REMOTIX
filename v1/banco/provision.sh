@@ -136,6 +136,13 @@ CONTAINER_PKGS=(
     # sono il modo piu' economico di avere un server HTTP/3 vero da puntare
     # contro un browser vero.  Serve al banco, non al prodotto.
     libevent-dev
+    # libev: la stessa cosa per `ngtcp2`.  ⚠ E' UN'ALTRA libreria, non una
+    # variante del nome: `ngtcp2/examples/CMakeLists.txt` cerca `libev`, e con
+    # la sola `libevent-dev` installata il cmake mette
+    # LIBEV_LIBRARY-NOTFOUND e ⛔ SALTA GLI ESEMPI IN SILENZIO — cioe' la
+    # costruzione riesce, e il server che serviva non c'e'.  Visto sul ferro
+    # il 10 agosto 2026 `[M]`.
+    libev-dev
     # ⭐ aioquic: due mestieri, e nessuno dei due e' il prodotto.
     #   1. e' il CONTROLLO POSITIVO di B2 — una sessione WebTransport che DEVE
     #      riuscire, senza la quale «la candidata non apre la sessione» e «il

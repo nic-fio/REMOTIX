@@ -231,6 +231,40 @@ risultato entra nel documento come un fatto misurato.
 > progetto dove i banchi sono nostri. In tutt'e tre i casi la cura è stata **la stessa**: far dire
 > allo strumento che cosa stava guardando, e in tutt'e tre ha trovato il difetto in un minuto.
 
+> ### ⭐ Il corollario, che è arrivato il giorno dopo: un denominatore si legge dove la cosa succede
+>
+> *10 agosto 2026, la prova SNI di B2. La quarta regola era applicata — la sonda **dichiarava** il
+> suo denominatore, a ogni gamba — e il denominatore era **falso**.*
+>
+> La sonda doveva rispondere a *«il server serve il certificato a chi non manda SNI?»*, e stampava
+> `server_name spedito: '192.168.0.2'` leggendolo dalla **configurazione** di `aioquic`. Due righe
+> di quella libreria, in due file diversi:
+>
+> | | |
+> |---|---|
+> | `asyncio/client.py:66-67` | se il campo è vuoto ci mette l'ospite — **anche se è un indirizzo IP** |
+> | `tls.py:1551-1556` | e poi, scrivendo il ClientHello, se quel valore è un indirizzo IP **lo butta** |
+>
+> ⛔ **Quindi la configurazione diceva `'192.168.0.2'` e sul filo non andava niente** — e la gamba
+> «con SNI», che usava l'indirizzo, mandava **esattamente quel che mandava l'altra**. Le due gambe
+> misuravano la stessa cosa mentre la sonda dichiarava che erano opposte.
+>
+> 5. ⛔ **Un denominatore si legge dove la cosa succede** — sul filo, non nella configurazione; nel
+>    processo, non nell'intenzione. E quando lì non si può leggere, lo si fa **confermare da un
+>    programma che non è nostro**: qui l'ha fatto il registro di `lsquic`, che scrive *«SNI is not
+>    set»* guardando lo stesso filo dall'altro capo.
+>
+> ⚠ **Perché è più insidioso della regola che estende**: un denominatore falso è **peggio** di
+> nessun denominatore, perché dà alla misura l'aria di essere già stata controllata. Nessuno
+> verifica due volte la riga che dice *«ecco su che cosa ho guardato»*.
+>
+> ⚠ **E la stessa sera, la prima regola è tornata in una veste nuova**: il banco dichiarava
+> **morti** due server che stavano ascoltando, perché li controllava con `kill -0` da utente
+> normale su processi di **root** — dove la risposta è *«operazione non permessa»*, cioè un errore,
+> non *«non esiste»*. ⛔ **Vuoto e proibito con la stessa faccia**, per la terza volta in quattro
+> giorni, stavolta su un controllo di sanità: la cura è `[ -d /proc/<pid> ]`, che tutti possono
+> leggere.
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque

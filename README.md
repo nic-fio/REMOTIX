@@ -4,7 +4,7 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> ## Stato alla notte del 9 agosto 2026 — ⭐ **si riparte da qui**
+> ## Stato al 10 agosto 2026 — ⭐ **si riparte da qui**
 >
 > **Fase 1 aperta**, banco scritto e **revisionato prima del prodotto** (44 rilievi, 38 `[R]`,
 > tutti curati). Il banco **B2 — quale libreria QUIC** è in corso, e ha già prodotto misure.
@@ -14,35 +14,46 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | |
 > |---|---|
 > | ⭐ **il modello di fiducia regge** | una sessione WebTransport verso un certificato **autofirmato P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**: **Chrome 151** (30,2 ms) e **Firefox 140** (52,0 ms). `RCP.md` §4.1-bis passa da `[S]` a `[M]` su **due motori** |
+> | ⭐ **`ngtcp2` passa il criterio dell'SNI** | **10 agosto**: il loro server d'esempio serve il certificato a chi **non manda SNI**, e ⛔ **l'impronta ricevuta combacia con quella del file** — la stretta di mano che riesce non basta. `ngtcp2` resta in gara con `quiche` |
+> | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera** |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile |
-> | ⛔ **`lsquic` è eliminata** | in HTTP/3 pretende **SNI** per trovare il certificato, e chi si collega a un **indirizzo IP** non lo manda. È il caso primario del prodotto. Scoperto dopo aver scritto **333 righe** di collante |
-> | **`ngtcp2`+`nghttp3`** | costruite con lo stesso BoringSSL. Dentro 447 file: extended CONNECT in **9**, WebTransport in **0** ⇒ lo strato è tutto nostro |
+> | **`ngtcp2`+`nghttp3`** | costruite con lo stesso BoringSSL. Dentro 447 file: extended CONNECT in **9**, WebTransport in **0** ⇒ lo strato è tutto nostro. ⚠ Il loro server d'esempio pesa **7.041 righe**: è un **tetto**, non una stima |
 >
-> ### ⛔ Il prossimo passo, e non è scrivere codice
+> ### ⛔ Il prossimo passo
 >
-> **Una connessione senza SNI a `ngtcp2`.** È il criterio nuovo di `DECISIONI.md` §6.4, nato dalla
-> morte di `lsquic`: *la libreria **deve** servire un certificato senza SNI*. Costa una connessione,
-> e va provato **prima** del collante — non dopo 333 righe.
+> **La stessa prova su `quiche`**, prima del collante — è la regola che il 9 agosto è costata 333
+> righe e che il 10 ha promosso `ngtcp2` in una connessione. Poi il **server minimo** sulla
+> candidata scelta, che è quel che apre le sei proprietà di B2 e le due misure del gruppo 3.
 >
-> ⚠ **E una previsione resta aperta**: `lsquic` scrive le impostazioni della **bozza 02** e mai
-> `SETTINGS_WT_MAX_SESSIONS`. Non è stata né confermata né smentita — non ci siamo arrivati — e va
-> tenuta aperta invece che chiusa con una prova che parla d'altro.
+> ⚠ **E una previsione resta aperta dopo due misure**: `lsquic` scrive le impostazioni della **bozza
+> 02** e mai `SETTINGS_WT_MAX_SESSIONS`. Nemmeno con l'SNI ci si arriva — la connessione muore
+> prima. Va tenuta aperta invece che chiusa con una prova che parla d'altro.
 >
 > ### Come si rimette in piedi il banco
 >
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
-> `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella pagina) ·
-> `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
+> `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-lancia-sni.sh` (**conduce la prova SNI**:
+> `costruisci`, poi `misura`) · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
+> pagina) · `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
 > `01-b2-raccogli.py` + `01-b2-sonda.html` (la pagina, da `localhost`).
-> ⚠ Tutto sotto `/media/REMOTIX` sopravvive al riavvio; il rootfs del server no.
+> ⚠ Tutto sotto `/media/REMOTIX` sopravvive al riavvio; il rootfs del server no —
+> ⛔ **e per questo i server dei banchi sopravvivono anche loro**: il 10 agosto due di essi tenevano
+> le porte otto ore dopo. Il banco adesso lo controlla prima di partire.
 >
-> ### ⛔ Quattro trappole pagate in una sera, tutte nel banco e nessuna nel prodotto
+> ### ⛔ Dieci trappole in due sere, tutte nel banco e nessuna nel prodotto
 >
-> `grep -q` con `pipefail` (il riscontro riuscito letto come fallimento) · `| tail` che mangia lo
-> stato d'uscita · due percorsi passati come una stringa, con `2>/dev/null` a nascondere l'errore —
-> **e quello ha stampato un verde** · `pkill -f` che uccide il processo che lo esegue, **due volte**.
-> ⭐ Da cui la **quarta regola** di `LEZIONI.md` §1.9: *una misura deve dichiarare su che cosa ha
-> guardato — il denominatore, non solo il risultato*.
+> `grep -q` con `pipefail` · `| tail` che mangia lo stato d'uscita **(rifatto il giorno dopo)** ·
+> due percorsi passati come una stringa, con `2>/dev/null` a nascondere l'errore — **e quello ha
+> stampato un verde** · `pkill -f` che uccide chi lo esegue · porte tenute da server di ieri ·
+> `>/dev/null` che inghiotte la **richiesta di password** · `setsid` che forca e falsa il PID ·
+> `kill -0` che confonde *proibito* con *morto*.
+>
+> ⭐ Da cui la **quarta regola** di `LEZIONI.md` §1.9 — *una misura deve dichiarare su che cosa ha
+> guardato* — e il suo **corollario del 10 agosto**, che è nato dal difetto più grave finora:
+> ⛔ **la sonda dichiarava un denominatore falso**, e le sue due gambe misuravano la stessa cosa
+> mentre diceva che erano opposte. *Un denominatore si legge **dove la cosa succede** — sul filo,
+> non nella configurazione — e chi non può leggerlo lì se lo fa confermare da un programma che non
+> è suo.*
 >
 > ---
 >

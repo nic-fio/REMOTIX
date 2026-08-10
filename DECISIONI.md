@@ -1758,6 +1758,59 @@ fa con un banco davanti, non su carta.
 > ⚠ **E un dettaglio che vale come odore**: il commento di `es_webtransport_server` dice *«Enable
 > datagram extension for http3 server»* — cioè **documenta un'altra cosa**. Un campo la cui
 > documentazione parla d'altro è un campo che nessuno ha riletto.
+
+> ### ⭐⛔ `ngtcp2` passa il criterio nuovo, ed è il primo a essere provato prima del collante — `[M]` 10 agosto 2026
+>
+> *`banchi/01-b2-sni-ngtcp2.sh` (costruisce il bersaglio) · `01-b2-sonda-sni.py` (la sonda) ·
+> `01-b2-lancia-sni.sh` (conduce). Il bersaglio è **il loro server d'esempio**, `bsslserver`, non un
+> server nostro: un server nostro sarebbe collante, cioè la cosa che questa prova deve venire prima
+> di scrivere. `ngtcp2` **16.11.0** + `nghttp3` **1.18.90**, sullo stesso BoringSSL di `lsquic`.*
+>
+> **La previsione, scritta prima** (`LEZIONI.md` §1.11): *passa*. `[R]` in **109 file** di
+> `examples/` e **18** di `crypto/` non compare **nessuna** occorrenza di `servername`,
+> `SSL_get_servername`, `SSL_CTX_set_tlsext_servername_callback`, `select_certificate_cb` — con i
+> controlli positivi che rispondono (`SSL_CTX_use_certificate_chain_file` in 8 file, `alpn_select`
+> in 6, `SSL_` in 10). Nessuno cerca il certificato per nome: è legato all'`SSL_CTX` e servito
+> sempre. ⭐ **Che aspetto avrebbe avuto il contrario**: la stretta di mano che cade come su
+> `lsquic`, e allora la candidata usciva qui invece che dopo il collante.
+>
+> | La misura | Atteso | Misurato |
+> |---|---|---|
+> | ⭐ **senza SNI sul filo** | la sessione si stabilisce | ⭐ **sì** |
+> | ⛔ **e il certificato è QUELLO** | l'impronta del file | ⭐ **`35wqjGTOmKSj…` combacia** — la stretta che riesce non basta, il certificato si confronta |
+> | con SNI (`remotix.prova`), il controllo | idem | ✅ sì |
+>
+> ⛔ **Quindi il criterio è soddisfatto, e `ngtcp2` resta in gara con `quiche`.** Il prezzo si
+> conosce: lo strato WebTransport è tutto nostro (extended CONNECT in 9 file, WebTransport in 0).
+>
+> ⚠ **E il primo numero della colonna «quanto collante»**: il loro server d'esempio pesa **7.041
+> righe** in **13 file** `.cc` `[M]` — ⛔ **è un tetto, non una stima**: è il loro HTTP/3 completo,
+> con la gestione dei file, la migrazione, il retry. Il nostro sarà meno. Il numero che conta è
+> quello del server minimo, e si conterà quando esisterà.
+>
+> ### ⭐ E la diagnosi di `lsquic` si chiude, con l'altra metà che mancava — `[M]` 10 agosto 2026
+>
+> Il 9 agosto si era letto *«SNI is not set»* nel suo registro e si era concluso — giustamente — che
+> pretende l'SNI. ⛔ **Ma «fallisce senza» non è «riesce con»**: finché nessuno prova la seconda
+> metà, la diagnosi resta a metà e la candidata è eliminata su mezza prova. Le due righe, dallo
+> stesso registro e nella stessa esecuzione:
+>
+> | Gamba | Che cosa dice `lsquic` |
+> |---|---|
+> | senza SNI | `SNI is not set, but is required in HTTP/3: fail certificate lookup` |
+> | con SNI | ⭐ `looked up cert for remotix.prova` — **il certificato lo trova** |
+>
+> ⛔ **Il difetto è l'SNI e nient'altro: l'eliminazione del 9 agosto regge, e adesso su una prova
+> intera.**
+>
+> ⚠ **E una cosa resta aperta, dichiarata invece che arrotondata**: con l'SNI la stretta di mano
+> cade lo stesso, ma **più avanti e per un'altra ragione** — avviso TLS **120**, `no suitable
+> application protocol`, dopo che il certificato è stato trovato. **Non è stata indagata**: non
+> serve a questa decisione, e `lsquic` è fuori per un motivo che non dipende da lei. Sta scritta
+> perché nessuno la scopra da capo credendo che sia nuova.
+>
+> ⚠ **E la previsione sulla bozza 02 resta APERTA anche dopo questa misura**: nemmeno stavolta ci
+> siamo arrivati — la connessione con l'SNI muore prima delle impostazioni HTTP/3.
 >
 > ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
 >

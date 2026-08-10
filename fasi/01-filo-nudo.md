@@ -240,8 +240,8 @@ WebTransport su `/rcp/1`, aperta da **un browser vero**, con l'impronta pubblica
 
 | Candidata | Sul ferro | Che cosa si prova |
 |---|---|---|
-| **`ngtcp2` + `nghttp3`** (MIT, C) | `libngtcp2-dev` 1.11, `libnghttp3-dev` 1.8 `[M]` — ⛔ **non installati** | le fondamenta più complete: quanto pesa lo strato WebTransport sopra |
-| **`quiche`** (BSD-2, API C) | `cargo`/`rustc` 1.85 `[M]` | idem, più il TLS che si porta dietro |
+| ⭐ **`ngtcp2` + `nghttp3`** (MIT, C) | ✅ **costruite dai sorgenti** — `ngtcp2` 16.11.0, `nghttp3` 1.18.90, sullo stesso BoringSSL `[M]`, **e il loro `bsslserver` gira** | ⭐ **passa il criterio dell'SNI** `[M]` 10 ago. Resta da misurare quanto pesa lo strato WebTransport sopra |
+| **`quiche`** (BSD-2, API C) | `cargo`/`rustc` 1.85 `[M]` | ⛔ **la prova SNI viene per prima**, come su `ngtcp2`: costa una connessione. Poi il TLS che si porta dietro |
 | ⛔ **`lsquic`** (C) | ✅ compilato, **e il collante scritto** (333 righe) `[M]` | ⛔ **ELIMINATA**: in modalità HTTP/3 pretende **SNI** per trovare il certificato, e chi si collega a un **indirizzo IP** non lo manda. È il caso primario del prodotto — `DECISIONI.md` §6.4 |
 | ⚠ **`libwtf`** (C su MsQuic) | ⛔ niente | *ultima della fila*: porta dentro una seconda pila QUIC, e ha una **licenza che si contraddice** |
 
@@ -525,6 +525,10 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ `banchi/01-b2-controllo-aioquic.py` | **nuovo**: ⛔ **il controllo positivo di B2** — una sessione WebTransport che *deve* riuscire. Senza, «la candidata non apre la sessione» e «il banco non sa aprirne nessuna» hanno lo stesso aspetto (R3.17) |
 | ⭐ `banchi/01-b2-cliente-aioquic.py` | **nuovo**: il germe del **cliente di prova** (B9), e il controllo d'ambiente che separa «il server non regge» da «il browser non accetta» |
 | ⭐ `banchi/01-b2-sonda.html` | **nuovo**: la pagina, ⛔ **servita da `localhost`** — contesto sicuro senza avvisi, così quel che si misura è **la sessione** e non il clic dell'utente |
+| ⭐ `banchi/01-b2-sni-ngtcp2.sh` | **nuovo, 10 agosto**: costruisce `bsslserver`, il server d'esempio di `ngtcp2`, che è il bersaglio della prova SNI. ⛔ **Non guarda l'uscita di `ninja`: guarda se il binario c'è** — `examples/CMakeLists.txt` costruisce quel blocco solo `if(LIBEV_FOUND AND HAVE_BORINGSSL AND LIBNGHTTP3_FOUND)`, e se una manca cmake **salta in silenzio** |
+| ⭐ `banchi/01-b2-sonda-sni.py` | **nuovo, 10 agosto**: la sonda del criterio nuovo di `DECISIONI.md` §6.4. Due gambe (senza SNI · con SNI), e ⛔ **due gradini per gamba**: la stretta di mano riesce **e** l'impronta del certificato ricevuto combacia con quella del file |
+| ⭐ `banchi/01-b2-lancia-sni.sh` | **nuovo, 10 agosto**: conduce la prova sui **due** bersagli — `ngtcp2` e `lsquic` come **controllo negativo**. ⛔ Verifica che le porte siano libere **prima**, che i server ascoltino davvero (`ss`, non solo «il processo è vivo»), e li ferma **per PID** |
+| `v1/banco/provision.sh` | **corretto**: `libev-dev` fra i pacchetti — è quel che serve agli esempi di `ngtcp2`, ed è **un'altra libreria** da `libevent-dev` che c'era già. ⚠ Senza, cmake mette `LIBEV_LIBRARY-NOTFOUND` e **salta gli esempi senza dire niente** |
 | `v1/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
 
 **Si riusa** (`PIANO.md` fase 1): `autenticazione.c` (144 righe, PAM) — ⛔ **con la cura di B10** — e
@@ -562,8 +566,12 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | ⭐ **B2** — **il controllo positivo d'ambiente** (senza browser) | sessione accettata **e** byte che tornano | ⭐ **`:status = 200`, `b'ciao'` torna identico** `[M]` | 9 ago |
 | ⭐ **B2** — **la sessione si apre da un BROWSER VERO** | si apre, e i byte tornano | ⭐ **APERTA in 30,2 ms** su **Chrome 151.0.0.0** (X11, Linux), `"ciao"` torna identico `[M]` | 9 ago |
 | ⭐ **B2** — lo stesso su **Firefox** | si apre | ⭐ **APERTA in 52,0 ms** su **Firefox 140.0**, `"ciao"` torna identico `[M]` | 9 ago |
+| ⭐ **B2** — ⛔ **`ngtcp2` serve il certificato SENZA SNI?** | **sì** (previsione scritta prima: zero ricerche per nome in 109+18 file) | ⭐ **sì** `[M]` — sessione stabilita, e **l'impronta del certificato ricevuto combacia** con quella del file | 10 ago |
+| **B2** — lo stesso con SNI, il controllo | sì | ✅ **sì** — `remotix.prova` | 10 ago |
+| ⭐ **B2** — il **controllo negativo**: `lsquic` senza SNI | **fallisce** | ⭐ **fallisce** `[M]`, e il suo registro dice **perché**: `SNI is not set … fail certificate lookup` | 10 ago |
+| ⭐ **B2** — `lsquic` **con** SNI: trova il certificato? | sì — *la metà che mancava alla diagnosi del 9* | ⭐ **sì** `[M]`: `looked up cert for remotix.prova`. ⚠ poi cade su ALPN (avviso 120), **causa non indagata** | 10 ago |
 | **B2** — la sessione si apre, **per candidata** | 2 motori su 2, **e le sei proprietà** | ⏳ *serve il server minimo su una candidata* | |
-| **B2** — righe di collante, per candidata | *si conta, non si stima* | | |
+| **B2** — righe di collante, per candidata | *si conta, non si stima* | ⚠ **primo numero, ed è un TETTO**: il server d'esempio di `ngtcp2` pesa **7.041 righe** in 13 file `.cc` `[M]` — è il loro HTTP/3 completo, non il minimo | 10 ago |
 | **B3** — 1ª · 2ª · 2ª in parallelo · 35 s a timeout 120 · 3ª con chiave ruotata | passa · passa · **rifiutata `0x0F`** · **entra** · passa | | |
 | **B4** — sei guaste **+ una conforme**, e il byte giusto | **6 rosse, 1 verde**, byte esatto | | |
 | **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | | |
@@ -661,6 +669,49 @@ l'intuito.
 ⚠ **La cura è dichiarata, non nascosta**: il ritorno si legge a livello QUIC, **scrivendo perché**.
 Fingere che l'abbia riconosciuto il livello H3 sarebbe stato comodo e falso.
 
+### ⛔ Sei difetti di banco per una prova che dura due secondi — 10 agosto 2026
+
+*La prova SNI di B2 è **una connessione**. Ci sono volute **sei esecuzioni** per arrivarci, e
+nessuno dei sei difetti era della libreria che si stava misurando.*
+
+| # | Che cosa è successo | Che cosa insegna |
+|---|---|---|
+| **1** | ⛔ **Due server della sessione del 9 agosto erano ancora vivi**, otto ore dopo, e tenevano le porte 7447 e 7448. `bsslserver` ha scritto *«Could not bind»* ed è morto | ⚠ Il rootfs del server è in RAM e **non si riavvia mai**: *«l'avevo fermato»* non è un'informazione. ⛔ E il rosso non sarebbe stato «il banco non parte», sarebbe stato **«`ngtcp2` rifiuta»** — un rosso attribuito alla libreria. Ora la porta si controlla **prima** |
+| **2** | La sessione remota è rimasta **appesa senza stampare nulla** | `>/dev/null 2>&1` su una chiamata a `enter.sh`: era la prima della sessione, `sudo` chiedeva la parola d'ordine, e **la domanda finiva nel nulla**. ⛔ È il `2>/dev/null` del 9 agosto in una veste peggiore: un errore nascosto fa sbagliare diagnosi, **una domanda nascosta ferma la macchina** |
+| **3** | ⛔ E non si vedeva **dove** si fermasse, perché avevo messo `\| tail` in coda al comando remoto | ⚠ **Identico al difetto n. 2 del 9 agosto**, commesso di nuovo dalla stessa mano il giorno dopo: `tail` non stampa niente finché il flusso non finisce. La cura non è ricordarsene — è **scrivere su un file e leggerlo** |
+| **4** | Il banco ha dichiarato **MORTI due server che stavano ascoltando** | `setsid` **forca**: `$!` era il PID di `setsid`, che esce subito, non quello del server. ⭐ E `lsquic` lo smentiva **tre righe sotto**, con un *«in ascolto»* stampato nel suo stesso registro |
+| **5** | E l'ha rifatto dopo la cura | `kill -0` da utente normale su un processo di **root** risponde *«operazione non permessa»* — cioè **un errore**, non *«non esiste»*. ⛔ **Vuoto e proibito con la stessa faccia**, `LEZIONI.md` §1.9 regola 1, su un controllo di sanità. Cura: `[ -d /proc/<pid> ]` |
+| **6** | Il collegamento è caduto su `cannot find -lngtcp2`, e ⛔ **il banco ha dato la diagnosi opposta** — *«cmake ha saltato gli esempi in silenzio»* | Cmake li aveva configurati benissimo: mancava la libreria **condivisa** (`ENABLE_SHARED_LIB=OFF`), che è il bersaglio che gli esempi chiedono. ⚠ Un messaggio d'errore che indovina la causa **manda a cercare nel posto sbagliato**: ora il banco distingue «ninja è fallito» da «ninja è riuscito e il file non c'è» |
+
+> #### ⛔⭐ E il settimo, che è il più grave del progetto finora: **la sonda dichiarava un denominatore falso**
+>
+> La quarta regola di `LEZIONI.md` §1.9 era **applicata**: la sonda stampava, a ogni gamba, che cosa
+> avesse messo nel campo `server_name`. Diceva `'192.168.0.2'` — **e sul filo non andava niente.**
+>
+> Due righe di `aioquic`, in due file diversi: `asyncio/client.py:66` riempie il campo con l'ospite
+> **anche se è un indirizzo IP**; `tls.py:1551` poi, scrivendo il ClientHello, **butta gli indirizzi
+> IP**. La sonda leggeva la prima e credeva di descrivere la seconda.
+>
+> ⛔ **Conseguenza: la gamba «con SNI» mandava esattamente quel che mandava la gamba «senza SNI».**
+> Le due gambe misuravano **la stessa cosa** mentre la sonda dichiarava che erano opposte — cioè il
+> controllo che doveva distinguere «la libreria pretende l'SNI» da «il banco è rotto» **non
+> distingueva niente**.
+>
+> ⚠ **E il verde di `ngtcp2` era già stampato quando me ne sono accorto.** Era vero — la misura
+> rifatta lo conferma — ma era vero **per caso**: nessuna delle due gambe stava provando quel che
+> diceva di provare.
+>
+> ⭐ **Che cosa l'ha fatto emergere**: non un sospetto, la riga stessa. `server_name spedito:
+> '192.168.0.2'` in **tutt'e due** le gambe è un'impossibilità visibile — e l'ha resa visibile
+> proprio la regola che stava sbagliando. Un denominatore falso si scopre solo se lo si stampa.
+>
+> ⛔ **La cura, in tre pezzi**: la sonda stampa il valore configurato **e** quel che finisce sul
+> filo, con la riga di codice che li separa; la gamba di controllo usa un **nome** (`remotix.prova`)
+> invece dell'indirizzo, perché è l'unico modo di far comparire l'estensione davvero; e ⭐ **il
+> testimone finale non è nostro** — il registro di `lsquic`, che scrive *«SNI is not set»* guardando
+> lo stesso filo dall'altro capo. È entrata in `LEZIONI.md` §1.9 come **corollario della quarta
+> regola**: *un denominatore si legge dove la cosa succede*.
+
 ---
 
 # Le decisioni prodotte
@@ -670,7 +721,7 @@ Fingere che l'abbia riconosciuto il livello H3 sarebbe stato comodo e falso.
 
 | | |
 |---|---|
-| ⏳ `DECISIONI.md` §6.4 | ❓ **aperta**, la chiude **B2** |
+| ⏳ `DECISIONI.md` §6.4 | ❓ **aperta**, la chiude **B2**. ⭐ *10 agosto: `ngtcp2` ha passato il criterio dell'SNI — resta in gara con `quiche`, e `lsquic` è fuori su una prova adesso intera* |
 | ✅ `DECISIONI.md` §1.8 | ⭐ **Apple è un di più, non un obiettivo** — 9 agosto 2026, dall'utente: S1a esce dalla fase, e la libreria si sceglie su due motori su tre |
 | ⏳ `DECISIONI.md` §1.7 | resta aperta solo la comodità su Safari, e nessuno la misurerà per ora |
 | ⏳ `DECISIONI.md` §5.0-quater | S5 dice se il numero dichiarato è quello vero |
@@ -694,6 +745,8 @@ Fingere che l'abbia riconosciuto il livello H3 sarebbe stato comodo e falso.
 | ⭐ **il segno della rotella su più di un compositore** | R3.25: §7.3 vincola cinque desktop, la misura è su Mutter |
 | ⭐ **l'istante da cui parte il primo tetto** | R3.27 |
 | ⭐ **la pila PAM per un utente diverso dal proprietario del processo** | R3.26 |
+| ⚠ **perché `lsquic` con l'SNI cada su ALPN** | `[M]` 10 agosto: avviso TLS **120**, `no suitable application protocol`, **dopo** che il certificato è stato trovato. ⛔ **Non indagato di proposito**: `lsquic` è fuori per un motivo che non dipende da questo, e la riga esiste perché nessuno lo riscopra credendolo nuovo |
+| ⚠ **la previsione sulla bozza 02 di `lsquic`** | ⛔ **ancora aperta dopo due misure**: nemmeno con l'SNI si arriva alle impostazioni HTTP/3. Non è stata né confermata né smentita |
 
 ---
 
