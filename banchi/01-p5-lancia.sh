@@ -566,8 +566,42 @@ gamba_pagina()
 	#    guardasse il registro dopo cinque secondi scriverebbe «IL POSTO NON SI
 	#    E' LIBERATO» su un server che stava per liberarlo, e sarebbe un rosso
 	#    sul difetto piu' caro della fase — dato all'imputato sbagliato.
+	# ⛔⭐ SI CHIUDE LA SCHEDA COME LA CHIUDEREBBE L'UTENTE, e non si ammazza
+	#     il browser — misurato l'11 agosto 2026, su tutt'e due i motori.
+	#
+	#     Qui c'era solo `kill "$PID_BR"`.  ⛔ Un browser che riceve un segnale
+	#     NON esegue piu' JavaScript: `pagehide` non arriva, la pagina non puo'
+	#     congedarsi, e il banco misurava «il client non si e' congedato» su un
+	#     client a cui non era stato dato modo di farlo.  E' la settima veste —
+	#     un banco che accusa il codice sbagliato — nella forma piu' difficile
+	#     da vedere, perche' il rosso e' **vero**: il congedo davvero non c'era.
+	#
+	# ⭐ `ctrl+w` e' il gesto dell'utente, ed e' esattamente la scena che §8.2
+	#    `CHIUSO_DALL_UTENTE` descrive.  ⚠ E S3 di questo stesso banco ha
+	#    misurato che su tutt'e due i motori quel tasto e' RISERVATO al browser:
+	#    qui e' la proprieta' che serve, non un ostacolo.
+	#
+	# ⚠ Il segnale resta come fondo: se la scheda non si chiude entro 5 s, si
+	#   ammazza il processo e LO SI DICHIARA — un banco che aspetta per sempre
+	#   non e' piu' un banco.
 	if [ -n "$PID_BR" ]; then
-		kill "$PID_BR" 2>/dev/null
+		if fuoco "REMOTIX"; then
+			xdotool key --clearmodifiers ctrl+w 2>/dev/null
+			inf "⭐ scheda chiusa con ctrl+w (il gesto dell'utente): se la pagina"
+			inf "   si congeda, e' qui che lo fa"
+		else
+			inf "⚠ non trovo la finestra: la scheda non e' stata chiusa col gesto,"
+			inf "  e il congedo che segue (o la sua assenza) NON e' giudicabile"
+		fi
+		for _ in 1 2 3 4 5; do
+			kill -0 "$PID_BR" 2>/dev/null || break
+			sleep 1
+		done
+		if kill -0 "$PID_BR" 2>/dev/null; then
+			inf "⚠ il browser e' ancora vivo dopo 5 s: lo chiudo col segnale, e"
+			inf "  da qui in poi l'assenza di congedo non e' un verdetto"
+			kill "$PID_BR" 2>/dev/null
+		fi
 		wait "$PID_BR" 2>/dev/null
 		PID_BR=
 	fi

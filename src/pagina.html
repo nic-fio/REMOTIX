@@ -305,6 +305,34 @@ async function impronta() {
    `esito(...)` e basta (rilievo B-4). */
 let congeda_corrente = null;
 
+/* ⛔⭐ E QUANDO L'UTENTE CHIUDE LA SCHEDA, LA PAGINA SI CONGEDA — §8.1, §8.2
+ *     `CHIUSO_DALL_UTENTE` 0x01.  Misurato mancante l'11 agosto 2026, banco P5,
+ *     su TUTT'E DUE i motori.
+ *
+ * ⛔ Prima di questa riga non c'era NESSUN gestore di `pagehide`: chiudendo la
+ *    scheda — che e' il modo piu' comune di andarsene — la pagina spariva senza
+ *    dire niente, e a liberare il posto era il tetto d'inattivita' di 30 s.
+ *    ⚠ Il sintomo, per chi usa il prodotto, non e' un errore: e' che per mezzo
+ *    minuto un altro dispositivo si sente rispondere «sei gia' collegato» — ed
+ *    e' esattamente il difetto 6 di B11, che li' era stato curato per la sola
+ *    chiusura VOLONTARIA dentro la pagina.
+ *
+ * ⚠ `pagehide` e non `beforeunload`: il secondo puo' essere ignorato, puo'
+ *   fermare la chiusura con una domanda all'utente, e su mobile spesso non
+ *   arriva.  `pagehide` arriva anche quando la scheda finisce nella cache
+ *   avanti/indietro.
+ *
+ * ⛔ E NON si aspetta: dentro `pagehide` il tempo e' quello che il browser
+ *    concede, non quello che chiediamo.  `congeda()` spedisce il `CONGEDO` e
+ *    poi chiude la sessione col codice — e sono le DUE strade di §3.1, di cui
+ *    la seconda arriva anche quando la prima viene buttata via.  `[M]` 10
+ *    agosto, difetto 2 di B11: Chrome butta un messaggio spedito subito prima
+ *    di chiudere, quindi qui la strada che regge e' il codice di chiusura. */
+window.addEventListener("pagehide", function () {
+  if (congeda_corrente)
+    congeda_corrente(MOT.CHIUSO_DALL_UTENTE, "la scheda e' stata chiusa");
+});
+
 async function collega(utente, parola) {
   if (!("WebTransport" in window)) {
     esito("Questo browser non ha WebTransport: serve Chrome/Edge, Firefox o Safari 26+.", false);
