@@ -393,6 +393,45 @@ gira()
 			u=$?
 		fi
 		spegni ;;
+	B2)
+		# ⛔ La sonda del trasporto legge i parametri che il server DICHIARA
+		#    nella stretta di mano — fra cui il credito di stream
+		#    unidirezionali, che §2.3 vuole «almeno 16».  ⚠ Il tetto
+		#    d'inattivita' atteso e' quello con cui `accendi` lancia il server
+		#    (`--timeout=120s`), non i 30 s predefiniti della sonda: passarlo
+		#    e' la differenza fra misurare e far tornare i conti.
+		accendi sessione "b2-$passo" || { u=99; }
+		if [ "$u" -eq 0 ]; then
+			bash "$ENTRA" --root \
+				"python3 -u $DENTRO/01-b2-sonda-trasporto.py --bersaglio innesto --indirizzo $IND --porta $PORTA --etichetta b12-$passo --idle-atteso 120000 > $uscita_file 2>&1"
+			u=$?
+		fi
+		spegni ;;
+	B3)
+		# ⛔ B3 E' DUE CONNESSIONI, e la seconda e' tutto il banco.
+		#    `LEZIONI.md` §2.1: in v1 il server moriva **alla seconda**, e una
+		#    prova a collegamento singolo resta verde per sempre.  ⭐ Qui si
+		#    riproduce quel che fa `01-b3-lancia.sh` ai punti 1 e 2: la prima
+		#    connessione, poi la seconda **dopo che la prima si e' chiusa**.
+		# ⚠ Il terzo giro (GIA_ATTIVA_REMOTA, le due vive insieme) sta in un
+		#   file suo e NON e' coperto da questa certificazione: si dichiara
+		#   invece di lasciar credere che il denominatore sia quello intero.
+		accendi sessione "b3-$passo" || { u=99; }
+		if [ "$u" -eq 0 ]; then
+			bash "$ENTRA" --root \
+				"python3 -u $DENTRO/01-b3-cliente.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --registra $DENTRO/b12-b3-uno.rcpreg > $uscita_file 2>&1"
+			u=$?
+			inf "prima connessione: uscita $u"
+			bash "$ENTRA" --root \
+				"python3 -u $DENTRO/01-b3-cliente.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --registra $DENTRO/b12-b3-due.rcpreg >> $uscita_file 2>&1"
+			local u2=$?
+			inf "SECONDA connessione: uscita $u2"
+			# ⛔ L'esito del passo e' il PEGGIORE dei due: se la prima passa e
+			#    la seconda no, il banco dev'essere rosso — e' esattamente il
+			#    caso per cui B3 esiste.
+			[ "$u2" -eq 0 ] || u=$u2
+		fi
+		spegni ;;
 	B5)
 		accendi sessione "b5-$passo" || { u=99; }
 		if [ "$u" -eq 0 ]; then
@@ -558,7 +597,15 @@ marca_vista() # $1 = sigla
 		echo "false"
 		return
 	fi
-	if [ -f "$FUORI/b12-uscita.txt" ] && grep -qF "$ago" "$FUORI/b12-uscita.txt"; then
+	# ⛔ IL «--» NON E' PIGNOLERIA — rilievo R12-A.43, 11 agosto 2026.
+	#    La marca di B2 e' «- credito uni DISPONIBILE a RCP all'apertura», e
+	#    comincia con un trattino: senza `--`, `grep` la scambia per
+	#    un'opzione, esce con errore, e questa funzione risponde «marca non
+	#    vista».  ⇒ Il verdetto scriveva «il banco e' rosso ma la sua uscita
+	#    non nomina la marca» su un'uscita che la nominava.
+	# ⚠ E il sintomo e' indistinguibile da quello di una marca sbagliata: e'
+	#   costato due giri di B2 prima di guardare qui invece che nel catalogo.
+	if [ -f "$FUORI/b12-uscita.txt" ] && grep -qF -- "$ago" "$FUORI/b12-uscita.txt"; then
 		echo "true"
 	else
 		echo "false"

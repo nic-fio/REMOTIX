@@ -653,6 +653,9 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | **B6** | ⭐ **certificato — e non era mai stato provato** | `0 → 1 → 0`, marca «⭐ nessuna caduta», cioè la riga che solo un caso `-presto` **caduto** può produrre. Il guasto porta `TETTO_CIAO` da 5000 a 500 ms: ⭐ *la metà del requisito che nessuno scrive è «non prima»* |
 > | ⭐ **B5** | ⭐ **certificato — e non era mai stato provato** | `0 → 1 → 0`, marca «§3.1 punto 3 su «capacita-ripetuta»». ⛔ Il guasto in catalogo **non rompeva niente**: l'appiglio era una stringa di *commento* e il sostituto ci appiccicava accanto la marca — il codice compilato restava identico byte per byte. Rifatto sul **ramo**: `if (ripetuto)` spento, `congeda()` mai chiamato |
 > | ⛔ **B8** | ⛔ **provato e NON certificato**, e il motivo è cambiato | vedi il riquadro qui sotto |
+> | ⭐ **B3** | ⭐ **certificato — e non era mai stato provato** | `0 → 2 → 0`, marca «`CONGEDO invece di SESSIONE: motivo 0x0f = GIA_ATTIVA_REMOTA`». ⛔ L'appiglio in catalogo aveva **due** spazi di rientro dove il file ne ha **quattro**: compariva **zero** volte, e il guasto non si sarebbe innestato. ⭐ Il sintomo col guasto è quello di v1 alla lettera: la prima connessione passa, la seconda si vede rifiutare perché il posto della prima non si è liberato |
+> | ⭐ **B2** | ⭐ **certificato — e ha trovato un difetto vero prima di lasciarsi certificare** | `0 → 1 → 0`, marca «`- credito uni DISPONIBILE a RCP all'apertura`». Vedi il riquadro |
+> | ⛔ **B11** | ⛔ **provato per la prima volta, e NON certificato** | il controllo che dice *no* **funziona** (9 punti contro il server sano); contro quello guasto **un punto** non passa. Vedi il riquadro |
 > | **B13** | ⛔ **non certificabile, e il motivo ha un nome** | vedi il riquadro qui sotto |
 >
 > ⇒ ⭐ **5 certificati su 12 sul codice di oggi**, contro **3 su 12 su un codice che non c'è più**.

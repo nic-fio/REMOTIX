@@ -300,15 +300,47 @@ guasto(
     "B3", "B3", "non si libera la struttura per connessione — il difetto che "
                 "uccise v1 alla SECONDA connessione",
     os.path.join(ESEMPI, "http3_server_proto_codec.cc"),
-    "  rcp_libera(rcp_);\n  rcp_ = nullptr;\n",
-    "  /* " + MARCA + " B3 — la struttura per connessione NON si libera.\n"
-    "   * E' il difetto di v1: la prima connessione passa, la seconda no. */\n",
+    # ⛔⭐ L'APPIGLIO ERA SBAGLIATO, E SI SAREBBE VISTO SOLO AL PRIMO GIRO VERO
+    #     — rilievo R12-A.41, 11 agosto 2026.
+    #
+    # Era `"  rcp_libera(rcp_);\n  rcp_ = nullptr;\n"`, con **due** spazi di
+    # rientro.  `[M]`: nel file vero il rientro e' di **quattro**, e la stringa
+    # compare **zero** volte — mentre `rcp_libera(rcp_)` da sola ne compare
+    # **due**.  ⇒ Il guasto non si sarebbe innestato, e la nota del catalogo
+    # avvertiva del pericolo opposto (l'appiglio troppo comune) senza
+    # accorgersi che quello scritto non c'era affatto.
+    #
+    # ⭐ Il punto giusto e' UNO dei due, e lo dice il file stesso: la riga sopra
+    #    porta il commento *«il posto nel registro delle sessioni si libera
+    #    QUI»*.  Prendendo il commento dentro l'appiglio, il punto diventa
+    #    unico senza dover scegliere fra due righe identiche.
+    # ⚠ `if (0 && rcp_)` invece di cancellare: il blocco resta sotto gli occhi
+    #   del compilatore (niente «codice irraggiungibile», niente variabile non
+    #   usata) e `--togli` torna a un testo identico all'originale.
+    "  // ⭐ REMOTIX B3 — il posto nel registro delle sessioni si libera QUI.\n"
+    "  if (rcp_) {\n",
+    "  /* " + MARCA + " B3 — il posto nel registro delle sessioni NON si\n"
+    "   * libera piu': e' il difetto di v1, dove la prima connessione passa\n"
+    "   * e le successive trovano il registro pieno. */\n"
+    "  if (0 && rcp_) {\n",
     "`LEZIONI.md` §2.1: in v1 un certificato condiviso uccideva il server "
     "**alla seconda** connessione, e una prova a collegamento singolo **resta "
     "verde per sempre**.  ⛔ B3 esiste per questo, e questo guasto e' la forma "
     "esatta del difetto che B3 e' nato per trovare: se B3 resta verde, la "
     "seconda connessione non la sta guardando nessuno",
-    "",
+    # ⛔ LA MARCA E' MISURATA — 11 agosto 2026, e il sintomo e' quello di v1
+    #    alla lettera.  Innestato il guasto, la PRIMA connessione passa e la
+    #    SECONDA si vede rispondere:
+    #      «⛔ RuntimeError: CONGEDO invece di SESSIONE:
+    #        motivo 0x0f = GIA_ATTIVA_REMOTA»
+    # ⭐ Cioe' il posto della prima non si e' liberato, e il server crede che
+    #    l'utente sia ancora collegato altrove.  E' esattamente «la prima passa,
+    #    la seconda no».
+    # ⚠ E la marca NON e' il solo nome del motivo: `GIA_ATTIVA_REMOTA` e' anche
+    #   l'esito ATTESO del terzo giro di B3 (le due connessioni vive insieme),
+    #   dove comparirebbe in verde.  La frase scelta porta con se' «invece di
+    #   SESSIONE», che esiste solo quando quel motivo arriva dove NON doveva.
+    "CONGEDO invece di SESSIONE: motivo 0x0f = GIA_ATTIVA_REMOTA",
     "ricostruisce",
     "fasi/01-filo-nudo.md B12-C1 · LEZIONI.md §2.1 · RCP.md §11",
     nota="⚠ L'appiglio sta nell'ospite, non in `rcp.c`: `rcp_libera()` in "
@@ -543,6 +575,33 @@ guasto(
     "",
     "gia-fatto",
     "fasi/01-filo-nudo.md B11 · banchi/01-b11-guasto-innesta.py",
+    nota="⭐ PROVATO PER LA PRIMA VOLTA l'11 agosto 2026 — e non era «mai "
+         "provato», era **mai lanciato**.  ⚠ Va lanciato **dalla macchina di "
+         "chi guarda**, non dal server: `01-b11-lancia.sh` cerca "
+         "`v1/strumenti/sshpw.py`, che sul server non c'e'.  Lanciato di la' "
+         "muore al passo 2 senza aver applicato nessun guasto (verificato: "
+         "zero marche nei sorgenti e nel binario, porta 7447 libera).\n"
+         "       ⭐ **IL CONTROLLO CHE DICE NO FUNZIONA**, ed e' la meta' che "
+         "vale: la pagina contro il server **SANO** esce NON-CONFORME con "
+         "**9 punti che non passano**.  ⇒ «tutti verdi» contro il server "
+         "guasto non e' compatibile con una pagina che dichiara conforme "
+         "qualunque cosa.\n"
+         "       ⛔ MA B11 NON E' CERTIFICATO, e per un punto solo, nominato: "
+         "contro il server guasto il caso **`respinto-non-riprovare`** "
+         "restituisce **`canale-rotto`** dove l'atteso dice **`muta`** "
+         "(Firefox 140.13.0esr).  ⚠ La pagina distingue un `FIN` da un "
+         "`RESET_STREAM` **apposta** — e' la cura del rilievo R6.12, che "
+         "prima li confondeva e lasciava `fin-sul-controllo` verde senza "
+         "distinguere il fatto che dichiara di misurare.\n"
+         "       ⛔ E QUI NON SI ALLARGA L'ATTESO finche' torna: e' "
+         "esattamente quel che B13 ha insegnato a non fare.  Le due strade "
+         "oneste sono **misurare che cosa manda davvero il server guasto** "
+         "(FIN o reset, dal registro del server) e poi correggere l'atteso "
+         "**o** la pagina — e finche' non e' fatto B11 resta NON "
+         "CERTIFICATO, non «quasi».\n"
+         "       ⚠ E il giro e' su **un motore solo**: Chrome non l'ha "
+         "guardato, quindi non si sa se il punto sia della pagina o del "
+         "trasporto di Firefox.",
 )
 
 # ── B13 — un certificato solo, in due file ─────────────────────────────────
@@ -629,10 +688,14 @@ guasto(
 
 # ── B2 — il credito degli stream che sparisce dai parametri ────────────────
 guasto(
-    "B2", "B2", "si toglie il credito di 16 stream unidirezionali dai "
+    "B2", "B2", "si toglie il credito di 19 stream unidirezionali dai "
                 "parametri di trasporto",
     os.path.join(ESEMPI, "..", "examples", "server.cc"),
-    "params.initial_max_streams_uni = 16;",
+    # ⛔ DICIANNOVE, NON SEDICI — e il numero e' cambiato l'11 agosto 2026
+    #    (R12-A.42) perche' certificando B2 il banco e' risultato rosso SUL
+    #    CODICE SANO: §2.3 vuole 16 **disponibili**, e HTTP/3 se ne prende 3
+    #    prima che RCP ne veda uno.  Con 16 dichiarati la sonda ne misurava 13.
+    "params.initial_max_streams_uni = 19;",
     "/* " + MARCA + " B2 */",
     "§2.3 obbliga il server a concedere **almeno 16** stream unidirezionali. "
     "L'esempio di ngtcp2 ne concede tre di suo, e l'innesto B2 li porta a "
@@ -644,7 +707,19 @@ guasto(
     #    numero accanto, anche quando il numero e' giusto.
     # ⭐ La riga che solo il rosso produce e' il verdetto del controllo, che la
     #    sonda scrive con `NO ` davanti al nome (righe 186-190).
-    "NO  credito INIZIALE stream unidirezionali",
+    # ⛔ LA MARCA E' MISURATA, E LE DUE PRIME SCELTE ERANO SBAGLIATE —
+    #    11 agosto 2026.
+    #    · «NO  credito INIZIALE stream unidirezionali» (quella in catalogo):
+    #      il banco quella frase **non la stampa piu'**, e nessuno se n'era
+    #      accorto perche' B2 non era mai stato provato;
+    #    · «NO  credito uni DISPONIBILE…»: ⛔ fra `NO` e il testo ci sono i
+    #      codici di colore ANSI, e `marca_vista()` cerca con `grep -F` sul
+    #      file COLORATO — non combacerebbe mai.  ⚠ E la stessa frase senza
+    #      `NO` compare anche nel giro sano, preceduta da `OK`.
+    # ⭐ La riga scelta e' quella dell'ELENCO FINALE dei controlli che non
+    #    passano: senza colori, e presente solo quando qualcosa non passa.
+    #    `[M]` sano 0 · guasto 1 · risano 0.
+    "- credito uni DISPONIBILE a RCP all'apertura",
     "ricostruisce",
     "fasi/01-filo-nudo.md B13.5 · RCP.md §2.3",
     nota="⚠ Catalogato e non eseguito in questo giro: costa una ricostruzione "
