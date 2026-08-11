@@ -672,6 +672,38 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > mancante**; **B2** costa una ricostruzione intera; **B3** e **B11** la marca non ce l'hanno;
 > **B10** non ha nemmeno il banco.
 >
+> #### ⭐⭐ `01-b0-terreno.sh` — il controllo che guarda SOTTO i banchi
+>
+> *Nato l'11 agosto 2026, rilievo **R12-A.46**. Non muove il conto di un punto, e protegge tutti.*
+>
+> ⛔ **Due volte nello stesso giorno un banco è stato verde su un terreno che non era quello che
+> credevamo**, e in tutt'e due i casi il banco non aveva nessun motivo di accorgersene: l'innesto
+> RCP sparito da `examples/` (**R12-A.45**) e l'utente `prova` che non lo creava nessuno
+> (**R12-A.44**). ⚠ Nel primo caso **la certificazione di B2 è passata lo stesso** — la sua sonda
+> legge i parametri QUIC e di RCP non sa niente. ⭐ **L'ho preso per caso**, mentre provavo un'altra
+> cosa: senza quella coincidenza starebbe nel registro, datato, e sbagliato in un modo che nessuno
+> ritrova.
+>
+> ⇒ Gira **prima** di ogni giro di certificazione e guarda **14 cose**: i due innesti al loro posto
+> in tutt'e due i file che se li contendono · i tre file che B3 copia dentro `examples/` · che
+> `examples/rcp.c` sia **identico** a `rcp/rcp.c` · che nessun guasto di B12 o di B11 sia rimasto
+> addosso · ⭐ e che **il binario sia più nuovo di tutti i sorgenti che dichiara**. Se non regge, B12
+> **non certifica e non scrive nel registro**.
+>
+> ⭐ **E si è fatto dire di no tre volte prima di essere creduto**: con un guasto di B12 lasciato
+> addosso → rosso; con un pezzo dell'innesto tolto → rosso; e ⭐ **la terza non l'avevo preparata** —
+> il mio stesso giro di prova aveva lasciato `rcp.c` più nuovo del binario, cioè *sorgente sano e
+> binario vecchio*, la trappola **R12-A.6** in persona. Il controllo l'ha trovata da solo.
+>
+> ⚠ **Che cosa non dimostra**: che il server sia *corretto*. Dimostra che è **quello dichiarato** —
+> cioè che i banchi cerchino nel posto giusto. Un server può passare tutti e 14 ed essere pieno di
+> difetti: quelli sono il mestiere dei banchi.
+>
+> ⛔ E la prima stesura sbagliava **nella stessa forma curata quella mattina su S1b** (A31): `grep
+> -c` esce **1** quando non trova niente — che è la risposta «zero», non un errore — e il `|| printf
+> '?'` ci appiccicava un `?` dopo lo zero già stampato. **Cinque falsi rossi in un colpo, dentro il
+> file che esiste per impedirli.**
+
 > #### ⛔⭐ Tre falsi rossi, tutti prodotti da B12 stesso — e sono la parte che vale
 >
 > **R12-A.31 — B12 certificava dove non poteva.** Il lanciatore avvertiva *«B9 e B4 si certificano
