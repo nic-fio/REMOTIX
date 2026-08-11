@@ -1156,6 +1156,16 @@ misurato lo dico.*
 
 ### ⛔ I ripieghi di fase — due che pesano e uno minore, dichiarati qui e non solo in un commento
 
+> ## ⭐ E i due che pesano hanno una SCADENZA, decisa dall'utente alla chiusura della fase
+>
+> *11 agosto 2026, sera. ⛔ Le decisioni stanno in `DECISIONI.md` e qui si rimanda: sotto c'è la
+> conseguenza sulla fase, non la decisione.*
+>
+> | | |
+> |---|---|
+> | **il filo** | **`DECISIONI.md` §1.10** — ⛔ **si cura PRIMA della fase 2**, e con un **processo aiutante** (PAM non è affidabilmente rientrante). ⭐ A spostare la scadenza dalla fase 5 alla 2 è stato **un numero di B8**: il blocco è di **1,0-2,2 s** a tentativo, ⛔ **e a metterlo è PAM**. Fino alla fase 1 il sintomo è *«l'ultimo dei dieci aspetta»*; **dalla fase 2 in poi è lo schermo di chi sta già lavorando che si pianta quando entra qualcun altro**, e chi lo vede lo attribuisce al video. ⛔ **E la proprietà da provare non è «PAM funziona ancora»**: è *«mentre uno si autentica, gli altri non se ne accorgono»* — e **quel banco oggi non esiste** |
+> | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: `SPECIFICHE.md` §5.5 dice di sé che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto. ⚠ **Il prezzo dichiarato**: per due fasi il codice dice **16** e la specifica dice **dieci**. ⛔ E vale per qualunque numero: **nessun banco ha mai visto quel tetto mordere** — riempirlo vuole dieci utenti **diversi** (I2), e il motivo del rifiuto è di fase 3 |
+
 *Rilievo **R12C.17**: stavano scritti in `src/main.c` e `src/rcp.c`, cioè dove non li legge nessuno
 che non stia leggendo quel file — mentre `SPECIFICHE.md` §5.5 e `DECISIONI.md` §4.6 promettono dieci
 sessioni insieme senza una riga che dica il contrario. ⚠ Un ripiego di fase dichiarato nel codice non

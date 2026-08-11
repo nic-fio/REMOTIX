@@ -336,6 +336,15 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > 5 in poi. Sta qui perché il giorno in cui lo sarà, **questo è il posto da cui si riparte**: la
 > verifica va su un filo a parte, e la tabella delle sessioni smette di essere un `#define`.
 > Il confine per intero sta in `fasi/01-filo-nudo.md`, «Che cosa è stato sviluppato».
+>
+> ### ⭐ E i due ripieghi hanno una scadenza, decisa dall'utente l'11 agosto 2026
+>
+> ⛔ *Non si copia qui che cosa è stato deciso: si rimanda dove le decisioni vivono.*
+>
+> | | |
+> |---|---|
+> | **il filo** | **`DECISIONI.md` §1.10** — ⛔ **si cura PRIMA della fase 2**, non alla 5, e con un **processo aiutante**. ⭐ Il numero che ha spostato la decisione l'ha misurato **B8**: il blocco è di **1,0-2,2 s** a tentativo, ⛔ e **a metterlo è PAM** (`+1034 ms` oltre il secondo fisso sui respinti contro `+84` sugli ammessi). Dalla fase 2 in poi quel blocco non fa più aspettare chi entra: **pianta lo schermo di chi sta già lavorando** |
+> | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: qui sopra è scritto che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto e cambiarlo adesso vuol dire cambiarlo due volte. ⚠ **E il prezzo è questa riga**: per due fasi il codice dice **16** e questa sezione dice **dieci**, ed è la stessa forma che ha prodotto il difetto della finestra di cinque minuti (R12C.5) |
 
 ---
 

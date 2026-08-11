@@ -639,6 +639,70 @@ giro** o non prova più niente (`fasi/01-filo-nudo.md`, regola B0.3).
 
 ---
 
+### 1.10 ✅ ⭐ La verifica PAM esce dal filo unico — **prima della fase 2**, e con un processo aiutante
+
+*11 agosto 2026, sera, dall'utente, alla chiusura della fase 1. La domanda gli è stata portata con
+il numero misurato accanto, non come un'ipotesi.*
+
+**Il fatto.** Il server della fase 1 gira in **un ciclo `poll` solo** (`src/main.c`), e la verifica
+PAM **blocca quel filo**. ⛔ Non è una stima: **B8 l'ha misurato la sera dell'11 agosto** —
+`[M]` da **1,0 a 2,2 secondi** per tentativo (mediane **2123 · 2198 · 1086 ms**), e ⭐ **il ritardo
+lo mette PAM, non noi**: il server attende **+1034 ms** oltre il proprio secondo fisso sui respinti
+contro **+84 ms** sugli ammessi, che è la firma di `pam_faildelay`.
+
+**La decisione.** ⛔ **Si cura prima di aprire la fase 2**, e ⭐ **con un processo aiutante, non con
+un filo**: PAM non è affidabilmente rientrante, e un thread porterebbe guai suoi dentro la cura di
+un problema di concorrenza.
+
+> ⭐ **Perché prima della fase 2, e non alla 5 come diceva il ripiego.** Finché non c'è video, il
+> sintomo è *«l'ultimo dei dieci aspetta dieci secondi»*: sgradevole e circoscritto. ⛔ **Dalla fase
+> 2 in poi diventa un altro difetto**: lo schermo di **tutti** quelli collegati si pianta per uno o
+> due secondi ogni volta che **qualcun altro** entra — e chi lo vedrà lo attribuirà al **video**,
+> perché è lì che si vede. ⚠ È la forma «il sintomo non nomina la causa» che `LEZIONI.md` §1.6
+> descrive, e curarla adesso significa **non farla nascere**.
+
+⚠ **E costa poco proprio adesso**: `rcp.c` non si tocca, quindi **le dodici certificazioni dell'11
+agosto restano valide**.
+
+⛔ **La proprietà da provare non è «PAM funziona ancora»**: è **«mentre uno si autentica, gli altri
+non se ne accorgono»** — cioè un secondo client che continua a ricevere pacchetti durante la
+verifica. Oggi **non esiste nessun banco che la guardi**, e senza quel banco la cura è una speranza.
+
+*Conseguenze da scrivere: `SPECIFICHE.md` §5.5 (il riquadro del ripiego, che oggi rimanda alla fase
+5) e `src/main.c` (il commento «UN SOLO FILO, E VA DETTO»).*
+
+---
+
+### 1.11 ✅ Il tetto delle sessioni resta **16, fisso in compilazione**, fino alla fase 3
+
+*11 agosto 2026, sera, dall'utente, alla chiusura della fase 1.*
+
+**Il fatto.** `src/rcp.c` ha `#define MAX_ATTACCATE 16`, mentre `SPECIFICHE.md` §5.5 vuole
+**«tetto predefinito 10 sessioni, configurabile»**.
+
+**La decisione.** ⛔ **Non si cambia adesso.** Il ragionamento che la regge è quello che §5.5 scrive
+di sé: *«il limite vero non è un conteggio: è un **budget** di pixel al secondo, e lo pone il
+codificatore»*. ⇒ Qualunque numero messo oggi è **un segnaposto**, e portarlo a dieci adesso
+significherebbe cambiarlo **due volte**: una per obbedire alla lettera, e una quando arriva il
+budget vero.
+
+⛔ **E il prezzo si dichiara, invece di lasciarlo implicito**: per due fasi **il codice dice 16 e la
+specifica dice 10**, e chi legge una delle due crede di sapere una cosa che l'altra smentisce. ⚠ È
+esattamente la forma che ha prodotto il difetto della **finestra di cinque minuti** (rilievo R12C.5):
+una regola copiata in quattro documenti, e le quattro copie non uguali. ⇒ **La differenza va nominata
+in tutt'e due i posti**, o alla fase 3 ci si arriva credendo che il tetto sia dieci.
+
+⚠ **E l'altra metà, che vale per qualunque numero si scelga**: **nessun banco ha mai visto quel tetto
+mordere**. Riempirlo richiede dieci utenti **diversi** (una seconda connessione dello stesso utente
+prende `GIA_ATTIVA_REMOTA`, **I2**), e il motivo con cui si rifiuta chi arriva è fra quelli che
+vogliono il codificatore. ⛔ Finché non c'è, è **codice presente che nessuno ha visto funzionare** —
+la stessa forma del contatore per indirizzo che **B5** ha trovato: si leggeva bene, e non faceva
+niente.
+
+*Conseguenze da scrivere: `SPECIFICHE.md` §5.5 e `fasi/01-filo-nudo.md`, «I ripieghi di fase».*
+
+---
+
 ## 2. I numeri
 
 ### 2.1 ✅ Minimo: 480p · 25 fps · 24 bit — ed è una garanzia, non un traguardo
