@@ -61,10 +61,14 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > un server che esiste.***
 >
 > `[M]` **11 agosto 2026** (`wc -l`, codice fermo alle 00:36): **22 file**, **9.647 righe**, di cui
-> **5.248 di codice**. ⭐ **Un browser vero apre `https://192.168.0.2:7447`, l'utente digita nome e
-> parola d'ordine, e la stretta di mano di RCP/1 arriva fino a `SESSIONE`** — con i due certificati
-> di §4.1-bis, la pagina servita dal server stesso, il ban di §4.4-bis su file e il suo comando di
+> **5.248 di codice**. ⭐ **La stretta di mano di RCP/1 arriva fino a `SESSIONE` con un browser
+> vero** — con i due certificati di §4.1-bis, il ban di §4.4-bis su file e il suo comando di
 > sblocco. ⛔ Niente video, niente audio, niente input: quelle sono le fasi da 2 in poi.
+> ⚠ *Questa riga diceva* «**un browser vero apre `https://192.168.0.2:7447`**, l'utente digita nome
+> e parola d'ordine … **la pagina servita dal server stesso**», *e il registro di quel giro non ne
+> regge tre pezzi: il browser stava **sulla stessa macchina del server**, la pagina **non l'ha
+> servita il prodotto** (`GET /` zero volte su 48 righe), e la porta era la **7448** — la 7447 è
+> dell'innesto. Corretta l'11 agosto 2026; il conto per esteso è nella tabella qui sotto.*
 > **Il dettaglio, file per file, sta in `fasi/01-filo-nudo.md` §«Che cosa è stato sviluppato».**
 >
 > ⛔ **E quel che NON è provato, che è la metà che non si vede:**
@@ -72,6 +76,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | |
 > |---|---|
 > | ⛔ **UN SOLO MOTORE** | l'unica traccia di un giro con un browser vero contro questo server è un commento dentro `src/pagina.html` — `[M]` 10 agosto notte, **Firefox** — e quel giro ha trovato un difetto vero (la pagina dichiarava `disposizione = en`, che non è un nome XKB). ⛔ **Di Chrome contro questo server non c'è nessuna traccia**, e il criterio di B2 vuole **due motori su due** |
+> | ⛔⛔ **e quel giro è MENO di quel che questa pagina diceva** | `[M]` **11 agosto 2026**, letto in `/media/REMOTIX/src/remotix-browser.log` (48 righe) e ricontato a mano. ⭐ **Quel che regge**: la stretta di mano arriva davvero fino a `SESSIONE` — `sessione aperta utente=prova … tela=1920x1080 vista=1152x836 disposizione=us`, e la vista dispari dice che a chiedere era una finestra vera. ⛔ **Quel che NON regge, e sono due cose**: *(1)* tutte e **19** le connessioni vengono da `[192.168.0.2]`, cioè **dal server stesso** — il giro **non ha attraversato la rete**, e questa pagina lo raccontava come un browser che apre un indirizzo da fuori; *(2)* **`GET /` compare ZERO volte** e `GET /impronta` una: ⛔ **la pagina non l'ha servita il prodotto**. Il secondo mestiere del server della fase 1 — *servire la pagina*, `PIANO.md` fase 1 — **non è misurato da nessuna parte** |
+> | ⚠ **e in quel giro il client non si è congedato** | il posto se n'è andato con `STACCATO per silenzio: 30269 ms … (posti occupati adesso: 0)`. ⛔ A liberarlo è stato **l'orologio**, non un congedo: un banco che aspettasse cinque secondi scriverebbe «il posto non si è liberato» su un server che stava per liberarlo |
 > | ⛔ **e quel giro non è riverificabile** | `[M]` 11 agosto: in `src/` non c'è né il binario né un `.o`, nessun `.jsonl`, e `git status` la dà **untracked**. ⛔ **Nessuno dei 14 script di lancio accende il prodotto**: `bsslserver` compare in **11** di loro, il binario `remotix` in **zero** |
 > | ⛔ **il server intero non l'ha eseguito nessun revisore** | mancavano `ngtcp2`, `nghttp3`, `libssl-dev`, `libpam0g-dev`: `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` sono **letti, non misurati**. ⭐ L'unica esecuzione è `rcp.c` **compilato isolato**, `-Wall -Wextra`, **zero avvisi**, sei ingressi byte per byte |
 > | ⛔ **le proprietà di trasporto non sono state rimisurate su di lui** | le sei di B2 sono `[M]` **sull'innesto**. Il prodotto oggi dichiara **19** stream unidirezionali dove la misura ne leggeva 16 |

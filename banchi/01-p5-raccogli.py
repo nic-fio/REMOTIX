@@ -45,6 +45,7 @@ riga che il 10 agosto 2026 diceva `pass` in `01-b2-raccogli.py` e ha reso
 indistinguibili due difetti.
 """
 import json
+import os
 import sys
 
 from datetime import datetime, timezone
@@ -56,7 +57,17 @@ REGISTRO = QUI / "01-p5-esiti.jsonl"
 
 
 def marca_il_tempo(dati):
-    """Le tre forme dell'istante.  ⛔ Nessuna delle tre e' facoltativa."""
+    """Le tre forme dell'istante, e il bersaglio.  ⛔ Nessuno e' facoltativo.
+
+    ⛔ `bersaglio` e `porta_bersaglio` seguono la convenzione di
+       `01-b0-bersaglio.py`: *«un registro che non dice contro quale server ha
+       misurato mette in fila numeri di due cose diverse»*, e non ha nessun
+       sintomo — i numeri sono tutti buoni, uno per uno.  Li mette il
+       lanciatore nell'ambiente; `ignoto` e' un valore legittimo, l'assenza
+       del campo no.
+    """
+    dati.setdefault("bersaglio", os.environ.get("BERSAGLIO", "ignoto"))
+    dati.setdefault("porta_bersaglio", os.environ.get("PORTA_BERSAGLIO", "ignota"))
     adesso = datetime.now().astimezone()
     dati["ora"] = adesso.isoformat(timespec="milliseconds")
     dati["ora_utc"] = adesso.astimezone(timezone.utc).isoformat(timespec="milliseconds")

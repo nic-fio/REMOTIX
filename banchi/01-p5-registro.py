@@ -56,6 +56,7 @@ il server, quindi il server e' il lato giusto).
 """
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -70,7 +71,26 @@ VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0
 # ===========================================================================
 # Scrittura
 # ===========================================================================
+def marca_il_bersaglio(dati):
+    """⛔ Ogni riga dice CONTRO CHE COSA ha misurato — `01-b0-bersaglio.py`.
+
+    *«Un registro che non dice contro quale server ha misurato mette in fila
+    numeri di due cose diverse»*, e non ha nessun sintomo: i numeri sono tutti
+    buoni, uno per uno.  ⚠ Il caso concreto e' gia' sul disco — i campioni del
+    secondo fisso di B8 esistono in due copie con lo stesso nome e la stessa
+    forma, una contro il prodotto e una contro l'innesto, e nessuna riga dice
+    quale.  Qui il valore arriva dall'ambiente, lo mette il lanciatore, e
+    ⛔ **`ignoto` e' un valore legittimo**: e' diverso da «prodotto» e diverso
+    dall'assenza del campo, che e' la cosa che rende due registri
+    indistinguibili.
+    """
+    dati.setdefault("bersaglio", os.environ.get("BERSAGLIO", "ignoto"))
+    dati.setdefault("porta_bersaglio", os.environ.get("PORTA_BERSAGLIO", "ignota"))
+    return dati
+
+
 def marca_il_tempo(dati):
+    marca_il_bersaglio(dati)
     adesso = datetime.now().astimezone()
     dati["ora"] = adesso.isoformat(timespec="milliseconds")
     dati["ora_utc"] = adesso.astimezone(timezone.utc).isoformat(timespec="milliseconds")
@@ -160,7 +180,22 @@ PASSI = [
     ("sessione",         r"sessione aperta utente=",                     1, None),
     ("congedo-canale",   r"il client si congeda, motivo=",               0, None),
     ("congedo-chiusura", r"la pagina ha chiuso la sessione, motivo",     0, None),
-    ("posto-lasciato",   r"posto LASCIATO da .*occupati adesso: (\d+)",  1, "occupati"),
+    # ⛔ IL POSTO SI LIBERA PER DUE STRADE, E LA SECONDA L'HA INSEGNATA IL
+    #    REGISTRO VERO DEL 10 AGOSTO 2026 (`/media/REMOTIX/src/remotix-browser.log`,
+    #    letto l'11 agosto).  Quel giro non ha **nessuna** riga `posto LASCIATO`:
+    #    il browser e' stato chiuso di colpo, il client non si e' congedato, e il
+    #    posto se n'e' andato trenta secondi dopo con
+    #
+    #      `STACCATO per silenzio: 30269 ms … (posti occupati adesso: 0; …)`
+    #
+    #    ⚠ Un banco che pretendesse solo la prima riga avrebbe dato ROSSO su un
+    #      server che ha fatto il suo mestiere — e il rosso sarebbe finito
+    #      sull'imputato sbagliato.  ⭐ Qui si contano tutt'e due, si giudica il
+    #      NUMERO finale (che deve essere 0) e si dichiara **per quale strada**:
+    #      la differenza fra le due e' precisamente cio' che distingue un client
+    #      che si congeda da uno che sparisce.
+    ("posto-lasciato",   r"posto LASCIATO da .*occupati adesso: (\d+)",  0, "occupati"),
+    ("staccato-silenzio", r"STACCATO per silenzio: .*posti occupati adesso: (\d+)", 0, "occupati"),
     ("byte-dopo-la-fine", r"byte arrivati DOPO la fine",                 0, "zero"),
     ("tentativo-fallito", r"tentativo fallito da ",                      0, None),
     ("bannato",          r"BANNATO l'indirizzo ",                        0, "zero"),
@@ -173,13 +208,17 @@ PASSI = [
 ATTESI = {
     # il giro buono: si arriva a SESSIONE, e il posto si libera alla fine
     "sessione": {
+        "pagina-servita": 1,
         "canale-controllo": 1, "negoziato": 1, "credenziali": 1,
         "pam": "ammesso", "ammesso": 1, "posto-preso": 1, "sessione": 1,
-        "posto-lasciato": 1, "byte-dopo-la-fine": 0, "respinto": 0,
+        "byte-dopo-la-fine": 0, "respinto": 0,
         "tentativo-fallito": 0, "bannato": 0,
+        # ⚠ «posto-lasciato» NON e' qui: il posto si giudica sul NUMERO finale,
+        #   piu' sotto, perche' le strade per liberarlo sono due.
     },
     # il controllo che dice NO, con la parola sbagliata
     "respinto": {
+        "pagina-servita": 1,
         "canale-controllo": 1, "negoziato": 1, "credenziali": 1,
         "pam": "respinto", "respinto": 1, "ammesso": 0, "sessione": 0,
         "posto-preso": 0, "tentativo-fallito": 1, "bannato": 0,
@@ -291,16 +330,34 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     #    numero che lo dice e' «occupati adesso: N» dell'ultima riga
     #    `posto LASCIATO`.
     lasciato = esito["passi"]["posto-lasciato"].get("valori") or []
-    esito["posto_finale_occupati"] = int(lasciato[-1]) if lasciato else None
+    silenzio = esito["passi"]["staccato-silenzio"].get("valori") or []
+    if lasciato and silenzio:
+        strada_posto = "tutt'e due"
+    elif lasciato:
+        strada_posto = "congedo del client (posto LASCIATO)"
+    elif silenzio:
+        strada_posto = "⚠ tetto d'inattivita' (STACCATO per silenzio) — il client NON si e' congedato"
+    else:
+        strada_posto = "NESSUNA"
+    ultimo = (lasciato + silenzio)[-1] if (lasciato or silenzio) else None
+    esito["posto_finale_occupati"] = int(ultimo) if ultimo is not None else None
+    esito["posto_strada"] = strada_posto
     if atteso == "sessione":
         approvati += 1
         if esito["posto_finale_occupati"] != 0:
             print(f"{ROSSO}NO{GRIGIO}  ⛔ IL POSTO NON SI E' LIBERATO: "
-                  f"«occupati adesso» finisce a {esito['posto_finale_occupati']}")
+                  f"«occupati adesso» finisce a {esito['posto_finale_occupati']} "
+                  f"(strada: {strada_posto})")
             print("      §8.2 0x0F — ed e' il difetto che si vede SOLO nella")
             print("      differenza fra i due motori: con un motore solo, questa")
             print("      riga e' verde per il motore sbagliato.")
             guasti += 1
+        elif not lasciato:
+            # ⚠ Non e' un guasto del server: e' un fatto sul CLIENT, e va detto.
+            print(f"{GIALLO}⚠{GRIGIO}   il posto si e' liberato, ma per il tetto "
+                  f"d'inattivita' e non per un congedo: §8.1 impone al client di")
+            print("      dire perche' chiude, e qui non l'ha detto — oppure il")
+            print("      browser e' stato chiuso di colpo dal banco.")
 
     esito["controlli_approvati"] = approvati
     esito["guasti"] = guasti
@@ -334,7 +391,8 @@ def stampa_passi(esito):
     print(f"    --  congedo: sul canale {c.get('sul_canale_di_controllo')}, "
           f"nel codice di chiusura {c.get('nel_codice_di_chiusura')} "
           f"⇒ strada «{c.get('strada')}»")
-    print(f"    --  posto, «occupati adesso» finale: {esito.get('posto_finale_occupati')}")
+    print(f"    --  posto, «occupati adesso» finale: {esito.get('posto_finale_occupati')} "
+          f"— strada: {esito.get('posto_strada')}")
     print(f"    --  controlli approvati: {esito.get('controlli_approvati')}, "
           f"guasti: {esito.get('guasti')}")
 

@@ -69,6 +69,13 @@ MISURA=${MISURA:-1280x1024}
 REG=$QUI/01-p5-registro.py
 T=$(mktemp -d)
 
+# ⛔ OGNI RIGA DEL REGISTRO DICE CONTRO CHE COSA HA MISURATO — la convenzione di
+#    `01-b0-bersaglio.py`.  Qui il bersaglio e' **finto**, e va scritto: senza,
+#    queste righe e quelle del giro contro il prodotto starebbero nello stesso
+#    file con la stessa forma e nessuno saprebbe quali sono quali.
+export BERSAGLIO=finto-locale
+export PORTA_BERSAGLIO=$PORTA
+
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -364,12 +371,42 @@ prova_motore()
 			sleep 1
 			controllo=$(python3 "$REG" battuta --giro "$giro" --da "$nA" 2>/dev/null)
 			if [ -z "$controllo" ]; then
-				fuoco_alla_pagina
-				sleep 1
-				nA=$(righe)
-				X xdotool key --clearmodifiers a >/dev/null 2>&1
-				sleep 1
-				controllo=$(python3 "$REG" battuta --giro "$giro" --da "$nA" 2>/dev/null)
+				# ⛔ E IL RECUPERO E' A TRE MOSSE, PERCHE' LE SCENE PERSE SONO
+				#    DI DUE SPECIE.  `[M]` 11 agosto 2026:
+				#
+				#      Chrome, `ctrl+t`   → una FINESTRA nuova sullo schermo:
+				#                           il fuoco X la riporta indietro;
+				#      Firefox, `ctrl+Tab`→ una SCHEDA nella stessa finestra:
+				#                           ⛔ il fuoco X non serve a niente —
+				#                           la finestra e' gia' quella giusta,
+				#                           e la pagina e' dietro.  Ci vuole
+				#                           una battuta di navigazione fra
+				#                           schede.
+				#
+				#    ⚠ Le mosse di recupero sono battute anche loro, e due di
+				#      esse sono nell'elenco: si danno FUORI dalla finestra di
+				#      misura di ogni riga (prima del segnaposto `n`), quindi
+				#      non entrano in nessun verdetto.  Dichiararlo e' quel che
+				#      le rende innocue.
+				local mossa
+				# ⚠ `Escape` viene per primo, ed e' il caso di Firefox: con una
+				#   sola scheda `ctrl+Tab` non cambia scheda — apre il pannello
+				#   delle anteprime, che si prende il fuoco e che nessuna
+				#   navigazione fra schede richiude.  Il `Tab` all'indietro e
+				#   `ctrl+1` restano per il caso opposto (piu' schede davvero).
+				for mossa in Escape FUOCO ctrl+shift+Tab ctrl+1 F6; do
+					if [ "$mossa" = FUOCO ]; then
+						fuoco_alla_pagina
+					else
+						X xdotool key --clearmodifiers "$mossa" >/dev/null 2>&1
+					fi
+					sleep 1
+					nA=$(righe)
+					X xdotool key --clearmodifiers a >/dev/null 2>&1
+					sleep 1
+					controllo=$(python3 "$REG" battuta --giro "$giro" --da "$nA" 2>/dev/null)
+					[ -n "$controllo" ] && break
+				done
 				[ -z "$controllo" ] && scena_persa=1
 			fi
 		fi
