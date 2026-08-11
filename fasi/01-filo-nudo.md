@@ -637,7 +637,114 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 | **C4** | i due lati si sincronizzano con **marcatori** | `LEZIONI.md` §2.3-quinquies |
 | **C5** | ⛔ **ogni banco confronta il proprio atteso**, e lo stato d'uscita è quello del confronto | ⚠ *La prima stesura citava `00-c1-kwin.sh` come modello: quel file **stampa e non confronta**, ed è un difetto dichiarato aperto nella fase 0. Citato adesso come **il difetto da non ripetere*** (R3.18) |
 
-> ### ⛔ Che cosa B12 ha certificato DAVVERO: **3 su 12** — all'11 agosto 2026
+> ### ⭐ IL GIRO DELL'11 AGOSTO, POMERIGGIO — e la prima cosa da dire è che il conto di stamattina era già scaduto
+>
+> ⛔ **Nessuno dei tre certificati valeva più.** Il registro porta, accanto a ogni certificazione,
+> l'impronta di `rcp.c` con cui è stata fatta: **`d839839f…`**. Oggi `rcp.c` è **`cb7af778…`** —
+> l'hanno cambiato le cure del 10-11 agosto. ⇒ *«3 su 12»* era **3 su 12 su un codice che non esiste
+> più**, ed è esattamente ciò che il registro dice quando lo si legge invece di leggerne il totale.
+>
+> | Banco | Oggi | Come |
+> |---|---|---|
+> | **B4** | ⭐ **certificato** | `0 → 1 → 0`, marca «⛔ atteso il byte» |
+> | **C2** | ⭐ **certificato** | `0 → 1 → 0`, marca «IRRAGGIUNGIBILE» |
+> | **B9** | ⭐ **certificato** | `0 → 3 → 0`, marca «il testo è cambiato sotto il banco». ⭐ **Ma prima ha trovato un difetto vero, e nostro**: il giro sano usciva **3**, perché la voce **L6** citava la vecchia riga 1 di `RCP.md` §4.6 — quella che partiva dalla fine del TLS — e **l'abbiamo corretta noi** l'11 agosto sulla misura di B6. ⛔ Nessun altro banco se ne sarebbe accorto: gli altri sarebbero diventati **più verdi**, non meno. La `[?]` R3.27 è ora registrata come **DECISA**, che non è «sparita» |
+> | **B7** | ⭐ **certificato** | `0 → 1 → 0`, marca «il motivo nel `CONGEDO` sul canale: assente» — ⛔ e la riserva del 10 agosto (*«marca non discriminante, 37 occorrenze»*) **è chiusa**: la marca di oggi nel giro sano non compare |
+> | **B13** | ⛔ **non certificabile, e il motivo ha un nome** | vedi il riquadro qui sotto |
+>
+> #### ⛔⭐ Tre falsi rossi, tutti prodotti da B12 stesso — e sono la parte che vale
+>
+> **R12-A.31 — B12 certificava dove non poteva.** Il lanciatore avvertiva *«B9 e B4 si certificano
+> dove stanno i loro file»* e poi li lanciava lo stesso. `[M]`: sul server **`RCP.md` non esiste** —
+> lì arrivano i banchi, non i documenti — B9 è uscito **4** e il registro ha scritto **«B9 NON
+> certificato»**. ⛔ È **la forma opposta del falso verde**, e costa uguale: un banco sano marchiato
+> rosso manda a cercare un difetto che non c'è, e il registro se lo porta dietro con una data.
+> ⭐ Cura: `--provabile` guarda se i file su cui la certificazione poggia ci sono, e il lanciatore si
+> **rifiuta** invece di misurare. *«Non posso provarlo qui»* e *«l'ho provato e non passa»* sono due
+> fatti.
+>
+> **R12-A.32 — B6 era certificabile, e l'obiezione in catalogo non reggeva.** Diceva che il guasto
+> non si può innestare perché *«`01-b6-lancia.sh` ricopia il sorgente a ogni giro»*. ⭐ Tutt'e due le
+> metà dell'obiezione parlano del **lanciatore**, e **B12 non lo usa**: chiama il programma del
+> banco. Aggiunta la riga di comando, coi tetti **letti** dal sorgente compilato invece che scritti a
+> mano. ⚠ E va detto che cosa questa certificazione **non** copre: certifica `01-b6-tetti.py`, non il
+> confronto sorgente/binario che sta nel lanciatore.
+>
+> **R12-A.33 — `--bersaglio` è diventato obbligatorio e i chiamanti sono rimasti indietro. Tre volte
+> in due giorni.** Il 10 agosto su `01-b6-lancia.sh` e `01-b3-quarto-giro.sh`; oggi su
+> `01-b12-lancia.sh`, che chiamava B7 **senza `--bersaglio`** e con un `--sorgente` che non esiste
+> più: il giro ha scritto **«B7 NON certificato»** su un banco sano.
+>
+> ⭐ **Da cui un banco nuovo: `banchi/01-b0-chiamate.py`** — *chi chiama un banco gli passa quel che
+> il banco pretende?* Legge gli `add_argument` con l'AST, scioglie le variabili di shell definite nel
+> file, e distingue **tre** esiti: approvata · rotta · **IGNOTA** (una variabile che potrebbe
+> nascondere il nome di un'opzione). Ha subito trovato **R12-A.33-bis**: `01-b8-lancia.sh` chiamava
+> il cronometro senza `--bersaglio` né `--porta`, quindi il passo *«che cosa mi aspetto, prima di
+> misurare»* stampava da giorni **un messaggio d'uso di argparse** — e non faceva fallire niente.
+>
+> ⛔ **E scriverlo ha insegnato quattro cose, tutte misurate, tutte sullo stesso tema:**
+> · accusava **21** righe di *esempio* dentro le spiegazioni. ⭐ Un controllo che grida sul falso non
+>   viene ignorato meno di uno che tace: viene ignorato **insieme ai suoi veri**;
+> · un filtro troppo stretto ha fatto sparire le chiamate `python3 -u` **in silenzio** — le viste
+>   sono passate da **83 a 22** e il conto sembrava soltanto più pulito. ⛔ Una copertura che cala
+>   senza dirlo è un banco che smette di guardare, e si vede **solo dal denominatore**;
+> · *«c'è un `$` ⇒ ignota»* rendeva ignote **26 righe su 34**, ⛔ compresa quella che aveva appena
+>   rotto B7. La domanda giusta non è «c'è una variabile», è **«quella variabile può nascondere il
+>   nome di un'opzione?»**;
+> · ⭐⭐ e il più istruttivo: unendo le opzioni del modulo condiviso avevo preso quelle **ammesse** e
+>   non quelle **pretese**. Risultato: la riga per B6 che avevo appena scritto — **senza
+>   `--bersaglio`** — il controllo l'ha dichiarata **approvata**, e il giro di certificazione ha
+>   scritto «B6 NON certificato» su un errore mio che lo strumento nato per trovarlo aveva guardato e
+>   promosso. ⛔ **Allargare le maglie per far tacere i falsi si porta via i veri nella stessa
+>   mossa**, e non si vede, perché il conto dei rossi scende — che è precisamente l'aspetto di un
+>   progresso.
+>
+> ⚠ E le tre accuse superstiti **le ho lanciate davvero** invece di dedurle: due erano false (B7 ha
+> una scorciatoia `--elenco` prima di `parse_args`) e una vera. Curarle tutt'e tre avrebbe rotto due
+> chiamate funzionanti per far tacere il mio stesso strumento.
+>
+> #### ⛔⭐ B13: la parola d'ordine in un indirizzo — e il banco aveva ragione da ieri
+>
+> B13 non si certifica perché **il suo soggetto è davvero rotto**, ed è la regola giusta: si lascia
+> NON CERTIFICATO invece di allargare l'atteso finché torna. Oggi il difetto ha un nome — **rilievo
+> R12-A.34**.
+>
+> `B13.2` — *«la parola d'ordine compare in 1 registri su 1288»* — indicava
+> `sonda/racc.log`. ⛔ Non era un registro stantio da cancellare: **`sonda/lancia.sh` passava le
+> credenziali nella query dell'indirizzo** (`&utente=prova&parola=…`), e la query fa parte della
+> **riga di richiesta HTTP**, che ogni server registra per mestiere.
+>
+> ⚠ E la stessa pagina, venti righe più sotto, stampava *«CREDENZIALI mandate (la parola non compare
+> in nessun registro)»*: una frase che si smentiva da sola nel file accanto.
+>
+> ⛔ **E il difetto era più largo del registro**: la parola stava anche nella sessione salvata di
+> **due profili Firefox** (`prof-ammesso`, `prof-respinto`), perché l'indirizzo è passato dalla
+> cronologia.
+>
+> ⭐ **Cura**: le credenziali passano nel **frammento** (`#`), che il browser **non manda al
+> server** — quindi non entra in nessun registro HTTP, né nostro né di un proxy in mezzo. ⛔ E la
+> seconda metà, che da sola avrebbe reso la cura una finzione: `lancia.sh` **stampava l'indirizzo**
+> sul terminale, e il terminale di un giro finisce in un file come tutto il resto — adesso lo stampa
+> mascherato.
+>
+> ⚠ **Che cosa la cura non chiude, detto qui e non altrove**: il frammento resta nella **cronologia**
+> del browser. Per un banco con una parola di prova va bene; ⛔ **una pagina di prodotto non deve
+> prendere la parola d'ordine da nessun pezzo dell'indirizzo**.
+>
+> ⛔ **E i registri sporchi NON sono stati cancellati**: farlo prima di aver verificato la cura
+> sarebbe rendere B13 verde **buttando la prova**. Si buttano il giorno in cui un giro nuovo della
+> sonda ne produce di puliti. ⚠ Resta inoltre aperta `B13.4` (*«qualcuno ascolta in TCP ma la pagina
+> non si carica»*): B13 non si certifica finché non passano tutt'e due.
+>
+> ⭐ **E la cartella `sonda/` non era nel deposito**: come i quattordici file del 10 agosto, viveva
+> solo sul server. Adesso sta in `banchi/sonda/`.
+>
+> ---
+>
+> ### ⛔ Che cosa B12 ha certificato DAVVERO: **3 su 12** — all'11 agosto 2026, *mattina*
+>
+> ⚠ *Il riquadro qui sotto è lo stato di stamattina, ed è tenuto perché spiega da dove si partiva.
+> Il conto di oggi sta nel riquadro qui sopra.*
 >
 > *Scritto qui perché è la domanda che vale doppio, e la risposta non stava in nessun documento: il
 > `README.md` diceva «sei verdi» nello stesso momento in cui il registro di B12 ne certificava due.

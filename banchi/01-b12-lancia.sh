@@ -418,7 +418,7 @@ gira()
 			accendi sessione "b6-$passo" || { u=99; }
 			if [ "$u" -eq 0 ]; then
 				bash "$ENTRA" --root \
-					"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --fase sani --idle 120000 --tetti-codice $tc > $uscita_file 2>&1"
+					"python3 -u $DENTRO/01-b6-tetti.py --bersaglio innesto --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --fase sani --idle 120000 --tetti-codice $tc > $uscita_file 2>&1"
 				u=$?
 			fi
 			spegni

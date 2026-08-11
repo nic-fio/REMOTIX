@@ -83,6 +83,20 @@ PROFILO = {
         #     e il rosso che ne esce il 10 agosto 2026 e' stato diagnosticato
         #     per ore come «difetto del certificato».
         "eco": True,
+        # ⛔⭐ IL TETTO DI §7.17 — sessione WebTransport aperta e canale di
+        #     controllo mai aperto, 5 s — QUESTO SERVER NON CE L'HA.
+        #
+        # `[M]` 11 agosto 2026, misurato da B6 in un giro di certificazione:
+        # `ciao-senza-controllo` resta appeso **20 s senza che succeda niente**.
+        # ⭐ E il banco aveva ragione: la cura di §7.17 e' `WT_TETTO_CANALE_NS`
+        # in `src/webtransport.c`, cioe' nel PRODOTTO.  L'innesto e' l'esempio
+        # di ngtcp2 con gli innesti sopra, e uno strato WebTransport suo non ce
+        # l'ha — quel tetto non ha un posto dove vivere.
+        # ⚠ E' la stessa forma di `spegnimento`: una proprieta' che esiste su un
+        #   bersaglio solo, dichiarata invece che scoperta a ogni giro.
+        # ⛔ Senza questa riga B6 non si puo' CERTIFICARE: il giro sano esce 1,
+        #   e un banco che non parte dal verde non dimostra niente col guasto.
+        "tetto_canale": False,
     },
     "prodotto": {
         "porta": 7448,
@@ -121,6 +135,10 @@ PROFILO = {
         #    aspettarla): qui si dichiara, perche' un'assenza tollerata e
         #    un'assenza mai avvenuta non devono avere lo stesso aspetto.
         "eco": False,
+        # ⭐ `WT_TETTO_CANALE_NS` in `src/webtransport.c`, armato
+        #    all'apertura della sessione (`cb_end_headers`) e fatto
+        #    valere in `wt_batti`.  `DECISIONI.md` §7.17.
+        "tetto_canale": True,
     },
 }
 

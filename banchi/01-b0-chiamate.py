@@ -263,9 +263,31 @@ def giro(elenco_solo=False):
                     and aiuto != nome and aiuto[:-3] in open(
                         os.path.join(QUI, nome), encoding="utf-8",
                         errors="ignore").read()):
-                _, sue, _c = opzioni_di(os.path.join(QUI, aiuto))
+                sue_obb, sue, _c = opzioni_di(os.path.join(QUI, aiuto))
                 if sue:
                     tutte = tutte | sue
+                # ⛔⭐ E ANCHE LE SUE **OBBLIGATORIE**, che alla prima stesura
+                #     non prendevo — ed e' il difetto piu' istruttivo di questo
+                #     file, perche' l'ho fatto **curando i falsi positivi**.
+                #
+                # `[M]` 11 agosto 2026, un'ora dopo aver scritto questo
+                # controllo: la riga che avevo appena aggiunto in
+                # `01-b12-lancia.sh` per B6 era senza `--bersaglio`, e il
+                # controllo l'ha dichiarata **approvata**.  `--bersaglio` non
+                # e' dichiarato dal banco: glielo aggiunge `b0.aggiungi_
+                # argomenti(p)`, e io avevo unito le opzioni **ammesse** dal
+                # modulo comune senza unire quelle **pretese**.
+                # ⇒ Il giro di certificazione ha scritto «B6 NON certificato»
+                #   su un errore mio, che lo strumento nato per trovarlo aveva
+                #   guardato e approvato.
+                # ⭐ La lezione non e' la riga mancante: e' che **allargare le
+                #   maglie per far tacere i falsi si porta via i veri nella
+                #   stessa mossa**, e non lo si vede perche' il conto dei rossi
+                #   scende — che e' precisamente l'aspetto di un progresso.
+                if sue_obb and "aggiungi_argomenti" in open(
+                        os.path.join(QUI, nome), encoding="utf-8",
+                        errors="ignore").read():
+                    obb = obb | sue_obb
         if tutte:
             banchi[nome] = (obb, tutte, corte)
 

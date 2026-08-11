@@ -959,6 +959,34 @@ async def principale(a):
     casi = [c for c in CASI if c["fase"] == a.fase
             and (not a.solo or a.solo in c["nome"])]
 
+    # ⛔⭐ IL TETTO DI §7.17 NON ESISTE SU TUTT'E DUE I BERSAGLI, e si dichiara
+    #     invece di scoprirlo a ogni giro — rilievo R12-A.35, 11 agosto 2026.
+    #
+    # `[M]`: contro l'INNESTO il caso `ciao-senza-controllo` resta appeso **20 s
+    # senza che succeda niente**, e B6 esce 1.  ⭐ E ha ragione: la cura di
+    # §7.17 e' `WT_TETTO_CANALE_NS` in `src/webtransport.c`, cioe' nel prodotto.
+    # L'innesto e' l'esempio di ngtcp2 e uno strato WebTransport suo non ce l'ha
+    # — quel tetto non ha un posto dove vivere.
+    #
+    # ⚠ E' la stessa forma di `server-in-chiusura` in B7, e si tratta allo
+    #   stesso modo: si toglie il caso E SI DICE, invece di lasciar credere che
+    #   il numeratore e il denominatore siano quelli di sempre.
+    # ⛔ Senza, B6 non si puo' CERTIFICARE contro l'innesto: il giro sano non
+    #   parte dal verde, e un banco gia' rosso col guasto e' una tautologia.
+    if not b0.profilo(a.bersaglio).get("tetto_canale", True):
+        tolti = [c["nome"] for c in casi if c["tetto"] == "CANALE"]
+        casi = [c for c in casi if c["tetto"] != "CANALE"]
+        if tolti:
+            print(f"    {GIALLO}⚠ TOLTI su «{a.bersaglio}»: {', '.join(tolti)}"
+                  f"{GRIGIO}")
+            print(f"       ⛔ Il tetto di §7.17 (sessione aperta, canale mai "
+                  f"aperto) e' del PRODOTTO:")
+            print(f"       `WT_TETTO_CANALE_NS` sta in `src/webtransport.c`, e "
+                  f"questo bersaglio non")
+            print(f"       ha uno strato WebTransport suo dove metterlo.")
+            print(f"       ⚠ Non e' «passato»: e' NON PROVATO qui, e il "
+                  f"denominatore lo dice.")
+
     # ⛔ ZERO CASI NON E' «TUTTI PASSATI» — la lezione di R7.15 su B5.  Un
     #    errore di battitura nel filtro non deve avere il colore del verde.
     if not casi:
