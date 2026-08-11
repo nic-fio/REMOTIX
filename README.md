@@ -63,6 +63,10 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > #### ⭐⭐ LE CERTIFICAZIONI: **12 su 14**, e stamattina erano 3 — su un codice che non esiste più
 >
+> ⚠ *E stanotte sono **7 su 14**: non perché qualcuna sia fallita, ma perché la cura del congedo ha
+> cambiato `rcp.c` e `RCP.md` sotto sette di loro. Il conto aggiornato, con i nomi, sta due riquadri
+> più sotto.*
+>
 > ⛔ **E il denominatore è cambiato di sera, quindi i due numeri non si sottraggono.** Il catalogo di
 > B12 è passato da **12 a 14 voci** (sono entrati **P1** e **P5**, i due banchi che guardano il
 > prodotto), e ⚠ **i «14 banchi» e le «14 voci» non sono gli stessi 14**: il catalogo comprende
@@ -77,6 +81,29 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >  1  provato e NON certificato    P5   (per un punto solo, e su un motore solo)
 >  0  mai provati                  —    ⭐ la riga che stamattina non c'era
 > ```
+>
+> ⛔⛔ **E QUESTO CONTO È SCADUTO POCHE ORE DOPO ESSERE STATO SCRITTO — `[M]` la notte fra l'11 e il
+> 12 agosto 2026, `01-b12-guasti.py --registro`:**
+>
+> ```
+> banchi nel catalogo: 14
+>  7  certificati e valgono oggi   B2 B4 B10 B11 C2 P1 P5
+>  7  certificazione SCADUTA       B3 B5 B6 B7 B8 B13 (rcp.c è cambiato) · B9 (RCP.md è cambiato)
+>  0  non riverificabili           —   ⭐ P1 e P5 adesso si riverificano anche da CHUWI
+>  0  provati e NON certificati    —
+>  0  mai provati                  —
+> ```
+>
+> ⭐ **E la causa non è una svista: è la cura del congedo.** `DECISIONI.md` §1.12 — la cura fuori
+> fase decisa dall'utente — ha toccato **`rcp.c`** e **`RCP.md`**, cioè i file su cui poggiavano
+> quelle sette certificazioni. ⇒ **Curare il prodotto fa scadere le certificazioni che lo
+> guardavano, ed è esattamente quel che il registro deve dire**: la riga vale per quei byte, non per
+> questi. ⛔ *«Scaduta» non è «fallita»*, e non è nemmeno «pulita»: quei sette **vanno rieseguiti**,
+> e finché non lo sono valgono come **non certificati**.
+>
+> ⚠ E i due che si sono aggiunti al verde non sono la stessa cosa: **P5** è stato certificato
+> stanotte con i tre giri; **P1** era già certificato dal pomeriggio, e a cambiare è che adesso la
+> sua riga **si può riverificare da CHUWI** — prima il file che nomina non si leggeva di qua.
 >
 > ⛔ **E va detto che cosa vale come garanzia, perché non è lo stesso numero.**
 > `banchi/01-b0-terreno.sh` — il controllo che guarda **sotto** i banchi, nato oggi perché **due
@@ -232,38 +259,36 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⛔⭐ DA QUI SI RIPRENDE — la notte fra l'11 e il 12 agosto 2026, **a metà di P5**
+> ### ⭐⭐⭐ P5 È CERTIFICATO — la notte fra l'11 e il 12 agosto 2026, **0 → 1 → 0**
 >
-> *Il lavoro si è fermato su richiesta dell'utente per riavviare la macchina dei browser (CHUWI),
-> dentro il terzo giro sano di P5. ⛔ Quel giro è **annullato e dichiarato** in
-> `banchi/01-p5-esiti.jsonl`: nessun `VERDETTO-MOTORE` è stato scritto, e non conta né a favore né
-> contro.*
->
-> **Che cosa è già in cassa** — tutto committato, albero pulito:
+> *I tre giri della certificazione sono stati fatti per intero contro la copia curata sulla **7501**,
+> con i browser su CHUWI e il prodotto su NIC-OS — cioè con il filo attraversato davvero.*
 >
 > | | |
 > |---|---|
-> | ⭐⭐ **la gamba `p-sessione` di P5 è CONFORME su TUTT'E DUE i motori** | `[M]` 15 controlli, **0 guasti**, Chrome **e** Firefox: il congedo per tutt'e due le strade col motivo `0x01`, `violazione-31` a **zero**, il posto preso e lasciato. ⇒ **Il difetto che teneva P5 fuori dalla certificazione non c'è più** |
-> | ⭐ **tre cure di prodotto e tre di banco**, tutte misurate | prodotto: l'ancora di `congeda_corrente` (`pagina.html`) e il `posto LASCIATO` sulla strada del congedo (`rcp.c`). Banco: la scena a due schede, il contatore che legge `motivo 0x01`, la scena ripulita prima di ogni browser, e la striscia dei dati di Firefox |
-> | ⭐ **e la gamba N2 gira, per la prima volta** | bastava poter passare da `sudo`: `SSH_ROOT` sceglie il portatore dei comandi privilegiati, e lo sblocco di §4.4-bis risponde `PONG` |
+> | ⭐ **il giro sano: VERDE su tutt'e due i motori** | n1 giusta/storpiata `ok`, `n2-parola-sbagliata` **11 controlli 0 guasti**, `p-sessione` **15 controlli 0 guasti**, su Chrome **e** su Firefox |
+> | ⭐ **il giro col guasto: ROSSO, e nomina la cosa giusta** | *«la pagina pubblica «AAAA…=» e l'endpoint dice «PJ03…=»: sono due impronte diverse per lo stesso certificato di sessione»* — il difetto **R1.14** di `RCP.md` §4.1-bis |
+> | ⭐ **e la marca è una marca**: `[M]` compare **0 volte nel sano, 1 nel guasto, 0 nel risanato**, contate sui tre giri di quella notte — non su una misura di ieri |
+> | ⭐ **il giro risanato: VERDE**, e il binario è tornato **identico byte per byte** | `d69df441…` → `117911ca…` → `d69df441…`: che il guasto sia entrato e poi uscito lo dice l'impronta del binario, non il colore del verdetto |
 >
-> **Che cosa manca**, ed è la certificazione vera e propria — **tre giri, in quest'ordine**:
+> ⛔ **E il guasto dimostra meno di quel che il suo titolo dice — va letto prima di credere alla
+> riga sopra.** Con l'impronta falsa nella pagina, le gambe `p-sessione` restano **CONFORMI**: la
+> sessione WebTransport **si apre lo stesso**. ⭐ La ragione è del prodotto, ed è §4.1-bis applicato:
+> `pagina.html` **ritira `/impronta` prima di ogni tentativo** e usa quella, tenendo l'impronta
+> servita solo come ripiego — e quando le due divergono **lo dice**. ⇒ Il guasto prova che **P5 vede
+> la divergenza**, che è ciò per cui P5 esiste; **non** prova che la divergenza uccida la sessione,
+> perché su questo prodotto non la uccide.
 >
-> 1. ⏳ **il giro sano**, verde su tutt'e due i motori (interrotto dal riavvio: si rifà da capo);
-> 2. **il giro col guasto innestato**, che deve uscire **rosso** — il guasto è in catalogo
->    (`01-b12-guasti.py`, voce `P5`): la pagina pubblica un'impronta di sessione **diversa** da
->    quella che `/impronta` dichiara, cioè il difetto **R1.14** di `RCP.md` §4.1-bis. La marca da
->    vedere **solo** nel rosso è *«sono due impronte diverse per lo stesso certificato di sessione»*;
-> 3. **il giro risanato**, di nuovo verde.
+> ⛔ **E il primo tentativo di giro sano è uscito ROSSO con tutt'e quattro le gambe CONFORMI**: il
+> registro del server aveva un buco di **37.120 byte NUL** — `svuota-registro` chiamato con il server
+> vivo — e `grep`, diventato cieco, leggeva «NON LETTO» dove c'era il nostro indirizzo, mandando lo
+> sblocco di §4.4-bis **sul server stesso**. Tre cure, tutte rimisurate; la lezione sta in
+> `LEZIONI.md` §1.9 punto 9.
 >
-> ⛔ **Fra un passo e l'altro ci vanno DUE cose, non una**: `costruisci.sh` sulla copia **e** il
-> server riacceso su quel binario. P5 non ricostruisce da sé — trova un server acceso e lo interroga
-> — quindi saltarne una lo farebbe misurare il binario di prima **con l'aria di aver innestato**.
->
-> **Lo stato della macchina di prova**, da verificare prima di ripartire:
+> **Come si rifà**, se serve rieseguirla:
 >
 > ```
-> # il bersaglio: una COPIA del prodotto CURATO, porta 7501, ban e socket suoi
+> # il bersaglio: una COPIA del prodotto, porta 7501, ban e socket suoi
 > bash /media/REMOTIX/enter.sh --root "bash /srv/src/01-p5-accendi.sh accendi"
 >
 > # il giro, DA CHUWI (i browser stanno di qua)
@@ -273,10 +298,12 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   SCHERMO=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
 > ```
 >
-> ⚠ Se il riavvio ha portato via anche il server, `01-p5-accendi.sh copia` rifà copia e costruzione
-> (`GEMELLO=/srv/src/rcp`). ⛔ E la certificazione che ne verrà sarà **contro la copia sulla 7501**:
-> il server di casa sulla **7448** gira ancora il binario di stamattina, **senza** le due cure di
-> stanotte, e chi lo interrogasse misurerebbe il prodotto di prima.
+> ⛔ **Fra un passo e l'altro ci vanno DUE cose, non una**: `costruisci.sh` sulla copia **e** il
+> server riacceso su quel binario. P5 non ricostruisce da sé — trova un server acceso e lo interroga
+> — quindi saltarne una lo farebbe misurare il binario di prima **con l'aria di aver innestato**.
+> ⚠ Se manca la copia, `01-p5-accendi.sh copia` la rifà e la ricostruisce (`GEMELLO=/srv/src/rcp`);
+> ⛔ e **non si usa `copia` per rifare il binario dopo un innesto**, perché ricopia dal prodotto e
+> il guasto sparisce senza dirlo.
 >
 > #### ⭐⭐ IL PRODOTTO ESISTE: `src/`, il server della fase 1 in C
 >

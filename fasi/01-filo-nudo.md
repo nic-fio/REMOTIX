@@ -1171,9 +1171,32 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > ha dato un rosso, ha detto **SENZA-DENOMINATORE**. È il controllo aggiunto curando la scena, e ha
 > funzionato al primo caso vero.
 >
-> ⏳ **Quel che manca è la certificazione**, e sono i tre giri `sano → guasto → sano`: il primo è
-> stato interrotto dal riavvio della macchina dei browser ed è **annullato e dichiarato** in
-> `01-p5-esiti.jsonl`. Il seguito sta in `README.md`, «DA QUI SI RIPRENDE».
+> ⭐⭐⭐ **E LA CERTIFICAZIONE È FATTA: `0 → 1 → 0`** — `[M]` la notte fra l'11 e il 12 agosto 2026,
+> i tre giri `sano → guasto → sano` per intero contro la copia sulla **7501**, con i browser su
+> CHUWI e il prodotto su NIC-OS. `01-b12-registro.jsonl`, riga delle 21:02 su CHUWI, con l'impronta
+> dei tre file su cui poggia.
+>
+> | | |
+> |---|---|
+> | ⭐ **sano: VERDE su due motori** | n1 giusta/storpiata `ok`, N2 **11 controlli 0 guasti**, `p-sessione` **15 controlli 0 guasti**, Chrome **e** Firefox |
+> | ⭐ **guasto: ROSSO, e nomina la cosa giusta** | *«la pagina pubblica «AAAA…=» e l'endpoint dice «PJ03…=»: sono due impronte diverse per lo stesso certificato di sessione»* — il difetto **R1.14** |
+> | ⭐ **e la marca è una marca** | `[M]` **0** volte nel sano, **1** nel guasto, **0** nel risanato — contate sui tre giri di quella notte, non su una misura di ieri |
+> | ⭐ **risanato: VERDE, e il binario torna identico** | `d69df441…` → `117911ca…` → `d69df441…`: che il guasto sia entrato e poi uscito lo dice **l'impronta del binario**, non il colore del verdetto |
+>
+> ⛔ **E il guasto dimostra MENO di quel che il suo titolo dice.** Con l'impronta falsa nella pagina
+> le gambe `p-sessione` restano **CONFORMI**: la sessione **si apre lo stesso**. ⭐ La ragione è del
+> prodotto ed è §4.1-bis applicato — `pagina.html` **ritira `/impronta` prima di ogni tentativo** e
+> usa quella, tenendo l'impronta servita solo come ripiego, e **dice** quando le due divergono.
+> ⇒ Il guasto prova che **P5 vede la divergenza**, che è ciò per cui P5 esiste; **non** prova che la
+> divergenza uccida la sessione, perché su questo prodotto non la uccide. ⚠ Il sintomo descritto in
+> R1.14 resta quello di un prodotto che l'impronta **non** la ritira.
+>
+> ⛔⭐ **E il primo tentativo di giro sano è uscito ROSSO con tutt'e quattro le gambe CONFORMI** — la
+> contraddizione fra la tabella e la riga finale era il sintomo. L'imputato l'ha nominato una riga
+> che `grep` stampa da sé: `binary file matches`. Il registro del server aveva un **buco di 37.120
+> byte NUL** (`svuota-registro` chiamato a server vivo), `grep` diventava cieco **con stato d'uscita
+> 0**, e il banco mandava lo sblocco di §4.4-bis **sul server invece che su di noi**. Tre cure,
+> tutte rimisurate; la lezione è `LEZIONI.md` §1.9 punto 9.
 >
 > ✅ **E la cura è un cambiamento di prodotto dopo la chiusura della fase, quindi è stata
 > DICHIARATA**: `DECISIONI.md` §1.12, dall'utente la stessa notte. ⛔ **La fase 1 non si riapre** e
@@ -1182,6 +1205,10 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > con lo stesso rigore della fase. ⇒ Alla fase 2 passa la **ricertificazione di P5**, che non passava
 > proprio per questo difetto — ⚠ e vuole prima la cura della sua scena, che chiude ancora `ctrl+w`
 > sull'**unica** scheda.
+> ⭐ *Aggiornamento della stessa notte: la scena è curata, e **la ricertificazione di P5 non passa
+> più alla fase 2 — è fatta**, qui sopra. ⛔ Quel che passa alla fase 2 è invece la **riesecuzione di
+> sette certificazioni scadute**: la cura di §1.12 ha toccato `rcp.c` e `RCP.md`, e `--registro` le
+> conta come non certificate — B3, B5, B6, B7, B8, B13 e B9. Il conto sta in `README.md`.*
 >
 > ⚠ *Un giro è stato **annullato**, e sta scritto in `01-p5-ff-esiti.jsonl`: il **PC dei browser si è
 > resettato a giro aperto** alle 18:40. L'ultima traccia al server è `ffm-183953-29125-fedele-avvio`,

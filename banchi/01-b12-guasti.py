@@ -1006,8 +1006,29 @@ guasto(
     "ricostruisce",
     "fasi/01-filo-nudo.md P5 · RCP.md §4.1-bis (R1.14) · README.md «CHE COSA "
     "FARE ADESSO» punto 5",
-    nota="⭐⭐ **AGGIORNATO LA NOTTE FRA L'11 E IL 12 AGOSTO 2026 — I QUATTRO "
-         "OSTACOLI DELL'ELENCO IN FONDO SONO TRE FATTI E UNO IN CORSO.**\n"
+    nota="⭐⭐⭐ **P5 E' CERTIFICATO — `[M]` la notte fra l'11 e il 12 agosto "
+         "2026, contro la copia sulla 7501: 0 → 1 → 0.**  Giro sano VERDE su "
+         "tutt'e due i motori, giro col guasto ROSSO con la marca, giro "
+         "risanato VERDE — e la frase-marca compare **0 volte nel sano, 1 nel "
+         "guasto, 0 nel risanato**, contate sui tre giri di quella notte e non "
+         "su una misura di ieri.\n"
+         "       ⭐ E il binario risanato e' tornato `d69df441…`, cioe' **lo "
+         "stesso byte per byte** di quello del giro sano: il guasto non e' "
+         "rimasto addosso al codice, e non e' dedotto dal verde.\n"
+         "       ⛔⭐ **E IL GUASTO DIMOSTRA MENO DI QUEL CHE IL SUO TITOLO "
+         "DICE, ed e' giusto scriverlo.**  Con l'impronta falsa nella pagina, "
+         "le gambe `p-sessione` restano CONFORMI su tutt'e due i motori: la "
+         "sessione WebTransport **si apre lo stesso**.  ⭐ La ragione e' del "
+         "PRODOTTO ed e' §4.1-bis applicato: `pagina.html` **ritira "
+         "`/impronta` prima di ogni tentativo** e usa quella, tenendo "
+         "l'impronta servita solo come ripiego — e quando le due divergono lo "
+         "DICE («il certificato e' stato ruotato…»).  ⇒ Quel che questo guasto "
+         "prova e' che **P5 vede la divergenza**, che e' cio' per cui P5 "
+         "esiste; ⛔ NON prova che la divergenza uccida la sessione, perche' su "
+         "questo prodotto non la uccide.  ⚠ Il sintomo descritto in R1.14 "
+         "resta quello di un prodotto che l'impronta NON la ritira.\n"
+         "       ⭐ **AGGIORNATO LA NOTTE FRA L'11 E IL 12 AGOSTO 2026 — I "
+         "QUATTRO OSTACOLI DELL'ELENCO IN FONDO SONO CADUTI TUTTI E QUATTRO.**\n"
          "       ⭐ **1 — il congedo di Firefox: CURATO NEL PRODOTTO E "
          "MISURATO.**  L'imputato era la pagina (`congeda_corrente` azzerato un "
          "millisecondo dopo `SESSIONE`), su tutt'e due i motori; la cura e' in "
@@ -1024,13 +1045,19 @@ guasto(
          "       ⭐⭐ **E IL RISULTATO CHE CONTA**: `[M]` la gamba `p-sessione` "
          "e' **CONFORME su TUTT'E DUE i motori** — 15 controlli, 0 guasti, "
          "`violazione-31` a zero, il posto preso e lasciato.\n"
-         "       ⏳ **4 — i tre giri sano → guasto → sano: DA FARE.**  Il primo "
-         "e' stato interrotto dal riavvio della macchina dei browser ed e' "
-         "annullato e dichiarato in `01-p5-esiti.jsonl`.  ⛔ Il bersaglio e' la "
-         "copia sulla **7501**, che si accende con `01-p5-accendi.sh` (la "
-         "ricetta che stava in prosa qui sotto adesso e' un file, e un file non "
-         "lo si ricopia a mano sbagliando).  Il seguito sta in `README.md`, "
-         "«DA QUI SI RIPRENDE».\n"
+         "       ⭐ **4 — i tre giri sano → guasto → sano: FATTI**, la notte "
+         "fra l'11 e il 12 agosto 2026, contro la copia sulla **7501** accesa "
+         "con `01-p5-accendi.sh`.  ⛔ Fra un passo e l'altro sono andate DUE "
+         "cose e non una — `costruisci.sh` sulla copia **e** il server "
+         "riacceso — e che siano andate lo dice l'impronta del binario, che "
+         "cambia (`d69df441…` → `117911ca…` → `d69df441…`) invece di essere "
+         "creduta.\n"
+         "       ⛔ E il primo tentativo di giro sano e' uscito ROSSO con "
+         "tutt'e quattro le gambe CONFORMI: il registro del server aveva un "
+         "buco di **37.120 byte NUL** — `svuota-registro` chiamato a server "
+         "vivo — e `grep` diventato cieco leggeva «NON LETTO» dove c'era il "
+         "nostro indirizzo, mandando lo sblocco sul SERVER.  Curato in tre "
+         "punti e rimisurato (`LEZIONI.md` §1.9 punto 9).\n"
          "       ⚠ *Quel che segue e' la fotografia della sera dell'11, tenuta "
          "perche' spiega da dove si partiva — e perche' il verdetto vecchio si "
          "corregge con una misura nuova, non cancellandolo.*\n"
@@ -1191,7 +1218,49 @@ def risolvi(p):
     return p.replace("{CERT}", CERT) if p else p
 
 
+# ⛔⭐ DOVE UN FILE STA SU QUESTA MACCHINA, E NON E' SEMPRE UN POSTO SOLO —
+#     cura della notte fra l'11 e il 12 agosto 2026.
+#
+# `remotix/pagina.c` e' il sorgente DEL PRODOTTO.  Sulla macchina di prova sta
+# accanto ai banchi (`/srv/src/remotix/`); su CHUWI — da cui si certificano P1 e
+# P5, perche' i browser stanno di qua — lo stesso file sta in `../src/`.  ⛔ Il
+# catalogo cercava solo il primo posto, quindi da CHUWI l'impronta valeva `None`
+# e `--registro` declassava P5 a «certificazione NON RIVERIFICABILE» — dopo un
+# giro 0 → 1 → 0 fatto per intero, con la marca vista solo nel rosso.
+#
+# ⚠ «Non ho guardato» non e' «non e' cambiato», e quella severita' resta giusta:
+#   la cura non e' ammorbidire il giudizio, e' GUARDARE ANCHE NELL'ALTRO POSTO.
+#
+# ⭐ E che i due posti siano lo stesso file non e' dedotto: `[M]` 11 agosto 2026,
+#    `sha256(pagina.c)` = `930b611a906e8051…` su tutt'e tre le copie — quella di
+#    CHUWI (`../src/`), quella del server (`remotix/`) e quella su cui il giro
+#    ha girato (`01-b12-copie/p5-remotix/`).
+#
+# ⛔ E la chiave nel registro resta il NOME DI CATALOGO, non il posto in cui si
+#    e' trovato: due giri su due macchine diverse devono poter confrontare la
+#    stessa riga.  Il posto si dichiara a schermo, non si nasconde e non
+#    cambia l'etichetta.
+ALTRI_POSTI = {
+    "remotix/pagina.c": ["../src/pagina.c"],
+}
+
+
+def dove_sta(nome):
+    """Il percorso da cui `nome` si legge QUI, o None se non c'e' da nessuna
+    parte.  ⚠ Prova prima il posto di catalogo, poi quelli dichiarati sopra."""
+    primo = os.path.join(QUI, nome)
+    if os.path.exists(primo):
+        return primo
+    for altro in ALTRI_POSTI.get(nome, []):
+        p = os.path.join(QUI, altro)
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def impronta_file(p):
+    if p is None:
+        return None
     try:
         with open(p, "rb") as f:
             return hashlib.sha256(f.read()).hexdigest()
@@ -1223,7 +1292,7 @@ def provabile(sigla):
         return 1
     mancanti = 0
     for nome in g.get("file_che_contano", []):
-        if not os.path.exists(os.path.join(QUI, nome)):
+        if dove_sta(nome) is None:
             print(f"MANCA {nome}")
             mancanti += 1
     return 1 if mancanti else 0
@@ -1238,7 +1307,7 @@ def impronte_di(sigla):
     """
     fuori = {}
     for nome in GUASTI.get(sigla, {}).get("file_che_contano", []):
-        fuori[nome] = impronta_file(os.path.join(QUI, nome))
+        fuori[nome] = impronta_file(dove_sta(nome))
     return fuori
 
 
@@ -1977,7 +2046,15 @@ def mostra_impronte(sigla):
             print(f"    {GIALLO}[?]{GRIGIO} {nome:34s} ⛔ non si legge da qui "
                   f"— «non ho guardato» non e' «non e' cambiato»")
         else:
+            # ⭐ E SI DICHIARA DA DOVE L'HA LETTO quando non e' il posto di
+            #    catalogo: un'impronta letta altrove e' una misura buona, ma
+            #    solo se chi legge la riga sa su che file e' stata fatta.
+            posto = dove_sta(nome)
+            atteso = os.path.join(QUI, nome)
             print(f"    --  {nome:34s} {sha[:32]}…")
+            if posto and os.path.abspath(posto) != os.path.abspath(atteso):
+                print(f"        ⚠ letto da «{os.path.relpath(posto, QUI)}» — su "
+                      f"questa macchina il file di catalogo sta li'")
     print(f"\n    --  {len(imp)} file, {len(imp) - ciechi} letti, "
           f"{ciechi} non leggibili da questa macchina")
     return 0 if ciechi == 0 else 3

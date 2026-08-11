@@ -329,6 +329,38 @@ risultato entra nel documento come un fatto misurato.
 > «nessun guasto». *Un banco che confronta ogni caso con un caso di controllo identico a sé
 > distingue «il guasto non c'è» da «la pagina non lo vede» prima di accusare qualcuno.*
 
+> ### ⛔ 9. Troncare un registro che qualcuno tiene aperto non lo azzera: ci scava dentro un buco
+>
+> *La nona veste, della notte fra l'11 e il 12 agosto 2026, e ha prodotto un **rosso falso** su un
+> giro in cui tutt'e quattro le gambe erano CONFORMI.*
+>
+> `: > registro.log` su un file che il server tiene aperto lo porta a lunghezza zero, ⛔ **ma non
+> sposta l'offset di chi ci scrive**: alla riga dopo il kernel riempie di NUL tutto quel che sta
+> prima. `[M]` il registro di P5 si è ritrovato con **37.120 byte NUL in testa su 66.289**, e il
+> testo vero che comincia subito dopo.
+>
+> ⛔ **E il modo in cui acceca è silenzioso, che è la parte che vale la lezione**: `grep` che
+> incontra un NUL smette di stampare le righe e dice `binary file matches` — ⛔ **con lo stesso
+> stato d'uscita 0**. Quindi `grep -c` continuava a contare, e il *controllo positivo del canale di
+> lettura* del banco diceva «sano»; era `grep | sed` a ricevere quella frase al posto della riga.
+> Il banco ha letto «non ho potuto sapere con che indirizzo il server ci vede» e ha mandato il
+> comando di sblocco su **192.168.0.2, cioè il server stesso** — che ha risposto *«non era
+> bannato»*, come risponderà sempre. ⚠ Una dichiarazione vera su un soggetto sbagliato.
+>
+> ⚠ **E il difetto viveva in un solo strumento**: a segmentare lo stesso registro era un programma
+> Python, che il buco non ferma — quindi le gambe passavano. *Due strumenti che leggono lo stesso
+> file possono vederne due cose diverse, e quello che tace non è quello che ha ragione.*
+>
+> ⭐ **Tre regole, non una**:
+> 1. **un registro si azzera dove si azzera davvero** — quando nessuno lo tiene aperto (allo
+>    spegnimento, o riaccendendo), e chi offre un comando «svuota» lo fa **rifiutare** a processo
+>    vivo, spiegando perché;
+> 2. **`grep -a` su ogni file da cui dipende un verdetto**: il costo è nullo, e senza, un solo byte
+>    fuori posto trasforma una riga di prova in una frase su sé stesso;
+> 3. ⭐ **e il buco si dichiara invece di essere aggirato** (§1.9 regola 4): il banco adesso conta i
+>    NUL e li scrive, così «il registro non dice» e «il registro non l'ho potuto leggere» restano
+>    due frasi diverse.
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque
