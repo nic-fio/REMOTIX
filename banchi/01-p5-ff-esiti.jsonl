@@ -76,3 +76,15 @@
 {"banco":"P5-FF","giro":"185736-31960","motore":"chrome","variante":"tenace","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":0,"cc_nulla":0,"cc_presente":0,"congeda_chiamata":0,"write_avviata":0,"write_risolta":0,"fin_canale":0,"close_prima":0,"close_dopo":0,"srv_canale":1,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":1,"srv_motivo_giusto":2,"srv_lasciato":0,"srv_silenzio":0}
 {"banco":"P5-FF","giro":"185736-31960","motore":"chrome","variante":"codice","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":0,"cc_nulla":0,"cc_presente":0,"congeda_chiamata":0,"write_avviata":0,"write_risolta":0,"fin_canale":0,"close_prima":0,"close_dopo":0,"srv_canale":0,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":0,"srv_motivo_giusto":1,"srv_lasciato":1,"srv_silenzio":0}
 {"banco":"P5-FF","giro":"185736-31960","tipo":"SBLOCCO","quando":"dopo"}
+{"banco":"P5-FF","giro":"192650-31228","tipo":"SBLOCCO","quando":"prima"}
+{"banco":"P5-FF","giro":"192650-31228","motore":"firefox","variante":"fedele","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":1,"cc_nulla":0,"cc_presente":1,"congeda_chiamata":1,"write_avviata":1,"write_risolta":1,"fin_canale":1,"close_prima":1,"close_dopo":1,"srv_canale":1,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":1,"srv_motivo_giusto":2,"srv_lasciato":1,"srv_silenzio":0}
+{"banco":"P5-FF","giro":"192650-31228","tipo":"SBLOCCO","quando":"dopo"}
+{"banco":"P5-FF","giro":"192813-17122","tipo":"SBLOCCO","quando":"prima"}
+{"banco":"P5-FF","giro":"192813-17122","motore":"firefox","variante":"fedele","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":1,"cc_nulla":0,"cc_presente":1,"congeda_chiamata":1,"write_avviata":1,"write_risolta":1,"fin_canale":1,"close_prima":1,"close_dopo":1,"srv_canale":1,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":1,"srv_motivo_giusto":2,"srv_lasciato":1,"srv_silenzio":0}
+{"banco":"P5-FF","giro":"192813-17122","tipo":"SBLOCCO","quando":"dopo"}
+{"banco":"P5-FF","giro":"192936-23449","tipo":"SBLOCCO","quando":"prima"}
+{"banco":"P5-FF","giro":"192936-23449","motore":"chrome","variante":"fedele","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":0,"cc_nulla":0,"cc_presente":0,"congeda_chiamata":0,"write_avviata":0,"write_risolta":0,"fin_canale":0,"close_prima":0,"close_dopo":0,"srv_canale":1,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":1,"srv_motivo_giusto":2,"srv_lasciato":1,"srv_silenzio":0}
+{"banco":"P5-FF","giro":"192936-23449","tipo":"SBLOCCO","quando":"dopo"}
+{"banco":"P5-FF","giro":"193057-24756","tipo":"SBLOCCO","quando":"prima"}
+{"banco":"P5-FF","giro":"193057-24756","motore":"chrome","variante":"fedele","gesto":"ctrl-w-due","gesto_fatto":"fatto","sessione":1,"pagehide":0,"cc_nulla":0,"cc_presente":0,"congeda_chiamata":0,"write_avviata":0,"write_risolta":0,"fin_canale":0,"close_prima":0,"close_dopo":0,"srv_canale":1,"srv_chiusura":1,"srv_viol31":0,"srv_fin_nudo":1,"srv_motivo_giusto":2,"srv_lasciato":1,"srv_silenzio":0}
+{"banco":"P5-FF","giro":"193057-24756","tipo":"SBLOCCO","quando":"dopo"}

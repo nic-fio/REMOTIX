@@ -1112,6 +1112,37 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > servita da un server a parte: il prodotto di casa non è stato acceso, e vale la riga di sempre —
 > *«nessun banco ha mai acceso `src/`»*.
 >
+> #### ⛔⭐ E LA CURA NE HA SCOPERTA UN'ALTRA SOTTO: **il posto che si libera in silenzio**
+>
+> *Trovata curando la scena di P5, `[M]` la tarda serata dell'11 agosto 2026 — e non cercandola.*
+>
+> ⛔ **Il difetto.** `src/rcp.c` libera il posto in **quattro** punti, e **tre** lo scrivono nel
+> registro. Il quarto — `CONGEDO` ricevuto dal client — no. ⇒ Sulla strada che **§8.1 impone**, cioè
+> quella che il prodotto sano percorre sempre, il registro **non porta nessun** `posto LASCIATO`.
+>
+> ⚠ **E il posto si liberava davvero**: `[M]` dodici sessioni di fila nei registri della sera, e
+> **ogni** `posto PRESO` successivo dice `occupati adesso: 1`. Non era una perdita — era che
+> **l'invariante §8.2 `0x0F` non si poteva più osservare**. ⛔ E la conseguenza è concreta: P5
+> **giudica il numero finale** di `occupati adesso`, non lo trovava, e avrebbe scritto *«IL POSTO NON
+> SI È LIBERATO»* su un server che aveva fatto il suo mestiere — un rosso all'imputato sbagliato, la
+> settima veste di `LEZIONI.md` §1.9 per la **terza** volta in questa fase.
+>
+> ⭐ **Ed era invisibile fino a stanotte**: prima della cura del congedo il client non si congedava
+> **mai**, quindi quel ramo non veniva percorso e il posto se ne andava sempre per il tetto
+> d'inattività — che la sua riga la scrive. ⇒ **La cura ha scoperto il difetto che la cura stessa
+> rendeva raggiungibile.**
+>
+> | il giudice di P5 sullo stesso genere di segmento | guasti |
+> |---|---|
+> | prima della cura del congedo (Chrome) | ⛔ **2** — *«nessun congedo per nessuna delle due strade»* **+** *«violazione-31 trovate=1 atteso=0»* |
+> | curato il congedo, non ancora il posto | ⛔ **1** — *«IL POSTO NON SI È LIBERATO»*, **e era falso** |
+> | curato anche il posto | ⭐ **0**, strada *«congedo del client (posto LASCIATO)»* — `[M]` **due giri per motore**, quattro su quattro |
+>
+> ⛔ **E «zero guasti» non vuol dire «P5 è certificato».** Quel che è verde è **il giudice di P5 su
+> un segmento vero** prodotto dal prodotto curato; il **giro di P5** — col suo guasto innestato, le
+> due colonne e tutta l'impalcatura — **non è stato fatto**. Sono due parole diverse, e questa fase
+> le ha già confuse una volta.
+>
 > ✅ **E la cura è un cambiamento di prodotto dopo la chiusura della fase, quindi è stata
 > DICHIARATA**: `DECISIONI.md` §1.12, dall'utente la stessa notte. ⛔ **La fase 1 non si riapre** e
 > la certificazione resta **12 su 14** com'è stata consegnata — questa sezione è un'**appendice

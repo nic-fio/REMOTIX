@@ -2182,9 +2182,35 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			    ld < sizeof dett ? dett
 			                     : "(piu' lungo del campo: non riportato)");
 			s->stato = S_FINITA;
+			/* ⛔⭐ E IL POSTO LASCIATO SI SCRIVE, come negli altri tre punti —
+			 * cura della tarda serata dell'11 agosto 2026.
+			 *
+			 * Questo era l'unico dei quattro luoghi che liberano il posto a NON
+			 * chiamare `reg()`: `rcp_libera`, `rcp_pagina_ha_chiuso` e
+			 * `rcp_canale_chiuso` lo scrivono tutti.  ⛔ E il buco stava
+			 * precisamente sulla strada che §8.1 IMPONE — il client che si
+			 * congeda — cioe' la piu' battuta di tutte quando il prodotto e'
+			 * sano.
+			 *
+			 * ⚠ Il posto si liberava davvero: `[M]` 11 agosto 2026, dodici
+			 *   sessioni di fila nei registri di `01-p5-ff-*`, e ogni «posto
+			 *   PRESO» successivo dice «occupati adesso: 1».  Il difetto non era
+			 *   una perdita, era che **l'invariante §8.2 `0x0F` non si poteva
+			 *   piu' osservare**: P5 giudica il numero finale di «occupati
+			 *   adesso», e su questa strada nessuna riga lo portava. ⇒ Il banco
+			 *   avrebbe scritto «IL POSTO NON SI E' LIBERATO» su un server che
+			 *   aveva fatto il suo mestiere — un rosso all'imputato sbagliato,
+			 *   che e' la settima veste di `LEZIONI.md` §1.9.
+			 *
+			 * ⛔ E prima della cura del congedo era INVISIBILE: il client non si
+			 *    congedava mai, quindi questa riga non veniva mai percorsa e il
+			 *    posto se ne andava sempre per il tetto d'inattivita', che la
+			 *    sua riga la scrive. */
 			if (s->attaccata) {
 				posto_lascia(s->utente);
 				s->attaccata = false;
+				reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)",
+				    s->utente, s->provenienza, posti_occupati());
 			}
 			/* ⭐ Lo stesso numero che il registro ha appena scritto: una sola
 			 * verita' sul fatto, su tutt'e due le strade di §3.1. */

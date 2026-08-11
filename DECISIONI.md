@@ -724,7 +724,34 @@ proprio per questo difetto. ⚠ E vuole prima la cura della sua scena — `01-p5
 ancora `ctrl+w` **sull'unica scheda**, dove Firefox **esce** e non esce niente per nessuna via: senza
 quella cura il giro nuovo sarebbe rosso per la scena, non per il prodotto.
 
-*Conseguenze scritte: `fasi/01-filo-nudo.md` (riquadro P5 e la tabella dei difetti) e `README.md`.*
+> ### ⭐ E la stessa notte la regola ha retto una SECONDA volta — il posto muto
+>
+> *Dall'utente, poche ore dopo, curando la scena di P5.* ⛔ `src/rcp.c` libera il posto in quattro
+> punti e **tre** lo scrivono nel registro: sulla strada del `CONGEDO` — quella che **§8.1 impone**,
+> cioè quella che il prodotto sano percorre sempre — il `posto LASCIATO` **non veniva scritto**.
+>
+> ⚠ Il posto si liberava davvero (`[M]` dodici sessioni, ogni `posto PRESO` successivo dice
+> `occupati adesso: 1`): il difetto **non era una perdita, era che l'invariante §8.2 `0x0F` non si
+> poteva più osservare**. ⇒ P5 giudica quel numero, non lo trovava, e avrebbe dato **un rosso a un
+> server sano**.
+>
+> **La decisione è la stessa di §1.12, e per le stesse tre ragioni**: si cura nel prodotto (una riga
+> di registro, identica alle tre sorelle), **fuori fase e dichiarata**, e la fase 1 resta a 12 su 14.
+> ⭐ Le ragioni che la reggono qui sono anche più semplici: è **additiva** — scrive quel che già
+> succede, non cambia un comportamento — e ripara un buco che rende **non verificabile** un'invariante
+> che il documento di fase dichiara verificata.
+>
+> ⭐ **Misurata**: `[M]` due giri per motore, quattro su quattro `PRESO(1) → si congeda 0x01 →
+> LASCIATO(0)`, e il giudice di P5 passa da **1 guasto falso** a **0**. ⛔ *E «zero guasti» non vuol
+> dire «P5 certificato»: quel che è verde è il giudice su un segmento vero, non il giro di P5.*
+>
+> ⚠ **E il prezzo dichiarato**: il binario del prodotto è stato **ricostruito** sulla macchina di
+> prova, e `RCP.md` §0-bis porta i numeri nuovi di `rcp.c` (2.592 righe, `md5` `1adce15b…`) — quella
+> casella dichiara che `src/rcp.c` e `banchi/rcp/rcp.c` sono identici byte per byte, e a farlo
+> rispettare è il `Makefile`, che li confronta a ogni costruzione.
+
+*Conseguenze scritte: `fasi/01-filo-nudo.md` (riquadro P5 e la tabella dei difetti), `README.md` e
+`RCP.md` §0-bis.*
 
 ---
 

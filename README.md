@@ -187,9 +187,19 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   riusasse quel tracciatore altrove deve saperlo.
 > - ⛔ **P5 non si certifica** per quel punto solo — il resto del suo giro sano è verde su Chrome.
 >   ⭐ **E adesso la causa non c'è più**, ma il giro nuovo **non è stato fatto**: si fa alla fase 2
->   (`DECISIONI.md` §1.12), ⚠ e **prima va curata la scena di P5**, che chiude ancora `ctrl+w`
->   sull'**unica** scheda — dove Firefox esce e non esce niente per nessuna via. ⛔ *«Curato»* non
->   vuol dire *«certificato»*: sono due parole diverse, e questa fase le ha già confuse una volta.
+>   (`DECISIONI.md` §1.12). ⛔ *«Curato»* non vuol dire *«certificato»*: sono due parole diverse, e
+>   questa fase le ha già confuse una volta.
+>   ⭐ **La scena di P5 è curata la stessa notte** — due schede, così `ctrl+w` chiude **la scheda** e
+>   non fa uscire Firefox — e con lei il contatore che l'avrebbe resa inutile: `01-p5-registro.py`
+>   pretende adesso **`motivo 0x01`** invece di *«una chiusura qualunque»*, e conta la riga di
+>   **violazione §3.1** con atteso zero. ⚠ *Provato su registri veri: il segmento pre-cura di Chrome
+>   — quello su cui il banco vecchio stampava «la pagina fa quel che §8.1 le impone» — adesso è
+>   **rosso con due guasti**.*
+>   ⭐⭐ **E curando la scena è saltato fuori un terzo difetto**: sulla strada del `CONGEDO` il server
+>   liberava il posto **senza scriverlo nel registro** (l'unico dei quattro punti a non farlo). Il
+>   posto si liberava davvero — ⛔ ma l'invariante **§8.2 `0x0F` non era più osservabile**, e P5
+>   avrebbe dato un rosso a un server sano. Curato e misurato (`DECISIONI.md` §1.12): il giudice di
+>   P5 passa da **1 guasto falso** a **0**, due giri per motore.
 > - ⛔ ~~La parola d'ordine nei registri sporchi~~ — **chiusa**: cura verificata con un giro nuovo,
 >   **33 file** buttati con la traccia. ⚠ **Resta** la parola sulla riga di comando dei banchi
 >   (quindi in `ps`) per `parola-di-prova`; ⭐ **per la parola generata di `prova2` no**: B10 la passa

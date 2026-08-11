@@ -75,8 +75,13 @@ in poi questo documento si tocca **solo** come dice §9, senza sconti.
 >
 > ⛔ **Le implementazioni di RCP/1 che esistono, contate l'11 agosto 2026** `[M]` (`wc -l`,
 > `md5sum`):
-> · `src/rcp.c` + `rcp.h` — **2.566 / 197 righe**, dentro il server di prodotto;
-> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `cb7af778…` e `0458f154…`);
+> · `src/rcp.c` + `rcp.h` — **2.592 / 197 righe**, dentro il server di prodotto;
+> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `1adce15b…` e `0458f154…`);
+>   ⚠ *`rcp.c` diceva **2.566 righe** e `md5` `cb7af778…`: sono cambiati la tarda serata dell'11
+>   agosto 2026, per la riga di registro del **posto lasciato** sulla strada del congedo — la cura
+>   sta nel codice, commentata. ⛔ E i due numeri si aggiornano **insieme**, o la riga che dichiara
+>   l'identità delle due copie diventa una promessa che nessuno verifica: a farla rispettare è il
+>   `Makefile`, che confronta `src/` con `banchi/rcp/` e si ferma se divergono.*
 > · `banchi/01-b3-cliente.py` — **il secondo lettore**, in un altro linguaggio;
 > · `src/pagina.html` — il terzo, in JavaScript;
 > · e due che leggono il formato senza parlarlo: `banchi/01-b4-validatore.py` (l'arbitro meccanico)
