@@ -650,7 +650,22 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | **C2** | ⭐ **certificato** | `0 → 1 → 0`, marca «IRRAGGIUNGIBILE» |
 > | **B9** | ⭐ **certificato** | `0 → 3 → 0`, marca «il testo è cambiato sotto il banco». ⭐ **Ma prima ha trovato un difetto vero, e nostro**: il giro sano usciva **3**, perché la voce **L6** citava la vecchia riga 1 di `RCP.md` §4.6 — quella che partiva dalla fine del TLS — e **l'abbiamo corretta noi** l'11 agosto sulla misura di B6. ⛔ Nessun altro banco se ne sarebbe accorto: gli altri sarebbero diventati **più verdi**, non meno. La `[?]` R3.27 è ora registrata come **DECISA**, che non è «sparita» |
 > | **B7** | ⭐ **certificato** | `0 → 1 → 0`, marca «il motivo nel `CONGEDO` sul canale: assente» — ⛔ e la riserva del 10 agosto (*«marca non discriminante, 37 occorrenze»*) **è chiusa**: la marca di oggi nel giro sano non compare |
+> | **B6** | ⭐ **certificato — e non era mai stato provato** | `0 → 1 → 0`, marca «⭐ nessuna caduta», cioè la riga che solo un caso `-presto` **caduto** può produrre. Il guasto porta `TETTO_CIAO` da 5000 a 500 ms: ⭐ *la metà del requisito che nessuno scrive è «non prima»* |
 > | **B13** | ⛔ **non certificabile, e il motivo ha un nome** | vedi il riquadro qui sotto |
+>
+> ⇒ ⭐ **5 certificati su 12 sul codice di oggi**, contro **3 su 12 su un codice che non c'è più**.
+>
+> ⚠ **E il numero dipende da dove lo si chiede — R12-A.36.** Il registro viveva in **due copie**,
+> una per macchina, e nessuna delle due sapeva dell'altra: il server dava «B9 NON certificato»
+> mentre sul portatile B9 era certificato da un'ora. ⭐ Unite (il file è quello versionato,
+> `banchi/01-b12-registro.jsonl`, e la copia del server ne è ora un riflesso). ⛔ Ma anche unite, il
+> server dice **4 su 12** e il portatile **5 su 12**, e ⭐ **hanno ragione tutt'e due**: sul server
+> `RCP.md` non c'è, quindi la certificazione di B9 non si può *riverificare* lì — e lo strumento
+> scrive *«non si può dire se valga oggi»* invece di arrotondarlo a «certificato». ⇒ Il numero è
+> **5**, e va detto **dove** si legge.
+> ⚠ E i due che restano provabili subito sono **B5** e **B8**, tutt'e due fermi sulla **marca
+> mancante**; **B2** costa una ricostruzione intera; **B3** e **B11** la marca non ce l'hanno;
+> **B10** non ha nemmeno il banco.
 >
 > #### ⛔⭐ Tre falsi rossi, tutti prodotti da B12 stesso — e sono la parte che vale
 >
