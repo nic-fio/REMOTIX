@@ -87,6 +87,27 @@ bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
 ok "sudo validato"
 
 # ---------------------------------------------------------------------------
+# ⛔⭐ IL TERRENO, PRIMA DI TUTTO — rilievo R12-A.46, 11 agosto 2026.
+#
+# B12 costruisce guasti e legge rossi.  ⛔ Ma un rosso vale solo se il verde da
+# cui parte era su un server **che e' quello dichiarato**, e l'11 agosto due
+# volte non lo era: l'innesto RCP sparito da `examples/` (R12-A.45) e l'utente
+# `prova` che non lo creava nessuno (R12-A.44).
+# ⚠ Nel primo caso la certificazione di B2 **e' passata lo stesso**, su un
+#   server senza meta' del prodotto dentro — perche' la sua sonda legge i
+#   parametri QUIC e di RCP non sa niente.
+# ⭐ Qui si guarda prima di misurare, e si rifiuta: un giro di certificazione
+#    su un terreno ignoto scrive nel registro una riga con una data, e quella
+#    riga poi la si crede.
+log "0. ⛔ Il terreno (B0.1): il server e' quello che credo?"
+if ! bash "$FUORI/01-b0-terreno.sh" innesto; then
+	ko "⛔ NON CERTIFICO NIENTE: il terreno non regge."
+	ko "   ⚠ E NON scrivo nel registro — un giro che non ha misurato niente"
+	ko "   non e' un giro con zero certificati."
+	exit 2
+fi
+
+# ---------------------------------------------------------------------------
 # ⛔ LA SENTINELLA: «vuoto» non e' «zero» — rilievo R12-A.7, e la cura era gia'
 #    scritta in questa stessa cartella, in `01-b11-guasto.sh:92-129`.
 #
