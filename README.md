@@ -232,7 +232,51 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⛔ SI RIPARTE DA QUI — l'11 agosto 2026 *(la mattina — tenuto perché spiega da dove si partiva)*
+> ### ⛔⭐ DA QUI SI RIPRENDE — la notte fra l'11 e il 12 agosto 2026, **a metà di P5**
+>
+> *Il lavoro si è fermato su richiesta dell'utente per riavviare la macchina dei browser (CHUWI),
+> dentro il terzo giro sano di P5. ⛔ Quel giro è **annullato e dichiarato** in
+> `banchi/01-p5-esiti.jsonl`: nessun `VERDETTO-MOTORE` è stato scritto, e non conta né a favore né
+> contro.*
+>
+> **Che cosa è già in cassa** — tutto committato, albero pulito:
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **la gamba `p-sessione` di P5 è CONFORME su TUTT'E DUE i motori** | `[M]` 15 controlli, **0 guasti**, Chrome **e** Firefox: il congedo per tutt'e due le strade col motivo `0x01`, `violazione-31` a **zero**, il posto preso e lasciato. ⇒ **Il difetto che teneva P5 fuori dalla certificazione non c'è più** |
+> | ⭐ **tre cure di prodotto e tre di banco**, tutte misurate | prodotto: l'ancora di `congeda_corrente` (`pagina.html`) e il `posto LASCIATO` sulla strada del congedo (`rcp.c`). Banco: la scena a due schede, il contatore che legge `motivo 0x01`, la scena ripulita prima di ogni browser, e la striscia dei dati di Firefox |
+> | ⭐ **e la gamba N2 gira, per la prima volta** | bastava poter passare da `sudo`: `SSH_ROOT` sceglie il portatore dei comandi privilegiati, e lo sblocco di §4.4-bis risponde `PONG` |
+>
+> **Che cosa manca**, ed è la certificazione vera e propria — **tre giri, in quest'ordine**:
+>
+> 1. ⏳ **il giro sano**, verde su tutt'e due i motori (interrotto dal riavvio: si rifà da capo);
+> 2. **il giro col guasto innestato**, che deve uscire **rosso** — il guasto è in catalogo
+>    (`01-b12-guasti.py`, voce `P5`): la pagina pubblica un'impronta di sessione **diversa** da
+>    quella che `/impronta` dichiara, cioè il difetto **R1.14** di `RCP.md` §4.1-bis. La marca da
+>    vedere **solo** nel rosso è *«sono due impronte diverse per lo stesso certificato di sessione»*;
+> 3. **il giro risanato**, di nuovo verde.
+>
+> ⛔ **Fra un passo e l'altro ci vanno DUE cose, non una**: `costruisci.sh` sulla copia **e** il
+> server riacceso su quel binario. P5 non ricostruisce da sé — trova un server acceso e lo interroga
+> — quindi saltarne una lo farebbe misurare il binario di prima **con l'aria di aver innestato**.
+>
+> **Lo stato della macchina di prova**, da verificare prima di ripartire:
+>
+> ```
+> # il bersaglio: una COPIA del prodotto CURATO, porta 7501, ban e socket suoi
+> bash /media/REMOTIX/enter.sh --root "bash /srv/src/01-p5-accendi.sh accendi"
+>
+> # il giro, DA CHUWI (i browser stanno di qua)
+> SSH_ROOT="python3 v1/strumenti/sshpw.py" \
+>   IND=192.168.0.2 PORTA=7501 SOCK=/srv/src/tmp/sera-p15.sock \
+>   LOG_SERVER=/media/REMOTIX/src/tmp/sera-p15-browser.log \
+>   SCHERMO=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
+> ```
+>
+> ⚠ Se il riavvio ha portato via anche il server, `01-p5-accendi.sh copia` rifà copia e costruzione
+> (`GEMELLO=/srv/src/rcp`). ⛔ E la certificazione che ne verrà sarà **contro la copia sulla 7501**:
+> il server di casa sulla **7448** gira ancora il binario di stamattina, **senza** le due cure di
+> stanotte, e chi lo interrogasse misurerebbe il prodotto di prima.
 >
 > #### ⭐⭐ IL PRODOTTO ESISTE: `src/`, il server della fase 1 in C
 >

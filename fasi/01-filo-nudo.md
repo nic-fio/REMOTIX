@@ -1143,6 +1143,38 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > due colonne e tutta l'impalcatura — **non è stato fatto**. Sono due parole diverse, e questa fase
 > le ha già confuse una volta.
 >
+> #### ⭐⭐ E ALLORA P5 È STATO RILANCIATO — la gamba che contava è **VERDE su tutt'e due i motori**
+>
+> *`[M]` la notte fra l'11 e il 12 agosto 2026, contro una **copia del prodotto curato** sulla
+> **7501** (`banchi/01-p5-accendi.sh`, scritto stanotte: la ricetta stava in prosa dentro il
+> catalogo dei guasti, e una ricetta in prosa la ricopia a mano chi la usa).*
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **`p-sessione`: CONFORME, Chrome E Firefox** | 15 controlli, **0 guasti**: congedo per **tutt'e due** le strade col motivo `0x01`, `violazione-31` a **zero**, posto **preso e lasciato**. ⇒ Il punto che teneva P5 fuori dal verde **non c'è più** |
+> | ⭐ **e la gamba N2 gira, per la prima volta da quando esiste** | bastava poter passare da `sudo`: `SSH_ROOT` sceglie il portatore dei comandi privilegiati (`v1/strumenti/sshpw.py` digita la password su un pty), e lo sblocco di §4.4-bis risponde `PONG`. ⛔ E i due portatori restano **due**: `sshpw.py` lascia due righe di preambolo nel proprio stdout, e usarlo anche per **scaricare** il registro sporcherebbe la prova con lo strumento che la raccoglie |
+>
+> ⛔ **E due difetti del PILOTA sono venuti fuori uno dopo l'altro, tutti e due trovati da una
+> FOTOGRAFIA** — cioè dalla cosa che questo banco scatta dicendo *«materiale per chi legge, NON un
+> verdetto»*:
+>
+> | | trovato da | e la cura |
+> |---|---|---|
+> | ⛔ **il browser di N1 sopravvive, e la gamba dopo ci si attacca** | `firefox-n2-parola-sbagliata-1-pagina.png`: Firefox con **tre schede** — due della sonda di N1 — ferma sul marcatore d'avvio, dopo due `ctrl+l`+indirizzo+`Invio` andati nel vuoto | `kill` ammazza il processo ma **la finestra resta**, e la gamba dopo riusa **lo stesso profilo**: il browser nuovo non nasce, si attacca al vecchio come scheda in più. ⭐ Cura **già in casa**: è quella che `01-p5-ff-lancia.sh` aveva misurato lo stesso giorno |
+> | ⛔ **la striscia dei dati sposta la pagina di ~23 px** | `firefox-0-avviso-non-superato.png`: l'avviso del certificato **non superato**, con la barra *«Firefox automatically sends some data…»* in cima | i due clic di `supera_avviso` stanno a coordinate **misurate**, e con la barra cadono **sopra** i bottoni. ⭐ La cura non è spostare le coordinate — è **togliere la barra**, così la misura da cui quei numeri vengono torna a valere |
+>
+> ⛔⭐ **E il secondo lo nascondeva il primo**: finché la gamba del prodotto riusava il browser di N1,
+> la striscia se l'era già mangiata la sessione precedente. ⇒ *Curato un difetto, il secondo è
+> comparso* — ed è la stessa forma del `posto` muto qui sopra, due volte nella stessa notte.
+>
+> ⚠ **E il banco ha fatto la cosa giusta la prima volta che è successo**: la gamba N2 su Firefox non
+> ha dato un rosso, ha detto **SENZA-DENOMINATORE**. È il controllo aggiunto curando la scena, e ha
+> funzionato al primo caso vero.
+>
+> ⏳ **Quel che manca è la certificazione**, e sono i tre giri `sano → guasto → sano`: il primo è
+> stato interrotto dal riavvio della macchina dei browser ed è **annullato e dichiarato** in
+> `01-p5-esiti.jsonl`. Il seguito sta in `README.md`, «DA QUI SI RIPRENDE».
+>
 > ✅ **E la cura è un cambiamento di prodotto dopo la chiusura della fase, quindi è stata
 > DICHIARATA**: `DECISIONI.md` §1.12, dall'utente la stessa notte. ⛔ **La fase 1 non si riapre** e
 > la certificazione resta **12 su 14** com'è stata consegnata — questa sezione è un'**appendice

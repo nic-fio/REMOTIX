@@ -155,7 +155,34 @@ PAROLA_STORTA=${PAROLA_STORTA:-questa-e-sbagliata-apposta-P5}
 LOG_SERVER=${LOG_SERVER:-/media/REMOTIX/src/remotix-browser.log}
 SOCK=${SOCK:-/srv/src/b8-comando.sock}
 COPIE=$QUI/01-p5-copie
-SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 nicfio@$IND"
+# ⛔⭐ IL TRASPORTO DEI COMANDI REMOTI SI PUO' SCEGLIERE — cura della tarda
+#     serata dell'11 agosto 2026, ed e' il punto 3 dei quattro che il catalogo
+#     dei guasti (`01-b12-guasti.py`, voce P5) chiede PRIMA dei tre giri.
+#
+#     `[M]` La chiave funziona per entrare (`ssh -o BatchMode=yes` risponde), ⛔
+#     ma `enter.sh --root` chiama `sudo`, e in BatchMode non c'e' nessuno che ne
+#     digiti la password: «sudo: a password is required».  ⇒ Il comando di
+#     sblocco non rispondeva MAI, `COMANDO_VIVO` valeva `no`, e ⛔ **la gamba N2
+#     veniva SALTATA in silenzio** — cioe' il giro restava senza il controllo che
+#     dice NO sull'autenticazione, che e' meta' del mestiere di questo banco.
+#
+# ⭐ Adesso i portatori sono DUE, e non e' pignoleria: `v1/strumenti/sshpw.py`
+#    digita la password su un pty — quindi `sudo` passa — ⛔ ma lascia nel
+#    proprio stdout due righe di preambolo (la richiesta della password, con la
+#    password tolta, e un avviso di `tput`).  Usarlo anche per SCARICARE il
+#    registro ci infilerebbe due righe che il server non ha scritto, cioe'
+#    sporcherebbe la prova con lo strumento che la raccoglie.
+#
+#      SSH       legge (il registro del server) — vuole uno stdout PULITO
+#      SSH_ROOT  comanda (lo sblocco, che passa da `sudo`) — vuole la password
+#
+#      SSH_ROOT="python3 v1/strumenti/sshpw.py" bash banchi/01-p5-lancia.sh
+#
+# ⚠ I predefiniti NON cambiano — `SSH_ROOT` vale `SSH` se nessuno lo dice — e
+#   chi lancia come prima misura quel che misurava: il salto di N2 resta
+#   dichiarato dal `PING-SBLOCCO` che finisce negli esiti.
+SSH=${SSH:-ssh -o BatchMode=yes -o ConnectTimeout=10 nicfio@$IND}
+SSH_ROOT=${SSH_ROOT:-$SSH}
 
 # ⛔ OGNI RIGA DEL REGISTRO DICE CONTRO CHE COSA HA MISURATO — la convenzione di
 #    `01-b0-bersaglio.py`.  ⚠ Qui e' il **prodotto** sulla 7448, non l'innesto
@@ -396,7 +423,7 @@ log "5. ⛔ IL COMANDO DI SBLOCCO — il PING e' il denominatore (B0.3)"
 sblocca() # $1 = etichetta del momento
 {
 	local quando=$1 uscita testo
-	testo=$($SSH "bash /media/REMOTIX/enter.sh --root \"python3 /srv/src/01-b8-sblocca.py --socket $SOCK ${INDIRIZZO_VISTO:-$IND}\"" 2>&1)
+	testo=$($SSH_ROOT "bash /media/REMOTIX/enter.sh --root \"python3 /srv/src/01-b8-sblocca.py --socket $SOCK ${INDIRIZZO_VISTO:-$IND}\"" 2>&1)
 	uscita=$?
 	printf '%s\n' "$testo" | sed 's/^/        /'
 	# ⛔ Tre esiti, non due: TOLTO · NON-BANNATO · «non ho potuto parlare».
@@ -410,7 +437,7 @@ sblocca() # $1 = etichetta del momento
 	inf "sblocco «$quando»: $esito"
 }
 
-PING=$($SSH "bash /media/REMOTIX/enter.sh --root \"python3 /srv/src/01-b8-sblocca.py --socket $SOCK --ping\"" 2>&1)
+PING=$($SSH_ROOT "bash /media/REMOTIX/enter.sh --root \"python3 /srv/src/01-b8-sblocca.py --socket $SOCK --ping\"" 2>&1)
 printf '%s\n' "$PING" | sed 's/^/        /'
 COMANDO_VIVO=no
 case "$PING" in *PONG*|*c'e'*) COMANDO_VIVO=si ;; esac
@@ -497,6 +524,39 @@ fuoco_prodotto()
 #    fuoco passa all'altra e il conto va da 1 a 0.  ⇒ «1 → 0» dice **la scheda
 #    si e' chiusa**, e non dice niente sul programma, che e' quel che serve.
 finestre() { X xdotool search --name "${1:-REMOTIX}" 2>/dev/null | wc -l; }
+
+# ⛔⭐ LA SCENA SI PULISCE PRIMA DI OGNI BROWSER, e questo banco l'aveva
+#     sbagliato — cura della tarda serata dell'11 agosto 2026, e a diagnosticarla
+#     e' stata UNA FOTOGRAFIA.
+#
+# `[M]` `01-p5-copie/firefox-n2-parola-sbagliata-1-pagina.png`, primo giro in cui
+# la gamba N2 e' stata eseguita davvero: Firefox mostra TRE schede — due «B2 — la
+# sonda della sessione» rimaste da N1 — e sta ferma sul marcatore d'avvio, dopo
+# che `naviga` aveva battuto `ctrl+l`, l'indirizzo e `Invio` DUE volte.
+#
+# ⛔ La ragione: `kill "$PID_BR"` ammazza il processo che si e' lanciato, ma la
+#    finestra puo' restare, e ⛔ la gamba dopo riusa LO STESSO PROFILO — quindi
+#    il browser nuovo non nasce, si attacca a quello vecchio come scheda in piu'.
+#    Da li' `fuoco` da' il fuoco alla finestra sbagliata e i tasti finiscono dove
+#    non si misura niente.  ⚠ Il risultato non e' un errore: e' una gamba che
+#    «non misura niente» con la faccia di una gamba muta.
+#
+# ⭐ E non e' una cura inventata qui: e' quella che `01-p5-ff-lancia.sh` ha
+#    misurato e applicato lo stesso giorno, sullo stesso difetto (le varianti
+#    `tenace` e `codice` leggevano «finestre 0» e «sessione stabilita 0»).
+#
+# ⚠ `pkill` prende i due profili DI QUESTO GIRO — stanno sotto `$T`, che e' una
+#   cartella temporanea unica — e non puo' toccare i browser di nessun altro.
+pulisci_scena()
+{
+	if [ "$(X xdotool search --name . 2>/dev/null | wc -l)" -gt 0 ]; then
+		X xdotool search --name . windowkill >/dev/null 2>&1
+		sleep 1
+	fi
+	pkill -f "$T/chrome-p"  >/dev/null 2>&1
+	pkill -f "$T/firefox-p" >/dev/null 2>&1
+	sleep 2
+}
 
 fotografia() # $1 = nome del file
 {
@@ -816,6 +876,7 @@ PY
 		n0=$(righe)
 		url="http://127.0.0.1:$PORTA_LOC/01-b2-sonda.html?avvia=1&url=https://$IND:$PORTA/rcp/1&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$imp")"
 		rm -rf "$T/$motore-n1"; mkdir -p "$T/$motore-n1"
+		pulisci_scena
 		X "$@" "$url" >"$T/$motore-n1-$caso.log" 2>&1 &
 		PID_BR=$!
 		i=0; visto=""
@@ -892,12 +953,34 @@ prova_motore() # $1 = nome  $2 = binario  $3 = titolo della pagina  $4.. = coman
 	# ⭐ E le tre preferenze qui sotto tolgono la scheda di benvenuto: senza,
 	#    Firefox apre DUE schede al primo avvio, e la pagina in prova non e'
 	#    l'unica — cioe' la scena non e' quella dichiarata.
+	#
+	# ⛔⭐ LA QUARTA E' DELLA TARDA SERATA DELL'11 AGOSTO 2026, E L'HA TROVATA
+	#     UNA FOTOGRAFIA — `01-p5-copie/firefox-0-avviso-non-superato.png`.
+	#
+	#     Al primo avvio di un profilo Firefox mostra in cima la striscia
+	#     «Firefox automatically sends some data to Mozilla…».  ⛔ Non e' una
+	#     scheda e non e' un avviso: e' una BARRA, e **spinge la pagina in giu'
+	#     di una ventina di pixel**.  I due clic di `supera_avviso` stanno a
+	#     coordinate MISURATE — (962, 656) e (881, 965) — e con la barra
+	#     cadono sopra i bottoni invece che dentro.
+	#
+	# ⇒ L'avviso del certificato non si supera, il marcatore non arriva al
+	#   server, e le gambe N2 e P **non si fanno per quel motore**.
+	#
+	# ⚠ E si vedeva solo adesso: finche' la gamba del prodotto RIUSAVA il
+	#   browser di N1 (il difetto curato in `pulisci_scena`, poco piu' su), la
+	#   striscia se l'era gia' mangiata la sessione precedente.  ⛔ Curato un
+	#   difetto, il secondo e' comparso — e il primo lo aveva nascosto.
+	#
+	# ⭐ La cura NON e' spostare le coordinate: e' togliere la barra, cosi' la
+	#    misura da cui vengono quei due numeri torna a valere.
 	mkdir -p "$T/$motore-p"
 	if [ "$motore" = firefox ]; then
 		cat > "$T/$motore-p/user.js" <<'FINE'
 user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("datareporting.policy.firstRunURL", "");
 user_pref("browser.aboutwelcome.enabled", false);
+user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
 FINE
 	fi
 
@@ -906,6 +989,7 @@ FINE
 
 	# ── La finestra contro il prodotto ────────────────────────────────────
 	rm -rf "$T/$motore"; mkdir -p "$T/$motore"
+	pulisci_scena
 	X "$@" "https://$IND:$PORTA/p5-$motore-avvio-$GIRO" >"$T/$motore.log" 2>&1 &
 	PID_BR=$!
 	sleep 12
@@ -949,6 +1033,7 @@ FINE
 			return 1
 		fi
 		# Si riapre la finestra per la gamba buona: N2 l'ha chiusa apposta.
+		pulisci_scena
 		X "$@" "https://$IND:$PORTA/p5-$motore-ripresa-$GIRO" >"$T/$motore-2.log" 2>&1 &
 		PID_BR=$!
 		sleep 10
