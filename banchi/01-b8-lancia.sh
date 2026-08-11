@@ -308,7 +308,16 @@ ok "certificazione fuori dal filo: passata (il denominatore lo stampa lei)"
 # ---------------------------------------------------------------------------
 # ⛔ E la previsione si stampa PRIMA dei numeri, o non e' una previsione.
 log "2. Che cosa mi aspetto, prima di misurare"
-bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --previsione"
+# ⛔ RILIEVO R12-A.33, 11 agosto 2026, trovato da `01-b0-chiamate.py`.
+#    Questa riga chiamava il cronometro **senza `--bersaglio` e senza
+#    `--porta`**, che sono obbligatori da quando esiste il profilo condiviso.
+#    `[M]` sul server: *«error: the following arguments are required: --porta,
+#    --bersaglio»*.  ⇒ La previsione **non e' mai stata stampata**, e il passo
+#    che questo banco chiama «prima di misurare» era, da giorni, una riga di
+#    uso di argparse.  ⚠ E non faceva fallire niente: il giro proseguiva.
+#    ⭐ La riga giusta esisteva gia' venti righe piu' su (l'azione `previsione`).
+bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --bersaglio $B_NOME --porta $PORTA --previsione" \
+	|| ko "⚠ la previsione non si e' stampata: il giro prosegue, ma senza"
 
 # ---------------------------------------------------------------------------
 # ⛔ `bersaglio_opzioni_python` porta con se' --bersaglio, --porta, --uscita,

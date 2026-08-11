@@ -397,30 +397,50 @@ voce(
 
 # ── L6 ──────────────────────────────────────────────────────────────────────
 voce(
-    "L6", "§4.6 riga 1  ·  la `[?]` R3.27",
+    "L6", "§4.6 righe 1 e 4  ·  la `[?]` R3.27 — ⭐ CHIUSA l'11 agosto 2026",
     "Da quale istante parte il primo tetto: la fine del TLS, l'apertura della "
     "sessione WebTransport, o l'apertura del canale di controllo?",
-    "A — la fine del TLS, alla lettera di §4.6",
+    "A — la fine del TLS, alla lettera di §4.6 ⛔ **ritirata dal documento**",
     "B — l'apertura della sessione, o del canale: sono gli istanti che il "
     "server puo' davvero osservare, e fra il TLS e la sessione passa almeno un "
     "giro di rete",
-    "il cliente di prova non ha dovuto scegliere — non misura tetti.  ⛔ **Ha "
-    "scelto B6**, che il cronometro lo fa partire dall'apertura del canale, e "
-    "questa voce e' li' per dichiarare che quella scelta e' del banco e non del "
-    "documento",
+    "⭐ **B, e adesso lo dice il documento, non solo il banco.**  §4.6 riga 1 "
+    "conta dall'**apertura del canale di controllo**, e la riga 4 — nuova — "
+    "mette un tetto di 5 s anche fra sessione e canale.  ⚠ Il cliente di prova "
+    "continua a non scegliere: non misura tetti.  Chi aveva scelto era **B6**, "
+    "e la scelta del banco e' diventata la lettera del documento",
     "una sessione aperta e un canale di controllo **mai aperto**: alla lettera "
     "di A il tetto e' gia' scaduto e la connessione dev'essere finita; alla "
     "lettura B non le sta addosso nessun tetto e **resta li'**, che e' proprio "
-    "la cosa che §4.6 esiste per impedire",
+    "la cosa che §4.6 esiste per impedire.  ⭐ Ed e' esattamente il buco che la "
+    "riga 4 e' nata per chiudere: `DECISIONI.md` §7.17",
     appigli_rcp=[
-        "| stretta di mano TLS finita | `CIAO` ricevuto | **5 s** |",
+        "| ⭐ **apertura del canale di controllo** *(il primo stream "
+        "bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |",
+        "| ⭐ **apertura della sessione WebTransport** | **apertura del canale "
+        "di controllo** | **5 s**",
     ],
     byte=None,
     nota="⛔ **Nessun byte cambia**, e va detto invece di inventarne uno: le "
          "due letture mandano lo stesso `CIAO` (o lo stesso silenzio).  Cambia "
          "**quando** arriva il `CONGEDO(TEMPO_SCADUTO)`, e nel caso della "
          "sessione senza canale cambia **se** arriva.  E' la voce che tiene "
-         "onesta la colonna «sul filo».",
+         "onesta la colonna «sul filo».\n"
+         "  ⭐ **E QUESTA VOCE E' LA PROVA CHE B9 SERVE, misurata l'11 agosto "
+         "2026.**  L'appiglio citato qui era la vecchia riga 1 di §4.6 — quella "
+         "che partiva dalla fine del TLS — e B9 e' uscito **3**: l'appiglio non "
+         "si trovava piu', perche' `RCP.md` era stato corretto quello stesso "
+         "giorno, da noi, sulla misura di B6.  ⛔ Nessun altro banco se ne "
+         "sarebbe accorto: gli altri sarebbero diventati **piu' verdi**, non "
+         "meno.  ⚠ E l'ambiguita' non e' «sparita»: e' stata **decisa**, il che "
+         "e' un esito diverso e va scritto come tale.\n"
+         "  ⛔ **E LA PRIMA STESURA DI QUESTA NOTA CITAVA LA MARCA A LETTERE**, "
+         "cioe' la frase che B12 cerca nell'uscita rossa per attribuire il "
+         "rosso al guasto.  Con quella dentro, la marca compariva **anche nel "
+         "giro sano** — e una marca che compare in tutt'e due i giri non e' una "
+         "marca, e' un modo di certificare senza guardare (la stessa trappola "
+         "gia' scritta nel guasto di C2).  ⭐ Preso dal giro di certificazione "
+         "dell'11 agosto, in cui il banco ha morso chi lo stava certificando.",
 )
 
 # ── L7 ──────────────────────────────────────────────────────────────────────

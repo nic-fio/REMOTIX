@@ -617,6 +617,36 @@ def impronta_file(p):
         return None
 
 
+def provabile(sigla):
+    """⛔ Si puo' certificare `sigla` SU QUESTA MACCHINA?
+
+    Stampa una riga `MANCA <nome>` per ogni file su cui la certificazione
+    poggia e che qui non c'e'; esce 0 se non ne manca nessuno, 1 altrimenti.
+
+    ⛔ RILIEVO R12-A.31, 11 agosto 2026.  «Non posso provarlo qui» e «l'ho
+    provato e non passa» erano la stessa riga di registro.  `[M]`: B9 lanciato
+    sul server e' uscito 4 — `RCP.md` **li' non esiste**, perche' su quella
+    macchina arrivano i banchi e non i documenti — e il verdetto ha scritto
+    «B9 NON certificato».  Un banco sano marchiato rosso manda a cercare un
+    difetto che non c'e', e il registro se lo porta dietro con una data.
+    ⭐ E' la forma opposta del falso verde.  Costa uguale, e si vede meno.
+
+    ⚠ Guarda `file_che_contano`, non `dove`: `dove` e' il posto in cui il
+      guasto si innesta, mentre la certificazione poggia sui file che il banco
+      **legge** — ed e' uno di quelli a mancare, non l'appiglio.
+    """
+    g = GUASTI.get(sigla)
+    if not g:
+        print(f"MANCA il-guasto-{sigla}-non-e-in-catalogo")
+        return 1
+    mancanti = 0
+    for nome in g.get("file_che_contano", []):
+        if not os.path.exists(os.path.join(QUI, nome)):
+            print(f"MANCA {nome}")
+            mancanti += 1
+    return 1 if mancanti else 0
+
+
 def impronte_di(sigla):
     """{nome del file: sha256 | None}.  ⛔ `None` = non si e' potuto guardare.
 
@@ -1383,6 +1413,10 @@ if __name__ == "__main__":
                    help="leggero | ricostruisce | copia-di-file | gia-fatto")
     p.add_argument("--impronte", metavar="SIGLA",
                    help="i file su cui la certificazione di quel banco poggia")
+    p.add_argument("--provabile", metavar="SIGLA",
+                   help="i file su cui la certificazione poggia ci sono, su "
+                        "questa macchina?  Stampa «MANCA <nome>» per ognuno "
+                        "che non c'e' (R12-A.31)")
     p.add_argument("--certificati", default=CERT_PREDEFINITA,
                    help="la cartella dei certificati (per i guasti «{CERT}»)")
     a = p.parse_args()
@@ -1398,6 +1432,8 @@ if __name__ == "__main__":
         sys.exit(mostra_registro())
     if a.giudica:
         sys.exit(giudica(a.giudica))
+    if a.provabile:
+        sys.exit(provabile(a.provabile))
     for campo in ("marca", "costa"):
         sigla = getattr(a, campo)
         if sigla:

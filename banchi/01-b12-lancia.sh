@@ -185,6 +185,53 @@ inf "sigle da provare: $SIGLE"
 #    al posto del lettore (0 → 1 → 0).
 inf "⚠ B9 e B4 non sono fra queste: si certificano dove stanno i loro file"
 
+# ---------------------------------------------------------------------------
+# ⛔⭐ RILIEVO R12-A.31, 11 agosto 2026 — L'AVVERTENZA QUI SOPRA ERA UN
+#     CONSIGLIO, E CHI LA IGNORAVA OTTENEVA UN ROSSO PULITO.
+#
+# `bash 01-b12-lancia.sh B4 B9 C2` stampava la riga qui sopra e **poi lanciava
+# B9 lo stesso**.  `[M]` 11 agosto: B9 e' uscito **4** — «senza i testi non c'e'
+# nessun inventario da verificare», perche' `RCP.md` **su questa macchina non
+# esiste** — e il verdetto ha scritto **«B9 NON certificato»**.
+#
+# ⛔ E' la forma opposta del falso verde, ed e' altrettanto cara: un banco sano
+#    marchiato come non certificato manda a cercare un difetto che non c'e', e
+#    intanto tiene il conto delle certificazioni fermo per una ragione che non
+#    e' del banco.  ⚠ Il registro se lo porta dietro con una data, e chi lo
+#    rilegge fra un mese non ha modo di sapere che quel rosso parlava di un file
+#    mancante.
+#
+# ⭐ La cura non e' ripetere l'avvertenza piu' forte: e' **guardare se i file su
+#    cui la certificazione poggia ci sono**, e rifiutarsi.  «Non posso provarlo
+#    qui» e «l'ho provato e non passa» sono due fatti diversi, e B12 esiste per
+#    non confonderli — e' il rilievo R12-A.4 applicato a se stesso.
+# ---------------------------------------------------------------------------
+RIFIUTATE=""
+RESTA=""
+for S in $SIGLE; do
+	MANCA=$(bash "$ENTRA" --root \
+	    "python3 $GUASTI --provabile $S 2>/dev/null" 2>/dev/null \
+	    | tr -d '\r' | sed -n 's/^MANCA //p' | tr '\n' ' ')
+	if [ -n "$MANCA" ]; then
+		ko "⛔ «$S» NON si prova qui: manca $MANCA"
+		ko "   Non e' «non certificato»: e' «non certificabile su questa"
+		ko "   macchina».  Si certifica dove stanno i suoi file."
+		RIFIUTATE="$RIFIUTATE $S"
+	else
+		RESTA="$RESTA $S"
+	fi
+done
+if [ -n "$RIFIUTATE" ]; then
+	inf "⛔ rifiutate qui:$RIFIUTATE   ·   restano:${RESTA:- —}"
+	SIGLE=$RESTA
+fi
+if [ -z "${SIGLE// /}" ]; then
+	ko "⛔ nessuna sigla provabile su questa macchina: non lancio niente."
+	ko "   ⚠ E NON scrivo nel registro: un giro che non ha provato niente"
+	ko "   non e' un giro con zero certificati."
+	exit 0
+fi
+
 rm -f "$ESITI_FUORI"
 
 PID=""
@@ -332,11 +379,55 @@ gira()
 			u=$?
 		fi
 		spegni ;;
+	B6)
+		# ⛔⭐ B6 SI PUO' CERTIFICARE, E L'OBIEZIONE IN CATALOGO NON REGGEVA
+		#     — rilievo R12-A.32, 11 agosto 2026.
+		#
+		# La nota diceva: *«il guasto va innestato in `rcp/rcp.c` e non nella
+		# copia di `examples/` — `01-b6-lancia.sh` ricopia il sorgente a ogni
+		# giro e cancellerebbe il guasto, e il confronto fra i due `#define`
+		# che B6 fa al passo 2 lo vedrebbe comunque»*.
+		#
+		# ⭐ Tutt'e due le meta' parlano di `01-b6-lancia.sh`, e **B12 non lo
+		#    usa**: qui i banchi si chiamano dal loro programma (la ragione sta
+		#    in testa a questo file — le uscite vanno catturate dentro le
+		#    virgolette di `enter.sh`).  Ne' la ricopiatura ne' il confronto
+		#    fra i `#define` girano da questa parte.
+		#
+		# ⚠ E VA DETTO CHE COSA QUESTA CERTIFICAZIONE **NON** COPRE, invece di
+		#   lasciarlo credere: certifica `01-b6-tetti.py`, cioe' i casi sul
+		#   filo.  Il confronto sorgente/binario e il richiamo allo sblocco di
+		#   §4.4-bis stanno nel lanciatore e restano **non certificati**.
+		#
+		# ⛔ E i tetti del codice si LEGGONO, non si scrivono a mano: passare
+		#    5000 al passo col guasto sarebbe mentire al banco proprio dove il
+		#    guasto vive.
+		local tc="" nome b
+		for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_ATTACCA"; do
+			nome=${coppia%%:*}
+			b=$(sed -n "s/^#define ${coppia##*:}[[:space:]]\{1,\}\([0-9]\{1,\}\).*/\1/p" \
+			    "$FUORI/b2/ngtcp2/examples/rcp.c" | head -1)
+			[ -n "$b" ] && tc="$tc${tc:+,}$nome=$b"
+		done
+		inf "tetti letti dal sorgente compilato: ${tc:-⛔ NESSUNO}"
+		if [ -z "$tc" ]; then
+			ko "⛔ non ho letto nessun tetto da examples/rcp.c: non lancio B6"
+			ko "   ⚠ con i tetti ignoti il banco misurerebbe contro niente"
+			u=99
+		else
+			accendi sessione "b6-$passo" || { u=99; }
+			if [ "$u" -eq 0 ]; then
+				bash "$ENTRA" --root \
+					"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --fase sani --idle 120000 --tetti-codice $tc > $uscita_file 2>&1"
+				u=$?
+			fi
+			spegni
+		fi ;;
 	B7)
 		accendi sessione "b7-$passo" || { u=99; }
 		if [ "$u" -eq 0 ]; then
 			bash "$ENTRA" --root \
-				"python3 -u $DENTRO/01-b7-congedo.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --registro $DENTRO/b12-b7-$passo.log --pagina $DENTRO/01-b11-pagina.html --sorgente $DENTRO/rcp/rcp.c > $uscita_file 2>&1"
+				"python3 -u $DENTRO/01-b7-congedo.py --bersaglio innesto --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --registro $DENTRO/b12-b7-$passo.log --pagina $DENTRO/01-b11-pagina.html > $uscita_file 2>&1"
 			u=$?
 		fi
 		spegni ;;
