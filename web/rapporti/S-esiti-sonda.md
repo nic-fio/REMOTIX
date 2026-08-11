@@ -24,7 +24,7 @@ Notte del **10 agosto 2026**. Sei righe della tabella «La sonda» di
 | | Eseguita? | Esito |
 |---|---|---|
 | **S7** — il segno della rotella | ⭐ **SÌ**, completa; **due controlli su quattro sono nel registro**, due stanno solo nell'uscita a schermo (§0-bis) | `ei_device_scroll_discrete(0, +120)` manda la pagina **verso la fine del documento** ⇒ ⛔ **il server RCP deve invertire l'asse verticale** |
-| **S1b** — la durata dell'eccezione | ⏳ **AVVIATA**: giorno 0 preso, orologio in moto | Chrome si è segnato la scadenza **2026-08-17T21:09:47.889Z**. ⛔ **NON** «604 800 s esatti dalla concessione»: dai due numeri che questo documento pubblica escono **604 786,889 s** (§2.2-bis). Il numero sul campo si legge fra sette giorni |
+| **S1b** — la durata dell'eccezione | ⭐ **RISPOSTA** l'**11 agosto**, senza aspettare (§2.5-ante), **6 controlli su 6** | **604 799,99997 s** `[M]` fra i due istanti che Chrome si scrive da solo; Chrome **onora** quell'istante (scadenza riscritta a ieri su una copia ⇒ la pagina non si apre) e **non lo rinnova** visitando. ⇒ all'utente si dice «**una volta a settimana**». ⛔ I «13,111 s mancanti» di §2.2-bis erano uno scarto fra **due orologi**, non un difetto della costante. ⏳ Il 17-18 agosto resta come conferma passiva |
 | **S5** — la tela dichiarata | ⚠ **metà**: il browser del portatile sì, **il DeX no** | ⛔ **i due motori NON concordano**: Firefox 140 dà la tela invariante, **Chrome 151 la fa crescere a 2880×1620** |
 | **S2** — HEVC Main10 in hardware | ⛔ **NO** — manca il **telefono Android** e il **PC per `chrome://inspect`**; e le cinque sequenze sono della fase 2 | resta `[?]`. Banco pronto: `01-s2-pagina.html` |
 | **S3a** — la tastiera nei tre stati | ⛔ **NO** — manca il **DeX** | resta `[?]`. Banco pronto: `01-s3a-pagina.html` |
@@ -45,8 +45,8 @@ declassato (S1b). ⛔ Nessun numero è stato arrotondato per farlo tornare.*
 | S1b — giorno 0 **2026-08-10T21:10:01Z** | idem, campo `ora` | ⚠ **sì, ma non è quel che dice**: è l'istante in cui la riga è stata **scritta**, cioè dopo due visite da ~28 s l'una. **Non** è l'istante del clic |
 | S1b — il valore grezzo **13431474587889370** | idem, dentro la stringa `"valore non interpretabile: '…'"` | ✅ **sì**: il numero c'è su disco, dentro la riga che dice di non averlo capito |
 | S1b — scadenza **2026-08-17T21:09:47.889Z** | ⛔ **in nessun file** | ⚠ **la conversione è giusta** (ricalcolata: `13431474587889370/1e6 − 11644473600` → `2026-08-17T21:09:47.889370+00:00`, `[M]`), **ma nessun giro l'ha scritta**. È una decodifica fatta a mano su un valore che sì è su disco. Da `[M]` a **`[M]` sul grezzo + conversione dichiarata** |
-| S1b — «**604 800 s esatti** dalla concessione», ⛔ scritto **due volte** | — | ⛔ **NO, NON SOPRAVVIVE.** Fra i due numeri che questo documento pubblica ci sono **604 786,889 s**. Mancano **13,111 s**, e «esatti» era falso in tutt'e due i punti. Vedi §2.2-bis |
-| S1b — la chiave `https://192.168.0.2:443,*` e il blocco `cert_exceptions_map` | ⛔ **in nessun file**: trascritti a mano dall'uscita a schermo del giro «avvia» | ⚠ **`[M]` a vista, senza provenienza su disco.** Coerenti col grezzo (`decision_expiration_time` = lo stesso 13431474587889370), ma un revisore non li può ritrovare. ⭐ Da adesso `01-s1b-eccezione.sh` li registra a ogni giro «oggi» |
+| S1b — «**604 800 s esatti** dalla concessione», ⛔ scritto **due volte** | ⭐ **`~/.remotix-s1b/profilo/Default/Preferences`**, campi `last_modified` e `setting.decision_expiration_time` | ⭐ **SOPRAVVIVE — e la riga che diceva di no era lei a sbagliare.** *(corretto l'**11 agosto 2026**)* La bocciatura confrontava la scadenza di Chrome con **il nostro** orologio al momento del clic: due orologi, 13,111 s di distanza. Nello stesso file Chrome scrive **tutt'e due** gli estremi, e la loro differenza è **604 799,99997 s** — 604 800 a meno di **30 µs**, `[M]`, riproducibile con `01-s1b-eccezione.sh scavalca`. ⛔ Una ricontata può sbagliare nella stessa forma di quel che ricontava: **E5**, un fatto che era una deduzione non misurata |
+| S1b — la chiave `https://192.168.0.2:443,*` e il blocco `cert_exceptions_map` | ⭐ ora **su disco**: `banchi/01-s1b-stato.jsonl` (campo `chiave_ssl`) e rileggibile dal profilo | ✅ **sì**, `[M]`. E la chiave dice due cose misurate: l'indicizzazione è **per host senza porta** (`:443` mentre il sito è su `:7452`), e la voce interna `-202DPJnKQ…` porta **il codice d'errore davanti all'impronta** — cioè l'eccezione è indicizzata sulla **coppia** (impronta, errore), che era il presupposto `[R]` del rilievo R3.15 e adesso è `[M]` |
 | S7 — `deltaY` **+114 / −114**, `wheelDeltaY` **−342 / +342**, `deltaMode` **0** | `banchi/01-s7-esiti.jsonl` — ⭐ **portato in questo albero l'11 agosto** (prima era solo sul server: rilievo A30) | ✅ **sì**, `[M]`, e **due volte in due giri distinti** (`7sd0u7jv`, `oq7jqrdv`) |
 | S7 — i due strumenti concordano (`deltaY` e `scrollY`) | idem, campi `deltaY` e `scorrimento` | ✅ **sì**: `+114 → scorrimento +114`, `−114 → −114`, in tutt'e due i giri |
 | S7 — la scena: **Firefox/140.0**, schermo **1920×1080**, `dpr` 1, partenza **8000 px** | idem, campi `motore`, `schermo`, `dpr`, `base` | ✅ **sì**, riga per riga |
@@ -296,11 +296,47 @@ lasciava lì una scena di un'altra misura, e la finestra di Chrome — che `xdot
 `/media/REMOTIX/s1b-certificato/s1b-pagina.pem`, cancellare `~/.remotix-s1b/`, o far cadere la data
 del server. I primi due li vede il controllo dell'impronta; il terzo no.
 
+## 2.5-ante ⭐ IL VERDETTO, DATO L'11 AGOSTO — senza aspettare il 17
+
+*Aggiunto l'**11 agosto 2026**. `banchi/01-s1b-eccezione.sh scavalca`, registro
+`banchi/01-s1b-stato.jsonl` riga 5. Chrome **151.0.7922.108**, impronta del giorno 0 verificata.
+**6 controlli su 6 approvati.***
+
+⛔ **La domanda di S1b non era «quanto dura»**: era *«che frase si dice all'utente — «una volta» o
+«una volta a settimana»?»*. E per rispondere non serviva il calendario: serviva **portare la
+scadenza da noi invece di aspettarla**.
+
+| che cosa | come | esito |
+|---|---|---|
+| ⭐ **la costante regge**: scadenza − decisione = **604 799,99997 s** | i **due** istanti che Chrome si scrive da solo nello stesso file (`last_modified` e `decision_expiration_time`) | `[M]` — 604 800 a meno di **30 µs** |
+| ⭐ **Chrome onora l'istante che si è segnato** | su una **copia** del profilo, la scadenza riscritta a **ieri** | la pagina **non si apre più** `[M]` |
+| ⛔ **il controllo che dice *no*** | la **stessa** manomissione con data **+30 giorni** | la pagina **si apre ancora** `[M]` — quindi al punto sopra è cambiato **solo il segno**, non il fatto di aver messo le mani nel file |
+| ⭐ **Chrome NON rinnova visitando** | la scadenza riletta **dopo** una visita | **identica**, `13431474587889370` `[M]` |
+| la copia porta l'eccezione | la copia apre la pagina **prima** di ogni manomissione | ✅ altrimenti ogni «no» successivo era già spiegato |
+| un profilo appena nato vede l'avviso | profilo vergine | **non arriva** ✅ |
+
+⇒ **All'utente si dice «una volta a settimana»**, non «una volta».
+
+⭐ **E la quarta riga è una domanda che l'orologio dei sette giorni non avrebbe mai potuto porre**:
+lui la pagina la visita **tutti i giorni**. Se Chrome rinnovasse la scadenza a ogni visita, chi usa
+il prodotto quotidianamente non rivedrebbe **mai** l'avviso — e il banco che aspetta avrebbe visto
+«regge» al settimo giorno senza sapere perché.
+
+⛔ **I «13,111 s che mancavano» non erano di Chrome.** §2.2-bis e la ricontata li davano come prova
+che «604 800 esatti» fosse falso. Erano la distanza fra **due orologi**: il nostro che leggeva
+l'istante del clic, il suo che scriveva. Presi tutt'e due dalla stessa mano, lo scarto è di **trenta
+microsecondi**. ⇒ La riga «**NON sopravvive**» della ricontata (§1.2) **si ribalta**: sopravvive,
+e adesso ha una provenienza su disco.
+
+⚠ **Che cosa questo giro NON prova**: che il 17 agosto non succeda *anche altro*. ⏳ Il profilo vero
+non è stato toccato — tutto è avvenuto su una copia — quindi **l'orologio dei sette giorni è intatto
+e lo dirà da solo**. Da conferma indipendente e gratis, non più da unica strada.
+
 ## 2.5 Che cosa resta `[?]`
 
-- **il numero sul campo**: fino al 17 agosto S1b resta *«a N giorni l'eccezione c'è ancora»*. Il
-  `[R]` dei sette giorni **non è ancora confermato dal comportamento**, solo dalla contabilità di
-  Chrome.
+- ~~**il numero sul campo**~~ — ⭐ **risposto l'11 agosto**, §2.5-ante: la contabilità di Chrome
+  **è** il comportamento, perché Chrome onora l'istante che vi scrive e non lo rinnova. Resta ⏳ la
+  conferma passiva del 17-18 agosto.
 - **Firefox e Safari**: questo banco misura **Chrome**. Firefox tiene l'eccezione per `host:porta` in
   un elenco visibile nelle impostazioni (S1 §4.3) e non ha la stessa scadenza; non è misurato.
 
@@ -487,7 +523,8 @@ S7 andati a vuoto.*
 | **S.2** | `fasi/01-filo-nudo.md`, riga S1b | il rimando `S1 §4.2 P5` è **sbagliato**: P5 è il contesto sicuro, e in S1 **non esiste** una prova di durata. Il banco è `banchi/01-s1b-eccezione.sh` |
 | **S.3** | `SPECIFICHE.md` §6.1-bis · `DECISIONI.md` §5.0-quater | ⛔ **`screen.width × devicePixelRatio` non è invariante allo zoom su Chrome 151**: dà `risoluzione × zoom`. La formula della tela va rivista, e finché non lo è un client su Chrome con zoom ≠ 100 % dichiara una tela sbagliata |
 | **S.4** | `PIANO.md` fasi 2 e 6 | l'ordine fra la nascita del puntatore virtuale e l'avvio delle applicazioni (§8) |
-| **S.5** | `web.md` §8 · `fasi/01-filo-nudo.md` | S1b non è più *«da avviare»*: è **avviata**, e il giorno del verdetto è il **17-18 agosto 2026** |
+| **S.5** | `web.md` §8 · `fasi/01-filo-nudo.md` | ⭐ *(aggiornato l'**11 agosto**)* S1b non è più né «da avviare» né «avviata»: è **risposta** (§2.5-ante). Il 17-18 agosto resta come **conferma passiva**, non come giorno del verdetto |
+| **S.8** ⛔⭐ | `banchi/01-s1b-eccezione.sh`, `cerca_nel_registro` | **RILIEVO A31, 11 agosto 2026 — la cura di A27 aveva lo stesso buco, entrato da un'altra porta, e ha mentito due volte di fila prima che qualcuno la prendesse.** A27 aveva insegnato alla funzione a distinguere «non c'è» da «non ho potuto guardare», facendosi stampare lo stato d'uscita di `grep`. ⛔ Ma il **conto** continuava a leggerlo **dalla riga 1** — e la riga 1 di un comando remoto non è del comando: è il rumore di `ssh` (`«nicfio@…'s password: »`, `«tput: No value for $TERM»`). Il conto usciva **vuoto**, `${conto:-0}` lo arrotondava a **zero**, e la funzione stampava un **«NO» pulito** mentre due righe più sotto, nello stesso testo, `S1B-FINE=0` diceva **trovato**. ⇒ Il primo giro di `scavalca` ha dichiarato «**la copia non porta l'eccezione, metodo inutilizzabile**» su una visita che nel registro del server **c'era**. ⚠ E nessuno aveva rotto quella funzione: è cambiato il **rumore di `ssh`** — chiave installata, `$TERM` assente — cioè un pezzo che quel file non nomina nemmeno. ⭐ **Cura, e la seconda vale più della prima**: ogni valore torna **etichettato** (`S1B-CONTO=`), e i due fatti **devono andare d'accordo** — `grep` che dice «trovato» con un conto di zero è una contraddizione, e da una contraddizione esce «IGNOTO», non un verdetto |
 | **S.6** ⭐ | `fasi/01-filo-nudo.md` §«La sonda», colonne **Misurato** e **Data** | ⛔ *(rilievo **R12.7**, 11 agosto 2026)* i numeri di **S7**, **S1b** e **S5** sono stati misurati e **non sono entrati nella tabella di fase**: quelle celle sono ancora vuote. Il progetto tiene i numeri lì, con la data accanto; finché restano solo qui, chi legge il documento di fase crede che la misura non ci sia. ⚠ Non è un file di questo autore: è scritto qui perché è la sua unica traccia |
 | **S.7** ⛔ | `RCP.md` §7.3 e §1275-1300 | *(rilievo **R12.7**)* la `[?]` del segno della rotella è **ancora aperta in `RCP.md`** — *«il segno è da misurare, non da decidere»*, col riquadro «va misurato» — mentre è **chiusa qui** da una misura che `RCP.md` non cita. ⛔ È la forma «una cosa che tutti danno per fatta da un altro»; qui per fortuna nel verso innocuo (una `[?]` rimasta aperta) invece che in quello caro |
 

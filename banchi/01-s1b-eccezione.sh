@@ -303,13 +303,43 @@ visita()
 # ⚠ Niente `grep -q` dentro un tubo con `pipefail` e niente `| tail` su un
 #   comando remoto: sono due trappole gia' pagate da questo progetto.  Il testo
 #   torna in una variabile, e si taglia QUI.
+#
+# ---------------------------------------------------------------------------
+# ⛔⭐ RILIEVO A31, 11 agosto 2026 — LA CURA DI A27 AVEVA LO STESSO BUCO,
+#     ENTRATO DA UN'ALTRA PORTA, E OGGI HA MENTITO DUE VOLTE DI FILA.
+#
+# Il conto si leggeva **dalla riga 1** (`sed -n '1s/…'`).  Ma la riga 1 di un
+# comando remoto non appartiene al comando: e' la roba di `ssh`.  `[M]` 11
+# agosto 2026, uscita vera:
+#     riga 1: «nicfio@192.168.0.2's password: »
+#     riga 2: «tput: No value for $TERM and no -T specified»
+#     riga 3: «1»                ← il conto, che nessuno guardava
+#     riga 4: «S1B-FINE=0»       ← e grep dice: TROVATO
+# Il conto usciva **vuoto**, `${conto:-0}` lo arrotondava a **zero**, e la
+# funzione stampava un **«NO» pulito e sicuro** — mentre la riga accanto,
+# nello stesso testo, diceva «trovato».  ⛔ I due fatti erano tutt'e due
+# presenti e si contraddicevano, e il programma credeva a quello che veniva
+# dal posto fragile.
+#
+# ⚠ E nessuno l'aveva rotta scrivendo questa funzione: e' cambiato il RUMORE
+#   di `ssh` — chiave installata, `$TERM` assente — cioe' un pezzo che questo
+#   file non nomina nemmeno.  Uno strumento che poggia sul NUMERO DI RIGA di
+#   un'uscita altrui si rompe per fatti che non sono suoi.
+#
+# ⭐ Due cure, e la seconda vale piu' della prima:
+#   1. ogni valore torna **etichettato** (`S1B-CONTO=`), quindi si trova
+#      ovunque stia, e il rumore non ha piu' un posto in cui contare.
+#   2. i due fatti **devono andare d'accordo**: `grep` che dice «trovato» e un
+#      conto di zero e' una contraddizione, e da una contraddizione non esce
+#      un verdetto — esce «IGNOTO».  E' quel confronto, non l'etichetta, che
+#      avrebbe fermato oggi la bugia.
 # ---------------------------------------------------------------------------
 cerca_nel_registro() # $1 = il token da cercare
 {
 	local token=$1 tutto stato conto
-	tutto=$(ssh_ "grep -c -F '$token' $SRC/01-s1b-visite.jsonl 2>&1; printf 'S1B-FINE=%s\n' \$?" 2>&1)
-	stato=$(printf '%s\n' "$tutto" | sed -n 's/^S1B-FINE=\([0-9][0-9]*\)$/\1/p')
-	conto=$(printf '%s\n' "$tutto" | sed -n '1s/^\([0-9][0-9]*\)$/\1/p')
+	tutto=$(ssh_ "n=\$(grep -c -F '$token' $SRC/01-s1b-visite.jsonl 2>/dev/null); s=\$?; printf 'S1B-CONTO=%s\nS1B-FINE=%s\n' \"\$n\" \"\$s\"" 2>&1)
+	stato=$(printf '%s\n' "$tutto" | sed -n 's/^S1B-FINE=\([0-9][0-9]*\)$/\1/p' | head -1)
+	conto=$(printf '%s\n' "$tutto" | sed -n 's/^S1B-CONTO=\([0-9][0-9]*\)$/\1/p' | head -1)
 	if [ -z "$stato" ]; then
 		printf 'IGNOTO\n'
 		{ ko "⛔ il comando remoto non e' arrivato in fondo: nessun «S1B-FINE»."
@@ -324,7 +354,26 @@ cerca_nel_registro() # $1 = il token da cercare
 		  ko "   ⛔ «non l'ho trovato» e «non ho potuto leggere» sono due fatti."; } >&2
 		return 0
 	fi
-	if [ "${conto:-0}" -gt 0 ]; then
+	if [ -z "$conto" ]; then
+		printf 'IGNOTO\n'
+		{ ko "⛔ il conto non e' tornato («S1B-CONTO=» non c'e'), e grep dice $stato."
+		  ko "   ⛔ Un conto assente NON si arrotonda a zero: e' A31 in persona."
+		  printf '%s\n' "$tutto" | sed -n '1,4p' | sed 's/^/        /'; } >&2
+		return 0
+	fi
+	# ⭐ IL CONFRONTO CHE OGGI AVREBBE FERMATO LA BUGIA: grep dice 0 quando ha
+	#    trovato qualcosa, e allora il conto deve essere > 0.  Se i due fatti si
+	#    contraddicono, il testo non e' quello che credo di star leggendo.
+	if { [ "$stato" -eq 0 ] && [ "$conto" -eq 0 ]; } || \
+	   { [ "$stato" -eq 1 ] && [ "$conto" -gt 0 ]; }; then
+		printf 'IGNOTO\n'
+		{ ko "⛔ I DUE FATTI SI CONTRADDICONO: grep esce $stato (0=trovato,"
+		  ko "   1=non trovato) ma il conto e' $conto.  Non e' possibile."
+		  ko "   ⛔ Da una contraddizione non esce un verdetto — vedi A31."
+		  printf '%s\n' "$tutto" | sed -n '1,6p' | sed 's/^/        /'; } >&2
+		return 0
+	fi
+	if [ "$conto" -gt 0 ]; then
 		printf 'SI\n'
 	else
 		printf 'NO\n'
@@ -447,6 +496,97 @@ for percorso, decisioni in trovati:
 PY
 }
 
+# ---------------------------------------------------------------------------
+# ⭐ I DUE NUMERI DI CHROME, LETTI GREZZI — e sono il pezzo di S1b che non
+#    aveva bisogno di aspettare nessuno.
+#
+# Nel profilo Chrome scrive DUE istanti, non uno:
+#   `last_modified`             quando ha preso la decisione
+#   `decision_expiration_time`  quando la butta
+# ⛔ Il rapporto confrontava la SCADENZA col nostro orologio al momento del
+#    clic, e trovava 13,111 s di scarto sui 604 800 attesi — poi dichiarati
+#    `[?]`.  Quei 13 secondi erano la distanza fra DUE OROLOGI (il nostro che
+#    leggeva, il suo che scriveva), non un difetto della costante.
+# ⭐ Presi tutt'e due dalla stessa mano, lo scarto e' di TRENTA MICROSECONDI.
+#    Stampa una riga sola: «<inizio> <scadenza> <differenza in secondi>».
+# ---------------------------------------------------------------------------
+due_numeri() # $1 = profilo
+{
+	python3 - "$1" <<'PY'
+import json, os, sys
+for cartella, _, file in os.walk(sys.argv[1]):
+    if "Preferences" not in file:
+        continue
+    try:
+        d = json.load(open(os.path.join(cartella, "Preferences"), encoding="utf-8"))
+    except Exception:
+        continue
+    dec = (d.get("profile", {}).get("content_settings", {})
+             .get("exceptions", {}).get("ssl_cert_decisions")) or {}
+    for chiave, voce in dec.items():
+        imp = voce.get("setting") or {}
+        sca = imp.get("decision_expiration_time") or voce.get("expiration")
+        mod = voce.get("last_modified")
+        if sca and mod:
+            print(mod, sca, (int(sca) - int(mod)) / 1e6, chiave)
+            sys.exit(0)
+sys.exit(1)
+PY
+}
+
+# ---------------------------------------------------------------------------
+# ⭐ SPOSTARE LA SCADENZA INVECE DI ASPETTARLA.
+#
+# Riscrive `decision_expiration_time` (e `expiration`, se c'e') a «adesso piu'
+# $2 secondi», che puo' essere NEGATIVO.  Torna 0 se ha toccato almeno una
+# voce, 1 se non ne ha trovate — ⛔ e «non ne ho trovate» non e' «fatto».
+#
+# ⚠ CHE COSA QUESTO NON DIMOSTRA, detto prima di usarlo: che il giorno 7 nel
+#   mondo vero succeda questo.  Dimostra che Chrome **onora l'istante che si e'
+#   segnato**.  Messo insieme a `due_numeri` — che quell'istante e' il clic piu'
+#   604 800 s — i due fatti danno la durata senza aspettarla.
+#
+# ⛔ E si lavora SEMPRE SU UNA COPIA: il profilo vero porta l'orologio dei sette
+#    giorni, che e' la conferma gratis del 17-18 agosto.  Rovinarlo per fare
+#    prima sarebbe pagare la fretta con l'unica prova indipendente che c'e'.
+# ---------------------------------------------------------------------------
+scrivi_scadenza() # $1 = profilo (una COPIA)   $2 = secondi da adesso
+{
+	python3 - "$1" "$2" <<'PY'
+import json, os, sys, time
+radice, delta = sys.argv[1], float(sys.argv[2])
+# base::Time conta in microsecondi dal 1° gennaio 1601.
+adesso = (time.time() + 11644473600) * 1e6
+nuovo = str(int(adesso + delta * 1e6))
+toccati = 0
+for cartella, _, file in os.walk(radice):
+    if "Preferences" not in file:
+        continue
+    percorso = os.path.join(cartella, "Preferences")
+    try:
+        d = json.load(open(percorso, encoding="utf-8"))
+    except Exception:
+        continue
+    dec = (d.get("profile", {}).get("content_settings", {})
+             .get("exceptions", {}).get("ssl_cert_decisions"))
+    if not dec:
+        continue
+    for chiave, voce in dec.items():
+        imp = voce.get("setting") or {}
+        if "decision_expiration_time" in imp:
+            print(f"        {chiave}")
+            print(f"          decision_expiration_time: {imp['decision_expiration_time']} → {nuovo}")
+            imp["decision_expiration_time"] = nuovo
+            toccati += 1
+        if "expiration" in voce and voce["expiration"] not in ("0", 0):
+            voce["expiration"] = nuovo
+            toccati += 1
+    with open(percorso, "w", encoding="utf-8") as f:
+        json.dump(d, f)
+sys.exit(0 if toccati else 1)
+PY
+}
+
 registra() # $1 = json compatto
 {
 	python3 - "$STATO" "$1" <<'PY'
@@ -492,8 +632,8 @@ stato)
 	fi
 	exit 0
 	;;
-avvia|oggi) ;;
-*) echo "uso: $0 {avvia|oggi|stato}" >&2; exit 2 ;;
+avvia|oggi|scavalca) ;;
+*) echo "uso: $0 {avvia|oggi|scavalca|stato}" >&2; exit 2 ;;
 esac
 
 log "1. Il sito, sul server"
@@ -585,6 +725,171 @@ if [ "$COMANDO" = avvia ]; then
 	scadenza_memorizzata | tee "$T/scadenza.txt" | sed 's/^/        /'
 	SCAD=$(sed -n 's/^scadenza : //p' "$T/scadenza.txt" | head -1)
 	registra "{\"giro\":\"avvia\",\"esito\":\"CONCESSA\",\"impronta\":\"$IMPRONTA\",\"chrome\":\"$VERSIONE\",\"scadenza_memorizzata\":\"${SCAD:-IGNOTA}\"}"
+elif [ "$COMANDO" = scavalca ]; then
+	# =====================================================================
+	# ⭐ IL GIRO CHE NON ASPETTA SETTE GIORNI.
+	#
+	# La domanda di S1b e' una sola, e non e' «quanto dura»: e' **che frase si
+	# dice all'utente** — «una volta» oppure «una volta a settimana».  Per
+	# rispondere servono due fatti, e nessuno dei due ha bisogno del calendario:
+	#
+	#   1. che istante Chrome si segna          → `due_numeri`, gia' su disco
+	#   2. che quell'istante lo ONORI           → si sposta la scadenza indietro
+	#
+	# ⛔ E un terzo che nessuno aveva posto, e che da solo cambierebbe la
+	#    risposta: **Chrome rinnova la scadenza a ogni visita?**  Se lo facesse,
+	#    chi si collega tutti i giorni non rivedrebbe mai l'avviso, e «una volta
+	#    a settimana» sarebbe falso anche con la costante giusta.  ⏳ L'orologio
+	#    da sette giorni **non lo avrebbe mai visto**: lo visita ogni giorno.
+	#
+	# ⛔ IL PROFILO VERO NON SI TOCCA.  Tutto avviene su una copia; l'orologio
+	#    del 17-18 agosto resta in piedi come conferma indipendente e gratis.
+	# =====================================================================
+	APPROVATI_SC=0
+
+	log "4. ⭐ I due numeri che Chrome si e' scritto da solo"
+	if DUE=$(due_numeri "$PROFILO"); then
+		read -r N_MOD N_SCA N_DIF N_CHIAVE <<< "$DUE"
+		inf "decisione presa : $N_MOD (µs dal 1601)"
+		inf "scadenza segnata: $N_SCA"
+		inf "chiave           : $N_CHIAVE"
+		inf "differenza      : $N_DIF s"
+		# ⛔ Il confronto e' fra DUE NUMERI DELLA STESSA MANO: nessun orologio
+		#    nostro entra nel conto, quindi nessuno scarto fra orologi da
+		#    spiegare.  E' precisamente l'errore che aveva reso `[?]` questa riga.
+		if python3 -c 'import sys; sys.exit(0 if abs(float(sys.argv[1])-604800)<1 else 1)' "$N_DIF"; then
+			ok "⭐ scadenza − decisione = 604800 s a meno di un secondo:"
+			ok "   la costante di S1 §3.1 regge sul campo, misurata [M]"
+			APPROVATI_SC=$((APPROVATI_SC + 1))
+		else
+			ko "⛔ scadenza − decisione = $N_DIF s, e l'atteso e' 604800."
+			ko "   ⚠ Questo NON e' uno scarto fra orologi: i due istanti li ha"
+			ko "   scritti Chrome. Se non torna, non torna davvero."
+		fi
+	else
+		ko "⛔ nel profilo non trovo la coppia (last_modified, scadenza):"
+		ko "   non e' «zero», e' «non l'ho trovata». Niente verdetto su questo."
+	fi
+
+	# ⛔ RILIEVO A31, e me l'ero fatto addosso io: da qui in poi OGNI risposta
+	#    passa dal registro delle visite.  A canale non certificato, «la copia
+	#    non apre» e «non ho potuto guardare» sono la stessa stringa — ed e'
+	#    esattamente quel che e' successo al primo giro di questo comando, che
+	#    ha dichiarato «COPIA_MUTA» su una visita che nel registro C'ERA.
+	#    Il giro `avvia` si ferma qui da sempre; questo si fermava dopo.
+	if [ "$CANALE" != SI ]; then
+		ko "⛔ NON PROSEGUO: il canale di lettura non e' certificato («$CANALE»)."
+		ko "   Ogni «NO» da qui in poi vorrebbe dire «non ho potuto guardare»,"
+		ko "   e uscirebbe un verdetto su S1b da uno strumento muto."
+		registra "{\"giro\":\"scavalca\",\"esito\":\"CANALE_NON_CERTIFICATO\",\"canale\":\"$CANALE\",\"chrome\":\"$VERSIONE\"}"
+		exit 6
+	fi
+
+	log "5. La copia — e il primo controllo, che e' sul metodo"
+	COPIA=$T/copia
+	cp -a "$PROFILO" "$COPIA" || { ko "la copia del profilo non e' riuscita"; exit 3; }
+	inf "copiato $PROFILO → $COPIA  ($(du -sh "$COPIA" | cut -f1))"
+	PRIMA_SC=$(visita "$COPIA" copia "")
+	if [ "$PRIMA_SC" = SI ]; then
+		ok "⭐ LA COPIA PORTA L'ECCEZIONE: la pagina si apre."
+		ok "   Senza questo, tutto il resto misurerebbe una copia rotta."
+		APPROVATI_SC=$((APPROVATI_SC + 1))
+	else
+		ko "⛔ la copia NON apre la pagina (esito «$PRIMA_SC»)."
+		ko "   Allora l'eccezione non sopravvive alla copia, e questo metodo"
+		ko "   non e' utilizzabile: ogni «NO» piu' avanti sarebbe gia' spiegato."
+		registra "{\"giro\":\"scavalca\",\"esito\":\"COPIA_MUTA\",\"copia_apre\":\"$PRIMA_SC\",\"chrome\":\"$VERSIONE\"}"
+		exit 6
+	fi
+
+	log "6. ⛔ Chrome rinnova la scadenza quando lo si visita?"
+	# ⛔ La domanda che l'orologio da sette giorni non poteva porre, perche' lo
+	#    visita tutti i giorni: se ogni visita spostasse la scadenza in avanti,
+	#    l'avviso non tornerebbe MAI per chi usa il prodotto — e il banco che
+	#    aspetta vedrebbe «regge» al settimo giorno senza sapere perche'.
+	if DUE2=$(due_numeri "$COPIA"); then
+		read -r M_MOD M_SCA _ _ <<< "$DUE2"
+		inf "prima della visita: $N_SCA"
+		inf "dopo  la visita   : $M_SCA"
+		if [ "$M_SCA" = "$N_SCA" ]; then
+			ok "⭐ LA SCADENZA NON SI SPOSTA: visitare la pagina non rinnova"
+			ok "   l'eccezione. Quindi «una volta a settimana» vale anche per"
+			ok "   chi si collega tutti i giorni"
+			RINNOVA=NO
+			APPROVATI_SC=$((APPROVATI_SC + 1))
+		else
+			ko "⛔ LA SCADENZA SI E' SPOSTATA visitando la pagina."
+			ko "   Allora chi usa il prodotto ogni giorno non rivede mai"
+			ko "   l'avviso, e la frase da dire all'utente cambia."
+			RINNOVA=SI
+		fi
+	else
+		ko "⛔ dopo la visita non ritrovo la coppia di istanti"; RINNOVA=IGNOTO
+	fi
+
+	log "7. ⛔ IL CONTROLLO CHE DICE *NO*: scadenza spostata IN AVANTI"
+	# ⛔ E' il controllo senza cui il punto 8 non dimostra niente.  Al punto 8 la
+	#    pagina smettera' di aprirsi: ma «Chrome ha onorato la scadenza» e
+	#    «Chrome si e' accorto che gli abbiamo messo le mani nel file e ha
+	#    buttato tutto» hanno la STESSA faccia.  ⭐ Qui si usa la stessa,
+	#    identica manomissione con una data FUTURA: se passa, la manomissione e'
+	#    accettata, e al punto 8 l'unica cosa cambiata sara' il segno.
+	if ! scrivi_scadenza "$COPIA" 2592000; then
+		ko "⛔ non ho trovato nessuna scadenza da riscrivere: metodo non applicabile"
+		exit 6
+	fi
+	AVANTI=$(visita "$COPIA" avanti "")
+	if [ "$AVANTI" = SI ]; then
+		ok "⭐ con la scadenza a +30 giorni la pagina si apre ANCORA:"
+		ok "   riscrivere quel campo non rompe l'eccezione di per se'"
+		APPROVATI_SC=$((APPROVATI_SC + 1))
+	else
+		ko "⛔ con la scadenza a +30 giorni la pagina NON si apre («$AVANTI»)."
+		ko "   Allora e' la SCRITTURA a rompere l'eccezione, non la data: il"
+		ko "   punto 8 misurerebbe la nostra manomissione, non Chrome."
+		ko "   ⛔ Nessun verdetto. Resta l'orologio del 17-18 agosto."
+		registra "{\"giro\":\"scavalca\",\"esito\":\"MANOMISSIONE_RIFIUTATA\",\"avanti\":\"$AVANTI\",\"chrome\":\"$VERSIONE\"}"
+		exit 6
+	fi
+
+	log "8. ⭐ LA MISURA: scadenza spostata INDIETRO di un giorno"
+	scrivi_scadenza "$COPIA" -86400 || { ko "niente da riscrivere"; exit 6; }
+	INDIETRO=$(visita "$COPIA" indietro "")
+	if [ "$INDIETRO" = NO ]; then
+		ok "⭐ con la scadenza gia' passata la pagina NON si apre piu':"
+		ok "   Chrome ONORA l'istante che si e' segnato"
+		APPROVATI_SC=$((APPROVATI_SC + 1))
+	elif [ "$INDIETRO" = SI ]; then
+		ko "⛔ con la scadenza GIA' PASSATA la pagina si apre lo stesso."
+		ko "   Allora quell'istante Chrome non lo guarda, e la durata"
+		ko "   dell'eccezione non e' quella che si e' scritto."
+	else
+		ko "⛔ esito «$INDIETRO»: non ho potuto guardare. Niente verdetto."
+	fi
+
+	log "9. ⛔ E un profilo appena nato deve vedere l'avviso"
+	NUOVO_SC=$(visita "$T/profilo-nuovo" nuovo "")
+	if [ "$NUOVO_SC" = NO ] && [ "$CANALE" = SI ]; then
+		ok "un profilo appena nato NON arriva alla pagina: lo strumento distingue"
+		APPROVATI_SC=$((APPROVATI_SC + 1))
+	else
+		ko "il profilo nuovo da' «$NUOVO_SC» (canale «$CANALE»): controllo non passato"
+	fi
+
+	registra "{\"giro\":\"scavalca\",\"differenza_s\":\"${N_DIF:-IGNOTA}\",\"rinnova_a_ogni_visita\":\"${RINNOVA:-IGNOTO}\",\"copia_apre\":\"$PRIMA_SC\",\"avanti_30g\":\"$AVANTI\",\"indietro_1g\":\"$INDIETRO\",\"profilo_nuovo\":\"$NUOVO_SC\",\"approvati\":\"$APPROVATI_SC su 6\",\"impronta\":\"$IMPRONTA\",\"chrome\":\"$VERSIONE\"}"
+
+	log "Esito"
+	inf "controlli approvati: $APPROVATI_SC su 6"
+	if [ "$APPROVATI_SC" -eq 6 ]; then
+		ok "⭐ S1b RISPOSTA, SENZA ASPETTARE: Chrome si segna il clic + 604800 s,"
+		ok "   onora quell'istante, e NON lo rinnova visitando la pagina."
+		ok "   ⇒ all'utente si dice «una volta a settimana», non «una volta»."
+		inf "⚠ Cio' che questo giro NON prova: che il 17 agosto non succeda"
+		inf "  anche altro. ⏳ L'orologio vero e' intatto e lo dira' da solo."
+	else
+		ko "⛔ verdetto NON dato: $APPROVATI_SC su 6. Le righe qui sopra dicono quale."
+		exit 6
+	fi
 else
 	log "4. Il giro di oggi"
 	ANCORA=$(visita "$PROFILO" oggi "")
