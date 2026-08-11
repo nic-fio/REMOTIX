@@ -132,11 +132,26 @@ def eco_attesa(bersaglio):
 
 
 def profilo(nome):
-    """⛔ Un bersaglio sconosciuto non ripiega su «innesto»: si ferma."""
+    """⛔ Un bersaglio sconosciuto non ripiega su «innesto»: si ferma.
+
+    ⚠ `controllo` sta nella grammatica (`--bersaglio {innesto,prodotto,
+      controllo}`, la stessa della sonda del trasporto) e **non** in questa
+      tabella: per B5, B6, B7 e B8 il server guasto di proposito verso il filo
+      non esiste ancora.  ⛔ Farlo cadere su «innesto» darebbe un VERDE del caso
+      sano al posto di un controllo che deve diventare rosso, che e' peggio di
+      un controllo assente.
+    """
+    if nome == "controllo":
+        raise SystemExit(
+            "⛔ bersaglio «controllo»: la grammatica lo prevede, questi quattro "
+            "banchi non ce l'hanno ancora.  Sarebbe il server GUASTO DI "
+            "PROPOSITO, quello contro cui il banco deve diventare rosso "
+            "(LEZIONI.md §1.2); oggi esiste solo verso la pagina "
+            "(01-b11-guasto-innesta.py), non verso il filo.")
     if nome not in PROFILO:
         raise SystemExit(
-            f"⛔ bersaglio «{nome}» sconosciuto: i due valori sono "
-            f"{' e '.join(PROFILO)}.  Non ripiego su nessuno dei due — "
+            f"⛔ bersaglio «{nome}» sconosciuto: i valori sono "
+            f"{', '.join(PROFILO)} e «controllo».  Non ripiego su nessuno — "
             f"misurerei un server dichiarandone un altro.")
     return PROFILO[nome]
 

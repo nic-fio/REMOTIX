@@ -1270,27 +1270,66 @@ def inf(testo):
 
 async def principale(a):
     registro = Registro(a.registro)
-    casi = [c for c in CASI if not a.solo or a.solo in c[0]]
+    # ⛔ I casi e gli esclusi sono quelli DEL BERSAGLIO: contro il prodotto
+    #    `server-in-chiusura` c'e' e 0x0C esce dagli esclusi; contro l'innesto
+    #    e' l'opposto.  ⭐ Il numero che B7 stampa accanto a un esito e' quello
+    #    del bersaglio che si e' acceso, non quello del documento.
+    TUTTI = casi_di(a.bersaglio)
+    ESCL = esclusi_di(a.bersaglio)
+    casi = [c for c in TUTTI if not a.solo or a.solo in c[0]]
+    if a.escludi:
+        prima = len(casi)
+        casi = [c for c in casi if a.escludi not in c[0]]
+        a.esclusi_a_mano = prima - len(casi)
+    else:
+        a.esclusi_a_mano = 0
 
     # ── --elenco: le previsioni, e il denominatore, senza misurare ──────────
     if a.elenco:
         print(f"== B7 — il congedo dal lato che riceve\n")
-        print(f"   ⛔ {len({c[1] for c in CASI})} motivi PROVOCABILI su "
-              f"{len(MOTIVI)} di §8.2, in {len(CASI)} casi.  Ogni riga e' una "
+        print(f"   ⛔ {len({c[1] for c in TUTTI})} motivi PROVOCABILI su "
+              f"{len(MOTIVI)} di §8.2, in {len(TUTTI)} casi.  Ogni riga e' una "
               f"PREVISIONE scritta prima di misurare\n")
-        for nome, motivo, verso, strade, spiega, _ in CASI:
+        for nome, motivo, verso, strade, spiega, _ in TUTTI:
             print(f"  {nome:34s} {motivo:#04x} {MOTIVI[motivo]}  [{verso}]")
             print(f"  {'':34s}   strade esigibili: {', '.join(strade)}")
             print(f"  {'':34s}   {spiega}")
-        print(f"\n   ⛔ E GLI {len(ESCLUSI)} ESCLUSI, col perche' — senza "
+        print(f"\n   ⛔ E GLI {len(ESCL)} ESCLUSI, col perche' — senza "
               f"questo elenco «7 su 7» sarebbe vero per costruzione:\n")
-        for c, perche in ESCLUSI:
+        for c, perche in ESCL:
             print(f"  {MOTIVI[c]:26s} {c:#04x}  {perche}")
-        ok, testo = certifica_denominatore(CASI)
+        ok, testo = certifica_denominatore(TUTTI, ESCL)
         print(f"\n   {'⭐' if ok else '⛔'} {testo}")
         return 0 if ok else 3
 
+    # ⛔ IL REGISTRO DEL GIRO — e la prima riga dice contro che cosa si misura.
+    #    Fino all'11 agosto 2026 B7 non ne aveva nessuno.
+    a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
+                        a.md5 or None)
+    a.reg.apri_giro(
+        "B7", "un caso per motivo, ciascuno su una connessione nuova; il "
+              "congedo si legge SUL FILO dal lato che riceve, mai dal registro "
+              "di chi lo manda",
+        extra={"casi": len(casi), "casi_del_bersaglio": len(TUTTI),
+               "provocabili": len({c[1] for c in TUTTI}),
+               "esclusi": len(ESCL), "filtro": a.solo,
+               # ⛔ IL NUMERO CHE CAMBIA COL BERSAGLIO, scritto PRIMA di
+               #    misurare: sette contro l'innesto, otto contro il prodotto.
+               "attesi_provocabili": b0.profilo(a.bersaglio)["motivi_provocabili"],
+               "pid_server": getattr(a, "pid_server", 0)})
     print("== B7 — il congedo, verificato DAL LATO CHE RICEVE (§8.1)")
+    print(f"   ⛔ BERSAGLIO: {a.bersaglio} · porta {a.porta} · binario md5 "
+          f"{(a.md5 or 'ignota')[:12]}…")
+    atteso_prov = b0.profilo(a.bersaglio)["motivi_provocabili"]
+    visti_prov = len({c[1] for c in TUTTI})
+    if visti_prov != atteso_prov:
+        print(f"   {ROSSO}⛔ i provocabili di questo bersaglio dovrebbero essere "
+              f"{atteso_prov} e i casi ne coprono {visti_prov}{GRIGIO}")
+        print(f"      ⛔ Non e' un rosso del server: e' il banco che non sa "
+              f"contare quel che sta per misurare.")
+        return 3
+    print(f"   ⛔ {visti_prov} motivi provocabili su {len(MOTIVI)} di §8.2 — e "
+          f"il numero e' del BERSAGLIO, non del documento")
     print("   ⛔ per ogni motivo: il CONGEDO sul canale **e** il codice nella "
           "chiusura")
     print("      della sessione — due strade, due contatori, una `&&`\n")
@@ -1299,7 +1338,7 @@ async def principale(a):
     print("== ⭐ Il banco si certifica prima di puntarsi sull'incognita "
           "(CODER.md §3.3)")
     guasti_cert = 0
-    ok, testo = certifica_denominatore(CASI)
+    ok, testo = certifica_denominatore(TUTTI, ESCL)
     riga(ok, "il denominatore torna", testo)
     guasti_cert += 0 if ok else 1
     for nome, ok, testo in certifica_lettori():
@@ -1359,19 +1398,23 @@ async def principale(a):
             print(f"    {GIALLO}⚠{GRIGIO} senza --registro i {prima - len(casi)}"
                   f" casi client→server NON si girano: manca il testimone")
 
-    # ═══ I CASI ════════════════════════════════════════════════════════════
+    # ═══ I CASI  ════════════════════════════════════════════════════════════
     if not casi:
         print(f"\n    {ROSSO}⛔ «--solo {a.solo}» ha selezionato ZERO casi su "
-              f"{len(CASI)}: non c'e' niente da misurare{GRIGIO}")
+              f"{len(TUTTI)}: non c'e' niente da misurare{GRIGIO}")
         print("       Questo NON e' un verde.  I nomi si leggono con --elenco.")
         return 2
 
-    print(f"\n== I casi: {len(casi)} su {len(CASI)}, "
+    print(f"\n== I casi: {len(casi)} su {len(TUTTI)}, "
           f"{len({c[1] for c in casi})} motivi su "
-          f"{len({c[1] for c in CASI})} provocabili")
+          f"{len({c[1] for c in TUTTI})} provocabili")
     if a.solo:
         print(f"    {GIALLO}⚠ GIRO PARZIALE{GRIGIO}: l'esito verde si legge «i "
               f"casi selezionati passano», mai «B7 passa»")
+    if a.esclusi_a_mano:
+        print(f"    {GIALLO}⚠{GRIGIO} {a.esclusi_a_mano} casi tolti da "
+              f"«--escludi {a.escludi}»: il giro e' PARZIALE, e l'esito verde "
+              f"non li copre")
 
     conti = {
         "§3.1 punto 1 — la riga «che cosa» nel registro di chi chiude": [0, 0],
@@ -1437,6 +1480,36 @@ async def principale(a):
             print(f"        dettaglio dal corpo: «{es.dettaglio}»  "
                   f"⚠ va nel registro, NON all'utente (§8.2)")
 
+        # ⛔ E il fatto va nel registro PRIMA di ogni conclusione: un caso che
+        #    fa cadere il banco deve aver lasciato la propria riga, o il
+        #    registro racconterebbe solo i giri andati bene.
+        a.reg.scrivi({"tipo": "caso", "nome": nome, "esito": bool(buono),
+                      "motivo_atteso": motivo, "verso": verso,
+                      "strade_esigibili": list(strade),
+                      "motivo_visto": es.motivo, "tipo_motivo": es.tipo_motivo,
+                      "codice_wt": es.codice_wt, "provocato": es.provocato,
+                      "fase": es.fase, "errore": es.errore,
+                      "dettaglio": es.dettaglio,
+                      "prove": [[e_, bool(x_), bool(y_)]
+                                for e_, x_, y_, _ in prove]})
+
+        # ⛔ B0.5 — «dopo ogni prova il server dev'essere ancora li'» — E IL
+        #    CASO CHE FA ECCEZIONE, dichiarato invece che dimenticato.
+        #
+        #    `server-in-chiusura` **spegne il server apposta**: e' l'unico caso
+        #    in cui la morte del server E' la cosa provata.  ⚠ Girare B0.5 qui
+        #    darebbe un rosso su un server che ha fatto esattamente quel che
+        #    §8.1 gli chiede, e sarebbe il rosso sull'imputato sbagliato dentro
+        #    il banco che quella lezione cita.
+        if motivo == SERVER_IN_CHIUSURA:
+            inf("⚠ B0.5 NON si applica a questo caso: il server l'ho spento io,")
+            inf("  ed e' la cosa provata.  Il conto non lo tocca, e questa riga")
+            inf("  esiste perche' «saltato» e «passato» non abbiano la stessa")
+            inf("  faccia")
+            a.reg.scrivi({"tipo": "b0.5-saltato", "nome": nome,
+                          "perche": "il caso spegne il server apposta"})
+            morto = True
+            break
         conto = conti["⛔ il server e' ancora li' dopo il caso (B0.5)"]
         conto[1] += 1
         vivo, perche = await ancora_vivo(a)
@@ -1486,20 +1559,47 @@ async def principale(a):
                                           f"{os.path.basename(a.pagina)}")
                 inf("(--frasi le stampa tutte)")
 
-        # ═══ L'ESCLUSIONE MISURATA ═════════════════════════════════════════
+        # ═══ L'ESCLUSIONE MISURATA — E IL SEGNO SI INVERTE COL BERSAGLIO ═══
+        #
+        # ⛔ Contro l'INNESTO il grep deve dire **zero**: il motivo e' escluso, e
+        #    l'esclusione e' misurata invece che asserita.
+        # ⭐ Contro il PRODOTTO deve dire **piu' di zero**: il percorso esiste,
+        #    ed e' l'ottavo motivo provocabile.  ⚠ Uno zero qui vorrebbe dire
+        #    che sto misurando un binario **di prima** di quella notte, e il
+        #    caso `server-in-chiusura` sarebbe rosso per la ragione sbagliata.
+        atteso_positivo = b0.profilo(a.bersaglio)["spegnimento"]
+        sorgenti = b0.sorgenti_spegnimento(a.bersaglio, a.dentro)
         print(f"\n== ⛔ L'esclusione che si MISURA: SERVER_IN_CHIUSURA (0x0C)")
-        quanti, testo = esclusione_misurata(a.sorgente)
+        inf(f"si guarda DOVE LA COSA SUCCEDE, e su «{a.bersaglio}» sono "
+            f"{len(sorgenti)} file — ⛔ non `rcp.c` da solo, che e' identico "
+            f"nei due server e non sa che esista un processo")
+        quanti, testo = esclusione_misurata(sorgenti)
         if quanti is None:
-            riga(False, "il grep su rcp.c", testo)
+            riga(False, "i sorgenti si leggono", testo)
             guasti += 1
+        elif atteso_positivo:
+            riga(quanti > 0, "⭐ SERVER_IN_CHIUSURA E' producibile", testo)
+            if quanti > 0:
+                inf("⭐ e infatti i provocabili qui sono OTTO, non sette: e' la "
+                    "prima")
+                inf("  differenza visibile fra i due server (fasi/01-filo-nudo.md B7)")
+            else:
+                inf("⛔ ZERO occorrenze su un bersaglio che dovrebbe averle: o")
+                inf("  sto misurando un binario di PRIMA della notte del 10")
+                inf("  agosto, o i sorgenti non sono quelli da cui e' stato")
+                inf("  costruito.  ⚠ Non e' «il prodotto non congeda»: e' che")
+                inf("  non sto guardando il prodotto che credo")
+                guasti += 1
         else:
             riga(quanti == 0, "SERVER_IN_CHIUSURA non e' producibile", testo)
             if quanti == 0:
-                inf("⚠ e `fasi/01-filo-nudo.md` B7 lo elenca fra «gli otto")
-                inf("  motivi che questa fase sa produrre»: sono sette")
+                inf("⚠ e `fasi/01-filo-nudo.md` B7 lo elencava fra «gli otto")
+                inf("  motivi che questa fase sa produrre»: contro l'innesto")
+                inf("  sono sette")
             else:
-                inf("⭐ il percorso adesso esiste: va tolto da ESCLUSI e gli si")
-                inf("  scrive un caso, o B7 conta un motivo in meno del vero")
+                inf("⭐ il percorso adesso esiste anche nell'innesto: va tolto")
+                inf("  dagli esclusi e gli si scrive un caso, o B7 conta un")
+                inf("  motivo in meno del vero")
                 guasti += 1
 
     # ═══ IL RIEPILOGO ══════════════════════════════════════════════════════
@@ -1517,24 +1617,45 @@ async def principale(a):
     print()
     print(f"    ⛔ i motivi: {len(motivi_pieni)} su {len(motivi_visti)} "
           f"provati in questo giro, e i PROVOCABILI dalla fase 1 sono "
-          f"{len({c[1] for c in CASI})} su {len(MOTIVI)} di §8.2")
-    print(f"       gli altri {len(ESCLUSI)} sono esclusi, ciascuno col suo "
+          f"{len({c[1] for c in TUTTI})} su {len(MOTIVI)} di §8.2")
+    print(f"       gli altri {len(ESCL)} sono esclusi, ciascuno col suo "
           f"perche' (--elenco), e l'esclusione di")
     print(f"       SERVER_IN_CHIUSURA e' misurata, non asserita")
 
+    if morto and any(c[1] == SERVER_IN_CHIUSURA for c in casi):
+        # ⭐ Il server e' morto perche' gliel'ho chiesto io: e' il caso
+        #    `server-in-chiusura`, e le sezioni che seguono (le frasi,
+        #    l'esclusione misurata) non toccano il server — girano lo stesso.
+        print(f"\n    ⚠ il server e' spento perche' questo giro lo ha spento "
+              f"apposta: il giro e' PARZIALE per costruzione")
+        a.reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": True,
+                      "perche": "giro dello spegnimento"})
+        print(f"    --  {a.reg.riassunto()}")
+        return 1 if guasti else 0
     if morto:
         print(f"\n    {ROSSO}⛔ il banco si e' fermato: senza un server non "
               f"c'e' niente da misurare{GRIGIO}")
+        a.reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": True,
+                      "perche": "il server e' morto senza che glielo chiedessi"})
         return 1
+    a.reg.scrivi({"tipo": "verdetto", "guasti": guasti,
+                  "parziale": bool(a.solo or not a.registro
+                                   or a.esclusi_a_mano),
+                  "motivi_pieni": sorted(motivi_pieni),
+                  "provocabili": len({c[1] for c in TUTTI}),
+                  "conti": {k: v for k, v in conti.items()}})
+    print(f"\n    --  {a.reg.riassunto()}")
     if guasti:
-        print(f"\n    {ROSSO}⛔ B7: {guasti} punti non passano{GRIGIO}")
+        print(f"\n    {ROSSO}⛔ B7: {guasti} punti non passano contro "
+              f"«{a.bersaglio}»{GRIGIO}")
         return 1
-    if a.solo or not a.registro:
-        print(f"\n    {VERDE}⭐ i punti misurati passano{GRIGIO} — ⚠ e questo "
-              f"NON e' «B7 passa»: il giro era parziale")
+    if a.solo or not a.registro or a.esclusi_a_mano:
+        print(f"\n    {VERDE}⭐ i punti misurati passano contro "
+              f"«{a.bersaglio}»{GRIGIO} — ⚠ e questo NON e' «B7 passa»: il giro "
+              f"era parziale")
         return 0
     print(f"\n    {VERDE}⭐ B7 passa: {len(motivi_pieni)} su "
-          f"{len({c[1] for c in CASI})} motivi provocabili, per TUTT'E DUE le "
+          f"{len({c[1] for c in TUTTI})} motivi provocabili, per TUTT'E DUE le "
           f"strade di §3.1,{GRIGIO}")
     print(f"    {VERDE}      e 15 frasi distinte su 15 — e i numeri qui sopra "
           f"dicono su che cosa{GRIGIO}")
@@ -1545,20 +1666,42 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="B7 — il congedo, verificato dal lato che riceve")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    p.add_argument("--porta", type=int, default=7447)
+    # ⛔ Nessun predefinito che nomini un bersaglio: 7447 e' l'innesto e 7448 il
+    #    prodotto, e un predefinito qui vorrebbe dire che «--bersaglio prodotto»
+    #    senza «--porta» misura l'innesto dichiarando il prodotto.
+    p.add_argument("--porta", type=int, required=True)
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
+    p.add_argument("--dentro", default=QUI,
+                   help="la radice dei sorgenti da cui si misura l'esclusione "
+                        "di SERVER_IN_CHIUSURA (dipende dal bersaglio)")
+    # ⛔ Il PID del server, per il solo caso `server-in-chiusura`.  Zero vuol
+    #    dire «non me l'hanno detto», e quel caso si dichiara NON FATTO invece
+    #    di mandare un segnale al buio.
+    p.add_argument("--pid-server", type=int, default=0,
+                   help="il PID del server, per provocare SERVER_IN_CHIUSURA")
     p.add_argument("--registro", default="",
                    help="il registro del server: serve a §3.1 punto 1 e al "
                         "verso client→server")
     p.add_argument("--pagina", default=os.path.join(QUI, "01-b11-pagina.html"),
                    help="il file dove vive la tabella delle frasi di §8.2")
-    p.add_argument("--sorgente", default=os.path.join(QUI, "rcp", "rcp.c"),
-                   help="rcp.c, per misurare l'esclusione di SERVER_IN_CHIUSURA")
     p.add_argument("--solo", default="",
                    help="gira solo i casi che contengono questo")
+    # ⛔ `--escludi` e non «--solo tutto tranne»: `server-in-chiusura` SPEGNE il
+    #    server, quindi il giro normale lo lascia fuori e lo script di lancio lo
+    #    chiama dopo, con il server riacceso apposta.  ⚠ Un filtro che togliesse
+    #    un caso in silenzio renderebbe «N su N» vero per costruzione: qui il
+    #    caso tolto si stampa, e il denominatore resta quello del bersaglio.
+    p.add_argument("--escludi", default="",
+                   help="NON gira i casi che contengono questo, e lo dichiara")
     p.add_argument("--frasi", action="store_true",
                    help="stampa tutte e quindici le frasi di §8.2")
     p.add_argument("--elenco", action="store_true",
                    help="stampa le previsioni e il denominatore, senza misurare")
+    b0.aggiungi_argomenti(p)
+    # ⚠ `--elenco` non misura e non ha bisogno di una porta.
+    if "--elenco" in sys.argv:
+        for _az in p._actions:
+            if _az.dest == "porta":
+                _az.required = False
     sys.exit(asyncio.run(principale(p.parse_args())))

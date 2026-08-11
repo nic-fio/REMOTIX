@@ -2,10 +2,27 @@
 #
 # 01-b6-lancia.sh — gira SUL SERVER.  B6: i tre tetti della stretta di mano.
 #
-#   bash /media/REMOTIX/src/01-b6-lancia.sh            tutto (due fasi)
-#   bash /media/REMOTIX/src/01-b6-lancia.sh sani       solo la fase «sani»
-#   bash /media/REMOTIX/src/01-b6-lancia.sh ping       solo la fase «ping»
-#   bash /media/REMOTIX/src/01-b6-lancia.sh elenco     le previsioni, senza misurare
+#   BERSAGLIO=innesto  bash .../01-b6-lancia.sh          tutto (due fasi)
+#   BERSAGLIO=prodotto bash .../01-b6-lancia.sh sani     solo la fase «sani»
+#   BERSAGLIO=prodotto bash .../01-b6-lancia.sh ping     solo la fase «ping»
+#   BERSAGLIO=innesto  bash .../01-b6-lancia.sh elenco   le previsioni
+#
+# ⛔ `BERSAGLIO` E' OBBLIGATORIA — vedi `01-b0-bersaglio.sh`.
+#
+# ---------------------------------------------------------------------------
+# ⛔⭐ CHE COSA CAMBIA PUNTANDO B6 AL PRODOTTO — la previsione, scritta PRIMA
+#
+# | cosa | innesto | prodotto | perche' |
+# |---|---|---|---|
+# | i tre tetti (5 · 60 · 10 s) | uguali | uguali | sono i `#define TETTO_*` di `rcp.c`, **identico byte per byte** nei due server |
+# | ⛔ **il tetto del TRASPORTO** | si sceglie: 120 s / 15 s | ⛔ **30 s fissi** | `#define IDLE_MS 30000` in `src/trasporto.c`, e nessuna opzione lo tocca (nessun `getenv` in tutto `src/`) |
+# | ⛔ **le due fasi** | indipendenti | ⛔ **NON indipendenti** | 30 s stanno sotto i 60 s delle credenziali: `credenziali-tetto` (sani) e `credenziali-tetto-sotto-il-trasporto` (ping) misurano LA STESSA COSA.  ⚠ CIAO (5 s) e ATTACCA (10 s) restano puliti — 30 > 10.  ⛔ Contarli come due conferme sarebbe contare due volte la stessa misura |
+# | `cert-morte-silenziosa` | muore a 15 s | muore a **30 s** | e' il tetto del trasporto, letto dal pari |
+# | `credenziali-presto` (tace 42 s) | passa sotto un tetto di 120 s | ⭐ passa **solo se i PING ci sono** | 42 s > 30 s: sul prodotto questo caso diventa una **seconda prova dei PING**, gratis, ed e' un guadagno — non una perdita |
+# | il cronometro del primo tetto | armato dall'apertura del canale | uguale | `src/webtransport.c` `rcp_avvia()` arma `regola_battito()` nella stessa riga di `rcp_apri()`.  ⚠ Il commento dice *«nell'innesto questo mancava»*: se `ciao-tetto` desse «niente» sull'innesto e 5 s sul prodotto, la differenza e' **questa**, non §4.6 |
+# | `ciao-senza-controllo` (R3.27, seconda risposta) | resta appesa fino a 120 s | ⚠ muore a **30 s** — per INATTIVITA', non per un tetto | e' lo stesso «non c'e' nessun tetto», con addosso un tempo di QUIC piu' corto.  ⛔ Il banco deve leggerlo come `morte-silenziosa`, non come «tetto scaduto»: la R3.27 resta APERTA su tutt'e due i bersagli |
+# | il ban | vive nel processo, muore col riavvio | ⛔ vive **su file** | riaccendere non basta piu' (I7): il file dei ban di B6 si butta all'inizio, e si sblocca PRIMA del giro, dichiarandolo |
+# | il registro | ⛔ **non esisteva** | ⛔ **non esisteva** | ⚠ i tre numeri del 10 agosto — 5,0 · 60,1 · 10,0 s — non sono riverificabili da nessuno.  Da questo giro c'e' `b6-esiti-<bersaglio>.jsonl` |
 #
 # ⛔ CON UN FILTRO IL GIRO E' PARZIALE, E LO DICE.  La fase «sani» misura i tre
 #    tetti; la fase «ping» misura **la cura di §4.6**, cioe' che il server
@@ -129,24 +146,27 @@ set -uo pipefail
 ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
-CERT=/media/REMOTIX/b2-certificati
-SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
-LIBS="$DENTRO/b2/ngtcp2/build/lib"
-IND=192.168.0.2
-PORTA=7447
 UTENTE=prova
 PAROLA=parola-di-prova
 
-# I due tetti del trasporto, in millisecondi.  ⛔ `TETTO_PING` deve stare
-# SOTTO i 60 s del tetto delle credenziali, o la fase «ping» non prova niente:
-# e' l'intero punto della fase.
-TETTO_SANI=120000
-TETTO_PING=15000
+# ⛔ Il bersaglio: una forma sola per i quattro banchi, in un file solo.
+SIGLA=b6
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
+
+# shellcheck source=01-b0-bersaglio.sh
+. "$FUORI/01-b0-bersaglio.sh"
+IND=$B_IND
+PORTA=$B_PORTA
+# ⛔ I due tetti del trasporto vengono dal PROFILO, non da qui.  Sull'innesto
+#    sono 120 000 e 15 000 ms; sul prodotto sono 30 000 tutt'e due, perche'
+#    `IDLE_MS` non si sposta — e quando coincidono le due fasi NON sono
+#    indipendenti, e il banco lo dichiara invece di contarle due volte.
+TETTO_SANI=$B_IDLE_LUNGO
+TETTO_PING=$B_IDLE_CORTO
 
 AZIONE=${1:-tutto}
 case "$AZIONE" in
@@ -211,42 +231,57 @@ chi_tiene_la_porta()
 }
 
 if [ "$AZIONE" = elenco ]; then
-	bash "$ENTRA" --root "python3 $DENTRO/01-b6-tetti.py --elenco"
+	bash "$ENTRA" --root "python3 $DENTRO/01-b6-tetti.py --bersaglio $B_NOME --elenco"
 	exit 0
 fi
 
 # ---------------------------------------------------------------------------
-log "1. Il server si ricostruisce — e i tetti stanno in rcp.c"
-inf "⛔ gli innesti si TOLGONO e si rimettono: applicarne uno sopra l'altro"
-inf "   lascerebbe due copie dello stesso codice, e la seconda non si vede"
-bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py --togli > /dev/null"
-bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py --togli > /dev/null"
-bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py" \
-	| grep -E "appiglio|righe|CODICE" | sed 's/^/        /'
-bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py" \
-	| grep -E "appiglio|NO |file nostri" | sed 's/^/        /'
+# ⛔ 1. IL SERVER SI PREPARA — e le due strade non sono la stessa (vedi
+#    `01-b0-bersaglio.sh`).  ⚠ Sull'innesto il pezzo che conta e' quello che fa
+#    SCORRERE IL TEMPO: senza `rcp_tempo()` nel percorso di scrittura nessun
+#    tetto scade mai, e B6 stamperebbe tre rossi contro un modulo intatto.
+#    Sul prodotto quel pezzo e' `wt_battito_ns()`/`wt_batti()`, che il ciclo di
+#    `main.c` chiama sempre: non c'e' un innesto che possa mancare.
+bersaglio_pronto || exit 3
 
-# ⛔ Un innesto che non trova un appiglio stampa «NO» e VA AVANTI: senza questo
-#    controllo si compilerebbe un server a cui manca un pezzo, e il banco
-#    darebbe rosso su una regola che il server non ha mai avuto occasione di
-#    applicare.  ⚠ Qui il pezzo che conta e' quello che fa **scorrere il
-#    tempo**: senza `rcp_tempo()` nel percorso di scrittura, nessun tetto
-#    scade mai e B6 stamperebbe tre rossi contro un modulo intatto.
-SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
-QUANTI=$(bash "$ENTRA" --root "grep -c 'rcp_tempo(rcp_' $SORG" | tr -cd '0-9')
-if [ "${QUANTI:-0}" -ge 1 ]; then
-	ok "la chiamata a rcp_tempo() e' nel sorgente ($QUANTI)"
+if [ "$B_NOME" = innesto ]; then
+	SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
+	QUANTI=$(bash "$ENTRA" --root "grep -c 'rcp_tempo(rcp_' $SORG" | tr -cd '0-9')
+	if [ "${QUANTI:-0}" -ge 1 ]; then
+		ok "la chiamata a rcp_tempo() e' nel sorgente ($QUANTI)"
+	else
+		ko "⛔ la chiamata a rcp_tempo() NON e' nel sorgente: il tempo di RCP"
+		ko "   non scorrerebbe, nessun tetto scadrebbe, e i tre rossi"
+		ko "   sarebbero del banco"
+		exit 3
+	fi
 else
-	# ⚠ Niente apici inversi dentro le virgolette doppie: la shell li
-	#   eseguirebbe come un comando.  E' la quinta veste della trappola delle
-	#   shell annidate di questa fase, in una riga d'errore che nessuno prova.
-	ko "⛔ la chiamata a rcp_tempo() NON e' nel sorgente: il tempo di RCP non"
-	ko "   scorrerebbe, nessun tetto scadrebbe,"
-	ko "   nessun tetto scadrebbe, e i tre rossi sarebbero del banco"
-	exit 3
+	# ⭐ Il controllo equivalente sul prodotto, e si MISURA come l'altro.
+	QUANTI=$(bash "$ENTRA" --root "grep -c 'wt_batti(' $DENTRO/remotix/trasporto.c" | tr -cd '0-9')
+	if [ "${QUANTI:-0}" -ge 1 ]; then
+		ok "il ciclo del prodotto chiama wt_batti() ($QUANTI): il tempo di RCP scorre"
+	else
+		ko "⛔ `wt_batti()` non compare in trasporto.c: senza, l'orologio di"
+		ko "   RCP non avanza e nessun tetto di §4.6 scade mai.  I tre rossi"
+		ko "   sarebbero del banco, non di §4.6"
+		exit 3
+	fi
 fi
 
 # ---------------------------------------------------------------------------
+# ⛔ 1-bis. LO STATO INIZIALE DEL BAN — B0.1, B0.2, B0.3.
+#
+# ⭐ B6 non fallisce MAI un'autenticazione: tutti i suoi casi usano le
+#    credenziali buone o si fermano prima di `CREDENZIALI`.  Quindi non consuma
+#    il conto e non lascia un ban addosso a chi viene dopo.
+# ⛔ Ma puo' TROVARLO: il ban del prodotto sta su file e sopravvive al riavvio
+#    (I7), quindi «riaccendere il server» — che era la cura di B6 — non basta
+#    piu'.  Il file dei ban di B6 e' suo soltanto, e si butta qui.
+log "1-bis. Lo stato iniziale del ban (B0.1, B0.2, B0.3)"
+bersaglio_butta_il_ban
+inf "⭐ e B6 non fallisce mai un'autenticazione: non consuma il conto, e non"
+inf "   lascia un ban a nessuno"
+
 # ⛔ I TETTI SCRITTI NEL CODICE, LETTI DALLA COPIA CHE SI COMPILA.
 #
 #    `01-b3-rcp-innesta.py` COPIA `rcp/rcp.c` in `examples/`: e' quella copia
@@ -269,8 +304,23 @@ leggi_tetto() # $1 = file, $2 = nome del define
 }
 
 log "2. I tetti scritti nel CODICE — e il numero cambiato il 10 agosto"
-SORGENTE_RCP=$FUORI/rcp/rcp.c
-COMPILATO_RCP=$FUORI/b2/ngtcp2/examples/rcp.c
+# ⛔ I DUE FILE DIPENDONO DAL BERSAGLIO, e il confronto e' lo stesso.
+#
+#   innesto   `01-b3-rcp-innesta.py` COPIA `rcp/rcp.c` in `examples/`: e' quella
+#             copia che finisce nel binario, e leggere solo il sorgente direbbe
+#             un numero che nel server in esecuzione potrebbe non esserci.
+#   prodotto  ⭐ non c'e' nessuna copia: il Makefile compila `src/rcp.c` sul
+#             posto.  ⚠ Il confronto si fa lo stesso, fra `src/rcp.c` e
+#             `banchi/rcp/rcp.c` — che DEVONO restare identici byte per byte
+#             (md5 `cb7af778…`): il giorno in cui divergessero, i banchi e il
+#             prodotto misurerebbero due protocolli diversi con lo stesso nome.
+if [ "$B_NOME" = innesto ]; then
+	SORGENTE_RCP=$FUORI/rcp/rcp.c
+	COMPILATO_RCP=$FUORI/b2/ngtcp2/examples/rcp.c
+else
+	SORGENTE_RCP=$FUORI/rcp/rcp.c
+	COMPILATO_RCP=$FUORI/remotix/rcp.c
+fi
 TETTI_CODICE=""
 LETTURA_OK=si
 for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_ATTACCA"; do
@@ -285,9 +335,16 @@ for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_A
 		continue
 	fi
 	if [ "$A" != "$B" ]; then
-		ko "⛔ $DEF: il sorgente dice $A e la copia compilata dice $B"
-		ko "   L'innesto non ha ricopiato rcp.c: il binario non ha il numero"
-		ko "   che credi di aver cambiato."
+		ko "⛔ $DEF: «$SORGENTE_RCP» dice $A e «$COMPILATO_RCP» dice $B"
+		if [ "$B_NOME" = innesto ]; then
+			ko "   L'innesto non ha ricopiato rcp.c: il binario non ha il"
+			ko "   numero che credi di aver cambiato."
+		else
+			ko "   ⛔ src/rcp.c e banchi/rcp/rcp.c NON sono piu' identici: da"
+			ko "      qui in poi i banchi e il prodotto parlano due protocolli"
+			ko "      diversi con lo stesso nome, e nessun confronto fra i due"
+			ko "      bersagli vuol piu' dire niente."
+		fi
 		LETTURA_OK=no
 		continue
 	fi
@@ -322,40 +379,23 @@ fi
 ok "compilato"
 
 # ---------------------------------------------------------------------------
-log "3. La porta"
-chi_tiene_la_porta
-case $? in
-0)	ko "la porta $PORTA e' gia' occupata:"
-	printf '%s\n' "$CHI" | sed 's/^/        /'
-	ko "fermalo per PID (mai con pkill -f) e rilancia"
-	exit 3 ;;
-1)	ok "porta $PORTA libera (e «ss» ha parlato: non e' un silenzio)" ;;
-*)	ko "⛔ non si e' potuto sapere chi tiene la porta $PORTA:"
-	ko "   e «non si sa» non si arrotonda a «libera» — i tre tetti"
-	ko "   verrebbero misurati contro il server di un altro banco (B0.1)"
-	exit 3 ;;
-esac
+log "3. La porta — la guarda `bersaglio_accendi`, prima di ogni accensione"
+inf "⛔ e non una volta sola all'inizio: fra la prima fase e la seconda ci sta"
+inf "   un altro server, e «non si sa» non si arrotonda a «libera»"
 
 # ---------------------------------------------------------------------------
 PID=""
 
 accendi() # $1 = tetto d'inattivita' in ms, $2 = etichetta
 {
-	local tms=$1 et=$2 ts=$((tms / 1000))
-	rm -f "$FUORI/b6-$et.log" "$FUORI/b6-$et.pid"
-	bash "$ENTRA" --root \
-		"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=${ts}s $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b6-$et.log 2>&1 & echo \$! > $DENTRO/b6-$et.pid"
-	sleep 2
-	PID=$(cat "$FUORI/b6-$et.pid" 2>/dev/null)
-	# ⛔ `/proc`, non `kill -0`: il server e' di root e questo script no, e da
-	#    utente normale `kill -0` risponde «operazione non permessa», cioe' un
-	#    errore, non «non esiste».
-	if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
-		ko "il server non e' partito.  Il registro dice:"
-		[ -f "$FUORI/b6-$et.log" ] && sed 's/^/        /' "$FUORI/b6-$et.log"
-		return 1
-	fi
-	ok "in ascolto con --timeout=${ts}s, PID $PID"
+	local tms=$1 et=$2
+	# ⛔ L'accensione, il controllo della porta e il rifiuto di accendere con un
+	#    tetto che il bersaglio non sa dare stanno tutti in `bersaglio_accendi`:
+	#    un posto solo per i due server.
+	bersaglio_accendi "$et" "$tms" || return 1
+	PID=$B_PID
+	# ⛔ E SUBITO L'IMPRONTA: ho acceso il server che ho dichiarato?
+	bersaglio_impronta || return 1
 	return 0
 }
 
@@ -376,33 +416,14 @@ accendi() # $1 = tetto d'inattivita' in ms, $2 = etichetta
 #    dice «proibito», che non e' «morto».
 spegni()
 {
-	local giri=0
-	[ -n "$PID" ] || return 0
-	bash "$ENTRA" --root "kill $PID 2>/dev/null || true"
-	while [ -d "/proc/$PID" ] && [ "$giri" -lt 20 ]; do
-		sleep 0.5
-		giri=$((giri + 1))
-	done
-	if [ -d "/proc/$PID" ]; then
-		ko "⛔ il processo $PID e' ancora vivo dopo 10 s: la fase successiva"
-		ko "   troverebbe la porta $PORTA tenuta e darebbe la colpa a se stessa"
-		PID=""
-		return 1
-	fi
-	inf "il processo $PID e' sparito (dopo $giri mezzi secondi)"
-	PID=""
-	# ⛔ E POI LA PORTA, che e' una cosa diversa dal processo: la si chiede al
-	#    sistema, e «non si sa» non si arrotonda a «libera».
-	chi_tiene_la_porta
-	case $? in
-	0)	ko "⛔ la porta $PORTA e' ancora tenuta dopo lo spegnimento:"
-		printf '%s\n' "$CHI" | sed 's/^/        /'
-		return 1 ;;
-	1)	inf "la porta $PORTA e' libera di nuovo" ; return 0 ;;
-	*)	ko "⛔ non si e' potuto sapere se la porta $PORTA si e' liberata:"
-		ko "   la fase successiva partirebbe da uno stato non verificato"
-		return 1 ;;
-	esac
+	# ⛔ Lo spegnimento sta in `bersaglio_spegni`: aspetta che il processo
+	#    sparisca da `/proc` E che la porta si liberi, che sono due cose diverse
+	#    (rilievo R12-A.24).  ⚠ Sul prodotto vale doppio: `SIGTERM` non e' la
+	#    fine ma l'INIZIO di un percorso — `main.c` congeda tutte le sessioni
+	#    con `SERVER_IN_CHIUSURA` e aspetta fino a due secondi che i byte
+	#    escano.  Un banco che pretendesse la morte immediata leggerebbe «non
+	#    muore» su un server che sta facendo il suo mestiere.
+	bersaglio_spegni
 }
 
 # ⛔ IL TETTO SI MISURA, NON SI DA' PER MESSO — rilievo R8.3.
@@ -414,18 +435,18 @@ spegni()
 tetto_dal_pari() # $1 = atteso in ms, $2 = etichetta
 {
 	local atteso=$1 et=$2 letto=""
-	rm -f "$FUORI/b6-$et-tetto.log"
+	rm -f "$FUORI/b6-$B_NOME-$et-tetto.log"
 	bash "$ENTRA" --root \
-		"python3 $DENTRO/01-b2-sonda-trasporto.py --indirizzo $IND --porta $PORTA --etichetta b6-$et --idle-atteso $atteso > $DENTRO/b6-$et-tetto.log 2>&1"
-	if [ ! -f "$FUORI/b6-$et-tetto.log" ]; then
+		"python3 $DENTRO/01-b2-sonda-trasporto.py --indirizzo $IND --porta $PORTA --etichetta b6-$et --idle-atteso $atteso > $DENTRO/b6-$B_NOME-$et-tetto.log 2>&1"
+	if [ ! -f "$FUORI/b6-$B_NOME-$et-tetto.log" ]; then
 		ko "la sonda non ha scritto niente: non si e' potuto guardare"
 		return 2
 	fi
-	letto=$(grep -m1 'max_idle_timeout *=' "$FUORI/b6-$et-tetto.log" | tr -dc '0-9')
+	letto=$(grep -m1 'max_idle_timeout *=' "$FUORI/b6-$B_NOME-$et-tetto.log" | tr -dc '0-9')
 	if [ -z "$letto" ]; then
 		ko "non ho potuto leggere max_idle_timeout dal pari: la fase non parte"
 		ko "   (senza il tetto non si sa chi chiudera' — R8.3)"
-		tail -6 "$FUORI/b6-$et-tetto.log" | sed 's/^/        /'
+		tail -6 "$FUORI/b6-$B_NOME-$et-tetto.log" | sed 's/^/        /'
 		return 2
 	fi
 	if [ "$letto" -ne "$atteso" ]; then
@@ -462,7 +483,7 @@ fase() # $1 = nome (sani|ping), $2 = tetto del trasporto in ms
 		return 5
 	fi
 	bash "$ENTRA" --root \
-		"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --fase $nome --idle $tms --tetti-codice $TETTI_CODICE"
+		"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND $(bersaglio_opzioni_python) --utente $UTENTE --parola $PAROLA --fase $nome --idle $tms --tetti-codice $TETTI_CODICE"
 	e=$?
 
 	# ⛔ B0.5, dal di fuori.  Il banco lo chiede a ogni caso aprendo una
@@ -478,17 +499,20 @@ fase() # $1 = nome (sani|ping), $2 = tetto del trasporto in ms
 	# ⚠ Il registro del server: diagnosi, NON arbitro (§8.1 vuole il congedo
 	#   verificato dal lato che riceve).
 	log "Che cosa ha scritto il server nella fase «$nome» — diagnosi, non prova"
-	if [ -f "$FUORI/b6-$nome.log" ]; then
-		grep -c "REMOTIX B3" "$FUORI/b6-$nome.log" \
+	if [ -f "$B_LOG_FUORI" ]; then
+		# ⛔ Si conta l'impronta DEL BERSAGLIO: il prodotto non scrive
+		#    «REMOTIX B3» da nessuna parte, e uno zero verrebbe letto come
+		#    «il server non ha scritto niente».
+		grep -cE "$B_IMPRONTA" "$B_LOG_FUORI" \
 			| sed 's/^/        righe di registro: /'
-		if grep -q "scaduto il tetto per" "$FUORI/b6-$nome.log"; then
-			grep "scaduto il tetto per" "$FUORI/b6-$nome.log" | sed 's/^/        /'
+		if grep -q "scaduto il tetto per" "$B_LOG_FUORI"; then
+			grep "scaduto il tetto per" "$B_LOG_FUORI" | sed 's/^/        /'
 		else
 			inf "nessuna riga «scaduto il tetto per»: il server non dichiara"
 			inf "di aver fatto scadere nessun tetto in questa fase"
 		fi
 	else
-		inf "⛔ nessun registro da riassumere: $FUORI/b6-$nome.log non c'e'"
+		inf "⛔ nessun registro da riassumere: $B_LOG_FUORI non c'e'"
 		inf "   (volume non mappato? server mai partito? nome cambiato?)"
 	fi
 
@@ -512,6 +536,23 @@ fase() # $1 = nome (sani|ping), $2 = tetto del trasporto in ms
 	return "$e"
 }
 
+# ⛔⭐ E SE I DUE TETTI COINCIDONO, LE DUE FASI NON SONO INDIPENDENTI.
+#     Sul prodotto valgono tutt'e due 30 000 ms, perche' `IDLE_MS` non si
+#     sposta: `credenziali-tetto` (sani) e `credenziali-tetto-sotto-il-trasporto`
+#     (ping) misurano allora LA STESSA COSA, e contarle come due conferme
+#     sarebbe contare due volte la stessa misura.
+if [ "$TETTO_SANI" = "$TETTO_PING" ]; then
+	log "⛔ Le due fasi contro «$B_NOME» NON sono indipendenti"
+	inf "il tetto del trasporto vale $TETTO_SANI ms in tutt'e due: e' IDLE_MS"
+	inf "in src/trasporto.c, e nessuna opzione lo tocca."
+	inf "⚠ CIAO (5 s) e ATTACCA (10 s) restano puliti — 30 s > 10 s — e i loro"
+	inf "  due numeri valgono quanto valevano."
+	inf "⛔ CREDENZIALI (60 s) no: 30 s < 60 s, quindi in fase «sani» a tenere"
+	inf "  viva la connessione sono gia' i PING, esattamente come in «ping»."
+	inf "⭐ Il guadagno: «credenziali-presto», che tace 42 s, diventa una"
+	inf "  SECONDA prova dei PING invece di un controllo che passa comunque."
+fi
+
 if [ "$AZIONE" = tutto ] || [ "$AZIONE" = sani ]; then
 	fase sani "$TETTO_SANI"
 fi
@@ -520,7 +561,22 @@ if [ "$AZIONE" = tutto ] || [ "$AZIONE" = ping ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# ⛔ B0.3 — LA DICHIARAZIONE SULLO SBLOCCO, e adesso e' una dichiarazione VERA.
+#
+# ⚠ Questa sezione diceva «B6 non chiama il comando di sblocco, e dice perche'»,
+#   e la ragione era che il comando «vuole un server acceso con quell'opzione, e
+#   B6 accende il proprio senza».  ⭐ Adesso lo accende CON: `bersaglio_accendi`
+#   passa sempre `--comando-socket`, e il socket e' di B6 soltanto.
+# ⛔ B6 comunque non sblocca niente DENTRO il giro, e non ne ha bisogno: non
+#    fallisce mai un'autenticazione.  Qui si dice soltanto che la macchina resta
+#    come l'ha trovata, e lo si verifica invece di crederci.
+log "B0.3 — che cosa lascia dietro questo giro"
+inf "⭐ B6 non ha fallito nessuna autenticazione: nessun conto consumato,"
+inf "   nessun ban lasciato addosso a chi viene dopo"
+inf "⛔ e il suo file dei ban e' «$B_BAN», che nessun altro banco legge"
+
 log "Esito"
+inf "bersaglio: $B_NOME  ·  binario md5 ${B_MD5:-ignota}"
 inf "fasi eseguite:${FATTE:- nessuna}"
 case "$ESITO" in
 0)
@@ -561,5 +617,8 @@ case "$ESITO" in
 	ko "⛔ B6: qualcosa non passa"
 	;;
 esac
-inf "i registri restano in $FUORI/b6-sani.log e $FUORI/b6-ping.log"
+inf "i registri del server: $FUORI/b6-$B_NOME-sani.log e $FUORI/b6-$B_NOME-ping.log"
+inf "⭐ e i FATTI di questo giro, uno per riga: $B_ESITI_FUORI"
+inf "   (fino all'11 agosto 2026 B6 non aveva nessun registro, e i suoi tre"
+inf "    numeri — 5,0 · 60,1 · 10,0 s — non sono riverificabili da nessuno)"
 exit "$ESITO"

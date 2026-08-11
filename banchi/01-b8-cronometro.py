@@ -198,6 +198,8 @@ b3 = _importa("b3cliente", "01-b3-cliente.py")
 # ⛔ E il comando di sblocco pure: se questo file se lo riscrivesse, B0.3
 #    avrebbe due comandi di sblocco e nessuno saprebbe quale ha girato.
 cmd = _importa("b8sblocca", "01-b8-sblocca.py")
+# ⛔ E il profilo del BERSAGLIO: le differenze fra i due server in un file solo.
+b0 = _importa("b0bersaglio", "01-b0-bersaglio.py")
 
 inquadra, s_str, MOTIVI = b3.inquadra, b3.s, b3.MOTIVI
 T_CREDENZIALI = 0x0003
@@ -636,14 +638,36 @@ def piano_azzeramento(indirizzi, utente, inesistente):
 # ===========================================================================
 # L'esecuzione
 # ===========================================================================
+# ⛔ IL BERSAGLIO ENTRA IN OGNI RIGA, e lo mette questa variabile invece dei
+#    venti punti che chiamano `scrivi()`.  ⚠ Il caso concreto e' gia' sul disco:
+#    `banchi/prodotto/b8-campioni.jsonl` sono i campioni del secondo fisso presi
+#    contro il PRODOTTO la notte del 10 agosto, e `/media/REMOTIX/src/
+#    b8-fatti.jsonl` quelli presi contro l'INNESTO.  Stesso nome, stessa forma,
+#    stessi campi — e nessuna riga, in nessuno dei due, dice quale server ha
+#    risposto.  Chi li mettesse insieme «per avere piu' campioni» calcolerebbe
+#    la mediana di due popolazioni diverse credendo di ridurre il rumore.
+BERSAGLIO = {"bersaglio": "non dichiarato", "porta": None, "md5": "ignota"}
+
+# ⛔ Le righe che il lettore del registro cerca, e sono SCRITTE DIVERSE nei due
+#    server: le riempie `principale()` dal profilo del bersaglio.  ⚠ I valori
+#    qui sotto sono quelli dell'innesto e servono solo perche' il modulo si
+#    possa importare: se restassero questi contro il prodotto, il lettore
+#    direbbe «il server non ha detto niente sul ban» su un server che lo dice.
+R_BAN = {"caricati": "ban caricati:",
+         "illeggibile": "NON HO POTUTO LEGGERE il file dei ban",
+         "pagina": "pagina TCP a"}
+
+
 def scrivi(uscita, rec):
     """Una riga per fatto, scritta e **sincronizzata** subito.
 
     ⚠ Un file scritto e chiuso e' un fatto; una riga in un buffer e' una
       speranza sul momento in cui qualcuno la vedra' (`LEZIONI.md` §1.9, settima
       veste) — e questo processo muore e rinasce a ogni fase."""
+    fuori = dict(BERSAGLIO)
+    fuori.update(rec)
     with open(uscita, "a") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        f.write(json.dumps(fuori, ensure_ascii=False) + "\n")
         f.flush()
         os.fsync(f.fileno())
 
@@ -856,12 +880,24 @@ def leggi_registro(percorso):
                     (d["ammessi"] if ultimo_pam == "ammesso" else d["respinti"]).append(n)
                 elif " da=" in riga and ("respinto motivo" in riga or "ammesso utente" in riga):
                     d["indirizzi"].add(riga.rsplit(" da=", 1)[1].strip().rsplit(":", 1)[0])
-                elif "ban caricati:" in riga:
+                elif R_BAN["caricati"] in riga:
                     d["vite"] += 1
-                    m = re.search(r"ban caricati: (-?\d+)", riga)
+                    # ⛔⭐ E LA RIGA D'AVVIO E' SCRITTA DIVERSA NEI DUE SERVER.
+                    #
+                    #     innesto   «REMOTIX B3: ban caricati: N»
+                    #     prodotto  «HH:MM:SS.mmm avvio  ban: <file>, N
+                    #               indirizzi caricati»
+                    #
+                    #  ⚠ Cercare la forma dell'innesto contro il prodotto
+                    #    avrebbe dato «vite = 0» e «il server non ha detto
+                    #    NIENTE sul ban all'avvio»: un rosso pieno su un server
+                    #    che quella riga la scrive, e il rosso sarebbe finito
+                    #    sull'imputato sbagliato.
+                    m = re.search(r"(-?\d+) indirizzi caricati", riga) or \
+                        re.search(r"ban caricati: (-?\d+)", riga)
                     d["carichi"].append(int(m.group(1)) if m else None)
                     d["avvii"].append(riga.strip())
-                elif "NON HO POTUTO LEGGERE il file dei ban" in riga:
+                elif R_BAN["illeggibile"] in riga:
                     d["vite"] += 1
                     d["illeggibili"] += 1
                     d["avvii"].append(riga.strip())
@@ -871,7 +907,7 @@ def leggi_registro(percorso):
                     d["sbloccati"].append(riga.strip())
                 elif "NON era bannato, non ho tolto niente" in riga:
                     d["non_bannati"].append(riga.strip())
-                elif "pagina TCP a" in riga:
+                elif R_BAN["pagina"] in riga:
                     d["pagine"].append(riga.strip())
     except OSError as e:
         return None, f"il registro del server non si legge: {e}"
@@ -2062,7 +2098,10 @@ async def controlla_utenti(a, *inesistenti):
 def principale():
     p = argparse.ArgumentParser(
         description="B8 — il secondo fisso, le tre mediane e il ban dell'indirizzo")
-    p.add_argument("--porta", type=int, default=7447)
+    # ⛔ Nessun predefinito che nomini un bersaglio: 7447 e' l'innesto e 7448 il
+    #    prodotto, e un predefinito qui vorrebbe dire che «--bersaglio prodotto»
+    #    senza «--porta» misura l'innesto dichiarando il prodotto.
+    p.add_argument("--porta", type=int, required=True)
     p.add_argument("--indirizzi", default="127.0.0.1,192.168.0.2",
                    help="⛔ due: raddoppiano il margine del bilancio e si "
                         "vedono nel registro del server")
@@ -2103,8 +2142,19 @@ def principale():
     p.add_argument("--giro", default="")
     p.add_argument("--uscita", default="b8-fatti.jsonl")
     p.add_argument("--registro", default="")
+    # ⛔ Gli stessi quattro argomenti di B5, B6 e B7 — bersaglio obbligatorio e
+    #    senza predefinito, uscita, giro, md5 del binario.
+    b0.aggiungi_argomenti(p)
     a = p.parse_args()
     a.indirizzi = [x for x in a.indirizzi.split(",") if x]
+    a.prof = b0.profilo(a.bersaglio)
+    # ⛔ E da qui in poi OGNI riga del registro porta il bersaglio, la porta e
+    #    l'impronta md5 del binario misurato.
+    BERSAGLIO.update({"bersaglio": a.bersaglio, "porta": a.porta,
+                      "md5": a.md5 or "ignota"})
+    R_BAN.update({"caricati": a.prof["r_ban_caricati"],
+                  "illeggibile": a.prof["r_ban_illeggibile"],
+                  "pagina": a.prof["r_pagina"]})
 
     if a.previsione:
         return previsione(a)
@@ -2115,6 +2165,22 @@ def principale():
     if len(a.indirizzi) < 2:
         print(f"    {ROSSO}NO{GRIGIO}  ⛔ servono DUE indirizzi di provenienza")
         return 2
+
+    # ⛔ E LA RIGA D'APERTURA DEL GIRO — che dice contro che cosa si misura, e
+    #    che cosa questo bersaglio fa di diverso.
+    scrivi(a.uscita, {"giro": a.giro, "tipo": "giro", "banco": "B8",
+                      "eseguibile": a.prof["eseguibile"],
+                      "indirizzi": a.indirizzi,
+                      # ⛔ La differenza che cambia il SIGNIFICATO di un rosso:
+                      #    se il file dei ban c'e' e non si legge, il prodotto
+                      #    RIFIUTA di partire (src/main.c: «non e' "zero ban",
+                      #    e' la protezione di §4.4-bis spenta.  Non si
+                      #    parte.»), mentre l'innesto parte e lo scrive.  ⚠ Su
+                      #    questo bersaglio quel caso non si osserva come una
+                      #    riga di registro: si osserva come «il server non si
+                      #    e' acceso».
+                      "ban_illeggibile_parte": a.prof["ban_illeggibile_parte"],
+                      "righe_cercate": dict(R_BAN)})
 
     if a.stato_iniziale:
         # ⛔ B0.1: si dichiara E si verifica da che stato si parte.  Qui lo stato

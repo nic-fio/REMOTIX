@@ -2,10 +2,27 @@
 #
 # 01-b8-lancia.sh — gira SUL SERVER.  B8: il secondo fisso, e IL BAN dell'indirizzo.
 #
-#   bash /media/REMOTIX/src/01-b8-lancia.sh              10 blocchi = 20 campioni/caso
-#   bash /media/REMOTIX/src/01-b8-lancia.sh 3            un giro corto, per provare il banco
-#   bash /media/REMOTIX/src/01-b8-lancia.sh previsione   che cosa mi aspetto, senza misurare
-#   bash /media/REMOTIX/src/01-b8-lancia.sh costruisci   rimette gli innesti e ricompila
+#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh             10 blocchi
+#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh 3           un giro corto
+#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh previsione  senza misurare
+#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh costruisci  rimette gli innesti
+#
+# ⛔ `BERSAGLIO` E' OBBLIGATORIA — vedi `01-b0-bersaglio.sh`.
+#
+# ---------------------------------------------------------------------------
+# ⛔⭐ CHE COSA CAMBIA PUNTANDO B8 AL PRODOTTO — la previsione, scritta PRIMA
+#
+# | cosa | innesto | prodotto | perche' |
+# |---|---|---|---|
+# | il secondo fisso e le tre mediane | uguali | uguali | li governa `rcp.c` + `autenticazione.c` + PAM.  ⚠ `rcp.c` e' identico byte per byte; `autenticazione.c` **no**, ed e' l'unico punto in cui una differenza sarebbe VERA e non di misura |
+# | ⚠ il `[?]` di PAM (mediana 2636 ms sui respinti) | aperto | ⛔ **atteso uguale**, e il giro contro il prodotto NON lo chiude | a governare i tempi e' PAM, non noi: cambiare server non cambia la pila PAM |
+# | il ban: soglia 3, finestra 5 min, 12 ore | uguali | uguali | `rcp.c`, identico |
+# | ⛔ **la riga d'avvio sul ban** | `REMOTIX B3: ban caricati: N` | `HH:MM:SS.mmm avvio  ban: <file>, N indirizzi caricati` | ⛔ due stringhe diverse.  Cercare la prima contro il prodotto avrebbe dato «il server non ha detto NIENTE sul ban all'avvio» — rosso pieno su un server che lo dice |
+# | ⛔ **file dei ban illeggibile** | il server parte e lo scrive | ⛔ il server **NON PARTE** | `src/main.c`: *«non e' "zero ban", e' la protezione di §4.4-bis spenta.  Non si parte.»*  ⚠ Su questo bersaglio quel caso non si osserva come una riga: si osserva come «il server non si e' acceso», e il banco lo dichiara |
+# | la pagina del ban | `pagina TCP a …` | `GET / da … (indirizzo BANNATO)` | ⭐ e i quattro appigli che B8 legge — `data-bannato`, `data-restano-ms`, «tentativi esauriti», `id="ore"`/`id="minuti"` — nel prodotto CI SONO: li ha messi il rilievo R12.2 apposta, dopo essersi accorti che senza il banco avrebbe dato tre rossi su un server che il ban lo fa |
+# | il comando di sblocco | `SBLOCCA` / `PING`, stesso protocollo | ⭐ identico, `src/comando.c` | ⛔ **ed e' la meta' che nessuno ha mai fatto**: `01-b8-sblocca.py` non e' mai stato puntato al prodotto |
+# | i due indirizzi (127.0.0.1 e 192.168.0.2) | ok su 0.0.0.0 | ok su 0.0.0.0 | ⚠ il certificato del prodotto porta il SAN `192.168.0.2`, ma il cliente di prova non verifica (`ssl.CERT_NONE`): il SAN non morde qui |
+# | il tetto d'inattivita' | 120 s | 30 s | ⚠ B8 non tace mai piu' di pochi secondi: non lo tocca |
 #
 # ---------------------------------------------------------------------------
 # ⛔ CHE COSA MISURA — e la spiegazione lunga sta in `01-b8-cronometro.py`
@@ -59,18 +76,8 @@ set -uo pipefail
 ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
-WT="$FUORI/01-b2-lancia-wt.sh"
 SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
 SORG_MAIN=$DENTRO/b2/ngtcp2/examples/server.cc
-SERVER=$DENTRO/b2/ngtcp2/build/examples/bsslserver
-PORTA=7447
-LEGAME=0.0.0.0
-INDIRIZZI=127.0.0.1,192.168.0.2
-# ⛔ Le due strade del padrone di casa (§4.4-bis), passate al server come
-#    opzioni: dove stanno i ban fra un riavvio e l'altro, e da dove si comanda
-#    di toglierne uno.
-BAN_FILE=$DENTRO/b8-ban.txt
-COMANDO=$DENTRO/b8-comando.sock
 PER_CASO=2          # terzine per blocco: 2 fallimenti per indirizzo, soglia 3
 # ⛔ E LE CREDENZIALI STANNO QUI, IN CHIARO E ACCANTO A QUELLE DEGLI ALTRI
 #    BANCHI.  Fino all'11 agosto 2026 questo banco si portava dentro il proprio
@@ -87,6 +94,17 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
+# ⛔ Il bersaglio: una forma sola per i quattro banchi, in un file solo.
+SIGLA=b8
+# shellcheck source=01-b0-bersaglio.sh
+. "$FUORI/01-b0-bersaglio.sh"
+PORTA=$B_PORTA
+LEGAME=$B_LEGAME
+INDIRIZZI=$B_INDIRIZZI
+BAN_FILE=$B_BAN
+COMANDO=$B_COMANDO
+GIRO=$B_GIRO
+
 AZIONE=${1:-10}
 
 # ---------------------------------------------------------------------------
@@ -95,7 +113,7 @@ bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
 ok "sudo validato"
 
 if [ "$AZIONE" = previsione ]; then
-	bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --previsione"
+	bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --bersaglio $B_NOME --porta $PORTA --previsione"
 	exit 0
 fi
 
@@ -105,6 +123,13 @@ fi
 #    toccava.  Un binario di ieri non ha ne' la pagina in TCP ne' il comando di
 #    sblocco, e il sintomo sarebbe «il banco non riesce a sbloccare» — cioe' il
 #    rosso sull'imputato sbagliato.
+if [ "$AZIONE" = costruisci ] && [ "$B_NOME" != innesto ]; then
+	ko "⛔ «costruisci» esiste solo per l'innesto: il prodotto non lo ricompila"
+	ko "   questo banco.  ⛔ Un banco che ricompila quel che misura si toglie il"
+	ko "   testimone indipendente.  Si rifa' con:"
+	ko "     bash $ENTRA --root \"bash $DENTRO/remotix/costruisci.sh\""
+	exit 2
+fi
 if [ "$AZIONE" = costruisci ]; then
 	log "1. Gli innesti si tolgono e si rimettono"
 	inf "⛔ applicarne uno sopra l'altro lascerebbe due copie dello stesso"
@@ -163,55 +188,68 @@ fi
 #       dice.  ⚠ E' un banco: in produzione buttare quel file e' togliere la
 #       protezione a tutti.
 log "1. Lo stato iniziale"
-GIRO=$(date +%Y%m%d-%H%M%S)
-rm -f "$FUORI/b8-fatti.jsonl" "$FUORI/b8-server.log" "$FUORI/b8-stato.txt"
-bash "$ENTRA" --root "rm -f $BAN_FILE $BAN_FILE.nuovo $COMANDO"
-inf "giro: $GIRO"
+rm -f "$B_ESITI_FUORI" "$FUORI/b8-$B_NOME-server.log" "$FUORI/b8-stato.txt"
+bersaglio_butta_il_ban
+inf "giro: $GIRO  ·  bersaglio: $B_NOME  ·  binario md5 ${B_MD5:-ignota}"
 inf "blocchi: $BLOCCHI  ·  campioni tenuti per caso: $((BLOCCHI * PER_CASO))"
-inf "⛔ buttato il file dei ban «$BAN_FILE» (B0.2: e' lo stato che sopravvive"
-inf "   di piu' fra tutti — al riavvio del server compreso)"
+
 inf "⚠ vite del server: 2 (una per i campioni e il ban, una per la persistenza)"
 inf "⚠ durata dell'ordine di $(( BLOCCHI * 6 * 4 / 60 + 2 ))–$(( BLOCCHI * 6 * 6 / 60 + 4 )) minuti"
 inf "⚠ e fa $((BLOCCHI * 4 + 9)) autenticazioni FALLITE sull'utente di prova: se un"
 inf "  giorno la pila PAM avesse un pam_faillock, quell'utente si bloccherebbe"
 
-# ⛔ CHE SERVER E' QUELLO CHE STO PER ACCENDERE — e adesso i file sono DUE.
+# ⛔ CHE SERVER E' QUELLO CHE STO PER ACCENDERE — e sull'innesto i file sono DUE.
 #    Un binario senza l'innesto di RCP non risponderebbe a `CIAO`; uno senza il
 #    ban lato ospite non servirebbe nessuna pagina in TCP e non aprirebbe nessun
 #    socket di comando.  ⚠ Un binario piu' VECCHIO del sorgente innestato e' un
-#    binario che quell'innesto non ce l'ha (`LEZIONI.md` §1.9, ottava veste).
-bash "$ENTRA" --root \
-	"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SORG_MAIN; stat -c %Y $SORG; stat -c %Y $SORG_MAIN; stat -c %Y $SERVER; stat -c %y $SERVER; } > $DENTRO/b8-stato.txt 2>&1"
-if [ ! -f "$FUORI/b8-stato.txt" ]; then
-	ko "non ho potuto guardare lo stato del server: il file non e' stato scritto"
-	exit 2
-fi
-INNESTO=$(sed -n 1p "$FUORI/b8-stato.txt")
-OSPITE=$(sed -n 2p "$FUORI/b8-stato.txt")
-T_SORG=$(sed -n 3p "$FUORI/b8-stato.txt")
-T_MAIN=$(sed -n 4p "$FUORI/b8-stato.txt")
-T_BIN=$(sed -n 5p "$FUORI/b8-stato.txt")
-QUANDO=$(sed -n 6p "$FUORI/b8-stato.txt")
-case "$INNESTO$OSPITE" in
-	''|*[!0-9]*) ko "non ho potuto contare l'innesto di RCP nei sorgenti:"
-	             sed 's/^/        /' "$FUORI/b8-stato.txt"; exit 2 ;;
-esac
-if [ "$INNESTO" -lt 3 ]; then
-	ko "⛔ l'innesto di RCP NON e' nel codec ($INNESTO righe «REMOTIX B3»)"
-	ko "   questo server non parla RCP: «01-b8-lancia.sh costruisci»"
-	exit 3
-fi
-if [ "$OSPITE" -lt 5 ]; then
-	ko "⛔ il BAN LATO OSPITE non e' in server.cc ($OSPITE righe «REMOTIX B3»)"
-	ko "   questo server non serve nessuna pagina in TCP e non ha nessun comando"
-	ko "   di sblocco: «01-b8-lancia.sh costruisci»"
-	exit 3
-fi
-ok "l'innesto e' nei due file (codec $INNESTO righe · ospite $OSPITE) · binario del $QUANDO"
-if [ "$T_BIN" -lt "$T_SORG" ] || [ "$T_BIN" -lt "$T_MAIN" ]; then
-	ko "⛔ il binario e' PIU' VECCHIO di un sorgente innestato: dentro non c'e'"
-	ko "   quel che si legge nel .cc.  «01-b8-lancia.sh costruisci»"
-	exit 3
+#    binario che quell'innesto non ce l'ha (`LEZIONI.md` §1.9, ottava veste), e
+#    `bersaglio_pronto` lo verifica per tutt'e due i bersagli prendendo anche
+#    l'impronta md5.
+bersaglio_pronto || exit 3
+
+if [ "$B_NOME" = innesto ]; then
+	bash "$ENTRA" --root \
+		"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SORG_MAIN; } > $DENTRO/b8-stato.txt 2>&1"
+	if [ ! -f "$FUORI/b8-stato.txt" ]; then
+		ko "non ho potuto guardare lo stato del server: il file non c'e'"
+		exit 2
+	fi
+	INNESTO=$(sed -n 1p "$FUORI/b8-stato.txt")
+	OSPITE=$(sed -n 2p "$FUORI/b8-stato.txt")
+	case "$INNESTO$OSPITE" in
+		''|*[!0-9]*) ko "non ho potuto contare l'innesto di RCP nei sorgenti:"
+		             sed 's/^/        /' "$FUORI/b8-stato.txt"; exit 2 ;;
+	esac
+	if [ "$INNESTO" -lt 3 ]; then
+		ko "⛔ l'innesto di RCP NON e' nel codec ($INNESTO righe «REMOTIX B3»)"
+		ko "   questo server non parla RCP: «01-b8-lancia.sh costruisci»"
+		exit 3
+	fi
+	if [ "$OSPITE" -lt 5 ]; then
+		ko "⛔ il BAN LATO OSPITE non e' in server.cc ($OSPITE righe)"
+		ko "   niente pagina in TCP e niente comando di sblocco:"
+		ko "   «BERSAGLIO=innesto ... 01-b8-lancia.sh costruisci»"
+		exit 3
+	fi
+	ok "l'innesto e' nei due file (codec $INNESTO righe · ospite $OSPITE)"
+else
+	# ⭐ Sul prodotto il pezzo equivalente e' il socket di comando, e si MISURA
+	#    nel sorgente prima di accendere: senza, ogni sblocco di questo giro
+	#    uscirebbe 3 e il sintomo sarebbe «il banco non riesce a sbloccare»,
+	#    cioe' il rosso sull'imputato sbagliato.
+	# ⛔ E questa e' «la meta' che nessuno ha fatto» di B0.3: puntare
+	#    `01-b8-sblocca.py` al prodotto, che oggi non e' mai stato provato.
+	QUANTI=$(bash "$ENTRA" --root "grep -c 'SBLOCCA ' $DENTRO/remotix/comando.c" | tr -cd '0-9')
+	if [ "${QUANTI:-0}" -ge 1 ]; then
+		ok "il comando di sblocco e' in comando.c ($QUANTI righe «SBLOCCA »)"
+		inf "⛔ e questa e' la PRIMA volta che 01-b8-sblocca.py viene puntato al"
+		inf "   prodotto: se il PING piu' sotto non risponde, il primo sospetto"
+		inf "   e' su questa cucitura, non sul ban"
+	else
+		ko "⛔ «SBLOCCA » non compare in comando.c: questo prodotto non ha il"
+		ko "   comando di sblocco, e B0.3 resterebbe senza il suo strumento"
+		exit 3
+	fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -266,20 +304,30 @@ log "2. Che cosa mi aspetto, prima di misurare"
 bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --previsione"
 
 # ---------------------------------------------------------------------------
-CRONO="python3 -u $DENTRO/01-b8-cronometro.py --porta $PORTA \
-	--indirizzi $INDIRIZZI --giro $GIRO --comando $COMANDO \
-	--utente $UTENTE --parola $PAROLA \
-	--uscita $DENTRO/b8-fatti.jsonl"
+# ⛔ `bersaglio_opzioni_python` porta con se' --bersaglio, --porta, --uscita,
+#    --md5 e --giro: gli stessi cinque di B5, B6 e B7, in un posto solo.
+CRONO="python3 -u $DENTRO/01-b8-cronometro.py $(bersaglio_opzioni_python) \
+	--indirizzi $INDIRIZZI --comando $COMANDO \
+	--utente $UTENTE --parola $PAROLA"
 
 ACCENDI() # $1 = perche'
 {
-	bash "$WT" accendi "$LEGAME" "$PORTA" \
-		"--ban-file=$BAN_FILE" "--comando-socket=$COMANDO"
-	if [ $? -ne 0 ]; then
+	# ⛔ L'accensione sta in `bersaglio_accendi`: passa `--ban-file` e
+	#    `--comando-socket` nella sintassi che quel bersaglio capisce
+	#    (`--ban-file=X` per l'innesto, `--ban-file X` per il prodotto),
+	#    controlla la porta prima, e rifiuta un tetto che non sa dare.
+	if ! bersaglio_accendi "$(printf '%s' "$1" | tr ' ' '-')" "$B_IDLE_LUNGO"; then
 		ko "il server non si e' acceso per «$1»"
+		if [ "$B_NOME" = prodotto ]; then
+			ko "   ⛔ e su questo bersaglio «non parte» ha una causa in piu':"
+			ko "   se «$BAN_FILE» c'e' e non si legge, il prodotto RIFIUTA di"
+			ko "   partire apposta (src/main.c).  Non e' «zero ban»."
+		fi
 		return 4
 	fi
-	PID=$(cat "$FUORI/b2-wt.pid" 2>/dev/null)
+	PID=$B_PID
+	# ⛔ E SUBITO L'IMPRONTA: e' il server che ho dichiarato?
+	bersaglio_impronta || return 4
 	# ⛔ E si guarda che cosa ha DETTO all'avvio sul ban: «zero ban» e «non ho
 	#    potuto leggere il file» sono due fatti diversi, e la riga che li
 	#    distingue e' l'unica prova che la persistenza e' accesa.
@@ -294,16 +342,22 @@ ACCENDI() # $1 = perche'
 	#    ⚠ Il verdetto poi le guarda (`leggi_registro`), ma chi legge il giro
 	#      dal vivo crede a questa riga, ed e' un'ora prima.
 	inf "quel che ha detto del ban all'avvio (stampato E confrontato — B0.4):"
-	if [ ! -f "$FUORI/b2-wt.log" ]; then
-		ko "⛔ il registro del server NON ESISTE ($FUORI/b2-wt.log): non e' «il"
+	if [ ! -f "$B_LOG_FUORI" ]; then
+		ko "⛔ il registro del server NON ESISTE ($B_LOG_FUORI): non e' «il"
 		ko "   server non ha detto niente sul ban», e' che non ho potuto guardare"
 		return 4
 	fi
-	grep -E "ban caricati|NON HO POTUTO LEGGERE il file dei ban|ban lato ospite|pagina e' servita|comando di sblocco" \
-		"$FUORI/b2-wt.log" | sed 's/^/        /'
-	CARICHI=$(grep -c "ban caricati:" "$FUORI/b2-wt.log")
-	ILLEGGIBILI=$(grep -c "NON HO POTUTO LEGGERE il file dei ban" "$FUORI/b2-wt.log")
-	SOCKET=$(grep -c "il comando di sblocco ascolta su" "$FUORI/b2-wt.log")
+	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|ban lato ospite|pagina e' servita|$B_R_PAGINA|comando di sblocco" \
+		"$B_LOG_FUORI" | sed 's/^/        /'
+	# ⛔⭐ E LE DUE RIGHE SONO SCRITTE DIVERSE NEI DUE SERVER — vengono dal
+	#     profilo, non da qui.
+	#       innesto   «ban caricati: N»  ·  «NON HO POTUTO LEGGERE il file dei ban»
+	#       prodotto  «ban: <file>, N indirizzi caricati»  ·  «c'e' e NON si e'
+	#                 potuto leggere»  — ⛔ e in quel caso il prodotto NON PARTE
+	#                 affatto, quindi qui non ci si arriva nemmeno.
+	CARICHI=$(grep -c "$B_R_BAN_CARICATI" "$B_LOG_FUORI")
+	ILLEGGIBILI=$(grep -c "$B_R_BAN_ILLEGGIBILE" "$B_LOG_FUORI")
+	SOCKET=$(grep -c "il comando di sblocco ascolta su" "$B_LOG_FUORI")
 	if [ "$ILLEGGIBILI" -gt 0 ]; then
 		ko "⛔ il server dichiara di NON aver potuto leggere il file dei ban."
 		ko "   ⛔ Questo NON e' «zero ban»: la persistenza di §4.4-bis parte da"
@@ -333,13 +387,13 @@ ACCENDI() # $1 = perche'
 
 SPEGNI()
 {
-	printf '\n===== %s =====\n' "$1" >> "$FUORI/b8-server.log"
-	if [ -f "$FUORI/b2-wt.log" ]; then
-		cat "$FUORI/b2-wt.log" >> "$FUORI/b8-server.log"
+	printf '\n===== %s =====\n' "$1" >> "$FUORI/b8-$B_NOME-server.log"
+	if [ -f "$B_LOG_FUORI" ]; then
+		cat "$B_LOG_FUORI" >> "$FUORI/b8-$B_NOME-server.log"
 	else
-		printf '(nessun registro per questa vita)\n' >> "$FUORI/b8-server.log"
+		printf '(nessun registro per questa vita)\n' >> "$FUORI/b8-$B_NOME-server.log"
 	fi
-	bash "$WT" spegni
+	bersaglio_spegni
 }
 
 VIVO() # ⛔ B0.5: dopo ogni prova il server dev'essere ancora li'
@@ -446,9 +500,7 @@ SPEGNI "seconda vita"
 
 # ---------------------------------------------------------------------------
 log "7. Il verdetto — lo confronta il banco, non chi legge (B0.4)"
-bash "$ENTRA" --root "python3 -u $DENTRO/01-b8-cronometro.py --verdetto \
-	--giro $GIRO --uscita $DENTRO/b8-fatti.jsonl \
-	--registro $DENTRO/b8-server.log"
+bash "$ENTRA" --root "$CRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log"
 ESITO=$?
 
 # ---------------------------------------------------------------------------
@@ -457,9 +509,7 @@ ESITO=$?
 #    mano, e il verdetto deve diventare rosso **in quel punto**: un banco che non
 #    riproduce non e' una prova di correttezza (§1.3).
 log "8. ⛔ La certificazione: si costruisce il guasto e si pretende il rosso"
-bash "$ENTRA" --root "python3 -u $DENTRO/01-b8-cronometro.py --certifica \
-	--giro $GIRO --uscita $DENTRO/b8-fatti.jsonl \
-	--registro $DENTRO/b8-server.log"
+bash "$ENTRA" --root "$CRONO --certifica --registro $DENTRO/b8-$B_NOME-server.log"
 CERT=$?
 if [ "$CERT" -ne 0 ]; then
 	ko "⛔ la certificazione del GIUDICE non passa: finche' e' rossa, un verde"
@@ -475,7 +525,8 @@ log "Esito"
 #    sono quattro fatti con quattro cure diverse, in quattro file diversi: dare
 #    loro lo stesso colore e' la forma E8 applicata a un verdetto.
 case "$ESITO" in
-	0) ok "⭐ B8 passa — e le risoluzioni qui sopra dicono fin dove ha guardato" ;;
+	0) ok "⭐ B8 passa contro «$B_NOME» — e le risoluzioni qui sopra dicono fin"
+	   ok "   dove ha guardato.  ⚠ L'altro bersaglio e' un altro programma" ;;
 	5) ko "⛔ B8: il BAN passa per intero, ma le mediane SI SEPARANO"
 	   inf "⛔ e l'esito 5 si da' SOLO quando l'imputato e' stato MISURATO ed e'"
 	   inf "PAM: il verdetto qui sopra stampa i due numeri del registro del"
@@ -499,7 +550,7 @@ if [ "$CERT" -ne 0 ] && [ "$ESITO" -eq 0 ]; then
 	ko "⛔ ...ma il banco NON e' certificato: l'esito diventa rosso"
 	ESITO=1
 fi
-inf "i fatti, uno per riga: $FUORI/b8-fatti.jsonl"
-inf "il registro del server, tutt'e due le vite: $FUORI/b8-server.log"
-inf "il file dei ban: $FUORI/b8-ban.txt (⚠ resta li' apposta, per guardarlo)"
+inf "i fatti, uno per riga: $B_ESITI_FUORI  (ogni riga porta il bersaglio)"
+inf "il registro del server, tutt'e due le vite: $FUORI/b8-$B_NOME-server.log"
+inf "il file dei ban: $BAN_FILE (⚠ resta li' apposta, per guardarlo)"
 exit "$ESITO"

@@ -221,6 +221,12 @@ _spec = importlib.util.spec_from_file_location(
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
+# ⛔ E il profilo del BERSAGLIO: le differenze fra i due server in un file solo.
+_spec_b0 = importlib.util.spec_from_file_location(
+    "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
+b0 = importlib.util.module_from_spec(_spec_b0)
+_spec_b0.loader.exec_module(b0)
+
 s, inquadra, MOTIVI = b3.s, b3.inquadra, b3.MOTIVI
 
 TEMPO_SCADUTO = 0x0D
@@ -953,6 +959,59 @@ async def principale(a):
           f"che porta allo stato.")
     print(f"   Riscontri e PING del trasporto non sono la scena, e sono "
           f"dichiarati (§4.6).")
+    # ⛔ IL REGISTRO DEL GIRO — e per B6 non e' un di piu': fino all'11 agosto
+    #    2026 **non esisteva nessun `.jsonl` di B6**.  I suoi tre numeri —
+    #    5,0 · 60,1 · 10,0 s — vivevano soltanto a schermo e nel `README.md`,
+    #    la scena di quel giro non era ricostruibile, e quei numeri non sono
+    #    riverificabili da nessuno.
+    a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
+                        a.md5 or None)
+    prof = a.reg.profilo
+    # ⛔⭐ E LA DIFFERENZA PIU' GRANDE DI B6 FRA I DUE BERSAGLI SI DICHIARA QUI.
+    #
+    #     Le due fasi di B6 esistono perche' il tetto del TRASPORTO si puo'
+    #     spostare: 120 s sopra tutti e tre i tetti del protocollo («sani»,
+    #     dove a chiudere puo' essere solo RCP) e 15 s sotto i 60 s delle
+    #     credenziali («ping», dove si vede se i PING di §4.6 reggono).
+    #
+    #  ⛔ SUL PRODOTTO QUEL TETTO NON SI SPOSTA: `#define IDLE_MS 30000` in
+    #     `src/trasporto.c`, e nessuna opzione lo tocca (nessun `getenv` in
+    #     tutto `src/`).  Le due fasi girano quindi contro **lo stesso** tetto,
+    #     e le conseguenze sono due e opposte:
+    #
+    #       · CIAO (5 s) e ATTACCA (10 s) restano puliti: 30 > 10, a chiudere
+    #         puo' essere solo RCP, e i due numeri si leggono come prima;
+    #       · ⛔ CREDENZIALI (60 s) NON e' piu' pulito nella fase «sani»: 30 < 60,
+    #         quindi quel caso misura **la stessa cosa** del caso della fase
+    #         «ping».  ⚠ Contarli come due conferme indipendenti sarebbe contare
+    #         due volte la stessa misura, che e' la forma di denominatore gonfio
+    #         di `LEZIONI.md` §1.9 regola 4.
+    a.fasi_indipendenti = prof["idle_lungo"] != prof["idle_corto"]
+    a.reg.apri_giro(
+        "B6", "il client TACE: nessun byte di RCP dopo il messaggio che porta "
+              "allo stato.  Riscontri e PING del trasporto non sono la scena, "
+              "e sono dichiarati (§4.6)",
+        extra={"fase": a.fase, "idle_chiesto": a.idle,
+               "idle_nostro_ms": int(a.idle_nostro * 1000),
+               "casi": len(casi), "casi_totali": len(CASI),
+               "tetti_documento": dict(TETTI_DOC),
+               "tetti_codice": tetti_codice,
+               "fasi_indipendenti": a.fasi_indipendenti})
+    print(f"   ⛔ BERSAGLIO: {a.bersaglio} · porta {a.porta} · binario md5 "
+          f"{(a.md5 or 'ignota')[:12]}…")
+    print(f"   il registro di questo giro: {a.uscita or '⛔ NESSUNO'}")
+    if not a.fasi_indipendenti:
+        print(f"   {GIALLO}⛔ SU QUESTO BERSAGLIO LE DUE FASI NON SONO "
+              f"INDIPENDENTI{GRIGIO}")
+        print(f"      Il tetto del trasporto non si sposta ({prof['idle_lungo']}"
+              f" ms, IDLE_MS in src/trasporto.c),")
+        print(f"      quindi «credenziali-tetto» (fase sani) e "
+              f"«credenziali-tetto-sotto-il-trasporto» (fase ping)")
+        print(f"      misurano LA STESSA COSA: 30 s di trasporto sotto 60 s di "
+              f"protocollo.")
+        print(f"      ⚠ CIAO (5 s) e ATTACCA (10 s) restano puliti — 30 > 10.")
+        print(f"      ⛔ Contarli come due conferme sarebbe contare due volte la "
+              f"stessa misura.")
     print(f"   tetto d'inattivita' del trasporto in vigore, LETTO DAL PARI: "
           f"{a.idle} ms")
     print(f"   tetto d'inattivita' annunciato da noi: "
@@ -1017,18 +1076,23 @@ async def principale(a):
         print("       ⛔ DODICI ORE, non trenta secondi.")
         print("       ⛔ Non e' un difetto dei tetti, ed e' precisamente il")
         print("          falso rosso che B0.3 esiste per impedire.")
-        print("       ⛔ Le cure, e la prima NON C'E':")
-        print("          · il comando di sblocco di §4.4-bis **non esiste**")
-        print("            come comando: `rcp_sblocca()` sta in rcp.c e non ha")
-        print("            nessun chiamante raggiungibile da fuori — niente")
-        print("            opzione, niente segnale, niente file dei ban;")
-        print("          · **riaccendere il server**, perche' il conto vive nel")
-        print("            processo.  Lo fa `01-b6-lancia.sh` a ogni fase: se")
-        print("            questa riga si accende, il ban e' arrivato DOPO")
-        print("            l'accensione, cioe' da un'altra connessione viva.")
-        print("       ⚠ E il ban di §4.4-bis DEVE sopravvivere al riavvio")
-        print("         (invariante I7): finche' non lo fa, questa cura e' un")
-        print("         difetto del server che ci sta tornando comodo.")
+        print("       ⛔ Le cure, e adesso sono DUE — ⚠ questa riga diceva che")
+        print("          la prima «non esiste»: era vera quando e' stata")
+        print("          scritta e ha smesso di esserlo nel giro di un'ora,")
+        print("          cioe' era la forma E5 (un fatto che era una deduzione")
+        print("          mai riverificata):")
+        print("          · ⭐ il comando di sblocco di §4.4-bis ESISTE:")
+        print("            `01-b8-sblocca.py` parla un socket Unix 0600 e dice")
+        print("            TOLTO / NON-BANNATO / «non ho parlato con nessuno».")
+        print("            Lo chiama `01-b6-lancia.sh` PRIMA del giro, e lo")
+        print("            dichiara (B0.3);")
+        print("          · **riaccendere il server** — ⛔ e su questo bersaglio")
+        print("            NON BASTA PIU': il ban del prodotto sta su FILE e")
+        print("            sopravvive al riavvio (invariante I7).  Riaccendere")
+        print("            azzera il conto in memoria, non il ban su disco.")
+        print("       ⚠ Quindi se questa riga si accende contro il prodotto, il")
+        print("         ban viene dal file — e il file di B6 lo butta lo script")
+        print("         di lancio all'inizio: guarda chi altro scrive li'.")
         return 5
     if not ok:
         print(f"\n    {ROSSO}⛔ lo strumento non arriva in fondo a una stretta "
@@ -1247,6 +1311,22 @@ async def principale(a):
             if es.dettaglio:
                 print(f"        dettaglio dal corpo: «{es.dettaglio}»")
 
+        # ⛔ Il fatto va nel registro, e porta il bersaglio: un numero senza
+        #    il nome del server che l'ha prodotto e' un numero di due cose
+        #    diverse messe in fila.
+        a.reg.scrivi({"tipo": "caso", "nome": c["nome"], "fase": c["fase"],
+                      "tetto": c["tetto"], "atteso": c["atteso"],
+                      "ms": es.ms, "esito": es.esito, "motivo": es.motivo,
+                      "tipo_motivo": es.tipo_motivo, "codice_wt": es.codice_wt,
+                      "pronto": es.pronto, "fase_raggiunta": es.fase,
+                      "errore": es.errore,
+                      "tetto_documento_ms": tetto_ms,
+                      # ⛔ E la riga dice se questa misura era PULITA: sul
+                      #    prodotto il caso delle credenziali in fase «sani» non
+                      #    lo e', perche' il tetto del trasporto sta sotto.
+                      "pulita": bool(a.fasi_indipendenti
+                                     or c["tetto"] != "CREDENZIALI")})
+
         # ⛔ B0.5, dopo OGNI caso.
         conti["B0.5 — il server ancora vivo dopo ogni caso"][1] += 1
         vivo, perche = await ancora_vivo(a)
@@ -1302,9 +1382,18 @@ async def principale(a):
     #         un'altra cosa: la cura sta nel documento;
     #      0  documento, codice e filo dicono la stessa cosa.
     print()
+    # ⛔ E il verdetto va nel registro col bersaglio dentro, o fra sei mesi «i
+    #    tre tetti scadono col motivo giusto» non dira' su quale server.  ⚠ E'
+    #    esattamente quel che e' successo ai tre numeri del 10 agosto — 5,0 ·
+    #    60,1 · 10,0 s — che non hanno nessun registro e non sono riverificabili.
+    a.reg.scrivi({"tipo": "verdetto", "fase": a.fase, "guasti": guasti,
+                  "risposte": [[n_, v_, r_] for n_, v_, r_ in risposte],
+                  "fasi_indipendenti": a.fasi_indipendenti,
+                  "conti": {k: v for k, v in conti.items()}})
+    print(f"    --  {a.reg.riassunto()}")
     if guasti:
-        print(f"    {ROSSO}⛔ B6 «{a.fase}»: {guasti} punti non passano"
-              f"{GRIGIO}")
+        print(f"    {ROSSO}⛔ B6 «{a.fase}» contro «{a.bersaglio}»: {guasti} "
+              f"punti non passano{GRIGIO}")
         return 1
 
     # ⛔ E L'ELENCO E' PER NOMI AMMESSI, NON PER ESCLUSIONE — rilievo R12-A.25.
@@ -1382,7 +1471,9 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="B6 — i tre tetti della stretta di mano (RCP.md §4.6)")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    p.add_argument("--porta", type=int, default=7447)
+    # ⛔ Nessun predefinito che nomini un bersaglio: 7447 e' l'innesto e 7448
+    #    il prodotto.  La passa `01-b0-bersaglio.sh`.
+    p.add_argument("--porta", type=int, default=0)
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
     p.add_argument("--fase", default="sani", choices=["sani", "ping"],
@@ -1396,6 +1487,7 @@ if __name__ == "__main__":
                         "#define letti da banchi/rcp/rcp.c")
     p.add_argument("--solo", default="",
                    help="gira solo i casi che contengono questo")
+    b0.aggiungi_argomenti(p)
     p.add_argument("--elenco", action="store_true",
                    help="stampa le previsioni senza misurare")
     sys.exit(asyncio.run(principale(p.parse_args())))
