@@ -263,6 +263,24 @@ else
 			#    del banco in cui B0.5 si legge al contrario.  ⚠ Un server
 			#    ancora vivo dopo un SIGTERM non e' «resistente»: e' un server
 			#    che non ha eseguito il percorso che si stava misurando.
+			#
+			# ⛔⭐ MA GLI SI DA' IL TEMPO CHE LUI STESSO DICHIARA — 11 agosto 2026.
+			#
+			#     Questa riga guardava `/proc/$PID` SUBITO, e fino a oggi era
+			#     giusta per accidente: il server rinunciava dopo tre decimi di
+			#     secondo.  ⛔ Curato il difetto di §3.1 punto 3, `src/main.c`
+			#     aspetta ora fino a **4 s** perche' la capsula di chiusura esca
+			#     davvero — e questo banco dichiarava morto un server che stava
+			#     facendo esattamente la cosa che il caso esiste per provare.
+			#
+			# ⚠ L'attesa e' LIMITATA e dichiarata: 8 s, cioe' il budget del
+			#   server piu' il doppio del margine.  Un'attesa senza fondo
+			#   trasformerebbe «non muore mai» in «il banco si e' piantato».
+			ATTESO_MORTE=8
+			for _ in $(seq $((ATTESO_MORTE * 10))); do
+				[ -d "/proc/$PID" ] || break
+				sleep 0.1
+			done
 			if [ -d "/proc/$PID" ]; then
 				ko "⛔ il server e' ANCORA VIVO dopo il SIGTERM: il percorso di"
 				ko "   spegnimento di src/main.c non e' stato eseguito, e il"

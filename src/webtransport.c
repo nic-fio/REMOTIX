@@ -488,8 +488,27 @@ const char *wt_perche_ha_da_dire(const wt *w)
 		return "(nessuna sessione)";
 	if (w->chiusura >= 0 && !coda_vuota(w))
 		return "capsula di chiusura in attesa E coda non vuota";
-	if (w->chiusura >= 0)
-		return "capsula di chiusura non ancora matura (coda vuota)";
+	if (w->chiusura >= 0) {
+		/* ⛔ E QUANTO MANCA, o la diagnosi si ferma qui — 11 agosto 2026.
+		 *    «Non ancora matura» dopo 2 s, quando ne bastano 0,5, ha due
+		 *    spiegazioni opposte: l'orologio non gira, oppure gira e viene
+		 *    RIAZZERATO.  Il numero le separa; l'aggettivo no. */
+		static char detto[220];
+		ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
+		snprintf(detto, sizeof detto,
+		         "capsula di chiusura non ancora matura (coda vuota) — "
+		         "chiusura=%#04x · chiusura_da=%s · mancano %lld ms · "
+		         "battito fra %lld ms",
+		         (unsigned)w->chiusura,
+		         w->chiusura_da ? "armato" : "⛔ MAI ARMATO",
+		         w->chiusura_da
+		             ? (long long)(((long long)w->chiusura_da - (long long)ora)
+		                           / (long long)NGTCP2_MILLISECONDS) : 0LL,
+		         w->battito_ms
+		             ? (long long)(((long long)w->battito - (long long)ora)
+		                           / (long long)NGTCP2_MILLISECONDS) : -1LL);
+		return detto;
+	}
 	if (!coda_vuota(w))
 		return "coda d'uscita non vuota";
 	return "niente";
@@ -855,7 +874,28 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	 *    LA CURA: l'ordine sul filo ci sarebbe, ⚠ ma l'ordine sul filo non e'
 	 *    quel che manca.  Quel che serve e' TEMPO fra i due. */
 	w->chiusura = motivo;
-	w->chiusura_da = 0;
+	/* ⛔⭐ L'ATTESA PARTE ADESSO, non «quando un battito vedra' la coda vuota»
+	 *     — misurato dal banco B7 l'11 agosto 2026, caso `server-in-chiusura`.
+	 *
+	 *     Qui c'era `w->chiusura_da = 0`, cioe' «non armato»: ad armarlo era
+	 *     il ramo di `wt_batti` che trova la coda gia' vuota.  ⛔ Allo
+	 *     spegnimento quel ramo non veniva percorso mai — il registro del
+	 *     server lo ha detto con queste parole: «capsula di chiusura non
+	 *     ancora matura (coda vuota) — chiusura_da = MAI ARMATO» dopo 200
+	 *     giri, quando ne bastavano cinquanta.
+	 *
+	 * ⛔ Che cosa vedeva il client: il `CONGEDO 0x0c` arrivava, e la sessione
+	 *    si chiudeva SENZA codice — QUIC terminato con `codice 0, nessun
+	 *    motivo`.  Cioe' mancava la SECONDA strada di §3.1 punto 3, che le
+	 *    decisioni dell'11 agosto (§7.14, §7.15) rendono l'unica che arrivi
+	 *    sempre — su Firefox, che azzera il canale, era l'UNICA.
+	 *
+	 * ⚠ E il senso non cambia: se la coda NON e' vuota, il ramo `!coda_vuota`
+	 *   di `wt_batti` riazzera questo campo e l'attesa riparte da capo, come
+	 *   prima.  Quel che cambia e' che adesso l'attesa esiste anche quando
+	 *   nessuno ripassa a dire «la coda e' vuota». */
+	w->chiusura_da = ngtcp2_conn_get_timestamp(w->conn)
+	                 + WT_ATTESA_CHIUSURA_NS;
 	/* ⛔ E L'ATTESA HA UN FONDO — rilievo B-3.  «Quando la coda si sara'
 	 *    svuotata» e' una condizione che qualcun altro deve far avvenire; se
 	 *    non avviene, il punto 3 di §3.1 non si esegue mai e il motivo resta

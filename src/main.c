@@ -376,7 +376,35 @@ int main(int argc, char **argv)
 		size_t restano = trasporto_congeda_tutte(
 			t, RCP_SERVER_IN_CHIUSURA, "il server si sta spegnendo");
 		int giri = 0;
-		while (restano > 0 && giri < 200) {
+		/* ⛔⭐ IL BUDGET SI CONTA IN TEMPO, NON IN GIRI — e l'11 agosto 2026
+		 *     e' stato misurato che la differenza e' di un fattore quattordici.
+		 *
+		 *     Qui c'era `giri < 200`, con accanto scritto «due secondi»: il
+		 *     conto assumeva che ogni giro costasse i 10 ms del `poll`.  ⛔ Ma
+		 *     `poll` ritorna SUBITO quando c'e' qualcosa da leggere, e allo
+		 *     spegnimento c'e' sempre qualcosa: **400 giri sono durati 293 ms**
+		 *     — letto nel registro del server, 08:17:08.756 → 08:17:09.049.
+		 *
+		 * ⛔ Da cui il difetto vero: `chiudi_sessione()` arma un fondo di
+		 *    sicurezza a **3 s** per la capsula di §3.1 punto 3, e chi spegne
+		 *    rinunciava dopo tre decimi.  La rete di sicurezza esisteva e non
+		 *    poteva scattare **proprio nel momento per cui era stata scritta**.
+		 *
+		 * ⚠ E un contatore di giri che si crede un orologio non sbaglia di
+		 *   poco: sbaglia di quanto e' veloce la macchina, cioe' di un numero
+		 *   che cambia da un ferro all'altro.  E' la forma peggiore, perche' il
+		 *   banco resta verde dove il ferro e' lento. */
+		struct timespec t0, tn;
+		clock_gettime(CLOCK_MONOTONIC, &t0);
+		while (restano > 0) {
+			clock_gettime(CLOCK_MONOTONIC, &tn);
+			{
+				long long trascorsi =
+				    (long long)(tn.tv_sec - t0.tv_sec) * 1000
+				    + (tn.tv_nsec - t0.tv_nsec) / 1000000;
+				if (trascorsi >= 4000)
+					break;
+			}
 			struct pollfd fds[MAX_POLL];
 			int attesa = trasporto_attesa_ms(t);
 			fds[0].fd = trasporto_fd(t);
@@ -436,7 +464,7 @@ int main(int argc, char **argv)
 		}
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔ %zu sessioni non hanno finito dopo %d giri — "
+			              "⛔ %zu sessioni non hanno finito dopo 4 s (%d giri) — "
 			              "«%s».  Il congedo 0x0c e' stato scritto ma non e' "
 			              "detto che sia uscito, e ⛔ §3.1 punto 3 — il motivo "
 			              "nel codice di chiusura — potrebbe non essere "
