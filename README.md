@@ -94,7 +94,37 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >  0  mai provati                  —
 > ```
 >
-> ⭐ **E la causa non è una svista: è la cura del congedo.** `DECISIONI.md` §1.12 — la cura fuori
+> ⭐⭐ **E le sette sono state RIESEGUITE la notte stessa — `[M]` 12 agosto 2026, `--registro`:
+> 13 su 14, zero scadute, zero non riverificabili.** Certificati di nuovo: **B7** (`0→1→0`, 1m11s) ·
+> **B9** (`0→3→0`, su CHUWI) · **B3** (`0→2→0`) · **B5** · **B6** · **B8** (`5→1→5`).
+> ⛔ **Resta fuori B13, ed è l'unico dei quattordici.**
+>
+> ⛔⭐ **E la cosa che vale più delle sei righe: il primo giro si è RIFIUTATO di partire, in mezzo
+> secondo.** `01-b0-terreno.sh` ha detto *«`examples/rcp.c` NON è `rcp/rcp.c`: il server misura una
+> versione che nessuno sta leggendo»*. ⇒ Le sette non erano solo **scadute**: erano
+> **irripetibili**. La cura aveva aggiornato `rcp/rcp.c`, ma il server dell'**innesto** — quello che
+> sei di quei banchi interrogano — era ancora compilato sul codice del mattino. Rilanciarle senza
+> guardare avrebbe scritto sei righe di registro con la data di stanotte **sul codice di prima**.
+> ⭐ Curato: `rcp/rcp.c` propagato in `b2/ngtcp2/examples/rcp.c`, `ninja bsslserver`, terreno
+> rimisurato (14 su 14). ⚠ **E nessun attrezzo fa quella propagazione** — i banchi la *controllano*
+> soltanto: è il motivo per cui il disallineamento è rimasto lì mezza giornata.
+>
+> ⛔ **B13, perché resta fuori — e non è del prodotto.** Il suo giro sano esce **1** dove il catalogo
+> dichiara **3**, e i numeri di B13 **non sono un conteggio**: `0` = sei proprietà su sei passano,
+> `1` = **c'è almeno una proprietà ROSSA**, `3` = nessun rosso, ma restano buchi dichiarati `[?]`.
+> Il rosso è **B13.4**, *«la pagina servita in TCP»*, che dà `[?]` se **nessuno** ascolta in TCP e
+> **rosso** se qualcuno ascolta e la pagina non si carica (`SSLError: WRONG_VERSION_NUMBER`).
+> ⚠ **E chi fosse ad ascoltare non è accertato**: finito il giro, su TCP 7447 non c'è più nessuno, e
+> una seconda sonda non l'ha ripreso. ⛔ Quindi B13 resta **NON CERTIFICATO**, e si certifica il
+> giorno in cui `B13.4` viene misurata dove la pagina **esiste** — cioè contro il **prodotto**, come
+> già fu chiusa (riquadro «B13 — certificato», 200 e 31 083 byte) — non il giorno in cui qualcuno
+> riscrive il numero.
+> ⚠ *E per mezz'ora quel numero l'ho riscritto io, portandolo a **1**, avendo letto «1» come «un
+> guasto solo» invece che «c'è un rosso». È stato rimesso a **3** e la ragione sta scritta accanto
+> nel catalogo: con un rosso già presente il guasto non può più cambiare l'esito, e il banco
+> diventerebbe **incertificabile per costruzione** — `[M]` sano 1 · guasto 1 · risano 1.*
+>
+> ⭐ **E la causa dello scadere non è una svista: è la cura del congedo.** `DECISIONI.md` §1.12 — la cura fuori
 > fase decisa dall'utente — ha toccato **`rcp.c`** e **`RCP.md`**, cioè i file su cui poggiavano
 > quelle sette certificazioni. ⇒ **Curare il prodotto fa scadere le certificazioni che lo
 > guardavano, ed è esattamente quel che il registro deve dire**: la riga vale per quei byte, non per

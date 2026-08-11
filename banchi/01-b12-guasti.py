@@ -733,6 +733,61 @@ guasto(
     "LE IMPRONTE COMBACIANO",
     "copia-di-file",
     "fasi/01-filo-nudo.md B13.1 · RCP.md §4.1-bis",
+    # ⛔⭐ RESTA 3, E LA NOTTE FRA L'11 E IL 12 AGOSTO 2026 QUALCUNO — io — L'HA
+    #     PORTATO A 1 PER MEZZ'ORA.  La riga e' tenuta perche' l'errore e'
+    #     istruttivo e perche' e' PROPRIO quello che questo file vieta in fondo
+    #     alla nota qui sotto.
+    #
+    # ⛔ I NUMERI DI B13 NON SONO UN CONTEGGIO DI GUASTI, e leggerli cosi' e'
+    #    stato l'errore (`01-b13-proprieta.py`, in fondo a `principale`):
+    #
+    #      0  tutte e sei le proprieta' passano
+    #      1  ⛔ c'e' ALMENO UNA proprieta' ROSSA
+    #      3  ⭐ nessun rosso, ma restano dei buchi DICHIARATI ([?] o ??)
+    #
+    #    ⇒ `atteso_sano=3` non vuol dire «aspettati tre guasti»: vuol dire
+    #    **«sul codice sano B13 non ha nessun rosso»**, ed e' la dichiarazione
+    #    giusta.  Portarlo a 1 dichiara normale un rosso — e in piu' rende il
+    #    banco NON CERTIFICABILE, perche' con un rosso gia' li' il guasto non
+    #    puo' piu' cambiare il numero: `[M]` giro delle 22:5x, sano 1 · guasto 1
+    #    · risano 1, e il giudice ha rifiutato con «col guasto il banco ha dato
+    #    lo stesso esito del sano», che era vero.
+    #
+    # ⭐ `[M]` la notte fra l'11 e il 12 agosto 2026, giro sano sotto B12, le sei
+    #    proprieta' una per una:
+    #
+    #      B13.1  OK      3 cose guardate
+    #      B13.2  OK  22.523 cose guardate  (la parola d'ordine non e' in nessun
+    #                                        registro: il difetto del 10 agosto
+    #                                        e' chiuso)
+    #      B13.3  [?]     8 cose guardate   (nessun imputato: i certificati li fa
+    #                                        un BANCO, non il codice)
+    #      B13.4  NO      2 cose guardate   ⛔ ed e' L'UNICO rosso
+    #      B13.5  ??      3 cose guardate   (il trasporto concede tutto: quella
+    #                                        meta' non e' misurabile da qui)
+    #      B13.6  OK      4 cose guardate
+    #
+    # ⛔ E IL ROSSO CHE RESTA NON E' DEL PRODOTTO: e' B13.4, «la pagina servita
+    #    in TCP», che sotto B12 viene chiesta al server dell'INNESTO — e la
+    #    pagina e' un mestiere del PRODOTTO.  Il sintomo e' `SSLError:
+    #    WRONG_VERSION_NUMBER`.  ⭐ E non e' una scoperta di stanotte: lo scrive
+    #    `01-b13-proprieta.py` in fondo alla propria certificazione — «quel che
+    #    resta fuori: la pagina in TCP (B13.4), che oggi non ha imputato».
+    #
+    # ⚠ E PERCHE' PRIMA ERANO TRE: l'ipotesi e' che due dei tre rossi venissero
+    #   dall'innesto DISALLINEATO — `b2/ngtcp2/examples/rcp.c` fermo al codice di
+    #   stamattina mentre `rcp/rcp.c` portava la cura del congedo — e siano
+    #   cadute quando l'innesto e' stato riallineato e ricostruito la notte fra
+    #   l'11 e il 12.  ⛔ IPOTESI, NON MISURA: l'uscita del giro delle 15:19 non
+    #   e' stata conservata, e senza quella il confronto non si puo' fare.  Si
+    #   scrive qui perche' chi rilegge sappia che cosa NON e' stato provato.
+    #
+    # ⇒ QUINDI B13 RESTA NON CERTIFICATO, e il motivo ha un nome: **B13.4 e'
+    #   rossa perche' la si chiede al server sbagliato**.  Si certifica il
+    #   giorno in cui quella proprieta' viene misurata dove la pagina esiste —
+    #   il PRODOTTO — e il giro sano torna a uscire 3.  ⛔ Non il giorno in cui
+    #   qualcuno riscrive questo numero: e' la stessa regola del 10 agosto qui
+    #   sotto, e la seconda volta che questo banco la fa pagare.
     atteso_sano=3,
     sostituisci_con="{CERT}/sessione.pem",
     nota="⛔ IL GUASTO E' STATO RIFATTO L'11 AGOSTO 2026 — rilievi R12-A.1 e "
