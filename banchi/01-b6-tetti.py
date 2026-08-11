@@ -237,7 +237,19 @@ CONGEDO, RESPINTO = 0x000C, 0x0005
 # ⛔ I TRE TETTI COME LI SCRIVE IL DOCUMENTO — `RCP.md` §4.6, tabella.
 #    Non si leggono dal codice: il codice e' l'imputato.  Il valore del codice
 #    arriva a parte, con `--tetti-codice`, e i due si confrontano.
-TETTI_DOC = {"CIAO": 5000, "CREDENZIALI": 60000, "ATTACCA": 10000}
+TETTI_DOC = {"CIAO": 5000, "CREDENZIALI": 60000, "ATTACCA": 10000,
+             # ⭐ La riga che §4.6 non aveva, ✅ decisa dall'utente l'11 agosto
+             #    2026 (`DECISIONI.md` §7.17): dall'apertura della SESSIONE
+             #    WebTransport all'apertura del CANALE di controllo, 5 s.
+             # ⛔ L'ha chiesta questo banco: era lui a dire «non e' successo
+             #    NIENTE in 20 s», e per quattro giorni quel numero e' stato
+             #    una risposta senza una regola contro cui giudicarla.
+             # ⚠ Il confronto documento/codice per questa riga NON si fa: il
+             #   valore del codice sta in `src/webtransport.c`
+             #   (`WT_TETTO_CANALE_NS`) e non fra i `#define TETTO_*` di
+             #   `rcp.c` che il lanciatore sa leggere.  Il banco lo dichiara
+             #   invece di tacerlo — «non me l'hanno detto» non e' «combaciano».
+             "CANALE": 5000}
 
 # ⚠ La tolleranza, e perche' e' asimmetrica.
 #
@@ -665,9 +677,11 @@ async def _(a, es):
 
 
 # ── ⛔ Dove parte il cronometro del primo tetto — la `[?]` R3.27 ────────────
-@caso("ciao-senza-controllo", "sani", "CIAO", "risposta",
-      "⛔ sessione aperta e canale di controllo MAI aperto: alla lettera di "
-      "§4.6 il tetto e' gia' partito col TLS, e a 5 s dev'essere finita")
+@caso("ciao-senza-controllo", "sani", "CANALE", TEMPO_SCADUTO,
+      "⛔ sessione aperta e canale di controllo MAI aperto: §4.6 riga 4, 5 s "
+      "(DECISIONI.md §7.17).  ⚠ E il CONGEDO qui NON e' esigibile: il canale "
+      "non esiste, quindi il motivo puo' arrivare SOLO nel codice di chiusura "
+      "della sessione — e' la condizione decisa in §7.15 lo stesso giorno")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
@@ -683,7 +697,7 @@ async def _(a, es):
     return es
 
 
-@caso("ciao-sessione-tardiva", "sani", "CIAO", "risposta",
+@caso("ciao-sessione-tardiva", "sani", "CIAO", TEMPO_SCADUTO,
       "⛔ il caso peggiore di R3.27: TLS finito, si aspetta, POI si apre la "
       "sessione.  Congedo subito = il budget era gia' consumato (cronometro "
       "dal TLS); congedo 5 s dopo = cronometro dalla sessione")
@@ -1253,9 +1267,29 @@ async def principale(a):
 
         else:
             # I tetti veri.
+            #
+            # ⛔⭐ E UNA RIGA IN CUI IL CONGEDO NON E' ESIGIBILE — §4.6 riga 4.
+            #
+            #     Il tetto «CANALE» scade quando il canale di controllo non e'
+            #     mai stato aperto: ⛔ non c'e' dove spedire un `CONGEDO`, e
+            #     `DECISIONI.md` §7.15 — decisa l'11 agosto 2026 — dice che
+            #     li' l'obbligo CADE.  Pretenderlo qui vorrebbe dire dare
+            #     rosso a un server che fa esattamente quel che il documento
+            #     gli impone, che e' la forma di difetto piu' cara di questo
+            #     progetto (rilievo R3.3, gia' pagato su B5 e B11).
+            #
+            # ⭐ Quel che resta esigibile e' la SECONDA strada di §3.1 punto 3
+            #    — il motivo nel codice di chiusura della sessione — ed e'
+            #    controllata sotto da `ok_wt`, senza sconti.  ⚠ Cioe' questo
+            #    caso non prova di meno: prova la strada che le decisioni
+            #    dell'11 agosto rendono l'unica che arrivi sempre.
+            congedo_esigibile = c["tetto"] != "CANALE"
             conti["tetti scaduti con TEMPO_SCADUTO"][1] += 1
-            ok_motivo = (es.motivo == c["atteso"]
-                         and es.tipo_motivo == "CONGEDO")
+            if congedo_esigibile:
+                ok_motivo = (es.motivo == c["atteso"]
+                             and es.tipo_motivo == "CONGEDO")
+            else:
+                ok_motivo = es.codice_wt == c["atteso"]
             if not es.pronto:
                 ok_motivo = False
             conti["tetti scaduti con TEMPO_SCADUTO"][0] += int(ok_motivo)
@@ -1267,7 +1301,11 @@ async def principale(a):
             #    questa condizione un caso in cui non succede niente potrebbe
             #    cadere dentro la tolleranza di un ALTRO tetto e stampare un
             #    verde — la forma E8, «niente» che prende l'aspetto di un dato.
-            ok_tempo = (es.esito == "congedo" and es.ms is not None
+            # ⚠ E con il canale mai aperto l'esito NON e' «congedo»: e'
+            #   «sessione-chiusa», che qui e' la cosa giusta e non un ripiego.
+            esiti_buoni = ("congedo",) if congedo_esigibile \
+                else ("congedo", "sessione-chiusa")
+            ok_tempo = (es.esito in esiti_buoni and es.ms is not None
                         and es.pronto and dentro_tolleranza(es.ms, tetto_ms))
             conti["tetti scaduti NEL TEMPO GIUSTO (§4.6)"][0] += int(ok_tempo)
 
