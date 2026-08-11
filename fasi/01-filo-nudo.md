@@ -763,6 +763,43 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > una scorciatoia `--elenco` prima di `parse_args`) e una vera. Curarle tutt'e tre avrebbe rotto due
 > chiamate funzionanti per far tacere il mio stesso strumento.
 >
+> #### ⭐⭐ B11: certificato — e il difetto era una CORSA, non una divergenza
+>
+> ⚠ Non era «mai provato»: era **mai lanciato**. E va lanciato **dalla macchina di chi guarda**, non
+> dal server — `01-b11-lancia.sh` cerca `v1/strumenti/sshpw.py`, che sul server non c'è. Lanciato di
+> là muore prima di applicare qualsiasi guasto (verificato: zero marche nei sorgenti e nel binario,
+> porta 7447 libera).
+>
+> ⛔ **Al primo giro un punto solo non passava**: contro il server guasto, `respinto-non-riprovare`
+> restituiva **`canale-rotto`** dove l'atteso dice **`muta`**. ⭐ **E la pagina aveva ragione**:
+> distinguere un `FIN` da un `RESET_STREAM` è la cura del rilievo R6.12, e il server in quel caso
+> **non manda nessun `FIN`** — chiude la *sessione* con `CLOSE_WEBTRANSPORT_SESSION`.
+>
+> ⭐⭐ **Ma la causa vera era un'altra, e allargando l'atteso non l'avrei mai trovata.** La pagina
+> non arrivava nemmeno al ramo del `RESPINTO`: il server manda `RESPINTO` e **chiude subito
+> dietro**, e la chiusura **corre** contro il lettore della pagina. ⇒ Il verdetto dipendeva da chi
+> vinceva la corsa.
+>
+> ⛔ **E la cura era già scritta nel file, per il caso gemello.** `respinto-poi-congedo` porta
+> questo commento: *«La chiusura di §3.1 partirebbe subito dietro al messaggio, e correrebbe contro
+> la risposta della pagina… un banco che cambia verdetto fra due giri identici non misura la pagina:
+> misura il carico della macchina»*. ⇒ Stessa cura, stesso posto: dopo `RESPINTO` il server guasto
+> **tace**, e chi chiude sarà la pagina.
+>
+> ⚠ **E non è allargare l'atteso**: l'atteso resta `muta`, e il caso può ancora dire di no — se la
+> pagina riprovasse, i byte in più li vedrebbe il **registro del server**, che è il testimone che
+> quel caso dichiara da sempre (§8.1).
+>
+> ⭐ **Esito**: **CONFORME, 0 punti** contro il server guasto; **NON-CONFORME, 9 punti** contro
+> quello sano, in 35 secondi. ⚠ Riserva scritta nel registro: **un motore solo** — Chrome non l'ha
+> guardato, e con un motore solo la seconda strada di §3.1 non si vede.
+>
+> ⭐ **E B12 ha imparato a giudicarlo — R12-A.48.** Il modello sano/guasto/risano non gli si
+> applica: il suo giro «sano» **dev'essere rosso**, perché è il controllo che dice *no*. `giudica()`
+> ha ora un passo **`proprio-giro`** che pretende **tutt'e due le metà, esplicite** — ⛔ un giro che
+> portasse solo *«il guasto è verde»* non certifica niente, perché sarebbe compatibile con una
+> pagina che dichiara conforme qualunque cosa.
+
 > #### ⛔⭐ B13: la parola d'ordine in un indirizzo — e il banco aveva ragione da ieri
 >
 > B13 non si certifica perché **il suo soggetto è davvero rotto**, ed è la regola giusta: si lascia
