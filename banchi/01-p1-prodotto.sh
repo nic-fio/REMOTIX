@@ -78,6 +78,38 @@
 # ⛔ La porta usata finisce in OGNI riga del registro, campo `porta_contenitore`.
 #
 # -----------------------------------------------------------------------------
+# ⛔⭐ LA PORTA E IL SORGENTE SI POSSONO CAMBIARE — e la modifica e' DICHIARATA
+#     qui, sera dell'11 agosto 2026, per la certificazione di P1 sotto B12.
+#
+# Prima di stasera `PORTA=7448` e `SORG=$FUORI/remotix` erano scritti dentro:
+# questo banco poteva girare solo contro l'unico prodotto della macchina, e
+# ⛔ **costruire vuol dire riscrivere `/media/REMOTIX/src/remotix/remotix`** —
+# cioe' il binario del server che gli altri banchi stanno usando.  Per
+# certificare P1 servono TRE giri (sano → guasto → sano), e il giro col guasto
+# lascerebbe per qualche minuto un binario bugiardo sotto i piedi di chiunque
+# altro riaccendesse il prodotto.  ⭐ Da cui due variabili d'ambiente:
+#
+#   PORTA        la porta su cui accendere      (def. 7448)
+#   SORG         la cartella dei sorgenti       (def. $FUORI/remotix)
+#   DENTRO_SORG  la stessa, vista dal contenitore (dedotta da SORG)
+#   PREFISSO_TMP il prefisso dei file di lavoro (def. p1)
+#
+# ⛔ E il valore predefinito NON e' cambiato: chi lancia questo banco a mano
+#    misura esattamente quel che misurava prima.  ⚠ La certificazione di B12 lo
+#    lancia invece su una **copia intera** del prodotto, con la sua porta:
+#
+#      cp -a /media/REMOTIX/src/remotix /media/REMOTIX/src/01-b12-copie/p1-remotix
+#      PORTA=7501 PORTA_MORTA=7502 PREFISSO_TMP=sera-p15 \
+#        SORG=/media/REMOTIX/src/01-b12-copie/p1-remotix \
+#        bash /media/REMOTIX/src/01-p1-prodotto.sh
+#
+#    ⛔ La copia si rifa' PRIMA di ogni giro sano, e per la ragione che
+#    `01-b12-guasti.py` scrive su `prepara_copia()`: una copia rimasta da un
+#    giro precedente potrebbe portarsi dietro il guasto di quel giro, e il
+#    banco partirebbe **gia' rosso** — cioe' il verde di partenza, che e' meta'
+#    della certificazione, sarebbe perso senza che nessuno lo veda.
+#
+# -----------------------------------------------------------------------------
 # ⛔ I CONFINI (mandato dell'11 agosto 2026)
 #
 #   · ⛔ **porta 7448**.  La 7447 e' `bsslserver`, l'innesto: non si tocca, e
@@ -100,10 +132,17 @@ ENTRA=/media/REMOTIX/enter.sh
 DEVROOT=/media/REMOTIX/devroot
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
-SORG=$FUORI/remotix              # == /srv/src/remotix dentro il contenitore
+# ⛔ SORG e' il percorso VISTO DA FUORI; DENTRO_SORG lo stesso visto dal
+#    contenitore.  ⚠ Si ricava per sottrazione del prefisso, non si indovina:
+#    due verita' sullo stesso percorso e' la forma con cui i guasti si perdono
+#    per strada (la stessa nota che `01-b12-guasti.py` scrive su `{CERT}`).
+SORG=${SORG:-$FUORI/remotix}     # == /srv/src/remotix dentro il contenitore
+DENTRO_SORG=${DENTRO_SORG:-$DENTRO/${SORG#"$FUORI/"}}
 TMP=$FUORI/tmp
 ESITI=$FUORI/01-p1-esiti.jsonl
-PORTA=7448
+PORTA=${PORTA:-7448}
+PORTA_MORTA=${PORTA_MORTA:-7449}
+PREFISSO_TMP=${PREFISSO_TMP:-p1}
 
 FUSO="$(date +%:z) $(date +%Z) — ⚠ l'orologio del server e' ~2 h indietro rispetto a CHUWI (CEST)"
 INIZIO_EPOCA=$(date +%s)
@@ -246,6 +285,14 @@ fi
 log "P1 — il prodotto si accende.  Giro $GIRO"
 inf "fuso: $FUSO"
 inf "porta del prodotto: $PORTA   ⛔ la 7447 (bsslserver) non si tocca"
+# ⛔ B0.1: lo stato iniziale si DICHIARA.  Da stasera la sorgente e la porta si
+#    possono cambiare, e quale delle due si e' usata non si deduce dal contesto.
+inf "sorgente:  $SORG   (dentro il contenitore: $DENTRO_SORG)"
+inf "porta morta (controllo C2): $PORTA_MORTA   ·   prefisso dei file: $PREFISSO_TMP"
+if [ "$SORG" != "$FUORI/remotix" ]; then
+	inf "⚠ NON e' il prodotto di casa: e' una COPIA.  Il prodotto in $FUORI/remotix"
+	inf "  non viene ne' ricostruito ne' toccato da questo giro."
+fi
 
 log "La porta del contenitore"
 scegli_porta
@@ -275,14 +322,14 @@ log "La costruzione, dentro il contenitore"
 #    banco ha dichiarato «nessuno stato letto» su una costruzione riuscita —
 #    un rosso puntato sull'imputato sbagliato (`LEZIONI.md` §1.9, settima
 #    veste), misurato alle 04:52 dell'11 agosto 2026.
-dentro "bash $DENTRO/remotix/costruisci.sh > $DENTRO/tmp-p1-costruisci.log 2>&1; printf 'P1-COSTRUISCI=%s\n' \$? >> $DENTRO/tmp-p1-costruisci.log"
-COSTR=$(grep -a -o 'P1-COSTRUISCI=[0-9]*' "$FUORI/tmp-p1-costruisci.log" 2>/dev/null | tail -1 | cut -d= -f2)
+dentro "bash $DENTRO_SORG/costruisci.sh > $DENTRO/tmp-$PREFISSO_TMP-costruisci.log 2>&1; printf 'P1-COSTRUISCI=%s\n' \$? >> $DENTRO/tmp-$PREFISSO_TMP-costruisci.log"
+COSTR=$(grep -a -o 'P1-COSTRUISCI=[0-9]*' "$FUORI/tmp-$PREFISSO_TMP-costruisci.log" 2>/dev/null | tail -1 | cut -d= -f2)
 # ⚠ La riga finale la stampa il comando DENTRO le virgolette, e non si legge
 #   dallo stato d'uscita di `enter.sh`: che quello lo propaghi non l'ha mai
 #   verificato nessuno (rilievo R5.21, ancora aperto).  ⛔ E se la riga NON
 #   arriva non si ricostruisce «per sicurezza»: si dichiara che lo stato non si
 #   e' letto, che non e' la stessa cosa di «e' andata male».
-tail -n 25 "$FUORI/tmp-p1-costruisci.log" 2>/dev/null
+tail -n 25 "$FUORI/tmp-$PREFISSO_TMP-costruisci.log" 2>/dev/null
 riga costruzione.esito "$([ "${COSTR:-9}" = 0 ] && echo 1 || echo 0)" \
   "costruisci.sh e' uscito «${COSTR:-nessuno stato letto}» (atteso 0)" \
   "\"stato_costruttore\":\"$(jesc "${COSTR:-}")\""
@@ -347,27 +394,32 @@ log "Il giro acceso e spento, e la prova di fumo"
 if [ ! -f "$FUORI/01-p1-dentro.sh" ]; then
 	riga fumo.attrezzo 0 "⛔ manca $FUORI/01-p1-dentro.sh: copiare tutt'e due i file di 01-p1- sul server"
 fi
-dentro "bash $DENTRO/01-p1-dentro.sh fumo > $DENTRO/tmp-p1-fumo.log 2>&1; printf 'P1-FUMO=%s\n' \$? >> $DENTRO/tmp-p1-fumo.log"
-sed -n '1,400p' "$FUORI/tmp-p1-fumo.log" 2>/dev/null
+# ⛔ Le variabili si passano DENTRO le virgolette, davanti a `bash`: sono
+#    l'unica strada che attraversa tutt'e due le porte del contenitore
+#    (`enter.sh --root "…"` e `unshare -Ur chroot … env -i bash -c "…"`), e
+#    `env -i` cancella tutto quel che si esportasse qui fuori.
+AMB="D=$DENTRO_SORG PORTA=$PORTA PORTA_MORTA=$PORTA_MORTA PREFISSO_TMP=$PREFISSO_TMP"
+dentro "$AMB bash $DENTRO/01-p1-dentro.sh fumo > $DENTRO/tmp-$PREFISSO_TMP-fumo.log 2>&1; printf 'P1-FUMO=%s\n' \$? >> $DENTRO/tmp-$PREFISSO_TMP-fumo.log"
+sed -n '1,400p' "$FUORI/tmp-$PREFISSO_TMP-fumo.log" 2>/dev/null
 FUMO_PROVATI=0; FUMO_PASSATI=0
 while read -r _ nome esito dett; do
 	riga "fumo.$nome" "$esito" "$dett"
 	FUMO_PROVATI=$((FUMO_PROVATI+1))
 	[ "$esito" = 1 ] && FUMO_PASSATI=$((FUMO_PASSATI+1))
-done < <(grep -a '^FATTO ' "$FUORI/tmp-p1-fumo.log" 2>/dev/null)
+done < <(grep -a '^FATTO ' "$FUORI/tmp-$PREFISSO_TMP-fumo.log" 2>/dev/null)
 if [ "$FUMO_PROVATI" -eq 0 ]; then
 	riga fumo.denominatore 0 "⛔ ZERO fatti raccolti: la fase di fumo non ha misurato NIENTE — un verdetto su zero cose supera qualunque criterio (LEZIONI.md §1.9 regola 6)"
 fi
 
 log "I controlli positivi: lo strumento sa diventare rosso?"
-dentro "bash $DENTRO/01-p1-dentro.sh controlli > $DENTRO/tmp-p1-controlli.log 2>&1; printf 'P1-CTRL=%s\n' \$? >> $DENTRO/tmp-p1-controlli.log"
-sed -n '1,200p' "$FUORI/tmp-p1-controlli.log" 2>/dev/null
+dentro "$AMB bash $DENTRO/01-p1-dentro.sh controlli > $DENTRO/tmp-$PREFISSO_TMP-controlli.log 2>&1; printf 'P1-CTRL=%s\n' \$? >> $DENTRO/tmp-$PREFISSO_TMP-controlli.log"
+sed -n '1,200p' "$FUORI/tmp-$PREFISSO_TMP-controlli.log" 2>/dev/null
 CTRL_PROVATI=0; CTRL_PASSATI=0
 while read -r _ nome esito dett; do
 	riga "controllo.$nome" "$esito" "$dett"
 	CTRL_PROVATI=$((CTRL_PROVATI+1))
 	[ "$esito" = 1 ] && CTRL_PASSATI=$((CTRL_PASSATI+1))
-done < <(grep -a '^FATTO ' "$FUORI/tmp-p1-controlli.log" 2>/dev/null)
+done < <(grep -a '^FATTO ' "$FUORI/tmp-$PREFISSO_TMP-controlli.log" 2>/dev/null)
 if [ "$CTRL_PROVATI" -eq 0 ]; then
 	riga controllo.denominatore 0 "⛔ ZERO controlli positivi eseguiti: questo banco non ha mostrato di saper vedere un fallimento"
 fi
@@ -383,11 +435,11 @@ fi
 # che `costruisci.sh` lo cancellasse.  ⛔ Su di lui questo controllo DEVE uscire
 # rosso; se uscisse verde, i verdi di sopra non varrebbero niente.
 log "C4 — lo stesso controllo, puntato sul binario STANTIO del 10 agosto"
-STANTIO_FILE=$TMP/p1-stantio/remotix/remotix
+STANTIO_FILE=$TMP/$PREFISSO_TMP-stantio/remotix/remotix
 RISERVA=/media/REMOTIX/tmp/riserva-11ago/prima-della-sincronia.tgz
 if [ ! -e "$STANTIO_FILE" ] && [ -f "$RISERVA" ]; then
-	mkdir -p "$TMP/p1-stantio"
-	tar xzf "$RISERVA" -C "$TMP/p1-stantio" remotix/remotix 2>/dev/null
+	mkdir -p "$TMP/$PREFISSO_TMP-stantio"
+	tar xzf "$RISERVA" -C "$TMP/$PREFISSO_TMP-stantio" remotix/remotix 2>/dev/null
 fi
 if [ ! -e "$STANTIO_FILE" ]; then
 	# ⛔ «non ho potuto guardare» non e' «e' andato bene»: e' rosso, e dice perche'.

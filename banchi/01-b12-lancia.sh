@@ -41,6 +41,20 @@
 #   possono redirigere.  L'accensione del server la fa questo script, con la
 #   stessa riga di comando che usano loro.
 #
+# ⛔⭐ E DUE BANCHI FANNO ECCEZIONE, PERCHE' LA REGOLA QUI SOPRA E' ANCHE LA
+#     RADICE DI QUASI TUTTI I FALSI ROSSI DI OGGI — 11 agosto 2026, sera.
+#
+# **C2** e **B8** si lanciano dal loro `01-b*-lancia.sh`.  ⚠ Non e' una deroga
+# comoda: sono i due banchi la cui scena non sta in una riga di comando — C2
+# vuole il server acceso per due prove e spento per due, B8 vuole **due vite del
+# server** (la persistenza del ban vuole un riavvio), la lettura della pagina e
+# uno sblocco su un ban vero.  ⛔ Riscrivere quelle sequenze qui vuol dire
+# tenerne due copie, e la seconda invecchia: e' esattamente quel che e' successo
+# a B8, il cui giro «sano» sotto B12 usciva rosso su otto punti che parlavano di
+# questo file e non del banco.
+# ⭐ La cucitura e' la stessa nei due casi: niente redirezione attorno al
+#    lanciatore, e la MARCA si legge dal file che il banco scrive da se'.
+#
 # ---------------------------------------------------------------------------
 # ⛔ LO STATO INIZIALE (B0.1, B0.3)
 #
@@ -70,7 +84,19 @@ CERT=/media/REMOTIX/b2-certificati
 SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
 LIBS="$DENTRO/b2/ngtcp2/build/lib"
 IND=192.168.0.2
-PORTA=7447
+# ⛔ LA PORTA SI PUO' SPOSTARE, E NON E' UN VEZZO — 11 agosto 2026.
+#    Su questa macchina misura piu' di una persona alla volta, e un giro di
+#    certificazione che si prende :7447 spegne la scena di chi sta misurando
+#    accanto.  ⚠ Senza la variabile la porta resta 7447, cioe' quella di
+#    «innesto» in `01-b0-bersaglio.sh`: un predefinito diverso qui vorrebbe dire
+#    certificare su una scena che nessuno ha dichiarato.
+PORTA=${B12_PORTA:-7447}
+# ⛔ E B8 vuole DUE cose in piu' di ogni altro banco, perche' la sua scena e'
+#    §4.4-bis: un file dei ban e un socket di comando tutti suoi.  ⚠ Il file dei
+#    ban e' «lo stato che sopravvive di piu' fra tutti» (B0.2): condividerlo con
+#    un altro giro vuol dire ereditarne i dodici ore di ban.
+B8_BAN=${B12_B8_BAN:-$DENTRO/b12-b8-ban.txt}
+B8_SOCK=${B12_B8_COMANDO:-$DENTRO/b12-b8-comando.sock}
 UTENTE=prova
 PAROLA=parola-di-prova
 ESITI=$DENTRO/b12-esiti.jsonl
@@ -230,8 +256,24 @@ inf "⚠ B9 e B4 non sono fra queste: si certificano dove stanno i loro file"
 RIFIUTATE=""
 RESTA=""
 for S in $SIGLE; do
+	# ⛔⭐ E QUI C'ERA UN `2>/dev/null` **ATTORNO** A `enter.sh` — misurato la
+	#     sera dell'11 agosto 2026, ed e' la stessa trappola che questo file
+	#     descrive in cima, per la QUINTA volta.
+	#
+	# `enter.sh` chiama `sudo -v -S -p Password`: la richiesta esce su
+	# **stderr** e la risposta si legge da stdin.  Buttando via stderr, la
+	# richiesta non arriva a nessuno — e chi lancia il giro da un'altra
+	# macchina non ha modo di rispondere a una domanda che non vede.
+	# `[M]` `ps` sul server: `sudo -v -S -p Password sudo:` fermo, e sotto di
+	# lui `enter.sh --root python3 … --provabile B8 2>/dev/null`, con l'intero
+	# giro di certificazione fermo al passo 0 di 3.
+	# ⚠ Da un terminale interattivo il difetto e' invisibile finche' il credito
+	#   di sudo regge: si vede solo quando scade, cioe' sui giri lunghi — che
+	#   sono esattamente quelli che costano di piu' da rifare.
+	# ⭐ Il `2>/dev/null` DENTRO le virgolette resta: quello butta lo stderr
+	#    del programma remoto, che e' quel che si voleva.
 	MANCA=$(bash "$ENTRA" --root \
-	    "python3 $GUASTI --provabile $S 2>/dev/null" 2>/dev/null \
+	    "python3 $GUASTI --provabile $S 2>/dev/null" \
 	    | tr -d '\r' | sed -n 's/^MANCA //p' | tr '\n' ' ')
 	if [ -n "$MANCA" ]; then
 		ko "⛔ «$S» NON si prova qui: manca $MANCA"
@@ -462,51 +504,59 @@ gira()
 		fi
 		spegni ;;
 	B8)
-		# ⛔ B8 e' DUE comandi, non uno: `--campioni` raccoglie i tempi e
-		#    `--verdetto` li giudica leggendo lo stesso file.  ⭐ E il file va
-		#    BUTTATO fra un passo e l'altro: `verdetto()` rifiuta di giudicare
-		#    righe di un altro giro (lo dice da se'), ma un file lasciato li'
-		#    farebbe giudicare il passo «guasto» sui numeri del passo «sano» —
-		#    cioe' il modo piu' silenzioso di certificare niente.
-		# ⚠ Due indirizzi di provenienza sono obbligatori: e' la scena stessa
-		#   di §4.4-bis, che conta per indirizzo.
-		# ⛔⭐ B8 E' UN CICLO, NON UN COMANDO — rilievo R12-A.40, 11 agosto.
+		# ⛔⭐ B8 SI LANCIA DAL SUO LANCIATORE, ED E' LA RIGA PIU' IMPORTANTE
+		#     DI QUESTO FILE — 11 agosto 2026, sera.
 		#
-		# Un blocco solo da' **n=2** per caso, e a quel punto B8 dichiara il
-		# verdetto sulle mediane **SOSPESO** (vuole ≥10 campioni): il guasto
-		# non verrebbe giudicato affatto, ne' col guasto ne' senza.
-		# ⛔ E non si puo' semplicemente alzare `--per-caso`: B8 controlla il
-		#    proprio piano PRIMA di partire e si rifiuta se sfora la soglia di
-		#    §4.4-bis — «un piano che sfora misurerebbe il ban credendo di
-		#    misurare PAM».  ⭐ Il modo giusto e' quello che `01-b8-lancia.sh`
-		#    usa da sempre: **blocchi corti con lo SBLOCCO in mezzo**, e per lo
-		#    sblocco il server dev'essere acceso col suo socket di comando.
-		# ⚠ E lo si dichiara (B0.3): qui il bilancio si rimette in piedi col
-		#   comando di sblocco, non riaccendendo il server.
-		local giro8="b12-$passo-$$"
-		local file8="$DENTRO/b12-b8-$passo.jsonl"
-		local sock8="$DENTRO/b12-b8-comando.sock"
-		local crono8="python3 -u $DENTRO/01-b8-cronometro.py --bersaglio innesto --porta $PORTA --indirizzi 127.0.0.1,$IND --comando $sock8 --utente $UTENTE --parola $PAROLA --giro $giro8 --uscita $file8 --registro $DENTRO/b12-b8-$passo.log"
-		bash "$ENTRA" --root "rm -f $file8 $sock8"
-		accendi sessione "b8-$passo" 0.0.0.0 "--comando-socket=$sock8" || { u=99; }
-		if [ "$u" -eq 0 ]; then
-			# la scaldata, scartata per regola scritta prima (E9)
-			bash "$ENTRA" --root "$crono8 --campioni --blocco 0 --per-caso 1 > $uscita_file 2>&1"
-			bash "$ENTRA" --root "$crono8 --sblocca 127.0.0.1,$IND --perche dopo-la-scaldata >> $uscita_file 2>&1"
-			local b8=1
-			while [ "$b8" -le 6 ]; do
-				bash "$ENTRA" --root "$crono8 --campioni --blocco $b8 --per-caso 2 >> $uscita_file 2>&1"
-				u=$?
-				[ "$u" -eq 0 ] || break
-				bash "$ENTRA" --root "$crono8 --sblocca 127.0.0.1,$IND --perche fra-i-blocchi >> $uscita_file 2>&1"
-				b8=$((b8 + 1))
-			done
-			if [ "$u" -eq 0 ]; then
-				bash "$ENTRA" --root "$crono8 --verdetto >> $uscita_file 2>&1"
-				u=$?
-			fi
-		fi
-		spegni ;;
+		# Fino a stasera qui c'era una COPIA della sequenza di
+		# `01-b8-lancia.sh`: accensione, scaldata, sei blocchi corti con lo
+		# sblocco in mezzo, verdetto.  ⛔ Una copia scritta bene, e incompleta
+		# in tre punti che il catalogo aveva gia' misurato: le **due vite del
+		# server** (senza riavvio la persistenza del ban — invariante I7 —
+		# non si prova), la **lettura della pagina** (§4.4-bis punto 1) e lo
+		# **sblocco su un ban VERO** (senza, «tolto» e «non c'era» hanno lo
+		# stesso aspetto).  ⇒ Il giro sano usciva rosso su otto punti, e
+		# ⛔ **nessuno degli otto parlava di B8**: parlavano di quel che
+		# questo orchestratore non gli dava.
+		#
+		# ⭐ La cura non e' completare la copia — sarebbe una quarta stesura
+		#    della stessa sequenza, cioe' la radice dei falsi rossi di oggi —
+		#    ma chiamare il lanciatore, che quella sequenza ce l'ha scritta,
+		#    commentata e gia' pagata.  ⚠ E' quel che C2 fa da sempre, poche
+		#    righe piu' su, per la stessa ragione: certi banchi non stanno in
+		#    una riga di comando.
+		#
+		# ⛔ TRE CUCITURE, E CIASCUNA HA UNA RAGIONE:
+		#
+		#   · niente redirezione ATTORNO al lanciatore: dentro chiama
+		#     `enter.sh`, e una redirezione si porterebbe via la richiesta di
+		#     password di sudo.  ⭐ La marca si legge dal file che il verdetto
+		#     di B8 scrive da se' (`b8-verdetto-<bersaglio>.txt`), esattamente
+		#     come per C2;
+		#   · `B8_NON_RICOSTRUIRE=1`: il lanciatore, sull'innesto, rimette gli
+		#     innesti e ricompila — e ⛔ questo CANCELLEREBBE il guasto da
+		#     `examples/rcp.c` al passo 2/3, lasciando il banco verde su un
+		#     server sano.  Restano la verifica md5 del binario e il rifiuto
+		#     di un binario piu' vecchio dei sorgenti;
+		#   · porta, file dei ban e socket **spostati**: due giri sulla stessa
+		#     macchina non condividono mai il file dei ban (§4.4-bis conta per
+		#     indirizzo, e un ban dura dodici ore).
+		local blocchi8=${B12_B8_BLOCCHI:-6}
+		inf "⭐ B8 si lancia dal SUO lanciatore ($blocchi8 blocchi): due vite"
+		inf "   del server · la pagina del ban · lo sblocco su un ban vero."
+		inf "   ⚠ Dura qualche minuto per passo, ed e' il prezzo di una"
+		inf "   certificazione che copre la sequenza intera"
+		inf "scena: porta $PORTA · ban $B8_BAN · comando $B8_SOCK"
+		# ⛔ E il file del verdetto si BUTTA PRIMA, non dopo: quello del passo
+		#    precedente farebbe cercare la marca nei numeri di un altro giro.
+		rm -f "$FUORI/b8-verdetto-innesto.txt"
+		BERSAGLIO=innesto \
+		B8_NON_RICOSTRUIRE=1 \
+		B8_PORTA="$PORTA" \
+		B8_BAN="$B8_BAN" \
+		B8_COMANDO="$B8_SOCK" \
+			bash "$FUORI/01-b8-lancia.sh" "$blocchi8"
+		u=$?
+		cp -f "$FUORI/b8-verdetto-innesto.txt" "$fuori_file" 2>/dev/null ;;
 	B6)
 		# ⛔⭐ B6 SI PUO' CERTIFICARE, E L'OBIEZIONE IN CATALOGO NON REGGEVA
 		#     — rilievo R12-A.32, 11 agosto 2026.

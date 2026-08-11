@@ -410,43 +410,23 @@ def classifica(rec, caso):
 #      diverse sotto la stessa etichetta.
 #    ⛔ La cura non e' qui: e' che i due formati diventino uno.  Finche' non lo
 #      sono, questa e' la riga che impedisce di perderci un'ora.
-def leggi_pagina(indirizzo, porta, attesa=5.0):
-    """Chiede la pagina in TCP **da quell'indirizzo**, e legge che cosa dice.
-
-    ⛔ L'indirizzo di provenienza non si dichiara: lo sceglie il nucleo, ed e'
-       quello dell'interfaccia con cui si esce.  Chiedendo a `127.0.0.1` si
-       arriva come `127.0.0.1`; chiedendo a `192.168.0.2` si arriva come
-       `192.168.0.2`.  ⭐ E il server scrive nel registro **da quale** indirizzo
-       ha ricevuto: il denominatore si legge dove la cosa succede."""
-    fuori = {"indirizzo": indirizzo, "stato": None, "bannato": None,
-             "restano_ms": None, "ore": None, "minuti": None,
-             "frase": False, "byte": 0, "errore": ""}
-    # ⛔ IN TLS, E NON E' UN DETTAGLIO — misurato l'11 agosto 2026.
-    #
-    #    Questa funzione parlava HTTP IN CHIARO.  Contro l'innesto funzionava;
-    #    contro il PRODOTTO il server chiude — `ConnectionResetError: [Errno
-    #    104]` da tutt'e due gli indirizzi — perche' sulla porta TCP serve
-    #    HTTPS (`SPECIFICHE.md` §11.5, e `01-p1-prodotto.sh` la interroga con
-    #    `curl -k https://`).  ⛔ Il server faceva la cosa giusta e il banco
-    #    leggeva un silenzio: e' la settima veste — un banco che accusa il
-    #    codice sbagliato.
-    #
-    # ⚠ E il rosso era della forma peggiore: §4.4-bis vieta al ban di
-    #   presentarsi come «un errore di rete, un silenzio», e il banco avrebbe
-    #   scritto esattamente quello — su un server che la pagina del ban la
-    #   serve.
-    #
-    # ⭐ Quel che NON cambia: l'indirizzo di provenienza continua a sceglierlo
-    #    il nucleo.  `wrap_socket` incarta la connessione gia' aperta, non ne
-    #    apre un'altra.
-    conf = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    conf.check_hostname = False
-    conf.verify_mode = ssl.CERT_NONE   # il certificato lo giudica B3, non B8
+def _chiedi_pagina(indirizzo, porta, attesa, tls):
+    """Una richiesta sola, nel dialetto chiesto.  (grezzo, errore)."""
     nudo = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     nudo.settimeout(attesa)
+    s = None
     try:
         nudo.connect((indirizzo, porta))
-        s = conf.wrap_socket(nudo, server_hostname=indirizzo)
+        if tls:
+            # ⭐ Quel che NON cambia: l'indirizzo di provenienza continua a
+            #    sceglierlo il nucleo.  `wrap_socket` incarta la connessione
+            #    gia' aperta, non ne apre un'altra.
+            conf = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            conf.check_hostname = False
+            conf.verify_mode = ssl.CERT_NONE  # il certificato lo giudica B3
+            s = conf.wrap_socket(nudo, server_hostname=indirizzo)
+        else:
+            s = nudo
         s.settimeout(attesa)
         s.sendall(f"GET / HTTP/1.1\r\nHost: {indirizzo}:{porta}\r\n"
                   f"Connection: close\r\n\r\n".encode())
@@ -456,21 +436,69 @@ def leggi_pagina(indirizzo, porta, attesa=5.0):
             if not d:
                 break
             pezzi.append(d)
-        grezzo = b"".join(pezzi)
+        return b"".join(pezzi), ""
     except OSError as e:
         # ⛔ E questo e' un esito, non un'assenza: §4.4-bis vieta «un errore di
         #    rete, un silenzio».  Chi legge questo campo deve poter distinguere
         #    «la pagina dice che non sono bannato» da «non ho parlato con
         #    nessuno» — sono la stessa faccia solo per chi non guarda.
-        fuori["errore"] = f"{type(e).__name__}: {e}"
-        return fuori
+        return b"", f"{type(e).__name__}: {e}"
     finally:
-        # ⚠ `s` puo' non esistere: se a fallire e' il `connect` o la stretta di
-        #   mano TLS, l'incarto non e' mai avvenuto.  Si chiude quel che c'e'.
         try:
-            s.close()
-        except NameError:
-            nudo.close()
+            (s or nudo).close()
+        except OSError:
+            pass
+
+
+def leggi_pagina(indirizzo, porta, attesa=5.0, tls=True):
+    """Chiede la pagina in TCP **da quell'indirizzo**, e legge che cosa dice.
+
+    ⛔ L'indirizzo di provenienza non si dichiara: lo sceglie il nucleo, ed e'
+       quello dell'interfaccia con cui si esce.  Chiedendo a `127.0.0.1` si
+       arriva come `127.0.0.1`; chiedendo a `192.168.0.2` si arriva come
+       `192.168.0.2`.  ⭐ E il server scrive nel registro **da quale** indirizzo
+       ha ricevuto: il denominatore si legge dove la cosa succede."""
+    fuori = {"indirizzo": indirizzo, "stato": None, "bannato": None,
+             "restano_ms": None, "ore": None, "minuti": None,
+             "frase": False, "byte": 0, "errore": "", "tls": tls}
+    # ⛔⭐ IL DIALETTO DELLA PAGINA E' UNA DIFFERENZA FRA I DUE SERVER, e sono
+    #     due rossi opposti pagati a un giorno di distanza (11 agosto 2026):
+    #
+    #       · questa funzione parlava HTTP IN CHIARO.  Contro l'innesto andava;
+    #         contro il PRODOTTO il server chiudeva — `ConnectionResetError:
+    #         [Errno 104]` da tutt'e due gli indirizzi — perche' li' la porta
+    #         TCP serve HTTPS (`SPECIFICHE.md` §11.5);
+    #       · la cura fu incartare SEMPRE in TLS, e ⛔ ha spostato il rosso
+    #         sull'altro bersaglio: `[M]` 11 agosto sera, contro l'innesto,
+    #         `SSLError: [SSL: WRONG_VERSION_NUMBER]` da tutt'e due gli
+    #         indirizzi — perche' `01-b3-rcp-innesta.py` la pagina la scrive
+    #         **in chiaro** (`HTTP/1.1 200 OK` su un fd nudo, nessuna riga di
+    #         TLS in tutto il file).
+    #
+    # ⚠ In tutt'e due i casi il server faceva la cosa giusta e il banco leggeva
+    #   un silenzio — la settima veste di `LEZIONI.md` §1.9 — e §4.4-bis vieta
+    #   proprio al ban di presentarsi come «un errore di rete, un silenzio».
+    #
+    # ⭐ Quindi il dialetto lo DICHIARA chi chiama (dal bersaglio), e qui c'e' il
+    #    controllo che dice no: se il dialetto dichiarato non risponde, si prova
+    #    l'ALTRO — e se e' l'altro a rispondere, l'errore lo scrive a lettere,
+    #    invece di lasciare «non ho parlato con nessuno».  ⛔ E' la differenza
+    #    fra «la pagina non c'e'» e «la pagina la sto chiedendo nella lingua
+    #    sbagliata», che senza questa riga hanno la stessa faccia.
+    grezzo, errore = _chiedi_pagina(indirizzo, porta, attesa, tls)
+    if errore:
+        altro, err2 = _chiedi_pagina(indirizzo, porta, attesa, not tls)
+        if not err2 and altro:
+            fuori["errore"] = (
+                f"⛔ IL DIALETTO E' L'ALTRO: chiesta in "
+                f"{'TLS' if tls else 'chiaro'} ha dato «{errore}», e in "
+                f"{'chiaro' if tls else 'TLS'} risponde ({len(altro)} byte). "
+                f"Non e' «la pagina non risponde»: e' il bersaglio dichiarato "
+                f"male, e i tre controlli della pagina qui sotto parlerebbero "
+                f"del banco e non del server")
+        else:
+            fuori["errore"] = errore
+        return fuori
     fuori["byte"] = len(grezzo)
     testo = grezzo.decode("utf-8", errors="replace")
     prima = testo.split("\r\n", 1)[0]
@@ -800,9 +828,28 @@ async def esegui(a, passi, tipo, etichetta, modo, confronta_modello=True):
     return 0
 
 
+def pagina_in_tls(a):
+    """⛔ In che lingua parla la pagina del ban, su QUESTO bersaglio.
+
+    innesto   in chiaro — `01-b3-rcp-innesta.py` scrive `HTTP/1.1 200 OK` su un
+              fd nudo, e in tutto il file non c'e' una riga di TLS;
+    prodotto  in TLS — `SPECIFICHE.md` §11.5, e `01-p1-prodotto.sh` la
+              interroga con `curl -k https://`.
+
+    ⚠ E IL POSTO GIUSTO DI QUESTA RIGA NON E' QUI: e' il profilo condiviso
+      (`01-b0-bersaglio.py`), accanto alle altre differenze fra i due server —
+      la riga d'avvio sul ban, il formato della pagina, il tetto d'inattivita'.
+      Sta scritto qui perche' la sera dell'11 agosto 2026 il profilo lo stanno
+      usando altri tre banchi, e una chiave nuova la si aggiunge quando non c'e'
+      nessun altro dentro.  ⛔ Finche' e' qui, e' una quinta copia di una
+      differenza — cioe' esattamente la forma che R12C.5 ha gia' fatto pagare:
+      si legge dal profilo appena la chiave esiste."""
+    return bool(a.prof.get("pagina_tls", a.bersaglio == "prodotto"))
+
+
 def guarda_pagina(a, indirizzo, etichetta, atteso_bannato):
     """La pagina, letta e SCRITTA nel file dei fatti — e confrontata subito."""
-    rec = leggi_pagina(indirizzo, a.porta)
+    rec = leggi_pagina(indirizzo, a.porta, tls=pagina_in_tls(a))
     rec.update({"giro": a.giro, "tipo": "pagina", "etichetta": etichetta,
                 "atteso_bannato": atteso_bannato})
     scrivi(a.uscita, rec)

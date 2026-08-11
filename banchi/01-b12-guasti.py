@@ -185,10 +185,21 @@ FILE_CHE_CONTANO = {
     "B7":  ["01-b7-congedo.py", "rcp/rcp.c"],
     "B8":  ["01-b8-cronometro.py", "rcp/rcp.c"],
     "B9":  ["01-b9-letture.py", "01-b3-cliente.py", "../RCP.md"],
-    "B10": ["rcp/autenticazione.c"],
+    # ⛔ La certificazione di B10 poggia sul banco che deve diventare rosso —
+    #    che dall'11 agosto 2026 sera ESISTE — e non solo sul modulo guastato.
+    "B10": ["01-b10-secondo-utente.py", "01-b10-lancia.sh",
+            "rcp/autenticazione.c"],
     "B11": ["01-b11-guasto-innesta.py", "01-b11-pagina.html"],
     "B13": ["01-b13-proprieta.py", "rcp/rcp.c"],
     "C2":  ["01-c2-diagnosi.py"],
+    # ⚠ P1 e P5 — sera dell'11 agosto 2026.  `remotix/pagina.c` e' il sorgente
+    #   DEL PRODOTTO, e si legge solo dalla macchina di prova: da `banchi/`, su
+    #   CHUWI, il prodotto sta in `../src/`, e quindi qui vale `None`.  ⛔ E'
+    #   la stessa scena di `../RCP.md` per B9, al contrario: ognuno dei due
+    #   banchi si certifica da una macchina sola, e `--provabile` lo dice
+    #   invece di lasciarlo scoprire a un rosso (R12-A.31).
+    "P1":  ["01-p1-prodotto.sh", "01-p1-dentro.sh", "remotix/pagina.c"],
+    "P5":  ["01-p5-lancia.sh", "01-p5-registro.py", "remotix/pagina.c"],
 }
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
@@ -453,45 +464,90 @@ guasto(
     "«utente inesistente» risponde in un millisecondo e «parola sbagliata» in "
     "cinquanta»*.  ⛔ E' una proprieta' di **sicurezza che nessun altro banco "
     "vede**, e una regressione che la togliesse non farebbe fallire niente",
-    "",
+    # ⛔⭐ LA MARCA, e fino alla sera dell'11 agosto 2026 era VUOTA — cioe' B8
+    #     non era certificabile nemmeno con un giro perfetto: `--giudica`
+    #     rifiuta un guasto senza marca, e ha ragione («il banco e' diventato
+    #     rosso» non si attribuisce a niente, e una compilazione fallita rende
+    #     rosso qualunque banco).
+    #
+    # ⭐ La frase e' quella del PRIMO criterio del verdetto — «nessuna risposta
+    #    di PAM prima di 1000 ms» — e la dice solo chi ha visto una risposta
+    #    sotto il secondo.  Col ritardo fisso a zero e' precisamente quel che
+    #    succede, ed e' il punto in cui il guasto morde.
+    # ⛔ E la seconda meta' del criterio la regge da se': nel giro SANO quella
+    #    riga non c'e' (la stampa alternativa dice «N su N ≥ 1000 ms»), quindi
+    #    non e' una marca che compare in tutt'e due i giri.
+    # ⚠ Si tiene anche il «La piu' veloce:» apposta: senza, la stessa
+    #   sottostringa comparirebbe nella riga con cui `--certifica` dichiara di
+    #   NON aver visto la frase, e la marca si vedrebbe per il motivo sbagliato.
+    "risposte sotto il secondo. La piu' veloce:",
     "ricostruisce",
     "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.4-bis",
+    # ⛔⭐ IL GIRO SANO DI B8 ESCE **5**, NON 0 — e non e' un atteso allargato
+    #     finche' torna, che e' la strada disonesta che B13 ha insegnato a non
+    #     prendere.  E' il quinto esito, che B8 dichiara da se': *«il BAN passa
+    #     per intero, ma le mediane SI SEPARANO»*, e ⛔ **l'esito 5 si da' SOLO
+    #     quando l'imputato e' stato MISURATO ed e' PAM** — se fosse un ritardo
+    #     nostro, o non misurabile, lo stesso giro uscirebbe 1.
+    #
+    # `[M]` 11 agosto 2026, NIC-OS, porta 7471, giro `20260811-130957`:
+    #   50 risposte su 50 ≥ 1000 ms (la piu' veloce 1073,0 ms) · mediane
+    #   inesistente 2210,5 · sbagliata 2104,5 · giusta 1088,9 ms ·
+    #   ⭐ «inesistente − sbagliata», l'unica coppia che direbbe se un nome
+    #   utente esiste, +106,0 ms [-239,7; +500,2] ⇒ NON si separa ·
+    #   il server dichiara di aver aspettato oltre il secondo fisso +1009 ms sui
+    #   respinti e +86 ms sugli ammessi ⇒ la firma di `pam_faildelay`.
+    #
+    # ⛔ E LA DISTINZIONE FRA I DUE ESITI E' QUEL CHE RENDE QUESTA
+    #    CERTIFICAZIONE UNA MISURA: il guasto porta `RITARDO_FISSO` a zero, le
+    #    risposte scendono sotto il secondo, e quello e' un **rosso pieno (1)**,
+    #    non un 5.  ⇒ sano 5 → guasto 1 → risano 5, e i due numeri non si
+    #    possono confondere.  ⚠ Se un giorno il `[?]` di PAM si chiudesse, il
+    #    giro sano diventerebbe 0 e QUESTA RIGA diventerebbe rossa: e' il modo
+    #    giusto di accorgersene.
+    atteso_sano=5,
     nota="⭐ IL GUASTO E' VERO E INNESTABILE dall'11 agosto 2026 (R12-A.38), "
          "e la sua efficacia e' MISURATA: col ritardo a zero, sull'innesto, "
          "«giusta» risponde in **58 ms** e «inesistente» in **2959** — il "
          "tempismo torna a essere un canale spalancato.\n"
-         "       ⛔ MA B8 NON SI PUO' ANCORA CERTIFICARE, e il motivo non e' "
-         "piu' il ban: e' che **il suo giro sano non e' verde sotto B12**. "
-         "`[M]` 11 agosto: 8 punti su 8 non passano, e sono tutti pezzi che "
-         "questo orchestratore non gli da'.\n"
-         "       ⭐ Quel che oggi c'e' (e prima no): B12 lancia B8 come un "
-         "CICLO — scaldata, sei blocchi corti, **sblocco fra un blocco e "
-         "l'altro** — col server acceso su `0.0.0.0` e col suo "
-         "`--comando-socket`, e gli passa il registro del server.  Con questo "
-         "B8 arriva a **39 tentativi, 14 sblocchi**, e le mediane le giudica "
-         "davvero.  ⚠ Un blocco solo dava n=2, e a n<10 il verdetto sulle "
-         "mediane e' **SOSPESO**: il guasto non sarebbe stato giudicato "
-         "affatto.  ⛔ E alzare `--per-caso` non e' la strada: B8 controlla il "
-         "proprio piano PRIMA di partire e si rifiuta se sfora la soglia di "
-         "§4.4-bis — *«un piano che sfora misurerebbe il ban credendo di "
-         "misurare PAM»*.\n"
-         "       ⛔ CHE COSA MANCA ANCORA, in ordine di costo:\n"
-         "         · **due vite del server**: la persistenza del ban (I7) si "
-         "prova con un RIAVVIO, e `gira()` accende una volta sola;\n"
-         "         · **la lettura della pagina**: il punto 1 di §4.4-bis vuole "
-         "che l'utente bannato veda una pagina, e qui non se ne legge nessuna;\n"
-         "         · **lo sblocco su un ban VERO**: oggi si sblocca sempre, e "
-         "«tolto» e «non c'era» non si distinguono.\n"
-         "       ⇒ Sono, in sostanza, la sequenza intera di "
-         "`01-b8-lancia.sh`.  ⭐ La strada onesta e' insegnarla a `gira()` "
-         "**o** certificare B8 dal suo lanciatore; ⛔ la strada disonesta "
-         "sarebbe allargare l'atteso finche' torna, che e' esattamente quel "
-         "che B13 ha insegnato a non fare.\n"
-         "       ⚠ E UN FATTO NUOVO, raccolto per strada: col registro del "
-         "server in mano B8 nomina l'imputato delle mediane, e sull'innesto "
-         "dice **«PAM»** — lo stesso che diceva sul prodotto.  Il ⚠ delle "
-         "mediane separate non e' del nostro codice, e adesso lo si sa su "
-         "tutt'e due i bersagli."
+         "       ⭐⭐ E B8 E' CERTIFICATO — 11 agosto 2026, sera, `[M]` "
+         "NIC-OS, porta 7471, `5 → 1 → 5`.  Il registro: giro «sano» "
+         "`20260811-133820`, «guasto» `20260811-134105`, «risano» "
+         "`20260811-134334`, verdetto scritto alle 13:46:12.\n"
+         "         sano   uscita **5** · 50 risposte su 50 ≥ 1000 ms (la piu' "
+         "veloce 1000,8) · mediane 2123 · 2198 · 1086 ms · la marca compare "
+         "**0** volte;\n"
+         "         guasto uscita **1** · ⛔ **17 risposte sotto il secondo, la "
+         "piu' veloce 49,7 ms**, e la mediana di «giusta» passa da 1085,9 a "
+         "**56,3 ms** · la marca compare;\n"
+         "         risano uscita **5** · di nuovo 0 volte.\n"
+         "       ⭐ E il rosso NON viene da una compilazione fallita — la "
+         "trappola n.1 di questo file: il binario e' stato ricostruito e "
+         "verificato in tutt'e tre i passi, e i 15 guasti a mano del giudice di "
+         "B8 restano 15 su 15 in ognuno.\n"
+         "       ⛔ COM'E' STATO POSSIBILE, e la cura vale piu' del punto: fino "
+         "a stasera `01-b12-lancia.sh` **riscriveva a mano** la sequenza di "
+         "B8, e la copia era incompleta in tre punti — le **due vite del "
+         "server** (la persistenza del ban, invariante I7, vuole un riavvio), "
+         "la **lettura della pagina** (§4.4-bis punto 1) e lo **sblocco su un "
+         "ban VERO** (senza, «tolto» e «non c'era» hanno la stessa faccia).  "
+         "⇒ Il giro sano usciva rosso su otto punti che parlavano "
+         "dell'orchestratore, non del banco.  ⭐ Adesso `gira()` **chiama "
+         "`01-b8-lancia.sh`**, come fa da sempre con C2, e la marca la legge "
+         "dal file che il verdetto di B8 scrive da se'.\n"
+         "       ⚠ E l'ATTESO SANO E' 5, NON 0, ed e' scritto nel catalogo "
+         "invece che allargato a posteriori: e' il quinto esito di B8 — «il ban "
+         "passa per intero, ma le mediane si separano» — e ⛔ si da' SOLO "
+         "quando l'imputato e' stato MISURATO ed e' **PAM**.  Il guasto, "
+         "invece, da' un rosso pieno (1): i due numeri non si confondono, e il "
+         "giorno in cui il `[?]` di PAM si chiudesse il sano diventerebbe 0 e "
+         "questa riga diventerebbe rossa — che e' il modo giusto di "
+         "accorgersene.\n"
+         "       ⚠ QUEL CHE QUESTA CERTIFICAZIONE NON COPRE, detto qui perche' "
+         "e' qui che si legge la parola «certificato»: il bersaglio e' "
+         "l'**innesto**, non il prodotto; la pagina si legge con un socket e "
+         "non con un browser; e le mediane restano separate — il `[?]` di PAM "
+         "resta aperto, e il ban non lo chiude."
 )
 
 # ── B9 — ⛔ il cliente di prova che ha letto il C ───────────────────────────
@@ -544,20 +600,79 @@ guasto(
 guasto(
     "B10", "B10", "si rimette la guardia che rifiuta chi non possiede il "
                   "processo",
-    os.path.join(ESEMPI, "autenticazione.c"),
-    "autenticazione_utente_atteso",
-    "autenticazione_utente_atteso /* " + MARCA + " B10 */",
+    # ⛔ SU UNA COPIA INTERA DELL'ALBERO DEL PRODOTTO, non su `src/remotix` e
+    #    non su `examples/`.  Due ragioni, e nessuna delle due e' di comodo:
+    #      · il banco di B10 misura il PRODOTTO (`SPECIFICHE.md` §5.5 parla del
+    #        servizio di sistema), quindi il guasto va dove il prodotto vive;
+    #      · costruire il guasto dentro `/srv/src/remotix` riscriverebbe il
+    #        binario che gli altri banchi stanno misurando, e per qualche
+    #        minuto lascerebbe sotto i loro piedi un server bugiardo.
+    #    La copia la rifa' da zero `01-b10-lancia.sh guasto`, e la butta in
+    #    fondo.  ⚠ Da CHUWI questo percorso non esiste: il guasto si applica
+    #    **sul server**, ed e' li' che ha senso.
+    os.path.join(QUI, "sera-b10-remotix", "autenticazione.c"),
+    # ⛔⭐ L'APPIGLIO VECCHIO ERA UNA STRINGA DI COMMENTO — la stessa trappola
+    #     che l'11 agosto 2026 aveva svuotato il guasto di B5.  `dove` era
+    #     `examples/autenticazione.c` e l'appiglio `autenticazione_utente_atteso`,
+    #     che in quel file compare **soltanto nel commento** che racconta la
+    #     guardia tolta: il sostituto ci appiccicava accanto la marca, il
+    #     codice compilato restava identico byte per byte, e il banco sarebbe
+    #     rimasto verde per il motivo giusto — non c'era nessun guasto.
+    #     ⭐ Adesso l'appiglio e' CODICE, e il sostituto rimette la guardia di
+    #        v1 alla lettera: `getpwuid(geteuid())` e il confronto col nome,
+    #        **prima** di `pam_start`.  Il rifiuto e' silenzioso, come in v1:
+    #        e' l'assenza di righe di PAM nel registro che B10 deve leggere.
+    "bool rcp_autentica(const char *utente, const char *parola)\n"
+    "{\n"
+    "\tif (!utente || !*utente || !parola)\n"
+    "\t\treturn false;\n",
+    "/* " + MARCA + " B10 — la guardia di v1 rimessa: il server torna a\n"
+    " * servire soltanto chi possiede il processo, e a tutti gli altri dice\n"
+    " * «credenziali errate» senza nemmeno interpellare PAM. */\n"
+    "#include <pwd.h>\n"
+    "#include <unistd.h>\n"
+    "\n"
+    "static const char *autenticazione_utente_atteso(void)\n"
+    "{\n"
+    "\tstruct passwd *p = getpwuid(geteuid());\n"
+    "\treturn p ? p->pw_name : \"\";\n"
+    "}\n"
+    "\n"
+    "bool rcp_autentica(const char *utente, const char *parola)\n"
+    "{\n"
+    "\tif (!utente || !*utente || !parola)\n"
+    "\t\treturn false;\n"
+    "\t/* " + MARCA + " B10 */\n"
+    "\tif (strcmp(utente, autenticazione_utente_atteso()) != 0)\n"
+    "\t\treturn false;\n",
     "`SPECIFICHE.md` §5.5 vuole il multi-tenant; v1 aveva una guardia che "
     "rifiutava chiunque non fosse il proprietario del processo.  ⛔ B10 esiste "
     "per vederla, e *«non entra» ha quattro cause* (R3.26): se B10 resta "
     "verde con la guardia rimessa, sta guardando la causa sbagliata",
-    "",
+    # ⭐ LA MARCA, e non e' una parola qualsiasi: e' la riga che
+    #    `01-b10-secondo-utente.py` stampa **soltanto** quando riconosce la
+    #    causa (1) — il server ha rifiutato e PAM non e' stata nemmeno
+    #    interrogata, mentre `pamtester` con la stessa parola e lo stesso
+    #    servizio riesce.  ⛔ Le altre tre cause hanno altre marche, e nel giro
+    #    sano questa non compare mai (verificato: 0 nel sano, ≥1 nel guasto).
+    "CAUSA-1-GUARDIA-PRE-PAM",
     "ricostruisce",
     "fasi/01-filo-nudo.md B12-C1 e B10 · SPECIFICHE.md §5.5",
-    nota="⚠ Catalogato e non eseguito: B10 non e' ancora scritto, e un guasto "
-         "senza il banco che lo deve vedere non certifica niente.  ⛔ E senza "
-         "marca — che qui e' una conseguenza, non una dimenticanza: la marca "
-         "e' una riga dell'uscita di un banco che non esiste (R12-A.3).",
+    nota="⭐ ESEGUITO PER LA PRIMA VOLTA la sera dell'11 agosto 2026, insieme "
+         "al banco che lo deve vedere (`01-b10-secondo-utente.py`, "
+         "`01-b10-lancia.sh`).\n"
+         "       ⛔ LA RICOSTRUZIONE NON E' `ninja`: il prodotto si costruisce "
+         "con `GEMELLO=nessuno bash <copia>/costruisci.sh`, e "
+         "`attrezzi-misura-marca.sh` sa fare solo `ninja -C .../build "
+         "bsslserver`, cioe' l'innesto.  Finche' `01-b12-lancia.sh` non impara "
+         "a costruire il prodotto, questa certificazione si fa dal lanciatore "
+         "del banco:  `BERSAGLIO=prodotto bash "
+         "/media/REMOTIX/src/01-b10-lancia.sh certifica`  (sano → guasto → "
+         "risanato, sulle porte 7491/7492).\n"
+         "       ⚠ E `GEMELLO=nessuno` va DICHIARATO: la copia guasta diverge "
+         "apposta da `banchi/rcp/autenticazione.c`, e il Makefile fermerebbe "
+         "la costruzione (R12.3).  Il prodotto vero non si tocca, e i sorgenti "
+         "della copia si confrontano con i suoi prima di guastarli.",
 )
 
 # ── B11 — la pagina che non applica §3 ─────────────────────────────────────
@@ -725,6 +840,313 @@ guasto(
     nota="⚠ Catalogato e non eseguito in questo giro: costa una ricostruzione "
          "intera del server d'esempio, e il banco che lo vede (la sonda del "
          "trasporto) e' di B2, non di questo mandato.",
+)
+
+
+# ===========================================================================
+# ⛔ P1 e P5 — I DUE BANCHI CHE ESISTEVANO E NON AVEVANO NESSUN GUASTO.
+#
+# Rilievo R12-A.50, sera dell'11 agosto 2026, e il `README.md` lo scriveva con
+# un numero: *«P1 e P5 non sono nel catalogo di B12: i banchi sono 14, le voci
+# 12»*.  ⛔ Non erano «puliti»: erano due banchi **mai diventati rossi**, cioe'
+# la definizione stessa di NON CERTIFICATO — e sono i due che guardano il
+# PRODOTTO, l'unica cosa di questa fase che un utente vedrebbe.
+#
+# ⛔ E IL DENOMINATORE VERO E' UN ALTRO ANCORA, misurato prima di scrivere
+#    queste due voci (`ls banchi/ | sed 's/^\\(01-[a-z0-9]*\\)-.*/\\1/' | sort -u`):
+#
+#      · 14 prefissi di BANCO in `banchi/`  — B2 B3 B4 B5 B6 B7 B8 B9 B11 B12
+#        B13 C2 P1 P5 — piu' `01-b0-` (gli attrezzi comuni: terreno, bersaglio,
+#        chiamate) e sette `01-s…` (le sonde S1b S2 S3a S5 S6 S7 e S-telefono,
+#        che sono MISURE del Gruppo 1, non banchi che si certificano);
+#      · 14 voci nel catalogo dopo queste due, ma **non le stesse quattordici**:
+#        il catalogo comprende **B10**, che non ha nessuno script, ed esclude
+#        **B12**, che non certifica se' stesso.
+#
+#    ⇒ I banchi scritti che il catalogo puo' certificare sono **13** (i 14
+#      prefissi meno B12), e le voci che hanno un banco dietro sono **13** (le
+#      14 meno B10).  ⚠ Due insiemi che adesso coincidono — mentre prima di
+#      stasera erano 12 e 12 **diversi**, ed e' precisamente il modo in cui un
+#      conteggio smette di essere una misura (`fasi/01-filo-nudo.md`, il
+#      riquadro sul denominatore).
+#
+# ⛔ E TUTT'E DUE I GUASTI SI INNESTANO SU UNA **COPIA INTERA** DEL PRODOTTO,
+#    mai su `/media/REMOTIX/src/remotix/`.  La ragione non e' la stessa dei tre
+#    guasti Python di sopra (quelli sono banchi di altri): qui e' che P1
+#    **ricostruisce il binario come primo passo del proprio giro**, e guastare
+#    il prodotto di casa lascerebbe, per i minuti del passo 2/3, un binario
+#    bugiardo sotto i piedi di chiunque altro riaccendesse il server.  ⚠ La
+#    sera dell'11 agosto 2026 sulla macchina di prova c'era un `remotix` vivo
+#    sulla 7448 di un altro giro, e cinque agenti al lavoro insieme.
+#
+#      cp -a /media/REMOTIX/src/remotix \
+#            /media/REMOTIX/src/01-b12-copie/p1-remotix
+#      PORTA=7501 PORTA_MORTA=7502 PREFISSO_TMP=sera-p15 \
+#        SORG=/media/REMOTIX/src/01-b12-copie/p1-remotix \
+#        bash /media/REMOTIX/src/01-p1-prodotto.sh
+#
+#    ⛔ La copia si rifa' PRIMA di ogni giro sano, per la ragione scritta su
+#       `prepara_copia()`: una copia rimasta da un giro precedente si porta
+#       dietro il guasto di quel giro, e il banco parte **gia' rosso**.
+# ===========================================================================
+
+# ── P1 — ⛔ l'isolamento fra origini SPENTO, e il NOME dell'intestazione resta ─
+guasto(
+    "P1", "P1", "⛔ `Cross-Origin-Opener-Policy` da `same-origin` a "
+                "`unsafe-none`: l'isolamento fra origini SPENTO",
+    os.path.join(COPIE, "p1-remotix", "pagina.c"),
+    '"Cross-Origin-Opener-Policy: same-origin\\r\\n"',
+    '"Cross-Origin-Opener-Policy: unsafe-none\\r\\n" /* ' + MARCA + ' P1 — '
+    'SPECIFICHE.md §11.5: l\'isolamento fra origini spento, e il NOME '
+    'dell\'intestazione lasciato al suo posto apposta. */',
+    "⛔ `SPECIFICHE.md` §11.5 non chiede che l'intestazione ci sia: chiede che "
+    "**valga `same-origin`**.  Con `unsafe-none` l'intestazione c'e', il "
+    "browser la legge, e l'isolamento non esiste: su Firefox e Safari i "
+    "cronometri della pagina tornano su una griglia da 1 ms — su un tetto di "
+    "50 — e la memoria condivisa sparisce.  ⭐ E' una regressione che **non "
+    "rompe niente adesso**: la pagina si serve, il 200 arriva, la stretta di "
+    "mano riesce.  Il sintomo arriverebbe alla fase 2, come «il video va a "
+    "scatti su Firefox», e nessuno collegherebbe le due cose",
+    # ⛔⭐ PERCHE' IL VALORE E NON LA RIGA INTERA — ed e' la trappola n.1 di
+    #     questo file, evitata prima di innestare invece che dopo.
+    #
+    # La prima stesura di questo guasto toglieva la riga (`""` al posto della
+    # stringa).  ⛔ Ma `remotix/costruisci.sh` **cerca «Cross-Origin-Opener-
+    # Policy» dentro il binario prodotto** e si ferma se non la trova, e la
+    # cerca anche `01-p1-prodotto.sh` fra le sue otto marche: il guasto avrebbe
+    # reso P1 rosso su `costruzione.esito` e su `binario.marche` — cioe' su una
+    # COMPILAZIONE FALLITA, che rende rosso qualunque banco e certifica ZERO.
+    # ⭐ Cambiando il VALORE e lasciando il NOME, il binario porta ancora la
+    #    marca, il costruttore esce 0, e l'unico controllo che si muove e'
+    #    quello che guarda l'intestazione servita davvero.
+    #
+    # ⛔ LA MARCA E' MISURATA, NON SCELTA — `[M]` 11 agosto 2026, macchina
+    #    NIC-OS, porta 7501, copia in `01-b12-copie/p1-remotix`, tre giri alle
+    #    12:56:20 · 12:56:56 · 12:57:24 UTC (registro `01-p1-esiti.jsonl`):
+    #
+    #      sano   uscita 0 · VERDE 34 su 34 · la marca compare **0** volte
+    #      guasto uscita 1 · ROSSO 33 su 34 · la marca compare **2** volte
+    #      risano uscita 0 · VERDE 34 su 34 · la marca compare **0** volte
+    #
+    # ⭐ E il rosso e' di UN controllo solo — `fumo.isolamento.coop` — mentre
+    #    `costruzione.esito` resta 0 e `binario.marche` resta 8/8: cioe' il
+    #    guasto NON e' passato per una compilazione fallita, che e' la trappola
+    #    n.1 di questo file.  ⚠ Il nome del caso da solo («isolamento.coop»)
+    #    compare in tutt'e due i giri, e sarebbe la stessa trappola gia' pagata
+    #    su B6 con «ciao-presto» e su B7 con «CONGEDO»; la riga scelta porta il
+    #    «MANCA:» che solo il giro rosso stampa.
+    "MANCA: Cross-Origin-Opener-Policy: same-origin",
+    # ⭐ «leggero» e non «ricostruisce», e non e' una svista: P1 **ricostruisce
+    #    da se'** come primo passo del proprio giro (e' meta' di quel che P1
+    #    esiste per misurare).  Fra l'innesto e il giro non ci va nessuna
+    #    compilazione fatta da qui.
+    "leggero",
+    "fasi/01-filo-nudo.md B12-C1 · SPECIFICHE.md §11.5 · README.md «CHE COSA "
+    "FARE ADESSO» punto 5",
+    nota="⛔ CHE COSA QUESTA CERTIFICAZIONE DICE, E CHE COSA NON DICE.\n"
+         "       Dice che P1 vede una regressione del PRODOTTO che passa per "
+         "il filo, dalla costruzione fino all'intestazione servita: il guasto "
+         "sta in `pagina.c`, il binario si ricostruisce, il server si accende, "
+         "e a diventare rosso e' il controllo che legge la risposta con "
+         "`curl`.  ⭐ Cioe' e' il giro intero di P1, non un pezzo.\n"
+         "       ⚠ **Non dice** che P1 veda un binario stantio: quello lo "
+         "guarda il controllo C4, che nel giro sano e' gia' verde e che questo "
+         "guasto non muove.  ⛔ E non dice niente su RCP, sull'autenticazione "
+         "e sul ban: P1 dichiara apertamente di fermarsi prima del filo RCP.\n"
+         "       ⚠ Il guasto si innesta nella COPIA "
+         "`01-b12-copie/p1-remotix/pagina.c`, e P1 va lanciato con `SORG` su "
+         "quella copia: il prodotto in `/media/REMOTIX/src/remotix` non si "
+         "tocca mai.\n"
+         "       ⚠ E si certifica **solo dalla macchina di prova**: "
+         "`remotix/pagina.c` da `banchi/` non esiste (su CHUWI il prodotto sta "
+         "in `../src/`), e `--provabile P1` da qui stampa «MANCA».",
+)
+
+# ── P5 — ⛔ la pagina pubblica un'impronta DIVERSA da quella dell'endpoint ────
+guasto(
+    "P5", "P5", "⛔ la pagina pubblica un'impronta di sessione DIVERSA da "
+                "quella che `/impronta` dichiara — il difetto R1.14",
+    os.path.join(COPIE, "p5-remotix", "pagina.c"),
+    'a = sostituisci(p->html, "__IMPRONTA__", p->cert->impronta);',
+    'a = sostituisci(p->html, "__IMPRONTA__", '
+    '"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="); /* ' + MARCA + ' P5 — '
+    'RCP.md §4.1-bis: la pagina porta un\'impronta ben formata e SBAGLIATA, '
+    'mentre /impronta continua a dichiarare quella vera. */',
+    "⛔ §4.1-bis, rilievo R1.14: se l'impronta scritta nella pagina e quella "
+    "del certificato di sessione divergono, **la sessione WebTransport non si "
+    "apre e nessun errore nomina l'impronta**.  Il sintomo che arriva a chi "
+    "guarda e' *«WebTransport non si connette»*, che ha almeno quattro cause "
+    "diverse.  ⭐ P5 e' l'unico banco che fa il confronto dalla parte del "
+    "browser vero, su due motori: se resta verde, quel difetto lo trovera' un "
+    "utente.  ⚠ E l'impronta storpiata e' **ben formata** apposta — 44 "
+    "caratteri, base64 valido: un valore rotto farebbe fallire il banco sulla "
+    "lunghezza, e allora il rosso non direbbe niente sul CONFRONTO",
+    # ⛔ LA MARCA E' MISURATA, NON DEDOTTA — `[M]` 11 agosto 2026, macchina
+    #    CHUWI (i browser stanno di qua), bersaglio la copia sulla **7501**,
+    #    due giri veri alle 13:01:22 e alle 13:06:18 UTC:
+    #
+    #      sano   la frase compare **0** volte
+    #      guasto la frase compare **1** volta, ed e' il punto 3 che cade:
+    #             «la pagina pubblica «AAAA…=» e l'endpoint dice «PJ03…=»»
+    #
+    # ⭐ E la seconda meta' del criterio regge: nel giro sano il punto 3 stampa
+    #    la riga OPPOSTA — «⭐ la pagina pubblica la stessa impronta
+    #    dell'endpoint (§4.1-bis)» — e la frase scelta non c'e'.
+    # ⚠ Il nome del segno («__IMPRONTA__») e la parola «impronta» da sola
+    #   compaiono in tutt'e due i giri decine di volte: sarebbero la trappola
+    #   gia' pagata su B7 con «CONGEDO».
+    "sono due impronte diverse per lo stesso certificato di sessione",
+    # ⛔ «ricostruisce», e la differenza con P1 e' misurata, non stimata: P1
+    #    ricostruisce da se' come primo passo del proprio giro, P5 **no** —
+    #    P5 trova un server gia' acceso e lo interroga.  Fra l'innesto e il
+    #    giro ci vanno DUE cose: `costruisci.sh` sulla copia, e il server
+    #    riacceso su quel binario.  Chiamarlo «leggero» farebbe girare P5
+    #    contro il binario di prima, che e' il difetto n.2 di questo file —
+    #    il guasto che non e' stato innestato, con l'aria di esserlo.
+    "ricostruisce",
+    "fasi/01-filo-nudo.md P5 · RCP.md §4.1-bis (R1.14) · README.md «CHE COSA "
+    "FARE ADESSO» punto 5",
+    nota="⛔ **P5 E' PROVATO E NON RIUSCITO — e non «non provabile qui», che e' "
+         "l'altra cosa** (R12-A.31).  Il guasto e' stato innestato, "
+         "ricostruito e girato per davvero la sera dell'11 agosto 2026.\n"
+         "       ⛔ **IL MOTIVO NON E' DEL GUASTO: E' CHE IL GIRO SANO DI P5 "
+         "NON E' VERDE.**  `[M]` 11 agosto 2026, 13:01:22 UTC, contro la copia "
+         "sulla 7501 (server acceso apposta, ban e socket suoi), Chrome "
+         "151.0.7922.108 e Firefox 140.13.0esr, schermo `:79` 1280x1024:\n"
+         "         · ⭐ **le quattro gambe N1 passano tutte e quattro**: "
+         "l'impronta giusta APRE la sessione e quella storpiata FALLISCE, su "
+         "tutt'e due i motori.  Cioe' il controllo che dice NO funziona;\n"
+         "         · ⭐ **e su Chrome la stretta di mano arriva fino in fondo**: "
+         "14 controlli su 15 — pagina servita, canale di controllo, "
+         "negoziazione, `CREDENZIALI`, PAM «ammesso», `AMMESSO`, posto preso, "
+         "`SESSIONE`.  Il secondo fisso di §4.4-bis misurato a **1063 ms**;\n"
+         "         · ⛔ **il punto che cadeva era UNO: il congedo** — e "
+         "⭐ **l'imputato adesso ha un nome, ed era il BANCO**.  Vedi il "
+         "riquadro «L'ARBITRATO» qui sotto;\n"
+         "         · ⚠ **su Firefox, in quel primo giro, il verdetto era SENZA "
+         "DENOMINATORE**: il "
+         "marcatore d'inizio della gamba `p-sessione` non e' mai arrivato al "
+         "server (`marcatori: inizio ×0`), quindi il segmento di quel motore e' "
+         "vuoto e non c'e' niente da giudicare.  ⚠ L'avviso del certificato "
+         "**era** stato superato (il marcatore d'avvio era arrivato): a non "
+         "arrivare e' la navigazione dentro la gamba.\n"
+         "       ⭐⭐ **E LA CAUSA L'HA TROVATA UNA FOTOGRAFIA** — "
+         "`01-p5-copie/firefox-p-sessione-1-pagina.png`, ed e' la seconda "
+         "volta che succede a questo banco.  Nello scatto Firefox e' fermo "
+         "sulla pagina del marcatore d'**avvio** (`/p5-firefox-avvio-…`, che "
+         "il server serve con «non c'e'»), e ci sono **tre schede**: due "
+         "residue della sonda N1 («B2 — la sonda della sessione») piu' quella "
+         "d'avvio.  ⇒ `naviga()` ha battuto `ctrl+l`, l'URL e `Invio` **e la "
+         "pagina non e' cambiata**.\n"
+         "       ⛔ E il difetto ha un nome preciso, che si legge nel "
+         "lanciatore: `fuoco \"REMOTIX\"` — l'unica riga che porta il fuoco "
+         "sulla finestra giusta — sta **dentro il ramo di N2**.  Con "
+         "`COMANDO_VIVO=no` quel ramo si salta, e si arriva alla gamba `P` "
+         "**senza aver mai dato il fuoco a nessuna finestra**.  ⚠ Su Chrome "
+         "non si e' visto perche' la finestra nuova prende il fuoco da se'.\n"
+         "       ⛔ Cioe' il rosso di Firefox e' **del banco, non del "
+         "prodotto**, e la cura e' una riga spostata: `fuoco` va chiamato "
+         "prima di OGNI gamba, non dentro il ramo di una sola.  ⚠ Non e' stata "
+         "applicata stasera: cambiare il pilota fra un giro e l'altro vorrebbe "
+         "dire misurare due banchi diversi e chiamarli sano e guasto.\n"
+         "       ══════════════════════════════════════════════════════════\n"
+         "       ⛔⭐ **L'ARBITRATO — di chi era il congedo che non arrivava**\n"
+         "       `banchi/01-p5-congedo.sh`, scritto apposta, `[M]` 11 agosto "
+         "2026 ore 13:26 UTC, Chrome contro la copia sulla 7501.  Due scene "
+         "nello stesso giro, e il testimone e' il **registro del server** "
+         "(§8.1 parla di byte che escono, e a vederli arrivare e' chi riceve):\n"
+         "         · **A — si naviga via** dalla barra (`ctrl+l`): «pagehide» "
+         "scatta di sicuro ⇒ congedo **1**, posto LASCIATO **1**;\n"
+         "         · **B — `ctrl+w`**, e il gesto e' verificato (finestre col "
+         "titolo REMOTIX **1 → 0**) ⇒ congedo **1**, posto LASCIATO **1**, "
+         "`STACCATO per silenzio` **0**.\n"
+         "       ⭐⭐ ⇒ **LA PAGINA FA QUEL CHE §8.1 LE IMPONE.**  Il congedo "
+         "esce per la strada 2 di §3.1 (il codice di chiusura), che e' "
+         "esattamente quel che `src/pagina.html:325` dichiara di aspettarsi da "
+         "Chrome.\n"
+         "       ⛔ **L'imputato era il PILOTA di `01-p5-lancia.sh`**: la riga "
+         "del `ctrl+w` batteva `xdotool` **senza la funzione `X`**, cioe' su un "
+         "`DISPLAY` che non e' lo schermo finto.  Il tasto non arrivava, "
+         "«pagehide» non scattava, e il banco scriveva *«nessun congedo, per "
+         "nessuna delle due strade di §3.1»* — ⛔ **un'accusa al prodotto per un "
+         "gesto mai fatto**, la settima veste di `LEZIONI.md` §1.9, e la "
+         "seconda volta in questa fase dopo B3 (dove il colpevole era il "
+         "buffer di Python).\n"
+         "       ⚠ E il PRIMO giro dell'arbitrato ha sbagliato a sua volta, "
+         "e si scrive: la scena A leggeva **zero** congedi perche' il segmento "
+         "si chiudeva sul marcatore di fine, mentre li' «pagehide» scatta "
+         "**mentre quella richiesta e' in volo** — la riga del congedo cadeva "
+         "fuori.  Uno zero da segmento sbagliato ha la stessa faccia di uno "
+         "zero vero.  Curato (`da()` invece di `fra()`) e rimisurato.\n"
+         "       ══════════════════════════════════════════════════════════\n"
+         "       ⭐ **LA CURA E' STATA APPLICATA, E I GIRI RIFATTI** — "
+         "`X` davanti al `ctrl+w`, e `fuoco` portato **fuori dal ramo di N2**, "
+         "davanti a ogni gamba.  `[M]` giro sano delle 13:29:41 UTC:\n"
+         "         · ⭐⭐ **Chrome passa a CONFORME** — era NON-CONFORME;\n"
+         "         · ⭐ **Firefox adesso MISURA** — era senza denominatore — e "
+         "arriva a `SESSIONE`: **14 controlli su 15**, secondo fisso 1069 ms;\n"
+         "         · ⛔ **ma su Firefox il congedo non esce lo stesso**, e "
+         "⚠ **questa volta non e' il pilota**: dal registro del server, il "
+         "client chiude con un **`FIN` nudo sul canale di controllo** "
+         "(`⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2`), il "
+         "posto e' `LASCIATO` in modo **ordinato** e `STACCATO per silenzio` "
+         "vale **0** — cioe' il gesto e' arrivato e la sessione si e' chiusa "
+         "bene, **senza dire perche'**.  §8.1 lo impone senza condizioni.\n"
+         "       ⛔ **E' un rilievo di PRODOTTO (o del trasporto di Firefox), "
+         "non di banco**, e i due non si distinguono dal registro del server: "
+         "«la pagina non ha spedito» e «Firefox ha buttato via quel che la "
+         "pagina ha spedito dentro `pagehide`» arrivano identici da questa "
+         "parte.  ⭐ A separarli serve il registro del **browser**, e non e' "
+         "roba di questo mandato.  ⚠ Nota che la pagina prevede il caso "
+         "opposto — *«Chrome butta un messaggio spedito subito prima di "
+         "chiudere, quindi la strada che regge e' il codice di chiusura»* — e "
+         "su Firefox **non regge nessuna delle due**.\n"
+         "       ⇒ Sano **1**, guasto **1**: lo stesso esito, e `giudica()` lo "
+         "chiamerebbe «il difetto che B12 esiste per trovare».  ⛔ **Non lo "
+         "e'**, e la marca lo dimostra: la frase del guasto compare 1 volta nel "
+         "giro rosso e 0 in quello sano.  Il banco **vede** il guasto; e' il "
+         "suo punto di partenza a non essere verde.  ⭐ E' la stessa forma di "
+         "B8 e di B13, e la regola e' quella gia' scritta li': **un banco il "
+         "cui giro sano non e' verde non si certifica**, e la cosa giusta e' "
+         "lasciarlo NON CERTIFICATO invece di allargare l'atteso finche' "
+         "torna.\n"
+         "       ⚠ **Il terzo passo (risano) non e' stato fatto**, e si "
+         "dichiara: con un sano gia' rosso non aggiungeva niente al verdetto. "
+         "⭐ Che il guasto non sia rimasto addosso e' provato in modo piu' "
+         "diretto: `--togli` ha riverificato il file, la copia e' tornata "
+         "`md5 77f744cd…` — identica al prodotto — e la pagina servita sul filo "
+         "e' tornata a pubblicare l'impronta vera.\n"
+         "       ⭐ CHE COSA MANCA, in ordine di costo, perche' il prossimo "
+         "giro non ricominci da capo:\n"
+         "         1. ⛔ **il congedo di Firefox** — ed e' l'UNICO punto che "
+         "separa P5 dal verde, adesso che Chrome e' CONFORME.  Va letto dal "
+         "registro del **browser**: la pagina non spedisce, o Firefox butta via "
+         "quel che spedisce dentro «pagehide»?  ⚠ E se l'imputato e' il "
+         "prodotto, **non si cura dentro un giro di certificazione**: si scrive "
+         "il rilievo e lo decide chi decide;\n"
+         "         2. ⭐ **fatto**: `X` davanti al `ctrl+w` e `fuoco` fuori dal "
+         "ramo di N2.  ⚠ Resta da aggiungere il nome del motore fra i titoli "
+         "che `fuoco_prodotto` prova, e la ragione per cui non e' stato fatto "
+         "stasera e' scritta accanto alla funzione;\n"
+         "         3. **lo sblocco**: `01-p5-lancia.sh` chiama `enter.sh` "
+         "dentro un `ssh -o BatchMode=yes`, che non ha nessuno che digiti la "
+         "password di `sudo`.  ⇒ `COMANDO_VIVO=no`, e la gamba **N2 e' stata "
+         "SALTATA in tutt'e due i giri**: questo giro non ha nessun controllo "
+         "che dica NO sull'autenticazione, ⭐ e in cambio non ha speso nessun "
+         "tentativo fallito, quindi nessun ban;\n"
+         "         4. e allora, e solo allora, i tre giri sano → guasto → "
+         "sano.\n"
+         "       ⚠ La ricetta della scena, misurata e funzionante:\n"
+         "         cp -a /srv/src/remotix /srv/src/01-b12-copie/p5-remotix\n"
+         "         bash /srv/src/01-b12-copie/p5-remotix/costruisci.sh\n"
+         "         <accendere sulla 7501 con --ban e --comando-socket propri>\n"
+         "         IND=192.168.0.2 PORTA=7501 SOCK=/srv/src/tmp/sera-p15.sock \\\n"
+         "           LOG_SERVER=/media/REMOTIX/src/tmp/sera-p15-browser.log \\\n"
+         "           SCHERMO=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh\n"
+         "       ⛔ E il guasto si innesta nella COPIA, mai nel prodotto: P5 "
+         "vuole il server RIACCESO fra un passo e l'altro, e riaccendere il "
+         "prodotto di casa con un guasto dentro lo metterebbe sotto i piedi di "
+         "chiunque altro.",
 )
 
 

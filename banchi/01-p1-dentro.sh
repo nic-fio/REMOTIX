@@ -35,17 +35,31 @@
 # -----------------------------------------------------------------------------
 set -uo pipefail
 
-D=/srv/src/remotix
+# ⛔⭐ `D` E `PREFISSO_TMP` SI POSSONO CAMBIARE — dichiarato la sera dell'11
+#     agosto 2026, per la certificazione di P1 sotto B12.
+#
+# `D` era scritto dentro, e voleva dire che questo banco poteva accendere solo
+# l'unico prodotto della macchina.  ⛔ La certificazione vuole tre giri di cui
+# uno col codice guasto: farli sul prodotto di casa lascerebbe, per qualche
+# minuto, un binario bugiardo sotto i piedi di chiunque altro lo riaccendesse.
+# ⭐ Da qui in poi `01-p1-prodotto.sh` passa `D`, `PORTA`, `PORTA_MORTA` e
+#    `PREFISSO_TMP` davanti a `bash`, e i valori predefiniti sono quelli di
+#    prima: chi lancia a mano misura quel che misurava.
+D=${D:-/srv/src/remotix}
 TMP=/srv/src/tmp
 IND=${IND:-192.168.0.2}
 PORTA=${PORTA:-7448}
 PORTA_MORTA=${PORTA_MORTA:-7449}   # dove non c'e' nessuno, e serve che non ci sia
+# ⛔ Il prefisso tiene separati i file di due giri che vivono insieme: cinque
+#    agenti sulla stessa macchina la sera dell'11 agosto 2026, e un file dei ban
+#    condiviso e' esattamente lo stato che sopravvive di B0.2.
+PREFISSO_TMP=${PREFISSO_TMP:-p1}
 
-CERT=$TMP/p1-cert
-BAN=$TMP/p1-ban
-SOCK=$TMP/p1-comando
-LOG=$TMP/p1-server.log
-PIDF=$TMP/p1-server.pid
+CERT=$TMP/$PREFISSO_TMP-cert
+BAN=$TMP/$PREFISSO_TMP-ban
+SOCK=$TMP/$PREFISSO_TMP-comando
+LOG=$TMP/$PREFISSO_TMP-server.log
+PIDF=$TMP/$PREFISSO_TMP-server.pid
 
 mkdir -p "$TMP"
 
@@ -135,11 +149,11 @@ fase_fumo()
 	      "sha256 del DER di sessione.pem, in base64: ${imp:-(vuota)}"
 
 	tit "GET / in TLS"
-	uscita=$(sonda_get "$PORTA" "/" "$TMP/p1-testa.txt" "$TMP/p1-corpo.html")
+	uscita=$(sonda_get "$PORTA" "/" "$TMP/$PREFISSO_TMP-testa.txt" "$TMP/$PREFISSO_TMP-corpo.html")
 	nota "curl: stato d'uscita $(echo "$uscita" | cut -d' ' -f1), stato HTTP $(echo "$uscita" | cut -d' ' -f2)"
 	fatto pagina.200 "$([ "$uscita" = "0 200" ] && echo 1 || echo 0)" \
 	      "curl uscita+stato = «$uscita» (atteso «0 200»)"
-	nota "corpo servito: $(stat -c%s "$TMP/p1-corpo.html" 2>/dev/null || echo 0) byte"
+	nota "corpo servito: $(stat -c%s "$TMP/$PREFISSO_TMP-corpo.html" 2>/dev/null || echo 0) byte"
 
 	# ⛔ Un nome per ciascuna, e non uno solo per tutte e tre: la prima stesura
 	#    le chiamava tutte «isolamento.Origin» — tre righe con la stessa chiave
@@ -150,7 +164,7 @@ fase_fumo()
 	              "coep|Cross-Origin-Embedder-Policy: require-corp" \
 	              "corp|Cross-Origin-Resource-Policy: same-origin"; do
 		nome=${coppia%%|*}; h=${coppia#*|}
-		if grep -a -i -F -q "$h" "$TMP/p1-testa.txt" 2>/dev/null; then
+		if grep -a -i -F -q "$h" "$TMP/$PREFISSO_TMP-testa.txt" 2>/dev/null; then
 			fatto "isolamento.$nome" 1 "$h"
 		else
 			fatto "isolamento.$nome" 0 "MANCA: $h"
@@ -158,29 +172,29 @@ fase_fumo()
 	done
 
 	tit "L'impronta DENTRO la pagina servita"
-	if [ -n "$imp" ] && grep -a -F -q "$imp" "$TMP/p1-corpo.html" 2>/dev/null; then
+	if [ -n "$imp" ] && grep -a -F -q "$imp" "$TMP/$PREFISSO_TMP-corpo.html" 2>/dev/null; then
 		fatto pagina.impronta 1 "la pagina porta l'impronta calcolata da openssl"
 	else
 		fatto pagina.impronta 0 "la pagina NON porta l'impronta di openssl"
-		grep -a -o 'IMPRONTA_SERVITA = "[^"]*"' "$TMP/p1-corpo.html" 2>/dev/null
+		grep -a -o 'IMPRONTA_SERVITA = "[^"]*"' "$TMP/$PREFISSO_TMP-corpo.html" 2>/dev/null
 	fi
-	if grep -a -F -q "__IMPRONTA__" "$TMP/p1-corpo.html" 2>/dev/null; then
+	if grep -a -F -q "__IMPRONTA__" "$TMP/$PREFISSO_TMP-corpo.html" 2>/dev/null; then
 		fatto pagina.segni 0 "il segno __IMPRONTA__ e' rimasto non sostituito"
 	else
 		fatto pagina.segni 1 "nessun segno __…__ rimasto nella pagina servita"
 	fi
 
 	tit "GET /impronta (RCP.md §4.1-bis)"
-	uscita=$(sonda_get "$PORTA" "/impronta" "$TMP/p1-testa2.txt" "$TMP/p1-imp.json")
-	cat "$TMP/p1-imp.json" 2>/dev/null; printf '\n'
-	if [ -n "$imp" ] && grep -a -F -q "$imp" "$TMP/p1-imp.json" 2>/dev/null; then
+	uscita=$(sonda_get "$PORTA" "/impronta" "$TMP/$PREFISSO_TMP-testa2.txt" "$TMP/$PREFISSO_TMP-imp.json")
+	cat "$TMP/$PREFISSO_TMP-imp.json" 2>/dev/null; printf '\n'
+	if [ -n "$imp" ] && grep -a -F -q "$imp" "$TMP/$PREFISSO_TMP-imp.json" 2>/dev/null; then
 		fatto endpoint.impronta 1 "«$uscita», e serve l'impronta corrente"
 	else
 		fatto endpoint.impronta 0 "«$uscita», e NON serve l'impronta corrente"
 	fi
 
 	tit "GET /qualcosa-che-non-esiste"
-	uscita=$(sonda_get "$PORTA" "/nulla-11ago" "$TMP/p1-testa3.txt" /dev/null)
+	uscita=$(sonda_get "$PORTA" "/nulla-11ago" "$TMP/$PREFISSO_TMP-testa3.txt" /dev/null)
 	fatto pagina.404 "$([ "$uscita" = "0 404" ] && echo 1 || echo 0)" \
 	      "curl uscita+stato = «$uscita» (atteso «0 404»)"
 
@@ -254,7 +268,7 @@ fase_fumo()
 # esce verde e' il banco a essere rotto, non il prodotto.
 fase_controlli()
 {
-	local g=$TMP/p1-guasto out stato
+	local g=$TMP/$PREFISSO_TMP-guasto out stato
 
 	# -- C1 -------------------------------------------------------------------
 	# ⛔ L'OTTAVA VESTE DI §1.9, RIPRODOTTA: «il file c'e'» e «il file e' quello
@@ -274,10 +288,10 @@ fase_controlli()
 
 	tit "C1 — costruzione guasta: l'esito dev'essere rosso e il binario dev'essere sparito"
 	nota "copia in $g, guasto in registro.c, binario buono messo li' prima"
-	GEMELLO=/srv/src/rcp bash "$g/costruisci.sh" > "$TMP/p1-c1.log" 2>&1
+	GEMELLO=/srv/src/rcp bash "$g/costruisci.sh" > "$TMP/$PREFISSO_TMP-c1.log" 2>&1
 	stato=$?
 	nota "costruisci.sh e' uscito $stato"
-	tail -n 12 "$TMP/p1-c1.log"
+	tail -n 12 "$TMP/$PREFISSO_TMP-c1.log"
 	fatto c1.esito.rosso "$([ "$stato" -ne 0 ] && echo 1 || echo 0)" \
 	      "costruisci.sh su sorgente guasto e' uscito $stato (atteso ≠ 0)"
 	if [ -e "$g/remotix" ]; then
@@ -293,7 +307,7 @@ fase_controlli()
 	# ⛔ La sonda della pagina puntata dove NON c'e' nessuno.  Se dicesse «0 200»
 	#    anche qui, tutti gli OK della fase di fumo sarebbero senza valore.
 	tit "C2 — la sonda della pagina contro la porta $PORTA_MORTA, dove non c'e' nessuno"
-	out=$(sonda_get "$PORTA_MORTA" "/" "$TMP/p1-c2-testa.txt" "$TMP/p1-c2-corpo.html")
+	out=$(sonda_get "$PORTA_MORTA" "/" "$TMP/$PREFISSO_TMP-c2-testa.txt" "$TMP/$PREFISSO_TMP-c2-corpo.html")
 	nota "curl uscita+stato: «$out»"
 	fatto c2.sonda.rossa "$([ "$out" != "0 200" ] && echo 1 || echo 0)" \
 	      "sonda su :$PORTA_MORTA → «$out» (atteso ≠ «0 200»)"

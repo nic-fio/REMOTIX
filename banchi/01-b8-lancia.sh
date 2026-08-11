@@ -98,6 +98,30 @@ inf()  { printf '    --  %s\n' "$*"; }
 SIGLA=b8
 # shellcheck source=01-b0-bersaglio.sh
 . "$FUORI/01-b0-bersaglio.sh"
+
+# ---------------------------------------------------------------------------
+# ⛔⭐ LA SCENA SI PUO' SPOSTARE, E SERVE A UNA COSA SOLA: FAR GIRARE QUESTO
+#     BANCO SOTTO B12 SENZA CHE I DUE SI PESTINO I PIEDI — 11 agosto 2026.
+#
+# `01-b12-lancia.sh` adesso certifica B8 **chiamando questo file** invece di
+# riscrivere a mano la sua sequenza (era la radice del suo giro sano non verde:
+# gli mancavano le due vite, la pagina e lo sblocco su un ban vero).  ⛔ Ma un
+# giro di certificazione non puo' prendersi la porta 7447 e il file dei ban del
+# bersaglio, che sono di chiunque altro stia misurando in quel momento.
+#
+# ⚠ E LE TRE VARIABILI SONO SENZA PREDEFINITO SPOSTATO: se non si passano, la
+#   scena resta ESATTAMENTE quella del profilo (`01-b0-bersaglio.sh`), cioe' un
+#   giro a mano non cambia di un byte.  Un predefinito diverso qui sarebbe il
+#   modo piu' comodo di misurare su una scena che nessuno ha dichiarato.
+# ⛔ E si STAMPA, sempre: una scena spostata in silenzio e' un numero che
+#    domani nessuno sa piu' dove e' stato preso.
+if [ -n "${B8_PORTA:-}${B8_BAN:-}${B8_COMANDO:-}" ]; then
+	B_PORTA=${B8_PORTA:-$B_PORTA}
+	B_BAN=${B8_BAN:-$B_BAN}
+	B_COMANDO=${B8_COMANDO:-$B_COMANDO}
+	printf '\n    --  ⚠ SCENA SPOSTATA (B8_PORTA/B8_BAN/B8_COMANDO):\n'
+	printf '        porta %s · ban %s · comando %s\n' "$B_PORTA" "$B_BAN" "$B_COMANDO"
+fi
 PORTA=$B_PORTA
 LEGAME=$B_LEGAME
 INDIRIZZI=$B_INDIRIZZI
@@ -205,8 +229,48 @@ inf "  giorno la pila PAM avesse un pam_faillock, quell'utente si bloccherebbe"
 #    binario che quell'innesto non ce l'ha (`LEZIONI.md` §1.9, ottava veste), e
 #    `bersaglio_pronto` lo verifica per tutt'e due i bersagli prendendo anche
 #    l'impronta md5.
-bersaglio_pronto || exit 3
+# ⛔⭐ E C'E' UN CASO IN CUI RIMETTERE GLI INNESTI E RICOMPILARE E' IL DIFETTO,
+#     NON LA CURA — 11 agosto 2026, ed e' il motivo per cui B6 stava in catalogo
+#     come «non eseguibile».
+#
+# `bersaglio_pronto`, sull'innesto, TOGLIE e rimette i due innesti (che
+# ricopiano `rcp/rcp.c` dentro `examples/`) e poi compila.  ⛔ Sotto B12, al
+# passo 2/3, il guasto vive proprio in `examples/rcp.c`: rimettere gli innesti
+# lo cancellerebbe, la compilazione produrrebbe un binario SANO, e il banco
+# resterebbe verde.  ⇒ La certificazione direbbe «B8 non vede il guasto» di un
+# guasto che non c'era piu' — un falso rosso che accusa il banco al posto
+# dell'orchestratore.
+#
+# ⭐ Con `B8_NON_RICOSTRUIRE=1` si misura il binario CHE C'E', e non si perde
+#    niente di quel che conta: la verifica vera resta tutta —
+#    `b0_binario_e_sorgenti` prende l'impronta md5 e ⛔ **rifiuta un binario
+#    piu' vecchio di un sorgente**, che e' precisamente la trappola di R12-A.6.
+#    ⚠ E' la stessa regola che questo file applica gia' al prodotto: «un banco
+#      che ricompila quel che misura si toglie il testimone indipendente».
+if [ "${B8_NON_RICOSTRUIRE:-0}" = 1 ]; then
+	log "1-ter. ⚠ Non si rimettono gli innesti e non si compila"
+	inf "⛔ B8_NON_RICOSTRUIRE=1: si misura il binario che c'e' — sotto B12"
+	inf "   rimettere gli innesti cancellerebbe il guasto da examples/rcp.c"
+	inf "   e il banco sarebbe verde su un server che il guasto non ce l'ha"
+	inf "⚠ resta la verifica che conta: md5 del binario, e il binario NON"
+	inf "  dev'essere piu' vecchio di nessun sorgente"
+	if [ "$B_NOME" = innesto ]; then
+		# ⚠ Il glob e' lo stesso di `bersaglio_pronto`: e' una copia, ed e'
+		#   dichiarata.  Il giorno in cui si aggiunge un sorgente all'innesto
+		#   va aggiunto in tutt'e due i posti.
+		b0_binario_e_sorgenti \
+			"$DENTRO/b2/ngtcp2/examples/*.cc $DENTRO/b2/ngtcp2/examples/*.c $DENTRO/rcp/rcp.c" \
+			|| exit 3
+	else
+		b0_binario_e_sorgenti "$DENTRO/remotix/*.c $DENTRO/remotix/*.h" || exit 3
+	fi
+else
+	bersaglio_pronto || exit 3
+fi
 
+# ⛔ E sotto B12 il conto delle righe «REMOTIX B3» qui sotto resta, ed e' giusto
+#    che resti: dice che il server che sto per accendere ha lo strato RCP e il
+#    ban lato ospite.  Il guasto di B12 non tocca quelle righe.
 if [ "$B_NOME" = innesto ]; then
 	bash "$ENTRA" --root \
 		"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SORG_MAIN; } > $DENTRO/b8-stato.txt 2>&1"
@@ -285,9 +349,28 @@ log "1-bis. ⛔ La certificazione fuori dal filo (LEZIONI.md §1.2: PRIMA)"
 #    e SENZA `--root`, dove si e' utente normale (id 1000).  Il file si fa rosso
 #    da se' se lo si lancia da root, quindi il vincolo resta sorvegliato da lui
 #    e non da questo commento.
+# ⛔⭐ E QUI C'ERA LA TRAPPOLA CHE QUESTO STESSO FILE VIETA IN TESTA — misurata
+#     l'11 agosto 2026, sera, alla prima esecuzione non interattiva.
+#
+# La riga era `bash "$ENTRA" "gcc …" 2>"$FUORI/b8-prova-ban.log"`: una
+# redirezione **ATTORNO** a `enter.sh`.  ⛔ `enter.sh` chiama `sudo -v -S -p
+# Password`, che stampa la richiesta su **stderr** e legge da stdin: con stderr
+# dirottato su file, la richiesta non arriva a chi guarda, ⇒ nessuno risponde,
+# ⇒ il giro resta appeso per sempre su una domanda che non si vede.
+# `[M]` `ps` sul server: `sudo -v -S -p Password sudo:` fermo, e il banco fermo
+# con lui al passo 1-bis.
+#
+# ⚠ E NON SI ERA MAI VISTO perche' da un terminale vero la richiesta era gia'
+#   stata soddisfatta dalla prima riga del banco, e il timestamp di sudo copriva
+#   il resto del giro: il difetto compare solo quando quel credito e' scaduto —
+#   cioe' sui giri lunghi e su quelli lanciati da un'altra macchina.  ⛔ E' la
+#   quarta veste della stessa trappola, dentro il file che la descrive.
+# ⭐ La cura e' quella scritta in cima a `01-b12-lancia.sh`: la redirezione va
+#    DENTRO le virgolette, e il file lo si legge dopo.
 PB=/srv/src/tmp/b8-prova-ban.$$
+rm -f "$FUORI/b8-prova-ban.log"
 if ! bash "$ENTRA" "gcc -std=c11 -Wall -Wextra -I$DENTRO/rcp -o $PB \
-	$DENTRO/01-b8-prova-ban.c $DENTRO/rcp/rcp.c" 2>"$FUORI/b8-prova-ban.log"; then
+	$DENTRO/01-b8-prova-ban.c $DENTRO/rcp/rcp.c > $DENTRO/b8-prova-ban.log 2>&1"; then
 	ko "⛔ 01-b8-prova-ban.c non compila contro $DENTRO/rcp/rcp.c:"
 	tail -20 "$FUORI/b8-prova-ban.log" | sed 's/^/        /'
 	ko "   ⚠ e «non compila» NON e' «passa»: l'ottava veste di LEZIONI.md §1.9"
@@ -296,7 +379,9 @@ if ! bash "$ENTRA" "gcc -std=c11 -Wall -Wextra -I$DENTRO/rcp -o $PB \
 fi
 bash "$ENTRA" "$PB"
 PROVA_BAN=$?
-bash "$ENTRA" "rm -f $PB" >/dev/null 2>&1
+# ⛔ E anche qui la redirezione va DENTRO: `>/dev/null 2>&1` attorno a
+#    `enter.sh` nasconde la richiesta di password esattamente come sopra.
+bash "$ENTRA" "rm -f $PB > /dev/null 2>&1"
 if [ "$PROVA_BAN" -ne 0 ]; then
 	ko "⛔ la certificazione fuori dal filo NON passa (uscita $PROVA_BAN):"
 	ko "   finche' e' rossa, i tre pezzi del ban che il filo non vede non sono"
@@ -516,8 +601,24 @@ SPEGNI "seconda vita"
 
 # ---------------------------------------------------------------------------
 log "7. Il verdetto — lo confronta il banco, non chi legge (B0.4)"
-bash "$ENTRA" --root "$CRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log"
+# ⛔ E IL VERDETTO SI SCRIVE ANCHE SU FILE, dentro le virgolette di `enter.sh` —
+#    mai una redirezione ATTORNO, che si porterebbe via la richiesta di
+#    password.  ⭐ Serve a chi certifica questo banco: `01-b12-lancia.sh` deve
+#    poter cercare la MARCA del guasto nell'uscita, e l'uscita di un lanciatore
+#    che gira FUORI dal contenitore non si puo' catturare (e' la stessa
+#    soluzione che C2 usa da sempre: il banco scrive, l'orchestratore legge).
+# ⚠ E si stampa lo stesso, riga per riga: un verdetto che finisce solo in un
+#   file e' un verdetto che dal vivo nessuno legge.
+VERDETTO_FUORI="$FUORI/b8-verdetto-$B_NOME.txt"
+rm -f "$VERDETTO_FUORI"
+bash "$ENTRA" --root "$CRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log > $DENTRO/b8-verdetto-$B_NOME.txt 2>&1"
 ESITO=$?
+if [ -f "$VERDETTO_FUORI" ]; then
+	cat "$VERDETTO_FUORI"
+else
+	ko "⛔ il verdetto NON ha scritto il suo file ($VERDETTO_FUORI): non e'"
+	ko "   «non ha detto niente», e' che non si e' arrivati a leggerlo"
+fi
 
 # ---------------------------------------------------------------------------
 # ⛔ E IL BANCO SI CERTIFICA — `LEZIONI.md` §1.2, e si fa DOPO perche' si guasta

@@ -66,7 +66,22 @@ def esegui(argv, password, timeout=1800):
     # «lenta» invece che bloccata.
     #
     # Il tetto alto e' sicuro solo grazie all'ancora qui sotto.
-    RISPOSTE_MAX = 64
+    #
+    # 11 agosto 2026, sera — e la stessa storia una terza volta, con un numero
+    # piu' grande.  Un giro di certificazione di B12 su B8 e' TRE esecuzioni del
+    # banco, e ciascuna entra nel contenitore una sessantina di volte (un blocco
+    # di campioni, uno sblocco, un'accensione, un'impronta...): oltre le 200
+    # richieste in mezz'ora.  `[M]` il giro si e' fermato al blocco 5 del passo
+    # «guasto» — `ps` sul server: `sudo -v -S -p Password sudo:` fermo, con il
+    # GUASTO ancora addosso al codice, che e' il peggior punto in cui fermarsi.
+    # ⚠ E il sintomo era di nuovo quello che inganna: non un errore, ma una
+    #   prova «lenta».  Chi guardava il registro vedeva l'ultimo blocco stampato
+    #   e credeva che stesse ancora misurando.
+    # ⛔ Il numero giusto non e' «quante ne servono oggi»: e' un tetto che non
+    #    morda su nessun giro pensabile, perche' a proteggere non e' lui — e'
+    #    l'ancora qui sotto, che spedisce la parola d'ordine solo a chi la sta
+    #    chiedendo in quell'istante.
+    RISPOSTE_MAX = 4096
     risposte = 0
     while True:
         try:

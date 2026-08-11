@@ -1,7 +1,8 @@
 # Fase 1 — Il filo nudo
 
 Aperta il **9 agosto 2026** · **Riscritta la sera del 9 agosto**, dopo due revisioni avversariali ·
-Chiusa il **—**
+⭐ **Chiusa l'11 agosto 2026**, sul giudizio dell'utente — la frase, con la scena e il registro, sta
+in fondo a questo documento
 
 > ⛔ **Questo documento si apre prima di sviluppare, e contiene i banchi** (`PIANO.md` §0.1). Le
 > tabelle delle misure sono **vuote per costruzione**: si riempiono strada facendo, una riga alla
@@ -39,9 +40,18 @@ Chiusa il **—**
 La **stretta di mano di RCP su WebTransport**, dai due lati: il server in C e la pagina servita dal
 server stesso. Niente video, niente audio, niente input.
 
-**Che cosa vede l'utente, e giudica**: apre `https://192.168.0.2:7447` nel browser, digita utente e
-password, e la pagina dice *«ammesso, sessione nuova, tela 1920×1080, desktop GNOME»*. Oppure dice
-**perché no**, con una frase comprensibile e non un numero (`RCP.md` §8.2).
+**Che cosa vede l'utente, e giudica**: apre `https://192.168.0.2:7448` nel browser, digita utente e
+password, e la pagina dice *«ammesso, sessione nuova, tela 1920×1080, **desktop sconosciuto**»*.
+Oppure dice **perché no**, con una frase comprensibile e non un numero (`RCP.md` §8.2).
+
+> ⚠ *Questa riga diceva* «`…:7447` … **desktop GNOME**» *— e il giro dell'utente dell'11 agosto 2026
+> l'ha smentita in tutt'e due i punti, con il prodotto acceso davanti.* ⛔ **La 7447 è dell'innesto**:
+> il prodotto sta sulla **7448**, e chi eseguiva questa riga alla lettera giudicava il banco invece
+> del prodotto. ⛔ **E «GNOME» è una parola che la fase 1 non può dire senza inventarla**: la sessione
+> grafica nasce alla fase 2, non c'è nessun compositore a cui chiedere, e `src/rcp.c` lo dichiara per
+> iscritto — `SESSIONE` porta `desktop=sconosciuto`. ⇒ **A cambiare è l'atteso, non il codice**:
+> era stato scritto prima che il prodotto esistesse. Prova e scena in
+> [`rapporti/GIUDIZIO-11-agosto.md`](rapporti/GIUDIZIO-11-agosto.md).
 
 ### ⛔ Il confine della fase, e le quattro cose che produce senza sembrare
 
@@ -624,6 +634,43 @@ in v1, **contraddice il multi-tenant** di `SPECIFICHE.md` §5.5.
 | ⭐ **il controllo che costa dieci secondi** | prima di credere al rosso, si verifica che la stessa parola **funzioni fuori dal server**: `pamtester` sullo stesso servizio PAM. Se fallisce anche lì, **non si sta misurando il server** |
 | **atteso** | l'utente `prova` — creato dal provisioning, non a mano — completa la stretta di mano fino a `SESSIONE` |
 
+> ### ⭐⭐ IL BANCO ESISTE DALL'11 AGOSTO 2026, SERA — e si è certificato nello stesso giro
+>
+> *Era l'unico dei dodici **mai provato**, e il motivo era che non c'era: `banchi/01-b10-secondo-utente.py`
+> e `banchi/01-b10-lancia.sh`. ⭐ Il banco **importa** `01-b3-cliente.py` come modulo invece di
+> copiarlo: misura RCP col secondo lettore, e la parola non passa da nessun `argv`.*
+>
+> | | |
+> |---|---|
+> | ⭐ **l'atteso è misurato** | **`prova2`** — dal provisioning, non a mano — arriva a `SESSIONE` sul **PRODOTTO**: `AMMESSO` a **1001-1059 ms** (il secondo fisso di §4.4-bis), stretta intera **1213-1261 ms**. `[M]` **11 agosto 2026, 13:08 UTC**, NIC-OS, porta **7491**, binario md5 `9dcb9657…`. Registro `banchi/b10-esiti-prodotto.jsonl` |
+> | ⛔ **chi possiede il processo è DICHIARATO** | **`root`, uid effettivo 0** — letto da `/proc/<pid>/status`, non supposto — cioè **di sistema**, come §5.5 vuole. ⭐ E il banco verifica di **non essere vacuo**: se il server girasse come l'utente della prova esce **2**, *«non ho potuto misurare»*, invece di stampare un verde che non significa niente |
+> | ⛔ **le quattro cause si distinguono, e con tre osservazioni** | *(1)* **la guardia** — il server rifiuta **e nel suo registro non c'è nessuna riga di `autenticazione.c`**: PAM non è stata nemmeno interrogata; *(2)* **il contatore per indirizzo** — il motivo sul filo è `TROPPI_TENTATIVI` `0x08`, e allora il banco **sblocca dichiarandolo e riprova**, o (2) coprirebbe (1); *(3)* **la pila PAM** — `pamtester` fallisce con la stessa parola; *(4)* **l'utente** — `getent passwd` e `getent shadow` |
+> | ⭐ **il controllo che costa dieci secondi, e il suo negativo** | `pamtester remotix prova2 authenticate` **riesce** — ⛔ sul servizio **`remotix`**, non `login` — e con la parola sbagliata **fallisce**: senza il secondo, il primo non varrebbe niente |
+> | ⭐⭐ **e la `[?]` R3.26 è MISURATA** | da un utente **non privilegiato** la verifica della parola di **un altro** utente **fallisce**; da **root riesce**. ⇒ **la pila PAM giudica un altro utente solo se il processo è privilegiato**. Il server oggi è di root e ci riesce; ⛔ un servizio di sistema che **lasciasse i privilegi** vedrebbe la causa (3), e il sintomo sarebbe di nuovo *«credenziali errate»* — è la domanda che la fase 2 si porta dietro |
+> | ⭐ **due utenti, non uno** | dopo il respinto, **`prova`** arriva a `SESSIONE`: è insieme **B0.5** (il server è ancora lì) e §5.5 (due utenti diversi, **nessuno dei due** proprietario del processo) |
+> | ⛔ **la parola generata non passa da nessuna riga di comando** | il compromesso che il `README.md` dichiarava **non accettato** è chiuso: la parola si legge da `credenziali-banchi`, si scrive con un **builtin** in un file `0600`, arriva come `--parola-file`, e una `trap` la cancella. ⚠ Resta una copia su disco per la durata del giro, ed è dichiarata |
+>
+> ⭐ **CERTIFICATO — `0 → 1 → 0`** `[M]` 11 agosto, **15:09 UTC**. Il guasto **rimette la guardia di
+> v1** — `getpwuid(geteuid())` e il confronto col nome, **prima** di `pam_start` — su una **copia
+> intera** dell'albero del prodotto, ⛔ **mai su `src/remotix`**: gli altri banchi lo stavano
+> misurando in quegli stessi minuti, e per un quarto d'ora avrebbero avuto sotto i piedi un server
+> bugiardo. Marca **`CAUSA-1-GUARDIA-PRE-PAM`: 2 nel giro guasto, 0 nei due giri sani**.
+>
+> ⛔ **E il guasto in catalogo non guastava niente.** L'appiglio `autenticazione_utente_atteso` era
+> puntato su un file dove compare **solo dentro un commento**: il sostituto ci appiccicava accanto la
+> marca e il codice compilato restava **identico byte per byte**. ⚠ **È la terza volta in un giorno**
+> che un appiglio di commento fa credere di aver guastato qualcosa — dopo B5 e B3 — ed è la forma che
+> costa di più, perché il giro *sembra* una certificazione riuscita.
+>
+> ⚠ **B10 non passa da `01-b12-lancia.sh`**: il suo guasto si ricostruisce con
+> `GEMELLO=nessuno <copia>/costruisci.sh`, mentre `attrezzi-misura-marca.sh` sa fare solo
+> `ninja … bsslserver`, cioè **l'innesto**. Finché `gira()` non impara a costruire il **prodotto**,
+> la certificazione si fa dal lanciatore del banco — ed è la stessa lacuna del punto 4 dell'elenco.
+>
+> ⛔ **E quel che B10 NON prova**: il caso dell'utente **proprietario** del processo. `root` non ha
+> una parola d'ordine nota nel contenitore, quindi *«con la guardia rimessa entra solo root»* è
+> **dedotto, non misurato**. ⚠ E B10 è provato solo contro il **prodotto**, mai contro l'innesto.
+
 ### B12 — la certificazione: come questi banchi si fanno credere
 
 ⛔ `PIANO.md` §0.3 regola 4. *La prima stesura costruiva **quattro** guasti per **dodici** banchi, e
@@ -644,6 +691,14 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > l'hanno cambiato le cure del 10-11 agosto. ⇒ *«3 su 12»* era **3 su 12 su un codice che non esiste
 > più**, ed è esattamente ciò che il registro dice quando lo si legge invece di leggerne il totale.
 >
+> ⚠ ⛔ **E la prova qui sopra è scritta in due alfabeti, cioè non si rifà** — trovato la sera dell'11
+> agosto. `d839839f…` è un **sha256 troncato** (il registro lo scrive per esteso); `cb7af778…` è un
+> **md5**. Il `sha256` di `rcp.c` oggi è **`84411b9c…`**. ⇒ La **conclusione regge** — il codice è
+> cambiato davvero, `d839839f…` → `84411b9c…` — ma **il confronto stampato mette a paragone due
+> funzioni diverse**, e chi lo rifacesse domani troverebbe due numeri che non c'entrano niente e non
+> saprebbe se ha sbagliato lui. ⭐ *Un'impronta senza il nome della funzione è la stessa cosa di un
+> numero senza unità di misura.*
+>
 > | Banco | Oggi | Come |
 > |---|---|---|
 > | **B4** | ⭐ **certificato** | `0 → 1 → 0`, marca «⛔ atteso il byte» |
@@ -652,7 +707,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | **B7** | ⭐ **certificato** | `0 → 1 → 0`, marca «il motivo nel `CONGEDO` sul canale: assente» — ⛔ e la riserva del 10 agosto (*«marca non discriminante, 37 occorrenze»*) **è chiusa**: la marca di oggi nel giro sano non compare |
 > | **B6** | ⭐ **certificato — e non era mai stato provato** | `0 → 1 → 0`, marca «⭐ nessuna caduta», cioè la riga che solo un caso `-presto` **caduto** può produrre. Il guasto porta `TETTO_CIAO` da 5000 a 500 ms: ⭐ *la metà del requisito che nessuno scrive è «non prima»* |
 > | ⭐ **B5** | ⭐ **certificato — e non era mai stato provato** | `0 → 1 → 0`, marca «§3.1 punto 3 su «capacita-ripetuta»». ⛔ Il guasto in catalogo **non rompeva niente**: l'appiglio era una stringa di *commento* e il sostituto ci appiccicava accanto la marca — il codice compilato restava identico byte per byte. Rifatto sul **ramo**: `if (ripetuto)` spento, `congeda()` mai chiamato |
-> | ⛔ **B8** | ⛔ **provato e NON certificato**, e il motivo è cambiato | vedi il riquadro qui sotto |
+> | ⛔ **B8** | ⛔ **provato e NON certificato**, e il motivo è cambiato — *poi **certificato la sera dello stesso giorno**, vedi in fondo alla sezione* | vedi il riquadro qui sotto |
 > | ⭐ **B3** | ⭐ **certificato — e non era mai stato provato** | `0 → 2 → 0`, marca «`CONGEDO invece di SESSIONE: motivo 0x0f = GIA_ATTIVA_REMOTA`». ⛔ L'appiglio in catalogo aveva **due** spazi di rientro dove il file ne ha **quattro**: compariva **zero** volte, e il guasto non si sarebbe innestato. ⭐ Il sintomo col guasto è quello di v1 alla lettera: la prima connessione passa, la seconda si vede rifiutare perché il posto della prima non si è liberato |
 > | ⭐ **B2** | ⭐ **certificato — e ha trovato un difetto vero prima di lasciarsi certificare** | `0 → 1 → 0`, marca «`- credito uni DISPONIBILE a RCP all'apertura`». Vedi il riquadro |
 > | ⭐ **B11** | ⭐ **certificato dal PROPRIO giro** | **CONFORME, 0 punti** contro il server guasto; **NON-CONFORME, 9 punti** contro quello sano — il controllo che dice *no*. ⚠ Riserva scritta: **un motore solo**. Vedi il riquadro |
@@ -833,6 +888,71 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > sonda ne produce di puliti. ⚠ Resta inoltre aperta `B13.4` (*«qualcuno ascolta in TCP ma la pagina
 > non si carica»*): B13 non si certifica finché non passano tutt'e due.
 >
+> #### ⭐⭐ LA SERA DELL'11 AGOSTO: la cura regge, i registri sono buttati, e **B13 è certificato**
+>
+> ⭐ **Il giro nuovo della sonda l'ha verificata** `[M]` **11 agosto 2026, 12:54:33Z-12:54:53Z**, su
+> **NIC-OS**, contro il **PRODOTTO** su `192.168.0.2:7481` (raccoglitore su `127.0.0.1:7482`,
+> **Firefox 140.13.0esr**): `AMMESSO` e `RIFIUTATO`, **8 file prodotti**, ⛔ **zero registri con la
+> parola dentro**. A contenerla restano i soli due **sorgenti** — ed è quel che `B13.2` dichiara di
+> non chiamare rosso.
+>
+> ⛔ **E il giro nuovo ha trovato che la cura era scritta e non fatta.** `sonda-rcp.html` prometteva
+> *«il profilo lo si butta a fine giro (`lancia.sh`)»*, e `lancia.sh` lo buttava all'**inizio**:
+> quello dell'ultimo giro restava sul disco. ⚠ **E le prime due cure non hanno tenuto, ed è
+> misurato**: profilo cancellato alle **12:49:54**, `recovery.jsonlz4` ricomparso alle **12:50:10**
+> (2223 byte, la parola dentro) — Firefox era ancora vivo; poi, con `setsid` + `kill -- -$p`,
+> ricomparso alle **12:51:31**, perché *«il gruppo è morto»* rispondeva **subito**: ⛔ **il controllo
+> era muto, e un controllo muto ha la stessa faccia di un controllo che passa**. ⭐ Adesso si guarda
+> in `/proc` **chi ha ancora quel profilo fra i propri argomenti** — mai `pkill -f` — e la
+> cancellazione **si riverifica cinque secondi dopo**.
+>
+> ⭐ **Poi i registri sporchi sono stati buttati, e non prima**: `sonda/racc.log` e i **due profili
+> Firefox interi**, **33 file**, di cui **5** contenevano la parola. ⛔ La traccia — nome, byte,
+> `sha256`, data, e **se** la contenevano ma non **quale** — sta in `banchi/01-b13-buttati.jsonl`:
+> buttare una prova senza lasciarne il conto è la seconda metà dello stesso difetto.
+> ⇒ ⭐ **`B13.2` è verde**: *«la parola non compare in nessuno dei **1368** registri»*, denominatore
+> **22 461 file**, **zero illeggibili**, col controllo positivo accanto.
+>
+> ⭐⭐ **`B13.4` si chiude, perché contro il prodotto ha finalmente un imputato**: la pagina si carica
+> (**200, 31 083 byte**), porta l'**impronta corrente**, e **`/impronta` risponde**. **4 su 4**.
+> ⚠ Contro l'**innesto** resterà `[?]` per sempre: lì nessuno ascolta in TCP.
+>
+> ⭐⭐ **E B13 è certificato** `[M]` **11 agosto 2026, 15:19**, NIC-OS: **sano 3 → guasto 1 → risanato
+> 3**, col guasto di B12 (`pagina.pem` sostituito da `sessione.pem`) e la marca *«LE IMPRONTE
+> COMBACIANO»* **nel suo punto** — più i **14 guasti costruiti a mano** di `--certifica`: **14 su
+> 14** ⚠ **da utente normale**, e **13 su 14 da root**, perché i permessi `0000` non fermano root e
+> ⛔ **un guasto saltato non è un guasto passato**. ⚠ **Tre deviazioni da B12, scritte dentro la riga
+> di registro**: porta **7481** invece della 7447 · bersaglio il **prodotto** e non l'innesto · il
+> ciclo condotto da uno script suo, perché `01-b12-lancia.sh` **scrive `PORTA=7447` in chiaro** e non
+> si può puntare altrove.
+>
+> ⛔ **Che cosa resta aperto, e sono due**: **`B13.3`** — c'è un imputato (`src/certificati.c`, **45
+> righe**) e questo banco **non lo interroga**: serve un banco che *installi* un certificato
+> d'autorità e guardi che cosa il server presenta sul filo dopo · **`B13.5`** — **non misurata**: il
+> credito letto dal pari è **19** (§2.3 ne vuole almeno 16), ma `aioquic` concede **tutti** i 23
+> stream chiesti, quindi lo strumento non sa dire *no* e il suo *sì* non vale. ⚠ È un difetto del
+> **banco**, non del server.
+>
+> ⛔⭐ **E la prima riga di registro di B13 non contava, e ci sono volute due letture per accorgersene.**
+> Il banco era certificato e il rapporto lo diceva; ⚠ ma `01-b12-guasti.py --registro` classificava
+> B13 fra le certificazioni **NON RIVERIFICABILI**, cioè **non lo contava**. ⛔ E il motivo non era
+> *«mancano le impronte»*: le impronte c'erano, **sotto nomi che il catalogo non conosce**
+> (`01-b13-sera-certifica.sh`, `src/rcp.c`, `src/pagina.c`). `FILE_CHE_CONTANO["B13"]` ne nomina
+> **due** — `01-b13-proprieta.py` e `rcp/rcp.c` — e `confronta_impronte()` scorre le chiavi vecchie
+> con un `get`: ⛔ **una sola chiave fuori catalogo manda l'intera riga in *«non si sa»***.
+> ⭐ **Lo strumento aveva ragione, e per la ragione giusta**: *«non so se valga oggi»* non si
+> arrotonda a *«certificato»* (`LEZIONI.md` §1.9).
+> ⭐ **E la correzione è una riga NUOVA, non una riga riscritta**: quella delle 15:07 resta dov'è, e
+> quella delle 15:19 dice perché esiste. ⚠ *E si è visto perché serviva anche l'altra metà della
+> cura: fra un `--put` dell'intero registro e il successivo, il server aveva guadagnato **una riga
+> di un altro agente** — che un `--put` avrebbe cancellato in silenzio.*
+>
+> ⚠ **E la riga porta scritta dentro una riserva che altrimenti non si vedrebbe**:
+> `FILE_CHE_CONTANO["B13"]` nomina `rcp/rcp.c`, la copia dei **banchi**, mentre il ciclo ha misurato
+> il **prodotto**. Oggi le due copie sono identiche byte per byte (`84411b9c…`) — ⛔ **per
+> combinazione, non per costruzione**: il giorno in cui divergono, quella riga riverificherà il file
+> sbagliato e continuerà a dire di sì.
+>
 > ⭐ **E la cartella `sonda/` non era nel deposito**: come i quattordici file del 10 agosto, viveva
 > solo sul server. Adesso sta in `banchi/sonda/`.
 >
@@ -882,6 +1002,76 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 >   entra affatto** (B4, B9, C2): un denominatore che promette una cosa e ne misura un'altra, cioè
 >   **peggio di nessuna impronta**, perché dà alla riga l'aria di essere già stata controllata
 >   (rilievo **A5**). Adesso ogni riga porta le impronte **dei file che partecipano davvero**.
+
+> ### ⭐ P1 e P5 entrano nel catalogo, e il denominatore cambia — la sera dell'11 agosto 2026
+>
+> Il `README.md` lo diceva con un numero: *«P1 e P5 non sono nel catalogo di B12: i banchi sono 14,
+> le voci 12»*. ⛔ E quei due non erano «puliti»: erano **due banchi mai diventati rossi**, cioè la
+> definizione di NON CERTIFICATO — ⛔ **e sono i due che guardano il PRODOTTO**, l'unica cosa di
+> questa fase che un utente vedrebbe.
+>
+> ⛔ **Il denominatore vero, contato e non ricordato** (`ls banchi/`): **22** prefissi `01-`, che non
+> sono 22 banchi — **14 banchi** (B2 B3 B4 B5 B6 B7 B8 B9 B11 **B12** B13 C2 **P1 P5**), **1
+> attrezzeria** (`01-b0-*`) e **7 sonde del Gruppo 1** (S1b S2 S3a S5 S6 S7 S-telefono), che sono
+> misure e non banchi che si certificano. Le voci del catalogo passano da **12 a 14**.
+> ⚠ ⭐ **E non sono gli stessi quattordici**: il catalogo comprende **B10** ed esclude **B12**, che
+> non certifica sé stesso. ⇒ I banchi che il catalogo può certificare sono **13**, e le voci che
+> hanno un banco dietro sono **13**: due insiemi che adesso **coincidono**, mentre prima di stasera
+> erano dodici e dodici **diversi** — cioè il conto tornava e contava cose che non erano le stesse.
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **P1 è CERTIFICATO** | `[M]` NIC-OS, porta **7501**, tre giri alle **12:56:20 · 12:56:56 · 12:57:24 UTC**: **0 → 1 → 0**, VERDE 34/34 → ROSSO 33/34 → VERDE 34/34. Guasto: `Cross-Origin-Opener-Policy` da `same-origin` a **`unsafe-none`**. Marca `MANCA: Cross-Origin-Opener-Policy: same-origin`, misurata **0 · 2 · 0** |
+> | ⭐ **e il rosso è di UN controllo solo** | `costruzione.esito` resta **0** e `binario.marche` resta **8/8**: il guasto **non** è passato per una compilazione fallita, che renderebbe rosso qualunque banco e certificherebbe **zero** |
+> | ⛔ **e la prima stesura del guasto sarebbe stata proprio quella** | toglieva **l'intestazione**. ⚠ Ma `src/costruisci.sh` **cerca `Cross-Origin-Opener-Policy` dentro il binario e si ferma se non la trova**, e la cerca anche P1 fra le sue otto marche. ⭐ Preso **leggendo `costruisci.sh` prima di innestare**, e la cura è nella forma del guasto: **si cambia il valore, si lascia il nome** |
+> | ⛔ **P5 è PROVATO e NON CERTIFICATO** | e non *«non provabile»*, che è l'altra cosa. ⭐ Ma il suo conto è cambiato due volte in un'ora, e la seconda in meglio |
+> | ⭐⭐ **e l'accusa al PRODOTTO era del BANCO** | ⛔ P5 scriveva *«nessun congedo, per nessuna delle due strade di §3.1»* — cioè accusava la pagina di violare §8.1 **per un gesto mai fatto**: `01-p5-lancia.sh` batteva `xdotool key ctrl+w` **senza la funzione `X`**, su un `DISPLAY` che non è lo schermo finto. Il tasto non arrivava, `pagehide` non scattava. ⭐ **L'arbitrato è `banchi/01-p5-congedo.sh`** `[M]` **13:26 UTC**: si va via in **due modi** — navigando via, dove `pagehide` scatta di sicuro, e con `ctrl+w`, dove scatta solo se il tasto arriva — e ⭐ **da tutt'e due il congedo ESCE** (strada 2 di §3.1, posto `LASCIATO`, **zero** `STACCATO per silenzio`, e il gesto verificato dalle finestre **1 → 0**). ⇒ **La pagina fa quel che §8.1 le impone.** ⚠ È `LEZIONI.md` §1.9 di nuovo, e **la seconda volta in questa fase dopo B3**: il rosso puntato sull'imputato sbagliato |
+> | ⭐ **e il testimone è stato scelto bene** | il registro **del server**, letto a **+8 s** — prima che il tetto dei 30 secondi possa liberare il posto: senza quella finestra, *«si è congedato»* e *«staccato per silenzio»* arrivano con la stessa faccia. ⚠ *E il primo giro dell'arbitrato ha sbagliato lui: il segmento si chiudeva sul marcatore di fine, mentre `pagehide` scatta **mentre quella richiesta è in volo**, e la riga del congedo cadeva fuori. Uno zero da segmento sbagliato ha la stessa faccia di uno zero vero — vale il **secondo** giro* |
+> | ⭐ **curato il pilota, i numeri si muovono** | `X` davanti al `ctrl+w`, e `fuoco` portato **fuori dal ramo di N2** — con lo sblocco che non risponde quel ramo si saltava, e si arrivava alla gamba `P` **senza aver mai dato il fuoco a nessuna finestra**. `[M]` giro sano **13:29:41 UTC**: ⭐ **Chrome passa a CONFORME**, e ⭐ **Firefox adesso MISURA** — arriva a `SESSIONE`, **14 su 15**, secondo fisso **1069 ms** — dove prima non aveva denominatore |
+> | ⛔ **e resta UN punto, che questa volta NON è del banco** | su **Firefox** il congedo non esce lo stesso: dal registro del server il client chiude con un **`FIN` nudo sul canale di controllo**, il posto è `LASCIATO` **in modo ordinato** e `STACCATO per silenzio` vale **0**. ⇒ **Il gesto è arrivato, la sessione si è chiusa bene, e il client non ha detto perché** — dove §8.1 lo impone senza condizioni. ⚠ **I due imputati residui non si distinguono da questa parte**: *«la pagina non spedisce»* e *«Firefox butta via quel che la pagina spedisce dentro `pagehide`»* arrivano identici al server, e a separarli serve il registro **del browser**. ⭐ E si noti che la pagina prevede il caso **opposto** — *«Chrome butta un messaggio spedito subito prima di chiudere, quindi la strada che regge è il codice di chiusura»* — mentre su Firefox non regge **nessuna** delle due: è la differenza fra motori per cui P5 esiste, ⛔ **e è comparsa solo DOPO aver curato il pilota**, che è la prova che le due colonne servono |
+> | ⭐ **e il guasto di P5 è misurato lo stesso** | la marca `sono due impronte diverse per lo stesso certificato di sessione` compare **1** volta nel giro rosso e **0** nel sano: il banco **vede** il proprio guasto. ⇒ P5 non si certifica perché **il suo giro sano non è verde** — la stessa forma di B8 — **non** perché sia cieco |
+>
+> ⛔ **E tutt'e due i guasti si innestano su una COPIA INTERA del prodotto**, mai su
+> `/media/REMOTIX/src/remotix/`. ⚠ La ragione **non** è quella dei guasti in Python degli altri
+> banchi: è che **P1 ricostruisce il binario come primo passo del proprio giro**, e guastare il
+> prodotto di casa lascerebbe, per i minuti del passo di mezzo, **un binario bugiardo sotto i piedi
+> di chiunque altro lo riaccendesse**. *La sera dell'11 agosto sulla macchina di prova c'era un
+> `remotix` vivo sulla 7448 e cinque agenti al lavoro insieme.*
+>
+> ⭐ **E `01-p1-prodotto.sh` e `01-p1-dentro.sh` accettano da stasera `PORTA`, `PORTA_MORTA`, `SORG`
+> e `PREFISSO_TMP`**, coi predefiniti di prima: chi lancia a mano misura quel che misurava.
+>
+> ### ⭐⭐ B8 CERTIFICATO — e la cura non è stata completare la copia, è stata TOGLIERE la copia
+>
+> | | |
+> |---|---|
+> | ⭐ **B8** | **certificato, e non lo era mai stato**: `[M]` 11 agosto 2026, **13:46 UTC**, NIC-OS, innesto, porta **7471** — **`5 → 1 → 5`**, marca *«N risposte sotto il secondo»*, vista **solo** nel rosso |
+> | ⛔ **e l'atteso sano è 5, non 0** | ⭐ **scritto nel catalogo prima del giro, non allargato dopo**: è il quinto esito di B8 — *«il ban passa per intero, ma le mediane si separano»* — e si concede **solo** perché l'imputato è **misurato** ed è **PAM**. ⭐ Il giorno in cui quel `[?]` si chiudesse, il sano diventerà **0** e **quella riga del catalogo diventerà rossa da sé**: è il modo giusto di accorgersene |
+> | ⭐ **il guasto dà un rosso pieno** | `RITARDO_FISSO` da 1000 a **0**: `[M]` **17 risposte sotto il secondo**, la più veloce **49,7 ms**, e la mediana del caso «parola giusta» da **1085,9** a **56,3 ms** |
+> | ⭐ **e il giro copre finalmente la sequenza intera** | **due vite del server** — la seconda accensione dichiara *«ban caricati: 1»*, cioè il ban torna **dal disco** e non dalla memoria (**I7**) · **la pagina** (HTTP **200**, `bannato=True`, *«tentativi esauriti»*, **12h 0m**, col controllo che dice no a 594 byte) · **lo sblocco su un ban vero** (`TOLTO` → poi `NON-BANNATO` → e l'indirizzo **rientra**) |
+> | ⭐ **il segreto NON trapela** | mediane `[M]`: **inesistente 2123,2 · sbagliata 2198,1 · giusta 1085,9 ms**; la coppia che §4.4 protegge — *«inesistente − sbagliata»* — vale **−74,8 ms**, intervallo **[−509,3; +255,7]** ⇒ ⛔ **non si separa**. E l'imputato del resto è misurato: il server ha atteso **+1034 ms** oltre il secondo fisso sui respinti e **+84 ms** sugli ammessi — la firma di `pam_faildelay` |
+> | ⚠ **e i due denominatori accanto** | la certificazione **fuori dal filo** 33 su 33, e il **giudice** di B8 15 su 15 guasti a mano, in tutt'e tre i passi |
+>
+> ⭐⭐ **E la cura strutturale è il punto 4 dell'elenco, fatto dove mordeva.** `01-b12-lancia.sh`
+> **riscriveva a mano** la sequenza di B8, e la copia era incompleta in tre punti: il giro sano
+> usciva rosso su **otto** punti che parlavano **dell'orchestratore, non del banco**. ⇒ Adesso
+> `gira()` **chiama `01-b8-lancia.sh`** — come faceva da sempre con C2, quindi è un precedente in
+> casa e non una deroga inventata — e la marca la legge dal file che il verdetto di B8 scrive da sé.
+> ⚠ **E si è fermato lì apposta**: estendere la cosa agli altri banchi stasera avrebbe cambiato il
+> modo di lanciare banchi **certificati oggi**, cioè invalidato nove certificazioni per rifarle in un
+> tempo che non c'era.
+>
+> ⛔ **Che cosa questa certificazione NON copre**, e va detto: B8 è certificato **contro l'innesto**.
+> Sul **prodotto** i tre appigli della pagina del ban esistono, ⚠ ma il giro non è stato fatto lì; e
+> **la pagina la legge un socket, non un browser**, mentre questa sezione ne chiede il DOM *«come per
+> le otto frasi di B7»*.
+>
+> ⚠ **E la certificazione di P1 non si riverifica da CHUWI**: la sua riga elenca `remotix/pagina.c`,
+> che da `banchi/` esiste **solo sul server** — qui il prodotto sta in `../src/`. ⛔ Quindi
+> `--registro` la classifica *«non si può dire se valga oggi»*, ed è **la scena di B9 al contrario**
+> (là mancava `RCP.md` sul server). ⭐ *«Non riverificabile da questa macchina»* non è
+> *«non certificato»*, e lo strumento fa bene a non fonderli — ma il conto **dipende ancora da dove
+> lo si chiede**, ed è la stessa `[?]` del pomeriggio, non curata.
 
 ### B13 — ⭐ Sei cose che la fase produce e che nessun banco guardava
 
@@ -959,7 +1149,7 @@ misurato lo dico.*
 |---|---|
 | ⛔ **il server intero non è mai stato eseguito da un revisore** | sulla macchina del revisore mancano `ngtcp2`, `nghttp3`, `libssl-dev` e `libpam0g-dev` (`make dipendenze` dà **cinque NO**). ⇒ tutto quel che riguarda `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` è **letto, non misurato**. ⭐ L'unica esecuzione è `src/rcp.c` **compilato isolato** con `-Wall -Wextra` — **zero avvisi** — contro un driver del revisore, sei ingressi byte per byte |
 | ⛔ **UN SOLO MOTORE** | l'unica traccia di un giro con un **browser vero** contro questo server è un commento dentro `src/pagina.html`: `[M]` 10 agosto notte, **Firefox** — e quel giro ha trovato un difetto vero (la pagina mandava `disposizione = en`, che **non è** un nome XKB, e il server congedava con `SESSIONE_NON_SERVIBILE` facendo esattamente il suo mestiere). ⛔ **Di Chrome contro questo server non c'è nessuna traccia**, e il criterio di B2 vuole **due motori su due** |
-| ⛔ **e quel giro non è riverificabile da questa parte** | `[M]` 11 agosto 2026: in `src/` non c'è né il binario `remotix` né un `.o`; nessun `.jsonl`; `git status` dà `src/` **untracked**, mai committata. E **nessuno dei 14 script `01-*-lancia.sh` accende il prodotto**: `bsslserver` compare in **11** di loro, il binario `remotix` in **zero** (l'unica occorrenza della parola è `remotix.prova`, un nome SNI in `01-b2-lancia-sni.sh`) |
+| ⛔ **e quel giro non è riverificabile da questa parte** | `[M]` 11 agosto 2026, **mattina**: in `src/` non c'è né il binario `remotix` né un `.o`; nessun `.jsonl`; `git status` dà `src/` **untracked**, mai committata. E **nessuno dei 14 script `01-*-lancia.sh` accende il prodotto**: `bsslserver` compare in **11** di loro, il binario `remotix` in **zero** (l'unica occorrenza della parola è `remotix.prova`, un nome SNI in `01-b2-lancia-sni.sh`). ⚠ ⛔ **E questa riga è SCADUTA la sera dello stesso giorno, e va letta con la data addosso**: `[M]` 11 agosto **sera** — `git ls-files src/` dà **22 file** (commit `ffeb341`), gli script di lancio sono **16** e **11 di loro sanno puntare al `BERSAGLIO=prodotto`**, tre accendono il binario per nome. ⭐ *Una riga che dichiara un'assenza invecchia nel verso peggiore: resta vera nell'aspetto e falsa nei fatti, e chi la legge non ha nessun motivo di sospettarla* |
 | ⛔ **le proprietà di trasporto non sono state rimisurate contro questo server** | le sei di B2 — tetto 30 s · datagram · credito uni · migrazione · niente 0-RTT · `allowPooling` — sono `[M]` **sull'innesto**, letto dal pari. `src/trasporto.c` oggi dichiara **19** stream uni dove la misura di B2 ne leggeva 16: è un numero diverso, ed è **la sonda `01-b2-sonda-trasporto.py` puntata al prodotto** che lo direbbe |
 | `[?]` **il rinnovo del credito degli stream** | il prodotto lo dichiara **di suo** (`src/trasporto.c`): ngtcp2 non alza il tetto da sé *«tranne quando uno stream si chiude senza che `stream_open` sia stato chiamato»*, e questo codice cade **probabilmente** in quell'eccezione. Nessuno l'ha misurato. ⛔ Si misura alla **fase 4**, quando gli appunti apriranno uno stream per trasferimento: prima di allora nessun client ne apre più di quattro, e una misura senza il carico che la provoca non è una misura |
 | ⚠ **la pagina del prodotto e quella dell'innesto sono due documenti diversi** | e **B8 misura i marcatori che solo l'innesto produceva**. Curato nel prodotto la notte del 10 (`data-bannato` e `data-restano-ms` ci sono, in una sola occorrenza ciascuno, e il server rifiuta di partire se ce ne fossero due) — ⛔ **ma nessuno ha puntato B8 al prodotto per verificarlo**: finché non lo si fa, «curato» è letto e non misurato |
@@ -1188,6 +1378,35 @@ agosto.
 ogni voce producano **byte diversi**, e una voce «UGUALI» è **un rosso di B9**. Cioè l'elenco non
 può crescere di voci inventate per far tornare la colonna — e L6, che byte non ne cambia, lo
 **dichiara** invece di fabbricarne uno.
+
+## ⛔ Tre trappole in un giro solo, e la terza non era nei banchi — 11 agosto 2026, sera
+
+*Dal giro che ha certificato **B8**. ⭐ Le prime due sono difetti che il progetto aveva già scritto,
+e la terza spiega perché le prime due erano rimaste invisibili.*
+
+- ⛔ **La pagina del ban era illeggibile sull'innesto, e nessuno lo sapeva.** `leggi_pagina()`
+  incartava **sempre** in TLS — `[M]` `SSLError: WRONG_VERSION_NUMBER` da tutt'e due gli indirizzi —
+  perché l'innesto la serve **in chiaro**. ⇒ Il banco scriveva *«la pagina non si è caricata»*, cioè
+  **il silenzio che §4.4-bis vieta al ban**, su un server che la pagina la serve. ⚠ **Ed era la cura
+  del giorno prima ad averlo spostato**: era stata scritta per il **prodotto**, che vuole HTTPS. Due
+  rossi opposti a un giorno di distanza, e in tutt'e due i casi **il server faceva la cosa giusta**.
+  ⭐ Ora il dialetto lo **dichiara il bersaglio**, e se quello dichiarato tace si prova l'altro:
+  *«il dialetto è l'altro»* è un fatto, *«non ho parlato con nessuno»* è un altro fatto.
+- ⛔ **Due redirezioni ATTORNO a `enter.sh` — dentro i due file che quella trappola la descrivono in
+  testa.** La richiesta di `sudo` esce su **stderr**: buttandola via, **nessuno può rispondere**.
+  `[M]` `ps` sul server: `sudo -v -S -p Password` fermo, ⛔ **col guasto ancora addosso al codice**,
+  che è il peggior punto in cui fermarsi. ⚠ Da un terminale interattivo è **invisibile** finché il
+  credito di `sudo` regge: morde solo sui giri lunghi, cioè quelli che costano di più da rifare.
+  ⇒ È la **quinta veste** della regola pagata il 10 agosto, e stavolta dentro i suoi stessi guardiani.
+- ⛔⭐ **E la causa vera stava nello strumento, non nei banchi**: `v1/strumenti/sshpw.py` rispondeva
+  ad al massimo **64** richieste di parola d'ordine, e un giro di certificazione di B8 — **tre**
+  esecuzioni del banco, una sessantina di ingressi nel contenitore ciascuna — ne chiede **oltre
+  200**. Il giro si fermava a metà del passo «guasto», ⚠ **e il sintomo era di nuovo quello che
+  inganna: non un errore, una prova «lenta»**. Chi guardava il registro vedeva l'ultimo blocco
+  stampato e credeva che stesse ancora misurando. ⚠ Il tetto era **già stato alzato una volta**, da 8
+  a 64, per la stessa ragione: **è la terza**. ⭐ Il numero giusto non è *«quante ne servono oggi»*:
+  a proteggere non è il tetto, è **l'ancora** che spedisce la parola d'ordine solo a chi la sta
+  chiedendo **in quell'istante**.
 
 ## I difetti pagati, uno per uno
 
@@ -1603,16 +1822,16 @@ perfetta.
 | ✅ `DECISIONI.md` §1.8 | ⭐ **Apple è un di più, non un obiettivo** — 9 agosto 2026, dall'utente: S1a esce dalla fase, e la libreria si sceglie su due motori su tre |
 | ⭐ ✅ `DECISIONI.md` §1.9 | **Il ban dell'indirizzo** — 10 agosto 2026, dall'utente: **tre autenticazioni fallite, dodici ore**, con un contatore solo e senza quello per nome utente. Riscrive `RCP.md` §4.4-bis — che da 🔸 diventa ✅ — `SPECIFICHE.md` §4.2, la regola **B0.3** e il banco **B8** per intero. ⛔ Nessun tipo nuovo sul filo: `TROPPI_TENTATIVI` c'era già |
 | ⏳ `DECISIONI.md` §1.7 | resta aperta solo la comodità su Safari, e nessuno la misurerà per ora |
-| ❓ `DECISIONI.md` §7.14 | ⛔ **aperta, e la fase l'ha prodotta**: dopo un `FIN` sul canale di controllo, chi lo riceve può ancora mandare il `CONGEDO` che §8.1 impone? Il banco **B11** ha scelto il silenzio, `RCP.md` §4.2 non dice quale sia giusta, e le due letture danno **byte diversi** (R11.22) |
-| ❓ `DECISIONI.md` §7.15 | ⛔ **aperta**: §8.1 impone il congedo senza condizioni, §3.1 punto 2 lo condiziona a *«se il canale di controllo è ancora utilizzabile»*, e **B5 e B11 applicano la seconda** — cioè un'implementazione conforme a §3.1 è in violazione di §8.1 (R11.23) |
-| ❓ `DECISIONI.md` §7.16 | ⛔ **aperta**: se `RCP.md` §7.5 fosse una decisione dell'utente. Intanto è 🔸 (riga qui sotto) |
+| ✅ `DECISIONI.md` §7.14 | ⭐ **CHIUSA dall'utente l'11 agosto 2026**: dopo un `FIN` sul canale di controllo **chi lo riceve tace** — cioè la lettura che **B11** aveva scelto da sé. ⚠ *Questa riga l'ha data **aperta** per mezza giornata dopo che era stata decisa (commit `ea35b5a`), e il documento di chiusura della fase **sottostimava quel che la fase aveva prodotto**: quattro decisioni contate come domande* |
+| ✅ `DECISIONI.md` §7.15 | ⭐ **CHIUSA dall'utente l'11 agosto 2026**: il congedo di §8.1 vale **se il canale è ancora utilizzabile** — vince la condizione di §3.1 punto 2, e **B5 e B11 applicavano già quella** |
+| ✅ `DECISIONI.md` §7.16 | ⭐ **CHIUSA dall'utente l'11 agosto 2026**: la funzione di banco resta 🔸 — ⭐ **e fuori dal prodotto consegnato** |
 | ⛔ `DECISIONI.md` §5.0-quater | **S5 ha risposto, e la risposta smentisce la ragione scritta accanto alla decisione**: la tela resta lo schermo in pixel fisici, ⛔ **ma la formula con cui il client lo legge non regge su Chrome** — `screen.width × devicePixelRatio` dà `risoluzione × zoom`. `[M]` 10 agosto 2026. ⚠ La decisione **resta 🔸** e non è ripensata: cade la formula, non l'oggetto. La cura è di `SPECIFICHE.md` §6.1-bis e **non c'è ancora** |
 | ⭐ `RCP.md` §7.3 | ⭐ **CHIUSA su Mutter l'11 agosto 2026**: S7 ha misurato il segno, e il server **inverte l'asse verticale**. ⛔ Resta `[?]` per gli altri quattro desktop, e *«non chiusa»* e *«non misurata»* sono due stati diversi |
-| ❓ `DECISIONI.md` §7.17 | ⛔ **aperta, e l'ha prodotta una misura**: **B6** ha chiuso R3.27 con due risposte, e la seconda dice che curare la parola di §4.6 non basta — una sessione che **non apre mai il canale di controllo** non ha addosso nessun tetto, e §4.6 non ha una riga per quello stato |
+| ✅ `DECISIONI.md` §7.17 | ⭐ **CHIUSA dall'utente l'11 agosto 2026: cinque secondi.** L'ha **prodotta una misura** — B6, chiudendo R3.27, ha trovato che una sessione che **non apre mai il canale di controllo** non aveva addosso nessun tetto — e l'ha chiusa l'utente dandogliene uno. ⭐ È il giro intero: una misura apre una domanda, la domanda va dove si decide, e la decisione torna nel protocollo |
 | ⏳ `RCP.md` §5.3 | S6 dice se i 5 ms del PCM reggono |
 | 🔸 `RCP.md` §7.5 | ⭐ **chiusa la notte del 9 agosto**: la funzione di banco — `BANCO_MARCA` e `BANCO_ESITO` — è entrata **prima del primo byte**, sotto la clausola di §9. ⚠ La usa la fase 3; qui se ne prova solo il **rifiuto a funzione spenta** (B5). ⚠ *Era marcata ✅, cioè «deciso dall'utente» (`README.md`), e non risulta presa dall'utente: §7.5 dichiara di venire dal **rilievo R3.4** e la motivazione da `web/rapporti/S4-ritardo-disegno.md` §5.3 — non c'è né frase né voce, come invece l'hanno §1.6 e §1.8. Corretta il 10 agosto 2026, rilievo **R11.15**, e **registrata dove le decisioni stanno**: `DECISIONI.md` §1.5 riga 26.* ⛔ **E la domanda «era sua?» è aperta, e sta in `DECISIONI.md` §7.16**: si chiude con una parola, e conta perché quei due tipi hanno consumato la clausola di §9 che `RCP.md` §12 dichiara essere stata *«l'ultima occasione»* |
 | ⭐ `RCP.md` §4.6 | ⭐ **CHIUSA l'11 agosto 2026**: il cronometro parte dall'**apertura del canale di controllo**, e la riga 1 è cambiata di una parola (B6, R3.27). ⛔ Con la seconda risposta che apre `DECISIONI.md` §7.17 |
-| ⏳ `SPECIFICHE.md` §11.5 | l'isolamento fra origini: è un vincolo che questa fase deve rispettare |
+| ⭐ `SPECIFICHE.md` §11.5 | ⭐ **MISURATA l'11 agosto 2026, sera**, e da fuori: `curl -skI https://192.168.0.2:7448/` sul **prodotto** risponde **200, 31 840 byte**, con `Cross-Origin-Opener-Policy: same-origin` · `Cross-Origin-Embedder-Policy: require-corp` · `Cross-Origin-Resource-Policy: same-origin` · `Cache-Control: no-store`. ⇒ l'isolamento fra origini **c'è sulla pagina che il prodotto serve**, e non è più *«un vincolo da rispettare»* letto in un documento. ⚠ È `[M]` sulle **intestazioni**, non sul comportamento del browser sotto attacco |
 
 ---
 
@@ -1629,11 +1848,13 @@ perfetta.
 | ⭐ **~~e la seconda metà del criterio di B2 sul terzo giro~~ — CHIUSA** | il giro è stato **rifatto la sera del 10 agosto**, su decisione dell'utente, e adesso passa pieno: la sonda manda un `CIAO` conforme e accetta `ECCOMI`, invece dell'eco di B2 che il server non fa più. ⭐ E registra **sempre** un esito, anche quando il server tace: prima restava appesa, e «il browser non è partito», «la sessione non si è aperta» e «il server non ha risposto» avevano lo stesso aspetto (R11.3) |
 | ⚠ **il segno della rotella su più di un compositore** | R3.25 — ⭐ **misurato su Mutter** il 10 agosto 2026 (`+120` ⇒ il server inverte), ⛔ **e §7.3 vincola cinque desktop**: se a normalizzare è `libei` il numero vale ovunque, se normalizza il compositore KWin darà un segno diverso. Il banco è rieseguibile su KWin senza cambiare una riga |
 | ~~**l'istante da cui parte il primo tetto**~~ — **CHIUSA** | R3.27, chiusa da **B6** l'11 agosto 2026: si parte dall'apertura del **canale di controllo**. ⛔ E la seconda risposta di B6 ha aperto `DECISIONI.md` §7.17 — **la sessione senza canale non ha nessun tetto** |
-| ⭐ **la pila PAM per un utente diverso dal proprietario del processo** | R3.26 — ⚠ e adesso ha un secondo motivo per essere rimisurata: il prodotto usa il servizio **`remotix`**, non `login` |
+| ⭐ ~~**la pila PAM per un utente diverso dal proprietario del processo**~~ — **CHIUSA** | R3.26, chiusa da **B10** l'11 agosto 2026 **con una misura**, sul servizio **`remotix`**: la pila PAM verifica la parola di un utente **diverso dal proprietario del processo** ⛔ **solo se il processo è privilegiato** — da `root` riesce, da un utente normale no. Il server oggi è di root. ⚠ **Resta la domanda della fase 2**: un servizio di sistema che **lascia i privilegi** vedrebbe quella causa, e il sintomo sarebbe *«credenziali errate»* |
+| ⛔ **il secondo fisso di §4.4-bis, e l'imputato adesso ha un nome** | ⭐ **Rimisurato la sera dell'11 agosto 2026** dal giro di certificazione di B8: mediane **2123,2 · 2198,1 · 1085,9 ms** — ⛔ *e quindi i «1984 ms» del `README` e i «2636 ms» qui sotto sono **due fotografie di giri diversi**, non un numero corretto due volte*. ⭐ **Quel che è cambiato non è il numero, è che l'imputato è misurato**: il server attende **+1034 ms** oltre il secondo fisso sui respinti e **+84 ms** sugli ammessi — la firma di `pam_faildelay`, cioè **PAM e non il nostro codice**. ⚠ E la `[?]` resta aperta lo stesso, perché finché quel ritardo non è costante il secondo fisso **non nasconde quel che dichiara di nascondere** |
 | ⛔ **il secondo fisso di §4.4-bis contro il servizio `remotix`** | i **2636 ms** di B8 sono la mediana **di `login`**. Il prodotto ha il suo servizio PAM, quindi *«a governare i tempi è PAM»* va rimisurato prima di credergli, e il `[?]` sul secondo fisso **non lo chiude quella misura** |
 | ⛔ **la formula della tela, dopo S5** | `screen.width × devicePixelRatio` non è invariante allo zoom su Chrome 151, e lo zoom di pagina **non è leggibile da JavaScript in modo portabile**. Non è una `[?]` da misurare: è una **cura da trovare**, in `SPECIFICHE.md` §6.1-bis |
 | ⛔ **S5 su DeX, e S2, S3a, S6** | quattro misure che aspettano un **dispositivo**, non un'idea: il telefono Android, il DeX, una rete LTE vera. ⭐ I banchi sono pronti e girano il giorno che il ferro c'è (`web/rapporti/S-esiti-sonda.md` §4-§6) |
 | ⏳ **il numero di S1b** | l'orologio è in moto dal 10 agosto 21:10 UTC: il verdetto è il **17-18 agosto 2026**. Fino ad allora S1b dice *«a N giorni l'eccezione c'è ancora»*, e il `[R]` dei sette giorni **non è confermato dal comportamento** — solo dalla contabilità di Chrome |
+| ⛔⭐ **il congedo di §8.1 su FIREFOX, alla chiusura della scheda** | ⭐ **Nuova, e l'ha prodotta P5 la sera dell'11 agosto 2026** — dopo che la stessa misura aveva **scagionato** la pagina su Chrome. Chiudendo la scheda, su Firefox il client se ne va con un **`FIN` nudo** sul canale di controllo: sessione chiusa **in modo ordinato** (`STACCATO per silenzio` = 0), **e nessun motivo**. §8.1 lo impone senza condizioni. ⛔ **I due imputati non si distinguono dal registro del server** — *«la pagina non spedisce»* e *«Firefox butta quel che la pagina spedisce dentro `pagehide`»* arrivano identici — e a separarli serve **il registro del browser**. ⚠ Finché non è separato, ⛔ **non si cura**: una cura scritta contro l'imputato sbagliato è il difetto che questa fase ha già pagato due volte |
 | ⛔ **il prodotto contro i banchi** | nessun banco ha mai acceso `src/`. Finché non lo fa, *«il server fa X»* è vero **dell'innesto**, e di `src/` è **letto** |
 | `[?]` **il rinnovo del credito degli stream unidirezionali** | dichiarato dal prodotto stesso; si misura alla **fase 4**, col carico che lo provoca |
 | ⚠ **perché `lsquic` con l'SNI cada su ALPN** | `[M]` 10 agosto: avviso TLS **120**, `no suitable application protocol`, **dopo** che il certificato è stato trovato. ⛔ **Non indagato di proposito**: `lsquic` è fuori per un motivo che non dipende da questo, e la riga esiste perché nessuno lo riscopra credendolo nuovo |
@@ -1702,4 +1923,28 @@ agosto — *«B11 ha dato verdetti diversi fra giri identici»* — con l'imputa
 
 *La frase vera, con la data. La fase si chiude qui, non quando questo documento è pieno.*
 
-*(la fase è aperta)*
+> ## ✅ **«Va bene, la stretta di mano funziona: fase 1 approvata.»**
+>
+> — l'utente, **11 agosto 2026**, dopo aver aperto `https://192.168.0.2:7448` **dal portatile**, in
+> **Chrome**, digitato `prova` e la parola d'ordine, e aver letto sulla pagina *«Ammesso, sessione
+> nuova, tela 1920×1080, desktop sconosciuto»*.
+
+⭐ **La misura che chiude la fase ha una provenienza su disco**, e non è un ricordo:
+[`rapporti/GIUDIZIO-11-agosto.md`](rapporti/GIUDIZIO-11-agosto.md) — la scena, le impronte, il
+registro del server verbatim (`GET /` alle **12:45:44 UTC**, la stretta di mano alle
+**12:48:55-12:48:56 UTC**) e quel che la pagina ha mostrato.
+
+⛔ **E quel giro ha chiuso da solo le due cose che il `README.md` di quella mattina dichiarava non
+misurate**: che **la pagina l'abbia servita il prodotto** (`GET /` era a **zero**) e che un giro
+**abbia attraversato la rete** (le 19 connessioni del 10 agosto venivano **dal server stesso**). Su
+**Chrome**, di cui contro questo server non c'era nessuna traccia.
+
+⚠ **Che cosa il giudizio NON è**: un banco. Non ha un atteso confrontato da una macchina (**B0.4**),
+non ha un controllo che dica *no*, non è rieseguibile senza una persona, e ⛔ **la versione esatta di
+Chrome non è annotata** (regola **B0.6** mancata). È **I8**, e vale per quello che è — che è
+esattamente ciò che `PIANO.md` §0.2 regola 3 chiede per chiudere una fase: *una misura giudicata
+dall'utente, non un documento completo*.
+
+⛔ **E la fase si chiude con del lavoro dichiarato aperto**, che è la forma onesta: le certificazioni
+mancanti e i `[?]` qui sopra non si cancellano perché il giudizio è arrivato — si portano in fase 2
+scritti, o la prossima fase comincia credendo a misure che nessuno ha fatto certificare.
