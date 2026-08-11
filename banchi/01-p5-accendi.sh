@@ -83,8 +83,31 @@ copia)
 	GEMELLO="$GEMELLO" bash "$D/costruisci.sh" || exit 3
 	exit 0 ;;
 svuota-registro)
+	# ⛔⭐ SI RIFIUTA SE IL SERVER E' VIVO, e questa riga costa una spiegazione
+	#     perche' e' costata un ROSSO FALSO — notte fra l'11 e il 12 agosto 2026.
+	#
+	# `: > file` su un registro che un processo tiene APERTO non lo azzera: il
+	# file diventa lungo zero, ma il processo conserva il suo offset, e alla
+	# prima riga che scrive il kernel riempie di NUL tutto quel che sta prima.
+	# `[M]` il registro di P5 si e' ritrovato con **37.120 byte NUL in testa**.
+	#
+	# ⛔ E il danno non e' l'estetica del file: `grep` che incontra un NUL
+	#    smette di stampare le righe e dice «binary file matches» — ⛔ **con lo
+	#    stesso stato d'uscita 0**.  Il banco ha letto «NON LETTO» dove c'era
+	#    scritto il nostro indirizzo, e ha sbloccato IL SERVER invece di noi,
+	#    ricevendo il NON-BANNATO che quell'indirizzo dara' per sempre.
+	#
+	# ⭐ Il registro si azzera dove si azzera davvero: nel passo «accendi», che
+	#    lo cancella mentre nessuno lo tiene aperto.
+	if [ -f "$PIDF" ] && [ -d "/proc/$(cat "$PIDF" 2>/dev/null)" ]; then
+		printf 'NO  ⛔ il server (pid %s) e\x27 vivo e tiene aperto questo registro:\n' "$(cat "$PIDF")"
+		printf '    troncarlo adesso non lo azzera, ci scava dentro un buco di NUL\n'
+		printf '    che acceca ogni «grep» del banco.  Spegni prima, o riaccendi:\n'
+		printf '      bash %s spegni  &&  bash %s accendi\n' "$0" "$0"
+		exit 2
+	fi
 	: > "$LOG"
-	printf 'OK  registro azzerato: %s\n' "$LOG"
+	printf 'OK  registro azzerato: %s  (nessun processo lo teneva aperto)\n' "$LOG"
 	exit 0 ;;
 accendi) ;;
 *) echo "uso: $0 [copia|accendi|spegni|svuota-registro]"; exit 2 ;;

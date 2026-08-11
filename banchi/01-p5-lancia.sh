@@ -393,7 +393,39 @@ if ! scarica_registro "$T/reg0.txt"; then
 	ko "   ⛔ senza il registro del server questo banco non ha nessun verdetto"
 	exit 3
 fi
-QUANTE=$(grep -c "$MARCA_CANALE" "$T/reg0.txt")
+# ⛔⭐ E PRIMA DI GREPPARLO SI DICHIARA SE IL REGISTRO E' TESTO — cura della
+#     notte fra l'11 e il 12 agosto 2026, e il difetto e' costato un ROSSO
+#     FALSO su un giro in cui tutt'e quattro le gambe erano CONFORMI.
+#
+# `[M]` `tmp/sera-p15-browser.log`, 66.289 byte di cui **37.120 NUL**, tutti in
+# un blocco in TESTA, e il testo vero che comincia subito dopo.  ⛔ Non e' un
+# registro sporco: e' un BUCO.  Qualcuno ha chiamato `01-p5-accendi.sh
+# svuota-registro` — cioe' `: > file` — **con il server vivo**: troncare un file
+# che un processo tiene aperto non sposta il suo offset, e alla scrittura dopo
+# il kernel riempie di NUL tutto quel che sta prima.
+#
+# ⛔ E il modo in cui questo acceca il banco e' silenzioso: `grep` che trova un
+#    NUL smette di stampare le righe e dice «binary file matches» — con lo
+#    STESSO stato d'uscita 0.  Quindi `grep -c` continuava a contare (il canale
+#    di lettura risultava sano), mentre `grep | sed` qui sotto riceveva quella
+#    frase al posto della riga e leggeva «NON LETTO»: lo sblocco e' finito su
+#    `192.168.0.2`, che e' IL SERVER, e ha risposto NON-BANNATO come rispondera'
+#    sempre.  ⚠ Le gambe passavano lo stesso perche' a segmentare il registro e'
+#    `01-p5-registro.py`, che legge in Python e il buco non lo ferma: il difetto
+#    viveva SOLO nel `grep` di bash — un motivo in piu' per dirlo invece che
+#    aggirarlo in silenzio.
+#
+# ⭐ Quindi due cose, non una: `-a` dappertutto (il buco non deve piu' accecare),
+#    e il buco SI DICHIARA (`LEZIONI.md` §1.9 regola 4: una misura dice su che
+#    cosa ha guardato).
+BUCO=$(tr -dc '\000' < "$T/reg0.txt" | wc -c)
+if [ "$BUCO" -gt 0 ]; then
+	inf "⚠ il registro scaricato ha $BUCO byte NUL: qualcuno l'ha troncato sotto"
+	inf "  il server, che scrive ancora al suo vecchio offset.  Le righe si"
+	inf "  leggono lo stesso (`grep -a`), ma il conto delle righe di prima e'"
+	inf "  perduto — e questo banco non lo spaccia per «registro vuoto»."
+fi
+QUANTE=$(grep -ac "$MARCA_CANALE" "$T/reg0.txt")
 if [ "$QUANTE" -lt 1 ]; then
 	ko "⛔ IL CANALE DI LETTURA E' ROTTO: ho appena chiesto «/$MARCA_CANALE» al"
 	ko "   prodotto e rileggendo il registro non lo trovo (righe guardate:"
@@ -408,7 +440,7 @@ ok "⭐ una richiesta certamente avvenuta si rilegge nel registro ($QUANTE volta
 #    (`[192.168.0.3]`), «perche' e' cosi' che lo scrive chi ospita».  Chi digita
 #    l'indirizzo nudo al comando di sblocco deve arrivare alla stessa chiave, e
 #    a normalizzare e' il server: qui si legge quel che il server ha scritto.
-INDIRIZZO_VISTO=$(grep "$MARCA_CANALE" "$T/reg0.txt" | tail -1 \
+INDIRIZZO_VISTO=$(grep -a "$MARCA_CANALE" "$T/reg0.txt" | tail -1 \
 	| sed -n 's/.* da \[\{0,1\}\([0-9.]*\)\]\{0,1\}:[0-9]*.*/\1/p')
 inf "il server ci vede come: «${INDIRIZZO_VISTO:-NON LETTO}»"
 if [ -z "$INDIRIZZO_VISTO" ]; then
@@ -510,10 +542,20 @@ fuoco() # $1 = pezzo di titolo
 #      ⛔ e NON e' stato fatto stasera: cambiare il pilota **dopo** aver misurato
 #      e prima di rimisurare vorrebbe dire pubblicare un banco che nessuno ha
 #      girato.  Si scrive qui, e lo fa il prossimo giro.
-fuoco_prodotto()
+#   ⭐⭐ FATTO la notte fra l'11 e il 12 agosto 2026, e rimisurato: il terzo
+#      titolo e' il nome del MOTORE, che ogni finestra di browser porta in coda
+#      («… — Mozilla Firefox», «… - Google Chrome»).  ⚠ E resta l'ULTIMO dei
+#      tre, non il primo: il titolo della pagina e' piu' stretto, e un titolo
+#      largo che vince per primo darebbe il fuoco a una finestra qualunque del
+#      motore — cioe' proprio il difetto di `--class` scritto qui sopra.
+fuoco_prodotto() # $1 = motore (facoltativo: il terzo titolo da provare)
 {
 	fuoco "REMOTIX" && return 0
 	fuoco "$IND" && return 0
+	case "${1:-}" in
+	chrome)  fuoco "Chrome"  && return 0 ;;
+	firefox) fuoco "Firefox" && return 0 ;;
+	esac
 	return 1
 }
 
@@ -644,10 +686,11 @@ gamba_pagina()
 	# ⛔ Il fuoco PRIMA di battere qualunque tasto, e se non si trova la finestra
 	#    lo si dice: un `ctrl+l` battuto nel vuoto lascia la pagina dov'era, e il
 	#    banco misurerebbe il silenzio di un gesto mai fatto.
-	if ! fuoco_prodotto; then
-		ko "⛔ non trovo nessuna finestra del browser in prova (ne' «REMOTIX» ne'"
-		ko "   «$IND»): da qui in poi i tasti andrebbero a nessuno, e quel che"
-		ko "   non arriva al server non sarebbe un fatto sul prodotto."
+	if ! fuoco_prodotto "$motore"; then
+		ko "⛔ non trovo nessuna finestra del browser in prova (ne' «REMOTIX», ne'"
+		ko "   «$IND», ne' il nome del motore): da qui in poi i tasti andrebbero a"
+		ko "   nessuno, e quel che non arriva al server non sarebbe un fatto sul"
+		ko "   prodotto."
 	fi
 	naviga "https://$IND:$PORTA/$marca_a"
 	sleep 4
@@ -747,7 +790,7 @@ gamba_pagina()
 		#    non moriva, la riga «da qui in poi l'assenza di congedo non e' un
 		#    verdetto».  Nella scena nuova quella riga direbbe **il falso** — il
 		#    browser e' vivo *perche'* la scheda si e' chiusa bene.
-		if fuoco_prodotto; then
+		if fuoco_prodotto "$motore"; then
 			local prima dopo vive
 			prima=$(finestre)
 			inf "finestre col titolo «REMOTIX» PRIMA del gesto: $prima"
@@ -808,7 +851,7 @@ gamba_pagina()
 	#     e' nata» sono due fatti diversi, e a separarli e' una richiesta
 	#     arrivata — la stessa forma con cui questo banco verifica l'avviso del
 	#     certificato e la digitazione.
-	if ! grep -q "$marca_c" "$T/$motore-$gamba.log"; then
+	if ! grep -aq "$marca_c" "$T/$motore-$gamba.log"; then
 		ko "⛔ IL BROWSER NON AVEVA DUE SCHEDE: il marcatore «$marca_c» non e' nel"
 		ko "   registro del server.  Allora «ctrl+w» puo' aver chiuso il PROGRAMMA"
 		ko "   invece della scheda, e in quella scena non esce niente per nessuna"
@@ -1000,7 +1043,7 @@ FINE
 	#    «l'avviso non si e' superato» hanno tutti la stessa faccia da qui.
 	sleep 2
 	if scarica_registro "$T/$motore-avvio.log"; then
-		if grep -q "p5-$motore-avvio-$GIRO" "$T/$motore-avvio.log"; then
+		if grep -aq "p5-$motore-avvio-$GIRO" "$T/$motore-avvio.log"; then
 			ok "⭐ l'avviso del certificato della PAGINA e' stato superato: il"
 			ok "   marcatore del browser e' arrivato al server"
 			registra "{\"banco\":\"P5\",\"giro\":\"$GIRO\",\"tipo\":\"AVVISO-PAGINA\",\"motore\":\"$motore\",\"superato\":\"si\",\"nota\":\"§4.1-bis: l'impronta NON copre il caricamento della pagina — l'avviso qui e' atteso\"}"
@@ -1018,17 +1061,22 @@ FINE
 
 	# ── N2: il controllo che dice NO sull'autenticazione ───────────────────
 	if [ "$COMANDO_VIVO" = si ]; then
-		if ! fuoco "REMOTIX"; then inf "⚠ non trovo la finestra col titolo REMOTIX"; fi
+		# ⭐ Gli stessi tre titoli della gamba, non il solo «REMOTIX»: qui la
+		#    finestra sta ancora sul marcatore d'avvio, che quel titolo non ce
+		#    l'ha — ed e' proprio il caso misurato l'11 agosto alle 13:29.
+		if ! fuoco_prodotto "$motore"; then
+			inf "⚠ non trovo la finestra ne' da «REMOTIX», ne' da «$IND», ne' dal motore"
+		fi
 		gamba_pagina "$motore" n2-parola-sbagliata "$PAROLA_STORTA" respinto || male=1
 		# ⛔ E SI GUARDA CHE IL NOME DIGITATO SIA ARRIVATO INTERO: se il server ha
 		#    letto un altro nome, la digitazione e' finita nel posto sbagliato, e
 		#    il tentativo speso e' colpa del pilota.  In quel caso non si riprova.
-		if ! grep -q "CREDENZIALI ricevute utente=$UTENTE" "$T/$motore-n2-parola-sbagliata.log" 2>/dev/null; then
+		if ! grep -aq "CREDENZIALI ricevute utente=$UTENTE" "$T/$motore-n2-parola-sbagliata.log" 2>/dev/null; then
 			ko "⛔ il server non ha letto «utente=$UTENTE»: la digitazione non e'"
 			ko "   finita dove doveva.  ⛔ NON si riprova: un secondo tentativo"
 			ko "   fallito per un difetto del pilota e' due terzi del budget di"
 			ko "   §4.4-bis, e sarebbe speso senza misurare niente."
-			grep "CREDENZIALI ricevute" "$T/$motore-n2-parola-sbagliata.log" 2>/dev/null | tail -2 | sed 's/^/        /'
+			grep -a "CREDENZIALI ricevute" "$T/$motore-n2-parola-sbagliata.log" 2>/dev/null | tail -2 | sed 's/^/        /'
 			kill "$PID_BR" 2>/dev/null; wait "$PID_BR" 2>/dev/null; PID_BR=
 			return 1
 		fi
