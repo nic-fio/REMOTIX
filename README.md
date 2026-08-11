@@ -51,7 +51,71 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta**. ⚠ *Il **sesto** era la regola di quel giorno: dalla sera del 10 agosto il ban scatta al **quarto** (`DECISIONI.md` §1.9), e la misura resta scritta com'era perché porta la data della regola che misurava* |
 > | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.2 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.2; §9 adesso la nomina. ⚠ *La cura del 10 agosto mandava a §2.4, che è «La porta» e non nomina né percorsi né versioni: corretta lo stesso giorno, rilievo **R11.2*** |
 >
-> ### ⛔ SI RIPARTE DA QUI — l'11 agosto 2026
+> ### ⛔ SI RIPARTE DA QUI — la sera dell'11 agosto 2026
+>
+> #### ⭐⭐ LE CERTIFICAZIONI: **9 su 12**, e stamattina erano 3 — su un codice che non esiste più
+>
+> ⛔ **La prima cosa che ho trovato stamattina è che il conto era già scaduto.** Il registro porta,
+> accanto a ogni certificazione, l'impronta di `rcp.c` con cui è stata fatta: era `d839839f…`, e il
+> codice di oggi è `cb7af778…`. ⇒ *«3 su 12»* erano tre su un codice che non c'è più.
+>
+> | | |
+> |---|---|
+> | ⭐ **certificati oggi** | **B2 · B3 · B4 · B5 · B6 · B7 · B9 · B11 · C2** — tutti sul codice di adesso |
+> | ⛔ **provati e NON certificati** | **B8** · **B13** — tutt'e due su lacune con un nome |
+> | ⛔ **mai provato** | **B10** — il banco non esiste, ma ⭐ **il secondo utente adesso c'è** |
+>
+> ⚠ **Il numero dipende da dove lo si chiede**: il registro viveva in **due copie**, una per
+> macchina. Unite in `banchi/01-b12-registro.jsonl` (quello versionato). ⛔ Ma il server ne dice
+> **8** e il portatile **9**, e hanno ragione tutt'e due: sul server `RCP.md` non c'è, quindi B9 non
+> si può *riverificare* lì — e lo strumento scrive «non so» invece di arrotondare.
+>
+> #### ⛔ CHE COSA FARE ADESSO, in ordine
+>
+> | # | | costo |
+> |---|---|---|
+> | **1** | ⛔ **B8** — il suo giro *sano* non è verde sotto B12. Mancano **due vite del server** (la persistenza del ban, invariante I7, vuole un riavvio), la **lettura della pagina**, e uno **sblocco su un ban vero**. ⇒ È la sequenza intera di `01-b8-lancia.sh`. ⭐ La strada onesta è insegnarla a `gira()` **o** certificare B8 dal suo lanciatore | ~1 sessione |
+> | **2** | ⛔ **B13** — verificare la cura del frammento con un giro nuovo della sonda, **poi** buttare i registri sporchi (⛔ non prima: sarebbe rendere B13 verde buttando la prova). Resta `B13.4` | ~mezza sessione |
+> | **3** | ⛔ **B10** — il banco non esiste. ⭐ Il secondo utente `prova2` c'è, nasce dal provisioning, e **si autentica** (`AMMESSO` → `SESSIONE`) | ~1 sessione |
+> | **4** | ⭐ **La cosa strutturale**: `01-b12-lancia.sh` **riscrive a mano** il modo di lanciare ogni banco invece di usare il lanciatore del banco. È la radice di quasi tutti i falsi rossi di oggi, e di quel che manca a B8. Non muove il conto, rende economico il resto | ~1 sessione |
+> | **5** | ⚠ **P1 e P5 non sono nel catalogo di B12**: i banchi sono **14**, le voci **12** | ~mezza sessione |
+>
+> ⭐ **E c'è una regola nuova che vale più di ogni singolo punto**: *chi scrive un banco lo certifica
+> nello stesso giro*, o il conto non cala mai. Oggi ne sono entrati due senza che nessuno lo notasse.
+>
+> #### ⭐ GLI ATTREZZI NUOVI, e servono al prossimo giro
+>
+> - **`banchi/01-b0-terreno.sh`** — ⛔ *il server è quello che credo?* 14 controlli, gira **prima**
+>   di ogni certificazione, e B12 si rifiuta se non regge. ⭐ Nato perché **due volte oggi** un banco
+>   è stato verde su un terreno sbagliato, e una l'ho presa **per caso**.
+> - **`banchi/01-b0-chiamate.py`** — *chi chiama un banco gli passa quel che pretende?* Tre volte in
+>   due giorni un chiamante era rimasto indietro su un argomento obbligatorio.
+> - **`banchi/attrezzi-misura-marca.sh`** — innesta un guasto, cattura **tutta** l'uscita, e rimette
+>   a posto **ricostruendo** anche se il giro muore. ⭐ È quello che rende una certificazione un'ora
+>   invece di una mattinata.
+>
+> #### ⚠ QUEL CHE RESTA STORTO, detto invece che taciuto
+>
+> - ⛔ **La parola d'ordine è ancora nei registri sporchi** di `sonda/` e nella sessione salvata di
+>   due profili Firefox. Non cancellati **apposta**: prima va verificata la cura.
+> - ⛔ **I banchi prendono la parola d'ordine sulla riga di comando**, quindi finisce in `ps`. Per
+>   `parola-di-prova` è un compromesso dichiarato; **per la parola generata di `prova2` non lo è**.
+> - ⚠ **Il registro delle certificazioni va unito a mano** dopo ogni giro fatto sull'altra macchina.
+> - ⚠ **7 chiamate su 34 restano «IGNOTE»** a `01-b0-chiamate.py`: non sono un rosso e non sono un
+>   verde.
+> - ⚠ **Le mediane di B8 valgono 1984 ms**, non 2636. ⭐ E l'imputato è **PAM su tutt'e due i
+>   bersagli** — quindi quel ⚠ non è del nostro codice.
+>
+> #### ⚖️ E DUE COSE CHE ASPETTANO L'UTENTE
+>
+> 1. **I due ripieghi dichiarati**: un filo solo con PAM che blocca, e il tetto delle sessioni fissato
+>    in compilazione (16) dove la regola lo vuole configurabile (10). Da sciogliere prima della fase 2.
+> 2. ⭐ **Il giudizio.** Dieci minuti: apri l'indirizzo, guarda, e di' la tua. La pagina arriva a
+>    `SESSIONE` su **Chrome e Firefox**. È l'unica cosa in tutto l'elenco che nessun altro può fare.
+>
+> ---
+>
+> ### ⛔ SI RIPARTE DA QUI — l'11 agosto 2026 *(la mattina — tenuto perché spiega da dove si partiva)*
 >
 > #### ⭐⭐ IL PRODOTTO ESISTE: `src/`, il server della fase 1 in C
 >
