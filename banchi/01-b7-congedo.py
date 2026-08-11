@@ -148,6 +148,7 @@ import contextlib
 import importlib.util
 import os
 import re
+import signal
 import ssl
 import struct
 import sys
@@ -168,6 +169,13 @@ _spec = importlib.util.spec_from_file_location(
     "b3cliente", os.path.join(QUI, "01-b3-cliente.py"))
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
+
+# ⛔ E il profilo del BERSAGLIO: le differenze fra i due server stanno in un
+#    file solo, e i quattro banchi le leggono invece di scoprirle da capo.
+_spec_b0 = importlib.util.spec_from_file_location(
+    "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
+b0 = importlib.util.module_from_spec(_spec_b0)
+_spec_b0.loader.exec_module(b0)
 
 s, inquadra = b3.s, b3.inquadra
 
@@ -222,12 +230,45 @@ ESCLUSI = [
            "— lo misurano B5 e B8"),
     (0x08, "idem, RESPINTO (§4.4-bis) — ⛔ e provocarlo bloccherebbe questo "
            "indirizzo per almeno 30 s, cioe' avvelenerebbe B8 e B10 (B0.3)"),
-    (0x0C, "⛔ il server della fase 1 non ha un percorso di spegnimento: "
-           "`RCP_SERVER_IN_CHIUSURA` e' dichiarato in `rcp.h` e non compare "
-           "in nessuna riga di `rcp.c`.  ⚠ MISURATO qui sotto col grep, non "
-           "supposto — e contraddice `fasi/01-filo-nudo.md` B7, che lo "
-           "elenca fra «gli otto motivi che questa fase sa produrre»"),
+    (0x0C, "⛔ l'INNESTO non ha un percorso di spegnimento: "
+           "`RCP_SERVER_IN_CHIUSURA` non compare in nessuna riga di "
+           "`01-b3-rcp-innesta.py`.  ⚠ MISURATO qui sotto col grep, non "
+           "supposto.  ⭐ E su `--bersaglio prodotto` questa riga SPARISCE: "
+           "`src/main.c` congeda tutti con SERVER_IN_CHIUSURA prima di "
+           "uscire, e i provocabili diventano OTTO"),
 ]
+
+
+# ⛔⭐ IL DENOMINATORE DIPENDE DAL BERSAGLIO — ed e' la differenza fra i due
+#     server che si vede da un NUMERO invece che da un comportamento.
+#
+#       innesto    SETTE provocabili + otto  esclusi = 15
+#       prodotto   OTTO  provocabili + sette esclusi = 15
+#
+# ⛔ *«Il numero da scrivere accanto a un esito e' quello del bersaglio che si e'
+#    acceso»* (`fasi/01-filo-nudo.md` B7).  ⚠ E se B7 puntato al prodotto
+#    continuasse a dire «sette su sette», il denominatore sarebbe sbagliato e il
+#    banco starebbe guardando dall'altra parte: sarebbe un verde per costruzione,
+#    la forma piu' vuota che ci sia.
+def esclusi_di(bersaglio):
+    if b0.profilo(bersaglio)["spegnimento"]:
+        return [(c, perche) for c, perche in ESCLUSI if c != SERVER_IN_CHIUSURA]
+    return list(ESCLUSI)
+
+
+def casi_di(bersaglio, tutti=None):
+    """I casi che QUESTO bersaglio sa produrre.
+
+    ⛔ `server-in-chiusura` esiste solo contro il prodotto: contro l'innesto
+       resterebbe ad aspettare un congedo che nessuna riga di codice puo'
+       mandare, e il suo rosso accuserebbe il server di non fare una cosa che
+       nessuno gli ha mai insegnato."""
+    fuori = []
+    for c in (tutti if tutti is not None else CASI):
+        if c[1] == SERVER_IN_CHIUSURA and not b0.profilo(bersaglio)["spegnimento"]:
+            continue
+        fuori.append(c)
+    return fuori
 
 
 # ---------------------------------------------------------------------------
@@ -592,7 +633,7 @@ def certifica_lettori():
     return prove
 
 
-def certifica_denominatore(casi):
+def certifica_denominatore(casi, esclusi_lista=None):
     """⛔ M + gli esclusi devono fare quindici, e il conto lo fa il programma.
 
     Un numero scritto a mano in un commento e' il numero che nessuno
@@ -600,7 +641,8 @@ def certifica_denominatore(casi):
     tornava col file.
     """
     provocabili = {c[1] for c in casi}
-    esclusi = {c for c, _ in ESCLUSI}
+    esclusi = {c for c, _ in (esclusi_lista if esclusi_lista is not None
+                              else ESCLUSI)}
     doppi = provocabili & esclusi
     tutti = provocabili | esclusi
     if doppi:
@@ -618,26 +660,47 @@ def certifica_denominatore(casi):
 # ===========================================================================
 # ⛔ LE ESCLUSIONI SI MISURANO — quella di `SERVER_IN_CHIUSURA` soprattutto.
 # ===========================================================================
-def esclusione_misurata(sorgente):
-    """`RCP_SERVER_IN_CHIUSURA` non compare in `rcp.c`, e il grep sa contare.
+def esclusione_misurata(sorgenti):
+    """Quante volte `RCP_SERVER_IN_CHIUSURA` compare nei sorgenti DEL BERSAGLIO.
 
-    ⭐ Il controllo positivo e' nella stessa riga: `RCP_TEMPO_SCADUTO` in
-       `rcp.c` **c'e'**, e se il lettore non trovasse nemmeno quello il suo
-       «zero» non varrebbe niente (`LEZIONI.md` §1.9).
+    ⛔⭐ E I SORGENTI NON SONO `rcp.c`, o non solo.  Fino all'11 agosto 2026
+        questa funzione guardava `rcp.c` e basta — e `rcp.c` e' **identico byte
+        per byte nei due server** (md5 `cb7af778…`).  Puntata al prodotto
+        avrebbe detto «zero occorrenze», cioe' avrebbe dichiarato NON
+        producibile un motivo che il prodotto produce, e B7 avrebbe stampato
+        «7 su 7» su un server che ne fa otto.
+        ⚠ E' `LEZIONI.md` §1.9 corollario 5 in casa nostra: *un denominatore si
+        legge dove la cosa succede*.  Un percorso di spegnimento non puo' vivere
+        in `rcp.c`, che non sa nemmeno che esista un processo: sul prodotto vive
+        in `main.c`, `trasporto.c` e `webtransport.c`.
+
+    ⭐ Il controllo positivo resta nella stessa riga: `RCP_TEMPO_SCADUTO` c'e'
+       di sicuro, e se il lettore non trovasse nemmeno quello il suo «zero» non
+       varrebbe niente.
+
+    Torna `(quanti, testo)`, con `quanti = None` se non si e' potuto guardare.
     """
-    try:
-        with open(sorgente, encoding="utf-8", errors="replace") as f:
-            testo = f.read()
-    except OSError as e:
-        return None, f"⛔ `{sorgente}` non si legge: {e} — l'esclusione resta " \
-                     f"ASSERITA, non misurata"
-    quanti = testo.count("RCP_SERVER_IN_CHIUSURA")
-    controllo = testo.count("RCP_TEMPO_SCADUTO")
+    quanti, controllo, letti, mancati = 0, 0, [], []
+    for sorgente in sorgenti:
+        try:
+            with open(sorgente, encoding="utf-8", errors="replace") as f:
+                testo = f.read()
+        except OSError as e:
+            mancati.append(f"{os.path.basename(sorgente)} ({e.strerror})")
+            continue
+        quanti += testo.count("RCP_SERVER_IN_CHIUSURA")
+        controllo += testo.count("RCP_TEMPO_SCADUTO")
+        letti.append(os.path.basename(sorgente))
+    if mancati:
+        return None, (f"⛔ {len(mancati)} sorgenti su {len(sorgenti)} non si "
+                      f"leggono ({', '.join(mancati)}): l'esclusione resterebbe "
+                      f"ASSERITA invece che misurata")
     if controllo == 0:
         return None, ("⛔ il lettore non trova nemmeno `RCP_TEMPO_SCADUTO`, "
                       "che c'e' di sicuro: il suo «zero» non vale niente")
-    return quanti, (f"`RCP_SERVER_IN_CHIUSURA`: {quanti} occorrenze  ·  "
-                    f"controllo positivo `RCP_TEMPO_SCADUTO`: {controllo}")
+    return quanti, (f"`RCP_SERVER_IN_CHIUSURA`: {quanti} occorrenze in "
+                    f"{len(letti)} file ({', '.join(letti)})  ·  controllo "
+                    f"positivo `RCP_TEMPO_SCADUTO`: {controllo}")
 
 
 # ===========================================================================
@@ -968,6 +1031,85 @@ async def _(campo, es):
     es.provocato = True
     await asyncio.sleep(0.5)
     await guarda_il_posto(campo, es)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⛔ IL CASO CHE ESISTE SOLO CONTRO IL PRODOTTO — `SERVER_IN_CHIUSURA` 0x0C.
+#
+# *«E `0x0C` e' cambiato di soggetto la notte del 10 agosto, ed e' il primo
+# posto in cui i due server divergono in modo visibile: il prodotto un percorso
+# di spegnimento adesso ce l'ha — `src/main.c` congeda tutti con
+# `SERVER_IN_CHIUSURA` prima di uscire — mentre l'innesto no.»*
+# (`fasi/01-filo-nudo.md` B7.)
+#
+# ⛔ E' l'ottavo motivo provocabile, e senza di lui B7 puntato al prodotto
+#    direbbe «sette su sette» **guardando dall'altra parte**.
+#
+# ---------------------------------------------------------------------------
+# ⛔ COME SI PROVOCA, E PERCHE' IL BANCO UCCIDE IL PROPRIO SERVER
+#
+# `SERVER_IN_CHIUSURA` non si provoca con un byte storto: lo provoca un
+# `SIGTERM` al processo.  ⚠ Quindi questo caso **spegne il server**, e da lui in
+# poi non c'e' piu' niente da misurare: gira per ultimo, in un'invocazione sua,
+# e lo script di lancio riaccende il server apposta prima di chiamarlo.
+#
+# ⛔ E B0.5 — «dopo ogni prova il server dev'essere ancora li'» — qui NON si
+#    applica, e non e' una deroga comoda: e' l'unico caso in cui la morte del
+#    server E' la cosa provata.  Lo si dichiara, invece di lasciare che il
+#    controllo di B0.5 dia un rosso su un server che ha fatto quel che doveva.
+#
+# ---------------------------------------------------------------------------
+# ⛔ E IL SEGNALE SI MANDA A UN PID VERIFICATO, non a un numero
+#
+# `/proc/<pid>/comm` dice il nome del programma.  ⚠ Il file del PID puo' essere
+# di un'esecuzione precedente, i PID si riusano, e il rootfs di questo server
+# vive in RAM: al riavvio i numeri ripartono dal basso e quel numero indica **un
+# processo di sistema** (rilievo R8.13, gia' pagato su `01-b2-lancia-wt.sh`).
+# ⛔ Se il nome non e' quello atteso, il caso NON manda niente e si dichiara
+#    «prova non fatta» — che non e' «prova fallita».
+@caso("server-in-chiusura", SERVER_IN_CHIUSURA, VERSO_SC,
+      ("congedo", "chiusura"),
+      "⭐ SOLO CONTRO IL PRODOTTO: sessione aperta, poi SIGTERM al server. "
+      "§8.1 vieta di chiudere con un silenzio, e src/main.c congeda tutti con "
+      "0x0C e ASPETTA che i byte escano prima di uscire.  ⛔ Contro l'innesto "
+      "questo caso non esiste: aspetterebbe un congedo che nessuna riga puo' "
+      "mandare")
+async def _(campo, es):
+    a = campo.a
+    pid = getattr(a, "pid_server", 0)
+    if not pid:
+        es.fase = ("⛔ nessun --pid-server: non ho nessuno a cui mandare il "
+                   "segnale.  Prova NON FATTA, non prova fallita")
+        return
+    # ⛔ Chi e' quel PID?  Si chiede al nucleo, non si deduce (CODER.md §3.7).
+    try:
+        with open(f"/proc/{pid}/comm", encoding="utf-8") as fp:
+            comm = fp.read().strip()
+    except OSError as e:
+        es.fase = (f"⛔ /proc/{pid}/comm non si legge ({e.strerror}): il "
+                   f"processo non c'e' piu', oppure non e' mio.  Prova NON "
+                   f"FATTA — e non mando nessun segnale al buio")
+        return
+    if comm != "remotix":
+        es.fase = (f"⛔ il PID {pid} adesso e' «{comm}», non «remotix»: NON gli "
+                   f"mando niente.  I PID si riusano (R8.13), e un SIGTERM a un "
+                   f"processo di sistema non e' una misura")
+        return
+
+    cli = await campo.apri()
+    # ⛔ Si arriva a SESSIONE e non ad AMMESSO: il congedo di §8.1 deve
+    #    raggiungere una sessione VIVA, e una stretta di mano a meta' potrebbe
+    #    cadere per un tetto di §4.6 mentre aspettiamo.
+    await campo.sessione(cli)
+    es.fase = "provocazione: SIGTERM al server"
+    os.kill(pid, signal.SIGTERM)
+    es.provocato = True
+    # ⚠ L'attesa e' 12 s e non 3: `main.c` aspetta fino a **due secondi** che i
+    #   byte del congedo escano davvero, e `wt_batti` fa maturare la capsula di
+    #   §3.1 punto 3 mezzo secondo dopo che la coda si e' svuotata.  Un banco
+    #   che smettesse di guardare subito leggerebbe «nessuna chiusura» su un
+    #   server che sta ancora parlando.
+    await osserva(cli, es, attesa=12)
 
 
 # ===========================================================================

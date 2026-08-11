@@ -14,6 +14,26 @@ prodotto (punto 1 della sessione dell'11 agosto) li rifà nella forma che il pro
 scena dichiarata, controllo positivo, denominatore — e allora questi si buttano. **Fino a quel
 momento sono l'unica prova che quel giro è avvenuto.**
 
+---
+
+## ⭐ Il banco c'è, ed è `banchi/01-p1-prodotto.sh` — 11 agosto 2026, 04:55 UTC
+
+*Aggiunto dopo il primo giro verde. ⛔ **Non si butta ancora niente**, e sotto c'è la riga che dice
+esattamente quanto di questa cartella è stato sostituito e quanto no.*
+
+| attrezzo | lo rifà `01-p1-`? | |
+|---|---|---|
+| `avvia-server.sh` · `spegni.sh` | ✅ **sì** | l'accensione, il pid, lo spegnimento con TERM e il controllo che TERM sia bastato stanno in `01-p1-dentro.sh`, con **la porta 7448 dichiarata** e i file in `/srv/src/tmp/p1-*` invece che sparsi in `/srv/src/` |
+| `fumo.sh` | ✅ **sì, e corregge un difetto** | ⛔ `fumo.sh` ha **`PORTA=${2:-7447}`**: lanciato senza argomenti accende **il prodotto sulla porta dell'innesto**, e `bsslserver` è quello che 11 banchi su 14 si aspettano lì. `01-p1-` non prende la porta da un argomento: la 7448 è scritta dentro |
+| `check-env.sh` | ✅ **sì** | quel che c'è nel contenitore lo dichiara il banco, riga per riga, invece di stamparlo e basta |
+| `b11-fumo.py` | — | è di B11, non del prodotto |
+| ⛔ `filo.sh` | ❌ **no** | è la **stretta di mano RCP** col cliente di prova di B3 e l'arbitro di B4. `01-p1-` si ferma prima del filo, e lo dichiara: si autenticherebbe, e tre parole d'ordine sbagliate mettono l'indirizzo fuori 12 ore (B0.3) |
+| ⛔ `resto.sh` | ❌ **no** | rotazione del certificato, certificato dell'amministratore, ban + pagina + sblocco. ⚠ **E una sua gamba è già morta**: la riga 83 chiama `remotix --ban … --sblocca <ind>`, e quell'opzione **non esiste più** dal rilievo R12.1 — `[M]` l'11 agosto 2026: stampa la spiegazione ed esce **2**, e `resto.sh` non guarda lo stato d'uscita |
+
+⛔ **Quindi questa cartella non si butta**: `filo.sh` e `resto.sh` restano l'unica traccia di come si
+provano il filo e il ban contro il **prodotto**, e finché non esistono i banchi che li rifanno,
+buttarli toglierebbe una descrizione senza sostituirla.
+
 ## Gli attrezzi
 
 | file | che cosa fa | data |

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>P5 — la sonda S3: che cosa si perde, motore per motore</title>
+<!--
+  ===========================================================================
+  01-p5-tastiera.html — LA SONDA S3, e misura la domanda giusta
+
+  `SPECIFICHE.md` §7.3-bis, riscritta il 9 agosto 2026 dalla misura S3:
+
+      ⛔ «Gli stati sono TRE, non due»:
+           consegnata              arriva alla sessione, e basta
+           consegnata E RISERVATA  la sessione riceve la battuta E il browser
+                                   esegue il suo comando  ← il peggiore
+           non consegnata          il browser se la tiene
+
+      ⚠ «Da cui la misura non e' *arriva?* ma *arriva E BASTA?*  — una prova che
+        guarda solo il lato della sessione dichiara verde proprio il caso
+        peggiore.»
+
+  ⛔ QUINDI QUESTA PAGINA DA SOLA NON PUO' DARE IL VERDETTO, e va detto qui
+     dentro perche' nessuno la usi da sola: dall'interno del documento si vede
+     **se la battuta e' arrivata**, non **se il browser ha anche fatto la sua**.
+     Il secondo testimone e' fuori — `01-p5-tastiera.sh` conta le finestre con
+     `xdotool` prima e dopo ogni combinazione — e i due insieme distinguono i
+     tre stati.  Questa pagina contribuisce anche il suo pezzo di prova sul
+     riservato: `blur` e `visibilitychange`, cioe' il fuoco che se ne va.
+
+  ===========================================================================
+  ⛔ LA SCENA, DICHIARATA — e questa scena NON e' quella dell'utente
+
+  Il giro gira su uno **Xvfb senza gestore di finestre**.  Conseguenze, e sono
+  limiti della misura, non risultati:
+
+    - `alt+Tab`, e ogni combinazione col tasto Meta/Super, le intercetterebbe
+      il gestore di finestre: qui non c'e' nessuno che le prenda, quindi quel
+      che si legge **non rappresenta il desktop dell'utente**.  Sono marcate
+      `scena=senza-gestore-finestre` e non entrano nel verdetto.
+    - lo schermo intero e la Keyboard Lock vogliono un gesto dell'utente e uno
+      schermo vero: qui si dichiara **che cosa l'API espone**, che e' un fatto
+      del motore, e **non** che la lock funzioni.
+
+  ⭐ Ed e' il senso di questo punto: `web.md` §7 dice che ogni misura va fatta
+     **sul dispositivo vero** (forma d'errore E10).  Questa e' la meta' che il
+     portatile puo' dare; la meta' su DeX resta non misurata, e la pagina lo
+     scrive da se' nel registro invece di lasciarlo dedurre.
+
+  ===========================================================================
+  ⛔ E L'ELENCO DELLE COMBINAZIONI STA IN UN POSTO SOLO — qui dentro
+
+  Il pilota (`01-p5-tastiera.sh`) NON ha una sua copia dell'elenco: lo legge
+  dal registro, dalla riga `ELENCO` che questa pagina spedisce appena nasce.
+  Due elenchi che si possono disallineare sono due misure diverse sotto la
+  stessa etichetta (forma E2), e il giorno che se ne aggiunge una il banco
+  proverebbe la combinazione A dichiarando la B.
+-->
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem; background: #101418; color: #e6edf3; }
+  h1 { font-size: 1.1rem; }
+  #stato { font-size: 2rem; margin: 1rem 0; }
+  table { border-collapse: collapse; font-size: .85rem; }
+  td, th { border: 1px solid #30363d; padding: .2rem .5rem; text-align: left; }
+  .si { color: #3fb950; } .no { color: #f85149; }
+</style>
+</head>
+<body tabindex="0">
+<h1>P5 · sonda S3 — le scorciatoie che il browser si tiene</h1>
+<div id="stato">in attesa</div>
+<div id="api"></div>
+<table id="tabella"><thead><tr><th>#</th><th>battuta</th><th>key</th><th>code</th><th>modificatori</th></tr></thead><tbody></tbody></table>
+
+<script>
+"use strict";
+
+/* ── Il marchio del giro: lo passa il pilota, e ogni riga lo porta. ────────
+   ⛔ Senza, «l'ultima riga» tornerebbe a voler dire «la riga di questa prova»,
+      che e' il rilievo R8.10 di B2 e che questo progetto ha gia' pagato due
+      volte in due sere.                                                     */
+const PAR = new URLSearchParams(location.search);
+const GIRO = PAR.get("giro") || "senza-giro";
+
+/* ── L'ELENCO, e sta in un posto solo ─────────────────────────────────────
+   Ogni voce: il nome per `xdotool`, che cosa il motore dovrebbe farne, e se
+   entra nel verdetto oppure e' solo dichiarata.
+
+   ⚠ `distruttiva: true` vuol dire «questa puo' portarsi via la scheda o la
+     pagina»: vanno in coda, e se dopo di loro non arriva piu' niente non e'
+     un guasto della sonda — e' quel che la combinazione ha fatto.           */
+const ELENCO = [
+  { xdo: "ctrl+l",        che: "barra dell'indirizzo",        verdetto: true  },
+  { xdo: "ctrl+f",        che: "trova nella pagina",          verdetto: true  },
+  { xdo: "ctrl+p",        che: "stampa",                      verdetto: true  },
+  { xdo: "ctrl+s",        che: "salva",                       verdetto: true  },
+  { xdo: "ctrl+d",        che: "aggiungi ai preferiti",       verdetto: true  },
+  { xdo: "ctrl+h",        che: "cronologia",                  verdetto: true  },
+  { xdo: "ctrl+j",        che: "scaricati",                   verdetto: true  },
+  { xdo: "ctrl+u",        che: "sorgente della pagina",       verdetto: true  },
+  { xdo: "ctrl+shift+i",  che: "strumenti di sviluppo",       verdetto: true  },
+  { xdo: "ctrl+shift+c",  che: "ispeziona elemento",          verdetto: true  },
+  { xdo: "ctrl+shift+j",  che: "console",                     verdetto: true  },
+  { xdo: "ctrl+Tab",      che: "scheda successiva — ⛔ su Firefox e' il caso «consegnata E riservata» di §7.3-bis", verdetto: true },
+  { xdo: "ctrl+1",        che: "prima scheda",                verdetto: true  },
+  { xdo: "ctrl+plus",     che: "ingrandisci",                 verdetto: true  },
+  { xdo: "ctrl+minus",    che: "rimpicciolisci",              verdetto: true  },
+  { xdo: "ctrl+0",        che: "zoom a 100 %",                verdetto: true  },
+  { xdo: "F1",            che: "aiuto",                       verdetto: true  },
+  { xdo: "F3",            che: "trova successivo",            verdetto: true  },
+  { xdo: "F6",            che: "sposta il fuoco nella cornice", verdetto: true },
+  { xdo: "F7",            che: "navigazione col cursore",     verdetto: true  },
+  { xdo: "F12",           che: "strumenti di sviluppo",       verdetto: true  },
+  { xdo: "Escape",        che: "annulla",                     verdetto: true  },
+  { xdo: "alt+Left",      che: "indietro",                    verdetto: true  },
+  { xdo: "alt+Home",      che: "pagina iniziale",             verdetto: true  },
+  { xdo: "alt+Tab",       che: "cambia finestra",             verdetto: false,
+    perche: "senza gestore di finestre non c'e' nessuno che la intercetti: la scena non e' quella dell'utente" },
+  { xdo: "super",         che: "tasto Meta",                  verdetto: false,
+    perche: "idem, e su Android/DeX la regola AOSP se le tiene tutte (§7.3-bis)" },
+  /* ── la coda distruttiva: dopo queste la pagina puo' non esserci piu' ── */
+  { xdo: "F11",           che: "schermo intero",              verdetto: true,  distruttiva: true },
+  { xdo: "ctrl+t",        che: "scheda nuova",                verdetto: true,  distruttiva: true },
+  { xdo: "ctrl+n",        che: "finestra nuova",              verdetto: true,  distruttiva: true },
+  { xdo: "F5",            che: "ricarica",                    verdetto: true,  distruttiva: true },
+  { xdo: "ctrl+r",        che: "ricarica",                    verdetto: true,  distruttiva: true },
+  { xdo: "ctrl+w",        che: "chiudi la scheda",            verdetto: true,  distruttiva: true },
+];
+
+const $ = (i) => document.getElementById(i);
+
+/* ⛔ Ogni riga esce SUBITO, una per fatto.  Non si accumula per spedire un
+      riassunto alla fine: le ultime combinazioni dell'elenco chiudono la
+      scheda, e un riassunto finale non partirebbe mai — cioe' il banco
+      perderebbe proprio i casi che la coda distruttiva esiste per misurare.  */
+function manda(riga) {
+  riga.banco = "P5-S3";
+  riga.giro = GIRO;
+  riga.motore = navigator.userAgent;
+  riga.bersaglio = "FINTO — nessun server del prodotto in gioco: questa sonda misura il BROWSER";
+  const testo = JSON.stringify(riga);
+  /* `sendBeacon` sopravvive alla chiusura della scheda; `fetch` e' il ripiego
+     dichiarato per il caso in cui non ci sia. */
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon("/esito", new Blob([testo], { type: "application/json" }));
+  } else {
+    fetch("/esito", { method: "POST", body: testo, keepalive: true,
+                      headers: { "Content-Type": "application/json" } });
+  }
+}
+
+/* ── Che cosa il motore ESPONE ────────────────────────────────────────────
+   ⛔ «L'API c'e'» non e' «la lock funziona»: e' la lezione di `web.md` §9.1 —
+      una promessa di un'API va trattata come la dichiarazione di un
+      compositore.  Qui si dichiara solo la presenza, ed e' scritto nel campo. */
+const api = {
+  tipo: "API",
+  isSecureContext: !!window.isSecureContext,
+  keyboard_esiste: !!(navigator.keyboard),
+  keyboard_lock_esiste: !!(navigator.keyboard && navigator.keyboard.lock),
+  keyboard_getLayoutMap: !!(navigator.keyboard && navigator.keyboard.getLayoutMap),
+  keyboardLock_nuova_forma: (typeof navigator.keyboardLock !== "undefined"),
+  clipboard_read: !!(navigator.clipboard && navigator.clipboard.read),
+  clipboard_write: !!(navigator.clipboard && navigator.clipboard.write),
+  fullscreenEnabled: !!document.fullscreenEnabled,
+  webtransport: (typeof WebTransport !== "undefined"),
+  nota: "presenza dell'API, NON funzionamento — §7.3-bis e web.md §9.1",
+};
+manda(Object.assign({}, api));
+$("api").textContent = JSON.stringify(api);
+
+/* L'elenco esce per primo: e' il contratto fra la pagina e il pilota. */
+manda({ tipo: "ELENCO", elenco: ELENCO,
+        nota: "l'elenco vive QUI e in nessun altro posto (forma E2)" });
+
+/* ── Il fuoco che se ne va: il pezzo di prova della pagina sul RISERVATO ──
+   Se dopo una combinazione la pagina perde il fuoco o diventa nascosta, il
+   browser ha fatto qualcosa di suo — anche quando la battuta e' arrivata.    */
+let ultima = null;
+function segnala_fuoco(che) {
+  manda({ tipo: "FUOCO", evento: che, visibile: document.visibilityState,
+          ha_il_fuoco: document.hasFocus(), dopo: ultima });
+}
+addEventListener("blur", () => segnala_fuoco("blur"));
+addEventListener("focus", () => segnala_fuoco("focus"));
+document.addEventListener("visibilitychange", () => segnala_fuoco("visibilitychange"));
+
+/* ── Le battute ───────────────────────────────────────────────────────────
+   ⛔ `preventDefault()` si chiama SEMPRE: e' quel che farebbe la sessione
+      remota, e senza di esso si misurerebbe una pagina che non prova nemmeno
+      a tenersi la battuta.  ⚠ E il suo esito **non e' osservabile da qui**:
+      una combinazione riservata dal browser arriva lo stesso e il
+      `preventDefault` non la ferma.  E' precisamente il secondo stato di
+      §7.3-bis, e lo vede il pilota da fuori.                                */
+let quante = 0;
+addEventListener("keydown", (ev) => {
+  ev.preventDefault();
+  quante++;
+  ultima = ev.key;
+  const riga = {
+    tipo: "BATTUTA",
+    n: quante,
+    key: ev.key,
+    code: ev.code,
+    ctrl: ev.ctrlKey, alt: ev.altKey, shift: ev.shiftKey, meta: ev.metaKey,
+    repeat: ev.repeat,
+    isTrusted: ev.isTrusted,
+    /* ⛔ Il denominatore della battuta: `cancelable` false vorrebbe dire che
+       nemmeno provare a tenersela era possibile, ed e' un fatto diverso da
+       «non e' arrivata». */
+    cancelable: ev.cancelable,
+    visibile: document.visibilityState,
+  };
+  manda(riga);
+  $("stato").textContent = quante + " — " + ev.key;
+  const tr = document.createElement("tr");
+  tr.innerHTML = "<td>" + quante + "</td><td>" + ev.key + "</td><td>" + ev.key +
+    "</td><td>" + ev.code + "</td><td>" +
+    (ev.ctrlKey ? "ctrl " : "") + (ev.altKey ? "alt " : "") +
+    (ev.shiftKey ? "shift " : "") + (ev.metaKey ? "meta " : "") + "</td>";
+  $("tabella").tBodies[0].appendChild(tr);
+}, true);
+
+/* ⛔ E si dichiara di essere VIVI, con il conto delle battute finora: senza,
+      «la pagina non ha registrato niente» e «la pagina non c'e' piu'» hanno lo
+      stesso aspetto — ed e' esattamente quel che le combinazioni distruttive
+      producono.                                                             */
+setInterval(() => manda({ tipo: "VIVA", battute_finora: quante }), 2000);
+manda({ tipo: "PRONTA", nota: "la pagina e' nata e sa spedire" });
+document.body.focus();
+</script>
+</body>
+</html>

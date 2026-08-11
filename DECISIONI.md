@@ -894,6 +894,53 @@ sessione aperta) e continuare quando la situazione migliora».*
 È l'invariante I4 di v1 (`palco.c`, 1.545 righe, fra il codice che sopravvive), qui promossa
 da dettaglio implementativo a **comportamento promesso all'utente**.
 
+### 4.1-bis ✅ ⭐ Il server non butta fuori una sessione sana — e ogni chiusura sua ha un motivo che sa spiegare
+
+*Decisa dall'utente l'**11 agosto 2026**, in coda alla decisione §7.14: «il server non deve
+attaccare. È l'utente che decide di fare il logout oppure chiude il client (la scheda del browser)».*
+
+⛔ **A chiudere è l'utente.** Il server non termina **mai** una sessione che sta funzionando: chi se
+ne va, se ne va perché ha deciso di andarsene — con il logout o chiudendo la scheda. È §4.1 vista
+dall'altro lato: là la sessione **sopravvive** al client, qui il server **non la porta via**.
+
+> ### ⚠ E la formulazione stretta è stata scelta sapendo quale scartava
+>
+> *Le due letture sono state messe davanti all'utente l'11 agosto, e ha scelto la prima.*
+>
+> | | |
+> |---|---|
+> | ✅ **scelta** | *il server non butta fuori una sessione **sana**; chiude solo per un motivo che sa spiegare* |
+> | ❌ **scartata** | *il server non chiude **mai**, in nessun caso* — ⛔ e cadrebbero il ban di §1.9, il rifiuto delle credenziali, la regola di rigore di `RCP.md` §3 e i tre tetti di §4.6, cioè quattro difese di cui **tre decise dall'utente stesso** |
+
+⭐ **Che cosa questa regola vieta davvero, ed è più di quanto sembri**: vieta la chiusura **senza
+motivo dicibile**. Non esiste una sessione che finisce «perché sì», né una che finisce con un
+numero al posto di una frase. ⛔ Ogni percorso in cui il server chiude **deve** portarsi dietro un
+motivo di `RCP.md` §8.2 **e** la frase che l'utente legge — e se un percorso non ce l'ha, quel
+percorso è un difetto, non una svista.
+
+**Le chiusure che restano, e ciascuna ha il suo motivo dicibile:**
+
+| chi chiude | perché resta |
+|---|---|
+| il ban dopo tre tentativi (`§1.9`, `RCP.md` §4.4-bis) | ⭐ **deciso dall'utente il 10 agosto**, e chi è bannato **vede una pagina che glielo dice** |
+| le credenziali sbagliate — `RESPINTO` | è il congedo dell'autenticazione, `RCP.md` §4.4 |
+| la regola di rigore — `ERRORE_PROTOCOLLO` | `RCP.md` §3: chi riceve qualcosa che non capisce **deve** chiudere, o un difetto passa inosservato |
+| i tre tetti della stretta di mano — `TEMPO_SCADUTO` | `RCP.md` §4.6, e sono **prima** che una sessione esista: non c'è ancora niente di sano da buttare fuori |
+| l'utente è già collegato altrove — `GIA_ATTIVA_REMOTA` | invariante I2 |
+| ⚠ **lo stacco a 30 minuti senza input** (`§4.3`) e **la chiusura a 6 ore** (`§4.2`) | ⛔ **decise dall'utente l'8 agosto**, e sono le due che sembrano contraddire questa regola e non la contraddicono: la prima **stacca il client e lascia viva la sessione**, la seconda raccoglie le risorse di una sessione che **non dà segni di vita da sei ore** — cioè non è più «sana», è abbandonata |
+
+⛔ **E questa regola si misura, non si dichiara.** Il banco che la verifica esiste già ed è **B7**:
+provoca ogni motivo di congedo e controlla che arrivi **dal lato che lo riceve**, con una frase
+distinta per ciascuno. ⭐ Da oggi B7 non conta più solo *«sette motivi su sette»*: ⛔ **è il banco di
+questa decisione**, e il suo denominatore è *«quanti percorsi di chiusura ha il server»* — non
+*«quanti ne conosco»*. Un percorso che chiude senza un motivo dicibile **non compare** in un banco
+che parte dall'elenco dei motivi: si trova solo partendo dal codice.
+
+⚠ **Tocca `DECISIONI.md` §7.17, che è ancora ❓**: una sessione WebTransport che non apre mai il
+canale di controllo oggi **non ha addosso nessun tetto** e resta lì per sempre. Non è una sessione
+sana — non è una sessione affatto — quindi questa regola non la protegge. **Ma quanto possa restare
+lì resta da decidere**, e non lo decide questa riga.
+
 ### 4.2 ✅ Dopo 6 ore senza segni di vita la sessione viene chiusa
 
 *8 agosto 2026, proposta dall'utente.* Il valore resta, e con §4.3 il suo mestiere è chiarito:
@@ -2364,10 +2411,89 @@ lo aveva dato per inesistente.
 >
 > ⚠ **E dall'11 agosto 2026 sono quattro**: §7.17 è nata il giorno dopo, **da una misura** — il banco
 > B6 — e non da una lettura. Vale per lei tutto quel che è scritto qui sopra.
+>
+> ---
+>
+> ## ✅⭐ **TUTTE E QUATTRO SONO CHIUSE — l'11 agosto 2026**, e le ha chiuse l'utente
+>
+> | | la risposta | e che cosa ha portato con sé |
+> |---|---|---|
+> | **§7.14** | *«silenzio»* | chi riceve un `FIN` non spedisce più niente. ⛔ E `RCP.md` §8.1 guadagna l'eccezione: **chi ha ricevuto un `FIN` non è «chi chiude»** |
+> | **§7.15** | *«se si può»* | il `CONGEDO` cade quando il canale è morto; il motivo resta nel codice di chiusura. ⭐ Chiude un **rosso su codice giusto** che B5 e B11 avrebbero dato |
+> | **§7.16** | *«si tiene per i test, nel prodotto si fa pulizia»* | ⭐ e la risposta è stata **più larga della domanda**: è nato un principio — `SPECIFICHE.md` §2 punto 6, *sullo schermo dell'utente c'è il suo desktop e nient'altro* — con la pulizia da misurare alla fase 13 |
+> | **§7.17** | *«5 secondi»* | ⛔ l'ultimo modo di **occupare un posto senza dire chi si è** |
+>
+> ⭐ **E tre di esse si incastrano su un caso solo**: il tetto di §7.17 scatta quando il canale di
+> controllo non esiste ancora, quindi §7.15 dice che il `CONGEDO` non si manda e §7.14 dice per dove
+> passa il motivo. ⚠ *Decise separatamente, nell'arco di un'ora, e nessuna delle tre sarebbe stata
+> difendibile da sola.*
+>
+> ⛔ **Nessuna delle quattro è ancora provata sul ferro.** §7.17 chiede a **B6** un quarto caso,
+> §7.14 chiede tre correzioni a `src/pagina.html` (righe 431, 479, 514, dove il prodotto fa oggi il
+> contrario), §7.16 chiede un banco alla fase 13. **Decise ≠ misurate**, e finché non lo sono la
+> distanza si dichiara.
 
-### 7.14 ❓ Il `FIN` sul canale di controllo: chi lo riceve può ancora congedarsi?
+### 7.14 ✅ Il `FIN` sul canale di controllo: chi lo riceve **tace**
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.22**. Riguarda `RCP.md` §4.2 e §8.1.*
+> ## ✅ **IL SILENZIO** — deciso dall'utente l'**11 agosto 2026**
+>
+> *«silenzio, anche perché il server non attacca mai di sua iniziativa»*
+>
+> ⛔ **Chi riceve un `FIN` sul canale di controllo non spedisce più niente, nemmeno lì.** Il motivo
+> viaggia per la seconda strada di `RCP.md` §3.1 punto 3 — il codice d'errore applicativo della
+> chiusura — che non ha bisogno di un canale vivo.
+>
+> ### ⛔ La premessa era falsa, e va scritta qui perché è quella con cui la decisione è stata presa
+>
+> *«Il server non attacca mai di sua iniziativa»* **non regge**: attaccare di sua iniziativa è il
+> comportamento **più misurato** della fase 1.
+>
+> | quando il server chiude da solo | quanto è provato |
+> |---|---|
+> | scade uno dei tetti di §4.6 | `[M]` **B6**: tutti e tre visti scattare — **5,0 · 60,1 · 10,0 s** — col congedo `TEMPO_SCADUTO` |
+> | arriva una violazione | `[M]` **B5**: **36 casi su 36**, e dopo ciascuno una connessione nuova arriva a `ECCOMI` |
+> | credenziali, ban, posto occupato | `RESPINTO` (§4.4) · `TROPPI_TENTATIVI` (§4.4-bis) · `GIA_ATTIVA_REMOTA` (§8.2) |
+> | e il caso da cui nasce la domanda | ⛔ il **quarto difetto di B11** era *«il posto non si libera quando a chiudere il canale è il SERVER»*, `[M]` su Chrome |
+>
+> ⭐ **La decisione non cambia, e la ragione vera la rende più forte**: proprio perché il server
+> chiude spesso, quel che fa chi riceve conta — e a scegliere è la misura, non la rarità del caso.
+> ⚠ *Scritto così, e non «come ha detto l'utente», perché una ragione falsa in un registro delle
+> decisioni vale più a lungo della decisione: è la forma **E5**, un fatto che era una deduzione mai
+> misurata.*
+>
+> ⭐ **E la premessa non è finita lì: è diventata una regola.** Messa davanti alla contraddizione,
+> l'utente ha scelto la forma stretta — *il server non butta fuori una sessione **sana**, e ogni sua
+> chiusura ha un motivo che sa spiegare* — e non quella larga, che avrebbe portato via il ban, il
+> rifiuto delle credenziali e la regola di rigore. ⇒ **`DECISIONI.md` §4.1-bis**, ✅ 11 agosto 2026.
+> ⚠ *Cioè: la frase era falsa come descrizione di quel che il server fa **oggi**, ed era giusta come
+> descrizione di quel che il server **deve** fare. Le due cose si somigliano abbastanza da passare
+> per la stessa, e in un registro delle decisioni non lo sono.*
+>
+> ### La ragione che regge, ed è una misura
+>
+> `[M]` **10 agosto 2026**, difetto 2 di **B11**: **Chrome butta un messaggio spedito subito prima
+> di chiudere la sessione.** Il `CONGEDO` della lettura B sarebbe dunque un **DEVE che un motore su
+> due non può onorare** — la forma che il rilievo **R1.4** ha già dichiarato difetto. La seconda
+> strada di §3.1 punto 3, invece, ⭐ **ha funzionato su tutt'e due i motori**, e su Firefox è
+> **l'unica** che porti il motivo (il congedo arriva per due strade diverse, una per motore).
+>
+> ### Dove la decisione è andata, e il prezzo è pagato per intero
+>
+> | | |
+> |---|---|
+> | `RCP.md` §4.2 | il divieto passa da *«sugli altri canali»* a **«su nessun canale, compreso quello di controllo»** |
+> | ⛔ `RCP.md` §8.1 | **l'eccezione scritta**: *chi ha ricevuto un `FIN` non è «chi chiude»*. ⚠ Senza di lei §4.2 vieta il byte e §8.1 lo impone: la decisione avrebbe **spostato** la contraddizione invece di chiuderla |
+> | ⭐ `banchi/01-b11-lancia.sh` | il caso `fin-sul-controllo` aveva già l'atteso *«muta»*: ⛔ **il banco applicava questa lettura senza che nessuna riga la dicesse**, ed è la ragione per cui la domanda era stata posta |
+> | ⛔ `src/pagina.html` **righe 431, 479, 514** | ⛔ **il prodotto fa oggi il CONTRARIO**: in tutt'e tre i punti, quando il server chiude il canale senza rispondere, la pagina chiama `congeda(ERRORE_PROTOCOLLO, …)` — cioè manda i nove byte. `[M]` 11 agosto 2026, letto nel sorgente. **Tre difetti da curare**, e la cura è togliere la chiamata lasciando l'`esito(...)` |
+>
+> ⚠ **E una cosa che la cura NON deve portarsi via**: quei tre punti chiamano `congeda()` anche per
+> **scrivere l'esito all'utente**. Chi toglie la riga senza guardare toglie anche la frase che dice
+> *«il server ha chiuso senza rispondere»*, e il sintomo diventa una pagina che non spiega niente —
+> che è precisamente ciò che §8.2 vieta.
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.22**. Riguarda `RCP.md` §4.2 e §8.1. Le due
+letture qui sotto sono lasciate come stavano: ⛔ una decisione senza l'alternativa che ha scartato
+non si può rimettere in discussione quando i fatti cambiano.*
 
 **Il fatto.** §4.2 dice: *«un `FIN` su quello stream, da una qualunque delle due parti, chiude la
 sessione. Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire **sugli
@@ -2401,9 +2527,36 @@ al testo quanto il primo»*. ⚠ E il prezzo di A va pagato per intero: senza l'
 **Come si chiude:** una parola — *«silenzio»* o *«congedo»*. Poi §4.2 dice se il `FIN` ricevuto
 chiuda anche il verso di chi lo riceve, e §8.1 recepisce l'eccezione o la perde.
 
-### 7.15 ❓ Il congedo di §8.1: obbligo senza condizioni, o con la condizione di §3.1?
+### 7.15 ✅ Il congedo di §8.1 vale **se il canale è ancora utilizzabile**
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.23**. Riguarda `RCP.md` §8.1 e §3.1 punto 2.*
+> ## ✅ **LA CONDIZIONE** — decisa dall'utente l'**11 agosto 2026**
+>
+> *«la soluzione più logica è "se si può". Se una connessione cade nessuno può dire al server
+> "chiudo perché ho finito"»*
+>
+> ⛔ **L'obbligo del `CONGEDO` sul canale di controllo cade quando il canale non è utilizzabile.**
+> Quel che non cade mai è il motivo dentro il **codice d'errore applicativo della chiusura**
+> (`RCP.md` §3.1 punto 3), che viaggia nella chiusura stessa e parte anche a canale morto.
+>
+> ⭐ **E la ragione dell'utente è la ragione giusta, senza correzioni**: un `DEVE` che non si può
+> rispettare non è una regola. `RCP.md` §0 lo dice di sé — *se una riga qui è ambigua, è un difetto
+> di questo file* — e questa lo era: §8.1 lo imponeva senza condizioni, §3.1 punto 2 con la
+> condizione, ⛔ e **un'implementazione conforme all'una era in violazione dell'altra**.
+>
+> ### Dove è andata, e che cosa ha chiuso
+>
+> | | |
+> |---|---|
+> | `RCP.md` §8.1 | la riga normativa porta la condizione dentro, e il riquadro dice perché |
+> | ⭐ **un rosso su codice giusto** | **B5** e **B11** applicavano già il condizionale (rilievo R3.3): un banco scritto sulla forma assoluta **avrebbe bocciato un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale col controllo già finito |
+> | ⚠ **e non indebolisce §4.1-bis** | *ogni chiusura del server ha un motivo che sa spiegare*, decisa lo stesso giorno: il motivo arriva comunque. ⛔ Quel che si perde è **il byte sul canale morto**, cioè un byte che non partiva |
+>
+> ⛔ **Le due decisioni dell'11 agosto non si sostituiscono**: §7.15 dice **quando** l'obbligo cade,
+> §7.14 dice **chi** non è tenuto affatto. Dopo un `FIN` ricevuto il canale, nel verso di chi lo ha
+> ricevuto, **è ancora utilizzabile** — quindi senza §7.14 la condizione di §7.15 non lo salverebbe.
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.23**. Riguarda `RCP.md` §8.1 e §3.1 punto 2. Le
+due letture qui sotto restano come stavano.*
 
 **Il fatto.** §8.1: *«Chi chiude **DEVE** mandare `CONGEDO` con un motivo prima di chiudere la
 sessione»*, e l'unica eccezione dichiarata è `RESPINTO`. §3.1 punto 2, per la stessa cosa:
@@ -2432,10 +2585,49 @@ di chiusura anche quando il canale è morto. ⛔ **E costa una frase in §8.1, z
 **non** chiude §7.14: dopo un `FIN` ricevuto il canale di controllo, **nel verso di chi lo ha
 ricevuto**, è ancora utilizzabile — ed è esattamente il punto che §7.14 chiede.
 
-### 7.16 ❓ `RCP.md` §7.5, la funzione di banco: era una decisione tua?
+### 7.16 ✅ La funzione di banco resta 🔸 — e ⭐ **fuori dal prodotto consegnato**
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.15**. Intanto la riga sta in §1.5 riga 26, ed è
-🔸 — non ✅.*
+> ## ✅ **DUE CASI DISTINTI** — deciso dall'utente l'**11 agosto 2026**
+>
+> *«Nessun quadratino: l'utente deve vedere il desktop senza artefatti, come se fosse davanti al
+> monitor del PC» → e poi, messo davanti al prezzo: «distinguiamo i 2 casi: si tiene quello che
+> serve per i test, ma poi nel prodotto finale si fa pulizia».*
+>
+> ⛔ **Il principio, ed è più grande della domanda che era stata posta**: sullo schermo dell'utente
+> non compare **mai** niente che non sia il suo desktop. Non «spento per predefinito», non «dietro
+> un interruttore»: **assente**. Chi si collega deve vedere quel che vedrebbe stando davanti al
+> monitor del PC, e nient'altro.
+>
+> ⭐ **E la funzione di banco sopravvive, dall'altra parte del confine**: serve a **tarare il
+> cronometro** del ritardo alla fase 3 — si inietta un ritardo noto e si verifica che la mediana
+> salga di esattamente quello. ⛔ *«Un banco che non lo fa non sa di misurare»*
+> (`web/rapporti/S4-ritardo-disegno.md` §4.2, controllo P1): toglierla del tutto avrebbe lasciato
+> il numero più importante del progetto — il tetto dei 50 ms — **senza un modo di sapere se è
+> vero**.
+>
+> ### Che cosa vuol dire, in concreto
+>
+> | | |
+> |---|---|
+> | **la marca resta 🔸** | non era una decisione dell'utente, e ⛔ **si può togliere senza tornare da lui**. Quel che l'utente ha deciso è il **confine**, non il messaggio |
+> | ⛔ **il prodotto consegnato non la contiene** | non compilata, non raggiungibile, **non presente nel binario**. ⚠ *«Spenta»* non basta più: era la forma di prima, e questa decisione la sostituisce |
+> | **il banco sì** | la costruzione di prova la contiene, e i due tipi `0x000F`/`0x0010` restano in `RCP.md` §7.5 come **funzione di banco dichiarata**, non come funzione del prodotto |
+> | ⛔ **e la differenza si misura** | *«non c'è»* e *«c'è ed è spenta»* hanno lo stesso aspetto da fuori: si distinguono **cercando le marche dentro il binario consegnato**, come fa già `banchi/01-p1-prodotto.sh` con le sue otto marche. Senza quella prova, questa decisione è una buona intenzione |
+>
+> ### ⛔ Dove morde, e non è oggi
+>
+> **Fase 13 — il confezionamento.** È lì che nasce il binario che si installa, ed è lì che questa
+> decisione si rispetta o si perde. ⚠ *Scritta anche in `PIANO.md` fase 13 e in `RCP.md` §7.5,
+> perché una regola che vale fra undici fasi e sta scritta in un posto solo è una regola che nessuno
+> troverà il giorno che serve.*
+>
+> ⚠ **E una cosa che questa decisione NON dice**: che la funzione di banco fosse un problema. Nasce
+> **spenta**, e `banchi/01-b5-violazioni.py` verifica che a funzione spenta il server **rifiuti**
+> dichiarando `FUNZIONE_SPENTA`. Il difetto non c'era: l'utente ha alzato l'asticella da *«non si
+> vede»* a *«non c'è»*.
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.15**. La riga sta in §1.5 riga 26, ed è 🔸 — non
+✅. La domanda com'era posta resta qui sotto.*
 
 **Il fatto.** `RCP.md` §7.5 aggiunge al protocollo **due tipi di messaggio** — `BANCO_MARCA`
 (`0x000F`) e `BANCO_ESITO` (`0x0010`) — e §7.5 dichiara di venire dal **rilievo R3.4** della
@@ -2464,10 +2656,40 @@ la domanda è *se l'hai detta*.
 **Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
 *«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
 
-### 7.17 ❓ La sessione che non apre mai il canale di controllo: quanto può restare lì?
+### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
+
+> ## ✅ **CINQUE SECONDI** — deciso dall'utente l'**11 agosto 2026**
+>
+> ⛔ **Dall'apertura della sessione WebTransport all'apertura del canale di controllo passano al
+> massimo 5 s**, poi il server chiude con `TEMPO_SCADUTO` `0x0D`. ⇒ `RCP.md` §4.6, la riga che
+> mancava.
+>
+> ⭐ **Perché 5 s, cioè lo stesso numero del primo tetto**: aprire il canale è il **primo atto
+> obbligatorio** della sessione (`RCP.md` §2.5), non dipende da quanto è veloce a digitare una
+> persona, e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
+>
+> ⛔ **Che cosa chiude**: era **l'ultimo modo, in questa fase, di occupare un posto senza dire chi
+> si è**. ⚠ E il tempo di inattività di QUIC non lo copriva — quello conta il **silenzio**, e una
+> sessione che scrive su un altro stream non è silenziosa: teneva il posto **a tempo
+> indeterminato**.
+>
+> ### ⭐ E qui le quattro decisioni dell'11 agosto si incastrano
+>
+> | | |
+> |---|---|
+> | **§7.15** | il canale di controllo non esiste ancora, quindi il `CONGEDO` **non si manda**: senza la condizione decisa un'ora prima, questa riga imporrebbe un byte su un canale mai nato |
+> | **§7.14** | e il motivo viaggia dove viaggia sempre quando il canale non c'è: nel **codice d'errore applicativo della chiusura** (§3.1 punto 3) |
+> | **§4.1-bis** | ⛔ è una chiusura decisa dal server, e **ha il suo motivo dicibile**: `TEMPO_SCADUTO`. Non è una sessione sana che viene buttata fuori — è una sessione che non è mai cominciata |
+>
+> ⚠ **Non serve nessun tipo di messaggio nuovo**, e conta: la finestra di §9 è chiusa dal 10 agosto
+> 2026. `TEMPO_SCADUTO` c'era già.
+>
+> ⛔ **E resta da misurare**: `B6` guadagna un quarto caso — apri la sessione, non aprire il canale,
+> e verifica che a 5 s arrivi `0x0D` **nel codice di chiusura**, non sul canale. Il banco oggi non
+> ce l'ha: fino ad allora questa riga è **scritta e non provata**.
 
 *Posta l'11 agosto 2026 da una **misura**, non da una lettura: il banco **B6** (rilievo **R12-A.25**,
-e `fasi/01-filo-nudo.md` B6). Riguarda `RCP.md` §4.6.*
+e `fasi/01-filo-nudo.md` B6). Riguarda `RCP.md` §4.6. La domanda com'era posta resta qui sotto.*
 
 **Il fatto, e sono due.** B6 ha chiuso la `[?]` **R3.27** — *da quale istante parte il primo tetto* —
 e la risposta è: **dall'apertura del canale di controllo**, non dalla fine del TLS. `RCP.md` §4.6

@@ -53,6 +53,47 @@
  *    — che e' lo strumento di B0.3 e non un pezzo di B8.  Averne due sarebbe
  *    stata la forma E2 di `REVIEWER.md`: due comportamenti sotto la stessa
  *    etichetta.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⭐ E `PING` DICE «QUALCUNO RISPONDE», NON «RISPONDE QUELLO GIUSTO»
+ *
+ * *Constatato l'11 agosto 2026, la prima volta che qualcuno ha puntato
+ * `01-b8-sblocca.py` a un server diverso da quello che aveva il ban.*
+ *
+ * Su questa macchina i server sono **due** — l'innesto `bsslserver` sulla 7447
+ * e questo prodotto sulla 7448 — e ciascuno ha il suo socket.  ⛔ Chi sbaglia
+ * socket riceve `PONG` e poi `NON-BANNATO`, cioe' le due risposte piu'
+ * rassicuranti del protocollo, mentre il ban che voleva togliere e' vivo
+ * nell'altro processo.  E' la faccia nuova del terzo esito: **ho parlato con un
+ * server, ma non con QUELLO** — e a differenza delle altre tre (socket assente,
+ * nessuno in ascolto, permesso negato) questa **risponde**, quindi non si vede.
+ *
+ * ⛔ NON SI E' AGGIUNTO NESSUN VERBO, e la ragione va scritta perche' e' la
+ *    tentazione ovvia.  Un `CHI` → `SONO remotix <pid>` avrebbe messo l'identita'
+ *    **dentro il protocollo**, e li' due cose vanno storte insieme:
+ *
+ *      1. `RCP.md` §4.4-bis e `fasi/01-filo-nudo.md` B0.3 promettono che i due
+ *         server parlino lo stesso protocollo **byte per byte**.  Un verbo che
+ *         capisce uno solo dei due lo rompe, ed e' la forma E2 di `REVIEWER.md`
+ *         proprio nel punto che questo riquadro esiste per non ripetere;
+ *      2. ⛔ e chi risponderebbe a `CHI` sarebbe il server: cioe' si chiederebbe
+ *         l'identita' **all'indiziato**.  `CODER.md` §3.7 dice l'opposto — *«non
+ *         si deduce il mittente: lo si chiede al nucleo»*.
+ *
+ * ⭐ La strada giusta e' fuori dal protocollo e non costa una riga a questo
+ *    file: un socket di dominio Unix porta con se' le credenziali di chi
+ *    ascolta, e `getsockopt(SO_PEERCRED)` le consegna a chi si collega — pid,
+ *    uid, gid, dal kernel.  Da li' `/proc/<pid>/comm` dice `remotix` oppure
+ *    `bsslserver`.  Lo fa `01-b8-sblocca.py`, che stampa sempre chi ha risposto
+ *    e sa pretenderlo (`--pretendi-chi`, `--pretendi-pid`).
+ *
+ * ⚠ E l'altra meta' del ban — il **file** che sopravvive al riavvio — questo
+ *   modulo non la sa guardare: `rcp_sblocca()` chiama `salva_ban(NULL, …)`, che
+ *   con la sessione a `NULL` tace su ogni guasto, e `percorso_ban` e' `static`
+ *   dentro `rcp.c`.  ⛔ Quindi qui non si dichiara mai che il file sia stato
+ *   scritto: si dice che e' stato **chiesto**.  Chi misura lo guarda da fuori —
+ *   `01-b8-sblocca.py --ban-file`, che lo legge prima e dopo.  ⭐ La cura vera
+ *   sarebbe in `rcp.c`: `rcp_sblocca()` deve poter dire se il file l'ha scritto.
  */
 #ifndef REMOTIX_COMANDO_H
 #define REMOTIX_COMANDO_H

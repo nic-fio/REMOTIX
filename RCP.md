@@ -209,7 +209,33 @@ preteso**.
 
 | | |
 |---|---|
-| **il server DEVE concedere credito** al client per i suoi stream unidirezionali: almeno **16** disponibili in ogni momento | il client apre uno stream di input e uno per ogni trasferimento di appunti. Se il credito finisse, **l'input non partirebbe affatto** e il sintomo sarebbe «il desktop non risponde» |
+| **il server DEVE concedere credito** al client per i suoi stream unidirezionali: almeno **16** disponibili in ogni momento — ⛔ **cioè almeno 19 dichiarati al livello QUIC** (vedi il riquadro) | il client apre uno stream di input e uno per ogni trasferimento di appunti. Se il credito finisse, **l'input non partirebbe affatto** e il sintomo sarebbe «il desktop non risponde» |
+
+> ### ⛔ I 16 sono **disponibili a RCP**, non dichiarati sul filo — e la differenza è di tre
+>
+> *Aggiunto l'11 agosto 2026, rilievo **A** del punto 4 della sessione. La riga qui sopra diceva
+> «almeno 16» e basta: ⛔ **chi la implementava alla lettera scriveva `initial_max_streams_uni = 16`
+> ed era conforme al documento e in violazione della sua ragione.** È il difetto **B-12**, trovato
+> nel prodotto la notte del 10 agosto e curato lì — e l'arbitro non lo diceva.*
+>
+> ⛔ **WebTransport non ha un credito suo.** Nelle bozze ≤ 07 ogni stream unidirezionale di
+> WebTransport **è** uno stream unidirezionale di QUIC, sullo stesso contatore di HTTP/3. E HTTP/3
+> se ne prende **tre** appena la connessione nasce — il suo stream di controllo e i due di QPACK —
+> e ⛔ **non li chiude mai**.
+>
+> ⇒ **16 dichiarati = 13 disponibili a RCP**, e i tre stream mancanti si perdono in silenzio: il
+> sintomo non è un errore ma *«il desktop non risponde»*, cioè il sintomo che questa riga esiste per
+> impedire.
+>
+> | | |
+> |---|---|
+> | quel che il server **dichiara** in `initial_max_streams_uni` | ⛔ **almeno 19** |
+> | quel che resta a RCP dopo i tre di HTTP/3 | **16**, che è il numero normativo |
+> | ⚠ e il conto **non si crede, si misura** | la sonda del trasporto conta gli unidirezionali che il pari ha davvero aperto e giudica `dichiarati − contati ≥ 16`. `[?]` **su un browser i tre potrebbero essere di più** — uno stream di *grease*, per dire — e nessuno l'ha misurato |
+>
+> ⚠ **E il numero giusto è 19 anche quando sembra generoso**: le due parole che decidono in questa
+> riga sono **«disponibili»** — non «dichiarati» — e **«in ogni momento»**. La lettura che salva il
+> 16 rende parole morte tutt'e due.
 | **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta e viene rinnovato mano a mano che gli stream si chiudono |
 | ⛔ **e quando il credito manca si butta il fotogramma — ma MAI una chiave** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Un **delta** vecchio non serve più: ne sta già arrivando uno nuovo. ⛔ Un fotogramma **chiave** invece si aspetta, perché è l'unica cosa che rimette in piedi il decodificatore (§5.2). E in tutt'e due i casi **si scrive nel registro** |
 
@@ -470,19 +496,38 @@ controllo, resta aperto per tutta la sessione, e il suo chiudersi **è** la fine
 > canale» **mentre il client lo ha aperto**.
 
 ⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, chiude la sessione.
-Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire sugli altri canali.
+Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire **su nessun canale,
+compreso quello di controllo**.
 
-> ⚠ **E che cosa può ancora fare chi riceve quel `FIN` — qui non è scritto, ed è una domanda
-> aperta** *(notte del 10 agosto 2026, rilievo **R11.22**)*. Il divieto qui sopra nomina **gli
-> altri canali**, e su uno stream bidirezionale il `FIN` di una parte non chiude il verso
-> dell'altra: chi lo riceve **potrebbe** mandare sul controllo il `CONGEDO` che §8.1 impone a chi
-> chiude. ⛔ Le due letture producono **byte diversi per lo stesso ingresso** — i nove byte di un
-> `CONGEDO` contro il silenzio — e il banco **B11** ha scelto il silenzio (caso
-> `fin-sul-controllo`, atteso *«muta»*) senza che nessuna riga di questo documento lo dica.
+> ### ✅ Deciso l'11 agosto 2026 dall'utente: **il silenzio** — `DECISIONI.md` §7.14
 >
-> ⛔ **La domanda sta in `DECISIONI.md` §7.14**, con le due letture, il byte che cambia e il prezzo
-> di ciascuna. Finché è ❓, questa sezione **non decide**: chi implementa sappia che sta scegliendo,
-> e non che sta obbedendo.
+> *Fino a oggi questa riga vietava di spedire «sugli altri canali» e taceva sul controllo. Su uno
+> stream bidirezionale il `FIN` di una parte non chiude il verso dell'altra, quindi chi lo riceveva
+> **poteva** mandare il `CONGEDO` che §8.1 impone a chi chiude: **byte diversi per lo stesso
+> ingresso** — nove contro zero — e due implementazioni divergenti senza che nessuna avesse torto
+> (rilievo **R11.22**).*
+>
+> ⛔ **Chi riceve il `FIN` non spedisce più niente, nemmeno sul canale di controllo.** Il motivo
+> viaggia per la **seconda strada** di §3.1 punto 3 — il codice d'errore applicativo della chiusura
+> della sessione — che non ha bisogno di un canale vivo.
+>
+> ⭐ **E a decidere è stata una misura, non una lettura.** `[M]` 10 agosto 2026, difetto 2 di B11:
+> **Chrome butta un messaggio spedito subito prima di chiudere la sessione.** Il `CONGEDO`
+> dell'altra lettura sarebbe un **DEVE che un motore su due non può onorare** — la forma che il
+> rilievo R1.4 ha già dichiarato difetto. La seconda strada di §3.1, invece, ha funzionato su
+> tutt'e due i motori.
+>
+> ⚠ **Il prezzo è pagato in §8.1**, non qui: quella sezione impone il congedo a «chi chiude», e da
+> oggi porta scritto che **chi ha ricevuto un `FIN` non è «chi chiude»**. Senza quella frase questa
+> decisione lascerebbe in piedi la contraddizione invece di chiuderla.
+>
+> ⛔ **E una premessa che era falsa va detta, perché è quella con cui la decisione è stata presa**:
+> *«il server non attacca mai di sua iniziativa»*. Attacca, ed è il comportamento più misurato
+> della fase 1 — i tre tetti di §4.6 visti scattare da **B6** (5,0 · 60,1 · 10,0 s), le **36
+> violazioni su 36** di **B5** dopo ciascuna delle quali il server chiude, `RESPINTO`,
+> `TROPPI_TENTATIVI` e `GIA_ATTIVA_REMOTA`. ⭐ La decisione **non cambia**: proprio perché il
+> server chiude spesso, quel che fa chi riceve conta — ed è la misura su Chrome a scegliere, non
+> la rarità del caso.
 
 ### 4.3 `CIAO` e `ECCOMI`
 
@@ -841,7 +886,31 @@ non lo dichiara a nessuno.*
 | ⭐ **apertura del canale di controllo** *(il primo stream bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |
 | `ECCOMI` spedito | `CREDENZIALI` ricevute | **60 s** — è il tempo in cui una persona digita la parola d'ordine |
 | `AMMESSO` spedito | `ATTACCA` ricevuto | **10 s** |
-| ❓ **sessione WebTransport aperta, canale di controllo MAI aperto** | — | ⛔ **oggi nessuno**, e non è una scelta: è un buco. `DECISIONI.md` §7.17 |
+| ⭐ **apertura della sessione WebTransport** | **apertura del canale di controllo** | **5 s** — ✅ deciso l'11 agosto 2026, `DECISIONI.md` §7.17 |
+
+> ### ⭐ La riga che mancava, e l'ha trovata una misura — ✅ 11 agosto 2026
+>
+> *La tabella cominciava da `CIAO`, e prima del `CIAO` c'era uno stato in cui il server non contava
+> niente: chi apriva la sessione e non apriva mai il canale **non aveva addosso nessun tetto**.
+> Trovato dal banco **B6** (rilievo **R12-A.25**), deciso dall'utente lo stesso giorno.*
+>
+> ⛔ **Scaduti i 5 s, il server chiude con `TEMPO_SCADUTO`** `0x0D`. ⚠ Il canale di controllo non
+> esiste, quindi il `CONGEDO` **non si manda** (§8.1, la condizione decisa in `DECISIONI.md` §7.15):
+> il motivo viaggia **solo** nel codice d'errore applicativo della chiusura della sessione (§3.1
+> punto 3). ⭐ Ed è il primo posto in cui le decisioni dell'11 agosto si incastrano: senza §7.15
+> questa riga imporrebbe un byte su un canale che non è mai nato.
+>
+> ⭐ **Perché 5 s, cioè lo stesso numero della riga sotto**: aprire il canale di controllo è il
+> **primo atto obbligatorio** della sessione (§2.5), non dipende da quanto è veloce a digitare una
+> persona e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
+>
+> ⛔ **E che cosa chiude davvero**: era l'ultimo modo, in questa fase, di **occupare un posto senza
+> dire chi si è**. Il tempo di inattività di QUIC non lo copriva: quello conta il **silenzio**, e
+> una sessione che scrive su un altro stream non è silenziosa — teneva il posto a tempo
+> indeterminato.
+>
+> ⚠ **Non serve nessun tipo di messaggio nuovo**, e conta: la finestra di §9 è chiusa dal 10 agosto
+> 2026. `TEMPO_SCADUTO` c'era già.
 
 > ### ⭐ La prima riga è cambiata di una parola, e la seconda risposta dice che non basta
 >
@@ -1485,10 +1554,37 @@ che la teneva aperta era che allora non esistesse nessuna implementazione. ⛔ *
 occasione, e non ce n'è una seconda. ⚠* Diceva «*la clausola che la tiene aperta è che **oggi** non
 esiste nessuna implementazione*», *al presente — corretta l'11 agosto 2026, rilievo **R12C.2***.
 
-⚠ **La sua marca è 🔸, non ✅, ed è registrata dove le decisioni stanno**: `DECISIONI.md` §1.5 riga
-26. ⛔ **Che sia stata dell'utente è una domanda aperta** — `DECISIONI.md` §7.16, rilievo
-**R11.15** — e conta perché questi due tipi hanno consumato la clausola di §9 che §12 dichiara
-essere stata *«l'ultima occasione»*.
+⚠ **La sua marca resta 🔸, non ✅**, ed è registrata dove le decisioni stanno: `DECISIONI.md` §1.5
+riga 26. La domanda *«era una decisione dell'utente?»* — rilievo **R11.15** — **è stata chiusa
+l'11 agosto 2026**: no, non lo era, e resta togliibile senza tornare da lui.
+
+> ### ⛔⭐ E DA OGGI NON ENTRA NEL PRODOTTO CONSEGNATO — ✅ 11 agosto 2026
+>
+> *`DECISIONI.md` §7.16, dall'utente: «l'utente deve vedere il desktop senza artefatti, come se
+> fosse davanti al monitor del PC … si tiene quello che serve per i test, ma poi nel prodotto
+> finale si fa pulizia».*
+>
+> ⛔ **Questa è una funzione di BANCO, e nel binario che si installa NON DEVE esserci.** Non spenta:
+> **assente** — non compilata, non raggiungibile, e ⛔ **non trovabile cercandone le marche dentro il
+> binario**. Sullo schermo di chi si collega non compare mai niente che non sia il suo desktop.
+>
+> ⚠ **«Spenta» era la forma di prima, e non basta più.** La funzione nasce spenta e
+> `banchi/01-b5-violazioni.py` verifica che a funzione spenta il server rifiuti con
+> `FUNZIONE_SPENTA`: quel comportamento **resta**, ed è giusto — ma vale per la **costruzione di
+> prova**, che è la sola in cui questi due tipi esistano.
+>
+> ⛔ **E la differenza si misura, o è una buona intenzione**: *«non c'è»* e *«c'è ed è spenta»* hanno
+> lo stesso aspetto da fuori. Si separano **cercando le marche dentro il binario consegnato** — la
+> stessa tecnica con cui `banchi/01-p1-prodotto.sh` distingue un binario nuovo da uno vecchio. Il
+> banco è della **fase 13**, dove il pacchetto nasce.
+>
+> ⭐ **Perché la funzione sopravvive comunque**: taratura del cronometro del ritardo alla fase 3 —
+> si inietta un ritardo noto e si verifica che la mediana salga di esattamente quello. Toglierla del
+> tutto avrebbe lasciato il tetto dei 50 ms **senza un modo di sapere se il numero è vero**.
+
+⚠ **E i due tipi hanno consumato la clausola di §9** che §12 dichiara essere stata *«l'ultima
+occasione»* per aggiungere tipi di messaggio: restano nel documento, ⛔ ma d'ora in poi come
+**funzione di banco dichiarata**, non come funzione del prodotto.
 
 > ⛔ **Perché una funzione di banco sta nel protocollo e non nel codice di prova.** L'anello del
 > ritardo di `DECISIONI.md` §2.6 misura **dal lato che riceve**: il client provoca un cambiamento
@@ -1561,7 +1657,10 @@ dice `DECISIONI.md` §2.6 — questo campo dice soltanto quando il server ha obb
 ### 8.1 Si dice, e si verifica dal lato che riceve
 
 ⛔ Chi chiude **DEVE** mandare `CONGEDO` con un motivo **prima** di chiudere la **sessione
-WebTransport**, e **DEVE** ripetere il motivo nel codice d'errore applicativo della chiusura (§3.1).
+WebTransport** — ⛔ **se il canale di controllo è ancora utilizzabile** (§3.1 punto 2) — e **DEVE**
+ripetere il motivo nel codice d'errore applicativo della chiusura (§3.1 punto 3). ⭐ **Il punto 3
+non ha condizioni e non ne ha bisogno**: viaggia nella chiusura stessa, e parte anche quando il
+canale è morto.
 
 > ⛔ *Corretto il 10 agosto 2026, rilievo **R11.8**: qui c'era «prima di chiudere la **connessione
 > QUIC**», e in §4.4 «con lo stesso motivo nel **`CONNECTION_CLOSE`**». Sono i due resti che la
@@ -1583,16 +1682,47 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 
 ⚠ **L'unica eccezione è `RESPINTO`** (§4.4), che *è* il congedo dell'autenticazione.
 
-> ⚠ **E questo obbligo è più largo di quello di §3.1 punto 2, che lo condiziona — domanda aperta**
-> *(notte del 10 agosto 2026, rilievo **R11.23**)*. §3.1 dice *«**DEVE** mandare `CONGEDO` … **se
-> il canale di controllo è ancora utilizzabile**»*, questa riga non pone condizioni: ⛔
-> **un'implementazione conforme a §3.1 è oggi in violazione di §8.1**, e sono due sezioni
-> normative dello stesso documento che danno due verdetti sullo stesso ingresso — la violazione che
-> arriva su uno stream unidirezionale col controllo già finito.
+> ### ⛔ E «chi chiude» non è chi ha ricevuto un `FIN` — ✅ 11 agosto 2026
 >
-> ⛔ **La domanda sta in `DECISIONI.md` §7.15**, e qui non si decide. ⚠ Chi scrive un banco sappia
-> intanto che **B5 e B11 applicano il condizionale di §3.1** (`fasi/01-filo-nudo.md`, rilievo
-> R3.3): un banco che pretendesse tutt'e tre i punti sempre **darebbe rosso sul codice giusto**.
+> *L'eccezione che la decisione di `DECISIONI.md` §7.14 pretende, scritta qui perché è qui che
+> l'obbligo è dettato. Senza questa frase §4.2 vieta di spedire sul canale di controllo dopo un
+> `FIN` e §8.1 continua a **imporre** proprio quel byte: la decisione avrebbe spostato la
+> contraddizione invece di chiuderla.*
+>
+> ⛔ **Chi riceve un `FIN` sul canale di controllo non è «chi chiude», e non manda nessun
+> `CONGEDO`.** A chiudere è stata l'altra parte; il motivo di quella chiusura arriva da lei, e la
+> sola cosa dovuta a chi riceve è **considerare la sessione finita** (§4.2).
+>
+> ⭐ **Restano dovuti i byte del punto 3 di §3.1** — il codice d'errore applicativo — quando è
+> **questo** lato a chiudere la sessione WebTransport per primo. L'eccezione riguarda il `CONGEDO`
+> sul canale, non il motivo nella chiusura.
+
+> ### ✅ La condizione, decisa dall'utente l'11 agosto 2026 — `DECISIONI.md` §7.15
+>
+> *Fino a oggi questa riga non poneva condizioni, mentre §3.1 punto 2 dice «**se il canale di
+> controllo è ancora utilizzabile**»: ⛔ **un'implementazione conforme a §3.1 era in violazione di
+> §8.1**, e due sezioni normative dello stesso documento davano due verdetti sullo stesso ingresso
+> — la violazione che arriva su uno stream unidirezionale col controllo già finito (rilievo
+> **R11.23**).*
+>
+> ⛔ **Vince la condizione.** L'obbligo del `CONGEDO` sul canale **cade quando il canale non è
+> utilizzabile**; quel che non cade mai è il motivo dentro il codice di chiusura (§3.1 punto 3).
+>
+> ⭐ **La ragione, con le parole dell'utente**: *«se una connessione cade nessuno può dire al server
+> "chiudo perché ho finito"»*. Un `DEVE` che non si può rispettare non è una regola: è un difetto
+> di questo file, e §0 dice che i difetti di questo file sono di questo file.
+>
+> ⚠ **E non indebolisce `DECISIONI.md` §4.1-bis**, decisa lo stesso giorno — *ogni chiusura del
+> server ha un motivo che sa spiegare*: il motivo arriva comunque, per la seconda strada. ⛔ Quel
+> che si perde è **solo il byte sul canale morto**, cioè un byte che non partiva.
+>
+> ⭐ **E chiude un rosso su codice giusto**: **B5 e B11 applicavano già il condizionale di §3.1**
+> (`fasi/01-filo-nudo.md`, rilievo R3.3), e un banco scritto sulla forma assoluta **avrebbe bocciato
+> un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale.
+>
+> ⛔ **E le due decisioni dell'11 agosto non si sostituiscono.** §7.15 dice *quando* l'obbligo cade;
+> §7.14 dice *chi* non è tenuto affatto. Dopo un `FIN` ricevuto il canale, nel verso di chi lo ha
+> ricevuto, **è ancora utilizzabile**: senza §7.14 la condizione di §7.15 non lo salverebbe.
 
 ### 8.2 I motivi
 

@@ -123,6 +123,14 @@ _spec = importlib.util.spec_from_file_location(
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
+# ⛔ E il profilo del BERSAGLIO, per la stessa ragione: le differenze fra i due
+#    server stanno in un file solo, e quattro banchi le leggono invece di
+#    scoprirle da capo — o, peggio, di non scoprirle e dare rosso.
+_spec_b0 = importlib.util.spec_from_file_location(
+    "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
+b0 = importlib.util.module_from_spec(_spec_b0)
+_spec_b0.loader.exec_module(b0)
+
 s, inquadra, MOTIVI = b3.s, b3.inquadra, b3.MOTIVI
 
 ERRORE_PROTOCOLLO = 0x0B
@@ -1012,7 +1020,7 @@ def riga(ok, nome, testo):
           f"{nome:26s} {testo}")
 
 
-def esito_finale(conti, guasti, parziale):
+def esito_finale(conti, guasti, parziale, reg=None):
     """⛔ Ogni conteggio con il suo denominatore, e il denominatore CALCOLATO.
 
     La riga vecchia stampava `N su N` — la stessa espressione due volte — e
@@ -1031,15 +1039,24 @@ def esito_finale(conti, guasti, parziale):
         col = VERDE if buoni == tot else ROSSO
         print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}")
     print()
+    # ⛔ E il verdetto va nel registro con dentro il bersaglio, o fra sei mesi
+    #    «B5 passa» non dira' contro quale dei due server.
+    if reg is not None:
+        reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": parziale,
+                    "conti": {k: v for k, v in conti.items()}})
+        print(f"    --  {reg.riassunto()}")
     if guasti:
-        print(f"    {ROSSO}⛔ B5: {guasti} punti non passano{GRIGIO}")
+        print(f"    {ROSSO}⛔ B5: {guasti} punti non passano contro "
+              f"«{reg.bersaglio if reg else '?'}»{GRIGIO}")
         return 1
     if parziale:
         print(f"    {VERDE}⭐ i casi selezionati passano{GRIGIO} — ⚠ e questo "
               f"NON e' «B5 passa»: il giro era parziale")
         return 0
-    print(f"    {VERDE}⭐ B5 passa, e i numeri qui sopra dicono su che cosa"
-          f"{GRIGIO}")
+    print(f"    {VERDE}⭐ B5 passa contro «{reg.bersaglio if reg else '?'}», e i "
+          f"numeri qui sopra dicono su che cosa{GRIGIO}")
+    print(f"    ⚠ e non e' «B5 passa»: l'altro bersaglio e' un altro programma, "
+          f"e questo giro non ne dice niente")
     return 0
 
 
@@ -1083,7 +1100,38 @@ async def principale(a):
         return 2
 
     sel_v, sel_verdi = conta(casi)
+
+    # ⛔ IL REGISTRO DEL GIRO, E LA PRIMA RIGA DICE CONTRO CHE COSA SI MISURA.
+    #
+    #    Fino all'11 agosto 2026 B5 non aveva **nessun** registro: girava, e
+    #    l'uscita era a schermo.  ⚠ Il che vuol dire che nessuno dei suoi
+    #    quarantaquattro esiti e' oggi riverificabile, e che il giorno in cui
+    #    due giri diranno cose diverse non ci sara' modo di sapere quale server
+    #    ha risposto a quale.
+    a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
+                        a.md5 or None)
+    prof = a.reg.profilo
+    a.reg.apri_giro(
+        "B5", "violazioni spedite su una connessione nuova per caso; il "
+              "server e' acceso da 01-b5-lancia.sh e non serve nessuna scena "
+              "in movimento",
+        extra={"casi_selezionati": len(casi), "casi_totali": len(CASI),
+               "filtro": a.solo, "violazioni": sel_v, "verdi_attesi": sel_verdi,
+               # ⛔ L'ECO: sul prodotto non c'e', e la differenza si scrive
+               #    PRIMA di misurare.  `src/webtransport.c`
+               #    `scarta_stream_di_troppo()`: «i byte si buttano, e NON si
+               #    rimandano indietro».  ⚠ Un banco che l'aspettasse resterebbe
+               #    appeso, e il 10 agosto 2026 quel rosso e' stato diagnosticato
+               #    per ore come «difetto del certificato».  B5 non l'aspetta:
+               #    la scarta se arriva, e qui dichiara se doveva arrivare.
+               "eco_attesa": prof["eco"]})
     print(f"== B5 — le prove di violazione verso il server")
+    print(f"   ⛔ BERSAGLIO: {a.bersaglio} · porta {a.porta} · binario md5 "
+          f"{(a.md5 or 'ignota')[:12]}…")
+    print(f"      {prof['eseguibile']}")
+    print(f"   ⚠ l'eco di B2 sugli stream aperti dal banco: "
+          f"{'attesa' if prof['eco'] else '⛔ NON attesa su questo bersaglio'}")
+    print(f"   il registro di questo giro: {a.uscita or '⛔ NESSUNO'}")
     print(f"   {len(casi)} casi su {len(CASI)} selezionati: {sel_v} violazioni "
           f"e {sel_verdi} ⭐ verdi attesi")
     print("   ⛔ ogni caso: la violazione spedita davvero, il motivo giusto nel "
@@ -1128,6 +1176,16 @@ async def principale(a):
             conti["violazioni col motivo atteso"][0] += int(ok)
             testo = str(es)
         riga(ok, nome, testo)
+        # ⛔ E il fatto va sul registro PRIMA di qualunque conclusione: un
+        #    caso che fa cadere il banco (il server che muore) deve aver
+        #    lasciato la propria riga, o il registro racconterebbe solo i giri
+        #    andati bene.
+        a.reg.scrivi({"tipo": "caso", "nome": nome, "esito": bool(ok),
+                      "atteso": atteso, "motivo": es.motivo,
+                      "tipo_motivo": es.tipo_motivo, "codice_wt": es.codice_wt,
+                      "provocato": es.provocato, "fase": es.fase,
+                      "errore": es.errore, "dettaglio": es.dettaglio,
+                      "viva": es.viva})
         if not ok:
             guasti += 1
             print(f"        atteso: "
@@ -1189,7 +1247,7 @@ async def principale(a):
         # ⚠ E si stampa lo stesso quel che si era guardato FIN LI': un banco
         #   che si ferma senza dire quanto aveva coperto lascia credere che
         #   avesse coperto tutto.
-        return esito_finale(conti, guasti, parziale=True)
+        return esito_finale(conti, guasti, parziale=True, reg=a.reg)
 
     # ⛔ SOTTO UN FILTRO QUESTE TRE SEZIONI NON SI ESEGUONO, ed e' dichiarato.
     #
@@ -1201,7 +1259,7 @@ async def principale(a):
     if a.solo:
         print(f"\n    ⚠ giro parziale: percorso, giro completo e limitatore "
               f"saltati (vedi sopra)")
-        return esito_finale(conti, guasti, parziale=True)
+        return esito_finale(conti, guasti, parziale=True, reg=a.reg)
 
     print("\n== ⛔ Il percorso della sessione (§2.2), che viene prima di RCP")
     for percorso, atteso, stato, ok in await il_percorso(a):
@@ -1224,6 +1282,9 @@ async def principale(a):
         guasti += 1
 
     print("\n== ⛔ Il limitatore dei tentativi (§4.4-bis) — per ultimo, e si dice perche'")
+    print(f"   ⚠ e su questo bersaglio il ban vive in «{a.bersaglio}»: il file")
+    print(f"     dei ban e' di B5 soltanto, e lo sblocco finale lo fa lo script")
+    print(f"     di lancio, DOPO questa sezione e dichiarandolo (B0.3)")
     print("   ⚠ da qui in poi questo indirizzo resta BLOCCATO per almeno trenta")
     print("     secondi: e' la regola che funziona, non un guasto del banco")
     for nome, (ok, perche) in (await limitatore(a)).items():
@@ -1231,16 +1292,30 @@ async def principale(a):
         if not ok:
             guasti += 1
 
-    return esito_finale(conti, guasti, parziale=False)
+    return esito_finale(conti, guasti, parziale=False, reg=a.reg)
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="B5 — le violazioni verso il server")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    p.add_argument("--porta", type=int, default=7447)
+    # ⛔ La porta NON ha piu' un predefinito che nomina un bersaglio: 7447 e'
+    #    l'innesto e 7448 il prodotto, e un predefinito qui vorrebbe dire che
+    #    `--bersaglio prodotto` senza `--porta` misura l'innesto dichiarando il
+    #    prodotto.  La passa `01-b0-bersaglio.sh`, che e' l'unico posto in cui
+    #    le due porte sono scritte.
+    p.add_argument("--porta", type=int, required=True)
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
     p.add_argument("--solo", default="", help="gira solo i casi che contengono questo")
     p.add_argument("--elenco", action="store_true",
                    help="stampa le previsioni senza misurare")
+    b0.aggiungi_argomenti(p)
+    # ⚠ `--elenco` non misura niente e non ha bisogno di una porta: si guarda
+    #   prima di pretenderla, o stampare le previsioni richiederebbe di aver
+    #   gia' scelto un server.
+    import sys as _s
+    if "--elenco" in _s.argv:
+        for _i, _az in enumerate(p._actions):
+            if _az.dest == "porta":
+                _az.required = False
     sys.exit(asyncio.run(principale(p.parse_args())))

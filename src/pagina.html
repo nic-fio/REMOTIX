@@ -376,10 +376,36 @@ async function collega(utente, parola) {
    *    che il server ha pagato dal suo lato (`webtransport.c`,
    *    `chiudi_sessione`: la capsula si RIMANDA). */
   congeda_corrente = congeda;
-  async function congeda(motivo, perche) {
+
+  /* ⛔⭐ E IL CASO IN CUI NON SI MANDA NIENTE — `muto`, §4.2 e DECISIONI.md §7.14.
+   *
+   * ✅ Deciso dall'utente l'11 agosto 2026: **chi riceve un `FIN` sul canale di
+   *    controllo non spedisce piu' niente, nemmeno li'**.  §4.2 vietava di
+   *    spedire «sugli altri canali» e taceva sul controllo; adesso il divieto
+   *    copre tutti i canali, e §8.1 porta l'eccezione che rende la cosa
+   *    coerente: *chi ha ricevuto un `FIN` non e' «chi chiude»*.
+   *
+   * ⛔ Prima di oggi questa pagina faceva il contrario in TRE punti — dopo il
+   *    `FIN` del server rispondeva con nove byte di `CONGEDO` — ed era una
+   *    lettura legittima del testo di allora.  ⚠ Ma la misura del 10 agosto
+   *    (difetto 2 di B11) dice che **Chrome butta un messaggio spedito subito
+   *    prima di chiudere**: quei nove byte erano un DOVERE che un motore su due
+   *    non poteva onorare.
+   *
+   * ⭐ Quel che NON si perde: la frase all'utente (`esito(...)`, che i tre punti
+   *    chiamano gia' per conto loro) e il motivo dentro il codice di chiusura
+   *    della sessione — la seconda strada di §3.1 punto 3, l'unica che funzioni
+   *    su tutt'e due i motori. */
+  async function congeda(motivo, perche, muto) {
     if (congedato) return;
     congedato = true;
-    nota("CONGEDO 0x" + motivo.toString(16) + " — " + perche);
+    nota("CONGEDO 0x" + motivo.toString(16) + " — " + perche
+         + (muto ? " — ⛔ MUTO: il server ha gia' chiuso il canale, §4.2 vieta "
+                 + "di spedirci sopra (DECISIONI.md §7.14).  Il motivo viaggia "
+                 + "solo nel codice di chiusura (§3.1 punto 3)" : ""));
+    if (muto) { try { wt.close({ closeCode: motivo, reason: perche.slice(0, 100) }); }
+                catch (e) { nota("la sessione non si e' chiusa col codice: " + e); }
+                return; }
     try {
       const s = new Scrittore().u8(motivo).str(perche);
       await canale.manda(TIPO.CONGEDO, s.byte());
@@ -430,7 +456,8 @@ async function collega(utente, parola) {
   let m = await canale.ricevi();
   if (!m) {
     esito("Il server ha chiuso il canale senza rispondere.", false);
-    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale di controllo si e' chiuso senza un ECCOMI");
+    /* ⛔ MUTO — §4.2 e DECISIONI.md §7.14: il canale l'ha chiuso il server. */
+    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale di controllo si e' chiuso senza un ECCOMI", true);
     return;
   }
   if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "congedato", false); return; }
@@ -478,7 +505,8 @@ async function collega(utente, parola) {
   m = await canale.ricevi();
   if (!m) {
     esito("Il server ha chiuso il canale senza rispondere alle credenziali.", false);
-    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale si e' chiuso senza rispondere a CREDENZIALI");
+    /* ⛔ MUTO — §4.2 e DECISIONI.md §7.14: il canale l'ha chiuso il server. */
+    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale si e' chiuso senza rispondere a CREDENZIALI", true);
     return;
   }
   if (m.tipo === TIPO.RESPINTO) {
@@ -513,7 +541,8 @@ async function collega(utente, parola) {
   m = await canale.ricevi();
   if (!m) {
     esito("Il server ha chiuso il canale senza rispondere ad ATTACCA.", false);
-    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale si e' chiuso senza rispondere ad ATTACCA");
+    /* ⛔ MUTO — §4.2 e DECISIONI.md §7.14: il canale l'ha chiuso il server. */
+    await congeda(MOT.ERRORE_PROTOCOLLO, "il canale si e' chiuso senza rispondere ad ATTACCA", true);
     return;
   }
   if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "congedato", false); return; }

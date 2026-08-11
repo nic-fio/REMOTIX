@@ -3,6 +3,31 @@
 
     python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1] [:status atteso]
     python3 01-b2-cliente-aioquic.py https://192.168.0.2:7447/rcp/9 404
+    python3 01-b2-cliente-aioquic.py https://192.168.0.2:7448/rcp/1 200 --senza-eco
+
+---------------------------------------------------------------------------
+⛔⭐ CONTRO IL PRODOTTO SI USA `--senza-eco`, E NON E' UNA COMODITA'
+
+*Aggiunto l'11 agosto 2026, e il difetto che evita e' gia' costato una
+mattina.*
+
+Questo cliente manda `ciao` su uno stream e aspetta che torni identico.
+⛔ **L'eco esiste solo nell'innesto di B2**, che era un server di cinquanta
+righe fatto per rimandare indietro i byte.  Il **prodotto** parla RCP: su quel
+primo stream si aspetta un `CIAO`, e a un `ciao` minuscolo risponde come deve
+— cioe' non rimandandolo indietro.
+
+⚠ E' esattamente il rosso del mattino del 10 agosto, quello che si era preso
+  per un difetto del certificato: *«il rosso era della SONDA, non del
+  certificato: mandava `ciao` e aspettava l'eco di B2, che con RCP innestato
+  non esiste piu'»* (`fasi/01-filo-nudo.md`, riga di B3).  Senza questa
+  opzione lo stesso rosso si ripresenterebbe contro il prodotto, e sembrerebbe
+  un difetto del server.
+
+⭐ Con `--senza-eco` il programma si ferma dove finisce quel che sa provare:
+  **la sessione WebTransport si e' aperta su quel percorso, con quel
+  `:status`**.  Quel che succede DOPO la CONNECT e' di RCP, e lo provano B3 e
+  B5 — non questo file.
 
 ---------------------------------------------------------------------------
 ⛔ CHE COSA MISURA, E SOPRATTUTTO CHE COSA NON MISURA
@@ -126,7 +151,7 @@ class ClienteWebTransport(QuicConnectionProtocol):
                     self.tornato.set_result(ev.data)
 
 
-async def principale(url: str, atteso: str = "200") -> int:
+async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
     u = urlparse(url)
     autorita = f"{u.hostname}:{u.port or 443}"
 
@@ -181,6 +206,18 @@ async def principale(url: str, atteso: str = "200") -> int:
             return 1
         print("   ⭐ sessione WebTransport ACCETTATA")
 
+        # ⛔ E QUI CI SI FERMA, SE L'ECO NON C'E' DA ASPETTARSI.  Il verdetto
+        #    dice quel che prova — «la sessione si e' aperta su questo
+        #    percorso» — e NON si allunga fino a un'affermazione che questo
+        #    programma non e' in grado di sostenere.  L'intestazione del file
+        #    spiega perche' contro il prodotto e' l'unica lettura onesta.
+        if not eco:
+            print("\n   ✅ sessione aperta su", u.path,
+                  "— l'eco NON e' stata chiesta (--senza-eco)")
+            print("   ⚠ quel che viaggia dopo la CONNECT e' RCP, e lo provano"
+                  " B3 e B5: non questo file")
+            return 0
+
         # ⛔ «Accettata» non basta: si mandano byte e si aspetta che tornino.
         #    Una sessione che si apre e non trasporta niente e' la forma di
         #    verde che questo banco esiste per non produrre.
@@ -195,13 +232,17 @@ async def principale(url: str, atteso: str = "200") -> int:
 
 
 if __name__ == "__main__":
-    url = sys.argv[1] if len(sys.argv) > 1 else "https://192.168.0.2:7447/rcp/1"
+    # ⚠ `--senza-eco` si toglie prima di leggere i posizionali, cosi' l'ordine
+    #   degli argomenti di sempre continua a valere.
+    argomenti = [x for x in sys.argv[1:] if x != "--senza-eco"]
+    eco = "--senza-eco" not in sys.argv[1:]
+    url = argomenti[0] if len(argomenti) > 0 else "https://192.168.0.2:7447/rcp/1"
     # ⚠ Il secondo argomento e' lo `:status` ATTESO: senza, e' 200 e vale la
     #   strada di sempre.  Con «404» il programma prova il controllo che dice
     #   NO, e un fallimento qualunque non passa piu' per un rifiuto (R8.8).
-    atteso = sys.argv[2] if len(sys.argv) > 2 else "200"
+    atteso = argomenti[1] if len(argomenti) > 1 else "200"
     try:
-        sys.exit(asyncio.run(principale(url, atteso)))
+        sys.exit(asyncio.run(principale(url, atteso, eco)))
     except Exception as e:
         print(f"\n   ⛔ fallito: {type(e).__name__}: {e}")
         sys.exit(2)

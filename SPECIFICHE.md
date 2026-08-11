@@ -68,6 +68,12 @@ il motivo per cui `RCP.md` esiste prima del codice.
    (`DECISIONI.md` §0.1 — è il principio che ha prodotto diverse delle scelte che seguono)
 5. **Parlare direttamente al compositore**, mai attraverso portali che chiedano autorizzazione a
    video: un servizio non presidiato non ha nessuno che clicchi.
+6. ⭐ ⛔ **Sullo schermo dell'utente c'è il suo desktop e nient'altro.** *«Come se fosse davanti al
+   monitor del PC»* — nessun artefatto, nessuna marca, nessun riquadro di servizio. ⛔ E non nella
+   forma *«spento per predefinito»*: quel che serve a noi per misurare **non entra nel binario che
+   si installa** (`DECISIONI.md` §7.16, dall'utente l'11 agosto 2026; la pulizia si fa e **si
+   misura** alla fase 13). ⚠ *Aggiunto quando la prima funzione di banco ha chiesto il permesso di
+   dipingere: il principio non c'era, e la risposta è stata più larga della domanda.*
 
 ---
 

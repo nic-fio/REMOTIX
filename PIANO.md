@@ -694,6 +694,23 @@ riavvio vero ha mostrato che mancavano due pezzi, e nessuno dei due era nei docu
 non si montava da solo, e i pacchetti installati a mano mesi prima che il provisioning ereditava
 senza dichiararli (`LEZIONI.md` §2.5-bis).
 
+> ### ⛔⭐ E qui si fa la pulizia: la funzione di banco non entra nel pacchetto — ✅ 11 agosto 2026
+>
+> *Decisione dell'utente, `DECISIONI.md` §7.16: «l'utente deve vedere il desktop senza artefatti,
+> come se fosse davanti al monitor del PC … si tiene quello che serve per i test, ma poi nel
+> prodotto finale si fa pulizia». ⚠ **Scritta qui, undici fasi prima di servire**, perché è la forma
+> di decisione che si perde: vale alla fase 13 e viene decisa alla 1.*
+>
+> ⛔ **Il binario che si installa non contiene la funzione di banco di `RCP.md` §7.5** — i due tipi
+> `BANCO_MARCA` e `BANCO_ESITO`. Non spenta: **assente**, non compilata, non raggiungibile.
+>
+> ⛔ **E si misura, o è una buona intenzione**: *«non c'è»* e *«c'è ed è spenta»* hanno lo stesso
+> aspetto da fuori. Il banco di questa fase **cerca le marche dentro il binario del pacchetto** e
+> pretende di **non** trovarle — con il controllo positivo che dice che lo strumento sa trovarle,
+> cioè le stesse marche cercate nel binario **di prova**, dove ci sono. È la tecnica già scritta in
+> `banchi/01-p1-prodotto.sh` della fase 1, che distingue un binario nuovo da uno vecchio con otto
+> marche e due controlli.
+
 ---
 
 # ⛔ BINARIO B — sciolto il 9 agosto 2026
