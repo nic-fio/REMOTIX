@@ -1,0 +1,684 @@
+
+[1m== Credenziali per il contenitore[0m
+    [1;32mOK[0m  sudo validato
+
+[1m== 1. Lo stato iniziale[0m
+    --  ⛔ buttato il file dei ban «/srv/src/b8-prodotto-ban.txt» e il socket «/srv/src/b8-prodotto-comando.sock»
+    --     (B0.2: e' lo stato che sopravvive di piu' fra tutti)
+    --  giro: 20260811-065716  ·  bersaglio: prodotto  ·  binario md5 ignota
+    --  blocchi: 10  ·  campioni tenuti per caso: 20
+    --  ⚠ vite del server: 2 (una per i campioni e il ban, una per la persistenza)
+    --  ⚠ durata dell'ordine di 6–10 minuti
+    --  ⚠ e fa 49 autenticazioni FALLITE sull'utente di prova: se un
+    --    giorno la pila PAM avesse un pam_faillock, quell'utente si bloccherebbe
+
+[1m== Il prodotto — si VERIFICA, non si ricompila[0m
+    --  ⛔ un banco che ricompila quel che misura si toglie il testimone
+    --     indipendente: qui si guarda soltanto il binario, e se non e' piu'
+    --     recente dei sorgenti ci si ferma
+    [1;32mOK[0m  binario verificato: md5 c75c343b0fa0… · piu' recente di ognisorgente (il piu' recente e' «/srv/src/remotix/main.c»)
+    [1;32mOK[0m  il comando di sblocco e' in comando.c (5 righe «SBLOCCA »)
+    --  ⛔ e questa e' la PRIMA volta che 01-b8-sblocca.py viene puntato al
+    --     prodotto: se il PING piu' sotto non risponde, il primo sospetto
+    --     e' su questa cucitura, non sul ban
+
+[1m== 1-bis. ⛔ La certificazione fuori dal filo (LEZIONI.md §1.2: PRIMA)[0m
+
+  == [sezione 1] 1. il file dei ban: ora assoluta sul disco, monotona in memoria
+  caricati: 1  (righe nel file: 2, di cui 1 gia' scaduta)
+    OK  carica UNA riga sola: la scaduta si scarta
+    OK  l'indirizzo bannato e' bannato — e la PORTA non lo confonde
+  restano: 3600000 ms (attesi ~3600000)
+    OK  la scadenza assoluta e' tornata monotona senza deriva
+    OK  ⛔ il controllo che dice NO: la riga scaduta non e' stata caricata
+    OK  ⛔ e un indirizzo mai visto non e' bannato (la guardia non inventa)
+    OK  il ban scade da se' col passare del tempo
+
+  == [sezione 2] 2. ⛔ la CHIAVE porta le quadre, e chi comanda digita senza
+  forme provate: 6
+    OK  «127.0.0.1» → «[127.0.0.1]» (atteso «[127.0.0.1]»)
+    OK  «127.0.0.1:53» → «[127.0.0.1]» (atteso «[127.0.0.1]»)
+    OK  «[127.0.0.1]» → «[127.0.0.1]» (atteso «[127.0.0.1]»)
+    OK  «[127.0.0.1]:55680» → «[127.0.0.1]» (atteso «[127.0.0.1]»)
+    OK  «fe80::1» → «[fe80::1]» (atteso «[fe80::1]»)
+    OK  «[fe80::1]:44661» → «[fe80::1]» (atteso «[fe80::1]»)
+    OK  ⛔ il controllo che dice NO: due indirizzi diversi danno due chiavi diverse
+
+  == [sezione 3] 3. il comando di sblocco: «non era bannato» e «l'ho tolto»
+    OK  lo sblocco dice TRUE su un indirizzo davvero bannato — e l'indirizzo era stato digitato SENZA le quadre
+    OK  e dopo non e' piu' bannato
+    OK  ⛔ e sblocca due volte dice FALSE: «non c'era» e «l'ho tolto» sono due fatti diversi
+  ban IPv6 caricati: 1 (atteso 1)
+    OK  un ban IPv6 si rilegge dal file
+    OK  e con la porta addosso e' bannato (e' la forma della sessione)
+    OK  ⛔ e lo sblocco lo TROVA anche senza porta: «[fe80::1]» non si taglia agli ultimi due punti, o diventerebbe «[fe80:»
+    OK  e dopo l'IPv6 non e' piu' bannato
+    OK  lo sblocco e' stato scritto sul file, non solo in memoria
+
+  == [sezione 4] 4. ⛔ zero ban e «non ho potuto guardare» — LEZIONI.md §1.9
+  file assente        → 0 (atteso 0)
+    OK  un file che non esiste ancora vale ZERO ban, non un errore
+  file vuoto          → 0 (atteso 0)
+    OK  un file vuoto vale ZERO ban
+  file senza permessi → -1 (atteso -1)
+    OK  ⛔ un file che c'e' e non si legge vale -1, NON zero: «vuoto» e «proibito» non devono avere la stessa faccia
+    OK  ⛔ e il controllo che dice NO: da un file illeggibile non esce nessun ban inventato
+  percorso impossibile → -1 (atteso -1)
+    OK  ⛔ e un percorso che non si puo' nemmeno aprire vale -1: ENOTDIR non e' «nessun ban»
+
+  == [sezione 5] 5. ⛔ lo sblocco azzera il conto anche su un indirizzo NON bannato
+    OK  ⭐ controllo positivo: un tentativo con la parola GIUSTA arriva ad AMMESSO — lo strumento sa far succedere quel che conta
+    OK  ⭐ e uno con la parola sbagliata arriva a CREDENZIALI_ERRATE: lo strumento sa produrre anche i fallimenti che contano
+    OK  ⛔ il controllo che dice NO: SENZA sblocco, tre fallimenti bannano e il quarto — con la parola GIUSTA — e' TROPPI_TENTATIVI
+    OK  a due fallimenti l'indirizzo NON e' ancora bannato (soglia 3)
+    OK  ⛔ e lo sblocco risponde FALSE — «non era bannato» — che e' esattamente il caso in cui la riga di 01-b8-sblocca.py parla
+    OK  ⭐ IL CONTO E' RIPARTITO DA ZERO: dopo uno sblocco su un indirizzo NON bannato, altri due fallimenti non fanno tre — e la strategia dei campioni di B8 poggia su questa riga
+    OK  ⛔ e il controllo che dice NO: l'indirizzo non e' bannato nemmeno adesso (se il conto non fosse ripartito, 2+2 farebbero quattro e il ban sarebbe scattato al terzo)
+
+  == il denominatore di QUESTO verdetto
+    sezioni arrivate in fondo : 5 (attese 5)
+    controlli eseguiti        : 33 (attesi 33)
+    di cui APPROVATI          : 33
+    di cui falliti            : 0
+
+  VERDE: 0 controlli falliti su 33 approvati, in 5 sezioni
+    [1;32mOK[0m  certificazione fuori dal filo: passata (il denominatore lo stampa lei)
+
+[1m== 2. Che cosa mi aspetto, prima di misurare[0m
+usage: 01-b8-cronometro.py [-h] --porta PORTA [--indirizzi INDIRIZZI]
+                           [--utente UTENTE] [--parola PAROLA]
+                           [--sbagliata SBAGLIATA] [--comando COMANDO]
+                           [--blocco BLOCCO] [--per-caso PER_CASO]
+                           [--campioni] [--ban {prima,dopo}]
+                           [--sblocca SBLOCCA] [--perche PERCHE]
+                           [--stato-iniziale] [--verdetto] [--certifica]
+                           [--previsione] [--registro REGISTRO]
+                           --bersaglio {innesto,prodotto,controllo}
+                           [--uscita USCITA] [--giro GIRO] [--md5 MD5]
+01-b8-cronometro.py: error: the following arguments are required: --porta, --bersaglio
+
+[1m== 3. La PRIMA vita del server — i campioni e il giro del ban[0m
+    [1;32mOK[0m  acceso «prodotto» (PID 130880 · porta 7448 · tetto 30s) — registro /media/REMOTIX/src/b8-prodotto-prima-vita.log
+    [1;32mOK[0m  ⭐ il registro e' di «prodotto»: 11 righe con la sua impronta, 0 con quella dell'altro, e la riga d'avvio c'e'
+    --  quel che ha detto del ban all'avvio (stampato E confrontato — B0.4):
+        06:57:17.952 avvio   ban: /srv/src/b8-prodotto-ban.txt, 0 indirizzi caricati
+        06:57:17.952 rcp     il comando di sblocco ascolta su «/srv/src/b8-prodotto-comando.sock» (0600) — «SBLOCCA <indirizzo>» oppure «PING» (RCP.md §4.4-bis)
+        06:57:17.963 pagina  ascolto TCP su 0.0.0.0:7448 — pagina /srv/src/remotix/pagina.html (30228 byte), isolata fra origini (COOP+COEP+CORP, SPECIFICHE.md §11.5)
+    [1;32mOK[0m  il server ha dichiarato lo stato del ban: 1 righe «ban caricati:»
+    [1;32mOK[0m     e 0 righe «non ho potuto leggere» — sono due fatti, e sono distinti
+    [1;32mOK[0m  il comando di sblocco ascolta (B0.3 ha lo strumento che pretende)
+
+[1m== 3.0  Lo stato iniziale, dichiarato E verificato (B0.1)[0m
+    --  ⛔ e questo sblocco e' PRIMA del giro, non dentro (B0.3)
+    [1;32mOK[0m  il comando di sblocco risponde (PONG)
+    [0m--[0m  sblocco «127.0.0.1» (stato-iniziale): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (stato-iniziale): NON-BANNATO — NON-BANNATO [192.168.0.2]
+    -- pagina da 127.0.0.1     → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+    -- pagina da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+    [1;32mOK[0m  ⭐ e la pagina SA DIRE DI NO: senza questa riga, «tentativi esauriti» piu' tardi sarebbe compatibile con una pagina che lo dice sempre
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  ⭐ e questo banco SA produrre un AMMESSO (1060 ms): i tre casi sono davvero tre
+
+[1m== 3.0b  la SCALDATA — una terzina, scartata per regola scritta prima (E9)[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-0»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 0»: 3 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 1, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. inesistente  127.0.0.1     nessuno-b8-0       1799.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE scaldata 
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. sbagliata    192.168.0.2   prova              2160.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE scaldata 
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso      scaldata 
+    [1;32mOK[0m  il server e' ancora vivo dopo «la scaldata» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (dopo-la-scaldata): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (dopo-la-scaldata): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.1  blocco 1 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-1»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 1»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. sbagliata    192.168.0.2   prova              1522.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. inesistente  127.0.0.1     nessuno-b8-1       2198.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. inesistente  192.168.0.2   nessuno-b8-1       1971.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. sbagliata    127.0.0.1     prova              1870.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 1» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.2  blocco 2 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-2»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 2»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       127.0.0.1     prova              1048.0 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. inesistente  127.0.0.1     nessuno-b8-2       1701.4 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. sbagliata    192.168.0.2   prova              2045.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. inesistente  127.0.0.1     nessuno-b8-2       1603.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. giusta       192.168.0.2   prova              1001.1 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. sbagliata    192.168.0.2   prova              2296.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 2» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.3  blocco 3 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-3»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 3»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. inesistente  192.168.0.2   nessuno-b8-3       1699.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. sbagliata    127.0.0.1     prova              1848.4 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. sbagliata    192.168.0.2   prova              1958.3 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. inesistente  127.0.0.1     nessuno-b8-3       2539.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 3» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.4  blocco 4 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-4»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 4»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 1, '192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. sbagliata    127.0.0.1     prova              1696.8 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. inesistente  192.168.0.2   nessuno-b8-4       1534.0 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. giusta       127.0.0.1     prova              1001.1 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. sbagliata    127.0.0.1     prova              2216.0 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. inesistente  192.168.0.2   nessuno-b8-4       2144.0 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 4» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.5  blocco 5 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-5»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 5»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. sbagliata    192.168.0.2   prova              2275.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. inesistente  127.0.0.1     nessuno-b8-5       1894.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. inesistente  192.168.0.2   nessuno-b8-5       1630.0 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. sbagliata    127.0.0.1     prova              1660.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 5» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.6  blocco 6 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-6»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 6»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 1, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. inesistente  127.0.0.1     nessuno-b8-6       2452.9 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. sbagliata    192.168.0.2   prova              2072.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. sbagliata    127.0.0.1     prova              2017.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. inesistente  192.168.0.2   nessuno-b8-6       2592.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 6» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.7  blocco 7 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-7»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 7»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. sbagliata    192.168.0.2   prova              1610.1 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. giusta       127.0.0.1     prova              1062.2 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. inesistente  127.0.0.1     nessuno-b8-7       2768.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. inesistente  192.168.0.2   nessuno-b8-7       2000.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. sbagliata    127.0.0.1     prova              1815.1 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 7» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.8  blocco 8 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-8»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 8»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 1}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. inesistente  127.0.0.1     nessuno-b8-8       2336.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. sbagliata    192.168.0.2   prova              2045.4 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. inesistente  127.0.0.1     nessuno-b8-8       1543.8 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. giusta       192.168.0.2   prova              1001.1 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. sbagliata    192.168.0.2   prova              2211.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 8» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.9  blocco 9 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-9»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 9»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 2, '192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. inesistente  192.168.0.2   nessuno-b8-9       2114.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. giusta       127.0.0.1     prova              1058.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. sbagliata    127.0.0.1     prova              2519.3 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. sbagliata    192.168.0.2   prova              1898.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. inesistente  127.0.0.1     nessuno-b8-9       2023.5 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. giusta       192.168.0.2   prova              1072.3 ms  AMMESSO                       atteso       
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 9» (PID 130880)
+    [0m--[0m  sblocco «127.0.0.1» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (fra-i-blocchi): NON-BANNATO — NON-BANNATO [192.168.0.2]
+
+[1m== 3.10  blocco 10 di 10 — 6 tentativi[0m
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-10»: non esiste, come deve
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+    [1;32mOK[0m  il server risponde su tutt'e due gli indirizzi: 127.0.0.1, 192.168.0.2  (fino a ECCOMI, senza toccare nessun conto)
+    -- piano di «blocco 10»: 6 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 1, '192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. sbagliata    127.0.0.1     prova              1664.3 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. inesistente  192.168.0.2   nessuno-b8-10      1746.2 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. giusta       127.0.0.1     prova              1001.3 ms  AMMESSO                       atteso       
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. giusta       127.0.0.1     prova              1001.1 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. sbagliata    127.0.0.1     prova              2039.1 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        6. inesistente  192.168.0.2   nessuno-b8-10      1480.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    [1;32mOK[0m  il server e' ancora vivo dopo «blocco 10» (PID 130880)
+
+[1m== 4. ⛔ Il giro del ban — e da qui in poi NESSUNO sblocca niente (B0.3)[0m
+    --  lo sblocco qui sotto e' l'ULTIMO prima del giro: serve a partire da un
+    --  conto azzerato, ed e' dichiarato.  ⚠ Se fallisse, il giro del ban se ne
+    --     accorgerebbe lo stesso — il bilancio dei blocchi tiene ogni indirizzo a
+    --     due fallimenti, cioe' uno sotto la soglia
+    [0m--[0m  sblocco «127.0.0.1» (prima-del-giro-del-ban): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (prima-del-giro-del-ban): NON-BANNATO — NON-BANNATO [192.168.0.2]
+    [1;32mOK[0m  l'utente vero «prova»: esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-ban»: non esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-uno»: non esiste, come deve
+    [1;32mOK[0m  un nome inesistente «nessuno-b8-tre»: non esiste, come deve
+
+    == ⭐ Controllo che dice NO n.2: 2 falliti · 1 riuscito · 2 falliti
+    -- piano di «azzeramento»: 5 tentativi, modo «non-banna» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'192.168.0.2': 2}
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e almeno un indirizzo a 2 fallimenti (se non ci arrivasse, il controllo sarebbe verde per costruzione)
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. sbagliata    192.168.0.2   prova              2491.7 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. inesistente  192.168.0.2   nessuno-b8-ban     1627.6 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. giusta       192.168.0.2   prova              1001.3 ms  AMMESSO                       atteso       
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. sbagliata    192.168.0.2   prova              1999.8 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        5. inesistente  192.168.0.2   nessuno-b8-ban     2134.3 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+    -- pagina da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+
+    == ⛔ Il giro del ban — tre nomi diversi, poi la parola GIUSTA
+    -- piano di «ban»: 4 tentativi, modo «banna-al-4» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: {'127.0.0.1': 3}
+       tentativi che il modello vede bloccati: [4]
+       atteso: bloccato SOLO il quarto — i primi tre passano da PAM, e il terzo e' quello che FA scattare il ban
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. inesistente  127.0.0.1     nessuno-b8-uno     1902.0 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        2. sbagliata    127.0.0.1     prova              1763.4 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x07 = CREDENZIALI_ERRATE
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        3. inesistente  127.0.0.1     nessuno-b8-tre     2209.4 ms  RESPINTO   CREDENZIALI_ERRATE atteso     chiusura=CREDENZIALI_ERRATE  
+   [wt]   sessione chiusa dal server, codice 0x08 = TROPPI_TENTATIVI
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        4. giusta       127.0.0.1     prova              1002.9 ms  RESPINTO   TROPPI_TENTATIVI   limitatore chiusura=TROPPI_TENTATIVI  
+
+    == ⭐ Controllo che dice NO n.1: un ALTRO indirizzo entra subito
+    -- piano di «altro-indirizzo»: 1 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: nessuno
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       192.168.0.2   prova              1001.0 ms  AMMESSO                       atteso       
+
+    == ⛔ Quel che l'utente vede, adesso
+    -- pagina da 127.0.0.1     → HTTP 200 · bannato=True (atteso True) · «tentativi esauriti» presente · mancano 12h 0m · 31337 byte
+    -- pagina da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+    [1;32mOK[0m  il server e' ancora vivo dopo «il giro del ban» (PID 130880)
+    --  il processo 130880 e' sparito (dopo 2 mezzi secondi)
+    --  la porta 7448 e' libera di nuovo
+
+[1m== 5. ⭐ La SECONDA vita del server — il ban sopravvive al riavvio?[0m
+    --  ⛔ il file dei ban NON si tocca: e' l'unica strada per cui il ban puo'
+    --     tornare, e buttarlo qui vorrebbe dire provare il contrario di quel che
+    --     si vuole provare
+    [1;32mOK[0m  acceso «prodotto» (PID 131785 · porta 7448 · tetto 30s) — registro /media/REMOTIX/src/b8-prodotto-seconda-vita.log
+    [1;32mOK[0m  ⭐ il registro e' di «prodotto»: 11 righe con la sua impronta, 0 con quella dell'altro, e la riga d'avvio c'e'
+    --  quel che ha detto del ban all'avvio (stampato E confrontato — B0.4):
+        07:01:35.035 avvio   ban: /srv/src/b8-prodotto-ban.txt, 1 indirizzi caricati
+        07:01:35.035 rcp     il comando di sblocco ascolta su «/srv/src/b8-prodotto-comando.sock» (0600) — «SBLOCCA <indirizzo>» oppure «PING» (RCP.md §4.4-bis)
+        07:01:35.040 pagina  ascolto TCP su 0.0.0.0:7448 — pagina /srv/src/remotix/pagina.html (30228 byte), isolata fra origini (COOP+COEP+CORP, SPECIFICHE.md §11.5)
+    [1;32mOK[0m  il server ha dichiarato lo stato del ban: 1 righe «ban caricati:»
+    [1;32mOK[0m     e 0 righe «non ho potuto leggere» — sono due fatti, e sono distinti
+    [1;32mOK[0m  il comando di sblocco ascolta (B0.3 ha lo strumento che pretende)
+
+    == ⭐ Controllo che dice NO n.3: il ban sopravvive al RIAVVIO
+    -- pagina da 127.0.0.1     → HTTP 200 · bannato=True (atteso True) · «tentativi esauriti» presente · mancano 12h 0m · 31337 byte
+    -- pagina da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+    -- piano di «dopo-riavvio»: 1 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: nessuno
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [wt]   sessione chiusa dal server, codice 0x08 = TROPPI_TENTATIVI
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       127.0.0.1     prova              1002.9 ms  RESPINTO   TROPPI_TENTATIVI   limitatore chiusura=TROPPI_TENTATIVI  ⚠ il modello non giudica qui (il ban viene dal disco)
+
+    == ⛔ E ADESSO lo sblocco, che fin qui non ha toccato niente
+    [0m--[0m  sblocco «127.0.0.1» (prova-tolto): TOLTO — TOLTO [127.0.0.1]
+    -- pagina da 127.0.0.1     → HTTP 200 · bannato=False (atteso False) · «tentativi esauriti» ASSENTE · 30515 byte
+    [0m--[0m  sblocco «127.0.0.1» (prova-non-bannato): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    -- piano di «dopo-sblocco»: 1 tentativi, modo «sotto-soglia» (soglia 3, bilancio 2, finestra 5 min)
+       picco dei fallimenti per indirizzo: nessuno
+       tentativi che il modello vede bloccati: nessuno
+       atteso: nessun bloccato, e picco ≤ 2 (soglia 3)
+   [quic] connessione TERMINATA: codice 0 · (nessun motivo)
+        1. giusta       127.0.0.1     prova              1001.1 ms  AMMESSO                       atteso       
+    [1;32mOK[0m  il server e' ancora vivo dopo «la persistenza e lo sblocco» (PID 131785)
+
+[1m== 6. Si rimette la macchina a posto (B0.3)[0m
+    [0m--[0m  sblocco «127.0.0.1» (pulizia-finale): NON-BANNATO — NON-BANNATO [127.0.0.1]
+    [0m--[0m  sblocco «192.168.0.2» (pulizia-finale): NON-BANNATO — NON-BANNATO [192.168.0.2]
+    --  il processo 131785 e' sparito (dopo 2 mezzi secondi)
+    --  la porta 7448 e' libera di nuovo
+
+[1m== 7. Il verdetto — lo confronta il banco, non chi legge (B0.4)[0m
+
+    == I DENOMINATORI — su che cosa ha guardato questo giro
+    --  fatti registrati: 138  (tentativi 76 · letture della pagina 8 · sblocchi 28)
+    --  blocchi di campioni: 11  (fra un blocco e l'altro si sblocca, ed e' dichiarato)
+    --  inesistente  tenuti  20 su  20 · scartati per scaldata 1 · ⛔ risposte del ban 0 · inattese 0 · errori 0 · indirizzi {'127.0.0.1': 10, '192.168.0.2': 10}
+    --  sbagliata    tenuti  20 su  20 · scartati per scaldata 1 · ⛔ risposte del ban 0 · inattese 0 · errori 0 · indirizzi {'192.168.0.2': 10, '127.0.0.1': 10}
+    --  giusta       tenuti  20 su  20 · scartati per scaldata 1 · ⛔ risposte del ban 0 · inattese 0 · errori 0 · indirizzi {'127.0.0.1': 11, '192.168.0.2': 9}
+
+    == ⛔ Primo criterio: nessuna risposta di PAM prima di 1000 ms (§4.4-bis)
+    --  guardate 74 risposte (campioni, scaldate e giro del ban insieme: il ritardo fisso vale per TUTTE, «anche quando la risposta e' AMMESSO»)
+    [1;32mOK[0m  74 su 74 ≥ 1000 ms — la piu' veloce: 1001.0 ms
+    --  ⚠ e le risposte TROPPI_TENTATIVI (che non passano da PAM): n=2  mediana 1002.9 ms  min 1002.9 ms
+        §4.4-bis dice che questo rifiuto «non passa dal secondo fisso»; rcp.c ce lo fa passare.  Il numero e' qui, e non e' un esito: e' un difetto del documento da chiudere in un verso o nell'altro
+
+    == ⛔ Secondo criterio: le tre mediane, e se si separano
+    --  inesistente  n= 20  min   1480.7  p25   1699.2  mediana   1986.2  p75   2198.2  max   2768.2  MAD  318.7   (ms)
+    --  sbagliata    n= 20  min   1522.6  p25   1815.1  mediana   1987.8  p75   2072.2  max   2519.3  MAD  198.2   (ms)
+    --  giusta       n= 20  min   1001.1  p25   1001.3  mediana   1001.3  p75   1001.3  max   1072.3  MAD    0.0   (ms)
+
+    differenza delle mediane, con l'intervallo al 95 % che la contiene:
+      inesistente  − sbagliata         -1.6 ms   [  -318.4;   +267.6]   risoluzione ±293.0 ms   [1;33mSOSPESO[0m  ⚠ e' QUESTA la coppia che dice i nomi degli utenti
+           ⚠ per arrivare a ±50 ms con questo rumore servirebbero ~687 campioni per caso (adesso 20)
+      inesistente  − giusta          +984.9 ms   [  +699.0;  +1169.8]   risoluzione ±235.4 ms   [1;31mSI DISTINGUONO[0m  (⚠ questa coppia non porta nessun segreto: vedi sotto)
+           ⚠ questa separazione NON dice niente che il filo non dica gia': «ammesso» e «respinto» sono due MESSAGGI diversi (§4.4).  Conta lo stesso — `fasi/01-filo-nudo.md` B8 chiede le TRE mediane indistinguibili — ma nel suo contatore, e col colpevole nominato in fondo
+      sbagliata    − giusta          +986.5 ms   [  +830.4;  +1070.9]   risoluzione ±120.2 ms   [1;31mSI DISTINGUONO[0m  (⚠ questa coppia non porta nessun segreto: vedi sotto)
+           ⚠ questa separazione NON dice niente che il filo non dica gia': «ammesso» e «respinto» sono due MESSAGGI diversi (§4.4).  Conta lo stesso — `fasi/01-filo-nudo.md` B8 chiede le TRE mediane indistinguibili — ma nel suo contatore, e col colpevole nominato in fondo
+
+    == ⛔ Il ban: tre fallite con TRE NOMI DIVERSI, poi la parola GIUSTA
+        nomi:     nessuno-b8-uno     prova              nessuno-b8-tre     prova             
+        modello:  CREDENZIALI_ERRATE CREDENZIALI_ERRATE CREDENZIALI_ERRATE TROPPI_TENTATIVI  
+        sul filo: CREDENZIALI_ERRATE CREDENZIALI_ERRATE CREDENZIALI_ERRATE TROPPI_TENTATIVI  
+    [1;32mOK[0m  i tre nomi sono diversi: il conto guarda l'indirizzo e non il nome (`DECISIONI.md` §1.9)
+    [1;32mOK[0m  ⭐ il QUARTO tentativo aveva la parola d'ordine GIUSTA ed e' stato rifiutato lo stesso, con TROPPI_TENTATIVI: e' la riga che distingue un ban da un contatore
+    [1;32mOK[0m  ⭐ e la sessione WebTransport si e' chiusa con TROPPI_TENTATIVI nel codice d'errore applicativo — letto dal lato che riceve (§3.1 punto 3)
+
+    == ⭐ I tre controlli che dicono NO
+    [1;32mOK[0m  1. un ALTRO indirizzo entra subito con le credenziali buone (1 tentativi): il server non ha smesso di funzionare, e il conto e' per indirizzo
+    [1;32mOK[0m  2. due falliti · UNO RIUSCITO · due falliti: nessun blocco.  Se il successo non azzerasse, il terzo fallito avrebbe fatto scattare il ban
+        ⭐ e la pagina lo conferma da fuori: quell'indirizzo non e' bannato (il conto vale 4 su 3)
+
+    [1;32mOK[0m  3. il ban SOPRAVVIVE al riavvio del server: dopo la seconda accensione la pagina lo dice ancora, e sul filo il tentativo con la parola giusta riceve ancora TROPPI_TENTATIVI
+
+    == ⛔ Quel che l'utente vede: la pagina si carica LO STESSO
+    --  `[?]` letto con un socket, non con un browser: la frase la scrive il server nel corpo e nessuno script la costruisce, quindi quel che un browser mostrerebbe e' questo testo — ⚠ ma un motore vero non l'ha guardata, e `fasi/01-filo-nudo.md` B8 chiede il DOM «come per le otto frasi di B7»
+    --  ⛔ i tre marcatori cercati qui (`data-bannato`, `data-restano-ms`, «tentativi esauriti») li produce SOLO l'innesto di `01-b3-rcp-innesta.py`.  Il server di prodotto in `src/` scrive la stessa cosa in un formato senza un campo in comune: puntando questo banco li', queste tre righe diventerebbero rosse SU UN SERVER CHE IL BAN LO FA
+    [1;32mOK[0m  stato-iniziale         da 127.0.0.1     → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  stato-iniziale         da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  azzeramento-dopo       da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  bannato-prima          da 127.0.0.1     → HTTP 200 · bannato=True (atteso True) · frase=True · ore=12 minuti=0
+    [1;32mOK[0m  non-bannato-prima      da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  bannato-dopo-riavvio   da 127.0.0.1     → HTTP 200 · bannato=True (atteso True) · frase=True · ore=12 minuti=0
+    [1;32mOK[0m  non-bannato-dopo-riavvio da 192.168.0.2   → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  dopo-sblocco           da 127.0.0.1     → HTTP 200 · bannato=False (atteso False) · frase=False · ore=None minuti=None
+    [1;32mOK[0m  e le ore che mancano sono plausibili (12 su 12): l'orologio della pagina e' quello della sessione
+
+    == ⛔ Il comando di sblocco, provato IN FONDO (B0.3)
+    [1;32mOK[0m  prova-tolto            «127.0.0.1» → TOLTO (atteso TOLTO)
+    [1;32mOK[0m  prova-non-bannato      «127.0.0.1» → NON-BANNATO (atteso NON-BANNATO)
+    [1;32mOK[0m  ⭐ e dopo lo sblocco quell'indirizzo ENTRA: lo sblocco non ha solo cambiato una risposta, ha rimesso l'indirizzo dentro
+
+    == ⚠ Il registro del server — diagnosi e denominatore, NON arbitro
+    --  vite del server nel registro: 2  (attese 2: una per i campioni e il ban, una per la persistenza)
+        06:57:17.952 avvio   ban: /srv/src/b8-prodotto-ban.txt, 0 indirizzi caricati
+        07:01:35.035 avvio   ban: /srv/src/b8-prodotto-ban.txt, 1 indirizzi caricati
+    --  «il secondo fisso e' passato»: n=76  mediana 1696 ms  (ammessi 1000 ms su 26 · respinti 1984 ms su 50)
+    --  se quel numero e' ~1000 ms a governare e' stato il RITARDO FISSO; se e' molto piu' alto a governare e' stato PAM, e una separazione fra le mediane sarebbe di PAM
+    --  indirizzi di provenienza visti DAL SERVER: ['[127.0.0.1]', '[192.168.0.2]']
+    --  righe «BANNATO»: 1 · «SBLOCCATO su comando»: 1 · «NON era bannato»: 27 · pagine servite: 2
+    [1;32mOK[0m  ⭐ e la seconda accensione dichiara «ban caricati: 1»: il ban e' tornato dal disco, non dalla memoria
+    [1;32mOK[0m  ⭐ ogni sblocco e' finito nel registro: 28 chiesti, 28 righe scritte (1 «tolto» + 27 «non era bannato»)
+
+    == ⛔ I due cronometri sullo stesso fatto (B0.4: si stampa E si confronta)
+    --  client (dal lato che riceve) 1700 ms  ·  server («il secondo fisso e' passato») 1696 ms  ·  differenza +4 ms
+    [1;32mOK[0m  il cronometro del client contiene quello del server, come deve: quel che il banco misura e' l'intervallo che dichiara di misurare
+
+    == ⛔ Le mediane si separano: CHI le separa — e si misura (A18)
+    --  quel che il SERVER dichiara di aver aspettato oltre il secondo fisso: respinti +984 ms · ammessi +0 ms  (margine 200 ms)
+    --  il caso piu' lento sul FILO: «sbagliata» (1988 ms)  ·  inesistente 1986 · sbagliata 1988 · giusta 1001
+    --  ⇒ ⛔ A GOVERNARE I TEMPI E' **PAM**: il server ha aspettato oltre il secondo fisso SOLO sui fallimenti, che e' la firma di `pam_faildelay`, e il caso lento sul filo e' un respinto.  La cura sta in `banchi/rcp/autenticazione.c` e nella pila PAM, non in `rcp.c`
+
+    == L'esito, e il suo denominatore: 76 tentativi, 8 pagine, 28 sblocchi
+    [1;31m⛔ B8: 2 coppie di mediane SI SEPARANO — «le tre mediane indistinguibili» di `fasi/01-filo-nudo.md` B8 non e' soddisfatta[0m
+    ⭐ ma la coppia che porta il SEGRETO — «inesistente − sbagliata», l'unica che direbbe se un nome utente esiste — NON si separa: quel che §4.4 vieta non e' leggibile col cronometro
+    ⭐ e il ban passa per intero: scatta al terzo, rifiuta il quarto con la parola giusta, sopravvive al riavvio, lo dice nella pagina, e lo sblocco lo toglie
+    ⚠ quel che il SERVER dichiara di aver aspettato oltre il secondo fisso: respinti +984 ms · ammessi +0 ms  (margine 200 ms)
+    ⚠ il caso piu' lento sul FILO: «sbagliata» (1988 ms)  ·  inesistente 1986 · sbagliata 1988 · giusta 1001
+    ⚠ ⇒ ⛔ A GOVERNARE I TEMPI E' **PAM**: il server ha aspettato oltre il secondo fisso SOLO sui fallimenti, che e' la firma di `pam_faildelay`, e il caso lento sul filo e' un respinto.  La cura sta in `banchi/rcp/autenticazione.c` e nella pila PAM, non in `rcp.c`
+    ⚠ E' il `[?]` che §4.4-bis ha gia' dichiarato il 10 agosto 2026 e che il ban NON chiude: sono due proprieta' diverse.  ⛔ Questo esito NON e' un verde, ed e' tenuto separato dal rosso di sopra per una ragione sola — un banco sempre rosso non fa fallire nessuna regressione, perche' nessuno lo guarda piu'.
+
+[1m== 8. ⛔ La certificazione: si costruisce il guasto e si pretende il rosso[0m
+
+    == ⛔ LA CERTIFICAZIONE: si costruisce il guasto e si pretende il rosso
+    --  ⛔ QUEL CHE QUESTA RIGA CERTIFICA: il GIUDICE.  I guasti si costruiscono sui FATTI GIA' REGISTRATI, quindi provano che `verdetto()` sa vedere un fatto storto, non che i fatti siano stati presi bene
+    --  ⛔ QUEL CHE NON CERTIFICA: l'ACQUISIZIONE.  Un `t0` spostato in un punto che tiene i numeri plausibili, un `RITARDO_CREDENZIALI` tolto dal server, un innesto che non c'e': nessuno di questi vive nei fatti registrati.  ⚠ Il solo guasto che ci arriva e' «cronometro scollato», e ci arriva per il SECONDO TESTIMONE (il registro del server), non per i fatti
+    --  ⛔ E il guasto che coprirebbe il resto — togliere `RITARDO_CREDENZIALI` dal server — sta nel catalogo di `01-b12-guasti.py` ed e' **catalogato e non eseguito**: e' un buco di due file di due mani diverse, e va detto qui perche' e' qui che si legge la parola «certificato»
+    --  il giro SANO, cosi' com'e': esito 5 (rosso)
+    --  fatti su cui si guasta: 138 · righe di registro: 1639
+    --  guasti costruiti a mano: 15  ⛔ e questo e' il denominatore: un elenco di OK senza di lui non e' una misura
+    [1;32mOK[0m  il quarto tentativo, con la parola GIUSTA, e' AMMESSO
+    [1;32mOK[0m  i tre nomi del giro del ban sono UGUALI
+    [1;32mOK[0m  una risposta di PAM arriva a 900 ms
+    [1;32mOK[0m  ⛔ «utente inesistente» risponde 2 s prima di «parola sbagliata»
+    [1;32mOK[0m  la pagina di un indirizzo bannato dice «non sei bannato»
+    [1;32mOK[0m  la pagina bannata non contiene «tentativi esauriti»
+    [1;32mOK[0m  la sessione si chiude con un codice diverso da TROPPI_TENTATIVI
+    [1;32mOK[0m  l'altro indirizzo NON entra
+    [1;32mOK[0m  il successo non azzera il conto
+    [1;32mOK[0m  lo sblocco risponde «non era bannato» su un ban vero
+    [1;32mOK[0m  la persistenza non e' stata provata (manca la pagina dopo il riavvio)
+    [1;31mNO[0m  la seconda accensione dichiara «ban caricati: 0»  ⛔ il verdetto NON ha detto «la seconda accensione dichiara ban caricati» (esito 5)
+    [1;32mOK[0m  ⛔ ZERO tentativi: «tutti quelli provati sono andati bene» su zero provati
+    [1;32mOK[0m  ⛔ il ritardo e' NOSTRO, sul percorso dell'AMMESSO, e PAM risponde in 5 ms (A18: il verdetto deve smettere di accusare PAM)
+    [1;32mOK[0m  ⛔ il cronometro del CLIENT misura meno di quello del SERVER (A19: `t0` spostato in un punto che tiene i numeri plausibili)
+
+    [1;31m⛔ LA CERTIFICAZIONE NON PASSA: 1 guasti su 15 non fanno diventare rosso il banco.[0m
+    ⚠ Finche' questa riga e' rossa, un verde di B8 non vuol dire niente: un banco che non riproduce non e' una prova di correttezza (`LEZIONI.md` §1.3)
+    [1;31mNO[0m  ⛔ la certificazione del GIUDICE non passa: finche' e' rossa, un verde
+    [1;31mNO[0m     di B8 non vuol dire niente
+
+[1m== Esito[0m
+    [1;31mNO[0m  ⛔ B8: il BAN passa per intero, ma le mediane SI SEPARANO
+    --  ⛔ e l'esito 5 si da' SOLO quando l'imputato e' stato MISURATO ed e'
+    --  PAM: il verdetto qui sopra stampa i due numeri del registro del
+    --  server che lo sostengono (quanto ha aspettato oltre il secondo fisso
+    --  sui respinti e sugli ammessi) e quale caso e' il piu' lento sul filo.
+    --  La cura sta in banchi/rcp/autenticazione.c e nella pila PAM: e' il
+    --  [?] che RCP.md §4.4-bis ha gia' dichiarato, e che il ban non chiude.
+    --  ⚠ Se l'imputato fosse stato un altro — o non misurabile — questo
+    --  giro sarebbe uscito 1, non 5: l'indulgenza e' scritta per PAM.
+    --  i fatti, uno per riga: /media/REMOTIX/src/b8-esiti-prodotto.jsonl  (ogni riga porta il bersaglio)
+    --  il registro del server, tutt'e due le vite: /media/REMOTIX/src/b8-prodotto-server.log
+    --  il file dei ban: /srv/src/b8-prodotto-ban.txt (⚠ resta li' apposta, per guardarlo)
+USCITA=5
