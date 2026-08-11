@@ -445,6 +445,41 @@ fuoco() # $1 = pezzo di titolo
 	return 0
 }
 
+# ⛔⭐ IL FUOCO PRIMA DI OGNI GAMBA, E NON DENTRO IL RAMO DI UNA SOLA — cura
+#     dell'11 agosto 2026, sera, e il difetto l'ha trovato una FOTOGRAFIA.
+#
+# `[M]` `01-p5-copie/firefox-p-sessione-1-pagina.png`: Firefox fermo sulla
+# pagina del marcatore d'**avvio**, con tre schede aperte — `naviga()` aveva
+# battuto `ctrl+l`, l'URL e `Invio`, e la pagina non era cambiata.  ⛔ La
+# ragione sta nella struttura: l'unica chiamata a `fuoco` stava **dentro il
+# ramo di N2**, e con il comando di sblocco che non risponde quel ramo si
+# salta — si arrivava alla gamba `P` **senza aver mai dato il fuoco a nessuna
+# finestra**.  ⚠ Su Chrome non si vedeva, perche' la finestra appena aperta
+# prende il fuoco da se': la stessa cura mancante, invisibile su un motore su
+# due — che e' esattamente la ragione per cui questo banco vuole DUE colonne.
+#
+# ⛔ E il titolo non e' sempre «REMOTIX»: all'inizio della gamba la finestra sta
+#    sul marcatore, che il server serve con un 404 e il cui titolo porta
+#    l'indirizzo.  Si provano tutt'e due, in ordine, e si dichiara se nessuno
+#    dei due si trova — invece di battere tasti nel vuoto.
+# ⚠ E UN LIMITE MISURATO DI QUESTA FUNZIONE, scritto invece che taciuto.
+#   `[M]` 11 agosto 2026, 13:29: all'inizio della gamba `p-sessione` su Firefox
+#   questa funzione ha detto NO — la finestra stava sul marcatore d'avvio, e il
+#   suo titolo non conteneva ne' «REMOTIX» ne' l'indirizzo.  ⛔ Il messaggio che
+#   ne segue («i tasti andrebbero a nessuno») era **fuorviante**: i tasti sono
+#   arrivati lo stesso, perche' quella finestra il fuoco ce l'aveva gia', e la
+#   gamba e' andata avanti fino a `SESSIONE`.
+#   ⭐ Il seguito giusto e' aggiungere il nome del motore fra i titoli provati —
+#      ⛔ e NON e' stato fatto stasera: cambiare il pilota **dopo** aver misurato
+#      e prima di rimisurare vorrebbe dire pubblicare un banco che nessuno ha
+#      girato.  Si scrive qui, e lo fa il prossimo giro.
+fuoco_prodotto()
+{
+	fuoco "REMOTIX" && return 0
+	fuoco "$IND" && return 0
+	return 1
+}
+
 fotografia() # $1 = nome del file
 {
 	X import -window root "$COPIE/$1.png" >/dev/null 2>&1 \
@@ -523,6 +558,14 @@ gamba_pagina()
 	local marca_b="p5-$motore-$gamba-$GIRO-fine"
 	log "   gamba «$gamba» su $motore — atteso: $atteso"
 
+	# ⛔ Il fuoco PRIMA di battere qualunque tasto, e se non si trova la finestra
+	#    lo si dice: un `ctrl+l` battuto nel vuoto lascia la pagina dov'era, e il
+	#    banco misurerebbe il silenzio di un gesto mai fatto.
+	if ! fuoco_prodotto; then
+		ko "⛔ non trovo nessuna finestra del browser in prova (ne' «REMOTIX» ne'"
+		ko "   «$IND»): da qui in poi i tasti andrebbero a nessuno, e quel che"
+		ko "   non arriva al server non sarebbe un fatto sul prodotto."
+	fi
 	naviga "https://$IND:$PORTA/$marca_a"
 	sleep 4
 	naviga "https://$IND:$PORTA/"
@@ -585,8 +628,23 @@ gamba_pagina()
 	#   ammazza il processo e LO SI DICHIARA — un banco che aspetta per sempre
 	#   non e' piu' un banco.
 	if [ -n "$PID_BR" ]; then
-		if fuoco "REMOTIX"; then
-			xdotool key --clearmodifiers ctrl+w 2>/dev/null
+		# ⛔⭐ `X xdotool`, NON `xdotool` — e questa riga sola vale mezza serata.
+		#
+		#     `[M]` 11 agosto 2026, `01-p5-congedo.sh`: qui c'era `xdotool key
+		#     --clearmodifiers ctrl+w` **senza `X`**, cioe' senza
+		#     `DISPLAY=$SCHERMO`.  Il tasto andava sul display dell'ambiente —
+		#     che in una sessione di banco non e' lo schermo finto — e la scheda
+		#     non si chiudeva col gesto: niente `pagehide`, niente congedo.
+		#     ⛔ E il banco scriveva **«nessun congedo, per nessuna delle due
+		#     strade di §3.1»**, che e' un'accusa al PRODOTTO per un tasto che
+		#     non era mai arrivato.  La settima veste di `LEZIONI.md` §1.9, e la
+		#     seconda volta in questa fase (dopo B3, dove il colpevole era il
+		#     buffer di Python).
+		#     ⭐ Con `X` davanti, misurato sulla stessa scena: il gesto arriva
+		#        (finestre 1 → 0) e **il congedo esce** — motivo nel codice di
+		#        chiusura, posto LASCIATO, zero `STACCATO per silenzio`.
+		if fuoco_prodotto; then
+			X xdotool key --clearmodifiers ctrl+w 2>/dev/null
 			inf "⭐ scheda chiusa con ctrl+w (il gesto dell'utente): se la pagina"
 			inf "   si congeda, e' qui che lo fa"
 		else
