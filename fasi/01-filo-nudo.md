@@ -655,10 +655,18 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | ⛔ **B8** | ⛔ **provato e NON certificato**, e il motivo è cambiato | vedi il riquadro qui sotto |
 > | ⭐ **B3** | ⭐ **certificato — e non era mai stato provato** | `0 → 2 → 0`, marca «`CONGEDO invece di SESSIONE: motivo 0x0f = GIA_ATTIVA_REMOTA`». ⛔ L'appiglio in catalogo aveva **due** spazi di rientro dove il file ne ha **quattro**: compariva **zero** volte, e il guasto non si sarebbe innestato. ⭐ Il sintomo col guasto è quello di v1 alla lettera: la prima connessione passa, la seconda si vede rifiutare perché il posto della prima non si è liberato |
 > | ⭐ **B2** | ⭐ **certificato — e ha trovato un difetto vero prima di lasciarsi certificare** | `0 → 1 → 0`, marca «`- credito uni DISPONIBILE a RCP all'apertura`». Vedi il riquadro |
-> | ⛔ **B11** | ⛔ **provato per la prima volta, e NON certificato** | il controllo che dice *no* **funziona** (9 punti contro il server sano); contro quello guasto **un punto** non passa. Vedi il riquadro |
+> | ⭐ **B11** | ⭐ **certificato dal PROPRIO giro** | **CONFORME, 0 punti** contro il server guasto; **NON-CONFORME, 9 punti** contro quello sano — il controllo che dice *no*. ⚠ Riserva scritta: **un motore solo**. Vedi il riquadro |
 > | **B13** | ⛔ **non certificabile, e il motivo ha un nome** | vedi il riquadro qui sotto |
 >
-> ⇒ ⭐ **5 certificati su 12 sul codice di oggi**, contro **3 su 12 su un codice che non c'è più**.
+> ⇒ ⭐ **9 certificati su 12 sul codice di oggi**, contro **3 su 12 su un codice che non c'è più**.
+> ⚠ Restano **due provati e non certificati** — **B8** e **B13**, tutt'e due su lacune con un nome,
+> non su capricci dello strumento — e **uno mai provato**, **B10**. ⛔ Nessuno dei tre è «pulito».
+>
+> ⛔ **E questa riga ha portato «5» per mezza giornata mentre il registro diceva 8** — R12-A.49.
+> Due aggiornamenti di questo file erano andati a vuoto **in silenzio**, perché una sostituzione di
+> testo non protesta quando non trova, e lo script diceva «fatto» lo stesso. ⭐ È la forma «il
+> denominatore non lo guarda nessuno», applicata a un documento invece che a un banco: adesso ogni
+> sostituzione si verifica, e chi non trova l'ancora **si ferma**.
 >
 > ⚠ **E il numero dipende da dove lo si chiede — R12-A.36.** Il registro viveva in **due copie**,
 > una per macchina, e nessuna delle due sapeva dell'altra: il server dava «B9 NON certificato»
