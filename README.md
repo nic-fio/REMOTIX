@@ -126,9 +126,10 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > arrivano **tutt'e due** le strade di §3.1 col motivo **`0x01`** — su Firefox **e** su Chrome, dove
 > la chiusura col codice `0x0` che §3.1 vieta **non compare più**. L'ancora di `congeda_corrente`
 > non è più *«il tentativo è finito»* ma ***«la sessione è finita»***: la azzera `wt.closed`, e solo
-> se il riferimento è ancora il proprio. ⛔ **Quel che resta non è una misura, è una dichiarazione**:
-> è un cambiamento di prodotto **dopo** la chiusura della fase 1, e come metterlo a verbale è una
-> **decisione dell'utente**, aperta.
+> se il riferimento è ancora il proprio. ✅ **Ed è un cambiamento di prodotto dopo la chiusura della
+> fase 1, quindi è stato messo a verbale**: `DECISIONI.md` §1.12 — la cura è **fuori fase**, ⛔ la
+> **fase 1 non si riapre** e la certificazione resta **12 su 14**, ⭐ e la cura **non si arretra**,
+> perché è misurata con lo stesso rigore della fase. Alla fase 2 passa la **ricertificazione di P5**.
 >
 > ⛔⛔ **E la storia di come è stato quasi perso vale più del difetto.** In ordine:
 >
@@ -178,13 +179,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   `pagehide`»* arrivavano **identici** al registro del server, e a separarli è servito il registro
 >   **del browser**: `banchi/01-p5-ff-*`, con un portatore che non passa da WebTransport. ⇒
 >   L'imputato era **la pagina**, su tutt'e due i motori; ⭐ la cura è nel prodotto e i due giri per
->   motore la confermano. ⛔ **Resta aperta la dichiarazione**, non la misura: la fase era chiusa
->   quando la cura è stata applicata.
+>   motore la confermano. ✅ **E la dichiarazione c'è**: `DECISIONI.md` §1.12 — cura **fuori fase**, la
+>   fase 1 resta chiusa a **12 su 14**, e la ricertificazione di P5 è carico della fase 2.
 > - ⚠ **E il tracciatore di quel banco è CIECO su Chrome dentro `pagehide`**: non esce né
 >   `sendBeacon` né una XHR **sincrona**. Su Chrome l'attribuzione poggia solo sul registro del
 >   server — che basta, perché fra prima e dopo cambia la riga della violazione, ⛔ ma chi
 >   riusasse quel tracciatore altrove deve saperlo.
 > - ⛔ **P5 non si certifica** per quel punto solo — il resto del suo giro sano è verde su Chrome.
+>   ⭐ **E adesso la causa non c'è più**, ma il giro nuovo **non è stato fatto**: si fa alla fase 2
+>   (`DECISIONI.md` §1.12), ⚠ e **prima va curata la scena di P5**, che chiude ancora `ctrl+w`
+>   sull'**unica** scheda — dove Firefox esce e non esce niente per nessuna via. ⛔ *«Curato»* non
+>   vuol dire *«certificato»*: sono due parole diverse, e questa fase le ha già confuse una volta.
 > - ⛔ ~~La parola d'ordine nei registri sporchi~~ — **chiusa**: cura verificata con un giro nuovo,
 >   **33 file** buttati con la traccia. ⚠ **Resta** la parola sulla riga di comando dei banchi
 >   (quindi in `ps`) per `parola-di-prova`; ⭐ **per la parola generata di `prova2` no**: B10 la passa

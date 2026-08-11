@@ -701,6 +701,31 @@ niente.
 
 *Conseguenze da scrivere: `SPECIFICHE.md` §5.5 e `fasi/01-filo-nudo.md`, «I ripieghi di fase».*
 
+### 1.12 ✅ ⭐ La cura del congedo è **fuori fase, e dichiarata** — la fase 1 resta chiusa a 12 su 14
+
+*11 agosto 2026, tarda serata, dall'utente, **dopo** la chiusura della fase 1.*
+
+**Il fatto.** Il difetto del congedo di §8.1 — chiudendo la scheda la pagina non manda nessun
+`CONGEDO`, su tutt'e due i motori — è stato trovato e **attribuito** in fase 1, e **curato dopo la
+chiusura**: `src/pagina.html` non azzera più `congeda_corrente` nel `finally` di `submit`, lo azzera
+`wt.closed`. ⛔ E il documento di fase dice, con parole dell'utente, che *«una cura di prodotto
+infilata dopo la chiusura non è una cura, è un cambiamento non dichiarato»*.
+
+**La decisione, e sono tre cose insieme:**
+
+| | |
+|---|---|
+| ⛔ **la fase 1 non si riapre** | la certificazione resta **12 su 14** com'è stata consegnata. Un verdetto già dato non si tocca per un fatto successivo: si riaprisse per questo, «chiusa» smetterebbe di voler dire qualcosa |
+| ⭐ **e la cura non si arretra** | è **misurata** con lo stesso rigore della fase — l'atteso scritto prima, **due giri per motore**, il registro conservato in `banchi/01-p5-ff-registro-cura.log`. Toglierla dal prodotto per rimetterla fra una settimana significherebbe tenere in casa un difetto **noto e curato** per una ragione di calendario |
+| ⭐ **la cura è un'APPENDICE DATATA** | sta nel riquadro P5 di `fasi/01-filo-nudo.md`, sotto la cura descritta, e dice *«applicata e rimisurata la tarda serata dell'11»*. ⛔ Non entra nel conto della certificazione, e **non cambia un numero** di quel documento |
+
+⛔ **Che cosa passa alla fase 2, e non si perde qui**: la **ricertificazione di P5**, che non passava
+proprio per questo difetto. ⚠ E vuole prima la cura della sua scena — `01-p5-lancia.sh` chiude
+ancora `ctrl+w` **sull'unica scheda**, dove Firefox **esce** e non esce niente per nessuna via: senza
+quella cura il giro nuovo sarebbe rosso per la scena, non per il prodotto.
+
+*Conseguenze scritte: `fasi/01-filo-nudo.md` (riquadro P5 e la tabella dei difetti) e `README.md`.*
+
 ---
 
 ## 2. I numeri
