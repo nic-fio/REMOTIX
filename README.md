@@ -109,7 +109,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > rimisurato (14 su 14). ⚠ **E nessun attrezzo fa quella propagazione** — i banchi la *controllano*
 > soltanto: è il motivo per cui il disallineamento è rimasto lì mezza giornata.
 >
-> ⛔ **B13, perché resta fuori — e non è del prodotto.** Il suo giro sano esce **1** dove il catalogo
+> ⭐⭐⭐ **E POI ANCHE B13 È RIENTRATO: `[M]` 12 agosto 2026, `14 su 14`, zero scadute, zero non
+> riverificabili, zero mai provati.** La cura non è stata toccare un numero: è stata **cambiare
+> scena**. `01-b13-sera-certifica.sh certifica` rifà lo stesso ciclo con lo **stesso guasto** ma
+> contro il **PRODOTTO** sulla 7481 — che la pagina la serve davvero — e lì `B13.4` ha un imputato:
+> **sano 3 → guasto 1 → risanato 3**, con la marca «LE IMPRONTE COMBACIANO» contata **0 · 1 · 0**
+> sui tre file d'uscita. ⇒ Il giro sano esce **3**, cioè esattamente l'atteso che il catalogo
+> dichiarava: **il numero era giusto e la scena era sbagliata.**
+> ⏳ **Quel che resta**: `01-b12-lancia.sh` non ha modo di essere puntato sul prodotto. Finché non
+> ce l'ha, i due strumenti misurano due scene diverse e **solo uno dei due può certificare B13**.
+>
+> ⛔ **B13, perché sotto B12 non si certifica — e non è del prodotto.** Il suo giro sano esce **1** dove il catalogo
 > dichiara **3**, e i numeri di B13 **non sono un conteggio**: `0` = sei proprietà su sei passano,
 > `1` = **c'è almeno una proprietà ROSSA**, `3` = nessun rosso, ma restano buchi dichiarati `[?]`.
 > Il rosso è **B13.4**, *«la pagina servita in TCP»*, che dà `[?]` se **nessuno** ascolta in TCP e

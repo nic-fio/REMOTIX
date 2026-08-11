@@ -782,12 +782,31 @@ guasto(
     #   e' stata conservata, e senza quella il confronto non si puo' fare.  Si
     #   scrive qui perche' chi rilegge sappia che cosa NON e' stato provato.
     #
-    # ⇒ QUINDI B13 RESTA NON CERTIFICATO, e il motivo ha un nome: **B13.4 e'
-    #   rossa perche' la si chiede al server sbagliato**.  Si certifica il
-    #   giorno in cui quella proprieta' viene misurata dove la pagina esiste —
-    #   il PRODOTTO — e il giro sano torna a uscire 3.  ⛔ Non il giorno in cui
-    #   qualcuno riscrive questo numero: e' la stessa regola del 10 agosto qui
-    #   sotto, e la seconda volta che questo banco la fa pagare.
+    # ⇒ QUINDI SOTTO B12 B13 NON SI CERTIFICA, e il motivo ha un nome: **B13.4
+    #   e' rossa perche' la si chiede al server sbagliato**.  ⛔ Non si cura
+    #   riscrivendo questo numero: e' la stessa regola del 10 agosto qui sotto,
+    #   e la seconda volta che questo banco la fa pagare.
+    #
+    # ⭐⭐ E LA CURA C'E', ED E' STATA ESEGUITA — `[M]` la notte fra l'11 e il
+    #    12 agosto 2026, `01-b13-sera-certifica.sh certifica`: **lo stesso ciclo
+    #    con lo STESSO guasto, ma contro il PRODOTTO** sulla 7481, che la pagina
+    #    la serve davvero (due ascoltatori, `pagina.html` 34.089 byte).
+    #
+    #      sano 3 · guasto 1 · risanato 3
+    #      marca «LE IMPRONTE COMBACIANO»: 0 · 1 · 0  (contata sui tre file
+    #                                                  d'uscita di quel giro)
+    #
+    #    ⇒ Il giro sano esce **3**, cioe' ESATTAMENTE l'atteso dichiarato qui:
+    #    contro il prodotto B13.4 ha un imputato e smette di essere un rosso.
+    #    ⭐ E la lezione e' che il numero era giusto e la SCENA era sbagliata —
+    #    non il contrario.
+    #
+    # ⚠ Quindi la riga di registro di B13 viene da `01-b13-sera-certifica.sh`,
+    #   non da `01-b12-lancia.sh`, ed e' scritto qui perche' chi rilegge non
+    #   vada a cercare un giro di B12 che non esiste.  ⏳ Quel che resta da fare
+    #   e' dare a `01-b12-lancia.sh` un modo di essere puntato sul prodotto:
+    #   finche' non ce l'ha, questi due strumenti misurano due scene diverse e
+    #   solo uno dei due puo' certificare B13.
     atteso_sano=3,
     sostituisci_con="{CERT}/sessione.pem",
     nota="⛔ IL GUASTO E' STATO RIFATTO L'11 AGOSTO 2026 — rilievi R12-A.1 e "
