@@ -1025,11 +1025,65 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | ⭐ **e il rosso è di UN controllo solo** | `costruzione.esito` resta **0** e `binario.marche` resta **8/8**: il guasto **non** è passato per una compilazione fallita, che renderebbe rosso qualunque banco e certificherebbe **zero** |
 > | ⛔ **e la prima stesura del guasto sarebbe stata proprio quella** | toglieva **l'intestazione**. ⚠ Ma `src/costruisci.sh` **cerca `Cross-Origin-Opener-Policy` dentro il binario e si ferma se non la trova**, e la cerca anche P1 fra le sue otto marche. ⭐ Preso **leggendo `costruisci.sh` prima di innestare**, e la cura è nella forma del guasto: **si cambia il valore, si lascia il nome** |
 > | ⛔ **P5 è PROVATO e NON CERTIFICATO** | e non *«non provabile»*, che è l'altra cosa. ⭐ Ma il suo conto è cambiato due volte in un'ora, e la seconda in meglio |
-> | ⭐⭐ **e l'accusa al PRODOTTO era del BANCO** | ⛔ P5 scriveva *«nessun congedo, per nessuna delle due strade di §3.1»* — cioè accusava la pagina di violare §8.1 **per un gesto mai fatto**: `01-p5-lancia.sh` batteva `xdotool key ctrl+w` **senza la funzione `X`**, su un `DISPLAY` che non è lo schermo finto. Il tasto non arrivava, `pagehide` non scattava. ⭐ **L'arbitrato è `banchi/01-p5-congedo.sh`** `[M]` **13:26 UTC**: si va via in **due modi** — navigando via, dove `pagehide` scatta di sicuro, e con `ctrl+w`, dove scatta solo se il tasto arriva — e ⭐ **da tutt'e due il congedo ESCE** (strada 2 di §3.1, posto `LASCIATO`, **zero** `STACCATO per silenzio`, e il gesto verificato dalle finestre **1 → 0**). ⇒ **La pagina fa quel che §8.1 le impone.** ⚠ È `LEZIONI.md` §1.9 di nuovo, e **la seconda volta in questa fase dopo B3**: il rosso puntato sull'imputato sbagliato |
+> | ⛔⛔ **ATTENZIONE: le due righe qui sotto sono state SMENTITE la sera stessa** | ⭐ Il banco aveva davvero un difetto — `ctrl+w` sul display sbagliato, ed è vero — ⛔ **ma l'assoluzione che ne è seguita era falsa**: l'arbitrato contava una chiusura **senza guardarne il motivo**. Il difetto del prodotto **c'è, su tutt'e due i motori**. Si leggano queste righe **fino in fondo al riquadro**, dove la misura le corregge |
+> | ⭐⭐ **e l'accusa al PRODOTTO era del BANCO** *(riga smentita — vedi sotto)* | ⛔ P5 scriveva *«nessun congedo, per nessuna delle due strade di §3.1»* — cioè accusava la pagina di violare §8.1 **per un gesto mai fatto**: `01-p5-lancia.sh` batteva `xdotool key ctrl+w` **senza la funzione `X`**, su un `DISPLAY` che non è lo schermo finto. Il tasto non arrivava, `pagehide` non scattava. ⭐ **L'arbitrato è `banchi/01-p5-congedo.sh`** `[M]` **13:26 UTC**: si va via in **due modi** — navigando via, dove `pagehide` scatta di sicuro, e con `ctrl+w`, dove scatta solo se il tasto arriva — e ⭐ **da tutt'e due il congedo ESCE** (strada 2 di §3.1, posto `LASCIATO`, **zero** `STACCATO per silenzio`, e il gesto verificato dalle finestre **1 → 0**). ⇒ **La pagina fa quel che §8.1 le impone.** ⚠ È `LEZIONI.md` §1.9 di nuovo, e **la seconda volta in questa fase dopo B3**: il rosso puntato sull'imputato sbagliato |
 > | ⭐ **e il testimone è stato scelto bene** | il registro **del server**, letto a **+8 s** — prima che il tetto dei 30 secondi possa liberare il posto: senza quella finestra, *«si è congedato»* e *«staccato per silenzio»* arrivano con la stessa faccia. ⚠ *E il primo giro dell'arbitrato ha sbagliato lui: il segmento si chiudeva sul marcatore di fine, mentre `pagehide` scatta **mentre quella richiesta è in volo**, e la riga del congedo cadeva fuori. Uno zero da segmento sbagliato ha la stessa faccia di uno zero vero — vale il **secondo** giro* |
 > | ⭐ **curato il pilota, i numeri si muovono** | `X` davanti al `ctrl+w`, e `fuoco` portato **fuori dal ramo di N2** — con lo sblocco che non risponde quel ramo si saltava, e si arrivava alla gamba `P` **senza aver mai dato il fuoco a nessuna finestra**. `[M]` giro sano **13:29:41 UTC**: ⭐ **Chrome passa a CONFORME**, e ⭐ **Firefox adesso MISURA** — arriva a `SESSIONE`, **14 su 15**, secondo fisso **1069 ms** — dove prima non aveva denominatore |
 > | ⛔ **e resta UN punto, che questa volta NON è del banco** | su **Firefox** il congedo non esce lo stesso: dal registro del server il client chiude con un **`FIN` nudo sul canale di controllo**, il posto è `LASCIATO` **in modo ordinato** e `STACCATO per silenzio` vale **0**. ⇒ **Il gesto è arrivato, la sessione si è chiusa bene, e il client non ha detto perché** — dove §8.1 lo impone senza condizioni. ⚠ **I due imputati residui non si distinguono da questa parte**: *«la pagina non spedisce»* e *«Firefox butta via quel che la pagina spedisce dentro `pagehide`»* arrivano identici al server, e a separarli serve il registro **del browser**. ⭐ E si noti che la pagina prevede il caso **opposto** — *«Chrome butta un messaggio spedito subito prima di chiudere, quindi la strada che regge è il codice di chiusura»* — mentre su Firefox non regge **nessuna** delle due: è la differenza fra motori per cui P5 esiste, ⛔ **e è comparsa solo DOPO aver curato il pilota**, che è la prova che le due colonne servono |
 > | ⭐ **e il guasto di P5 è misurato lo stesso** | la marca `sono due impronte diverse per lo stesso certificato di sessione` compare **1** volta nel giro rosso e **0** nel sano: il banco **vede** il proprio guasto. ⇒ P5 non si certifica perché **il suo giro sano non è verde** — la stessa forma di B8 — **non** perché sia cieco |
+>
+> #### ⛔⛔ E POI LA MISURA HA SMENTITO L'ASSOLUZIONE: **il congedo non esce, ed è della PAGINA**
+>
+> *`[M]` 11 agosto 2026, sera, `banchi/01-p5-ff-*`. ⛔ Due giri identici per motore, su una **copia
+> strumentata** di `src/pagina.html` servita da un server a parte — il prodotto non è stato toccato.
+> Il tracciatore è `navigator.sendBeacon`, cioè **un portatore che non passa da WebTransport**: se
+> passasse di lì condividerebbe il destino della cosa che si misura.*
+>
+> ⛔ **L'imputato è la pagina, e Gecko è scagionato per misura.** Chiudendo la scheda con `ctrl+w`
+> **a browser vivo**, su Firefox 140.13.0esr `pagehide` **scatta** — e la traccia della pagina dice
+> `congeda_corrente NULLA`. ⇒ Il gestore di `src/pagina.html:331` è **codice morto**: il `finally`
+> del gestore di `submit` (riga **620**) azzera `congeda_corrente` **un millisecondo dopo
+> `SESSIONE`**, perché `collega()` ritorna lì. Il posto se ne va dopo `STACCATO per silenzio:
+> 30060 ms`.
+>
+> | variante, stesso motore e stessa scena | `pagehide` | `congeda()` chiamata | che cosa arriva al SERVER |
+> |---|---|---|---|
+> | **fedele** — il prodotto com'è | ⭐ **1** | **0** | ⛔ **niente** |
+> | **tenace** — la *stessa* `congeda()`, riferimento non azzerato | 1 | 1 | ⭐ **`CONGEDO` sul canale + codice `0x01`** |
+> | **codice** — solo `wt.close(0x01)` | 1 | — | ⭐ codice `0x01` |
+> | **vivo** — la stessa `congeda()`, scheda **viva** | — | 1 | ⭐ `CONGEDO` + codice `0x01` |
+>
+> ⇒ ⭐ **Firefox non butta via niente**: dentro `pagehide` funzionano **tutt'e due** le strade di
+> §3.1. **Manca solo chi le imbocchi.**
+>
+> ⛔⛔ **E il ⭐ di Chrome era un FALSO VERDE — è il rilievo che vale di più.** Nella stessa scena,
+> su Chrome, la pagina non spedisce niente e al server arriva **lo smontaggio di Chrome**:
+>
+> ```
+> ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0 … A verbale va ERRORE_PROTOCOLLO
+> la pagina ha chiuso la sessione, motivo 0x0b
+> ```
+>
+> ⛔ `01-p5-congedo.sh:318` conta la riga *«la pagina ha chiuso la sessione, motivo»* **senza
+> guardare il motivo**: ha contato **una violazione di §3.1 come un congedo**, e ha stampato
+> *«⭐⭐ LA PAGINA FA QUEL CHE §8.1 LE IMPONE»*. ⇒ ⭐⭐ **I due motori non erano opposti: mostravano
+> lo STESSO difetto della pagina attraverso due smontaggi diversi**, e su uno dei due il banco è
+> inciampato nel proprio contatore. ⚠ *E il server lo diceva*: la riga di violazione la scrive lui,
+> ed era nel registro.
+>
+> ⭐ **La cura è di tre righe, ed è DESCRITTA E NON APPLICATA** — la fase era chiusa da un'ora, e una
+> cura di prodotto infilata dopo la chiusura non è una cura, è un cambiamento non dichiarato.
+> L'ancora di `congeda_corrente` è sbagliata: non è *«il tentativo è finito»*, è ⭐ ***«la sessione è
+> finita»***. ⇒ togliere l'azzeramento dal `finally` (riga 620) · azzerarlo dentro
+> `wt.closed.then(…)` di `collega()`, l'unico punto che sa quando la sessione non c'è più · lasciare
+> quello a inizio gestore (riga 606), perché un tentativo nuovo deve buttare il riferimento vecchio.
+>
+> ⚠ **E due rilievi per i banchi, che valgono oltre questo caso**: *(a)* si conta **`motivo 0x01`**,
+> non *«una chiusura qualunque»* — un contatore che non legge il motivo trasforma una violazione in
+> un verde; *(b)* ⛔ **`ctrl+w` sull'unica scheda fa USCIRE Firefox**, e in quella scena non esce
+> niente per **nessuna** via, nemmeno per le varianti che scavalcano il difetto: **la scena va fatta
+> con due schede**, o si misura l'uscita del programma invece della chiusura di una scheda. *Era la
+> scena di P5.*
 >
 > ⛔ **E tutt'e due i guasti si innestano su una COPIA INTERA del prodotto**, mai su
 > `/media/REMOTIX/src/remotix/`. ⚠ La ragione **non** è quella dei guasti in Python degli altri
@@ -1864,7 +1918,7 @@ perfetta.
 | ⛔ **la formula della tela, dopo S5** | `screen.width × devicePixelRatio` non è invariante allo zoom su Chrome 151, e lo zoom di pagina **non è leggibile da JavaScript in modo portabile**. Non è una `[?]` da misurare: è una **cura da trovare**, in `SPECIFICHE.md` §6.1-bis |
 | ⛔ **S5 su DeX, e S2, S3a, S6** | quattro misure che aspettano un **dispositivo**, non un'idea: il telefono Android, il DeX, una rete LTE vera. ⭐ I banchi sono pronti e girano il giorno che il ferro c'è (`web/rapporti/S-esiti-sonda.md` §4-§6) |
 | ⏳ **il numero di S1b** | l'orologio è in moto dal 10 agosto 21:10 UTC: il verdetto è il **17-18 agosto 2026**. Fino ad allora S1b dice *«a N giorni l'eccezione c'è ancora»*, e il `[R]` dei sette giorni **non è confermato dal comportamento** — solo dalla contabilità di Chrome |
-| ⛔⭐ **il congedo di §8.1 su FIREFOX, alla chiusura della scheda** | ⭐ **Nuova, e l'ha prodotta P5 la sera dell'11 agosto 2026** — dopo che la stessa misura aveva **scagionato** la pagina su Chrome. Chiudendo la scheda, su Firefox il client se ne va con un **`FIN` nudo** sul canale di controllo: sessione chiusa **in modo ordinato** (`STACCATO per silenzio` = 0), **e nessun motivo**. §8.1 lo impone senza condizioni. ⛔ **I due imputati non si distinguono dal registro del server** — *«la pagina non spedisce»* e *«Firefox butta quel che la pagina spedisce dentro `pagehide`»* arrivano identici — e a separarli serve **il registro del browser**. ⚠ Finché non è separato, ⛔ **non si cura**: una cura scritta contro l'imputato sbagliato è il difetto che questa fase ha già pagato due volte |
+| ⛔⛔ ~~**il congedo di §8.1 su FIREFOX**~~ — **NON È PIÙ UNA `[?]`: È UN DIFETTO DI PRODOTTO, CON UN NOME** | ⭐ **Attribuito la sera stessa** (`banchi/01-p5-ff-*`, due giri per motore): **è della PAGINA**, e su **tutt'e due i motori**. `src/pagina.html:620` azzera `congeda_corrente` un millisecondo dopo `SESSIONE`, e il gestore di `pagehide` (riga 331) è **codice morto**. ⇒ Chiudendo la scheda, il client **non manda nessun congedo** dove §8.1 lo impone senza condizioni, e il posto se ne va per il tetto dei 30 s. ⛔ **Gecko è scagionato per misura**: la stessa `congeda()` chiamata da dentro `pagehide` consegna **tutt'e due** le strade di §3.1. ⛔ E su Chrome quel che sembrava un congedo era **lo smontaggio col codice `0x0`, che §3.1 vieta** — il banco lo contava senza leggere il motivo. ⭐ **La cura è di tre righe ed è scritta**, nel riquadro di P5: non applicata, perché la fase era già chiusa |
 | ⛔ **il prodotto contro i banchi** | nessun banco ha mai acceso `src/`. Finché non lo fa, *«il server fa X»* è vero **dell'innesto**, e di `src/` è **letto** |
 | `[?]` **il rinnovo del credito degli stream unidirezionali** | dichiarato dal prodotto stesso; si misura alla **fase 4**, col carico che lo provoca |
 | ⚠ **perché `lsquic` con l'SNI cada su ALPN** | `[M]` 10 agosto: avviso TLS **120**, `no suitable application protocol`, **dopo** che il certificato è stato trovato. ⛔ **Non indagato di proposito**: `lsquic` è fuori per un motivo che non dipende da questo, e la riga esiste perché nessuno lo riscopra credendolo nuovo |

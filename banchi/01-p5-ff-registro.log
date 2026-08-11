@@ -1,0 +1,1606 @@
+13:52:38.762 avvio   REMOTIX_V2 — fase 1, il filo nudo
+13:52:38.762 avvio   ban: /srv/src/tmp/sera-ff-ban, 0 indirizzi caricati
+13:52:38.763 rcp     il comando di sblocco ascolta su «/srv/src/tmp/sera-ff.sock» (0600) — «SBLOCCA <indirizzo>» oppure «PING» (RCP.md §4.4-bis)
+13:52:38.763 avvio   servizio PAM «remotix»: /etc/pam.d/remotix c'e' (SPECIFICHE.md §4.2)
+13:52:38.767 cert    ⭐ due certificati, due impronte: pagina lEqbM0u1qKaT… sessione nLPuzviqT9RQ…
+13:52:38.768 cert    impronta della sessione (SHA-256 del DER, base64): nLPuzviqT9RQKhajRus55aO9UAPLZ6Ens7eZh7tOv+c=
+13:52:38.769 quic    contesto QUIC pronto — ALPN h3, TLS 1.3, 0-RTT SPENTO (§2.3), certificato /srv/src/tmp/sera-ff-cert/sessione.pem
+13:52:38.770 pagina  contesto TCP pronto — TLS 1.3, certificato longevo /srv/src/tmp/sera-ff-cert/pagina.pem
+13:52:38.770 quic    ascolto UDP su 0.0.0.0:7511 — max_idle_timeout=30000 ms, datagram abilitati e scartati con una riga (§6.3), 19 stream unidirezionali concessi = 16 di §2.3 + i 3 di HTTP/3
+13:52:38.770 pagina  ascolto TCP su 0.0.0.0:7511 — pagina /srv/src/tmp/sera-ff-pagina.html (36724 byte), isolata fra origini (COOP+COEP+CORP, SPECIFICHE.md §11.5)
+13:52:38.770 avvio   ⭐ pronto: https://192.168.0.2:7511  —  la sessione WebTransport vive su /rcp/1 (RCP.md §2.2)
+13:52:49.344 pagina  GET /155247-23723-canale da 192.168.0.3:46092
+13:52:50.606 pagina  GET / da 192.168.0.3:46108
+13:52:51.026 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+13:52:52.307 pagina  stretta TLS non riuscita con 192.168.0.3:35696 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+13:53:08.201 pagina  GET /ffm-155247-23723-eco-avvio da 192.168.0.3:52564
+13:53:08.278 pagina  GET /favicon.ico da 192.168.0.3:52580
+13:53:17.289 pagina  GET / da 192.168.0.3:41160
+13:53:17.350 pagina  POST /ff.155247-23723-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:41170
+13:53:29.941 pagina  GET /impronta da 192.168.0.3:58628
+13:53:29.954 quic    connessione nuova da [192.168.0.3]:46282 (in tutto 1)
+13:53:29.954 quic    connessione nuova da [192.168.0.3]:46282 (in tutto 2)
+13:53:29.954 quic    lettura fallita da [192.168.0.3]:46282: ERR_RETRY
+13:53:29.954 quic    connessione con [192.168.0.3]:46282 chiusa (ne restano 1)
+13:53:29.971 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+13:53:29.971 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:53:29.971 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:53:30.025 quic    stretta di mano TLS completata con [192.168.0.3]:46282
+13:53:30.025 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+13:53:30.030 rcp     canale di controllo aperto da [192.168.0.3]:46282 (indirizzo per §4.4-bis: [192.168.0.3])
+13:53:30.030 rcp     canale di controllo = stream 4
+13:53:30.030 wt      stream 4 e' WebTransport, sessione 0
+13:53:30.034 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+13:53:30.034 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+13:53:30.034 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:46282: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+13:53:30.037 rcp     CREDENZIALI ricevute utente=prova (con parola)
+13:53:30.103 rcp     PAM ha risposto: ammesso
+13:53:30.103 wt      PING del trasporto spenti con [192.168.0.3]:46282: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+13:53:31.037 rcp     il secondo fisso e' passato (1000 ms)
+13:53:31.037 rcp     ammesso utente=prova da=[192.168.0.3]:46282
+13:53:31.140 rcp     posto PRESO da prova via [192.168.0.3]:46282 (occupati adesso: 1)
+13:53:31.140 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+13:53:31.140 rcp     sessione aperta utente=prova via=[192.168.0.3]:46282 tela=1280x720 vista=1280x915 disposizione=us
+13:53:31.160 pagina  POST /ff.155247-23723-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:58644
+13:53:31.160 pagina  POST /ff.155247-23723-eco.eco.02.sessione-stabilita da 192.168.0.3:58630
+13:53:43.423 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+13:53:43.424 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: attiva)
+13:53:43.424 rcp     posto LASCIATO da prova via [192.168.0.3]:46282 (occupati adesso: 0)
+13:53:57.556 pagina  stretta TLS non riuscita con 192.168.0.3:60208 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+13:54:13.430 quic    [192.168.0.3]:46282: trenta secondi di silenzio, staccato (§2.2)
+13:54:13.430 quic    connessione con [192.168.0.3]:46282 chiusa (ne restano 0)
+13:54:13.461 pagina  GET /ffm-155247-23723-fedele-avvio da 192.168.0.3:49686
+13:54:13.521 pagina  GET /favicon.ico da 192.168.0.3:49690
+13:54:22.625 pagina  GET / da 192.168.0.3:47088
+13:54:22.672 pagina  POST /ff.155247-23723-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:47104
+13:54:35.250 pagina  GET /impronta da 192.168.0.3:48438
+13:54:35.290 quic    connessione nuova da [192.168.0.3]:46514 (in tutto 1)
+13:54:35.290 quic    connessione nuova da [192.168.0.3]:46514 (in tutto 2)
+13:54:35.291 quic    lettura fallita da [192.168.0.3]:46514: ERR_RETRY
+13:54:35.291 quic    connessione con [192.168.0.3]:46514 chiusa (ne restano 1)
+13:54:35.304 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+13:54:35.304 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:54:35.305 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:54:35.323 quic    stretta di mano TLS completata con [192.168.0.3]:46514
+13:54:35.323 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+13:54:35.329 rcp     canale di controllo aperto da [192.168.0.3]:46514 (indirizzo per §4.4-bis: [192.168.0.3])
+13:54:35.329 rcp     canale di controllo = stream 4
+13:54:35.329 wt      stream 4 e' WebTransport, sessione 0
+13:54:35.332 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+13:54:35.332 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+13:54:35.332 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:46514: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+13:54:35.337 rcp     CREDENZIALI ricevute utente=prova (con parola)
+13:54:35.386 rcp     PAM ha risposto: ammesso
+13:54:35.386 wt      PING del trasporto spenti con [192.168.0.3]:46514: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+13:54:36.337 rcp     il secondo fisso e' passato (1000 ms)
+13:54:36.337 rcp     ammesso utente=prova da=[192.168.0.3]:46514
+13:54:36.370 rcp     posto PRESO da prova via [192.168.0.3]:46514 (occupati adesso: 1)
+13:54:36.370 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+13:54:36.370 rcp     sessione aperta utente=prova via=[192.168.0.3]:46514 tela=1280x720 vista=1280x915 disposizione=us
+13:54:36.390 pagina  POST /ff.155247-23723-fedele.fedele.02.sessione-stabilita da 192.168.0.3:48450
+13:54:36.391 pagina  POST /ff.155247-23723-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:48464
+13:54:48.763 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+13:54:48.763 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: attiva)
+13:54:48.763 rcp     posto LASCIATO da prova via [192.168.0.3]:46514 (occupati adesso: 0)
+13:55:02.865 pagina  stretta TLS non riuscita con 192.168.0.3:56996 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+13:55:18.758 pagina  GET /ffm-155247-23723-vivo-avvio da 192.168.0.3:53800
+13:55:18.765 quic    [192.168.0.3]:46514: trenta secondi di silenzio, staccato (§2.2)
+13:55:18.765 quic    connessione con [192.168.0.3]:46514 chiusa (ne restano 0)
+13:55:18.850 pagina  GET /favicon.ico da 192.168.0.3:53808
+13:55:27.859 pagina  GET / da 192.168.0.3:37638
+13:55:27.907 pagina  POST /ff.155247-23723-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:37650
+13:55:40.505 pagina  GET /impronta da 192.168.0.3:41274
+13:55:40.541 quic    connessione nuova da [192.168.0.3]:56935 (in tutto 1)
+13:55:40.541 quic    connessione nuova da [192.168.0.3]:56935 (in tutto 2)
+13:55:40.541 quic    lettura fallita da [192.168.0.3]:56935: ERR_RETRY
+13:55:40.541 quic    connessione con [192.168.0.3]:56935 chiusa (ne restano 1)
+13:55:40.558 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+13:55:40.558 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:55:40.558 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+13:55:40.579 quic    stretta di mano TLS completata con [192.168.0.3]:56935
+13:55:40.579 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+13:55:40.586 rcp     canale di controllo aperto da [192.168.0.3]:56935 (indirizzo per §4.4-bis: [192.168.0.3])
+13:55:40.587 rcp     canale di controllo = stream 4
+13:55:40.587 wt      stream 4 e' WebTransport, sessione 0
+13:55:40.591 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+13:55:40.591 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+13:55:40.591 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:56935: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+13:55:40.597 rcp     CREDENZIALI ricevute utente=prova (con parola)
+13:55:40.658 rcp     PAM ha risposto: ammesso
+13:55:40.658 wt      PING del trasporto spenti con [192.168.0.3]:56935: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+13:55:41.597 rcp     il secondo fisso e' passato (1000 ms)
+13:55:41.597 rcp     ammesso utente=prova da=[192.168.0.3]:56935
+13:55:41.602 rcp     posto PRESO da prova via [192.168.0.3]:56935 (occupati adesso: 1)
+13:55:41.602 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+13:55:41.602 rcp     sessione aperta utente=prova via=[192.168.0.3]:56935 tela=1280x720 vista=1280x915 disposizione=us
+13:55:41.624 pagina  POST /ff.155247-23723-vivo.vivo.02.sessione-stabilita da 192.168.0.3:41278
+13:55:41.624 pagina  POST /ff.155247-23723-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:41286
+13:55:46.613 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+13:55:46.613 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+13:55:46.613 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+13:55:46.613 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+13:55:46.613 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+13:55:46.613 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+13:55:46.613 quic    connessione con [192.168.0.3]:56935 chiusa (ne restano 0)
+13:55:46.627 pagina  POST /ff.155247-23723-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:53788
+13:55:46.628 pagina  POST /ff.155247-23723-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:53798
+13:55:46.641 pagina  POST /ff.155247-23723-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:53812
+13:55:46.641 pagina  POST /ff.155247-23723-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:53810
+13:55:46.641 pagina  POST /ff.155247-23723-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:53828
+13:55:46.641 pagina  POST /ff.155247-23723-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:53826
+13:55:46.648 pagina  POST /ff.155247-23723-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:53844
+13:56:10.004 pagina  stretta TLS non riuscita con 192.168.0.3:51570 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+13:56:25.975 pagina  GET /ffm-155247-23723-tenace-avvio da 192.168.0.3:54122
+13:56:26.040 pagina  GET /favicon.ico da 192.168.0.3:54126
+13:57:15.288 pagina  stretta TLS non riuscita con 192.168.0.3:47942 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+13:57:31.257 pagina  GET /ffm-155247-23723-codice-avvio da 192.168.0.3:44026
+13:57:31.317 pagina  GET /favicon.ico da 192.168.0.3:44040
+13:58:19.885 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:00:56.643 pagina  GET /160054-24087-canale da 192.168.0.3:41822
+14:00:57.957 pagina  GET / da 192.168.0.3:41824
+14:00:58.395 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:01:01.841 pagina  stretta TLS non riuscita con 192.168.0.3:34706 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:01:17.609 pagina  GET /ffm-160054-24087-eco-avvio da 192.168.0.3:56730
+14:01:17.667 pagina  GET /favicon.ico da 192.168.0.3:56736
+14:01:26.645 pagina  GET / da 192.168.0.3:34290
+14:01:26.712 pagina  POST /ff.160054-24087-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:34302
+14:01:39.295 pagina  GET /impronta da 192.168.0.3:53640
+14:01:39.313 quic    connessione nuova da [192.168.0.3]:33626 (in tutto 1)
+14:01:39.313 quic    connessione nuova da [192.168.0.3]:33626 (in tutto 2)
+14:01:39.314 quic    lettura fallita da [192.168.0.3]:33626: ERR_RETRY
+14:01:39.314 quic    connessione con [192.168.0.3]:33626 chiusa (ne restano 1)
+14:01:39.324 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:01:39.324 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:01:39.324 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:01:39.342 quic    stretta di mano TLS completata con [192.168.0.3]:33626
+14:01:39.342 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:01:39.349 rcp     canale di controllo aperto da [192.168.0.3]:33626 (indirizzo per §4.4-bis: [192.168.0.3])
+14:01:39.349 rcp     canale di controllo = stream 4
+14:01:39.349 wt      stream 4 e' WebTransport, sessione 0
+14:01:39.355 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:01:39.355 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:01:39.355 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:33626: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:01:39.360 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:01:39.420 rcp     PAM ha risposto: ammesso
+14:01:39.420 wt      PING del trasporto spenti con [192.168.0.3]:33626: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:01:40.360 rcp     il secondo fisso e' passato (1000 ms)
+14:01:40.360 rcp     ammesso utente=prova da=[192.168.0.3]:33626
+14:01:40.366 rcp     posto PRESO da prova via [192.168.0.3]:33626 (occupati adesso: 1)
+14:01:40.366 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:01:40.366 rcp     sessione aperta utente=prova via=[192.168.0.3]:33626 tela=1280x720 vista=1280x915 disposizione=us
+14:01:40.387 pagina  POST /ff.160054-24087-eco.eco.02.sessione-stabilita da 192.168.0.3:53642
+14:01:40.389 pagina  POST /ff.160054-24087-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:53648
+14:01:55.114 pagina  GET /ffm-160054-24087-eco-viaggiato da 192.168.0.3:43126
+14:01:55.133 pagina  GET /ff.160054-24087-eco.eco.04.eco-pagehide-E-SCATTATO da 192.168.0.3:43130
+14:01:55.153 pagina  GET /ff.160054-24087-eco.eco.05.eco-congeda_corrente-NULLA da 192.168.0.3:43144
+14:01:55.177 pagina  GET /ff.160054-24087-eco.eco.06.eco-congeda_ultimo-PRESENTE da 192.168.0.3:43160
+14:01:55.195 pagina  GET /ff.160054-24087-eco.eco.07.eco-visibilita-visible da 192.168.0.3:43172
+14:02:10.403 rcp     STACCATO per silenzio: 30038 ms senza un byte da [192.168.0.3]:33626 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:02:25.400 quic    [192.168.0.3]:33626: trenta secondi di silenzio, staccato (§2.2)
+14:02:25.400 quic    connessione con [192.168.0.3]:33626 chiusa (ne restano 0)
+14:02:27.956 pagina  GET /160225-2476-canale da 192.168.0.3:46230
+14:02:29.206 pagina  GET / da 192.168.0.3:46232
+14:02:29.637 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:02:32.930 pagina  stretta TLS non riuscita con 192.168.0.3:55426 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:02:48.866 pagina  GET /ffm-160225-2476-eco-avvio da 192.168.0.3:42144
+14:02:48.920 pagina  GET /favicon.ico da 192.168.0.3:42150
+14:02:57.849 pagina  GET / da 192.168.0.3:35716
+14:02:57.905 pagina  POST /ff.160225-2476-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:35724
+14:03:10.505 pagina  GET /impronta da 192.168.0.3:54944
+14:03:10.520 quic    connessione nuova da [192.168.0.3]:52861 (in tutto 1)
+14:03:10.520 quic    connessione nuova da [192.168.0.3]:52861 (in tutto 2)
+14:03:10.520 quic    lettura fallita da [192.168.0.3]:52861: ERR_RETRY
+14:03:10.520 quic    connessione con [192.168.0.3]:52861 chiusa (ne restano 1)
+14:03:10.534 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:03:10.535 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:03:10.535 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:03:10.555 quic    stretta di mano TLS completata con [192.168.0.3]:52861
+14:03:10.556 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:03:10.562 rcp     canale di controllo aperto da [192.168.0.3]:52861 (indirizzo per §4.4-bis: [192.168.0.3])
+14:03:10.562 rcp     canale di controllo = stream 4
+14:03:10.562 wt      stream 4 e' WebTransport, sessione 0
+14:03:10.565 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:03:10.565 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:03:10.565 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:52861: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:03:10.569 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:03:10.618 rcp     PAM ha risposto: ammesso
+14:03:10.618 wt      PING del trasporto spenti con [192.168.0.3]:52861: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:03:11.569 rcp     il secondo fisso e' passato (1000 ms)
+14:03:11.569 rcp     ammesso utente=prova da=[192.168.0.3]:52861
+14:03:11.577 rcp     posto PRESO da prova via [192.168.0.3]:52861 (occupati adesso: 1)
+14:03:11.577 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:03:11.577 rcp     sessione aperta utente=prova via=[192.168.0.3]:52861 tela=1280x720 vista=1280x915 disposizione=us
+14:03:11.601 pagina  POST /ff.160225-2476-eco.eco.02.sessione-stabilita da 192.168.0.3:54946
+14:03:11.603 pagina  POST /ff.160225-2476-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:54954
+14:03:26.296 pagina  GET /ffm-160225-2476-eco-viaggiato da 192.168.0.3:52924
+14:03:26.317 pagina  GET /ff.160225-2476-eco.eco.04.eco-pagehide-E-SCATTATO da 192.168.0.3:52936
+14:03:26.340 pagina  GET /ff.160225-2476-eco.eco.05.eco-congeda_corrente-NULLA da 192.168.0.3:52950
+14:03:26.362 pagina  GET /ff.160225-2476-eco.eco.06.eco-congeda_ultimo-PRESENTE da 192.168.0.3:52966
+14:03:26.381 pagina  GET /ff.160225-2476-eco.eco.07.eco-visibilita-visible da 192.168.0.3:52970
+14:03:41.609 rcp     STACCATO per silenzio: 30032 ms senza un byte da [192.168.0.3]:52861 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:03:43.887 pagina  stretta TLS non riuscita con 192.168.0.3:35444 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:03:56.587 quic    [192.168.0.3]:52861: trenta secondi di silenzio, staccato (§2.2)
+14:03:56.587 quic    connessione con [192.168.0.3]:52861 chiusa (ne restano 0)
+14:03:59.765 pagina  GET /ffm-160225-2476-fedele-avvio da 192.168.0.3:55798
+14:03:59.825 pagina  GET /favicon.ico da 192.168.0.3:55802
+14:04:08.839 pagina  GET / da 192.168.0.3:41114
+14:04:08.891 pagina  POST /ff.160225-2476-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:41128
+14:04:21.501 pagina  GET /impronta da 192.168.0.3:55660
+14:04:21.512 quic    connessione nuova da [192.168.0.3]:43450 (in tutto 1)
+14:04:21.512 quic    connessione nuova da [192.168.0.3]:43450 (in tutto 2)
+14:04:21.512 quic    lettura fallita da [192.168.0.3]:43450: ERR_RETRY
+14:04:21.512 quic    connessione con [192.168.0.3]:43450 chiusa (ne restano 1)
+14:04:21.525 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:04:21.525 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:04:21.525 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:04:21.540 quic    stretta di mano TLS completata con [192.168.0.3]:43450
+14:04:21.540 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:04:21.548 rcp     canale di controllo aperto da [192.168.0.3]:43450 (indirizzo per §4.4-bis: [192.168.0.3])
+14:04:21.548 rcp     canale di controllo = stream 4
+14:04:21.548 wt      stream 4 e' WebTransport, sessione 0
+14:04:21.551 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:04:21.551 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:04:21.551 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:43450: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:04:21.557 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:04:21.617 rcp     PAM ha risposto: ammesso
+14:04:21.617 wt      PING del trasporto spenti con [192.168.0.3]:43450: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:04:22.557 rcp     il secondo fisso e' passato (1000 ms)
+14:04:22.557 rcp     ammesso utente=prova da=[192.168.0.3]:43450
+14:04:22.587 rcp     posto PRESO da prova via [192.168.0.3]:43450 (occupati adesso: 1)
+14:04:22.587 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:04:22.587 rcp     sessione aperta utente=prova via=[192.168.0.3]:43450 tela=1280x720 vista=1280x915 disposizione=us
+14:04:22.638 pagina  POST /ff.160225-2476-fedele.fedele.02.sessione-stabilita da 192.168.0.3:49260
+14:04:22.645 pagina  POST /ff.160225-2476-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:49272
+14:04:37.349 pagina  GET /ffm-160225-2476-fedele-viaggiato da 192.168.0.3:32992
+14:04:37.379 pagina  POST /ff.160225-2476-fedele.fedele.04.ph-entrato da 192.168.0.3:32996
+14:04:37.412 pagina  POST /ff.160225-2476-fedele.fedele.05.ph-congeda_corrente-NULLA da 192.168.0.3:33002
+14:04:37.415 pagina  POST /ff.160225-2476-fedele.fedele.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:33010
+14:04:37.416 pagina  POST /ff.160225-2476-fedele.fedele.08.ph-uscito-fedele da 192.168.0.3:33024
+14:04:37.417 pagina  POST /ff.160225-2476-fedele.fedele.07.ph-wt-PRESENTE da 192.168.0.3:33018
+14:04:52.651 rcp     STACCATO per silenzio: 30064 ms senza un byte da [192.168.0.3]:43450 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:04:54.945 pagina  stretta TLS non riuscita con 192.168.0.3:52666 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:05:07.619 quic    [192.168.0.3]:43450: trenta secondi di silenzio, staccato (§2.2)
+14:05:07.619 quic    connessione con [192.168.0.3]:43450 chiusa (ne restano 0)
+14:05:10.820 pagina  GET /ffm-160225-2476-vivo-avvio da 192.168.0.3:50362
+14:05:10.869 pagina  GET /favicon.ico da 192.168.0.3:50376
+14:05:19.890 pagina  GET / da 192.168.0.3:35710
+14:05:19.935 pagina  POST /ff.160225-2476-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:35712
+14:05:32.569 pagina  GET /impronta da 192.168.0.3:45912
+14:05:32.580 quic    connessione nuova da [192.168.0.3]:48508 (in tutto 1)
+14:05:32.580 quic    connessione nuova da [192.168.0.3]:48508 (in tutto 2)
+14:05:32.580 quic    lettura fallita da [192.168.0.3]:48508: ERR_RETRY
+14:05:32.580 quic    connessione con [192.168.0.3]:48508 chiusa (ne restano 1)
+14:05:32.595 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:05:32.595 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:05:32.595 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:05:32.619 quic    stretta di mano TLS completata con [192.168.0.3]:48508
+14:05:32.619 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:05:32.627 rcp     canale di controllo aperto da [192.168.0.3]:48508 (indirizzo per §4.4-bis: [192.168.0.3])
+14:05:32.627 rcp     canale di controllo = stream 4
+14:05:32.627 wt      stream 4 e' WebTransport, sessione 0
+14:05:32.629 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:05:32.629 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:05:32.629 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:48508: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:05:32.635 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:05:32.686 rcp     PAM ha risposto: ammesso
+14:05:32.686 wt      PING del trasporto spenti con [192.168.0.3]:48508: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:05:33.635 rcp     il secondo fisso e' passato (1000 ms)
+14:05:33.635 rcp     ammesso utente=prova da=[192.168.0.3]:48508
+14:05:33.641 rcp     posto PRESO da prova via [192.168.0.3]:48508 (occupati adesso: 1)
+14:05:33.641 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:05:33.641 rcp     sessione aperta utente=prova via=[192.168.0.3]:48508 tela=1280x720 vista=1280x915 disposizione=us
+14:05:33.662 pagina  POST /ff.160225-2476-vivo.vivo.02.sessione-stabilita da 192.168.0.3:45928
+14:05:33.663 pagina  POST /ff.160225-2476-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:45938
+14:05:38.650 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:05:38.650 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:05:38.650 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:05:38.650 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:05:38.651 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:05:38.651 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:05:38.651 quic    connessione con [192.168.0.3]:48508 chiusa (ne restano 0)
+14:05:38.654 quic    pacchetto di 48 byte per una connessione che non c'e': ignorato
+14:05:38.663 pagina  POST /ff.160225-2476-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:45952
+14:05:38.667 pagina  POST /ff.160225-2476-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:45958
+14:05:38.673 pagina  POST /ff.160225-2476-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:45974
+14:05:38.684 pagina  POST /ff.160225-2476-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:45982
+14:05:38.684 pagina  POST /ff.160225-2476-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:46010
+14:05:38.684 pagina  POST /ff.160225-2476-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:45994
+14:05:38.691 pagina  POST /ff.160225-2476-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:46012
+14:06:05.114 pagina  stretta TLS non riuscita con 192.168.0.3:37816 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:06:21.022 pagina  GET /ffm-160225-2476-tenace-avvio da 192.168.0.3:42526
+14:06:21.083 pagina  GET /favicon.ico da 192.168.0.3:42528
+14:06:30.095 pagina  GET / da 192.168.0.3:48352
+14:06:30.147 pagina  POST /ff.160225-2476-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:48360
+14:06:42.751 pagina  GET /impronta da 192.168.0.3:38200
+14:06:42.759 quic    connessione nuova da [192.168.0.3]:50239 (in tutto 1)
+14:06:42.760 quic    connessione nuova da [192.168.0.3]:50239 (in tutto 2)
+14:06:42.760 quic    lettura fallita da [192.168.0.3]:50239: ERR_RETRY
+14:06:42.760 quic    connessione con [192.168.0.3]:50239 chiusa (ne restano 1)
+14:06:42.782 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:06:42.782 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:06:42.782 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:06:42.839 quic    stretta di mano TLS completata con [192.168.0.3]:50239
+14:06:42.839 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:06:42.843 rcp     canale di controllo aperto da [192.168.0.3]:50239 (indirizzo per §4.4-bis: [192.168.0.3])
+14:06:42.844 rcp     canale di controllo = stream 4
+14:06:42.844 wt      stream 4 e' WebTransport, sessione 0
+14:06:42.847 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:06:42.847 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:06:42.847 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:50239: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:06:42.852 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:06:42.901 rcp     PAM ha risposto: ammesso
+14:06:42.901 wt      PING del trasporto spenti con [192.168.0.3]:50239: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:06:43.852 rcp     il secondo fisso e' passato (1000 ms)
+14:06:43.852 rcp     ammesso utente=prova da=[192.168.0.3]:50239
+14:06:43.924 rcp     posto PRESO da prova via [192.168.0.3]:50239 (occupati adesso: 1)
+14:06:43.924 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:06:43.924 rcp     sessione aperta utente=prova via=[192.168.0.3]:50239 tela=1280x720 vista=1280x915 disposizione=us
+14:06:43.942 pagina  POST /ff.160225-2476-tenace.tenace.02.sessione-stabilita da 192.168.0.3:38216
+14:06:43.948 pagina  POST /ff.160225-2476-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:38222
+14:06:58.577 pagina  GET /ffm-160225-2476-tenace-viaggiato da 192.168.0.3:48420
+14:06:58.585 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:06:58.585 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:06:58.586 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:06:58.587 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:06:58.587 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:06:58.587 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:06:58.587 quic    connessione con [192.168.0.3]:50239 chiusa (ne restano 0)
+14:06:58.592 quic    pacchetto di 48 byte per una connessione che non c'e': ignorato
+14:06:58.605 pagina  POST /ff.160225-2476-tenace.tenace.04.ph-entrato da 192.168.0.3:48426
+14:06:58.607 pagina  POST /ff.160225-2476-tenace.tenace.05.ph-congeda_corrente-NULLA da 192.168.0.3:48430
+14:06:58.614 pagina  POST /ff.160225-2476-tenace.tenace.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:48432
+14:06:58.628 pagina  POST /ff.160225-2476-tenace.tenace.07.ph-wt-PRESENTE da 192.168.0.3:48444
+14:06:58.630 pagina  POST /ff.160225-2476-tenace.tenace.08.cg-chiamata-motivo-0x1 da 192.168.0.3:48460
+14:06:58.642 pagina  POST /ff.160225-2476-tenace.tenace.10.ph-uscito-tenace da 192.168.0.3:48488
+14:06:58.642 pagina  POST /ff.160225-2476-tenace.tenace.09.cg-prima-di-manda da 192.168.0.3:48476
+14:06:58.644 pagina  POST /ff.160225-2476-tenace.tenace.11.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:48490
+14:06:58.644 pagina  POST /ff.160225-2476-tenace.tenace.12.cg-dopo-il-FIN-del-canale da 192.168.0.3:48496
+14:06:58.647 pagina  POST /ff.160225-2476-tenace.tenace.13.cg-prima-di-wt-close da 192.168.0.3:48502
+14:06:58.652 pagina  POST /ff.160225-2476-tenace.tenace.14.cg-dopo-wt-close da 192.168.0.3:48516
+14:07:16.195 pagina  stretta TLS non riuscita con 192.168.0.3:58328 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:07:32.071 pagina  GET /ffm-160225-2476-codice-avvio da 192.168.0.3:44880
+14:07:32.144 pagina  GET /favicon.ico da 192.168.0.3:44894
+14:07:41.248 pagina  GET / da 192.168.0.3:44902
+14:07:41.299 pagina  POST /ff.160225-2476-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:44908
+14:07:53.903 pagina  GET /impronta da 192.168.0.3:43410
+14:07:53.913 quic    connessione nuova da [192.168.0.3]:39234 (in tutto 1)
+14:07:53.914 quic    connessione nuova da [192.168.0.3]:39234 (in tutto 2)
+14:07:53.914 quic    lettura fallita da [192.168.0.3]:39234: ERR_RETRY
+14:07:53.914 quic    connessione con [192.168.0.3]:39234 chiusa (ne restano 1)
+14:07:53.932 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:07:53.932 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:07:53.932 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:07:53.954 quic    stretta di mano TLS completata con [192.168.0.3]:39234
+14:07:53.954 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:07:53.963 rcp     canale di controllo aperto da [192.168.0.3]:39234 (indirizzo per §4.4-bis: [192.168.0.3])
+14:07:53.963 rcp     canale di controllo = stream 4
+14:07:53.963 wt      stream 4 e' WebTransport, sessione 0
+14:07:53.964 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:07:53.964 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:07:53.964 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:39234: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:07:53.969 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:07:54.020 rcp     PAM ha risposto: ammesso
+14:07:54.020 wt      PING del trasporto spenti con [192.168.0.3]:39234: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:07:54.969 rcp     il secondo fisso e' passato (1000 ms)
+14:07:54.969 rcp     ammesso utente=prova da=[192.168.0.3]:39234
+14:07:54.990 rcp     posto PRESO da prova via [192.168.0.3]:39234 (occupati adesso: 1)
+14:07:54.990 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:07:54.990 rcp     sessione aperta utente=prova via=[192.168.0.3]:39234 tela=1280x720 vista=1280x915 disposizione=us
+14:07:55.017 pagina  POST /ff.160225-2476-codice.codice.02.sessione-stabilita da 192.168.0.3:43424
+14:07:55.017 pagina  POST /ff.160225-2476-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:43430
+14:08:09.754 pagina  GET /ffm-160225-2476-codice-viaggiato da 192.168.0.3:43858
+14:08:09.770 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:08:09.770 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: attiva)
+14:08:09.770 rcp     posto LASCIATO da prova via [192.168.0.3]:39234 (occupati adesso: 0)
+14:08:09.771 quic    connessione con [192.168.0.3]:39234 chiusa (ne restano 0)
+14:08:09.791 pagina  POST /ff.160225-2476-codice.codice.05.ph-congeda_corrente-NULLA da 192.168.0.3:43862
+14:08:09.791 pagina  POST /ff.160225-2476-codice.codice.04.ph-entrato da 192.168.0.3:43860
+14:08:09.799 pagina  POST /ff.160225-2476-codice.codice.07.ph-wt-PRESENTE da 192.168.0.3:43894
+14:08:09.799 pagina  POST /ff.160225-2476-codice.codice.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:43878
+14:08:09.811 pagina  POST /ff.160225-2476-codice.codice.08.ph-codice-prima-di-wt-close da 192.168.0.3:43908
+14:08:09.811 pagina  POST /ff.160225-2476-codice.codice.09.ph-codice-dopo-wt-close da 192.168.0.3:43916
+14:08:23.491 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:08:50.631 pagina  GET /160848-20996-canale da 192.168.0.3:45468
+14:08:51.899 pagina  GET / da 192.168.0.3:41660
+14:08:52.367 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:08:55.686 pagina  stretta TLS non riuscita con 192.168.0.3:41664 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:09:11.574 pagina  GET /ffm-160848-20996-eco-avvio da 192.168.0.3:49436
+14:09:11.645 pagina  GET /favicon.ico da 192.168.0.3:49446
+14:09:20.647 pagina  GET / da 192.168.0.3:47028
+14:09:20.697 pagina  POST /ff.160848-20996-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:47038
+14:09:33.285 pagina  GET /impronta da 192.168.0.3:57074
+14:09:33.317 quic    connessione nuova da [192.168.0.3]:54072 (in tutto 1)
+14:09:33.317 quic    connessione nuova da [192.168.0.3]:54072 (in tutto 2)
+14:09:33.317 quic    lettura fallita da [192.168.0.3]:54072: ERR_RETRY
+14:09:33.317 quic    connessione con [192.168.0.3]:54072 chiusa (ne restano 1)
+14:09:33.331 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:09:33.331 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:09:33.331 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:09:33.351 quic    stretta di mano TLS completata con [192.168.0.3]:54072
+14:09:33.351 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:09:33.355 rcp     canale di controllo aperto da [192.168.0.3]:54072 (indirizzo per §4.4-bis: [192.168.0.3])
+14:09:33.355 rcp     canale di controllo = stream 4
+14:09:33.355 wt      stream 4 e' WebTransport, sessione 0
+14:09:33.359 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:09:33.359 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:09:33.359 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:54072: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:09:33.364 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:09:33.414 rcp     PAM ha risposto: ammesso
+14:09:33.414 wt      PING del trasporto spenti con [192.168.0.3]:54072: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:09:34.364 rcp     il secondo fisso e' passato (1000 ms)
+14:09:34.364 rcp     ammesso utente=prova da=[192.168.0.3]:54072
+14:09:34.422 rcp     posto PRESO da prova via [192.168.0.3]:54072 (occupati adesso: 1)
+14:09:34.422 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:09:34.422 rcp     sessione aperta utente=prova via=[192.168.0.3]:54072 tela=1280x720 vista=1280x915 disposizione=us
+14:09:34.443 pagina  POST /ff.160848-20996-eco.eco.02.sessione-stabilita da 192.168.0.3:57090
+14:09:34.446 pagina  POST /ff.160848-20996-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:57102
+14:10:02.877 pagina  stretta TLS non riuscita con 192.168.0.3:54930 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:10:04.426 quic    [192.168.0.3]:54072: trenta secondi di silenzio, staccato (§2.2)
+14:10:04.426 quic    connessione con [192.168.0.3]:54072 chiusa (ne restano 0)
+14:10:04.426 rcp     posto LASCIATO da prova via [192.168.0.3]:54072 (occupati adesso: 0)
+14:10:18.779 pagina  GET /ffm-160848-20996-fedele-avvio da 192.168.0.3:48340
+14:10:18.844 pagina  GET /favicon.ico da 192.168.0.3:48348
+14:10:27.929 pagina  GET / da 192.168.0.3:54454
+14:10:27.981 pagina  POST /ff.160848-20996-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:54458
+14:10:40.560 pagina  GET /impronta da 192.168.0.3:41814
+14:10:40.594 quic    connessione nuova da [192.168.0.3]:60916 (in tutto 1)
+14:10:40.594 quic    connessione nuova da [192.168.0.3]:60916 (in tutto 2)
+14:10:40.594 quic    lettura fallita da [192.168.0.3]:60916: ERR_RETRY
+14:10:40.594 quic    connessione con [192.168.0.3]:60916 chiusa (ne restano 1)
+14:10:40.606 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:10:40.606 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:10:40.606 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:10:40.624 quic    stretta di mano TLS completata con [192.168.0.3]:60916
+14:10:40.624 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:10:40.630 rcp     canale di controllo aperto da [192.168.0.3]:60916 (indirizzo per §4.4-bis: [192.168.0.3])
+14:10:40.630 rcp     canale di controllo = stream 4
+14:10:40.630 wt      stream 4 e' WebTransport, sessione 0
+14:10:40.634 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:10:40.634 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:10:40.634 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:60916: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:10:40.638 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:10:40.686 rcp     PAM ha risposto: ammesso
+14:10:40.686 wt      PING del trasporto spenti con [192.168.0.3]:60916: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:10:41.638 rcp     il secondo fisso e' passato (1000 ms)
+14:10:41.638 rcp     ammesso utente=prova da=[192.168.0.3]:60916
+14:10:41.699 rcp     posto PRESO da prova via [192.168.0.3]:60916 (occupati adesso: 1)
+14:10:41.699 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:10:41.699 rcp     sessione aperta utente=prova via=[192.168.0.3]:60916 tela=1280x720 vista=1280x915 disposizione=us
+14:10:41.720 pagina  POST /ff.160848-20996-fedele.fedele.02.sessione-stabilita da 192.168.0.3:59864
+14:10:41.727 pagina  POST /ff.160848-20996-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:59868
+14:10:54.083 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:10:54.083 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: attiva)
+14:10:54.083 rcp     posto LASCIATO da prova via [192.168.0.3]:60916 (occupati adesso: 0)
+14:11:10.242 pagina  stretta TLS non riuscita con 192.168.0.3:54770 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:11:24.085 quic    [192.168.0.3]:60916: trenta secondi di silenzio, staccato (§2.2)
+14:11:24.086 quic    connessione con [192.168.0.3]:60916 chiusa (ne restano 0)
+14:11:26.140 pagina  GET /ffm-160848-20996-vivo-avvio da 192.168.0.3:35290
+14:11:26.224 pagina  GET /favicon.ico da 192.168.0.3:35294
+14:11:35.226 pagina  GET / da 192.168.0.3:60824
+14:11:35.268 pagina  POST /ff.160848-20996-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:60838
+14:11:47.879 pagina  GET /impronta da 192.168.0.3:46672
+14:11:47.891 quic    connessione nuova da [192.168.0.3]:34412 (in tutto 1)
+14:11:47.891 quic    connessione nuova da [192.168.0.3]:34412 (in tutto 2)
+14:11:47.891 quic    lettura fallita da [192.168.0.3]:34412: ERR_RETRY
+14:11:47.892 quic    connessione con [192.168.0.3]:34412 chiusa (ne restano 1)
+14:11:47.910 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:11:47.910 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:11:47.910 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:11:47.934 quic    stretta di mano TLS completata con [192.168.0.3]:34412
+14:11:47.934 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:11:47.942 rcp     canale di controllo aperto da [192.168.0.3]:34412 (indirizzo per §4.4-bis: [192.168.0.3])
+14:11:47.942 rcp     canale di controllo = stream 4
+14:11:47.942 wt      stream 4 e' WebTransport, sessione 0
+14:11:47.945 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:11:47.945 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:11:47.945 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:34412: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:11:47.952 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:11:48.003 rcp     PAM ha risposto: ammesso
+14:11:48.003 wt      PING del trasporto spenti con [192.168.0.3]:34412: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:11:48.952 rcp     il secondo fisso e' passato (1000 ms)
+14:11:48.952 rcp     ammesso utente=prova da=[192.168.0.3]:34412
+14:11:48.957 rcp     posto PRESO da prova via [192.168.0.3]:34412 (occupati adesso: 1)
+14:11:48.957 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:11:48.957 rcp     sessione aperta utente=prova via=[192.168.0.3]:34412 tela=1280x720 vista=1280x915 disposizione=us
+14:11:48.982 pagina  POST /ff.160848-20996-vivo.vivo.02.sessione-stabilita da 192.168.0.3:46686
+14:11:48.984 pagina  POST /ff.160848-20996-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:46700
+14:11:53.964 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:11:53.965 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:11:53.965 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:11:53.965 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:11:53.965 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:11:53.965 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:11:53.965 quic    connessione con [192.168.0.3]:34412 chiusa (ne restano 0)
+14:11:53.984 pagina  POST /ff.160848-20996-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:54144
+14:11:53.984 pagina  POST /ff.160848-20996-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:54148
+14:11:53.990 pagina  POST /ff.160848-20996-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:54162
+14:11:53.990 pagina  POST /ff.160848-20996-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:54168
+14:11:53.990 pagina  POST /ff.160848-20996-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:54150
+14:11:53.994 pagina  POST /ff.160848-20996-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:54166
+14:11:53.999 pagina  POST /ff.160848-20996-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:54174
+14:12:20.490 pagina  stretta TLS non riuscita con 192.168.0.3:36410 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:12:36.384 pagina  GET /ffm-160848-20996-tenace-avvio da 192.168.0.3:53542
+14:12:36.460 pagina  GET /favicon.ico da 192.168.0.3:53554
+14:12:45.504 pagina  GET / da 192.168.0.3:40576
+14:12:45.561 pagina  POST /ff.160848-20996-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:40582
+14:12:58.146 pagina  GET /impronta da 192.168.0.3:43454
+14:12:58.188 quic    connessione nuova da [192.168.0.3]:57449 (in tutto 1)
+14:12:58.188 quic    connessione nuova da [192.168.0.3]:57449 (in tutto 2)
+14:12:58.188 quic    lettura fallita da [192.168.0.3]:57449: ERR_RETRY
+14:12:58.188 quic    connessione con [192.168.0.3]:57449 chiusa (ne restano 1)
+14:12:58.205 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:12:58.205 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:12:58.205 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:12:58.231 quic    stretta di mano TLS completata con [192.168.0.3]:57449
+14:12:58.231 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:12:58.240 rcp     canale di controllo aperto da [192.168.0.3]:57449 (indirizzo per §4.4-bis: [192.168.0.3])
+14:12:58.240 rcp     canale di controllo = stream 4
+14:12:58.240 wt      stream 4 e' WebTransport, sessione 0
+14:12:58.243 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:12:58.243 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:12:58.243 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:57449: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:12:58.251 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:12:58.313 rcp     PAM ha risposto: ammesso
+14:12:58.313 wt      PING del trasporto spenti con [192.168.0.3]:57449: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:12:59.251 rcp     il secondo fisso e' passato (1000 ms)
+14:12:59.251 rcp     ammesso utente=prova da=[192.168.0.3]:57449
+14:12:59.257 rcp     posto PRESO da prova via [192.168.0.3]:57449 (occupati adesso: 1)
+14:12:59.257 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:12:59.257 rcp     sessione aperta utente=prova via=[192.168.0.3]:57449 tela=1280x720 vista=1280x915 disposizione=us
+14:12:59.278 pagina  POST /ff.160848-20996-tenace.tenace.02.sessione-stabilita da 192.168.0.3:43464
+14:12:59.279 pagina  POST /ff.160848-20996-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:43466
+14:13:11.660 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:13:11.660 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: attiva)
+14:13:11.660 rcp     posto LASCIATO da prova via [192.168.0.3]:57449 (occupati adesso: 0)
+14:13:27.756 pagina  stretta TLS non riuscita con 192.168.0.3:56988 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:13:41.662 quic    [192.168.0.3]:57449: trenta secondi di silenzio, staccato (§2.2)
+14:13:41.662 quic    connessione con [192.168.0.3]:57449 chiusa (ne restano 0)
+14:13:43.667 pagina  GET /ffm-160848-20996-codice-avvio da 192.168.0.3:42734
+14:13:43.714 pagina  GET /favicon.ico da 192.168.0.3:42742
+14:13:52.764 pagina  GET / da 192.168.0.3:37908
+14:13:52.819 pagina  POST /ff.160848-20996-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:37912
+14:14:05.411 pagina  GET /impronta da 192.168.0.3:48312
+14:14:05.447 quic    connessione nuova da [192.168.0.3]:40218 (in tutto 1)
+14:14:05.447 quic    connessione nuova da [192.168.0.3]:40218 (in tutto 2)
+14:14:05.447 quic    lettura fallita da [192.168.0.3]:40218: ERR_RETRY
+14:14:05.447 quic    connessione con [192.168.0.3]:40218 chiusa (ne restano 1)
+14:14:05.461 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:14:05.461 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:14:05.461 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:14:05.480 quic    stretta di mano TLS completata con [192.168.0.3]:40218
+14:14:05.480 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:14:05.487 rcp     canale di controllo aperto da [192.168.0.3]:40218 (indirizzo per §4.4-bis: [192.168.0.3])
+14:14:05.487 rcp     canale di controllo = stream 4
+14:14:05.487 wt      stream 4 e' WebTransport, sessione 0
+14:14:05.491 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:14:05.491 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:14:05.491 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:40218: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:14:05.493 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:14:05.544 rcp     PAM ha risposto: ammesso
+14:14:05.544 wt      PING del trasporto spenti con [192.168.0.3]:40218: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:14:06.493 rcp     il secondo fisso e' passato (1000 ms)
+14:14:06.493 rcp     ammesso utente=prova da=[192.168.0.3]:40218
+14:14:06.602 rcp     posto PRESO da prova via [192.168.0.3]:40218 (occupati adesso: 1)
+14:14:06.602 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:14:06.602 rcp     sessione aperta utente=prova via=[192.168.0.3]:40218 tela=1280x720 vista=1280x915 disposizione=us
+14:14:06.626 pagina  POST /ff.160848-20996-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:48324
+14:14:06.626 pagina  POST /ff.160848-20996-codice.codice.02.sessione-stabilita da 192.168.0.3:48320
+14:14:18.921 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:14:18.921 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: attiva)
+14:14:18.921 rcp     posto LASCIATO da prova via [192.168.0.3]:40218 (occupati adesso: 0)
+14:14:32.221 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:14:48.923 quic    [192.168.0.3]:40218: trenta secondi di silenzio, staccato (§2.2)
+14:14:48.923 quic    connessione con [192.168.0.3]:40218 chiusa (ne restano 0)
+14:15:46.377 pagina  GET /161544-30369-canale da 192.168.0.3:45042
+14:15:47.695 pagina  GET / da 192.168.0.3:45046
+14:15:48.195 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:15:51.491 pagina  stretta TLS non riuscita con 192.168.0.3:45048 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:16:07.462 pagina  GET /ffm-161544-30369-eco-avvio da 192.168.0.3:35200
+14:16:07.660 pagina  GET /favicon.ico da 192.168.0.3:35202
+14:16:16.434 pagina  GET / da 192.168.0.3:41766
+14:16:16.485 pagina  POST /ff.161544-30369-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:41772
+14:16:29.085 pagina  GET /impronta da 192.168.0.3:45752
+14:16:29.101 quic    connessione nuova da [192.168.0.3]:49490 (in tutto 1)
+14:16:29.102 quic    connessione nuova da [192.168.0.3]:49490 (in tutto 2)
+14:16:29.102 quic    lettura fallita da [192.168.0.3]:49490: ERR_RETRY
+14:16:29.102 quic    connessione con [192.168.0.3]:49490 chiusa (ne restano 1)
+14:16:29.119 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:16:29.119 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:16:29.119 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:16:29.145 quic    stretta di mano TLS completata con [192.168.0.3]:49490
+14:16:29.145 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:16:29.153 rcp     canale di controllo aperto da [192.168.0.3]:49490 (indirizzo per §4.4-bis: [192.168.0.3])
+14:16:29.153 rcp     canale di controllo = stream 4
+14:16:29.153 wt      stream 4 e' WebTransport, sessione 0
+14:16:29.156 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:16:29.156 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:16:29.156 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:49490: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:16:29.161 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:16:29.218 rcp     PAM ha risposto: ammesso
+14:16:29.218 wt      PING del trasporto spenti con [192.168.0.3]:49490: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:16:30.161 rcp     il secondo fisso e' passato (1000 ms)
+14:16:30.161 rcp     ammesso utente=prova da=[192.168.0.3]:49490
+14:16:30.193 rcp     posto PRESO da prova via [192.168.0.3]:49490 (occupati adesso: 1)
+14:16:30.193 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:16:30.193 rcp     sessione aperta utente=prova via=[192.168.0.3]:49490 tela=1280x720 vista=1280x915 disposizione=us
+14:16:30.215 pagina  POST /ff.161544-30369-eco.eco.02.sessione-stabilita da 192.168.0.3:45766
+14:16:30.216 pagina  POST /ff.161544-30369-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:45782
+14:16:45.946 pagina  GET /ffm-161544-30369-eco-secondascheda da 192.168.0.3:45984
+14:16:53.115 pagina  GET /ff.161544-30369-eco.eco.04.eco-pagehide-E-SCATTATO da 192.168.0.3:40146
+14:16:53.134 pagina  GET /ff.161544-30369-eco.eco.05.eco-congeda_corrente-NULLA da 192.168.0.3:40156
+14:16:53.154 pagina  GET /ff.161544-30369-eco.eco.06.eco-congeda_ultimo-PRESENTE da 192.168.0.3:40158
+14:16:53.172 pagina  GET /ff.161544-30369-eco.eco.07.eco-visibilita-visible da 192.168.0.3:40170
+14:17:00.223 rcp     STACCATO per silenzio: 30029 ms senza un byte da [192.168.0.3]:49490 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:17:01.179 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:17:01.179 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: staccata-per-silenzio)
+14:17:10.610 pagina  stretta TLS non riuscita con 192.168.0.3:43762 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:17:26.505 pagina  GET /ffm-161544-30369-fedele-avvio da 192.168.0.3:37246
+14:17:26.566 pagina  GET /favicon.ico da 192.168.0.3:37256
+14:17:31.183 quic    [192.168.0.3]:49490: trenta secondi di silenzio, staccato (§2.2)
+14:17:31.183 quic    connessione con [192.168.0.3]:49490 chiusa (ne restano 0)
+14:17:35.628 pagina  GET / da 192.168.0.3:43946
+14:17:35.700 pagina  POST /ff.161544-30369-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:43958
+14:17:48.284 pagina  GET /impronta da 192.168.0.3:35340
+14:17:48.304 quic    connessione nuova da [192.168.0.3]:59200 (in tutto 1)
+14:17:48.304 quic    connessione nuova da [192.168.0.3]:59200 (in tutto 2)
+14:17:48.304 quic    lettura fallita da [192.168.0.3]:59200: ERR_RETRY
+14:17:48.304 quic    connessione con [192.168.0.3]:59200 chiusa (ne restano 1)
+14:17:48.317 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:17:48.318 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:17:48.318 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:17:48.340 quic    stretta di mano TLS completata con [192.168.0.3]:59200
+14:17:48.340 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:17:48.348 rcp     canale di controllo aperto da [192.168.0.3]:59200 (indirizzo per §4.4-bis: [192.168.0.3])
+14:17:48.348 rcp     canale di controllo = stream 4
+14:17:48.348 wt      stream 4 e' WebTransport, sessione 0
+14:17:48.351 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:17:48.351 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:17:48.351 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:59200: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:17:48.358 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:17:48.407 rcp     PAM ha risposto: ammesso
+14:17:48.407 wt      PING del trasporto spenti con [192.168.0.3]:59200: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:17:49.412 rcp     il secondo fisso e' passato (1054 ms)
+14:17:49.412 rcp     ammesso utente=prova da=[192.168.0.3]:59200
+14:17:49.427 rcp     posto PRESO da prova via [192.168.0.3]:59200 (occupati adesso: 1)
+14:17:49.427 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:17:49.427 rcp     sessione aperta utente=prova via=[192.168.0.3]:59200 tela=1280x720 vista=1280x915 disposizione=us
+14:17:49.450 pagina  POST /ff.161544-30369-fedele.fedele.02.sessione-stabilita da 192.168.0.3:35354
+14:17:49.450 pagina  POST /ff.161544-30369-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:35360
+14:18:05.194 pagina  GET /ffm-161544-30369-fedele-secondascheda da 192.168.0.3:32876
+14:18:12.381 pagina  POST /ff.161544-30369-fedele.fedele.04.ph-entrato da 192.168.0.3:43846
+14:18:12.381 pagina  POST /ff.161544-30369-fedele.fedele.05.ph-congeda_corrente-NULLA da 192.168.0.3:43854
+14:18:12.384 pagina  POST /ff.161544-30369-fedele.fedele.08.ph-uscito-fedele da 192.168.0.3:43878
+14:18:12.384 pagina  POST /ff.161544-30369-fedele.fedele.07.ph-wt-PRESENTE da 192.168.0.3:43870
+14:18:12.384 pagina  POST /ff.161544-30369-fedele.fedele.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:43856
+14:18:19.455 rcp     STACCATO per silenzio: 30029 ms senza un byte da [192.168.0.3]:59200 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:18:20.407 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:18:20.408 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: staccata-per-silenzio)
+14:18:29.895 pagina  stretta TLS non riuscita con 192.168.0.3:36808 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:18:45.795 pagina  GET /ffm-161544-30369-vivo-avvio da 192.168.0.3:41986
+14:18:45.859 pagina  GET /favicon.ico da 192.168.0.3:41988
+14:18:50.412 quic    [192.168.0.3]:59200: trenta secondi di silenzio, staccato (§2.2)
+14:18:50.412 quic    connessione con [192.168.0.3]:59200 chiusa (ne restano 0)
+14:18:54.890 pagina  GET / da 192.168.0.3:54002
+14:18:54.940 pagina  POST /ff.161544-30369-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:54010
+14:19:07.531 pagina  GET /impronta da 192.168.0.3:49756
+14:19:07.565 quic    connessione nuova da [192.168.0.3]:47978 (in tutto 1)
+14:19:07.565 quic    connessione nuova da [192.168.0.3]:47978 (in tutto 2)
+14:19:07.565 quic    lettura fallita da [192.168.0.3]:47978: ERR_RETRY
+14:19:07.565 quic    connessione con [192.168.0.3]:47978 chiusa (ne restano 1)
+14:19:07.583 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:19:07.583 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:19:07.583 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:19:07.605 quic    stretta di mano TLS completata con [192.168.0.3]:47978
+14:19:07.605 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:19:07.611 rcp     canale di controllo aperto da [192.168.0.3]:47978 (indirizzo per §4.4-bis: [192.168.0.3])
+14:19:07.611 rcp     canale di controllo = stream 4
+14:19:07.611 wt      stream 4 e' WebTransport, sessione 0
+14:19:07.612 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:19:07.612 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:19:07.612 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:47978: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:19:07.615 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:19:07.674 rcp     PAM ha risposto: ammesso
+14:19:07.674 wt      PING del trasporto spenti con [192.168.0.3]:47978: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:19:08.677 rcp     il secondo fisso e' passato (1061 ms)
+14:19:08.677 rcp     ammesso utente=prova da=[192.168.0.3]:47978
+14:19:08.786 rcp     posto PRESO da prova via [192.168.0.3]:47978 (occupati adesso: 1)
+14:19:08.786 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:19:08.786 rcp     sessione aperta utente=prova via=[192.168.0.3]:47978 tela=1280x720 vista=1280x915 disposizione=us
+14:19:08.812 pagina  POST /ff.161544-30369-vivo.vivo.02.sessione-stabilita da 192.168.0.3:49760
+14:19:08.812 pagina  POST /ff.161544-30369-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:49766
+14:19:14.399 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:19:14.399 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:19:14.399 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:19:14.399 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:19:14.399 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:19:14.399 quic    connessione con [192.168.0.3]:47978 chiusa (ne restano 0)
+14:19:14.413 pagina  POST /ff.161544-30369-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:51940
+14:19:14.415 pagina  POST /ff.161544-30369-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:51946
+14:19:14.423 pagina  POST /ff.161544-30369-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:51948
+14:19:14.424 pagina  POST /ff.161544-30369-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:51970
+14:19:14.424 pagina  POST /ff.161544-30369-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:51956
+14:19:14.424 pagina  POST /ff.161544-30369-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:51974
+14:19:14.436 pagina  POST /ff.161544-30369-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:51988
+14:19:40.088 pagina  stretta TLS non riuscita con 192.168.0.3:32998 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:19:56.039 pagina  GET /ffm-161544-30369-tenace-avvio da 192.168.0.3:36826
+14:19:56.142 pagina  GET /favicon.ico da 192.168.0.3:36830
+14:20:05.154 pagina  GET / da 192.168.0.3:55386
+14:20:05.208 pagina  POST /ff.161544-30369-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:55402
+14:20:17.792 pagina  GET /impronta da 192.168.0.3:47044
+14:20:17.821 quic    connessione nuova da [192.168.0.3]:49091 (in tutto 1)
+14:20:17.821 quic    connessione nuova da [192.168.0.3]:49091 (in tutto 2)
+14:20:17.821 quic    lettura fallita da [192.168.0.3]:49091: ERR_RETRY
+14:20:17.822 quic    connessione con [192.168.0.3]:49091 chiusa (ne restano 1)
+14:20:17.838 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:20:17.838 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:20:17.838 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:20:17.862 quic    stretta di mano TLS completata con [192.168.0.3]:49091
+14:20:17.862 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:20:17.869 rcp     canale di controllo aperto da [192.168.0.3]:49091 (indirizzo per §4.4-bis: [192.168.0.3])
+14:20:17.869 rcp     canale di controllo = stream 4
+14:20:17.869 wt      stream 4 e' WebTransport, sessione 0
+14:20:17.873 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:20:17.873 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:20:17.873 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:49091: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:20:17.877 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:20:17.926 rcp     PAM ha risposto: ammesso
+14:20:17.926 wt      PING del trasporto spenti con [192.168.0.3]:49091: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:20:18.877 rcp     il secondo fisso e' passato (1000 ms)
+14:20:18.877 rcp     ammesso utente=prova da=[192.168.0.3]:49091
+14:20:18.932 rcp     posto PRESO da prova via [192.168.0.3]:49091 (occupati adesso: 1)
+14:20:18.932 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:20:18.932 rcp     sessione aperta utente=prova via=[192.168.0.3]:49091 tela=1280x720 vista=1280x915 disposizione=us
+14:20:18.953 pagina  POST /ff.161544-30369-tenace.tenace.02.sessione-stabilita da 192.168.0.3:47046
+14:20:18.953 pagina  POST /ff.161544-30369-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:47054
+14:20:34.709 pagina  GET /ffm-161544-30369-tenace-secondascheda da 192.168.0.3:40978
+14:20:41.862 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:20:41.862 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:20:41.862 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:20:41.862 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:20:41.862 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:20:41.862 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:20:41.862 quic    connessione con [192.168.0.3]:49091 chiusa (ne restano 0)
+14:20:41.890 pagina  POST /ff.161544-30369-tenace.tenace.04.ph-entrato da 192.168.0.3:51820
+14:20:41.890 pagina  POST /ff.161544-30369-tenace.tenace.05.ph-congeda_corrente-NULLA da 192.168.0.3:51832
+14:20:41.902 pagina  POST /ff.161544-30369-tenace.tenace.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:51848
+14:20:41.903 pagina  POST /ff.161544-30369-tenace.tenace.08.cg-chiamata-motivo-0x1 da 192.168.0.3:51858
+14:20:41.903 pagina  POST /ff.161544-30369-tenace.tenace.07.ph-wt-PRESENTE da 192.168.0.3:51852
+14:20:41.904 pagina  POST /ff.161544-30369-tenace.tenace.09.cg-prima-di-manda da 192.168.0.3:51874
+14:20:41.921 pagina  POST /ff.161544-30369-tenace.tenace.10.ph-uscito-tenace da 192.168.0.3:51890
+14:20:41.921 pagina  POST /ff.161544-30369-tenace.tenace.11.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:51906
+14:20:41.959 pagina  POST /ff.161544-30369-tenace.tenace.12.cg-dopo-il-FIN-del-canale da 192.168.0.3:51918
+14:20:41.959 pagina  POST /ff.161544-30369-tenace.tenace.13.cg-prima-di-wt-close da 192.168.0.3:51926
+14:20:41.961 pagina  POST /ff.161544-30369-tenace.tenace.14.cg-dopo-wt-close da 192.168.0.3:51940
+14:20:59.403 pagina  stretta TLS non riuscita con 192.168.0.3:48604 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:21:15.329 pagina  GET /ffm-161544-30369-codice-avvio da 192.168.0.3:36716
+14:21:15.400 pagina  GET /favicon.ico da 192.168.0.3:36728
+14:21:24.523 pagina  GET / da 192.168.0.3:34762
+14:21:24.566 pagina  POST /ff.161544-30369-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:34772
+14:21:37.174 pagina  GET /impronta da 192.168.0.3:35450
+14:21:37.190 quic    connessione nuova da [192.168.0.3]:35497 (in tutto 1)
+14:21:37.190 quic    connessione nuova da [192.168.0.3]:35497 (in tutto 2)
+14:21:37.190 quic    lettura fallita da [192.168.0.3]:35497: ERR_RETRY
+14:21:37.190 quic    connessione con [192.168.0.3]:35497 chiusa (ne restano 1)
+14:21:37.203 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:21:37.203 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:21:37.203 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:21:37.223 quic    stretta di mano TLS completata con [192.168.0.3]:35497
+14:21:37.223 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:21:37.228 rcp     canale di controllo aperto da [192.168.0.3]:35497 (indirizzo per §4.4-bis: [192.168.0.3])
+14:21:37.228 rcp     canale di controllo = stream 4
+14:21:37.228 wt      stream 4 e' WebTransport, sessione 0
+14:21:37.231 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:21:37.231 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:21:37.231 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:35497: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:21:37.236 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:21:37.285 rcp     PAM ha risposto: ammesso
+14:21:37.285 wt      PING del trasporto spenti con [192.168.0.3]:35497: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:21:38.236 rcp     il secondo fisso e' passato (1000 ms)
+14:21:38.236 rcp     ammesso utente=prova da=[192.168.0.3]:35497
+14:21:38.240 rcp     posto PRESO da prova via [192.168.0.3]:35497 (occupati adesso: 1)
+14:21:38.240 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:21:38.240 rcp     sessione aperta utente=prova via=[192.168.0.3]:35497 tela=1280x720 vista=1280x915 disposizione=us
+14:21:38.264 pagina  POST /ff.161544-30369-codice.codice.02.sessione-stabilita da 192.168.0.3:35458
+14:21:38.264 pagina  POST /ff.161544-30369-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:35462
+14:21:54.085 pagina  GET /ffm-161544-30369-codice-secondascheda da 192.168.0.3:51934
+14:22:01.239 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:22:01.239 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: attiva)
+14:22:01.239 rcp     posto LASCIATO da prova via [192.168.0.3]:35497 (occupati adesso: 0)
+14:22:01.239 quic    connessione con [192.168.0.3]:35497 chiusa (ne restano 0)
+14:22:01.264 pagina  POST /ff.161544-30369-codice.codice.04.ph-entrato da 192.168.0.3:51944
+14:22:01.267 pagina  POST /ff.161544-30369-codice.codice.05.ph-congeda_corrente-NULLA da 192.168.0.3:51952
+14:22:01.272 pagina  POST /ff.161544-30369-codice.codice.07.ph-wt-PRESENTE da 192.168.0.3:51964
+14:22:01.272 pagina  POST /ff.161544-30369-codice.codice.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:51954
+14:22:01.273 pagina  POST /ff.161544-30369-codice.codice.08.ph-codice-prima-di-wt-close da 192.168.0.3:51972
+14:22:01.273 pagina  POST /ff.161544-30369-codice.codice.09.ph-codice-dopo-wt-close da 192.168.0.3:51986
+14:22:14.927 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:22:44.630 pagina  GET /162242-21048-canale da 192.168.0.3:58584
+14:22:45.941 pagina  GET / da 192.168.0.3:58592
+14:22:46.378 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:22:49.685 pagina  stretta TLS non riuscita con 192.168.0.3:58594 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:23:05.576 pagina  GET /ffm-162242-21048-eco-avvio da 192.168.0.3:60102
+14:23:05.640 pagina  GET /favicon.ico da 192.168.0.3:60116
+14:23:14.651 pagina  GET / da 192.168.0.3:49506
+14:23:14.694 pagina  POST /ff.162242-21048-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:49520
+14:23:27.339 pagina  GET /impronta da 192.168.0.3:46586
+14:23:27.349 quic    connessione nuova da [192.168.0.3]:50952 (in tutto 1)
+14:23:27.349 quic    connessione nuova da [192.168.0.3]:50952 (in tutto 2)
+14:23:27.349 quic    lettura fallita da [192.168.0.3]:50952: ERR_RETRY
+14:23:27.349 quic    connessione con [192.168.0.3]:50952 chiusa (ne restano 1)
+14:23:27.363 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:23:27.363 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:23:27.363 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:23:27.380 quic    stretta di mano TLS completata con [192.168.0.3]:50952
+14:23:27.381 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:23:27.387 rcp     canale di controllo aperto da [192.168.0.3]:50952 (indirizzo per §4.4-bis: [192.168.0.3])
+14:23:27.387 rcp     canale di controllo = stream 4
+14:23:27.387 wt      stream 4 e' WebTransport, sessione 0
+14:23:27.390 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:23:27.390 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:23:27.390 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:50952: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:23:27.393 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:23:27.454 rcp     PAM ha risposto: ammesso
+14:23:27.454 wt      PING del trasporto spenti con [192.168.0.3]:50952: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:23:28.393 rcp     il secondo fisso e' passato (1000 ms)
+14:23:28.393 rcp     ammesso utente=prova da=[192.168.0.3]:50952
+14:23:28.476 rcp     posto PRESO da prova via [192.168.0.3]:50952 (occupati adesso: 1)
+14:23:28.477 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:23:28.477 rcp     sessione aperta utente=prova via=[192.168.0.3]:50952 tela=1280x720 vista=1280x915 disposizione=us
+14:23:28.496 pagina  POST /ff.162242-21048-eco.eco.02.sessione-stabilita da 192.168.0.3:46594
+14:23:28.497 pagina  POST /ff.162242-21048-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:46600
+14:23:44.163 pagina  GET /ffm-162242-21048-eco-secondascheda da 192.168.0.3:60930
+14:23:51.332 pagina  GET /ff.162242-21048-eco.eco.04.eco-pagehide-E-SCATTATO da 192.168.0.3:60944
+14:23:51.351 pagina  GET /ff.162242-21048-eco.eco.05.eco-congeda_corrente-NULLA da 192.168.0.3:60948
+14:23:51.369 pagina  GET /ff.162242-21048-eco.eco.06.eco-congeda_ultimo-PRESENTE da 192.168.0.3:60952
+14:23:51.388 pagina  GET /ff.162242-21048-eco.eco.07.eco-visibilita-visible da 192.168.0.3:60956
+14:23:59.390 rcp     STACCATO per silenzio: 30914 ms senza un byte da [192.168.0.3]:50952 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:23:59.395 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:23:59.395 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: staccata-per-silenzio)
+14:24:08.896 pagina  stretta TLS non riuscita con 192.168.0.3:59200 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:24:24.770 pagina  GET /ffm-162242-21048-fedele-avvio da 192.168.0.3:35404
+14:24:24.827 pagina  GET /favicon.ico da 192.168.0.3:35418
+14:24:29.402 quic    [192.168.0.3]:50952: trenta secondi di silenzio, staccato (§2.2)
+14:24:29.402 quic    connessione con [192.168.0.3]:50952 chiusa (ne restano 0)
+14:24:33.876 pagina  GET / da 192.168.0.3:34726
+14:24:33.924 pagina  POST /ff.162242-21048-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:34736
+14:24:46.526 pagina  GET /impronta da 192.168.0.3:56502
+14:24:46.549 quic    connessione nuova da [192.168.0.3]:44927 (in tutto 1)
+14:24:46.549 quic    connessione nuova da [192.168.0.3]:44927 (in tutto 2)
+14:24:46.549 quic    lettura fallita da [192.168.0.3]:44927: ERR_RETRY
+14:24:46.549 quic    connessione con [192.168.0.3]:44927 chiusa (ne restano 1)
+14:24:46.564 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:24:46.564 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:24:46.564 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:24:46.585 quic    stretta di mano TLS completata con [192.168.0.3]:44927
+14:24:46.585 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:24:46.590 rcp     canale di controllo aperto da [192.168.0.3]:44927 (indirizzo per §4.4-bis: [192.168.0.3])
+14:24:46.590 rcp     canale di controllo = stream 4
+14:24:46.590 wt      stream 4 e' WebTransport, sessione 0
+14:24:46.594 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:24:46.594 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:24:46.594 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:44927: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:24:46.600 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:24:46.675 rcp     PAM ha risposto: ammesso
+14:24:46.675 wt      PING del trasporto spenti con [192.168.0.3]:44927: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:24:47.600 rcp     il secondo fisso e' passato (1000 ms)
+14:24:47.600 rcp     ammesso utente=prova da=[192.168.0.3]:44927
+14:24:47.737 rcp     posto PRESO da prova via [192.168.0.3]:44927 (occupati adesso: 1)
+14:24:47.737 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:24:47.737 rcp     sessione aperta utente=prova via=[192.168.0.3]:44927 tela=1280x720 vista=1280x915 disposizione=us
+14:24:47.790 pagina  POST /ff.162242-21048-fedele.fedele.02.sessione-stabilita da 192.168.0.3:56504
+14:24:47.791 pagina  POST /ff.162242-21048-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:56516
+14:25:03.425 pagina  GET /ffm-162242-21048-fedele-secondascheda da 192.168.0.3:55380
+14:25:10.615 pagina  POST /ff.162242-21048-fedele.fedele.05.ph-congeda_corrente-NULLA da 192.168.0.3:55406
+14:25:10.615 pagina  POST /ff.162242-21048-fedele.fedele.04.ph-entrato da 192.168.0.3:55396
+14:25:10.624 pagina  POST /ff.162242-21048-fedele.fedele.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:55412
+14:25:10.624 pagina  POST /ff.162242-21048-fedele.fedele.08.ph-uscito-fedele da 192.168.0.3:55434
+14:25:10.624 pagina  POST /ff.162242-21048-fedele.fedele.07.ph-wt-PRESENTE da 192.168.0.3:55424
+14:25:17.797 rcp     STACCATO per silenzio: 30060 ms senza un byte da [192.168.0.3]:44927 (posti occupati adesso: 0; stato: staccata-per-silenzio)
+14:25:18.644 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:25:18.644 rcp     il canale di controllo si e' chiuso dal lato del server: §4.2, la sessione e' finita (stato: staccata-per-silenzio)
+14:25:28.099 pagina  stretta TLS non riuscita con 192.168.0.3:40452 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:25:44.004 pagina  GET /ffm-162242-21048-vivo-avvio da 192.168.0.3:48424
+14:25:44.068 pagina  GET /favicon.ico da 192.168.0.3:48438
+14:25:48.650 quic    [192.168.0.3]:44927: trenta secondi di silenzio, staccato (§2.2)
+14:25:48.650 quic    connessione con [192.168.0.3]:44927 chiusa (ne restano 0)
+14:25:53.106 pagina  GET / da 192.168.0.3:46578
+14:25:53.164 pagina  POST /ff.162242-21048-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:46590
+14:26:05.764 pagina  GET /impronta da 192.168.0.3:51180
+14:26:05.798 quic    connessione nuova da [192.168.0.3]:41246 (in tutto 1)
+14:26:05.799 quic    connessione nuova da [192.168.0.3]:41246 (in tutto 2)
+14:26:05.799 quic    lettura fallita da [192.168.0.3]:41246: ERR_RETRY
+14:26:05.799 quic    connessione con [192.168.0.3]:41246 chiusa (ne restano 1)
+14:26:05.816 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:26:05.816 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:26:05.816 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:26:05.837 quic    stretta di mano TLS completata con [192.168.0.3]:41246
+14:26:05.837 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:26:05.842 rcp     canale di controllo aperto da [192.168.0.3]:41246 (indirizzo per §4.4-bis: [192.168.0.3])
+14:26:05.842 rcp     canale di controllo = stream 4
+14:26:05.842 wt      stream 4 e' WebTransport, sessione 0
+14:26:05.846 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:26:05.846 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:26:05.846 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:41246: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:26:05.851 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:26:05.903 rcp     PAM ha risposto: ammesso
+14:26:05.903 wt      PING del trasporto spenti con [192.168.0.3]:41246: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:26:06.851 rcp     il secondo fisso e' passato (1000 ms)
+14:26:06.851 rcp     ammesso utente=prova da=[192.168.0.3]:41246
+14:26:06.859 rcp     posto PRESO da prova via [192.168.0.3]:41246 (occupati adesso: 1)
+14:26:06.859 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:26:06.859 rcp     sessione aperta utente=prova via=[192.168.0.3]:41246 tela=1280x720 vista=1280x915 disposizione=us
+14:26:06.884 pagina  POST /ff.162242-21048-vivo.vivo.02.sessione-stabilita da 192.168.0.3:51182
+14:26:06.886 pagina  POST /ff.162242-21048-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:51198
+14:26:11.869 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:26:11.869 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:26:11.872 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:26:11.879 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:26:11.879 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:26:11.879 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:26:11.879 quic    connessione con [192.168.0.3]:41246 chiusa (ne restano 0)
+14:26:12.021 pagina  POST /ff.162242-21048-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:51484
+14:26:12.022 pagina  POST /ff.162242-21048-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:51490
+14:26:12.033 pagina  POST /ff.162242-21048-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:51506
+14:26:12.035 pagina  POST /ff.162242-21048-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:51522
+14:26:12.035 pagina  POST /ff.162242-21048-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:51512
+14:26:12.036 pagina  POST /ff.162242-21048-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:51526
+14:26:12.039 pagina  POST /ff.162242-21048-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:51528
+14:26:38.528 pagina  stretta TLS non riuscita con 192.168.0.3:43672 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:26:54.237 pagina  GET /ffm-162242-21048-tenace-avvio da 192.168.0.3:58818
+14:26:54.392 pagina  GET /favicon.ico da 192.168.0.3:58828
+14:27:03.446 pagina  GET / da 192.168.0.3:36664
+14:27:03.492 pagina  POST /ff.162242-21048-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:36680
+14:27:16.088 pagina  GET /impronta da 192.168.0.3:33928
+14:27:16.096 quic    connessione nuova da [192.168.0.3]:48861 (in tutto 1)
+14:27:16.096 quic    connessione nuova da [192.168.0.3]:48861 (in tutto 2)
+14:27:16.096 quic    lettura fallita da [192.168.0.3]:48861: ERR_RETRY
+14:27:16.096 quic    connessione con [192.168.0.3]:48861 chiusa (ne restano 1)
+14:27:16.111 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:27:16.111 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:27:16.111 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:27:16.131 quic    stretta di mano TLS completata con [192.168.0.3]:48861
+14:27:16.131 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:27:16.137 rcp     canale di controllo aperto da [192.168.0.3]:48861 (indirizzo per §4.4-bis: [192.168.0.3])
+14:27:16.137 rcp     canale di controllo = stream 4
+14:27:16.137 wt      stream 4 e' WebTransport, sessione 0
+14:27:16.140 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:27:16.140 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:27:16.140 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:48861: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:27:16.143 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:27:16.194 rcp     PAM ha risposto: ammesso
+14:27:16.194 wt      PING del trasporto spenti con [192.168.0.3]:48861: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:27:17.196 rcp     il secondo fisso e' passato (1053 ms)
+14:27:17.196 rcp     ammesso utente=prova da=[192.168.0.3]:48861
+14:27:17.231 rcp     posto PRESO da prova via [192.168.0.3]:48861 (occupati adesso: 1)
+14:27:17.231 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:27:17.231 rcp     sessione aperta utente=prova via=[192.168.0.3]:48861 tela=1280x720 vista=1280x915 disposizione=us
+14:27:17.251 pagina  POST /ff.162242-21048-tenace.tenace.02.sessione-stabilita da 192.168.0.3:33936
+14:27:17.252 pagina  POST /ff.162242-21048-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:33950
+14:27:33.109 pagina  GET /ffm-162242-21048-tenace-secondascheda da 192.168.0.3:59918
+14:27:40.199 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:27:40.200 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:27:40.200 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:27:40.200 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:27:40.200 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:27:40.200 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:27:40.200 quic    connessione con [192.168.0.3]:48861 chiusa (ne restano 0)
+14:27:40.203 quic    pacchetto di 48 byte per una connessione che non c'e': ignorato
+14:27:40.226 pagina  POST /ff.162242-21048-tenace.tenace.04.ph-entrato da 192.168.0.3:59920
+14:27:40.234 pagina  POST /ff.162242-21048-tenace.tenace.05.ph-congeda_corrente-NULLA da 192.168.0.3:59928
+14:27:40.238 pagina  POST /ff.162242-21048-tenace.tenace.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:59942
+14:27:40.238 pagina  POST /ff.162242-21048-tenace.tenace.07.ph-wt-PRESENTE da 192.168.0.3:59946
+14:27:40.238 pagina  POST /ff.162242-21048-tenace.tenace.09.cg-prima-di-manda da 192.168.0.3:59968
+14:27:40.241 pagina  POST /ff.162242-21048-tenace.tenace.08.cg-chiamata-motivo-0x1 da 192.168.0.3:59956
+14:27:40.247 pagina  POST /ff.162242-21048-tenace.tenace.10.ph-uscito-tenace da 192.168.0.3:59980
+14:27:40.254 pagina  POST /ff.162242-21048-tenace.tenace.11.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:59994
+14:27:40.267 pagina  POST /ff.162242-21048-tenace.tenace.13.cg-prima-di-wt-close da 192.168.0.3:60006
+14:27:40.268 pagina  POST /ff.162242-21048-tenace.tenace.12.cg-dopo-il-FIN-del-canale da 192.168.0.3:59996
+14:27:40.275 pagina  POST /ff.162242-21048-tenace.tenace.14.cg-dopo-wt-close da 192.168.0.3:60014
+14:27:57.783 pagina  stretta TLS non riuscita con 192.168.0.3:57244 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:28:13.654 pagina  GET /ffm-162242-21048-codice-avvio da 192.168.0.3:48030
+14:28:13.713 pagina  GET /favicon.ico da 192.168.0.3:48042
+14:28:22.720 pagina  GET / da 192.168.0.3:57600
+14:28:22.801 pagina  POST /ff.162242-21048-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:57610
+14:28:35.393 pagina  GET /impronta da 192.168.0.3:36864
+14:28:35.408 quic    connessione nuova da [192.168.0.3]:39612 (in tutto 1)
+14:28:35.409 quic    connessione nuova da [192.168.0.3]:39612 (in tutto 2)
+14:28:35.409 quic    lettura fallita da [192.168.0.3]:39612: ERR_RETRY
+14:28:35.409 quic    connessione con [192.168.0.3]:39612 chiusa (ne restano 1)
+14:28:35.422 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:28:35.422 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:28:35.422 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:28:35.437 quic    stretta di mano TLS completata con [192.168.0.3]:39612
+14:28:35.437 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:28:35.443 rcp     canale di controllo aperto da [192.168.0.3]:39612 (indirizzo per §4.4-bis: [192.168.0.3])
+14:28:35.443 rcp     canale di controllo = stream 4
+14:28:35.443 wt      stream 4 e' WebTransport, sessione 0
+14:28:35.446 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:28:35.446 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:28:35.446 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:39612: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:28:35.449 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:28:35.498 rcp     PAM ha risposto: ammesso
+14:28:35.498 wt      PING del trasporto spenti con [192.168.0.3]:39612: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:28:36.449 rcp     il secondo fisso e' passato (1000 ms)
+14:28:36.449 rcp     ammesso utente=prova da=[192.168.0.3]:39612
+14:28:36.456 rcp     posto PRESO da prova via [192.168.0.3]:39612 (occupati adesso: 1)
+14:28:36.456 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:28:36.456 rcp     sessione aperta utente=prova via=[192.168.0.3]:39612 tela=1280x720 vista=1280x915 disposizione=us
+14:28:36.485 pagina  POST /ff.162242-21048-codice.codice.02.sessione-stabilita da 192.168.0.3:36874
+14:28:36.489 pagina  POST /ff.162242-21048-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:36882
+14:28:52.321 pagina  GET /ffm-162242-21048-codice-secondascheda da 192.168.0.3:46178
+14:28:59.467 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:28:59.467 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: attiva)
+14:28:59.467 rcp     posto LASCIATO da prova via [192.168.0.3]:39612 (occupati adesso: 0)
+14:28:59.468 quic    connessione con [192.168.0.3]:39612 chiusa (ne restano 0)
+14:28:59.491 pagina  POST /ff.162242-21048-codice.codice.04.ph-entrato da 192.168.0.3:46184
+14:28:59.491 pagina  POST /ff.162242-21048-codice.codice.05.ph-congeda_corrente-NULLA da 192.168.0.3:46186
+14:28:59.508 pagina  POST /ff.162242-21048-codice.codice.06.ph-congeda_ultimo-PRESENTE da 192.168.0.3:46200
+14:28:59.508 pagina  POST /ff.162242-21048-codice.codice.08.ph-codice-prima-di-wt-close da 192.168.0.3:46232
+14:28:59.508 pagina  POST /ff.162242-21048-codice.codice.07.ph-wt-PRESENTE da 192.168.0.3:46216
+14:28:59.508 pagina  POST /ff.162242-21048-codice.codice.09.ph-codice-dopo-wt-close da 192.168.0.3:46244
+14:29:13.166 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:29:26.746 pagina  GET /162924-26952-canale da 192.168.0.3:46648
+14:29:28.087 pagina  GET / da 192.168.0.3:46662
+14:29:28.509 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:29:30.989 pagina  stretta TLS non riuscita con 192.168.0.3:46672 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:31.029 pagina  stretta TLS non riuscita con 192.168.0.3:46678 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:31.029 pagina  stretta TLS non riuscita con 192.168.0.3:46688 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:31.076 pagina  stretta TLS non riuscita con 192.168.0.3:46690 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:46.391 pagina  stretta TLS non riuscita con 192.168.0.3:33194 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:46.394 pagina  stretta TLS non riuscita con 192.168.0.3:33200 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:46.404 pagina  GET /ffm-162924-26952-eco-avvio da 192.168.0.3:33208
+14:29:46.472 pagina  stretta TLS non riuscita con 192.168.0.3:33220 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:46.481 pagina  GET /favicon.ico da 192.168.0.3:33222
+14:29:55.462 pagina  stretta TLS non riuscita con 192.168.0.3:51278 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:55.472 pagina  GET / da 192.168.0.3:51280
+14:29:55.472 pagina  stretta TLS non riuscita con 192.168.0.3:51282 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:55.516 pagina  stretta TLS non riuscita con 192.168.0.3:51298 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:29:55.528 pagina  POST /ff.162924-26952-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:51310
+14:30:08.106 pagina  stretta TLS non riuscita con 192.168.0.3:48402 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:08.122 pagina  GET /impronta da 192.168.0.3:48412
+14:30:08.131 quic    connessione nuova da [192.168.0.3]:43481 (in tutto 1)
+14:30:08.132 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:30:08.132 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:30:08.137 quic    stretta di mano TLS completata con [192.168.0.3]:43481
+14:30:08.137 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:30:08.144 rcp     canale di controllo aperto da [192.168.0.3]:43481 (indirizzo per §4.4-bis: [192.168.0.3])
+14:30:08.144 rcp     canale di controllo = stream 4
+14:30:08.144 wt      stream 4 e' WebTransport, sessione 0
+14:30:08.146 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:30:08.146 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:30:08.146 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:43481: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:30:08.150 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:30:08.199 rcp     PAM ha risposto: ammesso
+14:30:08.199 wt      PING del trasporto spenti con [192.168.0.3]:43481: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:30:09.227 rcp     il secondo fisso e' passato (1077 ms)
+14:30:09.227 rcp     ammesso utente=prova da=[192.168.0.3]:43481
+14:30:09.232 rcp     posto PRESO da prova via [192.168.0.3]:43481 (occupati adesso: 1)
+14:30:09.232 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:30:09.232 rcp     sessione aperta utente=prova via=[192.168.0.3]:43481 tela=1280x720 vista=1280x913 disposizione=it
+14:30:09.246 pagina  stretta TLS non riuscita con 192.168.0.3:48426 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:09.246 pagina  stretta TLS non riuscita con 192.168.0.3:48442 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:09.260 pagina  POST /ff.162924-26952-eco.eco.02.sessione-stabilita da 192.168.0.3:48454
+14:30:09.260 pagina  POST /ff.162924-26952-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:48462
+14:30:24.995 pagina  stretta TLS non riuscita con 192.168.0.3:51590 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:25.012 pagina  stretta TLS non riuscita con 192.168.0.3:51614 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:25.012 pagina  GET /ffm-162924-26952-eco-secondascheda da 192.168.0.3:51606
+14:30:32.076 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+14:30:32.076 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+14:30:32.076 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: attiva)
+14:30:32.076 rcp     posto LASCIATO da prova via [192.168.0.3]:43481 (occupati adesso: 0)
+14:30:48.818 pagina  stretta TLS non riuscita con 192.168.0.3:54120 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:48.861 pagina  stretta TLS non riuscita con 192.168.0.3:54140 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:48.861 pagina  stretta TLS non riuscita con 192.168.0.3:54136 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:30:48.880 pagina  stretta TLS non riuscita con 192.168.0.3:54150 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:02.076 quic    [192.168.0.3]:43481: trenta secondi di silenzio, staccato (§2.2)
+14:31:02.076 quic    connessione con [192.168.0.3]:43481 chiusa (ne restano 0)
+14:31:04.267 pagina  stretta TLS non riuscita con 192.168.0.3:33242 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:04.273 pagina  stretta TLS non riuscita con 192.168.0.3:33246 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:04.283 pagina  GET /ffm-162924-26952-fedele-avvio da 192.168.0.3:33248
+14:31:04.350 pagina  stretta TLS non riuscita con 192.168.0.3:33256 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:04.359 pagina  GET /favicon.ico da 192.168.0.3:33262
+14:31:13.404 pagina  stretta TLS non riuscita con 192.168.0.3:43504 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:13.417 pagina  stretta TLS non riuscita con 192.168.0.3:43518 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:13.420 pagina  GET / da 192.168.0.3:43512
+14:31:13.459 pagina  stretta TLS non riuscita con 192.168.0.3:43530 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:13.472 pagina  POST /ff.162924-26952-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:43534
+14:31:26.035 pagina  stretta TLS non riuscita con 192.168.0.3:47590 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:26.047 pagina  GET /impronta da 192.168.0.3:47594
+14:31:26.056 quic    connessione nuova da [192.168.0.3]:38642 (in tutto 1)
+14:31:26.057 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:31:26.057 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:31:26.062 quic    stretta di mano TLS completata con [192.168.0.3]:38642
+14:31:26.062 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:31:26.069 rcp     canale di controllo aperto da [192.168.0.3]:38642 (indirizzo per §4.4-bis: [192.168.0.3])
+14:31:26.069 rcp     canale di controllo = stream 4
+14:31:26.069 wt      stream 4 e' WebTransport, sessione 0
+14:31:26.071 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:31:26.071 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:31:26.071 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:38642: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:31:26.076 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:31:26.125 rcp     PAM ha risposto: ammesso
+14:31:26.125 wt      PING del trasporto spenti con [192.168.0.3]:38642: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:31:27.076 rcp     il secondo fisso e' passato (1000 ms)
+14:31:27.076 rcp     ammesso utente=prova da=[192.168.0.3]:38642
+14:31:27.081 rcp     posto PRESO da prova via [192.168.0.3]:38642 (occupati adesso: 1)
+14:31:27.081 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:31:27.081 rcp     sessione aperta utente=prova via=[192.168.0.3]:38642 tela=1280x720 vista=1280x913 disposizione=it
+14:31:27.098 pagina  stretta TLS non riuscita con 192.168.0.3:47610 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:27.100 pagina  stretta TLS non riuscita con 192.168.0.3:47620 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:27.112 pagina  POST /ff.162924-26952-fedele.fedele.02.sessione-stabilita da 192.168.0.3:47624
+14:31:27.115 pagina  POST /ff.162924-26952-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:47636
+14:31:42.966 pagina  stretta TLS non riuscita con 192.168.0.3:50182 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:42.975 pagina  stretta TLS non riuscita con 192.168.0.3:50198 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:42.979 pagina  stretta TLS non riuscita con 192.168.0.3:50184 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:42.990 pagina  GET /ffm-162924-26952-fedele-secondascheda da 192.168.0.3:50212
+14:31:50.040 pagina  stretta TLS non riuscita con 192.168.0.3:50224 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:50.052 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+14:31:50.052 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+14:31:50.052 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: attiva)
+14:31:50.052 rcp     posto LASCIATO da prova via [192.168.0.3]:38642 (occupati adesso: 0)
+14:31:50.060 pagina  stretta TLS non riuscita con 192.168.0.3:50246 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:50.064 pagina  stretta TLS non riuscita con 192.168.0.3:50262 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:50.065 pagina  stretta TLS non riuscita con 192.168.0.3:50238 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:31:50.066 pagina  stretta TLS non riuscita con 192.168.0.3:50266 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:06.751 pagina  stretta TLS non riuscita con 192.168.0.3:41240 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:06.793 pagina  stretta TLS non riuscita con 192.168.0.3:41250 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:06.793 pagina  stretta TLS non riuscita con 192.168.0.3:41262 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:06.818 pagina  stretta TLS non riuscita con 192.168.0.3:41266 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:20.053 quic    [192.168.0.3]:38642: trenta secondi di silenzio, staccato (§2.2)
+14:32:20.053 quic    connessione con [192.168.0.3]:38642 chiusa (ne restano 0)
+14:32:22.202 pagina  stretta TLS non riuscita con 192.168.0.3:54300 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:22.211 pagina  stretta TLS non riuscita con 192.168.0.3:54316 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:22.224 pagina  GET /ffm-162924-26952-vivo-avvio da 192.168.0.3:54318
+14:32:22.299 pagina  stretta TLS non riuscita con 192.168.0.3:54334 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:22.307 pagina  GET /favicon.ico da 192.168.0.3:54350
+14:32:31.248 pagina  stretta TLS non riuscita con 192.168.0.3:54364 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:31.254 pagina  stretta TLS non riuscita con 192.168.0.3:54366 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:31.267 pagina  GET / da 192.168.0.3:54374
+14:32:31.309 pagina  stretta TLS non riuscita con 192.168.0.3:54390 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:31.321 pagina  POST /ff.162924-26952-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:54402
+14:32:43.881 pagina  stretta TLS non riuscita con 192.168.0.3:38598 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:43.895 pagina  GET /impronta da 192.168.0.3:38612
+14:32:43.907 quic    connessione nuova da [192.168.0.3]:33596 (in tutto 1)
+14:32:43.908 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:32:43.908 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:32:43.914 quic    stretta di mano TLS completata con [192.168.0.3]:33596
+14:32:43.914 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:32:43.922 rcp     canale di controllo aperto da [192.168.0.3]:33596 (indirizzo per §4.4-bis: [192.168.0.3])
+14:32:43.922 rcp     canale di controllo = stream 4
+14:32:43.922 wt      stream 4 e' WebTransport, sessione 0
+14:32:43.923 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:32:43.923 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:32:43.923 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:33596: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:32:43.927 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:32:43.986 rcp     PAM ha risposto: ammesso
+14:32:43.986 wt      PING del trasporto spenti con [192.168.0.3]:33596: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:32:44.927 rcp     il secondo fisso e' passato (1000 ms)
+14:32:44.927 rcp     ammesso utente=prova da=[192.168.0.3]:33596
+14:32:45.022 rcp     posto PRESO da prova via [192.168.0.3]:33596 (occupati adesso: 1)
+14:32:45.022 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:32:45.022 rcp     sessione aperta utente=prova via=[192.168.0.3]:33596 tela=1280x720 vista=1280x913 disposizione=it
+14:32:45.038 pagina  stretta TLS non riuscita con 192.168.0.3:38638 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:45.039 pagina  stretta TLS non riuscita con 192.168.0.3:38628 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:45.050 pagina  POST /ff.162924-26952-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:38652
+14:32:45.051 pagina  POST /ff.162924-26952-vivo.vivo.02.sessione-stabilita da 192.168.0.3:38658
+14:32:50.031 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:32:50.031 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:32:50.031 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:32:50.040 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:32:50.040 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:32:50.040 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:32:50.042 pagina  stretta TLS non riuscita con 192.168.0.3:38702 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.043 pagina  stretta TLS non riuscita con 192.168.0.3:38676 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.046 pagina  stretta TLS non riuscita con 192.168.0.3:38666 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.046 pagina  stretta TLS non riuscita con 192.168.0.3:38690 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.050 pagina  stretta TLS non riuscita con 192.168.0.3:38704 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.051 pagina  stretta TLS non riuscita con 192.168.0.3:38714 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.066 pagina  POST /ff.162924-26952-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:38750
+14:32:50.066 pagina  POST /ff.162924-26952-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:38730
+14:32:50.066 pagina  POST /ff.162924-26952-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:38754
+14:32:50.066 pagina  POST /ff.162924-26952-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:38728
+14:32:50.066 pagina  POST /ff.162924-26952-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:38740
+14:32:50.067 pagina  POST /ff.162924-26952-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:38762
+14:32:50.082 pagina  stretta TLS non riuscita con 192.168.0.3:38776 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:32:50.091 pagina  POST /ff.162924-26952-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:38778
+14:32:50.630 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+14:33:15.673 pagina  stretta TLS non riuscita con 192.168.0.3:58970 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:15.714 pagina  stretta TLS non riuscita con 192.168.0.3:58980 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:15.714 pagina  stretta TLS non riuscita con 192.168.0.3:58984 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:15.728 pagina  stretta TLS non riuscita con 192.168.0.3:58994 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:20.631 quic    [192.168.0.3]:33596: trenta secondi di silenzio, staccato (§2.2)
+14:33:20.631 quic    connessione con [192.168.0.3]:33596 chiusa (ne restano 0)
+14:33:31.129 pagina  stretta TLS non riuscita con 192.168.0.3:57600 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:31.134 pagina  stretta TLS non riuscita con 192.168.0.3:57602 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:31.144 pagina  GET /ffm-162924-26952-tenace-avvio da 192.168.0.3:57606
+14:33:31.201 pagina  stretta TLS non riuscita con 192.168.0.3:57608 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:31.210 pagina  GET /favicon.ico da 192.168.0.3:57616
+14:33:40.248 pagina  stretta TLS non riuscita con 192.168.0.3:35188 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:40.256 pagina  stretta TLS non riuscita con 192.168.0.3:35192 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:40.265 pagina  GET / da 192.168.0.3:35196
+14:33:40.303 pagina  stretta TLS non riuscita con 192.168.0.3:35206 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:40.314 pagina  POST /ff.162924-26952-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:35212
+14:33:52.878 pagina  stretta TLS non riuscita con 192.168.0.3:57822 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:52.888 pagina  GET /impronta da 192.168.0.3:57834
+14:33:52.898 quic    connessione nuova da [192.168.0.3]:34296 (in tutto 1)
+14:33:52.899 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:33:52.899 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:33:52.904 quic    stretta di mano TLS completata con [192.168.0.3]:34296
+14:33:52.904 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:33:52.911 rcp     canale di controllo aperto da [192.168.0.3]:34296 (indirizzo per §4.4-bis: [192.168.0.3])
+14:33:52.911 rcp     canale di controllo = stream 4
+14:33:52.911 wt      stream 4 e' WebTransport, sessione 0
+14:33:52.915 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:33:52.915 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:33:52.915 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:34296: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:33:52.918 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:33:52.967 rcp     PAM ha risposto: ammesso
+14:33:52.967 wt      PING del trasporto spenti con [192.168.0.3]:34296: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:33:53.918 rcp     il secondo fisso e' passato (1000 ms)
+14:33:53.918 rcp     ammesso utente=prova da=[192.168.0.3]:34296
+14:33:53.937 rcp     posto PRESO da prova via [192.168.0.3]:34296 (occupati adesso: 1)
+14:33:53.937 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:33:53.937 rcp     sessione aperta utente=prova via=[192.168.0.3]:34296 tela=1280x720 vista=1280x913 disposizione=it
+14:33:53.954 pagina  stretta TLS non riuscita con 192.168.0.3:57840 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:53.954 pagina  stretta TLS non riuscita con 192.168.0.3:57844 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:33:53.968 pagina  POST /ff.162924-26952-tenace.tenace.02.sessione-stabilita da 192.168.0.3:57854
+14:33:53.969 pagina  POST /ff.162924-26952-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:57850
+14:34:09.842 pagina  stretta TLS non riuscita con 192.168.0.3:47962 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:09.848 pagina  stretta TLS non riuscita con 192.168.0.3:47974 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:09.858 pagina  GET /ffm-162924-26952-tenace-secondascheda da 192.168.0.3:47986
+14:34:16.909 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:34:16.909 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:34:16.915 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:34:16.924 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:34:16.925 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:34:16.925 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38942 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38952 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38948 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38950 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38960 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.943 pagina  stretta TLS non riuscita con 192.168.0.3:38970 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.959 pagina  stretta TLS non riuscita con 192.168.0.3:38974 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.964 pagina  stretta TLS non riuscita con 192.168.0.3:38988 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.965 pagina  stretta TLS non riuscita con 192.168.0.3:39000 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.966 pagina  stretta TLS non riuscita con 192.168.0.3:38998 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:16.967 pagina  stretta TLS non riuscita con 192.168.0.3:38990 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:17.509 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+14:34:33.678 pagina  stretta TLS non riuscita con 192.168.0.3:34976 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:33.715 pagina  stretta TLS non riuscita con 192.168.0.3:34996 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:33.715 pagina  stretta TLS non riuscita con 192.168.0.3:34990 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:33.942 pagina  stretta TLS non riuscita con 192.168.0.3:34998 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:47.509 quic    [192.168.0.3]:34296: trenta secondi di silenzio, staccato (§2.2)
+14:34:47.509 quic    connessione con [192.168.0.3]:34296 chiusa (ne restano 0)
+14:34:49.129 pagina  stretta TLS non riuscita con 192.168.0.3:39562 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:49.136 pagina  stretta TLS non riuscita con 192.168.0.3:39564 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:49.147 pagina  GET /ffm-162924-26952-codice-avvio da 192.168.0.3:39568
+14:34:49.212 pagina  stretta TLS non riuscita con 192.168.0.3:39582 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:49.220 pagina  GET /favicon.ico da 192.168.0.3:39584
+14:34:58.218 pagina  stretta TLS non riuscita con 192.168.0.3:55394 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:58.230 pagina  stretta TLS non riuscita con 192.168.0.3:55398 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:58.233 pagina  stretta TLS non riuscita con 192.168.0.3:55414 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:58.244 pagina  GET / da 192.168.0.3:55426
+14:34:58.284 pagina  stretta TLS non riuscita con 192.168.0.3:55438 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:34:58.295 pagina  POST /ff.162924-26952-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:55450
+14:35:10.850 pagina  stretta TLS non riuscita con 192.168.0.3:37046 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:10.860 pagina  GET /impronta da 192.168.0.3:37050
+14:35:10.869 quic    connessione nuova da [192.168.0.3]:34625 (in tutto 1)
+14:35:10.871 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:35:10.871 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:35:10.876 quic    stretta di mano TLS completata con [192.168.0.3]:34625
+14:35:10.876 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:35:10.881 rcp     canale di controllo aperto da [192.168.0.3]:34625 (indirizzo per §4.4-bis: [192.168.0.3])
+14:35:10.882 rcp     canale di controllo = stream 4
+14:35:10.882 wt      stream 4 e' WebTransport, sessione 0
+14:35:10.884 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:35:10.884 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:35:10.884 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:34625: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:35:10.888 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:35:10.948 rcp     PAM ha risposto: ammesso
+14:35:10.948 wt      PING del trasporto spenti con [192.168.0.3]:34625: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:35:11.888 rcp     il secondo fisso e' passato (1000 ms)
+14:35:11.888 rcp     ammesso utente=prova da=[192.168.0.3]:34625
+14:35:11.929 rcp     posto PRESO da prova via [192.168.0.3]:34625 (occupati adesso: 1)
+14:35:11.929 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:35:11.929 rcp     sessione aperta utente=prova via=[192.168.0.3]:34625 tela=1280x720 vista=1280x913 disposizione=it
+14:35:11.948 pagina  stretta TLS non riuscita con 192.168.0.3:60300 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:11.950 pagina  stretta TLS non riuscita con 192.168.0.3:60294 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:11.958 pagina  POST /ff.162924-26952-codice.codice.02.sessione-stabilita da 192.168.0.3:60314
+14:35:11.959 pagina  POST /ff.162924-26952-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:60320
+14:35:27.797 pagina  stretta TLS non riuscita con 192.168.0.3:51472 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:27.804 pagina  stretta TLS non riuscita con 192.168.0.3:51482 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:27.814 pagina  GET /ffm-162924-26952-codice-secondascheda da 192.168.0.3:51484
+14:35:34.893 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:35:34.893 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: attiva)
+14:35:34.893 rcp     posto LASCIATO da prova via [192.168.0.3]:34625 (occupati adesso: 0)
+14:35:34.905 pagina  stretta TLS non riuscita con 192.168.0.3:40446 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:34.905 pagina  stretta TLS non riuscita con 192.168.0.3:40470 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:34.908 pagina  stretta TLS non riuscita con 192.168.0.3:40478 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:34.909 pagina  stretta TLS non riuscita con 192.168.0.3:40458 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:34.909 pagina  stretta TLS non riuscita con 192.168.0.3:40452 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:34.910 pagina  stretta TLS non riuscita con 192.168.0.3:40454 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:35:48.716 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:36:04.893 quic    [192.168.0.3]:34625: trenta secondi di silenzio, staccato (§2.2)
+14:36:04.893 quic    connessione con [192.168.0.3]:34625 chiusa (ne restano 0)
+14:36:19.381 pagina  GET /163617-8866-canale da 192.168.0.3:52490
+14:36:20.738 pagina  GET / da 192.168.0.3:52498
+14:36:21.143 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:36:23.566 pagina  stretta TLS non riuscita con 192.168.0.3:34598 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:23.603 pagina  stretta TLS non riuscita con 192.168.0.3:34600 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:23.603 pagina  stretta TLS non riuscita con 192.168.0.3:34606 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:23.622 pagina  stretta TLS non riuscita con 192.168.0.3:34608 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:39.013 pagina  stretta TLS non riuscita con 192.168.0.3:42128 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:39.018 pagina  stretta TLS non riuscita con 192.168.0.3:42132 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:39.028 pagina  GET /ffm-163617-8866-eco-avvio da 192.168.0.3:42134
+14:36:39.090 pagina  stretta TLS non riuscita con 192.168.0.3:42140 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:39.101 pagina  GET /favicon.ico da 192.168.0.3:42154
+14:36:48.064 pagina  stretta TLS non riuscita con 192.168.0.3:40564 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:48.073 pagina  GET / da 192.168.0.3:40572
+14:36:48.076 pagina  stretta TLS non riuscita con 192.168.0.3:40580 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:48.114 pagina  stretta TLS non riuscita con 192.168.0.3:40584 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:36:48.127 pagina  POST /ff.163617-8866-eco.eco.01.vita-caricata-variante-eco da 192.168.0.3:40592
+14:37:00.720 pagina  stretta TLS non riuscita con 192.168.0.3:57068 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:00.732 pagina  GET /impronta da 192.168.0.3:57082
+14:37:00.742 quic    connessione nuova da [192.168.0.3]:56477 (in tutto 1)
+14:37:00.743 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:37:00.743 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:37:00.750 quic    stretta di mano TLS completata con [192.168.0.3]:56477
+14:37:00.750 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:37:00.757 rcp     canale di controllo aperto da [192.168.0.3]:56477 (indirizzo per §4.4-bis: [192.168.0.3])
+14:37:00.757 rcp     canale di controllo = stream 4
+14:37:00.757 wt      stream 4 e' WebTransport, sessione 0
+14:37:00.760 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:37:00.760 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:37:00.760 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:56477: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:37:00.764 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:37:00.818 rcp     PAM ha risposto: ammesso
+14:37:00.818 wt      PING del trasporto spenti con [192.168.0.3]:56477: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:37:01.846 rcp     il secondo fisso e' passato (1082 ms)
+14:37:01.846 rcp     ammesso utente=prova da=[192.168.0.3]:56477
+14:37:01.868 rcp     posto PRESO da prova via [192.168.0.3]:56477 (occupati adesso: 1)
+14:37:01.868 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:37:01.868 rcp     sessione aperta utente=prova via=[192.168.0.3]:56477 tela=1280x720 vista=1280x913 disposizione=it
+14:37:01.885 pagina  stretta TLS non riuscita con 192.168.0.3:53104 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:01.886 pagina  stretta TLS non riuscita con 192.168.0.3:53116 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:01.899 pagina  POST /ff.163617-8866-eco.eco.02.sessione-stabilita da 192.168.0.3:53124
+14:37:01.899 pagina  POST /ff.163617-8866-eco.eco.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:53138
+14:37:17.572 pagina  stretta TLS non riuscita con 192.168.0.3:57112 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:17.591 pagina  GET /ffm-163617-8866-eco-secondascheda da 192.168.0.3:57122
+14:37:17.592 pagina  stretta TLS non riuscita con 192.168.0.3:57130 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:24.671 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+14:37:24.671 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+14:37:24.671 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: attiva)
+14:37:24.671 rcp     posto LASCIATO da prova via [192.168.0.3]:56477 (occupati adesso: 0)
+14:37:41.427 pagina  stretta TLS non riuscita con 192.168.0.3:44860 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:41.465 pagina  stretta TLS non riuscita con 192.168.0.3:44864 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:41.465 pagina  stretta TLS non riuscita con 192.168.0.3:44862 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:41.477 pagina  stretta TLS non riuscita con 192.168.0.3:44878 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:54.671 quic    [192.168.0.3]:56477: trenta secondi di silenzio, staccato (§2.2)
+14:37:54.671 quic    connessione con [192.168.0.3]:56477 chiusa (ne restano 0)
+14:37:56.879 pagina  stretta TLS non riuscita con 192.168.0.3:36268 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:56.888 pagina  stretta TLS non riuscita con 192.168.0.3:36282 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:56.898 pagina  GET /ffm-163617-8866-fedele-avvio da 192.168.0.3:36284
+14:37:56.957 pagina  stretta TLS non riuscita con 192.168.0.3:36298 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:37:56.965 pagina  GET /favicon.ico da 192.168.0.3:36312
+14:38:05.997 pagina  stretta TLS non riuscita con 192.168.0.3:53102 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:05.999 pagina  stretta TLS non riuscita con 192.168.0.3:53108 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:06.009 pagina  GET / da 192.168.0.3:53114
+14:38:06.052 pagina  stretta TLS non riuscita con 192.168.0.3:53116 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:06.061 pagina  POST /ff.163617-8866-fedele.fedele.01.vita-caricata-variante-fedele da 192.168.0.3:53130
+14:38:18.626 pagina  stretta TLS non riuscita con 192.168.0.3:34652 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:18.642 pagina  GET /impronta da 192.168.0.3:34660
+14:38:18.655 quic    connessione nuova da [192.168.0.3]:57553 (in tutto 1)
+14:38:18.656 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:38:18.656 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:38:18.662 quic    stretta di mano TLS completata con [192.168.0.3]:57553
+14:38:18.662 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:38:18.667 rcp     canale di controllo aperto da [192.168.0.3]:57553 (indirizzo per §4.4-bis: [192.168.0.3])
+14:38:18.667 rcp     canale di controllo = stream 4
+14:38:18.667 wt      stream 4 e' WebTransport, sessione 0
+14:38:18.669 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:38:18.669 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:38:18.669 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:57553: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:38:18.674 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:38:18.731 rcp     PAM ha risposto: ammesso
+14:38:18.731 wt      PING del trasporto spenti con [192.168.0.3]:57553: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:38:19.674 rcp     il secondo fisso e' passato (1000 ms)
+14:38:19.674 rcp     ammesso utente=prova da=[192.168.0.3]:57553
+14:38:19.769 rcp     posto PRESO da prova via [192.168.0.3]:57553 (occupati adesso: 1)
+14:38:19.769 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:38:19.769 rcp     sessione aperta utente=prova via=[192.168.0.3]:57553 tela=1280x720 vista=1280x913 disposizione=it
+14:38:19.784 pagina  stretta TLS non riuscita con 192.168.0.3:34674 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:19.785 pagina  stretta TLS non riuscita con 192.168.0.3:34684 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:19.800 pagina  POST /ff.163617-8866-fedele.fedele.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:34690
+14:38:19.800 pagina  POST /ff.163617-8866-fedele.fedele.02.sessione-stabilita da 192.168.0.3:34688
+14:38:35.555 pagina  stretta TLS non riuscita con 192.168.0.3:52614 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:35.573 pagina  stretta TLS non riuscita con 192.168.0.3:52626 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:35.577 pagina  GET /ffm-163617-8866-fedele-secondascheda da 192.168.0.3:52620
+14:38:42.643 pagina  stretta TLS non riuscita con 192.168.0.3:46908 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:42.643 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+14:38:42.643 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+14:38:42.643 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: attiva)
+14:38:42.643 rcp     posto LASCIATO da prova via [192.168.0.3]:57553 (occupati adesso: 0)
+14:38:42.644 pagina  stretta TLS non riuscita con 192.168.0.3:46918 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:42.645 pagina  stretta TLS non riuscita con 192.168.0.3:46930 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:42.648 pagina  stretta TLS non riuscita con 192.168.0.3:46938 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:42.649 pagina  stretta TLS non riuscita con 192.168.0.3:46950 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:59.386 pagina  stretta TLS non riuscita con 192.168.0.3:58888 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:59.422 pagina  stretta TLS non riuscita con 192.168.0.3:58904 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:59.423 pagina  stretta TLS non riuscita con 192.168.0.3:58910 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:38:59.458 pagina  stretta TLS non riuscita con 192.168.0.3:58924 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:12.643 quic    [192.168.0.3]:57553: trenta secondi di silenzio, staccato (§2.2)
+14:39:12.643 quic    connessione con [192.168.0.3]:57553 chiusa (ne restano 0)
+14:39:14.832 pagina  stretta TLS non riuscita con 192.168.0.3:54810 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:14.836 pagina  stretta TLS non riuscita con 192.168.0.3:54822 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:14.849 pagina  GET /ffm-163617-8866-vivo-avvio da 192.168.0.3:54828
+14:39:14.923 pagina  stretta TLS non riuscita con 192.168.0.3:54834 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:14.933 pagina  GET /favicon.ico da 192.168.0.3:54836
+14:39:23.944 pagina  stretta TLS non riuscita con 192.168.0.3:44798 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:23.950 pagina  stretta TLS non riuscita con 192.168.0.3:44804 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:23.963 pagina  GET / da 192.168.0.3:44812
+14:39:24.005 pagina  stretta TLS non riuscita con 192.168.0.3:44826 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:24.016 pagina  POST /ff.163617-8866-vivo.vivo.01.vita-caricata-variante-vivo da 192.168.0.3:44836
+14:39:36.580 pagina  stretta TLS non riuscita con 192.168.0.3:40010 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:36.593 pagina  GET /impronta da 192.168.0.3:40018
+14:39:36.604 quic    connessione nuova da [192.168.0.3]:33110 (in tutto 1)
+14:39:36.605 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:39:36.605 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:39:36.612 quic    stretta di mano TLS completata con [192.168.0.3]:33110
+14:39:36.612 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:39:36.619 rcp     canale di controllo aperto da [192.168.0.3]:33110 (indirizzo per §4.4-bis: [192.168.0.3])
+14:39:36.619 rcp     canale di controllo = stream 4
+14:39:36.619 wt      stream 4 e' WebTransport, sessione 0
+14:39:36.620 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:39:36.620 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:39:36.620 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:33110: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:39:36.625 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:39:36.674 rcp     PAM ha risposto: ammesso
+14:39:36.674 wt      PING del trasporto spenti con [192.168.0.3]:33110: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:39:37.625 rcp     il secondo fisso e' passato (1000 ms)
+14:39:37.625 rcp     ammesso utente=prova da=[192.168.0.3]:33110
+14:39:37.630 rcp     posto PRESO da prova via [192.168.0.3]:33110 (occupati adesso: 1)
+14:39:37.630 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:39:37.630 rcp     sessione aperta utente=prova via=[192.168.0.3]:33110 tela=1280x720 vista=1280x913 disposizione=it
+14:39:37.647 pagina  stretta TLS non riuscita con 192.168.0.3:40026 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:37.648 pagina  stretta TLS non riuscita con 192.168.0.3:40030 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:37.657 pagina  POST /ff.163617-8866-vivo.vivo.02.sessione-stabilita da 192.168.0.3:40036
+14:39:37.660 pagina  POST /ff.163617-8866-vivo.vivo.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:40046
+14:39:42.642 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:39:42.642 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:39:42.642 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:39:42.652 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:39:42.652 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:39:42.652 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:39:42.655 pagina  stretta TLS non riuscita con 192.168.0.3:48640 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.656 pagina  stretta TLS non riuscita con 192.168.0.3:48626 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.658 pagina  stretta TLS non riuscita con 192.168.0.3:48654 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.660 pagina  stretta TLS non riuscita con 192.168.0.3:48644 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.662 pagina  stretta TLS non riuscita con 192.168.0.3:48658 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.667 pagina  stretta TLS non riuscita con 192.168.0.3:48668 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.09.cg-prima-di-wt-close da 192.168.0.3:48724
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.04.vivo-timer-scattato-scheda-viva da 192.168.0.3:48688
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.06.cg-prima-di-manda da 192.168.0.3:48704
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.08.cg-dopo-il-FIN-del-canale da 192.168.0.3:48678
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.05.cg-chiamata-motivo-0x1 da 192.168.0.3:48708
+14:39:42.676 pagina  POST /ff.163617-8866-vivo.vivo.07.cg-dopo-manda-la-write-si-e-risolta da 192.168.0.3:48720
+14:39:42.694 pagina  stretta TLS non riuscita con 192.168.0.3:48728 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:39:42.702 pagina  POST /ff.163617-8866-vivo.vivo.10.cg-dopo-wt-close da 192.168.0.3:48742
+14:39:43.241 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+14:40:08.359 pagina  stretta TLS non riuscita con 192.168.0.3:34290 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:08.399 pagina  stretta TLS non riuscita con 192.168.0.3:34300 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:08.400 pagina  stretta TLS non riuscita con 192.168.0.3:34302 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:08.419 pagina  stretta TLS non riuscita con 192.168.0.3:34312 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:13.242 quic    [192.168.0.3]:33110: trenta secondi di silenzio, staccato (§2.2)
+14:40:13.242 quic    connessione con [192.168.0.3]:33110 chiusa (ne restano 0)
+14:40:23.798 pagina  stretta TLS non riuscita con 192.168.0.3:40796 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:23.802 pagina  stretta TLS non riuscita con 192.168.0.3:40806 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:23.814 pagina  GET /ffm-163617-8866-tenace-avvio da 192.168.0.3:40814
+14:40:23.877 pagina  stretta TLS non riuscita con 192.168.0.3:40820 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:23.888 pagina  GET /favicon.ico da 192.168.0.3:40834
+14:40:32.930 pagina  stretta TLS non riuscita con 192.168.0.3:59662 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:32.932 pagina  stretta TLS non riuscita con 192.168.0.3:59678 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:32.943 pagina  GET / da 192.168.0.3:59686
+14:40:32.981 pagina  stretta TLS non riuscita con 192.168.0.3:59698 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:32.993 pagina  POST /ff.163617-8866-tenace.tenace.01.vita-caricata-variante-tenace da 192.168.0.3:59706
+14:40:45.563 pagina  stretta TLS non riuscita con 192.168.0.3:60838 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:45.580 pagina  GET /impronta da 192.168.0.3:60844
+14:40:45.593 quic    connessione nuova da [192.168.0.3]:53029 (in tutto 1)
+14:40:45.594 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:40:45.594 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:40:45.599 quic    stretta di mano TLS completata con [192.168.0.3]:53029
+14:40:45.600 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:40:45.604 rcp     canale di controllo aperto da [192.168.0.3]:53029 (indirizzo per §4.4-bis: [192.168.0.3])
+14:40:45.604 rcp     canale di controllo = stream 4
+14:40:45.604 wt      stream 4 e' WebTransport, sessione 0
+14:40:45.606 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:40:45.606 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:40:45.606 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:53029: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:40:45.610 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:40:45.670 rcp     PAM ha risposto: ammesso
+14:40:45.670 wt      PING del trasporto spenti con [192.168.0.3]:53029: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:40:46.610 rcp     il secondo fisso e' passato (1000 ms)
+14:40:46.610 rcp     ammesso utente=prova da=[192.168.0.3]:53029
+14:40:46.714 rcp     posto PRESO da prova via [192.168.0.3]:53029 (occupati adesso: 1)
+14:40:46.714 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:40:46.714 rcp     sessione aperta utente=prova via=[192.168.0.3]:53029 tela=1280x720 vista=1280x913 disposizione=it
+14:40:46.728 pagina  stretta TLS non riuscita con 192.168.0.3:60850 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:46.729 pagina  stretta TLS non riuscita con 192.168.0.3:60862 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:40:46.746 pagina  POST /ff.163617-8866-tenace.tenace.02.sessione-stabilita da 192.168.0.3:60872
+14:40:46.746 pagina  POST /ff.163617-8866-tenace.tenace.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:60882
+14:41:02.493 pagina  stretta TLS non riuscita con 192.168.0.3:58936 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:02.516 pagina  stretta TLS non riuscita con 192.168.0.3:58956 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:02.519 pagina  GET /ffm-163617-8866-tenace-secondascheda da 192.168.0.3:58952
+14:41:09.564 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+14:41:09.564 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+14:41:09.565 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+14:41:09.569 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:41:09.569 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+14:41:09.569 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+14:41:09.579 pagina  stretta TLS non riuscita con 192.168.0.3:58962 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.615 pagina  stretta TLS non riuscita con 192.168.0.3:58972 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.615 pagina  stretta TLS non riuscita con 192.168.0.3:58974 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.617 pagina  stretta TLS non riuscita con 192.168.0.3:58986 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.619 pagina  stretta TLS non riuscita con 192.168.0.3:58990 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.620 pagina  stretta TLS non riuscita con 192.168.0.3:59000 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.626 pagina  stretta TLS non riuscita con 192.168.0.3:59010 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.635 pagina  stretta TLS non riuscita con 192.168.0.3:59026 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.637 pagina  stretta TLS non riuscita con 192.168.0.3:59044 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.637 pagina  stretta TLS non riuscita con 192.168.0.3:59040 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:09.639 pagina  stretta TLS non riuscita con 192.168.0.3:59056 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:10.164 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+14:41:26.300 pagina  stretta TLS non riuscita con 192.168.0.3:40558 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:26.534 pagina  stretta TLS non riuscita con 192.168.0.3:40582 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:26.534 pagina  stretta TLS non riuscita con 192.168.0.3:40574 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:40.164 quic    [192.168.0.3]:53029: trenta secondi di silenzio, staccato (§2.2)
+14:41:40.164 quic    connessione con [192.168.0.3]:53029 chiusa (ne restano 0)
+14:41:41.726 pagina  stretta TLS non riuscita con 192.168.0.3:43462 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:41.735 pagina  stretta TLS non riuscita con 192.168.0.3:43472 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:41.745 pagina  GET /ffm-163617-8866-codice-avvio da 192.168.0.3:43484
+14:41:41.795 pagina  stretta TLS non riuscita con 192.168.0.3:43492 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:41.804 pagina  GET /favicon.ico da 192.168.0.3:43506
+14:41:50.831 pagina  stretta TLS non riuscita con 192.168.0.3:43514 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:50.845 pagina  stretta TLS non riuscita con 192.168.0.3:43530 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:50.846 pagina  GET / da 192.168.0.3:43524
+14:41:50.888 pagina  stretta TLS non riuscita con 192.168.0.3:43538 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:41:50.899 pagina  POST /ff.163617-8866-codice.codice.01.vita-caricata-variante-codice da 192.168.0.3:43542
+14:42:03.466 pagina  stretta TLS non riuscita con 192.168.0.3:50756 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:03.481 pagina  GET /impronta da 192.168.0.3:50760
+14:42:03.504 quic    connessione nuova da [192.168.0.3]:53751 (in tutto 1)
+14:42:03.506 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+14:42:03.506 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+14:42:03.512 quic    stretta di mano TLS completata con [192.168.0.3]:53751
+14:42:03.512 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+14:42:03.517 rcp     canale di controllo aperto da [192.168.0.3]:53751 (indirizzo per §4.4-bis: [192.168.0.3])
+14:42:03.517 rcp     canale di controllo = stream 4
+14:42:03.517 wt      stream 4 e' WebTransport, sessione 0
+14:42:03.519 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+14:42:03.519 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+14:42:03.519 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:53751: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+14:42:03.523 rcp     CREDENZIALI ricevute utente=prova (con parola)
+14:42:03.583 rcp     PAM ha risposto: ammesso
+14:42:03.583 wt      PING del trasporto spenti con [192.168.0.3]:53751: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+14:42:04.523 rcp     il secondo fisso e' passato (1000 ms)
+14:42:04.523 rcp     ammesso utente=prova da=[192.168.0.3]:53751
+14:42:04.528 rcp     posto PRESO da prova via [192.168.0.3]:53751 (occupati adesso: 1)
+14:42:04.528 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+14:42:04.528 rcp     sessione aperta utente=prova via=[192.168.0.3]:53751 tela=1280x720 vista=1280x913 disposizione=it
+14:42:04.542 pagina  stretta TLS non riuscita con 192.168.0.3:50762 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:04.544 pagina  stretta TLS non riuscita con 192.168.0.3:50776 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:04.552 pagina  POST /ff.163617-8866-codice.codice.02.sessione-stabilita da 192.168.0.3:50778
+14:42:04.556 pagina  POST /ff.163617-8866-codice.codice.03.finally-azzero-congeda_corrente-era-PRESENTE da 192.168.0.3:50786
+14:42:20.400 pagina  stretta TLS non riuscita con 192.168.0.3:38926 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:20.409 pagina  stretta TLS non riuscita con 192.168.0.3:38938 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:20.422 pagina  GET /ffm-163617-8866-codice-secondascheda da 192.168.0.3:38944
+14:42:27.461 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+14:42:27.461 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: attiva)
+14:42:27.461 rcp     posto LASCIATO da prova via [192.168.0.3]:53751 (occupati adesso: 0)
+14:42:27.492 pagina  stretta TLS non riuscita con 192.168.0.3:38664 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:27.497 pagina  stretta TLS non riuscita con 192.168.0.3:38668 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:27.499 pagina  stretta TLS non riuscita con 192.168.0.3:38684 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:27.500 pagina  stretta TLS non riuscita con 192.168.0.3:38712 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:27.501 pagina  stretta TLS non riuscita con 192.168.0.3:38716 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:27.502 pagina  stretta TLS non riuscita con 192.168.0.3:38696 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+14:42:41.141 rcp     sblocco chiesto per [192.168.0.3] (chiesto «192.168.0.3»): NON era bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei tentativi di quell'indirizzo riparte comunque da zero
+14:42:57.461 quic    [192.168.0.3]:53751: trenta secondi di silenzio, staccato (§2.2)
+14:42:57.461 quic    connessione con [192.168.0.3]:53751 chiusa (ne restano 0)

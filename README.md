@@ -112,21 +112,41 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | **4** | ⭐ **Fatto dove mordeva, e fermato apposta**: `gira()` adesso **chiama** `01-b8-lancia.sh` invece di riscriverne la sequenza (come faceva già con C2). ⛔ Estenderlo agli altri stasera avrebbe **invalidato nove certificazioni** per rifarle in un tempo che non c'era | 🔸 metà |
 > | **5** | ⭐ **P1 e P5 sono in catalogo**: 12 voci → **14**. **P1 certificato**; ⛔ **P5 no** — e vedi la riga qui sotto, che è la cosa che vale | 🔸 P5 no |
 >
-> #### ⭐⭐ LA COSA CHE VALE PIÙ DI OGNI CERTIFICAZIONE: **due accuse al prodotto erano dei banchi**
+> #### ⛔⛔ IL DIFETTO DI PRODOTTO TROVATO IN FONDO ALLA SERATA — e prima era stato **assolto per sbaglio**
 >
-> - ⛔ **P5** scriveva *«la pagina non si congeda alla chiusura della scheda»*, cioè accusava il
->   prodotto di violare `RCP.md` §8.1. ⛔ **Era un'accusa per un gesto mai fatto**: il pilota batteva
->   `ctrl+w` **su un display che non era lo schermo finto**. L'arbitrato — andarsene in **due modi**,
->   contando le finestre **1 → 0** — mostra che ⭐ **da tutt'e due il congedo esce**. Curato il
->   pilota: **Chrome passa a CONFORME**, e **Firefox, che prima non misurava, arriva a `SESSIONE`**
->   (14 su 15).
-> - ⛔ **B8** scriveva *«la pagina del ban non si carica»* — cioè **proprio il silenzio che §4.4-bis
->   vieta** — su un server che la pagina la serve: `leggi_pagina()` parlava **TLS a un innesto che
->   risponde in chiaro**, e la causa era **la cura del giorno prima**, scritta per il prodotto.
+> **Il difetto**: chiudendo la scheda del browser, la pagina **non manda nessun `CONGEDO`**, dove
+> `RCP.md` §8.1 lo impone senza condizioni. Il posto se ne va dopo **30 secondi di silenzio**.
+> ⛔ **Su tutt'e due i motori.** La causa ha un nome: `src/pagina.html:620` azzera
+> `congeda_corrente` **un millisecondo dopo `SESSIONE`**, e il gestore di `pagehide` (riga 331) è
+> **codice morto**. ⭐ **La cura è di tre righe ed è scritta** in `fasi/01-filo-nudo.md`, riquadro
+> P5 — ⛔ **non applicata**: la fase era chiusa, e una cura infilata dopo la chiusura non è una cura.
 >
-> ⇒ ⭐ **È la seconda e la terza volta in questa fase, dopo B3, che il rosso è puntato sull'imputato
-> sbagliato** — e in tutt'e tre i casi il server faceva la cosa giusta. È la forma che
-> `LEZIONI.md` §1.9 nomina, e la ragione per cui un banco si certifica **prima** di essere creduto.
+> ⛔⛔ **E la storia di come è stato quasi perso vale più del difetto.** In ordine:
+>
+> 1. **P5 accusava il prodotto** di non congedarsi — ⛔ ma batteva `ctrl+w` **su un display che non
+>    era lo schermo finto**: un'accusa per **un gesto mai fatto**. Difetto del banco, vero.
+> 2. **L'arbitrato che ne è seguito ha ASSOLTO la pagina** — ⛔ **e sbagliava**: contava la riga
+>    *«la pagina ha chiuso la sessione, motivo»* **senza guardare il motivo**, e il motivo era
+>    `0x0`, cioè **lo smontaggio di Chrome, che §3.1 vieta**. Una violazione contata come congedo,
+>    e stampata come *«⭐⭐ la pagina fa quel che §8.1 le impone»*.
+> 3. ⭐ **La terza misura ha attribuito davvero**, con una copia strumentata della pagina e un
+>    portatore che non passa da WebTransport: `pagehide` **scatta**, e non c'è più niente da
+>    chiamare. **Gecko è scagionato per misura** — la stessa `congeda()` chiamata da lì consegna
+>    tutt'e due le strade di §3.1.
+>
+> ⇒ ⛔ **I due motori non erano opposti: era lo stesso difetto visto da due smontaggi**, e su uno il
+> banco è inciampato nel proprio contatore. ⚠ **E il server lo diceva**: la riga
+> `⛔ VIOLAZIONE §3.1 … A verbale va ERRORE_PROTOCOLLO` la scrive lui, ed era nel registro.
+>
+> #### ⭐ E un'accusa al prodotto che invece era davvero del banco
+>
+> **B8** scriveva *«la pagina del ban non si carica»* — cioè **proprio il silenzio che §4.4-bis
+> vieta** — su un server che la pagina la serve: `leggi_pagina()` parlava **TLS a un innesto che
+> risponde in chiaro**, e la causa era **la cura del giorno prima**, scritta per il prodotto.
+>
+> ⇒ Con B3, fa **tre volte in questa fase** che il rosso è puntato sull'imputato sbagliato — e una
+> volta, stasera, che il **verde** lo era. ⭐ *La forma di `LEZIONI.md` §1.9 vale nei due versi, e il
+> verde è quello che non torna a farsi vedere.*
 >
 > ⭐ **E c'è una regola nuova che vale più di ogni singolo punto**: *chi scrive un banco lo certifica
 > nello stesso giro*, o il conto non cala mai. Oggi ne sono entrati due senza che nessuno lo notasse.
