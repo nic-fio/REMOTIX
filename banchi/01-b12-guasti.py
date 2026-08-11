@@ -326,25 +326,45 @@ guasto(
 # ── B5 — una violazione che il server smette di punire ─────────────────────
 guasto(
     "B5", "B5", "una capacita' RIPETUTA nel `CIAO` non e' piu' "
-                "`ERRORE_PROTOCOLLO`",
+                "`ERRORE_PROTOCOLLO`: il controllo dei duplicati SPENTO",
     os.path.join(ESEMPI, "rcp.c"),
-    "nome ripetuto",
-    "nome ripetuto (" + MARCA + " B5: la punizione tolta)",
+    # ⛔⭐ IL GUASTO E' STATO RIFATTO L'11 AGOSTO 2026 — rilievo R12-A.37.
+    #
+    # L'appiglio era `"nome ripetuto"`, cioe' una stringa di COMMENTO, e il
+    # sostituto ci appiccicava accanto la marca.  ⛔ Quel guasto **non rompeva
+    # niente**: il codice compilato restava identico byte per byte, il server
+    # continuava a congedare con `ERRORE_PROTOCOLLO`, e B5 sarebbe rimasto
+    # verde nel passo 2/3 — cioe' avrebbe dichiarato «il banco non vede il
+    # guasto» su un banco sano e un guasto che non c'era.
+    # ⭐ Il guasto vero e' il RAMO: `if (ripetuto)` spento, `congeda()` mai
+    #    chiamato.  Il `0 &&` lascia la condizione sotto gli occhi del
+    #    compilatore, quindi niente avvisi su variabile non usata, e il
+    #    `--togli` torna a un testo identico all'originale.
+    "if (ripetuto) {",
+    "if (0 && ripetuto) { /* " + MARCA + " B5 — il controllo dei duplicati\n"
+    "\t\t                    * di §4.3 SPENTO: la ripetizione passa. */",
     "§4.3: *«un nome ripetuto due volte e' `ERRORE_PROTOCOLLO`. «Vince "
     "l'ultimo» e «vince il primo» sono due implementazioni diverse dello "
     "stesso documento»*.  ⛔ E' una violazione che **non produce nessun "
     "sintomo**: la connessione prosegue e la negoziazione riesce.  Se B5 non "
     "la vede, non la vedra' piu' nessuno",
-    "",
+    # ⛔ LA MARCA E' MISURATA, NON SCELTA — 11 agosto 2026.
+    #    Innestato il guasto, `01-b5-violazioni.py` stampa due righe nuove:
+    #      «NO  capacita-ripetuta   chiusura-wt=(assente)  sessione VIVA»
+    #      «NO      §3.1 punto 3 su «capacita-ripetuta»: la chiusura della
+    #               sessione porta assente, atteso 0x0b»
+    # ⭐ E si prende la SECONDA.  Il nome del caso da solo — «capacita-ripetuta»
+    #    — compare anche nel giro sano, in verde: sarebbe la stessa trappola
+    #    gia' pagata su B6 con «ciao-presto» e su B7 con «CONGEDO».  La frase
+    #    scelta esiste solo quando quel caso CADE.
+    "§3.1 punto 3 su «capacita-ripetuta»",
     "ricostruisce",
     "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.3",
-    nota="⚠ L'appiglio e' la stringa del registro, non il ramo: qui il guasto "
-         "serve solo a **marcare** il punto.  Il guasto vero — togliere il "
-         "controllo — va scritto sull'appiglio del ramo, e finche' quello non "
-         "e' stabile questa voce resta **catalogata e non eseguita**, "
-         "dichiarata cosi' invece di essere eseguita a meta'.\n"
-         "       ⛔ E **senza marca**: non certificabile, e `--giudica` lo "
-         "dice invece di tacere (R12-A.3).",
+    nota="⭐ ESEGUIBILE dall'11 agosto 2026 (R12-A.37).  ⚠ E la marca qui "
+         "sotto NON e' stata scelta a tavolino: e' stata **misurata** "
+         "innestando il guasto e leggendo che cosa il banco stampa, poi "
+         "verificata assente dal giro sano.  Una marca dedotta e' la forma E5 "
+         "— un fatto che era una deduzione mai riverificata.",
 )
 
 # ── B6 — il tetto che scatta PRIMA ─────────────────────────────────────────
@@ -383,8 +403,20 @@ guasto(
     "B8", "B8", "il ritardo fisso di un secondo prima di rispondere a "
                 "`CREDENZIALI` viene tolto",
     os.path.join(ESEMPI, "rcp.c"),
-    "RITARDO_CREDENZIALI",
-    "RITARDO_CREDENZIALI /* " + MARCA + " B8 */",
+    # ⛔⭐ E QUESTO APPIGLIO NON ESISTEVA — rilievo R12-A.38, 11 agosto 2026.
+    #
+    # Era `RITARDO_CREDENZIALI`, e in `rcp.c` quel nome **non compare nemmeno
+    # una volta**: la costante si chiama `RITARDO_FISSO` (riga 70).  ⇒ Il
+    # guasto non si sarebbe innestato nemmeno volendo, e la voce
+    # «catalogata e non eseguita» nascondeva questo, non solo il ban.
+    # ⚠ E come per B5, il sostituto era un COMMENTO accanto al nome: anche col
+    #   nome giusto non avrebbe tolto nessun ritardo.
+    # ⭐ Il guasto vero e' il NUMERO: il secondo fisso di §4.4-bis portato a
+    #    zero.  Da li' «utente inesistente» risponde in un millisecondo e
+    #    «parola sbagliata» in cinquanta — e il TEMPISMO torna a essere un
+    #    canale, che e' precisamente cio' che B8 esiste per vedere.
+    "#define RITARDO_FISSO 1000",
+    "#define RITARDO_FISSO 0 /* " + MARCA + " B8 */",
     "§4.4-bis: *«il secondo fisso toglie il TEMPISMO come canale — senza, "
     "«utente inesistente» risponde in un millisecondo e «parola sbagliata» in "
     "cinquanta»*.  ⛔ E' una proprieta' di **sicurezza che nessun altro banco "
@@ -392,17 +424,42 @@ guasto(
     "",
     "ricostruisce",
     "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.4-bis",
-    nota="⚠ Catalogato e non eseguito: B8 fallisce autenticazioni di proposito "
-         "e **banna l'indirizzo per dodici ore** (§4.4-bis).  ⛔ Certificarlo "
-         "costa un ban a chiunque stia lavorando da qui, e lo sblocco "
-         "(`01-b8-sblocca.py`) vuole un server acceso con `--comando-socket`, "
-         "che B12 non accende: si fa quando la macchina e' libera, e si "
-         "dichiara.\n"
-         "       ⛔ E **senza marca**: non certificabile (R12-A.3).  ⚠ Nota "
-         "che questo e' anche il guasto che coprirebbe l'ACQUISIZIONE dei "
-         "tempi di B8 — i suoi tredici guasti di certificazione lavorano tutti "
-         "sui numeri gia' scritti (rilievo R12-A.19), e questa voce "
-         "catalogata-e-non-eseguita e' l'altra meta' di quella frase.",
+    nota="⭐ IL GUASTO E' VERO E INNESTABILE dall'11 agosto 2026 (R12-A.38), "
+         "e la sua efficacia e' MISURATA: col ritardo a zero, sull'innesto, "
+         "«giusta» risponde in **58 ms** e «inesistente» in **2959** — il "
+         "tempismo torna a essere un canale spalancato.\n"
+         "       ⛔ MA B8 NON SI PUO' ANCORA CERTIFICARE, e il motivo non e' "
+         "piu' il ban: e' che **il suo giro sano non e' verde sotto B12**. "
+         "`[M]` 11 agosto: 8 punti su 8 non passano, e sono tutti pezzi che "
+         "questo orchestratore non gli da'.\n"
+         "       ⭐ Quel che oggi c'e' (e prima no): B12 lancia B8 come un "
+         "CICLO — scaldata, sei blocchi corti, **sblocco fra un blocco e "
+         "l'altro** — col server acceso su `0.0.0.0` e col suo "
+         "`--comando-socket`, e gli passa il registro del server.  Con questo "
+         "B8 arriva a **39 tentativi, 14 sblocchi**, e le mediane le giudica "
+         "davvero.  ⚠ Un blocco solo dava n=2, e a n<10 il verdetto sulle "
+         "mediane e' **SOSPESO**: il guasto non sarebbe stato giudicato "
+         "affatto.  ⛔ E alzare `--per-caso` non e' la strada: B8 controlla il "
+         "proprio piano PRIMA di partire e si rifiuta se sfora la soglia di "
+         "§4.4-bis — *«un piano che sfora misurerebbe il ban credendo di "
+         "misurare PAM»*.\n"
+         "       ⛔ CHE COSA MANCA ANCORA, in ordine di costo:\n"
+         "         · **due vite del server**: la persistenza del ban (I7) si "
+         "prova con un RIAVVIO, e `gira()` accende una volta sola;\n"
+         "         · **la lettura della pagina**: il punto 1 di §4.4-bis vuole "
+         "che l'utente bannato veda una pagina, e qui non se ne legge nessuna;\n"
+         "         · **lo sblocco su un ban VERO**: oggi si sblocca sempre, e "
+         "«tolto» e «non c'era» non si distinguono.\n"
+         "       ⇒ Sono, in sostanza, la sequenza intera di "
+         "`01-b8-lancia.sh`.  ⭐ La strada onesta e' insegnarla a `gira()` "
+         "**o** certificare B8 dal suo lanciatore; ⛔ la strada disonesta "
+         "sarebbe allargare l'atteso finche' torna, che e' esattamente quel "
+         "che B13 ha insegnato a non fare.\n"
+         "       ⚠ E UN FATTO NUOVO, raccolto per strada: col registro del "
+         "server in mano B8 nomina l'imputato delle mediane, e sull'innesto "
+         "dice **«PAM»** — lo stesso che diceva sul prodotto.  Il ⚠ delle "
+         "mediane separate non e' del nostro codice, e adesso lo si sa su "
+         "tutt'e due i bersagli."
 )
 
 # ── B9 — ⛔ il cliente di prova che ha letto il C ───────────────────────────

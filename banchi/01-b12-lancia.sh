@@ -235,12 +235,26 @@ fi
 rm -f "$ESITI_FUORI"
 
 PID=""
-accendi() # $1 = base del certificato (sessione | pagina), $2 = etichetta
+accendi() # $1 = base del certificato (sessione | pagina), $2 = etichetta,
+          # $3 = su quale indirizzo legarsi (opzionale, predefinito $IND)
 {
-	local base=$1 et=$2
+	local base=$1 et=$2 lega=${3:-$IND}
+	shift 3 2>/dev/null || shift $#
+	local extra="$*"   # opzioni in piu' per il server (B8 vuole il socket)
+	# ⛔⭐ PERCHE' L'INDIRIZZO E' UN PARAMETRO — rilievo R12-A.39, 11 agosto 2026.
+	#
+	# Tutti i banchi si accontentano di un server legato a $IND.  ⛔ B8 no: la
+	# sua scena E' §4.4-bis, che conta i tentativi **per indirizzo di
+	# provenienza**, e per vedere due bilanci separati servono DUE provenienze
+	# — 127.0.0.1 e 192.168.0.2.  Con il server legato al solo 192.168.0.2, da
+	# 127.0.0.1 non risponde nessuno.
+	# ⚠ `[M]` 11 agosto: B8 e' uscito **2** — «da 127.0.0.1 non si arriva a
+	#   ECCOMI» — e non 1.  ⭐ Cioe' si e' RIFIUTATO di misurare invece di
+	#   misurare meta' scena e chiamarla intera: e' il comportamento giusto, ed
+	#   e' anche il motivo per cui questo difetto si e' visto subito.
 	rm -f "$FUORI/b12-$et.log" "$FUORI/b12-$et.pid"
 	bash "$ENTRA" --root \
-		"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=120s $IND $PORTA $CERT/$base.key $CERT/$base.pem < /dev/null > $DENTRO/b12-$et.log 2>&1 & echo \$! > $DENTRO/b12-$et.pid"
+		"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=120s $extra $lega $PORTA $CERT/$base.key $CERT/$base.pem < /dev/null > $DENTRO/b12-$et.log 2>&1 & echo \$! > $DENTRO/b12-$et.pid"
 	sleep 2
 	PID=$(cat "$FUORI/b12-$et.pid" 2>/dev/null)
 	# ⛔ `/proc`, non `kill -0`: il server e' di root e questo script no.
@@ -377,6 +391,60 @@ gira()
 			bash "$ENTRA" --root \
 				"python3 -u $DENTRO/01-b13-proprieta.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --certificati $CERT --prodotti $DENTRO > $uscita_file 2>&1"
 			u=$?
+		fi
+		spegni ;;
+	B5)
+		accendi sessione "b5-$passo" || { u=99; }
+		if [ "$u" -eq 0 ]; then
+			bash "$ENTRA" --root \
+				"python3 -u $DENTRO/01-b5-violazioni.py --bersaglio innesto --indirizzo $IND --porta $PORTA > $uscita_file 2>&1"
+			u=$?
+		fi
+		spegni ;;
+	B8)
+		# ⛔ B8 e' DUE comandi, non uno: `--campioni` raccoglie i tempi e
+		#    `--verdetto` li giudica leggendo lo stesso file.  ⭐ E il file va
+		#    BUTTATO fra un passo e l'altro: `verdetto()` rifiuta di giudicare
+		#    righe di un altro giro (lo dice da se'), ma un file lasciato li'
+		#    farebbe giudicare il passo «guasto» sui numeri del passo «sano» —
+		#    cioe' il modo piu' silenzioso di certificare niente.
+		# ⚠ Due indirizzi di provenienza sono obbligatori: e' la scena stessa
+		#   di §4.4-bis, che conta per indirizzo.
+		# ⛔⭐ B8 E' UN CICLO, NON UN COMANDO — rilievo R12-A.40, 11 agosto.
+		#
+		# Un blocco solo da' **n=2** per caso, e a quel punto B8 dichiara il
+		# verdetto sulle mediane **SOSPESO** (vuole ≥10 campioni): il guasto
+		# non verrebbe giudicato affatto, ne' col guasto ne' senza.
+		# ⛔ E non si puo' semplicemente alzare `--per-caso`: B8 controlla il
+		#    proprio piano PRIMA di partire e si rifiuta se sfora la soglia di
+		#    §4.4-bis — «un piano che sfora misurerebbe il ban credendo di
+		#    misurare PAM».  ⭐ Il modo giusto e' quello che `01-b8-lancia.sh`
+		#    usa da sempre: **blocchi corti con lo SBLOCCO in mezzo**, e per lo
+		#    sblocco il server dev'essere acceso col suo socket di comando.
+		# ⚠ E lo si dichiara (B0.3): qui il bilancio si rimette in piedi col
+		#   comando di sblocco, non riaccendendo il server.
+		local giro8="b12-$passo-$$"
+		local file8="$DENTRO/b12-b8-$passo.jsonl"
+		local sock8="$DENTRO/b12-b8-comando.sock"
+		local crono8="python3 -u $DENTRO/01-b8-cronometro.py --bersaglio innesto --porta $PORTA --indirizzi 127.0.0.1,$IND --comando $sock8 --utente $UTENTE --parola $PAROLA --giro $giro8 --uscita $file8 --registro $DENTRO/b12-b8-$passo.log"
+		bash "$ENTRA" --root "rm -f $file8 $sock8"
+		accendi sessione "b8-$passo" 0.0.0.0 "--comando-socket=$sock8" || { u=99; }
+		if [ "$u" -eq 0 ]; then
+			# la scaldata, scartata per regola scritta prima (E9)
+			bash "$ENTRA" --root "$crono8 --campioni --blocco 0 --per-caso 1 > $uscita_file 2>&1"
+			bash "$ENTRA" --root "$crono8 --sblocca 127.0.0.1,$IND --perche dopo-la-scaldata >> $uscita_file 2>&1"
+			local b8=1
+			while [ "$b8" -le 6 ]; do
+				bash "$ENTRA" --root "$crono8 --campioni --blocco $b8 --per-caso 2 >> $uscita_file 2>&1"
+				u=$?
+				[ "$u" -eq 0 ] || break
+				bash "$ENTRA" --root "$crono8 --sblocca 127.0.0.1,$IND --perche fra-i-blocchi >> $uscita_file 2>&1"
+				b8=$((b8 + 1))
+			done
+			if [ "$u" -eq 0 ]; then
+				bash "$ENTRA" --root "$crono8 --verdetto >> $uscita_file 2>&1"
+				u=$?
+			fi
 		fi
 		spegni ;;
 	B6)
