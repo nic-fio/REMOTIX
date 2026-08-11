@@ -1078,6 +1078,46 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > `wt.closed.then(…)` di `collega()`, l'unico punto che sa quando la sessione non c'è più · lasciare
 > quello a inizio gestore (riga 606), perché un tentativo nuovo deve buttare il riferimento vecchio.
 >
+> #### ⭐⭐ E POI LA CURA È STATA APPLICATA E RIMISURATA — **due giri per motore, e il difetto non c'è più**
+>
+> *`[M]` 11 agosto 2026, tarda serata, `banchi/01-p5-ff-*` sulla **7511**, registro in
+> `banchi/01-p5-ff-registro-cura.log`. ⛔ **L'atteso è scritto in
+> `banchi/01-p5-ff-strumenta.py` PRIMA di misurare**, ed è quello il documento che dà il verdetto:
+> «`fedele` deve comportarsi come `tenace`; `eco` deve dire `congeda_corrente PRESENTE`; gli altri
+> tre invariati».*
+>
+> | la stessa scena, `ctrl+w` su due schede | PRIMA della cura | DOPO, due giri per motore |
+> |---|---|---|
+> | **Firefox** — `pagehide` | scatta, guardia **NULLA** | scatta, guardia ⭐ **PRESENTE** |
+> | **Firefox** — `congeda()` | **0** | ⭐ **1** |
+> | **Firefox** — al server | ⛔ **niente**, `FIN` nudo e `STACCATO per silenzio` | ⭐ `CONGEDO` sul canale **+** codice **`0x01`** |
+> | **Chrome** — al server | ⛔ chiusura col codice **`0x0`**, che §3.1 **vieta** e che il server mette a verbale | ⭐ `CONGEDO` sul canale **+** codice **`0x01`**, e **zero** violazioni |
+> | **`fedele` contro `tenace`** | due colonne diverse: era **lì** il difetto | ⭐ **non si distinguono più** — ed è la definizione della cura, visto che `tenace` era la variante che la scavalcava |
+>
+> ⭐ **E la traccia più bassa dice la stessa cosa da sotto**: `finally-congeda_corrente-PRESENTE-cura-in-vigore`
+> è arrivata in **10 varianti su 10** (cinque per motore), e `fine-sessione-lascio-il-mio-riferimento`
+> dove la sessione si chiude davvero ⇒ il riferimento si lascia andare **una volta sola, alla fine
+> della sessione**, che è esattamente l'ancora nuova. Su Firefox anche per via **sincrona**
+> (`eco-congeda_corrente`: **NULLA → PRESENTE**, in tutt'e due i giri).
+>
+> ⛔ **Tre cose che la misura ha aggiunto e che nell'atteso non c'erano**, e si scrivono:
+>
+> | | |
+> |---|---|
+> | ⛔ **il tracciatore del banco è CIECO su Chrome dentro `pagehide`** | non esce **né** `sendBeacon` **né la XHR sincrona** di `eco`: sei giri, zero tracce. ⇒ Su Chrome l'attribuzione poggia **solo** sul registro del server — che però è netto, perché fra prima e dopo cambia **la riga della violazione**. ⚠ E spiega a posteriori tutte le colonne a zero dei giri di Chrome: non erano un silenzio del prodotto, erano un silenzio del **portatore** |
+> | ⚠ **una corsa vista una volta sola su sei giri** | nel `vivo` delle 18:54 su Firefox il `CONGEDO` **sul canale** non è arrivato, benché la pagina avesse visto *«la write si è risolta»* e *«il FIN del canale è passato»*. È la stessa corsa che **B11 ha misurato su Chrome** (difetto 2). ⛔ **Non tocca §8.1**: il motivo `0x01` è arrivato lo stesso, per il **codice di chiusura** — cioè per la strada che `DECISIONI.md` §7.14 ha scelto **proprio per questo**. ⚠ Una osservazione non è una misura: si scrive e non si conclude |
+> | ⭐ **e `eco` su Chrome è il controllo negativo che nessuno aveva chiesto** | lì la chiusura col codice **`0x0`** c'è **ancora**, con la violazione a verbale — ed è giusto: `eco` esce da `pagehide` **senza spedire niente**, cioè è il prodotto **di prima**. ⇒ Il `0x0` non è sparito dal motore: sparisce **quando qualcuno congeda** |
+>
+> ⛔ **E che cosa questa misura NON dice.** Gira su una **copia strumentata** di `src/pagina.html`
+> servita da un server a parte: il prodotto di casa non è stato acceso, e vale la riga di sempre —
+> *«nessun banco ha mai acceso `src/`»*. ⛔ **E la cura è un cambiamento di prodotto dopo la chiusura
+> della fase**: è misurata, non è dichiarata. Dichiararla è una decisione dell'utente, ed è aperta.
+>
+> ⚠ *Un giro è stato **annullato**, e sta scritto in `01-p5-ff-esiti.jsonl`: il **PC dei browser si è
+> resettato a giro aperto** alle 18:40. L'ultima traccia al server è `ffm-183953-29125-fedele-avvio`,
+> nessun esito è stato scritto e lo sblocco «dopo» non è mai partito. ⛔ Non conta né a favore né
+> contro, e la coppia di giri concordi è stata rifatta da capo.*
+>
 > ⚠ **E due rilievi per i banchi, che valgono oltre questo caso**: *(a)* si conta **`motivo 0x01`**,
 > non *«una chiusura qualunque»* — un contatore che non legge il motivo trasforma una violazione in
 > un verde; *(b)* ⛔ **`ctrl+w` sull'unica scheda fa USCIRE Firefox**, e in quella scena non esce
@@ -1918,7 +1958,7 @@ perfetta.
 | ⛔ **la formula della tela, dopo S5** | `screen.width × devicePixelRatio` non è invariante allo zoom su Chrome 151, e lo zoom di pagina **non è leggibile da JavaScript in modo portabile**. Non è una `[?]` da misurare: è una **cura da trovare**, in `SPECIFICHE.md` §6.1-bis |
 | ⛔ **S5 su DeX, e S2, S3a, S6** | quattro misure che aspettano un **dispositivo**, non un'idea: il telefono Android, il DeX, una rete LTE vera. ⭐ I banchi sono pronti e girano il giorno che il ferro c'è (`web/rapporti/S-esiti-sonda.md` §4-§6) |
 | ⏳ **il numero di S1b** | l'orologio è in moto dal 10 agosto 21:10 UTC: il verdetto è il **17-18 agosto 2026**. Fino ad allora S1b dice *«a N giorni l'eccezione c'è ancora»*, e il `[R]` dei sette giorni **non è confermato dal comportamento** — solo dalla contabilità di Chrome |
-| ⛔⛔ ~~**il congedo di §8.1 su FIREFOX**~~ — **NON È PIÙ UNA `[?]`: È UN DIFETTO DI PRODOTTO, CON UN NOME** | ⭐ **Attribuito la sera stessa** (`banchi/01-p5-ff-*`, due giri per motore): **è della PAGINA**, e su **tutt'e due i motori**. `src/pagina.html:620` azzera `congeda_corrente` un millisecondo dopo `SESSIONE`, e il gestore di `pagehide` (riga 331) è **codice morto**. ⇒ Chiudendo la scheda, il client **non manda nessun congedo** dove §8.1 lo impone senza condizioni, e il posto se ne va per il tetto dei 30 s. ⛔ **Gecko è scagionato per misura**: la stessa `congeda()` chiamata da dentro `pagehide` consegna **tutt'e due** le strade di §3.1. ⛔ E su Chrome quel che sembrava un congedo era **lo smontaggio col codice `0x0`, che §3.1 vieta** — il banco lo contava senza leggere il motivo. ⭐ **La cura è di tre righe ed è scritta**, nel riquadro di P5: non applicata, perché la fase era già chiusa |
+| ⛔⛔ ~~**il congedo di §8.1 su FIREFOX**~~ — **NON È PIÙ UNA `[?]`: È UN DIFETTO DI PRODOTTO, CON UN NOME** | ⭐ **Attribuito la sera stessa** (`banchi/01-p5-ff-*`, due giri per motore): **è della PAGINA**, e su **tutt'e due i motori**. `src/pagina.html:620` azzera `congeda_corrente` un millisecondo dopo `SESSIONE`, e il gestore di `pagehide` (riga 331) è **codice morto**. ⇒ Chiudendo la scheda, il client **non manda nessun congedo** dove §8.1 lo impone senza condizioni, e il posto se ne va per il tetto dei 30 s. ⛔ **Gecko è scagionato per misura**: la stessa `congeda()` chiamata da dentro `pagehide` consegna **tutt'e due** le strade di §3.1. ⛔ E su Chrome quel che sembrava un congedo era **lo smontaggio col codice `0x0`, che §3.1 vieta** — il banco lo contava senza leggere il motivo. ⭐⭐ **E la cura è APPLICATA E RIMISURATA la tarda serata dell'11**, `[M]` **due giri per motore**: `pagehide` scatta con la guardia **PRESENTE**, `congeda()` viene chiamata, e al server arrivano **tutt'e due** le strade di §3.1 col motivo `0x01` — su Firefox **e** su Chrome, dove la chiusura col codice `0x0` **non compare più**. Il riquadro di P5 porta i numeri. ⛔ **Resta da dichiarare, non da misurare**: è un cambiamento di prodotto **dopo** la chiusura della fase, e come dichiararlo è una decisione dell'utente |
 | ⛔ **il prodotto contro i banchi** | nessun banco ha mai acceso `src/`. Finché non lo fa, *«il server fa X»* è vero **dell'innesto**, e di `src/` è **letto** |
 | `[?]` **il rinnovo del credito degli stream unidirezionali** | dichiarato dal prodotto stesso; si misura alla **fase 4**, col carico che lo provoca |
 | ⚠ **perché `lsquic` con l'SNI cada su ALPN** | `[M]` 10 agosto: avviso TLS **120**, `no suitable application protocol`, **dopo** che il certificato è stato trovato. ⛔ **Non indagato di proposito**: `lsquic` è fuori per un motivo che non dipende da questo, e la riga esiste perché nessuno lo riscopra credendolo nuovo |

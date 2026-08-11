@@ -119,7 +119,16 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⛔ **Su tutt'e due i motori.** La causa ha un nome: `src/pagina.html:620` azzera
 > `congeda_corrente` **un millisecondo dopo `SESSIONE`**, e il gestore di `pagehide` (riga 331) è
 > **codice morto**. ⭐ **La cura è di tre righe ed è scritta** in `fasi/01-filo-nudo.md`, riquadro
-> P5 — ⛔ **non applicata**: la fase era chiusa, e una cura infilata dopo la chiusura non è una cura.
+> P5.
+>
+> ⭐⭐ **E in fondo alla stessa serata è stata APPLICATA e RIMISURATA**, `[M]` **due giri per
+> motore**: `pagehide` scatta con la guardia **PRESENTE**, `congeda()` viene chiamata, e al server
+> arrivano **tutt'e due** le strade di §3.1 col motivo **`0x01`** — su Firefox **e** su Chrome, dove
+> la chiusura col codice `0x0` che §3.1 vieta **non compare più**. L'ancora di `congeda_corrente`
+> non è più *«il tentativo è finito»* ma ***«la sessione è finita»***: la azzera `wt.closed`, e solo
+> se il riferimento è ancora il proprio. ⛔ **Quel che resta non è una misura, è una dichiarazione**:
+> è un cambiamento di prodotto **dopo** la chiusura della fase 1, e come metterlo a verbale è una
+> **decisione dell'utente**, aperta.
 >
 > ⛔⛔ **E la storia di come è stato quasi perso vale più del difetto.** In ordine:
 >
@@ -164,11 +173,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > #### ⚠ QUEL CHE RESTA STORTO, detto invece che taciuto
 >
-> - ⛔ **Su Firefox il congedo di §8.1 non esce**, e questo **non è del banco**: chiudendo la scheda
->   il client se ne va con un **`FIN` nudo**, la sessione si chiude in modo **ordinato** (`STACCATO
->   per silenzio` = 0), **e non dice perché**. ⚠ *«La pagina non spedisce»* e *«Firefox butta via
->   quel che la pagina spedisce dentro `pagehide`»* arrivano **identici** al registro del server: a
->   separarli serve il registro **del browser**, e finché non è separato ⛔ **non si cura**.
+> - ⛔ ~~**Su Firefox il congedo di §8.1 non esce**~~ — **separato, curato e rimisurato la stessa
+>   notte**. ⚠ *«La pagina non spedisce»* e *«Firefox butta via quel che la pagina spedisce dentro
+>   `pagehide`»* arrivavano **identici** al registro del server, e a separarli è servito il registro
+>   **del browser**: `banchi/01-p5-ff-*`, con un portatore che non passa da WebTransport. ⇒
+>   L'imputato era **la pagina**, su tutt'e due i motori; ⭐ la cura è nel prodotto e i due giri per
+>   motore la confermano. ⛔ **Resta aperta la dichiarazione**, non la misura: la fase era chiusa
+>   quando la cura è stata applicata.
+> - ⚠ **E il tracciatore di quel banco è CIECO su Chrome dentro `pagehide`**: non esce né
+>   `sendBeacon` né una XHR **sincrona**. Su Chrome l'attribuzione poggia solo sul registro del
+>   server — che basta, perché fra prima e dopo cambia la riga della violazione, ⛔ ma chi
+>   riusasse quel tracciatore altrove deve saperlo.
 > - ⛔ **P5 non si certifica** per quel punto solo — il resto del suo giro sano è verde su Chrome.
 > - ⛔ ~~La parola d'ordine nei registri sporchi~~ — **chiusa**: cura verificata con un giro nuovo,
 >   **33 file** buttati con la traccia. ⚠ **Resta** la parola sulla riga di comando dei banchi

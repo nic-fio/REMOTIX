@@ -356,7 +356,32 @@ async function collega(utente, parola) {
     serverCertificateHashes: [{ algorithm: "sha-256", value: base64ABytes(b64) }],
   });
 
+  /* ⛔⭐ L'ANCORA DI `congeda_corrente` E' LA FINE DELLA SESSIONE, NON LA FINE
+   *     DEL TENTATIVO — cura della sera dell'11 agosto 2026, su un difetto
+   *     MISURATO poche ore prima dallo stesso banco.
+   *
+   * ⛔ Il difetto: dopo `SESSIONE` questa funzione RITORNA, e il `finally` del
+   *    gestore di `submit` azzerava `congeda_corrente` un millisecondo dopo.  Da
+   *    li' in poi il gestore di `pagehide` (piu' sopra) era CODICE MORTO —
+   *    chiudendo la scheda non usciva ne' il `CONGEDO` ne' il codice, e il posto
+   *    se ne andava per il tetto dei 30 s, dove §8.1 lo impone.
+   *
+   * ⛔ E su TUTT'E DUE i motori, non su uno: `banchi/01-p5-ff-*`, due giri per
+   *    motore su una copia strumentata servita a parte.  Dentro `pagehide` la
+   *    stessa `congeda()` consegna tutt'e due le strade di §3.1 (variante
+   *    «tenace»), quindi Gecko e' scagionato per misura; su Chrome quel che
+   *    sembrava un congedo era lo SMONTAGGIO del browser col codice `0x0`, che
+   *    §3.1 vieta e che il server scriveva a verbale come violazione.
+   *
+   * ⭐ `wt.closed` e' l'unico punto che sa quando la sessione non c'e' piu', e
+   *    scatta per qualunque strada la si chiuda: nostra, del server o del
+   *    trasporto.  ⚠ E si azzera solo se il riferimento e' ANCORA IL NOSTRO —
+   *    un tentativo nuovo ne ha gia' messo un altro, e portarselo via da qui
+   *    farebbe rinascere lo stesso difetto un giro piu' tardi. */
+  const fine_sessione = () => { if (congeda_corrente === congeda) congeda_corrente = null; };
+
   wt.closed.then((info) => {
+    fine_sessione();
     const c = info && info.closeCode;
     /* ⚠ Se a chiudere siamo stati NOI, il codice che torna e' il nostro e la
        frase giusta l'ha gia' scritta chi ha deciso di chiudere: sovrascriverla
@@ -368,7 +393,7 @@ async function collega(utente, parola) {
     }
     if (c && MOTIVO[c]) esito(MOTIVO[c], false);
     nota("sessione chiusa dal server: codice " + (c === undefined ? "?" : c));
-  }).catch((e) => nota("sessione chiusa con errore: " + e));
+  }).catch((e) => { fine_sessione(); nota("sessione chiusa con errore: " + e); });
 
   await wt.ready;
   nota("sessione WebTransport aperta");
@@ -617,7 +642,15 @@ $("modulo").addEventListener("submit", async (ev) => {
       catch (e2) { nota("nemmeno il congedo e' potuto uscire: " + e2); }
     }
   } finally {
-    congeda_corrente = null;
+    /* ⛔ QUI NON SI AZZERA `congeda_corrente`, ed e' la cura dell'11 agosto 2026.
+     *    `collega()` ritorna appena la stretta di mano e' arrivata a `SESSIONE`
+     *    — cioe' quando la sessione COMINCIA — quindi azzerarlo qui rendeva
+     *    codice morto il gestore di `pagehide` un millisecondo dopo, e la
+     *    pagina non si congedava piu' chiudendo la scheda (§8.1).  ⭐ Adesso lo
+     *    azzera `wt.closed`, dentro `collega()`, che e' l'unico punto che sa
+     *    quando la sessione e' FINITA.
+     * ⚠ Quello a inizio gestore (piu' sopra) resta: un tentativo nuovo deve
+     *   buttare il riferimento vecchio prima di aprirne un altro. */
     $("vai").disabled = false;
     /* ⛔ La parola non resta nel campo: e' la stessa regola per cui non entra
        in nessun registro (§4.4). */

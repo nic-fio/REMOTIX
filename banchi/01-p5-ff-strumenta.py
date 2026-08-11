@@ -51,6 +51,31 @@ byte e nessuna differenza puo' venire da una modifica fra un giro e l'altro.
                         butta via anche il codice di chiusura».
 
 ===========================================================================
+⛔⭐ L'ATTESO E' CAMBIATO LA SERA DELL'11 AGOSTO 2026, E SI SCRIVE PRIMA DEL GIRO
+
+Il pomeriggio dell'11 agosto questi quattro giri hanno attribuito il difetto:
+`fedele` non spediva niente, `tenace` e `vivo` spedivano tutt'e due le strade di
+§3.1.  ⇒ l'imputato era la PAGINA, e Gecko scagionato per misura.
+
+⭐ La cura e' nel prodotto dalla sera dell'11 (`src/pagina.html`): il `finally`
+   non azzera piu' `congeda_corrente`, e ad azzerarlo e' `wt.closed`.  ⛔ Da cui
+   l'atteso NUOVO, dichiarato qui prima di misurare:
+
+    fedele  ⭐ deve comportarsi come `tenace`: `pagehide` scatta, la guardia e'
+               PRESENTE, `congeda()` viene chiamata, e al server arriva il
+               motivo `0x01` — su TUTT'E DUE i motori.
+    tenace  invariato: era gia' la dimostrazione che la strada funziona.
+    vivo    invariato: e' il controllo positivo, e non passa da `pagehide`.
+    codice  invariato.
+    eco     ⭐ `eco-congeda_corrente` passa da NULLA a PRESENTE — ed e' la
+               traccia piu' bassa e piu' diretta della cura.
+
+⛔ E il controllo che dice NO resta quello di sempre: se il gesto non arriva
+   (`gesto_fatto` diverso da «fatto»), nessuna di queste righe accusa o assolve
+   nessuno.  ⚠ Con `ctrl+w` sull'UNICA scheda Firefox ESCE, e in quella scena
+   non esce niente per nessuna via: si usa il gesto `ctrl-w-due`.
+
+===========================================================================
 ⛔ LE PATCH SONO ANCORATE A TESTO ESATTO, E SE UNA NON ATTACCA SI MUORE.
 
 Una patch che non attacca in silenzio produrrebbe una copia che assomiglia al
@@ -244,14 +269,38 @@ p("controllo-vivo",
 }''')
 
 # ---------------------------------------------------------------------------
-# 6. ⛔⭐ IL SOSPETTO PRINCIPALE: il `finally` che azzera `congeda_corrente`
-#       appena `collega()` ritorna — cioe' subito dopo SESSIONE.
+# 6. ⛔⭐ IL SOSPETTO PRINCIPALE, E LA SUA CURA — 11 agosto misurato, 12 curato.
+#
+#    Il `finally` del gestore di `submit` azzerava `congeda_corrente` appena
+#    `collega()` ritornava, cioe' subito dopo SESSIONE: da li' in poi il gestore
+#    di `pagehide` era codice morto.  ⭐ La cura ha TOLTO quella riga e ha
+#    spostato l'azzeramento dentro `wt.closed`, che e' l'unico punto che sa
+#    quando la sessione e' FINITA.
+#
+# ⛔ L'appiglio vecchio (`congeda_corrente = null;` dentro il `finally`) NON
+#    ESISTE PIU', e questo file si sarebbe fermato con uscita 2 — che e' il
+#    comportamento giusto: una patch che non attacca non deve produrre una copia
+#    che assomiglia al prodotto senza strumentarlo.  Qui si prende il punto
+#    nuovo, e la traccia diventa la PROVA DELLA CURA: alla fine del tentativo il
+#    riferimento deve essere ANCORA PRESENTE.
 p("finally",
+  '  } finally {',
   '''  } finally {
-    congeda_corrente = null;''',
-  '''  } finally {
-    traccia("finally-azzero-congeda_corrente-" + (congeda_corrente ? "era-PRESENTE" : "era-gia-nulla"));
-    congeda_corrente = null;''')
+    traccia("finally-congeda_corrente-" + (congeda_corrente ? "PRESENTE-cura-in-vigore"
+                                                            : "NULLA-la-cura-non-c-e-piu"));''')
+
+# ---------------------------------------------------------------------------
+# 7. ⭐ E DOVE L'AZZERAMENTO E' ANDATO A FINIRE: `wt.closed`, cioe' la fine vera
+#       della sessione.  ⛔ Serve a distinguere «il riferimento c'e' ancora»
+#       (cura in vigore) da «il riferimento non viene mai lasciato andare»
+#       (perdita: un tentativo nuovo si porterebbe dietro il vecchio).
+p("fine-sessione",
+  '  const fine_sessione = () => { if (congeda_corrente === congeda) congeda_corrente = null; };',
+  '''  const fine_sessione = () => {
+    traccia("fine-sessione-" + (congeda_corrente === congeda ? "lascio-il-mio-riferimento"
+                                                             : "il-riferimento-non-e-piu-mio"));
+    if (congeda_corrente === congeda) congeda_corrente = null;
+  };''')
 
 
 def main():
