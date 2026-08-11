@@ -429,6 +429,17 @@ spegni()
 # ⛔ IL TETTO SI MISURA, NON SI DA' PER MESSO — rilievo R8.3.
 #    La sonda di B2 prende i parametri di trasporto **dove arrivano**, cioe'
 #    dal pari, invece che dalla configurazione di chi li manda.
+#
+# ⛔ E `--bersaglio` E' OBBLIGATORIO — cucitura rotta e riparata l'11 agosto 2026.
+#    Questa riga chiamava la sonda senza dirle contro chi stesse misurando,
+#    mentre lo stesso giorno la sonda rendeva quell'argomento obbligatorio e
+#    senza predefinito, apposta perche' un giro non potesse misurare il server
+#    sbagliato per distrazione.  Due file, due autori, nessuno dei due
+#    sbagliato da solo: e' la forma «cuciture» della revisione del 10 agosto.
+# ⭐ E si e' vista perche' il banco si e' RIFIUTATO di misurare — «non ho potuto
+#    leggere max_idle_timeout dal pari: la fase non parte» — invece di
+#    proseguire con un numero mancante.  Il ramo che distingue «vuoto» da
+#    «proibito» ha fatto esattamente il suo mestiere.
 # ⚠ Non si guarda il suo codice d'uscita: la sonda giudica sei proprieta' e qui
 #   ne interessa una sola.  Si legge il NUMERO, e «non ho letto niente» ha un
 #   ramo suo — «vuoto» e «proibito» non hanno lo stesso aspetto.
@@ -437,7 +448,7 @@ tetto_dal_pari() # $1 = atteso in ms, $2 = etichetta
 	local atteso=$1 et=$2 letto=""
 	rm -f "$FUORI/b6-$B_NOME-$et-tetto.log"
 	bash "$ENTRA" --root \
-		"python3 $DENTRO/01-b2-sonda-trasporto.py --indirizzo $IND --porta $PORTA --etichetta b6-$et --idle-atteso $atteso > $DENTRO/b6-$B_NOME-$et-tetto.log 2>&1"
+		"python3 $DENTRO/01-b2-sonda-trasporto.py --bersaglio $B_NOME --indirizzo $IND --porta $PORTA --etichetta b6-$et --idle-atteso $atteso > $DENTRO/b6-$B_NOME-$et-tetto.log 2>&1"
 	if [ ! -f "$FUORI/b6-$B_NOME-$et-tetto.log" ]; then
 		ko "la sonda non ha scritto niente: non si e' potuto guardare"
 		return 2

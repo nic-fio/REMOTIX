@@ -124,6 +124,9 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio);
 /* ⛔ «Ha ancora qualcosa da dire?» — serve a chi spegne il server per sapere
  * quando ha finito di far uscire i congedi, invece di contare i giri. */
 bool wt_ha_da_dire(const wt *w);
+/* ⛔ Perche' ha ancora da dire: «capsula non matura» e «coda non vuota» sono
+ *    due guasti diversi, e allo spegnimento avevano la stessa faccia. */
+const char *wt_perche_ha_da_dire(const wt *w);
 
 /* Per il registro e per i banchi. */
 const char *wt_stato_rcp(const wt *w);

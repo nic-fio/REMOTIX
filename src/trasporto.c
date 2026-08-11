@@ -975,6 +975,17 @@ size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche)
 	return restano;
 }
 
+/* ⛔ Che cosa trattiene chi non ha ancora finito — per il registro dello
+ *    spegnimento.  Torna la prima ragione trovata, che basta a mandare la
+ *    diagnosi dalla parte giusta. */
+const char *trasporto_perche_restano(const trasporto *t)
+{
+	for (connessione *c = t->prime; c; c = c->prossima)
+		if (!c->morta && c->w && wt_ha_da_dire(c->w))
+			return wt_perche_ha_da_dire(c->w);
+	return "niente";
+}
+
 size_t trasporto_quante(const trasporto *t) { return t->quante; }
 int trasporto_fd(const trasporto *t) { return t->fd; }
 void trasporto_contesto(trasporto *t, SSL_CTX *ctx) { t->ctx = ctx; }

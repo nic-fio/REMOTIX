@@ -421,10 +421,33 @@ def leggi_pagina(indirizzo, porta, attesa=5.0):
     fuori = {"indirizzo": indirizzo, "stato": None, "bannato": None,
              "restano_ms": None, "ore": None, "minuti": None,
              "frase": False, "byte": 0, "errore": ""}
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(attesa)
+    # ⛔ IN TLS, E NON E' UN DETTAGLIO — misurato l'11 agosto 2026.
+    #
+    #    Questa funzione parlava HTTP IN CHIARO.  Contro l'innesto funzionava;
+    #    contro il PRODOTTO il server chiude — `ConnectionResetError: [Errno
+    #    104]` da tutt'e due gli indirizzi — perche' sulla porta TCP serve
+    #    HTTPS (`SPECIFICHE.md` §11.5, e `01-p1-prodotto.sh` la interroga con
+    #    `curl -k https://`).  ⛔ Il server faceva la cosa giusta e il banco
+    #    leggeva un silenzio: e' la settima veste — un banco che accusa il
+    #    codice sbagliato.
+    #
+    # ⚠ E il rosso era della forma peggiore: §4.4-bis vieta al ban di
+    #   presentarsi come «un errore di rete, un silenzio», e il banco avrebbe
+    #   scritto esattamente quello — su un server che la pagina del ban la
+    #   serve.
+    #
+    # ⭐ Quel che NON cambia: l'indirizzo di provenienza continua a sceglierlo
+    #    il nucleo.  `wrap_socket` incarta la connessione gia' aperta, non ne
+    #    apre un'altra.
+    conf = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    conf.check_hostname = False
+    conf.verify_mode = ssl.CERT_NONE   # il certificato lo giudica B3, non B8
+    nudo = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    nudo.settimeout(attesa)
     try:
-        s.connect((indirizzo, porta))
+        nudo.connect((indirizzo, porta))
+        s = conf.wrap_socket(nudo, server_hostname=indirizzo)
+        s.settimeout(attesa)
         s.sendall(f"GET / HTTP/1.1\r\nHost: {indirizzo}:{porta}\r\n"
                   f"Connection: close\r\n\r\n".encode())
         pezzi = []
@@ -442,7 +465,12 @@ def leggi_pagina(indirizzo, porta, attesa=5.0):
         fuori["errore"] = f"{type(e).__name__}: {e}"
         return fuori
     finally:
-        s.close()
+        # ⚠ `s` puo' non esistere: se a fallire e' il `connect` o la stretta di
+        #   mano TLS, l'incarto non e' mai avvenuto.  Si chiude quel che c'e'.
+        try:
+            s.close()
+        except NameError:
+            nudo.close()
     fuori["byte"] = len(grezzo)
     testo = grezzo.decode("utf-8", errors="replace")
     prima = testo.split("\r\n", 1)[0]
@@ -2139,8 +2167,18 @@ def principale():
                    help="⛔ costruisce un guasto per volta nei fatti di un giro "
                         "vero e pretende che il banco diventi rosso in QUEL punto")
     p.add_argument("--previsione", action="store_true")
-    p.add_argument("--giro", default="")
-    p.add_argument("--uscita", default="b8-fatti.jsonl")
+    # ⛔ `--giro` idem: lo dichiara il profilo comune (vedi la nota qui sotto).
+    # ⛔ `--uscita` NON si dichiara qui: lo dichiara il profilo comune del
+    #    bersaglio, `01-b0-bersaglio.py`, poche righe piu' sotto.  Dichiararlo
+    #    in tutt'e due i posti fa morire il banco all'avvio con
+    #    «conflicting option string: --uscita» — misurato l'11 agosto 2026, e
+    #    il giro si fermava PRIMA di accendere qualunque cosa.
+    # ⚠ E' la cucitura fra due autori dello stesso giorno: chi ha scritto il
+    #   profilo non sapeva che B8 avesse gia' quell'argomento, e chi ha scritto
+    #   B8 non sapeva che sarebbe arrivato un profilo.  Il predefinito di
+    #   allora — `b8-fatti.jsonl`, senza il bersaglio nel nome — e' proprio
+    #   quello che il profilo esiste per togliere: due bersagli nello stesso
+    #   file sono due misure che non si possono mettere in fila.
     p.add_argument("--registro", default="")
     # ⛔ Gli stessi quattro argomenti di B5, B6 e B7 — bersaglio obbligatorio e
     #    senza predefinito, uscita, giro, md5 del binario.

@@ -269,27 +269,34 @@ fi
 #    costruzione, ed e' precisamente il controllo piu' vuoto di tutti.  Il file
 #    lo sa e si fa rosso da se' se lo si lancia da root.
 log "1-bis. ⛔ La certificazione fuori dal filo (LEZIONI.md §1.2: PRIMA)"
-PB=/tmp/b8-prova-ban.$$
-if ! command -v gcc >/dev/null 2>&1; then
-	ko "⛔ gcc non c'e' su questa macchina: la certificazione di "
-	ko "   01-b8-prova-ban.c NON E' STATA ESEGUITA."
-	ko "   ⛔ E non e' «passata»: e' un pezzo di B8 che nessuno ha provato."
-	ko "   Cura: lanciarla dove gcc c'e', da utente normale:"
-	ko "     gcc -std=c11 -Wall -Wextra -I$FUORI/rcp -o /tmp/pb \\"
-	ko "         $FUORI/01-b8-prova-ban.c $FUORI/rcp/rcp.c && /tmp/pb"
-	exit 3
-fi
-if ! gcc -std=c11 -Wall -Wextra -I"$FUORI/rcp" -o "$PB" \
-	"$FUORI/01-b8-prova-ban.c" "$FUORI/rcp/rcp.c" 2>"$FUORI/b8-prova-ban.log"; then
-	ko "⛔ 01-b8-prova-ban.c non compila contro $FUORI/rcp/rcp.c:"
+# ⛔ DOVE GIRA, e la distinzione e' stata pagata l'11 agosto 2026.
+#
+#    Questo passo girava sull'OSPITE, e il commento qui sopra diceva «fuori dal
+#    contenitore».  ⛔ Ma il vincolo vero e' «da UTENTE NORMALE» — la sezione 4
+#    distingue «zero ban» da «non ho potuto leggere», e da root sarebbe verde
+#    per costruzione — mentre «fuori dal contenitore» era solo il posto in cui
+#    capitava di essere.
+#
+#    E sull'ospite `gcc` NON C'E': `[M]` 11 agosto 2026, il giro si fermava qui
+#    con uscita 3.  ⭐ Il banco lo dichiarava bene — «non e' passata: e' un pezzo
+#    di B8 che nessuno ha provato» — ma restava non eseguito.
+#
+# ⭐ La cura tiene tutt'e due i vincoli: dentro il contenitore, dove gcc c'e',
+#    e SENZA `--root`, dove si e' utente normale (id 1000).  Il file si fa rosso
+#    da se' se lo si lancia da root, quindi il vincolo resta sorvegliato da lui
+#    e non da questo commento.
+PB=/srv/src/tmp/b8-prova-ban.$$
+if ! bash "$ENTRA" "gcc -std=c11 -Wall -Wextra -I$DENTRO/rcp -o $PB \
+	$DENTRO/01-b8-prova-ban.c $DENTRO/rcp/rcp.c" 2>"$FUORI/b8-prova-ban.log"; then
+	ko "⛔ 01-b8-prova-ban.c non compila contro $DENTRO/rcp/rcp.c:"
 	tail -20 "$FUORI/b8-prova-ban.log" | sed 's/^/        /'
 	ko "   ⚠ e «non compila» NON e' «passa»: l'ottava veste di LEZIONI.md §1.9"
 	ko "   dice di guardare l'esito del costruttore, non la presenza del file"
 	exit 3
 fi
-"$PB"
+bash "$ENTRA" "$PB"
 PROVA_BAN=$?
-rm -f "$PB"
+bash "$ENTRA" "rm -f $PB" >/dev/null 2>&1
 if [ "$PROVA_BAN" -ne 0 ]; then
 	ko "⛔ la certificazione fuori dal filo NON passa (uscita $PROVA_BAN):"
 	ko "   finche' e' rossa, i tre pezzi del ban che il filo non vede non sono"

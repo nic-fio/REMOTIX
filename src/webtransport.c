@@ -161,6 +161,27 @@ struct wt {
 	 *    rinuncia si SCRIVE. */
 	ngtcp2_tstamp chiusura_scadenza;
 
+	/* ⛔⭐ §4.6 — IL TETTO DELLA SESSIONE CHE NON APRE MAI IL CANALE.
+	 *
+	 * ✅ `DECISIONI.md` §7.17, deciso dall'utente l'11 agosto 2026: **5 s**
+	 *    dall'apertura della sessione WebTransport all'apertura del canale di
+	 *    controllo, poi `TEMPO_SCADUTO`.
+	 *
+	 * ⛔ Perche' serviva un orologio in piu': quelli di §4.6 partono
+	 *    dall'apertura del CANALE, quindi chi apriva la sessione e il canale
+	 *    non lo apriva mai **non aveva addosso nessun tetto**.  `[M]` 11 agosto
+	 *    2026, banco B6: la sessione senza canale e' rimasta viva 20 014 ms
+	 *    senza che succedesse niente.
+	 *
+	 * ⚠ E il tempo d'inattivita' di QUIC non lo copriva: quello conta il
+	 *   SILENZIO, e una sessione che scrive su un altro stream non e'
+	 *   silenziosa — teneva il posto a tempo indeterminato.
+	 *
+	 * ⛔ Zero quando il canale c'e' gia' (o non c'e' ancora la sessione): un
+	 *    orologio che non e' partito e uno che e' scaduto non devono avere la
+	 *    stessa faccia. */
+	ngtcp2_tstamp canale_entro;
+
 	/* ⛔ Quanti byte ci sono in coda, per il tetto di `coda_metti()`. */
 	size_t byte_in_coda;
 	/* Quanti stream di troppo (§2.5) hanno gia' scritto: per non riempire il
@@ -251,6 +272,15 @@ static size_t varint_leggi(uint64_t *v, const uint8_t *src, size_t len)
  * scrittura» col keep-alive a 100 ms, cioe' mezzo secondo: qui il tempo si
  * misura invece di contarlo, e sul filo non va niente. */
 #define WT_ATTESA_CHIUSURA_NS (500ULL * NGTCP2_MILLISECONDS)
+
+/* ⛔ §4.6, la riga che mancava: dall'apertura della sessione WebTransport
+ *    all'apertura del canale di controllo, **5 s**.
+ * ✅ `DECISIONI.md` §7.17, deciso dall'utente l'11 agosto 2026.
+ * ⭐ Lo stesso numero del primo tetto di §4.6, e non per simmetria: aprire il
+ *    canale e' il primo atto obbligatorio della sessione (§2.5), non dipende
+ *    da quanto e' veloce a digitare una persona e non dipende dalla rete piu'
+ *    di quanto ne dipenda il `CIAO`. */
+#define WT_TETTO_CANALE_NS (5000ULL * NGTCP2_MILLISECONDS)
 
 /* ------------------------------------------------------------------------ */
 /* Gli elenchi.                                                              */
@@ -443,6 +473,26 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 const char *wt_stato_rcp(const wt *w)
 {
 	return w->rcp ? rcp_stato_nome(w->rcp) : "(nessuna)";
+}
+
+/* ⛔ PERCHE' ha ancora da dire — e non e' un lusso: senza questa riga
+ *    «la capsula di chiusura non e' ancora matura» e «i byte non escono» hanno
+ *    la stessa faccia, e chi spegne il servizio legge «1 sessioni hanno ancora
+ *    byte in coda» senza sapere quale delle due sia.
+ * ⚠ `[M]` 11 agosto 2026: il caso `server-in-chiusura` di B7 e' rosso proprio
+ *   qui — §3.1 punto 3 assente allo spegnimento — e la diagnosi si e' fermata
+ *   davanti a questa ambiguita'. */
+const char *wt_perche_ha_da_dire(const wt *w)
+{
+	if (!w)
+		return "(nessuna sessione)";
+	if (w->chiusura >= 0 && !coda_vuota(w))
+		return "capsula di chiusura in attesa E coda non vuota";
+	if (w->chiusura >= 0)
+		return "capsula di chiusura non ancora matura (coda vuota)";
+	if (!coda_vuota(w))
+		return "coda d'uscita non vuota";
+	return "niente";
 }
 
 bool wt_ha_da_dire(const wt *w)
@@ -648,9 +698,22 @@ static void regola_battito(wt *w)
 	regola_tienila_viva(w, stato);
 
 	if (!stato) {
-		/* Nessuna sessione RCP: si batte solo se c'e' una chiusura da
-		 * far maturare. */
-		if (w->chiusura >= 0)
+		/* Nessuna sessione RCP: si batte se c'e' una chiusura da far
+		 * maturare — ⛔ **oppure se il tetto di §7.17 e' armato**.
+		 *
+		 * ⛔ E' qui che la prima stesura del tetto moriva, `[M]` 11 agosto
+		 *    2026 col banco B6: `cb_end_headers` armava `canale_entro` e
+		 *    chiamava `batti_fra`, e poi la prima passata di questa funzione
+		 *    rimetteva `battito_ms = 0`.  Il tetto scattava solo se il client
+		 *    faceva qualcos'altro che risvegliasse il battito — cioe'
+		 *    **proprio nel caso che non serve**: `ciao-sessione-tardiva`
+		 *    scadeva a 5,10 s, `ciao-senza-controllo` restava appeso 20 s.
+		 *
+		 * ⚠ E' la lezione scritta trenta righe piu' sotto, presa in flagrante
+		 *   nel giro stesso in cui la si applicava: **chi mette un tetto deve
+		 *   accendere anche cio' che lo fara' scadere** — e non basta
+		 *   accenderlo, bisogna che nessun altro lo spenga. */
+		if (w->chiusura >= 0 || w->canale_entro)
 			batti_fra(w, 100);
 		else
 			w->battito_ms = 0;
@@ -691,6 +754,11 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	g.chiudi = gancio_chiudi;
 	g.registra = gancio_registra;
 	g.verifica = gancio_verifica;
+
+	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
+	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un
+	 *    orologio disarmato e uno scaduto non devono avere la stessa faccia. */
+	w->canale_entro = 0;
 
 	w->rcp = rcp_apri(&g, w->provenienza,
 	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
@@ -1443,8 +1511,25 @@ static int apri_sessione(wt *w, richiesta *r)
 	}
 
 	w->sessione = r->id;
-	registro_dice(REG_WT, "⭐ sessione WebTransport APERTA su %s (stream %ld)",
-	              r->uri, (long)r->id);
+
+	/* ⛔⭐ E QUI PARTE IL TETTO DI §4.6 PER L'APERTURA DEL CANALE — 5 s.
+	 *
+	 * ✅ `DECISIONI.md` §7.17, dall'utente l'11 agosto 2026.  Chi apre la
+	 *    sessione e non apre mai il canale di controllo non aveva addosso
+	 *    NESSUN tetto: `[M]` B6, 20 014 ms senza che succedesse niente.
+	 *
+	 * ⛔ E si arma anche cio' che lo fara' scadere, nello stesso istante — e'
+	 *    la lezione piu' cara dell'innesto, scritta trenta righe piu' sotto in
+	 *    `rcp_avvia`: un tetto senza battito e' un tetto che non scade. */
+	w->canale_entro = ngtcp2_conn_get_timestamp(w->conn)
+	                  + WT_TETTO_CANALE_NS;
+	batti_fra(w, 100);
+
+	registro_dice(REG_WT, "⭐ sessione WebTransport APERTA su %s (stream %ld) — "
+	              "il canale di controllo va aperto entro %llu ms (§4.6, "
+	              "DECISIONI.md §7.17)",
+	              r->uri, (long)r->id,
+	              (unsigned long long)(WT_TETTO_CANALE_NS / NGTCP2_MILLISECONDS));
 	return 0;
 }
 
@@ -1793,6 +1878,35 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 {
 	if (w->rcp)
 		rcp_tempo(w->rcp, ts / NGTCP2_MILLISECONDS);
+
+	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
+	 *
+	 * ✅ `DECISIONI.md` §7.17, 11 agosto 2026: 5 s, poi `TEMPO_SCADUTO`.
+	 *
+	 * ⚠ E il `CONGEDO` NON si manda: il canale di controllo non e' mai nato,
+	 *   quindi non c'e' dove spedirlo.  E' la condizione decisa lo stesso
+	 *   giorno in §7.15 — «se il canale e' ancora utilizzabile» — e qui non lo
+	 *   e'.  Il motivo viaggia SOLO nel codice di chiusura della sessione, che
+	 *   e' la seconda strada di §3.1 punto 3.
+	 *
+	 * ⭐ Le due decisioni si incastrano proprio qui, ed e' il primo posto in
+	 *    cui succede: senza §7.15 questa riga dovrebbe spedire un byte su un
+	 *    canale mai nato. */
+	if (w->canale_entro && ts >= w->canale_entro && w->chiusura < 0) {
+		registro_dice(REG_RCP,
+		              "⛔ %s: sessione WebTransport aperta e canale di "
+		              "controllo MAI aperto entro %llu ms — congedo "
+		              "%#04x TEMPO_SCADUTO (§4.6, DECISIONI.md §7.17).  "
+		              "⚠ nessun CONGEDO sul canale: il canale non esiste, "
+		              "il motivo viaggia nel codice di chiusura (§3.1 punto "
+		              "3, e §7.15 lo consente)",
+		              w->provenienza,
+		              (unsigned long long)(WT_TETTO_CANALE_NS
+		                                   / NGTCP2_MILLISECONDS),
+		              RCP_TEMPO_SCADUTO);
+		w->canale_entro = 0;
+		chiudi_sessione(w, RCP_TEMPO_SCADUTO);
+	}
 
 	/* ⛔ La capsula di chiusura parte SOLO quando la coda d'uscita e' vuota:
 	 *    il `CONGEDO` deve essere gia' partito, o il browser lo butta insieme

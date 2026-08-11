@@ -85,7 +85,14 @@ rm -f "$QUI/b3-muta.log" "$QUI/b3-muta.attaccato" "$QUI/b3-presto.log" \
 #   qui ne interessa una sola.  Si legge il NUMERO, e «non ho letto niente» ha
 #   un ramo suo — «vuoto» e «proibito» non hanno lo stesso aspetto.
 TETTO_ATTESO=${TETTO_ATTESO:-120000}
-python3 "$QUI/01-b2-sonda-trasporto.py" --indirizzo "$IND" --porta "$PORTA" \
+# ⛔ `--bersaglio` e' obbligatorio dall'11 agosto 2026 e non ha predefinito:
+#    un giro non deve poter misurare il server sbagliato per distrazione.
+#    Questo giro e' scritto per l'INNESTO — i 120 000 ms qui sopra sono suoi,
+#    il prodotto ha 30 000 fissi — quindi il valore e' `innesto`, dichiarato e
+#    non dedotto.  ⚠ Trovato l'11 agosto 2026 riparando la stessa cucitura in
+#    `01-b6-lancia.sh`: la prima cura era stata applicata in un posto solo.
+python3 "$QUI/01-b2-sonda-trasporto.py" --bersaglio innesto \
+	--indirizzo "$IND" --porta "$PORTA" \
 	--etichetta quarto-giro --idle-atteso "$TETTO_ATTESO" \
 	> "$QUI/b3-tetto.log" 2>&1
 TETTO=$(grep -m1 'max_idle_timeout *=' "$QUI/b3-tetto.log" | tr -dc '0-9')

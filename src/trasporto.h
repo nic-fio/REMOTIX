@@ -83,6 +83,7 @@ size_t trasporto_quante(const trasporto *t);
  * ⭐ Restituisce quante connessioni hanno ancora byte da far uscire: chi spegne
  *    fa girare il ciclo finche' non e' zero (o finche' non scade la sua
  *    pazienza), perche' «consegnato a ngtcp2» non e' «uscito sul filo». */
+const char *trasporto_perche_restano(const trasporto *t);
 size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche);
 
 #endif

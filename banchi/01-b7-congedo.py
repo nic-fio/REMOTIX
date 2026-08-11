@@ -1178,8 +1178,27 @@ async def gira_caso(a, registro, inizio, motivo, verso, f):
     # ── §3.1 punto 1, e il verso client→server: dal registro del server ─────
     if inizio is not None:
         if verso == VERSO_SC:
+            # ⛔ SENZA IL PREFISSO, e non e' pigrizia — 11 agosto 2026.
+            #
+            #    Qui c'era `f"REMOTIX B3: congedo motivo=…"`, cioe' il prefisso
+            #    dell'INNESTO.  Il prodotto scrive la stessa riga preceduta da
+            #    `HH:MM:SS.mmm rcp `, quindi contro di lui questa attesa non
+            #    trovava MAI niente: ⛔ §3.1 punto 1 dichiarato assente su OGNI
+            #    caso, cioe' un rosso pieno su un server che quella riga la
+            #    scrive — misurato oggi, 8 casi su 8.
+            #
+            # ⚠ E il rilievo era gia' stato scritto (R-A2) e dichiarato curato:
+            #   la cura era arrivata al lanciatore e non a questa riga.  E' la
+            #   forma «una cura applicata in un posto solo», che questo
+            #   progetto paga piu' spesso di ogni altra.
+            #
+            # ⭐ La cura giusta non e' un secondo prefisso: e' NESSUN prefisso.
+            #    `congedo motivo=0xNN` e' quel che i due server hanno in comune,
+            #    ed e' esattamente la parte che §3.1 punto 1 pretende — il resto
+            #    e' l'intestazione di chi scrive il registro, che non e' del
+            #    protocollo.
             trovata, perche = await registro.attendi(
-                inizio, f"REMOTIX B3: congedo motivo={motivo:#04x}", entro=6)
+                inizio, f"congedo motivo={motivo:#04x}", entro=6)
             es.riga_registro = (trovata, perche)
         else:
             for chiave, frase in (

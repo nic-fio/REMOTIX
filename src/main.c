@@ -391,17 +391,58 @@ int main(int argc, char **argv)
 			                                  "il server si sta spegnendo");
 			giri++;
 		}
-		if (restano == 0)
+		/* ⛔⭐ E POI SI ASPETTA ANCORA — misurato dal banco B7 l'11 agosto 2026,
+		 *     caso `server-in-chiusura`, ed e' il difetto che il caso e' nato
+		 *     per trovare.
+		 *
+		 *     `wt_ha_da_dire()` diventa falsa quando la capsula di chiusura di
+		 *     §3.1 punto 3 e' stata CONSEGNATA A NGTCP2.  ⛔ Ma «consegnato a
+		 *     ngtcp2» non e' «uscito sul filo» — e' la stessa distinzione che
+		 *     `wt_batti` fa per il `CONGEDO`, curata li' e non qui.  Il ciclo
+		 *     usciva, `trasporto_chiudi()` abbatteva QUIC, e quei byte non
+		 *     partivano piu'.
+		 *
+		 * ⛔ Che cosa vedeva il client, misurato: il `CONGEDO 0x0c` arrivava
+		 *    sul canale, e la sessione si chiudeva **senza codice** — QUIC
+		 *    terminato con `codice 0 · nessun motivo`.  Cioe' la SECONDA
+		 *    strada di §3.1 mancava.
+		 *
+		 * ⚠ E la seconda strada e' quella che conta: `DECISIONI.md` §7.14 e
+		 *   §7.15, decise oggi, la rendono l'unica che arrivi sempre — su
+		 *   Firefox, che azzera il canale e butta quei byte, era l'UNICA.
+		 *   Un utente di Firefox avrebbe visto il servizio sparire **senza
+		 *   nessun motivo**, che e' esattamente cio' che §8.1 vieta.
+		 *
+		 * ⭐ Mezzo secondo, e si scrive quanto si e' aspettato: la cura non
+		 *    deve poter diventare «aspetta e spera» senza che nessuno lo veda. */
+		if (restano == 0) {
+			int coda = 0;
+			while (coda < 50) {
+				struct pollfd fds[MAX_POLL];
+				fds[0].fd = trasporto_fd(t);
+				fds[0].events = POLLIN;
+				fds[0].revents = 0;
+				if (poll(fds, 1, 10) > 0 && (fds[0].revents & POLLIN))
+					trasporto_leggi(t);
+				trasporto_scaduti(t);
+				coda++;
+			}
 			registro_dice(REG_AVVIO,
 			              "⭐ congedo 0x0c mandato a tutte le sessioni e uscito "
-			              "sul filo in %d giri (§8.1: mai con un silenzio)",
-			              giri);
+			              "sul filo in %d giri, piu' %d giri di coda perche' la "
+			              "capsula di chiusura (§3.1 punto 3) esca davvero "
+			              "(§8.1: mai con un silenzio)",
+			              giri, coda);
+		}
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔ %zu sessioni hanno ancora byte in coda dopo 2 s: "
-			              "il congedo 0x0c e' stato scritto ma non e' detto che "
-			              "sia uscito.  Si chiude lo stesso.",
-			              restano);
+			              "⛔ %zu sessioni non hanno finito dopo %d giri — "
+			              "«%s».  Il congedo 0x0c e' stato scritto ma non e' "
+			              "detto che sia uscito, e ⛔ §3.1 punto 3 — il motivo "
+			              "nel codice di chiusura — potrebbe non essere "
+			              "partito affatto.  Si chiude lo stesso. "
+			              "⚠ B7 `server-in-chiusura` misura esattamente questo.",
+			              restano, giri, trasporto_perche_restano(t));
 	}
 	esito = 0;
 
