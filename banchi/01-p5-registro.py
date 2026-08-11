@@ -178,8 +178,28 @@ PASSI = [
     ("respinto",         r"respinto motivo=",                            0, None),
     ("posto-preso",      r"posto PRESO da .*occupati adesso: (\d+)",     1, "occupati"),
     ("sessione",         r"sessione aperta utente=",                     1, None),
-    ("congedo-canale",   r"il client si congeda, motivo=",               0, None),
-    ("congedo-chiusura", r"la pagina ha chiuso la sessione, motivo",     0, None),
+    # ⛔⭐ SI CONTA IL MOTIVO, NON «UNA CHIUSURA QUALUNQUE» — cura della tarda
+    #     serata dell'11 agosto 2026, e questo contatore e' costato il difetto
+    #     piu' caro della fase.
+    #
+    #     Qui c'era `r"la pagina ha chiuso la sessione, motivo"`, SENZA il
+    #     motivo.  ⛔ Su Chrome il server scriveva
+    #
+    #       ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0…
+    #       la pagina ha chiuso la sessione, motivo 0x0b
+    #
+    #     cioe' **lo smontaggio del browser**, che §3.1 vieta — e questo passo lo
+    #     contava come un congedo.  ⇒ Una violazione trasformata in un verde, e
+    #     un difetto di prodotto assolto per un'ora (`01-p5-congedo.sh:318` aveva
+    #     lo stesso difetto, e la sua copia porta l'avviso in testa).
+    #
+    # ⭐ §8.2 `CHIUSO_DALL_UTENTE` vale **0x01**, e in questa scena e' l'unico
+    #    motivo giusto: un altro numero non e' un congedo, e' un'altra cosa.
+    ("congedo-canale",   r"il client si congeda, motivo=0x01",           0, None),
+    ("congedo-chiusura", r"la pagina ha chiuso la sessione, motivo 0x01", 0, None),
+    # ⛔ E la violazione si conta a parte, perche' e' il server stesso a
+    #    scriverla: era gia' nel registro mentre il banco stampava il verde.
+    ("violazione-31",    r"VIOLAZIONE §3\.1",                            0, "zero"),
     # ⛔ IL POSTO SI LIBERA PER DUE STRADE, E LA SECONDA L'HA INSEGNATA IL
     #    REGISTRO VERO DEL 10 AGOSTO 2026 (`/media/REMOTIX/src/remotix-browser.log`,
     #    letto l'11 agosto).  Quel giro non ha **nessuna** riga `posto LASCIATO`:
@@ -213,6 +233,12 @@ ATTESI = {
         "pam": "ammesso", "ammesso": 1, "posto-preso": 1, "sessione": 1,
         "byte-dopo-la-fine": 0, "respinto": 0,
         "tentativo-fallito": 0, "bannato": 0,
+        # ⛔ Zero violazioni di §3.1: una chiusura col codice 0x0 non e' un
+        #    congedo mal riuscito, e' un errore di protocollo che il server
+        #    mette a verbale.  ⚠ Sta qui e non negli altri due scenari perche'
+        #    QUESTA e' la scena misurata (`01-p5-ff-*`, due giri per motore):
+        #    altrove il passo si dichiara e non si giudica.
+        "violazione-31": 0,
         # ⚠ «posto-lasciato» NON e' qui: il posto si giudica sul NUMERO finale,
         #   piu' sotto, perche' le strade per liberarlo sono due.
     },
@@ -301,11 +327,21 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
 
     # ── Le due strade del congedo (§3.1 punto 3) ────────────────────────────
     #
-    # ⛔ Non e' un di piu': «il congedo arriva per due strade diverse, una per
-    #    motore» — Chrome lo manda come byte sul canale di controllo, Firefox
-    #    azzera il canale e il motivo arriva dentro il codice di chiusura della
-    #    sessione.  ⚠ Pretenderne UNA sola scriverebbe «Firefox non si congeda»,
-    #    che e' falso.  Qui si contano tutt'e due e si dichiara QUALE.
+    # ⛔ Non e' un di piu': §3.1 punto 3 ne prevede DUE, e una delle due puo'
+    #    perdersi.  ⚠ Pretenderne una sola scriverebbe «non si congeda» su un
+    #    client che si e' congedato per l'altra.  Qui si contano tutt'e due e si
+    #    dichiara QUALE.
+    #
+    # ⛔ E LA VECCHIA RAGIONE SCRITTA QUI ERA FALSA: diceva «due strade diverse,
+    #    una per motore — Chrome sul canale, Firefox nel codice di chiusura».
+    #    `[M]` 11 agosto 2026, `banchi/01-p5-ff-*`, due giri per motore: curato
+    #    il prodotto, **tutt'e due i motori consegnano tutt'e due le strade** col
+    #    motivo 0x01.  Quel che sembrava «la strada di Chrome» era la chiusura
+    #    col codice 0x0 — cioe' la violazione che il passo qui sopra adesso
+    #    conta.  ⚠ Una osservazione contraria: il `CONGEDO` **sul canale** si e'
+    #    perso una volta su sei giri (una corsa gia' vista su Chrome da B11), e
+    #    il motivo e' arrivato lo stesso per il codice di chiusura — che e'
+    #    esattamente perche' le strade sono due (`DECISIONI.md` §7.14).
     canale = esito["passi"]["congedo-canale"]["trovate"]
     chiusura = esito["passi"]["congedo-chiusura"]["trovate"]
     esito["congedo"] = {

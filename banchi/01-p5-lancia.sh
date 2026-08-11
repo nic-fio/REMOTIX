@@ -26,9 +26,19 @@
 #   - il **posto** (§8.2 `0x0F`) non si liberava quando a chiudere il canale era
 #     il SERVER: visto **solo su Chrome**, perche' su Firefox il trasporto
 #     chiudeva lo stream in tempo e il posto se ne andava lo stesso;
-#   - ⭐ **il congedo arriva per due strade diverse, una per motore**: Chrome lo
+#   - ⛔ ~~**il congedo arriva per due strade diverse, una per motore**: Chrome lo
 #     manda come byte sul canale di controllo; Firefox azzera il canale e il
-#     motivo arriva dentro il codice di chiusura della sessione.
+#     motivo arriva dentro il codice di chiusura della sessione~~ — ⛔ **FALSA, e
+#     smentita per misura l'11 agosto 2026** (`banchi/01-p5-ff-*`, due giri per
+#     motore).  Non erano due strade per due motori: era **lo stesso difetto di
+#     prodotto** visto attraverso due smontaggi diversi.  Quel che su Chrome
+#     sembrava «il motivo nel codice di chiusura» era la chiusura col codice
+#     **`0x0`, che §3.1 VIETA** — e questo banco la contava come un congedo
+#     perche' non leggeva il motivo (vedi `01-p5-registro.py`, cura della stessa
+#     notte).  ⭐ Curato il prodotto, **tutt'e due i motori consegnano tutt'e due
+#     le strade** col motivo `0x01`.
+#     ⚠ La regola del verdetto per motore **resta**, e il punto sopra la regge da
+#       solo: cambia la ragione, non la regola.
 #
 # ⭐ Da cui la regola di questo banco: **un verdetto per motore, mai uno solo.**
 #    Un verdetto unico su due motori nasconde esattamente la cosa che si cerca.
@@ -480,6 +490,14 @@ fuoco_prodotto()
 	return 1
 }
 
+# ⭐ Quante finestre portano quel titolo — ed e' il modo con cui questo banco
+#    verifica che la SCHEDA in prova sia sparita.
+# ⛔ Il titolo e' quello della scheda ATTIVA (`<title>REMOTIX</title>`,
+#    `src/pagina.html:49`): con due schede aperte, chiusa quella in prova il
+#    fuoco passa all'altra e il conto va da 1 a 0.  ⇒ «1 → 0» dice **la scheda
+#    si e' chiusa**, e non dice niente sul programma, che e' quel che serve.
+finestre() { X xdotool search --name "${1:-REMOTIX}" 2>/dev/null | wc -l; }
+
 fotografia() # $1 = nome del file
 {
 	X import -window root "$COPIE/$1.png" >/dev/null 2>&1 \
@@ -556,6 +574,11 @@ gamba_pagina()
 	local motore=$1 gamba=$2 parola=$3 atteso=$4
 	local marca_a="p5-$motore-$gamba-$GIRO-inizio"
 	local marca_b="p5-$motore-$gamba-$GIRO-fine"
+	# ⭐ Il marcatore della SECONDA scheda: e' la prova che il browser ne aveva
+	#    davvero due quando si e' battuto `ctrl+w`, e la da' il registro del
+	#    server invece della parola del pilota.
+	local marca_c="p5-$motore-$gamba-$GIRO-secondascheda"
+	local gesto_fatto=ignoto
 	log "   gamba «$gamba» su $motore — atteso: $atteso"
 
 	# ⛔ Il fuoco PRIMA di battere qualunque tasto, e se non si trova la finestra
@@ -643,23 +666,66 @@ gamba_pagina()
 		#     ⭐ Con `X` davanti, misurato sulla stessa scena: il gesto arriva
 		#        (finestre 1 → 0) e **il congedo esce** — motivo nel codice di
 		#        chiusura, posto LASCIATO, zero `STACCATO per silenzio`.
+		# ⛔⭐ E LA SCENA VUOLE DUE SCHEDE — cura della tarda serata dell'11
+		#     agosto 2026, e a insegnarla e' stato `banchi/01-p5-ff-*`.
+		#
+		#     `[M]` Con UNA sola scheda `ctrl+w` non chiude la scheda: **fa
+		#     uscire Firefox**.  Quel che si misurava non era «l'utente chiude
+		#     la scheda» ma «il programma termina» — ⛔ e in quella scena non
+		#     esce niente per NESSUNA via, nemmeno per le varianti che
+		#     scavalcano il difetto, provate una a una.  ⇒ Un'assenza di congedo
+		#     raccolta li' e' un'accusa al prodotto per una scena che non e'
+		#     quella di §8.2 `CHIUSO_DALL_UTENTE`.
+		#
+		# ⭐ Qui si apre una SECONDA scheda su un marcatore verificabile, si
+		#    torna sulla prima con `ctrl+shift+Tab` e si batte `ctrl+w`: la
+		#    scheda muore, il browser resta VIVO, ed e' la scena che l'utente fa
+		#    davvero.
+		#
+		# ⛔ E CHE IL BROWSER RESTI VIVO NON E' PIU' UN SINTOMO: E' L'ATTESO.
+		#    Qui c'erano cinque secondi d'attesa che il processo morisse e, se
+		#    non moriva, la riga «da qui in poi l'assenza di congedo non e' un
+		#    verdetto».  Nella scena nuova quella riga direbbe **il falso** — il
+		#    browser e' vivo *perche'* la scheda si e' chiusa bene.
 		if fuoco_prodotto; then
-			X xdotool key --clearmodifiers ctrl+w 2>/dev/null
-			inf "⭐ scheda chiusa con ctrl+w (il gesto dell'utente): se la pagina"
-			inf "   si congeda, e' qui che lo fa"
-		else
-			inf "⚠ non trovo la finestra: la scheda non e' stata chiusa col gesto,"
-			inf "  e il congedo che segue (o la sua assenza) NON e' giudicabile"
-		fi
-		for _ in 1 2 3 4 5; do
-			kill -0 "$PID_BR" 2>/dev/null || break
+			local prima dopo vive
+			prima=$(finestre)
+			inf "finestre col titolo «REMOTIX» PRIMA del gesto: $prima"
+			X xdotool key --clearmodifiers ctrl+t >/dev/null 2>&1
+			sleep 2
+			X xdotool type --clearmodifiers --delay 25 "https://$IND:$PORTA/$marca_c" >/dev/null 2>&1
 			sleep 1
-		done
-		if kill -0 "$PID_BR" 2>/dev/null; then
-			inf "⚠ il browser e' ancora vivo dopo 5 s: lo chiudo col segnale, e"
-			inf "  da qui in poi l'assenza di congedo non e' un verdetto"
-			kill "$PID_BR" 2>/dev/null
+			X xdotool key --clearmodifiers Return >/dev/null 2>&1
+			sleep 5
+			X xdotool key --clearmodifiers ctrl+shift+Tab >/dev/null 2>&1
+			sleep 2
+			X xdotool key --clearmodifiers ctrl+w 2>/dev/null
+			# ⚠ Otto secondi: il congedo esce dentro `pagehide`, cioe' subito, e
+			#   quel che non e' uscito qui non uscira' piu'.
+			sleep 8
+			dopo=$(finestre)
+			vive=$(X xdotool search --name . 2>/dev/null | wc -l)
+			inf "finestre col titolo «REMOTIX» DOPO: $dopo  ·  finestre del browser: $vive"
+			if [ "$dopo" -lt "$prima" ] && [ "$vive" -gt 0 ]; then
+				gesto_fatto=fatto
+				ok "⭐ la SCHEDA si e' chiusa e il BROWSER e' vivo: e' la scena di"
+				ok "   §8.2 CHIUSO_DALL_UTENTE, e se la pagina si congeda e' qui"
+				ok "   che lo fa"
+			else
+				gesto_fatto=scena-sbagliata
+				ko "⛔ la scena non e' quella dichiarata: finestre $prima → $dopo,"
+				ko "   finestre del browser $vive.  Il congedo che segue — o la sua"
+				ko "   assenza — NON e' giudicabile"
+			fi
+		else
+			gesto_fatto=nessuna-finestra
+			ko "⛔ non trovo la finestra: la scheda non e' stata chiusa col gesto,"
+			ko "   e il congedo che segue (o la sua assenza) NON e' giudicabile"
 		fi
+		# ⚠ E adesso si chiude il browser, che resta vivo PER DISEGNO: non e' un
+		#   ripiego e non toglie niente alla misura — la scheda in prova non c'e'
+		#   piu' da otto secondi.
+		kill "$PID_BR" 2>/dev/null
 		wait "$PID_BR" 2>/dev/null
 		PID_BR=
 	fi
@@ -675,6 +741,34 @@ gamba_pagina()
 	if ! scarica_registro "$T/$motore-$gamba.log"; then
 		ko "il registro del server non si e' letto: nessun verdetto per questa gamba"
 		return 3
+	fi
+
+	# ⛔⭐ CHE IL BROWSER AVESSE DAVVERO DUE SCHEDE NON SI CREDE AL PILOTA: lo
+	#     dice il registro del server.  «Ho battuto ctrl+t» e «la seconda scheda
+	#     e' nata» sono due fatti diversi, e a separarli e' una richiesta
+	#     arrivata — la stessa forma con cui questo banco verifica l'avviso del
+	#     certificato e la digitazione.
+	if ! grep -q "$marca_c" "$T/$motore-$gamba.log"; then
+		ko "⛔ IL BROWSER NON AVEVA DUE SCHEDE: il marcatore «$marca_c» non e' nel"
+		ko "   registro del server.  Allora «ctrl+w» puo' aver chiuso il PROGRAMMA"
+		ko "   invece della scheda, e in quella scena non esce niente per nessuna"
+		ko "   via — nemmeno da un prodotto sano."
+		gesto_fatto=senza-seconda-scheda
+	fi
+
+	# ⛔ E la conseguenza si tira QUI, non la tira chi legge.
+	if [ "$gesto_fatto" != fatto ]; then
+		if [ "$atteso" = sessione ]; then
+			ko "⛔ questa gamba NON DA' UN VERDETTO ($gesto_fatto): lo scenario"
+			ko "   «sessione» giudica il congedo, e il congedo si giudica solo su"
+			ko "   una chiusura di SCHEDA.  ⚠ Un rosso preso qui sarebbe dato"
+			ko "   all'imputato sbagliato — e' gia' successo due volte in questa"
+			ko "   fase (LEZIONI.md §1.9)."
+			return 3
+		fi
+		inf "⚠ la scena della chiusura non e' quella dichiarata ($gesto_fatto), ⭐ ma"
+		inf "  lo scenario «$atteso» non giudica il congedo: si prosegue, e sta"
+		inf "  scritto"
 	fi
 	python3 "$REG" passi --log "$T/$motore-$gamba.log" \
 		--marca-inizio "$marca_a" --marca-fine "$marca_b" \
