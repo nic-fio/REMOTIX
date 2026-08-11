@@ -4,14 +4,24 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> ## Stato al 10 agosto 2026 — ⭐ **si riparte da qui**
+> ## Stato all'11 agosto 2026 — ⭐ **si riparte da qui**
 >
-> **Fase 1 aperta**, banco scritto e **revisionato prima del prodotto**: 44 rilievi — **38 `[R]`,
-> tutti curati**, e **6 `[?]`, di cui tre ancora aperte per nome** (R3.25 il segno della rotella su
-> più di un compositore · R3.26 la pila PAM per un utente diverso dal proprietario del processo ·
-> R3.27 l'istante da cui parte il primo tetto — `fasi/01-filo-nudo.md`). ⚠ *Questa riga diceva «44
-> rilievi, 38 `[R]`, tutti curati», e sommava i 38 ai 44: una `[?]` non si cura, **si misura**
-> (`REVIEWER.md` §4). Corretta il 10 agosto 2026, rilievo **R11.19**.*
+> **Fase 1 aperta, e il prodotto esiste**: `src/`, il server in C che un browser vero apre. Banco
+> scritto e **revisionato prima del prodotto**: 44 rilievi — **38 `[R]`, tutti curati**, e **6 `[?]`,
+> di cui due ancora aperte per nome** (R3.25 il segno della rotella su più di un compositore ·
+> R3.26 la pila PAM per un utente diverso dal proprietario del processo). ⭐ **R3.27 — l'istante da
+> cui parte il primo tetto — è chiusa dall'11 agosto 2026**, e l'ha chiusa il banco **B6** con due
+> risposte. ⚠ *Questa riga diceva «44 rilievi, 38 `[R]`, tutti curati», e sommava i 38 ai 44: una
+> `[?]` non si cura, **si misura** (`REVIEWER.md` §4). Corretta il 10 agosto 2026, rilievo **R11.19**.*
+>
+> ⛔ **E una quarta revisione avversariale, la notte del 10-11 agosto, su quattro lenti**: i banchi
+> (**30** rilievi), il prodotto contro l'arbitro (**15**), i documenti (**17**), le cuciture fra i
+> cinque agenti (**10**). ⛔ **Nessuna delle quattro è verde**, e i verdetti stanno in
+> `fasi/rapporti/R12-A/B/C/D`. ⚠ *E il verdetto sui documenti ha trovato una causa di processo che
+> vale più di metà dei suoi rilievi: i `.md` erano stati chiusi alle **22:40**, il codice ha
+> continuato ad arrivare fino alle **00:36** — cioè la pagina che diceva «si riparte da qui» era già
+> falsa nel momento della consegna. Questa pagina è stata riallineata l'11 agosto 2026, **a codice
+> fermo**.*
 > ⭐ **Il banco B2 ha chiuso `DECISIONI.md` §6.4: la libreria QUIC è
 > `ngtcp2`+`nghttp3`** — con un banco, non su carta, e con le altre tre eliminate ciascuna da una
 > misura.
@@ -38,31 +48,126 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | ⭐⭐ **B5: quarantaquattro violazioni su quarantaquattro** | tipo sconosciuto · lunghezza in più e in meno · **4 GiB annunciati** · oltre 1 MiB · stato sbagliato · versione · nomi e valori di capacità · credenziali fuori intervallo · tela dispari e fuori limiti · disposizione malformata **contro** disposizione ignota (`SESSIONE_NON_SERVIBILE`) · secondo stream bidirezionale · tre canali nel verso sbagliato su stream unidirezionali. ⛔ Il motivo giusto ogni volta, **per tutt'e due le strade di §3.1**, e dopo **ciascuna** una connessione nuova arriva a `ECCOMI` |
 > | ⭐ **e i cinque casi che DEVONO passare** | `hevc,vp9` → si sceglie `hevc` e **lo scarto si scrive** · **vista 300×801** e **1×1** (§7.1) · `BANCO_MARCA` a funzione spenta → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **senza chiudere** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Senza di loro, «il server chiude su tutto» darebbe **36 verdi su 36**. ⚠ *I casi che DEVONO passare sono **otto**, non cinque, e i 44 casi di B5 sono **36 violazioni + 8 verdi attesi**: la riga finale diceva «44 su 44», che è vera per costruzione (rilievo **R7.14**)* |
-> | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta** |
+> | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta**. ⚠ *Il **sesto** era la regola di quel giorno: dalla sera del 10 agosto il ban scatta al **quarto** (`DECISIONI.md` §1.9), e la misura resta scritta com'era perché porta la data della regola che misurava* |
 > | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.2 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.2; §9 adesso la nomina. ⚠ *La cura del 10 agosto mandava a §2.4, che è «La porta» e non nomina né percorsi né versioni: corretta lo stesso giorno, rilievo **R11.2*** |
 >
-> ### ⛔ SI RIPARTE DA QUI — la sera del 10 agosto 2026
+> ### ⛔ SI RIPARTE DA QUI — l'11 agosto 2026
 >
-> **Otto banchi scritti, sei verdi.** B2 · B3 (cinque giri su cinque) · B4 (13 su 13, quattro
-> esiti) · B5 (36 violazioni su 36 + 8 verdi attesi) · B7 (7 motivi su 7, 15 frasi su 15) · B11
-> (13 casi su 13 sui due motori). ⚠ **B6 è giallo** e **B8 non ha finito**.
+> #### ⭐⭐ IL PRODOTTO ESISTE: `src/`, il server della fase 1 in C
 >
-> #### ⛔ Il primo passo della prossima sessione, e sono trenta minuti
+> ⚠ *Questa pagina, e il documento della fase, dicevano* «**nessuna riga di prodotto scritta**» *fino
+> all'11 agosto 2026 — mentre `src/` era nato la notte del 10 e nessuno dei dieci documenti lo
+> nominava (rilievo **R12C.1**). Chi riprendeva il lavoro leggeva quella riga e **riscriveva da zero
+> un server che esiste.***
 >
-> **La parola d'ordine GIUSTA sembra rifiutata dopo quattro sbagliate.** `[M]` 10 agosto, giro
-> corto di B8 (`bash /media/REMOTIX/src/01-b8-lancia.sh 2`): il controllo prevede *quattro
-> falliti · uno **riuscito** · altri quattro*, e sul filo il **quinto** — quello con le credenziali
-> buone — ha ricevuto `CREDENZIALI_ERRATE`, non `AMMESSO`; dal sesto in poi `TROPPI_TENTATIVI`.
-> ⇒ il caso «parola giusta» ha **zero campioni** e le tre mediane non si calcolano.
+> `[M]` **11 agosto 2026** (`wc -l`, codice fermo alle 00:36): **22 file**, **9.647 righe**, di cui
+> **5.248 di codice**. ⭐ **Un browser vero apre `https://192.168.0.2:7447`, l'utente digita nome e
+> parola d'ordine, e la stretta di mano di RCP/1 arriva fino a `SESSIONE`** — con i due certificati
+> di §4.1-bis, la pagina servita dal server stesso, il ban di §4.4-bis su file e il suo comando di
+> sblocco. ⛔ Niente video, niente audio, niente input: quelle sono le fasi da 2 in poi.
+> **Il dettaglio, file per file, sta in `fasi/01-filo-nudo.md` §«Che cosa è stato sviluppato».**
 >
-> ⛔ **Due imputati, e si separano con una misura sola**: o il server rifiuta una parola valida
-> quando il contatore di §4.4-bis è già oltre la soglia — e allora è una **decisione di prodotto**,
-> perché il sintomo è *«l'ho scritta giusta e non mi fa entrare»* — oppure è la gamba del banco a
-> mandare credenziali sbagliate anche al quinto passo. ⚠ Il banco stesso avverte di guardare prima
-> **quanti indirizzi** ha visto il server (ne ha visti due, `127.0.0.1` e `192.168.0.2`: B0.3 è
-> rispettato, quindi la spiegazione «è il contatore per indirizzo» **non basta da sola**).
-> Il primo posto dove guardare è `banchi/01-b8-cronometro.py`, la funzione che costruisce le due
-> gambe del controllo, e `banchi/rcp/rcp.c` §4.4-bis.
+> ⛔ **E quel che NON è provato, che è la metà che non si vede:**
+>
+> | | |
+> |---|---|
+> | ⛔ **UN SOLO MOTORE** | l'unica traccia di un giro con un browser vero contro questo server è un commento dentro `src/pagina.html` — `[M]` 10 agosto notte, **Firefox** — e quel giro ha trovato un difetto vero (la pagina dichiarava `disposizione = en`, che non è un nome XKB). ⛔ **Di Chrome contro questo server non c'è nessuna traccia**, e il criterio di B2 vuole **due motori su due** |
+> | ⛔ **e quel giro non è riverificabile** | `[M]` 11 agosto: in `src/` non c'è né il binario né un `.o`, nessun `.jsonl`, e `git status` la dà **untracked**. ⛔ **Nessuno dei 14 script di lancio accende il prodotto**: `bsslserver` compare in **11** di loro, il binario `remotix` in **zero** |
+> | ⛔ **il server intero non l'ha eseguito nessun revisore** | mancavano `ngtcp2`, `nghttp3`, `libssl-dev`, `libpam0g-dev`: `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` sono **letti, non misurati**. ⭐ L'unica esecuzione è `rcp.c` **compilato isolato**, `-Wall -Wextra`, **zero avvisi**, sei ingressi byte per byte |
+> | ⛔ **le proprietà di trasporto non sono state rimisurate su di lui** | le sei di B2 sono `[M]` **sull'innesto**. Il prodotto oggi dichiara **19** stream unidirezionali dove la misura ne leggeva 16 |
+> | ⛔ **due ripieghi di fase, dichiarati** | **un solo filo**, e la verifica PAM lo **blocca**: dieci utenti che entrano insieme fanno aspettare l'ultimo dieci secondi (`SPECIFICHE.md` §5.5 promette dieci sessioni). E **16 sessioni attaccate in compilazione**, dove il tetto è dieci configurabile |
+>
+> #### I banchi: **dodici scritti**, sei verdi, ⛔ **e TRE certificati**
+>
+> **Dodici banchi scritti** — `[M]` 11 agosto 2026, contando i prefissi distinti in `banchi/`:
+> `01-b2 · b3 · b4 · b5 · b6 · b7 · b8 · b9 · b11 · b12 · b13 · c2`. ⚠ *Questa riga diceva «**otto**
+> banchi scritti»: quattro erano nati la notte del 10 e nessuno li aveva aggiunti — rilievo
+> **R12C.13**.*
+>
+> **Sei verdi**: B2 · B3 (cinque giri su cinque) · B4 (13 su 13, quattro esiti) · B5 (36 violazioni
+> su 36 + 8 verdi attesi) · B7 (**7 motivi provocabili su 7, denominatore 15, e 15 frasi distinte**) ·
+> B11 (13 casi su 13 sui due motori).
+> ⭐ **B6 non è più giallo, e non è ancora verde**: ha chiuso R3.27 con **due** risposte (vedi sotto),
+> e usciva **3** — *«il filo si comporta come il codice dice, e il documento dice un'altra cosa»*.
+> ⛔ Adesso il documento è cambiato: **va rieseguito**, ed è la sola cosa che dirà se sia verde.
+> ⚠ **B8 non ha finito**: le tre mediane restano da confrontare.
+> ⭐ **E i quattro nati la notte del 10**: **B9** (il secondo lettore, che ha prodotto **dodici**
+> punti in cui `RCP.md` ammette due letture), **B12** (la certificazione), **B13** (le sei proprietà),
+> **C2** (le tre diagnosi) — più le **sette pagine della sonda**.
+>
+> ⛔ **E il conto onesto delle certificazioni è 3 su 12**, non sei e non quattro: *«verde»* vuol dire
+> che il banco ha girato senza trovare niente, *«certificato»* che qualcuno gli ha **rotto sotto il
+> codice** e lui è diventato rosso sulla marca giusta.
+>
+> ⚠ **E i due «dodici» NON sono lo stesso dodici, o questa riga sarebbe un conteggio senza
+> denominatore**: i dodici *scritti* sono i prefissi in `banchi/`; i dodici del **catalogo di B12**
+> comprendono **B10** — che non ha uno script suo — ed escludono **B12**, che non certifica sé stesso.
+> Il conto qui sotto è sul catalogo di B12.
+>
+> | | |
+> |---|---|
+> | ⭐ **certificati** | **B4**, **B9** (11 ago 00:27, con le impronte dei file che partecipano) e **C2** (10 ago 22:32) — ⚠ su B9 con una riserva scritta: il suo guasto dimostra che sa vedere **un testo cambiato**, che è la cosa che B9 dichiara di saper fare |
+> | ⛔ **provato e NON certificato** | **B13** — e il difetto è del **guasto**, che l'orchestratore non sa innestare e che costruirebbe un difetto che B13.1 non guarda |
+> | ⚠ **certificato e NON riverificabile** | **B7** — la marca pretesa era la parola `CONGEDO`, che il banco stampa anche nel giro **sano**: *«una marca che compare in tutt'e due i giri non è una marca»* |
+> | ⛔ **mai provati** | **B2 · B3 · B5 · B6 · B8 · B10 · B11** — sette |
+>
+> ⇒ Il registro è `banchi/01-b12-registro.jsonl`, e il conto per esteso sta in `fasi/01-filo-nudo.md`.
+>
+> #### ⭐ La regola dell'accesso è cambiata, e l'ha decisa l'utente — 10 agosto 2026
+>
+> ⛔ **Tre autenticazioni fallite dallo stesso indirizzo ENTRO 5 MINUTI, e quell'indirizzo è fuori
+> per 12 ore.** Il **nome utente non conta**: tre nomi diversi contano tre. Un accesso riuscito azzera
+> il conto; il ban **sta su file** e sopravvive al riavvio; si esce con le dodici ore **o** con un
+> comando di sblocco sul server. Chi è bannato **vede una pagina che glielo dice**, non un silenzio.
+>
+> > ⚠ *Questa riga diceva* «tre autenticazioni fallite **consecutive**», *senza finestra —
+> «consecutive» era la **prima** formulazione dell'utente, e la finestra dei cinque minuti è una
+> **terza** frase dello stesso giorno che la stringe. ⛔ Le due regole danno **esiti opposti sullo
+> stesso ingresso**: tre fallimenti alle 0:00, 4:00 e 8:00 sono consecutivi ⇒ bannati secondo questa
+> riga, e **fuori finestra** ⇒ non bannati secondo il codice. La finestra c'era in `DECISIONI.md`, in
+> `RCP.md` §4.4-bis, in `SPECIFICHE.md` §4.2 e nel codice, e mancava **nei due documenti da cui si
+> scrive il banco**. Corretta l'11 agosto 2026, rilievo **R12C.5** — ed è successo perché la
+> decisione era **copiata** in quattro documenti invece che rimandata, che è proprio quel che le
+> convenzioni qui sotto vietano.*
+> ⇒ `DECISIONI.md` §1.9 — e con essa `RCP.md` §4.4-bis (da 🔸 a ✅), `SPECIFICHE.md` §4.2,
+> `fasi/01-filo-nudo.md` B0.3 e B8.
+>
+> ⭐ **Sostituisce la forma che avevo scritto io** — 5 in 5 minuti, finestra che raddoppia fino a 15
+> minuti, due contatori — e ⛔ **il filo non guadagna un byte**: `TROPPI_TENTATIVI` esisteva già.
+> ⚠ **Il prezzo è dichiarato in §1.9** e non lo paga chi indovina: dietro un NAT tre errori di una
+> persona chiudono la porta a tutti per dodici ore, e il primo a inciamparci è chi digita una parola
+> lunga sulla tastiera di un telefono.
+>
+> #### ⛔⭐ IL PRIMO PASSO DELLA PROSSIMA SESSIONE: **puntare i banchi al PRODOTTO**, e trovare un secondo motore
+>
+> *(B8 è stato riscritto la notte del 10 agosto sulla regola nuova — tre falliti con tre nomi
+> diversi, il quarto con la parola giusta che DEVE essere rifiutato, più i controlli che dicono *no*.
+> Quel passo è fatto; questo è il prossimo.)*
+>
+> ⛔ **Oggi ci sono due server, e i banchi ne misurano uno solo.** Il prodotto è `src/`; l'innesto è
+> `banchi/01-b3-rcp-innesta.py` dentro `bsslserver`, ed è quello che tutti i 14 script di lancio
+> accendono. ⛔ **Il protocollo è lo stesso file** — `src/rcp.c` e `banchi/rcp/rcp.c` sono identici
+> byte per byte — **ma tutto quel che gli sta attorno è stato scritto due volte**, e nei punti in cui
+> le due stesure divergevano una portava scritta la dimostrazione che l'altra non funzionava.
+>
+> ⚠ **E il rischio è preciso, non generico**: la prima volta che qualcuno punterà un banco al
+> prodotto — cosa che prima o poi si farà, perché è il prodotto — otterrà **rossi su un server che le
+> cose le fa**. Il precedente di questo progetto dice che quando un banco è rosso e il codice sembra
+> funzionare, si cerca **nel codice per ore** prima di sospettare della misura.
+>
+> **In quest'ordine, e ciascuno costa poco:**
+>
+> | # | Che cosa | Perché prima o dopo |
+> |---|---|---|
+> | **1** | ⛔ **accendere `src/` una volta, e lasciarne una traccia in questo albero** — `bash src/costruisci.sh` e il registro del giro | il costruttore si difende dall'ottava veste di `LEZIONI.md` §1.9 (butta il binario prima, controlla cinque marche dentro quello nuovo, ha il controllo positivo dello strumento) ⛔ **e non è mai stato eseguito da nessuna parte in questo albero**. Un costruttore che si difende è esattamente il pezzo che non si può dare per buono senza averlo acceso una volta |
+> | **2** | ⛔ **puntare `01-b8-sblocca.py` al prodotto**, con il `PING` | è lo strumento della regola **B0.3**, cioè quello da cui dipende l'isolamento di **tutti** gli altri banchi. Oggi parla col socket dell'innesto e col prodotto non ha mai parlato |
+> | **3** | **B8, B6, B7 e B5 contro `src/`** | sono i quattro che toccano il ban, i tetti, il congedo e le violazioni — cioè i quattro punti in cui il prodotto ha del codice che nessuna misura ha visto. ⚠ E B7 lì trova **otto** motivi provocabili invece di sette: il prodotto ha un percorso di spegnimento, l'innesto no |
+> | **4** | ⛔ **la sonda del trasporto di B2 contro `src/`** | il prodotto dichiara **19** stream unidirezionali dove la misura di B2 ne leggeva 16, e le altre cinque proprietà (0-RTT, migrazione, datagram, tetto, `allowPooling`) su di lui **non le ha lette nessuno** |
+> | **5** | ⭐ **UN SECONDO MOTORE** | l'unico giro con un browser vero contro il prodotto è stato con **Firefox**. ⛔ Il criterio di B2 vuole **due motori su due**, e i difetti più cari di questa fase — i tre rossi di B11, il posto che non si liberava — **vivevano nella differenza fra i due motori**. Con un motore solo quella differenza non si vede |
+>
+> ⚠ **E una cosa da NON fare per prima**: rimettere mano ai documenti. Sono stati riallineati l'11
+> agosto sul codice fermo; il prossimo disallineamento nasce dalla prima misura nuova, e si cura
+> **nello stesso momento** (`CODER.md` §5).
 >
 > #### ⚠ E due cose che vanno con lui
 >
@@ -70,18 +175,57 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > |---|---|
 > | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` mediana **2636 ms** su 42 tentativi respinti, dove §4.4-bis vuole ~1000. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
 > | ⚠ **il giro pieno di B8 si pianta al nono blocco su dieci** | resta fermo su qualcosa che nessuno gli dà. Il giro corto (`… 01-b8-lancia.sh 2`) arriva in fondo. ⛔ Va lanciato **staccato** dalla sessione di chi lo comanda, non attraverso di essa |
-> | ⚠ **B6 è giallo per una parola** | i tre tetti scattano a **5,0 · 60,1 · 10,0 s**, ma §4.6 riga 1 fa partire il cronometro dalla **fine del TLS** mentre il codice lo fa partire dall'**apertura del canale di controllo**. ⛔ Nel mezzo c'è un caso vero: chi apre una sessione WebTransport e **non apre mai il canale** non ha nessun tetto addosso e resta lì |
+> | ⭐ **B6 ha chiuso R3.27, e con DUE risposte** | **la prima**: il cronometro parte dall'**apertura del canale di controllo**, non dalla fine del TLS ⇒ **`RCP.md` §4.6 riga 1 è cambiata di una parola**, l'11 agosto 2026. ⛔ **La seconda, e dice che curare la parola non basta**: chi apre una sessione WebTransport e **non apre mai il canale** non ha addosso **nessun tetto** e resta lì — §4.6 non aveva una riga per quello stato, adesso ce l'ha ed è ❓ (`DECISIONI.md` §7.17) |
+| ⚠ **i tre tetti di B6 non hanno un registro** | scattano a **5,0 · 60,1 · 10,0 s** — ⛔ ma **non esiste nessun `.jsonl` di B6**, la scena di quel giro non è dichiarata da nessuna parte, e questi tre numeri **non sono riverificabili**. ⚠ *Stavano qui senza marca, senza data, senza scena e senza dispositivo, mentre `[M]` è definito più sotto come «misurato da noi, sul ferro, **con la data**» — rilievo **R12C.11**. Si rifanno col registro, oppure restano tre numeri di cui si sa solo l'ordine di grandezza.* |
 >
-> ⚠ **E tre decisioni aperte, tutte dell'utente**, in `fasi/rapporti/R11-documenti.md`: la lettura
-> di §4.2 sul FIN · la condizione di §8.1 · e se §7.5 fosse davvero sua (intanto è 🔸).
+> #### ⭐ Le misure della notte del 10 agosto, e dove vivono
+>
+> ⛔ **Gli esiti stanno in `web/rapporti/S-esiti-sonda.md`** — il quinto file di `web/rapporti/`, che
+> non è uno studio: è **l'unico che porta numeri misurati**, con la scena accanto a ciascuno, i
+> registri `.jsonl` e ⛔ **una ricontata dell'11 agosto che dichiara quali numeri hanno una
+> provenienza su disco e quali no** (uno era falso, due erano senza provenienza, uno non era
+> ritrovabile). ⚠ *Fino all'11 agosto quel rapporto non era nominato da **nessuno** dei dieci
+> documenti — rilievo **R12C.15**.*
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **S7 — il segno della rotella: MISURATO** | `[M]` 10 agosto, 20:59 UTC. `+120` di `libei` manda la pagina **verso la fine del documento** ⇒ ⛔ **il server RCP deve invertire l'asse verticale**. Scena per intero: GNOME headless su 192.168.0.2, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**, **Firefox 140.13.0esr** in kiosk; registro `banchi/01-s7-esiti.jsonl`. ⇒ **`RCP.md` §7.3 è chiusa** — ⛔ **su Mutter**: §7.3 vincola cinque desktop, e per gli altri quattro resta `[?]` |
+> | ⛔ **S5 — la tela dichiarata: un DIFETTO DI PRODOTTO** | `[M]` 10 agosto, 23:13-23:14. A zoom 150 % **Chrome 151** dichiara una tela **del 50 % più grande** (1920×1080 → **2880×1620**) perché `screen.width` non cala; **Firefox 140** no. ⇒ la formula di `SPECIFICHE.md` §6.1-bis **non regge su Chrome**, e lì c'era ancora scritto *«va misurato»*. ⚠ La metà su **DeX** manca: il dispositivo non c'era |
+> | ⏳ **S1b — l'orologio dei sette giorni: AVVIATO** | giorno 0 il **10 agosto 21:10:01 UTC**, Chrome **151.0.7922.108**, profilo persistente. Chrome si è segnato la scadenza **2026-08-17T21:09:47.889Z** `[M]`. ⚠ **I «604 800 s esatti» NON reggono** — fra i due numeri pubblicati ci sono **604 786,889 s**, ne mancano **13,111** — e sono tornati `[?]`: l'istante del clic non l'ha registrato nessuno. **Il verdetto è del 17-18 agosto 2026** |
+> | ⛔ **S2 · S3a · S6 — non eseguite** | mancano **il telefono Android**, **il DeX**, **una rete LTE vera**. ⭐ Non sono state dedotte (sarebbe la forma **E5**): i banchi sono pronti e girano il giorno che il ferro c'è |
+>
+> ⚠ **E una scoperta che non è di questa fase**, portata in `PIANO.md` fasi 2 e 6: in una sessione
+> GNOME senza dispositivi di input fisici, un cliente partito **prima** che il puntatore virtuale di
+> `libei` esista **non riceve niente** — né rotella, né bottoni, né il movimento. Mutter l'iniezione
+> la riceve e non la consegna alla finestra.
+>
+> ⚠ **E QUATTRO decisioni aperte, e ciascuna si chiude con una parola**: la lettura di `RCP.md` §4.2
+> sul `FIN` · la condizione di §8.1 · se §7.5 fosse davvero sua (intanto è 🔸) · ⭐ **e da oggi:
+> quanto può restare lì una sessione WebTransport che non apre mai il canale di controllo**.
+> ⛔ **Stanno in `DECISIONI.md` §7.14, §7.15, §7.16 e §7.17** — con le due letture possibili, **il
+> byte che cambia sul filo** fra l'una e l'altra, il caso concreto in cui la differenza si vede e
+> quale sembra più difendibile. ⚠ *Le prime tre erano nominate qui e in
+> `fasi/rapporti/R11-documenti.md` (rilievi R11.22, R11.23, R11.15) e in nessun posto dove si decide:
+> portate dove le decisioni stanno la notte del 10 agosto 2026. La quarta è nata l'11 agosto **da una
+> misura** — B6 — e non da una lettura.* ⛔ **Nessuna delle quattro è decisa, e la marca resta ❓
+> finché l'utente non parla.**
 >
 > ---
 >
 > ### Il passo appena chiuso
 >
 > ⭐⭐ **B3, B5 e adesso B11 sono chiusi. Tredici casi su tredici su TUTT'E DUE i motori** —
-> Firefox 140 e Chrome 151 — più le due proprietà negative, più il controllo che dice di no, e
-> ⛔ **il secondo testimone verde**. *(10 agosto 2026, sera, e ripetuto)*
+> Firefox 140 e Chrome 151 — più le due proprietà negative, e ⛔ **il secondo testimone verde**.
+> *(10 agosto 2026, sera, e ripetuto)*
+>
+> ⚠ **E il controllo che dice di *no* gira su UN MOTORE SOLO — Firefox** *(rilievo **R11.24**,
+> chiuso così la notte del 10 agosto: il banco lo dichiarava di suo, questa pagina no)*. È
+> `01-b11-lancia.sh`: la pagina contro un server **sano** deve dire NON-CONFORME, e dice
+> NON-CONFORME con **9 casi su 13** falliti. ⛔ **La riga qui sopra lo elencava dentro «su tutt'e
+> due i motori»**, che è la lettura naturale e non era vera. ⚠ E la differenza morde proprio qui:
+> i tre casi rossi di stasera **vivevano nella differenza fra i due motori**, cioè nel punto in cui
+> *«per dire di no un motore basta»* è la premessa appena smentita. Si chiude del tutto
+> eseguendolo anche su Chrome.
 >
 > ⭐ **B11 ha trovato sei difetti veri, e nessuno era visibile al cliente di prova**:
 >
@@ -159,6 +303,20 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ### Come si rimette in piedi il banco
 >
+> ⚠ *Questa sezione elencava **soltanto** i banchi di B2, mentre la stessa pagina dichiara chiusi
+> B3, B4, B5 e B11 — rilievo **R11.21**, chiuso la notte del 10 agosto 2026. ⛔ Un banco che non è
+> nominato dove si dice come rimettere in piedi i banchi ha lo stesso destino di uno che ha bisogno
+> di una mano: **non si può rifare uguale**, e rifarlo uguale è l'unico modo di sapere se una misura
+> è cambiata perché è cambiato il server.*
+> ⚠ *L'elenco era della sera del 10 agosto 2026 e diceva:* «i banchi che nascono dopo — **B9, B12,
+> B13, C2** — li aggiunge qui chi li scrive». *⛔ Sono nati fra le 22:54 e le 23:20 di quella notte e
+> nessuno li ha aggiunti — e con loro mancavano i file di **B6, B7, B8 e B11**, che questa stessa
+> pagina dà per chiusi o eseguiti, e le **sette pagine della sonda**. Completato l'11 agosto 2026,
+> rilievo **R12C.13**: **R11.21 era stato chiuso la stessa notte in cui se ne apriva una versione due
+> volte più grande.***
+>
+> **B2 — la libreria QUIC e il modello di fiducia** *(dal server, salvo dove detto)*:
+>
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
 > `01-b2-sni-ngtcp2.sh` (costruisce `bsslserver`) · `01-b2-sni-quiche.sh` (`leggi`, poi
 > `costruisci`) · `01-b2-lancia-sni.sh` (**la prova SNI sui tre bersagli**: `costruisci`, poi
@@ -168,11 +326,63 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > lancia da QUI, non dal server: i browser stanno da questa parte** · `01-b2-certificati.sh` (⚠ **rigenera l'impronta**: va rimessa nella
 > pagina) · `01-b2-controllo-aioquic.py` (il controllo positivo) · `01-b2-cliente-aioquic.py` ·
 > `01-b2-raccogli.py` + `01-b2-sonda.html` (la pagina, da `localhost`).
+> **Il filo — i banchi che hanno chiuso qualcosa:**
+>
+> ⭐ `01-b3-rcp-innesta.py` (**RCP sopra lo strato WebTransport di B2**; `--togli` fa una rimozione
+> **parziale** e la dichiara a schermo) · `01-b3-lancia.sh` (**B3**, dal server: i primi tre giri,
+> con `01-b3-terzo-giro.sh` che gira **dentro** il contenitore) · `01-b3-quarto-giro.sh`
+> (l'orologio del silenzio, 35 s a `max_idle_timeout` 120) · ⚠ `01-b3-quinto-giro.sh` (**il
+> certificato ruotato: si lancia da QUI, non dal server — i browser stanno da questa parte**) ·
+> `01-b3-cliente.py` (**il secondo lettore di `RCP.md`**, e il registratore di §11.1) ·
+> `01-b4-lancia.py` + `01-b4-validatore.py` + `01-b4-registrazioni.py` (**B4**: il validatore
+> contro registrazioni **rigenerate adesso**) · `01-b5-lancia.sh` + `01-b5-violazioni.py` (**B5**,
+> dal server: le violazioni verso il server) · `01-b6-lancia.sh` + `01-b6-tetti.py` (**B6**, i tre
+> tetti) · `01-b7-lancia.sh` + `01-b7-congedo.py` (**B7**, il congedo **dal lato che riceve**) ·
+> `01-b8-lancia.sh` + `01-b8-cronometro.py` (**B8**, il secondo fisso e il ban — ⛔ **si riscrive**,
+> vedi sopra) · ⚠ `01-b11-lancia.sh` (**B11: da QUI**, coi due browser) + `01-b11-pagina.html` +
+> `01-b11-guasto.sh` e `01-b11-guasto-innesta.py` (**il server guasto di proposito**, e
+> `ricostruisci()` che rimette quello sano con i due `--togli` nell'ordine).
+>
+> **E quelli nati la notte del 10 agosto 2026:**
+>
+> ⭐ `01-b9-letture.py` (**B9**, il secondo lettore contro l'arbitro: **dodici** punti in cui
+> `RCP.md` ammette due letture, ciascuno **coi byte che cambiano sul filo**) ·
+> `01-b12-guasti.py` + `01-b12-lancia.sh` + `01-b12-copie/` (**B12**, la certificazione — un guasto
+> per banco, e il registro `01-b12-registro.jsonl` con la data e le impronte) ·
+> `01-b13-lancia.sh` + `01-b13-proprieta.py` (**B13**, le sei proprietà) ·
+> `01-c2-lancia.sh` + `01-c2-diagnosi.py` (**C2**, le tre diagnosi del collegamento guasto) ·
+> ⭐ `01-b8-sblocca.py` (⛔ **non è un pezzo di B8**: è **lo strumento della regola B0.3**, e parla il
+> socket di comando di `RCP.md` §4.4-bis con `SBLOCCA` e `PING`) · `01-b8-prova-ban.c`.
+>
+> **E la sonda del browser** — ⚠ **queste girano da QUI o dal server secondo la riga, e la riga lo
+> dice**:
+>
+> ⏳ `01-s1b-eccezione.sh` + `01-s1b-pagina.html` + `01-s1b-sito.sh` + `01-s1b-servi.py` (**S1b**,
+> l'orologio dei sette giorni — ⛔ **`bash banchi/01-s1b-eccezione.sh oggi` una volta al giorno fino
+> al 18 agosto**, e ⛔ **non si rigenera `/media/REMOTIX/s1b-certificato/` né si cancella
+> `~/.remotix-s1b/`**, o l'orologio riparte da capo senza che nessuno se ne accorga per una
+> settimana) · `01-s5-tela.sh` + `01-s5-pagina.html` + `01-s5-raccogli.py` (**S5**) ·
+> `01-s7-rotella.sh` + `01-s7-rotella.c` + `01-s7-pagina.html` + `01-s7-raccogli.py` (**S7** — ⚠ e si
+> chiude con `--pulisci`, o il drop-in resta e **il giro dopo non sa che era nostro**) ·
+> `01-s2-pagina.html` · `01-s3a-pagina.html` · `01-s6-pagina.html` · `01-s-telefono.sh` (le tre che
+> aspettano un dispositivo).
+>
 > ⚠ Tutto sotto `/media/REMOTIX` sopravvive al riavvio; il rootfs del server no —
 > ⛔ **e per questo i server dei banchi sopravvivono anche loro**: il 10 agosto due di essi tenevano
 > le porte otto ore dopo. Il banco adesso lo controlla prima di partire.
+> ⛔ **E dal 10 agosto sopravvive anche il ban di `RCP.md` §4.4-bis, che sta su file**: fra un banco
+> e l'altro si chiama il comando di sblocco, **mai dentro il giro di B8** (`fasi/01-filo-nudo.md`,
+> regola B0.3).
 >
-> ### ⛔ Quindici trappole in due giorni, tutte nel banco e nessuna nel prodotto
+> ### ⛔ Tredici trappole in due giorni, e due rifatte il giorno dopo — quindici occorrenze
+>
+> ⚠ *E il denominatore è dichiarato, perché prima non lo era: si contano **le voci elencate qui
+> sotto**, e le due marcate «rifatto» contano **due volte** perché sono state pagate due volte.
+> Il titolo diceva «**Quindici** trappole» su **undici** voci, e prima ancora «Dieci trappole in due
+> sere» su otto: il conto non tornava nemmeno allora — rilievo **R11.20**, chiuso la notte del 10
+> agosto 2026 dichiarando che cosa si conta e aggiungendo le **due** che mancavano.* ⛔ *«Un
+> conteggio senza denominatore non è una misura: è una speranza con un numero davanti»*
+> (`LEZIONI.md` §1.9 punto 4) — e qui il numero riassume **quanto lavoro di banco è stato buttato**.
 >
 > `grep -q` con `pipefail` · `| tail` che mangia lo stato d'uscita **(rifatto il giorno dopo)** ·
 > due percorsi passati come una stringa, con `2>/dev/null` a nascondere l'errore — **e quello ha
@@ -180,7 +390,9 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > tenute da server di ieri · `>/dev/null` che inghiotte la **richiesta di password** · `setsid` che
 > forca e falsa il PID · `kill -0` che confonde *proibito* con *morto* · un'impronta tagliata di
 > **una lettera**, che avrebbe bocciato una candidata · una cartella di profilo mancante, e nessuno
-> dei due lati che lo dicesse · ⛔ **e il buffer di Python, che ha fatto accusare al banco un server
+> dei due lati che lo dicesse · ⛔ **il registro tagliato a `tail -60`** e ⛔ **il caso
+> `respinto-poi-congedo` che faceva correre** la chiusura contro la risposta della pagina — *le due
+> di B11, raccontate per esteso qui sopra, tutt'e due sui **denominatori*** · ⛔ **e il buffer di Python, che ha fatto accusare al banco un server
 > innocente**.
 >
 > ⛔ **Quest'ultima è la settima veste, ed è la peggiore**: non un falso rosso, ma **un rosso
@@ -219,7 +431,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | **la sicurezza è a due livelli** | TLS per il trasporto, indirizzo/porta/utente/password per l'accesso — §1.7 |
 > | **la seconda connessione remota si rifiuta** | `RCP.md` §8.2, motivo `0x0F` |
 > | 📖 **il sesto studio** | [`web.md`](web.md), con quattro rapporti in `web/rapporti/` |
-> | ⛔ **due revisioni avversariali** | **51 contraddizioni** trovate e curate **prima del primo byte**: i verdetti sono `web/rapporti/R1-` e `R2-` |
+> | ⛔ **due revisioni avversariali** | **46 rilievi numerati** — **29** in `web/rapporti/R1-revisione-rcp.md` e **17** in `R2-revisione-web.md` — **più le 12 omissioni** `O1`-`O12` di `R2` §2, e tutti **prima del primo byte**. ⚠ *Diceva «**51** contraddizioni», e quel numero non si ritrova con nessun criterio scritto: 29 + 17 = 46, e nessuna somma dichiarata da nessuna parte dà 51 (rilievo **R11.20**, chiuso la notte del 10 agosto 2026 **dichiarando che cosa si conta**). Le omissioni si contano a parte perché non sono contraddizioni: sono righe che **non c'erano**, e per definizione nessun controllo delle citazioni le trova* |
 >
 > ### Il prossimo passo
 >
@@ -281,6 +493,12 @@ domande di `LEZIONI.md` §3.
 con i quattro rapporti di dettaglio in `web/rapporti/`. ⚠ **È quello che invecchia più in fretta**:
 i compositori li congela Debian, i browser si aggiornano da soli.
 
+⛔ **E accanto ai quattro, un quinto file che non è uno studio**:
+[`web/rapporti/S-esiti-sonda.md`](web/rapporti/S-esiti-sonda.md) — **gli esiti misurati** della sonda
+del browser (S7 · S1b · S5 · e le tre che aspettano un dispositivo), con la scena accanto a ogni
+numero e la ricontata che dice quali numeri hanno una provenienza su disco. ⚠ *I «quattro rapporti»
+qui sopra restano quattro: sono i rapporti degli **studi**, ed è un denominatore dichiarato.*
+
 ⚠ **`gnome-remote-desktop.md` non è uno di questi** *(chiarito il 9 agosto 2026)*. Studia **il
 server RDP di GNOME**, cioè un concorrente sul filo che abbiamo buttato — non il desktop. Con RDP
 morto decade quasi per intero, ed è scritto su una versione che Trixie non ha (51.alpha contro
@@ -290,9 +508,16 @@ morto decade quasi per intero, ed è scritto su una versione che Trixie non ha (
 
 ## Le cartelle
 
+⚠ *Questa tabella elencava **tre** voci — `fasi/`, `v1/`, `reference-*/` — e non aveva né `src/` né
+`banchi/` né `web/`: **la cartella che contiene il prodotto non compariva nella tabella che dice che
+cosa contengono le cartelle**. Completata l'11 agosto 2026, rilievo **R12C.1**.*
+
 | | |
 |---|---|
-| `fasi/` | un documento per fase, **aperto quando la fase si apre** — vedi `PIANO.md` §0.2 |
+| ⭐⭐ `src/` | **il prodotto**: il server della fase 1 in C — **22 file, 9.647 righe** `[M]` 11 ago 2026. RCP/1 su WebTransport, i due certificati, la pagina servita dal server, il ban e il suo comando di sblocco. ⛔ **Non è in git**, e nessun banco lo accende ancora |
+| ⭐ `banchi/` | **i banchi della fase 1** e la sonda del browser, più `banchi/rcp/` — la copia **gemella** di `rcp.c`/`rcp.h`/`autenticazione.c`, oggi identica a quella di `src/` byte per byte. ⚠ Qui il bersaglio è **l'innesto** dentro `bsslserver`, non `src/` |
+| `web/rapporti/` | i quattro rapporti dello studio del browser, ⭐ **più `S-esiti-sonda.md`**, che è l'unico posto dove vivono i numeri **misurati** della sonda |
+| `fasi/` | un documento per fase, **aperto quando la fase si apre** — vedi `PIANO.md` §0.2. In `fasi/rapporti/` i verdetti delle revisioni avversariali: ⛔ **portano la loro data e non si riscrivono**, e quando uno è superato lo si dice **altrove**, con la data |
 | `v1/` | l'eredità di REMOTIX v1: **17.481 righe di C**, 4.563 di banchi, i documenti e le scene di taratura |
 | `reference-*/` | cloni dei progetti di riferimento — **non versionati**, si rifanno con `git clone` |
 

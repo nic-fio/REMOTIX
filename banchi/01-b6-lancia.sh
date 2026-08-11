@@ -87,11 +87,33 @@
 #    ⚠ `rcp_azzera_registro_sessioni()` esiste in `rcp.c` **ma non ha nessun
 #      chiamante innestato**: da fuori non si puo' chiamare, e chi legge la
 #      riga in `rcp.h` crede che il banco la usi.  Non la usa: riaccende;
-#  · l'indirizzo di provenienza e' lo stesso di tutti gli altri banchi, e i
-#    contatori di §4.4-bis sono **per nome e per indirizzo** (B0.3).  Il primo
-#    controllo di `01-b6-tetti.py` e' una stretta di mano intera: se torna
-#    `TROPPI_TENTATIVI`, il banco **si ferma con l'uscita 5** e dice che e' la
-#    finestra di un altro banco, invece di dare rosso ai tetti.
+#  · l'indirizzo di provenienza e' lo stesso di tutti gli altri banchi, e dal
+#    10 agosto 2026 il conto di §4.4-bis e' **uno solo, sul solo indirizzo**, e
+#    porta a un **ban di dodici ore** (B0.3).  ⚠ La riga vecchia diceva «per
+#    nome e per indirizzo», ed era la forma precedente.  Il primo controllo di
+#    `01-b6-tetti.py` e' una stretta di mano intera: se torna
+#    `TROPPI_TENTATIVI`, il banco **si ferma con l'uscita 5** e dice che il ban
+#    e' di un altro banco, invece di dare rosso ai tetti.
+#
+# ⭐ E LA DICHIARAZIONE CHE B0.3 PRETENDE, PERCHE' «non e' scattato» E
+#    «qualcuno l'ha tolto» HANNO LO STESSO ASPETTO:
+#
+#      ⛔ **B6 non chiama il comando di sblocco, e dice perche'.**  Il comando
+#         esiste — `01-b8-sblocca.py`, che parla al server su una presa di
+#         comando (`--comando-socket`) — ma vuole un server **acceso con quella
+#         opzione**, e B6 accende il proprio senza.  ⭐ La cura che B6 usa e'
+#         piu' forte: **riaccende il server a ogni fase**, e il conto di
+#         §4.4-bis vive nel processo, quindi riparte da zero.
+#         ⚠ *Fino a stasera questa riga diceva che il comando «non esiste».
+#         Era vero quando e' stata scritta e ha smesso di esserlo nel giro
+#         di un'ora: e' la forma **E5**, un fatto che era una deduzione mai
+#         riverificata.*
+#
+#      ⭐ **E B6 non fallisce mai un'autenticazione**: tutti i suoi casi usano
+#         le credenziali buone, o si fermano prima di `CREDENZIALI`.  Quindi
+#         **non consuma il conto** e non lascia un ban addosso ai banchi che
+#         vengono dopo.  E' l'unico modo che questo banco ha di rispettare
+#         B0.3 senza una cura che non esiste.
 #
 # ---------------------------------------------------------------------------
 # ⛔ NESSUNA REDIREZIONE ATTORNO A `enter.sh`
@@ -135,6 +157,58 @@ esac
 log "Credenziali per il contenitore"
 bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
 ok "sudo validato"
+
+# ---------------------------------------------------------------------------
+# ⛔ LA SENTINELLA: «vuoto» non e' «zero» — rilievi R12-A.7 e R12-A.23, e la
+#    cura era gia' scritta nella stessa cartella, in `01-b11-guasto.sh:92-129`.
+#
+# `CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")` diceva «porta
+# libera» in tre casi opposti: la porta e' davvero libera · `ss` non c'e' nel
+# contenitore · `enter.sh` non ha eseguito il comando.  ⛔ E qui l'aggravante
+# era che quella lettura avveniva **una volta sola, all'inizio**: B6 era
+# l'unico dei quattro banchi a non ricontrollare la porta fra le due fasi.
+#
+# ⭐ Il comando remoto stampa da se' il proprio stato d'uscita, e in piu' c'e'
+#    il controllo positivo dello strumento: `ss` stampa sempre almeno la
+#    propria intestazione, e se non stampa niente non ha guardato niente.
+# ⚠ La sostituzione di comando e' lecita da qui in poi e non prima: la riga
+#   `--root "true"` qui sopra e' quella che si prende la richiesta di password.
+#   Il divieto in cima a questo file riguarda le REDIREZIONI attorno a
+#   `enter.sh`, che si porterebbero via quella domanda.
+USCITA=""
+dentro() # $1 = comando remoto.  Uscita in $USCITA, stato = quello del comando
+{
+	local tutto stato
+	tutto=$(bash "$ENTRA" --root "$1"'; printf "\nB6-FINE=%s\n" $?')
+	stato=$(printf '%s\n' "$tutto" | sed -n 's/^B6-FINE=\([0-9][0-9]*\)$/\1/p' | tail -1)
+	USCITA=$(printf '%s\n' "$tutto" | grep -v '^B6-FINE=')
+	if [ -z "$stato" ]; then
+		return 125   # non e' arrivato in fondo: non e' uno zero
+	fi
+	return "$stato"
+}
+
+# Chi tiene la porta UDP.  0 = occupata (le righe in $CHI) · 1 = libera ·
+# 2 = non si sa, e ⛔ «non si sa» non si arrotonda a «libera».
+CHI=""
+chi_tiene_la_porta()
+{
+	local st
+	dentro "ss -ulnp"
+	st=$?
+	if [ "$st" -ne 0 ]; then
+		ko "⛔ «ss -ulnp» non ha risposto dentro il contenitore (uscita $st):"
+		printf '%s\n' "$USCITA" | tail -5 | sed 's/^/        /'
+		return 2
+	fi
+	if [ -z "$USCITA" ]; then
+		ko "⛔ «ss -ulnp» non ha stampato NIENTE, nemmeno l'intestazione:"
+		ko "   lo strumento e' muto, e il suo silenzio non e' una porta libera"
+		return 2
+	fi
+	CHI=$(printf '%s\n' "$USCITA" | grep ":$PORTA ")
+	[ -n "$CHI" ]
+}
 
 if [ "$AZIONE" = elenco ]; then
 	bash "$ENTRA" --root "python3 $DENTRO/01-b6-tetti.py --elenco"
@@ -249,14 +323,18 @@ ok "compilato"
 
 # ---------------------------------------------------------------------------
 log "3. La porta"
-CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")
-if [ -n "$CHI" ]; then
-	ko "la porta $PORTA e' gia' occupata:"
+chi_tiene_la_porta
+case $? in
+0)	ko "la porta $PORTA e' gia' occupata:"
 	printf '%s\n' "$CHI" | sed 's/^/        /'
 	ko "fermalo per PID (mai con pkill -f) e rilancia"
-	exit 3
-fi
-ok "porta $PORTA libera"
+	exit 3 ;;
+1)	ok "porta $PORTA libera (e «ss» ha parlato: non e' un silenzio)" ;;
+*)	ko "⛔ non si e' potuto sapere chi tiene la porta $PORTA:"
+	ko "   e «non si sa» non si arrotonda a «libera» — i tre tetti"
+	ko "   verrebbero misurati contro il server di un altro banco (B0.1)"
+	exit 3 ;;
+esac
 
 # ---------------------------------------------------------------------------
 PID=""
@@ -281,11 +359,50 @@ accendi() # $1 = tetto d'inattivita' in ms, $2 = etichetta
 	return 0
 }
 
+# ⛔ SPEGNERE NON E' MANDARE UN `kill` — rilievo R12-A.24.
+#
+#    `spegni()` mandava il segnale e azzerava `PID` **subito**; `fase ping`
+#    chiamava `accendi` pochi millisecondi dopo, sulla stessa porta.  Il
+#    sintomo sarebbe stato «il server non e' partito» all'inizio della fase
+#    `ping`, cioe' un'uscita 4 — «lo strumento non e' certificato» — su un
+#    server sano: il rosso puntato sull'imputato sbagliato.
+#
+# ⭐ La cura era gia' scritta, la stessa notte, in `01-c2-lancia.sh:139-155`, e
+#    perfino il perche': *«fra la morte del processo e il rilascio della porta
+#    passa un istante che, se non si aspetta, fa misurare alla scena 1 una
+#    porta ancora tenuta»*.  Due mani sullo stesso problema; qui si prende la
+#    piu' forte.
+# ⛔ `/proc`, non `kill -0`: su un processo di root `kill -0` da utente normale
+#    dice «proibito», che non e' «morto».
 spegni()
 {
+	local giri=0
 	[ -n "$PID" ] || return 0
 	bash "$ENTRA" --root "kill $PID 2>/dev/null || true"
+	while [ -d "/proc/$PID" ] && [ "$giri" -lt 20 ]; do
+		sleep 0.5
+		giri=$((giri + 1))
+	done
+	if [ -d "/proc/$PID" ]; then
+		ko "⛔ il processo $PID e' ancora vivo dopo 10 s: la fase successiva"
+		ko "   troverebbe la porta $PORTA tenuta e darebbe la colpa a se stessa"
+		PID=""
+		return 1
+	fi
+	inf "il processo $PID e' sparito (dopo $giri mezzi secondi)"
 	PID=""
+	# ⛔ E POI LA PORTA, che e' una cosa diversa dal processo: la si chiede al
+	#    sistema, e «non si sa» non si arrotonda a «libera».
+	chi_tiene_la_porta
+	case $? in
+	0)	ko "⛔ la porta $PORTA e' ancora tenuta dopo lo spegnimento:"
+		printf '%s\n' "$CHI" | sed 's/^/        /'
+		return 1 ;;
+	1)	inf "la porta $PORTA e' libera di nuovo" ; return 0 ;;
+	*)	ko "⛔ non si e' potuto sapere se la porta $PORTA si e' liberata:"
+		ko "   la fase successiva partirebbe da uno stato non verificato"
+		return 1 ;;
+	esac
 }
 
 # ⛔ IL TETTO SI MISURA, NON SI DA' PER MESSO — rilievo R8.3.
@@ -375,7 +492,14 @@ fase() # $1 = nome (sani|ping), $2 = tetto del trasporto in ms
 		inf "   (volume non mappato? server mai partito? nome cambiato?)"
 	fi
 
-	spegni
+	# ⛔ E LO SPEGNIMENTO ENTRA NELL'ESITO — rilievo R12-A.24.  Se il server
+	#    non e' morto o la porta non si e' liberata, la fase successiva
+	#    misurerebbe uno stato che nessuno ha verificato, e il suo rosso non
+	#    sarebbe dei tetti.
+	if ! spegni; then
+		ko "⛔ la fase «$nome» non ha lasciato la macchina come l'ha trovata"
+		if [ "$e" -eq 0 ]; then e=5; fi
+	fi
 	FATTE="$FATTE $nome"
 	# ⛔ Tre esiti diversi dal banco, e si conservano: 1 = il server sbaglia,
 	#    3 = il server fa quel che il CODICE dice ma il DOCUMENTO dice
@@ -420,8 +544,18 @@ case "$ESITO" in
 	;;
 5)
 	ko "⛔ B6: lo stato iniziale non era quello che serve (B0.1/B0.3), oppure"
-	ko "   il tetto del trasporto sul filo non e' quello chiesto (R8.3)."
+	ko "   il tetto del trasporto sul filo non e' quello chiesto (R8.3),"
+	ko "   oppure lo spegnimento non e' stato verificato (R12-A.24)."
 	ko "   Non e' un rosso dei tetti."
+	;;
+6)
+	# ⛔ IL QUARTO ESITO, E NON E' ZELO — rilievo R12-A.25.  Un caso che il
+	#    banco non ha saputo classificare finiva fra le prove che il DOCUMENTO
+	#    sbaglia, e usciva 3: la cura veniva mandata in `RCP.md` per un
+	#    sintomo che poteva essere del server.
+	ko "⛔ B6: un caso ha prodotto un esito che il banco NON SA CLASSIFICARE."
+	ko "   Non e' «il server sbaglia» e non e' «il documento sbaglia»: e' una"
+	ko "   misura da rifare, e la R3.27 resta aperta."
 	;;
 *)
 	ko "⛔ B6: qualcosa non passa"

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S2 — HEVC Main10 in hardware, sul telefono vero</title>
+<!--
+  ============================================================================
+  ⛔ QUESTA PAGINA NON DEVE DIRE «HARDWARE» O «SOFTWARE».
+
+  S2 §4 lo mette in cima: *«Il banco non deve dire «hardware» o «software».
+  Deve produrre NUMERI, e dichiarare la propria sensibilita' PRIMA di dare un
+  verdetto.  Un banco che non ha dimostrato di saper riconoscere un
+  decodificatore software non ha il diritto di dichiarare «hardware».»*
+
+  Quindi qui il verdetto su HEVC **resta chiuso a chiave** finche' i due
+  controlli non sono passati:
+
+      A — VP9 con `prefer-software` DEVE risultare software
+      B — VP9 con `prefer-hardware` DEVE risultare hardware
+
+  Finche' A e B non dicono quel che devono dire, il campo del verdetto dice
+  «BANCO NON VALIDO» — non «hardware», non «software», non «probabilmente».
+
+  ============================================================================
+  ⛔ L'ATTESO DI S2 E' `[?]`, NON «SI' DA CHROME 108».
+
+  Quel `[S]` riguarda il **supporto in WebCodecs**, non l'hardware.  Scriverlo
+  come atteso di una misura di hardware mette la forma d'errore E1 nella
+  casella dell'aspettativa, e le prove indirette si leggono con indulgenza
+  quando l'atteso e' gia' scritto (rilievi R3.13, R4.13).
+
+  E il rapporto S2 §4.3 elenca per esteso **come apparirebbe un decodificatore
+  software che finge bene**: `isConfigSupported` → `true`, `configure`
+  `prefer-hardware` → riesce, `powerEfficient` → `true`, fotogrammi corretti,
+  latenza accettabile a 1080p.  ⛔ Cinque «si'» di fila, tutti da un
+  `c2.android.hevc.decoder` in puro software.  Le uniche tre prove che dicono
+  «no» sono le ultime: portata al carico bersaglio, canarina di CPU, e tenuta
+  su dieci minuti.  Per questo questa pagina gira **a 4K60 Main10 e per
+  minuti**, e non si accontenta di aprire un decodificatore.
+
+  ============================================================================
+  CHE COSA C'E' QUI DENTRO E CHE COSA MANCA
+
+  ✅ **La sequenza D (VP9 1080p60) la costruisce la pagina stessa**, con
+     `VideoEncoder`.  ⭐ Non e' un ripiego: significa che **i due controlli
+     che rendono valido il banco non dipendono dalla fase 2**, e si possono
+     eseguire il giorno stesso in cui il telefono arriva.
+
+  ⛔ **Le sequenze HEVC (A, B, C, E) NON ci sono**, e non si inventano: S2
+     §4.1 le vuole prodotte dal **nostro** `hevc_vaapi`, in Annex-B con
+     VPS/SPS/PPS ripetuti a ogni IDR — cioe' dal codificatore della fase 2.
+     Vanno messe in `sequenze/` accanto a questa pagina come file `.json`
+     (vedi `CARICA_SEQUENZE` piu' sotto).  Finche' non ci sono, la pagina lo
+     **dichiara** e non misura HEVC.  ⛔ Un banco che al posto della sequenza
+     bersaglio ne usa una piu' facile non misura «un po' meno»: misura
+     un'altra cosa.
+
+  ⛔ **Il controllo C non e' in JavaScript e non puo' esserlo**: e'
+     `is_software_codec` letto da `chrome://media-internals` via
+     `chrome://inspect` da un PC collegato.  La procedura sta in
+     `01-s2-decodifica.sh`.  Il browser sa e non risponde da JavaScript
+     (`web.md` §9.2): il banco pero' non e' JavaScript, il banco e' chi guarda.
+  ============================================================================
+-->
+<style>
+  body { margin: 0; padding: 1rem; background: #0d0d12; color: #e8e8f0;
+         font: 15px/1.5 ui-monospace, monospace; }
+  h2 { margin: 1.2rem 0 0.4rem; color: #9fe; font-size: 1rem; }
+  button { font: inherit; padding: 0.6rem 1rem; margin: 0.2rem 0.4rem 0.2rem 0;
+           background: #23233a; color: #e8e8f0; border: 1px solid #55557a;
+           border-radius: 6px; }
+  #registro { white-space: pre-wrap; background: #07070b; padding: 0.6rem;
+              border: 1px solid #333; max-height: 60vh; overflow: auto; }
+  .no { color: #f77; } .si { color: #7f7; } .boh { color: #fd7; }
+</style>
+</head>
+<body>
+<h1>S2 — la decodifica, misurata</h1>
+<p>
+  <button id="controlli">1. I due controlli (A e B) — obbligatori</button>
+  <button id="hevc">2. HEVC Main10, se le sequenze ci sono</button>
+  <button id="decadimento">3. Il decadimento su dieci minuti</button>
+  <button id="segnali">4. Che cosa avrebbe detto l'API</button>
+</p>
+<h2>Registro</h2>
+<div id="registro"></div>
+<script>
+"use strict";
+
+const GIRO = new URLSearchParams(location.search).get("giro")
+           || "s2-" + Math.random().toString(36).slice(2, 10);
+const SOGLIA_HW = 90, SOGLIA_SW = 30;       // fps, S2 §4.2 misura 1
+const CANARINA_HW = 0.85, CANARINA_SW = 0.4; // S2 §4.2 misura 2
+let numero = 0;
+
+function scrivi(testo, classe) {
+  const r = document.getElementById("registro");
+  r.innerHTML += `<div class="${classe || ""}">${testo}</div>`;
+  r.scrollTop = r.scrollHeight;
+}
+
+function spedisci(dati) {
+  dati.n = ++numero;
+  dati.giro = GIRO;
+  // ⛔ B0.6: la versione esatta viaggia con OGNI riga, non una volta sola.
+  dati.motore = navigator.userAgent;
+  dati.nuclei = navigator.hardwareConcurrency;
+  try {
+    navigator.sendBeacon("/esito", new Blob([JSON.stringify(dati)],
+                                            {type: "application/json"}));
+  } catch (e) { /* la pagina resta usabile anche senza raccoglitore */ }
+}
+
+// ===========================================================================
+// LA CANARINA DI CPU — S2 §4.2 misura 2
+//
+// Un worker che conta iterazioni per 100 ms.  Si misura a riposo (I0) e
+// durante la decodifica (I1), e si riporta I1/I0.
+//
+// ⛔ Vive in un worker SUO, e la decodifica in un altro: se girassero insieme
+//    al thread principale, la canarina misurerebbe anche il tempo che il
+//    thread principale spende a disegnare, che non e' quel che si vuole
+//    sapere.
+// ===========================================================================
+const SORGENTE_CANARINA = `
+onmessage = (e) => {
+  const fine = performance.now() + e.data.ms;
+  let n = 0, x = 1;
+  while (performance.now() < fine) {
+    for (let i = 0; i < 1000; i++) { x = (x * 1103515245 + 12345) % 2147483648; }
+    n++;
+  }
+  postMessage({iterazioni: n, x: x});
+};`;
+
+function canarina(ms) {
+  return new Promise((risolvi) => {
+    const w = new Worker(URL.createObjectURL(
+        new Blob([SORGENTE_CANARINA], {type: "text/javascript"})));
+    w.onmessage = (e) => { w.terminate(); risolvi(e.data.iterazioni); };
+    w.postMessage({ms: ms});
+  });
+}
+
+// ===========================================================================
+// LA SEQUENZA D — VP9 1080p60, costruita qui.
+//
+// ⭐ E' il controllo positivo del banco (S2 §4.4 A e B), e il rapporto lo
+//    vuole «sullo stesso telefono, nella stessa pagina, con lo stesso codice
+//    di misura».  Costruirla qui e' l'unico modo di averlo senza la fase 2.
+//
+// ⚠ Il contenuto e' rumore che si muove: un video statico si comprime a
+//   niente e la decodifica non costerebbe nulla — cioe' misurerebbe il vuoto.
+// ===========================================================================
+async function costruisciVP9(larghezza, altezza, quanti) {
+  const tela = new OffscreenCanvas(larghezza, altezza);
+  const ctx = tela.getContext("2d");
+  const pezzi = [];
+  let errore = null;
+
+  const codificatore = new VideoEncoder({
+    output: (chunk) => {
+      const dati = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(dati);
+      pezzi.push({tipo: chunk.type, istante: chunk.timestamp, dati: dati});
+    },
+    error: (e) => { errore = e; }
+  });
+  codificatore.configure({
+    codec: "vp09.00.10.08", width: larghezza, height: altezza,
+    bitrate: 8_000_000, framerate: 60
+  });
+
+  const immagine = ctx.createImageData(larghezza, altezza);
+  for (let f = 0; f < quanti; f++) {
+    // Rumore che cambia a ogni fotogramma: costa davvero, come il video vero.
+    for (let i = 0; i < immagine.data.length; i += 4) {
+      const v = (i * 7 + f * 131) & 0xff;
+      immagine.data[i] = v;
+      immagine.data[i + 1] = (v * 3) & 0xff;
+      immagine.data[i + 2] = (v * 5 + f) & 0xff;
+      immagine.data[i + 3] = 255;
+    }
+    ctx.putImageData(immagine, 0, 0);
+    const fotogramma = new VideoFrame(tela, {timestamp: Math.round(f * 1e6 / 60)});
+    codificatore.encode(fotogramma, {keyFrame: f % 300 === 0});
+    fotogramma.close();          // ⛔ sempre, S2 §3.8
+    if (f % 30 === 0) await new Promise((r) => setTimeout(r, 0));
+  }
+  await codificatore.flush();
+  codificatore.close();
+  if (errore) throw errore;
+  return pezzi;
+}
+
+// ===========================================================================
+// LA PORTATA A SATURAZIONE — S2 §4.2 misura 1
+//
+// Si accoda senza aspettare finche' `decodeQueueSize < 8`, si contano i
+// fotogrammi in uscita al secondo a regime, e ⛔ **si chiude ogni fotogramma
+// subito** (`frame.close()`): non chiuderli e' la perdita di memoria di
+// `VTDecoderXPCService` (S2 §3.8), e su un telefono e' il modo di far cadere
+// la misura a meta'.
+// ===========================================================================
+async function portata(pezzi, config, secondiMax) {
+  let usciti = 0, errore = null, formato = null, misure = null;
+  const decodificatore = new VideoDecoder({
+    output: (f) => {
+      usciti++;
+      if (formato === null) {
+        formato = f.format;
+        misure = f.codedWidth + "x" + f.codedHeight;
+      }
+      f.close();
+    },
+    error: (e) => { errore = e; }
+  });
+  let supporto = null;
+  try {
+    supporto = await VideoDecoder.isConfigSupported(config);
+  } catch (e) { supporto = {supported: false, errore: String(e)} }
+  decodificatore.configure(config);
+
+  const inizio = performance.now();
+  const fine = inizio + secondiMax * 1000;
+  let i = 0;
+  while (performance.now() < fine && !errore) {
+    while (decodificatore.decodeQueueSize < 8 && performance.now() < fine) {
+      const p = pezzi[i % pezzi.length];
+      decodificatore.decode(new EncodedVideoChunk(
+          {type: i % pezzi.length === 0 ? "key" : p.tipo,
+           timestamp: i * Math.round(1e6 / 60), data: p.dati}));
+      i++;
+    }
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  const durata = (performance.now() - inizio) / 1000;
+  try { await decodificatore.flush(); } catch (e) { /* atteso se e' caduto */ }
+  try { decodificatore.close(); } catch (e) { /* idem */ }
+  return {
+    fps: usciti / durata, usciti: usciti, secondi: durata,
+    formato: formato, misure: misure,
+    supportato: supporto && supporto.supported,
+    errore: errore ? String(errore) : null
+  };
+}
+
+// Una misura completa: portata + canarina, come vuole S2 §4.2.
+async function misuraCompleta(etichetta, pezzi, config, secondi) {
+  scrivi(`… ${etichetta}: canarina a riposo`);
+  const i0 = await canarina(400);
+  scrivi(`… ${etichetta}: decodifica a saturazione per ${secondi} s`);
+  const promessa = portata(pezzi, config, secondi);
+  await new Promise((r) => setTimeout(r, Math.max(0, secondi * 500)));
+  const i1 = await canarina(400);
+  const p = await promessa;
+  const rapporto = i0 > 0 ? i1 / i0 : null;
+  const esito = {
+    tipo: "MISURA", etichetta: etichetta, config: config,
+    fps: p.fps, fotogrammi: p.usciti, secondi: p.secondi,
+    canarina: rapporto, canarina_riposo: i0, canarina_sotto_carico: i1,
+    formato: p.formato, misure: p.misure, supportato: p.supportato,
+    errore: p.errore
+  };
+  spedisci(esito);
+  scrivi(`   ${etichetta}: <b>${p.fps.toFixed(1)} fps</b> · canarina `
+       + `<b>${rapporto === null ? "?" : rapporto.toFixed(2)}</b>`
+       + (p.errore ? ` · <span class="no">errore: ${p.errore}</span>` : ""));
+  return esito;
+}
+
+// ⛔ La lettura: TRE esiti, non due (S2 §4.2, rilievo del banco).
+function lettura(fps) {
+  if (fps >= SOGLIA_HW) return "hardware";
+  if (fps <= SOGLIA_SW) return "software";
+  return "sospeso";
+}
+
+// ===========================================================================
+// I DUE CONTROLLI CHE RENDONO VALIDO IL BANCO — S2 §4.4 A e B
+// ===========================================================================
+let bancoValido = null;
+
+document.getElementById("controlli").onclick = async () => {
+  scrivi("\n=== I due controlli (S2 §4.4) — il banco si valida qui ===");
+  let pezzi;
+  try {
+    scrivi("… costruisco la sequenza D (VP9 1080p60): serve mezzo minuto");
+    pezzi = await costruisciVP9(1920, 1080, 120);
+    scrivi(`   sequenza D pronta: ${pezzi.length} pezzi`);
+  } catch (e) {
+    scrivi(`<span class="no">la sequenza D non si costruisce: ${e}</span>`, "no");
+    scrivi(`<span class="no">⛔ senza sequenza D non ci sono i controlli, e senza`
+         + ` controlli non c'e' verdetto.</span>`, "no");
+    spedisci({tipo: "CONTROLLI", esito: "SEQUENZA_D_MANCATA", errore: String(e)});
+    return;
+  }
+
+  const base = {codec: "vp09.00.10.08", codedWidth: 1920, codedHeight: 1080,
+                optimizeForLatency: true};
+  const a = await misuraCompleta("controllo A (VP9 prefer-software)", pezzi,
+      Object.assign({}, base, {hardwareAcceleration: "prefer-software"}), 8);
+  const b = await misuraCompleta("controllo B (VP9 prefer-hardware)", pezzi,
+      Object.assign({}, base, {hardwareAcceleration: "prefer-hardware"}), 8);
+
+  const la = lettura(a.fps), lb = lettura(b.fps);
+  bancoValido = (la === "software" && lb === "hardware");
+  scrivi(`   A legge «${la}» (deve essere software) · B legge «${lb}» (deve essere hardware)`);
+  if (bancoValido) {
+    scrivi("   <b>BANCO VALIDO</b>: sa dire di no e sa dire di si'", "si");
+  } else {
+    scrivi("   <b>BANCO NON VALIDO</b> — ⛔ e finche' e' cosi' NON pubblica verdetti su HEVC.", "no");
+    scrivi("   ⚠ Le soglie sono tarate su 4K60: a 1080p possono non separare. "
+         + "Se A e B danno lo stesso numero, la taratura va rifatta PRIMA di HEVC, "
+         + "non dopo.", "boh");
+  }
+  spedisci({tipo: "CONTROLLI", A: la, B: lb, A_fps: a.fps, B_fps: b.fps,
+            A_canarina: a.canarina, B_canarina: b.canarina, banco_valido: bancoValido});
+};
+
+// ===========================================================================
+// HEVC — solo se le sequenze vere ci sono.
+// ===========================================================================
+async function caricaSequenza(nome) {
+  const risposta = await fetch(`sequenze/${nome}.json`);
+  if (!risposta.ok) throw new Error(`sequenze/${nome}.json: HTTP ${risposta.status}`);
+  const grezzo = await risposta.json();
+  return grezzo.pezzi.map((p) => ({
+    tipo: p.tipo,
+    istante: p.istante,
+    dati: Uint8Array.from(atob(p.dati), (c) => c.charCodeAt(0))
+  }));
+}
+
+document.getElementById("hevc").onclick = async () => {
+  scrivi("\n=== HEVC Main10 (S2 §4.1 sequenze A/B/C) ===");
+  if (bancoValido !== true) {
+    scrivi("⛔ i controlli A e B non sono passati: qui non si misura niente.", "no");
+    spedisci({tipo: "HEVC", esito: "BANCO_NON_VALIDO"});
+    return;
+  }
+  const sequenze = [
+    ["A", "hev1.2.4.L153.B0", 3840, 2160],
+    ["B", "hev1.1.6.L153.B0", 3840, 2160],
+    ["C", "hev1.2.4.L120.B0", 1920, 1080]
+  ];
+  for (const [nome, codec, l, a] of sequenze) {
+    let pezzi;
+    try {
+      pezzi = await caricaSequenza(nome);
+    } catch (e) {
+      scrivi(`⛔ sequenza ${nome} ASSENTE (${e.message}) — NON MISURATA, e non si `
+           + `sostituisce con una piu' facile.`, "no");
+      spedisci({tipo: "HEVC", sequenza: nome, esito: "SEQUENZA_ASSENTE",
+                errore: e.message});
+      continue;
+    }
+    for (const modo of ["no-preference", "prefer-hardware"]) {
+      const m = await misuraCompleta(`HEVC ${nome} ${modo}`, pezzi,
+          {codec: codec, codedWidth: l, codedHeight: a, optimizeForLatency: true,
+           hardwareAcceleration: modo}, 15);
+      scrivi(`   lettura: <b>${lettura(m.fps)}</b>`
+           + (lettura(m.fps) === "sospeso"
+              ? " — ⚠ verdetto SOSPESO: si guardano gli altri numeri" : ""));
+    }
+  }
+};
+
+// ===========================================================================
+// IL DECADIMENTO — S2 §4.2 misura 4: la firma piu' difficile da falsificare.
+// ===========================================================================
+document.getElementById("decadimento").onclick = async () => {
+  scrivi("\n=== Decadimento su dieci minuti (S2 §4.2 misura 4) ===");
+  scrivi("⚠ ⛔ LO SCHERMO DEVE RESTARE ACCESO E LA SCHEDA IN PRIMO PIANO: una "
+       + "scheda in secondo piano viene congelata dopo cinque minuti (S2 §3.8), e "
+       + "il banco misurerebbe il congelamento invece del calore.", "boh");
+  if (bancoValido !== true) {
+    scrivi("⛔ i controlli A e B non sono passati: niente misura.", "no");
+    return;
+  }
+  const pezzi = await costruisciVP9(1920, 1080, 120);
+  const base = {codec: "vp09.00.10.08", codedWidth: 1920, codedHeight: 1080,
+                optimizeForLatency: true, hardwareAcceleration: "prefer-hardware"};
+  const curva = [];
+  for (let k = 0; k < 20; k++) {
+    const m = await misuraCompleta(`decadimento t=${k * 30}s`, pezzi, base, 8);
+    curva.push(m.fps);
+    if (k < 19) await new Promise((r) => setTimeout(r, 22000));
+  }
+  const rapporto = curva[0] > 0 ? curva[curva.length - 1] / curva[0] : null;
+  scrivi(`   portata finale / iniziale = <b>${rapporto === null ? "?" : rapporto.toFixed(2)}</b>`
+       + "  (hardware &gt; 0,9 · software &lt; 0,6)");
+  spedisci({tipo: "DECADIMENTO", curva: curva, rapporto: rapporto});
+};
+
+// ===========================================================================
+// I SEGNALI JS — raccolti, mai creduti da soli.  S2 §4.2 punto 7.
+//
+// ⭐ E' questa tabella la vera consegna di S2: «che cosa avrebbe detto l'API»
+//    accanto a «che cosa dicono i numeri».
+// ===========================================================================
+document.getElementById("segnali").onclick = async () => {
+  scrivi("\n=== Che cosa avrebbe detto l'API (S2 §4.2 punto 7) ===");
+  const righe = [];
+  for (const codec of ["hev1.2.4.L153.B0", "hev1.1.6.L153.B0", "vp09.00.10.08"]) {
+    for (const modo of ["no-preference", "prefer-hardware", "prefer-software"]) {
+      let sup = null, errore = null;
+      try {
+        sup = await VideoDecoder.isConfigSupported(
+            {codec: codec, codedWidth: 3840, codedHeight: 2160,
+             hardwareAcceleration: modo});
+      } catch (e) { errore = String(e); }
+      let potenza = null;
+      try {
+        const info = await navigator.mediaCapabilities.decodingInfo({
+          type: "file",
+          video: {contentType: `video/mp4; codecs="${codec}"`, width: 3840,
+                  height: 2160, bitrate: 20000000, framerate: 60}
+        });
+        potenza = {supported: info.supported, smooth: info.smooth,
+                   powerEfficient: info.powerEfficient};
+      } catch (e) { potenza = {errore: String(e)}; }
+      righe.push({codec, modo, supportato: sup && sup.supported, errore, potenza});
+      scrivi(`   ${codec} ${modo}: isConfigSupported=${sup && sup.supported} `
+           + `powerEfficient=${potenza && potenza.powerEfficient}`);
+    }
+  }
+  scrivi("⚠ Nessuna di queste righe e' una misura dell'hardware: S2 §4.3 mostra "
+       + "che un decodificatore software di piattaforma le supera tutte.", "boh");
+  spedisci({tipo: "SEGNALI", righe: righe});
+};
+
+spedisci({tipo: "PRONTA", schermo: screen.width + "x" + screen.height,
+          dpr: devicePixelRatio, webcodecs: typeof VideoDecoder !== "undefined",
+          contestoSicuro: window.isSecureContext});
+scrivi(`pagina pronta · giro ${GIRO} · WebCodecs: `
+     + (typeof VideoDecoder !== "undefined" ? "c'e'" : "NON C'E'")
+     + ` · contesto sicuro: ${window.isSecureContext}`);
+</script>
+</body>
+</html>

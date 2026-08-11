@@ -1,0 +1,55 @@
+# remotix — il servizio PAM del server REMOTIX_V2.
+#
+#   si installa in /etc/pam.d/remotix   (lo fa `costruisci.sh`)
+#
+# -----------------------------------------------------------------------------
+# ⛔ PERCHE' ESISTE, E PERCHE' NON SI USA `login`
+#
+# `SPECIFICHE.md` §4.2, prima riga: «PAM locale, servizio `remotix`, con il ban
+# dell'indirizzo dopo tre tentativi falliti».  Fino al 10 agosto 2026 il codice
+# diceva `login` (rilievo B-11), e il prezzo non era di forma: su Debian
+# `/etc/pam.d/login` e' la pila della CONSOLE LOCALE.  Ci sta dentro
+# `pam_securetty` (che ragiona su /etc/securetty e su un terminale che qui non
+# c'e'), `pam_lastlog`, `pam_motd`, `pam_limits`, `pam_selinux`, `pam_keyinit`
+# — politiche pensate per chi si siede davanti alla macchina.  ⚠ Un accesso di
+# rete che passa di li' le eredita tutte, e quale comportamento cambi non e'
+# nemmeno prevedibile leggendo: dipende da come quella macchina e' configurata.
+#
+# ⚠ E c'e' una conseguenza sulle MISURE: la mediana dei tentativi respinti che
+#   B8 ha misurato la notte del 10 agosto — 2636 ms — e' la mediana di `login`,
+#   non di questo servizio.  Va rifatta, e il `[?]` sul secondo fisso di
+#   §4.4-bis non si chiude con quella.
+#
+# -----------------------------------------------------------------------------
+# ⛔ SE QUESTO FILE NON C'E', OGNI PAROLA D'ORDINE GIUSTA VIENE RIFIUTATA
+#
+# Linux-PAM, quando il servizio chiesto non ha un file, ripiega sul servizio
+# `other` — e su Debian `/etc/pam.d/other` e' `pam_deny`.  ⛔ Il sintomo sarebbe
+# «utente o parola d'ordine non corretti» per chiunque, cioe' una diagnosi che
+# punta sulla parola d'ordine mentre il difetto e' un file mancante.  Da cui le
+# due protezioni, che stanno nel programma (invariante I7):
+#
+#   1. `main.c` guarda /etc/pam.d/remotix all'avvio e lo DICE se non c'e';
+#   2. `autenticazione.c` distingue nel registro «PAM ha rifiutato» da «PAM non
+#      ha potuto giudicare», e nomina questo file nella seconda.
+#
+# -----------------------------------------------------------------------------
+# ⚠ Le pile comuni si INCLUDONO invece di riscriverle: `CODER.md` §4.1,
+#   «dipendere, non riscrivere».  Chi amministra la macchina configura
+#   `common-auth` una volta e vale per tutti i servizi, compreso questo.
+
+# ── auth: «questa parola d'ordine e' giusta?»
+auth       required     pam_nologin.so
+@include common-auth
+
+# ── account: «questo conto e' utilizzabile?»  (conto scaduto, bloccato, ...)
+#    ⚠ Non e' un di piu': `pam_authenticate` non risponde a questa domanda, e
+#      `autenticazione.c` chiama `pam_acct_mgmt` apposta.
+@include common-account
+
+# ── password e session non li usa nessuno alla fase 1 — il server non apre
+#    sessioni PAM e non cambia parole d'ordine.  ⛔ Si dichiarano lo stesso:
+#    senza una riga per un tipo, PAM ripiega su `other` per quel tipo, e un
+#    ripiego silenzioso e' quel che questo file esiste per togliere.
+@include common-password
+@include common-session-noninteractive

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>S7 — da che parte gira la rotella</title>
+<!--
+  ⛔ QUESTA PAGINA E' LO STRUMENTO DI MISURA, NON UNA DIMOSTRAZIONE.
+
+  Gira dentro la sessione GNOME senza schermo, e nessuno la guarda: quel che
+  non spedisce al raccoglitore non e' successo per nessuno.
+
+  Misura DUE cose sullo stesso scatto, con due strumenti diversi:
+
+    1. `deltaY` dell'evento `wheel`  — la convenzione che il browser dichiara.
+       ⭐ E' la stessa grandezza che il CLIENT di RCP legge quando l'utente
+       gira la rotella davvero, quindi il confronto e' fra due usi della
+       STESSA convenzione, non fra due mondi.
+    2. quanto e dove si e' spostato `scrollY` — che cosa e' successo davvero.
+
+  ⛔ Perche' due e non una: `deltaY` puo' arrivare senza che la pagina si
+     muova (documento gia' in fondo), e la pagina puo' muoversi senza `wheel`
+     (barra, tastiera).  Presi da soli, ciascuno dei due ha un modo di dire
+     una cosa falsa; insieme non ce l'hanno.
+
+  ⛔ E LA PAGINA NASCE A META' DEL DOCUMENTO, non in cima.  Con `scrollY = 0`
+     uno scatto verso l'alto non muove niente — e «non si e' mossa» avrebbe
+     lo stesso aspetto di «il segno e' quello opposto».  Sono 20 000 pixel di
+     documento e si riparte sempre da 8 000.
+-->
+<style>
+  html, body { margin: 0; background: #101014; color: #d8d8e0;
+               font: 16px/1.5 system-ui, sans-serif; }
+  #alto   { height: 20000px;
+            background: repeating-linear-gradient(#1a1a22 0 40px, #202029 40px 80px); }
+  #targa  { position: fixed; top: 0; left: 0; right: 0; padding: 8px 12px;
+            background: #000; border-bottom: 1px solid #444; white-space: pre; }
+</style>
+</head>
+<body>
+<div id="targa">S7 — in attesa</div>
+<div id="alto"></div>
+<script>
+"use strict";
+
+const CENTRO = 8000;        // da dove si riparte a ogni giro
+const ATTESA_LETTURA = 250; // ms fra lo scatto e la lettura di scrollY
+
+let numero = 0;             // cresce dentro QUESTO caricamento di pagina
+let inCorso = false;
+
+// ⛔ IL MARCHIO DEL GIRO, e nasce da un difetto vero.
+//
+//    `[M]` 10 agosto 2026: il contatore qui sopra riparte da 1 a ogni
+//    caricamento, e il banco cercava «la riga con n maggiore del segnaposto».
+//    Al secondo giro il registro conteneva gia' una riga n=1, il segnaposto
+//    valeva 1, e la riga NUOVA — anch'essa n=1 — non e' mai stata trovata: il
+//    banco ha stampato «la pagina non ha detto PRONTA in 45 s» **mentre il
+//    raccoglitore la stava scrivendo**.  Due cose diverse, un solo sintomo.
+//
+//    Il numero da solo non basta a riconoscere un giro: ci vuole qualcosa che
+//    non si ripeta.  Questo.
+const GIRO = Math.random().toString(36).slice(2, 10);
+
+function spedisci(dati) {
+  dati.n = ++numero;
+  dati.giro = GIRO;
+  dati.motore = navigator.userAgent;     // ⛔ B0.6: la versione, sempre
+  dati.schermo = screen.width + "x" + screen.height;
+  dati.finestra = innerWidth + "x" + innerHeight;
+  dati.dpr = devicePixelRatio;
+  navigator.sendBeacon("/esito", new Blob([JSON.stringify(dati)],
+                                          {type: "application/json"}));
+  targa(dati);
+}
+
+function targa(dati) {
+  document.getElementById("targa").textContent =
+    "S7 n." + dati.n + "  " + dati.tipo +
+    "  deltaY=" + dati.deltaY + "  scorrimento=" + dati.scorrimento;
+}
+
+// ⛔ Il `wheel` si ascolta in cattura e SENZA preventDefault: si vuole che lo
+//    scorrimento avvenga davvero, perche' e' il secondo strumento.
+// ⛔ IL RIFERIMENTO E' `base`, NON `scrollY` LETTO NEL GESTORE.
+//
+//    `[M]` 10 agosto 2026: con un ascoltatore passivo Firefox scorre **prima**
+//    che il gestore giri (lo fa il thread di composizione, non quello di
+//    JavaScript).  Leggendo `scrollY` dentro il gestore e di nuovo 250 ms
+//    dopo, i due valori sono uguali e la differenza e' **zero**: il banco
+//    scriveva «la pagina non si e' mossa» mentre si era mossa di 114 pixel, e
+//    il numero giusto era gia' nel registro sotto un altro nome.
+//
+//    Il riferimento giusto e' dove la pagina stava PRIMA dello scatto, cioe'
+//    l'ultima posizione ricentrata — che la pagina conosce perche' e' lei a
+//    metterla.  Cosi' la misura regge sia dove lo scorrimento e' asincrono
+//    sia dove non lo e'.
+let base = CENTRO;
+
+addEventListener("wheel", (e) => {
+  if (inCorso) return;      // un solo scatto per volta: i giri non si mescolano
+  inCorso = true;
+  const prima = Math.round(scrollY);
+  setTimeout(() => {
+    const dopo = Math.round(scrollY);
+    spedisci({
+      tipo: "SCATTO",
+      deltaY: e.deltaY, deltaX: e.deltaX, deltaMode: e.deltaMode,
+      wheelDeltaY: e.wheelDeltaY,
+      base: base, prima: prima, dopo: dopo, scorrimento: dopo - base
+    });
+    // Si torna al centro per il giro dopo, e il riferimento si rifa' li'.
+    scrollTo(0, CENTRO);
+    setTimeout(() => { base = Math.round(scrollY); inCorso = false; }, 150);
+  }, ATTESA_LETTURA);
+}, {capture: true, passive: true});
+
+// ⛔ IL DENOMINATORE DELLA MISURA, e non c'era al primo giro.
+//
+//    «La pagina non ha visto lo scatto» ha almeno tre cause con lo stesso
+//    aspetto: l'iniezione non parte · parte e non arriva a nessuna finestra ·
+//    arriva e lo scorrimento e' l'unica cosa che si perde.  Il movimento del
+//    puntatore le separa: se la pagina vede muoversi il puntatore, la strada
+//    fino a lei e' aperta e il silenzio sullo scatto vuol dire qualcosa.
+//
+//    ⭐ E' `LEZIONI.md` §1.9 regola 2 — il controllo positivo sullo stesso
+//    strumento — messo dove serve invece che a parole.
+let ultimoPuntatore = 0;
+addEventListener("pointermove", (e) => {
+  const ora = performance.now();
+  if (ora - ultimoPuntatore < 400) return;   // non si allaga il registro
+  ultimoPuntatore = ora;
+  spedisci({tipo: "PUNTATORE", x: Math.round(e.clientX), y: Math.round(e.clientY),
+            deltaY: null, scorrimento: null});
+}, {passive: true});
+
+addEventListener("mousedown", (e) => {
+  spedisci({tipo: "BOTTONE", bottone: e.button, x: Math.round(e.clientX),
+            y: Math.round(e.clientY), deltaY: null, scorrimento: null});
+}, {passive: true});
+
+addEventListener("load", () => {
+  scrollTo(0, CENTRO);
+  setTimeout(() => {
+    base = Math.round(scrollY);
+    spedisci({tipo: "PRONTA", deltaY: null, scorrimento: null, partenza: base});
+  }, 200);
+});
+</script>
+</body>
+</html>

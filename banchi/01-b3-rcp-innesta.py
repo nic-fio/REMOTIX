@@ -35,6 +35,27 @@ niente da spedire: se nessun timer scatta, la risposta non parte mai.
    `rcp_passa`, il tetto del `CIAO` (§4.6 riga 1) non scadeva mai — nello
    stato «attesa-ciao» di byte non ne e' ancora arrivato nessuno, quindi
    nessuno armava niente, quindi `rcp_tempo()` non lo chiamava piu' nessuno.
+
+---------------------------------------------------------------------------
+⛔⭐ E DALL'11 AGOSTO 2026 INNESTA ANCHE IL BAN LATO OSPITE — `RCP.md` §4.4-bis
+
+`rcp.c` sa contare i fallimenti, bannare, salvare su file, dire se un indirizzo
+e' bannato e togliere un ban.  ⛔ Ma non apre socket, non legge la riga di
+comando e non serve nessuna pagina: **le tre cose che §4.4-bis chiede al padrone
+di casa non esistevano**, e senza di esse la regola dell'utente era scritta a
+meta'.  Adesso stanno in `server.cc`, in `CORPO_OSPITE`:
+
+    --ban-file=<PATH>        i ban si rileggono all'avvio, e ⛔ «zero ban» e
+                             «non ho potuto leggere il file» si stampano
+                             DIVERSI — sul secondo il server non parte
+    la pagina in TCP         stessa porta dell'UDP (SPECIFICHE.md §4): a chi e'
+                             bannato si serve LO STESSO, con «tentativi
+                             esauriti» e le ore che mancano
+    --comando-socket=<PATH>  «SBLOCCA <indirizzo>» su un socket Unix 0600 —
+                             l'altra via d'uscita oltre alle dodici ore
+
+⚠ Chi accende questo server **senza** quelle due opzioni non perde il ban: perde
+  la persistenza e il comando.  Il server lo dice all'avvio, in due righe.
 """
 import os
 import shutil
@@ -52,10 +73,17 @@ FILE_NOSTRI = ["rcp.c", "rcp.h", "autenticazione.c"]
 
 # I file dell'esempio che questo innesto tocca: servono a `--togli` per
 # VERIFICARE di aver tolto, invece di restituire 0 comunque.
+#
+# ⛔ `server.cc` e' entrato l'11 agosto 2026 col ban lato ospite: le tre cose
+#    che §4.4-bis chiede al PADRONE DI CASA — caricare i ban all'avvio, servire
+#    la pagina a chi e' bannato, togliere un ban su comando — vivono nel `main`
+#    e nel ciclo degli eventi, non nel codec.  ⚠ Chi lo dimentica qui lascia
+#    `--togli` a dichiarare «nessuna traccia» su un file che ne ha cento.
 FILE_TOCCATI = [
     "http3_server_proto_codec.cc",
     "http3_server_proto_codec.h",
     "CMakeLists.txt",
+    "server.cc",
 ]
 
 INNESTI = [
@@ -977,6 +1005,571 @@ void ProtoCodec::wt_chiudi_adesso(uint8_t motivo) {
 
 '''
 
+# ===========================================================================
+# ⛔⭐ IL BAN LATO OSPITE — le tre cose che §4.4-bis chiede al PADRONE DI CASA
+# ===========================================================================
+#
+# `rcp.c` sa contare i fallimenti, bannare, salvare su file, rispondere «e'
+# bannato?» e togliere un ban.  ⛔ Ma non apre socket, non legge la riga di
+# comando e non serve nessuna pagina: le tre cose che seguono **non esistevano**
+# fino all'11 agosto 2026, e senza di esse la regola dell'utente era scritta a
+# meta'.
+#
+#   1. i ban si RILEGGONO all'avvio          §4.4-bis, «il ban sopravvive al
+#                                            riavvio del server» — invariante I7
+#   2. la PAGINA si serve lo stesso a chi     §4.4-bis, «viene visualizzata una
+#      e' bannato, e dice quante ore mancano  pagina di login rifiutato»
+#   3. il COMANDO DI SBLOCCO                  §4.4-bis, «si esce in due modi»
+#
+CORPO_OSPITE = r'''// ═══════════════════════════════════════════════════════════
+// ⛔⭐ REMOTIX B3 — IL BAN LATO OSPITE (RCP.md §4.4-bis, DECISIONI.md §1.9)
+//
+// ⛔ PERCHE' STA QUI E NON IN `rcp.c`.  Quel file «conosce RCP.md e nient'altro:
+//    non sa che sotto c'e' QUIC, non apre socket e non guarda l'orologio».  Le
+//    tre cose di sotto sono tutte e tre socket, riga di comando e orologio —
+//    cioe' tutte e tre del padrone di casa.  ⭐ `rcp.c` espone `rcp_ban_carica`,
+//    `rcp_bannato` e `rcp_sblocca` e non sa **chi** le chiama: e' la stessa
+//    linea che permettera' di portare il protocollo nel server vero senza
+//    riscriverlo.
+//
+// ⛔ E L'OROLOGIO DEV'ESSERE LO STESSO.  `rcp_apri`/`rcp_ricevi` ricevono
+//    `ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS`, e ngtcp2 quel
+//    valore lo prende da `util::timestamp()`.  Qui non c'e' nessuna
+//    connessione, quindi si chiama `util::timestamp()` direttamente: ⚠ un
+//    secondo orologio con un'altra origine renderebbe le scadenze del ban
+//    numeri senza senso — «restano 4 miliardi di ore» — e nessuno lo vedrebbe
+//    finche' qualcuno non viene bannato davvero.
+// ═══════════════════════════════════════════════════════════════════════════
+#include <sys/un.h>
+#include <cerrno>
+
+extern "C" {
+#include "rcp.h"
+}
+
+namespace {
+
+// L'orologio monotono in millisecondi: LO STESSO che vede la sessione.
+uint64_t remotix_ora_ms() { return util::timestamp() / NGTCP2_MILLISECONDS; }
+
+// Le due strade del padrone di casa, dalla riga di comando.
+const char *remotix_ban_file = nullptr;
+const char *remotix_comando_socket = nullptr;
+
+ev_io remotix_pagina_ev;
+ev_io remotix_comando_ev;
+bool remotix_pagina_accesa = false;
+bool remotix_comando_acceso = false;
+
+// ⛔ 200 ms, e il prezzo si dichiara invece di nasconderlo.  Qui la pagina e il
+//    comando si servono DENTRO il ciclo degli eventi di QUIC, con una lettura e
+//    una scrittura bloccanti a tempo: un client TCP che apre e tace ferma il
+//    server per due decimi di secondo.  ⚠ E' accettabile in un banco e va
+//    scritto qui: un server vero mettera' un `ev_io` per ogni connessione
+//    accettata, o un filo a parte.  ⭐ Il motivo per cui NON lo si fa oggi e'
+//    che `rcp.c` tiene la tabella dei ban in memoria statica senza nessun
+//    lucchetto: un filo a parte sarebbe una corsa fra due scrittori, cioe' un
+//    difetto vero comprato per evitare un ritardo finto.
+const timeval REMOTIX_TETTO{0, 200000};
+
+// ── Quel che si legge e si scrive, con un tetto e senza mai bloccare per
+//    sempre.  Restituiscono false su qualunque guasto: chi chiama chiude e va
+//    avanti — una connessione TCP persa non deve portarsi via il server.
+bool remotix_scrivi_tutto(int fd, std::string_view dati) {
+  while (!dati.empty()) {
+    auto n = send(fd, dati.data(), dati.size(), MSG_NOSIGNAL);
+    if (n <= 0) {
+      return false;
+    }
+    dati.remove_prefix(static_cast<size_t>(n));
+  }
+  return true;
+}
+
+// ═══ 1. LA PAGINA ═══════════════════════════════════════════════════════════
+//
+// ⛔ §4.4-bis, e la ragione e' dell'utente: «la pagina si serve lo stesso, e
+//    mostra il rifiuto — *tentativi esauriti*.  Non un errore di rete, non un
+//    silenzio: chi e' stato bannato per errore e' quasi sempre il proprietario,
+//    e deve poter capire che cosa gli e' successo invece di trovarsi davanti un
+//    server che sembra morto per mezza giornata».
+//
+// ⛔ E LO STATO E' 200, ANCHE PER CHI E' BANNATO — scelta, non distrazione.
+//    §4.4-bis dice «la pagina si serve lo stesso» e non dice con quale stato
+//    HTTP.  Con un 403 il documento sarebbe comunque servito, ⚠ ma un proxy,
+//    un'estensione o il browser stesso possono sostituire il corpo di una
+//    risposta d'errore con una propria schermata — e allora la frase che
+//    l'utente DEVE leggere sparisce, che e' esattamente il caso che questa
+//    regola esiste per impedire.  ⭐ Il rifiuto e' dell'ACCESSO, non della
+//    pagina: la pagina ha fatto il suo mestiere.
+std::string remotix_pagina_html(bool bannato, const std::string &chiave,
+                                uint64_t restano_ms) {
+  if (!bannato) {
+    return std::format(
+      "<!doctype html>\n<html lang=\"it\">\n<head><meta charset=\"utf-8\">\n"
+      "<title>REMOTIX — accesso</title></head>\n"
+      "<body data-bannato=\"no\" data-restano-ms=\"0\">\n"
+      "<h1 id=\"esito\">accesso</h1>\n"
+      "<p id=\"quanto\">Questo indirizzo ({}) puo' provare a entrare.</p>\n"
+      "<p>⚠ Pagina minima del banco: la pagina vera di RCP arriva con la fase "
+      "successiva.  Qui c'e' la sola cosa che §4.4-bis pretende dal padrone di "
+      "casa — dire se l'indirizzo e' fuori, e per quanto.</p>\n"
+      "</body>\n</html>\n",
+      chiave);
+  }
+  // ⚠ I minuti si arrotondano PER ECCESSO: dire «restano 0 ore» a chi ha
+  //   ancora 59 minuti da aspettare e' peggio che non dire niente.
+  auto minuti = (restano_ms + 59999) / 60000;
+  auto ore = minuti / 60;
+  auto resto = minuti % 60;
+  return std::format(
+    "<!doctype html>\n<html lang=\"it\">\n<head><meta charset=\"utf-8\">\n"
+    "<title>REMOTIX — tentativi esauriti</title></head>\n"
+    "<body data-bannato=\"si\" data-restano-ms=\"{}\">\n"
+    "<h1 id=\"esito\">tentativi esauriti</h1>\n"
+    "<p id=\"quanto\">Da questo indirizzo ({}) sono arrivati tre tentativi di "
+    "accesso falliti, e per questo resta fuori.  Mancano ancora "
+    "<b id=\"ore\">{}</b> ore e <b id=\"minuti\">{}</b> minuti.</p>\n"
+    "<p id=\"uscite\">Si rientra in due modi: aspettando la scadenza, oppure "
+    "col comando di sblocco sulla macchina che serve — che chiede l'accesso a "
+    "quella macchina, ed e' la via di chi si e' bannato dal proprio "
+    "telefono.</p>\n"
+    "</body>\n</html>\n",
+    restano_ms, chiave, ore, resto);
+}
+
+void remotix_pagina_servi(int fd, const sockaddr *sa, socklen_t salen) {
+  setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
+  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
+
+  // ⛔ La richiesta si LEGGE anche se non ci serve, e non e' cortesia: chiudere
+  //    un socket con byte non letti nel buffer manda un RST, e il RST fa
+  //    buttare al client la risposta che gli abbiamo appena scritto.  Chi e'
+  //    bannato vedrebbe «connessione azzerata» — cioe' l'errore di rete che
+  //    §4.4-bis vieta — e il server nel registro direbbe di aver risposto.
+  std::array<char, 4096> richiesta;
+  auto letti = recv(fd, richiesta.data(), richiesta.size(), 0);
+
+  // ⛔ E L'INDIRIZZO SI CHIEDE AL NUCLEO, NELLA STESSA FORMA DELLA SESSIONE.
+  //    `util::straddr()` scrive `[127.0.0.1]:55680` — con le quadre anche per
+  //    IPv4 — e quella e' la chiave che `rcp.c` conta e che finisce nel file
+  //    dei ban.  ⚠ Costruirla qui in un altro modo (`inet_ntop` nudo) darebbe
+  //    `127.0.0.1`, che NON e' `[127.0.0.1]`: la pagina direbbe «puoi entrare»
+  //    a un indirizzo bannato, e il registro del server direbbe il contrario.
+  //    `[M]` la forma con le quadre e' letta nel registro, non dedotta.
+  auto provenienza = util::straddr(sa, salen);
+  std::array<char, 64> chiave{};
+  rcp_chiave_indirizzo(provenienza.c_str(), chiave.data(), chiave.size());
+
+  uint64_t restano = 0;
+  auto fuori = rcp_bannato(provenienza.c_str(), remotix_ora_ms(), &restano);
+  auto corpo = remotix_pagina_html(fuori, std::string{chiave.data()}, restano);
+  auto testa = std::format("HTTP/1.1 200 OK\r\n"
+                           "Content-Type: text/html; charset=utf-8\r\n"
+                           "Content-Length: {}\r\n"
+                           "Cache-Control: no-store\r\n"
+                           "Connection: close\r\n"
+                           "\r\n",
+                           corpo.size());
+  auto scritta = remotix_scrivi_tutto(fd, testa) && remotix_scrivi_tutto(fd, corpo);
+  std::println(stderr,
+               "REMOTIX B3: pagina TCP a {} (chiave {}) — {} · richiesta {} "
+               "byte · risposta {} byte {}",
+               provenienza, chiave.data(),
+               fuori ? std::format("BANNATO, restano {} ms", restano)
+                     : std::string{"non bannato"},
+               letti, corpo.size(),
+               scritta ? "spedita" : "⛔ NON spedita per intero");
+}
+
+void remotix_pagina_cb(struct ev_loop *loop, ev_io *w, int revents) {
+  (void)loop;
+  (void)revents;
+  sockaddr_storage chi{};
+  socklen_t quanto = sizeof chi;
+  auto fd = accept(w->fd, reinterpret_cast<sockaddr *>(&chi), &quanto);
+  if (fd == -1) {
+    return;
+  }
+  remotix_pagina_servi(fd, reinterpret_cast<sockaddr *>(&chi), quanto);
+  close(fd);
+}
+
+// ═══ 2. IL COMANDO DI SBLOCCO ═══════════════════════════════════════════════
+//
+// ⛔ PERCHE' UN SOCKET DI CONTROLLO, E NON LE ALTRE DUE FORME.  §4.4-bis chiede
+//    «un comando di sblocco sul server», «la via d'uscita di chi si banna dal
+//    proprio telefono», che «chiede l'unica chiave che quel caso ammette —
+//    l'accesso alla macchina», e che **scriva nel registro ogni sblocco**
+//    distinguendo un ban tolto da un ban mai scattato.  Tre forme erano
+//    possibili e due non reggono:
+//
+//    ⛔ un SECONDO PROCESSO con un'opzione (`bsslserver --sblocca X`) —
+//       **non funziona**, e il modo in cui non funziona e' silenzioso: il ban
+//       vive nella memoria del processo che serve, e un secondo processo puo'
+//       solo riscrivere il file.  Il server continuerebbe a rispondere
+//       `TROPPI_TENTATIVI` fino al riavvio, e ⛔ il primo `salva_ban()` — cioe'
+//       il primo ban di chiunque altro — riscriverebbe il file rimettendoci
+//       dentro il ban appena tolto.  Chi ha dato il comando lo ha visto uscire
+//       con zero;
+//    ⛔ un SEGNALE — non porta un indirizzo.  `SIGUSR1` potrebbe togliere
+//       *tutti* i ban, che e' un comando diverso da quello chiesto, e
+//       soprattutto **non ha una risposta**: §4.4-bis vuole che «non era
+//       bannato» e «l'ho tolto» si distinguano, e un segnale consegnato dice
+//       solo che e' stato consegnato;
+//    ⭐ un SOCKET DI CONTROLLO — porta l'indirizzo, agisce sul processo VIVO
+//       (memoria e file nella stessa riga, per mano di `rcp_sblocca()`), e
+//       **risponde**, quindi le due risposte esistono davvero.  La chiave che
+//       chiede e' un file con permessi `0600` nel filesystem della macchina,
+//       cioe' esattamente «l'accesso alla macchina» — e non aggiunge nessuna
+//       superficie raggiungibile dalla rete: un socket di dominio Unix non ha
+//       un indirizzo IP.
+//
+// Il protocollo e' una riga, e si legge senza strumenti:
+//
+//     SBLOCCA <indirizzo>   →   TOLTO <chiave>      il ban c'era e non c'e' piu'
+//                           →   NON-BANNATO <chiave>  non c'era niente da togliere
+//     PING                  →   PONG                 «il comando esiste?», e non
+//                                                    tocca niente
+//
+// ⭐ `PING` non e' un ornamento: e' il denominatore di B0.3.  Un banco che
+//    chiama lo sblocco fra un banco e l'altro deve poter dire «il comando c'era
+//    e ha risposto», o «il ban non e' scattato» e «lo sblocco non e' mai
+//    arrivato a nessuno» hanno lo stesso aspetto.
+void remotix_comando_servi(int fd) {
+  setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
+  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
+  std::array<char, 256> buf{};
+  auto letti = recv(fd, buf.data(), buf.size() - 1, 0);
+  if (letti <= 0) {
+    std::println(stderr, "REMOTIX B3: ⚠ comando vuoto sul socket di controllo "
+                         "(letti {} byte): non ho tolto niente",
+                 letti);
+    remotix_scrivi_tutto(fd, "NON-CAPITO riga vuota\n");
+    return;
+  }
+  std::string riga{buf.data(), static_cast<size_t>(letti)};
+  while (!riga.empty() && (riga.back() == '\n' || riga.back() == '\r')) {
+    riga.pop_back();
+  }
+  if (riga == "PING") {
+    std::println(stderr, "REMOTIX B3: comando PING — il socket di sblocco e' "
+                         "vivo, e non ho toccato nessun ban");
+    remotix_scrivi_tutto(fd, "PONG\n");
+    return;
+  }
+  constexpr std::string_view verbo = "SBLOCCA ";
+  if (!riga.starts_with(verbo)) {
+    std::println(stderr, "REMOTIX B3: ⚠ comando sconosciuto «{}»: non ho tolto "
+                         "niente (le forme sono «SBLOCCA <indirizzo>» e «PING»)",
+                 riga);
+    remotix_scrivi_tutto(fd, std::format("NON-CAPITO {}\n", riga));
+    return;
+  }
+  auto chiesto = riga.substr(verbo.size());
+  // ⛔ La chiave la costruisce `rcp.c`, non questo file: chi comanda digita
+  //    `192.168.0.2`, e nel file dei ban c'e' scritto `[192.168.0.2]`.
+  std::array<char, 64> chiave{};
+  rcp_chiave_indirizzo(chiesto.c_str(), chiave.data(), chiave.size());
+  auto era = rcp_sblocca(chiave.data(), remotix_ora_ms());
+  // ⛔ «Ogni sblocco si scrive nel registro, o un ban tolto e un ban mai
+  //    scattato hanno lo stesso aspetto» (§4.4-bis).  Le due righe sono
+  //    diverse, e lo e' anche la risposta a chi comanda.
+  if (era) {
+    std::println(stderr,
+                 "REMOTIX B3: ⛔ SBLOCCATO su comando l'indirizzo {} (chiesto "
+                 "«{}»): il ban c'era ed e' stato tolto, e il file dei ban e' "
+                 "stato riscritto (§4.4-bis)",
+                 chiave.data(), chiesto);
+  } else {
+    std::println(stderr,
+                 "REMOTIX B3: sblocco chiesto per {} (chiesto «{}»): NON era "
+                 "bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei "
+                 "tentativi di quell'indirizzo riparte comunque da zero",
+                 chiave.data(), chiesto);
+  }
+  remotix_scrivi_tutto(fd, std::format("{} {}\n", era ? "TOLTO" : "NON-BANNATO",
+                                       chiave.data()));
+}
+
+void remotix_comando_cb(struct ev_loop *loop, ev_io *w, int revents) {
+  (void)loop;
+  (void)revents;
+  auto fd = accept(w->fd, nullptr, nullptr);
+  if (fd == -1) {
+    return;
+  }
+  remotix_comando_servi(fd);
+  close(fd);
+}
+
+// ═══ 3. L'AVVIO ═════════════════════════════════════════════════════════════
+//
+// ⛔ «ZERO BAN» E «NON HO POTUTO LEGGERE IL FILE» SONO DUE FATTI DIVERSI, e
+//    questa e' la funzione in cui il difetto di `LEZIONI.md` §1.9 sarebbe piu'
+//    caro di tutti: un errore letto come uno zero e' **la protezione spenta con
+//    l'aria di non avere niente da proteggere**, cioe' l'invariante I7 persa in
+//    silenzio.  Qui i fatti stampati sono TRE, e si distinguono guardando il
+//    file prima di aprirlo:
+//
+//      il file non c'e' ancora        nessun ban, e non e' un errore
+//      il file c'e' e dice zero       nessun ban, e l'ho letto
+//      il file c'e' e non si legge    ⛔ NON parto
+//
+// ⛔ E sul terzo il server ESCE, che e' la sola scelta difendibile: servire con
+//    la protezione spenta somiglia in tutto a servirla accesa, e chi ha
+//    riavviato per un altro motivo non saprebbe di averla persa.  ⚠ Sugli altri
+//    due guasti — la porta della pagina, il socket del comando — il server va
+//    avanti: senza pagina e senza comando la protezione **c'e' ancora**, e
+//    spegnere il server QUIC su cui poggiano cinque altri banchi metterebbe il
+//    rosso sull'imputato sbagliato.  In tutti i casi la riga si stampa.
+bool remotix_ospite_avvia(const char *addr, const char *port) {
+  auto ora = remotix_ora_ms();
+
+  if (remotix_ban_file == nullptr) {
+    std::println(stderr,
+                 "REMOTIX B3: ⛔ nessun --ban-file: il ban di §4.4-bis vive SOLO "
+                 "IN MEMORIA, e il primo riavvio lo porta via (invariante I7). "
+                 "Il conto dei tentativi funziona lo stesso, la persistenza no.");
+  } else {
+    struct stat st;
+    auto c_era = stat(remotix_ban_file, &st) == 0;
+    errno = 0;
+    auto quanti = rcp_ban_carica(remotix_ban_file, ora);
+    if (quanti < 0) {
+      std::println(stderr,
+                   "REMOTIX B3: ⛔ NON HO POTUTO LEGGERE il file dei ban «{}»: "
+                   "{}.  Non e' «zero ban»: e' «non ho potuto guardare», e "
+                   "servire cosi' spegnerebbe la protezione di §4.4-bis "
+                   "facendola sembrare accesa.  Non parto.",
+                   remotix_ban_file, strerror(errno));
+      return false;
+    }
+    if (!c_era) {
+      std::println(stderr,
+                   "REMOTIX B3: ban caricati: 0 — il file «{}» non esiste "
+                   "ancora, quindi nessun indirizzo e' fuori.  ⚠ Non e' un "
+                   "errore: lo scrivera' il primo ban.",
+                   remotix_ban_file);
+    } else {
+      std::println(stderr,
+                   "REMOTIX B3: ban caricati: {} — dal file «{}», letto per "
+                   "intero.  {}",
+                   quanti, remotix_ban_file,
+                   quanti == 0
+                     ? "⚠ zero indirizzi fuori, e questo e' un fatto misurato: "
+                       "il file c'era e l'ho letto"
+                     : "Questi indirizzi restano fuori finche' non scadono o "
+                       "finche' non li toglie il comando di sblocco (§4.4-bis).");
+    }
+  }
+
+  // ── la porta TCP della pagina, lo STESSO NUMERO dell'UDP (SPECIFICHE.md §4)
+  addrinfo suggerimenti{};
+  suggerimenti.ai_flags = AI_PASSIVE;
+  suggerimenti.ai_family = AF_UNSPEC;
+  suggerimenti.ai_socktype = SOCK_STREAM;
+  addrinfo *elenco = nullptr;
+  if (auto rv = getaddrinfo(addr, port, &suggerimenti, &elenco); rv != 0) {
+    std::println(stderr,
+                 "REMOTIX B3: ⛔ la pagina TCP non parte: getaddrinfo({}, {}) "
+                 "dice «{}».  Chi viene bannato non leggera' nessuna frase "
+                 "(§4.4-bis), e il server QUIC va avanti lo stesso.",
+                 addr, port, gai_strerror(rv));
+  } else {
+    auto fd = -1;
+    for (auto p = elenco; p; p = p->ai_next) {
+      fd = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol);
+      if (fd == -1) {
+        continue;
+      }
+      auto uno = 1;
+      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &uno, sizeof uno);
+      if (bind(fd, p->ai_addr, p->ai_addrlen) == 0 && listen(fd, 16) == 0) {
+        break;
+      }
+      close(fd);
+      fd = -1;
+    }
+    freeaddrinfo(elenco);
+    if (fd == -1) {
+      std::println(stderr,
+                   "REMOTIX B3: ⛔ la pagina TCP non parte: nessun indirizzo di "
+                   "{}:{} si e' lasciato legare ({}).  Chi viene bannato non "
+                   "leggera' nessuna frase (§4.4-bis), e il server QUIC va "
+                   "avanti lo stesso.",
+                   addr, port, strerror(errno));
+    } else {
+      ev_io_init(&remotix_pagina_ev, remotix_pagina_cb, fd, EV_READ);
+      ev_io_start(EV_DEFAULT, &remotix_pagina_ev);
+      remotix_pagina_accesa = true;
+      std::println(stderr,
+                   "REMOTIX B3: la pagina e' servita in TCP su {}:{} — ⛔ e a un "
+                   "indirizzo bannato si serve LO STESSO, con «tentativi "
+                   "esauriti» e le ore che mancano (§4.4-bis)",
+                   addr, port);
+    }
+  }
+
+  // ── il socket del comando di sblocco
+  if (remotix_comando_socket == nullptr) {
+    std::println(stderr,
+                 "REMOTIX B3: ⛔ nessun --comando-socket: il ban si toglie SOLO "
+                 "col passare delle 12 ore.  §4.4-bis ne vuole due, di strade, "
+                 "e questa meta' non c'e'.");
+  } else {
+    // ⚠ Si toglie il file vecchio: un socket lasciato li' da un'esecuzione
+    //   precedente fa fallire `bind` con EADDRINUSE, e il sintomo — «il comando
+    //   non risponde» — somiglia in tutto a un server morto.
+    unlink(remotix_comando_socket);
+    sockaddr_un dove{};
+    dove.sun_family = AF_UNIX;
+    if (strlen(remotix_comando_socket) >= sizeof dove.sun_path) {
+      std::println(stderr,
+                   "REMOTIX B3: ⛔ il percorso del socket di comando e' troppo "
+                   "lungo ({} byte, il massimo e' {}): il comando di sblocco "
+                   "non ci sara'",
+                   strlen(remotix_comando_socket), sizeof dove.sun_path - 1);
+    } else {
+      strcpy(dove.sun_path, remotix_comando_socket);
+      auto fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+      if (fd == -1 ||
+          bind(fd, reinterpret_cast<sockaddr *>(&dove), sizeof dove) != 0 ||
+          listen(fd, 4) != 0) {
+        std::println(stderr,
+                     "REMOTIX B3: ⛔ il socket del comando di sblocco non parte "
+                     "su «{}»: {}.  Il ban si potra' togliere solo aspettando "
+                     "12 ore (§4.4-bis).",
+                     remotix_comando_socket, strerror(errno));
+        if (fd != -1) {
+          close(fd);
+        }
+      } else {
+        // ⛔ 0600, e la ragione e' la regola: la chiave che questo comando
+        //    chiede e' «l'accesso alla macchina».  Un socket leggibile da
+        //    chiunque la renderebbe «l'accesso a un utente qualunque della
+        //    macchina», che e' una chiave diversa e piu' facile.
+        if (chmod(remotix_comando_socket, 0600) != 0) {
+          std::println(stderr,
+                       "REMOTIX B3: ⚠ non ho potuto mettere 0600 su «{}»: {} — "
+                       "il comando di sblocco c'e', ma la chiave che chiede e' "
+                       "piu' larga di quel che §4.4-bis suppone",
+                       remotix_comando_socket, strerror(errno));
+        }
+        ev_io_init(&remotix_comando_ev, remotix_comando_cb, fd, EV_READ);
+        ev_io_start(EV_DEFAULT, &remotix_comando_ev);
+        remotix_comando_acceso = true;
+        std::println(stderr,
+                     "REMOTIX B3: il comando di sblocco ascolta su «{}» (0600) "
+                     "— «SBLOCCA <indirizzo>» oppure «PING»",
+                     remotix_comando_socket);
+      }
+    }
+  }
+
+  // ⛔ E IL RIASSUNTO SI STAMPA IN UNA RIGA SOLA, con i tre fatti dentro: e' la
+  //    riga che un banco legge per sapere DA CHE STATO parte (B0.1), e senza la
+  //    quale «il ban non e' scattato» e «il ban non era nemmeno acceso» hanno
+  //    lo stesso aspetto.
+  std::println(stderr,
+               "REMOTIX B3: ban lato ospite — persistenza {} · pagina TCP {} · "
+               "comando di sblocco {}",
+               remotix_ban_file ? remotix_ban_file : "SPENTA",
+               remotix_pagina_accesa ? "accesa" : "SPENTA",
+               remotix_comando_acceso ? remotix_comando_socket : "SPENTO");
+  return true;
+}
+
+} // namespace
+
+'''
+
+# ⛔ Gli innesti in `server.cc`, e sono quattro punti perche' quattro sono i
+#    posti in cui un `main` scritto da altri si lascia allargare: la tabella
+#    delle opzioni lunghe, lo `switch` che le legge, l'aiuto, e la riga fra
+#    «il server e' pronto» e «gira».
+INNESTI_OSPITE = [
+    # ── il corpo, subito prima di `main` ────────────────────────────────────
+    (
+        "server.cc",
+        "int main(int argc, char **argv) {\n",
+        None,  # ⚠ riempito in `main()` con CORPO_OSPITE + l'appiglio
+        "il ban lato ospite (il corpo)",
+    ),
+    # ── le due opzioni lunghe ───────────────────────────────────────────────
+    #    ⚠ I numeri 100 e 101 stanno lontani dai 37 dell'esempio apposta: il
+    #      giorno in cui ngtcp2 aggiungera' la sua opzione numero 38, due casi
+    #      con lo stesso numero sarebbero un'opzione che ne esegue un'altra —
+    #      e il compilatore direbbe soltanto «duplicate case value», se va bene.
+    (
+        "server.cc",
+        '      {"gso-burst", required_argument, &flag, 37},\n',
+        '      {"gso-burst", required_argument, &flag, 37},\n'
+        "      // ⭐ REMOTIX B3 — RCP.md §4.4-bis, le due strade del padrone di\n"
+        "      //    casa: dove stanno i ban fra un riavvio e l'altro, e da dove\n"
+        "      //    si comanda di toglierne uno.\n"
+        '      {"ban-file", required_argument, &flag, 100},\n'
+        '      {"comando-socket", required_argument, &flag, 101},\n',
+        "le due opzioni del ban",
+    ),
+    # ── i due casi che le leggono ───────────────────────────────────────────
+    (
+        "server.cc",
+        "      case 36:\n"
+        "        // --show-stat\n"
+        "        config.show_stat = true;\n"
+        "        break;\n",
+        "      case 100:\n"
+        "        // ⭐ REMOTIX B3 — --ban-file (RCP.md §4.4-bis)\n"
+        "        remotix_ban_file = optarg;\n"
+        "        break;\n"
+        "      case 101:\n"
+        "        // ⭐ REMOTIX B3 — --comando-socket (RCP.md §4.4-bis)\n"
+        "        remotix_comando_socket = optarg;\n"
+        "        break;\n"
+        "      case 36:\n"
+        "        // --show-stat\n"
+        "        config.show_stat = true;\n"
+        "        break;\n",
+        "i due casi del ban",
+    ),
+    # ── l'aiuto ────────────────────────────────────────────────────────────
+    (
+        "server.cc",
+        "  -h, --help  Display this help and exit.\n",
+        "  --ban-file=<PATH>\n"
+        "              REMOTIX B3 (RCP.md 4.4-bis): dove si tengono i ban fra\n"
+        "              un riavvio e l'altro.  Senza, il ban vive solo in\n"
+        "              memoria.  Se il file c'e' e non si legge, il server NON\n"
+        "              parte: «zero ban» e «non ho potuto guardare» sono due\n"
+        "              fatti diversi.\n"
+        "  --comando-socket=<PATH>\n"
+        "              REMOTIX B3 (RCP.md 4.4-bis): il socket di dominio Unix\n"
+        "              (0600) da cui si comanda «SBLOCCA <indirizzo>».  E'\n"
+        "              l'altra via d'uscita oltre alle dodici ore.\n"
+        "  -h, --help  Display this help and exit.\n",
+        "l'aiuto delle due opzioni",
+    ),
+    # ── e la chiamata, fra «il server e' pronto» e «gira» ───────────────────
+    #    ⛔ DOPO `s.init`: prima, un fallimento del server lascerebbe aperti la
+    #       porta della pagina e il socket del comando di un server che non c'e'.
+    #    ⛔ E PRIMA di `ev_run`: i due `ev_io` vanno messi nel ciclo mentre il
+    #       ciclo non gira ancora.
+    (
+        "server.cc",
+        "  ev_run(EV_DEFAULT, 0);\n",
+        "  // ⭐ REMOTIX B3 — RCP.md §4.4-bis: i ban dal disco, la pagina in TCP\n"
+        "  //    e il comando di sblocco.  Tutte e tre cose del PADRONE DI CASA:\n"
+        "  //    `rcp.c` non apre socket e non legge la riga di comando.\n"
+        "  if (!remotix_ospite_avvia(addr, port)) {\n"
+        "    exit(EXIT_FAILURE);\n"
+        "  }\n"
+        "\n"
+        "  ev_run(EV_DEFAULT, 0);\n",
+        "la chiamata all'avvio",
+    ),
+]
+
 
 def leggi(percorso):
     with open(percorso, encoding="utf-8") as f:
@@ -1082,11 +1675,15 @@ def main():
         ("http3_server_proto_codec.cc",
          "std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {\n",
          None, "il corpo dei ganci"),
-    ]
+    ] + list(INNESTI_OSPITE)
     testi, guasti = {}, 0
     for percorso, appiglio, sostituto, nome in lista:
         if sostituto is None:
-            sostituto = CORPO + appiglio
+            # ⚠ Due corpi, e ciascuno ha il suo file: quello dei ganci va nel
+            #   codec, quello del ban lato ospite va nel `main`.  Prima qui
+            #   c'era un `CORPO` solo e la scelta non esisteva.
+            corpo = CORPO_OSPITE if percorso == "server.cc" else CORPO
+            sostituto = corpo + appiglio
         if percorso not in testi:
             with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
                 testi[percorso] = f.read()

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>S5 — la tela che il client dichiara</title>
+<!--
+  ⛔ QUESTA PAGINA CALCOLA LA TELA COME LA CALCOLERA' IL CLIENT VERO.
+
+  `SPECIFICHE.md` §6.1-bis e `DECISIONI.md` §5.0-quater: la tela e' lo schermo
+  in PIXEL FISICI, cioe' `screen.width × devicePixelRatio`.  Ed e' proprio
+  perche' i due fattori si muovono in senso opposto con lo zoom che il
+  prodotto vale: a 150 % `screen.width` cala di un terzo e `devicePixelRatio`
+  sale di un mezzo.
+
+  ⛔ Quindi il controllo NON e' «i due numeri devono differire» — quello era
+     ROSSO SU CODICE GIUSTO (rilievo R3.10), e mandava chi lo leggeva a
+     rompere una pagina sana finche' il numero non si muoveva.  Il controllo
+     e' che la tela dichiarata a 100 % e a 150 % sia **la stessa**, e che
+     coincida con la risoluzione letta **fuori dal browser**.
+
+  ⛔ E l'arrotondamento al PARI PER DIFETTO e' quello che l'invariante I7
+     pretende dal client, applicato qui e non «da qualche parte piu' tardi»:
+     un numero dispari nella tela e' un difetto che nasce nel client.
+     ⚠ Trovare qui un numero pari NON dimostra che i dispari non esistano
+       (`LEZIONI.md` §1.3): la protezione sta nel programma, la misura puo'
+       solo trovare un positivo.
+-->
+<style>
+  body { margin: 0; padding: 1.5rem; background: #0d0d12; color: #e8e8f0;
+         font: 15px/1.6 ui-monospace, monospace; }
+  td { padding: 0.15rem 1.2rem 0.15rem 0; }
+  b { color: #9fe; }
+</style>
+</head>
+<body>
+<h2>S5 — la tela dichiarata</h2>
+<table id="tabella"></table>
+<script>
+"use strict";
+const GIRO = new URLSearchParams(location.search).get("giro") || "senza-giro";
+let numero = 0;
+
+// ⛔ Il pari per difetto: e' la regola del client, scritta dove il numero nasce.
+const alPari = (x) => Math.floor(x / 2) * 2;
+
+function misura() {
+  const dpr = devicePixelRatio;
+  return {
+    tipo: "TELA",
+    n: ++numero,
+    giro: GIRO,
+    motore: navigator.userAgent,
+    schermo_l: screen.width,
+    schermo_a: screen.height,
+    dpr: dpr,
+    finestra_l: innerWidth,
+    finestra_a: innerHeight,
+    // La tela grezza, e la tela come la dichiarerebbe `ATTACCA`.
+    tela_grezza_l: screen.width * dpr,
+    tela_grezza_a: screen.height * dpr,
+    tela_l: alPari(Math.round(screen.width * dpr)),
+    tela_a: alPari(Math.round(screen.height * dpr))
+  };
+}
+
+function spedisci() {
+  const d = misura();
+  navigator.sendBeacon("/esito", new Blob([JSON.stringify(d)],
+                                          {type: "application/json"}));
+  document.getElementById("tabella").innerHTML = Object.entries(d)
+      .map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join("");
+}
+
+addEventListener("load", () => setTimeout(spedisci, 300));
+// Lo zoom fa un `resize`: ogni volta che cambia, la pagina ridichiara la tela.
+// ⛔ E' cosi' che il banco VERIFICA che lo zoom sia entrato in vigore, invece
+//    di credere che il tasto premuto abbia funzionato (`LEZIONI.md` §1.11).
+let attesa = null;
+addEventListener("resize", () => {
+  clearTimeout(attesa);
+  attesa = setTimeout(spedisci, 400);
+});
+</script>
+</body>
+</html>

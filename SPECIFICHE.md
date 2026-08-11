@@ -199,12 +199,27 @@ in `DECISIONI.md` §1.7, con le tre voci da rileggere quel giorno.
 
 ### 4.2 L'autenticazione
 
-**PAM locale**, servizio `remotix`, con limitazione della frequenza dei tentativi.
+**PAM locale**, servizio `remotix`, con il **ban dell'indirizzo** dopo tre tentativi falliti.
 
-✅ **La forma della limitazione è decisa** *(9 agosto 2026, `RCP.md` §4.4-bis e `DECISIONI.md`
-§1.5)*: cinque tentativi falliti in cinque minuti, poi un'attesa che parte da 30 secondi e
-raddoppia fino a un tetto di 15 minuti, con due contatori — uno per nome utente e uno per
-indirizzo — e l'azzeramento su un accesso riuscito.
+⭐ ✅ **Tre autenticazioni fallite dallo stesso indirizzo entro 5 minuti, e quell'indirizzo è fuori
+per 12 ore** *(deciso dall'utente il 10 agosto 2026 — `DECISIONI.md` §1.9, `RCP.md` §4.4-bis)*. Il
+**nome utente non conta**: tre nomi diversi contano tre. Un accesso riuscito azzera il conto.
+
+| | |
+|---|---|
+| **che cosa conta** | ⛔ **solo** l'autenticazione fallita — utente inesistente e parola sbagliata sono la stessa cosa, come §4.1 impone. Non gli errori di protocollo, non i tempi scaduti, **e non il rifiuto della seconda connessione** (§5.1), che è quel che riceve il secondo dispositivo dello stesso utente |
+| **che cosa vede chi è bannato** | la pagina **si carica lo stesso** e dice che i tentativi sono esauriti. ⛔ Mai un silenzio: chi è bannato per errore è quasi sempre il proprietario |
+| **come si esce** | ⭐ **le 12 ore che passano, oppure un comando di sblocco sul server** — che chiede l'accesso alla macchina, cioè l'unica chiave che quel caso ammette. Il ban **sopravvive al riavvio** |
+
+⚠ **Il prezzo, dichiarato**: dietro un NAT gli indirizzi si condividono, quindi tre errori di una
+persona chiudono la porta a tutti gli altri per dodici ore — ed è il caso per cui la forma
+precedente aveva un secondo contatore, **tolto sapendolo**. E il primo a inciamparci è chi digita
+una parola lunga sulla tastiera di un telefono.
+
+> ⛔ *Riscritta il 10 agosto 2026. Questa sezione diceva: «cinque tentativi falliti in cinque minuti,
+> poi un'attesa che parte da 30 secondi e raddoppia fino a un tetto di 15 minuti, con due contatori
+> — uno per nome utente e uno per indirizzo». Era 🔸, cioè scritta da me e mai pronunciata; adesso è
+> ✅ e più dura.*
 
 ⭐ **E un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso».** Non serve a
 rallentare chi indovina: serve a togliere il **tempismo** come canale. Senza, «utente inesistente»
@@ -297,6 +312,25 @@ Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — la sola i
 lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,
 cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 
+> ### ⛔ Alla fase 1 questa riga NON è onorata, ed è un ripiego dichiarato
+>
+> *Scritto qui l'11 agosto 2026, rilievo **R12C.17**: il ripiego era dichiarato **solo** in un
+> commento di `src/main.c`, cioè dove non lo legge nessuno che non stia leggendo quel file — mentre
+> questa sezione promette dieci sessioni insieme senza una riga che dica il contrario.*
+>
+> Il server della fase 1 gira in **un solo filo**, un ciclo `poll` solo, e ⛔ **la verifica PAM
+> BLOCCA quel filo**: la stretta di mano di un utente ritarda i pacchetti di **tutti gli altri**.
+> Con il secondo fisso di `RCP.md` §4.4-bis, dieci utenti che entrano insieme fanno aspettare
+> l'ultimo **dieci secondi** — e il sintomo, *«il server è lento quando c'è gente»*, non nomina né
+> PAM né il filo.
+> ⚠ E un secondo tetto della stessa natura: `src/rcp.c` tiene **16** sessioni attaccate in una
+> tabella fissa in compilazione (`MAX_ATTACCATE`), dove qui il tetto è **dieci configurabile**.
+>
+> ⭐ **Non è una promessa rotta: è una promessa non ancora dovuta** — il multi-tenant è delle fasi da
+> 5 in poi. Sta qui perché il giorno in cui lo sarà, **questo è il posto da cui si riparte**: la
+> verifica va su un filo a parte, e la tabella delle sessioni smette di essere un `#define`.
+> Il confine per intero sta in `fasi/01-filo-nudo.md`, «Che cosa è stato sviluppato».
+
 ---
 
 ## 6. La geometria: la tela e la vista
@@ -352,10 +386,26 @@ esattamente la condizione in cui vista e tela coincidono e non si scala niente.
 `[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
 cambiano il numero che il client dichiara:
 
-1. ⛔ **lo zoom della pagina falsa il conto.** Il fattore che converte i pixel logici in fisici
-   **cambia quando l'utente preme `Ctrl +`**, e un utente che ha zoomato *prima* di collegarsi
-   dichiarerebbe una tela sbagliata — che poi resta per tutta la sessione. Va misurato quanto e su
-   quali motori, e se esista un modo di leggere la misura vera invece di quella zoomata;
+1. ⛔ **lo zoom della pagina falsa il conto — MISURATO, e la formula qui sopra non regge.**
+   ⚠ *Questa riga diceva* «*Va misurato quanto e su quali motori*»: **è misurato**, e la risposta è
+   *«su uno dei due, del 50 %»* — banco **S5**, `[M]` 10 agosto 2026, dettaglio in
+   `web/rapporti/S-esiti-sonda.md` §3 e in `DECISIONI.md` §5.0-quater. Corretta l'11 agosto 2026,
+   rilievo **R12C.8**.
+
+   | Motore | zoom 100 % | zoom 150 % | la tela che questa formula darebbe |
+   |---|---|---|---|
+   | **Chrome 151.0.7922.108** | `screen` 1920×1080, `dpr` 1 | `screen` **1920×1080**, `dpr` 1,5 | ⛔ **2880×1620** |
+   | **Firefox 140.13.0esr** | `screen` 1920×1080, `dpr` 1 | `screen` **1280×720**, `dpr` 1,5 | ✅ 1920×1080 |
+
+   ⛔ **Su Chrome `screen.width` non cambia con lo zoom di pagina**, quindi
+   `screen.width × devicePixelRatio` dà `risoluzione × zoom`: un utente che ha premuto `Ctrl +`
+   prima di collegarsi dichiara una tela **del 50 % più grande di quella che esiste**, e se la tiene
+   per tutta la sessione. ⚠ **E non si aggiusta con una riga**: lo zoom di pagina non è leggibile da
+   JavaScript in modo portabile, e nessuna delle due misure da sola dice quale sia quella vera.
+   ⛔ **Finché la formula non è rivista, quel che questo documento prescrive produce un numero
+   sbagliato su un motore su due** — e va scritto qui invece di essere scoperto alla fase 2, quando
+   il sintomo sarà *«il desktop remoto è più grande dello schermo»*. La misura su **DeX** manca (la
+   macchina non c'era): il verso in cui sbaglia un telefono non lo sa nessuno;
 2. **su DeX, `screen` risponde con lo schermo esterno o con quello del telefono?** È l'uso primario,
    e la risposta decide se la tela nasce giusta o grande quanto un telefono;
 3. i browser **arrotondano** queste misure per non far riconoscere il dispositivo: quanto, e se
@@ -740,7 +790,7 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 | ⏳ **la licenza** | rinviata a fine progetto. Fino ad allora vale il solo vincolo di §11.4: niente x265 |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
-| ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto**, §4.2 |
+| ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |
 | `[?]` **il tocco nativo multi-dito** | §7.5 |
 | `[?]` **il puntatore relativo** per le applicazioni che catturano il puntatore | segnalato dal server, non dal client |
 | `[?]` **l'eccezione del certificato copre WebTransport?** | §4.1 — è la misura che decide se il predefinito «un clic» funziona ovunque o solo su Chrome e Firefox |

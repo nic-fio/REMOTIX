@@ -62,9 +62,25 @@ campo `tipo`, che erano indefiniti.
 pronunciate dall'utente, e si correggono senza discussione. Quel che resta volutamente aperto sta
 in §12, dichiarato invece che dimenticato.
 
-⭐ **E la finestra per farlo è adesso**: §9 vieta di aggiungere tipi di messaggio dentro una
-versione maggiore. Quel divieto protegge le implementazioni esistenti, e **oggi non ne esiste
-nessuna**. Dal primo byte scritto in poi, questo documento si tocca solo come dice §9.
+⛔ **E la finestra per farlo È CHIUSA**: §9 vieta di aggiungere tipi di messaggio dentro una
+versione maggiore, e quel divieto protegge le implementazioni esistenti. **Adesso esistono.** Da qui
+in poi questo documento si tocca **solo** come dice §9, senza sconti.
+
+> ⚠ *Questa riga diceva* «⭐ **E la finestra per farlo è adesso** … quel divieto protegge le
+> implementazioni esistenti, e **oggi non ne esiste nessuna**» — *e §9 diceva la stessa cosa con le
+> stesse parole. Era vero fino al 10 agosto 2026; il primo byte è stato scritto quel giorno, e le
+> due righe sono rimaste indietro. **Chi le avesse lette dopo avrebbe aggiunto un tipo di messaggio
+> con la benedizione scritta dell'arbitro**, cioè lo strappo che §12 dichiara di aver chiuso.
+> Corrette l'11 agosto 2026, rilievo **R12C.2**.*
+>
+> ⛔ **Le implementazioni di RCP/1 che esistono, contate l'11 agosto 2026** `[M]` (`wc -l`,
+> `md5sum`):
+> · `src/rcp.c` + `rcp.h` — **2.566 / 197 righe**, dentro il server di prodotto;
+> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `cb7af778…` e `0458f154…`);
+> · `banchi/01-b3-cliente.py` — **il secondo lettore**, in un altro linguaggio;
+> · `src/pagina.html` — il terzo, in JavaScript;
+> · e due che leggono il formato senza parlarlo: `banchi/01-b4-validatore.py` (l'arbitro meccanico)
+>   e `banchi/01-b11-pagina.html`.
 
 ---
 
@@ -411,7 +427,7 @@ dominio.*
 
 | | |
 |---|---|
-| **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta |
+| **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta. ⛔ **Dei byte DER del certificato** — non della chiave pubblica e non dei byte PEM. ⚠ *Il DER mancava qui e c'era in `DECISIONI.md` §1.5 riga 7 dal 9 agosto (rilievo R1.14): allineato la notte del 10 agosto 2026, ed è lo stesso danno di allora — chi calcola l'impronta sull'involucro sbagliato ottiene un confronto che **non combacia mai**, col sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta* |
 | ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** (30,2 ms) e su **Firefox 140** (52,0 ms), e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `fasi/01-filo-nudo.md` |
 | ⚠ **e quel che i due motori NON provano** | sono due squadre che non ci conoscono, quindi il loro accordo vale — ⛔ **ma chi serviva era `aioquic`, non una nostra implementazione**: questo misura **il modello di fiducia**, non il server. E **Safari resta fuori per decisione** (`DECISIONI.md` §1.8) |
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
@@ -455,6 +471,18 @@ controllo, resta aperto per tutta la sessione, e il suo chiudersi **è** la fine
 
 ⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, chiude la sessione.
 Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire sugli altri canali.
+
+> ⚠ **E che cosa può ancora fare chi riceve quel `FIN` — qui non è scritto, ed è una domanda
+> aperta** *(notte del 10 agosto 2026, rilievo **R11.22**)*. Il divieto qui sopra nomina **gli
+> altri canali**, e su uno stream bidirezionale il `FIN` di una parte non chiude il verso
+> dell'altra: chi lo riceve **potrebbe** mandare sul controllo il `CONGEDO` che §8.1 impone a chi
+> chiude. ⛔ Le due letture producono **byte diversi per lo stesso ingresso** — i nove byte di un
+> `CONGEDO` contro il silenzio — e il banco **B11** ha scelto il silenzio (caso
+> `fin-sul-controllo`, atteso *«muta»*) senza che nessuna riga di questo documento lo dica.
+>
+> ⛔ **La domanda sta in `DECISIONI.md` §7.14**, con le due letture, il byte che cambia e il prezzo
+> di ciascuna. Finché è ❓, questa sezione **non decide**: chi implementa sappia che sta scegliendo,
+> e non che sta obbedendo.
 
 ### 4.3 `CIAO` e `ECCOMI`
 
@@ -572,8 +600,11 @@ RESPINTO
 | respinto | `RESPINTO` con motivo |
 
 ⛔ Il server **NON DEVE** distinguere nel motivo fra «utente inesistente» e «parola d'ordine
-sbagliata»: entrambi sono `CREDENZIALI_ERRATE`. E **DEVE** applicare la limitazione della
-frequenza dei tentativi prima di rispondere (§4.4-bis).
+sbagliata»: entrambi sono `CREDENZIALI_ERRATE`. E **DEVE** applicare **il ban dell'indirizzo**
+prima di rispondere (§4.4-bis). ⚠ *Questa riga diceva «la **limitazione della frequenza** dei
+tentativi», che era la forma sostituita il 10 agosto 2026 da `DECISIONI.md` §1.9: dal ban non si
+esce aspettando qualche secondo, e chiamarlo frequenza faceva scrivere un'attesa dove va scritto un
+rifiuto. Allineata la notte del 10 agosto, come §8.2 riga `0x08` lo era già.*
 
 ⛔ **`RESPINTO` è il congedo dell'autenticazione.** Dopo averlo mandato il server **DEVE** chiudere
 la **sessione WebTransport** come dice §3.1 — con lo stesso motivo nel **codice d'errore
@@ -606,66 +637,147 @@ che §4.4 vieta.
 > stringa vuota, quindi `CREDENZIALI` con utente e parola di zero byte era **conforme**. Le due
 > letture — «si passa a PAM e si consuma un tentativo» contro «è errore di protocollo e la
 > connessione cade» — danno due profili di robustezza diversi, perché nella seconda un attaccante
-> che manda credenziali vuote **non incrementa nessuno dei due contatori** di §4.4-bis.*
+> che manda credenziali vuote **non incrementa il conto** di §4.4-bis. ⚠ *Diceva «nessuno dei due
+> contatori», ed erano i due della forma precedente: dal 10 agosto 2026 il conto è **uno solo**, sul
+> solo indirizzo. Il ragionamento non cambia — cambia il numero.*
 
 ⚠ **Una nota che non è normativa e che vale il tempo di scriverla**: la parola d'ordine sta in
 chiaro nella memoria di chi la riceve. Va azzerata appena PAM ha risposto, e **non** deve comparire
 in nessun registro a nessun livello — nemmeno in `traccia`, che in v1 è un registratore di battitura
 (`v1/remotix-c/src/registro.h`).
 
-### 4.4-bis 🔸 La limitazione dei tentativi
+### 4.4-bis ✅ Il ban dell'indirizzo — tre tentativi, poi dodici ore
 
-*Chiude la `[?]` di `SPECIFICHE.md` §4.2, aperta l'8 agosto e ancora aperta il 9. La forma è mia,
-non pronunciata dall'utente: si corregge senza discussione.*
+*Deciso dall'utente il 10 agosto 2026, in due passaggi. Prima: «se l'utente sbaglia la password per
+3 volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban)». Poi, più
+stretta: «3 tentativi di connessione fallita (perché user sbagliato o perché password sbagliata)
+causano il ban di quell'IP».*
 
-Il server tiene due contatori dei **tentativi falliti**, uno per **nome utente** e uno per
-**indirizzo di provenienza**, e applica il più severo dei due:
+> ⛔ **Sostituisce per intero la forma precedente**, che era 🔸 mia e non pronunciata da nessuno: 5
+> tentativi in 5 minuti, poi una finestra da 30 secondi che raddoppiava fino a 15 minuti, con **due**
+> contatori — uno per nome utente e uno per indirizzo — e l'azzeramento su un accesso riuscito.
+> Il contatore **per nome utente non esiste più**: il conto guarda l'indirizzo e nient'altro.
+>
+> ⭐ **E il filo non cambia di un byte**: `TROPPI_TENTATIVI` (`0x08`) esiste già in §8.2, nessun tipo
+> nuovo, nessuna deroga alla regola di §9.
 
 | | |
 |---|---|
-| **soglia** | 5 tentativi falliti in 5 minuti |
-| **oltre la soglia** | ogni nuovo tentativo riceve **`RESPINTO` con motivo `TROPPI_TENTATIVI`**, **senza che PAM venga interrogata**, per una **finestra** che parte da **30 secondi** e **raddoppia** a ogni tentativo fino a un tetto di **15 minuti**. ⛔ **Il rifiuto si decide subito; la risposta parte lo stesso non prima del secondo fisso** della riga in fondo a questa tabella |
+| **il conto** | **tre** autenticazioni fallite dallo stesso **indirizzo di provenienza**, ⛔ **dentro una finestra di 5 minuti**. Fuori dai cinque minuti il ban non scatta: chi sbaglia a digitare ogni tanto non è chi prova parole d'ordine. ⛔ E il nome utente **non conta**: tre nomi diversi contano tre |
+| **la conseguenza** | quell'indirizzo è **bannato per 12 ore** |
+| **che cosa azzera il conto** | un'autenticazione **riuscita** da quell'indirizzo — e il passare del tempo: ⚠ la finestra è **scorrevole**, cioè si guarda l'ora degli **ultimi tre** fallimenti, non si riparte da capo al primo. Ancorandola al primo, tre fallimenti a 0:00 · 4:59 · 5:01 farebbero ripartire il conto da uno, e chi prova a un ritmo appena più lento della finestra non verrebbe **mai** fermato |
+| ⛔ **la chiave del conto** | **il solo indirizzo, senza la porta.** ⚠ È il difetto che il banco **B5** ha trovato nella forma precedente: la chiave conteneva la porta, e siccome §4.4 ammette **un solo tentativo per connessione** la porta cambia a ogni tentativo — quel contatore valeva **sempre 1**. Codice presente, che si leggeva bene, e che non faceva niente |
 
-> ⛔ *Due ambiguità chiuse la sera del 9 agosto 2026, rilievo **R1.13**, ed erano la stessa forma che
-> §4.4 dichiarava di aver già chiuso per `CREDENZIALI_ERRATE`.*
->
-> **Dentro quale messaggio.** `TROPPI_TENTATIVI` è un *motivo*, non un messaggio: viaggiava in
-> `RESPINTO` o in `CONGEDO` secondo chi leggeva. Sul filo sono due tipi diversi e due corpi di
-> lunghezza diversa — e il client che aspetta l'uno e riceve l'altro applica §3 e chiude per errore
-> di protocollo. ⛔ **Il limitatore dei tentativi sarebbe diventato un errore di protocollo**, e la
-> diagnosi avrebbe puntato ovunque tranne che lì.
->
-> **Che cosa è «l'attesa».** Non è un ritardo della risposta: con un solo tentativo per connessione
-> (§4.4) e il tempo di inattività a 30 secondi (§2.2), un server che ritardasse di quindici minuti
-> **non consegnerebbe mai il rifiuto**. È una **finestra** durante la quale si rifiuta **senza
-> interrogare PAM** — non un'attesa che si aggiunge al secondo fisso.
-| **azzeramento** | un'autenticazione riuscita azzera entrambi i contatori di quel nome; il contatore per indirizzo scade da sé dopo 30 minuti di quiete |
-| ⛔ **il ritardo fisso** | il server **NON DEVE** rispondere a `CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è `AMMESSO`** e ⛔ **anche quando è `TROPPI_TENTATIVI`**: non esiste una risposta a `CREDENZIALI` che parta prima di un secondo |
+⛔ **Che cosa conta come tentativo fallito, e che cosa no.** Conta **soltanto** l'autenticazione: un
+`CREDENZIALI` a cui il server risponde `RESPINTO(CREDENZIALI_ERRATE)`. ⭐ E si noti che il conto
+**non sa** se il nome non esistesse o se la parola fosse sbagliata — §4.4 vieta al server di
+distinguerle — che è esattamente la cosa che questa regola ha deciso di contare come una sola.
 
-> ⛔ *L'ultima riga di ciascuna delle due caselle è del 10 agosto 2026, rilievo **R11.10**, e chiude
-> una contraddizione interna a questa stessa tabella.* La riga «oltre la soglia» diceva **subito**,
-> il ritardo fisso dice **non prima di un secondo** — e un sesto tentativo dentro la finestra è un
-> `CREDENZIALI`, cioè **lo stesso ingresso**. Due implementazioni scrivevano il byte a t=0 e a
-> t=1000, tutt'e due conformi a una riga e in violazione dell'altra: è la definizione di difetto
-> che §0 si assegna.
->
-> ⛔ **E non è cosmetico: è la proprietà di sicurezza che questa sezione esiste per proteggere.** Un
-> rifiuto immediato dentro la finestra e uno ritardato fuori dalla finestra rimettono il
-> **tempismo** come canale, dal lato opposto a quello che il ritardo fisso toglie.
->
-> ⚠ *La cura era già scritta nel **banco** — `fasi/01-filo-nudo.md`, B8: «e "subito" vale un
-> secondo … chi cronometra "subito" e si aspetta zero **dà rosso sul codice giusto**» — e non
-> nell'arbitro, che è l'ordine sbagliato: il banco si collauda contro `RCP.md` (§11), non
-> viceversa.*
+**NON contano**, e l'elenco è normativo perché ciascuno di questi bannerebbe qualcuno che non ha
+sbagliato niente:
 
-⭐ **Il ritardo fisso è la riga che conta**, e non serve a rallentare chi indovina: serve a togliere
-il **tempismo** come canale. Senza, «utente inesistente» risponde in un millisecondo e «password
-sbagliata» in cinquanta, e la distinzione che §4.4 vieta di scrivere nel motivo la si legge
-comunque col cronometro. Applicarlo solo ai rifiuti la rimetterebbe dall'altra parte.
+| | |
+|---|---|
+| `ERRORE_PROTOCOLLO` · `VERSIONE_INCOMPATIBILE` · `NIENTE_IN_COMUNE` | sono guasti dei **byte**, e possono nascere da un difetto **nostro** o da una scheda rimasta aperta su una versione vecchia (§13 di `PIANO.md`). Un difetto del server che bannasse l'utente per dodici ore sarebbe la peggiore diagnosi che questo progetto possa produrre |
+| `TEMPO_SCADUTO` · le connessioni che cadono a metà stretta di mano | misurano una rete lenta o una persona che digita piano (§4.6), non un tentativo |
+| ⛔ **`GIA_ATTIVA_REMOTA`** (`0x0F`) | è quel che riceve il **secondo dispositivo dello stesso utente** (§8.2): contarlo vorrebbe dire che chi prova a riattaccarsi tre volte dal telefono **si banna da sé**, mentre la sua sessione è viva |
 
-⚠ **E il conto per indirizzo va tenuto sapendo che cosa non protegge**: dietro un NAT gli indirizzi
-si condividono, quindi un utente maldestro può bloccare i vicini. È il motivo per cui il contatore
-per nome esiste ed è quello che si azzera con un successo.
+⛔ **Che cosa vede un indirizzo bannato** *(deciso dall'utente: «viene visualizzata una pagina di
+login rifiutato»)*:
+
+1. **la pagina si serve lo stesso**, e mostra il rifiuto — *«tentativi esauriti»*. ⛔ Non un errore di
+   rete, non un silenzio: chi è stato bannato per errore è quasi sempre il proprietario, e deve
+   poter capire che cosa gli è successo invece di trovarsi davanti un server che sembra morto per
+   mezza giornata;
+2. **la sessione WebTransport si rifiuta**, con `TROPPI_TENTATIVI` nel codice d'errore applicativo
+   della chiusura (§3.1 punto 3). ⚠ Serve alla **scheda già aperta**, che non ricarica la pagina e
+   altrimenti resterebbe ad aspettare;
+3. 🔸 la pagina dice anche **quante ore mancano**. *Derivata, correggibile senza discussione*: è la
+   differenza fra un'informazione e mezza giornata di mistero.
+
+⛔ **Il ban sopravvive al riavvio del server** *(deciso dall'utente)*: indirizzo e ora di scadenza su
+file. Un ban che si azzera riavviando è una protezione che **si perde da sé** — invariante **I7** — e
+chi riavvia il server per un altro motivo non saprebbe di averla tolta.
+
+⛔ **E si esce in due modi, non uno** *(deciso dall'utente: «comando di sblocco oppure il trascorrere
+delle 12 ore»)*: la scadenza naturale, oppure un **comando di sblocco sul server**. Quest'ultimo è la
+via d'uscita di chi si banna dal proprio telefono, e chiede l'unica chiave che quel caso ammette —
+l'accesso alla macchina. ⛔ **Ogni sblocco si scrive nel registro**, o un ban tolto e un ban mai
+scattato hanno lo stesso aspetto.
+
+> ⚠ **Il comando di sblocco NON è di RCP, e va detto qui perché non lo si cerchi sul filo.** Non
+> passa un byte della sessione: è un meccanismo del server, e questo documento ne detta soltanto
+> *che esista*, *che risponda distinguendo «tolto» da «non era bannato»* e *che scriva nel registro*.
+> ⛔ **La forma non è indifferente, ed è stata pagata**: `remotix --sblocca IND` come **secondo
+> processo** non funziona — il ban vive nella memoria del processo che serve, un secondo processo può
+> solo riscrivere il file, il server continuerebbe a rispondere `TROPPI_TENTATIVI` fino al riavvio, e
+> **chi ha dato il comando lo vede uscire con zero**. Dalla notte del 10 agosto 2026 le due
+> implementazioni parlano lo stesso protocollo di **una riga su un socket Unix `0600`** — `SBLOCCA
+> <indirizzo>` → `TOLTO` / `NON-BANNATO`, e `PING` → `PONG` per dire *«il comando c'è»*. Il racconto
+> per esteso sta in `fasi/01-filo-nudo.md` («Che cosa NON ha funzionato»), non qui.
+
+⭐ **Il ritardo fisso resta, e non è ridondante rispetto al ban.** Il server **NON DEVE** rispondere a
+`CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è
+`AMMESSO`**. Il ban toglie di mezzo chi indovina; il secondo fisso toglie il **tempismo** come
+canale — senza, «utente inesistente» risponde in un millisecondo e «parola sbagliata» in cinquanta,
+e la distinzione che §4.4 vieta di scrivere nel motivo la si legge col cronometro.
+
+> ⚠ **E su questo c'è una misura che non torna, dichiarata invece che nascosta.** `[M]` 10 agosto
+> 2026, banco **B8**: la mediana dei tentativi respinti è **2636 ms** su 42 campioni, dove questa
+> riga vuole ~1000. ⛔ A governare i tempi non è il nostro ritardo: è **PAM**. Finché quel ritardo
+> non è costante, il secondo fisso **non nasconde quel che dichiara di nascondere** — cioè se un
+> nome utente esista. Resta `[?]`, e **il ban non la chiude**: sono due proprietà diverse.
+
+⛔ **E il rifiuto di un indirizzo bannato parte anch'esso NON PRIMA DI UN SECONDO.** La *decisione* si
+prende senza interrogare PAM — guarda solo l'indirizzo, e nessun segreto ci entra — ma **la risposta
+aspetta come tutte le altre**: `RESPINTO(TROPPI_TENTATIVI)` sul canale di controllo, dopo il secondo
+fisso.
+
+> ⛔ *Corretto la notte del 10 agosto 2026, e l'ha trovato il banco **B8** mentre lo si riscriveva.*
+> Questo paragrafo diceva *«il rifiuto di un indirizzo bannato **non passa** dal secondo fisso: si
+> decide **prima** di `CREDENZIALI`»*. ⛔ **Sono due righe incompatibili nella stessa sezione**: un
+> rifiuto deciso *prima* di `CREDENZIALI` non ha nessun `RESPINTO` da mandare, perché `RESPINTO` è la
+> risposta a un messaggio che non è ancora arrivato — e §8.2 fa viaggiare `TROPPI_TENTATIVI` proprio
+> dentro un `RESPINTO`.
+>
+> ⛔ **E riapriva una contraddizione che il rilievo R11.10 aveva chiuso quello stesso giorno**, per la
+> ragione che vale ancora: *«un rifiuto immediato dentro la finestra e uno ritardato fuori rimettono
+> il **tempismo** come canale, dal lato opposto a quello che il ritardo fisso toglie»*. Un indirizzo
+> che riceve la risposta in un millisecondo sa di essere bannato prima ancora di leggere il motivo.
+>
+> ⚠ È la forma che questo progetto paga più spesso — **una cura applicata in un posto solo** — e
+> stavolta l'ha commessa chi scriveva la regola nuova, poche ore dopo averne curata una uguale.
+
+⛔ **La pagina del rifiuto si serve con stato HTTP `200`**, non con un 4xx. ⚠ *Scelto la notte del 10
+agosto 2026, 🔸 derivato:* con uno stato d'errore un intermediario o il browser stesso possono
+**sostituire il corpo** con la propria pagina d'errore, e la frase che il proprietario **deve**
+leggere — *«tentativi esauriti, restano N ore»* — sparirebbe proprio nel caso per cui esiste.
+
+⚠ **E la chiave del conto ha una forma canonica**, che va detta perché sta in un solo posto del
+codice e nessun documento la dichiarava: l'indirizzo viaggia fra **parentesi quadre anche quando è
+IPv4** — `[192.168.0.2]` — perché è così che lo scrive chi ospita. ⛔ Chi digita `192.168.0.2` al
+comando di sblocco **deve arrivare alla stessa chiave**: la normalizzazione è del server, non di chi
+comanda. Senza, il comando risponde *«non era bannato»* a ogni indirizzo, **per sempre e senza
+sintomo**.
+
+⚠ **Il prezzo, dichiarato — e non lo paga chi indovina:**
+
+| | |
+|---|---|
+| **dietro un NAT gli indirizzi si condividono** | tre errori di **una** persona chiudono la porta a tutti gli altri per dodici ore. Il contatore per nome utente della forma precedente esisteva proprio per questo, ed **è stato tolto sapendolo**: la scelta è dare all'indirizzo tre tentativi soli invece di distinguere chi sbaglia |
+| **il primo a inciamparci è il proprietario** | parola lunga, tastiera di un telefono, maiuscole automatiche. È da qui che vengono l'obbligo della pagina che **dice** che cos'è successo e il comando di sblocco: senza quei due, la regola sarebbe indistinguibile da un guasto |
+| ⛔ **e la parola d'ordine resta l'unica chiave** | tre tentativi **per indirizzo** alzano molto il costo di chi indovina, e non chiudono la partita: una rete di diecimila indirizzi ottiene comunque trentamila tentativi su un conto solo. Quella la chiude l'autenticazione forte rinviata a fine progetto (`DECISIONI.md` §1.7) |
+
+⭐ **E una cosa che questa regola non può fare**, scritta perché nessuno gliela attribuisca: nessuno
+può far bannare l'indirizzo **di qualcun altro**. Per arrivare a `CREDENZIALI` bisogna aver
+completato la stretta di mano QUIC, che pretende che i pacchetti tornino davvero a quell'indirizzo:
+il mittente non si falsifica. Il ban colpisce solo chi ha bussato per davvero.
+
+⚠ **E una conseguenza sul collaudo, che morde subito**: i banchi partono **tutti dallo stesso
+indirizzo**, e quello che prova questa regola fallisce di proposito. Con dodici ore, «si aspetta la
+scadenza» non è una cura — il banco si serve del comando di sblocco, e il banco del limitatore **non
+lo chiama dentro il proprio giro**, o non prova più niente. Il dettaglio sta in
+`fasi/01-filo-nudo.md`, regola **B0.3** e banco **B8**.
 
 ### 4.5 `ATTACCA`
 
@@ -726,9 +838,37 @@ non lo dichiara a nessuno.*
 
 | Da | A | Tetto |
 |---|---|---|
-| stretta di mano TLS finita | `CIAO` ricevuto | **5 s** |
+| ⭐ **apertura del canale di controllo** *(il primo stream bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |
 | `ECCOMI` spedito | `CREDENZIALI` ricevute | **60 s** — è il tempo in cui una persona digita la parola d'ordine |
 | `AMMESSO` spedito | `ATTACCA` ricevuto | **10 s** |
+| ❓ **sessione WebTransport aperta, canale di controllo MAI aperto** | — | ⛔ **oggi nessuno**, e non è una scelta: è un buco. `DECISIONI.md` §7.17 |
+
+> ### ⭐ La prima riga è cambiata di una parola, e la seconda risposta dice che non basta
+>
+> ⚠ *La prima riga diceva* **«stretta di mano TLS finita»** *dal 9 agosto 2026. Era la `[?]` **R3.27**
+> — «"stretta di mano TLS finita" non è un istante che i due lati condividono»: in WebTransport la
+> connessione HTTP/3 e la sessione sono due cose separate, e fra i due istanti passa almeno un giro
+> di rete. Corretta l'11 agosto 2026 su una misura del banco **B6**, rilievi **R12C.11** e
+> **R12-A.25**.*
+>
+> **La prima risposta di B6, e cambia una parola.** Il cronometro del primo tetto parte
+> dall'**apertura del canale di controllo**: è l'istante che il server osserva davvero, ed è quel che
+> `src/rcp.c` fa (la sessione RCP nasce quando il canale si apre, e il tetto si conta da lì). ⛔ La
+> fine del TLS **non** è utilizzabile: una seconda sessione su una connessione riusata partirebbe
+> **col budget già consumato**, cioè si vedrebbe congedare per un tempo che non ha avuto.
+>
+> ⛔ **E la seconda risposta di B6 è più grave, perché dice che curare la parola NON CHIUDE il
+> buco.** Se il cronometro parte dall'apertura del canale, chi apre la **sessione** WebTransport e
+> **non apre mai il canale** non ha addosso **nessun tetto**: resta lì, viva e senza scadenza — cioè
+> esattamente la connessione che *«tiene un posto e non lo dichiara a nessuno»*, che è la prima riga
+> di questa sezione. La tabella comincia da `CIAO`, e **prima del `CIAO` c'è uno stato in cui il
+> server non conta niente**.
+>
+> ⚠ **Che cosa lo copre oggi, e perché non basta**: solo il tempo di inattività di QUIC, che è **30
+> secondi di silenzio** — ma chi tiene aperta la sessione mandando qualunque cosa su un altro stream
+> non è silenzioso, e non scade mai. ⛔ **Quale sia il tetto giusto, e da che istante, è una domanda
+> aperta e non una svista**: sta in `DECISIONI.md` §7.17, con le due letture e il caso concreto. Qui
+> si dichiara il buco invece di riempirlo con un numero che nessuno ha scelto.
 
 ⛔ Scaduto un tetto, il server **DEVE** congedare con `TEMPO_SCADUTO`. **NON DEVE** aspettare i 30
 secondi del tempo di inattività di QUIC: quello misura il **silenzio della rete**, questo misura un
@@ -1187,28 +1327,68 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 | | |
 |---|---|
 | **i codici dei pulsanti e dei tasti** | ⛔ sono quelli di **evdev** (`linux/input-event-codes.h`): `BTN_LEFT` = `0x110`, `KEY_A` = `30`. ⭐ Non è una scelta di comodo: `libei` — cioè l'unico modo che abbiamo di iniettare input in un compositore Wayland — lavora in evdev, e ogni altra convenzione aggiungerebbe una tabella di traduzione che sbaglia in silenzio |
-| **la rotella** | ⛔ unità da **120 per scatto**, ⚠ e i mezzi scatti esistono: `60` è mezzo scatto e **non DEVE** essere arrotondato a zero. `[?]` **Il segno è da misurare, non da decidere** — vedi il riquadro |
+| **la rotella** | ⛔ unità da **120 per scatto**, ⚠ e i mezzi scatti esistono: `60` è mezzo scatto e **non DEVE** essere arrotondato a zero. ⭐ **Il segno è MISURATO** *(10 agosto 2026, su Mutter)*: il client manda `+120` quando l'utente gira la rotella **in su**, e ⛔ **il server DEVE invertire l'asse verticale** prima di passarlo a `libei` — vedi il riquadro |
 | **il carattere** | ⛔ un **valore scalare Unicode**: da `0` a `0x10FFFF`, esclusi i surrogati `0xD800`-`0xDFFF`. Fuori intervallo è `ERRORE_PROTOCOLLO` |
 | **l'identificatore** | ⛔ cresce di **almeno uno** a ogni messaggio, su tutto il canale di input — non uno per tipo. È quello che torna nel campo `input` dei fotogrammi (§6.2), e con contatori separati non tornerebbe niente |
 | **l'`istante`** | ⚠ **nessuna regola di questo documento lo consuma**: il ritardo lo misura l'anello chiuso di `DECISIONI.md` §2.6, e il fotogramma porta indietro l'`id`, non l'istante. Resta perché è l'unico modo di sapere **quando l'utente ha mosso la mano** invece di quando il byte è arrivato, e serve alla diagnosi. ⛔ In una pagina l'orologio monotono è in **millisecondi** e la sua grana è deliberatamente ingrossata: il client scrive `millisecondi × 1000` e **NON DEVE** far credere a una precisione che non ha *(rilievo **R1.27**)* |
 
-> ### `[?]` Il segno della rotella — rilievo **R1.26**, e va misurato
+> ### ⭐ Il segno della rotella — rilievo **R1.26**, ed è MISURATO
 >
-> Questa riga diceva *«positive verso l'alto e verso sinistra. È l'unità di
-> `wl_pointer.axis_value120`, quindi non si converte niente»*. ⛔ **Le due metà citano due
-> convenzioni con segni opposti**: in evdev la rotella è positiva verso l'alto, in `wl_pointer` il
-> valore è positivo nel verso in cui **scorre il contenuto**, cioè verso il basso. E
-> «positive verso sinistra» non corrisponde a nessuna delle due.
+> ⚠ *Questo riquadro finiva, fino all'11 agosto 2026, con* «**Finché non è misurata, questa riga
+> resta `[?]`**» *— e la misura era stata presa la notte del 10, senza che nessuno la portasse qui
+> (rilievo **R12C.7**, e la sonda lo aveva scritto di suo in* `web/rapporti/S-esiti-sonda.md` *§9,
+> voce S.7). Chi avesse scritto l'iniezione dell'input alla fase 4 leggendo questa riga avrebbe
+> scelto il segno a caso, e il sintomo è* «la rotella va al contrario» *— cioè la forma **E11** che
+> questo riquadro esiste per evitare.*
 >
-> Il caso concreto: il client manda `+120` perché l'utente ha girato la rotella in su. Un server
-> inietta `+120` e la pagina **sale**; l'altro inietta `-120` e la pagina **scende**. Nessuno dei
-> due ha sbagliato a leggere.
+> **Perché la domanda esisteva.** Questa riga diceva *«positive verso l'alto e verso sinistra. È
+> l'unità di `wl_pointer.axis_value120`, quindi non si converte niente»*. ⛔ **Le due metà citano
+> due convenzioni con segni opposti**: in evdev la rotella è positiva verso l'alto, in `wl_pointer`
+> il valore è positivo nel verso in cui **scorre il contenuto**, cioè verso il basso. E «positive
+> verso sinistra» non corrisponde a nessuna delle due. ⛔ E `libei` **non la scioglie**:
+> `ei_device_scroll_discrete` documenta *«the y scroll distance in fractions or multiples of 120»* —
+> **dichiara la grandezza e non il verso**. La convenzione non sta nell'API, sta nel compositore.
 >
-> ⭐ **Si misura in dieci minuti** — si inietta con `libei` e si guarda da che parte va la pagina.
-> ⛔ **E si misura con `natural-scroll` nei due stati**: se il segno cambia con la gsetting della
-> sessione di prova, il numero scritto qui sarebbe **il segno di una configurazione del desktop**, e
-> il sintomo per l'utente sarebbe *«la rotella va al contrario»* su metà delle installazioni — forma
-> **E11**. Finché non è misurata, questa riga resta `[?]`.
+> ⭐ **LA MISURA — `[M]` 10 agosto 2026, 20:59:27→20:59:57 UTC.**
+>
+> | | |
+> |---|---|
+> | **che cosa si è visto** | `ei_device_scroll_discrete(0, **+120**)` → l'evento `wheel` della pagina porta **`deltaY = +114`** (`deltaMode = 0`, pixel) e la pagina **scende** di 114 px, cioè va **verso la fine del documento**. Con **−120**, `deltaY = −114` e la pagina **sale** |
+> | **la scena, per intero** | macchina di prova **192.168.0.2**; sessione GNOME senza monitor da `banchi/00-sessione-gnome.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; la pagina in **Firefox 140.13.0esr** in `--kiosk` a schermo pieno sul monitor virtuale, `dpr` 1 |
+> | **dove si ricontrolla** | `banchi/01-s7-esiti.jsonl` (due giri, `7sd0u7jv` e `oq7jqrdv`), e il rapporto `web/rapporti/S-esiti-sonda.md` §1 |
+>
+> ⛔ **La conseguenza, ed è del server**: `deltaY` positivo vuol dire che il contenuto va **verso la
+> fine** del documento, cioè che l'utente ha girato la rotella **in giù**; questa sezione fissa
+> l'altra metà — il client manda `+120` quando l'utente gira **in su**. Le due convenzioni sono
+> **opposte**, quindi **il server DEVE invertire il segno dell'asse verticale** prima di passarlo a
+> `ei_device_scroll_discrete`. Iniettando il valore così com'è, lo schermo remoto scorrerebbe al
+> contrario per **ogni** utente.
+>
+> ⭐ **E il confronto è onesto perché i due lati parlano la stessa lingua**: `deltaY` è esattamente
+> la grandezza che il client legge quando l'utente gira la rotella vera. Non si confrontano due
+> mondi: si misura due volte lo stesso strumento.
+>
+> **I controlli, e quel che ciascuno vale** *(la ricontata dell'11 agosto, `S-esiti-sonda.md` §0-bis,
+> ha separato quel che è nel registro da quel che stava solo a schermo — e qui si riporta la
+> separazione, non solo l'esito)*:
+>
+> | Controllo | Esito | `[M]` o `[?]` |
+> |---|---|---|
+> | ⛔ **il segno opposto** — si inietta anche `−120` | ✅ `+120 → +114`, `−120 → −114`: si misura **il segno**, non «che qualcosa si muove» | `[M]`, nel registro |
+> | ⛔ **i due strumenti concordano** — l'evento `wheel` e lo spostamento vero di `scrollY` | ✅ concordano su tutte le prove | `[M]`, nel registro |
+> | ⛔ **`natural-scroll` nei due stati**, col dispositivo rifatto da capo | ✅ **il segno NON cambia**: `+120 → +114` in tutt'e due i giri | ⚠ **metà**: `[M]` che due giri indipendenti danno lo stesso segno; `[?]` **che fossero i due stati** — l'etichetta stava solo nell'uscita a schermo del lanciatore |
+> | **il silenzio** — dieci secondi senza iniettare | ✅ nessuno scatto | ⚠ è un'**assenza** di righe: coerente coi timbri, non provata da loro |
+> | *in più* — `ei_device_scroll_delta` ha lo stesso verso? | ✅ sì | ⛔ **non ritrovabile**: nessuna riga del registro lo porta. Resta cosa vista, non misura consegnata |
+>
+> ⚠ **Un fatto in più, per chi scriverà l'iniezione**: uno scatto (120 unità) si traduce in **114
+> pixel** su Firefox+Mutter, cioè tre righe. È il fattore di conversione di quella coppia, **non una
+> costante del protocollo**: non si scrive qui e non si mette in nessuna formula.
+>
+> ⛔ **E che cosa NON è chiuso, perché «non chiuso» e «non misurato» sono due stati diversi.** La
+> misura è su **Mutter**, e questa sezione vincola **cinque** desktop. Se a normalizzare è `libei`,
+> il numero vale ovunque; se normalizza il compositore, la fase 10 troverà un segno diverso su KWin.
+> `[?]` **resta per gli altri quattro**, e il banco è rieseguibile su KWin senza cambiare una riga
+> della pagina (`banchi/01-s7-rotella.sh` + `01-s7-pagina.html`).
 >
 > ⚠ *Il precedente che questa riga citava era sbagliato, ed è stato corretto la notte del 9 agosto
 > 2026 (rilievo **R4.15**): diceva che «in v1 questa esatta tabella di conversione è costata il
@@ -1299,8 +1479,16 @@ spingono.
 ### 7.5 ⭐ La funzione di banco: la marca, e il ritardo noto
 
 *Aggiunta la notte del 9 agosto 2026, rilievo **R3.4** della revisione del banco della fase 1, e
-**prima del primo byte di codice** — §9 chiude la finestra dei tipi nuovi da lì in poi, e la
-clausola che la tiene aperta è che oggi non esiste nessuna implementazione.*
+**prima del primo byte di codice** — §9 chiude la finestra dei tipi nuovi da lì in poi, e la clausola
+che la teneva aperta era che allora non esistesse nessuna implementazione. ⛔ **Il primo byte è del
+10 agosto 2026 e la finestra è chiusa** (§0-bis, §9): questi due tipi sono entrati con l'ultima
+occasione, e non ce n'è una seconda. ⚠* Diceva «*la clausola che la tiene aperta è che **oggi** non
+esiste nessuna implementazione*», *al presente — corretta l'11 agosto 2026, rilievo **R12C.2***.
+
+⚠ **La sua marca è 🔸, non ✅, ed è registrata dove le decisioni stanno**: `DECISIONI.md` §1.5 riga
+26. ⛔ **Che sia stata dell'utente è una domanda aperta** — `DECISIONI.md` §7.16, rilievo
+**R11.15** — e conta perché questi due tipi hanno consumato la clausola di §9 che §12 dichiara
+essere stata *«l'ultima occasione»*.
 
 > ⛔ **Perché una funzione di banco sta nel protocollo e non nel codice di prova.** L'anello del
 > ritardo di `DECISIONI.md` §2.6 misura **dal lato che riceve**: il client provoca un cambiamento
@@ -1395,6 +1583,17 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 
 ⚠ **L'unica eccezione è `RESPINTO`** (§4.4), che *è* il congedo dell'autenticazione.
 
+> ⚠ **E questo obbligo è più largo di quello di §3.1 punto 2, che lo condiziona — domanda aperta**
+> *(notte del 10 agosto 2026, rilievo **R11.23**)*. §3.1 dice *«**DEVE** mandare `CONGEDO` … **se
+> il canale di controllo è ancora utilizzabile**»*, questa riga non pone condizioni: ⛔
+> **un'implementazione conforme a §3.1 è oggi in violazione di §8.1**, e sono due sezioni
+> normative dello stesso documento che danno due verdetti sullo stesso ingresso — la violazione che
+> arriva su uno stream unidirezionale col controllo già finito.
+>
+> ⛔ **La domanda sta in `DECISIONI.md` §7.15**, e qui non si decide. ⚠ Chi scrive un banco sappia
+> intanto che **B5 e B11 applicano il condizionale di §3.1** (`fasi/01-filo-nudo.md`, rilievo
+> R3.3): un banco che pretendesse tutt'e tre i punti sempre **darebbe rosso sul codice giusto**.
+
 ### 8.2 I motivi
 
 | Codice | Nome | Quando |
@@ -1406,7 +1605,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
 | `0x06` | `BUDGET_PIENO` | la macchina non ha più capacità di codifica |
 | `0x07` | `CREDENZIALI_ERRATE` | |
-| `0x08` | `TROPPI_TENTATIVI` | limitazione della frequenza (§4.4-bis) |
+| `0x08` | `TROPPI_TENTATIVI` | ⭐ **l'indirizzo è bannato**: tre autenticazioni fallite, dodici ore (§4.4-bis). ⚠ *Diceva «limitazione della frequenza», ed era la forma precedente: dal 10 agosto 2026 non è più una frequenza, è un ban* |
 | `0x09` | `NIENTE_IN_COMUNE` | nessun codec condiviso |
 | `0x0A` | `VERSIONE_INCOMPATIBILE` | |
 | `0x0B` | `ERRORE_PROTOCOLLO` | §3 |
@@ -1437,8 +1636,11 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 > ⚠ **Il prezzo, dichiarato**: se il portatile si spegne di colpo senza congedarsi, dal telefono si
 > entra **dopo trenta secondi**, non subito.
 >
-> ⚠ E la finestra per aggiungere un motivo si chiudeva subito: §9 lo vieta dentro una versione
-> maggiore, e la clausola che lo permette è che **oggi non esiste nessuna implementazione**.
+> ⚠ E la finestra per aggiungere un motivo si è chiusa subito dopo: §9 lo vieta dentro una versione
+> maggiore, e la clausola che lo permetteva era che allora non esistesse nessuna implementazione.
+> ⛔ **Dal 10 agosto 2026 esistono** (§0-bis), e questa strada non c'è più. ⚠ *Diceva «la clausola
+> che lo permette è che **oggi** non esiste nessuna implementazione», al presente: corretta l'11
+> agosto 2026, rilievo **R12C.2**.*
 
 ⛔ Ogni motivo **DEVE** essere mostrabile all'utente in una frase comprensibile. `BUDGET_PIENO`
 non è «errore 6»: è «questa macchina non ha più capacità di codifica».
@@ -1495,10 +1697,22 @@ messaggi esistenti né tipi nuovi che il vecchio dovrebbe ignorare — perché i
 giorno in cui un telefono resta indietro — e quel giorno o si è scritta bene, o si scopre che il
 campo in più lo si era aggiunto «tanto è compatibile».
 
-⭐ **E la finestra in cui questo documento si può ancora completare è adesso**: il divieto qui sopra
-protegge le implementazioni esistenti, e **oggi non ne esiste nessuna**. I due tipi aggiunti il 9
-agosto (`0x000D`, `0x000E`) sono entrati sotto questa clausola. **Dal primo byte scritto in poi
-vale la regola senza sconti.**
+⛔ **E la finestra in cui questo documento si poteva ancora completare È CHIUSA**: il divieto qui
+sopra protegge le implementazioni esistenti, e **adesso esistono** — l'elenco, contato, sta in
+§0-bis. **Dal 10 agosto 2026, primo byte di codice, vale la regola senza sconti.**
+
+⛔ **Quanto è stata usata la finestra, prima di chiudersi: QUATTRO tipi, non due.**
+`RICHIEDI_CHIAVE` (`0x000D`) e `TELA` (`0x000E`) il 9 agosto; ⭐ **`BANCO_MARCA` (`0x000F`) e
+`BANCO_ESITO` (`0x0010`) la notte del 9** (§7.5). Più **tre** motivi di congedo (`TEMPO_SCADUTO`,
+`SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). Il conto sta in `DECISIONI.md` §1.5, e §12 dichiara
+che quella dei due della funzione di banco è stata *«l'ultima occasione»*.
+
+> ⚠ *Questa riga diceva* «I **due** tipi aggiunti il 9 agosto (`0x000D`, `0x000E`) sono entrati sotto
+> questa clausola», *e la finestra la dichiarava aperta. I due della funzione di banco erano stati
+> aggiunti nella stessa notte e non erano mai stati portati qui: la cura del rilievo **R11.13** era
+> arrivata a `DECISIONI.md` e non alla riga che tiene il conto della clausola — cioè chi verificava
+> quanto era stata usata una finestra irripetibile, contando da qui, ne trovava la metà. Corretta
+> l'11 agosto 2026, rilievo **R12C.3**.*
 
 ---
 
@@ -1533,6 +1747,7 @@ l'altro**: si collaudano contro questo documento.
 | ⭐ **l'audio, ascoltato** | si apre un datagram e si guardano i byte: frequenza, canali, ordine dei byte del PCM. ⛔ Un server che spedisse 44 100 Hz, o PCM big-endian, resterebbe **verde su tutti gli altri banchi** — e il sintomo, come in v1, «sembra un difetto di rete» (`LEZIONI.md` §2.2) |
 | ⭐ **gli appunti** | i tre messaggi, l'identificatore di trasferimento, e **due trasferimenti aperti insieme nei due versi**: è il caso in cui senza identificatore i testi si scambiavano |
 | ⭐ **il secondo fisso** | si cronometra la risposta a `CREDENZIALI` — **anche quella riuscita** (§4.4-bis). È una proprietà di sicurezza che nessun altro banco vede, e una regressione che la togliesse non farebbe fallire niente |
+| ⭐ **il ban dell'indirizzo** | tre autenticazioni fallite, e ⛔ **il quarto tentativo è rifiutato anche con la parola d'ordine GIUSTA** (§4.4-bis) — che è la prova che distingue un ban da un contatore. ⛔ E con **tre nomi utente diversi**, o non si sta provando la regola decisa ma quella vecchia. ⚠ Poi tre controlli che dicono *no*: un **altro** indirizzo entra lo stesso · un accesso **riuscito** azzera il conto (due falliti, uno riuscito, due falliti: il terzo **non** banna) · e il ban **sopravvive al riavvio** del server |
 | **l'anello del ritardo** | il client manda un input che cambia colore allo schermo e guarda i fotogrammi decodificati finché non lo vede (`DECISIONI.md` §2.6) |
 | ⭐ **il ritardo noto** | si chiede `BANCO_MARCA` con `ritardo_ms = N` e **la mediana DEVE salire di esattamente N** (§7.5). ⛔ *È il controllo che rende credibile ogni numero di ritardo di questo progetto: un banco che non lo fa non sa di misurare* |
 | ⭐ **la funzione di banco spenta** | ⛔ con `banco.marca = no`, un `BANCO_MARCA` **DEVE** ricevere `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — **non un silenzio e non una chiusura**. ⚠ E si verifica **dal lato che riceve**: un server che tace lascia il banco ad aspettare per sempre, e il sintomo è «il banco si è piantato» |
@@ -1601,8 +1816,13 @@ legge questa specifica.
 
 *Non sono buchi: sono cose che non si chiudono adesso, e il motivo per cui non si chiudono.*
 
+⛔ **E una riga di stato, perché cambia che cosa si può ancora fare qui dentro**: dal **10 agosto
+2026** — primo byte di codice — la clausola di §9 è **consumata**. Quel che non è chiuso in RCP/1
+resta aperto **fino a RCP/2**, o si chiude senza aggiungere tipi di messaggio (§0-bis, §9).
+
 | | Perché non ora | Quando |
 |---|---|---|
+| ⛔ **il tetto della sessione senza canale di controllo** | §4.6 conta dall'apertura del canale, e chi apre la sessione e **non apre mai il canale** non ha addosso nessun tetto. ⚠ Non si chiude con un numero scelto da me: è `DECISIONI.md` §7.17, ❓ aperta l'11 agosto 2026 dalla misura di **B6** | quando l'utente avrà risposto. ⭐ **Non serve un tipo nuovo**: il motivo è `TEMPO_SCADUTO`, che c'è già |
 | **il microfono** | il verso è previsto, il formato no. Chiuderlo adesso significherebbe scrivere una negoziazione che nessuno esercita | quando `SPECIFICHE.md` §10 smetterà di dirlo «non urgente» — e sarà una **versione maggiore nuova**, perché è un canale in più (§9) |
 | **il puntatore relativo** | serve alle applicazioni remote che **catturano** il puntatore, e quel caso lo segnala il server. Non è il caso di `Pointer Capture` su Android, che è già coperto (`DECISIONI.md` §5-bis.8) | quando si presenta un'applicazione che lo chiede |
 | **il tocco multi-dito** | `input.tocco` esiste e vale `no`. Un posto riservato costa niente; una definizione mai esercitata costa un vincolo | fase A4, se il tocco nativo servirà davvero |

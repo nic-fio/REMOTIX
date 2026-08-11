@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3a — la tastiera, nei tre stati</title>
+<!--
+  ============================================================================
+  ⛔ LA DOMANDA NON E' «ARRIVA?» MA «ARRIVA *E BASTA*?»
+
+  Gli stati sono TRE (`web.md` O8, `SPECIFICHE.md` §7.3-bis, S3 §3.A.2):
+
+    A — consegnata e annullabile: l'evento arriva e `preventDefault()` ferma
+        il browser.  Non c'e' niente da fare: funziona gia'.
+    B — ⛔ CONSEGNATA MA RISERVATA: l'evento arriva **e il browser esegue lo
+        stesso la sua azione**.  E' il peggiore: la sessione remota riceve la
+        battuta e la scheda si chiude.
+    C — non consegnata: nessun evento.
+
+  ⛔ E LO STATO B E' QUELLO CHE IL BANCO DEVE SAPER DISTINGUERE.  Un banco che
+     conta («12 scorciatoie su 20») non distingue B da C.
+
+  ============================================================================
+  ⛔ IL DIFETTO CHE INVERTIVA LA MISURA, E LA SUA CURA
+
+  `Ctrl+W` su DeX: la pagina riceve il `keydown` **e** il browser chiude la
+  scheda.  Se il registro vive nella pagina, la chiusura porta via il
+  registro: il banco scrive «non consegnata» — cioe' **lo stato opposto** — e
+  dichiara innocuo il caso pericoloso (rilievo R3.11).
+
+  ⭐ LA CURA, QUI: ogni evento parte per il server **nell'istante in cui
+     succede** (`navigator.sendBeacon`), e prima di ogni combinazione parte
+     anche una riga «ARMATO».  Cosi' il registro del server distingue da solo
+     i tre stati, senza che nessuno debba ricordarsi niente:
+
+       ARMATO + keydown + la pagina vive        ⇒ stato A (annullata)
+       ARMATO + keydown + `pagehide`            ⇒ ⛔ stato B (arriva e agisce)
+       ARMATO + nessun keydown + `pagehide`     ⇒ stato C (non consegnata)
+       ARMATO + nessun keydown + la pagina vive ⇒ C, e il browser non ha agito
+
+     ⛔ `sendBeacon` e non `fetch`: e' l'unica che il browser si impegna a
+        spedire mentre la pagina muore.  Il rapporto S3 chiedeva «un registro
+        che si puo' copiare via» senza dire come; copiarlo **con gli appunti**
+        sarebbe stato usare come strumento uno dei canali sotto misura.
+
+  ============================================================================
+  ⛔ I QUATTRO CONTROLLI POSITIVI, PRIMA DI OGNI SESSIONE E A OGNI MOTORE
+     (S3 §4.2 — «costa dieci secondi e impedisce la riga sbagliata»)
+
+    1. `KeyA` nudo arriva          — senza, ogni «non e' arrivata» e' ambiguo
+                                      fra «il browser se l'e' tenuta» e «il
+                                      banco era sordo»
+    2. `Ctrl+Maiusc+KeyA` arriva   — con i modificatori, non solo il tasto
+    3. gli appunti in USCITA vanno — o tutto il §3.B e' da rifare
+    4. ⛔ lo schermo intero e' entrato DA JAVASCRIPT, non con `F11` — perche'
+       con `F11` **la lock non esiste e non lo dice**, e tutte le prove che
+       seguono non valgono niente
+
+  ⛔ Il terzo va rifatto **a ogni motore**: e' il motore l'incognita.
+
+  ============================================================================
+  ⛔ LE DUE API DELLA LOCK, E SI PROVA L'EFFETTO NON L'ESISTENZA
+
+    await elem.requestFullscreen({keyboardLock: "browser"});   // WHATWG
+    await navigator.keyboard.lock();                           // Chromium
+
+  `requestFullscreen` **ignora in silenzio** le opzioni che non conosce:
+  chiamarlo con `{keyboardLock}` dove non e' sostenuto **non fallisce**,
+  semplicemente non blocca niente (S3 §5.1).  E' `KWIN_COMPOSE=O2` un livello
+  piu' in su (`LEZIONI.md` §1.11): non basta dire al componente cosa fare, va
+  verificato che abbia obbedito — e qui l'unica verifica e' **provare una
+  combinazione riservata e guardare che cosa succede**.
+
+  ⚠ `Escape` non e' MAI bloccabile del tutto, su nessun motore.  E la lock si
+    spegne da sola alla perdita del fuoco — cioe' proprio nell'istante in cui
+    i modificatori restano giu'.
+  ============================================================================
+-->
+<style>
+  body { margin: 0; padding: 1rem; background: #0d0d12; color: #e8e8f0;
+         font: 15px/1.5 ui-monospace, monospace; }
+  h2 { color: #9fe; font-size: 1rem; margin: 1.2rem 0 0.3rem; }
+  button { font: inherit; padding: 0.5rem 0.8rem; margin: 0.2rem 0.3rem 0.2rem 0;
+           background: #23233a; color: #e8e8f0; border: 1px solid #55557a;
+           border-radius: 6px; }
+  button.pronta { background: #1d3a1d; border-color: #4a4; }
+  #registro { white-space: pre-wrap; background: #07070b; padding: 0.5rem;
+              border: 1px solid #333; height: 40vh; overflow: auto; }
+  textarea { width: 100%; height: 3rem; background: #07070b; color: #8fd;
+             border: 1px solid #333; font: inherit; }
+  .no { color: #f77; } .si { color: #7f7; } .boh { color: #fd7; }
+</style>
+</head>
+<body>
+<h1>S3a — la tastiera</h1>
+<div id="scena"></div>
+
+<h2>0. Lo stato della scena</h2>
+<div id="stato">—</div>
+
+<h2>1. I quattro controlli positivi (obbligatori, a ogni motore)</h2>
+<p>
+  <button id="c1">1 · premi <b>A</b> nudo</button>
+  <button id="c2">2 · premi <b>Ctrl+Maiusc+A</b></button>
+  <button id="c3">3 · appunti in uscita</button>
+  <button id="c4">4 · schermo intero DA JS</button>
+</p>
+<textarea id="appunti">ciao dal banco S3a</textarea>
+
+<h2>2. La lock — si prova l'effetto, non l'esistenza</h2>
+<p>
+  <button id="lockWhatwg">schermo intero + {keyboardLock:"browser"}</button>
+  <button id="lockChromium">schermo intero + navigator.keyboard.lock()</button>
+  <button id="esci">esci da schermo intero</button>
+</p>
+
+<h2>3. Le combinazioni, <b>in quest'ordine</b></h2>
+<p id="gruppi"></p>
+
+<h2>Registro (una copia e' gia' sul server, sempre)</h2>
+<div id="registro"></div>
+
+<script>
+"use strict";
+
+const GIRO = new URLSearchParams(location.search).get("giro")
+           || "s3a-" + Math.random().toString(36).slice(2, 10);
+let numero = 0;
+let armato = null;      // che cosa stiamo aspettando adesso
+let lockChiesta = "no";
+let schermoInteroDaJS = false;
+
+function spedisci(d) {
+  d.n = ++numero;
+  d.giro = GIRO;
+  d.motore = navigator.userAgent;         // ⛔ B0.6, su ogni riga
+  d.armato = armato;
+  d.lock = lockChiesta;
+  d.schermoIntero = !!document.fullscreenElement;
+  d.schermoInteroDaJS = schermoInteroDaJS;
+  // ⛔ sendBeacon: l'unica che parte anche mentre la scheda si chiude.
+  try {
+    navigator.sendBeacon("/esito", new Blob([JSON.stringify(d)],
+                                            {type: "application/json"}));
+  } catch (e) { /* la pagina resta usabile */ }
+  const r = document.getElementById("registro");
+  r.innerHTML += `<div>${JSON.stringify(d)}</div>`;
+  r.scrollTop = r.scrollHeight;
+}
+
+function stato(testo, classe) {
+  document.getElementById("stato").innerHTML = `<span class="${classe || ""}">${testo}</span>`;
+}
+
+// ---------------------------------------------------------------------------
+// L'ascoltatore.  ⛔ `preventDefault()` si chiama SEMPRE e si registra
+// `defaultPrevented`: e' meta' della distinzione fra A e B.  L'altra meta' e'
+// se la pagina sopravvive, e la scrive `pagehide`.
+// ---------------------------------------------------------------------------
+addEventListener("keydown", (e) => {
+  spedisci({tipo: "KEYDOWN", code: e.code, key: e.key, ripetuto: e.repeat,
+            ctrl: e.ctrlKey, alt: e.altKey, maiusc: e.shiftKey, meta: e.metaKey,
+            altgr: e.getModifierState && e.getModifierState("AltGraph"),
+            keyCode: e.keyCode});
+  e.preventDefault();
+  spedisci({tipo: "KEYDOWN_DOPO", code: e.code, annullato: e.defaultPrevented});
+}, {capture: true});
+
+addEventListener("keyup", (e) => {
+  spedisci({tipo: "KEYUP", code: e.code, key: e.key});
+}, {capture: true});
+
+// ⛔ La riga che chiude la diagnosi dello stato B: la pagina se ne sta andando.
+addEventListener("pagehide", () => spedisci({tipo: "PAGEHIDE"}));
+addEventListener("blur", () => spedisci({tipo: "BLUR"}));
+addEventListener("focus", () => spedisci({tipo: "FOCUS"}));
+document.addEventListener("fullscreenchange", () => {
+  spedisci({tipo: "FULLSCREENCHANGE", attivo: !!document.fullscreenElement});
+});
+
+// ---------------------------------------------------------------------------
+// I quattro controlli positivi.
+// ---------------------------------------------------------------------------
+function arma(cosa, testo) {
+  armato = cosa;
+  spedisci({tipo: "ARMATO", cosa: cosa});
+  stato(testo, "boh");
+}
+
+document.getElementById("c1").onclick = () =>
+    arma("controllo1-A-nudo", "premi ora <b>A</b>: nel registro deve comparire code KeyA key a");
+document.getElementById("c2").onclick = () =>
+    arma("controllo2-ctrl-maiusc-A",
+         "premi ora <b>Ctrl+Maiusc+A</b>: devono comparire i due modificatori");
+
+document.getElementById("c3").onclick = async () => {
+  arma("controllo3-appunti-uscita", "scrivo negli appunti…");
+  const testo = document.getElementById("appunti").value;
+  try {
+    await navigator.clipboard.writeText(testo);
+    spedisci({tipo: "APPUNTI", esito: "SCRITTO", testo: testo});
+    stato("scritto negli appunti: ⛔ adesso INCOLLA in un editor e verifica che "
+        + "sia arrivato.  Se non arriva, tutto il capitolo appunti e' da rifare qui.", "boh");
+  } catch (e) {
+    spedisci({tipo: "APPUNTI", esito: "FALLITO", errore: String(e)});
+    stato("⛔ appunti in uscita FALLITI: " + e, "no");
+  }
+};
+
+document.getElementById("c4").onclick = async () => {
+  arma("controllo4-schermo-intero-da-js", "chiedo lo schermo intero da JavaScript…");
+  try {
+    await document.documentElement.requestFullscreen();
+    schermoInteroDaJS = true;
+    spedisci({tipo: "SCHERMO_INTERO", esito: "OK", da: "javascript"});
+    stato("schermo intero DA JAVASCRIPT: le prove di lock adesso valgono qualcosa.<br>"
+        + "⛔ Se ci fossi entrato con F11, la lock non esisterebbe e nessuno lo direbbe.", "si");
+  } catch (e) {
+    spedisci({tipo: "SCHERMO_INTERO", esito: "FALLITO", errore: String(e)});
+    stato("⛔ schermo intero fallito: " + e, "no");
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Le due lock.
+// ---------------------------------------------------------------------------
+document.getElementById("lockWhatwg").onclick = async () => {
+  arma("lock-whatwg", "chiedo schermo intero con {keyboardLock:'browser'}…");
+  try {
+    await document.documentElement.requestFullscreen({keyboardLock: "browser"});
+    schermoInteroDaJS = true;
+    lockChiesta = "whatwg";
+    spedisci({tipo: "LOCK", api: "whatwg", esito: "RISOLTA"});
+    stato("⚠ la chiamata e' RIUSCITA — ⛔ e questo NON vuol dire che blocchi: "
+        + "`requestFullscreen` ignora in silenzio le opzioni che non conosce.  "
+        + "Provare adesso una riservata (Ctrl+T) e guardare che cosa succede.", "boh");
+  } catch (e) {
+    spedisci({tipo: "LOCK", api: "whatwg", esito: "RIGETTATA", errore: String(e)});
+    stato("la chiamata e' stata RIGETTATA: " + e, "no");
+  }
+};
+
+document.getElementById("lockChromium").onclick = async () => {
+  arma("lock-chromium", "schermo intero + navigator.keyboard.lock()…");
+  try {
+    await document.documentElement.requestFullscreen();
+    schermoInteroDaJS = true;
+    if (!navigator.keyboard || !navigator.keyboard.lock) {
+      spedisci({tipo: "LOCK", api: "chromium", esito: "API_ASSENTE"});
+      stato("`navigator.keyboard.lock` non esiste su questo motore.", "no");
+      return;
+    }
+    await navigator.keyboard.lock();
+    lockChiesta = "chromium";
+    spedisci({tipo: "LOCK", api: "chromium", esito: "RISOLTA"});
+    stato("lock chiesta.  ⛔ Adesso si prova l'EFFETTO, non l'esistenza.", "boh");
+  } catch (e) {
+    spedisci({tipo: "LOCK", api: "chromium", esito: "RIGETTATA", errore: String(e)});
+    stato("rigettata: " + e, "no");
+  }
+};
+
+document.getElementById("esci").onclick = async () => {
+  if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+  if (document.fullscreenElement) await document.exitFullscreen();
+  lockChiesta = "no";
+  schermoInteroDaJS = false;
+  spedisci({tipo: "USCITO"});
+};
+
+// ---------------------------------------------------------------------------
+// ⛔ LE COMBINAZIONI, NELL'ORDINE DI S3 §4.3 — DALLA MENO ALLA PIU' RISCHIOSA.
+//
+//    «In quest'ordine, e una per volta, perche' quelle in fondo chiudono la
+//     scheda e portano via il registro.»
+//
+//    Le tre che chiudono — Ctrl+T, Ctrl+N, Ctrl+W — stanno in fondo, e qui
+//    hanno un bottone ROSSO a parte: non si arriva a loro per distrazione.
+// ---------------------------------------------------------------------------
+const GRUPPI = [
+  ["B1 · le annullabili", ["Ctrl+C", "Ctrl+V", "Ctrl+X", "Ctrl+Z", "Ctrl+A"]],
+  ["B2 · le funzioni del browser", ["Ctrl+P", "Ctrl+S", "Ctrl+F", "Ctrl+G", "Ctrl+O",
+    "Ctrl+U", "Ctrl+D", "Ctrl+H", "Ctrl+J", "Ctrl+L", "Ctrl+K", "Ctrl+E", "Ctrl+R",
+    "Ctrl++", "Ctrl+-", "Ctrl+0"]],
+  ["B3 · i tasti funzione", ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9",
+    "F10", "F11", "F12"]],
+  ["B4 · Ctrl+Maiusc+…", ["Ctrl+Maiusc+I", "Ctrl+Maiusc+J", "Ctrl+Maiusc+C",
+    "Ctrl+Maiusc+K", "Ctrl+Maiusc+E", "Ctrl+Maiusc+M", "Ctrl+Maiusc+P",
+    "Ctrl+Maiusc+N", "Ctrl+Maiusc+T", "Ctrl+Maiusc+W", "Ctrl+Maiusc+Q"]],
+  ["B5 · Alt+…", ["Alt+Freccia sinistra", "Alt+Freccia destra", "Alt+Home",
+    "Alt+D", "Alt+E", "Alt+F"]],
+  ["B6 · Escape (⛔ anche TENUTO PREMUTO, e si cronometra: doc Chrome 2 s, "
+   + "sorgente 1,5 s — due fonti nostre che si contraddicono)", ["Escape", "Escape tenuto"]],
+  ["B7 · le schede", ["Ctrl+Tab", "Ctrl+Maiusc+Tab", "Ctrl+1", "Ctrl+9"]],
+  ["B8 · ⛔ LE TRE CHE CHIUDONO — ultime, e il registro e' gia' fuori",
+    ["Ctrl+T", "Ctrl+N", "Ctrl+W"]],
+  ["B9 · quelle del sistema (⚠ Ctrl+Alt+Canc non e' recuperabile: si prova per "
+   + "scriverlo nero su bianco)", ["Super", "Super+D", "Alt+Tab", "Alt+F4",
+    "Stamp", "Pausa", "Ctrl+Alt+Canc"]],
+  ["C · il modificatore rimasto giu' (⛔ il gruppo piu' grave per noi: la "
+   + "sessione remota sopravvive alla connessione)",
+    ["tieni A 3 s", "tieni Ctrl e cambia scheda col mouse", "tieni Ctrl e Alt+Tab",
+     "tieni Ctrl ed esci da schermo intero con Escape",
+     "Maiusc destro e sinistro insieme, rilasciane uno"]],
+  ["D · DeX e tastiera a schermo", ["F1 su DeX (pannello scorciatoie)",
+    "scrivi «ciao» con la tastiera a schermo (keyCode 229?)",
+    "scrivi «perchd» e lascia correggere in «perche'»"]],
+  ["E · gli appunti", ["copia in un'altra applicazione e torna (clipboardchange?)",
+    "copia DUE volte fuori fuoco, poi torna: quanti eventi?",
+    "readText() a schermo intero con lock attiva",
+    "readText() senza fuoco", "writeText() senza gesto recente",
+    "testo con accenti, emoji e a capo"]]
+];
+
+const p = document.getElementById("gruppi");
+for (const [nome, voci] of GRUPPI) {
+  const titolo = document.createElement("div");
+  titolo.innerHTML = `<br><b>${nome}</b><br>`;
+  p.appendChild(titolo);
+  for (const voce of voci) {
+    const b = document.createElement("button");
+    b.textContent = voce;
+    if (nome.startsWith("B8")) b.style.borderColor = "#a44";
+    b.onclick = () => arma(voce,
+        `armato: <b>${voce}</b> — fallo ADESSO.  Il registro e' gia' sul server.`);
+    p.appendChild(b);
+  }
+}
+
+spedisci({tipo: "PRONTA", contestoSicuro: window.isSecureContext,
+          // ⛔ I due campi dicono «l'API ESISTE», non «la lock funziona»: il
+          //    nome lo deve dire, o fra sei mesi qualcuno leggera' «lock: true»
+          //    e credera' di aver misurato qualcosa.  L'effetto si prova
+          //    altrove, premendo una riservata.
+          requestFullscreen_esiste: "requestFullscreen" in document.documentElement,
+          navigator_keyboard_lock_esiste: !!(navigator.keyboard && navigator.keyboard.lock),
+          schermo: screen.width + "x" + screen.height,
+          appunti: !!(navigator.clipboard && navigator.clipboard.writeText)});
+stato("pronta. ⛔ Comincia dai QUATTRO CONTROLLI: senza, nessuna riga che segue "
+    + "vuol dire niente.", "boh");
+</script>
+</body>
+</html>

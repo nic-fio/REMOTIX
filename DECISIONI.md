@@ -226,9 +226,15 @@ qui stanno solo le scelte che avrebbero potuto essere prese altrimenti.
 contando da qui — come R1.29 dichiara di aver fatto su §0-bis — ne trovava quattro in meno di
 quelli che esistono.*
 
+⚠ **E il conto del titolo, dichiarato perché non se ne inventi un altro** *(notte del 10 agosto
+2026)*: le righe numerate qui sotto sono **ventisei**, di cui la **8** è *caduta* — le chiusure in
+vigore sono **venticinque**. ⛔ E il ventisei del titolo **non è** il ventisei dei messaggi del
+paragrafo qui sopra: sono due conteggi diversi che oggi danno lo stesso numero, e un numero senza
+il suo denominatore è quel che `LEZIONI.md` §1.9 punto 4 vieta.
+
 | # | La scelta | Perché così | Dove |
 |---|---|---|---|
-| 1 | **la porta è UDP 7447** | libera in `/etc/services` di Trixie `[M]`. `[?]` IANA non verificata | `RCP.md` §2.4 |
+| 1 | **la porta è 7447**, e sono ⛔ **due ascoltatori con lo stesso numero**: **UDP** per HTTP/3 e WebTransport, **TCP** per il primo caricamento della pagina | libera in `/etc/services` di Trixie `[M]`. `[?]` IANA non verificata. ⚠ *Questa riga diceva «la porta è **UDP** 7447» e basta, mentre `RCP.md` §2.4 dichiara i due ascoltatori dal 9 agosto: chi implementava di qui apriva il solo UDP, e **la pagina non si sarebbe servita affatto** — cioè il sintomo «`https://192.168.0.2:7447` non risponde», che non nomina né la porta né il trasporto. Allineata la notte del 10 agosto 2026 dalla **rilettura di tutte e ventisei le righe** che `R11-documenti.md` §C punto 6 prescrive — `[R]` **N1**, e non era fra i rilievi di R11* | `RCP.md` §2.4 |
 | 2 | le **stringhe** sono `u16` di lunghezza più UTF-8, senza terminatore | il terminatore invita a passare la stringa a `printf` senza copiarla, e un byte nullo in mezzo diventa un troncamento silenzioso | §6.0 |
 | 3 | **il byte alto del `tipo` dice il canale** di uno stream | chi riceve uno stream unidirezionale deve sapere che cosa c'è dentro **prima** di leggerlo, e non era scritto da nessuna parte | §2.5 |
 | 4 | **niente 0-RTT** | i dati 0-RTT si ripetono, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore | §2.3 |
@@ -236,9 +242,9 @@ quelli che esistono.*
 | 6 | ⛔ ~~credito degli stream ≥ 256~~ → **il server ne concede ≥ 16 al client** | *corretta il 9 agosto sera (**R1.14**): il 256 era un parametro che pretendevamo dal client, e **con un browser lo sceglie lui**. Chi implementava leggendo questa riga scriveva 256 dove `RCP.md` dice 16* | §2.3 |
 | 7 | ⛔ ~~l'impronta si calcola sulla chiave pubblica~~ → **sul certificato in forma DER** | *corretta il 9 agosto sera (**R1.14**): `serverCertificateHashes` confronta l'impronta **del certificato**. Chi pubblicava quella della chiave otteneva un confronto che **non combacia mai**, con il sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta. ⚠ E la ragione che ci stava accanto — «un certificato riemesso con la stessa chiave non deve far scattare l'avviso» — **è decaduta**: con l'impronta pubblicata dalla pagina, ogni riemissione la cambia comunque* | §4.1-bis |
 | 8 | ⛔ ~~il client spegne i controlli X.509 di serie~~ | *caduta il 9 agosto sera (**R1.14**): il client è una pagina, e non ha nessun controllo X.509 da spegnere. Era un resto della stesura con un client nostro, rimasto nel documento che dice che cosa è stato deciso* | — |
-| 9 | **`RESPINTO` è il congedo dell'autenticazione**, e non ne segue un altro | §4.4 e §8.2 si sovrapponevano: due implementazioni potevano indovinare diverso, o **uguale perché scritte dalla stessa mano** | §4.4 |
+| 9 | **`RESPINTO` è il congedo dell'autenticazione**, e ⛔ **il server** non ne manda un altro | §4.4 e §8.2 si sovrapponevano: due implementazioni potevano indovinare diverso, o **uguale perché scritte dalla stessa mano**. ⚠ *Diceva «e non ne segue un altro», senza dire di chi: il divieto è del **server**, e vale per `CONGEDO`. **Al client dopo `RESPINTO` resta una cosa che può dire, ed è proprio `CONGEDO`** — il divieto di §4.4 è di **riprovare**, non di congedarsi (chiarimento del 10 agosto, banco **B11**, che aveva messo un rosso sulla pagina mentre faceva quel che §8.1 le impone). Chi implementava la pagina leggendo questa riga taceva, e B11 pretende il congedo **una volta per motore**. Allineata la notte del 10 agosto 2026 dalla stessa rilettura — `[R]` **N2**, e non era fra i rilievi di R11* | §4.4 |
 | 10 | **un solo tentativo di credenziali per connessione** | il limitatore conta una cosa sola, e non serve una macchina a stati per i tentativi ripetuti | §4.4 |
-| 11 | ⭐ **la limitazione: 5 in 5 minuti, poi attesa da 30 s che raddoppia fino a 15 min** — più **un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso»** | chiude la `[?]` di `SPECIFICHE.md` §4.2. Il ritardo fisso toglie il **tempismo** come canale: senza, la distinzione fra «utente inesistente» e «password sbagliata» che §4.4 vieta di scrivere la si legge col cronometro | §4.4-bis |
+| 11 | ⛔ ~~**la limitazione: 5 in 5 minuti, poi attesa da 30 s che raddoppia fino a 15 min**, con due contatori~~ → **SOSTITUITA il 10 agosto 2026 da §1.9**, che è ✅ dell'utente: tre autenticazioni fallite e l'indirizzo è bannato **12 ore**, con **un** contatore solo e senza quello per nome utente. ⭐ **Sopravvive intatto** il resto della riga: **il secondo fisso di ritardo su ogni risposta, anche quando è «ammesso»** | il secondo fisso chiude la `[?]` di `SPECIFICHE.md` §4.2 e toglie il **tempismo** come canale: senza, la distinzione fra «utente inesistente» e «password sbagliata» che §4.4 vieta di scrivere la si legge col cronometro. ⚠ E su quel secondo c'è una misura che non torna: B8 dà **2636 ms** di mediana, cioè a governare i tempi è **PAM** — `[?]` aperta, e il ban **non** la chiude | §4.4-bis, §1.9 |
 | 12 | **la tela DEVE avere lati pari**, fra 320×240 e 7680×4320 | una misura dispari la arrotonda **il codificatore, in silenzio**: due misure sotto la stessa etichetta, cioè la forma d'errore **E2** | §4.5 |
 | 13 | **tre tetti di tempo sulla stretta di mano** (5 s, 60 s, 10 s) | una connessione ferma a metà tiene un posto; e i 30 s di QUIC misurano il **silenzio della rete**, non un client che non fa il suo mestiere | §4.6 |
 | 14 | ⛔ **i fotogrammi chiave**: `tipo` `0x0301`/`0x0302` e il messaggio `RICHIEDI_CHIAVE` | **non era una lacuna, era un difetto di disegno**: §5.1 concede di abbandonare un fotogramma, e il video è compresso con predizione — abbandonarne uno lascia il decodificatore rotto finché non arriva una chiave, e non c'era modo né di dirlo né di chiederla. Costa **zero byte**: entra nei valori di un campo che c'era già | §5.2 |
@@ -271,8 +277,16 @@ quelli che esistono.*
 ⚠ **E QUATTRO tipi di messaggio sono stati aggiunti** — `RICHIEDI_CHIAVE` e `TELA` il 9 agosto,
 ⭐ **`BANCO_MARCA` e `BANCO_ESITO` la notte del 9** (riga 26 qui sopra) — più **tre** motivi di
 congedo (`TEMPO_SCADUTO`, `SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). §9 lo vieta **dentro** una
-versione maggiore, e la clausola che lo permette è che **oggi non esiste nessuna implementazione**.
-Dal primo byte scritto in poi vale la regola senza sconti.
+versione maggiore, e la clausola che lo permetteva era che allora non esistesse nessuna
+implementazione.
+
+⛔ **E quella clausola è CONSUMATA dal 10 agosto 2026**, primo byte di codice: le implementazioni di
+RCP/1 adesso esistono e sono contate in `RCP.md` §0-bis. Da qui in poi vale la regola senza sconti, e
+i **quattro** tipi qui sopra sono tutto quel che la finestra ha lasciato passare. ⚠ *Questa riga
+diceva «la clausola che lo permette è che **oggi** non esiste nessuna implementazione», al presente,
+e lo dicevano con le stesse parole altri quattro punti di `RCP.md`: chi le leggeva dopo il 10 agosto
+trovava scritto che il protocollo era ancora modificabile. Corretta l'11 agosto 2026, rilievo
+**R12C.2**.*
 
 > ⚠ *Corretta il 10 agosto 2026, rilievo **R11.13**: questa riga diceva «due tipi … più due motivi»,
 > e i due della funzione di banco non comparivano in **nessun punto** di questo documento — mentre
@@ -522,14 +536,17 @@ risparmiare — che è una comodità, non una piattaforma.
 > |---|---|
 > | la prima connessione su ogni dispositivo | scoperta a un uomo-in-mezzo (§1.3, rischio valutato e accettato) |
 > | e con il client web | chi si mette in mezzo **riscrive la pagina** invece di intercettarla |
-> | l'unica chiave | la **password PAM**, con la limitazione dei tentativi di `RCP.md` §4.4-bis |
+> | l'unica chiave | la **password PAM**, con il **ban dell'indirizzo** di `RCP.md` §4.4-bis — tre tentativi falliti, dodici ore (§1.9) |
 >
 > ⭐ **E questa nota chiude un cerchio che era già stato aperto**: `DECISIONI.md` §4.3 — il blocco è
 > di REMOTIX, non del desktop — ha una **clausola di scadenza scritta l'8 agosto** con queste
 > parole: *«il ragionamento regge solo finché la password PAM è l'unica chiave. Chi implementa
 > l'autenticazione forte rilegge questa voce»*. L'MFA è precisamente quell'evento. **Quando si
-> aprirà l'evoluzione, le voci da rileggere sono tre e sono queste**: §1.3 (la fiducia), §1.7
-> (questa), §4.3 (il blocco schermo, che con una seconda chiave tornerebbe a difendere qualcosa).
+> aprirà l'evoluzione, le voci da rileggere sono quattro e sono queste**: §1.3 (la fiducia), §1.7
+> (questa), §4.3 (il blocco schermo, che con una seconda chiave tornerebbe a difendere qualcosa) e
+> ⭐ **§1.9** — *aggiunta il 10 agosto 2026*: il ban a tre tentativi è la difesa che la password da
+> sola pretende, e con una seconda chiave il suo prezzo — l'indirizzo del NAT chiuso a tutti per
+> dodici ore — diventa più caro di quel che compra.
 
 ---
 
@@ -563,6 +580,62 @@ comunque, perché una decisione presa citando un numero non misurato va sapendo 
 ⭐ **La porta resta aperta a costo zero**: i tre controlli di S1a sono già scritti in
 `fasi/01-filo-nudo.md` e la pagina sonda è la stessa. Il giorno in cui passasse di mano un Mac o un
 iPhone, **la misura è un pomeriggio**.
+
+### 1.9 ✅ ⭐ Tre tentativi falliti, poi il ban dell'indirizzo per 12 ore
+
+*10 agosto 2026, dall'utente, in due passaggi nello stesso discorso.*
+
+> *«Secondo me la cosa deve funzionare in modo molto semplice: se l'utente sbaglia la password per 3
+> volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban).»*
+>
+> E poi, stringendo: *«3 tentativi di connessione fallita (perché user sbagliato o perché password
+> sbagliata) causano il ban di quell'IP.»*
+
+⛔ **Sostituisce la forma precedente per intero**, che era 🔸 e sta nella riga 11 di §1.5: 5 tentativi
+in 5 minuti, finestra da 30 secondi che raddoppia fino a 15 minuti, **due** contatori — per nome
+utente e per indirizzo — e l'azzeramento su un accesso riuscito. ⭐ **Il contatore per nome utente
+non esiste più**: il conto guarda l'indirizzo e nient'altro, e tre nomi utente diversi contano tre.
+
+| | |
+|---|---|
+| **il conto** | tre autenticazioni fallite dallo stesso indirizzo (**senza la porta**), ⛔ **dentro 5 minuti** — *regola dell'utente, stesso giorno: «i 3 tentativi falliti devono avvenire entro i 5 minuti per far scattare il ban»*. La finestra è **scorrevole**: si guardano gli ultimi tre, non si riparte dal primo |
+| **la conseguenza** | quell'indirizzo è fuori per **12 ore** |
+| **che cosa azzera** | 🔸 un'autenticazione **riuscita** da quell'indirizzo. *Derivata da «consecutive»: senza, tre errori di battitura sparsi in un anno bannerebbero l'indirizzo da cui si lavora tutti i giorni* |
+| **che cosa conta** | ✅ **solo** l'autenticazione fallita. Non gli errori di protocollo, non i tempi scaduti, e ⛔ **non `GIA_ATTIVA_REMOTA`** — che è quel che riceve il secondo dispositivo dello **stesso** utente, e che bannerebbe l'utente da sé in tre riattacchi |
+| **che cosa vede chi è bannato** | ✅ *«viene visualizzata una pagina di login rifiutato (max tries reached)»*: la pagina si serve lo stesso e **dice** che i tentativi sono esauriti. La sessione WebTransport si rifiuta con `TROPPI_TENTATIVI` per la scheda **già aperta**, che altrimenti resterebbe ad aspettare |
+| **il ban sopravvive al riavvio** | ✅ **sì, su file.** Un ban che si azzera riavviando è una protezione che si perde da sé — invariante **I7** |
+| **come si esce** | ✅ *«comando di sblocco oppure il trascorrere delle 12 ore»*. Il comando chiede l'accesso alla macchina, che è l'unica chiave che il caso ammette, e ⛔ **ogni sblocco si scrive nel registro** |
+
+⭐ **Perché la forma nuova è migliore di quella che sostituisce, oltre che più dura**: spariscono il
+raddoppio, le due finestre che si sovrappongono e la domanda «che cosa fa il contatore per nome
+quando quello per indirizzo è già scattato». ⛔ E sparisce per costruzione il difetto che **B5** ha
+trovato il 10 agosto — la chiave del contatore conteneva **la porta**, che con un solo tentativo per
+connessione (§`RCP.md` 4.4) cambia ogni volta, quindi quel contatore valeva **sempre 1**.
+
+⛔ **E `RCP.md` non guadagna un byte**: `TROPPI_TENTATIVI` (`0x08`) c'era già, nessun tipo nuovo,
+nessuna deroga alla regola di §9 — che è la regola che il progetto si è dato e che da qui in poi non
+ha più sconti.
+
+⚠ **Il prezzo, accettato sapendolo, e non lo paga chi indovina:**
+
+| | |
+|---|---|
+| **dietro un NAT** | gli indirizzi si condividono: tre errori di **una** persona chiudono la porta a tutti gli altri per dodici ore. È esattamente il caso per cui il contatore per nome utente esisteva |
+| **il primo a inciamparci è il proprietario** | parola lunga, tastiera di un telefono. Da qui la pagina che **dice** che cos'è successo e il comando di sblocco: senza quei due, la regola è indistinguibile da un guasto |
+| ⛔ **e la parola resta l'unica chiave** | tre tentativi per indirizzo alzano molto il costo, e non chiudono la partita: diecimila indirizzi fanno trentamila tentativi su un conto solo. La chiude l'autenticazione forte rinviata a fine progetto — §1.7, il riquadro del debito di sicurezza, ⭐ **e questa voce va nell'elenco di quelle da rileggere quel giorno** |
+
+⭐ **E una cosa che il ban NON può fare**, scritta perché nessuno gliela attribuisca: nessuno può far
+bannare l'indirizzo di **qualcun altro**. Per arrivare a `CREDENZIALI` bisogna aver completato la
+stretta di mano QUIC, che pretende che i pacchetti tornino davvero a quell'indirizzo — il mittente
+non si falsifica.
+
+⚠ **E una conseguenza sul lavoro, non sul prodotto**: i banchi partono tutti dallo stesso indirizzo e
+quello del limitatore fallisce di proposito. Con dodici ore, «si aspetta la scadenza» non è una cura:
+il banco si serve del comando di sblocco, e quello del limitatore **non lo chiama dentro il proprio
+giro** o non prova più niente (`fasi/01-filo-nudo.md`, regola B0.3).
+
+*Conseguenze già scritte dove vanno: `RCP.md` §4.4-bis (riscritta per intero, e da 🔸 diventa ✅) e
+§8.2; `SPECIFICHE.md` §4.2; `fasi/01-filo-nudo.md` B0.3 e B8.*
 
 ---
 
@@ -962,6 +1035,14 @@ presenza dal client, non l'allungamento della soglia.
 remote? […] credo che 10 potrebbe essere un numero molto comodo». E poi: «il mio è un tetto: non
 capiterà mai che ci sono 10 utenti contemporaneamente che si collegano con client in 4K».*
 
+> ⚠ **E alla fase 1 questo tetto non è onorato, ed è un ripiego dichiarato**: il server gira su **un
+> filo solo** e la verifica PAM lo **blocca**, quindi dieci utenti che entrano insieme si mettono in
+> fila (con il secondo fisso di `RCP.md` §4.4-bis, l'ultimo aspetta **dieci secondi**); e la tabella
+> delle sessioni attaccate è un `#define` a **16**. ⛔ Non è una decisione che cambia: è una promessa
+> **non ancora dovuta**, e sta scritta in `SPECIFICHE.md` §5.5 e in `fasi/01-filo-nudo.md` perché il
+> giorno in cui sarà dovuta si sappia da dove ripartire. *Portata fuori dal commento in `src/main.c`
+> l'11 agosto 2026, rilievo **R12C.17**.*
+
 ⛔ **Dieci non è il limite: è il tetto amministrativo.** Il limite vero lo pone il
 **codificatore**, e si misura in pixel al secondo — con lo stesso ferro, le stesse dieci sessioni
 sono facilissime o impossibili a seconda della qualità che ciascuna chiede.
@@ -1143,6 +1224,40 @@ la tela, il client riscala). Cambia **che cosa il client legge** per rispondere.
 della pagina non falsi il conto — ⛔ *l'utente che ha premuto `Ctrl +` prima di collegarsi
 dichiarerebbe una tela sbagliata, e resterebbe per tutta la sessione* — che cosa risponde DeX, e se
 l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.5 rifiuta.
+
+> ### ⛔ La prima delle tre È MISURATA, e la risposta è la peggiore — `[M]` 10 agosto 2026
+>
+> *Banco **S5**, `banchi/01-s5-tela.sh` + `01-s5-pagina.html`, registro `banchi/01-s5-esiti.jsonl`
+> (due giri identici, 23:13 e 23:14). Scena: schermo **Xvfb 1920×1080×24**, risoluzione letta **fuori
+> dal browser** con `xdpyinfo` = 1920×1080. Il dettaglio sta in `web/rapporti/S-esiti-sonda.md` §3.*
+>
+> | Motore | zoom | `screen` | `devicePixelRatio` | **tela che il client dichiarerebbe** |
+> |---|---|---|---|---|
+> | **Chrome 151.0.7922.108** | 100 % | 1920×1080 | 1 | 1920×1080 |
+> | | 150 % | **1920×1080** | 1,5 | ⛔ **2880×1620** |
+> | **Firefox 140.13.0esr** | 100 % | 1920×1080 | 1 | 1920×1080 |
+> | | 150 % | **1280×720** | 1,5 | ✅ 1920×1080 |
+>
+> ⛔ **Su Chrome `screen.width` NON cala con lo zoom di pagina**, mentre `devicePixelRatio` sale:
+> la formula di `SPECIFICHE.md` §6.1-bis dà `risoluzione × zoom`. Un utente su un portatile 1920×1080
+> con lo zoom al 150 % dichiarerebbe una tela **del 50 % più grande di quella che esiste** — ed è
+> **esattamente il difetto che questa decisione dice di esistere per evitare**.
+>
+> ⛔ **Quindi la ragione scritta accanto a questa decisione era `[?]` e adesso è FALSA su un motore
+> su due.** `fasi/01-filo-nudo.md` la giustificava così: *«`screen.width` cala di un terzo,
+> `devicePixelRatio` sale di un mezzo, **il prodotto resta**»*. Resta su Firefox. Su Chrome no.
+> È il caso di `LEZIONI.md` §2.3-quater preso in flagrante: *una decisione presa citando un
+> comportamento non misurato è presa a metà* — e stavolta il comportamento, misurato, va nell'altro
+> verso.
+>
+> ⚠ **Che cosa NON cambia, e va detto per non far credere a un ripensamento**: la decisione resta 🔸
+> e resta *«la tela è lo schermo del dispositivo in pixel fisici»*. Quel che cade è **la formula con
+> cui il client lo legge**, non che cosa deve leggere. ⛔ E non si aggiusta con una riga: lo zoom di
+> pagina **non è leggibile da JavaScript in modo portabile**. La cura è di chi tiene `SPECIFICHE.md`
+> §6.1-bis, e finché non c'è, un client su Chrome con zoom ≠ 100 % **dichiara una tela sbagliata**.
+>
+> ⚠ **E metà di S5 non è misurata**: il **DeX** non c'era. *«Il Chrome del portatile lo fa»* non dice
+> niente del Chrome del telefono — forma **E10** — e la seconda delle tre `[?]` resta intera.
 
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 
@@ -2233,6 +2348,158 @@ lo aveva dato per inesistente.
 > riapre questa voce **ricloni `muffin` e rifaccia le quattro ricerche** prima di fidarsi di
 > `cinnamon.md`: un riferimento che invecchia in silenzio è peggio di nessun riferimento
 > (`LEZIONI.md` §9.8).
+
+---
+
+> ## ⛔ Le tre domande della notte del 10 agosto 2026 — **si rispondono con una parola**
+>
+> Le tre che seguono (§7.14, §7.15, §7.16) sono nate dalla revisione `fasi/rapporti/R11-documenti.md`
+> e stanno **qui** perché è qui che stanno le decisioni, una sola volta: `RCP.md`,
+> `fasi/01-filo-nudo.md` e `README.md` **rimandano**, non copiano.
+>
+> ⛔ **Nessuna delle tre è decisa**, e la marca resta ❓ finché l'utente non parla — anche dove
+> scrivo quale mi sembra più difendibile. Due di esse (§7.14, §7.15) **cambiano i byte sul filo**,
+> e finché sono aperte due implementazioni conformi a `RCP.md` divergono senza che nessuna delle
+> due abbia torto.
+>
+> ⚠ **E dall'11 agosto 2026 sono quattro**: §7.17 è nata il giorno dopo, **da una misura** — il banco
+> B6 — e non da una lettura. Vale per lei tutto quel che è scritto qui sopra.
+
+### 7.14 ❓ Il `FIN` sul canale di controllo: chi lo riceve può ancora congedarsi?
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.22**. Riguarda `RCP.md` §4.2 e §8.1.*
+
+**Il fatto.** §4.2 dice: *«un `FIN` su quello stream, da una qualunque delle due parti, chiude la
+sessione. Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire **sugli
+altri canali**»*. Il canale di controllo è uno stream **bidirezionale**: il `FIN` del server chiude
+il verso del server, non quello della pagina. E §8.1 impone a chi chiude di mandare `CONGEDO`.
+⛔ **Il divieto scritto nomina «gli altri canali» e non nomina quello di controllo**, quindi le due
+letture sono tutt'e due conformi al testo di oggi.
+
+| | **A — il silenzio** | **B — il congedo** |
+|---|---|---|
+| **la regola** | il `FIN` chiude la sessione **in tutt'e due i versi**: chi lo riceve non spedisce più niente, nemmeno sul controllo | il divieto è solo «sugli altri canali»: sul controllo la pagina **DEVE** ancora mandare il `CONGEDO` di §8.1, poi chiude |
+| ⛔ **il byte sul filo** | **nessuno.** Il motivo viaggia solo nel codice d'errore applicativo della chiusura della sessione (§3.1 punto 3) | **nove byte** sul canale di controllo, prima della chiusura: `00 0C` (`CONGEDO`, §7.1) · `00 00 00 03` · il motivo di §8.2 · `00 00` (dettaglio vuoto). Poi la stessa chiusura di A |
+| **chi la applica oggi** | ⛔ **il banco**: il caso `fin-sul-controllo` di B11 ha come atteso *«muta»*, e la pagina tace | nessuno |
+| **il prezzo** | §8.1 deve guadagnare l'eccezione scritta — *chi ha ricevuto un `FIN` non è «chi chiude»* — o continua a imporre un obbligo che §4.2 vieta | il server non può contare su quel byte: ⛔ `[M]` 10 agosto, **Chrome butta un messaggio spedito subito prima di chiudere la sessione** (difetto 2 di B11). Un `DEVE` che un motore su due non onora |
+
+**Il caso concreto, ed è già successo.** È il punto in cui il 10 agosto è nato il **quarto difetto
+di B11**: su Chrome, dopo il `FIN` del server sul canale di controllo, **il posto di §8.2 `0x0F`
+non si liberava** perché da lì in poi non arrivava più un byte capace di liberarlo, e l'utente
+vedeva *«mi dice che sono già collegato, e non è vero»*. Con la lettura **B** quel byte esisterebbe
+— è il `CONGEDO` — e arriverebbe dove il server già guarda. Con la lettura **A** il posto si libera
+leggendo la capsula di chiusura, che è la cura che è stata scritta quella sera.
+
+⭐ **Quale mi sembra più difendibile, e la ragione: A — il silenzio.** Non per il testo, che
+ammette tutt'e due, ma per due misure dello stesso giorno: la seconda strada di §3.1 punto 3 —
+il motivo dentro il codice di chiusura — **ha funzionato su tutt'e due i motori**, mentre il
+`CONGEDO` della lettura B **è stato visto sparire su Chrome**. ⛔ Un `DEVE` che un browser su due
+non può onorare è esattamente la forma che il rilievo R1.4 ha dichiarato difetto — *«era conforme
+al testo quanto il primo»*. ⚠ E il prezzo di A va pagato per intero: senza l'eccezione scritta in
+§8.1, A lascia in piedi la contraddizione invece di chiuderla.
+
+**Come si chiude:** una parola — *«silenzio»* o *«congedo»*. Poi §4.2 dice se il `FIN` ricevuto
+chiuda anche il verso di chi lo riceve, e §8.1 recepisce l'eccezione o la perde.
+
+### 7.15 ❓ Il congedo di §8.1: obbligo senza condizioni, o con la condizione di §3.1?
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.23**. Riguarda `RCP.md` §8.1 e §3.1 punto 2.*
+
+**Il fatto.** §8.1: *«Chi chiude **DEVE** mandare `CONGEDO` con un motivo prima di chiudere la
+sessione»*, e l'unica eccezione dichiarata è `RESPINTO`. §3.1 punto 2, per la stessa cosa:
+*«**DEVE** mandare `CONGEDO` (§8) con il motivo, sul canale di controllo, **se il canale di
+controllo è ancora utilizzabile**»*. ⛔ Un'implementazione che chiude **senza** congedo perché il
+canale è rotto è **conforme a §3.1 e in violazione di §8.1**, nello stesso documento.
+
+| | **A — l'obbligo è incondizionato** | **B — vale la condizione di §3.1** |
+|---|---|---|
+| **la regola** | chi chiude manda `CONGEDO` **sempre**, tranne dopo `RESPINTO` | l'obbligo cade quando il canale di controllo non è utilizzabile; il motivo passa comunque dal punto 3 |
+| ⛔ **il byte sul filo** | i nove byte del `CONGEDO` **anche** quando il controllo è già chiuso o rotto — cioè un byte che spesso non può partire | **nessun byte** in quel caso: resta il solo codice d'errore applicativo della chiusura (§3.1 punto 3) |
+| **chi la applica oggi** | nessuno | ⛔ **il banco**: B5 e B11 verificano le chiusure *«nei tre punti di §3.1 col secondo condizionale»* (`fasi/01-filo-nudo.md`, rilievo R3.3) |
+| **il prezzo** | un banco scritto su §8.1 **boccia un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale | §8.1 perde la forma assoluta, e va riscritta con la condizione dentro — una frase |
+
+**Il caso concreto.** Una violazione arriva su uno **stream unidirezionale** dopo che il canale di
+controllo è già finito: con **A** il server deve mandare un `CONGEDO` su un canale che non c'è più,
+e il banco che pretende tutt'e tre i punti di §3.1 **dà rosso sul codice giusto** — è il rilievo
+R3.3, già pagato una volta su questo stesso banco.
+
+⭐ **Quale mi sembra più difendibile, e la ragione: B — la condizione.** Un `DEVE` che non si può
+rispettare non è una regola, è un difetto del documento (`RCP.md` §0: *«se una riga qui è ambigua,
+è un difetto di questo file»*), e la seconda strada non fallisce mai: il motivo viaggia nel codice
+di chiusura anche quando il canale è morto. ⛔ **E costa una frase in §8.1, zero byte sul filo.**
+
+⚠ **Le due domande si toccano e non si sostituiscono.** Rispondere *«vale la condizione»* a §7.15
+**non** chiude §7.14: dopo un `FIN` ricevuto il canale di controllo, **nel verso di chi lo ha
+ricevuto**, è ancora utilizzabile — ed è esattamente il punto che §7.14 chiede.
+
+### 7.16 ❓ `RCP.md` §7.5, la funzione di banco: era una decisione tua?
+
+*Posta la notte del 10 agosto 2026, rilievo **R11.15**. Intanto la riga sta in §1.5 riga 26, ed è
+🔸 — non ✅.*
+
+**Il fatto.** `RCP.md` §7.5 aggiunge al protocollo **due tipi di messaggio** — `BANCO_MARCA`
+(`0x000F`) e `BANCO_ESITO` (`0x0010`) — e §7.5 dichiara di venire dal **rilievo R3.4** della
+revisione del banco, con la motivazione da `web/rapporti/S4-ritardo-disegno.md` §5.3. ⛔ **Non c'è
+né una frase né una voce**, mentre le decisioni che l'utente ha pronunciato davvero (§1.6, §1.8,
+§1.9) portano qui la frase virgolettata con la data. `fasi/01-filo-nudo.md` la marcava ✅, cioè
+*«deciso dall'utente»*: corretta a 🔸 il 10 agosto.
+
+| | **A — era tua (✅)** | **B — è derivata (🔸)** |
+|---|---|---|
+| **che cosa cambia** | non si tocca senza tornare da te | *«si corregge senza discussione»* |
+| ⛔ **il byte** | nessuno **oggi**: i due tipi ci sono in tutt'e due i casi. Cambia **la reversibilità** — con A i `0x000F`/`0x0010` restano in RCP/1 per sempre, con B si possono togliere | |
+| **il peso** | quei due tipi hanno **consumato la clausola di §9** — *«oggi non esiste nessuna implementazione»* — che `RCP.md` §12 dichiara essere stata **l'ultima occasione** per aggiungere tipi di messaggio | |
+
+**Il caso concreto.** Il giorno in cui quei due tipi diano fastidio — un'implementazione che deve
+riconoscerli per essere conforme, in un ambiente dove *dipingere un quadratino sul desktop di
+qualcuno* non è accettabile nemmeno dietro un interruttore — con **B** si tolgono, con **A** no. ⚠ E
+c'è la metà che conta anche se la risposta è *«fate voi»*: **il tuo protocollo porta due tipi che
+tu non hai chiesto**, e questa riga esiste perché tu lo sappia.
+
+⭐ **Quale mi sembra più difendibile, e la ragione: B — 🔸.** La provenienza è dichiarata da §7.5
+stessa e non è una tua frase; marcarla ✅ le darebbe una protezione che nessuna misura le ha dato
+(`LEZIONI.md` §2.3-quater). ⛔ Ma è l'unica delle tre che **solo tu** puoi chiudere davvero, perché
+la domanda è *se l'hai detta*.
+
+**Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
+*«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
+
+### 7.17 ❓ La sessione che non apre mai il canale di controllo: quanto può restare lì?
+
+*Posta l'11 agosto 2026 da una **misura**, non da una lettura: il banco **B6** (rilievo **R12-A.25**,
+e `fasi/01-filo-nudo.md` B6). Riguarda `RCP.md` §4.6.*
+
+**Il fatto, e sono due.** B6 ha chiuso la `[?]` **R3.27** — *da quale istante parte il primo tetto* —
+e la risposta è: **dall'apertura del canale di controllo**, non dalla fine del TLS. `RCP.md` §4.6
+riga 1 è stata corretta di quella parola l'11 agosto. ⛔ **Ma il banco ha dato una seconda risposta,
+e dice che curare la parola non basta**: se il cronometro parte dall'apertura del **canale**, chi apre
+la **sessione** WebTransport e il canale non lo apre mai **non ha addosso nessun tetto**. §4.6 non ha
+una riga per quello stato: la tabella comincia da *«`CIAO` ricevuto»*, e prima del `CIAO` c'è uno
+stato in cui il server non conta niente.
+
+| | **A — un quarto tetto** | **B — nessun tetto, e si dichiara** |
+|---|---|---|
+| **che cosa dice** | dall'apertura della **sessione** all'apertura del **canale di controllo** passa al massimo *N* secondi, poi `CONGEDO(TEMPO_SCADUTO)` | quello stato lo copre il solo tempo di inattività di QUIC (30 s di **silenzio**), e §4.6 lo scrive invece di lasciarlo implicito |
+| ⛔ **che cosa cambia sul filo** | arriva un `CONGEDO(0x0D)` — sul canale che non c'è, quindi **solo** il codice `0x0D` nella chiusura della sessione (§3.1 punto 3) — dove oggi non arriva niente | niente arriva, ed è **quel che succede oggi**: la differenza è che smette di essere un'omissione |
+| **il costo** | un tetto in più da misurare, e un client lento a chiamare l'API si vede chiudere la sessione appena aperta | ⛔ una sessione che non manda `CIAO` ma **tiene il filo occupato** su un altro stream non scade **mai**: il posto resta preso |
+
+**Il caso concreto, e non è di laboratorio.** Una pagina apre la sessione WebTransport, poi il
+browser va in secondo piano o la rete cade fra i due passi. Con **A** la sessione muore con un motivo
+leggibile; con **B** resta lì finché QUIC non si annoia — e se qualcosa continua a scrivere su un
+altro stream, non si annoia mai. ⚠ È la connessione che *«tiene un posto e non lo dichiara a
+nessuno»*, cioè la frase con cui §4.6 si apre: la sezione esiste per questo caso e non lo copre.
+
+⭐ **Quale mi sembra più difendibile, e la ragione: A, con lo stesso numero della riga 1 — 5 s.**
+Non per simmetria: perché l'apertura del canale di controllo è **il primo atto obbligatorio** della
+sessione (§2.5), non dipende dall'utente, e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
+⛔ Ma è una riga normativa che aggiunge un tetto a un'implementazione conforme, quindi **resta ❓**
+finché non la decidi: `RCP.md` §4.6 porta la riga marcata ❓ e rimanda qui, e §12 la dichiara fra le
+cose che RCP/1 lascia aperte. ⭐ **Non serve nessun tipo di messaggio nuovo** — il motivo è
+`TEMPO_SCADUTO`, che c'è già — e questo conta, perché la finestra di §9 è chiusa dal 10 agosto.
+
+**Come si chiude:** un numero, o *«nessun tetto»*. Con la prima, §4.6 guadagna una riga e B6 un caso;
+con la seconda, §4.6 guadagna comunque **la riga che dichiara lo stato**, perché un buco dichiarato e
+un buco dimenticato non si distinguono dopo tre mesi.
 
 ---
 

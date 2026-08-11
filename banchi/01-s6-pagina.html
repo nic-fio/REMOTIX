@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S6 — quanto porta davvero un datagram</title>
+<!--
+  ============================================================================
+  ⛔ NON E' UNA GRANDEZZA DEL MOTORE, E' UNA GRANDEZZA DEL CAMMINO.
+
+  Lo decide la MTU piu' piccola fra i due estremi meno le intestazioni, non il
+  browser.  Il motore decide solo che cosa **dichiara** l'API — che e' proprio
+  la cosa da non credere.  Attribuirlo al motore e' la forma d'errore E2: due
+  misure diverse sotto la stessa etichetta (rilievo R3.22).
+
+  ⛔ QUINDI IL PERCORSO SI DICHIARA ACCANTO AL NUMERO, e si misura sul
+     percorso **peggiore che si intende servire** — LTE, o una VPN a MTU 1400
+     — **non su quello comodo**.  Questa pagina pretende il parametro
+     `?percorso=` e **non misura senza**: un numero senza percorso qui e' come
+     un fotogramma al secondo senza la scena.
+
+  ============================================================================
+  ⛔ IL CONTROLLO: IL DATAGRAM DEVE ARRIVARE, NON ESSERE ACCETTATO.
+
+  `RCP.md` §5.3 e la riga di S6 lo dicono: si spedisce un datagram di quella
+  misura esatta e **si verifica che arrivi dall'altra parte**.  L'API che non
+  si lamenta non e' una consegna: un datagram troppo grande viene buttato **in
+  silenzio**, che e' esattamente il modo in cui l'audio PCM non partirebbe mai
+  senza che niente lo dica.
+
+  ⭐ E prima di tutto un CONTROLLO POSITIVO: un datagram piccolo (64 byte)
+     DEVE tornare.  Se non torna, il server non fa eco e la misura non e'
+     nemmeno cominciata — «niente torna» e «niente torna oltre N byte» hanno
+     lo stesso aspetto (`LEZIONI.md` §1.9).
+
+  ============================================================================
+  IL NUMERO CHE CONTA: 972 byte.
+
+  PCM a 5 ms = 480 campioni × 2 canali × 2 byte = 960, piu' 12 di
+  intestazione = **972** (`RCP.md` §5.3).  Sotto quella soglia il PCM scende
+  ancora — ed e' il controllo positivo di Opus, quindi non e' un dettaglio.
+
+  ⚠ E se il numero deve diventare un tetto di protocollo, S6 dice di non
+    misurarlo affatto: si prende il minimo garantito da QUIC.  Misurare in LAN
+    e alzare il tetto significa spedire audio che l'utente vero non riceve.
+  ============================================================================
+-->
+<style>
+  body { margin: 0; padding: 1rem; background: #0d0d12; color: #e8e8f0;
+         font: 15px/1.5 ui-monospace, monospace; }
+  button { font: inherit; padding: 0.6rem 1rem; background: #23233a;
+           color: #e8e8f0; border: 1px solid #55557a; border-radius: 6px; }
+  #registro { white-space: pre-wrap; background: #07070b; padding: 0.6rem;
+              border: 1px solid #333; max-height: 60vh; overflow: auto; }
+  .no { color: #f77; } .si { color: #7f7; } .boh { color: #fd7; }
+</style>
+</head>
+<body>
+<h1>S6 — il carico utile di un datagram</h1>
+<p id="scena"></p>
+<p><button id="via">misura</button></p>
+<div id="registro"></div>
+<script>
+"use strict";
+
+const P = new URLSearchParams(location.search);
+const GIRO = P.get("giro") || "s6-" + Math.random().toString(36).slice(2, 10);
+const URL_WT = P.get("url");
+const IMPRONTA = P.get("impronta");
+const PERCORSO = P.get("percorso");     // ⛔ obbligatorio
+const SOGLIA_PCM = 972;
+let numero = 0;
+
+function scrivi(t, c) {
+  const r = document.getElementById("registro");
+  r.innerHTML += `<div class="${c || ""}">${t}</div>`;
+  r.scrollTop = r.scrollHeight;
+}
+function spedisci(d) {
+  d.n = ++numero; d.giro = GIRO; d.motore = navigator.userAgent;
+  d.percorso = PERCORSO;      // ⛔ il percorso viaggia con OGNI riga
+  try {
+    navigator.sendBeacon("/esito", new Blob([JSON.stringify(d)],
+                                            {type: "application/json"}));
+  } catch (e) { /* si continua */ }
+}
+
+document.getElementById("scena").innerHTML =
+  `percorso dichiarato: <b>${PERCORSO || "⛔ NESSUNO"}</b> · `
++ `sessione: <b>${URL_WT || "⛔ nessuna"}</b>`;
+
+document.getElementById("via").onclick = async () => {
+  if (!PERCORSO) {
+    scrivi("⛔ manca `?percorso=`.  Il numero senza il percorso non e' una misura di "
+         + "S6: e' due misure diverse sotto la stessa etichetta (E2).  "
+         + "Esempi: percorso=LTE · percorso=VPN-1400 · percorso=LAN-casa", "no");
+    spedisci({tipo: "RIFIUTO", motivo: "PERCORSO_ASSENTE"});
+    return;
+  }
+  if (!URL_WT) { scrivi("⛔ manca `?url=`", "no"); return; }
+  if (typeof WebTransport === "undefined") {
+    scrivi("⛔ questo motore non ha WebTransport", "no");
+    spedisci({tipo: "RIFIUTO", motivo: "NIENTE_WEBTRANSPORT"});
+    return;
+  }
+
+  let opzioni = {};
+  if (IMPRONTA) {
+    opzioni = {serverCertificateHashes: [{
+      algorithm: "sha-256",
+      value: Uint8Array.from(atob(IMPRONTA), (c) => c.charCodeAt(0))
+    }]};
+  }
+  let wt;
+  try {
+    wt = new WebTransport(URL_WT, opzioni);
+    await wt.ready;
+  } catch (e) {
+    scrivi(`⛔ la sessione non si apre: ${e}`, "no");
+    spedisci({tipo: "RIFIUTO", motivo: "SESSIONE_NON_APERTA", errore: String(e)});
+    return;
+  }
+  scrivi("sessione aperta", "si");
+
+  const scrittore = wt.datagrams.writable.getWriter();
+  const lettore = wt.datagrams.readable.getReader();
+  // ⚠ Quel che l'API DICHIARA.  Si registra e non si crede: e' il numero che
+  //   il motore promette, non quello che il cammino porta.
+  const dichiarato = wt.datagrams.maxDatagramSize;
+  scrivi(`l'API dichiara maxDatagramSize = <b>${dichiarato}</b> (si registra, non si crede)`);
+  spedisci({tipo: "DICHIARATO", maxDatagramSize: dichiarato});
+
+  const attesi = new Map();
+  (async () => {
+    while (true) {
+      const {value, done} = await lettore.read();
+      if (done) break;
+      if (value && value.length >= 4) {
+        const marca = new DataView(value.buffer, value.byteOffset).getUint32(0);
+        const chi = attesi.get(marca);
+        if (chi) chi(value.length);
+      }
+    }
+  })().catch(() => {});
+
+  let marca = 1;
+  async function provaMisura(misura) {
+    const dati = new Uint8Array(misura);
+    const vista = new DataView(dati.buffer);
+    const mia = marca++;
+    vista.setUint32(0, mia);
+    for (let i = 4; i < misura; i++) dati[i] = i & 0xff;
+    let risolvi;
+    const tornato = new Promise((r) => { risolvi = r; });
+    attesi.set(mia, risolvi);
+    let accettato = true, errore = null;
+    try {
+      await scrittore.write(dati);
+    } catch (e) { accettato = false; errore = String(e); }
+    const esito = await Promise.race([
+      tornato,
+      new Promise((r) => setTimeout(() => r(null), 1500))
+    ]);
+    attesi.delete(mia);
+    spedisci({tipo: "PROVA", misura: misura, accettato: accettato,
+              tornato: esito !== null, misura_tornata: esito, errore: errore});
+    return esito !== null;
+  }
+
+  // ⭐ IL CONTROLLO POSITIVO, PRIMA DI TUTTO.
+  scrivi("… controllo positivo: un datagram da 64 byte deve tornare");
+  if (!(await provaMisura(64))) {
+    scrivi("⛔ nemmeno 64 byte tornano indietro.  Il server non fa eco dei datagram, "
+         + "oppure il cammino li butta tutti: in nessuno dei due casi «non torna» "
+         + "misura la MISURA.  ⛔ La prova si ferma qui.", "no");
+    spedisci({tipo: "ESITO", esito: "SENZA_ECO"});
+    return;
+  }
+  scrivi("   64 byte tornano: da qui in poi «non torna» vuol dire qualcosa", "si");
+
+  // Ricerca binaria sulla misura piu' grande che torna.
+  let basso = 64, alto = 65535, ultimoBuono = 64;
+  while (basso <= alto) {
+    const mezzo = Math.floor((basso + alto) / 2);
+    const ok = await provaMisura(mezzo);
+    scrivi(`   ${mezzo} byte: ${ok ? "torna" : "non torna"}`);
+    if (ok) { ultimoBuono = mezzo; basso = mezzo + 1; } else { alto = mezzo - 1; }
+  }
+
+  // ⛔ E si RICONFERMA il numero trovato, tre volte: una ricerca binaria su un
+  //    cammino che perde pacchetti puo' scendere per una perdita casuale.
+  let conferme = 0;
+  for (let i = 0; i < 3; i++) if (await provaMisura(ultimoBuono)) conferme++;
+
+  const basta = ultimoBuono >= SOGLIA_PCM;
+  scrivi(`\n<b>carico utile massimo che ARRIVA: ${ultimoBuono} byte</b> `
+       + `(riconfermato ${conferme}/3) · percorso <b>${PERCORSO}</b>`);
+  scrivi(`l'API ne dichiarava ${dichiarato}`
+       + (dichiarato && dichiarato !== ultimoBuono
+          ? " — ⚠ i due numeri NON coincidono, e quello che conta e' il primo" : ""));
+  scrivi(basta
+      ? `≥ ${SOGLIA_PCM}: il PCM a 5 ms di RCP §5.3 ci sta`
+      : `⛔ &lt; ${SOGLIA_PCM}: il PCM a 5 ms NON ci sta su questo percorso, e il `
+        + `blocco audio va accorciato`, basta ? "si" : "no");
+  spedisci({tipo: "ESITO", esito: "MISURATO", massimo: ultimoBuono,
+            conferme: conferme, dichiarato: dichiarato, soglia: SOGLIA_PCM,
+            basta_per_pcm: basta});
+};
+</script>
+</body>
+</html>

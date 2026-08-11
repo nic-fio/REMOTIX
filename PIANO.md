@@ -357,6 +357,31 @@ crollato»: **i pixel**.
 **Si riusa**: `cattura.c` (1060 righe), `mutter.c` (353), `superficie.c` (675), `immagine.c` (273),
 `codificatore.c` (889, da riportare a HEVC), `palco.c` per la parte di montaggio.
 
+> ### ⛔ Una domanda che la fase 1 ha trovato e che morde QUI — `[M]` 10 agosto 2026
+>
+> *Trovata dalla sonda S7, dopo tre giri andati a vuoto, dal controllo che dice «la pagina non vede
+> nemmeno muoversi il puntatore». Portata qui l'11 agosto 2026 invece di essere riscoperta da un
+> utente (`web/rapporti/S-esiti-sonda.md` §8, voce **S.4**).*
+>
+> ⛔ **In una sessione GNOME senza dispositivi di input fisici, se il client parte PRIMA che il
+> puntatore virtuale di `libei` esista, non riceve nulla** — né rotella, né bottoni, **né il
+> movimento del puntatore**. Se parte **dopo**, riceve tutto. `[M]`, ed è **l'ordine** a essere
+> misurato.
+>
+> ⚠ **E non è che l'iniezione non arrivi**: Mutter la riceve in tutt'e due i casi —
+> `org.gnome.Mutter.IdleMonitor.GetIdletime` cade da **35 952 ms a 1 013 ms** al primo movimento.
+> ⛔ **Il compositore la prende e non la consegna alla finestra.**
+>
+> `[?]` **La causa non è verificata**: la spiegazione plausibile — una sessione senza dispositivi
+> annuncia un `wl_seat` **senza puntatore**, e il cliente partito prima non si iscrive mai — non è
+> stata provata. Quel che è `[M]` è l'ordine.
+>
+> ⛔ **Perché riguarda il prodotto, e riguarda questa fase e la 6**: nel prodotto la sessione grafica
+> nasce **senza alcun dispositivo di input**, e le applicazioni aperte **prima** che un client si
+> colleghi potrebbero trovarsi nello stesso stato — l'utente muove il mouse e quella finestra non
+> risponde. ⇒ **Il banco di questa fase apre l'applicazione DOPO aver creato i dispositivi**, o
+> misura una scena che il prodotto non avrà mai.
+
 ⚠ Qui la codifica è **software**, di proposito. L'accelerazione è la fase 8, e metterla prima
 significherebbe non sapere quale dei due pezzi sbaglia.
 
@@ -521,6 +546,12 @@ dispositivi assoluti. Il puntatore al dispositivo vecchio smette di funzionare *
 `[R]` (`gnome.md` §9). Il banco del riattacco **deve battere un tasto e muovere il puntatore
 dopo**, non solo verificare che la sessione ci sia: è la forma «una prova verde col difetto vivo»
 esattamente dove si presenta.
+
+⛔ **E con lo stesso peso, l'ordine fra la nascita del puntatore virtuale e l'avvio delle
+applicazioni** — riquadro nella fase 2, `[M]` 10 agosto 2026: un cliente Wayland partito **prima**
+che i dispositivi di input esistano **non riceve niente**, e il compositore l'iniezione la prende lo
+stesso. Al riattacco i dispositivi si **distruggono e si ricreano**: è esattamente il caso in cui
+questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
 
 ---
 

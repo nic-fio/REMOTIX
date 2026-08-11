@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>S1b — l'eccezione sul certificato</title>
+<!--
+  Questa pagina esiste per essere RAGGIUNTA, o per non esserlo.
+
+  Se il browser la mostra, l'eccezione concessa sul certificato e' ancora
+  valida e la pagina lo dichiara spedendo una riga.  Se davanti c'e'
+  l'interstiziale del certificato, questo codice non gira affatto: e' il
+  silenzio che misura, e per questo il banco tiene sempre accanto una prova
+  che dice **come apparirebbe il caso opposto** (un profilo nuovo, che
+  l'avviso deve vederlo).
+-->
+<style>
+  body { margin: 0; padding: 2rem; background: #0d0d12; color: #e6e6ee;
+         font: 16px/1.6 system-ui, sans-serif; }
+  code { color: #8fd; }
+</style>
+</head>
+<body>
+<h1 id="segno">S1b — pagina servita</h1>
+<p>Se leggi questo, l'eccezione sul certificato regge ancora.</p>
+<p>giro: <code id="giro"></code></p>
+<script>
+"use strict";
+const parametri = new URLSearchParams(location.search);
+const giro = parametri.get("giro") || "senza-giro";
+document.getElementById("giro").textContent = giro;
+
+// ⛔ La versione esatta del motore viaggia con la misura, sempre — B0.6, e
+//    S1 §4.5 punto 5: «un risultato senza versione, fra sei mesi, non vale
+//    niente».  E' il campo che una trascrizione a mano dimentica.
+const dati = {
+  giro: giro,
+  motore: navigator.userAgent,
+  contestoSicuro: window.isSecureContext,
+  origine: location.origin
+};
+navigator.sendBeacon("/esito", new Blob([JSON.stringify(dati)],
+                                        {type: "application/json"}));
+document.getElementById("segno").textContent = "S1b — pagina servita, esito spedito";
+</script>
+</body>
+</html>

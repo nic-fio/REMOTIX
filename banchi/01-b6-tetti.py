@@ -1011,14 +1011,24 @@ async def principale(a):
     conti["certificazioni dello strumento"][0] += int(ok)
     riga(ok, "cert-giro-completo", testo)
     if bloccato:
-        print(f"\n    {ROSSO}⛔ LO STATO INIZIALE NON E' PULITO (B0.3){GRIGIO}")
-        print("       L'indirizzo e' dentro la finestra di §4.4-bis: un altro")
-        print("       banco (B5, B8) ha fallito dei tentativi da qui poco fa.")
+        print(f"\n    {ROSSO}⛔ L'INDIRIZZO E' BANNATO (§4.4-bis) — B0.3{GRIGIO}")
+        print("       Tre autenticazioni fallite da questo indirizzo, e un")
+        print("       altro banco (B5, B8) le ha fatte poco fa: il ban dura")
+        print("       ⛔ DODICI ORE, non trenta secondi.")
         print("       ⛔ Non e' un difetto dei tetti, ed e' precisamente il")
         print("          falso rosso che B0.3 esiste per impedire.")
-        print("       Cura: aspettare (il blocco parte da 30 s e raddoppia,")
-        print("       fino a 15 minuti; scade da se' dopo 30 minuti di quiete),")
-        print("       oppure riaccendere il server, che azzera la tabella.")
+        print("       ⛔ Le cure, e la prima NON C'E':")
+        print("          · il comando di sblocco di §4.4-bis **non esiste**")
+        print("            come comando: `rcp_sblocca()` sta in rcp.c e non ha")
+        print("            nessun chiamante raggiungibile da fuori — niente")
+        print("            opzione, niente segnale, niente file dei ban;")
+        print("          · **riaccendere il server**, perche' il conto vive nel")
+        print("            processo.  Lo fa `01-b6-lancia.sh` a ogni fase: se")
+        print("            questa riga si accende, il ban e' arrivato DOPO")
+        print("            l'accensione, cioe' da un'altra connessione viva.")
+        print("       ⚠ E il ban di §4.4-bis DEVE sopravvivere al riavvio")
+        print("         (invariante I7): finche' non lo fa, questa cura e' un")
+        print("         difetto del server che ci sta tornando comodo.")
         return 5
     if not ok:
         print(f"\n    {ROSSO}⛔ lo strumento non arriva in fondo a una stretta "
@@ -1133,10 +1143,48 @@ async def principale(a):
                             f"cronometro non parte affatto, e la connessione "
                             f"resta li' appesa")
                     verso = "MAI"
+                # ⛔ LA MORTE SILENZIOSA E' UN ROSSO DEL SERVER, NON UNA
+                #    RISPOSTA SUL DOCUMENTO — rilievo R12-A.25.
+                #
+                #    Fino all'11 agosto 2026 `esito == "morte-silenziosa"` —
+                #    che e' **la firma esatta del PING che manca**, quella per
+                #    cui la fase «ping» esiste — cadeva nell'`else` qui sotto,
+                #    non incrementava `guasti`, finiva in `risposte` con
+                #    `verso="?"`, e poi `fuori_dal_documento` lo raccoglieva e
+                #    lo script usciva **3**, stampando «i tetti si comportano
+                #    come il CODICE dice, ma §4.6 dice un'altra cosa … la cura
+                #    sta in RCP.md, non nel server».  ⛔ Cioe' il sintomo che
+                #    accusa il SERVER veniva consegnato come prova che sbaglia
+                #    il DOCUMENTO: il rosso mandato a cercare dove non c'e'
+                #    niente.  Il ramo giallo del banco sotto (righe 1190-1195)
+                #    lo diceva gia' bene per gli altri casi; qui no.
+                elif es.esito == "morte-silenziosa":
+                    risp = (f"⛔ MORTA SENZA MOTIVO dopo "
+                            f"{es.ms / 1000:.1f} s, e il tetto del trasporto "
+                            f"e' {a.idle / 1000:.0f} s: e' la firma che §4.6 "
+                            f"descrive — i PING del trasporto non ci sono, e "
+                            f"a chiudere e' QUIC.  ⛔ La cura sta NEL SERVER")
+                    verso = "SERVER"
                 else:
-                    risp = f"⛔ {es}"
-                    verso = "?"
-                riga_gialla(c["nome"], risp)
+                    # ⛔ E QUEL CHE IL BANCO NON HA SAPUTO CLASSIFICARE HA UN
+                    #    NOME SUO, e non e' una risposta.  Un esito senza nome
+                    #    consegnato come «numero da portare nei documenti» e'
+                    #    un «non lo so» travestito da misura: il ramo che
+                    #    decide fra «cura nel documento» e «cura nel server»
+                    #    non puo' essere quello che non ha un «non lo so».
+                    risp = (f"⛔ esito che il banco NON SA CLASSIFICARE: {es}. "
+                            f"Non e' una risposta a §4.6, e non e' un rosso "
+                            f"del server: e' una misura da rifare")
+                    verso = "NON-SO"
+                # ⛔ E LE TRE COSE SI STAMPANO IN TRE MODI DIVERSI, perche'
+                #    sono tre: un rosso del server e' un rosso (`riga`), una
+                #    risposta e' gialla (`riga_gialla`), un «non lo so» e'
+                #    giallo ma **non entra fra le risposte**.
+                if verso == "SERVER":
+                    guasti += 1
+                    riga(False, c["nome"], risp)
+                else:
+                    riga_gialla(c["nome"], risp)
                 risposte.append((c["nome"], verso, risp))
 
         else:
@@ -1223,13 +1271,28 @@ async def principale(a):
         col = VERDE if buoni == tot else ROSSO
         print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}")
 
-    if risposte:
+    # ⛔ E LE RISPOSTE SI SEPARANO DAI «NON LO SO» — rilievo R12-A.25.
+    #    Un esito che il banco non ha saputo classificare non e' «un numero da
+    #    portare nei documenti»: e' una misura da rifare, e stamparlo nello
+    #    stesso elenco delle risposte lo faceva pesare come una risposta.
+    non_classificati = [r for r in risposte if r[1] == "NON-SO"]
+    risposte_vere = [r for r in risposte if r[1] not in ("NON-SO", "SERVER")]
+    if risposte_vere:
         print()
         print("    == ⛔ le domande aperte a cui questo giro ha RISPOSTO")
         print("       (non sono passa/non passa: sono numeri da portare nei "
                "documenti)")
-        for nome, verso, risp in risposte:
+        for nome, verso, risp in risposte_vere:
             print(f"    ??  {nome:34s} {risp}")
+    if non_classificati:
+        print()
+        print(f"    == ⛔ e {len(non_classificati)} casi che il banco NON HA "
+              f"SAPUTO CLASSIFICARE")
+        print("       ⚠ Non entrano fra le risposte: un «non lo so» consegnato "
+              "come risposta")
+        print("         manderebbe la cura nel posto sbagliato.")
+        for nome, _, risp in non_classificati:
+            print(f"    ?!  {nome:34s} {risp}")
 
     # ⛔ TRE ESITI DIVERSI, PERCHE' SONO TRE COSE DIVERSE — ed e' il punto di
     #    questo banco.
@@ -1244,7 +1307,13 @@ async def principale(a):
               f"{GRIGIO}")
         return 1
 
-    fuori_dal_documento = [r for r in risposte if r[1] != "TLS"]
+    # ⛔ E L'ELENCO E' PER NOMI AMMESSI, NON PER ESCLUSIONE — rilievo R12-A.25.
+    #    Era `[r for r in risposte if r[1] != "TLS"]`: qualunque `verso` nuovo
+    #    — compreso il `"?"` che il banco metteva quando non aveva capito —
+    #    finiva automaticamente fra le prove che il DOCUMENTO sbaglia.  Una
+    #    lista per esclusione ingrossa da sola ogni volta che qualcuno aggiunge
+    #    un caso, e nella direzione che accusa il documento.
+    fuori_dal_documento = [r for r in risposte if r[1] in ("APERTURA", "MAI")]
     if disaccordo_doc_codice:
         print(f"    {ROSSO}⛔ B6 «{a.fase}»: il filo si comporta bene, ma "
               f"DOCUMENTO e CODICE non dicono lo stesso numero{GRIGIO}")
@@ -1265,7 +1334,45 @@ async def principale(a):
               "cambia di una parola»,")
         print("          oppure il cronometro cambia istante.  Non e' il rosso "
               "del server.")
+
+        # ⛔ E LE DUE RISPOSTE NON SONO LA STESSA, E LA SECONDA E' PIU' GRAVE.
+        #
+        #    «APERTURA» dice quale parola cambiare.  «MAI» dice che **cambiare
+        #    la parola non basta**: se il cronometro parte dall'apertura del
+        #    canale, una sessione WebTransport aperta e un canale mai aperto
+        #    non hanno addosso NESSUN tetto — cioe' proprio la connessione che
+        #    §4.6 esiste per non lasciare li' appesa, sopravvissuta alla cura.
+        #    Un banco che stampasse una riga sola per le due risposte
+        #    consegnerebbe la meta' facile.
+        mai = [r for r in risposte if r[1] == "MAI"]
+        if mai:
+            print()
+            print(f"    {ROSSO}⛔ E LA SECONDA RISPOSTA, CHE CAMBIARE LA PAROLA "
+                  f"NON CHIUDE{GRIGIO}")
+            for nome, _, risp in mai:
+                print(f"       {nome}: {risp}")
+            print("       Se il cronometro parte dall'apertura del CANALE, chi")
+            print("       apre la sessione e non apre mai il canale non ha")
+            print("       addosso nessun tetto: e' la connessione che «tiene un")
+            print("       posto e non lo dichiara a nessuno» (§4.6, prima riga")
+            print("       del riquadro), viva e senza scadenza.")
+            print("       ⛔ §4.6 non ha una riga per questo stato: la tabella")
+            print("          comincia da «CIAO ricevuto», e prima del CIAO c'e'")
+            print("          uno stato in cui il server non conta niente.")
         return 3
+    # ⛔ E IL «NON LO SO» HA UN ESITO SUO, IL 6 — rilievo R12-A.25.
+    #    Non e' 1 («il server sbaglia») e non e' 3 («il documento sbaglia»):
+    #    sono le due cose fra cui il banco non e' riuscito a scegliere, e
+    #    sceglierne una a caso e' il rosso mandato dove non c'e' niente.
+    if non_classificati:
+        print(f"    {GIALLO}⛔ B6 «{a.fase}»: {len(non_classificati)} casi "
+              f"hanno prodotto un esito che il banco non sa classificare"
+              f"{GRIGIO}")
+        print("       Non e' un rosso del server e non e' un rosso del "
+              "documento: e' una")
+        print("       misura da rifare, e finche' resta cosi' B6 non ha "
+              "risposto alla R3.27.")
+        return 6
     print(f"    {VERDE}⭐ B6 «{a.fase}» passa, e i numeri qui sopra dicono su "
           f"che cosa{GRIGIO}")
     return 0

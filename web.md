@@ -22,6 +22,12 @@ il primo che non parla di un compositore.*
 >
 > Il dettaglio sta nei quattro rapporti in `web/rapporti/`: **S1** certificato (920 righe), **S2**
 > decodifica (730), **S3** tastiera e appunti (1.391), **S4** ritardo del disegno.
+>
+> ⭐ **E dalla notte del 10 agosto 2026 in quella cartella c'è un quinto file che non è uno studio**:
+> `web/rapporti/S-esiti-sonda.md`, **gli esiti misurati** della sonda del browser — S7, S1b, S5 — con
+> la scena accanto a ogni numero, i registri `.jsonl` a cui risalire, e ⛔ **la ricontata dell'11
+> agosto che dichiara quali numeri hanno una provenienza su disco e quali no**. ⚠ È lì che il `[M]`
+> di questo studio comincia a esistere; qui dentro continua a non comparire.
 
 ---
 
@@ -389,6 +395,21 @@ Nell'ordine, e ciascuna col suo controllo positivo. **Nessuna richiede una riga 
 | **S3b** | la PWA su Chrome per Android | vale la tastiera intera (§1.2 B) |
 | **S4** | l'anello del ritardo, con il ritardo noto come controllo | dà il numero, e **la misura del pezzo cieco** |
 
+> ⛔ **E tre etichette della sonda NON sono nate qui**, contro quel che `fasi/01-filo-nudo.md`
+> dichiarava: **S5** (la tela che il client dichiara), **S6** (il carico utile di un datagram) e
+> **S7** (il segno della rotella) non compaiono in **nessuna riga** di questo documento — `[M]` 11
+> agosto 2026, `grep -cE '\bS5\b|\bS6\b|\bS7\b' web.md` → **0**, con il controllo positivo accanto
+> (le sei etichette della tabella qui sopra compaiono **24** volte). Sono nate nel documento della
+> fase 1, dalle domande di `SPECIFICHE.md` §6.1-bis, `RCP.md` §5.3 e `RCP.md` §7.3, e **rimandano
+> lì**. ⚠ *Scritto qui l'11 agosto 2026, rilievo **R12C.10**: la frase sbagliata era quella che
+> stabilisce la convenzione dei rimandi, e chi cercava la procedura di S5, S6 o S7 in questo §7 non
+> l'avrebbe trovata.*
+>
+> ⭐ **E gli esiti di quel che è stato eseguito stanno in `web/rapporti/S-esiti-sonda.md`** — il
+> quinto file di quella cartella, che non è un rapporto di studio ma **l'unico che porta numeri
+> misurati**: S7 completa, S1b avviata, S5 a metà, e la ricontata che dice quali numeri hanno una
+> provenienza su disco.
+
 ⛔ **E tutte sul dispositivo vero.** «Il Chrome del portatile lo fa» non dice niente del Chrome del
 telefono: è la forma d'errore **E10** con un travestimento nuovo (`DECISIONI.md` §5-bis.0-ter).
 
@@ -402,7 +423,7 @@ voci che toccano una decisione.*
 | | |
 |---|---|
 | `[?]` Safari e WebTransport dietro eccezione | §3.1 — **e Apple non documenta nemmeno se l'eccezione si possa concedere su iOS** |
-| ~~`[?]` la durata dell'eccezione su Chrome~~ | ⛔ **non era `[?]`, e questo documento si contraddiceva**: §3.2 la dà `[R]` da `kCertErrorBypassExpirationInSeconds = 604800`, cioè **sette giorni**. *Corretto la notte del 9 agosto 2026, rilievo **R4.14**: chi leggeva §8 pianificava una misura per **sapere** il numero, chi leggeva §3.2 per **confermarlo**, e a un banco che deve aspettare una settimana la differenza cambia la soglia di pazienza.* Resta da misurare **quanto quel `[R]` regga sul campo**, che è la misura S1b della fase 1 |
+| ⏳ ~~`[?]` la durata dell'eccezione su Chrome~~ — **la misura è AVVIATA** | ⛔ **non era `[?]`, e questo documento si contraddiceva**: §3.2 la dà `[R]` da `kCertErrorBypassExpirationInSeconds = 604800`, cioè **sette giorni**. *Corretto la notte del 9 agosto 2026, rilievo **R4.14**: chi leggeva §8 pianificava una misura per **sapere** il numero, chi leggeva §3.2 per **confermarlo**, e a un banco che deve aspettare una settimana la differenza cambia la soglia di pazienza.* Restava da misurare **quanto quel `[R]` regga sul campo** — ⭐ **e la misura è in moto dal 10 agosto 2026, 21:10:01 UTC**, su **Chrome 151.0.7922.108** con un profilo persistente: `banchi/01-s1b-eccezione.sh`, registro `banchi/01-s1b-stato.jsonl`, esiti in `web/rapporti/S-esiti-sonda.md` §2. **Il verdetto è del 17-18 agosto 2026.** ⚠ Chrome si è segnato la scadenza **2026-08-17T21:09:47.889Z** `[M]`, che è la **sua contabilità**, non il comportamento: che la pagina si apra ancora è un'altra domanda, ed è quella che il banco pone ogni giorno |
 | `[?]` i 10 bit fino allo schermo | §1.2 A — e **non è verificabile da JavaScript** |
 | `[?]` la Keyboard Lock su DeX, e la PWA su Android | §5.5 |
 | `[?]` i 16-40 ms del compositore | §6.2 — nessuna API li espone |

@@ -17,3 +17,7 @@ banchi/b4-registrazioni/
 
 # i .pyc di py_compile: non sono nostri e non servono a nessuno
 __pycache__/
+
+# Le copie guastate di B12 le rigenera `01-b12-guasti.py`: sono derivate,
+# e una copia col guasto dentro non va conservata.
+banchi/01-b12-copie/
