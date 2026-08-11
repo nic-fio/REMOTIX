@@ -1134,6 +1134,53 @@ def giudica(percorso):
         # ⛔ IL BANCO CHE NON SI E' NEMMENO POTUTO LANCIARE — e non e' «mai
         #    provato»: e' provato e non riuscito, per una ragione che ha un
         #    nome.  Tenerli separati e' il rilievo R12-A.4 applicato al giro.
+        # ⛔⭐ IL BANCO CHE PORTA IL PROPRIO GUASTO DENTRO — rilievo R12-A.48,
+        #     11 agosto 2026, e il modello a tre passi NON gli si applica.
+        #
+        # B11 e' l'unico cosi': `01-b11-guasto-innesta.py` costruisce un server
+        # che sbaglia apposta, e `01-b11-lancia.sh` gira la pagina **prima
+        # contro il server SANO** — dove i casi che si aspettano un congedo
+        # devono cadere TUTTI — e poi contro quello guasto.
+        # ⚠ Il suo giro «sano» dev'essere ROSSO: e' il controllo che dice no.
+        #   Infilarlo nel modello sano/verde di B12 vorrebbe dire scrivere
+        #   numeri che non descrivono quel che e' successo.
+        #
+        # ⛔ E QUESTA NON E' UNA SCAPPATOIA: si pretendono ENTRAMBE le meta',
+        #    esplicite.  Un giro che porta solo «il guasto e' verde» non
+        #    certifica niente — sarebbe compatibile con una pagina che dichiara
+        #    conforme qualunque cosa, che e' esattamente cio' che il controllo
+        #    che dice no esiste per escludere.
+        if p.get("proprio-giro"):
+            pg = p["proprio-giro"]
+            controllo = bool(pg.get("controllo_rosso"))
+            guasto_ok = bool(pg.get("guasto_verde"))
+            if g.get("costa") != "gia-fatto":
+                no.append(sigla)
+                print(f"  {ROSSO}NO{GRIGIO}  {sigla}  NON certificato")
+                print(f"        ⛔ ha dichiarato un «proprio giro» ma nel "
+                      f"catalogo non e' di tipo «gia-fatto»")
+            elif controllo and guasto_ok:
+                certificati.append(sigla)
+                print(f"  {VERDE}OK{GRIGIO}  {sigla}  ⭐ certificato dal PROPRIO "
+                      f"giro ({pg.get('come', 'lanciatore suo')})")
+                print(f"        ⭐ il controllo che dice NO e' rosso: "
+                      f"{pg.get('controllo', 'la pagina contro il server sano')}")
+                print(f"        ⭐ e contro il server guasto e' verde: "
+                      f"{pg.get('guasto', '—')}")
+                if pg.get("riserva"):
+                    print(f"        {GIALLO}⚠ con una riserva scritta: "
+                          f"{pg['riserva']}{GRIGIO}")
+            else:
+                no.append(sigla)
+                print(f"  {ROSSO}NO{GRIGIO}  {sigla}  NON certificato")
+                if not controllo:
+                    print(f"        ⛔ il controllo che dice NO non e' rosso: "
+                          f"senza, «verde col guasto» e' compatibile con un "
+                          f"banco che dice sempre di si'")
+                if not guasto_ok:
+                    print(f"        ⛔ contro il server guasto non e' verde: "
+                          f"{pg.get('guasto', 'ragione non detta')}")
+            continue
         if p.get("saltato"):
             saltati.append(sigla)
             print(f"  {GIALLO}--{GRIGIO}  {sigla}  NON certificato — non "
