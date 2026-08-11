@@ -85,6 +85,7 @@ nuove, che sono banco.
 | | |
 |---|---|
 | `v1/banco/provision-server.sh` | il ripristino della macchina, rieseguito il 9 agosto: GNOME 48.7, `vainfo`, `libei1`, e l'utente nei gruppi `render`/`video` |
+| ⭐ `v1/banco/provision.sh`, passo **5-bis** | **gli utenti di prova dell'autenticazione, dichiarati l'11 agosto 2026** — vedi il riquadro qui sotto |
 | `v1/banchi/banco-compositori/` | portato sul ferro in `/media/REMOTIX/tmp/`, ricompilato nel `devroot` |
 | ⭐ `banchi/00-sessione-gnome.sh` | **nuovo**: avvia una sessione GNOME senza monitor con l'ambiente composto da zero, e **verifica** che sia headless invece di sperarlo (`DECISIONI.md` §4.3-bis) |
 | ⭐ `banchi/00-c1-wlroots.sh` | **nuovo**: la certificazione di `misura-wlroots`, il terzo banco, su sway e labwc |
@@ -580,3 +581,51 @@ accanto**, o attribuirebbe il tetto alla cosa sbagliata:
 ⚠ La differenza fra le due frasi non è accademica: *«Mutter non va oltre 36»* chiude la questione,
 *«Mutter non va oltre 36 finché nessuno separa i due orologi»* la lascia aperta a costo zero. Oggi
 vale la seconda.
+
+---
+
+## ⛔⭐ R12-A.44 — l'utente su cui poggiava metà della fase 1 non lo creava nessuno
+
+*11 agosto 2026. Trovato rispondendo a una domanda dell'utente — «devo creare un secondo utente
+sul server?» — e la risposta interessante non era sul secondo.*
+
+`prova` è l'utente con cui **B5, B6, B7 e B8** si autenticano, e con cui si verifica la pila PAM del
+prodotto (servizio `remotix`, `SPECIFICHE.md` §4.2). ⛔ **Nessun file del deposito lo nominava.**
+Era stato creato **a mano** il 10 agosto — `/home/prova` porta quella data — e viveva **dentro il
+contenitore**, non sull'host: `getent passwd prova` da fuori esce 2, da dentro dà `1001`.
+
+⇒ Rifacendo il contenitore, **quattro banchi su otto certificati** sarebbero diventati rossi per una
+ragione che non è del prodotto. ⭐ È la forma più cara di falso rosso, perché manda a cercare il
+difetto nel server.
+
+### Che cosa c'è adesso
+
+`provision.sh` ha un passo **5-bis** che crea **tutt'e due** gli utenti dentro il contenitore, in
+modo ripetibile, e che **verifica** che PAM li possa accettare — perché *«l'utente c'è»* e
+*«l'utente si autentica»* sono due fatti, e il secondo è quello su cui i banchi poggiano.
+
+| utente | uid | parola d'ordine | perché così |
+|---|---|---|---|
+| `prova` | 1001 | `parola-di-prova`, **fissa** | ⚠ **compromesso dichiarato**: quella stringa è il predefinito in una dozzina di banchi, e generarla oggi li romperebbe tutti in silenzio. Accettabile perché l'utente vive **dentro un contenitore** non esposto e non esiste su nessuna macchina di nessuno. ⛔ Il giorno che un utente di prova dovesse esistere su una macchina vera, va rifatto |
+| `prova2` | 1002 | ⭐ **generata**, scritta in `/media/REMOTIX/credenziali-banchi` (0600) | **fuori dal deposito**, e non deve entrarci. *Deciso dall'utente l'11 agosto 2026.* Si genera **una volta** e poi si rilegge: rigenerarla a ogni giro vorrebbe dire che un banco fermato a metà non si può ripetere |
+
+### ⭐ E il secondo utente serve a due cose, non a una
+
+- **B10** — `SPECIFICHE.md` §5.5: il server serve più utenti, e uno non può prendersi la sessione
+  dell'altro. Con un utente solo quella proprietà non si può nemmeno provare.
+- **R3.26** — la pila PAM per un utente che **non è il proprietario del processo**. ⚠ Conta più di
+  quanto sembri: l'11 agosto B8 ha misurato che le mediane dei tempi si separano per colpa di PAM,
+  e **tutte** quelle misure sono con l'utente proprietario.
+
+⭐ **Primo dato, misurato subito**: `prova2` con la parola generata arriva ad **AMMESSO** e poi a
+**SESSIONE**, *«dopo 1080 ms — il secondo fisso c'è»*; con la parola sbagliata si vede rispondere
+**`RESPINTO: 0x07 = CREDENZIALI_ERRATE`**. ⇒ Il secondo utente si autentica, e il controllo che dice
+*no* funziona. ⚠ Il numero dei tempi per un non-proprietario resta da misurare per bene: questo è un
+campione solo.
+
+### ⚠ Quel che resta storto, e va detto
+
+⛔ **I banchi prendono la parola d'ordine sulla riga di comando** (`--parola …`), quindi finisce in
+`ps` e in ogni registro che catturi il comando. Per `parola-di-prova` è il compromesso di cui sopra;
+⛔ **per la parola generata di `prova2` non lo è**, ed è la stessa forma curata oggi su `sonda/`
+(R12-A.34). Chi userà `prova2` in un banco deve farle prendere un'altra strada.

@@ -350,6 +350,106 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5-bis. ⛔⭐ GLI UTENTI DI PROVA DELL'AUTENTICAZIONE — e il primo esisteva
+#        gia' senza che nessuno script lo creasse.
+#
+# ⛔ RILIEVO R12-A.44, 11 agosto 2026.  `prova` e' l'utente con cui B5, B6, B7
+#    e B8 si autenticano, e con cui il prodotto verifica la sua pila PAM
+#    (servizio `remotix`, `SPECIFICHE.md` §4.2).  `[M]`: era stato creato **a
+#    mano** il 10 agosto — `/home/prova` porta quella data — e **nessun file
+#    del deposito lo nominava**.
+#    ⇒ Rifacendo il contenitore, quattro banchi su otto certificati sarebbero
+#      diventati rossi per una ragione che non e' del prodotto: la forma piu'
+#      cara di falso rosso, perche' manda a cercare il difetto nel server.
+#
+# ⭐ `prova2` e' il SECONDO utente, e serve a due cose che con uno solo non si
+#    possono nemmeno provare:
+#      · `SPECIFICHE.md` §5.5 — il server serve piu' utenti, e uno non puo'
+#        prendersi la sessione dell'altro (e' il banco B10);
+#      · rilievo **R3.26** — la pila PAM per un utente che NON e' il
+#        proprietario del processo.  ⚠ Conta piu' di quanto sembri: l'11 agosto
+#        B8 ha misurato che le mediane dei tempi si separano per colpa di PAM,
+#        e tutte quelle misure sono con l'utente proprietario.
+#
+# ⛔ LE PAROLE D'ORDINE, E LE DUE SONO TRATTATE IN MODO DIVERSO — apposta.
+#    · `prova2`: **generata qui**, e scritta in un file **fuori dal deposito**
+#      (`/media/REMOTIX/credenziali-banchi`, 0600).  Deciso dall'utente l'11
+#      agosto 2026.  ⭐ Si comincia bene perche' non c'e' ancora niente che
+#      dipenda da lei.
+#    · `prova`: resta `parola-di-prova`, ed e' un compromesso **dichiarato**,
+#      non una dimenticanza.  Quella stringa e' scritta in una dozzina di
+#      banchi come predefinito; generarla oggi li romperebbe tutti in silenzio.
+#      ⚠ E' accettabile perche' quell'utente vive **dentro un contenitore** che
+#      non e' esposto alla rete e non esiste su nessuna macchina di nessuno.
+#      ⛔ Il giorno che un utente di prova dovesse esistere su una macchina
+#      vera, questa riga va rifatta — e sta scritta qui per essere ritrovata.
+# ---------------------------------------------------------------------------
+log "Utenti di prova dell'autenticazione nel contenitore"
+CRED_BANCHI=/media/REMOTIX/credenziali-banchi
+
+crea_utente_prova() # $1 = nome, $2 = uid, $3 = parola
+{
+    if in_chroot "id -u $1 >/dev/null 2>&1"; then
+        ok "utente '$1' gia' presente"
+    else
+        in_chroot "useradd -u $2 -m -s /bin/bash $1"
+        ok "utente '$1' creato (uid $2)"
+    fi
+    # ⛔ La parola si (ri)mette SEMPRE, anche se l'utente c'era: un utente
+    #    senza parola d'ordine e' un utente che PAM rifiuta, e il sintomo
+    #    sarebbe «l'autenticazione non funziona» su un server sano.
+    in_chroot "printf '%s:%s\n' '$1' '$3' | chpasswd"
+}
+
+crea_utente_prova prova  1001 parola-di-prova
+
+# ⭐ La parola di `prova2` si genera UNA VOLTA e poi si rilegge: rigenerarla a
+#    ogni provisioning vorrebbe dire che un banco fermato a meta' non si puo'
+#    piu' ripetere con le stesse credenziali.
+if [ -f "$CRED_BANCHI" ] && grep -q '^prova2:' "$CRED_BANCHI" 2>/dev/null; then
+    PAROLA2=$(sed -n 's/^prova2:[[:space:]]*//p' "$CRED_BANCHI" | head -1)
+    inf "parola di 'prova2' riletta da $CRED_BANCHI"
+else
+    PAROLA2=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)
+    sudo touch "$CRED_BANCHI"
+    sudo chmod 600 "$CRED_BANCHI"
+    # ⚠ Al proprietario DI FUORI, non a `dev`: il file va letto dai lanciatori
+    #   dei banchi, che girano sull'host.
+    sudo chown "$DEV_UID:$DEV_GID" "$CRED_BANCHI" 2>/dev/null || true
+    printf 'prova2: %s\n' "$PAROLA2" | sudo tee -a "$CRED_BANCHI" >/dev/null
+    ok "parola di 'prova2' generata e scritta in $CRED_BANCHI (0600)"
+    inf "⛔ quel file NON sta nel deposito, e non deve entrarci"
+fi
+crea_utente_prova prova2 1002 "$PAROLA2"
+
+# ⚠ E si VERIFICA che PAM li accetti davvero, invece di dare per buono che
+#   `chpasswd` sia bastato: «l'utente c'e'» e «l'utente si autentica» sono due
+#   fatti, e il secondo e' quello su cui poggiano quattro banchi.
+for u in prova prova2; do
+    if in_chroot "getent shadow $u | cut -d: -f2 | grep -q '^\\$'"; then
+        ok "$u: ha una parola d'ordine cifrata in /etc/shadow"
+    else
+        ko "⛔ $u: NON ha una parola d'ordine utilizzabile — PAM lo rifiutera'"
+    fi
+done
+
+# ⛔⭐ E UN AVVERTIMENTO PER CHI TOCCA GLI INNESTI — rilievo R12-A.45,
+#     11 agosto 2026, e me lo sono fatto addosso nel giro di un'ora.
+#
+# `01-b2-ngtcp2-wt-innesta.py --togli` rimette com'erano i file **tracciati**
+# di `examples/`, e fra quelli c'e' `http3_server_proto_codec.cc`, dove vive
+# l'innesto **RCP di B3**.  ⇒ Togliere l'innesto B2 porta via anche B3, in
+# silenzio.  `[M]`: dopo un `--togli`/rimetti dell'innesto B2, il `.cc` aveva
+# **zero** riferimenti a `rcp_`, e il server rispondeva rimandando indietro i
+# byte del client — «atteso ECCOMI, arrivato CIAO».
+# ⚠ E il banco che quel giorno stava girando — la sonda del trasporto di B2 —
+#   **e' passato lo stesso**, perche' legge i parametri QUIC e di RCP non sa
+#   niente.  ⭐ Un server senza meta' del prodotto dentro, certificato verde da
+#   un banco che non aveva motivo di accorgersene.
+# ⇒ Dopo ogni `--togli` dell'innesto B2 va rifatto **anche**
+#   `01-b3-rcp-innesta.py`, e poi si ricostruisce.
+
+# ---------------------------------------------------------------------------
 # 6. Dipendenze di compilazione dentro il contenitore
 # ---------------------------------------------------------------------------
 log "Dipendenze di compilazione nel contenitore"
