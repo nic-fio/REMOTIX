@@ -268,18 +268,39 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   avrebbe dato un rosso a un server sano. Curato e misurato (`DECISIONI.md` §1.12): il giudice di
 >   P5 passa da **1 guasto falso** a **0**, due giri per motore.
 > - ⛔ ~~La parola d'ordine nei registri sporchi~~ — **chiusa**: cura verificata con un giro nuovo,
->   **33 file** buttati con la traccia. ⚠ **Resta** la parola sulla riga di comando dei banchi
->   (quindi in `ps`) per `parola-di-prova`; ⭐ **per la parola generata di `prova2` no**: B10 la passa
->   per file `0600` e la cancella con una `trap`.
-> - ⚠ **Il registro delle certificazioni va ancora unito a mano**, e ⛔ **il numero dipende da dove lo
->   si chiede**: **12 su 14 da CHUWI**, **11 dal server** — là `RCP.md` non c'è (B9), qui non c'è
->   `remotix/pagina.c` (P1). ⭐ Hanno ragione tutt'e due, e lo strumento scrive *«non so»* invece di
->   arrotondare.
-> - ⚠ **7 chiamate su 52 restano «IGNOTE»** a `01-b0-chiamate.py` — **0 rotte**: non sono un rosso e
->   non sono un verde.
-> - ⚠ **`01-b0-terreno.sh prodotto` non guarda il binario del prodotto**: lo cerca in
->   `remotix/build/remotix` mentre `costruisci.sh` lo mette in `remotix/remotix`. ⇒ **il terreno del
->   prodotto non può uscire verde**, e quel controllo è un IGNOTO fisso.
+>   **33 file** buttati con la traccia. ⛔ ~~E resta la parola sulla riga di comando (quindi in
+>   `ps`)~~ — **chiusa anch'essa il 12 agosto 2026**, difetto **D12**: la strada di B10 (file `0600`,
+>   `trap`) estesa a tutti i banchi. ⭐ **Verificata con un A/B, non dichiarata**: l'esca in `argv` è
+>   vista **30 letture su 30**, la parola **0** e il percorso del file **30 su 30** — e quel «30» è il
+>   denominatore, senza il quale lo zero sarebbe *«non ho guardato»*. ⛔ E il difetto non era teorico:
+>   il contenitore è un **`chroot`, non uno spazio di nomi dei PID**, quindi i processi di dentro si
+>   vedono tutti nel `ps` dell'host. ⚠ **Resta scoperto `01-b12-lancia.sh`** (5 chiamate) — e adesso
+>   **dichiara a ogni giro** che la sua parola è in `ps`.
+> - ⛔ ~~Il registro delle certificazioni va ancora unito a mano~~ — **chiuso il 12 agosto 2026**,
+>   difetto **D10**: l'unione è **dentro il programma**, e dove non può esserlo (dal server la copia
+>   del portatile non è raggiungibile) **il non averla fatta si vede nel posto in cui si legge il
+>   numero**, col verdetto declassato. ⛔ **E il difetto aveva già morso**: le due copie divergevano
+>   di **5 righe di qua e 2 di là**, e il passo manuale era stato saltato **sette volte**. ⛔⛔ E un
+>   conflitto — la stessa certificazione con impronte diverse — si risolveva **in silenzio, per
+>   ordine di riga nel file**: la stessa voce leggeva *«vale oggi»* o *«non oggi»* a seconda di quale
+>   riga capitava più in basso. Adesso si ferma e lo nomina. ⭐ **Quel che NON è stato curato, perché
+>   non è un difetto**: che il numero dipenda da dove lo si chiede — le due macchine hanno ragione
+>   tutt'e due, e lo strumento scrive *«non so»* invece di arrotondare.
+> - ⚠ ~~7 chiamate su 52 restano «IGNOTE»~~ → `[M]` 12 agosto 2026, difetto **D9**: **115 chiamate
+>   guardate, 111 approvate, 0 rotte, 4 ignote** — e ognuna delle quattro porta scritto **nel codice**
+>   perché è ingiudicabile (tre lo sono **per costruzione**: `$*`/`$@` vorrebbero eseguire il
+>   chiamante del chiamante). ⛔ **E la metà peggiore del difetto non erano gli ignoti: era il
+>   denominatore.** Le righe spezzate con `\` e i lanciatori che tengono il banco in una variabile
+>   erano **fuori dal conto** — fra queste, quattro chiamate al validatore del filo e i giudici della
+>   cattura, della sessione e di P5. ⭐ E il controllo positivo **non c'era**: aggiunto, e provato
+>   mutando l'albero vero in copia (togliendo un obbligatorio dal profilo condiviso escono **7 rossi**).
+> - ⚠ ~~`01-b0-terreno.sh prodotto` non guarda il binario del prodotto~~ — **curato il 12 agosto
+>   2026**, difetto **D5**: il binario sta **accanto ai sorgenti** (`remotix/build/` non è mai
+>   esistito, e un altro banco lo dichiarava già). ⛔ **E il caso che conta è un altro**: un binario
+>   **stantio** sarebbe rimasto verde **anche col percorso corretto**, perché si confrontava il solo
+>   `rcp.c`. Ora tutti i sorgenti più il `Makefile`, e l'albero **si dichiara** — sotto
+>   `/media/REMOTIX/src` ce ne sono **cinque** con un `remotix` eseguibile dentro. Il terreno conta
+>   **15 su 15** sull'innesto e **4 su 4** sul prodotto, dov'era *«2 controlli, 1 ignoto»*.
 > - ⚠ **Le mediane di B8**: ~~1984~~ → `[M]` **2123 · 2198 · 1086 ms** (giro della sera). ⭐ Il numero
 >   cambia perché cambia il giro; quel che è nuovo è che **l'imputato è misurato**: **+1034 ms** oltre
 >   il secondo fisso sui respinti contro **+84 ms** sugli ammessi, cioè la firma di `pam_faildelay`.
@@ -289,13 +310,19 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ✅ **Il giudizio è dato**: 11 agosto 2026, e la fase è chiusa (in cima a questa pagina).
 >
-> ⏳ **Restano i due ripieghi dichiarati, e sono di apertura della fase 2, non di chiusura della 1:**
+> ✅ **E i due ripieghi sono decisi anch'essi.** ⚠ *Questa riga li dava per aperti, ed era scaduta:
+> l'utente li ha decisi la sera dell'11 agosto. Corretta il 12 agosto 2026.*
 >
-> 1. **Il filo unico.** Il server ha un filo solo e la verifica PAM lo **blocca**: dieci utenti che
->    entrano insieme fanno aspettare l'ultimo dieci secondi, dove `SPECIFICHE.md` §5.5 promette dieci
->    sessioni. Si tiene il ripiego, o il filo separato per PAM prima della fase 2?
-> 2. **Il tetto delle sessioni**, fissato a **16 in compilazione** dove la regola lo vuole **dieci,
->    configurabile**.
+> 1. **Il filo unico** ⇒ `DECISIONI.md` **§1.10**: la verifica PAM **esce dal filo unico prima che la
+>    fase 2 si apra**, e ⭐ **con un processo aiutante, non con un filo** — PAM non è affidabilmente
+>    rientrante, e un thread porterebbe guai suoi dentro la cura di un problema di concorrenza.
+>    ⛔ La ragione è del video: finché non c'è video il sintomo è *«l'ultimo dei dieci aspetta dieci
+>    secondi»*, sgradevole e circoscritto; dalla fase 2 in poi **lo schermo di tutti quelli collegati
+>    si pianta ogni volta che qualcun altro entra**, e chi lo vedrà **darà la colpa al video**.
+> 2. **Il tetto delle sessioni** ⇒ `DECISIONI.md` **§1.11**: resta **16, fisso in compilazione, fino
+>    alla fase 3** — perché *«il limite vero non è un conteggio: è un budget di pixel al secondo, e lo
+>    pone il codificatore»*, e qualunque numero messo oggi sarebbe un segnaposto da cambiare due
+>    volte. ⚠ E il prezzo è dichiarato: per due fasi **il codice dice 16 e la specifica dice 10**.
 >
 > ---
 >
@@ -312,12 +339,12 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > **Quel che resta, e non è stato deciso** — i punti 4-7 dell'elenco della notte:
 >
-> | | |
-> |---|---|
-> | **4** | `01-b12-lancia.sh` ha `PORTA=7447` e `bsslserver` in chiaro: non si può puntare sul prodotto, e per questo B13 si certifica **solo** dal suo script «sera», mentre P1 e P5 stanno fuori dall'orchestratore |
-> | **5** | il guasto di P5 copre **meno** di quel che promette: la pagina ritira `/impronta` prima di ogni tentativo, quindi l'impronta falsa non uccide la sessione. Per coprire davvero **R1.14** serve un guasto che colpisca **il ritiro** |
-> | **6** | i buchi **dichiarati**: `B13.3` (i certificati li fa un banco, non il codice), `B13.5` (il trasporto concede tutti gli stream chiesti), e il `[?]` di **B8** su `pam_faildelay` |
-> | **7** | i due ripieghi di fase: **un filo solo** con la verifica PAM che lo blocca, e il tetto di **16 sessioni in compilazione** dove la regola ne vuole dieci configurabili |
+> | | | dov'è finito |
+> |---|---|---|
+> | **4** | `01-b12-lancia.sh` ha `PORTA=7447` e `bsslserver` in chiaro: non si può puntare sul prodotto, e per questo B13 si certifica **solo** dal suo script «sera», mentre P1 e P5 stanno fuori dall'orchestratore | ⏳ **aperto**, difetto **D6** |
+> | **5** | il guasto di P5 copre **meno** di quel che promette: la pagina ritira `/impronta` prima di ogni tentativo, quindi l'impronta falsa non uccide la sessione. Per coprire davvero **R1.14** serve un guasto che colpisca **il ritiro** | ✅ **chiuso** il 12 agosto, difetto **D11**: il guasto nuovo toglie **il ritiro**, e la prova che guarda un'altra cosa è che col guasto dentro **il controllo vecchio resta verde** |
+> | **6** | i buchi **dichiarati**: `B13.3` (i certificati li fa un banco, non il codice), `B13.5` (il trasporto concede tutti gli stream chiesti), e il `[?]` di **B8** su `pam_faildelay` | ⏳ **aperti**, e dichiarati tali |
+> | **7** | i due ripieghi di fase: **un filo solo** con la verifica PAM che lo blocca, e il tetto di **16 sessioni in compilazione** dove la regola ne vuole dieci configurabili | ✅ **decisi dall'utente** l'11 agosto — `DECISIONI.md` §1.10 e §1.11. ⚠ *Questa riga li dava per non decisi, ed era già scaduta quando è stata scritta* |
 >
 > ⚠ **E una cosa sul metodo, da chi ha tenuto la tastiera**: la trappola *«mai una redirezione
 > **attorno** a `enter.sh`, o si mangia la richiesta di password di `sudo`»* — già in catalogo,

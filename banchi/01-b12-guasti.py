@@ -8,6 +8,9 @@
     python3 01-b12-guasti.py --giudica  esiti.jsonl il verdetto, e il registro
     python3 01-b12-guasti.py --registro             chi e' certificato, e quando
     python3 01-b12-guasti.py --impronte B7          i file su cui poggia B7, oggi
+    python3 01-b12-guasti.py --unisci ALTRA.jsonl   unisce le due copie del registro
+    python3 01-b12-guasti.py --unisci-col-server    va a prendere quella del server
+    python3 01-b12-guasti.py --unisci-col-server --rispecchia   ...e gliela rimanda
 
 ⚠ `--applica`, `--togli` e `--verifica` girano DENTRO il contenitore: toccano
   le copie che stanno in `examples/`.  `--giudica` e `--registro` girano
@@ -1279,6 +1282,60 @@ guasto(
 )
 
 
+# ── P5R — ⛔ IL GUASTO CHE TOGLIE LA CURA, NON IL VALORE ────────────────────
+#
+# Scritto il 12 agosto 2026 per il difetto D11: il guasto P5 qui sopra
+# «copriva meno di quel che prometteva» — con l'impronta falsa la sessione si
+# apre lo stesso, perche' la pagina RITIRA `/impronta` prima di ogni tentativo.
+# ⇒ Questo toglie il ritiro.  Voce scritta da chi ha misurato
+# (`banchi/01-p5-guasto-ritiro.py`), incollata dal coordinatore.
+guasto(
+    "P5R", "P5", "⛔ la pagina non RITIRA piu' l'impronta prima del tentativo "
+                 "— la cura di §4.1-bis tolta, non il valore",
+    os.path.join(COPIE, "..", "01-p5-copia-7522", "pagina.html"),
+    "  const b64 = await impronta();",
+    "  const b64 = IMPRONTA_SERVITA; /* " + MARCA + " P5-ritiro — "
+    "RCP.md §4.1-bis: il RITIRO tolto, non il valore.  La pagina non chiede "
+    "piu' /impronta e usa per sempre quella servita. */",
+    "⛔ §4.1-bis chiude R1.14 con **due** cose, e il guasto P5 ne prova una "
+    "sola.  Che un'impronta divergente uccida la sessione lo prova la gamba "
+    "N1; che la pagina **ne ritiri una fresca prima di ogni tentativo** non lo "
+    "provava nessuno — ed e' la meta' che il prodotto potrebbe perdere in una "
+    "riga.  ⭐ La prova che questo guasto guarda un'altra cosa e' misurata: "
+    "col ritiro tolto, il controllo del guasto P5 — *«la pagina pubblica la "
+    "stessa impronta dell'endpoint»* — resta **VERDE**, perche' il valore non "
+    "e' toccato.  ⇒ I due guasti sono complementari, e nessuno dei due copre "
+    "R1.14 da solo",
+    # ⛔ LA MARCA E' MISURATA — `[M]` 12 agosto 2026, tre giri veri contro la
+    #    copia sulla **7522** (accesa apposta con prefisso, ban e socket
+    #    propri: la 7501 non e' stata toccata), browser su CHUWI, Chrome 151 e
+    #    Firefox 140.13.0esr — `0 → 4 → 0`, la marca 0 · 4 · 0 volte.
+    #    ⭐ E che il guasto sia entrato e uscito lo dice la PAGINA CHIESTA AL
+    #      SERVER: sha256 `a2cda27c…` → `3b0080b1…` → `a2cda27c…`.
+    "NESSUN RITIRO DI /impronta IN QUESTA GAMBA",
+    # ⚠ «ricostruisce» SBAGLIA PER ECCESSO, ed e' voluto.  Il genere onesto
+    #   sarebbe **`riaccendi`**: `pagina.html` non entra in nessun binario
+    #   (`src/pagina.c:590` lo legge una volta sola all'accensione), quindi
+    #   compilare non serve — ma «leggero» farebbe girare P5 contro la pagina
+    #   di PRIMA, che e' il difetto n.2 di questo file.  Finche' `riaccendi`
+    #   non esiste si tiene il sovrainsieme: si sbaglia per eccesso, mai per
+    #   difetto, che e' il verso in cui un guasto si perde.
+    "ricostruisce",
+    "fasi/rapporti/DIFETTI-12-agosto.md D11 · RCP.md §4.1-bis (R1.14)",
+    nota="⛔ CHE COSA QUESTA CERTIFICAZIONE NON DICE.  Col guasto dentro la "
+         "sessione WebTransport **si apre lo stesso**: il bersaglio e' appena "
+         "riacceso, quindi l'impronta servita con la pagina e' fresca e "
+         "coincide.  ⇒ Questo guasto prova che P5 vede sparire **la cura**, "
+         "non che la sessione muoia.\n"
+         "       ⚠ E la `[?]` che resta, scritta come non saputa: **la "
+         "rotazione vera non e' stata misurata**.  Il difetto che R1.14 "
+         "descrive e' una scheda aperta da due settimane su un certificato "
+         "ruotato, e per vederlo servirebbe far ruotare il certificato di "
+         "sessione **sotto una pagina gia' caricata**.  Non e' stato fatto, e "
+         "questa voce non lo spaccia per fatto.",
+)
+
+
 # ===========================================================================
 # ⛔ La cartella dei certificati e' un percorso di esecuzione, e chi lancia la
 #    puo' cambiare: si tiene in UN posto solo, e le voci del catalogo la
@@ -1957,18 +2014,619 @@ def _normalizza(r):
     }
 
 
+# ===========================================================================
+# ⛔ IL REGISTRO VIVE IN DUE COPIE, E FINO A OGGI SI UNIVANO A MANO — D10
+# ===========================================================================
+#
+# `--giudica` scrive **in fondo alla copia della macchina da cui gira**, e le
+# macchine sono due: CHUWI, dove stanno il deposito e i documenti, e NIC-OS,
+# dove stanno la sessione grafica e il prodotto.  Nessuna delle due vede il
+# file dell'altra.  ⇒ Il conto vero e' l'UNIONE delle due, e fino a oggi
+# l'unione la faceva **una persona, a mano**, copiando le righe da una parte
+# all'altra (`fasi/01-filo-nudo.md`, R12-A.36, 11 agosto 2026).
+#
+# ⛔ **Un passo a mano in mezzo a una catena automatica e' un passo che prima o
+#    poi qualcuno salta**, e quando lo salta il conto delle certificazioni cala
+#    senza che nessuno se ne accorga — perche' una riga che non c'e' non
+#    protesta.  ⭐ E non e' un'ipotesi: `[M]` 12 agosto 2026, prima di scrivere
+#    una riga di questa cura, le due copie divergevano gia'.  CHUWI ne aveva 40
+#    e NIC-OS 37; **cinque righe stavano solo su CHUWI e due solo su NIC-OS**,
+#    scritte la sera dell'11 e mai tornate indietro.  L'ultima unione a mano era
+#    delle 20:51 di NIC-OS, e da allora il passo era stato saltato **sette
+#    volte**.
+#
+# ---------------------------------------------------------------------------
+# ⛔ LE DUE STRADE, E PERCHE' SI PRENDONO TUTT'E DUE
+#
+# La scelta era fra **uno strumento che unisce** e **uno strumento che si
+# rifiuta di rispondere finche' le due copie non sono unite**.  Prese da sole
+# non bastano ne' l'una ne' l'altra, e la ragione e' l'**asimmetria delle due
+# macchine**:
+#
+#   · **Il solo rifiuto non e' implementabile onestamente.**  `--registro`
+#     «gira dovunque», ed e' precisamente il suo valore.  Ma da NIC-OS — e a
+#     maggior ragione da dentro il contenitore — la copia di CHUWI **non e'
+#     raggiungibile**: solo CHUWI sa arrivare al server.  Un `--registro` che
+#     si rifiutasse di rispondere finche' non ha visto l'altra copia si
+#     rifiuterebbe **per sempre**, di la'.  ⛔ E uno strumento che dice sempre
+#     di no e' uno strumento che si scavalca — cioe' il passo a mano di prima,
+#     con un giro in piu'.
+#
+#   · **La sola unione non basta a I7.**  `--unisci` resta un comando che
+#     qualcuno deve lanciare, e «la protezione di un difetto noto sta nel
+#     programma, non in una procedura che si puo' dimenticare» (**I7**).  Uno
+#     strumento che unisce e basta sposta il passo manuale, non lo toglie.
+#
+# ⇒ **Si fanno tutt'e due, e la seconda meta' e' quella che chiude I7**:
+#   `--unisci` fa l'unione **dentro il programma**, con le regole scritte qui
+#   sotto; e `mostra_registro()` porta una **guardia** che dice, ogni volta e
+#   senza rete, se l'unione e' fresca — e quando non lo e' **declassa il
+#   verdetto** invece di stampare un conto che ha l'aria di essere completo.
+#   ⛔ Il non aver fatto l'unione **si vede**, e si vede nel posto in cui si
+#   legge il numero.
+#
+# ---------------------------------------------------------------------------
+# ⭐ QUEL CHE L'UNIONE NON DEVE FARE, E COME SE NE ACCORGE DA SE'
+#
+#   1. ⛔ **non perde una riga e non ne inventa una.**  Il risultato si
+#      **conta**, non si guarda: `unisci()` verifica che ogni riga di ciascuna
+#      delle due copie sia presente nel risultato, e che il numero delle righe
+#      sia esattamente `in comune + solo di qua + solo di la'`.  Se il conto
+#      non torna **non scrive niente** e esce rosso;
+#   2. ⛔ **e sa dire di no.**  Due righe che dichiarano **lo stesso giro**
+#      (stessa macchina, stessa data) con contenuto **diverso** — impronte
+#      diverse, per esempio — non sono un doppione da buttare: sono un
+#      **conflitto**, e una delle due mente.  Chi le unisse in silenzio
+#      sceglierebbe una delle due verita' senza dirlo.
+#      ⭐ E che il pericolo sia reale e' MISURATO, non dedotto: `[M]` 12 agosto
+#      2026, prima della cura, la stessa coppia in conflitto dava
+#      **«OK C2 CERTIFICATO … e vale oggi»** o **«NO C2 … MA NON OGGI»** a
+#      seconda soltanto dell'ORDINE delle due righe nel file, e la parola
+#      «conflitto» non compariva mai.  ⇒ `mostra_registro()` ordinava per data,
+#      trovava due righe con la stessa data, e teneva l'ultima **in ordine di
+#      file** — cioe' sceglieva una delle due verita' a caso.
+#      ⛔ Da cui: il conflitto **ferma l'unione** e si stampa per intero, e
+#      `mostra_registro()` lo **nomina** invece di risolverlo da se'.
+#
+# ---------------------------------------------------------------------------
+# ⚠ CHE COS'E' L'IDENTITA' DI UNA RIGA, E PERCHE' NON E' IL TESTO
+#
+# Una riga di registro e' **un giro**, e un giro e' identificato da **chi l'ha
+# fatto e quando**: `(macchina, quando)`.  Due righe con la stessa identita' e
+# lo stesso contenuto sono **la stessa riga arrivata da due parti** — l'unione
+# ne tiene una.  Due righe con la stessa identita' e contenuto diverso sono un
+# **conflitto**.  ⛔ Usare il testo come identita' fonderebbe le due cose: il
+# conflitto sembrerebbe due righe distinte, e passerebbe.
+#
+# ⚠ E la marca d'unione (`tipo: "unione"`) e' una riga di servizio, non un
+#   giro: non entra nel conto dei certificati, e ha una chiave sua.
+# ===========================================================================
+
+# La copia del server, e l'attrezzo che ci arriva.  ⛔ `sshpw.py --get`/`--put`
+# usano `scp`: ⚠ **mai una redirezione ATTORNO a `ssh`** (`fasi/00-ambiente.md`
+# B3.3), e infatti qui non ce n'e' nessuna — i byte passano da `scp`, non da un
+# `cat` remoto catturato.
+SERVER_REGISTRO = "/media/REMOTIX/src/01-b12-registro.jsonl"
+SSHPW = os.path.join(QUI, "..", "v1", "strumenti", "sshpw.py")
+
+
+def _chiave(r):
+    """L'identita' di una riga: chi l'ha scritta, quando, e di che tipo."""
+    return (r.get("tipo", "giro"), r.get("macchina", "?"), r.get("quando", "?"))
+
+
+def _canonica(r):
+    """Il contenuto di una riga, in una forma che non dipende dall'ordine
+    delle chiavi: due righe uguali nel contenuto danno la stessa stringa."""
+    return json.dumps(r, ensure_ascii=False, sort_keys=True)
+
+
+def _e_unione(r):
+    return r.get("tipo") == "unione"
+
+
+def leggi_registro(percorso):
+    """[dizionario] — ⛔ una riga che non e' JSON e' un ERRORE, non una riga da
+    saltare: saltarla sarebbe perdere una certificazione in silenzio, che e'
+    esattamente il difetto che questa cura chiude (`LEZIONI.md` §1.9)."""
+    fuori = []
+    with open(percorso, encoding="utf-8") as f:
+        for n, testo in enumerate(f, 1):
+            if not testo.strip():
+                continue
+            try:
+                fuori.append(json.loads(testo))
+            except ValueError as e:
+                raise ValueError(f"{percorso} riga {n}: non e' JSON — {e}")
+    return fuori
+
+
+def impronta_dei_giri(righe):
+    """sha256 dell'INSIEME dei giri — ⚠ ordinato, quindi NON dipende
+    dall'ordine in cui stanno nel file (che non e' l'ordine del tempo)."""
+    giri = sorted(_canonica(r) for r in righe if not _e_unione(r))
+    return hashlib.sha256("\n".join(giri).encode("utf-8")).hexdigest()
+
+
+def trova_conflitti(a, b):
+    """[(chiave, [testi diversi])] — le identita' che portano piu' di un
+    contenuto.  ⛔ Si guarda anche DENTRO una copia sola: due righe in
+    conflitto possono essere arrivate tutt'e due dalla stessa parte."""
+    per_chiave = {}
+    for r in list(a) + list(b):
+        per_chiave.setdefault(_chiave(r), set()).add(_canonica(r))
+    return sorted((k, sorted(v)) for k, v in per_chiave.items() if len(v) > 1)
+
+
+def _spiega_conflitto(testi):
+    """I campi su cui due righe con la stessa identita' non vanno d'accordo."""
+    letti = [json.loads(t) for t in testi]
+    campi = sorted({c for d in letti for c in d})
+    fuori = []
+    for c in campi:
+        valori = {json.dumps(d.get(c), ensure_ascii=False, sort_keys=True)
+                  for d in letti}
+        if len(valori) > 1:
+            fuori.append((c, sorted(valori)))
+    return fuori
+
+
+def unisci(percorso_altra, rispecchia_su=None, impronta_altra_letta=None):
+    """⛔ Unisce la copia locale con `percorso_altra`, e non perde ne' inventa.
+
+    Esce 0 se l'unione e' riuscita, 1 se c'e' un conflitto (e allora **non
+    scrive niente**), 2 se una delle due copie non si legge.
+    """
+    print("== ⛔ L'UNIONE DELLE DUE COPIE DEL REGISTRO — D10")
+    print(f"   qui:   {REGISTRO}")
+    print(f"   altra: {percorso_altra}\n")
+    if not os.path.exists(REGISTRO):
+        print(f"    {ROSSO}⛔ qui non c'e' nessun registro: non si unisce "
+              f"niente{GRIGIO}")
+        return 2
+    try:
+        a = leggi_registro(REGISTRO)
+        b = leggi_registro(percorso_altra)
+    except (OSError, ValueError) as e:
+        print(f"    {ROSSO}⛔ non si legge: {e}{GRIGIO}")
+        return 2
+
+    # ── 1. ⛔ IL CONFLITTO PRIMA DI TUTTO, E FERMA L'UNIONE ─────────────────
+    conflitti = trova_conflitti(a, b)
+    if conflitti:
+        print(f"    {ROSSO}⛔ {len(conflitti)} CONFLITTI: l'unione NON si fa, e "
+              f"il registro resta com'e'{GRIGIO}\n")
+        for (tipo, macchina, quando), testi in conflitti:
+            print(f"    ⛔ stesso giro «{macchina}» {quando} ({tipo}), "
+                  f"{len(testi)} contenuti DIVERSI:")
+            for campo, valori in _spiega_conflitto(testi):
+                print(f"         campo «{campo}» —")
+                for v in valori:
+                    print(f"           · {v[:200]}")
+            print()
+        print("    ⛔ Due righe che dichiarano LO STESSO GIRO con contenuto")
+        print("       diverso non sono un doppione da buttare: una delle due")
+        print("       mente.  Chi le unisse in silenzio sceglierebbe una delle")
+        print("       due verita' senza dirlo — e fino al 12 agosto 2026")
+        print("       `--registro` faceva proprio questo, tenendo quella che")
+        print("       capitava piu' in basso nel file.")
+        print("    ⇒ Si guarda quale delle due e' vera (le impronte si")
+        print("       ricalcolano: `--impronte <SIGLA>`), si toglie l'altra a")
+        print("       ragion veduta, e si riunisce.")
+        return 1
+
+    # ── 2. L'UNIONE, tenendo l'ordine di qua e accodando quel che manca ─────
+    visti = {}                       # chiave → testo canonico
+    risultato, presi_da_b = [], []
+    for r in a:
+        k = _chiave(r)
+        if k in visti:               # doppione identico DENTRO questa copia
+            continue
+        visti[k] = _canonica(r)
+        risultato.append(r)
+    for r in b:
+        k = _chiave(r)
+        if k in visti:
+            continue
+        visti[k] = _canonica(r)
+        risultato.append(r)
+        presi_da_b.append(r)
+
+    # ── 3. ⛔ IL CONTO, E SI CONTA — NON SI GUARDA ──────────────────────────
+    ka = {_chiave(r) for r in a}
+    kb = {_chiave(r) for r in b}
+    comune, solo_a, solo_b = ka & kb, ka - kb, kb - ka
+    print(f"    --  righe di qua:              {len(a):3d}  "
+          f"({len(ka)} giri distinti)")
+    print(f"    --  righe di la':              {len(b):3d}  "
+          f"({len(kb)} giri distinti)")
+    print(f"    --  in comune:                 {len(comune):3d}")
+    print(f"    --  solo di qua:               {len(solo_a):3d}")
+    print(f"    --  solo di la':               {len(solo_b):3d}")
+    print(f"    --  risultato dell'unione:     {len(risultato):3d}")
+    atteso = len(comune) + len(solo_a) + len(solo_b)
+    if len(risultato) != atteso:
+        print(f"    {ROSSO}⛔ IL CONTO NON TORNA: attese {atteso} righe, "
+              f"l'unione ne ha {len(risultato)}.  NON SI SCRIVE.{GRIGIO}")
+        return 1
+    # ⛔ E il conto da solo non basta: si verifica che OGNI riga di ciascuna
+    #    delle due copie sia davvero dentro il risultato.  Un conto giusto con
+    #    una riga scambiata per un'altra darebbe lo stesso numero.
+    dentro = {_canonica(r) for r in risultato}
+    perse = [(_chiave(r), q) for q, orig in (("qui", a), ("la'", b))
+             for r in orig if _canonica(r) not in dentro]
+    if perse:
+        print(f"    {ROSSO}⛔ {len(perse)} RIGHE ANDREBBERO PERSE: "
+              f"{perse[:5]}.  NON SI SCRIVE.{GRIGIO}")
+        return 1
+    inventate = [_chiave(r) for r in risultato
+                 if _canonica(r) not in {_canonica(x) for x in list(a) + list(b)}]
+    if inventate:
+        print(f"    {ROSSO}⛔ {len(inventate)} RIGHE INVENTATE: "
+              f"{inventate[:5]}.  NON SI SCRIVE.{GRIGIO}")
+        return 1
+    print(f"    {VERDE}⭐ nessuna riga persa, nessuna inventata{GRIGIO} "
+          f"(verificato contando, riga per riga)")
+
+    if solo_b:
+        print(f"\n    ⭐ {len(solo_b)} righe erano SOLO di la', e adesso ci sono "
+              f"anche qui:")
+        for r in presi_da_b:
+            print(f"       · {r.get('quando','?')} su «{r.get('macchina','?')}» "
+                  f"— certificati: "
+                  f"{', '.join(r.get('certificati', [])) or '—'} · "
+                  f"NON certificati: "
+                  f"{', '.join(r.get('non_certificati', [])) or '—'}")
+    if solo_a:
+        print(f"\n    ⚠ {len(solo_a)} righe stanno solo di qua: l'altra copia "
+              f"non le ha.")
+        print("       Con `--rispecchia` gliele si rimanda; senza, la sua "
+              "meta' dell'unione resta da fare.")
+
+    # ── 4. LA MARCA D'UNIONE.  ⛔ Sta DENTRO il registro e non accanto: un
+    #    file di stato a fianco e' precisamente «la riga di configurazione che
+    #    si puo' perdere» che **I7** vieta.  Chi copia il registro si porta
+    #    dietro anche la prova di quando e' stato unito.
+    marca = {
+        "tipo": "unione",
+        "quando": datetime.datetime.now().isoformat(timespec="seconds"),
+        "macchina": socket.gethostname(),
+        "con": os.path.abspath(percorso_altra),
+        "righe_qui_prima": len(a),
+        "righe_di_la": len(b),
+        "righe_prese_di_la": len(solo_b),
+        "righe_dopo": len(risultato),
+        # ⭐ L'impronta dell'INSIEME dei giri dopo l'unione: e' quel che
+        #    `mostra_registro()` ricalcola per sapere, senza rete, se dopo
+        #    l'ultima unione qualcuno ha scritto altro.
+        "impronta_giri": impronta_dei_giri(risultato),
+        # ⛔⭐ E L'ELENCO DELLE IDENTITA' UNITE, NON SOLO LA LORO IMPRONTA.
+        #
+        #    Serviva a `stato_unione()` per dire QUANTI giri sono arrivati dopo
+        #    l'unione, e la prima stesura lo deduceva confrontando le date con
+        #    quella della marca.  ⛔ Sbagliato, e il caso costruito l'ha fatto
+        #    vedere subito: un giro scritto **dopo** l'unione ma con una data
+        #    **anteriore** — che e' la norma, non l'eccezione, perche' le due
+        #    macchine hanno due orologi e l'11 agosto 2026 il server era
+        #    indietro di circa due ore — veniva contato **zero**.  La guardia
+        #    diceva «unione vecchia, 0 giri nuovi», cioe' un numero falso
+        #    accanto a un verdetto giusto.
+        #    ⭐ Con l'elenco delle identita' il confronto e' esatto e non passa
+        #       da nessun orologio: nuovo = identita' che l'unione non aveva.
+        "giri_uniti": sorted(f"{r.get('macchina','?')}|{r.get('quando','?')}"
+                             for r in risultato if not _e_unione(r)),
+        # ⚠ E l'impronta dell'altra copia com'era quando l'abbiamo letta:
+        #   serve alla prossima unione per dire «di la' e' cambiato qualcosa».
+        "impronta_altra": impronta_altra_letta or impronta_dei_giri(b),
+        "rispecchiata": bool(rispecchia_su),
+    }
+    risultato.append(marca)
+
+    # ── 5. SI SCRIVE DI FIANCO E SI RILEGGE, POI SI SOSTITUISCE ────────────
+    #    ⛔ Un `open(…, "w")` che muore a meta' lascia un registro troncato, e
+    #       un registro troncato e' esattamente «il conto cala e nessuno se ne
+    #       accorge».  Si scrive un file nuovo, lo si RILEGGE, e solo se
+    #       rilegge giusto prende il posto dell'altro.
+    tmp = REGISTRO + ".unione-in-corso"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            for r in risultato:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        riletto = leggi_registro(tmp)
+        if len(riletto) != len(risultato) or \
+                impronta_dei_giri(riletto) != marca["impronta_giri"]:
+            print(f"    {ROSSO}⛔ il file scritto non si rilegge uguale: NON "
+                  f"si sostituisce niente{GRIGIO}")
+            os.unlink(tmp)
+            return 1
+        os.replace(tmp, REGISTRO)
+    except OSError as e:
+        print(f"    {ROSSO}⛔ non si e' scritto: {e}{GRIGIO}")
+        return 1
+    print(f"\n    --  scritto in {REGISTRO}: "
+          f"{len(a)} → {len(risultato) - 1} giri, piu' la marca d'unione")
+
+    # ── 6. E, SE CHIESTO, LA SI RIMANDA DI LA' ─────────────────────────────
+    if rispecchia_su:
+        return 0 if rispecchia(rispecchia_su, impronta_altra_letta) else 1
+    return 0
+
+
+def prendi_dal_server(dove):
+    """Porta qui la copia del server con `scp`.  Vero se c'e' riuscito."""
+    esito = os.spawnv(os.P_WAIT, sys.executable,
+                      [sys.executable, SSHPW, "--get", SERVER_REGISTRO, dove])
+    if esito != 0 or not os.path.exists(dove):
+        print(f"    {ROSSO}⛔ la copia del server non e' arrivata (uscita "
+              f"{esito}){GRIGIO}")
+        print("       ⚠ Da NIC-OS questo comando non serve e non funziona: di "
+              "la' l'unione")
+        print("         si fa con `--unisci <percorso della copia di CHUWI>`, "
+              "portata a mano")
+        print("         una volta sola.  ⛔ E' l'asimmetria delle due macchine: "
+              "solo CHUWI")
+        print("         sa arrivare al server.")
+        return False
+    return True
+
+
+def rispecchia(impronta_attesa_di_la, _non_usato=None):
+    """⛔ Rimanda al server il registro unito — ma SOLO se di la' non e'
+    cambiato niente da quando l'abbiamo letto.
+
+    ⚠ Sulle due macchine lavorano piu' agenti insieme, e un giro finito fra la
+      nostra lettura e la nostra scrittura verrebbe **cancellato** da questa
+      copia.  Si rilegge l'impronta di la' e, se non e' piu' quella, ci si
+      ferma: un'unione rifatta costa un minuto, una certificazione persa non
+      si accorge nessuno.
+    """
+    import tempfile
+    print("\n    == ⛔ si rimanda la copia unita al server, se di la' non e' "
+          "cambiato niente")
+    with tempfile.TemporaryDirectory() as d:
+        controllo = os.path.join(d, "controllo.jsonl")
+        if not prendi_dal_server(controllo):
+            return False
+        try:
+            adesso = impronta_dei_giri(leggi_registro(controllo))
+        except (OSError, ValueError) as e:
+            print(f"    {ROSSO}⛔ la copia di controllo non si legge: "
+                  f"{e}{GRIGIO}")
+            return False
+    if adesso != impronta_attesa_di_la:
+        print(f"    {ROSSO}⛔ IL SERVER E' CAMBIATO fra la lettura e la "
+              f"scrittura: NON si sovrascrive{GRIGIO}")
+        print(f"       atteso  {impronta_attesa_di_la[:32]}…")
+        print(f"       trovato {adesso[:32]}…")
+        print("       ⇒ Qualcuno ha appena scritto un giro di la'.  Si rilancia "
+              "`--unisci-col-server`,")
+        print("         che stavolta prendera' anche quella riga.  ⭐ L'unione "
+              "gia' fatta QUI e' salva.")
+        return False
+    esito = os.spawnv(os.P_WAIT, sys.executable,
+                      [sys.executable, SSHPW, "--put", REGISTRO,
+                       SERVER_REGISTRO])
+    if esito != 0:
+        print(f"    {ROSSO}⛔ la copia non e' arrivata al server (uscita "
+              f"{esito}){GRIGIO}")
+        return False
+    print(f"    {VERDE}⭐ le due copie sono adesso identiche{GRIGIO} "
+          f"({SERVER_REGISTRO})")
+    return True
+
+
+def unisci_col_server(rispecchia_pure):
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        altra = os.path.join(d, "registro-del-server.jsonl")
+        if not prendi_dal_server(altra):
+            return 2
+        try:
+            impronta_la = impronta_dei_giri(leggi_registro(altra))
+        except (OSError, ValueError) as e:
+            print(f"    {ROSSO}⛔ la copia del server non si legge: {e}{GRIGIO}")
+            return 2
+        return unisci(altra,
+                      rispecchia_su=impronta_la if rispecchia_pure else None,
+                      impronta_altra_letta=impronta_la)
+
+
+def prova_unione():
+    """⛔ IL BANCO DELL'UNIONE — «chi scrive un banco lo certifica nello stesso
+    giro» (`MANDATO` §3.3, regola nata l'11 agosto 2026).
+
+    Tre casi COSTRUITI APPOSTA, e il verdetto si da' CONTANDO, non guardando:
+
+      1. due copie divergenti, una riga solo di qua e una solo di la'
+         → l'unione le tiene tutt'e due, e non ne inventa nessuna;
+      2. ⛔ due righe che dichiarano LO STESSO giro con impronte DIVERSE
+         → l'unione si FERMA e non scrive niente;
+      3. ⭐ il controllo positivo, che e' la meta' che si dimentica: due copie
+         identiche → l'unione riesce.  Senza questo caso, uno strumento che
+         dicesse sempre «conflitto» passerebbe i primi due.
+    """
+    import tempfile
+    globals_reg = REGISTRO
+    esiti = []
+
+    def riga(quando, macchina, cert, sha):
+        return {"quando": quando, "macchina": macchina, "certificati": cert,
+                "non_certificati": [], "saltati": [],
+                "non_provati_in_questo_giro": [],
+                "impronte": {c: {"finto.py": sha} for c in cert},
+                "impronta_rcp_c": "z" * 32}
+
+    def gira(qua, la):
+        d = tempfile.mkdtemp()
+        a, b = os.path.join(d, "qua.jsonl"), os.path.join(d, "la.jsonl")
+        for p, righe in ((a, qua), (b, la)):
+            with open(p, "w", encoding="utf-8") as f:
+                for r in righe:
+                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        globals()["REGISTRO"] = a
+        codice = unisci(b)
+        dopo = leggi_registro(a)
+        shutil.rmtree(d)
+        return codice, dopo
+
+    comuni = [riga("2026-08-12T08:00:00", "NIC-OS", ["B2"], "a" * 64),
+              riga("2026-08-12T08:10:00", "CHUWI", ["B4"], "b" * 64)]
+    solo_qua = riga("2026-08-12T09:00:00", "CHUWI", ["P5"], "c" * 64)
+    solo_la = riga("2026-08-12T09:30:00", "NIC-OS", ["B7"], "d" * 64)
+
+    print("\n\n########## 1/3 — una riga solo di qua, una solo di la'\n")
+    c, dopo = gira(comuni + [solo_qua], comuni + [solo_la])
+    giri = [r for r in dopo if not _e_unione(r)]
+    tutte = comuni + [solo_qua, solo_la]
+    dentro = {_canonica(r) for r in giri}
+    perse = [r for r in tutte if _canonica(r) not in dentro]
+    inventate = [r for r in giri
+                 if _canonica(r) not in {_canonica(x) for x in tutte}]
+    print(f"\n    il conto: 3 + 3 → {len(giri)} giri (atteso 4) · "
+          f"perse {len(perse)} · inventate {len(inventate)}")
+    esiti.append(("una riga di qua e una di la'",
+                  c == 0 and len(giri) == 4 and not perse and not inventate))
+
+    print("\n\n########## 2/3 — ⛔ stesso giro, impronte DIVERSE\n")
+    stesso = "2026-08-12T11:00:00"
+    c, dopo = gira(comuni + [riga(stesso, "NIC-OS", ["C2"], "1" * 64)],
+                   comuni + [riga(stesso, "NIC-OS", ["C2"], "9" * 64)])
+    print(f"\n    uscita {c} (atteso 1) · righe rimaste {len(dopo)} "
+          f"(atteso 3, cioe' com'erano) · marca d'unione "
+          f"{'⛔ SCRITTA' if any(_e_unione(r) for r in dopo) else 'no — giusto'}")
+    esiti.append(("il conflitto ferma l'unione",
+                  c == 1 and len(dopo) == 3
+                  and not any(_e_unione(r) for r in dopo)))
+
+    print("\n\n########## 3/3 — ⭐ controllo positivo: due copie identiche\n")
+    c, dopo = gira(comuni, comuni)
+    giri = [r for r in dopo if not _e_unione(r)]
+    print(f"\n    uscita {c} (atteso 0) · giri {len(giri)} (atteso 2) · "
+          f"marca d'unione "
+          f"{'si' if any(_e_unione(r) for r in dopo) else '⛔ NO'}")
+    esiti.append(("il controllo positivo",
+                  c == 0 and len(giri) == 2
+                  and any(_e_unione(r) for r in dopo)))
+
+    globals()["REGISTRO"] = globals_reg
+    print("\n\n    == il verdetto")
+    for nome, ok in esiti:
+        print(f"    {(VERDE + 'OK ') if ok else (ROSSO + 'NO ')}{GRIGIO} {nome}")
+    passati = sum(1 for _, ok in esiti if ok)
+    print(f"\n    {VERDE if passati == len(esiti) else ROSSO}"
+          f"{passati} casi su {len(esiti)}{GRIGIO}")
+    return 0 if passati == len(esiti) else 1
+
+
+def stato_unione(grezze):
+    """⛔ LA GUARDIA — quel che chiude **I7**, e gira SENZA rete.
+
+    Dice se l'unione e' fresca guardando la marca piu' recente e ricalcolando
+    l'impronta dei giri di oggi.  ⚠ Quel che NON puo' dire — e infatti non lo
+    dice — e' se l'ALTRA copia abbia scritto qualcosa nel frattempo: da qui non
+    si vede, e «non lo so» non si arrotonda a «e' a posto».
+    """
+    marche = sorted((r for r in grezze if _e_unione(r)),
+                    key=lambda r: r.get("quando", ""))
+    giri_oggi = impronta_dei_giri(grezze)
+    if not marche:
+        return {"fresca": False, "marca": None, "nuove": None,
+                "perche": "l'unione non e' MAI stata fatta da questo programma"}
+    ultima = marche[-1]
+    if ultima.get("impronta_giri") == giri_oggi:
+        return {"fresca": True, "marca": ultima, "nuove": 0,
+                "perche": "da allora qui non e' stato scritto nessun giro"}
+    # ⛔ Quanti giri sono arrivati dopo — e si contano per IDENTITA', non per
+    #    data: le due macchine hanno due orologi, e un giro scritto dopo
+    #    l'unione puo' benissimo portare una data anteriore.  (Il primo giro di
+    #    questa guardia lo contava per data e diceva «0 giri nuovi» su una
+    #    copia che ne aveva uno: il caso costruito l'ha fatto cadere.)
+    uniti = set(ultima.get("giri_uniti") or [])
+    if not uniti:
+        # ⚠ Marca vecchia, senza l'elenco: non si sa QUANTI, e non si tira a
+        #   indovinare.  «Non lo so» non si arrotonda a un numero.
+        return {"fresca": False, "marca": ultima, "nuove": None,
+                "perche": "da allora questa copia e' cambiata, e di quanti "
+                          "giri non si puo' dire (la marca non porta l'elenco)"}
+    nuove = [r for r in grezze if not _e_unione(r)
+             and f"{r.get('macchina','?')}|{r.get('quando','?')}" not in uniti]
+    return {"fresca": False, "marca": ultima, "nuove": len(nuove),
+            "perche": f"da allora questa copia ha {len(nuove)} giri nuovi che "
+                      f"l'altra copia non ha"}
+
+
+def stampa_stato_unione(st):
+    m = st["marca"]
+    if st["fresca"]:
+        print(f"  {VERDE}⭐ UNIONE FRESCA{GRIGIO} — unito il {m['quando']} su "
+              f"«{m['macchina']}» con")
+        print(f"     {m['con']}: {st['perche']}.")
+    elif m is None:
+        print(f"  {ROSSO}⛔ L'UNIONE NON E' MAI STATA FATTA{GRIGIO} da "
+              f"`--unisci`: il registro vive in DUE copie,")
+        print("     una per macchina, e questa e' una sola delle due.")
+    else:
+        print(f"  {ROSSO}⛔ UNIONE VECCHIA{GRIGIO} — l'ultima e' del "
+              f"{m['quando']} su «{m['macchina']}», e {st['perche']}.")
+    print("  ⚠ E di quel che l'ALTRA copia ha scritto dall'unione in poi, da "
+          "qui non si sa")
+    print("    niente: nessuna delle due macchine vede il file dell'altra.  "
+          "⇒ Il conto qui")
+    print("    sotto e' **il conto di QUESTA copia**.")
+    if not st["fresca"]:
+        print(f"  ⇒ Si rimette a posto con:  {ROSSO}python3 "
+              f"01-b12-guasti.py --unisci-col-server --rispecchia{GRIGIO}")
+        print("    (da CHUWI; da NIC-OS `--unisci <percorso della copia "
+              "portata a mano>`)")
+    print()
+
+
 def mostra_registro():
     if not os.path.exists(REGISTRO):
         print(f"    {GIALLO}[?]{GRIGIO} nessun registro in {REGISTRO}: "
               f"⛔ nessun banco di questa fase e' mai stato certificato")
         return 3
-    with open(REGISTRO, encoding="utf-8") as f:
-        grezze = [json.loads(r) for r in f if r.strip()]
+    try:
+        grezze = leggi_registro(REGISTRO)
+    except (OSError, ValueError) as e:
+        print(f"    {ROSSO}⛔ il registro non si legge: {e}{GRIGIO}")
+        return 2
     if not grezze:
         print(f"    {GIALLO}[?]{GRIGIO} il registro e' vuoto: ⛔ nessun banco "
               f"e' mai stato certificato")
         return 3
-    righe = [_normalizza(r) for r in grezze]
+
+    # ── ⛔ LA GUARDIA DELL'UNIONE, PRIMA DEL CONTO — D10, invariante I7 ─────
+    #    Si stampa in TESTA e non in coda: chi legge un numero deve sapere di
+    #    quale meta' del registro sia il numero, prima di leggerlo.
+    st = stato_unione(grezze)
+    stampa_stato_unione(st)
+
+    # ── ⛔ E I CONFLITTI SI NOMINANO, NON SI RISOLVONO IN SILENZIO ──────────
+    #    Fino al 12 agosto 2026 due righe con la stessa identita' e contenuto
+    #    diverso venivano risolte dall'ORDINE nel file, senza una parola: la
+    #    stessa coppia dava «certificato» o «non certificato» a seconda di
+    #    quale capitava piu' in basso.  `[M]` misurato costruendo il caso.
+    conflitti = trova_conflitti(grezze, [])
+    if conflitti:
+        print(f"  {ROSSO}⛔ {len(conflitti)} CONFLITTI NEL REGISTRO{GRIGIO}: "
+              f"righe che dichiarano lo STESSO giro")
+        print("     con contenuto diverso.  ⛔ Una delle due mente, e il conto "
+              "qui sotto ne")
+        print("     sceglierebbe una a caso — quindi NON si conta finche' non "
+              "sono risolti.")
+        for (tipo, macchina, quando), testi in conflitti:
+            print(f"     · «{macchina}» {quando} ({tipo}): {len(testi)} "
+                  f"contenuti diversi")
+            for campo, _ in _spiega_conflitto(testi):
+                print(f"         discordi sul campo «{campo}»")
+        print("     ⇒ Si guarda quale e' vera (`--impronte <SIGLA>`), si toglie "
+              "l'altra a")
+        print("       ragion veduta, e si rilegge.")
+        return 2
+
+    # ⚠ La marca d'unione e' una riga di servizio, non un giro: fuori dal conto.
+    righe = [_normalizza(r) for r in grezze if not _e_unione(r)]
 
     # ⛔ E L'ORDINE DI SCRITTURA NON E' L'ORDINE DEL TEMPO.  Nel file del
     #    10 agosto 2026 la riga delle 21:19 sta **sotto** quella delle 23:01,
@@ -2100,6 +2758,19 @@ def mostra_registro():
         print(f"    {ROSSO}⛔ e gli altri {len(GUASTI) - len(certi_oggi)} NON "
               f"sono «puliti»: sono NON CERTIFICATI{GRIGIO}")
         return 3
+    # ⛔ E UN CONTO PIENO SU UNA COPIA NON UNITA NON E' UN VERDE — D10, I7.
+    #    Qui e' il punto in cui il passo saltato **si vede**: senza questa
+    #    riga, un registro a cui manca meta' della storia potrebbe uscire 0 —
+    #    cioe' «tutto certificato» — proprio perche' le righe che dicono di no
+    #    stanno nell'altra copia.  ⭐ Una riga che manca non protesta: protesta
+    #    questa.
+    if not st["fresca"]:
+        print(f"    {ROSSO}⛔ ma l'unione delle due copie non e' fresca "
+              f"({st['perche']}):{GRIGIO}")
+        print("       questo NON e' il conto del progetto, e' il conto di "
+              "questa copia.")
+        print("       ⇒ `--unisci-col-server --rispecchia`, poi si rilegge.")
+        return 3
     return 0
 
 
@@ -2199,8 +2870,29 @@ if __name__ == "__main__":
                         "che non c'e' (R12-A.31)")
     p.add_argument("--certificati", default=CERT_PREDEFINITA,
                    help="la cartella dei certificati (per i guasti «{CERT}»)")
+    # ⛔ D10 — L'UNIONE STA NEL PROGRAMMA, non in una procedura da ricordare.
+    p.add_argument("--unisci", metavar="ALTRA",
+                   help="unisce il registro di qui con la copia in ALTRA. "
+                        "⛔ Non perde una riga, non ne inventa una, e davanti a "
+                        "due righe dello stesso giro con contenuto diverso si "
+                        "FERMA invece di sceglierne una")
+    p.add_argument("--unisci-col-server", action="store_true",
+                   help=f"va a prendere {SERVER_REGISTRO} con scp e unisce")
+    p.add_argument("--rispecchia", action="store_true",
+                   help="dopo l'unione rimanda la copia unita al server — e "
+                        "solo se di la' non e' cambiato niente nel frattempo")
+    p.add_argument("--prova-unione", action="store_true",
+                   help="⛔ certifica l'unione su tre casi costruiti apposta: "
+                        "due copie divergenti, due righe in conflitto, e il "
+                        "controllo positivo")
     a = p.parse_args()
     CERT = a.certificati
+    if a.prova_unione:
+        sys.exit(prova_unione())
+    if a.unisci_col_server:
+        sys.exit(unisci_col_server(a.rispecchia))
+    if a.unisci:
+        sys.exit(unisci(a.unisci))
     if a.impronte:
         if a.impronte not in GUASTI:
             print(f"⛔ sigla sconosciuta: {a.impronte}")
