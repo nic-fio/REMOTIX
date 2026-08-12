@@ -1,0 +1,51 @@
+{
+ "quando": "2026-08-12T11:42:04+0000",
+ "macchina": "NIC-OS",
+ "ignote": [],
+ "shell_pid": [
+  215144
+ ],
+ "shell_riga": [
+  "/usr/bin/gnome-shell",
+  "--headless",
+  "--no-x11",
+  "--virtual-monitor",
+  "1920x1080"
+ ],
+ "gnome_session_pid": 215112,
+ "shell_var": "",
+ "shell_var_presente": true,
+ "xdg_session_type": "wayland",
+ "sessione_gira": true,
+ "sessione_errore": null,
+ "display": {
+  "serial": 2,
+  "monitor": [
+   {
+    "connettore": "Meta-0",
+    "fornitore": "MetaVendor",
+    "prodotto": "MetaVirtualMonitor",
+    "seriale": "0x00",
+    "modo_corrente": {
+     "id": "1920x1080@60.000",
+     "larghezza": 1920,
+     "altezza": 1080,
+     "refresh": 60.0
+    },
+    "modi": 1
+   }
+  ],
+  "logici": 1,
+  "proprieta": {
+   "layout-mode": "1",
+   "supports-changing-layout-mode": "True"
+  }
+ },
+ "controllo_positivo": {
+  "layout_mode": "1",
+  "idletime_1": 3876,
+  "idletime_2": 4227,
+  "esito": true,
+  "perche": ""
+ }
+}

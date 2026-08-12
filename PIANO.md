@@ -184,7 +184,7 @@ quattro, e tre di esse cambiano quel che si scrive.*
 > | | |
 > |---|---|
 > | **S1** | il controllo positivo è *«la connessione con l'impronta pubblicata **deve riuscire**»* |
-> | ⛔ **S4** | vuole un server che **spedisca fotogrammi codificati** e un decodificatore che li accetti: non è «senza prodotto», è **la fase 3** — e pretende pure **una riga di protocollo** (`RCP.md` §12) |
+> | ⛔ **S4** | vuole un server che **spedisca fotogrammi codificati** e un decodificatore che li accetti: non è «senza prodotto», è **la fase 3** — e pretende pure **una riga di protocollo** (`RCP.md` **§7.5** — `BANCO_MARCA` `0x000F` e `BANCO_ESITO` `0x0010`). ⚠ *Questa riga mandava a `RCP.md` §12, dove la voce è **sbarrata**: fu chiusa la notte del 9 agosto e resa normativa in §7.5, e chi seguiva il rimando trovava una voce cancellata. Corretto il 12 agosto 2026, trovato da **F2.4**.* |
 > | la misura del **datagram** | vuole un ricevente |
 >
 > ⭐ **L'ordine onesto**: prima le misure che non toccano il filo — la durata dell'eccezione, la

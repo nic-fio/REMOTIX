@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F2.5 — dal byte al pixel dipinto</title>
+<!--
+  ==========================================================================
+  02-pagina-prova.html — LA PAGINA DI BANCO DI F2.5.  NON E' IL PRODOTTO.
+
+  ⛔ `src/pagina.html` non si tocca (mandato §4): questo giro e' **il banco
+     prima del prodotto** (`PIANO.md` §0.4, momento 1).  Quel che questa
+     pagina fa oggi, `src/pagina.html` lo fara' domani — e lo fara' contro un
+     banco gia' revisionato, invece che contro sé stessa.
+
+  ==========================================================================
+  ⛔ PERCHE' ESISTE: PERCHE' `isConfigSupported()` NON E' UNA PROVA.
+
+  `web.md` §4.1 e §9.1: `hardwareAcceleration: "prefer-hardware"` riuscito,
+  `powerEfficient: true` e fotogrammi corretti sono **tutti compatibili con la
+  CPU**.  E' la forma d'errore **E1** — necessario preso per sufficiente —
+  *«travestita da API ufficiale»*.  Lo stesso vale, un gradino piu' in basso,
+  per la domanda che F2.5 deve chiudere: **«questo browser decodifica HEVC?»**.
+
+      `VideoDecoder.isConfigSupported({codec: "hev1.2.4…"})` → `{supported:
+      true}` dice che il browser **riconosce la stringa**.  Non dice che il
+      flusso venga accettato, non dice che esca un `VideoFrame`, e soprattutto
+      non dice che sulla tela finisca un pixel.
+
+  ⛔ **La prova e' il pixel dipinto** — `CODER.md` §2, invariante I8: *il metro
+     e' quel che l'utente vede, non il numero che esce dal banco*.  Quindi qui
+     `isConfigSupported` si CHIAMA e si REGISTRA, in una casella sua chiamata
+     «che cosa avrebbe detto l'API», e ⛔ **non entra in nessun verdetto**.
+
+  ==========================================================================
+  ⛔ COME SI PROVA CHE IL PIXEL E' IL NOSTRO — e non un pixel qualsiasi
+
+  Un banco che guarda la tela e dice «c'e' qualcosa» promuove a verde:
+  una tela nera, il fotogramma precedente, un rettangolo grigio, l'immagine
+  della sequenza SBAGLIATA.  Tutte e quattro hanno l'aspetto di «ha dipinto».
+
+  Il flusso noto porta **otto tinte piatte in una griglia 4x2**, distanti fra
+  loro piu' di cento in RGB (`02-pagina-sequenze.py`).  La pagina rilegge i
+  pixel dipinti e classifica ogni cella sulla tinta piu' vicina.  ⭐ La
+  classificazione e' immune alla resa del colore — la conversione YUV->RGB, il
+  flag di intervallo, la gamma e la perdita del codificatore spostano un canale
+  di qualche decina, non di cento — e ⛔ **non e' immune all'immagine
+  sbagliata**, che e' precisamente quel che deve distinguere.
+
+  E i controlli sono QUATTRO, perche' tre non bastavano:
+
+  | | |
+  |---|---|
+  | **P1** il lettore dice SI'  | otto rettangoli dipinti a mano con `fillRect`: la rilettura deve trovarli **8 su 8**.  Se non li trova, non e' il decodificatore a mancare: e' `getImageData` |
+  | **P2** il lettore dice NO   | una tela grigia piatta: la classificazione **NON DEVE** dare 8 su 8.  ⛔ Senza questo, un classificatore che risponde sempre «giusto» passerebbe P1, passerebbe tutte le sequenze, e il banco sarebbe **verde su un difetto vivo** (`LEZIONI.md` §2.2) |
+  | **P3** il banco DISTINGUE   | due pattern con le stesse tinte in ordine diverso: i pixel letti da **A** devono classificarsi su A **e non** su B.  Un banco che ridipinge sempre la stessa cosa, o che riusa il fotogramma vecchio, da' la stessa risposta sui due |
+  | **P4** la catena esiste     | ⭐ **il flusso VP9**, che ogni motore decodifica.  Se HEVC fallisce **e** VP9 riesce, il «no» e' di HEVC; se falliscono tutti e due, il «no» e' di questa pagina, e ⛔ **su HEVC non si scrive niente** |
+
+  ⛔ P4 e' quello che tiene in piedi il verdetto su **Firefox**.  `web.md` §2
+     da' `VideoDecoder` per presente in Firefox dalla 130 `[S]`, e non dice
+     niente su HEVC per Firefox su Linux.  Senza P4, un rosso su Firefox
+     sarebbe indistinguibile da un banco che su Firefox non funziona — che e'
+     la forma d'errore **E10** vista dall'altra parte.
+
+  ==========================================================================
+  ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE — `LEZIONI.md` §1.9
+
+  Ogni prova riporta **i denominatori**, non solo il risultato:
+
+      pezzi_dati · fotogrammi_usciti · disegni · celle_lette · errori
+
+  «Zero fotogrammi» ha almeno cinque cause con lo stesso aspetto — la
+  configurazione rifiutata, la `decode()` che lancia, il richiamo `output` mai
+  chiamato, il disegno fallito, la rilettura negata — e senza i cinque numeri
+  accanto sono indistinguibili.  ⛔ E ogni eccezione si registra **con il suo
+  testo**: `try {} catch {}` che ingoia e' il `2>/dev/null` di JavaScript.
+
+  ==========================================================================
+  ⛔ I 10 BIT: IL CASO OPPOSTO E' SCRITTO QUI, PRIMA DEL GIRO
+
+  `DECISIONI.md` §2.3-bis: se il decodificatore torna a 8 bit senza dirlo, i
+  pixel vengono bene lo stesso e nessuno se ne accorge.  `LEZIONI.md` §1.11: il
+  caso opposto va scritto **prima**.  Ecco che aspetto avrebbe, e che cosa
+  questa pagina puo' e non puo' vedere:
+
+  | Che cosa si osserverebbe | Che cosa vorrebbe dire |
+  |---|---|
+  | `VideoFrame.format` = `"I420P10"` (o `…P10…`) | ⭐ i 10 bit **sono arrivati fino al fotogramma**.  ⚠ Non fino allo schermo |
+  | `VideoFrame.format` = `"I420"` su un flusso **Main10** | ⛔ il decodificatore ha **riportato l'uscita a 8 bit** senza dirlo: e' l'indizio di `DECISIONI.md` §2.3-bis, misurato |
+  | `VideoFrame.format` = `null` | ⛔ **non si conclude niente.**  `web.md` §1.2 A: sui fotogrammi decodificati in hardware il formato **non e' esposto**, ed e' `[S]` da una discussione W3C del 2023 mai riverificata.  Nullo e' «non lo dico», non «8 bit» |
+
+  ⛔ E LA TELA 2D NON PUO' RISPONDERE, per costruzione: `getImageData`
+     restituisce **8 bit per canale**.  Qualunque numero letto di li' e' a 8
+     bit anche se il fotogramma ne aveva 10.  ⇒ La domanda «i 10 bit arrivano
+     allo schermo?» **resta `[?]`**, e la prova finale e' guardare una
+     sfumatura (`web.md` §1.2 A, `LEZIONI.md` §2.4).  La striscia di sfumatura
+     in fondo al pattern e' li' per quel giorno.
+
+  ⭐ Quel che si puo' fare, e si fa: `frame.copyTo()` sui piani veri.  Se il
+     formato e' `…P10`, i campioni sono a 16 bit e i valori del luma superano
+     255 — cosa che a 8 bit non puo' succedere.  E' una misura del
+     **fotogramma**, dichiarata come tale.
+
+  ⛔⭐ E UNA CUCITURA DI F2.2 HA CAMBIATO **QUALE** DOMANDA SI STA FACENDO.
+
+     F2.2 ha misurato che **la sorgente da' otto bit**: Mutter consegna solo
+     BGRx/BGRA, 8 bit per canale `[M]`.  ⇒ Nella catena vera della fase 2 il
+     flusso che arriva qui e' **Main10 con dentro 8 bit promossi**, e la
+     domanda *«il decodificatore torna a 8 bit senza dirlo?»* con quel flusso
+     **non e' ponibile**: a 8 bit ci e' arrivato da solo.
+
+     ⛔ E lo stesso valeva per le sequenze di questo banco, senza che me ne
+        fossi accorto: il pattern nasce in RGB24.  Da cui **due domande
+        distinte**, che vanno tenute separate o un verde qui verra' letto come
+        «i 10 bit arrivano», che sarebbe falso per il motivo sbagliato:
+
+     | La domanda | Con quale flusso | Che cosa risponde |
+     |---|---|---|
+     | il browser **decodifica** un Main10? | tutte le `*-10bit-*` | ✅ misurabile: il pixel |
+     | il browser **conserva** i 10 bit? | ⛔ solo `A-10bitvero-lossless-*` | ⚠ **non da qui**: la tela e' a 8 bit |
+
+     Le due sequenze `*-lossless-*` sono un **caso di banco**, non la catena
+     vera: stesso pattern e stessa codifica senza perdita, e dentro **220
+     livelli** (8 bit promossi) contro **573** (10 bit veri), contati fuori dal
+     browser.  Servono a porre la domanda; ⛔ **la risposta non arriva da
+     JavaScript**, e la prova resta l'occhio sulla sfumatura.
+
+  ==========================================================================
+  ⛔ hvcC CONTRO ANNEX-B — la cucitura con F2.3, e si misura invece di dedurla
+
+  `web.md` §4.2 raccomanda **Annex-B senza `description`**.  Ma la scelta la fa
+  F2.3, e le due forme **non sono intercambiabili**: dare byte Annex-B a un
+  decodificatore configurato con la `description`, o viceversa, e' uno scambio
+  che a valle si vedrebbe come «immagine verde» o «niente», senza che nessuno
+  nomini la `description`.  ⇒ Questa pagina prova **tutte e quattro** le
+  combinazioni e registra che cosa fa ciascun motore.
+
+  ==========================================================================
+  LA TELA: PERCHE' NON E' DESINCRONIZZATA — decisione di F2.5, dichiarata
+
+  `web.md` §6.1 vuole la tela **desincronizzata**, ed e' la strada giusta per
+  il PRODOTTO: e' quella che accorcia il ritardo.  ⛔ Qui no, e la ragione e'
+  che qui la misura **e' la rilettura**: su una tela desincronizzata
+  `getImageData` legge da un buffer che il compositore puo' avere gia'
+  scambiato, e una lettura ambigua nel punto in cui sta la misura vale meno di
+  un millisecondo di ritardo in un banco.  ⚠ Va scritto perche' nessuno legga
+  questo file come «la forma che il prodotto avra'»: quella la decide S4.
+
+  ==========================================================================
+  ⛔ IL PORTATORE DEGLI ESITI, E LA TRAPPOLA GIA' PAGATA CHE NON MORDE QUI
+
+  `fasi/01-filo-nudo.md` (rilievo del banco P5): **il tracciatore di P5 e'
+  cieco su Chrome dentro `pagehide`** — non esce ne' `sendBeacon` ne' una XHR
+  sincrona: sei giri, zero tracce.  ⇒ Chi raccoglie esiti in quel modo misura
+  il silenzio del **portatore** e lo scrive come silenzio del prodotto.
+
+  ⭐ Qui la trappola non morde, e non per fortuna: questa pagina **non spedisce
+     niente dentro `pagehide`**.  Ogni esito parte con un `fetch` atteso
+     (`await`) nell'istante in cui la prova finisce, mentre la scheda e' viva e
+     in primo piano, e il banco chiude il browser **solo dopo** aver letto la
+     riga `FINITO` nel registro.  ⛔ Il `sendBeacon` di S5 e S7 qui non si usa:
+     e' senza conferma, e in questo banco la conferma serve.
+  ==========================================================================
+-->
+<style>
+  body { margin: 0; padding: 1rem; background: #0d0d12; color: #e8e8f0;
+         font: 14px/1.5 ui-monospace, monospace; }
+  h1 { font-size: 1.1rem; color: #9fe; margin: 0 0 .6rem; }
+  #tela { border: 1px solid #444; image-rendering: pixelated;
+          width: 320px; height: 240px; }
+  #registro { white-space: pre-wrap; background: #07070b; padding: .6rem;
+              border: 1px solid #333; max-height: 55vh; overflow: auto;
+              margin-top: .8rem; }
+  .no { color: #f77; } .si { color: #7f7; } .boh { color: #fd7; }
+  #stato { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>F2.5 — dal byte al pixel dipinto</h1>
+<div id="stato">in corso…</div>
+<canvas id="tela" width="640" height="480"></canvas>
+<div id="registro"></div>
+<script>
+"use strict";
+
+const PARAMETRI = new URLSearchParams(location.search);
+const GIRO = PARAMETRI.get("giro") || "f25-" + Math.random().toString(36).slice(2, 10);
+/* ⛔ I GUASTI SI INNESTANO DA QUI, e sono la certificazione del banco.
+   `PIANO.md` §0.3 punto 4 e la regola nata l'11 agosto: chi scrive un banco lo
+   certifica nello stesso giro.  Ogni guasto ha un controllo che DEVE virare al
+   rosso, e se non vira il controllo non controlla niente.
+
+     pixel     la pagina dipinge un grigio piatto invece del fotogramma
+               ⇒ ogni sequenza deve cadere; P1 e P2 restano verdi (non
+                 passano dal decodificatore) — e' cosi' che si vede che il
+                 rosso e' del percorso del video e non del lettore
+     lettore   il classificatore risponde sempre «la tinta attesa»
+               ⇒ P2 (il lettore che dice NO) deve cadere
+     scambio   al posto del pattern A si danno i byte del pattern B
+               ⇒ P3 (la distinzione) deve cadere
+     livello   la stringa di codec dichiara un livello piu' basso del vero
+               ⇒ `RCP.md` §4.3 rilievo O12: si misura che aspetto ha
+     muto      gli errori di `configure` e `decode` si buttano invece di
+               registrarli ⇒ P6 («lo zero ha sempre una causa») deve cadere.
+               ⛔ E' il guasto che certifica `REVIEWER.md` §1 punto 4: una
+                 misura che puo' dire «zero» deve poter dire anche «sono
+                 fallito».  Senza questo guasto, quella regola era scritta nel
+                 banco e non provata dal banco.  */
+const GUASTO = PARAMETRI.get("guasta") || "";
+
+const tela = document.getElementById("tela");
+/* `willReadFrequently`: la rilettura e' la misura, e senza questa opzione i
+   motori tengono la tela sulla GPU e ogni `getImageData` costa un ritorno.
+   ⚠ Non e' `desynchronized`: vedi l'intestazione. */
+const pennello = tela.getContext("2d", { willReadFrequently: true, alpha: false });
+
+let numero = 0;
+const riassunto = { prove: 0, rosse: 0 };
+
+function scrivi(testo, classe) {
+  const r = document.getElementById("registro");
+  const d = document.createElement("div");
+  if (classe) d.className = classe;
+  d.textContent = testo;
+  r.appendChild(d);
+  r.scrollTop = r.scrollHeight;
+}
+
+/* ⛔ Si ASPETTA la conferma del raccoglitore.  Un esito spedito e non
+   confermato ha due letture — «non e' successo» e «non e' arrivato» — ed e'
+   esattamente il difetto che ha reso illeggibili sei giri di P5. */
+async function spedisci(dati) {
+  dati.n = ++numero;
+  dati.giro = GIRO;
+  dati.guasto = GUASTO;
+  dati.ora_pagina = performance.now();
+  /* B0.6: la versione esatta del motore viaggia con OGNI riga, non una volta
+     sola — un registro che la porta in testa e' un registro che non si puo'
+     spezzare. */
+  dati.motore = navigator.userAgent;
+  dati.nuclei = navigator.hardwareConcurrency;
+  /* ⛔ LA SCENA, ACCANTO A OGNI NUMERO — `LEZIONI.md` §1.1.  La pagina non sa
+     su che schermo gira: glielo dice il banco nell'indirizzo.  ⚠ E qui non e'
+     una formalita': su Linux il decodificatore HEVC di Chrome e' quello della
+     PIATTAFORMA, e senza GPU non c'e'.  Lo stesso browser da' due risposte
+     diverse su due scene, e un numero senza la scena accanto sarebbe due
+     numeri sotto la stessa etichetta (E2). */
+  dati.scena = PARAMETRI.get("scena") || "non dichiarata";
+  try {
+    const r = await fetch("/esito", {
+      method: "POST", cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dati)
+    });
+    if (!r.ok) scrivi("⛔ il raccoglitore ha risposto " + r.status, "no");
+  } catch (e) {
+    scrivi("⛔ l'esito non e' potuto uscire: " + e, "no");
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LA RILETTURA DEI PIXEL — il cuore di F2.5.
+
+   ⛔ Si legge la TELA, non il `VideoFrame`.  Leggere il fotogramma sarebbe
+      leggere il decodificatore; qui la domanda e' che cosa e' finito **sulla
+      tela**, che e' l'unica cosa che l'utente vede (I8).
+   ───────────────────────────────────────────────────────────────────────── */
+
+function distanza(a, b) {
+  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+  return dr * dr + dg * dg + db * db;
+}
+
+/* Il colore medio del cuore di una cella: si scarta il 20 % di bordo per
+   lato, perche' i bordi fra due tinte sono proprio dove il 4:2:0 e la perdita
+   del codificatore fanno il danno maggiore — e li' si misurerebbe l'artefatto
+   invece della tinta. */
+function colore_cella(pixel, larghezza, cella) {
+  const bx = Math.floor(cella.l * 0.2), by = Math.floor(cella.a * 0.2);
+  const x0 = cella.x + bx, x1 = cella.x + cella.l - bx;
+  const y0 = cella.y + by, y1 = cella.y + cella.a - by;
+  let r = 0, g = 0, b = 0, n = 0;
+  const passo = 3;
+  for (let y = y0; y < y1; y += passo) {
+    for (let x = x0; x < x1; x += passo) {
+      const i = (y * larghezza + x) * 4;
+      r += pixel[i]; g += pixel[i + 1]; b += pixel[i + 2];
+      n++;
+    }
+  }
+  return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : null;
+}
+
+/* La classificazione: quale delle otto tinte e' questa cella.
+   ⛔ Ritorna anche `margine` — la distanza alla seconda tinta piu' vicina
+      divisa per quella alla prima.  Un margine vicino a 1 vuol dire «e' quasi
+      un pareggio», e un pareggio letto come certezza e' la banda incerta
+      promossa a verdetto che `web.md` §4.3 vieta. */
+function classifica(colore, tinte) {
+  let prima = null, seconda = null;
+  for (const t of tinte) {
+    const d = distanza(colore, t.rgb);
+    if (prima === null || d < prima.d) { seconda = prima; prima = { nome: t.nome, d: d }; }
+    else if (seconda === null || d < seconda.d) { seconda = { nome: t.nome, d: d }; }
+  }
+  return {
+    tinta: prima.nome,
+    distanza: Math.round(Math.sqrt(prima.d)),
+    margine: prima.d > 0 ? +(Math.sqrt(seconda.d / prima.d)).toFixed(2) : 99
+  };
+}
+
+/* Legge la tela e classifica le otto celle contro l'ordine ATTESO.
+   ⛔ Ritorna sempre l'elenco completo delle letture — anche quando sono
+      sbagliate — perche' F2.6 giudichi sui pixel e non sul nostro verdetto. */
+function leggi_tela(sequenza, atteso_da) {
+  const celle = (atteso_da || sequenza).celle;
+  const tinte = sequenza.tinte;
+  let dati;
+  try {
+    dati = pennello.getImageData(0, 0, sequenza.larghezza, sequenza.altezza);
+  } catch (e) {
+    /* ⛔ «La tela e' contaminata» e «la tela e' vuota» hanno lo stesso aspetto
+       se questa eccezione si ingoia: qui si dichiara. */
+    return { errore: "getImageData: " + e, celle: [], corrette: 0, lette: 0 };
+  }
+  const letture = [];
+  let corrette = 0;
+  for (const c of celle) {
+    const colore = colore_cella(dati.data, sequenza.larghezza, c);
+    if (colore === null) continue;
+    let esito = classifica(colore, tinte);
+    /* ⛔ GUASTO «lettore»: il classificatore risponde sempre giusto.  Deve far
+       cadere P2, e se non lo fa P2 non e' un controllo. */
+    if (GUASTO === "lettore") esito = { tinta: c.tinta, distanza: 0, margine: 99 };
+    const giusta = esito.tinta === c.tinta;
+    if (giusta) corrette++;
+    letture.push({
+      indice: c.indice, attesa: c.tinta, letta: esito.tinta, giusta: giusta,
+      rgb_letto: colore, rgb_atteso: c.rgb,
+      distanza: esito.distanza, margine: esito.margine,
+      /* ⚠ Lo scarto per canale contro il colore atteso: NON e' un criterio di
+         verdetto (la resa del colore non e' promessa da nessuno a questo
+         stadio), ma e' il numero che serve a F2.6 per giudicare la fedelta'. */
+      scarto: [colore[0] - c.rgb[0], colore[1] - c.rgb[1], colore[2] - c.rgb[2]]
+    });
+  }
+  return { celle: letture, corrette: corrette, lette: letture.length, errore: null };
+}
+
+/* ── LA SFUMATURA DIPINTA — quanti livelli ne sopravvivono sulla tela ─────
+ *
+ * ⛔⭐ E QUEL CHE QUESTA MISURA **NON** PUO' DIRE VA LETTO PRIMA DEL NUMERO.
+ *
+ * `getImageData` restituisce **8 bit per canale**, sempre.  Quindi il conto
+ * qui sotto non puo' superare 256 nemmeno se il fotogramma avesse 10 bit
+ * perfetti: ⛔ **un numero basso qui NON dimostra che il browser abbia
+ * riportato l'uscita a 8 bit**, perche' a 8 bit ci arriva comunque la tela.
+ *
+ * A che serve allora, e non e' poco:
+ *
+ *   1. dice quanti livelli **il flusso** ha portato fin qui.  La sorgente a
+ *      8 bit promossi ne ha 220 e quella a 10 bit veri 573 (misurati fuori dal
+ *      browser, sul flusso ridecodificato): se sulla tela ne arrivassero 220
+ *      da tutt'e due, la perdita sarebbe **a valle del flusso**;
+ *   2. e' il numero che accompagna il PNG che l'utente guardera'.  La prova
+ *      vera sui 10 bit e' **l'occhio sulla sfumatura** (`LEZIONI.md` §2.4), e
+ *      un occhio senza un numero accanto non si puo' rimettere in discussione.
+ *
+ * ⚠ Si guarda il solo canale rosso, e si verifica che R=G=B: la striscia e'
+ *   grigia per costruzione, e se non lo fosse piu' il conto starebbe misurando
+ *   una dominante di colore invece dei livelli.
+ */
+function misura_sfumatura(sequenza) {
+  const da = sequenza.sfumatura_da_y;
+  if (da === undefined) return null;
+  let dati;
+  try {
+    dati = pennello.getImageData(0, da, sequenza.larghezza,
+                                 sequenza.altezza - da);
+  } catch (e) { return { errore: "getImageData: " + e }; }
+  const visti = new Uint8Array(256);
+  let campioni = 0, sbilanciati = 0, minimo = 255, massimo = 0;
+  const d = dati.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    visti[r] = 1;
+    campioni++;
+    if (Math.abs(r - g) > 2 || Math.abs(r - b) > 2) sbilanciati++;
+    if (r < minimo) minimo = r;
+    if (r > massimo) massimo = r;
+  }
+  let distinti = 0;
+  for (let i = 0; i < 256; i++) if (visti[i]) distinti++;
+  return {
+    livelli_distinti_8bit: distinti, campioni: campioni,
+    minimo: minimo, massimo: massimo,
+    frazione_sbilanciati: +(sbilanciati / campioni).toFixed(4),
+    /* ⛔ Il tetto e' 256 PER COSTRUZIONE, e va portato accanto al numero o il
+       numero verra' letto come una misura della profondita' del fotogramma. */
+    tetto: 256,
+    nota: "getImageData e' a 8 bit: questo conto non puo' superare 256, e un "
+        + "valore basso NON dimostra che il decodificatore abbia perso i 10 bit"
+  };
+}
+
+/* ⛔ I PIXEL CHE ESCONO DAL BROWSER, per F2.6.
+   Due forme, e servono a due cose diverse:
+     - la miniatura 32x24 in RGB base64 finisce **nel registro**, quindi si
+       puo' rileggere fra sei mesi senza avere piu' i file accanto;
+     - il PNG a piena risoluzione va su `/pixel`, ed e' quello su cui F2.6
+       fara' il confronto vero col fotogramma catturato. */
+function miniatura(larghezza, altezza) {
+  const piccola = document.createElement("canvas");
+  piccola.width = 32; piccola.height = 24;
+  const p = piccola.getContext("2d", { willReadFrequently: true });
+  p.drawImage(tela, 0, 0, larghezza, altezza, 0, 0, 32, 24);
+  const d = p.getImageData(0, 0, 32, 24).data;
+  let s = "";
+  for (let i = 0; i < d.length; i += 4)
+    s += String.fromCharCode(d[i], d[i + 1], d[i + 2]);
+  return btoa(s);
+}
+
+async function spedisci_png(nome) {
+  let url;
+  try { url = tela.toDataURL("image/png"); }
+  catch (e) { scrivi("⛔ toDataURL: " + e, "no"); return null; }
+  const nomefile = GIRO + "-" + nome + ".png";
+  try {
+    const r = await fetch("/pixel?nome=" + encodeURIComponent(nomefile), {
+      method: "POST", cache: "no-store", body: url
+    });
+    if (!r.ok) { scrivi("⛔ /pixel ha risposto " + r.status, "no"); return null; }
+  } catch (e) { scrivi("⛔ il PNG non e' uscito: " + e, "no"); return null; }
+  return nomefile;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LA DECODIFICA — una sequenza, dal byte al pixel.
+   ───────────────────────────────────────────────────────────────────────── */
+
+function byte_da_base64(b64) {
+  const s = atob(b64);
+  const d = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) d[i] = s.charCodeAt(i);
+  return d;
+}
+
+/* ⛔ Che cosa dice il fotogramma sulla profondita' di bit.  Vedi l'intestazione:
+   `null` NON e' 8 bit, e la tela non puo' rispondere per costruzione. */
+async function guarda_profondita(f) {
+  const d = {
+    formato: f.format === undefined ? "assente" : f.format,
+    spazio_colore: null, copyTo: null, luma_massimo: null,
+    misura: f.codedWidth + "x" + f.codedHeight
+  };
+  try {
+    if (f.colorSpace) d.spazio_colore = {
+      primaries: f.colorSpace.primaries, transfer: f.colorSpace.transfer,
+      matrix: f.colorSpace.matrix, fullRange: f.colorSpace.fullRange
+    };
+  } catch (e) { d.spazio_colore = "errore: " + e; }
+
+  if (!f.format) { d.copyTo = "non tentato: il formato e' nullo"; return d; }
+  try {
+    const quanti = f.allocationSize();
+    const buf = new ArrayBuffer(quanti);
+    const disposizione = await f.copyTo(buf);
+    d.copyTo = { byte: quanti, piani: disposizione.length };
+    if (/P1[02]/.test(f.format)) {
+      /* ⭐ A 10 bit i campioni sono a 16 bit: il massimo del luma DEVE
+         superare 255, cosa che a 8 bit non puo' succedere.  E' l'unica prova
+         positiva sui bit che questa pagina puo' produrre. */
+      const v = new Uint16Array(buf, disposizione[0].offset,
+                                Math.floor(disposizione[0].stride *
+                                           (f.codedHeight - 1) / 2));
+      let massimo = 0;
+      for (let i = 0; i < v.length; i += 7) if (v[i] > massimo) massimo = v[i];
+      d.luma_massimo = massimo;
+    }
+  } catch (e) { d.copyTo = "errore: " + e; }
+  return d;
+}
+
+/* La stringa di codec, con il guasto del livello innestabile.
+   ⛔ `RCP.md` §4.3 rilievo O12: un livello dichiarato troppo basso NON da' un
+      errore di rete — fa rifiutare la configurazione dal decodificatore, e il
+      sintomo e' «il browser non apre il flusso».  Il guasto serve a vedere
+      che aspetto ha, su ciascun motore, prima che capiti sul serio. */
+function stringa_codec(sequenza) {
+  if (GUASTO !== "livello") return sequenza.codec;
+  return sequenza.codec.replace(/\.[LH]\d+/, ".L30");
+}
+
+async function decodifica(sequenza, opzioni) {
+  opzioni = opzioni || {};
+  const conto = {
+    pezzi_dati: 0, fotogrammi_usciti: 0, disegni: 0,
+    errori_decode: [], errore_configure: null, errore_callback: null
+  };
+  let primo = null;
+  const config = {
+    codec: opzioni.codec || stringa_codec(sequenza),
+    codedWidth: sequenza.larghezza,
+    codedHeight: sequenza.altezza,
+    optimizeForLatency: true
+  };
+  if (opzioni.accelerazione) config.hardwareAcceleration = opzioni.accelerazione;
+  /* ⛔ La `description` c'e' SOLO nella forma hvcC.  `web.md` §4.2: Annex-B
+     **senza** description e' la strada, e le due non sono intercambiabili. */
+  const descrizione = ("descrizione" in opzioni)
+      ? opzioni.descrizione : sequenza.descrizione;
+  if (descrizione) config.descriptionBase64 = descrizione;
+
+  /* «Che cosa avrebbe detto l'API» — si registra, non si crede (E1). */
+  let dichiarato = null;
+  try {
+    const c = Object.assign({}, config);
+    delete c.descriptionBase64;
+    if (descrizione) c.description = byte_da_base64(descrizione);
+    const s = await VideoDecoder.isConfigSupported(c);
+    dichiarato = { supported: s.supported,
+                   config_codec: s.config && s.config.codec };
+  } catch (e) { dichiarato = { errore: String(e) }; }
+
+  const decodificatore = new VideoDecoder({
+    output: (f) => {
+      conto.fotogrammi_usciti++;
+      try {
+        if (primo === null) primo = f;      /* chiuso piu' avanti */
+        if (GUASTO === "pixel") {
+          /* ⛔ GUASTO «pixel»: si dipinge un grigio piatto invece del
+             fotogramma.  E' il guasto che dice se il banco guarda davvero i
+             pixel o si accontenta che il decodificatore non abbia protestato. */
+          pennello.fillStyle = "#808080";
+          pennello.fillRect(0, 0, sequenza.larghezza, sequenza.altezza);
+        } else {
+          pennello.drawImage(f, 0, 0);
+        }
+        conto.disegni++;
+      } catch (e) {
+        conto.errore_callback = String(e);
+      }
+      if (f !== primo) f.close();   /* ⛔ sempre: un fotogramma non chiuso e'
+                                       memoria che non torna (S2 §3.8) */
+    },
+    error: (e) => { conto.errori_decode.push(String(e)); }
+  });
+
+  try {
+    const c = Object.assign({}, config);
+    delete c.descriptionBase64;
+    if (descrizione) c.description = byte_da_base64(descrizione);
+    decodificatore.configure(c);
+  } catch (e) {
+    conto.errore_configure = String(e);
+    try { decodificatore.close(); } catch (e2) { /* gia' morto */ }
+    return { conto, dichiarato, config_usata: config, profondita: null };
+  }
+
+  const pezzi = opzioni.pezzi || sequenza.pezzi;
+  for (const p of pezzi) {
+    try {
+      decodificatore.decode(new EncodedVideoChunk({
+        type: p.tipo, timestamp: p.istante, data: byte_da_base64(p.dati)
+      }));
+      conto.pezzi_dati++;
+    } catch (e) {
+      conto.errori_decode.push("decode: " + e);
+      break;
+    }
+  }
+  try { await decodificatore.flush(); }
+  catch (e) { conto.errori_decode.push("flush: " + e); }
+
+  let profondita = null;
+  if (primo) {
+    profondita = await guarda_profondita(primo);
+    try { primo.close(); } catch (e) { /* gia' chiuso */ }
+  }
+  try { decodificatore.close(); } catch (e) { /* gia' chiuso */ }
+  return { conto, dichiarato, config_usata: config, profondita };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LE PROVE
+   ───────────────────────────────────────────────────────────────────────── */
+
+const sequenze = {};
+
+async function carica(nome) {
+  if (sequenze[nome]) return sequenze[nome];
+  const r = await fetch("02-pagina-sequenze/" + nome + ".json", { cache: "no-store" });
+  if (!r.ok) throw new Error("sequenze/" + nome + ".json: HTTP " + r.status);
+  sequenze[nome] = await r.json();
+  return sequenze[nome];
+}
+
+function pulisci(sequenza) {
+  /* ⛔ Fra una prova e l'altra la tela si azzera con un colore che NON e'
+     nessuna delle otto tinte e non e' nero: cosi' «non ha dipinto niente» ha
+     un aspetto suo, invece di somigliare a «ha dipinto scuro». */
+  pennello.fillStyle = "#7a007a";
+  pennello.fillRect(0, 0, sequenza.larghezza, sequenza.altezza);
+}
+
+async function prova_sequenza(nome, opzioni) {
+  opzioni = opzioni || {};
+  const etichetta = opzioni.etichetta || nome;
+  let sequenza;
+  try { sequenza = await carica(nome); }
+  catch (e) {
+    scrivi("⛔ " + etichetta + ": la sequenza non si carica — " + e, "no");
+    await spedisci({ tipo: "SEQUENZA", prova: etichetta, sequenza: nome,
+                     esito: "SEQUENZA_ASSENTE", errore: String(e) });
+    riassunto.rosse++;
+    return null;
+  }
+  /* ⛔ GUASTO «scambio»: si danno i byte dell'ALTRO pattern.  Deve far cadere
+     P3, e se non lo fa il banco non sta guardando l'immagine. */
+  let pezzi = opzioni.pezzi;
+  if (GUASTO === "scambio" && !opzioni.pezzi) {
+    const altro = await carica(nome.replace(/^A/, "Z").replace(/^B/, "A")
+                                   .replace(/^Z/, "B"));
+    pezzi = altro.pezzi;
+  }
+
+  pulisci(sequenza);
+  const t0 = performance.now();
+  const d = await decodifica(sequenza, Object.assign({}, opzioni, { pezzi: pezzi }));
+  const ms = +(performance.now() - t0).toFixed(1);
+
+  const lettura = leggi_tela(sequenza);
+  /* ⛔ P3: le stesse letture, classificate contro l'ordine dell'ALTRO pattern.
+     Se tornano giuste anche li', il banco non distingue e il suo verde non
+     vale niente. */
+  let controlettura = null;
+  const nome_altro = nome.startsWith("A") ? nome.replace(/^A/, "B")
+                                          : nome.replace(/^B/, "A");
+  if (sequenze[nome_altro] || nome_altro !== nome) {
+    try {
+      const altro = await carica(nome_altro);
+      const l = leggi_tela(sequenza, altro);
+      controlettura = { pattern: altro.pattern, corrette: l.corrette, lette: l.lette };
+    } catch (e) { controlettura = { errore: String(e) }; }
+  }
+
+  const dipinto = d.conto.disegni > 0;
+  const png = (dipinto && opzioni.esporta_png !== false)
+      ? await spedisci_png(etichetta) : null;
+
+  const esito = {
+    tipo: "SEQUENZA", prova: etichetta, sequenza: nome,
+    ruolo: sequenza.ruolo, pattern: sequenza.pattern,
+    forma: sequenza.forma, profondita_flusso: sequenza.profondita,
+    codec_chiesto: d.config_usata.codec,
+    con_descrizione: !!d.config_usata.descriptionBase64,
+    ms: ms,
+    /* i denominatori — `LEZIONI.md` §1.9 regola 4 */
+    pezzi_attesi: (pezzi || sequenza.pezzi).length,
+    pezzi_dati: d.conto.pezzi_dati,
+    fotogrammi_usciti: d.conto.fotogrammi_usciti,
+    disegni: d.conto.disegni,
+    celle_lette: lettura.lette,
+    celle_giuste: lettura.corrette,
+    celle_attese: sequenza.celle.length,
+    /* ⛔ GUASTO «muto»: si buttano i testi degli errori.  Il conto dei
+       fotogrammi resta zero, ma sparisce il PERCHE' — ed e' esattamente la
+       forma che `REVIEWER.md` §1 punto 4 vieta: «zero» e «sono fallito» con
+       lo stesso aspetto.  P6 deve accorgersene. */
+    errore_configure: GUASTO === "muto" ? null : d.conto.errore_configure,
+    errori_decode: GUASTO === "muto" ? [] : d.conto.errori_decode,
+    errore_callback: d.conto.errore_callback,
+    errore_lettura: lettura.errore,
+    /* «che cosa avrebbe detto l'API» — registrato, mai creduto (E1) */
+    api_dichiarata: d.dichiarato,
+    profondita_fotogramma: d.profondita,
+    /* i pixel, per F2.6 */
+    letture: lettura.celle,
+    contro_pattern: controlettura,
+    /* ⛔ Quel che il flusso ha portato fino alla tela, e il tetto di 256 che
+       gli sta accanto: vedi `misura_sfumatura()`.  Serve a F2.6 e all'occhio
+       dell'utente, NON a concludere sui 10 bit. */
+    sfumatura: dipinto ? misura_sfumatura(sequenza) : null,
+    /* Che cosa il flusso conteneva DAVVERO, misurato fuori dal browser da
+       `02-pagina-sequenze.py` e portato qui per non doverlo ricongiungere. */
+    sorgente10: sequenza.sorgente10,
+    lossless: sequenza.lossless,
+    livelli_flusso: sequenza.livelli,
+    livelli_sorgente: sequenza.livelli_sorgente,
+    miniatura_rgb32x24: dipinto ? miniatura(sequenza.larghezza, sequenza.altezza) : null,
+    png: png
+  };
+  await spedisci(esito);
+
+  const classe = (lettura.corrette === sequenza.celle.length) ? "si"
+               : (d.conto.disegni === 0 ? "no" : "boh");
+  scrivi(etichetta + ": pezzi " + d.conto.pezzi_dati + "/" + esito.pezzi_attesi
+       + " · fotogrammi " + d.conto.fotogrammi_usciti
+       + " · disegni " + d.conto.disegni
+       + " · celle giuste " + lettura.corrette + "/" + sequenza.celle.length
+       + " · formato " + (d.profondita ? d.profondita.formato : "-")
+       + (d.conto.errore_configure ? " · CONFIGURE: " + d.conto.errore_configure : "")
+       + (d.conto.errori_decode.length ? " · ERRORI: " + d.conto.errori_decode.join(" | ") : ""),
+       classe);
+  riassunto.prove++;
+  if (classe === "no") riassunto.rosse++;
+  return esito;
+}
+
+/* ── IL LETTORE DEI 28 BYTE DI `RCP.md` §6.2 ─────────────────────────────
+ *
+ * ⛔⭐ E' SCRITTO QUI, DALLA SPECIFICA, E NON E' UNA COPIA DI QUELLO DEL FILO.
+ *
+ * Il divieto arriva da F2.4 e vale piu' del codice che regola: *«la pagina non
+ * deve ricopiare il giudizio di `intestazione()` di
+ * `banchi/02-filo-fotogramma.py` — se il lettore della pagina e' una copia di
+ * quello del filo, i due lettori indipendenti tornano a essere uno solo, e con
+ * essi sparisce il pezzo di arbitro che il progetto ha comprato apposta»*.
+ *
+ * `PIANO.md` §0.4: buttando RDP si e' perso **mstsc**, l'arbitro che
+ * protestava gratis quando sbagliavamo a leggere la specifica, e *«due
+ * programmi scritti dalla stessa mano che vanno d'accordo non confermano
+ * niente»*.  ⇒ Qui si legge `RCP.md` §6.2 e nient'altro.
+ *
+ * ⚠ Se un giorno il lettore di F2.4 e questo non andranno d'accordo su questi
+ *   28 byte, quel disaccordo **e' il regalo**: un fraintendimento della
+ *   specifica trovato da due letture separate invece che da un utente.
+ *
+ * ⛔ In QUESTA sotto-fase il filo non c'e': i pezzi arrivano da un file JSON, e
+ *    l'intestazione viaggia ACCANTO ai dati invece che davanti.  Quel che si
+ *    misura qui non e' il trasporto — e' che i due lettori leggano gli stessi
+ *    campi negli stessi posti.
+ */
+const RCP_TIPO_CHIAVE = 0x0301;
+const RCP_TIPO_DELTA  = 0x0302;
+const RCP_CODEC = { 1: "hevc", 2: "av1" };
+
+function leggi_intestazione(byte) {
+  /* ⛔ 28 byte esatti, e la lunghezza si controlla PRIMA di leggere: §6.1
+     impone di controllare la lunghezza prima di allocare, e la stessa
+     prudenza vale prima di indicizzare. */
+  if (byte.length !== 28)
+    return { errore: "l'intestazione e' di " + byte.length + " byte, non 28" };
+  const v = new DataView(byte.buffer, byte.byteOffset, byte.byteLength);
+  const tipo = v.getUint16(0);
+  if (tipo !== RCP_TIPO_CHIAVE && tipo !== RCP_TIPO_DELTA)
+    return { errore: "tipo 0x" + tipo.toString(16) + ": ne' 0x301 ne' 0x302 "
+                   + "(§6.2: altri valori sono ERRORE_PROTOCOLLO)" };
+  const codec = v.getUint16(2);
+  return {
+    errore: null,
+    chiave: tipo === RCP_TIPO_CHIAVE,
+    codec: codec,
+    codec_nome: RCP_CODEC[codec] || ("sconosciuto:" + codec),
+    larghezza: v.getUint32(4),
+    altezza: v.getUint32(8),
+    numero: v.getUint32(12),
+    /* ⚠ `istante` e' u64 in microsecondi dell'orologio MONOTONO del server, e
+       §6.2 vieta di confrontarlo col proprio: si legge come BigInt e si porta
+       fuori come stringa, invece di perdere i bit alti in un `double`. */
+    istante: v.getBigUint64(16).toString(),
+    input: v.getUint32(24)
+  };
+}
+
+async function prova_intestazioni(nome) {
+  const s = await carica(nome);
+  const righe = [];
+  let discordi = 0, senza = 0;
+  for (let i = 0; i < s.pezzi.length; i++) {
+    const p = s.pezzi[i];
+    if (!p.intestazione_rcp) { senza++; continue; }
+    const letta = leggi_intestazione(byte_da_base64(p.intestazione_rcp));
+    const guai = [];
+    if (letta.errore) guai.push(letta.errore);
+    else {
+      if (letta.chiave !== (p.tipo === "key"))
+        guai.push("il tipo dice «" + (letta.chiave ? "chiave" : "delta")
+                + "», il pezzo e' «" + p.tipo + "»");
+      if (letta.codec_nome !== "hevc") guai.push("codec " + letta.codec_nome);
+      if (letta.larghezza !== s.larghezza || letta.altezza !== s.altezza)
+        guai.push("misura " + letta.larghezza + "x" + letta.altezza
+                + " invece di " + s.larghezza + "x" + s.altezza);
+      if (letta.numero !== i)
+        guai.push("numero " + letta.numero + " invece di " + i);
+      if (letta.istante !== String(p.istante))
+        guai.push("istante " + letta.istante + " invece di " + p.istante);
+      if (letta.input !== 0)
+        guai.push("input " + letta.input + " invece di 0");
+    }
+    if (guai.length) discordi++;
+    righe.push({ pezzo: i, letta: letta, guai: guai });
+  }
+  await spedisci({ tipo: "INTESTAZIONE", sequenza: nome,
+                   pezzi: s.pezzi.length, senza_intestazione: senza,
+                   discordi: discordi, righe: righe });
+  scrivi("intestazioni RCP §6.2: " + (s.pezzi.length - senza) + " lette, "
+       + discordi + " in disaccordo"
+       + (senza ? " (" + senza + " pezzi senza intestazione)" : ""),
+       (discordi === 0 && senza === 0) ? "si" : "no");
+}
+
+/* ── IL SONDAGGIO DELLE STRINGHE DI CODEC ────────────────────────────────
+ *
+ * ⛔ NATO DA UN ROSSO DEL 12 AGOSTO 2026, e serve a non attribuirlo male.
+ *
+ * Al primo giro Chrome 151 su Linux ha rifiutato **tutte e otto** le sequenze
+ * HEVC con `OperationError: Unsupported configuration`.  Quel rosso ha almeno
+ * tre letture, e hanno lo stesso aspetto:
+ *
+ *    a) questo Chrome non ha HEVC affatto;
+ *    b) questo Chrome ha HEVC ma non su questa SCENA (senza GPU non c'e' il
+ *       decodificatore di piattaforma, e su Linux Chrome non ne impacchetta
+ *       uno software);
+ *    c) la nostra stringa di codec e' storta — `hev1.2.4.L90.90` invece della
+ *       forma canonica `hev1.2.4.L93.B0` — e il rifiuto e' del PARSER, non del
+ *       decodificatore.
+ *
+ * ⛔ Scrivere `[M] Chrome non decodifica HEVC` senza distinguerle sarebbe un
+ *    `[M]` falso contro un componente innocente — la stessa forma che
+ *    `web.md` §3.3 racconta come il rilievo piu' grave della revisione R2.
+ *
+ * Questo sondaggio chiede la STESSA domanda a molte stringhe: le nostre, le
+ * canoniche, un H.264 e un VP9 di controllo.  Se cadono **tutte** le HEVC e
+ * passano le altre, la lettura `c` cade; se lo stesso sondaggio da' risposte
+ * diverse su schermo finto e su schermo vero, la lettura giusta e' la `b`.
+ *
+ * ⚠ E resta quel che era: `isConfigSupported` **non prova niente sul pixel**
+ *   (E1).  Serve solo a dire di che cosa e' il «no».  */
+async function sondaggio() {
+  scrivi("— il sondaggio delle stringhe di codec (dice di CHE COSA e' il «no»)");
+  const stringhe = [
+    ["hev1.2.4.L90.90",  "HEVC Main10 — la nostra, dal flusso"],
+    ["hev1.1.6.L90.90",  "HEVC Main — la nostra, dal flusso"],
+    ["hev1.2.4.L93.B0",  "HEVC Main10 — la forma canonica"],
+    ["hvc1.2.4.L93.B0",  "HEVC Main10 — canonica, hvc1"],
+    ["hev1.1.6.L93.B0",  "HEVC Main — la forma canonica"],
+    ["hvc1.1.6.L93.B0",  "HEVC Main — canonica, hvc1"],
+    ["hev1.1.6.L120.B0", "HEVC Main — livello 4.0"],
+    ["vp09.00.41.08",    "VP9 — controllo"],
+    ["vp09.00.10.08",    "VP9 — controllo, livello 1.0"],
+    ["avc1.42E01E",      "H.264 baseline — controllo"],
+    ["av01.0.04M.08",    "AV1 — controllo"]
+  ];
+  const righe = [];
+  for (const [codec, perche] of stringhe) {
+    const r = { codec: codec, perche: perche };
+    try {
+      const s = await VideoDecoder.isConfigSupported({
+        codec: codec, codedWidth: 640, codedHeight: 480 });
+      r.isConfigSupported = s.supported;
+    } catch (e) { r.isConfigSupported = "eccezione: " + String(e); }
+    try {
+      const i = await navigator.mediaCapabilities.decodingInfo({
+        type: "file",
+        video: { contentType: 'video/mp4; codecs="' + codec + '"',
+                 width: 640, height: 480, bitrate: 2000000, framerate: 30 }
+      });
+      r.mediaCapabilities = { supported: i.supported, smooth: i.smooth,
+                              powerEfficient: i.powerEfficient };
+    } catch (e) { r.mediaCapabilities = "eccezione: " + String(e); }
+    try {
+      r.canPlayType = document.createElement("video")
+          .canPlayType('video/mp4; codecs="' + codec + '"');
+    } catch (e) { r.canPlayType = "eccezione: " + String(e); }
+    righe.push(r);
+    scrivi("   " + codec.padEnd(18) + " isConfigSupported=" + r.isConfigSupported
+         + "  powerEfficient=" + (r.mediaCapabilities &&
+                                  r.mediaCapabilities.powerEfficient)
+         + "  canPlayType=" + (r.canPlayType || "«»"));
+  }
+  await spedisci({ tipo: "SONDAGGIO", righe: righe });
+  scrivi("⚠ Nessuna di queste righe e' una misura: `isConfigSupported` vero e' "
+       + "compatibile con una tela nera (web.md §4.1, forma E1).", "boh");
+}
+
+/* ── P1 e P2: il lettore sa dire di si' e sa dire di no ─────────────────── */
+async function controlli_lettore() {
+  const sequenza = await carica("A-vp9");
+
+  /* P1 — otto rettangoli dipinti a mano: la rilettura DEVE trovarli 8 su 8. */
+  pulisci(sequenza);
+  for (const c of sequenza.celle) {
+    pennello.fillStyle = "rgb(" + c.rgb.join(",") + ")";
+    pennello.fillRect(c.x, c.y, c.l, c.a);
+  }
+  const p1 = leggi_tela(sequenza);
+  await spedisci({ tipo: "CONTROLLO", prova: "P1-lettore-si",
+                   corrette: p1.corrette, attese: sequenza.celle.length,
+                   lette: p1.lette, errore: p1.errore, letture: p1.celle });
+  const p1_ok = p1.corrette === sequenza.celle.length;
+  scrivi("P1 (il lettore dice SI'): " + p1.corrette + "/" + sequenza.celle.length
+       + (p1_ok ? "" : "  ⛔ senza P1 nessuna misura di questo banco vale"),
+       p1_ok ? "si" : "no");
+
+  /* P2 — tela grigia piatta: la classificazione NON deve dare 8 su 8. */
+  pennello.fillStyle = "#808080";
+  pennello.fillRect(0, 0, sequenza.larghezza, sequenza.altezza);
+  const p2 = leggi_tela(sequenza);
+  const p2_ok = p2.corrette < sequenza.celle.length;
+  await spedisci({ tipo: "CONTROLLO", prova: "P2-lettore-no",
+                   corrette: p2.corrette, attese: sequenza.celle.length,
+                   lette: p2.lette, errore: p2.errore, letture: p2.celle });
+  scrivi("P2 (il lettore dice NO): " + p2.corrette + "/" + sequenza.celle.length
+       + (p2_ok ? "  (deve essere meno di " + sequenza.celle.length + ")"
+                : "  ⛔ il classificatore risponde sempre giusto: e' cieco"),
+       p2_ok ? "si" : "no");
+  riassunto.prove += 2;
+  if (!p1_ok) riassunto.rosse++;
+  if (!p2_ok) riassunto.rosse++;
+}
+
+/* ── LA `[?]` CHE F2.3 HA LASCIATO APERTA, E CHE SI CHIUDE QUI ────────────
+ *
+ * F2.3 ha deciso **Annex-B puro, nessuna `description`**, e consegna la
+ * stringa nella forma `hev1.2.4.L<livello>.B0` — dichiarando aperta una `[?]`:
+ * *«non e' verificato che Chromium accetti il prefisso `hev1.` in Annex-B»*.
+ *
+ * ⛔ La domanda non e' oziosa.  Nei contenitori i due prefissi vogliono dire
+ *    cose diverse — `hvc1` i parameter set solo nel campione di
+ *    inizializzazione, `hev1` anche dentro il flusso — ed e' esattamente la
+ *    distinzione che l'Annex-B con VPS/SPS/PPS ripetuti a ogni IDR mette in
+ *    gioco.  Un motore che accettasse solo `hvc1.` farebbe fallire il prodotto
+ *    con un `NotSupportedError` che **non nomina il prefisso**.
+ *
+ * ⇒ Si prova lo STESSO flusso Annex-B con tutt'e due i prefissi.  Il metro,
+ *   come sempre qui, e' il pixel: non `isConfigSupported`.  */
+async function prefissi() {
+  scrivi("— i due prefissi sullo STESSO flusso Annex-B (la [?] di F2.3)");
+  const s = await carica("A-10bit-annexb");
+  await prova_sequenza("A-10bit-annexb", {
+    etichetta: "prefisso-hev1-annexb", codec: s.codec, esporta_png: false });
+  await prova_sequenza("A-10bit-annexb", {
+    etichetta: "prefisso-hvc1-annexb", codec: s.codec_hvc1, esporta_png: false });
+}
+
+/* ── Lo scambio delle due forme — la cucitura con F2.3, misurata ─────────── */
+async function scambio_forme() {
+  scrivi("— lo scambio hvcC / Annex-B (web.md §4.2)");
+  const annexb = await carica("A-10bit-annexb");
+  const hvcc = await carica("A-10bit-hvcc");
+  /* byte Annex-B, configurazione CON description */
+  await prova_sequenza("A-10bit-annexb", {
+    etichetta: "scambio-annexb-con-descrizione",
+    descrizione: hvcc.descrizione, esporta_png: false });
+  /* byte hvcC (lunghezze davanti), configurazione SENZA description */
+  await prova_sequenza("A-10bit-hvcc", {
+    etichetta: "scambio-hvcc-senza-descrizione",
+    descrizione: null, esporta_png: false });
+}
+
+/* ── I tre modi di `hardwareAcceleration` — registrati, MAI creduti ──────── */
+async function accelerazione() {
+  scrivi("— hardwareAcceleration: si registra, non prova niente (web.md §4.1)");
+  for (const modo of ["no-preference", "prefer-hardware", "prefer-software"]) {
+    await prova_sequenza("A-10bit-annexb", {
+      etichetta: "accelerazione-" + modo, accelerazione: modo,
+      esporta_png: false });
+  }
+}
+
+/* ── Il giro ────────────────────────────────────────────────────────────── */
+async function giro() {
+  await spedisci({
+    tipo: "AMBIENTE",
+    webcodecs: typeof VideoDecoder !== "undefined",
+    videoencoder: typeof VideoEncoder !== "undefined",
+    webtransport: typeof WebTransport !== "undefined",
+    contesto_sicuro: window.isSecureContext,
+    schermo: screen.width + "x" + screen.height,
+    dpr: devicePixelRatio,
+    tela_2d: !!pennello,
+    offscreen: typeof OffscreenCanvas !== "undefined"
+  });
+  scrivi("giro " + GIRO + (GUASTO ? "  ⚠ GUASTO INNESTATO: " + GUASTO : "")
+       + " · WebCodecs: " + (typeof VideoDecoder !== "undefined" ? "c'e'" : "NON C'E'")
+       + " · contesto sicuro: " + window.isSecureContext);
+
+  if (typeof VideoDecoder === "undefined") {
+    /* ⛔ E si dichiara, invece di lasciare che il banco legga «zero fotogrammi»
+       e vada a cercare la colpa nel flusso. */
+    scrivi("⛔ questo browser non ha WebCodecs: non c'e' niente da misurare, e "
+         + "«zero fotogrammi» qui vuol dire «non esiste il decodificatore»", "no");
+    await spedisci({ tipo: "FINITO", esito: "SENZA_WEBCODECS",
+                     prove: 0, rosse: 0 });
+    document.getElementById("stato").textContent = "FINITO — senza WebCodecs";
+    return;
+  }
+
+  await sondaggio();
+  await controlli_lettore();
+
+  /* ⭐ P4 — il controllo che dice «la catena esiste».  PRIMA di HEVC: se cade
+     qui, quel che si legge su HEVC dopo non significa niente. */
+  scrivi("— P4: il controllo VP9 (se cade, su HEVC non si scrive niente)");
+  const vp9 = await prova_sequenza("A-vp9", { etichetta: "P4-controllo-vp9" });
+  await prova_sequenza("B-vp9", { etichetta: "P4-controllo-vp9-B",
+                                  esporta_png: false });
+
+  scrivi("— le sequenze bersaglio: HEVC");
+  for (const nome of ["A-10bit-annexb", "A-10bit-hvcc",
+                      "A-8bit-annexb", "A-8bit-hvcc",
+                      "B-10bit-annexb", "B-8bit-annexb"]) {
+    await prova_sequenza(nome, { esporta_png: nome.startsWith("A") });
+  }
+
+  /* ⛔⭐ LA COPPIA DEI 10 BIT, ED E' NATA DA UNA CUCITURA DI F2.2.
+   *
+   * F2.2 ha misurato che **la sorgente da' otto bit**: Mutter consegna solo
+   * BGRx/BGRA `[M]`.  ⇒ In fase 2 il flusso che arriva qui e' **Main10 con
+   * dentro 8 bit promossi**, e la domanda *«il decodificatore torna a 8 bit
+   * senza dirlo?»* con quel flusso **non e' ponibile**: a 8 bit ci e' arrivato
+   * da solo.
+   *
+   * Queste due sequenze la pongono, e sono un **caso di banco**, non la catena
+   * vera.  Stesso pattern, stessa codifica senza perdita, stesso contenitore
+   * Main10 — e dentro:
+   *
+   *   `A-10bit-lossless-*`      220 livelli, sorgente a 8 bit PROMOSSI
+   *   `A-10bitvero-lossless-*`  573 livelli, sorgente a 10 BIT VERI
+   *
+   * ⛔ E il numero che le separa si misura FUORI dal browser: da qui la tela
+   *    e' a 8 bit e non puo' dirlo (vedi `misura_sfumatura()`). */
+  for (const nome of ["A-10bit-lossless-annexb",
+                      "A-10bitvero-lossless-annexb",
+                      "A-10bitvero-annexb"]) {
+    await prova_sequenza(nome, { esporta_png: true });
+  }
+
+  await prefissi();
+  await scambio_forme();
+  await accelerazione();
+
+  /* ⛔ In coda, e non a caso: l'intestazione di `RCP.md` §6.2 non c'entra con
+     la decodifica, e metterla in mezzo confonderebbe due misure.  Sta qui
+     perche' e' la cucitura con F2.4, e perche' il lettore che la legge e'
+     scritto in questa pagina, dalla specifica, apposta per NON essere una
+     copia di quello del filo. */
+  await prova_intestazioni("A-10bit-annexb");
+
+  await spedisci({ tipo: "FINITO", esito: "COMPLETO",
+                   prove: riassunto.prove, rosse: riassunto.rosse });
+  document.getElementById("stato").textContent =
+      "FINITO — " + riassunto.prove + " prove, " + riassunto.rosse + " senza un pixel";
+  scrivi("FINITO: " + riassunto.prove + " prove, " + riassunto.rosse
+       + " senza un pixel dipinto.  ⛔ Il verdetto lo calcola il banco, non "
+       + "questa pagina (B0.4).");
+}
+
+giro().catch(async (e) => {
+  /* ⛔ Un'eccezione che ferma il giro va SPEDITA: senza, il banco aspetta il
+     `FINITO` fino alla scadenza e poi dice «la pagina non ha registrato
+     niente» — che e' vero e non dice perche'. */
+  scrivi("⛔ il giro si e' fermato: " + e + "\n" + (e && e.stack ? e.stack : ""), "no");
+  await spedisci({ tipo: "FINITO", esito: "ECCEZIONE", errore: String(e),
+                   pila: e && e.stack ? String(e.stack) : null,
+                   prove: riassunto.prove, rosse: riassunto.rosse });
+  document.getElementById("stato").textContent = "FINITO — eccezione";
+});
+</script>
+</body>
+</html>
