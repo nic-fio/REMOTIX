@@ -73,13 +73,24 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aiutante.h"
+
 #include <nghttp3/nghttp3.h>
 #include <ngtcp2/ngtcp2.h>
 
 typedef struct wt wt;
 
+/* ⭐ `aiuto` e' l'aiutante di PAM (`DECISIONI.md` §1.10): uno solo per tutto il
+ * server, e questo strato lo riceve senza possederlo.  ⚠ NULL e' lecito e vuol
+ * dire «verifica sincrona», cioe' il ripiego dichiarato — il server funziona
+ * lo stesso, con il filo che si ferma. */
 wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
-             const char *provenienza);
+             const char *provenienza, aiutante *aiuto);
+
+/* ⭐ Il verdetto di PAM che rientra dall'aiutante.  ⛔ `true` se questa
+ * connessione era quella che aspettava quella pratica: chi chiama lo passa a
+ * tutte, e una sola lo prende. */
+bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso);
 void wt_libera(wt *w);
 
 /* Le chiamate che il trasporto gira qui.  Restituiscono 0 o un errore di

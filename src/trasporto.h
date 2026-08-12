@@ -40,6 +40,8 @@
 #ifndef REMOTIX_TRASPORTO_H
 #define REMOTIX_TRASPORTO_H
 
+#include "aiutante.h"
+
 #include <openssl/ssl.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -47,8 +49,20 @@
 
 typedef struct trasporto trasporto;
 
-/* Apre il socket UDP e prepara la pila.  `porta` e' la stessa del TCP. */
-trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx);
+/* Apre il socket UDP e prepara la pila.  `porta` e' la stessa del TCP.
+ *
+ * ⭐ `aiuto` e' l'aiutante di PAM (`DECISIONI.md` §1.10), acceso da `main.c`
+ *    PRIMA di questa chiamata — cosi' il processo figlio non eredita ne' il
+ *    socket UDP ne' l'ascoltatore TCP.  ⚠ NULL e' lecito: il server verifica
+ *    le credenziali per via sincrona, cioe' fermando il filo, ed e' il ripiego
+ *    dichiarato di `CODER.md` §4.2. */
+trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
+                          aiutante *aiuto);
+
+/* ⭐ Consegna un verdetto di PAM alla connessione che lo aspettava (§1.10).
+ * ⚠ Se non lo aspetta piu' nessuno lo scrive nel registro e lo butta: e'
+ *   quel che succede quando la connessione muore mentre PAM risponde. */
+void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso);
 void trasporto_chiudi(trasporto *t);
 
 int trasporto_fd(const trasporto *t);

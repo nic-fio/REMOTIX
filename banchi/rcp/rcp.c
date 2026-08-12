@@ -69,6 +69,24 @@ enum {
 /* §4.4-bis: il ritardo fisso, e vale ANCHE per AMMESSO. */
 #define RITARDO_FISSO 1000
 
+/* ⛔⭐ IL TETTO DEL VERDETTO — 12 agosto 2026, `DECISIONI.md` §1.10.
+ *
+ * Non e' un tetto di `RCP.md` §4.6: quei tre misurano il CLIENT, e questo
+ * misura NOI.  ⛔ Esiste perche' dal 12 agosto la risposta di PAM arriva da un
+ * altro processo, e un altro processo puo' morire: senza questo numero una
+ * sessione resterebbe in `attesa-verdetto` per sempre, cioe' un client appeso
+ * a un silenzio — precisamente cio' che §8.1 vieta.
+ *
+ * ⚠ E' la SECONDA rete, non la prima: l'aiutante ha gia' la sua scadenza a 8 s
+ *   (`aiutante.c`).  ⛔ Sono due apposta, e vivono in due processi diversi: la
+ *   prima non puo' scattare se a essere guasto e' proprio chi la tiene.
+ *   Dodici secondi, cioe' piu' della sua, cosi' nel caso normale il no arriva
+ *   da li' — con la sua riga di registro — e questo tetto resta l'ultima
+ *   parola invece che la prima.
+ *
+ * ⛔ E la scadenza vale NO: `cred_buone` non viene toccata, e parte da false. */
+#define TETTO_VERDETTO 12000
+
 /* ⛔ L'OROLOGIO DEL SILENZIO — `SPECIFICHE.md` §5.3, `DECISIONI.md` §4.4.
  *
  * Trenta secondi senza un byte DAL CLIENT e il client «si considera staccato»:
@@ -171,6 +189,25 @@ struct rcp_sessione {
 	uint64_t cred_arrivo; /* quando e' arrivato CREDENZIALI */
 	bool cred_buone;      /* il verdetto, gia' calcolato ma non ancora detto */
 	uint8_t cred_motivo;  /* se non buone */
+	/* ⭐ LA VERIFICA CHIESTA A UN ALTRO PROCESSO — `DECISIONI.md` §1.10.
+	 *
+	 * ⛔ `verdetto_atteso` e' vero fra la domanda e la risposta, ed e' la
+	 *    ragione per cui `cred_buone` non basta piu' da solo: prima del 12
+	 *    agosto 2026 il verdetto era gia' pronto quando lo stato diventava
+	 *    `attesa-verdetto`, perche' PAM aveva bloccato il filo.  ⚠ Adesso
+	 *    `attesa-verdetto` aspetta DUE cose: il secondo fisso di §4.4-bis e la
+	 *    risposta dell'aiutante — e l'ordine fra le due non e' garantito.
+	 *
+	 * ⛔ E finche' `verdetto_atteso` e' vero, `cred_buone` vale **false**: se
+	 *    qualcosa saltasse via nel mezzo, quel che si legge e' un no
+	 *    (invariante I3). */
+	bool verdetto_atteso;
+	uint64_t pratica;     /* il numero con cui la risposta si riconosce */
+	/* ⛔ `true` quando il no NON viene da PAM ma da noi (aiutante spento,
+	 * pratica scaduta): non conta come tentativo fallito di §4.4-bis.  Un
+	 * difetto del server che bannasse l'utente per dodici ore sarebbe «la
+	 * peggiore diagnosi che questo progetto possa produrre» (§4.4-bis). */
+	bool no_e_nostro;
 	bool attaccata;       /* occupa un posto nel registro delle sessioni */
 	/* ⛔ L'accumulo e' allocato a richiesta, e si azzera prima di liberarlo:
 	 * ci passa la `CREDENZIALI`, cioe' la parola d'ordine in chiaro (§4.4).
@@ -1456,6 +1493,20 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	 * tentativo per connessione, un server che ritardasse di quindici minuti
 	 * non consegnerebbe mai il rifiuto. */
 	uint64_t restano = 0;
+	/* ⛔⭐ E DA QUI IN GIU' SI PARTE DA NEGATO, SEMPRE — invariante I3.
+	 *
+	 * Prima del 12 agosto 2026 `cred_buone` prendeva il suo valore dentro
+	 * l'unico `else` qui sotto, e non c'era nessun'altra strada: PAM aveva
+	 * gia' risposto quando questa funzione tornava.  ⚠ Adesso le strade sono
+	 * quattro — bannato, aiutante che non prende la domanda, verifica
+	 * sincrona di ripiego, e la strada buona che ASPETTA — e tre di esse
+	 * escono da qui senza nessun verdetto in mano.  Un campo lasciato al suo
+	 * valore precedente su una di quelle strade sarebbe un «si'» arrivato per
+	 * inerzia. */
+	s->cred_buone = false;
+	s->cred_motivo = RCP_CREDENZIALI_ERRATE;
+	s->verdetto_atteso = false;
+	s->no_e_nostro = false;
 	if (bannato(s->indirizzo, ora, &restano)) {
 		/* ⛔ Il ban rifiuta SENZA interrogare PAM, e va saputo leggendo il
 		 * motivo sul filo: `TROPPI_TENTATIVI` e `CREDENZIALI_ERRATE` non
@@ -1467,9 +1518,43 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 		reg(s, "⛔ indirizzo %s BANNATO: restano %llu minuti, PAM non viene "
 		       "interrogata (§4.4-bis)",
 		    s->indirizzo, (unsigned long long)(restano / 60000u));
+	} else if (s->g.chiedi_verifica) {
+		/* ⭐⭐ LA STRADA BUONA — `DECISIONI.md` §1.10, 12 agosto 2026.
+		 *
+		 * ⛔ Qui NON si aspetta PAM.  Si chiede a un processo aiutante e si
+		 *    torna subito a chi ospita, che torna al suo `poll`: e' l'unico
+		 *    modo per cui «mentre uno si autentica, gli altri non se ne
+		 *    accorgono» possa essere vero su un server a un filo solo.
+		 *
+		 * ⚠ E il conto di §4.4-bis NON si muove qui: adesso si sa che si e'
+		 *   chiesto, non che cosa e' stato risposto.  Si muove in
+		 *   `rcp_verdetto()`, che e' il punto in cui il fatto esiste. */
+		if (s->g.chiedi_verifica(s->g.ctx, utente, parola, &s->pratica)) {
+			s->verdetto_atteso = true;
+			reg(s, "PAM chiesta all'aiutante, pratica %llu: il filo resta "
+			       "libero (DECISIONI.md §1.10)",
+			    (unsigned long long)s->pratica);
+		} else {
+			/* ⛔ LA DOMANDA NON E' PARTITA ⇒ NO, subito.  E' I3 alla lettera:
+			 *    «progetta perche' il fallimento sia un no, non un forse».
+			 * ⚠ E non conta come tentativo fallito: il difetto e' NOSTRO, e
+			 *   §4.4-bis elenca fra le cose che non bannano proprio quelle che
+			 *   «bannerebbero qualcuno che non ha sbagliato niente». */
+			s->no_e_nostro = true;
+			reg(s, "⛔ la domanda a PAM non e' partita: RESPINTO senza appello "
+			       "(invariante I3).  ⚠ E NON conta come tentativo fallito di "
+			       "§4.4-bis: il difetto e' nostro, e un ban per un difetto "
+			       "nostro sarebbe la peggiore diagnosi possibile");
+		}
 	} else {
+		/* ⚠ IL RIPIEGO DICHIARATO (`CODER.md` §4.2), e blocca chi lo chiama:
+		 *   e' la strada dei banchi in-processo, dove non c'e' nessun ciclo da
+		 *   liberare — e il GUASTO che `banchi/02-pam-*` innesta per
+		 *   certificarsi, perche' e' esattamente com'era il server prima. */
 		bool ok = s->g.verifica && s->g.verifica(s->g.ctx, utente, parola);
-		reg(s, "PAM ha risposto: %s", ok ? "ammesso" : "respinto");
+		reg(s, "PAM ha risposto: %s  ⚠ (per via SINCRONA: nessun gancio "
+		       "asincrono collegato — il filo e' rimasto fermo)",
+		    ok ? "ammesso" : "respinto");
 		s->cred_buone = ok;
 		s->cred_motivo = RCP_CREDENZIALI_ERRATE;
 		/* ⛔ Il conto e' sull'INDIRIZZO e basta: il nome utente non conta
@@ -2519,6 +2604,51 @@ void rcp_canale_chiuso(rcp_sessione *s)
 	s->stato = S_FINITA;
 }
 
+/* ⭐ L'ESITO DELLA VERIFICA ASINCRONA RIENTRA DA QUI — `DECISIONI.md` §1.10.
+ *
+ * ⛔ E CI SONO QUATTRO MURI PRIMA DI TOCCARE `cred_buone`, uno per ciascuna
+ *    strada per cui un «si'» potrebbe entrare dove non deve (invariante I3):
+ *
+ *   1. la sessione dev'essere viva e in `attesa-verdetto` — un verdetto che
+ *      arriva su una sessione gia' `attiva` non la puo' riaprire;
+ *   2. dev'essere STATA CHIESTA (`verdetto_atteso`) — cosi' una pratica
+ *      inventata non trova nessuno che l'aspetti;
+ *   3. il numero dev'essere il SUO — la pratica e' del processo, non della
+ *      sessione, e senza questo confronto la risposta di un utente potrebbe
+ *      ammetterne un altro.  ⛔ E' il muro che vale di piu';
+ *   4. `verdetto_atteso` si spegne QUI: una seconda risposta per la stessa
+ *      pratica non entra, e «ho ricevuto due verdetti» non diventa «vince
+ *      l'ultimo».
+ *
+ * ⚠ E non manda niente sul filo: ci pensa `rcp_tempo()`, quando anche il
+ *   secondo fisso di §4.4-bis sara' passato. */
+bool rcp_verdetto(rcp_sessione *s, uint64_t pratica, bool ammesso,
+                  uint64_t ora)
+{
+	if (!s || s->stato != S_ATTESA_VERDETTO || !s->verdetto_atteso)
+		return false;
+	if (s->pratica != pratica)
+		return false;
+
+	s->verdetto_atteso = false;
+	s->cred_buone = ammesso;
+	s->cred_motivo = RCP_CREDENZIALI_ERRATE;
+	reg(s, "PAM ha risposto (pratica %llu): %s  ⭐ e il filo non si e' mai "
+	       "fermato (DECISIONI.md §1.10)",
+	    (unsigned long long)pratica, ammesso ? "ammesso" : "respinto");
+
+	/* ⛔ IL CONTO DI §4.4-bis SI MUOVE QUI, ed e' l'unico posto in cui adesso
+	 *    esiste il fatto «un tentativo e' fallito».  ⚠ Portarlo qui e' la sola
+	 *    cosa che il ban ha dovuto subire da questa cura: la regola non
+	 *    cambia — tre falliti dallo stesso indirizzo in cinque minuti, dodici
+	 *    ore — cambia il momento in cui si sa. */
+	if (ammesso)
+		azzera_falliti(s, s->indirizzo, ora);
+	else
+		segna_fallito(s, s->indirizzo, ora);
+	return true;
+}
+
 bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 {
 	if (s->stato == S_FINITA)
@@ -2528,6 +2658,37 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 	 * ai rifiuti rimetterebbe il tempismo dall'altra parte, e la distinzione
 	 * che §4.4 vieta di scrivere nel motivo si leggerebbe col cronometro. */
 	if (s->stato == S_ATTESA_VERDETTO) {
+		/* ⛔⭐ ADESSO SI ASPETTANO DUE COSE, E L'ORDINE NON E' GARANTITO —
+		 *     `DECISIONI.md` §1.10, 12 agosto 2026.
+		 *
+		 *     Il secondo fisso di §4.4-bis e la risposta dell'aiutante.  Fino
+		 *     a ieri la seconda era gia' arrivata quando questo stato
+		 *     cominciava — PAM aveva bloccato il filo — e qui bastava
+		 *     guardare l'orologio.
+		 *
+		 * ⭐ E il tempo di chi si autentica NON cambia: PAM ci mette da 1,0 a
+		 *    2,2 s (`[M]` B8), quindi il verdetto arriva quasi sempre DOPO il
+		 *    secondo fisso ed e' lui a dettare il ritmo — esattamente come
+		 *    prima.  Quel che cambia e' che nel frattempo il filo lavora.
+		 *
+		 * ⛔ E il secondo fisso resta un PAVIMENTO, non un soffitto: una
+		 *    risposta arrivata in 10 ms non fa uscire `AMMESSO` in 10 ms,
+		 *    perche' §4.4-bis vuole che il cronometro non distingua quel che
+		 *    il motivo non distingue. */
+		if (s->verdetto_atteso && ora - s->cred_arrivo > TETTO_VERDETTO) {
+			/* ⛔ La rete di sicurezza, e vale NO.  `cred_buone` e' false da
+			 *    quando `CREDENZIALI` e' arrivata: qui non si tocca niente,
+			 *    si smette di aspettare. */
+			s->verdetto_atteso = false;
+			s->no_e_nostro = true;
+			reg(s, "⛔ nessun verdetto dall'aiutante dopo %llu ms (tetto %d): "
+			       "RESPINTO.  ⚠ E' un difetto NOSTRO, non una parola "
+			       "sbagliata — e per questo NON conta come tentativo fallito "
+			       "di §4.4-bis",
+			    (unsigned long long)(ora - s->cred_arrivo), TETTO_VERDETTO);
+		}
+		if (s->verdetto_atteso)
+			return true; /* PAM sta ancora rispondendo, e il filo intanto gira */
 		if (ora - s->cred_arrivo < RITARDO_FISSO)
 			return true;
 		reg(s, "il secondo fisso e' passato (%llu ms)",
@@ -2539,6 +2700,17 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 			reg(s, "ammesso utente=%s da=%s", s->utente, s->provenienza);
 			return true;
 		}
+		/* ⛔⭐ E SUL FILO IL MOTIVO E' LO STESSO, ma nel registro no — e' la
+		 *     stessa distinzione che `autenticazione.c` fa fra «PAM ha
+		 *     rifiutato» e «PAM non ha potuto giudicare».  §4.4 vieta di dire
+		 *     al client perche', perche' sarebbe un oracolo; ⛔ ma chi
+		 *     diagnostica deve poter distinguere mille parole sbagliate da un
+		 *     aiutante morto, o cerchera' nella parola d'ordine per ore. */
+		if (s->no_e_nostro)
+			reg(s, "⛔ e questo RESPINTO e' NOSTRO, non di PAM: la verifica non "
+			       "e' stata fatta.  ⚠ Sul filo il motivo e' lo stesso (§4.4 "
+			       "vieta di distinguerli), e il conto di §4.4-bis NON e' stato "
+			       "toccato");
 		respingi(s, s->cred_motivo);
 		return false;
 	}

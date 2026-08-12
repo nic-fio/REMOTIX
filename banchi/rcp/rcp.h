@@ -71,8 +71,33 @@ typedef struct {
 	 * non si e' capito, non «errore di protocollo». */
 	void (*registra)(void *ctx, const char *riga);
 	/* Verifica le credenziali.  Separato perche' PAM non c'entra col
-	 * protocollo, e perche' un banco lo possa sostituire dichiarandolo. */
+	 * protocollo, e perche' un banco lo possa sostituire dichiarandolo.
+	 *
+	 * ⛔⭐ QUESTO GANCIO BLOCCA CHI LO CHIAMA, e dal 12 agosto 2026 e' il
+	 *     RIPIEGO, non la strada buona: si usa solo quando `chiedi_verifica`
+	 *     e' NULL.  ⚠ Non e' stato tolto, e non per pigrizia — l'innesto di
+	 *     `banchi/01-b3-rcp-innesta.py` monta questo stesso modulo su un
+	 *     ospite che non ha un ciclo suo da liberare, e romperlo in silenzio
+	 *     sarebbe peggio del difetto (`CODER.md` §4.2: il ripiego si
+	 *     DICHIARA). */
 	bool (*verifica)(void *ctx, const char *utente, const char *parola);
+	/* ⭐ LA VERIFICA ASINCRONA — `DECISIONI.md` §1.10, 12 agosto 2026.
+	 *
+	 * ⛔ `verifica` blocca chi la chiama, e nel prodotto chi la chiama e'
+	 *    l'unico ciclo `poll` del server: `[M]` B8, 11 agosto 2026, **da 1,0 a
+	 *    2,2 secondi** in cui nessun altro riceve un pacchetto.  Questo gancio
+	 *    invece **torna subito**: chiede la verifica a un processo aiutante e
+	 *    lascia un numero di pratica, e l'esito rientra da `rcp_verdetto()`.
+	 *
+	 * Restituisce `false` se la domanda **non e' partita**.  ⛔ E allora
+	 * l'esito e' NO, subito e senza appello — invariante I3: il fallimento e'
+	 * un no, non un forse.
+	 *
+	 * ⚠ Se e' NULL si usa `verifica`, e il modulo si comporta esattamente
+	 *   come prima del 12 agosto 2026: e' quel che fanno i banchi in-processo,
+	 *   ed e' anche il GUASTO che `banchi/02-pam-*` innesta per certificarsi. */
+	bool (*chiedi_verifica)(void *ctx, const char *utente, const char *parola,
+	                        uint64_t *pratica);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.
@@ -92,6 +117,23 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len,
 /* Fa scorrere il tempo: i tetti di §4.6 e il ritardo fisso di §4.4-bis.
  * Restituisce false se la sessione e' finita. */
 bool rcp_tempo(rcp_sessione *s, uint64_t ora_ms);
+
+/* ⭐ L'esito della verifica asincrona rientra da qui — `DECISIONI.md` §1.10.
+ *
+ * ⛔ Restituisce `true` solo se la pratica era DI QUESTA sessione e la sessione
+ *    la stava davvero aspettando.  L'ospite lo usa per riconoscere a chi
+ *    consegnare: passa la pratica a tutte le sessioni vive, e una sola la
+ *    prende.  ⚠ Una pratica che non trova nessuno **si perde, ed e' giusto**:
+ *    vuol dire che la connessione e' morta mentre PAM rispondeva.
+ *
+ * ⛔ E il conto di §4.4-bis si muove QUI, non piu' quando arriva `CREDENZIALI`:
+ *    e' qui che si sa se il tentativo e' fallito.
+ *
+ * ⚠ NON manda niente sul filo: `AMMESSO`/`RESPINTO` escono da `rcp_tempo()`,
+ *   perche' il ritardo fisso di §4.4-bis deve essere scaduto — e il verdetto,
+ *   adesso, puo' arrivare prima o dopo di lui. */
+bool rcp_verdetto(rcp_sessione *s, uint64_t pratica, bool ammesso,
+                  uint64_t ora_ms);
 
 /* ⛔ §8.1: chi chiude DEVE mandare `CONGEDO` con un motivo PRIMA di chiudere la
  * sessione WebTransport, e DEVE ripetere il motivo nel codice d'errore

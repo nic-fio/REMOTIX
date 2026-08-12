@@ -76,6 +76,10 @@ struct trasporto {
 	size_t ncids, capcids;
 
 	uint8_t segreto[32];
+
+	/* ⭐ L'aiutante di PAM (`DECISIONI.md` §1.10): non e' suo, glielo passa
+	 *    `main.c`.  Serve solo per consegnarlo a ogni `wt` che nasce. */
+	aiutante *aiuto;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -640,7 +644,7 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	 *    riaccendere per distrazione. */
 	ngtcp2_conn_set_tls_native_handle(c->conn, c->ossl);
 
-	c->w = wt_nuovo(c->conn, &c->ultimo_errore, c->provenienza);
+	c->w = wt_nuovo(c->conn, &c->ultimo_errore, c->provenienza, t->aiuto);
 	if (!c->w)
 		goto male;
 
@@ -912,6 +916,41 @@ int trasporto_attesa_ms(const trasporto *t)
 	}
 }
 
+/* ⭐ IL VERDETTO DI PAM CHE RIENTRA — `DECISIONI.md` §1.10.
+ *
+ * ⛔ Si passa a tutte le connessioni vive e UNA sola lo prende: la pratica e'
+ *    un numero del processo, e chi sa a chi appartiene e' `rcp.c`.  ⚠ Un giro
+ *    su al massimo sedici connessioni costa meno di una tabella da tenere
+ *    allineata — e una tabella di puntatori a connessioni che possono morire
+ *    mentre PAM risponde e' precisamente il posto in cui nasce un puntatore
+ *    penzolante.
+ *
+ * ⭐ E se non lo prende nessuno si SCRIVE: «la connessione e' morta mentre PAM
+ *    rispondeva» e «il verdetto e' andato a finire da nessuna parte per un
+ *    difetto nostro» hanno lo stesso aspetto, e senza questa riga sarebbero
+ *    indistinguibili. */
+void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso)
+{
+	for (connessione *c = t->prime; c; c = c->prossima) {
+		if (c->morta || !c->w)
+			continue;
+		if (wt_verdetto(c->w, pratica, ammesso)) {
+			/* ⛔ E si riscrive SUBITO: il verdetto puo' aver reso maturo
+			 *    l'`AMMESSO`/`RESPINTO`, e aspettare il prossimo battito
+			 *    aggiungerebbe fino a 100 ms a chi si autentica — cioe'
+			 *    peggiorerebbe il numero che questa cura non deve toccare. */
+			if (wt_battito_ns(c->w) != UINT64_MAX)
+				wt_batti(c->w, adesso_ns());
+			trasporto_scrivi(t);
+			return;
+		}
+	}
+	registro_dice(REG_RCP,
+	              "⚠ il verdetto della pratica %llu (%s) non l'ha preso "
+	              "nessuno: la connessione che l'aspettava non c'e' piu'",
+	              (unsigned long long)pratica, ammesso ? "ammesso" : "respinto");
+}
+
 void trasporto_scaduti(trasporto *t)
 {
 	ngtcp2_tstamp ora = adesso_ns();
@@ -992,7 +1031,8 @@ void trasporto_contesto(trasporto *t, SSL_CTX *ctx) { t->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
-trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx)
+trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
+                          aiutante *aiuto)
 {
 	struct addrinfo suggerimenti, *ris = NULL, *r;
 	trasporto *t;
@@ -1054,6 +1094,7 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 	t->fd = fd;
 	t->famiglia = r->ai_family;
 	t->ctx = ctx;
+	t->aiuto = aiuto;
 	freeaddrinfo(ris);
 
 	if (RAND_bytes(t->segreto, sizeof t->segreto) != 1) {

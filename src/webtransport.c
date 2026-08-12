@@ -8,6 +8,7 @@
  */
 #include "webtransport.h"
 
+#include "aiutante.h"
 #include "rcp.h"
 #include "registro.h"
 
@@ -102,6 +103,13 @@ struct wt {
 	ngtcp2_ccerr *ultimo_errore;
 	nghttp3_conn *h3;
 	char provenienza[80];
+	/* ⭐ L'AIUTANTE DI PAM — `DECISIONI.md` §1.10.  ⛔ Non lo possiede questo
+	 *    strato: e' uno solo per tutto il server, acceso da `main.c` prima
+	 *    che esista una connessione, e arriva di qui perche' il gancio
+	 *    `chiedi_verifica` di RCP e' l'unico posto che lo usa.
+	 * ⚠ NULL e' lecito e vuol dire «verifica sincrona»: e' il ripiego
+	 *   dichiarato, ed e' il guasto che `banchi/02-pam-*` innesta. */
+	aiutante *aiuto;
 
 	/* lo stream di controllo di HTTP/3: serve a riconoscerlo in scrittura,
 	 * che e' l'unico istante in cui si possa dire al browser che parliamo
@@ -633,17 +641,40 @@ static void gancio_registra(void *ctx, const char *riga)
 	registro_dice(REG_RCP, "%s", riga);
 }
 
+/* ⛔⭐ QUESTO GANCIO E' IL RIPIEGO, DAL 12 AGOSTO 2026 — `DECISIONI.md` §1.10.
+ *
+ *     ⚠ PAM BLOCCA, e qui bloccava il ciclo intero: la stretta di mano di un
+ *       utente fermava quella di tutti gli altri e ritardava i pacchetti di
+ *       chiunque fosse gia' collegato.  `[M]` B8, 11 agosto 2026: **da 1,0 a
+ *       2,2 secondi**, e a metterceli era PAM (+1034 ms sui respinti contro
+ *       +84 ms sugli ammessi — la firma di `pam_faildelay`).
+ *
+ * ⛔ Adesso la strada buona e' `gancio_chiedi`, qui sotto.  Questa resta
+ *    collegata perche' `rcp.c` la usa quando l'aiutante non c'e' — e allora e'
+ *    giusto che il server funzioni lo stesso, con meno (`CODER.md` §4.2).
+ * ⚠ Ma il ripiego SI DICHIARA: chi lo percorre lo trova scritto nel registro
+ *   da `rcp.c`, «per via SINCRONA — il filo e' rimasto fermo». */
 static bool gancio_verifica(void *ctx, const char *utente, const char *parola)
 {
 	(void)ctx;
-	/* ⚠ PAM BLOCCA, e qui blocca il ciclo intero: la stretta di mano di un
-	 *   utente ferma quella di tutti gli altri e ritarda i pacchetti di
-	 *   chiunque sia gia' collegato.  ⛔ E' un ripiego dichiarato della fase
-	 *   1 (`CODER.md` §4.2, §4.4): la verifica va su un filo a parte prima
-	 *   che il server serva piu' di una persona (`SPECIFICHE.md` §5.5).
-	 *   Costa meno di un secondo per tentativo, e §4.4-bis ne impone gia'
-	 *   uno di ritardo fisso — ma «meno di un secondo» non e' «non blocca». */
 	return rcp_autentica(utente, parola);
+}
+
+/* ⭐⭐ LA STRADA BUONA: si chiede, non si aspetta — `DECISIONI.md` §1.10.
+ *
+ * ⛔ Restituisce `false` quando la domanda non e' partita, e `rcp.c` lo tratta
+ *    come un NO immediato: invariante I3, il fallimento e' un no e non un
+ *    forse. */
+static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
+                          uint64_t *pratica)
+{
+	wt *w = (wt *)ctx;
+	if (!w->aiuto)
+		return false;
+	return aiutante_chiedi(w->aiuto, utente, parola,
+	                       ngtcp2_conn_get_timestamp(w->conn)
+	                           / NGTCP2_MILLISECONDS,
+	                       pratica);
 }
 
 /* ⛔⭐ I PING DEL TRASPORTO MENTRE SI ASPETTANO LE CREDENZIALI — `RCP.md` §4.6,
@@ -773,6 +804,11 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	g.chiudi = gancio_chiudi;
 	g.registra = gancio_registra;
 	g.verifica = gancio_verifica;
+	/* ⛔ E si collega SOLO se l'aiutante c'e': `rcp.c` guarda questo puntatore
+	 *    per decidere quale delle due strade percorrere, e collegarlo a vuoto
+	 *    vorrebbe dire dirgli «chiedi a nessuno». */
+	if (w->aiuto)
+		g.chiedi_verifica = gancio_chiedi;
 
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un
@@ -1710,13 +1746,14 @@ static int apri_http3(wt *w)
 /* ------------------------------------------------------------------------ */
 
 wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
-             const char *provenienza)
+             const char *provenienza, aiutante *aiuto)
 {
 	wt *w = calloc(1, sizeof *w);
 	if (!w)
 		return NULL;
 	w->conn = conn;
 	w->ultimo_errore = ultimo_errore;
+	w->aiuto = aiuto;
 	w->ctrl_id = -1;
 	w->sessione = -1;
 	w->rcp_stream = -1;
@@ -1912,6 +1949,20 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
 		              w->provenienza, motivo);
 		chiudi_sessione(w, motivo);
 	}
+}
+
+/* ⭐ IL VERDETTO DI PAM CHE RIENTRA — `DECISIONI.md` §1.10.
+ *
+ * ⛔ Il trasporto lo passa a tutte le connessioni vive e una sola lo prende:
+ *    la pratica e' un numero del PROCESSO, e chi la riconosce e' `rcp.c`.  ⚠ E
+ *    se non la prende nessuno va bene cosi' — vuol dire che la connessione e'
+ *    morta mentre PAM rispondeva, e non c'e' piu' nessuno da ammettere. */
+bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso)
+{
+	if (!w || !w->rcp)
+		return false;
+	return rcp_verdetto(w->rcp, pratica, ammesso,
+	                    ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 }
 
 void wt_batti(wt *w, ngtcp2_tstamp ts)

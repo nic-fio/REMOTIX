@@ -31,7 +31,7 @@ PREFISSO ?=
 NOME    := remotix
 
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
-            tls.c registro.c rcp.c autenticazione.c
+            tls.c registro.c rcp.c autenticazione.c aiutante.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -153,10 +153,10 @@ dipendenze:
 	done; \
 	exit $$stato
 
-main.o:           certificati.h comando.h pagina.h rcp.h registro.h tls.h \
-                  trasporto.h
-trasporto.o:      trasporto.h registro.h webtransport.h
-webtransport.o:   webtransport.h rcp.h registro.h
+main.o:           aiutante.h certificati.h comando.h pagina.h rcp.h registro.h \
+                  tls.h trasporto.h
+trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
+webtransport.o:   webtransport.h aiutante.h rcp.h registro.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
 comando.o:        comando.h rcp.h registro.h
 certificati.o:    certificati.h registro.h
@@ -167,3 +167,7 @@ rcp.o:            rcp.h
 #   riga non ha prerequisiti — ma c'e', perche' era l'unica delle dieci a
 #   mancare e un'omissione uniforme si legge meglio di una sola eccezione.
 autenticazione.o:
+# ⭐ `aiutante.c` — il processo che interroga PAM al posto del filo unico
+#    (`DECISIONI.md` §1.10).  ⚠ NON e' fra i `GEMELLATI`: e' del PRODOTTO e
+#    basta, perche' l'innesto di `banchi/rcp/` non ha un ciclo suo da liberare.
+aiutante.o:       aiutante.h registro.h

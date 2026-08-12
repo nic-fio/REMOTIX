@@ -279,7 +279,7 @@ Il gancio è stato aggiunto **in fondo** a `rcp_ganci` apposta: l'innesto inizia
 
 **`RCP.md` §0-bis** porta righe e `md5` di `rcp.c` (2.592 righe, `md5 1adce15b…`), e quella casella
 dichiara che `src/rcp.c` e `banchi/rcp/rcp.c` sono identici. ⛔ **Adesso è stantia**: `rcp.c` è a
-2.750 righe con `md5 6d858886…`. Non l'ho corretta perché il mandato mi vieta `RCP.md` e §9 è
+**2.764 righe** con `md5 6d858886…`. Non l'ho corretta perché il mandato mi vieta `RCP.md` e §9 è
 chiusa. ⚠ **Il filo non è cambiato di un byte** — nessun tipo nuovo, nessun motivo nuovo, nessun
 campo nuovo — quindi non è un cambio di protocollo: è una casella di censimento da riallineare.
 

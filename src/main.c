@@ -23,14 +23,32 @@
  * accadere — quella riga e' anteriore alla misura.
  *
  * ---------------------------------------------------------------------------
- * ⛔ UN SOLO FILO, E VA DETTO
+ * ⛔ UN SOLO FILO, E ADESSO NON E' PIU' UN PROBLEMA — 12 agosto 2026
  *
- * Tutto gira in un ciclo `poll` solo.  ⚠ La verifica PAM BLOCCA quel filo (vedi
- * `webtransport.c`), quindi la stretta di mano di un utente ritarda i pacchetti
- * di chiunque altro.  E' un ripiego dichiarato della fase 1: `SPECIFICHE.md`
- * §5.5 vuole dieci utenti insieme, e prima di allora la verifica va su un filo
- * a parte.
+ * Tutto gira in un ciclo `poll` solo, e resta cosi'.  ⛔ Quel che e' cambiato
+ * e' che **il ciclo non chiama piu' PAM**: `DECISIONI.md` §1.10, dall'utente,
+ * alla chiusura della fase 1.
+ *
+ * ⚠ Quel che questo riquadro diceva fino a ieri — «la verifica PAM BLOCCA quel
+ *   filo, quindi la stretta di mano di un utente ritarda i pacchetti di
+ *   chiunque altro» — era vero e MISURATO: `[M]` B8, sera dell'11 agosto, **da
+ *   1,0 a 2,2 secondi per tentativo**, e a metterceli era PAM (+1034 ms oltre
+ *   il secondo fisso sui respinti contro +84 ms sugli ammessi, la firma di
+ *   `pam_faildelay`).
+ *
+ * ⭐ Adesso PAM la interroga un **processo aiutante** (`aiutante.c`), e la
+ *    forma e' quella decisa dall'utente: un processo, non un filo, perche' PAM
+ *    non e' affidabilmente rientrante.  Qui dentro restano tre righe: il
+ *    descrittore dell'aiutante entra nel `poll` insieme agli altri, le risposte
+ *    si consegnano, e le domande senza risposta scadono.
+ *
+ * ⛔ E la ragione per cui si e' curato PRIMA della fase 2, che non e' di
+ *    eleganza: senza video il sintomo era «l'ultimo dei dieci aspetta dieci
+ *    secondi»; con il video sarebbe stato **lo schermo di tutti quelli
+ *    collegati che si pianta ogni volta che qualcun altro entra** — e chi lo
+ *    vede da' la colpa al video, perche' e' li' che si vede.
  */
+#include "aiutante.h"
 #include "certificati.h"
 #include "comando.h"
 #include "pagina.h"
@@ -123,6 +141,16 @@ static void guarda_il_servizio_pam(void)
 	              dove, strerror(errno));
 }
 
+/* ⛔ Il ponte fra l'aiutante e il trasporto, e non fa niente di suo: il
+ * verdetto arriva con un numero di pratica, e chi sa a chi appartiene e'
+ * `rcp.c`.  ⚠ `ctx` e' il `trasporto *`, e non e' una comodita': senza, questa
+ * funzione avrebbe bisogno di una variabile globale — cioe' di un secondo
+ * posto in cui il trasporto puo' essere vivo o morto. */
+static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso)
+{
+	trasporto_verdetto((trasporto *)ctx, pratica, ammesso);
+}
+
 int main(int argc, char **argv)
 {
 	const char *indirizzo = "0.0.0.0";
@@ -137,6 +165,7 @@ int main(int argc, char **argv)
 	trasporto *t = NULL;
 	pagina *p = NULL;
 	comando *k = NULL;
+	aiutante *pam_aiuto = NULL;  /* ⚠ non «aiuto»: quel nome e' gia' della funzione che stampa l'uso */
 	time_t ultimo_controllo_cert;
 	int esito = 1;
 
@@ -264,6 +293,30 @@ int main(int argc, char **argv)
 	 *   chiesto, e in tutt'e due i casi scrive PERCHE': il server va avanti,
 	 *   perche' senza comando la protezione di §4.4-bis c'e' ancora — si esce
 	 *   solo con le dodici ore. */
+	/* ⛔⭐ L'AIUTANTE SI ACCENDE QUI, E IL «QUI» E' MEZZA CURA — §1.10.
+	 *
+	 *     Un `fork()` regala al figlio tutti i descrittori aperti.  ⛔ Acceso
+	 *     dopo `trasporto_apri()` o `pagina_apri()`, l'aiutante si porterebbe
+	 *     dietro il socket UDP e l'ascoltatore TCP della 7447: il server
+	 *     muore, la porta resta occupata da un processo che non la usa, e chi
+	 *     riavvia legge «indirizzo gia' in uso» senza vedere nessun server.
+	 *     ⚠ E' la forma di difetto peggiore — il sintomo non nomina la causa.
+	 *
+	 * ⭐ Acceso qui eredita: i tre descrittori standard e il file dei ban, che
+	 *    e' gia' chiuso.  E NON eredita il socket del comando di sblocco, che
+	 *    si apre nella riga sotto.
+	 *
+	 * ⚠ E se non si accende, il server parte lo stesso e lo dice: senza
+	 *   aiutante ogni autenticazione e' un NO (invariante I3), il che e'
+	 *   sgradevole ma e' la direzione giusta in cui sbagliare. */
+	pam_aiuto = aiutante_accendi();
+	if (!pam_aiuto)
+		registro_dice(REG_AVVIO,
+		              "⛔ nessun aiutante di PAM: si ripiega sulla verifica "
+		              "SINCRONA, che ferma il ciclo per 1-2 s a ogni tentativo "
+		              "(DECISIONI.md §1.10).  Il ripiego e' dichiarato, non "
+		              "silenzioso (CODER.md §4.2).");
+
 	k = comando_apri(socket_comando);
 
 	guarda_il_servizio_pam();
@@ -276,7 +329,7 @@ int main(int argc, char **argv)
 	if (!ctx_quic || !ctx_pagina)
 		goto fine;
 
-	t = trasporto_apri(indirizzo, porta, ctx_quic);
+	t = trasporto_apri(indirizzo, porta, ctx_quic, pam_aiuto);
 	if (!t)
 		goto fine;
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
@@ -292,7 +345,7 @@ int main(int argc, char **argv)
 
 	while (!si_ferma) {
 		struct pollfd fds[MAX_POLL];
-		size_t n = 0, npagina, ncomando;
+		size_t n = 0, npagina, ncomando, naiuto;
 		int attesa;
 
 		fds[n].fd = trasporto_fd(t);
@@ -304,11 +357,26 @@ int main(int argc, char **argv)
 		ncomando = comando_descrittori(k, fds + n + npagina,
 		                               MAX_POLL - n - npagina);
 
+		/* ⭐ L'aiutante di PAM entra nel `poll` come tutti gli altri, ed e'
+		 *    tutto quel che serve perche' il ciclo non aspetti piu' nessuno
+		 *    (`DECISIONI.md` §1.10).  ⛔ In coda, dopo la pagina e il comando,
+		 *    perche' i loro conti sono relativi e infilarlo in mezzo
+		 *    sposterebbe gli indici di due chiamate. */
+		naiuto = 0;
+		if (aiutante_descrittore(pam_aiuto) >= 0
+		    && n + npagina + ncomando < MAX_POLL) {
+			size_t i = n + npagina + ncomando;
+			fds[i].fd = aiutante_descrittore(pam_aiuto);
+			fds[i].events = POLLIN;
+			fds[i].revents = 0;
+			naiuto = 1;
+		}
+
 		attesa = trasporto_attesa_ms(t);
 		if (attesa < 0 || attesa > 1000)
 			attesa = 1000;
 
-		if (poll(fds, n + npagina + ncomando, attesa) < 0) {
+		if (poll(fds, n + npagina + ncomando + naiuto, attesa) < 0) {
 			if (errno == EINTR)
 				continue;
 			registro_dice(REG_AVVIO, "⛔ poll: %s", strerror(errno));
@@ -317,6 +385,18 @@ int main(int argc, char **argv)
 
 		if (fds[0].revents & POLLIN)
 			trasporto_leggi(t);
+		/* ⛔ Le risposte di PAM PRIMA di `trasporto_scaduti()`: il verdetto
+		 *    puo' rendere maturo un `AMMESSO`, e consegnarlo dopo aggiungerebbe
+		 *    un giro di ciclo a chi si autentica — cioe' peggiorerebbe proprio
+		 *    il numero che questa cura non deve toccare.
+		 * ⚠ E si chiama anche quando il descrittore NON e' leggibile: e' li'
+		 *   dentro che le pratiche scadono, e una scadenza che aspetta un byte
+		 *   e' una scadenza che non scatta mai — proprio nel caso per cui e'
+		 *   stata scritta (la lezione di `regola_battito`, pagata l'11 agosto
+		 *   con B6). */
+		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
+			aiutante_muovi(pam_aiuto, consegna_verdetto, t);
+		aiutante_scaduti(pam_aiuto, registro_ora_ms(), consegna_verdetto, t);
 		trasporto_scaduti(t);
 		pagina_muovi(p, fds + 1, npagina);
 		comando_muovi(k, fds + 1 + npagina, ncomando);
@@ -475,6 +555,13 @@ int main(int argc, char **argv)
 	esito = 0;
 
 fine:
+	/* ⛔ L'aiutante si spegne per primo: da qui in poi non c'e' piu' nessuno a
+	 *    cui consegnare un verdetto, e un figlio che scrive su un socket che
+	 *    nessuno legge e' un processo che resta.  ⚠ E `aiutante_spegni()`
+	 *    ASPETTA il figlio — ma fuori dal ciclo asincrono, che e' gia' finito:
+	 *    `CODER.md` §4.4 vieta l'attesa DENTRO il ciclo, e questa e' la riga
+	 *    dopo l'ultimo giro. */
+	aiutante_spegni(pam_aiuto);
 	comando_chiudi(k);
 	pagina_chiudi(p);
 	trasporto_chiudi(t);

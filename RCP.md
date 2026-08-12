@@ -122,8 +122,14 @@ in poi questo documento si tocca **solo** come dice §9, senza sconti.
 >
 > ⛔ **Le implementazioni di RCP/1 che esistono, contate l'11 agosto 2026** `[M]` (`wc -l`,
 > `md5sum`):
-> · `src/rcp.c` + `rcp.h` — **2.592 / 197 righe**, dentro il server di prodotto;
-> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `1adce15b…` e `0458f154…`);
+> · `src/rcp.c` + `rcp.h` — `[M]` **12 agosto 2026: 2.764 / 239 righe** (erano 2.592 / 197 l'11);
+> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `6d858886…` e `62415feb…`,
+>   erano `1adce15b…` e `0458f154…`);
+>
+> ⚠ *I numeri sono cresciuti per la cura di `DECISIONI.md` §1.10 — la verifica PAM fuori dal filo
+> unico — e ⛔ **il filo non è cambiato di un byte**: questa è una casella di **censimento**, non una
+> riga normativa, e va riallineata quando il codice cresce o diventa una misura che descrive il
+> codice di ieri. Riallineata il 12 agosto 2026, su segnalazione dell'agente che ha fatto la cura.*
 >   ⚠ *`rcp.c` diceva **2.566 righe** e `md5` `cb7af778…`: sono cambiati la tarda serata dell'11
 >   agosto 2026, per la riga di registro del **posto lasciato** sulla strada del congedo — la cura
 >   sta nel codice, commentata. ⛔ E i due numeri si aggiornano **insieme**, o la riga che dichiara
