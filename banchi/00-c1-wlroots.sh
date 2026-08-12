@@ -130,31 +130,59 @@ if [ -z "$STATO" ] || [ "${STATO#Z}" != "$STATO" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ `misura-wlroots` RITORNA 0 IN OGNI PERCORSO CHE ARRIVA ALLA STAMPA.
+# ⭐ IL RIPIEGO E' FINITO: `misura-wlroots` ADESSO SA DIRE DI NO DA SE'.
 #
-# Trovato dalla revisione avversariale del 9 agosto 2026, leggendo il suo
-# sorgente: se il compositore rifiuta la copia, se muore a meta', o se la
-# preparazione fallisce, il programma esce dal ciclo, stampa una RIGA con i
-# numeri parziali e **ritorna 0**.  Questo banco faceva `exit $USCITA`, quindi
-# la CERTIFICAZIONE del terzo strumento usciva verde su un compositore ucciso
-# al terzo secondo.
+# ⛔ COM'ERA, dal 9 agosto al 12 agosto 2026.  La revisione avversariale trovo'
+#    leggendo il sorgente che `misura-wlroots` **ritornava 0 in ogni percorso
+#    che arrivasse alla stampa**: compositore che rifiuta la copia, compositore
+#    che muore a meta', pentola non allocata — si usciva dal ciclo, si stampava
+#    una RIGA coi numeri parziali e si tornava **0**.  ⇒ Il verdetto lo
+#    costruiva questo script, cioe' la protezione di un difetto noto stava
+#    **fuori dal programma**: l'invariante **I7** al contrario, e chi avesse
+#    lanciato quel binario da un'altra riga di comando non l'avrebbe avuta.
 #
-# ⚠ La cura giusta sarebbe nel sorgente di `misura-wlroots`, come e' stata
-#   fatta in `misura-cattura.c`.  Finche' non c'e', il verdetto lo costruisce
-#   qui chi lo legge — e si dichiara che e' un ripiego, non una cura
-#   (`CODER.md` §4.2: un ripiego silenzioso produce due comportamenti sotto la
-#   stessa etichetta).
+# ⭐ CURATO il 12 agosto 2026 (lacuna L1), nella stessa forma del gemello
+#    `misura-cattura.c`: al posto della RIGA esce `GUASTO<TAB>etichetta<TAB>la
+#    ragione`, e lo stato d'uscita e' **2**.  I due ingressi costruiti, `[M]`
+#    su NIC-OS con labwc headless:
+#
+#      `--durata 0 --scarto 0`        prima: `RIGA … 0x0 … 0.00` uscita **0**
+#                                     dopo:  `GUASTO … nessun formato mai
+#                                            negoziato` uscita **2**
+#      labwc ucciso al 3° secondo     prima: `RIGA … 1280x720 … 0.00` uscita
+#      di una cella da 20 s                  **0** (185 fotogrammi arrivati e
+#                                            buttati, sotto l'etichetta di una
+#                                            cella intera)
+#                                     dopo:  `GUASTO … la connessione al
+#                                            compositore e' caduta durante la
+#                                            misura` uscita **2**
+#
+# ⚠ E LE TRE DOMANDE QUI SOTTO RESTANO, ma cambiano di natura: non sono piu' il
+#   ripiego che supplisce a uno stato d'uscita che non c'era — sono le domande
+#   sulla SCENA, che lo strumento non puo' fare perche' non la conosce.  «Zero
+#   fotogrammi» su una scena dichiarata in movimento e' un rosso di questo
+#   banco; per `misura-wlroots`, da solo, resta uno zero legittimo.
 # ---------------------------------------------------------------------------
 USCITA_FILE=$(mktemp)
 WAYLAND_DISPLAY=$SOCKET "$QUI/misura-wlroots" --durata "$DURATA" --scarto 5 \
     --etichetta "c1-$COMPOSITORE$ETICHETTA_MISURA" | tee "$USCITA_FILE"
 USCITA=$?
 
-# Tre domande che lo strumento non fa, e senza le quali il suo 0 non vale.
+# ⛔ E LO STATO D'USCITA DELLO STRUMENTO SI LEGGE PER PRIMO, adesso che c'e':
+#    se lui si e' gia' dichiarato guasto, il verdetto e' suo e questo banco non
+#    ci mette sopra una diagnosi propria.  Leggerlo dopo le tre domande
+#    sarebbe rimettere il ripiego davanti alla cura.
+GUASTO_DETTO=$(awk -F'\t' '/^GUASTO/{print $3}' "$USCITA_FILE" | head -1)
 FPS=$(awk -F'\t' '/^RIGA/{print $8}' "$USCITA_FILE" | head -1)
 rm -f "$USCITA_FILE"
 
-if [ -z "$FPS" ]; then
+if [ "$USCITA" -ne 0 ] || [ -n "$GUASTO_DETTO" ]; then
+	echo "⛔ FALLITO: lo strumento si e' dichiarato guasto (uscita $USCITA)."
+	echo "   ragione: ${GUASTO_DETTO:-non l'ha scritta, e questo e' un difetto suo}"
+	echo "   ⚠ e NON e' «il compositore non consegna»: non c'e' stata una misura."
+	USCITA=2
+# Tre domande sulla SCENA, che lo strumento non puo' fare perche' non la conosce.
+elif [ -z "$FPS" ]; then
 	echo "⛔ FALLITO: nessuna RIGA di misura."
 	USCITA=2
 elif awk -v f="${FPS:-0}" 'BEGIN{exit !(f+0 <= 0)}'; then

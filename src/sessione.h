@@ -79,15 +79,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/*
- * L'area del registro di questo modulo.
- *
- * ⚠ Sta qui e non in `registro.h` accanto alle altre sei perche' questo anello
- *   della fase 2 non tocca file di altri anelli: la riga
- *   `#define REG_SESSIONE "sessione"` va portata li' quando il coordinatore
- *   innesta, e questa sparisce.  Dichiarato, non nascosto.
- */
-#define REG_SESSIONE "sessione"
+/* ⭐ `REG_SESSIONE` sta in `registro.h` accanto alle altre aree, dal 12 agosto
+ *    2026: e' l'unica riga che il montaggio ha tolto da questo file, ed e' la
+ *    riga che §6.2 di `P2-1-sessione.md` chiedeva di portare li'. */
 
 /*
  * Come si avvia la sessione, e su quale unita' si scrive il monitor.

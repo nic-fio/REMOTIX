@@ -28,6 +28,12 @@
 #define REG_RCP "rcp"
 #define REG_PAGINA "pagina"
 #define REG_CERT "cert"
+/* ⭐ Le due aree della fase 2, innestate il 12 agosto 2026 dal montaggio.
+ * ⚠ `REG_SESSIONE` stava in testa a `src/sessione.h` con accanto la nota che lo
+ *   dichiarava provvisorio, perche' quel file e' nato prima di entrare nel
+ *   `Makefile` (`P2-1-sessione.md` §6.2 chiede questa riga). */
+#define REG_SESSIONE "sessione"
+#define REG_VIDEO "video"
 
 void registro_dice(const char *area, const char *fmt, ...)
 	__attribute__((format(printf, 2, 3)));

@@ -1326,6 +1326,25 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
   di più;
 - **DEVE** riconoscere un **buco** e chiedere una chiave (§5.2).
 
+⛔ **E c'è il verso opposto, che è il quinto della stessa famiglia**: un fotogramma alla misura
+**nuova** può arrivare **prima** del `TELA` che la concede — il `TELA` viaggia sul canale di
+controllo, il fotogramma su uno stream suo, e **niente ne ordina la consegna**. ⇒ Il client che
+ricevesse una misura che «non è mai stata in vigore» chiuderebbe **una sessione in cui nessuno ha
+sbagliato**.
+
+⛔ **Il client NON DEVE chiudere: trattiene il fotogramma** finché non sa decidere, e lo scrive nel
+registro. ⚠ *E questa metà è normativa perché discende da **I1** — «una sessione brutta vale più di
+una sessione chiusa» — e dalle quattro volte in cui questa stessa famiglia ha fatto morire una
+sessione sana.*
+
+> ⏳ **`[?]` E QUEL CHE NON È DECISO: fino a quando trattiene.** Il prodotto oggi usa **un fondo
+> osservabile** — otto fotogrammi — e non un orologio, che è già la lezione di P13 applicata; ⛔ ma
+> otto è **una grandezza sostitutiva**, esattamente quel che `LEZIONI.md` §1.13 dice di non scrivere.
+> La grandezza vera sarebbe *«finché il `TELA` che concede quella misura non è arrivato»*, e ⛔ **il
+> client non ha modo di sapere se sta per arrivare**: gli stream sono indipendenti e nessuna riga
+> lega i due. ⇒ Si dichiara aperta invece di scriverne una quinta che si sposterà di un passo.
+> Rilievo **P19**, 12 agosto 2026, trovato **scrivendo la pagina**.
+
 ⛔ **E la regola dell'ordine si applica PRIMA di quella della misura**: un fotogramma il cui `numero`
 è precedente all'ultimo già consegnato **si scarta**, e la sua misura non si guarda nemmeno.
 ⚠ *Senza questa precedenza le due righe di questa stessa sezione si contraddicono, e vince la più

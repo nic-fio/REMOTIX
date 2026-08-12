@@ -139,6 +139,29 @@ bool wt_ha_da_dire(const wt *w);
  *    due guasti diversi, e allo spegnimento avevano la stessa faccia. */
 const char *wt_perche_ha_da_dire(const wt *w);
 
+/* ⭐⭐ FASE 2 — IL FOTOGRAMMA CHE IL SERVER HA GIA' IN MANO.
+ *
+ * `main.c` cattura dal desktop e codifica **una volta sola, all'accensione**,
+ * quando gli ascoltatori non sono ancora aperti; qui deposita i byte, e questo
+ * strato li spedisce a ogni sessione che arriva a `SESSIONE` (§2.5, §6.2).
+ *
+ * ⛔ Perche' non si cattura quando serve: aspettare il prossimo fotogramma di
+ *    Mutter dentro il ciclo `poll` fermerebbe TUTTE le connessioni insieme
+ *    (`CODER.md` §4.4), e su un desktop fermo l'attesa arriva al suo tetto.
+ *
+ * `codec` e' quello di `RCP.md` §4.3/§6.2 — **1 = HEVC, 2 = AV1**, gli stessi
+ * numeri e non una traduzione.  Si deposita una volta per codec, perche' quale
+ * dei due si usera' si sa solo alla negoziazione, cioe' dopo l'accensione.
+ * `istante_us` e' l'orologio MONOTONO del server alla cattura (§6.2): non e'
+ * un'ora, e il client non lo confronta col proprio.
+ *
+ * ⚠ I byte si COPIANO: chi cattura puo' liberare il suo buffer subito dopo. */
+void wt_video_deposita(uint8_t codec, const uint8_t *dati, size_t byte,
+                       uint32_t larghezza, uint32_t altezza,
+                       uint64_t istante_us);
+/* Libera i depositi.  La chiama `main.c` allo spegnimento. */
+void wt_video_svuota(void);
+
 /* Per il registro e per i banchi. */
 const char *wt_stato_rcp(const wt *w);
 

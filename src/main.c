@@ -49,13 +49,18 @@
  *    vede da' la colpa al video, perche' e' li' che si vede.
  */
 #include "aiutante.h"
+#include "cattura.h"
 #include "certificati.h"
+#include "codificatore.h"
 #include "comando.h"
+#include "mutter.h"
 #include "pagina.h"
 #include "rcp.h"
 #include "registro.h"
+#include "sessione.h"
 #include "tls.h"
 #include "trasporto.h"
+#include "webtransport.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -70,6 +75,27 @@
 #include <openssl/ssl.h>
 
 #define PORTA_PREDEFINITA "7447" /* RCP.md §2.4 */
+
+/* ⛔⭐ LA TELA, IN UN POSTO SOLO — e fino al 12 agosto 2026 erano tre.
+ *
+ *     `PIANO.md` fase 1 dichiara «tela 1920×1080»; `src/pagina.html` la chiede
+ *     nel `CIAO` (riga 1503); `P2-1-sessione.md` §6.3 scriveva `1920, 1080` a
+ *     mano dentro `main.c` e lo dichiarava un debito: *«chi innesta li leghi a
+ *     una costante sola, o fra due settimane saranno tre posti»*.
+ *
+ * ⭐ Qui la costante e' una, e la usano tutte e tre le cose che devono
+ *    combaciare: il monitor virtuale che si chiede alla sessione, la misura con
+ *    cui si apre la cattura, e la misura con cui si codifica.  ⛔ Se non
+ *    combaciassero il sintomo NON sarebbe un errore: sarebbe un'intestazione di
+ *    §6.2 che dichiara una misura mentre i pixel ne portano un'altra, e il
+ *    client non ha modo di accorgersene.
+ *
+ * ⚠ Quel che resta fuori, e va detto: la tela che il client CHIEDE nel `CIAO`.
+ *   Quella e' sua, §4.5 permette al server di ridurla, e `video_forse()` in
+ *   `webtransport.c` rifiuta di spedire se non combacia con questa — invece di
+ *   spedire un fotogramma che mente. */
+#define TELA_L 1920u
+#define TELA_A 1080u
 
 /* 1 per l'UDP, 1 per l'ascoltatore TCP, il resto per le connessioni TCP. */
 #define MAX_POLL 64
@@ -105,6 +131,10 @@ static void aiuto(const char *nome)
 	        "                    il socket Unix 0600 del comando di sblocco:\n"
 	        "                    «SBLOCCA <indirizzo>» oppure «PING».  Senza,\n"
 	        "                    dal ban si esce solo con le 12 ore\n"
+	        "  --rilievo DIR     ⭐ fase 2: ci scrive il fotogramma catturato\n"
+	        "                    (cattura.bgrx) e i due flussi codificati.\n"
+	        "                    Senza, non scrive niente.  Serve al confronto\n"
+	        "                    a pixel di F2.6\n"
 	        "  --parlantina      registro di dettaglio\n",
 	        nome, PORTA_PREDEFINITA);
 }
@@ -151,6 +181,324 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso)
 	trasporto_verdetto((trasporto *)ctx, pratica, ammesso);
 }
 
+/* ========================================================================== */
+/* ⭐⭐ IL PRIMO FOTOGRAMMA — cattura, codifica, e lo mette in deposito        */
+/*                                                                            */
+/* ⛔ QUANDO, E PERCHE' PROPRIO QUI: prima del ciclo `poll` e DOPO l'aiutante. */
+/*                                                                            */
+/*    · prima del ciclo, perche' `cattura_prendi()` ASPETTA il prossimo        */
+/*      fotogramma di Mutter, e su un desktop fermo l'attesa arriva al suo     */
+/*      tetto.  Dentro il ciclo fermerebbe tutte le connessioni insieme        */
+/*      (`CODER.md` §4.4) — la forma appena curata su PAM, nel posto in cui    */
+/*      farebbe piu' male: con il video lo schermo di TUTTI si pianterebbe;    */
+/*    · dopo `aiutante_accendi()`, perche' quello e' un `fork()` e il figlio   */
+/*      erediterebbe i descrittori aperti.  ⛔ La cattura ne apre parecchi —   */
+/*      il socket di PipeWire, il bus di sessione, i MemFd dei buffer — e un   */
+/*      aiutante che se li portasse dietro terrebbe vivo il flusso di Mutter   */
+/*      anche dopo la morte del server.  ⚠ E' la stessa regola per cui         */
+/*      l'aiutante si accende prima di `trasporto_apri()`, letta al contrario. */
+/*                                                                            */
+/* ⛔ E QUEL CHE QUESTA FUNZIONE NON FA, dichiarato: non riprova, non ricattura */
+/*    e non si accorge se il desktop cambia.  La fase 2 e' UN'IMMAGINE FERMA   */
+/*    (`fasi/02-primo-fotogramma.md`), e il fotogramma e' quello dell'istante  */
+/*    dell'accensione.  Il ciclo dei fotogrammi e' della fase 3, e sara' un    */
+/*    consumo per RICHIAMATA — l'altra porta di `cattura.c`, che oggi nessuno  */
+/*    percorre.                                                                */
+
+struct palco {
+	MutterSessione *mutter;
+	Cattura *cattura;
+};
+
+static uint64_t ora_monotona_us(void)
+{
+	struct timespec t;
+	/* ⛔ MONOTONO, e §6.2 lo dice: «microsecondi dell'orologio monotono del
+	 *    server alla cattura.  ⚠ Non e' un'ora».  Un orologio di parete qui
+	 *    farebbe saltare il campo all'indietro al primo aggiustamento NTP, e il
+	 *    client non ha modo di distinguerlo da un fotogramma fuori ordine. */
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return (uint64_t)t.tv_sec * 1000000u + (uint64_t)(t.tv_nsec / 1000);
+}
+
+/* ⛔ Scrive un file di rilievo, e DICHIARA se non ci riesce: un rilievo che non
+ *    si e' potuto scrivere e uno che nessuno ha chiesto hanno lo stesso aspetto
+ *    sul disco (forma E8). */
+static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
+                           size_t byte)
+{
+	char percorso[512];
+	FILE *f;
+	size_t scritti;
+
+	if (!dir)
+		return;
+	snprintf(percorso, sizeof percorso, "%s/%s", dir, nome);
+	f = fopen(percorso, "wb");
+	if (!f) {
+		registro_dice(REG_AVVIO, "⛔ rilievo %s: %s", percorso, strerror(errno));
+		return;
+	}
+	scritti = fwrite(dati, 1, byte, f);
+	if (fclose(f) != 0 || scritti != byte) {
+		registro_dice(REG_AVVIO,
+		              "⛔ rilievo %s: scritti %zu byte su %zu — il file c'e' e "
+		              "NON e' quello che dice di essere",
+		              percorso, scritti, byte);
+		return;
+	}
+	registro_dice(REG_AVVIO, "rilievo scritto: %s (%zu byte)", percorso, byte);
+}
+
+/* Codifica il fotogramma con UN codec e lo deposita.  ⛔ Restituisce `false` e
+ * dice perche': «non ho codificato» e «ho codificato male» sono due fatti
+ * diversi, e chi legge il registro deve poterli distinguere. */
+static bool codifica_e_deposita(const CatturaFermo *f, CodecVideo codec,
+                                const char *dir_rilievo, const char *nome_file,
+                                uint64_t istante_us)
+{
+	CodificatoreRichiesta r;
+	CodificatoreFotogramma fg;
+	Codificatore *cod;
+	const CodificatoreConfessione *c;
+	char errore[256];
+
+	memset(&r, 0, sizeof r);
+	r.codec = codec;
+	r.componente = NULL; /* il nome predefinito, che e' comunque un NOME */
+	r.larghezza = TELA_L;
+	r.altezza = TELA_A;
+	r.fotogrammi_al_secondo = 30;
+	/* ⚠ CRF e non LOSSLESS, ed e' una scelta con una ragione: senza perdita un
+	 *   desktop vero produce un fotogramma di parecchi MiB, e §6.2 ne ammette
+	 *   al massimo 16 — si arriverebbe a sfiorare il tetto per un'immagine
+	 *   ferma.  ⛔ E il regime senza perdita serve a misurare i 10 bit VERI
+	 *   (`F2-3-codifica.md` §2.4), che da questa sorgente non escono: la
+	 *   cattura da' otto bit (`[M]` F2.2).  Qui non c'e' niente da distinguere,
+	 *   e il prezzo del lossless si pagherebbe a vuoto. */
+	r.modo = CODIFICATORE_QUALITA_CRF;
+	r.qualita = 20;
+	/* ⛔ 10 bit CHIESTI su una sorgente che ne da' 8: e' una PROMOZIONE, e il
+	 *    codificatore la scrive nel registro da se' (`promozione_8_a_10`).  Si
+	 *    chiede 10 perche' e' quel che la pagina negozia e quel che l'etichetta
+	 *    dira' per tutta la catena — ⚠ e proprio per questo va dichiarata
+	 *    invece che subita (`DECISIONI.md` §2.7). */
+	r.profondita = 10;
+	r.formato = CODIFICATORE_PIXEL_BGRX;
+	r.chiavi_ogni = 0; /* §5.2: le chiavi si CHIEDONO */
+
+	cod = codificatore_nuovo(&r, errore, sizeof errore);
+	if (!cod) {
+		registro_dice(REG_VIDEO, "⛔ niente video per il codec %d: %s", (int)codec,
+		              errore);
+		return false;
+	}
+	registro_dice(REG_VIDEO, "codificatore aperto: %s", codificatore_nome(cod));
+
+	/* ⛔ Il passo si PASSA, non si calcola: F2.2 lo legge dal manifesto di
+	 *    PipeWire e dice di fare altrettanto anche quando oggi coincide con
+	 *    larghezza×4.  `[M]` 7680 su 1920, cioe' coincide — e il giorno in cui
+	 *    non coincidesse il sintomo sarebbe un'immagine inclinata. */
+	if (!codificatore_comprimi(cod, f->pixel, f->stride, &fg)) {
+		registro_dice(REG_VIDEO,
+		              "⛔ il codec %d non ha consegnato il fotogramma: il "
+		              "registro qui sopra dice perche', e `false` NON e' «un "
+		              "fotogramma vuoto» — e' «questo non si spedisce»",
+		              (int)codec);
+		codificatore_libera(cod);
+		return false;
+	}
+
+	c = codificatore_confessione(cod);
+	registro_dice(REG_VIDEO,
+	              "⭐ fotogramma codificato: codec %d, %zu byte, %s, "
+	              "codec-string «%s», profondita' nel flusso %d, livello %d, "
+	              "promozione 8→10 %s, conversione %llu us, codifica %llu us, "
+	              "ricodifiche %u",
+	              (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
+	              c->stringa_codec, c->profondita_flusso, c->livello_flusso,
+	              c->promozione_8_a_10 ? "SI (dichiarata)" : "no",
+	              (unsigned long long)fg.us_conversione,
+	              (unsigned long long)fg.us_codifica, fg.ricodifiche);
+
+	wt_video_deposita((uint8_t)codec, fg.dati, fg.byte, TELA_L, TELA_A,
+	                  istante_us);
+	rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
+
+	codificatore_rilascia(cod);
+	codificatore_libera(cod);
+	return true;
+}
+
+static void primo_fotogramma(struct palco *p, const char *dir_rilievo)
+{
+	GError *sbaglio = NULL;
+	CatturaFermo f;
+	CatturaPresa presa;
+	uint64_t istante_us;
+	int quanti = 0;
+
+	p->mutter = mutter_apri(&sbaglio);
+	if (!p->mutter) {
+		registro_dice(REG_VIDEO,
+		              "⛔ nessun monitor virtuale da catturare: %s.  Il server "
+		              "parte lo stesso — la pagina e l'autenticazione della "
+		              "fase 1 funzionano — ma nessuna sessione vedra' un "
+		              "pixel.  Il ripiego e' dichiarato (CODER.md §4.2)",
+		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
+		g_clear_error(&sbaglio);
+		return;
+	}
+
+	p->cattura = cattura_avvia(mutter_nodo(p->mutter), TELA_L, TELA_A, 60,
+	                           CATTURA_STRADA_MEMORIA, CATTURA_COLORE_BGRX,
+	                           NULL, NULL, NULL, &sbaglio);
+	if (!p->cattura) {
+		registro_dice(REG_VIDEO, "⛔ la cattura non si apre: %s",
+		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
+		g_clear_error(&sbaglio);
+		return;
+	}
+
+	/* ⛔ 5 secondi, e il numero e' quello di F2.2: la scena si dichiara, e
+	 *    questa e' *«il desktop com'era all'accensione»* — che puo'
+	 *    legittimamente essere fermo.  ⚠ Mutter consegna un fotogramma solo se
+	 *    qualcosa cambia (`LEZIONI.md` §4 trappola 8), MA il primo dopo
+	 *    l'attivazione del flusso e' sempre l'immagine intera.  Se non
+	 *    arrivasse, `CATTURA_PRESA_ZERO` e' un RISULTATO e non un guasto. */
+	memset(&f, 0, sizeof f);
+	presa = cattura_prendi(p->cattura, 5.0, &f, &sbaglio);
+	istante_us = ora_monotona_us();
+
+	switch (presa) {
+	case CATTURA_PRESA_FATTA:
+		break;
+	case CATTURA_PRESA_ZERO:
+		registro_dice(REG_VIDEO,
+		              "⛔ ZERO fotogrammi in 5 s: il desktop non ha cambiato un "
+		              "pixel e Mutter non manda niente quando niente cambia.  "
+		              "⚠ E' un RISULTATO, non un guasto — e non c'e' niente da "
+		              "spedire");
+		return;
+	case CATTURA_PRESA_PIXEL_ALTROVE:
+		registro_dice(REG_VIDEO,
+		              "⛔ i pixel non sono qui (strada della scheda): importarli "
+		              "e' della fase 8, e questa fase ha chiesto la memoria");
+		return;
+	case CATTURA_PRESA_GUASTO:
+	default:
+		registro_dice(REG_VIDEO, "⛔ la cattura e' fallita: %s",
+		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
+		g_clear_error(&sbaglio);
+		return;
+	}
+
+	/* ⛔⭐ IL NOME DEL MONITOR SI CHIEDE **DOPO IL PRIMO FOTOGRAMMA**, e non
+	 *     dopo `cattura_avvia()` — cucitura corretta il 12 agosto 2026, col
+	 *     numero che l'ha corretta.
+	 *
+	 *     `P2-2-cattura.md` §«le righe da innestare» metteva
+	 *     `mutter_monitor_cerca()` **fra** `cattura_avvia()` e
+	 *     `cattura_prendi()`, con accanto la ragione giusta: *«solo adesso il
+	 *     monitor esiste»*.  ⛔ `[M]` innestandola li' il prodotto ha scritto
+	 *     *«non ho saputo dire quale schermo sia il nostro»* su una sessione
+	 *     perfettamente sana — lo stesso rosso che F2.2 aveva gia' pagato e
+	 *     curato, ricomparso di un passo piu' in la'.
+	 *
+	 * ⇒ La condizione vera non e' «ho chiesto il flusso»: e' **«sto davvero
+	 *   leggendo»**.  `cattura_avvia()` ritorna quando `Stream.Start` e'
+	 *   partito; il monitor virtuale Mutter lo crea quando il consumatore
+	 *   comincia a consumare — e il fatto che lo dimostra e' **un fotogramma
+	 *   in mano**, che e' esattamente la riga sopra.  ⚠ E' `LEZIONI.md` §1.13
+	 *   applicata a una sequenza: si nomina la grandezza vera del fenomeno,
+	 *   non quella che gli somiglia.
+	 *
+	 * ⚠ In fase 2 nessuno apre una finestra su quel monitor, quindi il nome
+	 *   serve al registro — ma serve al banco del giudizio (F2.6), che la mira
+	 *   la deve mandare su QUELLO schermo e per NOME: il 12 agosto sulla
+	 *   macchina ce n'erano due, `Meta-0` e `Meta-1`, entrambi 1920×1080@60. */
+	if (mutter_monitor_cerca(p->mutter)) {
+		guint prima = 0, dopo = 0;
+		mutter_monitor_conteggi(p->mutter, &prima, &dopo);
+		registro_dice(REG_VIDEO,
+		              "⭐ il nostro schermo si chiama «%s» (prodotto «%s»), "
+		              "monitor %u prima del montaggio e %u dopo — chi aprira' "
+		              "una finestra qui sopra lo deve chiamare per NOME",
+		              mutter_monitor_nostro(p->mutter),
+		              mutter_monitor_prodotto(p->mutter), prima, dopo);
+	} else {
+		registro_dice(REG_VIDEO,
+		              "⚠ non ho saputo dire quale schermo sia il nostro: la "
+		              "cattura funziona lo stesso, ma chi vorra' mandarci una "
+		              "finestra non ha un nome da usare");
+	}
+
+	registro_dice(REG_VIDEO,
+	              "⭐ fotogramma catturato: %ux%u, stride %u LETTO, %llu byte, "
+	              "formato %s a %d bit, buffer %s, range %s, min %u/%u/%u max "
+	              "%u/%u/%u",
+	              f.larghezza, f.altezza, f.stride,
+	              (unsigned long long)f.byte,
+	              f.consegna.formato ? f.consegna.formato : "(ignoto)",
+	              f.consegna.bit_per_canale,
+	              f.consegna.buffer_dichiarato == CATTURA_BUFFER_DMABUF
+	                      ? "DMA-BUF"
+	                      : "in memoria",
+	              f.consegna.range_misurato == CATTURA_RANGE_COMPATIBILE_PIENO
+	                      ? "compatibile col PIENO"
+	                      : "non conclusivo",
+	              f.consegna.minimo[0], f.consegna.minimo[1],
+	              f.consegna.minimo[2], f.consegna.massimo[0],
+	              f.consegna.massimo[1], f.consegna.massimo[2]);
+
+	/* ⛔ E IL NERO SI DICHIARA, NON SI RIFIUTA.  Un desktop puo' legittimamente
+	 *    essere nero, e rifiutarlo sarebbe decidere al posto dell'utente;
+	 *    tacerlo sarebbe consegnare il nulla senza una riga.  ⚠ E «nero» e
+	 *    «uniforme» sono due marche diverse: un grigio uniforme chiamato nero
+	 *    manda a cercare il difetto dalla parte sbagliata. */
+	if (f.consegna.nero)
+		registro_dice(REG_VIDEO,
+		              "⛔ il fotogramma catturato e' NERO (massimo 0 su tutti e "
+		              "tre i canali): e' quel che consegna una sessione senza "
+		              "monitor virtuale — gnome.md §3.1, guasto M9.  Lo spedisco "
+		              "lo stesso, e questa riga e' la dichiarazione");
+	else if (f.consegna.uniforme)
+		registro_dice(REG_VIDEO,
+		              "⚠ il fotogramma catturato e' UNIFORME (tutti i pixel "
+		              "uguali) e NON e' nero: e' un'altra cosa dal guasto M9");
+
+	/* ⛔ Il crudo si scrive PRIMA di codificare: e' l'ingresso del confronto a
+	 *    pixel di F2.6, e va salvato com'e' arrivato — stride compreso.  ⚠ E si
+	 *    scrive `f.byte`, non `larghezza×altezza×4`: lo stride e' letto dal
+	 *    chunk, e ricalcolarlo qui rimetterebbe il difetto che F2.2 esiste per
+	 *    togliere. */
+	rilievo_scrivi(dir_rilievo, "cattura.bgrx", f.pixel, (size_t)f.byte);
+
+	/* ⭐ TUTT'E DUE I CODEC, e la ragione e' misurata: la pagina sceglie il
+	 *    codec provandolo SUL PIXEL, e su un browser senza GPU HEVC non arriva
+	 *    (`[M]` F2.5) ⇒ negozia `av1`.  Quale dei due si usera' si sa solo alla
+	 *    negoziazione di §4.3, cioe' quando il ciclo e' gia' partito: si
+	 *    codificano adesso tutt'e due, e li' si sceglie fra due depositi. */
+	if (codifica_e_deposita(&f, CODIFICATORE_HEVC, dir_rilievo, "flusso-hevc.265",
+	                        istante_us))
+		quanti++;
+	if (codifica_e_deposita(&f, CODIFICATORE_AV1, dir_rilievo, "flusso-av1.obu",
+	                        istante_us))
+		quanti++;
+
+	if (quanti == 0)
+		registro_dice(REG_VIDEO,
+		              "⛔ nessuno dei due codec ha consegnato: c'e' un "
+		              "fotogramma e non c'e' niente da spedire");
+	else
+		registro_dice(REG_VIDEO,
+		              "⭐ %d flussi su 2 in deposito: la prima sessione che "
+		              "arriva a SESSIONE se ne prende uno (§6.2)",
+		              quanti);
+
+	cattura_fermo_libera(&f);
+}
+
 int main(int argc, char **argv)
 {
 	const char *indirizzo = "0.0.0.0";
@@ -160,11 +508,13 @@ int main(int argc, char **argv)
 	const char *file_html = "pagina.html";
 	const char *file_ban = "/var/lib/remotix/ban";
 	const char *socket_comando = NULL;
+	const char *dir_rilievo = NULL;
 	certificati cert;
 	SSL_CTX *ctx_quic = NULL, *ctx_pagina = NULL;
 	trasporto *t = NULL;
 	pagina *p = NULL;
 	comando *k = NULL;
+	struct palco palco = {NULL, NULL};
 	aiutante *pam_aiuto = NULL;  /* ⚠ non «aiuto»: quel nome e' gia' della funzione che stampa l'uso */
 	time_t ultimo_controllo_cert;
 	int esito = 1;
@@ -195,6 +545,17 @@ int main(int argc, char **argv)
 			file_ban = argv[++i];
 		else if (strcmp(a, "--comando-socket") == 0 && v)
 			socket_comando = argv[++i];
+		/* ⭐ FASE 2 — dove scrivere il fotogramma catturato e i due flussi.
+		 *
+		 * ⛔ Serve al banco del giudizio a pixel (F2.6): senza, il confronto
+		 *    fra CATTURATO e DIPINTO non ha il primo dei due termini, e
+		 *    l'unico modo di prenderlo sarebbe ricatturare con un altro
+		 *    programma — cioe' confrontare il dipinto con un fotogramma
+		 *    DIVERSO, preso un istante dopo.
+		 * ⚠ E' spento di suo: senza questa opzione il server non scrive un
+		 *   byte in piu' di prima. */
+		else if (strcmp(a, "--rilievo") == 0 && v)
+			dir_rilievo = argv[++i];
 		else if (strcmp(a, "--parlantina") == 0)
 			registro_parlantina(true);
 		else if (strcmp(a, "--sblocca") == 0) {
@@ -309,6 +670,45 @@ int main(int argc, char **argv)
 	 * ⚠ E se non si accende, il server parte lo stesso e lo dice: senza
 	 *   aiutante ogni autenticazione e' un NO (invariante I3), il che e'
 	 *   sgradevole ma e' la direzione giusta in cui sbagliare. */
+	/* ⛔⭐ IL PALCO PRIMA DEGLI ASCOLTATORI — invariante I4, e il difetto dei
+	 *     due giorni (`fasi/rapporti/D4-sessione-nera.md`).
+	 *
+	 *     Qui, e non alla connessione, per tre ragioni dichiarate:
+	 *     · il palco appartiene alla SESSIONE, non alla connessione (I4), e
+	 *       sopravvive al distacco;
+	 *     · far nascere una sessione costa fino a 40 s, e dentro il ciclo
+	 *       `poll` fermerebbe TUTTE le connessioni insieme — la stessa forma
+	 *       appena curata su PAM (`CODER.md` §4.4, `DECISIONI.md` §1.10);
+	 *     · qui gli ascoltatori non sono ancora aperti, quindi non c'e'
+	 *       nessuno in attesa: la porta compare quando c'e' che cosa mostrare.
+	 *
+	 * ⚠ E prima dell'aiutante di proposito: `sessione_assicura()` genera un
+	 *   processo, e un processo generato dopo si porterebbe dietro il
+	 *   socketpair dell'aiutante.  (GLib chiude da se' i descrittori > 2 nel
+	 *   figlio, quindi oggi non accadrebbe — ma l'ordine giusto non si affida
+	 *   a un comportamento di libreria.)
+	 *
+	 * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): senza sessione il server
+	 *   parte lo stesso — la pagina e l'autenticazione della fase 1 funzionano
+	 *   — ma non c'e' niente da catturare, e chi legge il registro lo sa. */
+	{
+		bool nata = false;
+		SessioneStato s = sessione_assicura(TELA_L, TELA_A, &nata);
+
+		if (s != SESSIONE_SANA)
+			registro_dice(REG_AVVIO,
+			              "⛔ nessuna sessione grafica con un monitor "
+			              "(%d %s): il server parte lo stesso, ma non c'e' "
+			              "niente da catturare.  Il ripiego e' dichiarato, "
+			              "non silenzioso (CODER.md §4.2)",
+			              (int)s, sessione_marca(s));
+		else
+			registro_dice(REG_AVVIO,
+			              "⭐ sessione grafica SANA, monitor %ux%u — %s",
+			              TELA_L, TELA_A,
+			              nata ? "l'ho fatta nascere io" : "c'era gia'");
+	}
+
 	pam_aiuto = aiutante_accendi();
 	if (!pam_aiuto)
 		registro_dice(REG_AVVIO,
@@ -316,6 +716,15 @@ int main(int argc, char **argv)
 		              "SINCRONA, che ferma il ciclo per 1-2 s a ogni tentativo "
 		              "(DECISIONI.md §1.10).  Il ripiego e' dichiarato, non "
 		              "silenzioso (CODER.md §4.2).");
+
+	/* ⭐⭐ E QUI SI PRENDE IL FOTOGRAMMA: la fase 2 in una riga.
+	 *
+	 * ⛔ Dopo l'aiutante (che e' un `fork()`: i descrittori di PipeWire e del
+	 *    bus non devono finire nel figlio) e prima degli ascoltatori (perche'
+	 *    l'attesa arriva al suo tetto, e nessuno la sta subendo).
+	 * ⚠ Se non ci riesce non si ferma niente: il server della fase 1 continua
+	 *   a funzionare, e ogni ragione e' scritta nel registro sotto «video». */
+	primo_fotogramma(&palco, dir_rilievo);
 
 	k = comando_apri(socket_comando);
 
@@ -565,6 +974,15 @@ fine:
 	comando_chiudi(k);
 	pagina_chiudi(p);
 	trasporto_chiudi(t);
+	/* ⛔ Il palco si smonta DOPO il trasporto: finche' una connessione e' viva
+	 *    puo' esserci un fotogramma in coda, e i suoi byte stanno nel deposito.
+	 * ⚠ E si smonta all'uscita del PROCESSO, non a quella di una connessione:
+	 *   e' l'invariante I4 — il palco appartiene alla sessione. */
+	wt_video_svuota();
+	if (palco.cattura)
+		cattura_ferma(palco.cattura);
+	if (palco.mutter)
+		mutter_chiudi(palco.mutter);
 	if (ctx_quic)
 		SSL_CTX_free(ctx_quic);
 	if (ctx_pagina)

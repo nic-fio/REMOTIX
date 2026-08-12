@@ -16,7 +16,31 @@
 #                             due certificati (src/certificati.c)
 #   libpam                    l'autenticazione          (SPECIFICHE.md §4.2)
 #
-# Su Debian Trixie: `libssl-dev`, `libpam0g-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
+# ⭐ E LE CINQUE DELLA FASE 2, innestate il 12 agosto 2026 dal montaggio
+#    (`fasi/rapporti/P2-6-montaggio.md`).  Ciascuna nomina l'anello che la
+#    porta, perche' «quale libreria serve a che cosa» e' la domanda che si fa
+#    il giorno in cui una manca:
+#
+#   gio-2.0 >= 2.80           il bus di sessione: il monitor virtuale
+#                             (`src/sessione.c`) E la sequenza ScreenCast di
+#                             Mutter (`src/mutter.c`).  ⛔ UNA VOLTA SOLA:
+#                             serve a due anelli, e due `pkg-config` che la
+#                             nominano due volte mettono gli stessi -l due
+#                             volte senza che nessuno se ne accorga
+#   libpipewire-0.3           il flusso dei fotogrammi  (`src/cattura.c`)
+#   libdrm                    i `DRM_FORMAT_MOD_*`: SOLO intestazioni, nessuna
+#                             libreria da collegare (`src/cattura.c`)
+#   libavcodec >= 61          la codifica HEVC/AV1      (`src/codificatore.c`)
+#   libavutil  >= 59          i fotogrammi
+#   libswscale >= 8           BGRx (dalla cattura) -> yuv420p10le, BT.709
+#                             ⛔ ERA NUOVA: `apt install libswscale-dev`.
+#                             `[M]` 12 ago 2026: sul contenitore della macchina
+#                             di prova c'era gia' (7:7.1.5-0+deb13u1, stesso
+#                             pacchetto sorgente di `libavcodec-dev`)
+#
+# Su Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
+# `libpipewire-0.3-dev`, `libdrm-dev`, `libavcodec-dev`, `libavutil-dev`,
+# `libswscale-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
 # bastano nella versione dei pacchetti (1.11 / 1.8): vanno costruiti dai
 # sorgenti, ed e' quel che fa `banchi/01-b2-costruisci-ngtcp2.sh`.
 #
@@ -30,8 +54,13 @@ PREFISSO ?=
 
 NOME    := remotix
 
+# ⭐ I QUATTRO FILE DELLA FASE 2 sono in coda, e in ordine di catena: sessione
+#    (il palco) → cattura+mutter (i pixel) → codificatore (i byte).  ⚠ Il
+#    quinto anello, il canale video, NON compare: vive in `rcp.c`, che c'era
+#    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
-            tls.c registro.c rcp.c autenticazione.c aiutante.c
+            tls.c registro.c rcp.c autenticazione.c aiutante.c \
+            sessione.c cattura.c mutter.c codificatore.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -77,6 +106,27 @@ CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 #    non nomina nessuna opzione.
 override CFLAGS += -D_GNU_SOURCE
 
+# ⛔⭐ LE LIBRERIE DELLA FASE 2, CHIESTE A `pkg-config` UNA VOLTA SOLA.
+#
+# ⚠ `gio-2.0` la vogliono DUE anelli — `sessione.c` (il drop-in dell'unita'
+#   della Shell e il bus) e `mutter.c` (la sequenza ScreenCast).  I due rapporti
+#   la chiedono ciascuno per se': metterla due volte non e' un errore di
+#   compilazione, e' un elenco che non si legge piu'.  ⇒ Qui e' nominata una
+#   volta, e le due righe di sotto sono il posto unico in cui guardare.
+#
+# ⚠ `libdrm` sta solo nei CFLAGS: `cattura.c` ne prende i `DRM_FORMAT_MOD_*`,
+#   che sono macro in `drm_fourcc.h`.  ⛔ Metterla anche nei LIBS collegherebbe
+#   una libreria di cui non si usa una funzione — e il giorno in cui qualcuno
+#   togliesse l'`#include` nessuno se ne accorgerebbe.
+#
+# ⛔ `override` per la stessa ragione della riga qui sopra: `costruisci.sh`
+#    passa `CFLAGS=` sulla riga di comando per aggiungerci i `-I` di ngtcp2, e
+#    un `+=` semplice sparirebbe insieme al resto.  Il sintomo sarebbe
+#    `gio/gio.h: No such file`, che non nomina nessuna opzione.
+F2_CFLAGS := $(shell pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm)
+F2_LIBS   := $(shell pkg-config --libs   gio-2.0 libpipewire-0.3)
+override CFLAGS += $(F2_CFLAGS)
+
 ifneq ($(PREFISSO),)
 CFLAGS  += -I$(PREFISSO)/include
 LDFLAGS += -L$(PREFISSO)/lib -Wl,-rpath,$(PREFISSO)/lib
@@ -84,7 +134,10 @@ endif
 
 # ⛔ `ngtcp2_crypto_ossl` va PRIMA di `ngtcp2`: il linker risolve i simboli da
 #    sinistra a destra, e all'incontrario mancherebbero i simboli del ponte.
-LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam
+# ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
+#   ngtcp2: il linker risolve da sinistra a destra.
+LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
+        -lavcodec -lswscale -lavutil $(F2_LIBS)
 
 .PHONY: tutto pulisci dipendenze impronte
 
@@ -143,7 +196,9 @@ pulisci:
 dipendenze:
 	@stato=0; \
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
-	         openssl/ssl.h security/pam_appl.h; do \
+	         openssl/ssl.h security/pam_appl.h \
+	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
+	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
@@ -154,7 +209,8 @@ dipendenze:
 	exit $$stato
 
 main.o:           aiutante.h certificati.h comando.h pagina.h rcp.h registro.h \
-                  tls.h trasporto.h
+                  tls.h trasporto.h \
+                  sessione.h cattura.h mutter.h codificatore.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
 webtransport.o:   webtransport.h aiutante.h rcp.h registro.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
@@ -171,3 +227,11 @@ autenticazione.o:
 #    (`DECISIONI.md` §1.10).  ⚠ NON e' fra i `GEMELLATI`: e' del PRODOTTO e
 #    basta, perche' l'innesto di `banchi/rcp/` non ha un ciclo suo da liberare.
 aiutante.o:       aiutante.h registro.h
+
+# ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
+#    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
+#    ngtcp2 non ha ne' una sessione grafica ne' un codificatore.
+sessione.o:       sessione.h registro.h
+cattura.o:        cattura.h registro.h
+mutter.o:         mutter.h registro.h
+codificatore.o:   codificatore.h registro.h

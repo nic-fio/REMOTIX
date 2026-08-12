@@ -205,6 +205,57 @@ def fabbrica_cliente():
             # (verso, canale, stream, carico, oscurati, fine) — §11.1
             self.reg_video = []
             self.primo_byte = None     # ⛔ quando e' arrivato il PRIMO byte video
+            # ⚠ Il codec negoziato in §4.3.  Lo pone il guidatore PRIMA della
+            #   stretta di mano, perche' `_sfoglia` puo' averne bisogno gia'
+            #   nel primo pacchetto che porta `SESSIONE`.
+            self.codec_atteso = 1
+
+        # ⛔⛔ IL CONTESTO SI PONE **QUI**, E NON NELLA COROUTINE CHE ASPETTA —
+        #     difetto del banco trovato dal PRIMO giro contro un server che
+        #     spedisce davvero, `[M]` 12 agosto 2026, montaggio della fase 2.
+        #
+        #     Il server spedisce `SESSIONE` sul canale di controllo e SUBITO
+        #     DOPO apre lo stream del primo fotogramma (§5.2: «il primo dopo
+        #     `SESSIONE` DEVE essere una chiave»).  Sul filo l'ordine e'
+        #     giusto, e i due arrivano nello stesso volo di pacchetti.
+        #
+        # ⛔ Ma `cli.contesto` lo poneva il guidatore **dopo**
+        #    `await attendi(cli, "SESSIONE")`, cioe' quando `asyncio` riprende
+        #    la coroutine — che e' **dopo** che tutti gli eventi di quel volo
+        #    sono stati smistati.  ⇒ `_arrivano()` trovava `contesto is None`,
+        #    concludeva *«un fotogramma prima di SESSIONE»* e stampava
+        #    `ERRORE_PROTOCOLLO` — ⛔ **un rosso puntato sul server, che aveva
+        #    fatto esattamente quel che §2.5 gli impone**.
+        #
+        # ⭐ Chi ha detto di chi era la colpa: `02-filo-validatore.py`, il
+        #    secondo lettore, sulla STESSA registrazione — *«ACCETTATO, flusso
+        #    15: chiave n. 1, 1920x1080, 11923 byte, conforme»*, uscita 0.  ⚠ E
+        #    che i due arbitri dello stesso banco dicessero cose opposte sugli
+        #    stessi byte e' una MISURA, non un incidente (`P2-4-filo.md` §4).
+        #
+        # ⛔ E la cura non e' «aspettare un po'»: e' guardare il buffer del
+        #    canale di controllo **prima** che `_sfoglia` lo consumi, cioe'
+        #    nello stesso istante sincrono in cui i byte sono arrivati.  Cosi'
+        #    «prima di `SESSIONE`» torna a essere una domanda sui BYTE, e non
+        #    sull'ordine in cui `asyncio` sveglia le coroutine.
+        def _sfoglia(self):
+            if self.contesto is None:
+                dati = bytes(self.arrivati)
+                i = 0
+                while len(dati) - i >= 6:
+                    tipo, lung = struct.unpack("!HI", dati[i:i + 6])
+                    if len(dati) - i < 6 + lung:
+                        break
+                    # corpo: 1 byte di stato, poi larghezza e altezza (§4.5)
+                    if tipo == carica_b3().T["SESSIONE"] and lung >= 9:
+                        lar, alt = struct.unpack("!II", dati[i + 7:i + 15])
+                        self.contesto = f24.Contesto(
+                            tela=(lar, alt),
+                            codec_negoziato=self.codec_atteso,
+                            sessione_aperta=True)
+                        break
+                    i += 6 + lung
+            super()._sfoglia()
 
         def quic_event_received(self, event):
             nome = type(event).__name__
@@ -451,6 +502,11 @@ async def principale(a):
         if stato != "200":
             return 2
         cli.apri_controllo()
+        # ⛔ PRIMA della stretta di mano: `_sfoglia` puo' aver bisogno del
+        #    codec gia' nel pacchetto che porta `SESSIONE`, e un valore posto
+        #    dopo sarebbe posto troppo tardi — e' lo stesso difetto di ordine
+        #    che il riquadro di `_sfoglia` descrive.
+        cli.codec_atteso = a.codec
         try:
             b = b3.inquadra(b3.T["CIAO"], b3.corpo_ciao())
             cli.manda(b)
@@ -492,9 +548,15 @@ async def principale(a):
         #    essere diversa da quella chiesta (§4.5, il ripiego su KDE) — e
         #    `codec` a quel che §4.3 ha negoziato.  Un giudice che usasse i
         #    propri predefiniti giudicherebbe se stesso.
-        cli.contesto = f24.Contesto(tela=(lar, alt),
-                                    codec_negoziato=a.codec,
-                                    sessione_aperta=True)
+        # ⚠ `_sfoglia` puo' averlo gia' posto, sugli stessi byte e con gli
+        #   stessi valori: allora non si rifa'.  ⛔ Rifarlo qui cancellerebbe
+        #   un contesto gia' usato dai flussi arrivati nello stesso volo — e i
+        #   loro `Flusso` terrebbero il vecchio oggetto, cioe' due verita'
+        #   sulla stessa sessione.
+        if cli.contesto is None:
+            cli.contesto = f24.Contesto(tela=(lar, alt),
+                                        codec_negoziato=a.codec,
+                                        sessione_aperta=True)
         ctx = cli.contesto
 
         visti, perche = await guarda(cli, a, ctx)
