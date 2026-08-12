@@ -306,6 +306,86 @@ specifica dice 10**.
 
 ---
 
+---
+
+## ⭐ LA SERA DEL 12 AGOSTO — il cancello si apre, e l'arbitro si corregge sei volte
+
+*Su richiesta dell'utente — «fai una lista dei bug, assegna un agente a ciascuno, e arriva al
+completamento della fase 2» — sono stati aperti **dodici difetti** (`rapporti/DIFETTI-12-agosto.md`)
+e affidati a un agente ciascuno, in ondate che non si pestassero i piedi.*
+
+### ⭐⭐ Il cancello della fase 2 è aperto: `DECISIONI.md` §1.10 è applicata e misurata
+
+La verifica PAM esce dal filo unico, **con un processo aiutante** — tre piani: il server scrive su un
+`socketpair` SEQPACKET e torna al `poll`; uno **smistatore** che non chiama mai PAM legge e forca; un
+**nipote** fa **una sola** transazione PAM e muore. ⇒ La rientranza di PAM non è *«gestita»*: **non è
+in gioco**.
+
+| | `[M]` 12 agosto 2026, cinque giri per lato |
+|---|---|
+| ⭐⭐ **chi NON si autentica** | picco **2259 → 3 ms** |
+| ⭐ **la stretta di mano di chi arriva in quel momento** | **2262 → 10 ms** |
+| ⚠ **chi si autentica** | 2260 → 1844 ms, cioè **invariato** — e deve restarlo: quel tempo lo mette PAM |
+
+⛔ **E il fallimento è un no, non un forse** (I3): il `true` nasce in **un punto solo del programma**,
+e sette strade portano a un no. Provato ammazzando l'aiutante con `SIGKILL` e presentando la parola
+**giusta** → `RESPINTO` in 1001 ms, col controllo positivo accanto.
+
+⭐ **E il filo NON è cambiato**: B3 `0→2→0` e B5 `0→1→0` danno gli **stessi identici numeri** di
+prima della cura. L'ipotesi di chi l'ha scritta è diventata una misura.
+
+### ⛔ Il prodotto sul server non era il prodotto che avevamo scritto
+
+`[M]`: **10 file su 24 diversi**, e i due che mancavano **del tutto** erano i due nuovi
+(`aiutante.c`, `aiutante.h`); il binario girava dall'11 agosto con `exe` marcato `(deleted)`.
+
+⭐ **E la cura non è la copia: è l'attrezzo che mancava** — `banchi/attrezzi-allinea-prodotto.sh`,
+che **enumera l'albero intero** invece di un elenco scritto a mano. È esattamente la lezione del
+difetto: *i due file che mancavano sono quelli che un elenco a mano non avrebbe mai avuto*. E non si
+ferma ai sorgenti: ⛔ **sorgenti allineati e binario nuovo non bastano finché il processo vivo è
+l'altro**.
+
+### ⛔⛔ E l'arbitro si è corretto sei volte in una sera
+
+Le sette righe di F2.4 sono entrate in `RCP.md`; ⛔ **due erano sbagliate**, e le due cure che le
+sistemavano ne hanno generate altre quattro. La successione **P8 → P11 → P13 → P14** e la lezione che
+ne esce stanno in **`LEZIONI.md` §1.13**, ed è la cosa più riusabile prodotta oggi:
+
+> ⭐ *Una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta di un passo a ogni
+> rilettura.* La risposta esatta stava dentro i 28 byte dell'intestazione da tre giorni — il campo
+> `numero` — e le prime tre stesure hanno usato una **grandezza sostitutiva**: una misura, un tempo,
+> un evento.
+
+⚠ **E chi le ha trovate, tutte e quattro: non chi rileggeva il documento, ma chi doveva far
+rispettare la regola** scrivendo l'arbitro che la giudica.
+
+### Il conto dei banchi, la sera del 12 agosto
+
+```
+banchi nel catalogo: 15   (P5R e' entrato: il guasto che toglie il RITIRO, non il valore)
+13  certificati e valgono oggi
+ 0  non riverificabili        ⭐ la riga di P5R adesso porta le impronte
+```
+
+⚠ **E il numero è sceso e risalito sei volte in una sera**, sempre per la stessa ragione dichiarata:
+curare il prodotto o l'arbitro **fa scadere le certificazioni che li guardavano**. ⛔ *«Scaduta» non
+è «fallita»*, e non è nemmeno «pulita».
+
+### ⭐ Gli attrezzi nuovi, e servono al prossimo giro
+
+- **`attrezzi-allinea-prodotto.sh`** — quel che il `README` dichiarava mancante da ieri.
+- **`02-sessione-guardia.sh`** — si mette **davanti** a una misura e fa le **due domande separate**:
+  *«è viva?»* e *«ha un monitor?»*. Con tre bande d'uscita, così un **rifiuto** non si confonde con
+  un fallimento del comando.
+- ⭐⭐ **il controllo positivo dell'àncora** (in `01-b8-cronometro.py`, riusato in
+  `01-b10-secondo-utente.py`) — allunga la riga di registro nei modi già successi e pretende che
+  l'esito **non cambi**. ⛔ Nato perché **un'àncora fragile passa tutti i guasti**: rompersi *fa*
+  diventare rossi, quindi nessuno dei quindici guasti la smascherava.
+- **`01-b12-lancia.sh`** prende `B12_BERSAGLIO=innesto|prodotto`, e ⛔ **la scena finisce in ogni
+  riga del registro**: chi non la dichiara ottiene *«non dichiarata»*, mai «innesto».
+
+---
+
 ## Il giudizio dell'utente
 
 ⏳ **Non ancora dato**: la fase è aperta e il prodotto non esiste. Quel che si giudica alla fine è
