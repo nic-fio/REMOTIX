@@ -161,16 +161,203 @@ MARCA_CAUSA_1 = "CAUSA-1-GUARDIA-PRE-PAM"
 MARCA_CAUSA_2 = "CAUSA-2-CONTATORE-PER-INDIRIZZO"
 MARCA_CAUSA_3 = "CAUSA-3-PILA-PAM-ALTRO-UTENTE"
 MARCA_CAUSA_4 = "CAUSA-4-UTENTE-SENZA-PAROLA"
+# ⛔ E una quinta marca, che NON e' una causa del server: e' un difetto di
+#    QUESTO file.  Sta separata dalle quattro apposta — `REVIEWER.md` §4 vieta
+#    di mescolare quel che si e' misurato con quel che non si e' potuto
+#    misurare, e un banco che non sa piu' leggere il registro non ha misurato
+#    niente.  ⚠ Non e' la marca del guasto di catalogo: quella resta
+#    `MARCA_CAUSA_1`, e le due non devono potersi confondere.
+MARCA_ANCORA_ROTTA = "ANCORA-AL-REGISTRO-ROTTA"
 
 # Le righe che `autenticazione.c` scrive su stderr, e che finiscono nel
 # registro del server.  ⛔ Sono la prova che PAM E' STATO INTERROGATO.
 RIGA_PAM_RIFIUTA = "PAM ha RIFIUTATO"
 RIGA_PAM_INCERTA = "PAM NON HA POTUTO GIUDICARE"
 RIGA_PAM_START = "pam_start"
+# ===========================================================================
+# ⛔⭐ LA RIGA DEL VERDETTO DI `rcp.c`, E PERCHE' QUI C'ERA UN'ANCORA GIA' CIECA
+# ===========================================================================
+# *Curata il 12 agosto 2026.  ⛔ Non ha mai prodotto un rosso — e questo e'
+#  esattamente il motivo per cui e' la piu' insidiosa delle tre trovate oggi.*
+#
 # La riga che `rcp.c` scrive dopo aver chiamato la funzione di verifica.  ⚠ NON
 # distingue (1) dal resto: c'e' anche quando la guardia rifiuta prima di PAM,
 # perche' `rcp.c` non sa che cosa faccia dentro `rcp_autentica()`.
-RIGA_RCP_VERDETTO = "PAM ha risposto:"
+#
+# ⛔ QUI C'ERA UNA SOTTOSTRINGA COI DUE PUNTI ATTACCATI:
+#
+#       RIGA_RCP_VERDETTO = "PAM ha risposto:"
+#
+#    e la si usava cosi': `if RIGA_RCP_VERDETTO in coda: ok(...)`.
+#
+#    La cura di `DECISIONI.md` §1.10 ha infilato **il numero di pratica fra
+#    «risposto» e i due punti** (`rcp.c:2636`), e da quel momento la
+#    sottostringa non combacia piu'.  ⛔ E siccome era il guardiano di un `if`
+#    **senza ramo `else`**, quel che si e' rotto non e' diventato rosso: e'
+#    diventato **niente**.  La conferma *«e il registro del server lo dice»* ha
+#    semplicemente **smesso di stamparsi, in silenzio**, e B10 ha continuato a
+#    uscire verde con un controllo in meno.
+#
+# ⛔ E' la forma **E8** di `REVIEWER.md` §2 — «vuoto» e «proibito» hanno lo
+#    stesso aspetto — nella sua veste peggiore: un controllo che **sparisce
+#    senza dirlo**.  ⚠ Un falso rosso costa un'ora e si nota; un controllo che
+#    si spegne non costa niente **finche' non serve**, e allora costa il difetto
+#    che doveva vedere.  Fra i due, questo e' il piu' caro.
+#
+# ⭐ LE TRE FORME VERE, e non sono immaginate: `[M]` 12 agosto 2026, lette con
+#    `grep` nei registri veri sul server (`/media/REMOTIX/src/*.log` e
+#    `tmp/*.log`), prodotto e innesto:
+#
+#      1.  «PAM ha risposto: ammesso»
+#          — il prodotto PRIMA di §1.10 (ancora vivo sulla 7448 stamattina);
+#      2.  «PAM ha risposto: ammesso  ⚠ (per via SINCRONA: nessun gancio
+#           asincrono collegato — il filo e' rimasto fermo)»
+#          — `rcp.c:1555`, la strada sincrona: l'INNESTO e i banchi in-processo;
+#      3.  «PAM ha risposto (pratica 1): respinto  ⭐ e il filo non si e' mai
+#           fermato (DECISIONI.md §1.10)»
+#          — `rcp.c:2636`, la strada asincrona: il PRODOTTO allineato di oggi.
+#
+#    ⛔ La vecchia sottostringa combacia con 1 e 2 e **non** con 3, cioe' e'
+#       cieca proprio sul server che B10 misura adesso.
+#
+# ⭐ LA FORMA CHE REGGE — la stessa gia' in casa in `01-b8-cronometro.py` e in
+#    `01-p5-registro.py`: si ancora al **pezzo stabile** — il nome del fatto
+#    («PAM ha risposto») e la parola che lo qualifica («ammesso»/«respinto») —
+#    e si lascia libero **tutto quel che sta in mezzo e tutto quel che viene
+#    dopo**.  Un numero di pratica, una spiegazione appesa in coda, un'emoji, un
+#    secondo campo: nessuno di questi la tocca.
+#
+# ⛔ E SONO DUE APPIGLI, NON UNO, perche' sono due fatti diversi:
+#      · `RIGA_RCP_VERDETTO`  «questa e' una riga di PAM»;
+#      · `R_RCP_VERDETTO`     «e so leggerne il verdetto».
+#    *«Non e' una riga di PAM»* e *«e' una riga di PAM che non so leggere»* non
+#    devono avere la stessa faccia: la seconda e' un difetto **di questo file**,
+#    e va detta a voce alta invece di essere arrotondata alla prima.
+RIGA_RCP_VERDETTO = "PAM ha risposto"
+R_RCP_VERDETTO = re.compile(r"PAM ha risposto\b[^:]*:\s*(ammesso|respinto)\b")
+
+
+def verdetto_nel_registro(coda):
+    """(stato, verdetto, quante) — ⛔ e gli stati sono TRE, non due.
+
+        `assente`      nessuna riga di PAM in questa coda — non si sa niente,
+                       e «non ho potuto guardare» non si arrotonda a un no;
+        `illeggibile`  la riga c'e' e l'appiglio non la apre — ⛔ e' un difetto
+                       DEL BANCO, ed e' il caso che il 12 agosto 2026 e' passato
+                       inosservato perche' non aveva un nome;
+        `letto`        e allora il verdetto e' «ammesso» o «respinto».
+
+    ⚠ Si tiene l'**ultimo** verdetto della coda: la coda parte dal marcatore
+      preso prima del tentativo (`coda_registro`), quindi le righe che ci sono
+      dentro sono di questo giro — ma un P1-bis dopo uno sblocco ne aggiunge
+      una seconda, e quella che conta e' l'ultima.
+    """
+    righe = [r for r in coda.splitlines() if RIGA_RCP_VERDETTO in r]
+    if not righe:
+        return "assente", None, 0
+    letti = [m.group(1) for m in map(R_RCP_VERDETTO.search, righe) if m]
+    if not letti:
+        return "illeggibile", None, len(righe)
+    return "letto", letti[-1], len(righe)
+
+
+# ===========================================================================
+# ⛔⭐ IL CONTROLLO POSITIVO DELL'ANCORA — e non e' un guasto, e' il suo rovescio
+# ===========================================================================
+# *Nato il 12 agosto 2026, dallo stesso difetto che ha accecato B8.*
+#
+# ⛔ PERCHE' NESSUN GUASTO LO AVREBBE MAI TROVATO.  Il guasto di catalogo di
+#    B10 — rimettere la guardia di v1 — chiede al banco di diventare **rosso**.
+#    Un'ancora rotta rende il banco rosso o muto, mai verde-quando-doveva-essere
+#    rosso: ⇒ un'ancora fragile **passa il guasto di catalogo** e la
+#    certificazione dice «B10 vede» mentre B10 ha un occhio chiuso.  E' la
+#    ragione per cui questo difetto ha attraversato indenne ogni giro finora.
+#
+# ⭐ Quindi si costruisce il contrario di un guasto: si danno all'appiglio le
+#    righe **vere** — quelle lette nei registri del prodotto e dell'innesto — e
+#    quelle che gli si allungheranno addosso domani, e si pretende che l'esito
+#    **non cambi**.  ⚠ E' il controllo positivo di `REVIEWER.md` §1 punto 5
+#    applicato al lettore del registro: «lo strumento sa ancora trovare quel che
+#    c'e' di sicuro?»
+#
+# ⛔ E HA ANCHE LA META' NEGATIVA, o non proverebbe niente: due righe che NON
+#    devono farsi leggere come un verdetto.  Un appiglio che dicesse «ammesso»
+#    a tutto passerebbe la prima meta' a occhi chiusi.
+CASI_ANCORA = [
+    # (che riga, stato atteso, verdetto atteso)
+    ("il prodotto PRIMA di §1.10 — la forma nuda (7448, [M] 12 ago)",
+     "12:48:55.369 rcp     PAM ha risposto: ammesso",
+     "letto", "ammesso"),
+    ("la strada SINCRONA, rcp.c:1555 — l'innesto e i banchi in-processo",
+     "12:48:55.369 rcp     PAM ha risposto: ammesso  ⚠ (per via SINCRONA: "
+     "nessun gancio asincrono collegato — il filo e' rimasto fermo)",
+     "letto", "ammesso"),
+    # ⛔ E' QUESTA la riga su cui l'appiglio vecchio era cieco.
+    ("la strada ASINCRONA, rcp.c:2636 — il PRODOTTO allineato di oggi",
+     "16:35:48.273 rcp     PAM ha risposto (pratica 2): ammesso  ⭐ e il filo "
+     "non si e' mai fermato (DECISIONI.md §1.10)",
+     "letto", "ammesso"),
+    ("la stessa, col verdetto opposto: «respinto» dev'essere letto «respinto», "
+     "non arrotondato",
+     "16:34:03.401 rcp     PAM ha risposto (pratica 1): respinto  ⭐ e il filo "
+     "non si e' mai fermato (DECISIONI.md §1.10)",
+     "letto", "respinto"),
+    # ⚠ La riga che NON esiste ancora: il campo in piu' che qualcuno aggiungera'
+    #   in mezzo, esattamente come «(pratica N)» e' stato aggiunto in mezzo.
+    ("⏳ un SECONDO campo in mezzo, che oggi non c'e' e domani ci sara'",
+     "16:35:48.273 rcp     PAM ha risposto (pratica 2, aiutante 3): ammesso  "
+     "⭐ e il filo non si e' mai fermato",
+     "letto", "ammesso"),
+    # ── ⛔ la meta' negativa: qui l'appiglio DEVE dire di no ────────────────
+    ("⛔ una riga di PAM SENZA verdetto: dev'essere «illeggibile», mai un "
+     "verdetto inventato",
+     "16:35:48.273 rcp     PAM ha risposto (pratica 2): boh",
+     "illeggibile", None),
+    ("⛔ una riga che non parla di PAM: dev'essere «assente», che non e' "
+     "«illeggibile»",
+     "16:35:48.273 rcp     CREDENZIALI ricevute utente=prova2",
+     "assente", None),
+]
+
+
+def controllo_positivo_ancora():
+    """⭐ (falliti, quanti) — e stampa riga per riga che cosa ha guardato.
+
+    ⛔ Gira a OGNI esecuzione di B10, prima di qualunque misura, e non e' una
+       cerimonia: un controllo che si esegue solo quando qualcuno se lo ricorda
+       e' un controllo che il giorno che serve non c'era.  Costa microsecondi e
+       non tocca ne' il server ne' PAM ne' il conto di §4.4-bis.
+    """
+    titolo("A0 — ⭐ il CONTROLLO POSITIVO dell'appiglio al registro del server")
+    inf("le righe vere del prodotto e dell'innesto, piu' quelle che gli si")
+    inf("allungheranno addosso: l'esito NON deve cambiare (REVIEWER.md §1.5)")
+    falliti = 0
+    for che, riga, stato_atteso, verdetto_atteso in CASI_ANCORA:
+        stato, verdetto, _ = verdetto_nel_registro(riga)
+        buono = (stato == stato_atteso and verdetto == verdetto_atteso)
+        if buono:
+            ok(f"{che}  ⇒ {stato}"
+               + (f"/{verdetto}" if verdetto else ""))
+        else:
+            falliti += 1
+            ko(f"{che}")
+            ko(f"   atteso «{stato_atteso}"
+               + (f"/{verdetto_atteso}" if verdetto_atteso else "")
+               + f"», ottenuto «{stato}"
+               + (f"/{verdetto}" if verdetto else "") + "»")
+            ko(f"   riga: {riga[:110]}")
+    if falliti:
+        ko(f"⛔ L'APPIGLIO AL REGISTRO E' ROTTO: {falliti} casi su "
+           f"{len(CASI_ANCORA)}.")
+        ko("   ⛔ Finche' questa riga e' rossa, un verde di B10 non vale: la")
+        ko("      conferma «il registro del server lo dice» puo' essere sparita")
+        ko("      IN SILENZIO, che e' quel che e' successo il 12 agosto 2026")
+        ko(f"   ⇒ {MARCA_ANCORA_ROTTA}")
+    else:
+        ok(f"⭐ tutte e {len(CASI_ANCORA)} — l'appiglio regge alle tre forme "
+           f"vere, all'aggiunta di domani, e dice di no alle due righe che "
+           f"non portano un verdetto")
+    return falliti, len(CASI_ANCORA)
 
 
 def ok(t):
@@ -445,6 +632,12 @@ def diagnosi(motivo, coda, pam_root, utente_ok, parola_ok, falliti_del_giro):
 def previsione(a):
     print(f"\n{NETTO}== B10 — le prove e l'atteso, scritti PRIMA{GRIGIO}\n")
     righe = [
+        # ⭐ A0 sta in CIMA all'elenco perche' sta in cima al giro: e' l'unica
+        #    prova che non guarda il server ma **questo file**, e se cade non
+        #    c'e' nessuna ragione di credere alle sette sotto.
+        ("A0", "il controllo positivo dell'appiglio al registro del server "
+               f"({len(CASI_ANCORA)} righe vere e di domani)",
+         "l'esito NON cambia — o la conferma di P1 e' gia' sparita in silenzio"),
         ("T1", "il secondo utente esiste e ha una parola in /etc/shadow",
          f"«{a.utente}» c'e', parola cifrata"),
         ("T2", "chi possiede il processo del server (letto, non supposto)",
@@ -481,6 +674,20 @@ def principale(a):
         f"{a.md5} · giro {a.giro}")
     inf(f"servizio PAM: «{a.servizio_pam}» (⛔ NON «login»: SPECIFICHE.md §4.2)")
     inf(f"registro del server: {a.registro_server}")
+
+    # ── ⭐ A0: PRIMA DI MISURARE, SI CONTROLLA LO STRUMENTO ────────────────
+    #
+    # ⛔ Sta qui, in cima e prima di tutto, e non in fondo: se l'appiglio al
+    #    registro e' rotto, la conferma di P1 e' gia' sparita **e chi legge deve
+    #    saperlo prima di credere a qualunque riga sotto**.  ⚠ Non tocca il
+    #    server, non tocca PAM, non muove il conto di §4.4-bis e costa
+    #    microsecondi: non c'e' nessun giro in cui valga la pena saltarlo.
+    falliti_ancora, quanti_ancora = controllo_positivo_ancora()
+    fatti.append({"prova": "A0", "casi": quanti_ancora,
+                  "falliti": falliti_ancora})
+    if falliti_ancora:
+        esito_finale = 1
+        marche.append(MARCA_ANCORA_ROTTA)
 
     # ── il secondo lettore ────────────────────────────────────────────────
     cliente, dove = carica_cliente()
@@ -632,10 +839,50 @@ def principale(a):
         ok(f"⭐ «{a.utente}» — che NON possiede il processo («{nome_prop}») — "
            f"e' arrivato fino a SESSIONE ({motivo})")
         ok("⇒ la guardia di v1 non c'e' piu': SPECIFICHE.md §5.5 regge sul filo")
-        if RIGA_RCP_VERDETTO in coda:
-            ok(f"e il registro del server porta «{RIGA_RCP_VERDETTO} ammesso»"
-               if "ammesso" in coda else
-               f"⚠ il registro dice «{RIGA_RCP_VERDETTO}» senza «ammesso»")
+        # ── ⛔ LA CONFERMA DAL LATO CHE RICEVE, e adesso ha QUATTRO esiti ────
+        #
+        # ⛔ Qui c'era un `if` senza `else`, guardato da una sottostringa che la
+        #    cura di §1.10 ha reso cieca: quando ha smesso di combaciare, questa
+        #    conferma **non e' diventata rossa — e' sparita**.  ⚠ E il ramo
+        #    «senza ammesso» stampava per giunta con `ok()`, cioe' in VERDE: un
+        #    avviso vestito da conferma.
+        #
+        # ⛔ E il vecchio criterio era «"ammesso" in coda», che e' un'altra
+        #    trappola: la parola «ammesso» compare anche in `ammesso utente=…`,
+        #    scritta da un ALTRO punto del server.  ⇒ La conferma poteva
+        #    risultare vera anche leggendo una riga che non e' il verdetto di
+        #    PAM.  Adesso il verdetto e' quello **catturato dall'appiglio**, e
+        #    non una parola trovata in giro per la coda.
+        stato_reg, verdetto_reg, quante_reg = verdetto_nel_registro(coda)
+        fatti.append({"prova": "P1-registro", "stato": stato_reg,
+                      "verdetto": verdetto_reg, "righe_pam": quante_reg})
+        if stato_reg == "letto" and verdetto_reg == "ammesso":
+            ok(f"⭐ e il registro del server lo conferma dal lato che RICEVE: "
+               f"«PAM ha risposto … ammesso» ({quante_reg} riga/e di PAM in "
+               f"questa coda)")
+        elif stato_reg == "letto":
+            falliti += 1
+            esito_finale = 1
+            ko(f"⛔ IL FILO E IL REGISTRO SI CONTRADDICONO: sul filo e' arrivato "
+               f"SESSIONE, e il registro del server dice «{verdetto_reg}».")
+            ko("   ⚠ Uno dei due sta mentendo, e non si sceglie quale: si dice.")
+        elif stato_reg == "illeggibile":
+            # ⛔ E QUESTO E' UN ROSSO SUL BANCO, NON SUL SERVER.
+            esito_finale = 1
+            marche.append(MARCA_ANCORA_ROTTA)
+            ko(f"⛔ {quante_reg} riga/e «{RIGA_RCP_VERDETTO}» ci sono e NON SI "
+               f"LASCIANO LEGGERE dall'appiglio «{R_RCP_VERDETTO.pattern}».")
+            ko("   ⛔ Il primo imputato e' il BANCO (`REVIEWER.md` §1): il")
+            ko("      server ha scritto il verdetto, e sono io a non saperlo")
+            ko("      piu' leggere.  E' la forma E8, ed e' esattamente quel che")
+            ko("      il 12 agosto 2026 ha accecato B8 per un giro intero.")
+            ko(f"   ⇒ {MARCA_ANCORA_ROTTA}")
+        else:
+            # ⚠ Tre esiti, e il terzo non si arrotonda a nessuno degli altri due.
+            dub("non ho potuto guardare: nessuna riga «PAM ha risposto» nella "
+                "coda di questo tentativo")
+            dub("   ⚠ non e' «il server non l'ha scritta»: puo' essere il")
+            dub("     registro sbagliato, o un marcatore preso troppo tardi.")
     else:
         falliti += 1
         esito_finale = 1
@@ -745,6 +992,17 @@ def principale(a):
 
 
 if __name__ == "__main__":
+    # ⛔ SI GUARDA PRIMA DI `argparse`, E NON E' PIGRIZIA.  Il controllo
+    #    positivo dell'appiglio non ha bisogno di NIENTE — ne' porta, ne'
+    #    parola d'ordine, ne' pid del server — mentre `argparse` qui sotto
+    #    pretende cinque argomenti obbligatori che esistono solo su NIC-OS,
+    #    dentro il contenitore.  ⭐ Volerli anche per questo passo vorrebbe dire
+    #    renderlo eseguibile **solo dove costa**, cioe' non eseguirlo mai: ed e'
+    #    la ragione per cui il difetto del 12 agosto 2026 e' rimasto in piedi.
+    if "--controllo-ancora" in sys.argv:
+        _falliti, _quanti = controllo_positivo_ancora()
+        print()
+        sys.exit(1 if _falliti else 0)
     p = argparse.ArgumentParser(
         description="B10 — il secondo utente: la guardia ereditata da v1")
     p.add_argument("--bersaglio", required=True)
@@ -769,6 +1027,12 @@ if __name__ == "__main__":
     p.add_argument("--md5", default="ignota")
     p.add_argument("--giro", default="")
     p.add_argument("--elenco", action="store_true")
+    # ⭐ Il controllo positivo dell'appiglio, da solo e SENZA SERVER: non serve
+    #    ne' porta, ne' PAM, ne' contenitore.  ⛔ Gira comunque a ogni giro di
+    #    B10 (passo A0); questa opzione esiste perche' lo si possa provare in un
+    #    secondo dopo aver toccato una riga di registro nel prodotto, che e'
+    #    precisamente il momento in cui il 12 agosto 2026 nessuno l'ha fatto.
+    p.add_argument("--controllo-ancora", action="store_true")
     a = p.parse_args()
     if a.elenco:
         previsione(a)

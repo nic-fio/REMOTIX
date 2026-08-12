@@ -409,7 +409,7 @@ togliere»*.
 | 3 | §7.1 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie: è l'unico momento in cui i due lati hanno legittimamente due verità |
 | 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere. ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
 | 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
-| 6 | §6.2 | dopo un cambio di tela, **un secondo di grazia** sui fotogrammi che portano la misura **precedente**: sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
+| 6 | §6.2 | dopo un cambio di tela si tollerano i fotogrammi che portano **una misura che è stata in vigore da quando la coda ha cominciato a svuotarsi**, e la tolleranza finisce quando arriva **la prima chiave alla misura nuova** (§5.2), non a orologio. Sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
 
 ⛔ **E ogni tolleranza va scritta nel registro.** Una tolleranza silenziosa è indistinguibile da un
 difetto, ed è precisamente l'indulgenza che questa sezione esiste per togliere.
@@ -1304,11 +1304,20 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
   di più;
 - **DEVE** riconoscere un **buco** e chiedere una chiave (§5.2).
 
+⛔ **E la regola dell'ordine si applica PRIMA di quella della misura**: un fotogramma il cui `numero`
+è precedente all'ultimo già consegnato **si scarta**, e la sua misura non si guarda nemmeno.
+⚠ *Senza questa precedenza le due righe di questa stessa sezione si contraddicono, e vince la più
+severa su una scena in cui nessuno ha sbagliato: la chiave che chiude la tolleranza **scavalca** i
+fotogrammi in volo — non per caso, ma perché quello vecchio è **il più grosso** (§5.2 vieta di
+abbandonare una chiave) e quello nuovo è più piccolo. Rilievo **P14**, 12 agosto 2026, e la stessa
+famiglia si era già spostata di un passo tre volte: **P8 → P11 → P13 → P14**.*
+
 ⚠ **Il cambio di tela e i fotogrammi in volo.** Dopo aver ricevuto un `TELA(ADATTATA)` (§7.1) il
-client **DEVE** accettare per **un secondo** i fotogrammi la cui misura vale **una tela che è stata
-in vigore entro il secondo appena passato**, dipingendoli riscalati alla vista e scrivendolo nel
-registro; passato quel secondo sono `ERRORE_PROTOCOLLO`, e lo è **subito** una misura che non è mai
-stata in vigore in quella finestra.
+client **DEVE** accettare i fotogrammi la cui misura vale **una tela che è stata in vigore da quando
+la coda ha cominciato a svuotarsi**, dipingendoli riscalati alla vista e scrivendolo nel registro.
+⛔ **E la tolleranza non finisce a orologio: finisce quando arriva la prima chiave alla misura
+nuova**, che §5.2 gli garantisce. Da quel fotogramma in poi una misura vecchia è
+`ERRORE_PROTOCOLLO`; e lo è **subito** una misura che non è mai stata in vigore in quella finestra.
 
 > ⚠ *Diceva «la tela **precedente**», al singolare, e ⛔ **chi trascina una finestra ne manda due**:
 > 1920×1080 → `TELA(1600,900)` → `TELA(1280,720)`, e la chiave aperta prima di tutto — la più
@@ -1323,6 +1332,18 @@ arrivasse al server porta legittimamente la misura di prima, e §5.2 vieta al se
 una chiave — cioè di sgombrare il tubo proprio dei fotogrammi più grossi, che sono i più probabili
 a essere in volo. ⇒ **Dal lato server non è curabile**, e per questo la riga è del client.
 
+> ⛔⛔ *E la prima stesura di questa riga diceva «**per un secondo**», con un orologio — corretta due
+> ore dopo, rilievo **P13**. La ragione è che **il secondo era la grandezza sbagliata**: quel che
+> deve svuotarsi è una **coda**, e quanto ci mette un fotogramma già in volo dipende dalla **banda**,
+> non dall'orologio. Una chiave 1920×1080 può pesare qualche MiB (§6.2 ne ammette 16) e su una linea
+> cattiva — che è **dentro** il modello, il minimo dichiarato è 480p a 25 — arriva **dopo** il
+> secondo. ⇒ Il client avrebbe chiuso un fotogramma spedito quando era legale, e che §5.2 vietava al
+> server di abbandonare: non è solo una sessione sana che cade, è l'invariante **I1** — «mai a
+> staccare» — rotta **perché la linea è lenta**, cioè nella condizione esatta che I1 esiste per
+> proteggere. ⭐ E allungare il secondo avrebbe spostato il difetto invece di toglierlo: la
+> tolleranza finisce su un **fatto osservabile sul filo** — la prima chiave alla misura nuova — che
+> §5.2 garantisce esistere.*
+>
 > ⚠ *Aggiunta il 12 agosto 2026, difetto **D14**, e la marca non è nessuna delle due che questo
 > documento usava: non è una **lettura doppia** e non è una **regola derivata** — è una
 > **contraddizione interna**. Due implementazioni conformi e attente qui **non divergono**:

@@ -172,6 +172,23 @@ per i fotogrammi quella grazia **non c'è**.
 
 ---
 
+### D15 — `[?]` **la grandezza sbagliata che P13 ha tolto da §6.2 è ancora in §7.1**
+
+Il server tollera **per un secondo** le coordinate valide sulla tela precedente. ⛔ Ma l'uplink è il
+verso debole e gli stream QUIC **condividono la finestra di congestione**: un input partito prima
+del `TELA` può arrivare dopo il secondo, e il server chiude. ⇒ È di nuovo **I1** — *«mai a
+staccare»* — rotta perché la linea è lenta.
+
+⚠ **E la cura di P13 non si trasporta**: per i fotogrammi la fine della tolleranza è un fatto
+**osservabile sul filo** (la prima chiave alla misura nuova, che §5.2 garantisce); per le coordinate
+no — una coordinata può essere **valida su tutt'e due le tele**, e il server non ha modo di
+distinguerla. ⇒ Serve una grandezza diversa, e non è stata trovata.
+
+`[?]` **Dichiarata, non curata, e non misurata.** Trovata il 12 agosto 2026 dall'agente degli
+arbitri, alla quarta rilettura ostile di §6.2.
+
+---
+
 ## Chi cura che cosa
 
 ⛔ **Un agente per difetto, e ognuno possiede file suoi**: due agenti sullo stesso file si

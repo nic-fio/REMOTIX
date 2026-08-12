@@ -749,7 +749,72 @@ gira()
 		#   · porta, file dei ban e socket **spostati**: due giri sulla stessa
 		#     macchina non condividono mai il file dei ban (§4.4-bis conta per
 		#     indirizzo, e un ban dura dodici ore).
-		local blocchi8=${B12_B8_BLOCCHI:-6}
+		# ⛔⭐ PERCHE' 10 E NON 6 — 12 agosto 2026, sera.  ⚠ CHI LO RIABBASSA
+		#     PER FAR PRIMA RIMETTE IN PIEDI UN FALSO ROSSO SULLA SICUREZZA.
+		#
+		# Il predefinito era **6**, cioe' `6 × PER_CASO(2)` = **12 campioni per
+		# caso**.  ⛔ Con 12 campioni la coppia «inesistente − sbagliata» — che
+		# e' **l'unica delle tre che porta il segreto** che §4.4 vieta di far
+		# trapelare (se un nome utente esista) — si separa **per caso**, e non
+		# per un difetto del server: a spostare quei tempi e' la randomizzazione
+		# di `pam_faildelay` in `libpam`, che B8 dichiara come `[?]` aperta.
+		#
+		# ⛔ IL CASO CONCRETO, `[M]` 12 agosto 2026, giro di B8 a 6 blocchi:
+		#
+		#     inesistente − sbagliata   **-409 ms   [-677; -8]**   ris. ±335 ms
+		#     ⇒ l'intervallo NON contiene lo zero  ⇒  **SI DISTINGUONO**
+		#
+		#    cioe' un **ROSSO PIENO sulla proprieta' di sicurezza**, che B12
+		#    leggerebbe come *«il guasto e' rimasto addosso al codice»* — mentre
+		#    il terreno dice di no.  ⚠ E l'estremo che decide e' **-8 ms**: la
+		#    separazione e' passata dalla parte sbagliata dello zero per otto
+		#    millisecondi su una risoluzione di ±335.
+		#
+		# ⭐ E CHE NON SIA UN CASO ISOLATO LO DICE IL DENOMINATORE, non
+		#    l'aneddoto.  `[M]` sei giri a 6 blocchi della stessa sera, stessa
+		#    scena, stesso innesto (`cert-b8.log`, `b12-b8.log`, tre passi
+		#    ciascuno) — la stessa coppia, sullo stesso server sano:
+		#
+		#      -197.0  [-349.9; +163.7]  ±256.8      +17.2  [-374.0; +477.8]  ±425.9
+		#       +24.5  [-513.2; +301.1]  ±407.1     -119.1  [-604.1; +324.7]  ±464.4
+		#      -160.9  [-521.2; +254.9]  ±388.1     -158.2  [-439.6; +274.6]  ±357.1
+		#
+		#    ⛔ La stima puntuale **vaga di ±400 ms** mentre la semiampiezza vale
+		#       ~±380: le due grandezze sono **la stessa**, quindi lo zero sta
+		#       sul bordo e prima o poi ci esce.  Su sette giri a 12 campioni ne
+		#       e' uscito **uno**, ed e' esattamente il tasso che questi numeri
+		#       prevedono.  ⇒ Non era sfortuna: era il numero di campioni.
+		#
+		# ⭐ A **10 blocchi** (= 20 campioni per caso) `[M]` la coppia del
+		#    segreto **non si separa in nessuno dei tre passi** — sano, guasto,
+		#    risanato — e il verdetto torna a essere quel che deve: `SOSPESO`
+		#    oppure `indistinguibili`, mai `SI DISTINGUONO`.
+		#
+		# ⚠ E QUEL CHE 10 **NON** COMPRA, detto invece che sottinteso: non
+		#   compra il verde.  ±50 ms (`RISOLUZIONE_VOLUTA`) resta irraggiungibile
+		#   — B8 stesso stampa che con questo rumore servirebbero **~871-1036
+		#   campioni per caso** — quindi il verdetto onesto a 20 campioni resta
+		#   `SOSPESO`.  ⭐ Ma il SOSPESO e' l'esito giusto («guardare meno allarga
+		#   l'intervallo e porta al sospeso, non al verde»), mentre il
+		#   `SI DISTINGUONO` di prima era un'**accusa** — e fra i due sbagli
+		#   quello che si paga e' l'accusa.
+		#
+		# ⛔ IL PREZZO, dichiarato e contato con la formula che stampa
+		#    `01-b8-lancia.sh` stesso (`BLOCCHI*6*4/60+2` … `BLOCCHI*6*6/60+4`):
+		#
+		#      6 blocchi   4-7 minuti per passo    · 33 autenticazioni fallite
+		#     10 blocchi   6-10 minuti per passo   · 49 autenticazioni fallite
+		#
+		#    ⇒ **+2/3 minuti per passo, ×3 passi: +6/9 minuti in tutto.**  ⚠ E le
+		#    autenticazioni fallite in piu' non toccano il bilancio di §4.4-bis:
+		#    quello e' **per blocco** (2 per indirizzo, soglia 3) e si sblocca fra
+		#    un blocco e l'altro — piu' blocchi vuol dire piu' sblocchi, non un
+		#    conto piu' alto.
+		#
+		# ⛔ Se un giorno serve piu' corto, si abbassa con `B12_B8_BLOCCHI=…`
+		#    **dichiarandolo nel rapporto**, e non si tocca questa riga: il
+		#    predefinito e' il numero che regge senza che nessuno ci pensi.
+		local blocchi8=${B12_B8_BLOCCHI:-10}
 		inf "⭐ B8 si lancia dal SUO lanciatore ($blocchi8 blocchi): due vite"
 		inf "   del server · la pagina del ban · lo sblocco su un ban vero."
 		inf "   ⚠ Dura qualche minuto per passo, ed e' il prezzo di una"
