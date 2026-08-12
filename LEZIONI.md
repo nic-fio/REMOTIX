@@ -464,6 +464,29 @@ un modo di leggerla che rileggerla non è.*
 
 *Dettaglio: `fasi/rapporti/F2-4-filo.md`, e le righe nel riquadro in testa a `RCP.md`.*
 
+### 1.14 ⛔⛔ Un controllo che accetta **«una delle due strade»** nasconde una strada rotta per sempre
+
+*Scritta il 13 agosto 2026, dopo che un difetto è passato **sotto le certificazioni** per due giorni.*
+
+`RCP.md` §3.1 fa chiudere una sessione per **due strade**, e il banco che le giudica accettava
+*«una delle due»*. ⇒ ⛔ **Una delle due poteva essere rotta da sempre e il banco restava verde**, perché
+l'altra passava — ed è quel che è successo: `[M]` la strada persa era sempre la stessa, e il rosso è
+comparso solo il giorno in cui a cadere è stata **l'altra**.
+
+⛔ **E il difetto era più vecchio del codice che l'ha fatto emergere**: chi l'ha cercato ha sospettato
+la riscrittura della sera, e i byte hanno detto che era lì da due giorni.
+
+> **La regola.** Un criterio nella forma *«almeno una di N»* va scritto **solo** se le N sono
+> davvero intercambiabili per chi le riceve. Se ciascuna ha un effetto suo — e due strade di
+> chiusura ce l'hanno, perché il motivo che arriva al server è diverso — allora il criterio giusto è
+> **«ciascuna quando tocca a lei»**, e il banco deve dire **quale** ha visto, non quante.
+
+⚠ E il corollario che costa di più: **un controllo così non fallisce mai per il difetto che dovrebbe
+prendere**, quindi non lo si scopre nemmeno certificandolo — i guasti innestati lo trovano verde
+prima e verde dopo.
+
+*Dettaglio: `fasi/rapporti/P2-8-congedo.md`, e la storia della cura dell'11 agosto in `README.md`.*
+
 ---
 
 ## 2. Come si prova

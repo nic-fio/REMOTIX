@@ -13,3 +13,4 @@
 {"ora": "2026-08-12T20:35:30", "tipo": "prova", "ip": "127.0.0.1", "ua": "curl/8.14.1", "dati": {"gettone": "gettone-157127-1786559730"}}
 {"ora": "2026-08-12T20:35:55", "tipo": "prova", "ip": "127.0.0.1", "ua": "curl/8.14.1", "dati": {"gettone": "gettone-157299-1786559755"}}
 {"ora": "2026-08-12T20:37:08", "tipo": "richiesta", "ip": "192.168.0.3", "ua": "curl/8.14.1", "percorso": "/02-giudizio-pagina.html?giro=20260812-2035", "codice": 200, "byte": 31483}
+{"ora": "2026-08-13T00:48:56", "tipo": "richiesta", "ip": "192.168.0.24", "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36", "indicazioni_client": {"Sec-CH-UA-Platform": "\"Linux\"", "Sec-CH-UA-Mobile": "?0", "Sec-CH-UA": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\""}, "percorso": "/02-giudizio-pagina.html?giro=20260812-1958", "codice": 200, "byte": 31483}

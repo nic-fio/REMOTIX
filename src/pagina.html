@@ -1309,7 +1309,40 @@ async function collega(utente, parola) {
     try {
       const s = new Scrittore().u8(motivo).str(perche);
       await canale.manda(TIPO.CONGEDO, s.byte());
-      await canale.scrittore.close();
+      /* ⛔⭐ IL FIN SI SPEDISCE E NON SI ASPETTA — cura del 13 agosto 2026, su
+       *     un difetto che ha ACCUSATO IL PRODOTTO DA SOLO, per bocca del
+       *     server, nel giro risanato di P5 delle 22:01:11 UTC (registro
+       *     conservato: `tmp/p5x-7582-VIOLAZIONE-31-risanato.log`).
+       *
+       * ⛔ Qui c'era `await canale.scrittore.close()`.  Dentro `pagehide` il
+       *    tempo e' quello che il browser concede, e ⛔ **la riga qui sotto —
+       *    `wt.close()`, che e' il punto 3 di §3.1 e NON HA CONDIZIONI —
+       *    stava dietro alla risoluzione di DUE promesse**.  Quando il
+       *    processo di rendita muore fra la seconda e la terza, il punto 3
+       *    non viene mai eseguito e a chiudere la sessione e' lo SMONTAGGIO
+       *    del browser, col codice `0x0` che §3.1 vieta.
+       *
+       * ⭐ E non e' dedotto: il server ha visto arrivare il `CONGEDO` (0x01) e
+       *    il `FIN` nello stesso millisecondo, e 33 ms dopo una
+       *    `CLOSE_WEBTRANSPORT_SESSION` **col codice 0** — cioe' i byte di
+       *    tutt'e due le attese erano usciti, e a non essere mai girata era
+       *    la riga dopo.  ⚠ Nei giri sani lo scarto fra il `FIN` e la
+       *    chiusura col codice `0x01` sta fra 3 e 6 ms.
+       *
+       * ⚠ Quel che si perde: l'attesa che il `FIN` sia CONFERMATO.  I byte
+       *   partono lo stesso — il server continua a scrivere «FIN del CLIENT»
+       *   — e ne' §3.1 ne' §8.1 chiedono quella conferma: chiedono il
+       *   `CONGEDO` (punto 2, condizionato) e il codice nella chiusura
+       *   (punto 3, senza condizioni).  ⛔ Un punto 3 sacrificato al punto 2
+       *   e' esattamente il verso che §3.1 vieta.
+       *
+       * ⚠ E NON E' UN DIFETTO DELLA PAGINA DI STASERA: queste righe sono
+       *   identiche byte per byte a quelle della cura dell'11 agosto
+       *   (`DECISIONI.md` §1.12).  Il difetto e' PIU' VECCHIO della scelta
+       *   del codec e delle quattro sonde, ed e' passato sotto le
+       *   certificazioni di ieri perche' `01-p5-registro.py` accetta **una
+       *   delle due strade** mentre §3.1 punto 3 non e' negoziabile. */
+      canale.scrittore.close().catch(() => {});
     } catch (e) {
       /* ⚠ Il canale poteva essere gia' morto: e' esattamente il caso per cui
          §3.1 ha voluto DUE strade, e la seconda parte lo stesso. */
