@@ -179,6 +179,25 @@ CORREDO = {
 # ⚠ E un file che non si legge da qui (i documenti non stanno sulla macchina di
 #   prova, i banchi di B4 non stanno nel contenitore) vale `None`, e due `None`
 #   NON sono uguali: «non ho potuto guardare» non e' «non e' cambiato».
+# ⛔⛔ IL BINARIO DEL PRODOTTO CONTA, E FINO AL 12 AGOSTO 2026 NON LO CONTAVA
+#     NESSUNO — trovato dal giro di ricertificazione della sera, ed e' un buco
+#     nello strumento che tutta la giornata ha usato come garanzia.
+#
+#     Nessun banco che misura il PRODOTTO (B10, B13, P1, P5, P5R) aveva
+#     `main.c` o il `Makefile` fra le impronte.  ⇒ Una ricostruzione che
+#     cambia il binario **non faceva scadere niente**, e il registro
+#     continuava a dire «vale oggi» di una riga misurata su un altro binario.
+#     `[M]` la sera del 12 agosto: `src/main.c` e `Makefile` cambiati alle
+#     22:18, il prodotto sul server un commit indietro, e il catalogo che
+#     diceva **15 su 15**.
+#
+#     ⚠ E' la forma E8 applicata alla garanzia stessa: «certificato» e «non
+#     ho guardato la cosa che conta» avevano lo stesso aspetto.  Da qui in poi
+#     un banco del prodotto porta anche i due file che decidono che cosa il
+#     binario CONTIENE — e scade quando il prodotto si ricostruisce, che e'
+#     esattamente quel che deve fare.
+FILE_DEL_BINARIO = ["../src/main.c", "../src/Makefile"]
+
 FILE_CHE_CONTANO = {
     "B2":  ["01-b2-sonda-trasporto.py", "01-b2-ngtcp2-wt-innesta.py"],
     "B3":  ["01-b3-cliente.py", "01-b3-rcp-innesta.py", "rcp/rcp.c"],
@@ -191,9 +210,9 @@ FILE_CHE_CONTANO = {
     # ⛔ La certificazione di B10 poggia sul banco che deve diventare rosso —
     #    che dall'11 agosto 2026 sera ESISTE — e non solo sul modulo guastato.
     "B10": ["01-b10-secondo-utente.py", "01-b10-lancia.sh",
-            "rcp/autenticazione.c"],
+            "rcp/autenticazione.c"] + FILE_DEL_BINARIO,
     "B11": ["01-b11-guasto-innesta.py", "01-b11-pagina.html"],
-    "B13": ["01-b13-proprieta.py", "rcp/rcp.c"],
+    "B13": ["01-b13-proprieta.py", "rcp/rcp.c"] + FILE_DEL_BINARIO,
     "C2":  ["01-c2-diagnosi.py"],
     # ⚠ P1 e P5 — sera dell'11 agosto 2026.  `remotix/pagina.c` e' il sorgente
     #   DEL PRODOTTO, e si legge solo dalla macchina di prova: da `banchi/`, su
@@ -201,13 +220,13 @@ FILE_CHE_CONTANO = {
     #   la stessa scena di `../RCP.md` per B9, al contrario: ognuno dei due
     #   banchi si certifica da una macchina sola, e `--provabile` lo dice
     #   invece di lasciarlo scoprire a un rosso (R12-A.31).
-    "P1":  ["01-p1-prodotto.sh", "01-p1-dentro.sh", "remotix/pagina.c"],
+    "P1":  ["01-p1-prodotto.sh", "01-p1-dentro.sh", "remotix/pagina.c"] + FILE_DEL_BINARIO,
     # ⚠ `01-p5-guasto-catalogo.py` entra il 12 agosto 2026, su segnalazione di
     #   chi l'ha scritto: innesta il guasto P5 leggendo le stringhe **da questo
     #   catalogo** invece di ricopiarle, e senza la sua impronta la riga di P5
     #   direbbe «certificato» senza sapere con che attrezzo.
     "P5":  ["01-p5-lancia.sh", "01-p5-registro.py", "01-p5-guasto-catalogo.py",
-            "remotix/pagina.c"],
+            "remotix/pagina.c"] + FILE_DEL_BINARIO,
     # ⚠ P5R — 12 agosto 2026.  Senza questa riga la certificazione di P5R
     #   esisteva ma NON portava impronte, cioe' era «non riverificabile»: una
     #   riga che dice «certificato» e non sa dire **su che byte**.  ⛔ E
@@ -219,7 +238,7 @@ FILE_CHE_CONTANO = {
     #     volta sola all'accensione — sono due file diversi e due guasti
     #     ortogonali (misurato in tutt'e due i versi il 12 agosto).
     "P5R": ["01-p5-lancia.sh", "01-p5-registro.py", "01-p5-guasto-ritiro.py",
-            "remotix/pagina.html"],
+            "remotix/pagina.html"] + FILE_DEL_BINARIO,
 }
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
