@@ -1765,7 +1765,7 @@ def togli(sigla):
 
 
 # ===========================================================================
-def giudica(percorso):
+def giudica(percorso, scena=None):
     """Legge gli esiti dei tre passi e dice CHI e' certificato.
 
     Ogni riga del file e' `{"sigla":…, "passo":"sano|guasto|risano|saltato",
@@ -1774,6 +1774,24 @@ def giudica(percorso):
     ⛔ E `marca_vista` si legge su TUTT'E TRE i passi, non solo sul guasto: la
        seconda meta' del criterio e' che il giro **sano** non dicesse gia' la
        marca (R12-A.3).
+
+    ⛔⭐ E `scena` — CHE COSA E' STATO INTERROGATO — entra nella riga di
+        registro, difetto **D6**, 12 agosto 2026.
+
+    Fino a oggi la riga diceva **chi**, **quando** e **su quali byte**, e non
+    diceva **contro che cosa**.  ⛔ Finche' l'orchestratore sapeva accendere un
+    solo server la cosa non si vedeva; dal 12 agosto `01-b12-lancia.sh` si
+    punta anche sul **prodotto**, e senza questo campo due righe «B13
+    certificato» scritte contro due server diversi hanno lo stesso aspetto.
+
+      ⛔ *E' la forma **E8** applicata al registro: «vuoto» e «un'altra scena»
+         si leggono uguali.  E non e' un'ipotesi — e' gia' successo: contro
+         l'INNESTO il giro sano di B13 esce **1** (B13.4, «la pagina servita in
+         TCP», che l'innesto non serve) e contro il PRODOTTO esce **3**, che e'
+         l'atteso del catalogo.  Il numero era giusto e la SCENA era sbagliata.*
+
+    ⚠ E una riga senza scena non si arrotonda a «innesto»: si scrive
+      «non dichiarata», che e' quel che e'.
     """
     try:
         with open(percorso, encoding="utf-8") as f:
@@ -1789,7 +1807,19 @@ def giudica(percorso):
 
     print("== ⛔ Chi e' CERTIFICATO, e chi no")
     print("   (certificato = verde prima · rosso col guasto, con una marca che")
-    print("    il giro SANO non diceva gia' · verde dopo)\n")
+    print("    il giro SANO non diceva gia' · verde dopo)")
+    # ⛔ LA SCENA SI DICHIARA PRIMA DEI NOMI, non dopo i numeri: chi legge un
+    #    «certificato» ha diritto di sapere contro che cosa, prima di leggerlo.
+    if scena:
+        print(f"   ⭐ scena interrogata: {GIALLO}{scena}{GRIGIO}")
+    else:
+        print(f"   {GIALLO}⚠ SCENA NON DICHIARATA{GRIGIO}: chi ha lanciato "
+              f"questo giudizio non ha detto contro")
+        print("     che cosa ha misurato, e la riga di registro lo scrivera' "
+              "come tale.  ⛔ Non e'")
+        print("     «innesto»: e' «non si sa», e le due cose non si "
+              "arrotondano (D6).")
+    print()
     certificati, no, saltati = [], [], []
     for sigla in sorted(per_sigla):
         p = per_sigla[sigla]
@@ -1976,6 +2006,10 @@ def giudica(percorso):
         #    sulla stessa macchina.  Una riga senza questo campo non dice se
         #    «non provato» voglia dire «non provabile da li'».
         "macchina": socket.gethostname(),
+        # ⛔ CONTRO CHE COSA — difetto D6.  «non dichiarata» e' un valore, non
+        #    un buco: le righe scritte prima del 12 agosto 2026 non lo portano,
+        #    e `--registro` deve poterle distinguere da quelle che lo portano.
+        "scena": scena or "non dichiarata",
         "certificati": certificati,
         "non_certificati": [s for s, _ in no],
         "saltati": saltati,
@@ -2018,6 +2052,10 @@ def _normalizza(r):
     return {
         "quando": r.get("quando", "?"),
         "macchina": r.get("macchina", "?"),
+        # ⚠ D6, 12 agosto 2026: le righe scritte prima non hanno questo campo,
+        #   e la parola giusta e' «non dichiarata» — non «innesto».  Dedurla
+        #   dal contesto vorrebbe dire scrivere una misura che nessuno ha fatto.
+        "scena": r.get("scena", "non dichiarata (riga scritta prima di D6)"),
         "certificati": r.get("certificati", []),
         "non_certificati": r.get("non_certificati", []),
         "saltati": r.get("saltati", []),
@@ -2673,6 +2711,9 @@ def mostra_registro():
     for r in ordinate:
         print(f"  {r['quando']}  su «{r['macchina']}»  "
               f"rcp.c {r['impronta_rcp_c'][:16]}…")
+        # ⛔ D6: la scena sta accanto alla data, non in fondo.  Due righe con
+        #    gli stessi nomi e due scene diverse dicono due cose diverse.
+        print(f"      scena interrogata      : {r['scena']}")
         print(f"      certificati            : "
               f"{', '.join(r['certificati']) or '—'}")
         print(f"      NON certificati        : "
@@ -2727,6 +2768,9 @@ def mostra_registro():
             print(f"  {VERDE}OK {GRIGIO} {sigla:4s} CERTIFICATO il "
                   f"{r['quando']} su «{r['macchina']}» — e vale oggi "
                   f"({perche})")
+            # ⛔ D6: e CONTRO CHE COSA.  Un «vale oggi» senza la scena dice su
+            #    quali byte la riga poggia e tace su quale server li eseguiva.
+            print(f"        scena: {r['scena']}")
         elif verdetto == "cambiate":
             scaduti.append(sigla)
             print(f"  {ROSSO}NO {GRIGIO} {sigla:4s} certificato il "
@@ -2887,6 +2931,16 @@ if __name__ == "__main__":
                         "che non c'e' (R12-A.31)")
     p.add_argument("--certificati", default=CERT_PREDEFINITA,
                    help="la cartella dei certificati (per i guasti «{CERT}»)")
+    # ⛔ D6 — LA SCENA SI DICHIARA, e chi la dichiara e' chi l'ha accesa.
+    #    Non si deduce qui dentro: `--giudica` legge un file di esiti e non ha
+    #    modo di sapere quale server li ha prodotti.  Chiederglielo sarebbe
+    #    chiedere a un verbale di ricordarsi la stanza.
+    p.add_argument("--scena", default=None,
+                   help="contro CHE COSA il giro ha misurato (es. «innesto "
+                        "bsslserver :7447» o «prodotto remotix :7526»).  ⛔ "
+                        "Finisce nella riga di registro: senza, due righe con "
+                        "gli stessi nomi e due scene diverse hanno lo stesso "
+                        "aspetto (forma E8 applicata al registro)")
     # ⛔ D10 — L'UNIONE STA NEL PROGRAMMA, non in una procedura da ricordare.
     p.add_argument("--unisci", metavar="ALTRA",
                    help="unisce il registro di qui con la copia in ALTRA. "
@@ -2920,7 +2974,7 @@ if __name__ == "__main__":
     if a.registro:
         sys.exit(mostra_registro())
     if a.giudica:
-        sys.exit(giudica(a.giudica))
+        sys.exit(giudica(a.giudica, a.scena))
     if a.provabile:
         sys.exit(provabile(a.provabile))
     for campo in ("marca", "costa"):

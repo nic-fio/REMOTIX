@@ -56,6 +56,61 @@
 #    lanciatore, e la MARCA si legge dal file che il banco scrive da se'.
 #
 # ---------------------------------------------------------------------------
+# ⛔⭐ IL BERSAGLIO SI DICHIARA — difetto **D6**, curato il 12 agosto 2026.
+#
+#   B12_BERSAGLIO=innesto   (predefinito)  `bsslserver`, il server di ngtcp2
+#                                          con l'innesto RCP dentro
+#   B12_BERSAGLIO=prodotto                 `remotix`, il prodotto vero
+#
+# ⛔ PERCHE' ERA UN DIFETTO, E NON UNA COMODITA' MANCANTE.
+#
+# Fino a stamattina qui c'era `SERVER=".../examples/bsslserver"` **scritto in
+# chiaro** — mentre la porta era gia' configurabile con `B12_PORTA`.  ⇒ Questo
+# orchestratore sapeva accendere **una scena sola**, e da li' due conseguenze
+# che si sono viste tutt'e due:
+#
+#   · **B13 si certificava solo dal proprio script «sera»**
+#     (`01-b13-sera-certifica.sh`), che rifa' lo STESSO ciclo con lo STESSO
+#     guasto contro il prodotto — cioe' due strumenti per una cosa sola, e il
+#     secondo destinato a invecchiare (e' la ragione per cui B8 e C2 si lanciano
+#     dai loro lanciatori invece che da una copia della loro sequenza);
+#   · **P1, P5 e P5R stanno fuori di qui** e certificano il prodotto per conto
+#     loro.
+#
+# ⛔⭐ E LA PROVA CHE IL DIFETTO MORDEVA E' UN NUMERO, non un ragionamento:
+#     sotto B12 il giro **sano** di B13 usciva **1** — rosso su `B13.4`, *«la
+#     pagina servita in TCP»* — perche' B12 lo puntava sull'**innesto**, che la
+#     pagina non la serve.  Contro il **prodotto** lo stesso identico giro esce
+#     **3**, che e' l'atteso scritto nel catalogo.
+#     ⇒ *Il numero era giusto e la SCENA era sbagliata.*  ⚠ E chi avesse curato
+#       il numero — allargando `atteso_sano` finche' tornava — avrebbe scritto
+#       nel catalogo che un rosso e' normale.
+#
+# ⛔ DA CUI LA SECONDA META' DELLA CURA, che vale piu' della prima: **ogni riga
+#    di registro dice adesso quale scena ha misurato** (`--scena`, campo
+#    `scena` in `01-b12-registro.jsonl`).  Senza, un domani due righe con lo
+#    stesso nome e due scene diverse avrebbero lo stesso aspetto — che e' la
+#    forma **E8** («vuoto» e «proibito» si leggono uguali) applicata al
+#    registro, dentro lo strumento che esiste per non far credere niente a
+#    nessuno.
+#
+# ⚠ E LA STRADA E' QUELLA GIA' IN CASA, non una seconda: `01-p1-prodotto.sh` si
+#   lascia spostare con `SORG=` e `PORTA=`, `01-b0-terreno.sh` prende
+#   `{innesto|prodotto}` come argomento e `SORG=` come ambiente, e
+#   `01-b13-sera-accendi.sh` ha gia' scritto **come** si accende il prodotto
+#   (porta, certificati, pagina, file dei ban, socket).  Qui si mettono insieme.
+#
+# ⛔ QUEL CHE QUESTA CURA **NON** FA, detto qui invece che scoperto da un rosso:
+#
+#   · non insegna a **costruire** il prodotto.  I guasti «ricostruisce» vivono
+#     tutti in `examples/rcp.c` e si compilano con `ninja`; il prodotto vuole
+#     `costruisci.sh` (lo dice gia' la nota di B10 nel catalogo).  ⇒ Sulla scena
+#     «prodotto» un guasto «ricostruisce» viene **rifiutato**, non tentato;
+#   · non porta P1, P5 e P5R dentro l'orchestratore: quelli vogliono un
+#     **browser vero**, che su questa macchina non c'e'.  Restano fuori, e
+#     restano dichiarati.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # ⛔ LO STATO INIZIALE (B0.1, B0.3)
 #
 #  · la porta 7447 dev'essere libera all'inizio;
@@ -80,8 +135,6 @@ set -uo pipefail
 ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
-CERT=/media/REMOTIX/b2-certificati
-SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
 LIBS="$DENTRO/b2/ngtcp2/build/lib"
 IND=192.168.0.2
 # ⛔ LA PORTA SI PUO' SPOSTARE, E NON E' UN VEZZO — 11 agosto 2026.
@@ -108,6 +161,49 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
+# ---------------------------------------------------------------------------
+# ⛔⭐ IL BERSAGLIO, DICHIARATO QUI E IN UN POSTO SOLO — difetto D6.
+#     La ragione per esteso sta in testa a questo file; qui c'e' la scelta.
+BERSAGLIO=${B12_BERSAGLIO:-innesto}
+# ⛔ L'albero del prodotto si dichiara come in `01-p1-prodotto.sh` e in
+#    `01-b0-terreno.sh`: su questa macchina di alberi con dentro un `remotix`
+#    ce n'e' piu' d'uno (`[M]` cinque, 12 agosto 2026), e «il prodotto» senza
+#    un percorso non e' un bersaglio.
+SORG=${B12_SORG:-$FUORI/remotix}
+DENTRO_SORG=${B12_DENTRO_SORG:-$DENTRO/${SORG#"$FUORI/"}}
+case "$BERSAGLIO" in
+innesto)
+	SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
+	# ⚠ I certificati dell'innesto li fa B2 e sono condivisi: `pagina.pem` e
+	#   `sessione.pem` stanno gia' li', ed e' su quei due che il guasto di
+	#   B13 lavora.
+	CERT=${B12_CERT:-/media/REMOTIX/b2-certificati}
+	CERT_FUORI=${CERT/#$DENTRO/$FUORI}
+	SCENA="innesto — bsslserver (b2/ngtcp2/build/examples) :$PORTA su $IND"
+	;;
+prodotto)
+	SERVER="$DENTRO_SORG/remotix"
+	# ⛔ E i certificati del prodotto sono i SUOI, non quelli di B2: se li
+	#    genera da se' alla prima accensione, ed e' la ragione per cui c'e'
+	#    una «scaldata» prima del giro — `--verifica B13` guarda quei due
+	#    file, e su una cartella vuota direbbe «non si leggono» invece di
+	#    «la scena non e' ancora pronta».
+	CERT=${B12_CERT:-$DENTRO/tmp/b12-prodotto-cert}
+	CERT_FUORI=${CERT/#$DENTRO/$FUORI}
+	SCENA="prodotto — remotix ($SORG) :$PORTA su $IND"
+	;;
+*)	ko "⛔ B12_BERSAGLIO=«$BERSAGLIO» non esiste: «innesto» o «prodotto»"
+	exit 2 ;;
+esac
+
+log "⭐ La scena, dichiarata PRIMA di misurarla (B0.1) — difetto D6"
+inf "bersaglio:    $BERSAGLIO"
+inf "server:       $SERVER"
+inf "certificati:  $CERT"
+inf "porta:        $PORTA"
+inf "⛔ e questa riga finisce nel registro, campo «scena»:"
+inf "   $SCENA"
+
 log "Credenziali per il contenitore"
 bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
 ok "sudo validato"
@@ -125,8 +221,14 @@ ok "sudo validato"
 # ⭐ Qui si guarda prima di misurare, e si rifiuta: un giro di certificazione
 #    su un terreno ignoto scrive nel registro una riga con una data, e quella
 #    riga poi la si crede.
-log "0. ⛔ Il terreno (B0.1): il server e' quello che credo?"
-if ! bash "$FUORI/01-b0-terreno.sh" innesto; then
+# ⛔ E IL TERRENO SI CHIEDE DEL BERSAGLIO GIUSTO — D6.  Fino a stamattina qui
+#    c'era `01-b0-terreno.sh innesto` scritto in chiaro, come il server: un giro
+#    puntato sul prodotto avrebbe verificato l'innesto e sarebbe partito lo
+#    stesso, cioe' avrebbe controllato **una scena che non stava per misurare**.
+#    ⚠ E `SORG=` glielo si passa, perche' anche lui ha piu' d'un albero da
+#      giudicare e sceglierne uno di suo sarebbe una seconda verita'.
+log "0. ⛔ Il terreno (B0.1): il server «$BERSAGLIO» e' quello che credo?"
+if ! SORG="$SORG" bash "$FUORI/01-b0-terreno.sh" "$BERSAGLIO"; then
 	ko "⛔ NON CERTIFICO NIENTE: il terreno non regge."
 	ko "   ⚠ E NON scrivo nel registro — un giro che non ha misurato niente"
 	ko "   non e' un giro con zero certificati."
@@ -200,8 +302,12 @@ chi_tiene_la_porta() # $1 = "-ulnp" (UDP) oppure "-tlnp" (TCP)
 case "${1:-leggeri}" in
 elenco)   bash "$ENTRA" --root "python3 $GUASTI --elenco"; exit 0 ;;
 registro) bash "$ENTRA" --root "python3 $GUASTI --registro"; exit 0 ;;
-leggeri)  SIGLE="C2 B13" ;;
-tutti)    SIGLE="C2 B13 B7" ;;
+leggeri)  # ⚠ E l'elenco predefinito e' del BERSAGLIO, non dello script: C2
+          #   accende e spegne `bsslserver` da se' (`01-c2-lancia.sh`), quindi
+          #   sulla scena «prodotto» misurerebbe l'innesto **mentre il registro
+          #   direbbe «prodotto»** — che e' il difetto D6 al contrario.
+          if [ "$BERSAGLIO" = prodotto ]; then SIGLE="B13"; else SIGLE="C2 B13"; fi ;;
+tutti)    if [ "$BERSAGLIO" = prodotto ]; then SIGLE="B13"; else SIGLE="C2 B13 B7"; fi ;;
 *)        SIGLE="$*" ;;
 esac
 inf "sigle da provare: $SIGLE"
@@ -275,7 +381,25 @@ for S in $SIGLE; do
 	MANCA=$(bash "$ENTRA" --root \
 	    "python3 $GUASTI --provabile $S 2>/dev/null" \
 	    | tr -d '\r' | sed -n 's/^MANCA //p' | tr '\n' ' ')
-	if [ -n "$MANCA" ]; then
+	# ⛔⭐ E LA SECONDA DOMANDA E' NUOVA — D6: «si prova su QUESTA SCENA?»
+	#
+	# La prima guarda se i file ci sono su questa macchina (R12-A.31).  Questa
+	# guarda se il guasto ha senso contro questo bersaglio: i guasti «ricostruisce»
+	# vivono in `examples/rcp.c` e si compilano con `ninja`, cioe' **fanno parte
+	# dell'innesto**.  ⛔ Innestarne uno mentre si misura il prodotto lascerebbe
+	# il prodotto intatto: il banco resterebbe verde e chi legge concluderebbe
+	# «il banco non vede il guasto» — l'accusa esattamente opposta, che e' la
+	# trappola n.2 del catalogo.
+	# ⚠ E si rifiuta PRIMA di spendere il giro sano, come l'altra.
+	COSTA_S=$(python3 "$FUORI/01-b12-guasti.py" --costa "$S" | tr -d '\r' | tail -1)
+	if [ "$BERSAGLIO" = prodotto ] && [ "$COSTA_S" = ricostruisce ]; then
+		ko "⛔ «$S» NON si prova sulla scena «prodotto»: il suo guasto e' di"
+		ko "   tipo «ricostruisce», cioe' vive in examples/rcp.c e si compila"
+		ko "   con ninja — e' un guasto dell'INNESTO."
+		ko "   ⚠ Innestandolo qui il prodotto resterebbe sano e il banco verde:"
+		ko "     «il banco non vede il guasto» invece di «il guasto non c'era»."
+		RIFIUTATE="$RIFIUTATE $S"
+	elif [ -n "$MANCA" ]; then
 		ko "⛔ «$S» NON si prova qui: manca $MANCA"
 		ko "   Non e' «non certificato»: e' «non certificabile su questa"
 		ko "   macchina».  Si certifica dove stanno i suoi file."
@@ -316,8 +440,24 @@ accendi() # $1 = base del certificato (sessione | pagina), $2 = etichetta,
 	#   misurare meta' scena e chiamarla intera: e' il comportamento giusto, ed
 	#   e' anche il motivo per cui questo difetto si e' visto subito.
 	rm -f "$FUORI/b12-$et.log" "$FUORI/b12-$et.pid"
-	bash "$ENTRA" --root \
-		"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=120s $extra $lega $PORTA $CERT/$base.key $CERT/$base.pem < /dev/null > $DENTRO/b12-$et.log 2>&1 & echo \$! > $DENTRO/b12-$et.pid"
+	# ⛔⭐ E LA RIGA DI COMANDO E' DEL BERSAGLIO, NON DI QUESTO SCRIPT — D6.
+	#
+	# I due server non si accendono nello stesso modo, e fingere che sia lo
+	# stesso e' precisamente il difetto: `bsslserver` prende i due certificati
+	# come argomenti posizionali e non serve nessuna pagina; `remotix` li
+	# **genera da se'** dentro `--certificati`, vuole `--pagina`, e ha un file
+	# dei ban e un socket di comando.  ⚠ La forma di questa seconda riga non e'
+	# inventata qui: e' quella di `01-b13-sera-accendi.sh`, che l'ha misurata.
+	# ⛔ E il file dei ban e il socket sono **di questo giro**: §4.4-bis conta
+	#    per indirizzo e un ban dura dodici ore — ereditare quello di un altro
+	#    giro vorrebbe dire misurare i suoi tentativi.
+	if [ "$BERSAGLIO" = prodotto ]; then
+		bash "$ENTRA" --root \
+			"mkdir -p $CERT $DENTRO/tmp; nohup $SERVER --indirizzo $lega --nome $IND --porta $PORTA --certificati $CERT --pagina $DENTRO_SORG/pagina.html --ban-file $DENTRO/tmp/b12-prodotto-ban --comando-socket $DENTRO/tmp/b12-prodotto.sock --parlantina $extra < /dev/null > $DENTRO/b12-$et.log 2>&1 & echo \$! > $DENTRO/b12-$et.pid"
+	else
+		bash "$ENTRA" --root \
+			"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=120s $extra $lega $PORTA $CERT/$base.key $CERT/$base.pem < /dev/null > $DENTRO/b12-$et.log 2>&1 & echo \$! > $DENTRO/b12-$et.pid"
+	fi
 	sleep 2
 	PID=$(cat "$FUORI/b12-$et.pid" 2>/dev/null)
 	# ⛔ `/proc`, non `kill -0`: il server e' di root e questo script no.
@@ -327,7 +467,33 @@ accendi() # $1 = base del certificato (sessione | pagina), $2 = etichetta,
 		PID=""
 		return 1
 	fi
-	ok "server acceso col certificato «$base», PID $PID"
+	ok "server «$BERSAGLIO» acceso col certificato «$base», PID $PID"
+	# ⛔⭐ E SUL PRODOTTO «IL PROCESSO E' VIVO» NON BASTA — B0.7, e qui morde.
+	#
+	# §2.4 vuole DUE ascoltatori sulla stessa porta: UDP per RCP e TCP per la
+	# pagina.  ⛔ B13.4 — *«la pagina servita in TCP»* — e' esattamente la
+	# proprieta' per cui questo bersaglio esiste: se il TCP non c'e' ancora, il
+	# banco esce rosso e il rosso parla dell'attesa, non del server.
+	# ⚠ Un marcatore, non un `sleep`: si guarda la porta, non l'orologio.
+	if [ "$BERSAGLIO" = prodotto ]; then
+		local g=0 n=0
+		while [ "$g" -lt 40 ]; do
+			[ -d "/proc/$PID" ] || break
+			if dentro "ss -tuln"; then
+				n=$(printf '%s\n' "$USCITA" | grep -c ":$PORTA ")
+				[ "$n" -ge 2 ] && break
+			fi
+			sleep 0.5; g=$((g + 1))
+		done
+		if [ "$n" -lt 2 ]; then
+			ko "⛔ su :$PORTA ci sono $n ascoltatori e ne servono DUE (§2.4)"
+			ko "   ⚠ non lancio il banco: un rosso raccolto adesso parlerebbe"
+			ko "     di questa attesa, non del server"
+			[ -f "$FUORI/b12-$et.log" ] && tail -20 "$FUORI/b12-$et.log" | sed 's/^/        /'
+			return 1
+		fi
+		ok "e ascolta in UDP e in TCP su :$PORTA ($n righe di «ss»)"
+	fi
 	return 0
 }
 
@@ -342,6 +508,29 @@ spegni()
 
 ricostruisci()
 {
+	# ⛔⭐ E SUL PRODOTTO QUESTA FUNZIONE NON SA COSTRUIRE NIENTE, E LO DICE —
+	#     D6, 12 agosto 2026.
+	#
+	# `ninja -C b2/ngtcp2/build bsslserver` costruisce l'INNESTO.  Il prodotto
+	# si costruisce con `costruisci.sh` (`GEMELLO=nessuno bash …`), e il
+	# catalogo lo scrive gia' nella nota di B10.  ⛔ Chiamare `ninja` qui e
+	# leggerne lo zero vorrebbe dire dichiarare ricostruito un binario che
+	# nessuno ha toccato — e il giro «col guasto» misurerebbe **il binario di
+	# prima**, cioe' il difetto n.3 di `01-b12-guasti.py` al suo peggio.
+	# ⚠ Si sbaglia per rifiuto, mai per silenzio: nessun guasto «ricostruisce»
+	#   arriva fin qui, perche' piu' sotto la scena «prodotto» li rifiuta prima
+	#   di spendere il giro sano.  Questa riga e' la seconda rete.
+	if [ "$BERSAGLIO" = prodotto ]; then
+		# ⚠ E niente apici inversi dentro le virgolette doppie: la shell li
+		#   ESEGUE, ed e' la trappola che questo stesso albero ha gia' pagato
+		#   in «attrezzi-allinea-innesto.sh» e in «01-b13-sera-certifica.sh».
+		ko "⛔ non so costruire il PRODOTTO: «ninja» costruisce l'innesto, e il"
+		ko "   prodotto vuole «GEMELLO=nessuno bash $DENTRO_SORG/costruisci.sh»."
+		ko "   ⛔ E non ricostruisco «per sicurezza»: un binario non toccato e"
+		ko "     un binario ricostruito hanno lo stesso aspetto, e il giro col"
+		ko "     guasto misurerebbe quello di prima."
+		return 1
+	fi
 	rm -f "$FUORI/b12-compila.log"
 	if ! bash "$ENTRA" --root \
 		"ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/b12-compila.log 2>&1"; then
@@ -449,10 +638,30 @@ gira()
 		#        combaciare e la marca non sarebbe uscita mai.
 		# ⭐ Adesso il guasto e' sui due file (tipo `copia-di-file`) e il server
 		#    si accende sempre con `sessione`, come vive.
+		# ⛔⭐ E LA COPIA COMPILATA SI DICHIARA, ED E' DIVERSA PER SCENA — D6.
+		#
+		# B13.6 chiede «sto leggendo il codice che e' DENTRO il binario che ho
+		# appena acceso?», e la risposta cambia col bersaglio: sull'innesto il
+		# server nasce da `b2/ngtcp2/examples/rcp.c`, sul prodotto da
+		# `remotix/rcp.c`.  ⛔ Passargliene una sola — o quella sbagliata —
+		# vuol dire farlo rispondere a «sto leggendo *un* rcp.c?», che e' la
+		# domanda piu' debole (`LEZIONI.md` §1.9, ottava veste, citata dal
+		# banco stesso).
+		# ⚠ La forma delle tre opzioni non e' inventata qui: e' quella che
+		#   `01-b13-sera-certifica.sh` ha misurato contro il prodotto — lo
+		#   stesso giro che e' uscito 3, cioe' l'atteso del catalogo.
+		local b13_comp b13_fonti
+		if [ "$BERSAGLIO" = prodotto ]; then
+			b13_comp=$DENTRO_SORG/rcp.c
+			b13_fonti="$DENTRO_SORG/certificati.c $DENTRO_SORG/main.c $DENTRO_SORG/rcp.c"
+		else
+			b13_comp=$DENTRO/b2/ngtcp2/examples/rcp.c
+			b13_fonti="$DENTRO/rcp/rcp.c $DENTRO/01-b3-rcp-innesta.py $DENTRO/01-b2-ngtcp2-wt-innesta.py"
+		fi
 		accendi sessione "b13-$passo" || { u=99; }
 		if [ "$u" -eq 0 ]; then
 			bash "$ENTRA" --root \
-				"python3 -u $DENTRO/01-b13-proprieta.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --certificati $CERT --prodotti $DENTRO > $uscita_file 2>&1"
+				"python3 -u $DENTRO/01-b13-proprieta.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --certificati $CERT --prodotti $DENTRO --codice $DENTRO/rcp/rcp.c --codice-compilato $b13_comp --fonti-codice $b13_fonti > $uscita_file 2>&1"
 			u=$?
 		fi
 		spegni ;;
@@ -683,10 +892,17 @@ marca_vista() # $1 = sigla
 	fi
 }
 
+# ⛔⭐ E OGNI RIGA DI ESITO PORTA LA SCENA — difetto D6, 12 agosto 2026.
+#
+# Questo file e' il verbale su cui `--giudica` scrive poi la riga di registro.
+# ⛔ Senza il campo `scena`, due righe «B13 sano uscita 3» prodotte contro due
+#    server diversi sono **indistinguibili**, e la prima cosa che si fa con un
+#    verbale e' confrontarlo con un altro.  ⚠ E' la forma E8 applicata a un file
+#    di esiti: «vuoto» e «un'altra scena» hanno lo stesso aspetto.
 annota() # $1 = sigla, $2 = passo, $3 = uscita, $4 = marca_vista
 {
-	printf '{"sigla":"%s","passo":"%s","uscita":%s,"marca_vista":%s}\n' \
-		"$1" "$2" "$3" "$4" >> "$ESITI_FUORI"
+	printf '{"sigla":"%s","passo":"%s","uscita":%s,"marca_vista":%s,"scena":"%s","bersaglio":"%s"}\n' \
+		"$1" "$2" "$3" "$4" "$SCENA" "$BERSAGLIO" >> "$ESITI_FUORI"
 }
 
 # ⛔ E IL BANCO CHE NON SI E' POTUTO LANCIARE HA UNA RIGA SUA — R12-A.4.
@@ -695,8 +911,8 @@ annota() # $1 = sigla, $2 = passo, $3 = uscita, $4 = marca_vista
 #    guardato» hanno due cure diverse.
 annota_saltato() # $1 = sigla, $2 = perche'
 {
-	printf '{"sigla":"%s","passo":"saltato","uscita":9,"marca_vista":false,"perche":"%s"}\n' \
-		"$1" "$2" >> "$ESITI_FUORI"
+	printf '{"sigla":"%s","passo":"saltato","uscita":9,"marca_vista":false,"scena":"%s","bersaglio":"%s","perche":"%s"}\n' \
+		"$1" "$SCENA" "$BERSAGLIO" "$2" >> "$ESITI_FUORI"
 }
 
 # ---------------------------------------------------------------------------
@@ -713,6 +929,43 @@ case $? in
 	ko "   poggerebbero su un server che potrebbe non essere il nostro"
 	exit 3 ;;
 esac
+
+# ---------------------------------------------------------------------------
+# ⛔⭐ LA SCALDATA DEL PRODOTTO — e non e' una comodita': senza, il passo 0/3
+#     mentirebbe.  D6, 12 agosto 2026.
+#
+# `bsslserver` riceve i due certificati gia' fatti (li fa `01-b2-certificati.sh`);
+# **`remotix` se li genera da se'**, dentro `--certificati`, alla prima
+# accensione.  ⛔ E il passo 0/3 di B13 — `--verifica B13` — confronta le
+# impronte di `pagina.pem` e `sessione.pem`: su una cartella vuota risponde
+# *«non si leggono i due file»*, che e' **-1**, e il giro morirebbe dicendo che
+# il guasto non e' innestabile.
+#   ⚠ Cioe' un rosso che parla della cartella e non del banco — la forma che
+#     questo file combatte da tre giorni.
+# ⭐ Quindi si accende una volta, si aspetta che i due file esistano, e si
+#    spegne: la scena si **prepara**, e la preparazione si dichiara.
+if [ "$BERSAGLIO" = prodotto ]; then
+	log "0-bis. ⭐ La scaldata: il prodotto si genera i propri certificati"
+	if [ -f "$CERT_FUORI/sessione.pem" ] && [ -f "$CERT_FUORI/pagina.pem" ]; then
+		ok "i due certificati ci sono gia' in $CERT: niente da scaldare"
+		inf "sessione.pem $(md5sum "$CERT_FUORI/sessione.pem" | cut -c1-16)…"
+		inf "pagina.pem   $(md5sum "$CERT_FUORI/pagina.pem"   | cut -c1-16)…"
+	elif accendi sessione "scaldata"; then
+		spegni
+		if [ -f "$CERT_FUORI/sessione.pem" ] && [ -f "$CERT_FUORI/pagina.pem" ]; then
+			ok "⭐ il prodotto ha scritto i suoi due certificati in $CERT"
+		else
+			ko "⛔ dopo la scaldata i due certificati NON ci sono in $CERT:"
+			ko "   il passo 0/3 di B13 direbbe «non si leggono i due file», e"
+			ko "   quel rosso parlerebbe della cartella, non del banco."
+			exit 3
+		fi
+	else
+		ko "⛔ la scaldata non e' riuscita: non misuro niente su una scena che"
+		ko "   non si e' nemmeno accesa."
+		exit 3
+	fi
+fi
 
 for S in $SIGLE; do
 	# ⛔ LA VERIFICA DELL'APPIGLIO VIENE PRIMA DEL GIRO SANO, E NON E' UN
@@ -783,7 +1036,12 @@ done
 
 # ---------------------------------------------------------------------------
 log "Il verdetto — e lo da' chi vede i tre passi insieme (B0.4)"
-bash "$ENTRA" --root "python3 $GUASTI --giudica $ESITI"
+# ⛔⭐ E LA SCENA GLIELA DICE CHI L'HA ACCESA — D6.  `--giudica` legge un file di
+#     esiti e non ha nessun modo di sapere quale server li ha prodotti:
+#     chiederglielo sarebbe chiedere a un verbale di ricordarsi la stanza.
+#     ⚠ Senza `--scena` la riga di registro dice «non dichiarata», che e' quel
+#       che e' — e non «innesto», che sarebbe una misura inventata.
+bash "$ENTRA" --root "python3 $GUASTI --giudica $ESITI --scena \"$SCENA\""
 E=$?
 inf "gli esiti restano in $ESITI_FUORI"
 exit "$E"

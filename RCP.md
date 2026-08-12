@@ -400,7 +400,7 @@ protesti (§0), non lo vedrà nessuno finché non produrrà un sintomo lontano e
 È `REVIEWER.md` §5 applicata al filo: *«l'indulgenza che nasconde è esattamente ciò che devi
 togliere»*.
 
-⚠ **Le eccezioni sono cinque, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
+⚠ **Le eccezioni sono sei, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
 
 | # | Dove | Che cosa si tollera, e perché |
 |---|---|---|
@@ -409,6 +409,7 @@ togliere»*.
 | 3 | §7.1 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie: è l'unico momento in cui i due lati hanno legittimamente due verità |
 | 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere. ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
 | 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
+| 6 | §6.2 | dopo un cambio di tela, **un secondo di grazia** sui fotogrammi che portano la misura **precedente**: sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
 
 ⛔ **E ogni tolleranza va scritta nel registro.** Una tolleranza silenziosa è indistinguibile da un
 difetto, ed è precisamente l'indulgenza che questa sezione esiste per togliere.
@@ -1072,6 +1073,24 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   accorgersene: non c'è nessun buco nella successione dei `numero`, e il decodificatore non solleva
   errori. Il sintomo sarebbe *«il desktop compare a pezzi»*, e non nominerebbe né il protocollo né
   la chiave;
+- ⛔ **e lo stesso vale a ogni cambio di tela**: il primo fotogramma spedito alla **misura nuova**,
+  dopo un `TELA(ADATTATA…)` (§7.1), **DEVE** essere una chiave (`0x0301`) — e **DEVE** essere una
+  chiave *vera*, cioè portare con sé tutto quel che serve a decodificarla da sola: per HEVC i suoi
+  VPS/SPS/PPS davanti all'IDR. ⚠ Senza questa riga un delta alla misura nuova è **conforme**, e il
+  client non ha modo di accorgersene: non c'è nessun buco nei `numero`, e — `[M]` 12 agosto 2026,
+  Chrome 151 su Linux con VA-API, banco `banchi/02-pagina-tela-*` — **il decodificatore HEVC non
+  solleva nessun errore**: continua a emettere fotogrammi alla misura **vecchia** e dipinge
+  un'immagine sfasciata, diversa a ogni giro. Il sintomo sarebbe *«il desktop si strappa quando
+  ridimensiono la finestra»*, e non nominerebbe né il protocollo né la tela. ⛔ E la stessa prova su
+  **AV1** dà `EncodingError` su Chrome e su Firefox `[M]`: ⇒ **la regola serve perché sul codec
+  principale il sintomo è muto**, e una regola non si scrive sul codec che si comporta bene;
+- ⛔ il client, dal canto suo, **NON DEVE** consegnare al decodificatore un fotogramma la cui misura
+  non è quella per cui il decodificatore è configurato: lo butta e lo tratta come un buco. ⚠ E non è
+  una prudenza in più: `[M]` un `VideoDecoder` riconfigurato alla misura nuova pretende una chiave
+  (`DataError: a key frame is required after configure()`), quindi senza la riga qui sopra quella
+  chiave non arriverebbe mai e il cambio di tela costerebbe un `RICHIEDI_CHIAVE` e un fermo-immagine
+  **ogni volta**. ⭐ Con la riga qui sopra, `[M]` la stessa chiave va bene **sia** riconfigurando
+  **sia** senza: 8 celle su 8 su HEVC e su AV1, su Chrome e su Firefox, in tutt'e due i versi;
 - ⛔ il server **NON DEVE** abbandonare un fotogramma **chiave**. Abbandonare la cura non è una cura;
 - ⛔ quando il server abbandona un delta, **DEVE** mandare un fotogramma chiave **appena può** —
   senza aspettare che il client lo chieda, perché il client se ne accorge un giro di rete più tardi.
@@ -1275,6 +1294,25 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
   a 60 fotogrammi al secondo il contatore gira dopo due anni e due mesi, e una sessione può durare
   di più;
 - **DEVE** riconoscere un **buco** e chiedere una chiave (§5.2).
+
+⚠ **Il cambio di tela e i fotogrammi in volo.** Dopo aver ricevuto un `TELA(ADATTATA)` (§7.1) il
+client **DEVE** accettare per **un secondo** i fotogrammi la cui misura vale la tela **precedente**,
+dipingendoli riscalati alla vista e scrivendolo nel registro; passato quel secondo sono
+`ERRORE_PROTOCOLLO`, e lo è **subito** una misura che non è né quella in vigore né la precedente.
+⭐ È la **sesta** eccezione dichiarata a §3, ed è la terza scritta per il verso in cui mancava: §7.1
+la dà già alle coordinate di input, per la stessa ragione — il cambio di tela è l'unico momento in
+cui i due lati hanno legittimamente due verità diverse. ⛔ Senza, un client conforme **uccide una
+sessione sana**: gli stream sono indipendenti, il fotogramma aperto prima che l'`ADATTA_TELA`
+arrivasse al server porta legittimamente la misura di prima, e §5.2 vieta al server di abbandonare
+una chiave — cioè di sgombrare il tubo proprio dei fotogrammi più grossi, che sono i più probabili
+a essere in volo. ⇒ **Dal lato server non è curabile**, e per questo la riga è del client.
+
+> ⚠ *Aggiunta il 12 agosto 2026, difetto **D14**, e la marca non è nessuna delle due che questo
+> documento usava: non è una **lettura doppia** e non è una **regola derivata** — è una
+> **contraddizione interna**. Due implementazioni conformi e attente qui **non divergono**:
+> producono lo stesso byte, la chiusura, ed è sbagliato. ⛔ È la specie che nessun confronto fra due
+> implementazioni può trovare, ed è la stessa che la prima stesura di **P5** ha avuto per due ore
+> quella mattina.*
 
 ⚠ **Che cosa il campo `input` dice davvero**, e va scritto qui perché nessuno gli attribuisca di
 più: dice quale input era stato **iniettato**, non quale era stato **disegnato**. Che il

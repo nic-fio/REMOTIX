@@ -165,13 +165,40 @@ fi
 
 if [ -n "$DIVERSI" ] || [ -n "$VECCHIO" ]; then
 	log "4. Si ricostruisce — e si guarda l'ESITO, non il binario"
-	if bash "$E" --root "ninja -C $DENTRO/b2/ngtcp2/build bsslserver" >/dev/null 2>&1; then
+	# ⛔⭐ QUI C'ERA `>/dev/null 2>&1` **ATTORNO** A `enter.sh`, ED E' LA
+	#     TRAPPOLA CHE `fasi/00-ambiente.md` B3.3 DICHIARA PAGATA QUATTRO
+	#     VOLTE — questa e' la quinta.  `[M]` 12 agosto 2026, 15:22-15:32.
+	#
+	# `enter.sh` chiede la parola d'ordine di `sudo` con `sudo -v -S -p`: la
+	# richiesta esce su **stderr** e la risposta si legge da stdin.  Buttando
+	# via lo stderr, la domanda non arriva a nessuno — e chi lancia il giro da
+	# un'altra macchina non puo' rispondere a una domanda che non vede.
+	# ⚠ E il sintomo e' quello che inganna: non un errore, ma un attrezzo
+	#   **lento**.  `[M]` `ps` sul server: `sudo -v -S -p Password sudo:` fermo
+	#   da 5 minuti e 28 secondi, con `attrezzi-allinea-innesto.sh` bloccato
+	#   subito **dopo la copia e prima di `ninja`** — cioe' con i sorgenti gia'
+	#   sostituiti e il binario ancora quello di prima: la scena PEGGIORE, che
+	#   e' esattamente quella che il commento in cima a questo file descrive.
+	# ⛔ Da un terminale interattivo il difetto e' invisibile finche' il credito
+	#    di `sudo` regge: si vede solo quando scade — cioe' sui giri lunghi.
+	#
+	# ⭐ La cura e' quella di casa (`01-b12-lancia.sh`, `01-p1-prodotto.sh`): si
+	#    redirige **dentro** le virgolette, su un file, e il file lo si legge
+	#    dopo.  Cosi' l'esito resta quello di `ninja` e l'errore non si perde.
+	rm -f "$FUORI/attrezzi-allinea-ninja.log"
+	if bash "$E" --root "ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/attrezzi-allinea-ninja.log 2>&1"; then
 		ok "⭐ bsslserver ricostruito"
+		# ⚠ E si dice quante regole ha eseguito: «ninja non aveva niente da
+		#   fare» e «ninja ha ricompilato» escono tutt'e due 0, e dopo una
+		#   copia di sorgenti le due cose non sono la stessa.
+		inf "   $(tail -1 "$FUORI/attrezzi-allinea-ninja.log" 2>/dev/null)"
 	else
 		ko "⛔ la compilazione e' FALLITA: il binario che c'e' e' quello di"
 		ko "   prima, e adesso il sorgente e' cambiato sotto di lui — cioe'"
-		ko "   la scena PEGGIORE.  Guarda l'errore con:"
-		ko "     bash $E --root \"ninja -C $DENTRO/b2/ngtcp2/build bsslserver\""
+		ko "   la scena PEGGIORE.  L'errore:"
+		[ -f "$FUORI/attrezzi-allinea-ninja.log" ] \
+			&& tail -20 "$FUORI/attrezzi-allinea-ninja.log" | sed 's/^/        /' \
+			|| ko "   ⛔ e non c'e' nemmeno il registro di ninja: non ho letto niente"
 		exit 3
 	fi
 fi
