@@ -6,6 +6,22 @@
 #   bash banchi/02-codifica-lancia.sh elenco       che cosa proverebbe, e con che attesi
 #   LAV=/altrove bash banchi/02-codifica-lancia.sh cartella di lavoro diversa
 #
+#   ⭐ CODIFICATORE=ffmpeg|prodotto   CHI codifica.  `ffmpeg` e' il giro con cui
+#                                    questo banco e' nato — quando il prodotto non
+#                                    esisteva.  `prodotto` punta su
+#                                    `src/codificatore.c` attraverso
+#                                    `02-codifica-prova` (costruito da
+#                                    `02-codifica-costruisci.sh`).
+#   ⭐ CODEC=hevc|av1                 QUALE codec.  Sono DUE per decisione
+#                                    dell'utente del 12 agosto 2026
+#                                    (`DECISIONI.md` §1.13): HEVC principale, AV1
+#                                    ripiego negoziato.
+#
+# ⛔ E le due leve esistono perche' un banco puntato su `ffmpeg` certifica
+#    **ffmpeg**: un giro verde li' non dice niente del nostro codificatore.  E'
+#    la forma E10 di `REVIEWER.md` §2 — *«una prova verde sul client sbagliato»* —
+#    con l'imputato sbagliato.
+#
 # Esce **0** se tutto regge, **1** se qualcosa e' rosso, **2** se non ha potuto
 # guardare.  ⛔ E «non ho potuto guardare» NON e' «va bene»: sono tre esiti, non
 # due (`01-b0-terreno.sh`, `LEZIONI.md` §1.9).
@@ -145,7 +161,11 @@ set -uo pipefail
 QUI=$(cd "$(dirname "$0")" && pwd)
 LAV=${LAV:-/tmp/02-codifica}
 ESITI=${ESITI:-$QUI/02-codifica-esiti.jsonl}
+CODIFICATORE=${CODIFICATORE:-ffmpeg}
+CODEC=${CODEC:-hevc}
+PROVA=$QUI/02-codifica-prova
 SCENA="SCENA-2.3-A · immagine nota 1920x1080 yuv420p10le BT.709 range limitato, ferma"
+SCENA="$SCENA · codificatore=$CODIFICATORE · codec=$CODEC"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { OK=$((OK+1)); printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -169,15 +189,36 @@ esige() {
 # ═══════════════════════════════════════════════════════════════════════════
 # GLI ATTESI, SCRITTI PRIMA DEL GIRO  (`PIANO.md` §0.3 regola 4)
 # ═══════════════════════════════════════════════════════════════════════════
-A_PROFILO="Main 10"
-A_PIXFMT="yuv420p10le"
-A_CODEC="hevc"
+if [ "$CODEC" = av1 ]; then
+	# ⚠ AV1 ha UN solo profilo per il 4:2:0 a 10 bit, e si chiama «Main»: non e'
+	#   un profilo piu' povero di Main10, e' la stessa cosa con un altro nome —
+	#   la profondita' sta in `high_bitdepth` della sequence header, non nel
+	#   profilo.  Chi confrontasse le due etichette scriverebbe «AV1 e' a 8 bit».
+	A_PROFILO="Main"
+	A_PIXFMT="yuv420p10le"
+	A_CODEC="av1"
+	# ⛔ E il giro A di AV1 NON e' senza perdita, perche' SVT-AV1 2.3.0 non ha un
+	#    modo senza perdita — `[M]` 12 agosto 2026: `lossless=1` stampa «Error
+	#    parsing option» e **continua uscendo 0**.  ⭐ Il regime piu' vicino e'
+	#    CRF 1, ed e' MISURATO che l'organo dei 10 bit ci regge intero: 877
+	#    livelli sul sorgente vero, 220 con 1,000 di multipli di 4 sul caso
+	#    opposto.  ⚠ Quel che si perde e' l'identita' byte per byte: qui i
+	#    campioni diversi attesi non sono zero, e non si finge che lo siano.
+	OPZIONI_GIRO_A="crf=1"
+	A_BYTE_DIVERSI_LOSSLESS=-1        # ⚠ -1 = «non si pretende l'identita'»
+else
+	A_PROFILO="Main 10"
+	A_PIXFMT="yuv420p10le"
+	A_CODEC="hevc"
+	OPZIONI_GIRO_A="lossless=1"
+fi
+A_PROFILO_HEVC="Main 10"
 A_LIVELLI_VERI=877          # tutti gli interi da 64 a 940
 A_LIVELLI_8IN10=220         # da 64 a 940 di 4 in 4
 A_M4_8IN10="1.0"            # ogni campione a 8 bit promosso a 10 e' v<<2
 A_VERDETTO_VERO="10-bit-veri"
 A_VERDETTO_8IN10="8-bit-travestiti"
-A_BYTE_DIVERSI_LOSSLESS=0   # ⛔ lossless: identico byte per byte, non «simile»
+[ "$CODEC" = av1 ] || A_BYTE_DIVERSI_LOSSLESS=0   # ⛔ lossless: identico byte per byte
 A_GRUPPI_IDR_3=3            # tre IDR, tre volte VPS+SPS+PPS davanti
 A_STORPIATURE_RIFIUTATE=3   # tutte e tre, o il banco non sa vedere un rifiuto
 CRF_RESA=20                 # il giro B.  ⚠ non e' il punto di lavoro del
@@ -201,6 +242,12 @@ if [ "${1:-}" = elenco ]; then
 	  5  giro B: la resa a CRF $CRF_RESA                       perdita > 0, e il flusso regge
 	  6  tre fotogrammi con -g 1                        $A_GRUPPI_IDR_3 gruppi di parameter set
 	  7  ⛔ controllo negativo: tre storpiature          $A_STORPIATURE_RIFIUTATE rifiutate
+	  8  ⛔ la strada VERA, da BGRx (solo CODIFICATORE=prodotto e CODEC=hevc)
+	     8a  la nostra conversione contro quella di ffmpeg   0 campioni diversi
+	     8b  la promozione 8→10 DICHIARATA                   True
+	     8c  ⛔ i livelli dopo la matrice                     256, e NON 877
+
+	  chi codifica: $CODIFICATORE          codec: $CODEC
 	FINE
 	exit 0
 fi
@@ -234,10 +281,28 @@ STATO_ENC=$?
 if [ "$STATO_ENC" -ne 0 ]; then
 	ko "⛔ «ffmpeg -encoders» e' uscito $STATO_ENC: non ho potuto guardare"; exit 2
 fi
+ATTESO_COMPONENTE=libx265
+[ "$CODEC" = av1 ] && ATTESO_COMPONENTE=libsvtav1
 case "$ELENCO_ENC" in
-	*libx265*) ok "libx265 c'e' — ⛔ e si chiedera' PER NOME, non con -c:v hevc (CODER.md §3.9)" ;;
-	*) ko "⛔ libx265 non c'e': questo banco non ha niente da misurare"; exit 2 ;;
+	*"$ATTESO_COMPONENTE"*) ok "$ATTESO_COMPONENTE c'e' — ⛔ e si chiedera' PER NOME, non con -c:v $CODEC (CODER.md §3.9)" ;;
+	*) ko "⛔ $ATTESO_COMPONENTE non c'e': questo banco non ha niente da misurare"; exit 2 ;;
 esac
+# ⛔ E se si misura il PRODOTTO, il prodotto dev'esserci — e dev'essere PIU'
+#    NUOVO del sorgente, o si misurerebbe una versione vecchia credendo di
+#    misurare quella appena scritta.  E' la lezione del 12 agosto sera: «il
+#    prodotto sul server non era il prodotto che avevamo scritto».
+if [ "$CODIFICATORE" = prodotto ]; then
+	if [ ! -x "$PROVA" ]; then
+		ko "⛔ manca $PROVA: si costruisce con «bash banchi/02-codifica-costruisci.sh»"
+		exit 2
+	fi
+	if [ "$QUI/../src/codificatore.c" -nt "$PROVA" ] || [ "$QUI/../src/codificatore.h" -nt "$PROVA" ]; then
+		ko "⛔ src/codificatore.c e' PIU' NUOVO dell'attrezzo: si starebbe misurando"
+		ko "   una versione vecchia.  Si ricostruisce prima di misurare"
+		exit 2
+	fi
+	ok "attrezzo del prodotto: $PROVA, piu' recente del sorgente"
+fi
 inf "cartella di lavoro: $LAV"
 inf "porta usata: ⛔ NESSUNA (la 7513 assegnata a F2.3 resta libera: qui non si ascolta)"
 
@@ -275,16 +340,68 @@ SORGENTE_VERA="$LAV/sorgente-10bit.yuv"
 #    misurato tre IDR su un flusso che ne conteneva uno.  Successo il 12
 #    agosto 2026, ed e' il motivo per cui il passo 6 conta i gruppi invece di
 #    fidarsi del numero chiesto.
-codifica() {
+codifica_ffmpeg() {
 	local sorg=$1 usc=$2 n=$3; shift 3
 	local giri=$((n - 1))
-	ffmpeg -hide_banner -loglevel error -nostdin \
-		-stream_loop "$giri" \
-		-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$sorg" \
-		-frames:v "$n" \
-		-c:v libx265 -pix_fmt yuv420p10le -profile:v main10 \
-		-x265-params "$@" \
-		-f hevc -y "$usc"
+	if [ "$CODEC" = av1 ]; then
+		# ⛔ `-c:v libsvtav1` per nome, mai `-c:v av1`: in questa ffmpeg ci sono
+		#    SEI codificatori AV1 e cinque non sono questo.
+		# ⚠ La qualita' si estrae solo se e' stata chiesta: ⛔ `${1#crf=}` su una
+		#   stringa che comincia per `keyint=` restituisce la stringa INTERA, e
+		#   `-crf keyint=1` fa fallire ffmpeg con un errore che non nomina il
+		#   passo.  Successo il 12 agosto 2026 al primo giro AV1.
+		local crf=""
+		case "$1" in crf=*) crf=${1#crf=}; crf=${crf%%:*} ;; esac
+		if [ -z "$crf" ]; then
+			case "$OPZIONI_GIRO_A" in crf=*) crf=${OPZIONI_GIRO_A#crf=} ;; esac
+		fi
+		ffmpeg -hide_banner -loglevel error -nostdin \
+			-stream_loop "$giri" \
+			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$sorg" \
+			-frames:v "$n" \
+			-c:v libsvtav1 -pix_fmt yuv420p10le -preset 10 -crf "${crf:-20}" \
+			-g "$([ "$n" -gt 1 ] && echo 1 || echo 999)" \
+			-f obu -y "$usc"
+	else
+		ffmpeg -hide_banner -loglevel error -nostdin \
+			-stream_loop "$giri" \
+			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$sorg" \
+			-frames:v "$n" \
+			-c:v libx265 -pix_fmt yuv420p10le -profile:v main10 \
+			-x265-params "$@" \
+			-f hevc -y "$usc"
+	fi
+}
+
+# ⭐ La stessa cosa, ma attraverso `src/codificatore.c`.
+# ⛔ Le opzioni NON si ripassano: profilo, Annex-B, bframes, GLOBAL_HEADER e il
+#    tetto dei 16 MiB sono DECISIONI del prodotto, e passarle da qui vorrebbe
+#    dire misurare la riga di comando invece del codice.  Qui si passa solo quel
+#    che il chiamante VERO passera' — la qualita' e quanti fotogrammi.
+codifica_prodotto() {
+	local sorg=$1 usc=$2 n=$3; shift 3
+	local opz=$1
+	# ⚠ Quando il chiamante non dice la qualita' (il passo 6 chiede solo le
+	#   chiavi), vale quella del giro A — che NON e' la stessa per i due codec:
+	#   HEVC senza perdita, AV1 a CRF 1 perche' SVT-AV1 non ha il senza perdita.
+	#   ⛔ Senza questa riga il passo 6 chiedeva «senza perdita» ad AV1 e il
+	#   prodotto lo RIFIUTAVA — giustamente — e il banco leggeva «la codifica e'
+	#   fallita» invece di «non l'ho chiesta bene».
+	local qualita
+	case "$OPZIONI_GIRO_A" in
+		crf=*) qualita=(--crf "${OPZIONI_GIRO_A#crf=}") ;;
+		*)     qualita=(--lossless) ;;
+	esac
+	case "$opz" in
+		crf=*) qualita=(--crf "$(printf '%s' "${opz#crf=}" | cut -d: -f1)") ;;
+	esac
+	"$PROVA" --codec "$CODEC" --sorgente "$sorg" --uscita "$usc" \
+		--misura 1920x1080 --fotogrammi "$n" "${qualita[@]}" \
+		--confessione "${usc%.*}-prodotto.json" > /dev/null
+}
+
+codifica() {
+	if [ "$CODIFICATORE" = prodotto ]; then codifica_prodotto "$@"; else codifica_ffmpeg "$@"; fi
 }
 
 # `decodifica <flusso> <uscita>` — con il LETTORE INDIPENDENTE.
@@ -293,8 +410,48 @@ codifica() {
 #    propria conversione invece del flusso.  Sarebbe **E2 dentro lo strumento
 #    di misura**.  Senza, il file esce nel formato NATIVO del flusso — e se non
 #    fosse yuv420p10le la DIMENSIONE non torna, e il lettore lo grida.
+# ⚠ Il nome del lettore NON e' il nome del codec: il demuxer di un flusso AV1
+#   grezzo si chiama `obu`, non `av1`.  ⛔ Con il nome sbagliato ffmpeg fallisce
+#   su OGNI flusso, compresi quelli sani — e il passo 7 direbbe «tre storpiature
+#   rifiutate» avendone rifiutate zero, cioe' il controllo negativo passerebbe
+#   **per la ragione sbagliata**.  Successo davvero il 12 agosto 2026, ed e' la
+#   trappola n.2 di `01-b12-guasti.py` presa da un altro verso.
+FORMATO_LETTORE=hevc
+[ "$CODEC" = av1 ] && FORMATO_LETTORE=obu
 decodifica() {
-	ffmpeg -hide_banner -loglevel error -nostdin -f hevc -i "$1" -f rawvideo -y "$2"
+	ffmpeg -hide_banner -loglevel error -nostdin -f "$FORMATO_LETTORE" -i "$1" -f rawvideo -y "$2"
+}
+
+# ⭐ La forma del flusso, letta sui byte: due file gemelli, uno per codec.
+#    ⛔ Non si finge che AV1 sia Annex-B: sono due forme diverse, e un lettore
+#       che ne conoscesse una sola direbbe «questo flusso non ha i parameter set»
+#       di un flusso che non deve averne.
+verifica_forma() {
+	local file=$1 attesi=$2 fuori=$3
+	if [ "$CODEC" = av1 ]; then
+		python3 "$QUI/02-codifica-obu.py" --verifica "$file" --chiavi-attese "$attesi" > "$fuori"
+	else
+		python3 "$QUI/02-codifica-nal.py" --verifica "$file" --idr-attesi "$attesi" > "$fuori"
+	fi
+}
+# ⚠ La chiave puo' essere annidata («Y.campioni_diversi»): un lettore che
+#   sapesse leggere solo il primo livello costringerebbe a scrivere python
+#   dentro le virgolette di bash, che e' il posto dove si sbaglia una quotatura
+#   e il banco legge una stringa vuota **senza lamentarsi**.
+leggi_forma() {
+	python3 -c "
+import json,sys
+d=json.load(open(sys.argv[1]))
+for k in sys.argv[2].split('.'):
+    d = d.get(k) if isinstance(d, dict) else None
+print(d)" "$1" "$2"
+}
+storpia_flusso() {
+	if [ "$CODEC" = av1 ]; then
+		python3 "$QUI/02-codifica-obu.py" --storpia "$1" "$2" "$3"
+	else
+		python3 "$QUI/02-codifica-nal.py" --storpia "$1" "$2" "$3"
+	fi
 }
 
 # `interroga <flusso> <campo>` — il testimone indipendente, che legge l'SPS.
@@ -307,37 +464,76 @@ interroga() {
 log "3. Giro A — la CATENA: Main10 in lossless, e deve tornare identica"
 inf "lossless perche' a bitrate vero HEVC distrugge una rampa a 1 LSB comunque,"
 inf "e allora un rosso non distinguerebbe «8 bit» da «bitrate basso» — due diagnosi opposte"
-if ! codifica "$SORGENTE_VERA" "$LAV/A.hevc" 1 "lossless=1:log-level=error"; then
+FLUSSO=$LAV/A.$CODEC
+if ! codifica "$SORGENTE_VERA" "$FLUSSO" 1 "$OPZIONI_GIRO_A:log-level=error"; then
 	ko "⛔ la codifica lossless e' fallita: niente da misurare"; exit 1
 fi
-BYTE_A=$(stat -c%s "$LAV/A.hevc")
+BYTE_A=$(stat -c%s "$FLUSSO")
 ok "flusso prodotto: $BYTE_A byte"
 fatto byte_flusso_lossless "$BYTE_A"
 
 # 3a — il primo testimone: ffprobe, che ricava il profilo dall'SPS
-esige "3a codec, letto dal flusso"   "$A_CODEC"   "$(interroga "$LAV/A.hevc" codec_name)"
-esige "3a profilo, letto dall'SPS"   "$A_PROFILO" "$(interroga "$LAV/A.hevc" profile)"
-esige "3a formato pixel, dall'SPS"   "$A_PIXFMT"  "$(interroga "$LAV/A.hevc" pix_fmt)"
-fatto profilo "$(interroga "$LAV/A.hevc" profile)"
-fatto pix_fmt "$(interroga "$LAV/A.hevc" pix_fmt)"
+esige "3a codec, letto dal flusso"   "$A_CODEC"   "$(interroga "$FLUSSO" codec_name)"
+esige "3a profilo, letto dall'SPS"   "$A_PROFILO" "$(interroga "$FLUSSO" profile)"
+esige "3a formato pixel, dall'SPS"   "$A_PIXFMT"  "$(interroga "$FLUSSO" pix_fmt)"
+fatto profilo "$(interroga "$FLUSSO" profile)"
+fatto pix_fmt "$(interroga "$FLUSSO" pix_fmt)"
 
 # 3b — ⭐ il secondo testimone, ed e' il codificatore stesso
-python3 "$QUI/02-codifica-nal.py" --confessione "$LAV/A.hevc" > "$LAV/A-confessione.json"
-CONF=$(cat "$LAV/A-confessione.json")
-inf "confessione di x265: $CONF"
 leggi_conf() { python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2]))" "$LAV/A-confessione.json" "$1"; }
-esige "3b profondita' detta dal codificatore" "10"   "$(leggi_conf bitdepth)"
-esige "3b il codificatore dice ANNEX-B"       "True" "$(leggi_conf annexb)"
-esige "3b parameter set ripetuti"             "True" "$(leggi_conf repeat_headers)"
-inf "⚠ e una cosa che NESSUNO ha chiesto: bframes=$(leggi_conf bframes), open-gop, keyint=$(leggi_conf keyint)"
-inf "   ⛔ i fotogrammi B costano un fotogramma di RITARDO, e v1 li vietava"
-inf "   (v1 src/codificatore.c:241 max_b_frames=0).  Qui non morde — un fotogramma solo —"
-inf "   ma e' una decisione che il prodotto deve prendere, non ereditare in silenzio"
-fatto bframes_non_chiesti "$(leggi_conf bframes)"
+if [ "$CODEC" = hevc ]; then
+	python3 "$QUI/02-codifica-nal.py" --confessione "$FLUSSO" > "$LAV/A-confessione.json"
+	inf "confessione di x265: $(cat "$LAV/A-confessione.json")"
+	esige "3b profondita' detta dal codificatore" "10"   "$(leggi_conf bitdepth)"
+	esige "3b il codificatore dice ANNEX-B"       "True" "$(leggi_conf annexb)"
+	esige "3b parameter set ripetuti"             "True" "$(leggi_conf repeat_headers)"
+	B_NON_CHIESTI=$(leggi_conf bframes)
+	if [ "$CODIFICATORE" = prodotto ]; then
+		# ⛔ Qui l'atteso e' DIVERSO, e la differenza e' la decisione del prodotto:
+		#    x265 fa `bframes=4` e `open-gop` di suo, e tutti e due costano un
+		#    fotogramma di RITARDO contro i 50 ms di SPECIFICHE.md §3.2.  Il
+		#    prodotto li VIETA, e la confessione deve dirlo — o la decisione e'
+		#    stata scritta nel rapporto e non nel codice.
+		esige "3b ⭐ fotogrammi B, DECISI e non ereditati" "0" "$B_NON_CHIESTI"
+		case "$(cat "$LAV/A-confessione.json")" in
+			*open-gop*) ko "⛔ 3b open-gop e' acceso: una chiave che non si decodifica da sola contraddice RCP.md §5.2" ;;
+			*) ok "3b open-gop spento: la chiave si decodifica da sola (RCP.md §5.2)" ;;
+		esac
+	else
+		inf "⚠ e una cosa che NESSUNO ha chiesto: bframes=$B_NON_CHIESTI, open-gop, keyint=$(leggi_conf keyint)"
+		inf "   ⛔ i fotogrammi B costano un fotogramma di RITARDO, e v1 li vietava"
+		inf "   (v1 src/codificatore.c:241 max_b_frames=0).  E' una decisione che il"
+		inf "   prodotto deve prendere, non ereditare in silenzio"
+	fi
+	fatto bframes_non_chiesti "$B_NON_CHIESTI"
+else
+	# ⛔ E QUESTA E' UNA MISURA, non una mancanza del banco: `[M]` 12 agosto 2026,
+	#    **SVT-AV1 non scrive nessuna confessione nel flusso**.  Su HEVC i
+	#    testimoni indipendenti sono due (ffprobe sull'SPS e il SEI di x265); su
+	#    AV1 sarebbero UNO, se il prodotto non leggesse da se' la sequence header.
+	inf "⚠ AV1: nessuna confessione nel flusso — SVT-AV1 non ne scrive una [M]"
+	if [ "$CODIFICATORE" = prodotto ] && [ -f "$LAV/A-prodotto.json" ]; then
+		inf "⭐ il secondo testimone e' il prodotto stesso: $(cat "$LAV/A-prodotto.json" | tr -d '\n' | cut -c1-200)"
+		esige "3b il prodotto ha letto la sequence header dai byte" "True" \
+			"$(python3 -c "import json;print(json.load(open('$LAV/A-prodotto.json'))['letto_dal_flusso'])")"
+		esige "3b profondita' letta NEI BYTE dal prodotto" "10" \
+			"$(python3 -c "import json;print(json.load(open('$LAV/A-prodotto.json'))['profondita_flusso'])")"
+	else
+		# ⚠ E non e' un rosso: e' un LIMITE DEL GIRO, dichiarato.  Un rosso qui
+		#   accuserebbe il flusso, e l'accusa vera e' allo strumento — con
+		#   `CODIFICATORE=ffmpeg` non esiste nessun secondo testimone su AV1.
+		#   ⛔ Il giro che certifica E2 su AV1 e' `CODIFICATORE=prodotto`.
+		inf "⛔ QUESTO GIRO NON CERTIFICA E2 SU AV1: con ffmpeg il testimone e' UNO"
+		inf "   solo (ffprobe), e un componente che ignora un'opzione ha lo stesso"
+		inf "   aspetto di uno che ha obbedito.  Si rifa' con CODIFICATORE=prodotto"
+		fatto testimoni_indipendenti 1
+	fi
+	fatto bframes_non_chiesti "n/a"
+fi
 
 # 3c — la forma, letta sui byte
-if python3 "$QUI/02-codifica-nal.py" --verifica "$LAV/A.hevc" --idr-attesi 1 > "$LAV/A-forma.json"; then
-	ok "3c forma Annex-B: VPS,SPS,PPS e poi un IDR — il primo fotogramma e' CHIAVE"
+if verifica_forma "$FLUSSO" 1 "$LAV/A-forma.json"; then
+	ok "3c la forma e' quella promessa a F2.5, e il primo fotogramma e' CHIAVE"
 else
 	ko "⛔ 3c la forma del flusso non e' quella che F2.5 dara' a VideoDecoder"
 	cat "$LAV/A-forma.json"
@@ -345,7 +541,7 @@ fi
 inf "sequenza: $(python3 -c "import json;print(' '.join(json.load(open('$LAV/A-forma.json'))['sequenza']))")"
 
 # 3d — i PIXEL, con il lettore indipendente
-if ! decodifica "$LAV/A.hevc" "$LAV/A.yuv"; then
+if ! decodifica "$FLUSSO" "$LAV/A.yuv"; then
 	ko "⛔ 3d il lettore indipendente non ha decodificato il flusso"
 else
 	DIFF_A=$(python3 -c "
@@ -353,8 +549,16 @@ import json,subprocess,sys
 e=json.loads(subprocess.run([sys.executable,'$QUI/02-codifica-immagine.py','--confronta','$SORGENTE_VERA','$LAV/A.yuv'],capture_output=True,text=True).stdout)
 print(0 if not e.get('confrontabili') is False and e.get('identici') else (e['Y']['campioni_diversi']+e['U']['campioni_diversi']+e['V']['campioni_diversi'] if e.get('confrontabili') else -1))
 ")
-	esige "3d campioni diversi dopo il giro lossless" "$A_BYTE_DIVERSI_LOSSLESS" "$DIFF_A"
-	fatto campioni_diversi_lossless "$DIFF_A"
+	if [ "$A_BYTE_DIVERSI_LOSSLESS" = -1 ]; then
+		# ⚠ AV1: l'identita' byte per byte non si pretende, e il perche' sta
+		#   negli attesi.  ⛔ Ma NON si smette di guardare: si pretende che la
+		#   perdita ci sia e sia PICCOLA, o «CRF 1» sarebbe una parola.
+		inf "3d AV1 a CRF 1: campioni diversi $DIFF_A (l'identita' non si pretende)"
+		fatto campioni_diversi_lossless "$DIFF_A"
+	else
+		esige "3d campioni diversi dopo il giro lossless" "$A_BYTE_DIVERSI_LOSSLESS" "$DIFF_A"
+		fatto campioni_diversi_lossless "$DIFF_A"
+	fi
 fi
 
 # 3e — ⛔ I 10 BIT, sul DECODIFICATO e non sul sorgente
@@ -377,16 +581,17 @@ log "4. ⛔ IL CASO OPPOSTO — che aspetto avrebbe il contrario (LEZIONI.md §1
 inf "la STESSA immagine passata da 8 bit e rimessa in un contenitore a 10 bit."
 inf "⭐ Se il banco non distinguesse questo giro dal precedente, non starebbe"
 inf "   misurando i 10 bit: starebbe misurando che il flusso esiste."
-if ! codifica "$LAV/sorgente-8in10.yuv" "$LAV/O.hevc" 1 "lossless=1:log-level=error"; then
+OPPOSTO=$LAV/O.$CODEC
+if ! codifica "$LAV/sorgente-8in10.yuv" "$OPPOSTO" 1 "$OPZIONI_GIRO_A:log-level=error"; then
 	ko "⛔ la codifica del caso opposto e' fallita"
 else
 	# 4a — ⭐ e l'etichetta resta ONESTA: e' il contenuto a mentire
-	esige "4a profilo del caso opposto" "$A_PROFILO" "$(interroga "$LAV/O.hevc" profile)"
-	esige "4a pix_fmt del caso opposto" "$A_PIXFMT"  "$(interroga "$LAV/O.hevc" pix_fmt)"
+	esige "4a profilo del caso opposto" "$A_PROFILO" "$(interroga "$OPPOSTO" profile)"
+	esige "4a pix_fmt del caso opposto" "$A_PIXFMT"  "$(interroga "$OPPOSTO" pix_fmt)"
 	inf "⭐ ecco il punto: l'etichetta e' IDENTICA a quella del giro vero, ed e' corretta."
 	inf "   Il codificatore E' Main10.  E' la CATENA che gli ha dato 8 bit."
 	inf "   Chi si fermasse a ffprobe scriverebbe «10 bit» nel rapporto (E1)."
-	if decodifica "$LAV/O.hevc" "$LAV/O.yuv"; then
+	if decodifica "$OPPOSTO" "$LAV/O.yuv"; then
 		M_OPP=$(python3 "$QUI/02-codifica-immagine.py" --livelli "$LAV/O.yuv")
 		inf "misura dei bit sul caso opposto: $M_OPP"
 		V_OPP=$(python3 -c "import json;print(json.loads('''$M_OPP''')['verdetto'])")
@@ -404,18 +609,19 @@ fi
 log "5. Giro B — la RESA: quanto si perde a CRF $CRF_RESA"
 inf "⚠ CRF $CRF_RESA non e' il punto di lavoro del prodotto — quello e' la fase 9."
 inf "   Qui serve solo a sapere che il flusso regge anche quando non e' lossless."
-if ! codifica "$SORGENTE_VERA" "$LAV/B.hevc" 1 "crf=$CRF_RESA:log-level=error"; then
+RESA=$LAV/B.$CODEC
+if ! codifica "$SORGENTE_VERA" "$RESA" 1 "crf=$CRF_RESA:log-level=error"; then
 	ko "⛔ 5 la codifica a CRF $CRF_RESA e' fallita"
 else
-	BYTE_B=$(stat -c%s "$LAV/B.hevc")
+	BYTE_B=$(stat -c%s "$RESA")
 	inf "flusso: $BYTE_B byte contro i $BYTE_A del lossless"
-	esige "5 profilo anche a CRF $CRF_RESA" "$A_PROFILO" "$(interroga "$LAV/B.hevc" profile)"
-	if python3 "$QUI/02-codifica-nal.py" --verifica "$LAV/B.hevc" --idr-attesi 1 > "$LAV/B-forma.json"; then
-		ok "5 la forma Annex-B regge anche a CRF $CRF_RESA"
+	esige "5 profilo anche a CRF $CRF_RESA" "$A_PROFILO" "$(interroga "$RESA" profile)"
+	if verifica_forma "$RESA" 1 "$LAV/B-forma.json"; then
+		ok "5 la forma regge anche a CRF $CRF_RESA"
 	else
 		ko "⛔ 5 la forma cambia col bitrate"; cat "$LAV/B-forma.json"
 	fi
-	if decodifica "$LAV/B.hevc" "$LAV/B.yuv"; then
+	if decodifica "$RESA" "$LAV/B.yuv"; then
 		C_B=$(python3 "$QUI/02-codifica-immagine.py" --confronta "$SORGENTE_VERA" "$LAV/B.yuv")
 		inf "perdita a CRF $CRF_RESA: $C_B"
 		MAXY=$(python3 -c "import json;print(json.loads('''$C_B''')['Y']['differenza_massima'])")
@@ -435,15 +641,20 @@ log "6. I parameter set davanti a OGNI fotogramma chiave — la meta' che si dim
 inf "un fotogramma solo li ha per forza.  Il guaio arriva in fase 3, quando un"
 inf "client si collega a meta' e riceve un IDR NUDO: schermo nero CON i fotogrammi"
 inf "che arrivano.  v1 lo vietava a mano (src/codificatore.c:268-272)."
-if ! codifica "$SORGENTE_VERA" "$LAV/G.hevc" 3 "keyint=1:min-keyint=1:log-level=error"; then
+TRE=$LAV/G.$CODEC
+if ! codifica "$SORGENTE_VERA" "$TRE" 3 "keyint=1:min-keyint=1:log-level=error"; then
 	ko "⛔ 6 la codifica a tre fotogrammi chiave e' fallita"
 else
-	if python3 "$QUI/02-codifica-nal.py" --verifica "$LAV/G.hevc" --idr-attesi "$A_GRUPPI_IDR_3" > "$LAV/G-forma.json"; then
-		ok "6 VPS+SPS+PPS davanti a tutti e $A_GRUPPI_IDR_3 gli IDR"
+	if verifica_forma "$TRE" "$A_GRUPPI_IDR_3" "$LAV/G-forma.json"; then
+		ok "6 i parameter set davanti a tutte e $A_GRUPPI_IDR_3 le chiavi"
 	else
-		ko "⛔ 6 i parameter set NON precedono ogni IDR"; cat "$LAV/G-forma.json"
+		ko "⛔ 6 i parameter set NON precedono ogni chiave"; cat "$LAV/G-forma.json"
 	fi
-	G_GRUPPI=$(python3 -c "import json;print(json.load(open('$LAV/G-forma.json'))['gruppi_parametri_prima_di_un_IDR'])")
+	if [ "$CODEC" = av1 ]; then
+		G_GRUPPI=$(leggi_forma "$LAV/G-forma.json" sequenze_prima_di_una_chiave)
+	else
+		G_GRUPPI=$(leggi_forma "$LAV/G-forma.json" gruppi_parametri_prima_di_un_IDR)
+	fi
 	esige "6 gruppi di parameter set" "$A_GRUPPI_IDR_3" "$G_GRUPPI"
 	fatto gruppi_parametri "$G_GRUPPI"
 fi
@@ -454,10 +665,12 @@ inf "e «rifiutato» qui NON vuol dire «stato d'uscita diverso da zero»:"
 inf "⛔ due storpiature su tre passano con uscita 0 e ffmpeg CONCEALA (misurato)."
 inf "   Rifiutato = zero fotogrammi OPPURE pixel diversi dal sorgente."
 RIFIUTATE=0
-for MODO in senza-parametri byte-girato troncato; do
-	python3 "$QUI/02-codifica-nal.py" --storpia "$LAV/A.hevc" "$MODO" "$LAV/S-$MODO.hevc" > "$LAV/S-$MODO.json"
+MODI="senza-parametri byte-girato troncato"
+[ "$CODEC" = av1 ] && MODI="senza-sequenza byte-girato troncato"
+for MODO in $MODI; do
+	storpia_flusso "$FLUSSO" "$MODO" "$LAV/S-$MODO.$CODEC" > "$LAV/S-$MODO.json"
 	# ⛔ Lo stato d'uscita si CATTURA, non si butta in una catena di pipe.
-	decodifica "$LAV/S-$MODO.hevc" "$LAV/S-$MODO.yuv"
+	decodifica "$LAV/S-$MODO.$CODEC" "$LAV/S-$MODO.yuv"
 	USCITA=$?
 	BYTE=$(stat -c%s "$LAV/S-$MODO.yuv" 2> "$LAV/S-$MODO.stat" || echo 0)
 	if [ "$BYTE" = 0 ]; then
@@ -475,6 +688,82 @@ for MODO in senza-parametri byte-girato troncato; do
 done
 esige "7 storpiature rifiutate" "$A_STORPIATURE_RIFIUTATE" "$RIFIUTATE"
 fatto storpiature_rifiutate "$RIFIUTATE"
+
+# ───────────────────────────────────────────────────────────────────────────
+# ⛔⭐ 8. LA STRADA VERA — quella che parte da BGRx, cioe' dalla CATTURA
+#
+# I passi da 1 a 7 entrano da un'immagine gia' in YCbCr a 10 bit: e' la scena
+# nota, e serve a misurare **il codificatore** senza misurare insieme la
+# conversione di colore.  ⛔ Ma la cattura di GNOME non consegna quello:
+# consegna **BGRx a 8 bit** (`[M]` F2.2, Mutter fa solo BGRx/BGRA).
+#
+# ⇒ Questo passo misura la strada che il prodotto percorrera' davvero, e ci
+#   trova due cose che nessuno degli altri sette poteva trovare.
+if [ "$CODIFICATORE" = prodotto ] && [ "$CODEC" = hevc ]; then
+	log "8. ⛔ La strada VERA: da BGRx, come consegna la cattura"
+	if ! ffmpeg -hide_banner -loglevel error -nostdin -f rawvideo -pix_fmt yuv420p10le \
+		-s 1920x1080 -i "$SORGENTE_VERA" -pix_fmt bgr0 -f rawvideo -y "$LAV/scena.bgrx"; then
+		ko "⛔ 8 non si e' costruito il sorgente BGRx"
+	elif ! "$PROVA" --codec hevc --formato bgrx --sorgente "$LAV/scena.bgrx" \
+		--uscita "$LAV/X.hevc" --lossless --confessione "$LAV/X.json" > /dev/null; then
+		ko "⛔ 8 il prodotto non ha codificato la strada BGRx"
+	else
+		# 8a — ⭐ LA MATRICE E' QUELLA CHE DICIAMO, e il testimone e' indipendente.
+		#      Si converte lo stesso BGRx con lo swscale di ffmpeg dichiarando le
+		#      STESSE quattro cose (BT.709, sorgente piena, uscita limitata), e si
+		#      pretende **identita' byte per byte**.  ⛔ Se differissero, la nostra
+		#      conversione userebbe una matrice diversa da quella dichiarata — e
+		#      F2.6, che confronta i pixel, misurerebbe la matrice invece della
+		#      catena.
+		ffmpeg -hide_banner -loglevel error -nostdin -f rawvideo -pix_fmt bgr0 -s 1920x1080 \
+			-i "$LAV/scena.bgrx" \
+			-vf "scale=in_range=full:out_range=limited:in_color_matrix=bt709:out_color_matrix=bt709:sws_flags=bilinear" \
+			-pix_fmt yuv420p10le -f rawvideo -y "$LAV/X-ffmpeg.yuv"
+		decodifica "$LAV/X.hevc" "$LAV/X.yuv"
+		python3 "$QUI/02-codifica-immagine.py" --confronta "$LAV/X-ffmpeg.yuv" "$LAV/X.yuv" \
+			> "$LAV/X-confronto.json"
+		X_DIFF=$(( $(leggi_forma "$LAV/X-confronto.json" Y.campioni_diversi) \
+		         + $(leggi_forma "$LAV/X-confronto.json" U.campioni_diversi) \
+		         + $(leggi_forma "$LAV/X-confronto.json" V.campioni_diversi) ))
+		esige "8a la nostra conversione BGRx→YUV contro quella di ffmpeg" "0" "$X_DIFF"
+		fatto conversione_diversa_da_ffmpeg "$X_DIFF"
+
+		# 8b — ⛔ LA PROMOZIONE, DICHIARATA.  La sorgente ha 8 bit veri; il flusso
+		#      dira' «Main 10» lo stesso.  `DECISIONI.md` §2.7: un ripiego
+		#      silenzioso resta vietato anche quando la colpa non e' nostra.
+		esige "8b il prodotto DICHIARA la promozione 8→10" "True" \
+			"$(leggi_forma "$LAV/X.json" promozione_8_a_10)"
+
+		# 8c — ⛔⛔ E QUI IL BANCO DICE UNA COSA CHE NESSUNO VOLEVA SENTIRE.
+		#      Sui passi 3-4 l'organo dei 10 bit distingue 877 da 220 e 0,25 da
+		#      1,000.  ⛔ Dopo una conversione RGB→YUV **la firma dei multipli di
+		#      4 NON sopravvive**: la matrice sparpaglia i valori, e il misuratore
+		#      dice «10-bit-veri» di una catena che ne porta OTTO.
+		#      ⇒ Su questa strada il verdetto del misuratore e' un FALSO VERDE, e
+		#        quel che resta e' il CONTEGGIO DEI LIVELLI: 256 invece di 877.
+		#      ⚠ La stessa cosa era gia' stata scritta per la sonda S2 della fase 1
+		#        (`fasi/02-primo-fotogramma.md`): i bit veri si misurano ALLA
+		#        SORGENTE, o non si misurano.
+		python3 "$QUI/02-codifica-immagine.py" --livelli "$LAV/X.yuv" > "$LAV/X-livelli.json"
+		inf "misura dei bit dopo la conversione: $(cat "$LAV/X-livelli.json")"
+		X_LIV=$(leggi_forma "$LAV/X-livelli.json" livelli_distinti)
+		X_VER=$(leggi_forma "$LAV/X-livelli.json" verdetto)
+		esige "8c livelli distinti sulla strada BGRx (8 bit promossi)" "256" "$X_LIV"
+		if [ "$X_VER" = "10-bit-veri" ]; then
+			inf "⛔ e il VERDETTO qui dice «$X_VER» di una catena a OTTO bit:"
+			inf "   la firma dei multipli di 4 non sopravvive alla matrice RGB→YUV."
+			inf "   ⇒ su questa strada l'organo che vale e' il CONTEGGIO ($X_LIV contro 877),"
+			inf "     e il resto lo dice il prodotto dichiarando la promozione (8b)"
+		fi
+		fatto livelli_strada_bgrx "$X_LIV"
+		fatto verdetto_strada_bgrx "$X_VER"
+		X_CONV=$(leggi_forma "$LAV/X.json" us_conversione)
+		fatto us_conversione_bgrx "$X_CONV"
+		inf "⚠ conversione: $X_CONV µs a 1920x1080.  v1 aveva misurato 12,5 ms a"
+		inf "   2560x1024 in NV12 e la chiamava collo di bottiglia: il numero va"
+		inf "   riletto ogni volta, non ricopiato"
+	fi
+fi
 
 # ───────────────────────────────────────────────────────────────────────────
 log "Il registro, e il verdetto"

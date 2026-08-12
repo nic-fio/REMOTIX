@@ -61,6 +61,7 @@ import sys
 QUI = os.path.dirname(os.path.abspath(__file__))
 LANCIA = os.path.join(QUI, "02-codifica-lancia.sh")
 NAL = os.path.join(QUI, "02-codifica-nal.py")
+PRODOTTO = os.path.join(QUI, "..", "src", "codificatore.c")
 
 GUASTI = {
     "A": {
@@ -83,6 +84,81 @@ GUASTI = {
         "atteso_guasto": 1,
         "riferimento": "SPECIFICHE.md §3.1 · DECISIONI.md §2.2, §2.3-bis · "
                        "LEZIONI.md §1.11 · REVIEWER.md §2 E1",
+    },
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⭐ C e D SONO DI UNA SPECIE DIVERSA: il guasto sta nel PRODOTTO
+    #
+    # A e B certificano che il banco sappia diventare rosso quando si rompe LUI.
+    # ⛔ Non dicono niente su un'altra domanda, che dal 12 agosto 2026 esiste
+    #    perche' il prodotto esiste: **questo banco sa vedere un difetto del
+    #    CODIFICATORE?**  Un banco che non l'ha mai visto non lo vede.
+    #
+    # ⚠ E hanno un passo in piu': dopo l'innesto il prodotto **va ricostruito**,
+    #   o si misurerebbe il binario di prima.  ⛔ Il banco non si fida che
+    #   qualcuno se lo ricordi: il passo 1 confronta le date e si ferma con
+    #   uscita 2 — «non ho potuto guardare» — se il sorgente e' piu' nuovo
+    #   dell'attrezzo.  E' la lezione della sera del 12 agosto: *«il prodotto sul
+    #   server non era il prodotto che avevamo scritto»*.
+    "C": {
+        "sigla": "F2.3-C",
+        "organo": "i parameter set davanti a OGNI chiave, nel PRODOTTO",
+        "titolo": "il prodotto smette di ripetere VPS/SPS/PPS: stanno solo in testa",
+        "file": PRODOTTO,
+        "appiglio": '"repeat-headers=1:"',
+        "sostituto": '"repeat-headers=0:"  /* GUASTO F2.3-C */',
+        "comando": ("bash banchi/02-codifica-costruisci.sh && "
+                    "CODIFICATORE=prodotto bash banchi/02-codifica-lancia.sh"),
+        "dimostra":
+            "⛔ E' il difetto che v1 aveva gia' comprato una volta "
+            "(`v1/remotix-c/src/codificatore.c:268-272`), ed e' quello che nessun "
+            "giro a UN fotogramma puo' vedere: con una chiave sola i parameter "
+            "set ci sono per forza.  ⭐ Il passo 6 ne codifica TRE, e li' i gruppi "
+            "cadono da 3 a 1.  ⚠ Il sintomo vero, in fase 3, sarebbe «schermo "
+            "nero CON i fotogrammi che arrivano» in un client che si collega a "
+            "meta' — e non nominerebbe ne' i parameter set ne' il codificatore.  "
+            "⭐⭐ E l'innesto ha insegnato una cosa che non era stata prevista: con "
+            "`repeat-headers=0` x265 toglie i parameter set **anche dalla PRIMA "
+            "chiave** (finirebbero in `extradata`, cioe' fuori dal flusso) — e a "
+            "diventare rosso e' la GUARDIA DEL PRODOTTO, non il passo 6: il "
+            "fotogramma non parte affatto.  ⇒ Il difetto di v1 oggi non "
+            "arriverebbe sul filo.",
+        "marca": "chiave senza VPS+SPS+PPS davanti",
+        "atteso_sano": 0,
+        "atteso_guasto": 1,
+        "riferimento": "RCP.md §5.2 · S2-decodifica.md §3.5 · "
+                       "v1 src/codificatore.c:268-272 · F2-3-codifica.md §3.2",
+    },
+    "D": {
+        "sigla": "F2.3-D",
+        "organo": "i fotogrammi B DECISI e non ereditati",
+        "titolo": "il prodotto lascia a x265 il suo `bframes=4`",
+        "file": PRODOTTO,
+        # ⚠ L'appiglio NON e' `bframes=0`, ed e' la seconda cosa che l'innesto
+        #   ha insegnato: le opzioni di x265 si applicano in ORDINE, e l'ultima
+        #   vince.  Scrivendo `bframes=4` nel primo punto, il `rc-lookahead=0`
+        #   che viene dopo restava in vigore e x265 **si rifiutava di aprirsi**
+        #   — cioe' il guasto non innestava l'organo che doveva innestare.
+        "appiglio": '"rc-lookahead=0:frame-threads=1:"',
+        "sostituto": '"rc-lookahead=20:frame-threads=1:bframes=4:"  /* GUASTO F2.3-D */',
+        "comando": ("bash banchi/02-codifica-costruisci.sh && "
+                    "CODIFICATORE=prodotto bash banchi/02-codifica-lancia.sh"),
+        "dimostra":
+            "⛔ x265 fa `bframes=4` **di suo**, e nessuno glielo ha chiesto: ogni "
+            "fotogramma B costringe ad attendere il successivo, cioe' un "
+            "fotogramma di RITARDO in piu' contro i 50 ms di `SPECIFICHE.md` "
+            "§3.2.  ⚠ E' E2 **al contrario**: non un ripiego non dichiarato, ma "
+            "un DEFAULT non dichiarato — e non si vede in nessun pixel.  ⭐ Lo "
+            "vede il passo 3b, leggendo la confessione che x265 scrive nel "
+            "flusso: `bframes=4` invece di 0.  ⚠ E l'innesto porta con se' "
+            "`rc-lookahead=20`, perche' `[M]` x265 **non si apre** con "
+            "`rc-lookahead=0` e `bframes=4` insieme (*«Lookahead depth must be "
+            "greater than the max consecutive bframe count»*): le due manopole "
+            "della bassa latenza sono legate, e va saputo prima di toccarne una.",
+        "marca": "non ereditati: 4 ⛔ ATTESO 0",
+        "atteso_sano": 0,
+        "atteso_guasto": 1,
+        "riferimento": "SPECIFICHE.md §3.2 · CODER.md §1-bis, §3.9 · "
+                       "REVIEWER.md §2 E2 · v1 src/codificatore.c:241",
     },
     "B": {
         "sigla": "F2.3-B",
@@ -196,7 +272,7 @@ def catalogo():
     for k, g in GUASTI.items():
         print(f"┌── {g['sigla']} — {g['organo']}")
         print(f"│  banco            02-codifica-lancia.sh")
-        print(f"│  comando          bash banchi/02-codifica-lancia.sh")
+        print(f"│  comando          {g.get('comando', 'bash banchi/02-codifica-lancia.sh')}")
         print(f"│  ⛔ ATTESO SANO    uscita {g['atteso_sano']} · «VERDE» · e la marca "
               f"«{g['marca']}» NON compare")
         print(f"│  guasto            {g['titolo']}")
