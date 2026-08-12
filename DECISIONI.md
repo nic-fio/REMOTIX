@@ -755,6 +755,54 @@ quella cura il giro nuovo sarebbe rosso per la scena, non per il prodotto.
 
 ---
 
+### 1.13 ✅ ⭐ HEVC **con un ripiego negoziato**, non un requisito dichiarato
+
+*12 agosto 2026, dall'utente, davanti alla misura della fase 2. La domanda gli è stata portata col
+numero accanto, non come un'ipotesi.*
+
+**Il fatto, `[M]` 12 agosto 2026** (sotto-fase **F2.5**, `fasi/rapporti/F2-5-pagina.md`):
+
+| | schermo vero (GPU) | Xvfb (senza GPU) |
+|---|---|---|
+| **Chrome 151** | ⭐ HEVC arriva al pixel, 8 celle su 8 | ⛔ **zero** |
+| **Firefox 140 ESR** | ⛔ **zero**, `NotSupportedError` | ⛔ **zero** |
+
+⭐ **VP9 dipinge 8 su 8 in tutti e quattro i casi**: il «no» è di HEVC, non del banco. E la causa è
+misurata: con `prefer-software` Chrome dice `Unsupported`, con `prefer-hardware` dipinge ⇒
+**Chrome su Linux non ha un decodificatore HEVC software**, HEVC esiste **solo via VA-API**.
+⛔ *Confermato una seconda volta, sul Chrome vero dell'utente, con controllo positivo (VP9, H.264) e
+negativo (un codec inventato).*
+
+**La decisione.** ⛔ **Non si dichiara un requisito** *«serve Chrome con VA-API»*: **il codec si
+negozia, e il ripiego si dichiara**. È quel che impone `CODER.md` §4.2 — *ogni dipendenza mancante
+ha un ripiego, il servizio funziona comunque con meno, e il ripiego si dichiara* — e quel che
+protegge la promessa di `DECISIONI.md` §1.6: *nessun client da installare, basta un browser
+moderno*.
+
+⭐ **E il meccanismo esiste già**: `RCP.md` §4.3 negozia `video.codec` e §6.2 porta il campo `codec`.
+Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
+
+> ### ⏳ Quel che NON è deciso: **quale** sia il secondo codec
+>
+> ⛔ **E qui il documento si è messo di traverso a sé stesso.** In RCP/1 i valori ammessi di
+> `video.codec` sono **`hevc`** e **`av1`**, e `vp9` compare in §4.3 come **l'esempio canonico di
+> valore che un'implementazione RCP/1 deve IGNORARE**. ⇒ Mettere VP9 dentro RCP/1 vorrebbe dire
+> **aprire RCP/2** o dichiarare un'eccezione a §9; **AV1 non costerebbe niente**, perché è già
+> normativo e ha già il suo `codec = 2`.
+>
+> ⚠ Ma **AV1 non è stato misurato**: sappiamo che VP9 arriva al pixel su tutti e quattro i casi, di
+> AV1 non sappiamo niente — e su un progetto che ha già pagato tre volte una deduzione presa per
+> misura, «AV1 è supportato ovunque» resta una `[?]`.
+>
+> ⇒ **La misura è in corso** (F2.5, 12 agosto): AV1 sui due motori nelle due scene, a 8 **e** a 10
+> bit, e ⛔ **con `prefer-software`** — perché un ripiego che esiste solo con la GPU non è un
+> ripiego. La decisione si chiude su quel numero, e non prima.
+
+*Conseguenze scritte: `fasi/02-primo-fotogramma.md`, e — quando il secondo codec avrà un nome —
+`RCP.md` §4.3 e §6.2.*
+
+---
+
 ## 2. I numeri
 
 ### 2.1 ✅ Minimo: 480p · 25 fps · 24 bit — ed è una garanzia, non un traguardo

@@ -898,25 +898,7 @@ def costruisci_vp9(nome_pattern):
                "un «no» su HEVC non si distingue da un banco rotto",
                errori.decode("utf-8", "replace"))
 
-    # IVF: 32 byte d'intestazione di file, poi per ogni fotogramma 12 byte
-    # (4 di lunghezza, 8 di istante) e i byte del fotogramma.
-    if uscita[:4] != b"DKIF":
-        errore("il flusso VP9 non comincia con DKIF: non e' un IVF")
-    pezzi = []
-    i = 32
-    n = 0
-    while i + 12 <= len(uscita):
-        lung = int.from_bytes(uscita[i:i + 4], "little")
-        corpo = uscita[i + 12:i + 12 + lung]
-        if len(corpo) != lung:
-            errore("un fotogramma IVF e' troncato: il lettore o il file sbagliano")
-        pezzi.append({"tipo": "key" if n == 0 else "delta",
-                      "istante": round(n * 1e6 / RITMO),
-                      "dati": base64.b64encode(corpo).decode()})
-        i += 12 + lung
-        n += 1
-    if len(pezzi) != QUANTI:
-        errore(f"il flusso VP9 ha {len(pezzi)} fotogrammi invece di {QUANTI}")
+    pezzi = spoglia_ivf(uscita, QUANTI)
 
     return {
         "nome": f"{nome_pattern}-vp9",
@@ -939,6 +921,176 @@ def costruisci_vp9(nome_pattern):
         "sfumatura_da_y": ALTEZZA - ALTEZZA_SFUMATURA,
         "byte_flusso": len(uscita),
         "pezzi": pezzi,
+    }
+
+
+def spoglia_ivf(uscita, quanti):
+    """IVF → elenco di pezzi.  32 byte d'intestazione di file, poi per ogni
+       fotogramma 12 byte (4 di lunghezza, 8 di istante) e i byte del
+       fotogramma.  ⛔ Estratta da `costruisci_vp9()` quando e' servita anche
+       ad AV1: due copie della stessa aritmetica sono due posti dove sbagliare
+       l'offset, e qui un offset sbagliato non da' un errore — da' un flusso
+       che il browser rifiuta, cioe' un `[M]` falso contro il browser."""
+    if uscita[:4] != b"DKIF":
+        errore("il flusso non comincia con DKIF: non e' un IVF")
+    pezzi = []
+    i, n = 32, 0
+    while i + 12 <= len(uscita):
+        lung = int.from_bytes(uscita[i:i + 4], "little")
+        corpo = uscita[i + 12:i + 12 + lung]
+        if len(corpo) != lung:
+            errore("un fotogramma IVF e' troncato: il lettore o il file sbagliano")
+        pezzi.append({"tipo": "key" if n == 0 else "delta",
+                      "istante": round(n * 1e6 / RITMO),
+                      "dati": base64.b64encode(corpo).decode()})
+        i += 12 + lung
+        n += 1
+    if len(pezzi) != quanti:
+        errore(f"il flusso ha {len(pezzi)} fotogrammi invece di {quanti}")
+    return pezzi
+
+
+def costruisci_av1(nome_pattern, sorgente10):
+    """⛔⭐ AV1 — E NON E' UN CODEC IN PIU': E' IL RIPIEGO NEGOZIATO.
+
+    L'utente ha deciso HEVC **con un ripiego negoziato**, invece di dichiarare
+    un requisito «Chrome con VA-API».  Il candidato naturale era il VP9 di
+    questo banco (8 celle su 8 in tutte e quattro le caselle) — ⛔ ma `RCP.md`
+    ha gia' la negoziazione, e in RCP/1 i valori ammessi di `video.codec` sono
+    **`hevc` e `av1`**: `vp9` compare in §4.3 come **l'esempio canonico di
+    valore che un'implementazione RCP/1 deve IGNORARE**, e §9 ha chiuso la
+    finestra dei valori nuovi il 10 agosto.
+
+    ⇒ Mettere VP9 in RCP/1 vorrebbe dire aprire **RCP/2** o dichiarare
+      un'eccezione a §9.  **AV1 non costa niente**: e' gia' normativo, e ha
+      gia' il suo `codec = 2` in `RCP.md` §6.2.
+
+    ⚠ E `web.md` **O2** dichiarava AV1 *«un vicolo cieco da entrambi i lati»* —
+      il nostro ferro non lo codifica in hardware `[M]`, e in decodifica non
+      aggiunge niente che HEVC non dia.  ⛔ Quella riga vale per il codec
+      **principale**; qui la domanda e' un'altra: **regge come ripiego, dove
+      HEVC non c'e'?**  Il vicolo cieco resta tale finche' qualcuno non misura
+      il ramo che non era stato percorso.
+
+    ⛔ La codifica e' **in software** (`libaom-av1`), ed e' un fatto da
+       dichiarare, non un ripiego di comodo: `[M]` 9 agosto, il nostro ferro
+       AV1 non lo codifica in hardware.  Alla fase 2 la codifica e' software
+       comunque, di proposito (`PIANO.md` fase 2).
+    """
+    if sorgente10:
+        grezzo, celle = disegna10(nome_pattern and PATTERN[nome_pattern])
+        pix, sorgente = "yuv420p10le", "rgb48le"
+    else:
+        grezzo, celle = disegna(PATTERN[nome_pattern])
+        pix, sorgente = "yuv420p", "rgb24"
+
+    comando = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-y",
+        "-f", "rawvideo", "-pix_fmt", sorgente,
+        "-s", f"{LARGHEZZA}x{ALTEZZA}", "-framerate", str(RITMO),
+        "-i", "pipe:0",
+        "-c:v", "libaom-av1", "-pix_fmt", pix,
+        # ⛔ Una chiave in testa e cinque delta, come per HEVC: la stessa forma,
+        #    o il confronto fra i due codec confronterebbe anche la struttura.
+        "-g", str(QUANTI), "-keyint_min", str(QUANTI),
+        "-crf", "20", "-b:v", "0", "-cpu-used", "8",
+        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+        "-f", "ivf", "pipe:1",
+    ]
+    codice, uscita, errori = esegui(comando, entrata=grezzo * QUANTI)
+    if codice != 0 or len(uscita) < 32:
+        errore(f"libaom-av1 non ha prodotto il flusso ({pix})",
+               errori.decode("utf-8", "replace"))
+
+    info = sonda_ivf(uscita)
+    if info.get("pix_fmt") != pix:
+        errore(f"il flusso AV1 e' {info.get('pix_fmt')}, non {pix}: la domanda "
+               "sulla profondita' non si puo' porre su questo flusso")
+
+    # ⛔ La stringa si compone dai numeri LETTI nel flusso, come per HEVC:
+    #    `av01.<profilo>.<seq_level_idx a 2 cifre><tier>.<profondita' a 2 cifre>`.
+    #    ⚠ `seq_level_idx` NON e' il livello in chiaro: 4 vuol dire 3.0.  Si
+    #      scrive l'indice, che e' quel che la stringa vuole.
+    profili = {"Main": 0, "High": 1, "Professional": 2}
+    profilo = profili.get(info.get("profile"), 0)
+    livello = int(info.get("level") or 4)
+    bit = 10 if sorgente10 else 8
+    codec = f"av01.{profilo}.{livello:02d}M.{bit:02d}"
+
+    livelli = conta_livelli_ivf(uscita, bit, ALTEZZA - ALTEZZA_SFUMATURA)
+    livelli_sorgente = conta_livelli_sorgente(grezzo, sorgente10,
+                                              ALTEZZA - ALTEZZA_SFUMATURA)
+    etichetta = "10bitvero" if sorgente10 else "8bit"
+    return {
+        "nome": f"{nome_pattern}-av1-{etichetta}",
+        "pattern": nome_pattern,
+        "ruolo": "bersaglio",
+        "codec": codec,
+        # ⚠ Le alternative servono se `seq_level_idx` non fosse quel che
+        #   pensiamo: la pagina le prova, e SCRIVE quale ha usato.  ⛔ Non e'
+        #   indovinare — e' dichiarare che il campo ha un'incertezza, invece di
+        #   far cadere la misura su di essa.
+        "codec_alternativi": [f"av01.{profilo}.{l:02d}M.{bit:02d}"
+                              for l in (4, 8, 0) if l != livello],
+        "profondita": bit,
+        "sorgente10": sorgente10,
+        "lossless": False,
+        "forma": "grezza",
+        "descrizione": None,
+        "larghezza": LARGHEZZA, "altezza": ALTEZZA, "ritmo": RITMO,
+        "fotogrammi": QUANTI, "pix_fmt": pix,
+        "profilo_ffprobe": info.get("profile"),
+        "livello_ffprobe": info.get("level"),
+        "celle": celle,
+        "tinte": [{"nome": n_, "rgb": list(c)} for n_, c in TINTE],
+        "sfumatura_da_y": ALTEZZA - ALTEZZA_SFUMATURA,
+        "byte_flusso": len(uscita),
+        "livelli": livelli,
+        "livelli_sorgente": livelli_sorgente,
+        "pezzi": spoglia_ivf(uscita, QUANTI),
+    }
+
+
+def sonda_ivf(flusso):
+    """Come `sonda()`, ma su un IVF invece che su un Annex-B nudo."""
+    comando = ["ffprobe", "-hide_banner", "-v", "error", "-of", "json",
+               "-show_streams", "-select_streams", "v:0", "-i", "pipe:0"]
+    codice, uscita, errori = esegui(comando, entrata=flusso)
+    if codice != 0:
+        errore("ffprobe non ha saputo leggere il flusso IVF appena prodotto",
+               errori.decode("utf-8", "replace"))
+    try:
+        return json.loads(uscita)["streams"][0]
+    except Exception as e:
+        errore(f"ffprobe ha risposto qualcosa che non e' uno stream: {e}",
+               uscita[:400])
+
+
+def conta_livelli_ivf(flusso, profondita, da_riga):
+    """`conta_livelli()` per un IVF: ridecodifica e conta i livelli veri."""
+    comando = ["ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
+               "-i", "pipe:0",
+               "-pix_fmt", "yuv420p10le" if profondita == 10 else "yuv420p",
+               "-frames:v", "1", "-f", "rawvideo", "pipe:1"]
+    codice, uscita, errori = esegui(comando, entrata=flusso)
+    if codice != 0 or not uscita:
+        errore("il flusso AV1 non si ridecodifica: senza, la profondita' vera "
+               "non e' misurabile", errori.decode("utf-8", "replace"))
+    passo = 2 if profondita == 10 else 1
+    livelli = {}
+    for y in range(da_riga, ALTEZZA):
+        riga = y * LARGHEZZA * passo
+        for x in range(LARGHEZZA):
+            i = riga + x * passo
+            v = uscita[i] if passo == 1 else (uscita[i] | (uscita[i + 1] << 8))
+            livelli[v] = livelli.get(v, 0) + 1
+    quanti = sum(livelli.values())
+    multipli = sum(n for v, n in livelli.items() if v % 4 == 0)
+    return {
+        "livelli_distinti": len(livelli), "campioni": quanti,
+        "frazione_multipli_di_4": round(multipli / quanti, 4) if quanti else None,
+        "minimo": min(livelli) if livelli else None,
+        "massimo": max(livelli) if livelli else None,
     }
 
 
@@ -965,6 +1117,9 @@ def principale():
         errore("`ffmpeg -encoders` e' fallito", errori.decode("utf-8", "replace"))
     if b"libx265" not in uscita:
         errore("questo ffmpeg non ha libx265: HEVC non si codifica")
+    if b"libaom-av1" not in uscita:
+        errore("questo ffmpeg non ha libaom-av1: il RIPIEGO negoziato non si "
+               "puo' misurare, e senza misura non si decide fra AV1 e RCP/2")
     if b"libvpx-vp9" not in uscita:
         errore("questo ffmpeg non ha libvpx-vp9: senza il flusso di CONTROLLO "
                "un «no» su HEVC non si distingue da un banco rotto, e il banco "
@@ -1018,6 +1173,20 @@ def principale():
                   f"⭐ 10 BIT VERI  "
                   f"livelli {d['livelli']['livelli_distinti']:4d}  "
                   f"×4 {d['livelli']['frazione_multipli_di_4']}")
+    # ⛔ AV1 — il RIPIEGO negoziato, non un codec in piu'.  Tre sequenze:
+    #    A e B a 8 bit (servono anche a P3/P5, la distinzione), e A a 10 bit
+    #    veri, perche' «la profondita' e' meta' del motivo per cui questo
+    #    progetto ha scelto HEVC».
+    for nome_pattern, sorgente10 in (("A", False), ("B", False), ("A", True)):
+        d = costruisci_av1(nome_pattern, sorgente10)
+        (DOVE / f"{d['nome']}.json").write_text(
+            json.dumps(d, ensure_ascii=False), encoding="utf-8")
+        fatte.append(d)
+        print(f"   \033[1;32mOK\033[0m  {d['nome']:32s} {d['codec']:18s} "
+              f"{d['pix_fmt']:12s} {d['byte_flusso']:8d} byte  ⭐ RIPIEGO  "
+              f"sorgente {d['livelli_sorgente']['livelli_distinti']:4d} liv · "
+              f"flusso {d['livelli']['livelli_distinti']:4d} liv")
+
     for nome_pattern in ("A", "B"):
         d = costruisci_vp9(nome_pattern)
         (DOVE / f"{d['nome']}.json").write_text(

@@ -842,7 +842,9 @@ async function sondaggio() {
     ["vp09.00.41.08",    "VP9 — controllo"],
     ["vp09.00.10.08",    "VP9 — controllo, livello 1.0"],
     ["avc1.42E01E",      "H.264 baseline — controllo"],
-    ["av01.0.04M.08",    "AV1 — controllo"]
+    ["av01.0.04M.08",    "AV1 8 bit — il RIPIEGO negoziato"],
+    ["av01.0.04M.10",    "AV1 10 bit — il ripiego conserva la profondita'?"],
+    ["av01.0.08M.10",    "AV1 10 bit, livello 8"]
   ];
   const righe = [];
   for (const [codec, perche] of stringhe) {
@@ -1027,6 +1029,41 @@ async function giro() {
                       "A-10bitvero-lossless-annexb",
                       "A-10bitvero-annexb"]) {
     await prova_sequenza(nome, { esporta_png: true });
+  }
+
+  /* ── ⭐ AV1: IL RIPIEGO NEGOZIATO ─────────────────────────────────────
+   *
+   * ⛔ Non e' un codec in piu': e' la strada che l'utente ha scelto invece di
+   *    dichiarare un requisito «Chrome con VA-API».  E la scelta e' caduta su
+   *    AV1 e non sul VP9 di questo banco per una ragione di protocollo:
+   *    `RCP.md` §4.3 ammette **`hevc` e `av1`**, e porta `vp9` come **l'esempio
+   *    canonico di valore che un'implementazione RCP/1 deve IGNORARE**; §9 ha
+   *    chiuso la finestra dei valori nuovi il 10 agosto.  ⇒ VP9 vorrebbe dire
+   *    RCP/2; AV1 ha gia' il suo `codec = 2` in §6.2 e non costa niente.
+   *
+   * ⛔ E le tre domande sono queste, in quest'ordine di importanza:
+   *      1. arriva al pixel?  su tutt'e due i motori, in tutt'e due le scene;
+   *      2. a 10 bit?  la profondita' e' meta' del motivo per cui si e' scelto
+   *         HEVC, e un ripiego che la perde va detto ADESSO;
+   *      3. ⭐ regge in `prefer-software`?  E' la domanda che ha smascherato
+   *         HEVC — ⛔ **un ripiego che esiste solo con la GPU non e' un
+   *         ripiego**, perche' mancherebbe esattamente dove serve.
+   *
+   * ⚠ E `web.md` **O2** dichiarava AV1 «un vicolo cieco da entrambi i lati».
+   *   Quella riga vale per il codec PRINCIPALE; qui la domanda e' il ramo che
+   *   non era stato percorso — e un vicolo cieco resta tale finche' nessuno
+   *   misura l'altro ramo.
+   */
+  scrivi("— ⭐ AV1: il ripiego negoziato (RCP.md §4.3, codec = 2)");
+  await prova_sequenza("A-av1-8bit", { esporta_png: true });
+  await prova_sequenza("B-av1-8bit", { etichetta: "av1-B-8bit",
+                                       esporta_png: false });
+  await prova_sequenza("A-av1-10bitvero", { esporta_png: true });
+  for (const modo of ["no-preference", "prefer-hardware", "prefer-software"]) {
+    await prova_sequenza("A-av1-8bit", {
+      etichetta: "av1-8bit-" + modo, accelerazione: modo, esporta_png: false });
+    await prova_sequenza("A-av1-10bitvero", {
+      etichetta: "av1-10bit-" + modo, accelerazione: modo, esporta_png: false });
   }
 
   await prefissi();

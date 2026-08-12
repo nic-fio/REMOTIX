@@ -62,6 +62,29 @@ campo `tipo`, che erano indefiniti.
 pronunciate dall'utente, e si correggono senza discussione. Quel che resta volutamente aperto sta
 in §12, dichiarato invece che dimenticato.
 
+> ### ⭐ Sette righe entrate il **12 agosto 2026**, dalla sotto-fase F2.4 della fase 2
+>
+> *Trovate scrivendo il banco del canale video **prima** del prodotto, e proposte in
+> [`fasi/rapporti/F2-4-filo.md`](fasi/rapporti/F2-4-filo.md) col testo pronto; applicate qui dal
+> coordinatore. ⛔ **Nessuna aggiunge un tipo di messaggio, un motivo di congedo o un campo a un
+> messaggio esistente**: la clausola di §9 è consumata dal 10 agosto, e ogni riga sta dentro quel
+> divieto.*
+>
+> ⚠ **Quattro sono letture doppie vere** — due implementazioni conformi producono **byte diversi per
+> lo stesso ingresso** — e **tre sono regole derivate**, che si ricavano da §1 e §3 ma che nessuna
+> riga scrive. Confonderle gonfierebbe il conto: una regola derivata non fa divergere due
+> implementazioni attente, una lettura doppia sì.
+>
+> | | Dove | Che cosa chiude |
+> |---|---|---|
+> | ⭐ **P2** | §6.2 `numero` | *lettura doppia, la più grave*: il contatore non diceva **da dove parte**, e §7.1 dà allo `0` il significato «nessun fotogramma» ⇒ `RICHIEDI_CHIAVE(0)` voleva dire **due cose** — il valore sentinella implicito che §6.0 vieta |
+> | ⭐ **P6** | §5.2 | *lettura doppia, e morde nella fase 2*: un **delta in apertura** era conforme a ogni riga, e il client **non aveva modo di accorgersene** — nessun buco nei `numero`, e il decodificatore non solleva errori |
+> | ⭐ **P5** | §6.2 `largh.`/`altezza` | *lettura doppia*: *«è sempre quella della tela»* **descrive** e non comanda, e nessuna riga diceva che cosa fa **chi riceve** una misura diversa — chiudere o riscalare |
+> | ⭐ **P3** | §2.5 riga `0x03` | *lettura doppia*: §2.5 vieta per nome il controllo su uno stream unidirezionale e l'audio su uno stream, ma **per il video non diceva su che stream viva** |
+> | **P1** | §2.5 riga «video» | *derivata*: per chi **riceve** si ricava da §1 e §3; per chi **manda** non si ricavava da nessuna parte — ed è l'invariante **I3** lasciata senza una riga sul filo |
+> | **P4** | §6.2 | *derivata*: un **FIN prima dei 28 byte** non è un fotogramma corto, è una lunghezza che non torna |
+> | ⭐ **P7** | §11.1 | *trovata dall'**arbitro meccanico***, non da una rilettura: la registrazione non portava **come si è chiuso lo stream**, e senza quel byte un fotogramma abbandonato e uno troncato per errore sono identici — la forma **E8**, rientrata dalla finestra |
+
 ⛔ **E la finestra per farlo È CHIUSA**: §9 vieta di aggiungere tipi di messaggio dentro una
 versione maggiore, e quel divieto protegge le implementazioni esistenti. **Adesso esistono.** Da qui
 in poi questo documento si tocca **solo** come dice §9, senza sconti.
@@ -295,7 +318,7 @@ nessuna parte.*
 | Stream | Chi lo apre | Quanti |
 |---|---|---|
 | **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la sessione |
-| **video** — unidirezionale | il server | uno **per fotogramma** |
+| **video** — unidirezionale | il server | uno **per fotogramma**, ⛔ e **nessuno prima di aver spedito `SESSIONE`**: chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`. ⚠ È l'invariante **I3** sul filo — *chi non passa dal validatore non riceve un pixel* — e va scritta anche per chi **manda**, come lo è per il canale di input qui sotto |
 | **input** — unidirezionale | il client | **uno solo**, aperto ⛔ **dopo aver ricevuto `SESSIONE`** e tenuto aperto |
 | **appunti** — unidirezionale | entrambi | uno **per trasferimento** |
 
@@ -310,7 +333,7 @@ caso un campo `tipo` (§6). Il byte alto dice il canale:
 | `0x00` | controllo | l'inquadratura di §6.1 — e su uno stream unidirezionale è `ERRORE_PROTOCOLLO`: il controllo vive solo sul **primo stream bidirezionale della sessione** (§4.2) |
 | `0x01` | input | l'inquadratura di §6.1, un messaggio dopo l'altro |
 | `0x02` | appunti | l'inquadratura di §6.1 |
-| `0x03` | video | l'intestazione di 28 byte di §6.2, **senza** inquadratura |
+| `0x03` | video | l'intestazione di 28 byte di §6.2, **senza** inquadratura — ⛔ e **solo su uno stream unidirezionale aperto dal server**: un `0x03` sul canale di controllo è `ERRORE_PROTOCOLLO`, come lo è un `0x00` su uno stream unidirezionale |
 | `0x04` | audio | ⛔ solo su datagram (§6.3). Su uno stream è `ERRORE_PROTOCOLLO` |
 
 ⛔ Un byte alto diverso da questi cinque è `ERRORE_PROTOCOLLO`. E un canale usato **nel verso
@@ -1014,6 +1037,11 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
 
 **Le regole:**
 
+- ⛔ **il primo fotogramma che il server spedisce dopo `SESSIONE` DEVE essere una chiave**
+  (`0x0301`). ⚠ Senza questa riga un delta in apertura è conforme, e il client non ha modo di
+  accorgersene: non c'è nessun buco nella successione dei `numero`, e il decodificatore non solleva
+  errori. Il sintomo sarebbe *«il desktop compare a pezzi»*, e non nominerebbe né il protocollo né
+  la chiave;
 - ⛔ il server **NON DEVE** abbandonare un fotogramma **chiave**. Abbandonare la cura non è una cura;
 - ⛔ quando il server abbandona un delta, **DEVE** mandare un fotogramma chiave **appena può** —
   senza aspettare che il client lo chieda, perché il client se ne accorge un giro di rete più tardi.
@@ -1165,7 +1193,9 @@ Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine 
 - uno stream chiuso con **FIN** porta un fotogramma **completo**;
 - uno stream **azzerato** (`RESET_STREAM`) porta un fotogramma **incompleto**: il client **DEVE**
   buttare quel che ha ricevuto, **NON DEVE** consegnarlo al decodificatore, e **DEVE** trattarlo
-  come un buco (§5.2).
+  come un buco (§5.2);
+- uno stream chiuso con **FIN prima dei 28 byte** dell'intestazione è `ERRORE_PROTOCOLLO`: non è un
+  fotogramma corto, è una lunghezza che non torna (§3).
 
 ```
  0        2        4        8        12       16       24       28   28+…
@@ -1187,8 +1217,8 @@ all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
 |---|---|
 | `tipo` | ⭐ `0x0301` **fotogramma chiave**, `0x0302` **fotogramma delta** (§5.2). Altri valori: `ERRORE_PROTOCOLLO` |
 | `codec` | `1` = HEVC, `2` = AV1. **DEVE** essere quello negoziato in §4.3 |
-| `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 è **sempre quella della tela**, e il client riscala (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia** |
-| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave |
+| `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 **DEVONO** valere la tela concessa in `SESSIONE` (§4.5), e chi ne riceve altre chiude con `ERRORE_PROTOCOLLO`: il client riscala alla **vista**, non alla tela (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia**: cambierebbe questa riga |
+| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta |
 | `istante` | microsecondi dell'orologio **monotono del server** alla cattura |
 | `input` | ⭐ **l'identificatore dell'ultimo input iniettato prima della cattura**; **0** se nessuno |
 
@@ -1915,13 +1945,15 @@ parola non c'è.
 
 ```
 intestazione (16 byte)
- ├── 8 byte   magia          "RCPREG" 0x00 0x01
+ ├── 8 byte   magia          "RCPREG" 0x00 0x02
  ├── u32      quanti_blocchi
  └── u32      riservato      DEVE essere 0
 
 poi `quanti_blocchi` blocchi, ciascuno:
  ├── u8       verso          1 = client → server, 2 = server → client
  ├── u8       canale         il byte alto di `tipo` (§2.5)
+ ├── u8       fine           ⛔ come si è chiuso lo stream DOPO questo blocco:
+ │                             0 = continua · 1 = FIN · 2 = RESET_STREAM
  ├── u64      stream         l'identificatore dello stream QUIC
  ├── u32      lunghezza      quanti byte di carico seguono — ⛔ la lunghezza VERA
  ├── u16      quanti_oscurati
@@ -1931,6 +1963,24 @@ poi `quanti_blocchi` blocchi, ciascuno:
  │       └── 32 B  impronta      SHA-256 dei byte veri
  └── `lunghezza` byte di carico
 ```
+
+> ### ⛔ Il campo `fine` non è un lusso — aggiunto il **12 agosto 2026**, proposta **P7** di F2.4
+>
+> *E non l'ha trovato una rilettura: l'ha trovato `banchi/02-filo-validatore.py` **provando a
+> giudicare una registrazione conforme**, e non riuscendo a dire se il fotogramma fosse completo.*
+>
+> Senza `fine`, un fotogramma **abbandonato** (§5.1, legale — il client butta e chiede una chiave) e
+> uno **troncato per errore** (§3 — la connessione cade) hanno lo **stesso aspetto** nella
+> registrazione: il validatore non può applicare la riga che §6.2 ha aggiunto apposta il 9 agosto
+> 2026 — *«ma solo se lo stream è finito con un FIN»*, rilievo **R1.7** — ed è la forma **E8**
+> rientrata dalla finestra. `[M]` sulla registrazione di prova conforme l'arbitro dichiarava *«di 1
+> su 1 NON si è potuta giudicare la completezza»*.
+>
+> ⚠ **La magia passa a `0x00 0x02`** perché il blocco cambia misura: un validatore vecchio deve
+> **rifiutare** il formato nuovo, non leggerlo di traverso.
+>
+> ⭐ **E non tocca §9**: un blocco di registrazione **non è un messaggio**, e il formato porta già la
+> propria versione nella magia.
 
 ⛔ **Gli intervalli oscurati contengono `0x2A` ripetuto**, non zeri: uno zero è un valore che i
 campi possono avere davvero, e un intervallo di zeri che «per caso» combacia con un corpo legittimo

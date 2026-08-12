@@ -260,10 +260,32 @@ fila per il decadimento quando le sequenze di F2.3 ci sono.*
 
 ⛔ **Non gli si chiede se «si vede bene»: la sonda produce numeri.**
 
-### ⏳ 3. E due che restano dalla fase 1, non decise
+### ⛔ 3. E un debito della fase 1 che questa fase NON può scavalcare
 
-Il **filo unico** con la verifica PAM che lo blocca, e il **tetto di 16 sessioni in compilazione**
-dove la regola ne vuole dieci configurabili (`README.md`, punto 7).
+⚠ *Il `README.md` elenca fra «quel che aspetta l'utente» i due ripieghi — il filo unico e il tetto
+delle sessioni. **Quella riga è scaduta**: tutt'e due sono state decise dall'utente la sera dell'11
+agosto, e stanno in `DECISIONI.md` §1.10 e §1.11. Corretto il 12 agosto 2026.*
+
+⛔ **E `DECISIONI.md` §1.10 impone una cosa a questa fase**: la verifica PAM esce dal filo unico
+**prima che la fase 2 si apra**, con un **processo aiutante** e non con un filo — perché PAM non è
+affidabilmente rientrante.
+
+La ragione è scritta lì, ed è del video: *«finché non c'è video il sintomo è «l'ultimo dei dieci
+aspetta dieci secondi», sgradevole e circoscritto; dalla fase 2 in poi lo schermo di **tutti** quelli
+collegati si pianta per uno o due secondi ogni volta che **qualcun altro** entra — e chi lo vedrà lo
+attribuirà al **video**»*. `[M]` da B8: **da 1,0 a 2,2 secondi** per tentativo, e il ritardo lo mette
+`pam_faildelay`, non il nostro codice.
+
+⇒ ⭐ **Il banco di questa fase poteva nascere prima della cura — il prodotto no.** Questo giro ha
+scritto solo banchi, quindi il debito non è stato violato; ⛔ **ma la prima riga di prodotto della
+fase 2 viene dopo quella cura**, o si misura il video con dentro un difetto che si attribuirà al
+video.
+
+### ⏳ 4. Il tetto delle sessioni resta 16, e il prezzo è dichiarato
+
+`DECISIONI.md` §1.11: non si cambia fino alla fase 3, perché *«il limite vero non è un conteggio: è
+un budget di pixel al secondo, e lo pone il codificatore»*. ⚠ Per due fasi **il codice dice 16 e la
+specifica dice 10**.
 
 ---
 
