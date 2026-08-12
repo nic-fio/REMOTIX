@@ -262,6 +262,57 @@ fa il file che il metro giudica. ⇒ la metà (a) e la metà (b) di F2.6 si inco
 giro, e il confronto dei pixel della fase 2 **non si fa sul Chrome del portatile** — che sarebbe la
 forma d'errore **E10**.
 
+### ⛔ D16 e D17 — i due difetti che l'utente ha trovato prima di noi, col telefono in mano
+
+*12 agosto 2026, ore 19.58. L'utente ha aperto la sonda **dal telefono in Samsung DeX**, ha premuto
+i bottoni 1 e 2, e ha visto «tutti esiti negativi». **Nessuno dei due era una misura del telefono**,
+e i dieci minuti li ha spesi lui.*
+
+| | Il difetto | La forma | La cura |
+|---|---|---|---|
+| **D16** | `serve` accendeva il sito **senza costruire il flusso**: `GET /flusso-20260812-1958.json` → **404**. Gli esiti «negativi» erano **la sonda che non aveva niente in mano** | **E8** — «non è arrivato» e «è arrivato e non aveva niente da decodificare» avevano la stessa faccia. ⛔ Il peggiore dei due: con un riconoscimento funzionante avrebbe prodotto **un verdetto falso** («il telefono non decodifica») che nessuno avrebbe messo in dubbio | `02-giudizio-flusso.py` impacchetta **quattro sequenze già certificate da F2.5** (HEVC **e** AV1, **8 e 10 bit**); `serve` le costruisce **prima** di accendere e, se non ci riesce, **non accende**; poi **rilegge il flusso dal server con `curl`** — il 404 era HTTP, e un controllo sul disco non l'avrebbe visto; e la pagina se ne accorge **da sé** e spedisce `FLUSSO_ASSENTE` invece di un esito che somiglia a una misura |
+| **D17** | il riconoscimento era sulla **stringa** dello user agent. Chrome in DeX manda `X11; Linux x86_64 … Chrome/150`, **indistinguibile da un desktop** ⇒ «NESSUNA riga viene da un dispositivo mobile» **mentre il telefono era lì** | **E10 al rovescio**: la difesa contro il client sbagliato ha rifiutato il client **giusto** | `02-giudizio-dispositivo.py`, su **due assi**: la **provenienza** (l'indirizzo IP, che il browser non può scrivere) e la **natura** (`userAgentData.getHighEntropyValues`, GPU letta da WebGL, tocco, puntatore, memoria, nuclei, schermo). ⛔ Nessun segnale da solo basta — «Android» vuole **due** segnali d'accordo, di cui almeno uno che **non** sia lo user agent — e **ogni riga dichiara quali ha usato** |
+
+⭐ **Le quattro caselle del flusso sono lo strumento, non un lusso**: con la sola HEVC 10 bit, «non
+dipinge» ha tre cause che si somigliano (manca il codec, manca la profondità, il flusso è storto);
+con HEVC/AV1 × 8/10 bit il rosso dice **dove**.
+
+⭐ **E DeX è un caso a sé, che il registro deve poter DIRE invece di scegliere.** Le etichette della
+natura sono cinque: `ANDROID-MANO`, `ANDROID-DEX`, `ANDROID-SITO-DESKTOP`, `DESKTOP`, `INCERTA`. Per
+S2 DeX **vale** (MediaCodec è quello del telefono); per calore e consumo vale meno (dock, spesso in
+carica) — e si dichiara. ⛔ La distinzione DeX / «sito desktop» è `[?]`: poggia su puntatore e
+schermo, perché nel browser **una dichiarazione del sistema non esiste**.
+
+⛔ **La difesa E10 non si è indebolita: la provenienza ha diritto di veto.** Qualunque cosa la pagina
+dichiari, un giro che nasce su questa macchina è **RIFIUTATO**.
+
+#### La certificazione, con l'atteso scritto prima — `bash banchi/02-giudizio-telefono.sh certifica`
+
+| | atteso, scritto prima | misurato `[M]` 12 ago 2026 |
+|---|---|---|
+| il riconoscimento, **7 casi** | DeX **ACCETTATO**, portatile **RIFIUTATO**, portatile travestito da Android **RIFIUTATO**, altro portatile in casa **RIFIUTATO**, la riga vera del 12 agosto **SOSPESO** | **7 su 7** ✅ |
+| ⛔ **il guasto su D16** | senza sequenze `serve` esce ≠ 0 **e non accende niente** | stato **2**, nessun ascolto sulla 7537 ✅ |
+| la catena, **prima** del verdetto | pagina 200 · flusso 200 · sequenze dipinte > 0 · pixel arrivati | Chrome 151: **4 su 4** dipinte, 3 686 400 byte di pixel · Firefox 140: **2 su 4** (HEVC `NotSupportedError`, coerente con F2.5), 1 843 200 byte ✅ |
+| ⛔ **il verdetto** | **RIFIUTATO** su tutti e tre i motori | **RIFIUTATO** ✅ — su una catena che ha funzionato in ogni suo pezzo, che è l'unico modo in cui un «rifiutato» certifica qualcosa |
+| ⭐ la differenza, **misurata** | — | **10 righe** su cui il riconoscimento per user agent dava un'altra risposta: il Chrome travestito lo **accettava** |
+
+⭐ **E un difetto trovato certificando** (`LEZIONI.md` §1.2): il raccoglitore era a **un filo solo**
+con `HTTP/1.1` keep-alive, e una connessione lasciata aperta da una scheda bloccava il servitore.
+`[M]` un `POST /esito` partito alle 20.31.00 è arrivato alle **20.32.57** — due minuti. ⛔ Sul
+telefono il sintomo sarebbe «la pagina si è piantata» e la diagnosi ovvia «il dispositivo non ce la
+fa»: **un'altra accusa al componente innocente**. Curato con `ThreadingHTTPServer` e un lucchetto
+sulla scrittura del registro.
+
+⛔ **E il registro ora porta l'indirizzo e le letture.** Ogni riga ha `ip`; ogni `GET` è una riga col
+codice. Le righe di prima di stasera restano senza indirizzo, e per quelle il verdetto è **SOSPESO**
+con la ragione scritta: *«il raccoglitore non lo scriveva»*. ⛔ Non si sono riscritte: un registro di
+misure non si corregge a posteriori.
+
+⛔ **E i pixel non si prendono più «i più recenti».** `analizza` accetta solo i `pagina-*.rgb24`
+spediti da una riga il cui dispositivo è **ACCETTATO**: bastava un giro di `certifica` sul portatile
+per lasciare in cartella un file più fresco di quello del telefono, ed era **E10 dalla porta di
+servizio**.
+
 ### Che cosa è già stato certificato della sonda, e che cosa no
 
 | | |
@@ -284,8 +335,10 @@ forma d'errore **E10**.
 | **dispositivo** | un **telefono Android** con Chrome aggiornato (≥ 108; si legge in `chrome://version` e **si scrive accanto al numero**). ⛔ Non il Chrome del portatile. ⭐ Se c'è anche un **iPhone** con Safari ≥ 16.4, si fa due volte: sono due silici diversi |
 | **rete** | telefono sulla **stessa rete WiFi** del portatile. Niente rete mobile: qui si misura la decodifica, non la linea |
 | **cavo** | ⭐ un **cavo USB** con il **debug USB acceso**, per il controllo C: `chrome://inspect` → la scheda del telefono → «inspect» → `chrome://media-internals`, e si cerca `Created MediaCodec <nome>, is_software_codec=<bool>`. ⛔ Se il nome comincia per `c2.android.` o `omx.google.` è **software, punto** — anche se `prefer-hardware` era riuscito. ⚠ Su iPhone questo canale **non esiste**, e il limite va scritto |
-| **gesto** | 1. sul portatile `bash banchi/02-giudizio-telefono.sh serve`; 2. sul telefono si apre l'indirizzo stampato e **si accetta l'avviso del certificato una volta** («Avanzate» → «Procedi»); 3. si preme il bottone 1 e si aspetta; 4. si preme il bottone 2; 5. ⛔ **schermo acceso e scheda in primo piano** per tutta la misura — una scheda in secondo piano si congela dopo cinque minuti e il banco misurerebbe il congelamento invece del calore |
-| **tempo** | **~10 minuti** per i bottoni 1, 2 e 4. ⏳ **+10 minuti di fila** per il decadimento, quando le sequenze di F2.3 ci sono |
+| **gesto** | 1. sul portatile `bash banchi/02-giudizio-telefono.sh serve`; 2. sul telefono si apre l'indirizzo stampato **per intero, col `?giro=…` in fondo** e **si accetta l'avviso del certificato una volta** («Avanzate» → «Procedi»); 3. si preme il bottone 1 e si aspetta; 4. si preme il bottone 2; 5. ⛔ **schermo acceso e scheda in primo piano** per tutta la misura — una scheda in secondo piano si congela dopo cinque minuti e il banco misurerebbe il congelamento invece del calore |
+| ⛔ **l'indirizzo non si accorcia** | il flusso si chiama `flusso-<giro>.json`: un indirizzo senza giro, o con un giro vecchio, finisce in un **404** — ed è esattamente quel che è successo il 12 agosto. Per un secondo tentativo: `bash banchi/02-giudizio-telefono.sh flusso`, che **non spegne niente** e **non fa ricomparire l'avviso del certificato** |
+| ⭐ **in DeX** | vale per S2 (MediaCodec è quello del telefono), vale meno per calore e consumo (dock, spesso in carica) — e si dichiara. ⛔ **Il cavo USB è l'unico canale che dice «hardware» con certezza**, e **in DeX la porta può essere occupata**: se DeX gira via cavo verso un monitor, quella è l'unica USB-C del telefono. Tre strade, in ordine: **DeX senza fili** col cavo libero per `chrome://inspect`; un **hub USB-C** con presa dati; oppure ⚠ si rinuncia al controllo C **e lo si dichiara** — il verdetto sull'hardware resta `[?]`, e i numeri della portata da soli **non** lo chiudono |
+| **tempo** | **~10 minuti** per i bottoni 1, 2 e 4 — ⭐ e il **secondo tentativo costa due minuti**: l'indirizzo nuovo si apre e basta. ⏳ **+10 minuti di fila** per il decadimento, quando le sequenze di F2.3 ci sono |
 | ⛔ **e che cosa NON gli si chiede** | di dire se «si vede bene». Questa sonda produce **numeri**. Il giudizio di I8 arriva alla fine della fase, sul desktop suo |
 
 ---

@@ -67,6 +67,41 @@ Le tre che dicono **no** sono le ultime, e sono le sole che contano:
 Le letture sono **TRE**, non due:  ≥ 90 fps ⇒ hardware · ≤ 30 ⇒ software ·
 in mezzo ⇒ ⛔ **verdetto sospeso**.  Un banco a due uscite promuove la banda
 incerta a certezza.
+
+============================================================================
+⛔ I DUE DIFETTI CURATI IL 12 AGOSTO 2026 A SERA — D16 e D17
+
+L'utente ha aperto questa pagina **dal telefono in Samsung DeX**, ha premuto i
+bottoni 1 e 2, e ha visto «tutti esiti negativi».  Nessuno dei due esiti era
+una misura del telefono:
+
+**D16.**  `GET /flusso-20260812-1958.json` → **404**.  Il bottone 2 scriveva
+«le sequenze della fase 2 NON ci sono» **nel riquadro** e non spediva niente:
+per chi guardava dopo, quel giro aveva la faccia di un fallimento del
+dispositivo.  ⛔ Adesso la pagina **se ne accorge da sé e lo DICHIARA come
+tale**: spedisce un esito `FLUSSO_ASSENTE` col codice HTTP e con l'indirizzo
+chiesto, e scrive a lettere sue *«questa NON e' una misura del dispositivo»*.
+⭐ La regola sotto: un banco che non ha l'ingresso non produce un esito che
+   somigli a una misura.  E' la forma **E8** — il silenzio scambiato per zero.
+
+**D17.**  Il riconoscimento del dispositivo si faceva sulla **stringa** dello
+user agent, che in DeX (e in «richiedi sito desktop») dice `X11; Linux
+x86_64` ed e' indistinguibile da un desktop.  ⛔ Adesso la pagina raccoglie
+un'**impronta** — `userAgentData.getHighEntropyValues`, il nome della GPU
+letto da WebGL, il tocco, il tipo di puntatore, la memoria, i nuclei, lo
+schermo — e la spedisce **con ogni esito**.  ⚠ La pagina **non decide**: la
+decisione la prende `02-giudizio-dispositivo.py` **fuori di qui**, mettendoci
+accanto l'indirizzo di provenienza, che e' il solo segnale che questa pagina
+non puo' scrivere.  Un imputato non si giudica da solo.
+
+============================================================================
+⛔ IL FLUSSO NON SI COSTRUISCE PIU' QUI E NON SI INDOVINA IL NOME
+
+`flusso-<giro>.json` lo scrive `02-giudizio-flusso.py` prendendo **quattro**
+sequenze gia' certificate da F2.5 — HEVC **e** AV1, **8 e 10 bit** — e le
+quattro caselle sono lo strumento: con la sola HEVC a 10 bit, «non dipinge»
+ha tre cause che si somigliano (manca il codec, manca la profondita', il
+flusso e' storto); con quattro, il rosso dice **dove**.
 ============================================================================
 -->
 <style>
@@ -99,7 +134,7 @@ const par = new URLSearchParams(location.search);
 const GIRO = par.get("giro") || ("giro-" + Date.now());
 const stato = {giro: GIRO, controlli: null, hevc: null, profondita: null,
                ua: navigator.userAgent, nucleo: navigator.hardwareConcurrency,
-               tela_profondita_bit: 8};
+               tela_profondita_bit: 8, impronta: null};
 
 function log(t, c) {
   const s = document.createElement("span");
@@ -114,6 +149,73 @@ async function spedisci(percorso, corpo, tipo) {
     log("   → " + percorso + " : " + r.status, r.ok ? "si" : "no");
     return r.ok;
   } catch (e) { log("   ⛔ non spedito: " + e, "no"); return false; }
+}
+// ⛔ Ogni esito JSON passa di qui, e porta l'impronta.  Un esito senza
+//    impronta e' un esito che nessuno potra' attribuire a un dispositivo.
+async function esito(oggetto) {
+  oggetto.giro = GIRO;
+  oggetto.impronta = stato.impronta;
+  return spedisci("/esito", JSON.stringify(oggetto), "application/json");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// ⛔ L'IMPRONTA — D17.  Si RACCOGLIE, non si giudica: il giudizio sta fuori,
+//    dove c'e' anche l'indirizzo di provenienza (che da qui non si vede).
+//    ⚠ Nessuno di questi segnali basta da solo, e la stringa dello user
+//      agent — quella che ha prodotto D17 — sta in fondo, dichiarata debole.
+// ─────────────────────────────────────────────────────────────────────────
+async function impronta() {
+  const d = {
+    quando: new Date().toISOString(),
+    ua_stringa: navigator.userAgent,          // ⚠ debole, raccolta lo stesso
+    piattaforma_legacy: navigator.platform || null,
+    ua_dati: null, ua_dati_alta_entropia: null, ua_dati_errore: null,
+    memoria_gb: ("deviceMemory" in navigator) ? navigator.deviceMemory : null,
+    nuclei: navigator.hardwareConcurrency || null,
+    tocco_massimo: ("maxTouchPoints" in navigator) ? navigator.maxTouchPoints : null,
+    puntatore_grossolano: matchMedia("(pointer: coarse)").matches,
+    puntatore_fine: matchMedia("(pointer: fine)").matches,
+    niente_sorvolo: matchMedia("(hover: none)").matches,
+    schermo: {l: screen.width, a: screen.height, dpr: devicePixelRatio,
+              disponibile_l: screen.availWidth, disponibile_a: screen.availHeight,
+              colore_bit: screen.colorDepth},
+    finestra: {l: innerWidth, a: innerHeight},
+    fuso: (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || null,
+    gpu: null,
+  };
+  // ⭐ Il canale che NON e' lo user agent e che dice il silicio: il nome del
+  //    disegnatore letto da WebGL.  «Adreno», «Mali» e «Xclipse» vivono
+  //    dentro un telefono; «Mesa Intel» vive dentro questo portatile.
+  //    ⚠ Chrome puo' mascherarlo: se e' mascherato lo si DICHIARA, invece di
+  //      far finta che il segnale ci fosse.
+  try {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+    if (gl) {
+      const e = gl.getExtension("WEBGL_debug_renderer_info");
+      d.gpu = {
+        resa: gl.getParameter(e ? e.UNMASKED_RENDERER_WEBGL : gl.RENDERER),
+        fornitore: gl.getParameter(e ? e.UNMASKED_VENDOR_WEBGL : gl.VENDOR),
+        mascherato: !e,
+      };
+    } else { d.gpu = {resa: null, errore: "niente contesto WebGL"}; }
+  } catch (e) { d.gpu = {resa: null, errore: String(e)}; }
+
+  if (navigator.userAgentData) {
+    d.ua_dati = {mobile: navigator.userAgentData.mobile,
+                 platform: navigator.userAgentData.platform,
+                 brands: navigator.userAgentData.brands};
+    try {
+      d.ua_dati_alta_entropia = await navigator.userAgentData.getHighEntropyValues(
+        ["platform", "platformVersion", "model", "mobile", "architecture",
+         "bitness", "fullVersionList", "formFactors"]);
+    } catch (e) { d.ua_dati_errore = String(e); }
+  } else {
+    // ⚠ Su Firefox e su Safari `userAgentData` non esiste: mezzo asse in
+    //    meno, e va detto — non e' «il dispositivo non ha risposto».
+    d.ua_dati_errore = "navigator.userAgentData non esiste su questo browser";
+  }
+  return d;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -211,80 +313,198 @@ document.getElementById("b1").onclick = async () => {
   else log("   ⛔ BANCO NON VALIDO su questo dispositivo: non distingue A da B.\n"
          + "      ⇒ nessun verdetto su HEVC verra' pubblicato.  Non e' un\n"
          + "        risultato negativo su HEVC: e' l'assenza di uno strumento.", "no");
-  await spedisci("/esito", JSON.stringify(stato), "application/json");
+  await esito({tipo: "controlli", misura_valida: true, controlli: stato.controlli,
+               nucleo: stato.nucleo, tela_profondita_bit: 8});
 };
 
 // ─────────────────────────────────────────────────────────────────────────
 // ⭐ IL PEZZO NUOVO: il fotogramma vero → la tela → i pixel al banco
+//
+// ⛔ E IL CONTROLLO CHE MANCAVA (D16): la pagina si accorge DA SE' che il
+//    flusso non e' arrivato, e lo dice **come tale**.  Un esito che sembra
+//    una misura, prodotto senza ingresso, e' peggio di nessun esito.
 // ─────────────────────────────────────────────────────────────────────────
-document.getElementById("b2").onclick = async () => {
-  log("\n== IL FOTOGRAMMA DELLA FASE 2 → tela → pixel al banco");
-  let fl, meta;
+function byteDaBase64(b64) {
+  const s = atob(b64);
+  const u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+
+async function prendiFlusso() {
+  const indirizzo = "flusso-" + GIRO + ".json";
+  let r;
   try {
-    meta = await (await fetch("flusso-" + GIRO + ".json")).json();
-    fl = new Uint8Array(await (await fetch("flusso-" + GIRO + ".h265")).arrayBuffer());
+    r = await fetch(indirizzo, {cache: "no-store"});
   } catch (e) {
-    log("⛔ le sequenze della fase 2 NON ci sono (" + e + ").", "no");
-    log("   Non si sostituiscono con una piu' facile: una sequenza piu' facile", "no");
-    log("   non misura «un po' meno», misura un'altra cosa.  Le produce F2.3.", "no");
-    return;
+    return {assente: true, indirizzo: indirizzo, stato: null, errore: String(e),
+            perche: "la richiesta non e' nemmeno partita (rete o pagina chiusa)"};
   }
-  const cfg = {codec: meta.codec, codedWidth: meta.larghezza, codedHeight: meta.altezza,
+  // ⛔ `r.ok` si guarda PRIMA di `json()`: un 404 con un corpo di testo dava
+  //    un errore di sintassi JSON, cioe' il sintomo giusto col nome sbagliato.
+  if (!r.ok) {
+    return {assente: true, indirizzo: indirizzo, stato: r.status,
+            perche: "il server ha risposto " + r.status + ": il file non c'e'"};
+  }
+  let m;
+  try { m = await r.json(); }
+  catch (e) {
+    return {assente: true, indirizzo: indirizzo, stato: r.status,
+            errore: String(e), perche: "il file c'e' ma non e' un JSON intero"};
+  }
+  if (!m.sequenze || !m.sequenze.length) {
+    return {assente: true, indirizzo: indirizzo, stato: r.status,
+            perche: "il file c'e' e non contiene nessuna sequenza"};
+  }
+  return {assente: false, manifesto: m};
+}
+
+async function decodificaSequenza(s, cx, tela) {
+  const conto = {nome: s.nome, ruolo: s.ruolo_sonda, codec: s.codec,
+                 profondita_dichiarata: s.profondita, forma: s.forma,
+                 pezzi_dati: 0, fotogrammi: 0, dipinto: false,
+                 supportata: null, errore_configure: null, errori: [],
+                 profondita_letta: null, ms: null};
+  const cfg = {codec: s.codec, codedWidth: s.larghezza, codedHeight: s.altezza,
                hardwareAcceleration: "no-preference", optimizeForLatency: true};
-  let dipinto = false;
-  const tela = document.getElementById("tela");
-  tela.width = meta.larghezza; tela.height = meta.altezza;
-  const cx = tela.getContext("2d", {willReadFrequently: true});
+  if (s.descrizione) cfg.description = byteDaBase64(s.descrizione);
+  try {
+    const q = await VideoDecoder.isConfigSupported(cfg);
+    conto.supportata = q.supported;
+  } catch (e) { conto.supportata = "errore: " + e; }
+
+  const t0 = performance.now();
   await new Promise((risolvi) => {
+    let finito = false;
+    const chiudi = () => { if (!finito) { finito = true; risolvi(); } };
     const dec = new VideoDecoder({
       output: (f) => {
-        if (!dipinto) {
+        conto.fotogrammi++;
+        if (!conto.dipinto) {
           // ⛔ LA PROFONDITA' SI CHIEDE AL FOTOGRAMMA, non si deduce dai pixel
-          stato.profondita = {format: f.format, codedWidth: f.codedWidth,
-                              codedHeight: f.codedHeight,
-                              colorSpace: f.colorSpace ? {
-                                primaries: f.colorSpace.primaries,
-                                transfer: f.colorSpace.transfer,
-                                matrix: f.colorSpace.matrix,
-                                fullRange: f.colorSpace.fullRange} : null,
-                              copyTo: null};
-          log("   VideoFrame.format = " + f.format,
-              f.format === null ? "boh" : "si");
-          if (f.format === null) {
-            log("   ⛔ format === null: su Chrome e' quel che si vede sul", "boh");
-            log("      fotogramma decodificato IN HARDWARE (w3c/webcodecs#631).", "boh");
-            log("      ⇒ NON vuol dire 8 bit e NON vuol dire 10 bit: vuol dire", "boh");
-            log("        CHE NON SI SA.  La profondita' resta non misurabile", "boh");
-            log("        da qui, e il banco NON la promuove.", "boh");
-          }
-          cx.drawImage(f, 0, 0);
-          dipinto = true;
+          conto.profondita_letta = {
+            format: f.format, codedWidth: f.codedWidth, codedHeight: f.codedHeight,
+            colorSpace: f.colorSpace ? {
+              primaries: f.colorSpace.primaries, transfer: f.colorSpace.transfer,
+              matrix: f.colorSpace.matrix, fullRange: f.colorSpace.fullRange} : null,
+            copyTo: null};
+          try { cx.drawImage(f, 0, 0); conto.dipinto = true; }
+          catch (e) { conto.errori.push("drawImage: " + e); }
         }
         f.close();
       },
-      error: (e) => { log("⛔ VideoDecoder: " + e, "no"); risolvi(); },
+      error: (e) => { conto.errori.push("VideoDecoder: " + e); chiudi(); },
     });
-    dec.configure(cfg);
-    dec.decode(new EncodedVideoChunk({type: "key", timestamp: 0, data: fl}));
-    dec.flush().then(() => { dec.close(); risolvi(); });
+    try { dec.configure(cfg); }
+    catch (e) { conto.errore_configure = String(e); chiudi(); return; }
+    try {
+      for (const p of s.pezzi) {
+        dec.decode(new EncodedVideoChunk({type: p.tipo, timestamp: p.istante,
+                                          data: byteDaBase64(p.dati)}));
+        conto.pezzi_dati++;
+      }
+    } catch (e) { conto.errori.push("decode: " + e); }
+    dec.flush().then(() => { try { dec.close(); } catch (e) {} chiudi(); })
+               .catch((e) => { conto.errori.push("flush: " + e); chiudi(); });
   });
-  if (!dipinto) { log("⛔ nessun fotogramma e' uscito dal decodificatore", "no"); return; }
+  conto.ms = +(performance.now() - t0).toFixed(1);
+  return conto;
+}
 
-  // ⛔ la rilettura della tela: se la tela fosse «sporcata» qui si prende un
-  //    errore, e un errore e' un'informazione — non lo si nasconde
-  let d;
-  try { d = cx.getImageData(0, 0, tela.width, tela.height); }
-  catch (e) { log("⛔ la tela non si rilegge (" + e + "): il confronto dei "
-                + "pixel su questo dispositivo NON e' possibile", "no"); return; }
-  const rgb = new Uint8Array(tela.width * tela.height * 3);
-  for (let i = 0, j = 0; i < d.data.length; i += 4) {
-    rgb[j++] = d.data[i]; rgb[j++] = d.data[i + 1]; rgb[j++] = d.data[i + 2];
+document.getElementById("b2").onclick = async () => {
+  log("\n== IL FOTOGRAMMA DELLA FASE 2 → tela → pixel al banco");
+  const f = await prendiFlusso();
+  if (f.assente) {
+    // ⛔⭐ D16: QUESTO NON E' UN ESITO NEGATIVO DEL DISPOSITIVO.
+    log("⛔ IL FLUSSO NON E' ARRIVATO — e questa NON e' una misura del", "no");
+    log("   dispositivo: il banco non aveva niente da dare da decodificare.", "no");
+    log("   chiesto:  " + f.indirizzo, "no");
+    log("   risposta: " + (f.stato === null ? "nessuna" : "HTTP " + f.stato)
+        + " — " + f.perche, "no");
+    log("   ⇒ sul portatile:  bash banchi/02-giudizio-telefono.sh serve", "boh");
+    log("     (e' `serve` che deve costruire flusso-<giro>.json; se non lo", "boh");
+    log("      costruisce deve RIFIUTARSI di servire, non servire un vuoto)", "boh");
+    await esito({tipo: "FLUSSO_ASSENTE", misura_valida: false,
+                 indirizzo: f.indirizzo, stato_http: f.stato,
+                 perche: f.perche, errore: f.errore || null,
+                 "⛔": "non e' un fallimento del dispositivo: e' un ingresso "
+                     + "che non c'era.  Nessun numero di S2 esce da questo giro"});
+    return;
   }
-  log("   riletti " + rgb.length + " byte RGB dalla tela (" + tela.width + "×" + tela.height + ")");
-  await spedisci("/pixel?nome=pagina-" + GIRO + ".rgb24", rgb, "application/octet-stream");
-  await spedisci("/esito", JSON.stringify({
-    giro: GIRO, tipo: "identita", fin_ricevuto: true, reset_ricevuto: false,
-    dipinto: true, profondita: stato.profondita, ua: stato.ua}), "application/json");
+
+  const m = f.manifesto;
+  log("   flusso ricevuto: " + m.sequenze.length + " sequenze · "
+      + m.larghezza + "×" + m.altezza + " · bit " + m.profondita_presenti.join("/")
+      + " · " + m.codec_presenti.join(" e "), "si");
+
+  const tela = document.getElementById("tela");
+  tela.width = m.larghezza; tela.height = m.altezza;
+  const cx = tela.getContext("2d", {willReadFrequently: true});
+  const conti = [];
+  let dipinte = 0;
+
+  for (const s of m.sequenze) {
+    // ⛔ fra una sequenza e l'altra la tela si azzera con un colore che NON e'
+    //    nessuna delle tinte e non e' nero: cosi' «non ha dipinto» ha un
+    //    aspetto suo invece di somigliare a «ha dipinto scuro».
+    cx.fillStyle = "#7a007a"; cx.fillRect(0, 0, tela.width, tela.height);
+    const c = await decodificaSequenza(s, cx, tela);
+    log("   " + (c.dipinto ? "✔" : "✗") + " " + c.nome + " (" + c.ruolo + ")"
+        + "  supportata=" + c.supportata + "  pezzi " + c.pezzi_dati + "/"
+        + s.pezzi.length + "  fotogrammi " + c.fotogrammi + "  " + c.ms + " ms"
+        + (c.errore_configure ? "  ⛔ configure: " + c.errore_configure : "")
+        + (c.errori.length ? "  ⛔ " + c.errori[0] : ""),
+        c.dipinto ? "si" : "no");
+    if (c.dipinto) {
+      log("     VideoFrame.format = " + c.profondita_letta.format,
+          c.profondita_letta.format === null ? "boh" : "si");
+      if (c.profondita_letta.format === null) {
+        log("     ⛔ format === null: su Chrome e' quel che si vede sul", "boh");
+        log("        fotogramma decodificato IN HARDWARE (w3c/webcodecs#631).", "boh");
+        log("        ⇒ NON vuol dire 8 bit e NON vuol dire 10 bit: vuol dire", "boh");
+        log("          CHE NON SI SA, e il banco NON la promuove.", "boh");
+      }
+      // ⛔ la rilettura della tela: se la tela fosse «sporcata» qui si prende
+      //    un errore, e un errore e' un'informazione — non lo si nasconde
+      let d = null;
+      try { d = cx.getImageData(0, 0, tela.width, tela.height); }
+      catch (e) {
+        c.tela_rileggibile = false; c.errori.push("getImageData: " + e);
+        log("     ⛔ la tela NON si rilegge (" + e + "): il confronto dei "
+            + "pixel su questo dispositivo non e' possibile", "no");
+      }
+      if (d) {
+        c.tela_rileggibile = true;
+        const rgb = new Uint8Array(tela.width * tela.height * 3);
+        for (let i = 0, j = 0; i < d.data.length; i += 4) {
+          rgb[j++] = d.data[i]; rgb[j++] = d.data[i + 1]; rgb[j++] = d.data[i + 2];
+        }
+        c.byte_pixel = rgb.length;
+        c.nome_pixel = "pagina-" + GIRO + "-" + c.nome + ".rgb24";
+        log("     riletti " + rgb.length + " byte RGB (" + tela.width + "×"
+            + tela.height + ") → " + c.nome_pixel);
+        await spedisci("/pixel?nome=" + encodeURIComponent(c.nome_pixel), rgb,
+                       "application/octet-stream");
+        dipinte++;
+      }
+    }
+    conti.push(c);
+  }
+
+  // ⛔ IL DENOMINATORE: quante ne ha dipinte su quante gliene sono state date.
+  //    Senza, «zero su quattro» e «zero su zero» si leggono uguali.
+  log("   ⇒ dipinte " + dipinte + " sequenze su " + m.sequenze.length,
+      dipinte ? "si" : "no");
+  if (!dipinte) {
+    log("   ⛔ NESSUNA delle quattro ha dipinto.  Con quattro caselle questo", "no");
+    log("      non e' «il dispositivo non decodifica»: e' un sospetto sul", "no");
+    log("      FLUSSO, perche' AV1 8 bit lo dipinge anche un browser senza GPU.", "no");
+  }
+  stato.profondita = (conti.find((c) => c.dipinto) || {}).profondita_letta || null;
+  await esito({tipo: "identita", misura_valida: true,
+               fin_ricevuto: true, reset_ricevuto: false,
+               sequenze_date: m.sequenze.length, sequenze_dipinte: dipinte,
+               conti: conti, tela: {l: tela.width, a: tela.height, bit: 8}});
 };
 
 document.getElementById("b3").onclick = async () => {
@@ -302,6 +522,12 @@ document.getElementById("b3").onclick = async () => {
     log("⛔ la sequenza A (4K60 Main10) non c'e': la produce F2.3.  ⛔ Il banco", "no");
     log("   DICHIARA assente la misura invece di farla su una sequenza piu'", "no");
     log("   facile — quella misurerebbe un'altra cosa.", "no");
+    // ⛔ D16, la stessa regola del bottone 2: un ingresso che manca si
+    //    DICHIARA al banco, e non si lascia sul solo riquadro.
+    await esito({tipo: "PORTATA_ASSENTE", misura_valida: false,
+                 indirizzo: "sequenza-A.json", errore: String(e),
+                 perche: "la sequenza 4K60 Main10 della portata la produce "
+                       + "F2.3 e non c'e' ancora"});
     return;
   }
   const pezzi = JSON.parse(new TextDecoder().decode(fl)); // {tipo,ts,offset,len}
@@ -330,29 +556,58 @@ document.getElementById("b4").onclick = async () => {
   log("      sceglie DI PROPOSITO un decodificatore software di MediaCodec");
   log("      quando non ne trova uno hardware, e tutte e tre dicono di si'");
   log("      lo stesso (S2 §4.1).  E' la forma d'errore E1.");
-  await spedisci("/esito", JSON.stringify({giro: GIRO, tipo: "api", righe: righe,
-                                           ua: stato.ua}), "application/json");
+  await esito({tipo: "api", misura_valida: true, righe: righe});
 };
 
-log("dispositivo: " + navigator.userAgent);
-log("nuclei dichiarati: " + navigator.hardwareConcurrency + " · giro: " + GIRO);
+log("giro: " + GIRO);
 log("⚠ questa pagina non dice «hardware» ne' «10 bit»: produce numeri.");
+log("⚠ e non dice nemmeno CHE COSA E': raccoglie l'impronta e la spedisce.");
 
-// ⛔ `?auto=N` preme il bottone N da solo.  ⚠ NON e' una comodita': e' il
-//    modo in cui questo banco si CERTIFICA senza un dito umano, e in
-//    particolare il modo in cui si e' verificato che la strada «BANCO NON
-//    VALIDO» funzioni — su un browser senza GPU i controlli A e B devono
-//    risultare indistinguibili, e la pagina deve rifiutarsi di pubblicare
-//    verdetti su HEVC.  ⛔ Un giro fatto cosi' certifica lo STRUMENTO e non
-//    misura S2: e' la forma E10 se qualcuno ne prendesse i numeri.
-const auto = par.get("auto");
-if (auto) {
-  log("\n⛔ giro AUTOMATICO (?auto=" + auto + "): certifica lo strumento,");
-  log("   NON misura S2.  I numeri di questo giro non si scrivono da nessuna");
-  log("   parte come misura del dispositivo.");
-  const b = document.getElementById("b" + auto);
-  if (b) b.click(); else log("⛔ bottone " + auto + " inesistente", "no");
-}
+// ⛔ L'impronta si raccoglie PRIMA di qualunque bottone: un esito senza
+//    impronta e' un esito che nessuno potra' attribuire a un dispositivo, ed
+//    e' esattamente il buco D17.
+(async () => {
+  stato.impronta = await impronta();
+  const i = stato.impronta;
+  const a = i.ua_dati_alta_entropia || {};
+  log("\n== L'IMPRONTA — raccolta qui, GIUDICATA FUORI (con l'indirizzo)");
+  log("   userAgentData: platform=" + (a.platform || "—")
+      + " mobile=" + (i.ua_dati ? i.ua_dati.mobile : "—")
+      + " model=" + (a.model || "—")
+      + (i.ua_dati_errore ? "  ⚠ " + i.ua_dati_errore : ""));
+  log("   GPU (WebGL): " + ((i.gpu && i.gpu.resa) || "—")
+      + (i.gpu && i.gpu.mascherato ? "  ⚠ mascherata" : ""));
+  log("   tocco=" + i.tocco_massimo + " puntatore="
+      + (i.puntatore_grossolano ? "grossolano" : (i.puntatore_fine ? "fine" : "?"))
+      + " schermo=" + i.schermo.l + "×" + i.schermo.a + "@" + i.schermo.dpr
+      + " nuclei=" + i.nuclei + " memoria=" + i.memoria_gb + " GB");
+  log("   ⚠ stringa UA (raccolta, MAI creduta da sola): " + i.ua_stringa);
+
+  // ⛔ `?auto=N` preme il bottone N da solo.  ⚠ NON e' una comodita': e' il
+  //    modo in cui questo banco si CERTIFICA senza un dito umano, e in
+  //    particolare il modo in cui si e' verificato che la strada «BANCO NON
+  //    VALIDO» funzioni — su un browser senza GPU i controlli A e B devono
+  //    risultare indistinguibili, e la pagina deve rifiutarsi di pubblicare
+  //    verdetti su HEVC.  ⛔ Un giro fatto cosi' certifica lo STRUMENTO e non
+  //    misura S2: e' la forma E10 se qualcuno ne prendesse i numeri — ed e'
+  //    per questo che il giudizio finale poggia sull'INDIRIZZO e non su
+  //    quello che questa pagina dichiara.
+  const auto = par.get("auto");
+  if (auto) {
+    log("\n⛔ giro AUTOMATICO (?auto=" + auto + "): certifica lo strumento,");
+    log("   NON misura S2.  I numeri di questo giro non si scrivono da nessuna");
+    log("   parte come misura del dispositivo.");
+    for (const n of auto.split(",")) {
+      const b = document.getElementById("b" + n.trim());
+      if (b) await b.onclick();
+      else log("⛔ bottone " + n + " inesistente", "no");
+    }
+    // ⭐ La riga che dice AL BANCO che il giro e' finito: senza, «non ha
+    //    finito» e «ha finito senza esiti» hanno lo stesso aspetto da fuori.
+    await esito({tipo: "FINITO", misura_valida: true, bottoni: auto});
+    log("\n== FINITO");
+  }
+})();
 </script>
 </body>
 </html>
