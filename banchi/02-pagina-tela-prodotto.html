@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>F2.5-tela-prodotto — le regole del cambio di tela, applicate DAL PRODOTTO</title>
+<style>
+  body { font: 13px/1.45 monospace; background: #101014; color: #ddd; margin: 12px; }
+  iframe { width: 700px; height: 560px; border: 1px solid #444; background: #fff; }
+  #registro { margin-top: 10px; max-height: 55vh; overflow: auto; white-space: pre-wrap; }
+  .si { color: #7ee787; } .no { color: #ff7b72; } .boh { color: #e3b341; }
+  h1 { font-size: 15px; }
+</style>
+</head>
+<body>
+<!--
+=============================================================================
+⛔ CHE COSA MISURA, E IN CHE COSA E' DIVERSO DA `02-pagina-tela-prova.html`
+
+Quello misura **che cosa fa un `VideoDecoder`** quando la tela cambia a meta'
+sessione: e' la misura che ha prodotto le righe entrate in `RCP.md` §5.2 e §6.2
+la sera dell'11 agosto, dopo sei correzioni.
+
+⛔ Questo misura **se il prodotto quelle righe le applica**.  Sono due domande
+diverse: il decodificatore puo' comportarsi come misurato e il client sbagliare
+lo stesso, perche' le regole di §5.2 e §6.2 sono **del client**, non del codec.
+
+⇒ Qui `src/pagina.html` sta in un `<iframe>` della stessa origine, e questa
+  pagina gli consegna **stream veri di RCP** — 28 byte d'intestazione piu' i
+  dati — attraverso `REMOTIX.schermo.stream_video()`, che e' esattamente la
+  porta da cui entrano i fotogrammi quando la sessione e' vera.
+
+=============================================================================
+⛔ L'ATTESO E' SCRITTO PRIMA, IN OGNI CASO, E LO CONFRONTA UN PROGRAMMA FUORI
+
+Ogni caso porta `atteso_scritto_prima`: un oggetto di contatori.  La pagina
+riporta `visto` accanto, e ⛔ **il confronto lo fa `02-pagina-tela-prodotto-
+verdetto.py`, fuori dal browser** (B0.4): la pagina gira DENTRO l'imputato, e
+un confronto fatto qui sarebbe d'accordo con il difetto.
+
+=============================================================================
+⛔ I GUASTI INNESTABILI (`?guasta=`)
+
+  lettore  il classificatore risponde sempre «la tinta attesa»
+           ⇒ P2 deve cadere
+  muto     i testi degli errori del prodotto si buttano
+           ⇒ ogni caso che pretende un ERRORE_PROTOCOLLO deve cadere: e' cosi'
+             che si certifica che «il prodotto ha detto perche'» e' una misura
+             e non una parola
+  pixel    la tela si copre di grigio DOPO la decodifica e prima della
+           rilettura
+           ⇒ T1, T3 e T7 devono cadere (guardano i pixel), e i casi di sole
+             regole devono restare verdi
+  ordine   ⭐ nel caso T5 il fotogramma alla misura vecchia porta un numero
+           MAGGIORE invece che minore
+           ⇒ T5 deve cadere.  Senza questo guasto, «l'ordine si applica prima
+             della misura» sarebbe verde anche in un prodotto che guarda solo
+             la misura, perche' il fotogramma verrebbe rifiutato lo stesso —
+             per la ragione sbagliata
+=============================================================================
+-->
+<h1>F2.5-tela-prodotto — §5.2 e §6.2 applicate da <code>src/pagina.html</code></h1>
+<div id="stato">in corso…</div>
+<iframe id="prodotto" src="/prodotto/pagina.html"></iframe>
+<div id="registro"></div>
+<script>
+"use strict";
+
+const PARAMETRI = new URLSearchParams(location.search);
+const GIRO = PARAMETRI.get("giro") || "f25tp-" + Math.random().toString(36).slice(2, 10);
+const GUASTO = PARAMETRI.get("guasta") || "";
+const SCENA = PARAMETRI.get("scena") || "non dichiarata";
+const CODEC_RCP = { hevc: 1, av1: 2 };
+
+let numero_riga = 0;
+const riassunto = { prove: 0 };
+
+function scrivi(t, c) {
+  const r = document.getElementById("registro");
+  const d = document.createElement("div");
+  if (c) d.className = c;
+  d.textContent = t;
+  r.appendChild(d); r.scrollTop = r.scrollHeight;
+}
+
+async function spedisci(dati) {
+  dati.n = ++numero_riga; dati.giro = GIRO; dati.guasto = GUASTO;
+  dati.motore = navigator.userAgent; dati.scena = SCENA;
+  dati.bersaglio = "prodotto";
+  try {
+    const r = await fetch("/esito", { method: "POST", cache: "no-store",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify(dati) });
+    if (!r.ok) scrivi("⛔ il raccoglitore ha risposto " + r.status, "no");
+  } catch (e) { scrivi("⛔ l'esito non e' potuto uscire: " + e, "no"); }
+}
+
+/* ── il lettore dei pixel, di questa pagina ─────────────────────────────── */
+function distanza(a, b) {
+  return (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+}
+function colore_cella(px, larghezza, c) {
+  const bx = Math.floor(c.l * 0.2), by = Math.floor(c.a * 0.2);
+  let r=0,g=0,b=0,n=0;
+  for (let y=c.y+by; y<c.y+c.a-by; y+=2)
+    for (let x=c.x+bx; x<c.x+c.l-bx; x+=2) {
+      const i=(y*larghezza+x)*4; r+=px[i]; g+=px[i+1]; b+=px[i+2]; n++;
+    }
+  return n ? [Math.round(r/n), Math.round(g/n), Math.round(b/n)] : null;
+}
+function leggi(g) {
+  /* ⛔ GUASTO «pixel»: la tela si copre di grigio DOPO la decodifica e prima
+     della rilettura.  ⇒ Ogni caso che guarda `celle_giuste` deve cadere, e i
+     casi di sole regole devono restare verdi: e' quel che dice a chi legge che
+     il rosso e' del percorso video e non delle regole. */
+  if (GUASTO === "pixel") {
+    P.schermo.pennello.fillStyle = "#808080";
+    P.schermo.pennello.fillRect(0, 0, P.schermo.tela.width, P.schermo.tela.height);
+  }
+  let px;
+  try { px = P.schermo.pennello.getImageData(0, 0, g.larghezza, g.altezza).data; }
+  catch (e) { return { corrette: 0, errore: "getImageData: " + e }; }
+  let corrette = 0;
+  for (const c of g.celle) {
+    const col = colore_cella(px, g.larghezza, c);
+    if (!col) continue;
+    let prima = null;
+    for (const t of g.tinte) {
+      const d = distanza(col, t.rgb);
+      if (prima === null || d < prima.d) prima = { nome: t.nome, d: d };
+    }
+    const letta = (GUASTO === "lettore") ? c.tinta : prima.nome;
+    if (letta === c.tinta) corrette++;
+  }
+  return { corrette: corrette, errore: null };
+}
+
+/* ── il prodotto ────────────────────────────────────────────────────────── */
+let P = null;
+function pulisci() {
+  /* Magenta: non e' nessuna delle otto tinte e non e' nero, cosi' «non ha
+     dipinto» ha un aspetto suo. */
+  P.schermo.pennello.fillStyle = "#7a007a";
+  P.schermo.pennello.fillRect(0, 0, P.schermo.tela.width, P.schermo.tela.height);
+}
+function aspetta_prodotto() {
+  return new Promise((risolvi, rifiuta) => {
+    const f = document.getElementById("prodotto");
+    const scadenza = setTimeout(() => rifiuta(new Error(
+      "la pagina del prodotto non ha esposto REMOTIX entro 15 s")), 15000);
+    (function guarda() {
+      let r = null;
+      try { r = f.contentWindow && f.contentWindow.REMOTIX; } catch (e) { r = null; }
+      if (r && r.schermo) { clearTimeout(scadenza); risolvi(r); return; }
+      setTimeout(guarda, 100);
+    })();
+  });
+}
+
+/* ⛔ L'intestazione di §6.2 la SCRIVE questa pagina, dalla tabella: il lettore
+   del prodotto e' un'altra implementazione, e devono restare due. */
+function intestazione(chiave, codec, l, a, numero, istante) {
+  const b = new Uint8Array(28), v = new DataView(b.buffer);
+  v.setUint16(0, chiave ? 0x0301 : 0x0302);
+  v.setUint16(2, codec);
+  v.setUint32(4, l); v.setUint32(8, a);
+  v.setUint32(12, numero);
+  v.setBigUint64(16, BigInt(istante));
+  v.setUint32(24, 0);
+  return b;
+}
+function byte_da_base64(b64) {
+  const s = atob(b64), d = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) d[i] = s.charCodeAt(i);
+  return d;
+}
+function unisci(a, b) {
+  const u = new Uint8Array(a.length + b.length);
+  u.set(a); u.set(b, a.length); return u;
+}
+
+const seq = {};
+async function carica(nome) {
+  if (seq[nome]) return seq[nome];
+  const r = await fetch("02-pagina-tela-sequenze/" + nome + ".json", { cache: "no-store" });
+  if (!r.ok) throw new Error(nome + ".json: HTTP " + r.status);
+  seq[nome] = await r.json();
+  return seq[nome];
+}
+
+async function attendi(tetto) {
+  const t0 = performance.now();
+  let ultimo = -1, fermo = 0;
+  while (performance.now() - t0 < (tetto || 2000)) {
+    await new Promise((r) => setTimeout(r, 40));
+    let coda = 0;
+    try { coda = P.schermo.dec ? P.schermo.dec.decodeQueueSize : 0; } catch (e) { coda = 0; }
+    const d = P.schermo.conti.dipinti;
+    if (d !== ultimo) { ultimo = d; fermo = 0; } else fermo += 40;
+    if (coda === 0 && fermo >= 200) break;
+  }
+}
+
+/* ⛔ Il prodotto chiude la sessione con ERRORE_PROTOCOLLO chiamando
+   `su_errore_protocollo`.  Qui non c'e' una sessione da chiudere, quindi si
+   CONTA: e' il fatto osservabile che dice «il prodotto ha rifiutato». */
+let protocolli = [];
+function arma(g, codec, profondita) {
+  P.schermo.riparti();
+  protocolli = [];
+  const stringa = (P.sondato.codec[codec] || {})[profondita] &&
+                   P.sondato.codec[codec][profondita].stringa
+    || P.stringhe_codec(codec, profondita, "5.1")[0];
+  P.schermo.negozia(CODEC_RCP[codec], profondita, stringa, g.larghezza, g.altezza);
+  P.schermo.vista(g.larghezza, g.altezza);
+  P.schermo.su_errore_protocollo = (p) => protocolli.push(p);
+  P.schermo.chiavi_chieste_qui = [];
+  P.schermo.su_chiave = (n) => P.schermo.chiavi_chieste_qui.push(n);
+  pulisci();
+  return stringa;
+}
+
+function dai(g, codec, pezzi, numero0, misura) {
+  let n = numero0;
+  for (const p of pezzi) {
+    const l = (misura && misura[0]) || g.larghezza;
+    const a = (misura && misura[1]) || g.altezza;
+    P.schermo.stream_video(
+      unisci(intestazione(p.tipo === "key", CODEC_RCP[codec], l, a, n, p.istante || 0),
+             byte_da_base64(p.dati)), true);
+    n++;
+  }
+  return n;
+}
+
+function visto() {
+  const c = P.schermo.conti;
+  return { dipinti: c.dipinti, consegnati: c.consegnati,
+           scartati_ordine: c.scartati_ordine, scartati_misura: c.scartati_misura,
+           tollerati: c.tollerati, trattenuti: c.trattenuti,
+           azzerati: c.azzerati, corti: c.corti, buchi: c.buchi,
+           riconfigurazioni: c.riconfigurazioni,
+           errori_protocollo: (GUASTO === "muto") ? 0 : protocolli.length,
+           chiavi_chieste: P.schermo.chiavi_chieste_qui.length,
+           dec: P.schermo.dec_l + "x" + P.schermo.dec_a };
+}
+
+async function caso(nome, atteso, fai) {
+  let celle = null, guai = null;
+  try { celle = await fai(); }
+  catch (e) { guai = String(e) + (e && e.stack ? "\n" + e.stack : ""); }
+  const v = visto();
+  if (celle !== null) v.celle_giuste = celle;
+  const riga = { tipo: "CASO", caso: nome, atteso_scritto_prima: atteso,
+                 visto: v, eccezione: guai,
+                 protocolli: (GUASTO === "muto") ? [] : protocolli.slice(0, 3),
+                 registro_del_prodotto: (GUASTO === "muto") ? []
+                   : P.schermo.errori.slice(0, 3) };
+  await spedisci(riga);
+  riassunto.prove++;
+  const differenze = Object.keys(atteso)
+    .filter((k) => JSON.stringify(atteso[k]) !== JSON.stringify(v[k]));
+  scrivi(nome.padEnd(38) + (differenze.length
+        ? "⛔ diverso su: " + differenze.map((k) => k + " atteso " +
+            JSON.stringify(atteso[k]) + " visto " + JSON.stringify(v[k])).join(", ")
+        : "come atteso  " + JSON.stringify(v)),
+    differenze.length ? "no" : "si");
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   I CASI, con l'atteso scritto prima.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ⛔ I casi si dividono in due famiglie, e la divisione non e' una comodita':
+ *
+ *   · quelli che vogliono il DECODIFICATORE (pixel, riconfigurazioni, ordine)
+ *     — su una scena senza GPU HEVC non arriva al pixel, e li' questi casi non
+ *     si possono porre.  ⛔ Un rosso su un caso che non si puo' porre non e' un
+ *     rosso: e' un banco che misura la scena.  Si SALTANO, e si dice perche'.
+ *   · quelli di sole REGOLE (tipo, codec, numero, lunghezza, ordine di §2.5)
+ *     — non toccano il decodificatore, e valgono su qualunque scena.
+ */
+async function casi(famiglia, arriva) {
+  const G = await carica("tela-" + famiglia + "-grande");    /* 640×480 */
+  const Pc = await carica("tela-" + famiglia + "-piccola");  /* 320×240 */
+  const prof = famiglia === "hevc" ? 10 : 8;
+  const f = famiglia;
+
+  if (!arriva) {
+    for (const nome of ["T1-controllo", "T2-in-volo-tollerato",
+                        "T3-riconfigura-sulla-chiave", "T5-ordine-prima-della-misura",
+                        "T4-dopo-la-chiave-la-vecchia-uccide",
+                        "T7-misura-mai-annunciata-trattenuta",
+                        "T8-nove-mai-annunciate-uccidono", "T9-reset-non-si-consegna",
+                        "T11-buco-nei-numeri"]) {
+      await spedisci({ tipo: "CASO", caso: nome + "-" + f, saltato: true,
+        perche: "su questa scena il codec " + f + " non arriva al pixel (la "
+              + "sonda del prodotto lo dice): questo caso vuole un "
+              + "decodificatore vivo, e qui non si puo' porre" });
+      scrivi((nome + "-" + f).padEnd(38) + "SALTATO — " + f
+           + " non arriva al pixel su questa scena", "boh");
+    }
+    await casi_di_sole_regole(G, f, prof);
+    return;
+  }
+
+  /* T1 — il controllo positivo del percorso: una chiave e cinque delta alla
+     tela in vigore.  ⛔ Se cade, di tutti gli altri casi non si scrive niente. */
+  await caso("T1-controllo-" + f,
+    /* ⛔⭐ `celle_giuste` NELL'ATTESO, e questa riga e' nata dalla
+     *     CERTIFICAZIONE del 12 agosto 2026, non da una rilettura.
+     * La prima stesura contava fotogrammi e riconfigurazioni e NON guardava i
+     * pixel: un prodotto che avesse dipinto spazzatura sarebbe passato per T1
+     * — cioe' il «controllo positivo del percorso video» non guardava il video.
+     * ⚠ L'ha detto il guasto `pixel`, che non faceva virare niente. */
+    { dipinti: 6, consegnati: 6, scartati_ordine: 0, scartati_misura: 0,
+      errori_protocollo: 0, riconfigurazioni: 1, dec: "640x480",
+      celle_giuste: 8 },
+    async () => { arma(G, f, prof); dai(G, f, G.pezzi, 1); await attendi();
+                  return leggi(G).corrette; });
+
+  /* T2 + T3 — i fotogrammi in volo alla misura VECCHIA, e la riconfigurazione
+     che NON avviene sul `TELA`.
+     ⛔ §6.2: dopo un `TELA(ADATTATA)` il client DEVE accettare i fotogrammi la
+        cui misura vale una tela in vigore da quando la coda ha cominciato a
+        svuotarsi, dipingendoli e SCRIVENDOLO NEL REGISTRO.
+     ⛔ §5.2: e riconfigura sulla prima CHIAVE alla misura nuova, non sul `TELA`.
+     ⇒ Atteso: dopo il `TELA` il decodificatore e' ANCORA a 640×480, il delta
+       alla misura vecchia viene dipinto e contato come `tollerati`. */
+  await caso("T2-in-volo-tollerato-" + f,
+    { dipinti: 3, consegnati: 3, tollerati: 2, scartati_misura: 0,
+      errori_protocollo: 0, riconfigurazioni: 1, dec: "640x480" },
+    async () => {
+      arma(G, f, prof);
+      let n = dai(G, f, G.pezzi.slice(0, 1), 1);       /* la chiave a 640×480 */
+      await attendi();
+      P.schermo.tela_adattata(Pc.larghezza, Pc.altezza);  /* TELA(ADATTATA→320×240) */
+      n = dai(G, f, G.pezzi.slice(1, 3), n);           /* due delta ancora a 640×480 */
+      await attendi();
+      return null;
+    });
+
+  /* T3 — e adesso la chiave alla misura NUOVA: il decodificatore si
+     riconfigura, la finestra si chiude, e i pixel sono quelli del flusso
+     piccolo. */
+  /* ⚠ `dipinti: 9` = 1 chiave + 2 delta a 640×480, poi 6 pezzi a 320×240.
+     ⛔ La prima stesura diceva 8, ed era un mio errore di conto sui pezzi che
+        QUESTA pagina consegna — non una smentita del prodotto.  Si corregge
+        dicendolo, invece di lasciare un rosso che non nomina la sua causa. */
+  await caso("T3-riconfigura-sulla-chiave-" + f,
+    { dipinti: 9, tollerati: 2, scartati_misura: 0, errori_protocollo: 0,
+      riconfigurazioni: 2, dec: "320x240", celle_giuste: 8 },
+    async () => {
+      arma(G, f, prof);
+      let n = dai(G, f, G.pezzi.slice(0, 1), 1);
+      await attendi();
+      P.schermo.tela_adattata(Pc.larghezza, Pc.altezza);
+      n = dai(G, f, G.pezzi.slice(1, 3), n);
+      await attendi();
+      pulisci();
+      P.schermo.vista(Pc.larghezza, Pc.altezza);
+      dai(Pc, f, Pc.pezzi, n);                     /* chiave + delta a 320×240 */
+      await attendi();
+      return leggi(Pc).corrette;
+    });
+
+  /* ⛔⭐ T5 — L'ORDINE SI APPLICA PRIMA DELLA MISURA (rilievo P14).
+   * La chiave grossa alla misura VECCHIA arriva DOPO la chiave nuova, perche'
+   * e' la piu' grossa e §5.2 vieta al server di abbandonarla.  Il suo `numero`
+   * e' precedente ⇒ si scarta per ORDINE, e ⛔ la sua misura non si guarda
+   * nemmeno.  Applicando prima la regola della misura, il client chiuderebbe
+   * una sessione in cui nessuno ha sbagliato.
+   * ⚠ Col guasto `ordine` il numero e' MAGGIORE: allora la misura si guarda, e
+   *   il caso deve CADERE — e' cosi' che si sa che T5 distingue le due regole. */
+  await caso("T5-ordine-prima-della-misura-" + f,
+    { scartati_ordine: 1, errori_protocollo: 0, dec: "320x240" },
+    async () => {
+      arma(G, f, prof);
+      let n = dai(G, f, G.pezzi.slice(0, 1), 10);
+      await attendi();
+      P.schermo.tela_adattata(Pc.larghezza, Pc.altezza);
+      P.schermo.vista(Pc.larghezza, Pc.altezza);
+      dai(Pc, f, Pc.pezzi.slice(0, 1), 20);        /* la chiave nuova, numero 20 */
+      await attendi();
+      /* la chiave vecchia in volo: misura 640×480, numero 15 — precedente */
+      const numero = (GUASTO === "ordine") ? 25 : 15;
+      dai(G, f, G.pezzi.slice(0, 1), numero);
+      await attendi();
+      return null;
+    });
+
+  /* T4 — la tolleranza FINISCE sulla prima chiave alla misura nuova: da li' una
+     misura vecchia con un numero SUCCESSIVO e' ERRORE_PROTOCOLLO (§6.2). */
+  await caso("T4-dopo-la-chiave-la-vecchia-uccide-" + f,
+    { errori_protocollo: 1 },
+    async () => {
+      arma(G, f, prof);
+      let n = dai(G, f, G.pezzi.slice(0, 1), 10);
+      await attendi();
+      P.schermo.tela_adattata(Pc.larghezza, Pc.altezza);
+      P.schermo.vista(Pc.larghezza, Pc.altezza);
+      dai(Pc, f, Pc.pezzi.slice(0, 1), 20);
+      await attendi();
+      dai(G, f, G.pezzi.slice(0, 1), 30);   /* misura vecchia, numero successivo */
+      await attendi();
+      return null;
+    });
+
+  /* ⛔⭐ T7 — LA MISURA MAI ANNUNCIATA, che e' la riga che `RCP.md` NON HA.
+   * Il `TELA` viaggia sul canale di controllo e il fotogramma su uno stream
+   * suo: sono stream QUIC indipendenti, e niente ne ordina la consegna.  Un
+   * fotogramma alla misura NUOVA puo' quindi arrivare PRIMA del `TELA`.
+   * ⇒ Atteso: il prodotto lo TRATTIENE (non uccide), e quando il `TELA` arriva
+   *   lo consegna. */
+  await caso("T7-misura-mai-annunciata-trattenuta-" + f,
+    { trattenuti: 1, errori_protocollo: 0, dipinti: 2, riconfigurazioni: 2,
+      dec: "320x240", celle_giuste: 8 },
+    async () => {
+      arma(G, f, prof);
+      dai(G, f, G.pezzi.slice(0, 1), 1);
+      await attendi();
+      P.schermo.vista(Pc.larghezza, Pc.altezza);
+      pulisci();
+      dai(Pc, f, Pc.pezzi.slice(0, 1), 2);   /* 320×240 PRIMA del TELA */
+      await attendi();
+      P.schermo.tela_adattata(Pc.larghezza, Pc.altezza);  /* il TELA arriva ora */
+      await attendi();
+      return leggi(Pc).corrette;
+    });
+
+  /* T8 — e la tolleranza ha un fondo: nove fotogrammi a una misura mai
+     annunciata non sono piu' una corsa fra due stream. */
+  await caso("T8-nove-mai-annunciate-uccidono-" + f,
+    { errori_protocollo: 1 },
+    async () => {
+      arma(G, f, prof);
+      dai(G, f, G.pezzi.slice(0, 1), 1);
+      await attendi();
+      for (let i = 0; i < 9; i++) dai(Pc, f, Pc.pezzi.slice(0, 1), 10 + i);
+      await attendi();
+      return null;
+    });
+
+  /* T9 — uno stream AZZERATO (`RESET_STREAM`) porta un fotogramma INCOMPLETO:
+     si butta, NON si consegna al decodificatore, e si tratta come un buco. */
+  await caso("T9-reset-non-si-consegna-" + f,
+    { azzerati: 1, consegnati: 1, buchi: 1, chiavi_chieste: 1,
+      errori_protocollo: 0 },
+    async () => {
+      arma(G, f, prof);
+      dai(G, f, G.pezzi.slice(0, 1), 1);
+      await attendi();
+      const p = G.pezzi[1];
+      const b = unisci(intestazione(false, CODEC_RCP[f], G.larghezza, G.altezza, 2,
+                                    p.istante || 0), byte_da_base64(p.dati));
+      P.schermo.stream_video(b.subarray(0, b.length - 10), false);  /* azzerato */
+      await attendi();
+      return null;
+    });
+
+  /* T11 — un buco nei `numero`: si chiede una chiave, e fino alla chiave i
+     delta NON si consegnano (§5.2: non si mostra quel che si sa incompleto). */
+  await caso("T11-buco-nei-numeri-" + f,
+    { buchi: 1, chiavi_chieste: 1, consegnati: 1, dipinti: 1,
+      errori_protocollo: 0 },
+    async () => {
+      arma(G, f, prof);
+      dai(G, f, G.pezzi.slice(0, 1), 1);
+      await attendi();
+      dai(G, f, G.pezzi.slice(2, 4), 5);   /* due delta, e mancano 2, 3, 4 */
+      await attendi();
+      return null;
+    });
+
+  await casi_di_sole_regole(G, f, prof);
+}
+
+/* ⛔ I casi che NON toccano il decodificatore: valgono su qualunque scena, e
+   sono quelli che dicono se il prodotto applica §2.5, §3 e §6.2 sulla forma. */
+async function casi_di_sole_regole(G, f, prof) {
+  /* T10 — FIN prima dei 28 byte: non e' un fotogramma corto, e' una lunghezza
+     che non torna (§6.2). */
+  await caso("T10-fin-prima-dei-28-byte-" + f,
+    { errori_protocollo: 1, corti: 1 },
+    async () => {
+      arma(G, f, prof);
+      P.schermo.stream_video(new Uint8Array([0x03, 0x01, 0, 1, 0, 0]), true);
+      return null;
+    });
+
+  /* T12 — uno stream video PRIMA di `SESSIONE`: §2.5 lo vieta, ed e' I3 sul
+     filo — chi non passa dal validatore non riceve un pixel. */
+  await caso("T12-video-prima-di-sessione-" + f,
+    { errori_protocollo: 1, consegnati: 0 },
+    async () => {
+      P.schermo.riparti();
+      protocolli = [];
+      P.schermo.su_errore_protocollo = (p) => protocolli.push(p);
+      P.schermo.chiavi_chieste_qui = [];
+      P.schermo.su_chiave = (n) => P.schermo.chiavi_chieste_qui.push(n);
+      const p = G.pezzi[0];
+      P.schermo.stream_video(
+        unisci(intestazione(true, CODEC_RCP[f], G.larghezza, G.altezza, 1, 0),
+               byte_da_base64(p.dati)), true);
+      return null;
+    });
+
+  /* T13 — un `codec` diverso da quello negoziato (§6.2). */
+  await caso("T13-codec-non-negoziato-" + f,
+    { errori_protocollo: 1, consegnati: 0 },
+    async () => {
+      arma(G, f, prof);
+      const p = G.pezzi[0];
+      P.schermo.stream_video(
+        unisci(intestazione(true, 7, G.larghezza, G.altezza, 1, 0),
+               byte_da_base64(p.dati)), true);
+      return null;
+    });
+
+  /* T14 — `numero = 0`, che §6.2 riserva a «nessun fotogramma». */
+  await caso("T14-numero-zero-riservato-" + f,
+    { errori_protocollo: 1, consegnati: 0 },
+    async () => {
+      arma(G, f, prof);
+      const p = G.pezzi[0];
+      P.schermo.stream_video(
+        unisci(intestazione(true, CODEC_RCP[f], G.larghezza, G.altezza, 0, 0),
+               byte_da_base64(p.dati)), true);
+      return null;
+    });
+
+  /* T15 — un `tipo` che non e' ne' chiave ne' delta (§6.2). */
+  await caso("T15-tipo-sconosciuto-" + f,
+    { errori_protocollo: 1, consegnati: 0 },
+    async () => {
+      arma(G, f, prof);
+      const b = new Uint8Array(28), v = new DataView(b.buffer);
+      v.setUint16(0, 0x0399); v.setUint16(2, CODEC_RCP[f]);
+      v.setUint32(4, G.larghezza); v.setUint32(8, G.altezza); v.setUint32(12, 1);
+      P.schermo.stream_video(unisci(b, byte_da_base64(G.pezzi[0].dati)), true);
+      return null;
+    });
+}
+
+/* ── i controlli del lettore ─────────────────────────────────────────────── */
+async function controlli(g) {
+  P.schermo.vista(g.larghezza, g.altezza);
+  const p = P.schermo.pennello;
+  for (const c of g.celle) {
+    p.fillStyle = "rgb(" + c.rgb.join(",") + ")";
+    p.fillRect(c.x, c.y, c.l, c.a);
+  }
+  const l1 = leggi(g);
+  p.fillStyle = "#808080"; p.fillRect(0, 0, P.schermo.tela.width, P.schermo.tela.height);
+  const l2 = leggi(g);
+  await spedisci({ tipo: "CONTROLLO", prova: "P1-P2",
+                   misura: g.larghezza + "x" + g.altezza,
+                   p1_corrette: l1.corrette, p2_corrette: l2.corrette,
+                   attese: g.celle.length,
+                   p1_ok: l1.corrette === g.celle.length,
+                   p2_ok: l2.corrette < g.celle.length });
+  scrivi("P1/P2 a " + g.larghezza + "×" + g.altezza + ": dice SI' " + l1.corrette
+       + "/" + g.celle.length + " · dice NO " + l2.corrette + "/" + g.celle.length,
+    (l1.corrette === g.celle.length && l2.corrette < g.celle.length) ? "si" : "no");
+}
+
+async function giro() {
+  P = await aspetta_prodotto();
+  P.sondato = await P.sondaggio;
+  await spedisci({ tipo: "AMBIENTE", webcodecs: typeof VideoDecoder !== "undefined",
+                   sonda_del_prodotto: P.sondato,
+                   schermo: screen.width + "x" + screen.height });
+  scrivi("giro " + GIRO + (GUASTO ? "  ⚠ GUASTO INNESTATO: " + GUASTO : "")
+       + " · scena " + SCENA);
+  if (typeof VideoDecoder === "undefined") {
+    await spedisci({ tipo: "FINITO", esito: "SENZA_WEBCODECS", prove: 0 });
+    document.getElementById("stato").textContent = "FINITO — senza WebCodecs";
+    return;
+  }
+  await controlli(await carica("tela-av1-grande"));
+  await controlli(await carica("tela-av1-piccola"));
+
+  for (const f of ["av1", "hevc"]) {
+    scrivi("");
+    /* ⛔ Su una scena senza GPU HEVC non arriva al pixel, e i casi HEVC
+       usciranno a zero dipinti: si DICE prima, invece di leggerli come un
+       difetto del prodotto. */
+    const s = P.sondato.codec[f];
+    const arriva = (s[8] && s[8].arriva) || (s[10] && s[10].arriva);
+    scrivi("══ " + f.toUpperCase() + " ══  la sonda del prodotto dice: "
+         + (arriva ? "arriva al pixel" : "NON arriva su questa scena — i casi "
+           + "qui sotto misurano le REGOLE (ordine, misura, buchi), non i pixel"),
+      arriva ? "si" : "boh");
+    try { await casi(f, arriva); }
+    catch (e) { scrivi("⛔ la famiglia " + f + " si e' fermata: " + e, "no"); }
+  }
+
+  await spedisci({ tipo: "FINITO", esito: "COMPLETO", prove: riassunto.prove });
+  document.getElementById("stato").textContent = "FINITO — " + riassunto.prove + " prove";
+  scrivi("FINITO: " + riassunto.prove + " prove.  ⛔ Il verdetto lo calcola il "
+       + "banco fuori dal browser.");
+}
+
+giro().catch(async (e) => {
+  scrivi("⛔ il giro si e' fermato: " + e + "\n" + (e && e.stack ? e.stack : ""), "no");
+  await spedisci({ tipo: "FINITO", esito: "ECCEZIONE", errore: String(e),
+                   pila: e && e.stack ? String(e.stack) : null, prove: riassunto.prove });
+  document.getElementById("stato").textContent = "FINITO — eccezione";
+});
+</script>
+</body>
+</html>

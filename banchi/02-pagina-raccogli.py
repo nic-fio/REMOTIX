@@ -79,6 +79,32 @@ class Raccoglitore(SimpleHTTPRequestHandler):
         super().__init__(*a, directory=str(QUI), **kw)
 
     # ------------------------------------------------------------------
+    # ⛔⭐ `/prodotto/pagina.html` SERVE `src/pagina.html`, IL FILE VERO.
+    #
+    # `banchi/02-pagina-prodotto.html` guida la pagina del PRODOTTO dentro un
+    # iframe, invece di riscriversi una catena che le somiglia: un banco che
+    # misura una copia misura la copia (forma E10).
+    #
+    # ⛔ Si serve il file dove sta, senza copiarlo: una copia risponde «esisto»
+    #    esattamente come l'originale (`LEZIONI.md` §1.9 punto 8), e il giorno in
+    #    cui divergessero il banco sarebbe verde sul file sbagliato.
+    # ⚠ Il percorso e' UNO SOLO e non un albero: qui non si apre `../` a nessuno.
+    def do_GET(self):
+        if self.path.split("?")[0] == "/prodotto/pagina.html":
+            vero = (QUI.parent / "src" / "pagina.html").resolve()
+            if not vero.is_file():
+                self.send_error(404, "src/pagina.html non c'e'")
+                return
+            corpo = vero.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+            print(f"    prodotto: servito {vero} ({len(corpo)} byte)", flush=True)
+            return
+        return super().do_GET()
+
     def do_POST(self):
         if self.path == "/esito":
             return self._esito()

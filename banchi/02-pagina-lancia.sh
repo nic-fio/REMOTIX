@@ -79,6 +79,26 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
+# ---------------------------------------------------------------------------
+# ⭐ IL BERSAGLIO — 12 agosto 2026, quando il prodotto e' esistito
+#
+#   BERSAGLIO=banco     `02-pagina-prova.html`     misura IL BROWSER (il giro
+#                                                  originale di F2.5)
+#   BERSAGLIO=prodotto  `02-pagina-prodotto.html`  misura `src/pagina.html`,
+#                                                  cioe' LA PAGINA CHE L'UTENTE
+#                                                  APRE, guidandone l'oggetto
+#                                                  `Schermo` dentro un iframe
+#
+# ⛔ Sono due domande diverse e le risposte non si sostituiscono: «il browser
+#    decodifica HEVC» non dice che il prodotto lo dipinga, e viceversa.  La
+#    riga di esito porta il bersaglio, come porta la scena.
+BERSAGLIO=${BERSAGLIO:-banco}
+case "$BERSAGLIO" in
+banco)    PAGINA=02-pagina-prova.html ;;
+prodotto) PAGINA=02-pagina-prodotto.html ;;
+*) echo "NO  BERSAGLIO dev'essere «banco» o «prodotto», non «$BERSAGLIO»"; exit 2 ;;
+esac
+
 QUI=$(cd "$(dirname "$0")" && pwd)
 PORTA=${PORTA:-7515}
 SCHERMO=${SCHERMO:-:75}
@@ -230,16 +250,29 @@ prova_motore()
 	fi
 	inf "versione: $("$binario" --version 2>&1 | head -1)"
 
+	# ⛔ Il prefisso del giro cambia SOLO per il bersaglio «prodotto», e non e'
+	#    un gusto: `02-pagina-certifica.sh` ripesca il giro dal registro con
+	#    `f25-[a-z0-9-]*`, e rinominare anche i giri del banco avrebbe fatto
+	#    fallire la certificazione GIA' FATTA con «il giro non e' arrivato in
+	#    fondo» — cioe' con la frase sbagliata.
 	local giro="f25-$nome-$(date +%s)"
+	[ "$BERSAGLIO" = prodotto ] && giro="f25p-$nome-$(date +%s)"
 	GIRI+=("$giro")
 	# ⛔ La scena viaggia nell'indirizzo e finisce in OGNI riga del registro:
 	#    su Linux il decodificatore HEVC di Chrome e' quello della piattaforma,
 	#    e senza GPU non c'e'.  Lo stesso browser da' due risposte diverse su
 	#    due schermi, e un numero senza la scena accanto e' due numeri sotto la
 	#    stessa etichetta (`LEZIONI.md` §1.1, forma E2).
-	local scena="$SCHERMO-$TELA"
-	[ "$SCHERMO" = ":0" ] || [ -n "${SCHERMO_VERO:-}" ] || scena="xvfb-$scena"
-	local url="http://127.0.0.1:$PORTA/02-pagina-prova.html?giro=$giro&scena=$scena"
+	# ⛔ La scena dice anche SE E' FINTA O VERA, per esteso: «:10» da solo non
+	#    lo dice a chi rilegge fra sei mesi, e la differenza fra i due vale
+	#    `arriva` contro `non-arriva` su HEVC.
+	local scena
+	if [ "$SCHERMO" = ":0" ] || [ -n "${SCHERMO_VERO:-}" ]; then
+		scena="schermo-VERO-$SCHERMO"
+	else
+		scena="xvfb-FINTO-$SCHERMO-$TELA"
+	fi
+	local url="http://127.0.0.1:$PORTA/$PAGINA?giro=$giro&scena=$scena"
 	[ -n "$GUASTO" ] && url="$url&guasta=$GUASTO"
 
 	local prima_richieste=0
@@ -363,6 +396,18 @@ inf "⛔ Sono la consegna a F2.6: il confronto vero lo fa lei, sui pixel, non"
 inf "   sul verdetto di questo banco."
 
 log "Esito"
+# ⛔ LA SCENA E IL BERSAGLIO NELLA RIGA DI ESITO, non solo nel registro: due
+#    giri con numeri diversi e la stessa riga d'esito sono due numeri sotto la
+#    stessa etichetta (forma E2).
+if [ "$SCHERMO" = ":0" ] || [ -n "${SCHERMO_VERO:-}" ]; then
+	inf "scena: schermo VERO $SCHERMO — il browser vede la GPU, e su Linux e'"
+	inf "       li' che HEVC esiste (VA-API).  ⚠ E' una scelta, non un caso."
+else
+	inf "scena: Xvfb FINTO $SCHERMO ${TELA}x24 — nessuna GPU.  ⛔ Su questa scena"
+	inf "       HEVC non arriva al pixel su Chrome, ed e' MISURATO: e' la scena,"
+	inf "       non il prodotto.  Il ripiego AV1 arriva lo stesso."
+fi
+inf "bersaglio: $BERSAGLIO ($PAGINA)"
 if [ "$ESITO" -eq 0 ]; then
 	ok "F2.5: il giro e' andato, e il banco e' valido"
 else

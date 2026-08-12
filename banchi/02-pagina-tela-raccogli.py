@@ -43,6 +43,25 @@ class Raccoglitore(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(QUI), **kw)
 
+    # ⛔ `/prodotto/pagina.html` serve `src/pagina.html`, il file VERO — cosi'
+    #    `02-pagina-tela-prodotto.html` puo' misurare le regole del cambio di
+    #    tela sul percorso del PRODOTTO invece che su una copia (forma E10).
+    def do_GET(self):
+        if self.path.split("?")[0] == "/prodotto/pagina.html":
+            vero = (QUI.parent / "src" / "pagina.html").resolve()
+            if not vero.is_file():
+                self.send_error(404, "src/pagina.html non c'e'")
+                return
+            corpo = vero.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+            print(f"    prodotto: servito {vero} ({len(corpo)} byte)", flush=True)
+            return
+        return super().do_GET()
+
     def do_POST(self):
         if self.path == "/esito":
             return self._esito()

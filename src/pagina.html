@@ -40,7 +40,41 @@
   ⛔ NIENTE RISORSE ESTERNE.  La pagina e' servita isolata fra origini
      (`SPECIFICHE.md` §11.5) con `Cross-Origin-Embedder-Policy: require-corp`:
      ogni sotto-risorsa dovrebbe dichiarare a sua volta la sua politica, e la
-     cura piu' semplice e' non averne.
+     cura piu' semplice e' non averne.  ⇒ Anche i quattro flussi di sonda del
+     video stanno DENTRO questo file, in base64: sono 1,2 KB in tutto.
+
+  ═══════════════════════════════════════════════════════════════════════════
+  ⭐ 12 AGOSTO 2026 — IL VIDEO.  Da qui in giu' questa pagina non fa piu' solo
+     la stretta di mano: RICEVE un fotogramma, lo DECODIFICA e lo DIPINGE.
+     E' l'anello dove l'utente VEDE, ed e' il metro della fase 2 (`CODER.md`
+     §2, invariante I8: *il metro e' quel che l'utente vede, non il numero che
+     esce dal banco*).
+
+  ⛔ LA COSA PIU' IMPORTANTE DI TUTTO IL PEZZO NUOVO: **il codec non si sceglie
+     chiedendolo alle API.**  `[M]` 12 agosto 2026, Firefox 140 ESR
+     (`fasi/rapporti/F2-5-pagina.md` §2), su TUTTE E SETTE le stringhe HEVC:
+
+         navigator.mediaCapabilities.decodingInfo()  →  supported / smooth /
+                                                        powerEfficient: TRUE
+         video.canPlayType()                         →  «probably»
+         VideoDecoder.isConfigSupported()            →  false
+         il pixel                                    →  NIENTE
+
+     ⇒ Tre testimoni, due dei quali dicono il falso, e si confermano a vicenda.
+       Una pagina che scegliesse il codec da `mediaCapabilities` — che e' l'API
+       fatta apposta per quella domanda — sceglierebbe HEVC su Firefox e non
+       dipingerebbe niente.  ⛔ Qui `mediaCapabilities` e `canPlayType` NON
+       vengono chiamate affatto: non c'e' nessun ramo di questo file in cui la
+       loro risposta possa cambiare qualcosa.
+
+  ⚠ E `isConfigSupported`, che li' dice la verita', resta la forma E1 di
+    `REVIEWER.md` §2 — *necessario preso per sufficiente*: dice che la
+    configurazione e' ACCETTATA, non che il pixel ARRIVA.  `[M]` sullo stesso
+    giro Chrome accetta `L30` su un flusso di livello 3.0 e dipinge lo stesso.
+    ⇒ Si guarda `isConfigSupported` come FILTRO (se dice no, il pixel non
+      arriva mai), e poi **si dipinge una sonda vera e si rileggono i pixel**.
+      La misura vive nel prodotto perche' il dispositivo dell'utente e' l'unico
+      posto dove la domanda ha una risposta (`web.md` §9, lezione 2).
 -->
 <html lang="it">
 <head>
@@ -78,6 +112,25 @@
   #registro { margin-top: 1.5rem; font-family: ui-monospace, monospace;
               font-size: .8rem; white-space: pre-wrap; opacity: .8; }
   .nota { font-size: .8rem; opacity: .7; margin-top: 2rem; }
+
+  /* ⛔ LA DEGRADAZIONE SI DICHIARA — `CODER.md` §4.2: «ogni dipendenza mancante
+     ha un ripiego, il servizio funziona comunque con meno, MA IL RIPIEGO SI
+     DICHIARA: un ripiego silenzioso produce due comportamenti sotto la stessa
+     etichetta».  Qui il ripiego e' AV1 al posto di HEVC (`DECISIONI.md` §1.13),
+     e questo riquadro e' il posto dove l'utente lo legge.  ⚠ Si nasconde da
+     solo quando e' vuoto, come `#avviso`: un riquadro sempre presente e quasi
+     sempre vuoto smette di essere letto. */
+  #dichiarazione { margin-top: 1rem; padding: .7rem; font-size: .85rem;
+                   border-left: 3px solid currentColor; opacity: .85; }
+  #dichiarazione:empty { display: none; }
+
+  /* ⛔ La tela sta SOTTO il modulo e non sopra: `web.md` §1.2 C — niente
+     elementi sopra la tela, o cadono il percorso overlay e la tela
+     desincronizzata.  ⚠ Alla fase 2 non c'e' ancora ne' l'uno ne' l'altra, ma
+     la forma si decide adesso: scoprirlo alla fase 4 costa una riscrittura. */
+  #schermo { display: none; width: 100%; height: auto; background: #000;
+             image-rendering: pixelated; margin-top: 1rem; }
+  body[data-schermo="acceso"] #schermo { display: block; }
 </style>
 </head>
 <body data-bannato="__BANNATO__" data-restano-ms="__RESTANO_MS__">
@@ -94,8 +147,10 @@
   </form>
 
   <div id="esito"></div>
+  <div id="dichiarazione"></div>
+  <canvas id="schermo" width="16" height="16"></canvas>
   <div id="registro"></div>
-  <p class="nota">Fase 1: la stretta di mano. Niente schermo, niente tastiera — ancora.</p>
+  <p class="nota">Fase 2: il primo fotogramma. Un'immagine ferma — niente tastiera, ancora.</p>
 </main>
 
 <script>
@@ -127,8 +182,20 @@ if (BANNATO) esito("Da questo indirizzo i tentativi di accesso sono esauriti: ve
 
 const TIPO = {
   CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
-  RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007, CONGEDO: 0x000C,
+  RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007, VISTA: 0x0008,
+  CURSORE_FORMA: 0x000A, CONGEDO: 0x000C,
+  /* ⭐ I due del video, §7.1: la pagina CHIEDE una chiave, il server dice
+     l'esito di un `ADATTA_TELA`.  ⚠ `ADATTA_TELA` non lo manda ancora nessuno
+     alla fase 2 — ma il `TELA` va SAPUTO LEGGERE lo stesso, o il cambio di tela
+     arriverebbe come «un messaggio che non capisco» (§3). */
+  RICHIEDI_CHIAVE: 0x000D, TELA: 0x000E,
 };
+
+/* ⛔ Il byte ALTO del `tipo` dice il canale — §2.5, e si legge dai primi due
+   byte di qualunque stream.  Il canale NON si riconosce dal numero dello
+   stream: quella era la stesura a QUIC nudo, tolta il 10 agosto (R11.9). */
+const CANALE = { CONTROLLO: 0x00, INPUT: 0x01, APPUNTI: 0x02, VIDEO: 0x03,
+                 AUDIO: 0x04 };
 
 /* La versione maggiore di RCP che questa pagina sa parlare — §9.  ⛔ Si scrive
    UNA volta: e' quella che va nel `CIAO` ed e' quella che si pretende
@@ -141,6 +208,10 @@ const VERSIONE = 1;
    d'errore e' un numero che nessuno rilegge (rilievo B-4). */
 const MOT = {
   CHIUSO_DALL_UTENTE: 0x01,
+  /* ⭐ 12 agosto 2026: la pagina puo' scoprire di non avere niente in comune
+     PRIMA del server — quando nessuno dei due codec le arriva al pixel, o
+     quando il server ne sceglie uno che lei non dipinge. */
+  NIENTE_IN_COMUNE: 0x09,
   VERSIONE_INCOMPATIBILE: 0x0A,
   ERRORE_PROTOCOLLO: 0x0B,
 };
@@ -238,6 +309,763 @@ function base64ABytes(b64) {
   return d;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   IL VIDEO — dal byte al pixel dipinto.  `RCP.md` §5.2, §6.2, §7.1.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* I due codec di RCP/1 (§4.3), e i loro numeri nell'intestazione (§6.2).
+   ⛔ `vp9` non c'e' e non e' una dimenticanza: §4.3 lo porta come l'esempio
+      canonico di valore che un'implementazione RCP/1 DEVE IGNORARE. */
+const CODEC_RCP = { hevc: 1, av1: 2 };
+const NOME_DEL_CODEC = { 1: "hevc", 2: "av1" };
+
+/* ⛔ L'ORDINE DI PREFERENZA NON SI ROVESCIA (`DECISIONI.md` §1.13): resta
+   `hevc,av1`.  HEVC e' il primo perche' e' quello che il telefono decodifica in
+   hardware; AV1 riempie le caselle che HEVC lascia vuote.  ⚠ Fra i due decide
+   comunque il SERVER (§4.3: «chi sceglie e' il server, dentro l'intersezione,
+   seguendo l'ordine di preferenza del client»): questo elenco e' una
+   preferenza, non una scelta. */
+const PREFERENZA = ["hevc", "av1"];
+
+/* ⚠ `video.livello` (§4.3) e' il livello massimo che questa pagina dichiara di
+   saper decodificare, e ⛔ NON e' misurabile da qui: `[M]` 12 agosto 2026,
+   Chrome 151/Linux accetta `L30` su un flusso di livello 3.0 e dipinge 8 celle
+   su 8 — cioe' il browser NON fa rispettare il livello, e un valore sbagliato
+   non produce nessun sintomo di qua.  ⇒ Il controllo del livello sta DAL LATO
+   SERVER (`fasi/02-primo-fotogramma.md` D4), e quel che questa pagina puo'
+   fare e' una cosa sola: **usare nella sonda la stessa stringa che usera' nella
+   sessione**, cosi' se questo motore rifiutasse un livello dichiarato piu' alto
+   del vero se ne accorgerebbe sul pixel invece che a sessione aperta. */
+const LIVELLO_DICHIARATO = "5.1";
+
+/* ⛔ La tela desincronizzata di `web.md` §6.1 e' un guadagno di RITARDO, e alla
+   fase 2 il ritardo non e' ancora misurato (`DECISIONI.md` §2.6 e' di S4).
+   ⚠ E costa una cosa precisa QUI: su una tela desincronizzata `getImageData`
+     legge da un buffer che il compositore puo' avere gia' scambiato — cioe'
+     rende ambigua proprio la rilettura su cui poggia il metro della fase (I8).
+   ⇒ Sta dietro un interruttore SPENTO (`CODER.md` §2, invariante I6) finche'
+     non c'e' un numero che dica quanto vale, e l'interruttore si accende con
+     `?tela=desincronizzata` per chi quel numero lo va a prendere. */
+const DESINCRONIZZATA =
+  new URLSearchParams(location.search).get("tela") === "desincronizzata";
+
+/* ⛔ Generato da `banchi/02-pagina-sonda-codec.py` — non si scrive a mano, e si
+   rifa' con quel programma (che si certifica da se': sano → guasto → risanato).
+   Un fotogramma chiave di 64×48 per codec e per profondita': meta' rosso e
+   meta' blu.  ⚠ DUE tinte e non una, e la tela si riempie prima di magenta:
+   con una tinta sola «ha dipinto» e «la tela era gia' di quel colore»
+   avrebbero lo stesso aspetto. */
+const SONDE = {
+  "hevc-8": { l: 64, a: 48, profondita: 8,
+    sinistra: [220, 32, 32], destra: [48, 64, 220],
+    dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAAAeugJAAAAAAUIBAQQIAAADAJ+oAAADAAAeoCCDFlurkyuagQEAggAAAwACAAADADwQAAAAAUQBwXPAiQAAASgBr3j3BAP/3zb/2P1LycMF0vi51/jN4x/+OzOA" },
+  "hevc-10": { l: 64, a: 48, profondita: 10,
+    sinistra: [220, 32, 32], destra: [48, 64, 220],
+    dati: "AAAAAUABDAH//wQIAAADAJ2oAAADAAAeugJAAAAAAUIBAQQIAAADAJ2oAAADAAAeoCCDE2W6uTK5qBAQCCAAAAMAIAAAAwPBAAAAAUQBwXPAiQAAASgBr3j3BAP/3zb/2P1LycMF0vjFF/jN4x/+OzOA" },
+  "av1-8": { l: 64, a: 48, profondita: 8,
+    sinistra: [220, 32, 32], destra: [48, 64, 220],
+    dati: "EgAKDQAAAAKv95tfIgQEAggyHhAAqAAAAkAAALSD6kViA0bZ9DMc0xkZdVxYxfhr9w==" },
+  "av1-10": { l: 64, a: 48, profondita: 10,
+    sinistra: [220, 32, 32], destra: [48, 64, 220],
+    dati: "EgAKDQAAAAKv95tfKgQEAggyHxAAqAAAAkAAALer4STJpjR378M0UaCnFfhFEJPWxBA=" },
+};
+
+/* ⛔ LE STRINGHE DI CODEC, E PERCHE' SONO UNA SCALA E NON UNA.
+ *
+ * `[M]` 12 agosto 2026: `hev1.` e `hvc1.` vanno tutti e due in Annex-B puro —
+ * Chromium decide la forma del flusso dalla PRESENZA della `description`, non
+ * dal prefisso (F2-5 §3).  Qui non si manda nessuna `description`, per HEVC e
+ * per AV1: `fasi/02-primo-fotogramma.md` D1.
+ *
+ * ⚠ `seq_level_idx` di AV1 NON e' il livello in chiaro: `4` vuol dire 3.0.  E'
+ *   il tipo di campo su cui si sbaglia in silenzio, e per questo il conto sta
+ *   qui con la tabella accanto invece che dentro una costante.
+ *
+ * ⛔ La prima stringa e' quella col livello DICHIARATO da questa pagina; la
+ *    seconda e' il ripiego con un livello basso, e serve al caso — non
+ *    misurato — di un motore che rifiuti un livello piu' alto del flusso.  La
+ *    sonda dice QUALE delle due ha dipinto, e la sessione usa quella. */
+function stringhe_codec(nome, profondita, livello) {
+  const pezzi = String(livello).split(".");
+  const maggiore = parseInt(pezzi[0], 10) || 5;
+  const minore = parseInt(pezzi[1], 10) || 0;
+  const due = (n) => (n < 10 ? "0" : "") + n;
+  if (nome === "hevc") {
+    /* general_profile_idc 1 = Main (8 bit), 2 = Main10; il campo dopo e' la
+       maschera di compatibilita' rovesciata, 6 per Main e 4 per Main10.
+       `L<level_idc>` e' il livello per trenta.  `B0`: nessun vincolo. */
+    const profilo = profondita >= 10 ? "2.4" : "1.6";
+    const idc = Math.max(30, Math.round((maggiore + minore / 10) * 30));
+    return ["hev1." + profilo + ".L" + idc + ".B0",
+            "hev1." + profilo + ".L93.B0"];
+  }
+  if (nome === "av1") {
+    /* seq_level_idx = (maggiore − 2) × 4 + minore.  5.1 → 13, 3.0 → 4. */
+    const idx = Math.min(23, Math.max(0, (maggiore - 2) * 4 + minore));
+    return ["av01.0." + due(idx) + "M." + due(profondita),
+            "av01.0.04M." + due(profondita)];
+  }
+  return [];
+}
+
+/* Il colore medio di un rettangolo, saltando un bordo: il sottocampionamento
+   della crominanza sporca il confine fra le due meta', e li' il colore non e'
+   ne' l'uno ne' l'altro. */
+function colore_medio(pixel, larghezza, x0, y0, x1, y1) {
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * larghezza + x) * 4;
+      r += pixel[i]; g += pixel[i + 1]; b += pixel[i + 2]; n++;
+    }
+  }
+  return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : null;
+}
+
+function lontananza(a, b) {
+  return Math.round(Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 +
+                              (a[2] - b[2]) ** 2));
+}
+
+/* Dipinge UNA sonda e rilegge i pixel.  ⛔ Ritorna «arriva» solo se le due
+   meta' si classificano ciascuna sulla PROPRIA tinta: nessun riempimento
+   uniforme — nero, magenta, o una delle due tinte — supera questa prova. */
+function dipingi_sonda(config, sonda) {
+  return new Promise((risolvi) => {
+    const tela = document.createElement("canvas");
+    tela.width = sonda.l; tela.height = sonda.a;
+    const p = tela.getContext("2d", { willReadFrequently: true, alpha: false });
+    if (!p) { risolvi({ arriva: false, perche: "niente contesto 2d" }); return; }
+    /* Magenta: non e' nessuna delle due tinte, e non e' nero. */
+    p.fillStyle = "#7a007a";
+    p.fillRect(0, 0, sonda.l, sonda.a);
+
+    let finito = false;
+    let dec = null;
+    const orologio = setTimeout(() => chiudi({
+      arriva: false, perche: "nessun fotogramma entro 2,5 s" }), 2500);
+    function chiudi(esito) {
+      if (finito) return;
+      finito = true;
+      clearTimeout(orologio);
+      try { if (dec && dec.state !== "closed") dec.close(); } catch (e) { /* gia' chiusa */ }
+      risolvi(esito);
+    }
+    function giudica(formato) {
+      let dati;
+      try { dati = p.getImageData(0, 0, sonda.l, sonda.a).data; }
+      catch (e) { return { arriva: false, perche: "getImageData: " + e }; }
+      const b = 4;
+      const sx = colore_medio(dati, sonda.l, b, b, sonda.l / 2 - b, sonda.a - b);
+      const dx = colore_medio(dati, sonda.l, sonda.l / 2 + b, b, sonda.l - b,
+                              sonda.a - b);
+      const bene = sx && dx &&
+        lontananza(sx, sonda.sinistra) < lontananza(sx, sonda.destra) &&
+        lontananza(dx, sonda.destra) < lontananza(dx, sonda.sinistra);
+      return { arriva: !!bene, formato: formato,
+               letture: { sinistra: sx, destra: dx },
+               perche: bene ? null : "il fotogramma e' uscito ma i pixel non "
+                      + "sono quelli della sonda (sinistra " + sx
+                      + ", destra " + dx + ")" };
+    }
+    try {
+      dec = new VideoDecoder({
+        output: (f) => {
+          const formato = (f.format === undefined) ? "assente" : f.format;
+          try { p.drawImage(f, 0, 0, sonda.l, sonda.a); }
+          catch (e) { try { f.close(); } catch (e2) { /* gia' chiuso */ }
+                      chiudi({ arriva: false, perche: "drawImage: " + e }); return; }
+          try { f.close(); } catch (e) { /* gia' chiuso */ }
+          chiudi(giudica(formato));
+        },
+        /* ⛔ Il richiamo d'errore e' l'unico posto in cui il decodificatore puo'
+           dire «sono fallito».  Buttarlo renderebbe ogni fallimento
+           indistinguibile da uno zero (`REVIEWER.md` §1 punto 4). */
+        error: (e) => chiudi({ arriva: false, perche: String(e) }),
+      });
+      dec.configure(config);
+      dec.decode(new EncodedVideoChunk({
+        type: "key", timestamp: 0, data: base64ABytes(sonda.dati) }));
+    } catch (e) {
+      chiudi({ arriva: false, perche: String(e) });
+    }
+  });
+}
+
+/* Sonda UN codec a UNA profondita', e ritorna che cosa ha detto ciascuno dei
+   due testimoni: l'API e il pixel. */
+async function sonda_una(nome, profondita) {
+  const esito = { codec: nome, profondita: profondita, arriva: false,
+                  stringa: null, api: [], formato: null, letture: null,
+                  perche: null };
+  const sonda = SONDE[nome + "-" + profondita];
+  if (!sonda) { esito.perche = "questa pagina non porta una sonda per "
+                             + nome + " a " + profondita + " bit"; return esito; }
+  if (typeof VideoDecoder === "undefined") {
+    esito.perche = "questo browser non ha WebCodecs"; return esito;
+  }
+  for (const stringa of stringhe_codec(nome, profondita, LIVELLO_DICHIARATO)) {
+    const config = { codec: stringa, codedWidth: sonda.l, codedHeight: sonda.a,
+                     optimizeForLatency: true };
+    let dichiarata;
+    try { dichiarata = (await VideoDecoder.isConfigSupported(config)).supported; }
+    catch (e) { dichiarata = "eccezione: " + e; }
+    esito.api.push({ stringa: stringa, isConfigSupported: dichiarata });
+    /* ⛔ `isConfigSupported` si usa come FILTRO e non come verdetto: quando dice
+       no, il pixel non arriva mai (`[M]` su tutte e quattro le caselle di
+       F2-5); quando dice si', non dice niente — e' la forma E1. */
+    if (dichiarata !== true) continue;
+    const r = await dipingi_sonda(config, sonda);
+    esito.letture = r.letture || esito.letture;
+    if (r.arriva) {
+      esito.arriva = true; esito.stringa = stringa; esito.formato = r.formato;
+      return esito;
+    }
+    esito.perche = r.perche;
+  }
+  if (!esito.perche)
+    esito.perche = "isConfigSupported ha detto no a tutte le stringhe provate";
+  return esito;
+}
+
+/* ⛔ IL SONDAGGIO PARTE AL CARICAMENTO, non alla connessione: le quattro sonde
+   costano qualche decina di millisecondi su un motore che decodifica e fino a
+   dieci secondi su uno che rifiuta tutto con un tempo scaduto.  Farlo qui
+   significa che quando l'utente preme «Collegati» la risposta c'e' gia'. */
+const SONDAGGIO = (async function () {
+  const fuori = { codec: {}, webcodecs: typeof VideoDecoder !== "undefined" };
+  for (const nome of PREFERENZA) {
+    fuori.codec[nome] = {};
+    for (const profondita of [8, 10])
+      fuori.codec[nome][profondita] = await sonda_una(nome, profondita);
+  }
+  return fuori;
+})();
+
+/* ⛔ LA DEGRADAZIONE SI DICHIARA — `CODER.md` §4.2.  Questa funzione e' il posto
+ *    in cui il ripiego smette di essere silenzioso, e scrive DUE cose diverse:
+ *    la frase per l'utente (nel riquadro) e i numeri per il registro.
+ *
+ * ⚠ E dichiara anche quel che NON sa: se il decodificatore sia hardware o
+ *   software **da JavaScript non e' osservabile** (`web.md` §4.1: il dato
+ *   esiste dentro Chromium, `IsPlatformDecoder()`, e non compare in nessuna
+ *   interfaccia).  ⛔ Scrivere «software» perche' `powerEfficient` e' falso
+ *   sarebbe inventare: `[M]` 12 agosto 2026 quello stesso campo risponde
+ *   `true` su Firefox per un codec che il browser non decodifica affatto. */
+function dichiara(sondaggio, scelto) {
+  const righe = [];
+  for (const nome of PREFERENZA) {
+    const c = sondaggio.codec[nome] || {};
+    const otto = c[8] || {}, dieci = c[10] || {};
+    if (otto.arriva || dieci.arriva) {
+      righe.push(nome.toUpperCase() + ": arriva al pixel ("
+        + [8, 10].filter((p) => c[p] && c[p].arriva).join(" e ") + " bit, «"
+        + (otto.stringa || dieci.stringa) + "»)");
+    } else {
+      righe.push("⛔ " + nome.toUpperCase() + ": NON arriva al pixel su questo "
+                 + "browser — " + (otto.perche || "non provato"));
+    }
+  }
+  for (const r of righe) nota("sonda video · " + r);
+
+  const d = $("dichiarazione");
+  const hevc = sondaggio.codec.hevc || {};
+  const av1 = sondaggio.codec.av1 || {};
+  const hevc_c = !!(hevc[8] && hevc[8].arriva) || !!(hevc[10] && hevc[10].arriva);
+  const av1_c = !!(av1[8] && av1[8].arriva) || !!(av1[10] && av1[10].arriva);
+  if (!hevc_c && !av1_c) {
+    d.textContent = "Questo browser non porta nessuno dei due codec video fino "
+      + "ai pixel: né HEVC né AV1. La sessione può aprirsi, ma non ci sarà "
+      + "immagine. Su Linux il decodificatore HEVC di Chrome è quello della "
+      + "scheda grafica, e senza scheda grafica non c'è; Firefox non fa HEVC "
+      + "affatto.";
+  } else if (!hevc_c && av1_c) {
+    /* ⭐ Il ripiego negoziato di `DECISIONI.md` §1.13, dichiarato all'utente. */
+    d.textContent = "Questo browser non decodifica HEVC: si usa AV1, che è il "
+      + "ripiego previsto. L'immagine c'è; il consumo di banda a parità di "
+      + "qualità può essere diverso.";
+  } else if (scelto && scelto.codec === "av1" && hevc_c) {
+    d.textContent = "Il server ha scelto AV1 anche se questo browser "
+      + "decodifica HEVC.";
+  } else {
+    d.textContent = "";
+  }
+  return { hevc: hevc_c, av1: av1_c };
+}
+
+/* ⛔ Il confronto fra due `numero` di §6.2 e' MODULO 2³², con le differenze
+   prese col segno: a 60 fotogrammi al secondo il contatore gira dopo due anni e
+   due mesi, e una sessione puo' durare di piu'.  Un confronto `a > b` nudo
+   farebbe scartare tutto per un anno dopo il giro. */
+function differenza(a, b) {
+  let d = (a - b) % 4294967296;
+  if (d >= 2147483648) d -= 4294967296;
+  if (d < -2147483648) d += 4294967296;
+  return d;
+}
+
+/* Il numero che ci si aspetta dopo `n`.  ⛔ Al giro del contatore lo ZERO si
+   salta: e' riservato e vuol dire «nessun fotogramma» (§6.2). */
+function dopo(n) { return n === 0xFFFFFFFF ? 1 : (n + 1) >>> 0; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   `Schermo` — riceve gli stream del video, applica le regole di RCP e DIPINGE.
+
+   ⛔ IL LETTORE DEI 28 BYTE E' SCRITTO QUI, DALLA TABELLA DI `RCP.md` §6.2, e
+      non e' copiato da nessuna parte — ne' da `banchi/02-filo-fotogramma.py`
+      (l'arbitro del filo), ne' dalla pagina di prova di F2.5.  ⭐ E' il pezzo di
+      arbitro che `PIANO.md` §0.4 dice di aver comprato: due implementazioni
+      indipendenti degli stessi 28 byte.  Se un giorno non andranno d'accordo,
+      **quel disaccordo e' il regalo** — e copiare il lettore lo farebbe sparire
+      senza che nessuno se ne accorga.
+   ══════════════════════════════════════════════════════════════════════════ */
+class Schermo {
+  constructor(tela) {
+    this.tela = tela;
+    this.pennello = tela.getContext("2d", {
+      alpha: false, willReadFrequently: true,
+      desynchronized: DESINCRONIZZATA });
+    this.codec = null;          /* il numero di §6.2: 1 o 2 */
+    this.stringa = null;        /* la stringa di WebCodecs che la sonda ha provato */
+    this.profondita = 8;
+    this.tela_l = 0; this.tela_a = 0;          /* la tela IN VIGORE */
+    this.tollerate = new Map();                /* "LxA" → perche' e' tollerata */
+    /* ⛔⭐ Le tele che sono state IN VIGORE in questa sessione, e la riga e' nata
+       da un rosso del banco il 12 agosto 2026 (caso T4).  Senza, una misura
+       VECCHIA arrivata dopo che la tolleranza si e' chiusa finiva nello stesso
+       ramo di una misura MAI ANNUNCIATA — cioe' veniva trattenuta invece di
+       chiudere la sessione, e §6.2 dice il contrario: «da quel fotogramma in poi
+       una misura vecchia e' ERRORE_PROTOCOLLO».  ⚠ Le due cose si somigliano e
+       hanno cure opposte: la vecchia e' un server che sbaglia, la mai annunciata
+       e' una corsa fra due stream in cui nessuno ha sbagliato. */
+    this.storiche = new Set();
+    this.finestra = false;                     /* la finestra del cambio di tela */
+    this.dec = null; this.dec_l = 0; this.dec_a = 0;
+    this.formato = null;                       /* `VideoFrame.format`, per il registro */
+    this.ultimo_consegnato = null;             /* §6.2: «l'ultimo GIA' CONSEGNATO» */
+    this.atteso = null;
+    this.sospeso = false;                      /* c'e' un buco aperto (§5.2) */
+    this.trattenuti = [];                      /* misure non ancora annunciate */
+    this.sessione = false;                     /* §2.5: niente video prima di SESSIONE */
+    this.errori = [];
+    this.conti = { stream: 0, completi: 0, azzerati: 0, consegnati: 0,
+                   dipinti: 0, scartati_ordine: 0, scartati_misura: 0,
+                   tollerati: 0, buchi: 0, chiavi_chieste: 0,
+                   riconfigurazioni: 0, trattenuti: 0, corti: 0 };
+    /* I richiami verso il canale di controllo, messi da `collega()`. */
+    this.su_chiave = null;
+    this.su_errore_protocollo = null;
+    this.su_riga = (t) => nota("video · " + t);
+  }
+
+  riga(t) { if (this.su_riga) this.su_riga(t); }
+
+  /* ⛔ Un tentativo nuovo riparte da zero.  ⚠ Senza, `ultimo_consegnato` del
+     tentativo di prima farebbe scartare per ORDINE tutti i fotogrammi del
+     tentativo nuovo — che ricomincia da `numero = 1` (§6.2) — e il sintomo
+     sarebbe «alla seconda connessione lo schermo resta nero». */
+  riparti() {
+    try { if (this.dec && this.dec.state !== "closed") this.dec.close(); }
+    catch (e) { /* gia' chiusa */ }
+    this.dec = null; this.dec_l = 0; this.dec_a = 0;
+    this.formato = null;
+    this.codec = null; this.stringa = null;
+    this.tollerate = new Map(); this.storiche = new Set(); this.finestra = false;
+    this.ultimo_consegnato = null; this.atteso = null;
+    this.sospeso = false; this.trattenuti = []; this.sessione = false;
+    this.errori = [];
+    for (const k of Object.keys(this.conti)) this.conti[k] = 0;
+  }
+
+  /* ⛔ Un ERRORE_PROTOCOLLO si scrive nel registro E si porta sul filo (§3):
+     «chi riceve qualcosa che non capisce DEVE chiudere la connessione con
+     ERRORE_PROTOCOLLO e scrivere nel registro che cosa non ha capito». */
+  errore_protocollo(perche) {
+    this.errori.push(perche);
+    this.riga("⛔ ERRORE_PROTOCOLLO: " + perche);
+    if (this.su_errore_protocollo) this.su_errore_protocollo(perche);
+    return false;
+  }
+
+  /* Un buco: §5.2 impone di chiedere una chiave e di NON mostrare quel che si
+     sa incompleto — si tiene l'ultimo fotogramma buono. */
+  buco(perche) {
+    /* ⛔⭐ UN BUCO APERTO NON SE NE FA UN SECONDO, e questa riga e' nata da un
+     *     rosso del banco il 12 agosto 2026 (caso T11).
+     *
+     * Con un buco aperto, OGNI delta successivo rientrava qui — perche' `atteso`
+     * non avanza sui fotogrammi che non si consegnano — e faceva partire una
+     * `RICHIEDI_CHIAVE` per fotogramma.  ⛔ E' esattamente la spirale che §5.2
+     * descrive: «durante una raffica di perdite le richieste arrivano a decine,
+     * e ogni chiave costa dieci volte un delta: assecondarle peggiorerebbe la
+     * condizione che le ha provocate».  ⚠ Il server ha il suo smorzatore (§5.2:
+     * puo' ignorare una richiesta entro 200 ms dall'ultima chiave spedita), ma
+     * appoggiarsi allo smorzatore dell'altro lato e' chiedere all'altro di
+     * curare un difetto nostro. */
+    if (this.sospeso) {
+      this.riga("buco: " + perche + " — e ce n'e' gia' uno aperto: la chiave e' "
+                + "gia' stata chiesta, non se ne chiede una seconda (§5.2)");
+      return;
+    }
+    this.conti.buchi++;
+    this.sospeso = true;
+    this.riga("buco: " + perche + " ⇒ RICHIEDI_CHIAVE, e fino alla chiave si "
+              + "tiene l'ultimo fotogramma buono (§5.2)");
+    if (this.su_chiave) {
+      this.conti.chiavi_chieste++;
+      this.su_chiave(this.ultimo_consegnato === null ? 0 : this.ultimo_consegnato);
+    }
+  }
+
+  /* La tela concessa in `SESSIONE` (§4.5) e il codec negoziato in `ECCOMI`. */
+  negozia(codec, profondita, stringa, tela_l, tela_a) {
+    this.codec = codec; this.profondita = profondita; this.stringa = stringa;
+    this.tela_l = tela_l; this.tela_a = tela_a;
+    this.tollerate = new Map([[tela_l + "x" + tela_a, "la tela concessa"]]);
+    this.storiche = new Set([tela_l + "x" + tela_a]);
+    this.sessione = true;
+    this.riga("negoziato: codec " + NOME_DEL_CODEC[codec] + " («" + stringa
+              + "»), " + profondita + " bit, tela " + tela_l + "×" + tela_a);
+  }
+
+  /* La vista: quanti pixel FISICI ha la finestra.  ⛔ La tela NON cambia
+     (§7.1: «VISTA non deve far cambiare la tela»); qui si riscala. */
+  vista(l, a) {
+    if (this.tela.width === l && this.tela.height === a) return;
+    this.tela.width = l; this.tela.height = a;
+    this.pennello.fillStyle = "#000";
+    this.pennello.fillRect(0, 0, l, a);
+  }
+
+  /* ⛔⭐ `TELA(ADATTATA)` — §7.1, e QUI NON SI RICONFIGURA NIENTE.
+   *
+   * §5.2: «il client riconfigura il decodificatore sulla prima CHIAVE alla
+   * misura nuova, NON sul `TELA`».  ⚠ Non e' una sfumatura: riconfigurare qui
+   * — che e' la lettura naturale di §7.1, «la tela in vigore DOPO questo
+   * messaggio» — metterebbe le due regole a comandare il contrario sullo stesso
+   * fotogramma, perche' §6.2 impone di ACCETTARE E DIPINGERE i fotogrammi in
+   * volo alla misura precedente, e un decodificatore gia' riconfigurato non
+   * saprebbe piu' decodificarli (rilievo P10).
+   *
+   * ⇒ Qui si apre soltanto la FINESTRA della tolleranza, e la si chiude sulla
+   *   prima chiave alla misura nuova — che e' un fatto osservabile sul filo, non
+   *   un orologio (rilievo P13). */
+  tela_adattata(l, a) {
+    const vecchia = this.tela_l + "x" + this.tela_a;
+    if (!this.finestra) {
+      /* La finestra si apre adesso: da qui in poi si tollera quel che e' stato
+         in vigore, e §6.2 dice «da quando la coda ha cominciato a svuotarsi».
+         ⚠ Chi trascina una finestra manda DUE `TELA` di fila (1920×1080 →
+           1600×900 → 1280×720) e la chiave aperta prima di tutto porta la
+           PRIMA delle tre: per questo la finestra si apre una volta sola e
+           accumula, invece di ricordare «la precedente» al singolare (P11). */
+      this.tollerate = new Map([[vecchia, "in vigore quando la coda ha "
+                                        + "cominciato a svuotarsi"]]);
+      this.finestra = true;
+    } else {
+      this.tollerate.set(vecchia, "in vigore dentro la finestra del cambio");
+    }
+    this.tela_l = l; this.tela_a = a;
+    this.tollerate.set(l + "x" + a, "la tela in vigore");
+    this.storiche.add(l + "x" + a);
+    this.riga("TELA(ADATTATA) " + vecchia + " → " + l + "×" + a
+              + ": il decodificatore NON si tocca; si riconfigurera' sulla prima "
+              + "CHIAVE alla misura nuova (§5.2).  Tollerate adesso: "
+              + [...this.tollerate.keys()].join(", "));
+    /* I fotogrammi trattenuti perche' portavano una misura mai annunciata
+       possono essere diventati legittimi proprio adesso — vedi `trattieni`. */
+    const in_attesa = this.trattenuti;
+    this.trattenuti = [];
+    for (const t of in_attesa) this.consegna(t.i, t.dati);
+  }
+
+  /* ── IL LETTORE DEI 28 BYTE, DA `RCP.md` §6.2 ──────────────────────────
+       0  u16 tipo · 2 u16 codec · 4 u32 largh. · 8 u32 altezza ·
+      12  u32 numero · 16 u64 istante · 24 u32 input · 28 i dati
+     ⛔ Nessun campo allineato, nessun riempimento: 28 byte esatti. */
+  leggi_intestazione(byte) {
+    if (byte.length < 28)
+      return { guaio: "uno stream video chiuso con FIN dopo " + byte.length
+             + " byte: §6.2 vuole 28 byte d'intestazione, e questo non e' un "
+             + "fotogramma corto — e' una lunghezza che non torna" };
+    const v = new DataView(byte.buffer, byte.byteOffset, byte.byteLength);
+    return { tipo: v.getUint16(0), codec: v.getUint16(2),
+             larghezza: v.getUint32(4), altezza: v.getUint32(8),
+             numero: v.getUint32(12),
+             /* ⚠ `istante` e' un orologio MONOTONO del server: non si confronta
+                col nostro, solo con altri `istante` dello stesso server (§6.2). */
+             istante: Number(v.getBigUint64(16)),
+             input: v.getUint32(24) };
+  }
+
+  /* Uno stream del video, per intero.  `completo` e' falso quando lo stream e'
+     stato AZZERATO (`RESET_STREAM`). */
+  stream_video(byte, completo) {
+    this.conti.stream++;
+    if (!this.sessione)
+      return this.errore_protocollo("uno stream video prima di SESSIONE: §2.5 "
+        + "lo vieta, ed e' l'invariante I3 sul filo — chi non passa dal "
+        + "validatore non riceve un pixel");
+    if (!completo) {
+      /* ⛔ §6.2: uno stream AZZERATO porta un fotogramma INCOMPLETO.  Il client
+         DEVE buttare quel che ha ricevuto e NON DEVE consegnarlo al
+         decodificatore: consegnare mezzo fotogramma e' la forma E8 — un
+         fotogramma abbandonato e uno completo avrebbero lo stesso aspetto. */
+      this.conti.azzerati++;
+      this.riga("stream azzerato (RESET_STREAM) dopo " + byte.length
+                + " byte: buttato, NON consegnato al decodificatore (§6.2)");
+      this.buco("un fotogramma abbandonato dal server");
+      return;
+    }
+    this.conti.completi++;
+    const i = this.leggi_intestazione(byte);
+    if (i.guaio) { this.conti.corti++; return this.errore_protocollo(i.guaio); }
+    return this.consegna(i, byte.subarray(28));
+  }
+
+  consegna(i, dati) {
+    /* 1. il tipo (§6.2): altri valori sono ERRORE_PROTOCOLLO. */
+    if (i.tipo !== 0x0301 && i.tipo !== 0x0302)
+      return this.errore_protocollo("tipo di fotogramma 0x" + i.tipo.toString(16)
+        + ": §6.2 ammette 0x0301 (chiave) e 0x0302 (delta)");
+    const chiave = i.tipo === 0x0301;
+
+    /* 2. il codec: «DEVE essere quello negoziato in §4.3». */
+    if (i.codec !== this.codec)
+      return this.errore_protocollo("il fotogramma porta codec " + i.codec
+        + " e il negoziato e' " + this.codec + " (" + NOME_DEL_CODEC[this.codec] + ")");
+
+    /* 3. lo zero e' riservato (§6.2): vuol dire «nessun fotogramma». */
+    if (i.numero === 0)
+      return this.errore_protocollo("un fotogramma con numero 0, che §6.2 "
+        + "riserva al significato «nessun fotogramma»");
+
+    /* ⛔⭐ 4. L'ORDINE SI APPLICA PRIMA DELLA MISURA — §6.2, rilievo P14.
+     *
+     * «Un fotogramma il cui numero e' precedente all'ultimo gia' consegnato si
+     * scarta, e la sua misura non si guarda nemmeno.»  ⚠ Senza questa
+     * precedenza le due righe di §6.2 si contraddicono su una scena in cui
+     * nessuno ha sbagliato: la chiave che chiude la tolleranza SCAVALCA i
+     * fotogrammi in volo — perche' quello vecchio e' il piu' grosso (§5.2 vieta
+     * al server di abbandonare una chiave) e quello nuovo e' piu' piccolo — e
+     * la regola della misura, applicata per prima, chiuderebbe la sessione. */
+    if (this.ultimo_consegnato !== null &&
+        differenza(i.numero, this.ultimo_consegnato) <= 0) {
+      this.conti.scartati_ordine++;
+      this.riga("fotogramma " + i.numero + " scartato per ORDINE (l'ultimo "
+                + "consegnato e' " + this.ultimo_consegnato + "): la sua misura "
+                + i.larghezza + "×" + i.altezza + " non si guarda nemmeno (§6.2)");
+      return;
+    }
+
+    /* 5. la misura. */
+    const m = i.larghezza + "x" + i.altezza;
+    const in_vigore = this.tela_l + "x" + this.tela_a;
+    if (m !== in_vigore && !this.tollerate.has(m)) {
+      /* ⛔ Le due strade, e sono opposte: una misura GIA' STATA IN VIGORE dopo
+         che la tolleranza si e' chiusa e' un server che sbaglia (§6.2, «da quel
+         fotogramma in poi una misura vecchia e' ERRORE_PROTOCOLLO»); una misura
+         MAI IN VIGORE puo' essere il `TELA` ancora in volo — vedi `trattieni`. */
+      if (this.storiche.has(m))
+        return this.errore_protocollo("fotogramma " + i.numero + " alla misura "
+          + m + ", che e' stata in vigore ma non lo e' piu': la tolleranza si e' "
+          + "chiusa sulla prima chiave alla misura nuova, e la tela in vigore e' "
+          + in_vigore + " (§6.2)");
+      return this.trattieni(i, dati);
+    }
+    if (m !== in_vigore) {
+      this.conti.tollerati++;
+      this.riga("fotogramma " + i.numero + " alla misura " + m
+                + ", che non e' la tela in vigore (" + in_vigore + ") ma e' "
+                + this.tollerate.get(m) + ": accettato e dipinto riscalato "
+                + "alla vista (§6.2)");
+    }
+
+    /* 6. il buco.  ⚠ `numero` conta i fotogrammi CATTURATI che il server ha
+       deciso di spedire, compresi quelli che poi abbandona: un salto e' quindi
+       un fotogramma che non arrivera' mai — chi arriva dopo cade sulla regola
+       dell'ordine — e va trattato come un buco. */
+    if (this.atteso !== null && differenza(i.numero, this.atteso) > 0)
+      this.buco("mancano i fotogrammi da " + this.atteso + " a "
+                + ((i.numero - 1) >>> 0));
+
+    /* 7. §5.2: «finche' non arriva una chiave, il client NON DEVE mostrare
+       fotogrammi che sa incompleti: tiene l'ultimo buono».  ⛔ E non li
+       consegna nemmeno: un delta che riferisce un fotogramma mai arrivato non
+       produce nessun errore dal decodificatore — solo un'immagine via via piu'
+       sfasciata, che e' precisamente il sintomo che non nomina la causa. */
+    if (this.sospeso && !chiave) {
+      this.riga("delta " + i.numero + " non consegnato: c'e' un buco aperto e "
+                + "si aspetta una chiave (§5.2)");
+      return;
+    }
+
+    /* 8. la misura per cui il decodificatore E' configurato. */
+    const dec_m = this.dec_l + "x" + this.dec_a;
+    if (!this.dec || m !== dec_m) {
+      if (chiave && m === in_vigore) {
+        if (!this.riconfigura(i.larghezza, i.altezza)) return;
+      } else {
+        /* ⛔ §5.2: «il client NON DEVE consegnare al decodificatore un
+           fotogramma la cui misura non e' quella per cui il decodificatore e'
+           configurato: lo butta e lo tratta come un buco».  `[M]` 12 agosto
+           2026: un delta alla misura nuova dato a un decodificatore configurato
+           alla vecchia dipinge SPAZZATURA IN SILENZIO su HEVC. */
+        this.conti.scartati_misura++;
+        this.riga("fotogramma " + i.numero + " alla misura " + m
+                  + " buttato: il decodificatore e' configurato per " + dec_m
+                  + " e questo non e' una chiave alla tela in vigore (§5.2)");
+        this.buco("una misura che il decodificatore non puo' decodificare");
+        return;
+      }
+    }
+
+    /* 9. la consegna. */
+    try {
+      this.dec.decode(new EncodedVideoChunk({
+        type: chiave ? "key" : "delta", timestamp: i.istante, data: dati }));
+    } catch (e) {
+      this.errori.push("decode: " + e);
+      this.riga("⛔ decode ha rifiutato il fotogramma " + i.numero + ": " + e);
+      this.buco("il decodificatore ha rifiutato un fotogramma");
+      return;
+    }
+    this.conti.consegnati++;
+    this.ultimo_consegnato = i.numero;
+    this.atteso = dopo(i.numero);
+    if (chiave) {
+      this.sospeso = false;
+      /* ⭐ La tolleranza finisce QUI: sulla prima chiave alla misura nuova, che
+         §5.2 garantisce esistere.  Da questo fotogramma in poi una misura
+         vecchia e' ERRORE_PROTOCOLLO. */
+      if (this.finestra && m === in_vigore) {
+        this.finestra = false;
+        this.tollerate = new Map([[in_vigore, "la tela in vigore"]]);
+        this.riga("prima CHIAVE alla misura nuova (" + m + "): la finestra "
+                  + "della tolleranza si chiude, e da qui una misura vecchia e' "
+                  + "ERRORE_PROTOCOLLO (§6.2)");
+      }
+    }
+    return true;
+  }
+
+  /* ⛔⭐ IL FOTOGRAMMA A UNA MISURA MAI ANNUNCIATA — E QUESTA E' UNA RIGA CHE
+   *     `RCP.md` NON HA, scritta il 12 agosto 2026 applicando §6.2.
+   *
+   * §6.2 dice: «chi ne riceve altre chiude con ERRORE_PROTOCOLLO», e la
+   * tolleranza che segue copre le misure VECCHIE — quelle in volo quando il
+   * `TELA` e' partito.  ⛔ Non copre il caso simmetrico: il `TELA` viaggia sul
+   * canale di CONTROLLO e il fotogramma su uno stream unidirezionale suo, e i
+   * due sono stream QUIC indipendenti — **niente ne ordina la consegna**.  Un
+   * fotogramma alla misura NUOVA puo' quindi arrivare PRIMA del `TELA` che la
+   * annuncia, e applicando §6.2 alla lettera il client chiuderebbe una sessione
+   * in cui nessuno ha sbagliato.  E' la stessa famiglia di P11/P13/P14, un
+   * passo piu' in la'.
+   *
+   * ⇒ Qui il fotogramma si TRATTIENE invece di uccidere la sessione, e diventa
+   *   legittimo se il `TELA` arriva subito dopo (`tela_adattata` lo ripassa).
+   *   ⛔ Ma la tolleranza ha un fondo, ed e' un fatto osservabile e non un
+   *      orologio: OTTO fotogrammi.  Piu' di cosi' non e' piu' una corsa fra due
+   *      stream — e' un server che manda una misura che non ha mai annunciato,
+   *      e li' §6.2 ha ragione.
+   *
+   * ⚠ Va portato al coordinatore: la cura vera sta in `RCP.md`, non qui. */
+  trattieni(i, dati) {
+    this.conti.trattenuti++;
+    this.trattenuti.push({ i: i, dati: dati });
+    this.riga("fotogramma " + i.numero + " alla misura " + i.larghezza + "×"
+              + i.altezza + ", che non e' mai stata annunciata: TRATTENUTO ("
+              + this.trattenuti.length + "/8) invece di chiudere la sessione — "
+              + "il TELA che la annuncia puo' essere ancora in volo sul canale "
+              + "di controllo");
+    if (this.trattenuti.length > 8) {
+      const quali = this.trattenuti.map((t) => t.i.larghezza + "x" + t.i.altezza);
+      this.trattenuti = [];
+      return this.errore_protocollo("nove fotogrammi a misure mai annunciate ("
+        + quali.join(", ") + ") mentre la tela in vigore e' " + this.tela_l + "×"
+        + this.tela_a + ": non e' piu' una corsa fra due stream (§6.2)");
+    }
+    return false;
+  }
+
+  riconfigura(l, a) {
+    const config = { codec: this.stringa, codedWidth: l, codedHeight: a,
+                     optimizeForLatency: true };
+    try {
+      /* ⛔⭐ E UN DECODIFICATORE CHIUSO NON SI RICONFIGURA — 12 agosto 2026.
+       * Dopo un errore, `VideoDecoder` passa a `closed` e ogni `configure()`
+       * lancia `InvalidStateError`.  ⚠ Senza questa riga, il primo errore del
+       * decodificatore rendeva la sessione irrecuperabile IN SILENZIO: la
+       * chiave chiesta a §5.2 arrivava e non poteva piu' essere consegnata, e il
+       * sintomo era «lo schermo si e' fermato e nessuno dice perche'». */
+      if (this.dec && this.dec.state === "closed") {
+        this.riga("il decodificatore era chiuso (un errore lo ha chiuso): se ne "
+                  + "fa uno nuovo, invece di riconfigurare quello morto");
+        this.dec = null;
+      }
+      if (!this.dec) {
+        this.dec = new VideoDecoder({
+          output: (f) => this.dipingi(f),
+          error: (e) => {
+            this.errori.push(String(e));
+            this.riga("⛔ il decodificatore ha detto: " + e);
+            this.buco("il decodificatore ha fallito");
+          },
+        });
+      }
+      this.dec.configure(config);
+    } catch (e) {
+      this.errori.push("configure: " + e);
+      this.riga("⛔ configure(«" + this.stringa + "», " + l + "×" + a
+                + ") ha lanciato: " + e);
+      return false;
+    }
+    this.conti.riconfigurazioni++;
+    this.dec_l = l; this.dec_a = a;
+    this.riga("decodificatore configurato per " + l + "×" + a + " con «"
+              + this.stringa + "» (riconfigurazione n. "
+              + this.conti.riconfigurazioni + ")");
+    return true;
+  }
+
+  /* ⛔ Si dipinge DENTRO il richiamo del decodificatore e non su
+     `requestAnimationFrame`: `web.md` §6.1.  Un giro di rAF in mezzo aggiunge
+     fino a un intervallo di quadro a un tetto che ne vale due e mezzo. */
+  dipingi(f) {
+    /* ⚠ `VideoFrame.format` si registra e NON si interpreta.  `[M]` 12 agosto
+       2026: su Chrome con VA-API un fotogramma HEVC esce `BGRA` — che non dice
+       che i 10 bit siano persi, dice come Chrome PRESENTA una tessitura di GPU;
+       su Firefox e' `BGRX` per tutto; su Chrome un AV1 a 10 bit veri esce
+       `I420P10`, ed e' l'unico percorso in cui i 10 bit si vedono da
+       JavaScript.  ⇒ La domanda ha risposta MOTORE PER MOTORE, e questa riga
+       serve a chi diagnostica, non a chi decide. */
+    if (this.formato === null || this.formato === undefined)
+      this.formato = (f.format === undefined) ? "assente" : f.format;
+    try {
+      const cl = this.tela.width, ca = this.tela.height;
+      const fl = f.displayWidth || f.codedWidth;
+      const fa = f.displayHeight || f.codedHeight;
+      const s = Math.min(cl / fl, ca / fa);
+      const dl = Math.max(1, Math.round(fl * s)), da = Math.max(1, Math.round(fa * s));
+      const dx = Math.floor((cl - dl) / 2), dy = Math.floor((ca - da) / 2);
+      /* ⚠ Le bande: la vista non ha nessun vincolo di proporzione con la tela
+         (§7.1), quindi si impagina invece di deformare
+         (`SPECIFICHE.md` §6.2). */
+      if (dl !== cl || da !== ca) {
+        this.pennello.fillStyle = "#000";
+        this.pennello.fillRect(0, 0, cl, ca);
+      }
+      this.pennello.drawImage(f, dx, dy, dl, da);
+      this.conti.dipinti++;
+      document.body.dataset.schermo = "acceso";
+    } catch (e) {
+      this.errori.push("drawImage: " + e);
+      this.riga("⛔ drawImage ha lanciato: " + e);
+    }
+    try { f.close(); } catch (e) { /* gia' chiuso */ }
+  }
+}
+
 /* ⛔⭐ LA DISPOSIZIONE DI TASTIERA, E PERCHE' NON E' `navigator.language`.
  *
  *    `[M]` 10 agosto 2026, primo giro con Firefox vero: questa riga diceva
@@ -332,6 +1160,16 @@ window.addEventListener("pagehide", function () {
   if (congeda_corrente)
     congeda_corrente(MOT.CHIUSO_DALL_UTENTE, "la scheda e' stata chiusa");
 });
+
+/* ⛔⭐ LO SCHERMO ESISTE PRIMA DELLA SESSIONE, ed e' la forma che il banco
+ *     pretende: `banchi/02-pagina-prodotto.html` guida QUESTO oggetto — cioe'
+ *     il percorso del prodotto — invece di riscriversene uno che gli somiglia.
+ *     ⚠ Un banco che misurasse una copia della catena misurerebbe la copia
+ *       (forma E10), e il verde non direbbe niente del prodotto.
+ * ⚠ E `REMOTIX` e' l'unico nome globale che questa pagina definisce. */
+const schermo = new Schermo($("schermo"));
+window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
+                   stringhe_codec: stringhe_codec, versione: VERSIONE };
 
 async function collega(utente, parola) {
   if (!("WebTransport" in window)) {
@@ -430,6 +1268,15 @@ async function collega(utente, parola) {
    *    `chiudi_sessione`: la capsula si RIMANDA). */
   congeda_corrente = congeda;
 
+  /* ⛔ Gli stream del video si cominciano ad ASCOLTARE ADESSO, non dopo
+     `SESSIONE`: §2.5 vieta al server di aprirne uno prima, ed e' l'invariante
+     I3 sul filo — *chi non passa dal validatore non riceve un pixel*.  ⚠ Per
+     accorgersi che il divieto e' stato violato bisogna stare in ascolto:
+     mettersi in ascolto dopo renderebbe la violazione indistinguibile da un
+     server che si comporta bene. */
+  schermo.riparti();
+  avvia_video(wt, congeda);
+
   /* ⛔⭐ E IL CASO IN CUI NON SI MANDA NIENTE — `muto`, §4.2 e DECISIONI.md §7.14.
    *
    * ✅ Deciso dall'utente l'11 agosto 2026: **chi riceve un `FIN` sul canale di
@@ -477,10 +1324,58 @@ async function collega(utente, parola) {
   }
 
   /* ── CIAO (§4.3) ────────────────────────────────────────────────────── */
+
+  /* ⛔⭐ QUI SI SCEGLIE IL CODEC, E SI SCEGLIE SUL PIXEL.
+   *
+   * Il sondaggio e' partito al caricamento della pagina; qui si aspetta.  Nel
+   * `CIAO` finiscono SOLO i codec che su QUESTO browser hanno davvero dipinto
+   * la sonda, nell'ordine di preferenza `hevc,av1` (`DECISIONI.md` §1.13: la
+   * scala non si rovescia).
+   *
+   * ⚠ Dichiarare un codec che non si dipinge non darebbe un errore: darebbe una
+   *   TELA NERA, cioe' il sintomo che non nomina la causa.  `[M]` su Firefox
+   *   140 ESR le tre API di supporto dicono si' a HEVC e il pixel non arriva. */
+  const sondaggio = await SONDAGGIO;
+  const codec_buoni = PREFERENZA.filter((n) =>
+    (sondaggio.codec[n][8] && sondaggio.codec[n][8].arriva) ||
+    (sondaggio.codec[n][10] && sondaggio.codec[n][10].arriva));
+  dichiara(sondaggio, null);
+
+  /* ⛔ E QUANDO NON NE ARRIVA NESSUNO AL PIXEL.
+   *
+   * §4.3: «un valore VUOTO e' ERRORE_PROTOCOLLO: chi non ha niente da dire non
+   * manda la capacita'».  ⇒ La capacita' si OMETTE, non si manda vuota, e il
+   * server congeda con `NIENTE_IN_COMUNE` — che e' il comportamento che §4.3 gli
+   * IMPONE quando l'intersezione di `video.codec` e' vuota.
+   *
+   * ⭐ La frase che l'utente legge la scrive questa pagina, PRIMA che il server
+   *    risponda: «nessun codec in comune» non nomina il browser ne' la scheda
+   *    grafica, e la causa la sa solo chi ha appena provato a dipingere.
+   * ⚠ E la parola d'ordine NON parte: il congedo arriva subito dopo il `CIAO`,
+   *   cioe' due messaggi prima delle `CREDENZIALI`. */
+  if (codec_buoni.length === 0) {
+    nota("⛔ nessun codec video arriva al pixel: `video.codec` NON si manda "
+       + "(§4.3 vieta il valore vuoto), e il server congedera' con "
+       + "NIENTE_IN_COMUNE");
+    esito("Nessuno dei due codec video (HEVC, AV1) arriva ai pixel su questo "
+        + "browser: la sessione non avrebbe immagine. Vedi il riquadro qui "
+        + "sopra.", false);
+  }
+
+  /* Le profondita': si dichiarano quelle che hanno DIPINTO su almeno uno dei
+     codec buoni.  ⛔ `8` DEVE comparire (§4.3), e se non ci fosse non ci
+     sarebbe nemmeno il codec: la sonda a 8 bit e' la prima che si prova. */
+  const profondita_buone = [8, 10].filter((p) =>
+    codec_buoni.some((n) => sondaggio.codec[n][p] && sondaggio.codec[n][p].arriva));
+
   const cap = [
-    ["video.codec", "hevc,av1"],
-    ["video.profondita", "8,10"],
-    ["video.livello", "5.1"],
+    ["video.codec", codec_buoni.join(",")],
+    ["video.profondita", profondita_buone.join(",") || "8"],
+    /* ⚠ `[?]` Il livello NON e' misurato: il browser non lo fa rispettare
+       (`[M]` Chrome accetta L30 su un flusso 3.0 e dipinge).  Il controllo sta
+       dal lato server — `fasi/02-primo-fotogramma.md` D4 — e questa riga
+       dichiara il valore che `web.md` O12 indica per il traguardo. */
+    ["video.livello", LIVELLO_DICHIARATO],
     /* ⛔ PIXEL INTERI — rilievo B-6, 10 agosto 2026 notte.  §4.3 definisce
        `video.misura_massima` come `LARGHEZZAxALTEZZA`, e sono pixel.  Questa
        riga non aveva l'arrotondamento, e su un telefono a fattore di scala 2,75
@@ -499,12 +1394,23 @@ async function collega(utente, parola) {
     ["appunti.testo", "si"],
     ["client.nome", "remotix-pagina 0.1.0"],
   ];
+  /* ⛔ §4.3: «un valore VUOTO e' ERRORE_PROTOCOLLO: chi non ha niente da dire
+     non manda la capacita'».  ⇒ Si OMETTE, e si scrive quale si e' omessa: una
+     capacita' sparita in silenzio e una mai avuta hanno lo stesso aspetto dal
+     lato che riceve. */
+  const cap_piene = cap.filter(([n, v]) => {
+    if (v !== "") return true;
+    nota("capacita' «" + n + "» OMESSA perche' non ha nessun valore (§4.3 "
+       + "vieta il valore vuoto)");
+    return false;
+  });
   const s = new Scrittore();
   s.u16(VERSIONE);       /* §9: la stessa che si pretende nell'ECCOMI */
-  s.u16(cap.length);
-  for (const [n, v] of cap) s.str(n).str(v);
+  s.u16(cap_piene.length);
+  for (const [n, v] of cap_piene) s.str(n).str(v);
   await canale.manda(TIPO.CIAO, s.byte());
-  nota("CIAO mandato (" + cap.length + " capacita')");
+  nota("CIAO mandato (" + cap_piene.length + " capacita', video.codec = «"
+     + (codec_buoni.join(",") || "NESSUNA") + "»)");
 
   let m = await canale.ricevi();
   if (!m) {
@@ -519,6 +1425,7 @@ async function collega(utente, parola) {
     await congeda(MOT.ERRORE_PROTOCOLLO, "atteso ECCOMI, arrivato il tipo 0x" + m.tipo.toString(16));
     return;
   }
+  let scelta_codec = "", scelta_profondita = "";
   {
     const l = new Lettore(m.corpo);
     const ver = l.u16(), quante = l.u16();
@@ -547,7 +1454,17 @@ async function collega(utente, parola) {
       return;
     }
     const scelte = [];
-    for (let i = 0; i < quante; i++) scelte.push(l.str() + "=" + l.str());
+    for (let i = 0; i < quante; i++) {
+      const nome = l.str(), valore = l.str();
+      scelte.push(nome + "=" + valore);
+      /* ⛔ La scelta del server e' quella che conta: §4.3 — «chi sceglie e' il
+         server, dentro l'intersezione, seguendo l'ordine di preferenza del
+         client».  ⚠ Se ne mandasse piu' d'uno si prende il primo che questa
+         pagina ha DIPINTO, e non il primo e basta: un elenco lasciato aperto
+         dal server non e' un permesso di indovinare. */
+      if (nome === "video.codec") scelta_codec = valore;
+      if (nome === "video.profondita") scelta_profondita = valore;
+    }
     nota("ECCOMI: versione " + ver + " — " + scelte.join(" · "));
   }
 
@@ -620,7 +1537,168 @@ async function collega(utente, parola) {
            + "registro del server — di solito e' video.misura_massima");
     esito("Ammesso, sessione " + (stato === 1 ? "nuova" : "ripresa") +
           ", tela " + tl + "×" + ta + ", desktop " + desktop, true);
+
+    /* ── DA QUI IN POI C'E' IL VIDEO (§2.5: non prima di SESSIONE) ──────── */
+    if (!scelta_codec) {
+      /* ⚠ Un server che non dichiara `video.codec` non sta sbagliando: alla
+         fase 1 non ne aveva.  Si dice, e non si indovina un codec. */
+      nota("il server non ha dichiarato video.codec: questa sessione non ha "
+         + "video, e uno stream 0x03 che arrivasse sarebbe ERRORE_PROTOCOLLO");
+    } else {
+      const nome = scelta_codec.split(",").find((n) => codec_buoni.includes(n));
+      if (!nome) {
+        await congeda(MOT.NIENTE_IN_COMUNE,
+          "il server ha scelto video.codec=«" + scelta_codec + "» e questa "
+          + "pagina dipinge « " + (codec_buoni.join(",") || "niente") + "»");
+        esito("Il server ha scelto un codec video che questo browser non porta "
+            + "ai pixel: " + scelta_codec + ".", false);
+        return;
+      }
+      const prof = Number(scelta_profondita.split(",")
+        .find((p) => profondita_buone.includes(Number(p))) || profondita_buone[0] || 8);
+      /* ⛔ La stringa e' quella che la SONDA ha visto dipingere, non una scritta
+         a mano: e' l'unica di cui si sappia che su questo motore arriva al
+         pixel (`web.md` §9 lezione 1 — una promessa di un'API va trattata come
+         la dichiarazione di un compositore). */
+      const provata = sondaggio.codec[nome][prof] || sondaggio.codec[nome][8];
+      schermo.negozia(CODEC_RCP[nome], prof, provata.stringa, tl, ta);
+      schermo.vista(vista_l, vista_a);
+      dichiara(sondaggio, { codec: nome });
+      /* §5.2: il client CHIEDE una chiave quando si accorge di un buco. */
+      schermo.su_chiave = (ultimo) => {
+        canale.manda(TIPO.RICHIEDI_CHIAVE, new Scrittore().u32(ultimo).byte())
+          .catch((e) => nota("la RICHIEDI_CHIAVE non e' potuta uscire: " + e));
+      };
+      schermo.su_errore_protocollo = (perche) => {
+        esito("La sessione si è chiusa: il server ha mandato qualcosa che non "
+            + "torna con RCP.", false);
+        congeda(MOT.ERRORE_PROTOCOLLO, perche);
+      };
+      /* ⛔ E si continua ad ASCOLTARE il canale di controllo: dopo `SESSIONE`
+         ci arrivano `TELA`, `CURSORE_FORMA` e il `CONGEDO`.  ⚠ Prima di oggi
+         questa funzione ritornava e nessuno leggeva piu' niente: un `TELA` —
+         che e' il messaggio da cui dipende tutta la regola del cambio di tela —
+         non sarebbe mai stato letto.  Non si aspetta: la stretta di mano e'
+         finita, e §4.4 vieta di bloccare il ciclo. */
+      ascolta_controllo(canale, congeda);
+    }
   }
+}
+
+/* ⛔ Il canale di controllo dopo la stretta di mano.  §3: quel che non si
+   capisce si chiude con `ERRORE_PROTOCOLLO`, e si scrive che cosa non si e'
+   capito. */
+async function ascolta_controllo(canale, congeda) {
+  for (;;) {
+    let m;
+    try { m = await canale.ricevi(); }
+    catch (e) { nota("il canale di controllo si e' rotto: " + e); return; }
+    if (!m) { nota("il server ha chiuso il canale di controllo (FIN)"); return; }
+    const l = new Lettore(m.corpo);
+    if (m.tipo === TIPO.CONGEDO) {
+      const mot = l.u8();
+      esito(MOTIVO[mot] || ("congedato, motivo 0x" + mot.toString(16)), false);
+      return;
+    }
+    if (m.tipo === TIPO.TELA) {
+      const esito_tela = l.u8(), motivo = l.u8(), tl = l.u32(), ta = l.u32();
+      if (esito_tela === 1) {
+        schermo.tela_adattata(tl, ta);
+      } else {
+        /* ⛔ §7.1: se il compositore non sa ridimensionare, il client DEVE
+           mostrare la voce come spenta.  NON DEVE fingere che sia riuscito. */
+        nota("TELA(RIFIUTATA, motivo " + motivo + "): la tela resta " + tl
+           + "×" + ta + ", e la voce «adatta il desktop» va mostrata spenta");
+      }
+      continue;
+    }
+    if (m.tipo === TIPO.CURSORE_FORMA) {
+      /* ⚠ Conosciuto e non ancora usato: alla fase 2 non c'e' puntatore.  Si
+         DICE — un messaggio saltato in silenzio e uno mai arrivato hanno lo
+         stesso aspetto (§5.5 e' della fase 4). */
+      nota("CURSORE_FORMA ricevuto e non usato: la fase 2 non disegna il "
+         + "puntatore");
+      continue;
+    }
+    await congeda(MOT.ERRORE_PROTOCOLLO, "sul canale di controllo e' arrivato "
+      + "il tipo 0x" + m.tipo.toString(16) + ", che questa pagina non aspetta "
+      + "dopo SESSIONE");
+    return;
+  }
+}
+
+/* ⛔ GLI STREAM UNIDIREZIONALI DEL SERVER — §2.5, e il canale si riconosce dal
+ * BYTE ALTO DEI PRIMI DUE BYTE, mai dal numero dello stream.
+ *
+ * ⭐ Ogni stream si legge nel SUO compito: §5.1 fa di ogni fotogramma uno
+ *    stream apposta perche' uno lento non blocchi quelli dopo, e leggerli in
+ *    fila dentro un `for await` unico rimetterebbe il blocco di testa che il
+ *    protocollo e' stato disegnato per togliere.
+ *
+ * ⛔ E il FIN si distingue dal RESET: uno stream chiuso con FIN porta un
+ *    fotogramma completo, uno AZZERATO porta un fotogramma incompleto e NON si
+ *    consegna al decodificatore (§6.2).  In WebTransport la differenza si legge
+ *    cosi': il `read()` che finisce con `done` e' un FIN, quello che LANCIA e'
+ *    un `RESET_STREAM`. */
+function avvia_video(wt, congeda) {
+  (async function () {
+    let lettore;
+    try { lettore = wt.incomingUnidirectionalStreams.getReader(); }
+    catch (e) { nota("niente stream unidirezionali: " + e); return; }
+    for (;;) {
+      let r;
+      try { r = await lettore.read(); }
+      catch (e) { nota("gli stream unidirezionali si sono fermati: " + e); return; }
+      if (r.done) return;
+      leggi_uno_stream(r.value, congeda);
+    }
+  })();
+}
+
+async function leggi_uno_stream(stream, congeda) {
+  const lettore = stream.getReader();
+  let pezzi = [], quanti = 0, completo = true;
+  for (;;) {
+    let r;
+    try { r = await lettore.read(); }
+    catch (e) {
+      /* ⛔ Qui casca il `RESET_STREAM`: i byte gia' arrivati non sono un
+         fotogramma corto, sono un fotogramma ABBANDONATO. */
+      completo = false;
+      break;
+    }
+    if (r.done) break;
+    pezzi.push(r.value); quanti += r.value.length;
+    /* Il tetto di §6.2: 16 MiB.  Chi ne riceve uno piu' lungo chiude, invece di
+       continuare ad accumulare. */
+    if (quanti > 16 * 1024 * 1024) {
+      await congeda(MOT.ERRORE_PROTOCOLLO, "uno stream video oltre i 16 MiB "
+        + "che §6.2 concede: si chiude invece di continuare ad accumulare");
+      return;
+    }
+  }
+  const byte = new Uint8Array(quanti);
+  let o = 0;
+  for (const p of pezzi) { byte.set(p, o); o += p.length; }
+  if (quanti < 2) {
+    /* ⚠ Meno di due byte: non c'e' nemmeno il `tipo`, quindi non si sa nemmeno
+       di che canale sia.  §3: quel che non si capisce chiude. */
+    if (!completo) { nota("uno stream unidirezionale azzerato prima dei due "
+                        + "byte del tipo: buttato"); return; }
+    await congeda(MOT.ERRORE_PROTOCOLLO, "uno stream unidirezionale chiuso con "
+      + "FIN dopo " + quanti + " byte: non c'e' nemmeno il campo `tipo` di §2.5");
+    return;
+  }
+  const alto = byte[0];
+  if (alto === CANALE.VIDEO) { schermo.stream_video(byte, completo); return; }
+  if (alto === CANALE.APPUNTI) {
+    nota("uno stream di appunti (0x02) ricevuto e non usato: la fase 2 non ha "
+       + "gli appunti (§5.4 e' della fase 5)");
+    return;
+  }
+  await congeda(MOT.ERRORE_PROTOCOLLO, "uno stream unidirezionale del server "
+    + "col byte alto 0x" + alto.toString(16) + ": §2.5 ammette 0x03 (video) e "
+    + "0x02 (appunti), e il canale non si riconosce dal numero dello stream");
 }
 
 $("modulo").addEventListener("submit", async (ev) => {

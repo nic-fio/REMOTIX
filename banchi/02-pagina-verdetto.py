@@ -218,6 +218,40 @@ def controlli(righe):
             or d.get("esito") == "SEQUENZA_ASSENTE"
         if not ha_causa:
             mute.append(d.get("prova"))
+    # ⛔⭐ P9 — IL CONTROLLO POSITIVO DEL PERCORSO DEL PRODOTTO, e c'e' solo nei
+    #    giri puntati sul prodotto (`02-pagina-prodotto.html`).
+    #
+    # P4 dice «questo MOTORE porta un video fino al pixel», e lo dice
+    # decodificando VP9 nella pagina del banco — perche' `RCP.md` §4.3 non ha
+    # VP9 e il prodotto non lo sa fare per decisione.  ⛔ Da solo non basta piu':
+    # con P4 verde e HEVC a zero, «HEVC non arriva su questo motore» e «la
+    # catena del PRODOTTO non funziona» hanno ancora lo stesso aspetto.
+    #
+    # ⇒ P9 chiude quel buco con AV1 — che `[M]` 12 agosto 2026 arriva al pixel
+    #   in tutte e quattro le caselle, con GPU e senza — fatto passare per
+    #   l'oggetto `Schermo` del prodotto: intestazione di §6.2, regole di §5.2,
+    #   `VideoDecoder` e tela del prodotto.  Se P9 e' verde, un «no» su HEVC e'
+    #   di HEVC; se P9 e' rosso mentre P4 e' verde, il «no» e' del prodotto.
+    prodotto = [d for d in righe if d.get("bersaglio") == "prodotto"]
+    if prodotto:
+        av1 = [d for d in prodotto
+               if d.get("tipo") == "SEQUENZA" and "-av1-" in (d.get("prova") or "")]
+        buone = [d for d in av1 if d.get("celle_giuste") == CELLE]
+        if not av1:
+            fuori["P9"] = ("assente", "nessuna sequenza AV1 e' stata data al "
+                                      "prodotto")
+        elif buone:
+            fuori["P9"] = ("verde", f"AV1 arriva al pixel ATTRAVERSO IL "
+                                    f"PRODOTTO: {len(buone)} sequenze su "
+                                    f"{len(av1)} a {CELLE}/{CELLE} celle — la "
+                                    "catena intestazione→regole→decodifica→tela "
+                                    "del prodotto ESISTE")
+        else:
+            fuori["P9"] = ("rosso", "nessuna sequenza AV1 arriva al pixel "
+                                    "attraverso il prodotto: ⛔ il «no» non e' "
+                                    "di HEVC, e' della catena del prodotto — su "
+                                    "HEVC questo giro non scrive niente")
+
     if zeri == 0:
         fuori["P6"] = ("verde", "nessuna sequenza e' rimasta a zero disegni: "
                                 "non c'e' nessuno zero da spiegare")
@@ -313,13 +347,17 @@ def stampa(giro, righe):
               "e le righe qui sotto sono un giro a meta'")
 
     c = controlli(righe)
-    print("\n    -- i controlli che rendono valido il banco")
-    for nome in ("P1", "P2", "P3", "P4", "P5", "P6"):
+    bersaglio = righe[0].get("bersaglio") or "il banco"
+    print(f"\n    -- i controlli che rendono valido il banco  (bersaglio: "
+          f"\033[1m{bersaglio}\033[0m)")
+    # ⚠ P9 esiste solo nei giri puntati sul prodotto: elencarlo sempre lo
+    #   farebbe leggere come «non eseguito» dove non ha senso.
+    quali = ["P1", "P2", "P3", "P4", "P5", "P6"] + (["P9"] if "P9" in c else [])
+    for nome in quali:
         esito, frase = c.get(nome, ("assente", "non eseguito"))
         segno = {"verde": VERDE, "rosso": ROSSO}.get(esito, GIALLO)
         print(f"      {segno}  {nome}: {frase}")
-    valido = all(c.get(n, ("assente",))[0] == "verde"
-                 for n in ("P1", "P2", "P3", "P4", "P5", "P6"))
+    valido = all(c.get(n, ("assente",))[0] == "verde" for n in quali)
 
     m = misura(righe)
     print("\n    -- la misura: che cosa arriva al PIXEL")

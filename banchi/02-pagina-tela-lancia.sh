@@ -74,6 +74,25 @@
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
+# ---------------------------------------------------------------------------
+# ⭐ IL BERSAGLIO — 12 agosto 2026, quando il prodotto e' esistito
+#
+#   BERSAGLIO=banco     `02-pagina-tela-prova.html`     misura che cosa fa un
+#                                                       `VideoDecoder` quando la
+#                                                       tela cambia
+#   BERSAGLIO=prodotto  `02-pagina-tela-prodotto.html`  misura se `src/pagina.html`
+#                                                       APPLICA le regole di
+#                                                       `RCP.md` §5.2 e §6.2
+#
+# ⛔ Sono due domande diverse: il decodificatore puo' comportarsi come misurato
+#    e il client sbagliare lo stesso, perche' quelle regole sono DEL CLIENT.
+BERSAGLIO=${BERSAGLIO:-banco}
+case "$BERSAGLIO" in
+banco)    PAGINA=02-pagina-tela-prova.html;    VERDETTORE=02-pagina-tela-verdetto.py ;;
+prodotto) PAGINA=02-pagina-tela-prodotto.html; VERDETTORE=02-pagina-tela-prodotto-verdetto.py ;;
+*) echo "NO  BERSAGLIO dev'essere «banco» o «prodotto», non «$BERSAGLIO»"; exit 2 ;;
+esac
+
 PORTA=${PORTA:-7533}
 SCHERMO=${SCHERMO:-:76}
 TELA=${TELA:-1280x1024}
@@ -200,11 +219,19 @@ prova_motore()
 	fi
 	inf "versione: $("$binario" --version 2>&1 | head -1)"
 
+	# ⛔ Il prefisso cambia solo per il prodotto: rinominare anche i giri del
+	#    banco farebbe fallire la certificazione gia' fatta, che li ripesca.
 	local giro="f25t-$nome-$(date +%s)"
+	[ "$BERSAGLIO" = prodotto ] && giro="f25tp-$nome-$(date +%s)"
 	GIRI+=("$giro")
-	local scena="$SCHERMO-$TELA"
-	[ "$SCHERMO" = ":0" ] || [ -n "${SCHERMO_VERO:-}" ] || scena="xvfb-$scena"
-	local url="http://127.0.0.1:$PORTA/02-pagina-tela-prova.html?giro=$giro&scena=$scena"
+	# ⛔ La scena dice anche SE E' FINTA O VERA, per esteso (CODER.md §3.2).
+	local scena
+	if [ "$SCHERMO" = ":0" ] || [ -n "${SCHERMO_VERO:-}" ]; then
+		scena="schermo-VERO-$SCHERMO"
+	else
+		scena="xvfb-FINTO-$SCHERMO-$TELA"
+	fi
+	local url="http://127.0.0.1:$PORTA/$PAGINA?giro=$giro&scena=$scena"
 	[ -n "$GUASTO" ] && url="$url&guasta=$GUASTO"
 
 	local prima_richieste=0
@@ -269,7 +296,7 @@ if [ "${#GIRI[@]}" -eq 0 ]; then
 	ko "nessun motore provato: non e' un esito, e' un banco che non ha misurato"
 	exit 1
 fi
-python3 "$QUI/02-pagina-tela-verdetto.py" "${GIRI[@]}"
+python3 "$QUI/$VERDETTORE" "${GIRI[@]}"
 VERDETTO=$?
 [ "$VERDETTO" -ne 0 ] && ESITO=1
 
