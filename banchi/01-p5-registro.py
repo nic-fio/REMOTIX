@@ -53,6 +53,19 @@ il server, quindi il server e' il lato giusto).
   proverebbe che questa macchina raggiunge il server, non che il motore in
   prova ci sia arrivato — e sono due fatti diversi, uno dei quali e' proprio
   quello in prova.
+
+===========================================================================
+⭐ IL PASSO NUOVO DEL 12 AGOSTO 2026 — `impronta-ritirata` (difetto D11)
+
+Questo attrezzo contava tutto quel che serve a dire «la stretta di mano e'
+arrivata a `SESSIONE`», ⛔ e non contava **il ritiro dell'impronta**, che e' la
+cura con cui `RCP.md` §4.1-bis chiude il rilievo **R1.14**.  ⇒ Un prodotto che
+smettesse di ritirare — cioe' R1.14 vivo — sarebbe passato di qui **verde**,
+perche' l'unico controllo sull'impronta guardava i VALORI, e su questo prodotto
+il valore servito viene scavalcato dal ritiro.
+
+⭐ Adesso il ritiro si conta dal registro del server (`GET /impronta da …`), sul
+   segmento della gamba, e ha il suo denominatore: **la pagina servita**.
 """
 import argparse
 import json
@@ -169,6 +182,34 @@ def cerca(giro, da, tipo, ultima=True):
 #   sbagliato.
 PASSI = [
     ("pagina-servita",   r"GET / da ",                                   1, None),
+    # ⛔⭐ IL RITIRO DELL'IMPRONTA — passo NUOVO, 12 agosto 2026, difetto D11.
+    #
+    # `RCP.md` §4.1-bis, rilievo **R1.14**: se l'impronta che la pagina ha in
+    # mano e quella del certificato di sessione divergono, la sessione
+    # WebTransport non si apre e **nessun errore nomina l'impronta** — il
+    # sintomo che arriva a chi guarda e' «WebTransport non si connette», che ha
+    # almeno quattro cause diverse.  ⭐ Delle due cure §4.1-bis ne sceglie una,
+    # e il prodotto l'ha applicata: **la pagina RITIRA `/impronta` prima di ogni
+    # tentativo** (`src/pagina.html`, funzione `impronta()`), e usa quella
+    # servita con la pagina solo come ripiego dichiarato.
+    #
+    # ⛔ E FINO A OGGI NESSUNA RIGA DI QUESTO BANCO GUARDAVA IL RITIRO.  Il
+    #    banco confrontava i VALORI — l'impronta scritta nella pagina servita
+    #    contro quella dell'endpoint — cioe' la cosa che su questo prodotto
+    #    **non decide niente**, perche' il valore servito viene scavalcato dal
+    #    ritiro.  ⇒ Il guasto di catalogo faceva virare P5 per una ragione piu'
+    #    debole di quella che dichiarava (difetto **D11**), e una pagina che
+    #    smettesse di ritirare — cioe' R1.14 vivo — sarebbe passata VERDE.
+    #
+    # ⭐ Si guarda dal lato che RICEVE (`CODER.md` §3.8): il ritiro e' una
+    #    richiesta HTTP ordinaria, e `src/pagina.c` la registra prima di
+    #    servirla — `GET /impronta da <indirizzo>`.  «La pagina ha chiamato
+    #    fetch» e «la richiesta e' arrivata» sono due fatti diversi, e qui si
+    #    prende il secondo.
+    # ⚠ Il conteggio e' sul SEGMENTO della gamba, quindi il `curl /impronta`
+    #   che il lanciatore fa al passo 3 — molto prima del primo marcatore —
+    #   non ci entra, e non puo' coprire un ritiro mancante.
+    ("impronta-ritirata", r"GET /impronta da ",                          1, None),
     ("canale-controllo", r"canale di controllo aperto da ",              1, None),
     ("negoziato",        r"negoziato video\.codec=",                     1, None),
     ("credenziali",      r"CREDENZIALI ricevute utente=",                1, None),
@@ -325,6 +366,50 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
             voce["ok"] = None
         esito["passi"][nome] = voce
 
+    # ── ⛔ IL RITIRO DELL'IMPRONTA (§4.1-bis, R1.14) — il passo che copre D11 ─
+    #
+    # ⛔ Si giudica **solo dove c'e' un tentativo di sessione**: le gambe
+    #    `sessione` e `respinto` caricano la pagina del prodotto e provano ad
+    #    aprire WebTransport, quindi li' `impronta()` deve essere passata di
+    #    li'.  La gamba `niente-sessione` non passa dalla pagina del prodotto.
+    #
+    # ⛔⭐ E IL DENOMINATORE E' «LA PAGINA E' STATA SERVITA».  Senza, «la pagina
+    #     non ritira» e «la pagina non e' mai arrivata al browser» avrebbero lo
+    #     stesso aspetto — che e' la forma **E8** di `REVIEWER.md` §2, e in
+    #     questo banco l'ha gia' pagata il congedo (uno zero da segmento
+    #     sbagliato ha la stessa faccia di uno zero vero).  ⇒ Se la pagina non
+    #     e' stata servita, il ritiro NON si giudica: lo dice gia' il passo
+    #     `pagina-servita`, e un secondo rosso sullo stesso fatto conterebbe due
+    #     volte lo stesso guasto.
+    ritiri = esito["passi"]["impronta-ritirata"]["trovate"]
+    servite = esito["passi"]["pagina-servita"]["trovate"]
+    if atteso in ("sessione", "respinto"):
+        if servite == 0:
+            esito["ritiro_impronta"] = "NON-GIUDICABILE (la pagina non e' stata servita)"
+            print(f"{GIALLO}⚠{GRIGIO}   il ritiro di /impronta non si giudica: in questo "
+                  f"segmento la pagina non e' stata servita nemmeno una volta,")
+            print("      e «non ritira» e «non e' mai arrivata» sarebbero lo stesso zero.")
+        else:
+            approvati += 1
+            esito["ritiro_impronta"] = ritiri
+            if ritiri == 0:
+                print(f"{ROSSO}NO{GRIGIO}  ⛔ NESSUN RITIRO DI /impronta IN QUESTA GAMBA "
+                      f"(§4.1-bis): la pagina e' stata")
+                print(f"      servita {servite} volta/e e non ha chiesto «/impronta» nemmeno una.")
+                print("      ⛔ §4.1-bis impone di RITIRARE l'impronta prima di ogni tentativo:")
+                print("      senza, una scheda aperta da due settimane tiene l'impronta di un")
+                print("      certificato gia' ruotato, la sessione non si apre e nessun errore")
+                print("      la nomina — che e' il rilievo R1.14 per intero.")
+                print("      ⚠ E qui la sessione puo' essersi aperta lo stesso: l'impronta")
+                print("      servita e' fresca perche' il server e' stato riacceso adesso.")
+                print("      ⛔ Il difetto NON e' il valore: e' che il ritiro non c'e' piu'.")
+                guasti += 1
+            else:
+                print(f"{VERDE}OK{GRIGIO}  ⭐ la pagina ha ritirato «/impronta» prima del "
+                      f"tentativo: {ritiri} volta/e (§4.1-bis)")
+    else:
+        esito["ritiro_impronta"] = "—  (dichiarato, non giudicato: questa gamba non passa dalla pagina)"
+
     # ── Le due strade del congedo (§3.1 punto 3) ────────────────────────────
     #
     # ⛔ Non e' un di piu': §3.1 punto 3 ne prevede DUE, e una delle due puo'
@@ -423,6 +508,8 @@ def stampa_passi(esito):
             extra = f"  valori={voce['valori']}"
         print(f"    {segno}  {nome:<20} trovate={voce['trovate']:<3} "
               f"atteso={voce['atteso']}{extra}")
+    print(f"    --  ritiro di /impronta prima del tentativo (§4.1-bis): "
+          f"{esito.get('ritiro_impronta', '—')}")
     c = esito.get("congedo") or {}
     print(f"    --  congedo: sul canale {c.get('sul_canale_di_controllo')}, "
           f"nel codice di chiusura {c.get('nel_codice_di_chiusura')} "

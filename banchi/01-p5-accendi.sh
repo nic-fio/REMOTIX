@@ -25,10 +25,20 @@
 #   2. `&` dentro tre livelli di virgolette (`ssh` → `enter.sh` → `bash -c`) non
 #      arriva dove sembra.  ⭐ Un file non ha livelli di virgolette.
 #
-# ⛔ IL PERIMETRO: tutto sta dentro 7501-7502, ban `tmp/sera-p15-ban`, socket
-#    `tmp/sera-p15.sock`, certificati `tmp/sera-p15-cert`, registro
-#    `tmp/sera-p15-browser.log`.  ⚠ La 7448 ha un server vivo che non e' di
-#    questo giro, la 7447 e' l'innesto di B2, la 7511 e' il banco del congedo.
+# ⛔ IL PERIMETRO: la porta (`PORTA`) piu' i cinque file che portano il
+#    **prefisso** (`PREFISSO`, predefinito `sera-p15`) — ban, socket,
+#    certificati, registro e file del pid.  ⚠ La 7448 ha un server vivo che non
+#    e' di questo giro, la 7447 e' l'innesto di B2, la 7511 e' il banco del
+#    congedo, e la 7501 e' il bersaglio di P5 gia' acceso.
+#
+#   ⭐ UN SECONDO BERSAGLIO, ACCANTO A QUELLO CHE C'E' GIA' (12 agosto 2026):
+#
+#       PREFISSO=p5r-7522 PORTA=7522 D=/srv/src/01-p5-copia-7522 \
+#         bash /srv/src/01-p5-accendi.sh accendi
+#
+#      ⛔ Il prefisso NON e' facoltativo quando si cambia porta: senza, i due
+#         bersagli si dividono lo stesso ban, lo stesso socket e lo stesso file
+#         del pid — cioe' `spegni` ammazzerebbe quello sbagliato.
 #
 # ⛔ E IL GUASTO SI INNESTA NELLA COPIA, MAI NEL PRODOTTO DI CASA: P5 vuole il
 #    server RIACCESO fra un passo e l'altro, e riaccendere il prodotto di casa
@@ -46,11 +56,30 @@ TMP=/srv/src/tmp
 PORTA=${PORTA:-7501}
 IND=${IND:-192.168.0.2}
 
-CERT=$TMP/sera-p15-cert
-BAN=$TMP/sera-p15-ban
-SOCK=$TMP/sera-p15.sock
-LOG=$TMP/sera-p15-browser.log
-PIDF=$TMP/sera-p15.pid
+# ⛔⭐ IL PREFISSO — cura del 12 agosto 2026, e nasce da un difetto che stava
+#     per essere commesso invece che da uno gia' pagato.
+#
+# `PORTA` e `D` erano gia' regolabili, ⛔ ma il ban, il socket, il registro, il
+# certificato e il **file del pid** erano scritti `sera-p15` in chiaro.  ⇒ Un
+# secondo bersaglio acceso su un'altra porta con questo stesso script avrebbe:
+#
+#   · cancellato `sera-p15-ban` e `sera-p15.sock` del bersaglio gia' vivo
+#     (li' sotto c'e' un `rm -f` nel passo «accendi»);
+#   · **sovrascritto `sera-p15.pid`**, e allora `spegni` avrebbe ammazzato il
+#     processo sbagliato — o nessuno, lasciando il primo bersaglio vivo e senza
+#     nessun file che dica qual era il suo pid.
+#
+# ⚠ E' esattamente la regola «un banco in parallelo ha porta, ban-file e socket
+#   PROPRI»: qui il perimetro sta in UNA variabile, cosi' non se ne puo'
+#   dimenticare un pezzo.  Il predefinito non cambia: chi lanciava prima misura
+#   quel che misurava.
+PREFISSO=${PREFISSO:-sera-p15}
+
+CERT=$TMP/$PREFISSO-cert
+BAN=$TMP/$PREFISSO-ban
+SOCK=$TMP/$PREFISSO.sock
+LOG=$TMP/$PREFISSO-browser.log
+PIDF=$TMP/$PREFISSO.pid
 
 mkdir -p "$TMP"
 
@@ -129,6 +158,16 @@ echo "OK  porta $PORTA libera (ss ha guardato e ha stampato $n righe su di lei)"
 echo "--  binario  : $(sha256sum "$D/remotix" | cut -c1-16)…  $(stat -c '%y' "$D/remotix")"
 echo "--  pagina   : $D/pagina.html  ($(sha256sum "$D/pagina.html" | cut -c1-16)…, $(stat -c%s "$D/pagina.html") byte)"
 
+# ⛔ E PRIMA DI CANCELLARE QUALCOSA, SI GUARDA SE E' DI QUALCUN ALTRO CHE VIVE.
+#    Un `rm` sul socket e sul ban di un bersaglio acceso non da' nessun errore e
+#    lo lascia senza il comando di sblocco di §4.4-bis, in silenzio.
+if [ -f "$PIDF" ] && [ -d "/proc/$(cat "$PIDF" 2>/dev/null)" ]; then
+	echo "NO  ⛔ «$PIDF» dice pid $(cat "$PIDF"), ed e' VIVO: un altro bersaglio"
+	echo "    con questo stesso prefisso («$PREFISSO») e' gia' acceso.  Non gli"
+	echo "    cancello ban e socket sotto i piedi.  ⇒ Spegnilo, o usa un PREFISSO"
+	echo "    tuo:  PREFISSO=… PORTA=… bash $0 accendi"
+	exit 2
+fi
 rm -f "$LOG" "$PIDF" "$SOCK" "$BAN" "$BAN.nuovo"
 mkdir -p "$CERT"
 # ⭐ Si accende DA DENTRO la sua cartella: il prodotto cerca `pagina.html`

@@ -134,6 +134,42 @@
 #   3. **Le proprieta' di trasporto delle sei di B2** — datagram, credito uni,
 #      migrazione, niente 0-RTT, `allowPooling` — non le guarda: le guarda
 #      `01-b2-sonda-trasporto.py`, che e' di un altro (agente 4).
+#
+# ===========================================================================
+# ⭐ QUEL CHE QUESTO BANCO HA IMPARATO A GUARDARE IL 12 AGOSTO 2026 — e prima
+#    non guardava.  Sono i due difetti **D11** e **D12** di
+#    `fasi/rapporti/DIFETTI-12-agosto.md`.
+#
+#   D11 — **IL RITIRO DELL'IMPRONTA.**  Il passo 3 qui sotto confronta due
+#         VALORI: l'impronta scritta nella pagina servita contro quella che
+#         `/impronta` dichiara.  ⛔ Ma su questo prodotto quel confronto non
+#         decide niente, perche' §4.1-bis e' applicato e la pagina **ritira**
+#         `/impronta` prima di ogni tentativo: il valore servito viene
+#         scavalcato.  ⇒ Un prodotto che smettesse di ritirare — cioe' il
+#         rilievo **R1.14** vivo — passava di qui **verde**.
+#         ⭐ Adesso il ritiro si conta, e si conta dal lato che RICEVE: la riga
+#            `GET /impronta da …` nel registro del server, dentro il segmento
+#            della gamba (`01-p5-registro.py`, passo `impronta-ritirata`).
+#         ⚠ E il guasto che lo certifica non e' quello del catalogo: e'
+#           `banchi/01-p5-guasto-ritiro.py`, che toglie **il ritiro** invece del
+#           valore.  `[M]` 12 agosto 2026, tre giri: 0 → 4 → 0.
+#
+#   D12 — **LA PAROLA D'ORDINE IN `ps`.**  Vedi `digita_parola` piu' sotto, e
+#         il passo **2-bis**, che la cura non la dichiara: la MISURA, con il suo
+#         controllo positivo.
+#
+# ⚠⛔ E UNA COSA SU QUESTO RIQUADRO, perche' tacerla sarebbe la stessa forma che
+#     questo banco passa la vita a combattere.  L'ho scritto **mentre il terzo
+#     giro girava**, e `bash` legge lo script per OFFSET: spostare venticinque
+#     righe in testa a un file in esecuzione puo' farlo riprendere in mezzo a una
+#     riga.  ⛔ Quel giro e' stato buttato e rifatto da capo con il file rimesso
+#     **byte per byte** com'era negli altri due — non perche' si fosse visto un
+#     danno, ma perche' «non si e' visto» e «non c'e' stato» sono la stessa cosa
+#     che §1.9 vieta di confondere.
+#     ⭐ E che questo riquadro non cambi il banco non e' una promessa: `[M]` 12
+#        agosto 2026, tolti commenti e righe vuote, il file che ha girato i tre
+#        passi e questo hanno **676 righe di codice identiche**, sha256
+#        `001d0322123608d3…` tutt'e due.
 # ===========================================================================
 set -uo pipefail
 
@@ -154,7 +190,14 @@ PAROLA=${PAROLA:-parola-di-prova}
 PAROLA_STORTA=${PAROLA_STORTA:-questa-e-sbagliata-apposta-P5}
 LOG_SERVER=${LOG_SERVER:-/media/REMOTIX/src/remotix-browser.log}
 SOCK=${SOCK:-/srv/src/b8-comando.sock}
-COPIE=$QUI/01-p5-copie
+# ⛔ LE FOTOGRAFIE HANNO UN NOME FISSO, quindi due giri di seguito si
+#    sovrascrivono a vicenda — e le fotografie di questo banco hanno gia'
+#    trovato DUE difetti che nessun conteggio aveva visto (la scheda di troppo,
+#    la striscia dei dati di Firefox).  ⚠ Buttare le prove di un giro per farne
+#    un altro e' gratis solo finche' non serve confrontarli: in una
+#    certificazione sano → guasto → risanato servono tutt'e tre.
+#    ⇒ La cartella si puo' spostare, e chi certifica ne da' una per passo.
+COPIE=${COPIE:-$QUI/01-p5-copie}
 # ⛔⭐ IL TRASPORTO DEI COMANDI REMOTI SI PUO' SCEGLIERE — cura della tarda
 #     serata dell'11 agosto 2026, ed e' il punto 3 dei quattro che il catalogo
 #     dei guasti (`01-b12-guasti.py`, voce P5) chiede PRIMA dei tre giri.
@@ -214,11 +257,90 @@ congedo()
 	[ -n "$PID_RACC" ] && { kill "$PID_RACC" 2>/dev/null; wait "$PID_RACC" 2>/dev/null; }
 	[ -n "$PID_X" ]    && { kill "$PID_X" 2>/dev/null; wait "$PID_X" 2>/dev/null; }
 	sleep 1
+	# ⛔ D12: la parola prima del resto, e con il suo nome — `rm -rf "$T"` la
+	#    porterebbe via lo stesso, ma se `$T` non si cancellasse (un montaggio,
+	#    un file aperto) la parola resterebbe sul disco senza che nessuno lo
+	#    dica.  Una cancellazione che si puo' perdere non e' una cancellazione.
+	rm -f "${PAROLA_FILE:-}"
 	rm -rf "$T"
 }
 trap congedo EXIT
 
 X() { env -u WAYLAND_DISPLAY DISPLAY=$SCHERMO "$@"; }
+
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ QUI C'ERA `X xdotool type --clearmodifiers --delay 40 "$parola"`, e
+#    `xdotool` e' un PROCESSO: la parola stava nel suo `argv`, cioe' in
+#    `/proc/<pid>/cmdline`, che su Linux e' **leggibile da chiunque** — un `ps`
+#    lanciato da un altro utente durante la gamba `p-sessione` la stampava per
+#    intero.  ⚠ E i banchi di questa macchina girano mentre ci lavorano altri.
+#
+# ⭐ LA STRADA BUONA ESISTEVA GIA' IN CASA, e questa e' la sua estensione — non
+#    un terzo modo: `banchi/01-b10-lancia.sh` scrive la parola di `prova2` in un
+#    file `0600` con `printf` (un **builtin** della shell: nemmeno la scrittura
+#    passa per un processo con la parola in `argv`) e la cancella con una
+#    `trap`.  Qui la stessa cosa, piu' il pezzo che B10 non aveva bisogno di
+#    risolvere: **come si BATTE una parola senza metterla in `argv`**.
+#
+#      `xdotool type --file <percorso>` — la legge dal file invece che dagli
+#      argomenti.  ⚠ Nel `cmdline` finisce il PERCORSO, non la parola, e il file
+#      e' `0600`: chi non e' noi non lo apre.
+#
+# ⛔ E il file si scrive SENZA a-capo in fondo: `xdotool` batte quel che trova, e
+#    un `\n` diventerebbe un `Invio` che manda il modulo prima del tempo.
+#    (`printf '%s'`, non `printf '%s\n'` — che e' l'unica differenza con B10,
+#    dove il file lo rilegge Python e l'a-capo non fa danno.)
+#
+# ⭐ `[M]` 12 agosto 2026, controllo positivo su un `Xvfb` a parte con `xev`: un
+#    file `0600` che contiene `ciao-mondo` produce esattamente i dieci tasti
+#    `c i a o - m o n d o`, e **nessun `Return`** in coda.
+#
+# ⚠ E la parola sbagliata passa dalla stessa strada, anche se non e' il segreto
+#   di nessuno: due strade per la stessa cosa sono la forma **E2** — due
+#   comportamenti sotto la stessa etichetta — e qui non comprerebbero niente.
+PAROLA_FILE=$T/parola-da-battere
+
+digita_parola() # $1 = la parola da battere.  ⛔ E' una FUNZIONE, non un
+{               #      programma: la chiamata non crea nessun `argv`.
+	local stato
+	# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro
+	#    intero: `umask 077` nudo resta addosso a tutto quel che viene dopo.
+	( umask 077; : > "$PAROLA_FILE" ) || return 2
+	chmod 600 "$PAROLA_FILE" || return 2
+	printf '%s' "$1" > "$PAROLA_FILE"
+	X xdotool type --clearmodifiers --delay 40 --file "$PAROLA_FILE"
+	stato=$?
+	# ⛔ E si cancella SUBITO, non alla fine del giro: la finestra in cui il
+	#    file esiste dev'essere quella della battuta e non un minuto.
+	rm -f "$PAROLA_FILE"
+	return "$stato"
+}
+
+# ⛔⭐ E CHE LA CURA ABBIA CHIUSO DAVVERO NON SI CREDE: SI GUARDA IN `ps`.
+#
+# `LEZIONI.md` §1.9: «non l'ho trovata» e «non ho guardato» hanno lo stesso
+# aspetto, e una cura dichiarata senza la misura che la prova e' la forma **E5**
+# — un fatto che era una deduzione.  ⛔ Qui il rischio e' peggio del solito: la
+# prova e' un'ASSENZA, e un'assenza si dimostra solo con accanto un controllo
+# positivo che dica «lo strumento, in quell'istante, stava guardando».
+#
+# ⛔ E IL CONTROLLO NON DEVE CREARE IL DIFETTO CHE CERCA: `ps` si legge in una
+#    variabile e il confronto lo fa **bash**.  Un `grep "$parola"` metterebbe la
+#    parola nell'`argv` del `grep`, e il guardiano sarebbe la falla.
+guardia_ps() # $1 = ago che NON deve comparire  ·  $2 = ago che DEVE comparire
+{
+	local i righe uno=0 due=0
+	for i in $(seq 1 25); do
+		righe=$(ps -ww -eo args)
+		[ -n "$1" ] && case "$righe" in *"$1"*) uno=$((uno + 1)) ;; esac
+		[ -n "$2" ] && case "$righe" in *"$2"*) due=$((due + 1)) ;; esac
+		sleep 0.08
+	done
+	printf '%s %s\n' "$uno" "$due" > "$T/guardia-ps"
+}
 
 registra() { python3 "$REG" aggiungi "$1" >/dev/null; }
 
@@ -295,6 +417,54 @@ else
 	DIM=$(X xdpyinfo 2>/dev/null | sed -n 's/^  dimensions: *\([0-9x]*\).*/\1/p' | head -1)
 	[ "$DIM" = "$MISURA" ] || { ko "⛔ chiesto $MISURA, letto ${DIM:-niente}"; exit 2; }
 	ok "schermo finto $SCHERMO — chiesto $MISURA, letto $DIM"
+fi
+
+# ---------------------------------------------------------------------------
+log "2-bis. ⛔ LA PAROLA D'ORDINE E IL «ps» — la cura di D12, MISURATA (A/B)"
+# ⛔ Le due meta' si fanno con LO STESSO strumento, nello stesso schermo e con
+#    la stessa durata: cambia solo **da dove `xdotool` prende quel che batte**.
+#    Un controllo positivo fatto con un altro attrezzo proverebbe che `ps`
+#    funziona, non che la cura ha chiuso questa strada.
+# ⚠ Si batte nel vuoto: qui nessuna finestra e' ancora aperta su $SCHERMO, e i
+#   tasti non arrivano a nessuno.  E' voluto — si misura il `cmdline`, non il
+#   testo che compare da qualche parte.
+PS_ESCA="p5-esca-ps-$GIRO"
+guardia_ps "$PS_ESCA" "" &
+PID_G=$!
+X xdotool type --clearmodifiers --delay 40 "$PS_ESCA"
+wait "$PID_G" 2>/dev/null
+A_VISTA=$(cut -d' ' -f1 "$T/guardia-ps")
+inf "A — la stessa battuta con il testo NELL'ARGV: «$PS_ESCA» visto $A_VISTA volte in ps"
+if [ "${A_VISTA:-0}" -lt 1 ]; then
+	ko "⛔ IL CONTROLLO POSITIVO NON PASSA: «ps» non ha visto in «argv» nemmeno un"
+	ko "   testo che ci stava di sicuro.  ⇒ Il «non l'ho vista» della meta' B non"
+	ko "   varrebbe niente, e questo banco non dichiara chiusa la cura di D12."
+	ESITO=1
+else
+	ok "⭐ «ps» vede l'argv di un «xdotool type»: lo strumento sa trovare quel che c'e'"
+fi
+
+guardia_ps "$PAROLA" "$PAROLA_FILE" &
+PID_G=$!
+digita_parola "$PAROLA"
+wait "$PID_G" 2>/dev/null
+B_PAROLA=$(cut -d' ' -f1 "$T/guardia-ps")
+B_FILE=$(cut -d' ' -f2 "$T/guardia-ps")
+inf "B — la battuta di adesso, dal file: la PAROLA vista $B_PAROLA volte, il"
+inf "    PERCORSO del file visto $B_FILE volte"
+if [ "${B_FILE:-0}" -lt 1 ]; then
+	ko "⚠ non ho visto in «ps» nemmeno il comando che stava battendo: allora il"
+	ko "  «zero» della parola e' «non ho guardato al momento giusto», non «non"
+	ko "  c'era».  ⛔ Non e' un verde, e si dichiara."
+	registra "{\"banco\":\"P5\",\"giro\":\"$GIRO\",\"tipo\":\"PS-PAROLA\",\"esito\":\"SENZA-DENOMINATORE\",\"parola_vista\":$B_PAROLA,\"file_visto\":$B_FILE,\"esca_vista\":$A_VISTA}"
+elif [ "${B_PAROLA:-1}" -gt 0 ]; then
+	ko "⛔⛔ LA PAROLA D'ORDINE E' ANCORA IN «ps»: la cura di D12 NON ha chiuso."
+	ESITO=1
+	registra "{\"banco\":\"P5\",\"giro\":\"$GIRO\",\"tipo\":\"PS-PAROLA\",\"esito\":\"ANCORA-IN-PS\",\"parola_vista\":$B_PAROLA,\"file_visto\":$B_FILE,\"esca_vista\":$A_VISTA}"
+else
+	ok "⭐⭐ D12 CHIUSO PER MISURA: nello stesso istante «ps» vedeva il comando"
+	ok "   («--file $PAROLA_FILE», $B_FILE volte) e NON vedeva la parola."
+	registra "{\"banco\":\"P5\",\"giro\":\"$GIRO\",\"tipo\":\"PS-PAROLA\",\"esito\":\"NON-IN-PS\",\"parola_vista\":$B_PAROLA,\"file_visto\":$B_FILE,\"esca_vista\":$A_VISTA}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -422,7 +592,7 @@ BUCO=$(tr -dc '\000' < "$T/reg0.txt" | wc -c)
 if [ "$BUCO" -gt 0 ]; then
 	inf "⚠ il registro scaricato ha $BUCO byte NUL: qualcuno l'ha troncato sotto"
 	inf "  il server, che scrive ancora al suo vecchio offset.  Le righe si"
-	inf "  leggono lo stesso (`grep -a`), ma il conto delle righe di prima e'"
+	inf "  leggono lo stesso («grep -a»), ma il conto delle righe di prima e'"
 	inf "  perduto — e questo banco non lo spaccia per «registro vuoto»."
 fi
 QUANTE=$(grep -ac "$MARCA_CANALE" "$T/reg0.txt")
@@ -711,7 +881,12 @@ gamba_pagina()
 	X xdotool type --clearmodifiers --delay 40 "$UTENTE" >/dev/null 2>&1
 	X xdotool key --clearmodifiers Tab >/dev/null 2>&1
 	sleep 1
-	X xdotool type --clearmodifiers --delay 40 "$parola" >/dev/null 2>&1
+	# ⛔ D12: la parola arriva da un file `0600`, mai da `argv` — vedi
+	#    `digita_parola` in testa a questo file.
+	if ! digita_parola "$parola"; then
+		ko "⛔ la parola non si e' potuta battere dal file: non e' «la parola e'"
+		ko "   sbagliata», e' «non l'ho battuta».  Il seguito non e' giudicabile."
+	fi
 	sleep 1
 	X xdotool key --clearmodifiers Return >/dev/null 2>&1
 

@@ -203,6 +203,18 @@ FILE_CHE_CONTANO = {
     #   invece di lasciarlo scoprire a un rosso (R12-A.31).
     "P1":  ["01-p1-prodotto.sh", "01-p1-dentro.sh", "remotix/pagina.c"],
     "P5":  ["01-p5-lancia.sh", "01-p5-registro.py", "remotix/pagina.c"],
+    # ⚠ P5R — 12 agosto 2026.  Senza questa riga la certificazione di P5R
+    #   esisteva ma NON portava impronte, cioe' era «non riverificabile»: una
+    #   riga che dice «certificato» e non sa dire **su che byte**.  ⛔ E
+    #   `--provabile P5R` usciva **0** proprio perche' non c'era niente da
+    #   confrontare — un verde vacuo, che e' peggio di un rosso.  Chiesta da
+    #   chi ha misurato il guasto, aggiunta dal coordinatore.
+    #   ⛔ E il file che conta e' `pagina.html`, non `pagina.c`: il guasto del
+    #     RITIRO vive nella pagina servita, e `src/pagina.c:590` la legge una
+    #     volta sola all'accensione — sono due file diversi e due guasti
+    #     ortogonali (misurato in tutt'e due i versi il 12 agosto).
+    "P5R": ["01-p5-lancia.sh", "01-p5-registro.py", "01-p5-guasto-ritiro.py",
+            "remotix/pagina.html"],
 }
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
@@ -1373,6 +1385,11 @@ def risolvi(p):
 #    cambia l'etichetta.
 ALTRI_POSTI = {
     "remotix/pagina.c": ["../src/pagina.c"],
+    # ⚠ Come sopra, per il guasto P5R: da CHUWI la pagina del prodotto sta in
+    #   `../src/`, sulla macchina di prova in `remotix/`.  Se non c'e' ne' di
+    #   qua ne' di la', `dove_sta` torna None e la riga dice «non so» invece
+    #   di arrotondare — che e' il comportamento giusto e va lasciato stare.
+    "remotix/pagina.html": ["../src/pagina.html"],
 }
 
 

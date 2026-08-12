@@ -108,11 +108,48 @@ congedo_finale()
 {
 	[ -n "$PID_BR" ] && { kill "$PID_BR" 2>/dev/null; wait "$PID_BR" 2>/dev/null; }
 	[ -n "$PID_X" ]  && { kill "$PID_X"  2>/dev/null; wait "$PID_X"  2>/dev/null; }
+	rm -f "${PAROLA_FILE:-}"
 	rm -rf "$T"
 }
 trap congedo_finale EXIT
 
 X() { env -u WAYLAND_DISPLAY DISPLAY=$SCHERMO "$@"; }
+
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026 insieme a `01-p5-lancia.sh`.
+#
+# ⛔ Qui c'era `X xdotool type … "$PAROLA"`, e `xdotool` e' un PROCESSO: la
+#    parola stava nel suo `argv`, cioe' in `/proc/<pid>/cmdline`, che su Linux
+#    e' leggibile da chiunque — un `ps` durante il giro la stampava per intero.
+#
+# ⭐ La strada e' quella gia' in casa (`banchi/01-b10-lancia.sh`): un file
+#    `0600` scritto con `printf`, che e' un **builtin** della shell — nemmeno la
+#    scrittura passa per un processo con la parola in `argv` — e cancellato
+#    subito.  ⛔ Senza a-capo in fondo: `xdotool` lo batterebbe come `Invio`.
+#
+# ⚠ Il pezzo in piu' rispetto a B10 e' `xdotool type --file`, che legge quel che
+#   deve battere da un file invece che dagli argomenti: nel `cmdline` finisce il
+#   PERCORSO, non la parola.  `[M]` controllo positivo con `xev`, 12 agosto
+#   2026: dieci caratteri battuti esatti e nessun `Return` in coda.
+# ⚠ La misura che PROVA la chiusura (un `ps` durante la battuta, con il suo
+#   controllo positivo) sta in `01-p5-lancia.sh`, passo 2-bis: e' lo stesso
+#   codice, e rifarla qui misurerebbe due volte la stessa cosa.
+PAROLA_FILE=$T/parola-da-battere
+
+digita_parola() # $1 = la parola da battere.  ⛔ E' una FUNZIONE, non un
+{               #      programma: la chiamata non crea nessun `argv`.
+	local stato
+	# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero.
+	( umask 077; : > "$PAROLA_FILE" ) || return 2
+	chmod 600 "$PAROLA_FILE" || return 2
+	printf '%s' "$1" > "$PAROLA_FILE"
+	X xdotool type --clearmodifiers --delay 40 --file "$PAROLA_FILE"
+	stato=$?
+	rm -f "$PAROLA_FILE"
+	return "$stato"
+}
+
 
 registra() { printf '%s\n' "$1" >> "$FUORI"; }
 
@@ -315,7 +352,9 @@ FINE
 	X xdotool key --clearmodifiers Tab >/dev/null 2>&1; sleep 1
 	X xdotool type --clearmodifiers --delay 40 "$UTENTE" >/dev/null 2>&1
 	X xdotool key --clearmodifiers Tab >/dev/null 2>&1; sleep 1
-	X xdotool type --clearmodifiers --delay 40 "$PAROLA" >/dev/null 2>&1; sleep 1
+	# ⛔ D12: la parola arriva da un file `0600`, mai da `argv`.
+	digita_parola "$PAROLA" || echo "    NO  ⛔ la parola non si e' potuta battere dal file"
+	sleep 1
 	X xdotool key --clearmodifiers Return >/dev/null 2>&1
 	# ⚠ Generoso apposta: §4.4-bis impone un secondo fisso e PAM ne ha aggiunti
 	#   fino a 2,6 in altre misure.
