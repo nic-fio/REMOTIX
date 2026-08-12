@@ -619,11 +619,37 @@ async function prova_sequenza(nome, opzioni) {
   }
   /* ⛔ GUASTO «scambio»: si danno i byte dell'ALTRO pattern.  Deve far cadere
      P3, e se non lo fa il banco non sta guardando l'immagine. */
+  /* ⛔ GUASTO «scambio»: si danno i byte dell'ALTRO pattern.  Deve far cadere
+     P5, e se non lo fa il banco non sta guardando l'immagine.
+
+     ⛔⭐ E IL CARICAMENTO DEL GEMELLO VA PROTETTO — `[M]` 12 agosto 2026,
+         difetto trovato **verificando una riga di catalogo invece di
+         scriverla**.  Non tutte le sequenze hanno un gemello: le `*-lossless-*`
+         e `A-10bitvero-*` esistono solo per il pattern A.  Senza questa
+         protezione `carica()` lanciava, l'eccezione saliva fino a `giro()`, e
+         **il giro finiva a meta'** — con le sequenze AV1, che vengono dopo, mai
+         eseguite.
+         ⚠ Il guasto restava «passato» perche' P5 virava lo stesso sulle prime
+           otto: un guasto che vira per la ragione giusta su meta' della corsa
+           e ferma l'altra meta' e' un guasto che **non ha certificato** quel
+           che credevo.  ⇒ Qui il gemello mancante si DICHIARA e si prosegue. */
   let pezzi = opzioni.pezzi;
+  let scambio_fatto = null;
   if (GUASTO === "scambio" && !opzioni.pezzi) {
-    const altro = await carica(nome.replace(/^A/, "Z").replace(/^B/, "A")
-                                   .replace(/^Z/, "B"));
-    pezzi = altro.pezzi;
+    const nome_gemello = nome.replace(/^A/, "Z").replace(/^B/, "A")
+                             .replace(/^Z/, "B");
+    try {
+      const altro = await carica(nome_gemello);
+      pezzi = altro.pezzi;
+      scambio_fatto = nome_gemello;
+    } catch (e) {
+      /* ⛔ Non si tace: «lo scambio non ha fatto virare niente» e «lo scambio
+         non e' stato fatto» sono due cose diverse, ed e' la stessa regola dei
+         denominatori applicata al guasto invece che alla misura. */
+      scambio_fatto = "NON APPLICABILE: manca " + nome_gemello;
+      scrivi("⚠ scambio non applicabile su " + nome + ": " + nome_gemello
+           + " non esiste — si prosegue SENZA scambio, e lo si dichiara", "boh");
+    }
   }
 
   pulisci(sequenza);
@@ -679,6 +705,10 @@ async function prova_sequenza(nome, opzioni) {
     /* i pixel, per F2.6 */
     letture: lettura.celle,
     contro_pattern: controlettura,
+    /* ⛔ Con quale sequenza e' stato fatto lo scambio, o perche' non si e'
+       potuto: senza, un guasto non applicato e un guasto inefficace hanno lo
+       stesso aspetto nel registro. */
+    scambio: scambio_fatto,
     /* ⛔ Quel che il flusso ha portato fino alla tela, e il tetto di 256 che
        gli sta accanto: vedi `misura_sfumatura()`.  Serve a F2.6 e all'occhio
        dell'utente, NON a concludere sui 10 bit. */

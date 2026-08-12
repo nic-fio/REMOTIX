@@ -243,12 +243,29 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 
 ## Che cosa aspetta l'utente
 
-### ⚖️ 1. Una decisione: HEVC esclude Firefox, e su Linux esclude chi non ha la GPU
+### ✅ 1. ~~Una decisione: HEVC esclude Firefox~~ — **decisa e chiusa il 12 agosto**
 
-Il progetto promette *«nessun client da installare — basta un browser moderno»*. Misurato oggi, con
-HEVC quella frase vale per **Chrome con una GPU che porta VA-API**. Firefox non dipinge, e Chrome
-senza GPU nemmeno. ⛔ **E la difesa dei tre motori indipendenti** — quella che `DECISIONI.md` §1.6
-comprava al posto dell'arbitro perduto — **su HEVC non c'è**.
+Il progetto promette *«nessun client da installare — basta un browser moderno»*, e con HEVC quella
+frase valeva per **Chrome con una GPU che porta VA-API**: Firefox non dipinge, e Chrome senza GPU
+nemmeno. ⛔ La difesa dei tre motori indipendenti — quella che `DECISIONI.md` §1.6 comprava al posto
+dell'arbitro perduto — **su HEVC non c'era**.
+
+✅ **L'utente ha deciso: `DECISIONI.md` §1.13** — HEVC **con un ripiego negoziato**, non un requisito
+dichiarato, perché `CODER.md` §4.2 impone che ogni dipendenza mancante abbia un ripiego e che il
+ripiego **si dichiari**.
+
+🔸 **E il secondo codec è AV1**, chiuso lo stesso giorno **su una misura** e non su una preferenza:
+`[M]` **quattro caselle su quattro** — i due motori, con GPU e senza — a **8 e a 10 bit**, e ⛔ **con
+`prefer-software`**, cioè senza dipendere dalla GPU. ⭐ AV1 riempie **esattamente** le tre caselle che
+HEVC lascia vuote, e ⭐⭐ i 10 bit su Chrome diventano per la prima volta **osservabili**
+(`VideoFrame.format` = `I420P10`, massimo del luma **870** — impossibile a 8 bit).
+
+⭐ **E non costa una riga di protocollo**: `av1` era già fra i valori ammessi di `RCP.md` §4.3 e aveva
+già `codec = 2` in §6.2 ⇒ **§9 non viene sfiorata**. ⛔ *VP9, che pure era misurato funzionare,
+sarebbe costato **RCP/2**: in §4.3 compare come l'esempio di valore che RCP/1 deve **ignorare**.*
+
+⛔ **L'ordine di preferenza non si rovescia**: resta `hevc,av1`. HEVC è ancora il primo, perché è
+quello che il telefono decodifica in hardware — ed è la domanda **S2**, ancora aperta.
 
 ### ⚖️ 2. La sonda del telefono, che non si fa da soli
 

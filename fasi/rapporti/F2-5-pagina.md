@@ -576,11 +576,175 @@ produrre (`LEZIONI.md` §2.4, `web.md` §1.2 A), e i PNG sono già su disco.
 
 | File | Righe **vere**, contate il 12 ago 2026 | Che cosa fa |
 |---|---|---|
-| `banchi/02-pagina-sequenze.py` | **1050** | costruisce le **16 sequenze** note con `libx265`: 2 pattern × (Main10, Main) × (Annex-B, hvcC), la coppia **lossless a 10 bit veri / 8 bit promossi**, e 2 di controllo **VP9**. Legge profilo e livello **dal flusso**, conta i livelli veri, e scrive i 28 byte di `RCP.md` §6.2 |
-| `banchi/02-pagina-prova.html` | **1064** | ⭐ **la pagina di prova**: decodifica, dipinge, **rilegge i pixel**, classifica, e li porta fuori. Non è il prodotto |
+| `banchi/02-pagina-sequenze.py` | **1219** | costruisce le **19 sequenze** note con `libx265`: 2 pattern × (Main10, Main) × (Annex-B, hvcC), la coppia **lossless a 10 bit veri / 8 bit promossi**, le **3 di AV1** (il ripiego) e 2 di controllo **VP9**. Legge profilo e livello **dal flusso**, conta i livelli veri, e scrive i 28 byte di `RCP.md` §6.2 |
+| `banchi/02-pagina-prova.html` | **1131** | ⭐ **la pagina di prova**: decodifica, dipinge, **rilegge i pixel**, classifica, e li porta fuori. Non è il prodotto |
 | `banchi/02-pagina-raccogli.py` | **169** | serve la pagina sulla **7515**, registra gli esiti e scrive i **PNG dei pixel** |
 | `banchi/02-pagina-verdetto.py` | **482** | ⛔ calcola il verdetto **fuori dal browser**, e tiene separate le due domande: «il banco funziona?» e «HEVC arriva al pixel?» |
 | `banchi/02-pagina-lancia.sh` | **374** | guida Chrome e Firefox su schermo finto o vero, con i denominatori |
 | `banchi/02-pagina-certifica.sh` | **210** | sano → 5 guasti → risanato, con gli attesi scritti prima |
 | `banchi/02-pagina-esiti.jsonl` | — | il registro, una riga per prova |
 | `banchi/02-pagina-pixel/` | — | ⭐ i PNG dei pixel dipinti: **la consegna a F2.6** |
+
+---
+
+# ⭐ Aggiunta del 12 agosto 2026 — AV1 come **ripiego negoziato**
+
+*F2.5 riaperta dal coordinatore per **una misura sola**. La ragione: l'utente ha deciso HEVC **con un
+ripiego negoziato**, invece di dichiarare un requisito «Chrome con VA-API» — e la decisione è
+inciampata nel protocollo.*
+
+## ⛔ Perché AV1 e non il VP9 che questo banco aveva già in mano
+
+Il VP9 di questo banco era il candidato naturale: **8 celle su 8 in tutte e quattro le caselle**, ed
+era già lì come controllo positivo. ⛔ Ma è **`RCP.md` a decidere**, non la comodità del banco:
+
+| | |
+|---|---|
+| `RCP.md` §4.3 | i valori ammessi di `video.codec` in RCP/1 sono **`hevc` e `av1`** |
+| ⛔ e `vp9` compare **come esempio del contrario** | è il valore canonico che un'implementazione RCP/1 **deve ignorare**: *«un `video.codec` che vale `hevc,vp9` si legge come `hevc`»* |
+| `RCP.md` §9 | la finestra dei valori nuovi è **chiusa dal 10 agosto** |
+| `RCP.md` §6.2 | AV1 ha **già il suo `codec = 2`** nell'intestazione del fotogramma |
+
+⇒ **VP9 in RCP/1 vorrebbe dire aprire RCP/2 o dichiarare un'eccezione a §9. AV1 non costa niente.**
+⇒ La domanda da misurare non era più «quale codec regge», ma **«AV1 regge?»**.
+
+> ⚠ **E `web.md` O2 diceva che AV1 è «un vicolo cieco da entrambi i lati»** — il nostro ferro non lo
+> codifica in hardware `[M]`, e in decodifica non aggiunge niente che HEVC non dia. ⛔ Quella riga
+> vale per il codec **principale**, e resta vera. Qui si misura **il ramo che non era stato
+> percorso**: non «AV1 al posto di HEVC», ma **«AV1 dove HEVC non c'è»**. Un vicolo cieco resta tale
+> finché nessuno guarda l'altro ramo.
+
+## Le quattro caselle — ⭐ AV1 arriva al pixel **dappertutto**
+
+`[M]` 12 agosto 2026. Giri: `f25-chrome-1786539457` e `f25-firefox-1786539464` (schermo vero `:10`),
+`f25-chrome-1786539477` e `f25-firefox-1786539480` (Xvfb `:75`).
+⛔ **In tutti e quattro i giri i sei controlli del banco sono verdi**: i numeri qui sotto sono stati
+prodotti da un banco valido.
+
+| Sequenza | Chrome 151 vero `:10` | Firefox 140 ESR vero `:10` | Chrome Xvfb | Firefox Xvfb |
+|---|---|---|---|---|
+| **AV1 8 bit** (`av01.0.04M.08`) | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** |
+| **AV1 10 bit** (`av01.0.04M.10`) | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** |
+| *(per confronto)* HEVC Main10 | 8/8 | ⛔ zero | ⛔ zero | ⛔ zero |
+| *(controllo)* VP9 | 8/8 | 8/8 | 8/8 | 8/8 |
+
+⭐ **AV1 riempie esattamente le tre caselle che HEVC lascia vuote.** È la sola riga che serviva.
+
+## ⭐ Regge in software — ed è la domanda che aveva smascherato HEVC
+
+⛔ *Un ripiego che esiste solo con la GPU non è un ripiego*, perché mancherebbe esattamente dove
+serve. È la prova che su HEVC aveva rivelato la dipendenza da VA-API.
+
+| `hardwareAcceleration` | Chrome vero | Firefox vero | Chrome Xvfb | Firefox Xvfb |
+|---|---|---|---|---|
+| `no-preference` | 8/8 | 8/8 | 8/8 | 8/8 |
+| ⭐ **`prefer-software`** | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** | ⭐ **8/8** |
+| `prefer-hardware` | ⛔ zero | 8/8 | ⛔ zero | 8/8 |
+
+⭐ **`prefer-software` dipinge 8/8 in tutte e quattro le caselle, a 8 bit e a 10 bit.** AV1 non
+dipende dalla GPU: **è un ripiego vero.**
+
+⚠ **E il `prefer-hardware` va letto al contrario di come sembra.** `vainfo` su questa macchina non
+elenca **nessun** entrypoint di decodifica AV1 `[M]` — c'è solo `av1_vaapi` in *codifica*. Quindi
+**Chrome ha ragione a rifiutare**: dice la verità, non c'è un decodificatore AV1 hardware.
+⛔ **Firefox invece accetta `prefer-hardware` e dipinge**, sulla stessa macchina. `[?]` **Delle due
+l'una**: o Firefox ha una strada hardware che VA-API non dichiara, o **ignora il suggerimento e
+ripiega in software senza dirlo** — che è la forma **E2**, un componente che decide da sé. ⚠ Non è
+misurato quale delle due, e non va scritto come se lo fosse.
+
+## ⭐⭐ I 10 bit: AV1 li conserva, **e sono osservabili** — il caso positivo che mancava
+
+`[M]` 12 agosto 2026, Chrome 151, flusso `A-av1-10bitvero` (sorgente a **10 bit veri**, 640 livelli):
+
+| Che cosa | AV1 8 bit | ⭐ AV1 10 bit |
+|---|---|---|
+| `VideoFrame.format` | `I420` | ⭐ **`I420P10`** |
+| `copyTo()` | 460 800 byte, 3 piani | ⭐ **921 600 byte**, 3 piani — cioè campioni a **16 bit** |
+| massimo del luma | — | ⭐ **870** |
+
+⛔ **870 è la prova, e non è un'opinione: a 8 bit un campione non può superare 255.** I 10 bit
+arrivano al fotogramma **e si vedono da JavaScript**.
+
+⭐ **È il caso positivo che la tabella del «caso opposto» di §6 non aveva mai potuto riempire.** Su
+HEVC in hardware il formato era `BGRA` e la domanda restava senza risposta; qui il formato è
+`I420P10`, e la stessa domanda ha **risposta sì**. ⇒ La riga *«dal browser i 10 bit non sono
+leggibili»* di `web.md` §1.2 A **non vale per AV1 su Chrome**: lì lo sono.
+
+⚠ **Su Firefox no**: il formato è `BGRX` a 1 228 800 byte in un piano solo, per **tutte** le
+sequenze. I 10 bit **arrivano** (la sfumatura dipinta ha 210 livelli distinti) ma **non sono
+osservabili**. ⇒ La domanda dei 10 bit ha risposta **motore per motore**, non una volta sola.
+
+## Le stringhe esatte, composte dai numeri letti nel flusso
+
+⛔ Come per HEVC: `ffprobe` legge profilo e livello **dal flusso appena prodotto**, e la stringa si
+compone da lì.
+
+| | |
+|---|---|
+| **8 bit** | **`av01.0.04M.08`** |
+| ⭐ **10 bit** | **`av01.0.04M.10`** |
+| forma | `av01.<profilo>.<seq_level_idx a 2 cifre><tier>.<profondità a 2 cifre>` |
+| letti nel flusso | profilo `Main` ⇒ **0** · livello **4** · tier `M` (main) |
+
+⚠ **`seq_level_idx = 4` non è «livello 4»: è il livello 3.0.** Nella stringa va **l'indice**, non il
+livello in chiaro — ed è il tipo di campo su cui si sbaglia in silenzio. ⭐ Tutt'e due le stringhe
+sono accettate e dipingono su **tutti e quattro** i giri; nessuna delle alternative di riserva
+(`av01.0.08M.*`, `av01.0.00M.*`) è servita.
+
+⛔ **Nessuna `description`**: AV1 in WebCodecs prende le unità temporali di OBU così come sono. ⇒ Per
+il ripiego **non esiste** la coppia hvcC/Annex-B che complica HEVC — una cucitura in meno con F2.3.
+
+## Il controllo positivo e negativo, come nel giro di prima
+
+⛔ Senza, un «no» su AV1 non si distinguerebbe da un banco che ha smesso di funzionare.
+
+| | |
+|---|---|
+| **P1** il lettore dice sì · **P2** dice no · **P3** distingue · **P4** VP9 arriva · **P5** dipinge quel che ha chiesto · **P6** gli zeri hanno una causa | ⭐ **verdi in tutti e quattro i giri** |
+| **il controllo negativo su AV1 stesso** | `av1-B-8bit` — il pattern **B** in AV1: dipinge **8/8 sul suo pattern**, e `contro_pattern` non lo confonde con A. ⇒ il banco non sta dicendo «8/8» a prescindere |
+| **e il rosso che c'è nello stesso giro** | HEVC su Firefox e su Xvfb resta a **zero**, nello **stesso registro e nello stesso giro**. ⛔ Un banco che dicesse 8/8 a tutto non potrebbe produrre quei tre zeri |
+
+⭐ Quest'ultima riga è la più forte: **il verde su AV1 e il rosso su HEVC convivono nello stesso giro,
+sullo stesso motore, con lo stesso codice di misura.**
+
+## Che cosa questo cambia, e che cosa no
+
+| | |
+|---|---|
+| ⭐ **AV1 regge come ripiego** | quattro caselle su quattro, a 8 **e** a 10 bit, **in software**. Non serve RCP/2, non serve un'eccezione a §9: `av1` è già normativo in §4.3 e ha già `codec = 2` in §6.2 |
+| ⭐ **e non perde i 10 bit** | anzi, su Chrome è **l'unico** percorso di questo banco in cui i 10 bit si vedono da JavaScript |
+| ⚠ **il prezzo non è misurato qui** | ⛔ questo giro dice **che** AV1 arriva al pixel, **non a che ritmo**. `web.md` O2 e `DECISIONI.md` restano in piedi su tutto il resto: la codifica AV1 sul nostro ferro è **software** `[M]` 9 ago, e a 4K60 il costo non è stato misurato da nessuno |
+| ⛔ **e la scala di preferenza non si rovescia** | `hevc,av1` resta l'ordine: HEVC dove c'è, AV1 dove HEVC non c'è. Questa misura riempie il **secondo** posto, non il primo |
+
+## Le `[?]` che questa aggiunta lascia aperte
+
+| | |
+|---|---|
+| `[?]` **il ritmo di AV1 in software** | a 640×480 su 6 fotogrammi non si misura niente di utile. Il costo a 1080p e a 4K è **da misurare**, ed è la domanda che decide se il ripiego è usabile o solo esistente |
+| `[?]` **perché Firefox accetta `prefer-hardware`** | strada hardware non dichiarata da VA-API, oppure ripiego silenzioso (**E2**). Non misurato |
+| `[?]` **AV1 su Chrome per Android e DeX** | ⛔ non misurato: manca il dispositivo. Vale la forma **E10** — «il Chrome del portatile lo fa» non dice niente del Chrome del telefono |
+| `[?]` **AV1 su Safari** | nessun dispositivo Apple |
+| `[?]` **il costo in banda** | a parità di qualità AV1 e HEVC non sono lo stesso flusso, e nessuno ha confrontato i due sul nostro contenuto |
+
+## La riga per il catalogo
+
+| nome | comando | atteso sano | guasto da innestare | atteso guasto |
+|---|---|---|---|---|
+| `f25-av1` | `SCHERMO=:10 SCHERMO_VERO=1 MOTORI="chrome firefox" bash banchi/02-pagina-lancia.sh` | `A-av1-8bit`, `A-av1-10bitvero` e `av1-*-prefer-software` a **8/8 celle** su tutti e quattro i giri, con P1..P6 verdi | `GUASTO=scambio` | ⛔ **P5 rosso**, e `A-av1-8bit` scende a **0/8 sul suo pattern e 8/8 sull'altro** `[M]` — il banco distingue anche su AV1, non solo su HEVC e VP9. ⚠ `A-av1-10bitvero` **non ha gemello** e lo dichiara (`scambio: NON APPLICABILE`) |
+
+> ### ⛔⭐ E questa riga ha trovato un difetto **mentre veniva verificata**, il 12 agosto
+>
+> L'avevo scritta come atteso e sono andato a **provarla** invece di lasciarla scritta. Il guasto
+> `scambio` cercava il pattern gemello con `carica()` **senza protezione**: le sequenze che il
+> gemello non ce l'hanno — le `*-lossless-*`, `A-10bitvero-*`, `A-av1-10bitvero` — facevano lanciare
+> l'eccezione, che saliva fino a `giro()` e **chiudeva la corsa a metà**. ⛔ Le sequenze **AV1, che
+> vengono dopo, non venivano eseguite affatto**.
+>
+> ⚠ **E la certificazione passava lo stesso**, perché P5 virava al rosso sulle prime otto sequenze.
+> Un guasto che vira per la ragione giusta su metà della corsa e ferma l'altra metà **non ha
+> certificato quel che credevo**: è `LEZIONI.md` §1.3 un piano più in su — non «il banco non
+> riproduce il difetto», ma «il banco riproduce il difetto **su un campione che non è quello che
+> credo**».
+>
+> ⭐ Curato: il gemello mancante si **dichiara** nel campo `scambio` e si prosegue. Dopo la cura il
+> giro arriva in fondo (`FINITO: COMPLETO`, **29 prove**) e le sequenze AV1 virano davvero.

@@ -782,24 +782,58 @@ moderno*.
 ⭐ **E il meccanismo esiste già**: `RCP.md` §4.3 negozia `video.codec` e §6.2 porta il campo `codec`.
 Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 
-> ### ⏳ Quel che NON è deciso: **quale** sia il secondo codec
+> ### 🔸 E il secondo codec è **AV1** — chiuso lo stesso giorno, su una misura
 >
-> ⛔ **E qui il documento si è messo di traverso a sé stesso.** In RCP/1 i valori ammessi di
-> `video.codec` sono **`hevc`** e **`av1`**, e `vp9` compare in §4.3 come **l'esempio canonico di
-> valore che un'implementazione RCP/1 deve IGNORARE**. ⇒ Mettere VP9 dentro RCP/1 vorrebbe dire
-> **aprire RCP/2** o dichiarare un'eccezione a §9; **AV1 non costerebbe niente**, perché è già
-> normativo e ha già il suo `codec = 2`.
+> *Conseguenza scritta da me, non pronunciata dall'utente: lui ha deciso **che ci sia** un ripiego;
+> **quale** l'ha deciso il numero. Si corregge senza discussione (§1.5).*
 >
-> ⚠ Ma **AV1 non è stato misurato**: sappiamo che VP9 arriva al pixel su tutti e quattro i casi, di
-> AV1 non sappiamo niente — e su un progetto che ha già pagato tre volte una deduzione presa per
-> misura, «AV1 è supportato ovunque» resta una `[?]`.
+> ⛔ **La domanda era vera, e il documento si era messo di traverso a sé stesso**: in RCP/1 i valori
+> ammessi di `video.codec` sono **`hevc`** e **`av1`**, e `vp9` compare in §4.3 come **l'esempio
+> canonico di valore che un'implementazione RCP/1 deve IGNORARE** ⇒ VP9 avrebbe voluto dire **aprire
+> RCP/2**, mentre AV1 è già normativo e ha già il suo `codec = 2`. ⚠ Ma «AV1 è supportato ovunque»
+> era una **deduzione**, e qui una deduzione presa per misura si è già pagata tre volte.
 >
-> ⇒ **La misura è in corso** (F2.5, 12 agosto): AV1 sui due motori nelle due scene, a 8 **e** a 10
-> bit, e ⛔ **con `prefer-software`** — perché un ripiego che esiste solo con la GPU non è un
-> ripiego. La decisione si chiude su quel numero, e non prima.
+> **`[M]` 12 agosto 2026, F2.5** — quattro caselle su quattro, coi sei controlli del banco verdi in
+> tutti e quattro i giri:
+>
+> | | Chrome vero | Firefox vero | Chrome Xvfb | Firefox Xvfb |
+> |---|---|---|---|---|
+> | **AV1 8 bit** | ⭐ 8/8 | ⭐ 8/8 | ⭐ 8/8 | ⭐ 8/8 |
+> | **AV1 10 bit** | ⭐ 8/8 | ⭐ 8/8 | ⭐ 8/8 | ⭐ 8/8 |
+> | *(confronto)* **HEVC Main10** | 8/8 | ⛔ zero | ⛔ zero | ⛔ zero |
+>
+> ⭐ **AV1 riempie esattamente le tre caselle che HEVC lascia vuote**, e ⛔ **regge in software**:
+> `prefer-software` dipinge 8/8 in tutte e quattro, a 8 e a 10 bit. ⇒ **è un ripiego vero, non un
+> secondo requisito travestito.**
+>
+> ⭐⭐ **E i 10 bit li conserva, per la prima volta osservabili**: su Chrome un flusso a 10 bit veri
+> dà `VideoFrame.format` = **`I420P10`**, `copyTo` su tre piani a 16 bit, **massimo del luma 870** —
+> impossibile a 8 bit. È il **caso positivo** che la tabella del caso opposto non aveva mai potuto
+> riempire: con HEVC in hardware il formato era `BGRA` e la domanda restava muta. ⚠ Su Firefox i 10
+> bit **arrivano** (sfumatura a 210 livelli) ma **non sono osservabili**: il formato è `BGRX` per
+> tutto. La domanda ha risposta **motore per motore**.
+>
+> **Le stringhe**: `av01.0.04M.08` e `av01.0.04M.10`, coi numeri letti dal flusso. ⚠ `seq_level_idx
+> = 4` **non è «livello 4»: è il 3.0** — nella stringa va l'indice. ⭐ E **nessuna `description`**:
+> AV1 prende le unità temporali di OBU così come sono, cioè **una cucitura in meno** rispetto alla
+> coppia `hvcC`/Annex-B di HEVC.
+>
+> ⛔ **La scala di preferenza NON si rovescia**: l'ordine resta **`hevc,av1`**. Questa misura riempie
+> il secondo posto, non il primo — HEVC resta il codec principale perché è quello che il telefono
+> decodifica in hardware, ed è la domanda **S2**, ancora aperta.
+>
+> ⇒ ⭐ **`RCP.md` non si tocca**: `av1` era già fra i valori ammessi di §4.3 e ha già `codec = 2` in
+> §6.2. La decisione dell'utente si realizza **senza una riga di protocollo nuova**, cioè senza
+> sfiorare §9.
+>
+> **Le `[?]` che restano, e sono del ripiego, non della scelta**: il **ritmo** di AV1 in software
+> (⛔ *è la domanda che decide se il ripiego è usabile o solo esistente*); il costo in banda contro
+> HEVC; AV1 su Android/DeX e su Safari (manca il dispositivo — forma **E10**); e ⚠ perché **Firefox
+> accetti `prefer-hardware` e dipinga** dove `vainfo` non elenca nessun entrypoint di decodifica AV1
+> `[M]` — o ha una strada che VA-API non dichiara, o **ripiega in silenzio** (forma **E2**). Non è
+> misurato quale, e non si scrive come se lo fosse.
 
-*Conseguenze scritte: `fasi/02-primo-fotogramma.md`, e — quando il secondo codec avrà un nome —
-`RCP.md` §4.3 e §6.2.*
+*Conseguenze scritte: `fasi/02-primo-fotogramma.md`. ⭐ `RCP.md` **non richiede modifiche**.*
 
 ---
 
