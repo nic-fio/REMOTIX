@@ -59,6 +59,10 @@ struct risposta {
 struct volo {
 	uint64_t pratica;
 	uint64_t scade;
+	/* ⛔ Il NOME dell'utente, e non la sua parola: quello serve al padre per
+	 *    generare il figlio quando la risposta e' «si'» (`figlio.h`), questa e'
+	 *    gia' azzerata da §4.4 prima che questa riga esista. */
+	char utente[257];
 };
 
 struct aiutante {
@@ -294,6 +298,8 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 
 	a->volo[a->nvolo].pratica = mia;
 	a->volo[a->nvolo].scade = ora_ms + SCADENZA_MS;
+	snprintf(a->volo[a->nvolo].utente, sizeof a->volo[a->nvolo].utente, "%s",
+	         utente);
 	a->nvolo++;
 	*pratica = mia;
 	a->prossima_pratica++;
@@ -304,19 +310,28 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
  * Una risposta per una pratica sconosciuta — o la seconda risposta per la
  * stessa — si scarta e si scrive: e' l'unico modo per cui «ho ricevuto due
  * verdetti» non diventi «vince l'ultimo». */
-static bool volo_consuma(aiutante *a, uint64_t pratica)
+static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
+                         size_t cap)
 {
 	for (int i = 0; i < a->nvolo; i++) {
 		if (a->volo[i].pratica == pratica) {
+			/* ⛔ Il nome si copia PRIMA di togliere la pratica: `volo_togli()`
+			 *    ci scrive sopra l'ultima della tabella, e leggerlo dopo
+			 *    vorrebbe dire consegnare il nome di un altro utente — che qui
+			 *    e' il difetto peggiore possibile. */
+			if (utente && cap)
+				snprintf(utente, cap, "%s", a->volo[i].utente);
 			volo_togli(a, i);
 			return true;
 		}
 	}
+	if (utente && cap)
+		utente[0] = 0;
 	return false;
 }
 
-static void muore(aiutante *a, const char *perche,
-                  void (*consegna)(void *, uint64_t, bool), void *ctx)
+static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
+                  void *ctx)
 {
 	registro_dice(REG_RCP,
 	              "⛔ l'aiutante di PAM non c'e' piu' (%s): le %d verifiche in "
@@ -353,20 +368,21 @@ static void muore(aiutante *a, const char *perche,
 	}
 	while (a->nvolo > 0) {
 		uint64_t p = a->volo[0].pratica;
+		char chi[257];
+		snprintf(chi, sizeof chi, "%s", a->volo[0].utente);
 		volo_togli(a, 0);
 		if (consegna)
-			consegna(ctx, p, false);
+			consegna(ctx, p, false, chi);
 	}
 }
 
-void aiutante_muovi(aiutante *a,
-                    void (*consegna)(void *ctx, uint64_t pratica, bool ammesso),
-                    void *ctx)
+void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 {
 	if (!a || a->fd < 0)
 		return;
 	for (;;) {
 		struct risposta ri;
+		char chi[257];
 		ssize_t letti = recv(a->fd, &ri, sizeof ri, 0);
 		if (letti == 0) {
 			muore(a, "il socket si e' chiuso dal suo lato", consegna, ctx);
@@ -390,7 +406,7 @@ void aiutante_muovi(aiutante *a,
 			              letti, sizeof ri);
 			continue;
 		}
-		if (!volo_consuma(a, ri.pratica)) {
+		if (!volo_consuma(a, ri.pratica, chi, sizeof chi)) {
 			registro_dice(REG_RCP,
 			              "⛔ risposta per la pratica %llu, che non e' in volo "
 			              "(gia' scaduta, o gia' risposta): SCARTATA",
@@ -401,12 +417,11 @@ void aiutante_muovi(aiutante *a,
 		 *     un confronto con `1`, non per un `!= 0`: un byte sporco, un
 		 *     residuo di memoria o un 255 sono un NO. */
 		if (consegna)
-			consegna(ctx, ri.pratica, ri.esito == 1u);
+			consegna(ctx, ri.pratica, ri.esito == 1u, chi);
 	}
 }
 
-void aiutante_scaduti(aiutante *a, uint64_t ora_ms,
-                      void (*consegna)(void *ctx, uint64_t pratica, bool ammesso),
+void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
                       void *ctx)
 {
 	if (!a)
@@ -414,6 +429,8 @@ void aiutante_scaduti(aiutante *a, uint64_t ora_ms,
 	for (int i = 0; i < a->nvolo;) {
 		if (ora_ms >= a->volo[i].scade) {
 			uint64_t p = a->volo[i].pratica;
+			char chi[257];
+			snprintf(chi, sizeof chi, "%s", a->volo[i].utente);
 			volo_togli(a, i);
 			registro_dice(REG_RCP,
 			              "⛔ la pratica %llu non ha ricevuto risposta in %d ms: "
@@ -423,7 +440,7 @@ void aiutante_scaduti(aiutante *a, uint64_t ora_ms,
 			              "banna nessuno",
 			              (unsigned long long)p, SCADENZA_MS);
 			if (consegna)
-				consegna(ctx, p, false);
+				consegna(ctx, p, false, chi);
 		} else {
 			i++;
 		}

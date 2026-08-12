@@ -1,0 +1,24 @@
+{"quando": "2026-08-12T20:28:34", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 288238, "utente": "nicfio", "guai": ["nasce: descrittori ereditati"], "esito": 1}
+{"quando": "2026-08-12T20:29:33", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 288238, "utente": "nicfio", "guai": ["nasce: nessun conto dei descrittori alla nascita", "nasce: nessun bus"], "esito": 1}
+{"quando": "2026-08-12T20:29:35", "banco": "02-figlio", "casi": ["due"], "porta": 7571, "pid_server": 288238, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:30:55", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 289214, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:31:08", "banco": "02-figlio", "casi": ["distacco"], "porta": 7571, "pid_server": 289214, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:31:31", "banco": "02-figlio", "casi": ["muore"], "porta": 7571, "pid_server": 289214, "utente": "nicfio", "guai": ["muore: non raccolto", "muore: causa non scritta"], "esito": 1}
+{"quando": "2026-08-12T20:33:18", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 290001, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:33:26", "banco": "02-figlio", "casi": ["muore"], "porta": 7571, "pid_server": 290001, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:33:40", "banco": "02-figlio", "casi": ["senza-palco"], "porta": 7571, "pid_server": 290001, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:36:53", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 290827, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:37:01", "banco": "02-figlio", "casi": ["senza-palco"], "porta": 7571, "pid_server": 290827, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:38:11", "banco": "02-figlio", "casi": ["guasto-uid"], "porta": 7571, "pid_server": 291413, "utente": "nicfio", "guai": ["guasto-uid: nessun controllo del figlio"], "esito": 1}
+{"quando": "2026-08-12T20:39:29", "banco": "02-figlio", "casi": ["guasto-uid"], "porta": 7571, "pid_server": 292079, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:40:21", "banco": "02-figlio", "casi": ["guasto-cieco"], "porta": 7571, "pid_server": 292658, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:40:55", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 293155, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:41:04", "banco": "02-figlio", "casi": ["due"], "porta": 7571, "pid_server": 293155, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:41:10", "banco": "02-figlio", "casi": ["distacco"], "porta": 7571, "pid_server": 293155, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:41:18", "banco": "02-figlio", "casi": ["muore"], "porta": 7571, "pid_server": 293155, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:41:26", "banco": "02-figlio", "casi": ["senza-palco"], "porta": 7571, "pid_server": 293155, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:44:39", "banco": "02-figlio", "casi": ["nasce"], "porta": 7571, "pid_server": 294158, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:44:47", "banco": "02-figlio", "casi": ["due"], "porta": 7571, "pid_server": 294158, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:44:54", "banco": "02-figlio", "casi": ["distacco"], "porta": 7571, "pid_server": 294158, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:45:02", "banco": "02-figlio", "casi": ["muore"], "porta": 7571, "pid_server": 294158, "utente": "nicfio", "guai": [], "esito": 0}
+{"quando": "2026-08-12T20:45:09", "banco": "02-figlio", "casi": ["senza-palco"], "porta": 7571, "pid_server": 294158, "utente": "nicfio", "guai": [], "esito": 0}

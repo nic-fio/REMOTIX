@@ -673,6 +673,32 @@ verifica. Oggi **non esiste nessun banco che la guardi**, e senza quel banco la 
 
 ---
 
+### 1.10-bis ✅ ⭐ **Un figlio per utente** — e non è simmetria, è un fatto del sistema
+
+*12 agosto 2026, dall'utente, davanti alla misura del montaggio della fase 2.*
+
+**Il fatto, `[M]`**: ⛔ **root non si collega al bus di sessione dell'utente** — e ⛔ **solo root può
+verificare con PAM la parola d'ordine di un altro**. ⇒ **Le due cose non stanno nello stesso
+processo**, e non è un dettaglio di implementazione: senza bus non c'è cattura, senza root non c'è
+autenticazione.
+
+**La decisione.** Il server resta **privilegiato**, e per ogni utente ammesso genera un **figlio che
+gira come lui** e tiene il suo bus di sessione, la sua cattura e i suoi dispositivi.
+
+⭐ **È l'aiutante di §1.10 al contrario, ed è la stessa regola**: *un mestiere per processo*. Lì un
+figlio **meno** privilegiato del padre fa la cosa che blocca; qui un figlio **diversamente**
+privilegiato fa la cosa che il padre non può fare. ⇒ La forma del server non è stata scelta due
+volte: è stata scelta una volta e applicata due.
+
+⭐ **E paga oltre la fase 2**: è la strada naturale verso il multi-tenant della **fase 12**, e isola
+un utente dall'altro **per costruzione** invece che per attenzione.
+
+⚠ **Il prezzo, dichiarato**: un processo per sessione. Col tetto di §1.11 — 16 — sono sedici
+processi, che è un costo noto e misurabile, non una sorpresa.
+
+*Conseguenze scritte: `fasi/02-primo-fotogramma.md`, e il prodotto delle fasi che toccano la
+sessione.*
+
 ### 1.11 ✅ Il tetto delle sessioni resta **16, fisso in compilazione**, fino alla fase 3
 
 *11 agosto 2026, sera, dall'utente, alla chiusura della fase 1.*

@@ -59,7 +59,7 @@ NOME    := remotix
 #    quinto anello, il canale video, NON compare: vive in `rcp.c`, che c'era
 #    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
-            tls.c registro.c rcp.c autenticazione.c aiutante.c \
+            tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
@@ -208,9 +208,12 @@ dipendenze:
 	done; \
 	exit $$stato
 
-main.o:           aiutante.h certificati.h comando.h pagina.h rcp.h registro.h \
-                  tls.h trasporto.h \
-                  sessione.h cattura.h mutter.h codificatore.h
+# ⛔ `main.c` NON dipende piu' da `sessione.h`, `cattura.h`, `mutter.h` e
+#    `codificatore.h`, e la riga che le toglie e' la stessa decisione di
+#    `DECISIONI.md` §1.10-bis: quei quattro anelli li apre il FIGLIO, che gira
+#    come l'utente.  Il padre e' root, e root non ha con chi parlare.
+main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
+                  registro.h tls.h trasporto.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
 webtransport.o:   webtransport.h aiutante.h rcp.h registro.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
@@ -227,6 +230,12 @@ autenticazione.o:
 #    (`DECISIONI.md` §1.10).  ⚠ NON e' fra i `GEMELLATI`: e' del PRODOTTO e
 #    basta, perche' l'innesto di `banchi/rcp/` non ha un ciclo suo da liberare.
 aiutante.o:       aiutante.h registro.h
+# ⭐ `figlio.c` — un processo per utente, che gira come lui (`DECISIONI.md`
+#    §1.10-bis).  ⚠ E' il SOLO file che sta di qua e di la' del calo di
+#    privilegio: la meta' del padre non include niente della fase 2, la meta'
+#    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
+#    prodotto e basta, come `aiutante.c`.
+figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di

@@ -116,19 +116,31 @@ int aiutante_descrittore(const aiutante *a);
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
                      uint64_t ora_ms, uint64_t *pratica);
 
+/* ⛔⭐ E LA CONSEGNA PORTA ANCHE IL NOME DELL'UTENTE — 12 agosto 2026,
+ *     `DECISIONI.md` §1.10-bis.
+ *
+ *     Fino a oggi bastava la pratica: chi sapeva a quale sessione appartenesse
+ *     era `rcp.c`, e il nome non serviva a nessuno.  ⛔ Adesso serve: quando la
+ *     risposta e' «si'», il padre deve generare **il figlio di quell'utente**
+ *     (`figlio.h`), e l'unico posto del programma che ha insieme la pratica e
+ *     il nome e' questo — il nome e' arrivato in `aiutante_chiedi()`.
+ *
+ * ⚠ Il nome vive nella tabella delle pratiche in volo accanto alla scadenza:
+ *   ⛔ **la parola d'ordine no**, e non e' un dettaglio — §4.4 vuole che sia
+ *   azzerata appena PAM ha risposto, e qui non ne resta nemmeno una copia. */
+typedef void (*AiutanteVerdetto)(void *ctx, uint64_t pratica, bool ammesso,
+                                 const char *utente);
+
 /* Legge le risposte pronte e le consegna una per una.  Da chiamare quando il
  * descrittore e' leggibile.
  * ⛔ Se lo smistatore e' morto, consegna un «no» per ogni pratica in volo:
  *    una pratica senza risposta e' un'attesa che nessuno chiude. */
-void aiutante_muovi(aiutante *a,
-                    void (*consegna)(void *ctx, uint64_t pratica, bool ammesso),
-                    void *ctx);
+void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx);
 
 /* ⛔ Fa scadere le pratiche troppo vecchie, consegnando un «no».  E' la rete di
  * sicurezza del caso 5: un nipote ucciso a meta' non scrive niente, e senza
  * questa chiamata la sessione resterebbe in `attesa-verdetto` per sempre. */
-void aiutante_scaduti(aiutante *a, uint64_t ora_ms,
-                      void (*consegna)(void *ctx, uint64_t pratica, bool ammesso),
+void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
                       void *ctx);
 
 /* Quante pratiche sono in volo.  Per il registro. */

@@ -47,17 +47,31 @@
  *    secondi»; con il video sarebbe stato **lo schermo di tutti quelli
  *    collegati che si pianta ogni volta che qualcun altro entra** — e chi lo
  *    vede da' la colpa al video, perche' e' li' che si vede.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⭐ E DAL 12 AGOSTO 2026 QUESTO PROCESSO NON CATTURA PIU' NIENTE — §1.10-bis
+ *
+ * `DECISIONI.md` §1.10-bis: il server resta **privilegiato**, e per ogni utente
+ * ammesso genera un **figlio che gira come lui**, che tiene il bus di sessione,
+ * la cattura e i dispositivi.  ⛔ La ragione e' una misura, non una preferenza:
+ * `[M]` root non si collega al bus di sessione dell'utente, e `[M]` solo root
+ * puo' verificare con PAM la parola d'ordine di un altro.
+ *
+ * ⇒ Da qui sono uscite `sessione_assicura()` e `primo_fotogramma()`, che fino a
+ *   ieri stavano proprio in questo file: adesso vivono in `figlio.c`, dall'altra
+ *   parte del calo di privilegio.  ⭐ E non e' solo una questione di permessi:
+ *   **questo processo non tocca piu' ne' GLib ne' PipeWire ne' D-Bus**, quindi
+ *   il `fork()` che genera un figlio parte da un processo a un filo solo — che
+ *   e' l'unica condizione in cui un `fork` da una libreria con thread non e'
+ *   una scommessa.
  */
 #include "aiutante.h"
-#include "cattura.h"
 #include "certificati.h"
-#include "codificatore.h"
 #include "comando.h"
-#include "mutter.h"
+#include "figlio.h"
 #include "pagina.h"
 #include "rcp.h"
 #include "registro.h"
-#include "sessione.h"
 #include "tls.h"
 #include "trasporto.h"
 #include "webtransport.h"
@@ -135,7 +149,12 @@ static void aiuto(const char *nome)
 	        "                    (cattura.bgrx) e i due flussi codificati.\n"
 	        "                    Senza, non scrive niente.  Serve al confronto\n"
 	        "                    a pixel di F2.6\n"
-	        "  --parlantina      registro di dettaglio\n",
+	        "  --parlantina      registro di dettaglio\n"
+	        "\n"
+	        "  ⛔ `--figlio-interno` NON si batte a mano: e' la riga con cui\n"
+	        "     questo stesso binario riparte come figlio di un utente\n"
+	        "     ammesso (DECISIONI.md §1.10-bis).  Se la vedi in `ps`, quello\n"
+	        "     e' un figlio, non un secondo server.\n",
 	        nome, PORTA_PREDEFINITA);
 }
 
@@ -171,332 +190,175 @@ static void guarda_il_servizio_pam(void)
 	              dove, strerror(errno));
 }
 
-/* ⛔ Il ponte fra l'aiutante e il trasporto, e non fa niente di suo: il
- * verdetto arriva con un numero di pratica, e chi sa a chi appartiene e'
- * `rcp.c`.  ⚠ `ctx` e' il `trasporto *`, e non e' una comodita': senza, questa
- * funzione avrebbe bisogno di una variabile globale — cioe' di un secondo
- * posto in cui il trasporto puo' essere vivo o morto. */
-static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso)
+/* ⛔ Le due cose che il ciclo `poll` deve poter raggiungere quando arriva un
+ * verdetto di PAM, e non una sola: il trasporto (per far uscire `AMMESSO`) e la
+ * tabella dei figli (per generare il palco di chi e' entrato).  ⚠ Sta in una
+ * struttura e non in due globali: una globale e' un secondo posto in cui una
+ * cosa puo' essere viva o morta. */
+struct ponte {
+	trasporto *t;
+	figli *f;
+};
+
+/* ⛔⭐ IL PONTE FRA L'AIUTANTE, IL TRASPORTO E IL FIGLIO.
+ *
+ *     `DECISIONI.md` §1.10-bis: il figlio nasce **quando PAM ha detto si'**, e
+ *     questa e' l'unica riga del programma in cui quel fatto esiste con accanto
+ *     il NOME dell'utente.  ⛔ Non un istante prima: un figlio generato su
+ *     `CREDENZIALI` girerebbe come un utente che non ha ancora dimostrato di
+ *     essere lui — invariante I3.
+ *
+ * ⚠ E l'ordine delle due righe conta: prima il figlio, poi il verdetto sul
+ *   filo.  Il figlio deve cominciare a collegarsi al bus e a catturare
+ *   **mentre** scorre il secondo fisso di §4.4-bis, che e' l'unico tempo
+ *   garantito dal protocollo prima che la sessione arrivi a `SESSIONE`.
+ *   ⛔ Nessuna delle due aspetta l'altra: `figli_assicura()` fa un `fork` e
+ *   torna, `trasporto_verdetto()` fa scorrere lo stato.  Il ciclo non si ferma. */
+/* ⛔ Dichiarata qui perche' vive sotto, accanto al deposito che governa: e' il
+ *    deposito il suo argomento, non il verdetto. */
+static void deposito_intesta(struct ponte *p, const char *utente, bool chiedi);
+
+static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
+                              const char *utente)
 {
-	trasporto_verdetto((trasporto *)ctx, pratica, ammesso);
+	struct ponte *p = (struct ponte *)ctx;
+
+	if (ammesso && utente && utente[0]) {
+		/* ⛔ «C'era gia'» e «l'ho appena generato» sono due fatti diversi, e la
+		 *    differenza serve una riga piu' sotto: a un figlio appena nato NON
+		 *    si chiede di rimandare il palco — lo sta prendendo adesso, e la
+		 *    domanda produrrebbe un fotogramma doppio. */
+		bool c_era = figli_pid_di(p->f, utente) > 0;
+
+		if (!figli_assicura(p->f, utente))
+			/* ⚠ Il RIPIEGO SI DICHIARA (`CODER.md` §4.2): la sessione resta
+			 *   buona — la stretta di mano finisce, la pagina funziona — e
+			 *   semplicemente non c'e' nessun palco da mostrare.  ⛔ Il verdetto
+			 *   NON cambia: negare l'accesso perche' il palco non si e' montato
+			 *   vorrebbe dire far pagare a chi entra un difetto nostro. */
+			registro_dice(REG_FIGLIO,
+			              "⚠ «%s» e' AMMESSO ma non ha un figlio: entra e non "
+			              "vede un pixel.  Il perche' e' nella riga qui sopra, e "
+			              "il verdetto di PAM non si tocca",
+			              utente);
+		else
+			deposito_intesta(p, utente, c_era);
+	}
+	trasporto_verdetto(p->t, pratica, ammesso);
 }
 
 /* ========================================================================== */
-/* ⭐⭐ IL PRIMO FOTOGRAMMA — cattura, codifica, e lo mette in deposito        */
+/* ⛔⭐ IL DEPOSITO DEL VIDEO, E LA FUGA CHE HA MISURATA IL BANCO             */
 /*                                                                            */
-/* ⛔ QUANDO, E PERCHE' PROPRIO QUI: prima del ciclo `poll` e DOPO l'aiutante. */
+/*     `wt_video_deposita()` (in `webtransport.c`) e' un deposito **di        */
+/*     PROCESSO**, non di sessione: il riquadro accanto a `video_forse()` lo  */
+/*     dichiara, e alla fase 2 era giusto — c'era una sessione grafica sola,  */
+/*     quella dentro cui girava il server, e «due connessioni vedono lo       */
+/*     stesso desktop» era la frase vera.                                     */
 /*                                                                            */
-/*    · prima del ciclo, perche' `cattura_prendi()` ASPETTA il prossimo        */
-/*      fotogramma di Mutter, e su un desktop fermo l'attesa arriva al suo     */
-/*      tetto.  Dentro il ciclo fermerebbe tutte le connessioni insieme        */
-/*      (`CODER.md` §4.4) — la forma appena curata su PAM, nel posto in cui    */
-/*      farebbe piu' male: con il video lo schermo di TUTTI si pianterebbe;    */
-/*    · dopo `aiutante_accendi()`, perche' quello e' un `fork()` e il figlio   */
-/*      erediterebbe i descrittori aperti.  ⛔ La cattura ne apre parecchi —   */
-/*      il socket di PipeWire, il bus di sessione, i MemFd dei buffer — e un   */
-/*      aiutante che se li portasse dietro terrebbe vivo il flusso di Mutter   */
-/*      anche dopo la morte del server.  ⚠ E' la stessa regola per cui         */
-/*      l'aiutante si accende prima di `trasporto_apri()`, letta al contrario. */
+/* ⛔⛔ CON UN FIGLIO PER UTENTE QUELLA FRASE E' UN DIFETTO, ED E' STATO      */
+/*     MISURATO — `[M]` 12 agosto 2026, `02-figlio-prova.py --caso           */
+/*     senza-palco`: «prova» (uid 1001, senza sessione grafica, senza figlio  */
+/*     che potesse catturare niente) ha ricevuto **un fotogramma conforme** — */
+/*     e quel fotogramma era il desktop di «nicfio».  ⛔ Non «non ricevi      */
+/*     niente»: **ricevi il desktop di un altro**, e nessuno dei due se ne    */
+/*     accorge.  E' l'invariante I3 violata nel modo peggiore.                */
 /*                                                                            */
-/* ⛔ E QUEL CHE QUESTA FUNZIONE NON FA, dichiarato: non riprova, non ricattura */
-/*    e non si accorge se il desktop cambia.  La fase 2 e' UN'IMMAGINE FERMA   */
-/*    (`fasi/02-primo-fotogramma.md`), e il fotogramma e' quello dell'istante  */
-/*    dell'accensione.  Il ciclo dei fotogrammi e' della fase 3, e sara' un    */
-/*    consumo per RICHIAMATA — l'altra porta di `cattura.c`, che oggi nessuno  */
-/*    percorre.                                                                */
+/* ⇒ LA GUARDIA, e sta nel PROGRAMMA (invariante I7):                        */
+/*                                                                            */
+/*   · il deposito ha un PADRONE, e a nominarlo e' **l'ammissione**, non il   */
+/*     fotogramma: quando PAM dice si' a un utente diverso dal padrone, il    */
+/*     deposito si SVUOTA e il padrone diventa lui;                           */
+/*   · un fotogramma che arriva da un figlio che non e' il padrone viene      */
+/*     RIFIUTATO — anche se e' partito prima che il padrone cambiasse;        */
+/*   · e al nuovo padrone si CHIEDE il suo (`figli_chiedi_palco`), cosi' chi  */
+/*     rientra rivede il proprio desktop invece di non vedere piu' niente.    */
+/*                                                                            */
+/* ⛔ Non c'e' nessuna strada verso `SESSIONE` che non passi da un'ammissione */
+/*    (invariante I3), quindi non c'e' nessuna sessione che possa leggere il  */
+/*    deposito di un altro.                                                   */
+/*                                                                            */
+/* ⚠ IL PREZZO, DICHIARATO: due utenti collegati insieme non possono vedere   */
+/*   tutt'e due il proprio desktop — l'ultimo che entra prende il deposito, e */
+/*   all'altro tocca rientrare.  ⛔ E' brutto e **non e' un difetto di        */
+/*   questo file**: la cura vera e' un deposito **per sessione** in           */
+/*   `webtransport.c`, che questo mandato non tocca (`P2-7-figlio.md` §6).    */
+/*   Meglio nessun fotogramma che il fotogramma di un altro.                  */
 
-struct palco {
-	MutterSessione *mutter;
-	Cattura *cattura;
-};
+static char deposito_di[64];
+static bool deposito_preso;
 
-static uint64_t ora_monotona_us(void)
-{
-	struct timespec t;
-	/* ⛔ MONOTONO, e §6.2 lo dice: «microsecondi dell'orologio monotono del
-	 *    server alla cattura.  ⚠ Non e' un'ora».  Un orologio di parete qui
-	 *    farebbe saltare il campo all'indietro al primo aggiustamento NTP, e il
-	 *    client non ha modo di distinguerlo da un fotogramma fuori ordine. */
-	clock_gettime(CLOCK_MONOTONIC, &t);
-	return (uint64_t)t.tv_sec * 1000000u + (uint64_t)(t.tv_nsec / 1000);
-}
-
-/* ⛔ Scrive un file di rilievo, e DICHIARA se non ci riesce: un rilievo che non
- *    si e' potuto scrivere e uno che nessuno ha chiesto hanno lo stesso aspetto
- *    sul disco (forma E8). */
-static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
-                           size_t byte)
-{
-	char percorso[512];
-	FILE *f;
-	size_t scritti;
-
-	if (!dir)
-		return;
-	snprintf(percorso, sizeof percorso, "%s/%s", dir, nome);
-	f = fopen(percorso, "wb");
-	if (!f) {
-		registro_dice(REG_AVVIO, "⛔ rilievo %s: %s", percorso, strerror(errno));
-		return;
-	}
-	scritti = fwrite(dati, 1, byte, f);
-	if (fclose(f) != 0 || scritti != byte) {
-		registro_dice(REG_AVVIO,
-		              "⛔ rilievo %s: scritti %zu byte su %zu — il file c'e' e "
-		              "NON e' quello che dice di essere",
-		              percorso, scritti, byte);
-		return;
-	}
-	registro_dice(REG_AVVIO, "rilievo scritto: %s (%zu byte)", percorso, byte);
-}
-
-/* Codifica il fotogramma con UN codec e lo deposita.  ⛔ Restituisce `false` e
- * dice perche': «non ho codificato» e «ho codificato male» sono due fatti
- * diversi, e chi legge il registro deve poterli distinguere. */
-static bool codifica_e_deposita(const CatturaFermo *f, CodecVideo codec,
-                                const char *dir_rilievo, const char *nome_file,
+static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
+                                uint8_t codec, const uint8_t *dati, size_t byte,
+                                uint32_t larghezza, uint32_t altezza,
                                 uint64_t istante_us)
 {
-	CodificatoreRichiesta r;
-	CodificatoreFotogramma fg;
-	Codificatore *cod;
-	const CodificatoreConfessione *c;
-	char errore[256];
-
-	memset(&r, 0, sizeof r);
-	r.codec = codec;
-	r.componente = NULL; /* il nome predefinito, che e' comunque un NOME */
-	r.larghezza = TELA_L;
-	r.altezza = TELA_A;
-	r.fotogrammi_al_secondo = 30;
-	/* ⚠ CRF e non LOSSLESS, ed e' una scelta con una ragione: senza perdita un
-	 *   desktop vero produce un fotogramma di parecchi MiB, e §6.2 ne ammette
-	 *   al massimo 16 — si arriverebbe a sfiorare il tetto per un'immagine
-	 *   ferma.  ⛔ E il regime senza perdita serve a misurare i 10 bit VERI
-	 *   (`F2-3-codifica.md` §2.4), che da questa sorgente non escono: la
-	 *   cattura da' otto bit (`[M]` F2.2).  Qui non c'e' niente da distinguere,
-	 *   e il prezzo del lossless si pagherebbe a vuoto. */
-	r.modo = CODIFICATORE_QUALITA_CRF;
-	r.qualita = 20;
-	/* ⛔ 10 bit CHIESTI su una sorgente che ne da' 8: e' una PROMOZIONE, e il
-	 *    codificatore la scrive nel registro da se' (`promozione_8_a_10`).  Si
-	 *    chiede 10 perche' e' quel che la pagina negozia e quel che l'etichetta
-	 *    dira' per tutta la catena — ⚠ e proprio per questo va dichiarata
-	 *    invece che subita (`DECISIONI.md` §2.7). */
-	r.profondita = 10;
-	r.formato = CODIFICATORE_PIXEL_BGRX;
-	r.chiavi_ogni = 0; /* §5.2: le chiavi si CHIEDONO */
-
-	cod = codificatore_nuovo(&r, errore, sizeof errore);
-	if (!cod) {
-		registro_dice(REG_VIDEO, "⛔ niente video per il codec %d: %s", (int)codec,
-		              errore);
-		return false;
-	}
-	registro_dice(REG_VIDEO, "codificatore aperto: %s", codificatore_nome(cod));
-
-	/* ⛔ Il passo si PASSA, non si calcola: F2.2 lo legge dal manifesto di
-	 *    PipeWire e dice di fare altrettanto anche quando oggi coincide con
-	 *    larghezza×4.  `[M]` 7680 su 1920, cioe' coincide — e il giorno in cui
-	 *    non coincidesse il sintomo sarebbe un'immagine inclinata. */
-	if (!codificatore_comprimi(cod, f->pixel, f->stride, &fg)) {
+	(void)ctx;
+	if (!deposito_preso || strcmp(utente, deposito_di) != 0) {
 		registro_dice(REG_VIDEO,
-		              "⛔ il codec %d non ha consegnato il fotogramma: il "
-		              "registro qui sopra dice perche', e `false` NON e' «un "
-		              "fotogramma vuoto» — e' «questo non si spedisce»",
-		              (int)codec);
-		codificatore_libera(cod);
-		return false;
+		              "⛔ il fotogramma di «%s» (uid %ld) NON entra in deposito: "
+		              "il deposito di processo e' %s%s.  ⚠ Un deposito solo per "
+		              "due palchi consegnerebbe a uno i pixel dell'altro — "
+		              "misurato il 12 agosto 2026, ed e' I3",
+		              utente, (long)uid,
+		              deposito_preso ? "di «" : "di nessuno",
+		              deposito_preso ? deposito_di : "");
+		return;
 	}
-
-	c = codificatore_confessione(cod);
+	wt_video_deposita(codec, dati, byte, larghezza, altezza, istante_us);
 	registro_dice(REG_VIDEO,
-	              "⭐ fotogramma codificato: codec %d, %zu byte, %s, "
-	              "codec-string «%s», profondita' nel flusso %d, livello %d, "
-	              "promozione 8→10 %s, conversione %llu us, codifica %llu us, "
-	              "ricodifiche %u",
-	              (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
-	              c->stringa_codec, c->profondita_flusso, c->livello_flusso,
-	              c->promozione_8_a_10 ? "SI (dichiarata)" : "no",
-	              (unsigned long long)fg.us_conversione,
-	              (unsigned long long)fg.us_codifica, fg.ricodifiche);
-
-	wt_video_deposita((uint8_t)codec, fg.dati, fg.byte, TELA_L, TELA_A,
-	                  istante_us);
-	rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
-
-	codificatore_rilascia(cod);
-	codificatore_libera(cod);
-	return true;
+	              "⭐ FASE 2: fotogramma del codec %u in deposito, %zu byte, "
+	              "%ux%u — catturato dal figlio di «%s» (uid %ld), non da questo "
+	              "processo",
+	              codec, byte, larghezza, altezza, utente, (long)uid);
 }
 
-static void primo_fotogramma(struct palco *p, const char *dir_rilievo)
+/* ⛔ Il deposito passa di mano QUI, sull'ammissione: e' l'unico punto in cui si
+ * sa **chi** sta per arrivare a `SESSIONE`, ed e' prima che ci arrivi. */
+static void deposito_intesta(struct ponte *p, const char *utente, bool chiedi)
 {
-	GError *sbaglio = NULL;
-	CatturaFermo f;
-	CatturaPresa presa;
-	uint64_t istante_us;
-	int quanti = 0;
-
-	p->mutter = mutter_apri(&sbaglio);
-	if (!p->mutter) {
-		registro_dice(REG_VIDEO,
-		              "⛔ nessun monitor virtuale da catturare: %s.  Il server "
-		              "parte lo stesso — la pagina e l'autenticazione della "
-		              "fase 1 funzionano — ma nessuna sessione vedra' un "
-		              "pixel.  Il ripiego e' dichiarato (CODER.md §4.2)",
-		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
-		g_clear_error(&sbaglio);
+	if (deposito_preso && strcmp(utente, deposito_di) == 0) {
+		/* ⚠ Lo stesso utente che rientra: il deposito e' gia' suo e non si
+		 *   svuota — ma glielo si fa rimandare lo stesso, perche' fra una
+		 *   connessione e l'altra puo' averlo svuotato la morte del figlio. */
+		if (chiedi)
+			figli_chiedi_palco(p->f, utente);
 		return;
 	}
-
-	p->cattura = cattura_avvia(mutter_nodo(p->mutter), TELA_L, TELA_A, 60,
-	                           CATTURA_STRADA_MEMORIA, CATTURA_COLORE_BGRX,
-	                           NULL, NULL, NULL, &sbaglio);
-	if (!p->cattura) {
-		registro_dice(REG_VIDEO, "⛔ la cattura non si apre: %s",
-		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
-		g_clear_error(&sbaglio);
-		return;
-	}
-
-	/* ⛔ 5 secondi, e il numero e' quello di F2.2: la scena si dichiara, e
-	 *    questa e' *«il desktop com'era all'accensione»* — che puo'
-	 *    legittimamente essere fermo.  ⚠ Mutter consegna un fotogramma solo se
-	 *    qualcosa cambia (`LEZIONI.md` §4 trappola 8), MA il primo dopo
-	 *    l'attivazione del flusso e' sempre l'immagine intera.  Se non
-	 *    arrivasse, `CATTURA_PRESA_ZERO` e' un RISULTATO e non un guasto. */
-	memset(&f, 0, sizeof f);
-	presa = cattura_prendi(p->cattura, 5.0, &f, &sbaglio);
-	istante_us = ora_monotona_us();
-
-	switch (presa) {
-	case CATTURA_PRESA_FATTA:
-		break;
-	case CATTURA_PRESA_ZERO:
+	if (deposito_preso)
 		registro_dice(REG_VIDEO,
-		              "⛔ ZERO fotogrammi in 5 s: il desktop non ha cambiato un "
-		              "pixel e Mutter non manda niente quando niente cambia.  "
-		              "⚠ E' un RISULTATO, non un guasto — e non c'e' niente da "
-		              "spedire");
-		return;
-	case CATTURA_PRESA_PIXEL_ALTROVE:
-		registro_dice(REG_VIDEO,
-		              "⛔ i pixel non sono qui (strada della scheda): importarli "
-		              "e' della fase 8, e questa fase ha chiesto la memoria");
-		return;
-	case CATTURA_PRESA_GUASTO:
-	default:
-		registro_dice(REG_VIDEO, "⛔ la cattura e' fallita: %s",
-		              sbaglio ? sbaglio->message : "(nessun dettaglio)");
-		g_clear_error(&sbaglio);
-		return;
-	}
+		              "⛔ il deposito era di «%s» e adesso entra «%s»: lo "
+		              "SVUOTO.  ⚠ Meglio nessun fotogramma che il fotogramma di "
+		              "un altro (I3) — e il prezzo e' che «%s», se e' ancora "
+		              "collegato, dovra' rientrare",
+		              deposito_di, utente, deposito_di);
+	wt_video_svuota();
+	deposito_preso = true;
+	snprintf(deposito_di, sizeof deposito_di, "%s", utente);
+	/* ⛔ E si chiede al suo figlio di rimandare il proprio: senza, chi rientra
+	 *    dopo qualcun altro non rivedrebbe mai piu' niente, perche' il palco
+	 *    cattura una volta sola (fase 2 = immagine ferma).  ⚠ A un figlio
+	 *    APPENA NATO no: lo sta gia' prendendo, e la domanda gli farebbe
+	 *    spedire lo stesso fotogramma due volte. */
+	if (chiedi)
+		figli_chiedi_palco(p->f, utente);
+}
 
-	/* ⛔⭐ IL NOME DEL MONITOR SI CHIEDE **DOPO IL PRIMO FOTOGRAMMA**, e non
-	 *     dopo `cattura_avvia()` — cucitura corretta il 12 agosto 2026, col
-	 *     numero che l'ha corretta.
-	 *
-	 *     `P2-2-cattura.md` §«le righe da innestare» metteva
-	 *     `mutter_monitor_cerca()` **fra** `cattura_avvia()` e
-	 *     `cattura_prendi()`, con accanto la ragione giusta: *«solo adesso il
-	 *     monitor esiste»*.  ⛔ `[M]` innestandola li' il prodotto ha scritto
-	 *     *«non ho saputo dire quale schermo sia il nostro»* su una sessione
-	 *     perfettamente sana — lo stesso rosso che F2.2 aveva gia' pagato e
-	 *     curato, ricomparso di un passo piu' in la'.
-	 *
-	 * ⇒ La condizione vera non e' «ho chiesto il flusso»: e' **«sto davvero
-	 *   leggendo»**.  `cattura_avvia()` ritorna quando `Stream.Start` e'
-	 *   partito; il monitor virtuale Mutter lo crea quando il consumatore
-	 *   comincia a consumare — e il fatto che lo dimostra e' **un fotogramma
-	 *   in mano**, che e' esattamente la riga sopra.  ⚠ E' `LEZIONI.md` §1.13
-	 *   applicata a una sequenza: si nomina la grandezza vera del fenomeno,
-	 *   non quella che gli somiglia.
-	 *
-	 * ⚠ In fase 2 nessuno apre una finestra su quel monitor, quindi il nome
-	 *   serve al registro — ma serve al banco del giudizio (F2.6), che la mira
-	 *   la deve mandare su QUELLO schermo e per NOME: il 12 agosto sulla
-	 *   macchina ce n'erano due, `Meta-0` e `Meta-1`, entrambi 1920×1080@60. */
-	if (mutter_monitor_cerca(p->mutter)) {
-		guint prima = 0, dopo = 0;
-		mutter_monitor_conteggi(p->mutter, &prima, &dopo);
-		registro_dice(REG_VIDEO,
-		              "⭐ il nostro schermo si chiama «%s» (prodotto «%s»), "
-		              "monitor %u prima del montaggio e %u dopo — chi aprira' "
-		              "una finestra qui sopra lo deve chiamare per NOME",
-		              mutter_monitor_nostro(p->mutter),
-		              mutter_monitor_prodotto(p->mutter), prima, dopo);
-	} else {
-		registro_dice(REG_VIDEO,
-		              "⚠ non ho saputo dire quale schermo sia il nostro: la "
-		              "cattura funziona lo stesso, ma chi vorra' mandarci una "
-		              "finestra non ha un nome da usare");
-	}
-
+/* ⛔ Il figlio se n'e' andato: se il deposito era suo, si svuota.  ⚠ Un
+ * deposito che sopravvive al palco che lo ha riempito e' l'immagine di un
+ * utente che resta in casa dopo che il suo processo e' morto. */
+static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
+{
+	(void)ctx;
+	if (!deposito_preso || strcmp(utente, deposito_di) != 0)
+		return;
+	wt_video_svuota();
+	deposito_preso = false;
+	deposito_di[0] = 0;
 	registro_dice(REG_VIDEO,
-	              "⭐ fotogramma catturato: %ux%u, stride %u LETTO, %llu byte, "
-	              "formato %s a %d bit, buffer %s, range %s, min %u/%u/%u max "
-	              "%u/%u/%u",
-	              f.larghezza, f.altezza, f.stride,
-	              (unsigned long long)f.byte,
-	              f.consegna.formato ? f.consegna.formato : "(ignoto)",
-	              f.consegna.bit_per_canale,
-	              f.consegna.buffer_dichiarato == CATTURA_BUFFER_DMABUF
-	                      ? "DMA-BUF"
-	                      : "in memoria",
-	              f.consegna.range_misurato == CATTURA_RANGE_COMPATIBILE_PIENO
-	                      ? "compatibile col PIENO"
-	                      : "non conclusivo",
-	              f.consegna.minimo[0], f.consegna.minimo[1],
-	              f.consegna.minimo[2], f.consegna.massimo[0],
-	              f.consegna.massimo[1], f.consegna.massimo[2]);
-
-	/* ⛔ E IL NERO SI DICHIARA, NON SI RIFIUTA.  Un desktop puo' legittimamente
-	 *    essere nero, e rifiutarlo sarebbe decidere al posto dell'utente;
-	 *    tacerlo sarebbe consegnare il nulla senza una riga.  ⚠ E «nero» e
-	 *    «uniforme» sono due marche diverse: un grigio uniforme chiamato nero
-	 *    manda a cercare il difetto dalla parte sbagliata. */
-	if (f.consegna.nero)
-		registro_dice(REG_VIDEO,
-		              "⛔ il fotogramma catturato e' NERO (massimo 0 su tutti e "
-		              "tre i canali): e' quel che consegna una sessione senza "
-		              "monitor virtuale — gnome.md §3.1, guasto M9.  Lo spedisco "
-		              "lo stesso, e questa riga e' la dichiarazione");
-	else if (f.consegna.uniforme)
-		registro_dice(REG_VIDEO,
-		              "⚠ il fotogramma catturato e' UNIFORME (tutti i pixel "
-		              "uguali) e NON e' nero: e' un'altra cosa dal guasto M9");
-
-	/* ⛔ Il crudo si scrive PRIMA di codificare: e' l'ingresso del confronto a
-	 *    pixel di F2.6, e va salvato com'e' arrivato — stride compreso.  ⚠ E si
-	 *    scrive `f.byte`, non `larghezza×altezza×4`: lo stride e' letto dal
-	 *    chunk, e ricalcolarlo qui rimetterebbe il difetto che F2.2 esiste per
-	 *    togliere. */
-	rilievo_scrivi(dir_rilievo, "cattura.bgrx", f.pixel, (size_t)f.byte);
-
-	/* ⭐ TUTT'E DUE I CODEC, e la ragione e' misurata: la pagina sceglie il
-	 *    codec provandolo SUL PIXEL, e su un browser senza GPU HEVC non arriva
-	 *    (`[M]` F2.5) ⇒ negozia `av1`.  Quale dei due si usera' si sa solo alla
-	 *    negoziazione di §4.3, cioe' quando il ciclo e' gia' partito: si
-	 *    codificano adesso tutt'e due, e li' si sceglie fra due depositi. */
-	if (codifica_e_deposita(&f, CODIFICATORE_HEVC, dir_rilievo, "flusso-hevc.265",
-	                        istante_us))
-		quanti++;
-	if (codifica_e_deposita(&f, CODIFICATORE_AV1, dir_rilievo, "flusso-av1.obu",
-	                        istante_us))
-		quanti++;
-
-	if (quanti == 0)
-		registro_dice(REG_VIDEO,
-		              "⛔ nessuno dei due codec ha consegnato: c'e' un "
-		              "fotogramma e non c'e' niente da spedire");
-	else
-		registro_dice(REG_VIDEO,
-		              "⭐ %d flussi su 2 in deposito: la prima sessione che "
-		              "arriva a SESSIONE se ne prende uno (§6.2)",
-		              quanti);
-
-	cattura_fermo_libera(&f);
+	              "il deposito del video era di «%s» (uid %ld), che se n'e' "
+	              "andato: SVUOTATO.  Chi entrera' se lo prendera'",
+	              utente, (long)uid);
 }
 
 int main(int argc, char **argv)
@@ -514,10 +376,25 @@ int main(int argc, char **argv)
 	trasporto *t = NULL;
 	pagina *p = NULL;
 	comando *k = NULL;
-	struct palco palco = {NULL, NULL};
 	aiutante *pam_aiuto = NULL;  /* ⚠ non «aiuto»: quel nome e' gia' della funzione che stampa l'uso */
+	figli *prole = NULL;
+	struct ponte ponte;
 	time_t ultimo_controllo_cert;
 	int esito = 1;
+
+	/* ⛔⭐ E QUESTA E' LA PRIMA RIGA DEL PROGRAMMA, PRIMA DI QUALUNQUE ALTRA
+	 *     COSA: se siamo il figlio, non siamo un server.
+	 *
+	 *     `figli_assicura()` ci ha gia' fatto scendere all'uid dell'utente e ha
+	 *     fatto `exec` di questo stesso binario (`figlio.c`, riquadro in testa:
+	 *     senza `exec` il figlio avrebbe in memoria la chiave privata TLS del
+	 *     server, e la memoria di un processo appartiene al suo proprietario).
+	 *     ⛔ Qui non si apre niente, non si legge nessun certificato e non si
+	 *     tocca il file dei ban: si va dritti a `figlio_vive()`, che non torna. */
+	if (argc >= 2 && strcmp(argv[1], "--figlio-interno") == 0) {
+		figlio_vive(argc, argv);
+		return 1; /* non ci si arriva */
+	}
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];
@@ -670,45 +547,23 @@ int main(int argc, char **argv)
 	 * ⚠ E se non si accende, il server parte lo stesso e lo dice: senza
 	 *   aiutante ogni autenticazione e' un NO (invariante I3), il che e'
 	 *   sgradevole ma e' la direzione giusta in cui sbagliare. */
-	/* ⛔⭐ IL PALCO PRIMA DEGLI ASCOLTATORI — invariante I4, e il difetto dei
-	 *     due giorni (`fasi/rapporti/D4-sessione-nera.md`).
+	/* ⛔⭐ E IL PALCO NON SI PRENDE PIU' QUI — §1.10-bis, 12 agosto 2026.
 	 *
-	 *     Qui, e non alla connessione, per tre ragioni dichiarate:
-	 *     · il palco appartiene alla SESSIONE, non alla connessione (I4), e
-	 *       sopravvive al distacco;
-	 *     · far nascere una sessione costa fino a 40 s, e dentro il ciclo
-	 *       `poll` fermerebbe TUTTE le connessioni insieme — la stessa forma
-	 *       appena curata su PAM (`CODER.md` §4.4, `DECISIONI.md` §1.10);
-	 *     · qui gli ascoltatori non sono ancora aperti, quindi non c'e'
-	 *       nessuno in attesa: la porta compare quando c'e' che cosa mostrare.
+	 *     Fino a ieri, in questo punto, il server chiamava `sessione_assicura()`
+	 *     e `primo_fotogramma()`: prendeva **la sessione grafica dentro cui
+	 *     girava lui**, e la mostrava a chiunque entrasse.  ⛔ `[M]` sulla
+	 *     macchina di prova il server girava come `nicfio` e l'utente entrava
+	 *     come `prova`: quel che si vedeva nella scheda era il desktop di
+	 *     `nicfio` — cioe' il palco era del PROCESSO, non dell'utente.
 	 *
-	 * ⚠ E prima dell'aiutante di proposito: `sessione_assicura()` genera un
-	 *   processo, e un processo generato dopo si porterebbe dietro il
-	 *   socketpair dell'aiutante.  (GLib chiude da se' i descrittori > 2 nel
-	 *   figlio, quindi oggi non accadrebbe — ma l'ordine giusto non si affida
-	 *   a un comportamento di libreria.)
+	 * ⇒ Adesso il palco e' del **figlio**, che nasce quando PAM dice si' e gira
+	 *   come quell'utente (`figlio.h`).  ⚠ La tabella si accende qui perche'
+	 *   `consegna_verdetto()` la vuole gia' pronta; i figli, no: quelli nascono
+	 *   uno per utente ammesso.
 	 *
-	 * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): senza sessione il server
-	 *   parte lo stesso — la pagina e l'autenticazione della fase 1 funzionano
-	 *   — ma non c'e' niente da catturare, e chi legge il registro lo sa. */
-	{
-		bool nata = false;
-		SessioneStato s = sessione_assicura(TELA_L, TELA_A, &nata);
-
-		if (s != SESSIONE_SANA)
-			registro_dice(REG_AVVIO,
-			              "⛔ nessuna sessione grafica con un monitor "
-			              "(%d %s): il server parte lo stesso, ma non c'e' "
-			              "niente da catturare.  Il ripiego e' dichiarato, "
-			              "non silenzioso (CODER.md §4.2)",
-			              (int)s, sessione_marca(s));
-		else
-			registro_dice(REG_AVVIO,
-			              "⭐ sessione grafica SANA, monitor %ux%u — %s",
-			              TELA_L, TELA_A,
-			              nata ? "l'ho fatta nascere io" : "c'era gia'");
-	}
-
+	 * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): se la tabella non si accende
+	 *   il server parte lo stesso — pagina e autenticazione funzionano — e
+	 *   nessuno vede un pixel. */
 	pam_aiuto = aiutante_accendi();
 	if (!pam_aiuto)
 		registro_dice(REG_AVVIO,
@@ -717,14 +572,28 @@ int main(int argc, char **argv)
 		              "(DECISIONI.md §1.10).  Il ripiego e' dichiarato, non "
 		              "silenzioso (CODER.md §4.2).");
 
-	/* ⭐⭐ E QUI SI PRENDE IL FOTOGRAMMA: la fase 2 in una riga.
-	 *
-	 * ⛔ Dopo l'aiutante (che e' un `fork()`: i descrittori di PipeWire e del
-	 *    bus non devono finire nel figlio) e prima degli ascoltatori (perche'
-	 *    l'attesa arriva al suo tetto, e nessuno la sta subendo).
-	 * ⚠ Se non ci riesce non si ferma niente: il server della fase 1 continua
-	 *   a funzionare, e ogni ragione e' scritta nel registro sotto «video». */
-	primo_fotogramma(&palco, dir_rilievo);
+	prole = figli_accendi(TELA_L, TELA_A, dir_rilievo, deposita_fotogramma,
+	                      congeda_figlio, NULL);
+	if (!prole)
+		registro_dice(REG_AVVIO,
+		              "⛔ la tabella dei figli non si accende: NESSUN utente "
+		              "avra' un palco, e la fase 2 non ha oggetto.  Il server "
+		              "parte lo stesso (la fase 1 funziona), e il perche' e' "
+		              "nella riga qui sopra");
+
+	/* ⛔ Chi possiede questo processo, scritto una volta e non dedotto dal
+	 *    lettore: da qui dipende se i figli potranno DAVVERO scendere a un
+	 *    altro utente.  ⚠ Un server non privilegiato genera figli che restano
+	 *    lui — `setuid()` fallisce, e `figli_assicura()` lo dichiara. */
+	registro_dice(REG_AVVIO,
+	              "%s questo processo e' uid %ld: %s",
+	              geteuid() == 0 ? "⭐" : "⚠", (long)geteuid(),
+	              geteuid() == 0
+	                      ? "puo' verificare con PAM la parola di chiunque e "
+	                        "far scendere i figli all'utente giusto "
+	                        "(DECISIONI.md §1.10-bis)"
+	                      : "NON e' root — PAM potra' verificare solo il suo "
+	                        "utente, e un figlio potra' nascere solo per lui");
 
 	k = comando_apri(socket_comando);
 
@@ -741,6 +610,8 @@ int main(int argc, char **argv)
 	t = trasporto_apri(indirizzo, porta, ctx_quic, pam_aiuto);
 	if (!t)
 		goto fine;
+	ponte.t = t;
+	ponte.f = prole;
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;
@@ -754,7 +625,8 @@ int main(int argc, char **argv)
 
 	while (!si_ferma) {
 		struct pollfd fds[MAX_POLL];
-		size_t n = 0, npagina, ncomando, naiuto;
+		size_t n = 0, npagina, ncomando, naiuto, nfigli;
+		uint64_t adesso;
 		int attesa;
 
 		fds[n].fd = trasporto_fd(t);
@@ -781,11 +653,20 @@ int main(int argc, char **argv)
 			naiuto = 1;
 		}
 
+		/* ⭐ E i figli dopo l'aiutante, per la stessa ragione: i conti di chi
+		 *    sta prima sono relativi, e infilarli in mezzo sposterebbe gli
+		 *    indici di tre chiamate.  ⛔ E sono l'ultimo blocco anche per una
+		 *    ragione di verita': se `MAX_POLL` finisse, a restare fuori sono i
+		 *    figli — cioe' il video — e non la pagina o l'autenticazione.  Una
+		 *    sessione brutta vale piu' di una sessione chiusa (invariante I1). */
+		nfigli = figli_descrittori(prole, fds + n + npagina + ncomando + naiuto,
+		                           MAX_POLL - n - npagina - ncomando - naiuto);
+
 		attesa = trasporto_attesa_ms(t);
 		if (attesa < 0 || attesa > 1000)
 			attesa = 1000;
 
-		if (poll(fds, n + npagina + ncomando + naiuto, attesa) < 0) {
+		if (poll(fds, n + npagina + ncomando + naiuto + nfigli, attesa) < 0) {
 			if (errno == EINTR)
 				continue;
 			registro_dice(REG_AVVIO, "⛔ poll: %s", strerror(errno));
@@ -803,9 +684,20 @@ int main(int argc, char **argv)
 		 *   e' una scadenza che non scatta mai — proprio nel caso per cui e'
 		 *   stata scritta (la lezione di `regola_battito`, pagata l'11 agosto
 		 *   con B6). */
+		adesso = registro_ora_ms();
 		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
-			aiutante_muovi(pam_aiuto, consegna_verdetto, t);
-		aiutante_scaduti(pam_aiuto, registro_ora_ms(), consegna_verdetto, t);
+			aiutante_muovi(pam_aiuto, consegna_verdetto, &ponte);
+		aiutante_scaduti(pam_aiuto, adesso, consegna_verdetto, &ponte);
+		/* ⛔ I figli PRIMA di `trasporto_scaduti()`, e per lo stesso motivo per
+		 *    cui ci stanno le risposte di PAM: un fotogramma appena arrivato dal
+		 *    palco puo' entrare in deposito **in questo giro**, e rimandarlo al
+		 *    prossimo costerebbe un giro intero a chi sta aspettando di vedere
+		 *    il proprio desktop.
+		 * ⚠ E si chiama SEMPRE, anche quando nessun figlio e' leggibile: qui
+		 *   dentro si raccolgono i morti (`waitpid(WNOHANG)`) e scadono le
+		 *   presentazioni, e una scadenza che aspetta un byte non scatta mai. */
+		figli_muovi(prole, fds + n + npagina + ncomando + naiuto, nfigli, adesso);
+		figli_ricontrolla(prole, adesso);
 		trasporto_scaduti(t);
 		pagina_muovi(p, fds + 1, npagina);
 		comando_muovi(k, fds + 1 + npagina, ncomando);
@@ -974,15 +866,16 @@ fine:
 	comando_chiudi(k);
 	pagina_chiudi(p);
 	trasporto_chiudi(t);
-	/* ⛔ Il palco si smonta DOPO il trasporto: finche' una connessione e' viva
+	/* ⛔ I figli si spengono DOPO il trasporto: finche' una connessione e' viva
 	 *    puo' esserci un fotogramma in coda, e i suoi byte stanno nel deposito.
-	 * ⚠ E si smonta all'uscita del PROCESSO, non a quella di una connessione:
-	 *   e' l'invariante I4 — il palco appartiene alla sessione. */
+	 * ⚠ E si spengono all'uscita del PROCESSO, non a quella di una connessione:
+	 *   e' l'invariante I4 — il palco appartiene alla sessione, e chi muore
+	 *   quando cade la rete non e' lui.  ⛔ `figli_spegni()` ASPETTA che siano
+	 *   morti, perche' il monitor virtuale sparisce quando sparisce il
+	 *   consumatore: uscire prima lascerebbe un monitor attaccato alla sessione
+	 *   dell'utente senza nessuno che lo guardi. */
+	figli_spegni(prole);
 	wt_video_svuota();
-	if (palco.cattura)
-		cattura_ferma(palco.cattura);
-	if (palco.mutter)
-		mutter_chiudi(palco.mutter);
 	if (ctx_quic)
 		SSL_CTX_free(ctx_quic);
 	if (ctx_pagina)
