@@ -202,7 +202,12 @@ FILE_CHE_CONTANO = {
     #   banchi si certifica da una macchina sola, e `--provabile` lo dice
     #   invece di lasciarlo scoprire a un rosso (R12-A.31).
     "P1":  ["01-p1-prodotto.sh", "01-p1-dentro.sh", "remotix/pagina.c"],
-    "P5":  ["01-p5-lancia.sh", "01-p5-registro.py", "remotix/pagina.c"],
+    # ⚠ `01-p5-guasto-catalogo.py` entra il 12 agosto 2026, su segnalazione di
+    #   chi l'ha scritto: innesta il guasto P5 leggendo le stringhe **da questo
+    #   catalogo** invece di ricopiarle, e senza la sua impronta la riga di P5
+    #   direbbe «certificato» senza sapere con che attrezzo.
+    "P5":  ["01-p5-lancia.sh", "01-p5-registro.py", "01-p5-guasto-catalogo.py",
+            "remotix/pagina.c"],
     # ⚠ P5R — 12 agosto 2026.  Senza questa riga la certificazione di P5R
     #   esisteva ma NON portava impronte, cioe' era «non riverificabile»: una
     #   riga che dice «certificato» e non sa dire **su che byte**.  ⛔ E

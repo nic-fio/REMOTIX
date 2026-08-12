@@ -1,0 +1,6 @@
+{"sigla": "P5", "passo": "sano", "uscita": 0, "marca_vista": false, "giro": "7544-1-sano", "quando": "2026-08-12T17:20", "nota": "4 gambe su 4 CONFORMI, due motori"}
+{"sigla": "P5", "passo": "guasto", "uscita": 1, "marca_vista": true, "giro": "7544-2-guasto-p5", "quando": "2026-08-12T17:32", "nota": "la marca compare 1 volta; le 4 gambe restano CONFORMI — il guasto e' piccolo apposta e muove UN solo controllo"}
+{"sigla": "P5", "passo": "risano", "uscita": 0, "marca_vista": false, "giro": "7544-3-risanato", "quando": "2026-08-12T17:44", "nota": "pagina.c tornata a sha256 930b611a…, binario ricostruito identico a f33c002e…"}
+{"sigla": "P5R", "passo": "sano", "uscita": 0, "marca_vista": false, "giro": "7544-3-risanato", "quando": "2026-08-12T17:44", "nota": "⚠ e' lo STESSO giro che chiude P5: e' il sano che precede immediatamente il guasto P5R, sullo stesso bersaglio e senza niente in mezzo"}
+{"sigla": "P5R", "passo": "guasto", "uscita": 1, "marca_vista": true, "giro": "7544-4-guasto-p5r", "quando": "2026-08-12T17:56", "nota": "la marca compare 4 volte; tutte e 4 le gambe dalla pagina NON-CONFORMI"}
+{"sigla": "P5R", "passo": "risano", "uscita": 0, "marca_vista": false, "giro": "7544-5-risanato-p5r", "quando": "2026-08-12T18:09", "nota": "pagina.html tornata a sha256 1497ce52…, e la pagina SERVITA identica byte per byte a quella del giro 3"}
