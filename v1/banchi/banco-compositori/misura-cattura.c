@@ -19,7 +19,7 @@
  *   --nodo N    si aggancia a un nodo PipeWire gia' esistente.  Serve agli altri
  *               compositori, che il nodo lo annunciano per strade loro.
  *
- * Le tre trappole gia' pagate, e qui rispettate:
+ * Le quattro trappole gia' pagate, e qui rispettate:
  *
  *   1. il DMA-BUF si chiede in DUE posti (formato + SPA_PARAM_Buffers), o la
  *      negoziazione riesce e i buffer arrivano lo stesso in memoria — R29;
@@ -28,7 +28,11 @@
  *      sia stata ridipinta davvero — ed e' la differenza fra «il compositore non
  *      da'» e «il compositore da' un diff»;
  *   3. non si stampa una riga per fotogramma: si conta e si riassume.  Il ciclo
- *      di PipeWire e' di tempo reale, e chi lo rallenta falsa la sua misura.
+ *      di PipeWire e' di tempo reale, e chi lo rallenta falsa la sua misura;
+ *   4. ⭐ la RIGA dichiara la misura NEGOZIATA, non quella chiesta — la voce
+ *      12-bis di `fasi/00-ambiente.md`, curata il 9 agosto nel gemello
+ *      `misura-wlroots` e qui soltanto il 12.  Vedi il riquadro sopra la printf
+ *      della RIGA, in fondo al file.
  */
 
 #include <gio/gio.h>
@@ -129,6 +133,25 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 	pw_thread_loop_signal(m->ciclo, false);
 }
 
+/* Il nome del formato di pixel, per la RIGA e per lo stderr.  ⛔ Serve una
+ * funzione sola perche' la stessa domanda si fa su DUE valori diversi — quello
+ * chiesto sulla riga di comando e quello negoziato — e finche' erano due
+ * espressioni ternarie sparse nessuno vedeva che la RIGA rispondeva sempre col
+ * primo.  Un formato che non e' ne' BGRx ne' BGRA non si tace: si stampa il
+ * numero, perche' «non lo so nominare» e «BGRA» non possono avere la stessa
+ * faccia (`LEZIONI.md` §1.9). */
+static const char *nome_colore(uint32_t formato)
+{
+	static char altro[16];
+
+	if (formato == SPA_VIDEO_FORMAT_BGRx)
+		return "BGRx";
+	if (formato == SPA_VIDEO_FORMAT_BGRA)
+		return "BGRA";
+	snprintf(altro, sizeof altro, "spa:%u", formato);
+	return altro;
+}
+
 static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 {
 	Misura *m = dati;
@@ -148,10 +171,10 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		return;
 
 	m->formato_noto = TRUE;
-	fprintf(stderr, "  formato negoziato: %ux%u %s, modificatore 0x%" PRIx64 "\n",
-	        m->formato.size.width, m->formato.size.height,
-	        m->formato.format == SPA_VIDEO_FORMAT_BGRx ? "BGRx" : "BGRA",
-	        (uint64_t) m->formato.modifier);
+	fprintf(stderr, "  formato negoziato: %ux%u %s, modificatore 0x%" PRIx64 ", cadenza massima %u/%u\n",
+	        m->formato.size.width, m->formato.size.height, nome_colore(m->formato.format),
+	        (uint64_t) m->formato.modifier, m->formato.max_framerate.num,
+	        m->formato.max_framerate.denom);
 
 	/* Il tipo dei dati si concorda QUI, non nel formato: chi tace lascia il
 	 * predefinito, che e' la memoria ordinaria.  R29, primo punto. */
@@ -536,7 +559,14 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT, "nessun nodo PipeWire annunciato");
 		goto guasto;
 	}
-	fprintf(stderr, "  monitor virtuale %ux%u montato, nodo PipeWire %u\n", larghezza, altezza,
+	/* ⚠ «CHIESTO», e non e' una sfumatura: qui il monitor virtuale non esiste
+	 *   ancora della misura che si legge.  Mutter lo crea (o lo ridimensiona)
+	 *   alla NEGOZIAZIONE del formato, che avviene dopo — e su un nodo gia'
+	 *   negoziato da qualcun altro non lo ridimensiona affatto.  Questa riga
+	 *   diceva «montato %ux%u» con i numeri di argv: la stessa forma della voce
+	 *   12-bis, un'etichetta che dichiara una misura che nessuno ha ancora
+	 *   onorato.  La misura vera e' quella della riga «formato negoziato». */
+	fprintf(stderr, "  monitor virtuale CHIESTO %ux%u, nodo PipeWire %u\n", larghezza, altezza,
 	        p->nodo);
 	return p;
 
@@ -810,6 +840,72 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	/*
+	 * ⛔ E LA MISURA CHE SI STAMPA E' QUELLA NEGOZIATA, NON QUELLA CHIESTA.
+	 *
+	 * Difetto **D7**, curato il 12 agosto 2026.  Rilievo `[R]` di F2.2
+	 * (`fasi/rapporti/F2-2-cattura.md`, «Un rilievo sullo strumento della fase
+	 * 0»): la RIGA stampava `larghezza`, `altezza` e `colore` presi da argv —
+	 * cioe' quel che era stato CHIESTO — mentre il formato NEGOZIATO era gia'
+	 * noto (`m.formato`, riempito in `su_parametri`) e finiva soltanto sullo
+	 * stderr, che le tabelle non leggono.
+	 *
+	 * ⚠ La cura non e' nuova: e' quella che il gemello `misura-wlroots` ha in
+	 *   corpo dal 7 agosto — stampa la misura VERA accanto al numero invece di
+	 *   ripetere l'etichetta che gli e' stata data.  E' con quella che il 9
+	 *   agosto e' venuta fuori la voce 12-bis di `fasi/00-ambiente.md`: labwc
+	 *   catturava a 1280x720 sotto un'etichetta che diceva 1920x1080, e ⛔ il
+	 *   numero era GIUSTO — 61,16, l'atteso esatto a 720p.  Niente sarebbe
+	 *   sembrato storto.  A `misura-cattura` quella cura non era mai arrivata.
+	 *
+	 * ⛔ E QUI NON E' TEORICA — il caso e' stato costruito e misurato `[M]` il
+	 *   12 agosto 2026 su NIC-OS, sessione GNOME headless 48.7:
+	 *
+	 *     A: --mutter --larghezza 1280 --altezza 720   → nodo PipeWire 46
+	 *     B: --nodo 46 --larghezza 1920 --altezza 1080 → «formato negoziato:
+	 *                                                     1280x720» sullo stderr
+	 *
+	 *   Su un nodo il cui formato e' GIA' FISSATO da un altro consumatore, la
+	 *   nostra proposta non filtra piu' niente: PipeWire consegna il formato in
+	 *   vigore e la negoziazione riesce.  Prima di questa cura B stampava
+	 *   `RIGA … 1920x1080 …` con uscita 0 — una misura di 720p pronta a entrare
+	 *   in una cella di tabella intestata 1080p.  E' la forma d'errore **E2**
+	 *   (`REVIEWER.md` §2): due misure diverse sotto la stessa etichetta.
+	 *
+	 * ⚠ E la stessa faccia l'aveva gia' avuta il 9 agosto: il revisore sospetto'
+	 *   che il 49,67 di KWin in memoria fosse una cattura a 720p etichettata
+	 *   1080p.  Il sospetto si chiuse **solo** perche' qualcuno aveva salvato lo
+	 *   stderr di quella corsa.  Ora la risposta sta nella riga.
+	 *
+	 * ⛔ PERCHE' NON SI FALLISCE, invece, e non e' distrazione.  Il DMA-BUF
+	 *   chiesto e non ottenuto qui sopra esce con 2, e la tentazione era di fare
+	 *   lo stesso.  Ma quel numero **non e' sbagliato**: e' la misura giusta di
+	 *   un'altra scena, e buttarla via darebbe un rosso su un compositore sano —
+	 *   la voce 2 di `fasi/00-ambiente.md`, una prova che si accende quando tutto
+	 *   funziona.  La cura di 12-bis infatti non fece fallire `misura-wlroots`
+	 *   su labwc: gli fece dire la verita', e il 61,16 resto' un numero buono a
+	 *   720p.  ⇒ chiesto e negoziato sono DUE COLONNE diverse (e' la convenzione
+	 *   del banco di F2.2), piu' una colonna `onorato` che dice in una parola se
+	 *   combaciano, perche' chi legge venti righe non confronta venti coppie.
+	 *
+	 * ⚠ La cadenza invece si CHIEDE A INTERVALLO (`maxFramerate` fra 1 e `fps`):
+	 *   un valore piu' basso li' dentro e' una negoziazione legittima, non una
+	 *   promessa mancata, e infatti non entra in `onorato`.  Si stampa lo stesso,
+	 *   perche' e' la meta' negoziata dell'asse «tetto dichiarato» che la tabella
+	 *   di `banco.sh` percorre a 30, 60 e 120.
+	 */
+	if (!m.formato_noto)
+	{
+		printf("GUASTO\t%s\tformato mai negoziato\n", etichetta);
+		fprintf(stderr,
+		        "⛔ FALLITO (non «zero»): il flusso e' attivo ma nessun formato e' mai\n"
+		        "   stato negoziato — quindi non si sa a che misura, a che colore ne'\n"
+		        "   su che strada siano i fotogrammi contati.  Una riga che dichiarasse\n"
+		        "   qui la misura CHIESTA sarebbe la voce 12-bis in persona.\n");
+		palco_smonta(palco);
+		return 2;
+	}
+
 	/* --- il conto ---------------------------------------------------- */
 	secondi = m.contati > 1 ? (double) (m.t_ultimo - m.t_primo) / G_USEC_PER_SEC : 0.0;
 	fps_misurati = secondi > 0.1 ? (double) (m.contati - 1) / secondi : 0.0;
@@ -820,6 +916,39 @@ int main(int argc, char **argv)
 
 	{
 		gint32 p50 = 0, p95 = 0, massimo = 0, minimo = 0;
+		uint32_t l_negoziata = m.formato.size.width, a_negoziata = m.formato.size.height;
+		gboolean misura_onorata = (l_negoziata == larghezza && a_negoziata == altezza);
+		gboolean colore_onorato = (m.formato.format == colore);
+		double cadenza_negoziata =
+		    m.formato.max_framerate.denom
+		        ? (double) m.formato.max_framerate.num / m.formato.max_framerate.denom
+		        : 0.0;
+		const char *onorato = misura_onorata ? (colore_onorato ? "si" : "NO:colore")
+		                                     : (colore_onorato ? "NO:misura" : "NO:misura+colore");
+		/* ⚠ Le due copie servono: `nome_colore` ha un buffer statico per il caso
+		 *   «formato che non so nominare», e chiamarla due volte dentro la stessa
+		 *   printf farebbe stampare lo stesso nome nelle due colonne — cioe' un
+		 *   chiesto e un negoziato sempre uguali, che e' precisamente il difetto
+		 *   che questa riga cura. */
+		char c_negoziato[16], c_chiesto[16];
+
+		g_strlcpy(c_negoziato, nome_colore(m.formato.format), sizeof c_negoziato);
+		g_strlcpy(c_chiesto, nome_colore(colore), sizeof c_chiesto);
+
+		if (!misura_onorata || !colore_onorato)
+			fprintf(stderr,
+			        "⚠ ⛔ LA MISURA CHIESTA NON E' STATA ONORATA — e il numero qui sotto\n"
+			        "     NON e' della scena che l'etichetta «%s» dichiara.\n"
+			        "     chiesto:   %ux%u %s\n"
+			        "     negoziato: %ux%u %s   ← e' QUESTA la scena misurata\n"
+			        "     Succede quando ci si aggancia con `--nodo` a un flusso il cui\n"
+			        "     formato e' gia' fissato da un altro consumatore: la proposta non\n"
+			        "     filtra piu' niente.  La RIGA porta la misura negoziata e la\n"
+			        "     colonna `onorato` dice NO; l'etichetta pero' e' di chi chiama, e\n"
+			        "     quella resta da correggere fuori di qui (voce 12-bis di\n"
+			        "     `fasi/00-ambiente.md`).\n",
+			        etichetta, larghezza, altezza, c_chiesto, l_negoziata, a_negoziata,
+			        c_negoziato);
 
 		if (m.n_intervalli > 0)
 		{
@@ -835,21 +964,24 @@ int main(int argc, char **argv)
 		 *    poter vedere su quale popolazione sono calcolate le altre colonne
 		 *    invece di doverlo dedurre (9 agosto 2026, dopo la revisione). */
 		printf("RIGA\t%s\t%ux%u\t%s\t%u\t%s\t%s\t%.2f\t%" PRIu64 "\t%" PRIu64 "\t%.2f\t%u\t%" PRIu64
-		       "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%.1f\t%.1f\t%.1f\t%.1f\n",
-		       etichetta, larghezza, altezza,
-		       colore == SPA_VIDEO_FORMAT_BGRx ? "BGRx" : "BGRA", fps,
+		       "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%.1f\t%.1f\t%.1f\t%.1f"
+		       "\t%ux%u\t%s\t%.1f\t%s\n",
+		       etichetta, l_negoziata, a_negoziata, c_negoziato, fps,
 		       vuole_dmabuf ? "dmabuf" : "memoria", nome_tipo, fps_misurati, m.contati, m.arrivati,
 		       secondi, m.quanti_fd, m.danno_pieno, m.danno_parziale, m.danno_assente, m.salti_seq,
-		       m.fence_non_pronta, minimo / 1000.0, p50 / 1000.0, p95 / 1000.0, massimo / 1000.0);
+		       m.fence_non_pronta, minimo / 1000.0, p50 / 1000.0, p95 / 1000.0, massimo / 1000.0,
+		       larghezza, altezza, c_chiesto, cadenza_negoziata, onorato);
 
 		fprintf(stderr,
 		        "  fotogrammi %" PRIu64 " in %.2f s  →  %.2f al secondo\n"
 		        "  (arrivati in tutto %" PRIu64 "; danno e fence sono sui %" PRIu64 " contati)\n"
+		        "  misura: negoziata %ux%u %s ← e' quella della RIGA; chiesta %ux%u %s (%s)\n"
 		        "  buffer: %s, %u distinti, stride %u\n"
 		        "  danno: pieno %" PRIu64 ", parziale %" PRIu64 ", assente %" PRIu64 "\n"
 		        "  salti di sequenza %" PRIu64 ", disegno non finito %" PRIu64 "\n"
 		        "  intervalli ms: min %.1f  mediana %.1f  p95 %.1f  max %.1f\n",
-		        m.contati, secondi, fps_misurati, m.arrivati, m.contati, nome_tipo, m.quanti_fd, m.stride, m.danno_pieno,
+		        m.contati, secondi, fps_misurati, m.arrivati, m.contati, l_negoziata, a_negoziata,
+		        c_negoziato, larghezza, altezza, c_chiesto, onorato, nome_tipo, m.quanti_fd, m.stride, m.danno_pieno,
 		        m.danno_parziale, m.danno_assente, m.salti_seq, m.fence_non_pronta, minimo / 1000.0,
 		        p50 / 1000.0, p95 / 1000.0, massimo / 1000.0);
 	}

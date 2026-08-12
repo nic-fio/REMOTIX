@@ -41,6 +41,39 @@
 # ⛔ Un server puo' passare tutto questo ed essere pieno di difetti: e' quel
 #    che i banchi cercano.  Qui si controlla soltanto che cerchino nel posto
 #    giusto.
+#
+# ---------------------------------------------------------------------------
+# ⛔⭐ E QUESTO FILE HA AVUTO ADDOSSO PROPRIO IL DIFETTO CHE ESISTE PER
+#     IMPEDIRE — difetto **D5**, 12 agosto 2026.
+#
+# La riga 235 cercava il binario del prodotto in `remotix/build/remotix`, che
+# **non e' mai esistito**: `src/Makefile` dichiara `NOME := remotix` e lo
+# costruisce accanto ai sorgenti, e `src/costruisci.sh` fa `make -C "$QUI"`
+# dopo aver cancellato `"$QUI/remotix"`.  ⇒ Il `[ -f ... ]` cadeva **sempre**
+# nel ramo «non lo giudico», e quel controllo era un **IGNOTO fisso**: non
+# controllava niente, e nessuno lo leggeva piu'.
+#
+# ⛔ E' la forma **E8** — «vuoto» e «proibito» hanno lo stesso aspetto —
+#    applicata allo strumento che dovrebbe impedirla agli altri.  Il percorso
+#    non e' stato indovinato una seconda volta: e' letto in `src/Makefile` e
+#    in `src/costruisci.sh`, ed e' lo stesso che dichiara gia'
+#    `01-b0-bersaglio.sh` (`B_ESE="$B0_DENTRO/remotix/remotix"`).
+#
+# ⭐ Da cui le quattro cose che questo giro ha cambiato, e ognuna risponde a
+#    «quale ingresso lo farebbe diventare ROSSO?»:
+#
+#   1. il percorso vero, `$SORG/remotix`             ⇒ rosso se il binario e'
+#                                                       piu' vecchio di un .c
+#   2. il binario che MANCA e' un **guaio**, non un ignoto — il ramo che lo
+#      scusava e' sparito, e giudica `piu_nuovo()` come sull'innesto
+#   3. si confronta con **tutti** i sorgenti compilati, non col solo `rcp.c`:
+#      con `rcp.c` da solo un `main.c` piu' nuovo del binario restava VERDE
+#   4. ⚠ **il posto e' uno solo per albero, ma gli alberi NON sono uno**:
+#      `[M]` 12 agosto 2026, cinque `remotix` eseguibili sotto `/media/REMOTIX/src`
+#      (il prodotto di casa, `01-p5-copia-7522`, `01-b12-copie/p1-remotix`,
+#      `01-b12-copie/p5-remotix`, `coder-r12/src`).  ⇒ l'albero si **dichiara**
+#      con `SORG=`, e se dentro l'albero i binari fossero due il controllo lo
+#      **dice** invece di sceglierne uno.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -49,6 +82,13 @@ FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
 ESEMPI=$FUORI/b2/ngtcp2/examples
 BINARIO_INNESTO=$FUORI/b2/ngtcp2/build/examples/bsslserver
+
+# ⛔ L'albero del prodotto si DICHIARA, come in `01-p1-prodotto.sh` (SORG):
+#    il binario sta sempre accanto ai suoi sorgenti, ma di alberi ce n'e' piu'
+#    d'uno su questa macchina e il bersaglio «prodotto» e' quello di casa,
+#    cioe' il server della 7448.  Chi vuole giudicarne un altro lo nomina.
+SORG=${SORG:-$FUORI/remotix}
+BINARIO_PRODOTTO=$SORG/remotix
 
 BERSAGLIO=${1:-}
 case "$BERSAGLIO" in
@@ -157,6 +197,48 @@ piu_nuovo() # $1 = binario, $2.. = sorgenti
 	fi
 }
 
+# ⛔ IL POSTO E' UNO SOLO?  E' l'altra meta' della cura di D5: sapere DOVE sta
+#    il binario non basta se il binario puo' stare in due posti.
+#
+#    Dentro UN albero il posto e' uno per costruzione — `src/Makefile` mette
+#    `$(NOME)` accanto ai sorgenti e `costruisci.sh` cancella quello vecchio
+#    prima — ⛔ ma un `build/remotix` lasciato li' da una costruzione fuori
+#    albero, o una copia dimenticata, rimetterebbe in piedi esattamente la
+#    domanda che D5 ha pagato: *quale dei due sta girando?*
+#    ⭐ Qui non si sceglie: si contano e si dicono.  L'ESISTENZA la giudica
+#       `piu_nuovo()`; questo controlla soltanto che non ce ne sia PIU' D'UNO.
+posto_unico() # $1 = albero, $2 = il binario che sto per giudicare
+{
+	local albero=$1 atteso=$2 trovati s n
+	GUARDATI=$((GUARDATI + 1))
+	if [ ! -d "$albero" ]; then
+		dub "⛔ l'albero del prodotto non c'e': $albero"
+		dub "   ⚠ e «non ho potuto guardare» non e' «va bene»"
+		IGNOTI=$((IGNOTI + 1))
+		return
+	fi
+	# ⚠ Niente `2>/dev/null`: se `find` non ha potuto guardare lo dice, e un
+	#   «non ho potuto» non deve avere la faccia di un «ce n'e' uno solo».
+	trovati=$(find "$albero" -maxdepth 2 -type f -name remotix -perm -u+x)
+	s=$?
+	if [ "$s" -ne 0 ]; then
+		dub "⛔ non ho potuto elencare i binari sotto «$albero» (find: $s)"
+		IGNOTI=$((IGNOTI + 1))
+		return
+	fi
+	if [ -z "$trovati" ]; then n=0; else n=$(printf '%s\n' "$trovati" | wc -l); fi
+	if [ "$n" -le 1 ]; then
+		ok "un solo posto dove puo' stare il binario: $atteso"
+		[ "$n" -eq 0 ] && inf "(oggi non c'e' nessun binario: lo giudica il controllo qui sotto)"
+	else
+		ko "⛔ $n binari «remotix» dentro lo stesso albero:"
+		printf '        %s\n' $trovati
+		ko "   ⇒ non so quale sta girando, e sceglierne uno sarebbe D5 daccapo."
+		ko "   Si butta quello di troppo, o si dichiara l'albero con SORG=."
+		GUAI=$((GUAI + 1))
+	fi
+}
+
 printf '\n%s== ⛔ Il terreno: il server «%s» e'"'"' quello che credo?%s\n' \
 	"$NETTO" "$BERSAGLIO" "$GRIGIO"
 
@@ -204,10 +286,25 @@ if [ "$BERSAGLIO" = innesto ]; then
 	nessuno "guasti di B12 in server.cc" "$ESEMPI/server.cc"                 "REMOTIX B12 GUASTO"
 	nessuno "guasti di B11 nel codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
 	nessuno "guasti di B11 in rcp.c"   "$ESEMPI/rcp.c"                       "REMOTIX B11 GUASTO"
+	# ⛔ ⭐ E IL TERZO FILE DI B11, che fino al 12 agosto 2026 non guardava
+	#    nessuno: `01-b11-guasto-innesta.py` scrive in TRE file — `rcp.c`,
+	#    `http3_server_proto_codec.cc` e `http3_server_proto_codec.h` (il
+	#    membro `bool b11_fatto_{false}; // ⚠ REMOTIX B11 GUASTO`).  Un
+	#    `--togli` che lasciasse indietro l'intestazione era invisibile a
+	#    questo strumento: la stessa forma di R12-A.45, che e' il motivo per
+	#    cui questo file esiste.
+	nessuno "guasti di B11 nell'intestazione del codec" \
+		"$ESEMPI/http3_server_proto_codec.h" "REMOTIX B11 GUASTO"
 
+	# ⛔ Le INTESTAZIONI stanno fra i sorgenti che il binario dichiara: senza,
+	#    un `touch examples/rcp.h` — o l'intestazione del codec riscritta da
+	#    `--togli` — lasciava questo controllo VERDE su un binario stantio.
+	#    E' lo stesso difetto di D5 sull'altro bersaglio, dove si confrontava
+	#    il solo `rcp.c`.
 	piu_nuovo "$BINARIO_INNESTO" \
-		"$ESEMPI/http3_server_proto_codec.cc" "$ESEMPI/server.cc" \
-		"$ESEMPI/rcp.c" "$ESEMPI/autenticazione.c"
+		"$ESEMPI/http3_server_proto_codec.cc" "$ESEMPI/http3_server_proto_codec.h" \
+		"$ESEMPI/server.cc" \
+		"$ESEMPI/rcp.c" "$ESEMPI/rcp.h" "$ESEMPI/autenticazione.c"
 else
 	# ── Il prodotto ─────────────────────────────────────────────────────
 	# ⛔ `src/rcp.c` e `banchi/rcp/rcp.c` DEVONO restare identici byte per
@@ -230,14 +327,28 @@ else
 		IGNOTI=$((IGNOTI + 1))
 	fi
 	nessuno "guasti di B12 in remotix/rcp.c" "$FUORI/remotix/rcp.c" "REMOTIX B12 GUASTO"
-	# ⚠ Il binario del prodotto lo costruisce il suo Makefile: qui si
-	#   controlla solo che non sia piu' vecchio del sorgente.
-	if [ -f "$FUORI/remotix/build/remotix" ]; then
-		piu_nuovo "$FUORI/remotix/build/remotix" "$FUORI/remotix/rcp.c"
-	else
-		dub "⚠ il binario del prodotto non e' dove lo cercavo: non lo giudico"
-		IGNOTI=$((IGNOTI + 1))
-	fi
+
+	# ── ⛔ IL BINARIO DEL PRODOTTO — la cura di D5 ───────────────────────
+	inf "albero del prodotto: $SORG   (si cambia con SORG=<percorso>)"
+	posto_unico "$SORG" "$BINARIO_PRODOTTO"
+
+	# ⛔ TUTTI i sorgenti che entrano nel binario, non il solo `rcp.c`:
+	#    `src/Makefile` ne compila DIECI, e con il solo `rcp.c` un `main.c`
+	#    piu' nuovo del binario lasciava il controllo VERDE.  Le
+	#    intestazioni ci stanno perche' il Makefile le dichiara come
+	#    prerequisiti degli oggetti.
+	#
+	# ⚠ `pagina.html` e `remotix.pam` NON ci stanno, e la ragione va detta:
+	#    il server li legge all'AVVIO (`pagina_apri()`), non li compila
+	#    dentro.  Uno di loro piu' nuovo del binario non e' un binario
+	#    stantio, e metterlo qui sarebbe un rosso puntato sull'imputato
+	#    sbagliato.
+	#
+	# ⛔ E il binario che MANCA e' un GUAIO, non un ignoto — e' il ramo che
+	#    D5 usava per non guardare niente.  `piu_nuovo()` lo sa dire da se',
+	#    ed e' quel che gia' fa sul bersaglio «innesto».
+	piu_nuovo "$BINARIO_PRODOTTO" \
+		"$SORG"/*.c "$SORG"/*.h "$SORG/Makefile"
 fi
 
 # ---------------------------------------------------------------------------

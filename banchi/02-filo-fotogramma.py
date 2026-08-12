@@ -75,8 +75,45 @@ zero, e non ha aperto quei file.
      stampa in fondo, si conta, e finisce nel registro**, perche' un'ambiguita'
      taciuta e' indistinguibile da una regola.
 
-     ⛔ E ogni `AMBIGUO` porta **il testo che si propone a `RCP.md`**, pronto
-     da incollare: un'ambiguita' segnalata senza la cura e' un reclamo.
+===========================================================================
+⭐⛔ E IL 12 AGOSTO 2026 LE QUATTRO AMBIGUITA' SONO STATE CHIUSE — questo file
+    E' STATO RISCRITTO DI CONSEGUENZA
+
+*Il 12 agosto 2026 il coordinatore ha applicato a `RCP.md` le sette righe che
+questo banco proponeva (§2.5, §5.2, §6.2, §11.1).  ⛔ Da quel momento le quattro
+`AMBIGUO` che questo file stampava sono **regole normative**, e un giudice che
+continuasse a chiamarle ambiguita' starebbe giudicando il documento di ieri.*
+
+  | riga entrata in `RCP.md` | dove | qui era | qui e' adesso |
+  |---|---|---|---|
+  | **P2** `numero` parte da 1, lo 0 e' riservato | §6.2 | `AMBIGUO` | `ERRORE_PROTOCOLLO` |
+  | **P6** il primo fotogramma dopo `SESSIONE` DEVE essere chiave | §5.2 | `AMBIGUO` | `ERRORE_PROTOCOLLO` |
+  | **P5** `largh.`/`altezza` DEVONO valere la tela concessa | §6.2 | `AMBIGUO` | `ERRORE_PROTOCOLLO` |
+  | **P3** un `0x03` sul canale di controllo | §2.5 | `AMBIGUO` | `ERRORE_PROTOCOLLO` |
+  | **P1** nessuno stream video prima di `SESSIONE` | §2.5 | derivata da §3+§1 | **citata**: §2.5 |
+  | **P4** FIN prima dei 28 byte | §6.2 | derivata da §3 | **citata**: §6.2 |
+
+⛔ **E ogni riga ha DUE casi, non uno: quello che la viola e quello che la
+   rispetta.**  Un arbitro che conosce una regola e non ha l'ingresso che la fa
+   scattare non la fa rispettare, e il verde che da' e' quello che da' fiducia
+   (`CODER.md` §4.6).  ⚠ E il caso che la **rispetta** non e' un di piu': senza,
+   una regola scritta troppo larga — «ogni misura diversa da 1920x1080 e'
+   `ERRORE_PROTOCOLLO`» invece che «diversa dalla tela **concessa**» —
+   resterebbe verde su tutto il banco.  La tabella `REGOLE_NUOVE` tiene i due
+   nomi accanto alla sigla, e il giro **conta** quante regole hanno tutt'e due:
+   un conto scritto a mano sarebbe il numero che nessuno ricalcola.
+
+⭐ **E l'esito `AMBIGUO` resta nel codice, con zero casi che lo pretendono** —
+   ⛔ e lo si **dichiara in coda a ogni giro** invece di lasciarlo scoprire:
+   «nessuna ambiguita' stampata» e «il ramo che le stampa non lo esercita
+   nessun caso» sono due fatti diversi, ed e' la forma **E8** rivolta contro il
+   banco stesso.  Resta per due ragioni: `RCP.md` tornera' ad ammettere due
+   letture — ne ha ammesse **dodici** nella sola fase 1
+   (`fasi/01-filo-nudo.md` B9) — e il guasto **G5**, *«il giudice della mattina
+   del 12 agosto»*, fa produrre `AMBIGUO` al giudice a ogni certificazione.
+   ⚠ Quel che G5 esercita e' il ramo del **giudice**, non quello che li stampa:
+   coi quattro casi che pretendono `ERRORE_PROTOCOLLO`, un `AMBIGUO` e' un
+   **rosso**, ed e' esattamente quel che deve essere.
 
 ===========================================================================
 ⛔ CHE COSA QUESTO BANCO **NON** PROVA, E VA DETTO
@@ -167,7 +204,21 @@ class Contesto:
 
     def __init__(self, tela=(1920, 1080), codec_negoziato=1,
                  sessione_aperta=True):
+        # ⛔ LA TELA E' QUELLA **IN VIGORE**, E PUO' CAMBIARE A META' SESSIONE.
+        #
+        #    §6.2, corretta il 12 agosto 2026: *«DEVONO valere la tela in
+        #    vigore — quella concessa in `SESSIONE` (§4.5), **oppure** l'ultima
+        #    concessa da `TELA` se nel frattempo e' stata adattata (§7.1)»*.
+        #    ⚠ La riga precedente diceva «la tela concessa in `SESSIONE`», e
+        #      **uccideva una sessione sana**: dopo un `ADATTA_TELA` il server
+        #      cattura alla misura nuova, e un client che confrontasse ancora
+        #      con `SESSIONE` chiuderebbe — la scena che §7.1 protegge con la
+        #      sua eccezione 4.  Trovata propagando la regola a questi arbitri.
         self.tela_larghezza, self.tela_altezza = tela
+        # ⛔ E si tiene DA DOVE viene, perche' e' la meta' che il verdetto deve
+        #    saper dire: «diversa dalla tela di `SESSIONE`» e «diversa dalla
+        #    tela in vigore» mandano a cercare in due posti diversi.
+        self.tela_da = "SESSIONE (§4.5)"
         self.codec_negoziato = codec_negoziato
         self.sessione_aperta = sessione_aperta
         # ⛔ `None` e' «nessuno», e NON e' zero: §6.0 vieta i valori sentinella
@@ -176,6 +227,18 @@ class Contesto:
         self.ultimo_consegnato = None
         self.chiave_consegnata = False
         self.chiedi_chiave = False    # §5.2: il client DEVE chiederla su un buco
+
+    def adatta_tela(self, lar, alt):
+        """§7.1 — e' arrivato un `TELA(ADATTATA, lar, alt)`.
+
+        ⛔ Da questo momento la tela **in vigore** e' un'altra, e §6.2 ci lega
+           `largh.`/`altezza` di ogni fotogramma successivo.  ⚠ Chi chiama
+           questo metodo lo fa perche' ha **visto** il messaggio sul filo: il
+           giudice del fotogramma non lo puo' sapere da solo, e infatti la tela
+           gli si dichiara sempre da fuori.
+        """
+        self.tela_larghezza, self.tela_altezza = lar, alt
+        self.tela_da = "TELA(ADATTATA) (§7.1)"
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +275,9 @@ class Giudice:
         self.tipi_leciti = ({CHIAVE, DELTA, 0x0300} if "G2" in self.guasti
                             else {CHIAVE, DELTA})
         self.reset_come_fin = "G3" in self.guasti
+        # ⛔ G5 — «il giudice della mattina del 12 agosto 2026», cioe' PRIMA che
+        #    le quattro righe entrassero in `RCP.md`.  Vedi l'intestazione.
+        self.regole_12_agosto = "G5" not in self.guasti
 
     # -- l'esito si scrive una volta sola: il primo verdetto e' la causa, i
     #    successivi sono conseguenze (come `_cade` in `01-b3-cliente.py`).
@@ -219,6 +285,27 @@ class Giudice:
         if self.verdetto is None:
             self.verdetto = v
         return self.verdetto
+
+    def _chiuso_il_12_agosto(self, sigla, scostamento, regola, dice,
+                             regola_prima, dice_prima):
+        """Una delle quattro letture doppie che `RCP.md` ha chiuso il 12 agosto.
+
+        ⛔ Le due meta' stanno **nella stessa funzione** apposta: la riga di
+           oggi e quella di ieri si leggono una sotto l'altra, e chi rileggesse
+           questo file fra un mese vede subito **che cosa e' cambiato e
+           perche'**.  ⚠ Tenerle in due punti lontani e' il modo in cui una
+           delle due invecchia da sola.
+
+        Col guasto **G5** innestato si torna alla lettura di ieri: il verdetto
+        e' `AMBIGUO` invece di `ERRORE_PROTOCOLLO`, e i quattro casi che devono
+        cadere diventano rossi con la marca `nome: ERRORE_PROTOCOLLO -> AMBIGUO`.
+        """
+        if not self.regole_12_agosto:
+            return self._decidi(Verdetto(AMBIGUO, regola_prima, dice_prima,
+                                         scostamento=scostamento,
+                                         propone=sigla))
+        return self._decidi(Verdetto(ERRORE_PROTOCOLLO, regola, dice,
+                                     scostamento=scostamento))
 
     def arrivano(self, pezzo):
         """Arriva un pezzo dello stream.  Puo' gia' bastare a decidere."""
@@ -265,13 +352,19 @@ class Giudice:
         if self.verdetto is not None:
             return self.verdetto
         if not self.letta:
-            # ⛔ FIN prima dei 28 byte.  §6.2 dice «la fine dello stream e' la
-            #    fine del fotogramma»: letta alla lettera, uno stream di 12
-            #    byte e' un fotogramma con **meno sedici** byte di dati.  Il
-            #    verdetto qui e' §3 — *«una lunghezza che non torna»* — e
-            #    ⚠ **e' derivato, non citato**: vedi la proposta P4.
+            # ⛔ P4 — FIN PRIMA DEI 28 BYTE, e dal 12 agosto 2026 e' **citata**.
+            #
+            #    §6.2, terza riga di «⛔ La regola, in due righe:»: *«uno stream
+            #    chiuso con FIN prima dei 28 byte dell'intestazione e'
+            #    ERRORE_PROTOCOLLO: non e' un fotogramma corto, e' una
+            #    lunghezza che non torna (§3)»*.
+            #    ⚠ Fino all'11 agosto la regola si **ricavava** da §3, e §6.2 —
+            #      il posto in cui chi implementa la guarda — non la scriveva:
+            #      letta alla lettera, *«la fine dello stream e' la fine del
+            #      fotogramma»* faceva di uno stream di 12 byte un fotogramma
+            #      con **meno sedici** byte di dati.
             return self._decidi(Verdetto(
-                ERRORE_PROTOCOLLO, "RCP.md §3 (per §6.2)",
+                ERRORE_PROTOCOLLO, "RCP.md §6.2",
                 f"lo stream finisce con FIN dopo {len(self.grezzo)} byte: "
                 f"l'intestazione ne vuole {self.intestazione} esatti",
                 scostamento=len(self.grezzo)))
@@ -300,33 +393,47 @@ class Giudice:
                 f"dal server: e' il canale sbagliato, o il verso sbagliato",
                 scostamento=0))
 
-        # 2. ⭐⛔ DOVE E' ARRIVATO — l'ambiguita' A3, e non e' teorica.
+        # 2. ⭐⛔ P3 — DOVE E' ARRIVATO.  Chiusa il 12 agosto 2026.
         #
-        #    §2.5 dice, per il canale di controllo, «su uno stream
-        #    unidirezionale e' ERRORE_PROTOCOLLO», e per l'audio «su uno stream
-        #    e' ERRORE_PROTOCOLLO».  ⛔ Per il **video** la stessa tabella dice
-        #    soltanto che cosa segue il tipo, e **non dice su che stream vive**.
-        #    Il server non apre stream bidirezionali (§2.5), quindi l'unico
-        #    posto in cui puo' scrivere un `0x03` fuori posto e' il canale di
-        #    controllo, che il client gli ha aperto.
+        #    §2.5, riga `0x03`: *«l'intestazione di 28 byte di §6.2, senza
+        #    inquadratura — ⛔ e SOLO su uno stream unidirezionale aperto dal
+        #    server: un `0x03` sul canale di controllo e' ERRORE_PROTOCOLLO,
+        #    come lo e' un `0x00` su uno stream unidirezionale»*.
+        #    ⚠ Fino all'11 agosto la stessa tabella chiudeva il caso per due
+        #      canali su cinque e **non per il video**, e il client leggeva quei
+        #      28 byte con l'inquadratura di §6.1 — un messaggio inventato di
+        #      64 KiB.  Il server non apre stream bidirezionali (§2.5), quindi
+        #      l'unico posto in cui puo' scrivere un `0x03` fuori posto e' il
+        #      canale di controllo, che il client gli ha aperto.
         if self.dove == "controllo":
-            return self._decidi(Verdetto(
-                AMBIGUO, "RCP.md §2.5",
+            return self._chiuso_il_12_agosto(
+                "P3", 0, "RCP.md §2.5",
+                "un fotogramma sul canale di CONTROLLO: §2.5 vuole il video "
+                "«solo su uno stream unidirezionale aperto dal server», e un "
+                "`0x03` sul canale di controllo e' ERRORE_PROTOCOLLO",
+                "RCP.md §2.5",
                 "un fotogramma sul canale di CONTROLLO: §2.5 vieta per nome il "
                 "controllo su uno stream unidirezionale e l'audio su uno "
-                "stream, e per il video non dice niente",
-                scostamento=0, propone="P3"))
+                "stream, e per il video non dice niente")
 
-        # 3. ⛔ LO STATO — §1 «l'ordine dei cinque passi non ammette permute»,
-        #    §3 «un messaggio arrivato nello stato sbagliato», e l'invariante
-        #    **I3**: *chi non passa dal validatore non riceve un pixel*.
-        #    ⚠ Derivato: §2.5 lo scrive per il canale di **input** («aperto
-        #      dopo aver ricevuto `SESSIONE`») e per il video no.  Proposta P1.
+        # 3. ⛔ P1 — LO STATO, e dal 12 agosto 2026 e' **citata**.
+        #
+        #    §2.5, riga «video» della tabella: *«uno per fotogramma, ⛔ e
+        #    nessuno prima di aver spedito `SESSIONE`: chi ne riceve uno prima
+        #    chiude con ERRORE_PROTOCOLLO»*.
+        #    ⚠ Fino all'11 agosto per chi RICEVE la regola si ricavava da §1
+        #      («l'ordine dei cinque passi non ammette permute») piu' §3, e per
+        #      chi MANDA non si ricavava da nessuna parte: era l'invariante
+        #      **I3** — *chi non passa dal validatore non riceve un pixel* —
+        #      lasciata senza una riga sul filo, mentre §2.5 la scriveva per il
+        #      canale di input due righe sopra.
         if not self.c.sessione_aperta:
             return self._decidi(Verdetto(
-                ERRORE_PROTOCOLLO, "RCP.md §3 (per §1, I3)",
-                "un fotogramma prima di `SESSIONE`: la guardia parte da negato "
-                "— chi non passa dal validatore non riceve un pixel",
+                ERRORE_PROTOCOLLO, "RCP.md §2.5",
+                "un fotogramma prima di `SESSIONE`: §2.5 vieta al server di "
+                "aprire uno stream video prima di averla spedita — e' "
+                "l'invariante I3 sul filo, chi non passa dal validatore non "
+                "riceve un pixel",
                 scostamento=0))
 
         # 4. ⛔ IL TIPO — §6.2: «Altri valori: ERRORE_PROTOCOLLO».
@@ -362,28 +469,50 @@ class Giudice:
         #    impliciti**».
         #    ⇒ Se il primo fotogramma porta `numero = 0`, `RICHIEDI_CHIAVE(0)`
         #      vuol dire tutt'e due le cose, e il server non puo' sapere quale.
+        #    ⭐ Chiusa il 12 agosto 2026: §6.2 porta adesso *«il primo
+        #      fotogramma di una sessione porta `numero = 1`, e lo 0 e'
+        #      riservato»*, che e' la stessa convenzione dell'`id` dell'input
+        #      (§7.3).
         if num == 0:
-            return self._decidi(Verdetto(
-                AMBIGUO, "RCP.md §6.2 contro §7.1, per §6.0",
+            return self._chiuso_il_12_agosto(
+                "P2", 12, "RCP.md §6.2",
+                "`numero = 0`: §6.2 riserva lo zero — «il primo fotogramma di "
+                "una sessione porta `numero = 1`», e «al giro del contatore lo "
+                "0 si salta» — perche' lo 0 vuol dire «nessun fotogramma», il "
+                "significato che §7.1 gli da' in `RICHIEDI_CHIAVE`",
+                "RCP.md §6.2 contro §7.1, per §6.0",
                 "`numero = 0`: §7.1 usa lo zero come «nessuno» in "
                 "`RICHIEDI_CHIAVE`, §6.2 non dice da dove parte il contatore, "
-                "e §6.0 vieta i sentinella impliciti",
-                scostamento=12, propone="P2"))
+                "e §6.0 vieta i sentinella impliciti")
 
-        # 7. ⭐⛔ LA MISURA — l'ambiguita' A4.
+        # 7. ⭐⛔ P5 — LA MISURA.  Chiusa il 12 agosto 2026, e **corretta lo
+        #    stesso giorno** perche' la prima stesura uccideva una sessione sana.
         #
-        #    §6.2: «⛔ In RCP/1 e' **sempre** quella della tela, e il client
-        #    riscala».  ⚠ «e' sempre» descrive, non comanda: §0 dichiara
-        #    normativo solo cio' che porta DEVE / NON DEVE / PUO'.  E non c'e'
-        #    nessuna riga che dica **che cosa fa chi riceve** una misura
-        #    diversa: chiudere, o riscalare come fa gia' per la vista?
+        #    §6.2: *«la misura di QUESTO fotogramma.  ⛔ In RCP/1 DEVONO valere
+        #    la **tela in vigore** — quella concessa in `SESSIONE` (§4.5),
+        #    **oppure** l'ultima concessa da `TELA` se nel frattempo e' stata
+        #    adattata (§7.1) — e chi ne riceve altre chiude con
+        #    ERRORE_PROTOCOLLO: il client riscala alla VISTA, non alla tela»*.
+        #    ⚠ Fino all'11 agosto la riga diceva *«e' sempre quella della tela,
+        #      e il client riscala»* — che **descrive** e non comanda (§0
+        #      dichiara normativo solo DEVE / NON DEVE / PUO') — e nessuna riga
+        #      diceva che cosa fa chi riceve una misura diversa.
+        #    ⛔ E per due ore ha detto «la tela concessa in `SESSIONE`», che
+        #      dopo un `ADATTA_TELA` faceva chiudere il client davanti a un
+        #      server conforme: le due parole giuste sono **in vigore**.
+        #    ⛔ Il confronto e' con la tela CHE SI E' DICHIARATA, mai con un
+        #      numero scritto qui: lo tengono onesto i due casi
+        #      `misura-uguale-a-una-tela-diversa` e `misura-dopo-adatta-tela`.
         if (lar, alt) != (self.c.tela_larghezza, self.c.tela_altezza):
-            return self._decidi(Verdetto(
-                AMBIGUO, "RCP.md §6.2",
+            return self._chiuso_il_12_agosto(
+                "P5", 4, "RCP.md §6.2",
+                f"il fotogramma e' {lar}x{alt} e la tela IN VIGORE e' "
+                f"{self.c.tela_larghezza}x{self.c.tela_altezza}, da "
+                f"{self.c.tela_da}: §6.2 vuole che DEVANO coincidere",
+                "RCP.md §6.2",
                 f"il fotogramma e' {lar}x{alt} e la tela concessa e' "
                 f"{self.c.tela_larghezza}x{self.c.tela_altezza}: «e' sempre "
-                f"quella della tela» non dice che cosa fa chi riceve",
-                scostamento=4, propone="P5"))
+                f"quella della tela» non dice che cosa fa chi riceve")
 
         # 8. ⛔ L'ORDINE — §6.2: si scarta un `numero` PRECEDENTE all'ultimo
         #    gia' consegnato, con l'aritmetica **modulo 2^32** e le differenze
@@ -403,27 +532,29 @@ class Giudice:
                     f"sono indipendenti e i fotogrammi arrivano fuori ordine",
                     scostamento=12))
 
-        # 9. ⭐⛔ IL PRIMO FOTOGRAMMA E' UN DELTA — l'ambiguita' A1, ed e'
-        #    quella che morde in QUESTA fase.
+        # 9. ⭐⛔ P6 — IL PRIMO FOTOGRAMMA E' UN DELTA.  Chiusa il 12 agosto
+        #    2026, ed e' la riga che morde in QUESTA fase.
         #
-        #    §5.2: un delta e' la differenza da quelli precedenti, e «a un
-        #    delta mancante il decodificatore **non solleva nessun errore**, si
-        #    limita a produrre immagini via via piu' sfasciate».  ⛔ Nessuna
-        #    riga di `RCP.md` dice che il primo fotogramma di una sessione
-        #    DEVE essere una chiave.
-        #    ⇒ Un server che apre la sessione con un delta e' **conforme a ogni
+        #    §5.2, primo punto delle «Le regole:»: *«⛔ il primo fotogramma che
+        #    il server spedisce dopo `SESSIONE` DEVE essere una chiave
+        #    (`0x0301`)»*.
+        #    ⚠ Fino all'11 agosto un delta in apertura era **conforme a ogni
         #      riga del documento**, e la fase 2 — che consegna un fotogramma
-        #      fermo — mostrerebbe spazzatura senza che nessuno abbia torto.
-        #    ⚠ E il client non se ne accorgerebbe da §5.2: non c'e' nessun buco
-        #      nella successione dei `numero` (e' il primo), e il decodificatore
-        #      non rifiuta niente.
+        #      fermo — avrebbe mostrato spazzatura senza che nessuno avesse
+        #      torto.  ⛔ E il client non aveva modo di accorgersene: §5.2 gli
+        #      fa chiedere una chiave su un **buco** nei `numero`, e qui buchi
+        #      non ce ne sono (e' il primo); e §5.2 stesso dichiara `[S]` che a
+        #      un delta mancante il decodificatore **non solleva nessun errore**.
         if tipo == DELTA and not self.c.chiave_consegnata:
-            return self._decidi(Verdetto(
-                AMBIGUO, "RCP.md §5.2",
+            return self._chiuso_il_12_agosto(
+                "P6", 0, "RCP.md §5.2",
+                "il primo fotogramma della sessione e' un DELTA: §5.2 vuole "
+                "che il primo fotogramma dopo `SESSIONE` sia una chiave "
+                "(0x0301)",
+                "RCP.md §5.2",
                 "il primo fotogramma della sessione e' un DELTA: nessuna riga "
                 "obbliga il server a cominciare con una chiave, e il client "
-                "non ha nessun buco da cui accorgersene",
-                scostamento=0, propone="P6"))
+                "non ha nessun buco da cui accorgersene")
 
     def _giudica_completo(self):
         """Lo stream e' finito con FIN e l'intestazione era buona."""
@@ -452,34 +583,121 @@ def intestazione(tipo=CHIAVE, codec=1, lar=1920, alt=1080, num=1, ist=0, inp=0):
 
 
 # ===========================================================================
-# ⛔ LE PROPOSTE A `RCP.md`, CON IL TESTO PRONTO.
+# ⛔ LE SEI RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026, E I DUE CASI DI OGNUNA.
 #
-#    Stanno **qui** e non nel rapporto soltanto perche' il banco le stampa: la
-#    copia normativa e' `fasi/rapporti/F2-4-filo.md`.  ⛔ E `RCP.md` non si
-#    tocca da qui: lo tocca il coordinatore, o sei agenti si sovrascrivono
-#    l'arbitro.
-PROPOSTE = {
-    "P1": ("§2.5, riga «video» della tabella — quando il video PUO' cominciare",
-           "Il server NON DEVE aprire uno stream video prima di aver spedito "
-           "`SESSIONE`; chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`."),
-    "P2": ("§6.2, campo `numero` — da dove parte il contatore",
-           "Il primo fotogramma di una sessione porta `numero = 1`; **0 e' "
-           "riservato** e vuol dire «nessun fotogramma», che e' il significato "
-           "che §7.1 gli da' in `RICHIEDI_CHIAVE`."),
-    "P3": ("§2.5, riga «video» — su che stream vive",
-           "Il video vive **solo** su uno stream unidirezionale aperto dal "
-           "server: un `0x03` sul canale di controllo e' `ERRORE_PROTOCOLLO`."),
-    "P4": ("§6.2 — lo stream che finisce prima dell'intestazione",
-           "Uno stream video chiuso con FIN prima dei 28 byte "
-           "dell'intestazione e' `ERRORE_PROTOCOLLO`."),
-    "P5": ("§6.2, campi `largh.` e `altezza` — che cosa fa chi riceve",
-           "In RCP/1 `largh.` e `altezza` **DEVONO** valere la tela concessa "
-           "in `SESSIONE`; chi riceve una misura diversa chiude con "
-           "`ERRORE_PROTOCOLLO`."),
-    "P6": ("§5.2 — il primo fotogramma",
-           "Il primo fotogramma che il server spedisce dopo `SESSIONE` **DEVE** "
-           "essere una chiave (`0x0301`)."),
+#    ⚠ Fino all'11 agosto questa tabella si chiamava `PROPOSTE` ed era un
+#      elenco di cose **da chiedere** al coordinatore.  Adesso le righe sono
+#      **normative** — stanno in `RCP.md` §2.5, §5.2, §6.2 — e questa tabella
+#      dice due cose che un elenco di proposte non diceva:
+#
+#      ⛔ **dove sta la riga**, per andarla a rileggere invece di fidarsi;
+#      ⛔ **quale caso la viola e quale la rispetta**, per nome.
+#
+#    ⭐ E i due nomi non sono documentazione: `regole_coperte()` li **cerca**
+#       fra i casi e il giro stampa il conto.  Una regola che perdesse uno dei
+#       due casi — o che ne citasse uno rinominato — diventa rossa qui, e non
+#       fra sei mesi quando qualcuno se ne accorge.
+REGOLE_NUOVE = {
+    "P1": {
+        "dove": "RCP.md §2.5, riga «video» della tabella",
+        "dice": "Il server NON DEVE aprire uno stream video prima di aver "
+                "spedito `SESSIONE`; chi ne riceve uno prima chiude con "
+                "`ERRORE_PROTOCOLLO`.",
+        "era": "derivata da §1 + §3 per chi riceve, e da NIENTE per chi manda",
+        "viola": "prima-di-sessione",
+        "rispetta": "dopo-sessione",
+    },
+    "P2": {
+        "dove": "RCP.md §6.2, campo `numero`",
+        "dice": "Il primo fotogramma di una sessione porta `numero = 1`; ⛔ **0 "
+                "e' riservato** e vuol dire «nessun fotogramma», che e' il "
+                "significato che §7.1 gli da' in `RICHIEDI_CHIAVE`.  ⛔ E al "
+                "giro del contatore lo 0 **si salta**: da `0xFFFFFFFF` si "
+                "passa a `1`.",
+        "era": "lettura doppia — §6.2 non diceva da dove parte il contatore; e "
+               "la cura stessa e' durata due ore prima che si vedesse che al "
+               "giro del contatore lo `0` riservato tornava in circolo da solo",
+        "viola": "numero-zero",
+        "rispetta": "numero-uno",
+    },
+    "P3": {
+        "dove": "RCP.md §2.5, riga `0x03` della tabella dei canali",
+        "dice": "Il video vive **solo** su uno stream unidirezionale aperto dal "
+                "server: un `0x03` sul canale di controllo e' "
+                "`ERRORE_PROTOCOLLO`.",
+        "era": "lettura doppia — §2.5 chiudeva il caso per 0x00 e 0x04 e non "
+               "per il video",
+        "viola": "video-sul-controllo",
+        "rispetta": "video-su-unidirezionale",
+    },
+    "P4": {
+        "dove": "RCP.md §6.2, terza riga di «La regola, in due righe»",
+        "dice": "Uno stream video chiuso con **FIN prima dei 28 byte** "
+                "dell'intestazione e' `ERRORE_PROTOCOLLO`: non e' un "
+                "fotogramma corto, e' una lunghezza che non torna (§3).",
+        "era": "derivata da §3, e §6.2 — dove chi implementa la guarda — taceva",
+        "viola": "intestazione-27-byte",
+        "rispetta": "chiave-senza-dati",
+    },
+    "P5": {
+        "dove": "RCP.md §6.2, campi `largh.` e `altezza`",
+        "dice": "In RCP/1 `largh.` e `altezza` **DEVONO** valere la **tela in "
+                "vigore** — quella di `SESSIONE` (§4.5), oppure l'ultima "
+                "concessa da `TELA` se e' stata adattata (§7.1); chi riceve "
+                "una misura diversa chiude con `ERRORE_PROTOCOLLO`.",
+        "era": "lettura doppia — «e' sempre quella della tela» descrive e non "
+               "comanda, e nessuna riga diceva che cosa fa chi riceve.  ⛔ E "
+               "per due ore la cura stessa e' stata sbagliata: diceva «la tela "
+               "concessa in `SESSIONE`», che dopo un `ADATTA_TELA` uccide una "
+               "sessione sana.  Corretta il 12 agosto 2026: «la tela IN VIGORE»",
+        "viola": "misura-diversa-dalla-tela",
+        "rispetta": "misura-dopo-adatta-tela",
+    },
+    "P6": {
+        "dove": "RCP.md §5.2, primo punto delle «Le regole:»",
+        "dice": "Il primo fotogramma che il server spedisce dopo `SESSIONE` "
+                "**DEVE** essere una chiave (`0x0301`).",
+        "era": "lettura doppia — un delta in apertura era conforme a ogni riga, "
+               "e il client non aveva modo di accorgersene",
+        "viola": "primo-fotogramma-delta",
+        "rispetta": "primo-fotogramma-chiave",
+    },
 }
+
+
+def regole_coperte(casi):
+    """⛔ Quante delle sei righe hanno DAVVERO un caso che le fa scattare.
+
+    ⛔ Il conto lo **calcola** questa funzione cercando i nomi fra i casi: un
+       numero scritto a mano in un commento e' il numero che nessuno ricalcola
+       (`01-b5-violazioni.py`, rilievo R7.14 — tre numeri nei commenti e
+       nessuno dei tre tornava con il file).
+
+    Restituisce (coperte, mancanti), dove `mancanti` porta la sigla e **quale
+    delle due meta'** manca: ⚠ «la regola c'e' ma il caso che la rispetta no»
+    e «la regola non e' provata affatto» sono due difetti diversi, e il primo
+    e' quello che lascia passare una regola scritta troppo larga.
+    """
+    per_nome = {c["nome"]: c for c in casi}
+    coperte, mancanti = [], []
+    for sigla, r in REGOLE_NUOVE.items():
+        v, s = per_nome.get(r["viola"]), per_nome.get(r["rispetta"])
+        buchi = []
+        if v is None:
+            buchi.append(f"manca il caso che la VIOLA («{r['viola']}»)")
+        elif v["atteso"] != ERRORE_PROTOCOLLO:
+            buchi.append(f"«{r['viola']}» non pretende ERRORE_PROTOCOLLO ma "
+                         f"{v['atteso']}")
+        if s is None:
+            buchi.append(f"manca il caso che la RISPETTA («{r['rispetta']}»)")
+        elif s["atteso"] != ACCETTATO:
+            buchi.append(f"«{r['rispetta']}» non pretende ACCETTATO ma "
+                         f"{s['atteso']}")
+        if buchi:
+            mancanti.append((sigla, "; ".join(buchi)))
+        else:
+            coperte.append(sigla)
+    return coperte, mancanti
 
 
 # ===========================================================================
@@ -524,11 +742,25 @@ def _():
     return [intestazione(tipo=0x0901)], "fin"
 
 
-@caso("video-sul-controllo", AMBIGUO,
-      "⭐ un fotogramma BEN FORMATO scritto sul canale di controllo.  §2.5 "
-      "vieta per nome il controllo su uno stream unidirezionale e l'audio su "
-      "uno stream, e per il video **non dice niente**",
+@caso("video-sul-controllo", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P3, il caso che la VIOLA** — un fotogramma BEN FORMATO scritto sul "
+      "canale di controllo.  ⛔ E' l'unico posto in cui il server puo' "
+      "sbagliare stream: §2.5 gli vieta di aprire stream bidirezionali, e il "
+      "canale di controllo glielo ha aperto il client.  ⚠ Senza la riga del 12 "
+      "agosto il client leggeva quei 28 byte con l'inquadratura di §6.1 e ne "
+      "ricavava un messaggio inventato di 64 KiB",
       "RCP.md §2.5", dove="controllo")
+def _():
+    return [intestazione() + b"\x00" * 64], "fin"
+
+
+@caso("video-su-unidirezionale", ACCETTATO,
+      "⭐ **P3, il caso che la RISPETTA** — gli **stessi identici byte** del "
+      "caso qui sopra, su uno stream unidirezionale del server.  ⛔ Senza "
+      "questo caso, un giudice che rifiutasse il video **dovunque** — cioe' "
+      "che avesse capito P3 come «il video non si accetta» invece che «il "
+      "video solo di la'» — resterebbe verde sul caso che la viola",
+      "RCP.md §6.2", dove="uni")
 def _():
     return [intestazione() + b"\x00" * 64], "fin"
 
@@ -569,10 +801,11 @@ def _():
 
 # ── La lunghezza, e il FIN contro il RESET (§6.2) ──────────────────────────
 @caso("intestazione-27-byte", ERRORE_PROTOCOLLO,
-      "FIN dopo 27 byte: uno in meno dei 28.  ⛔ Letta alla lettera, «la fine "
-      "dello stream e' la fine del fotogramma» fa di questo un fotogramma con "
-      "**meno un** byte di dati",
-      "RCP.md §3 (per §6.2)")
+      "⛔ **P4, il caso che la VIOLA** — FIN dopo 27 byte: uno in meno dei 28.  "
+      "Letta alla lettera, «la fine dello stream e' la fine del fotogramma» fa "
+      "di questo un fotogramma con **meno un** byte di dati.  ⭐ Dal 12 agosto "
+      "2026 la regola non si ricava piu' da §3: §6.2 la scrive",
+      "RCP.md §6.2")
 def _():
     return [intestazione()[:27]], "fin"
 
@@ -580,7 +813,7 @@ def _():
 @caso("stream-vuoto", ERRORE_PROTOCOLLO,
       "FIN a zero byte.  ⚠ E' il caso in cui «zero» e «fallimento» si "
       "somigliano di piu': uno stream aperto e chiuso subito",
-      "RCP.md §3 (per §6.2)")
+      "RCP.md §6.2")
 def _():
     return [], "fin"
 
@@ -639,47 +872,144 @@ def _():
 
 # ── Lo stato (§1, §3, I3) ──────────────────────────────────────────────────
 @caso("prima-di-sessione", ERRORE_PROTOCOLLO,
-      "⭐ un fotogramma ben formato **prima di `SESSIONE`**.  E' l'invariante "
-      "**I3** sul filo: *chi non passa dal validatore non riceve un pixel*.  "
-      "⚠ Il verdetto e' DERIVATO da §3 + §1: §2.5 lo scrive per il canale di "
-      "input («aperto dopo aver ricevuto `SESSIONE`») e per il video no — "
-      "proposta P1",
-      "RCP.md §3 (per §1, I3)",
+      "⭐⛔ **P1, il caso che la VIOLA** — un fotogramma ben formato **prima di "
+      "`SESSIONE`**, cioe' prima che la tela sia concordata: il client "
+      "riceverebbe un fotogramma di cui non conosce ne' la misura ne' il "
+      "codec.  E' l'invariante **I3** sul filo — *chi non passa dal validatore "
+      "non riceve un pixel* — e dal 12 agosto 2026 §2.5 la scrive anche per "
+      "chi **manda**",
+      "RCP.md §2.5",
       contesto={"sessione_aperta": False})
 def _():
     return [intestazione() + b"\x00" * 64], "fin"
 
 
+@caso("dopo-sessione", ACCETTATO,
+      "⭐ **P1, il caso che la RISPETTA** — gli **stessi identici byte**, con "
+      "`SESSIONE` gia' spedita.  ⛔ Senza questo caso il banco non "
+      "distinguerebbe «il video prima di `SESSIONE` cade» da «il video cade», "
+      "e la seconda lettura fa fallire la fase 2 per intero",
+      "RCP.md §6.2",
+      contesto={"sessione_aperta": True})
+def _():
+    return [intestazione() + b"\x00" * 64], "fin"
+
+
 # ── I numeri (§6.2, §6.0, §7.1) ────────────────────────────────────────────
-@caso("numero-zero", AMBIGUO,
-      "⭐ `numero = 0` sul primo fotogramma.  §7.1 usa lo zero come «nessuno» "
-      "in `RICHIEDI_CHIAVE`, §6.2 non dice da dove parte il contatore, e §6.0 "
-      "vieta i sentinella impliciti: `RICHIEDI_CHIAVE(0)` vorrebbe dire due "
-      "cose — proposta P2",
-      "RCP.md §6.2 contro §7.1, per §6.0")
+@caso("numero-zero", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P2, il caso che la VIOLA** — `numero = 0` sul primo fotogramma.  "
+      "Dal 12 agosto 2026 §6.2 riserva lo zero: **il primo porta 1**.  ⚠ Il "
+      "caso concreto che la riga chiude: il client decodifica il fotogramma 0, "
+      "poi manda `RICHIEDI_CHIAVE(ultimo_numero = 0)` — e il server non puo' "
+      "sapere se voglia dire «ho decodificato il fotogramma 0» o «non ne ho "
+      "decodificato nessuno» (§7.1), cioe' il sentinella implicito che §6.0 "
+      "vieta",
+      "RCP.md §6.2")
 def _():
     return [intestazione(num=0) + b"\x00" * 64], "fin"
 
 
-@caso("misura-diversa-dalla-tela", AMBIGUO,
-      "⭐ un fotogramma 1280x720 su una tela 1920x1080.  §6.2 dice «e' sempre "
-      "quella della tela» — che descrive e non comanda — e non dice che cosa "
-      "fa chi riceve: chiudere, o riscalare come gia' fa per la vista? — "
-      "proposta P5",
+@caso("numero-zero-al-giro", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P2 dall'altra parte: lo `0` che RITORNA** — il fotogramma dopo il "
+      "4294967295 porta `numero = 0`.  ⛔ E' la falla che P2 aveva lasciata "
+      "aperta per due ore: riservava lo `0` e non diceva che al giro del "
+      "contatore va **saltato**, cosi' il valore riservato tornava in circolo "
+      "da solo dopo due anni e due mesi di sessione.  ⚠ Il sintomo sarebbe "
+      "arrivato **una volta sola nella vita di una sessione**, e nessuno "
+      "l'avrebbe collegato a `RICHIEDI_CHIAVE`.  Chiusa da §6.2 il 12 agosto "
+      "2026: da `0xFFFFFFFF` si passa a `1`",
+      "RCP.md §6.2",
+      contesto={"ultimo_consegnato": 0xFFFFFFFF, "chiave_consegnata": True})
+def _():
+    return [intestazione(tipo=DELTA, num=0) + b"\x00" * 64], "fin"
+
+
+@caso("numero-uno", ACCETTATO,
+      "⭐ **P2, il caso che la RISPETTA** — `numero = 1` sul primo fotogramma, "
+      "che e' il valore che §6.2 impone.  ⛔ E' anche il caso che tiene onesto "
+      "il confronto: un giudice che rifiutasse **ogni** `numero` basso "
+      "sembrerebbe severissimo e sarebbe rotto",
+      "RCP.md §6.2")
+def _():
+    return [intestazione(num=1) + b"\x00" * 64], "fin"
+
+
+@caso("misura-diversa-dalla-tela", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P5, il caso che la VIOLA** — un fotogramma 1280x720 su una tela in "
+      "vigore 1920x1080, e ⛔ **nessun `ADATTA_TELA` prima**.  Dal 12 agosto "
+      "2026 §6.2 dice che `largh.` e `altezza` **DEVONO** valere la tela in "
+      "vigore, e che chi ne riceve altre chiude.  ⚠ Prima le due letture erano "
+      "tutt'e due difendibili — chiudere per §3, o riscalare come il client fa "
+      "gia' per la **vista**",
       "RCP.md §6.2")
 def _():
     return [intestazione(lar=1280, alt=720) + b"\x00" * 64], "fin"
 
 
-@caso("primo-fotogramma-delta", AMBIGUO,
-      "⭐⛔ il PRIMO fotogramma della sessione e' un delta.  Nessuna riga "
-      "obbliga il server a cominciare con una chiave, il decodificatore non "
-      "solleva errori su un delta orfano (§5.2), e non c'e' nessun buco nei "
-      "`numero` da cui accorgersene: **la fase 2 mostrerebbe spazzatura e "
-      "nessuno avrebbe torto** — proposta P6",
+@caso("misura-dopo-adatta-tela", ACCETTATO,
+      "⭐⛔ **P5, il caso che la RISPETTA, e ha corretto `RCP.md`** — gli "
+      "**stessi identici byte** del caso qui sopra, ma prima e' passato un "
+      "`TELA(ADATTATA, 1280, 720)` sul canale di controllo (§7.1).  ⛔ Per due "
+      "ore §6.2 ha detto «la tela concessa in `SESSIONE`», e con quella riga "
+      "questo caso sarebbe `ERRORE_PROTOCOLLO`: il client avrebbe ucciso la "
+      "sessione perche' l'utente ha trascinato una finestra — che e' "
+      "**esattamente** la scena che §7.1 protegge con la sua eccezione 4.  "
+      "⚠ Senza questo caso la regola nuova sarebbe severa quanto quella "
+      "sbagliata di prima, e nessun banco lo direbbe",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720)})
+def _():
+    return [intestazione(lar=1280, alt=720) + b"\x00" * 64], "fin"
+
+
+@caso("misura-uguale-a-una-tela-diversa", ACCETTATO,
+      "⭐⛔ **P5, il caso che la RISPETTA, e non e' il fotogramma predefinito** "
+      "— 1280x720 su una tela **concessa** 1280x720.  ⛔ Sono gli **stessi "
+      "byte** del caso che la viola: cambia solo la tela concordata in "
+      "`SESSIONE`.  ⚠ Senza questo caso, un giudice che avesse scritto "
+      "`if (lar, alt) != (1920, 1080)` — cioe' la misura predefinita al posto "
+      "della tela concessa — sarebbe verde su tutti e ventisette gli altri "
+      "casi, e rosso sulla prima sessione a 720p",
+      "RCP.md §6.2",
+      contesto={"tela": (1280, 720)})
+def _():
+    return [intestazione(lar=1280, alt=720) + b"\x00" * 64], "fin"
+
+
+@caso("primo-fotogramma-delta", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P6, il caso che la VIOLA, e morde proprio in questa fase** — il "
+      "PRIMO fotogramma della sessione e' un delta.  Dal 12 agosto 2026 §5.2 "
+      "vuole una chiave.  ⚠ Prima era conforme a **ogni riga** del documento, "
+      "e il client non aveva modo di accorgersene: nessun buco nei `numero` "
+      "(e' il primo) e il decodificatore non solleva errori su un delta orfano "
+      "— il sintomo sarebbe stato *«il desktop compare a pezzi»*, che non "
+      "nomina ne' il protocollo ne' la chiave",
       "RCP.md §5.2")
 def _():
     return [intestazione(tipo=DELTA) + b"\x00" * 64], "fin"
+
+
+@caso("primo-fotogramma-chiave", ACCETTATO,
+      "⭐ **P6, il caso che la RISPETTA** — il primo fotogramma della sessione "
+      "e' una chiave (`0x0301`).  ⛔ E' il fotogramma che la fase 2 esiste per "
+      "consegnare, ed e' qui col suo nome perche' la riga di §5.2 abbia le due "
+      "facce e non una",
+      "RCP.md §6.2")
+def _():
+    return [intestazione(tipo=CHIAVE) + b"\x00" * 64], "fin"
+
+
+@caso("delta-dopo-la-chiave", ACCETTATO,
+      "⭐⛔ **P6, la seconda faccia: un delta che NON e' il primo** — chiave 4 "
+      "gia' consegnata, arriva il delta 5.  ⚠ Senza questo caso, un giudice "
+      "che avesse capito §5.2 come «i delta non si accettano» invece che «il "
+      "PRIMO dev'essere una chiave» resterebbe verde su tutto il banco — e "
+      "fermerebbe il video dalla fase 3 in poi, dove i delta sono il 99 % dei "
+      "fotogrammi",
+      "RCP.md §6.2",
+      contesto={"ultimo_consegnato": 4, "chiave_consegnata": True})
+def _():
+    return [intestazione(tipo=DELTA, num=5) + b"\x00" * 64], "fin"
 
 
 @caso("fuori-ordine", SCARTATO,
@@ -704,11 +1034,15 @@ def _():
 
 
 @caso("modulo-2-32", ACCETTATO,
-      "⭐ il fotogramma 1 dopo il 4294967295: e' **successivo**, non "
+      "⭐ il fotogramma **1** dopo il 4294967295: e' **successivo**, non "
       "precedente.  §6.2 vuole l'aritmetica modulo 2^32 con le differenze con "
       "segno, ⛔ e un confronto `<` diretto farebbe scartare **ogni** "
       "fotogramma dopo il giro, per sempre — a 60 al secondo il contatore gira "
-      "dopo due anni e due mesi, e una sessione puo' durare di piu'",
+      "dopo due anni e due mesi, e una sessione puo' durare di piu'.  ⭐⛔ E "
+      "che dopo `0xFFFFFFFF` venga **1 e non 0** adesso e' una RIGA di §6.2 — "
+      "*«al giro del contatore lo 0 si salta»*, aggiunta il 12 agosto 2026 — "
+      "mentre fino a quel giorno era una scelta di questo banco: P2 riservava "
+      "lo `0` e nessuna riga impediva al contatore di ripassarci sopra da solo",
       "RCP.md §6.2",
       contesto={"ultimo_consegnato": 0xFFFFFFFF, "chiave_consegnata": True})
 def _():
@@ -826,6 +1160,29 @@ GUASTI = {
             "all'abbandono.",
         "marca": "reset-a-meta: SCARTATO -> ACCETTATO",
     },
+    # ⭐⛔ G5 — E QUESTO GUASTO NON E' INVENTATO: E' IL GIUDICE DI IERI MATTINA.
+    "G5": {
+        "titolo": "le quattro righe del 12 agosto tornano a essere ambiguita'",
+        "rompe": "le quattro letture doppie chiuse da `RCP.md` il 12 agosto "
+                 "2026 (P2 §6.2, P3 §2.5, P5 §6.2, P6 §5.2)",
+        "dimostra":
+            "⛔ E' **lo stato di questo stesso file la mattina del 12 agosto "
+            "2026**, prima che il coordinatore applicasse le sette righe — "
+            "come **G4** e' lo stato di oggi di `01-b4-validatore.py`.  ⭐ Un "
+            "guasto preso dalla storia vera vale piu' di uno inventato: "
+            "dimostra che il banco sa distinguere il documento di oggi da "
+            "quello di ieri, che e' precisamente il modo in cui una "
+            "certificazione scade senza che nessuno se ne accorga.  ⚠ E il "
+            "guasto **non fa cadere niente**: i quattro casi diventano "
+            "`AMBIGUO`, cioe' *«nessuno ha sbagliato»* — l'esito piu' "
+            "indulgente che questo banco abbia.  Un banco che contasse solo i "
+            "rossi lo lascerebbe passare.",
+        # ⛔ Quattro casi cambiano, e la marca ne cita **uno**: basta e avanza,
+        #    perche' la seconda meta' del criterio (R12-A.3) chiede che il giro
+        #    sano NON la dica — e da sano `numero-zero` esce ERRORE_PROTOCOLLO
+        #    atteso ed ERRORE_PROTOCOLLO visto.
+        "marca": "numero-zero: ERRORE_PROTOCOLLO -> AMBIGUO",
+    },
 }
 
 
@@ -845,8 +1202,17 @@ def gira_caso(c, guasti):
     ctx = Contesto(tela=campi.pop("tela", (1920, 1080)),
                    codec_negoziato=campi.pop("codec_negoziato", 1),
                    sessione_aperta=campi.pop("sessione_aperta", True))
+    # ⛔ `adatta_tela` NON e' un campo: e' un messaggio arrivato sul filo
+    #    (§7.1), e va fatto passare per il metodo — cosi' il contesto si porta
+    #    dietro anche DA DOVE viene la tela in vigore, che e' meta' del
+    #    verdetto di P5.  ⚠ Un `setattr` diretto avrebbe cambiato i numeri
+    #    lasciando `tela_da` a dire «SESSIONE», cioe' un verdetto che nomina
+    #    la sezione sbagliata.
+    adatta = campi.pop("adatta_tela", None)
     for k, v in campi.items():
         setattr(ctx, k, v)
+    if adatta is not None:
+        ctx.adatta_tela(*adatta)
     g = Giudice(ctx, dove=c["dove"], guasti=guasti)
     pezzi, come = c["fabbrica"]()
     for p in pezzi:
@@ -1092,10 +1458,19 @@ def principale(a):
             print(f"      atteso guasto: > 0 guasti, e nell'uscita la marca "
                   f"«{g['marca']}»")
             print(f"      ⛔ e la marca NON deve comparire nel giro sano")
-        print(f"\n== ⛔ LE PROPOSTE A `RCP.md`, se le ambiguita' si confermano")
-        for sigla, (dove, testo) in PROPOSTE.items():
-            print(f"  {sigla}  {dove}")
-            print(f"      «{testo}»")
+        print(f"\n== ⭐⛔ LE SEI RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026,")
+        print(f"      e i DUE casi di ciascuna")
+        coperte, mancanti = regole_coperte(CASI)
+        for sigla, r in REGOLE_NUOVE.items():
+            print(f"  {sigla}  {r['dove']}")
+            print(f"      «{r['dice']}»")
+            print(f"      era:      {r['era']}")
+            print(f"      la VIOLA:    {r['viola']}")
+            print(f"      la RISPETTA: {r['rispetta']}")
+        print(f"\n  ⛔ regole con TUTT'E DUE i casi: {len(coperte)} su "
+              f"{len(REGOLE_NUOVE)} — {', '.join(coperte) or '—'}")
+        for sigla, perche in mancanti:
+            print(f"     {ROSSO}⛔ {sigla}: {perche}{GRIGIO}")
         return 0
 
     if a.certifica:
@@ -1128,6 +1503,21 @@ def principale(a):
         else:
             print(f"    {tot:3d}      {che}")
 
+    # ⭐⛔ LE SEI RIGHE NUOVE: QUANTE HANNO DAVVERO I DUE CASI.
+    #
+    #    ⛔ Questo conto sta **dentro il giro**, non in un commento e non nel
+    #       rapporto: una regola che perdesse il caso che la fa scattare
+    #       tornerebbe a essere una regola che nessuno fa rispettare, e il
+    #       banco resterebbe verde — che e' la forma peggiore di verde.
+    coperte, mancanti = regole_coperte(CASI)
+    print(f"\n    == ⭐⛔ le sei righe entrate in `RCP.md` il 12 agosto 2026")
+    riga(VERDE if not mancanti else ROSSO, "OK" if not mancanti else "NO",
+         "regole-con-i-due-casi",
+         f"{len(coperte)} su {len(REGOLE_NUOVE)} hanno il caso che le VIOLA e "
+         f"quello che le RISPETTA: {', '.join(coperte) or '—'}")
+    for sigla, perche in mancanti:
+        print(f"        ⛔ {sigla}: {perche}")
+
     # ⭐⛔ LE AMBIGUITA' DI `RCP.md`, IN FONDO E CON LA CURA ACCANTO.
     if ambigui:
         print(f"\n    {GIALLO}⭐⛔ `RCP.md` AMMETTE DUE LETTURE IN "
@@ -1136,11 +1526,27 @@ def principale(a):
         print(f"         giro: e' un difetto del DOCUMENTO, e §0 dice che i")
         print(f"         difetti di quel file sono di quel file.")
         for nome, prop, dice in ambigui:
-            dove, testo = PROPOSTE.get(prop, ("?", "?"))
+            r = REGOLE_NUOVE.get(prop, {})
             print(f"\n       {nome}")
             print(f"         {dice}")
-            print(f"         ⇒ {prop} — {dove}")
-            print(f"           «{testo}»")
+            print(f"         ⇒ {prop} — {r.get('dove', '?')}")
+            print(f"           «{r.get('dice', '?')}»")
+    elif not a.solo:
+        # ⛔ E LO ZERO SI DICHIARA, non si tace: «nessuna ambiguita' stampata»
+        #    e «il ramo che le stampa non e' esercitato da nessun caso» sono
+        #    due fatti diversi, ed e' la forma E8 applicata al banco stesso.
+        print(f"\n    --  ⭐ `RCP.md` non ammette piu' due letture in nessuno "
+              f"dei {len(CASI)} casi:")
+        print(f"        le quattro che questo banco aveva trovato sono entrate "
+              f"nel documento")
+        print(f"        il 12 agosto 2026 (P2 §6.2 · P3 §2.5 · P5 §6.2 · P6 "
+              f"§5.2).")
+        print(f"        ⚠ Da cui: **nessun caso** pretende oggi `AMBIGUO`, e il "
+              f"ramo che li")
+        print(f"        stampa non e' esercitato da questo giro.  Il ramo del "
+              f"GIUDICE che")
+        print(f"        produce `AMBIGUO` lo esercita il guasto **G5**, a ogni "
+              f"certificazione.")
 
     # ⛔ IL CONTROLLO POSITIVO, IN CODA A OGNI ESECUZIONE.
     print(f"\n    == ⛔ il controllo positivo")

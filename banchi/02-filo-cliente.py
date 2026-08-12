@@ -146,6 +146,18 @@ def carica_b3():
     return b3
 
 CLIENT, SERVER = 1, 2
+
+# ⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x02` — §11.1, 12 agosto
+#    2026, proposta P7 (che questo banco stesso aveva trovato).  Il blocco
+#    porta `fine`, e passa da 16 a 17 byte.
+#    ⚠ Senza quel campo, quel che questo cliente registra e quel che ha visto
+#      sul filo non sono la stessa cosa: **lui** sa se lo stream e' finito con
+#      FIN o e' stato azzerato — glielo dice QUIC — e la registrazione non
+#      sapeva scriverlo.  L'arbitro che la legge doveva indovinare.
+MAGIA = b"RCPREG\x00\x02"
+BLOCCO = "!BBBQIH"
+CONTINUA, FIN, RESET = 0, 1, 2
+
 T_RICHIEDI_CHIAVE = 0x000D
 T_CONGEDO = 0x000C
 ERRORE_PROTOCOLLO = 0x0B      # §8.2
@@ -186,7 +198,8 @@ def fabbrica_cliente():
             self.flussi = {}
             self.finiti = []
             self.chiavi_chieste = 0
-            self.reg_video = []        # (verso, canale, stream, carico)
+            # (verso, canale, stream, carico, oscurati, fine) — §11.1
+            self.reg_video = []
             self.primo_byte = None     # ⛔ quando e' arrivato il PRIMO byte video
 
         def quic_event_received(self, event):
@@ -231,13 +244,29 @@ def fabbrica_cliente():
                 if self.primo_byte is None:
                     self.primo_byte = time.monotonic()
             f.byte += len(dati)
-            self.reg_video.append((SERVER, 0x03, sid, bytes(dati)))
+            self.reg_video.append([SERVER, 0x03, sid, bytes(dati), [],
+                                   FIN if fine else CONTINUA])
             f.giudice.arrivano(dati)
             if fine:
                 f.chiuso = "fin"
                 self._chiudi(f)
 
         def _azzerato(self, sid):
+            # ⛔ E LO SI SCRIVE NELLA REGISTRAZIONE — §11.1, campo `fine`.
+            #
+            #    Il `RESET_STREAM` non porta byte, quindi non ha un blocco suo:
+            #    marca l'ULTIMO blocco di quello stream.  ⚠ E se non ce n'e'
+            #    nessuno — uno stream azzerato prima di aver consegnato un byte
+            #    — se ne scrive uno **vuoto**: «zero byte, azzerato» e «non e'
+            #    mai esistito» sono due fatti diversi, ed e' la forma E8.
+            ultimo = None
+            for b in self.reg_video:
+                if b[2] == sid:
+                    ultimo = b
+            if ultimo is None:
+                self.reg_video.append([SERVER, 0x03, sid, b"", [], RESET])
+            else:
+                ultimo[5] = RESET
             f = self.flussi.get(sid)
             if f is None:
                 f = self.flussi[sid] = Flusso(
@@ -315,11 +344,18 @@ async def guarda(cli, a, ctx):
 
 
 def scrivi_registrazione(percorso, blocchi):
-    """Il formato di §11.1, con i blocchi del video accanto a quelli di controllo."""
-    out = bytearray(b"RCPREG\x00\x01" + struct.pack("!II", len(blocchi), 0))
-    for verso, canale, stream, carico, *osc in blocchi:
-        oscurati = osc[0] if osc else []
-        out += struct.pack("!BBQIH", verso, canale, stream, len(carico),
+    """Il formato di §11.1, con i blocchi del video accanto a quelli di controllo.
+
+    ⛔ `fine` predefinito a CONTINUA: il canale di controllo vive su **un solo
+       stream per tutta la sessione** (§2.5), e dentro la registrazione quello
+       stream non si chiude.  ⚠ Scrivere `FIN` a ogni messaggio direbbe che la
+       sessione si chiude e riapre a ogni riga.
+    """
+    out = bytearray(MAGIA + struct.pack("!II", len(blocchi), 0))
+    for verso, canale, stream, carico, *resto in blocchi:
+        oscurati = resto[0] if resto else []
+        fine = resto[1] if len(resto) > 1 else CONTINUA
+        out += struct.pack(BLOCCO, verso, canale, fine, stream, len(carico),
                            len(oscurati))
         for ini, qua, imp in oscurati:
             out += struct.pack("!II", ini, qua) + imp
@@ -413,8 +449,7 @@ async def principale(a):
         visti, perche = await guarda(cli, a, ctx)
 
     if a.registra:
-        n = scrivi_registrazione(a.registra, blocchi + [
-            (v, c, s, k) for v, c, s, k in cli.reg_video])
+        n = scrivi_registrazione(a.registra, blocchi + cli.reg_video)
         print(f"\n   registrazione: {a.registra} ({n} blocchi) — "
               f"⛔ e va data a `02-filo-validatore.py`, che e' l'altro lettore")
 
@@ -517,6 +552,67 @@ def elenco():
     return 0
 
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON DEVE PASSARE DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ `--parola` finisce nell'`argv` del processo, cioe' in `/proc/<pid>/cmdline`,
+#    che su Linux e' **leggibile da chiunque**: un `ps` lanciato da un altro
+#    utente durante il giro la stampa per intero.
+#
+# ⭐ La strada buona esisteva gia' in casa e questa e' la sua estensione, non un
+#    secondo modo: `01-b10-secondo-utente.py` prende `--parola-file`, un file
+#    `0600` che il lanciatore scrive con `printf` — un **builtin** della shell,
+#    quindi nemmeno la scrittura passa per un processo con la parola in `argv` —
+#    e cancella con una `trap`.
+#
+# ⚠ E `--parola` NON e' stata tolta, e non per pigrizia: dei chiamanti non
+#   ancora curati la passano ancora, e romperli **in silenzio** sarebbe peggio
+#   del difetto.  ⛔ Ma il ripiego si DICHIARA (`CODER.md` §4.2): un ripiego
+#   silenzioso produce due comportamenti sotto la stessa etichetta, che e' la
+#   forma **E2** — e qui i due comportamenti sono «il segreto e' protetto» e
+#   «il segreto e' pubblico».  ⇒ chi passa `--parola` se lo sente dire.
+#
+# ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
+#   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
+#   allarme che si impara a ignorare.
+def parola_dagli_argomenti(a):
+    """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
+
+    ⛔ E i tre modi di fallire si distinguono: «non si legge», «e' leggibile da
+    altri» e «e' vuoto» hanno tre cure diverse, e un file vuoto NON e' una
+    parola vuota — e' «il lanciatore non l'ha scritta» (`LEZIONI.md` §1.9).
+    """
+    percorso = getattr(a, "parola_file", "") or ""
+    if percorso:
+        try:
+            modo = os.stat(percorso).st_mode & 0o077
+        except OSError as e:
+            print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+            sys.exit(2)
+        if modo:
+            print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o}): il "
+                  f"segreto non e' protetto")
+        try:
+            with open(percorso, encoding="utf-8") as f:
+                parola = f.read().strip("\n")
+        except OSError as e:
+            print(f"   ⛔ la parola non si legge da «{percorso}»: {e}")
+            sys.exit(2)
+        if not parola:
+            print(f"   ⛔ il file della parola «{percorso}» e' VUOTO.  Non e'")
+            print("      «la parola e' vuota»: e' «il lanciatore non l'ha scritta».")
+            sys.exit(2)
+        return parola
+    if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
+        print("   ⚠ D12: la parola d'ordine e' arrivata da `--parola`, cioe' dalla")
+        print("     RIGA DI COMANDO: sta in `/proc/<pid>/cmdline` e la vede chiunque")
+        print("     faccia `ps` su questa macchina.  Il giro prosegue — il chiamante")
+        print("     non e' stato curato — ma non e' un giro riservato.")
+        print("     ⭐ La cura: `--parola-file <file 0600>`, come in B10.")
+    return a.parola
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="F2.4 — il cliente di prova che riceve il fotogramma")
@@ -528,6 +624,12 @@ if __name__ == "__main__":
     p.add_argument("--percorso", default="/rcp/1")
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
+    # ⛔ D12: la strada che NON passa da `ps`.  Vince su `--parola` se ci sono
+    #    tutt'e due — un file scritto apposta e' sempre piu' recente di un
+    #    predefinito.
+    p.add_argument("--parola-file", default="",
+                   help="file 0600 con la sola parola d'ordine (⭐ D12: cosi' "
+                        "non finisce in `ps`)")
     p.add_argument("--larghezza", type=int, default=1920)
     p.add_argument("--altezza", type=int, default=1080)
     p.add_argument("--disposizione", default="it")
@@ -541,6 +643,7 @@ if __name__ == "__main__":
     p.add_argument("--violazioni", action="store_true",
                    help="⏳ le prove verso il server (vuole un server)")
     a = p.parse_args()
+    a.parola = parola_dagli_argomenti(a)
     if a.elenco:
         sys.exit(elenco())
     if not a.porta:

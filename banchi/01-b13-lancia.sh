@@ -67,6 +67,44 @@ PORTA=7447
 UTENTE=prova
 PAROLA=parola-di-prova
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ QUI LA PAROLA finiva dentro la stringa che `bash $ENTRA --root "…"` riceve
+#    come argomento: cioe' nell'`argv` di `bash`, in quello di `sudo` e in
+#    quello di `python3`.  `/proc/<pid>/cmdline` su Linux e' **leggibile da
+#    chiunque**, e un `ps` lanciato da un altro utente durante il giro la
+#    stampava per intero.  ⚠ E i banchi di questa macchina girano mentre ci
+#    lavorano altri.
+#
+# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
+#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
+#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
+#    `argv` — passato al banco come `--parola-file`, e cancellato con una
+#    `trap` anche se il giro muore a meta'.
+#
+# ⚠ Nel `cmdline` finisce il PERCORSO, non la parola, e il file e' `0600`:
+#   chi non e' noi non lo apre.
+# ⚠ E il nome porta la sigla del banco: due giri che scrivessero lo stesso
+#   file si cancellerebbero la parola a vicenda — la stessa forma che ha fatto
+#   nascere il `PREFISSO` di `01-p5-accendi.sh`.
+PAROLA_FUORI=$FUORI/tmp/b13-parola
+PAROLA_DENTRO=$DENTRO/tmp/b13-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FUORI"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
+#    `umask 077` nudo resta addosso a tutto quel che viene dopo, compresi i
+#    comandi mandati dentro il contenitore, e li' fa scrivere a root dei file
+#    che poi `nicfio` non rilegge piu'.
+mkdir -p "$FUORI/tmp" \
+	&& ( umask 077; : > "$PAROLA_FUORI" ) \
+	&& chmod 600 "$PAROLA_FUORI" \
+	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FUORI"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FUORI"
+
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -200,7 +238,7 @@ inf "⚠ l'impronta si annota: fra sei mesi «rcp.c» da solo non dice quale (B0
 #      questo autore: qui si toglie la conseguenza, non la causa.
 log "1-bis. ⛔ La certificazione di B13 (guasti costruiti a mano, su copie)"
 bash "$ENTRA" --root "python3 -u $DENTRO/01-b13-proprieta.py --certifica \
-	--indirizzo $IND --parola $PAROLA"
+	--indirizzo $IND --parola-file $PAROLA_DENTRO"
 CERT_ESITO=$?
 if [ "$CERT_ESITO" -ne 0 ]; then
 	ko "⛔ B13 NON e' certificato (uscita $CERT_ESITO): finche' e' rossa,"
@@ -279,7 +317,7 @@ inf "⚠ la proprieta' 2 cerca la parola d'ordine in TUTTI i file sotto $DENTRO,
 inf "  compresi i registri lasciati dagli altri banchi: e' voluto — B13.2 dice"
 inf "  «tutti i file prodotti dal giro», e il giro e' la fase, non questo script"
 bash "$ENTRA" --root \
-	"python3 -u $DENTRO/01-b13-proprieta.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola $PAROLA --certificati $CERTDIR --prodotti $DENTRO --codice $DENTRO/rcp/rcp.c --codice-compilato $DENTRO/b2/ngtcp2/examples/rcp.c"
+	"python3 -u $DENTRO/01-b13-proprieta.py --indirizzo $IND --porta $PORTA --utente $UTENTE --parola-file $PAROLA_DENTRO --certificati $CERTDIR --prodotti $DENTRO --codice $DENTRO/rcp/rcp.c --codice-compilato $DENTRO/b2/ngtcp2/examples/rcp.c"
 E=$?
 
 # ⛔ B0.5, dal SISTEMA: un processo che risponde puo' aver gia' perso i figli,

@@ -10,6 +10,32 @@ ok() { printf '    OK  %s\n' "$*"; }
 ko() { printf '    NO  %s\n' "$*"; }
 log(){ printf '\n== %s\n' "$*"; }
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.  `python3` e' un PROCESSO: la parola stava nel
+#    suo `argv`, cioe' in `/proc/<pid>/cmdline`, leggibile da chiunque.
+#
+# ⭐ La strada e' quella gia' in casa (`banchi/01-b10-lancia.sh`): file `0600`
+#    scritto con `printf` — un **builtin**, quindi nemmeno la scrittura passa
+#    per un processo con la parola in `argv` — passato come `--parola-file`, e
+#    cancellato con una `trap`.  Nel `cmdline` finisce il PERCORSO.
+#
+# ⚠ Le parole SBAGLIATE restano dove stanno: non sono il segreto di nessuno, e
+#   due strade per la stessa cosa sarebbero la forma **E2**.  Qui pero' comprano
+#   qualcosa — la scena e' «tre tentativi falliti» — quindi si dichiarano.
+PAROLA=${PAROLA:-parola-di-prova}
+PAROLA_FILE=/srv/src/tmp/prodotto-filo-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FILE"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL: nudo resterebbe addosso a tutto quel che segue.
+mkdir -p /srv/src/tmp \
+  && ( umask 077; : > "$PAROLA_FILE" ) \
+  && chmod 600 "$PAROLA_FILE" \
+  || { ko "⛔ non si scrive $PAROLA_FILE"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FILE"
+
 # ⛔ Niente `pkill -f`: si spegne per pid, e solo il nostro.
 if [ -f "$PIDFILE" ]; then
   V=$(cat "$PIDFILE")
@@ -28,23 +54,23 @@ sleep 2
 [ -d "/proc/$PID" ] || { ko "morto subito"; cat "$REG"; exit 2; }
 ok "pid $PID"
 
-giro() # $1 = etichetta, $2 = utente, $3 = parola
+giro() # $1 = etichetta, $2 = utente  (⛔ D12: la parola dal file)
 {
   rm -f "/srv/src/filo-$1.rcpreg"
   timeout 40 python3 /srv/src/01-b3-cliente.py --indirizzo "$IND" --porta "$PORTA" \
-    --utente "$2" --parola "$3" --registra "/srv/src/filo-$1.rcpreg"
+    --utente "$2" --parola-file "$PAROLA_FILE" --registra "/srv/src/filo-$1.rcpreg"
   echo "    uscita cliente «$1»: $?"
 }
 
 log "PRIMA connessione — il cliente di prova di B3 (aioquic), che legge solo RCP.md"
-giro uno prova parola-di-prova
+giro uno prova
 
 log "L'arbitro di B4 giudica i byte della prima"
 timeout 60 python3 /srv/src/01-b4-validatore.py /srv/src/filo-uno.rcpreg
 echo "    uscita validatore: $?"
 
 log "SECONDA connessione, dopo che la prima si e' chiusa (LEZIONI 2.1)"
-giro due prova parola-di-prova
+giro due prova
 timeout 60 python3 /srv/src/01-b4-validatore.py /srv/src/filo-due.rcpreg
 echo "    uscita validatore: $?"
 

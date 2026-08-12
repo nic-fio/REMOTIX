@@ -22,10 +22,13 @@ vanno d'accordo non confermano niente (`README.md`).
 ⛔ QUATTRO ESITI, E TRE DI ESSI DICONO «NON E' UN GIUDIZIO SUL FILO»
 
   0  conforme — ⛔ e con il DENOMINATORE: quanti blocchi, quanti sul canale di
-     controllo, quanti messaggi letti, quanti con il corpo davvero giudicato
+     controllo e quanti sul video, quanti messaggi letti, quanti col corpo
+     davvero giudicato, quanti flussi video
   1  NON conforme — con lo scostamento del byte e la regola violata
-  2  ⛔ la REGISTRAZIONE e' rotta, **o non si legge**
-  3  ⛔ non c'e' NIENTE DA GIUDICARE: zero messaggi di controllo
+  2  ⛔ la REGISTRAZIONE e' rotta, **o non si legge**, ⛔ **o e' di un'altra
+     versione del formato**, ⛔ **o manca lo strumento per guardarla**
+  3  ⛔ non c'e' NIENTE DA GIUDICARE: zero messaggi di controllo **e** zero
+     flussi video — ⚠ e la seconda meta' e' del 12 agosto 2026
 
 Il **2** esiste perche' «il file e' rotto» e «il filo non era conforme» sono
 due fatti diversi con due cure diverse, e un validatore che li confondesse
@@ -57,13 +60,120 @@ SUCCESSIVO e dichiara non conforme quello.  **Rosso giusto, byte sbagliato** —
 e su una traccia vera manda la diagnosi a leggere il messaggio sbagliato.
 Per questo ogni verdetto porta due scostamenti (assoluto e dentro il blocco) e
 la riga di RCP.md che regge il giudizio.
+
+---------------------------------------------------------------------------
+⭐⛔ IL 12 AGOSTO 2026 QUESTO VALIDATORE HA IMPARATO IL **CANALE VIDEO**
+
+Fino all'11 agosto la riga 521 diceva:
+
+    if canale != 0x00:
+        print(... "non giudicato da questo validatore")
+        continue
+
+⚠ Era una riga **onesta** — dichiarava di non giudicare, che e' il contrario di
+assolvere — ma dal primo fotogramma in poi il capitolo piu' voluminoso del filo
+sarebbe tornato a essere validato da **una sola** implementazione, scritta
+dalla stessa mano che scrive il server: lo stato che `RCP.md` §0 chiama il
+difetto muto.
+
+⛔ E il 12 agosto 2026 sono entrate in `RCP.md` **sei righe normative** che
+parlano tutte del video (§2.5, §5.2, §6.2), e nessuno dei due arbitri le sapeva
+giudicare.  Adesso:
+
+  **P1** §2.5   nessuno stream video prima di aver spedito `SESSIONE`
+  **P2** §6.2   `numero` parte da **1**, e lo `0` e' riservato
+  **P3** §2.5   un `0x03` sul **canale di controllo** e' `ERRORE_PROTOCOLLO`
+  **P4** §6.2   **FIN prima dei 28 byte** e' `ERRORE_PROTOCOLLO`
+  **P5** §6.2   `largh.`/`altezza` **DEVONO** valere la tela concessa
+  **P6** §5.2   il primo fotogramma dopo `SESSIONE` **DEVE** essere chiave
+
+⛔⛔ **E IL GIUDIZIO DEL FOTOGRAMMA NON E' RISCRITTO QUI: SI IMPORTA.**
+`02-filo-fotogramma.py` e' il giudice scritto leggendo `RCP.md` §6.2, e due
+copie della stessa lettura sarebbero due implementazioni della stessa mano —
+cioe' precisamente cio' che un arbitro esterno esiste per impedire.  ⚠ Se non
+si trova, questo validatore **non indovina e non salta**: esce **2**, che e'
+«non ho potuto guardare», e lo dice.
+
+⚠ ⛔ **E UN BUCO CHE VA DICHIARATO, perche' non e' di questo file curarlo.**
+`01-b12-guasti.py` elenca in `FILE_CHE_CONTANO["B4"]` i tre file su cui poggia
+la certificazione di B4, e `02-filo-fotogramma.py` **non e' fra quelli**: da
+oggi si puo' riscrivere il giudice del fotogramma e la riga «B4 certificato»
+resta valida a vista mentre il banco certificato non e' piu' lo stesso.  E'
+esattamente la forma del rilievo **R12-A.5**, rientrata da un'altra porta.
+⇒ La cura e' una voce in `FILE_CHE_CONTANO` e una in `CORREDO`, e quel file e'
+di chi cura **D10**.  Qui si dichiara.
+
+---------------------------------------------------------------------------
+⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x02`, E IL VECCHIO SI RIFIUTA
+
+§11.1, 12 agosto 2026: il blocco porta `fine` — *0 continua · 1 FIN · 2
+RESET_STREAM* — e passa da **16 a 17 byte**.  ⛔ *«La magia passa a 0x00 0x02
+perche' il blocco cambia misura: un validatore vecchio deve RIFIUTARE il
+formato nuovo, non leggerlo di traverso»*, e vale nei due versi: un `.rcpreg`
+del 10 agosto letto con questo lettore avrebbe il `canale` dentro lo `stream` e
+ogni blocco scivolato di un byte — ne uscirebbe un **giudizio** su byte che
+nessuno ha scritto.
 """
 import hashlib
+import importlib.util
+import os
 import struct
 import sys
 
-MAGIA = b"RCPREG\x00\x01"
+QUI = os.path.dirname(os.path.abspath(__file__))
+
+MAGIA = b"RCPREG\x00\x02"
+MAGIA_VECCHIA = b"RCPREG\x00\x01"
 RIEMPIMENTO = 0x2A  # il byte degli intervalli oscurati (RCP.md §11.1)
+
+# Il blocco di §11.1: verso, canale, fine, stream, lunghezza, quanti_oscurati.
+BLOCCO = "!BBBQIH"
+BLOCCO_BYTE = struct.calcsize(BLOCCO)
+CONTINUA, FIN, RESET = 0, 1, 2
+FINE = {CONTINUA: "continua", FIN: "FIN", RESET: "RESET_STREAM"}
+
+VIDEO = 0x03
+CONTROLLO = 0x00
+
+
+def cerca_in_su(nome, da):
+    """Il file `nome` risalendo le cartelle da `da`.  ⛔ (None) se non c'e'.
+
+    ⚠ Serve perche' `01-b12-guasti.py` fa girare questo validatore da una
+      **copia** (`01-b12-copie/`) che contiene solo il corredo di B4: il
+      giudice del fotogramma non c'e', e va cercato dov'e' davvero.  E' la
+      stessa strada che `01-b9-letture.py` usa per trovare `RCP.md`.
+    """
+    d = da
+    for _ in range(6):
+        p = os.path.join(d, nome)
+        if os.path.exists(p):
+            return p
+        su = os.path.dirname(d)
+        if su == d:
+            break
+        d = su
+    return None
+
+
+def giudice_del_fotogramma():
+    """⛔ Il giudice si IMPORTA, non si ricopia — vedi l'intestazione.
+
+    Restituisce (modulo, perche_no).  ⚠ Un'importazione fallita **non e' un
+    fotogramma conforme**: chi chiama esce 2.
+    """
+    p = cerca_in_su("02-filo-fotogramma.py", QUI)
+    if p is None:
+        return None, ("`02-filo-fotogramma.py` non si trova risalendo da "
+                      f"{QUI}: e' il giudice che applica §6.2, e senza di lui "
+                      f"il canale video non si giudica")
+    try:
+        spec = importlib.util.spec_from_file_location("f24_b4", p)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except Exception as e:                      # noqa: BLE001
+        return None, f"«{p}» non si importa: {type(e).__name__}: {e}"
+    return mod, ""
 
 # ---------------------------------------------------------------------------
 # I tipi di messaggio del canale di controllo — RCP.md §7.1
@@ -128,11 +238,28 @@ class Malformata(Exception):
 
 
 class NienteDaGiudicare(Exception):
-    """⛔ Nel file non c'e' nessun messaggio di controllo da giudicare.
+    """⛔ Nel file non c'e' niente che questo validatore sappia giudicare.
 
     Non e' «conforme» e non e' «non conforme»: e' l'assenza dell'oggetto del
     giudizio, e ha un codice d'uscita suo perche' la cura e' un'altra —
     si guarda il registratore, non il protocollo (rilievo R7.4).
+
+    ⚠ **E dal 12 agosto 2026 vuol dire due cose insieme**: zero messaggi di
+      controllo **e** zero flussi video.  Prima bastava la prima, perche' il
+      video non lo guardava nessuno; una registrazione di soli fotogrammi
+      usciva 3 ed era vero.  Oggi quella stessa registrazione ha un oggetto
+      del giudizio, e dire «niente da giudicare» sarebbe **assolvere senza
+      aver guardato**.
+    """
+
+
+class NonHoPotutoGuardare(Exception):
+    """⛔ Manca lo strumento, non il giudizio — e sono due cose diverse.
+
+    ⚠ Ha lo stesso codice d'uscita di `Malformata` (**2**) perche' nessuno dei
+      due e' un giudizio sul filo, ma **non la stessa frase**: li' si guarda il
+      file, qui si guarda l'installazione.  Confonderle manderebbe a cercare un
+      difetto di registrazione dentro un'importazione fallita.
     """
 
 
@@ -227,7 +354,7 @@ class Lettore:
 def leggi_capacita(le, nome_messaggio, lato):
     """RCP.md §4.3 — l'elenco delle capacita', con tutte le sue regole."""
     quante = le.u16("il numero di capacita'")
-    visti = {}
+    visti, valori = {}, {}
     for k in range(quante):
         inizio = le.i
         nome = le.stringa(f"il nome della capacita' {k}", minimo=1, massimo=64,
@@ -248,6 +375,7 @@ def leggi_capacita(le, nome_messaggio, lato):
                               f"(la prima allo scostamento {visti[nome]})",
                               le.base + inizio, inizio)
         visti[nome] = inizio
+        valori[nome] = valore
         if valore is not None and valore == "":
             raise NonConforme("RCP.md §4.3",
                               f"la capacita' {nome!r} ha valore vuoto: "
@@ -261,14 +389,28 @@ def leggi_capacita(le, nome_messaggio, lato):
             raise NonConforme("RCP.md §4.3",
                               f"la capacita' {nome!r} non puo' arrivare dal {chi}",
                               le.base + inizio, inizio)
-    return visti
+    # ⛔ Si restituiscono i VALORI, non gli scostamenti: da qui `corpo()` prende
+    #    il codec negoziato in `ECCOMI`, che §6.2 lega al campo `codec` di ogni
+    #    fotogramma.  ⚠ Gli scostamenti restano interni — servivano solo al
+    #    messaggio del nome ripetuto.
+    return valori
 
 
-def corpo(tipo, nome, le, lato):
-    """Legge il corpo secondo il tipo.  §4.3, §4.4, §4.5, §7.1."""
+def corpo(tipo, nome, le, lato, stato=None):
+    """Legge il corpo secondo il tipo.  §4.3, §4.4, §4.5, §7.1.
+
+    ⛔ `stato` c'e' dal 12 agosto 2026: il canale VIDEO non si puo' giudicare
+       senza la **tela concessa** (§4.5, per P5) e senza il **codec negoziato**
+       (§4.3, per §6.2), e tutt'e due viaggiano qui.  ⚠ Prenderli dai propri
+       predefiniti sarebbe giudicare se' stessi.
+    """
     if nome in ("CIAO", "ECCOMI"):
         le.u16("la versione")
-        leggi_capacita(le, nome, lato)
+        cap = leggi_capacita(le, nome, lato)
+        if stato is not None and nome == "ECCOMI":
+            # §4.3: `ECCOMI` porta la scelta del server, una sola.
+            stato.codec = {"hevc": 1, "av1": 2}.get(
+                (cap.get("video.codec") or "").split(",")[0].strip())
     elif nome == "CREDENZIALI":
         le.stringa("l'utente", minimo=1, massimo=256, regola="RCP.md §4.4")
         le.stringa("la parola", minimo=1, massimo=1024, regola="RCP.md §4.4")
@@ -313,9 +455,12 @@ def corpo(tipo, nome, le, lato):
             raise NonConforme("RCP.md §4.5",
                               f"stato {st}: previsti 1 = NUOVA o 2 = RIPRESA",
                               le.base + le.i - 1, le.i - 1)
-        le.u32("tela_larghezza")
-        le.u32("tela_altezza")
+        lar = le.u32("tela_larghezza")
+        alt = le.u32("tela_altezza")
         le.stringa("il desktop", massimo=64, regola="RCP.md §4.5")
+        # ⛔ LA TELA CONCESSA — e' questa che §6.2 lega a `largh.`/`altezza`.
+        if stato is not None and lar is not None and alt is not None:
+            stato.tela = (lar, alt)
     elif nome == "CONGEDO":
         m = le.u8("il motivo")
         if m not in MOTIVI:
@@ -331,9 +476,46 @@ def corpo(tipo, nome, le, lato):
         le.stringa("la disposizione", massimo=64, regola="RCP.md §4.5")
     elif nome == "RICHIEDI_CHIAVE":
         le.u32("ultimo_numero")
+    elif nome == "TELA":
+        # ⛔ GIUDICATO DAL 12 AGOSTO 2026, e non per completezza: §6.2 lega
+        #    `largh.`/`altezza` di ogni fotogramma alla **tela in vigore**, e
+        #    l'unico messaggio che la cambia e' questo.  ⚠ Fino a ieri finiva
+        #    nel ramo «corpi che questo validatore non serve ancora», cioe' il
+        #    canale video non avrebbe potuto essere giudicato affatto dopo un
+        #    `ADATTA_TELA`.
+        es = le.u8("l'esito")
+        if es not in (1, 2):
+            raise NonConforme("RCP.md §7.1",
+                              f"esito {es}: previsti 1 = ADATTATA o "
+                              f"2 = RIFIUTATA",
+                              le.base + le.i - 1, le.i - 1)
+        mot = le.u8("il motivo")
+        if es == 1 and mot != 0:
+            raise NonConforme("RCP.md §7.1",
+                              f"TELA(ADATTATA) con motivo {mot}: §7.1 vuole "
+                              f"0 quando l'esito e' ADATTATA",
+                              le.base + le.i - 1, le.i - 1)
+        if es == 2 and mot not in (1, 2, 3):
+            raise NonConforme("RCP.md §7.1",
+                              f"motivo {mot}: §7.1 ne definisce tre — 1 = "
+                              f"COMPOSITORE_INCAPACE, 2 = MISURA_FUORI_LIMITI, "
+                              f"3 = NON_ORA",
+                              le.base + le.i - 1, le.i - 1)
+        lar = le.u32("tela_larghezza")
+        alt = le.u32("tela_altezza")
+        # ⛔ §7.1: questi due campi sono «la tela in vigore DOPO questo
+        #    messaggio» — e lo sono **anche** quando l'esito e' RIFIUTATA, dove
+        #    riportano quella di prima.  ⇒ si prende il campo, non si deduce
+        #    dall'esito: e' il campo a essere definito cosi'.
+        if stato is not None and lar is not None and alt is not None:
+            stato.tela = (lar, alt)
+            if es == 1:
+                stato.tela_da = "TELA(ADATTATA) (§7.1)"
     else:
         # I corpi che RCP/1 definisce e questo validatore non serve ancora
-        # (CURSORE_FORMA, TELA, BANCO_*): si dichiara di non giudicarli.
+        # (CURSORE_FORMA, BANCO_*): si dichiara di non giudicarli.
+        # ⚠ `TELA` stava qui fino all'11 agosto 2026, ed e' uscito perche' il
+        #   canale video ha bisogno della tela in vigore (§6.2).
         return False
     le.fine(nome)
     return True
@@ -374,6 +556,12 @@ class Stato:
         self.fatti = []
         self.attiva = False
         self.respinto = False
+        # ⛔ Quel che il canale di controllo dice e che serve a giudicare il
+        #    VIDEO: la tela concessa (§4.5) e il codec negoziato (§4.3).
+        #    ⚠ `None` e' «non l'ho letto», e NON e' un valore predefinito.
+        self.tela = None
+        self.tela_da = "SESSIONE (§4.5)"
+        self.codec = None
 
     def ammette(self, nome):
         """Il messaggio puo' arrivare adesso?  Restituisce None o il perche' no."""
@@ -457,6 +645,18 @@ def valida(percorso):
     with open(percorso, "rb") as f:
         d = f.read()
 
+    # ⛔ IL FORMATO VECCHIO SI RIFIUTA, E CON LA SUA FRASE — §11.1.
+    #
+    #    «Non e' del formato» e «e' di un'altra versione» sono due fatti con
+    #    due cure diverse: il primo manda a cercare chi ha rotto il file, il
+    #    secondo a rigenerarlo.  ⛔ E leggerlo di traverso non e' un'opzione: il
+    #    blocco vecchio e' di 16 byte, questo lettore ne vuole 17.
+    if len(d) >= 8 and d[:8] == MAGIA_VECCHIA:
+        raise Malformata(
+            "e' una registrazione nel formato VECCHIO, «RCPREG 0x00 0x01»: il "
+            "blocco non porta il campo `fine` e misura 16 byte invece di 17.  "
+            "⛔ Non si legge di traverso — §11.1, 12 agosto 2026 — e non e' un "
+            "file rotto: si RIGENERA con `01-b4-registrazioni.py`")
     if len(d) < 16 or d[:8] != MAGIA:
         raise Malformata("non comincia con la magia di RCP.md §11.1")
     quanti, riservato = struct.unpack("!II", d[8:16])
@@ -468,18 +668,32 @@ def valida(percorso):
 
     p = 16
     stato = Stato()
-    # ⛔ I DENOMINATORI DEL VERDETTO, e sono quattro perche' le cose che si
-    #    possono NON aver guardato sono quattro.  «Nessuna violazione» senza
-    #    di essi era vero anche su un file di zero blocchi (rilievo R7.4).
+    # ⛔ I DENOMINATORI DEL VERDETTO, e dal 12 agosto 2026 sono SEI: le cose che
+    #    si possono NON aver guardato sono cresciute col canale video.
+    #    «Nessuna violazione» senza di essi era vero anche su un file di zero
+    #    blocchi (rilievo R7.4).
     visti = 0        # blocchi letti
     di_controllo = 0  # blocchi sul canale 0x00
     messaggi = 0     # messaggi di controllo letti
     giudicati = 0    # ... di cui con il corpo davvero giudicato
+    di_video = 0     # blocchi sul canale 0x03
+    flussi_video = 0  # ... raggruppati per stream: uno stream, un fotogramma
+    # ⛔ Le due regole del 12 agosto che parlano di STREAM e non di byte: si
+    #    decidono qui, sfogliando, perche' un giudice del singolo fotogramma
+    #    non sa ne' su che stream sia arrivato ne' che cosa fosse gia' passato.
+    sessione_vista = False          # P1 — §2.5
+    stream_di_controllo = set()     # P3 — §2.5
+    flussi, ordine = {}, []
     for nb in range(quanti):
-        if p + 16 > len(d):
+        if p + BLOCCO_BYTE > len(d):
             raise Malformata(f"il blocco {nb} comincia oltre la fine del file")
-        verso, canale, stream, lung, nosc = struct.unpack("!BBQIH", d[p:p + 16])
-        p += 16
+        verso, canale, fine, stream, lung, nosc = struct.unpack(
+            BLOCCO, d[p:p + BLOCCO_BYTE])
+        p += BLOCCO_BYTE
+        if fine not in FINE:
+            raise Malformata(
+                f"blocco {nb}: `fine` vale {fine}, e §11.1 ne definisce tre — "
+                f"0 continua, 1 FIN, 2 RESET_STREAM")
         oscurati = []
         for _ in range(nosc):
             if p + 40 > len(d):
@@ -518,11 +732,33 @@ def valida(percorso):
                               f"il byte alto del tipo vale {canale:#04x}: "
                               "fuori dai cinque canali",
                               base, 0)
-        if canale != 0x00:
+        if canale == VIDEO:
+            # ⛔ I blocchi video si RACCOLGONO e si giudicano dopo, per stream:
+            #    uno stream, un fotogramma (§6.2), e i blocchi di stream
+            #    diversi si interlacciano.  ⚠ E si tiene il **momento** in cui
+            #    il flusso comincia — prima o dopo `SESSIONE` — perche' e' P1,
+            #    e dopo la sfogliata quell'informazione e' persa.
+            di_video += 1
+            if stream not in flussi:
+                flussi[stream] = {"pezzi": [], "base": base,
+                                  "dopo_sessione": sessione_vista,
+                                  "sul_controllo": stream in stream_di_controllo,
+                                  # ⛔ la tela IN VIGORE quando il flusso si
+                                  #    apre, non quella di fine file: giudicare
+                                  #    un fotogramma con una tela concessa dopo
+                                  #    di lui sarebbe leggere il filo
+                                  #    all'indietro.
+                                  "tela": stato.tela,
+                                  "tela_da": stato.tela_da}
+                ordine.append(stream)
+            flussi[stream]["pezzi"].append((nb, verso, carico, fine, oscurati))
+            continue
+        if canale != CONTROLLO:
             print(f"   blocco {nb}: canale {CANALI[canale]} dal {chi}, "
                   f"{lung} byte — non giudicato da questo validatore")
             continue
         di_controllo += 1
+        stream_di_controllo.add(stream)
 
         # Il canale di controllo vive solo sullo stream 0 della sessione (§2.5).
         le = Lettore(carico, base, oscurati)
@@ -561,12 +797,15 @@ def valida(percorso):
             sotto = Lettore(carico[le.i:le.i + lung_msg], base + le.i,
                             [(o - le.i, q) for o, q in oscurati
                              if o + q > le.i and o < le.i + lung_msg])
-            giudicato = corpo(tipo, nome, sotto, verso)
+            giudicato = corpo(tipo, nome, sotto, verso, stato)
             messaggi += 1
             giudicati += int(bool(giudicato))
             print(f"   blocco {nb}: {nome:<14s} dal {chi:<6s} {lung_msg:>5} byte"
                   + ("" if giudicato else "   (corpo non giudicato)"))
             stato.segna(nome)
+            # ⛔ P1 — §2.5: da qui in poi il video e' lecito, e prima no.
+            if nome == "SESSIONE" and verso == SERVER:
+                sessione_vista = True
             le.i += lung_msg
 
     # ⛔ IL CONTROLLO CHE C'ERA NON POTEVA FALLIRE, E MANCAVA QUELLO CHE SERVE.
@@ -586,14 +825,137 @@ def valida(percorso):
             f"o `quanti_blocchi` e' sotto-dichiarato — e allora c'e' del filo "
             f"che nessuno ha giudicato — o c'e' una coda che non e' del formato")
 
+    # =======================================================================
+    # ⭐⛔ IL CANALE VIDEO — le sei righe del 12 agosto 2026
+    #
+    #    Si giudica DOPO la sfogliata perche' due delle sei parlano di **quel
+    #    che era gia' passato** (P1) e di **su quale stream** (P3), e un
+    #    giudice del singolo fotogramma non lo puo' sapere.
+    # =======================================================================
+    if flussi:
+        f24, perche_no = giudice_del_fotogramma()
+        if f24 is None:
+            # ⛔ E8: «non ho lo strumento» NON e' «va bene».  Un `continue` qui
+            #    rimetterebbe in piedi la riga 521, con la differenza che
+            #    stavolta il file dichiara di giudicare il video.
+            raise NonHoPotutoGuardare(
+                f"ci sono {len(flussi)} flussi video da giudicare e il giudice "
+                f"non c'e': {perche_no}")
+        # ⛔ La tela e il codec NON si indovinano: si prendono da `SESSIONE` e
+        #    da `ECCOMI`, cioe' dal filo stesso.  Un arbitro che confrontasse
+        #    con i propri predefiniti starebbe giudicando se' stesso — ed e' il
+        #    caso `17-video-misura-diversa` a tenerlo onesto.
+        #
+        # ⭐ E LA TELA E' QUELLA **IN VIGORE**, NON QUELLA DI `SESSIONE` —
+        #    §6.2, **corretta il 12 agosto 2026** poche ore dopo essere stata
+        #    scritta, perche' propagarla fin qui ha mostrato che uccideva una
+        #    sessione sana: dopo un `TELA(ADATTATA, 1280, 720)` (§7.1) il
+        #    server cattura alla misura nuova, e un client che confrontasse
+        #    ancora con `SESSIONE` chiuderebbe — la scena che §7.1 protegge
+        #    con la sua eccezione 4.  ⇒ `stato.tela` si aggiorna su `SESSIONE`
+        #    **e** su `TELA`, e ogni flusso video e' giudicato con la tela che
+        #    era in vigore quando si e' aperto.
+        ctx = f24.Contesto(tela=stato.tela or (1920, 1080),
+                           codec_negoziato=stato.codec or 1,
+                           sessione_aperta=True)
+        for sid in ordine:
+            fl = flussi[sid]
+            flussi_video += 1
+            # ⛔ P5 — la tela IN VIGORE all'apertura di QUESTO flusso.
+            if fl["tela"] is not None:
+                if fl["tela_da"].startswith("TELA"):
+                    ctx.adatta_tela(*fl["tela"])
+                else:
+                    ctx.tela_larghezza, ctx.tela_altezza = fl["tela"]
+            b0 = fl["pezzi"][0]
+            base0 = fl["base"]
+
+            # ── P3 — §2.5: un `0x03` sul canale di controllo
+            if fl["sul_controllo"]:
+                raise NonConforme(
+                    "RCP.md §2.5",
+                    f"flusso {sid}: un fotogramma sullo stream del CANALE DI "
+                    f"CONTROLLO.  §2.5 vuole il video «solo su uno stream "
+                    f"unidirezionale aperto dal server»", base0, 0)
+
+            # ── P1 — §2.5: nessuno stream video prima di `SESSIONE`
+            if not fl["dopo_sessione"]:
+                raise NonConforme(
+                    "RCP.md §2.5",
+                    f"flusso {sid}: uno stream video si apre PRIMA di "
+                    f"`SESSIONE` — il client riceve un fotogramma di cui non "
+                    f"conosce ne' la misura ne' il codec.  E' l'invariante I3 "
+                    f"sul filo", base0, 0)
+
+            # ── e il verso, §2.5: il video va dal server al client
+            if any(v != SERVER for _, v, _, _, _ in fl["pezzi"]):
+                raise NonConforme(
+                    "RCP.md §2.5",
+                    f"flusso {sid}: un fotogramma DAL CLIENT — il video va dal "
+                    f"server al client", base0, 0)
+            if any(osc for _, _, _, _, osc in fl["pezzi"]):
+                raise Malformata(
+                    f"flusso {sid}: un intervallo oscurato su un blocco VIDEO. "
+                    f"§11.1 esiste per la parola d'ordine (§4.4); un "
+                    f"fotogramma non ha niente da oscurare, e il validatore "
+                    f"non puo' giudicare quel che non gli si lascia leggere")
+
+            chiusura = fl["pezzi"][-1][3]
+            for nbx, _, _, fx, _ in fl["pezzi"][:-1]:
+                if fx != CONTINUA:
+                    raise Malformata(
+                        f"blocco {nbx}: dichiara `fine = {fx}` ({FINE[fx]}) ma "
+                        f"sullo stream {sid} arrivano altri blocchi dopo.  "
+                        f"⛔ Uno stream si chiude una volta sola")
+
+            g = f24.Giudice(ctx, dove="uni")
+            # ⛔ IL RESET VINCE SULL'INTESTAZIONE — §6.2, rilievo R1.7: i byte
+            #    di un'intestazione troncata possono essere qualunque cosa, e
+            #    leggerli darebbe `ERRORE_PROTOCOLLO` su un abbandono legale.
+            if chiusura == RESET:
+                v = g.finisce("reset")
+            else:
+                for _, _, car, _, _ in fl["pezzi"]:
+                    g.arrivano(car)
+                    if g.verdetto is not None:
+                        break
+                if g.verdetto is not None:
+                    v = g.verdetto
+                elif chiusura == CONTINUA:
+                    # ⛔ `fine = 0` sull'ultimo blocco: lo stream non si chiude
+                    #    dentro il file, quindi la COMPLETEZZA non si giudica —
+                    #    e si dichiara invece di darla per buona.
+                    print(f"   flusso {sid}: {g.byte_dati} byte di dati e "
+                          f"`fine = 0` sull'ultimo blocco — ⛔ la completezza "
+                          f"NON si giudica (§6.2)")
+                    continue
+                else:
+                    v = g.finisce("fin")
+            if v.esito == f24.ERRORE_PROTOCOLLO:
+                rel = v.scostamento if v.scostamento is not None else 0
+                raise NonConforme(v.regola, f"flusso {sid}: {v.dice}",
+                                  base0 + rel, rel)
+            print(f"   flusso {sid}: {v.esito:<18s} {v.dice}")
+
     # ⛔ E «CONFORME» SI DICE CON IL DENOMINATORE, O NON SI DICE.
     print(f"\n   guardati: {visti} blocchi, di cui {di_controllo} sul canale di "
-          f"controllo · {messaggi} messaggi letti, {giudicati} col corpo giudicato")
-    if messaggi == 0:
+          f"controllo e {di_video} sul canale video · {messaggi} messaggi "
+          f"letti, {giudicati} col corpo giudicato · {flussi_video} flussi "
+          f"video")
+    # ⛔ E DAL 12 AGOSTO 2026 «NIENTE DA GIUDICARE» VUOLE **DUE** ZERI.
+    #
+    #    Prima bastava `messaggi == 0`, perche' il video non lo guardava
+    #    nessuno: una registrazione di soli fotogrammi usciva 3 ed era la
+    #    verita'.  ⛔ Oggi quei fotogrammi sono l'oggetto del giudizio, e
+    #    uscire 3 sarebbe assolvere senza aver guardato — la stessa cosa che
+    #    il codice 3 esiste per impedire.
+    if messaggi == 0 and flussi_video == 0:
         raise NienteDaGiudicare(
-            f"{visti} blocchi, {di_controllo} sul canale di controllo, "
-            f"ZERO messaggi di controllo")
-    print(f"   ⭐ conforme: nessuna violazione in {messaggi} messaggi")
+            f"{visti} blocchi, {di_controllo} sul canale di controllo e "
+            f"{di_video} sul canale video, ZERO messaggi di controllo e ZERO "
+            f"flussi video")
+    print(f"   ⭐ conforme: nessuna violazione in {messaggi} messaggi e "
+          f"{flussi_video} flussi video")
     return 0
 
 
@@ -611,6 +973,14 @@ def main():
     except Malformata as e:
         print(f"\n   ⚠ REGISTRAZIONE MALFORMATA: {e}")
         print("      ⛔ Non e' un giudizio sul filo: e' un difetto del file.")
+        return 2
+    except NonHoPotutoGuardare as e:
+        # ⛔ Stesso codice della malformata — nessuno dei due e' un giudizio sul
+        #    filo — ma un'altra frase: li' si guarda il file, qui l'attrezzo.
+        print(f"\n   ⚠ NON HO POTUTO GUARDARE: {e}")
+        print("      ⛔ Non e' un giudizio sul filo e non e' «il file e' rotto»:")
+        print("         manca lo STRUMENTO.  ⚠ E non e' «va bene»: e' la forma")
+        print("         E8, «vuoto» e «proibito» con lo stesso aspetto.")
         return 2
     except OSError as e:
         # ⛔ E8: «vuoto» e «proibito» hanno lo stesso aspetto.  Prima questo

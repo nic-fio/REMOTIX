@@ -9,6 +9,32 @@ ok() { printf '    OK  %s\n' "$*"; }
 ko() { printf '    NO  %s\n' "$*"; }
 log(){ printf '\n== %s\n' "$*"; }
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.  `python3` e' un PROCESSO: la parola stava nel
+#    suo `argv`, cioe' in `/proc/<pid>/cmdline`, leggibile da chiunque.
+#
+# ⭐ La strada e' quella gia' in casa (`banchi/01-b10-lancia.sh`): file `0600`
+#    scritto con `printf` — un **builtin**, quindi nemmeno la scrittura passa
+#    per un processo con la parola in `argv` — passato come `--parola-file`, e
+#    cancellato con una `trap`.  Nel `cmdline` finisce il PERCORSO.
+#
+# ⚠ Le parole SBAGLIATE restano dove stanno: non sono il segreto di nessuno, e
+#   due strade per la stessa cosa sarebbero la forma **E2**.  Qui pero' comprano
+#   qualcosa — la scena e' «tre tentativi falliti» — quindi si dichiarano.
+PAROLA=${PAROLA:-parola-di-prova}
+PAROLA_FILE=/srv/src/tmp/prodotto-resto-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FILE"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL: nudo resterebbe addosso a tutto quel che segue.
+mkdir -p /srv/src/tmp \
+  && ( umask 077; : > "$PAROLA_FILE" ) \
+  && chmod 600 "$PAROLA_FILE" \
+  || { ko "⛔ non si scrive $PAROLA_FILE"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FILE"
+
 accendi() # $1 = dir certificati, $2 = file ban, $3 = registro
 {
   nohup "$D/remotix" --indirizzo 0.0.0.0 --nome "$IND" --porta "$PORTA" \
@@ -67,7 +93,7 @@ for i in 1 2 3; do
 done
 log "   il quarto, e la pagina"
 timeout 30 python3 /srv/src/01-b3-cliente.py --indirizzo "$IND" --porta "$PORTA" \
-  --utente prova --parola parola-di-prova 2>&1 | tail -4
+  --utente prova --parola-file "$PAROLA_FILE" 2>&1 | tail -4
 curl -sk "https://$IND:$PORTA/" -o /srv/src/pagina-ban.html
 if grep -a -F -q "tentativi di accesso da questo indirizzo sono esauriti" /srv/src/pagina-ban.html; then
   ok "⭐ la pagina SI CARICA e dice che i tentativi sono esauriti"
@@ -91,5 +117,5 @@ curl -sk "https://$IND:$PORTA/" -o /srv/src/pagina-dopo.html
 grep -a -F -q "tentativi di accesso da questo indirizzo sono esauriti" /srv/src/pagina-dopo.html \
   && ko "l'avviso c'e' ancora" || ok "l'avviso e' sparito"
 timeout 30 python3 /srv/src/01-b3-cliente.py --indirizzo "$IND" --porta "$PORTA" \
-  --utente prova --parola parola-di-prova 2>&1 | tail -3
+  --utente prova --parola-file "$PAROLA_FILE" 2>&1 | tail -3
 spegni

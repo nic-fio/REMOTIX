@@ -231,12 +231,38 @@ dice "   pezzi girati:  $FATTI"
 dice "   pezzi saltati: $SALTATI   ⛔ e «saltato» non e' «passato»"
 dice "   registro:      $ESITI"
 dice ""
-dice "== ⭐⛔ LE LETTURE DOPPIE DI \`RCP.md\` che questo giro ha trovato"
-dice "   Non fanno fallire il giro: sono difetti del DOCUMENTO, e §0 dice che"
-dice "   i difetti di quel file sono di quel file.  Il testo pronto sta in"
-dice "   \`fasi/rapporti/F2-4-filo.md\`, sezione «Che cosa propongo a RCP.md»."
+# ⛔ LE LETTURE DOPPIE, E IL CONTO DELLE REGOLE CHE HANNO UN CASO CHE LE FA
+#    SCATTARE.
+#
+# ⚠ Fino all'11 agosto qui si stampavano le quattro ambiguita' di `RCP.md` con
+#   il testo da proporre.  ⭐ Il 12 agosto 2026 quelle quattro sono ENTRATE nel
+#   documento (§2.5, §5.2, §6.2) insieme alle altre tre, e questo blocco e'
+#   diventato la domanda opposta:
+#
+#     ⛔ *le regole nuove ce l'hanno, l'ingresso che le fa scattare?*
+#
+#   Un arbitro che conosce una regola e non ha il caso che la viola non la fa
+#   rispettare, e il verde che da' e' quello che da' fiducia.  E il caso che la
+#   **rispetta** conta quanto l'altro: senza, una regola scritta troppo larga
+#   resterebbe verde su tutto il banco.
+dice "== ⭐⛔ LE SETTE RIGHE ENTRATE IN \`RCP.md\` IL 12 AGOSTO 2026"
+dice "   Il conto lo calcolano i due arbitri cercando i casi per nome: una"
+dice "   regola che perdesse uno dei due diventa rossa qui, non fra sei mesi."
+python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'regole con TUTT' | \
+    sed 's/^ */   giudice del fotogramma:  /'
+python3 "$QUI/02-filo-validatore.py" --elenco | grep -E 'righe con TUTT' | \
+    sed 's/^ */   arbitro delle registrazioni: /'
+dice ""
+dice "== ⭐⛔ LE LETTURE DOPPIE DI \`RCP.md\` ancora aperte in questo capitolo"
 python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -A1 'AMBIGUO$' | \
     grep -v '^--$' | sed 's/^/   /'
+if ! python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -q 'AMBIGUO$'; then
+    dice "   ⭐ nessuna: le quattro che questo banco aveva trovato sono entrate"
+    dice "      nel documento il 12 agosto 2026 (P2 §6.2 · P3 §2.5 · P5 §6.2 ·"
+    dice "      P6 §5.2), e le altre tre con loro (P1 §2.5 · P4 §6.2 · P7 §11.1)."
+    dice "   ⚠ E questo NON vuol dire che \`RCP.md\` non ne abbia piu': vuol dire"
+    dice "     che non ne restano fra quelle che QUESTO banco sa cercare."
+fi
 
 dice ""
 if [ "$ROSSI" -gt 0 ]; then

@@ -91,11 +91,27 @@ cella_wlroots()
 	sleep 1
 }
 
-echo "# etichetta misura colore fps_dichiarato strada tipo fps_misurati fotogrammi secondi buffer danno_pieno danno_parziale danno_assente salti fence min p50 p95 max"
+# ⛔ DUE INTESTAZIONI, PERCHE' QUI STAMPANO DUE PROGRAMMI DIVERSI.
+#
+#    Corretto il 12 agosto 2026, curando D7.  Ce n'era UNA sola per le righe di
+#    `misura-cattura` (KWin) e quelle di `misura-wlroots` (sway, labwc), che non
+#    hanno le stesse colonne e non le hanno mai avute; ⛔ e per giunta era ferma
+#    al 9 agosto, quando a `misura-cattura` era stata aggiunta la colonna
+#    `arrivati`: dalla decima in poi l'intestazione nominava la colonna
+#    precedente.  Un'intestazione sbagliata e' peggio di nessuna intestazione —
+#    chi legge non sospetta, legge.
+echo "# --- KWin, righe di misura-cattura ---"
+echo "# etichetta misura_negoziata colore_negoziato fps_dichiarato strada tipo fps_misurati contati arrivati secondi buffer danno_pieno danno_parziale danno_assente salti fence min p50 p95 max misura_chiesta colore_chiesto cadenza_negoziata onorato"
 for m in "${MISURE[@]}"; do
 	cella_kwin "${m%x*}" "${m#*x}"
 done
 cella_kwin 1920 1080 --dmabuf
+# ⚠ E le colonne di `misura-wlroots` sono DICIANNOVE, non venti: non ha
+#   `arrivati` (conta e riassume in un colpo solo) e non ha le quattro in coda
+#   di D7 — la sua misura e' negoziata da sempre, perche' su wlr-screencopy la
+#   detta il compositore e non si puo' nemmeno chiedere.
+echo "# --- wlroots, righe di misura-wlroots (colonne DIVERSE) ---"
+echo "# etichetta misura_negoziata colore fps_dichiarato strada tipo fps_misurati contati secondi buffer danno_pieno danno_parziale danno_assente salti fence min p50 p95 max"
 for m in "${MISURE[@]}"; do
 	cella_wlroots sway "${m%x*}" "${m#*x}"
 done

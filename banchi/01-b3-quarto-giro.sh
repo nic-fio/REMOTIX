@@ -56,6 +56,37 @@ PORTA=${2:-7447}
 UTENTE=prova
 PAROLA=parola-di-prova
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ QUI C'ERA `--parola-file "$PAROLA_FILE"`, e `python3` e' un PROCESSO: la parola
+#    stava nel suo `argv`, cioe' in `/proc/<pid>/cmdline`, che su Linux e'
+#    **leggibile da chiunque** — un `ps` durante il giro la stampava per
+#    intero, e i banchi di questa macchina girano mentre ci lavorano altri.
+#
+# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
+#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
+#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
+#    `argv` — passato al banco come `--parola-file`, e cancellato con una
+#    `trap` anche se il giro muore a meta'.  Nel `cmdline` finisce il PERCORSO.
+#
+# ⚠ E il nome porta la sigla di CHI lo scrive: due giri che scrivessero lo
+#   stesso file si cancellerebbero la parola a vicenda — la stessa forma che ha
+#   fatto nascere il `PREFISSO` di `01-p5-accendi.sh`.
+PAROLA_FILE=$QUI/tmp/b3-quarto-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FILE"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
+#    `umask 077` nudo resta addosso a tutto quel che viene dopo.
+mkdir -p "$QUI/tmp" \
+	&& ( umask 077; : > "$PAROLA_FILE" ) \
+	&& chmod 600 "$PAROLA_FILE" \
+	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FILE"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FILE"
+
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
@@ -64,7 +95,7 @@ cliente() # $1 = etichetta, $2.. = opzioni
 {
 	local et=$1; shift
 	python3 -u "$QUI/01-b3-cliente.py" --indirizzo "$IND" --porta "$PORTA" \
-		--utente "$UTENTE" --parola "$PAROLA" \
+		--utente "$UTENTE" --parola-file "$PAROLA_FILE" \
 		--registra "$QUI/b3-$et.rcpreg" "$@" > "$QUI/b3-$et.log" 2>&1
 }
 

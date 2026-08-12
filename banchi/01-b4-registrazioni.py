@@ -44,7 +44,33 @@ Le nuove, e ciascuna copre un buco dichiarato:
 | `9-oscurati-sovrapposti` | il caso che §11.1 nomina per esteso: *«DEVE rifiutare una registrazione in cui un intervallo oscurato … si sovrappone a un altro»* |
 | `10-coda-di-spazzatura` | byte dopo l'ultimo blocco dichiarato |
 | `11-quanti-sotto-dichiarato` | ⛔ il piu' insidioso: si scrive 4 dove i blocchi sono 6, e il file resta **valido per ogni altra riga di §11.1** mentre due blocchi spariscono dal giudizio |
-| `12-niente-da-giudicare` | l'**esito 3**: soli blocchi video, zero messaggi di controllo |
+| `12-niente-da-giudicare` | l'**esito 3**: ⚠ *diceva «soli blocchi video»*, e dal **12 agosto 2026** porta soli blocchi di **appunti** — perche' il video adesso il validatore lo giudica, e quel file uscirebbe **1** |
+
+---------------------------------------------------------------------------
+⭐⛔ E DAL 12 AGOSTO 2026 CI SONO ANCHE LE REGISTRAZIONI DEL **VIDEO**
+
+*Le sette righe di F2.4 sono entrate in `RCP.md` (§2.5, §5.2, §6.2, §11.1), e
+sei di esse sono regole sul canale video che **nessun arbitro sapeva
+giudicare**.*
+
+⛔ Il formato della registrazione e' passato a **`RCPREG 0x00 0x02`** e il
+blocco porta un campo in piu' — `fine`: *0 continua · 1 FIN · 2 RESET_STREAM* —
+senza il quale *«un fotogramma abbandonato e uno troncato per errore hanno lo
+stesso aspetto nella registrazione»* (§11.1, forma d'errore **E8**).
+
+Le registrazioni nuove, **due per ciascuna riga**: quella che la viola e quella
+che la rispetta, che qui e' la `13-video-conforme` per cinque righe su sei.
+
+| | |
+|---|---|
+| `13-video-conforme` | ⭐ la chiave che la fase 2 esiste per consegnare: **rispetta** P1, P2, P4, P5, P6 in un colpo.  Senza, un validatore che rifiutasse ogni fotogramma sarebbe verde su tutte le violazioni |
+| `14-video-prima-di-sessione` | **P1** §2.5 |
+| `15-video-sul-controllo` | **P3** §2.5 |
+| `16-video-numero-zero` | **P2** §6.2 |
+| `17-video-misura-diversa` | **P5** §6.2 |
+| `18-video-primo-delta` | **P6** §5.2 |
+| `19-video-fin-corto` | **P4** §6.2 |
+| `20-video-abbandonato` | ⭐ **P7** §11.1 — uscita **0**: `fine = 2` dice che il server ha abbandonato **di proposito**, il fotogramma si butta e la sessione regge (§5.1).  ⛔ E' la registrazione che dimostra a che cosa serve il campo nuovo: senza, era identica alla `19` |
 
 ---------------------------------------------------------------------------
 ⚠ E LA PAROLA D'ORDINE NON C'E'
@@ -60,9 +86,31 @@ import os
 import struct
 import sys
 
-MAGIA = b"RCPREG\x00\x01"
+# ⛔ LA MAGIA E' `0x00 0x02` DAL 12 AGOSTO 2026 — `RCP.md` §11.1, proposta P7.
+#
+#    Il blocco porta un campo in piu', `fine`, e quindi **cambia misura**: 17
+#    byte invece di 16.  §11.1: *«la magia passa a 0x00 0x02 perche' il blocco
+#    cambia misura: un validatore vecchio deve RIFIUTARE il formato nuovo, non
+#    leggerlo di traverso»*.
+#    ⚠ E gli scostamenti attesi di tutte le registrazioni si spostano di un
+#      byte per blocco: ⭐ **non c'e' un solo numero da correggere a mano**,
+#      perche' `Registrazione.scostamento()` li calcola da `BLOCCO_BYTE`.  Un
+#      atteso scritto a mano avrebbe richiesto tredici correzioni, e sarebbe
+#      stata la volta in cui una si dimentica.
+MAGIA = b"RCPREG\x00\x02"
+MAGIA_VECCHIA = b"RCPREG\x00\x01"
 RIEMPIMENTO = 0x2A
 CLIENT, SERVER = 1, 2
+
+# Il blocco di §11.1: verso, canale, fine, stream, lunghezza, quanti_oscurati.
+BLOCCO = "!BBBQIH"
+BLOCCO_BYTE = struct.calcsize(BLOCCO)
+
+# ⛔ `fine` — «come si e' chiuso lo stream DOPO questo blocco» (§11.1).
+CONTINUA, FIN, RESET = 0, 1, 2
+
+VIDEO = 0x03
+CHIAVE, DELTA = 0x0301, 0x0302      # §6.2
 
 # I quattro esiti di `01-b4-validatore.py`, con il loro nome — scritti qui una
 # volta perche' il manifesto li porti per esteso e non per numero.
@@ -140,16 +188,38 @@ class Registrazione:
         self.dichiarate = {}    # indice -> lunghezza DICHIARATA, diversa dalla vera
         self.dichiara_quanti = None   # `quanti_blocchi` diverso da quelli scritti
         self.coda = b""         # byte dopo l'ultimo blocco
+        # ⛔ E il quarto: la MAGIA di ieri, `RCPREG 0x00 0x01`, col blocco da 16
+        #    byte.  Serve a una cosa sola, ed e' quella che §11.1 chiede per
+        #    nome: *«un validatore vecchio deve RIFIUTARE il formato nuovo»*.
+        #    ⚠ Un formato che sa scrivere solo la propria versione non puo'
+        #      certificare di saper rifiutare le altre.
+        self.magia = MAGIA
 
-    def blocco(self, verso, carico, canale=0x00, stream=0, oscurati=()):
-        self.blocchi.append((verso, canale, stream, carico, list(oscurati)))
+    def blocco(self, verso, carico, canale=0x00, stream=0, oscurati=(),
+               fine=CONTINUA):
+        """⛔ `fine` e' predefinito a CONTINUA, e non e' pigrizia.
+
+        Il canale di controllo vive su **un solo stream per tutta la sessione**
+        (§2.5): dentro una registrazione della stretta di mano quello stream
+        non si chiude mai, quindi `0` — «continua» — e' il valore vero.
+        ⚠ Metterci `1` per far contento un lettore direbbe che la sessione si e'
+          chiusa a ogni messaggio.
+        """
+        self.blocchi.append((verso, canale, stream, carico, list(oscurati),
+                             fine))
         return self
 
     def scostamento(self, indice_blocco, dentro):
-        """Lo scostamento ASSOLUTO nel file del byte `dentro` del blocco dato."""
+        """Lo scostamento ASSOLUTO nel file del byte `dentro` del blocco dato.
+
+        ⛔ Poggia su `BLOCCO_BYTE`, mai su un 16 scritto a mano: e' quel che ha
+           reso il passaggio a `0x00 0x02` una riga sola invece di tredici
+           attesi da correggere.
+        """
         p = 16
-        for i, (_, _, _, carico, osc) in enumerate(self.blocchi):
-            p += 16 + 40 * len(osc)
+        for i, b in enumerate(self.blocchi):
+            carico, osc = b[3], b[4]
+            p += BLOCCO_BYTE + 40 * len(osc)
             if i == indice_blocco:
                 return p + dentro
             p += len(carico)
@@ -158,10 +228,16 @@ class Registrazione:
     def byte(self):
         quanti = (len(self.blocchi) if self.dichiara_quanti is None
                   else self.dichiara_quanti)
-        out = bytearray(MAGIA + struct.pack("!II", quanti, 0))
-        for i, (verso, canale, stream, carico, osc) in enumerate(self.blocchi):
+        out = bytearray(self.magia + struct.pack("!II", quanti, 0))
+        for i, (verso, canale, stream, carico, osc, fine) in enumerate(
+                self.blocchi):
             lung = self.dichiarate.get(i, len(carico))
-            out += struct.pack("!BBQIH", verso, canale, stream, lung, len(osc))
+            if self.magia == MAGIA_VECCHIA:
+                out += struct.pack("!BBQIH", verso, canale, stream, lung,
+                                   len(osc))
+            else:
+                out += struct.pack(BLOCCO, verso, canale, fine, stream, lung,
+                                   len(osc))
             for ini, qua, imp in osc:
                 out += struct.pack("!II", ini, qua) + imp
             out += carico
@@ -207,7 +283,8 @@ def costruisci():
     #    il corpo finisce mentre si legge la vista.
     corpo_a = struct.pack("!IIII", 1920, 1080, 1920, 1080) + s("it")
     r = conforme()
-    r.blocchi[4] = (CLIENT, 0x00, 0, msg(0x0006, corpo_a[:-6], len(corpo_a) - 6), [])
+    r.blocchi[4] = (CLIENT, 0x00, 0, msg(0x0006, corpo_a[:-6],
+                                        len(corpo_a) - 6), [], CONTINUA)
     # ⛔ Il byte offensivo e' dove il campo MANCANTE sarebbe cominciato — qui
     #    `vista_altezza`, dopo i primi tre u32 — non la fine del corpo.
     #    ⚠ Il primo atteso scritto il 10 agosto diceva «la fine del corpo», e
@@ -239,7 +316,7 @@ def costruisci():
             scost = len(corpo_c) + 2 + len(n) + 2 + 7  # fino al byte 0xC3
         corpo_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [])
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA)
     casi.append(("2-utf8-non-valido", r, 1,
                  ("RCP.md §6.0", r.scostamento(0, 6 + scost)),
                  "client.nome contiene una sequenza UTF-8 rotta"))
@@ -254,7 +331,7 @@ def costruisci():
             scost = len(corpo_c)
         corpo_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [])
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA)
     casi.append(("3-capacita-ripetuta", r, 1,
                  ("RCP.md §4.3", r.scostamento(0, 6 + scost)),
                  "video.codec compare due volte"))
@@ -262,7 +339,7 @@ def costruisci():
     # ── 4. byte alto fuori dai cinque canali (§2.5) ─────────────────────────
     #    Un tipo 0x0701: il byte alto vale 7, e i canali sono cinque.
     r = conforme()
-    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0701, b""), [])
+    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0701, b""), [], CONTINUA)
     casi.append(("4-canale-sconosciuto", r, 1,
                  ("RCP.md §2.5", r.scostamento(3, 0)),
                  "un tipo il cui byte alto non e' uno dei cinque canali"))
@@ -283,7 +360,8 @@ def costruisci():
     #    ⛔ E dopo c'e' un altro messaggio: un validatore che non conosce §6.0
     #       leggerebbe di traverso QUELLO, e darebbe rosso sul byte sbagliato.
     r = conforme()
-    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0004, b"\x00\x00\x00\x00"), [])
+    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0004, b"\x00\x00\x00\x00"), [],
+                    CONTINUA)
     casi.append(("6-riempimento", r, 1,
                  ("RCP.md §6.0", r.scostamento(3, 6)),
                  "AMMESSO con quattro byte di riempimento, e un messaggio dopo"))
@@ -298,7 +376,7 @@ def costruisci():
     r = conforme()
     r.blocchi[4] = (CLIENT, 0x00, 0,
                     msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
-                        + s("it")), [])
+                        + s("it")), [], CONTINUA)
     casi.append(("7-tela-dispari", r, 1,
                  ("RCP.md §4.5", r.scostamento(4, 6)),
                  "ATTACCA con tela_larghezza = 1921, dispari"))
@@ -317,10 +395,11 @@ def costruisci():
     # ── 9. ⛔ due intervalli oscurati che SI SOVRAPPONGONO — §11.1 lo nomina
     #        per esteso, e nessuna registrazione lo esercitava.
     r = conforme()
-    v, c, st, carico, osc = r.blocchi[2]
+    v, c, st, carico, osc, fine = r.blocchi[2]
     ini_osc = osc[0][0]
     r.blocchi[2] = (v, c, st, carico,
-                    [(ini_osc, 4, osc[0][2]), (ini_osc + 2, 4, osc[0][2])])
+                    [(ini_osc, 4, osc[0][2]), (ini_osc + 2, 4, osc[0][2])],
+                    fine)
     casi.append(("9-oscurati-sovrapposti", r, 2, None,
                  "due intervalli oscurati che si accavallano di due byte"))
 
@@ -338,19 +417,172 @@ def costruisci():
     r = conforme()
     r.blocchi[4] = (CLIENT, 0x00, 0,
                     msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
-                        + s("it")), [])
+                        + s("it")), [], CONTINUA)
     r.dichiara_quanti = 4
     casi.append(("11-quanti-sotto-dichiarato", r, 2, None,
                  "quanti_blocchi dice 4 e i blocchi sono 6: la violazione "
                  "sta nel quinto"))
 
     # ── 12. ⛔ NIENTE DA GIUDICARE — l'esito 3.  Un file ben formato in cui
-    #         non c'e' un solo messaggio di controllo: «conforme» qui sarebbe
-    #         vero e vuoto (LEZIONI.md §1.9).
+    #         non c'e' niente che questo validatore sappia giudicare:
+    #         «conforme» qui sarebbe vero e vuoto (LEZIONI.md §1.9).
+    #
+    #    ⚠ ⛔ QUESTA REGISTRAZIONE E' CAMBIATA IL 12 AGOSTO 2026, e va detto
+    #      perche' il cambiamento e' la MISURA di quel che il validatore ha
+    #      imparato.  Prima portava **un blocco video**, e usciva 3 per la
+    #      ragione che la sua riga 521 dichiarava: *«canale video — non
+    #      giudicato da questo validatore»*.  ⭐ Adesso il video lo giudica, e
+    #      quel file uscirebbe **1**.  ⇒ Per tenere vivo il controllo positivo
+    #      dell'esito 3 ci vuole un canale che nessuno dei due arbitri giudica,
+    #      e sono gli **appunti** (`0x02`, §7.4): li' «non ho guardato» resta
+    #      un fatto vero, e resta dichiarato invece che assolto.
     r = Registrazione()
-    r.blocco(SERVER, b"\x03\x01" + b"\x00" * 26, canale=0x03, stream=7)
+    r.blocco(CLIENT, msg(0x0201, b"\x00" * 8), canale=0x02, stream=6)
     casi.append(("12-niente-da-giudicare", r, 3, None,
-                 "un solo blocco video: zero messaggi di controllo"))
+                 "un solo blocco di APPUNTI: zero messaggi di controllo e zero "
+                 "flussi video"))
+
+    # =======================================================================
+    # ⭐⛔ 13-20 — IL CANALE VIDEO, E LE SEI RIGHE ENTRATE IN `RCP.md` IL 12
+    #             AGOSTO 2026 (§2.5, §5.2, §6.2)
+    #
+    # ⛔ Prima di oggi nessuna registrazione di B4 portava un fotogramma
+    #    giudicabile, e non era una dimenticanza: il validatore il video non lo
+    #    guardava.  ⭐ Adesso lo guarda, e **un arbitro che conosce una regola e
+    #    non ha l'ingresso che la fa scattare non la fa rispettare**: queste
+    #    otto registrazioni sono quell'ingresso.
+    #
+    # ⛔ E ognuna delle sei righe ha DUE registrazioni, non una: quella che la
+    #    viola e quella che la rispetta.  Senza la seconda, un validatore che
+    #    rifiutasse **ogni** fotogramma sarebbe verde su tutte le violazioni.
+    #    La registrazione che le rispetta tutte e sei insieme e' la 13.
+    # =======================================================================
+    def con_video(*blocchi_video, base=None):
+        """La stretta di mano intera, e poi il video.  ⛔ In quest'ordine.
+
+        `SESSIONE` e' il sesto blocco di `conforme()`, quindi ogni fotogramma
+        aggiunto qui arriva **dopo**, che e' quel che §2.5 pretende (P1).
+        """
+        r = conforme() if base is None else base
+        for b in blocchi_video:
+            r.blocco(*b[:2], canale=VIDEO, stream=b[2], fine=b[3])
+        return r
+
+    def intestazione(tipo=CHIAVE, codec=1, lar=1920, alt=1080, num=1, ist=0,
+                     inp=0):
+        """I 28 byte di §6.2, in ordine di rete e senza riempimento.
+
+        ⚠ Ricalcati qui e non importati: questo file **costruisce** i byte, e
+          chi li giudica e' un altro programma.  Se costruissero e giudicassero
+          con la stessa funzione, un errore nella struttura si annullerebbe da
+          solo — che e' il difetto muto di `RCP.md` §0 dentro un banco.
+        """
+        return struct.pack("!HHIIIQI", tipo, codec, lar, alt, num, ist, inp)
+
+    # ── 13. ⭐ il fotogramma che la fase 2 esiste per consegnare ────────────
+    r = con_video((SERVER, intestazione() + b"\x00" * 512, 7, FIN))
+    casi.append(("13-video-conforme", r, 0, None,
+                 "⭐ una chiave 1920x1080 numero 1 dopo SESSIONE, chiusa con "
+                 "FIN: rispetta tutte e sei le righe del 12 agosto"))
+
+    # ── 14. P1 — §2.5: nessuno stream video prima di `SESSIONE` ────────────
+    r = Registrazione()
+    r.blocco(CLIENT, CIAO)
+    r.blocco(SERVER, ECCOMI)
+    r.blocco(SERVER, intestazione() + b"\x00" * 64, canale=VIDEO, stream=7,
+             fine=FIN)
+    casi.append(("14-video-prima-di-sessione", r, 1,
+                 ("RCP.md §2.5", r.scostamento(2, 0)),
+                 "⛔ P1 — uno stream video si apre prima che SESSIONE sia "
+                 "passata: il client non conosce ne' la misura ne' il codec"))
+
+    # ── 15. P3 — §2.5: un `0x03` sul canale di controllo ────────────────────
+    #    ⛔ E lo si scrive sullo STREAM 0, che e' quello del canale di
+    #       controllo: e' l'unico posto in cui il server puo' sbagliare, visto
+    #       che §2.5 gli vieta di aprire stream bidirezionali.
+    r = con_video((SERVER, intestazione() + b"\x00" * 64, 0, CONTINUA))
+    casi.append(("15-video-sul-controllo", r, 1,
+                 ("RCP.md §2.5", r.scostamento(6, 0)),
+                 "⛔ P3 — l'intestazione di 28 byte scritta sullo stream del "
+                 "canale di controllo"))
+
+    # ── 16. P2 — §6.2: `numero` parte da 1, lo 0 e' riservato ───────────────
+    r = con_video((SERVER, intestazione(num=0) + b"\x00" * 64, 7, FIN))
+    casi.append(("16-video-numero-zero", r, 1,
+                 ("RCP.md §6.2", r.scostamento(6, 12)),
+                 "⛔ P2 — `numero = 0`, che §7.1 usa per «nessun fotogramma»"))
+
+    # ── 17. P5 — §6.2: la misura DEVE valere la tela concessa ───────────────
+    #    ⛔ E la tela concessa e' 1920x1080, e sta nel `SESSIONE` di
+    #       `conforme()`: non e' un numero scritto nel validatore.
+    r = con_video((SERVER, intestazione(lar=1280, alt=720) + b"\x00" * 64, 7,
+                   FIN))
+    casi.append(("17-video-misura-diversa", r, 1,
+                 ("RCP.md §6.2", r.scostamento(6, 4)),
+                 "⛔ P5 — un fotogramma 1280x720 su una tela concessa "
+                 "1920x1080"))
+
+    # ── 17-bis. ⭐⛔ P5 RISPETTATA, ED E' LA REGISTRAZIONE CHE HA CORRETTO
+    #            `RCP.md` — §6.2 contro §7.1.
+    #
+    #    Gli **stessi identici byte** della 17, ma fra `SESSIONE` e il
+    #    fotogramma passa un `TELA(ADATTATA, 1280, 720)`.  ⛔ Con la prima
+    #    stesura di P5 — *«la tela concessa in `SESSIONE`»* — questa
+    #    registrazione usciva **1**: il client uccideva la sessione perche'
+    #    l'utente aveva trascinato una finestra, che e' **esattamente** la
+    #    scena che §7.1 protegge con la sua eccezione 4.  ⭐ Corretta lo stesso
+    #    giorno in «la tela **in vigore**», e questa e' la prova che lo tiene.
+    #    ⚠ Senza di lei la regola nuova sarebbe severa quanto quella sbagliata.
+    r = conforme()
+    r.blocco(SERVER, msg(0x000E, struct.pack("!BBII", 1, 0, 1280, 720)))
+    r = con_video((SERVER, intestazione(lar=1280, alt=720) + b"\x00" * 64, 7,
+                   FIN), base=r)
+    casi.append(("17bis-video-dopo-adatta-tela", r, 0, None,
+                 "⭐ P5 — 1280x720 dopo un TELA(ADATTATA, 1280, 720): la tela "
+                 "in vigore non e' piu' quella di SESSIONE, e il fotogramma "
+                 "e' conforme"))
+
+    # ── 18. P6 — §5.2: il primo fotogramma dopo `SESSIONE` DEVE essere chiave
+    r = con_video((SERVER, intestazione(tipo=DELTA) + b"\x00" * 64, 7, FIN))
+    casi.append(("18-video-primo-delta", r, 1,
+                 ("RCP.md §5.2", r.scostamento(6, 0)),
+                 "⛔ P6 — il primo fotogramma della sessione e' un delta: "
+                 "«il desktop compare a pezzi», e nessuno ha torto"))
+
+    # ── 19. P4 — §6.2: FIN prima dei 28 byte ────────────────────────────────
+    r = con_video((SERVER, intestazione()[:12], 7, FIN))
+    casi.append(("19-video-fin-corto", r, 1,
+                 ("RCP.md §6.2", r.scostamento(6, 12)),
+                 "⛔ P4 — lo stream si chiude con FIN dopo 12 byte: non e' un "
+                 "fotogramma corto, e' una lunghezza che non torna"))
+
+    # ── 20. ⭐ P7 — §11.1: il campo `fine` distingue l'ABBANDONO dall'errore
+    #    ⛔ Esce **0**, ed e' il punto: §5.1 concede al server di abbandonare un
+    #       fotogramma, il client lo butta e **la sessione regge**.  ⚠ Senza il
+    #       campo `fine` questa registrazione era identica alla 19 — un carico
+    #       che finisce prima del previsto — e l'arbitro doveva scegliere fra
+    #       accusare un abbandono legale e assolvere un troncamento vero.
+    r = con_video((SERVER, intestazione(), 7, CONTINUA),
+                  (SERVER, b"\x00" * 4096, 7, RESET))
+    casi.append(("20-video-abbandonato", r, 0, None,
+                 "⭐ P7 — uno stream AZZERATO a meta': il fotogramma si butta "
+                 "e la sessione regge (§5.1).  E' `fine = 2` a dirlo"))
+
+    # ── 21. ⛔⛔ IL FORMATO DI IERI, che DEVE essere rifiutato — §11.1.
+    #
+    #    *«La magia passa a 0x00 0x02 perche' il blocco cambia misura: un
+    #    validatore vecchio deve RIFIUTARE il formato nuovo, non leggerlo di
+    #    traverso»* — e vale nei due versi.  ⛔ Senza questa registrazione, la
+    #    riga che rifiuta `0x00 0x01` sarebbe **un ramo che nessuno fa girare**:
+    #    si potrebbe cancellarla e il banco resterebbe verde, perche' tutte le
+    #    altre venti sono scritte con la magia nuova.
+    #    ⚠ E il contenuto e' la registrazione **conforme**: cosi' l'unica cosa
+    #      che la fa rifiutare e' la versione, non un difetto del filo.
+    r = conforme()
+    r.magia = MAGIA_VECCHIA
+    casi.append(("21-formato-vecchio", r, 2, None,
+                 "⛔ una registrazione «RCPREG 0x00 0x01», conforme in tutto il "
+                 "resto: si RIFIUTA, non si legge di traverso"))
 
     return casi
 

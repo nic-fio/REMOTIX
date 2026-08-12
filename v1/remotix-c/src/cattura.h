@@ -50,12 +50,40 @@ typedef struct Cattura Cattura;
 /*
  * Una regione cambiata del fotogramma (SPA_META_VideoDamage).
  *
- * ⛔ NON E' UN'OTTIMIZZAZIONE: e' quel che rende leggibile il buffer.  In
- *    zero-copy Mutter ricicla i propri buffer e vi ridipinge dentro SOLO la
- *    parte cambiata; fuori da quelle regioni ci sono i pixel del fotogramma che
- *    aveva usato quel buffer prima.  Chi prende il buffer per un fotogramma
- *    intero consegna una schermata gia' passata — misurato il 7 agosto 2026,
- *    R29 di REFERENCE.md.
+ * ⛔ E' UN'INFORMAZIONE SU QUANTO E' CAMBIATO, NON LA CONDIZIONE PER CUI IL
+ *    BUFFER SI PUO' LEGGERE.  ⚠ Qui c'era scritto il contrario, e la misura lo
+ *    ha smentito.  Diceva: «NON E' UN'OTTIMIZZAZIONE: e' quel che rende
+ *    leggibile il buffer.  In zero-copy Mutter ricicla i propri buffer e vi
+ *    ridipinge dentro SOLO la parte cambiata; fuori da quelle regioni ci sono i
+ *    pixel del fotogramma che aveva usato quel buffer prima» (7 agosto 2026,
+ *    R29 di REFERENCE.md).
+ *
+ *    `[M]` 12 agosto 2026 — F2.2, `fasi/rapporti/F2-2-cattura.md`.  NIC-OS,
+ *    sessione GNOME headless (Mutter 48.7), strada MEMORIA, monitor virtuale
+ *    1920x1080, scena «bandiera» con sette barre SMPTE: il danno e' PARZIALE su
+ *    tutti e 410 i fotogrammi — il primo compreso — e le sette bande si leggono
+ *    INTERE nel fotogramma di regime, coi valori RGB attesi banda per banda.
+ *    ⇒ il buffer e' intero ANCHE quando il danno e' parziale.
+ *
+ *    `[R]` `gnome.md` §8.1, Mutter 48 riletto riga per riga, che lo diceva gia':
+ *    blit dell'INTERO framebuffer, stack di clip svuotato deliberatamente, e la
+ *    vista virtuale e' un `CoglOffscreen` persistente.  Le due strade — il
+ *    codice letto e i pixel contati — concordano.
+ *
+ * ⛔ E LA POSTA ERA ALTA.  Se avesse avuto ragione il testo vecchio, la fase 2
+ *    avrebbe consegnato mezzo desktop e meta' schermata gia' passata, SENZA UN
+ *    ERRORE da nessuna parte; e la cura sarebbe stata una superficie di
+ *    accumulo, che e' proprio quel che in v1 PEGGIORAVA le cose — copiavamo i
+ *    rettangoli danneggiati da un buffer che era gia' intero (`gnome.md` §8.1).
+ *
+ * ⚠ A che cosa serve allora il danno: a sapere QUANTA parte e' stata ridipinta
+ *   — cioe' quanto conviene ricodificare — e a distinguere «il produttore non
+ *   dichiara il danno» da «il danno copriva tutto».  Si continua a chiederlo
+ *   (`SPA_META_VideoDamage`), perche' non chiederlo significa non riceverlo.
+ *
+ * ⚠ `[?]` La misura e' della strada MEMORIA.  Sul DMA-BUF il codice letto dice
+ *   la stessa cosa, ma nessuno l'ha ancora misurata: quando la fase 8 la
+ *   percorrera', questo riquadro va riletto.
  */
 typedef struct
 {

@@ -149,6 +149,44 @@ DENTRO=/srv/src
 UTENTE=prova
 PAROLA=parola-di-prova
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ QUI LA PAROLA finiva dentro la stringa che `bash $ENTRA --root "…"` riceve
+#    come argomento: cioe' nell'`argv` di `bash`, in quello di `sudo` e in
+#    quello di `python3`.  `/proc/<pid>/cmdline` su Linux e' **leggibile da
+#    chiunque**, e un `ps` lanciato da un altro utente durante il giro la
+#    stampava per intero.  ⚠ E i banchi di questa macchina girano mentre ci
+#    lavorano altri.
+#
+# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
+#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
+#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
+#    `argv` — passato al banco come `--parola-file`, e cancellato con una
+#    `trap` anche se il giro muore a meta'.
+#
+# ⚠ Nel `cmdline` finisce il PERCORSO, non la parola, e il file e' `0600`:
+#   chi non e' noi non lo apre.
+# ⚠ E il nome porta la sigla del banco: due giri che scrivessero lo stesso
+#   file si cancellerebbero la parola a vicenda — la stessa forma che ha fatto
+#   nascere il `PREFISSO` di `01-p5-accendi.sh`.
+PAROLA_FUORI=$FUORI/tmp/b6-parola
+PAROLA_DENTRO=$DENTRO/tmp/b6-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FUORI"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
+#    `umask 077` nudo resta addosso a tutto quel che viene dopo, compresi i
+#    comandi mandati dentro il contenitore, e li' fa scrivere a root dei file
+#    che poi `nicfio` non rilegge piu'.
+mkdir -p "$FUORI/tmp" \
+	&& ( umask 077; : > "$PAROLA_FUORI" ) \
+	&& chmod 600 "$PAROLA_FUORI" \
+	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FUORI"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FUORI"
+
 # ⛔ Il bersaglio: una forma sola per i quattro banchi, in un file solo.
 SIGLA=b6
 
@@ -494,7 +532,7 @@ fase() # $1 = nome (sani|ping), $2 = tetto del trasporto in ms
 		return 5
 	fi
 	bash "$ENTRA" --root \
-		"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND $(bersaglio_opzioni_python) --utente $UTENTE --parola $PAROLA --fase $nome --idle $tms --tetti-codice $TETTI_CODICE"
+		"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND $(bersaglio_opzioni_python) --utente $UTENTE --parola-file $PAROLA_DENTRO --fase $nome --idle $tms --tetti-codice $TETTI_CODICE"
 	e=$?
 
 	# ⛔ B0.5, dal di fuori.  Il banco lo chiede a ogni caso aprendo una

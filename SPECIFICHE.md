@@ -324,17 +324,28 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > commento di `src/main.c`, cioè dove non lo legge nessuno che non stia leggendo quel file — mentre
 > questa sezione promette dieci sessioni insieme senza una riga che dica il contrario.*
 >
-> Il server della fase 1 gira in **un solo filo**, un ciclo `poll` solo, e ⛔ **la verifica PAM
-> BLOCCA quel filo**: la stretta di mano di un utente ritarda i pacchetti di **tutti gli altri**.
-> Con il secondo fisso di `RCP.md` §4.4-bis, dieci utenti che entrano insieme fanno aspettare
-> l'ultimo **dieci secondi** — e il sintomo, *«il server è lento quando c'è gente»*, non nomina né
-> PAM né il filo.
-> ⚠ E un secondo tetto della stessa natura: `src/rcp.c` tiene **16** sessioni attaccate in una
+> ### ⭐⭐ E DEI DUE RIPIEGHI, IL PRIMO È STATO CURATO — 12 agosto 2026
+>
+> *`DECISIONI.md` §1.10, misurato dal banco `banchi/02-pam-*` e scritto in
+> `fasi/rapporti/PAM-filo-unico.md`.* ⛔ **La verifica PAM non blocca più il filo**: la interroga un
+> **processo aiutante** (`src/aiutante.c`), e il ciclo `poll` torna al suo lavoro mentre PAM pensa.
+>
+> **I due numeri, sulla stessa scena** — una connessione già dentro e una seconda che fa la stretta
+> di mano, mentre una terza presenta credenziali **sbagliate** (il caso lento, quello con
+> `pam_faildelay`):
+>
+> | | prima | dopo |
+> |---|---|---|
+> | quanto sta fermo chi **non** si autentica | `[M]` **2259 ms** | ⭐ `[M]` **3 ms** |
+> | la stretta di mano di chi arriva in quel momento | `[M]` **2262 ms** | ⭐ `[M]` **10 ms** |
+> | ⚠ quanto aspetta **chi si autentica** | `[M]` 2260 ms | **1844 ms** — ⭐ *e va bene così: quel numero lo governa PAM, e non doveva cambiare* |
+>
+> ⚠ **Quel che resta ripiego è il secondo**: `src/rcp.c` tiene **16** sessioni attaccate in una
 > tabella fissa in compilazione (`MAX_ATTACCATE`), dove qui il tetto è **dieci configurabile**.
 >
 > ⭐ **Non è una promessa rotta: è una promessa non ancora dovuta** — il multi-tenant è delle fasi da
 > 5 in poi. Sta qui perché il giorno in cui lo sarà, **questo è il posto da cui si riparte**: la
-> verifica va su un filo a parte, e la tabella delle sessioni smette di essere un `#define`.
+> tabella delle sessioni smette di essere un `#define`.
 > Il confine per intero sta in `fasi/01-filo-nudo.md`, «Che cosa è stato sviluppato».
 >
 > ### ⭐ E i due ripieghi hanno una scadenza, decisa dall'utente l'11 agosto 2026
@@ -343,7 +354,7 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 >
 > | | |
 > |---|---|
-> | **il filo** | **`DECISIONI.md` §1.10** — ⛔ **si cura PRIMA della fase 2**, non alla 5, e con un **processo aiutante**. ⭐ Il numero che ha spostato la decisione l'ha misurato **B8**: il blocco è di **1,0-2,2 s** a tentativo, ⛔ e **a metterlo è PAM** (`+1034 ms` oltre il secondo fisso sui respinti contro `+84` sugli ammessi). Dalla fase 2 in poi quel blocco non fa più aspettare chi entra: **pianta lo schermo di chi sta già lavorando** |
+> | **il filo** | ✅ **CURATO il 12 agosto 2026** — **`DECISIONI.md` §1.10**, con un **processo aiutante** come deciso. ⭐ Il numero che ha spostato la decisione l'ha misurato **B8**: il blocco era di **1,0-2,2 s** a tentativo, ⛔ e **a metterlo era PAM** (`+1034 ms` oltre il secondo fisso sui respinti contro `+84` sugli ammessi). ⭐ E quel che è crollato è il numero giusto: **2259 → 3 ms** per chi *non* si sta autenticando (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
 > | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: qui sopra è scritto che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto e cambiarlo adesso vuol dire cambiarlo due volte. ⚠ **E il prezzo è questa riga**: per due fasi il codice dice **16** e questa sezione dice **dieci**, ed è la stessa forma che ha prodotto il difetto della finestra di cinque minuti (R12C.5) |
 
 ---

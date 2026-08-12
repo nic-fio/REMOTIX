@@ -37,6 +37,7 @@ sono cadute prima — e il registro dice quale delle due (rilievi R8.2, R8.4).
 import argparse
 import asyncio
 import hashlib
+import os
 import ssl
 import struct
 import sys
@@ -484,6 +485,67 @@ async def principale(a) -> int:
         return 0
 
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON DEVE PASSARE DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ `--parola` finisce nell'`argv` del processo, cioe' in `/proc/<pid>/cmdline`,
+#    che su Linux e' **leggibile da chiunque**: un `ps` lanciato da un altro
+#    utente durante il giro la stampa per intero.
+#
+# ⭐ La strada buona esisteva gia' in casa e questa e' la sua estensione, non un
+#    secondo modo: `01-b10-secondo-utente.py` prende `--parola-file`, un file
+#    `0600` che il lanciatore scrive con `printf` — un **builtin** della shell,
+#    quindi nemmeno la scrittura passa per un processo con la parola in `argv` —
+#    e cancella con una `trap`.
+#
+# ⚠ E `--parola` NON e' stata tolta, e non per pigrizia: dei chiamanti non
+#   ancora curati la passano ancora, e romperli **in silenzio** sarebbe peggio
+#   del difetto.  ⛔ Ma il ripiego si DICHIARA (`CODER.md` §4.2): un ripiego
+#   silenzioso produce due comportamenti sotto la stessa etichetta, che e' la
+#   forma **E2** — e qui i due comportamenti sono «il segreto e' protetto» e
+#   «il segreto e' pubblico».  ⇒ chi passa `--parola` se lo sente dire.
+#
+# ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
+#   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
+#   allarme che si impara a ignorare.
+def parola_dagli_argomenti(a):
+    """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
+
+    ⛔ E i tre modi di fallire si distinguono: «non si legge», «e' leggibile da
+    altri» e «e' vuoto» hanno tre cure diverse, e un file vuoto NON e' una
+    parola vuota — e' «il lanciatore non l'ha scritta» (`LEZIONI.md` §1.9).
+    """
+    percorso = getattr(a, "parola_file", "") or ""
+    if percorso:
+        try:
+            modo = os.stat(percorso).st_mode & 0o077
+        except OSError as e:
+            print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+            sys.exit(2)
+        if modo:
+            print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o}): il "
+                  f"segreto non e' protetto")
+        try:
+            with open(percorso, encoding="utf-8") as f:
+                parola = f.read().strip("\n")
+        except OSError as e:
+            print(f"   ⛔ la parola non si legge da «{percorso}»: {e}")
+            sys.exit(2)
+        if not parola:
+            print(f"   ⛔ il file della parola «{percorso}» e' VUOTO.  Non e'")
+            print("      «la parola e' vuota»: e' «il lanciatore non l'ha scritta».")
+            sys.exit(2)
+        return parola
+    if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
+        print("   ⚠ D12: la parola d'ordine e' arrivata da `--parola`, cioe' dalla")
+        print("     RIGA DI COMANDO: sta in `/proc/<pid>/cmdline` e la vede chiunque")
+        print("     faccia `ps` su questa macchina.  Il giro prosegue — il chiamante")
+        print("     non e' stato curato — ma non e' un giro riservato.")
+        print("     ⭐ La cura: `--parola-file <file 0600>`, come in B10.")
+    return a.parola
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="la stretta di mano di RCP, dal lato client")
     p.add_argument("--indirizzo", default="192.168.0.2")
@@ -491,6 +553,12 @@ if __name__ == "__main__":
     p.add_argument("--percorso", default="/rcp/1")
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="prova")
+    # ⛔ D12: la strada che NON passa da `ps`.  Vince su `--parola` se ci sono
+    #    tutt'e due — un file scritto apposta e' sempre piu' recente di un
+    #    predefinito.
+    p.add_argument("--parola-file", default="",
+                   help="file 0600 con la sola parola d'ordine (⭐ D12: cosi' "
+                        "non finisce in `ps`)")
     p.add_argument("--larghezza", type=int, default=1920)
     p.add_argument("--altezza", type=int, default=1080)
     p.add_argument("--disposizione", default="it")
@@ -499,6 +567,7 @@ if __name__ == "__main__":
     p.add_argument("--segnale",
                    help="file da scrivere quando la sessione e' aperta")
     a = p.parse_args()
+    a.parola = parola_dagli_argomenti(a)
     try:
         sys.exit(asyncio.run(principale(a)))
     except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura

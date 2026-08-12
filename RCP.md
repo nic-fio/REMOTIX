@@ -84,6 +84,30 @@ in §12, dichiarato invece che dimenticato.
 > | **P1** | §2.5 riga «video» | *derivata*: per chi **riceve** si ricava da §1 e §3; per chi **manda** non si ricavava da nessuna parte — ed è l'invariante **I3** lasciata senza una riga sul filo |
 > | **P4** | §6.2 | *derivata*: un **FIN prima dei 28 byte** non è un fotogramma corto, è una lunghezza che non torna |
 > | ⭐ **P7** | §11.1 | *trovata dall'**arbitro meccanico***, non da una rilettura: la registrazione non portava **come si è chiuso lo stream**, e senza quel byte un fotogramma abbandonato e uno troncato per errore sono identici — la forma **E8**, rientrata dalla finestra |
+>
+> ### ⛔⛔ E due ore dopo, DUE DI QUESTE SETTE ERANO SBAGLIATE — corrette lo stesso giorno
+>
+> *E non le ha trovate una rilettura: le ha trovate **chi doveva farle rispettare**, cioè l'agente che
+> propagava le sette righe ai due arbitri. Applicare una regola è un modo di leggerla che rileggerla
+> non è.*
+>
+> ⛔ **P5 uccideva una sessione sana.** La riga scriveva *«DEVONO valere la tela concessa in
+> `SESSIONE`»*, ⚠ ma §7.1 ha `ADATTA_TELA`, e `TELA` risponde con *«la tela in vigore **dopo** questo
+> messaggio»*. ⇒ `SESSIONE` concede 1920×1080 · l'utente trascina la finestra · il client manda
+> `ADATTA_TELA(1280,720)` · il server risponde `TELA(ADATTATA…)` e cattura a quella misura · il
+> fotogramma porta `largh. = 1280` · ⛔ **e il client lo rifiuta e chiude**. Un server conforme a §7.1
+> ucciso da un client conforme a §6.2 — ed è **esattamente la scena che §7.1 protegge** con la sua
+> eccezione 4: *«l'utente che trascina male una finestra non deve perdere la sessione»*. ⭐ La cura è
+> **una parola**: «la tela **in vigore**» al posto di «la tela concessa in `SESSIONE`».
+>
+> ⚠ **E P2 riportava in circolo il valore che aveva appena riservato.** L'aritmetica di `numero` è
+> **modulo 2³²** e §6.2 dichiara che una sessione può durare più di un giro del contatore: al giro,
+> `0xFFFFFFFF` passa a **`0`**, che P2 aveva riservato due ore prima, e nessuna riga diceva di
+> saltarlo. Curato: **da `0xFFFFFFFF` si passa a `1`**.
+>
+> ⇒ ⭐ **Cinque righe su sette erano giuste, due no — e il costo di scoprirlo è stato scriverne il
+> banco.** È il momento 1 di `PIANO.md` §0.4 che funziona nel verso in cui nessuno se lo aspetta: il
+> banco non ha trovato un difetto nel prodotto, ha trovato **un difetto nell'arbitro**.
 
 ⛔ **E la finestra per farlo È CHIUSA**: §9 vieta di aggiungere tipi di messaggio dentro una
 versione maggiore, e quel divieto protegge le implementazioni esistenti. **Adesso esistono.** Da qui
@@ -1217,8 +1241,8 @@ all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
 |---|---|
 | `tipo` | ⭐ `0x0301` **fotogramma chiave**, `0x0302` **fotogramma delta** (§5.2). Altri valori: `ERRORE_PROTOCOLLO` |
 | `codec` | `1` = HEVC, `2` = AV1. **DEVE** essere quello negoziato in §4.3 |
-| `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 **DEVONO** valere la tela concessa in `SESSIONE` (§4.5), e chi ne riceve altre chiude con `ERRORE_PROTOCOLLO`: il client riscala alla **vista**, non alla tela (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia**: cambierebbe questa riga |
-| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta |
+| `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 **DEVONO** valere la **tela in vigore** — quella concessa in `SESSIONE` (§4.5), **oppure** l'ultima concessa da `TELA` se nel frattempo è stata adattata (§7.1) — e chi ne riceve altre chiude con `ERRORE_PROTOCOLLO`: il client riscala alla **vista**, non alla tela (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia**: cambierebbe questa riga |
+| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta. ⛔ **E al giro del contatore lo `0` si salta**: l'aritmetica è modulo 2³², una sessione può durare più di un giro, e da `0xFFFFFFFF` si passa a **`1`** — senza questa riga il valore riservato tornerebbe in circolo da solo |
 | `istante` | microsecondi dell'orologio **monotono del server** alla cattura |
 | `input` | ⭐ **l'identificatore dell'ultimo input iniettato prima della cattura**; **0** se nessuno |
 

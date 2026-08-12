@@ -9,6 +9,11 @@
 #   bash 02-sessione-lancia.sh dispositivi   quando nasce il puntatore virtuale
 #   bash 02-sessione-lancia.sh ferma         Logout(2)
 #   bash 02-sessione-lancia.sh certifica     sano → guasto → risanato
+#   bash 02-sessione-lancia.sh come-al-riavvio  la fa rinascere SENZA nessun
+#                                            drop-in di questo banco: com'e'
+#                                            dopo un riavvio del server
+#   bash 02-sessione-lancia.sh guardia [...] la guardia da mettere davanti a una
+#                                            misura altrui (→ 02-sessione-guardia.sh)
 #
 # ⛔ GIRA SULL'HOST DI NIC-OS, non dentro il contenitore: la sessione grafica
 #    vive li', con logind, systemd --user e /dev/dri veri.
@@ -112,6 +117,12 @@ REGISTRO=$RUNTIME/remotix-sessione.log
 REGISTRO_SHELL=$RUNTIME/mutter.log
 DROPIN_DIR=$RUNTIME/systemd/user.control/org.gnome.Shell@wayland.service.d
 DROPIN=$DROPIN_DIR/zz-f21-monitor.conf
+# ⛔ Il drop-in PERSISTENTE, quello che scrive `v1/banco/provision-server.sh`.
+#    Il nostro sta in $XDG_RUNTIME_DIR e sparisce da se' al riavvio — che e'
+#    giusto per un banco, ed e' esattamente il motivo per cui va guardato anche
+#    quest'altro: se il monitor lo tiene in piedi SOLO il nostro, la macchina
+#    torna nera al primo riavvio e il difetto ricomincia da capo.
+DROPIN_PERSISTENTE=${DROPIN_PERSISTENTE:-/etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf}
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -264,22 +275,49 @@ attendi() # aspetta un EVENTO, con un tetto dichiarato
 }
 
 # ---------------------------------------------------------------------------
-scrivi_dropin() # $1 = "con" | "senza"
+# ⛔ TRE modi, e il terzo e' nato il 12 agosto per una ragione che vale piu'
+#    degli altri due:
+#
+#   con    il drop-in di questo banco CHIEDE il monitor        → la scena sana
+#   senza  il drop-in di questo banco NON lo chiede            → il guasto M9
+#   nudo   ⭐ NESSUN drop-in di questo banco: la sessione nasce con la sola
+#          configurazione PERSISTENTE della macchina, cioe' **com'e' dopo un
+#          riavvio**.  E' l'unico modo di misurare l'esito di un riavvio senza
+#          riavviare il server — che non si puo' fare, perche' dentro il
+#          contenitore girano due server voluti (7448, 7501) e il rootfs vive
+#          in RAM.
+#
+#   ⛔ E «nudo» NON E' UN RIAVVIO, e va detto ogni volta: non prova che /media
+#      si rimonti, che il rootfs torni, che qualcuno rilanci
+#      `provision-server.sh`.  Prova l'ULTIMO anello — data la configurazione
+#      persistente, una sessione appena nata ha il monitor? — che e'
+#      precisamente l'anello che il 10 agosto ha ceduto.  Gli altri anelli
+#      restano `[?]` finche' un riavvio vero non li tocca.
+scrivi_dropin() # $1 = "con" | "senza" | "nudo"
 {
-	mkdir -p "$DROPIN_DIR"
-	if [ "$1" = con ]; then
+	case "$1" in
+	con)
+		mkdir -p "$DROPIN_DIR"
 		cat >"$DROPIN" <<CONF
 [Service]
 ExecStart=
 ExecStart=/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor $MISURA
 CONF
-	else
+		;;
+	senza)
+		mkdir -p "$DROPIN_DIR"
 		cat >"$DROPIN" <<CONF
 [Service]
 ExecStart=
 ExecStart=/usr/bin/gnome-shell --headless --no-x11
 CONF
-	fi
+		;;
+	nudo)
+		rm -f "$DROPIN"
+		rmdir "$DROPIN_DIR" 2>&1 | grep -v "Directory not empty" || true
+		;;
+	*) ko "⛔ modo di drop-in ignoto: $1"; return 1 ;;
+	esac
 	systemctl --user daemon-reload || return 1
 	# ⛔ E si VERIFICA che il drop-in sia in vigore, non che sia scritto.
 	local vigore
@@ -292,6 +330,12 @@ CONF
 		ko "   un altro drop-in vince sul mio.  Non misuro."
 		return 1 ;;
 	senza:*) ok "il drop-in SENZA monitor e' in vigore" ;;
+	nudo:*--virtual-monitor*)
+		ok "senza nessun drop-in mio il monitor lo chiede la configurazione"
+		ok "PERSISTENTE della macchina: e' quel che si trovera' al riavvio" ;;
+	nudo:*)
+		att "⚠ senza i drop-in di questo banco nessuno chiede il monitor:"
+		att "  e' esattamente quel che la macchina fa dopo un riavvio" ;;
 	*)
 		ko "⛔ ho chiesto CON $MISURA e systemd non lo dice: il mio drop-in"
 		ko "   non vince.  Non misuro — un banco che non impone la scena"
@@ -299,6 +343,45 @@ CONF
 		return 1 ;;
 	esac
 	return 0
+}
+
+# ---------------------------------------------------------------------------
+# ⛔ «SANA ADESSO» NON E' «SANA DOPO IL RIAVVIO» — e la differenza si dice ogni
+#    volta, non si scopre.
+#
+# Il drop-in di questo banco vive in `$XDG_RUNTIME_DIR`, che il riavvio si porta
+# via insieme a tutto il rootfs (che su NIC-OS sta in RAM).  Se la sessione ha
+# il monitor solo grazie a lui, la macchina e' sana **per questa accensione** —
+# ed e' la stessa mezza verita' di `LEZIONI.md` §2.5-bis: un ripristino si prova
+# riavviando, non rileggendo lo script.
+#
+# ⇒ Chi rende il monitor persistente e' `provision-server.sh` §4, che dopo ogni
+#   riavvio va rieseguito comunque.  Questa funzione guarda se quella riga c'e',
+#   e se non c'e' lo dice FORTE invece di lasciar credere che sia finita.
+# ---------------------------------------------------------------------------
+dilo_se_non_persiste()
+{
+	if [ ! -r "$DROPIN_PERSISTENTE" ]; then
+		att "⚠ il drop-in persistente non c'e' o non lo leggo:"
+		att "  $DROPIN_PERSISTENTE"
+		att "  ⇒ dopo un riavvio del server la sessione torna NERA."
+		att "  Si rimette con: bash /media/REMOTIX/provision-server.sh monitor"
+		return 1
+	fi
+	if grep -q -- '--virtual-monitor' "$DROPIN_PERSISTENTE"; then
+		ok "e sopravvive al riavvio: --virtual-monitor sta anche nel drop-in"
+		inf "persistente ($DROPIN_PERSISTENTE), che provision-server.sh riscrive"
+		return 0
+	fi
+	att "⚠⚠ SANA ADESSO, NERA AL PROSSIMO RIAVVIO."
+	att "  Il monitor lo tiene in piedi SOLO il drop-in di questo banco, che sta"
+	att "  in \$XDG_RUNTIME_DIR e il riavvio se lo porta via; quello persistente"
+	att "  ($DROPIN_PERSISTENTE)"
+	att "  NON nomina --virtual-monitor — ed e' il difetto che ha tenuto questa"
+	att "  macchina nera dal 10 al 12 agosto (I7: la protezione sta nel"
+	att "  programma, non in una riga di configurazione che si puo' perdere)."
+	att "  Si cura con: bash /media/REMOTIX/provision-server.sh monitor"
+	return 1
 }
 
 togli_dropin()
@@ -341,7 +424,11 @@ riparti() # $1 = con|senza ; $2 = etichetta ; $3 = file scena (facoltativo)
 	#   che GetCurrentState risponda, che e' il fatto che serve a noi.
 	sleep 3
 	misura "$2" "${3:-}"
-	return $?
+	local e=$?
+	# ⛔ E si dice SUBITO se questa salute e' solo di oggi: chi ha appena letto
+	#    «SANA» e' esattamente chi deve sapere che al riavvio non lo sara' piu'.
+	[ "$1" = con ] && dilo_se_non_persiste
+	return $e
 }
 
 # ---------------------------------------------------------------------------
@@ -475,13 +562,44 @@ guarda)
 	log "Guardo e basta — non tocco niente"
 	vicini_prima
 	misura "${2:-guarda}"
-	exit $?
+	e=$?
+	dilo_se_non_persiste
+	exit $e
+	;;
+guardia)
+	# ⛔ La guardia da mettere DAVANTI a una misura altrui.  Sta in un file suo
+	#    perche' chi la usa non e' questo banco: sono F2.2..F2.6, e devono
+	#    poterla infilare davanti al proprio comando senza far partire niente.
+	shift
+	exec bash "$QUI/02-sessione-guardia.sh" "$@"
 	;;
 sano)      prendi_lucchetto || exit 2; vicini_prima; riparti con "sano" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
 guasto)    prendi_lucchetto || exit 2; vicini_prima; riparti senza "guasto" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
+come-al-riavvio)
+	# ⭐ La prova della PERSISTENZA senza riavviare il server: si tolgono i
+	#    drop-in di questo banco e si fa rinascere la sessione con la sola
+	#    configurazione che al riavvio ci sarebbe comunque.
+	prendi_lucchetto || exit 2
+	vicini_prima
+	riparti nudo "come-al-riavvio" "${2:-}"; e=$?
+	vicini_dopo || e=9
+	log "Che cosa dice questo numero, e che cosa NON dice"
+	if [ "$e" -eq 0 ]; then
+		ok "⭐ una sessione appena nata SENZA nessun drop-in di questo banco ha"
+		ok "   il monitor: la cura sta nella configurazione persistente, e"
+		ok "   sopravvive alla sparizione di \$XDG_RUNTIME_DIR."
+	else
+		ko "⛔ senza i drop-in di questo banco la sessione esce $e: dopo un"
+		ko "   riavvio del server la macchina torna cosi'."
+	fi
+	att "⚠ e NON e' un riavvio: che /media si rimonti, che il rootfs torni e"
+	att "  che qualcuno rilanci provision-server.sh restano [?] finche' un"
+	att "  riavvio vero non li tocca (LEZIONI.md §2.5-bis)."
+	exit $e
+	;;
 dispositivi) prendi_lucchetto || exit 2; dispositivi; exit $? ;;
 ferma)     prendi_lucchetto || exit 2; ferma_e_aspetta && { ok "fermata"; exit 0; } || { ko "⛔ non si e' fermata"; exit 1; } ;;
 certifica) prendi_lucchetto || exit 2; certifica; exit $? ;;
 pulisci)   togli_dropin; ok "drop-in di F2.1 tolto: la macchina torna al suo"; exit 0 ;;
-*) echo "uso: $0 {guarda|sano|guasto|dispositivi|ferma|certifica|pulisci}" >&2; exit 2 ;;
+*) echo "uso: $0 {guarda|sano|guasto|come-al-riavvio|dispositivi|ferma|certifica|pulisci|guardia [...]}" >&2; exit 2 ;;
 esac

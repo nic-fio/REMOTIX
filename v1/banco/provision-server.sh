@@ -7,7 +7,15 @@
 # dell'hypervisor» — e, subito dopo, «usiamo il server nativamente, non tramite
 # un container: basta installare gnome sul server».
 #
-#   bash /media/REMOTIX/provision-server.sh
+#   bash /media/REMOTIX/provision-server.sh            tutto
+#   bash /media/REMOTIX/provision-server.sh monitor    SOLO la §4 (la Shell e il
+#                                                      suo monitor virtuale)
+#
+# ⛔ Il secondo modo esiste per una ragione precisa, non per comodita': la §4 e'
+#    l'unica sezione che protegge un difetto GIA' PAGATO — la sessione viva e
+#    NERA — e va potuta rimettere, e riprovare, senza far girare apt, senza
+#    toccare polkit e senza fermare `remotix.service`.  Una cura che per essere
+#    riprovata chiede di rifare tutto non viene riprovata.
 #
 # ---------------------------------------------------------------------------
 # CHE COSA CADE, E VA SAPUTO
@@ -51,10 +59,170 @@ UTENTE=${SUDO_USER:-$(id -un)}
 UID_UTENTE=$(id -u "$UTENTE")
 BINARIO="$BASE/src/remotix-c/build/src/remotix"
 
+MODO=${1:-tutto}
+
+# ⛔ LA MISURA DEL MONITOR VIRTUALE — vedi la §4, che e' il motivo per cui
+#    questa riga esiste.  1920x1080 e' la misura che la fase 1 gia' annuncia
+#    alla pagina («tela 1920x1080», `PIANO.md` fase 1) e quella con cui F2.1 ha
+#    certificato il banco della sessione il 12 agosto 2026.
+MISURA_MONITOR=${MISURA_MONITOR:-1920x1080}
+DROPIN_SHELL=/etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf
+
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
+
+# ---------------------------------------------------------------------------
+# `systemctl --user` DELL'UTENTE, non di chi sta eseguendo lo script.
+#
+# ⛔ Se questo script viene lanciato con `sudo`, `systemctl --user` parlerebbe
+#    al gestore di ROOT — che non ha nessuna Shell — e il `daemon-reload` non
+#    arriverebbe mai a chi deve leggerlo.  Sembrerebbe fatto, e non lo sarebbe:
+#    e' la stessa forma del gestore d'utente non riavviato della §2.
+# ---------------------------------------------------------------------------
+utente_systemctl()
+{
+	if [ -n "${SUDO_USER:-}" ]; then
+		sudo -u "$UTENTE" \
+			XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+			DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$UID_UTENTE/bus" \
+			systemctl --user "$@"
+	else
+		systemctl --user "$@"
+	fi
+}
+
+# ===========================================================================
+# ⛔ §4 — LA SHELL SENZA SCHERMO, MA **CON** UN MONITOR VIRTUALE
+# ===========================================================================
+#
+# Uscite di questa sezione, scritte prima:
+#
+#   0  il drop-in e' scritto, e' IN VIGORE con `--virtual-monitor`, e la Shell
+#      viva (se c'e') la porta sulla sua riga di comando
+#   1  il drop-in e' scritto e NON e' in vigore: un altro drop-in vince sul mio
+#      — non e' un dettaglio di forma, e' il difetto che torna
+#   2  in vigore, ma la Shell VIVA e' nata prima: quella sessione e' ancora
+#      NERA e va rifatta nascere.  Scritto non e' in vigore (E1)
+#
+# ---------------------------------------------------------------------------
+# PERCHE' C'E' `--virtual-monitor`, E PERCHE' NON C'ERA
+# ---------------------------------------------------------------------------
+#
+# ⛔ Dal 9 agosto 2026 alle 10:19 al 12 agosto questa sezione scriveva
+#    `--headless --no-x11` e BASTA.  In headless Mutter mette
+#    `needs_outputs = false` (`gnome.md` §3.1): la sessione parte, prende i
+#    cinquanta nomi sul bus, `IsSessionRunning` risponde `true`, Nautilus e il
+#    Terminale si accendono — e `GetCurrentState` dichiara **zero monitor**.
+#    Viva, completa, e NERA.
+#
+# ⭐ E non e' un timore: `[M]` 12 agosto 2026, F2.1.  La sessione viva su questa
+#    macchina dal 10 agosto alle 21:01 era esattamente quella, e ci e' rimasta
+#    **due giorni** senza che nessuno se ne accorgesse, perche' tutti quelli che
+#    l'hanno guardata hanno fatto UNA domanda sola — «e' viva?» — e la risposta
+#    era si'.  La seconda domanda — «ha un monitor?» — non gliel'ha fatta
+#    nessuno.  Chi avesse misurato la cattura la' sopra avrebbe letto zero
+#    fotogrammi e sarebbe andato a cercare il difetto dentro PipeWire.
+#
+# ⚠ E la sessione nera non e' solo cieca: e' FRAGILE.  `Shell.Screenshot` su
+#   zero monitor fa tentare a Mutter una texture 0x0, l'assert
+#   `cogl_texture_2d_new_with_size: width >= 1` fallisce, e siccome l'unita'
+#   porta `OnFailure=gnome-session-shutdown.target` se ne va TUTTA la sessione
+#   `[M]`.  ⛔ Quindi non si controlla se c'e' un monitor chiedendo uno
+#   screenshot: si chiede `GetCurrentState`, che e' quel che fa
+#   `banchi/02-sessione-guardia.sh`.
+#
+# ---------------------------------------------------------------------------
+# ⛔ E QUESTA CURA E' **I7 A META'**, E VA DETTO QUI INVECE CHE SCOPERTO DOPO
+# ---------------------------------------------------------------------------
+#
+# `CODER.md` §2 I7: *la protezione di un difetto noto sta nel programma, non in
+# una riga di configurazione che si puo' perdere*.  Questa E' una riga di
+# configurazione, su un rootfs che vive in RAM: sopravvive al riavvio solo
+# perche' dopo ogni riavvio questo script va rieseguito — che e' la stessa
+# fragilita' per cui la riga di guardia del DMA-BUF e' finita nel codice il 7
+# agosto (vedi la §6 qui sotto, ed e' la stessa storia).
+#
+# ⇒ La cura DEFINITIVA e' di prodotto e sta scritta nel rapporto di F2.1:
+#   `v1/remotix-c/src/sessione.c:671` scrive il drop-in del monitor **solo se il
+#   compositore e' KWin**, e sul ramo GNOME `larghezza` e `altezza` entrano in
+#   `sessione_assicura()` e si perdono.  Finche' quella riga non cambia, la
+#   protezione sta qui — e qui si dichiara mezza, invece di far credere che sia
+#   intera.
+# ---------------------------------------------------------------------------
+sezione_monitor()
+{
+	log "gnome-shell headless, e CON il monitor virtuale $MISURA_MONITOR"
+	sudo mkdir -p /etc/systemd/user/org.gnome.Shell@wayland.service.d
+	# ⛔ SI SCRIVE SEMPRE, non solo se manca: un file che c'e' gia' puo' essere
+	#    quello vecchio senza l'opzione, ed e' precisamente il caso che si e'
+	#    pagato.  Vale la stessa regola del predefinito del DMA-BUF, §6.
+	sudo tee "$DROPIN_SHELL" >/dev/null <<CONF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor $MISURA_MONITOR
+CONF
+	ok "scritto $DROPIN_SHELL"
+
+	# Le unita' d'utente le legge il gestore DELL'UTENTE: senza questo, il file
+	# c'e' e non lo conosce nessuno.
+	utente_systemctl daemon-reload || { ko "daemon-reload d'utente fallito"; return 1; }
+
+	# ⛔ SCRITTO NON E' IN VIGORE (E1: necessario preso per sufficiente).  I
+	#    drop-in di TUTTE le cartelle si applicano in ordine di NOME FILE, e su
+	#    questa macchina ce ne sono altri due — `00-registro.conf` nella home e
+	#    `zz-f21-monitor.conf` in $XDG_RUNTIME_DIR.  Un file che comincia per
+	#    `zz-` vince su questo: se qualcuno ne ha lasciato uno in giro, questa
+	#    sezione deve DIRLO, non dare per buono di aver vinto.
+	local vigore
+	vigore=$(utente_systemctl show -p ExecStart --value org.gnome.Shell@wayland.service)
+	inf "ExecStart in vigore: $vigore"
+	case "$vigore" in
+	*--virtual-monitor\ $MISURA_MONITOR*)
+		ok "il monitor virtuale $MISURA_MONITOR e' IN VIGORE" ;;
+	*)
+		ko "⛔ ho scritto --virtual-monitor $MISURA_MONITOR e il gestore d'utente NON lo dice."
+		ko "   Un altro drop-in vince sul mio.  I drop-in in vigore sono:"
+		utente_systemctl show -p DropInPaths --value org.gnome.Shell@wayland.service \
+		    | tr ' ' '\n' | sed 's/^/        /'
+		ko "   ⇒ togli quello che vince (per F2.1: bash banchi/02-sessione-lancia.sh pulisci)"
+		return 1 ;;
+	esac
+
+	# ⛔ E IL DROP-IN VALE DALLA PROSSIMA NASCITA DELLA SHELL, NON PER QUELLA
+	#    VIVA.  E' il modo esatto in cui il difetto puo' restare invisibile
+	#    un'altra volta: si riesegue il provisioning, si legge «OK», e la
+	#    sessione che sta girando e' ancora quella nera di prima.
+	local viva righe=""
+	if viva=$(pgrep -u "$UID_UTENTE" -x gnome-shell); then
+		for p in $viva; do
+			righe="$righe $(tr '\0' ' ' <"/proc/$p/cmdline")"
+		done
+		case "$righe" in
+		*--virtual-monitor*)
+			ok "e la Shell viva (pid $(echo $viva | tr '\n' ' ')) la porta gia'" ;;
+		*)
+			ko "⛔ IL DROP-IN E' A POSTO, MA LA SESSIONE CHE STA GIRANDO E' NERA."
+			ko "   La Shell viva e' nata prima ed ha ancora la riga vecchia:"
+			ko "  $righe"
+			ko "   ⇒ va fatta rinascere:  bash /media/REMOTIX/f21/02-sessione-lancia.sh sano"
+			ko "   ⇒ e si verifica con:   bash /media/REMOTIX/f21/02-sessione-guardia.sh"
+			return 2 ;;
+		esac
+	else
+		# ⛔ Zero e fallimento sono due cose diverse: `pgrep` esce 1 se non ha
+		#    trovato niente, 2 o piu' se e' ANDATO MALE.
+		local e=$?
+		if [ "$e" -eq 1 ]; then
+			inf "nessuna sessione viva adesso: la prossima nascera' col monitor"
+		else
+			ko "⛔ pgrep e' uscito con $e: non ho potuto guardare la Shell viva"
+			return 1
+		fi
+	fi
+	return 0
+}
 
 # ---------------------------------------------------------------------------
 # Il contenuto.  E' lo stesso elenco di `provision-vm.sh`, e non e' pigrizia:
@@ -98,6 +266,22 @@ if ! sudo -n true 2>/dev/null; then
     log "Privilegi di amministratore"
     sudo -v -S -p 'Password sudo: '
 fi
+
+# ---------------------------------------------------------------------------
+# 0-bis. I due modi.  `monitor` fa la sola §4 ed esce col suo numero.
+# ---------------------------------------------------------------------------
+case "$MODO" in
+tutto) ;;
+monitor)
+    E=0
+    sezione_monitor || E=$?
+    exit $E
+    ;;
+*)
+    echo "uso: $0 [tutto|monitor]" >&2
+    exit 2
+    ;;
+esac
 
 # ---------------------------------------------------------------------------
 # 1. La cache di apt su /media
@@ -213,22 +397,20 @@ sudo visudo -c -q -f /etc/sudoers.d/remotix-banchi && ok "quattro comandi, senza
     || { ko "regola sudoers non valida: la tolgo"; sudo rm -f /etc/sudoers.d/remotix-banchi; }
 
 # ---------------------------------------------------------------------------
-# 4. La Shell senza monitor (§5.9-bis di SPECIFICA.md)
+# 4. La Shell senza schermo, MA CON UN MONITOR (§5.9-bis di SPECIFICA.md)
 #
 # L'unita' della Shell non prevede `--headless` sulla riga di comando: si
 # sovrascrive.  Sta in /etc/systemd/user perche' vale per l'utente qualunque sia
 # la sua home — e la home, a differenza del rootfs, e' su /media? no: e' in RAM
 # anch'essa, quindi tutto qui dentro va rifatto a ogni riavvio.  Lo script e'
 # idempotente apposta.
+#
+# ⛔ Il corpo, e il perche' per intero, stanno in `sezione_monitor()` in testa:
+#    e' l'unica sezione che si puo' rifare da sola (`provision-server.sh
+#    monitor`), perche' e' l'unica che protegge un difetto gia' pagato.
 # ---------------------------------------------------------------------------
-log "gnome-shell senza monitor"
-sudo mkdir -p /etc/systemd/user/org.gnome.Shell@wayland.service.d
-sudo tee /etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf >/dev/null <<'CONF'
-[Service]
-ExecStart=
-ExecStart=/usr/bin/gnome-shell --headless --no-x11
-CONF
-ok "partira' con --headless --no-x11"
+E_MONITOR=0
+sezione_monitor || E_MONITOR=$?
 
 # ---------------------------------------------------------------------------
 # 5. Quel che una sessione remota non deve poter fare (§3.4-bis)
@@ -386,3 +568,15 @@ log "Fatto"
 inf "porta il binario:  bash $BASE/server.sh copia"
 inf "poi collegati a:   $(hostname -I 2>/dev/null | awk '{print $1}'):3389"
 inf "⚠ dopo un riavvio del server questo script va rieseguito: / vive in RAM"
+# ⛔ E LA §4 NON SI RIASSUME IN «Fatto».  Se il monitor virtuale non e' in
+#    vigore, quel che segue e' una macchina che parte, si collega, e consegna
+#    una schermata nera senza un errore da nessuna parte: e' il difetto che ha
+#    vissuto due giorni su questa macchina, e non deve poter uscire dal fondo di
+#    questo script travestito da riga verde.
+if [ "$E_MONITOR" -ne 0 ]; then
+    ko "⛔ LA §4 (il monitor virtuale) e' uscita con $E_MONITOR: leggila sopra."
+    ko "   Finche' non e' 0, ogni misura che dipende dalla sessione grafica"
+    ko "   vale zero — e non per colpa di chi la prende."
+    exit "$E_MONITOR"
+fi
+inf "la sessione grafica si verifica con: bash $BASE/f21/02-sessione-guardia.sh"

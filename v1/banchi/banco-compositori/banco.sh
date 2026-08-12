@@ -218,7 +218,17 @@ tabella_mutter()
 	# ⛔ L'intestazione si separa con TABULAZIONI come i dati: con gli spazi
 	#    `cut -f7` dava una colonna sola sull'intestazione e la settima sui dati
 	#    (revisione del 9 agosto 2026).  E porta `arrivati`, la colonna nuova.
-	printf '#etichetta\tmisura\tcolore\tfps_dichiarato\tstrada\ttipo\tfps_misurati\tcontati\tarrivati\tsecondi\tbuffer\tdanno_pieno\tdanno_parziale\tdanno_assente\tsalti\tfence_non_pronta\tmin\tp50\tp95\tmax\n' 
+	#
+	# ⛔ E LA SECONDA COLONNA SI CHIAMA `misura_negoziata`, NON `misura`.
+	#    Difetto D7, 12 agosto 2026: fino a ieri diceva `misura` e portava quella
+	#    CHIESTA — cioe' un'intestazione che non distingueva le due cose proprio
+	#    dove non coincidere costa un numero attribuito alla scena sbagliata.  Le
+	#    quattro colonne in coda sono nuove: `misura_chiesta`, `colore_chiesto`,
+	#    `cadenza_negoziata` e `onorato`, che dice in una parola se il compositore
+	#    ha dato quel che gli era stato chiesto.  ⚠ Sono in CODA e non in mezzo
+	#    apposta: `banchi/00-c1-kwin.sh` legge la RIGA per posizione, e non e'
+	#    nostro da toccare.
+	printf '#etichetta\tmisura_negoziata\tcolore_negoziato\tfps_dichiarato\tstrada\ttipo\tfps_misurati\tcontati\tarrivati\tsecondi\tbuffer\tdanno_pieno\tdanno_parziale\tdanno_assente\tsalti\tfence_non_pronta\tmin\tp50\tp95\tmax\tmisura_chiesta\tcolore_chiesto\tcadenza_negoziata\tonorato\n'
 
 	cella fermo 1920 1080 60 memoria bgrx 8 "controllo-desktop-fermo"
 

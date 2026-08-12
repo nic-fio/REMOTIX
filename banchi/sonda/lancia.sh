@@ -49,6 +49,30 @@ chi_usa_il_profilo() # $1 = profilo
   done
 }
 
+# ⛔⭐ E CHE LA CURA DI D12 ABBIA CHIUSO NON SI CREDE: SI GUARDA IN `ps`.
+#
+# `LEZIONI.md` §1.9: «non l'ho trovata» e «non ho guardato» hanno lo stesso
+# aspetto, e la prova qui e' un'**ASSENZA** — che si dimostra solo con accanto
+# un denominatore che dica «lo strumento, in quell'istante, stava guardando».
+# ⇒ Il secondo ago e' il PERCORSO DEL PROFILO, che in `argv` c'e' di sicuro
+#   (`--profile "$prof"`): se sparisse anche quello, lo zero della parola
+#   varrebbe «non ho guardato» e non «non c'era».
+#
+# ⛔ E IL GUARDIANO NON DEVE CREARE IL DIFETTO CHE CERCA: `ps` si legge in una
+#    variabile e il confronto lo fa **bash**.  Un `grep "$parola"` metterebbe la
+#    parola nell'`argv` del `grep`, e il guardiano sarebbe la falla.
+guardia_ps() # $1 = ago che NON deve comparire · $2 = ago che DEVE comparire
+{
+  local i righe uno=0 due=0
+  for i in $(seq 1 40); do
+    righe=$(ps -ww -eo args)
+    [ -n "$1" ] && case "$righe" in *"$1"*) uno=$((uno + 1)) ;; esac
+    [ -n "$2" ] && case "$righe" in *"$2"*) due=$((due + 1)) ;; esac
+    sleep 0.25
+  done
+  printf '%s %s\n' "$uno" "$due" > "$QUI/guardia-ps"
+}
+
 giro() # $1 = etichetta, $2 = parola
 {
   local prof="$QUI/prof-$1"
@@ -61,11 +85,59 @@ giro() # $1 = etichetta, $2 = parola
   #    file come tutto il resto.  ⚠ Una cura a meta' e' peggio di nessuna: fa
   #    credere che il buco sia chiuso.
   echo "    ${U%%#*}#utente=prova&parola=<NON SI STAMPA>"
+
+  # ⛔⭐ LA TERZA META' DELLA CURA DEL FRAMMENTO — difetto **D12**, 12 agosto
+  #     2026, e qui la forma e' DIVERSA da quella di tutti gli altri banchi.
+  #
+  # Negli altri la parola era un `--parola` da togliere.  ⛔ Qui sta **dentro
+  # l'indirizzo**, e l'indirizzo si dava a `firefox` come argomento: finiva
+  # nell'`argv` di `setsid`, in quello di `xvfb-run` e in quello di `firefox`,
+  # cioe' in `/proc/<pid>/cmdline`, che su Linux e' leggibile da chiunque.
+  #
+  # ⚠ E questa e' la falla che le prime due meta' NON toccavano, ed e' la
+  #   ragione per cui vale la pena scriverlo qui: R12-A.34 ha spostato la parola
+  #   dalla query al frammento — cioe' fuori dai registri HTTP — e l'ha tolta
+  #   dal terminale, e in tutto quel tempo `ps` continuava a stamparla intera.
+  #   ⛔ Tre cure sullo stesso segreto, e la piu' facile da vedere era l'ultima.
+  #
+  # ⭐ LA CURA, e non poteva essere `--parola-file`: `firefox` non prende
+  #    l'indirizzo da un file.  Lo prende pero' dal **proprio profilo** —
+  #    `browser.startup.homepage` — e il profilo e' una cartella nostra, di
+  #    questo giro, che questa stessa funzione butta e VERIFICA di aver buttato.
+  #    ⇒ L'indirizzo passa da `user.js` (0600, in una cartella 0700) e
+  #    `firefox` si lancia **senza nessun indirizzo fra gli argomenti**.
+  #
+  # ⚠ E si dichiara che cosa questa cura NON compra: la parola resta nel
+  #   profilo, esattamente come gia' ci restava dentro `recovery.jsonlz4`.  Il
+  #   conto dei file sporchi qui sotto SALIRA', ed e' giusto che salga — e' la
+  #   verita' che si misurava gia' prima.  Quel che sparisce e' `ps`, che era
+  #   l'unico posto dove a guardare bastava essere sulla macchina.
+  #
+  # ⛔ Le tre righe in piu' non sono ornamento: su un profilo NUOVO Firefox
+  #    mostrerebbe la pagina di benvenuto invece della propria home, e la sonda
+  #    resterebbe ad aspettare un esito che non arriva mai — che ha lo stesso
+  #    aspetto di «il server non risponde».
+  ( umask 077
+    {
+      printf 'user_pref("browser.startup.homepage", "%s");\n' "$U"
+      printf 'user_pref("browser.startup.page", 1);\n'
+      printf 'user_pref("browser.startup.firstrunSkipsHomepage", false);\n'
+      printf 'user_pref("browser.startup.homepage_override.mstone", "ignore");\n'
+      printf 'user_pref("browser.aboutwelcome.enabled", false);\n'
+      printf 'user_pref("datareporting.policy.dataSubmissionEnabled", false);\n'
+      printf 'user_pref("datareporting.policy.firstRunURL", "");\n'
+    } > "$prof/user.js" ) || { ko "⛔ non si scrive $prof/user.js"; return 2; }
+  chmod 700 "$prof"; chmod 600 "$prof/user.js"
+
   # ⚠ `setsid` mette Firefox e il suo Xvfb in un gruppo tutto loro, cosi' il
   #   TERM qui sotto puo' provare a prenderli in blocco.  ⛔ Ma e' un tentativo,
   #   non il criterio: il criterio e' `/proc`, e la ragione sta nella corsa
   #   raccontata piu' sotto.
-  setsid xvfb-run -a firefox --no-remote --profile "$prof" "$U" \
+  # ⛔ E NIENTE INDIRIZZO FRA GLI ARGOMENTI: e' la cura di D12 (qui sopra).
+  rm -f "$QUI/guardia-ps"
+  guardia_ps "$2" "$prof" &
+  local pg=$!
+  setsid xvfb-run -a firefox --no-remote --profile "$prof" \
       > "$QUI/ff-$1.log" 2>&1 &
   local p=$!
   local i=0
@@ -73,6 +145,25 @@ giro() # $1 = etichetta, $2 = parola
     [ -s "$QUI/esiti.jsonl" ] && break
     sleep 1; i=$((i+1))
   done
+
+  # ── ⛔ D12: la misura, con il suo denominatore ─────────────────────────────
+  wait "$pg" 2>/dev/null
+  local vp=0 vf=0
+  if [ -r "$QUI/guardia-ps" ]; then
+    vp=$(cut -d' ' -f1 "$QUI/guardia-ps"); vf=$(cut -d' ' -f2 "$QUI/guardia-ps")
+  fi
+  echo "    -- D12/ps: la PAROLA vista $vp volte · il PROFILO (che in argv c'e')"
+  echo "       visto $vf volte"
+  if [ "${vf:-0}" -lt 1 ]; then
+    ko "⚠ non ho visto in «ps» nemmeno il profilo, che in «argv» c'era di"
+    ko "  sicuro: allora lo zero della parola e' «non ho guardato», non «non"
+    ko "  c'era».  ⛔ Non e' un verde, e si dichiara."
+  elif [ "${vp:-1}" -gt 0 ]; then
+    ko "⛔⛔ LA PAROLA E' ANCORA IN «ps» ($vp volte su $vf): D12 NON e' chiuso qui"
+  else
+    ok "⭐ D12 chiuso per misura: nello stesso istante «ps» vedeva il profilo"
+    ok "   ($vf volte) e NON vedeva la parola"
+  fi
 
   # ⛔⭐ E QUI C'ERA UNA CORSA, ED E' STATA MISURATA — 11 agosto 2026, 12:50 UTC.
   #

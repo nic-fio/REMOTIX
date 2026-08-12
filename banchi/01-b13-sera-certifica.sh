@@ -56,6 +56,37 @@ IND=${IND:-192.168.0.2}
 UTENTE=${UTENTE:-prova}
 PAROLA=${PAROLA:-parola-di-prova}
 
+# ---------------------------------------------------------------------------
+# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
+#    curato il 12 agosto 2026.
+#
+# ⛔ QUI C'ERA `--parola-file "$PAROLA_FILE"`, e `python3` e' un PROCESSO: la parola
+#    stava nel suo `argv`, cioe' in `/proc/<pid>/cmdline`, che su Linux e'
+#    **leggibile da chiunque** — un `ps` durante il giro la stampava per
+#    intero, e i banchi di questa macchina girano mentre ci lavorano altri.
+#
+# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
+#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
+#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
+#    `argv` — passato al banco come `--parola-file`, e cancellato con una
+#    `trap` anche se il giro muore a meta'.  Nel `cmdline` finisce il PERCORSO.
+#
+# ⚠ E il nome porta la sigla di CHI lo scrive: due giri che scrivessero lo
+#   stesso file si cancellerebbero la parola a vicenda — la stessa forma che ha
+#   fatto nascere il `PREFISSO` di `01-p5-accendi.sh`.
+PAROLA_FILE=/srv/src/tmp/b13-sera-parola
+
+ripulisci_parola() { rm -f "$PAROLA_FILE"; }
+trap ripulisci_parola EXIT
+
+# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
+#    `umask 077` nudo resta addosso a tutto quel che viene dopo.
+mkdir -p "/srv/src/tmp" \
+	&& ( umask 077; : > "$PAROLA_FILE" ) \
+	&& chmod 600 "$PAROLA_FILE" \
+	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FILE"; exit 2; }
+printf '%s\n' "$PAROLA" > "$PAROLA_FILE"
+
 CERT=$TMP/sera-b13-cert
 BANCO=/srv/src/01-b13-proprieta.py
 GIT_RCP=$TMP/sera-b13-rcp-git.c        # la copia che sta in git, portata a mano
@@ -71,7 +102,7 @@ giro() # $1 = file su cui scrivere l'uscita del banco
 {
 	python3 -u "$BANCO" \
 		--indirizzo "$IND" --porta "$PORTA" \
-		--utente "$UTENTE" --parola "$PAROLA" \
+		--utente "$UTENTE" --parola-file "$PAROLA_FILE" \
 		--certificati "$CERT" --prodotti /srv/src \
 		--codice "$GIT_RCP" --codice-compilato "$D/rcp.c" \
 		--fonti-codice "$D/certificati.c" "$D/main.c" "$D/rcp.c" \

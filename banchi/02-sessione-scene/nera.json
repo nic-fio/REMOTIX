@@ -1,16 +1,16 @@
 {
- "quando": "2026-08-12T11:42:09+0000",
+ "quando": "2026-08-12T13:25:22+0000",
  "macchina": "NIC-OS",
  "ignote": [],
  "shell_pid": [
-  215664
+  224327
  ],
  "shell_riga": [
   "/usr/bin/gnome-shell",
   "--headless",
   "--no-x11"
  ],
- "gnome_session_pid": 215632,
+ "gnome_session_pid": 224294,
  "shell_var": "",
  "shell_var_presente": true,
  "xdg_session_type": "wayland",
@@ -27,8 +27,8 @@
  },
  "controllo_positivo": {
   "layout_mode": "1",
-  "idletime_1": 3834,
-  "idletime_2": 4186,
+  "idletime_1": 3825,
+  "idletime_2": 4177,
   "esito": true,
   "perche": ""
  }
