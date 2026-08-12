@@ -138,6 +138,35 @@ vigore**), P6 (il primo fotogramma e' una chiave).
     `p5-misura-diversa` (misura diversa **senza** un `TELA` prima: si chiude) e
     `p5-misura-dopo-adatta-tela` (**gli stessi byte**, dopo un `TELA` che l'ha
     concessa: si accetta).
+
+===========================================================================
+⛔⛔ E LA CURA DI P5 NE HA APERTA UN'ALTRA — **D14**, la sera del 12 agosto
+
+*Adesso che la tela puo' cambiare a meta' sessione, i fotogrammi **gia' in
+volo** portano **legittimamente** la misura precedente — e §6.2 alla lettera fa
+chiudere chi ne riceve una diversa da quella in vigore.  ⛔ Un client conforme
+uccide una sessione sana, ed e' la stessa forma di P5.*
+
+  ⛔ **Qui si vede meglio che altrove**, ed e' la ragione per cui le due prove
+     stanno anche in questo file e non solo nel giudice: in una registrazione
+     l'ordine dei blocchi e' l'ordine di **arrivo**, e un flusso video il cui
+     primo blocco compare **dopo** il `TELA(ADATTATA)` e' esattamente il
+     fotogramma in volo.  L'arbitro non lo condanna: lo dichiara `AMBIGUO` e
+     porta la proposta **P8** — la grazia di un secondo che §7.1 da' gia' alle
+     coordinate di input (terza eccezione di §3).
+
+  ⛔ **E una meta' questo arbitro NON la puo' giudicare, e la dichiara**:
+     §11.1 non porta **nessun istante**, quindi da una registrazione «dentro il
+     secondo di grazia» e «fuori» hanno lo stesso aspetto.  ⚠ Vale anche per la
+     grazia che §7.1 ha **gia'** sulle coordinate di input: nessun arbitro
+     meccanico puo' giudicarla leggendo un `.rcpreg`.  Il denominatore si
+     chiama `grazia_ignota`, e c'e' perche' indovinare sarebbe la forma **E8**.
+
+  ⛔ **Le due prove, e la seconda e' quella che conta**:
+     `p8-in-volo-dopo-adatta-tela` (la sessione sana che oggi cadrebbe: esce 0
+     con la dichiarazione) e `p8-misura-di-nessuna-tela` (una misura che non e'
+     ne' quella in vigore ne' la precedente: esce **1**, e deve uscire 1 — una
+     cura scritta troppo larga passerebbe la prima e spegnerebbe P5).
 """
 import argparse
 import hashlib
@@ -339,8 +368,16 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
     # ⛔ I DENOMINATORI, E SONO CINQUE PERCHE' LE COSE CHE SI POSSONO NON AVER
     #    GUARDATO SONO CINQUE.  ⭐ `ordine_ignoto` e' nato col campo `fine`:
     #    e' il numero di flussi per cui **P1 non si e' potuta giudicare**.
+    # ⛔⛔ `grazia_ignota` e' del 12 agosto 2026, sera — difetto **D14**: e' il
+    #    numero di flussi che portano la tela **precedente** subito dopo un
+    #    `TELA(ADATTATA)`.  ⚠ E si chiama «ignota» per una ragione che vale la
+    #    pena avere in mano: §11.1 **non porta nessun istante**, quindi da una
+    #    registrazione non si puo' sapere se il **secondo** di grazia di §7.1
+    #    fosse passato o no.  ⛔ Dire «era dentro» sarebbe indovinare, e dire
+    #    «era fuori» sarebbe la forma E8 al contrario: si dichiara.
     conta = {"blocchi": len(blocchi), "video": 0, "flussi": 0,
-             "giudicati": 0, "completezza_ignota": 0, "ordine_ignoto": 0}
+             "giudicati": 0, "completezza_ignota": 0, "ordine_ignoto": 0,
+             "grazia_ignota": 0}
     ctx = f24.Contesto(tela=tela, codec_negoziato=codec, sessione_aperta=True)
 
     # I blocchi video si raggruppano per `stream`: uno stream, un fotogramma
@@ -367,7 +404,12 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
     #     ⚠ Si tiene il valore **al momento in cui ogni flusso si apre**, non
     #       quello di fine file: giudicare un fotogramma con una tela concessa
     #       dopo di lui sarebbe leggere il filo all'indietro.
-    tela_ora, tela_da_tela = tuple(tela), False
+    #     ⛔⛔ E SI TIENE ANCHE LA **PRECEDENTE** — difetto D14: i fotogrammi
+    #        gia' in volo quando il `TELA` e' passato la portano legittimamente,
+    #        e senza averla in mano l'arbitro non puo' distinguere «una misura
+    #        vecchia che sta ancora arrivando» da «una misura che non e' mai
+    #        stata di nessuna tela».  ⚠ `None` = non e' mai cambiata niente.
+    tela_ora, tela_da_tela, tela_prec = tuple(tela), False, None
     for b in blocchi:
         if b["canale"] not in CANALI:
             raise NonConforme("RCP.md §2.5",
@@ -391,7 +433,15 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                         #    quando l'esito e' RIFIUTATA, dove riportano quella
                         #    di prima.  ⇒ si prende il campo, non si deduce
                         #    dall'esito: e' il campo a essere definito cosi'.
-                        tela_ora = struct.unpack("!II", corpo[2:10])
+                        nuova = struct.unpack("!II", corpo[2:10])
+                        # ⛔ La precedente si tiene solo se la tela **cambia**
+                        #    davvero: un `TELA` che riporta la stessa misura —
+                        #    ed e' quel che fa un `RIFIUTATA` — non lascia
+                        #    niente in volo, e registrarlo come un cambio
+                        #    aprirebbe una grazia che non serve a nessuno.
+                        if nuova != tela_ora:
+                            tela_prec = tela_ora
+                        tela_ora = nuova
                         tela_da_tela = corpo[0] == ADATTATA
             except ControlloIlleggibile as e:
                 controllo_leggibile, perche_illeggibile = False, str(e)
@@ -436,7 +486,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                 su_controllo.add(b["stream"])
             if not sessione_vista:
                 prima_di_sessione.add(b["stream"])
-            tele[b["stream"]] = (tela_ora, tela_da_tela)
+            tele[b["stream"]] = (tela_ora, tela_da_tela, tela_prec)
         flussi[b["stream"]].append(b)
 
     if not flussi:
@@ -477,11 +527,22 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
         #    ⛔ Si rimette il contesto alla tela che era in vigore QUANDO
         #       questo flusso si e' aperto: e' il giudice ad applicare la
         #       regola, ma solo l'arbitro sa che cosa fosse passato prima.
-        tela_fl, da_tela = tele.get(sid, (tuple(tela), False))
+        tela_fl, da_tela, prec_fl = tele.get(sid, (tuple(tela), False, None))
         if da_tela:
-            ctx.adatta_tela(*tela_fl)
+            # ⛔⛔ E si riapre la **grazia** di D14 con la tela precedente in
+            #    mano: da una registrazione non si sa quanto tempo sia passato
+            #    (§11.1 non porta istanti), quindi l'unica cosa onesta e'
+            #    tenerla aperta e **dichiarare** che il secondo non si giudica.
+            #    ⛔ `grazia=True` va chiesta: e' spenta di suo, perche' P8 non e'
+            #       ancora una riga di `RCP.md` e chi non la chiede — B4 —
+            #       continua a giudicare il documento di oggi.
+            ctx.adatta_tela(*tela_fl, precedente=prec_fl, grazia=True)
         else:
             ctx.tela_larghezza, ctx.tela_altezza = tela_fl
+            # ⛔ E il contesto si RIAZZERA fra un flusso e l'altro: e' lo stesso
+            #    oggetto per tutta la registrazione, e una grazia lasciata
+            #    aperta da un flusso di prima assolverebbe il flusso dopo.
+            ctx.tela_precedente, ctx.grazia_aperta = None, False
 
         # ── e le altre quattro le applica il giudice, un byte per volta
         g = f24.Giudice(ctx, dove="uni", guasti=guasti)
@@ -539,6 +600,14 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
             rel = v.scostamento if v.scostamento is not None else 0
             raise NonConforme(v.regola, f"flusso {sid}: {v.dice}",
                               b0["base"] + rel, rel)
+        # ⛔⛔ D14 — il flusso porta la tela **precedente** subito dopo un
+        #    `TELA(ADATTATA)`.  §6.2 alla lettera farebbe cadere la sessione, e
+        #    cadrebbe una sessione in cui nessuno dei due lati ha sbagliato:
+        #    l'arbitro NON esce 1, **dichiara** che qui il documento non decide
+        #    e porta la proposta P8.  ⚠ E dichiara anche la meta' che non puo'
+        #    giudicare: il **secondo** di grazia, che in un `.rcpreg` non c'e'.
+        if v.esito == f24.AMBIGUO and v.propone == "P8":
+            conta["grazia_ignota"] += 1
         if stampa:
             col = {f24.ACCETTATO: VERDE, f24.SCARTATO: GIALLO,
                    f24.AMBIGUO: GIALLO}[v.esito]
@@ -560,6 +629,24 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                   f"difetto della")
             print(f"      REGISTRAZIONE — dal 12 agosto 2026 il formato la "
                   f"domanda la sa fare")
+        if conta["grazia_ignota"]:
+            print(f"   {GIALLO}⛔⛔ e {conta['grazia_ignota']} flussi su "
+                  f"{conta['flussi']} portano la tela **PRECEDENTE** subito "
+                  f"dopo un `TELA(ADATTATA)`{GRIGIO}")
+            print(f"      ⛔ §6.2 alla lettera li fa chiudere, e chiuderebbe "
+                  f"una sessione in cui")
+            print(f"         NESSUNO ha sbagliato: erano gia' in volo, e §6.2 "
+                  f"stesso dice che i")
+            print(f"         fotogrammi arrivano fuori ordine.  E' il difetto "
+                  f"**D14**, e la cura")
+            print(f"         e' la proposta **P8** — la grazia di un secondo "
+                  f"che §7.1 da' gia'")
+            print(f"         alle coordinate di input")
+            print(f"      ⚠ E il **secondo** non si giudica da qui: §11.1 non "
+                  f"porta istanti,")
+            print(f"        quindi «dentro la grazia» e «fuori» hanno lo stesso "
+                  f"aspetto in una")
+            print(f"        registrazione.  Si dichiara invece di indovinare")
         if conta["ordine_ignoto"]:
             print(f"   {GIALLO}⛔ e per {conta['ordine_ignoto']} flussi su "
                   f"{conta['flussi']} NON si e' potuto giudicare se venissero "
@@ -761,6 +848,46 @@ PROVE = {
         "tela": (1280, 720),
         "blocchi": lambda: chiave(lar=1280, alt=720),
     },
+    # ── ⛔⛔ D14 — I FOTOGRAMMI IN VOLO, e la proposta **P8** ────────────────
+    "p8-in-volo-dopo-adatta-tela": {
+        "spiega": "⛔⛔ **D14, LA REGISTRAZIONE DI UNA SESSIONE SANA UCCISA** — "
+                  "`SESSIONE` a 1920x1080, poi un `TELA(ADATTATA, 1280, 720)` "
+                  "(§7.1), e **poi** arriva il flusso video che porta ancora "
+                  "1920x1080: e' il fotogramma aperto **prima** che "
+                  "l'`ADATTA_TELA` arrivasse al server.  ⛔ §6.2 alla lettera "
+                  "farebbe uscire **1** — la sessione cade — e §6.2 **stesso** "
+                  "dice che «gli stream sono indipendenti, quindi i fotogrammi "
+                  "possono arrivare fuori ordine».  ⇒ Esce **0**, con il flusso "
+                  "dichiarato `AMBIGUO` e la proposta **P8** accanto: un "
+                  "arbitro che uscisse 1 certificherebbe che un client "
+                  "conforme deve uccidere una sessione sana.  ⚠ E il "
+                  "**secondo** di grazia da qui non si giudica: §11.1 non porta "
+                  "istanti, e l'arbitro lo dichiara invece di indovinarlo",
+        "uscita": 0,
+        "blocchi": lambda: [
+            apre_la_sessione(),
+            adatta_la_tela(1280, 720),
+            (SERVER, VIDEO, FIN, 8,
+             f24.intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64)],
+    },
+    "p8-misura-di-nessuna-tela": {
+        "spiega": "⭐⛔ **P8 copre UNA misura, non «tutto dopo un `TELA`»** — "
+                  "stessa registrazione, ma il fotogramma porta 800x600: ⛔ ne' "
+                  "la tela in vigore (1280x720) ne' la precedente (1920x1080). "
+                  "Non era in volo, e' un campo sbagliato — esce **1**, e deve "
+                  "uscire 1.  ⚠ **E' la prova che conta**: senza, una cura "
+                  "scritta «dopo un `TELA` la misura non si controlla» "
+                  "passerebbe la prova qui sopra e spegnerebbe P5 proprio nella "
+                  "finestra in cui il server e' piu' probabile che sbagli — ed "
+                  "e' esattamente cosi' che P5 e' finita sbagliata la prima "
+                  "volta",
+        "uscita": 1,
+        "blocchi": lambda: [
+            apre_la_sessione(),
+            adatta_la_tela(1280, 720),
+            (SERVER, VIDEO, FIN, 8,
+             f24.intestazione(lar=800, alt=600, num=41) + b"\x00" * 64)],
+    },
     "p6-primo-delta": {
         "spiega": "⭐⛔ **P6 violata** — il primo fotogramma dopo `SESSIONE` e' "
                   "un delta (`0x0302`).  ⚠ Fino all'11 agosto era conforme a "
@@ -835,6 +962,37 @@ REGOLE_NUOVE = {
     "P6": ("RCP.md §5.2", "p6-primo-delta", "p6-delta-dopo-la-chiave"),
     "P7": ("RCP.md §11.1", "formato-vecchio", "abbandonato"),
 }
+
+
+# ⛔⛔ E LE PROPOSTE ANCORA APERTE, IN UNA TABELLA A PARTE — quel che `RCP.md`
+#    NON dice ancora.  ⚠ La separazione e' la cosa importante: sopra ci sono
+#    righe normative da rileggere nel documento, qui una cura che il
+#    coordinatore non ha applicato.  ⛔ E la coppia ha una forma diversa: la
+#    prova che la fa VEDERE esce **0** (l'arbitro dichiara, non condanna) e
+#    quella che tiene la cura stretta esce **1**.
+PROPOSTE_APERTE = {
+    "P8": ("RCP.md §6.2 contro §7.1 — difetto D14",
+           "p8-misura-di-nessuna-tela", "p8-in-volo-dopo-adatta-tela"),
+}
+
+
+def proposte_coperte():
+    """⛔ Come `regole_coperte()`, per le cure che il documento non ha ancora."""
+    coperte, mancanti = [], []
+    for sigla, (_, stretta, vede) in PROPOSTE_APERTE.items():
+        buchi = []
+        if stretta not in PROVE:
+            buchi.append(f"manca la prova che la tiene STRETTA («{stretta}»)")
+        elif PROVE[stretta]["uscita"] != 1:
+            buchi.append(f"«{stretta}» non pretende uscita 1: una cura senza "
+                         f"questa prova si scrive troppo larga")
+        if vede not in PROVE:
+            buchi.append(f"manca la prova che la fa VEDERE («{vede}»)")
+        elif PROVE[vede]["uscita"] != 0:
+            buchi.append(f"«{vede}» non pretende uscita 0")
+        (mancanti if buchi else coperte).append(
+            (sigla, "; ".join(buchi)) if buchi else sigla)
+    return coperte, mancanti
 
 
 def regole_coperte():
@@ -1012,6 +1170,21 @@ def principale(a):
         print(f"\n  ⛔ righe con TUTT'E DUE le prove: {len(coperte)} su "
               f"{len(REGOLE_NUOVE)} — {', '.join(coperte) or '—'}")
         for sigla, perche in mancanti:
+            print(f"     {ROSSO}⛔ {sigla}: {perche}{GRIGIO}")
+        print(f"\n== ⛔⛔ LE PROPOSTE ANCORA APERTE — `RCP.md` non le porta")
+        print(f"      ⚠ La coppia ha una forma diversa: la prova che la fa "
+              f"VEDERE esce 0")
+        print(f"        (l'arbitro dichiara, non condanna) e quella che tiene "
+              f"la cura")
+        print(f"        STRETTA esce 1 — ed e' la seconda quella che conta")
+        ap_coperte, ap_mancanti = proposte_coperte()
+        for sigla, (dove, stretta, vede) in PROPOSTE_APERTE.items():
+            print(f"  {sigla}  {dove}")
+            print(f"      la fa VEDERE:   {vede}")
+            print(f"      la tiene STRETTA: {stretta}")
+        print(f"\n  ⛔ proposte con TUTT'E DUE le prove: {len(ap_coperte)} su "
+              f"{len(PROPOSTE_APERTE)} — {', '.join(ap_coperte) or '—'}")
+        for sigla, perche in ap_mancanti:
             print(f"     {ROSSO}⛔ {sigla}: {perche}{GRIGIO}")
         print(f"\n== ⭐ P7 — {P7[0]}")
         print(f"      «{P7[1]}»")

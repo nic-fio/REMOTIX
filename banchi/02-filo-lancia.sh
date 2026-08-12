@@ -253,7 +253,23 @@ python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'regole con TUTT' | \
 python3 "$QUI/02-filo-validatore.py" --elenco | grep -E 'righe con TUTT' | \
     sed 's/^ */   arbitro delle registrazioni: /'
 dice ""
-dice "== ⭐⛔ LE LETTURE DOPPIE DI \`RCP.md\` ancora aperte in questo capitolo"
+# ⛔⛔ E LE CURE CHE `RCP.md` NON PORTA ANCORA — aggiunto la sera del 12 agosto
+#    2026 col difetto **D14**.  ⚠ Sta in un blocco SUO e non insieme al conto
+#    qui sopra: «righe che il documento porta» e «cure che il documento non ha»
+#    sono due fatti diversi, e sommarli darebbe un numero che non vuol dire
+#    niente.  ⛔ E la coppia ha una forma diversa: la prova che la fa vedere e
+#    quella che impedisce di scriverla troppo larga.
+dice "== ⛔⛔ LE PROPOSTE ANCORA APERTE — \`RCP.md\` non le porta"
+python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'proposte con TUTTI' | \
+    sed 's/^ */   giudice del fotogramma:  /'
+python3 "$QUI/02-filo-validatore.py" --elenco | grep -E "proposte con TUTT'E DUE" | \
+    sed 's/^ */   arbitro delle registrazioni: /'
+dice ""
+dice "== ⭐⛔ I PUNTI IN CUI \`RCP.md\` NON DECIDE BENE, in questo capitolo"
+dice "   ⚠ Due famiglie, e non sono la stessa cosa: una **lettura doppia** fa"
+dice "     divergere due implementazioni attente; una **contraddizione interna**"
+dice "     le fa convergere sullo stesso byte sbagliato — ed e' peggio, perche'"
+dice "     nessun confronto fra due implementazioni la trova."
 python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -A1 'AMBIGUO$' | \
     grep -v '^--$' | sed 's/^/   /'
 if ! python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -q 'AMBIGUO$'; then
