@@ -1,0 +1,388 @@
+/*
+ * cattura — i pixel, letti dal nodo PipeWire che Mutter ha aperto.
+ *
+ * ⛔ IL MANDATO DI QUESTO FILE, IN UNA RIGA: **un fotogramma consegnato in
+ *    memoria con il tipo di buffer DICHIARATO, non dedotto.**
+ *
+ * ⛔ RIPORTATO da `v1/remotix-c/src/cattura.c` (1060 righe) e NON ricopiato.
+ *    Quel file portava dentro l'apparato RDP che in V2 non esiste — la strada
+ *    che si gira a cattura viva perche' AVC420 vuole la GPU e RemoteFX la CPU,
+ *    la misura negoziabile per KWin 6.8, il ridimensionamento della fase 6 — e
+ *    qui non c'e' niente di tutto questo.  Sopravvivono le tre regole che erano
+ *    il vero valore di quel file, e sono nei tre riquadri qui sotto.
+ *
+ * ===========================================================================
+ * ⛔ 1. LO STRIDE SI LEGGE DAL CHUNK DEL BUFFER, MAI CALCOLATO
+ *
+ * Il produttore allinea le righe come gli conviene, e dedurre `larghezza × 4`
+ * produce immagini oblique.  ⚠ `[M]` 12 agosto 2026: a 1920×1080 lo stride
+ * misurato e' **7680**, cioe' esattamente `larghezza × 4` — ⛔ **e proprio per
+ * questo la regola va scritta**: oggi coincide, e chi si abitua a calcolarlo non
+ * se ne accorgera' il giorno in cui non coincide piu'.  Chi sta a valle legge
+ * `stride` da qui, non lo rifa'.
+ *
+ * ⇒ Se il produttore consegnasse `stride == 0` questo modulo **scarta il
+ *   fotogramma e lo conta**, invece di calcolarne uno: un fotogramma obliquo non
+ *   da' nessun errore, e viene bene abbastanza da non farsi notare.
+ *
+ * ===========================================================================
+ * ⛔ 2. IL TIPO DI BUFFER SI CHIEDE IN DUE POSTI, E SI DICHIARA
+ *
+ * Il DMA-BUF si chiede nel campo `modifier` del FORMATO (con
+ * `MANDATORY | DONT_FIXATE`) **e** con il bit `SPA_DATA_DmaBuf` in
+ * `SPA_PARAM_Buffers`.  Dichiarandone uno solo la negoziazione riesce lo stesso
+ * e i buffer continuano ad arrivare in memoria: nessun errore, nessuna riga di
+ * registro, e la copia zero semplicemente non c'e' (`[M]` 6 agosto 2026).
+ *
+ * ⛔ E QUEL CHE IL TIPO **NON** DICE — forma E1 di `REVIEWER.md` §2, gia' pagata
+ *    DUE volte (`LEZIONI.md` §1.11):
+ *
+ *      «consegna MemFd  ⇒ Mutter rende in software»   ⛔ FALSO
+ *      «ha aperto un render node ⇒ rende in GPU»      ⛔ FALSO
+ *
+ *    Il tipo che arriva e' la risposta a quel che **abbiamo chiesto noi**, non
+ *    una scoperta sul compositore.  Per questo `CatturaConsegna` porta il tipo
+ *    **chiesto** e il tipo **dichiarato** in due campi diversi, e accanto chi lo
+ *    dice: sono tre fatti, non uno.
+ *
+ * ===========================================================================
+ * ⛔ 3. LA CADENZA SI DICHIARA A ZERO, con un massimo a intervallo
+ *
+ * `framerate = 0/1` piu' `maxFramerate` significa «mandami un fotogramma quando
+ * cambia qualcosa, non a ritmo fisso» — che e' il comportamento che serve a un
+ * desktop remoto.  ⛔ Ne discende che **su un desktop fermo non arriva nulla**:
+ * e' un comportamento voluto, non un guasto (`LEZIONI.md` §4 trappola 8), ed e'
+ * la ragione per cui `cattura_prendi` distingue **lo zero dal fallimento** con
+ * due valori d'uscita diversi (`CODER.md` §3.10).
+ *
+ * ===========================================================================
+ * ⛔ IL DANNO E' UN'INFORMAZIONE SU QUANTO E' CAMBIATO — NON LA CONDIZIONE PER
+ *    CUI IL BUFFER SI PUO' LEGGERE
+ *
+ * ⚠ In `v1/remotix-c/src/cattura.h` c'era scritto il contrario, e la misura lo ha
+ *   smentito.  Diceva: *«in zero-copy Mutter ricicla i propri buffer e vi
+ *   ridipinge dentro SOLO la parte cambiata; fuori da quelle regioni ci sono i
+ *   pixel del fotogramma che aveva usato quel buffer prima»* (7 agosto 2026).
+ *
+ * `[M]` 12 agosto 2026, F2.2 — NIC-OS, Mutter 48.7 headless, strada MEMORIA,
+ * monitor virtuale 1920×1080, scena «bandiera»: il danno e' **parziale su tutti
+ * e 410 i fotogrammi**, il primo compreso, e le sette barre SMPTE si leggono
+ * **intere** nel fotogramma di regime.  ⇒ **il buffer e' intero anche quando il
+ * danno e' parziale.**
+ *
+ * `[R]` `gnome.md` §8.1, Mutter riletto riga per riga, lo diceva gia': blit
+ * dell'INTERO framebuffer, stack di clip svuotato deliberatamente, vista
+ * virtuale come `CoglOffscreen` persistente.  Le due strade concordano.
+ *
+ * ⛔ E LA CONSEGUENZA CHE E' ANCORA VIVA NEL CODICE EREDITATO: in
+ *    `v1/remotix-c/src/palco.c:598-628` la copia zero nasce **spenta su GNOME**
+ *    con questa ragione, e questa ragione **e' morta**.  ⚠ Il che NON dice che
+ *    la copia zero su GNOME funzioni: dice che il motivo per cui era spenta non
+ *    c'e' piu', e che la decisione va ripresa **su una misura** invece che su
+ *    quel commento.  Qui la strada la sceglie chi chiama (`CatturaStrada`), e la
+ *    fase 2 chiede la memoria per una ragione sua e dichiarata: **vuole i pixel
+ *    leggibili**.
+ *
+ * ⚠ A che cosa serve allora il danno: a sapere QUANTA parte e' stata ridipinta —
+ *   cioe' quanto conviene ricodificare — e a distinguere «il produttore non
+ *   dichiara il danno» da «il danno copriva tutto».  Si continua a chiederlo,
+ *   perche' non chiederlo significa non riceverlo.
+ *
+ * ===========================================================================
+ * ⚠ IL CICLO DI PIPEWIRE VIVE SU UN THREAD SUO (`pw_thread_loop`).  Le
+ *   richiamate qui sotto vengono chiamate DA QUEL THREAD, che e' di tempo reale:
+ *   chi le scrive non deve aspettare nulla al loro interno, e in particolare non
+ *   deve chiamare `cattura_ferma` da dentro `CatturaFine`.
+ *
+ *   ⛔ E i pixel vivono SOLO per la durata della chiamata: appena si torna, il
+ *      buffer torna a PipeWire.  Chi li vuole se li copia — o usa
+ *      `cattura_prendi`, che la copia la fa lui.
+ */
+#ifndef REMOTIX_CATTURA_H
+#define REMOTIX_CATTURA_H
+
+#include <glib.h>
+#include <stdint.h>
+
+typedef struct Cattura Cattura;
+
+/* ------------------------------------------------------------------ *
+ *  Il tipo di buffer — si chiede e si dichiara
+ * ------------------------------------------------------------------ */
+
+typedef enum
+{
+	CATTURA_BUFFER_IGNOTO = 0,
+	CATTURA_BUFFER_MEMFD,
+	CATTURA_BUFFER_MEMPTR,
+	CATTURA_BUFFER_MEMID,
+	CATTURA_BUFFER_DMABUF
+} CatturaBuffer;
+
+/* La strada che si CHIEDE.  ⛔ Non e' la stessa cosa del tipo che arriva, e le
+ * due stanno in due campi diversi apposta: se si chiede la scheda e arriva la
+ * memoria, `cattura_avvia` FALLISCE dichiarandolo invece di ripiegare in
+ * silenzio (`LEZIONI.md` §1.8, corollario). */
+typedef enum
+{
+	CATTURA_STRADA_MEMORIA = 0, /* MemFd/MemPtr: i pixel si leggono            */
+	CATTURA_STRADA_SCHEDA       /* DMA-BUF: i pixel NON sono qui, c'e' un fd   */
+} CatturaStrada;
+
+/*
+ * Il colore che si CHIEDE.
+ *
+ * ⛔ E `CATTURA_COLORE_10BIT` non e' una speranza: e' **la domanda**, fatta al
+ *    produttore invece che dedotta.  `gnome.md` §8.3 `[R]`, Mutter 48.7 riletto
+ *    riga per riga (`meta-screen-cast-stream-src.c`, `supported_formats[]`):
+ *    **due sole voci, BGRx e BGRA**, tutt'e due a 8 bit per canale.  ⇒ Da questa
+ *    sorgente dieci bit veri non escono.
+ *
+ *    Chiedere il formato a 10 bit e ricevere un rifiuto trasforma quella lettura
+ *    in una **misura**, e il rifiuto va scritto invece che dedotto: e' l'unico
+ *    modo di chiudere la `[?]` senza deduzione (`LEZIONI.md` §1.11).
+ */
+typedef enum
+{
+	CATTURA_COLORE_BGRX = 0,
+	CATTURA_COLORE_BGRA,
+	CATTURA_COLORE_10BIT
+} CatturaColore;
+
+/* Da dove viene un valore.  ⛔ «Non dichiarato» E' UNA RISPOSTA, e non un campo
+ * da riempire con quel che ci aspettiamo: il silenzio scambiato per un valore e'
+ * la forma E8. */
+typedef enum
+{
+	CATTURA_FONTE_NON_DICHIARATA = 0, /* il produttore tace (SPA UNKNOWN)      */
+	CATTURA_FONTE_PRODUTTORE,         /* SPA_PARAM_Format, chiesto a lui       */
+	CATTURA_FONTE_FORMATO,            /* discende dal formato negoziato        */
+	CATTURA_FONTE_MISURATA            /* [M] contata da noi sui pixel          */
+} CatturaFonte;
+
+/* L'esito della misura del range fatta sui pixel consegnati.  ⛔ Non c'e' un
+ * valore «LIMITATO»: una scena che non arriva a 255 non prova un range
+ * limitato — prova solo che quella scena non ci arriva.  Le due risposte oneste
+ * sono «compatibile col pieno» e «non conclusivo». */
+typedef enum
+{
+	CATTURA_RANGE_NON_MISURATO = 0,
+	CATTURA_RANGE_COMPATIBILE_PIENO, /* i pixel toccano 0 e 255               */
+	CATTURA_RANGE_NON_CONCLUSIVO     /* non li toccano: dipende dalla SCENA   */
+} CatturaRangeMisurato;
+
+/* ------------------------------------------------------------------ *
+ *  ⛔ I QUATTRO FATTI CHE SI DICHIARANO A VALLE
+ * ------------------------------------------------------------------ *
+ *
+ *   1. il TIPO DI BUFFER   chiesto e dichiarato, con chi lo dice
+ *   2. i BIT PER CANALE    dal formato negoziato, mai inventati
+ *   3. la GEOMETRIA        misura, stride LETTO, byte per fotogramma
+ *   4. il COLORE           range · matrice · trasferimento · primari, come li
+ *                          dichiara il produttore — «non dichiarato» compreso
+ *
+ * ⛔ Chi sta a valle legge questi campi.  Non li deduce, non li ricalcola, e in
+ *    particolare non ricalcola lo stride.
+ */
+typedef struct
+{
+	gboolean noto; /* FALSE finche' il formato non e' stato negoziato */
+
+	/* --- 1. il tipo di buffer ------------------------------------------- */
+	CatturaStrada strada_chiesta;
+	CatturaBuffer buffer_chiesto;
+	CatturaBuffer buffer_dichiarato; /* CATTURA_BUFFER_IGNOTO fino al 1° fotogramma */
+	uint32_t buffer_dichiarato_grezzo;
+	guint buffer_distinti; /* quanti buffer diversi ricicla il produttore */
+
+	/* --- 2. il formato e i bit ------------------------------------------ */
+	uint32_t formato_grezzo;
+	const char *formato; /* "BGRx", "BGRA", … — mai una parola inventata */
+	int bit_per_canale;  /* 8; ⛔ 0 = formato ignoto, e 0 si scrive        */
+	CatturaFonte fonte_bit;
+
+	/* --- 3. la geometria ------------------------------------------------ */
+	uint32_t larghezza, altezza;
+	uint32_t stride;         /* ⛔ LETTO dal chunk. 0 = nessun fotogramma ancora */
+	gboolean stride_letto;   /* FALSE ⇒ `stride` non e' un fatto, e' un vuoto   */
+	guint64 byte;            /* stride × altezza                                */
+	uint64_t modificatore;
+
+	/* --- 4. il colore, come lo dichiara il produttore -------------------- */
+	uint32_t range_grezzo, matrice_grezza, trasferimento_grezzo, primari_grezzi;
+	CatturaFonte fonte_range, fonte_matrice;
+
+	/* --- e la misura che facciamo NOI, perche' il produttore tace -------- */
+	uint8_t minimo[3], massimo[3]; /* R, G, B */
+	CatturaRangeMisurato range_misurato;
+	gboolean nero;    /* ⛔ tutti i pixel a zero: il guasto peggiore di F2.2 */
+	gboolean uniforme; /* tutti i pixel uguali fra loro (nero compreso)      */
+} CatturaConsegna;
+
+/* ------------------------------------------------------------------ *
+ *  Il fotogramma
+ * ------------------------------------------------------------------ */
+
+/* Una regione cambiata (`SPA_META_VideoDamage`).  ⛔ Informazione, non
+ * condizione: vedi il riquadro in testa. */
+typedef struct
+{
+	uint32_t x, y, larghezza, altezza;
+} CatturaRegione;
+
+typedef struct
+{
+	/* ⛔ `pixel` e' NULL sulla strada della scheda: li' non c'e' un puntatore,
+	 *    c'e' un descrittore che vive sulla GPU.  Chi controlla «niente puntatore
+	 *    ⇒ niente fotogramma» senza guardare prima il tipo scarta ogni DMA-BUF in
+	 *    silenzio — misurato il 6 agosto 2026, ed e' costato un giro di prove. */
+	const uint8_t *pixel;
+	guint64 byte;
+	int fd; /* -1 se non c'e' */
+	uint32_t offset;
+	uint32_t stride; /* ⛔ letto dal chunk */
+
+	uint64_t seq;
+	int64_t pts;
+	gboolean seq_nota;
+
+	const CatturaRegione *danno;
+	guint quante_regioni;
+	gboolean danno_dichiarato;
+	gboolean danno_copre_tutto;
+
+	guint64 indice; /* quale fotogramma era, contato dal primo arrivato */
+	const CatturaConsegna *consegna;
+} CatturaFotogrammaInfo;
+
+typedef void (*CatturaFotogramma)(const CatturaFotogrammaInfo *fotogramma, gpointer dati);
+
+/* Il flusso si e' staccato: o la sessione grafica e' finita, o Mutter l'ha
+ * fermato per conto suo. */
+typedef void (*CatturaFine)(gpointer dati);
+
+/* ------------------------------------------------------------------ *
+ *  Il fotogramma FERMO — la consegna della fase 2
+ * ------------------------------------------------------------------ */
+
+/*
+ * Una copia nostra del fotogramma, che vive finche' non la si libera.
+ *
+ * ⭐ E' il prodotto di F2.2: *un'immagine ferma*, presa dalla sessione e messa
+ *    in memoria, con accanto tutto quel che serve a giudicarla senza dedurre
+ *    niente.
+ */
+typedef struct
+{
+	uint8_t *pixel;
+	guint64 byte;
+	uint32_t stride, larghezza, altezza;
+	uint64_t seq;
+	int64_t pts;
+	gboolean seq_nota;
+	gboolean danno_dichiarato, danno_copre_tutto;
+	guint64 indice;          /* quale fotogramma era fra gli arrivati */
+	CatturaConsegna consegna; /* i quattro fatti, congelati con lui   */
+} CatturaFermo;
+
+/*
+ * ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE, e qui sono quattro.
+ *    (`CODER.md` §3.10, `REVIEWER.md` §1 punto 4.)
+ */
+typedef enum
+{
+	CATTURA_PRESA_FATTA = 0,
+	/* ⭐ Zero LEGITTIMO: il flusso e' stato attivo per tutta l'attesa e non e'
+	 *    arrivato niente.  Su Mutter e' il desktop fermo, ed e' un risultato. */
+	CATTURA_PRESA_ZERO,
+	/* ⛔ Il flusso non e' mai stato attivo, o e' caduto: non c'e' nessun numero
+	 *    da leggere, e nessuno zero da scrivere in una tabella. */
+	CATTURA_PRESA_GUASTO,
+	/* ⛔ Strada della scheda: il tipo di buffer e' DICHIARATO, ma i pixel non
+	 *    sono qui.  Non e' un guasto e non e' uno zero. */
+	CATTURA_PRESA_PIXEL_ALTROVE
+} CatturaPresa;
+
+/* ------------------------------------------------------------------ *
+ *  Le chiamate
+ * ------------------------------------------------------------------ */
+
+/*
+ * Avvia la lettura dal nodo indicato, chiedendo misura, colore e strada.
+ *
+ * La misura si dichiara perche' si sta riprendendo un MONITOR VIRTUALE: non
+ * esiste uno schermo da cui dedurla, ed e' il consumatore a dire quanto grande
+ * lo vuole.  ⛔ E si dichiara come rettangolo FISSO, non come intervallo: un
+ * intervallo aperto lascerebbe scegliere a Mutter, che sceglie 1280×720.
+ *
+ * `su_fotogramma` puo' essere NULL: allora i fotogrammi si contano soltanto, e
+ * si prendono con `cattura_prendi`.
+ *
+ * ⛔ Fallisce — dichiarandolo — se il compositore rifiuta il formato chiesto.
+ *    E' l'unico punto in cui un rifiuto si vede subito invece di diventare uno
+ *    schermo nero molto piu' tardi.
+ */
+Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
+                       uint32_t fotogrammi_al_secondo, CatturaStrada strada, CatturaColore colore,
+                       CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
+                       GError **sbaglio);
+
+/*
+ * Aspetta il PROSSIMO fotogramma e ne consegna una copia.
+ *
+ * ⛔ La copia si fa dentro la richiamata di tempo reale — non c'e' altro modo,
+ *    i pixel vivono solo li' — e la MISURA sui pixel (range, nero, uniforme) si
+ *    fa qui, sul thread di chi chiama: rallentare il ciclo di PipeWire
+ *    falserebbe la cosa che si sta guardando.
+ *
+ * ⚠ I fotogrammi che arrivano quando nessuno sta aspettando si contano e basta:
+ *   non si accumulano copie da 8 MB che nessuno ha chiesto.
+ */
+CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
+                            GError **sbaglio);
+
+void cattura_fermo_libera(CatturaFermo *fermo);
+
+/* I quattro fatti, quando sono noti.  FALSE ⇒ il formato non e' stato ancora
+ * negoziato, e non c'e' niente da dichiarare (non «e' tutto a zero»). */
+gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori);
+
+/* I conteggi del giro.  Servono a chi scrive un manifesto o una riga di
+ * registro, e sono separati dai fatti apposta: un conteggio non e' una
+ * dichiarazione sul formato. */
+typedef struct
+{
+	guint64 arrivati;
+	guint64 danno_pieno, danno_parziale, danno_assente;
+	guint64 senza_intestazione;
+	guint64 solo_cursore;   /* buffer marcati CORRUPTED: pixel stantii */
+	guint64 stride_zero;    /* ⛔ scartati invece che calcolati        */
+	guint64 senza_pixel;    /* mappatura assente o chunk vuoto         */
+	guint buffer_distinti;
+	CatturaBuffer tipi_visti[4]; /* ⛔ TUTTI i tipi visti, non solo l'ultimo */
+	guint quanti_tipi;
+} CatturaConteggi;
+
+void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
+
+/* Il flusso e' attivo ADESSO?  ⛔ «E' STATO attivo» non e' «lo e' ancora»: la
+ * morte a meta' misura ha gia' prodotto una riga di tabella con dentro cinque
+ * secondi sotto l'etichetta di venti. */
+gboolean cattura_attiva(Cattura *cattura);
+
+/* Il guasto dichiarato dal produttore, o NULL. */
+const char *cattura_guasto(Cattura *cattura);
+
+void cattura_ferma(Cattura *cattura);
+
+/* --- i nomi, perche' chi scrive un manifesto non li reinventi --------- */
+const char *cattura_buffer_nome(CatturaBuffer buffer);
+const char *cattura_colore_nome(uint32_t formato_grezzo);
+const char *cattura_fonte_nome(CatturaFonte fonte);
+const char *cattura_range_nome(uint32_t grezzo);
+const char *cattura_matrice_nome(uint32_t grezzo);
+const char *cattura_trasferimento_nome(uint32_t grezzo);
+const char *cattura_primari_nome(uint32_t grezzo);
+const char *cattura_range_misurato_nome(CatturaRangeMisurato misurato);
+
+#endif

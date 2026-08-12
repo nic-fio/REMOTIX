@@ -904,6 +904,34 @@ a giudicare è l'utente (§7.3), dietro un interruttore spento di suo (§2.4).
 > **a runtime** invece che a tavolino. ⭐ È §2.7 in azione: il server offre il massimo, e chi non
 > arriva riceve il 4:2:0 — **con la ragione dichiarata**, non in silenzio.
 
+### 2.3-ter ⛔⛔ E il secondo indizio non è un indizio: **è una misura, ed è dalla nostra parte**
+
+*`[M]` 12 agosto 2026, sotto-fase F2.2 della fase 2, sul ferro.*
+
+⛔ **Dieci bit veri non escono dalla cattura di Mutter per NESSUNA strada.** Non è una deduzione
+dal formato che ci capitava: sono state chieste **le due strade e i formati per nome**.
+
+| | `[M]` |
+|---|---|
+| **in memoria (MemFd)** | solo **BGRx/BGRA** ⇒ 8 bit. Contati sulla sfumatura: **255/256/255 livelli distinti**, multipli di 4 a 0,26 |
+| **DMA-BUF** | ⭐ Mutter **lo consegna** — 388 fotogrammi, 4 buffer, modificatore **LINEAR**, stride 7680 letto dal chunk — ⛔ **ma il formato è BGRx, 8 bit** |
+| **chiedendo i formati a 10 bit da soli** | ⛔ `no more input formats`, **su tutt'e due le strade** |
+| ⭐ **il controllo positivo** | BGRx chiesto allo stesso modo, sullo stesso binario, **riesce** ⇒ il «no» è del formato, non dello strumento |
+
+⇒ ⛔ **Il desiderato di `SPECIFICHE.md` §3.1 — «10 bit per canale» — non è raggiungibile dalla
+sorgente**, e non per una scelta nostra. `Main10` da qui significa **otto bit promossi a dieci**, e
+l'etichetta continuerebbe a dirlo per tutta la catena senza che nessuno se ne accorga: l'immagine
+viene bene lo stesso.
+
+⚠ **E non è un muro** (§2.7): il massimo lo offre il server, l'altezza la mette il client. ⛔ **Ma
+adesso il tetto è a monte**, non a valle — e va dichiarato all'utente come tale, non taciuto.
+⭐ Quel che resta aperto non è più *«il nostro codice sa fare 10 bit?»* ma **«esiste una sorgente che
+ce li dia?»**: è una domanda per il compositore, e vive nelle fasi in cui la cattura si tocca.
+
+⭐ *E la previsione era stata scritta prima: F2.3 aveva messo a verbale «se la cattura dà 8 bit, tutta
+la catena resta verde e l'etichetta dice Main10 lo stesso» come rischio da misurare. F2.2 ha
+risposto: **è una certezza, e l'imputato sono io**.*
+
 ### 2.4 ✅ Il ritardo: 50 ms di tetto, 40 di traguardo — e solo per il pezzo che è nostro
 
 *9 agosto 2026. «Per quello che è sotto il nostro controllo 50 ms (o anche 40) va bene, su

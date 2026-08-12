@@ -138,8 +138,22 @@ set -uo pipefail
 
 QUI=${QUI:-/media/REMOTIX/tmp/02-cattura}
 SRC=${SRC:-/media/REMOTIX/src}
-PROG=$QUI/02-cattura-fotogramma
-FONTE=$SRC/02-cattura-fotogramma.c
+# ⭐ IL PRODUTTORE SI DICHIARA, E SONO DUE — aggiunto il 12 agosto 2026 con il
+#    prodotto (P2.2).  Il banco e' nato prima del prodotto e certificava il
+#    produttore scritto DENTRO di se': quel verde non diceva niente sul
+#    prodotto, perche' il prodotto non esisteva ancora (`LEZIONI.md` §1.3).
+#
+#      PROG=$QUI/02-cattura-fotogramma  FONTE=$SRC/02-cattura-fotogramma.c
+#          il produttore del banco, quello certificato il 12 agosto
+#      PROG=$QUI/02-cattura-prodotto    FONTE=$SRC/02-cattura-prodotto.c
+#          ⭐ IL PRODOTTO: src/cattura.c + src/mutter.c, dietro la stessa riga
+#          di comando e con lo stesso manifesto
+#
+# ⛔ E il giudice non cambia: giudica i PIXEL, e non sa chi li ha fatti.  Due
+#    produttori indipendenti sotto lo stesso giudice sono un controllo positivo
+#    che nessuno dei due sarebbe da solo.
+PROG=${PROG:-$QUI/02-cattura-fotogramma}
+FONTE=${FONTE:-$SRC/02-cattura-fotogramma.c}
 GIUDICE=$SRC/02-cattura-giudica.py
 ESITI=${ESITI:-$SRC/02-cattura-esiti.jsonl}
 
