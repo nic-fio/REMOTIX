@@ -196,7 +196,31 @@ CORREDO = {
 #     un banco del prodotto porta anche i due file che decidono che cosa il
 #     binario CONTIENE — e scade quando il prodotto si ricostruisce, che e'
 #     esattamente quel che deve fare.
-FILE_DEL_BINARIO = ["../src/main.c", "../src/Makefile"]
+#
+# ⛔⛔ E LA SECONDA META' DEL BUCO ERA PIU' GRAVE DELLA PRIMA, e si e' vista
+#     solo perche' la prima e' stata curata: aggiunti qui i due file, il conto
+#     e' rimasto **15 su 15**.  Il confronto guardava solo le impronte che la
+#     RIGA porta, quindi ⛔ **aggiungere un file che conta non invalidava
+#     niente**.  La cura sta in `confronta_impronte()`, col suo riquadro, e il
+#     banco che la certifica e' `--prova-impronte`.
+#     ⇒ Il conto onesto, la stessa sera: **da 15 su 15 a 10 su 15**.
+#
+# ⛔⭐ E IL NOME DI CATALOGO E' QUELLO DELLA MACCHINA DEL PRODOTTO — cura della
+#     notte fra il 12 e il 13 agosto 2026, e la prima stesura di questa riga
+#     l'aveva sbagliato.
+#
+#     Era `["../src/main.c", "../src/Makefile"]`, cioe' il posto in cui i due
+#     file stanno **su CHUWI** (`banchi/../src/`).  `[M]`: sul server i banchi
+#     stanno in `/media/REMOTIX/src/` e il prodotto in `/media/REMOTIX/src/
+#     remotix/`, quindi `../src/main.c` diventa `/src/main.c` e **non esiste**.
+#     ⇒ Ogni giro fatto **dal server** — cioe' B10 e B13 — avrebbe scritto due
+#     impronte `None`, e la riga sarebbe nata «non riverificabile» il giorno
+#     stesso: severita' giusta applicata a un file che c'era, solo altrove.
+#
+#     ⭐ E' identica alla cura gia' fatta per `remotix/pagina.c` (ALTRI_POSTI,
+#        qui sotto), e si risolve nello stesso modo: il nome di catalogo e'
+#        quello della macchina del prodotto, e l'altro posto si dichiara.
+FILE_DEL_BINARIO = ["remotix/main.c", "remotix/Makefile"]
 
 FILE_CHE_CONTANO = {
     "B2":  ["01-b2-sonda-trasporto.py", "01-b2-ngtcp2-wt-innesta.py"],
@@ -1414,6 +1438,27 @@ ALTRI_POSTI = {
     #   qua ne' di la', `dove_sta` torna None e la riga dice «non so» invece
     #   di arrotondare — che e' il comportamento giusto e va lasciato stare.
     "remotix/pagina.html": ["../src/pagina.html"],
+    # ⚠ E i due file del BINARIO, per la stessa ragione e nello stesso verso:
+    #   sul server stanno in `remotix/` accanto ai banchi, su CHUWI in
+    #   `../src/`.
+    #
+    # ⛔ CHE I DUE POSTI SIANO LO STESSO FILE NON SI DEDUCE — e la sera del
+    #    12 agosto 2026 NON LO ERANO.  `[M]`, prima di allineare:
+    #      main.c    CHUWI 4274017443a3bb72…  ·  NIC-OS dc9acfa5caca4a8d…
+    #      Makefile  CHUWI c25a1445dfa71c4a…  ·  NIC-OS 479b2af9f5b6c7ea…
+    #    ⇒ Il prodotto del server era costruito (19:46) su sorgenti che il
+    #    deposito aveva gia' cambiato alle 22:18 e alle 22:36, ed e' ESATTAMENTE
+    #    il difetto che queste due impronte esistono per far scadere.
+    #
+    # ⭐ `[M]` dopo `attrezzi-allinea-prodotto.sh allinea`, stessa sera:
+    #      main.c    4274017443a3bb72…  su tutt'e due
+    #      Makefile  c25a1445dfa71c4a…  su tutt'e due
+    #    ⇒ Da qui in poi la stessa riga di registro si rilegge uguale dalle due
+    #    macchine.  ⚠ E quando i due alberi divergono di nuovo, il nome di
+    #    catalogo NON nasconde la divergenza: la fa vedere come impronta
+    #    diversa, cioe' come certificazione scaduta — che e' il suo mestiere.
+    "remotix/main.c": ["../src/main.c"],
+    "remotix/Makefile": ["../src/Makefile"],
 }
 
 
@@ -1483,8 +1528,68 @@ def impronte_di(sigla):
     return fuori
 
 
+# ===========================================================================
+# ⛔⛔ IL CONFRONTO GUARDAVA SOLO QUEL CHE LA RIGA PORTAVA — la seconda meta'
+#     del buco del 12 agosto 2026, ed e' la peggiore delle due.
+#
+# La prima meta' era il catalogo: nessuno dei cinque banchi che misurano il
+# PRODOTTO portava `main.c` e il `Makefile` fra le impronte (il riquadro in
+# testa a `FILE_CHE_CONTANO`).  ⭐ Aggiunti quei due file, il conto e' rimasto
+# **15 su 15** — e li' si e' visto il difetto vero, che stava **qui dentro**:
+#
+#   ⛔ *Il ciclo girava su `vecchie.items()`, cioe' sulle impronte che la RIGA
+#      porta.  Un file aggiunto al catalogo dopo che la riga e' stata scritta
+#      non compare in `vecchie`, quindi non veniva guardato da nessuno: ⇒
+#      **aggiungere un file che conta non invalidava niente**, e una riga
+#      certificata ieri restava verde su un elenco che oggi e' piu' lungo.*
+#
+# ⚠ E' la forma E8 un piano piu' su di dove l'avevamo gia' pagata: non «il
+#   silenzio scambiato per zero» sul contenuto di un file, ma **il denominatore
+#   scambiato per quello di oggi**.  La riga rispondeva onestamente alla
+#   domanda che le veniva posta — «i file che porti sono cambiati?» — e la
+#   domanda era quella sbagliata.  ⛔ La domanda giusta e' *«sai rispondere di
+#   tutti i file che contano OGGI?»*, ed e' `LEZIONI.md` §1.9 regola 4: un
+#   conteggio senza denominatore non e' una misura.
+#
+# ⭐ LA CURA NON E' UN QUARTO ESITO: il terzo c'era gia'.  `non-si-sa` esisteva
+#    per il caso «la riga non porta NESSUNA impronta» (la riga di P5R delle
+#    16:58 del 12 agosto).  «Ne porta MENO di quante ne servono» e' lo stesso
+#    difetto in forma piu' subdola — una riga che dice «certificato» e non sa
+#    dire su tutti i byte che contano — e va nello stesso esito.
+#
+# ⛔ E I MANCANTI VENGONO PRIMA DEI CAMBIATI, che non e' un dettaglio d'ordine.
+#    «Scaduta» porta con se' una promessa — *«so esattamente che cosa e'
+#    cambiato»* — e una riga a cui manca meta' del denominatore quella promessa
+#    non la puo' fare: direbbe «cambiato X» tacendo che di Y e Z non sa niente,
+#    che e' precisamente il «denominatore che promette una cosa e ne misura
+#    un'altra» condannato in testa a questo file.  ⇒ Prima si dichiara che il
+#    denominatore e' rotto, e quel che si e' comunque potuto misurare si dice
+#    **dentro la stessa spiegazione**, invece di perderlo.
+#
+# ⚠ Il verso opposto — la riga porta PIU' file di quanti il catalogo ne conti
+#   oggi — non e' un buco: si continua a confrontarli tutti, cioe' si e' piu'
+#   severi, e un file tolto dal catalogo che nel frattempo e' cambiato fa
+#   scadere la riga.  Va bene cosi': e' l'errore dalla parte giusta.
+# ===========================================================================
 def confronta_impronte(vecchie, nuove):
-    """(verdetto, spiegazione).  verdetto: «uguali» · «cambiate» · «non-si-sa»"""
+    """(verdetto, spiegazione).  verdetto: «uguali» · «cambiate» · «non-si-sa»
+
+    ⛔ I TRE ESITI, e il terzo ha tre ragioni diverse:
+
+      uguali      la riga risponde di TUTTI i file che contano oggi, e sono
+                  identici a quelli su cui la certificazione e' stata fatta;
+      cambiate    ⇒ «scaduta»: i file che la riga porta sono cambiati;
+      non-si-sa   ⇒ «non riverificabile», e cioe':
+                    · la riga non porta NESSUNA impronta, oppure
+                    · ⭐ ne porta MENO di quante il catalogo ne conta oggi,
+                      oppure
+                    · un file non si legge da questa macchina.
+
+    ⚠ `nuove` dev'essere il conto di OGGI per intero — cioe' `impronte_di()`,
+      che mette una chiave per ogni file del catalogo anche quando il valore e'
+      `None`.  ⛔ Passare qui un dizionario potato renderebbe il controllo dei
+      mancanti cieco esattamente come lo era il ciclo di prima.
+    """
     if not vecchie:
         return "non-si-sa", "la certificazione non porta nessuna impronta"
     cambiati, ciechi = [], []
@@ -1494,6 +1599,16 @@ def confronta_impronte(vecchie, nuove):
             ciechi.append(nome)
         elif vecchia != nuova:
             cambiati.append(nome)
+    # ⛔ IL DENOMINATORE PRIMA DEL RISULTATO — vedi il riquadro qui sopra.
+    mancanti = sorted(set(nuove) - set(vecchie))
+    if mancanti:
+        perche = (f"la riga porta {len(vecchie)} impronte, il catalogo oggi ne "
+                  f"conta {len(nuove)}: di «{', '.join(mancanti)}» quella "
+                  f"certificazione non sa niente")
+        if cambiati:
+            perche += (" — e dei file che porta sono gia' cambiati: "
+                       + ", ".join(cambiati))
+        return "non-si-sa", perche
     if cambiati:
         return "cambiate", "cambiati da allora: " + ", ".join(cambiati)
     if ciechi:
@@ -2597,6 +2712,164 @@ def prova_unione():
     return 0 if passati == len(esiti) else 1
 
 
+def prova_impronte():
+    """⛔ IL BANCO DEL MECCANISMO CHE FA SCADERE LE CERTIFICAZIONI — e chi
+    scrive un banco lo certifica nello stesso giro (`MANDATO` §3.3).
+
+    ⭐ Nasce dal buco del 12 agosto 2026: `main.c` e il `Makefile` sono stati
+    aggiunti alle impronte dei cinque banchi del prodotto, **e il conto e'
+    rimasto 15 su 15**.  Il meccanismo che avrebbe dovuto far scadere quelle
+    righe non le ha nemmeno guardate.
+
+    I TRE ESITI si distinguono qui, su casi COSTRUITI e non dedotti:
+
+      1. ⭐ una riga che porta TUTTE le impronte di oggi        → vale oggi
+      2. ⛔ una riga che ne porta MENO                          → non riverif.
+      3. ⛔ una riga completa, con un'impronta diversa          → scaduta
+      4. ⛔ una riga che non porta NESSUNA impronta             → non riverif.
+         (il caso che il terzo esito copriva gia': non deve regredire)
+
+    ⭐⭐ 5. E IL CONTROLLO POSITIVO DEL MECCANISMO STESSO, che e' la meta' che
+    si dimentica.  I primi quattro casi passano anche su uno strumento che
+    dicesse sempre «non riverificabile» — anzi: **un meccanismo fragile passa
+    tutti i guasti, perche' rompersi FA diventare rossi**.  ⛔ Quindi si va
+    nella direzione opposta: si prende un banco che oggi e' VERDE sul registro
+    VERO, gli si aggiunge un file al catalogo, e **quel banco deve diventare
+    non riverificabile**.  Se resta verde, il buco e' ancora li'.
+
+    ⛔ E il giro e' a TRE PASSI, come ogni certificazione di questa casa —
+    verde → non riverificabile → verde: senza il terzo, «il meccanismo ha visto
+    il file nuovo» e «il meccanismo si e' rotto» hanno lo stesso aspetto.
+
+    ⚠ E IL FILE FINTO E' UN FILE VERO, LEGGIBILE, CON UN CONTENUTO.  Un file
+      inesistente farebbe diventare rosso il banco per la ragione sbagliata —
+      la strada dei «ciechi», che esisteva gia' — e certificherebbe zero sul
+      buco vero, che e' il CONTEGGIO.  ⭐ Cosi' invece l'unica cosa che cambia
+      fra il passo 1 e il passo 2 e' **quante impronte il catalogo conta**.
+    """
+    import tempfile
+    esiti = []
+
+    def riga(quando, cert, impronte):
+        return _normalizza({"quando": quando, "macchina": "banco",
+                            "certificati": cert, "impronte": impronte})
+
+    # ⭐ Si lavora su un banco VERO e sulle sue impronte VERE: un caso costruito
+    #    su un catalogo finto certificherebbe il catalogo finto.
+    campione = "B4"
+    oggi = impronte_di(campione)
+    print(f"== il banco su cui si costruiscono i casi: {campione}")
+    print(f"   il catalogo oggi conta {len(oggi)} file: "
+          f"{', '.join(sorted(oggi))}")
+    if len(oggi) < 2:
+        print(f"    {ROSSO}⛔ servono almeno due file per costruire il caso "
+              f"«ne porta meno»{GRIGIO}")
+        return 2
+    if any(v is None for v in oggi.values()):
+        print(f"    {ROSSO}⛔ qualche file di {campione} non si legge da qui: "
+              f"i casi non sarebbero costruiti su impronte vere{GRIGIO}")
+        return 2
+
+    def prova(nome, impronte, atteso):
+        r = riga("2026-08-12T00:00:00", [campione], {campione: impronte})
+        _, stato, verdetto, perche = verdetto_di_oggi(campione, [r])
+        ok = stato == "certificato" and verdetto == atteso
+        print(f"\n  {(VERDE + 'OK ') if ok else (ROSSO + 'NO ')}{GRIGIO} {nome}")
+        print(f"      la riga porta {len(impronte)} impronte, il catalogo "
+              f"oggi ne conta {len(oggi)}")
+        print(f"      verdetto «{verdetto}» (atteso «{atteso}»)")
+        print(f"      perche': {perche}")
+        esiti.append((nome, ok))
+
+    print("\n\n########## 1/5 — ⭐ la riga porta TUTTE le impronte di oggi\n")
+    prova("porta tutto ⇒ vale oggi", dict(oggi), "uguali")
+
+    print("\n\n########## 2/5 — ⛔ la riga ne porta MENO (il buco del 12 "
+          "agosto)\n")
+    meno = dict(oggi)
+    tolto = sorted(meno)[0]
+    del meno[tolto]
+    print(f"    (si toglie «{tolto}» dalla riga, come se fosse stato aggiunto "
+          f"al catalogo dopo)")
+    prova("ne porta meno ⇒ NON riverificabile", meno, "non-si-sa")
+
+    print("\n\n########## 3/5 — ⛔ la riga porta tutto, ma un file e' "
+          "cambiato\n")
+    cambiata = dict(oggi)
+    quale = sorted(cambiata)[0]
+    cambiata[quale] = "0" * 64
+    prova("un file cambiato ⇒ SCADUTA", cambiata, "cambiate")
+
+    print("\n\n########## 4/5 — ⛔ la riga non porta NESSUNA impronta\n")
+    prova("nessuna impronta ⇒ NON riverificabile", {}, "non-si-sa")
+
+    # ── ⭐⭐ 5. IL CONTROLLO POSITIVO DEL MECCANISMO ────────────────────────
+    print("\n\n########## 5/5 — ⭐⭐ il controllo positivo del MECCANISMO: un "
+          "file in piu'")
+    print("           nel catalogo deve far diventare NON RIVERIFICABILE un "
+          "banco verde\n")
+    esito5 = False
+    try:
+        grezze = leggi_registro(REGISTRO)
+    except (OSError, ValueError) as e:
+        print(f"    {ROSSO}⛔ il registro vero non si legge ({e}): il "
+              f"controllo positivo NON e' stato eseguito{GRIGIO}")
+        grezze = None
+    if grezze:
+        ordinate = sorted([_normalizza(r) for r in grezze
+                           if not _e_unione(r)], key=lambda r: r["quando"])
+        # ⛔ Serve un banco che OGGI sia verde.  Se non ce n'e' nemmeno uno il
+        #    controllo non si puo' fare, e «non l'ho potuto fare» non e' «e'
+        #    andato bene»: si esce rossi, non verdi.
+        verdi = [s for s in sorted(GUASTI)
+                 if verdetto_di_oggi(s, ordinate)[2] == "uguali"]
+        print(f"    banchi che oggi valgono, sul registro vero: "
+              f"{', '.join(verdi) or '⛔ NESSUNO'}")
+        if not verdi:
+            print(f"    {ROSSO}⛔ nessun banco verde da cui partire: il "
+                  f"controllo positivo NON si puo' eseguire, e questo non "
+                  f"e' un verde{GRIGIO}")
+        else:
+            vittima = verdi[0]
+            finto = os.path.join(tempfile.mkdtemp(), "b12-controllo-positivo.txt")
+            with open(finto, "w", encoding="utf-8") as f:
+                f.write("⭐ file vero, leggibile, e con un contenuto: e' il "
+                        "CONTEGGIO che deve mordere, non l'illeggibilita'.\n")
+            prima_lista = list(GUASTI[vittima]["file_che_contano"])
+            # passo 1 — verde
+            v1 = verdetto_di_oggi(vittima, ordinate)[2]
+            # passo 2 — col file in piu' nel catalogo
+            GUASTI[vittima]["file_che_contano"] = prima_lista + [finto]
+            letto = impronte_di(vittima).get(finto)
+            v2 = verdetto_di_oggi(vittima, ordinate)[2]
+            # passo 3 — tolto, ci deve tornare
+            GUASTI[vittima]["file_che_contano"] = prima_lista
+            v3 = verdetto_di_oggi(vittima, ordinate)[2]
+            shutil.rmtree(os.path.dirname(finto), ignore_errors=True)
+            print(f"    la vittima: {vittima} — {len(prima_lista)} file nel "
+                  f"catalogo, {len(prima_lista) + 1} col finto")
+            print(f"    ⚠ e il file finto E' STATO LETTO: impronta "
+                  f"{(letto or '⛔ None — il caso sarebbe quello sbagliato')[:32]}…")
+            print(f"    sano «{v1}» → col file in piu' «{v2}» → "
+                  f"risanato «{v3}»  (atteso: uguali → non-si-sa → uguali)")
+            esito5 = (v1 == "uguali" and v2 == "non-si-sa" and v3 == "uguali"
+                      and letto is not None)
+            if not esito5 and v2 == "uguali":
+                print(f"    {ROSSO}⛔⛔ IL BUCO E' ANCORA QUI: un file "
+                      f"aggiunto al catalogo non invalida niente, e una riga")
+                print(f"       certificata ieri resta verde su un elenco che "
+                      f"oggi e' piu' lungo.{GRIGIO}")
+    esiti.append(("⭐⭐ il controllo positivo del meccanismo", esito5))
+
+    print("\n\n    == il verdetto")
+    for nome, ok in esiti:
+        print(f"    {(VERDE + 'OK ') if ok else (ROSSO + 'NO ')}{GRIGIO} {nome}")
+    passati = sum(1 for _, ok in esiti if ok)
+    print(f"\n    {VERDE if passati == len(esiti) else ROSSO}"
+          f"{passati} casi su {len(esiti)}{GRIGIO}")
+    return 0 if passati == len(esiti) else 1
+
+
 def stato_unione(grezze):
     """⛔ LA GUARDIA — quel che chiude **I7**, e gira SENZA rete.
 
@@ -2658,6 +2931,41 @@ def stampa_stato_unione(st):
         print("    (da CHUWI; da NIC-OS `--unisci <percorso della copia "
               "portata a mano>`)")
     print()
+
+
+# ===========================================================================
+# ⛔ CHE COSA SI SA OGGI DI UN BANCO, IN UNA FUNZIONE SOLA — e sta fuori da
+#    `mostra_registro()` apposta.
+#
+# ⭐ Perche' il banco di questo meccanismo (`--prova-impronte`) deve poter
+#    interrogare **la stessa strada** che produce il conto, e non una sua
+#    ricostruzione: un controllo positivo che gira su una copia del giudizio
+#    certifica la copia.  E' la trappola n.1 di questo file — il verde per la
+#    ragione sbagliata — applicata al banco del banco.
+#
+# Torna `(riga, stato, verdetto, perche)`:
+#   stato   None = nessun giro lo nomina · «certificato» · «non certificato» ·
+#           «non lanciabile da li'»
+#   verdetto  ha senso solo se stato == «certificato»: «uguali» · «cambiate» ·
+#             «non-si-sa» (vedi `confronta_impronte`)
+# ===========================================================================
+def verdetto_di_oggi(sigla, ordinate):
+    ultimo = None
+    for r in ordinate:
+        if sigla in r["certificati"]:
+            ultimo = (r, "certificato")
+        elif sigla in r["non_certificati"]:
+            ultimo = (r, "non certificato")
+        elif sigla in r["saltati"]:
+            ultimo = (r, "non lanciabile da li'")
+    if ultimo is None:
+        return None, None, None, None
+    r, stato = ultimo
+    if stato != "certificato":
+        return r, stato, None, None
+    verdetto, perche = confronta_impronte(r["impronte"].get(sigla),
+                                          impronte_di(sigla))
+    return r, stato, verdetto, perche
 
 
 def mostra_registro():
@@ -2765,28 +3073,18 @@ def mostra_registro():
     #    l'arrotondamento del rilievo R12-A.4.
     certi_oggi, scaduti, ciechi, non_certi, mai = [], [], [], [], []
     for sigla in sorted(GUASTI):
-        ultimo = None
-        for r in ordinate:
-            if sigla in r["certificati"]:
-                ultimo = (r, "certificato")
-            elif sigla in r["non_certificati"]:
-                ultimo = (r, "non certificato")
-            elif sigla in r["saltati"]:
-                ultimo = (r, "non lanciabile da li'")
-        if ultimo is None:
+        r, stato, verdetto, perche = verdetto_di_oggi(sigla, ordinate)
+        if stato is None:
             # ⭐ E SOLO QUI la parola «mai» e' vera.
             mai.append(sigla)
             print(f"  {GIALLO}[?]{GRIGIO} {sigla:4s} MAI PROVATO — nessun giro "
                   f"del registro lo nomina")
             continue
-        r, stato = ultimo
         if stato != "certificato":
             non_certi.append(sigla)
             print(f"  {ROSSO}NO {GRIGIO} {sigla:4s} {stato.upper()} il "
                   f"{r['quando']} (su «{r['macchina']}»)")
             continue
-        verdetto, perche = confronta_impronte(r["impronte"].get(sigla),
-                                              impronte_di(sigla))
         if verdetto == "uguali":
             certi_oggi.append(sigla)
             print(f"  {VERDE}OK {GRIGIO} {sigla:4s} CERTIFICATO il "
@@ -2814,6 +3112,10 @@ def mostra_registro():
                   "una certificazione")
             print("          che non si puo' riverificare non e' una "
                   "certificazione (LEZIONI.md §1.9).")
+            print("        ⛔ E se la ragione e' che la riga porta MENO "
+                  "impronte di quante il catalogo")
+            print("           ne conta oggi, il giro va RIFATTO: nessuno ha "
+                  "mai guardato quei file.")
 
     # ── ⛔ IL CONTO, E IL SUO DENOMINATORE ──────────────────────────────────
     print()
@@ -2823,8 +3125,15 @@ def mostra_registro():
           f"{', '.join(certi_oggi) or '—'}")
     print(f"    {ROSSO}{len(scaduti):3d}{GRIGIO}  certificazione SCADUTA "
           f"(i file sono cambiati): {', '.join(scaduti) or '—'}")
+    # ⛔ E L'ETICHETTA DICEVA MENO DI QUEL CHE IL NUMERO CONTA — cura del
+    #    12 agosto 2026 sera, insieme al ciclo di `confronta_impronte`.
+    #    «la riga non porta impronte» nominava UNA sola delle tre ragioni, e
+    #    proprio non quella che stava per arrivare: chi avesse letto un 5 in
+    #    questa riga sarebbe andato a cercare cinque righe senza impronte, e
+    #    le avrebbe trovate con QUATTRO impronte su sei.
     print(f"    {ROSSO}{len(ciechi):3d}{GRIGIO}  certificazione NON "
-          f"RIVERIFICABILE (la riga non porta impronte): "
+          f"RIVERIFICABILE (nessuna impronta, o MENO di quante il catalogo ne "
+          f"conta oggi, o un file che non si legge da qui): "
           f"{', '.join(ciechi) or '—'}")
     print(f"    {ROSSO}{len(non_certi):3d}{GRIGIO}  provati e NON certificati: "
           f"{', '.join(non_certi) or '—'}")
@@ -2980,10 +3289,20 @@ if __name__ == "__main__":
                    help="⛔ certifica l'unione su tre casi costruiti apposta: "
                         "due copie divergenti, due righe in conflitto, e il "
                         "controllo positivo")
+    # ⛔ Il banco del meccanismo che fa SCADERE le certificazioni — il buco del
+    #    12 agosto 2026, dove aggiungere un file che conta non invalidava
+    #    niente.  ⭐ Compreso il controllo positivo del meccanismo stesso.
+    p.add_argument("--prova-impronte", action="store_true",
+                   help="⛔ certifica i TRE esiti (vale oggi · scaduta · non "
+                        "riverificabile) su casi costruiti, e ⭐ verifica che "
+                        "un file aggiunto al catalogo faccia davvero scadere "
+                        "un banco verde")
     a = p.parse_args()
     CERT = a.certificati
     if a.prova_unione:
         sys.exit(prova_unione())
+    if a.prova_impronte:
+        sys.exit(prova_impronte())
     if a.unisci_col_server:
         sys.exit(unisci_col_server(a.rispecchia))
     if a.unisci:
