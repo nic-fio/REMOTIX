@@ -220,6 +220,15 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 - ⛔ **Nove difetti di banco** trovati girando (elenco sopra).
 - ⚠ **In Chrome headless `VideoEncoder.flush()` non ritorna.** Aggirato con una finestra vera,
   ⛔ **non capito**: resta `[?]`, e chi lo riusa altrove deve saperlo.
+- ⛔⛔ **E un difetto del COORDINAMENTO, che è mio.** La regola *«ogni agente possiede file suoi, e
+  non tocca quelli degli altri»* — scritta per impedire che sei agenti si sovrascrivessero — ha
+  prodotto questo: l'agente degli arbitri ha **fatto e riferito cinque ricertificazioni**, e
+  **nessuna ha scritto una riga nel registro**, perché il registro apparteneva a un altro agente.
+  ⇒ Per ore il conto ha detto *«B9 scaduta»* mentre B9 era stato rigirato **quattro volte**.
+  ⚠ È la stessa forma che questa giornata ha inseguito tutto il tempo — ***«fatto» e «scritto dove
+  qualcuno lo legge» sono due cose diverse*** — applicata al registro invece che al filo.
+  ⭐ **La regola che ne esce**: *chi è autorizzato a certificare deve essere autorizzato a scrivere
+  la riga della certificazione*. Un permesso a metà produce lavoro che non esiste per nessuno.
 - ⚠ **`misura-cattura.c` stampa nella riga di esito la misura CHIESTA, non quella negoziata** — la
   voce 12-bis fu curata in `misura-wlroots` e **non lì**. Rilievo `[R]` **lasciato aperto e non
   toccato**: non è di questa fase, ed è lo strumento che certifica gli altri banchi.

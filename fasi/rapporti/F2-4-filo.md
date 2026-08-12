@@ -862,3 +862,31 @@ difetto, letta dal lato della cura invece che da quello del guasto.
 ⭐ Quattro correzioni alla stessa riga in una sera non sono un aneddoto: sono **la forma di un
 errore**. Chi la riconoscerà la prossima volta — *«sto indicizzando una tolleranza su un
 sostituto»* — risparmierà una serata.
+
+---
+
+## ⭐ La riga di catalogo di B9, rimessa a posto — 12 agosto 2026, 20:09
+
+⛔ **Che cosa era**: non un problema di unione. L'ultima riga «B9 certificato» era del **17:26 su
+CHUWI** — cioè della **prima** delle cinque ricertificazioni di stasera — e portava
+`../RCP.md = a6b7443c…`, mentre il documento di adesso è `31b8e15d…`: quattro cure dopo (P10 · P11 ·
+P12/P13 · P14). ⇒ Una **riga vecchia**, non una riga smarrita: le quattro ricertificazioni seguenti
+sono state fatte e riferite, ⛔ ma nessuna di esse aveva **scritto** una riga di registro, perché
+`01-b12-guasti.py` e il registro sono di un altro agente e non li ho toccati di mia iniziativa.
+⚠ È la stessa forma che questo capitolo ha pagato tutto il giorno: *«fatto» e «scritto dove qualcuno
+lo legge» sono due cose diverse* — qui applicata al registro invece che al filo.
+
+Il giro rifatto, con `01-b0-terreno.sh prodotto` davanti (**13 su 13**, 0 guai):
+
+| passo | uscita | la marca «il testo è cambiato sotto il banco» |
+|---|---|---|
+| sano | **0** — 12 voci su 12 sul `RCP.md` di adesso | ⛔ **non** compare |
+| guasto (`--applica B9`) | **3** — «l'inventario è intero, ma 1 voci citano un testo che non c'è più» | ⭐ compare **una volta**, con `L4: 1 appigli persi` |
+| risanato (`--togli B9`) | **0** | ⛔ non compare, e la copia torna all'impronta di prima |
+
+⛔ Scritta con `--giudica --scena`, **mai a mano**, e la scena dice contro che cosa: *documenti —
+`RCP.md` e `01-b3-cliente.py` su CHUWI, nessun server e nessuna rete*. Poi `--unisci-col-server
+--rispecchia`: **68 → 69 giri**, 0 righe perse, 0 inventate, e le due copie adesso identiche.
+
+⭐ **Il conto del catalogo: 15 su 15 certificati oggi** — 0 scadute, 0 non riverificabili, 0 mai
+provati.
