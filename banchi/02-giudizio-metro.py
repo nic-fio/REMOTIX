@@ -994,6 +994,29 @@ def main():
                         "stato 2, non con un promosso")
     a = p.parse_args()
 
+    # ⛔⭐ UNA FACOLTATIVA PASSATA VUOTA E' UNA FACOLTATIVA NON PASSATA — e la
+    #     riga che lo dichiara vale, perche' senza di lei chi chiama e'
+    #     costretto a costruire la riga di comando a pezzi.
+    #
+    # `[M]` 12 agosto 2026, lacuna L3.  `02-giudizio-confronto.sh giudica`
+    # inoltrava `"$@"` al metro, e nessun file del deposito diceva che cosa ci
+    # fosse dentro: `01-b0-chiamate.py` non poteva giudicare quella chiamata, e
+    # la stessa cucitura era gia' costata un rosso su B6 (10 agosto) e uno su
+    # B7 (11 agosto).  ⇒ Adesso quel ramo scrive **tutte** le opzioni per nome,
+    # e quelle che l'utente non ha dato le scrive vuote.
+    #
+    # ⚠ E vale SOLO per le facoltative.  I quattro obbligatori restano
+    #   `required=True`: `--cattura ""` non diventa «non passato», arriva a
+    #   `carica()` e si ferma con «il file non esiste — «»».  ⛔ Se «vuoto»
+    #   valesse «non passato» anche li', un ingresso perso in una variabile di
+    #   shell mai assegnata avrebbe la faccia di una scelta — che e' la forma
+    #   E8 (`REVIEWER.md` §2), rimessa dentro dalla porta di servizio.
+    for _facoltativa in ("cattura_precedente", "riferimento_10",
+                         "profondita_dispositivo", "colore",
+                         "identita_pagina", "esiti"):
+        if getattr(a, _facoltativa) == "":
+            setattr(a, _facoltativa, None)
+
     def log(s=""):
         print(s)
 

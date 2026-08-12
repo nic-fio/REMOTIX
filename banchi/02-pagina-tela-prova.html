@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>F2.5-tela — che cosa fa un VideoDecoder quando la tela cambia a meta' sessione</title>
+<style>
+  body { font: 13px/1.45 monospace; background: #101014; color: #ddd; margin: 12px; }
+  canvas { border: 1px solid #444; image-rendering: pixelated; }
+  #registro { margin-top: 10px; max-height: 60vh; overflow: auto; white-space: pre-wrap; }
+  .si  { color: #7ee787; }
+  .no  { color: #ff7b72; }
+  .boh { color: #e3b341; }
+  h1 { font-size: 15px; }
+</style>
+</head>
+<body>
+<!--
+=============================================================================
+⛔ PERCHE' QUESTA PAGINA ESISTE, E CHE MISURA SBAGLIATA IMPEDISCE
+
+`RCP.md` §6.2, corretto oggi: la misura di un fotogramma deve valere la **tela
+IN VIGORE**, che §7.1 lascia cambiare a meta' sessione con `ADATTA_TELA` /
+`TELA(ADATTATA…)`.  ⛔ Da cui un buco che nessuna riga copre: §5.2 impone una
+**chiave** dopo `SESSIONE`, ma dopo un `TELA(ADATTATA)` il decodificatore del
+client **riparte da zero una seconda volta**, e nessuna riga dice che il primo
+fotogramma alla misura nuova debba essere una chiave.
+
+⚠ E il buco NON si cura scrivendo la riga.  §5.2 motiva se stessa con un `[S]`:
+  *«il client non ha modo di accorgersene… il decodificatore non solleva
+  errori»*.  Se sul cambio di misura il decodificatore **solleva** un errore, il
+  client se ne accorge e la riga vale poco; se **dipinge spazzatura in
+  silenzio**, e' la stessa forma di P6 di F2.5 e la riga va scritta.
+
+⇒ Questa pagina lo MISURA, sul pixel, su due motori e su due codec.
+
+=============================================================================
+⛔ I QUATTRO ASPETTI POSSIBILI, SCRITTI PRIMA DEL GIRO
+
+Senza questa tabella «e' andata bene» e «non me ne sono accorto» hanno lo stesso
+aspetto.  Ogni riga del registro porta `esito` in questa forma — `<pixel>/<voce>`:
+
+  NIENTE/ERRORE      nessun fotogramma dipinto, E il decodificatore lo dice
+                     ⇒ il buco e' piccolo: il client se ne accorge da solo e
+                       manda `RICHIEDI_CHIAVE` (§5.2 lo impone gia')
+  NIENTE/MUTO        nessun fotogramma dipinto, e nessuno dice perche'
+                     ⇒ il sintomo e' «lo schermo si e' fermato», che non nomina
+                       ne' il protocollo ne' la tela
+  SBAGLIATI/ERRORE   ha dipinto qualcosa che NON e' l'immagine attesa, ma lo
+                     dice ⇒ il client ha comunque l'appiglio per reagire
+  ⛔ SBAGLIATI/MUTO  ha dipinto spazzatura E NON LO DICE
+                     ⇒ e' la forma di P6, ed e' il caso in cui la riga in
+                       `RCP.md` va scritta: non c'e' nessun altro modo di
+                       accorgersene
+  GIUSTI/…           8 celle su 8 alla misura NUOVA ⇒ il decodificatore si e'
+                     adattato da solo, e il buco costa meno di quel che sembra
+
+⛔ E «SBAGLIATI» ha due sotto-casi che il banco tiene separati, perche' hanno
+   cure diverse: `celle_vecchia` alto vuol dire **ha tenuto l'immagine
+   precedente** (che e' quel che §5.2 prescrive di fare, ed e' innocuo);
+   `celle_vecchia` basso e `celle_nuova` basso vuol dire **spazzatura vera**.
+
+=============================================================================
+⛔ LA TRAPPOLA CHE QUESTO BANCO EVITA, E CHE AVREBBE FALSATO TUTTO
+
+WebCodecs pretende un fotogramma **chiave dopo `configure()` E DOPO
+`flush()`**.  ⇒ Se fra la prima e la seconda fase questa pagina chiamasse
+`flush()`, il caso «delta alla misura nuova» fallirebbe **per una ragione che
+non c'entra niente con la misura**, e il banco scriverebbe contro `RCP.md` un
+difetto che e' suo.
+
+⛔ Qui fra le due fasi NON si chiama ne' `flush()` ne' `configure()` (tranne nei
+   due casi in cui la riconfigurazione E' la variabile, e li' lo si dichiara).
+   Si aspetta che la coda si svuoti e che i fotogrammi smettano di uscire.
+
+=============================================================================
+⚠ I CONTROLLI, e senza di loro nessun numero di qui vale
+
+  P1  il lettore trova 8/8 su celle dipinte a mano — a TUTT'E DUE le misure
+  P2  su una tela grigia piatta NON trova 8/8
+  P7  ⭐ il flusso PICCOLO, da solo, su un decodificatore configurato a
+      320x240, dipinge 8/8 ⇒ se un caso (b) sara' rosso, il rosso non e' del
+      flusso piccolo: quello e' buono
+  P8  il flusso piccolo SENZA parameter set, su un decodificatore FRESCO,
+      non dipinge ⇒ dice che togliere i parameter set e' un guasto vero, e
+      distingue «non c'e' nessun SPS» da «c'e' l'SPS SBAGLIATO», che e' la
+      condizione dei casi (b)
+  (a) il caso «chiave a misura A, poi delta a misura A» — il controllo
+      positivo dentro la stessa configurazione dei casi (b) e (c)
+
+⛔ GUASTI INNESTABILI (`?guasta=`), perche' chi scrive un banco lo certifica
+   nello stesso giro:
+     lettore   il classificatore risponde sempre «la tinta attesa»
+               ⇒ P2 deve cadere, e ogni SBAGLIATI deve diventare GIUSTI
+     muto      i testi degli errori si buttano
+               ⇒ ogni …/ERRORE deve diventare …/MUTO.  E' il guasto che
+                 certifica che «MUTO» questo banco lo sa vedere — senza,
+                 «spazzatura in silenzio» sarebbe una parola, non una misura
+=============================================================================
+-->
+<h1>F2.5-tela — il cambio di tela a meta' sessione, misurato sul pixel</h1>
+<div id="stato">in corso…</div>
+<canvas id="tela" width="640" height="480"></canvas>
+<div id="registro"></div>
+<script>
+"use strict";
+
+const PARAMETRI = new URLSearchParams(location.search);
+const GIRO = PARAMETRI.get("giro") || "f25t-" + Math.random().toString(36).slice(2, 10);
+const GUASTO = PARAMETRI.get("guasta") || "";
+
+const tela = document.getElementById("tela");
+const pennello = tela.getContext("2d", { willReadFrequently: true, alpha: false });
+
+let numero = 0;
+const riassunto = { prove: 0, rosse: 0, controlli_rossi: 0 };
+
+function scrivi(testo, classe) {
+  const r = document.getElementById("registro");
+  const d = document.createElement("div");
+  if (classe) d.className = classe;
+  d.textContent = testo;
+  r.appendChild(d);
+  r.scrollTop = r.scrollHeight;
+}
+
+/* ⛔ Si ASPETTA la conferma del raccoglitore: un esito spedito e non confermato
+   ha due letture — «non e' successo» e «non e' arrivato».  ⚠ E niente parte da
+   dentro `pagehide`: li' il tracciatore e' cieco su Chrome
+   (`fasi/01-filo-nudo.md`, banco P5). */
+async function spedisci(dati) {
+  dati.n = ++numero;
+  dati.giro = GIRO;
+  dati.guasto = GUASTO;
+  dati.motore = navigator.userAgent;
+  dati.scena = PARAMETRI.get("scena") || "non dichiarata";
+  try {
+    const r = await fetch("/esito", {
+      method: "POST", cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dati)
+    });
+    if (!r.ok) scrivi("⛔ il raccoglitore ha risposto " + r.status, "no");
+  } catch (e) {
+    scrivi("⛔ l'esito non e' potuto uscire: " + e, "no");
+  }
+}
+
+/* ── LA RILETTURA DEI PIXEL ────────────────────────────────────────────────
+   ⛔ Si legge la TELA, non il `VideoFrame`: leggere il fotogramma sarebbe
+      leggere il decodificatore, e qui la domanda e' che cosa vede l'utente (I8).
+   ⛔ E si legge alla GEOMETRIA che si sta interrogando: la stessa tela viene
+      letta due volte, contro la misura nuova e contro la vecchia. */
+
+function distanza(a, b) {
+  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+  return dr * dr + dg * dg + db * db;
+}
+
+function colore_cella(pixel, larghezza, cella) {
+  const bx = Math.floor(cella.l * 0.2), by = Math.floor(cella.a * 0.2);
+  const x0 = cella.x + bx, x1 = cella.x + cella.l - bx;
+  const y0 = cella.y + by, y1 = cella.y + cella.a - by;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let y = y0; y < y1; y += 3) {
+    for (let x = x0; x < x1; x += 3) {
+      const i = (y * larghezza + x) * 4;
+      r += pixel[i]; g += pixel[i + 1]; b += pixel[i + 2];
+      n++;
+    }
+  }
+  return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : null;
+}
+
+function classifica(colore, tinte) {
+  let prima = null, seconda = null;
+  for (const t of tinte) {
+    const d = distanza(colore, t.rgb);
+    if (prima === null || d < prima.d) { seconda = prima; prima = { nome: t.nome, d: d }; }
+    else if (seconda === null || d < seconda.d) { seconda = { nome: t.nome, d: d }; }
+  }
+  return { tinta: prima.nome, distanza: Math.round(Math.sqrt(prima.d)) };
+}
+
+/* Legge la tela alla geometria di `g` e classifica le otto celle. */
+function leggi(g) {
+  let dati;
+  try {
+    dati = pennello.getImageData(0, 0, g.larghezza, g.altezza);
+  } catch (e) {
+    return { errore: "getImageData: " + e, corrette: 0, lette: 0, celle: [] };
+  }
+  const letture = [];
+  let corrette = 0;
+  for (const c of g.celle) {
+    const colore = colore_cella(dati.data, g.larghezza, c);
+    if (colore === null) continue;
+    let esito = classifica(colore, g.tinte);
+    /* ⛔ GUASTO «lettore»: il classificatore risponde sempre giusto.  Deve far
+       cadere P2 e far diventare GIUSTI ogni SBAGLIATI. */
+    if (GUASTO === "lettore") esito = { tinta: c.tinta, distanza: 0 };
+    const giusta = esito.tinta === c.tinta;
+    if (giusta) corrette++;
+    letture.push({ indice: c.indice, attesa: c.tinta, letta: esito.tinta,
+                   giusta: giusta, rgb_letto: colore, rgb_atteso: c.rgb,
+                   distanza: esito.distanza });
+  }
+  return { celle: letture, corrette: corrette, lette: letture.length, errore: null };
+}
+
+function pulisci() {
+  /* ⛔ Un colore che non e' nessuna delle otto tinte e non e' nero: cosi'
+     «non ha dipinto niente» ha un aspetto suo. */
+  pennello.fillStyle = "#7a007a";
+  pennello.fillRect(0, 0, tela.width, tela.height);
+}
+
+function byte_da_base64(b64) {
+  const s = atob(b64);
+  const d = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) d[i] = s.charCodeAt(i);
+  return d;
+}
+
+async function spedisci_png(nome) {
+  let url;
+  try { url = tela.toDataURL("image/png"); }
+  catch (e) { scrivi("⛔ toDataURL: " + e, "no"); return null; }
+  const nomefile = GIRO + "-" + nome + ".png";
+  try {
+    const r = await fetch("/pixel?nome=" + encodeURIComponent(nomefile),
+                          { method: "POST", cache: "no-store", body: url });
+    if (!r.ok) { scrivi("⛔ /pixel ha risposto " + r.status, "no"); return null; }
+  } catch (e) { scrivi("⛔ il PNG non e' uscito: " + e, "no"); return null; }
+  return nomefile;
+}
+
+/* ── IL DECODIFICATORE, tenuto vivo attraverso le due fasi ───────────────── */
+
+function nuovo(conto) {
+  return new VideoDecoder({
+    output: (f) => {
+      conto.fotogrammi++;
+      conto.misure.push(f.codedWidth + "x" + f.codedHeight);
+      if (conto.formato === null) conto.formato = (f.format === undefined ? "assente" : f.format);
+      try { pennello.drawImage(f, 0, 0); conto.disegni++; }
+      catch (e) { conto.errore_disegno = String(e); }
+      try { f.close(); } catch (e) { /* gia' chiuso */ }
+    },
+    /* ⛔ Il richiamo d'errore e' l'unico posto in cui il decodificatore puo'
+       dire «sono fallito».  Buttarlo qui sarebbe rendere ogni fallimento
+       indistinguibile da uno zero (`REVIEWER.md` §1 punto 4). */
+    error: (e) => { conto.errori.push(String(e)); }
+  });
+}
+
+function conto_nuovo() {
+  return { pezzi_dati: 0, fotogrammi: 0, disegni: 0, misure: [], formato: null,
+           errori: [], errore_configure: null, errore_disegno: null };
+}
+
+async function configura(dec, conto, codec, larghezza, altezza) {
+  const config = { codec: codec, codedWidth: larghezza, codedHeight: altezza,
+                   optimizeForLatency: true };
+  try {
+    const s = await VideoDecoder.isConfigSupported(config);
+    conto.api_dichiarata = { supported: s.supported };
+  } catch (e) { conto.api_dichiarata = { errore: String(e) }; }
+  try { dec.configure(config); }
+  catch (e) { conto.errore_configure = String(e); return false; }
+  return true;
+}
+
+function dai(dec, conto, pezzi, spostamento) {
+  for (const p of pezzi) {
+    try {
+      dec.decode(new EncodedVideoChunk({
+        type: p.tipo, timestamp: p.istante + (spostamento || 0),
+        data: byte_da_base64(p.dati)
+      }));
+      conto.pezzi_dati++;
+    } catch (e) {
+      /* ⛔ Un'eccezione sincrona di `decode()` E' una voce: si registra e ci si
+         ferma, invece di continuare a versare pezzi in un decodificatore morto. */
+      conto.errori.push("decode: " + e);
+      break;
+    }
+  }
+}
+
+/* ⛔ SI ASPETTA SENZA `flush()` — vedi l'intestazione: un `flush()` qui
+   pretenderebbe una chiave dopo, e i casi «delta» fallirebbero per la ragione
+   sbagliata.  Si guarda la coda, e poi si guarda che i fotogrammi abbiano
+   smesso di uscire. */
+async function attendi(dec, conto, tetto_ms) {
+  const t0 = performance.now();
+  let ultimo = -1, fermo_da = 0;
+  while (performance.now() - t0 < (tetto_ms || 2500)) {
+    await new Promise(r => setTimeout(r, 40));
+    let coda = 0;
+    try { coda = dec.decodeQueueSize; } catch (e) { coda = 0; }
+    if (conto.fotogrammi !== ultimo) { ultimo = conto.fotogrammi; fermo_da = 0; }
+    else fermo_da += 40;
+    if (coda === 0 && fermo_da >= 240) return +(performance.now() - t0).toFixed(0);
+  }
+  return +(performance.now() - t0).toFixed(0);
+}
+
+/* ── UN CASO ─────────────────────────────────────────────────────────────── */
+
+function voce(conto) {
+  /* ⛔ «Ha detto perche'» e' vero se c'e' un testo d'errore da qualche parte.
+     Il guasto «muto» butta i testi: e' cosi' che si certifica che questo banco
+     sa distinguere il silenzio dal rumore. */
+  const errori = (GUASTO === "muto") ? [] : conto.errori;
+  const conf = (GUASTO === "muto") ? null : conto.errore_configure;
+  return { errori: errori, errore_configure: conf,
+           parlato: !!(errori.length || conf) };
+}
+
+function giudizio(conto, corrette_nuova, attese_nuova) {
+  const v = voce(conto);
+  const pixel = (conto.disegni === 0) ? "NIENTE"
+              : (corrette_nuova === attese_nuova ? "GIUSTI" : "SBAGLIATI");
+  return { esito: pixel + "/" + (v.parlato ? "ERRORE" : "MUTO"),
+           pixel: pixel, parlato: v.parlato, errori: v.errori,
+           errore_configure: v.errore_configure,
+           /* ⛔ LA RIGA CHE DECIDE LA RACCOMANDAZIONE: ha dipinto qualcosa che
+              non e' l'immagine attesa, e non l'ha detto a nessuno. */
+           spazzatura_in_silenzio: (pixel === "SBAGLIATI" && !v.parlato) };
+}
+
+/* `caso` = { nome, atteso, famiglia, prima, dopo, pezzi_dopo, riconfigura } */
+async function prova_caso(caso, seq) {
+  const g1 = seq[caso.prima];
+  const g2 = caso.dopo ? seq[caso.dopo] : null;
+
+  pulisci();
+  const c1 = conto_nuovo();
+  const dec = nuovo(c1);
+  const acceso = await configura(dec, c1, g1.codec, g1.larghezza, g1.altezza);
+  let ms1 = 0;
+  if (acceso) {
+    dai(dec, c1, g1.pezzi, 0);
+    ms1 = await attendi(dec, c1);
+  }
+  const l1 = leggi(g1);
+
+  /* La seconda fase, se c'e'. */
+  let c2 = null, l2_nuova = null, l2_vecchia = null, giud = null, ms2 = 0;
+  let riconfig = null;
+  if (g2 && acceso) {
+    pulisci();                       /* ⛔ o «non ha dipinto» somiglierebbe a
+                                        «ha tenuto il vecchio» */
+    c2 = conto_nuovo();
+    c2.fotogrammi_fase1 = c1.fotogrammi;
+    /* ⛔ Il conto della seconda fase e' un conto NUOVO ma il DECODIFICATORE e'
+       lo stesso: e' l'unico modo di misurare «a meta' sessione».  I richiami
+       del decodificatore scrivono ancora su `c1`, quindi si travasano qui. */
+    const base_fot = c1.fotogrammi, base_dis = c1.disegni, base_err = c1.errori.length;
+    if (caso.riconfigura) {
+      riconfig = { codec: g2.codec, larghezza: g2.larghezza, altezza: g2.altezza };
+      const ok = await configura(dec, c1, g2.codec, g2.larghezza, g2.altezza);
+      if (!ok) riconfig.errore = c1.errore_configure;
+    }
+    dai(dec, c1, g2[caso.pezzi_dopo], 1000000);
+    ms2 = await attendi(dec, c1);
+    c2.fotogrammi = c1.fotogrammi - base_fot;
+    c2.disegni = c1.disegni - base_dis;
+    c2.pezzi_dati = g2[caso.pezzi_dopo].length;
+    c2.misure = c1.misure.slice(base_fot);
+    c2.errori = c1.errori.slice(base_err);
+    c2.errore_configure = riconfig && riconfig.errore ? riconfig.errore : null;
+    c2.formato = c1.formato;
+    l2_nuova = leggi(g2);
+    l2_vecchia = leggi(g1);
+    giud = giudizio(c2, l2_nuova.corrette, g2.celle.length);
+  }
+
+  try { await dec.flush(); } catch (e) { /* in coda: qui il flush non falsa niente */ }
+  try { dec.close(); } catch (e) { /* gia' chiuso */ }
+
+  const png = (c2 ? c2.disegni : c1.disegni) > 0
+      ? await spedisci_png(caso.nome) : null;
+
+  const riga = {
+    tipo: "CASO", caso: caso.nome, famiglia: caso.famiglia,
+    /* ⛔⭐ L'ATTESO, SCRITTO PRIMA DEL GIRO, IN OGNI RIGA.  Senza, «e' andata
+       bene» e «non me ne sono accorto» hanno lo stesso aspetto. */
+    atteso_scritto_prima: caso.atteso,
+    prima: { sequenza: g1.nome, misura: g1.larghezza + "x" + g1.altezza,
+             pattern: g1.pattern, codec: g1.codec,
+             pezzi: g1.pezzi.length, fotogrammi: c1.fotogrammi,
+             disegni: c1.disegni, misure: c1.misure.slice(0, 3),
+             formato: c1.formato,
+             celle_giuste: l1.corrette, celle_attese: g1.celle.length,
+             errore_configure: GUASTO === "muto" ? null : c1.errore_configure,
+             errori: GUASTO === "muto" ? [] : c1.errori.slice(0, 4),
+             api_dichiarata: c1.api_dichiarata, ms: ms1 },
+    dopo: g2 && c2 ? {
+      sequenza: g2.nome, misura: g2.larghezza + "x" + g2.altezza,
+      pattern: g2.pattern, codec_del_flusso: g2.codec,
+      quali_pezzi: caso.pezzi_dopo, pezzi: c2.pezzi_dati,
+      riconfigurato: riconfig,
+      fotogrammi: c2.fotogrammi, disegni: c2.disegni,
+      misure_dei_fotogrammi: c2.misure,
+      celle_giuste_misura_NUOVA: l2_nuova.corrette,
+      celle_attese_nuova: g2.celle.length,
+      celle_giuste_misura_VECCHIA: l2_vecchia.corrette,
+      celle_attese_vecchia: g1.celle.length,
+      rgb_prime_tre: l2_nuova.celle.slice(0, 3).map(c => c.rgb_letto),
+      errori: c2.errori, errore_configure: c2.errore_configure, ms: ms2
+    } : null,
+    esito: giud ? giud.esito
+                : (c1.disegni === 0 ? "NIENTE/" + (c1.errori.length || c1.errore_configure ? "ERRORE" : "MUTO")
+                   : (l1.corrette === g1.celle.length ? "GIUSTI/-" : "SBAGLIATI/-")),
+    spazzatura_in_silenzio: giud ? giud.spazzatura_in_silenzio : false,
+    png: png
+  };
+  await spedisci(riga);
+
+  const classe = riga.esito.startsWith("GIUSTI") ? "si"
+               : (riga.spazzatura_in_silenzio ? "no" : "boh");
+  scrivi(caso.nome.padEnd(34) + " → " + riga.esito.padEnd(18)
+       + " fase1 " + l1.corrette + "/" + g1.celle.length
+       + (c2 ? ("  fase2 nuova " + l2_nuova.corrette + "/" + g2.celle.length
+                + " vecchia " + l2_vecchia.corrette + "/" + g1.celle.length
+                + " fotogrammi " + c2.fotogrammi + " [" + c2.misure.join(",") + "]"
+                + (c2.errori.length ? "  ⛔ " + c2.errori.join(" | ") : "")
+                + (c2.errore_configure ? "  ⛔ configure: " + c2.errore_configure : ""))
+             : "")
+       + (c1.errore_configure ? "  ⛔ configure(fase1): " + c1.errore_configure : ""),
+       classe);
+  riassunto.prove++;
+  return riga;
+}
+
+/* ── I CONTROLLI ─────────────────────────────────────────────────────────── */
+
+async function controlli_lettore(seq) {
+  for (const nome of ["tela-hevc-grande", "tela-hevc-piccola"]) {
+    const g = seq[nome];
+    pulisci();
+    for (const c of g.celle) {
+      pennello.fillStyle = "rgb(" + c.rgb.join(",") + ")";
+      pennello.fillRect(c.x, c.y, c.l, c.a);
+    }
+    const p1 = leggi(g);
+    const ok1 = p1.corrette === g.celle.length;
+    pennello.fillStyle = "#808080";
+    pennello.fillRect(0, 0, tela.width, tela.height);
+    const p2 = leggi(g);
+    const ok2 = p2.corrette < g.celle.length;
+    await spedisci({ tipo: "CONTROLLO", prova: "P1-P2",
+                     misura: g.larghezza + "x" + g.altezza,
+                     p1_corrette: p1.corrette, p2_corrette: p2.corrette,
+                     attese: g.celle.length, p1_ok: ok1, p2_ok: ok2 });
+    scrivi("P1/P2 a " + g.larghezza + "x" + g.altezza + ": dice SI' "
+         + p1.corrette + "/" + g.celle.length + " · dice NO "
+         + p2.corrette + "/" + g.celle.length,
+         (ok1 && ok2) ? "si" : "no");
+    if (!ok1 || !ok2) riassunto.controlli_rossi++;
+  }
+}
+
+/* P7 e P8 — sul flusso PICCOLO da solo, con un decodificatore FRESCO. */
+async function controlli_flusso(seq, famiglia) {
+  const g = seq["tela-" + famiglia + "-piccola"];
+  for (const [nome, quali, atteso] of [
+      ["P7-piccola-da-sola-" + famiglia, "pezzi",
+       "GIUSTI: il flusso piccolo e' buono, e un rosso nei casi (b) non e' suo"],
+      ["P8-piccola-senza-ps-fresco-" + famiglia, "pezzi_senza_ps",
+       "NIENTE/ERRORE: senza NESSUN parameter set attivo il decodificatore non "
+       + "puo' partire — e' la condizione OPPOSTA a quella dei casi (b), dove "
+       + "un parameter set c'e' ed e' quello SBAGLIATO"]]) {
+    pulisci();
+    const c = conto_nuovo();
+    const dec = nuovo(c);
+    const acceso = await configura(dec, c, g.codec, g.larghezza, g.altezza);
+    let ms = 0;
+    if (acceso) { dai(dec, c, g[quali], 0); ms = await attendi(dec, c); }
+    const l = leggi(g);
+    try { await dec.flush(); } catch (e) { /* atteso in P8 */ }
+    try { dec.close(); } catch (e) { /* gia' chiuso */ }
+    const giud = giudizio(c, l.corrette, g.celle.length);
+    await spedisci({ tipo: "CONTROLLO", prova: nome, famiglia: famiglia,
+                     atteso_scritto_prima: atteso,
+                     quali_pezzi: quali, misura: g.larghezza + "x" + g.altezza,
+                     fotogrammi: c.fotogrammi, disegni: c.disegni,
+                     misure: c.misure, formato: c.formato,
+                     celle_giuste: l.corrette, celle_attese: g.celle.length,
+                     /* ⛔ Le otto letture, per esteso: P7 e' il controllo che
+                        protegge i casi (b), e un controllo che dice solo «1 su
+                        8» non permette di distinguere «non ha dipinto» da «ha
+                        dipinto l'immagine sbagliata». */
+                     letture: l.celle,
+                     esito: giud.esito, errori: giud.errori,
+                     errore_configure: giud.errore_configure, ms: ms });
+    scrivi(nome.padEnd(34) + " → " + giud.esito.padEnd(18)
+         + " celle " + l.corrette + "/" + g.celle.length
+         + " fotogrammi " + c.fotogrammi
+         + (giud.errori.length ? "  ⛔ " + giud.errori.join(" | ") : "")
+         + (giud.errore_configure ? "  ⛔ configure: " + giud.errore_configure : ""),
+         giud.esito.startsWith("GIUSTI") ? "si" : "boh");
+    riassunto.prove++;
+  }
+}
+
+/* ── I CASI, CON L'ATTESO SCRITTO PRIMA ──────────────────────────────────── */
+
+function casi_di(famiglia) {
+  const G = "tela-" + famiglia + "-grande";
+  const P = "tela-" + famiglia + "-piccola";
+  return [
+    { nome: "a-controllo-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: null,
+      atteso: "GIUSTI 8/8 — chiave a misura A poi delta a misura A.  E' il "
+            + "controllo positivo: se cade, di (b) e (c) non si scrive niente" },
+
+    { nome: "b1-senza-ps-chiave-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: P, pezzi_dopo: "pezzi_senza_ps",
+      atteso: "[?] mia previsione: NIENTE/ERRORE.  I fotogrammi sono a 320x240 "
+            + "ma l'unico parameter set attivo dice 640x480: il decodificatore "
+            + "legge fette di una misura credendole di un'altra.  ⛔ Se invece "
+            + "esce SBAGLIATI/MUTO, la riga in RCP.md va scritta" },
+
+    { nome: "b2-senza-ps-solo-delta-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: P, pezzi_dopo: "pezzi_delta",
+      atteso: "[?] mia previsione: NIENTE/ERRORE.  E' IL BUCO ALLA LETTERA — un "
+            + "delta alla misura nuova, che oggi nessuna riga vieta.  ⛔ Se esce "
+            + "SBAGLIATI/MUTO e' la forma di P6 e la riga va scritta" },
+
+    { nome: "c-chiave-nuova-stesso-decoder-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: P, pezzi_dopo: "pezzi",
+      atteso: "[?] mia previsione: GIUSTI 8/8 alla misura NUOVA, con i "
+            + "fotogrammi che escono 320x240 — cioe' quel che la riga proposta "
+            + "imporrebbe funziona SENZA riconfigurare il decodificatore" },
+
+    { nome: "d-riconfigura-poi-chiave-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: P, pezzi_dopo: "pezzi", riconfigura: true,
+      atteso: "[?] mia previsione: GIUSTI 8/8.  E' quel che farebbe un client "
+            + "che si accorge del cambio leggendo largh./altezza di RCP §6.2" },
+
+    { nome: "e-riconfigura-poi-delta-" + famiglia, famiglia: famiglia,
+      prima: G, dopo: P, pezzi_dopo: "pezzi_delta", riconfigura: true,
+      atteso: "[S] previsione da specifica: NIENTE/ERRORE con un messaggio che "
+            + "nomina la chiave — WebCodecs pretende una chiave dopo "
+            + "configure().  ⭐ Se e' cosi', il client che riconfigura NON PUO' "
+            + "ripartire da un delta, e la riga in RCP.md non e' una prudenza: "
+            + "e' l'unica cosa che gli permette di ripartire" },
+
+    { nome: "b1r-senza-ps-chiave-ROVESCIO-" + famiglia, famiglia: famiglia,
+      prima: P, dopo: G, pezzi_dopo: "pezzi_senza_ps",
+      atteso: "[?] come b1 ma piccola→grande.  Un'asimmetria fra i due versi "
+            + "sarebbe una scoperta: crescere fa leggere OLTRE il buffer, "
+            + "calare no" },
+
+    { nome: "cr-chiave-nuova-ROVESCIO-" + famiglia, famiglia: famiglia,
+      prima: P, dopo: G, pezzi_dopo: "pezzi",
+      atteso: "[?] come c ma piccola→grande: GIUSTI 8/8 a 640x480" },
+  ];
+}
+
+/* ── Il giro ─────────────────────────────────────────────────────────────── */
+
+const seq = {};
+async function carica(nome) {
+  if (seq[nome]) return seq[nome];
+  const r = await fetch("02-pagina-tela-sequenze/" + nome + ".json", { cache: "no-store" });
+  if (!r.ok) throw new Error(nome + ".json: HTTP " + r.status);
+  seq[nome] = await r.json();
+  return seq[nome];
+}
+
+async function giro() {
+  await spedisci({ tipo: "AMBIENTE",
+    webcodecs: typeof VideoDecoder !== "undefined",
+    contesto_sicuro: window.isSecureContext,
+    schermo: screen.width + "x" + screen.height, dpr: devicePixelRatio });
+  scrivi("giro " + GIRO + (GUASTO ? "  ⚠ GUASTO INNESTATO: " + GUASTO : "")
+       + " · WebCodecs: " + (typeof VideoDecoder !== "undefined" ? "c'e'" : "NON C'E'"));
+
+  if (typeof VideoDecoder === "undefined") {
+    scrivi("⛔ questo browser non ha WebCodecs: non c'e' niente da misurare", "no");
+    await spedisci({ tipo: "FINITO", esito: "SENZA_WEBCODECS", prove: 0 });
+    document.getElementById("stato").textContent = "FINITO — senza WebCodecs";
+    return;
+  }
+
+  for (const n of ["tela-hevc-grande", "tela-hevc-piccola",
+                   "tela-av1-grande", "tela-av1-piccola"]) await carica(n);
+
+  scrivi("— i controlli del lettore, a TUTT'E DUE le misure");
+  await controlli_lettore(seq);
+
+  for (const famiglia of ["hevc", "av1"]) {
+    scrivi("");
+    scrivi("══ " + famiglia.toUpperCase() + " ══  ("
+         + seq["tela-" + famiglia + "-grande"].codec + " → "
+         + seq["tela-" + famiglia + "-piccola"].codec + ")");
+    await controlli_flusso(seq, famiglia);
+    for (const caso of casi_di(famiglia)) await prova_caso(caso, seq);
+  }
+
+  await spedisci({ tipo: "FINITO", esito: "COMPLETO", prove: riassunto.prove,
+                   controlli_rossi: riassunto.controlli_rossi });
+  document.getElementById("stato").textContent = "FINITO — " + riassunto.prove + " prove";
+  scrivi("FINITO: " + riassunto.prove + " prove.  ⛔ Il verdetto lo calcola il "
+       + "banco, non questa pagina.");
+}
+
+giro().catch(async (e) => {
+  scrivi("⛔ il giro si e' fermato: " + e + "\n" + (e && e.stack ? e.stack : ""), "no");
+  await spedisci({ tipo: "FINITO", esito: "ECCEZIONE", errore: String(e),
+                   pila: e && e.stack ? String(e.stack) : null,
+                   prove: riassunto.prove });
+  document.getElementById("stato").textContent = "FINITO — eccezione";
+});
+</script>
+</body>
+</html>

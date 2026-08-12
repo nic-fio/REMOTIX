@@ -77,6 +77,7 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
+QUI=$(cd "$(dirname "$0")" && pwd)
 ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
@@ -239,6 +240,158 @@ posto_unico() # $1 = albero, $2 = il binario che sto per giudicare
 	fi
 }
 
+# ===========================================================================
+# ⛔⭐ I GUASTI DI B12 SI CERCANO DOVE B12 LI METTE — lacuna L2, 12 agosto 2026.
+#
+# ⛔ QUEL CHE C'ERA PRIMA, E PERCHE' ERA PEGGIO DI NIENTE.
+#
+# Questo file aveva quattro righe scritte a mano:
+#
+#     nessuno "guasti di B12 nel codec"        examples/http3_server_proto_codec.cc
+#     nessuno "guasti di B12 in rcp.c"         examples/rcp.c
+#     nessuno "guasti di B12 in server.cc"     examples/server.cc
+#     nessuno "guasti di B12 in remotix/rcp.c" remotix/rcp.c        ← ⛔ QUESTA
+#
+# L'ultima **non poteva diventare rossa in nessun caso**: `01-b12-guasti.py`
+# non innesta in `remotix/rcp.c` e non ci ha mai innestato — per progetto
+# dichiarato, perche' *«non si guasta mai un originale»* (la sua §«LA CARTELLA
+# DELLE COPIE»).  ⇒ Un controllo verde per costruzione, che GUARDATI contava
+# come uno dei controlli fatti.  ⛔ E' peggio di un controllo assente: chi
+# legge «nessuna traccia» crede che qualcuno abbia guardato.
+#
+# ⚠ E le prime tre erano vere ma **parziali**: dei quindici guasti del catalogo
+#   ne coprivano cinque.  I posti che nessuno guardava — `[M]` 12 agosto 2026,
+#   letti dal catalogo, non dedotti — erano `01-b12-copie/p1-remotix/pagina.c`,
+#   `01-b12-copie/p5-remotix/pagina.c`, `sera-b10-remotix/autenticazione.c`,
+#   le tre copie di banchi in `01-b12-copie/` e `01-p5-copia-7522/pagina.html`.
+#
+# ⭐ LA CURA: l'elenco non si ricopia, SI CHIEDE AL CATALOGO.  Un guasto nuovo
+#    con un bersaglio nuovo entra qui dentro da solo; una riga ricopiata a mano
+#    invecchia in silenzio, ed e' la forma esatta di R12-A.45 — il file che uno
+#    script rimetteva com'era e che nessun altro guardava.
+#
+# ⚠ E la marca si legge di la' anche lei (`MARCA`): cercare una stringa
+#   ricopiata qui vorrebbe dire che il giorno in cui B12 la cambia questo
+#   controllo non trova piu' niente **e diventa verde**.
+# ===========================================================================
+CATALOGO=$QUI/01-b12-guasti.py
+
+# Ritorna: prima riga = la MARCA · righe dopo = «SIGLE<TAB>percorso».
+posti_dei_guasti()
+{
+	python3 - "$CATALOGO" <<'PY'
+import importlib.util
+import os
+import sys
+
+s = importlib.util.spec_from_file_location("b12", sys.argv[1])
+m = importlib.util.module_from_spec(s)
+s.loader.exec_module(m)
+print(m.MARCA)
+ordine, di_chi = [], {}
+for sigla in sorted(m.GUASTI):
+    g = m.GUASTI[sigla]
+    # ⛔ `copia-di-file` (oggi: B13) SOVRASCRIVE un file intero — un certificato
+    #    PEM — e non ci lascia dentro nessuna stringa da cercare.  Li' il
+    #    residuo lo giudica l'impronta che `--togli` rimette, non questo
+    #    setaccio: cercarci la marca sarebbe un controllo verde per
+    #    costruzione, cioe' il difetto che questa cura toglie.
+    if g["costa"] == "copia-di-file":
+        continue
+    d = os.path.realpath(m.risolvi(g["dove"]))
+    if d not in di_chi:
+        ordine.append(d)
+        di_chi[d] = []
+    di_chi[d].append(sigla)
+for d in ordine:
+    print("%s\t%s" % (",".join(di_chi[d]), d))
+PY
+}
+
+guasti_rimasti_addosso()
+{
+	local righe s marca n riga sigle percorso
+	local posti=0 guardati=0 sporchi=0 assenti=0
+
+	righe=$(posti_dei_guasti)
+	s=$?
+	# ⛔ Niente `2>/dev/null` qui sopra: se il catalogo non si carica, l'errore
+	#    di Python si vede, e questo controllo si dichiara IGNOTO invece di
+	#    setacciare zero file e chiamarlo «nessuna traccia».
+	if [ "$s" -ne 0 ] || [ -z "$righe" ]; then
+		GUARDATI=$((GUARDATI + 1))
+		dub "⛔ non ho potuto chiedere a 01-b12-guasti.py dove innesta (uscita $s)"
+		dub "   ⚠ e zero file setacciati non e' «nessun guasto rimasto addosso»"
+		IGNOTI=$((IGNOTI + 1))
+		return
+	fi
+	marca=$(printf '%s\n' "$righe" | head -1)
+
+	# ⭐ IL CONTROLLO POSITIVO, SULLO STESSO STRUMENTO (`LEZIONI.md` §1.9
+	#    regola 2).  `conta()` sa trovare la marca in un file che ce l'ha di
+	#    sicuro?  Se non la trova, ogni «nessuna traccia» qui sotto vale zero —
+	#    ed e' la stessa mattina in cui una ricerca non trovava nemmeno le 133
+	#    applicazioni di sistema.
+	GUARDATI=$((GUARDATI + 1))
+	local finto
+	finto=$(mktemp) || { dub "⛔ nessun file temporaneo: setaccio non certificato"; IGNOTI=$((IGNOTI + 1)); return; }
+	printf 'una riga qualunque\n/* %s prova */\n' "$marca" >"$finto"
+	n=$(conta "$finto" "$marca")
+	rm -f "$finto"
+	if [ "$n" = "?" ] || [ "$n" -lt 1 ]; then
+		dub "⛔ il setaccio NON trova la marca «$marca» in un file che ce l'ha:"
+		dub "   ogni «nessuna traccia» qui sotto sarebbe un verde vuoto."
+		IGNOTI=$((IGNOTI + 1))
+		return
+	fi
+	ok "il setaccio sa trovare «$marca» dove c'e' (controllo positivo)"
+
+	while IFS=$'\t' read -r sigle percorso; do
+		[ -n "${percorso:-}" ] || continue
+		posti=$((posti + 1))
+		if [ ! -e "$percorso" ]; then
+			# ⛔ ASSENTE NON E' IGNOTO, E QUI LA DIFFERENZA E' DIMOSTRABILE.
+			#    I bersagli di B12 sono COPIE che `prepara_copia()` rifa' da
+			#    zero a ogni giro: finche' la copia non esiste, non puo'
+			#    portare addosso niente.  ⇒ non e' «non ho potuto guardare»,
+			#    e non deve costare un IGNOTO che fermerebbe ogni giro.
+			assenti=$((assenti + 1))
+			continue
+		fi
+		GUARDATI=$((GUARDATI + 1))
+		guardati=$((guardati + 1))
+		n=$(conta "$percorso" "$marca")
+		if [ "$n" = "?" ]; then
+			dub "⛔ non ho potuto leggere «$percorso» (guasti $sigle)"
+			dub "   ⚠ e «non ho potuto guardare» non e' «va bene»"
+			IGNOTI=$((IGNOTI + 1))
+			continue
+		fi
+		if [ "$n" -ne 0 ]; then
+			ko "⛔ $n tracce di guasto RIMASTE ADDOSSO a «$percorso»"
+			ko "   e' il bersaglio di: $sigle"
+			ko "   Un guasto dimenticato avvelena ogni misura successiva, e"
+			ko "   nessuno sapra' che c'era.  Si toglie con:"
+			ko "     python3 $CATALOGO --togli ${sigle%%,*}"
+			GUAI=$((GUAI + 1))
+			sporchi=$((sporchi + 1))
+		fi
+	done <<< "$(printf '%s\n' "$righe" | tail -n +2)"
+
+	# ⛔ IL DENOMINATORE (`LEZIONI.md` §1.9 regola 4): «nessuna traccia» non e'
+	#    un dato finche' non dice DENTRO QUANTI FILE.
+	if [ "$sporchi" -eq 0 ] && [ "$guardati" -gt 0 ]; then
+		ok "nessun guasto di B12 rimasto addosso: $guardati file setacciati su"
+		ok "   $posti bersagli dichiarati dal catalogo ($assenti non esistono oggi)"
+	elif [ "$guardati" -eq 0 ]; then
+		dub "⛔ nessuno dei $posti bersagli del catalogo esiste su questa macchina:"
+		dub "   questo controllo non ha guardato niente, e non e' un verde"
+		IGNOTI=$((IGNOTI + 1))
+	fi
+	inf "i bersagli assenti sono copie che 01-b12-guasti.py rifa' a ogni giro:"
+	inf "  una copia che non c'e' non puo' portarsi addosso un guasto"
+}
+
 printf '\n%s== ⛔ Il terreno: il server «%s» e'"'"' quello che credo?%s\n' \
 	"$NETTO" "$BERSAGLIO" "$GRIGIO"
 
@@ -281,9 +434,12 @@ if [ "$BERSAGLIO" = innesto ]; then
 		IGNOTI=$((IGNOTI + 1))
 	fi
 
-	nessuno "guasti di B12 nel codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B12 GUASTO"
-	nessuno "guasti di B12 in rcp.c"   "$ESEMPI/rcp.c"                       "REMOTIX B12 GUASTO"
-	nessuno "guasti di B12 in server.cc" "$ESEMPI/server.cc"                 "REMOTIX B12 GUASTO"
+	# ⚠ I guasti di **B12** non stanno piu' qui: li setaccia
+	#   `guasti_rimasti_addosso()`, in fondo a questo file, chiedendo al
+	#   catalogo dove vanno davvero — e i suoi bersagli non sono tre, sono
+	#   nove (lacuna L2, 12 agosto 2026).  Quelli di **B11** restano scritti a
+	#   mano perche' li innesta un altro programma,
+	#   `01-b11-guasto-innesta.py`, che di catalogo non ne ha uno.
 	nessuno "guasti di B11 nel codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
 	nessuno "guasti di B11 in rcp.c"   "$ESEMPI/rcp.c"                       "REMOTIX B11 GUASTO"
 	# ⛔ ⭐ E IL TERZO FILE DI B11, che fino al 12 agosto 2026 non guardava
@@ -326,7 +482,13 @@ else
 		dub "⛔ non ho potuto confrontare i due rcp.c"
 		IGNOTI=$((IGNOTI + 1))
 	fi
-	nessuno "guasti di B12 in remotix/rcp.c" "$FUORI/remotix/rcp.c" "REMOTIX B12 GUASTO"
+	# ⛔ QUI C'ERA `nessuno "guasti di B12 in remotix/rcp.c"`, E NON POTEVA
+	#    DIVENTARE ROSSA: `01-b12-guasti.py` non innesta negli originali, per
+	#    progetto dichiarato.  La ragione per esteso sta accanto a
+	#    `guasti_rimasti_addosso()`, che adesso setaccia i bersagli VERI — e li
+	#    setaccia su tutt'e due i bersagli di questo script, perche' un guasto
+	#    dimenticato avvelena le misure di chiunque, non solo quelle
+	#    dell'innesto.
 
 	# ── ⛔ IL BINARIO DEL PRODOTTO — la cura di D5 ───────────────────────
 	inf "albero del prodotto: $SORG   (si cambia con SORG=<percorso>)"
@@ -350,6 +512,11 @@ else
 	piu_nuovo "$BINARIO_PRODOTTO" \
 		"$SORG"/*.c "$SORG"/*.h "$SORG/Makefile"
 fi
+
+# ── ⛔ I GUASTI DI B12, CERCATI DOVE B12 LI METTE (lacuna L2) ───────────────
+#    Fuori dall'if apposta: il bersaglio dice quale SERVER si sta per usare,
+#    non quali file possono essere sporchi.
+guasti_rimasti_addosso
 
 # ---------------------------------------------------------------------------
 # ⛔ IL DENOMINATORE — `LEZIONI.md` §1.9 regola 6.  «Tutti quelli provati sono

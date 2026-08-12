@@ -391,12 +391,28 @@ togli_dropin()
 	systemctl --user daemon-reload
 }
 
+# ⛔ LA RIGA DI COMANDO E' PIATTA, E LE DUE RESE SONO SCRITTE PER ESTESO —
+#    lacuna L3, 12 agosto 2026.
+#
+# C'era un vettore: `local extra=(); [ -n "${2:-}" ] && extra=(--registra "$2")`,
+# e poi `"${extra[@]}"` in coda alla chiamata.  Due righe in meno, e ⛔ la
+# chiamata **fuori da ogni controllo statico**: `01-b0-chiamate.py` vedeva una
+# variabile sola dove argparse aspetta un'opzione, non poteva sapere se
+# portasse dentro un `--qualcosa`, e la dichiarava IGNOTA — ne' rossa ne'
+# verde.  E' la cucitura che ha gia' fatto uscire rosso un banco sano due
+# volte: B6 il 10 agosto, B7 l'11 (`01-b0-chiamate.py`, in testa).
+#
+# ⚠ La ripetizione delle sei parole comuni e' il prezzo, e si paga: due righe
+#   leggibili valgono piu' di una riga che nessuno strumento sa leggere.
 misura() # $1 = etichetta della scena; $2 = file dove registrarla (facoltativo)
 {
-	local extra=()
-	[ -n "${2:-}" ] && extra=(--registra "$2")
+	if [ -n "${2:-}" ]; then
+		python3 "$STRUMENTO" --attesa "$MISURA" --dal-bus \
+		    --etichetta "$1" --esiti "$ESITI" --registra "$2"
+		return $?
+	fi
 	python3 "$STRUMENTO" --attesa "$MISURA" --dal-bus \
-	    --etichetta "$1" --esiti "$ESITI" "${extra[@]}"
+	    --etichetta "$1" --esiti "$ESITI"
 	return $?
 }
 

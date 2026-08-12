@@ -200,10 +200,34 @@ controllo_flusso()
 	return 0
 }
 
-metro()
-{
-	python3 "$QUI/02-giudizio-metro.py" "$@"
-}
+# ---------------------------------------------------------------------------
+# ⛔⭐ PERCHE' QUI NON C'E' PIU' UNA `metro()` CHE INOLTRA `"$@"` — lacuna L3,
+#     curata il 12 agosto 2026.
+#
+# C'era, e faceva una riga sola: `python3 "$QUI/02-giudizio-metro.py" "$@"`.
+# Comoda da scrivere, e ⛔ **invisibile a ogni controllo statico**: il metro
+# pretende `--scena --cattura --riferimento --pagina`, e nessun file del
+# deposito diceva che cosa ci fosse dentro quel `"$@"`.  `01-b0-chiamate.py`
+# la dichiarava IGNOTA — non un rosso e non un verde — cioe' **fuori
+# sorveglianza**, ed e' la cucitura gia' pagata due volte:
+#
+#   `[M]` 10 agosto 2026 · `01-b2-sonda-trasporto.py` guadagna `--bersaglio`
+#         obbligatorio e `01-b6-lancia.sh` resta indietro: **B6 rosso**, di un
+#         banco sano.
+#   `[M]` 11 agosto 2026 · la stessa cosa su B7, da `01-b12-lancia.sh`.
+#
+# ⇒ Ogni chiamata al metro, in questo file, e' adesso una **riga di comando
+#   piatta**: il nome di ogni opzione e' scritto per esteso, e le variabili
+#   stanno solo dove argparse aspetta un VALORE.  Se domani il metro guadagna
+#   un obbligatorio, il controllo lo vede da qui invece di lasciarlo scoprire
+#   a un rosso.
+#
+# ⚠ E il ramo `giudica` — quello che riceve gli argomenti dall'utente — non li
+#   inoltra piu' alla cieca: li legge lui, uno per uno (`leggi_opzioni_giudica`),
+#   e i quattro obbligatori li **pretende qui**, con un messaggio che dice
+#   quale manca.  Prima quel controllo esisteva solo dentro argparse, e da
+#   fuori aveva la faccia di «il metro e' rotto».
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 giro_sano()
@@ -219,7 +243,7 @@ giro_sano()
 	controllo_flusso "$LAV/flusso-g1.h265" || return 2
 
 	log "3. Il metro, sul giro sano"
-	metro --scena "$LAV/mira-g1.json" \
+	python3 "$QUI/02-giudizio-metro.py" --scena "$LAV/mira-g1.json" \
 		--cattura "$LAV/mira-g1.rgb48" \
 		--riferimento "$LAV/rif-g1.rgb48" \
 		--pagina "$LAV/pag-g1.rgb24" \
@@ -322,7 +346,7 @@ PY
 			;;
 		esac
 
-		metro --scena "$LAV/mira-g1.json" --cattura "$CAT" \
+		python3 "$QUI/02-giudizio-metro.py" --scena "$LAV/mira-g1.json" --cattura "$CAT" \
 			--riferimento "$LAV/rif-g1.rgb48" --pagina "$out" \
 			--cattura-precedente "$LAV/mira-g0.rgb48" \
 			--riferimento-10 "$RIF10" --colore "$COL" --identita-pagina "$IDE" \
@@ -392,14 +416,122 @@ PY
 }
 
 # ---------------------------------------------------------------------------
+# ⛔ IL GIRO VERO — e qui gli argomenti arrivano da FUORI.
+#
+# Li si legge uno per uno e si ricostruisce una riga di comando **piatta**,
+# invece di inoltrare `"$@"`.  Costa venti righe e compra due cose:
+#
+#   1. i quattro obbligatori li pretende QUESTO file, con il nome di quello che
+#      manca.  Prima li pretendeva solo argparse, e da fuori il rifiuto aveva
+#      la faccia di «il metro e' rotto» — che e' la trappola n.1 di
+#      `01-b12-guasti.py`, il rosso per la ragione sbagliata;
+#   2. la chiamata torna **giudicabile** da `01-b0-chiamate.py`: il nome di
+#      ogni opzione e' letterale in questo file, e le variabili stanno solo
+#      dove argparse aspetta un valore.
+#
+# ⚠ E un'opzione che il metro non conosce si ferma qui, non la' dentro: era il
+#   `--sorgente` dell'11 agosto 2026, che non esisteva piu' e che nessuno
+#   guardava.
+# ⛔ Un valore MANCANTE e un valore VUOTO non sono la stessa cosa: `--pagina`
+#   senza niente dietro non diventa `--pagina ""`, si ferma.  E' la forma E8
+#   applicata alla riga di comando.
+# ---------------------------------------------------------------------------
+giudica_veri()
+{
+	local G_SCENA= G_CATTURA= G_RIFERIMENTO= G_PAGINA=
+	local G_PRECEDENTE= G_RIF10= G_PROFONDITA= G_COLORE= G_IDENTITA=
+	local G_SCENA_NOME=mira-remotix-f2.6
+	local G_GIRO=giudica-$(date +%H%M%S)
+	local G_FRESCHEZZA=si manca=0
+
+	while [ $# -gt 0 ]; do
+		if [ "$1" = "--senza-freschezza" ]; then
+			G_FRESCHEZZA=no; shift; continue
+		fi
+		case "$1" in
+		--*) ;;
+		*) ko "⛔ argomento senza opzione davanti: «$1»"; return 2;;
+		esac
+		if [ $# -lt 2 ]; then
+			ko "⛔ l'opzione «$1» e' rimasta senza valore."
+			ko "   ⚠ e un valore mancante non e' un valore vuoto: qui ci si ferma"
+			ko "     invece di passare al metro una stringa che nessuno ha scritto."
+			return 2
+		fi
+		case "$1" in
+		--scena)                  G_SCENA=$2;;
+		--cattura)                G_CATTURA=$2;;
+		--riferimento)            G_RIFERIMENTO=$2;;
+		--pagina)                 G_PAGINA=$2;;
+		--cattura-precedente)     G_PRECEDENTE=$2;;
+		--riferimento-10)         G_RIF10=$2;;
+		--profondita-dispositivo) G_PROFONDITA=$2;;
+		--colore)                 G_COLORE=$2;;
+		--identita-pagina)        G_IDENTITA=$2;;
+		--giro)                   G_GIRO=$2;;
+		--scena-nome)             G_SCENA_NOME=$2;;
+		*)
+			ko "⛔ opzione che il metro non conosce: «$1»"
+			inf "ammesse: --scena --cattura --riferimento --pagina"
+			inf "         --cattura-precedente --riferimento-10"
+			inf "         --profondita-dispositivo --colore --identita-pagina"
+			inf "         --giro --scena-nome --senza-freschezza"
+			return 2;;
+		esac
+		shift 2
+	done
+
+	# ⛔ I QUATTRO CHE IL METRO PRETENDE, pretesi qui e per nome.
+	[ -n "$G_SCENA" ]       || { ko "⛔ manca --scena (il JSON della mira)"; manca=1; }
+	[ -n "$G_CATTURA" ]     || { ko "⛔ manca --cattura"; manca=1; }
+	[ -n "$G_RIFERIMENTO" ] || { ko "⛔ manca --riferimento"; manca=1; }
+	[ -n "$G_PAGINA" ]      || { ko "⛔ manca --pagina"; manca=1; }
+	if [ "$manca" -ne 0 ]; then
+		ko "   ⛔ stato 2: NON MISURATO.  Non e' un bocciato e non e' un metro"
+		ko "      rotto: e' una riga di comando incompleta, e si dice cosi'."
+		return 2
+	fi
+
+	# ⚠ Le facoltative si passano SEMPRE, anche vuote: `02-giudizio-metro.py`
+	#   legge una stringa vuota come «non passato» e lo stampa nel canale di
+	#   lettura (C1), cosi' un ingresso che non c'e' **si vede** invece di
+	#   sparire dalla riga di comando.
+	# ⚠ Le due rese sono la stessa riga meno un interruttore: `--senza-freschezza`
+	#   non ha un valore da portare, e una variabile che lo contenesse tornerebbe
+	#   a essere il buco che questa funzione chiude.
+	if [ "$G_FRESCHEZZA" = no ]; then
+		python3 "$QUI/02-giudizio-metro.py" --esiti "$ESITI" \
+			--scena "$G_SCENA" --cattura "$G_CATTURA" \
+			--riferimento "$G_RIFERIMENTO" --pagina "$G_PAGINA" \
+			--cattura-precedente "$G_PRECEDENTE" \
+			--riferimento-10 "$G_RIF10" \
+			--profondita-dispositivo "$G_PROFONDITA" \
+			--colore "$G_COLORE" --identita-pagina "$G_IDENTITA" \
+			--giro "$G_GIRO" --scena-nome "$G_SCENA_NOME" \
+			--senza-freschezza
+		return $?
+	fi
+	python3 "$QUI/02-giudizio-metro.py" --esiti "$ESITI" \
+		--scena "$G_SCENA" --cattura "$G_CATTURA" \
+		--riferimento "$G_RIFERIMENTO" --pagina "$G_PAGINA" \
+		--cattura-precedente "$G_PRECEDENTE" \
+		--riferimento-10 "$G_RIF10" \
+		--profondita-dispositivo "$G_PROFONDITA" \
+		--colore "$G_COLORE" --identita-pagina "$G_IDENTITA" \
+		--giro "$G_GIRO" --scena-nome "$G_SCENA_NOME"
+	return $?
+}
+
+# ---------------------------------------------------------------------------
 export QUI
 case "${1:-sano}" in
 sano)      shift; giro_sano "sano-$(date +%H%M%S)"; s=$?;;
 certifica) shift; certifica "${1:-}"; s=$?;;
 giudica)   shift
            log "Il giro VERO — il metro sui file di F2.2, F2.3 e F2.5"
-           inf "⚠ qui la catena non e' finta: gli argomenti li passa chi chiama"
-           metro --esiti "$ESITI" "$@"; s=$?;;
+           inf "⚠ qui la catena non e' finta: gli argomenti li passa chi chiama,"
+           inf "  e questo banco li legge uno per uno invece di inoltrarli"
+           giudica_veri "$@"; s=$?;;
 elenco)    python3 "$QUI/02-giudizio-guasti.py" --elenco; s=$?;;
 catalogo)  python3 "$QUI/02-giudizio-guasti.py" --riga-catalogo; s=$?;;
 *)         printf 'uso: %s {sano|certifica [guasto]|giudica …|elenco|catalogo}\n' "$0"; s=2;;

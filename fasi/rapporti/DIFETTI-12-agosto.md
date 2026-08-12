@@ -125,6 +125,53 @@ Per `parola-di-prova` finisce in `ps`. ⭐ Per la parola generata di `prova2` no
 
 ---
 
+---
+
+## ⛔ D. Nati la sera del 12 agosto, dalla correzione di `RCP.md` §6.2
+
+*La cura di **P5** — «la tela **in vigore**», non quella di `SESSIONE` — ha reso legale il cambio di
+tela a metà sessione. ⛔ E ogni volta che si rende legale una cosa nuova, si apre quel che quella
+cosa nuova porta con sé.*
+
+### D13 — **il primo fotogramma alla misura nuova può essere un delta**, e nessuno se ne accorge
+
+`[M]` 12 agosto 2026, banco `banchi/02-pagina-tela-*`, atteso scritto **prima** di ogni giro:
+
+| | Chrome · **HEVC** | Chrome e Firefox · **AV1** |
+|---|---|---|
+| solo delta alla misura nuova | ⛔⛔ **5 fotogrammi emessi, tutti dichiarati alla misura VECCHIA, dipinti, ZERO errori** — immagine strappata, 7/8 sul pattern vecchio e 1/8 sul nuovo | ⭐ `EncodingError`, 0 fotogrammi |
+| chiave nuova coi suoi parameter set | ⭐ 8 su 8 | ⭐ 8 su 8 |
+
+⛔⛔ **Chi dipinge spazzatura in silenzio è HEVC su Chrome, cioè l'unica casella in cui HEVC arriva
+al pixel** — e AV1 protesta in tutte e quattro. ⇒ **La regola serve perché sul codec principale il
+sintomo è muto**, e una regola non si scrive sul codec che si comporta bene. Il sintomo sarebbe *«il
+desktop si strappa quando ridimensiono la finestra»*, e non nominerebbe né il protocollo né la tela.
+
+⭐ E la cura **costa zero**: la chiave nuova va bene **sia** riconfigurando il decodificatore **sia**
+senza, su tutt'e due i codec, tutt'e due i motori, tutt'e due i versi. ⚠ E non è prudenza ma
+necessità: un `VideoDecoder` riconfigurato pretende una chiave (`DataError`), quindi senza la riga
+quella chiave **non arriverebbe mai** e ogni cambio di tela costerebbe un giro di rete e un
+fermo-immagine.
+
+⚠ **Un'asimmetria misurata e non spiegata**, che vale la pena avere in mano: **rimpicciolire tace,
+ingrandire protesta** (`EncodingError`). `[?]`
+
+⇒ **Testo pronto** nel rapporto dell'agente; da applicare a `RCP.md` §5.2 **quando il giro di
+ricertificazione ha finito** — B9 legge `RCP.md`, e cambiarlo sotto un giro in corso è l'errore che
+oggi è già costato un giro intero.
+
+### D14 — **i fotogrammi in volo uccidono una sessione sana** — trovato leggendo, `[?]` non misurato
+
+§6.2 fa chiudere con `ERRORE_PROTOCOLLO` chi riceve una misura diversa dalla tela in vigore. ⛔ Ma
+§6.2 dice **anche** che i fotogrammi possono arrivare **fuori ordine** — e dopo un `TELA(ADATTATA)`
+quelli già in volo portano **legittimamente** la misura precedente. ⇒ **Un client conforme uccide
+una sessione sana**, ed è la stessa forma di P5, che per due ore è stata dentro il documento.
+
+⚠ È la scena che §7.1 protegge per le **coordinate di input** con la sua grazia di un secondo — e
+per i fotogrammi quella grazia **non c'è**.
+
+---
+
 ## Chi cura che cosa
 
 ⛔ **Un agente per difetto, e ognuno possiede file suoi**: due agenti sullo stesso file si

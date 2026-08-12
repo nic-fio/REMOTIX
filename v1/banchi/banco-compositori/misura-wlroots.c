@@ -15,6 +15,38 @@
  *   giro di andata e ritorno sul socket per fotogramma.  Non e' un difetto del
  *   compositore: e' la forma del suo protocollo, ed e' quel che pagherebbe
  *   anche REMOTIX.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⭐ ZERO E FALLIMENTO SONO DUE COSE DIVERSE — lacuna L1, curata il 12
+ *     agosto 2026, e questo programma non lo sapeva dire da quando esiste.
+ *
+ * Fino a oggi `main()` finiva in un modo solo: stampava una RIGA e **ritornava
+ * 0**.  Qualunque cosa fosse successa.  Il compositore che rifiuta la copia, la
+ * pentola che non si alloca, il compositore che muore al terzo secondo: si
+ * usciva dal ciclo, si stampavano `0x0`, `0.00` e uno stato d'uscita **buono**.
+ * ⛔ E' la forma d'errore **E8** del catalogo (`REVIEWER.md` §2) — *«vuoto» e
+ *    «proibito» hanno lo stesso aspetto* — dentro lo strumento che deve
+ *    misurare la terza famiglia di compositori.
+ *
+ * ⚠ E la cura NON era nuova: il gemello `misura-cattura.c` ce l'ha dal 9
+ *   agosto 2026 e la porta in quattro guardie, tutte con la stessa faccia —
+ *   `printf("GUASTO\t…")` al posto della RIGA, la ragione sullo stderr,
+ *   **uscita 2**.  «Una riga di misura che non e' una misura e' peggio di
+ *   nessuna riga.»  Qui quella forma non era mai arrivata.
+ *
+ * ⛔ E il verdetto glielo costruiva attorno `banchi/00-c1-wlroots.sh`, che
+ *    rileggeva la RIGA e decideva lui — cioe' la protezione di un difetto noto
+ *    fuori dal programma, in un pezzo di script che si puo' perdere copiando
+ *    il binario altrove: l'invariante **I7** al contrario (`CODER.md` §2).
+ *    Adesso il rifiuto sta qui dentro, e chi lancia questo programma da una
+ *    riga di comando qualunque lo riceve lo stesso.
+ *
+ * ⚠ QUEL CHE RESTA UNO «ZERO» LEGITTIMO, e va detto o si cura troppo: con
+ *   `copy_with_damage` una scena FERMA non consegna niente, e zero fotogrammi
+ *   su un compositore sano e' la risposta giusta.  Lo discrimina il fatto che
+ *   il compositore abbia risposto almeno una volta con un formato
+ *   (`formato_noto`): la scena ferma ci arriva, il compositore rotto no.  E'
+ *   lo stesso discrimine che nel gemello si chiama `t_inizio`.
  */
 
 #include <fcntl.h>
@@ -45,6 +77,19 @@ static int conta;
 static int32_t *intervalli;
 static unsigned n_intervalli;
 static int visto_danno_pieno, visto_danno;
+
+/* ⛔ Le due variabili della lacuna L1, e sono due apposta:
+ *
+ *   formato_noto  il compositore ha risposto almeno una volta con un formato.
+ *                 E' il discrimine fra «la scena e' ferma» (zero legittimo) e
+ *                 «non ho mai parlato con nessuno» (fallimento).
+ *   guasto        la RAGIONE per cui la misura non vale, o NULL.  Una ragione,
+ *                 non un booleano: «e' andata male» non dice a chi legge dove
+ *                 andare a guardare, e questo programma gira dentro una
+ *                 certificazione che deve poter distinguere il rosso del
+ *                 compositore dal rosso dello strumento. */
+static int formato_noto;
+static const char *guasto;
 
 static int64_t adesso_us(void)
 {
@@ -104,6 +149,8 @@ static void su_buffer(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t fmt,
 	larghezza = w;
 	altezza = h;
 	passo = stride;
+	/* ⛔ Il compositore HA risposto: da qui in poi uno zero e' uno zero. */
+	formato_noto = 1;
 }
 
 static void su_linux_dmabuf(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t fmt, uint32_t w,
@@ -118,7 +165,7 @@ static void su_buffer_done(void *d, struct zwlr_screencopy_frame_v1 *f)
 {
 	if (prepara_pentola() < 0)
 	{
-		fprintf(stderr, "pentola non allocata\n");
+		guasto = "la pentola non si e' potuta allocare";
 		finito = 1;
 		return;
 	}
@@ -170,7 +217,10 @@ static void su_pronto(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t sec_
 
 static void su_fallito(void *d, struct zwlr_screencopy_frame_v1 *f)
 {
-	fprintf(stderr, "il compositore ha rifiutato la copia\n");
+	/* ⛔ `failed` di wlr-screencopy e' un RIFIUTO, non uno zero: prima di
+	 *    oggi finiva in un `fprintf` sullo stderr e la RIGA usciva lo
+	 *    stesso, con lo stato d'uscita buono. */
+	guasto = "il compositore ha rifiutato la copia (evento `failed`)";
 	zwlr_screencopy_frame_v1_destroy(f);
 	in_corso = 0;
 	finito = 1;
@@ -242,9 +292,58 @@ int main(int argc, char **argv)
 	while (!finito && adesso_us() < t_fine)
 	{
 		if (wl_display_dispatch(display) < 0)
+		{
+			/* ⛔ La connessione al compositore e' caduta A META' MISURA —
+			 *    il caso che la revisione avversariale del 9 agosto 2026
+			 *    costrui' sul gemello: si lancia una cella da 20 secondi e
+			 *    al terzo si uccide il compositore.  Quel che si e' raccolto
+			 *    prima non e' una misura: e' un PEZZO di misura sotto
+			 *    l'etichetta di una intera. */
+			guasto = "la connessione al compositore e' caduta durante la misura";
 			break;
+		}
 		if (!in_corso)
 			chiedi_fotogramma(display);
+	}
+
+	/*
+	 * ⛔ LE DUE GUARDIE DELLA LACUNA L1 — e sono la stessa forma che
+	 *    `misura-cattura.c` ha in corpo dal 9 agosto 2026.
+	 *
+	 * Al posto della RIGA si stampa un **GUASTO** con la ragione, e si esce
+	 * con **2**.  Non si stampa nessuna riga di misura: *«una riga di misura
+	 * che non e' una misura e' peggio di nessuna riga»* — se ne uscisse una,
+	 * finirebbe in una cella di tabella come «il compositore non consegna
+	 * niente», che e' un'accusa a un imputato che non c'entra.
+	 *
+	 * ⚠ E l'ordine e' voluto: prima la ragione NOTA (`guasto`), poi quella
+	 *   muta.  Un compositore che rifiuta la copia e un compositore che non
+	 *   c'era mai sono due rossi diversi, e chi legge deve poterli separare
+	 *   senza rileggere il proprio codice.
+	 */
+	if (guasto)
+	{
+		printf("GUASTO\t%s\t%s\n", etichetta, guasto);
+		fprintf(stderr,
+		        "⛔ FALLITO (non «zero»): %s.\n"
+		        "   fotogrammi raccolti prima di fermarsi: %" PRIu64 " (arrivati %" PRIu64 ").\n"
+		        "   Non sono una misura: sono un pezzo di misura sotto l'etichetta\n"
+		        "   di una intera, e per questo non esce nessuna RIGA (LEZIONI.md §1.9).\n",
+		        guasto, contati, arrivati);
+		return 2;
+	}
+	if (!formato_noto)
+	{
+		printf("GUASTO\t%s\tnessun formato mai negoziato\n", etichetta);
+		fprintf(stderr,
+		        "⛔ FALLITO (non «zero»): il compositore non ha mai risposto con un\n"
+		        "   formato, quindi non si sa a che misura ne' a che colore sarebbero\n"
+		        "   i fotogrammi che non sono arrivati.  Prima di oggi qui usciva\n"
+		        "   «RIGA … 0x0 … 0.00 …» con stato 0 — e uno zero cosi' e' la scena\n"
+		        "   ferma e il compositore morto insieme, sotto la stessa faccia.\n"
+		        "   ⚠ Una scena FERMA su un compositore sano arriva invece fin qui\n"
+		        "     con il formato noto, e il suo zero e' un dato: quello si stampa.\n");
+		return 2;
 	}
 
 	secondi = contati > 1 ? (double) (t_ultimo - t_primo) / 1000000.0 : 0.0;
