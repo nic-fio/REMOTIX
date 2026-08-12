@@ -425,6 +425,45 @@ permesso funziona ancora va rifatta** — non è implicita.
 
 *Dettaglio: `kde.md` §3.3-bis e §5.6.*
 
+### 1.13 ⭐⭐ Una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta di un passo a ogni rilettura
+
+*Scritta il 12 agosto 2026, dopo che **la stessa riga di `RCP.md` è stata corretta quattro volte in
+una sera** — P8 → P11 → P13 → P14 — e ogni cura ha spostato il difetto invece di toglierlo.*
+
+**La scena.** Il protocollo aveva bisogno di tollerare i fotogrammi **già in volo** quando la tela
+cambia a metà sessione. Le prime tre stesure hanno descritto quel fenomeno con una **grandezza
+sostitutiva**, e ciascuna era esatta nella scena che l'aveva motivata e **sbagliata di un passo
+appena fuori**:
+
+| # | La grandezza scelta | Dove si è rotta |
+|---|---|---|
+| **P8** | *«la misura vale la tela precedente»* | ⛔ chi trascina una finestra manda **due** cambi di tela, e la terza misura non è né l'una né l'altra |
+| **P11** | *«una tela in vigore entro il secondo appena passato»* | ⛔ un **orologio** dove quel che deve svuotarsi è una **coda**: su una linea lenta il fotogramma arriva dopo, e cade l'invariante I1 — *mai staccare* — proprio nella condizione che I1 esiste per proteggere |
+| **P13** | *«finisce alla prima chiave alla misura nuova»* | ⛔ quella chiave **scavalca** i fotogrammi in volo, e non per caso: il vecchio è il più grosso e §5.2 vieta di abbandonarlo |
+| ⭐ **P14** | **`numero`** — il campo che il protocollo porta già | *(regge)* |
+
+⭐ **Che cosa andava guardato la prima volta: il campo che il protocollo porta già.** La domanda
+*«questo fotogramma è stato catturato prima del cambio di tela?»* aveva **una risposta esatta dentro
+i 28 byte dell'intestazione da tre giorni**: il contatore `numero`. E un fotogramma in volo ha
+**sempre** un numero più basso del primo catturato dopo il cambio — non «quasi sempre»: **sempre**,
+perché il contatore cresce alla cattura.
+
+> ⛔ **La regola.** Quando si scrive una tolleranza, si nomina **la grandezza vera del fenomeno che
+> si tollera** e si guarda se il protocollo — o il formato, o l'API — **la porta già**. Se si sta per
+> scriverne una **sostitutiva** — una misura, un tempo, un evento — quella tolleranza si sposterà di
+> un passo alla prima rilettura ostile.
+
+⚠ **E la seconda metà è del banco, e vale quanto la prima.** Tutti e quattro i difetti sono usciti
+costruendo la scena **al limite della cura appena scritta** — due cambi invece di uno, la linea lenta
+invece della veloce, l'ordine d'arrivo invertito — e **nessuno** costruendo la scena che la cura
+raccontava. ⇒ Il caso che conta non è quello che la regola descrive: è quello **appena fuori**.
+
+⭐ E vale la pena notare **chi** le ha trovate, tutte e quattro: non chi rileggeva il documento, ma
+chi doveva **far rispettare la regola** scrivendo l'arbitro che la giudica. *Applicare una regola è
+un modo di leggerla che rileggerla non è.*
+
+*Dettaglio: `fasi/rapporti/F2-4-filo.md`, e le righe nel riquadro in testa a `RCP.md`.*
+
 ---
 
 ## 2. Come si prova

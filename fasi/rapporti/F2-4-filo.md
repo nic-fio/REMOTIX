@@ -601,3 +601,264 @@ cambiato non è certificato: il registro è `banchi/02-filo-esiti.jsonl`, con l'
 in una scheda del browser, e in questa sotto-fase **non è passato un byte sulla rete**. ⛔ Il verde di
 oggi vale per quel che il suo denominatore dice: 27 casi del giudice, 6 registrazioni, 4 guasti
 certificati, **0** fotogrammi arrivati da un server.
+
+---
+
+# ⭐⛔ Il giro della **sera del 12 agosto 2026** — le due cure di `RCP.md` propagate qui
+
+*Il coordinatore ha applicato la sera stessa le due righe nate dai difetti **D13** e **D14**
+(`fasi/rapporti/DIFETTI-12-agosto.md` §D). I due arbitri di F2.4 avevano tre casi **in attesa** che
+uscivano `AMBIGUO` «finché la regola non c'è». Adesso c'è, e questo è quel che è successo
+portandoli a verdetto.*
+
+## Le due righe, e le sigle con cui i banchi le chiamano
+
+| | dove | che cosa comanda |
+|---|---|---|
+| **P8** *(da D14)* | §6.2 in coda + §3 eccezione **6** | dopo un `TELA(ADATTATA)` si **accettano per un secondo** i fotogrammi che portano la misura **precedente**, dipinti riscalati e ⛔ **scritti nel registro**; fuori dal secondo, e per una misura mai in vigore, si chiude |
+| **P9** *(da D13)* | §5.2 | il primo fotogramma alla **misura nuova** DEVE essere una chiave **vera** (parameter set compresi), e il client **NON DEVE** consegnare al decodificatore un fotogramma la cui misura non è quella per cui è configurato |
+
+## ⛔ La grazia è **accesa di suo**, e la scelta è dichiarata
+
+`Contesto.adatta_tela(..., grazia=…)` era `False` di suo, e con ragione: era una **proposta**, e
+accenderla avrebbe cambiato in silenzio i verdetti di `01-b4-validatore.py`, che importa il giudice
+— l'invariante **I6** applicata a un banco. ⭐ Adesso è una **riga normativa**: l'interruttore ha
+cambiato mestiere, e il predefinito che tradisce è quello **spento** — lì il predefinito sarebbe il
+documento di ieri, e ogni lettore che non conosce D14 farebbe cadere una sessione sana senza che
+nessuno gliel'abbia chiesto. ⚠ Il parametro **resta**, e serve al guasto **G6**.
+
+## I casi accesi, e quelli aggiunti — 38 → **44**, e le regole coperte 6 → **8**
+
+| caso | prima | adesso |
+|---|---|---|
+| `p8-in-volo-dopo-adatta-tela` | `AMBIGUO` | ⭐ **ACCETTATO**, e il giro pretende che la **tolleranza sia dichiarata** (§3, ultima riga) |
+| `p8-in-volo-fuori-grazia` · `p8-misura-di-nessuna-tela` | `ERRORE_PROTOCOLLO` con la cura accanto | `ERRORE_PROTOCOLLO` **per una riga**, e sono i due che tengono P8 stretta |
+| `d13-delta-alla-misura-nuova` | — | **nuovo**: `ERRORE_PROTOCOLLO` (P9 violata) |
+| `d13-chiave-alla-misura-nuova` | — | **nuovo**: `ACCETTATO` (P9 rispettata) |
+| `d13-delta-dopo-la-chiave-nuova` | — | **nuovo**: `ACCETTATO` — ⛔ il debito si paga **una** volta, o il video si fermerebbe dopo ogni ridimensionamento |
+| `d13-tela-che-non-cambia` | — | **nuovo**: `ACCETTATO` — ⛔ §7.1 risponde `TELA` anche a un `ADATTA_TELA` che chiede la misura in vigore, e lì non c'è nessuna «misura nuova»: aprire il debito sarebbe un rosso su una sessione sana |
+
+Nell'arbitro delle registrazioni: `p9-delta-alla-misura-nuova` (uscita **1**),
+`p9-chiave-alla-misura-nuova` e `p9-delta-dopo-la-chiave-nuova` (**0**), `p8-due-tele-in-un-secondo`
+(**0**). Prove 22 → **26**, righe con tutt'e due le prove 7 → **9**.
+
+⚠ **E di P9 questi arbitri giudicano metà**: che il fotogramma sia `0x0301` sta nell'intestazione,
+che sia una chiave **vera** sta nei **dati**, e il giudice i dati non li conserva. La misurano
+`02-codifica-nal.py` e `02-pagina-tela-*` — scritto qui per non farla credere coperta.
+
+## ⛔⛔ E LE DUE CURE, LETTE CON L'OCCHIO OSTILE, **NON REGGONO IN DUE PUNTI**
+
+*Come stamattina: non le ha trovate una rilettura, le ha trovate **chi doveva farle rispettare**.*
+
+- ⛔⛔ **P10 — le due righe di stasera si contraddicono sullo stesso fotogramma.** §5.2 dice che il
+  client **NON DEVE** consegnare al decodificatore un fotogramma la cui misura non è quella per cui
+  il decodificatore è configurato, e che **lo butta**; §6.2 dice che quello stesso fotogramma —
+  quello in volo dopo un `TELA` — **DEVE** essere accettato e **dipinto** riscalato. Se il client ha
+  riconfigurato il decodificatore quando è arrivato il `TELA` — la lettura naturale di §7.1, *«la
+  tela in vigore DOPO questo messaggio»* — le due righe comandano il contrario. ⛔ `RCP.md` **non
+  dice in nessun punto quando il client riconfigura**: le due letture sono conformi tutt'e due e
+  **divergono sul filo** (chi butta manda `RICHIEDI_CHIAVE`, l'altro no). ⭐ Cura, una riga: *si
+  riconfigura sulla prima chiave alla misura nuova, non sul `TELA`* — e costa **zero**, perché `[M]`
+  la chiave vera va bene sia riconfigurando sia senza (8 celle su 8). Caso:
+  `d13-contro-d14-decodificatore` → `AMBIGUO`.
+- ⛔⛔ **P11 — «la tela precedente» è al singolare, e chi trascina una finestra ne manda due.**
+  1920×1080 → `TELA(ADATTATA, 1600, 900)` → `TELA(ADATTATA, 1280, 720)`. Il fotogramma aperto prima
+  di tutto — una **chiave**, la più grossa, la più lenta ad arrivare, e §5.2 vieta al server di
+  abbandonarla — porta 1920×1080: **né** la tela in vigore **né** la precedente, e §6.2 dice
+  `ERRORE_PROTOCOLLO` **subito**. ⇒ La sessione sana cade lo stesso, un passo più in là della scena
+  che la cura ha chiuso. ⭐ Cura: *«una tela che è stata in vigore entro il secondo appena passato»*
+  al posto di *«la precedente»* — e `p8-misura-di-nessuna-tela` resta rosso anche così. Casi:
+  `p8-due-tele-in-un-secondo` nei due arbitri.
+
+⚠ **E una `[?]` che P9 apre e non chiude**: §6.2 dice che i fotogrammi arrivano **fuori ordine**,
+quindi un delta alla misura nuova può arrivare **prima** della chiave spedita per prima. §5.2
+vincola chi **spedisce** e i due arbitri la applicano a chi **riceve** — la lettura severa, la
+stessa che P6 ha da stamattina. Un buco nei `numero` distinguerebbe i due casi, e nessuna riga dice
+di guardarlo.
+
+## Le certificazioni di questo giro — `[M]` 12 agosto 2026, sera
+
+| | atteso | misurato |
+|---|---|---|
+| `01-b0-terreno.sh prodotto` (su NIC-OS, **prima** di tutto) | 13 su 13 | ⭐ **13 su 13**, 0 guai, 0 ignoti |
+| `02-filo-fotogramma.py --certifica` | 0 guasti su **44** casi → >0 → 0, su **6** guasti | ⭐ **6 su 6**; G6 *«la grazia spenta»* sano 0 → **3** → 0 · G7 *«il delta alla misura nuova passa»* sano 0 → **1** → 0, marche viste nel rosso e **assenti** dal sano |
+| `02-filo-validatore.py --certifica` | 0 prove sbagliate → G4 → 0 | ⭐ sano **0** → guasto **21** → risanato **0**, marca «uscita 3 dove ne serviva 1» **10** volte col guasto e **0** da sano |
+| **B9** (`01-b12-copie/01-b9-letture.py`, la strada di `01-b12-lancia.sh` §B9) | 0 → 3 → 0 | ⭐ **0 → 3 → 0**, 12 voci su 12 con tutti gli appigli nel `RCP.md` di stasera; copia rimessa all'impronta di prima |
+| **B4** (`01-b12-copie/01-b4-lancia.py`) | 0 → 1 → 0 | ⭐ **23 su 23** → guasto **2 su 23** (uscita 1) → **23 su 23**; ⛔ e la grazia accesa **non gli ha cambiato un verdetto** |
+
+⚠ **E B4 non copre le due righe nuove**: nessuna delle sue 23 registrazioni porta un fotogramma in
+volo, quindi la grazia lì non è esercitata da nessun caso — il 23 su 23 dice «non è cambiato
+niente», non «le regole nuove sono provate». Quelle stanno nei due arbitri di F2.4.
+
+⛔ **G6 e G7 non sono guasti inventati**: sono il giudice di **ieri sera**, come G5 è quello di ieri
+mattina. Un guasto preso dalla storia vera dimostra che il banco sa distinguere il documento di oggi
+da quello di ieri, che è precisamente il modo in cui una certificazione scade senza che nessuno se
+ne accorga.
+
+---
+
+# ⭐⛔ Il giro **seguente**, sempre del 12 agosto 2026 — P10 e P11 applicate, e i due `AMBIGUO` portati a verdetto
+
+*I due punti in cui le cure della sera non reggevano sono entrati in `RCP.md` nel giro dopo essere
+stati trovati: **P10** in §5.2 (⛔ *«il client riconfigura il decodificatore sulla prima **CHIAVE**
+alla misura nuova, non sul `TELA`»*, e la riga del client esenta *«né quella tollerata da §6.2»*) e
+**P11** in §6.2 (⛔ *«una tela che è stata in vigore entro il **secondo appena passato**»* al posto
+di *«la tela precedente»*, con l'errore immediato per una misura *«che non è mai stata in vigore in
+quella finestra»*). ⇒ Nessun caso di questo capitolo esce più `AMBIGUO`.*
+
+| caso | prima | adesso |
+|---|---|---|
+| `p10-decodificatore-al-tela` *(era `d13-contro-d14-decodificatore`)* | `AMBIGUO` | **ACCETTATO** ⛔ **col RILIEVO SUL CLIENT**: sul filo nessuno ha sbagliato, ma quel decodificatore è dove §5.2 gli vieta di essere |
+| `p10-decodificatore-alla-chiave` | — | **nuovo**: ACCETTATO **senza** rilievo — il client dov'è giusto |
+| `p11-due-tele-nella-finestra` *(era `p8-due-tele-in-un-secondo`)* | `AMBIGUO` | **ACCETTATO**, tolleranza dichiarata |
+| `p11-misura-mai-in-vigore` | — | **nuovo**: `ERRORE_PROTOCOLLO` — la finestra copre le misure **vere**, non tutte |
+
+⛔ **P10 non sta con le altre, e la separazione è il punto.** È una riga sullo **stato del client**,
+non sui byte: la misura per cui il decodificatore è configurato **non è sul filo**, e il caso la
+**dichiara**. ⇒ I due casi escono tutt'e due `ACCETTATO` — promuovere un difetto del client a
+`ERRORE_PROTOCOLLO` farebbe cadere una sessione in cui il server è conforme, che è l'errore già
+pagato tre volte in questa giornata — e a cambiare è il **rilievo**, che il primo deve portare e il
+secondo ⛔ **non deve portare**: la regola delle due metà della marca (R12-A.3), applicata a un
+rilievo. Tabella `REGOLE_DI_STATO`, contata a parte. Nell'arbitro delle registrazioni P10 sta in
+`FUORI_PORTATA`: da un `.rcpreg` **non si giudica**, e lo si dichiara invece di fingere.
+
+**I numeri**: giudice del fotogramma **44 → 46 casi**, regole del filo **8 → 9** (P11), righe di
+stato **1** (P10), proposte aperte **2 → 0** — e la tabella resta, vuota e dichiarata. Arbitro delle
+registrazioni **26 → 27 prove**, righe coperte **9 → 10**. Guasti **6 → 8**: ⭐ **G8** *«la grazia
+copre la sola tela precedente»* (la riga di due ore prima) e ⭐ **G9** *«il rilievo sullo stato del
+client non si stampa»* — ⛔ e G9 non fa cadere nessun esito: si vede **solo** dal controllo che
+pretende il rilievo, che è la forma più silenziosa dell'indulgenza che §3 esiste per togliere.
+
+## ⛔⛔ E alla terza rilettura ne restano due — **dichiarate, non curate**
+
+- ⛔ **P12 `[R]` — §3 riga 6 è rimasta al singolare.** §6.2 dice adesso *«una tela che è stata in
+  vigore entro il secondo appena passato»*; la sesta eccezione di §3 dice ancora *«i fotogrammi che
+  portano la misura **precedente**»*. ⛔ E §3 non è un riassunto: dichiara *«le eccezioni sono sei, e
+  sono tutte qui. Fuori da questo elenco non se ne inventano»* — cioè **vieta** la tolleranza più
+  larga che §6.2 comanda. ⇒ Caso concreto, già nel banco: `p11-due-tele-nella-finestra`. Un client
+  scritto leggendo §3 **chiude**, uno scritto leggendo §6.2 **accetta e dipinge**: due
+  implementazioni conformi, due byte diversi, e una delle due uccide **la stessa sessione sana che
+  P11 ha appena salvato**. ⚠ Il banco segue §6.2 — la sezione normativa del campo — e lo **dichiara**
+  invece di sceglierlo in silenzio.
+- ⛔ **P13 `[?]` — il secondo di grazia è un tempo, e quel che deve svuotarsi è una coda.** Quanto ci
+  metta ad arrivare un fotogramma **già in volo** dipende dalla **banda**, non dall'orologio. Scena:
+  `TELA(ADATTATA, 1280, 720)`, e la **chiave** 1920×1080 aperta un istante prima pesa qualche MiB
+  (§6.2 ne ammette **16**) su una linea cattiva — e le linee cattive sono **dentro** il modello, il
+  minimo di `CODER.md` §1 è 480p25. Arriva dopo il secondo, e il client chiude un fotogramma che il
+  server ha spedito quando era legale e che §5.2 gli vietava di abbandonare. ⛔ Non è solo una
+  sessione sana che cade: è l'invariante **I1** — *«mai a staccare»*, *«una sessione brutta vale più
+  di una sessione chiusa»* — rotta **perché la linea è lenta**, cioè la condizione che I1 esiste per
+  proteggere. ⚠ Allungare il secondo sposta il difetto e non lo toglie; il client sa quando la coda
+  si è svuotata, perché §5.2 gli garantisce una **chiave alla misura nuova**. ⛔ Ma la riga è del
+  coordinatore, e questo banco **non ha un orologio**: qui si dichiara. `[?]` non misurata.
+
+⚠ **E la `[?]` di P9 resta aperta**, e non si chiude per simmetria con P6: un delta alla misura nuova
+può arrivare **prima** della chiave (§6.2, i fotogrammi arrivano fuori ordine), §5.2 vincola chi
+**spedisce** e gli arbitri la applicano a chi **riceve**. ⚠ La riga di P10 porta adesso un
+**candidato** di risposta — *«lo butta e lo tratta come un buco»*, cioè `SCARTATO` invece della
+chiusura — ⛔ ma *candidato* non è *deciso*, e le due letture producono ancora byte diversi
+(`RICHIEDI_CHIAVE` contro `CONGEDO`). Per chiuderla serve una **misura** che nessuno ha.
+
+## Le certificazioni di questo giro — `[M]` 12 agosto 2026
+
+| | atteso | misurato |
+|---|---|---|
+| `01-b0-terreno.sh prodotto` | 13 su 13 | ⛔ **12 su 13, 1 guaio** — e ⚠ **non è di questo giro**: `01-p5-copia-7522/pagina.html` porta addosso il guasto **P5R** di un altro agente, innestato adesso. Non l'ho tolto (non è mio) e **non tocca** questi banchi: B9, B4 e F2.4 girano su CHUWI e non misurano il server |
+| `02-filo-fotogramma.py --certifica` | 0 guasti su **46** casi → >0 → 0, su **8** guasti | ⭐ **8 su 8**, marche viste nel rosso e **assenti** dal sano |
+| `02-filo-validatore.py --certifica` | 0 prove sbagliate su **27** → G4 → 0 | ⭐ sano **0** → guasto **22** → risanato **0**, marca **11** volte col guasto e **0** da sano |
+| **B9** | 0 → 3 → 0 | ⭐ **0 → 3 → 0**, 12 voci su 12 sul `RCP.md` di adesso; copia rimessa all'impronta |
+| **B4** | 0 → 1 → 0 | ⭐ **23/23 → 2/23 → 23/23** |
+
+⚠ **7448 e 7501**: 2 ascoltatori prima, 2 dopo. Porta 7542: non aperta — questo giro non tocca la rete.
+
+---
+
+# ⭐⛔ Il **quarto** giro del 12 agosto 2026 — P12 e P13 applicate, l'orologio sparito, e due rilievi nuovi
+
+*`RCP.md` §3 riga 6 dice adesso la stessa cosa di §6.2 (**P12**), e §6.2 non ha più un orologio
+(**P13**): ⛔ *«la tolleranza non finisce a orologio: finisce quando arriva la prima chiave alla
+misura nuova»*. ⭐ E per questi due banchi non è una sfumatura: **la fine della tolleranza è passata
+da un tempo a un fotogramma**, cioè da una cosa che sul filo non c'è a una che si vede.*
+
+| caso / prova | esito |
+|---|---|
+| `p13-vecchia-dopo-la-chiave-nuova` *(era `p8-in-volo-fuori-grazia`)* | `ERRORE_PROTOCOLLO` — e il caso adesso **dichiara il numero**: `numero` 42 dopo la chiave 41, cioè un server che continua a catturare alla tela vecchia, non un fotogramma in volo |
+| `p13-linea-lenta` | **ACCETTATO** — ⛔ è il caso per cui la cura esiste: dichiara che *«il secondo è passato da un pezzo»*, e quel tempo **non decide più niente** |
+| **G10** *«il giudice con l'orologio»* | sano 0 → guasto **1** → risanato 0, marca `p13-linea-lenta: ACCETTATO -> ERRORE_PROTOCOLLO` — ⭐ è il guasto che rende la cura **provata** invece che raccontata: senza il caso della linea lenta, «finisce sulla chiave» e «finisce dopo un secondo» danno lo stesso verde su tutto il resto |
+| `p13-vecchia-dopo-la-chiave-nuova` *(prova dell'arbitro)* | ⭐ **prima non si poteva nemmeno scrivere**: §11.1 non porta istanti, e una tolleranza che finiva a orologio da un `.rcpreg` non si giudicava affatto. Il denominatore `grazia_ignota` è diventato `tollerati` — ⛔ e il cambio di nome è il rilievo: non c'è più niente da indovinare |
+
+**Numeri**: giudice **47 → 48 casi**, regole del filo **9 → 10** (P13), righe di stato **1** (P10),
+guasti **8 → 9**; arbitro **27 → 29 prove**, righe coperte **10 → 11**. Certificazioni: giudice
+**9 su 9**, arbitro sano **0** → G4 **24** → risanato **0** (marca 13 volte col guasto, 0 da sano),
+**B9 0 → 3 → 0**, **B4 23/23 → 2/23 → 23/23**, `01-b0-terreno.sh prodotto` ⭐ **13 su 13** (il guasto
+P5R dell'altro agente è stato tolto nel frattempo). 7448 e 7501: **2 prima, 2 dopo**.
+
+## ⛔⛔ E la rilettura ostile ne trova **due** — dichiarate, non curate
+
+- ⛔ **P14 `[R]` — la fine della tolleranza può arrivare PRIMA dei fotogrammi che doveva far
+  passare.** La tolleranza finisce sulla prima chiave alla misura nuova; ⛔ ma quella chiave
+  **scavalca** i fotogrammi in volo, e non per caso: gli stream sono indipendenti (§6.2), il
+  fotogramma vecchio è **il più grosso** — §5.2 vieta al server di abbandonare una chiave — e quello
+  nuovo è più piccolo. ⇒ Scena: chiave 1280×720 `numero` **41** consegnata, poi arriva il fotogramma
+  1920×1080 `numero` **40**, catturato prima del `TELA`. §6.2 fa chiudere, e cade una sessione in cui
+  nessuno ha sbagliato — ⛔ mentre §6.2 **stesso**, sette righe più su, direbbe di **scartare** un
+  `numero` precedente all'ultimo consegnato: due righe della stessa sezione, e vince la più severa.
+  ⚠ È la quarta volta che questa famiglia si sposta di un passo: **P8 → P11 → P13 → P14**. Caso:
+  `p14-in-volo-scavalcato-dalla-chiave`, nei due arbitri, e porta ⛔ **quel che il documento comanda**
+  — non quel che sarebbe giusto.
+- ⛔ **P15 `[?]` — la grandezza sbagliata che P13 ha tolto da §6.2 è ancora in §7.1**, per il verso
+  opposto del filo: il server tollera **per un secondo** le coordinate valide sulla tela precedente.
+  L'uplink è il verso debole e gli stream di QUIC condividono la finestra di congestione ⇒ un input
+  partito prima del `TELA` può arrivare dopo il secondo, e il server chiude. ⚠ **E la cura di P13 non
+  si trasporta**: per i fotogrammi la fine è un fatto osservabile (la chiave alla misura nuova), per
+  le coordinate non c'è niente di equivalente — una coordinata può essere valida su tutt'e due le
+  tele, e il server non sa distinguerla. ⛔ Non è di questo capitolo (§7.1 è l'input) e non è
+  misurata: si dichiara.
+
+⚠ **E le due `[?]` di prima restano aperte**: P9 (la regola vincola chi spedisce, gli arbitri la
+applicano a chi riceve) e il candidato di risposta che P10 le mette accanto. Chiuderle vuole una
+misura che nessuno ha.
+
+---
+
+# ⭐⛔ La storia di **una riga sola**, corretta quattro volte in una sera — e che cosa andava guardato la prima volta
+
+*P14 è curata: §6.2 dice adesso che **la regola dell'ordine si applica PRIMA di quella della
+misura** — un `numero` precedente all'ultimo consegnato **si scarta**, e la misura non si guarda
+nemmeno. Il caso `p14-in-volo-scavalcato-dalla-chiave` è passato da `ERRORE_PROTOCOLLO` a
+**SCARTATO** nei due arbitri, e il guasto **G11** — «la misura si guarda prima dell'ordine», il
+giudice di un'ora fa — lo rimette rosso.*
+
+| | la riga diceva | il difetto che restava | trovato da |
+|---|---|---|---|
+| **P8** | *(niente)*: una misura diversa dalla tela in vigore chiude | i fotogrammi **già in volo** dopo un `TELA` portano legittimamente la misura di prima ⇒ un client conforme uccide una sessione sana | leggendo il documento, prima di scrivere una riga di prodotto |
+| **P11** | tolleranza per **la tela precedente** | chi trascina una finestra manda **due** `ADATTA_TELA`: la misura in volo non è né quella in vigore né *la* precedente | applicando P8 al banco |
+| **P13** | tolleranza **per un secondo** | quel che si svuota è una **coda**, e il tempo di svuotamento dipende dalla **banda**: su una linea cattiva la chiave arriva dopo ⇒ I1 rotta perché la linea è lenta | applicando P11 al banco |
+| **P14** | tolleranza fino alla **prima chiave alla misura nuova** | quella chiave **scavalca** i fotogrammi in volo — non per caso: il vecchio è il più grosso e §5.2 vieta di abbandonarlo | applicando P13 al banco |
+
+⛔ **La forma è una sola, e si vede solo mettendo le quattro righe in fila:** ogni stesura ha
+descritto *«questo fotogramma appartiene al mondo di prima»* con **una grandezza sostitutiva** — una
+misura, poi un orologio, poi un evento — ⛔ e ogni sostituto era esatto **nella scena che aveva
+motivato la cura** e sbagliato di un passo appena fuori.
+
+⭐ **Che cosa andava guardato la prima volta: il campo che il protocollo porta già.** La domanda
+*«questo fotogramma è stato catturato prima del cambio di tela?»* ha una risposta esatta dentro i 28
+byte di §6.2 dal 9 agosto: **`numero`**, il contatore dei fotogrammi catturati. Un fotogramma in
+volo ha **sempre** un `numero` più basso di quello del primo catturato dopo il `TELA` — non «quasi
+sempre», non «di solito»: sempre, perché il contatore cresce alla cattura. ⇒ Le prime tre stesure
+hanno cercato fuori dall'intestazione un fatto che nell'intestazione c'era, e la quarta è la prima
+che lo usa. ⛔ **La regola di metodo che ne esce, e vale oltre questo capitolo:** quando si scrive
+una tolleranza, si nomina **la grandezza vera del fenomeno che si tollera** e si guarda se il
+protocollo la porta già; se si sta per scriverne una **sostitutiva** — un tempo, una misura, un
+messaggio — quella tolleranza si sposterà di un passo alla prima rilettura ostile.
+
+⚠ **E la seconda metà della lezione è sul banco, non sul documento:** ognuno dei quattro difetti è
+stato trovato costruendo la scena **al limite della cura appena scritta** — due cambi invece di uno,
+la linea lenta invece di quella veloce, l'ordine d'arrivo invertito — e **nessuno** costruendo la
+scena che la cura raccontava. ⛔ Un banco che prova solo la scena che ha motivato la riga certifica
+la riga, non la regola: è la stessa cosa che `CODER.md` §3.4 dice del banco che non riproduce il
+difetto, letta dal lato della cura invece che da quello del guasto.
+
+⭐ Quattro correzioni alla stessa riga in una sera non sono un aneddoto: sono **la forma di un
+errore**. Chi la riconoscerà la prossima volta — *«sto indicizzando una tolleranza su un
+sostituto»* — risparmierà una serata.

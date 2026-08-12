@@ -245,7 +245,13 @@ dice ""
 #   rispettare, e il verde che da' e' quello che da' fiducia.  E il caso che la
 #   **rispetta** conta quanto l'altro: senza, una regola scritta troppo larga
 #   resterebbe verde su tutto il banco.
-dice "== ⭐⛔ LE SETTE RIGHE ENTRATE IN \`RCP.md\` IL 12 AGOSTO 2026"
+dice "== ⭐⛔ LE RIGHE ENTRATE IN \`RCP.md\` IL 12 AGOSTO 2026"
+dice "   Sette di mattina (P1-P7), **due di sera** — P8 da D14 (la grazia sui"
+dice "   fotogrammi in volo) e P9 da D13 (la chiave vera a ogni cambio di tela) —"
+dice "   e ⛔ **due nate dalle due di sera**: P10 (§5.2, QUANDO il client"
+dice "   riconfigura) e P11 (§6.2, la finestra al posto de «la precedente»),"
+dice "   trovate applicando le prime e curate il giro dopo.  Il numero non e'"
+dice "   scritto qui: lo contano i due arbitri."
 dice "   Il conto lo calcolano i due arbitri cercando i casi per nome: una"
 dice "   regola che perdesse uno dei due diventa rossa qui, non fra sei mesi."
 python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'regole con TUTT' | \
@@ -253,8 +259,15 @@ python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'regole con TUTT' | \
 python3 "$QUI/02-filo-validatore.py" --elenco | grep -E 'righe con TUTT' | \
     sed 's/^ */   arbitro delle registrazioni: /'
 dice ""
-# ⛔⛔ E LE CURE CHE `RCP.md` NON PORTA ANCORA — aggiunto la sera del 12 agosto
-#    2026 col difetto **D14**.  ⚠ Sta in un blocco SUO e non insieme al conto
+# ⛔⛔ E LE CURE CHE `RCP.md` NON PORTA ANCORA.  ⚠ Aggiunto la sera del 12
+#    agosto 2026 col difetto **D14**, e la sera stessa il blocco ha cambiato
+#    contenuto: D14 e' entrato (P8), e al suo posto ci sono i **due punti in
+#    cui le cure di quella sera non reggono** — P10 (le due righe nuove si
+#    contraddicono sullo stesso fotogramma) e P11 (la grazia nomina «la tela
+#    precedente» al singolare, e chi trascina una finestra ne manda due).
+#    ⛔ Trovati **applicando** le righe ai due arbitri, che e' lo stesso modo
+#    in cui la mattina si erano trovate le due sbagliate su sette.
+#    ⚠ Sta in un blocco SUO e non insieme al conto
 #    qui sopra: «righe che il documento porta» e «cure che il documento non ha»
 #    sono due fatti diversi, e sommarli darebbe un numero che non vuol dire
 #    niente.  ⛔ E la coppia ha una forma diversa: la prova che la fa vedere e
@@ -273,9 +286,11 @@ dice "     nessun confronto fra due implementazioni la trova."
 python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -A1 'AMBIGUO$' | \
     grep -v '^--$' | sed 's/^/   /'
 if ! python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -q 'AMBIGUO$'; then
-    dice "   ⭐ nessuna: le quattro che questo banco aveva trovato sono entrate"
-    dice "      nel documento il 12 agosto 2026 (P2 §6.2 · P3 §2.5 · P5 §6.2 ·"
-    dice "      P6 §5.2), e le altre tre con loro (P1 §2.5 · P4 §6.2 · P7 §11.1)."
+    dice "   ⭐ nessuna: le OTTO che questo banco ha trovato sono entrate tutte"
+    dice "      nel documento il 12 agosto 2026 — quattro di mattina (P2 §6.2 ·"
+    dice "      P3 §2.5 · P5 §6.2 · P6 §5.2), tre con loro (P1 · P4 · P7), due"
+    dice "      di sera (P8 §6.2 · P9 §5.2) e ⛔ due nate DALLE due di sera"
+    dice "      (P10 §5.2 · P11 §6.2), trovate applicandole poche ore dopo."
     dice "   ⚠ E questo NON vuol dire che \`RCP.md\` non ne abbia piu': vuol dire"
     dice "     che non ne restano fra quelle che QUESTO banco sa cercare."
 fi

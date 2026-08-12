@@ -150,36 +150,134 @@ nuova porta con se'.*
      riga, scritta per il verso in cui manca: la strada buona esisteva gia' in
      casa.
 
-⛔ **FINCHE' IL COORDINATORE NON APPLICA P8, QUESTO GIUDICE DICE `AMBIGUO` IN
-   QUELLA SCENA — E NON `ERRORE_PROTOCOLLO`.**  ⚠ Non e' indulgenza, ed e' la
-   sola scelta che non avvelena il prossimo che legge questo banco: un verde su
-   `ERRORE_PROTOCOLLO` in quella scena **certificherebbe che un client conforme
-   deve uccidere una sessione sana**, e chi scrive il prodotto lo
-   implementerebbe.  ⇒ Il caso `p8-in-volo-dopo-adatta-tela` **non fa fallire
-   il giro** — nessuna delle due implementazioni ha sbagliato — ma si stampa in
-   fondo con il testo pronto della cura, che e' il mestiere dell'esito
-   `AMBIGUO` (punto 4 qui sopra).  ⭐ Ed e' la stessa strada da cui P2, P3, P5 e
-   P6 sono passate stamattina, prima di diventare righe.
+⭐⛔ **E LA SERA STESSA IL COORDINATORE HA APPLICATO LE DUE CURE: DA QUI IN POI
+    QUESTO GIUDICE LE FA RISPETTARE, E NON DICE PIU' `AMBIGUO` IN QUELLA
+    SCENA.**  Le righe entrate sono due, e sono **P8** e **P9**:
 
-⛔ **E la scena che uccide non basta: ce ne vogliono TRE**, perche' una grazia
-   scritta troppo larga e' un difetto quanto una regola scritta troppo stretta —
-   ed e' esattamente cosi' che P5 e' finita sbagliata la prima volta:
+     **P8** §6.2 in coda + §3 eccezione **6** — dopo un `TELA(ADATTATA)` il
+            client **DEVE** accettare per **un secondo** i fotogrammi che
+            portano la misura **precedente**, dipingendoli riscalati e
+            **scrivendolo nel registro**; fuori dal secondo sono
+            `ERRORE_PROTOCOLLO`, e lo e' **subito** una misura che non e' ne'
+            quella in vigore ne' la precedente;
+     **P9** §5.2 — il primo fotogramma alla **misura nuova** dopo un
+            `TELA(ADATTATA)` **DEVE** essere una chiave **vera** (coi suoi
+            parameter set), e il client **NON DEVE** consegnare al
+            decodificatore un fotogramma la cui misura non e' quella per cui il
+            decodificatore e' configurato (difetto **D13**, `[M]`).
 
-     `p8-in-volo-dopo-adatta-tela`   la misura **precedente**, dentro la
-                                     grazia -> `AMBIGUO` (con P8: ACCETTATO)
-     `p8-in-volo-fuori-grazia`       la stessa misura, **passato il secondo**
-                                     -> `ERRORE_PROTOCOLLO`.  ⛔ La grazia e'
-                                     un secondo, non un permesso permanente
-     `p8-misura-di-nessuna-tela`     una misura che non e' **ne'** quella in
-                                     vigore **ne'** la precedente, subito dopo
-                                     il `TELA` -> `ERRORE_PROTOCOLLO`.  ⛔ La
-                                     grazia copre **una misura**, non «tutto
-                                     per un secondo»
+⛔ **E la scena che uccide non basta: ce ne vogliono TRE per P8**, perche' una
+   grazia scritta troppo larga e' un difetto quanto una regola scritta troppo
+   stretta — ed e' esattamente cosi' che P5 e' finita sbagliata la prima volta:
 
-⚠ **E questo banco non ha un orologio**: il *secondo* di §7.1 lo dichiara il
-  caso (`grazia_scaduta`), non lo misura nessuno.  ⛔ Quanto duri davvero il
-  volo di un fotogramma dopo un `TELA` e' una `[?]`, e questa famiglia intera e'
-  stata trovata **leggendo**, non misurando.
+     `p8-in-volo-dopo-adatta-tela`      una misura in vigore da quando la coda
+                                        ha cominciato a svuotarsi ->
+                                        **ACCETTATO**, e il giro controlla che
+                                        la tolleranza sia **dichiarata** (§3,
+                                        ultima riga)
+     `p13-vecchia-dopo-la-chiave-nuova` la stessa misura, ma **la chiave alla
+                                        misura nuova e' arrivata** ->
+                                        `ERRORE_PROTOCOLLO`.  ⛔ La tolleranza
+                                        non e' un permesso permanente
+     `p8-misura-di-nessuna-tela`        una misura che in quella finestra non e'
+                                        **mai** stata in vigore ->
+                                        `ERRORE_PROTOCOLLO` **subito**
+
+⭐ **E QUESTO BANCO NON HA UN OROLOGIO — E DALLA CURA DI P13 NON GLIENE SERVE
+   PIU' UNO.**  La tolleranza finiva «dopo un secondo», che e' un fatto che sul
+   filo non c'e': il caso doveva **dichiararlo**, e un arbitro che legge una
+   registrazione non poteva vederlo affatto.  ⇒ Adesso finisce sulla **prima
+   chiave alla misura nuova**, che e' un **fotogramma** — e i fotogrammi si
+   vedono.  ⚠ Il tempo resta dichiarabile (`secondo_passato`) e non decide piu'
+   niente: lo rimette a decidere il solo guasto **G10**, ed e' il caso
+   `p13-linea-lenta` a dimostrare che la cura c'e'.
+
+===========================================================================
+⭐⛔⛔ E LE DUE CURE DI QUELLA SERA, LETTE CON L'OCCHIO OSTILE, NON REGGEVANO
+     IN DUE PUNTI — **P10** e **P11**, trovati APPLICANDOLE, ed ENTRATI NEL
+     DOCUMENTO IL GIRO DOPO
+
+*E' successo di nuovo quel che e' successo stamattina, quando due delle sette
+righe si sono rivelate sbagliate: a trovarle non e' stata una rilettura, e'
+stato **chi doveva farle rispettare**.  ⛔ Nessuno dei due era un difetto del
+prodotto: erano due punti in cui `RCP.md`, poche ore dopo la cura, non decideva
+— e il coordinatore li ha chiusi nel giro seguente.*
+
+  ⭐ **P10 — §5.2, la riga prima di quella del client**: *«il client
+     riconfigura il decodificatore sulla prima **CHIAVE** alla misura nuova,
+     non sul `TELA`»*, e la riga del client dice adesso *«ne' quella tollerata
+     da §6.2»*.  ⛔ Prima, le due cure si contraddicevano sullo **stesso
+     fotogramma**: §6.2 «accettalo e dipingilo», §5.2 «buttalo», e il documento
+     non diceva in nessun punto **quando** si riconfigura — due letture
+     conformi che divergevano sul filo.  ⇒ Qui la coppia di casi e'
+     `p10-decodificatore-al-tela` (il client fuori posto: si ACCETTA lo stesso,
+     ⛔ **col rilievo**) e `p10-decodificatore-alla-chiave` (il client dov'e'
+     giusto: si accetta, **senza** rilievo).
+
+  ⭐ **P11 — §6.2**: *«una tela che e' stata in vigore entro il **secondo
+     appena passato**»* al posto di *«la tela precedente»*, e
+     `ERRORE_PROTOCOLLO` subito per *«una misura che non e' mai stata in vigore
+     in quella finestra»*.  ⛔ Al singolare la riga uccideva una sessione sana
+     **un passo piu' in la'**: `ADATTA_TELA` lo manda l'utente che trascina una
+     finestra, e trascinando se ne mandano due in un secondo — 1920x1080 ->
+     `TELA(1600,900)` -> `TELA(1280,720)` — e la chiave aperta prima di tutto
+     (la piu' grossa, la piu' lenta, quella che §5.2 vieta di abbandonare)
+     portava una misura che non era ne' quella in vigore ne' la precedente.
+     ⇒ Coppia: `p11-due-tele-nella-finestra` e `p11-misura-mai-in-vigore`.
+
+===========================================================================
+⛔⛔ E ALLA TERZA RILETTURA NE RESTANO DUE, DICHIARATE E NON CURATE — **P12** e
+    **P13**.  Nessuna delle due si tocca da qui: `RCP.md` e' del coordinatore.
+
+  ⛔ **P12 — §3 eccezione 6 e' rimasta al SINGOLARE mentre §6.2 e' passata alla
+     finestra.**  §6.2 dice adesso *«una tela che e' stata in vigore entro il
+     secondo appena passato»*; la riga 6 della tabella di §3 dice ancora *«i
+     fotogrammi che portano la misura **precedente**»*.  ⛔ E §3 non e' un
+     riassunto: dichiara *«le eccezioni sono sei, e sono tutte qui.  Fuori da
+     questo elenco non se ne inventano»*, cioe' **vieta** la tolleranza piu'
+     larga che §6.2 comanda.
+     ⇒ Caso concreto, ed e' un caso che questo banco gia' porta:
+     `p11-due-tele-nella-finestra`.  Un client scritto leggendo §3 **chiude**;
+     uno scritto leggendo §6.2 **accetta e dipinge**.  Due implementazioni
+     conformi, due byte diversi, e una delle due uccide una sessione sana — la
+     **stessa** scena che P11 ha appena chiuso, sopravvissuta nella tabella che
+     dichiara di essere completa.  ⚠ Qui il banco segue §6.2, che e' la sezione
+     normativa del campo, e lo **dichiara** invece di sceglierlo in silenzio.
+
+  ⛔ **P13 — il secondo di grazia e' un tempo, e quel che deve svuotarsi e' una
+     CODA.**  `[?]` non misurata.  §6.2 tollera la misura vecchia per **un
+     secondo** dal `TELA`; ma i fotogrammi in volo sono stream QUIC gia'
+     aperti, e quanto ci mettono ad arrivare **dipende dalla banda**, non
+     dall'orologio.  ⇒ Scena: tela 1920x1080, l'utente trascina, `TELA(ADATTATA,
+     1280, 720)`; la **chiave** 1920x1080 aperta un istante prima pesa qualche
+     MiB — §6.2 ne ammette fino a **16** — e la linea e' cattiva (il minimo di
+     `CODER.md` §1 e' 480p25: le linee cattive sono **dentro** il modello).  Lo
+     stream ci mette **piu' di un secondo** ad arrivare, e il client chiude con
+     `ERRORE_PROTOCOLLO` un fotogramma che il server ha spedito quando era
+     ancora legale, e che §5.2 gli vietava di abbandonare.
+     ⛔ E qui non e' solo una sessione sana che cade: e' l'invariante **I1** —
+     *«mai a staccare», «una sessione brutta vale piu' di una sessione
+     chiusa»* — rotta **perche' la linea e' lenta**, che e' esattamente la
+     condizione che I1 esiste per proteggere.  ⚠ La cura non e' allungare il
+     secondo (un numero piu' grande sposta il difetto, non lo toglie): il
+     client sa quando la coda si e' svuotata, perche' §5.2 gli garantisce una
+     **chiave alla misura nuova**, e da quella in poi la misura vecchia non ha
+     piu' scuse.  ⛔ Ma la riga e' del coordinatore, e questo banco non ha un
+     orologio: qui si dichiara.
+
+⚠ **E una `[?]` che P9 apre e NON chiude — dichiarata, non chiusa per
+  simmetria**: §6.2 dice che i fotogrammi arrivano **fuori ordine**, quindi un
+  delta alla misura nuova puo' arrivare **prima** della chiave che il server ha
+  spedito per prima.  §5.2 vincola chi **spedisce**, e questo giudice — come
+  per P6 da stamattina — la applica a chi **riceve**: e' la lettura severa.
+  ⚠ E dalla riga di P10 il documento porta adesso un **candidato** di risposta
+  per l'altra lettura — *«il client … non consegna al decodificatore un
+  fotogramma la cui misura non e' quella per cui e' configurato … lo butta e lo
+  tratta come un buco»*, che darebbe `SCARTATO` invece della chiusura — ⛔ ma
+  **candidato non e' deciso**, e le due letture producono ancora byte diversi
+  (`RICHIEDI_CHIAVE` contro `CONGEDO`).  ⛔ Per chiuderla serve una **misura**
+  — quanto spesso un delta scavalchi la sua chiave sul filo vero — e questa
+  non ce l'ha nessuno: resta `[?]`.
 
 ===========================================================================
 ⛔ CHE COSA QUESTO BANCO **NON** PROVA, E VA DETTO
@@ -189,6 +287,7 @@ nuova porta con se'.*
 | che il server **spedisca** davvero un fotogramma | il prodotto non esiste (§0 di questo file).  Lo prova `02-filo-cliente.py` sulla **7514**, quando ci sara' |
 | che i **pixel** decodificati siano quelli catturati | e' la sotto-fase **F2.6**, e non e' una misura di protocollo |
 | che il **decodificatore** accetti i byte | e' **F2.5**: `VideoDecoder` e la tela |
+| che la chiave alla misura nuova sia una chiave **vera** — §5.2 vuole i VPS/SPS/PPS davanti all'IDR | ⛔ questo giudice **non conserva i dati** del fotogramma, quindi di P9 vede la meta' che sta nell'intestazione (`tipo = 0x0301`) e non quella che sta nel carico.  La misurano `02-codifica-nal.py` e `02-pagina-tela-*` |
 | il **credito** degli stream oltre i primi 256 fotogrammi (§2.3) | la fase 2 consegna **un** fotogramma fermo; e' la **fase 3** |
 | l'**abbandono** vero con `RESET_STREAM` sul filo | qui si giudica un flusso azzerato, non se ne provoca uno.  Il banco che lo provoca e' della **fase 3** (`RCP.md` §11, «il fotogramma abbandonato») |
 
@@ -235,12 +334,23 @@ class Verdetto:
     """
 
     def __init__(self, esito, regola="", dice="", scostamento=None,
-                 propone=""):
+                 propone="", tollerato="", rilievo=None):
         self.esito = esito
         self.regola = regola
         self.dice = dice
         self.scostamento = scostamento
         self.propone = propone      # ⛔ solo per AMBIGUO: la cura, non il reclamo
+        # ⛔ §3, ultima riga: *«ogni tolleranza va scritta nel registro.  Una
+        #    tolleranza silenziosa e' indistinguibile da un difetto»*.  ⇒ Un
+        #    fotogramma accettato **per un'eccezione** non ha lo stesso aspetto
+        #    di uno accettato perche' era in regola, e il giro lo verifica.
+        self.tollerato = tollerato
+        # ⛔ P10 — un rilievo sullo **stato del client**, che non e' un giudizio
+        #    sul filo e non cambia l'esito.  ⚠ Tenerli separati non e' ordine:
+        #    un rilievo promosso a esito farebbe cadere una sessione in cui il
+        #    server non ha sbagliato niente, ed e' la forma che questo capitolo
+        #    ha gia' pagato tre volte oggi.
+        self.rilievo = rilievo
 
     def __str__(self):
         p = [self.esito]
@@ -250,11 +360,14 @@ class Verdetto:
             p.append(self.dice)
         if self.scostamento is not None:
             p.append(f"(byte {self.scostamento} dell'intestazione)")
+        if self.rilievo:
+            p.append(f"— RILIEVO SUL CLIENT: {self.rilievo}")
         return " ".join(p)
 
     def come_dizionario(self):
         return {"esito": self.esito, "regola": self.regola, "dice": self.dice,
-                "scostamento": self.scostamento}
+                "scostamento": self.scostamento, "tollerato": self.tollerato,
+                "rilievo": self.rilievo}
 
 
 class Contesto:
@@ -295,10 +408,45 @@ class Contesto:
         #    ⚠ `tela_precedente` e' `None` finche' non e' mai cambiata niente:
         #      `None` e' «non c'e' una precedente», e NON e' una misura.
         self.tela_precedente = None
-        # ⛔ La grazia di §7.1 dura **un secondo**, e questo banco non ha un
-        #    orologio: lo stato lo dichiara il caso, non lo misura nessuno.
-        #    ⇒ `True` vuol dire «il secondo non e' ancora passato», dichiarato.
-        self.grazia_aperta = False
+        # ⛔⛔ E LE TELE CHE SONO STATE IN VIGORE **DA QUANDO LA CODA HA
+        #    COMINCIATO A SVUOTARSI**, non una sola.  §6.2 nominava «la tela
+        #    **precedente**» al singolare, ⚠ ma `ADATTA_TELA` lo manda l'utente
+        #    che trascina una finestra, e trascinando se ne mandano parecchi:
+        #    la tela puo' cambiare due volte mentre un fotogramma e' ancora in
+        #    volo (rilievo **P11**, curato il 12 agosto 2026).
+        self.tele_recenti = []
+        # ⛔⭐ D13, §5.2: dopo un `TELA(ADATTATA)` il primo fotogramma alla
+        #    misura NUOVA DEVE essere una chiave vera.  ⚠ `True` di suo vuol
+        #    dire «non c'e' nessun cambio di tela in sospeso»: a inizio sessione
+        #    la riga che comanda e' quella di P6, non questa.
+        #
+        # ⛔⭐⭐ E DALLA CURA DI **P13** QUESTO CAMPO FA **DUE** MESTIERI, ed e'
+        #    il punto di tutta la cura: e' anche **la fine della tolleranza**.
+        #    §6.2: *«la tolleranza non finisce a orologio: finisce quando arriva
+        #    la prima chiave alla misura nuova»*.  ⇒ La coda si sta svuotando
+        #    finche' questo e' `False`, e non c'e' nessun secondo da misurare —
+        #    ⭐ **la fine e' un fatto osservabile sul filo**, e per questo il
+        #    banco non ha piu' bisogno di un orologio che non ha mai avuto.
+        self.chiave_alla_tela_nuova = True
+        # ⛔ E IL SECONDO RESTA QUI, DICHIARATO E **INERTE** — non decide piu'
+        #    niente.  ⚠ Non e' un residuo: e' la leva del guasto **G10**, «il
+        #    giudice con l'orologio», cioe' la riga com'era due ore prima.  Un
+        #    campo che non decide e che nessun guasto esercita andrebbe tolto;
+        #    questo lo esercita, e dimostra che la cura di P13 e' **provata** e
+        #    non raccontata.
+        self.secondo_passato = False
+        # ⛔⛔ E A CHE MISURA E' CONFIGURATO IL DECODIFICATORE — `None` = «non
+        #    dichiarato», e NON e' «alla tela in vigore».
+        #
+        #    §5.2 (sera del 12 agosto) dice che il client **NON DEVE** consegnare
+        #    al decodificatore un fotogramma la cui misura non e' quella per cui
+        #    il decodificatore e' configurato; §6.2 (la stessa sera) dice che
+        #    **DEVE** accettare e **dipingere** i fotogrammi in volo alla misura
+        #    precedente.  ⇒ Le due righe si incontrano sullo stesso fotogramma,
+        #    e chi le legge deve sapere **quando il client riconfigura**: al
+        #    `TELA`, o alla prima chiave alla misura nuova.  ⛔ `RCP.md` non lo
+        #    dice in nessun punto — vedi la proposta **P10**.
+        self.decodificatore_a = None
         self.codec_negoziato = codec_negoziato
         self.sessione_aperta = sessione_aperta
         # ⛔ `None` e' «nessuno», e NON e' zero: §6.0 vieta i valori sentinella
@@ -307,8 +455,11 @@ class Contesto:
         self.ultimo_consegnato = None
         self.chiave_consegnata = False
         self.chiedi_chiave = False    # §5.2: il client DEVE chiederla su un buco
+        # ⛔ «Questo lettore applica l'eccezione 6 di §3?» — e NON e' «il
+        #    secondo non e' ancora passato»: il secondo non c'e' piu' (P13).
+        self.grazia_concessa = True
 
-    def adatta_tela(self, lar, alt, precedente=None, grazia=False):
+    def adatta_tela(self, lar, alt, precedente=None, grazia=True):
         """§7.1 — e' arrivato un `TELA(ADATTATA, lar, alt)`.
 
         ⛔ Da questo momento la tela **in vigore** e' un'altra, e §6.2 ci lega
@@ -326,33 +477,104 @@ class Contesto:
            legge una **registrazione** ricostruisce le tele sfogliando il file,
            e il contesto lo riusa da un flusso all'altro.
 
-        ⛔⛔ **E `grazia` e' SPENTA di suo, di proposito.**  La grazia di P8 non
-           e' ancora una riga di `RCP.md`: e' una **proposta**.  ⇒ Chi chiama
-           questo metodo senza chiederla continua a giudicare **il documento di
-           oggi**, che e' quel che un arbitro deve fare — e questo giudice e'
-           importato anche da `01-b4-validatore.py`, che e' della fase 1 e in
-           ricertificazione.  ⚠ Accenderla di suo avrebbe cambiato in silenzio
-           il verdetto di un banco che non sa niente di D14: e' l'invariante
-           **I6** applicata a un banco — *cio' che cambia quel che si vede sta
-           dietro un interruttore spento finche' non lo si guarda*.
+        ⛔⛔ **E LA CODA CHE SI SVUOTA NON HA PIU' UN INTERRUTTORE DEL TEMPO** —
+           cura di **P13**, 12 agosto 2026.  §6.2: *«la tolleranza non finisce
+           a orologio: finisce quando arriva la prima chiave alla misura
+           nuova»*.  ⇒ Qui non si apre nessun secondo: si apre un **debito**
+           (`chiave_alla_tela_nuova = False`), e a chiuderlo e' un fotogramma,
+           non un cronometro.  ⭐ Il che rende giudicabile da un `.rcpreg` una
+           cosa che prima non lo era.
+
+        ⛔⛔ **E `grazia` E' ACCESA DI SUO DALLA SERA DEL 12 AGOSTO 2026 —
+           cambiata, e la scelta va dichiarata.**
+
+           Fino a quella sera era **spenta**, e con ragione: la grazia era la
+           proposta **P8**, non una riga del documento, e accendere di suo una
+           proposta avrebbe cambiato in silenzio il verdetto di
+           `01-b4-validatore.py`, che la importa e non sa niente di D14 — cioe'
+           l'invariante **I6** applicata a un banco.
+
+           ⭐ Adesso `RCP.md` §6.2 la porta, ed e' la **sesta eccezione** di §3.
+           ⇒ L'interruttore ha cambiato mestiere: spenta di suo, il predefinito
+           sarebbe **il documento di ieri**, e ogni lettore che non conosce D14
+           — B4 compreso — farebbe cadere una sessione sana senza che nessuno
+           gliel'abbia chiesto.  ⛔ I6 protegge *«cio' che cambia quel che si
+           vede»* da un cambiamento **non guardato**: qui il cambiamento e'
+           stato guardato, sta nel documento, e il predefinito che tradisce non
+           e' piu' quello acceso ma quello spento.
+           ⚠ Il parametro **resta**, e serve al guasto **G6**: si spegne per
+             dimostrare che il banco sa vedere la differenza fra il giudice di
+             stasera e quello di ieri sera.
+
+        ⛔ E UN `TELA` CHE RIPETE LA MISURA IN VIGORE NON E' UN CAMBIO: non
+           lascia niente in volo, e riazzerare qui lo stato farebbe diventare
+           `ERRORE_PROTOCOLLO` il delta legittimo che segue la chiave nuova
+           quando i due arrivano su **due flussi** diversi (e' cosi' che
+           `02-filo-validatore.py` e `01-b4-validatore.py` rimettono il contesto
+           a posto flusso per flusso).
         """
-        self.tela_precedente = (precedente if precedente is not None
-                                else (self.tela_larghezza, self.tela_altezza))
-        self.grazia_aperta = bool(grazia)
+        if (lar, alt) == (self.tela_larghezza, self.tela_altezza):
+            # ⛔ Niente e' cambiato: non c'e' nessuna «misura nuova» che pretenda
+            #    una chiave (§5.2) e non c'e' niente in volo da graziare (§6.2).
+            #    ⚠ E il caso esiste davvero: §7.1 fa rispondere `TELA` a **ogni**
+            #      `ADATTA_TELA`, anche a uno che chiede la misura che c'e'
+            #      gia'.  Aprire li' un debito di chiave farebbe cadere il
+            #      delta legittimo che segue — un rosso su una sessione sana.
+            self.tela_da = "TELA(ADATTATA) (§7.1)"
+            return
+        prec = (precedente if precedente is not None
+                else (self.tela_larghezza, self.tela_altezza))
+        # ⛔ La lista tiene la precedente **e** quelle di prima, se la coda si
+        #    stava gia' svuotando: due `TELA` di fila sono la scena normale di
+        #    chi trascina una finestra (P11).
+        self.tele_recenti = ([prec] + self.tele_recenti
+                             if self.coda_da_svuotare() else [prec])
+        self.tela_precedente = prec
+        # ⚠ `grazia` non apre piu' un tempo: dice soltanto **se questo lettore
+        #   applica l'eccezione 6 di §3**.  Spenta (guasto G6) la coda non si
+        #   tollera affatto, ed e' il giudice di prima della cura.
+        self.grazia_concessa = bool(grazia)
+        self.chiave_alla_tela_nuova = False
         self.tela_larghezza, self.tela_altezza = lar, alt
         self.tela_da = "TELA(ADATTATA) (§7.1)"
 
-    def scade_la_grazia(self):
-        """⛔ E' passato **il secondo** di §7.1: da qui in poi la misura vecchia
-           e' `ERRORE_PROTOCOLLO` come qualunque altra.
+    def coda_da_svuotare(self):
+        """⭐⛔ **La coda si sta ancora svuotando?** — §6.2, cura di **P13**.
 
-        ⚠ Non c'e' nessun messaggio che dica questo, ed e' voluto: il tempo non
-          viaggia sul filo.  Lo dichiara il caso, e questo banco **non ha un
-          orologio** — scriverlo qui e' meno peggio di simulare una misura che
-          nessuno ha fatto (`MANDATO` §4: una cosa non misurata non si scrive
-          come misurata).
+        E' `True` fra un `TELA(ADATTATA)` e **la prima chiave alla misura
+        nuova**, che §5.2 garantisce esistere.  ⛔ Non c'e' nessun orologio, e
+        non e' una comodita' del banco: era la riga a essere sbagliata.
+
+        ⚠ *Il secondo era la grandezza sbagliata.*  Quel che deve svuotarsi e'
+          una **coda**, e quanto ci mette un fotogramma gia' in volo dipende
+          dalla **banda**: una chiave 1920x1080 di qualche MiB (§6.2 ne ammette
+          16) su una linea cattiva — che e' **dentro** il modello, il minimo e'
+          480p a 25 — arriva **dopo** il secondo.  ⇒ Il client avrebbe chiuso
+          un fotogramma spedito quando era legale, e che §5.2 vietava al server
+          di abbandonare: l'invariante **I1** («mai a staccare») rotta
+          **perche' la linea e' lenta**, cioe' nella condizione esatta che I1
+          esiste per proteggere.  ⭐ E allungare il secondo avrebbe **spostato**
+          il difetto invece di toglierlo.
         """
-        self.grazia_aperta = False
+        return (self.grazia_concessa and not self.chiave_alla_tela_nuova
+                and bool(self.tele_recenti))
+
+    def arriva_la_chiave_nuova(self):
+        """⛔ E' arrivata la prima chiave alla misura nuova: **la coda e'
+           svuotata**, e da qui in poi una misura vecchia e'
+           `ERRORE_PROTOCOLLO` come qualunque altra (§6.2).
+
+        ⚠ Fino alla cura di **P13** questo metodo si chiamava
+          `scade_la_grazia()` e diceva *«e' passato il secondo»* — un fatto che
+          **non viaggia sul filo** e che il caso doveva dichiarare.  ⭐ Adesso
+          il fatto e' un **fotogramma**, e lo si vede: e' la differenza fra una
+          regola che un arbitro meccanico puo' far rispettare e una che deve
+          indovinare.
+        """
+        self.chiave_alla_tela_nuova = True
+        # ⛔ E con la coda se ne vanno le misure vecchie: non sono piu' «in
+        #    volo», sono misure che non valgono piu' niente (§6.2).
+        self.tele_recenti = []
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +614,31 @@ class Giudice:
         # ⛔ G5 — «il giudice della mattina del 12 agosto 2026», cioe' PRIMA che
         #    le quattro righe entrassero in `RCP.md`.  Vedi l'intestazione.
         self.regole_12_agosto = "G5" not in self.guasti
+        # ⛔ G6 e G7 — «il giudice della SERA del 12 agosto», prima delle due
+        #    cure di D13 e D14.  Ognuno spegne una riga sola.
+        self.grazia_di_6_2 = "G6" not in self.guasti      # D14, §6.2 + §3 ecc. 6
+        self.chiave_di_5_2 = "G7" not in self.guasti      # D13, §5.2
+        # ⛔ G8 e G9 — «il giudice di due ore fa», cioe' fra le due cure della
+        #    sera e le due che le hanno rimesse in piedi (P11 e P10).
+        self.finestra_di_6_2 = "G8" not in self.guasti    # P11: la finestra
+        self.rilievo_di_5_2 = "G9" not in self.guasti     # P10: il rilievo
+        # ⛔ G10 — «il giudice con l'orologio»: la tolleranza torna a finire a
+        #    tempo, cioe' la riga com'era prima della cura di **P13**.
+        self.orologio_tolto = "G10" not in self.guasti
+        # ⛔ G11 — «il giudice di un'ora fa»: la misura guardata PRIMA
+        #    dell'ordine, cioe" §6.2 senza la precedenza di P14."
+        self.ordine_prima = "G11" not in self.guasti
+        # ⛔ La misura tollerata dalla grazia si TIENE, non si decide subito:
+        #    un fotogramma in volo resta soggetto a tutte le altre righe di
+        #    §6.2 — l'ordine dei `numero`, il tetto, il FIN — e decidere qui
+        #    salterebbe `_giudica_completo`, cioe' assolverebbe uno stream che
+        #    non si e' mai chiuso.
+        self.misura_tollerata = None
+        # ⛔ Il rilievo sullo **stato del client** (P10), che non e' l'esito:
+        #    vedi il punto 8-bis.  `None` = «non c'era niente da dire», e non
+        #    e' «non ho guardato»: il decodificatore si dichiara da fuori, e
+        #    quando non e' dichiarato il banco non inventa dove sia.
+        self.rilievo_cliente = None
 
     # -- l'esito si scrive una volta sola: il primo verdetto e' la causa, i
     #    successivi sono conseguenze (come `_cade` in `01-b3-cliente.py`).
@@ -599,7 +846,35 @@ class Giudice:
                 "`RICHIEDI_CHIAVE`, §6.2 non dice da dove parte il contatore, "
                 "e §6.0 vieta i sentinella impliciti")
 
-        # 7. ⭐⛔ P5 — LA MISURA.  Chiusa il 12 agosto 2026, e **corretta lo
+        # 7. ⭐⛔⛔ **L'ORDINE, E VIENE PRIMA DELLA MISURA** — §6.2, cura di
+        #    **P14**, 12 agosto 2026: *«la regola dell'ordine si applica PRIMA
+        #    di quella della misura: un fotogramma il cui `numero` e' precedente
+        #    all'ultimo gia' consegnato si scarta, e la sua misura non si
+        #    guarda nemmeno»*.
+        #
+        #    ⛔ **E la precedenza non e' un dettaglio di ordine del codice: e' la
+        #    riga che tiene in piedi le altre tre.**  Senza, le due righe di
+        #    questa stessa sezione si contraddicono e vince la piu' severa su
+        #    una scena in cui nessuno ha sbagliato: la chiave che chiude la
+        #    tolleranza **scavalca** i fotogrammi in volo — non per caso, ma
+        #    perche' quello vecchio e' **il piu' grosso** (§5.2 vieta di
+        #    abbandonare una chiave) e quello nuovo e' piu' piccolo.
+        #    ⚠ Fino a questa cura il giudizio della misura stava qui sopra, e
+        #      questo caso usciva `ERRORE_PROTOCOLLO`: la sessione cadeva.
+        #
+        #    ⚠ Il modulo non e' pedanteria: a 60 fotogrammi al secondo il
+        #      contatore gira dopo due anni e due mesi, e una sessione puo'
+        #      durare di piu' (§6.2).  Un confronto `<` diretto farebbe
+        #      scartare **ogni** fotogramma dopo il giro, per sempre.
+        #    ⛔ Col guasto **G11** l'ordine torna DOPO la misura, cioe' il
+        #       giudice di un'ora fa: e' la stessa riga, spostata di due passi
+        #       nel file, e basta a far cadere una sessione sana.
+        if self.ordine_prima:
+            fuori = self._ordine(num)
+            if fuori is not None:
+                return fuori
+
+        # 8. ⭐⛔ P5 — LA MISURA.  Chiusa il 12 agosto 2026, e **corretta lo
         #    stesso giorno** perche' la prima stesura uccideva una sessione sana.
         #
         #    §6.2: *«la misura di QUESTO fotogramma.  ⛔ In RCP/1 DEVONO valere
@@ -618,60 +893,101 @@ class Giudice:
         #      numero scritto qui: lo tengono onesto i due casi
         #      `misura-uguale-a-una-tela-diversa` e `misura-dopo-adatta-tela`.
         if (lar, alt) != (self.c.tela_larghezza, self.c.tela_altezza):
-            # 7-bis. ⛔⛔ **D14 — I FOTOGRAMMI IN VOLO**, e qui §6.2 ucciderebbe
-            #        una sessione sana.  Proposta **P8**, non ancora nel
-            #        documento: vedi l'intestazione di questo file.
+            # 8-bis. ⭐⛔ **D14 — I FOTOGRAMMI IN VOLO.  ENTRATA IN `RCP.md` LA
+            #        SERA DEL 12 AGOSTO 2026**, §6.2 in coda e **sesta
+            #        eccezione** di §3.
             #
-            #        §6.2 dice due cose che insieme non stanno in piedi:
-            #        *«DEVONO valere la tela in vigore … e chi ne riceve altre
-            #        chiude»* e *«gli stream sono indipendenti, quindi i
-            #        fotogrammi possono arrivare fuori ordine»*.  ⇒ Il
-            #        fotogramma aperto **prima** che l'`ADATTA_TELA` arrivasse
-            #        al server porta la misura di prima, ed e' conforme.
-            #        ⛔ E il server non puo' nemmeno sgombrare il tubo: §5.2 gli
-            #        vieta di abbandonare un fotogramma **chiave**, che e' il
-            #        piu' grosso e quindi il piu' probabile a essere in volo.
-            #        ⭐ La cura e' la grazia di un secondo che §7.1 da' gia'
-            #        alle coordinate di input (terza eccezione di §3).
-            if (self.c.grazia_aperta
-                    and (lar, alt) == self.c.tela_precedente):
-                return self._decidi(Verdetto(
-                    AMBIGUO, "RCP.md §6.2 contro §7.1",
-                    f"il fotogramma e' {lar}x{alt}, cioe' la tela "
-                    f"**precedente**, e la tela in vigore e' "
-                    f"{self.c.tela_larghezza}x{self.c.tela_altezza} da un "
-                    f"`TELA(ADATTATA)` appena passato: §6.2 alla lettera fa "
-                    f"chiudere, e chiuderebbe una sessione in cui NESSUNO dei "
-                    f"due ha sbagliato — il fotogramma era gia' in volo, e §6.2 "
-                    f"stesso dice che i fotogrammi arrivano fuori ordine",
-                    scostamento=4, propone="P8"))
-            return self._chiuso_il_12_agosto(
-                "P5", 4, "RCP.md §6.2",
-                f"il fotogramma e' {lar}x{alt} e la tela IN VIGORE e' "
-                f"{self.c.tela_larghezza}x{self.c.tela_altezza}, da "
-                f"{self.c.tela_da}: §6.2 vuole che DEVANO coincidere",
-                "RCP.md §6.2",
-                f"il fotogramma e' {lar}x{alt} e la tela concessa e' "
-                f"{self.c.tela_larghezza}x{self.c.tela_altezza}: «e' sempre "
-                f"quella della tela» non dice che cosa fa chi riceve")
+            #        *«Dopo aver ricevuto un `TELA(ADATTATA)` (§7.1) il client
+            #        DEVE accettare per un secondo i fotogrammi la cui misura
+            #        vale la tela precedente, dipingendoli riscalati alla vista
+            #        e scrivendolo nel registro; passato quel secondo sono
+            #        ERRORE_PROTOCOLLO, e lo e' subito una misura che non e' ne'
+            #        quella in vigore ne' la precedente.»*
+            #        ⚠ Fino a quella sera era la proposta **P8** e qui usciva
+            #          `AMBIGUO`: §6.2 faceva chiudere il client davanti a un
+            #          fotogramma aperto **prima** che l'`ADATTA_TELA` arrivasse
+            #          al server — e §5.2 vieta al server di sgombrare il tubo,
+            #          perche' una **chiave** non si abbandona.
+            # ⭐⛔ **P11 — LA FINESTRA, NON «LA PRECEDENTE».**  §6.2, corretta
+            #    la sera del 12 agosto 2026: *«i fotogrammi la cui misura vale
+            #    **una tela che e' stata in vigore da quando la coda ha
+            #    cominciato a svuotarsi**»*, e `ERRORE_PROTOCOLLO` **subito**
+            #    per una misura «che non e' mai stata in vigore in quella
+            #    finestra».
+            #    ⚠ Diceva «la tela precedente», al singolare, e chi trascina
+            #      una finestra ne manda due: 1920x1080 -> `TELA(1600,900)` ->
+            #      `TELA(1280,720)`, e la **chiave** aperta prima di tutto — la
+            #      piu' grossa, la piu' lenta, e quella che §5.2 vieta al server
+            #      di abbandonare — portava una misura che non era ne' quella in
+            #      vigore ne' la precedente.  ⛔ La sessione sana cadeva lo
+            #      stesso, **un passo piu' in la'** della scena che la cura
+            #      aveva appena chiuso.
+            # ⛔ Col guasto **G8** la finestra torna a essere «la precedente»
+            #    sola, cioe' la riga di due ore fa.
+            finestra = (self.c.tele_recenti if self.finestra_di_6_2
+                        else self.c.tele_recenti[:1])
+            # ⭐⛔ **P13 — LA TOLLERANZA FINISCE SULLA CHIAVE, NON A OROLOGIO.**
+            #    §6.2: *«la tolleranza non finisce a orologio: finisce quando
+            #    arriva la prima chiave alla misura nuova»*.  ⇒ La condizione e'
+            #    `coda_da_svuotare()`, e **non** guarda `secondo_passato`: quel
+            #    campo esiste solo perche' il guasto **G10** — «il giudice con
+            #    l'orologio», la riga di due ore fa — lo rimetta a decidere e si
+            #    veda cadere la sessione sulla linea lenta.
+            coda = self.c.coda_da_svuotare()
+            if not self.orologio_tolto and self.c.secondo_passato:
+                coda = False
+            if (coda and self.grazia_di_6_2 and (lar, alt) in finestra):
+                # ⛔ NON si decide qui: si segna la tolleranza e si prosegue.
+                #    Un fotogramma in volo resta soggetto all'ordine dei
+                #    `numero`, al tetto e al FIN.
+                self.misura_tollerata = (lar, alt)
+                # ⭐⛔ **P10 — E QUI SI GUARDA DOV'E' IL DECODIFICATORE.**
+                #
+                #    §5.2, riga entrata la sera del 12 agosto: *«il client
+                #    riconfigura il decodificatore sulla prima CHIAVE alla
+                #    misura nuova, non sul `TELA`»*, e la riga del client dice
+                #    adesso *«ne' quella tollerata da §6.2»*.  ⇒ Il fotogramma
+                #    si consegna comunque — le due righe non comandano piu' il
+                #    contrario — ⛔ ma un client che avesse riconfigurato sul
+                #    `TELA` e' **fuori da §5.2**, e il banco lo dice invece di
+                #    lasciarlo passare: `[M]` un decodificatore alla misura
+                #    nuova che riceve la vecchia non solleva errori e **dipinge
+                #    un'immagine sfasciata** (Chrome, HEVC, 12 agosto 2026).
+                #    ⚠ Il rilievo NON e' l'esito: l'esito parla del filo, dove
+                #      nessuno ha sbagliato; il rilievo parla dello **stato del
+                #      client**, che si dichiara da fuori perche' sul filo non
+                #      c'e'.
+                if (self.rilievo_di_5_2
+                        and self.c.decodificatore_a is not None
+                        and self.c.decodificatore_a != (lar, alt)):
+                    self.rilievo_cliente = (
+                        f"⛔ il decodificatore e' configurato a "
+                        f"{self.c.decodificatore_a[0]}x"
+                        f"{self.c.decodificatore_a[1]} mentre arriva un "
+                        f"fotogramma {lar}x{alt} tollerato da §6.2: chi lo ha "
+                        f"riconfigurato sul `TELA` ha fatto quel che §5.2 "
+                        f"vieta — si riconfigura sulla prima CHIAVE alla "
+                        f"misura nuova.  `[M]` cosi' configurato il "
+                        f"decodificatore dipinge un'immagine sfasciata senza "
+                        f"sollevare un errore")
+            if self.misura_tollerata is None:
+                return self._chiuso_il_12_agosto(
+                    "P5", 4, "RCP.md §6.2",
+                    f"il fotogramma e' {lar}x{alt} e la tela IN VIGORE e' "
+                    f"{self.c.tela_larghezza}x{self.c.tela_altezza}, da "
+                    f"{self.c.tela_da}: §6.2 vuole che DEVANO coincidere",
+                    "RCP.md §6.2",
+                    f"il fotogramma e' {lar}x{alt} e la tela concessa e' "
+                    f"{self.c.tela_larghezza}x{self.c.tela_altezza}: «e' sempre "
+                    f"quella della tela» non dice che cosa fa chi riceve")
 
-        # 8. ⛔ L'ORDINE — §6.2: si scarta un `numero` PRECEDENTE all'ultimo
-        #    gia' consegnato, con l'aritmetica **modulo 2^32** e le differenze
-        #    **con segno**.
-        #    ⚠ Il modulo non e' pedanteria: a 60 fotogrammi al secondo il
-        #      contatore gira dopo due anni e due mesi, e una sessione puo'
-        #      durare di piu' (§6.2).  Un confronto `<` diretto farebbe
-        #      scartare **ogni** fotogramma dopo il giro, per sempre.
-        if self.c.ultimo_consegnato is not None:
-            d = (num - self.c.ultimo_consegnato) & 0xFFFFFFFF
-            if d >= 0x80000000 or d == 0:
-                return self._decidi(Verdetto(
-                    SCARTATO, "RCP.md §6.2",
-                    f"`numero` {num} non e' successivo a "
-                    f"{self.c.ultimo_consegnato} (differenza con segno "
-                    f"{d - 0x100000000 if d >= 0x80000000 else d}): gli stream "
-                    f"sono indipendenti e i fotogrammi arrivano fuori ordine",
-                    scostamento=12))
+        # 8-ter. ⛔ E col guasto **G11** l'ordine si guarda QUI, dopo la
+        #        misura: il fotogramma in volo scavalcato dalla chiave e' gia'
+        #        caduto due passi piu' su, e la sessione con lui.
+        if not self.ordine_prima:
+            fuori = self._ordine(num)
+            if fuori is not None:
+                return fuori
 
         # 9. ⭐⛔ P6 — IL PRIMO FOTOGRAMMA E' UN DELTA.  Chiusa il 12 agosto
         #    2026, ed e' la riga che morde in QUESTA fase.
@@ -697,6 +1013,73 @@ class Giudice:
                 "obbliga il server a cominciare con una chiave, e il client "
                 "non ha nessun buco da cui accorgersene")
 
+        # 10. ⭐⛔ **P9 — IL PRIMO FOTOGRAMMA ALLA MISURA NUOVA.  Entrata in
+        #     `RCP.md` §5.2 la sera del 12 agosto 2026, difetto D13.**
+        #
+        #     *«E lo stesso vale a ogni cambio di tela: il primo fotogramma
+        #     spedito alla misura nuova, dopo un `TELA(ADATTATA…)` (§7.1), DEVE
+        #     essere una chiave (`0x0301`) — e DEVE essere una chiave vera,
+        #     cioe' portare con se' tutto quel che serve a decodificarla da
+        #     sola: per HEVC i suoi VPS/SPS/PPS davanti all'IDR.»*
+        #     ⛔ E la riga non e' prudenza: `[M]` 12 agosto 2026, banco
+        #     `02-pagina-tela-*` — con soli delta alla misura nuova **Chrome su
+        #     HEVC emette cinque fotogrammi, tutti dichiarati alla misura
+        #     VECCHIA, dipinti, e zero errori**.  Il sintomo e' «il desktop si
+        #     strappa quando ridimensiono la finestra», e non nomina ne' il
+        #     protocollo ne' la tela.
+        #
+        #     ⚠ **E QUI IL BANCO GIUDICA MENO DI QUEL CHE LA RIGA DICE**, e va
+        #       scritto invece che scoperto: questo giudice **non conserva i
+        #       dati** del fotogramma (vedi la classe), quindi vede che il
+        #       primo alla misura nuova e' `0x0301` e ⛔ **non puo' vedere se
+        #       porta davvero i suoi VPS/SPS/PPS davanti all'IDR** — la meta'
+        #       «chiave *vera*» resta al banco della codifica
+        #       (`02-codifica-nal.py`) e alla pagina (`02-pagina-tela-*`).
+        #     ⚠ `[?]` **E una domanda che questa riga apre e non chiude**:
+        #       §6.2 dice che i fotogrammi arrivano **fuori ordine**, quindi un
+        #       delta alla misura nuova puo' arrivare **prima** della chiave che
+        #       il server ha spedito per prima.  La riga vincola chi **spedisce**
+        #       e questo giudice la applica a chi **riceve**: e' la lettura
+        #       severa, ed e' la stessa che P6 ha da stamattina.  Un buco nei
+        #       `numero` distingue i due casi, e nessuna riga dice di guardarlo.
+        if (self.chiave_di_5_2
+                and self.c.tela_da.startswith("TELA")
+                and not self.c.chiave_alla_tela_nuova
+                and self.misura_tollerata is None
+                and tipo == DELTA):
+            return self._decidi(Verdetto(
+                ERRORE_PROTOCOLLO, "RCP.md §5.2",
+                f"il primo fotogramma alla misura NUOVA ({lar}x{alt}, da un "
+                f"`TELA(ADATTATA)`) e' un DELTA: §5.2 vuole una chiave "
+                f"({CHIAVE:#06x}) a ogni cambio di tela, e vera — coi suoi "
+                f"parameter set.  Senza, `[M]` Chrome su HEVC dipinge cinque "
+                f"fotogrammi alla misura vecchia senza sollevare un errore",
+                scostamento=0))
+
+    def _ordine(self, num):
+        """⛔ §6.2 — si scarta un `numero` **precedente** all'ultimo gia'
+           consegnato, con l'aritmetica modulo 2^32 e le differenze con segno.
+
+        ⚠ Sta in un metodo suo perche' il guasto **G11** lo deve poter
+          spostare **dopo** la misura senza che la riga cambi di una virgola:
+          quel che P14 ha curato non e' il testo della regola, e' **il posto in
+          cui si applica** — e un guasto che riscrivesse anche il testo
+          dimostrerebbe un'altra cosa.
+        """
+        if self.c.ultimo_consegnato is None:
+            return None
+        d = (num - self.c.ultimo_consegnato) & 0xFFFFFFFF
+        if d >= 0x80000000 or d == 0:
+            return self._decidi(Verdetto(
+                SCARTATO, "RCP.md §6.2",
+                f"`numero` {num} non e' successivo a "
+                f"{self.c.ultimo_consegnato} (differenza con segno "
+                f"{d - 0x100000000 if d >= 0x80000000 else d}): si scarta, "
+                f"e ⛔ **la misura non si guarda nemmeno** — gli stream sono "
+                f"indipendenti e i fotogrammi arrivano fuori ordine",
+                scostamento=12))
+        return None
+
     def _giudica_completo(self):
         """Lo stream e' finito con FIN e l'intestazione era buona."""
         num = self.campi["numero"]
@@ -711,10 +1094,32 @@ class Giudice:
         if self.campi["tipo"] == CHIAVE:
             self.c.chiave_consegnata = True
             self.c.chiedi_chiave = False
-        return Verdetto(ACCETTATO, "RCP.md §6.2",
-                        f"{'chiave' if self.campi['tipo'] == CHIAVE else 'delta'} "
-                        f"n. {num}, {self.campi['larghezza']}x"
-                        f"{self.campi['altezza']}, {self.byte_dati} byte di dati")
+            # ⛔ P9 — e la chiave vale per la tela nuova **solo se la porta**:
+            #    una chiave in volo alla misura vecchia non paga il debito che
+            #    §5.2 apre a ogni `TELA(ADATTATA)`.
+            # ⭐⛔ E P13: questa **e' anche la fine della tolleranza**.  §6.2:
+            #    *«finisce quando arriva la prima chiave alla misura nuova»* ⇒
+            #    da qui in poi una misura vecchia e' `ERRORE_PROTOCOLLO`, e non
+            #    e' un orologio a dirlo ma un fotogramma che si e' visto.
+            if self.misura_tollerata is None:
+                self.c.arriva_la_chiave_nuova()
+        se = (f"{'chiave' if self.campi['tipo'] == CHIAVE else 'delta'} "
+              f"n. {num}, {self.campi['larghezza']}x{self.campi['altezza']}, "
+              f"{self.byte_dati} byte di dati")
+        if self.misura_tollerata is not None:
+            # ⛔ §3, ultima riga: la tolleranza SI SCRIVE NEL REGISTRO.  Una
+            #    tolleranza silenziosa e' indistinguibile da un difetto.
+            return Verdetto(
+                ACCETTATO, "RCP.md §6.2",
+                f"{se} — ⚠ TOLLERATO: porta la tela **precedente** e il "
+                f"`TELA(ADATTATA)` e' appena passato, quindi era gia' in volo. "
+                f"Si dipinge **riscalato alla vista** ed e' la sesta eccezione "
+                f"di §3, che va scritta nel registro",
+                tollerato=(f"tela {self.misura_tollerata[0]}x"
+                           f"{self.misura_tollerata[1]}, in vigore dentro il "
+                           f"secondo appena passato (§6.2, §3 eccezione 6)"),
+                rilievo=self.rilievo_cliente)
+        return Verdetto(ACCETTATO, "RCP.md §6.2", se)
 
 
 # ---------------------------------------------------------------------------
@@ -724,7 +1129,9 @@ def intestazione(tipo=CHIAVE, codec=1, lar=1920, alt=1080, num=1, ist=0, inp=0):
 
 
 # ===========================================================================
-# ⛔ LE SEI RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026, E I DUE CASI DI OGNUNA.
+# ⛔ LE RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026, E I DUE CASI DI OGNUNA.
+#    ⚠ Sei di mattina (P1-P6) e **due di sera** (P8 da D14, P9 da D13): il
+#      conto non si scrive qui, lo calcola `regole_coperte()`.
 #
 #    ⚠ Fino all'11 agosto questa tabella si chiamava `PROPOSTE` ed era un
 #      elenco di cose **da chiedere** al coordinatore.  Adesso le righe sono
@@ -803,6 +1210,146 @@ REGOLE_NUOVE = {
         "viola": "primo-fotogramma-delta",
         "rispetta": "primo-fotogramma-chiave",
     },
+    # ── ⭐⛔ E LE DUE ENTRATE LA **SERA** DEL 12 AGOSTO, DA D13 E D14 ─────────
+    #    ⚠ Fino a quella sera stavano nella tabella `PROPOSTE_APERTE` qui
+    #      sotto, e i loro casi uscivano `AMBIGUO`.  ⛔ Il giorno in cui una
+    #      proposta diventa una riga, i suoi casi cambiano **atteso**: lasciarli
+    #      dov'erano vorrebbe dire giudicare il documento di ieri, che e' quel
+    #      che il guasto **G5** esiste per far vedere.
+    "P8": {
+        "dove": "RCP.md §6.2, in coda («Il cambio di tela e i fotogrammi in "
+                "volo»), e §3 eccezione 6",
+        "dice": "Dopo un `TELA(ADATTATA)` il client **DEVE** accettare per **un "
+                "secondo** i fotogrammi che portano la misura **precedente**, "
+                "dipingendoli riscalati alla vista e **scrivendolo nel "
+                "registro**; fuori dal secondo sono `ERRORE_PROTOCOLLO`, e lo "
+                "e' **subito** una misura che non e' ne' quella in vigore ne' "
+                "la precedente.",
+        "era": "⛔ **contraddizione interna** — non una lettura doppia: §6.2 "
+               "faceva chiudere chi riceve una misura diversa dalla tela in "
+               "vigore, e §6.2 stesso dice che i fotogrammi arrivano fuori "
+               "ordine.  Due implementazioni conformi producevano lo **stesso** "
+               "byte — la chiusura — e uccidevano una sessione sana",
+        # ⛔ DUE casi la violano, e servono tutt'e due: uno tiene la grazia
+        #    dentro **il secondo**, l'altro dentro **una misura**.  Una grazia
+        #    scritta troppo larga e' un difetto quanto una regola troppo
+        #    stretta, ed e' cosi' che P5 e' finita sbagliata stamattina.
+        "viola": ("p13-vecchia-dopo-la-chiave-nuova",
+                  "p8-misura-di-nessuna-tela"),
+        "rispetta": "p8-in-volo-dopo-adatta-tela",
+    },
+    "P9": {
+        "dove": "RCP.md §5.2, secondo punto delle «Le regole:»",
+        "dice": "Il primo fotogramma spedito alla **misura nuova**, dopo un "
+                "`TELA(ADATTATA…)`, **DEVE** essere una chiave (`0x0301`) — e "
+                "una chiave **vera**, coi suoi VPS/SPS/PPS davanti all'IDR.  ⛔ "
+                "E il client **NON DEVE** consegnare al decodificatore un "
+                "fotogramma la cui misura non e' quella per cui il "
+                "decodificatore e' configurato.",
+        "era": "⛔ **difetto D13, `[M]`**: con soli delta alla misura nuova "
+               "Chrome su HEVC emette 5 fotogrammi, tutti dichiarati alla "
+               "misura VECCHIA, li dipinge e non solleva **nessun** errore — "
+               "mentre AV1 protesta in tutt'e quattro le caselle.  La regola "
+               "serve perche' sul codec principale il sintomo e' **muto**",
+        "viola": "d13-delta-alla-misura-nuova",
+        "rispetta": "d13-chiave-alla-misura-nuova",
+    },
+    "P11": {
+        "dove": "RCP.md §6.2, in coda — la finestra al posto del singolare",
+        "dice": "La grazia copre i fotogrammi la cui misura vale **una tela "
+                "che e' stata in vigore entro il secondo appena passato**; ⛔ e "
+                "`ERRORE_PROTOCOLLO` **subito** e' per una misura che in quella "
+                "finestra **non e' mai stata in vigore**.",
+        "era": "⛔ la cura di D14 nominava «la tela **precedente**», al "
+               "singolare, ⚠ e chi trascina una finestra ne manda due: "
+               "1920x1080 -> `TELA(1600,900)` -> `TELA(1280,720)`, e la chiave "
+               "aperta prima di tutto — la piu' grossa, la piu' lenta, e quella "
+               "che §5.2 vieta al server di abbandonare — cadeva lo stesso.  "
+               "**Un passo piu' in la' della scena che la cura aveva appena "
+               "chiuso**",
+        "viola": "p11-misura-mai-in-vigore",
+        "rispetta": "p11-due-tele-nella-finestra",
+    },
+    "P13": {
+        "dove": "RCP.md §6.2, in coda — e §3, riga 6, che dice la stessa cosa",
+        "dice": "La tolleranza **non finisce a orologio: finisce quando arriva "
+                "la prima chiave alla misura nuova** (§5.2).  Da quel "
+                "fotogramma in poi una misura vecchia e' `ERRORE_PROTOCOLLO`.",
+        "era": "⛔ diceva «per **un secondo**», e il secondo era la grandezza "
+               "sbagliata: quel che deve svuotarsi e' una **coda**, e quanto ci "
+               "mette un fotogramma gia' in volo dipende dalla **banda**.  Una "
+               "chiave 1920x1080 di qualche MiB su una linea cattiva — che e' "
+               "**dentro** il modello, il minimo e' 480p a 25 — arriva **dopo** "
+               "il secondo, e il client chiudeva un fotogramma spedito quando "
+               "era legale e che §5.2 vietava di abbandonare.  ⛔ Non era solo "
+               "una sessione sana che cadeva: era l'invariante **I1** («mai a "
+               "staccare») rotta **perche' la linea e' lenta**, cioe' nella "
+               "condizione esatta che I1 esiste per proteggere.  ⭐ E allungare "
+               "il secondo avrebbe **spostato** il difetto invece di toglierlo",
+        "viola": "p13-vecchia-dopo-la-chiave-nuova",
+        "rispetta": "p13-linea-lenta",
+    },
+    "P14": {
+        "dove": "RCP.md §6.2, subito prima del riquadro sui fotogrammi in volo",
+        "dice": "⛔ **La regola dell'ordine si applica PRIMA di quella della "
+                "misura**: un fotogramma il cui `numero` e' precedente "
+                "all'ultimo gia' consegnato **si scarta**, e la sua misura non "
+                "si guarda nemmeno.",
+        "era": "⛔ due righe della **stessa sezione** che si contraddicevano, e "
+               "vinceva la piu' severa su una scena in cui nessuno aveva "
+               "sbagliato: la chiave che chiude la tolleranza **scavalca** i "
+               "fotogrammi in volo — non per caso, ma perche' quello vecchio e' "
+               "il piu' grosso (§5.2 vieta di abbandonarlo) e quello nuovo e' "
+               "piu' piccolo.  ⚠ Quarta volta che la stessa famiglia si sposta "
+               "di un passo: **P8 -> P11 -> P13 -> P14**",
+        # ⛔ E QUI LA COPPIA NON E' «chiude / accetta», ed e' il punto della
+        #    riga: e' «si scarta / si chiude davvero».  ⚠ Senza la seconda, la
+        #    precedenza nuova diventa un **buco che ingoia anche i casi veri** —
+        #    un fotogramma alla misura sbagliata passerebbe per «arrivato
+        #    tardi» e la regola della misura non morderebbe piu' niente.
+        "viola": "p13-vecchia-dopo-la-chiave-nuova",
+        "rispetta": "p14-in-volo-scavalcato-dalla-chiave",
+        "esito_viola": ERRORE_PROTOCOLLO,
+        "esito_rispetta": SCARTATO,
+        "etichetta_viola": "la tiene STRETTA (ordine a posto, misura sbagliata "
+                           "-> si chiude davvero)",
+        "etichetta_rispetta": "la ESERCITA (numero precedente -> si scarta)",
+    },
+}
+
+
+# ===========================================================================
+# ⛔ E UNA RIGA CHE NON PARLA DEL FILO MA DELLO **STATO DEL CLIENT** — P10.
+#
+#    §5.2: *«il client riconfigura il decodificatore sulla prima CHIAVE alla
+#    misura nuova, non sul `TELA`»*.  ⛔ Quella misura **non e' sul filo**: un
+#    arbitro che legge i byte non la puo' vedere, e questo banco la fa
+#    **dichiarare** dal caso (`decodificatore_a`).
+#
+#    ⚠ Sta in una tabella sua e non fra le regole qui sopra per una ragione
+#      sola, ed e' la stessa che tiene separati `SCARTATO` e
+#      `ERRORE_PROTOCOLLO`: la coppia ha una **forma diversa**.  Una regola del
+#      filo ha un caso che esce `ERRORE_PROTOCOLLO` e uno che esce `ACCETTATO`;
+#      qui escono `ACCETTATO` tutt'e due — sul filo nessuno ha sbagliato — e a
+#      cambiare e' il **rilievo sul client**, che c'e' in uno e non nell'altro.
+#      ⛔ Metterle insieme vorrebbe dire pretendere che un difetto del client
+#      faccia cadere la sessione, cioe' l'errore che questo capitolo ha gia'
+#      pagato tre volte in un giorno.
+REGOLE_DI_STATO = {
+    "P10": {
+        "dove": "RCP.md §5.2, la riga prima di quella del client",
+        "dice": "Il client **riconfigura il decodificatore sulla prima CHIAVE "
+                "alla misura nuova, non sul `TELA`** — e non consegna al "
+                "decodificatore un fotogramma di misura diversa da quella per "
+                "cui e' configurato **ne' quella tollerata da §6.2**.",
+        "era": "⛔⛔ **le due cure del 12 agosto si contraddicevano sullo "
+               "stesso fotogramma**: §6.2 «accettalo e dipingilo», §5.2 "
+               "«buttalo», e il documento non diceva in nessun punto **quando** "
+               "il client riconfigura.  Due letture conformi che divergevano "
+               "sul filo — una mandava `RICHIEDI_CHIAVE`, l'altra no",
+        "viola": "p10-decodificatore-al-tela",
+        "rispetta": "p10-decodificatore-alla-chiave",
+    },
 }
 
 
@@ -819,29 +1366,83 @@ REGOLE_NUOVE = {
 #
 #    ⛔ E ogni proposta porta i **suoi** casi con l'atteso di OGGI: quello che
 #       la fa vedere, e quelli che impediscono di scriverla troppo larga.
-PROPOSTE_APERTE = {
-    "P8": {
-        "dove": "RCP.md §6.2 (i campi `largh.`/`altezza`) e §3 (l'elenco delle "
-                "eccezioni, che diventerebbero sei)",
-        "dice": "Dopo aver ricevuto un `TELA(ADATTATA)` il client **DEVE** "
-                "accettare per **un secondo** i fotogrammi la cui misura vale "
-                "la tela **precedente**, dipingendoli riscalati alla vista e "
-                "scrivendolo nel registro; passato quel secondo sono "
-                "`ERRORE_PROTOCOLLO`.  ⛔ E' la grazia che §7.1 da' gia' alle "
-                "coordinate di input, scritta per il verso in cui manca.",
-        "era": "⛔ **contraddizione interna, non lettura doppia**: §6.2 fa "
-               "chiudere chi riceve una misura diversa dalla tela in vigore, e "
-               "§6.2 stesso dice che i fotogrammi arrivano **fuori ordine**.  "
-               "Due implementazioni conformi e attente producono lo **stesso** "
-               "byte — la chiusura — e uccidono una sessione sana.  ⚠ Trovata "
-               "**leggendo** la sera del 12 agosto 2026, `[?]` non misurata.",
-        # ⛔ tre casi, e i due che pretendono ERRORE_PROTOCOLLO valgono quanto
-        #    il primo: senza, la grazia diventa «per un secondo passa tutto».
-        "casi": {"p8-in-volo-dopo-adatta-tela": AMBIGUO,
-                 "p8-in-volo-fuori-grazia": ERRORE_PROTOCOLLO,
-                 "p8-misura-di-nessuna-tela": ERRORE_PROTOCOLLO},
+#
+# ⭐⛔ **E LA SERA DEL 12 AGOSTO 2026 QUESTA TABELLA SI E' SVUOTATA.**  P8 e P9
+#    sono entrate nel documento, e i due punti in cui **non reggevano** — P10 e
+#    P11, trovati applicandole — sono entrati nel giro dopo.  ⛔ Resta vuota, e
+#    la si dichiara vuota invece di toglierla: il giorno in cui questo banco
+#    trovera' il punto seguente, il posto dove scriverlo c'e' gia' — e
+#    `proposte_coperte()` continua a contare «0 su 0», che e' un numero, non un
+#    silenzio.
+PROPOSTE_APERTE = {}
+
+# ⭐ E LE DUE CHE QUESTA TABELLA HA OSPITATO PER UN GIRO SOLO, con la data:
+#    **P10** e **P11**, nate `AMBIGUO` la sera del 12 agosto 2026 e diventate
+#    righe di `RCP.md` poche ore dopo — §5.2 (il client riconfigura sulla prima
+#    CHIAVE) e §6.2 (la finestra al posto de «la precedente»).  ⛔ I loro casi
+#    stanno adesso in `REGOLE_NUOVE` e in `REGOLE_DI_STATO`, con l'atteso di
+#    oggi: un caso che restasse qui starebbe giudicando il documento di ieri.
+
+
+# ===========================================================================
+# ⛔⛔ I RILIEVI **DICHIARATI**: punti in cui `RCP.md` decide, e la decisione
+#     non regge — o non e' la stessa in due sezioni.
+#
+#     ⚠ Non sono `AMBIGUO` e non sono proposte con un caso che le fa scattare:
+#       il documento **ha** una risposta, e il banco la applica.  ⛔ Ma
+#       applicarla e tacere sul fatto che uccide una sessione sana sarebbe
+#       la forma **E8** rivolta contro chi legge il banco.  ⇒ Si stampano in
+#       coda a ogni giro, con la scena concreta e il caso che le mostra —
+#       oppure con «nessun caso», dichiarato.
+#     ⛔ E qui non si cura niente: `RCP.md` e' del coordinatore, e la sera del
+#       12 agosto 2026 tre righe applicate in fretta sono costate tre giri.
+RILIEVI_DICHIARATI = {
+    "P15": {
+        "dove": "RCP.md §7.1 — la grazia sulle **coordinate di input**, che e' "
+                "rimasta «per un secondo»",
+        "dice": "La stessa grandezza sbagliata che P13 ha tolto da §6.2 e' "
+                "ancora in §7.1 per il verso opposto del filo: il server "
+                "tollera **per un secondo** le coordinate valide sulla tela "
+                "precedente, e poi chiude.",
+        "scena": "l'uplink e' il verso debole (ADSL, mobile) e gli stream di "
+                 "QUIC condividono la finestra di congestione: un input partito "
+                 "prima del `TELA` puo' arrivare **dopo** il secondo, e il "
+                 "server chiude una sessione in cui il client non ha sbagliato "
+                 "— l'invariante **I1** di nuovo.  ⚠ `[?]` **e la cura di P13 "
+                 "NON si trasporta**: per i fotogrammi la fine e' un fatto "
+                 "osservabile (la chiave alla misura nuova), per le coordinate "
+                 "non c'e' niente di equivalente — una coordinata puo' essere "
+                 "valida su tutt'e due le tele, e il server non sa distinguerla",
+        "caso": None,
+        "marca": "[?] non misurata, e **non e' di questo capitolo**: §7.1 e' "
+                 "l'input, e questo banco giudica il canale video",
     },
 }
+
+# ⭐ E QUESTA TABELLA SI E' SVUOTATA IL 12 AGOSTO 2026, come quella delle
+#    proposte: **P12** (§3 riga 6 rimasta al singolare mentre §6.2 era passata
+#    alla finestra) e **P13** (il secondo di grazia, che era la grandezza
+#    sbagliata) sono state curate nel giro dopo essere state scritte qui.
+#    ⛔ Resta, vuota e dichiarata: un giro che non stampa niente e un giro che
+#    non ha niente da stampare sono due fatti diversi, ed e' la forma E8
+#    rivolta contro il banco.
+
+def rilievi_col_caso(casi):
+    """⛔ Quali rilievi dichiarati hanno un caso che li mostra, e quali no.
+
+    ⚠ «Non ha un caso» non e' «non conta»: e' un fatto che si stampa.  Un
+      rilievo senza caso resta una lettura, e questo banco dice quale delle due
+      cose sta consegnando (`REVIEWER.md` §4: un rilievo senza «come si
+      dimostra» e' un'ipotesi).
+    """
+    per_nome = {c["nome"] for c in casi}
+    con, senza = [], []
+    for sigla, r in RILIEVI_DICHIARATI.items():
+        if r["caso"] and r["caso"] in per_nome:
+            con.append(sigla)
+        else:
+            senza.append(sigla)
+    return con, senza
 
 
 def proposte_coperte(casi):
@@ -871,8 +1472,37 @@ def proposte_coperte(casi):
     return coperte, mancanti
 
 
+def regole_di_stato_coperte(casi):
+    """⛔ Come `regole_coperte`, per le righe che parlano dello **stato del
+       client** invece che dei byte — oggi la sola **P10**.
+
+    ⚠ La coppia ha una forma diversa, ed e' il punto: tutt'e due i casi escono
+      `ACCETTATO`, perche' sul filo nessuno ha sbagliato.  A cambiare e' il
+      **rilievo**: il caso che viola la riga lo deve portare, ⛔ e quello che la
+      rispetta **non lo deve portare** — che e' la stessa regola delle due
+      meta' della marca (R12-A.3), applicata a un rilievo invece che a un
+      guasto.
+    """
+    per_nome = {c["nome"]: c for c in casi}
+    coperte, mancanti = [], []
+    for sigla, r in REGOLE_DI_STATO.items():
+        buchi = []
+        for chi, nome in (("VIOLA", r["viola"]), ("RISPETTA", r["rispetta"])):
+            c = per_nome.get(nome)
+            if c is None:
+                buchi.append(f"manca il caso che la {chi} («{nome}»)")
+            elif c["atteso"] != ACCETTATO:
+                buchi.append(f"«{nome}» non pretende ACCETTATO ma {c['atteso']}"
+                             f": un difetto del CLIENT non fa cadere il filo")
+        if buchi:
+            mancanti.append((sigla, "; ".join(buchi)))
+        else:
+            coperte.append(sigla)
+    return coperte, mancanti
+
+
 def regole_coperte(casi):
-    """⛔ Quante delle sei righe hanno DAVVERO un caso che le fa scattare.
+    """⛔ Quante delle righe entrate hanno DAVVERO un caso che le fa scattare.
 
     ⛔ Il conto lo **calcola** questa funzione cercando i nomi fra i casi: un
        numero scritto a mano in un commento e' il numero che nessuno ricalcola
@@ -887,17 +1517,32 @@ def regole_coperte(casi):
     per_nome = {c["nome"]: c for c in casi}
     coperte, mancanti = [], []
     for sigla, r in REGOLE_NUOVE.items():
-        v, s = per_nome.get(r["viola"]), per_nome.get(r["rispetta"])
+        # ⛔ «viola» puo' essere UNO o PIU' D'UNO, e la differenza non e' di
+        #    comodo: **P8** ha due meta' da tenere strette — il secondo di
+        #    grazia e la misura — e una regola che ne provasse una sola
+        #    resterebbe verde con l'altra scritta troppo larga.
+        nomi_viola = (r["viola"] if isinstance(r["viola"], (tuple, list))
+                      else (r["viola"],))
+        # ⛔ E L'ESITO ATTESO DELLE DUE META' SI DICHIARA, non si da' per
+        #    scontato: **P14** ha la coppia «si scarta / si chiude davvero», e
+        #    pretendere qui `ERRORE_PROTOCOLLO` e `ACCETTATO` avrebbe voluto
+        #    dire che una regola con una forma diversa non si puo' contare —
+        #    cioe' contarla male, o non contarla affatto.
+        att_v = r.get("esito_viola", ERRORE_PROTOCOLLO)
+        att_s = r.get("esito_rispetta", ACCETTATO)
+        s = per_nome.get(r["rispetta"])
         buchi = []
-        if v is None:
-            buchi.append(f"manca il caso che la VIOLA («{r['viola']}»)")
-        elif v["atteso"] != ERRORE_PROTOCOLLO:
-            buchi.append(f"«{r['viola']}» non pretende ERRORE_PROTOCOLLO ma "
-                         f"{v['atteso']}")
+        for nome_v in nomi_viola:
+            v = per_nome.get(nome_v)
+            if v is None:
+                buchi.append(f"manca il caso che la VIOLA («{nome_v}»)")
+            elif v["atteso"] != att_v:
+                buchi.append(f"«{nome_v}» non pretende {att_v} ma "
+                             f"{v['atteso']}")
         if s is None:
             buchi.append(f"manca il caso che la RISPETTA («{r['rispetta']}»)")
-        elif s["atteso"] != ACCETTATO:
-            buchi.append(f"«{r['rispetta']}» non pretende ACCETTATO ma "
+        elif s["atteso"] != att_s:
+            buchi.append(f"«{r['rispetta']}» non pretende {att_s} ma "
                          f"{s['atteso']}")
         if buchi:
             mancanti.append((sigla, "; ".join(buchi)))
@@ -1185,36 +1830,90 @@ def _():
 # ── ⛔⛔ D14 — I FOTOGRAMMI IN VOLO, e la proposta **P8** ───────────────────
 #    I tre casi vanno letti insieme: il primo mostra la sessione sana uccisa,
 #    il secondo e il terzo impediscono di curarla con una regola troppo larga.
-@caso("p8-in-volo-dopo-adatta-tela", AMBIGUO,
-      "⛔⛔ **D14, LA SCENA CHE UCCIDE UNA SESSIONE SANA** — la tela era "
-      "1920x1080, e' passato un `TELA(ADATTATA, 1280, 720)` (§7.1), e adesso "
-      "arriva il fotogramma **aperto prima**, che porta 1920x1080.  ⛔ §6.2 "
-      "alla lettera dice `ERRORE_PROTOCOLLO` — e §6.2 **stesso** dice che «gli "
-      "stream sono indipendenti, quindi i fotogrammi possono arrivare fuori "
-      "ordine».  ⇒ Nessuno dei due lati ha sbagliato, e la sessione cade.  "
-      "⭐ La cura e' **P8**, che e' la grazia di un secondo gia' scritta in "
-      "§7.1 per le coordinate di input.  ⚠ Finche' il coordinatore non "
-      "l'applica, l'esito onesto e' `AMBIGUO`: un verde su `ERRORE_PROTOCOLLO` "
-      "qui certificherebbe che un client conforme deve uccidere una sessione "
-      "sana, e chi scrive il prodotto lo implementerebbe",
-      "RCP.md §6.2 contro §7.1",
+@caso("p8-in-volo-dopo-adatta-tela", ACCETTATO,
+      "⭐⛔ **P8, IL CASO CHE LA RISPETTA — ED E' LA SCENA CHE UCCIDEVA UNA "
+      "SESSIONE SANA** — la tela era 1920x1080, e' passato un `TELA(ADATTATA, "
+      "1280, 720)` (§7.1), e adesso arriva il fotogramma **aperto prima**, che "
+      "porta 1920x1080.  ⛔ Fino a stasera §6.2 alla lettera diceva "
+      "`ERRORE_PROTOCOLLO` — mentre §6.2 **stesso** dice che «gli stream sono "
+      "indipendenti, quindi i fotogrammi possono arrivare fuori ordine» — e "
+      "questo caso usciva `AMBIGUO` perche' nessuno dei due lati aveva "
+      "sbagliato.  ⭐ Dalla sera del 12 agosto 2026 la grazia di un secondo e' "
+      "una riga di §6.2 e la **sesta eccezione** di §3: si ACCETTA, si dipinge "
+      "**riscalato**, ⛔ e §3 pretende che la tolleranza sia **scritta nel "
+      "registro** — questo caso guarda anche quella, perche' «una tolleranza "
+      "silenziosa e' indistinguibile da un difetto»",
+      "RCP.md §6.2",
       contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720)})
 def _():
     return [intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64], "fin"
 
 
-@caso("p8-in-volo-fuori-grazia", ERRORE_PROTOCOLLO,
-      "⭐⛔ **P8 non e' un permesso permanente** — gli **stessi identici byte** "
-      "del caso qui sopra, ma il **secondo** di grazia e' passato "
-      "(`grazia_scaduta`).  ⛔ Da li' in poi un fotogramma alla misura vecchia "
-      "non e' piu' uno in volo: e' un server che continua a catturare a una "
-      "tela che non e' piu' in vigore, ed e' §6.2 senza sconti.  ⚠ Senza "
-      "questo caso, P8 scritta come «dopo un `TELA` la misura vecchia si "
-      "accetta» spegnerebbe la regola per sempre, e nessun banco lo direbbe.  "
-      "⛔ Il secondo lo **dichiara** questo caso: qui non c'e' nessun orologio",
+@caso("p13-vecchia-dopo-la-chiave-nuova", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P13, il caso che la VIOLA — e la tolleranza non e' un permesso "
+      "permanente** — gli **stessi identici byte** del caso qui sopra, ma la "
+      "**chiave alla misura nuova e' gia' arrivata**: la coda si e' svuotata.  "
+      "⛔ Da li' in poi un fotogramma alla misura vecchia non e' piu' uno in "
+      "volo: e' un server che continua a catturare a una tela che non e' piu' "
+      "in vigore, ed e' §6.2 senza sconti.  ⭐ E la fine della tolleranza e' un "
+      "**fatto osservabile sul filo**, non un tempo dichiarato: fino alla cura "
+      "di P13 questo caso doveva annunciare «il secondo e' passato», cioe' una "
+      "cosa che sul filo non c'e' — e che un arbitro che legge una "
+      "registrazione non poteva vedere",
       "RCP.md §6.2",
       contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
-                "grazia_scaduta": True})
+                "chiave_alla_tela_nuova": True, "ultimo_consegnato": 41,
+                "chiave_consegnata": True})
+def _():
+    # ⛔ `numero` **42**, cioe' DOPO la chiave alla misura nuova: non e' un
+    #    fotogramma in volo — quelli sono stati catturati prima e portano numeri
+    #    piu' bassi — e' un server che ha continuato a catturare alla tela
+    #    vecchia.  ⚠ Il numero qui e' la meta' del caso, e senza sarebbe la
+    #    scena del rilievo **P14**, che e' un'altra cosa.
+    return [intestazione(lar=1920, alt=1080, num=42) + b"\x00" * 64], "fin"
+
+
+@caso("p14-in-volo-scavalcato-dalla-chiave", SCARTATO,
+      "⭐⛔⛔ **P14, IL CASO CHE LA ESERCITA — e fino a un'ora fa qui cadeva la "
+      "sessione** — la chiave alla misura nuova (`numero` 41) e' gia' "
+      "arrivata, e adesso arriva il fotogramma **in volo** che porta la misura "
+      "vecchia e ⛔ **un numero PIU' BASSO** (40): e' stato catturato **prima** "
+      "del `TELA`.  ⚠ E' la scena normale, non quella rara: il fotogramma "
+      "vecchio e' il piu' grosso — §5.2 vieta al server di abbandonare una "
+      "chiave — e gli stream sono indipendenti, quindi la chiave nuova, piu' "
+      "piccola, **lo scavalca**.  ⛔ Prima della cura la misura si guardava per "
+      "prima e il verdetto era `ERRORE_PROTOCOLLO`: cadeva una sessione in cui "
+      "nessuno aveva sbagliato.  ⭐ Adesso §6.2 dice che **l'ordine viene prima "
+      "della misura**: si SCARTA, «e la sua misura non si guarda nemmeno» — e "
+      "la sessione resta viva, che e' quel che §5.1 chiede per un fotogramma "
+      "arrivato tardi",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "chiave_alla_tela_nuova": True, "ultimo_consegnato": 41,
+                "chiave_consegnata": True})
+def _():
+    return [intestazione(lar=1920, alt=1080, num=40) + b"\x00" * 64], "fin"
+
+
+@caso("p13-linea-lenta", ACCETTATO,
+      "⭐⛔⛔ **P13, IL CASO PER CUI LA CURA ESISTE — la linea lenta** — gli "
+      "**stessi identici byte** del fotogramma in volo, e il caso dichiara una "
+      "cosa sola in piu': ⛔ **il secondo e' passato da un pezzo**.  La chiave "
+      "1920x1080 aperta un istante prima del `TELA` pesa qualche MiB (§6.2 ne "
+      "ammette 16) e la linea porta poco — e le linee cattive sono **dentro** "
+      "il modello: il minimo di `CODER.md` §1 e' 480p a 25.  ⛔ Con la riga a "
+      "orologio il client chiudeva un fotogramma spedito quando era legale, e "
+      "che §5.2 vietava al server di abbandonare: non e' solo una sessione "
+      "sana che cade, e' l'invariante **I1** — «mai a staccare» — rotta "
+      "**perche' la linea e' lenta**, cioe' nella condizione esatta che I1 "
+      "esiste per proteggere.  ⭐ Adesso la tolleranza finisce sulla **chiave**, "
+      "e la chiave non e' ancora arrivata: si ACCETTA.  ⚠ Il tempo dichiarato "
+      "qui **non decide piu' niente** — lo rimette a decidere solo il guasto "
+      "**G10**, «il giudice con l'orologio», e allora questo caso torna rosso: "
+      "e' cosi' che la cura si dimostra invece di raccontarsi",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "secondo_passato": True})
 def _():
     return [intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64], "fin"
 
@@ -1232,6 +1931,155 @@ def _():
       contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720)})
 def _():
     return [intestazione(lar=800, alt=600, num=41) + b"\x00" * 64], "fin"
+
+
+# ── ⭐⛔ P10 E P11 — LE DUE CURE DELLA **SECONDA** TORNATA DI QUELLA SERA ───
+#    ⚠ Questi quattro casi sono nati `AMBIGUO`, il 12 agosto sera: erano i due
+#      punti in cui le cure di D13 e D14, appena applicate, non reggevano.  ⛔ Il
+#      coordinatore ha applicato tutt'e due le cure nel giro dopo, e qui i casi
+#      sono **passati a verdetto** — che e' la sola cosa che chiude il cerchio.
+@caso("p10-decodificatore-al-tela", ACCETTATO,
+      "⭐⛔ **P10, il caso che la VIOLA — e la violazione e' del CLIENT, non "
+      "del filo** — stessa scena del fotogramma in volo, con **una cosa in "
+      "piu' dichiarata**: il client ha riconfigurato il decodificatore a "
+      "1280x720 quando e' arrivato il `TELA`.  ⛔ Fino alla riga di stasera qui "
+      "§6.2 diceva «accettalo e dipingilo» e §5.2 «buttalo», e questo caso "
+      "usciva `AMBIGUO`.  ⭐ Adesso §5.2 dice due cose che lo chiudono: il "
+      "client riconfigura **sulla prima CHIAVE alla misura nuova, non sul "
+      "`TELA`**, e non consegna un fotogramma di misura sbagliata «**ne' quella "
+      "tollerata da §6.2**».  ⇒ Il fotogramma si ACCETTA — sul filo nessuno ha "
+      "sbagliato — ⛔ e il banco stampa un **RILIEVO SUL CLIENT**: quel "
+      "decodificatore e' dove §5.2 gli vieta di essere, e `[M]` dipinge "
+      "un'immagine sfasciata senza sollevare un errore.  ⚠ Il rilievo non e' "
+      "l'esito: promuoverlo farebbe cadere una sessione in cui il server e' "
+      "conforme",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "decodificatore_a": (1280, 720)})
+def _():
+    return [intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64], "fin"
+
+
+@caso("p10-decodificatore-alla-chiave", ACCETTATO,
+      "⭐ **P10, il caso che la RISPETTA** — gli **stessi identici byte**, e il "
+      "client e' dove §5.2 lo vuole: il decodificatore e' ancora a 1920x1080 "
+      "perche' la chiave alla misura nuova non e' ancora arrivata.  ⛔ La "
+      "misura del fotogramma e quella del decodificatore **coincidono**, quindi "
+      "non c'e' niente da rilevare — e il banco lo verifica: il rilievo del "
+      "caso qui sopra **non deve comparire** qui.  ⚠ Senza questa meta', un "
+      "banco che stampasse il rilievo sempre sarebbe verde su tutt'e due e non "
+      "distinguerebbe il client conforme da quello che non lo e'",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "decodificatore_a": (1920, 1080)})
+def _():
+    return [intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64], "fin"
+
+
+@caso("p11-due-tele-nella-finestra", ACCETTATO,
+      "⭐⛔ **P11, il caso che la RISPETTA — e la scena e' quella che uccideva "
+      "una sessione sana un passo piu' in la'** — 1920x1080, `TELA(ADATTATA, "
+      "1600, 900)`, e 200 ms dopo `TELA(ADATTATA, 1280, 720)`: chi trascina "
+      "una finestra ne manda due.  Arriva la **chiave** aperta prima di tutto, "
+      "che porta 1920x1080: ⛔ non e' la tela in vigore e non e' **la** "
+      "precedente, e §6.2 al singolare diceva `ERRORE_PROTOCOLLO` **subito**.  "
+      "⭐ Dalla riga di stasera la grazia copre «una tela che e' stata in "
+      "vigore entro il **secondo appena passato**», e questa lo e' stata: si "
+      "ACCETTA, con la tolleranza dichiarata.  ⚠ Ed e' proprio la chiave a "
+      "restare in volo piu' a lungo — e' la piu' grossa, e §5.2 vieta al server "
+      "di abbandonarla",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080),
+                "adatta_tela": [(1600, 900), (1280, 720)]})
+def _():
+    return [intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64], "fin"
+
+
+@caso("p11-misura-mai-in-vigore", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P11, il caso che la VIOLA, e senza di lui la cura e' larga** — "
+      "**stessa scena a due `TELA`** del caso qui sopra, ma il fotogramma porta "
+      "800x600: ⛔ una misura che **in quella finestra non e' mai stata in "
+      "vigore** — non 1920x1080, non 1600x900, non 1280x720.  §6.2 dice "
+      "`ERRORE_PROTOCOLLO` **subito**, e deve dirlo.  ⚠ Senza questo caso, una "
+      "finestra scritta «durante il secondo la misura non si controlla» "
+      "passerebbe il caso qui sopra e spegnerebbe P5 **proprio** dove il server "
+      "e' piu' probabile che sbagli.  ⛔ E' la seconda meta' che alla prima "
+      "stesura di P5 mancava, e che a P8 e' costata due giri",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080),
+                "adatta_tela": [(1600, 900), (1280, 720)]})
+def _():
+    return [intestazione(lar=800, alt=600, num=41) + b"\x00" * 64], "fin"
+
+
+# ── ⭐⛔ D13 — LA CHIAVE A OGNI CAMBIO DI TELA (§5.2), la riga di stasera ───
+@caso("d13-delta-alla-misura-nuova", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P9, il caso che la VIOLA** — dopo un `TELA(ADATTATA, 1280, 720)` "
+      "il primo fotogramma alla misura **nuova** e' un **delta**.  ⛔ `[M]` 12 "
+      "agosto 2026, banco `02-pagina-tela-*`: con soli delta alla misura nuova "
+      "**Chrome su HEVC emette 5 fotogrammi, tutti dichiarati alla misura "
+      "VECCHIA, li dipinge, e non solleva NESSUN errore** — immagine "
+      "strappata, 7/8 sul pattern vecchio.  ⚠ AV1 protesta (`EncodingError`) "
+      "in tutt'e quattro le caselle: ⇒ la regola serve perche' **sul codec "
+      "principale il sintomo e' muto**, e il sintomo sarebbe «il desktop si "
+      "strappa quando ridimensiono la finestra»",
+      "RCP.md §5.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "ultimo_consegnato": 40, "chiave_consegnata": True})
+def _():
+    return [intestazione(tipo=DELTA, lar=1280, alt=720, num=41)
+            + b"\x00" * 64], "fin"
+
+
+@caso("d13-chiave-alla-misura-nuova", ACCETTATO,
+      "⭐ **P9, il caso che la RISPETTA** — gli **stessi identici byte**, con "
+      "`tipo = 0x0301`.  ⛔ Senza questo caso una regola scritta «dopo un "
+      "`TELA` non si accetta niente» resterebbe verde su quello che la viola.  "
+      "⚠ E questo banco giudica **meno** di quel che §5.2 dice: vede che e' "
+      "una chiave, ⛔ **non puo' vedere se e' una chiave *vera*** — i "
+      "VPS/SPS/PPS davanti all'IDR stanno nei dati, e questo giudice i dati "
+      "non li conserva.  Quella meta' la misurano `02-codifica-nal.py` e "
+      "`02-pagina-tela-*`, ed e' scritto qui per non farla credere coperta",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "ultimo_consegnato": 40, "chiave_consegnata": True})
+def _():
+    return [intestazione(tipo=CHIAVE, lar=1280, alt=720, num=41)
+            + b"\x00" * 64], "fin"
+
+
+@caso("d13-tela-che-non-cambia", ACCETTATO,
+      "⭐⛔ **P9, la terza faccia: un `TELA` che NON cambia la misura non apre "
+      "nessun debito** — §7.1 fa rispondere `TELA` a **ogni** `ADATTA_TELA`, "
+      "compreso quello che chiede la misura che c'e' gia'; qui la tela resta "
+      "1920x1080 e arriva un delta a 1920x1080.  ⛔ Senza questo caso, un "
+      "giudice che aprisse il debito della chiave a ogni `TELA(ADATTATA)` "
+      "invece che a ogni **cambio** di misura sarebbe verde su tutto il banco "
+      "e rosso sulla prima sessione in cui l'utente trascina una finestra e la "
+      "rimette dov'era.  ⚠ Ed e' un rosso su una sessione **sana**, cioe' la "
+      "famiglia che ha gia' guastato P5 e D14",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1920, 1080),
+                "ultimo_consegnato": 40, "chiave_consegnata": True})
+def _():
+    return [intestazione(tipo=DELTA, lar=1920, alt=1080, num=41)
+            + b"\x00" * 64], "fin"
+
+
+@caso("d13-delta-dopo-la-chiave-nuova", ACCETTATO,
+      "⭐⛔ **P9, la seconda faccia: il debito si paga UNA volta** — la chiave "
+      "alla misura nuova e' gia' stata consegnata, e adesso arriva un delta a "
+      "1280x720.  ⛔ Senza questo caso, un giudice che avesse capito §5.2 come "
+      "«dopo un `TELA` i delta non si accettano» sarebbe verde su tutto il "
+      "banco e fermerebbe il video **dopo ogni ridimensionamento**, cioe' "
+      "esattamente dove la fase 3 vive",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1280, 720),
+                "ultimo_consegnato": 40, "chiave_consegnata": True,
+                "chiave_alla_tela_nuova": True})
+def _():
+    return [intestazione(tipo=DELTA, lar=1280, alt=720, num=41)
+            + b"\x00" * 64], "fin"
 
 
 @caso("primo-fotogramma-delta", ERRORE_PROTOCOLLO,
@@ -1441,6 +2289,103 @@ GUASTI = {
         #    atteso ed ERRORE_PROTOCOLLO visto.
         "marca": "numero-zero: ERRORE_PROTOCOLLO -> AMBIGUO",
     },
+    # ⭐⛔ G6 e G7 — E NEMMENO QUESTI DUE SONO INVENTATI: SONO IL GIUDICE DI
+    #    IERI **SERA**, prima che le cure di D13 e D14 entrassero in `RCP.md`.
+    "G6": {
+        "titolo": "la grazia di un secondo sui fotogrammi in volo non c'e'",
+        "rompe": "la sesta eccezione di §3 e la riga in coda a §6.2 (D14)",
+        "dimostra":
+            "⛔ E' lo stato di questo file **fino alla sera del 12 agosto "
+            "2026**, quando la grazia era la proposta P8 e non una riga.  ⭐ Col "
+            "guasto innestato il fotogramma gia' in volo dopo un "
+            "`TELA(ADATTATA)` torna a essere `ERRORE_PROTOCOLLO`: cioe' **il "
+            "client uccide una sessione sana** perche' l'utente ha trascinato "
+            "una finestra.  ⚠ E' la stessa forma della prima stesura di P5, "
+            "quella che e' rimasta due ore dentro il documento — un banco che "
+            "non sapesse vedere questo guasto certificherebbe di nuovo quella "
+            "riga.",
+        "marca": "p8-in-volo-dopo-adatta-tela: ACCETTATO -> ERRORE_PROTOCOLLO",
+    },
+    "G7": {
+        "titolo": "il primo fotogramma alla misura nuova puo' essere un delta",
+        "rompe": "la riga di §5.2 sul cambio di tela (D13)",
+        "dimostra":
+            "⛔ E' il difetto **D13** rimesso dentro il giudice, ed e' quello "
+            "che `[M]` fa dipingere a Chrome cinque fotogrammi alla misura "
+            "vecchia **senza un errore**.  ⭐ Il guasto non rompe niente di "
+            "visibile — ogni fotogramma buono continua a passare — e si vede "
+            "solo dal caso che deve fallire: un banco fatto di soli verdi "
+            "attesi resterebbe verde, ed e' precisamente com'e' stata la fase 2 "
+            "fino a stasera.",
+        "marca": "d13-delta-alla-misura-nuova: ERRORE_PROTOCOLLO -> ACCETTATO",
+    },
+    # ⭐⛔ G8 e G9 — IL GIUDICE DI **DUE ORE FA**: fra le due cure della sera e
+    #    le due che le hanno rimesse in piedi.  ⚠ La storia di questo capitolo
+    #    e' fatta di guasti veri a distanza di ore, e ognuno resta qui perche'
+    #    e' cosi' che si dimostra che il banco sa distinguere il documento di
+    #    adesso da quello di poco fa.
+    "G8": {
+        "titolo": "la grazia copre «la tela precedente» sola, non la finestra",
+        "rompe": "la riga di §6.2 corretta da P11",
+        "dimostra":
+            "⛔ E' la cura di D14 **come era stata scritta la prima volta**, al "
+            "singolare.  ⭐ Col guasto, la scena di chi trascina una finestra — "
+            "due `TELA(ADATTATA)` in un secondo — torna a far cadere la "
+            "sessione: la chiave aperta prima di tutto porta una misura che "
+            "non e' ne' quella in vigore ne' la precedente, e nessuno ha "
+            "sbagliato.  ⚠ E' **la stessa forma** di P5 e di D14: un difetto "
+            "che sta un passo piu' in la' della scena appena curata, e che si "
+            "vede solo se il banco porta il caso con **due** cambi di tela.",
+        "marca": "p11-due-tele-nella-finestra: ACCETTATO -> ERRORE_PROTOCOLLO",
+    },
+    "G9": {
+        "titolo": "il rilievo sullo stato del client non si stampa piu'",
+        "rompe": "la riga di §5.2 su QUANDO il client riconfigura (P10)",
+        "dimostra":
+            "⛔ E' l'indulgenza nella sua forma piu' silenziosa: l'esito resta "
+            "`ACCETTATO` — sul filo nessuno ha sbagliato davvero — e sparisce "
+            "**soltanto** la riga che dice che il decodificatore e' dove §5.2 "
+            "gli vieta di essere.  ⭐ Un banco che contasse solo gli esiti "
+            "resterebbe verde, ed e' precisamente il difetto che `[M]` fa "
+            "dipingere a Chrome un'immagine sfasciata senza sollevare un "
+            "errore.  ⚠ Il guasto **non fa cadere nessun esito**: si vede solo "
+            "dal controllo che pretende il rilievo.",
+        "marca": "p10-decodificatore-al-tela: ACCETTATO -> ACCETTATO    "
+                 "accettato, ma senza il RILIEVO",
+    },
+    "G10": {
+        "titolo": "la tolleranza torna a finire A OROLOGIO, dopo un secondo",
+        "rompe": "la riga di §6.2 corretta da P13",
+        "dimostra":
+            "⛔ E' la cura di D14 **come era scritta due ore prima**, con "
+            "dentro un secondo.  ⭐ Col guasto, il caso `p13-linea-lenta` "
+            "torna `ERRORE_PROTOCOLLO`: il client chiude un fotogramma che il "
+            "server ha spedito quando era legale e che §5.2 gli vietava di "
+            "abbandonare — **perche' la linea e' lenta**.  ⛔ E' l'invariante "
+            "**I1** («mai a staccare») rotta nella condizione esatta che I1 "
+            "esiste per proteggere, ed e' il guasto che dimostra che la cura di "
+            "P13 non e' raccontata: senza il caso della linea lenta, «la "
+            "tolleranza finisce sulla chiave» e «la tolleranza finisce dopo un "
+            "secondo» danno lo stesso verde su tutto il resto del banco.",
+        "marca": "p13-linea-lenta: ACCETTATO -> ERRORE_PROTOCOLLO",
+    },
+    "G11": {
+        "titolo": "la misura si guarda PRIMA dell'ordine",
+        "rompe": "la precedenza di §6.2 curata da P14",
+        "dimostra":
+            "⛔ E' il giudice di **un'ora fa**, e il guasto non riscrive "
+            "nessuna regola: sposta **il posto** in cui una regola si applica, "
+            "che e' esattamente quel che P14 ha curato.  ⭐ Col guasto, il "
+            "fotogramma in volo scavalcato dalla chiave nuova — `numero` piu' "
+            "basso, misura vecchia — torna `ERRORE_PROTOCOLLO` invece di "
+            "`SCARTATO`: la sessione cade, e nessuno dei due lati ha "
+            "sbagliato.  ⚠ E' la quarta forma della stessa famiglia (P8 -> P11 "
+            "-> P13 -> P14), ed e' quella che si vede peggio: due righe "
+            "**della stessa sezione**, tutt'e due giuste, e a decidere e' "
+            "l'ordine in cui le si legge.",
+        "marca": "p14-in-volo-scavalcato-dalla-chiave: SCARTATO -> "
+                 "ERRORE_PROTOCOLLO",
+    },
 }
 
 
@@ -1467,19 +2412,35 @@ def gira_caso(c, guasti):
     #    lasciando `tela_da` a dire «SESSIONE», cioe' un verdetto che nomina
     #    la sezione sbagliata.
     adatta = campi.pop("adatta_tela", None)
-    # ⛔ E nemmeno il **secondo** di grazia di §7.1 e' un campo: e' tempo che
-    #    passa, e non viaggia sul filo.  Il caso lo dichiara, questo banco non
-    #    lo misura, e la differenza sta scritta in `scade_la_grazia()`.
-    grazia_scaduta = campi.pop("grazia_scaduta", False)
+    # ⛔ Il tempo che passa NON e' un campo del filo, ed e' inerte dalla cura di
+    #    **P13**: lo si dichiara perche' la **scena** lo dice (la linea lenta),
+    #    non perche' decida qualcosa.  ⚠ A rimetterlo a decidere e' il solo
+    #    guasto G10, ed e' li' che si vede che la cura c'e' davvero.
+    secondo_passato = campi.pop("secondo_passato", False)
+    # ⚠ E la chiave alla misura nuova si dichiara **dopo** il `TELA`, perche' e'
+    #    quel che chiude la coda: vedi `arriva_la_chiave_nuova()`.
+    chiave_nuova = campi.pop("chiave_alla_tela_nuova", None)
+    if adatta is not None:
+        # ⛔ Uno o PIU' D'UNO: chi trascina una finestra manda piu' di un
+        #    `ADATTA_TELA` al secondo, ed e' la scena del caso
+        #    `p8-due-tele-in-un-secondo`.  ⚠ Una tupla sola resta una tupla
+        #    sola: `(1280, 720)` e `[(1280, 720)]` fanno la stessa cosa.
+        passi = adatta if isinstance(adatta, list) else [adatta]
+        for lar, alt in passi:
+            # ⚠ La grazia e' accesa di suo dalla sera del 12 agosto 2026 —
+            #   §6.2 la porta — e non si chiede piu': vedi `adatta_tela`.
+            ctx.adatta_tela(lar, alt)
+    # ⛔ E i campi si posano DOPO il `TELA`, non prima: sono lo stato del
+    #    client **al momento in cui il fotogramma arriva**, e un
+    #    `chiave_alla_tela_nuova` scritto prima verrebbe azzerato da
+    #    `adatta_tela` — cioe' il caso direbbe una cosa e il contesto un'altra.
     for k, v in campi.items():
         setattr(ctx, k, v)
-    if adatta is not None:
-        # ⛔ `grazia=True`: questo banco porta i casi di D14, quindi la chiede.
-        #    ⚠ Chi non la chiede — `01-b4-validatore.py`, per esempio — giudica
-        #    il documento di oggi, ed e' quel che deve fare.
-        ctx.adatta_tela(*adatta, grazia=True)
-    if grazia_scaduta:
-        ctx.scade_la_grazia()
+    ctx.secondo_passato = secondo_passato
+    if chiave_nuova:
+        ctx.arriva_la_chiave_nuova()
+    elif chiave_nuova is False:
+        ctx.chiave_alla_tela_nuova = False
     g = Giudice(ctx, dove=c["dove"], guasti=guasti)
     pezzi, come = c["fabbrica"]()
     for p in pezzi:
@@ -1564,6 +2525,37 @@ def giro(a, guasti=(), silenzioso=False):
         if ok and c["nome"] == "reset-a-meta" and not ctx.chiedi_chiave:
             ok, errore = False, ("scartato, ma non trattato come un buco: "
                                  "§6.2 lo impone (§5.2)")
+        # ⛔ E LA TOLLERANZA SI SCRIVE NEL REGISTRO — §3, ultima riga: *«una
+        #    tolleranza silenziosa e' indistinguibile da un difetto, ed e'
+        #    precisamente l'indulgenza che questa sezione esiste per togliere»*.
+        #    ⚠ Senza questo controllo un giudice che accettasse il fotogramma in
+        #      volo **in silenzio** sarebbe verde qui e avrebbe tolto a chi
+        #      legge il registro l'unico modo di distinguere l'eccezione dal
+        #      difetto.
+        if (ok and c["nome"] in ("p8-in-volo-dopo-adatta-tela",
+                                 "p11-due-tele-nella-finestra")
+                and not v.tollerato):
+            ok, errore = False, ("accettato, ma senza dichiarare la "
+                                 "tolleranza: §3 vuole che ogni eccezione "
+                                 "sia scritta nel registro")
+        # ⛔ P10 — E IL RILIEVO SUL CLIENT HA LE SUE DUE META', come una marca:
+        #    il caso che viola la riga lo deve **portare**, quello che la
+        #    rispetta **non lo deve portare**.  ⚠ Senza la seconda meta', un
+        #    banco che stampasse il rilievo sempre sarebbe verde su tutt'e due
+        #    e non distinguerebbe il client conforme da quello che non lo e' —
+        #    e' il rilievo R12-A.3 applicato a un rilievo invece che a un
+        #    guasto.
+        if ok:
+            for _s, _r in REGOLE_DI_STATO.items():
+                if c["nome"] == _r["viola"] and not (v and v.rilievo):
+                    ok, errore = False, (
+                        f"accettato, ma senza il RILIEVO che {_s} pretende: lo "
+                        f"stato del client contraddice §5.2 e il banco tace")
+                if c["nome"] == _r["rispetta"] and (v and v.rilievo):
+                    ok, errore = False, (
+                        f"accettato, ma con un RILIEVO addosso: qui il client "
+                        f"e' dove {_s} lo vuole, e un rilievo che compare "
+                        f"sempre non distingue niente")
         testo = (errore if errore else str(v))
         righe.append({"nome": c["nome"], "atteso": atteso, "visto": visto,
                       "esito": bool(ok), "regola_vista": v.regola if v else None,
@@ -1725,15 +2717,18 @@ def principale(a):
             print(f"      atteso guasto: > 0 guasti, e nell'uscita la marca "
                   f"«{g['marca']}»")
             print(f"      ⛔ e la marca NON deve comparire nel giro sano")
-        print(f"\n== ⭐⛔ LE SEI RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026,")
+        print(f"\n== ⭐⛔ LE {len(REGOLE_NUOVE)} RIGHE ENTRATE IN `RCP.md` IL 12 AGOSTO 2026,")
         print(f"      e i DUE casi di ciascuna")
         coperte, mancanti = regole_coperte(CASI)
         for sigla, r in REGOLE_NUOVE.items():
             print(f"  {sigla}  {r['dove']}")
             print(f"      «{r['dice']}»")
             print(f"      era:      {r['era']}")
-            print(f"      la VIOLA:    {r['viola']}")
-            print(f"      la RISPETTA: {r['rispetta']}")
+            viola = (", ".join(r["viola"])
+                     if isinstance(r["viola"], (tuple, list)) else r["viola"])
+            print(f"      {r.get('etichetta_viola', 'la VIOLA')}:    {viola}")
+            print(f"      {r.get('etichetta_rispetta', 'la RISPETTA')}: "
+                  f"{r['rispetta']}")
         print(f"\n  ⛔ regole con TUTT'E DUE i casi: {len(coperte)} su "
               f"{len(REGOLE_NUOVE)} — {', '.join(coperte) or '—'}")
         for sigla, perche in mancanti:
@@ -1793,14 +2788,15 @@ def principale(a):
         else:
             print(f"    {tot:3d}      {che}")
 
-    # ⭐⛔ LE SEI RIGHE NUOVE: QUANTE HANNO DAVVERO I DUE CASI.
+    # ⭐⛔ LE RIGHE NUOVE: QUANTE HANNO DAVVERO I DUE CASI.
     #
     #    ⛔ Questo conto sta **dentro il giro**, non in un commento e non nel
     #       rapporto: una regola che perdesse il caso che la fa scattare
     #       tornerebbe a essere una regola che nessuno fa rispettare, e il
     #       banco resterebbe verde — che e' la forma peggiore di verde.
     coperte, mancanti = regole_coperte(CASI)
-    print(f"\n    == ⭐⛔ le sei righe entrate in `RCP.md` il 12 agosto 2026")
+    print(f"\n    == ⭐⛔ le {len(REGOLE_NUOVE)} righe entrate in `RCP.md` il 12 "
+          f"agosto 2026 — sei di mattina, due di sera")
     riga(VERDE if not mancanti else ROSSO, "OK" if not mancanti else "NO",
          "regole-con-i-due-casi",
          f"{len(coperte)} su {len(REGOLE_NUOVE)} hanno il caso che le VIOLA e "
@@ -1811,9 +2807,21 @@ def principale(a):
     # ⛔⛔ E LE PROPOSTE ANCORA APERTE, CONTATE ALLO STESSO MODO.
     #
     #    ⚠ Il conto sta accanto a quello delle regole entrate e **non insieme**:
-    #      «sei righe che il documento porta» e «una cura che il documento non
+    #      «le righe che il documento porta» e «una cura che il documento non
     #      ha ancora» sono due fatti diversi, e sommarli darebbe un numero che
     #      non vuol dire niente.
+    # ⛔ E LA RIGA CHE PARLA DELLO STATO DEL CLIENT, CONTATA A PARTE — P10.
+    st_coperte, st_mancanti = regole_di_stato_coperte(CASI)
+    print(f"\n    == ⭐⛔ le righe che parlano dello STATO DEL CLIENT, non del "
+          f"filo")
+    riga(VERDE if not st_mancanti else ROSSO, "OK" if not st_mancanti else "NO",
+         "stato-con-i-due-casi",
+         f"{len(st_coperte)} su {len(REGOLE_DI_STATO)} hanno il caso che porta "
+         f"il RILIEVO e quello che non lo porta: "
+         f"{', '.join(st_coperte) or '—'}")
+    for sigla, perche in st_mancanti:
+        print(f"        ⛔ {sigla}: {perche}")
+
     ap_coperte, ap_mancanti = proposte_coperte(CASI)
     print(f"\n    == ⛔⛔ le proposte APERTE — `RCP.md` non le porta ancora")
     riga(VERDE if not ap_mancanti else ROSSO, "OK" if not ap_mancanti else "NO",
@@ -1860,16 +2868,45 @@ def principale(a):
         #    due fatti diversi, ed e' la forma E8 applicata al banco stesso.
         print(f"\n    --  ⭐ `RCP.md` non ammette piu' due letture in nessuno "
               f"dei {len(CASI)} casi:")
-        print(f"        le quattro che questo banco aveva trovato sono entrate "
-              f"nel documento")
-        print(f"        il 12 agosto 2026 (P2 §6.2 · P3 §2.5 · P5 §6.2 · P6 "
-              f"§5.2).")
+        print(f"        le **dieci** che questo banco ha trovato sono entrate "
+              f"tutte nel documento")
+        print(f"        il 12 agosto 2026, in quattro tornate: quattro di "
+              f"mattina (P2 · P3 ·")
+        print(f"        P5 · P6), due di sera (P8 §6.2 · P9 §5.2), ⛔ **due "
+              f"nate dalle due di")
+        print(f"        sera** (P10 §5.2 · P11 §6.2) e ⛔ **due nate da "
+              f"quelle** (P12 §3 · P13")
+        print(f"        §6.2) — ognuna trovata **applicando** la precedente, "
+              f"non rileggendola.")
         print(f"        ⚠ Da cui: **nessun caso** pretende oggi `AMBIGUO`, e il "
               f"ramo che li")
         print(f"        stampa non e' esercitato da questo giro.  Il ramo del "
               f"GIUDICE che")
         print(f"        produce `AMBIGUO` lo esercita il guasto **G5**, a ogni "
               f"certificazione.")
+
+    # ⛔⛔ I RILIEVI DICHIARATI — dove il documento decide, e la decisione non
+    #    regge.  ⚠ Non fanno fallire il giro: non e' il banco a curarli.
+    con, senza = rilievi_col_caso(CASI)
+    if RILIEVI_DICHIARATI:
+        n = len(RILIEVI_DICHIARATI)
+        print(f"\n    {GIALLO}⛔⛔ E {n} RILIEV{'O' if n == 1 else 'I'} "
+              f"DICHIARAT{'O' if n == 1 else 'I'} su `RCP.md`, che questo giro "
+              f"NON cura{GRIGIO}")
+        print(f"       ⚠ Qui il documento **decide**, e il banco applica la sua "
+              f"decisione:")
+        print(f"         non sono `AMBIGUO`.  ⛔ Ma applicarla e tacere che "
+              f"uccide una")
+        print(f"         sessione sana sarebbe la forma E8 rivolta contro chi "
+              f"legge il banco.")
+        print(f"       --  con un caso che li mostra: "
+              f"{', '.join(con) or '—'} · senza: {', '.join(senza) or '—'}")
+        for sigla, r in RILIEVI_DICHIARATI.items():
+            print(f"\n       {sigla}  {r['dove']}   {r['marca']}")
+            print(f"         {r['dice']}")
+            print(f"         scena: {r['scena']}")
+            senza_caso = "⛔ nessuno — resta una lettura, e si dichiara"
+            print(f"         caso: {r['caso'] or senza_caso}")
 
     # ⛔ IL CONTROLLO POSITIVO, IN CODA A OGNI ESECUZIONE.
     print(f"\n    == ⛔ il controllo positivo")
