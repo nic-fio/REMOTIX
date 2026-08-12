@@ -299,6 +299,34 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
+> ### ⭐ DA QUI SI RIPRENDE — **12 agosto 2026**, notte
+>
+> **Lo stato**: albero pulito (`636f088`), **14 banchi su 14 certificati e valgono oggi**, terreno
+> dell'innesto `14 su 14`. ⚠ Su NIC-OS restano accesi **due** server, e sono voluti: il **prodotto
+> di casa sulla 7448** (riavviato stanotte sul binario giusto) e il **bersaglio di P5 sulla 7501**.
+> Le porte **7447** e **7481** sono libere. Nessun giro in corso, su nessuna delle due macchine.
+>
+> ⏳ **La sola cosa con una scadenza**: `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al
+> giorno fino al 18 agosto**. L'11 era stato saltato e recuperato in extremis (giorno 1.00 su 7);
+> ⛔ non si rigenera `/media/REMOTIX/s1b-certificato/` né si cancella `~/.remotix-s1b/`.
+>
+> **Quel che resta, e non è stato deciso** — i punti 4-7 dell'elenco della notte:
+>
+> | | |
+> |---|---|
+> | **4** | `01-b12-lancia.sh` ha `PORTA=7447` e `bsslserver` in chiaro: non si può puntare sul prodotto, e per questo B13 si certifica **solo** dal suo script «sera», mentre P1 e P5 stanno fuori dall'orchestratore |
+> | **5** | il guasto di P5 copre **meno** di quel che promette: la pagina ritira `/impronta` prima di ogni tentativo, quindi l'impronta falsa non uccide la sessione. Per coprire davvero **R1.14** serve un guasto che colpisca **il ritiro** |
+> | **6** | i buchi **dichiarati**: `B13.3` (i certificati li fa un banco, non il codice), `B13.5` (il trasporto concede tutti gli stream chiesti), e il `[?]` di **B8** su `pam_faildelay` |
+> | **7** | i due ripieghi di fase: **un filo solo** con la verifica PAM che lo blocca, e il tetto di **16 sessioni in compilazione** dove la regola ne vuole dieci configurabili |
+>
+> ⚠ **E una cosa sul metodo, da chi ha tenuto la tastiera**: la trappola *«mai una redirezione
+> **attorno** a `enter.sh`, o si mangia la richiesta di password di `sudo`»* — già in catalogo,
+> `fasi/00-ambiente.md` B3.3 — è stata ripetuta **due volte nella stessa notte**, e la seconda è
+> costata venti minuti di attesa su una compilazione che non stava compilando niente. ⇒ Vale la
+> pena renderla impossibile invece di ricordarsela.
+>
+> ---
+>
 > ### ⭐⭐⭐ P5 È CERTIFICATO — la notte fra l'11 e il 12 agosto 2026, **0 → 1 → 0**
 >
 > *I tre giri della certificazione sono stati fatti per intero contro la copia curata sulla **7501**,
