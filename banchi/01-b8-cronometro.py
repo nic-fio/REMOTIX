@@ -713,6 +713,110 @@ R_BAN = {"caricati": "ban caricati:",
          "illeggibile": "NON HO POTUTO LEGGERE il file dei ban",
          "pagina": "pagina TCP a"}
 
+# ===========================================================================
+# ⛔⭐ COME SI LEGGE UN VERDETTO DI PAM NEL REGISTRO — e perche' NON DALLA FINE
+# ===========================================================================
+# *Difetto pagato il 12 agosto 2026, e questo banco e' rimasto **cieco** per un
+#  giro intero di ricertificazione senza dire una parola.*
+#
+# ⛔ QUEL CHE E' SUCCESSO.  Qui c'era:
+#
+#      ultimo_pam = "ammesso" if riga.rstrip().endswith("ammesso") else "respinto"
+#
+#    e la riga di `rcp.c` finiva davvero con la parola del verdetto.  Poi la cura
+#    di `DECISIONI.md` §1.10 (PAM fuori dal filo unico) le ha appeso in coda
+#    la spiegazione del ripiego:
+#
+#      PAM ha risposto: ammesso  ⚠ (per via SINCRONA: nessun gancio asincrono
+#      collegato — il filo e' rimasto fermo)
+#
+#    ⇒ `endswith("ammesso")` e' diventato **sempre falso**, ogni risposta e'
+#    finita fra i respinti — **52 righe, 0 ammessi** — `imputato_dei_tempi()`
+#    non ha piu' potuto nominare nessuno, e l'esito **5** (l'indulgenza scritta
+#    per `pam_faildelay`) non si e' piu' applicato: B8 ha dato **1** su un
+#    prodotto sano, con il ban che passava per intero.
+#
+# ⛔ LE DUE META' DELLA CAUSA, e curarne una sola la fa tornare:
+#      1. la cura ha cambiato una riga di registro che un banco LEGGE;
+#      2. il banco era ancorato alla **FINE** della riga — un'ancora che
+#         **qualunque** aggiunta rompe, e che si rompe **in silenzio**.
+#
+# ⭐ LA FORMA CHE REGGE, ed e' quella gia' in casa (`01-p5-registro.py` §«le
+#    righe che si contano», e `re.search(r"(-?\d+) indirizzi caricati", …)`
+#    dieci righe piu' sotto in questo stesso file): si ancora al **pezzo
+#    stabile** della riga — il nome del fatto e la parola che lo qualifica —
+#    e si lascia libero **tutto quel che viene dopo**.  Una spiegazione appesa
+#    in coda, un'altra emoji, un secondo campo: nessuno di questi la tocca.
+#
+# ⚠ E `[^:]*` fra «risposto» e i due punti non e' un vezzo: la cura di §1.10 ha
+#   scritto una SECONDA forma della stessa riga, per la strada asincrona —
+#   `rcp.c:2636`, «PAM ha risposto (pratica 7): ammesso  ⭐ …» — che l'innesto
+#   oggi non percorre ma che il prodotto percorrera'.  Un'ancora che pretendesse
+#   i due punti subito dopo «risposto» sarebbe cieca su quella, e la cecita'
+#   arriverebbe **il giorno in cui il banco viene puntato sul prodotto**.
+R_PAM = re.compile(r"PAM ha risposto\b[^:]*:\s*(ammesso|respinto)\b")
+# ⛔ E la riga si riconosce PRIMA di saperla leggere: «non e' una riga di PAM» e
+#    «e' una riga di PAM che non so leggere» sono due fatti diversi, e il
+#    secondo e' quello che oggi e' costato un giro.
+R_PAM_RIGA = "PAM ha risposto"
+
+# ⛔ Quante righe servono perche' «tutte nella stessa casella» sia un'accusa e
+#    non un caso: sotto questa soglia si dice e basta.  ⚠ Il giro vero ne porta
+#    una cinquantina.
+SOGLIA_MONOCATEGORIA = 5
+
+
+# ===========================================================================
+# ⛔⭐ IL CLASSIFICATORE CHE MISURA SE STESSO — E8 applicata a un CONTATORE
+# ===========================================================================
+# *Nata il 12 agosto 2026, e conta piu' della cura dell'ancora qui sopra.*
+#
+# ⛔ Il giudice ha contato **52 righe e 0 ammessi** senza che niente gridasse.
+#    Il numero c'era, era stampato, ed era assurdo — e nessuno lo ha guardato
+#    perche' nessuna riga diceva che era assurdo.
+#
+# ⛔ E' la forma **E8** di `REVIEWER.md` §2 — *«vuoto» e «proibito» hanno lo
+#    stesso aspetto* — spostata dalla lettura al **conteggio**: quando un
+#    classificatore mette **tutto** in una casella sola, «i fatti sono davvero
+#    tutti uguali» e «non so piu' leggere i fatti» hanno lo stesso aspetto.  E
+#    fra le due, la seconda e' quasi sempre quella vera.
+#
+# ⭐ LA REGOLA, e vale per qualunque contatore di questo banco: se le caselle
+#    sono piu' d'una e i fatti sono abbastanza, **almeno due caselle devono
+#    essere abitate**.  Se ne e' abitata una sola, il primo imputato e' il
+#    classificatore — `REVIEWER.md` §1: *il banco e' il primo imputato*.
+#
+# ⚠ E i tre esiti sono tre, non due: «nessun fatto» non e' «tutti nella stessa
+#   casella», ed e' esattamente la distinzione che E8 chiede.
+def tutto_in_una_casella(che_cosa, caselle, minimo=SOGLIA_MONOCATEGORIA):
+    """(sospetto, righe) — sospetto=True quando UNA sola casella e' abitata.
+
+    `caselle` e' {nome: quanti}.  ⛔ Non giudica i fatti: giudica **chi li ha
+    messi nelle caselle**, che e' l'unico imputato che nessun altro controllo
+    di questo file guarda."""
+    tot = sum(caselle.values())
+    conto = " · ".join(f"{k}: {v}" for k, v in caselle.items())
+    if tot == 0:
+        return False, [f"⚠ {che_cosa}: NESSUN fatto da classificare ({conto}) — "
+                       f"e «nessun fatto» non e' «tutti uguali»"]
+    abitate = [k for k, v in caselle.items() if v]
+    if len(abitate) > 1 or tot < minimo:
+        return False, [f"⚠ {che_cosa}: {conto} (su {tot})"]
+    return True, [
+        f"⛔ {che_cosa}: TUTTO IN UNA CASELLA SOLA — {conto} (su {tot}), e "
+        f"l'unica abitata e' «{abitate[0]}»",
+        f"⛔ un classificatore che su {tot} fatti non ne mette **nemmeno uno** "
+        f"nelle altre {len(caselle) - 1} caselle sta quasi sempre sbagliando: "
+        f"il primo imputato e' il BANCO, non il server (`REVIEWER.md` §1)",
+        f"⛔ ed e' la forma E8 — «vuoto» e «proibito» hanno lo stesso aspetto — "
+        f"applicata a un contatore: «i fatti sono tutti uguali» e «non so piu' "
+        f"leggere i fatti» qui hanno la stessa faccia",
+        f"⚠ da guardare per primo: l'appiglio con cui si legge la riga del "
+        f"registro.  Il 12 agosto 2026 e' bastata una spiegazione appesa in "
+        f"coda a «PAM ha risposto: ammesso» per farne 52 su 52 nella casella "
+        f"sbagliata, e B8 e' passato da 5 a 1 su un prodotto sano",
+    ]
+
 
 def scrivi(uscita, rec):
     """Una riga per fatto, scritta e **sincronizzata** subito.
@@ -937,24 +1041,61 @@ def leggi_registro(percorso):
       «Vuoto» e «non letto» sono due fatti diversi."""
     if not percorso or not os.path.exists(percorso):
         return None, "il registro del server non e' stato letto (file assente)"
-    d = {"fissi": [], "ammessi": [], "respinti": [], "indirizzi": set(),
+    d = {"fissi": [], "ammessi": [], "respinti": [], "senza_pam": [],
+         "indirizzi": set(),
          "avvii": [], "ban": [], "sbloccati": [], "non_bannati": [],
-         "pagine": [], "carichi": [], "illeggibili": 0, "vite": 0}
+         "pagine": [], "carichi": [], "illeggibili": 0, "vite": 0,
+         # ⛔ Le tre caselle del CLASSIFICATORE, contate a parte dalle mediane:
+         #    servono a giudicare chi legge, non quel che e' stato letto.
+         "pam": {"ammesso": 0, "respinto": 0, "illeggibile": 0},
+         "pam_esempi": []}
     ultimo_pam = None
     try:
         with open(percorso, errors="replace") as f:
             for riga in f:
-                if "PAM ha risposto:" in riga:
-                    ultimo_pam = "ammesso" if riga.rstrip().endswith("ammesso") else "respinto"
+                if R_PAM_RIGA in riga:
+                    # ⛔ L'ancora sta sul pezzo STABILE, non sulla fine della
+                    #    riga: quel che viene dopo la parola del verdetto e' di
+                    #    chi scrive il registro, e cambia (12 agosto 2026).
+                    m = R_PAM.search(riga)
+                    if m:
+                        ultimo_pam = m.group(1)
+                        d["pam"][ultimo_pam] += 1
+                    else:
+                        # ⛔ E QUI NON SI RIPIEGA SU «respinto».  Fino al 12
+                        #    agosto 2026 una riga illeggibile e un respinto
+                        #    erano lo stesso fatto — E8 — e questo `None` e'
+                        #    la cura: un verdetto che non si e' capito non
+                        #    entra in nessuna delle due mediane, e si conta.
+                        ultimo_pam = None
+                        d["pam"]["illeggibile"] += 1
+                        if len(d["pam_esempi"]) < 3:
+                            d["pam_esempi"].append(riga.strip()[:150])
                 elif "il secondo fisso e' passato" in riga:
-                    try:
-                        n = int(riga.split("(")[1].split(" ms")[0])
-                    except (IndexError, ValueError):
+                    # ⚠ Anche qui l'appiglio e' il pezzo stabile — «(N ms)» —
+                    #   e non «quel che sta dopo la prima parentesi».
+                    m = re.search(r"\((-?\d+) ms\)", riga)
+                    if not m:
                         continue
+                    n = int(m.group(1))
                     d["fissi"].append(n)
-                    (d["ammessi"] if ultimo_pam == "ammesso" else d["respinti"]).append(n)
+                    if ultimo_pam == "ammesso":
+                        d["ammessi"].append(n)
+                    elif ultimo_pam == "respinto":
+                        d["respinti"].append(n)
+                    else:
+                        d["senza_pam"].append(n)
                 elif " da=" in riga and ("respinto motivo" in riga or "ammesso utente" in riga):
-                    d["indirizzi"].add(riga.rsplit(" da=", 1)[1].strip().rsplit(":", 1)[0])
+                    # ⛔ E NEMMENO QUESTA SI LEGGE DALLA FINE.  Era
+                    #    `riga.rsplit(" da=", 1)[1].strip().rsplit(":", 1)[0]`,
+                    #    cioe' «l'indirizzo e' l'ultima cosa della riga»: la
+                    #    stessa ancora che oggi ha accecato il verdetto di PAM,
+                    #    su una riga che `rcp.c:979` e `rcp.c:2700` possono
+                    #    allungare domani come hanno allungato quella.  ⇒ Si
+                    #    prende il campo `da=` e si ferma al primo spazio.
+                    m = re.search(r"\bda=(\S+)", riga)
+                    if m:
+                        d["indirizzi"].add(m.group(1).rsplit(":", 1)[0])
                 elif R_BAN["caricati"] in riga:
                     d["vite"] += 1
                     # ⛔⭐ E LA RIGA D'AVVIO E' SCRITTA DIVERSA NEI DUE SERVER.
@@ -1048,11 +1189,21 @@ def imputato_dei_tempi(serie, reg):
     resp = statistics.median(reg["respinti"]) if reg["respinti"] else None
     amm = statistics.median(reg["ammessi"]) if reg["ammessi"] else None
     if resp is None or amm is None:
-        return None, [f"⛔ il registro non porta le due mediane che servono "
-                      f"(respinti: {len(reg['respinti'])} righe · ammessi: "
-                      f"{len(reg['ammessi'])} righe): senza tutt'e due non si "
-                      f"distingue «PAM ritarda i fallimenti» da «il ritardo e' "
-                      f"nostro», e non si nomina nessuno"]
+        # ⛔ E QUI SI DICE ANCHE PERCHE' — 12 agosto 2026.  Fino a stamattina
+        #    questa riga si fermava a «il registro non porta le due mediane»,
+        #    che si legge come *«il server non le ha scritte»*.  ⛔ Ma il caso
+        #    che si e' presentato davvero e' l'altro — **le ha scritte, e sono
+        #    io che non le so piu' leggere** — e i due hanno lo stesso aspetto
+        #    (E8).  Chi legge il verdetto deve trovare qui il primo imputato.
+        righe = [f"⛔ il registro non porta le due mediane che servono "
+                 f"(respinti: {len(reg['respinti'])} righe · ammessi: "
+                 f"{len(reg['ammessi'])} righe): senza tutt'e due non si "
+                 f"distingue «PAM ritarda i fallimenti» da «il ritardo e' "
+                 f"nostro», e non si nomina nessuno"]
+        _, righe_cieco = tutto_in_una_casella(
+            "e la classificazione che le riempie", reg["pam"])
+        righe += righe_cieco
+        return None, righe
     med = {c: statistics.median(serie[c]) for c in CASI if serie[c]}
     if not med:
         return None, ["⛔ nessuna serie di campioni: non c'e' nessuna "
@@ -1568,7 +1719,38 @@ def verdetto(a):
         print(f"    --  «il secondo fisso e' passato»: n={len(reg['fissi'])}  "
               f"mediana {med(reg['fissi'])}  "
               f"(ammessi {med(reg['ammessi'])} su {len(reg['ammessi'])} · "
-              f"respinti {med(reg['respinti'])} su {len(reg['respinti'])})")
+              f"respinti {med(reg['respinti'])} su {len(reg['respinti'])} · "
+              f"senza verdetto leggibile: {len(reg['senza_pam'])})")
+        # ── ⛔ IL BANCO CIECO SI DEVE VEDERE — 12 agosto 2026 ────────────────
+        #
+        # ⛔ Il giro di ricertificazione ha contato **52 righe e 0 ammessi** e
+        #    il banco non ha detto niente: ha solo smesso di poter nominare
+        #    l'imputato, e l'esito e' passato da 5 a 1 su un prodotto sano.
+        #    Queste righe sono il controllo che mancava, ed e' un controllo sul
+        #    BANCO, non sul server (`REVIEWER.md` §1).
+        cieco, righe_cieco = tutto_in_una_casella(
+            "la classificazione delle risposte di PAM nel registro", reg["pam"])
+        for r in righe_cieco:
+            print(f"    --  {r}")
+        for r in reg["pam_esempi"]:
+            print(f"        riga che non ho saputo leggere: {r}")
+        if cieco:
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ IL GIUDICE E' CIECO: finche' questa "
+                  f"riga e' rossa nessuna mediana qui sopra vale, perche' non e' "
+                  f"detto che sia la mediana di quel che dichiara di essere")
+            guasti += 1
+        elif reg["pam"]["illeggibile"]:
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {reg['pam']['illeggibile']} righe "
+                  f"«{R_PAM_RIGA}» non si sono lasciate leggere: l'appiglio "
+                  f"«{R_PAM.pattern}» non trova piu' il verdetto, e un verdetto "
+                  f"non letto NON e' un respinto (E8)")
+            guasti += 1
+        if reg["senza_pam"]:
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(reg['senza_pam'])} campioni del "
+                  f"secondo fisso non hanno un verdetto di PAM davanti: non "
+                  f"entrano in nessuna delle due mediane, e prima del 12 agosto "
+                  f"2026 sarebbero finiti tutti fra i RESPINTI in silenzio")
+            guasti += 1
         print(f"    --  se quel numero e' ~{RITARDO_FISSO:.0f} ms a governare e' "
               f"stato il RITARDO FISSO; se e' molto piu' alto a governare e' "
               f"stato PAM, e una separazione fra le mediane sarebbe di PAM")
@@ -1858,6 +2040,27 @@ def _guasti_possibili():
         return d, [r if "il secondo fisso e' passato" not in r
                    else "il secondo fisso e' passato (2500 ms)\n" for r in reg]
 
+    def pam_illeggibile(d, reg):
+        # ⛔ IL GUASTO PAGATO IL 12 AGOSTO 2026, riprodotto: la riga di PAM
+        #    cambia forma e il banco non sa piu' leggerne il verdetto.  ⚠ Il
+        #    registro NON e' vuoto e le righe ci sono tutte — e' precisamente
+        #    quel che rende il difetto muto: si continua a contare, si continua
+        #    a stampare mediane, e il numero e' di un'altra cosa.
+        # ⭐ Il verdetto deve dire «TUTTO IN UNA CASELLA SOLA» e diventare
+        #    rosso: senza questa riga il banco tornerebbe cieco alla prossima
+        #    volta che qualcuno riscrive quella riga di `rcp.c`.
+        return d, [re.sub(r"(PAM ha risposto\b[^:]*:\s*)(ammesso|respinto)",
+                          r"\1esito-\2", r) for r in reg]
+
+    def pam_tutti_respinti(d, reg):
+        # ⛔ La stessa cecita' senza la casella «illeggibile»: il classificatore
+        #    legge benissimo, e mette **tutto** dalla stessa parte.  E' la
+        #    fotografia esatta del 12 agosto — «52 righe, 0 ammessi» — e il
+        #    banco deve gridare anche in questa forma, o l'allarme starebbe
+        #    guardando l'appiglio invece del contatore.
+        return d, [re.sub(r"(PAM ha risposto\b[^:]*:\s*)ammesso",
+                          r"\1respinto", r) for r in reg]
+
     def nessun_tentativo(d, reg):
         # ⛔ Il file NON e' vuoto: restano le pagine e gli sblocchi, e sparisce
         #    ogni tentativo.  E' la forma piu' insidiosa di verde — «tutti
@@ -1900,6 +2103,12 @@ def _guasti_possibili():
         ("⛔ il cronometro del CLIENT misura meno di quello del SERVER "
          "(A19: `t0` spostato in un punto che tiene i numeri plausibili)",
          cronometro_scollato, "I DUE CRONOMETRI NON CONCORDANO"),
+        ("⛔ la riga di PAM cambia forma e il verdetto non si legge piu' "
+         "(12 agosto 2026: il banco diventato cieco senza dirlo)",
+         pam_illeggibile, "TUTTO IN UNA CASELLA SOLA"),
+        ("⛔ ogni risposta di PAM finisce fra i RESPINTI — «52 righe, 0 "
+         "ammessi» — e il classificatore legge benissimo",
+         pam_tutti_respinti, "TUTTO IN UNA CASELLA SOLA"),
     ]
 
 
@@ -1963,6 +2172,77 @@ def certifica(a):
     print(f"    --  fatti su cui si guasta: {len(sani)} · righe di registro: "
           f"{len(reg_sano)}")
 
+    # ======================================================================
+    # ⛔⭐ IL CONTROLLO POSITIVO DELL'ANCORA — e non e' un guasto, e' il suo
+    #     rovescio: qui il verdetto NON deve cambiare
+    # ======================================================================
+    # *Nato il 12 agosto 2026, dal difetto che ha reso cieco questo banco.*
+    #
+    # ⛔ I quindici guasti qui sotto provano che il giudice **sa diventare
+    #    rosso**.  Nessuno di loro prova la cosa che oggi e' costata un giro:
+    #    che il giudice **continui a leggere** quando chi scrive il registro
+    #    allunga una riga.  Un'ancora fragile passa tutti e quindici — era
+    #    fragile e li passava — perche' un'ancora rotta rende il banco rosso,
+    #    e i guasti chiedono proprio il rosso.
+    #
+    # ⭐ Quindi si costruisce il contrario: si allunga il registro **nei tre
+    #    modi che sono gia' successi o che stanno per succedere**, e si pretende
+    #    che l'esito resti **identico** a quello sano.  ⚠ E' il controllo
+    #    positivo di `REVIEWER.md` §1 punto 5 applicato al lettore del registro:
+    #    «lo strumento sa ancora trovare quel che c'e' di sicuro?»
+    falliti_ancora = 0
+    def _allunga_pam(r):
+        # la cura di `DECISIONI.md` §1.10, com'e' arrivata davvero
+        if R_PAM_RIGA in r:
+            return r.rstrip("\n") + ("  ⚠ (per via SINCRONA: nessun gancio "
+                                     "asincrono collegato — il filo e' "
+                                     "rimasto fermo)\n")
+        return r
+
+    def _pratica_pam(r):
+        # la SECONDA forma della riga, che il prodotto scrive gia' (rcp.c:2636)
+        if R_PAM_RIGA in r:
+            return r.replace("PAM ha risposto:",
+                             "PAM ha risposto (pratica 7):", 1)
+        return r
+
+    def _allunga_da(r):
+        # l'indirizzo smette di essere l'ultima cosa della riga
+        if " da=" in r and ("respinto motivo" in r or "ammesso utente" in r):
+            return r.rstrip("\n") + " · pratica=7 · via=asincrona\n"
+        return r
+
+    ancore = [
+        ("una spiegazione appesa in coda a «PAM ha risposto: …» "
+         "(la cura di §1.10, quella vera)", _allunga_pam),
+        ("un campo in piu' PRIMA dei due punti: «PAM ha risposto (pratica 7): "
+         "ammesso» (rcp.c:2636, la strada asincrona)", _pratica_pam),
+        ("l'indirizzo non e' piu' l'ultima cosa della riga «respinto "
+         "motivo=… da=…»", _allunga_da),
+    ]
+    print()
+    print("    == ⭐ IL CONTROLLO POSITIVO DELL'ANCORA: il registro si allunga, "
+          "e il verdetto NON deve cambiare")
+    for nome, cambia in ancore:
+        esito_a, testo_a = gira(sani, [cambia(r) for r in reg_sano])
+        cieco = "TUTTO IN UNA CASELLA SOLA" in testo_a
+        buono = esito_a == esito_sano and not cieco
+        segno = f"{VERDE}OK{GRIGIO}" if buono else f"{ROSSO}NO{GRIGIO}"
+        perche = ""
+        if cieco:
+            perche = ("  ⛔ e il giudice si e' accecato: l'ancora e' tornata "
+                      "a dipendere da quel che viene DOPO")
+        elif not buono:
+            perche = (f"  ⛔ l'esito e' cambiato da {esito_sano} a {esito_a}: "
+                      f"il lettore del registro dipende da quel che gli si "
+                      f"appende in coda")
+        print(f"    {segno}  {nome}{perche}")
+        if not buono:
+            falliti_ancora += 1
+    print(f"    --  ⚠ e questo controllo non prova che il banco sia giusto: "
+          f"prova che **regge a un'aggiunta**.  Il rosso lo provano i guasti "
+          f"qui sotto")
+
     prove = _guasti_possibili()
     print(f"    --  guasti costruiti a mano: {len(prove)}  ⛔ e questo e' il "
           f"denominatore: un elenco di OK senza di lui non e' una misura")
@@ -1999,6 +2279,14 @@ def certifica(a):
             pass
 
     print()
+    if falliti_ancora:
+        print(f"    {ROSSO}⛔ LA CERTIFICAZIONE NON PASSA: {falliti_ancora} "
+              f"allungamenti del registro su {len(ancore)} cambiano il verdetto."
+              f"{GRIGIO}")
+        print(f"    ⚠ E' il difetto del 12 agosto 2026, vivo: il banco legge una "
+              f"riga del server ancorandosi a quel che oggi le sta in fondo, e "
+              f"la prossima aggiunta lo acceca di nuovo")
+        return 1
     if falliti:
         print(f"    {ROSSO}⛔ LA CERTIFICAZIONE NON PASSA: {falliti} guasti su "
               f"{len(prove)} non fanno diventare rosso il banco.{GRIGIO}")
@@ -2008,7 +2296,8 @@ def certifica(a):
         return 1
     print(f"    {VERDE}⭐ IL GIUDICE di B8 e' certificato: tutti e {len(prove)} i "
           f"guasti costruiti a mano lo fanno diventare rosso, ciascuno nel suo "
-          f"punto{GRIGIO}")
+          f"punto — e i {len(ancore)} allungamenti del registro NON lo cambiano"
+          f"{GRIGIO}")
     print(f"    ⚠ e NON e' «B8 e' certificato»: l'acquisizione dei tempi resta "
           f"coperta da un guasto solo (i due cronometri).  Le tre righe in "
           f"cima dicono che cosa e' rimasto fuori")
@@ -2044,6 +2333,11 @@ def previsione(a):
     print(f"       esauriti» e quante ore mancano (~{BAN_ORE});")
     print("    9. il comando di sblocco lo toglie, lo scrive nel registro, e la")
     print("       seconda volta risponde «non era bannato».")
+    print("   10. ⛔ e il GIUDICE non dev'essere cieco: le risposte di PAM lette")
+    print("       nel registro devono cadere in ALMENO DUE caselle.  Tutte nella")
+    print("       stessa — «52 righe, 0 ammessi», 12 agosto 2026 — non e' «i")
+    print("       fatti sono tutti uguali»: e' «non so piu' leggere i fatti»,")
+    print("       cioe' la forma E8 su un contatore, e conta come un rosso.")
     print()
     print("  `[?]` E la previsione che puo' rendere SOSPESO il punto 2, scritta")
     print("  adesso perche' domani sembri una previsione e non una scusa:")

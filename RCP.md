@@ -1084,9 +1084,18 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   ridimensiono la finestra»*, e non nominerebbe né il protocollo né la tela. ⛔ E la stessa prova su
   **AV1** dà `EncodingError` su Chrome e su Firefox `[M]`: ⇒ **la regola serve perché sul codec
   principale il sintomo è muto**, e una regola non si scrive sul codec che si comporta bene;
+- ⛔ **e il client riconfigura il decodificatore sulla prima CHIAVE alla misura nuova, non sul
+  `TELA`.** ⚠ *Senza questa riga le due cure del 12 agosto si contraddicono sullo stesso fotogramma:
+  §6.2 dice che un fotogramma in volo alla misura precedente **DEVE** essere accettato e dipinto,
+  questa riga qui sotto dice che uno alla misura sbagliata **si butta** — e chi avesse riconfigurato
+  sul `TELA` (la lettura naturale di §7.1, «la tela in vigore **dopo** questo messaggio») si
+  troverebbe le due regole a comandare il contrario. Il documento non diceva **in nessun punto**
+  quando si riconfigura, e le due letture erano tutt'e due conformi e divergevano sul filo. Rilievo
+  **P10**, trovato applicando la cura di poche ore prima.* ⭐ E costa zero: `[M]` la chiave vera va
+  bene **sia** riconfigurando **sia** senza;
 - ⛔ il client, dal canto suo, **NON DEVE** consegnare al decodificatore un fotogramma la cui misura
-  non è quella per cui il decodificatore è configurato: lo butta e lo tratta come un buco. ⚠ E non è
-  una prudenza in più: `[M]` un `VideoDecoder` riconfigurato alla misura nuova pretende una chiave
+  non è quella per cui il decodificatore è configurato **né quella tollerata da §6.2**: lo butta e lo
+  tratta come un buco. ⚠ E non è una prudenza in più: `[M]` un `VideoDecoder` riconfigurato alla misura nuova pretende una chiave
   (`DataError: a key frame is required after configure()`), quindi senza la riga qui sopra quella
   chiave non arriverebbe mai e il cambio di tela costerebbe un `RICHIEDI_CHIAVE` e un fermo-immagine
   **ogni volta**. ⭐ Con la riga qui sopra, `[M]` la stessa chiave va bene **sia** riconfigurando
@@ -1296,9 +1305,16 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
 - **DEVE** riconoscere un **buco** e chiedere una chiave (§5.2).
 
 ⚠ **Il cambio di tela e i fotogrammi in volo.** Dopo aver ricevuto un `TELA(ADATTATA)` (§7.1) il
-client **DEVE** accettare per **un secondo** i fotogrammi la cui misura vale la tela **precedente**,
-dipingendoli riscalati alla vista e scrivendolo nel registro; passato quel secondo sono
-`ERRORE_PROTOCOLLO`, e lo è **subito** una misura che non è né quella in vigore né la precedente.
+client **DEVE** accettare per **un secondo** i fotogrammi la cui misura vale **una tela che è stata
+in vigore entro il secondo appena passato**, dipingendoli riscalati alla vista e scrivendolo nel
+registro; passato quel secondo sono `ERRORE_PROTOCOLLO`, e lo è **subito** una misura che non è mai
+stata in vigore in quella finestra.
+
+> ⚠ *Diceva «la tela **precedente**», al singolare, e ⛔ **chi trascina una finestra ne manda due**:
+> 1920×1080 → `TELA(1600,900)` → `TELA(1280,720)`, e la chiave aperta prima di tutto — la più
+> grossa, la più lenta, e quella che §5.2 vieta al server di abbandonare — porta 1920×1080, che non
+> è né quella in vigore né la precedente. La sessione sana cadeva lo stesso, **un passo più in là**
+> della scena che la cura aveva appena chiuso. Corretto il 12 agosto 2026, rilievo **P11**.*
 ⭐ È la **sesta** eccezione dichiarata a §3, ed è la terza scritta per il verso in cui mancava: §7.1
 la dà già alle coordinate di input, per la stessa ragione — il cambio di tela è l'unico momento in
 cui i due lati hanno legittimamente due verità diverse. ⛔ Senza, un client conforme **uccide una
