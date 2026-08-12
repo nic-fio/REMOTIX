@@ -195,6 +195,10 @@ def fabbrica_cliente():
         def __init__(self, *a, **kw):
             super().__init__(*a, **kw)
             self.contesto = None       # lo si pone dopo `SESSIONE`
+            # ⛔ Gli stream che abbiamo riconosciuto come VIDEO: si tiene
+            #    l'insieme e non si ricalcola, perche' il preambolo di
+            #    WebTransport arriva una volta sola, nel primo evento.
+            self.video_visti = set()
             self.flussi = {}
             self.finiti = []
             self.chiavi_chieste = 0
@@ -210,28 +214,75 @@ def fabbrica_cliente():
             #    leggerebbe come frame di HTTP/3 e chiuderebbe la connessione —
             #    **per mano nostra**.  ⚠ E' la stessa asimmetria pagata il 10
             #    agosto 2026 sul canale di controllo (`01-b3-cliente.py`).
-            if (nome == "StreamDataReceived"
-                    and self._e_del_video(event.stream_id)):
-                self._arrivano(event.stream_id, event.data, event.end_stream)
+            if nome == "StreamDataReceived" and self._smista(event):
                 return
-            if nome == "StreamReset" and self._e_del_video(event.stream_id):
+            if nome == "StreamReset" and event.stream_id in self.video_visti:
                 # ⛔ `RESET_STREAM`: il fotogramma e' INCOMPLETO (§6.2).
                 self._azzerato(event.stream_id)
                 return
             super().quic_event_received(event)
 
-        def _e_del_video(self, sid):
-            """⛔ Uno stream unidirezionale aperto dal SERVER, e si riconosce
-               dai due bit bassi dell'identificatore QUIC — non dal contenuto.
+        # ⛔⛔ IL PREAMBOLO DI WEBTRANSPORT, E IL PRIMO GIRO L'HA PAGATO
+        #
+        # ⚠ `[M]` 12 agosto 2026, PRIMO GIRO DAL VIVO di questo cliente contro
+        #   la 7514.  La riga di prima diceva: *«uno stream unidirezionale
+        #   aperto dal server si riconosce dai due bit bassi
+        #   dell'identificatore QUIC»* — e si prendeva **anche i tre stream
+        #   unidirezionali di HTTP/3** (il control stream e i due di QPACK, che
+        #   `aioquic` apre da se' e che hanno gli stessi due bit).  ⇒ Lo strato
+        #   HTTP/3 restava senza i suoi byte, la CONNECT estesa non arrivava
+        #   mai a `:status 200`, il canale di controllo non si apriva, e il
+        #   server chiudeva con `TEMPO_SCADUTO` dopo 5 s (§4.6).
+        #   ⛔ Il sintomo era **un rosso puntato sul server**, che aveva fatto
+        #      esattamente il suo mestiere: il controllo positivo —
+        #      `01-b3-cliente.py` contro lo **stesso** server, nello stesso
+        #      minuto — arrivava a `SESSIONE` in 1003 ms.
+        #
+        # ⭐ E la cura porta con se' una scoperta su `RCP.md`, che sta nel
+        #    rapporto come **P18**: §2.5 dice *«si leggono i primi due byte
+        #    dello stream, che sono in ogni caso un campo `tipo`»*, ⛔ e su
+        #    WebTransport **non e' vero**: uno stream unidirezionale del server
+        #    comincia con il tipo `0x54` in varint (due byte, `40 54`) e con il
+        #    numero della sessione, e i 28 byte di §6.2 cominciano dopo.
+        WT_UNI = 0x54  # draft-ietf-webtrans-http3: il tipo dello stream uni
 
-            ⚠ Ma il CANALE si riconosce dal byte alto di `tipo`, mai dal numero
-              (§2.5, rilievo R11.9): qui si decide soltanto **chi puo' averlo
-              aperto**, e che cosa ci sia dentro lo dice il giudice.
-            """
-            if sid in self.flussi:
+        @staticmethod
+        def _varint(b, i):
+            """Il varint di QUIC (RFC 9000 §16).  `None` = non e' tutto qui."""
+            if i >= len(b):
+                return None, i
+            n = 1 << (b[i] >> 6)
+            if i + n > len(b):
+                return None, i
+            v = b[i] & 0x3F
+            for k in range(1, n):
+                v = (v << 8) | b[i + k]
+            return v, i + n
+
+        def _smista(self, event):
+            """Questo stream e' un fotogramma?  ⛔ E se non lo e', **non se ne
+            consuma un byte**: quei byte sono di HTTP/3, e prenderglieli e'
+            il difetto che il primo giro ha pagato."""
+            sid = event.stream_id
+            if sid in self.video_visti:
+                self._arrivano(sid, event.data, event.end_stream)
                 return True
             # 0b11 = unidirezionale, aperto dal server
-            return (sid & 0x03) == 0x03 and sid != self.sessione
+            if (sid & 0x03) != 0x03 or sid == self.sessione:
+                return False
+            d = event.data
+            # ⛔ Si decide sul PRIMO evento e sui primi due byte, e se non
+            #    bastano si lascia perdere invece di trattenerli: «non ho
+            #    capito» e «e' mio» sono due cose diverse.
+            if len(d) < 2 or d[0] != 0x40 or d[1] != self.WT_UNI:
+                return False
+            tipo, i = self._varint(d, 0)
+            sessione, i = self._varint(d, i)
+            if tipo != self.WT_UNI or sessione is None:
+                return False
+            self.video_visti.add(sid)
+            self._arrivano(sid, bytes(d[i:]), event.end_stream)
+            return True
 
         def _arrivano(self, sid, dati, fine):
             if self.contesto is None:

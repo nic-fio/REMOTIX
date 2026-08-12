@@ -355,7 +355,29 @@ nessuna parte.*
 ⛔ **Il client NON DEVE aprire stream bidirezionali oltre lo 0. Il server NON DEVE aprire stream
 bidirezionali.** Chi ne riceve uno chiude con `ERRORE_PROTOCOLLO`.
 
-⭐ **Come si riconosce il canale**: si leggono i **primi due byte** dello stream, che sono in ogni
+> ### ⛔⛔ Prima di leggere: **i «primi due byte» non sono i primi byte dello stream** — rilievo P18
+>
+> *12 agosto 2026. Trovato dal **cliente di prova**, al suo primo giro dal vivo, e non da una
+> rilettura: `[M]` il giro è finito rosso con «canale di controllo mai aperto», e la causa era che
+> il cliente applicava questa riga **alla lettera**.*
+>
+> ⛔ Su WebTransport ogni stream porta un **preambolo**: il tipo di stream (`0x54` per gli
+> unidirezionali, `0x41` per i bidirezionali, in codifica variabile — sul filo `40 54` e `40 41`)
+> seguito dal **numero della sessione**. ⇒ Chi legge i «primi due byte» **dello stream** ricava
+> canale `0x40`, che non è nessuno dei cinque, e **chiude ogni fotogramma con
+> `ERRORE_PROTOCOLLO`**.
+>
+> ⇒ **I due byte sono i primi del carico RCP**, cioè quel che resta **dopo** il preambolo di
+> WebTransport, che lo strato di trasporto consuma e non consegna.
+>
+> ⚠ **E questo è il difetto muto che §0 di questo documento esiste per impedire.** Il server e la
+> pagina andavano d'accordo **perché li ha scritti la stessa mano**: nessuno dei due leggeva questa
+> riga, e la riga era falsa. ⭐ A trovarlo è stato **l'unico lettore che RCP.md l'ha letto senza
+> guardare il codice** — cioè precisamente il pezzo di arbitro che `PIANO.md` §1.1 dice di aver
+> comprato al posto di `mstsc`, e che qui ha ripagato il proprio costo alla prima esecuzione.
+
+⭐ **Come si riconosce il canale**: si leggono i **primi due byte del carico RCP** — cioè quel che
+resta **dopo** il preambolo di WebTransport (§2.4), che il trasporto consuma — e sono in ogni
 caso un campo `tipo` (§6). Il byte alto dice il canale:
 
 | Byte alto di `tipo` | Canale | Che cosa segue |
@@ -1276,7 +1298,7 @@ all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
 | `tipo` | ⭐ `0x0301` **fotogramma chiave**, `0x0302` **fotogramma delta** (§5.2). Altri valori: `ERRORE_PROTOCOLLO` |
 | `codec` | `1` = HEVC, `2` = AV1. **DEVE** essere quello negoziato in §4.3 |
 | `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 **DEVONO** valere la **tela in vigore** — quella concessa in `SESSIONE` (§4.5), **oppure** l'ultima concessa da `TELA` se nel frattempo è stata adattata (§7.1) — e chi ne riceve altre chiude con `ERRORE_PROTOCOLLO`: il client riscala alla **vista**, non alla tela (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia**: cambierebbe questa riga |
-| `numero` | ⛔ contatore dei fotogrammi **catturati**, che cresce di uno per ogni fotogramma che il server decide di spedire — **compresi quelli che poi abbandona**. Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta. ⛔ **E al giro del contatore lo `0` si salta**: l'aritmetica è modulo 2³², una sessione può durare più di un giro, e da `0xFFFFFFFF` si passa a **`1`** — senza questa riga il valore riservato tornerebbe in circolo da solo |
+| `numero` | ⛔ contatore dei fotogrammi **che il server decide di spedire**, che cresce di uno per ciascuno — **compresi quelli che poi abbandona**, e ⛔ **NON** per quelli che non spedisce affatto. ⚠ *Diceva «dei fotogrammi **catturati**» e insieme «che il server decide di spedire»: **due letture nella stessa frase**, e alla fase 3 si separano — calando i fotogrammi quando la linea non porta (I1, §8.3), la prima lettura aprirebbe **un buco per ogni salto**, quindi una `RICHIEDI_CHIAVE` per ognuno, cioè **la spirale che §5.2 esiste per evitare** proprio quando la linea è cattiva. Corretto il 12 agosto 2026, rilievo **P16**, trovato scrivendo il prodotto.* Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta. ⛔ **E al giro del contatore lo `0` si salta**: l'aritmetica è modulo 2³², una sessione può durare più di un giro, e da `0xFFFFFFFF` si passa a **`1`** — senza questa riga il valore riservato tornerebbe in circolo da solo |
 | `istante` | microsecondi dell'orologio **monotono del server** alla cattura |
 | `input` | ⭐ **l'identificatore dell'ultimo input iniettato prima della cattura**; **0** se nessuno |
 

@@ -98,6 +98,47 @@ typedef struct {
 	 *   ed e' anche il GUASTO che `banchi/02-pam-*` innesta per certificarsi. */
 	bool (*chiedi_verifica)(void *ctx, const char *utente, const char *parola,
 	                        uint64_t *pratica);
+
+	/* ------------------------------------------------------------------ */
+	/* ⭐ I QUATTRO GANCI DEL CANALE VIDEO — §2.5, §5.1, §6.2.
+	 *
+	 * ⛔ SONO QUATTRO E NON UNO, e la ragione e' normativa: §6.2 dice che
+	 *    **come lo stream finisce e' parte del messaggio** — FIN vuol dire
+	 *    «fotogramma completo», `RESET_STREAM` vuol dire «incompleto, si
+	 *    butta».  Un gancio solo che «manda un fotogramma» non saprebbe dire
+	 *    la differenza, e un fotogramma abbandonato e uno completo tornerebbero
+	 *    ad avere lo stesso aspetto: e' la forma d'errore **E8**, e su questo
+	 *    esatto campo e' gia' stata pagata (rilievo R1.7, 9 agosto 2026).
+	 *
+	 * ⛔ E SONO **OPZIONALI**: se `video_apri` e' NULL questo server non ha un
+	 *    canale video, e `rcp_video_apri()` restituisce
+	 *    `RCP_VIDEO_NIENTE_CANALE` invece di tacere.  ⚠ «Non ho un canale
+	 *    video» e «il fotogramma non e' partito» sono due fatti diversi
+	 *    (`LEZIONI.md` §1.9 regola 1), e i banchi in-processo della fase 1 non
+	 *    hanno stream unidirezionali da offrire.
+	 *
+	 * ⚠ Chi li collega li collega TUTTI E QUATTRO: un ospite che sapesse
+	 *   aprire e non sapesse azzerare non potrebbe onorare §5.1, e il modulo
+	 *   se ne accorge e rifiuta di aprire. */
+
+	/* ⛔ §2.5: apre uno stream **unidirezionale nuovo**, uno **per
+	 * fotogramma**, dal server verso il client.  ⛔ NON e' il canale di
+	 * controllo: un `0x03` sul canale di controllo e' `ERRORE_PROTOCOLLO`
+	 * (§2.5, riga `0x03`).  Restituisce `true` e riempie `stream` con
+	 * l'identificatore, oppure `false` se non se ne puo' aprire uno adesso —
+	 * ⚠ e allora NON si e' spedito niente, che e' meglio di mezzo fotogramma. */
+	bool (*video_apri)(void *ctx, int64_t *stream);
+	/* Scrive byte su quello stream.  ⛔ `false` vuol dire «non sono entrati»,
+	 * e chi chiama AZZERA: non si chiude con FIN uno stream a cui manca un
+	 * pezzo, perche' FIN vuol dire «completo» (§6.2). */
+	bool (*video_scrivi)(void *ctx, int64_t stream, const uint8_t *dati,
+	                     size_t len);
+	/* ⛔ §6.2: FIN ⇒ il fotogramma e' **completo** e si consegna al
+	 * decodificatore. */
+	void (*video_fin)(void *ctx, int64_t stream);
+	/* ⛔ §5.1, §6.2: `RESET_STREAM` ⇒ il fotogramma e' **incompleto**, il
+	 * client lo butta, NON lo consegna, e lo tratta come un buco. */
+	void (*video_azzera)(void *ctx, int64_t stream);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.
@@ -192,6 +233,141 @@ const char *rcp_utente(const rcp_sessione *s);
 /* ⛔ Azzera il registro delle sessioni attive.  Serve SOLO al banco, fra una
  * prova e l'altra: in un server vero non lo chiama nessuno. */
 void rcp_azzera_registro_sessioni(void);
+
+/* ========================================================================= */
+/* ⭐ IL CANALE VIDEO — `RCP.md` §2.5, §5.1, §5.2, §6.2                       */
+/*                                                                           */
+/* ⛔ PERCHE' STA QUI E NON IN UN MODULO SUO                                  */
+/*                                                                           */
+/* Sette delle undici regole del canale video non parlano dei 28 byte: parlano */
+/* dello **stato della sessione**.  «Nessuno stream prima di aver spedito     */
+/* `SESSIONE`» (§2.5) e' lo stato; «`largh.`/`altezza` valgono la tela in     */
+/* vigore» (§6.2) e' la tela concessa da `SESSIONE` o dall'ultimo `TELA`;     */
+/* «`codec` DEVE essere quello negoziato» e' §4.3; «il primo fotogramma DEVE  */
+/* essere una chiave» (§5.2) e' il primo **dopo `SESSIONE`**; e               */
+/* `RICHIEDI_CHIAVE` arriva sul canale di controllo.                          */
+/*                                                                           */
+/* ⇒ Un `video.c` a parte dovrebbe **ricopiarsi** quello stato, e due copie   */
+/*   di uno stato divergono: e' la stessa ragione per cui `RCP.md` §0 esiste, */
+/*   applicata dentro un programma solo.  ⭐ E ha un secondo effetto, che si  */
+/*   vede nel `Makefile`: **zero righe da aggiungere**, perche' `rcp.c` e'    */
+/*   gia' compilato e gia' confrontato con `banchi/rcp/` a ogni costruzione.  */
+/*                                                                           */
+/* ⛔ E QUEL CHE QUESTO MODULO NON FA, DICHIARATO: non guarda **dentro** i    */
+/*    byte del codec.  §5.2 vuole che la chiave sia una chiave **vera** —     */
+/*    VPS/SPS/PPS davanti all'IDR — e quella meta' la puo' giudicare solo chi */
+/*    conosce HEVC/AV1.  Qui si dichiara invece di farla credere coperta.     */
+
+/* Gli esiti di `rcp_video_apri()` e di `rcp_video_spedisci()`.
+ * ⛔ Sono SETTE e non due, perche' i fatti sono sette: chi chiama deve poter
+ *    distinguere «ricodifica piu' piccolo» da «mandami una chiave» da «non
+ *    hai ancora spedito `SESSIONE`».  Un solo `false` li metterebbe sotto la
+ *    stessa etichetta, che e' la forma d'errore E2. */
+enum {
+	RCP_VIDEO_SPEDITO = 0,
+	/* i quattro ganci non ci sono: questo server non ha un canale video */
+	RCP_VIDEO_NIENTE_CANALE,
+	/* ⛔ §2.5 / invariante I3: `SESSIONE` non e' ancora partita */
+	RCP_VIDEO_PRIMA_DI_SESSIONE,
+	/* ⛔ §5.2: ci vuole una CHIAVE — il primo dopo `SESSIONE`, il primo alla
+	 * misura nuova dopo un `TELA`, o quella che il client ha chiesto */
+	RCP_VIDEO_SERVE_UNA_CHIAVE,
+	/* ⛔ §6.2: oltre i 16 MiB.  Si RICODIFICA a qualita' inferiore — non si
+	 * spedisce, e non e' partito un byte */
+	RCP_VIDEO_TROPPO_GRANDE,
+	/* non si e' potuto aprire uno stream adesso: non e' partito niente */
+	RCP_VIDEO_STREAM_NON_APERTO,
+	/* la scrittura si e' rotta a meta': lo stream e' stato AZZERATO (§6.2), e
+	 * il client lo trattera' come un buco — mai come un fotogramma corto */
+	RCP_VIDEO_ROTTO_A_META,
+	/* c'e' gia' un fotogramma aperto su questa sessione: si finisce o si
+	 * abbandona quello, prima */
+	RCP_VIDEO_GIA_APERTO,
+};
+
+/* ⛔ APRE IL FOTOGRAMMA e ci scrive i **28 byte** di §6.2.
+ *
+ * `chiave`      §5.2: `0x0301` se vero, `0x0302` se falso.
+ * `lunghezza`   quanti byte di DATI seguiranno.  ⛔ Si dichiara **prima**, e
+ *               non e' una comodita': §6.2 dice che «il tetto vincola prima di
+ *               tutto chi spedisce», e un tetto che si controllasse mentre i
+ *               byte escono avrebbe gia' spedito i primi 16 MiB.  Chi codifica
+ *               la lunghezza dell'access unit ce l'ha.
+ * `istante_us`  microsecondi dell'orologio **monotono del server** alla
+ *               cattura (§6.2).  ⚠ Non e' un'ora.
+ * `input`       l'identificatore dell'ultimo input iniettato prima della
+ *               cattura, 0 se nessuno (§6.2, §7.3).
+ * `ora_ms`      l'orologio della sessione, come per `rcp_ricevi()`.  ⛔ E' un
+ *               parametro a parte e NON si ricava da `istante_us`: quello e'
+ *               l'orologio della cattura, e che i due siano lo stesso e'
+ *               probabile e non scritto da nessuna parte.  Serve ai 200 ms di
+ *               §5.2 (l'eccezione 5 di §3).
+ *
+ * ⛔ E QUEL CHE **NON** SI PASSA E' IL PUNTO: `largh.`, `altezza`, `codec` e
+ *    `numero` non sono parametri.  Li mette questo modulo, dalla tela in
+ *    vigore (§4.5, §7.1), dalla negoziazione di §4.3 e dal proprio contatore
+ *    (§6.2).  ⭐ Cosi' le tre regole non si possono violare **per costruzione**
+ *    invece che per disciplina di chi chiama — che e' l'invariante I7 letta da
+ *    dentro: la protezione sta nel programma, non in una riga che si puo'
+ *    perdere. */
+int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
+                   uint64_t istante_us, uint32_t input, uint64_t ora_ms);
+
+/* Scrive un pezzo dei dati del fotogramma aperto.  ⛔ Se non entrano, lo
+ * stream viene AZZERATO qui dentro (§6.2) e si restituisce
+ * `RCP_VIDEO_ROTTO_A_META`: un fotogramma a meta' chiuso con FIN sarebbe un
+ * fotogramma completo per chi riceve. */
+int rcp_video_pezzo(rcp_sessione *s, const uint8_t *dati, size_t len);
+
+/* ⛔ §6.2: chiude con **FIN**, e solo se i `lunghezza` byte dichiarati sono
+ * usciti tutti.  Se ne mancano, azzera e restituisce `RCP_VIDEO_ROTTO_A_META`:
+ * «FIN» e' un'affermazione, non un modo di chiudere. */
+int rcp_video_finisci(rcp_sessione *s);
+
+/* ⛔ §5.1: abbandona il fotogramma aperto con `RESET_STREAM`, perche' ne e'
+ * gia' partito uno piu' recente.  ⛔ E §5.2 vieta di abbandonare una
+ * **chiave**: qui si rifiuta e si restituisce `false` — «abbandonare la cura
+ * non e' una cura».  ⛔ Ogni abbandono finisce nel registro (§5.1): «un
+ * fotogramma perso in silenzio e uno abbandonato di proposito hanno lo stesso
+ * aspetto dal lato che riceve». */
+bool rcp_video_abbandona(rcp_sessione *s, const char *perche);
+
+/* La comodita': apre, scrive e chiude in una chiamata.  ⛔ Il tetto dei 16 MiB
+ * si applica PRIMA di aprire lo stream, quindi su un fotogramma troppo grande
+ * non parte un byte e non si apre niente. */
+int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
+                       size_t len, uint64_t istante_us, uint32_t input,
+                       uint64_t ora_ms);
+
+/* ⛔ §7.1 — si e' appena risposto `TELA(ADATTATA, lar, alt)`: da qui in poi la
+ * tela **in vigore** e' questa, e §6.2 ci lega `largh.`/`altezza` di ogni
+ * fotogramma successivo.
+ *
+ * ⛔ E se la misura e' cambiata DAVVERO apre il debito di §5.2: il primo
+ *    fotogramma alla misura nuova DEVE essere una chiave.  ⚠ Se la misura
+ *    **non** cambia il debito NON si apre — §7.1 fa rispondere `TELA` anche a
+ *    un `ADATTA_TELA` che chiede la misura in vigore, e aprire il debito li'
+ *    fermerebbe il video su una sessione sana ogni volta che l'utente
+ *    trascina una finestra e la rimette dov'era.
+ *
+ * ⚠ Chi risponde `TELA` non e' questo modulo: la risposta vuole un
+ *   compositore che sappia ridimensionare, e `ADATTA_TELA` non e' ancora
+ *   servito (vedi il registro di `rcp_ricevi`).  Questa funzione esiste
+ *   perche' il giorno in cui lo sara', la regola di §6.2 stia **in un posto
+ *   solo** — qui — invece di essere ricopiata accanto a chi manda il `TELA`. */
+void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt);
+
+/* Per il registro, per il banco e per chi cattura.  ⛔ `false` quando la tela
+ * non c'e' ancora, che NON e' «0x0» (§6.0: niente valori sentinella). */
+bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
+/* §4.3/§6.2: 1 = HEVC, 2 = AV1.  ⛔ `0` = non ancora negoziato. */
+uint8_t rcp_codec_negoziato(const rcp_sessione *s);
+/* ⛔ §5.2: «il prossimo fotogramma deve essere una chiave?».  La chiede chi
+ * codifica, perche' e' lui che decide il tipo di fotogramma. */
+bool rcp_video_serve_chiave(const rcp_sessione *s);
+/* Il `numero` (§6.2) dell'ultimo fotogramma spedito.  ⛔ `0` vuol dire
+ * «nessuno», ed e' il significato che §6.2 e §7.1 danno allo zero. */
+uint32_t rcp_video_ultimo_numero(const rcp_sessione *s);
 
 /* ------------------------------------------------------------------------ */
 /* §4.4-bis — IL BAN DELL'INDIRIZZO, e le tre cose che il padrone di casa deve

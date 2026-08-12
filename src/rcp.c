@@ -27,6 +27,12 @@ enum {
 	T_ATTACCA = 0x0006,
 	T_SESSIONE = 0x0007,
 	T_CONGEDO = 0x000C,
+	/* ⭐ §5.2, §7.1: «il client chiede una chiave».  Servito dal 12 agosto
+	 * 2026, insieme al canale video: finche' il video non c'era, questo tipo
+	 * cadeva nel `default` e faceva **perdere la sessione** a un client
+	 * conforme che avesse visto un buco — il prezzo che il registro dichiarava
+	 * («la fase 1 non lo serve ancora»). */
+	T_RICHIEDI_CHIAVE = 0x000D,
 	T_BANCO_MARCA = 0x000F,
 	T_BANCO_ESITO = 0x0010,
 };
@@ -226,6 +232,71 @@ struct rcp_sessione {
 	 * campi non esistevano: il nome era riconosciuto come lecito in
 	 * `NOMI_NOTI` e il valore veniva buttato — rilievo B-1. */
 	uint32_t max_l, max_a;
+
+	/* ==================================================================== */
+	/* ⭐ IL CANALE VIDEO — §2.5, §5.1, §5.2, §6.2                          */
+
+	/* ⛔⭐ «`SESSIONE` E' STATA SPEDITA», E NON «LO STATO E' ATTIVA».
+	 *
+	 * §2.5 scrive la regola con queste parole: «nessuno stream video prima di
+	 * aver spedito `SESSIONE`».  ⚠ Lo stato `attiva` e' vicinissimo e NON e'
+	 * la stessa cosa — e' una **grandezza sostitutiva**: cambia con
+	 * `S_STACCATA` (una sessione che ha taciuto trenta secondi ha spedito
+	 * `SESSIONE` da un pezzo), e non cambierebbe affatto se un giorno lo stato
+	 * si mettesse a `attiva` una riga prima di spedire il messaggio.
+	 *
+	 * ⛔ Questa riga si accende NELLA STESSA riga che spedisce `SESSIONE`, e
+	 *    solo se il messaggio e' partito davvero (`if (!w.pieno)`).
+	 *
+	 * ⭐ `LEZIONI.md` §1.13, applicata mentre si scriveva: *«si nomina la
+	 *    grandezza vera del fenomeno, e si guarda se il protocollo la porta
+	 *    gia'»*.  Qui il fenomeno e' «il client sa la tela e il codec», e il
+	 *    fatto che glielo dice e' `SESSIONE` — non uno stato del server. */
+	bool sessione_spedita;
+
+	/* ⛔ §6.2: LA TELA **IN VIGORE**, che e' quella concessa in `SESSIONE`
+	 * (§4.5) **oppure** l'ultima concessa da `TELA(ADATTATA)` (§7.1).  ⚠ `0`
+	 * qui non e' una misura: e' «non c'e' ancora nessuna tela», e `sessione_
+	 * spedita` e' il fatto che lo dice. */
+	uint32_t tela_l, tela_a;
+
+	/* ⛔ §6.2: il contatore dei fotogrammi.  `0` = **nessuno spedito**, ed e'
+	 * il significato che §7.1 da' allo zero in `RICHIEDI_CHIAVE`: qui non e'
+	 * un sentinella implicito (§6.0), e' quello dichiarato. */
+	uint32_t video_numero;
+
+	/* ⛔ §5.2: «il prossimo fotogramma DEVE essere una chiave».  Vero:
+	 *   · appena `SESSIONE` e' partita           (primo punto delle regole)
+	 *   · dopo un `TELA(ADATTATA)` che CAMBIA la misura  (secondo punto)
+	 *   · quando il client manda `RICHIEDI_CHIAVE`       (§5.2, §7.1) */
+	bool serve_chiave;
+	/* Perche' serve, per il registro: le tre ragioni non sono la stessa cosa
+	 * e chi diagnostica deve poterle distinguere. */
+	const char *serve_chiave_perche;
+
+	/* ⛔ §5.2, eccezione 5 di §3: «il server PUO' ignorare una
+	 * `RICHIEDI_CHIAVE` che arrivi entro 200 ms **dall'ultima chiave che ha
+	 * spedito**» — ⛔ non dall'ultima richiesta ricevuta, e la differenza non
+	 * e' una sfumatura: contando dalle richieste, due client insistenti
+	 * spostano l'orologio all'infinito e la chiave non parte mai. */
+	uint64_t ultima_chiave_ms;
+	bool mai_spedita_una_chiave;
+
+	/* Il fotogramma aperto adesso — §5.1, uno stream per fotogramma.
+	 * ⛔ `video_aperto` e non «`stream` vale -1»: `0` e' un identificatore di
+	 *    stream legittimo, e un sentinella preso da un valore valido e' quel
+	 *    che §6.0 vieta ai campi del protocollo.  Non lo si fa nemmeno qui. */
+	bool video_aperto;
+	int64_t video_stream;
+	bool video_e_chiave;      /* §5.2: una chiave NON si abbandona */
+	uint32_t video_suo_numero;
+	size_t video_da_scrivere; /* i byte di dati DICHIARATI in `apri` */
+	size_t video_scritti;     /* quelli usciti finora */
+	uint64_t video_aperto_ms; /* l'ora della sessione quando si e' aperto */
+	/* Il conto degli abbandoni, per il registro: §5.1 vuole che ogni
+	 * abbandono si veda, e un conteggio senza denominatore non e' una misura
+	 * (`LEZIONI.md` §1.9). */
+	uint32_t video_spediti, video_abbandonati;
 };
 
 /* Dichiarata qui perche' il limitatore dei tentativi, qui sotto, DEVE poter
@@ -797,6 +868,13 @@ static void sc_u32(scrittore *s, uint32_t v)
 	sc_byte(s, (uint8_t)(v >> 16));
 	sc_byte(s, (uint8_t)(v >> 8));
 	sc_byte(s, (uint8_t)v);
+}
+/* ⛔ §6.0: `u64` big-endian, e serve al solo campo `istante` di §6.2 — l'unico
+ * intero a otto byte che RCP/1 mette sul filo. */
+static void sc_u64(scrittore *s, uint64_t v)
+{
+	for (int i = 7; i >= 0; i--)
+		sc_byte(s, (uint8_t)(v >> (i * 8)));
 }
 static void sc_str(scrittore *s, const char *t)
 {
@@ -1780,12 +1858,497 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	sc_u32(&w, tl);
 	sc_u32(&w, ta);
 	sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c'e' compositore */
-	if (!w.pieno)
+	if (!w.pieno) {
 		manda_messaggio(s, T_SESSIONE, corpo, w.len);
+		/* ⛔⭐ IL CANALE VIDEO SI APRE **QUI**, E NON UNA RIGA PIU' SU.
+		 *
+		 * §2.5: «uno per fotogramma, ⛔ e **nessuno prima di aver spedito
+		 * `SESSIONE`**: chi ne riceve uno prima chiude con
+		 * `ERRORE_PROTOCOLLO`».  E' l'invariante **I3** sul filo — *chi non
+		 * passa dal validatore non riceve un pixel*.
+		 *
+		 * ⛔ Le tre righe stanno DENTRO il `if`: se il corpo non fosse entrato
+		 *    nel buffer, `SESSIONE` non sarebbe partita, e un canale video
+		 *    aperto lo stesso spedirebbe fotogrammi a un client che non sa ne'
+		 *    la tela ne' il codec.  ⚠ Fuori dal `if` sembrerebbero uguali e
+		 *    non lo sono. */
+		s->tela_l = tl;
+		s->tela_a = ta;
+		s->sessione_spedita = true;
+		/* ⛔ §5.2, primo punto: «il primo fotogramma che il server spedisce
+		 * dopo `SESSIONE` DEVE essere una chiave». */
+		s->serve_chiave = true;
+		s->serve_chiave_perche = "e' il primo dopo SESSIONE (§5.2)";
+		s->mai_spedita_una_chiave = true;
+	}
 	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u vista=%ux%u "
 	       "disposizione=%s",
 	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
+	return true;
+}
+
+/* ========================================================================= */
+/* ⭐⛔ IL CANALE VIDEO — §2.5, §5.1, §5.2, §6.2                              */
+/*                                                                           */
+/* ⛔ LE UNDICI REGOLE, E DOVE STA CIASCUNA IN QUESTE RIGHE                   */
+/*                                                                           */
+/*  P1  §2.5   nessuno stream video prima di aver SPEDITO `SESSIONE`          */
+/*             ⇒ `s->sessione_spedita`, accesa dalla riga che lo spedisce     */
+/*  P2  §6.2   `numero` parte da 1, lo 0 e' riservato, e AL GIRO si salta     */
+/*             ⇒ `numero_prossimo()`                                          */
+/*  P3  §2.5   il video vive SOLO su uno stream unidirezionale del server     */
+/*             ⇒ `g.video_apri`, e mai `g.manda` (che e' il controllo)        */
+/*  P4  §6.2   FIN prima dei 28 byte e' `ERRORE_PROTOCOLLO`                   */
+/*             ⇒ i 28 byte escono in UNA scrittura, e se non escono si AZZERA */
+/*  P5  §6.2   `largh.`/`altezza` valgono la tela IN VIGORE                   */
+/*             ⇒ `s->tela_l/tela_a`, che chi chiama non puo' passare          */
+/*  P6  §5.2   il primo fotogramma dopo `SESSIONE` DEVE essere una chiave     */
+/*  P9  §5.2   e lo stesso a ogni cambio di tela                              */
+/*             ⇒ `s->serve_chiave`, acceso in tre punti e spento in uno       */
+/*  §6.2       il tetto di 16 MiB vincola PRIMA chi spedisce                  */
+/*             ⇒ il controllo sta prima di aprire lo stream: non parte un byte*/
+/*  §6.2       FIN ⇒ completo · `RESET_STREAM` ⇒ si butta                     */
+/*             ⇒ `rcp_video_finisci()` contro `rcp_video_abbandona()`         */
+/*  §6.2       `codec` DEVE essere quello negoziato in §4.3                   */
+/*             ⇒ `rcp_codec_negoziato()`, e nemmeno questo e' un parametro    */
+/*  §5.1/§5.2  ogni abbandono nel registro, e una CHIAVE non si abbandona     */
+/*                                                                           */
+/* ⛔ E LA FORMA DI TUTTE E TRE LE REGOLE «PER COSTRUZIONE»: `largh.`,        */
+/*    `altezza`, `codec` e `numero` **non sono parametri di nessuna funzione  */
+/*    pubblica**.  Chi codifica non li puo' sbagliare perche' non li puo'     */
+/*    toccare.  ⚠ La strada alternativa — passarli e controllarli — sarebbe   */
+/*    stata piu' corta e avrebbe messo la protezione dove si puo' perdere     */
+/*    (invariante I7, letta da dentro il programma).                          */
+
+/* §6.2 — i due valori del campo `tipo`. */
+#define V_CHIAVE 0x0301
+#define V_DELTA 0x0302
+/* §6.2 — l'intestazione e' di 28 byte esatti, senza riempimento. */
+#define V_INTESTAZIONE 28
+/* ⛔ §6.2 — «il server NON DEVE produrre un fotogramma piu' lungo di 16 MiB».
+ * ⚠ E il tetto e' del FOTOGRAMMA, cioe' intestazione compresa: e' cosi' che lo
+ *   conta chi riceve, che vede uno stream solo e non sa dove finisce la
+ *   nostra struttura.  Un tetto contato sui soli dati lascerebbe passare 28
+ *   byte di troppo, e la differenza si vede solo al limite — dove i banchi
+ *   mettono i loro casi apposta. */
+#define V_TETTO (16u * 1024u * 1024u)
+/* ⛔ §5.2, eccezione 5 di §3: 200 ms dall'ultima CHIAVE SPEDITA. */
+#define V_GRAZIA_CHIAVE 200
+
+/* ⛔ §6.2 — IL CONTATORE, E LE DUE RIGHE CHE LO GOVERNANO.
+ *
+ *   «Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` e'
+ *    riservato»  —  «E al giro del contatore lo `0` si salta: l'aritmetica e'
+ *    modulo 2^32 […] e da `0xFFFFFFFF` si passa a `1`».
+ *
+ * ⚠ La seconda riga e' entrata due ore dopo la prima, il 12 agosto 2026,
+ *   perche' senza di essa il valore riservato tornava in circolo da solo dopo
+ *   due anni e due mesi di sessione — una volta sola nella vita, e nessuno
+ *   l'avrebbe collegato a `RICHIEDI_CHIAVE`.  ⛔ Le due righe sono qui una
+ *   sotto l'altra apposta: separarle e' il modo in cui la seconda si perde. */
+static uint32_t numero_prossimo(uint32_t ultimo)
+{
+	uint32_t n = ultimo + 1; /* modulo 2^32, per definizione del tipo */
+	if (n == 0)
+		n = 1;
+	return n;
+}
+
+uint8_t rcp_codec_negoziato(const rcp_sessione *s)
+{
+	if (!s)
+		return 0;
+	/* §6.2: «`codec`: 1 = HEVC, 2 = AV1.  DEVE essere quello negoziato in
+	 * §4.3».  ⛔ La stringa la sceglie `prima_comune()` sul `CIAO` del client,
+	 * e la traduzione sta QUI e in nessun altro posto: due tabelle che
+	 * mappano gli stessi nomi divergono, ed e' la stessa forma del difetto che
+	 * §0 di `RCP.md` esiste per togliere. */
+	if (strcmp(s->codec, "hevc") == 0)
+		return 1;
+	if (strcmp(s->codec, "av1") == 0)
+		return 2;
+	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
+}
+
+bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
+{
+	if (!s || !s->sessione_spedita)
+		return false;
+	if (lar)
+		*lar = s->tela_l;
+	if (alt)
+		*alt = s->tela_a;
+	return true;
+}
+
+bool rcp_video_serve_chiave(const rcp_sessione *s)
+{
+	return s && s->serve_chiave;
+}
+
+uint32_t rcp_video_ultimo_numero(const rcp_sessione *s)
+{
+	return s ? s->video_numero : 0;
+}
+
+/* ⛔ §7.1 — la tela e' cambiata, e §5.2 apre il debito SOLO se e' cambiata
+ * davvero.  Vedi il riquadro in `rcp.h`. */
+void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
+{
+	if (!s || !s->sessione_spedita)
+		return;
+	if (lar == s->tela_l && alt == s->tela_a) {
+		/* ⛔ §7.1 risponde `TELA` anche a un `ADATTA_TELA` che chiede la
+		 * misura che c'e' gia': li' non c'e' nessuna «misura nuova», e aprire
+		 * il debito della chiave fermerebbe il video su una sessione sana —
+		 * il rosso all'imputato sbagliato che questa famiglia di regole ha
+		 * gia' pagato quattro volte (P8 → P11 → P13 → P14). */
+		reg(s, "TELA(ADATTATA) alla misura che c'era gia' (%ux%u): la tela in "
+		       "vigore non cambia e §5.2 NON apre il debito della chiave",
+		    lar, alt);
+		return;
+	}
+	reg(s, "tela IN VIGORE cambiata da %ux%u a %ux%u (§7.1): da qui §6.2 lega "
+	       "largh./altezza alla nuova, e §5.2 vuole una CHIAVE alla misura "
+	       "nuova",
+	    s->tela_l, s->tela_a, lar, alt);
+	s->tela_l = lar;
+	s->tela_a = alt;
+	s->serve_chiave = true;
+	s->serve_chiave_perche = "e' il primo alla misura nuova dopo TELA (§5.2)";
+}
+
+/* ⛔ §5.1 — l'abbandono, e §5.2 vieta di abbandonare una CHIAVE. */
+bool rcp_video_abbandona(rcp_sessione *s, const char *perche)
+{
+	if (!s || !s->video_aperto)
+		return false;
+	if (s->video_e_chiave) {
+		/* ⛔ §5.2: «il server NON DEVE abbandonare un fotogramma chiave.
+		 * Abbandonare la cura non e' una cura».  ⚠ E il rifiuto si SCRIVE: un
+		 * divieto che si fa rispettare in silenzio e' indistinguibile da un
+		 * divieto che nessuno ha applicato. */
+		reg(s, "⛔ NON abbandono il fotogramma %u: e' una CHIAVE, e §5.2 lo "
+		       "vieta (motivo chiesto: %s)",
+		    s->video_suo_numero, perche ? perche : "non dichiarato");
+		return false;
+	}
+	s->g.video_azzera(s->g.ctx, s->video_stream);
+	s->video_aperto = false;
+	s->video_abbandonati++;
+	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
+	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
+	 * dal lato che riceve». */
+	reg(s, "fotogramma %u ABBANDONATO (§5.1) dopo %zu byte su %zu, stream %lld, "
+	       "perche': %s — spediti %u, abbandonati %u",
+	    s->video_suo_numero, s->video_scritti, s->video_da_scrivere,
+	    (long long)s->video_stream, perche ? perche : "non dichiarato",
+	    s->video_spediti, s->video_abbandonati);
+	/* ⛔ §5.2: «quando il server abbandona un delta, DEVE mandare un
+	 * fotogramma chiave appena puo' — senza aspettare che il client lo
+	 * chieda, perche' il client se ne accorge un giro di rete piu' tardi».
+	 * ⭐ E' l'unica cura che abbiamo: a un delta mancante il decodificatore
+	 * non solleva nessun errore, si limita a produrre immagini via via piu'
+	 * sfasciate. */
+	s->serve_chiave = true;
+	s->serve_chiave_perche = "un delta e' stato abbandonato (§5.2)";
+	return true;
+}
+
+int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
+                   uint64_t istante_us, uint32_t input, uint64_t ora_ms)
+{
+	if (!s)
+		return RCP_VIDEO_NIENTE_CANALE;
+
+	/* ⛔ I QUATTRO GANCI O NESSUNO.  Un ospite che sapesse aprire e non
+	 * azzerare non potrebbe onorare §5.1, e se ne accorgerebbe a meta' di un
+	 * fotogramma: qui la cosa si dice prima di aprire qualunque cosa. */
+	if (!s->g.video_apri || !s->g.video_scrivi || !s->g.video_fin ||
+	    !s->g.video_azzera)
+		return RCP_VIDEO_NIENTE_CANALE;
+
+	if (s->video_aperto)
+		return RCP_VIDEO_GIA_APERTO;
+
+	/* ⛔ P1 / §2.5 / invariante I3 — «nessuno prima di aver spedito
+	 * `SESSIONE`».  ⚠ E la sessione FINITA vale come «non piu'»: dopo un
+	 * congedo il canale di controllo non c'e' piu', e un fotogramma che
+	 * partisse adesso arriverebbe a nessuno. */
+	if (!s->sessione_spedita || s->stato == S_FINITA) {
+		reg(s, "⛔ NIENTE VIDEO: `SESSIONE` non e' stata spedita (stato %s) — "
+		       "§2.5 vieta di aprire uno stream video prima, ed e' "
+		       "l'invariante I3 sul filo",
+		    NOMI_STATO[s->stato]);
+		return RCP_VIDEO_PRIMA_DI_SESSIONE;
+	}
+
+	/* ⛔ P6 e P9 / §5.2 — il primo dopo `SESSIONE`, e il primo alla misura
+	 * nuova dopo un `TELA`, DEVONO essere una chiave.  ⚠ Qui si RIFIUTA
+	 * invece di promuovere il delta a chiave: promuoverlo sarebbe mentire sul
+	 * campo `tipo`, e il fotogramma non diventerebbe decodificabile da solo.
+	 * Chi codifica ha la risposta giusta — `rcp_video_serve_chiave()` — e la
+	 * puo' chiedere PRIMA di codificare. */
+	if (!chiave && s->serve_chiave) {
+		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: e' un delta e §5.2 vuole una CHIAVE "
+		       "(%s).  ⚠ Chiedere `rcp_video_serve_chiave()` prima di "
+		       "codificare costa zero; qui il fotogramma si butta",
+		    s->serve_chiave_perche ? s->serve_chiave_perche : "§5.2");
+		return RCP_VIDEO_SERVE_UNA_CHIAVE;
+	}
+
+	/* ⛔ §6.2 — IL TETTO VINCOLA PRIMA DI TUTTO CHI SPEDISCE, e per questo il
+	 * controllo sta QUI: prima di aprire lo stream, prima che parta un byte.
+	 * «Se la codifica ne producesse uno piu' grande, DEVE ricodificarlo a
+	 * qualita' inferiore e scriverlo nel registro — mai spedirlo».
+	 *
+	 * ⚠ E il confronto e' `>` e non `>=`: 16 MiB esatti sono legali, il tetto
+	 *   e' un massimo.  La differenza si vede su un caso solo, ed e' il caso
+	 *   che i banchi mettono apposta. */
+	if (lunghezza > (size_t)(V_TETTO - V_INTESTAZIONE)) {
+		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: %zu byte di dati + %d di "
+		       "intestazione superano i %u del tetto di §6.2 — si RICODIFICA a "
+		       "qualita' inferiore, non si spedisce",
+		    lunghezza, V_INTESTAZIONE, V_TETTO);
+		return RCP_VIDEO_TROPPO_GRANDE;
+	}
+
+	uint8_t codec = rcp_codec_negoziato(s);
+	if (codec == 0) {
+		/* §6.2: «DEVE essere quello negoziato in §4.3».  Se non c'e' una
+		 * negoziazione non c'e' un valore lecito da scrivere, e inventarne uno
+		 * sarebbe la forma E2 — due comportamenti sotto la stessa etichetta. */
+		reg(s, "⛔ NIENTE VIDEO: nessun codec negoziato in §4.3 (codec=«%s»), e "
+		       "§6.2 vuole quello negoziato",
+		    s->codec);
+		return RCP_VIDEO_NIENTE_CANALE;
+	}
+
+	int64_t stream = 0;
+	/* ⛔ P3 / §2.5 — «solo su uno stream unidirezionale aperto dal server: un
+	 * `0x03` sul canale di controllo e' `ERRORE_PROTOCOLLO`».  ⭐ Il canale di
+	 * controllo in questo modulo si scrive con `s->g.manda`, e da qui in giu'
+	 * quella funzione non compare: e' l'unico modo di rendere la regola
+	 * impossibile da violare invece che facile da rispettare. */
+	if (!s->g.video_apri(s->g.ctx, &stream)) {
+		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: non si e' potuto aprire uno stream "
+		       "unidirezionale adesso — e non e' partito un byte, che e' meglio "
+		       "di mezzo fotogramma");
+		return RCP_VIDEO_STREAM_NON_APERTO;
+	}
+
+	uint32_t num = numero_prossimo(s->video_numero);
+
+	/* ⛔ §6.2 — I 28 BYTE, IN QUEST'ORDINE E SENZA UN BYTE DI RIEMPIMENTO.
+	 *
+	 *   0  tipo u16 · 2 codec u16 · 4 largh. u32 · 8 altezza u32 ·
+	 *   12 numero u32 · 16 istante u64 · 24 input u32 · 28 dati
+	 *
+	 * ⚠ Il disegno diceva «… 24 │ 32» fino al 9 agosto 2026: quattro byte di
+	 *   riempimento mai dichiarati, che due implementazioni potevano indovinare
+	 *   uguali senza che nessuno se ne accorgesse.  ⛔ `scrittore` scrive byte
+	 *   per byte in ordine di rete apposta: una `struct` C con `memcpy` qui
+	 *   rimetterebbe quel difetto, e nemmeno un banco lo vedrebbe finche' i due
+	 *   lati non girassero su due architetture diverse. */
+	uint8_t testa[V_INTESTAZIONE];
+	scrittore w = {testa, sizeof testa, 0, false};
+	sc_u16(&w, chiave ? V_CHIAVE : V_DELTA);
+	sc_u16(&w, codec);
+	/* ⛔ P5 / §6.2: la tela IN VIGORE — quella di `SESSIONE` (§4.5) oppure
+	 * l'ultima concessa da `TELA` (§7.1).  Non un parametro. */
+	sc_u32(&w, s->tela_l);
+	sc_u32(&w, s->tela_a);
+	sc_u32(&w, num);
+	/* ⚠ §6.2: microsecondi dell'orologio MONOTONO del server alla cattura.
+	 *   Non e' un'ora, e il client NON DEVE confrontarlo col proprio. */
+	sc_u64(&w, istante_us);
+	/* §6.2, §7.3: l'ultimo input iniettato prima della cattura, 0 se nessuno. */
+	sc_u32(&w, input);
+
+	/* ⛔ P4 / §6.2 — «uno stream chiuso con FIN prima dei 28 byte
+	 * dell'intestazione e' `ERRORE_PROTOCOLLO`: non e' un fotogramma corto, e'
+	 * una lunghezza che non torna».
+	 *
+	 * ⭐ Da cui la forma di queste sei righe: i 28 byte escono in **una sola**
+	 *    scrittura, e se non escono si AZZERA.  Uno stream azzerato a zero
+	 *    byte e' un fotogramma abbandonato — §5.1, legale, la sessione regge —
+	 *    mentre un FIN a zero byte sarebbe `ERRORE_PROTOCOLLO` e farebbe
+	 *    cadere una sessione in cui a sbagliare siamo stati noi.
+	 *    ⛔ Le due chiusure NON sono intercambiabili, ed e' tutto §6.2. */
+	if (w.pieno || !s->g.video_scrivi(s->g.ctx, stream, testa, sizeof testa)) {
+		s->g.video_azzera(s->g.ctx, stream);
+		reg(s, "⛔ i 28 byte dell'intestazione del fotogramma %u non sono "
+		       "usciti: stream %lld AZZERATO (§6.2) — ⚠ mai chiuso con FIN, o "
+		       "sarebbe stato «una lunghezza che non torna»",
+		    num, (long long)stream);
+		/* Il numero e' stato consumato: §6.2 dice che il contatore cresce
+		 * «compresi quelli che poi abbandona», e un buco «significa qualcosa». */
+		s->video_numero = num;
+		return RCP_VIDEO_ROTTO_A_META;
+	}
+
+	s->video_aperto = true;
+	s->video_stream = stream;
+	s->video_e_chiave = chiave;
+	s->video_suo_numero = num;
+	s->video_da_scrivere = lunghezza;
+	s->video_scritti = 0;
+	s->video_numero = num;
+	/* ⛔ L'ora si tiene DA QUI, e non si va a chiederla al campo `istante`:
+	 * `istante` e' l'orologio della CATTURA in microsecondi (§6.2) e `ora_ms`
+	 * quello della sessione in millisecondi.  Che siano lo stesso orologio e'
+	 * probabile e non e' scritto da nessuna parte — e derivarne uno dall'altro
+	 * sarebbe indicizzare i 200 ms di §5.2 su una grandezza sostitutiva
+	 * (`LEZIONI.md` §1.13). */
+	s->video_aperto_ms = ora_ms;
+	return RCP_VIDEO_SPEDITO;
+}
+
+int rcp_video_pezzo(rcp_sessione *s, const uint8_t *dati, size_t len)
+{
+	if (!s || !s->video_aperto)
+		return RCP_VIDEO_STREAM_NON_APERTO;
+	if (len == 0)
+		return RCP_VIDEO_SPEDITO;
+	/* ⛔ Piu' byte di quanti se ne erano dichiarati vorrebbe dire che il tetto
+	 * di §6.2 e' stato controllato su un numero e il filo ne porta un altro:
+	 * il controllo diventerebbe una formalita'.  Si azzera. */
+	if (len > s->video_da_scrivere - s->video_scritti) {
+		reg(s, "⛔ il fotogramma %u vuole scrivere %zu byte oltre i %zu "
+		       "dichiarati: stream AZZERATO — il tetto di §6.2 era stato "
+		       "controllato sui byte dichiarati",
+		    s->video_suo_numero, len, s->video_da_scrivere);
+		s->g.video_azzera(s->g.ctx, s->video_stream);
+		s->video_aperto = false;
+		s->video_abbandonati++;
+		s->serve_chiave = true;
+		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		return RCP_VIDEO_ROTTO_A_META;
+	}
+	if (!s->g.video_scrivi(s->g.ctx, s->video_stream, dati, len)) {
+		s->g.video_azzera(s->g.ctx, s->video_stream);
+		s->video_aperto = false;
+		s->video_abbandonati++;
+		reg(s, "⛔ il fotogramma %u si e' rotto a %zu byte su %zu: stream "
+		       "AZZERATO (§6.2) — il client lo butta e lo tratta come un buco, "
+		       "che e' vero; con un FIN lo avrebbe consegnato al "
+		       "decodificatore, che e' falso",
+		    s->video_suo_numero, s->video_scritti, s->video_da_scrivere);
+		s->serve_chiave = true;
+		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		return RCP_VIDEO_ROTTO_A_META;
+	}
+	s->video_scritti += len;
+	return RCP_VIDEO_SPEDITO;
+}
+
+int rcp_video_finisci(rcp_sessione *s)
+{
+	if (!s || !s->video_aperto)
+		return RCP_VIDEO_STREAM_NON_APERTO;
+	/* ⛔ §6.2 — «uno stream chiuso con FIN porta un fotogramma COMPLETO».  Il
+	 * FIN e' un'affermazione, non un modo di chiudere: se mancano byte si
+	 * azzera, e il client trattera' il fotogramma come un buco invece di
+	 * consegnare mezza immagine al decodificatore (rilievo R1.7, 9 agosto
+	 * 2026 — «un fotogramma abbandonato e uno completo avevano lo stesso
+	 * aspetto», la forma d'errore E8). */
+	if (s->video_scritti != s->video_da_scrivere) {
+		reg(s, "⛔ il fotogramma %u ha %zu byte sui %zu dichiarati: stream "
+		       "AZZERATO invece che chiuso con FIN — FIN vuol dire COMPLETO "
+		       "(§6.2)",
+		    s->video_suo_numero, s->video_scritti, s->video_da_scrivere);
+		s->g.video_azzera(s->g.ctx, s->video_stream);
+		s->video_aperto = false;
+		s->video_abbandonati++;
+		s->serve_chiave = true;
+		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		return RCP_VIDEO_ROTTO_A_META;
+	}
+	s->g.video_fin(s->g.ctx, s->video_stream);
+	s->video_aperto = false;
+	s->video_spediti++;
+	if (s->video_e_chiave) {
+		/* ⛔ §5.2: il debito si paga UNA volta.  ⚠ E si spegne QUI e non
+		 * all'apertura: un fotogramma aperto e poi rotto non ha pagato niente,
+		 * e spegnere il debito li' avrebbe lasciato il client senza chiave con
+		 * il server convinto di avergliela mandata. */
+		s->serve_chiave = false;
+		s->serve_chiave_perche = NULL;
+		s->mai_spedita_una_chiave = false;
+		/* ⛔ §5.2 / §3 eccezione 5 — l'orologio dei 200 ms parte da QUI, cioe'
+		 * dalla chiave SPEDITA.  ⚠ E «spedita» vuol dire «i byte sono usciti
+		 * da noi», non «e' arrivata»: vedi il rilievo P17 nel rapporto, che
+		 * dichiara la differenza invece di correggerla di testa propria. */
+		s->ultima_chiave_ms = s->video_aperto_ms;
+	}
+	reg(s, "fotogramma %u SPEDITO: %s, codec %u, %ux%u, %zu byte di dati, "
+	       "stream %lld, FIN (§6.2: completo) — spediti %u, abbandonati %u",
+	    s->video_suo_numero, s->video_e_chiave ? "CHIAVE 0x0301" : "delta 0x0302",
+	    rcp_codec_negoziato(s), s->tela_l, s->tela_a, s->video_scritti,
+	    (long long)s->video_stream, s->video_spediti, s->video_abbandonati);
+	return RCP_VIDEO_SPEDITO;
+}
+
+int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
+                       size_t len, uint64_t istante_us, uint32_t input,
+                       uint64_t ora_ms)
+{
+	int e = rcp_video_apri(s, chiave, len, istante_us, input, ora_ms);
+	if (e != RCP_VIDEO_SPEDITO)
+		return e;
+	if (len) {
+		e = rcp_video_pezzo(s, dati, len);
+		if (e != RCP_VIDEO_SPEDITO)
+			return e;
+	}
+	return rcp_video_finisci(s);
+}
+
+/* ⛔ §5.2 e §7.1 — `RICHIEDI_CHIAVE`, servito dal 12 agosto 2026.
+ *
+ * ⚠ Fino a oggi questo tipo cadeva nel `default` dello switch e faceva
+ *   **perdere la sessione** a un client conforme che avesse visto un buco: il
+ *   registro lo dichiarava («la fase 1 non lo serve ancora»), e il prezzo era
+ *   dichiarato ma reale.  Con il canale video quel prezzo non si puo' piu'
+ *   pagare, perche' §5.2 obbliga il client a mandarlo.
+ *
+ * ⛔ E l'ORLOGIO SI CONTA DALL'ULTIMA CHIAVE SPEDITA, non dall'ultima richiesta
+ *    ricevuta: «contando dalle richieste, due client insistenti spostano
+ *    l'orologio all'infinito e la chiave non parte mai».                     */
+static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
+{
+	uint32_t ultimo = le_u32(l);
+	if (l->corto) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO,
+		        "RICHIEDI_CHIAVE senza `ultimo_numero`");
+		return false;
+	}
+	/* §5.2: la si serve solo a sessione aperta — prima non ci sono fotogrammi
+	 * di cui accorgersi. */
+	if (!s->sessione_spedita) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO,
+		        "RICHIEDI_CHIAVE prima di SESSIONE: non c'e' nessun fotogramma");
+		return false;
+	}
+	/* ⛔ §7.1: «`ultimo_numero`: l'ultimo fotogramma decodificato, **0 se
+	 * nessuno**».  E' il significato che P2 ha riservato allo zero in §6.2:
+	 * qui si legge, non si indovina. */
+	if (!s->mai_spedita_una_chiave && ora - s->ultima_chiave_ms < V_GRAZIA_CHIAVE) {
+		/* ⛔ §3: «ogni tolleranza va scritta nel registro.  Una tolleranza
+		 * silenziosa e' indistinguibile da un difetto».  E' l'eccezione 5. */
+		reg(s, "⚠ TOLLERANZA DICHIARATA (§3 eccezione 5, §5.2): "
+		       "RICHIEDI_CHIAVE(ultimo_numero=%u) ignorata — sono passati %llu "
+		       "ms dall'ultima CHIAVE spedita, meno dei %d ammessi",
+		    ultimo, (unsigned long long)(ora - s->ultima_chiave_ms),
+		    V_GRAZIA_CHIAVE);
+		return true;
+	}
+	reg(s, "RICHIEDI_CHIAVE(ultimo_numero=%u) accolta (§5.2): il prossimo "
+	       "fotogramma sara' una CHIAVE — ultimo spedito da noi: %u",
+	    ultimo, s->video_numero);
+	s->serve_chiave = true;
+	s->serve_chiave_perche = "il client ne ha chiesta una (§5.2)";
 	return true;
 }
 
@@ -1895,6 +2458,21 @@ void rcp_libera(rcp_sessione *s)
 {
 	if (!s)
 		return;
+	/* ⛔ §6.2 — UNO STREAM VIDEO LASCIATO A META' SI AZZERA, NON SI ABBANDONA
+	 * AL TRASPORTO.  Un fotogramma aperto quando la sessione finisce e' per
+	 * definizione incompleto: azzerarlo lo dice, ed e' l'unica chiusura che
+	 * significa «buttalo».  ⚠ E si passa dal gancio, non da
+	 * `rcp_video_abbandona()`: quello rifiuta le chiavi (§5.2) e ha ragione
+	 * finche' la sessione vive — qui non c'e' piu' niente da proteggere, e una
+	 * chiave lasciata aperta resterebbe aperta per sempre. */
+	if (s->video_aperto && s->g.video_azzera) {
+		s->g.video_azzera(s->g.ctx, s->video_stream);
+		s->video_aperto = false;
+		reg(s, "⚠ il fotogramma %u era ancora aperto alla fine della sessione: "
+		       "stream %lld AZZERATO (§6.2), %zu byte su %zu",
+		    s->video_suo_numero, (long long)s->video_stream, s->video_scritti,
+		    s->video_da_scrivere);
+	}
 	if (s->attaccata) {
 		posto_lascia(s->utente);
 		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
@@ -2052,6 +2630,12 @@ static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
 	case T_CONGEDO:
 		le_u8(&l);
 		le_str(&l, buf, sizeof buf);
+		break;
+	/* §7.1: `RICHIEDI_CHIAVE` ├── u32 ultimo_numero.  Quattro byte, e non uno
+	 * di piu': un corpo piu' lungo e' `ERRORE_PROTOCOLLO` come per gli altri
+	 * (§6.1), e questa riga e' quel che lo fa succedere. */
+	case T_RICHIEDI_CHIAVE:
+		le_u32(&l);
 		break;
 	default:
 		/* un tipo che non arriveremo comunque a trattare: decide lo switch, e
@@ -2214,6 +2798,21 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			}
 			avanti = tratta_banco_marca(s, &l);
 			break;
+		case T_RICHIEDI_CHIAVE:
+			/* ⛔ §5.2: si chiede una chiave perche' c'e' un buco fra i
+			 * fotogrammi, e i fotogrammi cominciano con `SESSIONE`.  Prima e'
+			 * un messaggio nello stato sbagliato come tutti gli altri (§1, §3).
+			 * ⚠ `S_STACCATA` va bene: quella sessione ha spedito `SESSIONE` da
+			 *   un pezzo, ha solo lasciato il posto per silenzio (R9.2) — e
+			 *   rifiutarle una chiave sarebbe punire il client per un tetto
+			 *   del server. */
+			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "RICHIEDI_CHIAVE nello stato sbagliato");
+				return false;
+			}
+			avanti = tratta_richiedi_chiave(s, &l, ora);
+			break;
 		case T_CONGEDO: {
 			/* ⛔⭐ QUATTRO COSE IN NOVE RIGHE — rilievo R9.5.
 			 *
@@ -2321,6 +2920,15 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    stesso difetto che il capoverso qui sopra dichiara di aver
 			 *    corretto per i tipi del server.
 			 *
+			 * ⭐ E DAL 12 AGOSTO 2026 SONO **TRE**, non quattro: `0x000D
+			 *    RICHIEDI_CHIAVE` e' servito insieme al canale video, perche'
+			 *    §5.2 obbliga il client a mandarlo appena vede un buco — e
+			 *    farlo cadere qui vorrebbe dire chiudere la sessione di un
+			 *    client che sta facendo quel che l'arbitro gli impone.  ⛔ Gli
+			 *    altri tre restano fuori, e il prezzo resta quello scritto qui
+			 *    sotto: `ADATTA_TELA` vuole un compositore che sappia
+			 *    ridimensionare, e non e' di questo anello.
+			 *
 			 * ⚠ SERVIRLI e' un'altra cosa, e non e' di questa fase:
 			 *   `fasi/01-filo-nudo.md` dice «niente video, niente audio, niente
 			 *   input».  ⛔ Ma il prezzo va detto per intero, perche' non e'
@@ -2348,9 +2956,6 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				break;
 			case 0x000B:
 				del_client = "ADATTA_TELA";
-				break;
-			case 0x000D:
-				del_client = "RICHIEDI_CHIAVE";
 				break;
 			default:
 				break;
