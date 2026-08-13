@@ -3302,9 +3302,17 @@ def stampa_verdetto(v, a=None):
                 a3, b3 = s0.get(k, {}), sn.get(k, {})
                 if not isinstance(a3, dict) or "mediana" not in a3:
                     continue
-                d = round(b3.get("mediana", 0) - a3["mediana"], 3)
-                if abs(d) >= 0.5:
-                    inf("   %-56s %+8.3f  (chiesti %g)" % (k[:56], d, n_ms))
+                # ⛔ IL NOME NON E' `d`: `d` in questa funzione E' LA
+                #    DISTRIBUZIONE, e riusarlo la sovrascrive con un float —
+                #    poi `verdetto(d, …)` esplode con AttributeError.
+                #    `[M]` 14 agosto 2026: e' successo davvero, e l'eccezione
+                #    e' uscita con **codice 1**, cioe' lo STESSO di un P1 rosso
+                #    legittimo ⇒ si e' nascosta dietro un rosso plausibile e ha
+                #    fatto saltare il deposito della riga.  E' la trappola n.4
+                #    del catalogo, rifatta da chi la stava curando.
+                salto = round(b3.get("mediana", 0) - a3["mediana"], 3)
+                if abs(salto) >= 0.5:
+                    inf("   %-56s %+8.3f  (chiesti %g)" % (k[:56], salto, n_ms))
 
     log("LA SCOMPOSIZIONE")
     for k, x in scomponi(camp).items():

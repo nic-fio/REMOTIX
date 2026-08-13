@@ -824,7 +824,8 @@ che ha sporcato i 74,58 del 13 agosto **non c'è**.
 
 | # | | perché in quest'ordine |
 |---|---|---|
-| **1** | ⛔⛔⛔ **il DISEGNO**: perché `drawImage` costa **25,1 ms** con HEVC e **9,1** con AV1 | è **il 33 % del numero** e nessuno lo stava guardando. ⚠ Vale più della codifica residua: la codifica in hardware ne costa ormai **5** |
+| **1** | ⛔⛔⛔ **il DISEGNO**: perché `drawImage` costa **28,0 ms** con HEVC e **9,1** con AV1 | è **il 36 % del numero** e nessuno lo stava guardando. ⚠ Vale più di tutto il resto messo insieme: la codifica in hardware ne costa ormai **5** |
+| **1-bis** | ⚠ **due cure del BANCO, piccole e già identificate** | (a) `regime()` deve buttare **il transitorio della sessione**, non solo quello di ogni fetta — stanotte l'ho aggirato dichiarando il taglio; (b) `misura()` deve **depositare la riga anche se la stampa esplode**, o un'eccezione costa il verbale di registro **uscendo con lo stesso codice di un rosso legittimo** |
 | **2** | ⛔ **il giro a CINQUE punti sull'albero del DEPOSITO** — `--ritardi 0,5,10,25,60` | ⭐ è **il prossimo giro**, e vale doppio: misura **la configurazione che l'utente giudica**, non una sua parente. Decide fra *«errore proporzionale del 14 %»* e *«ginocchio»*, con le previsioni **scritte prima** |
 | **3** | ⚠ il resto del tratto 2 | in B vale **30,4 ms** di cui la codifica confessata è **~5** ⇒ ci sono **~25 ms** fra cattura e primo byte che **non sono codifica**, e non sono mai stati scomposti |
 | **4** | ⚠ e solo dopo, il tetto | ⛔ oggi **SFORA**, e sforerebbe anche a codifica gratis |
@@ -901,11 +902,56 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 
 ---
 
+## ⛔⛔⛔ E IL GIRO CHE HA PRODOTTO IL NUMERO È MORTO CON UN'ECCEZIONE — mia
+
+*Trovato **dopo** aver consegnato i numeri, controllando una cosa banale: **che numero è finito nel
+registro degli esiti?** ⇒ **Nessuno.** La riga non c'era.*
+
+```
+File "banchi/03-b17-ritardo.py", line 1804, in verdetto
+    if not d or not d.get("n"):
+AttributeError: 'float' object has no attribute 'get'
+```
+
+⛔ **Nel blocco nuovo della diagnosi di P1 avevo riusato il nome `d`** — che in `stampa_verdetto()`
+è **la distribuzione** — sovrascrivendola con un float.
+
+⛔⛔ **E la parte grave non è l'errore: è come si è nascosto.** L'eccezione ha fatto uscire Python
+con **codice 1** — ⭐ **esattamente lo stesso codice di un P1 rosso legittimo**. ⇒ Il giro
+*sembrava* finito bene con un rosso atteso, e invece:
+
+| | |
+|---|---|
+| ⛔ **la riga di misura non è stata depositata** | il registro non aveva **nessuna** traccia del numero della fase |
+| ⛔ **e nessuno se ne sarebbe accorto** | uscita 1 su un giro con P1 rosso è **quel che ci si aspetta** |
+
+⇒ ⛔ **È la trappola n.4 del catalogo** — *«`RuntimeError` fa uscire Python con 1, lo STESSO codice
+di un caso rosso»* — **rifatta da chi la stava curando**, e nello stesso blocco scritto per
+diagnosticare P1.
+
+⭐ **Quel che salva i numeri**: il verbale era **già scritto** quando l'eccezione è scattata (§7-ter
+lo scrive prima di stampare) e **tutto quel che ho consegnato viene dal verbale**, non dalla stampa.
+⇒ I numeri sono intatti e riverificabili.
+
+| la cura | |
+|---|---|
+| la variabile si chiama **`salto`** | e il commento dice perché, con la data |
+| `--verdetto` sul verbale D | ⭐ **arriva in fondo**, uscita **1** — che qui è il P1 rosso **vero** |
+| la riga mancante | ⭐ **depositata a mano**, marcata `MISURA — ⛔ riga DEPOSITATA A MANO`, con dentro il motivo, il numero del giro intero **e** quello a regime |
+
+⚠ **E resta un difetto che non ho curato, perché non ho potuto provarlo**: `misura()` non ha un
+`try/except` attorno alla stampa, quindi **un'eccezione dopo il verbale costa sempre la riga di
+registro**. ⇒ La cura è avvolgere `stampa_verdetto()` e depositare comunque; ma un giro per provarla
+stanotte non c'è più, e **un banco curato che nessuno ha visto arrossire non è curato**.
+
+---
+
 ## ⛔ CHE COSA NON HA FUNZIONATO — la notte del 14
 
 | | |
 |---|---|
-| ⛔⛔ **P1 rosso su B** | il controllo che valida il metro non torna proprio sul giro che produce il numero. ⛔ **Il numero si consegna con la riserva, non senza** |
+| ⛔⛔⛔ **il giro del numero è morto con un'eccezione MIA, mascherata da rosso legittimo** | uscita **1**, come un P1 rosso ⇒ **la riga di registro non è stata depositata e nessuno se ne sarebbe accorto**. Trovato controllando *«che numero è finito nel registro?»*. ⭐ I numeri sono salvi (vengono dal verbale, scritto prima), la variabile è stata rinominata, la riga depositata a mano |
+| ⛔⛔ **P1 rosso su B** | il controllo che valida il metro non torna proprio sul giro che produce il numero. ⛔ **Il numero si consegna con la riserva, non senza**. ⭐ Sul **deposito** invece P1 torna **verde** a regime |
 | ⛔⛔ **e ho scagionato il ponte con un dato preso nella condizione sbagliata** | avevo letto il suo verbale **a giro finito**, cioè con `ritardo_ms = 0`: uno scarto di consegna nullo **a ritardo zero** non dice niente su come consegna quando ritarda. ⇒ **Il ponte NON è scagionato.** Curato: adesso il banco lo legge **mentre ritarda**, una volta per ogni N |
 | ⛔ **e la mia spiegazione di P1 era sbagliata** | dicevo *«saturazione a 30 fps»*. **Falso**, e si vedeva nei dati che avevo: il ritmo **non cala** (30,18 · 30,01 · 30,33). ⭐ La diagnosi vera — il surplus è **tutto nel tratto 2 e non nel tratto 3** — l'ho trovata **senza un giro nuovo**, e adesso **la stampa il banco** ogni volta che P1 è rosso |
 | ⛔ **il banco si è rifiutato di misurare — due volte, e la seconda aveva ragione su di me** | vedeva **il proprio prodotto** come vicino affamato (67,8 % di CPU = x265 che codifica). Curato riconoscendo i **propri** pid dal **proprio** pidfile, e solo quelli |
@@ -959,7 +1005,9 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 | ⭐ ~~**il numero con la codifica in hardware**~~ | ✅ **MISURATO la notte del 14: 75,23 ms**, ⛔ con P1 rosso dichiarato accanto |
 | ⛔ **quanto vale davvero il 75,23** | ⚠ `[?]` **la larghezza dell'errore**: il metro, su questo giro, non è tarato. ⭐ **Ma il surplus è localizzato** (tutto nel tratto 2, zero nel 3) e il ritmo non cala ⇒ resta `[?]` **la causa**, non più *dove*. Il giro a cinque punti la decide |
 | ⛔ **il ponte è colpevole o innocente?** | ⚠ `[?]`, e il mio scagionamento era **nullo** (letto a ritardo zero). ⭐ Adesso il banco legge il ponte **mentre ritarda**: la risposta esce dal prossimo giro **senza lavoro in più** |
-| ⛔⛔ **perché il DISEGNO costa 25 ms con HEVC e 9 con AV1** | `[?]`, ed è **il primo lavoro della fase**: vale più di tutto quel che resta |
+| ⛔⛔ **perché il DISEGNO costa 28 ms con HEVC e 9 con AV1** | `[?]`, ed è **il primo lavoro che resta**: **28,0 su 78,1 = il 36 %**, contro i **5 ms** che ormai costa la codifica |
+| ⛔ **perché la copia di B ha P1 rosso e il deposito no** | `[?]`: sullo stesso hardware e con la stessa pagina, la copia sbaglia di +6,98 e +12,11 **anche a regime**, il deposito sta entro ±3. ⚠ Qualcosa è cambiato nel travaso, e **non sappiamo che cosa** |
+| ⚠ **il transitorio d'avvio** | `[?]` **da dove venga**: mezzo giro a 130-165 ms prima di assestarsi a 78. ⛔ E il banco **non lo butta**: `regime()` scarta l'assestamento di ogni *fetta*, non quello della *sessione* |
 | ⛔⛔ **i 74,58 / 74,576 del 13 agosto** | ⚠ vanno riletti con la riserva del palco: **presi sul desktop dell'utente**, con la sua contesa dentro. ⭐ Il valore di oggi (**72,40**) è preso **sullo stesso palco** ⇒ i due si confrontano fra loro, ⛔ ma nessuno dei due è «l'anello su un palco pulito» |
 | ⚠ **quanto pesa il palco sul numero** | `[?]`: nessuno ha ancora misurato l'anello su un Xvfb vero (`--ozone-platform=x11`). ⚠ Là **non c'è GPU** ⇒ il numero cambierebbe, e non è detto in quale verso |
 | ⚠ **il tratto 6 (il disegno)** | i **9,105 ms** sono un **minimo**: due terzi del disegno sono **rimandati**, e finiscono nel pezzo cieco |
