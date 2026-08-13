@@ -109,6 +109,20 @@ qui, e chi ha bisogno di un file altrui **lo chiede al coordinatore**.*
 lavoro **era già fatto** (03-b16, 03-b14, 03-marca sono certificati), e una perché **la corsia A non
 esiste più**.
 
+⭐⭐ **E QUESTO È COM'È ANDATA** — aggiornato a fine serata, 13 agosto:
+
+| # | agente | corsia | esito |
+|---|---|---|---|
+| **1** | il punto cieco del catalogo | **K1** | ✅ **fatto dal coordinatore** — e ha aperto una domanda più grande: `--punti-ciechi`, **22 file del prodotto che nessuno guarda** |
+| **2** | ⭐ **la prova WebCodecs** *(non era in elenco: è nata dalla `[?]` delle 20:40)* | **B0** | ✅ **120 fotogrammi su 120, 5 giri su 5**, due strade di confezionamento |
+| **3** | le tre code dell'anello + `03-b17` | **C → E** | ✅ **C3·C4·C5 chiuse, `03-b17` CERTIFICATO** · ⏳ diventata **E** |
+| **4** | il secondo motore | **D** | ✅ **consegnato** — ⛔ e ha smentito la scoperta del coordinatore sul palco · ⏳ i **millisecondi** restano `[?]` finché non ha la finestra |
+| **5** | la codifica HEVC in hardware | **B** | ✅ **nel prodotto, sulla copia**: la codifica scende a **2,64 ms** · ⛔ e ha trovato **perché** si negoziava AV1 |
+| **6** | il refutatore del n. 5 | **B** | ⚠ **non lanciato**: la corsia B ha refutato **tre premesse sue** da sola, e il tempo è andato al lavoro invece che al secondo paio d'occhi. **Va detto, non nascosto** |
+| **7** | le marche che restano | **K2·K3** | ✅ **`03-scena`, `03-deposita`, `03-marca` certificati** · ⏳ resta **`03-b19`**: vuole finestra **e** macchina di prova |
+
+*La tabella di partenza, per confronto:*
+
 | # | agente | corsia | quando parte | porta | perimetro dei file |
 |---|---|---|---|---|---|
 | **1** | ⛔ **il punto cieco del catalogo** | **K1** | ⛔⛔ **PER PRIMO, da solo** — dieci minuti, e sblocca il n. 5 | — | `01-b12-guasti.py` + registro |
