@@ -354,9 +354,53 @@ cat > "$LAV/colore.json" <<JSON
   "pagina":      {"matrice": "bt709", "gamma": "$GAMMA", "primarie": "bt709"}
 }
 JSON
-# ⛔⭐ LA SCENA DICHIARA DI NON ESSERE LA MIRA, e non e' una scorciatoia: e' la
-#    riga che fa spegnere M4, M7 e i marcatori di M-V, e che fa contare al
-#    metro quanti dei dodici guasti questo giro NON avrebbe visto.
+# ⛔⭐ LA SCENA SI DICHIARA, E LE DUE DICHIARAZIONI NON SONO EQUIVALENTI.
+#
+#    `MIRA_JSON=…`  la scena della sessione **e' la mira** di F2.6 (messa sul
+#                   monitor virtuale come sfondo del desktop, vedi §«la mira»
+#                   qui sotto): allora M4, M7 e i marcatori di M-V hanno dove
+#                   guardare, e i dodici guasti sono dodici.
+#    senza           la scena e' il desktop qualunque dell'utente: tre
+#                   strumenti si spengono, e il metro **conta** da se' quanti
+#                   guasti questo giro non avrebbe visto.
+#
+# ⛔ E la dichiarazione non si crede sulla parola: il metro cerca i quattro
+#    marcatori d'angolo NELLA CATTURA, e se non ci sono non da' nessun verdetto
+#    (M-V).  ⇒ dire «e' la mira» quando non lo e' produce uno stato 1, non un
+#    verde comodo.
+SCENA_NOME=desktop-vero
+if [ -n "${MIRA_JSON:-}" ]; then
+	[ -s "$MIRA_JSON" ] || { ko "⛔ MIRA_JSON=«$MIRA_JSON» non c'e' o e' vuoto"; exit 2; }
+	SCENA_NOME=$(python3 - "$MIRA_JSON" "$LAV/scena.json" "$L" "$A" "$GIRO" <<'PY'
+import json, sys
+dentro, fuori, L, A, giro = (sys.argv[1], sys.argv[2], int(sys.argv[3]),
+                             int(sys.argv[4]), sys.argv[5])
+m = json.load(open(dentro))
+# ⛔ La misura della mira e quella della tela devono coincidere: una mira di
+#    un'altra misura vorrebbe dire zone nel posto sbagliato, cioe' uno
+#    strumento che guarda dove il segnale non c'e'.
+if int(m["larghezza"]) != L or int(m["altezza"]) != A:
+    raise SystemExit("⛔ la mira e' %dx%d e la tela e' %dx%d: le zone "
+                     "cadrebbero nel posto sbagliato"
+                     % (m["larghezza"], m["altezza"], L, A))
+m["nome"] = "mira-" + str(m.get("giro", "?"))
+m["mira"] = True
+m["giro_del_metro"] = giro
+m["perche"] = ("⭐ La scena della sessione E' la mira di F2.6: messa sul "
+               "monitor virtuale come sfondo del desktop, cioe' come l'unica "
+               "cosa che Mutter dipinge sul monitor che il prodotto cattura.  "
+               "⇒ M4 (i tre riquadri a luminanza uguale), M7 (la sfumatura "
+               "dichiarata) e i marcatori d'angolo di M-V hanno dove guardare, "
+               "e i dodici guasti sono dodici.  ⛔ E la dichiarazione non basta: "
+               "i marcatori si CERCANO nella cattura.")
+json.dump(m, open(fuori, "w"), ensure_ascii=False, indent=1)
+sys.stderr.write("    OK  %s: mira=true «%s», %dx%d\n"
+                 % (fuori, m["nome"], L, A))
+print(m["nome"])
+PY
+	) || { ko "⛔ la scena della mira non si e' scritta"; exit 2; }
+	ok "⭐ la scena dichiarata e' LA MIRA: «$SCENA_NOME»"
+else
 python3 - "$LAV/scena.json" "$L" "$A" "$GIRO" <<'PY'
 import json, sys
 fuori, L, A, giro = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
@@ -376,6 +420,7 @@ json.dump({
 }, open(fuori, "w"), ensure_ascii=False, indent=1)
 print("    OK  %s: mira=false, %dx%d" % (fuori, L, A))
 PY
+fi
 
 python3 - "$LAV/pagina.json" "$LAV/identita.json" <<'PY'
 import json, sys
@@ -386,9 +431,36 @@ print("    OK  %s (cucitura F2.4)" % sys.argv[2])
 PY
 
 log "9. ⭐⭐ IL METRO — i due piani, sulla catena vera"
-inf "⚠ --senza-freschezza: la fase 2 cattura UNA volta all'accensione, quindi"
-inf "  non esiste un «giro precedente» con una scena diversa.  M6 si dichiara"
-inf "  non misurato: fingere una cattura precedente sarebbe un verde regalato."
+# ⛔⭐ M6 (LA FRESCHEZZA) VUOLE DUE CATTURE CON SCENE DIVERSE, e su questa
+#    catena non si ottengono da sole: il palco appartiene alla sessione (I4), il
+#    figlio cattura UNA volta e sopravvive al distacco.  ⇒ le due catture si
+#    fanno con **due mire diverse** — il riquadro di rumore ha per seme il nome
+#    del giro — e fra l'una e l'altra il server si riaccende, perche' e' l'unico
+#    modo in cui il prodotto ricattura senza che nessuno lo violenti.
+#
+#    `PRECEDENTE=/…/cattura.rgb48` e' la cattura del giro PRIMA, con l'ALTRA
+#    mira.  ⛔ Senza, M6 si dichiara non misurato: fingere una cattura
+#    precedente sarebbe un verde regalato, e passare la STESSA scena sarebbe
+#    peggio — il metro direbbe «il fotogramma e' vecchio» su una catena sana.
+ARG_M6=(--senza-freschezza)
+if [ -n "${PRECEDENTE:-}" ]; then
+	[ -s "$PRECEDENTE" ] || { ko "⛔ PRECEDENTE=«$PRECEDENTE» non c'e'"; exit 2; }
+	# ⛔ E LE DUE CATTURE DEVONO ESSERE DIVERSE.  Due file uguali darebbero a M6
+	#    un delta di 0 dB, cioe' un rosso su una catena sana: sarebbe il banco a
+	#    essere rotto, e il metro accuserebbe il prodotto.
+	if cmp -s "$PRECEDENTE" "$LAV/cattura.rgb48"; then
+		ko "⛔ la cattura di adesso e quella di prima sono IDENTICHE byte per"
+		ko "   byte: la scena non si e' mossa fra i due giri.  M6 direbbe «il"
+		ko "   fotogramma e' vecchio» su una catena sana ⇒ stato 2, non un rosso"
+		exit 2
+	fi
+	ok "⭐ la cattura precedente c'e' ed e' DIVERSA da questa: M6 e' misurabile"
+	inf "   precedente: $PRECEDENTE"
+	ARG_M6=(--cattura-precedente "$PRECEDENTE")
+else
+	inf "⚠ --senza-freschezza: non c'e' una cattura del giro precedente con una"
+	inf "  scena diversa.  M6 si dichiara non misurato."
+fi
 bash "$QUI/02-giudizio-confronto.sh" giudica \
 	--scena "$LAV/scena.json" \
 	--cattura "$LAV/cattura.rgb48" \
@@ -397,9 +469,9 @@ bash "$QUI/02-giudizio-confronto.sh" giudica \
 	--riferimento-10 "$LAV/riferimento.yuv" \
 	--colore "$LAV/colore.json" \
 	--identita-pagina "$LAV/identita.json" \
-	--scena-nome "desktop-vero" \
+	--scena-nome "$SCENA_NOME" \
 	--giro "$GIRO" \
-	--senza-freschezza
+	"${ARG_M6[@]}"
 S=$?
 
 # ---------------------------------------------------------------------------
