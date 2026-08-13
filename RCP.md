@@ -348,7 +348,26 @@ nessuna parte.*
 | Stream | Chi lo apre | Quanti |
 |---|---|---|
 | **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la sessione |
-| **video** — unidirezionale | il server | uno **per fotogramma**, ⛔ e **nessuno prima di aver spedito `SESSIONE`**: chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`. ⚠ È l'invariante **I3** sul filo — *chi non passa dal validatore non riceve un pixel* — e va scritta anche per chi **manda**, come lo è per il canale di input qui sotto |
+| **video** — unidirezionale | il server | uno **per fotogramma**, ⛔ e **nessuno prima di aver spedito `SESSIONE`**. ⚠ Il divieto vincola **chi manda**: chi riceve non lo può misurare sull'ordine in cui gli arrivano le cose, perché il canale di controllo e lo stream del fotogramma sono **due stream QUIC indipendenti** e niente ne ordina la consegna (§6.2). ⇒ Il client dichiara `ERRORE_PROTOCOLLO` **solo** se non ha ancora spedito `ATTACCA`: §4.5 fa di `SESSIONE` la risposta ad `ATTACCA`, quindi lì il server **non può** averla spedita, e il client lo sa **senza guardare la rete**. ⛔ Se `ATTACCA` è partito e `SESSIONE` non è ancora arrivata il client **NON DEVE chiudere**: **trattiene** il fotogramma e lo scrive nel registro, e lo giudica quando `SESSIONE` arriva — che arriva per forza, perché il canale di controllo è affidabile e ordinato e §4.5 vieta al server di rispondere con un silenzio. ⚠ E l'invariante **I3** resta intera: chi ha spedito `ATTACCA` è già passato da `AMMESSO`, cioè dal validatore |
+
+> ### ⛔ La riga qui sopra è stata riscritta il **13 agosto 2026** — rilievo **P20**
+>
+> *Diceva:* «*chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`*». ⛔ **E «chi ne riceve uno
+> prima» è una grandezza sostitutiva**: chi riceve non ha altro da misurare che l'ordine in cui il
+> proprio strato di rete gli consegna gli eventi, e i due stream sono indipendenti. ⇒ Bastava
+> **perdere il pacchetto che porta `SESSIONE`** perché un client conforme uccidesse una sessione in
+> cui il server aveva fatto tutto giusto — **I1 rotta perché la linea perde pacchetti**, cioè la
+> condizione che I1 esiste per proteggere.
+>
+> ⚠ *È la **sesta** della famiglia* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13). E
+> anche la prima cura proposta — «solo se, quando il fotogramma arriva, i byte di `SESSIONE` non sono
+> ancora arrivati» — restava un sostituto: sposta la misura dal risveglio della coroutine ai byte, e
+> **i byte li ritarda la rete**. Sarebbe stata la settima stesura.*
+>
+> ⭐ **La grandezza vera è quel che il client ha spedito LUI** — `ATTACCA` — ed è la forma generale
+> del campo `numero` di P14: **locale, monotona, indipendente dalla consegna**. ⛔ E non l'ha trovata
+> una rilettura: l'ha trovata il **cliente di prova** al suo primo giro contro un server che
+> spedisce davvero.
 | **input** — unidirezionale | il client | **uno solo**, aperto ⛔ **dopo aver ricevuto `SESSIONE`** e tenuto aperto |
 | **appunti** — unidirezionale | entrambi | uno **per trasferimento** |
 

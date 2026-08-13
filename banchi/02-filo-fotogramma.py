@@ -448,7 +448,27 @@ class Contesto:
         #    dice in nessun punto — vedi la proposta **P10**.
         self.decodificatore_a = None
         self.codec_negoziato = codec_negoziato
+        # ⛔⛔ E QUESTE DUE NON SONO LA STESSA COSA — proposta **P20**.
+        #
+        #    `sessione_aperta` dice *«i byte di `SESSIONE` li ho gia' visti»*,
+        #    e ⛔ **e' una grandezza sostitutiva**: il canale di controllo e lo
+        #    stream del fotogramma sono due stream QUIC indipendenti, e
+        #    RFC 9000 non ne ordina la consegna — §6.2 lo scrive due volte
+        #    (P14, P19).  ⇒ Basta che si perda il pacchetto che porta
+        #    `SESSIONE` perche' questo campo sia `False` mentre il server ha
+        #    fatto **esattamente** quel che §2.5 e §5.2 gli impongono.
+        #
+        # ⭐ `attacca_spedito` e' la grandezza **vera**, ed e' quel che `numero`
+        #    e' stato per P14: un fatto **locale, monotono e indipendente
+        #    dall'ordine di consegna**.  §4.5 fa di `SESSIONE` la risposta ad
+        #    `ATTACCA` ⇒ un server che non ha ricevuto `ATTACCA` **non puo'**
+        #    aver spedito `SESSIONE`, e il client sa senza margine di errore se
+        #    l'ha spedito, perche' l'ha spedito lui.
+        #    ⚠ E copre l'invariante che la riga difende: il client che ha
+        #      spedito `ATTACCA` e' gia' passato da `AMMESSO` (§1), cioe' **dal
+        #      validatore** — che e' tutto quel che I3 chiede.
         self.sessione_aperta = sessione_aperta
+        self.attacca_spedito = True
         # ⛔ `None` e' «nessuno», e NON e' zero: §6.0 vieta i valori sentinella
         #    impliciti, e zero e' un `numero` che il documento non esclude —
         #    vedi il caso `numero-zero`, che e' l'ambiguita' A1.
@@ -628,6 +648,19 @@ class Giudice:
         # ⛔ G11 — «il giudice di un'ora fa»: la misura guardata PRIMA
         #    dell'ordine, cioe" §6.2 senza la precedenza di P14."
         self.ordine_prima = "G11" not in self.guasti
+        # ⛔⛔ G12 e G13 — I DUE MODI DI SCRIVERE MALE **P20**, uno per verso.
+        #
+        #    G12 «la grandezza sostitutiva»: si misura §2.5 sull'arrivo di
+        #        `SESSIONE` invece che sulla partenza di `ATTACCA` — cioe' il
+        #        giudice di **oggi**, e il cliente di prova al suo primo giro
+        #        dal vivo (`P2-6` §5.2).  ⇒ La sessione sana cade.
+        #    G13 «la cura scritta troppo larga»: non si chiude **mai** prima di
+        #        `SESSIONE`.  ⇒ I3 sparisce, e un server che non ha ricevuto
+        #        `ATTACCA` puo' spingere pixel addosso a chi non si e' ancora
+        #        attaccato.  ⚠ E' la forma con cui **P5** e' finita sbagliata:
+        #        una cura che salva il caso che l'ha motivata e apre l'altro.
+        self.sessione_come_grandezza = "G12" in self.guasti
+        self.chiude_prima_di_attacca = "G13" not in self.guasti
         # ⛔ La misura tollerata dalla grazia si TIENE, non si decide subito:
         #    un fotogramma in volo resta soggetto a tutte le altre righe di
         #    §6.2 — l'ordine dei `numero`, il tetto, il FIN — e decidere qui
@@ -788,7 +821,22 @@ class Giudice:
         #      **I3** — *chi non passa dal validatore non riceve un pixel* —
         #      lasciata senza una riga sul filo, mentre §2.5 la scriveva per il
         #      canale di input due righe sopra.
-        if not self.c.sessione_aperta:
+        #
+        # ⛔⛔ E DAL 13 AGOSTO 2026 LA RIGA SI LEGGE IN DUE PEZZI — proposta
+        #     **P20**, e sono due fenomeni diversi sotto la stessa parola.
+        #
+        #     3a. ⭐ **La certezza**: il client non ha ancora spedito `ATTACCA`.
+        #         §4.5 fa di `SESSIONE` la **risposta** ad `ATTACCA` ⇒ il
+        #         server non puo' averla spedita, e non serve nessuna ipotesi
+        #         sull'ordine di consegna.  Qui si chiude, ed e' I3.
+        #     3b. ⛔ **L'indecidibile**: `ATTACCA` e' partito e i byte di
+        #         `SESSIONE` non sono ancora arrivati.  §2.5 alla lettera fa
+        #         chiudere; ⚠ ma il fotogramma e il canale di controllo sono
+        #         **due stream QUIC indipendenti** e niente ne ordina la
+        #         consegna — basta perdere il pacchetto che porta `SESSIONE`.
+        #         ⇒ Oggi il caso esce `AMBIGUO` con la cura accanto: e' del
+        #         coordinatore, non di questo banco.
+        if not self.c.attacca_spedito and self.chiude_prima_di_attacca:
             return self._decidi(Verdetto(
                 ERRORE_PROTOCOLLO, "RCP.md §2.5",
                 "un fotogramma prima di `SESSIONE`: §2.5 vieta al server di "
@@ -796,6 +844,26 @@ class Giudice:
                 "l'invariante I3 sul filo, chi non passa dal validatore non "
                 "riceve un pixel",
                 scostamento=0))
+        if not self.c.sessione_aperta:
+            if self.sessione_come_grandezza:
+                # ⛔ La lettura di OGGI, alla lettera: si chiude.  E' la
+                #    grandezza sostitutiva, ed e' quel che ha fatto il cliente
+                #    di prova al suo primo giro dal vivo (`P2-6` §5.2).
+                return self._decidi(Verdetto(
+                    ERRORE_PROTOCOLLO, "RCP.md §2.5",
+                    "un fotogramma prima di `SESSIONE`: §2.5 vieta al server "
+                    "di aprire uno stream video prima di averla spedita",
+                    scostamento=0))
+            return self._decidi(Verdetto(
+                AMBIGUO, "RCP.md §2.5",
+                "`ATTACCA` e' partito e i byte di `SESSIONE` non sono ancora "
+                "arrivati: §2.5 alla lettera fa chiudere, ⛔ ma la misura e' "
+                "presa sull'ordine di consegna di **due stream QUIC "
+                "indipendenti** — il server puo' aver fatto tutto quel che "
+                "§2.5 e §5.2 gli impongono e il pacchetto di `SESSIONE` "
+                "essersi perso.  ⇒ Chi applica la riga alla lettera chiude "
+                "una sessione in cui nessuno ha sbagliato",
+                scostamento=0, propone="P20"))
 
         # 4. ⛔ IL TIPO — §6.2: «Altri valori: ERRORE_PROTOCOLLO».
         if tipo not in self.tipi_leciti:
@@ -1374,7 +1442,66 @@ REGOLE_DI_STATO = {
 #    trovera' il punto seguente, il posto dove scriverlo c'e' gia' — e
 #    `proposte_coperte()` continua a contare «0 su 0», che e' un numero, non un
 #    silenzio.
-PROPOSTE_APERTE = {}
+#
+# ⭐⛔ **E IL 13 AGOSTO 2026 SI E' RIEMPITA DI NUOVO, CON UNA SOLA VOCE: P20.**
+#    ⚠ Non l'ha trovata una rilettura: l'ha trovata il **cliente di prova** al
+#      suo primo giro contro un server che spedisce davvero (`P2-6` §5.2), e la
+#      cura di quel giro ha curato il **banco** — non la riga.
+PROPOSTE_APERTE = {
+    "P20": {
+        "dove": "RCP.md §2.5, riga «video» della tabella",
+        "dice":
+            "⛔ Il divieto vincola **chi manda**, e chi riceve non lo puo' "
+            "misurare: «prima di `SESSIONE`» e' un ordine fra **due stream "
+            "QUIC indipendenti**, e RFC 9000 non ne ordina la consegna.  ⭐ La "
+            "grandezza vera e' un fatto **locale del client**: se non ha "
+            "ancora spedito `ATTACCA`, il server non puo' aver spedito "
+            "`SESSIONE` (§4.5 ne fa la risposta) — e questo il client lo sa "
+            "senza ipotesi sulla rete, perche' l'`ATTACCA` l'ha spedito lui.",
+        "era":
+            "⛔ *«uno per fotogramma, e nessuno prima di aver spedito "
+            "`SESSIONE`: chi ne riceve uno prima chiude con "
+            "`ERRORE_PROTOCOLLO`»* — e **«chi ne riceve uno prima»** e' una "
+            "grandezza sostitutiva: chi riceve non ha altro da misurare che "
+            "l'ordine in cui il proprio strato di rete gli consegna gli "
+            "eventi, e i due stream sono indipendenti.  ⚠ Ed e' la **sesta** "
+            "della famiglia P8 -> P11 -> P13 -> P14 -> P19 -> P20 "
+            "(`LEZIONI.md` §1.13).  ⛔ Anche la prima cura proposta — *«solo "
+            "se, quando il fotogramma arriva, i byte di `SESSIONE` non sono "
+            "ancora arrivati»* — resta un sostituto: sposta la misura dal "
+            "risveglio della coroutine ai byte, e i byte li ritarda **la "
+            "rete** (un pacchetto perso, una ritrasmissione).  ⇒ Sarebbe la "
+            "settima stesura, e si sposterebbe di un passo alla prima "
+            "rilettura ostile.",
+        # ⛔ E il testo pronto da incollare sta qui, non in un rapporto: un
+        #    banco che nomina una cura senza portarla e' un reclamo (§«i quattro
+        #    esiti»).  ⚠ Non tocca §9: nessun tipo, nessun campo, nessun valore
+        #    nuovo — `ATTACCA` e `SESSIONE` ci sono da §4.5.
+        "testo":
+            "| **video** — unidirezionale | il server | uno **per "
+            "fotogramma**, ⛔ e **nessuno prima di aver spedito `SESSIONE`**. "
+            "⚠ Il divieto vincola **chi manda**: chi riceve non lo puo' "
+            "misurare sull'ordine in cui gli arrivano le cose, perche' il "
+            "canale di controllo e lo stream del fotogramma sono **due stream "
+            "QUIC indipendenti** e niente ne ordina la consegna (§6.2).  ⇒ Il "
+            "client dichiara `ERRORE_PROTOCOLLO` **solo** se non ha ancora "
+            "spedito `ATTACCA`: §4.5 fa di `SESSIONE` la risposta ad "
+            "`ATTACCA`, quindi li' il server **non puo'** averla spedita, e il "
+            "client lo sa senza guardare la rete.  ⛔ Se `ATTACCA` e' partito "
+            "e `SESSIONE` non e' ancora arrivata il client **NON DEVE "
+            "chiudere**: **trattiene** il fotogramma e lo scrive nel registro, "
+            "come per la misura mai in vigore di §6.2, e lo giudica quando "
+            "`SESSIONE` arriva — che arriva per forza, perche' il canale di "
+            "controllo e' affidabile e ordinato e §4.5 vieta al server di "
+            "rispondere con un silenzio.  ⚠ E l'invariante **I3** resta "
+            "intera: chi ha spedito `ATTACCA` e' gia' passato da `AMMESSO`, "
+            "cioe' dal validatore |",
+        "casi": {
+            "p20-sessione-in-ritardo": AMBIGUO,
+            "p20-prima-di-attacca": ERRORE_PROTOCOLLO,
+        },
+    },
+}
 
 # ⭐ E LE DUE CHE QUESTA TABELLA HA OSPITATO PER UN GIRO SOLO, con la data:
 #    **P10** e **P11**, nate `AMBIGUO` la sera del 12 agosto 2026 e diventate
@@ -1416,6 +1543,45 @@ RILIEVI_DICHIARATI = {
         "caso": None,
         "marca": "[?] non misurata, e **non e' di questo capitolo**: §7.1 e' "
                  "l'input, e questo banco giudica il canale video",
+    },
+    # ⭐⛔⛔ E QUESTO L'HA TROVATO LA RILETTURA OSTILE DEL 13 AGOSTO 2026,
+    #     rimettendo in fila le sei righe della famiglia adesso che convivono:
+    #     P8 -> P11 -> P13 -> P14 -> P19 -> P20.
+    "P21": {
+        "dove": "RCP.md §6.2 — **due paragrafi della stessa sezione**, e "
+                "comandano il contrario sullo stesso fotogramma",
+        "dice":
+            "Il paragrafo di **P19** dice che un fotogramma alla misura nuova "
+            "puo' arrivare **prima** del `TELA` che la concede e che il client "
+            "⛔ **NON DEVE chiudere: trattiene**.  Il paragrafo della "
+            "tolleranza (P11 + P13), otto righe sotto, dice che una misura "
+            "*«che non e' mai stata in vigore in quella finestra»* e' "
+            "`ERRORE_PROTOCOLLO` ⛔ **subito**.  ⇒ Due implementazioni "
+            "conformi, due byte diversi: una manda `CONGEDO`, l'altra "
+            "trattiene.  ⚠ E' la forma di **P10**, che il 12 agosto aveva §5.2 "
+            "e §6.2 a comandare il contrario sullo stesso fotogramma — qui le "
+            "due righe sono nella **stessa** sezione.",
+        "scena": "`SESSIONE` 1920x1080; `TELA(ADATTATA, 1600, 900)` — la "
+                 "finestra e' aperta; il client manda `ADATTA_TELA(1280, 720)` "
+                 "e il fotogramma catturato alla misura nuova arriva **prima** "
+                 "del `TELA` che la concede.  1280x720 non e' mai stata in "
+                 "vigore in quella finestra ⇒ il secondo paragrafo chiude, il "
+                 "primo trattiene.  ⭐ E il discriminante e' lo stesso di P20, "
+                 "cioe' **quel che il client ha spedito lui**: una misura "
+                 "nominata da un `ADATTA_TELA` ancora senza risposta si "
+                 "trattiene, una che nessuno ha mai nominato (800x600, il caso "
+                 "`p11-misura-mai-in-vigore`) chiude subito.  ⛔ E la stessa "
+                 "grandezza chiude la `[?]` che P19 lascia aperta — *«fino a "
+                 "quando trattiene»*, oggi **otto** fotogrammi in "
+                 "`src/pagina.html`, che e' un sostituto: si trattiene finche' "
+                 "non arriva il `TELA` che risponde a QUEL `ADATTA_TELA`, e "
+                 "§7.1 lo garantisce — *«a ogni `ADATTA_TELA` il server DEVE "
+                 "rispondere con un `TELA`, riuscito o no»*",
+        "caso": None,
+        "marca": "[R] contraddizione confermata da due righe gia' scritte "
+                 "(§6.2 con se stessa), ⛔ **dichiarata e non curata**: due "
+                 "cure in un giro sono la fretta che il 12 agosto e' costata "
+                 "tre giri, e questo giro ne porta gia' una (P20)",
     },
 }
 
@@ -1730,7 +1896,16 @@ def _():
       "non riceve un pixel* — e dal 12 agosto 2026 §2.5 la scrive anche per "
       "chi **manda**",
       "RCP.md §2.5",
-      contesto={"sessione_aperta": False})
+      # ⛔ IL CONTESTO E' DIVENTATO ESPLICITO IL 13 AGOSTO 2026, e l'atteso NON
+      #    e' cambiato.  Il caso dice da sempre *«prima che la tela sia
+      #    concordata»*: la tela la chiede il client con `ATTACCA` (§4.5),
+      #    quindi la scena che questo caso descrive e' quella **prima** di
+      #    `ATTACCA`.  ⚠ Fino a oggi il campo non c'era e il caso non
+      #    distingueva le due scene — perche' nessuno aveva visto che erano
+      #    due.  ⭐ Il verdetto e' `ERRORE_PROTOCOLLO` con la riga di oggi **e**
+      #    con la cura di P20: e' il caso su cui le due letture vanno
+      #    d'accordo, e per questo resta qui invariato.
+      contesto={"sessione_aperta": False, "attacca_spedito": False})
 def _():
     return [intestazione() + b"\x00" * 64], "fin"
 
@@ -1742,6 +1917,58 @@ def _():
       "e la seconda lettura fa fallire la fase 2 per intero",
       "RCP.md §6.2",
       contesto={"sessione_aperta": True})
+def _():
+    return [intestazione() + b"\x00" * 64], "fin"
+
+
+# ── ⛔⛔ P20 — «prima di `SESSIONE`» misurato da chi RICEVE ─────────────────
+#
+#    ⭐ La sesta della famiglia P8 -> P11 -> P13 -> P14 -> P19 -> P20, e la
+#      forma e' sempre quella di `LEZIONI.md` §1.13: la riga descrive il
+#      fenomeno con una **grandezza sostitutiva**.  Qui il sostituto e'
+#      *«l'ordine in cui i due stream mi arrivano»*, e il fenomeno vero e'
+#      *«il server aveva gia' spedito `SESSIONE` quando ha aperto questo
+#      stream»*.
+#    ⛔ I due casi qui sotto sono la coppia, e il secondo e' quello che conta:
+#      una cura scritta troppo larga passa il primo e apre il secondo, ed e'
+#      cosi' che **P5** e' finita sbagliata.
+@caso("p20-sessione-in-ritardo", AMBIGUO,
+      "⭐⛔ **P20, il caso che la RISPETTA** — gli **stessi identici byte** di "
+      "`dopo-sessione`, e un server che ha fatto **tutto** quel che §2.5 e "
+      "§5.2 gli impongono: ha spedito `SESSIONE` sul canale di controllo e ha "
+      "aperto lo stream del primo fotogramma nella riga dopo.  ⛔ Si perde il "
+      "pacchetto che porta `SESSIONE`, il fotogramma arriva intero, e un "
+      "client che applichi §2.5 alla lettera **chiude una sessione in cui "
+      "nessuno ha sbagliato** — l'invariante **I1** rotta perche' la linea "
+      "perde pacchetti, cioe' la condizione che I1 esiste per proteggere.  "
+      "⚠ §6.2 dice due volte che gli stream sono indipendenti e che niente ne "
+      "ordina la consegna (P14, P19): la stessa frase che qui §2.5 ignora.  "
+      "⭐⛔ **E la famiglia e' la CONTRADDIZIONE INTERNA, non la lettura "
+      "doppia**: chi riceve non ha nessun'altra grandezza da misurare che il "
+      "proprio ordine d'arrivo, quindi due implementazioni attente "
+      "**convergono sullo stesso byte** — `CONGEDO(ERRORE_PROTOCOLLO)` su una "
+      "sessione sana — e nessun confronto fra client la trova.  ⚠ `[M]` 12 "
+      "agosto 2026 e' successo: il cliente di prova ha accusato il server, e a "
+      "smentirlo e' stato l'arbitro della **registrazione**, che l'ordine del "
+      "filo ce l'ha scritto dentro e un client dal vivo no",
+      "RCP.md §2.5",
+      contesto={"sessione_aperta": False, "attacca_spedito": True})
+def _():
+    return [intestazione() + b"\x00" * 64], "fin"
+
+
+@caso("p20-prima-di-attacca", ERRORE_PROTOCOLLO,
+      "⭐⛔ **P20, il caso che la VIOLA, e quello che impedisce di scrivere la "
+      "cura TROPPO LARGA** — lo stesso fotogramma, ma il client **non ha "
+      "ancora spedito `ATTACCA`**.  §4.5 fa di `SESSIONE` la **risposta** ad "
+      "`ATTACCA` ⇒ un server che non l'ha ricevuto non puo' averla spedita, e "
+      "il client lo sa **senza guardare l'ordine di consegna**: l'ha spedito "
+      "lui.  ⛔ Senza questo caso, una cura nella forma «il client non chiude "
+      "mai per un fotogramma prima di `SESSIONE`» resterebbe verde e "
+      "porterebbe via l'invariante **I3** — *chi non passa dal validatore non "
+      "riceve un pixel* — che e' la sola ragione per cui la riga esiste",
+      "RCP.md §2.5",
+      contesto={"sessione_aperta": False, "attacca_spedito": False})
 def _():
     return [intestazione() + b"\x00" * 64], "fin"
 
@@ -2386,6 +2613,47 @@ GUASTI = {
         "marca": "p14-in-volo-scavalcato-dalla-chiave: SCARTATO -> "
                  "ERRORE_PROTOCOLLO",
     },
+    # ⭐⛔ G12 e G13 — I DUE MODI DI SBAGLIARE **P20**, uno per verso.  ⚠ E il
+    #    primo non e' inventato: e' il giudice di **stamattina**, ed e' quel
+    #    che `02-filo-cliente.py` ha fatto al suo primo giro dal vivo.
+    "G12": {
+        "titolo": "§2.5 misurata sull'arrivo di `SESSIONE` invece che sulla "
+                  "partenza di `ATTACCA`",
+        "rompe": "la grandezza vera del fenomeno di §2.5 (proposta P20, "
+                 "`LEZIONI.md` §1.13)",
+        "dimostra":
+            "⛔ E' il giudice di **oggi**, prima della proposta P20, ed e' "
+            "esattamente quel che il cliente di prova ha fatto al suo primo "
+            "giro contro un server vero (`P2-6` §5.2): "
+            "*«[ERRORE_PROTOCOLLO] un fotogramma prima di `SESSIONE`»* su un "
+            "server che aveva fatto tutto quel che §2.5 e §5.2 gli impongono.  "
+            "⭐ Col guasto la sessione sana cade, e la causa non e' nel "
+            "prodotto: e' **la rete**, che ha perso il pacchetto di "
+            "`SESSIONE`.  ⚠ La cura di quel giro ha spostato la misura di un "
+            "istante — dal risveglio della coroutine ai byte del canale — cioe' "
+            "ha curato il **banco** e non la riga: la grandezza restava "
+            "sostitutiva, e questo guasto e' la prova che il banco sa "
+            "distinguere le due cose.",
+        "marca": "p20-sessione-in-ritardo: AMBIGUO -> ERRORE_PROTOCOLLO",
+    },
+    "G13": {
+        "titolo": "la cura di P20 scritta TROPPO LARGA: non si chiude mai "
+                  "prima di `SESSIONE`",
+        "rompe": "l'invariante **I3** sul filo (§2.5)",
+        "dimostra":
+            "⛔ E' la forma con cui **P5** e' finita sbagliata, e la lezione "
+            "sta nel mandato di questo giro: una regola troppo severa uccide "
+            "la sessione sana, una troppo larga lascia passare quel che la "
+            "riga esisteva per fermare — e **tutt'e due passano il caso che ha "
+            "motivato la cura**.  ⭐ Col guasto, un server puo' aprire uno "
+            "stream video addosso a un client che non ha nemmeno spedito "
+            "`ATTACCA`, cioe' spingere pixel su chi non si e' attaccato: I3 "
+            "sparisce, e nessuno dei 49 verdi del banco se ne accorge.  ⚠ E' "
+            "il guasto che dimostra che il **secondo** caso della coppia si "
+            "guadagna il posto: senza di lui, «trattiene sempre» e «trattiene "
+            "solo dopo `ATTACCA`» danno lo stesso verde su tutto il resto.",
+        "marca": "p20-prima-di-attacca: ERRORE_PROTOCOLLO -> AMBIGUO",
+    },
 }
 
 
@@ -2744,6 +3012,12 @@ def principale(a):
             print(f"  {sigla}  {p['dove']}")
             print(f"      «{p['dice']}»")
             print(f"      e':       {p['era']}")
+            # ⛔ E IL TESTO PRONTO SI STAMPA, non si nomina.  Una proposta
+            #    citata senza il testo e' un reclamo, ed e' la meta' che
+            #    `F2-4-filo.md` §«Che cosa propongo» pretende da ogni riga.
+            if p.get("testo"):
+                print(f"      testo pronto da incollare:")
+                print(f"        {p['testo']}")
             for nome, atteso in p["casi"].items():
                 # ⛔ «(oggi)» in coda non e' decorazione: senza, questa riga
                 #    finirebbe con `AMBIGUO` e `02-filo-lancia.sh` — che le
@@ -2952,4 +3226,20 @@ if __name__ == "__main__":
                    help="sano -> guasto -> risanato, per ogni guasto")
     p.add_argument("--uscita", default="",
                    help="il registro del giro, in JSONL")
-    sys.exit(principale(p.parse_args()))
+    # ⛔ E CHI LEGGE QUESTA USCITA LA CHIUDE A META': `02-filo-lancia.sh` fa
+    #    `--elenco | grep -q 'AMBIGUO$'`, e `grep -q` esce **al primo colpo**
+    #    chiudendo il tubo.  ⚠ Fino al 13 agosto 2026 non si vedeva, perche'
+    #    nessun caso pretendeva `AMBIGUO` e `grep` leggeva fino in fondo: alla
+    #    prima proposta aperta lo script ha stampato un `BrokenPipeError` in
+    #    mezzo al verdetto.  ⛔ Un tubo chiuso da chi legge non e' un difetto
+    #    di questo banco, e non deve avere l'aspetto di uno — ma **si dichiara
+    #    e non si tace**, che e' la forma E8 applicata a se stessi.
+    try:
+        _codice = principale(p.parse_args())
+    except BrokenPipeError:
+        # ⚠ Si dirotta il **descrittore 1**, non `sys.stdout`: chiudere
+        #   l'oggetto Python fa fallire anche lo svuotamento finale, e il
+        #   secondo errore nasconde il primo.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+        _codice = 0
+    sys.exit(_codice)
