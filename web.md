@@ -339,17 +339,94 @@ QPR1) e **se la PWA valga anche su Chrome per Android**.
 
 *Dettaglio: `web/rapporti/S4-ritardo-disegno.md`.*
 
-### 6.1 La strada
+### 6.1 La strada — ⛔ **non più una prescrizione: una decisione misurata** *(13 agosto 2026)*
 
-`drawImage(videoFrame)` su canvas 2D **desincronizzato**, dipinto **dentro la callback del
-decodificatore** — non su `requestAnimationFrame` — con WebTransport, decodifica e canvas **tutti
-in un worker dedicato**, così il fotogramma non attraversa mai un `postMessage`. Zero copie in CPU
-se il fotogramma è NV12 a 8 bit; una conversione di colore in GPU `[R]`. È anche l'unica che
-funziona su tutti e tre i motori.
+*⛔ Questo paragrafo era scritto prima di qualunque riga di pagina, e prescriveva. Alla fase 3 è
+stato **attuato e misurato**, e la misura ha diviso la prescrizione in due metà con esiti opposti.
+Il testo originale è tenuto qui sotto perché la parte che regge è ancora quella.*
 
-⚠ **E impone la forma della pagina**: il video vive nel worker, l'input vive nel thread principale
-(gli eventi di tastiera e puntatore sono del DOM). Due mestieri, due thread, e il confine passa fra
-loro — deciderlo adesso costa niente, scoprirlo alla fase 4 costa una riscrittura.
+`drawImage(videoFrame)` **dentro la callback del decodificatore** — ⛔ **non** su
+`requestAnimationFrame`. Zero copie in CPU se il fotogramma è NV12 a 8 bit; una conversione di
+colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
+
+| la prescrizione diceva | esito `[M]` 13 agosto |
+|---|---|
+| ⭐ dipingere **dentro la callback del decodificatore**, non su `requestAnimationFrame` | ✅ **regge, ed è la metà che vale** |
+| ⭐ la **decodifica** fuori dal thread principale | ✅ **VALE, ed è misurato**: `[M]` **−3,44 ms** (7,17 → 3,73) |
+| ⛔ la **tela** fuori dal thread principale | ⛔⛔ **AFFONDA IL CONTO**: `[M]` **+17,6 ms** sul disegno, più **+10,2** sulla consegna dello stream |
+| il canvas 2D **desincronizzato** | ⚠ **non è mai stato acceso nel prodotto**: `src/pagina.html:407` ha `desynchronized` **spento** `[R]`, e la strada per accenderlo (`?tela=desincronizzata`) **non esiste** — non è un interruttore spento, è un interruttore che non c'è. ⇒ Non è una prescrizione respinta: è una prescrizione **mai eseguita**, e il guadagno resta `[?]` |
+
+> ### ⛔⛔ Il worker: attuato, misurato — e **sbagliato A METÀ, non per intero**
+>
+> *`[M]` stessa macchina, stessa sessione, **stessa pagina** (cambia solo l'interruttore), stesso
+> strumento rigirato per il «prima» e per il «dopo». Due giri di «prima», per sapere quanto vale il
+> rumore: **5,9 ms**, e l'effetto lo supera di **cinque volte**. Errore d'orologio ±0,63-0,65 ms.*
+>
+> | ritardo disegno → vetro | n | p05 | **mediana** | p95 | p99 |
+> |---|---|---|---|---|---|
+> | PRIMA-A (thread principale) | 432 | 58,85 | **73,66** | 99,53 | 218,46 |
+> | PRIMA-B (ripetuto) | 492 | 53,93 | **67,79** | 88,51 | 98,16 |
+> | ⛔ **DOPO (worker)** | 483 | 84,48 | ⛔ **101,30** | 126,13 | 157,82 |
+>
+> ⇒ **+27,6 / +33,5 ms di mediana.** ⛔ Ma il totale nasconde la cosa che serve, e la scomposizione
+> la mostra:
+>
+> | tratto (mediana, ms) | PRIMA-A | PRIMA-B | DOPO | Δ |
+> |---|---|---|---|---|
+> | stream completo → `decode()` | 0,07 | 0,06 | **10,23** | ⛔ **+10,2** |
+> | ⭐ **la decodifica** | **7,17** | 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
+> | richiamo → disegno finito (`drawImage` ×2) | 9,63 | 9,11 | **27,19** | ⛔ **+17,6** |
+> | **somma dei tre** | 16,87 | 15,30 | **41,15** | **+24,3 / +25,9** |
+>
+> ⭐⭐ **⇒ §6.1 non è sbagliata per intero: è sbagliata a metà. Vale la DECODIFICA, non la TELA.**
+> Il decodificatore **consegna prima quando non contende** — `[M]` **−3,44 ms**, ed è un guadagno
+> vero, non un arrotondamento. È la **tela** che affonda il conto, e da sola vale **+17,6**.
+> ⇒ ⛔ **La riga utilizzabile non è *«il worker è sbagliato»***, che sarebbe solo una porta chiusa:
+> è ***«la decodifica sì, la tela no»***, che dice a chi verrà dove mettere il confine.
+>
+> ### E i fotogrammi dipinti, obbligatori accanto (`LEZIONI.md` §6.2)
+>
+> | | catena vera (P7) | saturazione 1080p | saturazione 480p |
+> |---|---|---|---|
+> | thread principale | 22,8-24,2 /s | **127,6** /s | **230,6** /s |
+> | worker | **26,3** /s | **33,9** /s (−73,4 %) | **56,4** /s (−75,5 %) |
+>
+> ⚠⚠ **Le due grandezze dicono cose OPPOSTE**: sulla catena vera il worker dipinge **di più** (è la
+> coda), ma a saturazione il tetto **crolla di tre quarti**. Chi ne guardasse una sola leggerebbe
+> metà del fatto — e **quale metà dipende da quale grandezza ha scelto per prima**.
+>
+> ### ⭐⭐ Il meccanismo, ed è la scoperta che cambia una REGOLA
+>
+> Costo extra per fotogramma **13,4 ms a 480p** e **21,7 ms a 1080p**; e a 480p il worker si ferma a
+> **56,4 dipinti/s ≈ il quadro dei 60 Hz**, mentre il thread principale ne fa **230,6**.
+> ⇒ ⛔ **`transferControlToOffscreen` impegna la tela al ritmo del quadro: è un
+> `requestAnimationFrame` implicito.** Il worker prescritto da questo paragrafo reintroduce **in
+> silenzio** proprio il salto di quadro che il paragrafo vieta a voce alta.
+> ⛔⛔ **La prescrizione conteneva la propria smentita, e nessuna rilettura del documento poteva
+> accorgersene senza misurarla.**
+>
+> ⇒ ⛔ **Il divieto si estende AL MECCANISMO, non alla parola.** Non basta «non chiamare
+> `requestAnimationFrame`»: **qualunque strada che consegni al ritmo del quadro è vietata allo
+> stesso modo**, e chi la prende paga il quadro senza averlo mai nominato.
+>
+> ### ⏳ `[?]` E questo va letto ACCANTO ai numeri, non in fondo
+>
+> ⛔⛔ **Tutto è misurato su Xvfb, in software, SENZA GPU**, e la penale è in gran parte
+> **sincronizzazione al quadro**. ⇒ **Su hardware vero il conto va rifatto PRIMA di seppellire
+> §6.1**: questi numeri chiudono la strada per oggi, **non per sempre**.
+> ⏳ `[?]` E un `WebTransport` aperto **dentro** il worker toglierebbe i **+10,2** del tratto della
+> consegna, ⛔ **non** i **+17,6** del disegno — che sono quelli che decidono.
+>
+> ⇒ ⭐ **Il codice resta in albero dietro `#video=worker`, SPENTO**, proprio perché il giorno della
+> GPU vera il numero si rifà senza riscrivere niente (`DECISIONI.md` §2.8).
+> ⚠ **E l'interruttore legge il FRAMMENTO, non la stringa di ricerca**, ed è una conseguenza di un
+> difetto: `?video=worker` prende **404** (`src/pagina.c:243`). La sintassi col `?` tornerà valida
+> quando quel difetto sarà curato.
+
+⚠ *La riga «e impone la forma della pagina: il video vive nel worker, l'input nel thread
+principale» **cade con il worker**: oggi video e input stanno tutti e due nel thread principale, e
+il confine che questo paragrafo diceva di dover decidere subito non esiste più. ⛔ Se il worker
+tornasse, torna anche quel confine — ma dovrà tornare con una misura nuova, non con questa riga.*
 
 ### 6.2 Il pezzo che non è nostro e si sente lo stesso
 
@@ -363,6 +440,15 @@ a un elemento `<video>` per prendere il percorso **overlay**, che salta il compo
 sotto un interruttore spento, non scritta per prima. ⚠ Xpra e noVNC restano sul canvas, e **nessuno
 dei due dichiara un numero di ritardo**.
 
+> ⛔⛔ **E su Xvfb questo pezzo cieco NON ESISTE** — *13 agosto 2026, e vale per ogni banco browser
+> del progetto.* I 16-40 ms sono il tempo fra il disegno e il **pixel acceso su uno schermo**. Su
+> Xvfb non c'è schermo, non c'è scanout, e **`requestAnimationFrame` non gira mai**: `[M]` **0
+> quadri in 3 secondi**, con e senza GPU, con `visibilityState` a «visible».
+> ⇒ ⛔ **La stima 16-40 ms si dichiara accanto ai numeri destinati all'utente, e NON accanto ai
+> numeri del banco.** Sommarla a una misura presa su Xvfb gonfia il totale di un pezzo che lì non
+> c'è; toglierla da un numero che si promette all'utente lo sgonfia dello stesso pezzo. È lo stesso
+> numero, e i due errori hanno segno opposto.
+
 ### 6.3 Il banco, e il suo pezzo cieco
 
 L'anello di `DECISIONI.md` §2.6 si costruisce così: `t0` prima di spedire, `t1` come **prima riga**
@@ -374,10 +460,12 @@ GPU, e falserebbe la misura che sta prendendo.
 |---|---|
 | ⛔ **P1, il controllo decisivo** | il server ritarda di **N millisecondi noti**, e la mediana **deve salire di esattamente N**. Un banco che non lo fa non sa di misurare |
 | ⛔ **P2 e P3, e P3 era caduto** | **P2**: il rilevatore trova il colore **che c'è**. ⛔ **P3**: **non** trova quello che **non c'è**. *S4 §4.2: «se dice sempre sì, si sta misurando zero e si è felici a torto» — e un rilevatore che dice sempre «ho visto la marca» **passa anche P1**, perché i N ms si sommano identici. Ripristinato dal rilievo **R3.1***, 9 ago |
-| ⛔ **P5, il fuori ordine** | i fotogrammi arrivano su stream indipendenti: un anello che non lo regge misura la coda invece del ritardo |
+| ⛔ **P5, il fuori ordine** | i fotogrammi arrivano su stream indipendenti: un anello che non lo regge misura la coda invece del ritardo. ⛔ **13 agosto: P5 NON È STATO ESEGUITO, e adesso lo dice.** Dopo tre iniettori `scavalcati = 0` — e *«zero fuori ordine»* non è «l'anello regge», è **«il fenomeno non si è presentato»** (`LEZIONI.md` §1.9). Prima il banco lo dichiarava **verde** |
+| ⭐ **P5 — e la causa del fuori ordine è misurata** | ⛔ **non nasce (solo) dalla rete: nasce dalla DIMENSIONE del fotogramma.** `stream_video` scatta al **completamento** dello stream ⇒ l'ordine d'arrivo è **l'ordine delle dimensioni**, non quello di partenza, e **una chiave grossa viene scavalcata dai delta** che le partono dietro. ⚠ E il conto lo paga il protocollo: uno scavalcamento **costa una chiave** (`RCP.md` §5.2, §6.2 — «la regola dell'ordine si applica prima di quella della misura»). ⇒ Un iniettore che ritarda i pacchetti non riproduce il fenomeno: **lo riproduce chi cambia le dimensioni** |
 | ⛔ **P6, la grana dell'orologio** | senza le due intestazioni di isolamento fra origini, su Firefox e Safari i cronometri cadono su una griglia da **1 ms** — su un tetto di **50**. ⚠ E `SPECIFICHE.md` §11.5 ne fa un **vincolo di prodotto**, non una taratura del banco (O11) |
 | ⛔ **P7, il ritmo come controllo del percorso** | il ritmo consegnato dice se si sta misurando la strada che si crede |
-| ⛔ **il pezzo cieco** | la misura finisce alla callback; il pixel si accende `[?]` 16-40 ms dopo, e **nessuna API JavaScript lo vede**. Si stima, e **la stima si dichiara accanto a ogni numero** invece di far finta che il numero sia il totale |
+| ⛔ **dove finisce la misura** | ⛔ **al disegno finito, non al richiamo del decodificatore.** *Corretto il 13 agosto 2026: la prima stesura chiudeva al richiamo, regalandosi **~11 ms** nostri e misurabili su un tetto di 50. Il numero è salito da **63,8 a 74,6** e lo si è lasciato salire.* ⇒ Il confine si sposta **nella direzione scomoda**, o il metro lavora per chi lo tiene |
+| ⛔ **il pezzo cieco** | la misura finisce al disegno; il pixel si accende `[?]` 16-40 ms dopo, e **nessuna API JavaScript lo vede**. Si stima, e **la stima si dichiara accanto a ogni numero** invece di far finta che il numero sia il totale. ⛔⛔ **Ma su Xvfb quel pezzo NON esiste** (§6.2): la stima vale per lo schermo dell'utente, **non per il banco** |
 | ⚠ **e una misura singola non vale nulla** | si lavora **a distribuzioni**, non a campioni |
 
 ---
@@ -426,8 +514,8 @@ voci che toccano una decisione.*
 | ⏳ ~~`[?]` la durata dell'eccezione su Chrome~~ — **la misura è AVVIATA** | ⛔ **non era `[?]`, e questo documento si contraddiceva**: §3.2 la dà `[R]` da `kCertErrorBypassExpirationInSeconds = 604800`, cioè **sette giorni**. *Corretto la notte del 9 agosto 2026, rilievo **R4.14**: chi leggeva §8 pianificava una misura per **sapere** il numero, chi leggeva §3.2 per **confermarlo**, e a un banco che deve aspettare una settimana la differenza cambia la soglia di pazienza.* Restava da misurare **quanto quel `[R]` regga sul campo** — ⭐ **e la misura è in moto dal 10 agosto 2026, 21:10:01 UTC**, su **Chrome 151.0.7922.108** con un profilo persistente: `banchi/01-s1b-eccezione.sh`, registro `banchi/01-s1b-stato.jsonl`, esiti in `web/rapporti/S-esiti-sonda.md` §2. ⭐ **E l'11 agosto 2026 la misura ha risposto, senza aspettare il verdetto del 17**: `01-s1b-eccezione.sh scavalca`, **6 controlli su 6**. ⚠ L'obiezione scritta qui sopra era giusta — *«la contabilità di Chrome non è il comportamento»* — ed è **proprio quella** che il giro nuovo chiude: su una **copia** del profilo la scadenza è stata riscritta **a ieri**, e la pagina **non si apre più**; riscritta a **+30 giorni** (stessa manomissione, segno opposto) si apre ancora. ⇒ Chrome **onora** l'istante che si segna. E la scadenza riletta **dopo una visita** è identica: **non si rinnova** — la domanda che l'orologio dei sette giorni non poteva porre, perché la pagina la visita tutti i giorni. ⇒ **All'utente si dice «una volta a settimana»**. ⏳ Il 17-18 agosto resta come conferma indipendente: il profilo vero non è stato toccato |
 | `[?]` i 10 bit fino allo schermo | §1.2 A — e **non è verificabile da JavaScript** |
 | `[?]` la Keyboard Lock su DeX, e la PWA su Android | §5.5 |
-| `[?]` i 16-40 ms del compositore | §6.2 — nessuna API li espone |
-| `[?]` quanti stream al secondo regge ciascun browser | `RCP.md` §2.3 — il video ne consuma uno per fotogramma |
+| ⛔ ~~`[?]` i 16-40 ms del compositore~~ — **resta aperta, ma NON dove si credeva** | §6.2 — nessuna API li espone, e questo non è cambiato. ⛔ **Quel che è cambiato è dove valgono**: `[M]` 13 agosto, **su Xvfb `requestAnimationFrame` non gira mai** — **0 quadri in 3 secondi**, con e senza GPU, `visibilityState` «visible». Senza schermo non c'è scanout ⇒ **su Xvfb il pezzo cieco non esiste**. La stima si dichiara accanto ai numeri dell'**utente**, non accanto a quelli del banco |
+| ⏳ ~~`[?]` quanti stream al secondo regge ciascun browser~~ — ⭐ **un numero c'è, per un browser solo** | `RCP.md` §2.3 — il video ne consuma uno per fotogramma. `[M]` 13 agosto, **Chrome 151 su Linux**: **60,0** fotogrammi dipinti al secondo offrendone 60 (cioè 60 stream/s, senza perdite), e **127,6/s** come **tetto a saturazione**. ⛔ **Resta `[?]` su Firefox e su Safari**, ed è la stessa `[?]` di `SPECIFICHE.md` §11.5: i mattoni stanno su due motori, i numeri su uno |
 
 ---
 

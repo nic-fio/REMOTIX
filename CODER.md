@@ -122,6 +122,26 @@ E la banda dichiarata è un **pavimento, non un budget**. Si spende, non si risp
 la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
 (`LEZIONI.md` §7.2 — ottimizzare nella direzione sbagliata è peggio che non ottimizzare.)
 
+> ### ⛔⛔ DOVE FINISCE LA MISURA — *13 agosto 2026, e vale 11 ms su 50*
+>
+> **La misura del ritardo finisce al DISEGNO FINITO, non al richiamo del decodificatore.**
+>
+> ⛔ Non è una sfumatura di metodo: la prima stesura del metro chiudeva al **richiamo**, e si
+> regalava **~11 ms** — nostri, misurabili, e dentro il tetto. Spostato il confine, il numero è
+> salito da **63,8 a 74,6 ms** e lo si è lasciato salire.
+>
+> ⇒ ⭐ **La regola per chi scrive un metro: il confine si sposta nella direzione SCOMODA.** Ogni
+> confine ha due posizioni difendibili, e quella che favorisce chi misura si sceglie da sé se
+> nessuno la nomina. Si nomina, e si sceglie l'altra.
+>
+> ⚠ **E si dichiara che cosa resta fuori anche quando non si può misurare**: fra il disegno finito
+> e il pixel acceso passano `[?]` **16-40 ms** che nessuna API espone. Si stimano e si scrivono
+> accanto al numero — ⛔ **ma non su Xvfb, dove quel pezzo non esiste** (`web.md` §6.2).
+>
+> ⛔ **Il numero misurato, e il tetto è sforato**: `[M]` mediana **74,58 ms** cattura → vetro, che
+> con il pezzo cieco fanno **90-115 ms** sullo schermo dell'utente. ⛔⛔ **E il 78 % è nostro**: a
+> Mutter va il 22 %, il resto sta quasi tutto nel codificatore in software (`SPECIFICHE.md` §3.2).
+
 ---
 
 ## 2. Gli invarianti da proteggere

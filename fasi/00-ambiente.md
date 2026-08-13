@@ -32,7 +32,7 @@ di v1, che sono state buttate tutte (`LEZIONI.md` §1.1).
 | | |
 |---|---|
 | **lo strumento** | `v1/banchi/banco-compositori/misura-cattura` — consumatore PipeWire che conta i fotogrammi e dice tipo di buffer, danno, buffer riciclati, se il disegno era finito, e la distribuzione degli intervalli. Sa montare da sé lo schermo virtuale di Mutter |
-| **la scena** | ⛔ **dichiarata, e in movimento a ogni ridisegno**: `weston-simple-egl -f -o` a schermo intero, opaco, che ridisegna a ogni *frame callback* del compositore. Non una scena ferma, non una mossa a colpi di tastiera (`LEZIONI.md` §1.1) |
+| **la scena** | ⛔ **dichiarata, e in movimento a ogni ridisegno**: a schermo intero, opaca, che ridisegna a ogni *frame callback* del compositore. Non una scena ferma, non una mossa a colpi di tastiera (`LEZIONI.md` §1.1). ⚠ *Qui era nominato `weston-simple-egl -f -o`: `[M]` **il 13 agosto 2026 non è installato**, e dalla fase 3 la scena è la nostra — `banchi/03-scena.c`, che porta una marca e **conta le proprie attese***. ⛔ **E c'è un terzo requisito, imparato in fase 3**: la scena deve stare **sul monitor che si sta catturando** |
 | **il controllo che dice di chi è il tetto** | ⛔ **quanto disegna il client**, contato accanto a quanto consegna la cattura. Senza, un tetto della scena viene attribuito al compositore — e viceversa |
 | **la durata** | ⚠ **almeno 300 fotogrammi, e si scartano i primi**: i primi dieci sono l'avvio, quando tutto viene ridipinto, e su di essi il rapporto si ribalta (`LEZIONI.md` §1.4) |
 
@@ -123,7 +123,7 @@ congedo è **`Logout(2)`**, non `systemctl --user stop`.
 | Mutter / gnome-shell | 48.7 (Trixie) | ✅ **48.7**, `gnome-session` 48.0 — le versioni che `gnome.md` ha studiato | 9 ago |
 | `nicfio` nei gruppi | `render`, `video` | ✅ `nicfio sudo video render` | 9 ago |
 | `libei1` | presente | ✅ 1.3.901 | 9 ago |
-| `weston-simple-egl` per la scena | presente | ✅ `/usr/bin/weston-simple-egl` | 9 ago |
+| `weston-simple-egl` per la scena | presente | ⛔ **ASSENTE il 13 agosto 2026** — `[M]`. Era ✅ `/usr/bin/weston-simple-egl` il 9 ago, ed è sparito: **il rootfs sta in RAM** e la macchina che si rimette da sé non si rimette *completa* (`LEZIONI.md` §2.5-bis). ⇒ La scena della fase 3 è **la nostra** (`banchi/03-scena.c`), e non dipende da un pacchetto | 9 ago → **13 ago** |
 
 ### `vainfo` — la `[?]` del budget del codificatore, chiusa
 
@@ -155,6 +155,14 @@ controllo del bitrate proprie, ed è il punto esatto in cui v1 si è fatto male 
 **Scena dichiarata**: `weston-simple-egl -f -o`, schermo intero, opaco, un commit per ogni
 ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `RecordVirtual`,
 20 secondi di misura, 7 di scarto. GNOME 48.7 headless, DMA-BUF, BGRx, 60 dichiarati.
+
+> ⛔ *13 agosto 2026, e va letto prima di rifare questa misura: **la scena qui nominata non è più
+> disponibile** (`weston-simple-egl` non è installato), e **il numero che questo controllo positivo
+> riproduceva — i ~37 di Mutter — non si riproduce**. Non è un difetto del banco: alla cadenza che
+> gli si chiedeva Mutter consegna **31,5**, e rinegoziando la sola cadenza (monitor 120, freno 90)
+> ne consegna `[M]` **61,4**. Il 37 era il resto di una **divisione troncata** (`gnome.md` §8.2).*
+> ⇒ **Il controllo positivo del progetto va rifatto contro la legge, non contro il numero**, e con
+> la scena della fase 3 — che **conta le proprie attese** e dichiara se ha corso a vuoto.
 
 | Che cosa | Atteso | Misurato | Esito | Data |
 |---|---|---|---|---|

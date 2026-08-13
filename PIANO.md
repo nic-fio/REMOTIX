@@ -227,6 +227,12 @@ fotogrammi al secondo, KWin ~60. Non è un risultato di prodotto: è il **contro
 tutto il progetto**. Se il banco non sa riprodurre un numero che sappiamo vero, ogni misura futura
 è sospetta.
 
+> ⛔ *13 agosto 2026, e va letto insieme alla riga qui sopra: **il 37 non si riproduce**. Alla
+> cadenza che chiedevamo Mutter consegna **31,5**; rinegoziando la sola cadenza, **61,4**. Non è il
+> banco che sbaglia: il 37 non era una proprietà del compositore ma il resto di una divisione
+> troncata (`gnome.md` §8.2). ⇒ Il controllo positivo di questa fase va rifatto **contro la legge**,
+> non contro il numero.*
+
 **Il banco**: `v1/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
 scene con `ffmpeg -f lavfi -i testsrc2`.
 
@@ -435,17 +441,30 @@ qualcun altro.
 
 **I numeri da raggiungere**: ritardo ≤ 50 ms, traguardo 40 (`SPECIFICHE.md` §3.2).
 
-⚠ **Attesa dichiarata in anticipo**: su GNOME il traguardo dei 40 ms probabilmente **non si
-raggiunge**, per il muro dei 37 fotogrammi di Mutter. Se la misura lo confermasse, non è un difetto
-nostro — ed è una ragione in più per la fase 10.
-
-⭐ **Ma prima di dichiararlo si prova la cadenza disaccoppiata**, ed è la prima cosa da fare in
-questa fase perché costa **tre celle e zero righe di prodotto**: `maxFramerate` fa da freno alla
-cattura **e** da frequenza al monitor virtuale, e due orologi allo stesso numero battono fra loro
-`[R]` (`LEZIONI.md` §3, il riquadro dei sei decimi; misura M3 di `gnome.md` §13). Si negozia alto
-e poi si rinegozia **la sola cadenza**, a monitor fermo. Se riesce, GNOME entra nel traguardo e
-questa riga va riscritta; se non riesce, il muro diventa `[M]` invece di `[?]` — che è un
-guadagno comunque, perché oggi è una stima che tre documenti citano come se fosse un fatto.
+> ## ⛔⛔ 13 agosto 2026 — l'esperimento è FATTO, e l'esito non era fra i due previsti
+>
+> *Qui stava scritto: «su GNOME il traguardo dei 40 ms probabilmente non si raggiunge, per il muro
+> dei 37 fotogrammi di Mutter; se la misura lo confermasse non è un difetto nostro — ed è una
+> ragione in più per la fase 10». E accanto: «prima di dichiararlo si prova la cadenza
+> disaccoppiata… se riesce, GNOME entra nel traguardo; se non riesce, il muro diventa `[M]`».*
+>
+> ⛔ **L'esito non è «riesce» né «non riesce». È: «riesce con un numero diverso, e il prodotto non
+> ci arriva» — e intanto il ritardo è stato misurato altrove, e la colpa è nostra.** Le tre metà:
+>
+> | | |
+> |---|---|
+> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms**. M3 di `gnome.md` §13 è **chiusa** |
+> | ⛔ **ma la causa scritta era sbagliata** | non è un **battimento** fra due orologi: è una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs. Legge su **13 punti**, 8 confermano, 0 smentiscono. ⛔ E i «sei decimi» **non si riproducono**: la cella bassa dà **0,50 pulito** |
+> | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h:82`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
+>
+> ⛔ **E il ritardo, che è il numero per cui la fase esisteva, SFORA**: `[M]` mediana **74,58 ms**
+> cattura → vetro, pezzo cieco 16-40 ms **escluso** ⇒ sullo schermo dell'utente **90-115 ms**,
+> contro un tetto di 50. ⛔⛔ **Ma il muro non è di Mutter**: 16,66 su 74,6 è il **22 %**, il
+> **78 % è nostro**, e ~39 ms stanno nel tratto cattura → primo byte, dominato dal **codificatore
+> in software**. ⇒ La cura è la **fase 8**, non la 10 (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
+>
+> ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
+> tolgono un ostacolo; il numero lo fa il ritardo.
 
 ---
 
@@ -641,9 +660,33 @@ guardato (I6).
 
 **L'utente vede**: la stessa cosa su Plasma.
 
-⭐ **E qui si insegue il numero desiderato**: KWin consegna 60 fotogrammi al secondo dove Mutter ne
-dà 37 `[M]`. La fase 10 non è solo «servire più desktop»: è la strada per i 60 a 4K e per il
-traguardo dei 40 ms.
+> ## ⛔⛔ La motivazione PRESTAZIONALE di questa fase è caduta — *13 agosto 2026*
+>
+> *Qui stava scritto: «E qui si insegue il numero desiderato: KWin consegna 60 fotogrammi al secondo
+> dove Mutter ne dà 37 `[M]`. La fase 10 non è solo "servire più desktop": è la strada per i 60 a 4K
+> e per il traguardo dei 40 ms».*
+>
+> ⚠⚠ **La fase resta, e resta giusta: è «il secondo desktop», ed è la ragione per cui era stata
+> messa nel piano.** Quel che si toglie è **la promessa sul ritardo**, che si appoggiava a due
+> numeri e nessuno dei due regge:
+>
+> | quel che la riga diceva | che cosa dice la misura del 13 agosto |
+> |---|---|
+> | «Mutter ne dà **37**» | ⛔ **non si riproduce**. Alla cadenza che chiedevamo Mutter consegna **31,5** (mediana 33,31 ms); rinegoziando la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** — cioè **quanto KWin**. Il 37 non era una proprietà del compositore: era il resto di una divisione troncata (`gnome.md` §8.2) |
+> | «è la strada per il traguardo dei **40 ms**» | ⛔ **no.** Il ritardo misurato è `[M]` **74,58 ms** cattura → vetro, e Mutter ne vale il **22 %** (16,66 su 74,6). Il **78 % è nostro**, ~39 ms nel tratto cattura → primo byte, **dominato dal codificatore in software**. ⇒ Cambiare compositore **lascerebbe intatti i 39 ms di codifica** |
+>
+> ⇒ ⛔ **Chi arriva a questa fase aspettandosi che porti il ritardo dentro il tetto resterà deluso**,
+> e va scritto qui perché nessuno ci conti sopra pianificando: il ritardo si cura **sulla codifica**,
+> ed è la **fase 8** (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
+>
+> ⏳ `[?]` **Resta aperto e non è stato misurato** quanto scenderebbe il numero con un codificatore
+> **hardware**: è la domanda della fase 8, non di questa.
+
+⭐ **E qui si guadagna comunque una cosa che vale**: KWin consegna **58,9** fotogrammi al secondo
+`[M]` senza che gli si debba rinegoziare niente, mentre su GNOME lo stesso risultato richiede una
+cadenza che **il prodotto oggi non sa chiedere** (`DECISIONI.md` §2.5-bis). ⚠ È un guadagno sul
+**ritmo**, non sul **ritardo**: sono due grandezze diverse, e `LEZIONI.md` §6.2 esiste perché sono
+già state confuse.
 
 **Si riusa**: `kwin.c` (822 righe), `appunti_wlr.c` (796).
 

@@ -313,15 +313,45 @@ ferma `lock()` ma **non** `activate()` — la leva vera è `lock-enabled=false`.
 (stesso fd), primo `SPA_PARAM_Buffers` con `metaType` MANDATORY; e i buffer vanno alzati (Mutter ne
 propone fino a 16; i nostri quattro li chiediamo noi).
 
-### 8.2 ⭐ La cadenza: perché sei decimi
+### 8.2 ⭐ La cadenza: ⛔ **non un battimento — una quantizzazione**. *Misurato il 13 agosto 2026*
 
 `framerate` è un **valore fisso `0/1`** — ecco perché una cadenza fissa non negozia. E il
 `maxFramerate` fa **due cose insieme**: è il freno della cattura **ed è la frequenza del monitor
-virtuale**. Stesso numero ⇒ battimento ⇒ 0,61.
+virtuale**.
 
-⭐ **`ensure_virtual_monitor` esce prima se la misura non cambia**: negoziare alto e poi rinegoziare la
-sola cadenza **dovrebbe disaccoppiarli**. È un esperimento da tre celle e **zero righe di prodotto**, e
-se funziona porta i 60 su GNOME.
+⛔ *Questo paragrafo diceva: «Stesso numero ⇒ **battimento** ⇒ 0,61». **È sbagliato**, e la misura
+della fase 3 (step 1, M3) lo smentisce in tutt'e due le metà: né il battimento né lo 0,61.*
+
+⭐ **`maxFramerate` non è un tetto continuo: è una GRIGLIA.** Il freno calcola
+`min_interval_us = 10⁶/maxFramerate` **troncato a intero** — 16666 per 60 — e lo mette contro un
+tick da **16666,67 µs**. Chi cade sotto la griglia **perde un tick intero**, e da lì il numero
+consegnato. `[M]` legge verificata su **13 punti**: 8 la confermano, **0 la smentiscono**.
+
+| monitor | freno | consegnati | mediana | p99 |
+|---|---|---|---|---|
+| 60 | 60 | 31,5 | 33,31 ms | 35,53 |
+| 120 | 60 | 46,13 | 24,12 ms | 29,23 |
+| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 |
+
+⛔ **E i «sei decimi» non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**, che è
+quel che una griglia produce e un battimento no. ⚠ Riscontro incrociato con una seconda scena
+indipendente: concordano **entro il 4 %**, attese **0** ovunque.
+
+⭐ **`ensure_virtual_monitor` esce prima se la misura non cambia**, e il disaccoppiamento
+**funziona**: negoziare alto (monitor 120) e rinegoziare la sola cadenza (freno 90) porta GNOME a
+**61,4**, cioè quanto KWin. È costato tre celle e **zero righe di prodotto**, come previsto.
+
+⛔⛔ **Ma il prodotto oggi non sa chiederlo, e va scritto qui**: `MOVIMENTO_FPS 60` è una costante di
+compilazione (`src/figlio.c:1465`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual`
+non prende la frequenza** (`src/mutter.h:82`) — i quattro monitor virtuali sono tutti
+**1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
+
+⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Misurato
+il ritardo cattura → vetro (mediana **74,58 ms**, `SPECIFICHE.md` §3.2), il disegno → cattura di
+Mutter pesa **16,66 ms su 74,6, cioè il 22 %**: il **78 % è nostro**, e ~39 ms stanno nel tratto
+cattura → primo byte in pagina, dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il
+figlio del prodotto consegna **23,93 fotogrammi/s con ZERO attese a vuoto**: **non aspetta mai
+Mutter**. Alzare la cadenza della cattura non sposterebbe il ritardo.
 
 ### 8.3 Il resto
 
@@ -478,7 +508,7 @@ a ~10 cicli da Mutter: **non è gratis né dalla fase wlroots né dal lavoro su 
 |---|---|---|
 | **M1** | ⛔ il nostro regolatore regge `queueDepth == 0xFFFFFFFF` | §11: un desktop che si pianta per sempre. Si prova con un client strumentato, non aspettando |
 | **M2** | headless sì/no contro `inhibit_remote_access` | §4: è la precondizione che oggi abbiamo **per accidente** |
-| **M3** | ⭐ la cadenza disaccoppiata (negoziare alto, rinegoziare la sola cadenza) | §8.2: tre celle, zero righe, e potrebbe portare i 60 su GNOME |
+| ✅ **M3** | ~~la cadenza disaccoppiata~~ — ⭐ **CHIUSA il 13 agosto 2026, e riesce** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **61,4 consegnati** (60,04), mediana **16,66 ms**. ⛔ **E la causa scritta era sbagliata**: quantizzazione sui tick, non battimento. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
 | **M4** | `SPA_META_SyncTimeline` con acquire/release, **oppure** trattenere il `pw_buffer` | §8.1: è la caccia della fase 9 nel posto giusto |
 | **M5** | `SPA_META_Cursor` + `cursor-mode=2` → cursore RDP nativo | §5.2: oggi il puntatore non arriva da nessuna parte |
 | **M6** | il profilo dconf in `$XDG_RUNTIME_DIR` con i lock, e **ogni chiave riletta** | §6: paga §1.1 punti 3, 4 e 5 insieme |

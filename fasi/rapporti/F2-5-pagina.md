@@ -426,6 +426,14 @@ giudizio.
    buffer che il compositore può avere già scambiato. Un'ambiguità nel punto in cui sta la misura
    vale meno di un millisecondo di ritardo in un banco. ⚠ Va detto perché nessuno legga questo file
    come «la forma che il prodotto avrà».
+   > ⛔ *13 agosto 2026 — e la seconda metà di questa riga è caduta: **nemmeno il prodotto ha la tela
+   > desincronizzata.** `src/pagina.html:407` ha `desynchronized` **spento** `[R]`, e la strada per
+   > accenderlo (`?tela=desincronizzata`) **non è mai stata raggiungibile**: `src/pagina.c:243` manda
+   > in **404** qualunque percorso con un `?`. ⇒ ⛔ Non è «un interruttore spento», è **un interruttore
+   > che non c'è**, e la differenza conta: un interruttore spento si accende per misurare, uno che non
+   > esiste no. ⚠ Non visto da nessuno perché i banchi servono la pagina da un `http.server` di
+   > Python, che il `?` lo ignora. ⇒ Il guadagno della tela desincronizzata resta `[?]`: **non è mai
+   > stato misurato**.*
 2. **Le sequenze hanno 6 fotogrammi (1 chiave + 5 delta)** mentre la fase 2 ne consegna **uno**.
    Ragione: cinque delta in più distinguono «ha decodificato» da «ha decodificato il primo e si è
    fermato», e `bframes=0` perché un fotogramma B uscirebbe in un ordine diverso da quello di

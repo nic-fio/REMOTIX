@@ -60,7 +60,7 @@ stesso fraintendimento, questo confronto lo vedrebbe e nessun altro banco della 
 | **M3** | PSNR-Y del **blocco 64×64 peggiore** | ≥ **30 dB** | un blocco è 1/506 dell'immagine: può essere spazzatura pura e spostare il PSNR globale di **0,03 dB**. La media lo annega |
 | **M4** | errore quadratico fra canali, **sui tre riquadri a luminanza uguale** | il proprio dev'essere ≥ **4×** migliore del miglior altro | nessuna soglia assoluta, è un confronto. ⛔ E si misura **solo dove il segnale esiste** (vedi sotto) |
 | **M5** | guadagno e scarto per canale (minimi quadrati) | guadagno ∈ [0,98; 1,02] · scarto ≤ 2/255 | prende la gamma limitata letta come piena, che è un guadagno di **255/219 = 1,164** — dodici volte fuori soglia — e la matrice sbagliata, che sposta gli scarti in versi diversi |
-| **M6** | PSNR(pagina, cattura ora) − PSNR(pagina, cattura prima) | ≥ **+3 dB** | relativo. ⛔ Pretende che **la scena sia cambiata**: `CODER.md` §3.2 diventa una condizione di validità invece di un consiglio |
+| **M6** | PSNR(pagina, cattura ora) − PSNR(pagina, cattura prima) | ≥ **+3 dB** | relativo. ⛔ Pretende che **la scena sia cambiata**: `CODER.md` §3.2 diventa una condizione di validità invece di un consiglio. ⭐ **13 agosto 2026: da `[?]` a `[M]`** — in fase 3 i giri precedenti **ci sono**, e M6 è stato misurato. ⛔ **Col limite della catena scritto accanto**: mancano la **cattura PipeWire** e la **tela del browser riletta**, quindi è misurato **su una catena, non su quella intera** |
 | **M7** | i **due bit bassi** del piano Y decodificato, **sulle zone sfumate** | casella più piena ≤ **0,50** e tutte e quattro ≥ 0,05 | 0,50 è **il confine esatto** fra «almeno tre caselle portano informazione» e «al massimo due», che è la firma aritmetica del troncamento |
 | **M8** | l'identità del fotogramma dichiarata dalla pagina (FIN / RESET / giro) | nessun RESET su un fotogramma dipinto | cucitura F2.4. ⛔ Anello **debole per costruzione**: crede a chi è sotto esame, e vale solo insieme al registro di F2.4 |
 
@@ -75,7 +75,7 @@ colonna di mezzo dice quanti guasti un PSNR da solo promuoverebbe.
 | ⛔ **cattura E pagina nere** | ⛔ **NO — PSNR infinito** | **M-V** | **2** |
 | spostato di **una riga** | ⛔ solo se la scena ha alta frequenza | **M0** | 1 |
 | spostato di **una colonna** | idem | **M0** | 1 |
-| del **giro precedente** | ⛔ solo se la scena è cambiata | **M6** | 1 |
+| del **giro precedente** | ⛔ solo se la scena è cambiata | **M6** — ⭐ `[M]` **13 ago**, col limite della catena accanto | 1 |
 | **8 bit** al posto di 10 | ⛔ **NO — resta sopra 55 dB** | **M7** | 1 |
 | **piani del colore scambiati** | ⛔ **NO sulla luminanza** | **M4** | 1 |
 | gamma limitata letta come piena | in parte | M5 | 1 |
@@ -181,7 +181,7 @@ forma di `01-b12-guasti.py`: `nome`, `comando`, `atteso_sano`, `guasto_da_innest
 | `F2.6/nero-doppio` | 0, con M-V fra gli OK | **cattura e pagina** nere | **2**, marca **M-V a monte** |
 | `F2.6/riga` | 0, con M0 fra gli OK | scorrimento di 1 riga | 1, **M0** |
 | `F2.6/colonna` | 0, con M0 fra gli OK | scorrimento di 1 colonna | 1, **M0** |
-| `F2.6/precedente` | 0, con M6 fra gli OK | il fotogramma del giro prima | 1, **M6** |
+| `F2.6/precedente` | 0, con M6 fra gli OK | il fotogramma del giro prima | 1, **M6** — ⭐ **eseguito sulla catena vera il 13 ago**: da `[?]` a `[M]`, ⛔ **ma senza la cattura PipeWire e senza la tela del browser riletta** |
 | `F2.6/otto-bit` | 0, con M7 fra gli OK | i 2 bit bassi del piano Y spenti | 1, **M7** |
 | `F2.6/piani` | 0, con M4 fra gli OK | R ⟷ B | 1, **M4** |
 | `F2.6/gamma` | 0, con M5 fra gli OK | 16-235 steso su 0-255 | 1, **M5** |
@@ -445,7 +445,7 @@ non accuserà il client, ma **non darà nessun verdetto**.
 | **quattro stati d'uscita** | chiunque chiami il metro sa distinguere «bocciato» da «non ho potuto guardare» |
 | **la scena** | `02-giudizio-mira.py`, con le zone in un JSON, a qualunque risoluzione ≥ 640×480 |
 | **la sonda pronta** | il giorno che il telefono c'è, la misura costa un pomeriggio invece di una settimana |
-| ⛔ **e un limite dichiarato** | il metro **non** dice se i 10 bit veri arrivano al telefono, e **non** vede un fotogramma consegnato dopo un RESET con i pixel giusti. Sono due buchi **con un nome e un proprietario**, non due silenzi |
+| ⛔ **e un limite dichiarato** | il metro **non** dice se i 10 bit veri arrivano al telefono, e **non** vede un fotogramma consegnato dopo un RESET con i pixel giusti. Sono due buchi **con un nome e un proprietario**, non due silenzi. ⚠ *13 agosto 2026: la **prima metà resta** — `dipinto_dopo_reset` è ancora scoperto. ⛔ La **seconda cade**: il `giro` di M8 non è più «non applicabile per costruzione», è **eseguibile** con il `numero` della fase 3 (vedi §M8)* |
 
 ---
 
@@ -500,7 +500,7 @@ un banco invece che a una specifica*.
 |---|---|
 | **`dipinto_dopo_reset`** | ⭐ **misurato**, sull'invariante `consegnati > completi` |
 | **`fin_ricevuto`** | ⭐ **misurato**, `completi > 0` — ⚠ ed è una domanda di **sessione**, non di fotogramma: dice «almeno un FIN l'ha visto» |
-| **`giro`** | ⛔ **NON APPLICABILE, e dichiarato**: è il nome del giro **del banco**, il prodotto non lo conosce e il protocollo non ha un campo per dirglielo. Non è «non ancora»: è **per costruzione**. Il guasto «fotogramma di un altro giro» resta preso da **M6**, che lo misura **sui pixel** invece di chiederlo all'imputato |
+| **`giro`** | ⛔ ~~**NON APPLICABILE, e dichiarato**~~ — ⭐ **CADE il 13 agosto 2026**. Diceva: *«è il nome del giro del banco, il prodotto non lo conosce e il protocollo non ha un campo per dirglielo. Non è "non ancora": è **per costruzione»***. ⛔ **Il "per costruzione" era sbagliato**: con la fase 3 il protocollo porta un **`numero` che cresce a ogni fotogramma**, e la domanda *«questo fotogramma è di questo giro?»* torna **ponibile ed eseguibile**. ⚠ E resta vero che M6 lo prende **sui pixel** invece di chiederlo all'imputato: sono due anelli, non uno |
 
 ⛔ **E se nessuno dei tre è eseguibile, M8 esce `ok: None, applicabile: False`** ⇒ non è vivo, e
 `dopo-reset` si conta fra i **ciechi**. Il ripiego `d.get("fin_ricevuto", True)` è stato tolto: un

@@ -130,13 +130,50 @@ totale che l'utente sente è questo più la rete: si **dichiara**, non si promet
 uno scambio che si presenta di continuo, perché **ogni memoria intermedia compra fluidità e vende
 risposta**. (`DECISIONI.md` §2.4)
 
-`[?]` Il traguardo dei 40 ms probabilmente **non è raggiungibile su GNOME**, per lo stesso muro
-dei 60 fotogrammi: Mutter ne consegna 37 al secondo. Stima, non misura. (`DECISIONI.md` §2.5)
+### ⛔⛔ Il numero c'è, ed è misurato — e la causa NON era quella
 
-⭐ **Ma «nessuna leva nostra lo sposta» non si può più scrivere** *(9 agosto 2026)*: `gnome.md`
-§8.2 dà la causa del muro `[R]` — un solo numero che fa da freno alla cattura **e** da frequenza
-al monitor virtuale — e con essa un candidato di cura che costa zero righe di prodotto. Va
-provato prima di dare il muro per acquisito (`LEZIONI.md` §3, il riquadro dei sei decimi).
+*13 agosto 2026, fase 3 step 5. Qui stava scritto, con la marca `[?]`: «il traguardo dei 40 ms
+probabilmente non è raggiungibile su GNOME, per lo stesso muro dei 60 fotogrammi: Mutter ne
+consegna 37 al secondo. Stima, non misura», e accanto il candidato di cura letto in `gnome.md`
+§8.2. ⛔ **La misura adesso c'è, e smentisce la causa.***
+
+`[M]` **ritardo cattura → vetro: mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99 138,1,
+su **6 giri** da ~800 campioni ciascuno, errore d'orologio **±0,63 ms**. Banco
+`banchi/03-b17-ritardo.py`, **31 controlli su 31**, ponte **11 su 11**.
+⛔ **Il pezzo cieco 16-40 ms NON è compreso** ⇒ sullo schermo dell'utente **90-115 ms**. ⇒ **si
+sfora il tetto dei 50, non solo il traguardo dei 40.**
+⚠ **E non è input → vetro**: il canale di input nasce alla fase 4 (`input` = 0 in **953 casi su
+953**), e al suo posto sta il controllo **P1**. Quel che è misurato è **cattura → vetro**.
+
+| tratto | mediana | di chi è |
+|---|---|---|
+| disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
+| ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro**, dominato dal codificatore in software |
+| il filo | 0,32 ms | — |
+| stream completo → `decode()` | 0,08 ms | nostro |
+| decodifica | 7,58 ms | nostro |
+| richiamo → disegno finito (due `drawImage`) | 10,51 ms | nostro |
+
+⛔⛔ **Il muro è NOSTRO, non di Mutter: 58 ms su 74,6 sono nostri, il 78 %**, e ~39 stanno nel
+tratto cattura→filo. A Mutter resta il **22 %**, che è un intervallo di quadro a 60 Hz. Le tre
+prove che lo dicono: la scena disegna **59,98/s con 0 attese**; il figlio del prodotto consegna
+**23,93/s con ZERO attese a vuoto**, cioè **non aspetta MAI Mutter**; e il codificatore è **in
+software**, dichiarato dal prodotto stesso (libsvtav1 / libx265). ⇒ La leva non è il compositore:
+è **la codifica** (`gnome.md` §8.2 e §13).
+
+⛔ **E il muro dei 37 fotogrammi non si riproduce.** La causa scritta finora — un **battimento**
+fra due orologi allo stesso numero — è sbagliata: è una **quantizzazione** sui tick
+(`min_interval_us = 10⁶/maxFramerate` troncato a intero contro un tick da 16666,67 µs). Con
+monitor a **120** e freno **90** si ottengono `[M]` **61,4 fotogrammi consegnati al secondo**
+(60,04), intervallo mediano **16,66 ms**. ⚠ **Ma quella cura oggi non è raggiungibile dal
+prodotto**: è `[M]` sul banco e **zero in produzione** (`DECISIONI.md` §2.5).
+
+⛔ **Dove finisce la misura, ed è la parte scomoda**: la misura si chiude al **disegno finito**,
+non al richiamo del decodificatore. Sono **11 ms su un tetto di 50** che la prima stesura si
+regalava — il numero è salito da **63,8 a 74,6** e lo si è lasciato salire (`CODER.md` §1-bis).
+
+⚠ **E il pezzo cieco su Xvfb non esiste**: la stima 90-115 ms vale per lo schermo dell'utente, non
+per il banco (`web.md` §8).
 
 ---
 
@@ -782,6 +819,21 @@ modo in cui la pagina è confezionata.
 ⚠ **E le versioni contano più che sui desktop**: qui il pavimento non lo pone Debian, lo pone il
 dispositivo dell'utente. Un telefono fermo a una versione vecchia di Chrome non ha WebCodecs, e
 il sintomo va detto in una frase — non «non funziona».
+
+> ### ⏳ A fine fase 3: i **mattoni** stanno su due motori, i **numeri** stanno su uno
+>
+> *13 agosto 2026, e va scritto qui perché la riga «si collauda su almeno due motori» non venga
+> data per soddisfatta guardando il posto sbagliato.*
+>
+> | | |
+> |---|---|
+> | ✅ **i mattoni** | il comportamento del decodificatore al cambio di tela è `[M]` **su Chrome e su Firefox**, in tutt'e due i versi — 8 celle su 8, HEVC e AV1 (`RCP.md` §5.2) |
+> | ⛔ **i numeri** | il ritardo cattura → vetro (§3.2), i fotogrammi dipinti e il tetto a saturazione sono misurati **su Chrome 151 e basta** |
+>
+> ⇒ ⏳ **`[?]` il secondo motore sui numeri resta aperta**, ed è una `[?]` di questa sezione, non
+> del banco: finché una sola squadra che non ci conosce ha detto la sua, l'arbitro esterno di cui
+> parla il primo capoverso **non c'è ancora**. ⚠ E non si chiude ricopiando le celle dei mattoni:
+> quelle rispondono a un'altra domanda.
 
 ---
 

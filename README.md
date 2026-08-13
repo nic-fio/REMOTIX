@@ -348,7 +348,124 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, a fase 2 chiusa**. ⇒ **LA PROSSIMA SESSIONE FA LA FASE 3**
+> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, sera. LA FASE 3 HA IL SUO NUMERO, E SFORA**
+>
+> *⛔ Scritto **a codice fermo**, con lo stato **verificato e non ricordato**. La fase 3 è stata
+> divisa in **cinque step** su richiesta dell'utente, uno o due agenti per step, sviluppo + prova +
+> correzione. ⏳ **La fase NON è chiusa**: manca la scrittura, non la misura.*
+>
+> #### ⭐ Il numero, che è quel che la fase esisteva per produrre
+>
+> **Ritardo cattura → vetro: mediana 74,58 ms** · p05 58,1 · p95 101,2 · p99 138,1 · errore
+> d'orologio **±0,63 ms**. ⛔ **Pezzo cieco 16-40 ms NON compreso** ⇒ sullo schermo dell'utente
+> **90-115 ms**, contro un tetto di **50**. ⇒ **SFORA i 50 e i 40.**
+> ⚠ Non è input→vetro (`input` = 0 in 953 su 953): il canale di input nasce alla fase 4, e al suo
+> posto c'è il controllo **P1**. Banco `03-b17-ritardo.py`, **31 controlli su 31**.
+>
+> | dove se ne va | mediana | di chi è |
+> |---|---|---|
+> | ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
+> | disegno → cattura | 16,66 ms | Mutter (**22 %**) — è un intervallo di quadro a 60 Hz |
+> | richiamo → disegno finito | 10,51 ms | nostro |
+> | decodifica | 7,58 ms | ⭐ **il 10 %, in software** |
+> | il filo | 0,32 ms | — |
+>
+> ⭐⭐ **IL MURO NON È DI MUTTER, e la prova è che il figlio non lo aspetta mai**: zero attese a
+> vuoto in 20 s. **58 ms su 74,6 sono nostri**, e quasi tutti nella codifica ⇒ **è la fase 8**.
+>
+> #### ⛔ QUATTRO RIGHE CHE TRE DOCUMENTI DANNO PER FATTE E CHE OGGI SONO SMENTITE
+>
+> 1. ⛔ **il muro dei 37 fotogrammi di Mutter NON SI RIPRODUCE**, e nemmeno i «sei decimi»: la
+>    cella bassa dà **0,50 pulito e deterministico**. Non è un **battimento** fra due orologi — è
+>    una **quantizzazione**: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per
+>    60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero. Legge verificata su
+>    **13 punti**, 8 confermano, **0 la smentiscono**. Con monitor a **120 Hz** e freno **90**:
+>    **61,4 fotogrammi/s, intervallo mediano 16,66 ms**;
+> 2. ⛔⛔ **ma quella cura NON è raggiungibile dal prodotto**: `MOVIMENTO_FPS 60` è una costante di
+>    compilazione (`figlio.c:1465`), `main.c` non ha opzioni di cadenza, e **`RecordVirtual` non
+>    prende la frequenza** (`mutter.h:82`) — i quattro monitor virtuali sono tutti **@60**. È `[M]`
+>    sul banco e **zero in produzione**;
+> 3. ⛔ **la motivazione prestazionale della FASE 10 (KDE) non regge più**: il piano la giustifica
+>    con *«KWin consegna 60 dove Mutter ne dà 37 — è la strada per il traguardo dei 40 ms»*. I 37
+>    non esistono e Mutter vale il 22 %: cambiare compositore **lascerebbe intatti i 39 ms di
+>    codifica**. La fase 10 resta giusta come *«il secondo desktop»*; la promessa sul ritardo va
+>    **riscritta o tolta**;
+> 4. ⛔ **`web.md` §6.1 — «tutto in un worker dedicato» — è ATTUATA, MISURATA E RESPINTA**:
+>    **+27,6/+33,5 ms** di mediana e **tetto −73 %** (127,6 → 33,9 dipinti/s a 1080p). ⭐ E il
+>    meccanismo è nuovo: una `OffscreenCanvas` in un worker **si consegna al ritmo del quadro** —
+>    è un `requestAnimationFrame` implicito che nessuno ha scritto. ⇒ Il divieto di §6.1 va esteso
+>    **al meccanismo**, non alla sola parola. Il codice resta dietro `#video=worker`, **spento**.
+>
+> #### ⭐ Che cosa il prodotto sa fare adesso, e non sapeva stamattina
+>
+> **135 fotogrammi**, `numero` 1→135 · **132 delta e 3 chiavi** · il primo dopo `SESSIONE` è una
+> **chiave** con FIN · `RICHIEDI_CHIAVE` → chiave in ≤200 ms · **10 stream azzerati contro 18 con
+> FIN**, nessuna chiave abbandonata, **E8 provata sul filo** · **60,0 fotogrammi dipinti al secondo**
+> offrendone 60, tetto a saturazione **127,6/s** · ⭐ nei 28 byte finisce il **`pts` di Mutter**,
+> cioè l'istante **vero** della cattura (scarto dal nostro `CLOCK_MONOTONIC`: 11 347 µs).
+> ⭐ **Sei dei sette punti del prodotto sono chiusi**, e il deposito è sparito del tutto: il prezzo
+> dichiarato il 12 agosto — *«due utenti insieme non possono vedere tutt'e due il proprio»* — **è
+> pagato**.
+>
+> #### ⛔ QUEL CHE MANCA PRIMA DI CHIEDERE IL GIUDIZIO — è scrittura, non misura
+>
+> 1. ✅ ~~**i documenti**: ~35 righe in **nove file**~~ — ⭐ **FATTO il 13 agosto, sera.** Il registro
+>    è stato **portato dentro il deposito** (`fasi/rapporti/F3-righe-da-riscrivere.md`, 206 righe) e
+>    le righe sono state riscritte in **quindici file**: `SPECIFICHE.md` · `DECISIONI.md` ·
+>    `LEZIONI.md` · `PIANO.md` · `gnome.md` · `web.md` · `RCP.md` · `CODER.md` · `README.md` ·
+>    `fasi/03-movimento.md` (le tre sezioni vuote riempite) · `fasi/00-ambiente.md` ·
+>    `fasi/02-primo-fotogramma.md` · `fasi/rapporti/F2-6-giudizio.md` ·
+>    `fasi/rapporti/P2-5-pagina.md` · `fasi/rapporti/F2-5-pagina.md`.
+>    ⚠ **E toccare `RCP.md` fa scadere la certificazione di B9**: è previsto, e va rigirata insieme
+>    alle altre (punto 2);
+> 2. ⛔ **le certificazioni**: **10 su 15 sono scadute** perché `src/` è cambiato oggi, e i banchi
+>    nuovi non sono a catalogo — ⚠ **SEI numerati** (`03-b14` · `03-b15` · `03-b16` · `03-b17` ·
+>    `03-b18` · `03-b19`) **più tre** senza numero (`03-scena`, `03-marca`, `03-deposita`).
+>    *⚠ Questa riga diceva «cinque banchi (`03-b14` … `03-b19`)» — **sei nomi per cinque banchi**,
+>    e chi ricontava il catalogo ci andava a sbattere. Corretta la sera del 13 agosto 2026, contata
+>    con `ls banchi/03-*`.* ⭐ Adesso si possono rigirare: la
+>    pagina ha smesso di cambiare;
+> 3. ⛔ **`src/pagina.c:243`**: `strcmp(percorso, "/")` confronta il bersaglio **con la stringa di
+>    ricerca dentro** ⇒ `/?qualunque-cosa` prende **404** (`[M]`: `/` → 200/166107 byte,
+>    `/?video=worker` → 404/9). ⇒ **`?tela=desincronizzata` non è MAI stato raggiungibile**, e il
+>    commento della pagina indica da sempre una strada che non esiste. Non visto da nessuno perché
+>    i banchi servono la pagina da un `http.server` di Python, che il `?` lo ignora;
+> 4. ⚠ **la cura B-18 non è compilata né girata**: `rcp_video_niente_credito()` era l'unico dei tre
+>    percorsi di abbandono di un delta a non accendere `serve_chiave` ⇒ **un solo delta saltato per
+>    mancanza di posto sfasciava l'immagine per sempre e in silenzio** (il `numero` non è
+>    consumato ⇒ nessun buco ⇒ il client non può chiedere la chiave; GOP infinito ⇒ non ne arriva
+>    più una da sola). ✅ I due gemelli `rcp.c` **sono stati riallineati stasera** — divergevano, e
+>    il prodotto **non compilava per nessuno**;
+> 5. **il giudizio dell'utente**: il desktop che si muove dentro una scheda.
+>
+> ⚠⚠ **E UN RISCHIO DI CASA, misurato la sera del 13 agosto: `/tmp` è una tmpfs da 3,8 G al 94 %**,
+> **246 M liberi**. Ha già fatto fallire un giro di `03-b16` (Chrome non parte). ⛔ **Non è stata
+> svuotata di proposito**: dentro ci sono le prove dei giri di oggi — `/tmp/03-b17` (155 M, col
+> `verbale.json` dell'anello del ritardo), `/tmp/03-b19-dipinti` (128 M), `/tmp/remotix-f26-*`
+> (288 M) — e buttarle toglierebbe la **provenienza** dei numeri di questo riquadro. ⇒ **Si guarda
+> prima di cancellare**, e si comincia da `/tmp/claude-1000` (1,1 G) e `/tmp/google-chrome`
+> (227 M), che prove non ne portano.
+>
+> #### ⭐⭐ E la lezione del metodo, che stavolta ha un conto
+>
+> **Gli agenti mandati a REFUTARE hanno rifiutato CINQUE cure passate dal coordinatore, e avevano
+> ragione tutte e cinque**: la `ResizeObserver` (la premessa era falsa) · la seconda cura della
+> vista (caduta alla misura: `overflow-y: scroll` tiene `clientWidth` fermo) · il seqlock in
+> contesa (**200 letture su 200 riuscite**: la causa era un relitto a `seq` dispari) · *«quel che
+> manca ai 60 è di Mutter»* (**zero attese a vuoto**) · *«accendi su `Meta-3`»* (i monitor sono
+> **quattro**, il suo era `Meta-2`: avrebbe misurato il palco di un altro gruppo).
+> ⛔ **E un difetto che sembrava del prodotto era del BANCO**: il `STREAM_LIMIT_ERROR` nasceva da un
+> banco che annunciava il credito **dopo** la stretta di mano — cosa che l'RFC vieta — e poi accusava
+> il prodotto di non reggerlo. `ngtcp2` non aveva violato niente. ⭐ Ma cercandolo è uscito **B-18**,
+> che era vero e peggiore.
+> ⛔ **E un verde in catalogo lo produceva lo STRUMENTO**: `02-pagina-vista-prova.py` passava solo
+> grazie a `Page.captureScreenshot`, chiamata da un'opzione di stampa (`--copia`); senza, lo stesso
+> banco sul prodotto **sano** dava **5 pretese rosse** — e quelle quattro pretese non erano **mai
+> state innestate con un guasto**. Curato, e adesso **si giudica prima il palco**.
+>
+> ---
+>
+> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, a fase 2 chiusa**. ⇒ **LA PROSSIMA SESSIONE FA LA FASE 3** *(superato dal riquadro qui sopra)*
 >
 > *Deciso dall'utente: «la prossima sessione si occuperà della fase 3». ⛔ Questo riquadro è scritto
 > **prima** di chiudere e **a codice fermo**, con lo stato **verificato e non ricordato** — è la
@@ -392,9 +509,11 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   scoperta). Con il movimento diventa più caro sbagliarlo, non meno;
 > - ⚠ **M8 ha un controllo dichiarato NON APPLICABILE** (`giro`): il prodotto non conosce il nome del
 >   giro del banco. In fase 3, con un contatore `numero` che cresce a ogni fotogramma, **si può
->   riaprire** — ⇒ `fasi/rapporti/F2-6-giudizio.md`;
+>   riaprire** — ⇒ `fasi/rapporti/F2-6-giudizio.md`. ⭐ **FATTO il 13 agosto**: la dichiarazione
+>   *«non applicabile **per costruzione**»* **cade**, ed era il «per costruzione» a essere sbagliato;
 > - ⚠ **`02-figlio-accendi.sh:165`** conta i figli **di tutti** invece dei propri: si accende solo
->   quando due banchi girano in parallelo, e in fase 3 gireranno.
+>   quando due banchi girano in parallelo, e in fase 3 gireranno. ✅ **Curato il 13 agosto** — ⛔ `[R]`,
+>   **non eseguito**: la cura è letta nel codice e non è stata girata.
 >
 > #### ⚠ E due cose sul metodo, che hanno prodotto il risultato migliore di oggi
 >

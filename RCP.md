@@ -294,7 +294,39 @@ preteso**.
 > ⚠ **E il numero giusto è 19 anche quando sembra generoso**: le due parole che decidono in questa
 > riga sono **«disponibili»** — non «dichiarati» — e **«in ogni momento»**. La lettura che salva il
 > 16 rende parole morte tutt'e due.
-| **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta e viene rinnovato mano a mano che gli stream si chiudono |
+| **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta |
+
+> ### ⛔ «Il credito viene rinnovato mano a mano che gli stream si chiudono» — **FALSO, e misurato**
+>
+> *13 agosto 2026, fase 3. La riga qui sopra finiva così, e chi la leggeva ne ricavava una
+> garanzia: chiudi gli stream e il posto torna. ⛔ **Non torna per forza.***
+>
+> ⛔ **Il rinnovo del credito è POLITICA DEL PARI, non una conseguenza della chiusura.** Chiudere uno
+> stream non restituisce niente da sé: il limite sale **solo** quando il pari decide di mandare un
+> `MAX_STREAMS` più alto, e **quando** lo manda lo decide lui. `[M]` **con il rinnovo del pari
+> spento, il credito resta fermo anche a stream tutti chiusi.** ⇒ La riga vecchia non descriveva il
+> protocollo: descriveva un pari gentile.
+>
+> ⇒ **Che cosa resta normativo, e non cambia**: il server **DEVE reggere il rifiuto** di aprire uno
+> stream (riga qui sopra) e **DEVE** buttare il fotogramma — mai una chiave (riga qui sotto). ⛔ Quel
+> che cade è la **rassicurazione**: non si scrive codice che *aspetta* il posto contando sul rinnovo,
+> perché il rinnovo non è nostro e può non arrivare.
+>
+> ⛔⛔ **E NON si scrive che il prodotto cade sotto credito basso: non è misurato.** *Un giro del 13
+> agosto ha prodotto uno `STREAM_LIMIT_ERROR`, e per qualche ora è sembrato un difetto del prodotto.
+> Non lo era: il **banco** annunciava il credito **dopo** la stretta di mano — cosa che RFC 9000 §4.6
+> vieta — quindi il `6` **non è mai stato annunciato sul filo**. Il server aveva **128 posti
+> concessi** e ne ha aperti **14**. ⇒ **`ngtcp2` non ha violato niente, e lì il prodotto non ha un
+> difetto.** Quel che regge di quella giornata è la riga qui sopra, che è un'altra cosa.*
+>
+> ⭐ **E cercando il difetto falso ne è uscito uno vero, ed era peggiore: `B-18`.** Uno dei tre
+> percorsi di abbandono di un delta — proprio quello **per mancanza di posto** — **non accendeva la
+> richiesta di chiave**. ⛔ **Un solo delta saltato per credito esaurito sfasciava l'immagine per
+> sempre e in silenzio**, e la catena del silenzio è questa: il fotogramma non è mai stato spedito
+> ⇒ il `numero` **non è consumato** (§6.2) ⇒ **nessun buco** nella successione ⇒ il client non ha di
+> che accorgersene e **non può chiedere la chiave** ⇒ e con un GOP infinito non ne arriva più una da
+> sola. ⇒ **È la ragione per cui la riga qui sotto obbliga il server a produrre la chiave da sé**:
+> in questo caso il client non ha nessun modo di chiederla.
 | ⛔ **e quando il credito manca si butta il fotogramma — ma MAI una chiave** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Un **delta** vecchio non serve più: ne sta già arrivando uno nuovo. ⛔ Un fotogramma **chiave** invece si aspetta, perché è l'unica cosa che rimette in piedi il decodificatore (§5.2). E in tutt'e due i casi **si scrive nel registro** |
 
 > ⛔ *Corretta la sera del 9 agosto 2026, rilievo **R1.9**, e la sequenza che la rompeva è questa.*
@@ -1100,6 +1132,46 @@ si *butta il passato* quando è passato. E ogni abbandono **DEVE** essere scritt
 un fotogramma perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto dal lato che
 riceve.
 
+> ### ⛔ L'abbandono ha **DUE forme osservabili**, non una — *13 agosto 2026, `[M]`*
+>
+> *Questo paragrafo, e §6.2 con lui, descrivevano una forma sola: lo stream **azzerato**. Alla fase
+> 3 se n'è vista una seconda, e un client scritto sulla prima **non la riconosce**.*
+>
+> | forma | che cosa vede il client | quando succede |
+> |---|---|---|
+> | **A — lo stream azzerato** | uno stream aperto che finisce con `RESET_STREAM` invece che con FIN | il server aveva già **fatto uscire almeno un byte** di quel fotogramma |
+> | ⛔ **B — il buco nei `numero`** | **nessuno stream**, e il `numero` successivo salta di uno | il server aveva **consumato il `numero`** e poi ha abbandonato **prima che un byte uscisse** |
+>
+> ⛔ **Quale delle due il client veda dipende da un dettaglio che nessuno dei due lati controlla:
+> se un byte era già uscito.** Non è una scelta del server e non è un'informazione che il protocollo
+> porti — è il momento in cui l'abbandono cade rispetto alla scrittura.
+>
+> ⇒ **Le conseguenze, e sono normative:**
+>
+> - il client **DEVE** trattare **tutt'e due** le forme come un buco, e in tutt'e due mandare
+>   `RICHIEDI_CHIAVE` (§5.2). ⛔ Un client che guardi i soli `RESET_STREAM` **perde la forma B in
+>   silenzio**, e il sintomo è quello che §5.2 esiste per evitare: immagini via via più sfasciate
+>   senza nessun errore sollevato da nessuno;
+> - il server **DEVE** scrivere nel registro **tutt'e due**, e distinguerle: sono la stessa
+>   decisione, ma dal lato che riceve hanno **aspetti diversi**, e un registro che ne nomina una
+>   sola non spiega quel che il client ha visto;
+> - ⚠ e un banco che innesta l'abbandono **deve saper produrre tutt'e due**, o certifica metà della
+>   regola credendo di certificarla tutta.
+>
+> ### ⛔⛔ E c'è un terzo caso, che **non è osservabile affatto** — ed è il più pericoloso
+>
+> Un fotogramma **buttato per mancanza di credito** (§2.3) non è nessuna delle due forme: non si apre
+> nessuno stream **e il `numero` non viene consumato**, perché §6.2 lo fa crescere solo per i
+> fotogrammi che il server **decide di spedire**. ⇒ ⛔ **Nessuno stream, nessun buco, nessun segnale:
+> dal lato che riceve non è successo niente.**
+>
+> ⛔ **Quindi il client non può accorgersene, e non può chiedere la chiave.** Se il server non la
+> produce **da sé**, l'immagine si sfascia **per sempre e in silenzio** — con un GOP lungo non ne
+> arriva più una da sola. È il difetto **B-18**, trovato il 13 agosto 2026.
+> ⇒ ⭐ **È la ragione per cui l'obbligo di §5.2 — «quando il server abbandona un delta DEVE mandare
+> una chiave appena può, senza aspettare che il client la chieda» — non è una prudenza: in questo
+> caso è l'unica cosa che esiste.** Il client non ha una domanda da fare.
+
 ### 5.2 ⛔ Il prezzo dell'abbandono, e come si paga
 
 *Aggiunta il 9 agosto 2026, ed è il difetto di disegno che il censimento ha trovato — non una
@@ -1304,7 +1376,11 @@ Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine 
   buttare quel che ha ricevuto, **NON DEVE** consegnarlo al decodificatore, e **DEVE** trattarlo
   come un buco (§5.2);
 - uno stream chiuso con **FIN prima dei 28 byte** dell'intestazione è `ERRORE_PROTOCOLLO`: non è un
-  fotogramma corto, è una lunghezza che non torna (§3).
+  fotogramma corto, è una lunghezza che non torna (§3);
+- ⛔ **e un fotogramma abbandonato può non presentarsi come stream affatto**: se il server ha
+  consumato il `numero` e ha abbandonato **prima che un byte uscisse**, il client non vede nessuno
+  stream — vede un **buco nella successione dei `numero`**. È la **forma B** dell'abbandono, e va
+  trattata come un buco esattamente come l'azzeramento (§5.1, il riquadro delle due forme).
 
 ```
  0        2        4        8        12       16       24       28   28+…
@@ -1390,6 +1466,35 @@ client ha spedito lui*: locale, monotona, indipendente dalla consegna.
 > sempre **una grandezza sostitutiva**. Chiusa il 13 agosto 2026, rilievo **P21**. ⭐ E la prima cura
 > proposta — «la misura che il client ha nominato» — è stata **bocciata da un caso**: §4.5 permette
 > al server di concedere una tela diversa da quella chiesta, quindi sarebbe stata l'ottava stesura.*
+
+> ### ⛔ E il trattenimento **non ha tetto in byte** — la riga mancava
+>
+> *13 agosto 2026. Il paragrafo qui sopra dice fino a **quando** si trattiene, e non dice **quanto**.
+> Sono due domande diverse, e la seconda non aveva risposta da nessuna parte.*
+>
+> ⛔ **La condizione di fine è corretta e non basta.** §7.1 obbliga il server a rispondere a ogni
+> `ADATTA_TELA` con un `TELA`, riuscito o no — ed è la ragione per cui la condizione «finché una
+> `ADATTA_TELA` è senza risposta» **finisce**. ⛔ Ma un server che **non risponde** non viola una
+> regola che il client possa far rispettare: fa crescere la coda del client **senza limite**, e il
+> client conforme continua a trattenere finché la memoria regge. ⇒ Il difetto non è del client:
+> **è una riga che manca a questo documento.**
+>
+> ⇒ **Le due regole:**
+>
+> - ⛔ il client **DEVE** avere un tetto al trattenuto, e superarlo **NON è `ERRORE_PROTOCOLLO`**:
+>   il server non ha sbagliato niente in un modo che il client possa dimostrare. Si butta il più
+>   vecchio, **lo si scrive nel registro**, e si tratta come un buco (§5.2). Un fermo-immagine con
+>   una riga di registro è meglio di una sessione che finisce la memoria in silenzio;
+> - ⛔ **e il tetto si conta in FOTOGRAMMI, non in richieste in volo.** ⚠ Il paragrafo qui sopra non
+>   lo diceva, e sono due grandezze diverse: le richieste in volo dicono **se** si trattiene, i
+>   fotogrammi dicono **quanto**. ⭐ E un fotogramma si conta **una volta sola anche se viene
+>   rigiudicato due volte** — un trattenuto che al primo `TELA` non si risolve e resta in attesa del
+>   secondo **non è due fotogrammi**. *Il prodotto lo faceva già giusto; il documento non lo diceva.*
+>
+> ⏳ `[?]` **Quale sia il numero non è deciso qui**: dipende dalla memoria del dispositivo e dal peso
+> di una chiave (§6.2 ne ammette 16 MiB), e sceglierlo a caso rifarebbe l'errore di §1.13 —
+> una grandezza sostitutiva al posto di quella vera. ⛔ Ma *«non c'è tetto»* non è una risposta, ed
+> era quel che il documento diceva tacendo.
 
 ⛔ **E la regola dell'ordine si applica PRIMA di quella della misura**: un fotogramma il cui `numero`
 è precedente all'ultimo già consegnato **si scarta**, e la sua misura non si guarda nemmeno.
@@ -1810,6 +1915,31 @@ l'11 agosto 2026**: no, non lo era, e resta togliibile senza tornare da lui.
 > ⭐ **Perché la funzione sopravvive comunque**: taratura del cronometro del ritardo alla fase 3 —
 > si inietta un ritardo noto e si verifica che la mediana salga di esattamente quello. Toglierla del
 > tutto avrebbe lasciato il tetto dei 50 ms **senza un modo di sapere se il numero è vero**.
+
+> ### ⛔⛔ 13 agosto 2026 — **la funzione di banco NON dà il ritardo noto**, e non l'ha dato alla fase 3
+>
+> *Questo paragrafo è normativo e descrive un meccanismo che nel prodotto **non c'è**. Va scritto
+> qui, o chi legge questa sezione crede di avere in mano uno strumento che non esiste.*
+>
+> | | stato `[R]` |
+> |---|---|
+> | la funzione | `BANCO_ACCESO 0` — nasce spenta, come §7.5 vuole |
+> | ⛔ **il ramo `ACCETTATA`** | **è uno stub**: non dipinge, non aspetta il `ritardo_ms`, non produce l'`istante` che il messaggio promette |
+>
+> ⇒ ⛔ **P1, il controllo decisivo dell'anello del ritardo, alla fase 3 NON è passato di qui.**
+> L'iniezione del ritardo noto è stata fatta **fuori dal prodotto**, ed è risultata `[M]` verde
+> (N = 25 → **+25,08 ms**; N = 60 → **+58,58 ms**).
+>
+> ⭐ **E l'iniezione fuori dal prodotto non è un ripiego: è meglio.** L'ancora d'orologio del metro
+> **non passa** per il percorso iniettato — se ci passasse, **P1 passerebbe anche a banco rotto**,
+> perché i N millisecondi si sommerebbero identici da tutt'e due le parti. Un controllo decisivo
+> che non sa più fallire ha smesso di essere un controllo (`LEZIONI.md` §1.2).
+>
+> ⇒ ⏳ **Che cosa resta da decidere, e non si decide qui**: se il ramo `ACCETTATA` vada completato o
+> se i due messaggi vadano tolti dal protocollo, visto che la loro sola ragione dichiarata —
+> «tarare il cronometro del ritardo» — è stata soddisfatta **senza di loro**. ⚠ Finché stanno
+> scritti qui e non esistono nel codice, questa sezione descrive una cosa che non c'è: è la specie
+> di difetto contro cui §0 esiste.
 
 ⚠ **E i due tipi hanno consumato la clausola di §9** che §12 dichiara essere stata *«l'ultima
 occasione»* per aggiungere tipi di messaggio: restano nel documento, ⛔ ma d'ora in poi come

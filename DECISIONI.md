@@ -259,7 +259,7 @@ il suo denominatore è quel che `LEZIONI.md` §1.9 punto 4 vieta.
 | 23 | **`TELA` è la risposta obbligatoria ad `ADATTA_TELA`** | §7.1 imponeva un «rifiuto motivato» e non esisteva un messaggio per dirlo: il client sarebbe rimasto ad aspettare per sempre | §7.1 |
 | 24 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie | è l'unico momento in cui i due lati hanno legittimamente due verità diverse. Dichiarata come eccezione a §3, non lasciata all'improvvisazione | §7.1 |
 | 25 | il motivo del congedo viaggia **anche nel codice d'errore applicativo della chiusura della sessione WebTransport** | se il congedo non arriva — stream rotto, messaggio illeggibile — il motivo passa comunque. È la ferita di `LEZIONI.md` §1.7 curata con due strade invece che con una. ⚠ *Diceva «chiusura QUIC», ed è la lettura che il rilievo **R1.4** ha dichiarato impossibile per la pagina: l'API espone la chiusura **della sessione**, non quella della connessione HTTP/3 sotto. Allineata il 10 agosto 2026, rilievo **R11.8*** | §3.1 |
-| 26 | ⭐ **la funzione di banco entra nel protocollo**: due tipi nuovi, `BANCO_MARCA` (`0x000F`) e `BANCO_ESITO` (`0x0010`) — il rettangolo 16×16, il colore, e il **ritardo `N` iniettabile** | l'anello del ritardo di §2.6 misura dal lato che riceve, e perché quel numero valga il banco deve poter **iniettare un ritardo noto** e verificare che la mediana salga di esattamente quello — *«un banco che non lo fa non sa di misurare»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). Quel comando **attraversa il filo**: improvvisarlo nel codice di prova sarebbe il difetto muto contro cui `RCP.md` §0 esiste. ⛔ **La funzione è spenta di suo** (invariante I6) e spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, mai un silenzio | §7.5 |
+| 26 | ⭐ **la funzione di banco entra nel protocollo**: due tipi nuovi, `BANCO_MARCA` (`0x000F`) e `BANCO_ESITO` (`0x0010`) — il rettangolo 16×16, il colore, e il **ritardo `N` iniettabile** | l'anello del ritardo di §2.6 misura dal lato che riceve, e perché quel numero valga il banco deve poter **iniettare un ritardo noto** e verificare che la mediana salga di esattamente quello — *«un banco che non lo fa non sa di misurare»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). Quel comando **attraversa il filo**: improvvisarlo nel codice di prova sarebbe il difetto muto contro cui `RCP.md` §0 esiste. ⛔ **La funzione è spenta di suo** (invariante I6) e spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, mai un silenzio. ⛔⛔ **13 agosto 2026: la funzione NON dà il ritardo noto, e alla fase 3 non l'ha dato** — `BANCO_ACCESO 0` e il ramo `ACCETTATA` è **uno stub** `[R]`. Il ritardo noto è stato iniettato **fuori dal prodotto**, e P1 è `[M]` verde (N=25 → +25,08; N=60 → +58,58). ⭐ E fuori dal prodotto è **meglio**: l'ancora d'orologio non passa per il percorso iniettato, quindi P1 **sa ancora fallire**. ⇒ ⏳ resta da decidere se completare il ramo o togliere i due tipi (`RCP.md` §7.5) | §7.5 |
 
 > ⭐ *La riga 26 è **della notte del 9 agosto 2026** e stava soltanto in `RCP.md` §7.5; è registrata
 > qui il 10 agosto, rilievo **R11.13** e **R11.15**.* ⛔ **È 🔸, non ✅**: la provenienza dichiarata
@@ -872,6 +872,12 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 Diceva «30 fps a 1080p», ed era il numero di v1 — che lo superava già `[M]`: la cattura di
 Mutter consegnava 37 fotogrammi, KWin 60.
 
+> ⛔ *13 agosto 2026: **il 37 non si riproduce**, e questa riga lo cita come se fosse un fatto
+> stabile. Alla cadenza che chiedevamo Mutter consegna **31,5** con mediana 33,31 ms; rinegoziando
+> la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** (60,04). Il numero non è una
+> proprietà di Mutter: è il resto di una divisione troncata (§2.5-bis). ⚠ Il **minimo** deciso qui
+> non si tocca — resta lontanissimo in tutt'e due i casi.*
+
 Il cambiamento è di **natura** più che di valore: il minimo smette di essere un'asticella da
 inseguire e diventa il **livello sotto cui non si scende e non si stacca**, per quanto brutta
 sia la linea. Nasce dal caso della rete mobile (§3.1), non da una rinuncia sulla qualità.
@@ -978,7 +984,22 @@ che l'utente sente è questo più la rete: si dichiara, non si promette.
 
 *Scritto in `CODER.md` §1-bis, accanto agli altri due numeri.*
 
-### 2.5 🔸 ⛔ Il traguardo dei 40 ms non è raggiungibile su GNOME — stesso muro dei 60 fps
+⛔ **13 agosto 2026 — il numero è stato misurato, e sfora**: `[M]` mediana **74,58 ms** cattura →
+vetro, pezzo cieco 16-40 ms escluso (§2.5 e `SPECIFICHE.md` §3.2). ⛔ **E il muro dei 37 fotogrammi
+di Mutter non ne è la causa**: Mutter vale il **22 %**, il **78 % è nostro** e quasi tutto sta nel
+codificatore in software. La decisione dell'utente resta questa; cambia da chi si va a prendere i
+millisecondi.
+⛔ **E «il pezzo che è nostro» adesso ha un confine dichiarato**: la misura finisce al **disegno
+finito**, non al richiamo del decodificatore. Sono **11 ms su 50** che la prima stesura si
+regalava, ed è la parte che si dà volentieri via senza accorgersene.
+
+### 2.5 🔸 ⛔⛔ Il traguardo dei 40 ms su GNOME — **MISURATO il 13 agosto, e la causa NON era Mutter**
+
+*⛔ Questa voce si intitolava «Il traguardo dei 40 ms non è raggiungibile su GNOME — stesso muro dei
+60 fps», e attribuiva il ritardo al muro dei 37 fotogrammi della cattura. **Il ritardo è stato
+misurato alla fase 3, e sfora — ma per il 78 % è nostro.** Il conto qui sotto è tenuto perché era
+la stima su cui la decisione è stata presa; la correzione è nel riquadro in fondo, e vale più della
+stima.*
 
 Il conto, sommando i pezzi che v1 ha misurato:
 
@@ -1009,6 +1030,56 @@ misurati separatamente, che è *precisamente* ciò contro cui mette in guardia `
 sommare i registri di chi manda non dice che il byte è arrivato. Serve per orientarsi, **non per
 concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 
+> ## ⛔⛔ 13 agosto 2026 — il banco di §2.6 ha parlato, e ha smentito la tabella qui sopra
+>
+> *Fase 3, step 5. La stima diceva **~48 ms** e dava la colpa alla cattura di Mutter. La misura dice
+> **74,58** e dà la colpa a noi. La previsione era sbagliata in tutt'e due i modi: nel numero e
+> nell'imputato.*
+>
+> `[M]` **ritardo cattura → vetro, mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99
+> 138,1, 6 giri da ~800 campioni, errore d'orologio **±0,63 ms**, banco `banchi/03-b17-ritardo.py`
+> (31 controlli su 31, ponte 11 su 11). ⛔ **Pezzo cieco 16-40 ms non compreso** ⇒ sullo schermo
+> dell'utente **90-115 ms**. ⇒ **Si sfora il tetto dei 50, non solo il traguardo dei 40.**
+> ⚠ Non è input → vetro: il canale di input nasce alla fase 4 (`input` = 0 in 953 su 953), e al suo
+> posto sta il controllo **P1**.
+>
+> | dove se ne va | mediana | di chi è |
+> |---|---|---|
+> | disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
+> | ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
+> | il filo | 0,32 ms | — |
+> | stream completo → `decode()` | 0,08 ms | nostro |
+> | decodifica | 7,58 ms | nostro |
+> | richiamo → disegno finito | 10,51 ms | nostro |
+>
+> ⛔⛔ **Il muro NON è di Mutter, e le tre prove sono queste**: la scena disegna **59,98/s con 0
+> attese**; il figlio del prodotto consegna **23,93/s con ZERO attese a vuoto** — *non aspetta mai
+> Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (libsvtav1 /
+> libx265). ⇒ **58 ms su 74,6 sono nostri, il 78 %**, ~39 nel solo tratto cattura→filo.
+>
+> ⛔ **E il muro dei 37 non si riproduce.** Il riquadro qui sopra dava la causa dei sei decimi come
+> **battimento** fra due orologi allo stesso numero: è sbagliata anche quella. È una
+> **quantizzazione** sui tick — `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666
+> per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero. Legge verificata su
+> **13 punti**, 8 confermano, **0 la smentiscono**, e i «sei decimi» non si riproducono: la cella
+> bassa dà **0,50 pulito**. Con monitor a **120** e freno **90**: `[M]` **61,4 fotogrammi
+> consegnati al secondo** (60,04), intervallo mediano **16,66 ms**.
+>
+> ⛔⛔ **Ma quella cura il prodotto oggi non la sa chiedere**, e va scritto qui o si scambia una
+> misura di banco per una prestazione: `MOVIMENTO_FPS 60` è una **costante di compilazione**
+> (`src/figlio.c:1465`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual` non prende
+> la frequenza** (`src/mutter.h:82`) — i quattro monitor virtuali sono tutti **1920×1080@60**. ⇒ Il
+> «monitor 120 / freno 90» è **`[M]` sul banco e zero in produzione**.
+>
+> ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
+> tolgono un ostacolo; il numero lo fa il ritardo, ed è quello qui sopra.
+>
+> ⇒ ⛔ **Che cosa cambia per le decisioni**: la decisione dell'utente (50 di tetto, 40 di traguardo,
+> e solo per il pezzo nostro) **non si tocca** — è sua, e sta sui numeri. Cambia **l'imputato**: il
+> ritardo non si cura cambiando compositore, si cura **sulla codifica**, che è la fase 8. E cade la
+> frase *«se la misura lo confermasse non è un difetto nostro»*: la misura ha confermato lo sforo e
+> ha detto che **il difetto è nostro**.
+
 ### 2.5-bis ✅ Il tetto di Mutter è accettato: su GNOME il desiderato non si promette
 
 *9 agosto 2026, alla chiusura della fase 0, guardando i numeri misurati.* «Sappiamo che tra tutti i
@@ -1035,6 +1106,37 @@ cosa sbagliata:
    valori intermedi — è quella di due orologi a 60 che battono fra loro, cioè la lettura di
    `gnome.md` §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
    riuscisse, questa voce si riscrive.
+
+> ### ⛔ 13 agosto 2026 — **M3 è chiusa, e questa voce va rimessa in discussione**
+>
+> *Punto 2 qui sopra: «se riuscisse, questa voce si riscrive». È riuscito.*
+>
+> ⛔ **Il tetto non è del compositore: è un troncamento.** `min_interval_us = 10⁶/maxFramerate`
+> **troncato a intero** (16666 per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick
+> intero. Non è un battimento fra due orologi — è una **quantizzazione**, legge verificata su **13
+> punti** (8 confermano, 0 smentiscono). ⛔ E la firma «mediana 33,3, minimo 16,2, mai valori
+> intermedi» è **esattamente** quel che una griglia produce, non due orologi in battimento.
+>
+> | monitor | freno | consegnati | mediana | p99 |
+> |---|---|---|---|---|
+> | 60 | 60 | 31,5 | 33,31 ms | 35,53 |
+> | 120 | 60 | 46,13 | 24,12 ms | 29,23 |
+> | ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 |
+>
+> ⇒ ⛔ **Il «36 ± 2» resta vero alla cadenza che chiedevamo, e smette di essere un muro del
+> compositore.** Alla cadenza disaccoppiata GNOME consegna **61,4**, cioè quanto KWin. ⚠ E i «sei
+> decimi» **non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**.
+>
+> ⛔⛔ **Ma la decisione dell'utente NON cambia oggi, e la ragione è che il prodotto non sa
+> chiedere quella cadenza**: `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`),
+> `main.c` non ha opzioni di cadenza, `RecordVirtual` non prende la frequenza (`src/mutter.h:82`) e
+> i quattro monitor virtuali sono tutti **@60**. ⇒ Il 61,4 è `[M]` **sul banco** e **zero in
+> produzione**. Finché resta così, *«su GNOME il desiderato non si promette»* regge — ⛔ **ma la
+> ragione è cambiata: non è più «Mutter non ce la fa», è «noi non gliela chiediamo».** Sono due
+> frasi con cure opposte, e la seconda è nostra.
+>
+> ⚠ **E il ritmo non è il ritardo**: questa voce parla di fotogrammi al secondo. Il ritardo è §2.5,
+> sfora, e per il 78 % è nostro (`LEZIONI.md` §6.2).
 
 ### 2.7 ✅ ⭐ Il massimo lo offre il server; l'altezza la mette il client
 
@@ -1086,6 +1188,45 @@ alcune **molto più economiche da rispettare**.
 > l'anello si chiude come prima — inietta l'input e guarda i fotogrammi che `VideoDecoder` le
 > consegna. ⭐ E in dote arriva una cosa che con due client nativi non avevamo: **lo stesso banco
 > gira su ogni dispositivo che ha un browser**, telefono compreso, senza compilare niente.
+
+### 2.8 ✅ ⛔ La **tela** non va nel worker — la **decodifica** sì. *Attuato, misurato, tenuto spento*
+
+*13 agosto 2026, fase 3. ⛔ Questa non è una prescrizione rinviata: è una prescrizione **eseguita**.
+`web.md` §6.1 diceva «WebTransport, decodifica e canvas tutti in un worker dedicato», come strada
+migliore. È stata scritta, misurata — e ⭐ **la misura l'ha spaccata in due**, non bocciata in
+blocco.*
+
+| tratto (mediana, ms) | prima | dopo | Δ |
+|---|---|---|---|
+| stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
+| ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
+| richiamo → disegno finito | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
+| **mediana disegno → vetro** | 73,66 / 67,79 | ⛔ **101,30** | ⛔ **+27,6 / +33,5** |
+
+⭐⭐ **La decisione, e non è «niente worker»: è DOVE passa il confine.**
+
+| | |
+|---|---|
+| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** `[M]` **−3,44 ms** — il decodificatore consegna prima quando non contende |
+| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: da sola **+17,6 ms**, più i +10,2 della consegna |
+
+⛔ **Il meccanismo, ed è la parte che vale oltre questo caso**: una `OffscreenCanvas` in un worker
+**si consegna al ritmo del quadro** — un `requestAnimationFrame` implicito che nessuno ha scritto.
+`transferControlToOffscreen` impegna al quadro **da sé**. ⇒ Il divieto di `web.md` §6.1 non è sulla
+parola: **è sul meccanismo**. ⛔⛔ E la prescrizione **conteneva la propria smentita**: prescriveva
+il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
+
+⚠ **E i fotogrammi dipinti dicono il contrario del ritardo, quindi vanno accanto** (`LEZIONI.md`
+§6.2): sulla catena vera il worker dipinge **di più** (26,3/s contro 22,8-24,2), ma a saturazione il
+tetto **crolla di tre quarti** — 127,6 → **33,9**/s a 1080p, 230,6 → **56,4**/s a 480p, cioè **≈ il
+quadro dei 60 Hz**.
+
+⇒ **Che cosa si decide oggi**: il codice resta in albero **dietro `#video=worker`, spento**. ⛔ **E
+non è una bocciatura definitiva.** ⏳ `[?]` **il limite più grosso, e va letto accanto ai numeri**:
+tutto è misurato su **Xvfb, in software, senza GPU**, e la penale è in gran parte sincronizzazione
+al quadro. ⇒ **Su hardware vero il conto va rifatto prima di seppellire §6.1** — ed è la ragione
+per cui il codice **non** è stato tolto: il giorno della GPU vera il numero si rifà senza
+riscrivere niente.
 
 ---
 
@@ -1557,6 +1698,32 @@ l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.
 >
 > ⚠ **E metà di S5 non è misurata**: il **DeX** non c'era. *«Il Chrome del portatile lo fa»* non dice
 > niente del Chrome del telefono — forma **E10** — e la seconda delle tre `[?]` resta intera.
+
+### 5.0-quinquies ✅ ⭐ La tela resta **1920×1080** — e adesso è una decisione, non un'eredità
+
+*13 agosto 2026, all'apertura della fase 3, **decisa dall'utente**. Era ereditata dalla scena di un
+banco e non era mai stata decisa da nessuno: `src/main.c:111` ha `TELA_L 1920` scritto a mano.*
+
+La domanda è stata posta con il suo prezzo misurato accanto: sullo schermo dell'utente la tela
+viene dipinta all'**86 %**, cioè **912 px di nero**. Le tre alternative messe davanti:
+
+| | |
+|---|---|
+| ⭐ **tenerla a 1920×1080** | **scelta** |
+| portarla a 2560×1440 (lo schermo dell'utente) | non scelta |
+| accendere subito `SPECIFICHE.md` §6.1 — *la tela nasce dallo schermo del client* | non scelta: oggi il prodotto non lo fa |
+
+⭐ **La ragione è di metodo, ed è la ragione per cui la decisione è stata presa il giorno stesso in
+cui la fase si apriva**: la fase 3 misura il **tempo**, non la geometria. Con la tela ferma, un
+ritardo che sfora i 50 ms accusa l'architettura; con la tela cambiata sotto, non si saprebbe se
+accusa l'architettura o il conto dei pixel.
+
+⛔ **E le bande nere non sono la risoluzione**, o la `[?]` verrà riaperta credendo di curarle:
+2545×927 di finestra fanno un rapporto **2,74** contro un 16:9 di **1,7778**. Quelle bande sono la
+**forma della finestra**, e sparirebbero solo a schermo pieno — cambiare la tela non le tocca.
+
+⏳ **Resta aperta**, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.md`
+§6.1: oggi è una specifica scritta e **non attuata** (§5.0-quater ne racconta il pezzo difficile).
 
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 
@@ -2543,8 +2710,11 @@ Dieci come tetto configurabile. Ma il limite vero non è un conteggio: è un bud
 secondo, e su una macchina sola lo pone il codificatore.
 
 ### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
-50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. Con l'avvertenza che il
-traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi.
+50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. ⛔ *L'avvertenza che stava qui —
+«il traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi» — è
+**caduta il 13 agosto 2026**: il ritardo è `[M]` **74,58 ms** e sfora anche il tetto, ma il motivo
+non è quello. Mutter pesa il **22 %**, il **78 % è nostro**, e il muro dei 37 non si riproduce
+(§2.5).*
 
 ### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
 Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio
