@@ -21,3 +21,11 @@ __pycache__/
 # Le copie guastate di B12 le rigenera `01-b12-guasti.py`: sono derivate,
 # e una copia col guasto dentro non va conservata.
 banchi/01-b12-copie/
+
+# Le copie del prodotto che P5 e i banchi della fase 3 si fabbricano per innestarci
+# dentro un guasto sono DERIVATE: il prodotto vero sta in `src/`, e la ricetta per
+# rifarle sta nel banco che le usa.  Stessa ragione di `01-b12-copie/` qui sopra.
+# ⚠ Le SEQUENZE di 03-b16 invece si committano, anche se `--sequenze` le rigenera:
+#    sono la *scena dichiarata* di una misura certificata, e una scena che si puo'
+#    solo rifare non e' una scena che si puo' RIVEDERE.
+banchi/01-p5-copie-*/
