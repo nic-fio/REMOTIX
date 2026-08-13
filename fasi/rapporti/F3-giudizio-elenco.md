@@ -10,12 +10,18 @@ un'approvazione al buio — è la forma della fase 2, e si ripete qui.
 
 ## 0. ⭐⭐ IL NUMERO C'È — e porta una domanda che è tua
 
-*Misurato la notte del 13 agosto, tre giri, **una variabile per volta**.*
+*Misurato la notte del 13 agosto, **quattro** giri, **una variabile per volta**, e il numero finale
+è preso **sull'albero del deposito** — cioè esattamente su quel che guarderai.*
 
-| | totale | codifica | **disegno** | **fotogrammi/s** |
-|---|---|---|---|---|
-| **AV1 in software** *(quel che girava fino a ieri)* | **72,40 ms** | 39,82 | ⭐ 9,11 | 21,2 |
-| ⭐ **HEVC in hardware** *(quel che guarderai)* | **75,23 ms** | ⭐ **30,37** | ⛔ 25,11 | ⭐ **30,2** |
+| | totale | codifica | **disegno** | **fotogrammi/s** | P1 |
+|---|---|---|---|---|---|
+| **AV1 in software** *(la 7561, quel che girava fino a ieri)* | **71,86 ms** | 39,67 | ⭐ 9,07 | 22,0 | ✅ |
+| ⭐ **HEVC in hardware** *(la 7571, quel che guarderai)* | **78,12 ms** | ⭐ **31,78** | ⛔ **28,00** | ⭐ **30,0** | ✅ |
+| *(HEVC in software, per capire)* | 109,77 | ⛔ 63,22 | 28,99 | 14,6 | — |
+
+⚠ **E il numero della fase è 78,1, non il 75,2 misurato prima su una copia**: quel giro aveva un
+controllo del banco **rosso**, questo no. ⛔ **Si è preso il peggiore dei due — non si sceglie il più
+bello.**
 
 ⭐⭐ **La codifica in hardware funziona**: la chiave costa **23 volte meno** (4 894 µs contro
 114 533), e **il ritmo raddoppia**.
@@ -72,12 +78,15 @@ quelle note alle 23:00 del 13 agosto; ⛔ quelle superate saranno barrate e data
 
 | | che cosa manca | quanto pesa sul tuo giudizio |
 |---|---|---|
-| **1** | ⏳ **Il numero con la codifica in hardware** — è il lavoro della notte | ⚠ **molto**: se non c'è, stai giudicando la fluidità del prodotto **col freno a mano tirato** (la codifica in software vale il **55 %** del ritardo) |
-| **2** | ⛔ **I banchi browser misuravano sul tuo desktop** credendo di essere su uno schermo finto | ⭐ **nessuno**: riguarda i banchi, non il prodotto. Ma spiega perché i numeri di ieri portavano dentro la contesa col tuo desktop |
-| **3** | ⏳ **`P5R` e la marca di `03-b19`** non sono rigirati | poco: è debito di catalogo, non del prodotto |
-| **4** | ⛔ **22 file del prodotto non sono guardati da nessuna certificazione** | ⚠ **da sapere**: non vuol dire che un guasto passerebbe, vuol dire che una riga verde continuerebbe a dire «certificato» su un prodotto che nel frattempo è un altro. **È lavoro di una fase sua** |
-| **5** | ⛔ **`03-b16` non si rigira** finché il palco non è a posto | poco, e la ragione è scritta a catalogo |
-| **6** | ⏳ **I millisecondi del secondo motore (Firefox)** restano `[?]` per contaminazione **dichiarata** | poco: i conteggi e i sì/no reggono, mancano i tempi |
+| ✅ | ~~il numero con la codifica in hardware~~ | ⭐ **fatto**: 78,1 ms, P1 verde, sull'albero che guarderai |
+| ✅ | ~~la codifica in hardware nel prodotto~~ | ⭐ **fatta**: non più su una copia. Il ritorno indietro è **una riga** |
+| **1** | ⛔⛔ **Il numero SFORA**: 78,1 contro il tetto di **50** e il traguardo di **40** — e col pezzo cieco dichiarato sta fra **94 e 118 ms** sul vetro | ⚠ **è il fatto centrale**. ⛔ Ma guarda **prima** e leggi **dopo**: il numero non è la fluidità, e i due giudizi restano separati |
+| **2** | ⛔ **Il collo di bottiglia adesso è il DISEGNO**: 28,0 ms su 78,1, **il 36 %** — la codifica ne costa 5 | ⭐ **nessuno sul giudizio**, ma è **il primo lavoro della prossima fase**, e non era in nessun piano |
+| **3** | ⛔ **I banchi browser misuravano sul tuo desktop** credendo di essere su uno schermo finto | ⭐ **nessuno**: riguarda i banchi. Ma spiega perché i numeri di ieri portavano dentro la contesa col tuo desktop |
+| **4** | ⏳ **8 banchi su 25 non hanno una certificazione che regge**: 5 sono scaduti **stanotte**, perché il travaso ha cambiato il `Makefile` che loro guardano | ⚠ **poco sul prodotto**, ma va saputo: **non è che siano rossi — è che la loro riga verde descrive un prodotto di ieri** |
+| **5** | ⛔ **22 file del prodotto non sono guardati da nessuna certificazione** | ⚠ **da sapere**: una riga verde continuerebbe a dire «certificato» su un prodotto che nel frattempo è un altro. **È lavoro di una fase sua** |
+| **6** | ⛔ **`03-b16` non si rigira** finché il palco non è a posto | poco, e la ragione è scritta a catalogo |
+| **7** | ⚠ **Due difetti del banco dell'anello, trovati e NON curati** | `regime()` non butta il transitorio della **sessione**; `misura()` non deposita la riga se la stampa esplode. ⛔ Lasciati scritti perché *un banco curato che nessuno ha visto arrossire non è curato* |
 
 ---
 
