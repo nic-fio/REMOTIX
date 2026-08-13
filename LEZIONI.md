@@ -869,6 +869,37 @@ il codice: lo trova **chi legge i byte prodotti**.
 banco che adesso lo fa (`banchi/02-pagina-sonda-verifica.py`) legge le sonde **dal file del
 prodotto** invece di ricopiarle, e **conta i fotogrammi** invece di chiedere.
 
+### ⛔⛔ 2.0-ter Due misure prese in POSIZIONI diverse dentro la stessa pagina non si confrontano
+
+*13 agosto 2026, notte. ⭐ Un banco stava per consegnare **«Firefox è il 44 % più lento di Chrome»**,
+e il 44 % non era di Firefox.*
+
+Un banco provava più configurazioni **di fila, nella stessa pagina**, e ne confrontava i tempi. Lo
+scarto era stabile e riproducibile — **2,5 ms**, sempre nello stesso verso. ⛔ **Era la POSIZIONE
+nella sequenza**: rovesciando l'ordine dei casi, le tre configurazioni davano lo stesso numero.
+
+⛔⛔ **E la parte che rende la trappola cattiva**: l'effetto **tira in versi opposti sui due motori**.
+
+| | chi corre **per primo** |
+|---|---|
+| **Chrome** | è il **più veloce** (7,9 ms) |
+| **Firefox** | è il **più lento** (11,5 ms) |
+
+⇒ Un banco che provasse i casi sempre nello stesso ordine — cioè **qualunque banco scritto in modo
+naturale** — misurerebbe una differenza fra i due motori **che non esiste**, e la misurerebbe
+**stabile**, cioè con tutta l'aria di un fatto.
+
+> ⛔ **La regola**: *quando si confrontano N configurazioni dentro uno stesso processo, l'ordine è
+> una variabile* — e come ogni variabile va **dichiarata e rovesciata**. ⭐ Il controllo costa **un
+> giro in più**: si rifà la sequenza al contrario, e se i numeri si spostano, quel che si stava
+> misurando era la sequenza.
+
+⚠ **E c'è una sorella, trovata la stessa notte, che riguarda le finestre esclusive**: un banco che
+misura N configurazioni di fila **è il vicino di sé stesso** — il carico a un minuto è una media, e
+la configurazione appena finita si presenta come contesa a quella dopo. `[M]` **5 rifiuti su 8** con
+*«browser altrui: 0»*. ⛔ **La cura non è alzare la soglia** — sarebbe spegnere l'arbitro — ma
+**aspettare che la propria scia si spenga** prima di chiedere il permesso.
+
 ### 2.1 La regola dei tre client, e le sue forme insidiose
 
 Nessun client copre i casi degli altri. Un difetto che si vede **solo** su uno è quasi sempre

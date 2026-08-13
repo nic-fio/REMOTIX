@@ -14,7 +14,7 @@
 #        6 s perche' «zero quadri» e «pagina morta» non si somiglino).
 #
 #   2. **Quanto costa dipingere un fotogramma decodificato**, con i DUE
-#      `drawImage` del prodotto (`src/pagina.html:1862` e `:1445`): dal
+#      `drawImage` del prodotto (`src/pagina.html:1863` e `:1446`): dal
 #      fotogramma al deposito, e dal deposito alla tela.
 #
 #   3. ⛔⛔ **Quel `drawImage` ha fatto il lavoro, o l'ha rimandato?**  Il costo
@@ -27,6 +27,12 @@
 #    non disegna niente e' velocissimo.  ⇒ alla fine si rilegge la tela e si
 #    pretende che i pixel **non siano tutti uguali**.  Se lo sono, il numero e'
 #    buttato e il banco lo dice.
+#
+# ⚠ `src/pagina.html` E' CAMBIATA DUE VOLTE la sera del 13 (le sonde HEVC).
+#   ⭐ Verificato riga per riga: la FORMA che questo banco rispecchia — due
+#   `drawImage` e `willReadFrequently: true` sulla tela — **non e' cambiata**;
+#   sono scesi di una riga i numeri, e sono aggiornati qui sopra.
+#   ⛔ E questo banco **non carica** la pagina del prodotto: serve la propria.
 #
 # ⚠ LA SCENA: flusso `testsrc2` 1920x1080 sintetico (non il desktop vero), AV1
 #    Main 10 bit da libsvtav1 preset 10 `pred-struct=1` — le impostazioni del
@@ -82,6 +88,10 @@ const palco = () => {
   return {motore: navigator.userAgent, gpu, nuclei: navigator.hardwareConcurrency,
           crossOriginIsolated: self.crossOriginIsolated,
           visibilita: document.visibilityState,
+          // ⛔ IL PALCO LETTO DALLA PAGINA (vedi `03-ff-decodifica.py`)
+          schermo: screen.width + 'x' + screen.height,
+          finestra: innerWidth + 'x' + innerHeight,
+          pixelRatio: devicePixelRatio,
           VideoDecoder: ('VideoDecoder' in window),
           OffscreenCanvas: (typeof OffscreenCanvas !== 'undefined')};
 };
@@ -110,14 +120,14 @@ function quadri() {
 async function dipingi(forzato) {
   const buf = await (await fetch('/' + CASO.flusso)).arrayBuffer();
   // Le due tele del prodotto: `deposito` (grandezza del fotogramma) e `tela`
-  // (la vista).  `src/pagina.html:1860` e `:1135`.
+  // (la vista).  `src/pagina.html:1861` e `:1136`.
   const deposito = document.createElement('canvas');
   deposito.width = CASO.larghezza; deposito.height = CASO.altezza;
   const dp = deposito.getContext('2d', {alpha: false});
   const tela = document.createElement('canvas');
   tela.width = 1280; tela.height = 720;
   // ⛔⛔ `willReadFrequently: true` E' QUEL CHE FA IL PRODOTTO
-  //    (`src/pagina.html:1136`), e va messo in TUTT'E DUE i passaggi.
+  //    (`src/pagina.html:1137`), e va messo in TUTT'E DUE i passaggi.
   //    ⚠ La prima stesura di questo banco lo metteva solo nel passaggio
   //    «forzato»: i due numeri differivano allora per DUE variabili (la
   //    rilettura E il tipo di tela), cioe' era lo stesso errore del confronto
@@ -252,7 +262,7 @@ def main():
           % (schermo0, "" if con_gpu else "   ⛔ CON --disable-gpu"))
     print("   flusso:    %s  %s  %d pezzi  ⚠ scena SINTETICA (testsrc2), non il desktop vero"
           % (f["nome"], f["codec"], len(caso["pezzi"])))
-    print("   disegno:   i due `drawImage` del prodotto (pagina.html:1862 e :1445),"
+    print("   disegno:   i due `drawImage` del prodotto (pagina.html:1863 e :1446),"
           " deposito 1920x1080 → tela 1280x720")
     print("   ero solo:  %s   %s" % ("SI" if prima["sono_solo"] else "⛔ NO",
                                      "; ".join(prima.get("perche") or [])))

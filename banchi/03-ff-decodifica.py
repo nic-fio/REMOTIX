@@ -72,6 +72,12 @@ const palco = () => {
           nuclei: navigator.hardwareConcurrency,
           crossOriginIsolated: self.crossOriginIsolated,
           visibilityState: document.visibilityState,
+          // ⛔ IL PALCO LETTO DALLA PAGINA, e non dalle intenzioni del banco:
+          //    uno `screen` di 2560x1080 vuol dire che NON siamo sull'Xvfb del
+          //    banco (che e' 1920x1200) ma sul desktop vero dell'utente.
+          schermo: screen.width + 'x' + screen.height,
+          finestra: innerWidth + 'x' + innerHeight,
+          pixelRatio: devicePixelRatio,
           VideoDecoder: ('VideoDecoder' in window)};
 };
 
