@@ -861,6 +861,52 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 
 *Conseguenze scritte: `fasi/02-primo-fotogramma.md`. ⭐ `RCP.md` **non richiede modifiche**.*
 
+> ### ⭐⭐⭐ 1.13-bis — **AV1 NON PUÒ ANDARE IN HARDWARE**, e la scala di preferenza ne esce rafforzata
+>
+> *13 agosto 2026, sera, a codice fermo. ⛔ **Non è una decisione dell'utente: è un vincolo della
+> macchina**, misurato. Si scrive qui perché cambia il peso di una decisione già presa, non il suo
+> verso.*
+>
+> **`[M]` sul server, 3 giri su 3**, con l'esito letto dal **codice d'uscita** e non dalla prosa:
+>
+> ```
+> av1_vaapi   ⛔ USCITA 218   «No usable encoding profile found»
+> ```
+>
+> ⭐ **E la causa è nell'hardware, non in `ffmpeg`**: `vainfo` dà `VAProfileAV1Profile0 :
+> VAEntrypointVLD` su `renderD129` e **niente AV1 affatto** su `renderD128` ⇒ **solo decodifica**.
+> ⚠ `av1_vaapi` **compare** nell'elenco dei codificatori di `ffmpeg`: chi si fidasse dell'elenco
+> invece di un giro butterebbe una consegna. *Un elenco dice che il codice c'è, non che la macchina
+> lo sa fare.*
+>
+> | codificatore, 1920×1080 10 bit, **20 Mbit/s per tutti**, 120 fotogrammi contati in uscita | ms/fotogramma |
+> |---|---|
+> | ⭐ **hevc_vaapi** | **3,16 – 3,24** |
+> | h264_vaapi | 3,11 – 3,16 |
+> | vp9_vaapi profilo 2 | 6,95 – 7,28 |
+> | ⛔ **av1_vaapi** | **non esiste** |
+> | *(software)* libsvtav1 preset 10, sul numero della fase 3 | **22,23** |
+>
+> ⇒ ⛔⛔ **Restare su AV1 vuol dire restare in software per sempre**, su questa macchina. La riga
+> *«la scala di preferenza NON si rovescia: l'ordine resta `hevc,av1`»* era stata scritta per una
+> ragione (il telefono) e ⭐ **adesso ne ha una seconda, più forte**: **HEVC è l'unica strada verso
+> l'hardware sul lato server.**
+>
+> ⛔ **E la riga che rendeva HEVC irraggiungibile è SMENTITA.** Era scritto qui sopra: *«Chrome su
+> Xvfb: HEVC zero»*. `[M]` **la causa era la bandiera `--disable-gpu` del banco**, non il palco:
+> senza quella, lo stesso Chrome sullo stesso Xvfb vede la GPU (`ANGLE (Intel, Mesa Intel(R)
+> Graphics (ADL-N))`) e ⭐ **dipinge un flusso HEVC Main10 uscito da `hevc_vaapi`: 5 giri su 5,
+> 1920×1080, 119 fotogrammi su 120, `powerEfficient: true`**.
+> ⚠ **Quel che NON è smentito, e resta vero**: *Chrome su Linux non ha un decodificatore HEVC
+> software* — HEVC esiste **solo via VA-API**. È **esattamente per questo** che il ripiego AV1
+> **resta necessario** e la decisione dell'utente **non si tocca**: su un client senza VA-API per
+> HEVC il ripiego è l'unica cosa che tiene in piedi la promessa di §1.6.
+>
+> ⚠ **La `[?]` che questa misura apre**: il flusso è stato dipinto per la strada **`<video>`**, e il
+> prodotto usa **WebCodecs `VideoDecoder`**. C'è la dichiarazione (`isConfigSupported` true col
+> palco giusto) e la decodifica vera via `<video>`; ⛔ **non ancora la decodifica vera via
+> `VideoDecoder`**. Si chiude prima di impegnare il lavoro grosso, non dopo.
+
 ---
 
 ## 2. I numeri

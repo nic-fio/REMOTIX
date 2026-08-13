@@ -5,6 +5,23 @@ la fase 3. ⭐ Deciso dall'utente: **la codifica in hardware si anticipa dentro 
 fase **non si chiude** finché non è fatta. ⭐ E su sua richiesta, l'elenco è **raggruppato per poter
 lavorare in parallelo**.*
 
+> ## ⭐⭐⭐ RADDRIZZATO alle 20:40 del 13 agosto, **prima che partisse un solo agente**
+>
+> *L'utente ha chiesto di rileggere il piano «per controllare che non ci siano problemi». Il
+> controllo è stato fatto **misurando lo stato**, non ricordandolo, e ha trovato quattro cose. ⛔ La
+> più grossa è che **la corsia A poggiava su una conclusione FALSA**, e sarebbe stata la corsia da
+> cui «comincia la sessione».*
+>
+> | | |
+> |---|---|
+> | ⛔⛔ **la corsia A è CANCELLATA** | non era «su Xvfb non c'è GPU»: era ⛔ **la bandiera `--disable-gpu` del banco stesso**. Tolta quella, la GPU c'è, HEVC dice sì, e il flusso del codificatore hardware **si dipinge**. `[M]` 5 giri su 5 — vedi la corsia A qui sotto |
+> | ⛔⛔ **la codifica AV1 in hardware NON ESISTE** | e adesso è **misurata**, non dedotta: `av1_vaapi` esce **218** con *«No usable encoding profile found»*, 3 giri su 3. ⇒ Il codec negoziato oggi (`codec 2` = AV1) **non potrà mai** andare in hardware su questa macchina |
+> | ⚠ **la corsia K è per metà GIÀ FATTA** | il piano diceva «sette MAI PROVATI su quindici»; il catalogo dice **24 banchi, 20 certificati, 4 mai provati**. Tre agenti del ventaglio diventano circa uno |
+> | ⚠ **P3-bis fatto, P3 già fatto, P4 no** | le tre porte del 13 sono spente (sul server restano **solo** 7448 · 7501 · 7561, contate prima e dopo); i commit di `banchi/` c'erano già; ⛔ `/tmp` su CHUWI è al **98 %** |
+>
+> ⇒ ⭐ **La giunzione 1 non esiste più**: era «A e B tutt'e due arrivate», e A è caduta.
+> **La strada critica è B → E**, e non ha più il ramo che poteva bloccarla.
+
 ⛔ **Questo file è il compagno del riquadro «DA QUI SI RIPRENDE» del `README.md`**: là c'è il
 *perché*, qui c'è il *chi fa che cosa, quando, e senza pestare i piedi a chi*.
 
@@ -12,18 +29,18 @@ lavorare in parallelo**.*
 
 ## 0. Come si legge questo piano
 
-**Sei corsie.** Quattro partono **subito e insieme**; due sono **serie** e aspettano un ricongiungimento.
+**Cinque corsie** (A è caduta). Tre partono **subito e insieme**; una è **serie** e aspetta B.
 
 ```
-          ┌── A  IL CLIENT HEVC ────────────┐
-subito ───┼── B  LA CODIFICA HW ────────────┼─▶ GIUNZ. 1 ─▶ E  L'ANELLO RIMISURATO ──┐
-  in      ├── C  I 74,58: [M] o [?] ────────┘                    (finestra esclusiva) │
-parallelo └── D  IL SECONDO MOTORE ────────────────────────────────────────────────── ├─▶ GIUDIZIO
-                                                                                      │
-  K1 ─┬─ K2 ─┬─ K3 ─┬─ K4 ─┬─ K5 ─┐                                                   │
-      │      │      │      │      │  ← a VENTAGLIO, una porta e una scheggia ciascuno  │
-      └──────┴──────┴──────┴──────┴─▶ UNIONE del registro ─▶ K6 ─▶ GIUNZ. 2 ───────────┘
-                                        (l'unico passo in serie)
+          ┌── ⛔ A  CANCELLATA ── una riga di cura alla sonda, non una corsia
+subito ───┼── B  LA CODIFICA HW ──────────────▶ E  L'ANELLO RIMISURATO ─────────────┐
+  in      ├── C  I 74,58: [M] o [?] ────────┘         (finestra esclusiva)          │
+parallelo └── D  IL SECONDO MOTORE ────────────────────────────────────────────────  ├─▶ GIUDIZIO
+                                                                                     │
+  K1 ─┬─ K2 ─┬─ K3 ─┐                                                                │
+      │      │      │  ← a VENTAGLIO, una porta e una scheggia ciascuno              │
+      └──────┴──────┴─▶ UNIONE del registro ─▶ K6 ─▶ GIUNZ. 2 ─────────────────────  ┘
+                          (l'unico passo in serie)
 ```
 
 ⛔ **La regola che rende il parallelo possibile, ed è stata pagata oggi**: *ogni corsia ha **porta,
@@ -88,30 +105,39 @@ disco. Chi lancia browser dichiara quanto spazio serve, e lo libera a fine giro.
 propri**. Il perimetro dei **file** è la cosa che rompe il parallelo prima delle porte: è dichiarato
 qui, e chi ha bisogno di un file altrui **lo chiede al coordinatore**.*
 
+⛔ **RIVISTO alle 20:40 del 13**: da **dieci** agenti a **sei**. Tre righe sono cadute perché il
+lavoro **era già fatto** (03-b16, 03-b14, 03-marca sono certificati), e una perché **la corsia A non
+esiste più**.
+
 | # | agente | corsia | quando parte | porta | perimetro dei file |
 |---|---|---|---|---|---|
-| **1** | ⛔ **il punto cieco del catalogo** | **K1** | ⛔⛔ **PER PRIMO, da solo** — dieci minuti, e sblocca il n. 2 | — | `01-b12-guasti.py` + registro |
-| **2** | **il client HEVC** | **A** | subito, in parallelo al n. 1 | 7621 | `banchi/03-hevc-*` (nuovi) |
-| **3** | ⛔ **l'anello: i 74,58 sono `[M]` o `[?]`** | **C** | subito | 7623 | `banchi/03-b17-*` |
+| **1** | ⛔ **il punto cieco del catalogo** | **K1** | ⛔⛔ **PER PRIMO, da solo** — dieci minuti, e sblocca il n. 5 | — | `01-b12-guasti.py` + registro |
+| **3** | ⛔ **le tre code della corsia C** | **C** | subito | 7623 | `banchi/03-b17-*` |
 | **4** | **il secondo motore** | **D** | subito | 7624 | `banchi/03-ff-*` (nuovi) |
 | **5** | ⭐ **la codifica HEVC in hardware** | **B** | ⛔ **quando il n. 1 ha consegnato** | 7622 | `src/codificatore.*` · `figlio.c` · `Makefile` — ⛔ **solo nella COPIA** |
 | **6** | ⭐⭐ **il refutatore del n. 5** | **B** | quando il n. 5 consegna | 7632 | copia **sua**; del n. 5 **legge**, non scrive |
-| **7** | le marche: `03-scena` · `03-marca` · `03-deposita` | **K2·K3** | dopo il n. 1 | 7625 | `03-scena*` · `03-marca*` · `03-deposita*` |
-| **8** | le marche: `03-b16` + la copia ad albero | **K2·K4** | dopo il n. 1 | 7626 | `03-b16-*` |
-| **9** | ⛔ **le marche a TEMPO**: `03-b14` · `03-b19` | **K2** | dopo il n. 1, ⛔ **in finestra esclusiva** | 7627 | `03-b14-*` · `03-b19-*` |
-| **10** | propagazione su NIC-OS · `03-b15-lancia.sh` · ⭐ **l'unione delle schegge** | **K5·K7** | dopo il n. 1 | 7628 | NIC-OS · `03-b15-lancia.sh` · l'unione |
+| **7** | le marche che restano: `03-scena` · `03-deposita` · `03-b19` | **K2·K3** | dopo il n. 1 | 7625 | `03-scena*` · `03-deposita*` · `03-b19-*` |
+
+⛔ **Cadute, e perché** — *non «rimandate»: fatte*:
+
+| | |
+|---|---|
+| **n. 2** — il client HEVC (corsia A) | ⛔ **la domanda è chiusa**: HEVC in hardware **si dipinge**, `[M]` 5 su 5. Resta **una riga di cura** alla sonda, che fa il n. 1 |
+| **n. 8** — `03-b16` + la copia ad albero | ✅ **03-b16 è CERTIFICATO** (13 agosto). La copia ad albero è stata costruita |
+| **n. 9** — `03-b14` a tempo | ✅ **03-b14 è CERTIFICATO**. Resta solo `03-b19`, ed è passato al n. 7 |
+| **n. 10** — propagazione + unione | ⚠ **rientra nel n. 1**: le schegge da unire sono **due**, non cinque, e l'unione costa meno del coordinamento |
 
 **Al ricongiungimento**, senza aggiungere agenti:
 - ⭐ **il n. 3 diventa la corsia E** — possiede già `03-b17-*`, quindi il *prima* e il *dopo* escono
   dalla stessa mano e **si sottraggono davvero**;
-- ⭐ **il n. 1 o il n. 10 fa K6**, le cinque certificazioni scadute per il `Makefile`.
+- ⭐ **il n. 1 fa K6**, le cinque certificazioni scadute per il `Makefile`.
 
 ### ⛔ Le due contese da arbitrare, e le arbitra il coordinatore
 
 | | |
 |---|---|
-| ⛔⛔ **la finestra esclusiva** | il n. **9** e la corsia **E** misurano tutt'e due un **tempo** ⇒ **non possono girare insieme**, e nemmeno accanto a un vicino che cicla. `[M]` il 13 agosto due giri di griglia interi sono stati **buttati** proprio così. ⇒ **Una alla volta, e il banco verifica di essere solo** (§0-bis) |
-| ⚠ **`/tmp` su CHUWI** | i n. **2**, **4**, **8** e **9** lanciano browser: tmpfs da 3,8 G, il 13 agosto al **94 %**. Ciascuno dichiara quanto gli serve e **libera a fine giro**, o il sintomo accuserà la pagina invece del disco |
+| ⛔⛔ **la finestra esclusiva** | il n. **7** (per `03-b19`, che misura un tempo) e la corsia **E** ⇒ **non possono girare insieme**, e nemmeno accanto a un vicino che cicla. `[M]` il 13 agosto due giri di griglia interi sono stati **buttati** proprio così. ⇒ **Una alla volta, e il banco verifica di essere solo** (§0-bis) |
+| ⚠ **`/tmp` su CHUWI** | i n. **4** e **7** lanciano browser: tmpfs da 3,8 G, ⛔ **il 13 agosto sera al 98 %**, 100 M liberi. Ciascuno dichiara quanto gli serve e **libera a fine giro**, o il sintomo accuserà la pagina invece del disco |
 
 ⭐ **E il mandato di tutti e dieci è di REFUTARE, non di verificare** — e **ammette il rifiuto**: se
 la cura che arriva dal coordinatore è sbagliata, si rifiuta **con un caso**. Il 13 agosto è successo
@@ -123,45 +149,69 @@ la cura che arriva dal coordinatore è sbagliata, si rifiuta **con un caso**. Il
 
 *Non è una corsia: è la precondizione di tutte.*
 
-| | |
-|---|---|
-| **P1** | **Lo stato, verificato e non ricordato**: albero pulito · `ss -ltn` ⛔ **su 192.168.0.2, non su CHUWI** (l'errore è già stato fatto oggi) · `python3 banchi/01-b12-guasti.py --registro` |
-| **P2** | ⏳ **La scadenza**: `bash banchi/01-s1b-eccezione.sh oggi`, una volta al giorno **fino al 18 agosto**. Il 13: 4 controlli su 4, 2,50 giorni su 7; Chrome si è segnato **2026-08-17T21:09:47Z** |
-| **P3** | ⛔ **I commit di `banchi/`**, rimasti fuori dalla sessione del 13 (~46 voci: nove banchi nuovi, le cure ai vecchi, il catalogo). Erano in scrittura da due gruppi quando la sessione è finita. ⚠ **Si committano PRIMA di far partire le corsie**, o il primo giro sporca uno stato mai committato |
-| **P3-bis** | ⚠ **TRE PORTE LASCIATE ACCESE dalla sessione del 13**, e non sono le protette: **7603** (il banco del ciclo dei fotogrammi), **7605** e **7615** (l'anello del ritardo). ⛔ **Sono state lasciate APPOSTA, ispezionabili** — non sono un residuo da ammazzare alla cieca. Si spengono con `bash banchi/03-b17-lancia.sh spegni` e l'equivalente di `03-b15`. ⭐ **Vanno spente prima di P1**, o il controllo dello stato conta **sei** porte e chi legge non sa quali sono sue |
-| **P4** | ⚠ **`/tmp` su CHUWI è una tmpfs da 3,8 G al 94 %**. Si libera `/tmp/google-chrome` e `/tmp/claude-*`; ⛔ **si guarda prima di cancellare il resto**: dentro ci sono le **prove** dei giri del 13 |
+⭐ **FATTO alle 20:30-20:40 del 13 agosto.** Le righe restano perché l'esito è la scena da cui
+partono le corsie, e ⛔ **due sono andate diversamente da come erano scritte**.
+
+| | | esito |
+|---|---|---|
+| **P1** | **Lo stato, verificato e non ricordato**: albero pulito · `ss -ltn` ⛔ **su 192.168.0.2, non su CHUWI** (l'errore è già stato fatto) · `python3 banchi/01-b12-guasti.py --registro` | ✅ albero pulito; catalogo **24 banchi, 20 certificati, 4 mai provati** (`03-b17` · `03-b19` · `03-deposita` · `03-scena`) |
+| **P2** | ⏳ **La scadenza**: `bash banchi/01-s1b-eccezione.sh oggi`, una volta al giorno **fino al 18 agosto** | ✅ fatto il 13 alle 09:03 — l'eccezione regge, **2,50 giorni su 7**, Chrome si è segnato **2026-08-17T21:09:47Z**. ⏳ Il prossimo è il **14** |
+| **P3** | ⛔ **I commit di `banchi/`**, rimasti fuori dalla sessione del 13 (~46 voci) | ✅ **erano già dentro** (10caa3c, 769de61): l'albero è pulito. La riga era invecchiata di due commit |
+| **P3-bis** | ⚠ **TRE PORTE LASCIATE ACCESE**, e non sono le protette: **7603** · **7605** · **7615**. ⛔ Lasciate **APPOSTA**, ispezionabili | ✅ **spente** con `03-b17-lancia.sh spegni` e `03-b15-lancia.sh spegni`. ⭐ Contate **prima e dopo**: sul server restano **solo** 7448 · 7501 · 7561 |
+| **P4** | ⚠ **`/tmp` su CHUWI**: si libera `/tmp/google-chrome` e `/tmp/claude-*`; ⛔ **si guarda prima di cancellare il resto**: dentro ci sono le **prove** dei giri del 13 | ⛔ **NON fatto**: è al **98 %**, 100 M liberi. 1,3 G sono vecchi scratchpad di sessioni chiuse. ⚠ **Chi lancia browser lo guarda prima di credere a un errore che accusa la pagina** |
 
 ---
 
-## 🅐 CORSIA A — ⛔ **IL PALCO SENZA GPU** — e la domanda è già stata risposta
+## ⛔ CORSIA A — **CANCELLATA la sera del 13 agosto**: non era un palco, era una BANDIERA
 
-> ### ⛔⛔ **RISPOSTA GIÀ DATA la notte del 13 agosto: NO, un client che accetta HEVC su questo palco NON esiste.** E la causa **non è HEVC**.
+> ### ⛔⛔⛔ **LA CONCLUSIONE DEL 13 ERA FALSA, E QUESTA È LA TRAPPOLA PIÙ CARA DELLA GIORNATA**
 >
-> `[M]` **5 giri validi su 5**, nell'ambiente esatto del banco (Xvfb + `google-chrome` 151 coi flag
-> di `03-b17-ritardo.py:620`): `isConfigSupported` è **`false`** per **tutte** le stringhe HEVC
-> (`hev1.1.6.L93`, `hev1.2.4.L120`, `hvc1.*`) e **`true`** per AV1. **Ecco perché si negozia AV1.**
+> Era scritto: *«su Xvfb non c'è GPU affatto ⇒ non è un problema di codec, è un problema di
+> PALCO»*, e su quella riga la corsia A diventava **la corsia da cui comincia la sessione**.
 >
-> ⭐⭐ **E la causa vera**: su **Xvfb non c'è GPU affatto** — la stessa pagina risponde *«niente
-> webgl»*. Chrome **non ha un decodificatore HEVC in software**, quindi senza VAAPI dice no.
-> ⇒ **Non è un problema di codec: è un problema di PALCO.**
+> ⛔ **È la BANDIERA `--disable-gpu` del banco stesso.** `03-b17-ritardo.py:626` la infila quando
+> `self.gpu` è falso. `[M]` **A/B con UNA SOLA VARIABILE**, lo stesso script girato due volte:
 >
-> ⚠ *E questa riga corregge la mia: non è che «la sonda fallisce con `EncodingError`» — nel giro
-> vero **non ci arriva nemmeno**, si ferma prima, a `isConfigSupported`.*
+> | Chrome su Xvfb | webgl visto dalla pagina | HEVC `isConfigSupported` |
+> |---|---|---|
+> | **senza** `--disable-gpu` | ⭐ `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
+> | **con** `--disable-gpu` | `niente webgl` | no |
+>
+> ⭐ **E la GPU su Xvfb c'è**: è la iGPU di CHUWI, presa dal nodo DRM. `vainfo` su CHUWI dice
+> `VAProfileHEVCMain10 : VAEntrypointVLD` — **la decodifica HEVC a 10 bit in hardware, sul client**.
+>
+> ⭐⭐ **E l'anomalia del piano è spiegata**: *«un giro ha detto HEVC true e non si è più
+> riprodotto»* era il giro **senza la bandiera**. Non era un caso: era l'unico giro giusto.
+>
+> ⭐ **Quel che NON è successo, e va detto perché era il rischio grosso**: `03-b17-ritardo.py:582`
+> ha **`gpu=True` di default** (`--senza-gpu` è opt-in) ⇒ ⛔ **l'anello dei 74,58 ms NON era
+> misurato al buio**. Era **la sonda dei codec** a esserlo, non la misura.
 
-**⇒ La corsia cambia mestiere: non «trovare un client HEVC», ma «dare al banco un palco con una
-GPU vera».** ⭐ **Ed è da qui che comincia la sessione, non dal codificatore** — il codificatore
-hardware **c'è e funziona già**, misurato (vedi corsia B).
+> ### ⭐⭐⭐ E HEVC IN HARDWARE **SI DIPINGE DAVVERO** — non «dice di sì»: dipinge
+>
+> ⛔ `isConfigSupported` è una **dichiarazione**. Quindi il flusso uscito da `hevc_vaapi` sul server
+> è stato **fatto suonare** al Chrome del banco, e i fotogrammi **contati**. `[M]` **5 giri su 5**,
+> identici:
+>
+> | flusso | esito |
+> |---|---|
+> | ⭐ **HEVC Main10** (`hevc_vaapi`) | 1920×1080, **119 fotogrammi su 120**, `powerEfficient: true` |
+> | VP9 profilo 2 10 bit (`vp9_vaapi`) | 1920×1080, 120 su 120, `powerEfficient: true` |
+> | H.264 high (`h264_vaapi`) | 1920×1080, 120 su 120, `powerEfficient: true` |
+>
+> ⚠ **Il pezzo che manca, e si dice prima che lo trovi qualcun altro**: questa è la strada
+> `<video>`, e il prodotto usa **WebCodecs `VideoDecoder`**. Per HEVC c'è la **dichiarazione**
+> (`isConfigSupported` true col palco giusto) e la **decodifica vera via `<video>`**, ⛔ **non
+> ancora la decodifica vera via `VideoDecoder`**. ⇒ È il **primo controllo della corsia B**, non un
+> blocco: se cadesse lì, cadrebbe prima che B abbia scritto il codificatore.
+
+**⇒ Quel che resta della corsia A è UNA RIGA DI CURA, e la fa il n. 1 insieme a K1:**
 
 | | |
 |---|---|
-| **Che cosa** | ⭐ CHUWI **ha una GPU**, e il Chrome del banco monta un `gpu-process` su `renderD128` **sotto Wayland**. ⛔ Ma il palco lo lancia su **Xvfb** (`03-b17-ritardo.py:604`), dove GPU non ce n'è. ⇒ **Portare il palco dove la GPU c'è** |
-| **La domanda** | *Con un browser su GPU vera, `isConfigSupported` dice sì a HEVC Main10?* E se sì, **la catena intera si misura**. Chrome sotto Wayland · Chrome con `--ozone-platform` · il telefono (che HEVC Main10 lo dipinge già, `[M]` 13 agosto) |
-| ⚠ **Un'anomalia da inseguire** | ⛔ **un giro della sonda ha detto HEVC = `true` con GPU, e non si è più riprodotto** (0 su 5 successivi). Non ci si costruisce sopra niente — ⭐ **ma se fosse raggiungibile sbloccherebbe tutto**, quindi si insegue |
-| **Perimetro file** | `banchi/03-palco-*` (nuovi). ⛔ **Niente `src/`, niente `.md`, nessun banco `03-b1x` esistente** |
-| **Porta / palco** | **7621** · browser veri su CHUWI |
-| **Dipende da** | niente. ⭐ **È la corsia che sblocca tutte le altre: parte per prima e con la persona migliore** |
-| **Consegna a** | ⛔ **GIUNZIONE 1**, ed è la metà che può bloccarla |
-| **Ripiego se resta NO** | si misura il **lato server soltanto**, e ⛔ **si dichiara che è mezzo anello** — non lo si spaccia per l'anello. ⚠ In quel caso l'anello intero resta col codec **AV1**, e la fase 8 andrà misurata su AV1 in software contro HEVC in hardware, che **non è un confronto pulito** e va detto |
+| **La cura** | la sonda dei codec **non deve girare con `--disable-gpu`**. E ⛔ **il banco deve DIRE con che palco ha risposto**: una sonda che risponde «no a HEVC» senza scrivere se aveva una GPU **ha lo stesso aspetto** di una che risponde bene |
+| **Perimetro file** | `banchi/03-palco-*` (nuovi, per la sonda che resta come prova) |
+| **Consegna a** | il coordinatore — ⛔ **e la GIUNZIONE 1 non esiste più**: B consegna direttamente a E |
 
 ---
 
@@ -183,6 +233,42 @@ hardware **c'è e funziona già**, misurato (vedi corsia B).
 >
 > ⇒ ⭐ **Circa otto volte più veloce di quel che gira adesso.** Il pezzo grosso dei 39 ms è
 > aggredibile per davvero.
+
+> ### ⭐⭐ SECONDA MISURA, la sera del 13 — **a parità di bitrate, e coi fotogrammi CONTATI**
+>
+> ⛔ **Il primo giro di questa sonda NON era un confronto, e il banco si è accusato da sé**: VP9
+> consegnava **129 221 byte** dove HEVC ne consegnava **3 893 620** — *trenta volte meno*. «Più
+> veloce» a un trentesimo del bitrate **non è più veloce**. Rifatto **a 20 Mbit/s per tutti**, con
+> `ffprobe` a contare i fotogrammi in uscita (un codificatore che ne butta 60 è veloce il doppio, e
+> il cronometro da solo non se ne accorge). **3 giri:**
+>
+> | codificatore | ms/fotogramma | byte | fotogrammi in uscita |
+> |---|---|---|---|
+> | ⭐ **hevc_vaapi** | **3,16 – 3,24** | 5 356 148 | **120 su 120** |
+> | h264_vaapi | 3,11 – 3,16 | 5 784 639 | 120 su 120 |
+> | vp9_vaapi 10 bit | 6,95 – 7,28 | 4 927 115 | 120 su 120 |
+> | ⛔ **av1_vaapi** | **non esiste** — uscita 218, *«No usable encoding profile found»* | — | — |
+>
+> ⭐ **Il controllo tiene**: `hevc_vaapi` senza vincolo di bitrate dà **2,92 ms** contro i **2,85**
+> del 13 ⇒ questa sonda e quella della notte **parlano la stessa lingua**, e i numeri si leggono
+> sulla stessa scala.
+>
+> ⛔⛔ **E la riga che cambia il bersaglio per sempre: la codifica AV1 in HARDWARE NON ESISTE.**
+> Né su `renderD128` né su `renderD129` — `vainfo` dà `VAProfileAV1Profile0 : VAEntrypointVLD`,
+> cioè **solo decodifica**. ⚠ `av1_vaapi` **compare** nell'elenco di `ffmpeg`: chi si fidasse
+> dell'elenco invece che di un giro butterebbe una consegna. ⇒ **Restare su AV1 vuol dire restare in
+> software per sempre**, su questa macchina.
+>
+> ⇒ ⭐ **HEVC è il bersaglio giusto, e adesso per una ragione MISURATA ai due capi**: il più veloce
+> in codifica **e** l'unico che il client dipinge in hardware. **VP9 non serve** — era la strada di
+> ripiego, è più lento, e avrebbe voluto un numero di codec nuovo nel protocollo (`RCP.md:1404` dà
+> `1` = HEVC, `2` = AV1, e basta).
+>
+> ⚠ **Una cosa che NON si può leggere da questi numeri**: il `libsvtav1` di questa sonda fa **9,9
+> ms**, non 22,23 — perché **la scena è diversa** (contenuto sintetico, e i byte lo dicono: 2,8 M
+> contro 5,5 M). ⭐ I codificatori in hardware sono quasi indifferenti al contenuto (2,92 contro
+> 2,85), quelli **software no**. ⇒ ⛔ **Il rapporto software/hardware va preso da un giro sulla
+> STESSA scena** — ed è esattamente quel che fa la corsia E.
 >
 > ⛔ **E tre avvertenze, perché il numero non venga letto per più di quel che è:**
 > 1. **è mezzo anello**: è la portata di `ffmpeg` **in blocco e pipelined**, non il ritardo per
@@ -211,13 +297,15 @@ VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
 | **B4** | ⚠ **chiave/delta e `RICHIEDI_CHIAVE` con VA-API** | i codificatori hardware trattano le **chiavi forzate** diversamente da quelli software. ⇒ `03-b15-movimento.py` **va rigirato per controllo** — non perché la certificazione scada, ma perché **è il posto dove guarderei per primo** |
 | **B5** | ⛔ **che cosa NON si anticipa** | la **copia zero** resta alla fase 8 |
 | **B6** | ⭐ **l'occasione dentro l'occasione** | `EncSliceLP` è l'entrypoint che `web.md` nomina come *«da verificare»* per i **sotto-livelli temporali**: la strada per **abbandonare un fotogramma senza rompere quelli dopo**, che oggi costa **una chiave ogni volta**. ⚠ **Non farla dentro questa corsia**: si nomina, si misura la fattibilità, e diventa lavoro suo |
+| **B0** | ⛔⛔ **IL PRIMO CONTROLLO, prima di scrivere un carattere** | la decodifica HEVC via **WebCodecs `VideoDecoder`** — non `<video>` — con un flusso vero di `hevc_vaapi`. ⭐ Oggi c'è la dichiarazione e c'è la decodifica via `<video>`, `[M]` 5 su 5; **manca la strada che il prodotto usa davvero**. ⚠ Se cadesse, cade **prima** del lavoro grosso, non dopo |
+| **B7** | ⚠ **la negoziazione dice già HEVC** | `RCP.md:699` elenca `hevc, av1` e `:1404` dà `codec 1 = HEVC`. ⇒ **il protocollo non va toccato**: va tolto il motivo per cui il prodotto sceglie `2` |
 
 | | |
 |---|---|
 | **Perimetro file** | `src/codificatore.c` · `src/codificatore.h` · `src/figlio.c` · `src/Makefile` — ⛔ **e SOLO nella copia sul server**. ⚠ Nessun `.md`, nessun banco |
 | **Porta / palco** | **7622**, copia del prodotto sul server, ban+socket+registro propri |
 | **Dipende da** | **K1** (il punto cieco del catalogo) — vedi corsia K, ed è una cosa da dieci minuti |
-| **Consegna a** | ⛔ **GIUNZIONE 1** |
+| **Consegna a** | ⭐ **direttamente a E** — ⛔ la giunzione 1 non esiste più, la corsia A è caduta |
 
 ---
 
@@ -305,7 +393,8 @@ VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
 | **Perimetro file** | `banchi/03-ff-*` (nuovi) |
 | **Porta / palco** | **7624** · Firefox 140.13.0esr su CHUWI |
 | **Dipende da** | niente |
-| **Consegna a** | il coordinatore. ⚠ Se ci arriva **prima** della giunzione, i suoi numeri entrano nel giudizio; se no, resta `[?]` **dichiarata**, forma d'errore **E10** — che è già la posizione onesta di oggi |
+| **Consegna a** | il coordinatore. ⚠ Se ci arriva **prima che E chiuda**, i suoi numeri entrano nel giudizio; se no, resta `[?]` **dichiarata**, forma d'errore **E10** — che è già la posizione onesta di oggi |
+| ⭐ **E una cosa in più, gratis** | la sonda del palco scritta la sera del 13 (`isConfigSupported` + decodifica vera, esiti **rimandati dalla pagina**, niente CDP) **funziona già su tutt'e due i motori**: la corsia D non ha bisogno di un attrezzo diverso, solo di puntarla ai numeri invece che ai sì/no |
 
 ---
 
@@ -327,15 +416,21 @@ successo: due giudizi caduti **nello stesso secondo**, e l'unione **l'ha detto**
 ⛔⛔ **E restano DUE VINCOLI D'ORDINE, che non sono negoziabili e non c'entrano col parallelo**: uno
 in testa (**K1**) e uno in coda (**K6**). Nel mezzo, tutto va a ventaglio.
 
+⛔ **RIVISTO alle 20:40 del 13 col catalogo davanti** — `python3 banchi/01-b12-guasti.py --registro`:
+**24 banchi, 20 CERTIFICATI, 4 mai provati** (`03-b17` · `03-b19` · `03-deposita` · `03-scena`).
+⇒ **K4 e metà di K2 erano già fatte**, e il piano non lo sapeva perché è stato scritto **prima**
+degli ultimi due commit della giornata.
+
 | # | quando | | |
 |---|---|---|---|
-| **K1** | ⛔ **PER PRIMO, e blocca la corsia B** | **IL PUNTO CIECO** | **Nessuna certificazione guarda `codificatore.c`. Nessuna. E nemmeno `figlio.c`.** ⇒ Si può riscrivere il codificatore da capo a fondo e il conto direbbe *«15 su 15, tutto verde»*. Non è nato oggi — si vede **adesso** perché adesso la corsia B sta per lavorare proprio lì. ⭐ **Costa due righe, e va fatto prima che B scriva un carattere** |
-| **K2** | mentre A-B-C-D girano | **le marche dei banchi nuovi** | sette sono a catalogo come **MAI PROVATI**, col campo `marca` **vuoto di proposito** — *una marca si **misura**, e una dedotta dal sorgente è la forma d'errore già pagata su B4 e B7*. ⭐ Su `03-marca` poggia la mediana **74,58 ms**: se ce n'è una che vale, è quella. ⛔ **Meglio tre misurate bene che sette dedotte** |
+| **K1** | ⛔ **PER PRIMO, e blocca la corsia B** | **IL PUNTO CIECO** | ⭐ **VERIFICATO, e va detto più preciso di com'era scritto**: `src/codificatore.c` non compare in **nessuna** lista di `FILE_CHE_CONTANO` — vero. ⛔ Ma *«e nemmeno `figlio.c`»* **è smentito**: `figlio.c` c'è, nella lista di `03-b17` (riga 352). ⚠ Solo che **`03-b17` è uno dei quattro MAI PROVATI** ⇒ la rete c'è **sulla carta e non nei fatti**. La cura resta la stessa; la frase no. ⭐ **Costa due righe, e va fatto prima che B scriva un carattere** |
+| **K2** | mentre B-C-D girano | **le marche dei banchi che RESTANO** | ⭐ **03-b14, 03-b16, 03-b15, 03-b18 e 03-marca sono CERTIFICATI** (13 agosto sera). ⛔ Restano **`03-scena`, `03-deposita`, `03-b19`** — e `03-b17`, che però è della corsia C. Il campo `marca` resta **vuoto di proposito**: *una marca si **misura**, e una dedotta dal sorgente è la forma d'errore già pagata su B4 e B7* |
 | **K3** | insieme a K2 | **`03-deposita` non è certificabile** | e non per la marca: **nessuno rilegge `03-scena-esiti.jsonl`**, quindi un guasto lascerebbe il giro verde. Il controllo mancante **costa due righe** |
-| **K4** | insieme a K2 | **`03-b16` vuole una copia ad ALBERO** | e `prepara_copia()` non lo sa fare: va costruita a mano |
-| **K5** | insieme a K2 | ⚠ **propagazione su NIC-OS** | là il conto legge **11/15** perché tre file di *banco* sono vecchi. Non tocca la validità — quei giri sono partiti da CHUWI — ma va allineato |
-| **K6** | ⛔ **DOPO la giunzione 1** | **le certificazioni che scadono** | **cinque su quindici** — **B10 · B13 · P1 · P5 · P5R** — ⛔ e **nessuna per colpa del codificatore**: scadono perché guardano **`remotix/Makefile`**, che cambia per legare VA-API. ✅ **Reggono**: B3·B5·B6·B7·B8 (`rcp/rcp.c`) · B9 (`RCP.md`) · B2·B4·B11·C2 · 03-b14·03-b15·03-b18 (banchi propri) |
+| ~~**K4**~~ | ✅ **FATTA** | ~~`03-b16` vuole una copia ad ALBERO~~ | **03-b16 è certificato**: la copia ad albero è stata costruita |
+| **K5** | insieme a K2 | ⚠ **propagazione su NIC-OS** | là il conto era **11/15** perché tre file di *banco* erano vecchi. Non tocca la validità — quei giri sono partiti da CHUWI — ma va allineato, e ⚠ **il denominatore adesso è 24** |
+| **K6** | ⛔ **DOPO che B ha consegnato** (la giunzione 1 non esiste più) | **le certificazioni che scadono** | ⭐ **CONTROLLATO nel sorgente**: sono **cinque**, e sono esattamente quelle che portano `FILE_DEL_BINARIO = ["remotix/main.c", "remotix/Makefile"]` (riga 269) — **B10 · B13 · P1 · P5 · P5R**. ⛔ **Nessuna per colpa del codificatore**: scadono perché guardano il **`Makefile`**, che cambia per legare VA-API. ⚠ Il piano diceva «cinque su **quindici**»: sono **cinque su ventiquattro**. ✅ **Reggono**: B3·B5·B6·B7·B8 (`rcp/rcp.c`) · B9 (`RCP.md`) · B2·B4·B11·C2 · 03-b14·03-b15·03-b16·03-b18·03-marca (banchi propri) |
 | **K7** | insieme a K6 | ⚠ **`03-b15-lancia.sh`** | usa ancora la porta 7603 e l'ordine vecchio **scena → misura**, che dà **zero fotogrammi** |
+| **K8** | ⭐ **insieme a K1** | ⛔ **la sonda che ha mentito** | `03-b17` porta `figlio.c` a catalogo ma **non è mai stato provato**, e la sonda dei codec del 13 girava con `--disable-gpu` **senza dirlo**. ⇒ **Un banco che risponde «no» deve scrivere CON CHE PALCO ha risposto**, o la risposta e la cecità hanno lo stesso aspetto |
 
 | | |
 |---|---|
@@ -347,15 +442,17 @@ in testa (**K1**) e uno in coda (**K6**). Nel mezzo, tutto va a ventaglio.
 
 ---
 
-## ⚡ GIUNZIONE 1 — quando A e B sono tutt'e due arrivate
+## ⛔ GIUNZIONE 1 — **SCIOLTA la sera del 13 agosto**
 
-⛔ **Non prima.** Con la sola B si misura mezzo anello; con la sola A non c'è niente da misurare.
+Era *«non prima che A e B siano tutt'e due arrivate: con la sola B si misura mezzo anello»*.
+⭐ **La metà che mancava c'è già**: il client dipinge HEVC in hardware, `[M]` 5 giri su 5.
+⇒ **B consegna direttamente a E**, e la strada critica perde il ramo che poteva bloccarla.
 
 ---
 
 ## 🅔 CORSIA E — L'anello rimisurato, ed è il numero su cui la fase si chiude
 
-**Parte alla giunzione 1.**
+**Parte quando B ha consegnato** — ⛔ la giunzione 1 è sciolta, non c'è più niente da aspettare.
 
 | # | | |
 |---|---|---|
@@ -368,7 +465,8 @@ in testa (**K1**) e uno in coda (**K6**). Nel mezzo, tutto va a ventaglio.
 |---|---|
 | **Perimetro file** | `banchi/03-b17-*` — ⚠ **ereditato dalla corsia C**, che a quel punto ha finito |
 | **Porta / palco** | **7623**, la stessa di C, con la copia della corsia B montata dietro |
-| **Dipende da** | ⛔ **A + B (giunzione 1)** · ⚠ **C** (se C dice che i 74,58 sono `[?]`, il «prima» va rifatto **anche lui**, o la sottrazione non vale) |
+| **Dipende da** | ⛔ **B soltanto** (la giunzione 1 è sciolta) · ⚠ **C** (se C dice che i 74,58 sono `[?]`, il «prima» va rifatto **anche lui**, o la sottrazione non vale) |
+| ⛔ **E una cosa da non sbagliare** | il «prima» e il «dopo» devono avere **lo stesso palco**: se il giro nuovo gira **con** la GPU e quello vecchio **senza**, la differenza non è il codificatore. ⭐ `03-b17-ritardo.py` ha `gpu=True` di default in tutt'e due, **ma va DICHIARATO accanto al numero**, non creduto |
 
 ---
 
@@ -454,6 +552,9 @@ primo.
 | ⛔ **`giri_verdi: 6` gonfiato — erano 3**, e uno dei giri contati aveva rosso proprio il controllo che valida il numero usato |
 | ⛔ **numeri FOSSILI incollati nei commenti** («0 su 783») mentre il giro vero ne aveva 804 |
 | ⛔ **una voce di catalogo che diceva «1 guaio» dove i guai erano 3**: la certificazione sarebbe caduta **per una virgola** |
+| ⛔⛔⛔ **una sonda che ha spento da sé quel che stava cercando**: chiedeva a Chrome se sapesse decodificare HEVC, e lo lanciava con **`--disable-gpu`**. Cinque «no» su cinque, e il «sì» che ogni tanto usciva è stato archiviato come *anomalia non riproducibile*. ⇒ **Ne è nata una corsia intera del piano** — «dare al banco un palco con una GPU vera» — su una conclusione **falsa**. ⭐ La cura non è tecnica: **un banco che risponde «no» deve scrivere CON CHE PALCO ha risposto**, o «non c'è» e «non ho potuto guardare» hanno lo stesso aspetto |
+| ⛔⛔ **un confronto fra codificatori che NON era un confronto**: VP9 sembrava concorrenziale, e consegnava **trenta volte meno byte** di HEVC. «Più veloce» a un trentesimo del bitrate non è più veloce. ⇒ **Si fissa il bitrate a tutti, e i fotogrammi in uscita si CONTANO** — uno che ne butta 60 è veloce il doppio, e il cronometro da solo non se ne accorge |
+| ⛔ **un elenco di `ffmpeg` creduto invece che girato**: `av1_vaapi` **compare** fra i codificatori, e all'uso esce **218** — *«No usable encoding profile found»*, perché l'hardware l'entrypoint non ce l'ha. ⇒ **Un elenco dice che il codice c'è, non che la macchina lo sa fare** |
 
 ### 4. ⛔ I CODICI D'USCITA — il rosso che non esce dal programma
 
@@ -472,7 +573,7 @@ primo.
 | ⛔ **`numpy` non c'è su NIC-OS** — chi legge i pixel lo fa **da CHUWI** |
 | ⛔ **`bc` non c'è sul server**, e `y4m` non accetta il 10 bit ⇒ due giri persi in cronometri a zero |
 | ⛔ **Firefox non apre finestre su Xvfb `:81`** (0 finestre in 90 s) e **non ha CDP** ⇒ si prova `--headless` **facendo rimandare gli esiti alla pagina stessa** |
-| ⛔⛔ **su Xvfb non c'è GPU AFFATTO** ⇒ `requestAnimationFrame` **non gira mai** (0 quadri in 3 s, a scheda «visible»), e Chrome dice **no a HEVC** perché non ha un decodificatore software. ⇒ **Il palco, non il codec** |
+| ⛔⛔⛔ **~~su Xvfb non c'è GPU AFFATTO~~ — SMENTITA la sera del 13, ed è la riga più cara della giornata**: la GPU su Xvfb **c'è** (`ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))`). A spegnerla era ⛔ **la bandiera `--disable-gpu` del banco stesso** (`03-b17-ritardo.py:626`). `[M]` A/B con una sola variabile: senza bandiera → webgl **e HEVC true**; con bandiera → *«niente webgl»* e HEVC no. ⚠ **La riga su `requestAnimationFrame` (0 quadri in 3 s) va rimisurata**: era presa sullo stesso palco cieco |
 | ⚠ **`/tmp` su CHUWI è una tmpfs da 3,8 G, il 13 agosto al 94 %**: quando si riempie Chrome non apre il profilo e il banco fallisce con un errore che **accusa la pagina**. ⛔ Si guarda il disco **prima** di credergli — ed è **già successo** |
 
 ### 6. ⛔ GLI ATTREZZI — che mentono in silenzio

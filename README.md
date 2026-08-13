@@ -379,12 +379,36 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > per **AV1**, ⛔ **falsa per HEVC**. ⚠ Stessa forma dei «37 fotogrammi di Mutter»: una riga
 > **ripetuta invece che misurata**, che poi decide un piano.
 >
-> #### ⛔ L'ordine del lavoro, e il primo punto è uno scoglio vero
+> #### ⛔⛔⛔ LO SCOGLIO NON C'ERA — **smentito la sera del 13, prima che partisse un agente**
 >
-> 1. ⛔⛔ **il codec negoziato oggi è AV1**, perché la sonda HEVC di Chrome **fallisce su Xvfb**
->    (`EncodingError`). **Senza un client che accetti HEVC l'anello intero non si misura** — al
->    massimo il lato server, e sarebbe mezzo anello. **Affrontalo per primo**;
-> 2. la codifica HEVC in hardware nel prodotto, **su una copia** finché non è misurata;
+> Qui era scritto: *«il codec negoziato è AV1 perché la sonda HEVC di Chrome fallisce su Xvfb ⇒
+> senza un client che accetti HEVC l'anello intero non si misura. **Affrontalo per primo**»*.
+> ⛔ **Falso, e la causa era dentro il banco**: la sonda lanciava Chrome con **`--disable-gpu`**.
+>
+> | Chrome su Xvfb | webgl | HEVC |
+> |---|---|---|
+> | **senza** `--disable-gpu` | ⭐ `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
+> | **con** `--disable-gpu` | `niente webgl` | no |
+>
+> ⭐⭐ **E non è una dichiarazione: è una decodifica.** Il flusso uscito da `hevc_vaapi` è stato
+> fatto **dipingere** al Chrome del banco — `[M]` **5 giri su 5**, 1920×1080, **119 fotogrammi su
+> 120**, `powerEfficient: true`. **Il client c'è, ed è quello che c'era già.**
+>
+> ⛔⛔ **E una seconda riga che cambia il bersaglio per sempre**: la codifica **AV1 in hardware NON
+> ESISTE** su questa macchina — `av1_vaapi` esce **218**, *«No usable encoding profile found»*, 3
+> giri su 3. ⇒ **Restare su AV1 vuol dire restare in software per sempre.** HEVC non è una
+> preferenza: è **l'unica strada** verso l'hardware, ed è misurata ai due capi.
+>
+> ⚠ **La forma dell'errore, che è la terza volta in due giorni**: una riga **ripetuta invece che
+> misurata** stava per decidere il lavoro di una sessione intera. Qui però era peggio — ⛔ **il
+> banco si era accecato da solo e non l'aveva scritto**. ⇒ La lezione nuova: *un banco che risponde
+> «no» deve dire **con che palco** ha risposto*.
+>
+> #### L'ordine del lavoro, riscritto
+>
+> 1. ✅ ~~lo scoglio HEVC~~ — **chiuso**: resta una riga di cura alla sonda;
+> 2. ⭐ **la codifica HEVC in hardware nel prodotto**, **su una copia** finché non è misurata — è
+>    adesso **il primo lavoro**, e la sua strada critica è **B → E**;
 > 3. ⭐ l'anello rimisurato con lo **STESSO** banco (`03-b17-ritardo.py`) e la **STESSA** scena;
 > 4. ⛔ **i CINQUE tratti affiancati**, non il totale: *tolta la codifica software, gli altri quattro
 >    restano dove sono?* Se restano, l'architettura è **assolta**;
@@ -401,9 +425,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⭐⭐ **E L'ELENCO COMPLETO DI QUEL CHE C'È DA LAVORARE** — trentadue voci in sette gruppi, in
 > ordine di quando mordono, con dentro **le trappole già pagate** perché non si ripaghino — sta in
 > [`fasi/rapporti/F3-prossima-sessione.md`](fasi/rapporti/F3-prossima-sessione.md).
-> ⛔ **Le due voci bloccanti sono in testa a quel file**: il **punto cieco del catalogo** (nessuna
-> certificazione guarda `codificatore.c`, e la sessione nuova lavora proprio lì) e lo **scoglio
-> HEVC**.
+> ⛔ **RIVISTO la sera del 13**: quel file è stato **raddrizzato coi fatti misurati** — la corsia A
+> è **cancellata**, la corsia K è **per metà già fatta** (il catalogo dice **24 banchi, 20
+> certificati, 4 mai provati**), e gli agenti scendono da **dieci a sei**.
+> ⇒ **Resta UNA voce bloccante**: il **punto cieco del catalogo** — nessuna certificazione guarda
+> `codificatore.c`, e il lavoro nuovo va proprio lì. ⚠ E va detta più precisa di com'era scritta:
+> `figlio.c` **a catalogo c'è**, nella lista di `03-b17` — ma `03-b17` **non è mai stato provato**,
+> quindi la rete c'è **sulla carta e non nei fatti**.
 >
 > ⏳ **E i due punti che l'utente ha lasciato APERTI di proposito** stanno in
 > [`fasi/03-movimento.md`](fasi/03-movimento.md), ciascuno con scritto **come si chiude**: il debito

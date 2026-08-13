@@ -766,6 +766,44 @@ che scrive una pretesa non ha modo di saperlo.*
 
 ## 2. Come si prova
 
+### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no
+
+*13 agosto 2026, sera. ⛔ **È costata una corsia intera di un piano**, ed è la forma più cara
+incontrata finora, perché il banco **non si è rotto**: ha risposto, con precisione, alla domanda
+sbagliata.*
+
+Una sonda chiedeva a Chrome se sapesse decodificare HEVC. Rispondeva **no**, cinque volte su cinque,
+con la fermezza di una misura ripetuta. Ogni tanto usciva un **sì**, e veniva archiviato come
+*«anomalia non riproducibile»*.
+
+⛔ **La sonda lanciava Chrome con `--disable-gpu`.** Chiedeva a un browser accecato se vedesse.
+
+| Chrome sullo stesso Xvfb | webgl | HEVC |
+|---|---|---|
+| **senza** la bandiera | `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
+| **con** la bandiera | `niente webgl` | no |
+
+Sul quel «no» era stata scritta una conclusione — *«non è un problema di codec, è un problema di
+PALCO»* — e sulla conclusione **una corsia di lavoro**, dichiarata *«quella da cui comincia la
+sessione»*. Il «sì» scartato come anomalia era **l'unico giro giusto**.
+
+> ⛔⛔ **La lezione, e non è tecnica**: *«non c'è»* e *«non ho potuto guardare»* **hanno lo stesso
+> aspetto**, e il secondo è più frequente del primo. ⇒ **Un banco che risponde NO deve scrivere
+> accanto alla risposta la scena da cui l'ha data** — che palco, che bandiere, che hardware visibile
+> — esattamente come `§1.1` pretende la scena accanto a un numero. **Un no senza la scena dichiarata
+> non è un no: è un'assenza di informazione travestita da informazione.**
+
+⭐ **E il segnale c'era già, nel verbale**: un esito che non si riproduce **una volta su sei** non è
+rumore, è una **variabile non dichiarata**. ⇒ *Quando un banco dà due esiti diversi sulla stessa
+domanda, la cosa da cercare non è quale dei due è vero: è **che cosa è cambiato fra i due giri**.*
+
+⚠ **Due sorelle minori, pagate lo stesso giorno e della stessa famiglia:**
+
+| | |
+|---|---|
+| ⛔ **un confronto che non era un confronto** | due codificatori cronometrati **a bitrate libero**: quello che sembrava concorrenziale consegnava **trenta volte meno byte**. ⇒ *«Più veloce» a un trentesimo del lavoro non è più veloce* — **si fissa il lavoro, e i fotogrammi in uscita si CONTANO** |
+| ⛔ **un elenco creduto invece che girato** | `av1_vaapi` **compare** fra i codificatori di `ffmpeg`, e all'uso esce **218**: l'hardware l'entrypoint non ce l'ha. ⇒ *Un elenco dice che il codice c'è, non che la macchina lo sa fare* |
+
 ### 2.1 La regola dei tre client, e le sue forme insidiose
 
 Nessun client copre i casi degli altri. Un difetto che si vede **solo** su uno è quasi sempre
