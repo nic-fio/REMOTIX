@@ -27,6 +27,7 @@
 #     scrive accanto al numero ⇒ `scena_macchina()`, prima e dopo ogni giro.
 #   · le porte protette 7448 · 7501 · 7561 si CONTANO prima e dopo, e ⛔ vivono
 #     su NIC-OS: contarle su CHUWI e' l'errore gia' fatto una volta.
+import importlib.util
 import json
 import os
 import shutil
@@ -36,6 +37,13 @@ import sys
 import threading
 import time
 import http.server
+
+# ⭐ L'arbitro della finestra esclusiva e' di un altro (13 agosto, `03-solo.py`):
+#    si USA, non si riscrive — o «solo» vorrebbe dire cinque cose diverse.
+_qui = os.path.dirname(os.path.abspath(__file__))
+_ss = importlib.util.spec_from_file_location("solo", os.path.join(_qui, "03-solo.py"))
+solo = importlib.util.module_from_spec(_ss)
+_ss.loader.exec_module(solo)
 
 # ⛔ NON `~/.cache`: quello e' /tmp.  Questo sta su /dev/sda2.
 BASE = "/var/tmp/corsia-d"
@@ -82,6 +90,25 @@ def _out(cmd, **k):
         return "⛔ non ho potuto guardare: %s" % e
 
 
+def spazio():
+    """⛔ Lo spazio libero, in una riga, da mettere DENTRO i messaggi d'errore.
+
+    ⭐ E si guarda anche `/tmp` pur non usandolo: il browser ci mette dentro
+       roba sua comunque (socket, cache di sistema), e chi legge l'errore deve
+       poter escludere il disco senza andarlo a cercare.
+    """
+    fuori = []
+    for d in (BASE, "/tmp"):
+        try:
+            s = os.statvfs(d)
+            mb = int(s.f_bavail * s.f_frsize / 1024 / 1024)
+            fs = [r.split()[0] for r in _out(["df", "-P", d]).splitlines()[1:2]]
+            fuori.append("%s: %d MB liberi (%s)" % (d, mb, fs[0] if fs else "?"))
+        except OSError as e:
+            fuori.append("%s: non ho potuto guardare (%s)" % (d, e))
+    return "DISCO — " + " · ".join(fuori)
+
+
 def porte_protette():
     """⛔ Si contano su NIC-OS, non su CHUWI: e' li' che ascoltano."""
     s = _out(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", SERVER,
@@ -92,8 +119,15 @@ def porte_protette():
     return {"macchina": SERVER, "viste": viste, "quante": len(viste)}
 
 
-def scena_macchina(etichetta):
-    """⭐ La fotografia che va ACCANTO al numero, non al posto del numero."""
+def scena_macchina(etichetta, mie_porte=()):
+    """⭐ La fotografia che va ACCANTO al numero, non al posto del numero.
+
+    ⛔ Il giudizio «sono solo» NON e' mio: e' di `03-solo.py`, che e' l'arbitro
+       del progetto.  Qui si aggiunge solo quel che a lui non serve e a me si':
+       quanti browser altrui sono vivi (il mio banco ne accende, e vuol sapere
+       se ce ne sono d'altri) e lo spazio su `/var/tmp`, che e' il disco VERO.
+    """
+    s = solo.guarda(mie_porte=mie_porte)
     ps = _out(["ps", "-eo", "comm,pcpu,etimes"])
     righe = ps.splitlines()[1:]
 
@@ -115,22 +149,24 @@ def scena_macchina(etichetta):
                 cpu_altrui = max(cpu_altrui, float(c[1]))
             except ValueError:
                 pass
-    s = {
+    s.update({
         "quando": etichetta,
-        "ora": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "carico_1_5_15": [round(x, 2) for x in carico],
         "nuclei": os.cpu_count(),
         "browser_vivi": browser,
         "xvfb_vivi": len(xvfb),
         "cpu_massima_di_un_altro_processo": cpu_altrui,
         "disco": [" ".join(r.split()[:6]) for r in df],
-    }
-    # ⛔ «solo» non e' un'opinione: e' una soglia scritta, e si scrive quale.
-    s["sono_solo"] = (browser == 0 and carico[0] < 1.0
-                      and cpu_altrui < 40.0)
-    s["criterio_di_solitudine"] = ("nessun browser altrui vivo · carico(1m) < 1,0 "
-                                   "· nessun processo altrui sopra il 40 %% di CPU "
-                                   "(la macchina ha %d nuclei)" % (os.cpu_count() or 0))
+    })
+    # ⭐ Il verdetto e' dell'arbitro; qui si aggiunge una sola stretta in piu',
+    #    e si DICHIARA che e' in piu': un browser d'altri vivo mi contamina
+    #    anche se non e' ancora salito sopra la soglia di CPU.
+    s["sono_solo"] = bool(s.get("solo")) and browser == 0
+    s["criterio_di_solitudine"] = (
+        "il giudizio di `03-solo.py` (carico < %.1f · nessun vicino sopra il "
+        "%.0f %% di CPU · nessuna porta :76xx altrui · /tmp sopra %d MB liberi)"
+        " E IN PIU' nessun browser altrui vivo"
+        % (solo.CARICO_MASSIMO, solo.CPU_VICINO_MAX, solo.TMP_LIBERO_MIN))
     return s
 
 
@@ -246,16 +282,32 @@ class _Servo(http.server.SimpleHTTPRequestHandler):
 
 
 def _amb(schermo, moz_log=None):
+    """⛔⛔ NON BASTA METTERE `DISPLAY`.
+
+    `[M]` 13 agosto, 21:50 — un Chrome lanciato con `DISPLAY=:75` e senza
+    `WAYLAND_DISPLAY` girava con ⛔ **`--ozone-platform=wayland`**: si era
+    agganciato alla **sessione vera dell'utente**, non all'Xvfb del banco.
+    La riga di comando lo diceva, e nessuno l'aveva letta.  ⇒ La «gpu vista
+    sull'Xvfb» era la GPU **del desktop vero**.
+
+    ⭐ Ozone sceglie da se' guardando `XDG_SESSION_TYPE`, che qui vale
+    `wayland`: togliere `WAYLAND_DISPLAY` non gli toglie il socket, che sta
+    in `XDG_RUNTIME_DIR/wayland-0`.  ⇒ Si toglie anche quello, e a Chrome si
+    dice **esplicitamente** `--ozone-platform=x11`.
+    """
     e = dict(os.environ)
     if schermo:
         e["DISPLAY"] = schermo
+        e["XDG_SESSION_TYPE"] = "x11"
+        e["GDK_BACKEND"] = "x11"          # Firefox: niente Wayland di soppiatto
+        e["MOZ_ENABLE_WAYLAND"] = "0"
     e.pop("WAYLAND_DISPLAY", None)
     if moz_log:
         e["MOZ_LOG"] = moz_log
     return e
 
 
-def bandiere(motore, url, profilo, headless, con_gpu):
+def bandiere(motore, url, profilo, headless, con_gpu, ozone="x11"):
     """⛔ Le bandiere si RESTITUISCONO, perche' finiscono scritte accanto al
        numero: e' l'intera lezione §2.0."""
     if motore == "chrome":
@@ -263,6 +315,8 @@ def bandiere(motore, url, profilo, headless, con_gpu):
              "--no-default-browser-check", "--disable-sync",
              "--autoplay-policy=no-user-gesture-required",
              "--window-size=1920,1200", "--window-position=0,0"]
+        if ozone:
+            f.append("--ozone-platform=" + ozone)
         if headless:
             f.append("--headless=new")
         if not con_gpu:
@@ -274,8 +328,33 @@ def bandiere(motore, url, profilo, headless, con_gpu):
     return f + [url]
 
 
+def clienti_x(schermo):
+    """⭐ LA PROVA che il browser sta DAVVERO sullo schermo dichiarato.
+
+    ⛔ Senza questa riga, «l'ho lanciato su Xvfb» e' una intenzione, non un
+       fatto — e il 13 agosto sera l'intenzione era falsa.
+    """
+    if not schermo:
+        return {"nota": "nessuno schermo dichiarato (headless o Wayland)"}
+    amb = dict(os.environ)
+    amb["DISPLAY"] = schermo
+    try:
+        r = subprocess.run(["xlsclients", "-display", schermo],
+                           capture_output=True, text=True, timeout=15)
+        c = [x for x in r.stdout.splitlines() if x.strip()]
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"errore": str(e)}
+    try:
+        w = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", ""],
+                           env=amb, capture_output=True, text=True, timeout=15)
+        n = len([x for x in w.stdout.splitlines() if x.strip()])
+    except (OSError, subprocess.TimeoutExpired):
+        n = None
+    return {"clienti": c, "finestre_visibili": n}
+
+
 def giro(pagina, motore, porta, schermo, headless=True, con_gpu=True,
-         attesa_s=300, moz_log=None, xvfb=True):
+         attesa_s=300, moz_log=None, xvfb=True, ozone="x11"):
     """⭐ Un giro solo: accende il palco, serve la pagina, aspetta il POST.
 
     ⛔ Torna sempre un dizionario: se la pagina non rimanda niente **non e'
@@ -305,13 +384,18 @@ def giro(pagina, motore, porta, schermo, headless=True, con_gpu=True,
                               "«schermo vuoto», e' «non ho potuto guardare»" % schermo}
 
     url = "http://127.0.0.1:%d/" % porta
-    f = bandiere(motore, url, profilo, headless, con_gpu)
+    f = bandiere(motore, url, profilo, headless, con_gpu, ozone)
     t0 = time.time()
+    clienti = None
     with open(reg, "wb") as log:
         b = subprocess.Popen(f, env=_amb(schermo if xvfb else None, moz_log),
                              stdout=log, stderr=subprocess.STDOUT)
         fine = time.time() + attesa_s
         while time.time() < fine and "dati" not in cassetta:
+            # ⭐ La prova del palco si prende MENTRE il browser e' vivo: dopo
+            #   non c'e' piu' niente da contare.
+            if clienti is None and time.time() - t0 > 5:
+                clienti = clienti_x(schermo if xvfb else None)
             if b.poll() is not None and "dati" not in cassetta:
                 time.sleep(1.5)          # ⚠ l'ultimo POST puo' essere in volo
                 break
@@ -335,13 +419,21 @@ def giro(pagina, motore, porta, schermo, headless=True, con_gpu=True,
                 coda = fh.read()[-600:]
         except OSError:
             pass
+        # ⛔⛔ I MEGABYTE LIBERI STANNO DENTRO IL MESSAGGIO D'ERRORE, non in un
+        #     controllo a parte: e' la trappola gia' pagata DUE VOLTE — un disco
+        #     pieno impedisce al browser di aprire il profilo, e il sintomo
+        #     ACCUSA LA PAGINA.  Chi legge questo errore deve vedere il disco
+        #     nella stessa riga, o guardera' nel posto sbagliato.
         return {"errore": "⛔ la pagina non ha rimandato niente in %d s — NON e' "
-                          "«tutti no», e' «non ho potuto guardare»" % attesa_s,
-                "coda_del_motore": coda}
+                          "«tutti no», e' «non ho potuto guardare».  %s"
+                          % (attesa_s, spazio()),
+                "spazio": spazio(), "coda_del_motore": coda}
     d["_palco"] = {"motore": motore, "bandiere": f[:-1], "schermo": schermo,
                    "headless": headless, "con_gpu_chiesta": con_gpu,
-                   "xvfb": bool(x), "secondi": round(time.time() - t0, 1),
-                   "registro_motore": reg}
+                   "xvfb": bool(x), "ozone": ozone,
+                   "secondi": round(time.time() - t0, 1),
+                   # ⛔ la PROVA che il browser era sullo schermo dichiarato
+                   "clienti_x": clienti, "registro_motore": reg}
     return d
 
 

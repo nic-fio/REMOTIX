@@ -177,8 +177,38 @@ partono le corsie, e ⛔ **due sono andate diversamente da come erano scritte**.
 > | **senza** `--disable-gpu` | ⭐ `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
 > | **con** `--disable-gpu` | `niente webgl` | no |
 >
-> ⭐ **E la GPU su Xvfb c'è**: è la iGPU di CHUWI, presa dal nodo DRM. `vainfo` su CHUWI dice
-> `VAProfileHEVCMain10 : VAEntrypointVLD` — **la decodifica HEVC a 10 bit in hardware, sul client**.
+> > ### ⛔⛔⛔ E QUESTA RIGA È STATA CORRETTA UN'ORA DOPO, DALLA CORSIA D — **era mezza falsa, e la metà falsa è mia**
+> >
+> > *La corsia D l'ha trovata; il coordinatore l'ha riprodotta con una controprova che **non passa
+> > dal browser**: `xlsclients`, cioè chi è davvero attaccato a quello schermo.*
+> >
+> > | come si lancia Chrome | clienti **sull'Xvfb** | `screen` | webgl | HEVC |
+> > |---|---|---|---|---|
+> > | **come lo lancia il banco** (nessuna `--ozone-platform`) | ⛔ **0** | **2560×1080** | GPU Intel | true |
+> > | `--ozone-platform=x11` | ⭐ **1** | 1280×1024 | *niente webgl* | **false** |
+> > | `--ozone-platform=wayland` | 0 | 2560×1080 | GPU Intel | true |
+> >
+> > ⇒ ⛔⛔ **Chrome IGNORA `DISPLAY` e sceglie Wayland da `XDG_SESSION_TYPE`.** Quando il banco crede
+> > di lanciarlo sull'Xvfb, quel Chrome **è sul desktop vero dell'utente**, 2560×1080, con la GPU
+> > vera — e sullo schermo finto non c'è **nessun cliente attaccato**.
+> >
+> > ⇒ **La bandiera contava, ma solo perché il palco era GIÀ quello vero in tutt'e due i bracci
+> > dell'A/B.** ⭐ **Sul vero Xvfb la GPU non c'è e HEVC è `false`: la riga del 13 agosto notte era
+> > GIUSTA su quel punto**, e a essere sbagliata era la conseguenza — *«serve costruire un palco con
+> > una GPU vera»* — perché **il browser ci andava già da solo**.
+> >
+> > ⛔⛔ **E la cosa grossa che ne esce non è il codec: è che i banchi browser di questo progetto
+> > misurano sul desktop dell'utente credendo di essere su uno schermo finto.** ⇒ contesa non
+> > dichiarata, e **una scena dichiarata falsa** in ogni verbale che dice «Xvfb». Compresi i miei
+> > delle 20:33: quegli esiti valgono, la **scena scritta accanto** no.
+> >
+> > ⇒ ⭐ **La corsia A resta cancellata** — la conclusione non cambia — **ma per la ragione opposta a
+> > quella che avevo scritto**: non «la GPU c'era e la bandiera la spegneva», bensì **«il palco con
+> > la GPU il banco ce l'aveva già, a sua insaputa»**.
+>
+> ⭐ **E la decodifica HEVC in hardware su CHUWI c'è davvero**: `vainfo` dice
+> `VAProfileHEVCMain10 : VAEntrypointVLD`. ⚠ Ma è la GPU **della sessione vera**, non dello schermo
+> finto.
 >
 > ⭐⭐ **E l'anomalia del piano è spiegata**: *«un giro ha detto HEVC true e non si è più
 > riprodotto»* era il giro **senza la bandiera**. Non era un caso: era l'unico giro giusto.

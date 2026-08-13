@@ -122,7 +122,10 @@ async function seriale(cfg, pz) {
     if (t1 === null) break;                       // errore del decodificatore
     if (i === 0) primo = t1 - t0; else lat.push(t1 - t0);
   }
-  try { await dec.flush(); } catch (e) {}
+  // ⛔ `flush()` CON UN TETTO: senza, una `Promise` che non si risolve mai fa
+  //    sembrare «il motore non ce la fa» quel che e' «il banco e' appeso».
+  //    `[M]` e' successo: il banco del disegno e' rimasto fermo 240 s qui.
+  try { await Promise.race([dec.flush(), attesa(15000)]); } catch (e) {}
   try { dec.close(); } catch (e) {}
   return {entrate: pz.length, uscite, primo_fotogramma_ms: primo,
           latenze_ms: lat, scaduto_al_pezzo: scaduto, errore, forma};
@@ -227,6 +230,12 @@ def main():
     finestra = "--con-finestra" in a          # ⇒ NON headless
     con_gpu = "--senza-gpu" not in a
     confessione = "--confessione" in a
+    # ⛔⛔ L'INTERRUTTORE PIU' IMPORTANTE DI QUESTO BANCO, e non c'era il 13
+    #    agosto: `x11` mette Chrome sull'Xvfb del banco, `wayland` lo manda
+    #    sulla SESSIONE VERA DELL'UTENTE anche se `DISPLAY` dice altro.
+    #    ⇒ La differenza fra i due non e' di comodo: e' la differenza fra
+    #      «misurato sul palco del banco» e «misurato sul desktop di Nic».
+    ozone = opz("--ozone", "x11")
 
     prima = P.scena_macchina("prima del giro")
     porte_prima = P.porte_protette()
@@ -243,12 +252,24 @@ def main():
                          "codec": f["codec"], "modo": m,
                          "larghezza": f["larghezza"], "altezza": f["altezza"],
                          "pezzi": f["pezzi"][:pezzi]})
+    # ⛔⛔ L'INTERRUTTORE CHE CERCA LA VARIABILE NON DICHIARATA.  Su Firefox il
+    #    PRIMO caso della lista e' uscito sistematicamente piu' lento degli
+    #    altri due dello stesso flusso (11,9 contro 9,1 ms, 3 giri su 3).  Un
+    #    esito che si ripete non e' rumore: o e' del caso, o e' della POSIZIONE.
+    #    ⇒ Si rovescia l'ordine e si riguarda.  Se il lento resta lo stesso
+    #      CASO, e' del caso; se resta la stessa POSIZIONE, e' l'accensione del
+    #      motore che il banco stava attribuendo a `no-preference`.
+    if "--rovescia" in a:
+        casi.reverse()
     pagina = PAGINA % (json.dumps(casi), pezzi)
 
     print("== LA SCENA ==")
     print("   motore chiesto:  %s%s" % (motore, "" if finestra else "  (headless)"))
-    print("   palco:           Xvfb %s, 1920x1200x24%s"
-          % (schermo0, "" if con_gpu else "   ⛔ CON --disable-gpu"))
+    print("   palco:           Xvfb %s, 1920x1200x24%s%s"
+          % (schermo0, "" if con_gpu else "   ⛔ CON --disable-gpu",
+             ("   ·  ozone=%s%s" % (ozone, "  ⛔⛔ NON E' L'XVFB: E' LA SESSIONE VERA"
+                                    if ozone == "wayland" else ""))
+             if motore == "chrome" else ""))
     print("   flusso:          testsrc2 1920x1080, 120 fotogrammi a 60/s "
           "⚠ SCENA SINTETICA, non il desktop vero")
     for f in flussi:
@@ -264,9 +285,9 @@ def main():
     for n in range(giri):
         moz = ("PlatformDecoderModule:5,MediaFormatReader:5"
                if (confessione and motore == "firefox") else None)
-        d = P.giro(pagina, motore, porta0 + n, ":%d" % (70 + n),
+        d = P.giro(pagina, motore, porta0 + n, ":%d" % (int(schermo0[1:]) + n),
                    headless=not finestra, con_gpu=con_gpu, attesa_s=420,
-                   moz_log=moz, xvfb=True)
+                   moz_log=moz, xvfb=True, ozone=ozone)
         d["_macchina"] = P.scena_macchina("dopo il giro %d" % (n + 1))
         if "errore" in d:
             print("   giro %d ⛔ %s" % (n + 1, d["errore"]))
@@ -285,7 +306,12 @@ def main():
 
     dopo = P.scena_macchina("a fine banco")
     porte_dopo = P.porte_protette()
-    fuori = os.path.join(P.BASE, "03-ff-decodifica-%s.json" % motore)
+    # ⛔ Il nome porta dentro il PALCO: due giri con palchi diversi che si
+    #    sovrascrivessero sarebbero la stessa trappola di `w` invece di `>>`.
+    fuori = os.path.join(P.BASE, "03-ff-decodifica-%s-%s%s%s.json"
+                         % (motore, "finestra" if finestra else "headless",
+                            "-" + ozone if (finestra and motore == "chrome") else "",
+                            "-rovesciato" if "--rovescia" in a else ""))
     with open(fuori, "w") as f:
         json.dump({"prima": prima, "dopo": dopo, "porte_prima": porte_prima,
                    "porte_dopo": porte_dopo, "giri": tutti}, f, indent=1,

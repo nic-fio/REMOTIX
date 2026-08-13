@@ -797,6 +797,36 @@ sessione»*. Il «sì» scartato come anomalia era **l'unico giro giusto**.
 rumore, è una **variabile non dichiarata**. ⇒ *Quando un banco dà due esiti diversi sulla stessa
 domanda, la cosa da cercare non è quale dei due è vero: è **che cosa è cambiato fra i due giri**.*
 
+> ### ⛔⛔⛔ E LA CURA DI QUESTA LEZIONE È CADUTA NELLA STESSA LEZIONE, un'ora dopo
+>
+> *La spiegazione qui sopra — «era la bandiera, non il palco» — è **mezza falsa**, e a trovarlo è
+> stato un altro gruppo. Si lascia scritta perché **il modo in cui è caduta è la lezione vera**.*
+>
+> `[M]` con una controprova che **non passa dal browser** — `xlsclients`, cioè chi è davvero
+> attaccato a quello schermo:
+>
+> | come si lancia Chrome | clienti **sull'Xvfb** | `screen` | webgl | HEVC |
+> |---|---|---|---|---|
+> | **come lo lanciava il banco** | ⛔ **0** | **2560×1080** | GPU | true |
+> | `--ozone-platform=x11` | ⭐ **1** | 1280×1024 | *niente* | **false** |
+>
+> ⛔⛔ **Chrome ignora `DISPLAY` e sceglie Wayland da `XDG_SESSION_TYPE`.** ⇒ Il browser **non era
+> mai stato sullo schermo finto**, in nessuno dei due bracci dell'A/B: era **sul desktop
+> dell'utente**. La bandiera contava; il palco era già quello vero.
+>
+> ⇒ ⭐ **La lezione si rafforza invece di indebolirsi, e si allarga**: chi ha scritto la cura ha
+> dichiarato una scena — *«Xvfb :85»* — **che ha creduto invece di verificare**, e l'ha scritta nel
+> verbale accanto al numero. **Esattamente il difetto che stava curando.**
+>
+> > ⛔ **La forma completa, e vale per ogni banco browser di questo progetto**: *dichiarare un palco
+> > non è averlo*. Il palco si **verifica dall'altro capo** — chi è attaccato allo schermo, che
+> > misura ha lo schermo che la pagina vede, che hardware nomina — e non da come si è **lanciato** il
+> > processo. **Un'intenzione scritta in una riga di comando non è una misura.**
+>
+> ⚠ E la conseguenza operativa è più grossa del codec da cui è partita: **i banchi browser di questo
+> progetto misurano sul desktop dell'utente credendo di essere su uno schermo finto** ⇒ contesa non
+> dichiarata, e ogni verbale che dice «Xvfb» dice una cosa che non è.
+
 ⚠ **Tre sorelle minori, pagate lo stesso giorno e della stessa famiglia:**
 
 | | |

@@ -383,12 +383,25 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > Qui era scritto: *«il codec negoziato è AV1 perché la sonda HEVC di Chrome fallisce su Xvfb ⇒
 > senza un client che accetti HEVC l'anello intero non si misura. **Affrontalo per primo**»*.
-> ⛔ **Falso, e la causa era dentro il banco**: la sonda lanciava Chrome con **`--disable-gpu`**.
+> ⛔ **Lo scoglio non c'era — ma la ragione vera è la TERZA, e le prime due erano sbagliate.**
 >
-> | Chrome su Xvfb | webgl | HEVC |
-> |---|---|---|
-> | **senza** `--disable-gpu` | ⭐ `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
-> | **con** `--disable-gpu` | `niente webgl` | no |
+> | | chi | che cosa diceva | esito |
+> |---|---|---|---|
+> | 1ª | il piano del 13 notte | *«su Xvfb non c'è GPU ⇒ **è un problema di PALCO**, costruiscine uno»* | ⚠ **la premessa era giusta, la conseguenza no** |
+> | 2ª | il coordinatore, ore 20:33 | *«non era il palco: era la **bandiera** `--disable-gpu` del banco»* | ⛔ **mezza falsa** |
+> | 3ª | la corsia D, ore 22:00 | ⭐ **«Chrome ignora `DISPLAY` e va su Wayland da `XDG_SESSION_TYPE`: il banco non era MAI stato sull'Xvfb»** | ⭐ **e questa regge** |
+>
+> `[M]` con la controprova che **non passa dal browser** — `xlsclients`, chi è davvero attaccato a
+> quello schermo:
+>
+> | come si lancia Chrome | clienti **sull'Xvfb** | `screen` | webgl | HEVC |
+> |---|---|---|---|---|
+> | **come lo lancia il banco** | ⛔ **0** | **2560×1080** (il monitor dell'utente) | GPU Intel | true |
+> | `--ozone-platform=x11` | ⭐ **1** | 1280×1024 | *niente webgl* | **false** |
+>
+> ⇒ ⛔⛔ **La cosa grossa non è il codec: è che i banchi browser di questo progetto misurano sul
+> desktop dell'utente credendo di essere su uno schermo finto.** Contesa non dichiarata, e ogni
+> verbale che dice «Xvfb» dice una cosa che non è. **È il primo lavoro di chi riprende.**
 >
 > ⭐⭐ **E non è una dichiarazione: è una decodifica.** Il flusso uscito da `hevc_vaapi` è stato
 > fatto **dipingere** al Chrome del banco — `[M]` **5 giri su 5**, 1920×1080, **119 fotogrammi su
