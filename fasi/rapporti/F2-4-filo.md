@@ -890,3 +890,162 @@ Il giro rifatto, con `01-b0-terreno.sh prodotto` davanti (**13 su 13**, 0 guai):
 
 ⭐ **Il conto del catalogo: 15 su 15 certificati oggi** — 0 scadute, 0 non riverificabili, 0 mai
 provati.
+
+---
+
+# ⭐⛔⛔ Il giro del **13 agosto 2026** — §6.2 comandava il contrario di sé stessa, e la `[?]` era un numero inventato
+
+*Rilievo **P21**, la **settima** della famiglia `P8 → P11 → P13 → P14 → P19 → P20 → P21`. ⛔ Non è
+un difetto del prodotto: è il documento, e nasce dalla rilettura ostile che rimetteva in fila le sei
+righe che ormai **convivono nella stessa sezione**.*
+
+## La scena, concreta
+
+`SESSIONE` 1920×1080 → `TELA(ADATTATA, 1600, 900)`; il client manda `ADATTA_TELA(1280, 720)` e il
+fotogramma catturato a 1280×720 **arriva prima della risposta** — gli stream sono indipendenti, e
+§6.2 lo scrive due volte. A **otto righe di distanza**, dentro §6.2:
+
+| paragrafo | che cosa comanda sullo stesso fotogramma |
+|---|---|
+| quello di **P19** | ⛔ *«Il client NON DEVE chiudere: **trattiene** il fotogramma»* |
+| quello della tolleranza (**P11** + **P13**) | ⛔ una misura *«che non è mai stata in vigore in quella finestra»* è `ERRORE_PROTOCOLLO` **subito** |
+
+⇒ Due implementazioni conformi, **due byte diversi**: una manda `CONGEDO`, l'altra non manda niente.
+E il server non ha sbagliato — §5.2 gli **impone** una chiave alla misura nuova a ogni cambio di
+tela, quindi quel fotogramma è esattamente quel che deve spedire.
+
+⚠ **Una differenza da D14/P8, e conta**: lì due implementazioni attente **convergevano** sul byte
+sbagliato e nessun confronto le poteva smentire; qui **divergono**. Questa un confronto fra due
+client la trova — e la troverebbe in produzione, su una sessione viva.
+
+## ⭐ Il discriminante proposto **non ha retto alla verifica**, e la cura è un passo più in là
+
+Chi ha trovato P21 proponeva: *«quel che il client ha nominato lui»* — si trattiene una misura
+**nominata** da un `ADATTA_TELA` senza risposta. ⛔ **Il caso concreto l'ha bocciato**, ed è la firma
+di questa famiglia da P8 in poi:
+
+> `RCP.md` §4.5 dice a chiare lettere che **«la tela concessa può essere diversa da quella
+> chiesta»**. Su KWin < 6.8 è **la strada normale** (`SPECIFICHE.md` §6.3), e la negoziazione di
+> §6.4 concede il modo che il compositore **ha**, non quello che si è chiesto. ⇒ Il client che
+> chiede `ADATTA_TELA(1366, 768)` e riceve — prima della risposta — il fotogramma **1280×720** che
+> il compositore sta per concedere, con quel discriminante **chiude una sessione sana**: sarebbe
+> stata l'**ottava** stesura della stessa riga.
+
+⭐ **La grandezza vera non è la misura: è la richiesta in volo.** Si trattiene finché resta una
+`ADATTA_TELA` che **il client ha spedito lui** e a cui nessun `TELA` ha risposto — locale, monotona,
+indipendente dalla consegna, cioè la stessa grandezza di **P20** (dove è `ATTACCA`, non la tela che
+`ATTACCA` chiede) e la forma generale del `numero` di **P14**. ⚠ *Il rilievo aveva ragione sulla
+famiglia e torto sul campo*: la forma di P20 è «il messaggio che ho spedito», non «i numeri che
+portava».
+
+**E §7.1 lo garantisce davvero — verificato, non citato di seconda mano** (`RCP.md` riga 1522):
+*«**A ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`**, riuscito o no. Un silenzio lascia
+il client ad aspettare per sempre una risposta che non arriverà»*. ⭐ E il canale di controllo è
+**uno solo, affidabile e ordinato** (§4.2, §2.5) ⇒ l'n-esimo `TELA` risponde all'n-esima
+`ADATTA_TELA`, e chi trascina una finestra ne manda due senza che il conto si perda — la scena che
+**P11** ha già pagato una volta.
+
+## Il testo pronto da incollare — §6.2 · **contraddizione interna** · `[R]`
+
+⛔ **Marca: contraddizione interna** (non lettura doppia: le due righe ci sono tutt'e due, ed è il
+documento a dirle) · `[R]` confermata da due righe già scritte, §6.2 contro sé stessa · ⛔ **non
+tocca §9**: nessun tipo, nessun campo, nessun valore nuovo — `ADATTA_TELA` e `TELA` ci sono da §7.1.
+
+**[1] Al posto del paragrafo «Il client NON DEVE chiudere» e dell'intero riquadro `[?]` «fino a
+quando trattiene»:**
+
+> ⛔ **Il client NON DEVE chiudere: trattiene il fotogramma**, e lo scrive nel registro. ⭐ **E fino a
+> quando lo trattiene non è un numero: è una condizione** — finché resta una `ADATTA_TELA` che **il
+> client ha spedito** e a cui nessun `TELA` ha ancora risposto. Arrivato quel `TELA`, il fotogramma
+> trattenuto **si rigiudica** contro la tela che quel `TELA` dichiara in vigore, e da lì è un
+> fotogramma come tutti gli altri: prima la regola dell'ordine, poi quella della misura. ⛔ **E se
+> nessuna `ADATTA_TELA` è senza risposta non si trattiene niente**: una misura che il client non ha
+> nessun motivo di aspettarsi è `ERRORE_PROTOCOLLO` subito, come dice il paragrafo della tolleranza
+> qui sotto.
+>
+> ⚠ **E il `TELA` arriva per forza**, che è la ragione per cui questa è una fine e non un'attesa
+> aperta: §7.1 impone *«a ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o
+> no»*, e il canale di controllo è **uno solo, affidabile e ordinato** (§4.2) ⇒ l'n-esimo `TELA`
+> risponde all'n-esima `ADATTA_TELA`, e chi trascina una finestra ne manda due senza che il conto si
+> perda. ⛔ Un `TELA(RIFIUTATA)` chiude l'attesa quanto un `TELA(ADATTATA)`: il fotogramma trattenuto
+> si rigiudica contro la tela rimasta in vigore, e di norma **è `ERRORE_PROTOCOLLO`** — il server ha
+> spedito una misura che non ha mai avuto.
+>
+> ⭐ **E la grandezza è «una richiesta in volo», non «la misura che il client ha chiesto»**: §4.5
+> dice che *«la tela concessa può essere diversa da quella chiesta»* — su KWin < 6.8 è la strada
+> normale (`SPECIFICHE.md` §6.3) e la negoziazione di §6.4 concede il modo che il compositore **ha**.
+> ⇒ Un client che trattenesse solo i numeri che ha nominato chiuderebbe una sessione in cui il server
+> ha fatto esattamente quel che §7.1 gli permette. ⚠ È la stessa grandezza di **P20** — *quel che il
+> client ha spedito lui*: locale, monotona, indipendente dalla consegna.
+
+**[2] In coda al paragrafo «Il cambio di tela e i fotogrammi in volo», al posto di «e lo è subito una
+misura che non è mai stata in vigore in quella finestra»:**
+
+> e lo è **subito** una misura che non è mai stata in vigore in quella finestra ⛔ **e che nessuna
+> `ADATTA_TELA` senza risposta può ancora concedere**: se una c'è, il fotogramma **si trattiene**
+> invece di far chiudere (il paragrafo qui sopra).
+
+⚠ **I due pezzi si applicano insieme.** Curarne uno solo lascerebbe in piedi la contraddizione — ed è
+l'errore che **P12** ha già fatto pagare, quando §3 è rimasta al singolare mentre §6.2 passava alla
+finestra.
+
+## ⭐ La riga per `src/pagina.html` — gli **otto fotogrammi** spariscono
+
+⛔ *Scritta qui e **non applicata**: un altro agente ha in mano la pagina e la 7561.* Oggi
+`trattieni()` (riga ~1553) tiene un fondo di **otto fotogrammi** — un fatto osservabile, non un
+orologio, quindi già la lezione di P13 applicata, ⛔ **ma pur sempre una grandezza sostitutiva**.
+
+| dove | che cosa | 
+|---|---|
+| costruttore e `azzera` | `this.adatta_in_volo = 0;` — *le `ADATTA_TELA` spedite e non ancora risposte* |
+| dove la pagina spedirà `ADATTA_TELA` | `this.adatta_in_volo++;` ⚠ oggi **nessuno lo manda** (`TIPO`, riga ~246) |
+| in testa a `trattieni(i, dati)`, **prima** del `push` | `if (this.adatta_in_volo === 0) return this.errore_protocollo("fotogramma " + i.numero + " alla misura " + i.larghezza + "×" + i.altezza + ", che non è mai stata in vigore e che nessuna `ADATTA_TELA` in volo può concedere (§6.2)");` |
+| e al posto di `if (this.trattenuti.length > 8) {…}` | **niente**: il fondo non serve più, la condizione è quella qui sopra |
+| in `tela_adattata(l, a)` | `if (this.adatta_in_volo > 0) this.adatta_in_volo--;` **in testa**, prima di tutto il resto |
+| ⛔ e nel ramo `TELA(RIFIUTATA)` (riga ~2298) | lo **stesso** decremento **e** la rigiudicata dei trattenuti: §7.1 dice *«riuscito o no»*, e senza questo un `TELA(RIFIUTATA)` lascerebbe i fotogrammi trattenuti lì per sempre |
+
+⭐ **E la conseguenza onesta, da dire**: siccome alla fase 2 la pagina **non manda nessun
+`ADATTA_TELA`**, `adatta_in_volo` vale sempre `0` ⇒ una misura mai annunciata **chiude subito**, e il
+ramo del trattenere resta dichiarato e non raggiungibile. ⛔ Non è un ripiego: è la riga giusta che,
+nello stato di oggi del prodotto, dice che gli otto fotogrammi non stavano proteggendo niente.
+
+## I casi nel banco — 50 → **52**, guasti 13 → **14** *(la terna è di tre, come per P8)*
+
+| caso | atteso | che cosa tiene |
+|---|---|---|
+| `p21-nominata-e-in-volo` | **`AMBIGUO`** | ⭐ **lo fa vedere**: `TELA(1600,900)`, `ADATTA_TELA(1280,720)` senza risposta, e il fotogramma 1280×720 arriva prima. Oggi §6.2 dice due cose |
+| `p21-concessa-diversa-da-chiesta` | **`AMBIGUO`** | ⛔ impedisce la cura **troppo stretta**: chiesto 1366×768, concesso 1280×720. È il caso che ha bocciato il discriminante proposto |
+| `p11-misura-mai-in-vigore` *(contesto reso esplicito)* | `ERRORE_PROTOCOLLO` | ⛔ impedisce la cura **troppo larga**: 800×600, **nessuna** `ADATTA_TELA` in volo ⇒ si chiude, e deve chiudersi |
+
+| guasto | marca | |
+|---|---|---|
+| **G14** *«il discriminante scritto sulla MISURA nominata»* | `p21-concessa-diversa-da-chiesta: AMBIGUO -> ERRORE_PROTOCOLLO` | ⭐ non è inventato: è **la cura come è stata proposta** stamattina |
+| **G15** *«trattiene sempre»* | `p11-misura-mai-in-vigore: ERRORE_PROTOCOLLO -> AMBIGUO` | ⛔ senza il terzo caso, «si trattiene sempre» e «si trattiene finché c'è una richiesta in volo» danno **lo stesso verde** su tutto il resto |
+
+**Numeri**: giudice **50 → 52 casi** (21 violazioni · 5 scarti · 23 verdi · **3** ambiguità), guasti
+**13 → 14**, proposte aperte **1 → 2** (P20, P21), rilievi dichiarati **1 → 2** (P15, P22).
+Certificazione **14 su 14**, sano 0 → guasto → risanato 0 su ognuno. ⛔ E i tre lettori che importano
+questo giudice non cambiano di un byte — `02-filo-validatore.py` **certificato**, `02-filo-prodotto.py`
+**17 scene su 17**, `01-b4-validatore.py` conforme su `13-video-conforme` e `17bis-video-dopo-adatta-tela` —
+perché `adatta_in_volo` **nasce vuoto**: chi non dichiara niente ha il giudice di ieri (I6).
+7448 e 7501 girano sulla macchina del prodotto e **non sono state contate qui**.
+
+## ⛔⛔ E la rilettura ostile sulle sette righe ne trova **un'ottava** — solo il nome e la scena
+
+⛔ **P22 `[R]` — §3 dichiara sei eccezioni e «fuori da questo elenco non se ne inventano», e il
+TRATTENERE non è fra le sei.** §2.5 (cura di **P20**, ieri) ordina di trattenere il fotogramma
+arrivato prima di `SESSIONE`; §6.2 (cura di **P19**) ordina di trattenere quello alla misura mai in
+vigore. ⇒ **Un client scritto leggendo §3 chiude, uno scritto leggendo §2.5 trattiene** — due
+implementazioni conformi, due byte diversi, e quella che chiude uccide **proprio la sessione sana**
+che P19 e P20 sono state scritte per salvare. ⚠ L'eccezione 6 non le copre: parla dei fotogrammi che
+portano *«una misura che **è stata** in vigore»*, cioè del caso opposto. ⛔ È la forma esatta di
+**P12** — §3 rimasta indietro mentre §6.2 andava avanti — e la cura di P21 ne aggiunge una **terza**
+allo stesso elenco. **Dichiarata e non curata**: sta in `RILIEVI_DICHIARATI["P22"]`, senza caso e
+senza cura, e va in un giro suo.
+
+⚠ **E le altre sei reggono alla rilettura**, con due interazioni verificate e non lasciate al caso:
+il fotogramma trattenuto **non produce un buco** nella successione dei `numero` (dopo il primo alla
+misura nuova arrivano solo misure nuove, che si trattengono a loro volta: nessuna consegna, nessun
+`RICHIEDI_CHIAVE` inutile proprio durante il cambio di tela); e la **rigiudicata** passa da **P14**,
+cioè prima l'ordine e poi la misura — senza quella precedenza un trattenuto scavalcato dalla chiave
+farebbe cadere la sessione, che è la scena di P14 un messaggio più tardi.

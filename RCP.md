@@ -441,7 +441,7 @@ protesti (§0), non lo vedrà nessuno finché non produrrà un sintomo lontano e
 È `REVIEWER.md` §5 applicata al filo: *«l'indulgenza che nasconde è esattamente ciò che devi
 togliere»*.
 
-⚠ **Le eccezioni sono sei, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
+⚠ **Le eccezioni sono otto, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
 
 | # | Dove | Che cosa si tollera, e perché |
 |---|---|---|
@@ -451,6 +451,16 @@ togliere»*.
 | 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere. ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
 | 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
 | 6 | §6.2 | dopo un cambio di tela si tollerano i fotogrammi che portano **una misura che è stata in vigore da quando la coda ha cominciato a svuotarsi**, e la tolleranza finisce quando arriva **la prima chiave alla misura nuova** (§5.2), non a orologio. Sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
+| 7 | §2.5 | uno **stream video arrivato prima di `SESSIONE`** quando l'`ATTACCA` è già partito **non chiude**: si **trattiene** e si giudica quando `SESSIONE` arriva. ⚠ *L'ordine fra due stream QUIC non è quello del filo, e bastava un pacchetto perso perché un client conforme uccidesse una sessione sana — rilievo **P20*** |
+| 8 | §6.2 | un fotogramma la cui misura **nessuna tela ha mai avuto** **non chiude** finché resta una **`ADATTA_TELA` senza risposta**: si **trattiene** e si rigiudica quando il `TELA` arriva, riuscito o rifiutato. ⚠ *Perché §4.5 permette al server di concedere una tela **diversa da quella chiesta** — rilievo **P21*** |
+
+> ⛔ **Le righe 7 e 8 sono entrate il 13 agosto 2026, rilievo P22 — ed erano già comandate altrove.**
+> §2.5 e §6.2 ordinavano quelle due tolleranze mentre **questo elenco dichiarava che le eccezioni
+> erano sei e che fuori di qui non se ne inventano**. ⇒ Un client scritto leggendo §3 **chiudeva**
+> proprio le sessioni sane che le altre due righe salvavano.
+> ⚠ *È la seconda volta che questo elenco resta indietro: la prima fu **P12**, il 12 agosto. ⭐ Da qui
+> la regola: **chi scrive una tolleranza altrove aggiunge la riga qui nello stesso momento**, o le due
+> metà si separano — ed è la forma che questo documento paga più spesso.*
 
 ⛔ **E ogni tolleranza va scritta nel registro.** Una tolleranza silenziosa è indistinguibile da un
 difetto, ed è precisamente l'indulgenza che questa sezione esiste per togliere.
@@ -1351,18 +1361,35 @@ controllo, il fotogramma su uno stream suo, e **niente ne ordina la consegna**. 
 ricevesse una misura che «non è mai stata in vigore» chiuderebbe **una sessione in cui nessuno ha
 sbagliato**.
 
-⛔ **Il client NON DEVE chiudere: trattiene il fotogramma** finché non sa decidere, e lo scrive nel
-registro. ⚠ *E questa metà è normativa perché discende da **I1** — «una sessione brutta vale più di
-una sessione chiusa» — e dalle quattro volte in cui questa stessa famiglia ha fatto morire una
-sessione sana.*
+⛔ **Il client NON DEVE chiudere: trattiene il fotogramma**, e lo scrive nel registro. ⭐ **E fino a
+quando lo trattiene non è un numero: è una condizione** — finché resta una `ADATTA_TELA` che **il
+client ha spedito** e a cui nessun `TELA` ha ancora risposto. Arrivato quel `TELA`, il fotogramma
+trattenuto **si rigiudica** contro la tela che quel `TELA` dichiara in vigore, e da lì è un
+fotogramma come tutti gli altri: prima la regola dell'ordine, poi quella della misura. ⛔ **E se
+nessuna `ADATTA_TELA` è senza risposta non si trattiene niente**: una misura che il client non ha
+nessun motivo di aspettarsi è `ERRORE_PROTOCOLLO` subito.
 
-> ⏳ **`[?]` E QUEL CHE NON È DECISO: fino a quando trattiene.** Il prodotto oggi usa **un fondo
-> osservabile** — otto fotogrammi — e non un orologio, che è già la lezione di P13 applicata; ⛔ ma
-> otto è **una grandezza sostitutiva**, esattamente quel che `LEZIONI.md` §1.13 dice di non scrivere.
-> La grandezza vera sarebbe *«finché il `TELA` che concede quella misura non è arrivato»*, e ⛔ **il
-> client non ha modo di sapere se sta per arrivare**: gli stream sono indipendenti e nessuna riga
-> lega i due. ⇒ Si dichiara aperta invece di scriverne una quinta che si sposterà di un passo.
-> Rilievo **P19**, 12 agosto 2026, trovato **scrivendo la pagina**.
+⚠ **E il `TELA` arriva per forza**, che è la ragione per cui questa è una fine e non un'attesa
+aperta: §7.1 impone *«a ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o no»*,
+e il canale di controllo è **uno solo, affidabile e ordinato** (§4.2) ⇒ l'n-esimo `TELA` risponde
+all'n-esima `ADATTA_TELA`, e chi trascina una finestra ne manda due senza che il conto si perda.
+⛔ Un `TELA(RIFIUTATA)` chiude l'attesa quanto un `TELA(ADATTATA)`: il trattenuto si rigiudica contro
+la tela rimasta in vigore, e di norma **è `ERRORE_PROTOCOLLO`** — il server ha spedito una misura che
+non ha mai avuto.
+
+⭐ **E la grandezza è «una richiesta in volo», non «la misura che il client ha chiesto»**: §4.5 dice
+che *«la tela concessa può essere diversa da quella chiesta»* — su KWin < 6.8 è la strada normale
+(`SPECIFICHE.md` §6.3) e la negoziazione di §6.4 concede il modo che il compositore **ha**. ⇒ Un
+client che trattenesse solo i numeri che ha nominato chiuderebbe una sessione in cui il server ha
+fatto esattamente quel che §7.1 gli permette. ⚠ È la stessa grandezza di **P20** — *quel che il
+client ha spedito lui*: locale, monotona, indipendente dalla consegna.
+
+> ⚠ *Questo paragrafo diceva «trattiene **finché non sa decidere**», e accanto portava un riquadro
+> `[?]` che dichiarava aperta la domanda «fino a quando». Il prodotto la chiudeva con **otto
+> fotogrammi** — un fondo osservabile invece di un orologio, che era già la lezione di P13, ⛔ ma pur
+> sempre **una grandezza sostitutiva**. Chiusa il 13 agosto 2026, rilievo **P21**. ⭐ E la prima cura
+> proposta — «la misura che il client ha nominato» — è stata **bocciata da un caso**: §4.5 permette
+> al server di concedere una tela diversa da quella chiesta, quindi sarebbe stata l'ottava stesura.*
 
 ⛔ **E la regola dell'ordine si applica PRIMA di quella della misura**: un fotogramma il cui `numero`
 è precedente all'ultimo già consegnato **si scarta**, e la sua misura non si guarda nemmeno.
@@ -1377,7 +1404,9 @@ client **DEVE** accettare i fotogrammi la cui misura vale **una tela che è stat
 la coda ha cominciato a svuotarsi**, dipingendoli riscalati alla vista e scrivendolo nel registro.
 ⛔ **E la tolleranza non finisce a orologio: finisce quando arriva la prima chiave alla misura
 nuova**, che §5.2 gli garantisce. Da quel fotogramma in poi una misura vecchia è
-`ERRORE_PROTOCOLLO`; e lo è **subito** una misura che non è mai stata in vigore in quella finestra.
+`ERRORE_PROTOCOLLO`; e lo è **subito** una misura che non è mai stata in vigore in quella finestra
+⛔ **e che nessuna `ADATTA_TELA` senza risposta può ancora concedere**: se una c'è, il fotogramma
+**si trattiene** invece di far chiudere (il paragrafo qui sopra).
 
 > ⚠ *Diceva «la tela **precedente**», al singolare, e ⛔ **chi trascina una finestra ne manda due**:
 > 1920×1080 → `TELA(1600,900)` → `TELA(1280,720)`, e la chiave aperta prima di tutto — la più
