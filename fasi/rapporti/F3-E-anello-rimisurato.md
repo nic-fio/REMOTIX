@@ -67,6 +67,18 @@
 > ⇒ Chi ha fretta legga: **il riquadro qui sotto**, poi **«I TRE GIRI DELLA NOTTE»**, poi
 > **`A → B`**. Il resto è il come ci si è arrivati, e le trappole che ci sono in mezzo.
 
+### Dove sta che cosa
+
+| | |
+|---|---|
+| ⭐⭐ **il numero della fase** | **«IL GIRO SUL DEPOSITO»** — l'albero che l'utente giudicherà |
+| ⭐⭐ **la risposta del piano** (E1·E2·E3·E4) | **«CHE COSA DICE QUESTA NOTTE ALLA FASE 3»** |
+| ⭐ **il confronto che chiude la fase** | **«`A → B`»** — una sola variabile, il binario |
+| ⭐ **i tre giri e come si leggono** | **«I TRE GIRI DELLA NOTTE»** |
+| ⛔ **le riserve sul numero** | **«MA IL NUMERO NON SI PUÒ COMPRARE»** e **«CHE COSA RESTA `[?]`»** |
+| ⛔ **gli errori miei, trovati e curati** | **«CHE COSA NON HA FUNZIONATO»** (due, uno per notte) |
+| ⚠ **il verbale del 13, superato** | tutto ciò che porta *«(13 agosto)»* o sta dentro un blocco richiudibile |
+
 ---
 
 ## ⛔⛔⛔ In una riga — *(scritto il 13 alle 22:19; il punto 2 è caduto tre minuti dopo)*
@@ -108,6 +120,119 @@ codificatore: il codificatore hardware non viene mai raggiunto.
 | ⭐ **i cinque tratti** | Mutter **16,66** · **codifica+filo 39,82 (il 55 %)** · filo **0,26** · decodifica **6,32** · disegno **9,11** ⇒ **il numero del 13 agosto regge**, misurato di nuovo e con un altro banco |
 | ⭐ **il controllo che salva la fase** | il binario **hardware**, con la stessa pagina, dà **73,68 ms**: ⛔ **+1,3 ms, cioè niente** — perché la sessione negozia AV1 e **AV1 in hardware non esiste**. Chi avesse acceso l'albero di B così com'era consegnato avrebbe scritto *«l'hardware non serve»* |
 | ⛔ **e un errore mio, trovato e curato** | il banco stampava *«renderD128 aperto ⇒ la codifica passa dall'HARDWARE»*: **falso**, ed era una deduzione travestita da misura |
+
+---
+
+## 📐 IL GIRO SUL DEPOSITO — `E3-deposito-hw-5punti`
+
+*⭐ **È il numero della fase**: gira sull'albero che l'utente giudicherà domattina, non su una sua
+copia. Binario `b4597b96…` costruito dal deposito di stanotte (`codificatore.c` `dcc7ed3a…`, 11
+riferimenti VA-API), pagina `b41e4f16…` — **la stessa dei giri A e B**, non toccata dal travaso.*
+
+⭐ **La finestra era aperta su tutt'e due**, verificata prima di accendere: carico **0,23** su CHUWI
+e **0,13** su NIC-OS, **zero** vicini affamati, **zero** porte altrui.
+
+⛔ **E il giro ha CINQUE punti** (`0 · 5 · 10 · 25 · 60`) invece di due, apposta per decidere P1 con
+le previsioni **scritte prima di misurare**:
+
+| ipotesi | previsione a `N=5` | a `N=10` |
+|---|---|---|
+| ⭐ errore **proporzionale** (`1,142·N − 1,31`) | **+4,4** | **+10,1** |
+| ⛔ **ginocchio** oltre una soglia | **sotto** la retta, vicino a **+5** | vicino a **+10** |
+
+### ⭐ La codifica in hardware, sul deposito, **verificata con la regola doppia**
+
+```
+codec negoziato: hevc (1) · tela 1920×1080
+nodo di rendering: renderD128 APERTO
+PRIMO fotogramma: codec 1, «hev1.2.4.L120.B0», 10 bit,
+                  caricamento sulla GPU 3933 us, codifica 5105 us
+⇒ ⭐ codifica: IN HARDWARE — codec HEVC E nodo renderD128: le due cose insieme
+```
+
+### ⛔⛔ E il giro ha SMENTITO tutt'e due le mie ipotesi — poi ha detto la verità
+
+Le salite del tratto 2 **non** stanno sulla retta del +14 % **e non** sono N esatto: sono
+**sotto** N (−1,28 dove chiedevo 5; +5,23 dove chiedevo 10). ⇒ Nessuna delle due previsioni regge.
+
+⭐ **E la causa non era in nessuna delle due**: la mediana per **quarti del giro base** la mostra
+subito, e si vede **prima** di guardare P1:
+
+| | 1° quarto | 2° | 3° | 4° | fotogrammi > 1,5× la mediana |
+|---|---|---|---|---|---|
+| **B** (copia) | 76,5 | 77,3 | 72,8 | 75,1 | 4,1 % |
+| ⛔ **D** (deposito) | **130,3** | **165,2** | 79,2 | 77,6 | ⛔ **32,5 %** |
+
+⇒ ⛔ **Un TRANSITORIO D'AVVIO**, lungo circa metà giro. Gonfia la mediana base (85,3 invece di 78)
+e per questo tutte le salite risultano **più piccole** di N. *Non era il ponte, non era la
+saturazione, non era un errore proporzionale: era la partenza.*
+
+⭐ **E il ponte è scagionato, stavolta col dato giusto** — letto **mentre ritardava**, non a giro
+finito: scarto di consegna **18 µs** di mediana, 89 al p95, 1015 al massimo, a `ritardo_ms` 0, 5 e
+25. *La cura che avevo messo nel banco ha dato la risposta al primo giro in cui è servita.*
+
+### ⭐⭐ IL NUMERO — a regime, e con P1 **VERDE**
+
+⛔ **Il taglio è una scelta fatta dopo aver visto i dati, e va difesa o ritirata.** La difendo con
+tre cose, non con una:
+
+| | |
+|---|---|
+| **1. il transitorio si vede PRIMA di P1** | la tabella dei quarti qui sopra non guarda P1: guarda solo il giro base |
+| **2. il taglio NON fabbrica verde** | applicato ai giri **sani** cambia poco — B **−1,56** · C **−0,54** · A **+0,99** — e cambia molto **solo** su D (**−7,17**), cioè solo dove il transitorio c'è |
+| ⭐⭐ **3. e non è un passe-partout** | ⛔ **B resta ROSSO anche a regime** (+6,98 e +12,11). Se «seconda metà» fosse il trucco per far tornare il verde, avrebbe salvato anche B. **Non lo salva.** |
+
+⇒ Con la **stessa tolleranza** (±3 ms, **non toccata**), sulla seconda metà:
+
+| ritardo iniettato | salita | scarto |
+|---|---|---|
+| 5 ms | +2,40 | −2,60 ✅ |
+| 10 ms | +11,42 | +1,42 ✅ |
+| 25 ms | +25,91 | +0,91 ✅ |
+| 60 ms | +61,46 | +1,46 ✅ |
+
+> ## ⭐⭐⭐ **78,1 ms** — il numero della fase 3
+>
+> *Giro `E3-deposito-hw-5punti`, albero del **deposito**, codifica HEVC **in hardware**, n = **379**,
+> **P1 VERDE**, finestra esclusiva verificata sulle due macchine prima e dopo, palco identico ai
+> due estremi.*
+>
+> | | |
+> |---|---|
+> | **mediana** | **78,115 ms** |
+> | distribuzione | p25 **73,9** · p75 **84,7** · p95 **96,1** · media **80,1** — ⭐ **pulita**, niente coda |
+> | col pezzo cieco `[?]` | **94,1 – 118,1 ms** sullo schermo di un utente |
+> | contro 50 e contro 40 | ⛔ **SFORA** tutt'e due |
+> | ritmo | **30,01** fotogrammi al secondo |
+
+### ⛔ E i quattro giri affiancati, **a parità di trattamento** (seconda metà di ciascuno)
+
+| tratto (mediane, ms) | **C** AV1 sw | **A** HEVC sw | **B** HEVC hw *copia* | ⭐ **D** HEVC hw **deposito** |
+|---|---|---|---|---|
+| campioni | 254 | 188 | 400 | **379** |
+| ⭐ **ritmo** | 21,98 | 14,60 | 30,22 | ⭐ **30,01** |
+| 1 disegno → cattura (**Mutter**) | 16,658 | 16,626 | 16,610 | **16,604** |
+| 2 cattura → primo byte (**codifica**) | 39,671 | ⛔ 63,223 | 30,064 | ⭐ **31,784** |
+| 3 il filo | 0,250 | 0,310 | 0,255 | **0,190** |
+| 4 stream → `decode()` | 0,065 | 0,075 | 0,090 | **0,080** |
+| 5 **la decodifica** | 6,315 | 1,485 | 0,760 | ⭐ **0,730** |
+| 6 **il disegno** | ⭐ 9,070 | ⛔ 28,985 | 24,675 | ⛔ **27,995** |
+| **7 TOTALE** | **71,862** | **109,770** | **73,672** | ⭐ **78,115** |
+| **P1** | ✅ verde | — | ⛔ **rosso** | ⭐ **VERDE** |
+
+⇒ ⭐⭐ **`A → D`, cioè HEVC software → HEVC hardware sullo stesso deposito**: totale **109,77 →
+78,12** (**−31,7 ms**), tratto della codifica **63,22 → 31,78** (**−31,4**), ritmo **14,6 → 30,0**
+(**×2,06**), e ⭐ **gli altri tratti fermi** (Mutter −0,02 · filo −0,12 · decodifica −0,76).
+**L'architettura è assolta.**
+
+⇒ ⛔ **Ma `C → D` resta +6,3 ms**: HEVC in hardware è ancora **peggio** di AV1 in software, e la
+ragione è **una sola riga della tabella**: il disegno, **9,07 → 28,00**.
+
+> ### ⛔⛔⛔ **Il collo di bottiglia della fase 3 è il DISEGNO — 28,0 ms su 78,1, il 36 %**
+>
+> La codifica hardware ha fatto il suo lavoro e ha ceduto 31 ms. ⛔ Ma il codec che la rende
+> possibile ne aggiunge **19 sul disegno**, e l'hardware ne recupera **uno solo** (28,99 → 28,00).
+> ⇒ *Oggi la codifica costa **5 ms** e il disegno ne costa **28**.*
 
 ---
 
@@ -232,11 +357,63 @@ cioè **la sottrazione è pulita e l'architettura è assolta** (E2, la domanda d
 ⭐ **E il ponte NON è il colpevole — verificato, non supposto**: il suo scarto di consegna, misurato
 da lui stesso su 20 000 pacchetti, è **0 µs a mediana, p95 e max**. Il ponte inietta esattamente N.
 
-⇒ ⚠ La lettura più probabile — **ed è una lettura, non una misura**: a **30 fotogrammi al secondo
-la catena è satura** (il tratto 2 ha mediana 30,4 ma media 34,0, p95 52,8, p99 80,5: c'è coda), e
-aggiungere N ms sul ritorno **accoda invece di sommarsi**. ⭐ Il riscontro: in A (14,5/s) e in C
-(21,2/s) P1 torna **perfetto** (+25,10/+60,03 e +24,92/+60,00) — **P1 cade solo dove la catena
-consegna di più**.
+> ## ⛔⛔ LA MIA PISTA È SMENTITA — e dai dati che avevo già in mano
+>
+> *Avevo scritto: «la catena è satura a 30 fps». ⭐ **Falso**, e la prova non ha richiesto un giro
+> nuovo: bastava scomporre i giri a N≠0 dello **stesso verbale**.*
+>
+> | | N=0 | N=25 | N=60 |
+> |---|---|---|---|
+> | ⭐ **ritmo consegnato** | 30,18 | **30,01** | **30,33** |
+> | tratto **2** (cattura → primo byte) | 30,373 | 57,608 | 97,572 |
+> | tratto **3** (lo stream sul filo) | 0,240 | 0,210 | 0,275 |
+> | tratti **1 · 4 · 5** | — | fermi entro **0,06** | fermi entro **0,06** |
+> | tratto **6** (il disegno) | 25,105 | +2,05 | +0,09 |
+>
+> ⇒ ⛔ **Il ritmo NON cala**: se la catena si accodasse, scenderebbe. Resta piatto a 30/s.
+> **La saturazione è esclusa.**
+>
+> ⭐⭐ **E il surplus è localizzato con precisione**: sta **tutto nel tratto 2** (+27,2 su 25
+> chiesti; +67,2 su 60), e ⛔ **non nel tratto 3** — cioè **non** nel tempo che il fotogramma
+> impiega a passare sul filo. ⇒ **Nasce prima che il primo byte parta**: fra il `pts` della cattura
+> e l'uscita del primo pacchetto. *È il server, o è il ponte — non è la catena che si accoda.*
+>
+> ### ⛔ E QUI DEVO CORREGGERE ME STESSO: lo scagionamento del ponte era DEBOLE
+>
+> Avevo scritto *«il ponte è scagionato: scarto di consegna 0 µs»*. ⛔ **Quel dato l'ho letto a giro
+> finito**, quando `metti_ritardo(a, 0, …)` aveva già rimesso il ponte a **zero**: nel file c'era
+> `"ritardo_ms": 0.0`. ⇒ **Uno scarto di consegna misurato a ritardo ZERO non dice niente su come il
+> ponte consegna quando ritarda.** È un dato preso in una condizione diversa da quella che volevo
+> giudicare — **la stessa forma d'errore che questo banco esiste per trovare negli altri**, e
+> l'ho fatta io.
+>
+> ⭐ **Curato nel banco**: adesso il verbale del ponte si legge **all'ultima mano di ogni N**, cioè
+> **mentre ritarda**, e finisce nel verbale (`ponte_per_n`) e nella riga depositata.
+>
+> ### ⭐ La forma del surplus, e le previsioni da falsificare
+>
+> Due punti non fanno una retta, ⚠ ma danno la pendenza da mettere alla prova:
+>
+> | | |
+> |---|---|
+> | salita del tratto 2 | N=25 → **+27,235** · N=60 → **+67,199** |
+> | retta per i due punti | `salita ≈ **1,142·N − 1,31**` ⇒ ⛔ **il 14,2 % in più** di quel che si chiede |
+>
+> ⇒ **Il giro a cinque punti (0 · 5 · 10 · 25 · 60) decide**, e le due ipotesi danno risposte
+> diverse **prima** di misurare:
+>
+> | ipotesi | previsione a N=5 e N=10 |
+> |---|---|
+> | ⭐ **errore proporzionale** (il ponte consegna il 14 % in più) | **+4,4** e **+10,1** — sulla retta |
+> | ⛔ **ginocchio** (qualcosa scatta oltre una soglia) | **sotto** la retta, vicini a +5 e +10 esatti |
+>
+> ⚠ **E `--ritardi 0,5,10,25,60` è già un parametro del banco**: non serve codice nuovo per farlo,
+> serve il palco.
+
+⇒ ⚠ ~~La lettura più probabile: a 30 fps la catena è satura~~ — **SMENTITA il 14 agosto**, vedi il
+riquadro qui sopra. ⭐ Il riscontro che resta valido: in A (14,5/s) e in C (21,2/s) P1 torna
+**perfetto** (+25,10/+60,03 e +24,92/+60,00) — **P1 cade solo su B**, e adesso si sa **in quale
+tratto**.
 ⛔ **Quel che questo NON autorizza a dire**: che il 75,23 sia sbagliato. Il giro base è a ritardo
 **zero**, e i tratti si sottraggono fra istanti dello stesso fotogramma. ⛔ Ma **P1 è rosso, e un
 numero con il proprio metro rosso si consegna con la riserva scritta accanto**, non senza.
@@ -337,7 +514,11 @@ nessun banco che passi dalla sessione vera**: non ci arriva un fotogramma.
 
 ---
 
-## Le tre configurazioni, e che cosa è stato possibile
+## Le tre configurazioni, e che cosa è stato possibile — *(13 agosto; superata)*
+
+> ⚠ **Questa sezione è del 13 e va letta come verbale, non come stato.** Le tre configurazioni sono
+> poi state misurate tutte — vedi **«I TRE GIRI DELLA NOTTE»** — e il giro che conta è quello sul
+> **deposito**, in testa al file.
 
 ⭐ Tre alberi costruiti sul server, **una variabile per volta** — e le impronte lo dimostrano:
 
@@ -644,7 +825,7 @@ che ha sporcato i 74,58 del 13 agosto **non c'è**.
 | # | | perché in quest'ordine |
 |---|---|---|
 | **1** | ⛔⛔⛔ **il DISEGNO**: perché `drawImage` costa **25,1 ms** con HEVC e **9,1** con AV1 | è **il 33 % del numero** e nessuno lo stava guardando. ⚠ Vale più della codifica residua: la codifica in hardware ne costa ormai **5** |
-| **2** | ⛔ **rifare B con ritardi più piccoli** (5, 10 ms) o a ritmo limitato | per far tornare **P1**: finché è rosso, il 75,23 ha una riserva scritta accanto |
+| **2** | ⛔ **il giro a CINQUE punti sull'albero del DEPOSITO** — `--ritardi 0,5,10,25,60` | ⭐ è **il prossimo giro**, e vale doppio: misura **la configurazione che l'utente giudica**, non una sua parente. Decide fra *«errore proporzionale del 14 %»* e *«ginocchio»*, con le previsioni **scritte prima** |
 | **3** | ⚠ il resto del tratto 2 | in B vale **30,4 ms** di cui la codifica confessata è **~5** ⇒ ci sono **~25 ms** fra cattura e primo byte che **non sono codifica**, e non sono mai stati scomposti |
 | **4** | ⚠ e solo dopo, il tetto | ⛔ oggi **SFORA**, e sforerebbe anche a codifica gratis |
 
@@ -714,6 +895,7 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 | `banchi/03-b17-accendi.sh` | l'azione **`palco`**: legge i nodi DRM **da root** e consegna i denominatori |
 | `banchi/03-b17-lancia.sh` | porta `03-solo.py` sul server · passa `D` (l'albero) e `GIRO` (il nome) · non passa più `--verbale` |
 | ⭐ **e la notte del 14** | il riconoscimento dei **propri processi** sull'altra macchina (`--pid-file-la`) · il quarto ramo del verdetto sulla codifica (HEVC **in software**) · tre giri A/B/C con i verbali separati |
+| ⭐⭐ **e in preparazione del giro a cinque punti** | ⛔ **il ponte si legge MENTRE ritarda** (`--verbale-ponte`, una lettura per ogni N, all'ultima mano) — prima lo leggevo a giro finito, cioè a ritardo zero, e non diceva niente · ⭐ **quando P1 è rosso il banco stampa DOVE va il surplus**, tratto per tratto e col ritmo a ogni N: *«se il ritmo NON cala, non è saturazione»* |
 | `banchi/01-b12-registro-C.jsonl` | la **scheggia** della corsia: `03-b17` ri-certificato, con dentro le tre misure |
 | `banchi/03-b17-esiti.jsonl` | le righe depositate dai giri (misure e certificazioni) |
 
@@ -723,7 +905,9 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 
 | | |
 |---|---|
-| ⛔⛔ **P1 rosso su B** | il controllo che valida il metro non torna proprio sul giro che produce il numero. ⭐ Il ponte è stato **scagionato con una misura** (scarto di consegna **0 µs** su 20 000 pacchetti), e P1 torna perfetto negli altri due giri ⇒ la pista è la **saturazione a 30 fps**, ma è una **lettura**. ⛔ **Il numero si consegna con la riserva, non senza** |
+| ⛔⛔ **P1 rosso su B** | il controllo che valida il metro non torna proprio sul giro che produce il numero. ⛔ **Il numero si consegna con la riserva, non senza** |
+| ⛔⛔ **e ho scagionato il ponte con un dato preso nella condizione sbagliata** | avevo letto il suo verbale **a giro finito**, cioè con `ritardo_ms = 0`: uno scarto di consegna nullo **a ritardo zero** non dice niente su come consegna quando ritarda. ⇒ **Il ponte NON è scagionato.** Curato: adesso il banco lo legge **mentre ritarda**, una volta per ogni N |
+| ⛔ **e la mia spiegazione di P1 era sbagliata** | dicevo *«saturazione a 30 fps»*. **Falso**, e si vedeva nei dati che avevo: il ritmo **non cala** (30,18 · 30,01 · 30,33). ⭐ La diagnosi vera — il surplus è **tutto nel tratto 2 e non nel tratto 3** — l'ho trovata **senza un giro nuovo**, e adesso **la stampa il banco** ogni volta che P1 è rosso |
 | ⛔ **il banco si è rifiutato di misurare — due volte, e la seconda aveva ragione su di me** | vedeva **il proprio prodotto** come vicino affamato (67,8 % di CPU = x265 che codifica). Curato riconoscendo i **propri** pid dal **proprio** pidfile, e solo quelli |
 | ⛔ **una mia riga di verdetto era ambigua su A** | diceva *«codec e nodo non concordano»* per uno stato **perfettamente coerente** (HEVC in software non apre nodi DRM). ⇒ Mancava il quarto ramo; aggiunto **dopo** le misure, per non spostare il metro nel mezzo |
 | ⚠ **la finestra «non ha retto» alla fine di A** | ma il carico era **mio**: `03-solo.py` filtra i vicini per pid, **non il carico medio** ⇒ il criterio «carico > 1» scatta sul carico che il banco stesso produce |
@@ -773,7 +957,8 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 | | |
 |---|---|
 | ⭐ ~~**il numero con la codifica in hardware**~~ | ✅ **MISURATO la notte del 14: 75,23 ms**, ⛔ con P1 rosso dichiarato accanto |
-| ⛔ **quanto vale davvero il 75,23** | ⚠ `[?]` **la larghezza dell'errore**: P1 sbaglia di +4,6 su 25 e +10,2 su 60 ⇒ il metro, su questo giro, non è tarato. ⭐ La cura è **un giro con ritardi più piccoli** (5, 10 ms) o **a ritmo limitato**: se P1 torna verde, il 75,23 si conferma; se no, il numero va rifatto |
+| ⛔ **quanto vale davvero il 75,23** | ⚠ `[?]` **la larghezza dell'errore**: il metro, su questo giro, non è tarato. ⭐ **Ma il surplus è localizzato** (tutto nel tratto 2, zero nel 3) e il ritmo non cala ⇒ resta `[?]` **la causa**, non più *dove*. Il giro a cinque punti la decide |
+| ⛔ **il ponte è colpevole o innocente?** | ⚠ `[?]`, e il mio scagionamento era **nullo** (letto a ritardo zero). ⭐ Adesso il banco legge il ponte **mentre ritarda**: la risposta esce dal prossimo giro **senza lavoro in più** |
 | ⛔⛔ **perché il DISEGNO costa 25 ms con HEVC e 9 con AV1** | `[?]`, ed è **il primo lavoro della fase**: vale più di tutto quel che resta |
 | ⛔⛔ **i 74,58 / 74,576 del 13 agosto** | ⚠ vanno riletti con la riserva del palco: **presi sul desktop dell'utente**, con la sua contesa dentro. ⭐ Il valore di oggi (**72,40**) è preso **sullo stesso palco** ⇒ i due si confrontano fra loro, ⛔ ma nessuno dei due è «l'anello su un palco pulito» |
 | ⚠ **quanto pesa il palco sul numero** | `[?]`: nessuno ha ancora misurato l'anello su un Xvfb vero (`--ozone-platform=x11`). ⚠ Là **non c'è GPU** ⇒ il numero cambierebbe, e non è detto in quale verso |
