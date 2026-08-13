@@ -128,6 +128,7 @@ la cura che arriva dal coordinatore è sbagliata, si rifiuta **con un caso**. Il
 | **P1** | **Lo stato, verificato e non ricordato**: albero pulito · `ss -ltn` ⛔ **su 192.168.0.2, non su CHUWI** (l'errore è già stato fatto oggi) · `python3 banchi/01-b12-guasti.py --registro` |
 | **P2** | ⏳ **La scadenza**: `bash banchi/01-s1b-eccezione.sh oggi`, una volta al giorno **fino al 18 agosto**. Il 13: 4 controlli su 4, 2,50 giorni su 7; Chrome si è segnato **2026-08-17T21:09:47Z** |
 | **P3** | ⛔ **I commit di `banchi/`**, rimasti fuori dalla sessione del 13 (~46 voci: nove banchi nuovi, le cure ai vecchi, il catalogo). Erano in scrittura da due gruppi quando la sessione è finita. ⚠ **Si committano PRIMA di far partire le corsie**, o il primo giro sporca uno stato mai committato |
+| **P3-bis** | ⚠ **TRE PORTE LASCIATE ACCESE dalla sessione del 13**, e non sono le protette: **7603** (il banco del ciclo dei fotogrammi), **7605** e **7615** (l'anello del ritardo). ⛔ **Sono state lasciate APPOSTA, ispezionabili** — non sono un residuo da ammazzare alla cieca. Si spengono con `bash banchi/03-b17-lancia.sh spegni` e l'equivalente di `03-b15`. ⭐ **Vanno spente prima di P1**, o il controllo dello stato conta **sei** porte e chi legge non sa quali sono sue |
 | **P4** | ⚠ **`/tmp` su CHUWI è una tmpfs da 3,8 G al 94 %**. Si libera `/tmp/google-chrome` e `/tmp/claude-*`; ⛔ **si guarda prima di cancellare il resto**: dentro ci sono le **prove** dei giri del 13 |
 
 ---
