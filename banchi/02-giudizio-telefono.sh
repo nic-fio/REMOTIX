@@ -361,18 +361,30 @@ spec = importlib.util.spec_from_file_location(
 disp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(disp)
 locali = disp.indirizzi_locali()
-buoni = []
+# ⛔⭐ D21 — E QUI STAVA IL TERZO RIFIUTO, gia' pronto.  Le righe `tipo:
+#     "pixel"` sono una POST di byte grezzi e NON portano l'impronta: giudicate
+#     da sole davano tutte SOSPESO, e questo filtro non ne teneva NESSUNA.
+#     `[M]` 13 ago 2026: il telefono dell'utente aveva dipinto quattro immagini
+#     giuste, e il banco avrebbe detto «nessun file di pixel viene da un
+#     dispositivo accettato» — contro un componente innocente.
+#  ⇒ L'impronta si presta dall'esito dello STESSO INDIRIZZO, e il veto E10
+#    resta dov'era: sull'indirizzo della riga dei pixel, che e' il suo.
+righe = []
 for r in open(sys.argv[1], encoding="utf-8"):
     r = r.strip()
     if not r:
         continue
     try:
-        d = json.loads(r)
+        righe.append(json.loads(r))
     except Exception:
         continue
+per_ip = disp.impronte_per_indirizzo(righe)
+buoni = []
+for d in righe:
     if d.get("tipo") != "pixel":
         continue
-    if disp.giudica(d, locali)["verdetto"] != "ACCETTATO":
+    g = disp.giudica(d, locali, None, per_ip)
+    if g["verdetto"] != "ACCETTATO":
         continue
     p = os.path.join(sys.argv[2], d.get("nome", ""))
     if os.path.isfile(p):

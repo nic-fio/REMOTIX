@@ -29,6 +29,14 @@ profondita' non ha il diritto di dichiarare «10 bit».
      non esistono.**  `VideoFrame.format` e `copyTo()`.  `[S]` Su Chrome, sul
      fotogramma decodificato **in hardware**, `format` e' `null` e `copyTo()`
      e' negato (w3c/webcodecs#631, S2 §3.7).
+     ⛔⚠ E IL 13 AGOSTO 2026 QUESTO `[S]` E' STATO CONTRADDETTO DALLA MISURA:
+     sul telefono dell'utente, su tutte e quattro le sequenze, `format` vale
+     **«RGBA»** — non `null`.  ⇒ Il `[S]` e' vecchio o incompleto, e resta
+     scritto qui **con la contraddizione accanto**, non corretto in silenzio.
+     ⛔ E «RGBA» sono 8 bit per canale: quel che arriva alla pagina e' a 8 bit
+     anche sulla sequenza AV1 a 10 bit VERI.  ⚠ Che sia un limite del telefono
+     o dello STRUMENTO non lo dice questa riga: lo dira' `copyTo`, che fino al
+     13 agosto questa pagina dichiarava di chiedere e non chiedeva (D22).
      ⇒ ⛔ **«format === null» NON vuol dire 8 bit e NON vuol dire 10 bit:
      vuol dire CHE NON SI SA**, e la pagina scrive «non misurabile».
      ⛔ E non lo si sostituisce contando le bande sulla tela: la tela 2D e' a
@@ -388,6 +396,35 @@ async function decodificaSequenza(s, cx, tela) {
               primaries: f.colorSpace.primaries, transfer: f.colorSpace.transfer,
               matrix: f.colorSpace.matrix, fullRange: f.colorSpace.fullRange} : null,
             copyTo: null};
+          // ⛔⭐ D22 — IL SECONDO CANALE, CHE QUESTA PAGINA DICHIARAVA DI
+          //     CHIEDERE E NON CHIEDEVA.  L'intestazione qui sopra promette
+          //     «i DUE canali che esistono: VideoFrame.format e copyTo()»:
+          //     `copyTo` veniva inizializzato a `null` e non veniva MAI
+          //     chiamato.  ⇒ nel registro il campo diceva `null`, che si
+          //     legge «chiesto e negato» — mentre era «non chiesto».
+          //     `[M]` 13 ago 2026: e' la forma E8, dentro la pagina scritta
+          //     per non commetterla, e ha reso muto il giro dell'utente.
+          //  ⚠ Il layout NON e' un ornamento: e' il campo che dice la
+          //    profondita'.  `allocationSize` su un 4:2:0 a 10 bit vale il
+          //    DOPPIO che a 8 bit, e i `stride` lo dicono per piano.
+          try {
+            const n = f.allocationSize();
+            const b = new Uint8Array(n);
+            const layout = f.copyTo ? f.copyTo(b) : null;
+            conto.profondita_letta.copyTo = {
+              riuscito: true, allocationSize: n,
+              byte_per_pixel: +(n / (f.codedWidth * f.codedHeight)).toFixed(4),
+              // ⛔ la Promise non si aspetta qui dentro: si registra che la
+              //    chiamata NON ha sollevato, e il layout arriva se sincrono.
+              layout: (layout && layout.then) ? "promise" : layout};
+          } catch (e) {
+            // ⭐ E IL RIFIUTO E' ESSO STESSO LA MISURA: su Chrome il
+            //    fotogramma tenuto dalla GPU nega `copyTo`, ed e' quel che si
+            //    vede sul decodificatore in hardware (w3c/webcodecs#631).
+            //    ⛔ Nega ≠ 8 bit e nega ≠ 10 bit: e' un fatto sul CANALE.
+            conto.profondita_letta.copyTo = {riuscito: false,
+                                             errore: String(e)};
+          }
           try { cx.drawImage(f, 0, 0); conto.dipinto = true; }
           catch (e) { conto.errori.push("drawImage: " + e); }
         }

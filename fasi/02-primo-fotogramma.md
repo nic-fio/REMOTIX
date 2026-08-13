@@ -395,6 +395,42 @@ curare il prodotto o l'arbitro **fa scadere le certificazioni che li guardavano*
 
 ---
 
+## ⭐⭐⭐ L'UTENTE HA VISTO IL PROPRIO DESKTOP — 13 agosto 2026, mattina
+
+*Non è il giudizio di fase: è il fatto che la catena consegna. Si scrive qui perché è la prima volta
+che un essere umano guarda l'uscita di questo prodotto, e perché fin qui tutto quel che ne sapevamo
+erano decibel.*
+
+> **«È lo sfondo GNOME, è OK.»** — l'utente, davanti a `https://192.168.0.2:7561/`, entrato come sé
+> stesso.
+
+⭐ Cattura → codifica → filo → `VideoDecoder` → pixel sullo schermo di una persona, con in mezzo un
+protocollo scritto da zero. Il registro del server, dalla stessa sessione:
+
+```
+il client dichiara video.misura_massima=3840x2160   ← MISURATA decodificando, non dedotta dallo schermo
+sessione aperta utente=nicfio  tela=1920x1080  vista=2559x922
+fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN — spediti 1, abbandonati 0
+```
+
+⚠ **E si scrive che cosa questo NON è**: non è il giudizio della fase, e la fase resta aperta.
+L'immagine è **piccola** — la pagina non riscala alla vista, che §6.1 le impone — e il metro a pixel
+sulla catena vera non è stato girato.
+
+### ⛔ E i tre difetti che l'utente ha trovato in una mattina, che 518 file di banco non avevano preso
+
+| | Che cosa ha visto | Perché il banco non lo vedeva |
+|---|---|---|
+| **1** | ⛔ entrando come `prova` vedeva il desktop di **`nicfio`** | il deposito dei fotogrammi era **di processo**, non di sessione — e nessun banco entrava con **due** utenti diversi sullo stesso server |
+| **2** | ⛔ **pagina vuota**, nessuna spiegazione | la pagina dichiarava `video.misura_massima` dalla **misura dello schermo** invece che da quel che sa decodificare ⇒ tela concessa più piccola della cattura, e il prodotto **si rifiutava di spedire**. ⚠ Le pagine di prova dichiaravano un tetto comodo: **solo la pagina del prodotto, su uno schermo vero, sbagliava** |
+| **3** | ⚠ l'immagine è **piccola** | i banchi guardano **se** i pixel arrivano, non **quanto grandi** sono dipinti |
+
+⇒ ⭐ **È l'invariante I8 in azione** — *il metro è quel che l'utente vede, non il numero che esce dal
+banco*. Quella notte i banchi dicevano **48,27 dB**; l'utente ha detto *«non vedo nessun desktop»*, e
+aveva ragione lui.
+
+---
+
 ## Il giudizio dell'utente
 
 ⏳ **Non ancora dato**: la fase è aperta e il prodotto non esiste. Quel che si giudica alla fine è

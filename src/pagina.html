@@ -121,7 +121,12 @@
      solo quando e' vuoto, come `#avviso`: un riquadro sempre presente e quasi
      sempre vuoto smette di essere letto. */
   #dichiarazione { margin-top: 1rem; padding: .7rem; font-size: .85rem;
-                   border-left: 3px solid currentColor; opacity: .85; }
+                   border-left: 3px solid currentColor; opacity: .85;
+                   /* ⚠ Le dichiarazioni sono DUE — quella del codec e quella
+                      del video che non arriva — e vanno a capo fra loro: un
+                      riquadro che le incollasse in un paragrafo solo
+                      leggerebbe come una frase sola. */
+                   white-space: pre-line; }
   #dichiarazione:empty { display: none; }
 
   /* ⛔ La tela sta SOTTO il modulo e non sopra: `web.md` §1.2 C — niente
@@ -370,6 +375,127 @@ const SONDE = {
     dati: "EgAKDQAAAAKv95tfKgQEAggyHxAAqAAAAkAAALer4STJpjR378M0UaCnFfhFEJPWxBA=" },
 };
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ⛔⭐ LA SCALA DELLE MISURE — e le DUE GRANDEZZE che si erano confuse.
+
+   `RCP.md` §4.3, tabella delle capacita':
+
+       | `video.misura_massima` | client | `LARGHEZZAxALTEZZA` **che sa
+         decodificare**, es. `3840x2160` |
+
+   e piu' sotto, nello stesso paragrafo:
+
+       ⚠ `video.misura_massima` **non** cambia la tela: e' un tetto che il
+         server **DEVE** rispettare quando concede la tela (§4.5).  Esiste
+         perche' il decodificatore di un telefono ha limiti **che il suo
+         schermo non dichiara**.
+
+   ⛔ FINO AL 13 AGOSTO 2026 QUESTA PAGINA CI METTEVA DENTRO LA MISURA DELLO
+      SCHERMO — `screen.width * devicePixelRatio` — e sono DUE GRANDEZZE
+      DIVERSE:
+
+     la misura dello SCHERMO       quanti pixel ha il vetro davanti
+                                   all'utente.  ⭐ Nel protocollo ha gia' il
+                                   suo campo, ed e' la `vista` di §4.5 — «la
+                                   misura in cui il client disegnera'» — che
+                                   questa pagina manda in `ATTACCA` due
+                                   messaggi dopo.  §6.2 dice il resto: «il
+                                   client riscala alla VISTA, non alla tela».
+     la misura del DECODIFICATORE  fino a che risoluzione questo browser porta
+                                   un flusso video fino al PIXEL.  Non ha
+                                   niente a che vedere col vetro.
+
+   ⇒ ⛔ Sono indipendenti, e la specifica nomina proprio il caso in cui
+     divergono.  `[M]` 13 agosto 2026, registro del server sulla 7561, sessioni
+     dell'utente `nicfio` delle 05:48 e delle 05:55:
+
+       il client dichiara video.misura_massima=2560x1010 — e' il tetto che la
+         tela concessa DEVE rispettare (§4.5)
+       ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto 2560x1010
+         — CONCESSA 1794x1010
+       ⛔ tela in vigore 1794x1010 ma il fotogramma catturato e' 1920x1080 —
+         NON lo spedisco
+
+     Lo schermo dell'utente e' alto **1010** pixel; il suo browser decodifica
+     il 1080p senza fatica.  ⛔ Su quello schermo l'immagine non sarebbe
+     comparsa **mai**, e nemmeno a schermo intero: `screen.height` non cambia
+     con F11 — l'utente l'ha provato.
+
+   ⚠ E nessun banco l'aveva preso, perche' le pagine di prova dichiarano
+     `3840x2160` o `2048x1280` a mano: ⛔ **solo la pagina del prodotto, su uno
+     schermo vero, sbagliava**.  Il banco che adesso lo prende e'
+     `banchi/02-pagina-misura-lancia.sh`, e gli si da' uno schermo piu' corto
+     di 1080.
+
+   ⛔⛔ E LA CURA NON PUO' ESSERE «DICHIARA 4K SEMPRE».  Sarebbe rompere §4.5
+      dalla parte opposta, cioe' **rompere il telefono** — che e' il
+      dispositivo per cui quel campo esiste.  Un client che dichiara un tetto
+      piu' alto del vero riceve una tela che il suo decodificatore rifiuta, e
+      il sintomo non e' un errore di rete: e' `configure()` che lancia, cioe'
+      lo stesso rosso che `video.livello` ha gia' pagato (rilievo O12).
+
+   ⇒ ⭐ IL TETTO SI MISURA, E SI MISURA COME QUESTA PAGINA MISURA GIA' I CODEC:
+     non chiedendolo a un'API — `mediaCapabilities` mente su tutte e sette le
+     stringhe HEVC di Firefox — ma **dipingendo un fotogramma vero a misure
+     crescenti e rileggendo i pixel**.  Da cui questa scala.
+
+   ⛔ LA SCALA SI FERMA A 3840x2160, E NON E' UN ARROTONDAMENTO: questa pagina
+      dichiara `video.livello = 5.1` sei righe piu' su, e il livello 5.1 arriva
+      a 4096x2176.  Dichiarare una `misura_massima` piu' grande del livello
+      appena dichiarato sarebbe una contraddizione **dentro lo stesso `CIAO`**.
+      ⚠ E il primo gradino e' 320x240, che e' la tela MINIMA di §4.5: sotto non
+        c'e' niente da dichiarare, perche' non c'e' nessuna tela legale che ci
+        stia dentro.
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ⛔ Generato da `banchi/02-pagina-sonda-misura.py` — non si scrive a
+      mano.  Una scala di fotogrammi chiave a MISURE CRESCENTI, due
+      tinte piatte ciascuno: serve a misurare `video.misura_massima`
+      di §4.3 — **quel che il DECODIFICATORE regge**, che non e' la
+      misura dello schermo.  L'ultimo gradino e' il piu' grande che
+      `LIVELLO_DICHIARATO` regge; il primo e' la tela minima di §4.5. */
+const SONDE_MISURA = {
+  hevc: [
+    { l: 320, a: 240, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAAA8ugJAAAAAAUIBAQQIAAADAJ+oAAADAAA8oAoIDxZbqSTK5qBAQCCAAAADAIAAAA8EAAAAAUQBwXKwYkAAAAEoAa9yGfLJgOsCAf/vm3/sfqXk4FRUYR7klwFWF8XOv8Y0wJoA+Qf4pb0VkBpqbT6oZyOgkwM0fl+UZAAsIIcAAB0+Z04AAU8=" },
+    { l: 640, a: 480, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAABaugJAAAAAAUIBAQQIAAADAJ+oAAADAABaoAUCAeFlupJMrmoEBAIIAAADAAgAAAMA8EAAAAABRAHBcrBiQAAAASgBr3EGnRNNMLLg6wIB/++bf+x+peTgVFRhHuSW7gDoAzgYp26efCL+gDzqMAAAAwDxgKW9FZAW4K8UfEpe1AAAAwAlYJMDNGUAAfmjthAAAASshwAAAwAFI1X3uAAAM6AAAAMAAQ4Pi3wAABswAAADAAsOjdwwAAGHAAADADGC8CsAAAqYAAJp6YAaMA==" },
+    { l: 1280, a: 720, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAABdugJAAAAAAUIBAQQIAAADAJ+oAAADAABdoAKAgC0WW6kkyuagQEAggAAAAwCAAAAPBAAAAAFEAcFysGJAAAABKAGvcYbBphhdZVNNRSDrAgH/75t/7H6l5OBUVGEe5JbuAOgDOBUhqAAAAwA4+PF8XOv8Y8cgAAADAAADAAMmpb0VkBbgrxOAAAADAAJbJLzoAAADAAADAAekkwM0ZQAAAwAAAwAAqAmnIgAAAwAAAwADmocAAAMAAAMAAAMAD1LTHqAAAAMAAAMAnIAAAAMAAAMAAAMADQjFDMAAAAMAAAMAtIAAAAMAAAMAAAMBXdeBmAAAAwAAAwAecAAAAwAAAwAACOSm9iAAAAMAAAMA7oAAAAMAAAMAABz2BXrAAAADAAAEjAAAAwAAAwAAOmwq9YAAAAMAAAqoAAADAAADAABVtq0ZAAADAAADABTwAAADAAADAAB8WKXrAAADAAADABzwAAADAAADAABDwwAAAwAAAwAAQ0A=" },
+    { l: 1920, a: 1080, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAAB4ugJAAAAAAUIBAQQIAAADAJ+oAAADAAB4oAPAgBDllupJMrmoEBAIIAAAAwAgAAADA8EAAAABRAHBcrBiQAAAASgBr3CJupIoYHnnXXXXXXXXYOsCAf/vm3/sfqXk4FRUYR7klu4A6AM4FSGoAAADAAADAAADAI9vlPPhF/QEeIAAAAMAAAMAAAMAADvgpb0VkBbgrxOAAAADAAADAAADABMpKLtgAAADAAADAAADAABwQJMDNGUAAAMAAAMAAAMAAAMADSjSDMAAAAMAAAMAAAMAAHNAhwAAAwAAAwAAAwAAAwAAAwJ3sKMwAAADAAADAAADAAAtYAAAAwAAAwAAAwAAAwAAAwMEOCjIAAADAAADAAADAABCwAAAAwAAAwAAAwAAAwAAZgc5GQAAAwAAAwAAAwAADAgAAAMAAAMAAAMAAAMAAuu1CMgAAAMAAAMAAAMAAHbAAAADAAADAAADAAADAAr+2aMgAAADAAADAAADAAI6AAADAAADAAADAAADABmx73rAAAADAAADAAADAAaMAAADAAADAAADAAADACZzBDMAAAMAAAMAAAMAAAr4AAADAAADAAADAAADAEJmGGYAAAMAAAMAAAMAABnQAAADAAADAAADAAADAFu3QRkAAAMAAAMAAAMAACKgAAADAAADAAADAAADAItMmMwAAAMAAAMAAAMAAEXAAAADAAADAAADAAADAK/u2jIAAAMAAAMAAAMAAF9AAAADAAADAAADAAADAOizDsQAAAMAAAMAAAMAAIiAAAADAAADAAADAAADAReaAZgAAAMAAAMAAAMAAMKABKAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMATSAAYKrjYAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAIyA==" },
+    { l: 2560, a: 1440, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAACWugJAAAAAAUIBAQQIAAADAJ+oAAADAACWoAFAIAWhZbqSTK5qBAQCCAAAAwAIAAADAPBAAAAAAUQBwXKwYkAAAAEoAa9wueGtWKlKdQmSpUqZMmTJkqVKlSpI6wIB/++bf+x+peTgVFRhHuSW7gDoAzgVIagAAAMAAAMAAAMAAAMAABRdgL4udf4yCMAAAAMAAAMAAAMAAAMAAAMAFXClvRWQFuCvE4AAAAMAAAMAAAMAAAMAAAQCVTsQAAADAAADAAADAAADAAADAEdAkwM0ZQAAAwAAAwAAAwAAAwAAAwAAAwNaOejIAAADAAADAAADAAADAAADAERAhwAAAwAAAwAAAwAAAwAAAwAAAwAAvY66MgAAAwAAAwAAAwAAAwAAAwAXcAAAAwAAAwAAAwAAAwAAAwAAAwABCpcBmAAAAwAAAwAAAwAAAwAAAwA2IAAAAwAAAwAAAwAAAwAAAwAAAwAoO3KMgAAAAwAAAwAAAwAAAwAACXgAAAMAAAMAAAMAAAMAAAMAAAMBTdwUZAAAAwAAAwAAAwAAAwAAAwBeQAAAAwAAAwAAAwAAAwAAAwAABYty0ZAAAAMAAAMAAAMAAAMAAAMBsQAAAwAAAwAAAwAAAwAAAwAADqMnvWAAAAMAAAMAAAMAAAMAAAUEAAADAAADAAADAAADAAADAAAWDdZGQAAAAwAAAwAAAwAAAwAACrgAAAMAAAMAAAMAAAMAAAMAACu7soyAAAADAAADAAADAAADAAAYsAAAAwAAAwAAAwAAAwAAAwAAQCZwZgAAAwAAAwAAAwAAAwAAAwAr4AAAAwAAAwAAAwAAAwAAAwAAZ4il6wAAAwAAAwAAAwAAAwAAAwBEQAAAAwAAAwAAAwAAAwAAAwAAis0gzAAAAwAAAwAAAwAAAwAAAwBuwAAAAwAAAwAAAwAAAwAAAwAAwJGb1gAAAwAAAwAAAwAAAwAAAwCkgAAAAwAAAwAAAwAAAwAAAwAA77O+xAAAAwAAAwAAAwAAAwAAAwDKgAAAAwAAAwAAAwAAAwAAAwABVN8XrAAAAwAAAwAAAwAAAwAAAwFtAAADAAADAAADAAADAAADAAGNJBesAAADAAADAAADAAADAAADAZcAAAMAAAMAAAMAAAMAAAMAAfc16MgAAAMAAAMAAAMAAAMAAAMC5gAAAwAAAwAAAwAAAwAAAwACaTZIyAAAAwAAAwAAAwAAAwAAAwMGAAADAAADAAADAAADAAADAAL4SS9YAAADAAADAAADAAADAAADA3IAAAMAAAMAAAMAAAMAAAMAA37RuxAAAAMAAAMAAAMAAAMAAAQsAAADAAADAADFaEAAAAMAAAMBgQ==" },
+    { l: 3840, a: 2160, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAUABDAH//wQIAAADAJ+oAAADAACWugJAAAAAAUIBAQQIAAADAJ+oAAADAACWoAHgIAIcWW6kkyuagQEAggAAAwACAAADADwQAAAAAUQBwXKwYkAAAAEoAa9wRHrQHzt25dOW7du3cOG7du3bNmzZs2bNmzZs2bNm0OsCAf/vm3/sfqXk4FRUYR7klu4A6AM4FSGoAAADAAADAAADAAADAAADAAADAAADAAADAmm+F8XOv8ZBGAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwASEKW9FZAW4K8TgAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwCpbjoyAAADAAADAAADAAADAAADAAADAAADAAADADbgkwM0ZQAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwC07noyAAADAAADAAADAAADAAADAAADAAADAAADAEPAhwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAK5uojIAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABWwAAADAAADAAADAAADAAADAAADAAADAAADAAADAABU910ZAAADAAADAAADAAADAAADAAADAAADAAADADRgAAADAAADAAADAAADAAADAAADAAADAAADAAADAA4jL+xAAAADAAADAAADAAADAAADAAADAAADAAAJ2AAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwCOTPDMAAADAAADAAADAAADAAADAAADAAADAAADAHPAAAADAAADAAADAAADAAADAAADAAADAAADAAADAq28b1gAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMCygAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAACFTRoyAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAApYAAADAAADAAADAAADAAADAAADAAADAAADAAANyzvsQAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEFAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAB7me9iAAAADAAADAAADAAADAAADAAADAAADAAAiYAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAMmR+9YAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAEBAAAADAAADAAADAAADAAADAAADAAADAAADAABYN93rAAADAAADAAADAAADAAADAAADAAADAAADAIOAAAADAAADAAADAAADAAADAAADAAADAAADAAB7GhdiAAADAAADAAADAAADAAADAAADAAADAAADAKKAAAADAAADAAADAAADAAADAAADAAADAAADAAC5b9vWAAADAAADAAADAAADAAADAAADAAADAAADAR0AAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAOw0XsQAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMBVwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwABaN/3rAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwJSAAADAAADAAADAAADAAADAAADAAADAAADAAG5JNesAAADAAADAAADAAADAAADAAADAAADAAADAk4AAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAkk3KMgAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAQEAAADAAADAAADAAADAAADAAADAAADAAADAALZwG9YAAADAAADAAADAAADAAADAAADAAADAAAEvAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwADpNJ7EAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAABYQAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMABG5u0ZAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAg4AAADAAADAAADAAADAAADAAADAAADAAADAAU/gN6wAAADAAADAAADAAADAAADAAADAAADAAAJeAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAGDJPesAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAACXgAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMABqyT3rAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAl4AAADAAADAAADAAADAAADAAADAAADAAADAAdppPYgAAADAAADAAADAAADAAADAAADAAADAAALCAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAIJN2jIAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEHAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMACPzdoyAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABBwAAADAAADAAADAAADAAADAAADAAADAAADAAmk3aMgAAADAAADAAADAAADAAADAAADAAADAAAQcAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAJ3wG9YAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEvAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMACocBvWAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABLwAAADAAADAAADAAADAAADAAADAAADAAADAArfAb1gAAADAAADAAADAAADAAADAAADAAADAAAS8AAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwALPwG9YAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEvAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAUHGB9EAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAmI=" },
+  ],
+  av1: [
+    { l: 320, a: 240, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDgAAAAQ8/7za+RAgIBBAMroBEACKAAAAkAsAA84R3WUqhlHDHrT6JJhMGbpv9E+XEl89Bzu8QY1KnKptvhB4/4Auf7ezQx/wI21GMO9+eMN/n6bcvf0jiT2Dv0EI03v1RmEsvRhFdygQIhbxRmnGd3qrvIwFV8C8UL7YxI740EAgW7vJ06nPB81u3qPe6qrTZu//Zlzdlnbdyh6O4h3eI7zzh4z5J1KXDHA8N+32MILUgSKWOt8usLMiKfkkmVf12Cq7XMkS2Z+b/8aA" },
+    { l: 640, a: 480, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDgAAACTE/982vkQICAQQMlEQAIoAAACQAAADzhHdZSqGUcMetPsIfE85VjSVHW1vOIj+So5N6Rh0HzTyLHv6hiBYoQeld+J+WxChguqmYO0HbfFJzzKm/okbL8d2bXT6imI=" },
+    { l: 1280, a: 720, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDgAAAC1M/7PMr5ECAgEEMnAQAIoAAACQAAADzhHdZSqGUcMetPsIgaPbxpKd4+s8ZjW26gzI7GhtP1uoeCBM/qYfsNugkRt63EmTQtyaRWTIKkH6HnMcm4pOebs+Xa7HbJlty+Ns507Ya38Gn82CLhqHGaGKtL31niS/5awh8QS8" },
+    { l: 1920, a: 1080, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDgAAAEKrv8NzK+RAgIBBMosBEACKAAAAkAAAA84R3WUqhlHDHrT7CIGj3q1AXGmPgSj/j5/YgUssf25iDs1D7uYO27U4X9ciGYkC56m+3Sm7uhKo/o/5DQaZcBJCv0SamvsvNf8ckRpAvhrYqHOLme67GYMmK7F1JjDsY4k0/50ZMyZ8Xkgl0FcRIe7JUv7TYK8BJ+UO+/i+qyHPdA==" },
+    { l: 2560, a: 1440, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDwAAAGLqf+z7lfIgQEAggDKnARAAigAAAJAAIAx1opYMvmQqhurhTAixKyCfbzHeCMvNM0qJ2+EhglW52h3qXkSU8h0YYQ5COprHLfcuZ/cixRtnCmMLvv0tvOOUDdfiJ3gRjqO9urFo8UpsgdFA3iiGp2O/ELwriOlJGXaRDR8OSv3EfMSu5r7o1sCBwHDJadZvZTh7xUccOD5mBC5r3movMO8vmSmp2Ga52a5ebf2IPQ9nOq7ut3zk" },
+    { l: 3840, a: 2160, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "EgAKDwAAAGLvv+G9yvkQICAQQDLbARAAigAAAJAAIAx1opYMvmQqhurhTAixKyCfegrYFokVSrtTQ0g8u+4i7GZMADpD7K3/wYXMhwqIkmWZGNJ6EC9U4YWCm56/viNTwu9mn4ACpsV1jhi7vKA279qYmSPDp93BpgCuWFi5ISeQUEcN/Kupr8Hc34uGazDJNDHOZS5JvDaf1aVqUoR/sF0KoCQVeZp/Pr8lVgLuaPK982MSIT87l9wzcy94DorqS3jMm/pyGdD90NNxlBh5YeSSVrkNSk8lmB7OOi64xRRXmfdaix6bNSK6k80RPQV+PQ==" },
+  ],
+};
+
 /* ⛔ LE STRINGHE DI CODEC, E PERCHE' SONO UNA SCALA E NON UNA.
  *
  * `[M]` 12 agosto 2026: `hev1.` e `hvc1.` vanno tutti e due in Annex-B puro —
@@ -432,13 +558,23 @@ function lontananza(a, b) {
    uniforme — nero, magenta, o una delle due tinte — supera questa prova. */
 function dipingi_sonda(config, sonda) {
   return new Promise((risolvi) => {
+    /* ⛔ LA TELA DELLA RILETTURA NON E' LA MISURA DEL FOTOGRAMMA, e la
+       differenza e' nata con la scala delle misure: `getImageData` su
+       3840x2160 sono **33 milioni di pixel** riportati indietro, per gradino e
+       per codec — cioe' il costo all'avvio non sarebbe piu' quello della
+       decodifica ma quello della rilettura.  ⇒ Il fotogramma si dipinge
+       RIDOTTO (`drawImage` scala) e si rilegge una tela di 64x48: le due meta'
+       restano due meta' anche ridotte.
+       ⚠ Le quattro sonde del CODEC non portano `rl`/`ra`, e per loro la
+         rilettura resta 1:1 esattamente come prima. */
+    const rl = sonda.rl || sonda.l, ra = sonda.ra || sonda.a;
     const tela = document.createElement("canvas");
-    tela.width = sonda.l; tela.height = sonda.a;
+    tela.width = rl; tela.height = ra;
     const p = tela.getContext("2d", { willReadFrequently: true, alpha: false });
     if (!p) { risolvi({ arriva: false, perche: "niente contesto 2d" }); return; }
     /* Magenta: non e' nessuna delle due tinte, e non e' nero. */
     p.fillStyle = "#7a007a";
-    p.fillRect(0, 0, sonda.l, sonda.a);
+    p.fillRect(0, 0, rl, ra);
 
     let finito = false;
     let dec = null;
@@ -451,18 +587,17 @@ function dipingi_sonda(config, sonda) {
       try { if (dec && dec.state !== "closed") dec.close(); } catch (e) { /* gia' chiusa */ }
       risolvi(esito);
     }
-    function giudica(formato) {
+    function giudica(formato, misura) {
       let dati;
-      try { dati = p.getImageData(0, 0, sonda.l, sonda.a).data; }
+      try { dati = p.getImageData(0, 0, rl, ra).data; }
       catch (e) { return { arriva: false, perche: "getImageData: " + e }; }
       const b = 4;
-      const sx = colore_medio(dati, sonda.l, b, b, sonda.l / 2 - b, sonda.a - b);
-      const dx = colore_medio(dati, sonda.l, sonda.l / 2 + b, b, sonda.l - b,
-                              sonda.a - b);
+      const sx = colore_medio(dati, rl, b, b, rl / 2 - b, ra - b);
+      const dx = colore_medio(dati, rl, rl / 2 + b, b, rl - b, ra - b);
       const bene = sx && dx &&
         lontananza(sx, sonda.sinistra) < lontananza(sx, sonda.destra) &&
         lontananza(dx, sonda.destra) < lontananza(dx, sonda.sinistra);
-      return { arriva: !!bene, formato: formato,
+      return { arriva: !!bene, formato: formato, misura: misura,
                letture: { sinistra: sx, destra: dx },
                perche: bene ? null : "il fotogramma e' uscito ma i pixel non "
                       + "sono quelli della sonda (sinistra " + sx
@@ -472,11 +607,20 @@ function dipingi_sonda(config, sonda) {
       dec = new VideoDecoder({
         output: (f) => {
           const formato = (f.format === undefined) ? "assente" : f.format;
-          try { p.drawImage(f, 0, 0, sonda.l, sonda.a); }
+          /* ⛔⭐ LA MISURA SI LEGGE DAL FOTOGRAMMA, E NON DALLA CONFIGURAZIONE.
+             Per la scala delle misure e' la meta' della prova: un
+             decodificatore che accettasse `codedWidth: 3840` e producesse un
+             fotogramma piu' piccolo — o che dipingesse due tinte perche' il
+             flusso di prima era ancora in coda — passerebbe la prova dei pixel
+             e mentirebbe sulla misura.  ⚠ Si legge PRIMA di `close()`: dopo,
+             i campi non ci sono piu'. */
+          const misura = [f.displayWidth || f.codedWidth,
+                          f.displayHeight || f.codedHeight];
+          try { p.drawImage(f, 0, 0, rl, ra); }
           catch (e) { try { f.close(); } catch (e2) { /* gia' chiuso */ }
                       chiudi({ arriva: false, perche: "drawImage: " + e }); return; }
           try { f.close(); } catch (e) { /* gia' chiuso */ }
-          chiudi(giudica(formato));
+          chiudi(giudica(formato, misura));
         },
         /* ⛔ Il richiamo d'errore e' l'unico posto in cui il decodificatore puo'
            dire «sono fallito».  Buttarlo renderebbe ogni fallimento
@@ -528,17 +672,129 @@ async function sonda_una(nome, profondita) {
   return esito;
 }
 
+/* ⛔ LA TELA MINIMA DI §4.5.  Non e' una preferenza: sotto 320x240 non esiste
+   nessuna tela che il protocollo permetta di chiedere, quindi non esiste
+   nessun tetto piu' basso che valga la pena di dichiarare. */
+const TELA_MINIMA_L = 320, TELA_MINIMA_A = 240;
+
+/* ⭐ UN GRADINO DELLA SCALA: si prova a decodificare alla misura del gradino, e
+   si pretendono DUE cose insieme —
+     1. i pixel sono quelli della sonda (le due tinte, come per il codec);
+     2. ⛔ e il fotogramma che ne e' uscito ha DAVVERO quella misura.
+   ⚠ La seconda senza la prima non basterebbe (un fotogramma nero della misura
+     giusta e' un fotogramma che non e' arrivato), e la prima senza la seconda
+     nemmeno (un fotogramma piu' piccolo, ridotto sulla tela di rilettura,
+     porterebbe le due tinte lo stesso).  ⇒ E' la stessa coppia di pretese che
+     `banchi/02-pagina-sonda-misura.py` certifica dal lato del costruttore. */
+async function misura_un_gradino(stringa, gradino) {
+  const esito = { misura: gradino.l + "x" + gradino.a, arriva: false,
+                  isConfigSupported: null, ms: 0, perche: null };
+  const config = { codec: stringa, codedWidth: gradino.l,
+                   codedHeight: gradino.a, optimizeForLatency: true };
+  const t0 = performance.now();
+  try { esito.isConfigSupported =
+          (await VideoDecoder.isConfigSupported(config)).supported; }
+  catch (e) { esito.isConfigSupported = "eccezione: " + e; }
+  /* ⛔ Filtro, non verdetto — la forma E1, la stessa di `sonda_una`. */
+  if (esito.isConfigSupported !== true) {
+    esito.ms = Math.round(performance.now() - t0);
+    esito.perche = "isConfigSupported: " + esito.isConfigSupported;
+    return esito;
+  }
+  const r = await dipingi_sonda(config, gradino);
+  esito.ms = Math.round(performance.now() - t0);
+  if (!r.arriva) { esito.perche = r.perche; return esito; }
+  const m = r.misura || [0, 0];
+  if (m[0] !== gradino.l || m[1] !== gradino.a) {
+    esito.perche = "ha dipinto, ma il fotogramma misura " + m[0] + "x" + m[1]
+                 + " invece di " + gradino.l + "x" + gradino.a;
+    return esito;
+  }
+  esito.arriva = true;
+  return esito;
+}
+
+/* La scala per UN codec: si sale finche' si dipinge, e ⛔ ci si ferma al primo
+   gradino che non arriva.  ⚠ Fermarsi e' una SCELTA e non una scorciatoia: un
+   decodificatore che rifiuta 2560x1440 e accettasse 3840x2160 sarebbe un
+   fenomeno di cui questo progetto non ha nessuna misura, e continuare a salire
+   costerebbe a ogni avvio su ogni dispositivo per coprirlo.  ⇒ Si dichiara
+   l'ipotesi (la capacita' e' monotona nella misura) invece di pagarla in
+   silenzio, e il registro porta il gradino su cui ci si e' fermati. */
+async function scala_di(nome, stringa) {
+  const fuori = { codec: nome, stringa: stringa, gradini: [],
+                  massima: null, fermato: null, ms: 0 };
+  const t0 = performance.now();
+  for (const gradino of (SONDE_MISURA[nome] || [])) {
+    const r = await misura_un_gradino(stringa, gradino);
+    fuori.gradini.push(r);
+    if (!r.arriva) { fuori.fermato = r.misura + " — " + r.perche; break; }
+    fuori.massima = [gradino.l, gradino.a];
+  }
+  fuori.ms = Math.round(performance.now() - t0);
+  return fuori;
+}
+
+/* ⛔⭐ `video.misura_massima` DI §4.3, MISURATA SUL PIXEL.
+ *
+ * ⚠ Il tetto si prende al MINIMO fra i codec che questa pagina dichiarera',
+ *   e la ragione e' §4.3: **chi sceglie il codec e' il server**, dopo.  Un
+ *   tetto che valesse per uno solo dei due codec dichiarati sarebbe un tetto
+ *   che non regge — e il rosso arriverebbe a sessione aperta, non qui.
+ *
+ * ⚠ E si misura a 8 bit: `8` e' la profondita' che §4.3 impone a tutti e due i
+ *   lati, quindi e' l'unica che si sa che verra' usata.  `[?]` Un
+ *   decodificatore che regga il 4K a 8 bit e si fermi a 1080p a 10 bit non e'
+ *   misurato: sarebbero dodici gradini invece di sei all'avvio di ogni pagina,
+ *   e il caso non ha ancora un numero che lo giustifichi. */
+async function misura_massima(sondaggio) {
+  const fuori = { per_codec: {}, massima: null, ms: 0, perche: null };
+  const t0 = performance.now();
+  for (const nome of PREFERENZA) {
+    const c = sondaggio.codec[nome] || {};
+    /* ⛔ Un codec che non arriva al pixel non entra nel `CIAO`, quindi non ha
+       nessun tetto da far rispettare: misurarne la scala sarebbe pagare
+       sei decodifiche per un codec che non si dichiara. */
+    const provata = (c[8] && c[8].arriva) ? c[8]
+                  : ((c[10] && c[10].arriva) ? c[10] : null);
+    if (!provata) continue;
+    const s = await scala_di(nome, provata.stringa);
+    fuori.per_codec[nome] = s;
+    if (!s.massima) {
+      /* ⛔ Il codec dipinge a 64x48 ma non alla tela minima del protocollo.
+         Non c'e' niente di piu' basso da dichiarare — 320x240 e' il fondo di
+         §4.5 — e dichiarare piu' in alto sarebbe la bugia che rompe il
+         telefono.  ⇒ Si dichiara il fondo, E si dice che nemmeno quello ha
+         dipinto: il tetto e' onesto, la frase avverte. */
+      fuori.massima = [TELA_MINIMA_L, TELA_MINIMA_A];
+      fuori.perche = "⛔ " + nome + " non ha dipinto nemmeno alla tela minima "
+                   + "di §4.5 (" + TELA_MINIMA_L + "x" + TELA_MINIMA_A + "): "
+                   + s.fermato;
+    } else if (!fuori.massima ||
+               s.massima[0] * s.massima[1] < fuori.massima[0] * fuori.massima[1]) {
+      fuori.massima = s.massima;
+    }
+  }
+  fuori.ms = Math.round(performance.now() - t0);
+  return fuori;
+}
+
 /* ⛔ IL SONDAGGIO PARTE AL CARICAMENTO, non alla connessione: le quattro sonde
    costano qualche decina di millisecondi su un motore che decodifica e fino a
    dieci secondi su uno che rifiuta tutto con un tempo scaduto.  Farlo qui
-   significa che quando l'utente preme «Collegati» la risposta c'e' gia'. */
+   significa che quando l'utente preme «Collegati» la risposta c'e' gia'.
+   ⭐ E da qui passa anche la scala delle misure: e' la stessa domanda — «che
+   cosa arriva al pixel su QUESTO dispositivo» — posta un'altra volta, e il suo
+   costo si legge in `sondaggio.misura.ms`, che il registro scrive. */
 const SONDAGGIO = (async function () {
-  const fuori = { codec: {}, webcodecs: typeof VideoDecoder !== "undefined" };
+  const fuori = { codec: {}, webcodecs: typeof VideoDecoder !== "undefined",
+                  misura: null };
   for (const nome of PREFERENZA) {
     fuori.codec[nome] = {};
     for (const profondita of [8, 10])
       fuori.codec[nome][profondita] = await sonda_una(nome, profondita);
   }
+  fuori.misura = await misura_massima(fuori);
   return fuori;
 })();
 
@@ -552,6 +808,19 @@ const SONDAGGIO = (async function () {
  *   interfaccia).  ⛔ Scrivere «software» perche' `powerEfficient` e' falso
  *   sarebbe inventare: `[M]` 12 agosto 2026 quello stesso campo risponde
  *   `true` su Firefox per un codec che il browser non decodifica affatto. */
+/* ⛔ IL RIQUADRO PORTA DUE DICHIARAZIONI, E SI TENGONO SEPARATE.
+ *
+ * Prima di oggi ce n'era una sola — quella del codec — e chi ne avesse scritta
+ * una seconda avrebbe cancellato la prima con un `textContent =`.  ⛔ E' la
+ * forma piu' facile da non vedere: il ripiego dichiarato che sparisce perche'
+ * ne e' arrivato un altro, cioe' `CODER.md` §4.2 rotto proprio dal secondo
+ * ripiego.  ⇒ Due caselle, e una funzione sola che le compone. */
+const DICHIARAZIONI = { codec: "", video: "" };
+function dichiarazione_scrivi() {
+  $("dichiarazione").textContent =
+    [DICHIARAZIONI.codec, DICHIARAZIONI.video].filter((t) => t).join("\n\n");
+}
+
 function dichiara(sondaggio, scelto) {
   const righe = [];
   for (const nome of PREFERENZA) {
@@ -566,31 +835,115 @@ function dichiara(sondaggio, scelto) {
                  + "browser — " + (otto.perche || "non provato"));
     }
   }
+  /* ⭐ E la scala delle misure scrive le SUE righe: il gradino piu' alto che ha
+     dipinto per ciascun codec, quello su cui si e' fermata, e ⛔ QUANTO E'
+     COSTATA — perche' e' un prezzo che si paga al caricamento di ogni pagina,
+     e un prezzo che nessuno scrive e' un prezzo che nessuno puo' discutere. */
+  const mm = sondaggio.misura || {};
+  for (const nome of PREFERENZA) {
+    const s = (mm.per_codec || {})[nome];
+    if (!s) continue;
+    righe.push("misura " + nome.toUpperCase() + ": fino a "
+      + (s.massima ? s.massima[0] + "x" + s.massima[1] : "NIENTE")
+      + " (" + s.gradini.length + " gradini, " + s.ms + " ms"
+      + (s.fermato ? "; fermata a " + s.fermato : "; scala finita") + ")");
+  }
+  righe.push("⭐ video.misura_massima MISURATA: "
+    + (mm.massima ? mm.massima[0] + "x" + mm.massima[1] : "nessuna — la "
+       + "capacita' si OMETTE (§4.3 vieta il valore vuoto)")
+    + " — e' il tetto del DECODIFICATORE (§4.3), non la misura dello schermo, "
+    + "che vale " + Math.max(1, Math.floor(screen.width * devicePixelRatio))
+    + "x" + Math.max(1, Math.floor(screen.height * devicePixelRatio))
+    + " e viaggia in ATTACCA come «vista» · scala in " + (mm.ms || 0) + " ms");
+  if (mm.perche) righe.push(mm.perche);
   for (const r of righe) nota("sonda video · " + r);
 
-  const d = $("dichiarazione");
   const hevc = sondaggio.codec.hevc || {};
   const av1 = sondaggio.codec.av1 || {};
   const hevc_c = !!(hevc[8] && hevc[8].arriva) || !!(hevc[10] && hevc[10].arriva);
   const av1_c = !!(av1[8] && av1[8].arriva) || !!(av1[10] && av1[10].arriva);
   if (!hevc_c && !av1_c) {
-    d.textContent = "Questo browser non porta nessuno dei due codec video fino "
-      + "ai pixel: né HEVC né AV1. La sessione può aprirsi, ma non ci sarà "
+    DICHIARAZIONI.codec = "Questo browser non porta nessuno dei due codec video "
+      + "fino ai pixel: né HEVC né AV1. La sessione può aprirsi, ma non ci sarà "
       + "immagine. Su Linux il decodificatore HEVC di Chrome è quello della "
       + "scheda grafica, e senza scheda grafica non c'è; Firefox non fa HEVC "
       + "affatto.";
   } else if (!hevc_c && av1_c) {
     /* ⭐ Il ripiego negoziato di `DECISIONI.md` §1.13, dichiarato all'utente. */
-    d.textContent = "Questo browser non decodifica HEVC: si usa AV1, che è il "
-      + "ripiego previsto. L'immagine c'è; il consumo di banda a parità di "
+    DICHIARAZIONI.codec = "Questo browser non decodifica HEVC: si usa AV1, che è "
+      + "il ripiego previsto. L'immagine c'è; il consumo di banda a parità di "
       + "qualità può essere diverso.";
   } else if (scelto && scelto.codec === "av1" && hevc_c) {
-    d.textContent = "Il server ha scelto AV1 anche se questo browser "
+    DICHIARAZIONI.codec = "Il server ha scelto AV1 anche se questo browser "
       + "decodifica HEVC.";
   } else {
-    d.textContent = "";
+    DICHIARAZIONI.codec = "";
   }
+  /* ⛔ E se nemmeno la tela minima ha dipinto, l'utente lo legge: e' il caso in
+     cui il tetto dichiarato e' onesto ma non basta a nessuna tela legale. */
+  if ((sondaggio.misura || {}).perche)
+    DICHIARAZIONI.codec = (DICHIARAZIONI.codec ? DICHIARAZIONI.codec + " " : "")
+      + "E questo browser non ha dipinto nemmeno alla misura minima prevista "
+      + "dal protocollo (320×240): l'immagine potrebbe non arrivare affatto.";
+  dichiarazione_scrivi();
   return { hevc: hevc_c, av1: av1_c };
+}
+
+/* ⛔⭐ LA DICHIARAZIONE DI QUEL CHE NON ARRIVA — `CODER.md` §4.2, e il difetto
+ *     dell'utente del 13 agosto 2026.
+ *
+ * Quel giorno l'utente ha aperto il prodotto sul proprio schermo e **non ha
+ * visto niente**.  ⛔ E il prodotto SAPEVA: il server aveva scritto nel proprio
+ * registro *«tela in vigore 1794x1010 ma il fotogramma catturato e' 1920x1080 —
+ * NON lo spedisco»*.  Lo sapeva il server, non lo sapeva l'utente, e la pagina
+ * mostrava un riquadro vuoto sotto un modulo che aveva detto «Ammesso».
+ *
+ * ⇒ §4.2: *«il ripiego SI DICHIARA»*.  Una pagina che apre una sessione e non
+ *   riceve un pixel deve dirlo — in italiano, nel riquadro, con dentro i numeri
+ *   e la causa piu' probabile.  ⚠ E deve dirlo **anche quando la causa sta
+ *   dall'altra parte del filo**: «non lo so» detto con i numeri in mano vale
+ *   piu' del silenzio.
+ *
+ * ⛔ E la soglia e' un FATTO, non un'impressione: il primo fotogramma e' una
+ *    chiave che §5.2 impone al server di spedire subito dopo `SESSIONE`.  Sei
+ *    secondi sono venti volte il tempo che ha impiegato l'unico giro misurato
+ *    (`P2-6` §3: dall'accensione al deposito ~330 ms), e restano sotto la
+ *    pazienza di chi guarda uno schermo bianco. */
+const ATTESA_PRIMO_FOTOGRAMMA_S = 6;
+function veglia_primo_fotogramma(schermo, chiesta, concessa, codec) {
+  const t0 = performance.now();
+  const id = setInterval(() => {
+    if (schermo.conti.dipinti > 0) {
+      clearInterval(id);
+      /* ⭐ E quando arriva, la dichiarazione si TOGLIE: un avviso che resta
+         dopo che il fatto e' passato insegna a non leggerlo. */
+      if (DICHIARAZIONI.video.indexOf("Nessun fotogramma") === 0) {
+        DICHIARAZIONI.video = "";
+        dichiarazione_scrivi();
+      }
+      return;
+    }
+    const s = Math.round((performance.now() - t0) / 1000);
+    if (s < ATTESA_PRIMO_FOTOGRAMMA_S) return;
+    const ridotta = (concessa[0] !== chiesta[0] || concessa[1] !== chiesta[1]);
+    DICHIARAZIONI.video = "Nessun fotogramma è arrivato in " + s + " secondi. "
+      + "La sessione è aperta e il codec video negoziato è " + codec.toUpperCase()
+      + ", ma il server non ha ancora spedito nessuna immagine.\n"
+      + (ridotta
+         ? "La causa più probabile è la tela: ne sono stati chiesti "
+           + chiesta[0] + "×" + chiesta[1] + " e il server ne ha concessi "
+           + concessa[0] + "×" + concessa[1] + ". Un server che cattura lo "
+           + "schermo a una misura fissa non può spedire un fotogramma che non "
+           + "corrisponda alla tela in vigore, e non lo spedisce: lo scrive nel "
+           + "proprio registro. ⇒ Quel che manca è l'immagine, e quel che la "
+           + "trattiene è la differenza fra queste due misure."
+         : "La tela concessa è quella chiesta (" + concessa[0] + "×"
+           + concessa[1] + "), quindi non è la tela a trattenerla: il motivo è "
+           + "dalla parte del server, e sta nel suo registro. Questa pagina non "
+           + "lo può leggere, e non lo indovina.");
+    dichiarazione_scrivi();
+  }, 1000);
+  return id;
 }
 
 /* ⛔ Il confronto fra due `numero` di §6.2 e' MODULO 2³², con le differenze
@@ -1169,7 +1522,15 @@ window.addEventListener("pagehide", function () {
  * ⚠ E `REMOTIX` e' l'unico nome globale che questa pagina definisce. */
 const schermo = new Schermo($("schermo"));
 window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
-                   stringhe_codec: stringhe_codec, versione: VERSIONE };
+                   stringhe_codec: stringhe_codec, versione: VERSIONE,
+                   /* ⭐ La scala delle misure e le sue dichiarazioni: da qui le
+                      legge `banchi/02-pagina-misura-*`, che e' il banco che
+                      prende il difetto delle due grandezze confuse.  ⚠ E' un
+                      OGGETTO DA LEGGERE, non un interruttore: non c'e' niente
+                      qui dentro che possa cambiare quel che la pagina fa
+                      (`CODER.md` §2, invariante I6). */
+                   sonde_misura: SONDE_MISURA,
+                   dichiarazioni: DICHIARAZIONI };
 
 async function collega(utente, parola) {
   if (!("WebTransport" in window)) {
@@ -1409,19 +1770,31 @@ async function collega(utente, parola) {
        dal lato server — `fasi/02-primo-fotogramma.md` D4 — e questa riga
        dichiara il valore che `web.md` O12 indica per il traguardo. */
     ["video.livello", LIVELLO_DICHIARATO],
-    /* ⛔ PIXEL INTERI — rilievo B-6, 10 agosto 2026 notte.  §4.3 definisce
-       `video.misura_massima` come `LARGHEZZAxALTEZZA`, e sono pixel.  Questa
-       riga non aveva l'arrotondamento, e su un telefono a fattore di scala 2,75
-       — l'esempio che questo progetto cita due volte — `screen.width` vale 393
-       e sul filo partiva «1080.75x2340.25», che non e' `LARGHEZZAxALTEZZA`.
-       ⚠ Non se ne accorgeva nessuno perche' il server quel campo non lo
-         leggeva affatto (rilievo B-1): due difetti che si coprivano a vicenda,
-         ed e' per questo che nessun banco funzionale li vedeva.
-       ⭐ Si arrotonda per DIFETTO: e' un tetto di quel che il decodificatore
-          sa fare, e un tetto arrotondato per eccesso e' un tetto piu' alto del
-          vero. */
-    ["video.misura_massima", Math.max(1, Math.floor(screen.width * devicePixelRatio)) + "x" +
-                             Math.max(1, Math.floor(screen.height * devicePixelRatio))],
+    /* ⛔⭐ IL TETTO DEL DECODIFICATORE, MISURATO SUL PIXEL — 13 agosto 2026.
+     *
+     * ⛔ QUESTA RIGA PORTAVA LA MISURA DELLO SCHERMO
+     *    (`screen.width * devicePixelRatio`), e §4.3 chiede un'altra
+     *    grandezza: *«`LARGHEZZAxALTEZZA` **che sa decodificare**»*, con
+     *    accanto la frase che lo dice per esteso — *«esiste perche' il
+     *    decodificatore di un telefono ha limiti **che il suo schermo non
+     *    dichiara**»*.  Le due grandezze e la loro storia stanno per esteso al
+     *    blocco `SONDE_MISURA`, piu' su in questo file.
+     *
+     * ⭐ Adesso e' `sondaggio.misura.massima`: il gradino piu' alto della scala
+     *    che su QUESTO browser ha davvero dipinto, preso al minimo fra i codec
+     *    che il `CIAO` dichiara.  La misura dello schermo non e' sparita — va
+     *    dov'e' il suo posto, cioe' nella `vista` di `ATTACCA`, dieci righe
+     *    piu' giu'.
+     *
+     * ⚠ Resta vero quel che diceva il rilievo B-6 (10 agosto): sono PIXEL
+     *   INTERI.  ⭐ E adesso lo sono per costruzione — i gradini della scala
+     *   sono interi e pari — invece che per un arrotondamento fatto qui.
+     *
+     * ⛔ E se non ha misurato niente, la capacita' si OMETTE: §4.3 vieta il
+     *    valore vuoto, e un tetto inventato romperebbe §4.5 dalla parte del
+     *    telefono. */
+    ["video.misura_massima", (sondaggio.misura && sondaggio.misura.massima)
+        ? sondaggio.misura.massima[0] + "x" + sondaggio.misura.massima[1] : ""],
     ["audio.codec", "opus,pcm"],
     ["input.tocco", "no"],
     ["appunti.testo", "si"],
@@ -1564,10 +1937,19 @@ async function collega(utente, parola) {
        chiesta.  ⚠ E il caso concreto e' gia' vivo: un telefono che dichiara
        `video.misura_massima` piu' piccola di 1920×1080 riceve una tela
        ridotta (rilievo B-1). */
-    if (tl !== tela_l || ta !== tela_a)
+    if (tl !== tela_l || ta !== tela_a) {
       nota("⚠ la tela CONCESSA (" + tl + "×" + ta + ") non e' quella chiesta ("
            + tela_l + "×" + tela_a + "): §4.5 lo permette, e il motivo sta nel "
            + "registro del server — di solito e' video.misura_massima");
+      /* ⛔ E LO LEGGE ANCHE L'UTENTE, non solo chi diagnostica.  §4.5 dice che
+         il client «DEVE adattarsi riscalando», e finche' l'immagine arriva
+         questa e' una nota; ⚠ quando NON arriva e' la prima cosa da guardare,
+         e la veglia qui sotto la ripete con dentro il tempo passato. */
+      DICHIARAZIONI.video = "Il server ha concesso una tela di " + tl + "×" + ta
+        + " invece dei " + tela_l + "×" + tela_a + " chiesti: il protocollo "
+        + "glielo permette (§4.5) e questa pagina si adatta riscalando.";
+      dichiarazione_scrivi();
+    }
     esito("Ammesso, sessione " + (stato === 1 ? "nuova" : "ripresa") +
           ", tela " + tl + "×" + ta + ", desktop " + desktop, true);
 
@@ -1597,6 +1979,11 @@ async function collega(utente, parola) {
       schermo.negozia(CODEC_RCP[nome], prof, provata.stringa, tl, ta);
       schermo.vista(vista_l, vista_a);
       dichiara(sondaggio, { codec: nome });
+      /* ⛔ E da adesso si VEGLIA il primo fotogramma: se non arriva, l'utente
+         legge che cosa non sta arrivando e perche' — `CODER.md` §4.2.  Prima
+         di oggi la pagina restava bianca e il motivo stava solo nel registro
+         del SERVER, cioe' dall'unica parte che l'utente non puo' guardare. */
+      veglia_primo_fotogramma(schermo, [tela_l, tela_a], [tl, ta], nome);
       /* §5.2: il client CHIEDE una chiave quando si accorge di un buco. */
       schermo.su_chiave = (ultimo) => {
         canale.manda(TIPO.RICHIEDI_CHIAVE, new Scrittore().u32(ultimo).byte())
