@@ -179,7 +179,24 @@ def costruisci(codec, larghezza, altezza, guasto=""):
         comando = comune + [
             "-c:v", "libx265", "-pix_fmt", "yuv420p", "-frames:v", "1",
             "-profile:v", "main",
-            "-x265-params", "log-level=none:bframes=0:keyint=1:info=0",
+            # ⛔⛔⛔ `keyint=1` TOLTO IL 13 AGOSTO 2026, NOTTE — ed e' LA SECONDA
+            #    META' DELLO STESSO DIFETTO.  La prima e' stata curata due ore
+            #    prima in `02-pagina-sonda-codec.py:121`, e la cura era
+            #    INCOMPLETA: quel file fa le sonde di **presenza** (64x48, che
+            #    decidono se un codec entra nel `CIAO`), questo fa quelle di
+            #    **misura** (320x240 … 3840x2160, che decidono `misura_massima`).
+            #
+            #    ⇒ Con meta' cura il prodotto e' finito in uno stato PEGGIORE
+            #    di prima: le sonde curate facevano negoziare HEVC, quelle
+            #    ancora `Rext` non dipingevano nemmeno a 320x240, la tela
+            #    crollava a 320x240 e il prodotto — giustamente, §6.2 — si
+            #    rifiutava di spedire un 1920x1080 dentro quel tetto.
+            #    **Zero fotogrammi consegnati.**
+            #
+            # ⭐ La riga da portarsi via: quando si cura un difetto che nasce da
+            #   una riga COPIATA, si cerca la riga, non il file — `grep keyint`
+            #   avrebbe trovato tutt'e due in un secondo.
+            "-x265-params", "log-level=none:bframes=0:info=0",
         ] + colore + ["-f", "hevc", "pipe:1"]
         minimo = 64
     else:

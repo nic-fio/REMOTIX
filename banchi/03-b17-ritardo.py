@@ -190,6 +190,16 @@ def ponte_modulo():
     return carica("ponte", PONTE)
 
 
+def solo_modulo():
+    """⭐ L'arbitro della finestra esclusiva (`03-solo.py`, certificato).
+
+    ⛔ Non si riscrive qui: se ogni banco si scrivesse il proprio «sono solo?»,
+       la parola «solo» vorrebbe dire cinque cose diverse e nessuna sarebbe
+       confrontabile con le altre.
+    """
+    return carica("solo", os.path.join(QUI, "03-solo.py"))
+
+
 def dist(v, scala=1.0):
     """⭐ La distribuzione, non il campione.  ⛔ Ritorna SEMPRE un dizionario:
     «zero campioni» e «non ho potuto guardare» si distinguono dal campo `n`."""
@@ -625,6 +635,15 @@ class Palco:
                 "about:blank"]
         if not self.gpu:
             flag.insert(1, "--disable-gpu")
+        # ⛔⛔ LE BANDIERE SI CONSERVANO, PERCHE' VANNO NEL VERBALE — `LEZIONI.md`
+        #     §2.0.  Il 13 agosto 2026 una sonda ha risposto «no a HEVC» cinque
+        #     volte su cinque **girando con `--disable-gpu` e senza dirlo**, e
+        #     su quel «no» e' nata una corsia intera del piano.  ⇒ Un banco che
+        #     risponde deve scrivere accanto alla risposta **con che palco** ha
+        #     risposto, e un default nel sorgente non e' una dichiarazione:
+        #     chiunque puo' passare `--senza-gpu` e il numero avrebbe lo stesso
+        #     aspetto.
+        self.bandiere = list(flag)
         self.chrome = subprocess.Popen(flag, env=self._amb(),
                                        stdout=subprocess.DEVNULL,
                                        stderr=subprocess.DEVNULL)
@@ -1501,9 +1520,32 @@ def certifica(verboso=True):
         rossi = [k for k in TUTTI if not gg[k].get("esito")]
         # il guasto DEVE far diventare rossi quelli attesi...
         preso = all(k in rossi for k in attesi)
-        # ...e ⛔ NON deve far diventare rosso nient'altro di inatteso, o il
-        #    controllo non sta distinguendo: e' `LEZIONI.md` §2.3, una prova che
-        #    boccia il codice giusto costa quanto una che promuove lo sbagliato.
+        # ...e gli altri che arrossiscono si CONTANO e si STAMPANO.
+        #
+        # ⛔⛔ QUI IL COMMENTO DICEVA UNA COSA CHE IL CODICE NON FA, ed e' stato
+        #     riscritto il 13 agosto 2026 sera (corsia C/E) per dire il vero.
+        #
+        #     Diceva: «e NON deve far diventare rosso nient'altro di inatteso, o
+        #     il controllo non sta distinguendo».  ⛔ Ma `preso` guarda **solo**
+        #     che gli attesi siano rossi: gli `extra` finiscono in un ⚠ stampato
+        #     accanto alla riga, e **non bocciano**.  ⇒ Chi leggeva il commento
+        #     credeva che il banco pretendesse la separazione; il banco la
+        #     stampa e basta.  E' la stessa forma della trappola n.3 — un banco
+        #     che sembra piu' severo di quel che e' — dentro il commento invece
+        #     che dentro il codice.
+        #
+        #     `[M]` il caso vivo: il guasto «P7 il ritmo e' morto» fa arrossire
+        #     anche **P3 e P5**, e la riga passa lo stesso.
+        #
+        # ⭐ E CHE GLI `extra` NON BOCCINO E' UNA SCELTA, NON UNA DIMENTICANZA —
+        #    decisa dal coordinatore il 13 agosto sera.  Stringere il controllo
+        #    adesso boccerebbe il giro SANO e sposterebbe il metro **nel mezzo**
+        #    della misura che si sta per fare (la corsia E deve sottrarre un
+        #    «prima» e un «dopo» presi con lo stesso banco).  ⇒ Il metro non si
+        #    tocca durante la misura: si tocca prima o dopo, e si dichiara.
+        #    ⚠ Chi vorra' stringerlo dovra' prima spiegare perche' P7, tagliando
+        #    i campioni a 15, DEBBA lasciare verdi P3 e P5 — che oggi e' una
+        #    domanda aperta, non un difetto accertato.
         extra = [k for k in rossi if k not in attesi]
         dice("guasto «%s» → rossi %s (attesi %s)%s"
              % (nome, rossi or "nessuno", attesi,
@@ -1590,6 +1632,119 @@ def certifica(verboso=True):
              sano["giri"][0]["campioni"], [])["esito"])
     dice("il pezzo cieco compare in ogni numero stampato",
          "pezzo cieco" in con_pezzo_cieco(30.0))
+
+    log("E. ⛔ LA CORSIA E — il verbale, il palco, la finestra")
+    # ⛔⛔ PERCHE' QUESTI CONTROLLI ESISTONO: quel che segue vive dentro
+    #     `misura()`, che vuole due macchine, un server acceso e un browser ⇒
+    #     **da qui non si puo' girare**.  Un pezzo di banco che non si puo'
+    #     provare e' un pezzo di banco creduto.  ⇒ La logica sta in funzioni
+    #     PURE, e qui si certificano una per una, col guasto dentro.
+
+    # ── 1. IL VERBALE PER GIRO — il danno era «sovrascrivere in silenzio» ──
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = percorso_verbale(tmp, "b17-A")
+        p2 = percorso_verbale(tmp, "b17-B")
+        dice("verbale: due giri diversi danno due nomi diversi, e il giro sta "
+             "DENTRO il nome", p1 != p2 and "b17-A" in p1 and "b17-B" in p2)
+        dice("verbale: `--verbale` esplicito continua a comandare (chi ha uno "
+             "script vecchio non si trova un file altrove)",
+             percorso_verbale(tmp, "b17-A", "/x/y.json") == "/x/y.json")
+        ult = os.path.join(tmp, "verbale-ultimo.json")
+        scrivi_verbale(p1, {"giro": "b17-A"}, ult)
+        dice("verbale: il primo giro si scrive (%s)" % os.path.basename(p1),
+             os.path.exists(p1))
+        # ⛔ IL GUASTO: si riprova a scrivere sullo STESSO nome.  Prima questa
+        #    riga cancellava il verbale di prima **senza dire niente**, ed e'
+        #    cosi' che il 13 agosto ne sono spariti tredici su quattordici.
+        try:
+            scrivi_verbale(p1, {"giro": "b17-A-bis"}, ult)
+            alzato, dentro = False, None
+        except RuntimeError as e:
+            alzato, dentro = True, str(e)
+        with open(p1) as f:
+            rimasto = json.load(f)
+        dice("⛔ verbale: riscrivere lo STESSO nome ALZA un errore, e il primo "
+             "verbale e' ancora li' intatto",
+             alzato and rimasto.get("giro") == "b17-A"
+             and "C'E' GIA'" in (dentro or ""))
+        # ── e il RISANATO: cambiato il giro, si scrive di nuovo ────────────
+        scrivi_verbale(p2, {"giro": "b17-B"}, ult)
+        dice("verbale RISANATO: cambiato il giro, il secondo si scrive e i due "
+             "coesistono", os.path.exists(p1) and os.path.exists(p2))
+        dice("verbale: `verbale-ultimo.json` PUNTA all'ultimo (ed e' un "
+             "puntatore, non un verbale)",
+             os.path.islink(ult)
+             and os.path.realpath(ult) == os.path.realpath(p2))
+
+    # ── 2. LA FINESTRA ESCLUSIVA SU DUE MACCHINE ──────────────────────────
+    libera = {"solo": True, "perche": [], "carico": [0.1, 0.1, 0.1]}
+    carica_ = {"solo": False, "perche": ["carico a 1 minuto 3.80 (massimo 1.00)"]}
+    dice("finestra: libere tutt'e due ⇒ SOLO",
+         unisci_scene(libera, dict(libera))["solo"])
+    u = unisci_scene(libera, carica_)
+    dice("finestra: libera di qua e CARICA di la' ⇒ NON solo, e la riga dice "
+         "quale delle due (%s)" % (u["perche"][0][:40] if u["perche"] else "—"),
+         (not u["solo"]) and any("NIC-OS" in g for g in u["perche"]))
+    # ⛔⛔ IL GUASTO CHE CONTA, ed e' quello che un banco ingenuo sbaglia: la
+    #     scena dell'altra macchina NON SI E' POTUTA LEGGERE.  Un banco che
+    #     concludesse «solo» qui misurerebbe **mezzo anello** dichiarandosi
+    #     pulito — `LEZIONI.md` §2.0 al punto in cui costa un numero di fase.
+    m_ = unisci_scene(libera, None)
+    dice("⛔⛔ finestra: la scena dell'ALTRA macchina non si legge ⇒ **NON "
+         "SOLO**, e non «probabilmente sì»",
+         (not m_["solo"]) and any("non ho guardato" in g or
+                                  "NON si e' potuta leggere" in g
+                                  for g in m_["perche"]))
+    # ⭐ E l'arbitro deve saper leggere l'unione: il rifiuto esce dalla SUA
+    #    bocca, o in giro ci sarebbero due idee diverse di «solo».
+    _solo = solo_modulo()
+    try:
+        _solo.pretendi(m_)
+        rifiutato = False
+    except RuntimeError:
+        rifiutato = True
+    try:
+        _solo.pretendi(unisci_scene(libera, dict(libera)))
+        passato = True
+    except RuntimeError:
+        passato = False
+    dice("finestra: `03-solo.pretendi()` legge l'unione — rifiuta quella cieca "
+         "e lascia passare quella libera", rifiutato and passato)
+
+    # ── 3. IL PALCO AI DUE ESTREMI ────────────────────────────────────────
+    pal = {"chuwi": {"disable_gpu": False,
+                     "pagina": {"codec_nome": "av1", "tela": [1920, 1080],
+                                "webgl": {"disegnatore": "Mesa Intel(R) Graphics"}}},
+           "server": {"nodi_di_rendering": []}}
+    dice("palco: due letture identiche ⇒ regge",
+         confronta_palco(pal, copy.deepcopy(pal))["regge"])
+    # ⛔ IL GUASTO: il nodo di rendering cambia a meta' giro — cioe' esattamente
+    #    quel che succederebbe se il «prima» fosse software e il «dopo»
+    #    hardware **dentro lo stesso giro**.
+    hw = copy.deepcopy(pal)
+    hw["server"]["nodi_di_rendering"] = ["renderD128"]
+    r_hw = confronta_palco(pal, hw)
+    dice("⛔ palco: il NODO DI RENDERING cambia a meta' giro ⇒ NON regge, e la "
+         "riga lo nomina",
+         (not r_hw["regge"]) and any("nodi_di_rendering" in g
+                                     for g in r_hw["perche"]))
+    cod = copy.deepcopy(pal)
+    cod["chuwi"]["pagina"]["codec_nome"] = "hevc"
+    dice("⛔ palco: il CODEC negoziato cambia ⇒ NON regge (i due numeri non si "
+         "sottrarrebbero)", not confronta_palco(pal, cod)["regge"])
+    gpu = copy.deepcopy(pal)
+    gpu["chuwi"]["disable_gpu"] = True
+    dice("⛔ palco: `--disable-gpu` compare a meta' giro ⇒ NON regge — e' la "
+         "bandiera che e' costata una corsia intera",
+         not confronta_palco(pal, gpu)["regge"])
+    r_meta = confronta_palco(pal, None)
+    dice("palco: manca un estremo ⇒ NON regge, e dice «non ho potuto "
+         "confrontare» invece di «non e' cambiato»",
+         (not r_meta["regge"])
+         and any("non ho potuto" in g for g in r_meta["perche"]))
+    dice("palco: i campi PORTANTI sono dichiarati, non impliciti (%d)"
+         % len(PALCO_PORTANTI), len(PALCO_PORTANTI) >= 5)
 
     passati = sum(1 for e in esiti if e["esito"])
     print()
@@ -1679,6 +1834,561 @@ STATO = """
            deposito: s && s.deposito ? [s.deposito.width, s.deposito.height] : null };
 })()
 """
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §7-quinquies  ⛔⛔ LA FINESTRA ESCLUSIVA — e QUI sono DUE macchine
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⭐ L'arbitro c'e' gia' ed e' certificato: `banchi/03-solo.py`.  ⛔ Ma porta
+#    scritto in testa il proprio limite, e **riguarda questo banco in pieno**:
+#
+#      «Guarda UNA macchina sola: la sua.  L'anello del ritardo attraversa
+#       NIC-OS *e* CHUWI ⇒ chi lo misura deve girarlo da tutt'e due le parti e
+#       unire le due scene.  Un giro "solo" su CHUWI mentre il server e' carico
+#       e' un numero contaminato che si dichiara pulito.»
+#
+# ⇒ Qui si fa esattamente quello, e ⛔ **la regola che tiene in piedi l'unione
+#   e' una sola**: se la scena dell'altra macchina **non si e' potuta leggere**,
+#   il verdetto e' **NON SOLO**.  Non «probabilmente sì», non «solo di qua»:
+#   `LEZIONI.md` §2.0 — *«non c'e'» e «non ho potuto guardare» hanno lo stesso
+#   aspetto*, e qui il secondo costerebbe un numero della fase.
+def unisci_scene(qui, la, nome_qui="CHUWI", nome_la="NIC-OS"):
+    """Le due scene in una sola.  ⛔ Funzione PURA, e si certifica.
+
+    ⚠ Torna un dizionario della **stessa forma** che `03-solo.pretendi()` sa
+      leggere (`solo` + `perche`), così l'arbitro resta uno solo e il rifiuto
+      esce dalla sua bocca, non dalla nostra.
+    """
+    guai = []
+    for nome, s in ((nome_qui, qui), (nome_la, la)):
+        if s is None:
+            guai.append(
+                "⛔ la scena di %s NON si e' potuta leggere ⇒ conto come NON "
+                "SOLO.  ⚠ Non e' «la' era libero»: e' che non l'ho guardato, e "
+                "l'anello attraversa tutt'e due le macchine" % nome)
+        elif not s.get("solo"):
+            guai += ["%s: %s" % (nome, g) for g in (s.get("perche") or
+                                                    ["ragione non registrata"])]
+    return {"solo": not guai, "perche": guai,
+            "scene": {nome_qui: qui, nome_la: la},
+            "⛔ perche' DUE": "l'anello attraversa NIC-OS e CHUWI: una finestra "
+                             "esclusiva su una macchina sola non e' una "
+                             "finestra esclusiva (`03-solo.py`, limite n. 1)"}
+
+
+def scena_esclusiva(a, mie_porte=(), miei_pid=(), solo_la=None):
+    """La scena delle DUE macchine, adesso.
+
+    ⚠ `solo_la` e' il percorso di `03-solo.py` **sul server** — ce lo porta
+      `03-b17-lancia.sh porta`.  ⛔ Se di la' non c'e', questa funzione NON
+      finge: torna una scena senza il pezzo del server, e l'unione dira' NON
+      SOLO.
+    """
+    solo = solo_modulo()
+    qui = solo.guarda(mie_porte=mie_porte, miei_pid=miei_pid)
+    la = None
+    percorso = solo_la or "/media/REMOTIX/src/03-solo.py"
+    r = _sshpw("python3 %s --json" % percorso, silenzioso=True)
+    testo = (r.stdout or "").strip().splitlines()
+    for riga in reversed(testo):
+        riga = riga.strip()
+        if riga.startswith("{"):
+            try:
+                la = json.loads(riga)
+            except ValueError:
+                la = None
+            break
+    # ⛔⛔ E LE MIE PORTE VANNO TOLTE ANCHE DI LA' — trovato al primo giro vero,
+    #     13 agosto 2026 sera, e senza questo la corsia E non misura MAI.
+    #
+    #     `03-solo.py --json` gira sul server SENZA sapere quali porte sono mie:
+    #     dalla riga di comando non si possono dichiarare.  ⇒ Vedeva la 7605
+    #     (il mio ponte) e la 7615 (il mio prodotto) come «porte altrui» e
+    #     rispondeva NON SOLO — un rifiuto **permanente**, e per il banco stesso.
+    #     ⛔ E' un falso rosso, cioe' la forma opposta di quella per cui
+    #     l'arbitro esiste: costa uguale e si vede meno.
+    #
+    # ⭐ La correzione NON riscrive il giudizio: toglie le mie porte dall'elenco
+    #    e richiama `_giudica()` **dell'arbitro**, cosi' la parola «solo»
+    #    continua a voler dire una cosa sola ai due capi dell'anello.
+    if isinstance(la, dict) and mie_porte:
+        mie = set(int(p) for p in mie_porte)
+        la["porte_mie_dichiarate_dal_banco"] = sorted(mie)
+        la["porte_altrui"] = [p for p in (la.get("porte_altrui") or [])
+                              if p not in mie]
+        la["porte_mie"] = sorted(set(la.get("porte_mie") or []) | mie)
+        la["solo"], la["perche"] = solo._giudica(la)
+    return unisci_scene(qui, la)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §7-quater  ⛔⛔ IL PALCO SI DICHIARA ACCANTO AL NUMERO — `LEZIONI.md` §2.0
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⛔ *«Non c'e'» e «non ho potuto guardare» hanno lo stesso aspetto, e il secondo
+#    e' piu' frequente del primo.*  Il 13 agosto 2026 e' costata **una corsia
+#    intera di un piano**: una sonda chiedeva a Chrome se sapesse decodificare
+#    HEVC **lanciandolo con `--disable-gpu`**, e i cinque «no» sono diventati
+#    una conclusione («non e' un problema di codec, e' un problema di PALCO»)
+#    su cui si e' costruito il lavoro di una sessione.
+#
+# ⚠ Qui il difetto NON c'era — `gpu=True` e' il predefinito e `--senza-gpu` e'
+#   opt-in, quindi l'anello dei 74,58 ms non e' stato misurato al buio.  ⛔ **Ma
+#   questo si sa leggendo il sorgente, non il verbale**, ed e' esattamente la
+#   differenza che §2.0 vieta: un default non e' una dichiarazione.
+#
+# ⛔⛔ E PER LA CORSIA E LA POSTA E' PIU' ALTA CHE MAI: il «prima» e il «dopo»
+#     si SOTTRAGGONO.  Se il giro nuovo girasse con un palco diverso da quello
+#     vecchio — un'altra GPU, un altro codec negoziato, un altro nodo di
+#     rendering — la differenza non sarebbe il codificatore, e nessuno potrebbe
+#     accorgersene guardando i due numeri.  ⇒ Il palco entra nel verbale, **da
+#     tutt'e due i lati dell'anello**, e ogni pezzo che manca si dichiara
+#     «non ho potuto guardare» invece di sparire.
+PALCO_PAGINA = """
+(function () {
+  const out = {};
+  /* 1. LA GPU VISTA DALLA PAGINA — non il flag, quel che il motore vede. */
+  try {
+    const cv = document.createElement("canvas");
+    const gl = cv.getContext("webgl2") || cv.getContext("webgl");
+    if (!gl) out.webgl = null;
+    else {
+      const d = gl.getExtension("WEBGL_debug_renderer_info");
+      out.webgl = { versione: gl.getParameter(gl.VERSION),
+                    vendore: d ? gl.getParameter(d.UNMASKED_VENDOR_WEBGL)
+                               : gl.getParameter(gl.VENDOR),
+                    disegnatore: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL)
+                                   : gl.getParameter(gl.RENDERER),
+                    mascherato: !d };
+    }
+  } catch (e) { out.webgl = "\\u26d4 " + e; }
+  /* 2. IL CODEC NEGOZIATO, chiesto al prodotto e non indovinato. */
+  try {
+    const s = window.REMOTIX && window.REMOTIX.schermo;
+    out.codec_numero = s ? s.codec : null;
+    out.codec_nome = (s && typeof NOME_DEL_CODEC !== "undefined")
+                     ? NOME_DEL_CODEC[s.codec] : null;
+    out.stringa_codec = s ? (s.stringa_codec || s.stringa || null) : null;
+    out.tela = s ? [s.tela_l, s.tela_a] : null;
+    out.profondita = s ? s.profondita : null;
+  } catch (e) { out.codec_numero = "\\u26d4 " + e; }
+  /* 3. LA STRADA CHE IL PRODOTTO USA DAVVERO: WebCodecs, non <video>. */
+  out.videodecoder = (typeof VideoDecoder !== "undefined");
+  out.isolata = !!self.crossOriginIsolated;
+  out.agente = navigator.userAgent;
+  /* ⛔⛔ 4. SU QUALE SCHERMO STA DAVVERO QUESTO BROWSER — 13 agosto 2026 sera,
+   *     rilievo della corsia D, e ribalta una conclusione della giornata.
+   *
+   *     Chrome IGNORA `DISPLAY` e sceglie Wayland da `XDG_SESSION_TYPE`: un
+   *     banco che lancia Xvfb, gli punta `DISPLAY` addosso e crede di misurare
+   *     li' puo' star misurando **sul desktop vero dell'utente**, con la GPU
+   *     vera e con la contesa del desktop dentro il numero.
+   *
+   *     ⭐ E la misura che lo dice costa due parole: `screen`.  Su questa
+   *        macchina 1280x1024 (o la misura data a Xvfb) = schermo finto;
+   *        2560x1080 = il monitor dell'utente.  ⛔ Non si deduce dalle
+   *        bandiere: le bandiere dicono che cosa si e' CHIESTO. */
+  out.schermo_del_browser = { larghezza: screen.width, altezza: screen.height,
+                              disponibile: [screen.availWidth, screen.availHeight],
+                              rapporto_pixel: window.devicePixelRatio };
+  return out;
+})()
+"""
+
+# ⛔ E il secondo pezzo e' ASINCRONO: `isConfigSupported` torna una promessa, e
+#    dice `powerEfficient` — cioe' se quella decodifica e' in HARDWARE.  ⚠ E'
+#    una **dichiarazione**, non una decodifica: si scrive per quel che e'.
+PALCO_DECODIFICA = """
+(async function () {
+  const out = {};
+  if (typeof VideoDecoder === "undefined") return { errore: "niente VideoDecoder" };
+  const s = window.REMOTIX && window.REMOTIX.schermo;
+  const prove = [];
+  const c = s && (s.stringa_codec || s.stringa);
+  if (c) prove.push(c);
+  prove.push("hev1.2.4.L120.B0", "av01.0.08M.10");
+  for (const codec of prove) {
+    try {
+      const r = await VideoDecoder.isConfigSupported({ codec: codec,
+                  codedWidth: 1920, codedHeight: 1080 });
+      out[codec] = { supportato: !!r.supported,
+                     efficiente: r.config ? !!r.config.hardwareAcceleration : null,
+                     dichiarato: r.supported && r.config
+                                 ? (r.config.hardwareAcceleration || null) : null };
+    } catch (e) { out[codec] = { errore: String(e) }; }
+  }
+  return out;
+})()
+"""
+
+
+def palco_del_server(registro_prodotto):
+    """⛔ Il palco dell'ALTRO capo dell'anello, MISURATO da fuori.
+
+    ⭐ Il nodo di rendering non si deduce e non si chiede al prodotto (che oggi
+       **non lo scrive**): si guarda quali `/dev/dri/renderD*` i processi del
+       prodotto hanno **aperti**.  Un descrittore aperto e' un fatto; un nome in
+       un `Makefile` e' un'intenzione.
+
+    ⛔ E il caso `nodi == []` NON e' «non lo so»: e' **la firma della codifica in
+       SOFTWARE** — `libsvtav1` e `libx265` un nodo DRM non lo aprono.  ⇒ E'
+       proprio il pezzo che la corsia E deve vedere cambiare fra il «prima» e il
+       «dopo», e va letto insieme al codificatore, non da solo.
+    """
+    fuori = {}
+    # ⛔⛔ SI PASSA DALL'AZIONE `palco` DI `03-b17-accendi.sh`, E GIRA DA ROOT.
+    #     Il prodotto e' di root: `ls /proc/<pid>/fd` da utente normale risponde
+    #     «Permission denied» e un lettore ingenuo leggerebbe **zero nodi** —
+    #     cioe' «codifica in SOFTWARE» — proprio sul giro in cui la codifica e'
+    #     in hardware.  ⇒ Il conto dei processi LETTI e di quelli NEGATI viaggia
+    #     insieme ai nodi, o «nessun nodo» non si puo' interpretare.
+    r = _sshpw("sudo -S -p 'Password sudo: ' bash "
+               "/media/REMOTIX/src/03-b17-accendi.sh palco", silenzioso=True)
+    d = None
+    for riga in reversed((r.stdout or "").splitlines()):
+        riga = riga.strip()
+        if riga.startswith("{"):
+            try:
+                d = json.loads(riga)
+            except ValueError:
+                d = None
+            break
+    if d is None:
+        fuori["nodi_di_rendering"] = None
+        fuori["⛔ nodi"] = ("non ho potuto guardare: l'azione `palco` non ha "
+                           "risposto JSON (ssh %d).  ⚠ NON e' «nessun nodo "
+                           "aperto»" % r.returncode)
+    else:
+        nodi = d.get("nodi_di_rendering") or []
+        fuori["nodi_di_rendering"] = nodi
+        fuori["processi_del_prodotto"] = d.get("processi_remotix")
+        fuori["descrittori_letti"] = d.get("letti")
+        fuori["descrittori_negati"] = d.get("negati")
+        fuori["utente_che_ha_guardato"] = d.get("utente")
+        if not d.get("processi_remotix"):
+            fuori["lettura_dei_nodi"] = (
+                "⛔ NON HO POTUTO GUARDARE: nessun processo `remotix` vivo.  "
+                "⚠ Zero nodi con zero processi NON e' «software»: e' «non "
+                "c'era niente da guardare»")
+        elif d.get("negati"):
+            fuori["lettura_dei_nodi"] = (
+                "⛔ NON HO POTUTO GUARDARE fino in fondo: %d processi su %d mi "
+                "hanno negato i descrittori (utente «%s»).  ⚠ I nodi visti "
+                "sono un MINIMO, non un conto"
+                % (d["negati"], d["processi_remotix"], d.get("utente")))
+        elif nodi:
+            # ⛔⛔ QUESTA RIGA DICEVA «⇒ la codifica passa dall'HARDWARE», ED E'
+            #     STATA SMENTITA DA UN GIRO — 13 agosto 2026 notte, corsia E,
+            #     ed e' una forma d'errore che avevo appena finito di togliere
+            #     ad altri e ho rimesso io.
+            #
+            #     `[M]` giro `E-B-hardware-stessapagina`: il binario con VA-API
+            #     tiene **renderD128 aperto** e nello stesso giro codifica
+            #     **`av01.0.09M.10`** — cioe' AV1, che su questa macchina in
+            #     hardware **NON ESISTE** (`av1_vaapi` esce 218).  ⇒ Il nodo era
+            #     aperto e i fotogrammi passavano da `libsvtav1`, in software.
+            #
+            # ⭐ Un descrittore aperto dice che il CONTESTO VA-API esiste, non
+            #    che i fotogrammi ci passino.  ⇒ Si consegna il fatto e si
+            #    dichiara che da solo non decide: chi legge deve guardarlo
+            #    INSIEME al codec confessato dal prodotto.
+            fuori["lettura_dei_nodi"] = (
+                "⚠ %s APERTO/I dal prodotto (%d processi, %d letti, 0 negati). "
+                "⛔ E NON VUOL DIRE «codifica in hardware»: un descrittore "
+                "aperto dice che il contesto VA-API esiste, non che i "
+                "fotogrammi ci passino.  `[M]` un giro con renderD128 aperto "
+                "ha codificato `av01…`, e AV1 in hardware su questa macchina "
+                "non esiste.  ⇒ Si legge INSIEME a `riga_del_codificatore`: "
+                "hardware e' «nodo aperto **E** codec che l'hardware sa fare»"
+                % (", ".join(nodi), d["processi_remotix"], d["letti"]))
+        else:
+            fuori["lettura_dei_nodi"] = (
+                "⛔ NESSUN nodo DRM aperto dal prodotto (%d processi, %d "
+                "letti, 0 negati) ⇒ la codifica e' in SOFTWARE.  ⭐ E' una "
+                "misura: i descrittori si sono letti tutti"
+                % (d["processi_remotix"], d["letti"]))
+    # ⭐ E il codificatore per come lo confessa il prodotto: la riga del PRIMO
+    #   fotogramma porta la stringa di codec vera, letta sui byte in uscita.
+    #
+    # ⛔⛔ E SI ANCORA ALL'ACCENSIONE DI ADESSO — trovato provandolo, 13 agosto
+    #     2026 sera.  Il registro del prodotto e' in APPEND (`>> "$LOG"` in
+    #     `03-b17-accendi.sh`): un `grep | tail -1` pesca la riga dell'ULTIMO
+    #     giro che ha codificato, che puo' essere quello di un'ora fa e di un
+    #     altro codec.  ⇒ E' la forma del **numero fossile**, con l'aggravante
+    #     che qui il fossile finirebbe nel verbale come «il codec di questo
+    #     giro».  ⭐ L'ancora e' l'ultima riga «pronto: https://», che il
+    #     prodotto scrive UNA volta per accensione: si guarda solo da li' in
+    #     giu'.
+    # ⚠ E si fa a COSTO FISSO, non accumulando: il registro del prodotto sta a
+    #   17 MB dopo mezza giornata, e un `awk` che se lo tiene in una variabile
+    #   non finisce.  ⇒ si trova la RIGA dell'ultima accensione e si legge da
+    #   li' in giu' con `tail -n +N`.
+    rc = _sshpw("N=$(grep -an 'pronto: https:' %s 2>/dev/null | tail -1 | "
+                "cut -d: -f1); [ -n \"$N\" ] && tail -n +$N %s | "
+                "grep -ao 'PRIMO fotogramma codificato[^\"]*' | tail -1"
+                % (registro_prodotto, registro_prodotto), silenzioso=True)
+    riga = ""
+    for x in (rc.stdout or "").splitlines():
+        if "PRIMO fotogramma codificato" in x:
+            riga = x.strip()
+    fuori["riga_del_codificatore"] = riga or None
+    fuori["⛔ da dove"] = ("letta SOLO dopo l'ultima riga «pronto: https://» del "
+                          "registro, cioe' dentro QUESTA accensione: il "
+                          "registro e' in append e un `tail` pescherebbe il "
+                          "giro di prima")
+    if not riga:
+        fuori["⛔ codificatore"] = (
+            "in questa accensione il prodotto non ha ancora scritto la riga "
+            "del PRIMO fotogramma: ⛔ non e' «non ha codificato», e' «non ho "
+            "potuto guardare» — e se compare a misura finita, va riletta")
+    # ⚠ E QUEL CHE IL PRODOTTO NON DICE, detto qui perche' non lo si cerchi:
+    #   il **nome del componente** (`libsvtav1` / `hevc_vaapi` / `libx265`) e'
+    #   in `codificatore_confessione()` ma NON viene scritto in nessun
+    #   registro.  ⇒ Da fuori si sa il codec e si sa il nodo, non il nome.
+    fuori["⚠ quel che di la' non si puo' leggere"] = (
+        "il NOME del componente di codifica: il prodotto lo tiene in "
+        "`conf.componente` e non lo scrive da nessuna parte.  ⇒ software o "
+        "hardware si distinguono dal NODO DRM aperto, non dal nome.  Se la "
+        "corsia B facesse scrivere quel nome nel registro, questa riga "
+        "diventerebbe una lettura diretta invece che un indizio")
+    return fuori
+
+
+def palco_dichiarato(palco, a, registro_prodotto):
+    """⭐ Tutto il palco, dai due capi, in un dizionario solo.
+
+    ⛔ Nessun campo si deduce da un default: quel che non si e' potuto leggere
+       resta `None` **con accanto il motivo**.
+    """
+    d = {"⛔": "il palco si DICHIARA accanto al numero (`LEZIONI.md` §2.0): un "
+               "numero senza il palco da cui e' uscito non e' confrontabile con "
+               "un altro numero"}
+    bandiere = list(getattr(palco, "bandiere", []) or [])
+    d["chuwi"] = {
+        "bandiere_del_browser": bandiere or None,
+        # ⭐ La domanda si fa ESPLICITA, non si lascia a chi legge l'elenco:
+        #   e' la bandiera che ha spento quel che la sonda stava cercando.
+        "disable_gpu": ("--disable-gpu" in bandiere) if bandiere else None,
+        "gpu_chiesta_al_banco": bool(getattr(palco, "gpu", None)),
+        "schermo": getattr(palco, "schermo", None),
+    }
+    if not bandiere:
+        d["chuwi"]["⛔ bandiere"] = ("il palco non ha registrato le bandiere: "
+                                    "⚠ NON e' «nessuna bandiera»")
+    # ⛔⛔ SU CHE PALCO GIRA DAVVERO IL BROWSER — e si misura in DUE modi che
+    #     non passano l'uno per l'altro (rilievo della corsia D, 13 agosto).
+    #
+    #     (a) `--ozone-platform`: Chrome IGNORA `DISPLAY` e sceglie Wayland da
+    #         `XDG_SESSION_TYPE`.  Senza quella bandiera il browser puo' essere
+    #         **sul desktop vero dell'utente** mentre il banco crede di averlo
+    #         messo su Xvfb — con la GPU vera e la contesa del desktop dentro
+    #         il numero.
+    #     (b) ⭐ `xlsclients`: **chi e' attaccato all'Xvfb**.  E' la controprova
+    #         che non passa dal browser: zero clienti sullo schermo che il banco
+    #         ha acceso vuol dire che li' non c'e' nessuno.
+    ozone = [x for x in bandiere if x.startswith("--ozone-platform")]
+    d["chuwi"]["ozone_platform"] = ozone[0] if ozone else None
+    d["chuwi"]["⛔ ozone"] = (
+        "⛔ NESSUNA `--ozone-platform` passata: Chrome sceglie da se', e da "
+        "`XDG_SESSION_TYPE` sceglie Wayland ⇒ questo browser puo' NON essere "
+        "sull'Xvfb che il banco ha acceso.  ⚠ Si guardi `xlsclients` e "
+        "`schermo_del_browser` prima di credere alla bandiera `DISPLAY`"
+        if not ozone else
+        "⭐ passata: %s — il palco e' quello dichiarato" % ozone[0])
+    d["chuwi"]["xdg_session_type"] = os.environ.get("XDG_SESSION_TYPE")
+    d["chuwi"]["wayland_display_tolto_dal_banco"] = True
+    schermo = getattr(palco, "schermo", None)
+    if schermo:
+        r = subprocess.run(["xlsclients", "-display", schermo],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            clienti = [x for x in r.stdout.splitlines() if x.strip()]
+            d["chuwi"]["clienti_sull_xvfb"] = len(clienti)
+            d["chuwi"]["clienti_sull_xvfb_elenco"] = clienti[:10]
+            d["chuwi"]["lettura_del_palco"] = (
+                "⛔⛔ ZERO clienti attaccati a %s: il browser che sto misurando "
+                "NON E' sull'Xvfb del banco.  ⇒ Sta sul palco che Chrome ha "
+                "scelto da se' — su questa macchina il desktop dell'utente.  "
+                "⚠ Non e' un intoppo da curare adesso: e' il palco di QUESTO "
+                "numero, e va scritto accanto al numero" % schermo
+                if not clienti else
+                "⭐ %d client(i) attaccati a %s: il browser e' sull'Xvfb del "
+                "banco" % (len(clienti), schermo))
+        else:
+            d["chuwi"]["clienti_sull_xvfb"] = None
+            d["chuwi"]["lettura_del_palco"] = (
+                "⛔ `xlsclients` non ha risposto (%d): ⚠ non e' «zero clienti», "
+                "e' «non ho potuto guardare»" % r.returncode)
+    for nome, espressione, attendi in (
+            ("pagina", PALCO_PAGINA, False),
+            ("decodifica_dichiarata", PALCO_DECODIFICA, True)):
+        try:
+            d["chuwi"][nome] = palco.valuta(espressione, attendi=attendi)
+        except Exception as e:                       # noqa: BLE001
+            d["chuwi"][nome] = None
+            d["chuwi"]["⛔ " + nome] = "non ho potuto guardare: %s" % str(e)[:120]
+    d["server"] = palco_del_server(registro_prodotto)
+    d["host_del_prodotto"] = a.host
+    return d
+
+
+def _pesca(d, *strada):
+    for k in strada:
+        if not isinstance(d, dict):
+            return None
+        d = d.get(k)
+    return d
+
+
+# ⛔ I campi PORTANTI: quelli che, se cambiano a meta' giro, fanno sì che il
+#    numero prima e il numero dopo **non si sottraggano**.  ⚠ Non e' l'elenco
+#    di tutto quel che sta nel palco: e' l'elenco di quel che cambia il
+#    significato del numero.
+PALCO_PORTANTI = (
+    ("chuwi", "disable_gpu"),
+    ("chuwi", "pagina", "codec_nome"),
+    ("chuwi", "pagina", "webgl", "disegnatore"),
+    ("chuwi", "pagina", "tela"),
+    ("server", "nodi_di_rendering"),
+    # ⛔⛔ E LO SCHERMO SU CUI IL BROWSER STA DAVVERO — aggiunto il 13 agosto
+    #     2026 sera, dopo che la corsia D ha misurato che Chrome ignora
+    #     `DISPLAY`.  Se il «prima» finisse sull'Xvfb e il «dopo» sul desktop
+    #     dell'utente, la differenza sarebbe il PALCO e la chiameremmo «la
+    #     codifica in hardware».
+    ("chuwi", "pagina", "schermo_del_browser", "larghezza"),
+    ("chuwi", "clienti_sull_xvfb"),
+)
+
+
+def confronta_palco(prima, dopo):
+    """⛔ Il palco si legge PRIMA e DOPO — funzione PURA.
+
+    ⚠ Stessa forma delle porte contate ai due estremi: un palco che cambia in
+      mezzo alla misura fa uscire un numero che sembra buono.  ⛔ E come per le
+      porte, questa guardia **non vede** un cambio avvenuto e disfatto nel
+      mezzo: lo dichiara invece di lasciarlo credere.
+    """
+    if not prima or not dopo:
+        return {"regge": False,
+                "perche": ["⛔ non ho potuto confrontare: manca il palco %s"
+                           % ("d'apertura" if not prima else "di chiusura")],
+                "⚠ e non e'": "«il palco non e' cambiato»"}
+    guai = []
+    for strada in PALCO_PORTANTI:
+        a, b = _pesca(prima, *strada), _pesca(dopo, *strada)
+        if a != b:
+            guai.append("⛔ %s: da %r a %r" % (".".join(strada), a, b))
+    return {"regge": not guai, "perche": guai,
+            "campi_guardati": [".".join(s) for s in PALCO_PORTANTI],
+            "⚠ quel che questa guardia NON vede":
+                "un palco cambiato e rimesso a posto FRA i due estremi"}
+
+
+def stampa_palco(p):
+    """Il palco, a schermo, ⛔ accanto al numero e non in fondo al file."""
+    if not p:
+        ko("⛔ IL PALCO NON E' STATO DICHIARATO: il numero qui sopra non e' "
+           "confrontabile con nessun altro numero (`LEZIONI.md` §2.0)")
+        return
+    c, s = p.get("chuwi") or {}, p.get("server") or {}
+    pg = c.get("pagina") or {}
+    w = pg.get("webgl") if isinstance(pg, dict) else None
+    inf("CHUWI  · `--disable-gpu`: %s   · schermo %s"
+        % ("⛔ SI" if c.get("disable_gpu") else "no", c.get("schermo")))
+    inf("CHUWI  · gpu vista dalla pagina: %s"
+        % (w.get("disegnatore") if isinstance(w, dict) else
+           "⛔ NIENTE WEBGL — e allora ogni «no» di questo giro va letto come "
+           "«non ho potuto guardare»"))
+    inf("CHUWI  · codec negoziato: %s (%s)  · tela %s  · WebCodecs: %s"
+        % (pg.get("codec_nome"), pg.get("codec_numero"), pg.get("tela"),
+           pg.get("videodecoder")))
+    inf("SERVER · nodo di rendering: %s"
+        % (s.get("lettura_dei_nodi") or s.get("⛔ nodi")))
+    inf("SERVER · %s" % (s.get("riga_del_codificatore")
+                         or s.get("⛔ codificatore"))[:220])
+    # ⛔ E IL VERDETTO SI FA SUI DUE INSIEME, mai su uno solo: il nodo dice che
+    #    il contesto c'e', il codec dice che cosa e' passato di li'.
+    riga = s.get("riga_del_codificatore") or ""
+    nodi = s.get("nodi_di_rendering")
+    if nodi is None:
+        inf("SERVER · ⛔ codifica: NON HO POTUTO GUARDARE")
+    elif "av01" in riga:
+        inf("SERVER · ⛔ codifica: **IN SOFTWARE** — il codec e' AV1, e AV1 in "
+            "hardware su questa macchina NON ESISTE (`av1_vaapi` esce 218), "
+            "%s" % ("e il nodo %s e' aperto lo stesso: il contesto VA-API c'e' "
+                    "ma i fotogrammi non ci passano" % ", ".join(nodi) if nodi
+                    else "e infatti nessun nodo DRM e' aperto"))
+    elif "hev1" in riga and nodi:
+        inf("SERVER · ⭐ codifica: **IN HARDWARE** — codec HEVC E nodo %s "
+            "aperto: le due cose insieme" % ", ".join(nodi))
+    elif riga:
+        inf("SERVER · ⚠ codifica: codec e nodo non concordano — nodi %s, riga "
+            "«%s»" % (nodi, riga[:90]))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §7-ter  ⛔⛔ UN VERBALE PER GIRO — e la ragione e' un danno gia' avvenuto
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⛔ `--verbale` aveva un percorso FISSO (`/tmp/03-b17/verbale.json`), scritto
+#    con `open(..., "w")`: **ogni giro cancellava il precedente, in silenzio**.
+#    `[M]` 13 agosto 2026: dei **quattordici** giri della giornata ne sopravvive
+#    **UNO**, l'ultimo.  ⇒ Il verbale del giro da 74,576 — il numero della
+#    fase — non esiste piu', e nemmeno quello del giro con P3 rosso: per questo
+#    «quale parte di P3 fosse rossa» e' `[?]` **per sempre**.
+#
+# ⛔⛔ E PER LA CORSIA E SAREBBE PEGGIO: i due verbali che si devono SOTTRARRE
+#     — il «prima» in software e il «dopo» in hardware — hanno lo stesso nome.
+#     Il secondo giro cancellerebbe il primo, e la differenza non si potrebbe
+#     nemmeno rifare.
+#
+# ⭐ La cura e' in tre pezzi, e nessuno dei tre e' «stare attenti»:
+#      1. il nome porta dentro il GIRO;
+#      2. ⛔ si RIFIUTA di sovrascrivere un verbale che c'e' gia' — il danno e'
+#         avvenuto proprio perche' sovrascrivere era silenzioso;
+#      3. ⚠ resta un `verbale-ultimo.json` che PUNTA all'ultimo, per non
+#         rompere le abitudini — ma e' un puntatore, e si dice che lo e'.
+def percorso_verbale(lavoro, giro, chiesto=None):
+    """Dove va il verbale di QUESTO giro.  ⛔ Funzione PURA."""
+    if chiesto:
+        return chiesto
+    return os.path.join(lavoro or ".", "verbali", "verbale-%s.json" % giro)
+
+
+def scrivi_verbale(percorso, v, ultimo=None):
+    """Scrive il verbale, e ⛔ **rifiuta di cancellarne uno**.
+
+    ⚠ Torna il percorso scritto.  Alza `RuntimeError` se il file c'e' gia': non
+      e' prudenza, e' che l'unico modo in cui si perdono tredici verbali e'
+      sovrascriverli senza che nessuno lo veda.
+    """
+    if os.path.exists(percorso):
+        raise RuntimeError(
+            "⛔ IL VERBALE C'E' GIA': %s\n"
+            "   Non lo sovrascrivo.  Due giri con lo stesso nome vogliono dire "
+            "che uno dei due sta per sparire — ed e' cosi' che il 13 agosto "
+            "2026 sono andati perduti TREDICI verbali su quattordici, fra cui "
+            "quello del numero della fase.\n"
+            "   ⇒ Cambia `--giro`, oppure sposta il file di la' se sei sicuro."
+            % percorso)
+    os.makedirs(os.path.dirname(percorso) or ".", exist_ok=True)
+    with open(percorso, "w") as f:
+        json.dump(v, f, ensure_ascii=False)
+    if ultimo:
+        # ⚠ Un PUNTATORE, non una copia: una copia sarebbe un secondo verbale
+        #   con la stessa forma e nessun giro dentro il nome, cioe' di nuovo la
+        #   cosa che si sta togliendo di mezzo.
+        try:
+            tmp = ultimo + ".tmp"
+            if os.path.islink(tmp) or os.path.exists(tmp):
+                os.unlink(tmp)
+            os.symlink(os.path.abspath(percorso), tmp)
+            os.replace(tmp, ultimo)
+        except OSError as e:
+            dub("⚠ non ho potuto rifare il puntatore %s (%s): il verbale c'e' "
+                "lo stesso, e sta in %s" % (ultimo, e, percorso))
+    return percorso
 
 
 def _sshpw(comando, silenzioso=False):
@@ -1803,6 +2513,39 @@ def misura(a):
     for riga in prima_porte.strip().splitlines():
         inf(riga.strip())
     v["porte_prima"] = prima_porte
+
+    log("0-bis. ⛔⛔ SONO SOLO? — su TUTT'E DUE le macchine, e prima di "
+        "accendere il mio palco")
+    # ⛔ PRIMA di accendere Xvfb e Chrome: `03-solo.py` non sa distinguere il
+    #    proprio rumore da quello d'altri (limite n. 3), e un banco che si
+    #    misurasse addosso si assolverebbe da solo.
+    solo = solo_modulo()
+    v["scena_prima"] = scena_esclusiva(
+        # ⛔ LE PORTE MIE SONO TRE, non due: il ponte (`--porta`), l'ancora
+        #    (`--ancora`) e ⛔ **il prodotto dietro il ponte** — che sta sul
+        #    server, e' acceso da me, e senza dichiararlo l'arbitro di la' lo
+        #    conta come un estraneo e rifiuta per sempre.
+        a, mie_porte=(a.porta, a.ancora, a.porta_dentro),
+        solo_la=getattr(a, "solo_la", None))
+    for nome, s in (v["scena_prima"].get("scene") or {}).items():
+        if s is None:
+            ko("%-7s ⛔ la scena non si e' potuta leggere" % nome)
+        else:
+            inf("%-7s carico %s · porte altrui %s · vicini %d · /tmp %s MB"
+                % (nome, (s.get("carico") or ["?"])[0], s.get("porte_altrui"),
+                   len(s.get("vicini_affamati") or []), s.get("tmp_liberi_mb")))
+    # ⛔ E SE NON SONO SOLO, MI RIFIUTO — l'eccezione la alza l'arbitro, non io.
+    #    ⚠ Non c'e' nessuna bandiera per scavalcarlo, ed e' voluto: una via
+    #      d'uscita e' la stessa mossa di allargare l'atteso finche' passa.
+    #      Se serve la finestra, la si chiede al coordinatore.
+    try:
+        solo.pretendi(v["scena_prima"])
+    except RuntimeError as e:
+        ko(str(e))
+        ko("⛔ NON MISURO.  ⇒ Chiedi la finestra esclusiva al coordinatore: "
+           "l'anello attraversa NIC-OS e CHUWI, e le vuole tutt'e due.")
+        return 4
+    ok("solo su tutt'e due le macchine: un tempo misurato adesso e' un tempo")
 
     log("1. L'ANCORA DELL'OROLOGIO — ⛔ e NON passa dal ritardatore")
     parete = scarto_parete_monotono_us()
@@ -1983,6 +2726,13 @@ def misura(a):
         #     cieco sulla meta' del fenomeno che il banco non puo' vedere (i
         #     fotogrammi scavalcati, che il prodotto scarta a
         #     `src/pagina.html:1578`, prima del decodificatore).
+        # ⛔⛔ IL PALCO, DICHIARATO PRIMA DEL PRIMO NUMERO (§7-quater).
+        #     Si legge QUI e non all'accensione: il codec si negozia con la
+        #     sessione, e un palco letto prima direbbe «codec: null» — cioe'
+        #     l'assenza di informazione travestita da informazione.
+        log("5-bis. ⛔ IL PALCO, dai due capi dell'anello")
+        v["palco_prima"] = palco_dichiarato(palco, a, a.registro_prodotto)
+        stampa_palco(v["palco_prima"])
         _s0 = c.valuta(STATO, attendi=False)
         v["conti_pagina_prima"] = (_s0 or {}).get("conti")
         if not v["conti_pagina_prima"]:
@@ -2213,6 +2963,16 @@ def misura(a):
         else:
             dub("⚠ " + cdp_anc.get("perche", ""))
 
+        log("11-bis. ⛔ IL PALCO, RILETTO — un palco che cambia a meta' giro fa "
+            "uscire un numero che sembra buono")
+        v["palco_dopo"] = palco_dichiarato(palco, a, a.registro_prodotto)
+        v["palco_regge"] = confronta_palco(v.get("palco_prima"), v["palco_dopo"])
+        (ok if v["palco_regge"]["regge"] else ko)(
+            "il palco e' lo stesso ai due estremi"
+            if v["palco_regge"]["regge"] else
+            "⛔ IL PALCO E' CAMBIATO DURANTE LA MISURA: " +
+            " · ".join(v["palco_regge"]["perche"]))
+
         log("12. ⛔ Quale dei due orologi ha letto il prodotto (il `pts`)")
         v["riattacchi_cdp"] = getattr(palco, "riattacchi", 0)
         rl = _sshpw("grep -aoh 'MISURATO: il .pts. di Mutter[^\"]*' "
@@ -2233,10 +2993,35 @@ def misura(a):
     if v["porte_dopo"] != v["porte_prima"]:
         dub("⚠ le porte sono cambiate durante la misura:\n%s" % v["porte_dopo"])
 
-    os.makedirs(os.path.dirname(a.verbale) or ".", exist_ok=True)
-    with open(a.verbale, "w") as f:
-        json.dump(v, f, ensure_ascii=False)
-    inf("verbale: %s (%d byte)" % (a.verbale, os.path.getsize(a.verbale)))
+    # ⛔ E LA SCENA SI RILEGGE ALLA FINE: il carico e' una fotografia, non una
+    #    sorveglianza (`03-solo.py`, limite n. 2).  ⚠ Qui NON si rifiuta piu' —
+    #    il giro e' fatto — ma il verbale porta dentro se un vicino si e'
+    #    acceso a meta', e chi legge il numero lo vede accanto al numero.
+    v["scena_dopo"] = scena_esclusiva(
+        # ⛔ LE PORTE MIE SONO TRE, non due: il ponte (`--porta`), l'ancora
+        #    (`--ancora`) e ⛔ **il prodotto dietro il ponte** — che sta sul
+        #    server, e' acceso da me, e senza dichiararlo l'arbitro di la' lo
+        #    conta come un estraneo e rifiuta per sempre.
+        a, mie_porte=(a.porta, a.ancora, a.porta_dentro),
+        solo_la=getattr(a, "solo_la", None))
+    v["scena_regge"] = {
+        n: solo_modulo().confronta(
+            (v["scena_prima"].get("scene") or {}).get(n) or {},
+            (v["scena_dopo"].get("scene") or {}).get(n) or {})
+        for n in ("CHUWI", "NIC-OS")}
+    for n, r3 in v["scena_regge"].items():
+        (ok if r3["regge"] else ko)(
+            "%-7s la finestra ha retto" % n if r3["regge"] else
+            "⛔ %-7s la finestra NON ha retto: %s" % (n, "; ".join(r3["guai"])))
+
+    # ⛔ UN VERBALE PER GIRO, e si RIFIUTA di cancellarne uno (§7-ter).
+    dove = percorso_verbale(a.lavoro, a.giro, a.verbale)
+    scrivi_verbale(dove, v, os.path.join(a.lavoro or ".", "verbale-ultimo.json"))
+    a.verbale = dove
+    inf("verbale: %s (%d byte)" % (dove, os.path.getsize(dove)))
+    inf("⚠ `%s/verbale-ultimo.json` e' un PUNTATORE all'ultimo giro, non un "
+        "verbale: il verbale di questo giro e' quello qui sopra, e porta il "
+        "giro dentro il nome" % (a.lavoro or "."))
 
     g = stampa_verdetto(v, a)
     base = next((x for x in v["giri"] if x.get("ritardo_chiesto_ms") == 0), None)
@@ -2251,6 +3036,18 @@ def misura(a):
               "errore_orologio_us": v.get("errore_orologio_us"),
               "deriva_ppm": v.get("deriva_ppm"),
               "riga_del_pts": v.get("riga_del_pts"),
+              # ⛔ IL PALCO E LA FINESTRA VANNO NELLA RIGA DEPOSITATA, non solo
+              #    nel verbale: chi legge `03-b17-esiti.jsonl` per confrontare
+              #    due giri deve vedere **da che palco** escono, o confronta
+              #    due numeri che non si sottraggono.
+              "palco": v.get("palco_prima"),
+              "palco_regge": v.get("palco_regge"),
+              "scena_esclusiva": {
+                  "prima": {"solo": (v.get("scena_prima") or {}).get("solo"),
+                            "perche": (v.get("scena_prima") or {}).get("perche")},
+                  "dopo": {"solo": (v.get("scena_dopo") or {}).get("solo"),
+                           "perche": (v.get("scena_dopo") or {}).get("perche")},
+                  "regge": v.get("scena_regge")},
               "P2b": v.get("P2b"), "verbale": a.verbale})
     return 0 if all(g[k].get("esito") for k in TUTTI) else 1
 
@@ -2270,6 +3067,11 @@ def principale():
     p.add_argument("--host", default="192.168.0.2")
     p.add_argument("--porta", type=int, default=7605)
     p.add_argument("--ancora", type=int, default=7616)
+    # ⛔ La porta del PRODOTTO dietro il ponte: il banco non ci parla mai
+    #    direttamente, ⚠ ma e' SUA — l'ha accesa lui — e va dichiarata
+    #    all'arbitro della finestra esclusiva, o l'arbitro la conta come un
+    #    estraneo sul server e rifiuta ogni giro.
+    p.add_argument("--porta-dentro", type=int, default=7615)
     p.add_argument("--comando-ponte", default="/tmp/03-b17/comando")
     p.add_argument("--utente", default="nicfio")
     p.add_argument("--parola-file")
@@ -2279,7 +3081,15 @@ def principale():
     p.add_argument("--schermo", default=":85")
     p.add_argument("--diagnosi", type=int, default=9605)
     p.add_argument("--lavoro", default="/tmp/03-b17")
-    p.add_argument("--verbale", default="/tmp/03-b17/verbale.json")
+    # ⛔ NIENTE PERCORSO FISSO — §7-ter.  Senza `--verbale` il nome lo fa il
+    #    GIRO: `<lavoro>/verbali/verbale-<giro>.json`.  Il vecchio predefinito
+    #    (`/tmp/03-b17/verbale.json`) ha cancellato tredici verbali su
+    #    quattordici il 13 agosto 2026, fra cui quello del numero della fase.
+    p.add_argument("--verbale", default=None,
+                   help="⚠ di norma NON si passa: il nome lo fa il giro. "
+                        "Passandolo si torna a un nome fisso, e due giri con "
+                        "lo stesso nome adesso danno un ERRORE invece di "
+                        "sovrascriversi")
     p.add_argument("--senza-gpu", action="store_true")
     p.add_argument("--gancio-scena", help="il comando che ACCENDE la scena, "
                    "eseguito DOPO il primo fotogramma dipinto (prima il monitor "
@@ -2287,6 +3097,11 @@ def principale():
     p.add_argument("--gancio-scena-spegni", help="⛔ il comando che la SPEGNE: "
                    "senza, P3(a) non si puo' eseguire")
     p.add_argument("--registro-prodotto", default="/media/REMOTIX/tmp/03-b17/registro.log")
+    # ⛔ L'arbitro della finestra esclusiva DALL'ALTRA PARTE: l'anello
+    #    attraversa due macchine, e `03-solo.py` ne guarda una sola.
+    p.add_argument("--solo-la", default="/media/REMOTIX/src/03-solo.py",
+                   help="dove sta `03-solo.py` SUL SERVER (ce lo porta "
+                        "`03-b17-lancia.sh porta`)")
     p.add_argument("--mani", type=int, default=5,
                    help="⛔ in quante fette ALTERNATE si divide ogni giro di P1: "
                         "a blocchi il ritardo iniettato si confonde con la "
@@ -2351,6 +3166,21 @@ def stampa_verdetto(v, a=None):
     log("IL NUMERO — ⛔ col pezzo cieco accanto")
     inf(json.dumps(d, ensure_ascii=False))
     inf(con_pezzo_cieco(d.get("mediana")))
+    # ⛔⛔ E IL PALCO STA QUI, ATTACCATO AL NUMERO — non in fondo al file e non
+    #     in un altro documento.  Un numero senza il palco da cui e' uscito non
+    #     e' confrontabile con nessun altro numero (`LEZIONI.md` §2.0), e la
+    #     corsia E il suo mestiere lo fa **sottraendone due**.
+    log("⛔ IL PALCO DA CUI ESCE QUESTO NUMERO")
+    stampa_palco(v.get("palco_prima"))
+    sc = v.get("scena_prima") or {}
+    if sc:
+        (inf if sc.get("solo") else ko)(
+            "finestra esclusiva: %s"
+            % ("⭐ ero solo su tutt'e due le macchine" if sc.get("solo")
+               else "⛔ NON ero solo — " + "; ".join(sc.get("perche") or [])))
+    else:
+        ko("⛔ la finestra esclusiva NON e' stata verificata: questo numero "
+           "puo' essere la contesa")
     log("LA SCOMPOSIZIONE")
     for k, x in scomponi(camp).items():
         inf("%-58s %s" % (k, json.dumps(x, ensure_ascii=False)))

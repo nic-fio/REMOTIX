@@ -108,23 +108,51 @@ def guarda(mie_porte=(), miei_pid=()):
                                    if p not in PROTETTE and p not in mie_porte)
     scena["porte_mie"] = sorted(p for p in porte if p in mie_porte)
 
-    # ⛔ I vicini affamati: chiunque mangi CPU e non sia mio.
+    # ⛔⛔ I VICINI AFFAMATI — E QUESTA PARTE E' STATA RIFATTA IL 13 AGOSTO
+    #    NOTTE, DOPO TRE FALSI ROSSI DATI ALLA CORSIA E.
+    #
+    #    La prima stesura leggeva `ps -eo pcpu`, e ⛔ **`pcpu` di `ps` e' la
+    #    media dalla NASCITA del processo**: un browser che ha macinato per
+    #    dieci minuti e adesso dorme risulta «al 50 %» mentre sta allo 0,0 %.
+    #    ⇒ L'arbitro rifiutava di far misurare per colpa di fantasmi, e
+    #    **rifiutare a torto e' un difetto quanto passare a torto**: il primo
+    #    fa buttare giri buoni, e chi lo subisce impara a scavalcare l'arbitro.
+    #
+    #    ⭐ Adesso si misura un DELTA su una finestra vera: due letture di
+    #    `/proc/<pid>/stat` a distanza di `FINESTRA` secondi, e la percentuale
+    #    e' quella di QUELL'INTERVALLO.  ⚠ Costa mezzo secondo, e vale.
+    def _tempi():
+        fuori = {}
+        for p in os.listdir("/proc"):
+            if not p.isdigit():
+                continue
+            try:
+                with open("/proc/%s/stat" % p) as f:
+                    c = f.read().rsplit(") ", 1)[1].split()
+                fuori[int(p)] = int(c[11]) + int(c[12])   # utime + stime
+            except (OSError, IndexError, ValueError):
+                continue
+        return fuori
+
+    FINESTRA = 0.5
+    prima = _tempi()
+    time.sleep(FINESTRA)
+    dopo = _tempi()
+    tick = os.sysconf("SC_CLK_TCK")
     vicini = []
-    for riga in _uscita(["ps", "-eo", "pcpu,pid,comm",
-                         "--sort=-pcpu"]).splitlines()[1:12]:
-        pezzi = riga.split(None, 2)
-        if len(pezzi) < 3:
+    for pid, t2 in dopo.items():
+        if pid in miei_pid or pid not in prima:
             continue
-        try:
-            pcpu, pid = float(pezzi[0]), int(pezzi[1])
-        except ValueError:
-            continue
-        # ⚠ `ps` stesso e' sempre in testa al proprio elenco: non e' un vicino.
-        if pid in miei_pid or pezzi[2].strip() == "ps":
-            continue
+        pcpu = (t2 - prima[pid]) / tick / FINESTRA * 100.0
         if pcpu >= CPU_VICINO_MAX:
-            vicini.append({"pcpu": pcpu, "pid": pid, "chi": pezzi[2].strip()})
-    scena["vicini_affamati"] = vicini
+            try:
+                with open("/proc/%d/comm" % pid) as f:
+                    chi = f.read().strip()
+            except OSError:
+                chi = "?"
+            vicini.append({"pcpu": round(pcpu, 1), "pid": pid, "chi": chi})
+    scena["vicini_affamati"] = sorted(vicini, key=lambda v: -v["pcpu"])[:10]
+    scena["finestra_cpu_s"] = FINESTRA
 
     # ⚠ Le sessioni grafiche vive, che su questo palco sono la contesa vera.
     schermi = sorted(f for f in os.listdir("/tmp/.X11-unix")) \
