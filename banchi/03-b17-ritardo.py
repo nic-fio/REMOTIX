@@ -1210,13 +1210,23 @@ def giudica(verbale):
             camp, verbale.get("senza_marca", [])),
         # ⛔⭐ P5 SI GIUDICA DOVE IL FENOMENO C'E', NON DOVE NON C'E'.
         #
-        #     `[M]` 13 agosto 2026: sul giro normale i fotogrammi fuori ordine
-        #     sono **0 su 783** — su questa LAN, con delta da 2,6 KB, lo
+        #     Sul giro normale, su questa LAN e con delta da ~2,6 KB, lo
         #     scavalcamento per dimensione non si presenta.  ⛔ Un P5 giudicato
         #     li' sarebbe VERDE PER COSTRUZIONE, che e' peggio di un rosso
         #     (`LEZIONI.md` §1.3, §2.2).  ⇒ Si giudica sul giro in cui il fuori
         #     ordine e' stato FABBRICATO dal ponte; il giro normale resta
         #     accanto come misura di quanto spesso accade da solo.
+        #
+        # ⛔⛔ QUI STAVA UN NUMERO FOSSILE, ED E' TOLTO IL 13 AGOSTO 2026 SERA
+        #     (corsia C, coda C5).  Diceva «0 su **783**» con la marca `[M]`.
+        #     ⚠ 783 e' il numero di campioni di UN giro (`b17-20260813-131128`,
+        #     mediana 70,999): non era il denominatore dei fuori ordine del
+        #     giro che ha prodotto il numero della fase, che di campioni ne ha
+        #     **804**.  Un numero incollato in un commento non invecchia
+        #     insieme al codice, e quello aveva gia' due giri di ritardo.
+        #     ⇒ Il denominatore adesso NON si scrive qui: lo consegna
+        #     `p5_fuori_ordine` a ogni giro, insieme al conto del prodotto —
+        #     ed e' l'unico posto in cui puo' essere vero.
         "P5": (p5_fuori_ordine(camp5, p5g.get("conti_pagina_prima"),
                                p5g.get("conti_pagina"))
                if camp5 else
@@ -1362,6 +1372,24 @@ def _g_p5_coda(v):
     return v
 
 
+def _g_p5_conti_ciechi(v):
+    """⛔⛔ IL GUASTO CHE CERTIFICA LA CURA DI C3: spariscono i conti del
+    PRODOTTO, cioe' la meta' del fenomeno che il banco non puo' vedere da se'.
+
+    ⭐ Prima della cura questo guasto non era nemmeno esprimibile: il banco non
+       guardava quei conti, quindi toglierli non cambiava niente e P5 restava
+       verde.  Adesso P5 deve dire «non ho potuto guardare» — e diventare
+       ROSSO, perche' un anello giudicato su meta' del fenomeno non e' un
+       anello giudicato.
+    """
+    v.pop("conti_pagina_prima", None)
+    v.pop("conti_pagina", None)
+    if "giro_p5" in v:
+        v["giro_p5"].pop("conti_pagina_prima", None)
+        v["giro_p5"].pop("conti_pagina", None)
+    return v
+
+
 def _g_p6_non_isolata(v):
     v["isolata"] = False
     v["grana"] = {"salti": 4000, "minimo_ms": 1.0, "mediano_ms": 1.0}
@@ -1388,6 +1416,9 @@ GUASTI = [
     ("P3 il `disegno` non cresce", _g_p3_disegno_fermo, ["P3"]),
     ("P3 l'istante e' inventato", _g_p3_istante_inventato, ["P3"]),
     ("P5 l'anello misura la coda", _g_p5_coda, ["P5"]),
+    # ⛔ 13 agosto 2026 sera, corsia C: il guasto che certifica la cura di C3.
+    ("P5 spariscono i conti del PRODOTTO (la cecita' per costruzione)",
+     _g_p5_conti_ciechi, ["P5"]),
     ("P6 la pagina non e' isolata", _g_p6_non_isolata, ["P6"]),
     ("P7 il ritmo e' morto", _g_p7_ritmo_morto, ["P7"]),
     ("P8 il banco costa mezzo ritmo", _g_p8_banco_caro, ["P8"]),
@@ -1482,6 +1513,66 @@ def certifica(verboso=True):
         g2 = giudica(verbale_sintetico())
         dice("  risanato «%s»: torna tutto verde" % nome,
              all(g2[k].get("esito") for k in TUTTI))
+
+    log("C-bis. ⛔⛔ P5 E LA CECITA' PER COSTRUZIONE — le TRE risposte devono "
+        "essere TRE frasi diverse")
+    # ⛔ Il difetto curato qui (corsia C, coda C3) e' che DUE stati del mondo
+    #    davano la STESSA riga: «il fuori ordine non e' successo» e «il fuori
+    #    ordine e' successo e il prodotto l'ha assorbito prima che io potessi
+    #    vederlo».  E ce n'era un terzo, che non aveva riga affatto: «non ho i
+    #    conti del prodotto».  ⇒ Si certificano tutt'e tre, sullo stesso
+    #    verbale, cambiando UNA cosa per volta.
+    def _senza_scavalcati(v):
+        for g in v["giri"]:
+            massimo = 0
+            for c in g["campioni"]:
+                massimo = max(massimo + 1, c.get("numero") or 0)
+                c["numero"] = massimo
+        return v
+
+    base_p5 = _senza_scavalcati(copy.deepcopy(verbale_sintetico()))
+    camp_p5 = regime(base_p5["giri"][0]["campioni"])
+
+    r_zero = p5_fuori_ordine(camp_p5, base_p5["conti_pagina_prima"],
+                             base_p5["conti_pagina"])
+    dice("P5 (1) il fenomeno NON si e' presentato: rosso, e lo dice MISURATO "
+         "ai due capi (0 visti dal banco, 0 `scartati_ordine` del prodotto)",
+         (not r_zero["esito"]) and "NON ESEGUITO" in r_zero["perche"]
+         and r_zero["scartati_dal_prodotto"] == 0)
+
+    dopo_scarta = dict(base_p5["conti_pagina"])
+    dopo_scarta["scartati_ordine"] = \
+        base_p5["conti_pagina_prima"]["scartati_ordine"] + 30
+    r_assorbito = p5_fuori_ordine(camp_p5, base_p5["conti_pagina_prima"],
+                                  dopo_scarta)
+    dice("P5 (2) il fenomeno C'E' STATO e il prodotto l'ha assorbito PRIMA del "
+         "decodificatore: P5 diventa ESEGUITO e conta i 30 scartati che il "
+         "banco non puo' vedere (scartati_dal_prodotto = %s)"
+         % r_assorbito.get("scartati_dal_prodotto"),
+         r_assorbito["esito"] and r_assorbito["scartati_dal_prodotto"] == 30
+         and r_assorbito["fuori_ordine_totali"] == 30
+         and "ESEGUITO" in r_assorbito["perche"])
+
+    dice("P5 (1) e (2) NON dicono la stessa frase — ⛔ prima della cura la "
+         "dicevano, ed e' il difetto che questo controllo esiste per non far "
+         "tornare", r_zero["perche"] != r_assorbito["perche"]
+         and r_zero["esito"] != r_assorbito["esito"])
+
+    r_cieco = p5_fuori_ordine(camp_p5, None, None)
+    dice("P5 (3) senza i conti del prodotto → NON passa, e dice «non ho potuto "
+         "guardare» invece di «non eseguito» (`LEZIONI.md` §2.0)",
+         (not r_cieco["esito"]) and r_cieco.get("cieco") is True
+         and "NON HO POTUTO GUARDARE" in r_cieco["perche"]
+         and "NON ESEGUITO" not in r_cieco["perche"])
+
+    # ⛔ E il gemello negativo del conto: un contatore che va INDIETRO (la
+    #    pagina si e' riaccesa a meta' giro) non e' «zero scartati».
+    dice("il conto del prodotto che torna INDIETRO dice «non ho potuto», non "
+         "«zero»",
+         delta_conto({"scartati_ordine": 7}, {"scartati_ordine": 2},
+                     "scartati_ordine") is None
+         and delta_conto({"scartati_ordine": 2}, {"scartati_ordine": 7},
+                         "scartati_ordine") == 5)
 
     log("D. Gli attrezzi che dicono «non ho potuto guardare»")
     dice("P1 senza il giro a ritardo 0 → NON passa",
@@ -1886,6 +1977,17 @@ def misura(a):
         #        la confusione: fette corte, alternate, tante volte.  Cosi' la
         #        deriva colpisce **tutti** i valori di N allo stesso modo e la
         #        differenza fra le mediane resta il solo ritardo iniettato.
+        # ⛔⛔ L'ISTANTANEA DEI CONTI DEL PRODOTTO **PRIMA** — corsia C, coda C3.
+        #     I contatori della pagina sono CUMULATIVI dall'accensione: senza
+        #     il «prima» non c'e' nessuna differenza da fare, e P5 resterebbe
+        #     cieco sulla meta' del fenomeno che il banco non puo' vedere (i
+        #     fotogrammi scavalcati, che il prodotto scarta a
+        #     `src/pagina.html:1578`, prima del decodificatore).
+        _s0 = c.valuta(STATO, attendi=False)
+        v["conti_pagina_prima"] = (_s0 or {}).get("conti")
+        if not v["conti_pagina_prima"]:
+            dub("⚠ non ho l'istantanea dei conti del prodotto PRIMA: P5 dira' "
+                "«non ho potuto guardare», e sara' vero")
         ritardi = [float(x) for x in a.ritardi.split(",")]
         mani = max(2, a.mani)
         fetta = max(3.0, a.secondi / mani)
@@ -2008,8 +2110,18 @@ def misura(a):
             # ⚠ E si dichiara il prezzo: con una raffica ogni 400 pacchetti il
             #   fuori ordine si fabbrica RARAMENTE.  Se non ne esce nessuno
             #   scavalcato, P5 dira' «NON ESEGUITO» — e sara' vero.
+            # ⛔ E l'assetto si DICHIARA insieme al suo modo di degenerazione:
+            #    fo=400 con raffica=4 NON degenera (4 % 400 = 4).  Se un giorno
+            #    qualcuno mettesse raffica multipla di fo, il ponte smetterebbe
+            #    di riordinare e lo direbbe da se' (`03-b17-ponte.py`, conto
+            #    `degenere`), invece di consegnare zero fuori ordine in
+            #    silenzio — che e' quel che e' successo all'autoprova.
             metti_ritardo(a, 0, 400, a.giro + "-p5", fo_ms=45.0, raffica=4)
             time.sleep(1.0)
+            # ⛔ L'istantanea dei conti del prodotto PRIMA del giro di P5, e va
+            #    presa DOPO l'assestamento e PRIMA di svuotare i campioni: la
+            #    differenza deve coprire la stessa finestra dei fotogrammi.
+            _s5 = c.valuta(STATO, attendi=False)
             c.valuta("window.__B17.prendi(), true")
             camp5, _, _, u5 = raccogli(c, min(14.0, a.secondi))
             oro5 = Orologi(parete, anc_a, {"c_e": False},
@@ -2018,11 +2130,27 @@ def misura(a):
             v["giro_p5"] = {"campioni": camp5,
                             "distribuzione": dist([x["ritardo_ms"]
                                                    for x in regime(camp5)]),
+                            "assetto_iniettore": {"fuori_ordine": 400,
+                                                  "raffica": 4,
+                                                  "fuori_ordine_ms": 45.0,
+                                                  "degenere": (4 % 400) == 0},
+                            "conti_pagina_prima": (_s5 or {}).get("conti"),
                             "conti_pagina": (u5 or {}).get("pagina")}
             metti_ritardo(a, 0, 0, a.giro)
             inf("fuori ordine fabbricato: %s campioni, mediana %s ms"
                 % (v["giro_p5"]["distribuzione"].get("n"),
                    v["giro_p5"]["distribuzione"].get("mediana")))
+            # ⛔ E si stampa QUEL CHE IL BANCO NON PUO' VEDERE, letto dal
+            #    prodotto: i fotogrammi scavalcati non arrivano mai al vetro.
+            _sc = delta_conto(v["giro_p5"].get("conti_pagina_prima"),
+                              v["giro_p5"].get("conti_pagina"),
+                              "scartati_ordine")
+            _cg = delta_conto(v["giro_p5"].get("conti_pagina_prima"),
+                              v["giro_p5"].get("conti_pagina"), "consegnati")
+            inf("e quel che il banco NON vede, letto dal prodotto: "
+                "`scartati_ordine` %s su %s consegnati in questa finestra  "
+                "(⛔ `None` vuol dire «non ho potuto guardare», non «zero»)"
+                % (_sc, _cg))
             time.sleep(1.0)
 
         log("9-bis. ⛔ E la scena SI SPEGNE — quel che succede va detto")
@@ -2182,8 +2310,23 @@ def principale():
     if a.verdetto:
         with open(a.verdetto) as f:
             v = json.load(f)
-        stampa_verdetto(v, a)
-        return 0
+        g = stampa_verdetto(v, a)
+        # ⛔⛔ IL ROSSO VA NEL CODICE D'USCITA, NON NELLA PROSA — curato il
+        #     13 agosto 2026 sera (corsia C), e la cura e' MISURATA sullo
+        #     stesso verbale prima e dopo.
+        #
+        #     Qui c'era `return 0` incondizionato: `stampa_verdetto()` stampa i
+        #     rossi con `ko()` e poi il programma usciva **verde**.  ⇒ Chi
+        #     rileggeva un verbale gia' salvato — che e' proprio il modo in cui
+        #     si rilegge il numero della fase — vedeva sempre 0.
+        #     ⚠ Il catalogo diceva «tre banchi che escono SEMPRE 0, due curati,
+        #     il terzo e' ancora li' (`03-b19-ritardo-worker.py --verdetto`)».
+        #     ⛔ Erano QUATTRO: il quarto e' questo, cioe' il banco che ha
+        #     prodotto il numero della fase 3, e non lo aveva contato nessuno.
+        #     `[M]` sullo stesso verbale `/tmp/03-b17/verbale.json` (giro
+        #     `b17-20260813-193656`), P5 rosso a stampa: **prima uscita 0,
+        #     dopo uscita 1**.
+        return 0 if all(g[k].get("esito") for k in TUTTI) else 1
 
     if a.misura:
         from importlib import import_module  # noqa: F401

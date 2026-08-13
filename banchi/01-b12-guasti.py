@@ -1971,35 +1971,43 @@ guasto(
     "restano i due setacci che un rilevatore bugiardo **passa** — e il banco "
     "continua a consegnare un numero di ritardo dall'aria perfettamente "
     "normale.  ⇒ Il numero della fase 3 poggia su questo setaccio",
-    # ⛔ NON MISURATA.  ⭐ Dove guardare: `certifica()` costruisce la riga e
-    #    `dice()` la stampa con `ko()`:
+    # ⭐⭐ MISURATA IL 13 AGOSTO 2026 SERA, dalla corsia C, e la candidata
+    #    scritta qui sotto era quella giusta — ma **non si e' messa finche' non
+    #    e' uscita da un giro vero**, che e' la regola pagata su B4 e B7.
+    #    `certifica()` costruisce la riga e `dice()` la stampa con `ko()`:
     #      «guasto «P3 l'istante e' inventato» → rossi nessuno (attesi ['P3'])»
-    #    Candidata da verificare: «rossi nessuno (attesi ['P3'])».  ⭐ Nel giro
-    #    sano la stessa riga dice «→ rossi ['P3'] (attesi ['P3'])», e siccome
-    #    nel sano tutti e dieci i guasti sintetici sono presi, la parola
-    #    «rossi nessuno» non compare mai.
-    "",
+    #    ⭐ Nel giro sano la stessa riga dice «→ rossi ['P3'] (attesi ['P3'])»,
+    #    e siccome nel sano tutti e dieci i guasti sintetici sono presi, la
+    #    parola «rossi nessuno» **non compare mai**: e' la seconda meta' del
+    #    criterio che R12-A.3 pretende, cioe' che il SANO non dica gia' la marca.
+    "rossi nessuno (attesi ['P3'])",
     "leggero",
     "fasi/03-movimento.md step 5 · web.md §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
     "RCP.md §6.2 · LEZIONI.md §1.2, §1.13",
-    nota="⛔⛔ **IL GIRO SANO DI `--certifica` NON E' VERDE SU CHUWI, E "
-         "L'HO MISURATO: 3 GIRI SU 3, USCITA 1, «BOCCIATO — 30 controlli su "
-         "31».**  `[M]` 13 agosto 2026 sera, sulla copia in `01-b12-copie/`, "
-         "**senza nessun guasto innestato**.  ⛔ E non e' instabilita': cade "
-         "sempre lo **stesso** controllo, ed e' del PONTE e non del banco del "
-         "ritardo — *«fuori ordine: 0 inversioni su 40 pacchetti tornati "
-         "(attese > 0)»*.  Il ponte deve **produrre** disordine per poter "
-         "dimostrare di saperlo vedere, e su questa macchina non ne produce.\n"
-         "⚠ I sette PROMOSSO 31 su 31 del 13 agosto erano su **NIC-OS**: "
-         "`atteso_sano = 0` vale la' e **non qui**, e le due cose non si "
-         "arrotondano.  ⇒ Finche' il giro sano non e' verde, 03-b17 **NON SI "
-         "CERTIFICA** — e' la regola gia' scritta per B8, per B13 e per P5, e "
-         "la cosa giusta e' lasciarlo NON CERTIFICATO invece di allargare "
-         "l'atteso finche' torna.\n"
-         "⭐ Da cui il primo passo per chi lo riprendera', ed e' piu' corto di "
-         "quanto sembri: capire se il ponte non inverte perche' su CHUWI il "
-         "giro e' tutto in casa, o perche' il controllo pretende un evento che "
-         "nessuno gli fa succedere.  Le due hanno cure diverse.\n"
+    nota="⭐⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA — 38/38 → 37/38 → 38/38, "
+         "e la marca MISURATA.**  ⛔ E la nota che c'era qui prima diceva il "
+         "contrario, con un caso che si e' rivelato **falso**: si legge sotto, "
+         "perche' il modo in cui e' caduta vale piu' della riga che la "
+         "sostituisce.\n"
+         "⛔⛔ **QUEL CHE C'ERA SCRITTO, E CHE E' STATO SMENTITO**: *«il giro "
+         "sano di `--certifica` non e' verde su CHUWI, 3 giri su 3, uscita 1, "
+         "BOCCIATO 30 su 31 — e i sette PROMOSSO 31/31 del 13 agosto erano su "
+         "NIC-OS: `atteso_sano = 0` vale la' e non qui»*.\n"
+         "  ⇒ ⭐ **Non era una differenza di macchina: era una REGRESSIONE del "
+         "CONTROLLO**, e il 30/31 e' stato **riprodotto su CHUWI** col file di "
+         "ieri.  La logica della «raffica» aggiunta alle 13:23 ritarda i "
+         "pacchetti dal 2° al 40° tutti della stessa quantita' ⇒ l'ordine si "
+         "conserva **per aritmetica, su qualunque macchina**, e `inversioni` "
+         "vale 0.  Rimesso il ponte a com'era, **su CHUWI**: PROMOSSO.\n"
+         "  ⚠ E anche il conto era sbagliato: i «sette giri promossi» del "
+         "12:46→13:18 erano **nove**, di cui **due BOCCIATO 20/31** che "
+         "nessun documento nomina.\n"
+         "⭐ **La forma dell'errore, che e' la cosa da portarsi via**: due esiti "
+         "diversi sulla stessa domanda erano stati spiegati con la variabile "
+         "piu' comoda (*«e' l'altra macchina»*) invece che cercata.  E' la "
+         "gemella della bandiera `--disable-gpu` della stessa sera: *quando un "
+         "banco da' due esiti diversi, la cosa da cercare non e' quale dei due "
+         "e' vero — e' **che cosa e' cambiato fra i due giri**.*\n"
          "⛔ E LA VOCE VALE PER `--certifica`, NON PER `--misura`: sul giro dal "
          "vivo l'atteso sano **non e' stabilmente 0** — su 13 misure "
          "registrate solo 3 hanno tutti e sette i controlli veri, e il "
