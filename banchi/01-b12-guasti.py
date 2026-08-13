@@ -347,10 +347,29 @@ FILE_CHE_CONTANO = {
     #    sono esattamente cio' che il controllo P6 misura (pagina.c).
     #    ⚠ Ogni nome e' anche una scadenza in piu': e' il prezzo di una
     #    certificazione che dice davvero su quali byte ha misurato.
+    # ⛔⛔ `remotix/codificatore.c` e `.h` ENTRANO il 13 agosto 2026 sera — ed e'
+    #    la cura del PUNTO CIECO, non un'aggiunta di completezza.
+    #
+    #    Fino a stasera **nessuna** voce del catalogo nominava il codificatore:
+    #    lo si poteva riscrivere da capo a fondo e il conto avrebbe detto «tutto
+    #    verde».  ⚠ E si vede ADESSO perche' adesso il lavoro va proprio li':
+    #    la codifica HEVC in hardware.
+    #
+    #    ⛔ Va nella lista di B17 e di B19 e **non altrove**, e la ragione e' la
+    #    stessa che tiene `03-b15` senza `remotix/*`: qui ci vanno i file su cui
+    #    il banco MISURA.  B17 e B19 misurano la catena vera, e il codificatore
+    #    e' il tratto che pesa 39 dei 74,58 ms — il piu' grosso di tutti.
+    #    Metterlo dove non si misura sarebbe una scadenza regalata.
+    #
+    #    ⚠⚠ E QUEL CHE QUESTA RIGA NON FA, detto qui perche' non venga letta per
+    #    piu' di quel che e': B17 e B19 sono **MAI PROVATI**.  ⇒ Da stasera la
+    #    rete c'e' **sulla carta**; nei fatti ci sara' il giorno in cui B17
+    #    viene certificato.  Il punto cieco non e' chiuso: e' **nominato**.
     "03-b17": ["03-b17-ritardo.py", "03-b17-ponte.py", "03-b17-accendi.sh",
                "03-b17-lancia.sh", "03-marca.py", "03-scena.c",
                "02-pagina-misura-cdp.py", "remotix/figlio.c",
                "remotix/webtransport.c", "remotix/pagina.c",
+               "remotix/codificatore.c", "remotix/codificatore.h",
                "remotix/pagina.html"] + FILE_DEL_BINARIO,
     # ⚠ B19 sono DUE file, e a catalogo va quello che misura la catena vera.
     #   ⭐ Il gemello `03-b19-dipinti-worker.py` non esce piu' «SEMPRE 0»: la
@@ -358,6 +377,7 @@ FILE_CHE_CONTANO = {
     #     (vedi la nota della voce), e adesso sa dire di no anche lui.
     "03-b19": ["03-b19-ritardo-worker.py", "03-b17-ponte.py", "03-marca.py",
                "03-scena.c", "03-b17-accendi.sh", "02-pagina-misura-cdp.py",
+               "remotix/codificatore.c", "remotix/codificatore.h",
                "remotix/pagina.html"] + FILE_DEL_BINARIO,
 
     # =======================================================================
@@ -2329,6 +2349,9 @@ ALTRI_POSTI = {
     #   cura gia' fatta sopra per `pagina.c`, applicata dove serviva adesso.
     "remotix/figlio.c": ["../src/figlio.c"],
     "remotix/webtransport.c": ["../src/webtransport.c"],
+    # ⛔ 13 agosto 2026 sera, con `codificatore.c` — il punto cieco.
+    "remotix/codificatore.c": ["../src/codificatore.c"],
+    "remotix/codificatore.h": ["../src/codificatore.h"],
 }
 
 
@@ -3838,6 +3861,130 @@ def verdetto_di_oggi(sigla, ordinate):
     return r, stato, verdetto, perche
 
 
+def punti_ciechi():
+    """⛔⛔ QUALI FILE DEL PRODOTTO NON HA SOTTO GLI OCCHI NESSUNO.
+
+    ⭐ Nasce il 13 agosto 2026 sera, e non per curare il punto cieco del
+    codificatore — quello si cura a mano, in due righe.  Nasce perche' **quel
+    punto cieco e' stato trovato per caso**, rileggendo il piano: nessuno
+    strumento sapeva dirlo, e il conto diceva «tutto verde» mentre un file da
+    53 000 byte non era guardato da nessuno.
+
+    ⚠ E la domanda giusta non e' «chi lo nomina», e' **«chi lo nomina in una
+    certificazione che REGGE OGGI»**: un file guardato solo da banchi mai
+    provati e' guardato **sulla carta**.  ⇒ Tre livelli, non due:
+
+        NESSUNO      il file non compare in nessuna lista        ⛔ cieco
+        SULLA CARTA  compare, ma solo in banchi non certificati  ⛔ cieco
+        COPERTO      compare in almeno un banco certificato oggi ⭐
+
+    Il codice d'uscita e' **1 se c'e' almeno un cieco**: cosi' la domanda si
+    puo' mettere in un giro automatico invece di doversela ricordare."""
+    sorgente = os.path.join(QUI, "..", "src")
+    if not os.path.isdir(sorgente):
+        print(f"    {GIALLO}[?]{GRIGIO} `../src` non c'e' da qui: questa "
+              f"domanda si fa dalla macchina che ha il prodotto")
+        return 3
+
+    # ⚠ Chi e' certificato OGGI si legge dal registro, non si ricorda.
+    certificati = set()
+    if os.path.exists(REGISTRO):
+        try:
+            # ⛔ Le stesse due cure di `mostra_registro`, e non per simmetria:
+            #    le righe d'unione non sono giri, e l'ordine di scrittura NON
+            #    e' l'ordine del tempo (due macchine scrivono lo stesso file).
+            grezze = [_normalizza(r) for r in leggi_registro(REGISTRO)
+                      if not _e_unione(r)]
+            ordinate = sorted(grezze, key=lambda r: r["quando"])
+            for sigla in FILE_CHE_CONTANO:
+                _, stato, verdetto, _ = verdetto_di_oggi(sigla, ordinate)
+                # ⚠ «uguali» e' il verdetto che vale oggi — non «vale».
+                #   Il nome sbagliato dava ZERO coperti su tutto: un allarme
+                #   totale, che e' il modo piu' rapido di non essere letto.
+                if stato == "certificato" and verdetto == "uguali":
+                    certificati.add(sigla)
+        except (OSError, ValueError) as e:
+            print(f"    {ROSSO}⛔ il registro non si legge: {e}{GRIGIO}")
+            return 2
+
+    # ⛔ Il nome di catalogo e' `remotix/x.c`, il file sta in `../src/x.c`:
+    #    si passa per ALTRI_POSTI, che e' gia' il posto dove questa
+    #    corrispondenza e' dichiarata una volta sola.
+    guardato_da = {}
+    for sigla, lista in FILE_CHE_CONTANO.items():
+        for nome in lista:
+            p = dove_sta(nome)
+            if p:
+                guardato_da.setdefault(os.path.realpath(p), []).append(sigla)
+
+    # ⛔ IL GEMELLO, e senza questa riga il conto grida al lupo.
+    #    `src/rcp.c` e `banchi/rcp/rcp.c` sono gemelli: il `Makefile` pretende
+    #    che siano identici e **nessuno compila** se divergono (e' gia' costato
+    #    il blocco di due gruppi).  ⇒ Chi guarda l'uno guarda l'altro.
+    #    ⚠ Ma la copertura e' **condizionata**: vale finche' regge il controllo
+    #    d'identita' del Makefile, e questo si DICE invece di darlo per fatto.
+    GEMELLI = {"rcp.c": "rcp/rcp.c", "rcp.h": "rcp/rcp.h",
+               "autenticazione.c": "rcp/autenticazione.c"}
+
+    ciechi, carta, coperti, gemellati = [], [], [], []
+    for f in sorted(os.listdir(sorgente)):
+        if not f.endswith((".c", ".h", ".html")) and f != "Makefile":
+            continue
+        vero = os.path.realpath(os.path.join(sorgente, f))
+        chi = guardato_da.get(vero, [])
+        if not chi and f in GEMELLI:
+            g = dove_sta(GEMELLI[f])
+            chi_g = guardato_da.get(os.path.realpath(g), []) if g else []
+            vivi = [s for s in chi_g if s in certificati]
+            if vivi:
+                gemellati.append((f, GEMELLI[f], vivi))
+                continue
+        if not chi:
+            ciechi.append((f, []))
+        elif not [s for s in chi if s in certificati]:
+            carta.append((f, chi))
+        else:
+            coperti.append((f, [s for s in chi if s in certificati]))
+
+    print(f"\n    == I PUNTI CIECHI DEL PRODOTTO — {len(coperti)} coperti, "
+          f"{len(gemellati)} per gemellaggio, {len(carta)} sulla carta, "
+          f"{len(ciechi)} ciechi\n")
+    for f, chi in ciechi:
+        print(f"    {ROSSO}⛔ CIECO      {GRIGIO}{f:22s} "
+              f"nessuna voce del catalogo lo nomina")
+    for f, chi in carta:
+        print(f"    {ROSSO}⛔ SULLA CARTA{GRIGIO} {f:22s} "
+              f"lo nomina {', '.join(sorted(chi))} — ma nessuno di quelli "
+              f"e' certificato oggi")
+    for f, g, chi in sorted(gemellati):
+        print(f"    {GIALLO}⚠ gemello    {GRIGIO} {f:22s} "
+              f"coperto via «{g}» da {', '.join(sorted(chi))} — ⛔ finche' "
+              f"regge il controllo d'identita' del Makefile")
+    for f, chi in sorted(coperti):
+        print(f"    {VERDE}⭐ coperto   {GRIGIO} {f:22s} "
+              f"{', '.join(sorted(chi))}")
+    print()
+    if ciechi or carta:
+        # ⛔ E QUESTA FRASE E' STATA RISTRETTA APPOSTA.  La prima versione
+        #    diceva «si possono riscrivere da capo a fondo senza che il conto
+        #    cambi di una riga»: vero per la SCADENZA, falso come suona.  Un
+        #    banco che gira contro un prodotto rotto diventa rosso lo stesso —
+        #    quel che NON succede e' che la certificazione si dichiari
+        #    invecchiata.  ⇒ Il difetto e' che una riga verde continua a dire
+        #    «certificato» quando non descrive piu' il prodotto che gira.
+        print(f"    {ROSSO}⛔ {len(ciechi) + len(carta)} file del prodotto "
+              f"possono cambiare senza che NESSUNA certificazione scada"
+              f"{GRIGIO}")
+        print(f"       ⇒ non vuol dire che un guasto passerebbe inosservato: "
+              f"vuol dire che una riga verde\n"
+              f"         continuerebbe a dire «certificato» su un prodotto "
+              f"che nel frattempo e' un altro.\n")
+        return 1
+    print(f"    {VERDE}⭐ ogni file del prodotto e' sotto gli occhi di almeno "
+          f"una certificazione che regge oggi{GRIGIO}\n")
+    return 0
+
+
 def mostra_registro():
     if not os.path.exists(REGISTRO):
         print(f"    {GIALLO}[?]{GRIGIO} nessun registro in {REGISTRO}: "
@@ -4118,6 +4265,11 @@ if __name__ == "__main__":
     p.add_argument("--togli", metavar="SIGLA")
     p.add_argument("--giudica", metavar="ESITI")
     p.add_argument("--registro", action="store_true")
+    p.add_argument("--punti-ciechi", action="store_true",
+                   dest="punti_ciechi",
+                   help="quali file del prodotto non sono guardati da nessuna "
+                        "certificazione che regge oggi. Esce 1 se ce n'e' "
+                        "almeno uno")
     # ⛔ Due domande che l'orchestratore deve poter fare senza rileggersi
     #    questo file da dentro una shell: chi le pone da fuori con `exec()` si
     #    costruisce una seconda verita' sul catalogo, e il giorno in cui le due
@@ -4186,6 +4338,8 @@ if __name__ == "__main__":
         sys.exit(elenco())
     if a.registro:
         sys.exit(mostra_registro())
+    if a.punti_ciechi:
+        sys.exit(punti_ciechi())
     if a.giudica:
         sys.exit(giudica(a.giudica, a.scena))
     if a.provabile:
