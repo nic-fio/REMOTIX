@@ -902,10 +902,28 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > **resta necessario** e la decisione dell'utente **non si tocca**: su un client senza VA-API per
 > HEVC il ripiego è l'unica cosa che tiene in piedi la promessa di §1.6.
 >
-> ⚠ **La `[?]` che questa misura apre**: il flusso è stato dipinto per la strada **`<video>`**, e il
-> prodotto usa **WebCodecs `VideoDecoder`**. C'è la dichiarazione (`isConfigSupported` true col
-> palco giusto) e la decodifica vera via `<video>`; ⛔ **non ancora la decodifica vera via
-> `VideoDecoder`**. Si chiude prima di impegnare il lavoro grosso, non dopo.
+> ⭐⭐ **E LA `[?]` È STATA CHIUSA LA SERA STESSA, PRIMA DEL LAVORO GROSSO.** Era: *«il flusso è
+> stato dipinto per la strada `<video>`, e il prodotto usa WebCodecs `VideoDecoder`»*.
+> `[M]` **120 `VideoFrame` su 120 unità d'accesso, 5 giri su 5, su tutt'e due le strade di
+> confezionamento** (Annex-B senza `description`, e `hvcC` demuxato dall'mp4) — fotogrammi contati
+> all'uscita del *callback*, non dichiarati. HEVC è anche **il più veloce dei sei flussi provati**, e
+> restituisce `VideoFrame.format: null`, cioè **fotogrammi opachi che stanno sulla GPU**.
+> ⭐ Il controllo negativo separa netto: con `--disable-gpu` HEVC dà **zero** 5 volte su 5 e gli
+> altri quattro flussi 120. ⚠ **Firefox headless** dà una risposta vera e diversa: positivi verdi,
+> HEVC **`NotSupportedError` 5 su 5** ⇒ il ripiego AV1 **serve davvero**, e adesso è misurato invece
+> che temuto.
+>
+> ⛔ **E una correzione al numero di due ore prima**: il *«119 fotogrammi su 120»* di `<video>` era
+> **un artefatto del CONTENITORE, non del codec** — l'mp4 porta una *edit list* che salta 2,4
+> fotogrammi in testa. Il flusso ne ha **120**, e tre fonti indipendenti lo dicono: `ffmpeg`
+> dall'mp4 ne conta **118**, dallo stesso flusso in Annex-B **120**, `<video>` **119**,
+> `VideoDecoder` — che contenitore non ne ha — **tutti e 120**. ⇒ Seconda ragione, indipendente, per
+> cui la misura con `<video>` non bastava: **non contava nemmeno la stessa cosa.**
+>
+> ⚠ **La `[?]` che RESTA, ed è di un altro pezzo**: lì i chunk arrivano **già spezzati, da un file
+> completo, su localhost**. Nel prodotto arriveranno **dalla rete, a pezzi**, e a spezzare sarà il
+> client. ⇒ È chiuso *«il decodificatore accetta e conta»*; **non** è chiuso *«il nostro
+> impacchettatore produce chunk che accetta»*.
 
 ---
 

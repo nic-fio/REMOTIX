@@ -199,11 +199,21 @@ partono le corsie, e ⛔ **due sono andate diversamente da come erano scritte**.
 > | VP9 profilo 2 10 bit (`vp9_vaapi`) | 1920×1080, 120 su 120, `powerEfficient: true` |
 > | H.264 high (`h264_vaapi`) | 1920×1080, 120 su 120, `powerEfficient: true` |
 >
-> ⚠ **Il pezzo che manca, e si dice prima che lo trovi qualcun altro**: questa è la strada
-> `<video>`, e il prodotto usa **WebCodecs `VideoDecoder`**. Per HEVC c'è la **dichiarazione**
-> (`isConfigSupported` true col palco giusto) e la **decodifica vera via `<video>`**, ⛔ **non
-> ancora la decodifica vera via `VideoDecoder`**. ⇒ È il **primo controllo della corsia B**, non un
-> blocco: se cadesse lì, cadrebbe prima che B abbia scritto il codificatore.
+> ⭐⭐⭐ **E IL PEZZO CHE MANCAVA È STATO CHIUSO LA SERA STESSA** — `banchi/03-palco-webcodecs.py`:
+> **120 `VideoFrame` su 120 unità d'accesso, 5 giri su 5, su tutt'e due le strade di
+> confezionamento** (Annex-B e `hvcC`). ⭐ E reso **refutabile invece che dimostrato**: due strade
+> invece di una, perché è quel che separa *«Chrome non decodifica HEVC»* da *«non ho saputo
+> chiedere»* — e ogni strada porta un controllo positivo che passa per **la stessa riga di codice**
+> (`h264` Annex-B usa lo stesso spezzatore di HEVC, `h264` avcC lo stesso demuxer).
+> **60 occasioni, 120/120 sui positivi.** Col `--disable-gpu`: HEVC **zero** 5 su 5, gli altri 120.
+>
+> ⛔ **E ha corretto il numero di due ore prima**: il *«119 su 120»* era **un artefatto del
+> contenitore** (una *edit list* che salta 2,4 fotogrammi), non del codec. Il flusso ne ha **120**.
+>
+> ⚠ **La `[?]` che RESTA, e non è del decodificatore**: lì i chunk arrivano **già spezzati, da un
+> file completo, su localhost**; nel prodotto arriveranno **dalla rete, a pezzi**, e a spezzare sarà
+> il client. ⇒ Chiuso *«il decodificatore accetta e conta»*; **non** chiuso *«il nostro
+> impacchettatore produce chunk che accetta»*. **È la prima cosa che tocca alla corsia B.**
 
 **⇒ Quel che resta della corsia A è UNA RIGA DI CURA, e la fa il n. 1 insieme a K1:**
 
