@@ -387,10 +387,36 @@ def mc_colore(percorso):
         v = {p: str(d[p][c]).lower() for p in parti}
         if len(set(v.values())) > 1:
             disaccordi.append("%s: %s" % (c, v))
+    # ⛔⭐ E LA CODIFICA HA **DUE** GAMME, NON UNA — 13 agosto 2026, trovato al
+    #    primo giro sulla catena vera.
+    #
+    #    La prima stesura confrontava `cattura.gamma` con `codifica.gamma`, cioe'
+    #    pretendeva che la codifica SCRIVESSE nella gamma in cui aveva RICEVUTO.
+    #    ⛔ Sul prodotto vero non e' cosi', ed e' legittimo: Mutter consegna RGB
+    #    **pieno** (0-255, misurato da F2.2) e il codificatore scrive YUV
+    #    bt709 a gamma **limitata**, dichiarandolo nel VUI
+    #    (`color_range = tv`, letto con `ffprobe`).  Il browser legge il VUI e
+    #    riespande: la catena e' coerente, e questo controllo l'avrebbe
+    #    **bocciata** — un rosso su una conversione dichiarata e corretta.
+    #
+    # ⇒ Le due domande si separano, e restano tutt'e due:
+    #      1. la codifica ha LETTO la cattura nella gamma in cui e' arrivata?
+    #         (`gamma_ingresso` contro `cattura.gamma`)
+    #      2. chi legge il flusso legge nella gamma in cui e' stato SCRITTO?
+    #         (`gamma` di codifica, riferimento e pagina — gia' sopra)
+    # ⚠ `gamma_ingresso` assente ⇒ si torna alla domanda vecchia: una catena
+    #   che non dichiara la conversione non se ne compra il permesso col
+    #   silenzio.
+    ing = d["codifica"].get("gamma_ingresso")
     g = {"cattura": str(cat["gamma"]).lower(),
-         "codifica": str(d["codifica"]["gamma"]).lower()}
+         "codifica": str(ing if ing else d["codifica"]["gamma"]).lower()}
     if len(set(g.values())) > 1:
-        disaccordi.append("gamma fra cattura e codifica: %s" % g)
+        disaccordi.append(
+            ("gamma con cui la codifica HA LETTO la cattura: %s" % g) if ing else
+            ("gamma fra cattura e codifica: %s — ⚠ e la codifica non dichiara "
+             "«gamma_ingresso»: una conversione di gamma e' legittima, ma va "
+             "DICHIARATA, o «ha convertito» e «ha letto male» hanno la stessa "
+             "faccia" % g))
     if disaccordi:
         return {"ok": False, "dichiarato": d,
                 "ragione": ("⛔ CHI LEGGE NON LEGGE COME E' STATO SCRITTO: "
@@ -422,8 +448,28 @@ def psnr_num(a, b, se_identici=99.0):
 # ───────────────────────────────────────────────────────────────────────────
 # Gli strumenti
 # ───────────────────────────────────────────────────────────────────────────
-def mv_vitalita(img, zone, quale):
-    """M-V — la porta.  Senza scena viva non si misura niente."""
+def mv_vitalita(img, zone, quale, mira=True):
+    """M-V — la porta.  Senza scena viva non si misura niente.
+
+    ⛔⭐ E `mira=False` NON SPEGNE QUESTA PORTA, ne spegne META' — 13 agosto 2026.
+
+    La scena della catena vera e' **il desktop dell'utente**, non la mira: sul
+    desktop non ci sono ne' i quattro marcatori d'angolo, ne' i tre riquadri a
+    luminanza uguale, ne' le rampe.  ⇒ Su una scena cosi' il metro ha due strade
+    e una sola e' onesta:
+
+      · pretendere i marcatori ⇒ **rosso su una catena sana**, cioe' uno
+        strumento che dice no sempre, che `F2-6` §3.3 dichiara non essere uno
+        strumento;
+      · ⛔ **promuovere in silenzio** ⇒ un verde che si porta dietro tre guasti
+        che questo giro NON avrebbe visto.  E' la cosa peggiore delle due.
+
+    ⇒ La terza: la meta' che **non dipende dalla scena** — deviazione e livelli,
+      cioe' la guardia contro i due neri con PSNR infinito — resta in vigore e
+      boccia; la meta' che dipende dalla mira si dichiara NON APPLICABILE con
+      scritto **che cosa smette di vedere**: un'immagine ribaltata dira' «i
+      pixel non coincidono» invece di «e' ribaltata».
+    """
     y = luma(img)
     dev = float(np.std(y))
     livelli = int(len(np.unique(np.round(y * 255).astype(np.int32))))
@@ -438,6 +484,22 @@ def mv_vitalita(img, zone, quale):
                             "infinito: qui il metro si ferma invece di "
                             "promuovere" % (quale, dev, SOGLIE["MV_dev"],
                                             livelli, SOGLIE["MV_livelli"]))
+        return esito
+
+    if not mira:
+        # ⛔ E il limite si scrive QUI, non nel rapporto: chi legge questa riga
+        #    sa che il giro non puo' dire «ribaltata».
+        esito["ok"] = True
+        esito["applicabile_marcatori"] = False
+        esito["marcatori"] = ("⚠ NON APPLICABILE: la scena dichiara «mira»: "
+                              "false, cioe' non e' la mira di F2.6 e non ha i "
+                              "quattro marcatori d'angolo.  ⇒ questo giro NON "
+                              "vede il guasto «ribaltato»: un'immagine "
+                              "specchiata direbbe «i pixel non coincidono» "
+                              "invece di «e' ribaltata», e manderebbe a cercare "
+                              "dalla parte sbagliata.  ⭐ La meta' che conta di "
+                              "piu' — due neri con PSNR infinito — e' stata "
+                              "misurata lo stesso, qui sopra")
         return esito
 
     # I quattro marcatori: ognuno deve somigliare AL PROPRIO, non a quello
@@ -591,7 +653,7 @@ def m3_blocco_peggiore(pag, rif, lato=64):
              "strumento no" % (dove, peggio, SOGLIE["M3_db"]))}
 
 
-def m4_canali(pag, rif, zone):
+def m4_canali(pag, rif, zone, mira=True):
     """M4 — SOLO sui tre riquadri a luminanza uguale della mira.
 
     ⛔ La prima stesura correlava i canali su TUTTA l'immagine, e il primo giro
@@ -606,6 +668,24 @@ def m4_canali(pag, rif, zone):
        ogni canale somigli al PROPRIO almeno 4 volte meglio (6 dB) che al
        migliore degli altri due.  Se i piani sono scambiati il rapporto va a 1.
     """
+    if not mira:
+        # ⛔ E NON si ripiega sull'immagine intera: e' esattamente la prima
+        #    stesura, quella che il primo giro sano ha smascherato (R, G e B
+        #    correlati a 0,978 su una scena naturale ⇒ rosso su catena sana).
+        #    Uno strumento tarato dove il segnale non esiste non misura «un po'
+        #    meno»: misura un'altra cosa.  ⇒ si dichiara assente.
+        return {"ok": None, "applicabile": False, "rapporti": None,
+                "ragione": ("⚠ NON APPLICABILE: la scena non e' la mira, quindi "
+                            "non ha i tre riquadri a luminanza uguale "
+                            "((87,0,0)·(0,26,0)·(0,0,255)) su cui questo "
+                            "strumento e' tarato.  ⛔ E la conseguenza va letta: "
+                            "questo giro NON vede il guasto «piani del colore "
+                            "scambiati» — che non muove la luminanza di un LSB, "
+                            "quindi M1a, M2 e M3 lo PROMUOVEREBBERO tutti e "
+                            "tre.  ⛔ Su una scena naturale non si ripiega "
+                            "sull'immagine intera: li' R, G e B sono gia' "
+                            "correlati a 0,978 e lo strumento direbbe rosso su "
+                            "una catena sana")}
     idx = []
     for z in zone["colori"].values():
         yy, xx = np.mgrid[z["y"]:z["y"] + z["h"], z["x"]:z["x"] + z["w"]]
@@ -710,7 +790,7 @@ def residuo_rampa(y10, z):
     return float(np.std(rm - np.polyval(A, t)))
 
 
-def m7_profondita(percorso_y10, larghezza, altezza, zone, prof_disp):
+def m7_profondita(percorso_y10, larghezza, altezza, zone, prof_disp, mira=True):
     """⛔ La profondita' NON si legge dal confronto dei pixel su una tela a 8 bit.
 
     ⭐ LO STRUMENTO DECISIVO SONO **I DUE BIT BASSI**, e non era quello che il
@@ -774,7 +854,21 @@ def m7_profondita(percorso_y10, larghezza, altezza, zone, prof_disp):
       strada **DMA-BUF**, che F2.2 dichiara non provata.
     """
     e = {"lato_nostro": None, "lato_dispositivo": None}
-    if percorso_y10 is None:
+    if not mira:
+        # ⛔ La nota misurata qui sopra dice perche' non si ripiega su una zona
+        #    qualunque: su una zona PIATTA i due bit bassi si concentrano al
+        #    95 % e M7 direbbe «troncato» su una catena sana (`[M]` 0,954).  Una
+        #    scena naturale non garantisce nessuna zona sfumata dichiarata.
+        e["lato_nostro"] = {"ok": None, "applicabile": False, "ragione":
+                            "⚠ NON APPLICABILE: la scena non e' la mira e non "
+                            "dichiara nessuna zona sfumata.  ⛔ E non si ripiega "
+                            "su una zona qualunque: su una zona piatta i due "
+                            "bit bassi si concentrano al 95 % e questo "
+                            "strumento direbbe «troncato» su una catena sana "
+                            "(`[M]` 0,954, 12 agosto 2026).  ⇒ questo giro NON "
+                            "vede il guasto «8 bit al posto di 10», che il PSNR "
+                            "da solo promuove restando sopra i 55 dB"}
+    elif percorso_y10 is None:
         e["lato_nostro"] = {"ok": None, "ragione":
                             "⛔ non misurata: manca --riferimento-10, cioe' il "
                             "piano Y `yuv420p10le` grezzo della decodifica di "
@@ -862,6 +956,14 @@ def m7_profondita(percorso_y10, larghezza, altezza, zone, prof_disp):
     ln, ld = e["lato_nostro"].get("ok"), e["lato_dispositivo"].get("ok")
     if ln is False or ld is False:
         e["ok"] = False
+    elif not mira:
+        # ⛔ «non applicabile per costruzione» e «manca l'ingresso» sono due
+        #    cose diverse, e il metro le tiene separate apposta: la prima si
+        #    DICHIARA, la seconda SOSPENDE il verdetto.  Confonderle e' il modo
+        #    in cui una misura mancante diventa un promosso.
+        e["ok"] = None
+        e["applicabile"] = False
+        e["ragione"] = e["lato_nostro"]["ragione"]
     elif ln is None:
         e["ok"] = None          # manca l'ingresso: sospeso, non promosso
     else:
@@ -929,7 +1031,7 @@ def m8_identita(percorso, giro):
 # ───────────────────────────────────────────────────────────────────────────
 # ⛔ C2 — il controllo positivo in coda: lo strumento sa bocciare?
 # ───────────────────────────────────────────────────────────────────────────
-def controllo_positivo(pag, rif, zone):
+def controllo_positivo(pag, rif, zone, mira=True):
     """⛔ Il guasto si innesta sul RIFERIMENTO, non sulla pagina.
 
     La prima stesura lo innestava sulla **pagina**, ed e' stata smascherata
@@ -954,22 +1056,35 @@ def controllo_positivo(pag, rif, zone):
     y0, x0 = h // 2 & ~63, w // 2 & ~63
     finta[y0:y0 + 64, x0:x0 + 64, :] = 0.0
     esiti["blocco_64_azzerato"] = not m3_blocco_peggiore(finta, rif)["ok"]
-    finta = rif[:, :, ::-1].copy()
-    esiti["piani_scambiati"] = not m4_canali(finta, rif, zone)["ok"]
+    # ⛔⭐ E LA TERZA PROVA NON SI DICHIARA PASSATA QUANDO NON PUO' GIRARE.
+    #    Con `mira=False` M4 non esiste (non ci sono i tre riquadri), e un
+    #    `not None` avrebbe fatto risultare la prova **superata**: il controllo
+    #    che deve dimostrare che il metro sa bocciare si sarebbe promosso da
+    #    solo, sullo strumento che in quel giro e' spento.  ⇒ si toglie
+    #    dall'elenco delle prove e si dichiara.
+    if mira:
+        finta = rif[:, :, ::-1].copy()
+        esiti["piani_scambiati"] = not m4_canali(finta, rif, zone)["ok"]
     # ⛔ e il rovescio, che e' l'altra meta' del controllo: sulla coppia SANA
-    #    (riferimento contro se stesso) gli stessi tre strumenti devono dire
-    #    di si'.  Uno strumento che dice no sempre non e' uno strumento.
-    esiti["e_sul_sano_dicono_si"] = (
+    #    (riferimento contro se stesso) gli stessi strumenti devono dire di si'.
+    #    Uno strumento che dice no sempre non e' uno strumento.
+    esiti["e_sul_sano_dicono_si"] = bool(
         m0_allineamento(rif, rif)["ok"] and
         m3_blocco_peggiore(rif, rif)["ok"] and
-        m4_canali(rif, rif, zone)["ok"])
+        (m4_canali(rif, rif, zone)["ok"] if mira else True))
     ok = all(esiti.values())
-    return {"ok": ok, "prove": esiti,
-            "ragione": None if ok else
-            ("⛔⛔ IL METRO E' ROTTO: gli sono stati innestati in memoria dei "
-             "guasti che DEVE vedere, e non li ha visti: %s.  Il verdetto di "
-             "questo giro NON VALE — non e' un promosso, non e' un bocciato"
-             % [k for k, v in esiti.items() if not v])}
+    fuori = {"ok": ok, "prove": esiti,
+             "ragione": None if ok else
+             ("⛔⛔ IL METRO E' ROTTO: gli sono stati innestati in memoria dei "
+              "guasti che DEVE vedere, e non li ha visti: %s.  Il verdetto di "
+              "questo giro NON VALE — non e' un promosso, non e' un bocciato"
+              % [k for k, v in esiti.items() if not v])}
+    if not mira:
+        fuori["non_provati"] = {
+            "piani_scambiati": "⚠ non provato: M4 e' spento su una scena che "
+                               "non e' la mira, e una prova che non gira non "
+                               "e' una prova passata"}
+    return fuori
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -1031,7 +1146,14 @@ def main():
         return 2
     W, H = meta["larghezza"], meta["altezza"]
     zone = meta["zone"]
+    # ⛔⭐ LA SCENA DICHIARA SE E' LA MIRA — e il valore di riposo e' `true`.
+    #    Una scena che non lo dice e' la mira: cosi' una scena naturale deve
+    #    dichiararsi, e nessun giro perde tre strumenti per una chiave
+    #    dimenticata.  ⚠ E' la stessa forma di `--senza-freschezza`: il limite
+    #    lo chiede chi misura, non lo concede il metro da solo.
+    mira = bool(meta.get("mira", True))
     R["larghezza"], R["altezza"] = W, H
+    R["mira"] = mira
 
     # ── C1: il canale di lettura ────────────────────────────────────────
     log("\n\033[1m== C1 · il canale di lettura — che cosa sto guardando davvero\033[0m")
@@ -1131,8 +1253,13 @@ def main():
     # ── M-V: la porta ───────────────────────────────────────────────────
     log("\n\033[1m== M-V · la scena e' viva? (⛔ la porta: due neri hanno PSNR infinito)\033[0m")
     R["MV"] = {}
+    if not mira:
+        log("    %s—%s   ⚠ la scena dichiara «mira»: false — il desktop vero, non "
+            "la mira di F2.6." % (GIALLO, GRIGIO))
+        log("        ⛔ Restano in vigore deviazione e livelli (la guardia contro i")
+        log("           due neri con PSNR infinito); i marcatori d'angolo NO.")
     for nome, img in (("cattura", cat), ("pagina", pag), ("riferimento", rif)):
-        e = mv_vitalita(img, zone, nome)
+        e = mv_vitalita(img, zone, nome, mira)
         R["MV"][nome] = e
         if e["ok"]:
             log("    %sOK%s  %-12s deviazione %.4f · %d livelli · marcatori al posto"
@@ -1169,11 +1296,11 @@ def main():
     R["M1"] = m1_catena_pulita(pag, rif)
     R["M2"] = m2_catena_intera(pag, rif, cat, profondita_pagina)
     R["M3"] = m3_blocco_peggiore(pag, rif)
-    R["M4"] = m4_canali(pag, rif, zone)
+    R["M4"] = m4_canali(pag, rif, zone, mira)
     R["M5"] = m5_gamma(pag, rif)
     R["M6"] = m6_freschezza(pag, cat, letti["cattura_precedente"])
     try:
-        R["M7"] = m7_profondita(a.riferimento_10, W, H, zone, prof_disp)
+        R["M7"] = m7_profondita(a.riferimento_10, W, H, zone, prof_disp, mira)
     except Mancante as e:
         log("    %sNO%s  %s" % (ROSSO, GRIGIO, e))
         R["esito"] = "non-misurato"
@@ -1258,7 +1385,9 @@ def main():
 
     # ── C2: il controllo positivo in coda ───────────────────────────────
     log("\n\033[1m== C2 · il controllo positivo — questo strumento sa BOCCIARE?\033[0m")
-    R["C2"] = controllo_positivo(pag, rif, zone)
+    R["C2"] = controllo_positivo(pag, rif, zone, mira)
+    for nome, r in (R["C2"].get("non_provati") or {}).items():
+        log("    %s—%s   guasto «%s» → %s" % (GIALLO, GRIGIO, nome, r))
     for nome, v in R["C2"]["prove"].items():
         log("    %s  guasto innestato in memoria «%s» → %s"
             % (VERDE + "OK" + GRIGIO if v else ROSSO + "NO" + GRIGIO, nome,
@@ -1268,6 +1397,49 @@ def main():
         R["esito"] = "metro-rotto"
         scrivi(a.esiti, R)
         return 3
+
+    # ── ⛔⭐ I DODICI GUASTI, E QUANTI QUESTO GIRO NON AVREBBE VISTO ──────
+    #
+    # ⛔ Nato il 13 agosto 2026, col primo giro sulla catena VERA.  Il metro e'
+    #    certificato «12 guasti su 12» — ⚠ ma quella cifra vale sulla MIRA.  Su
+    #    una scena naturale tre strumenti sono spenti, e senza questa tabella il
+    #    verdetto «PROMOSSO» si sarebbe portato dietro la cifra 12 di un giro
+    #    che ne poteva vedere nove.  ⇒ Il conto si rifa' A OGNI GIRO, sugli
+    #    strumenti VIVI in quel giro, invece di ricopiare un numero di ieri.
+    CHI_PRENDE = {
+        "nero":         ("M1", "M3"),
+        "nero-doppio":  ("M-V",),
+        "riga":         ("M0",),
+        "colonna":      ("M0",),
+        "precedente":   ("M6",),
+        "otto-bit":     ("M7",),
+        "piani":        ("M4",),
+        "gamma":        ("M5",),
+        "blocco":       ("M3",),
+        "matrice":      ("M-C",),
+        "dopo-reset":   ("M8",),
+        "ribaltato":    ("M-V/marcatori",),
+    }
+    vivi = set()
+    if R["MC"]["ok"]:
+        vivi.add("M-C")
+    vivi.add("M-V")                       # deviazione e livelli: sempre in vigore
+    if R["MV"]["cattura"].get("applicabile_marcatori") is not False:
+        vivi.add("M-V/marcatori")
+    for k in ("M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8"):
+        if R[k].get("ok") is not None:
+            vivi.add(k)
+    ciechi = [g for g, s in CHI_PRENDE.items() if not (set(s) & vivi)]
+    R["guasti_visibili"] = len(CHI_PRENDE) - len(ciechi)
+    R["guasti_ciechi"] = ciechi
+    log("\n\033[1m== ⛔ I dodici guasti: quanti questo giro ne avrebbe visti\033[0m")
+    log("    %s%d su %d%s — con gli strumenti VIVI in QUESTO giro, non con la"
+        % (VERDE if not ciechi else GIALLO, R["guasti_visibili"],
+           len(CHI_PRENDE), GRIGIO))
+    log("    cifra della certificazione, che vale sulla mira.")
+    for g in ciechi:
+        log("    %s—%s   «%s» — cieco: lo prende solo %s, spento in questo giro"
+            % (GIALLO, GRIGIO, g, "/".join(CHI_PRENDE[g])))
 
     # ── il verdetto ─────────────────────────────────────────────────────
     log("\n\033[1m== Il verdetto\033[0m")
@@ -1296,6 +1468,14 @@ def main():
     if sospesi:
         log("    ⚠ ma con %s dichiarati NON MISURATI su richiesta esplicita."
             % ", ".join(sospesi))
+    if ciechi:
+        # ⛔ La riga non e' un contorno: un promosso che non dichiara quanti
+        #    guasti non poteva vedere e' esattamente il verde che da' fiducia.
+        log("    ⛔ E questo promosso vale su %d guasti su %d: %s NON li avrebbe"
+            % (R["guasti_visibili"], len(CHI_PRENDE),
+               ", ".join("«%s»" % g for g in ciechi)))
+        log("       visti, e il rimedio non e' una soglia: e' la MIRA sul "
+            "monitor virtuale.")
     scrivi(a.esiti, R)
     return 0
 

@@ -280,6 +280,50 @@ prodotto: erano due punti in cui `RCP.md`, poche ore dopo la cura, non decideva
   non ce l'ha nessuno: resta `[?]`.
 
 ===========================================================================
+⭐⛔⛔ E IL 13 AGOSTO 2026 LA RILETTURA OSTILE NE HA TROVATA UNA **DENTRO §6.2
+     CONTRO SE STESSA** — **P21**, la settima della famiglia
+
+*P8 -> P11 -> P13 -> P14 -> P19 -> P20 -> **P21**.  ⛔ Sei righe della stessa
+famiglia ormai convivono nella stessa sezione, e questa e' venuta fuori
+mettendole in fila: **due paragrafi di §6.2, a otto righe di distanza,
+comandano il contrario sullo stesso fotogramma.**  ⚠ Non e' un difetto del
+prodotto: e' il documento.*
+
+  ⛔ Il paragrafo di **P19**: un fotogramma alla misura **nuova** puo' arrivare
+     **prima** del `TELA` che la concede, e il client *«NON DEVE chiudere:
+     trattiene»*.
+  ⛔ Il paragrafo della tolleranza (**P11** + **P13**), otto righe sotto: una
+     misura *«che non e' mai stata in vigore in quella finestra»* e'
+     `ERRORE_PROTOCOLLO` **subito**.
+  ⇒ Scena: `SESSIONE` 1920x1080 -> `TELA(ADATTATA, 1600, 900)`; il client manda
+    `ADATTA_TELA(1280, 720)` e il fotogramma a 1280x720 arriva **prima** della
+    risposta.  Due implementazioni conformi, **due byte diversi**.
+
+⭐ **La cura, e la grandezza vera**: si trattiene finche' resta una
+   `ADATTA_TELA` che **il client ha spedito lui** e a cui nessun `TELA` ha
+   risposto — locale, monotona, indipendente dalla consegna, come `ATTACCA` per
+   P20 e come `numero` per P14.  §7.1 garantisce che la risposta arrivi (*«a
+   ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o
+   no»*), e §4.2 che il canale sia ordinato ⇒ l'n-esimo `TELA` risponde
+   all'n-esima richiesta.  ⛔ E chiude la `[?]` di P19 — *«fino a quando
+   trattiene»*, che nel prodotto era **otto fotogrammi**: un fondo osservabile,
+   ma pur sempre un sostituto.
+
+⛔⛔ **E la prima stesura della cura era ancora un sostituto**, bocciata dal
+    caso e non da una rilettura: diceva *«si trattiene la MISURA che il client
+    ha nominato»*, e §4.5 dice che **la tela concessa puo' essere diversa da
+    quella chiesta** — su KWin < 6.8 e' la strada normale (`SPECIFICHE.md`
+    §6.3).  ⇒ Il client che chiede 1366x768 e riceve il 1280x720 che il
+    compositore sta per concedere avrebbe chiuso una sessione sana **un passo
+    piu' in la'**: l'ottava stesura, evitata.  Caso
+    `p21-concessa-diversa-da-chiesta`, guasto **G14**.
+
+⇒ Tre casi, come per P8, perche' una cura si sbaglia in **due** versi:
+  `p21-nominata-e-in-volo` (la fa vedere) · `p21-concessa-diversa-da-chiesta`
+  (impedisce di scriverla troppo stretta, **G14**) · `p11-misura-mai-in-vigore`
+  (impedisce di scriverla troppo larga, **G15**).
+
+===========================================================================
 ⛔ CHE COSA QUESTO BANCO **NON** PROVA, E VA DETTO
 
 | | perche' non e' qui |
@@ -478,6 +522,54 @@ class Contesto:
         # ⛔ «Questo lettore applica l'eccezione 6 di §3?» — e NON e' «il
         #    secondo non e' ancora passato»: il secondo non c'e' piu' (P13).
         self.grazia_concessa = True
+        # ⛔⛔⭐ E LE RICHIESTE DI CAMBIO TELA CHE IL CLIENT HA SPEDITO E CHE
+        #     NESSUN `TELA` HA ANCORA RISPOSTO — proposta **P21**, 13 agosto 2026.
+        #
+        #     ⚠ **Non e' un elenco di misure: e' un conto di richieste in volo**,
+        #       e la differenza e' tutta la cura.  La grandezza vera del fenomeno
+        #       *«questo fotogramma appartiene a un mondo che ho chiesto io e che
+        #       non mi e' ancora stato risposto»* e' **il messaggio spedito**, non
+        #       i numeri che porta — esattamente come per **P20** e' `ATTACCA` e
+        #       non la tela che `ATTACCA` chiede.  ⛔ Le misure si tengono per il
+        #       **registro** e per il guasto **G14**, mai per decidere: §4.5 dice
+        #       che *«la tela concessa puo' essere diversa da quella chiesta»*, e
+        #       un discriminante scritto sui numeri chiuderebbe una sessione sana
+        #       il giorno in cui il compositore concede una misura vicina invece
+        #       di quella chiesta (`SPECIFICHE.md` §6.3 e §6.4).
+        #     ⭐ Locale, monotona, indipendente dalla consegna: il client sa
+        #       quante `ADATTA_TELA` ha spedito perche' le ha spedite lui, e sa
+        #       che a ciascuna arrivera' un `TELA` perche' §7.1 lo impone.
+        #     ⛔ Vuota di suo: chi non dichiara niente ha il giudice di ieri, e
+        #       nessun lettore che importa questo file (`01-b4-validatore.py`,
+        #       `02-filo-validatore.py`) cambia verdetto senza saperlo — I6.
+        self.adatta_in_volo = []
+
+    def adatta_spedito(self, lar, alt):
+        """⭐⛔ **Il client ha spedito un `ADATTA_TELA(lar, alt)`** — §7.1, e la
+        risposta non e' ancora arrivata.
+
+        ⛔ E' un fatto **del client**, non del filo che il client riceve: sta qui
+           per la stessa ragione per cui ci sta `attacca_spedito` (P20).  Un
+           arbitro che legge una **registrazione** lo vede lo stesso, perche'
+           §11.1 registra tutt'e due i versi.
+        """
+        self.adatta_in_volo.append((lar, alt))
+
+    def risponde_il_tela(self):
+        """⛔ E' arrivato un `TELA`: **una** richiesta in volo e' stata risposta.
+
+        ⭐ Quale?  **La piu' vecchia**, e non e' una scelta di comodo: il canale
+           di controllo e' **uno solo, affidabile e ordinato** (§4.2, §2.5) e
+           §7.1 impone **un** `TELA` a **ogni** `ADATTA_TELA` ⇒ l'n-esimo `TELA`
+           risponde all'n-esimo `ADATTA_TELA`.  ⚠ Senza questa riga la cura di
+           P21 non sarebbe scritta affatto nella scena che P11 ha gia' pagato —
+           chi trascina una finestra ne manda **due**.
+
+        ⚠ Vale per tutt'e due gli esiti: un `TELA(RIFIUTATA)` risponde quanto un
+          `TELA(ADATTATA)` (§7.1, *«riuscito o no»*).
+        """
+        if self.adatta_in_volo:
+            self.adatta_in_volo.pop(0)
 
     def adatta_tela(self, lar, alt, precedente=None, grazia=True):
         """§7.1 — e' arrivato un `TELA(ADATTATA, lar, alt)`.
@@ -533,6 +625,12 @@ class Contesto:
            `02-filo-validatore.py` e `01-b4-validatore.py` rimettono il contesto
            a posto flusso per flusso).
         """
+        # ⛔ P21 — E UN `TELA` RISPONDE A UNA RICHIESTA, PRIMA DI QUALUNQUE
+        #    ALTRA COSA: anche quello che ripete la misura in vigore, anche
+        #    quello che rifiuta.  ⚠ Metterlo dopo il ritorno anticipato qui
+        #    sotto lascerebbe in volo per sempre una richiesta a cui il server
+        #    ha risposto — cioe' un client che trattiene senza fine.
+        self.risponde_il_tela()
         if (lar, alt) == (self.tela_larghezza, self.tela_altezza):
             # ⛔ Niente e' cambiato: non c'e' nessuna «misura nuova» che pretenda
             #    una chiave (§5.2) e non c'e' niente in volo da graziare (§6.2).
@@ -661,6 +759,23 @@ class Giudice:
         #        una cura che salva il caso che l'ha motivata e apre l'altro.
         self.sessione_come_grandezza = "G12" in self.guasti
         self.chiude_prima_di_attacca = "G13" not in self.guasti
+        # ⛔⛔ G14 e G15 — I DUE MODI DI SCRIVERE MALE **P21**, uno per verso, e
+        #     il primo non e' inventato: e' **la cura come e' stata proposta**.
+        #
+        #     G14 «il discriminante scritto sulla MISURA nominata»: si trattiene
+        #         solo un fotogramma la cui misura il client ha nominato lui in
+        #         un `ADATTA_TELA`.  ⛔ Troppo STRETTA: §4.5 dice che la tela
+        #         concessa puo' essere diversa da quella chiesta, e su KWin < 6.8
+        #         (`SPECIFICHE.md` §6.3) e' la strada normale ⇒ la sessione sana
+        #         cade **un passo piu' in la'**, che e' la firma di questa
+        #         famiglia da P8 in poi.
+        #     G15 «trattiene sempre»: ogni misura mai in vigore si trattiene,
+        #         anche senza nessuna richiesta in volo.  ⛔ Troppo LARGA: porta
+        #         via la riga di P11 — quella che chiude **subito** su una misura
+        #         che nessuno ha mai chiesto — cioe' proprio dove il server e'
+        #         piu' probabile che sbagli.
+        self.p21_sulla_misura = "G14" in self.guasti
+        self.p21_trattiene_sempre = "G15" in self.guasti
         # ⛔ La misura tollerata dalla grazia si TIENE, non si decide subito:
         #    un fotogramma in volo resta soggetto a tutte le altre righe di
         #    §6.2 — l'ordine dei `numero`, il tetto, il FIN — e decidere qui
@@ -1038,6 +1153,52 @@ class Giudice:
                         f"misura nuova.  `[M]` cosi' configurato il "
                         f"decodificatore dipinge un'immagine sfasciata senza "
                         f"sollevare un errore")
+            # 8-quater. ⭐⛔⛔ **P21 — LE DUE RIGHE DI §6.2 COMANDANO IL
+            #           CONTRARIO SULLO STESSO FOTOGRAMMA**, e a otto righe di
+            #           distanza.  Proposta aperta il 13 agosto 2026.
+            #
+            #           §6.2, paragrafo di **P19**: un fotogramma alla misura
+            #           **nuova** puo' arrivare **prima** del `TELA` che la
+            #           concede, e il client ⛔ **NON DEVE chiudere: trattiene**.
+            #           §6.2, paragrafo della tolleranza (**P11** + **P13**),
+            #           otto righe sotto: una misura *«che non e' mai stata in
+            #           vigore in quella finestra»* e' `ERRORE_PROTOCOLLO`
+            #           ⛔ **subito**.
+            #           ⇒ Sulla scena `SESSIONE` 1920x1080 -> `TELA(1600,900)`
+            #             -> `ADATTA_TELA(1280,720)` senza risposta, col
+            #             fotogramma 1280x720 che arriva prima del `TELA`, le
+            #             due righe danno **due byte diversi**: `CONGEDO` da una
+            #             parte, niente dall'altra.  E' la forma di **P10** —
+            #             ⛔ ma li' erano due sezioni, qui e' **la stessa**.
+            #
+            #     ⭐ Il discriminante che questo banco propone e' quel che
+            #        **il client ha spedito lui**, cioe' la stessa grandezza di
+            #        P20 e la forma generale del `numero` di P14: locale,
+            #        monotona, indipendente dalla consegna.  ⛔ E NON e' «la
+            #        misura che il client ha nominato» — vedi `adatta_in_volo` e
+            #        il guasto G14: §4.5 permette al server di concedere una
+            #        tela **diversa da quella chiesta**, e il discriminante
+            #        scritto sui numeri ucciderebbe la sessione sana un passo
+            #        piu' in la'.
+            #     ⛔ E qui non si cura niente: `RCP.md` e' del coordinatore.
+            #        Finche' il documento porta le due righe, l'esito onesto e'
+            #        `AMBIGUO` — due implementazioni conformi divergono.
+            in_volo = (self.p21_trattiene_sempre
+                       or ((lar, alt) in self.c.adatta_in_volo
+                           if self.p21_sulla_misura
+                           else bool(self.c.adatta_in_volo)))
+            if self.misura_tollerata is None and in_volo:
+                return self._decidi(Verdetto(
+                    AMBIGUO, "RCP.md §6.2",
+                    f"il fotogramma e' {lar}x{alt}, la tela in vigore e' "
+                    f"{self.c.tela_larghezza}x{self.c.tela_altezza} e quella "
+                    f"misura non e' mai stata in vigore in questa finestra — "
+                    f"⛔ ma il client ha {len(self.c.adatta_in_volo)} "
+                    f"`ADATTA_TELA` spedita e senza risposta: §6.2 dice "
+                    f"«trattiene» nel paragrafo dei fotogrammi in volo e "
+                    f"`ERRORE_PROTOCOLLO` **subito** otto righe sotto.  Due "
+                    f"implementazioni conformi, due byte diversi",
+                    scostamento=4, propone="P21"))
             if self.misura_tollerata is None:
                 return self._chiuso_il_12_agosto(
                     "P5", 4, "RCP.md §6.2",
@@ -1501,6 +1662,108 @@ PROPOSTE_APERTE = {
             "p20-prima-di-attacca": ERRORE_PROTOCOLLO,
         },
     },
+    # ⭐⛔⛔ E LA **SETTIMA** DELLA FAMIGLIA, TROVATA DALLA RILETTURA OSTILE DEL
+    #     13 AGOSTO 2026 rimettendo in fila le sei che ormai convivono:
+    #     P8 -> P11 -> P13 -> P14 -> P19 -> P20 -> **P21**.
+    #     ⚠ Il 13 agosto e' nata come rilievo **dichiarato e non curato**
+    #       (`RILIEVI_DICHIARATI`), senza un caso.  ⛔ Ci e' rimasta un giro
+    #       solo: un rilievo che ha una cura, tre casi e un guasto per verso
+    #       **non e' piu' un rilievo, e' una proposta** — e la tabella in cui sta
+    #       scritto e' meta' di quel che dice.
+    "P21": {
+        "dove": "RCP.md §6.2 — **due paragrafi della stessa sezione**, a otto "
+                "righe di distanza",
+        "dice":
+            "⛔ Il fotogramma alla misura mai in vigore **si trattiene** finche' "
+            "resta una `ADATTA_TELA` che il client ha **spedito lui** e a cui "
+            "nessun `TELA` ha ancora risposto; quando quel `TELA` arriva, il "
+            "fotogramma si **rigiudica** contro la tela che il `TELA` dichiara. "
+            "⛔ E se non c'e' nessuna richiesta in volo non si trattiene "
+            "niente: `ERRORE_PROTOCOLLO` **subito**, come §6.2 dice gia'.  "
+            "⭐ La grandezza e' **una richiesta in volo**, non **la misura "
+            "chiesta**: §4.5 permette una tela concessa diversa da quella "
+            "chiesta.",
+        "era":
+            "⛔ **Contraddizione interna, e i due paragrafi sono nella stessa "
+            "sezione**: quello di **P19** dice che un fotogramma alla misura "
+            "nuova arrivato **prima** del suo `TELA` non fa chiudere — "
+            "*«trattiene»* — e quello della tolleranza (**P11** + **P13**), "
+            "otto righe sotto, dice che una misura *«che non e' mai stata in "
+            "vigore in quella finestra»* e' `ERRORE_PROTOCOLLO` **subito**.  "
+            "⇒ Sulla stessa scena due implementazioni conformi mandano due byte "
+            "diversi: una `CONGEDO`, l'altra niente.  ⚠ E' la forma di **P10** "
+            "— li' pero' erano §5.2 contro §6.2, **due sezioni**; qui e' §6.2 "
+            "con se stessa, ⛔ e la seconda riga e' arrivata **dopo** la prima. "
+            "⭐ E si distingue da **D14/P8** in un punto che conta: li' le due "
+            "implementazioni **convergevano** sul byte sbagliato e nessun "
+            "confronto le poteva smentire, qui **divergono** — questa un "
+            "confronto fra due client la trova, e la troverebbe in produzione.  "
+            "⛔ E la prima cura proposta era **la misura che il client ha "
+            "nominato**, che e' ancora un sostituto: §4.5 dice *«la tela "
+            "concessa puo' essere diversa da quella chiesta»* — su KWin < 6.8 "
+            "e' la strada normale (`SPECIFICHE.md` §6.3) e la negoziazione "
+            "PipeWire di §6.4 concede il modo che il compositore **ha** — e un "
+            "client che trattenesse solo i numeri che ha nominato chiuderebbe "
+            "la sessione **un passo piu' in la'**, che e' la firma di questa "
+            "famiglia da P8 in poi.  ⇒ Sarebbe stata l'ottava stesura.",
+        # ⛔ Il testo pronto da incollare, e **non tocca §9**: nessun tipo,
+        #    nessun campo, nessun valore nuovo — `ADATTA_TELA` e `TELA` ci sono
+        #    da §7.1, e la clausola di §9 e' consumata dal 10 agosto 2026.
+        #    ⚠ Sono DUE pezzi, perche' i paragrafi che si contraddicono sono
+        #      due: curarne uno solo lascerebbe in piedi la contraddizione, che
+        #      e' l'errore che P12 ha gia' fatto pagare (§3 al singolare mentre
+        #      §6.2 era passata alla finestra).
+        "testo":
+            "⛔ **[1] Al posto del paragrafo «Il client NON DEVE chiudere» e "
+            "dell'intero riquadro `[?]` «fino a quando trattiene»:**\n"
+            "\n"
+            "⛔ **Il client NON DEVE chiudere: trattiene il fotogramma**, e lo "
+            "scrive nel registro.  ⭐ **E fino a quando lo trattiene non e' un "
+            "numero: e' una condizione** — finche' resta una `ADATTA_TELA` che "
+            "**il client ha spedito** e a cui nessun `TELA` ha ancora risposto. "
+            "Arrivato quel `TELA`, il fotogramma trattenuto **si rigiudica** "
+            "contro la tela che quel `TELA` dichiara in vigore, e da li' e' un "
+            "fotogramma come tutti gli altri: prima la regola dell'ordine, poi "
+            "quella della misura.  ⛔ **E se nessuna `ADATTA_TELA` e' senza "
+            "risposta non si trattiene niente**: una misura che il client non "
+            "ha nessun motivo di aspettarsi e' `ERRORE_PROTOCOLLO` subito, come "
+            "dice il paragrafo della tolleranza qui sotto.\n"
+            "\n"
+            "⚠ **E il `TELA` arriva per forza**, che e' la ragione per cui "
+            "questa e' una fine e non un'attesa aperta: §7.1 impone *«a ogni "
+            "`ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o "
+            "no»*, e il canale di controllo e' **uno solo, affidabile e "
+            "ordinato** (§4.2) ⇒ l'n-esimo `TELA` risponde all'n-esima "
+            "`ADATTA_TELA`, e chi trascina una finestra ne manda due senza che "
+            "il conto si perda.  ⛔ Un `TELA(RIFIUTATA)` chiude l'attesa quanto "
+            "un `TELA(ADATTATA)`: il fotogramma trattenuto si rigiudica contro "
+            "la tela rimasta in vigore, e di norma **e' `ERRORE_PROTOCOLLO`** — "
+            "il server ha spedito una misura che non ha mai avuto.\n"
+            "\n"
+            "⭐ **E la grandezza e' «una richiesta in volo», non «la misura che "
+            "il client ha chiesto»**: §4.5 dice che *«la tela concessa puo' "
+            "essere diversa da quella chiesta»* — su KWin < 6.8 e' la strada "
+            "normale (`SPECIFICHE.md` §6.3) e la negoziazione di §6.4 concede "
+            "il modo che il compositore **ha**.  ⇒ Un client che trattenesse "
+            "solo i numeri che ha nominato chiuderebbe una sessione in cui il "
+            "server ha fatto esattamente quel che §7.1 gli permette.  ⚠ E' la "
+            "stessa grandezza di **P20** — *quel che il client ha spedito lui*: "
+            "locale, monotona, indipendente dalla consegna.\n"
+            "\n"
+            "⛔ **[2] In coda al paragrafo «Il cambio di tela e i fotogrammi in "
+            "volo», al posto di «e lo e' subito una misura che non e' mai stata "
+            "in vigore in quella finestra»:**\n"
+            "\n"
+            "e lo e' **subito** una misura che non e' mai stata in vigore in "
+            "quella finestra ⛔ **e che nessuna `ADATTA_TELA` senza risposta "
+            "puo' ancora concedere**: se una c'e', il fotogramma **si "
+            "trattiene** invece di far chiudere (il paragrafo qui sopra).",
+        "casi": {
+            "p21-nominata-e-in-volo": AMBIGUO,
+            "p21-concessa-diversa-da-chiesta": AMBIGUO,
+            "p11-misura-mai-in-vigore": ERRORE_PROTOCOLLO,
+        },
+    },
 }
 
 # ⭐ E LE DUE CHE QUESTA TABELLA HA OSPITATO PER UN GIRO SOLO, con la data:
@@ -1544,46 +1807,59 @@ RILIEVI_DICHIARATI = {
         "marca": "[?] non misurata, e **non e' di questo capitolo**: §7.1 e' "
                  "l'input, e questo banco giudica il canale video",
     },
-    # ⭐⛔⛔ E QUESTO L'HA TROVATO LA RILETTURA OSTILE DEL 13 AGOSTO 2026,
-    #     rimettendo in fila le sei righe della famiglia adesso che convivono:
-    #     P8 -> P11 -> P13 -> P14 -> P19 -> P20.
-    "P21": {
-        "dove": "RCP.md §6.2 — **due paragrafi della stessa sezione**, e "
-                "comandano il contrario sullo stesso fotogramma",
+    # ⭐⛔⛔ E QUESTA L'HA TROVATA LA RILETTURA OSTILE DEL 13 AGOSTO 2026, quella
+    #     che rimetteva in fila le SETTE righe della famiglia — P8, P11, P13,
+    #     P14, P19, P20, P21 — per vedere se ne restava un'ottava.  ⛔ Ne
+    #     restava una, e non e' dentro §6.2: e' in §3, ed e' **la forma esatta
+    #     di P12**, un passo piu' in la'.
+    #     ⚠ **Dichiarata e non curata, e la cura NON si prova qui**: due cure in
+    #       un giro sono la fretta che il 12 agosto e' costata tre giri, e
+    #       questo giro ne porta gia' una (P21).
+    "P22": {
+        "dove": "RCP.md §3 — l'elenco delle eccezioni, contro §2.5 e §6.2",
         "dice":
-            "Il paragrafo di **P19** dice che un fotogramma alla misura nuova "
-            "puo' arrivare **prima** del `TELA` che la concede e che il client "
-            "⛔ **NON DEVE chiudere: trattiene**.  Il paragrafo della "
-            "tolleranza (P11 + P13), otto righe sotto, dice che una misura "
-            "*«che non e' mai stata in vigore in quella finestra»* e' "
-            "`ERRORE_PROTOCOLLO` ⛔ **subito**.  ⇒ Due implementazioni "
-            "conformi, due byte diversi: una manda `CONGEDO`, l'altra "
-            "trattiene.  ⚠ E' la forma di **P10**, che il 12 agosto aveva §5.2 "
-            "e §6.2 a comandare il contrario sullo stesso fotogramma — qui le "
-            "due righe sono nella **stessa** sezione.",
-        "scena": "`SESSIONE` 1920x1080; `TELA(ADATTATA, 1600, 900)` — la "
-                 "finestra e' aperta; il client manda `ADATTA_TELA(1280, 720)` "
-                 "e il fotogramma catturato alla misura nuova arriva **prima** "
-                 "del `TELA` che la concede.  1280x720 non e' mai stata in "
-                 "vigore in quella finestra ⇒ il secondo paragrafo chiude, il "
-                 "primo trattiene.  ⭐ E il discriminante e' lo stesso di P20, "
-                 "cioe' **quel che il client ha spedito lui**: una misura "
-                 "nominata da un `ADATTA_TELA` ancora senza risposta si "
-                 "trattiene, una che nessuno ha mai nominato (800x600, il caso "
-                 "`p11-misura-mai-in-vigore`) chiude subito.  ⛔ E la stessa "
-                 "grandezza chiude la `[?]` che P19 lascia aperta — *«fino a "
-                 "quando trattiene»*, oggi **otto** fotogrammi in "
-                 "`src/pagina.html`, che e' un sostituto: si trattiene finche' "
-                 "non arriva il `TELA` che risponde a QUEL `ADATTA_TELA`, e "
-                 "§7.1 lo garantisce — *«a ogni `ADATTA_TELA` il server DEVE "
-                 "rispondere con un `TELA`, riuscito o no»*",
+            "§3 dichiara *«le eccezioni sono **sei**, e sono tutte qui.  Fuori "
+            "da questo elenco non se ne inventano»* ⛔ e **il TRATTENERE non e' "
+            "fra le sei**.  Ma §2.5 (cura di **P20**, 13 agosto) dice che un "
+            "fotogramma arrivato prima di `SESSIONE` *«NON DEVE»* far chiudere: "
+            "**si trattiene**; e §6.2 (cura di **P19**, 12 agosto) dice la "
+            "stessa cosa del fotogramma alla misura mai in vigore.  ⇒ Sono "
+            "**due tolleranze comandate da due sezioni normative** e assenti "
+            "dall'elenco che si dichiara completo.  ⚠ L'eccezione 6 non le "
+            "copre: parla dei fotogrammi che portano *«una misura che E' STATA "
+            "in vigore»*, cioe' del caso opposto.",
+        "scena": "un client scritto leggendo §3 — *«fuori da questo elenco non "
+                 "se ne inventano»* — chiude con `ERRORE_PROTOCOLLO` il "
+                 "fotogramma che §2.5 e §6.2 gli ordinano di trattenere; uno "
+                 "scritto leggendo §2.5 lo trattiene.  ⛔ Due implementazioni "
+                 "conformi, due byte diversi, e quella che chiude uccide "
+                 "**proprio la sessione sana** che P19 e P20 sono state scritte "
+                 "per salvare.  ⭐ E' la forma di **P12** — §3 rimasta indietro "
+                 "mentre §6.2 andava avanti — con una differenza che la rende "
+                 "peggiore: li' §3 era piu' STRETTA della stessa tolleranza, "
+                 "qui la tolleranza in §3 **non c'e' affatto**.  ⛔ E la cura "
+                 "di **P21**, quando entrera', ne aggiunge una terza allo "
+                 "stesso elenco: applicarla senza toccare §3 lascia la ferita "
+                 "aperta esattamente come il 12 agosto",
         "caso": None,
-        "marca": "[R] contraddizione confermata da due righe gia' scritte "
-                 "(§6.2 con se stessa), ⛔ **dichiarata e non curata**: due "
-                 "cure in un giro sono la fretta che il 12 agosto e' costata "
-                 "tre giri, e questo giro ne porta gia' una (P20)",
+        "marca": "[R] contraddizione confermata da due righe gia' scritte (§3 "
+                 "contro §2.5 e §6.2).  ⛔ **Nessun caso**: questo banco giudica "
+                 "il fotogramma con la lettura di §6.2, e un caso che "
+                 "pretendesse la lettura di §3 giudicherebbe un client "
+                 "immaginario — si dichiara invece di fabbricarlo",
     },
 }
+
+# ⭐⛔ E UNA QUESTA TABELLA L'HA OSPITATA PER UN GIRO SOLO: **P21**, nata qui il
+#    13 agosto 2026 — «§6.2 comanda il contrario di se stessa a otto righe di
+#    distanza» — e passata a `PROPOSTE_APERTE` il giro dopo, con il testo
+#    pronto, tre casi e due guasti.  ⛔ Il passaggio non e' contabilita': un
+#    rilievo e' una **lettura**, una proposta e' una **cura con i casi che la
+#    tengono onesta**, e questo banco dice quale delle due sta consegnando
+#    (`REVIEWER.md` §4).  ⚠ E il discriminante che il rilievo proponeva —
+#    *«la misura che il client ha nominato»* — la verifica col caso concreto
+#    l'ha **bocciato**: §4.5 permette una tela concessa diversa da quella
+#    chiesta.  Vedi `p21-concessa-diversa-da-chiesta` e il guasto **G14**.
 
 # ⭐ E QUESTA TABELLA SI E' SVUOTATA IL 12 AGOSTO 2026, come quella delle
 #    proposte: **P12** (§3 riga 6 rimasta al singolare mentre §6.2 era passata
@@ -2233,10 +2509,67 @@ def _():
       "e' piu' probabile che sbagli.  ⛔ E' la seconda meta' che alla prima "
       "stesura di P5 mancava, e che a P8 e' costata due giri",
       "RCP.md §6.2",
+      # ⛔ IL CONTESTO E' DIVENTATO ESPLICITO IL 13 AGOSTO 2026 — proposta
+      #    **P21** — e l'atteso NON e' cambiato.  ⭐ Il campo che decide e'
+      #    `adatta_in_volo`, e qui e' **vuoto**: i due `TELA` sono arrivati
+      #    tutt'e due, quindi non c'e' nessuna richiesta del client che 800x600
+      #    possa ancora concedere.  ⇒ E' il caso che tiene STRETTA la cura di
+      #    P21: senza, *«si trattiene sempre»* resterebbe verde su tutto il
+      #    banco e porterebbe via la riga di P11, cioe' la difesa proprio dove
+      #    il server e' piu' probabile che sbagli.  Guasto **G15**.
       contesto={"tela": (1920, 1080),
-                "adatta_tela": [(1600, 900), (1280, 720)]})
+                "adatta_tela": [(1600, 900), (1280, 720)],
+                "adatta_spedito": []})
 def _():
     return [intestazione(lar=800, alt=600, num=41) + b"\x00" * 64], "fin"
+
+
+# ── ⭐⛔⛔ P21 — LE DUE RIGHE DI §6.2 CHE COMANDANO IL CONTRARIO ────────────
+#    ⚠ La coppia di P21 e' di **tre** casi, come quella di P8, e per la stessa
+#      ragione: una cura si puo' sbagliare in due versi, e la scena che l'ha
+#      motivata li passa tutt'e due.  Il terzo caso e' quello contro cui la
+#      cura **come e' stata proposta** si e' rotta.
+@caso("p21-nominata-e-in-volo", AMBIGUO,
+      "⭐⛔ **P21, IL CASO CHE LA FA VEDERE** — `SESSIONE` 1920x1080, e' passato "
+      "un `TELA(ADATTATA, 1600, 900)`, il client manda `ADATTA_TELA(1280, 720)` "
+      "e ⛔ **il fotogramma a 1280x720 arriva PRIMA della risposta**: gli stream "
+      "sono indipendenti e §6.2 lo dice due volte.  ⇒ Otto righe di §6.2 "
+      "comandano il contrario sullo stesso fotogramma — il paragrafo di **P19** "
+      "dice *«NON DEVE chiudere: trattiene»*, quello della tolleranza (**P11** "
+      "+ **P13**) dice `ERRORE_PROTOCOLLO` **subito** per una misura mai in "
+      "vigore in quella finestra.  ⛔ Due implementazioni conformi, due byte "
+      "diversi, e una delle due uccide una sessione in cui **nessuno** ha "
+      "sbagliato: il server ha catturato alla misura che sta per concedere, "
+      "com'e' tenuto a fare da §5.2 (la chiave a ogni cambio di tela).  ⭐ E la "
+      "cura non e' un'attesa aperta: §7.1 impone un `TELA` a **ogni** "
+      "`ADATTA_TELA`, «riuscito o no»",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1600, 900),
+                "adatta_spedito": (1280, 720)})
+def _():
+    return [intestazione(lar=1280, alt=720, num=41) + b"\x00" * 64], "fin"
+
+
+@caso("p21-concessa-diversa-da-chiesta", AMBIGUO,
+      "⭐⛔⛔ **P21, IL CASO CHE IMPEDISCE DI SCRIVERE LA CURA TROPPO STRETTA — "
+      "e ha bocciato il discriminante come era stato proposto** — stessa scena, "
+      "ma il client ha chiesto `ADATTA_TELA(1366, 768)` e il fotogramma che "
+      "arriva prima della risposta porta **1280x720**, che e' la misura che il "
+      "compositore concedera'.  ⛔ Il client quel numero non l'ha **nominato** "
+      "mai: la cura scritta *«si trattiene la misura che il client ha "
+      "nominato»* chiude qui la sessione, e §4.5 dice a chiare lettere che *«la "
+      "tela concessa puo' essere diversa da quella chiesta»* — su KWin < 6.8 e' "
+      "**la strada normale** (`SPECIFICHE.md` §6.3), e la negoziazione di §6.4 "
+      "concede il modo che il compositore **ha**, non quello che si e' chiesto. "
+      "⇒ Il difetto si sposta di un passo, che e' la firma di questa famiglia "
+      "da P8 in poi (`LEZIONI.md` §1.13): la grandezza vera non e' **la misura "
+      "chiesta**, e' **una richiesta in volo**.  ⭐ Ed e' la stessa forma di "
+      "P20, dove la grandezza e' `ATTACCA` e non la tela che `ATTACCA` chiede",
+      "RCP.md §6.2",
+      contesto={"tela": (1920, 1080), "adatta_tela": (1600, 900),
+                "adatta_spedito": (1366, 768)})
+def _():
+    return [intestazione(lar=1280, alt=720, num=41) + b"\x00" * 64], "fin"
 
 
 # ── ⭐⛔ D13 — LA CHIAVE A OGNI CAMBIO DI TELA (§5.2), la riga di stasera ───
@@ -2654,6 +2987,49 @@ GUASTI = {
             "solo dopo `ATTACCA`» danno lo stesso verde su tutto il resto.",
         "marca": "p20-prima-di-attacca: ERRORE_PROTOCOLLO -> AMBIGUO",
     },
+    # ⭐⛔⛔ G14 e G15 — I DUE MODI DI SBAGLIARE **P21**, uno per verso.  ⚠ E il
+    #     primo non e' inventato nemmeno lui: e' **la cura come e' stata
+    #     proposta**, la mattina del 13 agosto, prima che qualcuno le mettesse
+    #     davanti un compositore che concede una misura diversa da quella
+    #     chiesta.
+    "G14": {
+        "titolo": "il discriminante di P21 scritto sulla MISURA che il client "
+                  "ha nominato, invece che sulla richiesta in volo",
+        "rompe": "la grandezza vera del fenomeno di §6.2 (proposta P21, "
+                 "`LEZIONI.md` §1.13)",
+        "dimostra":
+            "⛔ E' la cura di P21 **come e' stata proposta**, e la verifica "
+            "l'ha bocciata in un caso solo: §4.5 dice che *«la tela concessa "
+            "puo' essere diversa da quella chiesta»*, su KWin < 6.8 e' la "
+            "strada normale (`SPECIFICHE.md` §6.3) e la negoziazione di §6.4 "
+            "concede il modo che il compositore **ha**.  ⭐ Col guasto, il "
+            "client che ha chiesto 1366x768 e riceve — prima della risposta — "
+            "il fotogramma 1280x720 che il compositore sta per concedere "
+            "**chiude la sessione**: nessuno ha sbagliato, e il difetto si e' "
+            "spostato di un passo invece di sparire.  ⚠ E' la ottava stesura "
+            "della stessa riga, evitata perche' il banco porta il caso **appena "
+            "fuori** dalla scena che la cura raccontava.",
+        "marca": "p21-concessa-diversa-da-chiesta: AMBIGUO -> ERRORE_PROTOCOLLO",
+    },
+    "G15": {
+        "titolo": "la cura di P21 scritta TROPPO LARGA: ogni misura mai in "
+                  "vigore si trattiene, anche senza nessuna richiesta in volo",
+        "rompe": "la riga di §6.2 curata da P11 — `ERRORE_PROTOCOLLO` **subito** "
+                 "per una misura mai in vigore in quella finestra",
+        "dimostra":
+            "⛔ E' la forma con cui **P5** e' finita sbagliata, e con cui P8 e' "
+            "costata due giri: una cura che salva il caso che l'ha motivata e "
+            "porta via la difesa dall'altro lato.  ⭐ Col guasto, il fotogramma "
+            "a 800x600 in mezzo a un cambio di tela — una misura che **nessuno "
+            "ha mai chiesto**, cioe' il campo sbagliato che P11 esiste per "
+            "fermare — smette di far chiudere: il banco non distingue piu' «il "
+            "`TELA` e' ancora in volo» da «il server sta spedendo una misura "
+            "che non ha».  ⚠ E' il guasto che dimostra che il **terzo** caso "
+            "della terna si guadagna il posto: senza di lui, «si trattiene "
+            "sempre» e «si trattiene finche' c'e' una richiesta in volo» danno "
+            "lo stesso verde su tutto il resto del banco.",
+        "marca": "p11-misura-mai-in-vigore: ERRORE_PROTOCOLLO -> AMBIGUO",
+    },
 }
 
 
@@ -2698,6 +3074,19 @@ def gira_caso(c, guasti):
             # ⚠ La grazia e' accesa di suo dalla sera del 12 agosto 2026 —
             #   §6.2 la porta — e non si chiede piu': vedi `adatta_tela`.
             ctx.adatta_tela(lar, alt)
+    # ⛔⭐ E LE `ADATTA_TELA` SPEDITE E NON ANCORA RISPOSTE — proposta **P21**.
+    #
+    #    ⚠ Si posano **dopo** i `TELA`, e l'ordine e' la scena: un `TELA` che
+    #      arrivasse dopo risponderebbe a questa richiesta e la toglierebbe dal
+    #      volo — cioe' il caso direbbe una cosa e il contesto un'altra.
+    #    ⛔ E non e' un campo del filo che il client riceve: e' quel che il
+    #      client ha **spedito lui**, come `attacca_spedito` per P20.  Un
+    #      `setattr` diretto sull'elenco avrebbe scavalcato il metodo, che e'
+    #      il posto in cui sta scritto **perche'** quel fatto conta.
+    spedite = campi.pop("adatta_spedito", None)
+    if spedite is not None:
+        for lar, alt in (spedite if isinstance(spedite, list) else [spedite]):
+            ctx.adatta_spedito(lar, alt)
     # ⛔ E i campi si posano DOPO il `TELA`, non prima: sono lo stato del
     #    client **al momento in cui il fotogramma arriva**, e un
     #    `chiave_alla_tela_nuova` scritto prima verrebbe azzerato da

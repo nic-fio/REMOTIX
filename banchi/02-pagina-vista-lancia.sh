@@ -8,6 +8,20 @@
 #   GIRI="vista-piu-larga" bash banchi/02-pagina-vista-lancia.sh
 #   GUASTI="" bash banchi/02-pagina-vista-lancia.sh      solo le scene sane
 #
+#   ⭐ E CONTRO IL SERVER VERO, cioe' la pagina che la 7561 SERVE davvero:
+#      URL_SANO=https://192.168.0.2:7561/ bash banchi/02-pagina-vista-lancia.sh
+#
+#   ⛔ Perche' e' un giro DIVERSO, e non un doppione.  Il giro normale misura la
+#      pagina del DEPOSITO (`src/pagina.html`) servita da un `http.server` di
+#      casa.  ⛔ Ma il processo del prodotto la pagina la legge UNA VOLTA SOLA
+#      all'accensione (`src/pagina.c:590`): deposito curato e pagina servita
+#      sono due fatti diversi, ed e' esattamente lo scarto che il 13 agosto ha
+#      lasciato la cura scritta e fuori servizio.  ⇒ Con `URL_SANO` il banco
+#      misura quel che l'utente scarica, non quel che noi abbiamo scritto.
+#   ⚠ E i GUASTI restano di casa: si innestano in una COPIA servita da noi, e
+#     sul server vero non si innestano — quindi con `URL_SANO` il banco gira le
+#     sole scene sane, e lo dichiara invece di far credere di aver certificato.
+#
 # ⚠ GIRA SU CHUWI, dove stanno i browser.  ⛔ Porta di questo giro: **7591**.
 #   7448, 7501 e 7561 si contano prima e dopo e NON si toccano — ⛔ la 7561 e'
 #   il server che l'utente sta guardando adesso.
@@ -51,9 +65,15 @@ SCHERMO=${SCHERMO:-:91}
 TELA=${TELA:-2600x1500}
 DIAGNOSI=${DIAGNOSI:-9591}
 SORGENTE=${SORGENTE:-$RADICE/src/pagina.html}
+# ⛔ Vuoto = il giro di casa.  Pieno = si misura la pagina che un server VERO
+#    sta servendo in questo istante (vedi la testata).
+URL_SANO=${URL_SANO:-}
 GIRI=${GIRI:-vista-piu-larga vista-piu-grande vista-piu-piccola fattore-2 ridimensiona}
 # ⛔ I guasti si provano sulla scena dell'utente: finestra larga, tela 16:9.
 GUASTI=${GUASTI:-cornice-fissa uno-a-uno}
+# ⛔ Contro un server vero i guasti non esistono: si innestano in una copia, e
+#    la copia qui non c'e'.  Si tolgono, e si dice perche'.
+[ -n "$URL_SANO" ] && GUASTI=""
 GIRO_GUASTO=${GIRO_GUASTO:-vista-piu-larga}
 ESITI=${ESITI:-$QUI/02-pagina-vista-esiti.jsonl}
 COPIE=${COPIE:-$QUI/02-pagina-vista-copie}
@@ -98,26 +118,52 @@ for t in Xvfb xdpyinfo google-chrome python3 curl; do
 done
 ok "Xvfb · xdpyinfo · google-chrome · python3 · curl"
 inf "vicini PRIMA (su NIC-OS) — $(vicini)"
-[ -f "$SORGENTE" ] || { ko "⛔ non trovo $SORGENTE"; exit 2; }
-# ⛔ E si guarda che sia la pagina DI OGGI: un banco che misurasse la pagina di
-#    ieri direbbe «il difetto c'e' ancora» di una cura gia' fatta.
-if grep -q 'adatta_vista' "$SORGENTE"; then
-	ok '⭐ il sorgente porta «adatta_vista»: e'"'"' la pagina con la cura'
-else
-	ko '⛔ il sorgente NON porta «adatta_vista»: e'"'"' la pagina di prima della cura'
-	exit 1
-fi
-
-log "1. Le pagine servite — la sana e le guaste, in cartelle separate"
 mkdir -p "$COPIE"
-python3 "$QUI/02-pagina-vista-prova.py" --prepara sano \
-	--sorgente "$SORGENTE" --dentro "$T/sano" >/dev/null || exit 2
-ok "sana: $T/sano/index.html"
-for g in $GUASTI; do
-	python3 "$QUI/02-pagina-vista-prova.py" --prepara "$g" \
-		--sorgente "$SORGENTE" --dentro "$T/$g" >/dev/null || exit 2
-	ok "guasta «$g»: $T/$g/index.html — l'innesto ha trovato il suo testo"
-done
+
+if [ -n "$URL_SANO" ]; then
+	# ⛔⭐ IL CONTROLLO CHE DA' SENSO A TUTTO IL GIRO, e non e' sul deposito:
+	#    si SCARICA la pagina dal server e si conta li' dentro.  «La cura e'
+	#    scritta» e «la cura e' in servizio» sono due fatti diversi, e il
+	#    processo del prodotto legge il file una volta sola all'accensione.
+	#    ⚠ Il corpo si scarica in un FILE: `curl | grep -q` chiude la
+	#      conduttura al primo riscontro e `pipefail` fa fallire un controllo
+	#      su una pagina che c'era.
+	log "0-bis. ⭐ La pagina SERVITA da $URL_SANO — contata, non sperata"
+	curl -sk --max-time 20 -o "$T/servita-vera.html" "$URL_SANO" \
+		|| { ko "⛔ non ho scaricato $URL_SANO: non dico niente della sua pagina"; exit 2; }
+	n=$(grep -c 'adatta_vista' "$T/servita-vera.html")
+	inf "$(wc -c < "$T/servita-vera.html") byte scaricati"
+	if [ "$n" -gt 0 ]; then
+		ok "⭐ la pagina SERVITA porta «adatta_vista» $n volte: e' quella con la cura"
+	else
+		ko "⛔ la pagina SERVITA porta «adatta_vista» ZERO volte: il file sul"
+		ko "   disco puo' anche essere curato — il PROCESSO sta servendo quella"
+		ko "   di prima, e va riavviato"
+		exit 1
+	fi
+	inf "⚠ e i guasti NON girano in questo modo: si innestano in una copia, e la"
+	inf "   copia qui non c'e'. Chi certifica lo strumento e' il giro di casa"
+else
+	[ -f "$SORGENTE" ] || { ko "⛔ non trovo $SORGENTE"; exit 2; }
+	# ⛔ E si guarda che sia la pagina DI OGGI: un banco che misurasse la pagina di
+	#    ieri direbbe «il difetto c'e' ancora» di una cura gia' fatta.
+	if grep -q 'adatta_vista' "$SORGENTE"; then
+		ok '⭐ il sorgente porta «adatta_vista»: e'"'"' la pagina con la cura'
+	else
+		ko '⛔ il sorgente NON porta «adatta_vista»: e'"'"' la pagina di prima della cura'
+		exit 1
+	fi
+
+	log "1. Le pagine servite — la sana e le guaste, in cartelle separate"
+	python3 "$QUI/02-pagina-vista-prova.py" --prepara sano \
+		--sorgente "$SORGENTE" --dentro "$T/sano" >/dev/null || exit 2
+	ok "sana: $T/sano/index.html"
+	for g in $GUASTI; do
+		python3 "$QUI/02-pagina-vista-prova.py" --prepara "$g" \
+			--sorgente "$SORGENTE" --dentro "$T/$g" >/dev/null || exit 2
+		ok "guasta «$g»: $T/$g/index.html — l'innesto ha trovato il suo testo"
+	done
+fi
 
 log "2. Xvfb e Chrome, una volta sola per tutte le scene"
 # ⚠ Il browser NON si rifa' a ogni scena: qui non c'e' nessun certificato da
@@ -132,8 +178,14 @@ X xdpyinfo >/dev/null 2>&1 || { ko "⛔ Xvfb non risponde"; cat "$T/xvfb.log"; e
 inf "Xvfb $SCHERMO a $TELA, pid $XVFB"
 
 mkdir -p "$T/profilo"
+# ⛔ Contro il server vero il certificato e' il suo, autofirmato: senza questo
+#    Chrome si ferma sull'avviso e il banco misurerebbe la schermata d'avviso.
+#    ⚠ Si accende SOLO in quel modo — nel giro di casa non c'e' nessun TLS, e
+#    un interruttore acceso sempre nasconderebbe un giorno un errore vero.
+CERTI=()
+[ -n "$URL_SANO" ] && CERTI=(--ignore-certificate-errors)
 X google-chrome --user-data-dir="$T/profilo" --no-first-run \
-	--no-default-browser-check --disable-gpu \
+	--no-default-browser-check --disable-gpu "${CERTI[@]}" \
 	--remote-debugging-port="$DIAGNOSI" --remote-allow-origins='*' \
 	--window-size=${TELA%x*},${TELA#*x} --window-position=0,0 \
 	about:blank >"$T/chrome.log" 2>&1 &
@@ -171,8 +223,14 @@ servi() {
 }
 
 log "3. Le scene sane — la pagina del prodotto, cinque viste"
-servi || exit 2
-inf "servito $T su http://127.0.0.1:$PORTA/ — una cartella per pagina"
+if [ -n "$URL_SANO" ]; then
+	SANO=$URL_SANO
+	inf "⭐ la pagina la serve IL PRODOTTO: $SANO"
+else
+	SANO="http://127.0.0.1:$PORTA/sano/"
+	servi || exit 2
+	inf "servito $T su http://127.0.0.1:$PORTA/ — una cartella per pagina"
+fi
 # ⛔ E si guarda che al percorso ci sia DAVVERO quella pagina, prima di
 #    misurarla: un banco che misurasse la pagina sbagliata direbbe il contrario
 #    del vero, e l'ha gia' fatto una volta oggi.
@@ -181,17 +239,19 @@ inf "servito $T su http://127.0.0.1:$PORTA/ — una cartella per pagina"
 #   `pipefail` fa fallire il controllo su una pagina che c'era — `[M]` sul
 #   secondo giro di stasera.
 for g in sano $GUASTI; do
-	curl -s --max-time 5 -o "$T/servita-$g.html" "http://127.0.0.1:$PORTA/$g/"
+	if [ "$g" = sano ]; then u=$SANO; else u="http://127.0.0.1:$PORTA/$g/"; fi
+	curl -sk --max-time 20 -o "$T/servita-$g.html" "$u"
 	if grep -q 'REMOTIX' "$T/servita-$g.html"; then
-		ok "http://127.0.0.1:$PORTA/$g/ risponde con la pagina ($(wc -c < "$T/servita-$g.html") byte)"
+		ok "$u risponde con la pagina ($(wc -c < "$T/servita-$g.html") byte)"
 	else
-		ko "⛔ http://127.0.0.1:$PORTA/$g/ non risponde con la pagina"; exit 2
+		ko "⛔ $u non risponde con la pagina"; exit 2
 	fi
 done
+PREF=${PREF:-sano}
 for g in $GIRI; do
 	python3 "$QUI/02-pagina-vista-prova.py" --giro "$g" --guasto sano \
-		--url "http://127.0.0.1:$PORTA/sano/" --diagnosi "$DIAGNOSI" \
-		--copia "$COPIE/sano-$g.png" --uscita "$ESITI"
+		--url "$SANO" --diagnosi "$DIAGNOSI" \
+		--copia "$COPIE/$PREF-$g.png" --uscita "$ESITI"
 	s=$?; FATTI=$((FATTI+1))
 	[ "$s" -ne 0 ] && GUAI=$((GUAI+1))
 done
@@ -216,7 +276,17 @@ printf '\n'
 if [ "$GUAI" -eq 0 ]; then
 	printf '    %s⭐ tutti i %s giri sono come dovevano: la pagina riscala alla%s\n' "$VERDE" "$FATTI" "$GRIGIO"
 	printf '    %s   vista in tutt%se due i versi, tiene le proporzioni, segue il%s\n' "$VERDE" "'" "$GRIGIO"
-	printf '    %s   ridimensionamento — e le due pagine guaste diventano rosse.%s\n' "$VERDE" "$GRIGIO"
+	printf '    %s   ridimensionamento.%s\n' "$VERDE" "$GRIGIO"
+	# ⛔ La riga dei guasti si stampa SOLO se i guasti sono girati.  ⚠ Dirla
+	#    sempre sarebbe la forma peggiore: un verde che si attribuisce una
+	#    certificazione che in questo giro non ha fatto.
+	if [ -n "$GUASTI" ]; then
+		printf '    %s   ⭐ E le %s pagine guaste sono diventate rosse.%s\n' \
+			"$VERDE" "$(printf '%s\n' $GUASTI | wc -l)" "$GRIGIO"
+	else
+		printf '    %s   ⚠ E i guasti in questo giro NON sono girati: questo giro%s\n' "$GIALLO" "$GRIGIO"
+		printf '    %s     MISURA la pagina servita, non CERTIFICA lo strumento.%s\n' "$GIALLO" "$GRIGIO"
+	fi
 	exit 0
 fi
 printf '    %s⛔ %s giri su %s non sono come dovevano.%s\n' "$ROSSO" "$GUAI" "$FATTI" "$GRIGIO"
