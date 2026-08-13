@@ -4,6 +4,28 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
+> ## Stato al 13 agosto 2026 — ⭐⭐⭐ **LA FASE 2 È CHIUSA: il desktop è dentro una scheda**
+>
+> ✅ **Chiusa il 13 agosto 2026, sul giudizio dell'utente**, che ha riaperto
+> `https://192.168.0.2:7561/` **come sé stesso** dopo la cura del riscalamento e ha deciso di
+> chiudere **davanti all'elenco di quel che resta aperto**.
+>
+> ⭐⭐ **E questa volta il giudizio non è solo una frase: i pixel sono stati misurati.** Il server
+> dichiara `vista=2545x927` alle 08:45:44 UTC; lo scatto, otto secondi dopo, ha la zona dipinta alta
+> **927 px** e larga **1648** — rapporto **1,7778** contro un 16:9 di **1,7778**. ⇒ La pagina riscala
+> alla vista **senza storcere di un pixel**: `SPECIFICHE.md` §6.1 misurata sul vetro.
+> ⭐ La provenienza sta in [`fasi/rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md).
+>
+> ⛔ **E si chiude con SETTE cose dichiarate aperte**, messe davanti all'utente **prima** che
+> decidesse — perché un giudizio dato senza sapere che cosa manca è un'approvazione al buio. Stanno
+> nel riquadro «DA QUI SI RIPRENDE — 13 agosto» più sotto, e in
+> [`fasi/02-primo-fotogramma.md`](fasi/02-primo-fotogramma.md).
+>
+> ⭐ **Il catalogo dei banchi è pieno: 15 su 15**, ed è il conto del **progetto** — le due copie del
+> registro unite e rispecchiate, 90 giri, *nessuna riga persa, nessuna inventata*.
+>
+> ---
+>
 > ## Stato all'11 agosto 2026 — ⭐⭐ **LA FASE 1 È CHIUSA**
 >
 > ✅ **Chiusa la sera dell'11 agosto 2026, sul giudizio dell'utente**: *«Va bene, la stretta di mano

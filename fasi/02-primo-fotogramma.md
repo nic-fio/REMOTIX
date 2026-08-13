@@ -1,8 +1,9 @@
 # Fase 2 — Il primo fotogramma
 
-Aperta il **12 agosto 2026** · ⏳ **In corso** — ⭐ **il banco esiste e il prodotto esiste**: la
-catena consegna, e il 13 agosto l'utente ha visto il proprio desktop dentro una scheda. Manca il
-giudizio.
+Aperta il **12 agosto 2026** · ⭐⭐⭐ **CHIUSA il 13 agosto 2026, sul giudizio dell'utente** — la
+catena consegna, e l'utente ha guardato il proprio desktop dentro una scheda del browser.
+⭐ La provenienza sta in [`rapporti/GIUDIZIO-13-agosto.md`](rapporti/GIUDIZIO-13-agosto.md): la scena,
+il registro del server verbatim, le impronte, e ⭐ **la misura fatta sui pixel dello scatto**.
 
 > ⚠ *Questa riga diceva «il banco esiste, il prodotto no», e con lei altri tre punti del documento
 > (§«Come è stata divisa», §«Che cosa è stato sviluppato», §«Il giudizio dell'utente»). Erano vere
@@ -564,11 +565,30 @@ decodificatore non c'è, senza cavo dati non si legge `Created MediaCodec <nome>
 
 ---
 
-## Il giudizio dell'utente
+## ⭐⭐⭐ Il giudizio dell'utente — **dato il 13 agosto 2026, e la fase è chiusa**
 
-⏳ **Non ancora dato, e adesso c'è di che darlo**: il prodotto esiste e la catena consegna — l'utente
-ha guardato il proprio desktop dentro una scheda e ha detto *«è lo sfondo GNOME, è OK»*.
+L'utente ha riaperto `https://192.168.0.2:7561/` **come sé stesso** dopo la cura del riscalamento, ha
+consegnato lo scatto come risultato, e — messe davanti le **sette cose dichiarate aperte** — ha deciso
+di **chiudere la fase adesso**, con quelle scritte come aperte.
 
-⛔ **Ma il giudizio non si chiede sul solo verde**: si chiede insieme alle tre cose qui sopra e alle
-`[?]` della tavola «Che cosa resta `[?]`», o è preso su metà quadro. Quel che manca prima della
-domanda sta in `README.md`, riquadro «Che cosa manca per chiedere il giudizio».
+⭐ **E questa volta il giudizio non è solo una frase**: lo scatto è stato letto **pixel per pixel**, e
+il numero si confronta con quel che il server dichiara.
+
+| dal registro del server, `08:45:44 UTC` | dai pixel dello scatto, otto secondi dopo |
+|---|---|
+| `vista=2545x927` | la zona dipinta è alta **927 px** ⭐ **identico** |
+| `tela=1920x1080` | larga **1648 px**, rapporto **1,7778** contro un 16:9 di **1,7778** |
+
+⇒ ⭐⭐ **La pagina riscala alla vista rispettando la proporzione, e non di un pixel storta** — è
+`SPECIFICHE.md` §6.1 misurata **sul vetro**, non dichiarata. Le bande nere (448 a sinistra, 464 a
+destra) sono la conseguenza aritmetica di una finestra 2,74 che ospita una tela 16:9: l'alternativa
+sarebbe **stirare**, che §6.1 vieta.
+
+⛔ **E lo scatto ha sollevato una cosa che nessun banco aveva visto**: la tela viene dipinta all'**86%**
+su un monitor largo **2560**. Non è un difetto del riscalamento — è la `[?]` sulla risoluzione, e
+**912 px di nero** sono il suo prezzo, misurato.
+
+⚠ *Si scrive quel che è successo e non una frase che non è stata detta: il verdetto dell'11 agosto
+era una **citazione**, questo è una **decisione presa davanti a un elenco**. Le due cose hanno lo
+stesso valore e non la stessa forma.* ⇒
+[`rapporti/GIUDIZIO-13-agosto.md`](rapporti/GIUDIZIO-13-agosto.md).
