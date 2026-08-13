@@ -274,6 +274,46 @@ stato)
 registro)
 	tail -"${2:-60}" "$LOG"; exit 0 ;;
 
+palco)
+	# ⛔⛔ IL PALCO DEL SERVER, MISURATO — e gira QUI perche' DEVE girare da
+	#     ROOT.  Il prodotto e' di root: `ls /proc/<pid>/fd` da utente normale
+	#     risponde «Permission denied», e un lettore ingenuo leggerebbe zero
+	#     nodi DRM e concluderebbe «codifica in SOFTWARE» — cioe' esattamente
+	#     il numero che la corsia E deve misurare, sbagliato al contrario.
+	#     ⇒ `LEZIONI.md` §2.0: «non c'e'» e «non ho potuto guardare».
+	#
+	# ⭐ E la stampa e' JSON su UNA riga, con dentro anche i DENOMINATORI:
+	#    quanti processi ho trovato e se li ho potuti guardare.  Zero nodi con
+	#    zero processi non e' «software»: e' «non c'era niente da guardare».
+	pids=$(pgrep -x remotix 2>/dev/null | tr '\n' ' ')
+	n=0; letti=0; negati=0; nodi=""
+	for p in $pids; do
+		n=$((n+1))
+		if elenco=$(ls -l "/proc/$p/fd" 2>/dev/null); then
+			letti=$((letti+1))
+			trovati=$(printf '%s\n' "$elenco" | grep -o 'renderD[0-9]*' | sort -u | tr '\n' ' ')
+			nodi="$nodi $trovati"
+		else
+			negati=$((negati+1))
+		fi
+	done
+	nodi=$(printf '%s' "$nodi" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+	# ⚠ E si dice anche CHI SIAMO: un `palco` girato senza sudo e' leggibile
+	#   dal verbale invece che indovinabile.
+	printf '{"utente":"%s","processi_remotix":%d,"letti":%d,"negati":%d,' \
+	       "$(id -un)" "$n" "$letti" "$negati"
+	printf '"nodi_di_rendering":['
+	primo=1
+	IFS=,
+	for x in $nodi; do
+		[ -z "$x" ] && continue
+		[ "$primo" -eq 1 ] || printf ','
+		printf '"%s"' "$x"; primo=0
+	done
+	unset IFS
+	printf ']}\n'
+	exit 0 ;;
+
 spegni)
 	bash "$0" scena-ferma
 	bash "$0" ponte-ferma

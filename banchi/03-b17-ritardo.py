@@ -1877,7 +1877,8 @@ def unisci_scene(qui, la, nome_qui="CHUWI", nome_la="NIC-OS"):
                              "finestra esclusiva (`03-solo.py`, limite n. 1)"}
 
 
-def scena_esclusiva(a, mie_porte=(), miei_pid=(), solo_la=None):
+def scena_esclusiva(a, mie_porte=(), miei_pid=(), solo_la=None,
+                    pid_file_la=None):
     """La scena delle DUE macchine, adesso.
 
     ⚠ `solo_la` e' il percorso di `03-solo.py` **sul server** — ce lo porta
@@ -1919,6 +1920,49 @@ def scena_esclusiva(a, mie_porte=(), miei_pid=(), solo_la=None):
                               if p not in mie]
         la["porte_mie"] = sorted(set(la.get("porte_mie") or []) | mie)
         la["solo"], la["perche"] = solo._giudica(la)
+    # ⛔⛔ E I MIEI PROCESSI DI LA' — stessa forma delle porte, e senza questo il
+    #     banco NON MISURA MAI.
+    #
+    #     `[M]` 14 agosto 2026: il banco si e' rifiutato per *«un vicino mangia
+    #     CPU: **remotix** al 67,8 %»* — e quel `remotix` era **il figlio del
+    #     prodotto che il banco stesso aveva acceso**, che bruciava CPU perche'
+    #     stava codificando HEVC in software.  ⇒ Il consumo del prodotto **e'
+    #     la misura**, non la contesa: un arbitro che lo conta come vicino
+    #     rifiuta il banco per il fenomeno che il banco esiste per misurare.
+    #
+    # ⛔ E SI TOLGONO SOLO I MIEI, LETTI DAL MIO PIDFILE, non «tutti i
+    #    remotix»: sulla stessa macchina girano i tre prodotti dell'utente
+    #    (7448, 7501, 7561), e quelli restano vicini a tutti gli effetti.  ⚠ La
+    #    differenza fra «tolgo me stesso» e «tolgo chiunque si chiami come me»
+    #    e' la differenza fra una cura e un atteso allargato.
+    if isinstance(la, dict) and pid_file_la:
+        r2 = _sshpw("P=$(cat %s 2>/dev/null); [ -n \"$P\" ] && "
+                    "{ echo $P; pgrep -P $P 2>/dev/null; "
+                    "for f in $(pgrep -P $P 2>/dev/null); do "
+                    "pgrep -P $f 2>/dev/null; done; }" % pid_file_la,
+                    silenzioso=True)
+        miei_la = set()
+        for x in (r2.stdout or "").split():
+            if x.isdigit():
+                miei_la.add(int(x))
+        la["miei_pid_dichiarati_dal_banco"] = sorted(miei_la)
+        la["⛔ come li ho presi"] = (
+            "dal pidfile del prodotto che HO ACCESO IO (%s) piu' i suoi figli e "
+            "nipoti.  ⚠ NON «tutti i processi che si chiamano remotix»: i tre "
+            "prodotti dell'utente restano vicini" % pid_file_la)
+        if miei_la:
+            fuori_ = [v for v in (la.get("vicini_affamati") or [])
+                      if v.get("pid") not in miei_la]
+            la["vicini_affamati_miei"] = [
+                v for v in (la.get("vicini_affamati") or [])
+                if v.get("pid") in miei_la]
+            la["vicini_affamati"] = fuori_
+            la["solo"], la["perche"] = solo._giudica(la)
+        else:
+            la["⛔ pid propri"] = (
+                "non ho potuto leggere il pidfile di la': ⚠ i miei processi "
+                "restano contati come vicini, e il rifiuto che ne segue va "
+                "letto come «non ho potuto guardare», non come contesa")
     return unisci_scene(qui, la)
 
 
@@ -2322,6 +2366,13 @@ def stampa_palco(p):
     elif "hev1" in riga and nodi:
         inf("SERVER · ⭐ codifica: **IN HARDWARE** — codec HEVC E nodo %s "
             "aperto: le due cose insieme" % ", ".join(nodi))
+    elif "hev1" in riga:
+        # ⛔ IL RAMO CHE MANCAVA, e sul giro A ha prodotto una riga fuorviante
+        #    («codec e nodo non concordano») per uno stato che invece e'
+        #    perfettamente coerente: HEVC codificato in SOFTWARE non apre
+        #    nessun nodo DRM, ed e' quel che ci si aspetta da x265.
+        inf("SERVER · ⛔ codifica: **IN SOFTWARE** — codec HEVC ma NESSUN nodo "
+            "DRM aperto: e' x265, non VA-API")
     elif riga:
         inf("SERVER · ⚠ codifica: codec e nodo non concordano — nodi %s, riga "
             "«%s»" % (nodi, riga[:90]))
@@ -2526,7 +2577,8 @@ def misura(a):
         #    server, e' acceso da me, e senza dichiararlo l'arbitro di la' lo
         #    conta come un estraneo e rifiuta per sempre.
         a, mie_porte=(a.porta, a.ancora, a.porta_dentro),
-        solo_la=getattr(a, "solo_la", None))
+        solo_la=getattr(a, "solo_la", None),
+        pid_file_la=getattr(a, "pid_file_la", None))
     for nome, s in (v["scena_prima"].get("scene") or {}).items():
         if s is None:
             ko("%-7s ⛔ la scena non si e' potuta leggere" % nome)
@@ -3003,7 +3055,8 @@ def misura(a):
         #    server, e' acceso da me, e senza dichiararlo l'arbitro di la' lo
         #    conta come un estraneo e rifiuta per sempre.
         a, mie_porte=(a.porta, a.ancora, a.porta_dentro),
-        solo_la=getattr(a, "solo_la", None))
+        solo_la=getattr(a, "solo_la", None),
+        pid_file_la=getattr(a, "pid_file_la", None))
     v["scena_regge"] = {
         n: solo_modulo().confronta(
             (v["scena_prima"].get("scene") or {}).get(n) or {},
@@ -3099,6 +3152,12 @@ def principale():
     p.add_argument("--registro-prodotto", default="/media/REMOTIX/tmp/03-b17/registro.log")
     # ⛔ L'arbitro della finestra esclusiva DALL'ALTRA PARTE: l'anello
     #    attraversa due macchine, e `03-solo.py` ne guarda una sola.
+    # ⛔ Il pidfile del prodotto che il banco ha acceso SUL SERVER: serve a
+    #    riconoscere i PROPRI processi.  Senza, il banco si rifiuta da se'
+    #    perche' il suo prodotto sta codificando — cioe' sta misurando.
+    p.add_argument("--pid-file-la",
+                   default="/media/REMOTIX/tmp/03-b17/pid",
+                   help="il pidfile del prodotto MIO sul server")
     p.add_argument("--solo-la", default="/media/REMOTIX/src/03-solo.py",
                    help="dove sta `03-solo.py` SUL SERVER (ce lo porta "
                         "`03-b17-lancia.sh porta`)")

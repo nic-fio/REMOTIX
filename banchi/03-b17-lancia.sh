@@ -90,10 +90,18 @@ porta)
 	log "2. E i banchi, accanto agli altri"
 	# ⛔ `03-scena.c` e' dello STEP 2 e NON si tocca: si porta e si compila in
 	#    una cartella mia.  Si dipende, non si riscrive (`CODER.md` §4.1).
-	for f in 03-b17-accendi.sh 03-b17-ponte.py 03-scena.c; do
+	# ⛔⛔ `03-solo.py` VA DI LA', ED E' UN REQUISITO DELLA MISURA, non un di
+	#     piu': l'anello attraversa NIC-OS **e** CHUWI, e l'arbitro della
+	#     finestra esclusiva guarda **una macchina sola** (`03-solo.py`, limite
+	#     n. 1).  ⇒ Senza la copia sul server il banco non puo' sapere se di la'
+	#     e' libero, e — per come e' scritto — **si rifiuta di misurare** invece
+	#     di dichiararsi solo su meta' anello.
+	#     ⚠ Si porta e non si riscrive: un secondo «sono solo?» scritto a mano
+	#     farebbe volere alla parola «solo» due cose diverse ai due capi.
+	for f in 03-b17-accendi.sh 03-b17-ponte.py 03-scena.c 03-solo.py; do
 		metti "$QUI/$f" "$FUORI/$f" || { ko "scp di $f fallito"; exit 2; }
 	done
-	ok "tre file → $FUORI/"
+	ok "quattro file → $FUORI/  (03-solo.py compreso: la finestra esclusiva vuole tutt'e due le macchine)"
 	exit 0 ;;
 
 costruisci)
@@ -127,7 +135,15 @@ scena-avvia|scena-ferma|scena-conta|scena-uscite|ponte-accendi|ponte-ferma)
 	exit $? ;;
 
 accendi|riaccendi|spegni|stato)
-	fuori "sudo -S -p 'Password sudo: ' bash $FUORI/03-b17-accendi.sh $AZIONE"
+	# ⛔⛔ `D` SI PASSA DI LA', ED E' QUEL CHE RENDE POSSIBILE LA CORSIA E.
+	#     `03-b17-accendi.sh` prende l'albero da `D` (binario + pagina), e la
+	#     corsia E deve accendere lo STESSO prodotto da alberi diversi — quello
+	#     software e quello con la codifica in hardware — senza cambiare una
+	#     riga d'altro.  ⇒ `D=... sudo` non basta: `sudo` ripulisce l'ambiente,
+	#     quindi la variabile va DOPO `sudo`.
+	# ⚠ E l'albero si DICHIARA: `03-b17-accendi.sh` stampa l'impronta del
+	#   binario e della pagina, ed e' quel che finisce nel verbale.
+	fuori "sudo -S -p 'Password sudo: ' ${D:+D=\"$D\" }bash $FUORI/03-b17-accendi.sh $AZIONE"
 	exit $? ;;
 
 registro)
@@ -137,6 +153,11 @@ registro)
 misura)
 	SECONDI=${2:-25}
 	RITARDI=${3:-0,25,60}
+	# ⭐ Il GIRO si puo' nominare da fuori (`GIRO=A-software bash ... misura`):
+	#    la corsia E ne fa tre di seguito — software, hardware, controllo — e
+	#    tre nomi con dentro l'ora non direbbero QUALE era quale.  ⛔ E il nome
+	#    finisce nel nome del verbale, che adesso e' uno per giro.
+	NOME_GIRO=${GIRO:-b17-$(date +%Y%m%d-%H%M%S)}
 	[ -f "$PAROLA_QUI" ] || { ko "⛔ manca $PAROLA_QUI: «terreno» prima"; exit 2; }
 	# ⛔⭐ LA SCENA SI RIACCENDE PRIMA DI OGNI MISURA, E NON E' PRUDENZA.
 	#     `[M]` 13 agosto 2026 (step 3): la scena resta VIVA ma smette di
@@ -147,6 +168,12 @@ misura)
 	#   scena — sembra viva.
 	bash "$0" scena-ferma >/dev/null 2>&1
 	log "La misura — $SECONDI s per giro, ritardi noti «$RITARDI»"
+	# ⛔⛔ `--verbale` NON SI PASSA PIU', ed e' la cura di un danno avvenuto.
+	#     Qui c'era `--verbale "$LAVORO_QUI/verbale.json"`, un nome FISSO: ogni
+	#     giro cancellava il precedente in silenzio, e dei quattordici giri del
+	#     13 agosto 2026 ne e' sopravvissuto UNO.  ⇒ Adesso il nome lo fa il
+	#     giro (`$LAVORO_QUI/verbali/verbale-<giro>.json`) e il banco RIFIUTA
+	#     di sovrascriverne uno.  ⚠ `verbale-ultimo.json` resta come puntatore.
 	# ⛔ I due GANCI: la scena si accende DOPO che la pagina ha dipinto il primo
 	#    fotogramma, perche' prima il monitor virtuale del palco NON ESISTE (lo
 	#    monta il figlio, non il server) e non c'e' nessun nome da chiedere.
@@ -160,7 +187,7 @@ misura)
 		--utente "$UTENTE" --parola-file "$PAROLA_QUI" \
 		--secondi "$SECONDI" --ritardi "$RITARDI" \
 		--schermo "$SCHERMO" --diagnosi "$DIAGNOSI" \
-		--lavoro "$LAVORO_QUI" --verbale "$LAVORO_QUI/verbale.json" \
+		--lavoro "$LAVORO_QUI" --giro "$NOME_GIRO" \
 		--gancio-scena "$G_ON" --gancio-scena-spegni "$G_OFF" --p5
 	exit $? ;;
 
