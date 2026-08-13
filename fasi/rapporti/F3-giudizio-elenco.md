@@ -8,6 +8,42 @@ un'approvazione al buio — è la forma della fase 2, e si ripete qui.
 
 ---
 
+## 0. ⭐⭐ IL NUMERO C'È — e porta una domanda che è tua
+
+*Misurato la notte del 13 agosto, tre giri, **una variabile per volta**.*
+
+| | totale | codifica | **disegno** | **fotogrammi/s** |
+|---|---|---|---|---|
+| **AV1 in software** *(quel che girava fino a ieri)* | **72,40 ms** | 39,82 | ⭐ 9,11 | 21,2 |
+| ⭐ **HEVC in hardware** *(quel che guarderai)* | **75,23 ms** | ⭐ **30,37** | ⛔ 25,11 | ⭐ **30,2** |
+
+⭐⭐ **La codifica in hardware funziona**: la chiave costa **23 volte meno** (4 894 µs contro
+114 533), e **il ritmo raddoppia**.
+⭐⭐ **E l'architettura è ASSOLTA**: tolta la codifica, gli altri quattro tratti **restano dove
+erano** (Mutter −0,01 · filo −0,07 · decodifica −0,72). ⇒ *Non c'era un secondo problema nascosto
+dietro il primo.*
+
+> ### ⛔ E la domanda che devi decidere tu, guardando
+>
+> **HEVC in hardware ha 3 ms di ritardo IN PIÙ e 9 fotogrammi al secondo IN PIÙ.**
+> ⇒ Le due cose tirano in versi opposti, e **nessun numero può dire quale conti di più per un occhio
+> umano**. È esattamente ciò per cui il tuo giudizio esiste.
+>
+> ⚠ Se vuoi confrontarle davvero, si può accendere **anche l'altra configurazione** e passare
+> dall'una all'altra: costa cinque minuti in più. Dimmelo e lo preparo.
+
+⛔ **E il perché dei 3 ms in più, che è la scoperta della notte**: passando a HEVC **il disegno va da
+9,1 a 25,1 ms**. ⇒ **Il collo di bottiglia non è più la codifica: è il disegno**, il 33 % del
+ritardo, e **nessuno lo stava guardando**. È il primo lavoro della fase che verrà.
+
+⚠ **Una riserva scritta, non nascosta**: nel giro in hardware un controllo del banco (P1, la taratura
+del ritardo iniettato) è **rosso**. Il ponte è **scagionato con una misura** (scarto di consegna
+**0 µs** su 20 000 pacchetti), e la pista è la saturazione a 30 fps — ⛔ ma è **una lettura, non una
+misura**, e stanotte si sta cercando di trasformarla in una. **Il numero ti arriva con questo
+asterisco**, non senza.
+
+---
+
 ## 1. Che cosa devi fare, in tre righe
 
 > *(i comandi esatti stanno in fondo, in «Come si accende»)*
