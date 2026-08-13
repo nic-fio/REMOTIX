@@ -98,7 +98,45 @@ veloce»* del piano vale **per il tratto, non per l'anello**.
 ⇒ ⭐ **E c'è un secondo pezzo da aggredire, che non era in programma**: `swscale` BGRx→P010,
 **7,1 ms su 9,7**, candidato naturale della copia zero della fase 8.
 
-### L'anello, rimisurato con banco e pagina nuovi
+### ⭐⭐⭐ L'ANELLO CON LA CODIFICA IN HARDWARE — il numero della fase
+
+*Tre giri, **una variabile per volta**, dopo che la cura completa alle sonde ha fatto cadere il muro
+dei zero fotogrammi (157 consegnati / 157 dipinti, HEVC negoziato, tela piena).*
+
+| | totale | **codifica** | **disegno** | fps | n |
+|---|---|---|---|---|---|
+| **C** AV1 software | **72,397** | 39,82 | ⭐ 9,11 | 21,21 | 508 |
+| **A** HEVC software | 108,778 | ⛔ 61,77 | 29,25 | 14,53 | 375 |
+| ⭐ **B** HEVC **hardware** | **75,230** | ⭐ **30,37** | ⛔ **25,11** | ⭐ **30,18** | 799 |
+
+⭐⭐ **`A → B`, una sola variabile — il binario**: la chiave costa **4 894 µs contro 114 533**,
+**ventitré volte meno**, letto dal prodotto. Il ritmo **raddoppia**: 14,53 → **30,18 fps**.
+⭐⭐ **E2 risponde SÌ, e l'architettura è ASSOLTA**: gli altri quattro tratti **restano dove
+erano** — Mutter −0,01 · filo −0,07 · decodifica −0,72.
+
+⛔⛔ **Ma il totale SFORA, e supera perfino AV1 in software**, perché passando a HEVC **il disegno
+va da 9,1 a 25,1 ms**.
+
+> ⇒ ⭐ **Il collo di bottiglia della fase 3 non è più la codifica: è il DISEGNO** — 25,1 su 75,2, il
+> **33 %**, e **nessuno lo stava guardando**.
+> ⛔ **E si vede SOLO perché i tre giri esistono tutti e tre**: con A e B soli si leggerebbe
+> *«−33 ms, vittoria»*; con C e B soli, *«l'hardware non serve»*. **Sono tutt'e due sbagliate.**
+> *Il terzo giro non era pignoleria: era la differenza fra un numero e una conclusione.*
+
+#### ⛔ La riserva sul numero, e come è stata trattata
+
+`P1` — la taratura del ritardo iniettato — è **rosso** nel giro in hardware. Il numero è stato
+consegnato **con l'asterisco**, non senza. E poi la corsia E ha **smentito la propria pista** e
+**corretto il proprio dato**, senza che nessuno glielo chiedesse:
+
+| | |
+|---|---|
+| ⛔ *«è saturazione a 30 fps»* | **falso**: il ritmo **non cala** con l'iniezione (30,18 · 30,01 · 30,33) — se la catena si accodasse, scenderebbe |
+| ⭐ e il surplus è **localizzato** | sta **tutto nel tratto 2** (+27,2 su 25; +67,2 su 60) e **non** nel tratto 3 ⇒ **nasce prima che il primo byte parta** |
+| ⛔⛔ *«il ponte è scagionato, scarto 0 µs»* | **ritirato dall'autore**: quel dato era stato letto **a giro finito, col ponte già rimesso a zero**. Uno scarto nullo **a ritardo zero** non dice niente su come consegna **quando ritarda** ⇒ **un dato preso in una condizione diversa da quella da giudicare**, cioè *la forma d'errore che quel banco esiste per trovare negli altri* |
+| ⭐ e le previsioni sono scritte **prima** | errore **proporzionale** ⇒ +4,4 e +10,1 sulla retta `1,142·N − 1,31`; **ginocchio** ⇒ sotto la retta, vicini a +5 e +10 esatti. **Due ipotesi che danno risposte diverse prima di misurare** |
+
+### L'anello, rimisurato con banco e pagina nuovi *(il giro precedente, senza hardware)*
 
 | | **software + AV1** | **hardware + AV1** | Δ |
 |---|---|---|---|

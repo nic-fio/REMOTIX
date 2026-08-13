@@ -2809,6 +2809,33 @@ def misura(a):
                 ultimi[n] = ultimo
                 if n == 0:
                     v.setdefault("costo_lettura_us", []).extend(costo)
+                # ⛔⛔ IL PONTE SI LEGGE **MENTRE RITARDA**, non alla fine.
+                #
+                #     `[M]` 14 agosto 2026: avevo scagionato il ponte da P1
+                #     rosso leggendo il suo verbale **a giro finito** — cioe'
+                #     con `ritardo_ms = 0`, perche' `metti_ritardo(a, 0, ...)`
+                #     lo rimette a zero prima di chiudere.  ⇒ Uno scarto di
+                #     consegna di 0 us misurato a ritardo ZERO **non dice
+                #     niente** su come consegna quando ritarda: e' un dato
+                #     preso in una condizione diversa da quella che si voleva
+                #     giudicare.  ⛔ E' la stessa forma d'errore che questo
+                #     banco esiste per trovare negli altri.
+                #
+                # ⭐ Una lettura per valore di N, all'ULTIMA mano: il ponte
+                #    riscrive il verbale ogni 2 s, quindi li' dentro c'e' lo
+                #    scarto misurato con QUEL ritardo attivo.
+                #    ⚠ Una lettura per mano costerebbe 25 giri di `ssh`.
+                if mano == mani - 1:
+                    rp = _sshpw("cat %s" % a.verbale_ponte, silenzioso=True)
+                    for riga in (rp.stdout or "").splitlines():
+                        riga = riga.strip()
+                        if riga.startswith("{"):
+                            try:
+                                v.setdefault("ponte_per_n", {})[str(n)] = \
+                                    json.loads(riga)
+                            except ValueError:
+                                pass
+                            break
         metti_ritardo(a, 0, 0, a.giro)
         oro0 = Orologi(parete, anc_a, {"c_e": False},
                        (ultimi.get(0.0) or ultimi.get(ritardi[0]) or {}).get("t_origine", 0))
@@ -3094,6 +3121,8 @@ def misura(a):
               #    due giri deve vedere **da che palco** escono, o confronta
               #    due numeri che non si sottraggono.
               "palco": v.get("palco_prima"),
+              # ⛔ Il ponte MENTRE ritardava: e' il testimone di P1.
+              "ponte_per_n": v.get("ponte_per_n"),
               "palco_regge": v.get("palco_regge"),
               "scena_esclusiva": {
                   "prima": {"solo": (v.get("scena_prima") or {}).get("solo"),
@@ -3155,6 +3184,11 @@ def principale():
     # ⛔ Il pidfile del prodotto che il banco ha acceso SUL SERVER: serve a
     #    riconoscere i PROPRI processi.  Senza, il banco si rifiuta da se'
     #    perche' il suo prodotto sta codificando — cioe' sta misurando.
+    # ⛔ Il verbale del PONTE sul server: si legge MENTRE ritarda, o non dice
+    #    niente su come consegna quando ritarda (rilievo del 14 agosto).
+    p.add_argument("--verbale-ponte",
+                   default="/media/REMOTIX/tmp/03-b17/ponte.json",
+                   help="il verbale che il ponte riscrive ogni 2 s")
     p.add_argument("--pid-file-la",
                    default="/media/REMOTIX/tmp/03-b17/pid",
                    help="il pidfile del prodotto MIO sul server")
@@ -3240,6 +3274,38 @@ def stampa_verdetto(v, a=None):
     else:
         ko("⛔ la finestra esclusiva NON e' stata verificata: questo numero "
            "puo' essere la contesa")
+    # ⛔⛔ SE P1 E' ROSSO, SI DICE **DOVE** VA IL SURPLUS — 14 agosto 2026.
+    #
+    #     Un P1 rosso da solo dice «il metro non torna» e manda a cercare
+    #     dappertutto.  ⭐ Ma il verbale ha i giri a ogni N, e la scomposizione
+    #     si puo' fare su ciascuno: il surplus sta in UN tratto, e nominarlo
+    #     e' la differenza fra una riserva e una diagnosi.
+    #     `[M]` giro `E2-B-hardware-hevc`: tutto nel tratto 2, e il ritmo NON
+    #     cala (30,18 · 30,01 · 30,33) ⇒ la saturazione e' SMENTITA.
+    if not g["P1"].get("esito"):
+        log("⛔ P1 E' ROSSO — dove va il surplus, tratto per tratto")
+        base_n = next((x for x in v.get("giri", [])
+                       if x.get("ritardo_chiesto_ms") == 0), None)
+        s0 = scomponi(regime((base_n or {}).get("campioni", [])))
+        for gg in v.get("giri", []):
+            n_ms = gg.get("ritardo_chiesto_ms")
+            if not n_ms:
+                continue
+            cc = regime(gg.get("campioni", []))
+            sn = scomponi(cc)
+            iv = sorted(b["t1"] - a2["t1"] for a2, b in zip(cc, cc[1:])
+                        if 0 < b["t1"] - a2["t1"] < 500)
+            fps = round(1000.0 / iv[len(iv) // 2], 2) if iv else None
+            inf("N=%-4g  ritmo %s/s  (se il ritmo NON cala, non e' saturazione)"
+                % (n_ms, fps))
+            for k in s0:
+                a3, b3 = s0.get(k, {}), sn.get(k, {})
+                if not isinstance(a3, dict) or "mediana" not in a3:
+                    continue
+                d = round(b3.get("mediana", 0) - a3["mediana"], 3)
+                if abs(d) >= 0.5:
+                    inf("   %-56s %+8.3f  (chiesti %g)" % (k[:56], d, n_ms))
+
     log("LA SCOMPOSIZIONE")
     for k, x in scomponi(camp).items():
         inf("%-58s %s" % (k, json.dumps(x, ensure_ascii=False)))
