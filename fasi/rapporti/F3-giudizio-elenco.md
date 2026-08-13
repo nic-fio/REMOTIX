@@ -83,7 +83,7 @@ quelle note alle 23:00 del 13 agosto; ⛔ quelle superate saranno barrate e data
 | **1** | ⛔⛔ **Il numero SFORA**: 78,1 contro il tetto di **50** e il traguardo di **40** — e col pezzo cieco dichiarato sta fra **94 e 118 ms** sul vetro | ⚠ **è il fatto centrale**. ⛔ Ma guarda **prima** e leggi **dopo**: il numero non è la fluidità, e i due giudizi restano separati |
 | **2** | ⛔ **Il collo di bottiglia adesso è il DISEGNO**: 28,0 ms su 78,1, **il 36 %** — la codifica ne costa 5 | ⭐ **nessuno sul giudizio**, ma è **il primo lavoro della prossima fase**, e non era in nessun piano |
 | **3** | ⛔ **I banchi browser misuravano sul tuo desktop** credendo di essere su uno schermo finto | ⭐ **nessuno**: riguarda i banchi. Ma spiega perché i numeri di ieri portavano dentro la contesa col tuo desktop |
-| **4** | ⏳ **8 banchi su 25 non hanno una certificazione che regge**: 5 sono scaduti **stanotte**, perché il travaso ha cambiato il `Makefile` che loro guardano | ⚠ **poco sul prodotto**, ma va saputo: **non è che siano rossi — è che la loro riga verde descrive un prodotto di ieri** |
+| **4** | ⏳ **6 banchi su 25 non hanno una certificazione che regge** — `B10 · B13` (scadute, **non rigirabili**: gli alberi dei loro guasti non esistono più) · `P5 · P5R` (non c'era il tempo, e **non sono state comprate**) · `03-b16` (aspetta il palco) · `03-b19` (mai provato) | ⚠ **poco sul prodotto**, ma va saputo: **non è che siano rosse — è che la loro riga verde descrive un prodotto di ieri**. ⭐ **P1 è stata rigirata stanotte** e regge |
 | **5** | ⛔ **22 file del prodotto non sono guardati da nessuna certificazione** | ⚠ **da sapere**: una riga verde continuerebbe a dire «certificato» su un prodotto che nel frattempo è un altro. **È lavoro di una fase sua** |
 | **6** | ⛔ **`03-b16` non si rigira** finché il palco non è a posto | poco, e la ragione è scritta a catalogo |
 | **7** | ⚠ **Due difetti del banco dell'anello, trovati e NON curati** | `regime()` non butta il transitorio della **sessione**; `misura()` non deposita la riga se la stampa esplode. ⛔ Lasciati scritti perché *un banco curato che nessuno ha visto arrossire non è curato* |
@@ -131,9 +131,41 @@ diverse, senza che nessuno debba spegnere niente.
 
 ⚠ **Entra come te stesso** in tutt'e due, come per il giudizio della fase 2.
 
-*(la riga di comando esatta per riaccendere la 7571, e la prova che quella sessione negozia davvero
-HEVC in hardware, vengono scritte qui sotto a fine notte — ⛔ **verificate su una sessione vera**,
-non a memoria)*
+### ⭐ Tutt'e due sono ACCESE adesso — non c'è niente da lanciare
+
+`[M]` verificato alla chiusura della notte:
+
+```
+:7448 :7501 :7561 :7571          ← le porte vive sul server
+pid 326940  da 13h23  …/src/remotix/remotix           --porta 7561   ← il tuo, intatto
+pid 410731  da 16m56  …/02-figlio-src/src/remotix     --porta 7571   ← il nuovo
+```
+
+⇒ **Apri due schede e basta.** Se una delle due non rispondesse, si riaccende così:
+
+| | |
+|---|---|
+| la **7571** | `bash banchi/02-figlio-lancia.sh accendi` *(da CHUWI; lo script fa il resto)* |
+| la **7561** | ⛔ **è tua**: nessuno l'ha toccata, e nessuno la riaccenda al posto tuo |
+
+### ⭐⭐ E la 7571 è stata provata fino al pixel, non solo accesa
+
+`[M]` sessione vera contro `https://192.168.0.2:7571/`, **quattro fatti nello stesso giro**:
+
+```
+negoziato video.codec=hevc — codec 1
+aperto: HEVC 10 bit via hevc_vaapi (in HARDWARE · /dev/dri/renderD128 · Intel iHD)
+PRIMO fotogramma codificato: CHIAVE, «hev1.2.4.L120.B0»
+t+ 4s  consegnati  567 · dipinti  567 · scartati_ordine 0 · buchi 0
+t+20s  consegnati 1047 · dipinti 1047 · scartati_ordine 0 · buchi 0
+```
+
+⭐ **+120 ogni 4 secondi = 30 fps esatti**, e `consegnati == dipinti` a ogni lettura: **non ne cade
+uno**. ⇒ **La 7571 non mente**: dice HEVC in hardware e lo fa **fino al vetro**.
+
+⚠ **Ma la scena di quella prova era SINTETICA, non il tuo desktop**: i 1 047 fotogrammi dicono che
+la catena regge a 30/s, ⛔ **non** che il *tuo* desktop ti sembrerà fluido. **Quella domanda te la
+porti tu, ed è tutto il punto.**
 
 ---
 
