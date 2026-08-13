@@ -156,22 +156,68 @@ spegni)
 	#    morti con lui: «il padre e' spento» e «i figli sono spenti» sono due
 	#    fatti diversi, e il secondo e' quello che conta (nessun orfano
 	#    attaccato al monitor virtuale di un utente).
-	prima=$(pgrep -P "$pid" 2>/dev/null | wc -l)
+	#
+	# ⛔⛔ E SI PRENDONO I **PID**, NON IL LORO NUMERO — cura del 13 agosto 2026.
+	#
+	#    La riga di prima contava, dopo lo spegnimento,
+	#    `pgrep -f -- "--figlio-interno" | wc -l`: cioe' **i figli di TUTTI**.
+	#    ⇒ due difetti in una riga sola, opposti fra loro:
+	#      · un altro banco con un figlio vivo faceva uscire questo ROSSO con
+	#        zero orfani propri — un'accusa al prodotto che era del vicino;
+	#      · e non sapeva dire se l'orfano fosse suo, quindi nemmeno il rosso
+	#        vero avrebbe detto di chi era.
+	#    ⚠ E si accende **solo quando due banchi girano in parallelo**, che e'
+	#      quel che la fase 3 fa di mestiere: fino a ieri era un difetto
+	#      addormentato.
+	#
+	#    ⭐ La cura non e' un `pgrep` piu' furbo — un filtro sulla riga di
+	#      comando resterebbe una deduzione.  Si CHIEDE al nucleo chi sono i
+	#      propri figli **prima** di uccidere il padre, si tiene l'elenco dei
+	#      pid, e dopo si guarda **quell'elenco** (`LEZIONI.md` §1.6: non si
+	#      deduce, si chiede).
+	#    ⚠ Un pid puo' essere riciclato dal nucleo fra il prima e il dopo: per
+	#      questo non basta che `/proc/$f` esista — si ricontrolla che la riga
+	#      di comando sia ancora quella di un figlio nostro.
+	miei_figli=""
+	prima=0
+	for f in $(pgrep -P "$pid" 2>/dev/null); do
+		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
+		case "$riga" in
+		*--figlio-interno*) miei_figli="$miei_figli $f"; prima=$((prima+1)) ;;
+		esac
+	done
 	kill "$pid" 2>/dev/null
 	g=0
 	while [ -d "/proc/$pid" ] && [ "$g" -lt 30 ]; do sleep 0.5; g=$((g+1)); done
 	[ -d "/proc/$pid" ] && { ko "il pid $pid non e' morto"; exit 3; }
 	rm -f "$PIDF"
-	restano=$(pgrep -f -- "--figlio-interno" 2>/dev/null | wc -l)
-	ok "spento (pid $pid, aveva $prima figli+aiutante)"
+
+	restano=0
+	orfani=""
+	for f in $miei_figli; do
+		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null) || continue
+		case "$riga" in
+		*--figlio-interno*) restano=$((restano+1)); orfani="$orfani $f" ;;
+		esac
+	done
+	ok "spento (pid $pid, aveva $prima figli MIEI)"
 	if [ "$restano" -eq 0 ]; then
-		ok "⭐ e NESSUN figlio e' rimasto orfano"
+		ok "⭐ e NESSUN figlio MIO e' rimasto orfano"
 	else
-		ko "⛔ $restano processi «--figlio-interno» sono ancora vivi: sono"
-		ko "   orfani attaccati al monitor virtuale di qualcuno"
-		pgrep -af -- "--figlio-interno" | sed 's/^/        /'
+		ko "⛔ $restano figli MIEI sono ancora vivi:$orfani — sono orfani"
+		ko "   attaccati al monitor virtuale di qualcuno"
+		for f in $orfani; do
+			printf '        %s  %s\n' "$f" "$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)"
+		done
 	fi
+	# ⚠ I figli DEGLI ALTRI si contano lo stesso, e si stampano come contorno:
+	#   servono a capire la macchina, e ⛔ NON entrano nel verdetto.  Confonderli
+	#   con i propri e' esattamente il difetto curato qui sopra.
+	altrui=$(( $(pgrep -f -- "--figlio-interno" 2>/dev/null | wc -l) ))
+	inf "sulla macchina restano $altrui processi «--figlio-interno» in tutto"\
+	    "(miei: $restano · di altri banchi: $((altrui - restano))) — ⚠ contorno, non verdetto"
 	inf "$(vicini)"
+	[ "$restano" -eq 0 ] || exit 4
 	exit 0 ;;
 
 guasto)

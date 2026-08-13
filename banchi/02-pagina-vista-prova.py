@@ -56,6 +56,18 @@ due modi in cui questa cura puo' morire:
    verde (`CODER.md` §4.6).  Per questo l'innesto e' verificato: una sostituzione
    che non trovasse il suo testo ferma il banco invece di servire una pagina
    sana chiamandola guasta — che sarebbe misurare il sano e crederlo il guasto.
+
+===========================================================================
+⛔⭐ E QUEL CHE QUESTO BANCO NON PROVA — 13 agosto 2026, dopo il rilievo
+
+`[?]` **Che il cammino del ridimensionamento giri DA SOLO.**  Su questo schermo
+finto non si produce nessun quadro (`[M]`: `requestAnimationFrame` fermo per
+3002 ms), e in Blink l'evento `resize` si consegna dentro il giro di rendering:
+⇒ il banco il quadro se lo **batte** (vedi `SPIA` e `batti`), e quel che misura
+e' «dato un quadro, il prodotto segue la finestra».  Che il quadro arrivi
+quando l'utente trascina il bordo di una finestra VERA e' un fatto del browser,
+non del prodotto, e va misurato con una finestra vera — non e' una riga di
+questo banco.  ⚠ Il verde di qui NON lo dichiara.
 """
 import argparse
 import json
@@ -131,6 +143,31 @@ GUASTI = {
         # ⛔ La cornice resta giusta e muore SOLO il riscalamento: il fotogramma
         #    si dipinge 1:1 dentro una vista che non e' la sua misura.
         ("const s = Math.min(cl / fl, ca / fa);", "const s = 1;"),
+    ],
+    # =======================================================================
+    # ⛔⭐ E I DUE GUASTI DELLA SCENA «RIDIMENSIONA», nati il 13 agosto 2026 da
+    #     un rilievo: il blocco «dopo» — quattro pretese, fra cui
+    #     `ricomposizioni > prima` — non era MAI stato provato capace di
+    #     arrossire, perche' i guasti giravano solo sulla scena
+    #     «vista-piu-larga» (`GIRO_GUASTO`).  `CODER.md` §4.6: un banco che non
+    #     sappia diventare rosso non dice niente quando e' verde.
+    "ridimensiona-sordo": [
+        # 1. la pagina non ascolta piu' il `resize`: il riscalamento NON segue
+        #    la finestra.  ⚠ E' il difetto che la scena «ridimensiona» esiste
+        #    per prendere, e nessuno l'aveva mai innestato.
+        ('addEventListener("resize", rinegozia_vista);',
+         '/* banco: l\'ascolto del resize e\' stato tolto */ void 0;'),
+    ],
+    "deposito-perso": [
+        # 2. ⭐ IL GUASTO CHE ISOLA `ricomposizioni > prima`.  `vista()` cambia
+        #    la misura della tela — e scrivere `canvas.width` la SVUOTA — ma
+        #    non ricompone piu' dal deposito.  ⇒ buffer e cornice restano
+        #    giusti (le prime due pretese del blocco «dopo» restano verdi), e
+        #    quel che muore e' solo il ridipinto: la tela resta NERA.
+        #    ⚠ Il primo fotogramma non ne soffre: `dipingi()` chiama
+        #      `componi()` per conto suo.  ⇒ il giro sano fino al
+        #      ridimensionamento resta identico, e cade SOLO il «dopo».
+        ("    this.componi();\n    return true;", "    return true;"),
     ],
 }
 
@@ -286,6 +323,79 @@ MISURA = """
 """
 
 
+# ===========================================================================
+# ⛔⭐ LA SPIA DEL PALCO — 13 agosto 2026, e senza di lei questo banco misurava
+#     se stesso.
+#
+# `[M]` Su questo Xvfb, con Chrome headed e `--disable-gpu`, **non si produce
+#   nessun quadro**: `requestAnimationFrame` sta fermo per 3002 ms (1 → 1) con
+#   `document.visibilityState` uguale a «visible».  E in Blink l'evento
+#   `resize` non e' un segnale immediato: si consegna DENTRO il giro di
+#   rendering.  ⇒ Senza quadri, `Emulation.setDeviceMetricsOverride` cambia
+#   `documentElement.clientWidth` (misurato: 1385 → 885) e **l'evento `resize`
+#   non arriva mai**: contato 0 in 2 secondi.
+#
+# ⛔ Il cammino del prodotto e' `resize` → `requestAnimationFrame` →
+#    `adatta_vista()` → `vista()` → `componi()` → `ricomposizioni++`.  Con
+#    zero quadri quel contatore NON PUO' crescere, e la pretesa
+#    «ricomposizioni > prima» sarebbe rossa **col prodotto sano**.
+#
+# ⭐ E allora perche' era verde?  Perche' `Page.captureScreenshot` — cioe' la
+#    FOTOGRAFIA DEL BANCO, un'opzione di comodo (`--copia`, che di suo vale «»)
+#    — forza un quadro e sveglia la conduttura: misurato, `raf` 1 → 5 sullo
+#    scatto, e poi 5 → 8 sul ridimensionamento, con `resize` 0 → 1 e
+#    `ricomposizioni` 1 → 3.  ⛔ Il verde dipendeva da un EFFETTO COLLATERALE
+#    NON DICHIARATO di un'opzione: togliendo `--copia`, il banco sarebbe
+#    diventato rosso sul prodotto GIUSTO (`LEZIONI.md` §2.3).
+#
+# ⇒ Due cure, e sono l'una il controllo dell'altra:
+#   1. il quadro si BATTE apposta, sempre, e si dice quante volte (`batti`);
+#   2. la spia CONTA i quadri e i `resize` e li mette nel registro, cosi' un
+#      rosso del palco non si puo' piu' confondere con un rosso del prodotto
+#      (`LEZIONI.md` §1.2: prima si certifica lo strumento).
+#
+# ⚠ La spia e' codice DEL BANCO, iniettato da fuori con `Runtime.evaluate`: non
+#   entra in `src/pagina.html` e il prodotto gira identico che ci sia o no.
+#   ⛔ E il suo `requestAnimationFrame` e' inerte — misurato: con la spia
+#   dentro e senza battito, i quadri restano fermi lo stesso.
+SPIA = """
+(function () {
+  window.__BANCO_SPIA = { resize: 0, quadri: 0 };
+  addEventListener("resize", function () { window.__BANCO_SPIA.resize++; }, true);
+  (function q() { window.__BANCO_SPIA.quadri++; requestAnimationFrame(q); })();
+  return true;
+})()
+"""
+
+LEGGI_SPIA = """
+({resize: (window.__BANCO_SPIA || {}).resize,
+  quadri: (window.__BANCO_SPIA || {}).quadri,
+  visibile: document.visibilityState,
+  clientW: document.documentElement.clientWidth,
+  clientH: document.documentElement.clientHeight})
+"""
+
+# ⛔ Un numero FISSO di battiti, non «finche' diventa verde»: un ciclo che si
+#    ferma sul risultato atteso e' un ciclo che nasconde quanto ci ha messo, e
+#    diventerebbe verde anche su un prodotto lentissimo (`LEZIONI.md` §1.14).
+BATTITI = 5
+PAUSA_BATTITO = 0.2
+
+
+def batti(c, quanti=BATTITI, pausa=PAUSA_BATTITO):
+    """⭐ Batte `quanti` quadri e torna quanti ne ha battuti davvero."""
+    n = 0
+    for _ in range(quanti):
+        try:
+            c.chiama("Page.captureScreenshot", format="png",
+                     captureBeyondViewport=False)
+            n += 1
+        except Exception:                        # noqa: BLE001
+            pass
+        time.sleep(pausa)
+    return n
+
+
 def aspetta(c, espressione, quanto, pronto, passo=0.4):
     fine = time.time() + quanto
     ultimo = None
@@ -359,6 +469,9 @@ def giro(nome, args):
             ko(f"⛔ la pagina non ha esposto REMOTIX: {pronta}")
             fuori["guaio"] = "REMOTIX assente"
             return fuori
+        # ⛔ La spia del palco entra PRIMA del fotogramma: da qui in poi ogni
+        #    quadro e ogni `resize` sono contati (vedi il commento su `SPIA`).
+        c.valuta(SPIA, attendi=False)
         d = c.valuta(DIPINGI % scena["fotogramma"])
         if not isinstance(d, dict) or d.get("guaio"):
             ko(f"⛔ il fotogramma non e' partito: {d}")
@@ -384,8 +497,19 @@ def giro(nome, args):
             #    fotogramma nuovo.  Quel che si ridipinge e' il deposito.
             inf(f"⭐ la finestra cambia a {scena['poi'][0]}×{scena['poi'][1]} "
                 f"CSS — e nessun fotogramma nuovo arriva")
+            fuori["spia_prima"] = c.valuta(LEGGI_SPIA, attendi=False)
             viewport(c, scena["poi"], scena["dpr"])
-            time.sleep(1.5)
+            # ⛔⭐ E QUI SI BATTE IL QUADRO, APPOSTA E DICENDOLO.  Prima c'era un
+            #    `time.sleep(1.5)`: su questo Xvfb i quadri non girano da soli e
+            #    l'attesa non ne produceva nessuno — il quadro lo forzava, per
+            #    sbaglio, la fotografia opzionale di `--copia`.
+            fuori["battiti"] = batti(c)
+            fuori["spia_dopo"] = c.valuta(LEGGI_SPIA, attendi=False)
+            sp, sd = fuori["spia_prima"] or {}, fuori["spia_dopo"] or {}
+            inf(f"il palco: quadri {sp.get('quadri')} → {sd.get('quadri')} "
+                f"({fuori['battiti']} battiti), eventi resize "
+                f"{sp.get('resize')} → {sd.get('resize')}, "
+                f"clientWidth {sp.get('clientW')} → {sd.get('clientW')}")
             fuori["dopo"] = c.valuta(MISURA, attendi=False)
             if args.copia:
                 dopo = args.copia.replace(".png", "-dopo.png")
@@ -515,6 +639,29 @@ def verdetto(r, args):
             f"{scena['poi'][1]} CSS, senza nessun fotogramma nuovo")
         d = r.get("dopo") or {}
         prima = r["misura"]
+
+        # ⛔⭐ PRIMA DEL PRODOTTO SI GIUDICA IL PALCO — `LEZIONI.md` §1.2, e qui
+        #    non e' una formalita': il cammino del prodotto passa da
+        #    `requestAnimationFrame`, e su questo Xvfb i quadri non girano da
+        #    soli.  ⇒ Se l'evento `resize` non e' ARRIVATO alla pagina, tutto
+        #    quel che segue e' rosso a prescindere da come sta il prodotto, e
+        #    attribuirglielo sarebbe la §2.3 — bocciare il codice giusto.
+        sp = r.get("spia_prima") or {}
+        sd = r.get("spia_dopo") or {}
+        dq = (sd.get("quadri") or 0) - (sp.get("quadri") or 0)
+        dr = (sd.get("resize") or 0) - (sp.get("resize") or 0)
+        inf(f"il palco: {dq} quadri girati e {dr} eventi resize consegnati "
+            f"({r.get('battiti')} battiti del banco), clientWidth "
+            f"{sp.get('clientW')} → {sd.get('clientW')}")
+        if dr < 1:
+            ko("⛔ IL PALCO, NON IL PRODOTTO: l'evento `resize` non e' mai "
+               "arrivato alla pagina (i quadri non girano su questo schermo "
+               "finto). Il banco non puo' dire NIENTE del ridimensionamento — "
+               "ne' verde ne' rosso")
+            return guai + [f"{nome} (palco): nessun evento resize consegnato"]
+        ok(f"⭐ il palco regge: la pagina ha ricevuto {dr} evento/i `resize` e "
+           f"{dq} quadri sono girati — quel che segue e' del PRODOTTO")
+
         if not d or not d.get("buffer"):
             ko("⛔ non ho misurato niente dopo il ridimensionamento")
             return guai + ["niente dopo il ridimensionamento"]

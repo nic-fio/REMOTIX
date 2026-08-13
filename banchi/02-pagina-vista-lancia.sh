@@ -71,9 +71,16 @@ URL_SANO=${URL_SANO:-}
 GIRI=${GIRI:-vista-piu-larga vista-piu-grande vista-piu-piccola fattore-2 ridimensiona}
 # ⛔ I guasti si provano sulla scena dell'utente: finestra larga, tela 16:9.
 GUASTI=${GUASTI:-cornice-fissa uno-a-uno}
+# ⛔⭐ E QUESTI DUE SULLA SCENA «RIDIMENSIONA», che e' l'unica in cui il blocco
+#    «dopo» esiste — 13 agosto 2026.  Prima i guasti giravano SOLO su
+#    `vista-piu-larga`, e le quattro pretese del ridimensionamento (fra cui
+#    «ricomposizioni > prima») non erano mai state provate capaci di arrossire:
+#    verdi da sempre, e nessuno sapeva se sapessero fare altro (`CODER.md`
+#    §4.6, `LEZIONI.md` §2.2).
+GUASTI_RIDIM=${GUASTI_RIDIM:-ridimensiona-sordo deposito-perso}
 # ⛔ Contro un server vero i guasti non esistono: si innestano in una copia, e
 #    la copia qui non c'e'.  Si tolgono, e si dice perche'.
-[ -n "$URL_SANO" ] && GUASTI=""
+[ -n "$URL_SANO" ] && { GUASTI=""; GUASTI_RIDIM=""; }
 GIRO_GUASTO=${GIRO_GUASTO:-vista-piu-larga}
 ESITI=${ESITI:-$QUI/02-pagina-vista-esiti.jsonl}
 COPIE=${COPIE:-$QUI/02-pagina-vista-copie}
@@ -158,7 +165,7 @@ else
 	python3 "$QUI/02-pagina-vista-prova.py" --prepara sano \
 		--sorgente "$SORGENTE" --dentro "$T/sano" >/dev/null || exit 2
 	ok "sana: $T/sano/index.html"
-	for g in $GUASTI; do
+	for g in $GUASTI $GUASTI_RIDIM; do
 		python3 "$QUI/02-pagina-vista-prova.py" --prepara "$g" \
 			--sorgente "$SORGENTE" --dentro "$T/$g" >/dev/null || exit 2
 		ok "guasta «$g»: $T/$g/index.html — l'innesto ha trovato il suo testo"
@@ -238,7 +245,7 @@ fi
 #   `grep` chiude la conduttura al primo riscontro, `curl` muore di SIGPIPE e
 #   `pipefail` fa fallire il controllo su una pagina che c'era — `[M]` sul
 #   secondo giro di stasera.
-for g in sano $GUASTI; do
+for g in sano $GUASTI $GUASTI_RIDIM; do
 	if [ "$g" = sano ]; then u=$SANO; else u="http://127.0.0.1:$PORTA/$g/"; fi
 	curl -sk --max-time 20 -o "$T/servita-$g.html" "$u"
 	if grep -q 'REMOTIX' "$T/servita-$g.html"; then
@@ -269,6 +276,19 @@ if [ -n "$GUASTI" ]; then
 	done
 fi
 
+if [ -n "$GUASTI_RIDIM" ]; then
+	log "4-bis. ⭐ I guasti DEL RIDIMENSIONAMENTO — le quattro pretese del blocco «dopo»"
+	for g in $GUASTI_RIDIM; do
+		inf "la pagina guasta «$g» sta su http://127.0.0.1:$PORTA/$g/"
+		python3 "$QUI/02-pagina-vista-prova.py" --giro ridimensiona \
+			--guasto "$g" --rosso-atteso \
+			--url "http://127.0.0.1:$PORTA/$g/" --diagnosi "$DIAGNOSI" \
+			--copia "$COPIE/guasto-$g.png" --uscita "$ESITI"
+		s=$?; FATTI=$((FATTI+1))
+		[ "$s" -ne 0 ] && GUAI=$((GUAI+1))
+	done
+fi
+
 log "5. I vicini, contati DOPO"
 inf "vicini DOPO (su NIC-OS) — $(vicini)"
 
@@ -280,9 +300,9 @@ if [ "$GUAI" -eq 0 ]; then
 	# ⛔ La riga dei guasti si stampa SOLO se i guasti sono girati.  ⚠ Dirla
 	#    sempre sarebbe la forma peggiore: un verde che si attribuisce una
 	#    certificazione che in questo giro non ha fatto.
-	if [ -n "$GUASTI" ]; then
+	if [ -n "$GUASTI$GUASTI_RIDIM" ]; then
 		printf '    %s   ⭐ E le %s pagine guaste sono diventate rosse.%s\n' \
-			"$VERDE" "$(printf '%s\n' $GUASTI | wc -l)" "$GRIGIO"
+			"$VERDE" "$(printf '%s\n' $GUASTI $GUASTI_RIDIM | wc -l)" "$GRIGIO"
 	else
 		printf '    %s   ⚠ E i guasti in questo giro NON sono girati: questo giro%s\n' "$GIALLO" "$GRIGIO"
 		printf '    %s     MISURA la pagina servita, non CERTIFICA lo strumento.%s\n' "$GIALLO" "$GRIGIO"

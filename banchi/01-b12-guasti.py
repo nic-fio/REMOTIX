@@ -153,6 +153,52 @@ CORREDO = {
     "B4": ["01-b4-lancia.py", "01-b4-validatore.py", "01-b4-registrazioni.py"],
     "B9": ["01-b9-letture.py", "01-b3-cliente.py"],
     "C2": ["01-c2-diagnosi.py", "01-b3-cliente.py"],
+    # ⛔⭐ I BANCHI DELLA FASE 3 VOGLIONO IL CORREDO INTERO, E NON E' PIGNOLERIA
+    #     — 13 agosto 2026, alla messa a catalogo.
+    #
+    # Quei banchi risolvono i propri fratelli con `dirname(__file__)` e **senza
+    # nessuna variabile d'ambiente**: `03-scena-accendi.sh:105` compila
+    # `"$QUI/03-scena.c"`, `03-scena-certifica.sh:48-51` prende accendi, marca e
+    # metro da `$QUI`, e `03-marca-certifica.py:53-56` carica `03-marca.py` con
+    # `importlib` dalla propria cartella.
+    #
+    #   ⛔ *Copiare il solo file guastato e lanciare l'originale vorrebbe dire
+    #      compilare il sorgente SANO con il guasto fermo in una cartella che
+    #      nessuno legge: il banco resterebbe **verde**, e la riga direbbe «non
+    #      e' diventato rosso» di un guasto **mai innestato** — la trappola n.2
+    #      di questo file, nella sua forma piu' silenziosa.*
+    #
+    # ⚠ E `02-giudizio-metro.py` sta nel corredo pur non chiamandosi `03-`: M6 e
+    #   il `giro` di M8 sono verdetti SUOI, non della scena.
+    "03-scena": ["03-scena.c", "03-scena-accendi.sh", "03-scena-certifica.sh",
+                 "03-marca.py", "03-marca-certifica.py", "03-deposita.py",
+                 "02-giudizio-metro.py"],
+    "03-marca": ["03-marca.py", "03-marca-certifica.py", "03-scena.c",
+                 "03-scena-accendi.sh", "03-scena-certifica.sh",
+                 "03-deposita.py", "02-giudizio-metro.py"],
+    "03-deposita": ["03-deposita.py", "03-scena-certifica.sh", "03-scena.c",
+                    "03-scena-accendi.sh", "03-marca.py",
+                    "03-marca-certifica.py", "02-giudizio-metro.py"],
+    # ⚠ B17 col guasto (B): il banco gira `--certifica` su CHUWI senza rete, e
+    #   carica i fratelli dalla PROPRIA cartella.
+    "03-b17": ["03-b17-ritardo.py", "03-b17-ponte.py", "03-marca.py",
+               "02-pagina-misura-cdp.py"],
+    # ⚠ B14: `costruisci_e_spedisci()` compila `$QUI/03-b14-metro.c`, quindi il
+    #   metro guasto dev'essere accanto alla copia del banco.
+    "03-b14": ["03-b14-cadenza.py", "03-b14-metro.c", "03-b14-scena.c",
+               "03-marca.py"],
+    # ⛔⭐ B15 E B18: `02-filo-fotogramma.py` NON e' un di piu' — 13 agosto 2026
+    #     sera, MISURATO invece che letto.  `certifica()` di tutt'e due chiude
+    #     confrontando le costanti di §6.2 (`INTESTAZIONE`, `CHIAVE`, `DELTA`)
+    #     con quelle di quel file, caricandolo con `_porta()` **dalla propria
+    #     cartella**.  ⚠ Senza, quel controllo non fallisce: cade nel ramo
+    #     «non ho potuto confrontare» — che in B15 conta **una falla** (e il
+    #     giro sano uscirebbe 2 invece di 0), e in B18 non ne conta nessuna,
+    #     cioe' sparisce in silenzio.  ⇒ Copiare il solo banco vorrebbe dire
+    #     certificarne uno su un atteso sbagliato e l'altro su un controllo in
+    #     meno, e le due forme d'errore sono diverse solo nel sintomo.
+    "03-b15": ["03-b15-movimento.py", "02-filo-fotogramma.py"],
+    "03-b18": ["03-b18-credito.py", "02-filo-fotogramma.py"],
 }
 
 # ===========================================================================
@@ -263,6 +309,80 @@ FILE_CHE_CONTANO = {
     #     ortogonali (misurato in tutt'e due i versi il 12 agosto).
     "P5R": ["01-p5-lancia.sh", "01-p5-registro.py", "01-p5-guasto-ritiro.py",
             "remotix/pagina.html"] + FILE_DEL_BINARIO,
+
+    # =======================================================================
+    # ⭐ I BANCHI DELLA FASE 3 — messi a catalogo il 13 agosto 2026 alla
+    #    chiusura della fase, con le voci scritte e i guasti costruiti ma
+    #    ⛔ **NESSUNA MARCA MISURATA**, e quindi nessuno certificato.
+    #
+    # ⭐⭐ LA SERA DEL 13 AGOSTO TRE DI LORO SONO STATI CERTIFICATI DAVVERO —
+    #     `03-b14`, `03-marca` e i due che entrano stasera, `03-b15` e
+    #     `03-b18` — e le loro marche sono MISURATE in due meta', sano e
+    #     guasto, su giri veri.  Le note dicono con che numeri.
+    # ⛔ Gli altri restano col campo `marca` VUOTO **di proposito**: finche' e'
+    #    vuoto `--giudica` li rifiuta, ed e' giusto cosi'.  Non sono «puliti»:
+    #    sono banchi che nessuno ha ancora messo alla prova.
+    # =======================================================================
+    # ⚠ Un `*-esiti.jsonl` NON entra qui, in nessuna di queste voci: e'
+    #   l'USCITA del banco e cambia a ogni giro, quindi ogni certificazione
+    #   nascerebbe scaduta il minuto dopo.  Nessuna delle quindici voci di
+    #   prima ne include uno.
+    "03-scena": ["03-scena.c", "03-scena-accendi.sh", "03-scena-certifica.sh",
+                 "03-marca.py", "03-marca-certifica.py",
+                 "02-giudizio-metro.py", "03-deposita.py"],
+    "03-marca": ["03-marca.py", "03-marca-certifica.py", "03-scena.c",
+                 "03-scena-certifica.sh"],
+    "03-deposita": ["03-deposita.py", "03-scena-certifica.sh"],
+    # ⛔ B14 non misura un byte del prodotto: il suo soggetto e' **Mutter**.
+    #    `FILE_DEL_BINARIO` qui sarebbe una scadenza regalata.
+    "03-b14": ["03-b14-cadenza.py", "03-b14-metro.c", "03-b14-scena.c"],
+    # ⚠ B16 non tocca il prodotto compilato ne' il servente C: apre
+    #   `src/pagina.html` da un `http.server` di Python, con Chrome vero.
+    "03-b16": ["03-b16-dipinti.py", "02-pagina-misura-cdp.py",
+               "remotix/pagina.html"],
+    # ⛔ B17 e' l'unico dei quattro che misura la CATENA VERA, e la sua lista e'
+    #    la piu' lunga apposta: ogni nome e' un tratto della catena che il
+    #    numero attraversa — il `pts` (figlio.c), il filo (webtransport.c), la
+    #    decodifica e il disegno (pagina.html), e le intestazioni COOP/COEP che
+    #    sono esattamente cio' che il controllo P6 misura (pagina.c).
+    #    ⚠ Ogni nome e' anche una scadenza in piu': e' il prezzo di una
+    #    certificazione che dice davvero su quali byte ha misurato.
+    "03-b17": ["03-b17-ritardo.py", "03-b17-ponte.py", "03-b17-accendi.sh",
+               "03-b17-lancia.sh", "03-marca.py", "03-scena.c",
+               "02-pagina-misura-cdp.py", "remotix/figlio.c",
+               "remotix/webtransport.c", "remotix/pagina.c",
+               "remotix/pagina.html"] + FILE_DEL_BINARIO,
+    # ⚠ B19 sono DUE file, e a catalogo va quello che misura la catena vera.
+    #   ⭐ Il gemello `03-b19-dipinti-worker.py` non esce piu' «SEMPRE 0»: la
+    #     cura del 13 agosto sera gli ha messo l'esito nel codice d'uscita
+    #     (vedi la nota della voce), e adesso sa dire di no anche lui.
+    "03-b19": ["03-b19-ritardo-worker.py", "03-b17-ponte.py", "03-marca.py",
+               "03-scena.c", "03-b17-accendi.sh", "02-pagina-misura-cdp.py",
+               "remotix/pagina.html"] + FILE_DEL_BINARIO,
+
+    # =======================================================================
+    # ⭐ GLI ULTIMI DUE BANCHI NUOVI — 13 agosto 2026 sera.
+    #
+    # `03-b15` e `03-b18` erano rimasti fuori dalle certificazioni del giorno
+    # perche' i loro file si muovevano ancora alle 17:58 e alle 18:04 mentre
+    # gli altri sette erano fermi.  ⭐ Adesso sono fermi, e la loro scena e' la
+    # piu' economica di tutta la fase 3: `--certifica` gira **su CHUWI, senza
+    # rete, senza contenitore e senza prodotto** — aioquic si importa tardi,
+    # dentro le funzioni del giro dal vivo — e ci mette circa un secondo.
+    # ⛔ Da cui: qui l'unica cosa che si certifica e' **la certificazione**,
+    #    cioe' che i controlli sappiano dire di no ai propri verbali guasti.
+    #    Il giro DAL VIVO sulla 7603 e sulla 7607 resta `[?]`, e le due cose
+    #    non si arrotondano.
+    #
+    # ⛔ E NIENTE `FILE_DEL_BINARIO` E NIENTE `remotix/*`: `--certifica` non
+    #    tocca un byte del prodotto — gira su verbali FABBRICATI A MANO.
+    #    Metterceli sarebbe una scadenza regalata, cioe' una severita' che non
+    #    descrive niente: la certificazione cadrebbe per un file su cui non ha
+    #    mai misurato.  ⚠ Il giorno in cui si certifichera' il giro DAL VIVO,
+    #    quelle righe andranno aggiunte — e quel giorno la voce sara' un'altra.
+    # =======================================================================
+    "03-b15": ["03-b15-movimento.py", "02-filo-fotogramma.py"],
+    "03-b18": ["03-b18-credito.py", "02-filo-fotogramma.py"],
 }
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
@@ -1397,6 +1517,747 @@ guasto(
 
 
 # ===========================================================================
+# ⭐⭐ I BANCHI DELLA FASE 3 — messi a catalogo il 13 agosto 2026
+#
+# ⛔ E SI ERA ENTRATI DA NON CERTIFICATI, tutti e sette.  Il campo `marca` di
+#    queste voci nasceva **vuoto**, e non per dimenticanza: la regola di questo
+#    file e' che una marca **si misura innestando il guasto e leggendo che cosa
+#    il banco stampa**, poi si verifica ASSENTE dal giro sano.  Una marca
+#    dedotta dal sorgente e' la forma **E5** — un fatto che era una deduzione
+#    mai riverificata — ed e' esattamente cio' che il rilievo R12-A.3 ha pagato
+#    su B4 e su B7.  ⇒ Qui si scrive **dove guardare**, non che cosa si vedra'.
+#
+# ⚠ Da cui: `--giudica` li rifiuta finche' il campo e' vuoto, e il conto onesto
+#   li conta **MAI PROVATI**.  Non sono «puliti»: sono banchi nuovi che nessuno
+#   ha ancora messo alla prova.
+#
+# ⭐⭐⭐ LA SERA DEL 13 AGOSTO LE «DOVE GUARDARE» SONO STATE ANDATE A GUARDARE,
+#      e il metodo ha retto: le candidate scritte per `03-b14` e per `03-marca`
+#      erano **giuste tutt'e due**, misurate 0 nel sano e >0 nel guasto su giri
+#      veri.  ⇒ Scrivere «dove guardare» invece di indovinare la stringa non ha
+#      rallentato niente: ha fatto trovare la marca al primo colpo, e con la
+#      prova che nel sano non c'era.
+# ⛔ E DUE VOCI SONO ENTRATE STASERA — `03-b15` e `03-b18` — nate gia' con la
+#    marca MISURATA, che e' il modo in cui una voce dovrebbe nascere.
+# ⚠ Restano col campo vuoto `03-b16`, `03-b17`, `03-b19`, `03-deposita` e
+#   `03-scena`.  ⛔ E `03-b17` non e' «da fare»: il suo giro SANO su CHUWI e'
+#   BOCCIATO 30 su 31, tre giri su tre, sempre sullo stesso controllo e **del
+#   ponte** — la sua nota lo dice, e la cosa giusta e' lasciarlo NON
+#   CERTIFICATO invece di allargare l'atteso finche' torna.
+#
+# ⛔ E i tre SENZA NUMERO sono quelli che si dimenticano — `03-scena`,
+#    `03-marca`, `03-deposita` — proprio perche' non hanno un numero che li
+#    chiami.  Due dei tre non giudicano il prodotto: sono **lo strumento** e
+#    **la scena**, cioe' la meta' di cui `PIANO.md` §0.4 dice che *«un difetto
+#    nel banco non lo trova niente, e avvelena ogni misura successiva perche'
+#    da' fiducia»*.
+# ===========================================================================
+
+# ── 03-scena — l'istante della marca si congela ────────────────────────────
+guasto(
+    "03-scena", "03-scena",
+    "l'istante dipinto nella marca si prende UNA VOLTA SOLA: ogni fotogramma "
+    "dichiara di essere stato composto all'istante del primo",
+    os.path.join(COPIE, "03-scena.c"),
+    "\tuint64_t istante = ora_monotonica_us();\n",
+    "\t/* " + MARCA + " 03-scena — l'istante della marca si prende UNA VOLTA\n"
+    "\t * SOLA: il numero del disegno continua a crescere, i pixel continuano\n"
+    "\t * a cambiare, e ogni fotogramma dichiara l'istante del primo.  Se il\n"
+    "\t * controllo P7 resta verde, «la scena si muove» sta guardando il\n"
+    "\t * CONTATORE e non l'orologio. */\n"
+    "\tstatic uint64_t istante_congelato_b12 = 0;\n"
+    "\tif (!istante_congelato_b12) istante_congelato_b12 = ora_monotonica_us();\n"
+    "\tuint64_t istante = istante_congelato_b12;\n",
+    "⛔ L'istante dipinto nella marca e' **la partenza dell'anello del "
+    "ritardo**: la mediana di 74,58 ms della fase 3 nasce da li'.  ⭐ E questo "
+    "guasto e' scelto perche' **non produce nessun sintomo**: i pixel "
+    "cambiano, il conto dei disegni cresce, il CRC e' giusto, e P1, P4, P6, "
+    "M6 e M8 restano tutti verdi — P6 in particolare, perche' l'istantanea "
+    "riceve la STESSA variabile e dichiarato e dipinto continuano a "
+    "coincidere.  ⇒ L'unico che puo' vederlo e' `P7 la scena si muove`, che "
+    "confronta gli istanti in senso STRETTO.  Se P7 non lo vede, ogni misura "
+    "di ritardo della fase 3 poggia su un orologio che non e' un orologio",
+    # ⛔ NON MISURATA — e va misurata prima di poter certificare 03-scena.
+    # ⭐ Dove guardare: la riga «misura» di P7, che `Conto.esito()` stampa come
+    #    JSON PURO, senza codici ANSI in mezzo — e quello conta, perche'
+    #    `marca_vista()` cerca la stringa nel file COLORATO e una marca che
+    #    attraversi un codice ANSI non combacerebbe mai (e' la ragione per cui
+    #    la riga con «NO» non si puo' usare).  Candidata da verificare:
+    #    «"delta_istante_us": [0» — nel giro sano quei delta sono positivi.
+    "",
+    "ricostruisce",
+    "fasi/03-movimento.md, step 2 «La scena che si dichiara» · "
+    "LEZIONI.md §1.1 e §1.7 · fasi/00-ambiente.md",
+    nota="⛔ **03-scena NON e' un banco che giudica il prodotto: e' la SCENA**, "
+         "e il prodotto non e' nemmeno in campo (la catena e' "
+         "`03-scena.c → libx265 → ffmpeg`).  ⭐ E' a catalogo per la ragione "
+         "opposta a quella degli altri: un attrezzo di scena che sbaglia non "
+         "fa diventare rosso niente — **avvelena ogni misura che ci si "
+         "appoggia**.  E ci si appoggiano `03-b14`, `03-b15`, `03-b17` e "
+         "`03-b18`.\n"
+         "⚠ IL GUASTO SI INNESTA NELLA COPIA E IL GIRO SI LANCIA DALLA COPIA: "
+         "`03-scena-accendi.sh` compila `$QUI/03-scena.c` senza nessuna "
+         "variabile d'ambiente, quindi un giro lanciato dall'originale "
+         "compilerebbe il sorgente SANO e resterebbe verde col guasto in mano. "
+         "Da cui il CORREDO intero.\n"
+         "⚠ E va dato un `PORTA=` diverso da quello del giro sano: la cartella "
+         "di lavoro e il binario si chiamano `/tmp/remotix-03-scena-$PORTA`, e "
+         "due passi sulla stessa porta si riuserebbero il binario.\n"
+         "⚠ Effetto collaterale letto e dichiarato: con l'istante congelato "
+         "anche `ultimo_disegno_us` si ferma, e `03-marca.py` calcola una "
+         "durata ≤ 0 ⇒ `disegni_al_secondo` esce `null` nella lettura da "
+         "fuori.  Non fa cadere nessun controllo, ma si vede.\n"
+         "⭐ E c'e' una SECONDA STRADA gia' in casa, che copre un'altra cosa: "
+         "`03-scena.c` porta **il proprio guasto dentro** (`--guasto rientro`) "
+         "e `03-scena-certifica.sh` fa gia' sano → guasto → risanato su P13. "
+         "E' la forma di B11, e certifica il rilevatore della corsa a vuoto — "
+         "non la scena come strumento di tempo.  Le due sono complementari.",
+)
+
+# ── 03-marca — il terzo setaccio del lettore disarmato ─────────────────────
+guasto(
+    "03-marca", "03-marca",
+    "⛔ al lettore della marca si disarma il controllo del CRC: resta con due "
+    "setacci su tre",
+    os.path.join(COPIE, "03-marca.py"),
+    "    if crc_letto != crc_atteso:\n",
+    "    if False and crc_letto != crc_atteso:   # " + MARCA + " 03-marca —\n"
+    "        # il terzo setaccio disarmato: il sync passa, il CRC no.  Il\n"
+    "        # lettore restituisce un numero di disegno FALSO invece di\n"
+    "        # rifiutare la lettura.\n",
+    "⛔ E' **il difetto che non produce nessun sintomo**: sui fotogrammi veri "
+    "il pittore continua a scrivere CRC giusti, quindi ogni misura di ritardo "
+    "resta identica al microsecondo e nessun altro controllo si muove.  Quel "
+    "che sparisce e' **la capacita' di dire di no** — e il lettore che dice "
+    "sempre si' e' quello che il suo stesso certificatore dichiara di temere: "
+    "*«un rilevatore che dice sempre si' misura zero ed e' felice a torto»*.  "
+    "⭐ Il danno concreto ha un nome gia' scritto: con il CRC spento un "
+    "fotogramma corrotto verrebbe letto come fresco, cioe' **M6 diventerebbe "
+    "cieco proprio sul guasto che esiste per vedere** («il fotogramma e' del "
+    "giro prima» travestito da fotogramma nuovo)",
+    # ⭐⭐ MISURATA il 13 agosto 2026 sera, e la candidata scritta qui sopra ha
+    #     retto: e' la riga «misura» del controllo «P5 un bit invertito», che
+    #     nel giro sano e' `{"lette_a_torto": []}` e col guasto si riempie di
+    #     celle lette a torto.  Nessun codice ANSI dentro (i colori stanno
+    #     sulla riga OK/NO di sopra, verificato con `cat -v`).
+    # ⛔ Le DUE META', contate sull'uscita dei tre giri veri:
+    #    **0 nel sano, 1 nel guasto, 0 nel risanato**.
+    # ⭐ E una terza prova, che vale piu' delle prime due: la marca da' **0**
+    #    anche sul giro rosso per CARTELLA VUOTA (l'ambiente che manca, cioe'
+    #    la trappola n.1).  ⇒ Questa marca non confonde il guasto col guasto
+    #    d'ambiente, ed e' esattamente quel che a un campo `marca` si chiede.
+    # ⚠ E DUE COSE DA NON USARE COME MARCA, per non ripetere R12-A.3, e adesso
+    #    e' MISURATO e non piu' temuto:
+    #    · «P5 un bit invertito» — 1 volta nel giro SANO: e' il nome del
+    #      controllo, non il suo esito;
+    #    · «marche rotte RIFIUTATE (il CRC le prende); zero lette a torto» —
+    #      1 volta nel giro SANO.
+    #    · la riga dell'elenco finale — ha i codici ANSI in mezzo.
+    '{"lette_a_torto": [{"cella"',
+    "leggero",
+    "web.md §6.3 controllo P3 · LEZIONI.md §1.2 e §1.9 · "
+    "fasi/rapporti/F2-6-giudizio.md (il «giro» di M8)",
+    nota="⛔ **03-marca non giudica il prodotto: e' lo STRUMENTO DI MISURA**, e "
+         "sopra ci sta il numero della fase.  Ci si appoggiano `03-b17` e "
+         "`03-b19` (che lo caricano con `importlib` invece di riscriverlo), "
+         "`03-b14` e l'intero `03-scena-certifica.sh`.  ⇒ Se sbaglia, i banchi "
+         "del ritardo **continuano a dare un numero**, e il numero e' falso: "
+         "nessun sintomo a valle.\n"
+         "⚠ Il guasto si innesta nella COPIA e il giro si lancia dalla copia — "
+         "`03-marca-certifica.py` carica `03-marca.py` dalla PROPRIA cartella "
+         "con `importlib`.  Da cui il CORREDO intero.\n"
+         "⚠ E si e' scelto di far cadere **P5** (sei celle invertite a "
+         "posizioni fisse, cinque delle quali fuori dal byte del sync ⇒ rosso "
+         "deterministico) e non **P3** (il rumore casuale dovrebbe azzeccare "
+         "sync E versione: circa un falso positivo atteso su tutto il giro, "
+         "cioe' un rosso su cui non si puo' contare).\n"
+         "⚠ `ffmpeg` e `libx265` decidono l'esito di P4 e NON sono impronte di "
+         "questo catalogo: senza ffmpeg P4 esce «NON MISURATO», che e' una "
+         "terza cosa e non un verde.\n"
+         "⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA — ed e' la voce che vale di "
+         "piu', perche' su `03-marca.py` poggia la mediana 74,58 ms della "
+         "fase.**  Tre giri sulla COPIA di `01-b12-copie/`, con "
+         "`--applica`/`--togli` del catalogo stesso: sano **0** (21 controlli, "
+         "21 passati) → guasto **1** (21 controlli, 20 passati, **1 fallito, e "
+         "il fallito e' P5**, cioe' esattamente il setaccio disarmato) → "
+         "risanato **0** (21 su 21).  `03-marca.py` tornato "
+         "`5d7fa2783c968076d76c6f84adf53799d1c489f9772b53e009a8f3b41408fce7`, "
+         "byte per byte l'originale.  E l'uscita del risanato e' identica riga "
+         "per riga a quella del sano (`diff` vuoto).\n"
+         "⛔⛔ **E `atteso_sano = 0` VALE SOLO SE `--cartella` HA DENTRO I "
+         "FOTOGRAMMI VERI**, ed e' la cosa che chi rifa' la prova deve sapere "
+         "prima: con la cartella VUOTA il giro **sano** esce **1** — 17 "
+         "controlli invece di 21, con P6 e P7 «NON MISURATO».  ⇒ Misurerebbe "
+         "un rosso che non e' il guasto.  ⚠ I giri di stasera hanno usato i "
+         "tre fotogrammi 1920x1080 di un giro di `03-scena` del 13 agosto "
+         "(`/tmp/remotix-03-scena-7602`), e quella cartella sta su **tmpfs**: "
+         "sparisce al riavvio.  Nel giro di norma li produce "
+         "`prepara_fotogrammi` dentro `03-scena-certifica.sh:670`, e va "
+         "riacceso.\n"
+         "⭐ SECONDO SINTOMO TROVATO, e smentisce di poco una frase scritta "
+         "qui sopra: col CRC disarmato il controllo «P1 margine di "
+         "scorrimento» scende da **10 px a 9**.  Resta VERDE (la soglia "
+         "dichiarata e' 4), quindi «nessun altro controllo si muove» regge "
+         "come **esito** ma non come **numero** — il CRC e' anche cio' che fa "
+         "proseguire la ricerca di posizione, e spento il lettore si "
+         "accontenta della prima lettura falsa.  ⚠ Non e' usabile come marca: "
+         "quella riga e' verde in tutt'e due i giri.",
+)
+
+# ── 03-deposita — il deposito che si tronca invece di crescere ─────────────
+guasto(
+    "03-deposita", "03-deposita",
+    "il deposito degli esiti si apre in scrittura invece che in coda: resta "
+    "solo l'ultima riga",
+    os.path.join(COPIE, "03-deposita.py"),
+    '    with open(esiti, "a") as f:\n',
+    '    with open(esiti, "w") as f:   # ' + MARCA + ' 03-deposita — il\n'
+    '        # deposito si TRONCA a ogni riga: resta solo l\'ultima, la riga\n'
+    '        # stampata a schermo e\' identica a quella del giro sano, e il\n'
+    '        # codice d\'uscita resta 0.\n',
+    "⛔ Il deposito esiste perche' la cartella di lavoro sta in `/tmp` e su "
+    "quella macchina **il rootfs vive in RAM e si azzera al riavvio**: senza, "
+    "dopo un riavvio resterebbe *il ricordo che «erano verdi»* e non i numeri. "
+    "⭐ Con questo guasto la riga a schermo e' **identica**, il codice "
+    "d'uscita resta **0** e il giro esce **tutto verde**: a sparire e' la "
+    "storia, cioe' esattamente la cosa per cui il file e' stato scritto",
+    # ⛔ NON MISURATA, e qui il motivo e' piu' grave che altrove: vedi la nota.
+    "",
+    "leggero",
+    "LEZIONI.md §2.5-bis (il rootfs in RAM) · fasi/03-movimento.md step 2 · "
+    "REVIEWER.md E1 (la catena dichiarata)",
+    nota="⛔⛔ **QUESTA VOCE NON E' CERTIFICABILE OGGI, E NON PER LA MARCA "
+         "MANCANTE: PERCHE' NON ESISTE IL CONTROLLO CHE POTREBBE DIVENTARE "
+         "ROSSO.**  `[M]` 13 agosto 2026, verificato leggendo: nessuno "
+         "rilegge `03-scena-esiti.jsonl` — `03-scena-certifica.sh` legge gli "
+         "esiti del METRO in `/tmp`, non il deposito.  ⇒ Innestare questo "
+         "guasto oggi lascerebbe il giro **tutto verde**, e la riga direbbe "
+         "«il banco non vede il guasto» di un banco che **non ha nessun "
+         "occhio puntato li'**.\n"
+         "⭐ E il controllo che manca costa due righe e non ha bisogno di "
+         "niente: contare le righe del deposito PRIMA e DOPO il giro e "
+         "pretendere `dopo == prima + 2`, poi rileggere l'ultima riga e "
+         "pretendere `quanti_giri == 4` per il giro di M8.  Finche' non c'e', "
+         "questa voce sta a catalogo come **dichiarazione di un buco**, che e' "
+         "il suo mestiere: e' il gemello negativo che non c'e'.\n"
+         "⚠ Un secondo guasto, piu' fine, per quando il controllo esistera': "
+         "sostituire il ramo `except` che appende «non si e' letto» con un "
+         "`continue` — `quanti_giri` scenderebbe **in silenzio**, che e' il "
+         "conto gonfiato al contrario.",
+)
+
+# ── 03-b14 — un tetto di sicurezza sulla cadenza chiesta ───────────────────
+guasto(
+    "03-b14", "03-b14",
+    "un tetto «di sicurezza» a 60 sulla cadenza proposta: si chiede 120 e si "
+    "negozia 60, e il numero che esce porta l'etichetta sbagliata",
+    os.path.join(COPIE, "03-b14-metro.c"),
+    "\tstruct spa_fraction massima = SPA_FRACTION(cadenza, 1);\n",
+    "\t/* " + MARCA + " 03-b14 — un tetto «di sicurezza» a 60 sulla cadenza\n"
+    "\t * proposta: si chiede 120, si negozia 60, e la cella continua a\n"
+    "\t * chiamarsi «120».  §1.8: quando si chiede un componente per nome si\n"
+    "\t * verifica che abbia obbedito. */\n"
+    "\tstruct spa_fraction massima = SPA_FRACTION(cadenza > 60 ? 60 : cadenza, 1);\n",
+    "⛔ §1.8: *«quando si chiede un componente per nome si verifica che abbia "
+    "obbedito»*.  Con questo tetto la cella B nasce a **60 Hz invece che a "
+    "120**, e la cella C — «monitor fermo a 120, freno a 60» — misura in "
+    "realta' 60 contro 60.  ⭐ E il guasto e' scelto perche' **tutti i numeri "
+    "restano plausibili**: il controllo positivo (10 Hz) continua a "
+    "funzionare, quello negativo pure, nessuna cella si rompe, e la "
+    "conclusione **M3 diventa falsa senza che una riga sembri strana**.  ⇒ Se "
+    "B14 non lo vede, la riga «monitor 120 + freno 90 ⇒ 61,4 consegnati» "
+    "l'avrebbe prodotta uno strumento che quei 120 non li ha mai chiesti — "
+    "che e' la forma gia' pagata in questa stessa fase, «un verde in catalogo "
+    "lo produceva lo STRUMENTO»",
+    # ⭐⭐ MISURATA il 13 agosto 2026 sera, e la candidata scritta qui sopra
+    #     ha retto: `cella()` la stampa con `ko()`, ed e' la riga «⛔ chiesto
+    #     maxFramerate 120, FISSATO 60.000 — il numero che segue NON e' la
+    #     misura di 120 (§1.8)».
+    # ⛔ Le DUE META', contate sull'uscita dei tre giri veri e non sul sorgente:
+    #    **0 nel sano, 1 nel guasto, 0 nel risanato**.
+    "chiesto maxFramerate 120, FISSATO 60",
+    "ricostruisce",
+    "fasi/03-movimento.md step 1 · gnome.md §8.2 e §13 (M3) · "
+    "LEZIONI.md §1.1, §1.2, §1.8",
+    nota="⭐⭐⭐ **IL BANCO E' STATO CURATO E POI CERTIFICATO — 13 agosto 2026 "
+         "sera.**  Fino a stasera questa nota diceva «NON CERTIFICABILE: "
+         "`03-b14-cadenza.py` ESCE SEMPRE 0», e diceva il vero: `esegui()` "
+         "finiva con `return 0` e `ko()` si limitava a **stampare**, quindi "
+         "col guasto dentro il rosso sarebbe rimasto **soltanto nel testo** e "
+         "`giudica()` avrebbe scritto «col guasto ha dato lo stesso esito del "
+         "sano» — il difetto che B12 esiste per trovare, dentro il banco che "
+         "ha prodotto la legge della griglia.\n"
+         "⭐ LA CURA: `ko()` conta i rossi e `esegui()` chiude con "
+         "`return 1 if ROSSI else 0`; il 2 (versioni, compilatore, `scp`) e il "
+         "3 (sessione GNOME assente) restano quel che erano, cioe' "
+         "attrezzatura che manca.  ⛔ E il conto sta dentro `ko()` e non "
+         "accanto alle 29 chiamate perche' sei rossi escono da `cella()`, che "
+         "ritorna presto: scritti a mano se ne sarebbero persi per strada.  ⚠ "
+         "Nessuna misura e' stata toccata — per `ko()` non passa nessun numero.\n"
+         "⭐⭐ **I TRE GIRI, VERI, SULLA SESSIONE GNOME DI NIC-OS**: sano "
+         "**0** → guasto **1** → risanato **0**, con `--secondi 10 "
+         "--riscaldamento 3` e la marca a **0 / 1 / 0**.  Il metro guasto e' "
+         "tornato `284614ad3d15de42891a6c57342be1e4ff24d8bfb91709884f013f06de"
+         "398928`, byte per byte l'originale.  ⛔ E il guasto **compila "
+         "pulito** — `gcc -std=gnu11 -Wall -Wextra -O2`, uscita 0, verificato "
+         "PRIMA del giro: il rosso non e' quello della trappola n.1.  ⛔ Le "
+         "tre porte d'altri contate prima e dopo in tutt'e tre i giri "
+         "(7448: 2·2 · 7501: 2·2 · 7561: 2·2) e **nessun monitor lasciato "
+         "addosso alla macchina**.\n"
+         "⛔⭐ E COL GUASTO NON CADE SOLO LA MARCA: cadono anche «⛔ L'IPOTESI "
+         "NON REGGE» e «nemmeno il freno intermedio porta ai 60», perche' il "
+         "monitor nasce a 60 e la cella C misura 60 contro 60 — cioe' il "
+         "guasto morde esattamente dove la voce diceva che avrebbe morso.\n"
+         "⛔⛔ **E `atteso_sano = 0` VALE PER IL GIRO DI NORMA (celle A-D) E "
+         "NON PER GLI ALTRI DUE**, e non e' una deduzione: i tre registri gia' "
+         "esistenti sono stati ripassati nei verdetti del banco CURATO senza "
+         "rimisurare niente.  `03-b14-esiti.jsonl` (il giro che ha prodotto i "
+         "**61,4 fps a monitor 120 / freno 90**) da' **0** ⇒ l'atteso e' "
+         "giusto.  Ma `03-b14-esiti-scena2.jsonl` darebbe **1** (la cella D "
+         "e' crollata a 0,04 fps, con la scena morta e il palco cambiato "
+         "sotto) e `03-b14-esiti-griglia.jsonl` darebbe **1** — i suoi DUE "
+         "soli punti hanno `scena_sul_mio_monitor = false`, quindi "
+         "`verdetto_griglia` li conta **contaminati** e stampa «la legge NON "
+         "regge su 0 punti su 0».  ⇒ ⚠ Chi certifichera' `--scena2` o "
+         "`--griglia` deve dichiarare l'atteso di QUELLA forma di giro, "
+         "oppure ripulire la scena: **non si arrotondano con questa**.\n"
+         "⛔ E resta un `[?]` che va detto forte: la **griglia di record e' "
+         "contaminata in tutt'e due i punti**.  Il 61,4 viene dalla cella D, "
+         "che e' pulita (scena 115,07 sul mio monitor, palco stabile), ma "
+         "chiunque citi «la legge della griglia» appoggiandosi a "
+         "`03-b14-esiti-griglia.jsonl` sta citando due punti che il banco "
+         "stesso rifiuta.  ⚠ Non e' stato toccato niente: e' una misura da "
+         "rifare, non un numero da correggere.\n"
+         "⚠ La scena: gira su NIC-OS dentro la sessione GNOME headless gia' "
+         "viva, che il banco **verifica e non ferma mai**; il soggetto e' "
+         "**Mutter**, non il prodotto — nessun server, nessun browser.\n"
+         "⚠ Il guasto va innestato nella COPIA del metro e il giro lanciato "
+         "dalla copia del banco: `costruisci_e_spedisci()` compila "
+         "`$QUI/03-b14-metro.c` con un percorso fisso.\n"
+         "⚠ E `03-marca.py` + `03-scena.c` entrano nel conto **solo** col giro "
+         "`--scena2`; col giro di norma la scena e' quella EGL di B14.",
+)
+
+# ── 03-b16 — la riga di stile che tiene la barra sempre presente ───────────
+guasto(
+    "03-b16", "03-b16",
+    "⛔ si toglie dalla pagina la riga che tiene la barra verticale sempre "
+    "presente: la vista cambia sotto la tela quando la tela si accende",
+    os.path.join(COPIE, "b16-albero", "src", "pagina.html"),
+    "  html { overflow-y: scroll; }",
+    "  /* " + MARCA + " 03-b16 — la riga di stile che tiene la barra\n"
+    "     verticale sempre presente, tolta.  Niente si rompe: la pagina si\n"
+    "     impagina identica finche' la tela resta spenta. */",
+    "⛔ E' un difetto che **il prodotto stesso documenta come curato per "
+    "caso**, e che nessun'altra pretesa guarda.  Senza quella riga, "
+    "accendendo la tela il documento diventa quattro volte piu' alto "
+    "(`scrollHeight` da 788 a 1288, misurato e scritto dentro `pagina.html`), "
+    "**compare la barra verticale**, `clientWidth` cala di una quindicina di "
+    "pixel, alla tela si da' la larghezza vecchia — e riparte la famiglia «la "
+    "barra compare e la vista resta quella di prima», cioe' proprio la "
+    "famiglia per cui il 13 agosto una cura era stata scritta e poi "
+    "**RITIRATA**.  ⭐ A tela spenta non produce **nessun sintomo**, e a "
+    "vederlo e' un caso solo: `V3s`, che pretende la larghezza della tela "
+    "uguale a quella disponibile",
+    # ⭐⭐ MISURATA il 13 agosto 2026 sera: 0 nel sano, 1 nel guasto, 0 nel
+    #     risanato.  E' il conto finale di `principale()`, stampato da `ko()`,
+    #     e la marca sta tutta DOPO il reset ANSI della riga.
+    # ⛔⭐ E LA CANDIDATA SCRITTA QUI SOPRA ERA SBAGLIATA DI UN PEZZO, ed e' il
+    #     genere di errore per cui questo campo si MISURA invece di dedurlo:
+    #     diceva «sano/V3s: rosso (1 guai)», ma i guai sono **3**.  Scritta col
+    #     conteggio dentro, la marca avrebbe dato **0 anche nel giro guasto** e
+    #     la certificazione sarebbe caduta per una virgola — cioe' il banco
+    #     sarebbe risultato «rosso per un'altra causa» proprio mentre faceva
+    #     esattamente il suo mestiere.  ⇒ La marca giusta e' senza il conteggio.
+    # ⚠ E NON si usa il testo della pretesa: `Pretese.che()` stampa la STESSA
+    #   frase in verde e in rosso, cambiando solo il prefisso OK/NO colorato —
+    #   che e' la trappola gia' pagata su B7 con «CONGEDO».
+    # ⭐ Seconda marca misurata (0/1/0), piu' forte contro la trappola n.1
+    #    perche' un Chrome morto non la puo' stampare — pretende che il caso
+    #    arrivi in fondo e legga l'impaginazione:
+    #    «impaginazione ACCESA  clientWidth×clientHeight [1361, 773]».
+    "sano/V3s: rosso",
+    "leggero",
+    "fasi/03-movimento.md step 4 · SPECIFICHE.md §6.1-bis · "
+    "RCP.md §6.2 e §5.2 · LEZIONI.md §1.1, §1.2",
+    nota="⚠ LA COPIA QUI DEV'ESSERE UN ALBERO, NON UN FILE, e `prepara_copia()` "
+         "oggi **non lo sa fare**: `03-b16-dipinti.py` legge la pagina come "
+         "`RADICE/src/pagina.html` con `RADICE = QUI.parent` e **non ha nessuna "
+         "opzione per cambiare sorgente** (la costante `COPIE` dentro quel file "
+         "e' definita e mai usata — codice morto).  ⇒ Prima del giro va "
+         "costruito a mano `01-b12-copie/b16-albero/` con dentro "
+         "`banchi/03-b16-dipinti.py` e `src/pagina.html`, e si lancia la copia "
+         "del banco: `RADICE` segue `__file__` e ci va dietro da sola, senza "
+         "toccare una riga.\n"
+         "⭐ E l'appiglio e' lungo apposta: `overflow-y: scroll` da solo "
+         "compare **due** volte in `pagina.html` — la seconda dentro il "
+         "commento che racconta la cura — e un appiglio corto avrebbe innestato "
+         "il guasto **nel commento**, lasciando il difetto fuori e il banco "
+         "verde.\n"
+         "⭐ `atteso_sano = 0` e questa volta e' MISURATO, non dedotto: giro "
+         "`b16-20260813-144817`, 19 casi, tutti «verde», 0 guai.\n"
+         "⚠ Da misurare: che il guasto faccia rosso **V3s e solo V3s**.  La "
+         "lettura dice che V3 e V3d confrontano tela e larghezza fra loro e "
+         "non con un numero fisso, ma e' una lettura, non una misura.\n"
+         "⚠ La scena: niente prodotto (su CHUWI non compila) e niente "
+         "WebTransport — la pagina si serve da un `http.server` di Python su "
+         "127.0.0.1, i fotogrammi entrano da uno stream finto, e il browser e' "
+         "Chrome vero su schermo finto.  E' dichiarato dal banco stesso.\n"
+         "⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA**: 0 → 1 → 0 sull'albero "
+         "`01-b12-copie/b16-albero/`, **che adesso esiste** (costruito a mano, "
+         "come questa nota gia' chiedeva) — quindi `--verifica`, `--applica` e "
+         "`--togli` funzionano su questa voce.  Pagina tornata "
+         "`ec169e5d7232ca6a…`, byte per byte quella di casa.\n"
+         "⭐ E LA `⚠ Da misurare` DI QUESTA STESSA NOTA E' STATA MISURATA: col "
+         "guasto e' rosso **V3s e SOLO V3s**, gli altri 18 casi restano verdi. "
+         "La lettura («V3 e V3d confrontano tela e larghezza fra loro e non "
+         "con un numero fisso») regge anche alla misura, e non e' piu' una "
+         "lettura.  Il difetto vale esattamente **15 px** di `clientWidth` "
+         "(1376 → 1361): «una quindicina», verificata.\n"
+         "⛔⛔ **E UNA TRAPPOLA N.1 MISURATA SUL CAMPO, che va saputa prima di "
+         "leggere un rosso di questo banco**: un primo giro risanato e' uscito "
+         "**1 con ZERO righe rosse**, perche' un `Xvfb :90` rimasto in piedi "
+         "da un giro ucciso occupava lo schermo.  Il banco lo dice a chiare "
+         "lettere — *«lo schermo :90 e' gia' occupato: un altro banco ci sta "
+         "sopra»* — ma **alza un `RuntimeError`, e Python esce 1 come per un "
+         "caso rosso**.  ⇒ `uscita = 1` di questo banco significa «un caso e' "
+         "rosso» **oppure** «lo schermo era occupato», e le due si distinguono "
+         "SOLO dalla marca.  ⭐ E' la ragione per cui il campo `marca` non e' "
+         "una formalita': quel giro fasullo aveva `marca_vista = false`, e "
+         "`--giudica` l'avrebbe rifiutato.  Il giro e' stato buttato e rifatto "
+         "a schermo pulito.",
+)
+
+# ── 03-b17 — la finestra di sanita' dell'istante spalancata ────────────────
+guasto(
+    "03-b17", "03-b17",
+    "⛔ al banco del ritardo si spalanca la finestra di sanita' dell'istante: "
+    "il setaccio che smaschera un rilevatore che INVENTA il tempo",
+    os.path.join(COPIE, "03-b17-ritardo.py"),
+    "    dentro = [s for s in scarti if -1000000 <= s <= 5000]",
+    "    dentro = list(scarti)  # " + MARCA + " 03-b17 — la finestra di\n"
+    "    # sanita' dell'istante spalancata: un istante inventato non viene\n"
+    "    # piu' preso da nessuno.",
+    "⛔ La finestra di P3 e' **il setaccio che smaschera un rilevatore che si "
+    "inventa l'istante** invece di leggerlo: e' il controllo caduto in v1, ed "
+    "e' cosi' che si riperde in silenzio.  ⭐ Con la finestra tolta il guasto "
+    "sintetico «l'istante e' inventato» non viene piu' preso da nessuno — "
+    "restano i due setacci che un rilevatore bugiardo **passa** — e il banco "
+    "continua a consegnare un numero di ritardo dall'aria perfettamente "
+    "normale.  ⇒ Il numero della fase 3 poggia su questo setaccio",
+    # ⛔ NON MISURATA.  ⭐ Dove guardare: `certifica()` costruisce la riga e
+    #    `dice()` la stampa con `ko()`:
+    #      «guasto «P3 l'istante e' inventato» → rossi nessuno (attesi ['P3'])»
+    #    Candidata da verificare: «rossi nessuno (attesi ['P3'])».  ⭐ Nel giro
+    #    sano la stessa riga dice «→ rossi ['P3'] (attesi ['P3'])», e siccome
+    #    nel sano tutti e dieci i guasti sintetici sono presi, la parola
+    #    «rossi nessuno» non compare mai.
+    "",
+    "leggero",
+    "fasi/03-movimento.md step 5 · web.md §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
+    "RCP.md §6.2 · LEZIONI.md §1.2, §1.13",
+    nota="⛔⛔ **IL GIRO SANO DI `--certifica` NON E' VERDE SU CHUWI, E "
+         "L'HO MISURATO: 3 GIRI SU 3, USCITA 1, «BOCCIATO — 30 controlli su "
+         "31».**  `[M]` 13 agosto 2026 sera, sulla copia in `01-b12-copie/`, "
+         "**senza nessun guasto innestato**.  ⛔ E non e' instabilita': cade "
+         "sempre lo **stesso** controllo, ed e' del PONTE e non del banco del "
+         "ritardo — *«fuori ordine: 0 inversioni su 40 pacchetti tornati "
+         "(attese > 0)»*.  Il ponte deve **produrre** disordine per poter "
+         "dimostrare di saperlo vedere, e su questa macchina non ne produce.\n"
+         "⚠ I sette PROMOSSO 31 su 31 del 13 agosto erano su **NIC-OS**: "
+         "`atteso_sano = 0` vale la' e **non qui**, e le due cose non si "
+         "arrotondano.  ⇒ Finche' il giro sano non e' verde, 03-b17 **NON SI "
+         "CERTIFICA** — e' la regola gia' scritta per B8, per B13 e per P5, e "
+         "la cosa giusta e' lasciarlo NON CERTIFICATO invece di allargare "
+         "l'atteso finche' torna.\n"
+         "⭐ Da cui il primo passo per chi lo riprendera', ed e' piu' corto di "
+         "quanto sembri: capire se il ponte non inverte perche' su CHUWI il "
+         "giro e' tutto in casa, o perche' il controllo pretende un evento che "
+         "nessuno gli fa succedere.  Le due hanno cure diverse.\n"
+         "⛔ E LA VOCE VALE PER `--certifica`, NON PER `--misura`: sul giro dal "
+         "vivo l'atteso sano **non e' stabilmente 0** — su 13 misure "
+         "registrate solo 3 hanno tutti e sette i controlli veri, e il "
+         "rapporto di fase lo dichiara («P5 NON ESEGUITO, e adesso lo dice»). "
+         "Mettere questa voce sul giro dal vivo vorrebbe dire dichiarare "
+         "`atteso_sano = 1`, oppure rifare il sano finche' non torna — cioe' "
+         "un verde fragile.  ⚠ `--certifica` gira su CHUWI **senza rete e "
+         "senza server**, ed e' il motivo per cui questo guasto si puo' "
+         "chiudere in minuti.\n"
+         "⛔⭐ **E IL GUASTO PIU' FEDELE ALLO SPIRITO DI B12 E' UN ALTRO, ED "
+         "E' BLOCCATO DA UN DIFETTO DEL BANCO** — si scrive qui perche' chi "
+         "verra' non ricominci da capo.  Sarebbe: nella COPIA del prodotto "
+         "(`03-b17-src/src/figlio.c`, quella che `03-b17-lancia.sh porta` "
+         "srotola sul server) far finire nei 28 byte il `pts` del fotogramma "
+         "**precedente** — appiglio `\\tpts_us = (uint64_t)fo->pts / 1000u;`, "
+         "verificato **unico**.  E' il difetto perfetto: la guardia del "
+         "prodotto ripiega solo oltre **un secondo**, quindi uno scarto di un "
+         "fotogramma (~41 ms) **passa**, il video si vede identico, e il "
+         "numero della fase esce piu' corto del vero.  A vederlo sarebbe il "
+         "solo P3, e P1 non si muoverebbe (il ritardo si calcola sulla marca "
+         "dei pixel, non sul `pts`).\n"
+         "⛔ **Perche' non e' quello scritto qui sopra**: la riga che il banco "
+         "stampa per un P3 rosso e' un `json.dumps(...)[:220]`, e i 220 "
+         "caratteri **si esauriscono prima** del campo che cambia — sano e "
+         "guasto stampano un prefisso della stessa forma.  ⇒ Una marca non "
+         "esiste, e senza marca `giudica()` non certifica.  ⭐ La cura e' due "
+         "righe: dare a P3 un campo `perche` come ce l'hanno gia' P1, P2 e P5. "
+         "Fatto quello, questo guasto va costruito.",
+)
+
+# ── 03-b19 — l'interruttore del worker spento dalla parte che funziona ─────
+guasto(
+    "03-b19", "03-b19",
+    "⛔ nella pagina si spegne il ramo del FRAMMENTO che accende il worker: "
+    "resta solo la strada a cui il prodotto risponde 404",
+    os.path.join(QUI, "03-b17-src", "src", "pagina.html"),
+    '  new URLSearchParams(location.hash.replace(/^#/, "")).get("video") === "worker";',
+    "  false; /* " + MARCA + " 03-b19 — l'interruttore dal FRAMMENTO spento.\n"
+    "            Resta solo `?video=worker`, e il servente risponde 404 a\n"
+    "            quello: il worker non nasce piu' per nessuna strada. */",
+    "⛔ E' **il difetto senza nessun sintomo per definizione**: il worker e' "
+    "*attuato, misurato e tenuto spento* in produzione, quindi togliere quel "
+    "ramo non cambia niente per l'utente e non muove nessun altro banco.  ⭐ "
+    "Ma il frammento e' **l'unica strada che funziona** — il servente "
+    "confronta il percorso con `/` e risponde **404** a `GET /?video=worker`, "
+    "misurato il 13 agosto — ed e' per questo che il banco apre "
+    "`#video=worker` e non `?video=worker`.  ⇒ Spento quel ramo, la pagina "
+    "gira **tutta sul thread principale mentre l'URL dice worker**: il banco "
+    "dei dipinti confronterebbe il thread principale **con se stesso** "
+    "stampando «indistinguibili», e quello del ritardo misurerebbe *«il "
+    "thread principale con l'etichetta del worker»* — la frase e' del banco",
+    # ⛔ NON MISURATA.  ⭐ Dove guardare: `misura()` la stampa con `ko()` prima
+    #    ancora di misurare, quando `aggancia_worker()` non trova nessun
+    #    bersaglio: «⛔ e' stato chiesto «?video=worker» ma nessun bersaglio
+    #    «worker» si e' fatto agganciare: NON misuro».  Candidata da
+    #    verificare: «nessun bersaglio «worker» si e' fatto agganciare».
+    #    ⭐ Nel giro sano al suo posto c'e' «⭐ worker agganciato, e il prologo
+    #    e' dentro anche li'».
+    "",
+    "leggero",
+    "fasi/03-movimento.md §7 e §8 · DECISIONI.md §2.8 · web.md §6.1 · "
+    "LEZIONI.md §6.2",
+    atteso_sano=1,
+    nota="⛔ `atteso_sano = 1`, E NON E' UN ATTESO ALLARGATO: e' MISURATO.  "
+         "Tutt'e tre i giri `b19-*` registrati sulla 7608 escono 1 perche' "
+         "**P5 e' falso** in tutti e tre (e in due anche P3 o P1), e P5 non "
+         "eseguito e' una cosa **dichiarata** dal rapporto di fase, non un "
+         "difetto scoperto oggi.  ⚠ Un `atteso_sano = 0` avrebbe fatto "
+         "scrivere «il banco non partiva dallo stato che il catalogo "
+         "dichiara» a un banco che sta facendo il suo mestiere.\n"
+         "⭐ E il guasto da' un numero **diverso**: il banco si ferma prima di "
+         "misurare, con uscita **4**.  I due non si confondono.\n"
+         "⚠ IL GUASTO MORDE SOLO COL GIRO `--video-worker`: senza "
+         "quell'interruttore il ramo non viene percorso e il banco resta "
+         "verde — e sembrerebbe che non veda.  Va dichiarato a chi lancia.\n"
+         "⛔ E B19 SONO DUE FILE, non uno.  A catalogo c'e' "
+         "`03-b19-ritardo-worker.py`, l'unico che sa dire di no; il gemello "
+         "`03-b19-dipinti-worker.py` e' un banco **comparativo** a se'.  "
+         "⭐ **E NON ESCE PIU' SEMPRE 0: curato il 13 agosto 2026 sera**, con "
+         "la stessa forma di B14 — `ko()` conta, e `principale()` chiude con "
+         "`return 1 if ROSSI else 0`.\n"
+         "⭐⭐ E LA CURA E' STATA MISURATA SULLO STESSO IDENTICO GIRO, prima e "
+         "dopo: Xvfb :87, Chrome vero, porta 7614, `src/pagina.html` su un "
+         "albero a parte, 2 giri da 6 s per strada.  **Prima della cura: "
+         "uscita 0** stampando «⛔ il worker DIPINGE MENO: -97,3 dipinti/s "
+         "(-74,2 %)».  **Dopo la cura: uscita 1**, stessa scena, stessa riga "
+         "rossa.  ⇒ Il difetto c'era davvero e la cura lo chiude.\n"
+         "⛔ E `atteso_sano = 1` ANCHE PER IL GEMELLO, ed e' MISURATO tre "
+         "volte su tre (129,1 contro 28,4 · 131,1 contro 33,8 · 130,8 contro "
+         "37,7 dipinti/s): su CHUWI, a schermo finto e in software, **il "
+         "worker dipinge circa un quarto** del thread principale.  ⚠ Quel "
+         "rosso e' del PRODOTTO e non del banco — `LEZIONI.md` §6.2 — ed e' "
+         "coerente con il fatto che il worker sia tenuto **spento** in "
+         "produzione.  ⛔ Un `atteso_sano = 0` qui sarebbe un atteso "
+         "allargato al contrario: farebbe scrivere «il banco non partiva "
+         "dallo stato dichiarato» a un banco che sta misurando bene.\n"
+         "⭐ E i TRE GIRI del gemello sono stati fatti, il 13 agosto sera, "
+         "sull'albero di prova `/home/nicfio/b19-albero` — mai su `src/`: "
+         "**sano 1 → guasto 3 → risanato 1**, col ramo `?video=worker` della "
+         "pagina spento (appiglio `  new URLSearchParams(location.search)."
+         "get(\"video\") === \"worker\" ||`, verificato UNICO) e la pagina "
+         "tornata `ec169e5d7232ca6a…`, byte per byte quella di casa.  La "
+         "marca «ma il worker non e' pronto: NON misuro» ha dato **0 nel "
+         "sano, 1 nel guasto, 0 nel risanato**.  ⚠ Non e' a catalogo come "
+         "voce propria: e' UN banco per riga, e la riga di `03-b19` e' del "
+         "ritardo.  Chi vorra' certificare anche il gemello ha qui tutto "
+         "quello che serve.\n"
+         "⚠ E il ritardo-worker **non ha un registro proprio**: deposita in "
+         "`03-b17-esiti.jsonl` marcandosi `\"banco\": \"B17\"`.  Due banchi "
+         "sotto la stessa etichetta e' la forma E2, e va saputo prima di "
+         "leggere quel file.\n"
+         "⚠ Il `dove` sta sulla MACCHINA DI PROVA (la copia che "
+         "`03-b17-lancia.sh porta` srotola): da CHUWI `--provabile 03-b19` "
+         "stampa MANCA, ed e' giusto — e' la stessa scena di P1.\n"
+         "⛔⛔⭐ **E IL DIFETTO DEL `return 0` NON E' CHIUSO DEL TUTTO: NE "
+         "RESTA UN TERZO, E STA PROPRIO IN `03-b19-ritardo-worker.py`, cioe' "
+         "nel file che QUESTA voce mette a catalogo.**  Trovato il 13 agosto "
+         "2026 sera **cercando il caso che smentisse «adesso i banchi sanno "
+         "bocciare»**, e il caso c'era.  `principale()` ha tre strade: "
+         "`--certifica` chiude con `return 0 if r[\"esito\"] == \"PROMOSSO\" "
+         "else 1` (giusta), `--misura` con `return 0 if all(...) else 1` "
+         "(giusta), ⛔ ma `--verdetto <file>` chiama `stampa_verdetto()` — che "
+         "stampa i rossi con `ko()` — e poi **`return 0` incondizionato**.  ⇒ "
+         "Rileggere un verbale gia' salvato stampa il verdetto giusto e esce "
+         "**sempre verde**: e' la stessa forma curata stasera su `03-b14` e "
+         "sul gemello dei dipinti.\n"
+         "⚠ **NON E' STATO CURATO, E IL MOTIVO E' UNA REGOLA DI CASA**: la "
+         "cura sarebbe una riga, ma per provarla servono la macchina di prova "
+         "e la scena di P1, che da CHUWI non c'e'.  ⛔ E un banco «curato» che "
+         "nessuno ha visto arrossire non e' curato — meglio il difetto "
+         "SCRITTO che una cura non eseguita spacciata per fatta.  ⇒ E' il "
+         "primo lavoro per chi riprende `03-b19`, e costa una riga piu' un "
+         "giro.",
+)
+
+# ── 03-b15 — il setaccio del TIPO del primo fotogramma, tolto ──────────────
+guasto(
+    "03-b15", "03-b15",
+    "⛔ a P2 si toglie il setaccio del TIPO del primo fotogramma: un DELTA "
+    "subito dopo `SESSIONE` passa per buono, e il banco lo chiama CHIAVE",
+    os.path.join(COPIE, "03-b15-movimento.py"),
+    "    if primo.tipo != CHIAVE:\n",
+    "    # ⭐ " + MARCA + " 03-b15 — tolto il setaccio del TIPO del primo\n"
+    "    #   fotogramma: P2 non guarda piu' se il primo dopo SESSIONE e' una\n"
+    "    #   CHIAVE 0x0301, e un DELTA in apertura passa per buono.\n"
+    "    #   ⛔ Non si vede perche' non ha nessun ALTRO sintomo: il banco gira\n"
+    "    #   intero, conta gli stessi fotogrammi e stampa lo stesso verde — i\n"
+    "    #   `numero` non hanno buchi e nessun decodificatore protesta.\n"
+    "    if False and primo.tipo != CHIAVE:\n",
+    "⛔ §5.2 vuole che il PRIMO fotogramma dopo `SESSIONE` sia una CHIAVE "
+    "`0x0301`, e P2 e' l'unico che lo guarda.  ⭐ E' il difetto di questo "
+    "catalogo nella sua forma piu' pura, perche' **il banco non tace: afferma "
+    "il falso** — su un delta `0x0302` in apertura stampa «il primo "
+    "fotogramma (`numero` 1) e' una CHIAVE 0x0301».  ⇒ Passerebbe in silenzio "
+    "un prodotto che dopo `SESSIONE` manda un delta: il client aprirebbe su "
+    "un riferimento che non ha, e il sintomo sarebbe «il desktop compare a "
+    "pezzi» — **senza buchi nella successione dei `numero`** (li' guarda P1) "
+    "**e senza un errore del decodificatore** che lo denunci.  ⚠ E' proprio "
+    "quel che l'intestazione del banco dichiara di sua mano.",
+    # ⭐ MISURATA, non dedotta — 13 agosto 2026 sera, su copia in scratchpad,
+    #    tre giri: 0 nel sano, 1 nel guasto, 0 nel risanato.
+    # ⛔ E NON e' la riga generica «⛔ sul verbale guasto dice VERDE invece di
+    #    ROSSO: non sa vedere», che pure darebbe 0/1: quella uscirebbe IDENTICA
+    #    per qualunque altro ago non visto, cioe' non distingue questo guasto
+    #    da un altro — la trappola R12-A.3 nella sua forma piu' educata.
+    # ⭐ Questa invece incastra il `(atteso ROSSO)`, che esiste solo dentro la
+    #    certificazione, con la BUGIA che solo questo guasto fa dire.
+    "(atteso ROSSO) il primo fotogramma (`numero` 1) e' una CHIAVE 0x0301",
+    "leggero",
+    "fasi/03-movimento.md step 3 · RCP.md §5.2 e §6.2 · "
+    "LEZIONI.md §1.1, §1.2",
+    nota="⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA, E LA SCENA E' LA PIU' "
+         "ECONOMICA DELLA FASE 3**: `python3 03-b15-movimento.py --certifica` "
+         "gira **su CHUWI**, senza rete, senza contenitore, senza prodotto e "
+         "senza aioquic (che si importa tardi, dentro le funzioni del giro dal "
+         "vivo), e ci mette circa un secondo.  Tre giri: sano **0** → guasto "
+         "**2** → risanato **0**, con il file tornato "
+         "`229f041a16a8a589d24eb0d67463da6c4a2e65de9a2bba8ba0b2ff7a6057eead`, "
+         "byte per byte l'originale.\n"
+         "⛔ E IL 2 ARRIVA DALLA STRADA GIUSTA, verificato invece che sperato: "
+         "`certifica()` conta **UNA falla sola**, sull'ago «delta in apertura» "
+         "di P2 — non un crollo, non un import fallito, non tre controlli che "
+         "cadono insieme.  `principale()` stampa «Non punto un banco non "
+         "certificato sull'incognita» e ritorna 2.\n"
+         "⛔⭐ **E IL GUASTO E' STATO REFUTATO PRIMA DI ESSERE SCRITTO**: dato "
+         "in pasto a tutt'e sei i controlli un verbale col difetto vero (un "
+         "delta in apertura), il banco SANO dice `P2 ROSSO` e il banco GUASTO "
+         "dice **VERDE su tutti e sei**.  ⇒ Nessun altro controllo lo "
+         "raccoglie al posto di P2: il setaccio e' davvero l'unico.\n"
+         "⚠ L'appiglio e' lungo di un rientro apposta: `primo.tipo` da solo "
+         "compare **3** volte nel file, `    if primo.tipo != CHIAVE:\\n` una "
+         "sola (contata, non guardata).\n"
+         "⛔ QUEL CHE QUESTA VOCE **NON** CERTIFICA, e va letto: il giro DAL "
+         "VIVO sulla 7603 — quello che vuole aioquic, il contenitore e il "
+         "prodotto — resta `[?]`.  Qui si certifica **la certificazione**, "
+         "cioe' che i sei controlli sappiano dire di no ai propri verbali "
+         "guasti.  E' una meta' sola, ed e' quella che si puo' misurare "
+         "stasera.\n"
+         "⚠ La marca poggia sul formato di stampa di `certifica()` "
+         "(`{esito:<11} (atteso {atteso})`) e sulla prima frase del verde di "
+         "P2: se qualcuno riscrive quel `print`, la marca muore — ma muore "
+         "RUMOROSAMENTE, dando 0 anche nel giro guasto, e `--giudica` se ne "
+         "accorge invece di certificare lo stesso.",
+)
+
+# ── 03-b18 — il setaccio della CURA di §5.2, disarmato ─────────────────────
+guasto(
+    "03-b18", "03-b18",
+    "⛔ a C6 si disarma il ramo che dice ROSSO: dopo un delta saltato per "
+    "mancanza di posto, il banco non guarda piu' se il server ha preparato "
+    "la CHIAVE che §5.2 gli impone",
+    os.path.join(COPIE, "03-b18-credito.py"),
+    "    if not righe_debito_chiave(v):\n",
+    "    # ⭐ " + MARCA + " 03-b18 — TOLTO il setaccio di C6 (§5.2): il ramo\n"
+    "    #   che dichiara ROSSO quando nessuna delle tre forme di CURA_ARMATA\n"
+    "    #   sta nel registro.\n"
+    "    #   ⛔ NON SI VEDE perche' `c6_cura` cade sul proprio ritorno VERDE e\n"
+    "    #   dice «la cura e' ARMATA» con 0 righe: il banco gira intero, C1-C5\n"
+    "    #   restano verdi, e ogni suo numero resta plausibile.\n"
+    "    if False and not righe_debito_chiave(v):\n",
+    "⛔ E' **l'unico setaccio dell'intero banco che vede il difetto B-18**, e "
+    "non e' una lettura: lo dichiara il progetto stesso.  "
+    "`03-b18-innesta.py:81` — l'ago che si innesta nel PRODOTTO per fargli "
+    "violare §5.2 — porta scritto `\"chi_lo_vede\": \"03-b18 C6-cura — e "
+    "NESSUN ALTRO: la sessione regge, il registro dice tutto, nessuna chiave "
+    "viene buttata\"`.  ⭐ Disarmato quel ramo, passerebbe in silenzio un "
+    "prodotto che salta un delta per mancanza di posto e **non accende** "
+    "`serve_chiave`: la sessione regge, il registro scrive tutto, nessuna "
+    "CHIAVE viene buttata — e al decodificatore manca per sempre un delta che "
+    "col GOP infinito non tornera' mai, mentre §6.2 impedisce al client di "
+    "accorgersene perche' nei numeri non resta buco.  ⇒ Sei controlli verdi, "
+    "e lo schermo rotto per sempre.",
+    # ⭐ MISURATA — 13 agosto 2026 sera: 0 nel sano, 3 nel guasto, 0 nel
+    #    risanato (tre, quanti sono gli aghi di C6).
+    # ⛔ E ANCHE QUI NON si usa la riga generica «⛔ sul verbale guasto dice
+    #    VERDE invece di ROSSO»: darebbe pure lei 0/3, ma uscirebbe uguale per
+    #    qualunque altro ago non visto.
+    # ⚠ E il pezzo «2 delta saltati per mancanza di posto…» da solo NON basta:
+    #   compare anche nel giro sano, nelle righe `sano` e `risanato` di C6.  Il
+    #   prefisso `(atteso ROSSO) ` e' obbligatorio, ed e' quel che rende la
+    #   marca una marca invece di una frase del banco.
+    "(atteso ROSSO) 2 delta saltati per mancanza di posto, e il server ha "
+    "preparato la CHIAVE",
+    "leggero",
+    "fasi/03-movimento.md step 6 · RCP.md §2.3 e §5.2 · "
+    "LEZIONI.md §1.1, §1.2",
+    nota="⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA**, stessa scena economica "
+         "di `03-b15`: `python3 03-b18-credito.py --certifica` gira **su "
+         "CHUWI** senza rete, senza contenitore e senza prodotto, in circa un "
+         "secondo.  Tre giri: sano **0** («8 aghi su 8, per 6 controlli») → "
+         "guasto **2** («5 aghi su 8») → risanato **0**, con il file tornato "
+         "`175f13244000ae6fcc9e50994bffa977f2d87b0dd0fc8a127abd515cf1ebd4af`, "
+         "byte per byte l'originale.\n"
+         "⛔ E LE TRE FALLE SONO ESATTAMENTE E SOLO I TRE AGHI DI C6 — «B-18 "
+         "in piedi», nelle forme «FOTOGRAMMA NON SPEDITO», «girata al palco» e "
+         "«il debito resta acceso» — non un crollo che sporca tutto.  Nel giro "
+         "sano le righe `NO` sono **zero**.\n"
+         "⛔⭐ **DUE ALTERNATIVE SONO STATE PROVATE E SCARTATE, E VALGONO PIU' "
+         "DI QUELLA SCELTA** perche' dicono dove il banco NON guarda:\n"
+         "   · disarmare `if v.caduta:` di C3 da' uscita 2, ma con **una sola** "
+         "falla e il verbale guasto che dice **ancora ROSSO**: il ramo "
+         "`if not v.viva:` fa da rete.  Sarebbe un rosso per la ragione "
+         "sbagliata — mancata *nominazione*, non cecita';\n"
+         "   · ⛔ disarmare `if buttate:` di C3 (§5.2, «nessuna CHIAVE "
+         "buttata») da' **uscita 0, 8 aghi su 8**: nessun ago copre quel ramo. "
+         "⇒ E' un **punto cieco vero della certificazione di 03-b18**, "
+         "misurato stasera e scritto qui perche' non si riperda: quel "
+         "controllo esiste e nessuno ha mai provato che sappia dire di no.\n"
+         "⚠ L'appiglio e' preso col rientro: `righe_debito_chiave(v)` da solo "
+         "compare **3** volte, `    if not righe_debito_chiave(v):\\n` una "
+         "sola (contata).\n"
+         "⛔ QUEL CHE QUESTA VOCE **NON** CERTIFICA: il giro DAL VIVO sulla "
+         "7607 resta `[?]`.  E c'e' un dettaglio che va detto perche' non si "
+         "scambi per un rosso sul filo — `certifica()` gira **per prima**, "
+         "quindi col guasto dentro il banco esce 2 **senza mai arrivare al "
+         "filo**.  E' il comportamento voluto (§1.2), ma vuol dire che il 2 e' "
+         "il verdetto della certificazione, non di una misura.\n"
+         "⚠ I conteggi della marca («2 delta») nascono dai verbali fabbricati "
+         "in `_verbale_sano()`: se qualcuno cambia `REG_CREDITO_DELTA` o il "
+         "numero di righe, la marca va RIMISURATA, non ritoccata a mente.",
+)
+
+
+# ===========================================================================
 # ⛔ La cartella dei certificati e' un percorso di esecuzione, e chi lancia la
 #    puo' cambiare: si tiene in UN posto solo, e le voci del catalogo la
 #    nominano con `{CERT}` invece di scriverla due volte.  Due verita' sullo
@@ -1459,6 +2320,15 @@ ALTRI_POSTI = {
     #    diversa, cioe' come certificazione scaduta — che e' il suo mestiere.
     "remotix/main.c": ["../src/main.c"],
     "remotix/Makefile": ["../src/Makefile"],
+    # ⚠ E i due tratti di catena che `03-b17` misura, per la stessa ragione e
+    #   nello stesso verso — 13 agosto 2026, alla messa a catalogo dei banchi
+    #   della fase 3.  ⛔ Senza queste due righe `--provabile 03-b17` stampava
+    #   «MANCA remotix/figlio.c» **da CHUWI, dove il file c'e'**, e la sua
+    #   certificazione sarebbe nata «non riverificabile»: cioe' una riga che
+    #   dice «certificato» e non sa dire su che byte.  ⭐ E' esattamente la
+    #   cura gia' fatta sopra per `pagina.c`, applicata dove serviva adesso.
+    "remotix/figlio.c": ["../src/figlio.c"],
+    "remotix/webtransport.c": ["../src/webtransport.c"],
 }
 
 

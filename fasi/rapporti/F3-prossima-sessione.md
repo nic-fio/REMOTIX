@@ -402,45 +402,112 @@ un sintomo temuto invece che osservato* (`LEZIONI.md` §2.6). Il dettaglio sta i
 
 ---
 
-## 🚧 Le trappole già pagate — non si ripagano
+## 🚧 LE TRAPPOLE GIÀ PAGATE — il catalogo completo, e si legge PRIMA di partire
 
-*Ciascuna è costata dei giri buttati il 13 agosto. **Vanno lette da OGNI corsia prima di partire.***
+*⭐ Raccolte su richiesta dell'utente alla chiusura del 13 agosto 2026, da **tutti e dodici** i
+gruppi di lavoro della giornata. ⛔ **Ciascuna è costata dei giri buttati, e il costo è scritto
+accanto.** Sono qui perché non li costino di nuovo.*
+
+⛔ **Ogni corsia le legge prima di lanciare il primo giro.** Non è cerimonia: **sette di queste sono
+state pagate DUE VOLTE nella stessa giornata**, da gruppi diversi, perché il secondo non sapeva del
+primo.
+
+---
+
+### 1. ⛔⛔ IL PALCO — la famiglia più cara della giornata
+
+*Tutte hanno lo stesso sintomo: **la catena funziona perfettamente e il numero è zero, o falso**.*
+
+| | costo |
+|---|---|
+| ⛔⛔ **la scena deve stare sul MONITOR CHE SI STA CATTURANDO** — il palco ha **quattro** monitor virtuali (`Meta-0…3`, tutti 1920×1080@60), e il proprio si legge **dal registro del proprio server**, non si indovina. Una scena sul monitor sbagliato dà **zero fotogrammi per dieci secondi con la catena perfetta** | **quattro giri**, due gruppi |
+| ⛔⛔ **e la stessa trappola è tornata a mordere il RISULTATO che la citava**: due file di esiti su tre portavano `scena_sul_mio_monitor: **false**` — scritto **dal banco stesso, accanto al numero** — e nessuno l'ha guardato. ⇒ La «legge della griglia su 13 punti» e il «riscontro incrociato entro il 4 %» **non esistevano** | **13 correzioni in 10 documenti** |
+| ⛔ **la scena accesa PRIMA della sessione resta viva e NON disegna** — Mutter non manda i *frame callback* a una superficie su un monitor che nessuno registra. Si accende **a sessione aperta** | due gruppi |
+| ⛔ **la scena smette di disegnare quando nessuno registra più il suo monitor, e non riparte da sola** — va riaccesa prima di ogni misura | un caso perso |
+| ⛔ **la finestra a schermo intero viene SPOSTATA VIA dal monitor quando il palco cambia** — e un monitor fermo non consegna niente, senza un errore | un giro |
+| ⛔ **una guardia sul palco che confronta solo i DUE ESTREMI della finestra di misura non vede un monitor d'altri smontato e rimontato in mezzo** ⇒ **due punti sono entrati in tabella come se fossero misure**. Si legge `mutter.log` **dentro** la finestra | due punti falsi |
+
+### 2. ⛔⛔ LA CONTESA — chi misura un tempo e non è solo, misura la contesa
+
+| | costo |
+|---|---|
+| ⛔⛔ **due giri di griglia interi buttati** perché **il prodotto dell'utente stava ciclando** accanto | **due giri** |
+| ⛔ **CHUWI ha 4 core**: durante un giro dell'anello un altro banco girava al **74 % di CPU** con `load` 3,8 ⇒ i tratti della **decodifica** e del **disegno** ne risentono, e il numero non lo dice | contaminazione dichiarata |
+| ⇒ ⭐ **la cura è §0-bis**: chi misura un tempo **verifica di essere solo e lo scrive accanto al numero**, e **se non è solo RIFIUTA di misurare** | — |
+
+### 3. ⛔ I BANCHI CHE SI AUTOINGANNANO — e sono i più insidiosi, perché escono verdi
 
 | | |
 |---|---|
-| ⛔⛔ **la scena deve stare sul monitor che si sta catturando** — ⭐ **è la n. 1, ed è quella che è tornata** | il palco ha **quattro** monitor virtuali (`Meta-0…3`, tutti 1920×1080@60): il proprio si legge **dal registro del proprio server**, non si indovina. Una scena sul monitor sbagliato dà **zero fotogrammi per dieci secondi con la catena perfetta**. Costo: **quattro giri** — ⛔ **più il risultato più grosso della giornata**, vedi il riquadro qui sotto |
-| ⛔ **la scena accesa PRIMA della sessione non disegna** | Mutter non manda i *frame callback* a una superficie su un monitor che nessuno registra. Si accende **a sessione aperta** |
-| ⛔ **su Xvfb `requestAnimationFrame` non gira MAI** | 0 quadri in 3 s, con e senza GPU, a scheda «visible». Ogni cammino di prodotto che ci passa dietro è **codice morto sul banco** |
-| ⛔ **`curl` normalizza** | non manda il frammento e si mangia il `?` vuoto. Sul filo grezzo serve `--request-target`, o si misura curl |
-| ⛔ **`&` dentro `ssh → enter.sh → bash -c`** non arriva dove sembra | **si usa un file, non una riga annidata** |
-| ⭐ **la parola d'ordine di `sudo` sta in `~/SERVER.ssh`** | convenzione del progetto (`banchi/02-pam-lancia.sh:59`). Un gruppo si è fermato **per non saperlo** |
-| ⛔ **il prodotto legge `pagina.html` UNA VOLTA SOLA all'accensione** | dopo ogni modifica **si riaccende**, o si prova la pagina di prima |
-| ⛔ **su CHUWI il prodotto NON si compila** | manca `nghttp3/nghttp3.h`. Vive in un contenitore su **192.168.0.2** (`enter.sh`, sorgenti `/srv/src/remotix`); i **browser veri** stanno su CHUWI |
-| ⛔ **`src/rcp.c` e `banchi/rcp/rcp.c` sono GEMELLI** | il `Makefile` pretende che siano identici: se divergono **nessuno compila**, e non si vede finché non ci si sbatte contro |
-| ⚠ **`/tmp` su CHUWI, tmpfs da 3,8 G al 94 %** | quando si riempie, Chrome non apre il profilo e il banco fallisce con un errore che **accusa la pagina**. Si guarda il disco **prima** di credergli |
+| ⛔⛔ **una certificazione VERDE che provava il giudice nell'UNITÀ SBAGLIATA** — le celle si campionano 0-255 e il giudice le voleva 0-1: passava nell'unità del **lettore** invece che in quella dell'**acquisizione** |
+| ⛔ **un caso verde perché lo produceva lo STRUMENTO**: `Page.captureScreenshot` — chiamata da un'opzione di **stampa** (`--copia`) — svegliava il rendering. Senza, lo stesso banco su prodotto **sano** dava **5 pretese rosse** |
+| ⛔ **quattro pretese MAI innestate con nessun guasto**: verdi da sempre, e nessuno sapeva se sapessero fare altro |
+| ⛔ **un rilevatore CIECO PER COSTRUZIONE**: il prodotto scarta i fuori ordine **prima** del decodificatore, il banco guarda solo **dopo** ⇒ «0 fuori ordine» è **un'identità algebrica, non una misura** |
+| ⛔ **una funzione di arricchimento NON IDEMPOTENTE**: la seconda passata consumava le celle e **cancellava 264 letture buone** ⇒ «zero campioni» con la catena perfetta |
+| ⛔ **un controllo dell'orologio che confrontava un numero CON SÉ STESSO** |
+| ⛔ **un contatore letto su fette intrecciate** dava 6,5 fotogrammi/s di una catena che ne consegnava 23 |
+| ⛔ **un banco che leggeva il registro INTERO** invece che dalla propria riga di partenza ⇒ il controllo *negativo* leggeva le righe del giro precedente e arrossiva su un prodotto sano |
+| ⛔ **un `w` invece di un `>>` sugli esiti**: i tre giri sparivano uno alla volta. *Trovato guardando il file, non il codice* |
+| ⛔ **tre FALSI ROSSI** che accusavano il prodotto mentre faceva la cosa giusta: cercavano una riga di registro che **un prodotto che si comporta bene non scrive mai** |
+| ⛔ **un banco che pretendeva ZERO BUCHI** nella successione dei `numero`, mentre l'arbitro dice che **un buco è normale e significa qualcosa** |
+| ⛔ **`giri_verdi: 6` gonfiato — erano 3**, e uno dei giri contati aveva rosso proprio il controllo che valida il numero usato |
+| ⛔ **numeri FOSSILI incollati nei commenti** («0 su 783») mentre il giro vero ne aveva 804 |
+| ⛔ **una voce di catalogo che diceva «1 guaio» dove i guai erano 3**: la certificazione sarebbe caduta **per una virgola** |
 
-> ## ⛔⛔⛔ E la trappola n. 1 è tornata a mordere **il risultato che la citava** — la sera stessa
->
-> *Va letta prima delle altre, perché non è una trappola nuova: è quella già pagata quattro volte
-> **la mattina dello stesso giorno**, e già scritta in `LEZIONI.md` §1.1.*
->
-> Il pomeriggio del 13 agosto la «legge della griglia» di Mutter è stata dichiarata **verificata su
-> 13 punti, 8 confermano, 0 la smentiscono**, ed è stata scritta in **nove documenti**. ⛔ Le celle
-> della griglia erano **due**, e portavano tutt'e due `scena_sul_mio_monitor: **false**`.
->
-> ⭐⭐ **Il banco lo aveva scritto nel proprio file.** Le ha contate **contaminate** e sul verdetto
-> ha stampato per esteso *«⛔ la legge NON regge su 0 punti su 0»*. ⛔ **Nessuno ha guardato: si è
-> letto il numero, e non la riga accanto.**
->
-> | | |
-> |---|---|
-> | ⛔ **la regola che ne esce** | prima di copiare un numero in un documento si legge **il verdetto del banco**, non la cella. Se il banco ha un campo di validità, **quel campo si cita insieme al numero** — o non si cita il numero |
-> | ⚠ **e perché non basta stare attenti** | un numero **verosimile non attiva nessun sospetto**: i 13 punti erano plausibili, il banco sapeva davvero produrli, e la spiegazione tornava |
-> | ✅ **che cosa è sopravvissuto** | `banchi/03-b14-esiti.jsonl`, sette celle tutte `scena_sul_mio_monitor: true` ⇒ il **61,4** a monitor 120 e freno 90 resta `[M]`; la **causa** torna `[R]`; **M3 resta mezza** |
->
-> ⇒ ⭐ **La lezione intera sta in `LEZIONI.md` §1.1-bis**: *un banco che dichiara la propria
-> invalidità non serve a niente se chi legge guarda solo il risultato.* Corretto il **13 agosto
-> 2026**, rilievo del coordinatore della fase 3.
+### 4. ⛔ I CODICI D'USCITA — il rosso che non esce dal programma
+
+| | |
+|---|---|
+| ⛔⛔ **tre banchi che escono SEMPRE 0**: `ko()` **stampa e basta**, e il `return` finale è incondizionato ⇒ col guasto dentro il rosso resta **nella prosa** e chi legge a macchina vede verde. Due curati, ⛔ **il terzo è ancora lì** (`03-b19-ritardo-worker.py`, percorso `--verdetto`) |
+| ⛔ **`RuntimeError` fa uscire Python con 1 — lo STESSO codice di un caso rosso**: un `Xvfb` rimasto da un giro ucciso ha prodotto **«uscita 1 con zero righe rosse»**. ⭐ È il campo `marca` che l'avrebbe fermato |
+
+### 5. ⛔ L'AMBIENTE — quel che manca, e non è dove lo cerchi
+
+| | |
+|---|---|
+| ⛔ **su CHUWI il prodotto NON si compila**: manca `nghttp3/nghttp3.h`. Vive in un contenitore su **192.168.0.2** (`enter.sh`, sorgenti `/srv/src/remotix`); i **browser veri** stanno su CHUWI |
+| ⭐ **la parola d'ordine di `sudo` sta in `~/SERVER.ssh`** (`banchi/02-pam-lancia.sh:59`) — ⛔ **un gruppo si è fermato per un'intera consegna per non saperlo** |
+| ⛔ **`weston-simple-egl` NON esiste** su nessuna delle due macchine, e tre documenti lo prescrivevano come scena. È stato scritto da zero |
+| ⛔ **`numpy` non c'è su NIC-OS** — chi legge i pixel lo fa **da CHUWI** |
+| ⛔ **`bc` non c'è sul server**, e `y4m` non accetta il 10 bit ⇒ due giri persi in cronometri a zero |
+| ⛔ **Firefox non apre finestre su Xvfb `:81`** (0 finestre in 90 s) e **non ha CDP** ⇒ si prova `--headless` **facendo rimandare gli esiti alla pagina stessa** |
+| ⛔⛔ **su Xvfb non c'è GPU AFFATTO** ⇒ `requestAnimationFrame` **non gira mai** (0 quadri in 3 s, a scheda «visible»), e Chrome dice **no a HEVC** perché non ha un decodificatore software. ⇒ **Il palco, non il codec** |
+| ⚠ **`/tmp` su CHUWI è una tmpfs da 3,8 G, il 13 agosto al 94 %**: quando si riempie Chrome non apre il profilo e il banco fallisce con un errore che **accusa la pagina**. ⛔ Si guarda il disco **prima** di credergli — ed è **già successo** |
+
+### 6. ⛔ GLI ATTREZZI — che mentono in silenzio
+
+| | |
+|---|---|
+| ⛔ **`curl` NORMALIZZA**: non manda il frammento e si mangia il `?` vuoto ⇒ due prove erano **verdi per costruzione**. Sul filo grezzo serve `--request-target` |
+| ⛔ **`&` dentro `ssh → enter.sh → bash -c`** non arriva dove sembra: **si usa un file, non una riga annidata**. ⚠ E un `grep` annidato allo stesso modo **contava zero** su un registro che la riga ce l'aveva |
+| ⛔ **modificare uno script `bash` MENTRE GIRA** butta il giro: bash rilegge il file **a offset** |
+| ⛔ **`Page.addScriptToEvaluateOnNewDocument` NON entra nei worker** ⇒ un banco non adattato conta **zero richiami** su una catena viva, e si legge come «non arriva niente» |
+| ⛔ **la presa CDP diretta al bersaglio `worker` accetta la connessione e poi NON RISPONDE** (`Runtime.enable` scade a 15 s) — *una presa che si apre e tace è peggio di una che rifiuta: sembra agganciata*. Serve `Target.setAutoAttach(flatten)` |
+| ⛔ **`scp` risponde «Failure» se il binario è IN USO** da un altro banco |
+| ⛔ **`set -u` è un amico**: due variabili non definite hanno fatto uscire due controlli rossi con «NON MISURATI» — ⭐ **senza, la scena sarebbe partita sul display sbagliato in silenzio** |
+| ⛔ **un'ancora testuale che compare DUE VOLTE** nel file ferma l'innesto del guasto: l'ancora va di due righe |
+
+### 7. ⛔ IL PRODOTTO E IL DEPOSITO — quel che blocca tutti
+
+| | |
+|---|---|
+| ⛔⛔ **`src/rcp.c` e `banchi/rcp/rcp.c` sono GEMELLI**: il `Makefile` pretende che siano identici, e se divergono **NESSUNO compila** — e non si vede finché non ci si sbatte contro. È successo, e ha bloccato due gruppi |
+| ⛔ **il prodotto legge `pagina.html` UNA VOLTA SOLA all'accensione**: dopo ogni modifica **si riaccende**, o si prova la pagina di prima |
+| ⛔ **`src/pagina.c` rispondeva 404 a QUALUNQUE stringa di ricerca** (curato oggi): `/?x=1` → 404. ⇒ Ogni interruttore `?…` era **irraggiungibile**, e i banchi non se n'erano accorti perché servono la pagina da un `http.server` di Python, **che il `?` lo ignora** |
+| ⛔ **il codec in uso è AV1 (SVT-AV1), non x265**: una manopola preparata per x265 **non avrebbe toccato niente** — *chi l'aveva scritta l'ha rifiutata da sé prima di consegnarla* |
+| ⚠ **il binario «risanato» non torna identico a quello «sano»** pur coi sorgenti uguali: la costruzione **non è riproducibile bit per bit** |
+| ⚠ **le porte protette**: **7448** · **7501** · ⛔ **7561, quella che l'utente apre** — si leggono e **non si toccano**. E ⛔ **si contano PRIMA e DOPO ogni passo**, che è quel che ha permesso di dire «non le ho toccate» invece di crederlo |
+| ⚠ **`ss` va girato sulla macchina GIUSTA**: un controllo delle porte fatto su CHUWI ha concluso che i tre server dell'utente erano spenti — **ascoltano su NIC-OS** |
+
+### 8. ⚠ IL COORDINAMENTO — quel che si rompe fra i gruppi
+
+| | |
+|---|---|
+| ⛔ **il registro rifiuta due giudizi caduti nello STESSO SECONDO** — ed è giusto così: li ha visti come conflitto e **l'ha detto**, invece di sceglierne uno |
+| ⚠ **una macchina ai byte di ieri**: NIC-OS andava riallineata prima di certificare |
+| ⚠ **un binario stantio che non esisteva più**: va riseminato **verificandone l'impronta** |
+| ⛔ **un agente ha toccato un file fuori dal proprio perimetro senza avvisare** — il codice era giusto, la regola no. ⇒ **Il perimetro si dichiara per file, non per cartella** |
+| ⚠ **due agenti sono morti a 140 byte senza fare niente**: recuperati con un secondo giro |
 
 ---
 
