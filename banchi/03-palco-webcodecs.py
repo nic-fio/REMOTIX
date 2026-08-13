@@ -231,6 +231,14 @@ SCENE = [
          nota="⭐ CONTROLLO POSITIVO dell'HARNESS — se qui non si contano "
               "fotogrammi, nessun «no» di questo banco vale niente",
          controllo=True, atteso=("si", "si")),
+    dict(chiave="av1-ivf", codec="av01.0.08M.08", strada="IVF (nessuna description)",
+         fonte="prova-h264.mp4", forma="av1-ivf",
+         nota="⭐ CONTROLLO POSITIVO chiesto dal mandato.  ⚠ SCENA DIVERSA "
+              "DALLE ALTRE: NON esce dal codificatore hardware del server "
+              "(av1_vaapi su questa macchina da' «No usable encoding profile "
+              "found», vedi 03-palco-codificatori) — e' un TRANSCODE software "
+              "libsvtav1 preset 10 crf 40 dal file h264",
+         controllo=True, atteso=("si", "si")),
     dict(chiave="h264-annexb", codec="avc1.640028", strada="Annex-B (description assente)",
          fonte="prova-h264.mp4", forma="annexb-h264",
          nota="⭐ CONTROLLO POSITIVO dello SPEZZATORE ANNEX-B — stesso codice "
@@ -266,17 +274,25 @@ def prepara():
             desc, aus = demux_mp4(grezzi[s["fonte"]])
             d = grezzi[s["fonte"]]
         else:
-            fmt = {"ivf": "ivf", "annexb-h264": "h264",
-                   "annexb-hevc": "hevc"}[s["forma"]]
-            r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-c", "copy",
-                                "-f", fmt, "pipe:1"], capture_output=True)
+            if s["forma"] == "av1-ivf":
+                # ⚠ l'unico flusso RICODIFICATO, e in software: qui non c'e'
+                #   av1_vaapi.  La scena lo dichiara, il verdetto no.
+                cmd = ["ffmpeg", "-v", "error", "-i", p, "-c:v", "libsvtav1",
+                       "-preset", "10", "-crf", "40", "-g", "120",
+                       "-f", "ivf", "pipe:1"]
+            else:
+                fmt = {"ivf": "ivf", "annexb-h264": "h264",
+                       "annexb-hevc": "hevc"}[s["forma"]]
+                cmd = ["ffmpeg", "-v", "error", "-i", p, "-c", "copy",
+                       "-f", fmt, "pipe:1"]
+            r = subprocess.run(cmd, capture_output=True)
             if r.returncode != 0 or not r.stdout:
-                raise RuntimeError("ffmpeg -f %s: uscita %d %s"
-                                   % (fmt, r.returncode, r.stderr[:200]))
+                raise RuntimeError("ffmpeg %s: uscita %d %s"
+                                   % (s["forma"], r.returncode, r.stderr[:200]))
             d = r.stdout
             desc = None
-            aus = (spezza_ivf(d) if s["forma"] == "ivf"
-                   else spezza_annexb(d, s["forma"] == "annexb-hevc"))
+            aus = (spezza_annexb(d, s["forma"] == "annexb-hevc")
+                   if s["forma"].startswith("annexb") else spezza_ivf(d))
 
         if not aus:
             raise RuntimeError("%s: zero unita' — spezzatore rotto" % s["chiave"])
@@ -612,8 +628,22 @@ def main():
                                "description": bool(v["description"])}
                            for k, v in indice.items()},
             "verdetti": verdetti,
-            "fotogrammi": {e["chiave"]: e.get("fotogrammi")
-                           for e in buoni[0].get("esiti", []) if "chiave" in e},
+            # ⚠ per giro, non solo il primo: un numero che non si ripete e' una
+            #   variabile non dichiarata, e si vede solo se si scrivono tutti.
+            "fotogrammi": {s["chiave"]: [e.get("fotogrammi", e.get("errore"))
+                                         for d in buoni for e in d["esiti"]
+                                         if e.get("chiave") == s["chiave"]]
+                           for s in SCENE},
+            "ms": {s["chiave"]: [e.get("ms") for d in buoni for e in d["esiti"]
+                                 if e.get("chiave") == s["chiave"]]
+                   for s in SCENE},
+            "formato_fotogramma": {s["chiave"]: sorted(
+                {str((e.get("primo") or {}).get("formato")) + " " +
+                 str((e.get("primo") or {}).get("w")) + "x" +
+                 str((e.get("primo") or {}).get("h"))
+                 for d in buoni for e in d["esiti"]
+                 if e.get("chiave") == s["chiave"] and e.get("primo")})
+                for s in SCENE},
             "porte_protette_prima": prima, "porte_protette_dopo": porte_protette_vive(),
             "giri_falliti": [d["errore"] for d in tutti if "errore" in d]}
 

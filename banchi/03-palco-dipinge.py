@@ -185,8 +185,52 @@ def main():
                      dp.get("errore") or ""))
     with open(os.path.join(BASE, "dipinge-%s.json" % modo), "w") as f:
         json.dump(tutti, f, indent=1)
+
+    # ⛔⛔ IL RITORNO ERA `return 0` — INCONDIZIONATO, E QUESTO BANCO ERA IL
+    #    QUARTO DELLA FAMIGLIA CHE E' GIA' COSTATA UNA GIORNATA.
+    #
+    #    Il catalogo delle trappole di questa fase porta la voce: «tre banchi
+    #    che escono SEMPRE 0: `ko()` stampa e basta, e il `return` finale e'
+    #    incondizionato ⇒ col guasto dentro il rosso resta NELLA PROSA e chi
+    #    legge a macchina vede verde».  ⭐ Questo banco l'ha scritto il
+    #    coordinatore la sera stessa in cui quella voce e' stata catalogata,
+    #    e ci e' cascato lo stesso: stampava «⛔ ZERO» e usciva 0.
+    #    ⇒ Trovato da un altro agente, che l'ha detto invece di lasciarlo
+    #      correre — ed era fuori dal suo perimetro.
+    #
+    # ⚠ E il verdetto non e' «tutto verde o rosso»: ci sono TRE esiti, perche'
+    #   «non ho potuto guardare» non e' «ha dipinto zero».
+    if not tutti or all("errore" in d for d in tutti):
+        print("\n   ⛔ NESSUN GIRO E' ARRIVATO IN FONDO: non e' «zero "
+              "fotogrammi», e' «non ho potuto guardare»")
+        return 3
+    zero, dipinti, rotti = [], [], []
+    for d in tutti:
+        for e in d.get("esiti", []):
+            dp = e.get("dipinto")
+            if not isinstance(dp, dict):
+                rotti.append(e["nota"])
+            elif isinstance(dp.get("fotogrammi"), int) and dp["fotogrammi"] > 0:
+                dipinti.append(e["nota"])
+            else:
+                zero.append(e["nota"])
+    print("\n   == IL VERDETTO: %d dipinti · %d a zero · %d non giudicabili"
+          % (len(dipinti), len(zero), len(rotti)))
+    if zero:
+        print("   ⛔ ROSSO — questi non hanno dipinto niente: %s"
+              % ", ".join(sorted(set(zero))))
+        return 2
+    if rotti:
+        print("   ⚠ NON GIUDICABILE — questi non sono arrivati a un conteggio: "
+              "%s" % ", ".join(sorted(set(rotti))))
+        return 3
+    print("   ⭐ VERDE — ogni flusso ha consegnato fotogrammi in ogni giro")
     return 0
 
 
 if __name__ == "__main__":
+    # ⛔ E `RuntimeError` esce 1, che sarebbe lo STESSO codice di un rosso: qui
+    #    il rosso e' 2, il non-giudicabile 3, e l'1 resta a «Python e' morto da
+    #    solo». Un `Xvfb` rimasto da un giro ucciso ha gia' prodotto una volta
+    #    «uscita 1 con zero righe rosse».
     sys.exit(main())
