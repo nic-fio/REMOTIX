@@ -103,10 +103,28 @@ quelle note alle 23:00 del 13 agosto; ⛔ quelle superate saranno barrate e data
 
 ---
 
-## 5. Come si accende
+## 5. Come si accende — ⭐ e puoi confrontare le due configurazioni
 
-*(riempito a fine notte con i comandi esatti e la porta, verificati su una sessione vera —
-⛔ non scritti a memoria)*
+⭐⭐ **La tua porta 7561 NON è stata toccata.** Ci gira ancora il server che hai acceso tu
+(da 12 ore, binario e pagina di ieri): ⇒ è **la configurazione vecchia**, AV1 in software.
+
+⭐ Quella nuova sta sulla **7571** — la porta che `02-figlio-accendi.sh` usa **per progetto**, da
+root, mostrando il desktop di chi entra.
+
+| apri | che cosa stai guardando |
+|---|---|
+| `https://192.168.0.2:7561/` | ⏳ **il vecchio**: AV1 in software · 72,40 ms · **21 fps** |
+| `https://192.168.0.2:7571/` | ⭐ **il nuovo**: HEVC in **hardware** · 75,23 ms · **30 fps** |
+
+⇒ ⭐ **Puoi tenerle aperte in due schede e passare dall'una all'altra.** È il confronto che ti
+avevo offerto, e costa zero: le due configurazioni **esistono già tutt'e due**, su due porte
+diverse, senza che nessuno debba spegnere niente.
+
+⚠ **Entra come te stesso** in tutt'e due, come per il giudizio della fase 2.
+
+*(la riga di comando esatta per riaccendere la 7571, e la prova che quella sessione negozia davvero
+HEVC in hardware, vengono scritte qui sotto a fine notte — ⛔ **verificate su una sessione vera**,
+non a memoria)*
 
 ---
 
