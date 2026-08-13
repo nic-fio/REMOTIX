@@ -164,14 +164,73 @@ prepara()
 }
 JSON
 	# ⛔ E LA DICHIARAZIONE DEL FILO — cucitura di F2.4.  Sulla catena finta
-	#    non c'e' filo: il FIN e' vero per costruzione e nessun RESET esiste.
-	#    Si scrive lo stesso, perche' un campo assente e un campo falso non
-	#    devono avere lo stesso aspetto.
-	cat > "$LAV/identita-$giro.json" <<JSON
-{"giro": null, "fin_ricevuto": true, "reset_ricevuto": false, "dipinto": true,
- "nota": "catena finta: nessun filo, il FIN e' vero per costruzione"}
-JSON
+	#    non c'e' filo: i contatori li mette questo banco.  Si scrive lo
+	#    stesso, perche' un campo assente e un campo falso non devono avere lo
+	#    stesso aspetto.
+	identita_finta sano "$LAV/identita-$giro.json" || return 2
 	return 0
+}
+
+# ---------------------------------------------------------------------------
+# ⛔⭐ LA CUCITURA DI F2.4 DELLA CATENA FINTA — COSTRUITA DALLA STESSA FUNZIONE
+#     CHE GIRA SULLA CATENA VERA, e non da un `printf` gemello.
+#
+# Fino al 13 agosto 2026 questo file scriveva i JSON di M8 a mano, con
+# `cat` e `printf`.  ⛔ Quel che certificava era quindi **se stesso**: la
+# derivazione vera — «`consegnati > completi` vuol dire consegnato dopo un
+# RESET» — vive in `02-giudizio-catena.py`, e nessun giro di certificazione la
+# toccava.  Il guasto `dopo-reset` passava «12 su 12» mentre sulla catena vera
+# M8 era verde per costruzione: le due cose non si contraddicevano perche'
+# **non si incontravano mai**.
+#
+# ⇒ Adesso i contatori sono l'unica cosa che questo file scrive, e il JSON lo
+#   costruisce `identita_dalla_pagina()`.  Cosi' la certificazione riguarda il
+#   codice che poi lavora sul prodotto.
+#
+# ⚠ E resta dichiarato che cosa questo NON prova: i contatori qui sono
+#   INVENTATI da questo banco.  Si certifica **lo strumento** (la derivazione
+#   + M8), non il prodotto — per innestare un RESET_STREAM vero nella catena
+#   vera bisognerebbe toccare `src/` o il server, e non si fa.
+#
+#   sano               1 stream, FIN, consegnato, dipinto — la catena sana
+#   azzerato-buttato   il server AZZERA uno stream e la pagina lo butta bene
+#                      (`azzerati` = 1) ⇒ ⛔ DEVE restare VERDE: e' la prova
+#                      che `conti.azzerati` non era la grandezza giusta, e che
+#                      la cura non ha comprato il rosso con un falso rosso
+#   dopo-reset         la pagina CONSEGNA lo stream azzerato ⇒ consegnati (2)
+#                      supera completi (1): il guasto di F2.4
+# ---------------------------------------------------------------------------
+identita_finta()
+{
+	local forma=$1 fuori=$2
+	python3 - "$QUI" "$forma" "$fuori" <<'PY' || return 3
+import importlib.util, json, os, sys
+QUI, forma, fuori = sys.argv[1], sys.argv[2], sys.argv[3]
+sp = importlib.util.spec_from_file_location(
+    "catena", os.path.join(QUI, "02-giudizio-catena.py"))
+catena = importlib.util.module_from_spec(sp)
+sp.loader.exec_module(catena)
+CONTI = {
+    "sano":             {"stream": 1, "completi": 1, "azzerati": 0,
+                         "consegnati": 1, "dipinti": 1},
+    "azzerato-buttato": {"stream": 2, "completi": 1, "azzerati": 1,
+                         "consegnati": 1, "dipinti": 1},
+    "dopo-reset":       {"stream": 2, "completi": 1, "azzerati": 1,
+                         "consegnati": 2, "dipinti": 2},
+}
+if forma not in CONTI:
+    raise SystemExit("⛔ forma sconosciuta: %s (ammesse: %s)"
+                     % (forma, ", ".join(CONTI)))
+d = catena.identita_dalla_pagina(CONTI[forma])
+d["nota_del_banco"] = (
+    "⚠ catena FINTA: questi contatori li ha inventati 02-giudizio-confronto.sh "
+    "(forma «%s»).  Il JSON pero' l'ha costruito identita_dalla_pagina() di "
+    "02-giudizio-catena.py, cioe' la STESSA derivazione che gira sulla catena "
+    "vera: si certifica lo strumento, non il prodotto." % forma)
+json.dump(d, open(fuori, "w"), ensure_ascii=False, indent=1)
+print("    OK  %s: forma «%s» ⇒ dipinto_dopo_reset=%s fin_ricevuto=%s"
+      % (fuori, forma, d["dipinto_dopo_reset"], d["fin_ricevuto"]))
+PY
 }
 
 # ⛔ CONTROLLO POSITIVO 2 — il flusso e' davvero a 10 bit?
@@ -317,9 +376,33 @@ PY
 			;;
 		dopo-reset)
 			# ⛔ i pixel sono PERFETTI: e' l'identita' del fotogramma a essere
-			#    sbagliata, ed e' invisibile a M0..M7 per costruzione
-			printf '%s\n' '{"giro": null, "fin_ricevuto": true, "reset_ricevuto": true, "dipinto": true}' \
-				> "$LAV/identita-guasto.json" || return 3
+			#    sbagliata, ed e' invisibile a M0..M7 per costruzione.
+			#
+			# ⛔⭐ E PRIMA DEL GUASTO, IL FALSO ROSSO.  `conti.azzerati > 0` e'
+			#    il PRODOTTO CHE SI COMPORTA BENE (la pagina butta lo stream
+			#    azzerato e non lo consegna): se M8 diventasse rosso qui, la
+			#    cura del 13 agosto avrebbe comprato il rosso giusto al prezzo
+			#    di un rosso inventato — e un metro che accusa un prodotto sano
+			#    e' peggio di un metro cieco.  ⇒ si prova, e dev'essere VERDE.
+			identita_finta azzerato-buttato "$LAV/identita-azzerato-buttato.json" || return 3
+			python3 "$QUI/02-giudizio-metro.py" --scena "$LAV/mira-g1.json" \
+				--cattura "$CAT" --riferimento "$LAV/rif-g1.rgb48" \
+				--pagina "$PAG" --cattura-precedente "$LAV/mira-g0.rgb48" \
+				--riferimento-10 "$RIF10" --colore "$COL" \
+				--identita-pagina "$LAV/identita-azzerato-buttato.json" \
+				--giro "certifica-azzerato-buttato" --esiti "$ESITI" >/dev/null
+			if [ $? -eq 0 ]; then
+				ok "⭐ il falso rosso NON c'e': con azzerati=1 e consegnati=completi"
+				ok "   il metro resta PROMOSSO — «conti.azzerati» non e' la grandezza"
+				ok "   di M8, e la cura non l'ha scambiata per quella"
+			else
+				ko "⛔ FALSO ROSSO: il metro boccia una pagina che ha BUTTATO lo"
+				ko "   stream azzerato, cioe' che ha fatto quel che F2.4 pretende."
+				ko "   ⇒ la certificazione si ferma: il rosso di «dopo-reset» non"
+				ko "      varrebbe niente se il verde sano non fosse verde."
+				return 3
+			fi
+			identita_finta dopo-reset "$LAV/identita-guasto.json" || return 3
 			IDE="$LAV/identita-guasto.json"
 			cp "$PAG" "$out"
 			;;

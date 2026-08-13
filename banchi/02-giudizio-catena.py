@@ -173,6 +173,142 @@ FETTA = """
 """
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⭐ LA CUCITURA DI F2.4 — E IL FALSO VERDE CHE C'ERA QUI DENTRO
+#
+# Fino al 13 agosto 2026 questo pezzo scriveva **tre costanti**:
+#
+#     {"giro": None, "fin_ricevuto": True,
+#      "reset_ricevuto": bool(conti.get("reset", 0)), "dipinto": True}
+#
+# e i tre controlli di M8 (`02-giudizio-metro.py`) leggevano proprio quelle.
+# ⛔ Nessuno dei tre poteva scattare: `giro` era None (il confronto e' saltato
+#    per costruzione), `fin_ricevuto` era True (il controllo cerca il False), e
+#    `conti["reset"]` **non esiste** — la pagina quel contatore lo chiama
+#    `azzerati` (`src/pagina.html` §`stream_video`), quindi `.get("reset", 0)`
+#    valeva 0 a ogni giro di ogni scena.
+# ⇒ M8 usciva `ok: True` qualunque cosa facesse il prodotto, e siccome il metro
+#   conta vivo ogni strumento con `ok is not None`, il «12 guasti su 12» della
+#   catena vera erano **undici strumenti e un verde vuoto**.
+#
+# ⚠ Ed e' la STESSA FORMA del difetto curato la mattina stessa alle 08:56
+#   (`dc2f6a9`, «due grandezze che si chiamano tutt'e due larghezza della
+#   tela»): due nomi per una cosa sola.  E' rinata dodici ore dopo in un altro
+#   file, il che dice che la cura non era il nome ma la regola — **il nome
+#   della grandezza si legge da chi la produce**, non si ricorda a memoria.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔ E `conti.azzerati` **NON E'** LA GRANDEZZA CHE M8 CERCA — verificato sui
+#     pixel del prodotto, non creduto sulla parola.
+#
+# `src/pagina.html` §`stream_video`, ramo `!completo`:
+#
+#     this.conti.azzerati++;
+#     this.riga("stream azzerato (RESET_STREAM) … buttato, NON consegnato al
+#               decodificatore (§6.2)");
+#     this.buco(…); return;
+#
+# ⇒ `azzerati` conta gli stream che la pagina ha **buttato bene**: e' il
+#   prodotto che si comporta come F2.4 pretende.  Scrivere
+#   `reset_ricevuto = bool(azzerati)` accanto a `dipinto = True` avrebbe reso
+#   M8 **rosso la prima volta che il server azzera uno stream**, su una catena
+#   sana — un FALSO ROSSO, che e' l'altro modo di rompere un metro, e sarebbe
+#   stato peggio del falso verde perche' avrebbe accusato il prodotto.
+#
+# ⭐ LA GRANDEZZA VERA E' L'INVARIANTE, e sta in **due** contatori.  Nella
+#   pagina ogni `consegnati++` e' a valle di un `completi++` della **stessa**
+#   chiamata, e il ramo azzerato esce PRIMA di consegnare.  ⇒
+#
+#       consegnati > completi
+#
+#   vuol dire — e puo' voler dire solo — «un fotogramma e' stato consegnato al
+#   decodificatore senza che il suo stream fosse completo», cioe' **esattamente
+#   il guasto `dopo-reset`**.  E' una grandezza che il prodotto produce da se',
+#   che parte da 0 su una catena sana, e che **puo' diventare vera**: le tre
+#   cose che alla riga di prima mancavano tutte.
+#
+# ⚠ IL LIMITE, DICHIARATO: e' una domanda di SESSIONE, non di fotogramma.  Un
+#   prodotto che consegnasse dopo un RESET incrementando **anche** `completi`
+#   passerebbe di qui — ma M8 e' un anello debole per costruzione (crede a chi
+#   e' sotto esame) e questo non lo cambia: lo dichiara.
+# ═══════════════════════════════════════════════════════════════════════════
+def identita_dalla_pagina(conti, errori=None):
+    """La cucitura di F2.4 costruita dai contatori VERI della pagina.
+
+    ⛔ Vive in una funzione, e non in linea dentro `giro()`, per una ragione
+    sola: **cosi' la certificazione puo' chiamare questa e non una copia**.
+    `02-giudizio-confronto.sh` costruisce con questa funzione tanto il giro
+    sano quanto il guasto `dopo-reset`, e quel che certifica e' quindi la
+    derivazione che gira sulla catena vera — non una riga gemella scritta a
+    mano in uno shell, che e' il modo in cui una certificazione smette di
+    riguardare il codice che poi lavora.
+    """
+    conti = dict(conti or {})
+    completi = conti.get("completi")
+    consegnati = conti.get("consegnati")
+    dipinti = conti.get("dipinti")
+    d = {"conti": conti, "errori_pagina": list(errori or [])}
+    perche = {}
+
+    # ── 1. IL GIRO ────────────────────────────────────────────────────────
+    # ⛔ NON APPLICABILE, e non «non ancora»: **per costruzione**.
+    d["giro"] = None
+    perche["giro"] = (
+        "⛔ NON APPLICABILE dalla catena vera, e non per una mancanza che si "
+        "possa colmare: «giro» in M8 e' il nome del giro DEL BANCO (p.es. "
+        "«mira-cat2-20260813-095007»), che il banco si e' dato da se'.  Il "
+        "prodotto non lo conosce — nessuno glielo dice, il protocollo non ha "
+        "un campo per dirglielo, e `src/` non si tocca.  ⚠ Scriverci `None` "
+        "era una COSTANTE CHE FA PASSARE: il controllo di M8 e' «se il giro "
+        "c'e' ed e' diverso», e con None non c'era mai.  Qui e' un buco "
+        "DICHIARATO.  ⇒ Il guasto «il fotogramma e' di un altro giro» non "
+        "resta scoperto: lo prende M6 (freschezza), che lo misura sui pixel "
+        "invece di chiederlo all'imputato.")
+
+    # ── 2. IL FIN ─────────────────────────────────────────────────────────
+    # ⭐ Questa e' misurabile davvero, e la grandezza vera e' `conti.completi`:
+    #    la pagina lo incrementa **solo** sul ramo `completo` di
+    #    `stream_video`, cioe' solo quando il FIN e' arrivato.
+    # ⚠ E' una domanda di sessione: dice «almeno un FIN l'ha visto», non «quel
+    #   fotogramma li' aveva il suo».  La forma forte della stessa domanda e'
+    #   il punto 3 qui sotto, e le due stanno insieme.
+    if completi is None or dipinti is None:
+        d["fin_ricevuto"] = None
+        perche["fin_ricevuto"] = (
+            "⛔ NON MISURATA: la pagina non ha consegnato i contatori "
+            "`completi` / `dipinti` in questo giro.  ⚠ Un contatore assente "
+            "non vale 0: valesse 0 direbbe «non ha mai visto un FIN», che e' "
+            "un rosso inventato.")
+    else:
+        d["fin_ricevuto"] = completi > 0
+
+    # ── 3. IL FOTOGRAMMA DIPINTO DOPO UN RESET ────────────────────────────
+    # ⭐ La grandezza vera, quella di cui sopra: `consegnati > completi`.
+    # ⛔ E il nome del campo dice la RISPOSTA, non l'ingrediente: si chiamava
+    #    `reset_ricevuto`, che e' `azzerati > 0`, che e' **un'altra cosa** —
+    #    ed e' proprio da li' che il falso verde e' nato.
+    if completi is None or consegnati is None:
+        d["dipinto_dopo_reset"] = None
+        perche["dipinto_dopo_reset"] = (
+            "⛔ NON MISURATA: mancano `conti.completi` o `conti.consegnati`, "
+            "e l'invariante di F2.4 si legge in due contatori o in nessuno.  "
+            "⚠ Un contatore assente letto come 0 darebbe `0 > 0` = falso, "
+            "cioe' un VERDE su una misura che non e' stata fatta.")
+    else:
+        d["dipinto_dopo_reset"] = consegnati > completi
+
+    d["dipinto"] = bool(dipinti) if dipinti is not None else None
+    if perche:
+        d["non_applicabile"] = perche
+    d["nota"] = (
+        "⛔ Anello DEBOLE per costruzione (F2.6): sono i contatori DELLA "
+        "PAGINA, cioe' di chi e' sotto esame, letti via CDP.  Valgono insieme "
+        "al registro del filo (F2.4), non al posto suo.  ⭐ Ma sono grandezze "
+        "che il prodotto produce e che possono diventare vere: non sono piu' "
+        "le tre costanti che rendevano M8 verde per costruzione.")
+    return d
+
+
 def aspetta(c, espressione, quanto, pronto, passo=0.5):
     fine = time.time() + quanto
     ultimo = None
@@ -363,17 +499,9 @@ def giro(args):
         fuori["pixel"] = {"file": args.fuori_pixel, "byte": len(dati),
                           "fette": len(pezzi)}
 
-        # ⚠ La cucitura di F2.4: quel che la pagina DICHIARA di aver dipinto.
-        #   Anello debole per costruzione — crede a chi e' sotto esame — e vale
-        #   solo insieme al registro del filo.
-        errori = (s.get("errori") or [])
-        fuori["identita"] = {
-            "giro": None, "fin_ricevuto": True,
-            "reset_ricevuto": bool(conti.get("reset", 0)),
-            "dipinto": True,
-            "nota": ("dichiarata dalla pagina via CDP; M8 e' un anello debole "
-                     "per costruzione (F2.6): crede a chi e' sotto esame"),
-            "errori_pagina": errori}
+        # ⚠ La cucitura di F2.4 — e i suoi conti VERI, non tre costanti.
+        #   Il perche' di ogni campo sta in `identita_dalla_pagina()`.
+        fuori["identita"] = identita_dalla_pagina(conti, s.get("errori"))
         return fuori
     finally:
         # ⛔ IL POSTO SI LASCIA: il server lo libera dopo trenta secondi di

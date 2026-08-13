@@ -337,38 +337,73 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | | |
 > |---|---|
-> | ⭐ **il metro della fase** | ha girato **sulla catena vera** e dice **PROMOSSO**: piano 1 **PSNR-Y 62,09 dB** (soglia 45), e **12 guasti su 12** — non ha più punti ciechi |
-> | ⛔ **il catalogo** | **13 su 15**: restano **B9** e **P5R** scadute. ⏳ Un giro di ricertificazione era **in corso** quando questa sessione si è chiusa: **ricontrolla il conto**, non fidarti di questo numero |
-> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, che è **quella che l'utente apre** — gira **da root** (`02-figlio-accendi.sh`), e serve la pagina col riscalamento (`adatta_vista` **3**, verificato col conteggio) |
-> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Fatto il 13: **2,04 giorni su 7** |
+> | ⭐ **il metro della fase** | ha girato **sulla catena vera del prodotto** — cattura di Mutter → codifica → filo → `VideoDecoder` → `getImageData`, **con la mira di F2.6 messa a sfondo del desktop** — e dice **PROMOSSO**: piano 1 (browser ⟷ `ffmpeg` sullo stesso flusso) **PSNR-Y 62,09 dB**, soglia 45, **12 guasti su 12** e zero ciechi. ⛔ **E vanno dette tre cose accanto**, o la riga dice più della misura ⇓ |
+> | ⛔ **1 — sul TUO desktop il metro dice BOCCIATO** | scena naturale, `cura-desktop-vero-20260813-103246`: **58,62 dB**, rosso su **M5**, e **8 guasti su 12** — senza la mira, M4, M7 e i marcatori di M-V si spengono. ⇒ *Il verde è del metro **con la mira**; sul desktop nudo il metro vede meno e trova un rosso.* ⛔ Il rosso **non è stato curato: è sparito quando è cambiata la scena** |
+> | ⭐ **2 — «12 su 12» adesso è vero, e stamattina non lo era** | vuol dire **«nessuno strumento spento»**, non «dodici guasti innestati sul prodotto»: sul prodotto ne sono innestati **tre**. ⛔ **E uno dei dodici era verde per costruzione** — M8 leggeva un contatore `reset` che la pagina chiama `azzerati`, quindi **valeva sempre 0**. Erano **11 vivi più un verde vuoto**. ⭐ Curato e ricertificato il 13 agosto (0 → 1 → 0, col controllo del **falso rosso** accanto): ⇒ `fasi/rapporti/F2-6-giudizio.md` |
+> | ⛔ **3 — il metro non guarda A MONTE della cattura** | il suo fondo di verità è **il buffer che il prodotto stesso ha catturato**: quale monitor, quale sessione, **quale utente** sono fuori dalla sua portata. ⇒ Se il prodotto catturasse il desktop di un altro utente, **il metro direbbe 62 dB e promosso** — ed è il difetto **numero 1** che l'utente ha trovato in una mattina. Lo copre `02-figlio-prova.py`, **rigirato il 13 agosto: 9 misure, 9 uscite 0** — ⛔ ma solo per **metà**: vedi le `[?]` |
+> | ⭐ **il catalogo** | **14 su 15** `[M]` 13 agosto, `01-b12-guasti.py --registro`: ⭐ **B9 ricertificato alle 10:06** sul testo di `RCP.md` uscito dalle cure P20-P21-P22 (0 → 3 → 0, marca vista nel rosso e assente nel verde). ⛔ **Resta P5R**, e la causa è dichiarata: l'ha fatto scadere **la cura del riscalamento** delle 08:56, che ha cambiato `remotix/pagina.html`. ⚠ **E il conto è quello di QUESTA copia**: l'unione col server è ferma alle 02:29 e da allora c'è un giro nuovo di qua — si rimette con `--unisci-col-server --rispecchia`. ⚠ *Questa riga diceva «13 su 15, restano B9 e P5R»: era vera alle 09:57 ed è scaduta alle 10:06 (R13.3)* |
+> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, che è **quella che l'utente apre** — gira **da root** (`banchi/02-figlio-accendi.sh`), e serve la pagina col riscalamento (`adatta_vista` **3**, verificato col conteggio). ⭐ `[M]` 13 agosto, ricontrollato: **34 file su 34** identici fra `src/` e l'albero del server, `pagina.html` **byte identica**, e ⛔ `/proc/…/exe` punta al binario **vero** — non a un `(deleted)`, che è la trappola già pagata due volte |
+> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Fatto il 13 alle 08:08: **2,46 giorni su 7**, canale certificato, **4 controlli su 4**, e il profilo nuovo vede ancora l'avviso. ⚠ *Questa riga diceva «2,04», che è il giro del **12 sera**: il numero era stato copiato da un giro che non era quello che la frase nominava (R13.4)* |
 >
-> #### ⛔ Che cosa manca per chiedere il giudizio all'utente
+> #### ✅ Che cosa mancava per chiedere il giudizio — **fatto il 13 agosto, mattina tardi**
 >
-> **Una cosa sola**: il catalogo pieno. ⇒ Poi gli si chiede *«questo vale come primo fotogramma?»*
-> — ⛔ **e insieme al verde vanno dette tre cose**, o il giudizio è preso su metà quadro:
+> ⭐ **Il catalogo è pieno: 15 su 15**, e ⭐ **è il conto del progetto, non di una copia** — le due
+> copie del registro sono state unite e rispecchiate (90 giri, *nessuna riga persa, nessuna
+> inventata*, verificato contando riga per riga). ⛔ Finché l'unione non era fresca, quel numero era
+> «il conto di questa copia», e il `README` lo presentava come **il** numero.
 >
-> 1. **il piano 2 del metro non è applicabile** e lo dichiara: la codifica perde **meno** della tela;
+> ⇒ Adesso si chiede *«questo vale come primo fotogramma?»* — ⛔ **e insieme al verde vanno dette
+> tre cose**, o il giudizio è preso su metà quadro:
+>
+> 1. **il piano 2 del metro non è applicabile** e lo dichiara — cioè **la catena intera, pagina ⟷
+>    cattura, non è stata giudicata**. Il numero grezzo c'è ed è **54,11 dB**; a mancare è il margine
+>    che lo rende leggibile: la perdita del codificatore (**55,08 dB**) deve stare **10 dB sotto** il
+>    rumore della tela a 8 bit (**62,09 dB**), e ne sta 7,01. ⚠ *Questa riga diceva «la codifica perde
+>    **meno** della tela», ed è **invertita**: PSNR più alto vuol dire errore più piccolo, quindi la
+>    codifica perde **più** della tela — solo non abbastanza (R13-M.6). La frase giusta era di un
+>    altro giro, quello del 12 agosto a QP 20, e si era portata avanti senza rifare il conto.*
+>    ⛔ **E c'è un difetto nello strumento, dichiarato**: il messaggio che finisce negli esiti dice
+>    *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py:610`);
 > 2. ⛔ **i dieci bit sono otto promossi**, e lo sono **a tutt'e due i capi** — `DECISIONI.md` §2.3-ter
 >    (Mutter non li dà per nessuna strada) e la misura sul telefono (`copyTo` riuscito, 4 byte per
 >    pixel);
-> 3. ⛔ **il telefono non è mai stato misurato sull'hardware**: senza cavo dati non si legge il nome
->    del decodificatore, e il criterio A/B misura **spesa fissa**. `[?]` dichiarata.
+> 3. ⚠ **il telefono è stato misurato, ma non sull'hardware** — e la differenza conta. `[M]` 13
+>    agosto, **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte**, HEVC Main10
+>    e AV1 10 bit. ⛔ **Quel che NON ha risposta è «lo decodifica il silicio o la CPU?»**: senza cavo
+>    dati non si legge `Created MediaCodec <nome>`, e il criterio A/B esce `valido: false` perché
+>    misura **spesa fissa**. `[?]` dichiarata, e più stretta di com'era scritta.
 >
 > #### ⚠ Le `[?]` aperte, dichiarate e non curate
 >
+> ⛔⛔ **La più grande, e non era dichiarata da nessuna parte fino a oggi: «due utenti con due
+> sessioni vere, ciascuno vede LA PROPRIA» non lo copre nessun banco.** `[M]` 13 agosto:
+> `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti
+> **al nucleo**) non vede il desktop di `nicfio`, e un cliente RCP indipendente conta **zero**
+> fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella
+> macchina `prova` non ha mai fatto login, quindi **un prodotto che non consegnasse niente a nessuno
+> passerebbe allo stesso modo**. ⚠ `01-b10-secondo-utente.py`, `attrezzi-prova2.sh` e `02-pam-i3.py`
+> si fermano tutti **all'autenticazione**, non al vedere.
+>
 > **M5** — uno scarto di **crominanza fra due decodificatori** (0,9791 contro un limite di 0,98): è
-> l'unico rosso mai uscito dal metro, ⛔ **non si riproduce sulla mira**, e **la soglia non è stata
-> allargata**. · **P15** (§7.1, il secondo di grazia sulle coordinate: l'ultimo posto dove un orologio
-> decide) · **la risoluzione del desktop**, `1920×1080`, ⛔ **ereditata dalla scena di un banco senza
-> decisione né misura** — e in v1 era **2560×1080**.
+> **l'unico rosso rimasto su catena sana**, ⛔ **non si riproduce sulla mira**, e **la soglia non è
+> stata allargata**. ⚠ *Diceva «l'unico rosso mai uscito dal metro», ed è più largo della misura: ai
+> giri delle 09:19-09:20 erano rossi anche **M0 e M1** (33,03 dB contro una soglia di 45), ed erano il
+> difetto dell'immagine piccola, poi curato (R13.12).* · **P15** (`RCP.md` §7.1, il secondo di grazia
+> sulle coordinate: l'ultimo posto dove un orologio decide) · **la risoluzione del desktop**,
+> `1920×1080`, ⛔ **ereditata dalla scena di un banco senza decisione né misura** — e in v1 era
+> **2560×1080**. ⚠ Le tre stanno adesso anche in `fasi/02-primo-fotogramma.md`, §«Che cosa resta
+> `[?]`», che è dove chi riprende le cerca.
 >
 > #### ⭐ Le due lezioni nuove, e valgono più del codice
 >
 > **`LEZIONI.md` §1.13** — *una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta
-> di un passo a ogni rilettura*: la stessa riga di `RCP.md` è stata corretta **sette volte**
-> (P8 → P11 → P13 → P14 → P19 → P20 → P21), e ogni volta la grandezza giusta **il protocollo la
-> portava già**. · **§1.14** — *un controllo che accetta «una delle due strade» nasconde una strada
-> rotta per sempre*.
+> di un passo a ogni rilettura*, ⭐ **e l'elenco delle eccezioni è parte della tolleranza**: la
+> successione intera sta là, e qui non si ricopia. · **§1.14** — *un controllo che accetta «una delle
+> due strade» nasconde una strada rotta per sempre*.
+>
+> ⚠ *Questo riquadro portava la successione a sette e §1.13 — che è **la fonte** — diceva ancora
+> «quattro volte» e dava P14 per una cura che regge. ⛔ Il rimando mandava a una sezione che
+> **contraddiceva chi la citava**: si è aggiornata la fonte, non i due che la citano (R13.6).*
 >
 > ⭐⭐ **E la cosa che questa sessione ha dimostrato meglio di ogni numero**: i **tre** difetti più
 > gravi della giornata li ha trovati **l'utente in una mattina**, e nessuno dei 518 file di banco li

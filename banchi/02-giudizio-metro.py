@@ -99,9 +99,17 @@ LE SOGLIE, UNA PER UNA, CON LA RAGIONE — e quali sono `[?]`
        come e' stato scritto.  ⛔ Senza, il confronto MISURA LA MATRICE.
        Cucitura di F2.3.  Nessuna soglia: e' un confronto di dichiarazioni.
 
-  M8   l'identita' del fotogramma dichiarata dalla pagina — FIN, RESET, giro.
-       Cucitura di F2.4.  ⛔ Anello DEBOLE per costruzione: crede a chi e'
-       sotto esame, e vale solo insieme al registro di F2.4.
+  M8   l'identita' del fotogramma dichiarata dalla pagina.  Cucitura di F2.4.
+       Tre controlli, e **ognuno si conta a parte**: `dipinto_dopo_reset`
+       (⭐ sulla catena vera e' `consegnati > completi` dei contatori della
+       pagina), `fin_ricevuto` (⭐ `completi > 0`) e `giro` (⛔ NON
+       APPLICABILE dalla catena vera: e' il nome del giro DEL BANCO, che il
+       prodotto non conosce — lo copre M6 sui pixel).  Nessuna soglia.
+       ⛔ Se **nessuno** dei tre e' eseguibile, M8 esce `ok: None` e non e'
+       uno strumento vivo: fino al 13 agosto 2026 usciva verde su zero
+       controlli, e il «12 guasti su 12» della catena vera erano 11.
+       ⛔ Anello DEBOLE per costruzione: crede a chi e' sotto esame, e vale
+       solo insieme al registro di F2.4.
 
   M-V  vitalita' della scena.  deviazione standard di Y ≥ 0,02 (su 0..1) e
        ≥ 32 livelli distinti, **e i quattro marcatori al posto giusto**.
@@ -999,6 +1007,24 @@ def m8_identita(percorso, giro):
       costruzione — crede a chi e' sotto esame — e per questo vale solo
       insieme al registro di F2.4, non al posto suo.  Senza il file, M8 si
       dichiara non misurato e stampa di chi e' la cucitura.
+
+    ⛔⭐ E OGNI CONTROLLO SI CONTA UNO PER UNO — la cura del 13 agosto 2026.
+
+    Prima, i tre controlli stavano in fila e l'esito era `ok = not guasti`.
+    ⛔ Un controllo che **non poteva scattare** era indistinguibile da un
+    controllo passato: `giro = None` saltava il confronto, `fin_ricevuto`
+    aveva `True` come valore di ripiego, e `reset_ricevuto` arrivava da un
+    contatore che non esisteva.  Tre controlli spenti facevano `ok = True`, e
+    il metro contava M8 fra gli **strumenti vivi** (`ok is not None`),
+    portandosi dietro il «12 guasti su 12» della catena vera.  I vivi erano 11.
+
+    ⇒ Adesso ogni controllo ha tre stati — **passato / scattato / non
+      eseguito** — e sono tenuti separati:
+        · se nessuno dei tre si e' potuto eseguire, M8 esce `ok: None,
+          applicabile: False` ⇒ NON e' vivo, e il guasto `dopo-reset` si conta
+          fra i CIECHI di quel giro invece di sparire in un verde;
+        · quali sono stati eseguiti sta scritto nel rapporto, sempre, anche
+          nei giri verdi.
     """
     if percorso is None:
         return {"ok": None, "applicabile": False,
@@ -1012,19 +1038,101 @@ def m8_identita(percorso, giro):
     except Exception as e:                       # noqa: BLE001
         return {"ok": None, "applicabile": False,
                 "ragione": "--identita-pagina non si legge: %s" % e}
+
+    # ⛔⛔ IL NOME RITIRATO, RIFIUTATO A VOCE ALTA.  `reset_ricevuto` voleva
+    #     dire «e' arrivato un RESET_STREAM» (cioe' `conti.azzerati`), e M8 lo
+    #     leggeva come «un fotogramma e' stato dipinto DOPO un RESET»: due
+    #     grandezze sotto un nome solo, che e' la forma esatta del difetto
+    #     pagato due volte il 13 agosto 2026.  ⇒ Chi scrive ancora quel nome
+    #     non riceve un verde e non riceve un rosso: riceve un rifiuto che dice
+    #     come si chiama adesso.  ⚠ Tacere e leggere il campo nuovo mancante
+    #     come «non applicabile» avrebbe fatto scivolare un chiamante rimasto
+    #     indietro dentro un giro con M8 spento e nessuno che se ne accorge.
+    if "reset_ricevuto" in d:
+        return {"ok": None, "applicabile": False, "dichiarato": d,
+                "ragione": ("⛔ «%s» porta il campo RITIRATO `reset_ricevuto`.  "
+                            "Quel nome diceva «e' arrivato un RESET» (= "
+                            "`conti.azzerati`, che su una catena SANA e' > 0 "
+                            "ogni volta che il server azzera uno stream e la "
+                            "pagina lo butta bene), mentre M8 chiede «un "
+                            "fotogramma e' stato DIPINTO dopo un RESET».  Il "
+                            "campo si chiama adesso `dipinto_dopo_reset` e la "
+                            "grandezza vera e' `consegnati > completi`.  ⇒ Chi "
+                            "ha scritto questo file va aggiornato: qui non si "
+                            "indovina." % percorso)}
+
+    # nome -> True (passato) · False (scattato) · None (non eseguibile)
+    controlli = {}
+    perche = dict(d.get("non_applicabile") or {})
     guasti = []
-    if d.get("reset_ricevuto") and d.get("dipinto"):
-        guasti.append("la pagina dichiara di aver DIPINTO un fotogramma il cui "
-                      "stream aveva ricevuto RESET_STREAM: F2.4 dice che si "
-                      "butta e non si consegna")
-    if not d.get("fin_ricevuto", True):
+
+    def salta(nome, ragione):
+        controlli[nome] = None
+        perche.setdefault(nome, ragione)
+
+    # ── 1. il fotogramma DIPINTO DOPO UN RESET ────────────────────────────
+    v = d.get("dipinto_dopo_reset")
+    if v is None:
+        salta("dipinto_dopo_reset",
+              "⛔ non dichiarato da chi ha scritto il file: M8 non finge di "
+              "averlo guardato.")
+    elif v:
+        controlli["dipinto_dopo_reset"] = False
+        guasti.append("un fotogramma e' stato CONSEGNATO al decodificatore "
+                      "senza che il suo stream fosse completo: F2.4 dice che "
+                      "uno stream azzerato si butta e NON si consegna (§6.2)"
+                      + (" — i conti della pagina: %s"
+                         % {k: (d.get("conti") or {}).get(k)
+                            for k in ("stream", "completi", "azzerati",
+                                      "consegnati", "dipinti")}
+                         if d.get("conti") else ""))
+    else:
+        controlli["dipinto_dopo_reset"] = True
+
+    # ── 2. il FIN ─────────────────────────────────────────────────────────
+    # ⚠ Il controllo e' «ha DIPINTO senza aver visto il FIN»: senza `dipinto`
+    #   non e' la stessa domanda, e un `fin_ricevuto` falso su una pagina che
+    #   non ha dipinto niente sarebbe un rosso di un guasto che non c'e'.
+    fin = d.get("fin_ricevuto")
+    if fin is None:
+        salta("fin_ricevuto",
+              "⛔ non dichiarato da chi ha scritto il file.  ⚠ E il valore di "
+              "ripiego `True` che c'era qui era una costante che faceva "
+              "passare: e' stato tolto.")
+    elif d.get("dipinto") and not fin:
+        controlli["fin_ricevuto"] = False
         guasti.append("la pagina ha dipinto senza aver visto il FIN: il "
                       "fotogramma non era dichiarato completo")
-    if d.get("giro") is not None and str(d["giro"]) != str(giro):
+    else:
+        controlli["fin_ricevuto"] = True
+
+    # ── 3. il giro ────────────────────────────────────────────────────────
+    if d.get("giro") is None:
+        salta("giro",
+              "⛔ chi ha scritto il file non dichiara nessun giro.  ⚠ E «None» "
+              "non vuol dire «coincide»: il confronto NON e' stato fatto.")
+    elif str(d["giro"]) != str(giro):
+        controlli["giro"] = False
         guasti.append("la pagina dichiara il giro «%s», il banco sta girando "
                       "«%s»" % (d["giro"], giro))
+    else:
+        controlli["giro"] = True
+
+    fatti = [k for k, v in controlli.items() if v is not None]
+    if not fatti:
+        return {"ok": None, "applicabile": False, "controlli": controlli,
+                "dichiarato": d, "non_applicabile": perche,
+                "ragione": ("⛔ NESSUNO dei tre controlli di M8 e' eseguibile "
+                            "su questo giro ⇒ M8 non e' uno strumento vivo qui, "
+                            "e il guasto «dopo-reset» va contato fra i CIECHI. "
+                            "⚠ Un M8 verde su zero controlli e' esattamente il "
+                            "falso verde del 13 agosto 2026.  · "
+                            + " · ".join("%s: %s" % (k, perche.get(k))
+                                         for k in sorted(controlli)))}
     ok = not guasti
-    return {"ok": ok, "dichiarato": d,
+    return {"ok": ok, "controlli": controlli, "dichiarato": d,
+            "non_applicabile": {k: perche.get(k) for k in sorted(controlli)
+                                if controlli[k] is None},
             "ragione": None if ok else "⛔ " + " · ".join(guasti)}
 
 
@@ -1331,7 +1439,11 @@ def main():
         misure = " ".join("%s=%s" % (kk, vv) for kk, vv in e.items()
                           if kk not in ("ok", "ragione", "correlazioni",
                                         "canali", "lato_nostro",
-                                        "lato_dispositivo", "prove"))
+                                        "lato_dispositivo", "prove",
+                                        # ⚠ M8: i suoi campi hanno una riga
+                                        #   loro qui sotto, per esteso.
+                                        "dichiarato", "controlli",
+                                        "non_applicabile"))
         if ok is True:
             log("    %sOK%s  %s  %s  %s" % (VERDE, GRIGIO, k, etichette[k], misure))
         elif ok is False:
@@ -1347,6 +1459,21 @@ def main():
         else:
             log("    %s??%s  %s  %s  ⛔ NON MISURATO" % (GIALLO, GRIGIO, k, etichette[k]))
             sospesi.append(k)
+        # ⛔⭐ M8 STAMPA I SUOI TRE CONTROLLI UNO PER UNO, ANCHE QUANDO E'
+        #    VERDE.  E' la riga che il 13 agosto 2026 non c'era: con tre
+        #    controlli spenti M8 stampava «OK» esattamente come con tre
+        #    controlli passati, e da fuori le due cose erano lo stesso verde.
+        #    ⇒ Un verde di M8 adesso dice **su che cosa** e' verde.
+        if k == "M8" and e.get("controlli") is not None:
+            for nome in sorted(e["controlli"]):
+                v = e["controlli"][nome]
+                seg = {True: VERDE + "OK" + GRIGIO,
+                       False: ROSSO + "NO" + GRIGIO}.get(
+                           v, GIALLO + "—" + GRIGIO + " ")
+                coda = ("" if v is not None
+                        else "  ⚠ NON ESEGUITO — %s"
+                             % (e.get("non_applicabile") or {}).get(nome))
+                log("          %s %s%s" % (seg, nome, coda))
         if k == "M7":
             for lato in ("lato_nostro", "lato_dispositivo"):
                 sub = e[lato]

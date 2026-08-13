@@ -429,6 +429,10 @@ permesso funziona ancora va rifatta** — non è implicita.
 
 *Scritta il 12 agosto 2026, dopo che **la stessa riga di `RCP.md` è stata corretta quattro volte in
 una sera** — P8 → P11 → P13 → P14 — e ogni cura ha spostato il difetto invece di toglierlo.*
+*⛔ **Riaperta il 13 agosto 2026**: le volte sono **sette** — P8 → P11 → P13 → P14 → P19 → P20 → P21
+— e ⛔ **P14 non «reggeva»**. Reggeva la grandezza (il campo `numero`); a essere rimasto sostitutivo
+era tutto quel che le stava attorno. Il seguito è in fondo a questa sezione, e chi cita questa
+lezione **rimanda qui invece di ricopiare la successione** (rilievo **R13.6**).*
 
 **La scena.** Il protocollo aveva bisogno di tollerare i fotogrammi **già in volo** quando la tela
 cambia a metà sessione. Le prime tre stesure hanno descritto quel fenomeno con una **grandezza
@@ -461,6 +465,28 @@ raccontava. ⇒ Il caso che conta non è quello che la regola descrive: è quell
 ⭐ E vale la pena notare **chi** le ha trovate, tutte e quattro: non chi rileggeva il documento, ma
 chi doveva **far rispettare la regola** scrivendo l'arbitro che la giudica. *Applicare una regola è
 un modo di leggerla che rileggerla non è.*
+
+#### ⛔⛔ Il seguito del 13 agosto: le volte sono sette, e la lezione vale anche **sul contorno**
+
+| # | La grandezza scelta | Dove si è rotta |
+|---|---|---|
+| **P19-P20** | §2.5: *«chi riceve un fotogramma **prima di `SESSIONE`** chiude con `ERRORE_PROTOCOLLO`»* | ⛔ **«chi ne riceve uno prima» è una grandezza sostitutiva**: i due stream QUIC sono indipendenti e niente ne ordina la consegna. Bastava **perdere il pacchetto che porta `SESSIONE`** perché un client conforme uccidesse una sessione sana — I1 rotta *perché la linea perde pacchetti*, cioè la condizione che I1 esiste per proteggere. ⭐ La grandezza vera è **`ATTACCA`**, cioè quel che il client ha spedito **lui** |
+| **P21** | *«la misura che il client ha nominato»* | ⛔ **§4.5 permette al server di concedere una tela DIVERSA da quella chiesta** — su KWin < 6.8 è la strada normale. Chi chiede 1366×768 e riceve il 1280×720 che sta per essergli concesso **chiuderebbe una sessione sana**. ⭐ La grandezza vera è **«una `ADATTA_TELA` senza risposta»**, non i numeri che portava |
+| ⛔⛔ **P22 — e non è una grandezza: è il CONTORNO** | §3 dichiarava *«le eccezioni sono sei, e fuori da questo elenco non se ne inventano»* | ⛔ mentre §2.5 e §6.2 **ne comandavano due che lì non c'erano**. ⇒ Un client scritto leggendo §3 **chiudeva proprio le sessioni sane che le altre due righe salvavano**. Adesso sono **otto** |
+
+> ⭐ **La regola si allarga.** Non basta scrivere la tolleranza sulla grandezza vera: **l'elenco delle
+> eccezioni è parte della tolleranza**, e invecchia da solo. Chi ne scrive una altrove **aggiunge la
+> riga all'elenco nello stesso momento**, o il documento si contraddice da sé — ed è la stessa specie
+> di P12, cioè un difetto **di chi scrive la specifica**, non di chi la implementa.
+
+⭐ **E la forma comune delle tre cure è la stessa di P14**: *quel che il client ha spedito lui* —
+**locale, monotono, indipendente dalla consegna**. Il campo `numero` era il primo caso; `ATTACCA` e
+«una richiesta in volo» sono lo stesso principio applicato a due fenomeni diversi.
+
+⚠ **E un agente ha rifiutato la propria prima proposta, e uno ha bocciato quella di chi lo mandava**:
+*«solo se i byte di `SESSIONE` non sono ancora arrivati»* spostava la misura dal risveglio della
+coroutine **ai byte, che li ritarda la rete** — sarebbe stata la settima stesura della stessa
+famiglia; e *«la misura che il client ha nominato»* sarebbe stata l'ottava.
 
 *Dettaglio: `fasi/rapporti/F2-4-filo.md`, e le righe nel riquadro in testa a `RCP.md`.*
 

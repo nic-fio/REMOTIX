@@ -187,7 +187,7 @@ forma di `01-b12-guasti.py`: `nome`, `comando`, `atteso_sano`, `guasto_da_innest
 | `F2.6/gamma` | 0, con M5 fra gli OK | 16-235 steso su 0-255 | 1, **M5** |
 | `F2.6/blocco` | 0, con M3 fra gli OK | un blocco 64×64 azzerato | 1, **M3** |
 | `F2.6/matrice` | 0, con M-C fra gli OK | la pagina dichiara BT.601 | 1, **M-C** |
-| `F2.6/dopo-reset` | 0, con M8 fra gli OK | `reset_ricevuto` + `dipinto` | 1, **M8** |
+| `F2.6/dopo-reset` | 0, con M8 fra gli OK | **`consegnati > completi`** | 1, **M8** |
 | `F2.6/ribaltato` | 0, con M-V fra gli OK | ribaltamento orizzontale | 1, **M-V (marcatori)** |
 
 ⛔ E vale la regola della marca in **due metà** (rilievo R12-A.3): il giro guasto deve portare la
@@ -461,6 +461,91 @@ Piccole, prese qui e dichiarate — nessuna tocca `DECISIONI.md`, che resta del 
 4. il guasto «blocco corrotto» si innesta **sui pixel**, non sul flusso — F2.3 ha misurato che una
    corruzione del flusso può uscire **identica bit per bit**, e un guasto che può non esserci non
    certifica niente.
+
+---
+
+---
+
+## ⛔⛔ 13 agosto 2026 — **uno dei dodici era verde per costruzione**, e l'ha trovato una revisione avversariale
+
+*Questo rapporto era fermo al 12 agosto, ore 20:36, e la catena vera viveva solo in un messaggio di
+commit. Questa sezione la porta dentro, e con lei il difetto che la accompagnava.*
+
+⛔ **M8 sulla catena vera non poteva diventare rosso.** `02-giudizio-catena.py` costruiva la cucitura
+che M8 giudica con **tre costanti**: `giro: None`, `fin_ricevuto: True`, e
+`reset_ricevuto: bool(conti.get("reset", 0))` — dove ⛔ **il contatore `reset` non esiste**: la pagina
+del prodotto lo chiama `azzerati` (`src/pagina.html:1394`). ⇒ M8 usciva `ok: true` qualunque cosa
+facesse il prodotto, e siccome `ok is not None` il metro lo contava fra i **vivi**: **il «12 su 12»
+era 11 vivi più un verde vuoto**.
+
+⚠ **È la stessa forma del difetto curato quel mattino alle 08:56** — *due grandezze che si chiamano
+tutt'e due «larghezza della tela»* — rinata dodici ore dopo in un altro file.
+
+### ⭐ E la cura di una parola era sbagliata: `azzerati` non è la grandezza
+
+Chi ha curato ha **rifiutato la cura che gli era stata passata**, e con un caso. Sul ramo `!completo`
+la pagina fa `azzerati++`, scrive *«buttato, NON consegnato al decodificatore (§6.2)»* ed **esce**.
+⇒ `azzerati > 0` è **il prodotto che si comporta bene**: leggerlo accanto a `dipinto` avrebbe reso M8
+rosso **la prima volta che il server azzera uno stream su una catena sana**. ⛔ Un falso rosso, che
+accusa il prodotto — **peggio del falso verde che sostituiva**.
+
+⭐ **La grandezza vera è l'invariante**: ogni `consegnati++` sta a valle di un `completi++` della
+stessa chiamata, e il ramo azzerato esce prima. ⇒ **`consegnati > completi`** vuol dire, e può voler
+dire solo, *«un fotogramma è stato consegnato senza che il suo stream fosse completo»*. Il campo si
+chiama adesso `dipinto_dopo_reset`: `reset_ricevuto` diceva **l'ingrediente** mentre M8 leggeva **la
+risposta**, cioè due grandezze sotto un nome solo — ⭐ *ed è `LEZIONI.md` §1.13 di nuovo, applicata a
+un banco invece che a una specifica*.
+
+| il controllo | che cosa è adesso |
+|---|---|
+| **`dipinto_dopo_reset`** | ⭐ **misurato**, sull'invariante `consegnati > completi` |
+| **`fin_ricevuto`** | ⭐ **misurato**, `completi > 0` — ⚠ ed è una domanda di **sessione**, non di fotogramma: dice «almeno un FIN l'ha visto» |
+| **`giro`** | ⛔ **NON APPLICABILE, e dichiarato**: è il nome del giro **del banco**, il prodotto non lo conosce e il protocollo non ha un campo per dirglielo. Non è «non ancora»: è **per costruzione**. Il guasto «fotogramma di un altro giro» resta preso da **M6**, che lo misura **sui pixel** invece di chiederlo all'imputato |
+
+⛔ **E se nessuno dei tre è eseguibile, M8 esce `ok: None, applicabile: False`** ⇒ non è vivo, e
+`dopo-reset` si conta fra i **ciechi**. Il ripiego `d.get("fin_ricevuto", True)` è stato tolto: un
+ripiego che vale `True` è la stessa costante di prima, scritta in un altro modo.
+
+⭐ **E il nome ritirato non si legge in silenzio**: chi scrive ancora `reset_ricevuto` riceve un
+rifiuto che dice come si chiama adesso. È la difesa contro *«l'elenco rimasto indietro»* — la seconda
+metà di §1.13.
+
+### La certificazione, e che cosa NON dice
+
+`sano → dopo-reset → risanato` = **0 → 1 → 0**, marca **M8** vista nel rosso e assente nei due verdi,
+con la ragione giusta e i conti stampati (`completi 1, azzerati 1, consegnati 2`). Poi **i dodici
+guasti interi: 12 su 12**.
+
+⭐ **E un controllo che nessuno aveva chiesto, il più importante: il FALSO ROSSO.** Prima del guasto
+gira il caso `azzerato-buttato` — `azzerati = 1`, `consegnati = completi`, cioè il server azzera e la
+pagina butta bene — e **deve restare verde**. Lo è. ⇒ È la prova che `conti.azzerati` non era la
+grandezza, e che la cura **non ha comprato il rosso giusto al prezzo di uno inventato**.
+
+⛔ **CHE COSA QUESTA CERTIFICAZIONE NON DICE**: `dopo-reset` gira **solo sulla catena finta**. Per
+innestare un `RESET_STREAM` vero bisognerebbe toccare `src/` o il server. ⇒ **la cura è provata sullo
+strumento, non sul prodotto**; quel che è provato sul prodotto è che i contatori veri arrivano e sono
+quelli giusti.
+
+⭐ E la certificazione stessa era circolare, e non lo è più: i JSON di M8 della catena finta erano
+scritti a mano con `printf`, quindi **la derivazione vera non la toccava nessun giro**. Adesso li
+costruisce la stessa funzione che gira sulla catena vera.
+
+### Il giro rifatto: il dodici regge, per un'altra ragione
+
+| | `mira-cat2-20260813-095007` | `cura-mira-cat2-20260813-103505` |
+|---|---|---|
+| PSNR-Y | 62,09 dB | **62,09 dB** |
+| esito | promosso | **promosso** |
+| guasti visibili | 12 — ⛔ di cui **uno finto** | **12, e tutti veri** |
+| M8 | `ok: true`, controlli **ignoti** | `ok: true` · `dipinto_dopo_reset` ✅ · `fin_ricevuto` ✅ · `giro` **non eseguito** |
+
+⭐ **Non è stato allargato niente per far tornare il conto**: se l'invariante non fosse stato
+misurabile, la riga direbbe **11**. E M8 adesso stampa i suoi tre controlli **anche quando è verde**,
+perché *«verde su tre controlli»* e *«verde su zero»* avevano fin qui lo stesso aspetto.
+
+⚠ **Sulla scena naturale la cura non sposta niente, ed era giusto così**:
+`cura-desktop-vero-20260813-103246` dà **bocciato su M5**, **58,62 dB**, 8 guasti su 12 — identico al
+giro delle 09:29. M5 misura pixel, M8 no.
 
 ---
 

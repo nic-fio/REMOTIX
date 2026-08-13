@@ -1,11 +1,21 @@
 # Fase 2 — Il primo fotogramma
 
-Aperta il **12 agosto 2026** · ⏳ **In corso** — il banco esiste, il prodotto no
+Aperta il **12 agosto 2026** · ⏳ **In corso** — ⭐ **il banco esiste e il prodotto esiste**: la
+catena consegna, e il 13 agosto l'utente ha visto il proprio desktop dentro una scheda. Manca il
+giudizio.
+
+> ⚠ *Questa riga diceva «il banco esiste, il prodotto no», e con lei altri tre punti del documento
+> (§«Come è stata divisa», §«Che cosa è stato sviluppato», §«Il giudizio dell'utente»). Erano vere
+> del **giro del 12 agosto mattina** e sono rimaste addosso al documento mentre il prodotto nasceva
+> la sera stessa. ⛔ **È la causa di processo di R12-C alla terza occorrenza**: il documento è stato
+> chiuso alle **08:36** del 13 agosto e il codice è arrivato fino alle **09:55** — quattro commit
+> più tardi. Corretto il 13 agosto 2026 a codice fermo, revisione **R13**, rilievi 1 e 2.*
 
 > Il modello di questo documento sta in [`../PIANO.md`](../PIANO.md) §0.2; le decisioni stanno in
 > [`../DECISIONI.md`](../DECISIONI.md) e qui si **rimanda**, non si copia. ⛔ E si rimanda anche ai
-> **sei rapporti di sotto-fase**: quel che sta lì non si ricopia qui, o le due copie divergono —
-> è la lezione del 10 agosto, quando i `.md` erano stati chiusi due ore prima del codice.
+> **sei rapporti di sotto-fase e ai sette del prodotto**: quel che sta lì non si ricopia qui, o le
+> due copie divergono — è la lezione del 10 agosto, quando i `.md` erano stati chiusi due ore prima
+> del codice.
 
 ---
 
@@ -40,10 +50,25 @@ Il mandato comune sta in [`rapporti/MANDATO-12-agosto-fase2.md`](rapporti/MANDAT
 | **F2.5** | La pagina | [`rapporti/F2-5-pagina.md`](rapporti/F2-5-pagina.md) | `banchi/02-pagina-*` | 7515 |
 | **F2.6** | Il giudizio | [`rapporti/F2-6-giudizio.md`](rapporti/F2-6-giudizio.md) | `banchi/02-giudizio-*` | 7516 |
 
-⛔ **E questo giro non ha scritto una riga di prodotto**, per la regola di `PIANO.md` §0.4: il
-revisore interviene **appena il banco esiste**, prima che il prodotto esista, perché *«un difetto nel
-prodotto lo trova un banco buono; un difetto nel banco non lo trova niente, e avvelena ogni misura
-successiva perché dà fiducia»*. `src/` è **intatto**.
+⛔ **E il giro del 12 agosto MATTINA non ha scritto una riga di prodotto**, per la regola di
+`PIANO.md` §0.4: il revisore interviene **appena il banco esiste**, prima che il prodotto esista,
+perché *«un difetto nel prodotto lo trova un banco buono; un difetto nel banco non lo trova niente,
+e avvelena ogni misura successiva perché dà fiducia»*. In quel momento `src/` era **intatto**.
+
+⭐ **Il prodotto è arrivato la sera dello stesso giorno**, con lo stesso taglio ad anelli e un
+rapporto per ciascuno — ⛔ e questa tavola non li nominava, così che chi riprendeva leggendo questo
+documento **non sapeva che esistessero** (revisione **R13**, rilievo 1; è il danno di R12C.1, dove
+*«chi riprendeva il lavoro leggeva quella riga e riscriveva da zero un server che esiste»*):
+
+| # | Il prodotto dell'anello | Rapporto |
+|---|---|---|
+| **P2.1** | la sessione GNOME | [`rapporti/P2-1-sessione.md`](rapporti/P2-1-sessione.md) |
+| **P2.2** | la cattura | [`rapporti/P2-2-cattura.md`](rapporti/P2-2-cattura.md) |
+| **P2.3** | la codifica, HEVC **e** AV1 in software | [`rapporti/P2-3-codifica.md`](rapporti/P2-3-codifica.md) |
+| **P2.4** | il canale video, dentro `rcp.c` | [`rapporti/P2-4-filo.md`](rapporti/P2-4-filo.md) |
+| **P2.5** | la pagina che dipinge il fotogramma | [`rapporti/P2-5-pagina.md`](rapporti/P2-5-pagina.md) |
+| **P2.6** | il montaggio: i cinque anelli messi insieme | [`rapporti/P2-6-montaggio.md`](rapporti/P2-6-montaggio.md) |
+| **P2.7** | il figlio per utente (`DECISIONI.md` §1.10-bis) | [`rapporti/P2-7-figlio.md`](rapporti/P2-7-figlio.md) |
 
 ---
 
@@ -85,9 +110,14 @@ prodotto**. La fase 1 ne ha pagati tre di quel tipo.
 
 ## Che cosa è stato sviluppato
 
-**Niente prodotto** — e non è un ritardo, è l'ordine (`PIANO.md` §0.4). Quel che esiste è il banco,
-e con esso la **forma** che il prodotto dovrà avere: le decisioni qui sotto sono vincoli per chi
-scriverà il codice.
+**Il 12 agosto mattina, niente prodotto** — e non era un ritardo, era l'ordine (`PIANO.md` §0.4).
+Quel che esisteva era il banco, e con esso la **forma** che il prodotto avrebbe dovuto avere: le
+decisioni qui sotto erano vincoli per chi avrebbe scritto il codice.
+
+⭐ **Il prodotto è stato scritto la sera del 12 e la mattina del 13**, e sta in `src/` — la sessione,
+la cattura, le due codifiche, il canale video dentro `rcp.c`, la pagina che dipinge, il montaggio e
+il figlio per utente. I sette rapporti sono nella tavola `P2.1` … `P2.7` qui sopra, e **quel che sta
+lì non si ricopia qui**.
 
 ---
 
@@ -239,10 +269,15 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 
 | | |
 |---|---|
-| ⛔ **i 10 bit veri** | non passano da MemFd/BGRx `[M]`. Restano possibili **solo** per via **DMA-BUF**, **non provata** |
-| ⛔ **il telefono** | hardware e 10 bit: **nessun numero prodotto, e nessuno dedotto**. Serve il dispositivo (vedi sotto) |
+| ⛔ **i 10 bit veri** | ⇒ **`DECISIONI.md` §2.3-ter, e non è più una `[?]`**: non escono da Mutter per **nessuna** strada — né MemFd né DMA-BUF, e i formati a 10 bit chiesti **per nome** danno `no more input formats` su tutt'e due, col controllo positivo accanto. ⚠ *Questa riga diceva «restano possibili solo per via DMA-BUF, non provata»: era una **copia invecchiata di una decisione**, cioè proprio quel che il riquadro in testa promette di non fare, e teneva aperta una speranza che una misura aveva chiuso (R13.5b)* |
+| ⚠ **il telefono, e la `[?]` adesso è più stretta** | `[M]` **13 agosto 2026**, telefono vero — **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte**, HEVC Main10 **e** AV1 10 bit. ⛔ **Ma `copyTo` dà `format` `RGBA` e 4 byte per pixel**: al capo del dispositivo i dieci bit sono **otto promossi**, come alla sorgente. ⛔ **E resta aperto l'hardware**: senza cavo dati non si legge `Created MediaCodec <nome>`, quindi *«lo decodifica il silicio o la CPU?»* non ha risposta — e il criterio A/B esce `valido: false`, perché misura **spesa fissa**. ⚠ *Questa riga diceva «nessun numero prodotto, e nessuno dedotto», e i numeri stanno in `banchi/02-giudizio-sonda.jsonl` dalle 07:53 del 13 (R13.5a)* |
 | ⛔ **il buffer della scheda sbagliata** | il banco della cattura **non lo vedrebbe**, e il suo verde **non lo assolve**. La macchina ha due GPU |
-| ⚠ **che un fotogramma arrivi davvero sul filo** | il primo giro del cliente di prova sulla 7514 **è** la prima misura vera della fase |
+| ✅ **che un fotogramma arrivi davvero sul filo** | ⭐ **chiusa il 13 agosto**: l'utente l'ha guardato, e il registro del server lo scrive — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
+| ⛔ **M5 — lo scarto di crominanza fra due decodificatori** | 0,9791 contro un limite di 0,98: è **l'unico rosso rimasto su catena sana** — M0 e M1 erano rossi ai giri delle 09:19-09:20, prima della cura del riscalamento. ⛔ **Non si riproduce sulla mira**, e **la soglia non è stata allargata**: il rosso non è stato curato, **è sparito quando è cambiata la scena** |
+| ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in [`rapporti/F2-4-filo.md`](rapporti/F2-4-filo.md) |
+| ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **non lo copre nessun banco**, ed è il buco più grande della fase. `[M]` 13 agosto: il caso `senza-palco` di `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti al nucleo) **non** vede il desktop di `nicfio`, e il cliente RCP indipendente conta **zero** fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella macchina `prova` non ha mai fatto login — niente `/run/user/1001`, niente bus, niente palco — quindi **un prodotto che non consegnasse niente a nessuno passerebbe allo stesso modo**. La metà positiva regge oggi **solo per uid 1000**. ⚠ Guardati e scartati: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` si fermano tutti **all'autenticazione**, non al vedere |
+| ⚠ **`02-figlio-accendi.sh:165` conta i figli di tutti** | `pgrep -f -- "--figlio-interno" \| wc -l` non guarda **di chi** sono: allo spegnimento ha accusato due orfani che erano figli vivi di padri vivi (la 7693 di un altro banco e ⛔ **la 7561 dell'utente**). È la stessa forma che il file **vieta trenta righe più su** per l'azione `stato`. ⚠ Non cura, non ferma nessuno (`spegni` esce 0 lo stesso) — si accende solo quando due banchi girano in parallelo, e il 12 agosto infatti taceva |
+| ⛔ **la risoluzione del desktop, `1920×1080`** | ⛔ **ereditata dalla scena di un banco, senza decisione né misura** — `grep 1920 DECISIONI.md` non trova nessuna decisione che la fissi, e in v1 era **2560×1080**. ⚠ È la tela che l'utente vedrà: `LEZIONI.md` §2.3-quater la vuole scritta come **provvisoria**, ed è quel che questa riga fa |
 | ⚠ **`VideoEncoder.flush()` in headless** | aggirato, non capito |
 | ⚠ **le soglie M1b e M3 del metro** | **calcolate**, non tarate sul campo |
 | ⚠ **Safari, e Chrome per Android/DeX** | manca il dispositivo |
@@ -414,8 +449,18 @@ fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN — sped
 ```
 
 ⚠ **E si scrive che cosa questo NON è**: non è il giudizio della fase, e la fase resta aperta.
-L'immagine è **piccola** — la pagina non riscala alla vista, che §6.1 le impone — e il metro a pixel
-sulla catena vera non è stato girato.
+
+⚠ *Questo riquadro, chiuso alle **08:36**, proseguiva così: «L'immagine è **piccola** — la pagina non
+riscala alla vista, che §6.1 le impone — e il metro a pixel sulla catena vera non è stato girato».
+⛔ **Tutt'e due le metà sono morte nell'ora e venti che è seguita**, e il documento è rimasto indietro
+di quattro commit (R13.2):*
+
+- ⭐ *il riscalamento è **in servizio** dalle **08:56** (`dc2f6a9`): due grandezze si chiamavano
+  tutt'e due «larghezza della tela». E il rimando era **rotto** — `RCP.md` §6.1 è «Sui canali
+  affidabili» e non nomina né vista né riscalamento; la sezione giusta è **`SPECIFICHE.md` §6.1**,
+  ed è la terza volta in due fasi che un `§x.y` manda altrove (R13.8);*
+- ⭐ *il metro a pixel **ha girato sulla catena vera** alle **09:50** — e quel che dice, per intero e
+  senza arrotondarlo, sta nella sezione qui sotto.*
 
 ### ⛔ E i tre difetti che l'utente ha trovato in una mattina, che 518 file di banco non avevano preso
 
@@ -431,8 +476,99 @@ aveva ragione lui.
 
 ---
 
+---
+
+## ⭐ Il metro ha girato sulla catena vera — e che cosa dice, per intero
+
+`[M]` **13 agosto 2026**. I quattro ingressi messi insieme per la prima volta: la **cattura** (il
+buffer BGRx che il prodotto ha scritto con `--rilievo`), il **flusso** che il prodotto ha spedito, il
+**riferimento** (lo stesso flusso decodificato da `ffmpeg` — ⭐ il *secondo lettore* che `PIANO.md`
+§0.4 dichiarava mancante) e la **pagina** (`getImageData` dalla tela, in un browser vero collegato al
+server vero).
+
+| la scena | l'esito | PSNR-Y | strumenti vivi |
+|---|---|---|---|
+| ⭐ **la mira di F2.6 a sfondo del desktop** | **PROMOSSO** | **62,09 dB** (soglia 45) | **12 su 12**, zero ciechi |
+| ⛔ **il desktop naturale dell'utente** | **BOCCIATO su M5** | 58,62 dB | 8 su 12 — ciechi *precedente · otto-bit · piani · ribaltato* |
+
+⛔ **E le due righe non si scelgono: si leggono insieme.** Il verde è del metro **con la mira**; sul
+desktop nudo il metro vede meno — senza i marcatori, M4, M7 e M-V si spengono per costruzione — e
+trova un rosso. ⚠ Il rosso di M5 **non è stato curato: è sparito quando è cambiata la scena**, e
+resta `[?]`.
+
+### ⛔ E uno dei dodici era verde per costruzione
+
+Trovato da una **revisione avversariale** il 13 agosto, mandata a *refutare* la frase invece che a
+confermarla. M8 leggeva un contatore `reset` che la pagina del prodotto chiama **`azzerati`**: valeva
+sempre zero, e con lui due costanti scritte a mano. ⇒ **erano 11 vivi più un verde vuoto.**
+
+⭐ Curato, **e la cura di una parola era sbagliata**: `azzerati > 0` è *il prodotto che si comporta
+bene*, quindi leggerlo lì avrebbe prodotto un **falso rosso**. La grandezza vera è l'invariante
+**`consegnati > completi`**. La storia intera, col controllo del falso rosso e con quel che la
+certificazione **non** dice, sta in [`rapporti/F2-6-giudizio.md`](rapporti/F2-6-giudizio.md) — qui non
+si ricopia.
+
+### ⛔ Il punto cieco che non è del metro: **a monte della cattura**
+
+Il fondo di verità del metro è **il buffer che il prodotto stesso ha catturato**. ⇒ Quale monitor,
+quale sessione, **quale utente** sono fuori dalla sua portata: se il prodotto catturasse il desktop
+di un altro utente, cattura, flusso, riferimento e pagina sarebbero **tutti d'accordo**, e il metro
+direbbe **62 dB e promosso**.
+
+⛔ **Ed è il difetto numero 1 che l'utente ha trovato in una mattina.** Lo copre un altro banco,
+`02-figlio-prova.py` — rigirato il 13 agosto sul prodotto di oggi, **9 misure, 9 uscite 0, nessuna
+uscita 2** — ⛔ ma solo per **metà**: vedi la tavola «Che cosa resta `[?]`».
+
+---
+
+## ⛔ Che cosa va detto insieme al verde, o il giudizio è preso su metà quadro
+
+*Scritta il 13 agosto 2026, revisione **R13** rilievo 9. ⛔ Queste tre cose vivevano solo in un
+riquadro del `README`, e chi leggeva **questo** documento — che il `README` gli dice di leggere per
+primo — ne trovava una e mezza, e sbagliata.*
+
+### 1. Il **piano 2** del metro non è applicabile: la catena intera non è stata giudicata
+
+Il metro ha due piani (`banchi/02-giudizio-metro.py:46,56`): **piano 1** confronta *pagina ⟷
+riferimento* — il browser contro `ffmpeg` **sullo stesso flusso**, cioè due decodificatori
+indipendenti; **piano 2** confronta *pagina ⟷ cattura*, che è la catena intera.
+
+⛔ **Il numero che il verde porta è del piano 1.** Il piano 2 il metro lo dichiara **non
+applicabile**, e la ragione è aritmetica: perché la sottrazione misuri il client e non la tela, la
+perdita del codificatore deve stare **10 dB sotto** il rumore della tela a 8 bit, e qui ne sta
+**7,01** (55,08 contro 62,09). Il numero grezzo esiste — **54,11 dB** — ma non è un giudizio.
+
+> ⚠ **E si dichiara un difetto dello strumento**: il messaggio che finisce nel file di esiti dice
+> *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py:610`).
+> La soglia vera è quella del codice; il messaggio è rimasto alla prima stesura.
+
+### 2. I dieci bit sono **otto promossi**, e lo sono **a tutt'e due i capi**
+
+- **alla sorgente**: ⇒ `DECISIONI.md` §2.3-ter — non escono da Mutter per **nessuna** strada, né
+  MemFd né DMA-BUF, e i formati a 10 bit chiesti per nome danno `no more input formats`;
+- **al dispositivo**: `[M]` 13 agosto sul telefono vero — `VideoFrame.format` è **`RGBA`** e `copyTo`
+  dà **4 byte per pixel**, su una sequenza dichiarata `hev1.2.4.L90.90`, profondità 10.
+
+⇒ ⛔ **L'etichetta `Main10` continuerebbe a dirlo per tutta la catena senza che nessuno se ne
+accorga**: l'immagine viene bene lo stesso. Non è un ripiego nostro, ed è per questo che si scrive.
+
+### 3. Il telefono **è stato misurato**, ma non sull'hardware
+
+`[M]` 13 agosto, **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte** — HEVC
+Main10 **e** AV1 10 bit, `tela_rileggibile: true`.
+
+⛔ **Quel che non ha risposta è «lo decodifica il silicio o la CPU?»**: nel browser il nome del
+decodificatore non c'è, senza cavo dati non si legge `Created MediaCodec <nome>` da
+`chrome://media-internals`, e il criterio A/B esce **`valido: false`** perché misura *spesa fissa*.
+⇒ `[?]` dichiarata — ed è la misura **S2** che `PIANO.md` §1.2 mette in questa fase.
+
+---
+
 ## Il giudizio dell'utente
 
-⏳ **Non ancora dato**: la fase è aperta e il prodotto non esiste. Quel che si giudica alla fine è
-*il proprio desktop dentro una scheda del browser* — e finché non c'è quello, non c'è niente da
-giudicare.
+⏳ **Non ancora dato, e adesso c'è di che darlo**: il prodotto esiste e la catena consegna — l'utente
+ha guardato il proprio desktop dentro una scheda e ha detto *«è lo sfondo GNOME, è OK»*.
+
+⛔ **Ma il giudizio non si chiede sul solo verde**: si chiede insieme alle tre cose qui sopra e alle
+`[?]` della tavola «Che cosa resta `[?]`», o è preso su metà quadro. Quel che manca prima della
+domanda sta in `README.md`, riquadro «Che cosa manca per chiedere il giudizio».
