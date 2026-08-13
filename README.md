@@ -398,6 +398,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > fotogramma **senza rompere quelli dopo** — che oggi costa una chiave ogni volta.
 > ⛔ **La copia zero NON si anticipa**: resta alla fase 8.
 >
+> ⭐⭐ **E L'ELENCO COMPLETO DI QUEL CHE C'È DA LAVORARE** — trentadue voci in sette gruppi, in
+> ordine di quando mordono, con dentro **le trappole già pagate** perché non si ripaghino — sta in
+> [`fasi/rapporti/F3-prossima-sessione.md`](fasi/rapporti/F3-prossima-sessione.md).
+> ⛔ **Le due voci bloccanti sono in testa a quel file**: il **punto cieco del catalogo** (nessuna
+> certificazione guarda `codificatore.c`, e la sessione nuova lavora proprio lì) e lo **scoglio
+> HEVC**.
+>
 > ⏳ **E i due punti che l'utente ha lasciato APERTI di proposito** stanno in
 > [`fasi/03-movimento.md`](fasi/03-movimento.md), ciascuno con scritto **come si chiude**: il debito
 > di chiave strozzato (si legge il registro della sessione del giudizio, **costa zero**) e *dove
