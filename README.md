@@ -348,7 +348,68 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026**, mattina
+> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, a fase 2 chiusa**. ⇒ **LA PROSSIMA SESSIONE FA LA FASE 3**
+>
+> *Deciso dall'utente: «la prossima sessione si occuperà della fase 3». ⛔ Questo riquadro è scritto
+> **prima** di chiudere e **a codice fermo**, con lo stato **verificato e non ricordato** — è la
+> lezione che questa giornata è nata applicando, e che è stata mancata tre volte (11 agosto, 12
+> agosto, e stamattina alle 09:57).*
+>
+> **Lo stato, verificato adesso:**
+>
+> | | |
+> |---|---|
+> | ⭐ **albero** | pulito, `47e006e` |
+> | ⭐⭐⭐ **la fase 2** | **CHIUSA** sul giudizio dell'utente ⇒ [`fasi/rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md) |
+> | ⭐ **il catalogo** | **15 su 15**, e ⭐ è il conto del **progetto**: le due copie unite e rispecchiate, 90 giri. ⚠ **Ricontrollalo lo stesso** con `python3 banchi/01-b12-guasti.py --registro`: la fase 3 toccherà `rcp.c` e la pagina, e ⛔ **curare il prodotto fa scadere le certificazioni che lo guardavano** |
+> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, **quella che l'utente apre** — e la 7561 è anche **il bersaglio del metro**: si legge, non si tocca. Verificato: sono le sole tre `:7xxx` in ascolto |
+> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Ultimo giro: 13 agosto ore 08:08, **2,46 giorni su 7** |
+>
+> #### ⛔ Le tre cose da decidere PRIMA di scrivere la fase 3
+>
+> 1. ⛔⛔ **La risoluzione della tela.** `1920×1080` è **ereditato dalla scena di un banco, senza
+>    decisione né misura**; in v1 era `2560×1080`. ⭐ E adesso ha un numero addosso: sullo schermo
+>    dell'utente il desktop è dipinto all'**86%**, cioè **912 px di nero**. ⇒ **È la tela di tutte le
+>    fasi che vengono dopo: prima si decide, meno costa.** Decisione dell'utente, non un rilievo;
+> 2. ⛔ **La scena si dichiara e si muove sempre** — `PIANO.md` fase 3: *«un client a schermo intero
+>    che ridisegna a ogni richiamo del compositore»*. ⚠ **Tutte le misure di ritmo delle fasi 3-9 di
+>    v1 sono state buttate per questo** (`LEZIONI.md` §1.1). Si sceglie la scena **prima** di scrivere
+>    il banco;
+> 3. ⚠ **L'attesa dichiarata in anticipo**: su GNOME il traguardo dei **40 ms** probabilmente **non si
+>    raggiunge**, per il muro dei 37 fotogrammi di Mutter. Il numero da battere è **≤ 50 ms**
+>    (`SPECIFICHE.md` §3.2). Se la misura lo confermasse **non è un difetto nostro** — ed è una
+>    ragione in più per la fase 10.
+>
+> #### ⭐ Che cosa la fase 3 eredita, e che le morde addosso
+>
+> - ⛔ **P15** — `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto dove un
+>   orologio decide**. La fase 3 è tutta tempo: è lì che si scoprirà se regge;
+> - ⛔ **il metro non guarda a monte della cattura**, e con molti fotogrammi il punto cieco si allarga:
+>   **M6** («il fotogramma è del giro prima») è l'unico che vede quel guasto, e ⛔ **non è mai stata
+>   misurata sulla catena vera** perché manca la cattura del giro precedente. In fase 3 i giri
+>   precedenti ci sono: **si può chiudere**;
+> - ⛔ **«due utenti, ciascuno vede la propria sessione»** non lo copre nessun banco (metà positiva
+>   scoperta). Con il movimento diventa più caro sbagliarlo, non meno;
+> - ⚠ **M8 ha un controllo dichiarato NON APPLICABILE** (`giro`): il prodotto non conosce il nome del
+>   giro del banco. In fase 3, con un contatore `numero` che cresce a ogni fotogramma, **si può
+>   riaprire** — ⇒ `fasi/rapporti/F2-6-giudizio.md`;
+> - ⚠ **`02-figlio-accendi.sh:165`** conta i figli **di tutti** invece dei propri: si accende solo
+>   quando due banchi girano in parallelo, e in fase 3 gireranno.
+>
+> #### ⚠ E due cose sul metodo, che hanno prodotto il risultato migliore di oggi
+>
+> ⭐⭐ **Gli agenti si mandano a REFUTARE, non a verificare.** La riga su cui stavo per chiedere il
+> giudizio — *«12 guasti su 12, non ha più punti ciechi»* — è stata **refutata** da un agente mandato
+> a smentirla: uno dei dodici era **verde per costruzione**. Un agente mandato a *verificare* avrebbe
+> letto la stessa riga e confermato.
+>
+> ⭐ **E il mandato deve ammettere il rifiuto.** La cura che avevo passato io (*«leggi `azzerati`»*)
+> era **sbagliata**, e chi curava l'ha rifiutata con un caso: avrebbe prodotto un **falso rosso**,
+> che accusa il prodotto — peggio del falso verde che sostituiva.
+>
+> ---
+>
+> ### ⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026**, mattina *(superato dal riquadro qui sopra)*
 >
 > ⭐⭐⭐ **La fase 2 consegna: l'utente ha visto il proprio desktop dentro una scheda del browser**,
 > a schermo pieno, e ha detto *«è lo sfondo GNOME, è OK»*. La storia sta in
