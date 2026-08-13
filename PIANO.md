@@ -469,6 +469,34 @@ qualcun altro.
 >
 > ⏳ **Il lavoro comincia in una sessione nuova** (deciso dall'utente). Il punto di ripresa sta nel
 > `README.md`.
+>
+> ---
+>
+> ### ⭐⭐⭐ 13 agosto, sera — **IL BERSAGLIO È CONFERMATO AI DUE CAPI, e uno scoglio non c'era**
+>
+> *Il piano della sessione nuova è stato riletto **prima che partisse un agente**, e controllato
+> misurando invece che ricordando. Ne sono uscite tre righe che cambiano il lavoro.*
+>
+> **1. ⛔⛔ La codifica AV1 in hardware NON ESISTE su questa macchina** — `[M]`, 3 giri su 3:
+> `av1_vaapi` esce **218**, *«No usable encoding profile found»*, e `vainfo` dà AV1 in **sola
+> decodifica** su tutt'e due i nodi. ⚠ Il codificatore **compare** nell'elenco di `ffmpeg`: *un
+> elenco dice che il codice c'è, non che la macchina lo sa fare*.
+> ⇒ ⭐ **Restare su AV1 vuol dire restare in software per sempre.** HEVC non è una preferenza: sul
+> lato server è **l'unica strada verso l'hardware**.
+>
+> **2. ⛔⛔ Lo scoglio «nessun client accetta HEVC» era una BANDIERA del banco**, non un palco.
+> `[M]` A/B con una sola variabile: senza `--disable-gpu` il Chrome del banco vede la GPU e dice sì
+> a HEVC; con la bandiera dice no. ⭐ E **dipinge davvero** un flusso di `hevc_vaapi`: 5 giri su 5,
+> 1920×1080, 119 fotogrammi su 120, `powerEfficient: true`.
+> ⇒ **La corsia che doveva aprire la sessione è cancellata**, e la strada critica diventa
+> *codifica → anello rimisurato*, senza rami che possano bloccarla.
+>
+> **3. ⭐ I numeri dei codificatori, a parità di bitrate e coi fotogrammi in uscita CONTATI** —
+> 1920×1080 10 bit, 20 Mbit/s per tutti, 120 su 120 consegnati:
+> **`hevc_vaapi` 3,16-3,24 ms** · `h264_vaapi` 3,11-3,16 · `vp9_vaapi` 6,95-7,28 · `av1_vaapi` **non
+> esiste**. ⚠ Il primo giro di quella sonda **non era un confronto e il banco l'ha detto da sé**:
+> a bitrate libero VP9 consegnava **trenta volte meno byte**. *«Più veloce» a un trentesimo del
+> lavoro non è più veloce.*
 
 **Produce**: uno stream per fotogramma, l'abbandono con `RESET_STREAM`, la cadenza.
 

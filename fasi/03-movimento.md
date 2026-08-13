@@ -269,6 +269,43 @@ Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (li
 prodotta abbastanza da riempirla: ci vanno i **giri buttati**, le **cure rifiutate**, e i **banchi
 che hanno accusato il prodotto a torto**.*
 
+### ⛔⛔⛔ 0. LA PEGGIORE, e non è stata trovata da un banco: è stata trovata **rileggendo un piano**
+
+*13 agosto 2026, sera, a codice fermo, sulla richiesta dell'utente di **controllare che il piano
+della sessione nuova non avesse problemi**.*
+
+Il piano della sessione seguente si apriva con una corsia dichiarata *«quella da cui comincia la
+sessione»*: **dare al banco un palco con una GPU vera**. Nasceva da una conclusione scritta la notte
+prima, e scritta con la fermezza di una misura ripetuta — *«`[M]` 5 giri validi su 5:
+`isConfigSupported` è `false` per tutte le stringhe HEVC. E la causa vera: su **Xvfb non c'è GPU
+affatto** ⇒ non è un problema di codec, è un problema di PALCO»*.
+
+⛔⛔ **Era la bandiera `--disable-gpu` del banco stesso** (`03-b17-ritardo.py:626`). La sonda
+chiedeva a un browser **accecato da lei** se vedesse.
+
+| Chrome, stesso Xvfb, stesso script, **una sola variabile** | webgl | HEVC |
+|---|---|---|
+| **senza** `--disable-gpu` | `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
+| **con** `--disable-gpu` | `niente webgl` | no |
+
+⭐⭐ **E non è rimasta una dichiarazione**: il flusso uscito da `hevc_vaapi` è stato fatto
+**dipingere** allo stesso Chrome — `[M]` **5 giri su 5**, 1920×1080, **119 fotogrammi su 120**,
+`powerEfficient: true`.
+
+⚠ **Il segnale c'era, ed era stato archiviato**: il piano stesso annotava *«un giro della sonda ha
+detto HEVC = true con GPU, e non si è più riprodotto (0 su 5 successivi)»*, catalogandolo come
+**anomalia da inseguire**. ⇒ Era **l'unico giro giusto**. *Un esito che non si riproduce una volta
+su sei non è rumore: è una **variabile non dichiarata**.*
+
+⭐ **Quel che NON è successo, e va detto perché era il rischio grosso**: `03-b17-ritardo.py:582` ha
+**`gpu=True` di default** — `--senza-gpu` è opt-in ⇒ ⛔ **il numero della fase, i 74,58 ms, NON era
+misurato al buio.** Era **la sonda dei codec** a esserlo, non la misura.
+
+⇒ **Costo**: una corsia intera di un piano, e la sessione seguente sarebbe cominciata da lì.
+⇒ **Riga nuova per `LEZIONI.md`, ed è la §2.0**: *un banco che risponde «no» deve scrivere **con che
+palco** ha risposto* — «non c'è» e «non ho potuto guardare» hanno lo stesso aspetto, e il secondo è
+più frequente del primo.
+
 ### ⛔ 1. I giri buttati, e sono tutti dello stesso errore
 
 ⛔ **La scena stava sul monitor sbagliato**, e i monitor virtuali erano **quattro**. Una scena
