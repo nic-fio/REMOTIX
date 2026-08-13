@@ -348,7 +348,38 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **LA SESSIONE NUOVA FA LA CODIFICA IN HARDWARE, DENTRO LA FASE 3**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, NOTTE FONDA.** ⇒ **PRIMA IL PALCO, POI LA PAGINA, POI IL NUMERO**
+>
+> *La sessione della sera è finita. ⛔ **Non ha prodotto il numero della fase**, e la ragione non è
+> che sia mancato il tempo: **il codificatore hardware non riceve un fotogramma**. In cambio ha
+> smentito **tre righe** su cui il progetto stava per costruire — e il conto per intero sta in
+> [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).*
+>
+> #### ⛔⛔ I tre lavori, in quest'ordine e non in un altro
+>
+> | | | perché **prima** |
+> |---|---|---|
+> | **1** | ⛔⛔ **IL PALCO**: i banchi browser **misurano sul desktop dell'utente** credendo di essere su uno schermo finto. Chrome ignora `DISPLAY` e va su Wayland da `XDG_SESSION_TYPE`. `[M]` `xlsclients` sull'Xvfb dice **0 clienti**, la pagina dice `screen 2560×1080` | finché non è fatto, **ogni numero di ritardo porta dentro la contesa col desktop dell'utente** — e il prossimo «prima» nascerebbe già sbagliato. ⚠ E ha già fatto **una vittima**: la certificazione di `03-b16` non si rigira, perché su una finestra da 2560 il caso `V3s` non trova più il difetto |
+> | **2** | ⛔ **LA PAGINA**: HEVC **viene offerto e negoziato** ma **non dipinge nella sessione vera**, e il suo fallimento trascina `video.misura_massima` a **320×240** ⇒ tela 320×240 contro cattura 1920×1080, e il prodotto (correttamente, §6.2) **non spedisce**. **Zero fotogrammi** | senza, **nessun banco può esercitare il codificatore hardware**: non ci arriva un fotogramma, e la fase non si chiude |
+> | **3** | ⭐ **IL NUMERO**: l'anello con la codifica in hardware, `03-b17-ritardo.py`, **stessa scena** | è il numero su cui la fase si chiude, e i due precedenti sono le sue precondizioni |
+>
+> ⚠ **E `/srv/src/03-B-src/` porta la pagina VECCHIA**: chi accendesse quell'albero così com'è
+> misurerebbe il codificatore hardware **spento**, e scriverebbe *«l'hardware non serve a niente»*.
+>
+> #### ⭐ Quel che invece è in cassaforte
+>
+> | | |
+> |---|---|
+> | il numero della fase **regge** | **72,397 ms** rimisurati con banco e pagina nuovi (n=508), e la codifica vale **39,82 = il 55 %** |
+> | la codifica in hardware **funziona** | `hevc_vaapi` porta il tratto da **28,03 a 2,64 ms** (scena facile) e da **113,10 a 3,93** (dura) |
+> | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa 5,65 ms**, più del doppio della codifica ⇒ ⭐ **`swscale` BGRx→P010 è il pezzo nuovo da aggredire: 7,1 ms su 9,7** |
+> | il client **decodifica HEVC** | `VideoDecoder`: **120 fotogrammi su 120**, due strade di confezionamento, 5 giri su 5 |
+> | ⛔ **AV1 in hardware NON esiste** | `av1_vaapi` esce **218**: restare su AV1 = restare in software **per sempre** |
+> | ⛔ **Firefox non ha HEVC** in WebCodecs | ⇒ passare a HEVC **non toglie AV1: lo rende obbligatorio** |
+>
+> ---
+>
+> ### ⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **LA SESSIONE NUOVA FA LA CODIFICA IN HARDWARE, DENTRO LA FASE 3** *(superato dal riquadro qui sopra)*
 >
 > *Deciso dall'utente: ⭐ «**si anticipa la codifica HW alla fase 3. Per questo però dopo servirà una
 > nuova sessione**». ⛔ **La fase 3 NON è chiusa.***
