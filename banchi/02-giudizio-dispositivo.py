@@ -503,7 +503,20 @@ def principale():
 
     accettati = 0
     discordi = 0
-    for (verdetto, nat, ip, _ua, con_impronta), v in sorted(conteggio.items()):
+    # ⛔ Le chiavi possono portare `None` — un campo che il browser non ha
+    #    mandato, o una riga vecchia scritta da un raccoglitore che non lo
+    #    scriveva ancora.  `sorted()` su una tupla mista `str`/`None` **crolla**,
+    #    e lo strumento muore prima di stampare il verdetto: `[M]` 13 agosto
+    #    2026, sul primo giro vero dal telefono dell'utente.
+    #    ⚠ E crollava DOPO aver gia' letto tutto: la misura c'era, il lettore no.
+    #    Si ordina su una chiave che tratta l'assente come stringa vuota — e
+    #    l'assente resta `None` nei dati, perche' «non l'ha mandato» e «l'ha
+    #    mandato vuoto» sono due cose diverse (E8).
+    def _chiave(coppia):
+        return tuple("" if c is None else str(c) for c in coppia[0])
+
+    for (verdetto, nat, ip, _ua, con_impronta), v in sorted(conteggio.items(),
+                                                            key=_chiave):
         g = v["g"]
         colore = {"ACCETTATO": "\033[1;32m", "RIFIUTATO": "\033[1;31m",
                   "SOSPESO": "\033[1;33m"}[verdetto]
