@@ -438,3 +438,191 @@ che si risponde con `vaQueryConfigAttributes`, non con `ffmpeg`.
 
 ⛔ **Non ho committato niente**, non ho toccato nessun `.md` fuori da questo, e i file del deposito
 nel mio perimetro hanno le sha256 di partenza.
+
+---
+---
+
+# APPENDICE — IL TRAVASO NEL DEPOSITO
+
+*14 agosto 2026, notte. Aggiunta dopo il messaggio del coordinatore con i numeri dell'anello
+(corsia E). ⭐ **Il travaso è FATTO e VERIFICATO su una sessione vera.***
+
+---
+
+## A0. In una riga
+
+**I quattro file sono nel deposito**, il deposito **compila** (gemelli `rcp` compresi), e un
+prodotto **costruito dal deposito** ha aperto una **sessione vera** in cui — nello **stesso giro** —
+il codec negoziato è **`hevc`**, il nodo **`/dev/dri/renderD128`** è aperto **in hardware**, e da lì
+è **uscito un fotogramma** con `hev1.2.4.L120.B0` letto **dal flusso**. ⛔ Nessun ripiego dichiarato.
+Le porte protette sono le stesse prima e dopo.
+
+---
+
+## A1. Che cosa ho traspostato, e da dove
+
+⛔ **Non ho ricopiato "quel che credevo di avere": ho verificato che la sorgente del travaso fosse
+esattamente quella che l'anello ha misurato.** La copia sul server era ancora intatta —
+`remotix` = `7a5ee61d…`, cioè il binario dei tre giri di E — e i quattro sorgenti avevano le stesse
+sha256 della mia copia di lavoro. Solo allora ho copiato.
+
+| file | sha256 (identica su copia, server e adesso deposito) |
+|---|---|
+| `src/codificatore.c` | `dcc7ed3ad4927514e05c496c13d26ec7cb9d9acb92d7e2f37a9114065dd60e23` |
+| `src/codificatore.h` | `7bc74545753c801707b0186357dacbc04bb88238b6ac142bb6612d548e27692c` |
+| `src/figlio.c` | `5b61b12200c92b1de32ce8d58c8e4e8d1b70c22376276445a5b90495eb9dc268` |
+| `src/Makefile` | `69577003bec70d87f5eca2a50ea88a8d13251348d8e78f1a9e6ac643324784a8` |
+
+⛔ **`git status src/` dice quattro file e basta.** ⭐ **`src/pagina.html` non è stata toccata**
+(non compare fra i modificati), e i tre **gemelli** `rcp.c` · `rcp.h` · `autenticazione.c` sono
+`cmp`-identici alle copie di `banchi/rcp/`.
+
+⚠ **La base non si era mossa sotto di me**: prima di copiare ho verificato che i quattro file del
+deposito avessero ancora le sha256 da cui ero partito (`02babbc4…` `bb3424a5…` `ecb60d93…`
+`c25a1445…`). Se si fossero mosse, mi sarei fermato.
+
+---
+
+## A2. La costruzione — ⛔ dal DEPOSITO, e non nell'albero del prodotto di casa
+
+Ho estratto `src/` + `banchi/rcp/` del deposito in una copia **nuova**,
+`/srv/src/03-B-verifica/`, e l'ho costruita lì. ⛔ **Non ho ricostruito
+`/media/REMOTIX/src/remotix/`**, che è l'albero dietro la **7448** — una porta protetta.
+
+```
+OK  rcp.c            identico a …/banchi/rcp/rcp.c            (8cdc80c64ada2eea…)
+OK  rcp.h            identico a …/banchi/rcp/rcp.h            (77c562f9c0b14737…)
+OK  autenticazione.c identico a …/banchi/rcp/autenticazione.c (86451cd1c8bb6367…)
+OK  make e' uscito 0
+OK  ⭐ costruito: /srv/src/03-B-verifica/src/remotix
+```
+
+- **nessun errore, nessun avviso** del compilatore;
+- binario del deposito: `283571055af77243e58364848b1653d2726b7dbe4621933d8fb49e083a485d1e`.
+
+⚠ Non coincide con `7a5ee61d…` per **due** ragioni, tutte e due note e nessuna preoccupante: la
+costruzione **non è riproducibile bit per bit**, e la `pagina.html` del deposito è quella **curata**,
+diversa da quella della mia copia.
+
+---
+
+## A3. Il codificatore del deposito, provato da fuori
+
+Ho ricompilato il mio banco isolato contro il **`codificatore.o` costruito dal deposito**. ⛔ È una
+prova di **correttezza**, non di tempo — ma il banco ha comunque dichiarato la scena e verificato di
+essere solo (carico 0,05 · 13 vicini, **nessuno consuma**).
+
+| | copia misurata da E | ⭐ **deposito** |
+|---|---|---|
+| `hevc_vaapi` renderD128, cammino seriale | 9,73 / 9,77 ms | **9,80 ms** |
+| fotogrammi consegnati | 120 su 120 | **120 su 120** |
+| **B4** chiave su richiesta | SI | **SI** |
+| riordina · trattenuto | no · no | **no · no** |
+| controllo negativo «nodo non dichiarato» | rifiuta | **rifiuta** |
+| controllo negativo «EncSlice piena su renderD128» | rifiuta, e dice `[1,8]` | **rifiuta, e dice `[1,8]`** |
+| ⚠ `renderD129` (AMD) | ⛔ 0 su 120 | ⛔ **0 su 120** |
+
+⇒ **Il travaso non ha cambiato niente**, e l'unico rosso è quello **già dichiarato e atteso**
+(§1.2): l'AMD che consegna 1088 righe. **Non è una regressione.**
+
+---
+
+## A4. ⭐⭐ LA CONDIZIONE 2 — LA SESSIONE VERA
+
+### ⛔ Perché NON ho usato l'anello, e perché è la scelta giusta
+
+Ho provato per primo `03-b17-ritardo.py --misura` contro la mia copia. **Si è rifiutato**, ed
+aveva ragione:
+
+> `⛔ NON SONO SOLO — mi RIFIUTO di misurare un tempo: CHUWI: un vicino mangia CPU: chrome (pid
+> 571048) al 30.0 % · chrome (pid 567382) al 20.0 %`
+
+⚠ **Ho guardato di chi fossero prima di dare la colpa a qualcuno**: `--ozone-platform=wayland`,
+vivi da 23 minuti ⇒ è **il Chrome dell'utente sul suo desktop**. Non miei, e non si toccano.
+
+⇒ ⭐ **Ma la mia non è una misura di tempo: è un sì/no** — §0-bis, *«la correttezza non dipende da
+quanto la macchina è carica»*. L'anello è lo strumento della famiglia sbagliata. Ho scritto un
+apri-sessione che **riusa il `Palco` già certificato** di quel banco (`CODER.md` §4.1 — si dipende,
+non si riscrive) e che **non misura niente**.
+
+### Il giro, e la regola doppia che vale contro me stesso
+
+⛔ **Ho preteso TRE fatti, non uno**, perché *un descrittore aperto non dice che i fotogrammi ci
+passino* — è la regola che avevo proposto io, e qui l'ho puntata sul mio lavoro.
+
+**Scena**: prodotto **costruito dal deposito** sulla **7626** (ponte 7622, lavoro e certificati
+miei); Chrome su Xvfb `:89`, ⭐ **senza `--disable-gpu`** (bandiere stampate nel giro); utente
+`nicfio`, parola da file 0600, **mai da argv**. ⛔ Il registro è stato letto **solo dai 2 145 byte in
+poi** — non dall'inizio, che è la trappola già pagata.
+
+```
+21:20:49.410 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+21:20:49.584 video   aperto: HEVC 10 bit via hevc_vaapi (in HARDWARE · /dev/dri/renderD128 ·
+                     Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 () · ⚠ EncSliceLP,
+                     bassa potenza — NON e' la codifica piena) · 1920x1080 · QP costante
+21:20:49.603 figlio  ⭐ PRIMO fotogramma codificato: codec 1, 3334 byte, CHIAVE,
+                     «hev1.2.4.L120.B0», profondita' nel flusso 10, livello 120,
+                     promozione 8→10 SI (dichiarata), conversione 7177 us,
+                     caricamento sulla GPU 3882 us, codifica 7645 us
+```
+
+| | |
+|---|---|
+| **1/3** | ⭐ il codec negoziato è **`hevc`** — cioè **il codec 1**, e la cura B7 funziona da capo a fondo |
+| **2/3** | ⭐ `/dev/dri/renderD128` aperto **IN HARDWARE**, col **fornitore VA** scritto accanto |
+| **3/3** | ⭐ e da lì è **uscito un fotogramma**: `hev1.2.4.L120.B0`, 10 bit **letti dal flusso**, chiave vera |
+
+⛔ **E i tre contatori del silenzio sono tutti a zero**: `RIPIEGO DICHIARATO` **0** · `ha trattenuto
+il fotogramma` **0** · `non ha consegnato` **0**. ⇒ Il software **non** ha preso il posto
+dell'hardware, e nessun fotogramma è rimasto in canna.
+
+### ⭐ E una verifica in più, che costa zero e chiude il cerchio su B7
+
+Le sonde HEVC dentro `src/pagina.html` del deposito, rilette **nei byte**:
+
+```
+hevc-8   114 byte  profile_idc = 1   ⭐ Main
+hevc-10  116 byte  profile_idc = 2   ⭐ Main10
+```
+
+⇒ **La Rext è sparita.** È esattamente la cura che avevo chiesto al §7, ed è la ragione per cui
+adesso il `CIAO` porta `hevc` e il server sceglie 1 invece di 2.
+
+---
+
+## ⛔ A5. CHE COSA NON HA FUNZIONATO
+
+| | |
+|---|---|
+| ⛔ **la scena non si è accesa** | il mio gancio a `03-b17-accendi.sh scena-avvia` è fallito 6 tentativi su 6 ⇒ i contatori **della pagina** sono a zero (`consegnati: 0, dipinti: 0`). ⚠ **Non inficia la condizione 2**, che si legge nel registro **del prodotto** e riguarda la codifica, non il disegno — e il fotogramma codificato c'è. ⇒ Ma va detto: **quel giro non prova che il client dipinga**; a provarlo sono i 799 fotogrammi di E e i 120 su 120 del §6 |
+| ⛔ **l'anello si è rifiutato** | e correttamente: il Chrome dell'utente ciclava. ⇒ Cambiato strumento, non forzata la misura |
+| ⛔ **`03-b17-accendi.sh spegni` non ha morso** | ha lasciato vivi prodotto, figlio e ponte. Li ho chiusi **per PID esplicito**, uno per uno, dopo aver letto la riga di comando di ciascuno ⇒ ⛔ **nessun `pkill` a tappeto vicino a tre porte protette** |
+| ⚠ **`sshpw.py` non eleva il `sudo`** | i miei `kill` via quello strumento sono usciti 0 **senza uccidere niente** — «ha risposto» e «ha fatto» avevano lo stesso aspetto. Me ne sono accorto **ricontando i processi**, non fidandomi del codice d'uscita |
+| ⚠ **il mio apri-sessione è nato rotto due volte** | leggeva la lunghezza del registro e il conto delle porte dallo stdout di `ssh`, dove ci sono anche la richiesta della parola e il rumore di `tput`. Curato pescando il numero con una regex invece di presumere che l'output fosse solo il numero |
+
+---
+
+## ⏳ A6. CHE COSA RESTA `[?]` dopo il travaso
+
+| | |
+|---|---|
+| ⚠ **il giro della condizione 2 non ha dipinto** | zero fotogrammi **alla pagina**, per la scena spenta. La catena fino al **client** è provata altrove (E: 799 fotogrammi, 30,18 fps; io: 120 su 120 nel `VideoDecoder`), **non in questo giro** |
+| ⚠ **il deposito non è stato provato sull'ANELLO** | E ha misurato il binario della **mia copia**, non quello del deposito. I sorgenti sono **identici byte per byte** e il codificatore si comporta identico (§A3) — ma la sottrazione dei cinque tratti resta quella di E |
+| ⚠ **`03-b17` e `03-b19` scadono** | `src/codificatore.c` è cambiato. ⛔ **Non ho toccato il catalogo**, come da istruzione: le rigira il coordinatore |
+| ⚠ **il disegno a 25,1 ms** | il collo di bottiglia si è spostato di nuovo, adesso è il disegno lato client. **Non è mio**, ma è il numero che tiene il totale sopra AV1 software |
+| ⚠ **tutto il resto delle `[?]` di §10** | invariato: qualità della LP non misurata, QP 26 ≠ CRF 20, `renderD129` inservibile, quale scheda componga il desktop |
+
+---
+
+## A7. Lo stato in cui lascio le cose
+
+| | |
+|---|---|
+| **deposito** | 4 file modificati, `src/pagina.html` **intatta**, gemelli `rcp` identici. ⛔ **Non committato** |
+| **porte sul server** | ⭐ `7448 · 7501 · 7561` e **nient'altro** — contate all'inizio, durante e alla fine. Le mie 7622/7626/7627 sono **spente** |
+| **copie sul server** | `/srv/src/03-B-src/` (quella misurata da E) e `/srv/src/03-B-verifica/` (quella del deposito) restano, spente, ispezionabili |
+| **CHUWI** | Xvfb e profili dei miei giri chiusi e cancellati a fine giro; `/tmp` a ~1,4 G liberi |
+
+⇒ ⭐ **Domattina l'utente giudicherebbe il prodotto SENZA il freno tirato**: negozia HEVC e codifica
+in hardware. ⚠ E se qualcosa dovesse andare storto, il ritorno indietro è **`git checkout -- src/`**
+su quattro file, e nient'altro.

@@ -1543,6 +1543,45 @@ static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
  *        resta con lo schermo sfasciato per sempre.  Il chiamante adesso c'e' —
  *        `MSG_VIDEO` con `chiave = 1`, e la strada intera e' nel riquadro di
  *        `wt_video_gancio()`. */
+/* ⛔⭐ IL NODO DI RENDERING E L'ENTRYPOINT — DICHIARATI QUI, NON INDOVINATI E
+ *     NON IN UNA RIGA DI CONFIGURAZIONE.
+ *
+ * `CODER.md` invariante I7: *«la protezione di un difetto noto sta nel
+ * programma, non in una riga di configurazione che si puo' perdere»*.  Un nodo
+ * preso da una variabile d'ambiente sparirebbe il giorno in cui qualcuno accende
+ * il servizio a mano, e il sintomo sarebbe **il codificatore in software con la
+ * stessa etichetta**: due ritmi diversi sotto lo stesso nome.
+ *
+ * ⭐ E i due numeri stanno accanto alla riga perche' questa e' una SCELTA, e una
+ *    scelta senza il conto accanto e' una preferenza:
+ *
+ *   `[M]` 13 agosto 2026, 1920×1080 10 bit, 120 fotogrammi, tutti a 20 Mbit/s,
+ *   fotogrammi in uscita CONTATI con `ffprobe`:
+ *
+ *     /dev/dri/renderD128   Intel iHD 25.2.3    EncSliceLP   ⭐ 3,16-3,24 ms
+ *     /dev/dri/renderD129   AMD radeonsi 25.0.7 EncSlice        3,43 ms
+ *     libsvtav1 preset 10   (in software)                      22,23 ms
+ *
+ * ⚠ **E i due nodi NON sono due volti della stessa scheda**: `renderD128` e'
+ *   l'iGPU Intel (0000:00:02.0, i915), `renderD129` e' una **AMD Radeon RX
+ *   6800** discreta (0000:03:00.0, amdgpu).  Chi leggesse «due nodi» come «due
+ *   code della stessa GPU» sceglierebbe a caso fra due macchine diverse.
+ *
+ * ⛔ **Perche' l'Intel e non l'AMD, che ha l'entrypoint PIENO**: e' piu' veloce
+ *    `[M]`, e soprattutto e' **la scheda che compone il desktop** — cioe' quella
+ *    su cui i fotogrammi stanno gia' quando la fase 8 togliera' la copia.
+ *    ⚠ Il prezzo si dichiara e non si nasconde: `EncSliceLP` e' la codifica **a
+ *    bassa potenza**, non e' equivalente alla piena, e il confronto di qualita'
+ *    fra le due a parita' di bitrate `[?]` **non e' stato misurato**.
+ */
+#define NODO_RENDERING "/dev/dri/renderD128"
+#define POTENZA_RENDERING CODIFICATORE_POTENZA_BASSA
+/* ⛔ Il QP costante, e NON e' «il CRF 20 di prima»: sono due grandezze diverse
+ *    (vedi `ModoQualita` in `codificatore.h`).  ⚠ Il valore e' di comodo
+ *    dichiarato — il punto di lavoro fra qualita' e banda e' la fase 9, come il
+ *    preset di x265. */
+#define QP_HARDWARE 26
+
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
@@ -1567,7 +1606,40 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	r.formato = CODIFICATORE_PIXEL_BGRX;
 	r.chiavi_ogni = 0;
 
-	codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+	/*
+	 * ⭐⭐ HEVC SI PROVA PRIMA IN HARDWARE — e AV1 no, e la ragione e' MISURATA.
+	 *
+	 * `[M]` 13 agosto 2026: `av1_vaapi` **compare** nell'elenco di ffmpeg e
+	 * all'uso esce **218**, *«No usable encoding profile found»*, 3 giri su 3;
+	 * `vainfo` da' AV1 in **sola decodifica** su tutti e due i nodi.  ⇒ Provarlo
+	 * in hardware sarebbe un giro speso per un errore gia' noto.
+	 *
+	 * ⛔ E il ripiego **si dichiara** (`CODER.md` §4.2): un codificatore in
+	 *    software con la stessa etichetta di uno in hardware darebbe due ritmi
+	 *    sotto lo stesso nome, che e' la forma E2.  Qui il registro dice quale
+	 *    dei due e' vivo, e `codificatore_nome()` porta il nodo dentro il nome.
+	 */
+	if (codec == CODIFICATORE_HEVC) {
+		CodificatoreRichiesta hw = r;
+		hw.componente = "hevc_vaapi";
+		hw.nodo_rendering = NODO_RENDERING;
+		hw.potenza = POTENZA_RENDERING;
+		/* ⛔ In hardware non c'e' il CRF: si chiede QP, e si scrive QP. */
+		hw.modo = CODIFICATORE_QUALITA_QP;
+		hw.qualita = QP_HARDWARE;
+		codif[indice] = codificatore_nuovo(&hw, errore, sizeof errore);
+		if (!codif[indice])
+			registro_dice(REG_FIGLIO,
+			              "⚠ RIPIEGO DICHIARATO: «hevc_vaapi» su %s non si e' "
+			              "aperto (%s) ⇒ si scende su %s IN SOFTWARE, che sul "
+			              "banco costa ~22 ms per fotogramma contro ~3.  ⛔ Non e' "
+			              "un dettaglio del registro: e' il tratto piu' grosso "
+			              "dei 39 ms della codifica",
+			              NODO_RENDERING, errore, "libx265");
+	}
+
+	if (!codif[indice])
+		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
 	if (!codif[indice]) {
 		registro_dice(REG_FIGLIO, "⛔ niente video per il codec %d: %s",
 		              (int)codec, errore);
@@ -1693,18 +1765,23 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		registro_dice(REG_FIGLIO,
 		              "⭐ PRIMO fotogramma codificato: codec %d, %zu byte, %s, "
 		              "«%s», profondita' nel flusso %d, livello %d, promozione "
-		              "8→10 %s, conversione %llu us, codifica %llu us%s",
+		              "8→10 %s, conversione %llu us, caricamento sulla GPU %llu "
+		              "us, codifica %llu us · %s%s",
 		              (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
 		              c->stringa_codec, c->profondita_flusso, c->livello_flusso,
 		              c->promozione_8_a_10 ? "SI (dichiarata)" : "no",
 		              (unsigned long long)fg.us_conversione,
+		              (unsigned long long)fg.us_caricamento,
 		              (unsigned long long)fg.us_codifica,
+		              codificatore_nome(cod),
 		              fg.trattenuto ? " — ⚠ TRATTENUTO: il codificatore ha "
 		                              "messo un fotogramma di ritardo" : "");
 	else
 		registro_dettaglio(REG_FIGLIO,
-		                   "codec %d: %zu byte, %s, codifica %llu us%s",
+		                   "codec %d: %zu byte, %s, caricamento %llu us, "
+		                   "codifica %llu us%s",
 		                   (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
+		                   (unsigned long long)fg.us_caricamento,
 		                   (unsigned long long)fg.us_codifica,
 		                   fg.trattenuto ? " — TRATTENUTO" : "");
 

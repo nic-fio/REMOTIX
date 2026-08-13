@@ -1,9 +1,14 @@
 /*
- * codificatore.c — HEVC Main10 e AV1, in software, con la confessione letta sui
- * byte.  Il perche' di ogni scelta sta in `codificatore.h`; qui c'e' il come, e
- * accanto a ogni riga strana la misura che l'ha resa necessaria.
+ * codificatore.c — HEVC Main10 e AV1, in software **o in hardware via VA-API**,
+ * con la confessione letta sui byte.  Il perche' di ogni scelta sta in
+ * `codificatore.h`; qui c'e' il come, e accanto a ogni riga strana la misura
+ * che l'ha resa necessaria.
  *
- * ⛔ Non si tocca nessuna GPU: l'accelerazione e' la fase 8.
+ * ⭐ La GPU si tocca dal 13 agosto 2026 (fase 3, anticipata per decisione
+ *    dell'utente).  ⛔ Ma **solo per la codifica**: la copia zero — il
+ *    fotogramma che dalla cattura va alla GPU senza passare per la memoria di
+ *    sistema — resta alla fase 8, e qui il caricamento si paga e **si misura a
+ *    parte** (`us_caricamento`), perche' si veda quanto varra' toglierlo.
  */
 #include "codificatore.h"
 #include "registro.h"
@@ -17,9 +22,12 @@
 #include <time.h>
 
 #include <libavcodec/avcodec.h>
+#include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_vaapi.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
+#include <va/va.h>
 
 /* ⚠ Area propria invece di una delle sei di `registro.h`: quel file non e' di
  *   questa sotto-fase e non si tocca.  La riga per centralizzarla — `#define
@@ -270,8 +278,39 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 		lb_bit(&l, 1);                          /* separate_colour_plane_flag */
 	uint32_t larghezza = lb_ue(&l);
 	uint32_t altezza = lb_ue(&l);
+	uint32_t codificata_l = larghezza, codificata_a = altezza;
+	/*
+	 * ⛔⭐ LA FINESTRA DI CONFORMITA' SI APPLICA — e fino al 13 agosto 2026 questa
+	 *     lettura la SALTAVA (quattro `lb_ue()` buttati via).
+	 *
+	 * ⚠ Non si era mai visto perche' `libx265` a 1920×1080 non ne mette una: 1080
+	 *   e' multiplo di 8 e ci sta senza riempimento.  ⛔ `hevc_vaapi` **su AMD**
+	 *   (radeonsi, navi21) codifica **1920×1088** e ritaglia a 1080 con la
+	 *   finestra — e il controllo di `forma_va_bene()` rifiutava OGNI fotogramma
+	 *   dicendo *«il flusso dichiara 1920x1088 e la tela e' 1920x1080»*.
+	 *
+	 * ⇒ ⭐ Il difetto era del LETTORE, non del codificatore, e si e' visto solo
+	 *   perche' il controllo c'era.  ⚠ Le due grandezze restano DUE — quel che si
+	 *   codifica e quel che si mostra — e si scrivono tutte e due: un giorno la
+	 *   differenza costera' banda, e allora si vorra' sapere che c'e'.
+	 *
+	 * `[S]` H.265 §7.4.3.2: gli scarti sono in unita' di croma, cioe' vanno
+	 * moltiplicati per SubWidthC/SubHeightC.
+	 */
 	if (lb_bit(&l, 1)) {                        /* conformance_window_flag */
-		lb_ue(&l); lb_ue(&l); lb_ue(&l); lb_ue(&l);
+		uint32_t sinistra = lb_ue(&l), destra = lb_ue(&l);
+		uint32_t sopra = lb_ue(&l), sotto = lb_ue(&l);
+		uint32_t sub_l = (croma == 1 || croma == 2) ? 2 : 1;
+		uint32_t sub_a = (croma == 1) ? 2 : 1;
+		uint32_t taglio_l = sub_l * (sinistra + destra);
+		uint32_t taglio_a = sub_a * (sopra + sotto);
+		/* ⚠ Un taglio piu' grande dell'immagine non si sottrae: si lascia stare e
+		 *   il chiamante vedra' una misura che non combacia, che e' meglio di un
+		 *   numero che va sotto zero e diventa enorme. */
+		if (taglio_l < larghezza)
+			larghezza -= taglio_l;
+		if (taglio_a < altezza)
+			altezza -= taglio_a;
 	}
 	uint32_t bit_luma = lb_ue(&l) + 8;
 	uint32_t bit_croma = lb_ue(&l) + 8;
@@ -286,6 +325,8 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	c->tier_alto = tier != 0;
 	c->larghezza_flusso = larghezza;
 	c->altezza_flusso = altezza;
+	c->larghezza_codificata = codificata_l;
+	c->altezza_codificata = codificata_a;
 	c->croma_flusso = (int) croma;
 
 	/* ⭐ La stringa per `VideoDecoder.configure()`, costruita dai byte veri.
@@ -520,7 +561,23 @@ struct Codificatore {
 	AVPacket *pacchetto;
 	struct SwsContext *conversione;
 	CodificatoreConfessione conf;
-	char nome[96];
+	/* ⚠ 320 e non 160: dentro ci sta il fornitore VA per esteso — «Intel iHD
+	 *   driver for Intel(R) Gen Graphics - 25.2.3 ()» sono gia' 53 byte.  Un nome
+	 *   troncato nel registro toglie proprio il pezzo che dice QUALE macchina ha
+	 *   fatto il numero. */
+	char nome[320];
+
+	/* ───────────────────────────────────────────────────────────────────────
+	 * ⭐ LA META' IN HARDWARE.  ⚠ Tutti NULL/false quando si codifica in
+	 *    software, e il codice che segue lo controlla su `hardware` — non sulla
+	 *    presenza di uno di questi, che sarebbe la stessa cosa scritta in un
+	 *    posto dove un giorno non lo sara' piu'.
+	 */
+	bool hardware;
+	AVBufferRef *dispositivo;     /* AVHWDeviceContext (VAAPI) */
+	AVBufferRef *magazzino;       /* AVHWFramesContext: le superfici della GPU */
+	enum AVPixelFormat formato_gpu; /* P010LE a 10 bit, NV12 a 8 */
+	AVFrame *appoggio;            /* il fotogramma in memoria di sistema */
 
 	bool prossimo_chiave;         /* ⛔ la prossima e' una chiave VERA */
 	bool prima_codifica_fatta;
@@ -579,6 +636,33 @@ static enum AVCodecID id_di(CodecVideo codec)
 	return codec == CODIFICATORE_HEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_AV1;
 }
 
+/*
+ * ⛔ «E' in hardware?» si CHIEDE AL COMPONENTE, non si legge nel nome.
+ *
+ * ⚠ Un `strstr(nome, "_vaapi")` sarebbe la stessa cosa scritta male: il giorno
+ *   in cui si provasse `hevc_qsv` o `hevc_vulkan` la riga direbbe «software» di
+ *   un codificatore in hardware, e il sintomo sarebbe swscale che converte
+ *   verso un formato che il componente non accetta — cioe' un errore che non
+ *   nomina ne' la GPU ne' il nome.  ⇒ Si guarda quel che DICHIARA: un
+ *   codificatore in hardware accetta un formato di superficie, non di pixel.
+ */
+static bool componente_e_hardware(const AVCodec *c, enum AVPixelFormat *quale)
+{
+	const enum AVPixelFormat *elenco = NULL;
+	if (avcodec_get_supported_config(NULL, c, AV_CODEC_CONFIG_PIX_FORMAT, 0,
+	                                 (const void **) &elenco, NULL) < 0 || !elenco)
+		return false;
+	for (int i = 0; elenco[i] != AV_PIX_FMT_NONE; i++) {
+		const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(elenco[i]);
+		if (d && (d->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
+			if (quale)
+				*quale = elenco[i];
+			return true;
+		}
+	}
+	return false;
+}
+
 static bool accetta_formato(const AVCodec *c, enum AVPixelFormat voluto)
 {
 	const enum AVPixelFormat *elenco = NULL;
@@ -591,6 +675,264 @@ static bool accetta_formato(const AVCodec *c, enum AVPixelFormat voluto)
 		if (elenco[i] == voluto)
 			return true;
 	return false;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐ LA GPU — E SI APRE SU UN NODO DICHIARATO, CON UN ENTRYPOINT DICHIARATO
+ *
+ * ⛔ Le due cose che questo blocco NON fa, e sono le due che costerebbero:
+ *
+ *    1. **non sceglie il nodo**.  `[M]` 13 agosto 2026 i due nodi della
+ *       macchina di prova sono di due fornitori diversi (Intel iHD su
+ *       `renderD128`, AMD radeonsi su `renderD129`) e con due entrypoint
+ *       diversi.  Un codice che aprisse «il primo che c'e'» misurerebbe una
+ *       macchina a caso, e il numero non direbbe quale;
+ *    2. **non si fida di aver chiesto**.  Fra «ho passato `low_power=1` a
+ *       libavcodec» e «il driver ha quell'entrypoint» c'e' la stessa distanza
+ *       che fra `-svtav1-params lossless=1` e un flusso senza perdita — cioe'
+ *       una stampa di errore e un'uscita 0 (`[M]` 12 agosto).  ⇒ La coppia
+ *       (profilo, entrypoint) si legge dal driver con
+ *       `vaQueryConfigEntrypoints` **prima** di aprire.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+static VAProfile profilo_va(CodecVideo codec, int profondita)
+{
+	if (codec != CODIFICATORE_HEVC)
+		return VAProfileNone;
+	return profondita == 10 ? VAProfileHEVCMain10 : VAProfileHEVCMain;
+}
+
+/*
+ * ⛔ TRE ESITI, NON DUE: `c'e'`, `non c'e'`, `non ho potuto guardare`.
+ * `LEZIONI.md` §1.9 regola 1 — «vuoto» e «proibito» hanno lo stesso aspetto.
+ */
+typedef enum { EP_C_E, EP_NON_C_E, EP_NON_GUARDATO } EsitoEntrypoint;
+
+static EsitoEntrypoint entrypoint_c_e(VADisplay d, VAProfile p, VAEntrypoint voluto,
+                                      char *visti, size_t visti_byte)
+{
+	int massimo = vaMaxNumEntrypoints(d);
+	if (massimo <= 0)
+		return EP_NON_GUARDATO;
+	VAEntrypoint *elenco = calloc((size_t) massimo, sizeof(*elenco));
+	if (!elenco)
+		return EP_NON_GUARDATO;
+	int quanti = 0;
+	VAStatus st = vaQueryConfigEntrypoints(d, p, elenco, &quanti);
+	if (st != VA_STATUS_SUCCESS) {
+		free(elenco);
+		return EP_NON_GUARDATO;
+	}
+	EsitoEntrypoint esito = EP_NON_C_E;
+	if (visti && visti_byte)
+		visti[0] = 0;
+	for (int i = 0; i < quanti; i++) {
+		if (visti && visti_byte) {
+			char pezzo[24];
+			snprintf(pezzo, sizeof(pezzo), "%s%d", i ? "," : "", (int) elenco[i]);
+			strncat(visti, pezzo, visti_byte - strlen(visti) - 1);
+		}
+		if (elenco[i] == voluto)
+			esito = EP_C_E;
+	}
+	free(elenco);
+	return esito;
+}
+
+/*
+ * Apre il dispositivo VA-API sul nodo dichiarato, ne legge il FORNITORE, e
+ * verifica che (profilo, entrypoint) esista davvero prima di aprire.
+ */
+static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
+{
+	const CodificatoreRichiesta *r = &c->richiesta;
+
+	if (!r->nodo_rendering || !r->nodo_rendering[0]) {
+		di(errore, errore_byte,
+		   "«%s» e' un codificatore in HARDWARE e non e' stato dichiarato nessun "
+		   "nodo di rendering: ⛔ non se ne indovina uno — su questa macchina i due "
+		   "nodi sono di due fornitori diversi [M]", c->componente->name);
+		return -1;
+	}
+	if (r->potenza == CODIFICATORE_POTENZA_NON_DICHIARATA) {
+		di(errore, errore_byte,
+		   "«%s»: l'entrypoint non e' stato dichiarato.  ⛔ `EncSliceLP` (bassa "
+		   "potenza) e `EncSlice` (piena) NON sono equivalenti, e il difetto di "
+		   "libavcodec (piena) non si eredita: si chiede PIENA o BASSA",
+		   c->componente->name);
+		return -1;
+	}
+
+	int esito = av_hwdevice_ctx_create(&c->dispositivo, AV_HWDEVICE_TYPE_VAAPI,
+	                                   r->nodo_rendering, NULL, 0);
+	if (esito < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(esito, testo, sizeof(testo));
+		di(errore, errore_byte, "VA-API non si e' aperta su «%s»: %s",
+		   r->nodo_rendering, testo);
+		return -1;
+	}
+
+	AVHWDeviceContext *dc = (AVHWDeviceContext *) c->dispositivo->data;
+	AVVAAPIDeviceContext *va = dc->hwctx;
+	const char *fornitore = vaQueryVendorString(va->display);
+	snprintf(c->conf.nodo, sizeof(c->conf.nodo), "%s", r->nodo_rendering);
+	snprintf(c->conf.fornitore_va, sizeof(c->conf.fornitore_va), "%s",
+	         fornitore ? fornitore : "(il driver non dice il suo nome)");
+
+	VAProfile profilo = profilo_va(r->codec, r->profondita);
+	if (profilo == VAProfileNone) {
+		di(errore, errore_byte,
+		   "in hardware si sa aprire solo HEVC: per AV1 la codifica in hardware su "
+		   "questa macchina NON ESISTE [M] — `av1_vaapi` esce 218, «No usable "
+		   "encoding profile found», 3 giri su 3");
+		return -1;
+	}
+	VAEntrypoint voluto = (r->potenza == CODIFICATORE_POTENZA_BASSA)
+	                          ? VAEntrypointEncSliceLP
+	                          : VAEntrypointEncSlice;
+	char visti[128] = { 0 };
+	switch (entrypoint_c_e(va->display, profilo, voluto, visti, sizeof(visti))) {
+	case EP_C_E:
+		c->conf.bassa_potenza = (r->potenza == CODIFICATORE_POTENZA_BASSA);
+		c->conf.bassa_potenza_verificata = true;
+		break;
+	case EP_NON_C_E:
+		di(errore, errore_byte,
+		   "su «%s» (%s) il profilo %d NON ha l'entrypoint %s: il driver ne "
+		   "dichiara [%s].  ⛔ Non si ripiega sull'altro — sono due codifiche "
+		   "diverse, e ripiegare darebbe due misure sotto la stessa etichetta",
+		   r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+		   voluto == VAEntrypointEncSliceLP ? "EncSliceLP (bassa potenza)"
+		                                    : "EncSlice (piena)",
+		   visti[0] ? visti : "nessuno");
+		return -1;
+	case EP_NON_GUARDATO:
+	default:
+		di(errore, errore_byte,
+		   "su «%s» NON ho potuto leggere gli entrypoint del profilo %d: ⛔ non e' "
+		   "«non ce n'e'», e' «non ho guardato», e non si codifica su una macchina "
+		   "che non si e' potuta interrogare",
+		   r->nodo_rendering, (int) profilo);
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ * Il magazzino delle superfici: quel che il codificatore in hardware consuma.
+ * ⚠ `initial_pool_size` non e' un numero di comodo — e' quante superfici la GPU
+ *   tiene pronte.  Con `async_depth=1` ne serve poco piu' di una, e si tiene un
+ *   margine dichiarato per il caso in cui il componente ne trattenga qualcuna.
+ */
+#define SUPERFICI_PRONTE 8
+
+static int apri_magazzino(Codificatore *c, char *errore, size_t errore_byte)
+{
+	av_buffer_unref(&c->magazzino);
+	c->magazzino = av_hwframe_ctx_alloc(c->dispositivo);
+	if (!c->magazzino) {
+		di(errore, errore_byte, "niente memoria per il magazzino delle superfici");
+		return -1;
+	}
+	AVHWFramesContext *fc = (AVHWFramesContext *) c->magazzino->data;
+	fc->format = AV_PIX_FMT_VAAPI;
+	fc->sw_format = c->formato_gpu;
+	fc->width = (int) c->richiesta.larghezza;
+	fc->height = (int) c->richiesta.altezza;
+	fc->initial_pool_size = SUPERFICI_PRONTE;
+	int esito = av_hwframe_ctx_init(c->magazzino);
+	if (esito < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(esito, testo, sizeof(testo));
+		di(errore, errore_byte, "il magazzino %s %ux%u non si e' aperto: %s",
+		   av_get_pix_fmt_name(c->formato_gpu), c->richiesta.larghezza,
+		   c->richiesta.altezza, testo);
+		av_buffer_unref(&c->magazzino);
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ * ⛔ LE OPZIONI DEL CODIFICATORE IN HARDWARE, DECISE INVECE CHE EREDITATE — e
+ *    sono la stessa regola di `opzioni_hevc()`, su un altro componente.
+ *
+ * ⚠ `[M]` 13 agosto 2026, lette in `ffmpeg -h encoder=hevc_vaapi`: il difetto
+ *   di `async_depth` e' **2**.  Nessuno l'aveva chiesto, ed e' esattamente la
+ *   stessa forma dei `bframes=4` di x265 — un fotogramma tenuto in canna e' un
+ *   fotogramma di ritardo, contro un tetto di 50 ms.  ⛔ Qui vale DOPPIO: il
+ *   ciclo di `figlio.c` manda un fotogramma e ne aspetta subito il pacchetto, e
+ *   con `async_depth=2` il primo giro tornerebbe `EAGAIN` — cioe' il ramo che
+ *   mette il codificatore in scarico e lo fa riaprire, con una chiave in piu' a
+ *   ogni fotogramma.
+ */
+static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
+{
+	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
+		/* ⛔ Non si finge, come non si finge su SVT-AV1: `hevc_vaapi` non ha un
+		 *    modo senza perdita, e `qp=0` NON lo e' — su VA-API lo zero e' il
+		 *    valore che vuol dire «non chiesto» (difetto dell'opzione), che e'
+		 *    la stessa sentinella implicita gia' pagata su `crf=0`. */
+		di(errore, errore_byte,
+		   "in hardware non c'e' un modo senza perdita, e non lo si finge: "
+		   "`hevc_vaapi` ha QP costante, e `qp=0` vuol dire «non chiesto», non "
+		   "«senza perdita».  ⇒ Il regime senza perdita si chiede a libx265");
+		return -1;
+	}
+	if (c->modo_corrente == CODIFICATORE_QUALITA_CRF) {
+		/* ⛔ CRF e QP non sono la stessa grandezza: vedi `ModoQualita`. */
+		di(errore, errore_byte,
+		   "in hardware non c'e' il CRF: `hevc_vaapi` ha il QP costante.  ⛔ "
+		   "Tradurre CRF %d in QP %d e continuare a chiamarlo CRF darebbe due "
+		   "misure sotto la stessa etichetta ⇒ si chieda CODIFICATORE_QUALITA_QP",
+		   c->qualita_corrente, c->qualita_corrente);
+		return -1;
+	}
+	if (c->qualita_corrente < 1 || c->qualita_corrente > 51) {
+		di(errore, errore_byte,
+		   "QP %d fuori misura: si chiede fra 1 e 51 — ⛔ e lo ZERO non e' «il "
+		   "migliore», e' il valore di difetto che vuol dire «non chiesto»",
+		   c->qualita_corrente);
+		return -1;
+	}
+	/* CQP: il quantizzatore fermo.  ⚠ Si chiede PER NOME (`rc_mode=CQP`) e non
+	 * si lascia `auto`: `auto` sceglie in base alle altre opzioni, cioe' un
+	 * componente che decide da se' — `CODER.md` §3.9. */
+	if (av_opt_set_int(c->ctx->priv_data, "rc_mode", 1 /* CQP */, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato rc_mode=CQP", c->componente->name);
+		return -1;
+	}
+	if (av_opt_set_int(c->ctx->priv_data, "qp", c->qualita_corrente, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato qp=%d", c->componente->name,
+		   c->qualita_corrente);
+		return -1;
+	}
+	if (av_opt_set_int(c->ctx->priv_data, "async_depth", 1, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato async_depth=1", c->componente->name);
+		return -1;
+	}
+	if (av_opt_set_int(c->ctx->priv_data, "low_power",
+	                   c->richiesta.potenza == CODIFICATORE_POTENZA_BASSA ? 1 : 0, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato low_power", c->componente->name);
+		return -1;
+	}
+	/* ⛔ `idr_interval = 0`: fra due chiavi non ci vanno I non-IDR.  Una I che
+	 *    non azzera la predizione non e' una chiave di `RCP.md` §5.2, e un
+	 *    client che si collegasse li' resterebbe con lo schermo sfasciato. */
+	if (av_opt_set_int(c->ctx->priv_data, "idr_interval", 0, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato idr_interval=0", c->componente->name);
+		return -1;
+	}
+	/* ⚠ Il profilo si chiede anche qui, per nome e non per numero implicito:
+	 *   `ctx->profile` lo dice gia', ma il componente ha un'opzione sua e due
+	 *   posti che dicono la stessa cosa vanno detti tutti e due o nessuno. */
+	if (av_opt_set_int(c->ctx->priv_data, "profile",
+	                   c->richiesta.profondita == 10 ? 2 : 1, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato il profilo", c->componente->name);
+		return -1;
+	}
+	return 0;
 }
 
 /*
@@ -701,14 +1043,31 @@ static void chiudi_contesto(Codificatore *c)
 	if (c->pacchetto)
 		av_packet_free(&c->pacchetto);
 	if (c->ctx)
-		avcodec_free_context(&c->ctx);
+		avcodec_free_context(&c->ctx); /* ⚠ libera anche `hw_frames_ctx` */
+	/* ⚠ Il magazzino si chiude col contesto: `apri_contesto` ne apre uno nuovo,
+	 *   e tenerne due vivi vorrebbe dire superfici della GPU che nessuno
+	 *   restituisce — una perdita che si vede solo dopo mezz'ora. */
+	av_buffer_unref(&c->magazzino);
 }
 
 static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
-	enum AVPixelFormat formato = (r->profondita == 10) ? AV_PIX_FMT_YUV420P10LE
-	                                                   : AV_PIX_FMT_YUV420P;
+	/*
+	 * ⚠ In hardware il formato del CONTESTO e' quello della superficie
+	 *   (`AV_PIX_FMT_VAAPI`); il formato dei pixel veri e' quello del magazzino
+	 *   (`formato_gpu`), ed e' **P010LE** a 10 bit — non `yuv420p10le`.  ⛔ Sono
+	 *   due formati diversi con lo stesso numero di bit: P010 e' semi-planare e
+	 *   tiene i 10 bit nei bit ALTI di sedici.  Convertirci dentro come se fosse
+	 *   planare darebbe un'immagine buia e nessun errore.
+	 */
+	enum AVPixelFormat formato;
+	if (c->hardware) {
+		c->formato_gpu = (r->profondita == 10) ? AV_PIX_FMT_P010LE : AV_PIX_FMT_NV12;
+		formato = AV_PIX_FMT_VAAPI;
+	} else {
+		formato = (r->profondita == 10) ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P;
+	}
 
 	if (!accetta_formato(c->componente, formato)) {
 		di(errore, errore_byte,
@@ -716,6 +1075,8 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		   c->componente->name, av_get_pix_fmt_name(formato));
 		return -1;
 	}
+	if (c->hardware && apri_magazzino(c, errore, errore_byte) < 0)
+		return -1;
 
 	c->ctx = avcodec_alloc_context3(c->componente);
 	if (!c->ctx) {
@@ -772,8 +1133,25 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 */
 	c->ctx->flags &= ~(unsigned) AV_CODEC_FLAG_GLOBAL_HEADER;
 
-	int esito = (r->codec == CODIFICATORE_HEVC) ? opzioni_hevc(c, errore, errore_byte)
-	                                            : opzioni_av1(c, errore, errore_byte);
+	/* ⛔ Il magazzino si attacca PRIMA di `avcodec_open2`: senza, il componente
+	 *    in hardware si apre lo stesso e fallisce al primo fotogramma con «No
+	 *    device available», che e' un errore che non nomina questa riga. */
+	if (c->hardware) {
+		c->ctx->hw_frames_ctx = av_buffer_ref(c->magazzino);
+		if (!c->ctx->hw_frames_ctx) {
+			di(errore, errore_byte, "niente memoria per legare il magazzino");
+			chiudi_contesto(c);
+			return -1;
+		}
+	}
+
+	int esito;
+	if (c->hardware)
+		esito = opzioni_vaapi(c, errore, errore_byte);
+	else if (r->codec == CODIFICATORE_HEVC)
+		esito = opzioni_hevc(c, errore, errore_byte);
+	else
+		esito = opzioni_av1(c, errore, errore_byte);
 	if (esito < 0) {
 		chiudi_contesto(c);
 		return -1;
@@ -796,8 +1174,21 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	c->conf.profondita_chiesta = r->profondita;
 	c->conf.fotogrammi_b = c->ctx->max_b_frames;
 	c->conf.global_header = (c->ctx->flags & AV_CODEC_FLAG_GLOBAL_HEADER) != 0;
+	c->conf.in_hardware = c->hardware;
 	c->conf.ha_obbedito = true;
 	c->conf.perche_no[0] = 0;
+
+	/* ⭐ E in hardware si RILEGGONO le due opzioni che comprano ritardo: quel che
+	 *    si e' chiesto e quel che il componente ha tenuto sono due cose diverse
+	 *    finche' non si guarda.  ⚠ `av_opt_get_int` sul `priv_data` legge il
+	 *    valore in vigore, non quello passato. */
+	if (c->hardware) {
+		int64_t v = 0;
+		c->conf.profondita_asincrona =
+		    (av_opt_get_int(c->ctx->priv_data, "async_depth", 0, &v) == 0) ? (int) v : -1;
+		if (av_opt_get_int(c->ctx->priv_data, "low_power", 0, &v) == 0)
+			c->conf.bassa_potenza = v != 0;
+	}
 
 	if (c->ctx->codec->id != id_di(r->codec))
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
@@ -816,6 +1207,18 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	else if (c->ctx->max_b_frames != 0)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "fotogrammi B: %d, e ne erano stati chiesti 0", c->ctx->max_b_frames);
+	/* ⛔ Un `async_depth` diverso da 1 e' un fotogramma trattenuto, cioe' il
+	 *    difetto che questa fase esiste per togliere: non si spedisce. */
+	else if (c->hardware && c->conf.profondita_asincrona != 1)
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "async_depth = %d dopo averne chiesto 1: il componente terrebbe "
+		   "fotogrammi in canna", c->conf.profondita_asincrona);
+	else if (c->hardware &&
+	         c->conf.bassa_potenza != (r->potenza == CODIFICATORE_POTENZA_BASSA))
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "chiesta la codifica %s e il componente dice %s",
+		   r->potenza == CODIFICATORE_POTENZA_BASSA ? "a bassa potenza" : "piena",
+		   c->conf.bassa_potenza ? "bassa potenza" : "piena");
 
 	if (c->conf.perche_no[0]) {
 		c->conf.ha_obbedito = false;
@@ -831,6 +1234,112 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		return -1;
 	}
 	c->prossimo_chiave = true; /* ⛔ dopo ogni apertura il primo e' una chiave */
+	return 0;
+}
+
+/*
+ * ⭐ I FOTOGRAMMI E LA CONVERSIONE — in un posto solo, perche' `codificatore_
+ *    nuovo()` e `codificatore_ridimensiona()` facevano la stessa cosa in due
+ *    stesure, e ⛔ la seconda si era gia' dimenticata la promozione dichiarata.
+ *    Due stesure della stessa cosa sono un posto dove divergere in silenzio.
+ *
+ * ⚠ In hardware i fotogrammi sono DUE: quello in memoria di sistema
+ *   (`appoggio`, dove swscale scrive) e la superficie della GPU (`fotogramma`,
+ *   che si prende dal magazzino a ogni giro).  In software resta uno solo.
+ */
+static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
+{
+	const CodificatoreRichiesta *r = &c->richiesta;
+	enum AVPixelFormat destinazione = c->hardware ? c->formato_gpu : c->ctx->pix_fmt;
+
+	if (c->fotogramma)
+		av_frame_free(&c->fotogramma);
+	if (c->appoggio)
+		av_frame_free(&c->appoggio);
+	if (c->conversione) {
+		sws_freeContext(c->conversione);
+		c->conversione = NULL;
+	}
+
+	/* Il fotogramma che entra nel codificatore. */
+	c->fotogramma = av_frame_alloc();
+	if (!c->fotogramma) {
+		di(errore, errore_byte, "niente memoria per il fotogramma");
+		return -1;
+	}
+	if (!c->hardware) {
+		c->fotogramma->format = c->ctx->pix_fmt;
+		c->fotogramma->width = c->ctx->width;
+		c->fotogramma->height = c->ctx->height;
+		c->fotogramma->colorspace = c->ctx->colorspace;
+		c->fotogramma->color_range = c->ctx->color_range;
+		if (av_frame_get_buffer(c->fotogramma, 0) < 0) {
+			di(errore, errore_byte, "niente memoria per i piani del fotogramma");
+			return -1;
+		}
+	} else {
+		/* ⛔ La superficie NON si alloca qui e non si riusa: si prende dal
+		 *    magazzino a ogni giro (vedi `prepara_fotogramma`).  Riusarne una
+		 *    sola mentre il codificatore ne tiene ancora un riferimento e' una
+		 *    scrittura sotto i piedi di chi legge, e il sintomo sarebbe
+		 *    un'immagine che ogni tanto si strappa — senza nessun errore. */
+		c->appoggio = av_frame_alloc();
+		if (!c->appoggio) {
+			di(errore, errore_byte, "niente memoria per il fotogramma d'appoggio");
+			return -1;
+		}
+		c->appoggio->format = c->formato_gpu;
+		c->appoggio->width = (int) r->larghezza;
+		c->appoggio->height = (int) r->altezza;
+		c->appoggio->colorspace = c->ctx->colorspace;
+		c->appoggio->color_range = c->ctx->color_range;
+		if (av_frame_get_buffer(c->appoggio, 0) < 0) {
+			di(errore, errore_byte, "niente memoria per i piani d'appoggio");
+			return -1;
+		}
+	}
+
+	/*
+	 * La conversione.  ⛔ Serve in DUE casi, e il secondo e' nato con
+	 * l'hardware:
+	 *   - BGRx → il formato del codificatore: la cattura di GNOME (`[M]` F2.2);
+	 *   - yuv420p10le → **P010LE**: l'ingresso del banco su un codificatore in
+	 *     hardware.  ⚠ Sono tutti e due «10 bit 4:2:0» e **non sono lo stesso
+	 *     formato**: P010 e' semi-planare e tiene i dieci bit in ALTO dentro
+	 *     sedici.  Copiarli come se fossero uguali darebbe un'immagine buia e
+	 *     nessun errore — la forma di difetto che non nomina la causa.
+	 */
+	enum AVPixelFormat sorgente;
+	if (r->formato == CODIFICATORE_PIXEL_BGRX)
+		sorgente = AV_PIX_FMT_BGR0;
+	else
+		sorgente = AV_PIX_FMT_YUV420P10LE;
+
+	if (sorgente != destinazione) {
+		c->conversione = sws_getContext((int) r->larghezza, (int) r->altezza, sorgente,
+		                                (int) r->larghezza, (int) r->altezza, destinazione,
+		                                SWS_BILINEAR, NULL, NULL, NULL);
+		if (!c->conversione) {
+			di(errore, errore_byte, "swscale non ha aperto %s → %s",
+			   av_get_pix_fmt_name(sorgente), av_get_pix_fmt_name(destinazione));
+			return -1;
+		}
+		/* ⛔ La matrice si IMPONE.  Senza questa chiamata swscale usa il suo
+		 *    difetto, che non e' scritto da nessuna parte nel nostro codice: due
+		 *    versioni di ffmpeg potrebbero convertire diversamente e nessuno se
+		 *    ne accorgerebbe guardando l'immagine.
+		 * ⚠ La sorgente e' a intervallo PIENO solo quando e' RGB: un
+		 *   `yuv420p10le` che arriva dal banco e' gia' a intervallo limitato, e
+		 *   dichiararlo pieno lo schiarirebbe di un passo a ogni giro. */
+		const int *tavola = sws_getCoefficients(SWS_CS_ITU709);
+		sws_setColorspaceDetails(c->conversione, tavola,
+		                         r->formato == CODIFICATORE_PIXEL_BGRX ? 1 : 0,
+		                         tavola, 0 /* uscita: limitato */, 0, 1 << 16, 1 << 16);
+	}
+	/* ⚠ La sorgente ha 8 bit veri (`[M]` F2.2): il Main10 che ne esce e' 8 bit
+	 *   PROMOSSI, e la promozione si dichiara invece di subirla. */
+	c->conf.promozione_8_a_10 =
+	    (r->formato == CODIFICATORE_PIXEL_BGRX && r->profondita == 10);
 	return 0;
 }
 
@@ -902,68 +1411,52 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		return NULL;
 	}
 
+	/*
+	 * ⛔ «E' in hardware?» si chiede al componente PRIMA di aprire: da quella
+	 *    risposta dipendono il formato del contesto, il magazzino e la
+	 *    conversione — cioe' tre cose che dopo non si possono cambiare.
+	 */
+	c->hardware = componente_e_hardware(c->componente, NULL);
+	if (c->hardware && apri_dispositivo(c, errore, errore_byte) < 0) {
+		codificatore_libera(c);
+		return NULL;
+	}
+
 	if (apri_contesto(c, errore, errore_byte) < 0) {
-		free(c);
-		return NULL;
-	}
-
-	c->fotogramma = av_frame_alloc();
-	if (!c->fotogramma) {
-		di(errore, errore_byte, "niente memoria per il fotogramma");
 		codificatore_libera(c);
 		return NULL;
 	}
-	c->fotogramma->format = c->ctx->pix_fmt;
-	c->fotogramma->width = c->ctx->width;
-	c->fotogramma->height = c->ctx->height;
-	c->fotogramma->colorspace = c->ctx->colorspace;
-	c->fotogramma->color_range = c->ctx->color_range;
-	if (av_frame_get_buffer(c->fotogramma, 0) < 0) {
-		di(errore, errore_byte, "niente memoria per i piani del fotogramma");
+	if (apri_fotogrammi(c, errore, errore_byte) < 0) {
 		codificatore_libera(c);
 		return NULL;
 	}
 
-	if (richiesta->formato == CODIFICATORE_PIXEL_BGRX) {
-		/*
-		 * ⛔ La conversione la fa `libswscale`, non noi: `CODER.md` §4.1 —
-		 *    «ogni componente che scriviamo e' un componente da mantenere per
-		 *    sempre», e di RGB→YUV esiste **una** implementazione standard.
-		 * ⚠ E il conto di v1 va rimisurato, non ricopiato: li' la conversione
-		 *   era il collo di bottiglia **misurato** (12,5 ms contro 3,8 di
-		 *   codifica, a 2560×1024 in NV12).  A 10 bit i byte in uscita
-		 *   raddoppiano.
-		 */
-		c->conversione = sws_getContext((int) richiesta->larghezza, (int) richiesta->altezza,
-		                                AV_PIX_FMT_BGR0,
-		                                (int) richiesta->larghezza, (int) richiesta->altezza,
-		                                c->ctx->pix_fmt, SWS_BILINEAR, NULL, NULL, NULL);
-		if (!c->conversione) {
-			di(errore, errore_byte, "swscale non ha aperto BGRx → %s",
-			   av_get_pix_fmt_name(c->ctx->pix_fmt));
-			codificatore_libera(c);
-			return NULL;
-		}
-		/* ⛔ La matrice si IMPONE.  Senza questa chiamata swscale usa il suo
-		 *    difetto, che non e' scritto da nessuna parte nel nostro codice: due
-		 *    versioni di ffmpeg potrebbero convertire diversamente e nessuno se
-		 *    ne accorgerebbe guardando l'immagine. */
-		const int *tavola = sws_getCoefficients(SWS_CS_ITU709);
-		sws_setColorspaceDetails(c->conversione, tavola, 1 /* sorgente: RGB pieno */,
-		                         tavola, 0 /* uscita: limitato */, 0, 1 << 16, 1 << 16);
-		/* ⚠ La sorgente ha 8 bit veri (`[M]` F2.2): il Main10 che ne esce e' 8
-		 *   bit PROMOSSI, e la promozione si dichiara invece di subirla. */
-		c->conf.promozione_8_a_10 = (richiesta->profondita == 10);
-	}
-
-	snprintf(c->nome, sizeof(c->nome), "%s %s via %s (in software)",
-	         richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1",
-	         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-	         c->componente->name);
+	/*
+	 * ⛔ Il nome porta DENTRO il nodo e la potenza, non a fianco: e' la riga che
+	 *    finisce nel registro accanto a ogni numero, e un ritmo di 3 ms senza
+	 *    «quale scheda» e «quale entrypoint» accanto e' un numero che vale per
+	 *    una macchina che non si sa quale sia (`LEZIONI.md` §1.1).
+	 */
+	if (c->hardware)
+		snprintf(c->nome, sizeof(c->nome),
+		         "%s %s via %s (in HARDWARE · %s · %s · %s)",
+		         richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1",
+		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
+		         c->componente->name, c->conf.nodo, c->conf.fornitore_va,
+		         c->conf.bassa_potenza ? "⚠ EncSliceLP, bassa potenza — NON e' la "
+		                                 "codifica piena"
+		                               : "EncSlice, piena");
+	else
+		snprintf(c->nome, sizeof(c->nome), "%s %s via %s (in software)",
+		         richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1",
+		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
+		         c->componente->name);
 
 	registro_dice(REG_CODIFICA, "aperto: %s · %ux%u · %s · chiavi %s%s", c->nome,
 	              richiesta->larghezza, richiesta->altezza,
-	              richiesta->modo == CODIFICATORE_QUALITA_LOSSLESS ? "senza perdita" : "CRF",
+	              richiesta->modo == CODIFICATORE_QUALITA_LOSSLESS ? "senza perdita"
+	              : richiesta->modo == CODIFICATORE_QUALITA_QP     ? "QP costante"
+	                                                               : "CRF",
 	              richiesta->chiavi_ogni ? "periodiche" : "solo su richiesta",
 	              c->conf.promozione_8_a_10
 	                  ? " · ⚠ 8 bit della cattura PROMOSSI a 10: il desiderato di "
@@ -982,7 +1475,13 @@ void codificatore_libera(Codificatore *c)
 		sws_freeContext(c->conversione);
 	if (c->fotogramma)
 		av_frame_free(&c->fotogramma);
+	if (c->appoggio)
+		av_frame_free(&c->appoggio);
 	chiudi_contesto(c);
+	/* ⚠ Il dispositivo si chiude per ULTIMO: il magazzino e le superfici ne
+	 *   tengono un riferimento, e chiuderlo prima lascerebbe il driver a
+	 *   liberare superfici su un display che non c'e' piu'. */
+	av_buffer_unref(&c->dispositivo);
 	free(c);
 }
 
@@ -1016,14 +1515,10 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 
 	/* ⛔ Si riapre davvero.  Un codificatore aperto a una misura e alimentato a
 	 *    un'altra non protesta: taglia o riempie, e il difetto si vede solo
-	 *    nell'immagine. */
+	 *    nell'immagine.
+	 * ⚠ In hardware si riapre anche il MAGAZZINO — le superfici hanno la misura
+	 *   dentro, e riusarle vorrebbe dire caricare 1920 righe dentro 1280. */
 	chiudi_contesto(c);
-	if (c->fotogramma)
-		av_frame_free(&c->fotogramma);
-	if (c->conversione) {
-		sws_freeContext(c->conversione);
-		c->conversione = NULL;
-	}
 	c->richiesta.larghezza = larghezza;
 	c->richiesta.altezza = altezza;
 	c->prima_codifica_fatta = false;
@@ -1031,31 +1526,8 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 
 	if (apri_contesto(c, errore, errore_byte) < 0)
 		return false;
-	c->fotogramma = av_frame_alloc();
-	if (!c->fotogramma) {
-		di(errore, errore_byte, "niente memoria per il fotogramma");
+	if (apri_fotogrammi(c, errore, errore_byte) < 0)
 		return false;
-	}
-	c->fotogramma->format = c->ctx->pix_fmt;
-	c->fotogramma->width = c->ctx->width;
-	c->fotogramma->height = c->ctx->height;
-	c->fotogramma->colorspace = c->ctx->colorspace;
-	c->fotogramma->color_range = c->ctx->color_range;
-	if (av_frame_get_buffer(c->fotogramma, 0) < 0) {
-		di(errore, errore_byte, "niente memoria per i piani");
-		return false;
-	}
-	if (c->richiesta.formato == CODIFICATORE_PIXEL_BGRX) {
-		c->conversione = sws_getContext((int) larghezza, (int) altezza, AV_PIX_FMT_BGR0,
-		                                (int) larghezza, (int) altezza, c->ctx->pix_fmt,
-		                                SWS_BILINEAR, NULL, NULL, NULL);
-		if (!c->conversione) {
-			di(errore, errore_byte, "swscale non ha riaperto alla misura nuova");
-			return false;
-		}
-		const int *tavola = sws_getCoefficients(SWS_CS_ITU709);
-		sws_setColorspaceDetails(c->conversione, tavola, 1, tavola, 0, 0, 1 << 16, 1 << 16);
-	}
 
 	/* ⛔ `RCP.md` §5.2: il primo fotogramma alla misura nuova DEVE essere una
 	 *    chiave, e una chiave VERA.  `apri_contesto` l'ha gia' preteso; la riga
@@ -1067,19 +1539,47 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	return true;
 }
 
-/* Riempie `c->fotogramma` dai pixel del chiamante. */
+/*
+ * Riempie il fotogramma che entra nel codificatore, dai pixel del chiamante.
+ *
+ * ⭐ In hardware sono DUE passi e si cronometrano SEPARATI:
+ *      `us_conversione`  swscale, in memoria di sistema — il tratto che c'era
+ *                        gia';
+ *      `us_caricamento`  memoria di sistema → GPU — ⛔ il tratto NUOVO, ed e'
+ *                        esattamente quello che la copia zero della fase 8
+ *                        esiste per togliere.  Sommarlo alla codifica renderebbe
+ *                        invisibile quanto varra' quel lavoro.
+ */
 static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                               uint64_t *us)
+                               uint64_t *us, uint64_t *us_carico)
 {
 	uint64_t t0 = adesso_us();
-	if (av_frame_make_writable(c->fotogramma) < 0)
+	AVFrame *dove = c->hardware ? c->appoggio : c->fotogramma;
+
+	*us_carico = 0;
+	if (av_frame_make_writable(dove) < 0)
 		return false;
 
-	if (c->richiesta.formato == CODIFICATORE_PIXEL_BGRX) {
-		const uint8_t *piani[4] = { pixel, NULL, NULL, NULL };
-		int passi[4] = { (int) passo, 0, 0, 0 };
+	if (c->conversione) {
+		const uint8_t *piani[4] = { NULL, NULL, NULL, NULL };
+		int passi[4] = { 0, 0, 0, 0 };
+		if (c->richiesta.formato == CODIFICATORE_PIXEL_BGRX) {
+			piani[0] = pixel;
+			passi[0] = (int) passo;
+		} else {
+			/* ⚠ Il passo del chiamante vale per il piano Y; i due di croma sono
+			 *   la meta', ed e' la convenzione del formato — non una deduzione. */
+			uint32_t l = c->richiesta.larghezza, a = c->richiesta.altezza;
+			uint32_t passo_y = passo ? passo : l * 2;
+			piani[0] = pixel;
+			piani[1] = pixel + (size_t) passo_y * a;
+			piani[2] = piani[1] + (size_t) (passo_y / 2) * (a / 2);
+			passi[0] = (int) passo_y;
+			passi[1] = (int) (passo_y / 2);
+			passi[2] = (int) (passo_y / 2);
+		}
 		int righe = sws_scale(c->conversione, piani, passi, 0, (int) c->richiesta.altezza,
-		                      c->fotogramma->data, c->fotogramma->linesize);
+		                      dove->data, dove->linesize);
 		if (righe != (int) c->richiesta.altezza) {
 			registro_dice(REG_CODIFICA,
 			              "⛔ la conversione ha reso %d righe su %u: non si codifica mezzo "
@@ -1087,29 +1587,59 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 			return false;
 		}
 	} else {
-		/* yuv420p10le: tre piani gia' pronti, 2 byte per campione.
-		 * ⚠ Il passo del chiamante vale per il piano Y; i due di croma sono la
-		 *   meta', ed e' la convenzione del formato — non una deduzione. */
+		/* yuv420p10le → yuv420p10le: tre piani gia' pronti, 2 byte per campione. */
 		uint32_t l = c->richiesta.larghezza, a = c->richiesta.altezza;
 		uint32_t passo_y = passo ? passo : l * 2;
 		const uint8_t *y = pixel;
 		const uint8_t *u = y + (size_t) passo_y * a;
 		const uint8_t *v = u + (size_t) (passo_y / 2) * (a / 2);
 		for (uint32_t r = 0; r < a; r++)
-			memcpy(c->fotogramma->data[0] + (size_t) r * c->fotogramma->linesize[0],
+			memcpy(dove->data[0] + (size_t) r * dove->linesize[0],
 			       y + (size_t) r * passo_y, (size_t) l * 2);
 		for (uint32_t r = 0; r < a / 2; r++) {
-			memcpy(c->fotogramma->data[1] + (size_t) r * c->fotogramma->linesize[1],
+			memcpy(dove->data[1] + (size_t) r * dove->linesize[1],
 			       u + (size_t) r * (passo_y / 2), (size_t) (l / 2) * 2);
-			memcpy(c->fotogramma->data[2] + (size_t) r * c->fotogramma->linesize[2],
+			memcpy(dove->data[2] + (size_t) r * dove->linesize[2],
 			       v + (size_t) r * (passo_y / 2), (size_t) (l / 2) * 2);
 		}
 	}
+	*us = adesso_us() - t0;
+
+	if (c->hardware) {
+		uint64_t t1 = adesso_us();
+		/* ⛔ Una superficie NUOVA a ogni giro: vedi `apri_fotogrammi()`.  Il
+		 *    magazzino ne tiene `SUPERFICI_PRONTE` e le riusa da se' quando
+		 *    nessuno le guarda piu'. */
+		av_frame_unref(c->fotogramma);
+		int esito = av_hwframe_get_buffer(c->magazzino, c->fotogramma, 0);
+		if (esito < 0) {
+			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+			av_strerror(esito, testo, sizeof(testo));
+			registro_dice(REG_CODIFICA,
+			              "⛔ nessuna superficie libera nel magazzino (%d pronte): %s",
+			              SUPERFICI_PRONTE, testo);
+			return false;
+		}
+		esito = av_hwframe_transfer_data(c->fotogramma, c->appoggio, 0);
+		if (esito < 0) {
+			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+			av_strerror(esito, testo, sizeof(testo));
+			registro_dice(REG_CODIFICA,
+			              "⛔ il fotogramma non e' salito sulla GPU (%s → %s): %s",
+			              av_get_pix_fmt_name(c->formato_gpu), c->conf.nodo, testo);
+			return false;
+		}
+		c->fotogramma->colorspace = c->ctx->colorspace;
+		c->fotogramma->color_range = c->ctx->color_range;
+		*us_carico = adesso_us() - t1;
+	}
+
 	c->fotogramma->pts = c->numero;
 	c->fotogramma->pict_type = c->prossimo_chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
 	if (c->prossimo_chiave)
 		c->fotogramma->flags |= AV_FRAME_FLAG_KEY;
-	*us = adesso_us() - t0;
+	else
+		c->fotogramma->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
 	return true;
 }
 
@@ -1173,9 +1703,10 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 		if (c->conf.larghezza_flusso != c->richiesta.larghezza ||
 		    c->conf.altezza_flusso != c->richiesta.altezza) {
 			registro_dice(REG_CODIFICA,
-			              "⛔ il flusso dichiara %ux%u e la tela e' %ux%u: RCP.md §6.2 vuole "
-			              "la misura della tela in vigore",
+			              "⛔ il flusso MOSTRA %ux%u (ne codifica %ux%u) e la tela e' "
+			              "%ux%u: RCP.md §6.2 vuole la misura della tela in vigore",
 			              c->conf.larghezza_flusso, c->conf.altezza_flusso,
+			              c->conf.larghezza_codificata, c->conf.altezza_codificata,
 			              c->richiesta.larghezza, c->richiesta.altezza);
 			return false;
 		}
@@ -1188,20 +1719,32 @@ static bool abbassa_qualita(Codificatore *c)
 {
 	char errore[256] = { 0 };
 	int prima = c->qualita_corrente;
+	ModoQualita modo_prima = c->modo_corrente;
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
+		/* ⚠ Il senza perdita esiste solo in software: il ripiego resta CRF. */
 		c->modo_corrente = CODIFICATORE_QUALITA_CRF;
 		c->qualita_corrente = CRF_DI_EMERGENZA;
 	} else {
+		/* ⚠ Il modo NON cambia: chi era a QP resta a QP.  Passare a CRF sotto il
+		 *   tetto vorrebbe dire cambiare grandezza a meta' sessione, cioe' due
+		 *   misure sotto la stessa etichetta. */
 		c->qualita_corrente += CRF_PASSO;
 		if (c->qualita_corrente > 51)
 			c->qualita_corrente = 51;
 	}
-	if (c->qualita_corrente == prima && c->modo_corrente == CODIFICATORE_QUALITA_CRF)
+	if (c->qualita_corrente == prima && c->modo_corrente == modo_prima)
 		return false;
 
 	chiudi_contesto(c);
 	if (apri_contesto(c, errore, sizeof(errore)) < 0) {
 		registro_dice(REG_CODIFICA, "⛔ non si e' riaperto a qualita' inferiore: %s", errore);
+		return false;
+	}
+	/* ⛔ In hardware il magazzino e' stato riaperto insieme al contesto: i
+	 *    fotogrammi vanno rilegati, o il prossimo giro caricherebbe su superfici
+	 *    di un magazzino chiuso. */
+	if (apri_fotogrammi(c, errore, sizeof(errore)) < 0) {
+		registro_dice(REG_CODIFICA, "⛔ i fotogrammi non si sono riaperti: %s", errore);
 		return false;
 	}
 	return true;
@@ -1231,16 +1774,21 @@ bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo
 			registro_dice(REG_CODIFICA, "⛔ non si e' riaperto dopo lo scarico: %s", errore);
 			return false;
 		}
+		if (apri_fotogrammi(c, errore, sizeof(errore)) < 0) {
+			registro_dice(REG_CODIFICA, "⛔ i fotogrammi non si sono riaperti: %s", errore);
+			return false;
+		}
 		c->svuotato = false;
 		registro_dice(REG_CODIFICA, "riaperto dopo lo scarico: il prossimo e' una chiave");
 	}
 	memset(fuori, 0, sizeof(*fuori));
 
 	for (uint32_t tentativo = 0;; tentativo++) {
-		uint64_t us_conv = 0;
-		if (!prepara_fotogramma(c, pixel, passo, &us_conv))
+		uint64_t us_conv = 0, us_carico = 0;
+		if (!prepara_fotogramma(c, pixel, passo, &us_conv, &us_carico))
 			return false;
 		fuori->us_conversione = us_conv;
+		fuori->us_caricamento = us_carico;
 
 		uint64_t t0 = adesso_us();
 		int esito = avcodec_send_frame(c->ctx, c->fotogramma);
@@ -1345,13 +1893,15 @@ bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo
 		c->prima_codifica_fatta = true;
 		registro_dice(REG_CODIFICA,
 		              "primo fotogramma: %s · %d byte · chiave %s · flusso: %s, %d bit, "
-		              "livello %d, %ux%u · conversione %" PRIu64 " µs, codifica %" PRIu64 " µs",
+		              "livello %d, %ux%u · conversione %" PRIu64 " µs, caricamento "
+		              "%" PRIu64 " µs, codifica %" PRIu64 " µs · %s",
 		              c->conf.stringa_codec[0] ? c->conf.stringa_codec : "(non letto)",
 		              c->pacchetto->size, chiave ? "si" : "no",
 		              c->conf.letto_dal_flusso ? "letto" : "⛔ NON letto",
 		              c->conf.profondita_flusso, c->conf.livello_flusso,
 		              c->conf.larghezza_flusso, c->conf.altezza_flusso,
-		              fuori->us_conversione, fuori->us_codifica);
+		              fuori->us_conversione, fuori->us_caricamento, fuori->us_codifica,
+		              c->nome);
 		if (c->conf.promozione_8_a_10)
 			registro_dice(REG_CODIFICA,
 			              "⚠ e i 10 bit sono OTTO PROMOSSI: la cattura di GNOME consegna "

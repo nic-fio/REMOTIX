@@ -127,6 +127,33 @@ F2_CFLAGS := $(shell pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm)
 F2_LIBS   := $(shell pkg-config --libs   gio-2.0 libpipewire-0.3)
 override CFLAGS += $(F2_CFLAGS)
 
+# ⭐⭐ LA SESTA DELLA FASE 3, innestata il 13 agosto 2026: **libva**.
+#
+#   libva >= 1.22            `src/codificatore.c` la usa per DUE cose sole, e
+#                            nessuna delle due la fa libavcodec:
+#                              · `vaQueryVendorString()` — CHI ha risposto sul
+#                                nodo che si e' aperto.  ⛔ `[M]` 13 agosto: i
+#                                due nodi della macchina di prova sono Intel
+#                                (renderD128, iHD) e AMD (renderD129,
+#                                radeonsi) — dedurre il fornitore dal numero
+#                                del nodo e' esattamente il modo di sbagliare
+#                                senza accorgersene;
+#                              · `vaQueryConfigEntrypoints()` — se la coppia
+#                                (profilo, entrypoint) esiste davvero, PRIMA di
+#                                aprire.  Fra «ho chiesto low_power=1» e «il
+#                                driver ce l'ha» c'e' la stessa distanza che
+#                                fra un'opzione stampata come errore e
+#                                un'uscita 0.
+#
+# ⚠ Su Debian Trixie: `apt install libva-dev`.  `[M]` 13 ago 2026: sul
+#   contenitore della macchina di prova c'era gia' (1.22.0), tirata dentro da
+#   `libavutil-dev`.  ⛔ La riga sta qui lo stesso: una dipendenza che c'e'
+#   perche' un'altra se l'e' portata dietro sparisce il giorno in cui quell'altra
+#   cambia idea, ed e' il difetto che questo elenco esiste per non avere.
+F3_CFLAGS := $(shell pkg-config --cflags libva)
+F3_LIBS   := $(shell pkg-config --libs   libva)
+override CFLAGS += $(F3_CFLAGS)
+
 ifneq ($(PREFISSO),)
 CFLAGS  += -I$(PREFISSO)/include
 LDFLAGS += -L$(PREFISSO)/lib -Wl,-rpath,$(PREFISSO)/lib
@@ -137,7 +164,7 @@ endif
 # ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
-        -lavcodec -lswscale -lavutil $(F2_LIBS)
+        -lavcodec -lswscale -lavutil $(F2_LIBS) $(F3_LIBS)
 
 .PHONY: tutto pulisci dipendenze impronte
 
@@ -198,7 +225,8 @@ dipendenze:
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
-	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h; do \
+	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h \
+	         libavutil/hwcontext_vaapi.h va/va.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \

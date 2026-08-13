@@ -8,9 +8,33 @@
  * pixel che la cattura consegna e produce **un flusso che F2.4 mette sul filo e
  * F2.5 da' a `VideoDecoder`**.
  *
- * ⛔ **In software, di proposito.**  L'accelerazione e' la fase 8, e metterla
- *    prima significherebbe non sapere quale dei due pezzi sbaglia
- *    (`PIANO.md` §«Fase 2»).  Qui non si tocca ne' VA-API ne' QSV ne' NVENC.
+ * ⛔ **In software fino al 13 agosto 2026, e la riga qui sotto era questa:**
+ *    *«In software, di proposito.  L'accelerazione e' la fase 8, e metterla
+ *    prima significherebbe non sapere quale dei due pezzi sbaglia.»*
+ *
+ * ⭐⭐ **L'ACCELERAZIONE E' STATA ANTICIPATA DENTRO LA FASE 3, per decisione
+ *      dell'utente**, e la ragione e' misurata ai due capi:
+ *
+ *      il costo   `[M]` 13 agosto 2026, 1920×1080 a 10 bit, 120 fotogrammi,
+ *                 tutti a 20 Mbit/s e coi fotogrammi in uscita CONTATI:
+ *                 `hevc_vaapi` **3,16-3,24 ms** contro **22,23 ms** di
+ *                 `libsvtav1` preset 10 sulla scena vera.  Il codificatore in
+ *                 software e' il pezzo grosso dei 39 ms del tratto di codifica.
+ *      il bersaglio ⛔ e **non e' AV1**: `av1_vaapi` **compare** nell'elenco di
+ *                 ffmpeg e all'uso esce **218** — *«No usable encoding profile
+ *                 found»*, 3 giri su 3.  `vainfo` da' AV1 in sola decodifica su
+ *                 tutti e due i nodi.  ⇒ **restare su AV1 vuol dire restare in
+ *                 software per sempre** su questa macchina.
+ *
+ * ⇒ Da qui: **HEVC in hardware c'e' e AV1 no**, ed e' il rovescio esatto della
+ *   tabella di `DECISIONI.md` §1.13 qui sotto — che parlava del CLIENT, non del
+ *   server.  Le due cose non si contraddicono e vanno lette insieme.
+ *
+ * ⛔ **Quel che NON e' stato anticipato**: la **copia zero** (il fotogramma che
+ *    va dalla cattura alla GPU senza passare per la memoria di sistema) resta
+ *    alla fase 8.  Qui i pixel si convertono in software e si CARICANO sulla
+ *    GPU, e il costo del caricamento si misura a parte — vedi
+ *    `us_caricamento` in `CodificatoreFotogramma`.
  *
  * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
  *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
@@ -188,7 +212,39 @@ typedef enum {
 typedef enum {
 	CODIFICATORE_QUALITA_LOSSLESS, /* ⚠ HEVC si'; AV1 vedi la nota in .c */
 	CODIFICATORE_QUALITA_CRF,      /* qualita' costante, `valore` = CRF */
+	/*
+	 * ⛔⭐ QP COSTANTE — ed e' un modo A PARTE, non «CRF sull'hardware».
+	 *
+	 * `[M]` 13 agosto 2026: `hevc_vaapi` **non ha** un'opzione `crf`; ha `qp`
+	 * (`rc_mode=CQP`).  CRF e QP non sono la stessa grandezza — CRF e' una
+	 * qualita' costante *percepita*, con il quantizzatore che si muove; QP e'
+	 * il quantizzatore, fermo.  ⛔ Tradurre «CRF 20» in «QP 20» e chiamarla
+	 * ancora CRF sarebbe due misure sotto la stessa etichetta, cioe' la forma
+	 * E2 (`CODER.md` §3.9): si chiede QP, e si scrive QP.
+	 */
+	CODIFICATORE_QUALITA_QP,
 } ModoQualita;
+
+/*
+ * ⛔⭐ LA POTENZA DELL'ENTRYPOINT — TRE ESITI, NON DUE.
+ *
+ * `EncSliceLP` e' la codifica «a bassa potenza»: veloce, ma con limiti suoi di
+ * qualita' e di funzioni, e **non e' equivalente** alla piena.  ⛔ Da cui: non
+ * si eredita il difetto di `libavcodec` (`low_power=false`) e non si indovina.
+ * Chi apre un codificatore in hardware **dichiara quale delle due vuole**, e
+ * `NON_DICHIARATA` — che e' lo zero, cioe' quel che si ottiene senza scriverlo
+ * — **fallisce dicendolo**.
+ *
+ * ⚠ E la ragione per cui i tre esiti servono e' misurata: sulla macchina di
+ *   prova i due nodi di rendering NON hanno lo stesso entrypoint (`[M]` 13
+ *   agosto 2026 — vedi `nodo_rendering` qui sotto), quindi «bassa potenza» e
+ *   «piena» non sono una preferenza: sono due macchine diverse.
+ */
+typedef enum {
+	CODIFICATORE_POTENZA_NON_DICHIARATA = 0,
+	CODIFICATORE_POTENZA_PIENA,  /* VAEntrypointEncSlice   */
+	CODIFICATORE_POTENZA_BASSA,  /* VAEntrypointEncSliceLP */
+} PotenzaEntrypoint;
 
 typedef struct {
 	CodecVideo codec;
@@ -198,10 +254,34 @@ typedef struct {
 	 * `libsvtav1`), che e' comunque un nome e non una scelta di libavcodec.
 	 */
 	const char *componente;
+	/*
+	 * ⛔⭐ IL NODO DI RENDERING — si stabilisce e si DICHIARA, non si indovina.
+	 *
+	 * Serve solo quando `componente` e' un codificatore in hardware (uno che
+	 * accetta `AV_PIX_FMT_VAAPI`).  ⛔ `NULL` non vuol dire «quello buono»:
+	 * vuol dire **fallisci dicendolo**.
+	 *
+	 * ⚠ E la ragione per cui non si puo' indovinare e' `[M]` 13 agosto 2026
+	 *   sulla macchina di prova, ed e' piu' grossa di «due nodi uguali»:
+	 *
+	 *     /dev/dri/renderD128   0000:00:02.0  i915   Intel (8086:4680)
+	 *                           driver VA: Intel iHD 25.2.3
+	 *                           VAProfileHEVCMain10 : VAEntrypointEncSliceLP
+	 *     /dev/dri/renderD129   0000:03:00.0  amdgpu AMD Radeon RX 6800 (navi21)
+	 *                           driver VA: Mesa Gallium 25.0.7 (radeonsi)
+	 *                           VAProfileHEVCMain10 : VAEntrypointEncSlice
+	 *
+	 *   ⇒ Sono **due fornitori diversi** e **due entrypoint diversi**.  Un
+	 *     numero preso sull'uno non vale per l'altro, e un codice che aprisse
+	 *     «il primo che c'e'» misurerebbe una macchina a caso.
+	 */
+	const char *nodo_rendering;
+	/* ⛔ Vedi `PotenzaEntrypoint`: lo zero fallisce, e lo fa apposta. */
+	PotenzaEntrypoint potenza;
 	uint32_t larghezza, altezza;
 	uint32_t fotogrammi_al_secondo;
 	ModoQualita modo;
-	int qualita;                 /* CRF, quando `modo` e' CRF */
+	int qualita;                 /* CRF (software) o QP (hardware) */
 	int profondita;              /* 8 o 10 — quel che si CHIEDE al codificatore */
 	FormatoPixel formato;
 	/*
@@ -239,11 +319,53 @@ typedef struct {
 	int livello_flusso;           /* HEVC: general_level_idc · AV1: seq_level_idx */
 	bool tier_alto;               /* HEVC: general_tier_flag · AV1: seq_tier */
 	uint32_t larghezza_flusso, altezza_flusso;
+	/*
+	 * ⭐ Quel che il flusso CODIFICA, che non e' sempre quel che MOSTRA.
+	 * ⛔ `[M]` 13 agosto 2026: `hevc_vaapi` su AMD (radeonsi, navi21) codifica
+	 *    1920×**1088** e ritaglia a 1080 con la finestra di conformita'; su Intel
+	 *    (iHD) codifica 1080 tondi.  Le due grandezze si tengono separate perche'
+	 *    la seconda e' quella che il decodificatore mostra e la prima e' quella
+	 *    che costa banda — e per un giorno intero il lettore di SPS ha confuso
+	 *    l'una con l'altra e rifiutava OGNI fotogramma di quella scheda.
+	 */
+	uint32_t larghezza_codificata, altezza_codificata;
 	int croma_flusso;             /* 1 = 4:2:0 */
 	char stringa_codec[64];       /* `hev1.2.4.L93.B0` / `av01.0.04M.10` */
 
 	/* ⚠ la promozione, dichiarata invece che subita */
 	bool promozione_8_a_10;
+
+	/* ───────────────────────────────────────────────────────────────────────
+	 * ⭐ L'HARDWARE, E SI DICHIARA ACCANTO AL NUMERO — non «in fondo al
+	 *    rapporto».  Un ritmo di 3 ms senza queste cinque righe accanto e' un
+	 *    numero che vale per una macchina che non si sa quale sia.
+	 */
+	bool in_hardware;             /* il componente accetta AV_PIX_FMT_VAAPI */
+	char nodo[64];                /* il nodo CHIESTO, es. /dev/dri/renderD128 */
+	/*
+	 * ⭐ Il fornitore che ha RISPOSTO, chiesto a `vaQueryVendorString()` sul
+	 *    display aperto — non dedotto dal nome del nodo.  E' il testimone che
+	 *    dice se «renderD128» e' l'Intel che si credeva o un'altra scheda: sulla
+	 *    macchina di prova i due nodi sono di due fornitori diversi `[M]`.
+	 */
+	char fornitore_va[128];
+	/*
+	 * ⛔ L'entrypoint: `false` = piena (`VAEntrypointEncSlice`), `true` = bassa
+	 *    potenza (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` dice
+	 *    che la coppia (profilo, entrypoint) e' stata **letta dal driver** con
+	 *    `vaQueryConfigEntrypoints`, non solo chiesta a libavcodec: senza quel
+	 *    controllo «gliel'ho chiesto» e «l'ha fatto» hanno lo stesso aspetto.
+	 */
+	bool bassa_potenza;
+	bool bassa_potenza_verificata;
+	/*
+	 * ⛔ Quanti fotogrammi il codificatore in hardware ha il PERMESSO di tenere
+	 *    in canna: `async_depth`.  ⚠ `[M]` 13 agosto 2026 il difetto di
+	 *    `hevc_vaapi` e' **2**, e nessuno l'aveva chiesto — e' lo stesso difetto
+	 *    non chiesto di `bframes=4` su x265, in un'altra veste.  Si legge
+	 *    RILEGGENDO l'opzione dopo l'apertura.
+	 */
+	int profondita_asincrona;
 
 	/* ⚠ il ritardo, misurato invece che dedotto */
 	bool riordina;                /* un pacchetto con dts != pts */
@@ -258,6 +380,16 @@ typedef struct {
 	bool chiave;                  /* `RCP.md` §6.2: 0x0301 chiave, 0x0302 delta */
 	uint64_t us_conversione;      /* ⭐ i tre tempi separati: senza, «il ritmo e' */
 	uint64_t us_codifica;         /*    calato» non si attribuisce a niente */
+	/*
+	 * ⭐ IL QUARTO TEMPO, e nasce con l'hardware: quanto costa PORTARE il
+	 *    fotogramma dalla memoria di sistema alla GPU (`av_hwframe_transfer_
+	 *    data`).  ⛔ Sta separato di proposito: e' esattamente il tratto che la
+	 *    **copia zero** della fase 8 esiste per togliere, e sommarlo alla
+	 *    codifica renderebbe invisibile quanto vale quel lavoro.  ⚠ In software
+	 *    e' sempre 0, e lo zero li' vuol dire «non c'e' questo tratto», non
+	 *    «e' gratis».
+	 */
+	uint64_t us_caricamento;
 	uint32_t ricodifiche;         /* ⛔ >0 ⇒ il tetto dei 16 MiB ha morso */
 	bool trattenuto;              /* ⚠ il codificatore non l'ha consegnato subito */
 } CodificatoreFotogramma;
@@ -275,7 +407,10 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
                                  char *errore, size_t errore_byte);
 void codificatore_libera(Codificatore *cod);
 
-/* Per il registro: «HEVC Main10 via libx265 (in software)». */
+/* Per il registro: «HEVC 10 bit via libx265 (in software)» oppure
+ * «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
+ * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
+ * la riga che finisce nel registro accanto a ogni numero. */
 const char *codificatore_nome(const Codificatore *cod);
 
 /* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
