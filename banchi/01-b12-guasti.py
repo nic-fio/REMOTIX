@@ -1603,14 +1603,15 @@ guasto(
     "coincidere.  ⇒ L'unico che puo' vederlo e' `P7 la scena si muove`, che "
     "confronta gli istanti in senso STRETTO.  Se P7 non lo vede, ogni misura "
     "di ritardo della fase 3 poggia su un orologio che non e' un orologio",
-    # ⛔ NON MISURATA — e va misurata prima di poter certificare 03-scena.
-    # ⭐ Dove guardare: la riga «misura» di P7, che `Conto.esito()` stampa come
-    #    JSON PURO, senza codici ANSI in mezzo — e quello conta, perche'
-    #    `marca_vista()` cerca la stringa nel file COLORATO e una marca che
-    #    attraversi un codice ANSI non combacerebbe mai (e' la ragione per cui
-    #    la riga con «NO» non si puo' usare).  Candidata da verificare:
-    #    «"delta_istante_us": [0» — nel giro sano quei delta sono positivi.
-    "",
+    # ⭐⭐ MISURATA IL 13 AGOSTO 2026 SERA, dalla corsia K — contata nei log:
+    #    **0 volte nel sano, 1 nel guasto**.  ⛔ E NON e' la candidata che era
+    #    scritta qui («"delta_istante_us": [0»): quella e' rimasta un'ipotesi
+    #    dedotta dal sorgente, ed e' esattamente la forma d'errore gia' pagata
+    #    su B4 e su B7 — *una marca si misura, e una dedotta e' una marca che
+    #    sembra una marca*.
+    # ⚠ Il trattino e' un TRATTINO LUNGO (U+2014), non un meno: chi la ricopia
+    #   a mano da un terminale sbaglia carattere e la marca non combacia piu'.
+    "P7 la scena si muove — disegni consecutivi",
     "ricostruisce",
     "fasi/03-movimento.md, step 2 «La scena che si dichiara» · "
     "LEZIONI.md §1.1 e §1.7 · fasi/00-ambiente.md",
@@ -1747,8 +1748,17 @@ guasto(
     "⭐ Con questo guasto la riga a schermo e' **identica**, il codice "
     "d'uscita resta **0** e il giro esce **tutto verde**: a sparire e' la "
     "storia, cioe' esattamente la cosa per cui il file e' stato scritto",
-    # ⛔ NON MISURATA, e qui il motivo e' piu' grave che altrove: vedi la nota.
-    "",
+    # ⭐⭐ MISURATA IL 13 AGOSTO 2026 SERA, dalla corsia K — 0 nel sano, 1 nel
+    #    guasto.  ⛔ E prima di poterla misurare **il controllo che la produce
+    #    e' dovuto NASCERE**: la nota qui sotto diceva che questa voce stava a
+    #    catalogo come «dichiarazione di un buco», perche' nessuno rileggeva
+    #    `03-scena-esiti.jsonl` e quindi il guasto lasciava il giro verde.
+    #    ⇒ La corsia K ha scritto P18 (il deposito cresce in coda) e P19
+    #    (l'ultima riga si rilegge), e **solo allora** la marca e' esistita.
+    #    ⭐ E ha aggiunto la meta' che mancava alla ricetta: sotto le due
+    #    scritture il controllo dichiara **NON ESEGUITO** invece di passare —
+    #    con una riga sola «cresciuto» e «troncato» danno lo stesso numero.
+    "il deposito si TRONCA invece di crescere",
     "leggero",
     "LEZIONI.md §2.5-bis (il rootfs in RAM) · fasi/03-movimento.md step 2 · "
     "REVIEWER.md E1 (la catena dichiarata)",
