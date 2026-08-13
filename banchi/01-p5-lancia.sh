@@ -1048,9 +1048,32 @@ gamba_pagina()
 		inf "  lo scenario «$atteso» non giudica il congedo: si prosegue, e sta"
 		inf "  scritto"
 	fi
+	# ⛔⭐ «--sonde-del-banco 1» — LA DICHIARAZIONE CHE DISINNESCA UNA MINA,
+	#     13 agosto 2026, `LEZIONI.md` §1.14.
+	#
+	# `[M]` 15 giri su 15 (i giri d'indagine sulla 7601, notte fra il 12 e il 13
+	# agosto): il registro del server porta una `VIOLAZIONE §3.1` a OGNI giro, e
+	# non e' del prodotto — e' della sonda di **N1**, cioe' di
+	# `01-b2-sonda.html`, che e' la pagina del BANCO.  Quella pagina apre la
+	# sessione, si ferma prima delle credenziali (lo dichiara nel proprio
+	# sorgente), e quando qui sopra si ammazza il browser a chiudere la sessione
+	# e' lo smontaggio del motore, col codice `0x0` che §3.1 vieta.
+	#
+	# ⛔ Oggi quelle righe cadono sempre PRIMA di «$marca_a», quindi il conto
+	#    usciva 0 e nessuno se ne accorgeva.  ⚠ Ma era un verde che dipendeva dai
+	#    tempi: il giro in cui la sonda tarda, o il marcatore arriva presto,
+	#    avrebbe scritto NON-CONFORME sul PRODOTTO per una riga del BANCO.
+	#
+	# ⭐ La cura non e' spostare il marcatore — sarebbe un verde piu' stabile e un
+	#    giudice ancora incapace di dire di chi e' la riga.  Il giudice adesso
+	#    spezza il segmento in SESSIONI e attribuisce; qui si dichiara **quante
+	#    sessioni proprie** questo banco puo' avergli lasciato dentro: UNA, la
+	#    sonda di N1 di questo motore, che gira subito prima di questa gamba.
+	# ⛔ E il numero e' 1 e non «tante quante ne trovi»: oltre il dichiarato la
+	#    riga torna al prodotto, che e' il verso giusto dello sbaglio.
 	python3 "$REG" passi --log "$T/$motore-$gamba.log" \
 		--marca-inizio "$marca_a" --marca-fine "$marca_b" \
-		--atteso "$atteso" --utente "$UTENTE" \
+		--atteso "$atteso" --utente "$UTENTE" --sonde-del-banco 1 \
 		--registra "{\"banco\":\"P5\",\"giro\":\"$GIRO\",\"gamba\":\"$gamba\",\"motore\":\"$motore\",\"motore_binario\":\"$(eval echo \$VER_$(echo "$motore" | tr a-z A-Z))\",\"origine\":\"https://$IND:$PORTA/ — la pagina del PRODOTTO, non nostra\"}"
 	return $?
 }

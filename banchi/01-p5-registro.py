@@ -7,7 +7,10 @@
     python3 01-p5-registro.py battuta  --giro G --da N
     python3 01-p5-registro.py cerca    --giro G --da N --tipo PRONTA
     python3 01-p5-registro.py passi    --log FILE --marca-inizio A --marca-fine B \\
-                                       --utente prova [--atteso sessione|respinto|niente-sessione]
+                                       --utente prova [--atteso sessione|respinto|niente-sessione] \\
+                                       [--sonde-del-banco N]
+    python3 01-p5-registro.py controllo-ancora
+    python3 01-p5-registro.py controllo-31
 
 ===========================================================================
 ⛔ PERCHE' UN ATTREZZO E NON TRE `grep` DENTRO LO SCRIPT
@@ -75,6 +78,28 @@ primo** a ogni comando `passi`: se l'ancora con cui si legge il verdetto di PAM
 ha smesso di combaciare, tutto quel che sta sotto e' stato letto con un occhio
 chiuso, e chi legge deve saperlo **prima** di credere a una riga.  Vedi il
 riquadro sopra `ANCORA_PAM`, piu' giu' in questo file.
+
+===========================================================================
+⛔⭐ E IL PASSO A1 — DI CHI E' LA RIGA DI §3.1 (13 agosto 2026)
+
+Il passo `violazione-31` contava le occorrenze di `VIOLAZIONE §3.1` **in un
+intervallo**, con atteso 0.  ⛔ Due difetti in uno:
+
+  1. **una riga contata non ha un padrone.**  `[M]` 15 giri su 15, il registro
+     ne porta una a ogni giro, ed e' del BANCO — la sonda di N1
+     (`01-b2-sonda.html`), che si ferma prima delle credenziali e viene chiusa
+     ammazzando il browser.  Oggi cade prima del marcatore d'inizio e il conto
+     esce 0; il giorno in cui i tempi scivolano, quel conto accusa il PRODOTTO;
+
+  2. **«almeno una delle due» sulle strade di §3.1.**  E' il criterio che ha
+     tenuto nascosto per due giorni il difetto curato oggi in `src/pagina.html`:
+     il punto 2 arrivava, il punto 3 no, e il banco stampava verde.
+
+⭐ Adesso il segmento si spezza in **sessioni**, ogni violazione dice di chi e'
+   e perche', e le due strade si giudicano **ciascuna quando tocca a lei**.  A1
+   e' il controllo positivo di tutto questo — quattro casi, con le righe vere
+   dei registri — e gira **a ogni comando `passi`**, come A0.  Il riquadro lungo
+   sta sopra `sessioni_del_segmento()`.
 """
 import argparse
 import importlib.util
@@ -82,6 +107,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -97,6 +123,12 @@ VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0
 #    misurato con quel che non si e' potuto misurare, e un banco che non sa piu'
 #    leggere il registro non ha misurato niente.
 MARCA_ANCORA_ROTTA = "ANCORA-AL-REGISTRO-ROTTA"
+
+# ⛔ E la seconda marca del banco rotto, della stessa famiglia e per la stessa
+#    ragione: un giudice che non sa piu' dire **di chi** e' una `VIOLAZIONE
+#    §3.1` non ha misurato niente su §3.1 — e non deve poterlo confondere con
+#    «nessuna violazione».  Cura del 13 agosto 2026, `LEZIONI.md` §1.14.
+MARCA_ATTRIBUZIONE_ROTTA = "ATTRIBUZIONE-31-ROTTA"
 
 
 # ===========================================================================
@@ -476,6 +508,12 @@ PASSI = [
     ("congedo-chiusura", r"la pagina ha chiuso la sessione, motivo 0x01", 0, None),
     # ⛔ E la violazione si conta a parte, perche' e' il server stesso a
     #    scriverla: era gia' nel registro mentre il banco stampava il verde.
+    # ⚠ Da oggi (13 agosto 2026) questa riga e' DICHIARATA e non piu' giudicata
+    #   dal conteggio: il giudizio sta in `sessioni_del_segmento()`, che dice di
+    #   CHI e' ciascuna riga invece di contarne le occorrenze in un intervallo.
+    #   Il numero resta perche' e' il denominatore dell'attribuzione — quante ne
+    #   ho viste in tutto — e perche' i registri dei giri di prima si
+    #   confrontano con questo campo.
     ("violazione-31",    r"VIOLAZIONE §3\.1",                            0, "zero"),
     # ⛔ IL POSTO SI LIBERA PER DUE STRADE, E LA SECONDA L'HA INSEGNATA IL
     #    REGISTRO VERO DEL 10 AGOSTO 2026 (`/media/REMOTIX/src/remotix-browser.log`,
@@ -510,12 +548,13 @@ ATTESI = {
         "pam": "ammesso", "ammesso": 1, "posto-preso": 1, "sessione": 1,
         "byte-dopo-la-fine": 0, "respinto": 0,
         "tentativo-fallito": 0, "bannato": 0,
-        # ⛔ Zero violazioni di §3.1: una chiusura col codice 0x0 non e' un
-        #    congedo mal riuscito, e' un errore di protocollo che il server
-        #    mette a verbale.  ⚠ Sta qui e non negli altri due scenari perche'
-        #    QUESTA e' la scena misurata (`01-p5-ff-*`, due giri per motore):
-        #    altrove il passo si dichiara e non si giudica.
-        "violazione-31": 0,
+        # ⛔⭐ E «violazione-31» NON STA PIU' QUI — cura del 13 agosto 2026,
+        #     `LEZIONI.md` §1.14 applicata alla mina che questo banco si portava
+        #     addosso.  Il riquadro lungo sta sopra `sessioni_del_segmento()`:
+        #     in due parole, un conteggio con atteso 0 su un intervallo non sa
+        #     dire **di chi** e' la riga, e la riga che compariva a ogni giro
+        #     era del BANCO — la sonda di N1, che e' `01-b2-sonda.html`.
+        #     ⇒ Il giudizio adesso e' per SESSIONE, e sta piu' sotto.
         # ⚠ «posto-lasciato» NON e' qui: il posto si giudica sul NUMERO finale,
         #   piu' sotto, perche' le strade per liberarlo sono due.
     },
@@ -535,7 +574,424 @@ ATTESI = {
 }
 
 
-def passi(percorso, marca_inizio, marca_fine, atteso, utente):
+# ===========================================================================
+# ⛔⭐ §3.1 — DI CHI E' LA RIGA, E QUALE DELLE DUE STRADE HA VIAGGIATO
+#     Cura del 13 agosto 2026.  `LEZIONI.md` §1.14, che e' nata qui.
+# ===========================================================================
+#
+# ⛔ LA MINA CHE QUESTO BLOCCO DISINNESCA, detta prima di tutto.
+#
+#    `[M]` 15 giri su 15 (i giri d'indagine sulla **7601**, la notte fra il 12 e
+#    il 13 agosto 2026): il registro del server porta una `VIOLAZIONE §3.1` **a
+#    ogni giro**, e non e' del prodotto.  E' della **sonda di N1**, cioe' di
+#    `01-b2-sonda.html`, che e' la pagina del BANCO: quella pagina apre la
+#    sessione, si ferma prima delle credenziali **per disegno e per
+#    dichiarazione nel proprio sorgente**, e quando il banco ammazza il browser
+#    a chiudere la sessione e' lo smontaggio del motore, col codice `0x0` che
+#    §3.1 vieta.  Il server la mette a verbale, ed e' giusto che lo faccia.
+#
+#      22:58:04.724 rcp  canale di controllo aperto da [192.168.0.3]:55491
+#      22:58:07.239 rcp  ⛔ VIOLAZIONE §3.1 — … col codice 0x0 …
+#      22:58:07.239 rcp  la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la
+#                        sessione e' finita (stato: attesa-credenziali)
+#
+# ⛔ E il passo `violazione-31` la contava **ovunque nel segmento, con atteso
+#    0**.  Oggi quelle righe cadono sempre PRIMA del marcatore d'inizio, quindi
+#    il conto esce 0 e nessuno se ne accorge — ⚠ **ma e' un verde che dipende
+#    dai tempi**: il giro in cui la sonda tarda tre secondi, o il marcatore
+#    arriva presto, scriverebbe `NON-CONFORME` sul PRODOTTO per una riga fatta
+#    dal BANCO.  E' la settima veste di §1.9 — il rosso puntato sull'imputato
+#    sbagliato — armata e in attesa.
+#
+# ⭐ E LA CURA NON E' SPOSTARE IL MARCATORE.  Spostarlo rende il verde piu'
+#    stabile e lascia il giudice **incapace di dire di chi e' la riga**, che e'
+#    la cosa che serve.  §1.14 chiede l'opposto: *«il banco deve dire QUALE ha
+#    visto, non quante»*.
+#
+# ---------------------------------------------------------------------------
+# ⛔⭐ E LA SECONDA META', CHE E' QUELLA CHE HA GIA' FATTO IL DANNO.
+#
+# §3.1 fa arrivare il motivo per DUE strade, e questo file accettava *«almeno
+# una delle due»* (`canale + chiusura == 0` ⇒ rosso, cioe' rosso solo se
+# mancavano tutt'e due).  ⛔ Con quel criterio una delle due poteva essere rotta
+# **da sempre**, e lo e' stata per due giorni:
+#
+#   `[M]` `tmp/p5x-7582-VIOLAZIONE-31-risanato.log`, 22:01:11 UTC del 12 agosto
+#   2026 — la sessione del PRODOTTO, quella con le credenziali e il posto:
+#
+#     22:01:11.748 rcp  il client si congeda, motivo=0x01 …      ← punto 2 ✅
+#     22:01:11.781 rcp  ⛔ VIOLAZIONE §3.1 — … col codice 0x0 …
+#     22:01:11.781 rcp  la pagina ha chiuso la sessione, motivo 0x0b … ← punto 3 ⛔
+#
+#   Il punto 2 c'era, e il banco stampava VERDE.  Il punto 3 — che §8.1 dichiara
+#   **senza condizioni** — non c'era: `wt.close({closeCode: 0x01})` non veniva
+#   mai eseguita, e a chiudere era lo smontaggio del browser.
+#
+# ⭐ Da cui i due criteri, ciascuno quando tocca a lui:
+#
+#   punto 3  `la pagina ha chiuso la sessione, motivo 0x01`
+#            ⛔ OBBLIGATORIO E SENZA CONDIZIONI nello scenario «sessione».
+#            §8.1: *«Il punto 3 non ha condizioni e non ne ha bisogno: viaggia
+#            nella chiusura stessa, e parte anche quando il canale e' morto»*.
+#            Se manca, o se il motivo e' un altro numero, e' ROSSO — e il numero
+#            visto si scrive, perche' `0x0b` non e' «un congedo mal riuscito».
+#
+#   punto 2  `il client si congeda, motivo=0x01`
+#            ⚠ DOVUTO **se il canale di controllo e' ancora utilizzabile**
+#            (§3.1 punto 2, e la condizione l'ha decisa l'utente l'11 agosto
+#            2026 — `DECISIONI.md` §7.15).  ⛔ E questo banco NON lo trasforma
+#            in un rosso, per una ragione scritta in `RCP.md` §8.1: *«un banco
+#            scritto sulla forma assoluta avrebbe bocciato un server
+#            corretto»*.  Il server non puo' vedere se il byte e' partito e il
+#            motore l'ha buttato — e `src/pagina.html` documenta che **Chrome
+#            butta un messaggio spedito subito prima di chiudere**.
+#            ⇒ Si DICHIARA: strada vista o non vista, con accanto lo `stato`
+#            che il server ha scritto alla chiusura, che e' l'unico byte da cui
+#            si legge se il canale era ancora vivo.  ⛔ E non puo' piu'
+#            sostituire il punto 3 in nessun caso: e' la sostituzione che ha
+#            tenuto il difetto nascosto due giorni.
+#
+# ---------------------------------------------------------------------------
+# ⛔ COME SI ATTRIBUISCE UNA RIGA, e le due condizioni sono in AND
+#
+#   1. il byte del SERVER: la riga che accompagna sempre la violazione dice lo
+#      stato in cui la sessione e' morta.  `stato: attesa-credenziali` vuol dire
+#      che quella sessione **non ha mai mandato `CREDENZIALI`** — e la pagina
+#      del prodotto, nelle gambe «sessione» e «respinto», le manda sempre;
+#   2. la DICHIARAZIONE del banco: `--sonde-del-banco N` dice quante sessioni
+#      proprie il banco puo' aver lasciato in giro in questo segmento (una per
+#      gamba: quella di N1).  ⛔ Oltre quel numero, la riga torna a essere del
+#      prodotto — un banco che si scusasse da solo per un numero qualunque di
+#      righe sarebbe il difetto, non la cura.
+#
+# ⛔ E OGNI ALTRO CASO E' DEL PRODOTTO.  «Non so di chi e'» non si arrotonda a
+#    «non e' mia»: si conta, e si dichiara che l'imputato e' dubbio.  Il verso
+#    dello sbaglio e' quello che si nota (un rosso di troppo), non quello che si
+#    perde (un verde di troppo) — §1.9.
+# ---------------------------------------------------------------------------
+R_SESSIONE_APERTA = re.compile(r"sessione WebTransport APERTA su (\S+)")
+R_CANALE_APERTO = re.compile(r"canale di controllo aperto da (\[[^\]]+\]:\d+)")
+R_CREDENZIALI_RIC = re.compile(r"CREDENZIALI ricevute utente=")
+R_VIOLAZIONE_31 = re.compile(
+    r"VIOLAZIONE §3\.1 — la pagina ha chiuso la sessione col codice "
+    r"(0x[0-9a-fA-F]+)")
+# ⛔ Le due strade, con il motivo dentro l'ago: §8.2 `CHIUSO_DALL_UTENTE` vale
+#    0x01, e in questa scena un altro numero non e' un congedo — e' un'altra
+#    cosa.  ⚠ Qui si cattura il numero invece di pretenderlo, cosi' il rosso
+#    puo' DIRE che numero ha visto.
+R_PUNTO_2 = re.compile(r"il client si congeda, motivo=(0x[0-9a-fA-F]+)")
+R_PUNTO_3 = re.compile(
+    r"la pagina ha chiuso la sessione, motivo (0x[0-9a-fA-F]+): §4\.2, la "
+    r"sessione e' finita \(stato: ([^)]*)\)")
+MOTIVO_CONGEDO = "0x01"
+STATO_SENZA_CREDENZIALI = "attesa-credenziali"
+
+
+def sessioni_del_segmento(corpo):
+    """Il segmento spezzato in SESSIONI, invece che letto come un intervallo.
+
+    ⚠ Il primo blocco e' quel che sta **prima** di ogni «sessione WebTransport
+      APERTA» del segmento: ⛔ non e' vuoto per costruzione, ed e' proprio il
+      posto in cui la coda di una sessione di prima puo' scivolare dentro — la
+      mina descritta qui sopra.  Porta `aperta_qui=False`, cosi' chi legge sa
+      che di quella sessione ha visto solo la fine.
+    """
+    def nuovo(aperta_qui):
+        return {"aperta_qui": aperta_qui, "chiave": None, "credenziali": 0,
+                "violazioni": [], "punto2": [], "punto3": [], "righe": 0}
+
+    blocchi = []
+    corrente = nuovo(False)
+    for riga in corpo.splitlines():
+        if R_SESSIONE_APERTA.search(riga):
+            blocchi.append(corrente)
+            corrente = nuovo(True)
+        corrente["righe"] += 1
+        m = R_CANALE_APERTO.search(riga)
+        if m and corrente["chiave"] is None:
+            corrente["chiave"] = m.group(1)
+        if R_CREDENZIALI_RIC.search(riga):
+            corrente["credenziali"] += 1
+        m = R_VIOLAZIONE_31.search(riga)
+        if m:
+            corrente["violazioni"].append(m.group(1))
+        m = R_PUNTO_2.search(riga)
+        if m:
+            corrente["punto2"].append(m.group(1))
+        m = R_PUNTO_3.search(riga)
+        if m:
+            corrente["punto3"].append((m.group(1), m.group(2)))
+    blocchi.append(corrente)
+    return blocchi
+
+
+def attribuisci_31(blocchi, sonde_del_banco):
+    """(righe, del_prodotto, del_banco, dubbie) — e ognuna dice di chi e'.
+
+    ⛔ Le due condizioni sono in AND, e la seconda consuma un budget: vedi il
+       riquadro.  Un blocco senza violazioni non consuma niente.
+    """
+    righe = []
+    avanzo = int(sonde_del_banco or 0)
+    for i, b in enumerate(blocchi):
+        if not b["violazioni"]:
+            continue
+        # ⛔ Lo stato alla chiusura si legge dalla riga gemella della
+        #    violazione — quella che il server scrive subito dopo.  Se quel
+        #    blocco non ne porta nessuna, lo stato e' IGNOTO, e un ignoto non
+        #    scusa: cade nel ramo «del prodotto, imputato dubbio».
+        stati = [s for _m, s in b["punto3"]]
+        senza_credenziali = (b["credenziali"] == 0
+                             and stati
+                             and all(s == STATO_SENZA_CREDENZIALI for s in stati))
+        if senza_credenziali and avanzo > 0:
+            avanzo -= 1
+            padrone, perche = "banco", (
+                "la sessione e' morta in «%s» e non ha mai mandato CREDENZIALI: "
+                "e' la sonda di N1 (01-b2-sonda.html), che si ferma li' per "
+                "disegno — e il banco ne aveva dichiarata una" % STATO_SENZA_CREDENZIALI)
+        elif senza_credenziali:
+            padrone, perche = "prodotto", (
+                "nessuna CREDENZIALI in questa sessione, ⛔ ma il banco non ha "
+                "dichiarato altre sonde proprie (--sonde-del-banco): oltre il "
+                "numero dichiarato la riga torna al prodotto")
+        else:
+            padrone, perche = "prodotto", (
+                "questa sessione ha mandato CREDENZIALI %d volta/e (stati alla "
+                "chiusura: %s): e' la pagina del prodotto"
+                % (b["credenziali"], ", ".join(stati) or "nessuno letto"))
+        for codice in b["violazioni"]:
+            righe.append({"blocco": i, "chiave": b["chiave"],
+                          "sessione_aperta_nel_segmento": b["aperta_qui"],
+                          "codice": codice, "padrone": padrone,
+                          "perche": perche})
+    prodotto = [r for r in righe if r["padrone"] == "prodotto"]
+    banco = [r for r in righe if r["padrone"] == "banco"]
+    return righe, prodotto, banco, avanzo
+
+
+# ---------------------------------------------------------------------------
+# ⭐ A1 — IL CONTROLLO POSITIVO DELL'ATTRIBUZIONE, e i suoi quattro casi
+#
+# ⛔ `LEZIONI.md` §1.14, il corollario che costa di piu': *«un controllo cosi'
+#    non fallisce mai per il difetto che dovrebbe prendere»*.  ⇒ Qui ci sono
+#    tutt'e due i versi, e senza i due la cura non si vede lavorare:
+#
+#      A  la riga e' del BANCO      ⇒ va IGNORATA, e va DETTA
+#      B  la riga e' del PRODOTTO   ⇒ va CONTATA (e il giro e' rosso)
+#      C  punto 2 c'e', punto 3 no  ⇒ ROSSO — il difetto dei due giorni, che il
+#                                     criterio «almeno una delle due» dava verde
+#      D  tutt'e due le strade      ⇒ VERDE, o il controllo direbbe di no a
+#                                     tutto e non distinguerebbe niente
+#
+# ⛔ E LE RIGHE SONO VERE, lette nei registri veri e non inventate: A e C dal
+#    `tmp/p5x-7582-VIOLAZIONE-31-risanato.log` del 12 agosto 2026 (il giro
+#    risanato uscito rosso), B da `01-p5-ff-registro-cura.log` (la sessione con
+#    il posto, chiusa col codice 0x0), D dal `p5z-7601-browser.log` dei giri
+#    d'indagine.  ⚠ I marcatori d'inizio e fine sono di questo controllo, e sono
+#    l'unica cosa qui dentro che il server non abbia scritto davvero.
+# ---------------------------------------------------------------------------
+_A1_INIZIO = "GET /a1-controllo-inizio da 192.168.0.3:1"
+_A1_FINE = "GET /a1-controllo-fine da 192.168.0.3:2"
+
+_A1_SONDA_DEL_BANCO = """\
+22:58:04.720 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+22:58:04.724 rcp     canale di controllo aperto da [192.168.0.3]:55491 (indirizzo per §4.4-bis: [192.168.0.3])
+22:58:04.725 rcp     negoziato video.codec=hevc video.profondita=8 audio.codec=opus
+22:58:07.239 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+22:58:07.239 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+22:58:07.239 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: attesa-credenziali)"""
+
+# ⭐ LA GAMBA SANA, PRESA VERBATIM DA UN GIRO VERO — `p5z-7601-browser.log`,
+#    22:58:41 UTC del 12 agosto 2026, gamba `p-sessione` su Chrome, uscita
+#    CONFORME.  ⛔ E' l'intero segmento fra i due marcatori, non un estratto: un
+#    controllo positivo su un segmento potato proverebbe che il giudice sa
+#    leggere un segmento potato.
+_A1_GAMBA_SANA = """\
+22:58:48.198 pagina  stretta TLS non riuscita con 192.168.0.3:33914 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.206 pagina  stretta TLS non riuscita con 192.168.0.3:33918 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.206 pagina  stretta TLS non riuscita con 192.168.0.3:33916 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.215 pagina  GET / da 192.168.0.3:33924
+22:58:58.925 pagina  stretta TLS non riuscita con 192.168.0.3:44372 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:58.934 pagina  GET /impronta da 192.168.0.3:44378
+22:58:58.945 quic    connessione nuova da [192.168.0.3]:36455 (in tutto 1)
+22:58:58.946 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+22:58:58.946 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+22:58:58.952 quic    stretta di mano TLS completata con [192.168.0.3]:36455
+22:58:58.952 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+22:58:58.958 rcp     canale di controllo aperto da [192.168.0.3]:36455 (indirizzo per §4.4-bis: [192.168.0.3])
+22:58:58.958 rcp     canale di controllo = stream 4
+22:58:58.958 wt      stream 4 e' WebTransport, sessione 0
+22:58:58.961 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+22:58:58.961 rcp     negoziato video.codec=av1 video.profondita=8 audio.codec=opus
+22:58:58.961 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:36455: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+22:58:58.970 rcp     CREDENZIALI ricevute utente=prova (con parola)
+22:58:58.970 rcp     PAM chiesta all'aiutante, pratica 1: il filo resta libero (DECISIONI.md §1.10)
+22:58:58.970 wt      PING del trasporto spenti con [192.168.0.3]:36455: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+22:58:59.054 figlio  ⭐ figlio generato per «prova»: pid 309379, uid 1001, gid 1001, matricola 1.  ⛔ Che sia DAVVERO quell'uid non lo dico io: lo dira' il nucleo su ogni suo messaggio (SO_PASSCRED)
+22:58:59.055 rcp     PAM ha risposto (pratica 1): ammesso  ⭐ e il filo non si e' mai fermato (DECISIONI.md §1.10)
+22:58:59.074 figlio  ⭐ sono il figlio di «prova»: pid 309379, uid 1001 (chiesto al nucleo, non dedotto), 4 descrittori aperti — la porta del server NON e' fra questi
+22:58:59.074 figlio  ⭐ «prova» si presenta: pid 309379 (padre 309303), uid 1001/1001/1001, gid 1001/1001/1001, 4 descrittori aperti, runtime «/run/user/1001» ⛔ NON c'e' o non e' sua, socket del bus ⛔ non c'e'
+22:58:59.075 figlio  ⛔ NON ho il bus di sessione: bus di sessione: Could not connect: No such file or directory.  ⚠ Non e' «non c'e' la sessione», e' «non ho potuto guardare» — e senza bus non c'e' niente da catturare
+22:58:59.075 figlio  ⛔ il palco di «prova»: bus ⛔ NO, sessione 5, presa 0, monitor «» (0 prima, 0 dopo), 0x0 stride 0 a 0 bit, 0 flussi in consegna — bus di sessione: Could not connect: No such file or directory
+22:58:59.975 rcp     il secondo fisso e' passato (1005 ms)
+22:58:59.975 rcp     ammesso utente=prova da=[192.168.0.3]:36455
+22:58:59.979 rcp     posto PRESO da prova via [192.168.0.3]:36455 (occupati adesso: 1)
+22:58:59.979 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+22:58:59.979 rcp     sessione aperta utente=prova via=[192.168.0.3]:36455 tela=1280x720 vista=1280x913 disposizione=it
+22:58:59.979 rcp     ⛔ [192.168.0.3]:36455: nessun fotogramma in deposito per il codec 2: il server e' partito senza (vedi le righe «avvio» e «video» dell'accensione).  La sessione regge, lo schermo resta vuoto — e il ripiego e' dichiarato (CODER.md §4.2)
+22:59:15.252 pagina  stretta TLS non riuscita con 192.168.0.3:60798 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:59:15.274 pagina  GET /p5-chrome-p-sessione-p5-20260813-005752-28987-secondascheda da 192.168.0.3:60804
+22:59:15.276 pagina  stretta TLS non riuscita con 192.168.0.3:60812 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:59:22.320 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+22:59:22.320 rcp     posto LASCIATO da prova via [192.168.0.3]:36455 (occupati adesso: 0)
+22:59:22.320 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+22:59:22.320 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+22:59:22.320 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x1
+22:59:22.320 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x01 — i byte sul canale non erano piu' spedibili
+22:59:22.320 rcp     la pagina ha chiuso la sessione, motivo 0x01: §4.2, la sessione e' finita (stato: finita)
+22:59:22.920 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+22:59:52.320 quic    [192.168.0.3]:36455: trenta secondi di silenzio, staccato (§2.2)
+22:59:52.320 quic    connessione con [192.168.0.3]:36455 chiusa (ne restano 0)
+22:59:59.330 figlio  «prova» ricontrollato: uid 1001, pid 309379, padre 309303, 6 descrittori — il legame regge
+23:00:10.389 pagina  GET /p5-chrome-p-sessione-p5-20260813-005752-28987-fine da 192.168.0.3:41434"""
+
+
+# ⛔ E LA STESSA GAMBA COL DIFETTO DEI DUE GIORNI: cambiano TRE righe, e sono le
+#    tre vere del giro rosso delle 22:01:11 UTC
+#    (`tmp/p5x-7582-VIOLAZIONE-31-risanato.log`).  Il punto 2 resta dov'era —
+#    `il client si congeda, motivo=0x01` — e il punto 3 porta `0x0b`.
+#    ⭐ E' il caso in cui il criterio vecchio («almeno una delle due») diceva
+#    VERDE: se questo caso non fosse rosso, la cura non servirebbe a niente.
+_A1_GAMBA_PUNTO3_ROTTO = """\
+22:58:48.198 pagina  stretta TLS non riuscita con 192.168.0.3:33914 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.206 pagina  stretta TLS non riuscita con 192.168.0.3:33918 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.206 pagina  stretta TLS non riuscita con 192.168.0.3:33916 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:48.215 pagina  GET / da 192.168.0.3:33924
+22:58:58.925 pagina  stretta TLS non riuscita con 192.168.0.3:44372 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:58:58.934 pagina  GET /impronta da 192.168.0.3:44378
+22:58:58.945 quic    connessione nuova da [192.168.0.3]:36455 (in tutto 1)
+22:58:58.946 wt      HTTP/3 aperto: controllo=3 qpack=7/11
+22:58:58.946 wt      ⭐ SETTINGS riscritto — 22 byte di nghttp3 + 14 nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)
+22:58:58.952 quic    stretta di mano TLS completata con [192.168.0.3]:36455
+22:58:58.952 wt      ⭐ sessione WebTransport APERTA su /rcp/1 (stream 0) — il canale di controllo va aperto entro 5000 ms (§4.6, DECISIONI.md §7.17)
+22:58:58.958 rcp     canale di controllo aperto da [192.168.0.3]:36455 (indirizzo per §4.4-bis: [192.168.0.3])
+22:58:58.958 rcp     canale di controllo = stream 4
+22:58:58.958 wt      stream 4 e' WebTransport, sessione 0
+22:58:58.961 rcp     il client dichiara video.misura_massima=1280x1024: e' il tetto che la tela concessa DEVE rispettare (§4.5)
+22:58:58.961 rcp     negoziato video.codec=av1 video.profondita=8 audio.codec=opus
+22:58:58.961 wt      ⭐ PING del trasporto ACCESI ogni 10 s con [192.168.0.3]:36455: §4.6 da' 60 s per digitare la parola d'ordine e l'inattivita' di QUIC ne da' 30
+22:58:58.970 rcp     CREDENZIALI ricevute utente=prova (con parola)
+22:58:58.970 rcp     PAM chiesta all'aiutante, pratica 1: il filo resta libero (DECISIONI.md §1.10)
+22:58:58.970 wt      PING del trasporto spenti con [192.168.0.3]:36455: la finestra delle credenziali e' chiusa, e i 30 s di §2.2 tornano a essere l'orologio del silenzio
+22:58:59.054 figlio  ⭐ figlio generato per «prova»: pid 309379, uid 1001, gid 1001, matricola 1.  ⛔ Che sia DAVVERO quell'uid non lo dico io: lo dira' il nucleo su ogni suo messaggio (SO_PASSCRED)
+22:58:59.055 rcp     PAM ha risposto (pratica 1): ammesso  ⭐ e il filo non si e' mai fermato (DECISIONI.md §1.10)
+22:58:59.074 figlio  ⭐ sono il figlio di «prova»: pid 309379, uid 1001 (chiesto al nucleo, non dedotto), 4 descrittori aperti — la porta del server NON e' fra questi
+22:58:59.074 figlio  ⭐ «prova» si presenta: pid 309379 (padre 309303), uid 1001/1001/1001, gid 1001/1001/1001, 4 descrittori aperti, runtime «/run/user/1001» ⛔ NON c'e' o non e' sua, socket del bus ⛔ non c'e'
+22:58:59.075 figlio  ⛔ NON ho il bus di sessione: bus di sessione: Could not connect: No such file or directory.  ⚠ Non e' «non c'e' la sessione», e' «non ho potuto guardare» — e senza bus non c'e' niente da catturare
+22:58:59.075 figlio  ⛔ il palco di «prova»: bus ⛔ NO, sessione 5, presa 0, monitor «» (0 prima, 0 dopo), 0x0 stride 0 a 0 bit, 0 flussi in consegna — bus di sessione: Could not connect: No such file or directory
+22:58:59.975 rcp     il secondo fisso e' passato (1005 ms)
+22:58:59.975 rcp     ammesso utente=prova da=[192.168.0.3]:36455
+22:58:59.979 rcp     posto PRESO da prova via [192.168.0.3]:36455 (occupati adesso: 1)
+22:58:59.979 rcp     ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto del decodificatore 1280x1024 (video.misura_massima) — CONCESSA 1280x720, proporzioni tenute, entrambe pari
+22:58:59.979 rcp     sessione aperta utente=prova via=[192.168.0.3]:36455 tela=1280x720 vista=1280x913 disposizione=it
+22:58:59.979 rcp     ⛔ [192.168.0.3]:36455: nessun fotogramma in deposito per il codec 2: il server e' partito senza (vedi le righe «avvio» e «video» dell'accensione).  La sessione regge, lo schermo resta vuoto — e il ripiego e' dichiarato (CODER.md §4.2)
+22:59:15.252 pagina  stretta TLS non riuscita con 192.168.0.3:60798 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:59:15.274 pagina  GET /p5-chrome-p-sessione-p5-20260813-005752-28987-secondascheda da 192.168.0.3:60804
+22:59:15.276 pagina  stretta TLS non riuscita con 192.168.0.3:60812 (errore 1) — di solito e' l'avviso sul certificato non ancora accettato
+22:59:22.320 rcp     il client si congeda, motivo=0x01 dettaglio=la scheda e' stata chiusa
+22:59:22.320 rcp     posto LASCIATO da prova via [192.168.0.3]:36455 (occupati adesso: 0)
+22:59:22.320 wt      chiusura della sessione RIMANDATA, codice 0x01 (in coda: 0 elementi)
+22:59:22.320 rcp     ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, la sessione e' finita
+22:01:11.781 wt      la pagina ha CHIUSO la sessione WebTransport: codice 0x0
+22:01:11.781 rcp     ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione col codice 0x0, che non e' un motivo di §8.2 (0 = «senza motivo», ed e' vietato).  A verbale va ERRORE_PROTOCOLLO
+22:01:11.781 rcp     ⭐ il motivo e' arrivato per la seconda strada di §3.1 (il codice di chiusura): 0x0b — i byte sul canale non erano piu' spedibili
+22:01:11.781 rcp     la pagina ha chiuso la sessione, motivo 0x0b: §4.2, la sessione e' finita (stato: finita)
+22:59:22.920 wt      chiusa la sessione WebTransport, codice 0x01 (9 byte: 2 di frame DATA + 7 di capsula)
+22:59:52.320 quic    [192.168.0.3]:36455: trenta secondi di silenzio, staccato (§2.2)
+22:59:52.320 quic    connessione con [192.168.0.3]:36455 chiusa (ne restano 0)
+22:59:59.330 figlio  «prova» ricontrollato: uid 1001, pid 309379, padre 309303, 6 descrittori — il legame regge
+23:00:10.389 pagina  GET /p5-chrome-p-sessione-p5-20260813-005752-28987-fine da 192.168.0.3:41434"""
+
+
+
+def _a1_registro(pezzi):
+    return "\n".join([_A1_INIZIO] + list(pezzi) + [_A1_FINE])
+
+
+# (che cosa prova · le parti del registro · sonde dichiarate · verdetto atteso ·
+#  violazioni attese del prodotto · violazioni attese del banco)
+CASI_31 = [
+    ("D ⭐ il giro SANO: le due strade di §3.1, tutt'e due col motivo 0x01",
+     [_A1_GAMBA_SANA], 1, "CONFORME", 0, 0),
+    ("A ⭐ la riga e' del BANCO (la sonda di N1): IGNORATA, e DETTA — "
+     "e il giro resta CONFORME",
+     [_A1_SONDA_DEL_BANCO, _A1_GAMBA_SANA], 1, "CONFORME", 0, 1),
+    ("B ⛔ la STESSA riga senza la sonda dichiarata: torna al PRODOTTO e conta",
+     [_A1_SONDA_DEL_BANCO, _A1_GAMBA_SANA], 0, "NON-CONFORME", 1, 0),
+    ("C ⛔ punto 2 arrivato e punto 3 NO (il difetto dei due giorni, che "
+     "«almeno una delle due» dava VERDE): ROSSO",
+     [_A1_SONDA_DEL_BANCO, _A1_GAMBA_PUNTO3_ROTTO], 1, "NON-CONFORME", 1, 1),
+]
+
+
+def controllo_positivo_31(dettaglio=True):
+    """⭐ (falliti, quanti) — il giudice sa dire DI CHI e' la riga?
+
+    ⛔ Gira a ogni comando `passi`, come A0, e per la stessa ragione: un
+       controllo che si esegue quando qualcuno se lo ricorda e' un controllo
+       che il giorno che serve non c'era.  Non tocca il server e non legge
+       nessun file del giro — il registro se lo scrive da se'.
+    """
+    falliti = []
+    for che, pezzi, sonde, verdetto_atteso, viol_prod, viol_banco in CASI_31:
+        testo = _a1_registro(pezzi)
+        with tempfile.NamedTemporaryFile("w", suffix=".log", encoding="utf-8",
+                                         delete=False) as f:
+            f.write(testo + "\n")
+            dove = f.name
+        try:
+            esito, _stato = passi(dove, _A1_INIZIO, _A1_FINE, "sessione",
+                                  "prova", sonde_del_banco=sonde, zitto=True,
+                                  ricorsivo=True)
+        finally:
+            os.unlink(dove)
+        v = (esito or {}).get("verdetto")
+        t = (esito or {}).get("violazioni_31") or {}
+        buono = (v == verdetto_atteso
+                 and t.get("del_prodotto") == viol_prod
+                 and t.get("del_banco") == viol_banco)
+        if buono:
+            if dettaglio:
+                print(f"{VERDE}OK{GRIGIO}  {che}")
+                print(f"      ⇒ {v}, violazioni del prodotto "
+                      f"{t.get('del_prodotto')}, del banco {t.get('del_banco')}")
+        else:
+            falliti.append((che, verdetto_atteso, viol_prod, viol_banco,
+                            v, t.get("del_prodotto"), t.get("del_banco")))
+    for che, va, vp, vb, so, sp, sb in falliti:
+        print(f"{ROSSO}NO{GRIGIO}  {che}")
+        print(f"      atteso «{va}» con {vp} del prodotto e {vb} del banco;")
+        print(f"      ottenuto «{so}» con {sp} del prodotto e {sb} del banco")
+    if falliti:
+        print(f"{ROSSO}NO{GRIGIO}  ⛔ L'ATTRIBUZIONE DI §3.1 E' ROTTA: "
+              f"{len(falliti)} casi su {len(CASI_31)}.")
+        print("      ⛔ Finche' questa riga e' rossa, un verde di P5 non dice se")
+        print("         la violazione era del prodotto o della sonda del banco,")
+        print("         e un rosso non dice a chi darlo.")
+        print(f"      ⇒ {MARCA_ATTRIBUZIONE_ROTTA}")
+    elif dettaglio:
+        print(f"{VERDE}OK{GRIGIO}  ⭐ tutti e {len(CASI_31)} — il giudice "
+              f"distingue la riga del banco da quella del prodotto, e il punto 3 "
+              f"non si lascia piu' sostituire dal punto 2")
+    else:
+        print(f"{VERDE}OK{GRIGIO}  A1 — l'attribuzione di §3.1 e le due strade: "
+              f"{len(CASI_31)} casi su {len(CASI_31)}")
+    return len(falliti), len(CASI_31)
+
+
+def passi(percorso, marca_inizio, marca_fine, atteso, utente,
+          sonde_del_banco=0, zitto=False, ricorsivo=False):
     # ── ⭐ A0: PRIMA DI CONTARE QUALUNQUE COSA, SI CONTROLLA LO STRUMENTO ────
     #
     # ⛔ Sta qui, in cima e prima della lettura del registro, e non in fondo: se
@@ -544,12 +1000,31 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     #    prima di credere a qualunque riga sotto**.  ⚠ Non tocca il server, non
     #    tocca il registro e costa microsecondi: non c'e' nessun giro in cui
     #    valga la pena saltarlo.
-    falliti_ancora, quanti_ancora = controllo_positivo_ancora(dettaglio=False)
+    # ⛔ `ricorsivo` e' vero solo quando a chiamare e' A1 stesso: un controllo
+    #    che chiamasse se' stesso non finirebbe mai, e — peggio — un A1 che
+    #    girasse dentro i propri casi direbbe «regge» guardandosi allo specchio.
+    #    ⚠ Nel giro ricorsivo si saltano TUTT'E DUE i controlli sullo strumento
+    #    (A0 e A1): ciascuno ha il proprio, e farli entrare nel conto dei casi
+    #    di A1 legherebbe l'esito di A1 a un guasto che non sta misurando.
+    # ⭐ `di` invece di `print` in tutto il corpo di questa funzione: quando A1
+    #    la chiama sui propri quattro casi, il verdetto lo legge dal dizionario
+    #    e non dallo schermo, e mille righe di finto registro fra i controlli
+    #    renderebbero illeggibile quel che il giro vero ha da dire.
+    def di(*a, **k):
+        if not zitto:
+            print(*a, **k)
+
+    if ricorsivo:
+        falliti_ancora, quanti_ancora = 0, 0
+        falliti_31, quanti_31 = 0, 0
+    else:
+        falliti_ancora, quanti_ancora = controllo_positivo_ancora(dettaglio=False)
+        falliti_31, quanti_31 = controllo_positivo_31(dettaglio=False)
     try:
         testo = Path(percorso).read_text(encoding="utf-8", errors="replace")
     except Exception as sbaglio:
-        print(f"{ROSSO}NO{GRIGIO}  ⛔ il registro del server non si legge ({sbaglio}).")
-        print("      Non e' «nessun passo»: e' «non ho potuto guardare» — §1.9.")
+        di(f"{ROSSO}NO{GRIGIO}  ⛔ il registro del server non si legge ({sbaglio}).")
+        di("      Non e' «nessun passo»: e' «non ho potuto guardare» — §1.9.")
         return None, 3
     tutte = testo.splitlines()
 
@@ -564,14 +1039,18 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
         #    che gira e non lascia traccia non si puo' confrontare fra due giri.
         "ancora_pam": ANCORA_PAM,
         "ancora_casi": quanti_ancora, "ancora_falliti": falliti_ancora,
+        # ⭐ E A1 accanto ad A0, per la stessa ragione: due giri si confrontano
+        #    solo se ciascuno dice con che strumento ha guardato.
+        "attribuzione_casi": quanti_31, "attribuzione_falliti": falliti_31,
+        "sonde_del_banco_dichiarate": int(sonde_del_banco or 0),
     }
     if not inizi or not fini:
-        print(f"{ROSSO}NO{GRIGIO}  ⛔ i marcatori non ci sono tutt'e due "
+        di(f"{ROSSO}NO{GRIGIO}  ⛔ i marcatori non ci sono tutt'e due "
               f"(inizio {len(inizi)}, fine {len(fini)}) su {len(tutte)} righe.")
-        print("      ⛔ E questo NON e' «il motore ha fallito»: e' «il motore non")
-        print("         ha nemmeno parlato col server», oppure «sto leggendo un")
-        print("         registro che non e' di questo giro».  Due cause opposte,")
-        print("         e nessun verdetto si da' su nessuna delle due.")
+        di("      ⛔ E questo NON e' «il motore ha fallito»: e' «il motore non")
+        di("         ha nemmeno parlato col server», oppure «sto leggendo un")
+        di("         registro che non e' di questo giro».  Due cause opposte,")
+        di("         e nessun verdetto si da' su nessuna delle due.")
         esito["verdetto"] = "SENZA-DENOMINATORE"
         return esito, 2
     segmento = tutte[inizi[-1]: fini[-1] + 1]
@@ -581,7 +1060,7 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     # ── I passi ─────────────────────────────────────────────────────────────
     voluti = ATTESI.get(atteso)
     if voluti is None:
-        print(f"{ROSSO}NO{GRIGIO}  scenario «{atteso}» sconosciuto: "
+        di(f"{ROSSO}NO{GRIGIO}  scenario «{atteso}» sconosciuto: "
               f"i noti sono {', '.join(sorted(ATTESI))}")
         return esito, 3
     esito["scenario"] = atteso
@@ -622,16 +1101,34 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     #    gambe che non giudicano PAM.  ⚠ E' un controllo sul BANCO, non sulla
     #    scena: se dipendesse dallo scenario, ci sarebbe uno scenario in cui lo
     #    strumento non si guarda.
-    approvati += 1
+    if not ricorsivo:
+        approvati += 1
     if falliti_ancora:
         guasti += 1
         esito["ancora_verdetto"] = "ROTTA"
-        print(f"{ROSSO}NO{GRIGIO}  ⛔ e il rosso qui sopra e' del BANCO, non del "
+        di(f"{ROSSO}NO{GRIGIO}  ⛔ e il rosso qui sopra e' del BANCO, non del "
               f"server ({MARCA_ANCORA_ROTTA}):")
-        print("      quel che questo giro ha contato sul passo «pam» e' stato")
-        print("      letto con un'ancora che non combacia piu'.")
+        di("      quel che questo giro ha contato sul passo «pam» e' stato")
+        di("      letto con un'ancora che non combacia piu'.")
     else:
         esito["ancora_verdetto"] = "REGGE"
+
+    # ── ⭐ A1, GIUDICATO, per la stessa ragione di A0 ────────────────────────
+    #
+    # ⛔ E conta anche qui **sempre**, in ogni scenario: se il giudice non sa
+    #    piu' dire di chi e' una riga di §3.1, non lo sa nemmeno nelle gambe che
+    #    quella riga non se l'aspettano.
+    if not ricorsivo:
+        approvati += 1
+        if falliti_31:
+            guasti += 1
+            esito["attribuzione_verdetto"] = "ROTTA"
+            di(f"{ROSSO}NO{GRIGIO}  ⛔ e il rosso qui sopra e' del BANCO "
+                  f"({MARCA_ATTRIBUZIONE_ROTTA}): quel che questo giro dira'")
+            di("      su §3.1 non sa distinguere la riga del banco da quella")
+            di("      del prodotto.")
+        else:
+            esito["attribuzione_verdetto"] = "REGGE"
 
     # ── ⛔ LA RIGA DI PAM: TRE ESITI, NON DUE ────────────────────────────────
     #
@@ -656,23 +1153,23 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
         if not gia_contato:
             approvati += 1
             guasti += 1
-        print(f"{ROSSO}NO{GRIGIO}  ⛔ {righe_pam} riga/e «{RIGA_PAM}» ci sono in "
+        di(f"{ROSSO}NO{GRIGIO}  ⛔ {righe_pam} riga/e «{RIGA_PAM}» ci sono in "
               f"questo segmento e NON SI LASCIANO LEGGERE")
-        print(f"      dall'ancora «{ANCORA_PAM}».")
-        print("      ⛔ Il primo imputato e' il BANCO (`REVIEWER.md` §1): il")
-        print("         server ha scritto il verdetto, e sono io a non saperlo")
-        print("         piu' leggere.  ⛔ NON e' «PAM non ha risposto», e i due")
-        print("         non si arrotondano.")
+        di(f"      dall'ancora «{ANCORA_PAM}».")
+        di("      ⛔ Il primo imputato e' il BANCO (`REVIEWER.md` §1): il")
+        di("         server ha scritto il verdetto, e sono io a non saperlo")
+        di("         piu' leggere.  ⛔ NON e' «PAM non ha risposto», e i due")
+        di("         non si arrotondano.")
         if gia_contato:
-            print("      ⇒ e il rosso del passo «pam» qui sotto va letto COSI':")
-            print("         non e' il server che ha taciuto, e' questo file che")
-            print("         non legge piu'.  Il guasto resta UNO.")
-        print(f"      ⇒ {MARCA_ANCORA_ROTTA}")
+            di("      ⇒ e il rosso del passo «pam» qui sotto va letto COSI':")
+            di("         non e' il server che ha taciuto, e' questo file che")
+            di("         non legge piu'.  Il guasto resta UNO.")
+        di(f"      ⇒ {MARCA_ANCORA_ROTTA}")
     elif stato_pam == "assente" and atteso in ("sessione", "respinto"):
         # ⚠ Dichiarato, non giudicato due volte: il passo `pam` della tabella
         #   qui sopra lo conta gia' come guasto, e un secondo rosso sullo stesso
         #   fatto conterebbe due volte lo stesso guasto.
-        print(f"{GIALLO}⚠{GRIGIO}   nessuna riga «{RIGA_PAM}» in questo "
+        di(f"{GIALLO}⚠{GRIGIO}   nessuna riga «{RIGA_PAM}» in questo "
               f"segmento — e non e' «illeggibile»: e' che non c'e' proprio.")
 
     # ── ⛔ IL RITIRO DELL'IMPRONTA (§4.1-bis, R1.14) — il passo che copre D11 ─
@@ -695,62 +1192,157 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     if atteso in ("sessione", "respinto"):
         if servite == 0:
             esito["ritiro_impronta"] = "NON-GIUDICABILE (la pagina non e' stata servita)"
-            print(f"{GIALLO}⚠{GRIGIO}   il ritiro di /impronta non si giudica: in questo "
+            di(f"{GIALLO}⚠{GRIGIO}   il ritiro di /impronta non si giudica: in questo "
                   f"segmento la pagina non e' stata servita nemmeno una volta,")
-            print("      e «non ritira» e «non e' mai arrivata» sarebbero lo stesso zero.")
+            di("      e «non ritira» e «non e' mai arrivata» sarebbero lo stesso zero.")
         else:
             approvati += 1
             esito["ritiro_impronta"] = ritiri
             if ritiri == 0:
-                print(f"{ROSSO}NO{GRIGIO}  ⛔ NESSUN RITIRO DI /impronta IN QUESTA GAMBA "
+                di(f"{ROSSO}NO{GRIGIO}  ⛔ NESSUN RITIRO DI /impronta IN QUESTA GAMBA "
                       f"(§4.1-bis): la pagina e' stata")
-                print(f"      servita {servite} volta/e e non ha chiesto «/impronta» nemmeno una.")
-                print("      ⛔ §4.1-bis impone di RITIRARE l'impronta prima di ogni tentativo:")
-                print("      senza, una scheda aperta da due settimane tiene l'impronta di un")
-                print("      certificato gia' ruotato, la sessione non si apre e nessun errore")
-                print("      la nomina — che e' il rilievo R1.14 per intero.")
-                print("      ⚠ E qui la sessione puo' essersi aperta lo stesso: l'impronta")
-                print("      servita e' fresca perche' il server e' stato riacceso adesso.")
-                print("      ⛔ Il difetto NON e' il valore: e' che il ritiro non c'e' piu'.")
+                di(f"      servita {servite} volta/e e non ha chiesto «/impronta» nemmeno una.")
+                di("      ⛔ §4.1-bis impone di RITIRARE l'impronta prima di ogni tentativo:")
+                di("      senza, una scheda aperta da due settimane tiene l'impronta di un")
+                di("      certificato gia' ruotato, la sessione non si apre e nessun errore")
+                di("      la nomina — che e' il rilievo R1.14 per intero.")
+                di("      ⚠ E qui la sessione puo' essersi aperta lo stesso: l'impronta")
+                di("      servita e' fresca perche' il server e' stato riacceso adesso.")
+                di("      ⛔ Il difetto NON e' il valore: e' che il ritiro non c'e' piu'.")
                 guasti += 1
             else:
-                print(f"{VERDE}OK{GRIGIO}  ⭐ la pagina ha ritirato «/impronta» prima del "
+                di(f"{VERDE}OK{GRIGIO}  ⭐ la pagina ha ritirato «/impronta» prima del "
                       f"tentativo: {ritiri} volta/e (§4.1-bis)")
     else:
         esito["ritiro_impronta"] = "—  (dichiarato, non giudicato: questa gamba non passa dalla pagina)"
 
-    # ── Le due strade del congedo (§3.1 punto 3) ────────────────────────────
+    # ── ⛔⭐ §3.1 — IL SEGMENTO SPEZZATO IN SESSIONI, E OGNI RIGA CON UN NOME ─
     #
-    # ⛔ Non e' un di piu': §3.1 punto 3 ne prevede DUE, e una delle due puo'
-    #    perdersi.  ⚠ Pretenderne una sola scriverebbe «non si congeda» su un
-    #    client che si e' congedato per l'altra.  Qui si contano tutt'e due e si
-    #    dichiara QUALE.
+    #    Il riquadro lungo sta sopra `sessioni_del_segmento()`.  Qui si applica.
+    blocchi = sessioni_del_segmento(corpo)
+    righe31, viol_prod, viol_banco, avanzo = attribuisci_31(blocchi,
+                                                            sonde_del_banco)
+    esito["sessioni_nel_segmento"] = [
+        {"chiave": b["chiave"], "aperta_qui": b["aperta_qui"],
+         "credenziali": b["credenziali"], "righe": b["righe"],
+         "violazioni_31": b["violazioni"],
+         "punto2": b["punto2"], "punto3": b["punto3"]}
+        for b in blocchi if b["righe"]]
+    esito["violazioni_31"] = {
+        "in_tutto": len(righe31),
+        "del_prodotto": len(viol_prod),
+        "del_banco": len(viol_banco),
+        "sonde_dichiarate_non_usate": avanzo,
+        "righe": righe31,
+    }
+
+    # ⚠ Le righe del BANCO si DICONO, sempre, anche quando non cambiano il
+    #   verdetto: e' la meta' che il vecchio conteggio non aveva.  Un banco che
+    #   ignora in silenzio una riga che il server ha scritto e' indistinguibile
+    #   da un banco che non l'ha vista.
+    for r in viol_banco:
+        di(f"{GIALLO}⚠{GRIGIO}   ⭐ una «VIOLAZIONE §3.1» (codice "
+              f"{r['codice']}) IN QUESTO SEGMENTO E' DEL BANCO, non del "
+              f"prodotto:")
+        di(f"      sessione {r['chiave'] or 'senza chiave (nel segmento se ne vede solo la coda)'}")
+        di(f"      {r['perche']}")
+        di("      ⇒ non si conta, e sta scritta qui perche' un'assenza")
+        di("        taciuta e un'assenza non vista hanno la stessa faccia.")
+
+    if atteso in ("sessione", "respinto"):
+        approvati += 1
+        if viol_prod:
+            di(f"{ROSSO}NO{GRIGIO}  ⛔ {len(viol_prod)} «VIOLAZIONE §3.1» "
+                  f"ATTRIBUITE AL PRODOTTO in questo segmento:")
+            for r in viol_prod:
+                di(f"      codice {r['codice']} · sessione "
+                      f"{r['chiave'] or 'IGNOTA'} · {r['perche']}")
+            di("      ⛔ Una chiusura col codice 0x0 non e' un congedo mal")
+            di("         riuscito: e' l'errore di protocollo che §3.1 vieta,")
+            di("         e a metterlo a verbale e' il server, non io.")
+            guasti += 1
+
+    # ── ⛔⭐ LE DUE STRADE DI §3.1, CIASCUNA QUANDO TOCCA A LEI ──────────────
     #
-    # ⛔ E LA VECCHIA RAGIONE SCRITTA QUI ERA FALSA: diceva «due strade diverse,
-    #    una per motore — Chrome sul canale, Firefox nel codice di chiusura».
-    #    `[M]` 11 agosto 2026, `banchi/01-p5-ff-*`, due giri per motore: curato
-    #    il prodotto, **tutt'e due i motori consegnano tutt'e due le strade** col
-    #    motivo 0x01.  Quel che sembrava «la strada di Chrome» era la chiusura
-    #    col codice 0x0 — cioe' la violazione che il passo qui sopra adesso
-    #    conta.  ⚠ Una osservazione contraria: il `CONGEDO` **sul canale** si e'
-    #    perso una volta su sei giri (una corsa gia' vista su Chrome da B11), e
-    #    il motivo e' arrivato lo stesso per il codice di chiusura — che e'
-    #    esattamente perche' le strade sono due (`DECISIONI.md` §7.14).
+    # ⛔ Qui c'era `canale + chiusura == 0` — cioe' *«almeno una delle due»*, il
+    #    criterio che `LEZIONI.md` §1.14 e' nata per vietare.  I conteggi piatti
+    #    restano nel registro (sotto, `sul_canale_di_controllo` e
+    #    `nel_codice_di_chiusura`), ⭐ ma il giudizio adesso guarda LA SESSIONE
+    #    DEL PRODOTTO e le due strade una per una.
     canale = esito["passi"]["congedo-canale"]["trovate"]
     chiusura = esito["passi"]["congedo-chiusura"]["trovate"]
+    # ⭐ La sessione del prodotto e' quella con le credenziali: e' lo stesso
+    #    byte con cui si attribuiscono le violazioni, e usarne due diversi
+    #    darebbe due verita' sulla stessa sessione (forma E2).
+    del_prodotto = [b for b in blocchi if b["credenziali"] > 0]
+    p2 = p3 = None
+    stato_chiusura = None
+    if del_prodotto:
+        ultimo = del_prodotto[-1]
+        p2 = [m for m in ultimo["punto2"]]
+        p3 = [m for m, _s in ultimo["punto3"]]
+        stato_chiusura = ([s for _m, s in ultimo["punto3"]] or [None])[-1]
     esito["congedo"] = {
         "sul_canale_di_controllo": canale,
         "nel_codice_di_chiusura": chiusura,
         "strada": ("canale" if canale and not chiusura else
                    "chiusura" if chiusura and not canale else
                    "tutt'e due" if canale and chiusura else "NESSUNA"),
+        "sessioni_del_prodotto_nel_segmento": len(del_prodotto),
+        "punto2_motivi": p2, "punto3_motivi": p3,
+        "stato_alla_chiusura": stato_chiusura,
     }
-    if atteso == "sessione" and canale + chiusura == 0:
-        print(f"{ROSSO}NO{GRIGIO}  ⛔ nessun congedo, per nessuna delle due strade "
-              f"di §3.1: §8.1 lo impone senza condizioni")
-        guasti += 1
     if atteso == "sessione":
-        approvati += 1
+        if not del_prodotto:
+            # ⚠ Non si giudica e non si assolve: il passo `credenziali` ha gia'
+            #   messo il suo rosso, e un secondo rosso sullo stesso fatto
+            #   conterebbe due volte lo stesso guasto.
+            esito["congedo"]["verdetto"] = (
+                "NON-GIUDICABILE (nessuna sessione con CREDENZIALI in questo "
+                "segmento — lo dice gia' il passo «credenziali»)")
+            di(f"{GIALLO}⚠{GRIGIO}   le due strade di §3.1 non si giudicano: in "
+                  f"questo segmento non c'e' nessuna sessione del prodotto")
+        else:
+            # ── punto 3: OBBLIGATORIO E SENZA CONDIZIONI (§8.1) ──────────
+            approvati += 1
+            if MOTIVO_CONGEDO in (p3 or []):
+                di(f"{VERDE}OK{GRIGIO}  ⭐ §3.1 punto 3 — il motivo "
+                      f"{MOTIVO_CONGEDO} E' nel codice di chiusura della "
+                      f"sessione (senza condizioni, §8.1)")
+                esito["congedo"]["punto3"] = "ARRIVATO"
+            else:
+                guasti += 1
+                esito["congedo"]["punto3"] = "MANCA"
+                visti = ", ".join(p3 or []) or "nessuna chiusura a verbale"
+                di(f"{ROSSO}NO{GRIGIO}  ⛔ §3.1 PUNTO 3 NON E' ARRIVATO: il "
+                      f"codice di chiusura doveva portare {MOTIVO_CONGEDO} e "
+                      f"porta «{visti}».")
+                di("      ⛔ §8.1: «il punto 3 non ha condizioni e non ne ha")
+                di("         bisogno: viaggia nella chiusura stessa, e parte")
+                di("         anche quando il canale e' morto».  ⛔ E NON basta")
+                di("         che sia arrivato il punto 2: e' esattamente la")
+                di("         sostituzione che ha tenuto nascosto per due")
+                di("         giorni il difetto curato il 13 agosto 2026")
+                di("         (LEZIONI.md §1.14).")
+            # ── punto 2: DOVUTO SE IL CANALE ERA UTILIZZABILE, e si DICHIARA ─
+            if MOTIVO_CONGEDO in (p2 or []):
+                esito["congedo"]["punto2"] = "ARRIVATO"
+                di(f"{VERDE}OK{GRIGIO}  ⭐ §3.1 punto 2 — il CONGEDO "
+                      f"{MOTIVO_CONGEDO} e' arrivato sul canale di controllo")
+            else:
+                esito["congedo"]["punto2"] = "NON-ARRIVATO"
+                di(f"{GIALLO}⚠{GRIGIO}   §3.1 punto 2 — nessun CONGEDO "
+                      f"{MOTIVO_CONGEDO} sul canale di controllo (visti: "
+                      f"{', '.join(p2 or []) or 'nessuno'}); la sessione si e'")
+                di(f"      chiusa in stato «{stato_chiusura}».")
+                di("      ⚠ E questo banco NON lo trasforma in un rosso: §3.1")
+                di("        punto 2 e' CONDIZIONATO — «se il canale di")
+                di("        controllo e' ancora utilizzabile» (DECISIONI.md")
+                di("        §7.15) — e RCP.md §8.1 avverte che un banco")
+                di("        scritto sulla forma assoluta boccerebbe un server")
+                di("        corretto.  ⛔ Quel che NON puo' piu' fare e'")
+                di("        sostituire il punto 3, che sopra e' giudicato da")
+                di("        solo.")
 
     # ── ⛔ IL POSTO, e questo e' il punto che un motore solo non vede ────────
     #
@@ -775,19 +1367,19 @@ def passi(percorso, marca_inizio, marca_fine, atteso, utente):
     if atteso == "sessione":
         approvati += 1
         if esito["posto_finale_occupati"] != 0:
-            print(f"{ROSSO}NO{GRIGIO}  ⛔ IL POSTO NON SI E' LIBERATO: "
+            di(f"{ROSSO}NO{GRIGIO}  ⛔ IL POSTO NON SI E' LIBERATO: "
                   f"«occupati adesso» finisce a {esito['posto_finale_occupati']} "
                   f"(strada: {strada_posto})")
-            print("      §8.2 0x0F — ed e' il difetto che si vede SOLO nella")
-            print("      differenza fra i due motori: con un motore solo, questa")
-            print("      riga e' verde per il motore sbagliato.")
+            di("      §8.2 0x0F — ed e' il difetto che si vede SOLO nella")
+            di("      differenza fra i due motori: con un motore solo, questa")
+            di("      riga e' verde per il motore sbagliato.")
             guasti += 1
         elif not lasciato:
             # ⚠ Non e' un guasto del server: e' un fatto sul CLIENT, e va detto.
-            print(f"{GIALLO}⚠{GRIGIO}   il posto si e' liberato, ma per il tetto "
+            di(f"{GIALLO}⚠{GRIGIO}   il posto si e' liberato, ma per il tetto "
                   f"d'inattivita' e non per un congedo: §8.1 impone al client di")
-            print("      dire perche' chiude, e qui non l'ha detto — oppure il")
-            print("      browser e' stato chiuso di colpo dal banco.")
+            di("      dire perche' chiude, e qui non l'ha detto — oppure il")
+            di("      browser e' stato chiuso di colpo dal banco.")
 
     esito["controlli_approvati"] = approvati
     esito["guasti"] = guasti
@@ -805,6 +1397,10 @@ def stampa_passi(esito):
           f"{esito.get('ancora_verdetto', '— (non giudicata)')} "
           f"— {esito.get('ancora_casi')} casi, "
           f"{esito.get('ancora_falliti')} falliti")
+    print(f"    --  A1, l'attribuzione di §3.1: "
+          f"{esito.get('attribuzione_verdetto', '— (non giudicata)')} "
+          f"— {esito.get('attribuzione_casi')} casi, "
+          f"{esito.get('attribuzione_falliti')} falliti")
     p = esito.get("pam_lettura") or {}
     print(f"    --  la riga di PAM in questo segmento: {p.get('stato', '—')}"
           + (f"/{p['verdetto']}" if p.get("verdetto") else "")
@@ -827,10 +1423,27 @@ def stampa_passi(esito):
               f"atteso={voce['atteso']}{extra}")
     print(f"    --  ritiro di /impronta prima del tentativo (§4.1-bis): "
           f"{esito.get('ritiro_impronta', '—')}")
+    v = esito.get("violazioni_31") or {}
+    print(f"    --  «VIOLAZIONE §3.1» nel segmento: {v.get('in_tutto')} in tutto "
+          f"⇒ {v.get('del_prodotto')} del PRODOTTO, {v.get('del_banco')} del "
+          f"BANCO (sonde dichiarate: "
+          f"{esito.get('sonde_del_banco_dichiarate')}, non usate: "
+          f"{v.get('sonde_dichiarate_non_usate')})")
+    for s in (esito.get("sessioni_nel_segmento") or []):
+        if not (s["violazioni_31"] or s["punto2"] or s["punto3"]):
+            continue
+        print(f"        · sessione {s['chiave'] or '(solo la coda: aperta prima '
+                                                 'del marcatore)'} — "
+              f"credenziali {s['credenziali']}, punto2 {s['punto2'] or '—'}, "
+              f"punto3 {s['punto3'] or '—'}, §3.1 {s['violazioni_31'] or '—'}")
     c = esito.get("congedo") or {}
     print(f"    --  congedo: sul canale {c.get('sul_canale_di_controllo')}, "
           f"nel codice di chiusura {c.get('nel_codice_di_chiusura')} "
           f"⇒ strada «{c.get('strada')}»")
+    print(f"    --  §3.1 ciascuna quando tocca a lei: punto 2 "
+          f"«{c.get('punto2', '— (non giudicato)')}» (condizionato) · punto 3 "
+          f"«{c.get('punto3', '— (non giudicato)')}» (senza condizioni) — "
+          f"stato alla chiusura: {c.get('stato_alla_chiusura')}")
     print(f"    --  posto, «occupati adesso» finale: {esito.get('posto_finale_occupati')} "
           f"— strada: {esito.get('posto_strada')}")
     print(f"    --  controlli approvati: {esito.get('controlli_approvati')}, "
@@ -850,6 +1463,10 @@ def principale():
     #    un secondo dopo aver toccato una riga di registro nel prodotto — che e'
     #    precisamente il momento in cui, il 12 agosto 2026, nessuno l'ha fatto.
     sub.add_parser("controllo-ancora")
+    # ⭐ E A1 da solo, per la stessa ragione di `controllo-ancora`: si prova in
+    #    un secondo dopo aver toccato una riga di registro nel prodotto, o dopo
+    #    aver toccato questo file.
+    sub.add_parser("controllo-31")
     for nome in ("elenco", "battuta"):
         s = sub.add_parser(nome)
         s.add_argument("--giro", required=True)
@@ -864,6 +1481,12 @@ def principale():
     q.add_argument("--marca-fine", required=True)
     q.add_argument("--atteso", default="sessione")
     q.add_argument("--utente", default="prova")
+    # ⛔ Quante sessioni PROPRIE il banco dichiara di poter aver lasciato in
+    #    questo segmento.  ⚠ Il predefinito e' **0**, e non per prudenza: chi
+    #    non dichiara niente si prende tutte le violazioni addosso, che e' il
+    #    verso giusto dello sbaglio.  Il riquadro sta sopra
+    #    `sessioni_del_segmento()`.
+    q.add_argument("--sonde-del-banco", type=int, default=0)
     q.add_argument("--registra", default=None,
                    help="json di contorno da unire alla riga scritta nel registro")
     a2 = p.parse_args()
@@ -877,6 +1500,15 @@ def principale():
         print("   si allungheranno addosso: l'esito NON deve cambiare")
         print(f"   ancora: {ANCORA_PAM}\n")
         falliti, _quanti = controllo_positivo_ancora(dettaglio=True)
+        print()
+        return 1 if falliti else 0
+
+    if a2.comando == "controllo-31":
+        print("== A1 — ⭐ il CONTROLLO POSITIVO dell'attribuzione di §3.1")
+        print("   quattro casi, con le righe VERE dei registri del server:")
+        print("   la riga del BANCO va ignorata E detta, quella del PRODOTTO va")
+        print("   contata, e il punto 3 non si lascia sostituire dal punto 2\n")
+        falliti, _quanti = controllo_positivo_31(dettaglio=True)
         print()
         return 1 if falliti else 0
 
@@ -944,7 +1576,8 @@ def principale():
 
     if a2.comando == "passi":
         esito, stato = passi(a2.log, a2.marca_inizio, a2.marca_fine,
-                             a2.atteso, a2.utente)
+                             a2.atteso, a2.utente,
+                             sonde_del_banco=a2.sonde_del_banco)
         if esito is not None:
             stampa_passi(esito)
             contorno = {}

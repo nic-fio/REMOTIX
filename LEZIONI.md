@@ -485,7 +485,10 @@ la riscrittura della sera, e i byte hanno detto che era lì da due giorni.
 prendere**, quindi non lo si scopre nemmeno certificandolo — i guasti innestati lo trovano verde
 prima e verde dopo.
 
-*Dettaglio: `fasi/rapporti/P2-8-congedo.md`, e la storia della cura dell'11 agosto in `README.md`.*
+*Dettaglio: il commit `d722460` porta l'attribuzione per intero — i byte, i 33 ms contro i 3-6 dei
+giri sani, e la prova che il server quello zero lo **legge** invece di sintetizzarlo. La storia della
+cura dell'11 agosto sta in `README.md`. ⚠ Questa riga citava un rapporto che **non esiste**: corretta
+il 13 agosto 2026, su segnalazione dell'agente che è andato a cercarlo.*
 
 ---
 
