@@ -626,3 +626,79 @@ adesso il `CIAO` porta `hevc` e il server sceglie 1 invece di 2.
 ⇒ ⭐ **Domattina l'utente giudicherebbe il prodotto SENZA il freno tirato**: negozia HEVC e codifica
 in hardware. ⚠ E se qualcosa dovesse andare storto, il ritorno indietro è **`git checkout -- src/`**
 su quattro file, e nient'altro.
+
+---
+---
+
+# APPENDICE B — LA VERIFICA SULLA 7571, QUELLA CHE L'UTENTE GUARDERÀ
+
+*14 agosto 2026, 00:25-00:55. Su richiesta del coordinatore, che ha acceso la 7571 col mio binario
+perché l'utente possa confrontare le due configurazioni senza toccare la sua 7561.*
+
+## B0. ⭐⭐ QUATTRO SU QUATTRO — e il quarto è quello che mancava
+
+**Sessione vera contro `https://192.168.0.2:7571/`**, Chrome su Xvfb `:90` ⭐ **senza
+`--disable-gpu`**, utente `nicfio`, parola da file 0600 mai da argv. Registro letto **solo dal
+taglio in poi**.
+
+| | |
+|---|---|
+| **1/4** | ⭐ `negoziato video.codec=hevc video.profondita=8 audio.codec=opus` — **codec 1** |
+| **2/4** | ⭐ `aperto: HEVC 10 bit via hevc_vaapi (in HARDWARE · /dev/dri/renderD128 · Intel iHD driver … · ⚠ EncSliceLP, bassa potenza)` |
+| **3/4** | ⭐ `PRIMO fotogramma codificato: codec 1, 3334 byte, CHIAVE, «hev1.2.4.L120.B0», profondità nel flusso 10` |
+| ⭐⭐ **4/4** | **IL CLIENT DIPINGE**: **1 047 fotogrammi dipinti**, e la catena arriva al vetro |
+
+### ⭐ E il quarto porta un numero che si legge da sé
+
+```
+t+ 4s  consegnati  567 · dipinti  567 · scartati_ordine 0 · buchi 0
+t+ 8s  consegnati  687 · dipinti  687 · scartati_ordine 0 · buchi 0
+t+12s  consegnati  807 · dipinti  807 · scartati_ordine 0 · buchi 0
+t+16s  consegnati  927 · dipinti  927 · scartati_ordine 0 · buchi 0
+t+20s  consegnati 1047 · dipinti 1047 · scartati_ordine 0 · buchi 0
+```
+
+⭐ **+120 ogni 4 secondi = 30 fotogrammi al secondo esatti**, e **`consegnati == dipinti` a ogni
+lettura**: ⛔ **non ne cade nemmeno uno**. Zero fuori ordine, zero buchi.
+
+⚠ **E il 30 non è un numero mio**: è lo stesso **30,18 fps** che la corsia E ha misurato sull'anello.
+Due banchi diversi, due scene diverse, la stessa cadenza.
+
+⛔ **Che cosa questo NON è**: non è una misura di ritardo. È un conteggio di fotogrammi — famiglia
+**correttezza** — e non ha preso nessuna finestra esclusiva. Il numero del ritardo resta quello di E.
+
+## B1. ⛔ Che cosa NON ha funzionato, e sono tutte cose MIE
+
+*Tre giri, e i primi due sono usciti storti per difetti del banco, non del prodotto.*
+
+| | |
+|---|---|
+| ⛔⛔ **«il registro non nomina nessun monitor» — di un registro che lo nominava** | il mio estrattore passava le virgolette a caporale dentro il comando `ssh`, e `«»` non sopravvive al giro `ssh → shell → grep`. ⇒ Ho concluso che il prodotto non dicesse una cosa che **diceva**: `monitor «Meta-2»`. ⭐ Curato spostando il filtro **in Python**, dopo il trasporto |
+| ⛔ **e poi la regex era in una stringa RAW** | `r"«"` **non è** «: in una stringa raw resta il testo `«`. Secondo giro perso allo stesso punto, per una ragione diversa |
+| ⛔ **«nessuna apertura in hardware» al secondo giro** | ⚠ ed era **giusto che mancasse**: il palco **sopravvive al distacco** (invariante **I4**), quindi alla seconda connessione il codificatore **non si riapre** e le sue righe stanno *prima* del taglio. ⇒ Curato allargando la finestra — ⛔ **ma DICENDOLO**, con una riga che scrive «ho guardato più indietro». Un banco che allarga la finestra in silenzio è un banco che trova sempre quel che cerca |
+| ⚠ **la scena si è accesa ma non ha stampato un conteggio** | e lo script l'ha detto: *«la scena è viva ma non ha stampato un conteggio: NON dico che sta disegnando — "vivo" non è "disegna"»*. ⭐ **A dire che disegnava sono stati i 1 047 fotogrammi della pagina**, non il fatto che il processo esistesse |
+
+⇒ ⭐ **Zero volte il banco ha sbagliato a favore del prodotto**: tutti e tre i difetti facevano
+apparire il prodotto **peggiore** di quel che è.
+
+## B2. Che cosa resta `[?]`
+
+| | |
+|---|---|
+| ⚠ **la scena è SINTETICA** | è la barra in movimento dello step 2, non il desktop dell'utente. ⇒ I 1 047 fotogrammi dicono che **la catena regge a 30/s**, non che il *suo* desktop sarà fluido: quello lo dirà lui |
+| ⚠ **`chiavi_chieste: 0`** | in venti secondi nessuna chiave è stata richiesta ⇒ **B4 non è stato esercitato in questo giro**. È provato altrove (§5 e §A3), non qui |
+| ⚠ **il disegno a ~25 ms** | il collo di bottiglia lato client, misurato da E. Non tocca questi conteggi, ma è il motivo per cui il totale resta sopra AV1 software |
+| ⚠ **il binario della 7571 è COPIATO, non ricostruito lì** | come il coordinatore ha dichiarato. ⭐ È lo stesso binario che questo giro ha esercitato per davvero — quindi «copiato» qui non è una `[?]`: è un fatto verificato dall'uso |
+
+## B3. Come lascio le cose
+
+| | |
+|---|---|
+| ⭐ **7571** | **viva e intatta** (pid 410731/410737) — non l'ho accesa io e non l'ho spenta |
+| ⛔ **7561** | **mai toccata**, né lei né `/media/REMOTIX/src/remotix` |
+| ⛔ **il `--figlio-interno` di `02-montaggio`** | **non ucciso**: è suo, come detto |
+| **la mia scena** | **spenta** a fine giro (`scena-ferma`): non lascio una finestra di prova sul monitor che l'utente guarderà |
+| **porte** | `7448 · 7501 · 7561 · 7571` — contate prima, durante e dopo. Nessuna mia |
+| **CHUWI** | Xvfb `:90` e profili chiusi e cancellati dal giro stesso |
+
+⇒ ⭐ **La 7571 non mente**: dice HEVC in hardware, e fa HEVC in hardware, fino al pixel dipinto.
