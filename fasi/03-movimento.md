@@ -449,3 +449,123 @@ quanto**, e la cura si giustifica su un fatto invece che su un timore.
 ⚠ **Quel che NON va fatto**: chiudere questo punto perché il desktop *sembrava* fluido. La sessione
 del giudizio si guarda **e si legge**, ed è la stessa disciplina con cui la fase 2 è stata chiusa —
 davanti a un elenco, non a un'impressione.
+
+---
+
+## ⏳ Il secondo punto lasciato APERTO dall'utente — dove finisce di contare il tetto
+
+*Deciso dall'utente la sera del 13 agosto 2026: ⭐ «**alla tua domanda si può rispondere solo dopo
+aver misurato i risultati con l'accelerazione HW**».*
+
+### La domanda che oggi nessun documento risponde
+
+`SPECIFICHE.md` §3.2 chiede **≤ 50 ms**. ⛔ **Ma non dice fino a dove si conta**, e la fase 3 ha
+scoperto che la differenza non è accademica:
+
+| dove si smette di contare | con la codifica di **oggi** (software) | con un codificatore **gratis** `[R]` |
+|---|---|---|
+| al **disegno finito** | **74,58 ms** ⇒ fuori | **~35,4 ms** ⇒ ⭐ **dentro il tetto, vicino al traguardo** |
+| al **pixel acceso** (col pezzo cieco) | 90-115 ms ⇒ fuori | **51-75 ms** ⇒ ⛔ **fuori anche a fase 8 fatta** |
+
+⇒ **La stessa architettura è promossa o bocciata a seconda di dove si mette il traguardo.**
+
+⚠ *E il confine della **misura** è stato spostato oggi, nella direzione scomoda: la prima stesura
+dell'anello chiudeva al richiamo del decodificatore, regalandosi ~11 ms nostri e misurabili. Il
+numero è salito da 63,8 a 74,58 ed è stato lasciato salire. `CODER.md` §1-bis dichiara adesso dove
+finisce la **misura** — non fino a dove vale il **tetto**, che è questa domanda.*
+
+### ⛔ Perché NON si decide adesso, e sono due ragioni indipendenti
+
+1. **il pavimento con l'accelerazione vera non è misurato**, e non lo sarà finché la fase 8 non
+   esiste;
+2. ⛔ **il pezzo cieco è a sua volta una `[?]`**: **16-40 ms** è una forbice larga **due volte e
+   mezzo**, e nessuna API JavaScript la espone (`web.md` §6.2). Decidere dove finisce di contare un
+   tetto di **50** appoggiandosi a un numero che oscilla di **24** è decidere su niente — ed è la
+   grandezza sostitutiva che `LEZIONI.md` §1.13 vieta.
+
+⇒ È la stessa disciplina del primo punto aperto: **non si cura, e non si decide, su un sintomo
+temuto invece che osservato** (`LEZIONI.md` §2.6).
+
+### ⛔ E una cosa che va detta perché non venga letta male
+
+**Il «codificatore finto» misurato in fase 3 NON è un codificatore hardware.** Risponde a
+*«la catena regge quando la codifica costa poco?»*, che è una domanda utile e **diversa**. Un
+codificatore vero in hardware ha un profilo di ritardo suo — la consegna alla GPU, l'attesa della
+fine, il ritorno dei byte — che un finto **non modella affatto**.
+⇒ ⛔ **Quel numero dice se l'architettura ha margine, NON quanto varrà la fase 8.** Le due cose non
+si sommano, e chi le sommasse otterrebbe una previsione che nessuno ha misurato.
+
+### ⭐ Come si chiude
+
+Alla **fase 8**, e nell'ordine:
+
+1. si misura l'anello **con la codifica in hardware**, con lo stesso banco (`03-b17-ritardo.py`) e
+   la stessa scena, così i due numeri si sottraggono davvero;
+2. si guarda **dove cade il totale al disegno finito**, e **quanto vale davvero** il tratto della
+   codifica quando è la GPU a farla;
+3. ⛔ **solo allora** la domanda «fino al disegno o fino al vetro» ha davanti due numeri veri invece
+   di una forbice, e l'utente decide **sapendo che cosa costa ciascuna delle due letture**.
+
+⚠ **Quel che NON va fatto**: scrivere in `SPECIFICHE.md` una risposta oggi. Una soglia decisa per
+prudenza, e poi trovata comoda, è una soglia che si sposta di un passo a ogni rilettura — è la
+famiglia **P8 → P11 → P13 → P14**, che questo progetto ha già percorso quattro volte.
+
+---
+
+## ⭐⭐⭐ LA FASE NON SI CHIUDE QUI — la codifica in hardware è anticipata dentro la fase 3
+
+*Deciso dall'utente la sera del 13 agosto 2026: ⭐ «**si anticipa la codifica HW alla fase 3. Per
+questo però dopo servirà una nuova sessione**».*
+
+⛔ **Quindi tutto quel che sta scritto sopra è vero e NON è finale.** Il documento resta com'è —
+non si riscrive una misura perché è arrivata una decisione — e questa sezione dice **che cosa manca
+ancora prima del giudizio**.
+
+### Perché, in un numero
+
+Il ritardo misurato è **74,58 ms**, e ⛔ **39,17 di quelli — il 53 % — sono la codifica in
+software**. Gli altri quattro tratti sommano **~35,4 ms**, che sarebbe il **pavimento della catena a
+codificatore gratis**: `[R]` **dentro il tetto dei 50, e vicino al traguardo dei 40**.
+
+⇒ L'obiezione dell'utente, che è quella giusta: *«senza accelerazione hw stiamo ragionando e
+sviluppando su numeri non molto affidabili»*. Un totale dominato da un pezzo che sta per essere
+sostituito **non è un numero su cui prendere decisioni** — e le fasi 4-7 ne produrrebbero altri
+uguali, da rifare dopo.
+
+⚠ **Ma il danno era stretto, e va detto perché non si legga la giornata come persa**: dei risultati
+della fase 3, **solo il verdetto sul ritardo** dipendeva dal codificatore. La legge della griglia,
+il verde prodotto dallo strumento, **B-18**, **B-20**, il worker respinto, la scena che correva a
+vuoto e i tre falsi rossi **non ci si appoggiano affatto**.
+
+### ⭐⭐ E si può fare — `[M]` verificato il 13 agosto sul server
+
+```
+Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 e renderD129
+VAProfileHEVCMain10     : VAEntrypointEncSliceLP    ← 10 bit, IN HARDWARE
+VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
+```
+
+⛔ **E questa riga corregge un errore di oggi**: un agente aveva riferito *«su questo server non c'è
+un codificatore hardware per nessuno dei due codec»*, e **nessuno l'aveva verificata**. È vera per
+**AV1** — e stava già nei documenti — ed è **falsa per HEVC**. ⚠ È la stessa forma dei «37
+fotogrammi di Mutter»: una riga **ripetuta** invece che **misurata**, che poi decide un piano.
+
+### Che cosa manca, e in che ordine
+
+| | |
+|---|---|
+| 1 | ⛔ **il primo scoglio, e va affrontato per primo**: il codec negoziato nelle misure di oggi è **AV1**, perché la sonda HEVC di Chrome **fallisce su Xvfb** (`EncodingError`). Senza un client che accetti HEVC, l'anello intero non si misura — al massimo si misura il lato server, e sarebbe **mezzo anello** |
+| 2 | la codifica HEVC in hardware nel prodotto, **su una copia** finché non è misurata |
+| 3 | ⭐ **l'anello rimisurato con lo STESSO banco e la STESSA scena** — o i due numeri non si sottraggono |
+| 4 | ⛔ **i CINQUE tratti affiancati**, non il totale: *tolta la codifica in software, gli altri quattro restano dove sono?* Se restano, l'architettura è **assolta**; se si muovono, c'è una contesa che nessuno ha visto |
+| 5 | ⚠ **i fotogrammi consegnati accanto ai millisecondi** (`LEZIONI.md` §6.2): in v1 il costo per fotogramma scese da 41 a 6 **mentre i consegnati calavano da 29 a 22,7** |
+| 6 | e **solo allora** il giudizio dell'utente, su un numero che non ha il freno a mano tirato |
+
+⚠ **`EncSliceLP` è la codifica «a bassa potenza»**: veloce, ma con limiti suoi di qualità e di
+funzioni. **Non è equivalente** alla codifica piena, e va dichiarato accanto al numero.
+⭐ **E porta un'occasione**: `EncSliceLP` è l'entrypoint che `web.md` nomina come *«da verificare»*
+per i **sotto-livelli temporali** — cioè la strada per abbandonare un fotogramma **senza rompere
+quelli dopo**, che oggi costa una chiave ogni volta.
+
+⛔ **Che cosa NON si anticipa**: la **copia zero** resta alla fase 8. È lavoro suo, e non tocca
+questo numero.

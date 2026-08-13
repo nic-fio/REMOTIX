@@ -348,7 +348,64 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, sera. LA FASE 3 HA IL SUO NUMERO, E SFORA**
+> ### ⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **LA SESSIONE NUOVA FA LA CODIFICA IN HARDWARE, DENTRO LA FASE 3**
+>
+> *Deciso dall'utente: ⭐ «**si anticipa la codifica HW alla fase 3. Per questo però dopo servirà una
+> nuova sessione**». ⛔ **La fase 3 NON è chiusa.***
+>
+> #### Perché, in un numero
+>
+> Il ritardo è **74,58 ms**, e ⛔ **39,17 — il 53 % — sono la codifica in software**. Gli altri
+> quattro tratti sommano **~35,4 ms**: `[R]` **dentro il tetto dei 50 e vicino al traguardo dei 40**.
+> ⇒ L'obiezione dell'utente, ed è quella giusta: *«senza accelerazione hw stiamo ragionando e
+> sviluppando su numeri non molto affidabili»*. Le fasi 4-7 ne produrrebbero altri uguali, **da
+> rifare dopo**.
+>
+> ⭐ **E costa poco farlo adesso**: la catena che si muove **esiste da oggi**, il banco dell'anello è
+> scritto, la scena e la marca sono certificate ⇒ il *prima* e il *dopo* si misurano con **lo stesso
+> strumento e la stessa scena**, e i due numeri **si sottraggono davvero**. Fra tre fasi non sarebbe
+> più vero.
+>
+> #### ⭐⭐ Si può fare — `[M]` verificato il 13 agosto sul server
+>
+> ```
+> Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 e renderD129
+> VAProfileHEVCMain10     : VAEntrypointEncSliceLP    ← 10 bit, IN HARDWARE
+> VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
+> ```
+>
+> ⛔ **E questa riga corregge un errore di oggi**: un agente aveva riferito *«su questo server non
+> c'è un codificatore hardware per nessuno dei due codec»*, e **nessuno l'aveva verificata**. È vera
+> per **AV1**, ⛔ **falsa per HEVC**. ⚠ Stessa forma dei «37 fotogrammi di Mutter»: una riga
+> **ripetuta invece che misurata**, che poi decide un piano.
+>
+> #### ⛔ L'ordine del lavoro, e il primo punto è uno scoglio vero
+>
+> 1. ⛔⛔ **il codec negoziato oggi è AV1**, perché la sonda HEVC di Chrome **fallisce su Xvfb**
+>    (`EncodingError`). **Senza un client che accetti HEVC l'anello intero non si misura** — al
+>    massimo il lato server, e sarebbe mezzo anello. **Affrontalo per primo**;
+> 2. la codifica HEVC in hardware nel prodotto, **su una copia** finché non è misurata;
+> 3. ⭐ l'anello rimisurato con lo **STESSO** banco (`03-b17-ritardo.py`) e la **STESSA** scena;
+> 4. ⛔ **i CINQUE tratti affiancati**, non il totale: *tolta la codifica software, gli altri quattro
+>    restano dove sono?* Se restano, l'architettura è **assolta**;
+> 5. ⚠ **i fotogrammi consegnati accanto ai millisecondi** — in v1 il costo scese da 41 ms a 6
+>    **mentre i consegnati calavano da 29 a 22,7**;
+> 6. e **solo allora** il giudizio dell'utente.
+>
+> ⚠ `EncSliceLP` è la codifica **a bassa potenza**: veloce, con limiti suoi — **non è equivalente**
+> alla piena, e va dichiarato accanto al numero. ⭐ Ma porta un'occasione: è l'entrypoint che
+> `web.md` nomina come *«da verificare»* per i **sotto-livelli temporali**, cioè abbandonare un
+> fotogramma **senza rompere quelli dopo** — che oggi costa una chiave ogni volta.
+> ⛔ **La copia zero NON si anticipa**: resta alla fase 8.
+>
+> ⏳ **E i due punti che l'utente ha lasciato APERTI di proposito** stanno in
+> [`fasi/03-movimento.md`](fasi/03-movimento.md), ciascuno con scritto **come si chiude**: il debito
+> di chiave strozzato (si legge il registro della sessione del giudizio, **costa zero**) e *dove
+> finisce di contare il tetto dei 50 ms* (si risponde **dopo** la misura in hardware).
+>
+> ---
+>
+> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, sera. LA FASE 3 HA IL SUO NUMERO, E SFORA** *(superato dal riquadro qui sopra)*
 >
 > *⛔ Scritto **a codice fermo**, con lo stato **verificato e non ricordato**. La fase 3 è stata
 > divisa in **cinque step** su richiesta dell'utente, uno o due agenti per step, sviluppo + prova +

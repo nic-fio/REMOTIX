@@ -421,6 +421,53 @@ qualcun altro.
 
 ## Fase 3 — Il movimento
 
+> ### ⭐⭐⭐ LA CODIFICA IN HARDWARE È ANTICIPATA QUI — deciso dall'utente il 13 agosto 2026, sera
+>
+> *E la fase 3 **non si chiude** finché non è fatta.*
+>
+> ⛔ **La ragione, e non è un'opinione: è un numero.** L'anello del ritardo misurato il 13 agosto
+> dà **74,58 ms** di mediana, e la scomposizione dice dove sta:
+>
+> | tratto | mediana | cambia con l'accelerazione? |
+> |---|---|---|
+> | ⛔ **cattura → primo byte** (la codifica, **in software**) | **39,17 ms — il 53 %** | ⭐ **sì, è tutta lì** |
+> | Mutter | 16,66 ms | no — è un intervallo di quadro a 60 Hz |
+> | il disegno nella pagina | 10,51 ms | no |
+> | la decodifica | 7,58 ms | poco, ed è già solo il 10 % |
+> | il filo | 0,32 ms | no |
+>
+> ⇒ **Finché la codifica è in software, ogni numero di ritardo che le fasi 3-7 producono è dominato
+> da un pezzo che sta per essere sostituito** — e andrebbe rifatto dopo. È l'obiezione dell'utente,
+> ed è giusta: *«senza accelerazione hw stiamo ragionando e sviluppando su numeri non molto
+> affidabili»*.
+>
+> ⭐⭐ **E si può fare, `[M]` verificato il 13 agosto 2026 sul server:**
+>
+> ```
+> Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 e renderD129
+> VAProfileHEVCMain10     : VAEntrypointEncSliceLP    ← 10 bit, IN HARDWARE
+> VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
+> ```
+>
+> ⚠ *Un agente aveva riferito «su questo server non c'è un codificatore hardware per nessuno dei due
+> codec». **È vero per AV1** — e stava già nei documenti — **ed è FALSO per HEVC**, che è proprio
+> quel che la fase 8 promette. Nessuno l'aveva verificato: la riga è stata ripetuta, non misurata.*
+>
+> ⭐ **E costa poco farlo adesso**, per una ragione precisa: la catena che si muove **esiste da
+> oggi**, il banco dell'anello è scritto, la scena e la marca sono certificate. ⇒ Il *prima* e il
+> *dopo* si misurano con **lo stesso strumento e la stessa scena**, quindi i due numeri **si
+> sottraggono davvero** — cosa che non sarebbe più vera fra tre fasi.
+>
+> ⛔ **Che cosa si anticipa, e che cosa NO**: si prende **la sola codifica in hardware**. La **copia
+> zero** resta alla fase 8, è lavoro suo e non tocca questo numero.
+>
+> ⚠ **E la fase 8 non sparisce**: resta con la copia zero, e con la sua lezione che vale anche qui —
+> *«si misurano i fotogrammi consegnati, non i millisecondi di CPU»*. In v1 il costo per fotogramma
+> scese da 41 ms a 6 **mentre i fotogrammi consegnati scendevano da 29 a 22,7**.
+>
+> ⏳ **Il lavoro comincia in una sessione nuova** (deciso dall'utente). Il punto di ripresa sta nel
+> `README.md`.
+
 **Produce**: uno stream per fotogramma, l'abbandono con `RESET_STREAM`, la cadenza.
 
 **L'utente vede**: il desktop **che si muove**, e dice se è fluido.
