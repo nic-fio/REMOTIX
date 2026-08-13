@@ -199,6 +199,9 @@ CORREDO = {
     #     meno, e le due forme d'errore sono diverse solo nel sintomo.
     "03-b15": ["03-b15-movimento.py", "02-filo-fotogramma.py"],
     "03-b18": ["03-b18-credito.py", "02-filo-fotogramma.py"],
+    # ⭐ 03-solo vuole UN FILE SOLO: non chiama nessun fratello, e il vicino
+    #   che gli serve per la certificazione **se lo accende da se'**.
+    "03-solo": ["03-solo.py"],
 }
 
 # ===========================================================================
@@ -403,6 +406,9 @@ FILE_CHE_CONTANO = {
     # =======================================================================
     "03-b15": ["03-b15-movimento.py", "02-filo-fotogramma.py"],
     "03-b18": ["03-b18-credito.py", "02-filo-fotogramma.py"],
+    # ⭐ 03-solo — 13 agosto 2026 sera. Un file solo: l'arbitro non chiama
+    #   nessun fratello, e il suo «guasto» se lo accende da se'.
+    "03-solo": ["03-solo.py"],
 }
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
@@ -2274,6 +2280,68 @@ guasto(
          "⚠ I conteggi della marca («2 delta») nascono dai verbali fabbricati "
          "in `_verbale_sano()`: se qualcuno cambia `REG_CREDITO_DELTA` o il "
          "numero di righe, la marca va RIMISURATA, non ritoccata a mente.",
+)
+
+
+# ── 03-solo — l'arbitro che non sa piu' dire «non sei solo» ─────────────────
+#
+# ⛔⛔ QUESTA VOCE CERTIFICA UN GIUDICE, NON UN BANCO, e la differenza conta.
+#
+# `03-solo.py` esiste perche' §0-bis del piano pretende che chi misura un tempo
+# **verifichi di essere solo e RIFIUTI di misurare se non lo e'** — nato da due
+# giri di griglia interi buttati perche' il prodotto dell'utente stava ciclando
+# accanto.  ⇒ Da stasera i banchi a tempo si appoggiano a lui.
+#
+# ⭐ Il suo `--prova` fa gia' `sano → guasto → risanato` da solo, col guasto
+#    VERO: accende un processo che cicla al 100 % e pretende un «no».
+# ⛔ **Ma un `--prova` che si autoinganna avrebbe lo stesso aspetto di uno che
+#    funziona**, ed e' esattamente la famiglia «i banchi che si autoingannano».
+#    ⇒ Qui si guasta **il giudizio stesso**: `_giudica` non riferisce piu'
+#    nessun guaio.  Se `--prova` restasse verde, vorrebbe dire che il suo
+#    verdetto non poggia sul giudizio che dice di provare.
+guasto(
+    "03-solo", "03-solo",
+    "⛔ si disarma `_giudica`: l'arbitro non riferisce piu' nessun guaio e "
+    "dice «sei solo» anche con un processo che cicla al 100 %",
+    os.path.join(COPIE, "03-solo.py"),
+    "    return (not guai), guai\n",
+    "    # ⭐ " + MARCA + " 03-solo — `_giudica` disarmato: la lista dei guai\n"
+    "    #   viene raccolta e poi BUTTATA, e l'arbitro dice sempre «solo».\n"
+    "    #   ⛔ Non si vede da fuori: la scena esce identica, con carico,\n"
+    "    #   porte, vicini e /tmp tutti al loro posto — cambia solo il\n"
+    "    #   verdetto, che e' l'unica cosa per cui l'arbitro esiste.\n"
+    "    return True, []\n",
+    "⛔ L'arbitro esiste per **una** ragione: dire di no quando la macchina non "
+    "e' libera.  Con questo guasto continua a raccogliere e a stampare tutto — "
+    "il carico, i vicini affamati, le porte altrui, i MB di `/tmp` — e "
+    "**conclude sempre «solo»**.  ⇒ Un banco a tempo che ci si appoggiasse "
+    "misurerebbe la contesa e scriverebbe accanto al numero una scena che dice "
+    "«ero solo», che e' **peggio di non averla**: la contaminazione ci "
+    "sarebbe, e il verbale la negherebbe con l'autorita' di una misura.  ⭐ E' "
+    "la stessa forma dei tre banchi che uscivano SEMPRE 0, spostata di un "
+    "piano: li' il rosso restava nella prosa, qui il rosso non nasce affatto.",
+    # ⭐ MISURATA, non dedotta: e' la riga che il verdetto stampa quando il
+    #   passo 2 non ha alzato l'eccezione.  ⛔ E NON compare nel giro sano, che
+    #   finisce con «PROMOSSO» — la meta' del criterio che R12-A.3 pretende.
+    "BOCCIATO: col vicino acceso l'arbitro NON ha detto di no",
+    "leggero",
+    "fasi/rapporti/F3-prossima-sessione.md §0-bis · LEZIONI.md §1.1 e §2.0",
+    nota="⭐ **La scena e' la piu' economica del catalogo insieme a `03-b15`**: "
+         "`python3 03-solo.py --prova` gira **su CHUWI**, senza rete, senza "
+         "contenitore, senza prodotto e senza browser, e ci mette sette "
+         "secondi.\n"
+         "⛔⛔ **E ha un modo NON GIUDICABILE dichiarato, che e' la sua "
+         "onesta'**: se al passo 1 la macchina non e' gia' libera, `--prova` "
+         "esce **2** e dice «scena sporca, si rifa' a macchina ferma» invece "
+         "di chiamarlo rosso.  ⇒ Senza quella terza uscita, un arbitro sano "
+         "provato su una macchina carica sarebbe stato **bocciato per la "
+         "ragione sbagliata** — e sarebbe stata la quarta volta.\n"
+         "⚠ **QUEL CHE NON CERTIFICA**: che le soglie (`CARICO_MASSIMO` 1.0, "
+         "`CPU_VICINO_MAX` 20 %, `TMP_LIBERO_MIN` 300 MB) siano quelle "
+         "giuste — sono **dichiarate**, non misurate, e chi le cambia cambia "
+         "il significato della parola «solo».  E non certifica che l'arbitro "
+         "veda l'ALTRA macchina: guarda la sua, e l'anello del ritardo le "
+         "attraversa tutt'e due.",
 )
 
 

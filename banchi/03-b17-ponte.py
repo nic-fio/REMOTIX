@@ -360,7 +360,33 @@ class RitardatoreUdp(threading.Thread):
         self.ultima_lettura_comando = 0.0
         self.vivo = True
         self.c = {"su": 0, "giu": 0, "byte_su": 0, "byte_giu": 0,
-                  "ritardati": 0, "scambiati": 0, "clienti": 0}
+                  "ritardati": 0, "scambiati": 0, "clienti": 0,
+                  # ⛔⛔ I DUE CONTI CHE NOMINANO IL MODO DI DEGENERAZIONE —
+                  #    aggiunti il 13 agosto 2026 sera, corsia C, e sono la
+                  #    cura di C4.
+                  #
+                  #    Il fuori ordine si fabbrica trattenendo una RAFFICA
+                  #    ogni `fo` pacchetti e lasciando passare DRITTI tutti
+                  #    gli altri: sono i dritti a scavalcare i trattenuti.
+                  #    ⇒ Se i dritti sono ZERO, il ponte non sta riordinando
+                  #    niente: sta ritardando tutto della stessa quantita',
+                  #    e l'ordine si conserva PER ARITMETICA.
+                  #    ⛔ Prima di questi due conti quel modo era SILENZIOSO:
+                  #    il ponte usciva 0 inversioni con l'aria di uno che ha
+                  #    provato e non ci e' riuscito.
+                  "fo_trattenuti": 0, "fo_dritti": 0,
+                  # ⛔ `None` e non `False`: «non ho ancora guardato» e «non
+                  #    degenera» non sono la stessa cosa (`LEZIONI.md` §1.9).
+                  "degenere": None}
+        # ⛔ E la stessa cosa detta PRIMA di girare, per aritmetica: la raffica
+        #    parte al pacchetto `k*fo` e ne copre `raffica_lunga`; il primo
+        #    pacchetto dopo la raffica ha indice `k*fo + raffica_lunga`, che e'
+        #    ancora un multiplo di `fo` **se e solo se** `raffica_lunga % fo ==
+        #    0` — e allora fa ripartire subito un'altra raffica, all'infinito.
+        #    `[M]` fo=2: raffica 1→13 inversioni, 2→0, 3→7, 4→0, 5→5, 6→0.
+        #    ⭐ L'iniettore vero gira a fo=400, raffica=4 (4 % 400 = 4): NON
+        #    degenera.  Degenerava l'AUTOPROVA, che usa fo=2.
+        self.degenere = None
         # ⛔ La precisione del ritardo si MISURA: «ho chiesto N» e «ho fatto N»
         #    non sono la stessa cosa, e un ponte che sbaglia di 5 ms su 30
         #    farebbe fallire P1 dando la colpa alla pagina.
@@ -396,6 +422,22 @@ class RitardatoreUdp(threading.Thread):
             fo = self.cmd.valori["fuori_ordine"]
             self.ritardo_fo_us = int(self.cmd.valori.get("fuori_ordine_ms", 60) * 1000)
             self.raffica_lunga = int(self.cmd.valori.get("fuori_ordine_raffica", 4))
+            # ⛔ IL MODO DEGENERE SI DICHIARA, e si dichiara a ogni cambio di
+            #    assetto: un ponte che smette di riordinare e non lo dice fa
+            #    fallire il controllo che dovrebbe accorgersene, e la colpa
+            #    finisce sulla macchina o sul prodotto.  Costato un giorno di
+            #    «03-b17 non si certifica su CHUWI» (voce di catalogo 03-b17).
+            deg = bool(fo) and self.raffica_lunga > 0 and self.raffica_lunga % fo == 0
+            if deg != self.degenere:
+                self.degenere = deg
+                self.c["degenere"] = deg
+                if deg:
+                    print("⛔ ponte: assetto DEGENERE — fuori_ordine=%d e "
+                          "raffica=%d (raffica multipla di fo): da qui in poi "
+                          "ritardo TUTTI i pacchetti allo stesso modo e NON "
+                          "riordino piu' niente.  Le inversioni saranno 0 per "
+                          "aritmetica, non per la rete."
+                          % (fo, self.raffica_lunga), file=sys.stderr, flush=True)
 
             letti = [self.fuori] + list(self.verso_prodotto.values())
             # ⛔ L'attesa si accorcia se c'e' roba in coda: dormire 5 ms con un
@@ -468,13 +510,20 @@ class RitardatoreUdp(threading.Thread):
                             self._consegna(mono_us() + ritardo_us
                                            + self.ritardo_fo_us, d, chi)
                             self.c["scambiati"] += 1
+                            self.c["fo_trattenuti"] += 1
                             continue
                         if self.contatore_fo % fo == 0:
                             self.raffica = self.raffica_lunga - 1
                             self._consegna(mono_us() + ritardo_us
                                            + self.ritardo_fo_us, d, chi)
                             self.c["scambiati"] += 1
+                            self.c["fo_trattenuti"] += 1
                             continue
+                        # ⭐ E QUESTO E' IL PACCHETTO CHE SCAVALCA: passa dritto
+                        #    mentre la raffica di prima e' ancora in coda.  Se
+                        #    questo conto resta a ZERO col fuori ordine acceso,
+                        #    non c'e' niente che possa scavalcare nessuno.
+                        self.c["fo_dritti"] += 1
                     if ritardo_us <= 0:
                         self._spedisci_giu(d, chi, 0)
                     else:
@@ -696,28 +745,107 @@ def certifica(verboso=True):
          % ((risanato or {}).get("mediana"), (sano or {}).get("mediana")), torna)
 
     # ── il fuori ordine ────────────────────────────────────────────────────
-    with open(cmdf, "w") as f:
-        f.write("ritardo_ms=0\nfuori_ordine=2\n")
-    time.sleep(0.15)
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(1.0)
-    ordine = []
-    for i in range(40):
-        s.sendto(struct.pack("!I", i) + b"y" * 100, ("127.0.0.1", porta_ponte))
-        time.sleep(0.004)
-    fine = time.time() + 1.5
-    while time.time() < fine:
-        try:
-            d, _ = s.recvfrom(65535)
-        except socket.timeout:
-            break
-        ordine.append(struct.unpack("!I", d[:4])[0])
-    s.close()
-    inversioni = sum(1 for a, b in zip(ordine, ordine[1:]) if b < a)
-    dice("fuori ordine: %d inversioni su %d pacchetti tornati (attese > 0)"
-         % (inversioni, len(ordine)), inversioni > 0)
-    dice("fuori ordine: nessun pacchetto perso (%d su 40)" % len(ordine),
-         len(ordine) == 40)
+    #
+    # ⛔⛔ QUESTO CONTROLLO E' STATO RISCRITTO IL 13 AGOSTO 2026 SERA (corsia C,
+    #     coda C4), E LA RAGIONE VA LETTA PRIMA DI TOCCARLO.
+    #
+    #     La stesura precedente girava un assetto solo — `fuori_ordine=2` con la
+    #     raffica di riposo, che vale **4** — e pretendeva inversioni > 0.
+    #     ⛔ Ma 4 e' multiplo di 2: la raffica che parte al pacchetto 2k ne
+    #     copre quattro e finisce esattamente su un altro multiplo di 2, che ne
+    #     fa partire subito un'altra.  ⇒ Da li' in poi il ponte ritarda **tutti**
+    #     i pacchetti della stessa quantita', l'ordine si conserva PER
+    #     ARITMETICA, e le inversioni sono 0 su qualunque macchina.
+    #
+    #     `[M]` fo=2, al variare della raffica: 1→13 inversioni, 2→0, 3→7,
+    #     **4→0**, 5→5, 6→0.  ⛔ Il rosso non era della macchina («su CHUWI il
+    #     giro e' tutto in casa»): era di questo controllo, che chiedeva al
+    #     ponte un evento con un assetto in cui il ponte non lo fabbrica.
+    #     Ed e' costato la NON certificazione di 03-b17 per un giorno.
+    #
+    # ⭐ LA CURA NON E' RENDERE LA RAFFICA DISPARI — sarebbe una toppa che fa
+    #    tornare il verde senza dire niente.  E' misurare **quel che il ponte
+    #    fabbrica adesso**, e sono due cose diverse che vanno tutt'e due
+    #    dichiarate:
+    #      1. con l'assetto **VERO** (raffica NON multipla di fo, come il
+    #         fo=400/raffica=4 dell'iniettore) il ponte deve fabbricare fuori
+    #         ordine — e allora il controllo di P5 e' esercitato davvero;
+    #      2. con l'assetto **DEGENERE** (raffica multipla di fo) il ponte non
+    #         ne fabbrica, e **deve dirlo**: `degenere` vero e `fo_dritti` a
+    #         zero.  ⛔ Un ponte che degenera in silenzio ha lo stesso aspetto
+    #         di uno che ci ha provato e non c'e' riuscito — `LEZIONI.md` §2.0
+    #         portata dal palco all'iniettore.
+    def giro_fuori_ordine(fo, raffica, quanti=120, passo_s=0.004):
+        """Manda `quanti` pacchetti numerati e riporta come tornano.
+
+        ⛔ Riporta ANCHE i conti del ponte presi come DIFFERENZA fra prima e
+           dopo: sono cumulativi, e leggerli assoluti conterebbe i giri di
+           prima.
+        """
+        prima = dict(ponte.c)
+        with open(cmdf, "w") as f:
+            f.write("ritardo_ms=0\nfuori_ordine=%d\nfuori_ordine_raffica=%d\n"
+                    % (fo, raffica))
+        time.sleep(0.20)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(1.0)
+        for i in range(quanti):
+            s.sendto(struct.pack("!I", i) + b"y" * 100,
+                     ("127.0.0.1", porta_ponte))
+            time.sleep(passo_s)
+        tornati = []
+        fine = time.time() + 2.0
+        while time.time() < fine:
+            try:
+                d, _ = s.recvfrom(65535)
+            except socket.timeout:
+                break
+            tornati.append(struct.unpack("!I", d[:4])[0])
+        s.close()
+        return {
+            "fo": fo, "raffica": raffica, "spediti": quanti,
+            "tornati": len(tornati),
+            "inversioni": sum(1 for a, b in zip(tornati, tornati[1:]) if b < a),
+            "degenere": ponte.degenere,
+            "trattenuti": ponte.c["fo_trattenuti"] - prima["fo_trattenuti"],
+            "dritti": ponte.c["fo_dritti"] - prima["fo_dritti"],
+        }
+
+    # ── 1. l'assetto VERO, nella forma che usa l'iniettore ─────────────────
+    #    ⚠ fo=10 e non 400: l'autoprova manda 120 pacchetti, e con una raffica
+    #      ogni 400 non ne partirebbe nemmeno una — cioe' zero inversioni per
+    #      un motivo TERZO, che e' esattamente l'errore che si sta curando.
+    #      Quel che si conserva del vero e' la FORMA: raffica non multipla di
+    #      fo, e fo molto piu' grande della raffica (4 su 10 come 4 su 400).
+    vero = giro_fuori_ordine(10, 4)
+    dice("fuori ordine, assetto VERO (fo=10 raffica=4, la forma del "
+         "fo=400/raffica=4 dell'iniettore): %d inversioni su %d tornati, "
+         "%d trattenuti e %d passati dritti (attese > 0)"
+         % (vero["inversioni"], vero["tornati"], vero["trattenuti"],
+            vero["dritti"]),
+         vero["inversioni"] > 0)
+    dice("fuori ordine, assetto VERO: nessun pacchetto perso (%d su %d)"
+         % (vero["tornati"], vero["spediti"]), vero["tornati"] == vero["spediti"])
+    dice("fuori ordine, assetto VERO: il ponte NON si dichiara degenere "
+         "(degenere = %s) e qualcuno passa dritto (%d)"
+         % (vero["degenere"], vero["dritti"]),
+         vero["degenere"] is False and vero["dritti"] > 0)
+
+    # ── 2. l'assetto DEGENERE, e il ponte deve DIRLO ───────────────────────
+    #    ⛔ E' il controllo che mancava: senza, il modo silenzioso resta
+    #       silenzioso e il prossimo che lo incontra da' la colpa alla macchina.
+    deg = giro_fuori_ordine(2, 4)
+    dice("fuori ordine, assetto DEGENERE (fo=2 raffica=4, raffica multipla di "
+         "fo): il ponte lo DICHIARA — degenere = %s, passati dritti %d, "
+         "inversioni %d"
+         % (deg["degenere"], deg["dritti"], deg["inversioni"]),
+         deg["degenere"] is True and deg["dritti"] == 0)
+    dice("fuori ordine, assetto DEGENERE: e infatti NON fabbrica fuori ordine "
+         "(%d inversioni) — ⚠ e questo non e' un difetto del ponte, e' il "
+         "motivo per cui va dichiarato" % deg["inversioni"],
+         deg["inversioni"] == 0)
+    dice("fuori ordine, assetto DEGENERE: nessun pacchetto perso (%d su %d)"
+         % (deg["tornati"], deg["spediti"]), deg["tornati"] == deg["spediti"])
 
     # ── l'ancora dell'orologio, contro se stessa ───────────────────────────
     o = Orologio(0, indirizzo="127.0.0.1")
@@ -752,6 +880,10 @@ def certifica(verboso=True):
     return {"controlli": len(esiti), "passati": passati,
             "esiti": esiti, "sano_us": sano, "risanato_us": risanato,
             "guasti": guasti,
+            # ⛔ I due assetti si CONSEGNANO tutt'e due, non solo il verde: chi
+            #    rilegge deve poter vedere che il modo degenere e' stato
+            #    provato, non dedotto.
+            "fuori_ordine": {"assetto_vero": vero, "assetto_degenere": deg},
             "esito": "PROMOSSO" if passati == len(esiti) else "BOCCIATO"}
 
 

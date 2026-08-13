@@ -62,6 +62,10 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 mkdir -p "$LAV"
 FALLITI=0
+# ⛔ Quante righe il giro ha CHIESTO di depositare, e quante ce n'erano prima:
+#    sono le due meta' di P18.  Vedi `prova_deposito()`.
+DEPOSITI=0
+PRIMA_DEP=0
 
 # ---------------------------------------------------------------------------
 # I fotogrammi veri della scena: due giri DIVERSI, con due nomi diversi.
@@ -399,7 +403,100 @@ PY
 #    dietro senza più un numero sotto.
 deposita()   # <marca> <atteso> <sano> <guasto> <risanato> [quarto]
 {
+	# ⛔ Si contano i depositi CHIESTI, non quelli riusciti: se `03-deposita.py`
+	#    fallisse, il file avrebbe una riga in meno e P18 lo direbbe.  Contare i
+	#    riusciti farebbe sparire il guasto insieme alla riga.
+	DEPOSITI=$((DEPOSITI+1))
 	python3 "$QUI/03-deposita.py" "$ESITI" "$GIRO" "$1" "$2" "$3" "$4" "$5" "${6:-}"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⭐⭐ P18/P19 — IL DEPOSITO SI RILEGGE.  Scritto il 13 agosto 2026 sera.
+#
+# ⛔ IL BUCO CHE QUESTO CHIUDE, ed era scritto nel catalogo (`01-b12-guasti.py`,
+#    voce `03-deposita`): **nessuno rileggeva `03-scena-esiti.jsonl`.**  Questo
+#    script leggeva gli esiti del METRO in `$LAV` — cioe' in /tmp — e il
+#    deposito lo scriveva e basta.  ⇒ Il guasto di catalogo (`open(esiti,"w")`
+#    invece di `"a"`: il deposito si TRONCA e resta solo l'ultima riga) lasciava
+#    il giro **tutto verde**: la riga a schermo e' identica, il codice d'uscita
+#    di `03-deposita.py` resta 0, e a sparire e' la STORIA — cioe' esattamente
+#    la cosa per cui il file era stato scritto.
+#
+# ⛔⛔ E LA META' CHE SI DIMENTICA, ED E' LA RAGIONE PER CUI SERVONO DUE
+#     SCRITTURE E NON UNA: con **una sola** riga depositata, «cresciuto di uno»
+#     e «troncato all'ultima» danno lo STESSO numero.  Un controllo che non puo'
+#     diventare rosso non e' un controllo (`LEZIONI.md` §2.2).  ⇒ sotto le due
+#     scritture questo controllo dichiara **NON ESEGUITO** invece di passare:
+#     «non ho guardato» e «va tutto bene» non si arrotondano.
+#
+# ⚠ E si contano le righe NON VUOTE, non i ritorni a capo: un file senza il
+#   `\n` finale ha una riga in meno per `wc -l` e la piena per chi la legge.
+# ═══════════════════════════════════════════════════════════════════════════
+righe_deposito()
+{
+	[ -s "$ESITI" ] || { echo 0; return 0; }
+	grep -c . "$ESITI" 2>/dev/null || echo 0
+}
+
+prova_deposito()   # <righe-prima> <quante-scritture-ha-fatto-il-giro>
+{
+	log "5. ⛔⭐ IL DEPOSITO — la storia c'e' ANCORA, o e' rimasta l'ultima riga?"
+	local prima=$1 scritte=$2
+	local dopo; dopo=$(righe_deposito)
+	inf "deposito: $ESITI"
+
+	if [ "$scritte" -lt 2 ]; then
+		ko "⛔ P18 · NON ESEGUITO: questo giro ha depositato $scritte riga/e, e con"
+		ko "   meno di due «il deposito cresce» e «il deposito si tronca» danno lo"
+		ko "   stesso numero.  ⇒ non e' «verde»: e' «non ho potuto guardare»."
+		FALLITI=$((FALLITI+1))
+		return 0
+	fi
+
+	# ── P18 · le righe di prima ci sono ancora ───────────────────────────
+	local atteso=$((prima + scritte))
+	if [ "$dopo" -eq "$atteso" ]; then
+		ok "⭐ P18 · il deposito CRESCE in coda: $prima → $dopo righe (+$scritte),"
+		ok "     e le $prima di prima ci sono ancora"
+	else
+		ko "⛔ P18 · il deposito e' passato da $prima a $dopo righe, e ne erano"
+		ko "   attese $atteso ($prima + $scritte scritture).  Se $dopo e' minore,"
+		ko "   il deposito si TRONCA invece di crescere: la storia e' sparita e"
+		ko "   resta solo l'ultima riga — con la stampa a schermo identica."
+		FALLITI=$((FALLITI+1))
+	fi
+
+	# ── P19 · e l'ultima riga si RILEGGE, e dice quel che il giro ha fatto ─
+	# ⛔ Non basta contare: una riga illeggibile e una riga giusta si contano
+	#    uguale.  ⇒ si riapre il deposito, si prende l'ULTIMA riga e si
+	#    pretende che sia il giro di M8 con i suoi QUATTRO giri dentro
+	#    (sano · guasto · risanato · senza-marca).  E' il conto che
+	#    `03-deposita.py` scrive da se': se scendesse in silenzio sarebbe il
+	#    conto gonfiato al contrario, che e' il secondo guasto del catalogo.
+	local r
+	r=$(python3 - "$ESITI" <<'PY'
+import json, sys
+righe = [x for x in open(sys.argv[1], encoding="utf-8") if x.strip()]
+if not righe:
+    print("VUOTO"); raise SystemExit(0)
+try:
+    d = json.loads(righe[-1])
+except Exception as e:                                    # noqa: BLE001
+    print("ILLEGGIBILE %s" % e); raise SystemExit(0)
+print("%s %s %s" % (d.get("marca"), d.get("quanti_giri"),
+                    "SI" if d.get("catena") else "NO"))
+PY
+)
+	if [ "$r" = "M8/giro 4 SI" ]; then
+		ok "⭐ P19 · e l'ultima riga si RILEGGE: marca «M8/giro», 4 giri dentro,"
+		ok "     e con la CATENA dichiarata accanto"
+	else
+		ko "⛔ P19 · l'ultima riga del deposito dice «$r»,"
+		ko "   atteso «M8/giro 4 SI»: il giro di M8 non e' arrivato al deposito"
+		ko "   com'e' stato fatto (marca · quanti_giri · catena dichiarata)"
+		FALLITI=$((FALLITI+1))
+	fi
+	return 0
 }
 
 # ⛔ Si legge SOLO il campo che interessa, e si stampa tutto il resto: un
@@ -679,8 +776,15 @@ tutto)
 	log "P1..P8 · i controlli della marca"
 	python3 "$QUI/03-marca-certifica.py" --cartella "$LAV" --esiti "$ESITI" \
 	    --giro "$GIRO" --rumore "${RUMORE:-3000}" || FALLITI=$((FALLITI+1))
+	# ⛔ Il conto si prende QUI, dopo la riga di `03-marca-certifica.py` — che
+	#    il deposito se lo scrive da se', senza passare da `03-deposita.py` — e
+	#    prima delle due scritture di M6 e M8.  Cosi' P18 misura esattamente le
+	#    righe che `03-deposita.py` ha in mano, e non un totale in cui la sua
+	#    parte si perde.
+	PRIMA_DEP=$(righe_deposito)
 	prova_m6
 	prova_m8
+	prova_deposito "$PRIMA_DEP" "$DEPOSITI"
 	log "Il conto del giro «$GIRO»"
 	if [ "$FALLITI" -eq 0 ]; then
 		ok "⭐ tutti i controlli passati"

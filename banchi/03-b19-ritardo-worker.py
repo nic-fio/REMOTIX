@@ -2430,8 +2430,19 @@ def principale():
     if a.verdetto:
         with open(a.verdetto) as f:
             v = json.load(f)
-        stampa_verdetto(v, a)
-        return 0
+        # ⛔⭐ LA CURA DEL 13 AGOSTO 2026 SERA — il terzo `return 0`
+        #     incondizionato, quello che il catalogo (`01-b12-guasti.py`, voce
+        #     03-b19) dichiarava «ancora li'».  `stampa_verdetto()` stampa i
+        #     rossi con `ko()`, e `ko()` STAMPA E BASTA: col guasto dentro, il
+        #     rosso restava nella prosa e chi legge a macchina vedeva verde.
+        #
+        # ⛔ E la riga non e' inventata: e' la STESSA di `misura()` (la riga
+        #    che chiude quella strada), presa tale e quale.  Le due strade
+        #    leggono lo stesso `g` dallo stesso `giudica()`, quindi rileggere
+        #    un verbale salvato e misurarlo dal vivo adesso danno lo stesso
+        #    codice d'uscita — che era il punto.
+        g = stampa_verdetto(v, a)
+        return 0 if all(g[k].get("esito") for k in TUTTI) else 1
 
     if a.misura:
         from importlib import import_module  # noqa: F401

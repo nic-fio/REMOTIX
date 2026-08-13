@@ -974,7 +974,27 @@ def p3_non_trova_quel_che_non_c_e(campioni, senza_marca, disegni_attesi=True):
     return fuori
 
 
-def p5_fuori_ordine(campioni):
+def delta_conto(prima, dopo, campo):
+    """La DIFFERENZA di un contatore cumulativo del prodotto fra due istantanee.
+
+    ⛔ Ritorna `None` — e non 0 — quando la differenza non si puo' fare: manca
+       un'istantanea, manca il campo, o il conto e' ANDATO INDIETRO (la pagina
+       si e' riaccesa e i conti sono ripartiti da zero).  «Non ho potuto
+       guardare» e «zero» non sono la stessa cosa, `LEZIONI.md` §1.9.
+    """
+    if not isinstance(prima, dict) or not isinstance(dopo, dict):
+        return None
+    a, b = prima.get(campo), dopo.get(campo)
+    if a is None or b is None:
+        return None
+    try:
+        d = int(b) - int(a)
+    except (TypeError, ValueError):
+        return None
+    return d if d >= 0 else None
+
+
+def p5_fuori_ordine(campioni, conti_prima=None, conti_dopo=None):
     """⛔ I fotogrammi arrivano su stream indipendenti.  Un anello che non lo
     regge misura la coda invece del ritardo.
 
@@ -983,10 +1003,41 @@ def p5_fuori_ordine(campioni):
        e il controllo lo DIMOSTRA invece di dichiararlo: si conta quanti
        fotogrammi sono arrivati fuori ordine, e si verifica che il ritardo dei
        fuori ordine e quello degli altri vengano dalla stessa distribuzione.
+
+    ⛔⛔ E QUI STAVA LA CECITA' PIU' GRAVE DEL BANCO — trovata la sera del 13
+        agosto 2026 e curata qui (corsia C, coda C3).
+
+        Il prodotto **scarta i fotogrammi fuori ordine PRIMA del
+        decodificatore**: `src/pagina.html:1578`, «un fotogramma il cui numero
+        e' precedente all'ultimo gia' consegnato si scarta, e la sua misura non
+        si guarda nemmeno» (§6.2, rilievo P14).  ⇒ Un fotogramma scavalcato non
+        arriva **mai** al vetro, quindi non entra **mai** nel campione di questo
+        banco, che guarda solo quel che e' stato dipinto.
+
+        ⛔ Ne discendeva che «0 fotogrammi fuori ordine» era **un'identita'
+        algebrica, non una misura**: su una rete che riordinasse davvero i
+        fotogrammi scavalcati **sparirebbero dal campione** e questa funzione
+        direbbe ancora «non eseguito».  «P5 non eseguito» e «tutto a posto»
+        avevano lo stesso aspetto.
+
+    ⭐ LA CURA: il numero c'e' gia', e ce l'ha il PRODOTTO.  `this.conti
+       .scartati_ordine` (`src/pagina.html:1235`, incrementato a `:1578`) conta
+       esattamente i fotogrammi buttati per ordine.  Si legge **come
+       differenza** fra l'inizio e la fine del giro, e si SOMMA a quel che il
+       banco vede da sé:
+
+           fuori ordine = scavalcati VISTI (dopo il decodificatore)
+                        + scartati DAL PRODOTTO (prima del decodificatore)
+
+    ⛔ E se i conti del prodotto non ci sono, questa funzione **non dice piu'
+       «non eseguito»**: dice «non ho potuto guardare», che e' un'altra cosa
+       (`LEZIONI.md` §2.0).
     """
+    scartati = delta_conto(conti_prima, conti_dopo, "scartati_ordine")
+    consegnati = delta_conto(conti_prima, conti_dopo, "consegnati")
     ord_ = [c for c in campioni if c.get("numero") is not None]
     if len(ord_) < 20:
-        return {"esito": False,
+        return {"esito": False, "scartati_dal_prodotto": scartati,
                 "perche": "⛔ meno di 20 fotogrammi con un `numero`: non ho "
                           "potuto guardare l'ordine"}
     scavalcati = 0
@@ -1007,25 +1058,74 @@ def p5_fuori_ordine(campioni):
     if d_a["n"] >= 5 and d_b["n"] >= 5:
         coerente = abs(d_a["mediana"] - d_b["mediana"]) <= max(
             8.0, 0.4 * d_b["mediana"])
+    comune = {"scavalcati": scavalcati, "totali": len(ord_),
+              "scavalcati_visti_dal_banco": scavalcati,
+              "scartati_dal_prodotto": scartati,
+              "consegnati_dal_prodotto": consegnati,
+              "dove_si_e_guardato":
+                  "⭐ DUE POSTI: gli scavalcati che il banco vede DOPO il "
+                  "decodificatore, e gli `scartati_ordine` che il prodotto "
+                  "conta PRIMA (src/pagina.html:1578).  Il banco da solo non "
+                  "puo' vedere i secondi: non arrivano al vetro"}
+
+    # ⛔⛔ IL RAMO CHE PRIMA NON C'ERA: i conti del prodotto non ci sono.
+    #     ⇒ Il banco ha guardato **meta'** del fenomeno e non puo' saperlo.
+    #     Un «non eseguito» qui sarebbe la cecita' travestita da misura.
+    if scartati is None:
+        return dict(comune, esito=False, cieco=True,
+                    ritardo_in_ordine=d_b,
+                    perche="⛔ NON HO POTUTO GUARDARE: mancano i conti del "
+                           "prodotto (`scartati_ordine` prima e dopo il giro). "
+                           "Il banco vede solo i fotogrammi DIPINTI, e un "
+                           "fotogramma scavalcato il prodotto lo scarta prima "
+                           "del decodificatore (src/pagina.html:1578): non "
+                           "arriva mai qui.  ⚠ Con %d scavalcati visti, questo "
+                           "NON e' «non eseguito» e NON e' «tutto a posto»: e' "
+                           "un'assenza di informazione" % scavalcati)
+
+    fuori_totali = scavalcati + scartati
+
     # ⛔⭐ «NESSUNO SCAVALCATO» NON E' «REGGE IL FUORI ORDINE»: e' «il fuori
     #     ordine non e' successo».  `LEZIONI.md` §1.9 applicata a un controllo
-    #     invece che a una lettura.  `[M]` 13 agosto 2026: sul giro normale gli
-    #     scavalcati sono 0 su 783, e un P5 dichiarato verde li' sarebbe verde
-    #     PER COSTRUZIONE — il caso che questo banco esiste per non fare.
+    #     invece che a una lettura.  ⭐ E adesso e' una MISURA e non piu'
+    #     un'identita' algebrica: lo zero lo dichiara il PRODOTTO, che i fuori
+    #     ordine li conta prima di buttarli.
+    if fuori_totali == 0:
+        return dict(comune, esito=False, quota=0.0, ritardo_in_ordine=d_b,
+                    fuori_ordine_totali=0,
+                    perche="⛔ NON ESEGUITO: nessuno dei %d fotogrammi e' "
+                           "arrivato fuori ordine — e stavolta e' MISURATO ai "
+                           "due capi: 0 scavalcati nel campione del banco E 0 "
+                           "`scartati_ordine` dichiarati dal prodotto su %s "
+                           "consegnati.  ⚠ Non e' «l'anello regge»: e' «il "
+                           "fenomeno non si e' presentato»"
+                           % (len(ord_), consegnati))
+
+    # ⛔ IL CASO CHE PRIMA SPARIVA: il fuori ordine e' successo, e il prodotto
+    #    l'ha assorbito PRIMA del decodificatore.  Il banco non ne vede
+    #    nessuno — e va detto che non li vede PERCHE' NON GLI ARRIVANO, non
+    #    perche' non ci sono.
     if scavalcati == 0:
-        return {"esito": False, "scavalcati": 0, "totali": len(ord_),
-                "quota": 0.0, "ritardo_in_ordine": dist(b),
-                "perche": "⛔ NON ESEGUITO: nessuno dei %d fotogrammi e' arrivato "
-                          "fuori ordine, quindi non c'e' niente da reggere.  "
-                          "⚠ Non e' «l'anello regge»: e' «il fenomeno non si e' "
-                          "presentato»" % len(ord_)}
-    return {"esito": coerente, "scavalcati": scavalcati, "totali": len(ord_),
-            "quota": round(scavalcati / len(ord_), 4),
-            "ritardo_scavalcati": d_a, "ritardo_in_ordine": d_b,
-            "perche": None if coerente else
-                      "⛔ i fotogrammi scavalcati hanno una mediana di %.1f ms "
-                      "contro %.1f: l'anello sta misurando la coda"
-                      % (d_a["mediana"], d_b["mediana"])}
+        return dict(comune, esito=True, quota=0.0, ritardo_in_ordine=d_b,
+                    fuori_ordine_totali=fuori_totali,
+                    perche="⭐ ESEGUITO, e il fenomeno c'e' stato: il prodotto "
+                           "ha scartato %d fotogrammi per ORDINE su %s "
+                           "consegnati, tutti PRIMA del decodificatore "
+                           "(src/pagina.html:1578).  ⇒ Nel campione del banco "
+                           "non ce n'e' nessuno **per costruzione**, e i %d "
+                           "che restano non possono portare dentro la coda di "
+                           "quelli scavalcati.  ⚠ Quel che questo NON dice: "
+                           "quanto sarebbe stato il loro ritardo — quei "
+                           "fotogrammi al vetro non ci arrivano mai"
+                           % (scartati, consegnati, len(ord_)))
+
+    return dict(comune, esito=coerente, quota=round(scavalcati / len(ord_), 4),
+                fuori_ordine_totali=fuori_totali,
+                ritardo_scavalcati=d_a, ritardo_in_ordine=d_b,
+                perche=None if coerente else
+                       "⛔ i fotogrammi scavalcati hanno una mediana di %.1f ms "
+                       "contro %.1f: l'anello sta misurando la coda"
+                       % (d_a["mediana"], d_b["mediana"]))
 
 
 def p6_grana(grana, isolata):
@@ -1097,6 +1197,12 @@ def giudica(verbale):
     g = verbale.get("giri", [])
     base = next((x for x in g if x.get("ritardo_chiesto_ms") == 0), None)
     camp = (base or {}).get("campioni", [])
+    # ⛔ I conti del PRODOTTO, presi come differenza fra l'inizio e la fine del
+    #    giro: sono la meta' del fenomeno che il banco non puo' vedere (vedi
+    #    `p5_fuori_ordine`).  ⚠ Si prendono dal giro a cui appartengono, o si
+    #    sommerebbe lo scarto di un giro ai fotogrammi di un altro.
+    p5g = verbale.get("giro_p5") or {}
+    camp5 = regime(p5g.get("campioni") or [])
     return {
         "P1": p1_ritardo_noto(g),
         "P2": p2_trova_quel_che_c_e(camp),
@@ -1111,10 +1217,15 @@ def giudica(verbale):
         #     (`LEZIONI.md` §1.3, §2.2).  ⇒ Si giudica sul giro in cui il fuori
         #     ordine e' stato FABBRICATO dal ponte; il giro normale resta
         #     accanto come misura di quanto spesso accade da solo.
-        "P5": p5_fuori_ordine(
-            regime((verbale.get("giro_p5") or {}).get("campioni") or [])
-            or regime(camp)),
-        "P5_spontaneo": p5_fuori_ordine(regime(camp)),
+        "P5": (p5_fuori_ordine(camp5, p5g.get("conti_pagina_prima"),
+                               p5g.get("conti_pagina"))
+               if camp5 else
+               p5_fuori_ordine(regime(camp),
+                               verbale.get("conti_pagina_prima"),
+                               verbale.get("conti_pagina"))),
+        "P5_spontaneo": p5_fuori_ordine(regime(camp),
+                                        verbale.get("conti_pagina_prima"),
+                                        verbale.get("conti_pagina")),
         "P6": p6_grana(verbale.get("grana"), verbale.get("isolata")),
         "P7": p7_ritmo(camp, verbale.get("conti_pagina")),
         "P8": p8_costo_del_banco(verbale.get("costo_lettura_us", []),
@@ -1168,9 +1279,21 @@ def verbale_sintetico(seme=7, quanti=900, ritardi=(0, 25, 60), ritardo_vero_ms=2
             c["numero"] = max(1, c["numero"] - 2)
     senza = [{"celle": [rnd.random() * 255.0 for _ in range(144)], "visto": True,
               "marca": {"c_e": False, "perche": "rumore"}} for _ in range(120)]
+    # ⛔ I CONTI DEL PRODOTTO, PRIMA E DOPO — e sono della forma vera, presi da
+    #    un verbale VERO (`giro b17-20260813-193656`, /tmp/03-b17/verbale.json).
+    #    Senza le DUE istantanee P5 non ha la meta' del fenomeno che gli serve
+    #    e dice «non ho potuto guardare»: e' esattamente il ramo nuovo, e il
+    #    verbale sintetico deve poterlo esercitare in tutt'e due i versi.
+    conti_prima = {"stream": 100, "completi": 100, "consegnati": 98,
+                   "dipinti": 98, "scartati_ordine": 0, "scartati_misura": 0,
+                   "buchi": 0}
+    conti_dopo = {"stream": 100 + quanti, "completi": 100 + quanti,
+                  "consegnati": 98 + quanti, "dipinti": 98 + quanti,
+                  "scartati_ordine": 0, "scartati_misura": 0, "buchi": 0}
     return {"giri": giri, "senza_marca": senza,
             "grana": {"salti": 4000, "minimo_ms": 0.005, "mediano_ms": 0.02},
-            "isolata": True, "conti_pagina": {"dipinti": quanti},
+            "isolata": True,
+            "conti_pagina_prima": conti_prima, "conti_pagina": conti_dopo,
             "costo_lettura_us": [rnd.gauss(600, 120) for _ in range(500)],
             "fps_senza_lettura": 59.8, "fps_con_lettura": 58.9}
 
