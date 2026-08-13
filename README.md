@@ -326,6 +326,57 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
+> ### ⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026**, mattina
+>
+> ⭐⭐⭐ **La fase 2 consegna: l'utente ha visto il proprio desktop dentro una scheda del browser**,
+> a schermo pieno, e ha detto *«è lo sfondo GNOME, è OK»*. La storia sta in
+> [`fasi/02-primo-fotogramma.md`](fasi/02-primo-fotogramma.md), che è **il documento da leggere per
+> primo** insieme a questo riquadro.
+>
+> **Lo stato, verificato prima di scrivere** (albero pulito, `ec646d5`):
+>
+> | | |
+> |---|---|
+> | ⭐ **il metro della fase** | ha girato **sulla catena vera** e dice **PROMOSSO**: piano 1 **PSNR-Y 62,09 dB** (soglia 45), e **12 guasti su 12** — non ha più punti ciechi |
+> | ⛔ **il catalogo** | **13 su 15**: restano **B9** e **P5R** scadute. ⏳ Un giro di ricertificazione era **in corso** quando questa sessione si è chiusa: **ricontrolla il conto**, non fidarti di questo numero |
+> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, che è **quella che l'utente apre** — gira **da root** (`02-figlio-accendi.sh`), e serve la pagina col riscalamento (`adatta_vista` **3**, verificato col conteggio) |
+> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Fatto il 13: **2,04 giorni su 7** |
+>
+> #### ⛔ Che cosa manca per chiedere il giudizio all'utente
+>
+> **Una cosa sola**: il catalogo pieno. ⇒ Poi gli si chiede *«questo vale come primo fotogramma?»*
+> — ⛔ **e insieme al verde vanno dette tre cose**, o il giudizio è preso su metà quadro:
+>
+> 1. **il piano 2 del metro non è applicabile** e lo dichiara: la codifica perde **meno** della tela;
+> 2. ⛔ **i dieci bit sono otto promossi**, e lo sono **a tutt'e due i capi** — `DECISIONI.md` §2.3-ter
+>    (Mutter non li dà per nessuna strada) e la misura sul telefono (`copyTo` riuscito, 4 byte per
+>    pixel);
+> 3. ⛔ **il telefono non è mai stato misurato sull'hardware**: senza cavo dati non si legge il nome
+>    del decodificatore, e il criterio A/B misura **spesa fissa**. `[?]` dichiarata.
+>
+> #### ⚠ Le `[?]` aperte, dichiarate e non curate
+>
+> **M5** — uno scarto di **crominanza fra due decodificatori** (0,9791 contro un limite di 0,98): è
+> l'unico rosso mai uscito dal metro, ⛔ **non si riproduce sulla mira**, e **la soglia non è stata
+> allargata**. · **P15** (§7.1, il secondo di grazia sulle coordinate: l'ultimo posto dove un orologio
+> decide) · **la risoluzione del desktop**, `1920×1080`, ⛔ **ereditata dalla scena di un banco senza
+> decisione né misura** — e in v1 era **2560×1080**.
+>
+> #### ⭐ Le due lezioni nuove, e valgono più del codice
+>
+> **`LEZIONI.md` §1.13** — *una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta
+> di un passo a ogni rilettura*: la stessa riga di `RCP.md` è stata corretta **sette volte**
+> (P8 → P11 → P13 → P14 → P19 → P20 → P21), e ogni volta la grandezza giusta **il protocollo la
+> portava già**. · **§1.14** — *un controllo che accetta «una delle due strade» nasconde una strada
+> rotta per sempre*.
+>
+> ⭐⭐ **E la cosa che questa sessione ha dimostrato meglio di ogni numero**: i **tre** difetti più
+> gravi della giornata li ha trovati **l'utente in una mattina**, e nessuno dei 518 file di banco li
+> vedeva — il desktop di un altro utente, la pagina che restava vuota, l'immagine grande come un
+> francobollo. ⇒ `CODER.md` **I8** non è una frase: *il metro è quel che l'utente vede*.
+>
+> ---
+>
 > ### ⭐ DA QUI SI RIPRENDE — **12 agosto 2026**, notte
 >
 > **Lo stato**: albero pulito (`636f088`), **14 banchi su 14 certificati e valgono oggi**, terreno
