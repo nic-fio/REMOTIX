@@ -348,12 +348,31 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, NOTTE FONDA.** ⇒ **PRIMA IL PALCO, POI LA PAGINA, POI IL NUMERO**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **IL NUMERO C'È: 78,1 ms — E IL COLLO DI BOTTIGLIA È IL DISEGNO**
 >
-> *La sessione della sera è finita. ⛔ **Non ha prodotto il numero della fase**, e la ragione non è
-> che sia mancato il tempo: **il codificatore hardware non riceve un fotogramma**. In cambio ha
-> smentito **tre righe** su cui il progetto stava per costruire — e il conto per intero sta in
-> [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).*
+> *La fase 3 ha il suo numero **con la codifica in hardware**, e la codifica in hardware è **nel
+> prodotto**, non su una copia. ⏳ **Manca solo il giudizio dell'utente**, preparato in
+> [`fasi/rapporti/F3-giudizio-elenco.md`](fasi/rapporti/F3-giudizio-elenco.md). Il conto per intero
+> sta in [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).*
+>
+> | | totale | codifica | **disegno** | fps | P1 |
+> |---|---|---|---|---|---|
+> | AV1 in software *(la 7561)* | **71,86 ms** | 39,67 | ⭐ 9,07 | 22,0 | ✅ |
+> | ⭐ **HEVC in hardware** *(la 7571, il deposito)* | **78,12 ms** | ⭐ 31,78 | ⛔ **28,00** | ⭐ **30,0** | ✅ |
+>
+> ⭐⭐ **L'ARCHITETTURA È ASSOLTA**: togliendo l'hardware si perdono **31,7 ms** e **gli altri quattro
+> tratti non si muovono** (Mutter −0,02 · filo −0,12 · decodifica −0,76). La chiave passa da
+> **114,5 ms a 5,1**, e il ritmo **raddoppia**.
+> ⛔ **Ma il tetto SFORA** — 78,1 contro 50, e **94-118 ms** sul vetro col pezzo cieco dichiarato.
+>
+> > ### ⛔⛔⛔ E IL COLLO DI BOTTIGLIA NON È PIÙ LA CODIFICA: È IL DISEGNO
+> > **28,0 ms su 78,1 — il 36 %** — contro i **5 ms** che ormai costa la codifica.
+> > ⭐ E si vede **solo** perché i giri sono **quattro**: con due soli si leggerebbe *«−31 ms,
+> > vittoria»* oppure *«l'hardware non serve»*. **Sono tutt'e due sbagliate.**
+> > ⇒ **È il primo lavoro della prossima fase, e non era in nessun piano.**
+>
+> ⚠ **Il numero è 78,1 e non il 75,2 misurato su una copia**: quel giro aveva un controllo del banco
+> **rosso**, questo no. ⛔ **Si è preso il peggiore dei due.**
 >
 > #### ⛔⛔ I tre lavori, in quest'ordine e non in un altro
 >
