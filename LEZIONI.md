@@ -797,12 +797,47 @@ sessione»*. Il «sì» scartato come anomalia era **l'unico giro giusto**.
 rumore, è una **variabile non dichiarata**. ⇒ *Quando un banco dà due esiti diversi sulla stessa
 domanda, la cosa da cercare non è quale dei due è vero: è **che cosa è cambiato fra i due giri**.*
 
-⚠ **Due sorelle minori, pagate lo stesso giorno e della stessa famiglia:**
+⚠ **Tre sorelle minori, pagate lo stesso giorno e della stessa famiglia:**
 
 | | |
 |---|---|
 | ⛔ **un confronto che non era un confronto** | due codificatori cronometrati **a bitrate libero**: quello che sembrava concorrenziale consegnava **trenta volte meno byte**. ⇒ *«Più veloce» a un trentesimo del lavoro non è più veloce* — **si fissa il lavoro, e i fotogrammi in uscita si CONTANO** |
 | ⛔ **un elenco creduto invece che girato** | `av1_vaapi` **compare** fra i codificatori di `ffmpeg`, e all'uso esce **218**: l'hardware l'entrypoint non ce l'ha. ⇒ *Un elenco dice che il codice c'è, non che la macchina lo sa fare* |
+| ⛔⛔ **una dichiarazione d'accordo con sé stessa e discorde dai byte** | vedi §2.0-bis qui sotto: **è costata il codec dell'intero prodotto** |
+
+### ⛔⛔ 2.0-bis Chiedere un formato non è averlo — si rilegge quel che si è PRODOTTO
+
+*13 agosto 2026, notte. ⛔ **Il prodotto ha codificato in software per giorni per una riga di un
+banco**, e la cosa notevole è che **ogni pezzo della catena rispondeva correttamente alla domanda
+che gli era stata fatta**.*
+
+Un generatore di sonde chiedeva a libx265 il profilo per nome — `-profile:v main10` — e due righe
+dopo passava `-x265-params …:**keyint=1**:…`. ⛔ **`keyint=1` fa emettere «Main 10 Intra», cioè
+`Rext`, `profile_idc = 4`, annullando il profilo chiesto — e senza un errore.**
+
+Quelle sonde finivano dentro la pagina del prodotto, che le usava per decidere quali codec
+dichiarare al server:
+
+| chi | che cosa diceva | ed era **giusto** |
+|---|---|---|
+| la **stringa** | `hev1.1.6…` — profilo **1** | sì, per quel che dichiarava |
+| i **byte** | `profile_idc = **4**` | ⛔ e nessuno li leggeva |
+| `isConfigSupported` | **true** | sì: risponde **alla stringa** |
+| il decodificatore | `EncodingError` **sui byte** | sì |
+| la pagina | *«questo codec non arriva al pixel»* | sì, dato quel che vedeva |
+| il server | negozia **l'altro codec** | sì: prende la prima voce del client |
+
+⇒ **Nessuno ha sbagliato, e il risultato era sbagliato.** Un difetto così non lo trova chi rilegge
+il codice: lo trova **chi legge i byte prodotti**.
+
+> ⛔ **La regola**: `CODER.md` §3.9 dice *«quando si chiede un componente per nome, si verifica che
+> abbia obbedito»* — e finora è stata applicata **all'ingresso**. ⇒ **Vale anche all'USCITA**: quando
+> si dichiara un formato, **si rilegge il flusso e si confronta con la dichiarazione**. Una stringa e
+> un flusso che non si guardano in faccia **non sono due controlli: sono zero**.
+
+⭐ **E il costo del controllo mancante era due righe**: `ffprobe` sul flusso appena prodotto. Il
+banco che adesso lo fa (`banchi/02-pagina-sonda-verifica.py`) legge le sonde **dal file del
+prodotto** invece di ricopiarle, e **conta i fotogrammi** invece di chiedere.
 
 ### 2.1 La regola dei tre client, e le sue forme insidiose
 

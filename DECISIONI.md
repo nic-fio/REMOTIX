@@ -920,10 +920,45 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > `VideoDecoder` — che contenitore non ne ha — **tutti e 120**. ⇒ Seconda ragione, indipendente, per
 > cui la misura con `<video>` non bastava: **non contava nemmeno la stessa cosa.**
 >
-> ⚠ **La `[?]` che RESTA, ed è di un altro pezzo**: lì i chunk arrivano **già spezzati, da un file
-> completo, su localhost**. Nel prodotto arriveranno **dalla rete, a pezzi**, e a spezzare sarà il
-> client. ⇒ È chiuso *«il decodificatore accetta e conta»*; **non** è chiuso *«il nostro
-> impacchettatore produce chunk che accetta»*.
+> ⭐⭐ **E anche QUESTA è stata chiusa, un'ora dopo, dalla corsia B**: i pacchetti versati dal
+> **nostro** codificatore, col confine letto dalla lunghezza — *il prodotto non spezza niente, il
+> confine è già scritto* — danno **120 fotogrammi su 120, 3 giri su 3**, `format: null`; controllo
+> negativo con `--disable-gpu` → **0**.
+>
+> ---
+>
+> ### ⛔⛔⛔ E LA RAGIONE PER CUI SI NEGOZIAVA `codec 2` NON ERA NESSUNA DI QUELLE CERCATE
+>
+> *13 agosto 2026, notte. **Il prodotto ha codificato in software per giorni per una riga di un
+> banco**, e ogni pezzo della catena rispondeva correttamente alla domanda che gli era stata fatta.*
+>
+> `banchi/02-pagina-sonda-codec.py:121` passava `-x265-params …:**keyint=1**:…`, e `keyint=1` fa
+> emettere a libx265 **«Main 10 Intra» — Rext, `profile_idc = 4`** — ⛔ **annullando il
+> `-profile:v main10` chiesto quattro righe sopra**. *Il profilo era stato chiesto e non applicato,
+> senza un errore.* ⚠ Ed è la forma d'errore che **il commento di quello stesso file descrive**.
+>
+> Le due sonde finiscono **dentro `src/pagina.html`**, e la pagina le usa per decidere che cosa
+> mettere nel `CIAO`:
+>
+> | pezzo | che cosa faceva | ed era giusto |
+> |---|---|---|
+> | la **stringa** dichiarata | `hev1.1.6…` / `hev1.2.4…` — profili **1** e **2** | sì, per quel che dichiarava |
+> | i **byte** della sonda | `profile_idc = **4**` (Rext) | ⛔ no, e nessuno li leggeva |
+> | `isConfigSupported` | **`true`** | sì: risponde **alla stringa** |
+> | il decodificatore | `EncodingError` **sui byte** | sì |
+> | `pagina.html` | *«HEVC non arriva al pixel»* ⇒ fuori dal `CIAO` | sì, dato quel che vedeva |
+> | `rcp.c:1128` `prima_comune()` | prende la prima voce **dell'elenco del client** ⇒ `av1` = **2** | sì |
+>
+> ⭐ **La cura è di due righe** — tolto `keyint=1`, sonde rigenerate — **e il protocollo non si
+> tocca**. `[M]` `ffprobe` dà adesso `profile=Main` e `profile=Main 10` (erano Rext), e
+> `banchi/02-pagina-sonda-verifica.py` — che legge le sonde **dal file del prodotto** invece di
+> ricopiarle e **conta i fotogrammi** — dà **4 su 4, 3 giri su 3**, con le due AV1 come controllo
+> positivo. Prima: **zero fotogrammi**.
+>
+> ⛔ **La riga da portarsi via**: *chiedere non basta*. La stringa e il codec erano d'accordo **fra
+> loro** e discordi **dal flusso**, e nessun controllo guardava i byte. ⇒ Quando si dichiara un
+> formato, **si rilegge quel che si è prodotto** — è `CODER.md` §3.9 (*si chiede per nome e si
+> verifica che sia stato dato*) applicato all'**uscita**, non solo all'ingresso.
 
 ---
 
