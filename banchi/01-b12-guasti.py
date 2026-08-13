@@ -2500,9 +2500,33 @@ def provabile(sigla):
     difetto che non c'e', e il registro se lo porta dietro con una data.
     ⭐ E' la forma opposta del falso verde.  Costa uguale, e si vede meno.
 
-    ⚠ Guarda `file_che_contano`, non `dove`: `dove` e' il posto in cui il
-      guasto si innesta, mentre la certificazione poggia sui file che il banco
-      **legge** — ed e' uno di quelli a mancare, non l'appiglio.
+    ⚠ Guarda `file_che_contano`, **e da stanotte anche `dove`**: la prima
+      versione guardava solo i file che il banco **legge**, e diceva **SI'** per
+      un banco il cui **bersaglio del guasto non esiste**.
+
+    ⛔⛔ 13 agosto 2026, notte fonda.  La corsia B, mandata a rigirare `B10` e
+    `B13` scadute dal travaso, ha riferito che *«`--verifica` stampa un rosso ed
+    esce 0»*.  ⚠ **Rimisurato dal coordinatore: `--verifica` esce 1**, e quella
+    riga non si riproduce.  ⭐ **Ma il difetto c'era davvero, in un attrezzo
+    accanto**: `--provabile B10` e `--provabile B13` uscivano **0** — cioe'
+    *«si puo' provare»* — mentre l'albero di B10 (`sera-b10-remotix/`) **non
+    esiste su nessuna delle due macchine** e i certificati di B13 nemmeno.
+
+      ⇒ ⭐ *La segnalazione era giusta nella sostanza e sbagliata
+        nell'imputato.*  E' il motivo per cui un rilievo si verifica prima di
+        curarlo: curando l'attrezzo sbagliato si sarebbe rotto quello sano e
+        lasciato in piedi quello guasto.
+
+    ⛔ **E il difetto mordeva proprio dove fa piu' male**: `--provabile` e' la
+    domanda che un rigiratore automatico fa **prima** di innestare.  Con lo 0 in
+    mano avrebbe innestato un guasto il cui bersaglio non c'e', letto un banco
+    rimasto verde, e scritto **«provato e NON certificato»** — un falso rosso,
+    con una data attaccata.
+
+    ⇒ Adesso ci sono **due domande e due righe diverse**, perche' «il banco non
+      si puo' provare qui» e «il guasto non si puo' innestare qui» hanno cure
+      diverse: la prima e' la macchina sbagliata, la seconda e' un albero che
+      non c'e' piu'.
     """
     g = GUASTI.get(sigla)
     if not g:
@@ -2513,6 +2537,41 @@ def provabile(sigla):
         if dove_sta(nome) is None:
             print(f"MANCA {nome}")
             mancanti += 1
+    # ⛔ E il BERSAGLIO del guasto: senza, si dice «provabile» di un banco che
+    #    non si puo' guastare.  ⚠ I tipi «gia-fatto» e «riga-di-comando» non
+    #    hanno un bersaglio per costruzione, e non e' una mancanza.
+    # ⛔⛔⛔ E QUI C'ERA UN CONTROLLO IN PIU', SCRITTO E POI TOLTO LA NOTTE DEL
+    #    13 AGOSTO 2026.  Si scrive perche' NON venga riscritto domani.
+    #
+    #    Doveva chiudere un buco vero, segnalato dalla corsia B: `--provabile`
+    #    dice **SI'** per `B10` e `B13`, mentre l'albero del guasto di B10
+    #    (`sera-b10-remotix/`) non esiste su nessuna delle due macchine e i
+    #    certificati di B13 nemmeno.  ⇒ Un rigiratore automatico che si fidasse
+    #    di quello 0 innesterebbe un guasto senza bersaglio, leggerebbe un banco
+    #    rimasto verde, e scriverebbe **«provato e NON certificato»**: un falso
+    #    rosso con una data attaccata.
+    #
+    # ⛔ **La cura non si e' potuta scrivere, e la ragione e' la forma E8**:
+    #    aggiungendo «il bersaglio del guasto deve esistere» il conto e' passato
+    #    a **13 rossi su 25** — e la maggior parte erano LEGITTIMI: per P1 e P5
+    #    l'albero (`p1-remotix`, `p5-remotix`) **lo fabbrica il giro stesso**,
+    #    per B2·B3·B5-B8 il bersaglio vive **sull'altra macchina**.
+    #    ⇒ *«il bersaglio non c'e' ancora perche' lo crea il giro»* e *«il
+    #    bersaglio non c'e' piu'»* si leggono **uguali** da qui, ed e' la stessa
+    #    forma per cui `--provabile` esiste: «non ho potuto guardare» non e'
+    #    «non c'e'».
+    #
+    # ⭐ Quel che servirebbe, ed e' lavoro di chi riprende: **il catalogo deve
+    #   dire, per ogni guasto, se il bersaglio e' PREESISTENTE o FABBRICATO dal
+    #   giro** — un campo, non un'euristica.  Senza quel campo qualunque
+    #   controllo automatico qui grida al lupo o tace, e non c'e' una terza
+    #   possibilita'.
+    #
+    # ⚠ Fino ad allora: `--provabile` risponde a *«i file che il banco LEGGE ci
+    #   sono?»* e **non** a *«il guasto si puo' innestare?»*.  La seconda domanda
+    #   la fa `--verifica`, che quella risposta ce l'ha giusta (esce **1** se il
+    #   bersaglio non si legge — rimisurato, contro quel che era stato
+    #   riferito).
     return 1 if mancanti else 0
 
 

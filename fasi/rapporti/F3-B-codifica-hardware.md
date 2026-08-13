@@ -702,3 +702,113 @@ apparire il prodotto **peggiore** di quel che è.
 | **CHUWI** | Xvfb `:90` e profili chiusi e cancellati dal giro stesso |
 
 ⇒ ⭐ **La 7571 non mente**: dice HEVC in hardware, e fa HEVC in hardware, fino al pixel dipinto.
+
+---
+---
+
+# APPENDICE C — K6: `B10` e `B13` NON SI RIGIRANO, E IL PERCHÉ È MISURATO
+
+*14 agosto 2026, ~01:00. ⛔ **Mi sono fermato invece di forzare**, come da istruzione: qui c'è la
+verità sul catalogo, non il catalogo pieno.*
+
+## C0. In una riga
+
+⛔ **Nessuna delle due si può rigirare stanotte**, e **non per mancanza di tempo**: il posto in cui
+il guasto si innesta **non esiste** su nessuna delle due macchine. ⭐ **E non l'ho dedotto: l'ho
+chiesto al catalogo**, che lo dice con parole sue.
+
+## C1. B10 — l'albero del guasto non c'è
+
+```
+$ python3 banchi/01-b12-guasti.py --verifica B10
+⛔ non si legge: …/banchi/sera-b10-remotix/autenticazione.c
+   Non e' «l'appiglio non c'e'»: e' che non si e' potuto guardare.
+```
+
+⚠ **Su tutt'e due le macchine**: `banchi/sera-b10-remotix/` non esiste su CHUWI, e
+`/media/REMOTIX/src/sera-b10-remotix/` non esiste sul server. Restano solo i **residui** del giro
+dell'11 agosto (`01-b10-uscita-sano.txt`, `01-b10-costruisci.log`, `b10-esiti-cert.jsonl`):
+⛔ **gli esiti sono sopravvissuti all'albero che li ha prodotti.**
+
+⇒ Per rigirarla va **ricostruito quell'albero** — e B10 porta `costa: ricostruisce`, cioè un
+`costruisci.sh` intero, non una copia di file.
+
+## C2. B13 — la cartella dei certificati non c'è, e il lanciatore punta all'albero SBAGLIATO
+
+```
+$ python3 banchi/01-b12-guasti.py --verifica B13
+⛔ non si leggono i due file:
+   /media/REMOTIX/b2-certificati/pagina.pem:   ⛔ NO
+   /media/REMOTIX/b2-certificati/sessione.pem: ⛔ NO
+   Non e' «sono uguali»: e' che non si e' potuto guardare.
+```
+
+`{CERT}` = `/media/REMOTIX/b2-certificati`, e **quella cartella non esiste** su nessuna delle due.
+
+⛔⛔ **E c'è una seconda ragione, più grave della prima, che avrei potuto non vedere**:
+`banchi/01-b13-sera-certifica.sh` si appoggia a `01-b13-sera-accendi.sh`, che ha
+**`D=/srv/src/remotix` scritto in chiaro** e non è puntabile altrove. ⇒ Rigirare B13 con
+l'attrezzo com'è **certificherebbe il binario VECCHIO** — l'albero che il coordinatore ha lasciato
+indietro **apposta** come configurazione «prima».
+
+⚠ **E sarebbe il contrario di quel che K6 serve a fare**: B13 è scaduta *perché il `Makefile` è
+cambiato*; certificarla contro l'albero che quel `Makefile` non ce l'ha produrrebbe una **riga verde
+che descrive il prodotto di ieri** — esattamente la cosa che K6 esiste per togliere.
+
+⛔ **E NON ho innestato il guasto nei certificati della 7571**, che sarebbe stata la strada corta:
+quel guasto sostituisce `pagina.pem` con `sessione.pem` sulla porta che **l'utente aprirà
+domattina**. *Meglio una porta spenta che una porta che mente* — e ancora meglio non toccarla.
+
+## C3. ⛔ Il rigiratore si sarebbe rifiutato, e per la ragione sbagliata
+
+`banchi/03-k6-rigira.sh` pretende che il comando **nomini `01-b12-copie`**. ⭐ La guardia è giusta
+nell'intento. ⚠ Ma **né B10 né B13 hanno il guasto lì**:
+
+| | `dove` (il punto d'innesto) |
+|---|---|
+| **B10** | `banchi/sera-b10-remotix/autenticazione.c` |
+| **B13** | `{CERT}/pagina.pem` |
+
+⇒ Per queste due la guardia **non è applicabile**: chiede una stringa che il comando corretto non
+può contenere. ⛔ **Non ho toccato il rigiratore** — non è mio.
+
+## C4. ⚠ E una cosa che ho trovato mentre guardavo, e vale più delle due righe di catalogo
+
+⛔⛔ **`--verifica` stampa un ROSSO e poi esce 0.**
+
+```
+$ python3 banchi/01-b12-guasti.py --verifica B10 ; echo $?
+⛔ non si legge: …/sera-b10-remotix/autenticazione.c
+0
+```
+
+⇒ È **la trappola n. 4 del catalogo** — *«il rosso resta nella prosa e chi legge a macchina vede
+verde»* — dentro l'attrezzo che il catalogo usa per guardarsi. Tre banchi l'hanno già pagata.
+⚠ Un rigiratore automatico che leggesse il codice d'uscita di `--verifica` concluderebbe **«si può
+innestare»** di un guasto il cui bersaglio non esiste, e poi scriverebbe un rosso che non attribuisce
+niente — **la stessa forma del falso rosso di stanotte**, un passo più a monte.
+
+⭐ **E `--provabile` e `--verifica` si contraddicono**, ed è giusto che lo facciano: `--provabile`
+guarda i `file_che_contano` (tutti presenti ⇒ esce 0), `--verifica` guarda `dove` (assente). ⚠ Ma
+**solo la seconda risponde alla domanda «posso rigirarla?»**, e solo la prima ha un codice d'uscita
+che si può leggere a macchina.
+
+## C5. Che cosa serve, e a chi
+
+| | che cosa manca | costo |
+|---|---|---|
+| **B10** | ricostruire `sera-b10-remotix/` (copia del prodotto **col Makefile nuovo**) e rigirare `01-b10-lancia.sh` sul server, su porte proprie | ⛔ una ricostruzione |
+| **B13** | una cartella di certificati propria **e** un modo di puntare `01-b13-sera-accendi.sh` a un albero diverso da `/srv/src/remotix` (oggi è in chiaro) | ⚠ due righe in un banco **non mio** |
+| ⭐ **il rigiratore** | la guardia `01-b12-copie` va resa **relativa a `dove`** invece che a una stringa fissa, e `--verifica` deve **portare il rosso nel codice d'uscita** | ⚠ file **non miei** |
+
+## C6. ⛔ Che cosa NON ho scritto, ed è una scelta
+
+**Non ho creato `banchi/01-b12-registro-B.jsonl`.**
+
+⚠ Scrivere una riga «provato e NON certificato» sarebbe un **falso rosso**: il guasto non è mai stato
+in gioco. È *identica* alla riga falsa che il coordinatore ha scritto stanotte col rigiratore, e che
+mi ha raccontato apposta perché non la rifacessi. ⇒ A catalogo B10 e B13 restano **SCADUTE**, che è
+la verità: *«la loro riga verde descrive un prodotto di ieri»* — e adesso c'è anche scritto perché
+non si è potuta rifare.
+
+⭐ **Nessuna porta toccata**: `7448 · 7501 · 7561 · 7571` prima e dopo. La 7571 è viva.

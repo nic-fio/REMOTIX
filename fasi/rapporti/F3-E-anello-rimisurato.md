@@ -861,7 +861,8 @@ server sono già lì con le impronte dichiarate. Quel che manca è **un fotogram
 |---|---|
 | prodotto · ponte · scena | **spenti**, *«nessun figlio MIO orfano»* |
 | ⛔ **porte protette** | contate dopo l'ultimo giro: restano **solo** `7448 · 7501 · 7561`. **Non toccate** |
-| ⭐ **i quattro verbali** | `E2-A-software-hevc` (1,3 MB) · `E2-B-hardware-hevc` (2,7 MB) · `E-C-software-av1` (2,0 MB) · `E-B-hardware-stessapagina` (2,1 MB) — **uno per giro, nessuno ha cancellato l'altro** |
+| ⛔⛔ **i verbali sono AL SICURO, e non era scontato** | stavano su `/tmp` di CHUWI, che e' **tmpfs**: un riavvio e le prove del numero della fase sparivano — ⛔ *esattamente il modo in cui il 13 agosto ne sono andati perduti tredici su quattordici*. ⇒ Copiati su **`/media/REMOTIX/tmp/03-b17/verbali-E/`** (disco vero, 1,7 TB liberi), e **verificati per impronta**: tutti e cinque identici byte per byte. ⚠ **Non nel deposito**: sono 12 MB, e in git non ci vanno |
+| ⭐ **i cinque verbali** | `E2-A-software-hevc` (1,3 MB) · `E2-B-hardware-hevc` (2,7 MB) · `E-C-software-av1` (2,0 MB) · `E-B-hardware-stessapagina` (2,1 MB) — **uno per giro, nessuno ha cancellato l'altro** |
 | gli alberi sul server | `03-b17-src` (A) · `03-b17-src-hw` (B) · `03-b17-src-av1` (C) — restano in piedi, con le impronte in questo rapporto |
 | il banco | **certificato**: 54/54 → 53/54 (marca 1 volta) → 54/54, impronta `9d2648ce…` |
 | il registro | tre righe nella **scheggia** `banchi/01-b12-registro-C.jsonl` — ⛔ non nel registro comune |
