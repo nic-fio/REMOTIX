@@ -118,7 +118,35 @@ def costruisci_hevc(profondita, guasto=""):
         # ⛔ `info=0` toglie la SEI di x265 con dentro la riga di comando: sono
         #    ~1,5 KB di testo che finirebbero in base64 dentro la pagina del
         #    prodotto senza dire niente a nessuno.
-        "-x265-params", "log-level=none:bframes=0:keyint=1:info=0",
+        #
+        # ⛔⛔⛔ E `keyint=1` E' STATO TOLTO IL 13 AGOSTO 2026 SERA, PERCHE'
+        #    ANNULLAVA IL `-profile:v` CHIESTO QUATTRO RIGHE SOPRA — ed e'
+        #    costato il codec dell'intero prodotto.
+        #
+        #    Con `keyint=1` libx265 emette **Main 10 Intra**, cioe' `Rext`,
+        #    `profile_idc = 4`: esattamente la cosa che il commento qui sopra
+        #    dichiara di voler evitare.  ⇒ Il profilo **era stato chiesto e non
+        #    applicato, senza un errore**.
+        #
+        #    ⛔ E il danno non era nel banco: le due sonde finiscono **in
+        #    `src/pagina.html`**, e la pagina le usa per decidere che cosa
+        #    mettere nel `CIAO`.  La stringa dichiarata diceva `hev1.1.6` /
+        #    `hev1.2.4` — profili 1 e 2 — e **i byte dicevano 4**.
+        #    `isConfigSupported` risponde alla STRINGA e diceva `true`; il
+        #    decodificatore cadeva sui BYTE con `EncodingError`; la pagina
+        #    concludeva «HEVC non arriva al pixel» e non lo metteva nel `CIAO`;
+        #    e il server, che prende la prima voce dell'elenco del CLIENT,
+        #    negoziava **AV1**.
+        #
+        #    ⇒ ⭐ **Il prodotto ha codificato in software per giorni per una
+        #    riga di un banco**, e nessuno l'ha visto perche' ogni pezzo della
+        #    catena rispondeva correttamente alla domanda che gli era stata
+        #    fatta.  `[M]` togliendo `keyint=1` esce **Main 10**, riprodotto
+        #    tre volte.
+        #
+        #    ⚠ E si e' visto SOLO andando a leggere i byte prodotti: la stringa
+        #    e il codec erano d'accordo fra loro e discordi dal flusso.
+        "-x265-params", "log-level=none:bframes=0:info=0",
         "-color_primaries", "bt709", "-color_trc", "bt709",
         "-colorspace", "bt709",
         "-f", "hevc", "pipe:1",
