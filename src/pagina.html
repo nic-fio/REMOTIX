@@ -83,6 +83,15 @@
 <title>REMOTIX</title>
 <style>
   :root { color-scheme: light dark; }
+  /* ⛔⭐ LA BARRA DI SCORRIMENTO C'E' SEMPRE, e non e' un gusto: e' quel che
+     rende STABILE la vista.  La vista si misura da `documentElement.clientWidth`
+     (§4.5: «la misura in cui il client disegnera'»), e quel numero cambia di
+     una quindicina di pixel nell'istante in cui compare una barra verticale.
+     ⚠ Senza questa riga: si misura la vista SENZA barra → si da' alla tela
+       quella larghezza → la tela alta quanto la finestra fa comparire la barra
+       → la tela adesso e' 15 px piu' larga della finestra → compare anche la
+       barra ORIZZONTALE.  Un ciclo che comincia da una misura giusta. */
+  html { overflow-y: scroll; }
   body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem;
          display: flex; justify-content: center; }
   main { width: 100%; max-width: 34rem; }
@@ -129,13 +138,57 @@
                    white-space: pre-line; }
   #dichiarazione:empty { display: none; }
 
-  /* ⛔ La tela sta SOTTO il modulo e non sopra: `web.md` §1.2 C — niente
-     elementi sopra la tela, o cadono il percorso overlay e la tela
+  /* ⛔ La tela sta SOTTO il modulo e non sopra: `web.md` §1.2 C (rilievo S4) —
+     niente elementi sopra la tela, o cadono il percorso overlay e la tela
      desincronizzata.  ⚠ Alla fase 2 non c'e' ancora ne' l'uno ne' l'altra, ma
-     la forma si decide adesso: scoprirlo alla fase 4 costa una riscrittura. */
-  #schermo { display: none; width: 100%; height: auto; background: #000;
-             image-rendering: pixelated; margin-top: 1rem; }
-  body[data-schermo="acceso"] #schermo { display: block; }
+     la forma si decide adesso: scoprirlo alla fase 4 costa una riscrittura.
+     ⭐ «Sotto» e' l'ordine nel DOCUMENTO, e resta.  Quel che cambia qui sotto
+        e' solo l'ORDINE VISIVO quando la tela e' accesa: `order: -1` la porta
+        in cima senza spostarla nel documento e senza metterci niente sopra. */
+
+  /* ⛔⭐ LA CORNICE E' LA VISTA — e questa e' la cura del 13 agosto 2026.
+   *
+   * `[M]` quel giorno, dall'utente in persona: *«adesso vedo un'immagine
+   * piccola dello sfondo del desktop»*.  Il registro della sua pagina, nella
+   * stessa schermata: `ATTACCA: tela 1920×1080, vista 2560×857`.
+   *
+   * ⛔ La pagina la vista ce l'ha, la dichiara, e ci riscala DENTRO i pixel —
+   *    le bande nere ai lati c'erano gia' e sono giuste.  Quel che era piccolo
+   *    e' la CORNICE: questa riga diceva `width: 100%`, e il 100 % era quello
+   *    di `main`, che e' largo **34rem**.  ⇒ Una tela di 2560×857 pixel veri,
+   *    schiacciata dal foglio di stile in una colonna di 544 px.
+   *
+   * ⚠ Sono DUE misure e si chiamano tutt'e due «larghezza della tela»:
+   *
+   *     `canvas.width`        i pixel del buffer — quanti se ne dipingono
+   *     `canvas.style.width`  la cornice sul foglio — quanto e' grande cio'
+   *                           che l'utente guarda
+   *
+   *   La prima era gia' la vista (`Schermo.vista`); la seconda era una
+   *   colonna di testo.  Un buffer grande dentro una cornice piccola non da'
+   *   nessun errore: da' l'immagine piccola.
+   *
+   * ⇒ ⛔ NESSUNA MISURA DI STILE STA PIU' QUI DENTRO.  Le mette JavaScript,
+   *   `canvas.style.width = canvas.width / devicePixelRatio` — cioe' le due
+   *   misure sono la stessa cosa detta in due unita', e un pixel del
+   *   fotogramma finisce su un pixel del vetro.  Scriverla anche qui sarebbe
+   *   due autorita' sullo stesso numero (la forma E2 di `REVIEWER.md`). */
+  #schermo { display: none; background: #000; image-rendering: pixelated; }
+
+  /* ⛔ Con la tela accesa il foglio si toglie di mezzo: niente `padding` del
+     corpo e niente `max-width` della colonna, o la cornice non potrebbe MAI
+     essere larga quanto la vista — e la vista e' la finestra.  ⚠ E' anche quel
+     che `SPECIFICHE.md` §6.1-bis promette: «appena vai a schermo intero torna
+     1:1 e nitido», che con una colonna di 34rem non succede a nessuna misura
+     di finestra. */
+  body[data-schermo="acceso"] { padding: 0; display: block; }
+  body[data-schermo="acceso"] main { max-width: none; width: 100%;
+                                     display: flex; flex-direction: column; }
+  /* ⚠ `flex: none`: in una colonna flessibile l'altezza esplicita di un figlio
+     e' comprimibile, e la tela e' alta quanto la finestra — cioe' proprio il
+     candidato che il flex vorrebbe stringere. */
+  body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
+                                         margin: 0; }
 </style>
 </head>
 <body data-bannato="__BANNATO__" data-restano-ms="__RESTANO_MS__">
@@ -961,6 +1014,30 @@ function differenza(a, b) {
    salta: e' riservato e vuol dire «nessun fotogramma» (§6.2). */
 function dopo(n) { return n === 0xFFFFFFFF ? 1 : (n + 1) >>> 0; }
 
+/* ⛔⭐ LA VISTA, MISURATA — `RCP.md` §4.5: «la misura in cui il client
+ *     disegnera'», in pixel FISICI.
+ *
+ * ⚠ `documentElement.clientWidth` e non `innerWidth`, e la differenza e' la
+ *   BARRA DI SCORRIMENTO: `innerWidth` la conta, e disegnarci dentro vuol dire
+ *   dichiarare al server una vista che sul vetro non c'e'.  Sono una quindicina
+ *   di pixel — cioe' abbastanza per far comparire la barra orizzontale, e non
+ *   abbastanza perche' qualcuno se ne accorga leggendo il codice.
+ *
+ * ⚠ E il fattore di scala si moltiplica UNA volta sola, qui: `RCP.md` §4.5 e
+ *   `SPECIFICHE.md` §6.1-bis parlano di pixel fisici, il foglio di stile parla
+ *   di pixel logici, e la conversione fra i due e' l'unico posto in cui questa
+ *   pagina puo' sbagliare di un fattore 2 su un telefono. */
+function misura_vista() {
+  const r = devicePixelRatio || 1;
+  const d = document.documentElement;
+  const l = d.clientWidth || innerWidth || 1;
+  const a = d.clientHeight || innerHeight || 1;
+  /* ⛔ Qualunque misura da 1×1 in su e' legale per la vista (§7.1): niente
+     arrotondamenti ai numeri pari, che sono un vincolo della TELA e che qui
+     sarebbero la forma E2 — «mentire arrotondando a 320». */
+  return [Math.max(1, Math.round(l * r)), Math.max(1, Math.round(a * r))];
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    `Schermo` — riceve gli stream del video, applica le regole di RCP e DIPINGE.
 
@@ -994,6 +1071,26 @@ class Schermo {
     this.storiche = new Set();
     this.finestra = false;                     /* la finestra del cambio di tela */
     this.dec = null; this.dec_l = 0; this.dec_a = 0;
+    this.vista_l = 0; this.vista_a = 0;        /* §4.5: la misura in cui si disegna */
+    /* ⛔⭐ IL DEPOSITO — l'ultimo fotogramma dipinto, tenuto alla sua misura
+     * nativa.  Nasce con la cura del 13 agosto 2026, e non e' un'ottimizzazione:
+     * e' quel che rende POSSIBILE seguire la vista.
+     *
+     * ⚠ Scrivere `canvas.width` **svuota la tela**, sempre, anche col valore di
+     *   prima.  Ridimensionare la vista senza un deposito vorrebbe dire nero
+     *   fino al fotogramma dopo — ⛔ e alla fase 2 il fotogramma dopo NON
+     *   ESISTE: ne arriva uno solo.  Il sintomo sarebbe «ridimensiono la
+     *   finestra e l'immagine sparisce», cioe' una cura peggiore del male.
+     *
+     * ⚠ Costa un `drawImage` in piu' per fotogramma (dal fotogramma al
+     *   deposito, e dal deposito alla vista).  ⭐ L'altra strada era tenere
+     *   aperto il `VideoFrame` invece di copiarlo — zero copie — e non e'
+     *   stata presa: un fotogramma trattenuto e' un posto in meno nella riserva
+     *   del decodificatore, e dopo un `close()` del decodificatore quel
+     *   fotogramma non si sa se sia ancora disegnabile.  Il prezzo del deposito
+     *   e' noto e si paga; quello dell'altra strada e' un `[?]`. */
+    this.deposito = null; this.deposito_p = null;
+    this.dipinta = null;                       /* l'ultimo rettangolo dipinto, per il registro */
     this.formato = null;                       /* `VideoFrame.format`, per il registro */
     this.ultimo_consegnato = null;             /* §6.2: «l'ultimo GIA' CONSEGNATO» */
     this.atteso = null;
@@ -1004,7 +1101,13 @@ class Schermo {
     this.conti = { stream: 0, completi: 0, azzerati: 0, consegnati: 0,
                    dipinti: 0, scartati_ordine: 0, scartati_misura: 0,
                    tollerati: 0, buchi: 0, chiavi_chieste: 0,
-                   riconfigurazioni: 0, trattenuti: 0, corti: 0 };
+                   riconfigurazioni: 0, trattenuti: 0, corti: 0,
+                   /* ⚠ Contato a parte da `dipinti`, e non insieme: `dipinti`
+                      vuol dire «fotogrammi arrivati fino al vetro» ed e' il
+                      metro della fase (I8) — la veglia del primo fotogramma lo
+                      legge.  Un ridimensionamento che lo facesse salire direbbe
+                      «e' arrivata un'immagine» tirando una finestra. */
+                   ricomposizioni: 0, viste: 0 };
     /* I richiami verso il canale di controllo, messi da `collega()`. */
     this.su_chiave = null;
     this.su_errore_protocollo = null;
@@ -1022,6 +1125,11 @@ class Schermo {
     catch (e) { /* gia' chiusa */ }
     this.dec = null; this.dec_l = 0; this.dec_a = 0;
     this.formato = null;
+    /* ⛔ Il deposito e' di QUESTA sessione.  Senza questa riga, un tentativo
+       nuovo ricomporrebbe il desktop del tentativo di prima appena la finestra
+       cambia misura — un'immagine vecchia sotto una sessione nuova, che e'
+       peggio del nero perche' sembra viva. */
+    this.deposito = null; this.deposito_p = null; this.dipinta = null;
     this.codec = null; this.stringa = null;
     this.tollerate = new Map(); this.storiche = new Set(); this.finestra = false;
     this.ultimo_consegnato = null; this.atteso = null;
@@ -1081,13 +1189,132 @@ class Schermo {
               + "»), " + profondita + " bit, tela " + tela_l + "×" + tela_a);
   }
 
-  /* La vista: quanti pixel FISICI ha la finestra.  ⛔ La tela NON cambia
-     (§7.1: «VISTA non deve far cambiare la tela»); qui si riscala. */
+  /* ⛔⭐ LA VISTA — quanti pixel FISICI ha la finestra, e le DUE misure che
+   *     devono valere lo stesso numero.
+   *
+   * ⛔ LA TELA NON CAMBIA, e la riga qui sotto non la tocca.  §7.1: «`VISTA`
+   *    NON DEVE far cambiare la tela, e in RCP/1 non cambia nemmeno la misura
+   *    di quel che si codifica».  ⚠ Cambiare la tela e' un'ALTRA cosa, si
+   *    chiama `ADATTA_TELA` (§7.1), viaggia sul filo, la decide l'utente
+   *    (`SPECIFICHE.md` §6.4) e a RCP/1 non la manda nessuno.  Qui non parte
+   *    nessun messaggio: si decide **come si dipinge quel che e' gia'
+   *    arrivato**, e `this.tela_l`/`this.tela_a` — la tela in vigore, quella
+   *    che le regole di §6.2 confrontano coi fotogrammi — non compaiono.
+   *
+   * ⛔ E le misure sono DUE, che e' il difetto del 13 agosto 2026:
+   *
+   *     `this.tela.width`        il buffer: quanti pixel si dipingono
+   *     `this.tela.style.width`  la cornice: quanto e' grande sul vetro
+   *
+   *   Il buffer era gia' la vista.  La cornice era `width: 100%` di una colonna
+   *   di 34rem — e un buffer di 2560 px dentro una cornice di 544 non da'
+   *   nessun errore: da' l'immagine piccola.  ⇒ Si mettono qui tutt'e due, uno
+   *   accanto all'altra, divise per `devicePixelRatio` — che e' esattamente il
+   *   fattore fra le due unita'.  Cosi' un pixel del buffer e' un pixel del
+   *   vetro, e `image-rendering` non ha piu' niente da decidere. */
   vista(l, a) {
-    if (this.tela.width === l && this.tela.height === a) return;
+    if (this.vista_l === l && this.vista_a === a) return false;
+    const prima = this.vista_l ? this.vista_l + "×" + this.vista_a : "nessuna";
+    this.vista_l = l; this.vista_a = a;
+    this.conti.viste++;
+    /* ⚠ Questo svuota la tela — sempre, anche se il numero non cambiasse.
+       Per questo subito sotto si ricompone dal deposito. */
     this.tela.width = l; this.tela.height = a;
+    const r = devicePixelRatio || 1;
+    this.tela.style.width = (l / r) + "px";
+    this.tela.style.height = (a / r) + "px";
     this.pennello.fillStyle = "#000";
     this.pennello.fillRect(0, 0, l, a);
+    this.riga("vista " + prima + " → " + l + "×" + a + " pixel fisici ("
+              + Math.round(l / r) + "×" + Math.round(a / r) + " CSS, fattore "
+              + r + "): la TELA resta " + this.tela_l + "×" + this.tela_a
+              + " — §7.1, qui si riscala e non si cambia la tela");
+    this.componi();
+    return true;
+  }
+
+  /* ⭐ La vista, misurata dalla finestra e applicata.  ⛔ E' UN PUNTO SOLO: la
+     stretta di mano (§4.5, il campo `vista` di `ATTACCA`), il ridimensionamento
+     della finestra e il banco passano tutti di qui.  Due strade per lo stesso
+     numero sono due numeri che possono divergere (rilievo B-5).
+
+     ⛔⭐ E SI MISURA DUE VOLTE — `[M]` 13 agosto 2026, primo giro del banco
+     `02-pagina-vista-lancia.sh`, scena «ridimensiona»: finestra da 1400×900 a
+     900×700, e la tela e' finita a **885×685** invece di 885×700.  Quindici
+     pixel, ed erano la BARRA ORIZZONTALE.
+
+     ⚠ La vista dipende dall'impaginazione, e la tela FA PARTE
+       dell'impaginazione: e' un anello.  Nell'istante del `resize` la tela e'
+       ancora larga 1385 dentro una finestra da 885 ⇒ compare la barra
+       orizzontale ⇒ `clientHeight` vale 685.  Si misura li', si stringe la
+       tela, la barra sparisce — e adesso il numero misurato e' vecchio di un
+       istante.  ⛔ E nessun altro `resize` arriva a correggerlo: il difetto
+       resta finche' l'utente non tocca di nuovo la finestra.
+
+     ⇒ La seconda passata si fa DOPO aver stretto la tela, cioe' quando la tela
+       non puo' piu' far comparire nessuna barra.  ⛔ Due e non un ciclo: se
+       dopo la seconda cambiasse ancora, non sarebbe piu' l'anello della barra e
+       un ciclo lo nasconderebbe girando.  ⚠ L'altra cura era un
+       `max-width: 100%` sulla tela — piu' corta, e SILENZIOSA: taglierebbe da
+       sola qualunque tela troppo larga, compresa una larga per un difetto. */
+  adatta_vista() {
+    let ultimo = misura_vista();
+    if (this.vista(ultimo[0], ultimo[1])) {
+      const secondo = misura_vista();
+      if (secondo[0] !== ultimo[0] || secondo[1] !== ultimo[1]) {
+        this.riga("⚠ la vista misurata e' cambiata fra la prima e la seconda "
+                  + "passata (" + ultimo[0] + "×" + ultimo[1] + " → "
+                  + secondo[0] + "×" + secondo[1] + "): era una barra di "
+                  + "scorrimento che la tela stessa faceva comparire");
+        ultimo = secondo;
+        this.vista(secondo[0], secondo[1]);
+      }
+    }
+    return ultimo;
+  }
+
+  /* ⛔⭐ IL RISCALAMENTO ALLA VISTA — §6.2: «il client riscala alla **vista**,
+   *     non alla tela», e `SPECIFICHE.md` §6.2: «si impagina, non si stira».
+   *
+   * ⚠ LE BANDE SONO CORRETTE, e sono la ragione del `Math.min`.  §7.1: «la
+   *   vista non ha nessun vincolo di proporzione con la tela: se le proporzioni
+   *   non combaciano, si impagina con le bande».  Una tela 16:9 dentro una
+   *   finestra piu' larga che alta lascia due bande verticali, ed e' giusto:
+   *   ⛔ riempire deformerebbe, e `SPECIFICHE.md` §6.2 dice perche' —
+   *   «allungare deforma il testo e lo rende illeggibile».  Un desktop remoto
+   *   e' quasi tutto testo.
+   *
+   * ⭐ E il fattore non ha un tetto a 1: se la vista e' PIU' GRANDE della tela
+   *    l'immagine si INGRANDISCE fino a riempirla.  ⚠ Un `Math.min(1, …)`
+   *    sarebbe la stessa famiglia del difetto curato oggi — l'immagine piccola
+   *    in un angolo di una finestra grande — e sarebbe piu' difficile da
+   *    vedere, perche' su una finestra piccola sembrerebbe giusto. */
+  componi() {
+    if (!this.deposito) return false;
+    const cl = this.tela.width, ca = this.tela.height;
+    const fl = this.deposito.width, fa = this.deposito.height;
+    if (!cl || !ca || !fl || !fa) return false;
+    const s = Math.min(cl / fl, ca / fa);
+    const dl = Math.max(1, Math.round(fl * s)), da = Math.max(1, Math.round(fa * s));
+    const dx = Math.floor((cl - dl) / 2), dy = Math.floor((ca - da) / 2);
+    try {
+      /* Le bande: si ridipingono a ogni giro, o quella di prima resterebbe
+         accesa sotto un'immagine diventata piu' grande. */
+      if (dl !== cl || da !== ca) {
+        this.pennello.fillStyle = "#000";
+        this.pennello.fillRect(0, 0, cl, ca);
+      }
+      this.pennello.drawImage(this.deposito, dx, dy, dl, da);
+    } catch (e) {
+      this.errori.push("drawImage: " + e);
+      this.riga("⛔ drawImage ha lanciato: " + e);
+      return false;
+    }
+    this.conti.ricomposizioni++;
+    this.dipinta = { l: dl, a: da, x: dx, y: dy, vista: [cl, ca],
+                     fotogramma: [fl, fa], scala: Math.round(s * 1000) / 1000 };
+    document.body.dataset.schermo = "acceso";
+    return true;
   }
 
   /* ⛔⭐ `TELA(ADATTATA)` — §7.1, e QUI NON SI RICONFIGURA NIENTE.
@@ -1394,28 +1621,36 @@ class Schermo {
        serve a chi diagnostica, non a chi decide. */
     if (this.formato === null || this.formato === undefined)
       this.formato = (f.format === undefined) ? "assente" : f.format;
+    /* ⛔ Il fotogramma si DEPOSITA alla sua misura nativa, e il riscalamento
+       alla vista lo fa `componi()` — che e' la stessa funzione che gira quando
+       l'utente ridimensiona la finestra.  ⚠ Riscalare qui e ricomporre la'
+       sarebbero due riscalamenti sotto la stessa etichetta, e il giorno in cui
+       divergessero il sintomo sarebbe «l'immagine cambia misura quando tocco la
+       finestra» — la forma E2 di `REVIEWER.md`. */
+    const fl = f.displayWidth || f.codedWidth;
+    const fa = f.displayHeight || f.codedHeight;
     try {
-      const cl = this.tela.width, ca = this.tela.height;
-      const fl = f.displayWidth || f.codedWidth;
-      const fa = f.displayHeight || f.codedHeight;
-      const s = Math.min(cl / fl, ca / fa);
-      const dl = Math.max(1, Math.round(fl * s)), da = Math.max(1, Math.round(fa * s));
-      const dx = Math.floor((cl - dl) / 2), dy = Math.floor((ca - da) / 2);
-      /* ⚠ Le bande: la vista non ha nessun vincolo di proporzione con la tela
-         (§7.1), quindi si impagina invece di deformare
-         (`SPECIFICHE.md` §6.2). */
-      if (dl !== cl || da !== ca) {
-        this.pennello.fillStyle = "#000";
-        this.pennello.fillRect(0, 0, cl, ca);
+      if (!this.deposito) this.deposito = document.createElement("canvas");
+      if (this.deposito.width !== fl || this.deposito.height !== fa) {
+        this.deposito.width = fl; this.deposito.height = fa;
+        this.deposito_p = this.deposito.getContext("2d", { alpha: false });
       }
-      this.pennello.drawImage(f, dx, dy, dl, da);
-      this.conti.dipinti++;
-      document.body.dataset.schermo = "acceso";
+      this.deposito_p.drawImage(f, 0, 0);
     } catch (e) {
-      this.errori.push("drawImage: " + e);
-      this.riga("⛔ drawImage ha lanciato: " + e);
+      this.errori.push("deposito: " + e);
+      this.riga("⛔ il fotogramma non e' entrato nel deposito: " + e);
+      try { f.close(); } catch (e2) { /* gia' chiuso */ }
+      return;
     }
     try { f.close(); } catch (e) { /* gia' chiuso */ }
+    /* ⚠ La vista si misura QUI SOLO SE non c'e' ancora — cioe' quasi mai, e mai
+       due volte.  ⛔ Misurarla a ogni fotogramma sarebbe leggere `clientWidth`
+       dentro il richiamo del decodificatore: una riorganizzazione del foglio
+       forzata sessanta volte al secondo, dentro il percorso che `web.md` §6.1
+       tiene corto apposta.  ⇒ Dopo la prima, a rimisurarla e' l'unico fatto che
+       la cambia: il ridimensionamento della finestra, in fondo al file. */
+    if (this.sessione && !this.vista_l) this.adatta_vista();
+    if (this.componi()) this.conti.dipinti++;
   }
 }
 
@@ -1521,6 +1756,39 @@ window.addEventListener("pagehide", function () {
  *       (forma E10), e il verde non direbbe niente del prodotto.
  * ⚠ E `REMOTIX` e' l'unico nome globale che questa pagina definisce. */
 const schermo = new Schermo($("schermo"));
+
+/* ⛔⭐ E QUANDO LA FINESTRA CAMBIA, IL RISCALAMENTO SEGUE — §6.1 di
+ * `SPECIFICHE.md`: «durante la sessione **nessuno** decide la misura: se
+ * l'utente ridimensiona la finestra, **il client riscala l'immagine**».
+ *
+ * ⛔ QUESTO NON E' `ADATTA_TELA`, e le due cose si somigliano abbastanza da
+ *    essere confuse.  Qui non parte NIENTE sul filo e la tela in vigore non si
+ *    tocca: cambia solo la cornice in cui si ridipinge un fotogramma **gia'
+ *    arrivato**.  `ADATTA_TELA` (§7.1) e' l'opposto — un messaggio, una scelta
+ *    esplicita dell'utente (`SPECIFICHE.md` §6.4), e cambia la tela DAL LATO
+ *    SERVER, che risponde `TELA(ADATTATA)` o `TELA(RIFIUTATA)`.  ⚠ Il
+ *    documento le tiene separate e le nomina («l'unico messaggio che cambia la
+ *    tela e' `ADATTA_TELA`»): la confusione sarebbe solo qui dentro.
+ *
+ * ⚠ E si aspetta il quadro invece di agire a ogni evento: trascinare il bordo
+ *   di una finestra produce decine di `resize` al secondo, e ciascuno
+ *   riallocherebbe un buffer di qualche milione di pixel.  ⭐ `vista()` scarta
+ *   da sola le misure uguali, quindi il giro a vuoto costa un confronto.
+ *
+ * `[?]` ⚠ Quel che questa riga NON fa: mandare `VISTA` (0x0008) al server.
+ *   §7.1 dice che serve «a scegliere quanti bit spendere», e alla fase 2 non
+ *   c'e' nessun controllo di banda che lo leggerebbe — ma dopo il primo
+ *   ridimensionamento la vista dichiarata in `ATTACCA` e' vecchia.  Sta al
+ *   coordinatore: tocca il filo, e questo giro non lo tocca. */
+let quadro_vista = 0;
+addEventListener("resize", function () {
+  if (!schermo.sessione || quadro_vista) return;
+  quadro_vista = requestAnimationFrame(function () {
+    quadro_vista = 0;
+    schermo.adatta_vista();
+  });
+});
+
 window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
                    stringhe_codec: stringhe_codec, versione: VERSIONE,
                    /* ⭐ La scala delle misure e le sue dichiarazioni: da qui le
@@ -1907,8 +2175,11 @@ async function collega(utente, parola) {
   /* ⛔ I limiti sono normativi: fra 320×240 e 7680×4320, ed entrambe PARI. */
   const pari = (n, min, max) => Math.max(min, Math.min(max, n - (n % 2)));
   const tela_l = pari(1920, 320, 7680), tela_a = pari(1080, 240, 4320);
-  const vista_l = Math.max(1, Math.round(innerWidth * devicePixelRatio));
-  const vista_a = Math.max(1, Math.round(innerHeight * devicePixelRatio));
+  /* ⛔ La vista si misura in UN posto solo — `misura_vista()`, la stessa che
+     usa il ridimensionamento.  ⚠ Qui c'era `innerWidth × devicePixelRatio`, che
+     conta anche la barra di scorrimento: si dichiarava al server una vista piu'
+     larga di quella in cui si disegna davvero. */
+  const [vista_l, vista_a] = misura_vista();
   const disp = disposizione();
   await canale.manda(TIPO.ATTACCA,
     new Scrittore().u32(tela_l).u32(tela_a).u32(vista_l).u32(vista_a).str(disp).byte());
