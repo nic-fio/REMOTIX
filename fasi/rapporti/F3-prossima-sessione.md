@@ -408,7 +408,7 @@ un sintomo temuto invece che osservato* (`LEZIONI.md` §2.6). Il dettaglio sta i
 
 | | |
 |---|---|
-| ⛔ **la scena deve stare sul monitor che si sta catturando** | il palco ha **quattro** monitor virtuali (`Meta-0…3`, tutti 1920×1080@60): il proprio si legge **dal registro del proprio server**, non si indovina. Una scena sul monitor sbagliato dà **zero fotogrammi per dieci secondi con la catena perfetta**. Costo: **quattro giri** |
+| ⛔⛔ **la scena deve stare sul monitor che si sta catturando** — ⭐ **è la n. 1, ed è quella che è tornata** | il palco ha **quattro** monitor virtuali (`Meta-0…3`, tutti 1920×1080@60): il proprio si legge **dal registro del proprio server**, non si indovina. Una scena sul monitor sbagliato dà **zero fotogrammi per dieci secondi con la catena perfetta**. Costo: **quattro giri** — ⛔ **più il risultato più grosso della giornata**, vedi il riquadro qui sotto |
 | ⛔ **la scena accesa PRIMA della sessione non disegna** | Mutter non manda i *frame callback* a una superficie su un monitor che nessuno registra. Si accende **a sessione aperta** |
 | ⛔ **su Xvfb `requestAnimationFrame` non gira MAI** | 0 quadri in 3 s, con e senza GPU, a scheda «visible». Ogni cammino di prodotto che ci passa dietro è **codice morto sul banco** |
 | ⛔ **`curl` normalizza** | non manda il frammento e si mangia il `?` vuoto. Sul filo grezzo serve `--request-target`, o si misura curl |
@@ -418,6 +418,29 @@ un sintomo temuto invece che osservato* (`LEZIONI.md` §2.6). Il dettaglio sta i
 | ⛔ **su CHUWI il prodotto NON si compila** | manca `nghttp3/nghttp3.h`. Vive in un contenitore su **192.168.0.2** (`enter.sh`, sorgenti `/srv/src/remotix`); i **browser veri** stanno su CHUWI |
 | ⛔ **`src/rcp.c` e `banchi/rcp/rcp.c` sono GEMELLI** | il `Makefile` pretende che siano identici: se divergono **nessuno compila**, e non si vede finché non ci si sbatte contro |
 | ⚠ **`/tmp` su CHUWI, tmpfs da 3,8 G al 94 %** | quando si riempie, Chrome non apre il profilo e il banco fallisce con un errore che **accusa la pagina**. Si guarda il disco **prima** di credergli |
+
+> ## ⛔⛔⛔ E la trappola n. 1 è tornata a mordere **il risultato che la citava** — la sera stessa
+>
+> *Va letta prima delle altre, perché non è una trappola nuova: è quella già pagata quattro volte
+> **la mattina dello stesso giorno**, e già scritta in `LEZIONI.md` §1.1.*
+>
+> Il pomeriggio del 13 agosto la «legge della griglia» di Mutter è stata dichiarata **verificata su
+> 13 punti, 8 confermano, 0 la smentiscono**, ed è stata scritta in **nove documenti**. ⛔ Le celle
+> della griglia erano **due**, e portavano tutt'e due `scena_sul_mio_monitor: **false**`.
+>
+> ⭐⭐ **Il banco lo aveva scritto nel proprio file.** Le ha contate **contaminate** e sul verdetto
+> ha stampato per esteso *«⛔ la legge NON regge su 0 punti su 0»*. ⛔ **Nessuno ha guardato: si è
+> letto il numero, e non la riga accanto.**
+>
+> | | |
+> |---|---|
+> | ⛔ **la regola che ne esce** | prima di copiare un numero in un documento si legge **il verdetto del banco**, non la cella. Se il banco ha un campo di validità, **quel campo si cita insieme al numero** — o non si cita il numero |
+> | ⚠ **e perché non basta stare attenti** | un numero **verosimile non attiva nessun sospetto**: i 13 punti erano plausibili, il banco sapeva davvero produrli, e la spiegazione tornava |
+> | ✅ **che cosa è sopravvissuto** | `banchi/03-b14-esiti.jsonl`, sette celle tutte `scena_sul_mio_monitor: true` ⇒ il **61,4** a monitor 120 e freno 90 resta `[M]`; la **causa** torna `[R]`; **M3 resta mezza** |
+>
+> ⇒ ⭐ **La lezione intera sta in `LEZIONI.md` §1.1-bis**: *un banco che dichiara la propria
+> invalidità non serve a niente se chi legge guarda solo il risultato.* Corretto il **13 agosto
+> 2026**, rilievo del coordinatore della fase 3.
 
 ---
 
@@ -433,8 +456,11 @@ rifiuto**: la cura che arriva dall'alto può essere sbagliata, e chi cura deve p
 - **un verde in catalogo lo produceva lo STRUMENTO** — una funzione di stampa opzionale svegliava il
   rendering, e quelle pretese non erano **mai** state innestate con un guasto;
 - **tre falsi rossi** trovati nei banchi, che accusavano il prodotto mentre faceva la cosa giusta;
-- ⛔ **e DUE righe ripetute invece che misurate hanno quasi deciso un piano**: i «37 fotogrammi di
-  Mutter» e *«non c'è un codificatore hardware»*. **La seconda nella stessa giornata in cui si
-  scopriva la prima.**
+- ⛔ **e TRE righe ripetute invece che misurate hanno quasi deciso un piano**: i «37 fotogrammi di
+  Mutter», *«non c'è un codificatore hardware»* — **la seconda nella stessa giornata in cui si
+  scopriva la prima** — e ⛔⛔ **la «legge della griglia verificata su 13 punti»**, scritta in nove
+  documenti mentre il banco aveva già stampato *«la legge NON regge su 0 punti su 0»*.
+  ⭐ **La terza è la peggiore**: le prime due erano righe vecchie ripetute, questa è stata
+  **prodotta oggi**, dallo stesso progetto che aveva appena scritto la lezione per evitarla.
 
 ⇒ ⭐ **Zero volte i banchi hanno sbagliato a favore del prodotto.**

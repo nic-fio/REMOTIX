@@ -161,12 +161,20 @@ prove che lo dicono: la scena disegna **59,98/s con 0 attese**; il figlio del pr
 software**, dichiarato dal prodotto stesso (libsvtav1 / libx265). ⇒ La leva non è il compositore:
 è **la codifica** (`gnome.md` §8.2 e §13).
 
-⛔ **E il muro dei 37 fotogrammi non si riproduce.** La causa scritta finora — un **battimento**
-fra due orologi allo stesso numero — è sbagliata: è una **quantizzazione** sui tick
-(`min_interval_us = 10⁶/maxFramerate` troncato a intero contro un tick da 16666,67 µs). Con
-monitor a **120** e freno **90** si ottengono `[M]` **61,4 fotogrammi consegnati al secondo**
-(60,04), intervallo mediano **16,66 ms**. ⚠ **Ma quella cura oggi non è raggiungibile dal
-prodotto**: è `[M]` sul banco e **zero in produzione** (`DECISIONI.md` §2.5).
+⛔ **E il muro dei 37 fotogrammi non si riproduce.** Con monitor a **120** e freno **90** si
+ottengono `[M]` **61,4 fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**.
+⚠ La causa scritta finora — un **battimento** fra due orologi allo stesso numero — è sbagliata; al
+suo posto c'è una **quantizzazione** sui tick (`min_interval_us = 10⁶/maxFramerate` troncato a
+intero contro un tick da 16666,67 µs), ⛔ **ma questa è `[R]`, letta nel codice di Mutter, non
+`[M]`**. ⚠ **E quella cura oggi non è raggiungibile dal prodotto**: è `[M]` sul banco e **zero in
+produzione** (`DECISIONI.md` §2.5).
+
+> ⛔ ⚠ *Questo capoverso dava la quantizzazione come misurata, «legge verificata su 13 punti, 8
+> confermano, 0 la smentiscono». **È falso**: il file `banchi/03-b14-esiti-griglia.jsonl` porta due
+> sole celle, tutt'e due con `scena_sul_mio_monitor: false`, e il banco stesso stampa «la legge NON
+> regge su 0 punti su 0». **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3.
+> ⇒ Il **61,4 resta `[M]`** (cella D di `03-b14-esiti.jsonl`, pulita); il **perché è `[R]`**.
+> Dettaglio in `gnome.md` §8.2.*
 
 ⛔ **Dove finisce la misura, ed è la parte scomoda**: la misura si chiude al **disegno finito**,
 non al richiamo del decodificatore. Sono **11 ms su un tetto di 50** che la prima stesura si

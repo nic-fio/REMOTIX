@@ -313,7 +313,7 @@ ferma `lock()` ma **non** `activate()` — la leva vera è `lock-enabled=false`.
 (stesso fd), primo `SPA_PARAM_Buffers` con `metaType` MANDATORY; e i buffer vanno alzati (Mutter ne
 propone fino a 16; i nostri quattro li chiediamo noi).
 
-### 8.2 ⭐ La cadenza: ⛔ **non un battimento — una quantizzazione**. *Misurato il 13 agosto 2026*
+### 8.2 ⭐ La cadenza: il fatto è `[M]`, ⚠ **la causa è `[R]`**. *Misurato il 13 agosto 2026, e corretto la sera stessa*
 
 `framerate` è un **valore fisso `0/1`** — ecco perché una cadenza fissa non negozia. E il
 `maxFramerate` fa **due cose insieme**: è il freno della cattura **ed è la frequenza del monitor
@@ -322,20 +322,54 @@ virtuale**.
 ⛔ *Questo paragrafo diceva: «Stesso numero ⇒ **battimento** ⇒ 0,61». **È sbagliato**, e la misura
 della fase 3 (step 1, M3) lo smentisce in tutt'e due le metà: né il battimento né lo 0,61.*
 
-⭐ **`maxFramerate` non è un tetto continuo: è una GRIGLIA.** Il freno calcola
-`min_interval_us = 10⁶/maxFramerate` **troncato a intero** — 16666 per 60 — e lo mette contro un
-tick da **16666,67 µs**. Chi cade sotto la griglia **perde un tick intero**, e da lì il numero
-consegnato. `[M]` legge verificata su **13 punti**: 8 la confermano, **0 la smentiscono**.
+⭐ **IL FATTO, che è `[M]` e non si tocca**: negoziando il monitor a **120 Hz** e rinegoziando la
+**sola** cadenza a **90**, GNOME consegna **61,4 fotogrammi al secondo** (60,04 dalla mediana), con
+intervallo mediano **16,66 ms** e p99 **20,43**. È la cella **D** di `banchi/03-b14-esiti.jsonl`.
 
-| monitor | freno | consegnati | mediana | p99 |
-|---|---|---|---|---|
-| 60 | 60 | 31,5 | 33,31 ms | 35,53 |
-| 120 | 60 | 46,13 | 24,12 ms | 29,23 |
-| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 |
+⚠ **LA CAUSA, che è `[R]` e va detta per quello che è**: letta nel codice di Mutter, `maxFramerate`
+non sembra un tetto continuo ma una **griglia** — il freno calcola
+`min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) e lo mette contro un tick
+da **16666,67 µs**, e chi cade sotto **perde un tick intero**. ⭐ **Resta la spiegazione migliore che
+abbiamo**, ed è **coerente con la cella D**, che è pulita. ⛔ **Ma è una lettura del codice, non una
+legge misurata**, e non va scritta come se lo fosse.
+
+> ⛔⛔ ⚠ *Qui stava scritto, e in altri otto documenti con lei: «`[M]` legge verificata su **13
+> punti**: 8 la confermano, **0 la smentiscono**». **È FALSO.** Il file degli esiti della griglia —
+> `banchi/03-b14-esiti-griglia.jsonl` — porta **tre righe in tutto**: il terreno e **due celle**
+> (`griglia-apertura-120` e `griglia-freno-90`), e **tutt'e due portano `scena_sul_mio_monitor:
+> false`** ⇒ sono **rifiutate dal banco stesso**, che sul proprio verdetto stampa «⛔ la legge NON
+> regge su **0 punti su 0**». I tredici punti non stanno in nessun file di esiti. ⇒ La
+> quantizzazione **torna `[R]`**. **Corretta il 13 agosto 2026**, rilievo del coordinatore della
+> fase 3, verificato riga per riga sui due file di esiti.*
+>
+> ⭐⭐ **E la ragione del rifiuto è la trappola numero uno di `LEZIONI.md` §1.1**: *la scena deve
+> stare sul monitor che si sta catturando*. Il banco **lo aveva scritto nel proprio file**, campo per
+> campo, e nessuno ha guardato quel campo: si è letto il numero e non la riga accanto.
+
+**La tabella qui sotto viene TUTTA da `banchi/03-b14-esiti.jsonl`** — sette celle, **tutte** con
+`scena_sul_mio_monitor: true`, con i tre controlli (positivo: crollo a 9,57 chiedendo 10; negativo:
+60→60 resta su 46,07; ritorno: 83,03, cioè torna su B) che chiudono:
+
+| monitor | freno | consegnati | mediana | p99 | cella |
+|---|---|---|---|---|---|
+| 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
+| 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
+| 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
+| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
 
 ⛔ **E i «sei decimi» non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**, che è
-quel che una griglia produce e un battimento no. ⚠ Riscontro incrociato con una seconda scena
-indipendente: concordano **entro il 4 %**, attese **0** ovunque.
+quel che una griglia produce e un battimento no. ⭐ **Questa cella è pulita** — è la **A**, e regge.
+
+> ⛔ ⚠ *E cade anche il riscontro incrociato.* Qui stava scritto: «Riscontro incrociato con una
+> seconda scena indipendente: concordano **entro il 4 %**, attese **0** ovunque». ⛔ **Non regge**, e
+> lo dice il file stesso, `banchi/03-b14-esiti-scena2.jsonl`: la sua **cella D** — cioè proprio il
+> risultato da confermare — porta `scena_sul_mio_monitor: false`, `palco_stabile: false` e **1
+> fotogramma in 25 s (0,04/s)**, e non ha nemmeno il conto delle attese, perché il suo step 2 non
+> c'è. E il suo **controllo di RITORNO** dà **52,84** contro gli **80,28** della sua stessa cella B:
+> **non torna**, quindi la catena dei controlli di quella scena **non chiude**. Entro il 4 %
+> concordano solo la cella A (31,28 contro 31,5), la B (3,2 %) e il controllo positivo; la C sta al
+> **5,4 %** e il controllo negativo al **7 %**. ⇒ ⛔ **Il 61,4 oggi ha UNA scena sola.** Corretto il
+> 13 agosto 2026, stesso rilievo.
 
 ⭐ **`ensure_virtual_monitor` esce prima se la misura non cambia**, e il disaccoppiamento
 **funziona**: negoziare alto (monitor 120) e rinegoziare la sola cadenza (freno 90) porta GNOME a
@@ -508,13 +542,27 @@ a ~10 cicli da Mutter: **non è gratis né dalla fase wlroots né dal lavoro su 
 |---|---|---|
 | **M1** | ⛔ il nostro regolatore regge `queueDepth == 0xFFFFFFFF` | §11: un desktop che si pianta per sempre. Si prova con un client strumentato, non aspettando |
 | **M2** | headless sì/no contro `inhibit_remote_access` | §4: è la precondizione che oggi abbiamo **per accidente** |
-| ✅ **M3** | ~~la cadenza disaccoppiata~~ — ⭐ **CHIUSA il 13 agosto 2026, e riesce** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **61,4 consegnati** (60,04), mediana **16,66 ms**. ⛔ **E la causa scritta era sbagliata**: quantizzazione sui tick, non battimento. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
+| ⚠ **M3** | la cadenza disaccoppiata — ⭐ **il fatto è ottenuto**, ⛔ **ma la misura è MEZZA e non è chiusa** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **61,4 consegnati** (60,04), mediana **16,66 ms** — cella **D**, pulita, con i tre controlli che chiudono. ⛔ **Ma la causa è `[R]`, non `[M]`**: la «legge della griglia» su 13 punti **non esiste** (vedi il riquadro di §8.2), e ⛔ **il riscontro su una seconda scena non c'è**: la cella D di `03-b14-esiti-scena2.jsonl` è rifiutata dal banco. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
 | **M4** | `SPA_META_SyncTimeline` con acquire/release, **oppure** trattenere il `pw_buffer` | §8.1: è la caccia della fase 9 nel posto giusto |
 | **M5** | `SPA_META_Cursor` + `cursor-mode=2` → cursore RDP nativo | §5.2: oggi il puntatore non arriva da nessuna parte |
 | **M6** | il profilo dconf in `$XDG_RUNTIME_DIR` con i lock, e **ogni chiave riletta** | §6: paga §1.1 punti 3, 4 e 5 insieme |
 | **M7** | `Inhibit(…, 12)` regge 20 minuti, e la macchina non si sospende | §7 |
 | **M8** | la clipboard: annuncio alla riconnessione, e il blocco schermo che la azzera | §10 |
 | **M9** | prova **guasta di proposito**: `SHELL` non vuota, e `--virtual-monitor` assente | ⭐ imparare come si legge il guasto: sessione **viva, completa e nera** |
+
+> ### ⚠ M3 — **lo stato vero**, scritto il 13 agosto 2026 dopo il rilievo
+>
+> *Stamattina questa riga diceva **✅ CHIUSA il 13 agosto 2026**, e lo diceva **sulla base della
+> griglia**. La griglia è caduta — le sue due celle sono rifiutate dal banco stesso, §8.2. ⇒ **M3 non
+> è chiusa e non è aperta: è mezza**, e va tenuta mezza finché non si fanno le due metà che mancano.
+> ⛔ Non la si forza a «chiusa» perché il numero è bello, né ad «aperta» perché una riga era falsa.*
+>
+> | | |
+> |---|---|
+> | ✅ **quel che M3 HA ottenuto** | `[M]` **61,4** a monitor 120 e freno 90 — cella **D** di `banchi/03-b14-esiti.jsonl`, `scena_sul_mio_monitor: true`, con controllo positivo (crollo a 9,57), negativo (fermo su 46,07) e di ritorno (83,03) che chiudono. **Questo è un fatto, e resta** |
+> | ⛔ **quel che M3 NON ha** | la **causa**. La quantizzazione è `[R]`: letta nel codice di Mutter, coerente con la cella D, **mai misurata su una griglia di punti** |
+> | ⛔ **e nemmeno** | il **riscontro su una seconda scena**: la cella D di `banchi/03-b14-esiti-scena2.jsonl` porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s** ⇒ il 61,4 ha **una scena sola** |
+> | ⇒ **che cosa la chiuderebbe** | rifare la **griglia** con la scena sul monitor che si cattura, e rifare la **cella D** sulla seconda scena. È lo stesso banco `banchi/03-b14-cadenza.py`, e ⭐ **il campo per accorgersene ce l'ha già**: è `scena_sul_mio_monitor`, e stamattina nessuno l'ha guardato |
 
 ---
 

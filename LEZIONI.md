@@ -97,8 +97,15 @@ Mutter un tetto che era della scena — e viceversa.
 > ⇒ ⭐ **La forma di riposo della fase 3 è la scena scritta da noi**: `banchi/03-scena.c`
 > (`wl_shm` + `xdg-shell`, marca a 144 bit, quattro conti fra cui le **attese**, verifica
 > `wl_surface.enter`) e `banchi/03-b14-scena.c` (la variante EGL). ⚠ **Ne esistono due**, ed è una
-> decisione aperta se ne sopravviva una sola: dove è stato fatto il riscontro incrociato,
-> concordano **entro il 4 %**, con **0 attese** da tutt'e due le parti.
+> decisione aperta se ne sopravviva una sola.
+>
+> > ⛔ ⚠ *Questa riga finiva con: «dove è stato fatto il riscontro incrociato, concordano **entro il
+> > 4 %**, con **0 attese** da tutt'e due le parti». **Va ristretta**: il 4 % vale sulle celle bassa
+> > e alta e sul controllo positivo, **non sulla cella D** — il risultato per cui il riscontro
+> > serviva. In `banchi/03-b14-esiti-scena2.jsonl` la cella D porta `scena_sul_mio_monitor: false`,
+> > `palco_stabile: false` e **1 fotogramma in 25 s**, e il controllo di ritorno di quella scena non
+> > torna (52,84 contro 80,28). **Corretta il 13 agosto 2026**, rilievo del coordinatore della
+> > fase 3.*
 
 ⛔ **E c'è un terzo punto, che non stava scritto qui e costa quanto i primi due: la scena deve
 stare sul MONITOR CHE SI STA CATTURANDO.** Su un palco con monitor virtuali quello non è il monitor
@@ -109,6 +116,31 @@ nostra** — e assomiglia a un difetto del prodotto.
 ⇒ **La scena dichiara su quale monitor sta, e il banco lo verifica** invece di darlo per scontato.
 *Prezzo: **quattro giri buttati** in un giorno solo — due allo step 3 e due allo step 1 della
 fase 3.*
+
+> ## ⛔⛔⛔ E lo stesso giorno la trappola è tornata a mordere **il risultato che la citava** — §1.1-bis
+>
+> *13 agosto 2026, sera. La riga qui sopra era stata scritta la mattina, dopo aver buttato quattro
+> giri. Il pomeriggio, la «legge della griglia» di Mutter è stata dichiarata **verificata su 13
+> punti** e scritta in **nove documenti**. Le celle della griglia erano **due**, e portavano tutt'e
+> due `scena_sul_mio_monitor: **false**`.*
+>
+> ⭐⭐ **IL BANCO LO AVEVA SCRITTO NEL PROPRIO FILE.** Non l'ha nascosto, non l'ha sbagliato, non
+> l'ha taciuto: ha stampato il campo `scena_sul_mio_monitor: false` accanto a ogni cella, ha contato
+> quelle celle come **contaminate**, e sul verdetto ha scritto per esteso *«⛔ la legge NON regge su
+> 0 punti su 0: la spiegazione della quantizzazione va riscritta»*. ⛔ **E nessuno ha guardato: si è
+> letto il numero, e non la riga accanto.**
+>
+> | | |
+> |---|---|
+> | ⛔ **la lezione** | **Un banco che dichiara la propria invalidità non serve a niente, se chi legge guarda solo il risultato.** Il campo che salva la giornata e la riga che la butta stanno nello **stesso file**, a due centimetri l'una dall'altra |
+> | ⇒ **la regola** | prima di copiare un numero in un documento, si legge **il verdetto del banco**, non la cella. Se il banco ha un campo di validità, **quel campo si cita insieme al numero**, o non si cita il numero |
+> | ⚠ **e la forma d'errore** | non è distrazione: è che **un numero verosimile non attiva nessun sospetto**. I 13 punti erano plausibili, il banco aveva davvero un modo per produrli, e la spiegazione tornava. ⇒ Il controllo non può essere «sembra giusto» |
+> | 💰 **il prezzo** | quattro giri buttati la mattina, e **una riga falsa in nove documenti** il pomeriggio — scritta dallo stesso progetto che aveva appena scritto la lezione per evitarla |
+>
+> ⭐ **E la cosa che la rende una lezione e non un aneddoto**: la trappola non è tornata su un banco
+> nuovo o su un pezzo nuovo. È tornata **sul risultato che la citava**, dentro la stessa giornata, a
+> lezione già scritta. ⇒ Una lezione scritta non protegge da niente finché non diventa **un campo
+> che qualcuno è obbligato a leggere**.
 
 *Prezzo della lezione intera: tutte le misure di ritmo delle fasi 3-9. Dettaglio: `REFERENCE.md`
 R32.*
@@ -935,7 +967,7 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 | 10-bis | **Che cosa costa la risoluzione, per davvero?** | niente fino a 4K | **niente a copia zero** (59 fps da 720p a 4K su una Intel integrata), **tutto in memoria** (49,6 → 27,0) [M, 8 ago] | a 4K sì |
 | 5 | **Si può chiedere uno schermo virtuale della misura voluta?** | sì, `RecordVirtual` | ⛔ **NO, e il codice diceva di sì** [M, 8 ago]: `stream_virtual_output` col backend `--virtual` risponde **`Could not find output`**, per ogni misura. E `--drm`, che gli output veri ce l'ha, da una sessione senza seat non parte. L'output lo crea la riga di comando del compositore, e noi ci attacchiamo | sì, backend headless |
 | 6 | **Quanto consegna, con una scena che cambia a ogni ridisegno?** | ⛔ **la domanda è mal posta, `[M]` 13 ago**: dipende da **come** si chiede. Chiedendo 60 a un monitor a 60: **31,5** (il «~37» di v1 **non si riproduce**). Chiedendo **90 a un monitor a 120**: **61,4**. ⇒ Alla domanda 7, e non a questa | **59–60** | **61** (40 a 4K, per il costo della copia) |
-| 7 | **La cadenza dichiarata come si comporta?** | ⛔ **su una GRIGLIA**, `[M]` **13 ago**: `maxFramerate` fa due mestieri insieme — freno della cattura *ed* frequenza del monitor virtuale — e il freno calcola `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro un tick da 16666,67 µs ⇒ chi cade sotto **perde un tick intero**. ⛔ Non è un **battimento**, è una **quantizzazione**, e i «sei decimi» **non si riproducono** (la cella bassa dà **0,50 pulito**). ⭐ Disaccoppiando — monitor **120**, freno **90** — se ne ottengono **61,4**. Vedi il riquadro sotto la tabella | **fissa rifiutata anche qui** (`framerate` deve valere `0/1`); il tetto è `maxFramerate`, e lo **onora il server** [R] | da misurare |
+| 7 | **La cadenza dichiarata come si comporta?** | ⭐ `[M]` **13 ago**: **dipende da come si chiede**, e disaccoppiando — monitor **120**, freno **90** — se ne ottengono **61,4**; i «sei decimi» **non si riproducono** (la cella bassa dà **0,50 pulito**). ⚠ **Il perché è `[R]`, non `[M]`**: `maxFramerate` fa due mestieri insieme — freno della cattura *ed* frequenza del monitor virtuale — e nel codice il freno calcola `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro un tick da 16666,67 µs ⇒ chi cade sotto **perderebbe un tick intero**: una **griglia**, non un battimento. ⛔ *Questa cella dava la griglia come `[M]` «su 13 punti»: falso, corretto il 13 ago sera — vedi il riquadro sotto la tabella.* | **fissa rifiutata anche qui** (`framerate` deve valere `0/1`); il tetto è `maxFramerate`, e lo **onora il server** [R] | da misurare |
 | 8 | **Consegna fotogrammi interi o «diff»?** | ⛔ **interi anche a copia zero** — `[R]` **9 ago**, e per due anni abbiamo creduto il contrario: il blit copia l'**intero** framebuffer di vista, Cogl **svuota deliberatamente** lo stack di clip, e per un CRTC virtuale la vista è un `CoglOffscreen` **singolo e persistente**, non uno swapchain. I quattro buffer li chiedevamo noi | **interi, sempre**, su 2–4 buffer, con il danno dichiarato a parte [R] | da misurare |
 | 9 | **Il buffer arriva già disegnato?** | **no**: a copia zero il 100 % arriva con il disegno in corso | **sì**: KWin fa `glFlush()`, e `glFinish()` su NVidia e llvmpipe [R] | da misurare |
 | 10 | **Che cosa costa la risoluzione?** | **niente** fino a 4K | niente | a 4K sì, ed è la copia in memoria |
@@ -963,11 +995,24 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 > ⭐ **La riserva era quella giusta, e la misura le ha dato ragione due volte: la cura funziona, e la
 > spiegazione era sbagliata lo stesso.**
 >
-> ⛔ **`maxFramerate` non è un tetto continuo: è una GRIGLIA.** Il freno calcola
-> `min_interval_us = 10⁶/maxFramerate` **troncato a intero** — 16666 per 60 — contro un tick da
-> **16666,67 µs**: chi cade sotto la griglia **perde un tick intero**. Non è un **battimento** fra
-> due orologi, è una **quantizzazione**. `[M]` legge verificata su **13 punti**: 8 la confermano,
-> **0 la smentiscono**.
+> ⭐ **IL FATTO, `[M]`**: monitor a **120**, freno a **90**, e GNOME consegna **61,4** — cella **D**
+> di `banchi/03-b14-esiti.jsonl`, pulita, coi tre controlli che chiudono.
+>
+> ⚠ **LA CAUSA, `[R]`**: letta nel codice di Mutter, `maxFramerate` non sembra un tetto continuo ma
+> una **GRIGLIA**. Il freno calcola `min_interval_us = 10⁶/maxFramerate` **troncato a intero** —
+> 16666 per 60 — contro un tick da **16666,67 µs**: chi cade sotto **perde un tick intero**. Non un
+> **battimento** fra due orologi, una **quantizzazione**. ⭐ **È la spiegazione migliore che
+> abbiamo**, ed è coerente con la cella D. ⛔ **Ma è una lettura, non una misura.**
+>
+> > ⛔⛔ ⚠ *Questa riga diceva: «`[M]` legge verificata su **13 punti**: 8 la confermano, **0 la
+> > smentiscono**». **È FALSA.** Il file degli esiti della griglia,
+> > `banchi/03-b14-esiti-griglia.jsonl`, porta **tre righe**: il terreno e **due celle**
+> > (`griglia-apertura-120`, `griglia-freno-90`), **tutt'e due con `scena_sul_mio_monitor: false`**
+> > ⇒ rifiutate dal banco stesso, che stampa «⛔ la legge NON regge su **0 punti su 0**». I tredici
+> > punti non esistono in nessun file di esiti. **Corretta il 13 agosto 2026**, rilievo del
+> > coordinatore della fase 3, verificato sui due file di esiti. ⇒ La quantizzazione torna `[R]`; la
+> > tabella qui sotto resta `[M]`, perché viene tutta da `03-b14-esiti.jsonl`, sette celle tutte con
+> > `scena_sul_mio_monitor: true`.*
 >
 > | monitor | freno | consegnati | mediana | p99 |
 > |---|---|---|---|---|
@@ -989,11 +1034,20 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 > > funzionando la conferma. Qui il battimento spiegava lo 0,61, indicava il disaccoppiamento, e il
 > > disaccoppiamento ha portato i 60: tre conferme di fila per una causa sbagliata.
 > >
-> > ⛔ **A smontarla non è stata la cura: è stata la MISURA A TAPPETO** — 13 punti invece dei tre che
-> > servivano a dimostrare che funziona. Il battimento e la quantizzazione **prevedono la stessa cosa
-> > sulla cella che si voleva curare**, e cose diverse **fuori**. ⇒ È §1.13 nella sua forma
-> > generale: *il caso che distingue due spiegazioni non è quello che le ha prodotte, è quello appena
-> > fuori* — e la cella che le distingue costa quanto quella che le conferma.
+> > ⛔ **A smontarla non è stata la cura: è stata la CELLA APPENA FUORI** — la cella bassa, che il
+> > battimento vuole a **0,61** e che dà **0,50 pulito e deterministico**. Il battimento e la
+> > quantizzazione **prevedono la stessa cosa sulla cella che si voleva curare**, e cose diverse
+> > **fuori**. ⇒ È §1.13 nella sua forma generale: *il caso che distingue due spiegazioni non è
+> > quello che le ha prodotte, è quello appena fuori* — e la cella che le distingue costa quanto
+> > quella che le conferma.
+> >
+> > > ⛔⛔ ⚠ *Questo capoverso diceva: «A smontarla non è stata la cura: è stata la **MISURA A
+> > > TAPPETO** — **13 punti** invece dei tre che servivano a dimostrare che funziona». **È falso, e
+> > > la misura a tappeto non c'è mai stata**: le sue due sole celle sono rifiutate dal banco stesso
+> > > (riquadro qui sopra). A smontare il battimento è stata **una** cella pulita, la A. **Corretto
+> > > il 13 agosto 2026**, rilievo del coordinatore della fase 3.* ⇒ ⭐ **E la lezione ne esce più
+> > > forte, non più debole**: non serviva il tappeto, **bastava il caso appena fuori** — purché sia
+> > > valido.
 
 > ⚠ **La colonna wlroots e' stata riempita dopo** *(8 agosto 2026)*. Le celle «da misurare» qui sopra
 > hanno una risposta in **`xfce.md` §12**, che rifa' queste quattordici domande con la colonna
@@ -1094,10 +1148,13 @@ arrivavano 18, chiedendone 60 ne arrivano 37.
 catena. Un anello più veloce di quel che gli arriva non produce niente.
 
 > ⭐⭐ **E il 13 agosto 2026 la lezione si è avverata una seconda volta, sul numero che questa
-> sezione cita.** *«Chiedendone 60 ne arrivano 37»* non era un tetto: era il resto di una
-> **divisione troncata**. `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60)
-> contro un tick da 16666,67 µs ⇒ chi cade sotto **perde un tick intero**. Chiedendone **90 a un
-> monitor a 120** ne arrivano `[M]` **61,4**.
+> sezione cita.** *«Chiedendone 60 ne arrivano 37»* non è un tetto: `[M]` **non si riproduce
+> affatto** — alla cadenza che chiedevamo ne arrivano **31,5**, e chiedendone **90 a un monitor a
+> 120** ne arrivano **61,4**. ⚠ **Il perché è `[R]`**: nel codice di Mutter il freno calcola
+> `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
+> 16666,67 µs ⇒ chi cade sotto **perderebbe un tick intero** — il resto di una **divisione
+> troncata**. *La sera del 13 agosto questa spiegazione era scritta qui come misurata: non lo è,
+> vedi il riquadro di §3 domanda 7 e `gnome.md` §8.2.*
 >
 > ⇒ ⛔ **Il tetto era di nuovo un numero che avevamo scritto noi, e stavolta era scritto due volte**:
 > una nella cadenza che chiedevamo, e una **nel modo in cui il compositore la converte**. La forma

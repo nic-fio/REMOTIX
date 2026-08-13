@@ -46,29 +46,45 @@ in catalogo avvelena ogni misura che gli viene dopo, perché dà fiducia.
 
 ## ⭐⭐ Dallo step 1 — la cadenza. È il risultato più grosso della giornata
 
-**La causa scritta in tre documenti è SBAGLIATA, e la cura esiste.** `maxFramerate` non è un tetto
-continuo: è una **griglia**. `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per
-60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero. Non è un **battimento**
-fra due orologi: è una **quantizzazione**. Legge verificata su **13 punti**, 8 confermano, 0
-smentiscono.
+**La causa scritta in tre documenti è SBAGLIATA, e la cura esiste.** ⭐ **Il fatto, `[M]`**: monitor
+**120** + freno **90** ⇒ **61,4** consegnati. ⚠ **La causa nuova, `[R]`**: letta nel codice di
+Mutter, `maxFramerate` non è un tetto continuo ma una **griglia** —
+`min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
+16666,67 µs ⇒ chi cade sotto perderebbe un tick intero. Non un **battimento** fra due orologi: una
+**quantizzazione**.
 
-| monitor | freno | consegnati | mediana | p99 |
-|---|---|---|---|---|
-| 60 | 60 | 31,5 | 33,31 ms | 35,53 |
-| 120 | 60 | 46,13 | 24,12 ms | 29,23 |
-| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 |
+> ⛔⛔ ⚠ *Questo capoverso diceva: «Legge verificata su **13 punti**, 8 confermano, 0 smentiscono», e
+> il capoverso sotto la tabella diceva: «Riscontro incrociato con la scena dello step 2: concordano
+> **entro il 4 %**, attese **0** ovunque». ⛔ **Falsi tutt'e due**, e questo rapporto è il posto da
+> cui la riga si è propagata negli altri otto documenti.*
+>
+> | file di prova | che cosa contiene davvero |
+> |---|---|
+> | `banchi/03-b14-esiti-griglia.jsonl` | **tre righe**: il terreno e **due celle** (`griglia-apertura-120`, `griglia-freno-90`), **tutt'e due con `scena_sul_mio_monitor: false`** ⇒ rifiutate dal banco, che stampa «⛔ la legge NON regge su **0 punti su 0**». ⇒ **i 13 punti non esistono** |
+> | `banchi/03-b14-esiti-scena2.jsonl` | la **cella D** — proprio quella da confermare — porta `scena_sul_mio_monitor: false`, `palco_stabile: false`, **1 fotogramma in 25 s**; e il controllo di **ritorno** dà 52,84 contro gli 80,28 della sua cella B, cioè **non torna**. Entro il 4 % concordano A (0,7 %), B (3,2 %) e il controllo positivo; C sta al **5,4 %**, il negativo al **7 %** ⇒ **il 61,4 ha una scena sola** |
+> | `banchi/03-b14-esiti.jsonl` | ⭐ **pulito**: sette celle, **tutte** `scena_sul_mio_monitor: true`, coi tre controlli che chiudono. **È da qui che viene la tabella qui sotto**, ed è tutto quel che sopravvive |
+>
+> **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3, verificato riga per riga
+> sui file di esiti. ⇒ La quantizzazione torna `[R]`, e **M3 non è chiusa: è mezza**.
+
+| monitor | freno | consegnati | mediana | p99 | cella |
+|---|---|---|---|---|---|
+| 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
+| 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
+| 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
+| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
 
 ⛔ **E NON si riproducono**: né i «sei decimi» (la cella A dà **0,50** pulito), né il **37** che tre
-documenti citano come fatto. Riscontro incrociato con la scena dello step 2: concordano **entro il
-4 %**, attese **0** ovunque.
+documenti citano come fatto. ⭐ **Queste due righe reggono**, perché vengono da celle pulite.
 
 | Dove | Che cosa cade |
 |---|---|
 | `SPECIFICHE.md:133-139` | «il traguardo dei 40 ms probabilmente non è raggiungibile su GNOME… Mutter ne consegna 37» ⇒ `[M]` **60,04** con monitor 120 / freno 90 |
 | `DECISIONI.md` §2.5 (r. 981, riquadro 997), r. 873, r. 2547; §2.5-bis r. 1012 | il «tetto di Mutter accettato» va rimesso in discussione |
 | `PIANO.md` fase 3, r. 442-448 | l'esperimento è fatto: l'esito non è «riesce» né «non riesce», è **«riesce con un numero diverso»** |
-| `LEZIONI.md` r. 734-750 (il riquadro dei sei decimi), r. 717 (domanda 7), §6.1 r. 848 | il battimento va sostituito dalla quantizzazione sui tick |
-| `gnome.md` §8.2 r. 316-325, §13 r. 482 | **M3 si può chiudere** |
+| `LEZIONI.md` r. 734-750 (il riquadro dei sei decimi), r. 717 (domanda 7), §6.1 r. 848 | il battimento va sostituito dalla quantizzazione sui tick, ⚠ **marcata `[R]`** |
+| `gnome.md` §8.2 r. 316-325, §13 r. 482 | ⛔ *diceva «**M3 si può chiudere**»: **no**. Il fatto è `[M]`, la causa `[R]`, il riscontro su una seconda scena non c'è ⇒ **M3 resta mezza**. Corretto il 13 ago 2026, stesso rilievo* |
+| ⭐⭐ `LEZIONI.md` §1.1 | **la trappola n. 1 è tornata a mordere il risultato che la citava**: il banco aveva scritto `scena_sul_mio_monitor: false` nel proprio file e nessuno l'ha guardato. ⇒ *un banco che dichiara la propria invalidità non serve a niente se chi legge guarda solo il risultato* — scritto come **§1.1-bis** |
 
 ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
 tolgono un ostacolo; il numero lo fa lo step 5.
@@ -136,9 +152,16 @@ chi legge `.disegni` senza guardare `fidato`.
 
 ⛔ **RIGA NUOVA PER I DOCUMENTI**: *ogni cella di ritmo misurata con `03-scena` **prima** del 13
 agosto va rifatta o marcata `[?]`* — la scena poteva correre a vuoto senza dirlo.
-⚠ Il riscontro incrociato dello step 1 **regge**: le sue celle principali usavano `03-b14-scena`
+⭐ **Le celle che contano dello step 1 reggono**: `banchi/03-b14-esiti.jsonl` usa `03-b14-scena`
 (EGL, sua), e la matrice dei tetti rifatta con la cura è **invariata** (60,0-60,2 disegni/s,
-0 attese) ⇒ l'accordo entro il 4 % fra due scene indipendenti tiene.
+0 attese).
+
+> ⛔ ⚠ *Questa riga diceva: «**Il riscontro incrociato dello step 1 regge** […] ⇒ l'accordo entro il
+> 4 % fra due scene indipendenti tiene». **Non regge**, e per la ragione che la riga sopra dichiara:
+> la seconda scena del riscontro **è** `03-scena`. In `banchi/03-b14-esiti-scena2.jsonl` la cella
+> **D** porta `scena_sul_mio_monitor: false`, `palco_stabile: false` e **1 fotogramma in 25 s**, e
+> il controllo di **ritorno** non torna (52,84 contro 80,28). ⇒ ⛔ **il 61,4 ha una scena sola.**
+> Corretta il 13 agosto 2026, rilievo del coordinatore della fase 3.*
 
 ## ⛔⛔ Dallo step 5 — L'ANELLO DEL RITARDO. **SFORA**, e il muro è NOSTRO
 

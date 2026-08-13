@@ -160,9 +160,13 @@ ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `Re
 > disponibile** (`weston-simple-egl` non è installato), e **il numero che questo controllo positivo
 > riproduceva — i ~37 di Mutter — non si riproduce**. Non è un difetto del banco: alla cadenza che
 > gli si chiedeva Mutter consegna **31,5**, e rinegoziando la sola cadenza (monitor 120, freno 90)
-> ne consegna `[M]` **61,4**. Il 37 era il resto di una **divisione troncata** (`gnome.md` §8.2).*
-> ⇒ **Il controllo positivo del progetto va rifatto contro la legge, non contro il numero**, e con
-> la scena della fase 3 — che **conta le proprie attese** e dichiara se ha corso a vuoto.
+> ne consegna `[M]` **61,4**. ⚠ Che il 37 fosse il resto di una **divisione troncata** è la
+> spiegazione più probabile, ed è `[R]` — letta nel codice di Mutter, **non misurata**
+> (`gnome.md` §8.2; la «legge su 13 punti» che si leggeva qui il 13 agosto **è caduta la sera
+> stessa**).*
+> ⇒ **Il controllo positivo del progetto va rifatto contro le celle pulite di
+> `banchi/03-b14-esiti.jsonl`, non contro il numero**, e con la scena della fase 3 — che **conta le
+> proprie attese** e dichiara se ha corso a vuoto.
 
 | Che cosa | Atteso | Misurato | Esito | Data |
 |---|---|---|---|---|
@@ -585,6 +589,12 @@ accanto**, o attribuirebbe il tetto alla cosa sbagliata:
    orologi a 60 che battono fra loro, cioè esattamente il meccanismo che `gnome.md` §8.2 legge nel
    codice. La cura candidata (**M3**: negoziare alto e rinegoziare la sola cadenza) costa **zero
    righe di prodotto** e non è stata provata. È in `PIANO.md` fase 3.
+   > ⭐ ⚠ *13 agosto 2026: **M3 è stata provata e il fatto riesce** — monitor 120, freno 90, `[M]`
+   > **61,4**. ⛔ Ma il meccanismo scritto qui («due orologi che battono») **è sbagliato**, e quello
+   > che lo sostituisce (una **quantizzazione** sui tick) è `[R]`, non `[M]`: la «legge verificata
+   > su 13 punti» scritta il pomeriggio del 13 agosto **è caduta la sera stessa**, perché le due
+   > celle della griglia portavano `scena_sul_mio_monitor: false`. ⇒ **M3 resta mezza**
+   > (`gnome.md` §13).*
 
 ⚠ La differenza fra le due frasi non è accademica: *«Mutter non va oltre 36»* chiude la questione,
 *«Mutter non va oltre 36 finché nessuno separa i due orologi»* la lascia aperta a costo zero. Oggi

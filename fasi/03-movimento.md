@@ -217,11 +217,34 @@ Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (li
 
 | # | Step | Che cosa ha prodotto | Esito |
 |---|---|---|---|
-| **1** | ⭐ **La cadenza disaccoppiata** (M3) | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), mediana **16,66 ms**. ⛔ E la **legge**: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro un tick da 16666,67 µs — una **quantizzazione**, non un battimento. 13 punti, 8 confermano, 0 smentiscono | ⭐ **M3 chiusa, e riesce** — ⛔ **ma la causa scritta in tre documenti era sbagliata, e il prodotto non sa chiedere quella cadenza** |
+| **1** | ⭐ **La cadenza disaccoppiata** (M3) | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), mediana **16,66 ms** — cella **D**, pulita. ⚠ E la spiegazione, che è `[R]`: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro un tick da 16666,67 µs — una **quantizzazione**, non un battimento, **letta nel codice di Mutter** | ⭐ **il fatto riesce** — ⛔ **ma M3 è MEZZA, non chiusa**: la causa non è misurata, il prodotto non sa chiedere quella cadenza, e la causa scritta in tre documenti era sbagliata |
 | **2** | ⛔ **La scena che si dichiara** | `banchi/03-scena.c` — `wl_shm` + `xdg-shell`, marca a **144 bit**, quattro conti fra cui le **attese**, verifica `wl_surface.enter` — e il suo lettore | ✅ **34 verdi / 0 rossi**. M6 chiusa `[M]`, il `giro` di M8 riaperto |
 | **3** | **Il prodotto: uno stream per fotogramma** | **135 fotogrammi**, `numero` 1→135 · **132 delta e 3 chiavi** · il primo dopo `SESSIONE` è una **chiave con FIN** · `RICHIEDI_CHIAVE` → chiave in **≤ 200 ms** · **10 stream azzerati contro 18 con FIN**, nessuna chiave abbandonata, **E8 provata sul filo** · ⭐ nei 28 byte il **`pts` di Mutter** (scarto dal nostro `CLOCK_MONOTONIC`: **11 347 µs**) · ⭐ **il deposito del video sparito del tutto** | ✅ **6 punti su 7 chiusi** · 13 controlli di certificazione, **13 verdi** · giro dal vivo **8 verdi, 1 rosso** |
 | **4** | **La pagina: i fotogrammi consegnati** | **60,0 fotogrammi dipinti al secondo** offrendone 60; tetto a saturazione **127,6/s** a 1080p | ✅ **19 casi verdi**, **8 guasti innestati su 8 accusati** |
 | **5** | ⭐ **L'anello del ritardo (S4)** | il numero qui sopra. **P1** verde (N=25 → **+25,08**; N=60 → **+58,58**), con l'iniezione **fuori dal prodotto** e l'ancora d'orologio che **non ci passa**. **P3** verde **sui pixel veri**: 234 fotogrammi in movimento, **0 falsi positivi** | ✅ **banco 31 su 31, ponte 11 su 11** — ⛔ **ma P5 NON ESEGUITO, e adesso lo dice** |
+
+> ⛔⛔ ⚠ **La riga dello step 1 diceva un'altra cosa, e va detto che cosa diceva.** *Fino alla sera
+> del 13 agosto 2026 portava: «13 punti, 8 confermano, 0 smentiscono» e l'esito «⭐ **M3 chiusa, e
+> riesce**». ⛔ **Falso tutt'e due.** Il file degli esiti della griglia,
+> `banchi/03-b14-esiti-griglia.jsonl`, porta **tre righe**: il terreno e **due celle**
+> (`griglia-apertura-120` e `griglia-freno-90`), e **tutt'e due portano `scena_sul_mio_monitor:
+> false`** ⇒ sono rifiutate dal banco stesso, che sul verdetto stampa «⛔ la legge NON regge su **0
+> punti su 0**». **Corretta il 13 agosto 2026**, rilievo del coordinatore della fase 3, verificato
+> sui due file di esiti.*
+>
+> | | |
+> |---|---|
+> | ✅ **che cosa sopravvive** | tutto quel che sta in `banchi/03-b14-esiti.jsonl`: sette celle, **tutte** con `scena_sul_mio_monitor: true` — A (60/60 → 31,5), B (120/120 → 82,9), C (120/60 → 46,13), ⭐ **D (120/90 → 61,4, mediana 16,66, p99 20,43)** e i tre controlli. E con loro il **«sei decimi non si riproducono»** (la A dà 0,50 pulito) e il **«37 non si riproduce»** |
+> | ⛔ **che cosa cade** | la **legge della griglia verificata**. La quantizzazione torna `[R]`: resta la spiegazione migliore che abbiamo, coerente con la cella D, **ma è letta nel codice di Mutter, non misurata** |
+> | ⛔ **e cade anche** | il **riscontro incrociato**: in `banchi/03-b14-esiti-scena2.jsonl` la cella D porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s**, e il controllo di ritorno di quella scena non torna. ⇒ **il 61,4 ha una scena sola** |
+> | ⚠ **e M3** | **non è chiusa: è mezza** — il fatto è `[M]`, la causa `[R]`, il riscontro non c'è (`gnome.md` §13) |
+>
+> ⭐⭐ **E la cosa che vale più della correzione**: la ragione del rifiuto è **la trappola numero uno
+> della giornata** — *la scena deve stare sul monitor che si sta catturando* — che stamattina era
+> già costata **quattro giri** ad altri due gruppi ed era già stata scritta in `LEZIONI.md` §1.1.
+> ⛔ Il banco **lo aveva scritto nel proprio file**, campo `scena_sul_mio_monitor: false`, e nessuno
+> l'ha guardato: si è letto il numero e non la riga accanto. ⇒ *Un banco che dichiara la propria
+> invalidità non serve a niente se chi legge guarda solo il risultato* — `LEZIONI.md` §1.1-bis.
 
 ### ⭐ E tre cose che il prodotto sa fare adesso e non sapeva stamattina
 
@@ -331,9 +354,18 @@ legge i disegni senza guardare `fidato`. **Chiusa: 43 righe verdi, 0 rosse.**
 
 ⛔⛔ **RIGA CHE VALE PER TUTTO IL PROGETTO**: *ogni cella di ritmo misurata con `03-scena` **prima**
 del 13 agosto va rifatta o marcata `[?]`* — la scena poteva correre a vuoto senza dirlo.
-⚠ Il riscontro incrociato dello step 1 **regge**: usava `03-b14-scena` (EGL, sua), e la matrice dei
-tetti rifatta con la cura è **invariata** (60,0-60,2 disegni/s, 0 attese) ⇒ l'accordo **entro il 4 %**
-fra due scene indipendenti tiene.
+⭐ **Le celle che contano dello step 1 reggono**: `banchi/03-b14-esiti.jsonl` usa `03-b14-scena`
+(EGL, sua), e la matrice dei tetti rifatta con la cura è **invariata** (60,0-60,2 disegni/s,
+0 attese).
+
+> ⛔ ⚠ *Questa riga diceva: «**Il riscontro incrociato dello step 1 regge** […] ⇒ l'accordo **entro
+> il 4 %** fra due scene indipendenti tiene». **Non regge.** La seconda scena del riscontro è
+> proprio `03-scena`, cioè quella che questa stessa riga dichiara da rifare — e in
+> `banchi/03-b14-esiti-scena2.jsonl` la sua **cella D** porta `scena_sul_mio_monitor: false`,
+> `palco_stabile: false` e **1 fotogramma in 25 s**, mentre il suo controllo di **ritorno** dà 52,84
+> contro gli 80,28 della sua cella B: **non torna**. Il 4 % vale su A (0,7 %), B (3,2 %) e il
+> controllo positivo; C sta al **5,4 %** e il negativo al **7 %**. ⇒ ⛔ **La cella D — il 61,4 — ha
+> UNA scena sola.** Corretta il 13 agosto 2026, rilievo del coordinatore della fase 3.*
 
 ### ⛔ 6. Il metro si stava regalando 11 ms, e P5 si dichiarava verde senza esserlo
 
@@ -533,9 +565,14 @@ sostituito **non è un numero su cui prendere decisioni** — e le fasi 4-7 ne p
 uguali, da rifare dopo.
 
 ⚠ **Ma il danno era stretto, e va detto perché non si legga la giornata come persa**: dei risultati
-della fase 3, **solo il verdetto sul ritardo** dipendeva dal codificatore. La legge della griglia,
-il verde prodotto dallo strumento, **B-18**, **B-20**, il worker respinto, la scena che correva a
-vuoto e i tre falsi rossi **non ci si appoggiano affatto**.
+della fase 3, **solo il verdetto sul ritardo** dipendeva dal codificatore. La cella **D** (61,4 a
+monitor 120 e freno 90), il verde prodotto dallo strumento, **B-18**, **B-20**, il worker respinto,
+la scena che correva a vuoto e i tre falsi rossi **non ci si appoggiano affatto**.
+
+> ⛔ ⚠ *Questa riga cominciava l'elenco con «**La legge della griglia**». **Va tolta di lì**: la
+> legge della griglia non è mai stata misurata — le due celle della griglia sono rifiutate dal banco
+> stesso (riquadro nella tavola dei cinque step). Al suo posto sta la **cella D**, che è pulita e
+> regge. **Corretta il 13 agosto 2026**, rilievo del coordinatore della fase 3.*
 
 ### ⭐⭐ E si può fare — `[M]` verificato il 13 agosto sul server
 

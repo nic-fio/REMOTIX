@@ -874,9 +874,10 @@ Mutter consegnava 37 fotogrammi, KWin 60.
 
 > ⛔ *13 agosto 2026: **il 37 non si riproduce**, e questa riga lo cita come se fosse un fatto
 > stabile. Alla cadenza che chiedevamo Mutter consegna **31,5** con mediana 33,31 ms; rinegoziando
-> la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** (60,04). Il numero non è una
-> proprietà di Mutter: è il resto di una divisione troncata (§2.5-bis). ⚠ Il **minimo** deciso qui
-> non si tocca — resta lontanissimo in tutt'e due i casi.*
+> la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** (60,04). Il numero **non è una
+> proprietà stabile di Mutter**, e la spiegazione più probabile — il resto di una divisione troncata
+> — è `[R]`, non `[M]` (§2.5-bis). ⚠ Il **minimo** deciso qui non si tocca — resta lontanissimo in
+> tutt'e due i casi.*
 
 Il cambiamento è di **natura** più che di valore: il minimo smette di essere un'asticella da
 inseguire e diventa il **livello sotto cui non si scende e non si stacca**, per quanto brutta
@@ -1057,13 +1058,22 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 > Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (libsvtav1 /
 > libx265). ⇒ **58 ms su 74,6 sono nostri, il 78 %**, ~39 nel solo tratto cattura→filo.
 >
-> ⛔ **E il muro dei 37 non si riproduce.** Il riquadro qui sopra dava la causa dei sei decimi come
-> **battimento** fra due orologi allo stesso numero: è sbagliata anche quella. È una
-> **quantizzazione** sui tick — `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666
-> per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero. Legge verificata su
-> **13 punti**, 8 confermano, **0 la smentiscono**, e i «sei decimi» non si riproducono: la cella
-> bassa dà **0,50 pulito**. Con monitor a **120** e freno **90**: `[M]` **61,4 fotogrammi
-> consegnati al secondo** (60,04), intervallo mediano **16,66 ms**.
+> ⛔ **E il muro dei 37 non si riproduce.** Con monitor a **120** e freno **90**: `[M]` **61,4
+> fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**. E i «sei decimi» non
+> si riproducono nemmeno: la cella bassa dà **0,50 pulito**. ⚠ Il riquadro qui sopra dava la causa
+> dei sei decimi come **battimento** fra due orologi allo stesso numero: è sbagliata anche quella, e
+> al suo posto c'è una **quantizzazione** sui tick — `min_interval_us = 10⁶/maxFramerate` **troncato
+> a intero** (16666 per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero.
+> ⛔ **Ma la quantizzazione è `[R]`, letta nel codice di Mutter, non `[M]`.**
+>
+> > ⛔ ⚠ *Questo capoverso diceva «Legge verificata su **13 punti**, 8 confermano, **0 la
+> > smentiscono**». **È falso**: il file degli esiti della griglia,
+> > `banchi/03-b14-esiti-griglia.jsonl`, porta **tre righe** — il terreno e **due celle**, tutt'e
+> > due con `scena_sul_mio_monitor: false` ⇒ rifiutate dal banco stesso, che stampa «⛔ la legge NON
+> > regge su **0 punti su 0**». **Corretto il 13 agosto 2026**, rilievo del coordinatore della
+> > fase 3, verificato sui due file di esiti. ⇒ Restano `[M]` il **61,4** e lo **0,50**, che vengono
+> > dalle celle pulite di `03-b14-esiti.jsonl`; **cade la legge**, e con lei la chiusura di M3
+> > (`gnome.md` §13).*
 >
 > ⛔⛔ **Ma quella cura il prodotto oggi non la sa chiedere**, e va scritto qui o si scambia una
 > misura di banco per una prestazione: `MOVIMENTO_FPS 60` è una **costante di compilazione**
@@ -1107,21 +1117,35 @@ cosa sbagliata:
    `gnome.md` §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
    riuscisse, questa voce si riscrive.
 
-> ### ⛔ 13 agosto 2026 — **M3 è chiusa, e questa voce va rimessa in discussione**
+> ### ⚠ 13 agosto 2026 — **M3 riesce nel fatto, e questa voce va rimessa in discussione**
 >
-> *Punto 2 qui sopra: «se riuscisse, questa voce si riscrive». È riuscito.*
+> *Punto 2 qui sopra: «se riuscisse, questa voce si riscrive». Il fatto è riuscito — ⛔ ma **M3 non
+> è chiusa**: la causa non è misurata (`gnome.md` §13).*
 >
-> ⛔ **Il tetto non è del compositore: è un troncamento.** `min_interval_us = 10⁶/maxFramerate`
-> **troncato a intero** (16666 per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick
-> intero. Non è un battimento fra due orologi — è una **quantizzazione**, legge verificata su **13
-> punti** (8 confermano, 0 smentiscono). ⛔ E la firma «mediana 33,3, minimo 16,2, mai valori
-> intermedi» è **esattamente** quel che una griglia produce, non due orologi in battimento.
+> ⭐ **Il tetto non è del compositore, e la prova è `[M]`**: alla cadenza disaccoppiata GNOME
+> consegna **61,4** invece di 31,5, sulla stessa macchina e con la stessa scena.
 >
-> | monitor | freno | consegnati | mediana | p99 |
-> |---|---|---|---|---|
-> | 60 | 60 | 31,5 | 33,31 ms | 35,53 |
-> | 120 | 60 | 46,13 | 24,12 ms | 29,23 |
-> | ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 |
+> ⚠ **Il perché è `[R]`**: nel codice di Mutter il freno calcola
+> `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
+> 16666,67 µs ⇒ chi cade sotto perderebbe un tick intero. Non un battimento fra due orologi, una
+> **quantizzazione**. ⚠ E la firma «mediana 33,3, minimo 16,2, mai valori intermedi» è quel che una
+> griglia produce e due orologi in battimento no — ⛔ **ma è un indizio coerente, non una legge
+> misurata**.
+>
+> > ⛔ ⚠ *Questo capoverso diceva: «è una **quantizzazione**, legge verificata su **13 punti** (8
+> > confermano, 0 smentiscono)». **È falso.** `banchi/03-b14-esiti-griglia.jsonl` ha **due sole
+> > celle**, tutt'e due con `scena_sul_mio_monitor: false`, e il banco stampa «⛔ la legge NON regge
+> > su **0 punti su 0**». **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3.*
+>
+> | monitor | freno | consegnati | mediana | p99 | cella |
+> |---|---|---|---|---|---|
+> | 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
+> | 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
+> | 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
+> | ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
+>
+> *Le quattro celle vengono da `banchi/03-b14-esiti.jsonl`, tutte con `scena_sul_mio_monitor: true`
+> e coi tre controlli — positivo, negativo, ritorno — che chiudono.*
 >
 > ⇒ ⛔ **Il «36 ± 2» resta vero alla cadenza che chiedevamo, e smette di essere un muro del
 > compositore.** Alla cadenza disaccoppiata GNOME consegna **61,4**, cioè quanto KWin. ⚠ E i «sei

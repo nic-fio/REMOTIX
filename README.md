@@ -440,11 +440,16 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > #### ⛔ QUATTRO RIGHE CHE TRE DOCUMENTI DANNO PER FATTE E CHE OGGI SONO SMENTITE
 >
 > 1. ⛔ **il muro dei 37 fotogrammi di Mutter NON SI RIPRODUCE**, e nemmeno i «sei decimi»: la
->    cella bassa dà **0,50 pulito e deterministico**. Non è un **battimento** fra due orologi — è
->    una **quantizzazione**: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per
->    60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero. Legge verificata su
->    **13 punti**, 8 confermano, **0 la smentiscono**. Con monitor a **120 Hz** e freno **90**:
->    **61,4 fotogrammi/s, intervallo mediano 16,66 ms**;
+>    cella bassa dà **0,50 pulito e deterministico**. Con monitor a **120 Hz** e freno **90**: `[M]`
+>    **61,4 fotogrammi/s, intervallo mediano 16,66 ms**. ⚠ **Il perché è `[R]`**: non un
+>    **battimento** fra due orologi ma una **quantizzazione** letta nel codice di Mutter —
+>    `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
+>    16666,67 µs ⇒ chi cade sotto perderebbe un tick intero.
+>    ⛔ ⚠ *Questa riga diceva «Legge verificata su **13 punti**, 8 confermano, **0 la smentiscono**».
+>    **È falso**: `banchi/03-b14-esiti-griglia.jsonl` ha **due sole celle**, tutt'e due con
+>    `scena_sul_mio_monitor: false`, e il banco stampa «la legge NON regge su 0 punti su 0».
+>    Corretta il **13 agosto 2026**, rilievo del coordinatore della fase 3. ⇒ **M3 non è chiusa: è
+>    mezza** (`gnome.md` §13);*
 > 2. ⛔⛔ **ma quella cura NON è raggiungibile dal prodotto**: `MOVIMENTO_FPS 60` è una costante di
 >    compilazione (`figlio.c:1465`), `main.c` non ha opzioni di cadenza, e **`RecordVirtual` non
 >    prende la frequenza** (`mutter.h:82`) — i quattro monitor virtuali sono tutti **@60**. È `[M]`

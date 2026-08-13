@@ -229,9 +229,11 @@ tutto il progetto**. Se il banco non sa riprodurre un numero che sappiamo vero, 
 
 > ⛔ *13 agosto 2026, e va letto insieme alla riga qui sopra: **il 37 non si riproduce**. Alla
 > cadenza che chiedevamo Mutter consegna **31,5**; rinegoziando la sola cadenza, **61,4**. Non è il
-> banco che sbaglia: il 37 non era una proprietà del compositore ma il resto di una divisione
-> troncata (`gnome.md` §8.2). ⇒ Il controllo positivo di questa fase va rifatto **contro la legge**,
-> non contro il numero.*
+> banco che sbaglia: il 37 non è una proprietà del compositore — ⚠ e che sia il resto di una
+> divisione troncata è `[R]`, letto nel codice, **non misurato** (`gnome.md` §8.2; la «legge su 13
+> punti» che si leggeva qui il 13 agosto **è caduta la sera stessa**). ⇒ Il controllo positivo di
+> questa fase va rifatto **contro le celle pulite di `banchi/03-b14-esiti.jsonl`**, non contro il
+> numero.*
 
 **Il banco**: `v1/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
 scene con `ffmpeg -f lavfi -i testsrc2`.
@@ -500,8 +502,8 @@ qualcun altro.
 >
 > | | |
 > |---|---|
-> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms**. M3 di `gnome.md` §13 è **chiusa** |
-> | ⛔ **ma la causa scritta era sbagliata** | non è un **battimento** fra due orologi: è una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs. Legge su **13 punti**, 8 confermano, 0 smentiscono. ⛔ E i «sei decimi» **non si riproducono**: la cella bassa dà **0,50 pulito** |
+> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms** — cella **D**, pulita. ⚠ **Ma M3 di `gnome.md` §13 NON è chiusa: è mezza**, perché la causa non è misurata |
+> | ⛔ **ma la causa scritta era sbagliata, e quella nuova è `[R]`** | non un **battimento** fra due orologi ma una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs — ⛔ **letta nel codice, non misurata**. E i «sei decimi» **non si riproducono**: la cella bassa dà **0,50 pulito** |
 > | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h:82`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
 >
 > ⛔ **E il ritardo, che è il numero per cui la fase esisteva, SFORA**: `[M]` mediana **74,58 ms**
@@ -512,6 +514,15 @@ qualcun altro.
 >
 > ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
 > tolgono un ostacolo; il numero lo fa il ritardo.
+>
+> > ⛔⛔ ⚠ *La seconda riga della tavola diceva: «Legge su **13 punti**, 8 confermano, 0
+> > smentiscono», e la prima dava **M3 per chiusa**. **Tutt'e due false**, e corrette la sera del
+> > 13 agosto 2026 (rilievo del coordinatore della fase 3, verificato sui file di esiti): il file
+> > `banchi/03-b14-esiti-griglia.jsonl` porta **due sole celle**, tutt'e due con
+> > `scena_sul_mio_monitor: **false**` ⇒ rifiutate dal banco stesso, che stampa «⛔ la legge NON
+> > regge su **0 punti su 0**». ⇒ **Il 61,4 resta un fatto `[M]`; il perché torna `[R]`; M3 resta
+> > mezza.** ⭐ E la ragione del rifiuto è la trappola n. 1 di `LEZIONI.md` §1.1 — la scena non era
+> > sul monitor che si catturava — **tornata a mordere il risultato che la citava**: §1.1-bis.*
 
 ---
 
@@ -719,7 +730,7 @@ guardato (I6).
 >
 > | quel che la riga diceva | che cosa dice la misura del 13 agosto |
 > |---|---|
-> | «Mutter ne dà **37**» | ⛔ **non si riproduce**. Alla cadenza che chiedevamo Mutter consegna **31,5** (mediana 33,31 ms); rinegoziando la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** — cioè **quanto KWin**. Il 37 non era una proprietà del compositore: era il resto di una divisione troncata (`gnome.md` §8.2) |
+> | «Mutter ne dà **37**» | ⛔ **non si riproduce**. Alla cadenza che chiedevamo Mutter consegna **31,5** (mediana 33,31 ms); rinegoziando la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** — cioè **quanto KWin**. Il 37 non è una proprietà del compositore; ⚠ che sia il resto di una divisione troncata è `[R]`, letto nel codice e non misurato (`gnome.md` §8.2) |
 > | «è la strada per il traguardo dei **40 ms**» | ⛔ **no.** Il ritardo misurato è `[M]` **74,58 ms** cattura → vetro, e Mutter ne vale il **22 %** (16,66 su 74,6). Il **78 % è nostro**, ~39 ms nel tratto cattura → primo byte, **dominato dal codificatore in software**. ⇒ Cambiare compositore **lascerebbe intatti i 39 ms di codifica** |
 >
 > ⇒ ⛔ **Chi arriva a questa fase aspettandosi che porti il ritardo dentro il tetto resterà deluso**,
