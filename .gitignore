@@ -29,3 +29,13 @@ banchi/01-b12-copie/
 #    sono la *scena dichiarata* di una misura certificata, e una scena che si puo'
 #    solo rifare non e' una scena che si puo' RIVEDERE.
 banchi/01-p5-copie-*/
+
+# ⛔ I FLUSSI DI PROVA DELLA SONDA DEL PALCO — 13 agosto 2026 sera.
+# `banchi/03-palco-lavoro/` sono i .265/.264/.ivf che escono dal codificatore
+# HARDWARE del server e servono solo a dare da mangiare al decodificatore del
+# browser: sono DERIVATI, li rifa' `03-palco-codificatori-2.sh` in venti
+# secondi, e pesano 15 MB.
+#   ⚠ E ci sono finiti dentro per un `git add -A` del coordinatore mentre gli
+#     agenti lavoravano: la ricetta si committa, i 15 MB no.
+banchi/03-palco-lavoro/
+banchi/03-palco-profili/
