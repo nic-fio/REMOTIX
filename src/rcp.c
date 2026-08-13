@@ -1905,7 +1905,9 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 /*             ⇒ `s->tela_l/tela_a`, che chi chiama non puo' passare          */
 /*  P6  §5.2   il primo fotogramma dopo `SESSIONE` DEVE essere una chiave     */
 /*  P9  §5.2   e lo stesso a ogni cambio di tela                              */
-/*             ⇒ `s->serve_chiave`, acceso in tre punti e spento in uno       */
+/*             ⇒ `s->serve_chiave`, acceso in CINQUE punti e spento in uno    */
+/*             ⚠ Diceva «tre» e i punti erano quattro; il quinto e' §2.3, il  */
+/*               delta saltato per mancanza di posto (difetto B-18)           */
 /*  §6.2       il tetto di 16 MiB vincola PRIMA chi spedisce                  */
 /*             ⇒ il controllo sta prima di aprire lo stream: non parte un byte*/
 /*  §6.2       FIN ⇒ completo · `RESET_STREAM` ⇒ si butta                     */
@@ -2017,6 +2019,128 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
 	s->tela_a = alt;
 	s->serve_chiave = true;
 	s->serve_chiave_perche = "e' il primo alla misura nuova dopo TELA (§5.2)";
+}
+
+void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
+                     uint32_t *abbandonati)
+{
+	if (spediti)
+		*spediti = s ? s->video_spediti : 0;
+	if (abbandonati)
+		*abbandonati = s ? s->video_abbandonati : 0;
+}
+
+/* ⛔⭐ §5.1 — L'ABBANDONO DECISO A VALLE, E PERCHE' NON BASTAVA QUELLO DI SOPRA.
+ *
+ * `rcp_video_abbandona()` qui sotto sa abbandonare **il fotogramma aperto**,
+ * cioe' uno a cui manca ancora un pezzo da scrivere.  ⛔ Ma la scena che §5.1
+ * descrive con le sue stesse parole — «il server PUO' chiamare `RESET_STREAM`
+ * su un fotogramma che non serve piu', **perche' ne e' gia' partito uno piu'
+ * recente**» — non e' quella: li' il fotogramma vecchio e' stato scritto TUTTO
+ * e chiuso con FIN, e sta fermo nella coda d'uscita del trasporto perche' la
+ * linea non lo porta via.  Per RCP quel fotogramma e' gia' finito
+ * (`video_aperto` e' falso), e `rcp_video_abbandona()` restituirebbe `false`
+ * senza scrivere una riga.
+ *
+ * ⇒ Chi tiene la coda — `webtransport.c` — e' l'unico che sa quali fotogrammi
+ *   sono ancora **sul filo o prima del filo**, e quindi l'unico che puo'
+ *   decidere l'abbandono di §5.1.  ⛔ Ma le tre conseguenze di quell'abbandono
+ *   sono di RCP e non sue: la riga di registro obbligatoria (§5.1), il conto
+ *   degli abbandonati, e ⛔ **il debito della chiave** (§5.2 — «quando il
+ *   server abbandona un delta DEVE mandare un fotogramma chiave appena puo'»).
+ *   Lasciarle a chi tiene la coda vorrebbe dire due copie dello stesso stato,
+ *   che e' la forma che `RCP.md` §0 esiste per togliere.
+ *
+ * ⛔ E LA CHIAVE NON SI ABBANDONA NEMMENO DA VALLE: §5.2 lo vieta senza
+ *    distinguere chi decide.  Qui si RIFIUTA e si scrive, come sopra —
+ *    altrimenti la regola varrebbe per una strada e non per l'altra, e quale
+ *    delle due si percorra dipenderebbe da quanto e' veloce la linea. */
+bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave,
+                                   size_t byte_non_usciti, const char *perche)
+{
+	if (!s)
+		return false;
+	if (chiave) {
+		reg(s, "⛔ NON abbandono il fotogramma %u nella coda: e' una CHIAVE, e "
+		       "§5.2 lo vieta anche a valle (motivo chiesto: %s) — restavano "
+		       "%zu byte da far uscire",
+		    numero, perche ? perche : "non dichiarato", byte_non_usciti);
+		return false;
+	}
+	s->video_abbandonati++;
+	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
+	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
+	 * dal lato che riceve».  ⚠ E si dice quanti byte NON sono usciti: e' la
+	 * differenza fra «l'ho buttato prima di spendere banda» e «l'avevo gia'
+	 * quasi spedito», che sono due fatti diversi per chi regola il ritmo. */
+	reg(s, "fotogramma %u ABBANDONATO NELLA CODA (§5.1, RESET_STREAM): %zu byte "
+	       "non sono usciti, perche': %s — spediti %u, abbandonati %u",
+	    numero, byte_non_usciti, perche ? perche : "non dichiarato",
+	    s->video_spediti, s->video_abbandonati);
+	/* ⛔ §5.2: «quando il server abbandona un delta, DEVE mandare un fotogramma
+	 * chiave appena puo' — senza aspettare che il client lo chieda». */
+	s->serve_chiave = true;
+	s->serve_chiave_perche = "un delta e' stato abbandonato nella coda (§5.1)";
+	return true;
+}
+
+/* ⛔ §2.3 — IL CREDITO DI STREAM MANCATO, SCRITTO NEL REGISTRO DA UN POSTO SOLO.
+ *
+ * §2.3 chiude cosi': «e in tutt'e due i casi **si scrive nel registro**», dove
+ * i due casi sono il delta buttato e la chiave che aspetta.  ⛔ La riga esiste
+ * perche' senza di essa il sintomo e' *«schermo fermo, e nessuna riga nel
+ * registro che dica perche'»* — il rilievo R1.9 la nomina parola per parola.
+ *
+ * ⚠ E il contatore degli abbandonati NON si tocca: qui lo stream non e' mai
+ *   nato, quindi non c'e' niente da azzerare sul filo e il `numero` non e'
+ *   stato consumato (§6.2: «NON per quelli che non spedisce affatto»).  Sono
+ *   due grandezze diverse e tenerle insieme confonderebbe chi diagnostica. */
+void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano)
+{
+	if (!s)
+		return;
+	if (chiave) {
+		reg(s, "⛔ §2.3: nessuno stream unidirezionale per una CHIAVE (il client "
+		       "ne concede ancora %llu).  ⚠ La chiave NON si butta: §5.2 la "
+		       "vuole, il debito resta acceso e si riprova al prossimo "
+		       "fotogramma — «aspettare un posto libero» e' esattamente quel "
+		       "che §2.3 prescrive per le chiavi",
+		    (unsigned long long)restano);
+		return;
+	}
+	reg(s, "⚠ §2.3: nessuno stream unidirezionale per il delta che veniva dopo "
+	       "il %u (il client ne concede ancora %llu): il delta si BUTTA — «un "
+	       "delta vecchio non serve piu', ne sta gia' arrivando uno nuovo».  ⛔ "
+	       "E non e' un errore fatale: la sessione regge (§2.3)",
+	    s->video_numero, (unsigned long long)restano);
+	/* ⛔⭐ E SI ACCENDE IL DEBITO DI CHIAVE — mancava, ed e' il difetto B-18.
+	 *
+	 *   §5.2: «quando il server abbandona un delta, DEVE mandare un fotogramma
+	 *   chiave appena puo', senza aspettare che il client lo chieda».  I due
+	 *   gemelli che abbandonano un delta lo fanno gia' — l'abbandono nella coda
+	 *   (piu' su, §5.1) e `rcp_video_abbandona()` (piu' giu', §5.2) — e QUI il
+	 *   danno visto dal lato che riceve e' lo stesso: al decodificatore manca un
+	 *   delta, e da li' in poi produce immagini via via piu' sfasciate.
+	 *
+	 * ⛔ E QUI SERVE PIU' CHE NEI DUE GEMELLI, perche' il client non se ne
+	 *    accorge MAI da solo:
+	 *      · il `numero` NON e' stato consumato (il riquadro qui sopra, §6.2),
+	 *        quindi nei numeri non resta **nessun buco** — ed e' l'unico segnale
+	 *        su cui §5.2 fa chiedere una chiave al client;
+	 *      · il codificatore gira a GOP infinito (`chiavi_ogni = 0`,
+	 *        `src/figlio.c:1568`), quindi un'altra chiave non arriverebbe **mai
+	 *        piu'** da sola.
+	 *    ⇒ Senza questa riga, UN SOLO delta saltato per mancanza di posto
+	 *      sfascia l'immagine **per sempre e in silenzio**: nessun errore,
+	 *      nessuna riga, e il client che non ha modo di chiedere la cura.
+	 *
+	 * ⚠ E se il posto manca ancora quando la chiave sara' pronta, non si ricade
+	 *   nel caso vietato da R1.9: il ramo `chiave` qui sopra NON la butta —
+	 *   tiene il debito acceso e riprova al fotogramma dopo, che e' quel che
+	 *   §2.3 prescrive per le chiavi. */
+	s->serve_chiave = true;
+	s->serve_chiave_perche = "un delta e' stato saltato per mancanza di posto "
+	                         "(§2.3), e nei numeri non resta nessun buco";
 }
 
 /* ⛔ §5.1 — l'abbandono, e §5.2 vieta di abbandonare una CHIAVE. */
@@ -2131,10 +2255,12 @@ int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
 	 * controllo in questo modulo si scrive con `s->g.manda`, e da qui in giu'
 	 * quella funzione non compare: e' l'unico modo di rendere la regola
 	 * impossibile da violare invece che facile da rispettare. */
-	if (!s->g.video_apri(s->g.ctx, &stream)) {
-		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: non si e' potuto aprire uno stream "
-		       "unidirezionale adesso — e non e' partito un byte, che e' meglio "
-		       "di mezzo fotogramma");
+	uint64_t restano = 0;
+	if (!s->g.video_apri(s->g.ctx, &stream, &restano)) {
+		/* ⛔ §2.3 — e i due casi NON sono lo stesso caso: un delta si butta,
+		 * una chiave si aspetta.  La riga la scrive una funzione sola, perche'
+		 * due righe scritte in due posti divergono. */
+		rcp_video_niente_credito(s, chiave, restano);
 		return RCP_VIDEO_STREAM_NON_APERTO;
 	}
 

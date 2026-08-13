@@ -110,10 +110,19 @@ typedef struct figli figli;
  * sono TUTT'E DUE apposta: il nome e' quello con cui la sessione RCP ha chiesto
  * di entrare, l'uid e' quello che il **nucleo** ha timbrato sul messaggio, e
  * chi consegna deve poter rifiutare se i due si sono scollati. */
+/* ⛔⭐ `chiave` E' ARRIVATO CON LA FASE 3, E NON E' UN CAMPO IN PIU'.
+ *
+ *     Fino alla fase 2 chi riceveva marcava `chiave = true` **per
+ *     costruzione**, perche' il fotogramma era uno solo e per forza una
+ *     chiave.  ⛔ Con la predizione fra fotogrammi quella riga diventa **una
+ *     bugia sul filo**: §6.2 scrive quel valore nel campo `tipo`, e un delta
+ *     marcato `0x0301` fa riconfigurare al client un decodificatore su
+ *     un'immagine che non si decodifica da sola.  ⇒ Qui viaggia quel che il
+ *     codificatore ha LETTO dal flusso, non quel che si spera. */
 typedef void (*FiglioDeposito)(void *ctx, const char *utente, uid_t uid,
-                               uint8_t codec, const uint8_t *dati, size_t byte,
-                               uint32_t larghezza, uint32_t altezza,
-                               uint64_t istante_us);
+                               uint8_t codec, bool chiave, const uint8_t *dati,
+                               size_t byte, uint32_t larghezza,
+                               uint32_t altezza, uint64_t istante_us);
 
 /* ⛔ Un figlio se n'e' andato.  Serve al padre per lasciare quel che era suo —
  * per esempio il deposito del video, che oggi e' di PROCESSO (vedi il riquadro
@@ -186,6 +195,24 @@ pid_t figli_pid_di(const figli *f, const char *utente);
  * `false` = non c'e' nessun figlio per quell'utente, o la domanda non e'
  * partita — e allora quella sessione non vedra' niente, dichiarato. */
 bool figli_chiedi_palco(figli *f, const char *utente);
+
+/* ⛔⭐ FASE 3 — «CATTURA DI CONTINUO», E «QUESTA DEV'ESSERE UNA CHIAVE».
+ *
+ *     E' la meta' padre della cucitura che alla fase 2 non esisteva:
+ *     `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel
+ *     prodotto**, quindi un `RICHIEDI_CHIAVE` del client accendeva un `bool` in
+ *     `rcp.c` e non produceva nessuna chiave — e con `chiavi_ogni = 0` (GOP
+ *     infinito) dopo la prima chiave non ne arrivava mai piu' una.
+ *
+ * `codec`  1 = HEVC, 2 = AV1, e ⛔ **0 = smetti di catturare**.  Non e' un
+ *          sentinella implicito: e' il valore che §4.3/§6.2 danno a «nessun
+ *          codec negoziato», e qui vuol dire la stessa cosa — nessuno guarda.
+ * `chiave` §5.2: il prossimo fotogramma di quel codec DEVE essere una chiave.
+ *
+ * ⚠ Chi decide non e' questo file e non e' `main.c`: e' `webtransport.c`, che
+ *   sa quando `SESSIONE` e' partita e quando §5.2 apre il debito.  `main.c` fa
+ *   da ponte perche' e' l'unico che conosce tutt'e due i lati. */
+bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave);
 
 /* ⛔⭐ RICHIEDE A OGNI FIGLIO «CHI SEI», al massimo una volta ogni minuto.
  *

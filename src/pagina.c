@@ -175,7 +175,7 @@ static void componi(cliente *c, const char *stato, const char *tipo,
 
 static void servi(pagina *p, cliente *c)
 {
-	char metodo[16] = {0}, percorso[256] = {0};
+	char metodo[16] = {0}, percorso[256] = {0}, bersaglio[256] = {0};
 	const char *sp1, *sp2;
 	char indirizzo[64];
 	uint64_t restano = 0;
@@ -206,6 +206,43 @@ static void servi(pagina *p, cliente *c)
 		memcpy(percorso, sp1 + 1, n);
 	}
 
+	/* ⛔⭐ IL BERSAGLIO DELLA RICHIESTA NON E' IL PERCORSO — difetto B-20,
+	 *     misurato il 13 agosto 2026.
+	 *
+	 * `[M]` Prima di questa riga il confronto qui sotto era
+	 * `strcmp(percorso, "/")` sul bersaglio INTERO, stringa di ricerca
+	 * compresa: `GET /` dava **200 su 166107 byte** e `GET /?video=worker`
+	 * dava **404 su 9 byte**.  RFC 9110 §4.1 dice l'opposto — la stringa di
+	 * ricerca e' un componente a se' della URI, non un pezzo del percorso, e
+	 * chi decide che cosa servire guarda il percorso.
+	 *
+	 * ⛔ E LA CONSEGUENZA VERA NON E' IL WORKER, e' che `pagina.html`
+	 *    documenta da sempre DUE interruttori che si accendono dalla stringa
+	 *    di ricerca — `?tela=desincronizzata` (§6.1 di `web.md`) e
+	 *    `?video=worker` — e **nessuno dei due e' mai stato raggiungibile
+	 *    attraverso il prodotto**: il commento indicava una strada che il
+	 *    server chiudeva con un 404.  ⚠ Nessuno se n'era accorto perche' i
+	 *    banchi la pagina la servono da un `http.server` di Python, che il `?`
+	 *    lo ignora — cioe' il difetto viveva ESATTAMENTE nella fessura fra il
+	 *    banco e il prodotto.
+	 *
+	 * ⭐ La cura taglia, e taglia SOLO il `?` (e il `#`, se mai arrivasse: un
+	 *    browser il frammento non lo manda, ma un client qualunque puo'
+	 *    mandarlo, e allora il percorso resta il percorso).  ⛔ Il controllo
+	 *    NON si allenta: `/inesistente?x=1` continua a dare 404 come
+	 *    `/inesistente`, perche' quel che cambia e' quale stringa si confronta,
+	 *    non il confronto.  ⚠ E se il bersaglio fosse cosi' lungo da non
+	 *    entrare in `percorso`, il troncamento di qui sopra si porta via anche
+	 *    il `?`: il risultato e' un percorso che non combacia con niente,
+	 *    cioe' 404 — l'esito prudente, non un buco.
+	 *
+	 * ⚠ E NEL REGISTRO CI VA IL BERSAGLIO INTERO, non il percorso tagliato:
+	 *   dopo questa cura gli interruttori si accendono davvero, e un registro
+	 *   che scrivesse `/` per `/?tela=desincronizzata` renderebbe invisibile
+	 *   proprio l'unica cosa che questa riga ha appena reso possibile. */
+	memcpy(bersaglio, percorso, sizeof bersaglio - 1);
+	percorso[strcspn(percorso, "?#")] = 0;
+
 	/* ⛔ La chiave del ban la fa `rcp.c`, non questo file: `rcp.h` lo dice con
 	 *    un ⛔, e la ragione e' che il formato della chiave lo sa un modulo
 	 *    solo.  ⚠ Chi se la costruisse da se' cercherebbe `192.168.0.2` dove
@@ -214,7 +251,7 @@ static void servi(pagina *p, cliente *c)
 	rcp_chiave_indirizzo(c->provenienza, indirizzo, sizeof indirizzo);
 	bannato = rcp_bannato(indirizzo, registro_ora_ms(), &restano);
 
-	registro_dice(REG_PAGINA, "%s %s da %s%s", metodo, percorso, c->provenienza,
+	registro_dice(REG_PAGINA, "%s %s da %s%s", metodo, bersaglio, c->provenienza,
 	              bannato ? " (indirizzo BANNATO)" : "");
 
 	/* ⛔ L'ENDPOINT DA CUI LA PAGINA RITIRA L'IMPRONTA AGGIORNATA (§4.1-bis).

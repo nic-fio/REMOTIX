@@ -53,6 +53,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -102,6 +103,11 @@ enum {
 	MSG_CHI_SEI = 1,      /* padre → figlio */
 	MSG_SPEGNITI = 2,     /* padre → figlio */
 	MSG_RIMANDA_PALCO = 3,/* padre → figlio */
+	/* ⭐⭐ FASE 3 — «cattura, e questa dev'essere una chiave».  ⛔ E' la
+	 *     cucitura che mancava: `codificatore_chiedi_chiave()` non aveva
+	 *     nessun chiamante nel prodotto, e il palco sta in un ALTRO PROCESSO —
+	 *     questa e' la riga che attraversa il confine. */
+	MSG_VIDEO = 4,        /* padre → figlio */
 	MSG_SONO = 10,      /* figlio → padre */
 	MSG_PALCO = 11,     /* figlio → padre */
 	MSG_FOTOGRAMMA = 12 /* figlio → padre */
@@ -140,6 +146,16 @@ struct corpo_palco {
 	uint32_t flussi;          /* quanti codec hanno consegnato */
 	char monitor[64];
 	char guasto[224];
+};
+
+/* ⛔ Che cosa il padre chiede al palco.  ⚠ `codec` a **0** vuol dire «smetti di
+ *    catturare»: non e' un sentinella implicito, e' il valore che §4.3/§6.2
+ *    riservano a «nessun codec negoziato», e qui vuol dire la stessa cosa —
+ *    nessuno sta guardando. */
+struct corpo_video {
+	uint8_t codec;  /* 1 = HEVC, 2 = AV1, 0 = spegni */
+	uint8_t chiave; /* ⛔ §5.2: il prossimo DEVE essere una chiave */
+	uint16_t riempi;
 };
 
 struct corpo_fotogramma {
@@ -182,6 +198,15 @@ struct figlio {
 	uint8_t monta_codec, monta_chiave;
 	uint32_t monta_l, monta_a;
 	uint64_t monta_istante;
+	/* ⛔ Il conto dei fotogrammi arrivati da questo figlio.  ⚠ Sta qui e non
+	 *    in una variabile di modulo perche' e' PER FIGLIO: sommato fra due
+	 *    utenti direbbe che il palco funziona anche quando ne funziona uno
+	 *    solo — due misure sotto la stessa etichetta. */
+	uint64_t fotogrammi_avuti, byte_avuti, chiavi_avute;
+	uint64_t detto_conto_ms;
+	/* ⛔ Che cosa il padre ha gia' chiesto a questo palco: si tiene per non
+	 *    ripetere lo stesso comando a ogni giro di `poll`. */
+	uint8_t video_codec_chiesto;
 };
 
 struct figli {
@@ -885,14 +910,35 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 	if (g->monta_avuti < g->monta_totale)
 		return;
 
-	registro_dice(REG_FIGLIO,
-	              "⭐ fotogramma completo da «%s» (uid %ld, timbro del nucleo): "
-	              "codec %u, %zu byte, %ux%u, %s",
-	              g->utente, (long)g->uid, g->monta_codec, g->monta_totale,
-	              g->monta_l, g->monta_a, g->monta_chiave ? "CHIAVE" : "delta");
+	/* ⛔⭐ E QUESTA RIGA E' PASSATA IN PARLANTINA CON LA FASE 3.
+	 *
+	 *     Con un fotogramma solo era la riga che dimostrava tutta la fase 2.
+	 *     ⛔ A sessanta al secondo diventa sessanta righe al secondo per
+	 *     utente, e un registro che ripete non si legge piu' — cioe' la stessa
+	 *     ragione per cui esisteva `bool video_fatto`.  ⚠ Il fatto NON sparisce:
+	 *     resta nella parlantina, e il conto riassunto lo scrive `contati` qui
+	 *     sotto una volta al secondo.  Il primo, quello che dice se il palco
+	 *     funziona, si scrive comunque. */
+	if (g->fotogrammi_avuti == 0)
+		registro_dice(REG_FIGLIO,
+		              "⭐ PRIMO fotogramma completo da «%s» (uid %ld, timbro del "
+		              "nucleo): codec %u, %zu byte, %ux%u, %s",
+		              g->utente, (long)g->uid, g->monta_codec, g->monta_totale,
+		              g->monta_l, g->monta_a,
+		              g->monta_chiave ? "CHIAVE" : "delta");
+	else
+		registro_dettaglio(REG_FIGLIO,
+		                   "fotogramma da «%s»: codec %u, %zu byte, %s",
+		                   g->utente, g->monta_codec, g->monta_totale,
+		                   g->monta_chiave ? "CHIAVE" : "delta");
+	g->fotogrammi_avuti++;
+	g->byte_avuti += g->monta_totale;
+	if (g->monta_chiave)
+		g->chiavi_avute++;
 	if (f->deposita)
-		f->deposita(f->ctx, g->utente, g->uid, g->monta_codec, g->monta,
-		            g->monta_totale, g->monta_l, g->monta_a, g->monta_istante);
+		f->deposita(f->ctx, g->utente, g->uid, g->monta_codec,
+		            g->monta_chiave != 0, g->monta, g->monta_totale, g->monta_l,
+		            g->monta_a, g->monta_istante);
 	free(g->monta);
 	g->monta = NULL;
 	g->monta_totale = g->monta_avuti = 0;
@@ -1202,6 +1248,66 @@ bool figli_chiedi_palco(figli *f, const char *utente)
 	return true;
 }
 
+/* ⛔⭐ FASE 3 — «CATTURA, E QUESTA DEV'ESSERE UNA CHIAVE».
+ *
+ *     E' la meta' padre della cucitura che mancava.  ⚠ Chi decide non e'
+ *     questo file — non sa niente di sessioni RCP — ed e' `webtransport.c`, che
+ *     sa quando `SESSIONE` e' partita e quando §5.2 vuole una chiave.  `main.c`
+ *     fa da ponte, perche' e' l'unico che conosce tutt'e due.
+ *
+ * ⛔ E LA RICHIESTA SI RIPETE ANCHE SE IL CODEC NON CAMBIA, quando la chiave e'
+ *    chiesta: una chiave chiesta due volte costa un fotogramma grosso, una
+ *    chiave chiesta zero volte costa **lo schermo fermo per sempre**.  Il fondo
+ *    che evita la raffica sta dall'altra parte (`WT_CHIAVE_RICHIESTA_MS`), dove
+ *    c'e' l'orologio della sessione. */
+bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
+{
+	struct figlio *g;
+	struct testa t;
+	struct corpo_video c;
+	uint8_t busta[sizeof t + sizeof c];
+
+	if (!f || !utente)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+	if (codec == g->video_codec_chiesto && !chiave)
+		return true; /* niente di nuovo da dire */
+
+	memset(&t, 0, sizeof t);
+	magia_scrivi(&t);
+	t.tipo = MSG_VIDEO;
+	t.versione = FIGLIO_VERSIONE;
+	t.matricola = g->matricola;
+	t.uid_dichiarato = (uint32_t)g->uid;
+	t.byte = (uint32_t)sizeof c;
+	memset(&c, 0, sizeof c);
+	c.codec = codec;
+	c.chiave = chiave ? 1u : 0u;
+	memcpy(busta, &t, sizeof t);
+	memcpy(busta + sizeof t, &c, sizeof c);
+	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+		registro_dice(REG_FIGLIO,
+		              "⚠ la richiesta di video a «%s» (codec %u, chiave %s) non "
+		              "e' partita (%s): quella sessione non vedra' niente, e "
+		              "questa riga e' il perche'",
+		              utente, codec, chiave ? "SI" : "no", strerror(errno));
+		return false;
+	}
+	if (codec != g->video_codec_chiesto)
+		registro_dice(REG_FIGLIO,
+		              codec ? "⭐ FASE 3: al palco di «%s» ho chiesto di "
+		                      "catturare di continuo, codec %u%s"
+		                    : "al palco di «%s» ho chiesto di SMETTERE di "
+		                      "catturare (codec %u): non lo guarda piu' "
+		                      "nessuno%s",
+		              utente, codec, chiave ? " — e la prima dev'essere una "
+		                                      "CHIAVE (§5.2)" : "");
+	g->video_codec_chiesto = codec;
+	return true;
+}
+
 void figli_spegni(figli *f)
 {
 	if (!f)
@@ -1334,6 +1440,56 @@ static bool tenuto_chiave[3];
 static uint32_t tenuto_l, tenuto_a;
 static uint64_t tenuto_istante;
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ⭐⭐ FASE 3 — IL CICLO DEI FOTOGRAMMI, DENTRO IL FIGLIO                      */
+/*                                                                             */
+/* ⛔⭐ IL CODIFICATORE E' UNO SOLO PER CODEC, E VIVE FRA UN FOTOGRAMMA E       */
+/*     L'ALTRO.  Fino alla fase 2 se ne creava uno per fotogramma —            */
+/*     `codificatore_nuovo()` … `codificatore_libera()` dentro la stessa       */
+/*     funzione — e con un fotogramma solo non si vedeva.  ⛔ Con il ciclo,    */
+/*     un codificatore nuovo a ogni giro vuol dire che **la predizione non     */
+/*     esiste**: ogni fotogramma sarebbe una chiave, cioe' dieci volte la      */
+/*     banda di un delta, per sempre.  ⚠ E non e' solo banda: `RCP.md` §5.2    */
+/*     costruisce tutta la cura dell'abbandono sulla differenza fra chiave e   */
+/*     delta, e senza delta quella cura non ha oggetto.                        */
+/*                                                                             */
+/* ⛔ E LA CADENZA E' **UNA SOLA**, e prima erano due.  `cattura_avvia()`      */
+/*    chiedeva 60 e la richiesta di codifica dichiarava 30: due numeri diversi */
+/*    per la stessa grandezza, innocui solo finche' si codificava un           */
+/*    fotogramma solo.  ⇒ `MOVIMENTO_FPS`, dichiarata qui e usata in tutt'e    */
+/*    due i posti.  ⭐ Il valore e' **60** e non 30 perche' e' il desiderato di */
+/*    `SPECIFICHE.md` §3.1, e perche' `LEZIONI.md` §6.1 dice che il numero     */
+/*    chiesto alla cattura E' il tetto: chiedendone 30 ne arrivano 18,         */
+/*    chiedendone 60 ne arrivano 37.  Un tetto che ci mettiamo noi non e' una  */
+/*    misura della macchina.                                                    */
+#define MOVIMENTO_FPS 60
+
+/* ⛔ Quanto si aspetta un fotogramma dalla cattura dentro un giro del ciclo.
+ *
+ * ⚠ Non e' un tetto di cadenza: e' quanto si resta fermi PRIMA di tornare a
+ *   guardare se il padre ha detto qualcosa.  ⭐ Qui si PUO' aspettare — questo
+ *   e' un altro processo, e `CODER.md` §4.4 vieta l'attesa dentro il ciclo
+ *   asincrono del server, non qui.  Ma non troppo: un `MSG_SPEGNITI` che
+ *   arrivasse durante l'attesa resterebbe fermo tutto quel tempo.
+ * ⛔ E su un desktop FERMO Mutter non consegna niente: questa attesa scade
+ *    tutta, e il giro dopo ricomincia.  Zero fotogrammi su una scena ferma e'
+ *    un RISULTATO (`CatturaPresa` lo distingue dal guasto), non un difetto. */
+#define MOVIMENTO_ATTESA_S 0.25
+
+static Codificatore *codif[3];
+/* Quale codec il padre ha chiesto: 0 = nessuno, cioe' nessuno sta guardando. */
+static uint8_t codec_chiesto;
+/* ⛔ §5.2 — il debito della chiave, uno per codec: chiederla per l'HEVC non la
+ *    produce sull'AV1, e trattarli insieme darebbe una chiave a chi non l'ha
+ *    chiesta e un delta a chi si'. */
+static bool debito_chiave[3];
+static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
+static uint64_t ciclo_detto_ms;
+/* ⛔ La misura del punto 7, fatta e NON dedotta: il `pts` che Mutter attacca al
+ *    fotogramma e' o non e' il nostro orologio monotono?  Si guarda una volta,
+ *    si scrive, e da li' in poi si sa quale istante finisce nei 28 byte. */
+static int pts_e_monotono = -1; /* -1 = non ancora guardato */
+
 static uint64_t ora_monotona_us(void)
 {
 	struct timespec t;
@@ -1372,74 +1528,216 @@ static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
 /* ⛔ La stessa richiesta di codifica di `main.c` prima del 12 agosto 2026 —
  *    CRF 20, 10 bit chiesti su una sorgente a 8 (promozione DICHIARATA dal
  *    codificatore), BGRx, chiavi a richiesta.  ⚠ Non e' stata «riscritta»: e'
- *    stata SPOSTATA, perche' e' il figlio che ha i pixel. */
-static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
-                             uint8_t numero, const char *dir_rilievo,
-                             const char *nome_file, uint64_t istante_us,
-                             uint32_t tela_l, uint32_t tela_a)
+ *    stata SPOSTATA, perche' e' il figlio che ha i pixel.
+ *
+ * ⛔⭐ E `chiavi_ogni = 0` RESTA ZERO, cioe' GOP infinito, ed e' una scelta —
+ *     non una dimenticanza.  `RCP.md` §5.2 vuole una chiave in tre casi soli:
+ *     il primo dopo `SESSIONE`, il primo alla misura nuova, e quando il client
+ *     la chiede.  Chiavi periodiche sarebbero banda spesa per un'assicurazione
+ *     che il protocollo compra gia' — e `SPECIFICHE.md` §8.2 dice che la banda
+ *     si spende sulla qualita', non sulla prudenza.
+ *
+ *     ⛔ MA IL PREZZO E' CHE LA CUCITURA DEVE ESISTERE: con GOP infinito e
+ *        senza nessuno che chiami `codificatore_chiedi_chiave()`, dopo la prima
+ *        chiave non ne arriva **mai piu' una**, e un client che perde un delta
+ *        resta con lo schermo sfasciato per sempre.  Il chiamante adesso c'e' —
+ *        `MSG_VIDEO` con `chiave = 1`, e la strada intera e' nel riquadro di
+ *        `wt_video_gancio()`. */
+static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
+                                     uint32_t tela_l, uint32_t tela_a)
 {
 	CodificatoreRichiesta r;
-	CodificatoreFotogramma fg;
-	Codificatore *cod;
-	const CodificatoreConfessione *c;
 	char errore[256];
+
+	if (indice > 2)
+		return NULL;
+	if (codif[indice])
+		return codif[indice];
 
 	memset(&r, 0, sizeof r);
 	r.codec = codec;
 	r.componente = NULL;
 	r.larghezza = tela_l;
 	r.altezza = tela_a;
-	r.fotogrammi_al_secondo = 30;
+	/* ⛔ La cadenza e' UNA, e la stessa che si chiede alla cattura. */
+	r.fotogrammi_al_secondo = MOVIMENTO_FPS;
 	r.modo = CODIFICATORE_QUALITA_CRF;
 	r.qualita = 20;
 	r.profondita = 10;
 	r.formato = CODIFICATORE_PIXEL_BGRX;
 	r.chiavi_ogni = 0;
 
-	cod = codificatore_nuovo(&r, errore, sizeof errore);
-	if (!cod) {
+	codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+	if (!codif[indice]) {
 		registro_dice(REG_FIGLIO, "⛔ niente video per il codec %d: %s",
 		              (int)codec, errore);
-		return false;
+		return NULL;
 	}
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 3: codificatore %d APERTO e TENUTO VIVO fra un "
+	              "fotogramma e l'altro, %ux%u a %d/s — senza questo la "
+	              "predizione non esisterebbe e ogni fotogramma sarebbe una "
+	              "chiave",
+	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS);
+	return codif[indice];
+}
+
+static void codificatori_libera(void)
+{
+	for (uint8_t i = 0; i < 3; i++) {
+		if (!codif[i])
+			continue;
+		codificatore_libera(codif[i]);
+		codif[i] = NULL;
+	}
+}
+
+/* ⛔⭐ QUALE ISTANTE FINISCE NEI 28 BYTE, E DA DOVE VIENE — il punto 7, deciso
+ *     e MISURATO invece che dedotto.
+ *
+ *     §6.2 dice «microsecondi dell'orologio **monotono del server** alla
+ *     cattura».  Le due sorgenti possibili sono:
+ *
+ *       a) `CLOCK_MONOTONIC` letto da NOI **dopo** che `cattura_prendi()` e'
+ *          tornata — quel che faceva la fase 2.  ⚠ Non e' l'istante della
+ *          cattura: e' l'istante in cui ce ne siamo accorti, e ci sta dentro
+ *          tutta l'attesa nel posto di scambio;
+ *       b) il `pts` che PipeWire attacca al fotogramma (`spa_meta_header`), che
+ *          e' l'istante vero — se e' lo stesso orologio.
+ *
+ *     ⛔ «Se» non e' una parola che si scrive in una decisione (`LEZIONI.md`
+ *        §2.3-quater): qui si GUARDA.  Alla prima presa si confrontano il `pts`
+ *        e il nostro `CLOCK_MONOTONIC`; se distano meno di un secondo sono lo
+ *        stesso orologio e si prende il `pts`, altrimenti si prende il nostro e
+ *        **si scrive che si e' ripiegato** (`CODER.md` §4.2).
+ *
+ *     ⚠ L'anello del ritardo dello step 5 si appoggia a questo numero: qui c'e'
+ *       la riga che dice quale dei due sta leggendo. */
+static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_us)
+{
+	uint64_t pts_us;
+
+	if (!fo->seq_nota || fo->pts <= 0) {
+		if (pts_e_monotono != 0) {
+			pts_e_monotono = 0;
+			registro_dice(REG_FIGLIO,
+			              "⚠ il fotogramma non porta un `pts` (seq_nota %d, pts "
+			              "%lld): l'istante dei 28 byte e' il NOSTRO "
+			              "CLOCK_MONOTONIC letto dopo la presa — ripiego "
+			              "dichiarato, e ci sta dentro l'attesa nel posto di "
+			              "scambio",
+			              (int)fo->seq_nota, (long long)fo->pts);
+		}
+		return nostro_us;
+	}
+	pts_us = (uint64_t)fo->pts / 1000u;
+	if (pts_e_monotono < 0) {
+		uint64_t scarto = pts_us > nostro_us ? pts_us - nostro_us
+		                                     : nostro_us - pts_us;
+		pts_e_monotono = scarto < 1000000u ? 1 : 0;
+		registro_dice(REG_FIGLIO,
+		              pts_e_monotono
+		                  ? "⭐ MISURATO: il `pts` di Mutter e' lo stesso "
+		                    "CLOCK_MONOTONIC nostro (scarto %llu us) ⇒ nei 28 "
+		                    "byte di §6.2 finisce l'istante VERO della cattura, "
+		                    "non quello in cui ce ne siamo accorti"
+		                  : "⚠ MISURATO: il `pts` di Mutter NON e' il nostro "
+		                    "CLOCK_MONOTONIC (scarto %llu us, oltre il secondo) "
+		                    "⇒ nei 28 byte finisce il NOSTRO orologio letto dopo "
+		                    "la presa.  Ripiego dichiarato (CODER.md §4.2): "
+		                    "l'anello del ritardo ci legge dentro anche l'attesa "
+		                    "nel posto di scambio",
+		              (unsigned long long)scarto);
+	}
+	return pts_e_monotono ? pts_us : nostro_us;
+}
+
+/* Codifica un fotogramma con il codificatore VIVO di quel codec e lo manda al
+ * padre.  ⛔ `chiave` non si suppone: e' quel che il codificatore ha letto dal
+ * flusso (`fg.chiave`), e §6.2 lo scrive nel campo `tipo`. */
+static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
+                             uint8_t numero, const char *dir_rilievo,
+                             const char *nome_file, uint64_t istante_us,
+                             uint32_t tela_l, uint32_t tela_a)
+{
+	CodificatoreFotogramma fg;
+	Codificatore *cod;
+	const CodificatoreConfessione *c;
+
+	cod = codificatore_di(codec, numero, tela_l, tela_a);
+	if (!cod)
+		return false;
+
+	/* ⛔ §5.2 — E QUI LA CHIAVE CHIESTA DIVENTA UNA CHIAVE VERA.  ⚠ Si chiede
+	 *    PRIMA di comprimere: dopo sarebbe tardi di un fotogramma, e quel
+	 *    fotogramma e' proprio quello che il client sta aspettando. */
+	if (numero < 3 && debito_chiave[numero]) {
+		codificatore_chiedi_chiave(cod);
+		debito_chiave[numero] = false;
+	}
+
 	if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ il codec %d non ha consegnato il fotogramma: `false` "
 		              "NON e' «un fotogramma vuoto», e' «questo non si "
 		              "spedisce»",
 		              (int)codec);
-		codificatore_libera(cod);
+		ciclo_guasti++;
 		return false;
 	}
 	c = codificatore_confessione(cod);
-	registro_dice(REG_FIGLIO,
-	              "⭐ fotogramma codificato: codec %d, %zu byte, %s, «%s», "
-	              "profondita' nel flusso %d, livello %d, promozione 8→10 %s, "
-	              "conversione %llu us, codifica %llu us",
-	              (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
-	              c->stringa_codec, c->profondita_flusso, c->livello_flusso,
-	              c->promozione_8_a_10 ? "SI (dichiarata)" : "no",
-	              (unsigned long long)fg.us_conversione,
-	              (unsigned long long)fg.us_codifica);
+	/* ⛔ Il primo si dice, i successivi vanno in parlantina: a sessanta al
+	 *    secondo questa riga renderebbe illeggibile tutto il resto del registro
+	 *    — ed e' precisamente il caso in cui il resto del registro serve. */
+	if (ciclo_fotogrammi == 0)
+		registro_dice(REG_FIGLIO,
+		              "⭐ PRIMO fotogramma codificato: codec %d, %zu byte, %s, "
+		              "«%s», profondita' nel flusso %d, livello %d, promozione "
+		              "8→10 %s, conversione %llu us, codifica %llu us%s",
+		              (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
+		              c->stringa_codec, c->profondita_flusso, c->livello_flusso,
+		              c->promozione_8_a_10 ? "SI (dichiarata)" : "no",
+		              (unsigned long long)fg.us_conversione,
+		              (unsigned long long)fg.us_codifica,
+		              fg.trattenuto ? " — ⚠ TRATTENUTO: il codificatore ha "
+		                              "messo un fotogramma di ritardo" : "");
+	else
+		registro_dettaglio(REG_FIGLIO,
+		                   "codec %d: %zu byte, %s, codifica %llu us%s",
+		                   (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
+		                   (unsigned long long)fg.us_codifica,
+		                   fg.trattenuto ? " — TRATTENUTO" : "");
+
+	ciclo_fotogrammi++;
+	if (fg.chiave)
+		ciclo_chiavi++;
 
 	manda_fotogramma(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
 	                 fg.byte);
-	if (numero < 3) {
-		free(tenuto[numero]);
-		tenuto[numero] = (uint8_t *)malloc(fg.byte);
-		if (tenuto[numero]) {
-			memcpy(tenuto[numero], fg.dati, fg.byte);
+	/* ⛔ Il fotogramma TENUTO e' ancora quello dell'accensione — «rimanda il
+	 *    palco» serve a chi rientra prima che il ciclo abbia consegnato il
+	 *    primo.  ⚠ E si tiene solo la CHIAVE: rimandare un delta a chi non ha
+	 *    il suo passato sarebbe un'immagine sfasciata, cioe' quel che §5.2
+	 *    vieta al client di mostrare. */
+	if (numero < 3 && fg.chiave) {
+		uint8_t *copia = (uint8_t *)malloc(fg.byte);
+		if (copia) {
+			memcpy(copia, fg.dati, fg.byte);
+			free(tenuto[numero]);
+			tenuto[numero] = copia;
 			tenuto_byte[numero] = fg.byte;
-			tenuto_chiave[numero] = fg.chiave;
+			tenuto_chiave[numero] = true;
 			tenuto_l = tela_l;
 			tenuto_a = tela_a;
 			tenuto_istante = istante_us;
 		}
 	}
-	rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
+	/* ⛔ Il rilievo si scrive solo se qualcuno l'ha chiesto, e solo il primo:
+	 *    sessanta file al secondo non sono un rilievo, sono un disco pieno. */
+	if (ciclo_fotogrammi <= 2)
+		rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
 
 	codificatore_rilascia(cod);
-	codificatore_libera(cod);
 	return true;
 }
 
@@ -1517,7 +1815,10 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		return;
 	}
 
-	cat = cattura_avvia(mutter_nodo(mut), tela_l, tela_a, 60,
+	/* ⛔ La cadenza si chiede UNA volta e con UN nome: `MOVIMENTO_FPS`.  Qui
+	 *    c'era il letterale 60 e la richiesta di codifica ne dichiarava 30 —
+	 *    due numeri diversi per la stessa grandezza. */
+	cat = cattura_avvia(mutter_nodo(mut), tela_l, tela_a, MOVIMENTO_FPS,
 	                    CATTURA_STRADA_MEMORIA, CATTURA_COLORE_BGRX, NULL, NULL,
 	                    NULL, &sbaglio);
 	if (!cat) {
@@ -1534,7 +1835,7 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 
 	memset(&fo, 0, sizeof fo);
 	presa = cattura_prendi(cat, 5.0, &fo, &sbaglio);
-	istante_us = ora_monotona_us();
+	istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
 	p.presa = (uint32_t)presa;
 	if (presa != CATTURA_PRESA_FATTA) {
 		snprintf(p.guasto, sizeof p.guasto, "presa %u: %s", (unsigned)presa,
@@ -1576,12 +1877,26 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 
 	rilievo_scrivi(dir_rilievo, "cattura.bgrx", fo.pixel, (size_t)fo.byte);
 
+	/* ⛔⭐ E QUESTA PRIMA CODIFICA RESTA, anche se adesso c'e' il ciclo: non
+	 *     serve a spedire, serve a DIMOSTRARE che il palco funziona prima che
+	 *     qualcuno lo chieda.  `p.flussi` e' il numero che `MSG_PALCO` porta al
+	 *     padre, ed e' l'unica riga che distingue «nessuno guarda» da «il
+	 *     codificatore non si apre».  ⚠ E i due codificatori restano APERTI:
+	 *     sono quelli che il ciclo usera'.
+	 * ⛔ §5.2: tutt'e due i primi devono essere una CHIAVE, e si chiede invece
+	 *    di sperarlo. */
+	debito_chiave[1] = debito_chiave[2] = true;
 	if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
 	                     "flusso-hevc.265", istante_us, tela_l, tela_a))
 		p.flussi++;
 	if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
 	                     "flusso-av1.obu", istante_us, tela_l, tela_a))
 		p.flussi++;
+	/* ⛔ E i contatori del ciclo ripartono da zero: questi due non sono
+	 *    fotogrammi del movimento, sono la diagnosi dell'accensione.  Sommarli
+	 *    direbbe «due fotogrammi consegnati» a un utente che non ne ha visto
+	 *    nemmeno uno. */
+	ciclo_fotogrammi = ciclo_chiavi = 0;
 
 	cattura_fermo_libera(&fo);
 	manda(MSG_PALCO, &p, sizeof p, NULL, 0);
@@ -1697,86 +2012,260 @@ void figlio_vive(int argc, char **argv)
 	 *     catturare e codificare.  Aspettare una richiesta lo butterebbe via. */
 	prendi_il_palco(tela_l, tela_a, dir_rilievo, &mut, &cat);
 
+	/* ═══════════════════════════════════════════════════════════════════ */
+	/* ⭐⭐ IL CICLO DELLA FASE 3 — cattura, codifica, manda; e ascolta.    */
+	/*                                                                     */
+	/* ⛔ DUE COSE DA FARE E UN PROCESSO SOLO, e l'ordine conta.  Il ciclo  */
+	/*    guarda PRIMA se il padre ha detto qualcosa (che non aspetta:     */
+	/*    `poll` con zero) e POI cattura (che aspetta).  Al contrario, un   */
+	/*    `MSG_SPEGNITI` o una chiave chiesta resterebbero fermi per tutta  */
+	/*    l'attesa della cattura — cioe' fino a un quarto di secondo, che   */
+	/*    sul ritardo di `SPECIFICHE.md` §3.2 e' cinque volte il tetto.     */
+	/*                                                                     */
+	/* ⛔ E QUANDO NESSUNO GUARDA NON SI CATTURA: `codec_chiesto` a zero    */
+	/*    vuol dire che l'ultima sessione se n'e' andata.  ⚠ NON e'        */
+	/*    l'invariante I1 al contrario — I1 vieta di calare il ritmo per    */
+	/*    prudenza **mentre qualcuno guarda**; qui non guarda nessuno, e il */
+	/*    palco (I4) resta in piedi: si ferma solo il ciclo.  Allora si     */
+	/*    aspetta sul socket, e il processo costa zero.                     */
 	for (;;) {
 		uint8_t busta[BUSTA_MAX];
 		struct testa t;
 		struct ucred chi;
 		bool c_e = false;
 		ssize_t letti;
+		struct pollfd pf;
+		int pronto;
+		bool fine = false;
 
-		/* ⛔ Qui SI PUO' aspettare, ed e' tutto il punto di avere un processo:
-		 *    `CODER.md` §4.4 vieta l'attesa dentro il ciclo asincrono del
-		 *    server, e questo non e' quel ciclo — e' un altro processo. */
-		letti = ricevi_con_credenziali(fd_figlio, busta, sizeof busta, &chi, &c_e);
-		if (letti == 0) {
-			registro_dice(REG_FIGLIO,
-			              "il padre ha chiuso il socket: smonto il palco ed "
-			              "esco.  ⚠ E' la SECONDA rete di sicurezza, quella che "
-			              "non dipende da PR_SET_PDEATHSIG");
-			break;
-		}
-		if (letti < 0) {
-			if (errno == EINTR)
-				continue;
-			break;
-		}
-		if ((size_t)letti < sizeof t)
-			continue;
-		memcpy(&t, busta, sizeof t);
-		if (!magia_giusta(&t))
-			continue;
-		/* ⛔ Il padre dev'essere root E dev'essere il mio processo padre.  Un
-		 *    messaggio senza timbro del nucleo non e' un messaggio del padre. */
-		if (!c_e || chi.uid != 0) {
-			registro_dice(REG_FIGLIO,
-			              "⛔ un messaggio che dice di venire dal padre e non "
-			              "porta il timbro di root (uid %ld): SCARTATO",
-			              c_e ? (long)chi.uid : -1L);
-			continue;
-		}
-		if (t.uid_dichiarato != (uint32_t)mio_uid) {
-			registro_dice(REG_FIGLIO,
-			              "⛔ il padre crede che io sia uid %lu e il nucleo dice "
-			              "%ld: NON rispondo",
-			              (unsigned long)t.uid_dichiarato, (long)mio_uid);
-			continue;
-		}
-		if (t.tipo == MSG_SPEGNITI)
-			break;
-		if (t.tipo == MSG_RIMANDA_PALCO) {
-			int quanti = 0;
-			for (uint8_t c = 1; c < 3; c++) {
-				if (!tenuto[c])
+		/* ── 1. quel che il padre ha da dire, senza aspettare ────────── */
+		for (;;) {
+			pf.fd = fd_figlio;
+			pf.events = POLLIN;
+			pf.revents = 0;
+			/* ⛔ Zero quando si sta catturando, il tetto quando non si
+			 *    cattura: cosi' il processo fermo non gira a vuoto e quello
+			 *    che lavora non perde tempo. */
+			pronto = poll(&pf, 1, codec_chiesto ? 0 : 1000);
+			if (pronto < 0) {
+				if (errno == EINTR)
 					continue;
-				manda_fotogramma(c, tenuto_chiave[c], tenuto_l, tenuto_a,
-				                 tenuto_istante, tenuto[c], tenuto_byte[c]);
-				quanti++;
+				fine = true;
+				break;
 			}
-			registro_dice(REG_FIGLIO,
-			              quanti ? "il padre ha chiesto il palco: rimando %d "
-			                       "flussi (lo STESSO fotogramma: la fase 2 e' "
-			                       "un'immagine ferma)"
-			                     : "il padre ha chiesto il palco e non ho "
-			                       "niente da rimandare (%d): il perche' e' "
-			                       "nelle righe qui sopra",
-			              quanti);
-			continue;
+			if (pronto == 0)
+				break;
+
+			letti = ricevi_con_credenziali(fd_figlio, busta, sizeof busta, &chi,
+			                               &c_e);
+			if (letti == 0) {
+				registro_dice(REG_FIGLIO,
+				              "il padre ha chiuso il socket: smonto il palco ed "
+				              "esco.  ⚠ E' la SECONDA rete di sicurezza, quella "
+				              "che non dipende da PR_SET_PDEATHSIG");
+				fine = true;
+				break;
+			}
+			if (letti < 0) {
+				if (errno == EINTR)
+					continue;
+				if (errno == EAGAIN || errno == EWOULDBLOCK)
+					break;
+				fine = true;
+				break;
+			}
+			if ((size_t)letti < sizeof t)
+				continue;
+			memcpy(&t, busta, sizeof t);
+			if (!magia_giusta(&t))
+				continue;
+			/* ⛔ Il padre dev'essere root E dev'essere il mio processo padre.
+			 *    Un messaggio senza timbro del nucleo non e' un messaggio del
+			 *    padre. */
+			if (!c_e || chi.uid != 0) {
+				registro_dice(REG_FIGLIO,
+				              "⛔ un messaggio che dice di venire dal padre e "
+				              "non porta il timbro di root (uid %ld): SCARTATO",
+				              c_e ? (long)chi.uid : -1L);
+				continue;
+			}
+			if (t.uid_dichiarato != (uint32_t)mio_uid) {
+				registro_dice(REG_FIGLIO,
+				              "⛔ il padre crede che io sia uid %lu e il nucleo "
+				              "dice %ld: NON rispondo",
+				              (unsigned long)t.uid_dichiarato, (long)mio_uid);
+				continue;
+			}
+			if (t.tipo == MSG_SPEGNITI) {
+				fine = true;
+				break;
+			}
+			if (t.tipo == MSG_VIDEO) {
+				struct corpo_video cv;
+				if ((size_t)letti < sizeof t + sizeof cv)
+					continue;
+				memcpy(&cv, busta + sizeof t, sizeof cv);
+				if (cv.codec > 2) {
+					registro_dice(REG_FIGLIO,
+					              "⛔ il padre chiede il codec %u, che §6.2 non "
+					              "definisce: NON cambio niente",
+					              cv.codec);
+					continue;
+				}
+				if (cv.codec != codec_chiesto)
+					registro_dice(REG_FIGLIO,
+					              cv.codec
+					                  ? "⭐ FASE 3: il ciclo dei fotogrammi si "
+					                    "ACCENDE, codec %u, %d/s chiesti alla "
+					                    "cattura"
+					                  : "il ciclo dei fotogrammi si SPEGNE "
+					                    "(codec %u): non guarda piu' nessuno, e "
+					                    "il palco resta in piedi (I4).  %d/s",
+					              cv.codec, MOVIMENTO_FPS);
+				codec_chiesto = cv.codec;
+				/* ⛔ §5.2: il debito si segna sul codec CHIESTO, non su tutti.
+				 *    Chiedere una chiave per l'HEVC non ne produce una
+				 *    sull'AV1, e segnarli insieme darebbe una chiave a chi non
+				 *    l'ha chiesta. */
+				if (cv.chiave && cv.codec)
+					debito_chiave[cv.codec] = true;
+				continue;
+			}
+			if (t.tipo == MSG_RIMANDA_PALCO) {
+				int quanti = 0;
+				for (uint8_t c = 1; c < 3; c++) {
+					if (!tenuto[c])
+						continue;
+					manda_fotogramma(c, tenuto_chiave[c], tenuto_l, tenuto_a,
+					                 tenuto_istante, tenuto[c], tenuto_byte[c]);
+					quanti++;
+				}
+				registro_dice(REG_FIGLIO,
+				              quanti
+				                  ? "il padre ha chiesto il palco: rimando %d "
+				                    "flussi (l'ultima CHIAVE tenuta — un delta "
+				                    "senza il suo passato sarebbe un'immagine "
+				                    "sfasciata, §5.2)"
+				                  : "il padre ha chiesto il palco e non ho "
+				                    "niente da rimandare (%d): il perche' e' "
+				                    "nelle righe qui sopra",
+				              quanti);
+				/* ⛔ E si segna il debito: chi rientra ha bisogno di una chiave
+				 *    NUOVA, non di quella di prima — quella la sta gia'
+				 *    ricevendo, ma il suo decodificatore riparte da li' e i
+				 *    delta che seguono sono figli di un'altra catena. */
+				if (codec_chiesto)
+					debito_chiave[codec_chiesto] = true;
+				continue;
+			}
+			if (t.tipo == MSG_CHI_SEI) {
+				/* ⛔ Si RILEGGE dal nucleo, non si ristampa la copia di
+				 *    prima. */
+				getresuid(&r, &e, &sv);
+				getresgid(&rg, &eg, &sg);
+				s.uid = r;
+				s.euid = e;
+				s.suid = sv;
+				s.gid = rg;
+				s.egid = eg;
+				s.sgid = sg;
+				s.ppid = (uint32_t)getppid();
+				s.descrittori = quanti_descrittori();
+				manda(MSG_SONO, &s, sizeof s, NULL, 0);
+				continue;
+			}
 		}
-		if (t.tipo == MSG_CHI_SEI) {
-			/* ⛔ Si RILEGGE dal nucleo, non si ristampa la copia di prima. */
-			getresuid(&r, &e, &sv);
-			getresgid(&rg, &eg, &sg);
-			s.uid = r;
-			s.euid = e;
-			s.suid = sv;
-			s.gid = rg;
-			s.egid = eg;
-			s.sgid = sg;
-			s.ppid = (uint32_t)getppid();
-			s.descrittori = quanti_descrittori();
-			manda(MSG_SONO, &s, sizeof s, NULL, 0);
+		if (fine)
+			break;
+
+		/* ── 2. il fotogramma ────────────────────────────────────────── */
+		if (!codec_chiesto || !cat)
+			continue;
+		{
+			CatturaFermo fo;
+			GError *sbaglio = NULL;
+			CatturaPresa presa;
+			uint64_t istante_us, adesso;
+
+			memset(&fo, 0, sizeof fo);
+			presa = cattura_prendi(cat, MOVIMENTO_ATTESA_S, &fo, &sbaglio);
+			/* ⛔⭐ IL CONTO SI SCRIVE PRIMA DI GUARDARE L'ESITO, ED E' UNA
+			 *     CURA TROVATA DAL PRIMO GIRO DAL VIVO (13 agosto 2026).
+			 *
+			 *     La prima stesura scriveva questa riga solo DOPO un fotogramma
+			 *     consegnato: su un desktop fermo — cioe' su ogni macchina
+			 *     senza una scena dichiarata — il ciclo girava e il registro
+			 *     non diceva NIENTE.  ⛔ «Il ciclo non parte», «la cattura non
+			 *     consegna» e «la scena e' ferma» avevano tutt'e tre la stessa
+			 *     faccia: il silenzio.  E' esattamente `LEZIONI.md` §1.9 —
+			 *     «vuoto» e «proibito» con lo stesso aspetto — dentro la riga
+			 *     che dovrebbe smascherarlo.
+			 *
+			 *     ⇒ Adesso si scrive comunque, una volta al secondo, con dentro
+			 *     gli ZERO: chi legge distingue le tre cose senza dedurre. */
+			adesso = ora_monotona_us();
+			if (adesso - ciclo_detto_ms >= 1000000u) {
+				ciclo_detto_ms = adesso;
+				registro_dice(REG_FIGLIO,
+				              "ciclo: %llu fotogrammi consegnati (%llu chiavi), "
+				              "%llu attese a vuoto (scena ferma: Mutter consegna "
+				              "solo quando qualcosa cambia), %llu guasti — codec "
+				              "%u, %d/s chiesti, attesa %.2f s",
+				              (unsigned long long)ciclo_fotogrammi,
+				              (unsigned long long)ciclo_chiavi,
+				              (unsigned long long)ciclo_zero,
+				              (unsigned long long)ciclo_guasti, codec_chiesto,
+				              MOVIMENTO_FPS, MOVIMENTO_ATTESA_S);
+			}
+
+			if (presa == CATTURA_PRESA_ZERO) {
+				/* ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE, e questo e' lo
+				 *    zero: il flusso e' stato attivo per tutta l'attesa e non
+				 *    e' arrivato niente.  Su Mutter e' il DESKTOP FERMO, ed e'
+				 *    un risultato — `LEZIONI.md` §1.1: «un compositore Wayland
+				 *    consegna un fotogramma solo quando qualcosa cambia».
+				 *    ⚠ Non si codifica niente e non si spedisce niente: I1
+				 *    vieta di calare il ritmo per prudenza, non di stare fermi
+				 *    quando la scena non si muove. */
+				ciclo_zero++;
+				g_clear_error(&sbaglio);
+				continue;
+			}
+			if (presa != CATTURA_PRESA_FATTA) {
+				ciclo_guasti++;
+				registro_dice(REG_FIGLIO,
+				              "⛔ la cattura non consegna piu' (presa %u: %s): "
+				              "il ciclo continua, e questa riga dice che non e' "
+				              "«la scena e' ferma»",
+				              (unsigned)presa,
+				              sbaglio ? sbaglio->message : "nessun dettaglio");
+				g_clear_error(&sbaglio);
+				cattura_fermo_libera(&fo);
+				continue;
+			}
+			g_clear_error(&sbaglio);
+
+			istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
+			codifica_e_manda(&fo, codec_chiesto == 1 ? CODIFICATORE_HEVC
+			                                         : CODIFICATORE_AV1,
+			                 codec_chiesto, NULL, NULL, istante_us, tela_l,
+			                 tela_a);
+			cattura_fermo_libera(&fo);
 		}
 	}
+
+	codificatori_libera();
+	for (uint8_t c = 0; c < 3; c++) {
+		free(tenuto[c]);
+		tenuto[c] = NULL;
+	}
+	registro_dice(REG_FIGLIO,
+	              "il ciclo si ferma: %llu fotogrammi consegnati (%llu chiavi), "
+	              "%llu attese a vuoto, %llu guasti",
+	              (unsigned long long)ciclo_fotogrammi,
+	              (unsigned long long)ciclo_chiavi,
+	              (unsigned long long)ciclo_zero,
+	              (unsigned long long)ciclo_guasti);
 
 	if (cat)
 		cattura_ferma(cat);

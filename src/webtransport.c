@@ -86,7 +86,47 @@ typedef struct {
 	bytes dati;
 	size_t off;
 	bool fin;
+	/* ⛔⭐ FASE 3 — «MORTO» INVECE DI «TOLTO DALLA TESTA».
+	 *
+	 *     Fino alla fase 2 da questa coda si toglieva **solo la testa**, e
+	 *     bastava: si spediva un fotogramma solo per sessione.  ⛔ Con uno
+	 *     stream per fotogramma la testa non e' piu' l'unico elemento che puo'
+	 *     finire — si sceglie un elemento **in mezzo** quando quelli davanti
+	 *     appartengono a uno stream bloccato — e togliere dal mezzo un array
+	 *     vorrebbe dire spostare tutto il resto a ogni fotogramma.
+	 *
+	 *     ⇒ Chi finisce si marca morto; `testa` scorre sui morti in testa. */
+	bool morto;
 } uscita;
+
+/* ⛔⭐ FASE 3 — GLI STREAM BLOCCATI DI **QUESTA PASSATA**, E PERCHE' NON E' PIU'
+ *     UN `bool`.
+ *
+ * Fino alla fase 2 qui c'era `bool coda_bloccata`: al primo
+ * `NGTCP2_ERR_STREAM_DATA_BLOCKED` si fermava **tutta la coda** per la passata.
+ * ⛔ Con uno stream per fotogramma quel `bool` annulla esattamente il beneficio
+ *    che `RCP.md` §5.1 compra: «gli stream sono indipendenti, quindi un
+ *    fotogramma in ritardo non tocca i successivi» e' vero al livello di QUIC e
+ *    diventava **falso un piano sopra**, dentro casa nostra — un fotogramma
+ *    lento bloccava in testa tutti quelli dopo, cioe' il blocco di testa che
+ *    §5.1 esiste per togliere, rifatto a mano.
+ *
+ * ⇒ Si blocca **lo stream**, non la coda.  L'ordine DENTRO uno stream resta
+ *   quello: si sceglie sempre il primo elemento eleggibile in ordine di
+ *   inserimento, quindi il primo di uno stream non bloccato e' il suo piu'
+ *   vecchio.
+ *
+ * ⚠ E il tetto e' dichiarato: oltre `WT_BLOCCATI_MAX` stream bloccati nella
+ *   stessa passata ci si ferma come prima e **si scrive**.  Un tetto che si
+ *   supera in silenzio e' un tetto che non c'e'. */
+#define WT_BLOCCATI_MAX 64
+
+/* ⛔ Quanti fotogrammi possono essere in volo insieme su una sessione.  ⚠ Il
+ *    numero non e' arbitrario: `RCP.md` §2.3 dichiara normativi **16** stream
+ *    unidirezionali disponibili a RCP, e uno lo prende l'input.  Oltre quel
+ *    numero il credito e' finito comunque, e questa tabella non e' il tetto che
+ *    morde. */
+#define WT_INVOLO_MAX 32
 
 /* Le richieste HTTP/3: qui ne serve una sola cosa — distinguere la CONNECT
  * estesa di WebTransport da tutto il resto. */
@@ -132,10 +172,16 @@ struct wt {
 
 	uscita *coda;
 	size_t ncoda, capcoda, testa;
-	/* ⛔ La coda nostra e' bloccata per QUESTA passata di scrittura: ngtcp2
-	 *    ha detto STREAM_DATA_BLOCKED, e riprovare dentro la stessa passata
-	 *    sarebbe un ciclo che non avanza. */
-	bool coda_bloccata;
+	/* ⛔ Gli stream bloccati per QUESTA passata di scrittura: ngtcp2 ha detto
+	 *    STREAM_DATA_BLOCKED, e riprovare dentro la stessa passata sarebbe un
+	 *    ciclo che non avanza.  ⚠ Erano un `bool` fino alla fase 2 — vedi il
+	 *    riquadro di `WT_BLOCCATI_MAX`: quel `bool` rifaceva a mano il blocco
+	 *    di testa che `RCP.md` §5.1 esiste per togliere. */
+	int64_t bloccati[WT_BLOCCATI_MAX];
+	size_t nbloccati;
+	/* ⛔ Il tetto e' stato toccato e la coda si ferma davvero: si tiene per
+	 *    scriverlo UNA volta invece che a ogni passata. */
+	bool troppi_bloccati;
 
 	int64_t sessione; /* lo stream della CONNECT estesa: E' la sessione */
 
@@ -152,16 +198,62 @@ struct wt {
 	struct rcp_sessione *rcp;
 	int64_t rcp_stream;
 
-	/* ⭐ FASE 2 — «il fotogramma di questa sessione e' gia' partito».
+	/* ═══ IL VIDEO DI QUESTA SESSIONE — fase 3 ═════════════════════════ */
+	/*
+	 * ⛔⭐ QUI C'ERA `bool video_fatto`, ED E' IL FRENO DELLA FASE 2.
 	 *
-	 * ⛔ E' un `bool` e non un contatore perche' la fase 2 consegna
-	 *    UN'IMMAGINE FERMA: il ciclo dei fotogrammi e' della fase 3.  ⚠ Si
-	 *    accende anche quando il fotogramma NON parte per una ragione
-	 *    dichiarata (nessun deposito, tela diversa, codec non negoziato): se
-	 *    non si accendesse, ogni battito riproverebbe e riscriverebbe la
-	 *    stessa riga nel registro un secondo dopo l'altro — e un registro che
-	 *    ripete non si legge piu'. */
-	bool video_fatto;
+	 *     Il commento diceva: «e' un `bool` e non un contatore perche' la fase
+	 *     2 consegna UN'IMMAGINE FERMA: il ciclo dei fotogrammi e' della fase
+	 *     3».  ⇒ Adesso e' la fase 3, e il freno si toglie: al suo posto ci
+	 *     sta lo stato del **canale**, che si accende una volta e resta acceso,
+	 *     e i contatori dei fotogrammi, che crescono.
+	 *
+	 * ⚠ La ragione per cui il `bool` esisteva resta valida e va onorata lo
+	 *   stesso: senza un fondo, `video_regola()` riscriverebbe la stessa riga
+	 *   di registro a ogni battito di ogni sessione, e un registro che ripete
+	 *   non si legge piu'.  ⇒ `video_detto` e' quel fondo, ed e' solo per il
+	 *   registro: non ferma piu' i fotogrammi.
+	 */
+	/* Il canale video di questa sessione e' acceso: `SESSIONE` e' partita, il
+	 * codec e' negoziato, e al figlio e' stato chiesto di catturare. */
+	bool video_acceso;
+	uint8_t video_codec;
+	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha video»: una volta
+	 *    sola, e il perche' e' nella riga scritta allora. */
+	bool video_detto;
+	/* Quando si e' chiesta l'ultima chiave al figlio, per non chiederne una a
+	 * ogni battito mentre la prima e' ancora in viaggio.  ⛔ Non e' la grazia
+	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
+	 * fondo di una richiesta ripetuta verso il palco. */
+	uint64_t chiave_chiesta_ms;
+	uint32_t video_diffusi, video_saltati;
+
+	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
+	 *
+	 *     Un fotogramma che RCP ha gia' chiuso con FIN puo' avere ancora tutti
+	 *     i suoi byte fermi in questa coda: per RCP e' partito, sul filo non
+	 *     e'.  §5.1 dice che quello si PUO' azzerare — «i byte non ancora
+	 *     spediti non partono affatto» — ed e' l'unica strada per cui un
+	 *     abbandono si veda davvero dal lato che riceve.
+	 *
+	 * ⚠ Si tiene qui e non in `rcp.c` perche' e' un fatto della CODA; e le tre
+	 *   conseguenze (la riga di registro, il conto, il debito della chiave)
+	 *   stanno in `rcp.c`, che e' l'unico a possederle. */
+	struct {
+		int64_t stream;
+		uint32_t numero;
+		bool chiave;
+		bool vivo;
+		bool detto; /* la chiave che trattiene la coda si dice una volta */
+	} involo[WT_INVOLO_MAX];
+	size_t ninvolo;
+	/* ⛔ Lo stream che `gancio_video_apri()` ha appena aperto: `rcp.c` non lo
+	 *    restituisce, e dedurlo da «l'ultimo aperto sulla connessione» sarebbe
+	 *    indovinare. */
+	int64_t video_stream_ultimo;
+
+	/* La lista delle sessioni vive, per la diffusione dei fotogrammi. */
+	wt *viva_dopo;
 
 	/* ⛔ La chiusura della sessione ASPETTA che la coda d'uscita si sia
 	 *    svuotata, e poi ancora un po': vedi `chiudi_sessione()`. */
@@ -363,28 +455,91 @@ static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
 	}
 }
 
-static uscita *coda_prima(wt *w)
+/* ⛔ Un elemento muore qui e in nessun altro posto: e' l'unico punto in cui
+ *    `byte_in_coda` cala, e due punti che lo calassero divergerebbero. */
+static void coda_uccidi(wt *w, size_t i)
 {
-	if (w->testa >= w->ncoda)
-		return NULL;
-	return &w->coda[w->testa];
-}
-
-static void coda_togli(wt *w)
-{
-	if (w->testa >= w->ncoda)
+	uscita *u;
+	if (i >= w->ncoda)
 		return;
-	if (w->byte_in_coda >= w->coda[w->testa].dati.n)
-		w->byte_in_coda -= w->coda[w->testa].dati.n;
+	u = &w->coda[i];
+	if (u->morto)
+		return;
+	if (w->byte_in_coda >= u->dati.n)
+		w->byte_in_coda -= u->dati.n;
 	else
 		w->byte_in_coda = 0;
-	bytes_libera(&w->coda[w->testa].dati);
-	w->testa++;
+	bytes_libera(&u->dati);
+	u->morto = true;
+	/* I morti in testa non servono a nessuno: la testa scorre. */
+	while (w->testa < w->ncoda && w->coda[w->testa].morto)
+		w->testa++;
 	if (w->testa == w->ncoda)
 		w->testa = w->ncoda = 0;
 }
 
-static bool coda_vuota(const wt *w) { return w->testa >= w->ncoda; }
+static bool coda_vuota(const wt *w)
+{
+	for (size_t i = w->testa; i < w->ncoda; i++)
+		if (!w->coda[i].morto)
+			return false;
+	return true;
+}
+
+/* ⛔ Quanti byte di QUESTO stream non sono ancora usciti.  ⚠ Zero non vuol dire
+ *    «e' arrivato»: vuol dire «non e' piu' roba nostra» — l'abbiamo consegnato
+ *    a ngtcp2.  La differenza si dichiara qui perche' §5.1 la usa: un
+ *    fotogramma che non ha piu' byte in coda non si abbandona, perche'
+ *    l'abbandono non risparmierebbe piu' niente. */
+static size_t coda_byte_stream(const wt *w, int64_t id)
+{
+	size_t n = 0;
+	for (size_t i = w->testa; i < w->ncoda; i++)
+		if (!w->coda[i].morto && w->coda[i].id == id)
+			n += w->coda[i].dati.n - w->coda[i].off;
+	return n;
+}
+
+/* ⛔ §5.1: i byte non ancora spediti **non partono affatto**.  Si chiama solo
+ *    accanto a un `RESET_STREAM`: buttare i byte senza azzerare lo stream
+ *    lascerebbe il client ad aspettare una fine che non arriva. */
+static size_t coda_butta_stream(wt *w, int64_t id)
+{
+	size_t buttati = 0;
+	for (size_t i = w->testa; i < w->ncoda; i++) {
+		if (w->coda[i].morto || w->coda[i].id != id)
+			continue;
+		buttati += w->coda[i].dati.n - w->coda[i].off;
+		coda_uccidi(w, i);
+	}
+	return buttati;
+}
+
+static bool stream_bloccato(const wt *w, int64_t id)
+{
+	for (size_t i = 0; i < w->nbloccati; i++)
+		if (w->bloccati[i] == id)
+			return true;
+	return false;
+}
+
+/* ⛔ Il primo elemento eleggibile in ORDINE DI INSERIMENTO, saltando gli stream
+ *    gia' bloccati in questa passata.  ⚠ Scorrere in ordine e' quel che tiene
+ *    l'ordine DENTRO ogni stream: il primo elemento di uno stream non bloccato
+ *    e' per costruzione il suo piu' vecchio. */
+static uscita *coda_scegli(wt *w, size_t *fuori)
+{
+	for (size_t i = w->testa; i < w->ncoda; i++) {
+		if (w->coda[i].morto)
+			continue;
+		if (stream_bloccato(w, w->coda[i].id))
+			continue;
+		if (fuori)
+			*fuori = i;
+		return &w->coda[i];
+	}
+	return NULL;
+}
 
 /* ⛔ IL TETTO DELLA CODA D'USCITA — rilievo B-3 punto 4, 10 agosto 2026 notte.
  *
@@ -741,15 +896,19 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
 /*        — non una copia dei due byte a mano, che il giorno in cui il numero  */
 /*        di sessione supera 63 diventerebbe muta e sbagliata.                 */
 
-static bool gancio_video_apri(void *ctx, int64_t *stream)
+static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
 	uint8_t pre[16];
 	size_t n = 0;
 	int64_t id = -1;
 
+	if (restano)
+		*restano = 0;
 	if (!w->conn || w->sessione == -1 || w->guasto)
 		return false;
+	if (restano)
+		*restano = ngtcp2_conn_get_streams_uni_left2(w->conn);
 
 	/* ⚠ `false` qui vuol dire «non adesso», e `rcp.c` lo traduce in «non e'
 	 *   partito un byte» — che e' meglio di mezzo fotogramma.  ⛔ La ragione
@@ -757,14 +916,28 @@ static bool gancio_video_apri(void *ctx, int64_t *stream)
 	 *   unidirezionali, e allora si dice quanti gliene restano invece di
 	 *   scrivere «non si e' potuto». */
 	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
-		registro_dice(REG_WT,
-		              "⛔ nessuno stream unidirezionale per il fotogramma: il "
+		registro_dettaglio(REG_WT,
+		              "nessuno stream unidirezionale per il fotogramma: il "
 		              "client ne concede ancora %llu (§2.5 ne vuole uno PER "
-		              "fotogramma)",
+		              "fotogramma).  ⚠ La riga che decide — delta si butta, "
+		              "chiave si aspetta — la scrive `rcp.c` (§2.3)",
 		              (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
 			              w->conn));
 		return false;
 	}
+
+	/* ⛔ Quanto credito ngtcp2 CREDE di avere, chiesto a lui e non dedotto
+	 *    (`LEZIONI.md` §1.6).  ⚠ Serve a distinguere «il pari non ci ha dato
+	 *    credito» da «ce l'ha dato e uno dei due conta male»: il 13 agosto 2026
+	 *    un cliente che dichiarava `initial_max_streams_uni = 6` ha chiuso con
+	 *    `STREAM_LIMIT_ERROR` dopo che avevamo aperto 11 stream, e senza questa
+	 *    riga di chi fosse il conto sbagliato si poteva solo indovinare. */
+	registro_dettaglio(REG_WT,
+	                   "stream uni %ld aperto per un fotogramma; ngtcp2 dice che "
+	                   "ne restano %llu",
+	                   (long)id,
+	                   (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
+		                   w->conn));
 
 	n += varint_scrivi(pre + n, 0x54);
 	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
@@ -783,6 +956,11 @@ static bool gancio_video_apri(void *ctx, int64_t *stream)
 		return false;
 	}
 	*stream = id;
+	/* ⛔ Qui e in nessun altro posto: `rcp.c` non restituisce l'identificatore
+	 *    dello stream che ha aperto, e ricavarlo da «l'ultimo aperto sulla
+	 *    connessione» sarebbe indovinare.  ⭐ Senza questo, §5.1 non ha nessun
+	 *    modo di dire QUALE stream azzerare quando ne parte uno piu' recente. */
+	w->video_stream_ultimo = id;
 	return true;
 }
 
@@ -816,11 +994,19 @@ static void gancio_video_azzera(void *ctx, int64_t stream)
 	if (!w->conn)
 		return;
 	/* ⛔ §5.1/§6.2: `RESET_STREAM` ⇒ il client BUTTA quel che e' arrivato e lo
-	 *    tratta come un buco.  ⚠ I byte eventualmente ancora in coda per questo
-	 *    stream li scarta `wt_scrivi()` da se', sul ramo
-	 *    `NGTCP2_ERR_STREAM_SHUT_WR`: non si tolgono a mano di qui, o si
-	 *    sfaserebbe il conto dei byte in coda. */
+	 *    tratta come un buco. */
 	ngtcp2_conn_shutdown_stream_write(w->conn, 0, stream, 0);
+	/* ⛔⭐ E I BYTE ANCORA IN CODA SI BUTTANO QUI, NON «alla prossima passata».
+	 *
+	 *     Il commento di prima diceva che li avrebbe scartati `wt_scrivi()` sul
+	 *     ramo `NGTCP2_ERR_STREAM_SHUT_WR`, e con un fotogramma solo per
+	 *     sessione era vero e bastava.  ⛔ A sessanta al secondo no: quei byte
+	 *     restano contati in `byte_in_coda` fino alla passata dopo, cioe' il
+	 *     tetto della coda morde su roba che si e' gia' deciso di non spedire —
+	 *     e §5.1 dice **«i byte non ancora spediti non partono affatto»**, non
+	 *     «partono dopo».  ⚠ Il conto non si sfasa: `coda_butta_stream()` passa
+	 *     da `coda_uccidi()`, che e' l'unico punto in cui `byte_in_coda` cala. */
+	coda_butta_stream(w, stream);
 }
 
 /* ⛔⭐ I PING DEL TRASPORTO MENTRE SI ASPETTANO LE CREDENZIALI — `RCP.md` §4.6,
@@ -939,187 +1125,361 @@ static void regola_battito(wt *w)
 }
 
 /* ========================================================================== */
-/* ⭐⭐ IL FOTOGRAMMA DELLA FASE 2 — «un'immagine ferma, ma sua»               */
+/* ⭐⭐ IL CICLO DEI FOTOGRAMMI — FASE 3, «il desktop che si muove»            */
 /*                                                                            */
-/* ⛔ PERCHE' IL FOTOGRAMMA E' DEPOSITATO QUI INVECE DI ESSERE CATTURATO       */
-/*    QUANDO SERVE — e non e' una comodita', e' `CODER.md` §4.4.              */
+/* ⛔⭐ CHE COSA C'ERA QUI PRIMA, E PERCHE' E' STATO TOLTO                     */
 /*                                                                            */
-/*    Catturare vuol dire ASPETTARE il prossimo fotogramma di Mutter, e su un  */
-/*    desktop fermo Mutter non ne manda nessuno: `cattura_prendi()` sta in     */
-/*    attesa fino al suo tetto.  ⛔ Dentro il ciclo `poll` quell'attesa        */
-/*    fermerebbe **tutte** le connessioni insieme — la stessa forma appena     */
-/*    curata su PAM (`DECISIONI.md` §1.10), e nel posto in cui farebbe piu'    */
-/*    male, perche' con il video lo schermo di tutti si pianterebbe ogni volta */
-/*    che qualcun altro entra.                                                 */
+/*    Fino alla fase 2 questo posto conteneva un DEPOSITO DI PROCESSO:        */
+/*    `struct video_deposito video_dep[3]`, riempito una volta all'accensione */
+/*    e letto da ogni sessione che arrivasse a `SESSIONE`.  Aveva tre difetti */
+/*    dichiarati, e tutt'e tre sono di questa fase:                            */
 /*                                                                            */
-/* ⇒ `main.c` cattura e codifica UNA VOLTA, all'accensione, quando gli         */
-/*   ascoltatori non sono ancora aperti e non c'e' nessuno in attesa; qui si   */
-/*   DEPOSITANO i byte, e quando una sessione arriva a `SESSIONE` si spedisce  */
-/*   quel che c'e' gia'.  Nel ciclo non si aspetta niente e non si codifica    */
-/*   niente.                                                                   */
+/*      1. era di PROCESSO e non di sessione — `main.c` §«il deposito e la    */
+/*         fuga» lo dichiara: «la cura vera e' un deposito per sessione».  Il */
+/*         ripiego era un PADRONE del deposito, e il prezzo dichiarato era    */
+/*         che due utenti collegati insieme non potevano vedere tutt'e due il */
+/*         proprio desktop;                                                    */
+/*      2. marcava `chiave = true` **per costruzione**, e con chiave/delta    */
+/*         veri quella riga diventa **una bugia sul filo** (§6.2, campo       */
+/*         `tipo`);                                                            */
+/*      3. serviva UN fotogramma per sessione, e il freno era `bool           */
+/*         video_fatto`.                                                       */
 /*                                                                            */
-/* ⛔ E I DEPOSITI SONO DUE, uno per codec, per una ragione misurata: la       */
-/*    pagina sceglie il codec **provandolo sul pixel** (`P2-5-pagina.md` §1) e */
-/*    su un browser senza GPU HEVC non arriva ⇒ `av1`.  Il codec si sa solo    */
-/*    alla negoziazione di §4.3, cioe' DOPO l'accensione: codificare allora    */
-/*    rimetterebbe i 100-400 ms della codifica dentro il ciclo.  Si codificano */
-/*    tutt'e due prima, e si sceglie qui — che costa zero.                     */
+/* ⇒ Al suo posto c'e' una DIFFUSIONE: il figlio dell'utente cattura e        */
+/*   codifica di continuo, `main.c` gira ogni fotogramma qui dentro, e questa */
+/*   funzione lo consegna **alle sessioni di quell'utente e a nessun'altra**. */
+/*   ⛔ Il confronto sul nome dell'utente e' l'invariante I3 sul filo, ed e'  */
+/*   la stessa guardia di prima messa dove serviva: non piu' «di chi e' il    */
+/*   deposito», ma «di chi e' questa sessione».  Due utenti collegati insieme */
+/*   adesso vedono ciascuno il proprio.                                        */
 /*                                                                            */
-/* ⚠ E' un deposito di PROCESSO, non di connessione, e lo dev'essere:          */
-/*   l'immagine appartiene al palco, cioe' alla SESSIONE GRAFICA (invariante   */
-/*   I4), non a chi si collega.  Due connessioni vedono lo stesso desktop.     */
+/* ⚠ E QUEL CHE NON SI FA, DICHIARATO: i byte NON si copiano.  Il fotogramma  */
+/*   arriva da `main.c`, viene messo in coda a ciascuna sessione (che lo copia */
+/*   lei, in `coda_metti`) e poi il chiamante puo' liberarlo.  Un deposito     */
+/*   intermedio qui sarebbe una copia in piu' per fotogramma, cioe' fino a 60  */
+/*   copie al secondo di qualche centinaio di KiB.                             */
 
-struct video_deposito {
-	uint8_t *dati;
-	size_t byte;
-	bool chiave;
-};
-/* indice 1 = HEVC, 2 = AV1 — gli stessi numeri di §4.3/§6.2, non una
- * traduzione: chi traduce sbaglia. */
-static struct video_deposito video_dep[3];
-static uint32_t video_dep_l, video_dep_a;
-static uint64_t video_dep_istante_us;
+/* ⛔ L'elenco delle sessioni vive.  Serve perche' i fotogrammi arrivano da
+ *    FUORI (dal figlio, per la mano di `main.c`) e non da un evento di questa
+ *    connessione: senza un elenco, chi diffonde dovrebbe tenersi lui i
+ *    puntatori, e due elenchi dello stesso insieme divergono. */
+static wt *vive_prima;
 
-void wt_video_deposita(uint8_t codec, const uint8_t *dati, size_t byte,
-                       uint32_t larghezza, uint32_t altezza,
-                       uint64_t istante_us)
+static wt_video_richiesta gancio_palco;
+static void *gancio_palco_ctx;
+
+void wt_video_gancio(wt_video_richiesta f, void *ctx)
 {
-	uint8_t *copia;
-	if (codec != 1 && codec != 2)
+	gancio_palco = f;
+	gancio_palco_ctx = ctx;
+}
+
+/* ⛔ Ogni quanto si puo' RIchiedere una chiave al palco mentre il debito e'
+ *    ancora acceso.  ⚠ Non e' la grazia di §5.2 — quella e' di `rcp.c` e conta
+ *    dall'ultima chiave SPEDITA: questo e' il fondo di una richiesta che deve
+ *    ancora attraversare un socket, un processo e un codificatore.  Senza,
+ *    ogni battito ne manderebbe una e il figlio codificherebbe solo chiavi. */
+#define WT_CHIAVE_RICHIESTA_MS 150
+
+/* ⛔ Quanti stream uni servono al video PRIMA di dire «senza credito»: `RCP.md`
+ *    §2.3 vuole che l'input ne trovi sempre uno, e il video non deve mangiarsi
+ *    l'ultimo posto.  ⚠ Il numero e' il minimo che §2.3 riserva a RCP diviso a
+ *    meta': si dichiara qui perche' e' una scelta nostra, non una riga
+ *    dell'arbitro. */
+#define WT_UNI_RISERVA 2
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ §5.1 — L'ABBANDONO, ED E' QUELLO CHE SI VEDE DAL LATO CHE RICEVE.       */
+
+static void involo_pulisci(wt *w)
+{
+	size_t j = 0;
+	for (size_t i = 0; i < w->ninvolo; i++)
+		if (w->involo[i].vivo)
+			w->involo[j++] = w->involo[i];
+	w->ninvolo = j;
+}
+
+/* ⛔ §5.1: «il server PUO' chiamare `RESET_STREAM` su un fotogramma che non
+ *    serve piu' — perche' ne e' gia' partito uno piu' recente — e i byte non
+ *    ancora spediti non partono affatto».
+ *
+ * ⚠ «Non ancora spediti» vuol dire «ancora nella NOSTRA coda»: quel che e' gia'
+ *   passato a ngtcp2 non lo riprendiamo, e azzerare li' non risparmierebbe piu'
+ *   niente.  ⇒ Un fotogramma senza byte in coda esce dall'elenco senza che si
+ *   scriva niente: non e' stato abbandonato, e' stato spedito. */
+static void video_sgombra(wt *w, const char *perche)
+{
+	if (!w->rcp || !w->conn)
 		return;
-	copia = malloc(byte);
-	if (!copia) {
+	for (size_t i = 0; i < w->ninvolo; i++) {
+		size_t rimasti;
+		if (!w->involo[i].vivo)
+			continue;
+		rimasti = coda_byte_stream(w, w->involo[i].stream);
+		if (rimasti == 0) {
+			w->involo[i].vivo = false;
+			continue;
+		}
+		if (w->involo[i].chiave) {
+			/* ⛔ §5.2: «il server NON DEVE abbandonare un fotogramma chiave.
+			 * Abbandonare la cura non e' una cura».  ⚠ E si dice UNA volta,
+			 * perche' e' una cosa che dura finche' la linea non la porta via:
+			 * ripeterla a ogni fotogramma renderebbe illeggibile il registro
+			 * proprio quando serve. */
+			if (!w->involo[i].detto) {
+				w->involo[i].detto = true;
+				registro_dice(REG_RCP,
+				              "⚠ %s: la CHIAVE %u tiene ancora %zu byte in coda "
+				              "e §5.2 vieta di abbandonarla: si ASPETTA.  ⭐ E i "
+				              "delta che vengono dopo non sono bloccati da lei — "
+				              "gli stream sono indipendenti (§5.1)",
+				              w->provenienza, w->involo[i].numero, rimasti);
+			}
+			continue;
+		}
+		/* ⛔ La riga di registro, il conto e il debito della chiave sono di
+		 * `rcp.c`: due copie dello stesso stato divergono. */
+		if (!rcp_video_abbandonato_a_valle(w->rcp, w->involo[i].numero, false,
+		                                   rimasti, perche))
+			continue;
+		/* ⛔ PRIMA si azzera lo stream, POI si buttano i byte.  Al contrario
+		 * resterebbe una finestra — corta ma vera — in cui lo stream e' vivo e
+		 * i suoi byte non ci sono piu': `wt_scrivi()` lo troverebbe muto invece
+		 * che azzerato, e il client aspetterebbe una fine che non arriva. */
+		ngtcp2_conn_shutdown_stream_write(w->conn, 0, w->involo[i].stream, 0);
+		coda_butta_stream(w, w->involo[i].stream);
+		w->involo[i].vivo = false;
+	}
+	involo_pulisci(w);
+}
+
+static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
+{
+	if (stream < 0)
+		return;
+	involo_pulisci(w);
+	if (w->ninvolo >= WT_INVOLO_MAX) {
+		/* ⚠ Si dice invece di scivolare: da qui in poi quel fotogramma non
+		 *   sara' abbandonabile, e chi legge il registro deve saperlo — un
+		 *   abbandono che non avviene perche' una tabella e' piena somiglia in
+		 *   tutto a un abbandono che nessuno ha chiesto. */
 		registro_dice(REG_WT,
-		              "⛔ il fotogramma per il codec %u (%zu byte) non entra in "
-		              "memoria: questo server non avra' video",
-		              codec, byte);
+		              "⚠ %s: %u fotogrammi gia' in volo: il %u non entra "
+		              "nell'elenco e NON potra' essere abbandonato (§5.1)",
+		              w->provenienza, WT_INVOLO_MAX, numero);
 		return;
 	}
-	memcpy(copia, dati, byte);
-	free(video_dep[codec].dati);
-	video_dep[codec].dati = copia;
-	video_dep[codec].byte = byte;
-	/* ⛔ §5.2: il primo fotogramma dopo `SESSIONE` DEVE essere una chiave, e
-	 *    questo lo e' per costruzione — e' il primo che il codificatore
-	 *    produce.  Il campo esiste lo stesso perche' `rcp_video_spedisci()`
-	 *    scrive `tipo` da qui: dedurlo sarebbe scrivere `0x0301` sperando. */
-	video_dep[codec].chiave = true;
-	video_dep_l = larghezza;
-	video_dep_a = altezza;
-	video_dep_istante_us = istante_us;
+	w->involo[w->ninvolo].stream = stream;
+	w->involo[w->ninvolo].numero = numero;
+	w->involo[w->ninvolo].chiave = chiave;
+	w->involo[w->ninvolo].vivo = true;
+	w->involo[w->ninvolo].detto = false;
+	w->ninvolo++;
 }
 
-void wt_video_svuota(void)
-{
-	for (size_t i = 0; i < 3; i++) {
-		free(video_dep[i].dati);
-		video_dep[i].dati = NULL;
-		video_dep[i].byte = 0;
-	}
-}
+/* ------------------------------------------------------------------------ */
+/* ⭐ LA CUCITURA FRA LA CHIAVE CHIESTA E IL CODIFICATORE — punto 4.          */
 
-/* ⛔ Si chiama dopo OGNI cosa che possa aver fatto spedire `SESSIONE`: i byte
- *    arrivati sul canale (`rcp_passa`) e il battito (`wt_batti`).  ⚠ E la
- *    prima riga e' il freno: senza `video_fatto` questa funzione girerebbe a
- *    ogni battito di ogni sessione. */
-static void video_forse(wt *w)
+/* ⛔ `rcp_video_serve_chiave()` era LETTA e non serviva a niente:
+ *    `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel prodotto**.
+ *    ⇒ Un `RICHIEDI_CHIAVE` del client accendeva un `bool` in `rcp.c`, il
+ *    fotogramma dopo era un delta, `rcp_video_apri()` lo rifiutava con
+ *    `RCP_VIDEO_SERVE_UNA_CHIAVE`, e **lo schermo restava fermo per sempre** —
+ *    perche' `chiavi_ogni = 0` da' GOP infinito e dopo la prima chiave non ne
+ *    arriva mai piu' una da sola.
+ *
+ * ⇒ Il gancio: il palco sta in un ALTRO PROCESSO (il figlio dell'utente), e
+ *   questa e' la riga che attraversa il confine.  ⚠ Sta qui e non in `rcp.c`
+ *   perche' `rcp.c` non conosce i figli, e non in `main.c` perche' `main.c` non
+ *   conosce lo stato della sessione. */
+static void video_regola(wt *w, uint64_t ora_ms)
 {
 	uint32_t l = 0, a = 0;
 	uint8_t codec;
-	const struct video_deposito *d;
-	bool chiave;
-	int e;
+	const char *utente;
 
-	if (!w->rcp || w->video_fatto || w->chiusura >= 0)
+	if (!w->rcp || w->chiusura >= 0)
 		return;
 
 	/* ⛔ P1 / §2.5 / invariante I3 — «nessuno stream video prima di aver
-	 *    SPEDITO `SESSIONE`».  ⚠ Non si chiede a `rcp_video_apri()` di dirlo:
-	 *    quella funzione scrive una riga nel registro ogni volta che rifiuta, e
-	 *    chiamarla a ogni battito riempirebbe il registro di una riga al
-	 *    secondo per ogni sessione in attesa della parola d'ordine.
-	 *    `rcp_tela_in_vigore()` risponde `false` finche' `SESSIONE` non e'
-	 *    partita, e non scrive niente. */
+	 *    SPEDITO `SESSIONE`».  `rcp_tela_in_vigore()` risponde `false` finche'
+	 *    `SESSIONE` non e' partita, e non scrive niente nel registro: chiamare
+	 *    `rcp_video_apri()` per saperlo riempirebbe il registro di una riga al
+	 *    secondo per ogni sessione in attesa della parola d'ordine. */
 	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
 		return;
 
 	codec = rcp_codec_negoziato(w->rcp);
 	if (codec == 0) {
-		/* ⚠ Non e' un difetto: un client della fase 1 non dichiara nessun
-		 *   codec, e §4.3 gli da' ragione.  Si dice, e non si riprova. */
-		registro_dice(REG_RCP,
-		              "%s: nessun codec negoziato (§4.3) — questa sessione non "
-		              "ha video, ed e' quel che la fase 1 faceva",
-		              w->provenienza);
-		w->video_fatto = true;
+		if (!w->video_detto) {
+			/* ⚠ Non e' un difetto: un client della fase 1 non dichiara nessun
+			 *   codec, e §4.3 gli da' ragione. */
+			w->video_detto = true;
+			registro_dice(REG_RCP,
+			              "%s: nessun codec negoziato (§4.3) — questa sessione "
+			              "non ha video, ed e' quel che la fase 1 faceva",
+			              w->provenienza);
+		}
 		return;
 	}
 
-	d = &video_dep[codec];
-	if (!d->dati) {
-		/* ⛔ «Non ho un fotogramma» e «il fotogramma non e' partito» sono due
-		 *    fatti diversi, e questo e' il primo.  La causa sta nel registro
-		 *    dell'accensione — sessione nera, cattura fallita, codificatore che
-		 *    non si apre — e questa riga rimanda li' invece di inventare. */
+	utente = rcp_utente(w->rcp);
+	if (!utente || !utente[0])
+		return;
+
+	if (!w->video_acceso) {
+		w->video_acceso = true;
+		w->video_codec = codec;
+		w->chiave_chiesta_ms = ora_ms;
 		registro_dice(REG_RCP,
-		              "⛔ %s: nessun fotogramma in deposito per il codec %u: il "
-		              "server e' partito senza (vedi le righe «%s» e «video» "
-		              "dell'accensione).  La sessione regge, lo schermo resta "
-		              "vuoto — e il ripiego e' dichiarato (CODER.md §4.2)",
-		              w->provenienza, codec, REG_AVVIO);
-		w->video_fatto = true;
+		              "⭐ FASE 3: canale video ACCESO per «%s» da %s — codec %u, "
+		              "tela %ux%u.  Chiedo al palco di catturare di continuo, e "
+		              "§5.2 vuole che il PRIMO sia una CHIAVE",
+		              utente, w->provenienza, codec, l, a);
+		if (gancio_palco)
+			gancio_palco(gancio_palco_ctx, utente, codec, true);
 		return;
 	}
+
+	/* ⛔ E qui la chiave chiesta arriva davvero al codificatore. */
+	if (rcp_video_serve_chiave(w->rcp)
+	    && ora_ms - w->chiave_chiesta_ms >= WT_CHIAVE_RICHIESTA_MS) {
+		w->chiave_chiesta_ms = ora_ms;
+		if (gancio_palco)
+			gancio_palco(gancio_palco_ctx, utente, codec, true);
+		registro_dettaglio(REG_RCP,
+		                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
+		                   "palco di «%s» (codec %u)",
+		                   w->provenienza, utente, codec);
+	}
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, CONSEGNATO A UNA SESSIONE.          */
+
+static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
+                        const uint8_t *dati, size_t byte, uint32_t l, uint32_t a,
+                        uint64_t istante_us, uint32_t input)
+{
+	uint32_t tl = 0, ta = 0;
+	uint64_t ora_ms;
+	const char *mio;
+	int e;
+
+	if (!w->video_acceso || w->video_codec != codec)
+		return;
+	if (!w->rcp || !w->conn || w->chiusura >= 0)
+		return;
+
+	/* ⛔⭐ INVARIANTE I3 SUL FILO, E NON E' UNA PRUDENZA IN PIU'.
+	 *
+	 *     `[M]` 12 agosto 2026: con un deposito di processo, «prova» (uid 1001,
+	 *     senza sessione grafica) ha ricevuto **un fotogramma conforme**, e quel
+	 *     fotogramma era il desktop di «nicfio».  Non «non ricevi niente»:
+	 *     **ricevi il desktop di un altro**, e nessuno dei due se ne accorge.
+	 *     ⇒ Qui il confronto e' fra l'utente che ha CATTURATO e l'utente che
+	 *     PAM ha ammesso su questa sessione, e sono due fatti diversi tutti e
+	 *     due chiesti a chi li sa. */
+	mio = rcp_utente(w->rcp);
+	if (!mio || !utente || strcmp(mio, utente) != 0)
+		return;
+
+	if (!rcp_tela_in_vigore(w->rcp, &tl, &ta))
+		return;
 
 	/* ⛔⭐ E LA TELA DEV'ESSERE QUELLA, non «piu' o meno quella» — §6.2, P5.
 	 *
 	 *     I 28 byte portano `largh.`/`altezza` = la tela IN VIGORE, e li scrive
-	 *     `rcp.c` dalla sua, non da qui.  ⚠ Se il client avesse chiesto una tela
-	 *     diversa — §4.5 la puo' RIDURRE per rispettare `video.misura_massima` —
-	 *     l'intestazione direbbe una misura e i pixel dentro il flusso ne
-	 *     porterebbero un'altra: due verita' sulla stessa cosa, e il client non
-	 *     avrebbe modo di accorgersene (il decodificatore prende la misura dal
-	 *     flusso).  ⛔ Meglio nessun fotogramma che un fotogramma che mente. */
-	if (l != video_dep_l || a != video_dep_a) {
-		registro_dice(REG_RCP,
-		              "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato e' "
-		              "%ux%u — NON lo spedisco: l'intestazione di §6.2 direbbe "
-		              "una misura e i pixel ne porterebbero un'altra.  ⚠ La fase "
-		              "2 cattura una volta sola, a una misura sola; il "
-		              "ridimensionamento e' della fase 6",
-		              w->provenienza, l, a, video_dep_l, video_dep_a);
-		w->video_fatto = true;
+	 *     `rcp.c` dalla sua.  Se il fotogramma catturato ne portasse un'altra,
+	 *     l'intestazione direbbe una misura e i pixel ne porterebbero un'altra:
+	 *     due verita' sulla stessa cosa, e il client non avrebbe modo di
+	 *     accorgersene — il decodificatore prende la misura dal flusso.
+	 *     ⛔ Meglio nessun fotogramma che un fotogramma che mente. */
+	if (tl != l || ta != a) {
+		w->video_saltati++;
+		if (!w->video_detto) {
+			w->video_detto = true;
+			registro_dice(REG_RCP,
+			              "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
+			              "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
+			              "direbbe una misura e i pixel ne porterebbero un'altra",
+			              w->provenienza, tl, ta, l, a);
+		}
 		return;
 	}
 
-	/* ⛔ §5.2: si chiede PRIMA di spedire, e costa zero.  Qui il deposito e'
-	 *    una chiave in ogni caso, ma la domanda si fa lo stesso: il giorno in
-	 *    cui il deposito portera' anche dei delta, questa riga e' gia' quella
-	 *    giusta e non va ritrovata. */
-	chiave = rcp_video_serve_chiave(w->rcp);
-	if (chiave && !d->chiave) {
-		registro_dice(REG_RCP,
-		              "⛔ %s: §5.2 vuole una CHIAVE e il deposito ha un delta: "
-		              "non si promuove il tipo, si tace",
-		              w->provenienza);
-		w->video_fatto = true;
+	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+
+	/* ⛔ §5.1 — «ne e' gia' partito uno piu' recente»: i delta ancora fermi
+	 * nella coda si azzerano PRIMA di accodare questo, o la coda crescerebbe
+	 * col passato invece di portare il presente. */
+	video_sgombra(w, "ne e' partito uno piu' recente (§5.1)");
+
+	/* ⛔ §2.3 — e il credito si guarda PRIMA di chiedere lo stream, per poter
+	 * distinguere «non c'era posto» da «lo stream si e' rotto».  ⚠ La riserva
+	 * e' per l'input: §2.3 esiste perche' senza credito «l'input non partirebbe
+	 * affatto e il sintomo sarebbe il desktop non risponde». */
+	if (!chiave
+	    && ngtcp2_conn_get_streams_uni_left2(w->conn) <= WT_UNI_RISERVA) {
+		w->video_saltati++;
+		rcp_video_niente_credito(w->rcp, false,
+		                         ngtcp2_conn_get_streams_uni_left2(w->conn));
 		return;
 	}
 
-	e = rcp_video_spedisci(w->rcp, d->chiave, d->dati, d->byte,
-	                       video_dep_istante_us, 0,
-	                       ngtcp2_conn_get_timestamp(w->conn)
-	                           / NGTCP2_MILLISECONDS);
-	/* ⛔ E il risultato si scrive SEMPRE, anche quando e' 0: «il fotogramma e'
-	 *    partito» e' il fatto che l'intera fase 2 esiste per produrre, e un
-	 *    fatto che non lascia una riga non e' successo per nessuno. */
-	registro_dice(REG_RCP,
-	              "%s ⭐ FASE 2: fotogramma %s spedito a %s — codec %u, %zu "
-	              "byte, tela %ux%u, esito rcp_video_spedisci = %d",
-	              e == RCP_VIDEO_SPEDITO ? "" : "⛔",
-	              d->chiave ? "CHIAVE" : "delta", w->provenienza, codec,
-	              d->byte, l, a, e);
-	w->video_fatto = true;
+	w->video_stream_ultimo = -1;
+	e = rcp_video_spedisci(w->rcp, chiave, dati, byte, istante_us, input, ora_ms);
+	if (e == RCP_VIDEO_SPEDITO) {
+		w->video_diffusi++;
+		involo_aggiungi(w, w->video_stream_ultimo,
+		                rcp_video_ultimo_numero(w->rcp), chiave);
+		return;
+	}
+
+	w->video_saltati++;
+	/* ⛔ E il rifiuto NON e' un errore fatale: §2.3 — «il server DEVE reggere
+	 * il rifiuto di aprire uno stream invece di considerarlo un errore
+	 * fatale».  ⚠ Le righe le ha gia' scritte `rcp.c`, che sa quale delle sette
+	 * ragioni e': qui si conta e si tace, o la stessa cosa finirebbe due volte
+	 * nel registro con due parole diverse. */
+}
+
+void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
+                       const uint8_t *dati, size_t byte, uint32_t larghezza,
+                       uint32_t altezza, uint64_t istante_us, uint32_t input)
+{
+	if (codec != 1 && codec != 2)
+		return;
+	for (wt *w = vive_prima; w; w = w->viva_dopo)
+		video_a_una(w, utente, codec, chiave, dati, byte, larghezza, altezza,
+		            istante_us, input);
+}
+
+bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
+{
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		if (!w->video_acceso || !w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !utente || strcmp(mio, utente) != 0)
+			continue;
+		if (codec)
+			*codec = w->video_codec;
+		return true;
+	}
+	return false;
+}
+
+void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
+                    uint32_t *spediti, uint32_t *abbandonati)
+{
+	if (diffusi)
+		*diffusi = w ? w->video_diffusi : 0;
+	if (saltati)
+		*saltati = w ? w->video_saltati : 0;
+	rcp_video_conti(w ? w->rcp : NULL, spediti, abbandonati);
 }
 
 static void rcp_avvia(wt *w, int64_t stream_id)
@@ -1187,7 +1547,7 @@ static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
 	 *    appena spedito `SESSIONE`, e aspettare il battito costerebbe fino a un
 	 *    secondo intero prima che il desktop compaia — cioe' il numero che
 	 *    l'utente guarda. */
-	video_forse(w);
+	video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 	regola_battito(w);
 }
 
@@ -2106,8 +2466,14 @@ wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
 	w->sessione = -1;
 	w->rcp_stream = -1;
 	w->chiusura = -1;
+	w->video_stream_ultimo = -1;
 	snprintf(w->provenienza, sizeof w->provenienza, "%s",
 	         provenienza ? provenienza : "");
+	/* ⛔ Nell'elenco delle vive PRIMA di restituire: un fotogramma puo'
+	 *    arrivare dal palco fra due giri di `poll`, e una sessione che non e'
+	 *    nell'elenco non lo riceve — senza che nessuno se ne accorga. */
+	w->viva_dopo = vive_prima;
+	vive_prima = w;
 	return w;
 }
 
@@ -2115,8 +2481,35 @@ void wt_libera(wt *w)
 {
 	if (!w)
 		return;
-	/* ⭐ Il posto nel registro delle sessioni si libera qui, se non l'ha gia'
-	 *    fatto la chiusura dello stream. */
+	/* ⛔ Fuori dall'elenco delle vive PRIMA di liberare qualunque cosa: da qui
+	 *    in poi `wt_video_diffondi()` non deve piu' trovarla. */
+	if (vive_prima == w) {
+		vive_prima = w->viva_dopo;
+	} else {
+		for (wt *p = vive_prima; p; p = p->viva_dopo)
+			if (p->viva_dopo == w) {
+				p->viva_dopo = w->viva_dopo;
+				break;
+			}
+	}
+	/* ⛔⭐ E SI SPEGNE IL PALCO SE NESSUNO GUARDA PIU'.
+	 *
+	 *     Il figlio cattura e codifica solo perche' qualcuno guarda: un palco
+	 *     lasciato acceso su una sessione chiusa spenderebbe una GPU e una CPU
+	 *     per nessuno, per sempre.  ⚠ E non e' l'invariante I1 al contrario —
+	 *     I1 vieta di calare il ritmo **per prudenza mentre qualcuno guarda**;
+	 *     qui non guarda piu' nessuno, e il palco (I4) resta in piedi: si ferma
+	 *     solo il ciclo dei fotogrammi. */
+	if (w->video_acceso && w->rcp && gancio_palco) {
+		const char *mio = rcp_utente(w->rcp);
+		if (mio && mio[0] && !wt_video_qualcuno_guarda(mio, NULL)) {
+			registro_dice(REG_RCP,
+			              "l'ultima sessione di «%s» se ne va: il palco smette "
+			              "di catturare (il figlio resta, e' l'invariante I4)",
+			              mio);
+			gancio_palco(gancio_palco_ctx, mio, 0, false);
+		}
+	}
 	if (w->rcp)
 		rcp_libera(w->rcp);
 	if (w->h3)
@@ -2124,7 +2517,7 @@ void wt_libera(wt *w)
 	for (size_t i = 0; i < w->ngiudizi; i++)
 		bytes_libera(&w->giudizi[i].pref);
 	free(w->giudizi);
-	for (size_t i = w->testa; i < w->ncoda; i++)
+	for (size_t i = 0; i < w->ncoda; i++)
 		bytes_libera(&w->coda[i].dati);
 	free(w->coda);
 	bytes_libera(&w->capsbuf);
@@ -2324,7 +2717,7 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	 *    il fotogramma sarebbe partito solo per le sessioni che dicono ancora
 	 *    qualcosa dopo, e su un client che tace dopo le credenziali non sarebbe
 	 *    partito mai. */
-	video_forse(w);
+	video_regola(w, ts / NGTCP2_MILLISECONDS);
 
 	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
 	 *
@@ -2406,11 +2799,12 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 {
 	nghttp3_vec vec[16];
 
-	/* ⭐ Una passata di scrittura comincia qui, e la coda nostra riparte
-	 *    SBLOCCATA: `coda_bloccata` vale per una passata sola.  ⚠ Sta fuori
-	 *    dal ciclo apposta — azzerarlo dentro rimetterebbe in gioco lo stesso
-	 *    elemento a ogni giro, che e' precisamente il ciclo che non avanza. */
-	w->coda_bloccata = false;
+	/* ⭐ Una passata di scrittura comincia qui, e gli stream ripartono tutti
+	 *    SBLOCCATI: l'elenco vale per una passata sola.  ⚠ Sta fuori dal ciclo
+	 *    apposta — azzerarlo dentro rimetterebbe in gioco lo stesso elemento a
+	 *    ogni giro, che e' precisamente il ciclo che non avanza. */
+	w->nbloccati = 0;
+	w->troppi_bloccati = false;
 
 	for (;;) {
 		int64_t stream_id = -1;
@@ -2419,6 +2813,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		nghttp3_vec wtvec[1];
 		size_t wt_orig = 0;
 		bool wt_mio = false;
+		size_t mio_i = 0;
 		ngtcp2_ssize ndatalen = -1, nwrite;
 		const nghttp3_vec *v;
 		size_t vcnt;
@@ -2459,13 +2854,18 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		}
 
 		/* ── 2. la coda nostra ──────────────────────────────────────── */
-		if (sveccnt <= 0 && !w->coda_bloccata && !coda_vuota(w)) {
-			uscita *u = coda_prima(w);
-			stream_id = u->id;
-			fin = u->fin ? 1 : 0;
-			wtvec[0].base = u->dati.d + u->off;
-			wtvec[0].len = u->dati.n - u->off;
-			wt_mio = true;
+		/* ⛔ `coda_scegli()` e non «la testa»: la testa puo' appartenere a uno
+		 *    stream bloccato, e fermarsi li' rifarebbe il blocco di testa che
+		 *    §5.1 esiste per togliere. */
+		if (sveccnt <= 0 && !w->troppi_bloccati) {
+			uscita *u = coda_scegli(w, &mio_i);
+			if (u) {
+				stream_id = u->id;
+				fin = u->fin ? 1 : 0;
+				wtvec[0].base = u->dati.d + u->off;
+				wtvec[0].len = u->dati.n - u->off;
+				wt_mio = true;
+			}
 		}
 
 		v = vec;
@@ -2504,21 +2904,46 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *   condizione normale e transitoria che si scioglie col
 				 *   primo MAX_STREAM_DATA. */
 				if (wt_mio) {
-					uscita *u = coda_prima(w);
+					uscita *u = &w->coda[mio_i];
 					registro_dettaglio(
 						REG_WT,
 						"stream %ld bloccato: %zu byte RESTANO in "
-						"coda (%zu gia' usciti), si riprova alla "
-						"passata dopo",
+						"coda (%zu gia' usciti) — ⭐ gli ALTRI stream "
+						"continuano (§5.1)",
 						(long)stream_id, u->dati.n - u->off, u->off);
-					w->coda_bloccata = true;
+					/* ⛔⭐ SI BLOCCA LO STREAM, NON LA CODA — ed e' la
+					 *     cura del punto 5 della fase 3.  Fino alla fase 2
+					 *     qui si alzava `coda_bloccata`, che fermava
+					 *     TUTTA la coda per la passata: un fotogramma
+					 *     lento bloccava in testa i successivi **a
+					 *     livello applicativo**, annullando esattamente il
+					 *     beneficio che §5.1 compra al livello di QUIC. */
+					if (w->nbloccati < WT_BLOCCATI_MAX) {
+						w->bloccati[w->nbloccati++] = stream_id;
+					} else {
+						/* ⚠ Il tetto si dichiara invece di scivolare:
+						 *   da qui in poi la passata si ferma davvero, e
+						 *   chi legge sa che non e' §5.1 a non
+						 *   funzionare, e' questa tabella a essere
+						 *   piena. */
+						w->troppi_bloccati = true;
+						registro_dice(REG_WT,
+						              "⚠ %u stream bloccati nella stessa "
+						              "passata: la coda si ferma qui.  Non "
+						              "e' §5.1 che non vale, e' il tetto "
+						              "di WT_BLOCCATI_MAX",
+						              WT_BLOCCATI_MAX);
+					}
 					continue;
 				}
 				nghttp3_conn_block_stream(w->h3, stream_id);
 				continue;
 			case NGTCP2_ERR_STREAM_SHUT_WR:
 				if (wt_mio) {
-					coda_togli(w);
+					/* Lo stream e' gia' chiuso in scrittura — di norma
+					 * perche' lo abbiamo AZZERATO noi (§5.1): i byte che
+					 * restavano non partono, che e' quel che si voleva. */
+					coda_uccidi(w, mio_i);
 					continue;
 				}
 				nghttp3_conn_shutdown_stream_write(w->h3, stream_id);
@@ -2540,7 +2965,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			 * restituisce e' il NOSTRO, e dirglielo sfaserebbe i suoi
 			 * conti. */
 			if (wt_mio) {
-				uscita *u = coda_prima(w);
+				uscita *u = &w->coda[mio_i];
 				u->off += (size_t)ndatalen;
 				if (u->off >= u->dati.n) {
 					/* ⛔⭐ `RCP.md` §4.2: il canale di controllo
@@ -2551,7 +2976,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					if (u->fin && w->rcp &&
 					    (u->id == w->rcp_stream || u->id == w->sessione))
 						rcp_canale_chiuso(w->rcp);
-					coda_togli(w);
+					coda_uccidi(w, mio_i);
 				}
 			} else if (wt_orig) {
 				uint64_t c = (uint64_t)ndatalen;

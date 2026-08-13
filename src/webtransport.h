@@ -139,28 +139,68 @@ bool wt_ha_da_dire(const wt *w);
  *    due guasti diversi, e allo spegnimento avevano la stessa faccia. */
 const char *wt_perche_ha_da_dire(const wt *w);
 
-/* ⭐⭐ FASE 2 — IL FOTOGRAMMA CHE IL SERVER HA GIA' IN MANO.
+/* ⭐⭐ FASE 3 — IL CICLO DEI FOTOGRAMMI, E DOVE PASSA IL CONFINE.
  *
- * `main.c` cattura dal desktop e codifica **una volta sola, all'accensione**,
- * quando gli ascoltatori non sono ancora aperti; qui deposita i byte, e questo
- * strato li spedisce a ogni sessione che arriva a `SESSIONE` (§2.5, §6.2).
+ * ⛔ QUI C'ERA `wt_video_deposita()`, ED E' STATO TOLTO.  Depositava UN
+ *    fotogramma per codec, **di processo**, marcato chiave per costruzione, e
+ *    questo strato lo spediva una volta sola per sessione (`bool video_fatto`).
+ *    Tre difetti in una funzione, e tutt'e tre della fase 3: il deposito di
+ *    processo consegnava a una sessione i pixel di un altro utente (`[M]` 12
+ *    agosto 2026, invariante I3); il `chiave = true` per costruzione sarebbe
+ *    diventato **una bugia sul filo** appena i delta fossero esistiti (§6.2,
+ *    campo `tipo`); e il `bool` fermava il ciclo al primo fotogramma.
  *
- * ⛔ Perche' non si cattura quando serve: aspettare il prossimo fotogramma di
- *    Mutter dentro il ciclo `poll` fermerebbe TUTTE le connessioni insieme
- *    (`CODER.md` §4.4), e su un desktop fermo l'attesa arriva al suo tetto.
+ * ⇒ Adesso i fotogrammi ARRIVANO, uno dopo l'altro, dal figlio dell'utente che
+ *   li cattura e li codifica (`figlio.h`), e `main.c` li gira qui.
+ *
+ * ⛔ `utente` NON e' un'etichetta: e' l'invariante I3 sul filo.  Il fotogramma
+ *    va **solo** alle sessioni che PAM ha ammesso per quell'utente, e il
+ *    confronto si fa qui perche' qui si sa chi e' ciascuna sessione.
  *
  * `codec` e' quello di `RCP.md` §4.3/§6.2 — **1 = HEVC, 2 = AV1**, gli stessi
- * numeri e non una traduzione.  Si deposita una volta per codec, perche' quale
- * dei due si usera' si sa solo alla negoziazione, cioe' dopo l'accensione.
+ * numeri e non una traduzione.  `chiave` e' il tipo VERO letto dal flusso dal
+ * codificatore, non una supposizione: §6.2 lo scrive nel campo `tipo`.
  * `istante_us` e' l'orologio MONOTONO del server alla cattura (§6.2): non e'
- * un'ora, e il client non lo confronta col proprio.
+ * un'ora, e il client non lo confronta col proprio.  `input` e' §7.3.
  *
- * ⚠ I byte si COPIANO: chi cattura puo' liberare il suo buffer subito dopo. */
-void wt_video_deposita(uint8_t codec, const uint8_t *dati, size_t byte,
-                       uint32_t larghezza, uint32_t altezza,
-                       uint64_t istante_us);
-/* Libera i depositi.  La chiama `main.c` allo spegnimento. */
-void wt_video_svuota(void);
+ * ⚠ I byte si COPIANO dentro la coda di ciascuna sessione: chi cattura puo'
+ *   liberare il suo buffer subito dopo. */
+void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
+                       const uint8_t *dati, size_t byte, uint32_t larghezza,
+                       uint32_t altezza, uint64_t istante_us, uint32_t input);
+
+/* ⛔⭐ LA CUCITURA CHE MANCAVA — il punto 4 della fase 3.
+ *
+ *     `rcp_video_serve_chiave()` era LETTA e non serviva a niente, perche'
+ *     `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel
+ *     prodotto**: un `RICHIEDI_CHIAVE` del client accendeva un `bool` e non
+ *     produceva nessuna chiave.  Con `chiavi_ogni = 0` (GOP infinito) dopo la
+ *     prima chiave non ne arrivava **mai piu' una**, e lo schermo restava fermo.
+ *
+ * ⇒ Il palco sta in un altro processo, e questo e' il gancio che attraversa il
+ *   confine.  Lo chiama questo strato quando:
+ *     · una sessione arriva a `SESSIONE` e il codec e' negoziato
+ *       ⇒ `acceso = true`, `chiave = true` (§5.2: il primo DEVE essere chiave);
+ *     · §5.2 vuole una chiave (richiesta dal client, delta abbandonato, tela
+ *       cambiata) ⇒ `chiave = true`;
+ *     · l'ultima sessione di quell'utente se ne va ⇒ `codec = 0`, cioe'
+ *       «smetti di catturare».  ⚠ Il palco (I4) resta in piedi: si ferma solo
+ *       il ciclo dei fotogrammi. */
+typedef void (*wt_video_richiesta)(void *ctx, const char *utente, uint8_t codec,
+                                   bool chiave);
+void wt_video_gancio(wt_video_richiesta f, void *ctx);
+
+/* ⛔ «Qualcuno di questo utente sta ancora guardando?»  Serve a decidere se
+ *    spegnere il palco, e la risposta si CHIEDE all'elenco delle sessioni vive
+ *    invece di tenersi un contatore a parte: due copie dello stesso insieme
+ *    divergono, e quella che sbaglia lascia il palco acceso per sempre. */
+bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec);
+
+/* I quattro numeri del video di una sessione, per il registro e per i banchi.
+ * ⛔ Insieme, sempre: «zero abbandonati» detto da solo non distingue una linea
+ *    che porta da un canale che non ha mai spedito niente. */
+void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
+                    uint32_t *spediti, uint32_t *abbandonati);
 
 /* Per il registro e per i banchi. */
 const char *wt_stato_rcp(const wt *w);

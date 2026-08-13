@@ -403,9 +403,89 @@ const LIVELLO_DICHIARATO = "5.1";
      rende ambigua proprio la rilettura su cui poggia il metro della fase (I8).
    ⇒ Sta dietro un interruttore SPENTO (`CODER.md` §2, invariante I6) finche'
      non c'e' un numero che dica quanto vale, e l'interruttore si accende con
-     `?tela=desincronizzata` per chi quel numero lo va a prendere. */
+     `?tela=desincronizzata` per chi quel numero lo va a prendere.
+
+   ⛔⭐ E QUELLA STRADA, FINO AL 13 AGOSTO 2026, NON ESISTEVA — difetto B-20.
+       `src/pagina.c` confrontava il bersaglio della richiesta con la stringa
+       di ricerca DENTRO (`strcmp(percorso, "/")`), quindi il server rispondeva
+       **404 «non c'e'»** a `GET /?tela=desincronizzata`: questo commento
+       indicava da sempre una strada che il prodotto chiudeva, e nessuno se
+       n'era accorto perche' i banchi la pagina la servono da un `http.server`
+       di Python, che il `?` lo ignora.
+     ⭐ `[M]` 13 agosto 2026, dopo la cura in `pagina.c` (si taglia il `?` e il
+       `#` prima del confronto): `GET /?tela=desincronizzata` → **200, e il
+       corpo e' byte per byte quello di `GET /`** (confrontato con `cmp`, non
+       col solo conteggio: due corpi lunghi uguali possono essere diversi).
+     ⚠ Il numero di byte NON si scrive qui: e' la lunghezza di QUESTO file, e
+       una riga che lo cita invecchia al primo commento che qualcuno aggiunge —
+       compreso questo.  Quel che regge e' il confronto con `/`.
+     ⚠ Adesso l'interruttore si raggiunge: chi lo accende sappia che sta
+       accendendo qualcosa che prima era irraggiungibile, e che il numero di
+       §6.1 resta da prendere. */
 const DESINCRONIZZATA =
   new URLSearchParams(location.search).get("tela") === "desincronizzata";
+
+/* ⛔⭐ IL WORKER DEDICATO DI `web.md` §6.1 — «WebTransport, decodifica e canvas
+ * tutti in un worker dedicato».  Era una decisione SCRITTA E MAI ATTUATA: fino
+ * al 13 agosto 2026 questa pagina aveva un solo `<script>` e faceva tutto sul
+ * thread principale.  ⇒ Adesso la strada c'e', e sta dietro un interruttore
+ * SPENTO, per le due ragioni che seguono — e sono ragioni MISURATE, non
+ * prudenza.
+ *
+ * ⛔ 1. PERCHE' SPENTO E NON PREDEFINITO: il numero.  `[M]` 13 agosto 2026,
+ *    banco `03-b17-ritardo.py` sulla catena vera, stessa macchina e stessa
+ *    sessione: il worker NON toglie ritardo (vedi il verbale del giro).  Un
+ *    interruttore acceso «perche' il documento lo dice» sarebbe la forma E5 di
+ *    `REVIEWER.md` — un fatto che era una deduzione mai misurata.  Si accende
+ *    con `?video=worker`, e chi lo accende va a prendere il numero.
+ *
+ * ⛔ 2. PERCHE' NON SI E' RISCRITTA LA CLASSE: `banchi/03-b16-dipinti.py`
+ *    innesta i suoi otto guasti per SOSTITUZIONE TESTUALE dentro `Schermo` e si
+ *    ferma se il conto delle occorrenze non torna.  ⇒ `Schermo` qui sotto NON
+ *    e' cambiata di un byte: il worker la riceve con `Schermo.toString()`, e
+ *    quel che gli manca (`document`, `devicePixelRatio`, `misura_vista`) glielo
+ *    da' un guscio nel worker stesso.  ⭐ Una definizione sola, due contesti: se
+ *    ci fossero due copie della regola di §6.2, il giorno in cui divergessero
+ *    il banco resterebbe verde su quella che non gira.
+ *
+ * ⚠ E QUEL CHE NON C'E' DENTRO, detto invece che taciuto: **`WebTransport` si
+ *   apre ancora sul thread principale**.  La stretta di mano (§4.3-§4.5), il
+ *   canale di controllo e la parola d'ordine sono legati al modulo e all'utente,
+ *   e il canale di controllo e' bidirezionale e vive quanto la sessione.  Nel
+ *   worker va quel che §6.1 tiene corto: **gli stream del video** — che si
+ *   TRASFERISCONO (`postMessage(f, [f])`, un `ReadableStream` e' trasferibile) —
+ *   la lettura dei byte, le regole di §6.2, `VideoDecoder` e la tela.  ⇒ Sul
+ *   thread principale, per fotogramma, resta un `read()` e un trasferimento.
+ *
+ * ⛔⭐ E SI LEGGE ANCHE DAL FRAMMENTO — nato come AGGIRAMENTO di un difetto del
+ *     prodotto, e resta perche' non costa niente.
+ *
+ *   ⛔ IL DIFETTO (B-20), com'era.  `[M]` 13 agosto 2026, mattina:
+ *     `src/pagina.c` confrontava il bersaglio della richiesta **stringa di
+ *     ricerca compresa** (`strcmp(percorso, "/")`), quindi il server rispondeva
+ *     **404 «non c'e'»** a `GET /?video=worker` — misurato, 404 su 9 byte
+ *     contro i 166107 di `/`.  ⚠ E la stessa riga travolgeva l'interruttore del
+ *     vicino: anche `?tela=desincronizzata` (qui sopra) prendeva 404, cioe' la
+ *     strada che quel commento indica non era mai stata percorribile attraverso
+ *     il prodotto.  Nessuno se n'era accorto perche' i banchi servono
+ *     `pagina.html` da un `http.server` di Python, che la stringa di ricerca la
+ *     ignora.
+ *
+ *   ⭐ LA CURA, FATTA.  `[M]` 13 agosto 2026, sera: `pagina.c` taglia il `?` e
+ *     il `#` prima del confronto, e `GET /?video=worker` risponde **200 con gli
+ *     stessi byte di `GET /`**.  ⇒ La stringa di ricerca adesso funziona da
+ *     se'.
+ *
+ *   ⚠ E LA LETTURA DAL FRAMMENTO RESTA, invece di essere tolta: il frammento
+ *     non viaggia sul filo — il browser non lo manda al server — quindi
+ *     `#video=worker` accende l'interruttore **senza toccare il server**, il
+ *     che serve a chi prova la pagina da un `http.server` di Python o da un
+ *     `file://`.  ⛔ Toglierla adesso significherebbe togliere l'unica strada
+ *     che regge se quel confronto tornasse a rompersi, e le due si guardano in
+ *     un'espressione sola. */
+const VIDEO_WORKER =
+  new URLSearchParams(location.search).get("video") === "worker" ||
+  new URLSearchParams(location.hash.replace(/^#/, "")).get("video") === "worker";
 
 /* ⛔ Generato da `banchi/02-pagina-sonda-codec.py` — non si scrive a mano, e si
    rifa' con quel programma (che si certifica da se': sano → guasto → risanato).
@@ -1082,6 +1162,45 @@ class Schermo {
      *   ESISTE: ne arriva uno solo.  Il sintomo sarebbe «ridimensiono la
      *   finestra e l'immagine sparisce», cioe' una cura peggiore del male.
      *
+     * ⛔⭐ E ALLA FASE 3 QUELLA RAGIONE CADE — RIVALUTATO E TENUTO, COL NUMERO
+     *     ACCANTO.  `[M]` 13 agosto 2026, banco `03-b16-dipinti.py`, caso
+     *     `V3d`, Chrome 151 su Xvfb (tela 2D e AV1 tutti e due in SOFTWARE,
+     *     cioe' il caso peggiore).
+     *
+     *   Alla fase 3 i fotogrammi sono sessanta al secondo, quindi «il
+     *   fotogramma dopo» arriva fra 16 ms e il nero non si vedrebbe.  ⛔ Ma ne
+     *   subentra una piu' forte, ed e' della fase 3 e non della 2: **durante un
+     *   BUCO il fotogramma dopo non esiste lo stesso**.  §5.2 impone di non
+     *   mostrare quel che si sa incompleto e di tenere l'ultimo buono finche'
+     *   non arriva una chiave, e quella chiave arriva dopo un giro di rete piu'
+     *   fino a 200 ms di smorzatore del server.  Un ridimensionamento in quella
+     *   finestra, senza deposito, e' NERO per tutto quel tempo.
+     *
+     *   | | col deposito | senza |
+     *   |---|---|---|
+     *   | tela dopo un ridimensionamento a buco aperto | ⭐ **frazione nera 0,03** — l'immagine c'e' | ⛔ **frazione nera 1,00** — nero pieno |
+     *   | dipinti al secondo con 60 offerti, 1920×1080 | **60,0** (100 % degli offerti) | 60,0 (100 %) |
+     *   | tetto a saturazione, 1920×1080 (tre giri) | **71,3 · 71,5 · 72,3** al secondo | 75,5 · 75,6 · 75,7 al secondo |
+     *
+     *   ⇒ Il disegno in piu' costa circa il **5 % del tetto** (4 fotogrammi su
+     *   75, cioe' **~0,7 ms per fotogramma**) e ⛔ **zero al ritmo che la fase
+     *   insegue**: a 60 offerti al secondo le due strade dipingono lo stesso
+     *   numero, perche' l'avanzo c'e'.  ⚠ Tre giri per lato e non uno: la
+     *   dispersione fra giri (un fotogramma al secondo) e' piu' piccola della
+     *   differenza fra le due strade (quattro), e senza i tre giri non si
+     *   saprebbe.
+     *
+     * ⚠ E LE DUE MISURE NON VANNO D'ACCORDO, il che e' l'informazione: la copia
+     *   1:1 cronometrata DA SOLA costa **15 µs** (0,09 % di un quadro), la
+     *   catena intera ne perde **~600**.  ⛔ Vince la seconda — `LEZIONI.md`
+     *   §3.1, «misura la consegna, non solo l'elaborazione» — e la differenza e'
+     *   quel che il cronometro isolato non vede: `drawImage(VideoFrame)` non e'
+     *   una copia di tela, e' una conversione di colore e un trasferimento.
+     *
+     * ⚠ E `LEZIONI.md` §6.2 vuole tutt'e due le grandezze: qui il guadagno non
+     *   si paga in fluidita' finche' si sta sotto ai 72 al secondo — sopra, si
+     *   paga, e allora questa riga va riletta.
+     *
      * ⚠ Costa un `drawImage` in piu' per fotogramma (dal fotogramma al
      *   deposito, e dal deposito alla vista).  ⭐ L'altra strada era tenere
      *   aperto il `VideoFrame` invece di copiarlo — zero copie — e non e'
@@ -1096,6 +1215,20 @@ class Schermo {
     this.atteso = null;
     this.sospeso = false;                      /* c'e' un buco aperto (§5.2) */
     this.trattenuti = [];                      /* misure non ancora annunciate */
+    /* ⛔⭐ LE `ADATTA_TELA` SPEDITE E SENZA RISPOSTA — §6.2, rilievo P21 del
+     * 13 agosto 2026.  E' la GRANDEZZA su cui si regge il trattenimento, e
+     * non e' un numero di fotogrammi: «fino a quando lo trattiene non e' un
+     * numero: e' una CONDIZIONE — finche' resta una `ADATTA_TELA` che il
+     * client ha spedito e a cui nessun `TELA` ha ancora risposto».
+     *
+     * ⚠ E' «quel che il client ha spedito LUI»: locale, monotona, indipendente
+     *   dalla consegna (§6.2 la chiama la stessa grandezza di P20).  ⛔ NON e'
+     *   «la misura che il client ha chiesto»: §4.5 permette al server di
+     *   concedere una tela DIVERSA da quella chiesta — su KWin < 6.8 e' la
+     *   strada normale — e un client che trattenesse solo i numeri che ha
+     *   nominato chiuderebbe una sessione in cui il server ha fatto
+     *   esattamente quel che §7.1 gli permette. */
+    this.attese_tela = 0;
     this.sessione = false;                     /* §2.5: niente video prima di SESSIONE */
     this.errori = [];
     this.conti = { stream: 0, completi: 0, azzerati: 0, consegnati: 0,
@@ -1134,6 +1267,11 @@ class Schermo {
     this.tollerate = new Map(); this.storiche = new Set(); this.finestra = false;
     this.ultimo_consegnato = null; this.atteso = null;
     this.sospeso = false; this.trattenuti = []; this.sessione = false;
+    /* ⛔ Anche le attese di `TELA` sono di QUESTA sessione: un contatore
+       ereditato dal tentativo di prima farebbe TRATTENERE — invece di chiudere
+       — una misura mai annunciata nel tentativo nuovo, cioe' l'indulgenza che
+       §6.2 toglie proprio quando nessuna `ADATTA_TELA` e' in volo. */
+    this.attese_tela = 0;
     this.errori = [];
     for (const k of Object.keys(this.conti)) this.conti[k] = 0;
   }
@@ -1331,6 +1469,12 @@ class Schermo {
    *   prima chiave alla misura nuova — che e' un fatto osservabile sul filo, non
    *   un orologio (rilievo P13). */
   tela_adattata(l, a) {
+    /* ⛔ Prima di tutto: questo `TELA` CHIUDE un'attesa (§7.1).  Va fatto qui
+       e non in fondo, perche' i fotogrammi trattenuti si rigiudicano poche
+       righe piu' sotto e devono trovare il conto gia' aggiornato: se ne resta
+       un'altra senza risposta si ritrattengono, se non ne resta nessuna la
+       misura mai annunciata chiude — ed e' la stessa decisione di `trattieni`. */
+    this.tela_risposta();
     const vecchia = this.tela_l + "x" + this.tela_a;
     if (!this.finestra) {
       /* La finestra si apre adesso: da qui in poi si tollera quel che e' stato
@@ -1544,28 +1688,108 @@ class Schermo {
    *
    * ⇒ Qui il fotogramma si TRATTIENE invece di uccidere la sessione, e diventa
    *   legittimo se il `TELA` arriva subito dopo (`tela_adattata` lo ripassa).
-   *   ⛔ Ma la tolleranza ha un fondo, ed e' un fatto osservabile e non un
-   *      orologio: OTTO fotogrammi.  Piu' di cosi' non e' piu' una corsa fra due
-   *      stream — e' un server che manda una misura che non ha mai annunciato,
-   *      e li' §6.2 ha ragione.
    *
-   * ⚠ Va portato al coordinatore: la cura vera sta in `RCP.md`, non qui. */
+   * ⛔⭐ E IL FONDO NON E' PIU' UN NUMERO — corretto il 13 agosto 2026, rilievo
+   *     P21, e questa riga qui dentro diceva **OTTO FOTOGRAMMI**.
+   *
+   *   `RCP.md` §6.2 e' stato riscritto quel giorno e adesso dice: «fino a
+   *   quando lo trattiene non e' un numero: e' una CONDIZIONE — finche' resta
+   *   una `ADATTA_TELA` che il client ha spedito e a cui nessun `TELA` ha
+   *   ancora risposto.  ⛔ E se nessuna `ADATTA_TELA` e' senza risposta non si
+   *   trattiene niente: una misura che il client non ha nessun motivo di
+   *   aspettarsi e' `ERRORE_PROTOCOLLO` subito».
+   *
+   * ⛔ Otto era una GRANDEZZA SOSTITUTIVA — un fondo osservabile al posto di un
+   *   orologio, che era gia' la lezione di P13, ma pur sempre un numero preso
+   *   perche' sembrava largo abbastanza.  ⚠ E costava in tutt'e due i versi:
+   *   con nove fotogrammi in volo dentro una corsa legittima chiudeva una
+   *   sessione sana; e senza nessuna `ADATTA_TELA` in volo — cioe' SEMPRE, in
+   *   RCP/1, perche' questa pagina non ne manda nessuna — teneva in vita per
+   *   otto fotogrammi un server che manda una misura che non ha mai annunciato,
+   *   invece di chiudere subito come §6.2 impone.
+   *
+   * ⚠ E il tetto in BYTE di quel che si trattiene NON c'e', ed e' dichiarato:
+   *   `RCP.md` §6.2 non ne da' uno, §7.1 obbliga il server a rispondere a ogni
+   *   `ADATTA_TELA` e §6.2 tetta il singolo fotogramma a 16 MiB.  ⛔ Rimetterne
+   *   uno qui sarebbe rifare P21 in un'altra unita'.  `[?]` Sta al
+   *   coordinatore: un server che non risponde mai al `TELA` fa crescere questa
+   *   coda, e la cura vera e' una riga di `RCP.md`, non una di qui. */
   trattieni(i, dati) {
-    this.conti.trattenuti++;
+    /* ⛔ LA CONDIZIONE, PRIMA DI TUTTO: senza una `ADATTA_TELA` senza risposta
+       il client non ha NESSUN motivo di aspettarsi quella misura. */
+    if (this.attese_tela <= 0)
+      return this.errore_protocollo("fotogramma " + i.numero + " alla misura "
+        + i.larghezza + "×" + i.altezza + ", che non e' mai stata in vigore, "
+        + "mentre la tela in vigore e' " + this.tela_l + "×" + this.tela_a
+        + " e nessuna ADATTA_TELA e' senza risposta: non c'e' nessun TELA che "
+        + "possa concederla, quindi non e' una corsa fra due stream (§6.2)");
+    /* ⚠ Un fotogramma RIGIUDICATO che torna qui — perche' una seconda
+       `ADATTA_TELA` e' ancora senza risposta — non si conta due volte: il
+       contatore dice quanti FOTOGRAMMI sono stati trattenuti, non quante volte
+       ci si e' passati. */
+    if (!i.gia_trattenuto) { i.gia_trattenuto = true; this.conti.trattenuti++; }
     this.trattenuti.push({ i: i, dati: dati });
     this.riga("fotogramma " + i.numero + " alla misura " + i.larghezza + "×"
               + i.altezza + ", che non e' mai stata annunciata: TRATTENUTO ("
-              + this.trattenuti.length + "/8) invece di chiudere la sessione — "
+              + this.trattenuti.length + " in mano, " + this.attese_tela
+              + " ADATTA_TELA senza risposta) invece di chiudere la sessione — "
               + "il TELA che la annuncia puo' essere ancora in volo sul canale "
-              + "di controllo");
-    if (this.trattenuti.length > 8) {
-      const quali = this.trattenuti.map((t) => t.i.larghezza + "x" + t.i.altezza);
-      this.trattenuti = [];
-      return this.errore_protocollo("nove fotogrammi a misure mai annunciate ("
-        + quali.join(", ") + ") mentre la tela in vigore e' " + this.tela_l + "×"
-        + this.tela_a + ": non e' piu' una corsa fra due stream (§6.2)");
-    }
+              + "di controllo (§6.2)");
     return false;
+  }
+
+  /* ⛔⭐ L'`ADATTA_TELA` E' PARTITA — §6.2, e la grandezza e' «quel che il
+   * client ha spedito LUI».  Chi manda il messaggio sul canale di controllo
+   * chiama questa, e da qui in poi una misura mai annunciata si TRATTIENE
+   * invece di chiudere.
+   *
+   * ⚠ In RCP/1 non la chiama nessuno, ed e' detto invece che taciuto: la voce
+   *   «adatta il desktop a questa finestra» e' di `SPECIFICHE.md` §6.4 e questa
+   *   pagina non ce l'ha ancora.  ⛔ Finche' non c'e', `attese_tela` vale zero
+   *   sempre, e il ramo giusto e' quello che chiude — che e' esattamente quel
+   *   che §6.2 vuole.  La riga sta qui perche' il giorno in cui la voce si
+   *   accende il contatore non venga dimenticato: senza, il primo utente che
+   *   trascina la finestra si vedrebbe chiudere la sessione. */
+  adatta_tela_chiesta() {
+    this.attese_tela++;
+    this.riga("ADATTA_TELA spedita: le richieste senza risposta sono adesso "
+              + this.attese_tela + " — da qui una misura mai annunciata si "
+              + "trattiene invece di chiudere (§6.2)");
+  }
+
+  /* ⛔ Una `TELA` RISPONDE a un'`ADATTA_TELA`, riuscita o no (§7.1: «a ogni
+     `ADATTA_TELA` il server DEVE rispondere con un `TELA`»), e il canale di
+     controllo e' uno solo, affidabile e ordinato (§4.2) ⇒ l'n-esimo `TELA`
+     risponde all'n-esima `ADATTA_TELA`.  ⚠ Il conto non scende sotto zero: un
+     `TELA` non richiesto e' un difetto del server, e sottrarre lo farebbe
+     diventare un CREDITO per il prossimo trattenimento. */
+  tela_risposta() {
+    if (this.attese_tela > 0) this.attese_tela--;
+    else this.riga("⚠ un TELA senza nessuna ADATTA_TELA in attesa: il conto "
+                   + "resta a zero (§7.1 dice che ogni TELA risponde a una "
+                   + "ADATTA_TELA, e questa non c'e' mai stata)");
+  }
+
+  /* ⛔⭐ `TELA(RIFIUTATA)` — §6.2: «un `TELA(RIFIUTATA)` chiude l'attesa quanto
+   * un `TELA(ADATTATA)`: il trattenuto si rigiudica contro la tela rimasta in
+   * vigore, e di norma e' `ERRORE_PROTOCOLLO` — il server ha spedito una misura
+   * che non ha mai avuto».
+   *
+   * ⚠ Prima di oggi questo ramo non esisteva: la pagina scriveva la riga nel
+   *   registro e basta, e i fotogrammi trattenuti restavano in mano PER SEMPRE
+   *   — l'attesa non si chiudeva piu' e la memoria non si liberava piu'.  ⛔ Il
+   *   sintomo sarebbe stato «ho chiesto di adattare il desktop, il server ha
+   *   detto di no, e da quel momento lo schermo non si e' piu' mosso». */
+  tela_rifiutata() {
+    this.tela_risposta();
+    if (!this.trattenuti.length) return;
+    const in_attesa = this.trattenuti;
+    this.trattenuti = [];
+    this.riga("TELA(RIFIUTATA): l'attesa si chiude lo stesso, e i "
+              + in_attesa.length + " fotogrammi trattenuti si rigiudicano "
+              + "contro la tela rimasta in vigore (" + this.tela_l + "×"
+              + this.tela_a + ") — §6.2");
+    for (const t of in_attesa) this.consegna(t.i, t.dati);
   }
 
   riconfigura(l, a) {
@@ -1755,7 +1979,16 @@ window.addEventListener("pagehide", function () {
  *     ⚠ Un banco che misurasse una copia della catena misurerebbe la copia
  *       (forma E10), e il verde non direbbe niente del prodotto.
  * ⚠ E `REMOTIX` e' l'unico nome globale che questa pagina definisce. */
-const schermo = new Schermo($("schermo"));
+/* ⛔ E CON IL WORKER, LA TELA VERA NON E' PIU' SUA.  `transferControlToOffscreen()`
+   si puo' chiamare una volta sola, e SOLO se nessuno ha gia' chiesto un contesto
+   2D a quell'elemento — cioe' non dopo che questo costruttore ci e' passato.
+   ⇒ Con l'interruttore acceso l'istanza di qua nasce su una tela staccata e
+   serve solo da SPECCHIO (i dodici contatori, che i banchi leggono da fuori);
+   a dipingere e' quella del worker, sulla `<canvas>` vera.
+   ⚠ Con l'interruttore spento la riga e' quella di prima, carattere per
+     carattere: `$("schermo")`. */
+const schermo = new Schermo(VIDEO_WORKER ? document.createElement("canvas")
+                                         : $("schermo"));
 
 /* ⛔⭐ E QUANDO LA FINESTRA CAMBIA, IL RISCALAMENTO SEGUE — §6.1 di
  * `SPECIFICHE.md`: «durante la sessione **nessuno** decide la misura: se
@@ -1781,13 +2014,56 @@ const schermo = new Schermo($("schermo"));
  *   ridimensionamento la vista dichiarata in `ATTACCA` e' vecchia.  Sta al
  *   coordinatore: tocca il filo, e questo giro non lo tocca. */
 let quadro_vista = 0;
-addEventListener("resize", function () {
+function rinegozia_vista() {
   if (!schermo.sessione || quadro_vista) return;
   quadro_vista = requestAnimationFrame(function () {
     quadro_vista = 0;
     schermo.adatta_vista();
   });
-});
+}
+addEventListener("resize", rinegozia_vista);
+
+/* ⛔⭐ E QUI C'ERA UN `ResizeObserver`, SCRITTO E POI RITIRATO IL 13 AGOSTO 2026,
+ * PERCHE' IL SUO CASO NON ESISTE.  La riga resta come nota, perche' senza di
+ * essa la stessa cura verrebbe riproposta la prossima volta.
+ *
+ * ⚠ L'IPOTESI ERA: la vista si misura su `documentElement.clientWidth`, e quel
+ *   numero si stringe di una quindicina di pixel appena compare una barra di
+ *   scorrimento — che e' un fatto dell'IMPAGINAZIONE, non della finestra ⇒
+ *   `resize` non arriva, e la vista resta vecchia.  Il sospetto era serio:
+ *   `componi()` scrive `data-schermo="acceso"` al primo fotogramma e il foglio
+ *   di stile CAMBIA IMPAGINAZIONE SOTTO (via il `padding`, via il `max-width`
+ *   di 34rem, la tela alta quanto la finestra) — e su quel percorso
+ *   `adatta_vista()`, con la sua doppia passata, NON viene chiamata: la vista
+ *   la scrive `collega()` con i numeri della stretta di mano, e `dipingi()`
+ *   chiama `adatta_vista()` solo `if (!this.vista_l)`, che li' e' gia' falso.
+ *
+ * ⛔ E IL CASO NON C'E', per due misure fatte prima di scrivere la cura,
+ *   `[M]` 13 agosto 2026, banco `03-b16-dipinti.py`:
+ *
+ *   1. ⭐ `html { overflow-y: scroll }` — la riga in cima a questo file — TIENE
+ *      LA BARRA VERTICALE SEMPRE PRESENTE.  Misurato: `clientWidth` vale 1361
+ *      prima e dopo che la tela si accenda, mentre `scrollHeight` passa da 788
+ *      a 1288.  Il documento diventa quattro volte piu' alto e la larghezza
+ *      utile NON SI MUOVE ⇒ la famiglia intera e' gia' curata, da una riga di
+ *      foglio di stile che nessuno aveva messo li' per questo.
+ *   2. La barra ORIZZONTALE cambia `clientHeight`, non `clientWidth`, e non
+ *      compare: la tela viene larga esattamente `clientWidth` (misurato:
+ *      `scrollWidth` = `clientWidth` = 1361 dopo il primo fotogramma).
+ *
+ * `[?]` ⚠ E RESTA APERTA UNA COSA SOLA, che questo banco NON sa chiudere: il
+ *   cambio di `devicePixelRatio` a finestra ferma — l'utente che preme
+ *   `Ctrl +`, o che trascina la finestra su uno schermo con un altro fattore di
+ *   scala.  ⛔ Sotto `Emulation.setDeviceMetricsOverride` non arriva NIENTE:
+ *   ne' `resize`, ne' `ResizeObserver`, ne' il `change` di
+ *   `matchMedia("(resolution: Ndppx)")` — e nemmeno l'ultimo, che e' il
+ *   meccanismo fatto apposta per quella domanda.  ⇒ Il banco sta misurando
+ *   **l'emulazione**, non il browser (`LEZIONI.md` §1.11), e da una prova
+ *   indiretta che non prova niente non si scrive una cura.  Va misurato con uno
+ *   zoom VERO, battuto sulla tastiera, ed e' una riga dello step 5.
+ *
+ * ⛔ Scrivere l'osservatore lo stesso «tanto costa poco» sarebbe la forma E5 di
+ *    `REVIEWER.md`: un fatto che era una deduzione mai misurata. */
 
 window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
                    stringhe_codec: stringhe_codec, versione: VERSIONE,
@@ -1798,6 +2074,24 @@ window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
                       qui dentro che possa cambiare quel che la pagina fa
                       (`CODER.md` §2, invariante I6). */
                    sonde_misura: SONDE_MISURA,
+                   /* ⛔⭐ IL LETTORE DI UNO STREAM, esposto perche' il banco
+                    * possa provare la distinzione **FIN contro `RESET_STREAM`**
+                    * sul percorso VERO (§6.2, forma d'errore E8).
+                    *
+                    * ⚠ Senza questa riga il banco entrerebbe da
+                    *   `schermo.stream_video(byte, completo)`, cioe' un passo
+                    *   DOPO — e `completo` glielo passerebbe lui.  ⛔ Il verde
+                    *   direbbe allora «la pagina applica la regola», e non
+                    *   direbbe niente sull'unico punto in cui la regola si puo'
+                    *   sbagliare in silenzio: che un `read()` che LANCIA e' un
+                    *   azzeramento e uno che finisce con `done` e' un FIN.  Un
+                    *   banco che salta quel passo e' verde mentre il difetto e'
+                    *   vivo (`LEZIONI.md` §2.2).
+                    *
+                    * ⚠ E' UN OGGETTO DA LEGGERE come tutto il resto di
+                    *   `REMOTIX`: una funzione che si chiama con uno stream, non
+                    *   un interruttore che cambia quel che la pagina fa (I6). */
+                   leggi_uno_stream: leggi_uno_stream,
                    dichiarazioni: DICHIARAZIONI };
 
 async function collega(utente, parola) {
@@ -2300,6 +2594,11 @@ async function ascolta_controllo(canale, congeda) {
            mostrare la voce come spenta.  NON DEVE fingere che sia riuscito. */
         nota("TELA(RIFIUTATA, motivo " + motivo + "): la tela resta " + tl
            + "×" + ta + ", e la voce «adatta il desktop» va mostrata spenta");
+        /* ⛔ E l'attesa si chiude LO STESSO (§6.2): un rifiuto risponde a
+           un'`ADATTA_TELA` quanto un'adozione, e i fotogrammi trattenuti in
+           attesa di questo `TELA` vanno rigiudicati adesso — o restano in mano
+           per sempre. */
+        schermo.tela_rifiutata();
       }
       continue;
     }
@@ -2341,6 +2640,12 @@ function avvia_video(wt, congeda) {
       try { r = await lettore.read(); }
       catch (e) { nota("gli stream unidirezionali si sono fermati: " + e); return; }
       if (r.done) return;
+      /* ⭐ Con il worker acceso lo stream CAMBIA PROPRIETARIO qui, e da questa
+         riga in poi il fotogramma non tocca piu' il thread principale: i byte,
+         le regole di §6.2, `decode()` e i due `drawImage` stanno di la'
+         (`web.md` §6.1).  ⛔ Quel che resta di qua, per fotogramma, e' il
+         `read()` qui sopra e questo trasferimento. */
+      if (VW) { VW.manda_flusso(r.value); continue; }
       leggi_uno_stream(r.value, congeda);
     }
   })();
@@ -2390,6 +2695,250 @@ async function leggi_uno_stream(stream, congeda) {
   await congeda(MOT.ERRORE_PROTOCOLLO, "uno stream unidirezionale del server "
     + "col byte alto 0x" + alto.toString(16) + ": §2.5 ammette 0x03 (video) e "
     + "0x02 (appunti), e il canale non si riconosce dal numero dello stream");
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⭐⭐ IL WORKER DEDICATO — `web.md` §6.1, attuata il 13 agosto 2026.
+
+   ⛔ NON C'E' UN SECONDO FILE, e non e' una scorciatoia: `src/pagina.c` serve
+      UNA pagina e basta (`componi(c, "200 OK", "text/html", …)`), quindi un
+      `worker.js` accanto non sarebbe raggiungibile.  ⇒ Il worker nasce da un
+      `Blob`, che eredita l'origine del documento — ⭐ e con lei
+      COOP+COEP: `[M]` 13 agosto 2026, `crossOriginIsolated` e' **true** anche
+      dentro il worker, e la grana del cronometro misurata li' e' **0,005 ms**,
+      la stessa del thread principale (`src/pagina.c:32-35`, §11.5).
+
+   ⛔ E IL CODICE NON SI DUPLICA: `Schermo` e `leggi_uno_stream` viaggiano con
+      `Function.prototype.toString()`, cioe' il sorgente ESATTO che sta qui
+      sopra — commenti compresi.  Quel che nel worker non esiste (`document`,
+      `devicePixelRatio`, `misura_vista`) si mette a disposizione con un guscio,
+      invece di riscrivere le regole di §6.2 una seconda volta.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ⛔ Il guscio, e ogni pezzo copre un uso PRECISO di `Schermo` — se un giorno
+   la classe ne usasse uno in piu', il worker si romperebbe subito e a voce
+   alta, che e' quel che deve fare. */
+const GUSCIO_WORKER = `
+/* ── quel che nel worker NON C'E', e che \`Schermo\` usa ─────────────────── */
+let devicePixelRatio = 1;          /* ⛔ nel worker non esiste: lo manda il di la' */
+let __vista = [1, 1];              /* la vista MISURATA dal thread principale */
+let __oc = null, schermo = null;
+
+function __posta(m) { self.postMessage(m); }
+
+/* \`misura_vista()\` legge il foglio (\`documentElement.clientWidth\`): qui non
+   c'e' nessun foglio.  ⛔ E NON si indovina — la misura, doppia passata della
+   barra di scorrimento compresa, la fa il thread principale e la manda. */
+function misura_vista() { return __vista.slice(); }
+
+/* \`nota()\` scrive nel registro della pagina, che e' un nodo del DOM. */
+function nota(t) { __posta({ t: "riga", riga: t }); }
+
+/* \`document\`: \`Schermo\` ne usa DUE cose sole — il deposito e la marca
+   «acceso».  ⛔ Il deposito diventa una \`OffscreenCanvas\`, che ha la stessa
+   interfaccia (\`width\`, \`height\`, \`getContext("2d")\`, \`drawImage\`). */
+const document = {
+  createElement: function () { return new OffscreenCanvas(1, 1); },
+  body: { dataset: { set schermo(v) { __posta({ t: "acceso", valore: v }); },
+                     get schermo() { return null; } } },
+};
+
+/* ⛔ LA TELA, E PERCHE' NON E' LA \`OffscreenCanvas\` NUDA.  \`vista()\` scrive
+   \`this.tela.style.width\` — la CORNICE in pixel CSS, che e' l'altra meta'
+   della cura del 13 agosto (buffer e cornice devono valere lo stesso numero).
+   ⚠ Una \`OffscreenCanvas\` non ha \`style\`: la cornice vive di la', sul nodo
+   vero, e questo guscio ce la porta invece di lasciarla cadere in silenzio. */
+function tela_finta(oc) {
+  const stile = {};
+  for (const k of ["width", "height"])
+    Object.defineProperty(stile, k, { configurable: true,
+      get: function () { return ""; },
+      set: function (v) { __posta({ t: "stile", chiave: k, valore: v }); } });
+  return {
+    get width() { return oc.width; }, set width(v) { oc.width = v; },
+    get height() { return oc.height; }, set height(v) { oc.height = v; },
+    style: stile,
+    getContext: function (t, o) { return oc.getContext(t, o); },
+  };
+}
+
+/* \`leggi_uno_stream\` chiude la sessione passando da qui: il filo e' di la'. */
+function congeda(motivo, perche) {
+  __posta({ t: "congeda", motivo: motivo, perche: perche });
+  return Promise.resolve();
+}
+
+/* ⛔ LO SPECCHIO DEI DODICI CONTATORI.  Il mandato li vuole «leggibili da
+   fuori»: i banchi leggono \`REMOTIX.schermo.conti\` sul thread principale, e
+   con il worker lo stato vero sta di qua.  ⇒ Si rimanda a fette, non a ogni
+   fotogramma: un \`postMessage\` per fotogramma dentro il percorso che §6.1
+   tiene corto sarebbe pagare la misura con la cosa misurata. */
+function specchia() {
+  if (!schermo) return;
+  __posta({ t: "conti", conti: Object.assign({}, schermo.conti),
+    stato: { vista_l: schermo.vista_l, vista_a: schermo.vista_a,
+             dec_l: schermo.dec_l, dec_a: schermo.dec_a,
+             tela_l: schermo.tela_l, tela_a: schermo.tela_a,
+             ultimo_consegnato: schermo.ultimo_consegnato,
+             atteso: schermo.atteso, sospeso: schermo.sospeso,
+             attese_tela: schermo.attese_tela,
+             trattenuti: schermo.trattenuti.length,
+             formato: schermo.formato, dipinta: schermo.dipinta,
+             errori: schermo.errori.slice(-8),
+             tela: __oc ? [__oc.width, __oc.height] : null } });
+}
+
+self.onmessage = function (ev) {
+  const m = ev.data;
+  if (m.t === "accendi") {
+    __oc = m.tela; devicePixelRatio = m.dpr || 1; __vista = m.vista || [1, 1];
+    schermo = new Schermo(tela_finta(__oc));
+    schermo.su_chiave = function (u) { __posta({ t: "chiave", ultimo: u }); };
+    schermo.su_errore_protocollo = function (p) {
+      __posta({ t: "errore_protocollo", perche: p }); };
+    /* ⚠ Lo stesso nome globale di la', per la stessa ragione: un banco che
+       debba guardare dentro guarda \`REMOTIX.schermo\`, non un nome nuovo. */
+    self.REMOTIX = { schermo: schermo, leggi_uno_stream: leggi_uno_stream };
+    setInterval(specchia, 100);
+    __posta({ t: "pronto" });
+    return;
+  }
+  if (!schermo) return;
+  if (m.t === "vista") {
+    devicePixelRatio = m.dpr || 1; __vista = m.vista;
+    schermo.adatta_vista(); specchia(); return;
+  }
+  /* ⛔ Le chiamate che vengono da FUORI (\`riparti\`, \`negozia\`, \`vista\`,
+     \`tela_adattata\`, \`tela_rifiutata\`): le fa la stretta di mano e il canale
+     di controllo, che stanno di la'. */
+  if (m.t === "chiama") {
+    const f = schermo[m.metodo];
+    if (typeof f === "function") f.apply(schermo, m.argomenti || []);
+    specchia(); return;
+  }
+  /* ⭐ E QUI ENTRA IL VIDEO: uno stream TRASFERITO, letto di qua. */
+  if (m.t === "flusso") { leggi_uno_stream(m.flusso, congeda); return; }
+};
+`;
+
+/* ⛔ Il sorgente del worker si COMPONE, non si scrive: le costanti si
+   serializzano e le funzioni si stampano da se'.  ⚠ Se una di queste sparisse
+   o cambiasse nome, qui si romperebbe la composizione — e non il silenzio. */
+function sorgente_worker() {
+  return [
+    "/* generato da pagina.html — `web.md` §6.1 */",
+    "const DESINCRONIZZATA = " + JSON.stringify(DESINCRONIZZATA) + ";",
+    "const NOME_DEL_CODEC = " + JSON.stringify(NOME_DEL_CODEC) + ";",
+    "const CANALE = " + JSON.stringify(CANALE) + ";",
+    "const MOT = " + JSON.stringify(MOT) + ";",
+    differenza.toString(),
+    dopo.toString(),
+    GUSCIO_WORKER,
+    /* ⭐ Il sorgente ESATTO della classe del prodotto — non una copia. */
+    Schermo.toString(),
+    leggi_uno_stream.toString(),
+  ].join("\n\n");
+}
+
+/* Il worker, visto dal thread principale. */
+function accendi_worker() {
+  const V = { pronto: false, flussi: 0, w: null };
+  const url = URL.createObjectURL(
+    new Blob([sorgente_worker()], { type: "text/javascript" }));
+  V.w = new Worker(url);
+  V.chiama = function (metodo, argomenti) {
+    V.w.postMessage({ t: "chiama", metodo: metodo, argomenti: argomenti || [] });
+  };
+  /* ⛔⭐ IL TRASFERIMENTO, ed e' il punto in cui §6.1 diventa byte.  Lo stream
+     non si COPIA e non si legge di qua: cambia proprietario.  ⚠ Se un motore
+     non lo permettesse, `postMessage` lancia — e allora si DICE, invece di
+     ripiegare in silenzio sul thread principale e chiamarlo worker. */
+  V.manda_flusso = function (f) {
+    try { V.w.postMessage({ t: "flusso", flusso: f }, [f]); V.flussi++; }
+    catch (e) {
+      nota("⛔ lo stream del video non si e' potuto trasferire al worker ("
+           + e + "): il video di questa sessione NON arriva.  ⚠ E non ripiego "
+           + "sul thread principale: sarebbe misurare una cosa e chiamarla "
+           + "un'altra.");
+      V.rotto = true;
+    }
+  };
+  V.vista = function () {
+    /* ⛔ La vista si misura DI QUA — doppia passata compresa, che e' un fatto
+       del foglio — e si manda gia' decisa. */
+    const v = misura_vista();
+    V.w.postMessage({ t: "vista", vista: v, dpr: devicePixelRatio || 1 });
+  };
+  V.w.onerror = function (e) {
+    nota("⛔ il worker del video e' morto: " + (e.message || e));
+    V.rotto = true;
+  };
+  V.w.onmessage = function (ev) {
+    const m = ev.data;
+    if (m.t === "pronto") { V.pronto = true; return; }
+    if (m.t === "riga") { nota("video · " + m.riga); return; }
+    if (m.t === "acceso") { document.body.dataset.schermo = m.valore; return; }
+    if (m.t === "stile") { $("schermo").style[m.chiave] = m.valore; return; }
+    if (m.t === "conti") {
+      /* Lo specchio: da qui i banchi leggono `REMOTIX.schermo.conti`. */
+      Object.assign(schermo.conti, m.conti);
+      const s = m.stato || {};
+      for (const k of ["vista_l", "vista_a", "dec_l", "dec_a", "tela_l",
+                       "tela_a", "ultimo_consegnato", "atteso", "sospeso",
+                       "attese_tela", "formato", "dipinta"])
+        if (k in s) schermo[k] = s[k];
+      if (s.errori) schermo.errori = s.errori;
+      V.tela = s.tela || null;
+      V.trattenuti = s.trattenuti;
+      return;
+    }
+    /* ⭐ I due richiami che tornano sul FILO, e il filo e' di qua: la
+       `RICHIEDI_CHIAVE` di §5.2 e la chiusura di §3.  ⚠ Si passa dalle stesse
+       proprieta' che `collega()` riempie gia' — cosi' il percorso del
+       messaggio e' quello di sempre, e non ce n'e' un secondo. */
+    if (m.t === "chiave") {
+      if (schermo.su_chiave) schermo.su_chiave(m.ultimo);
+      return;
+    }
+    if (m.t === "errore_protocollo") {
+      if (schermo.su_errore_protocollo) schermo.su_errore_protocollo(m.perche);
+      return;
+    }
+    if (m.t === "congeda") {
+      if (congeda_corrente) congeda_corrente(m.motivo, m.perche);
+      return;
+    }
+  };
+  const oc = $("schermo").transferControlToOffscreen();
+  V.w.postMessage({ t: "accendi", tela: oc, dpr: devicePixelRatio || 1,
+                    vista: misura_vista() }, [oc]);
+  return V;
+}
+
+/* ⛔ Si accende AL CARICAMENTO e non alla connessione, e non e' anticipo
+   inutile: cosi' il worker esiste — e un banco che debba guardarci dentro ha
+   dove attaccarsi — PRIMA che esista un `VideoDecoder` da osservare.  ⚠ E a
+   riposo non fa niente: aspetta un messaggio. */
+const VW = VIDEO_WORKER ? accendi_worker() : null;
+
+/* ⛔⭐ E QUI LE CHIAMATE DI FUORI SI DIROTTANO.  `collega()` e
+ * `ascolta_controllo()` parlano a `schermo` come hanno sempre fatto: con
+ * l'interruttore acceso, quelle stesse chiamate vanno al worker.
+ *
+ * ⚠ NON si esegue anche di qua: l'istanza di questo lato e' uno SPECCHIO, e
+ *   farla dipingere davvero vorrebbe dire decodificare e disegnare due volte —
+ *   cioe' misurare un worker mentre il thread principale fa lo stesso lavoro.
+ *   ⛔ Sarebbe un «dopo» piu' lento del «prima» per colpa della misura. */
+if (VW) {
+  for (const metodo of ["riparti", "negozia", "vista", "tela_adattata",
+                        "tela_rifiutata", "adatta_tela_chiesta",
+                        "stream_video"]) {
+    schermo[metodo] = (function (m) {
+      return function () { VW.chiama(m, Array.prototype.slice.call(arguments)); };
+    })(metodo);
+  }
+  /* `adatta_vista()` e' l'unica che deve MISURARE di qua prima di partire. */
+  schermo.adatta_vista = function () { VW.vista(); return misura_vista(); };
 }
 
 $("modulo").addEventListener("submit", async (ev) => {

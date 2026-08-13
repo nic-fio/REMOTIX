@@ -214,10 +214,6 @@ struct ponte {
  *   garantito dal protocollo prima che la sessione arrivi a `SESSIONE`.
  *   ⛔ Nessuna delle due aspetta l'altra: `figli_assicura()` fa un `fork` e
  *   torna, `trasporto_verdetto()` fa scorrere lo stato.  Il ciclo non si ferma. */
-/* ⛔ Dichiarata qui perche' vive sotto, accanto al deposito che governa: e' il
- *    deposito il suo argomento, non il verdetto. */
-static void deposito_intesta(struct ponte *p, const char *utente, bool chiedi);
-
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
                               const char *utente)
 {
@@ -241,123 +237,96 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "vede un pixel.  Il perche' e' nella riga qui sopra, e "
 			              "il verdetto di PAM non si tocca",
 			              utente);
-		else
-			deposito_intesta(p, utente, c_era);
+		else if (c_era) {
+			/* ⛔ Un figlio che c'era gia' puo' avere il ciclo SPENTO — l'ultima
+			 *    sessione di quell'utente se n'era andata e il palco aveva
+			 *    smesso di catturare.  ⚠ Gli si chiede il fotogramma tenuto
+			 *    (l'ultima CHIAVE) cosi' chi rientra vede subito qualcosa,
+			 *    mentre `video_regola()` riaccende il ciclo appena `SESSIONE`
+			 *    parte.  ⛔ A un figlio APPENA NATO no: lo sta gia' prendendo, e
+			 *    la domanda gli farebbe spedire lo stesso fotogramma due
+			 *    volte. */
+			figli_chiedi_palco(p->f, utente);
+		}
 	}
 	trasporto_verdetto(p->t, pratica, ammesso);
 }
 
-/* ========================================================================== */
-/* ⛔⭐ IL DEPOSITO DEL VIDEO, E LA FUGA CHE HA MISURATA IL BANCO             */
-/*                                                                            */
-/*     `wt_video_deposita()` (in `webtransport.c`) e' un deposito **di        */
-/*     PROCESSO**, non di sessione: il riquadro accanto a `video_forse()` lo  */
-/*     dichiara, e alla fase 2 era giusto — c'era una sessione grafica sola,  */
-/*     quella dentro cui girava il server, e «due connessioni vedono lo       */
-/*     stesso desktop» era la frase vera.                                     */
-/*                                                                            */
-/* ⛔⛔ CON UN FIGLIO PER UTENTE QUELLA FRASE E' UN DIFETTO, ED E' STATO      */
-/*     MISURATO — `[M]` 12 agosto 2026, `02-figlio-prova.py --caso           */
-/*     senza-palco`: «prova» (uid 1001, senza sessione grafica, senza figlio  */
-/*     che potesse catturare niente) ha ricevuto **un fotogramma conforme** — */
-/*     e quel fotogramma era il desktop di «nicfio».  ⛔ Non «non ricevi      */
-/*     niente»: **ricevi il desktop di un altro**, e nessuno dei due se ne    */
-/*     accorge.  E' l'invariante I3 violata nel modo peggiore.                */
-/*                                                                            */
-/* ⇒ LA GUARDIA, e sta nel PROGRAMMA (invariante I7):                        */
-/*                                                                            */
-/*   · il deposito ha un PADRONE, e a nominarlo e' **l'ammissione**, non il   */
-/*     fotogramma: quando PAM dice si' a un utente diverso dal padrone, il    */
-/*     deposito si SVUOTA e il padrone diventa lui;                           */
-/*   · un fotogramma che arriva da un figlio che non e' il padrone viene      */
-/*     RIFIUTATO — anche se e' partito prima che il padrone cambiasse;        */
-/*   · e al nuovo padrone si CHIEDE il suo (`figli_chiedi_palco`), cosi' chi  */
-/*     rientra rivede il proprio desktop invece di non vedere piu' niente.    */
-/*                                                                            */
-/* ⛔ Non c'e' nessuna strada verso `SESSIONE` che non passi da un'ammissione */
-/*    (invariante I3), quindi non c'e' nessuna sessione che possa leggere il  */
-/*    deposito di un altro.                                                   */
-/*                                                                            */
-/* ⚠ IL PREZZO, DICHIARATO: due utenti collegati insieme non possono vedere   */
-/*   tutt'e due il proprio desktop — l'ultimo che entra prende il deposito, e */
-/*   all'altro tocca rientrare.  ⛔ E' brutto e **non e' un difetto di        */
-/*   questo file**: la cura vera e' un deposito **per sessione** in           */
-/*   `webtransport.c`, che questo mandato non tocca (`P2-7-figlio.md` §6).    */
-/*   Meglio nessun fotogramma che il fotogramma di un altro.                  */
-
-static char deposito_di[64];
-static bool deposito_preso;
-
+/* ⛔⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, E DOVE FINISCE.
+ *
+ *     Fino alla fase 2 finiva in un DEPOSITO DI PROCESSO — una copia per
+ *     codec, con un PADRONE — e il riquadro che stava qui dichiarava il prezzo:
+ *     «due utenti collegati insieme non possono vedere tutt'e due il proprio
+ *     desktop; la cura vera e' un deposito **per sessione** in
+ *     `webtransport.c`».
+ *
+ * ⭐ LA CURA VERA E' STATA FATTA, ed e' meglio di un deposito per sessione: non
+ *    c'e' piu' nessun deposito.  Il figlio cattura di continuo e ogni
+ *    fotogramma viene consegnato **subito** alle sessioni di quell'utente —
+ *    `wt_video_diffondi()` confronta il nome dell'utente che ha catturato con
+ *    quello che PAM ha ammesso su ciascuna sessione, e sono due fatti diversi
+ *    chiesti tutt'e due a chi li sa.
+ *
+ * ⛔ Quindi la guardia dell'invariante I3 non e' sparita: si e' spostata dove
+ *    serviva.  Il difetto misurato il 12 agosto 2026 — «prova» che riceve il
+ *    desktop di «nicfio» — non e' piu' possibile perche' non c'e' piu' nessun
+ *    posto in cui i pixel di un utente aspettino una sessione qualunque.
+ *
+ * ⚠ E il prezzo dichiarato allora e' PAGATO: due utenti collegati insieme
+ *   vedono ciascuno il proprio, e nessuno dei due deve rientrare.  ⭐ Vale la
+ *   pena scriverlo, perche' era il difetto che il documento chiamava «brutto e
+ *   non curabile qui». */
 static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
-                                uint8_t codec, const uint8_t *dati, size_t byte,
-                                uint32_t larghezza, uint32_t altezza,
-                                uint64_t istante_us)
+                                uint8_t codec, bool chiave, const uint8_t *dati,
+                                size_t byte, uint32_t larghezza,
+                                uint32_t altezza, uint64_t istante_us)
 {
 	(void)ctx;
-	if (!deposito_preso || strcmp(utente, deposito_di) != 0) {
-		registro_dice(REG_VIDEO,
-		              "⛔ il fotogramma di «%s» (uid %ld) NON entra in deposito: "
-		              "il deposito di processo e' %s%s.  ⚠ Un deposito solo per "
-		              "due palchi consegnerebbe a uno i pixel dell'altro — "
-		              "misurato il 12 agosto 2026, ed e' I3",
-		              utente, (long)uid,
-		              deposito_preso ? "di «" : "di nessuno",
-		              deposito_preso ? deposito_di : "");
-		return;
-	}
-	wt_video_deposita(codec, dati, byte, larghezza, altezza, istante_us);
-	registro_dice(REG_VIDEO,
-	              "⭐ FASE 2: fotogramma del codec %u in deposito, %zu byte, "
-	              "%ux%u — catturato dal figlio di «%s» (uid %ld), non da questo "
-	              "processo",
-	              codec, byte, larghezza, altezza, utente, (long)uid);
+	(void)uid;
+	/* ⛔ `input` e' 0: §6.2 dice «l'identificatore dell'ultimo input iniettato
+	 *    prima della cattura, **0 se nessuno**», e in questa fase l'iniezione
+	 *    non c'e' ancora.  ⚠ Lo zero e' il valore che il documento riserva a
+	 *    «nessuno», non un riempimento: quando l'input arrivera' (fase 5) qui
+	 *    passera' il suo identificatore, e il campo e' gia' quello giusto. */
+	wt_video_diffondi(utente, codec, chiave, dati, byte, larghezza, altezza,
+	                  istante_us, 0);
 }
 
-/* ⛔ Il deposito passa di mano QUI, sull'ammissione: e' l'unico punto in cui si
- * sa **chi** sta per arrivare a `SESSIONE`, ed e' prima che ci arrivi. */
-static void deposito_intesta(struct ponte *p, const char *utente, bool chiedi)
+/* ⛔⭐ LA CUCITURA FRA LA CHIAVE CHIESTA E IL CODIFICATORE — punto 4 della
+ *     fase 3, e attraversa DUE confini di modulo e uno di processo.
+ *
+ *     Chi sa che serve una chiave: `rcp.c` (§5.2 — primo dopo `SESSIONE`, tela
+ *     cambiata, `RICHIEDI_CHIAVE` del client, delta abbandonato).
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     Chi ha il codificatore: il FIGLIO, che e' un altro processo.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e non decide niente: passa.
+ *
+ * ⚠ Senza questa riga, `rcp_video_serve_chiave()` restava LETTA e inutile e
+ *   `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel prodotto**:
+ *   il sintomo era «il desktop si ferma e non riparte piu'», e non nominava ne'
+ *   la chiave ne' il codificatore. */
+static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
+                         bool chiave)
 {
-	if (deposito_preso && strcmp(utente, deposito_di) == 0) {
-		/* ⚠ Lo stesso utente che rientra: il deposito e' gia' suo e non si
-		 *   svuota — ma glielo si fa rimandare lo stesso, perche' fra una
-		 *   connessione e l'altra puo' averlo svuotato la morte del figlio. */
-		if (chiedi)
-			figli_chiedi_palco(p->f, utente);
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
 		return;
-	}
-	if (deposito_preso)
-		registro_dice(REG_VIDEO,
-		              "⛔ il deposito era di «%s» e adesso entra «%s»: lo "
-		              "SVUOTO.  ⚠ Meglio nessun fotogramma che il fotogramma di "
-		              "un altro (I3) — e il prezzo e' che «%s», se e' ancora "
-		              "collegato, dovra' rientrare",
-		              deposito_di, utente, deposito_di);
-	wt_video_svuota();
-	deposito_preso = true;
-	snprintf(deposito_di, sizeof deposito_di, "%s", utente);
-	/* ⛔ E si chiede al suo figlio di rimandare il proprio: senza, chi rientra
-	 *    dopo qualcun altro non rivedrebbe mai piu' niente, perche' il palco
-	 *    cattura una volta sola (fase 2 = immagine ferma).  ⚠ A un figlio
-	 *    APPENA NATO no: lo sta gia' prendendo, e la domanda gli farebbe
-	 *    spedire lo stesso fotogramma due volte. */
-	if (chiedi)
-		figli_chiedi_palco(p->f, utente);
+	figli_video(p->f, utente, codec, chiave);
 }
 
-/* ⛔ Il figlio se n'e' andato: se il deposito era suo, si svuota.  ⚠ Un
- * deposito che sopravvive al palco che lo ha riempito e' l'immagine di un
- * utente che resta in casa dopo che il suo processo e' morto. */
+/* ⛔ Il figlio se n'e' andato.  ⚠ Non c'e' piu' nessun deposito da svuotare —
+ * era la cura della fase 2 — ma la riga resta perche' il fatto e' un fatto: da
+ * adesso quell'utente non ha piu' un palco, e le sue sessioni non vedranno piu'
+ * arrivare fotogrammi.  ⛔ E NON si chiude niente: `SPECIFICHE.md` §8.3, «mai
+ * staccare» — una sessione senza fotogrammi vale piu' di una sessione chiusa. */
 static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 {
 	(void)ctx;
-	if (!deposito_preso || strcmp(utente, deposito_di) != 0)
-		return;
-	wt_video_svuota();
-	deposito_preso = false;
-	deposito_di[0] = 0;
 	registro_dice(REG_VIDEO,
-	              "il deposito del video era di «%s» (uid %ld), che se n'e' "
-	              "andato: SVUOTATO.  Chi entrera' se lo prendera'",
+	              "⛔ il palco di «%s» (uid %ld) se n'e' andato: da adesso le sue "
+	              "sessioni non ricevono piu' fotogrammi.  ⚠ NON si chiude "
+	              "niente (I1, SPECIFICHE.md §8.3): una sessione ferma vale piu' "
+	              "di una sessione staccata, e il palco puo' rinascere",
 	              utente, (long)uid);
 }
 
@@ -612,6 +581,11 @@ int main(int argc, char **argv)
 		goto fine;
 	ponte.t = t;
 	ponte.f = prole;
+	/* ⛔ Il gancio si collega QUI, dopo che la tabella dei figli c'e' e prima
+	 *    che il primo pacchetto arrivi: collegarlo dopo lascerebbe la prima
+	 *    sessione senza la richiesta della sua chiave, cioe' con lo schermo
+	 *    fermo e nessuna riga che dica perche'. */
+	wt_video_gancio(video_chiedi, &ponte);
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;
@@ -875,7 +849,6 @@ fine:
 	 *   consumatore: uscire prima lascerebbe un monitor attaccato alla sessione
 	 *   dell'utente senza nessuno che lo guardi. */
 	figli_spegni(prole);
-	wt_video_svuota();
 	if (ctx_quic)
 		SSL_CTX_free(ctx_quic);
 	if (ctx_pagina)

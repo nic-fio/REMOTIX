@@ -126,8 +126,22 @@ typedef struct {
 	 * controllo: un `0x03` sul canale di controllo e' `ERRORE_PROTOCOLLO`
 	 * (§2.5, riga `0x03`).  Restituisce `true` e riempie `stream` con
 	 * l'identificatore, oppure `false` se non se ne puo' aprire uno adesso —
-	 * ⚠ e allora NON si e' spedito niente, che e' meglio di mezzo fotogramma. */
-	bool (*video_apri)(void *ctx, int64_t *stream);
+	 * ⚠ e allora NON si e' spedito niente, che e' meglio di mezzo fotogramma.
+	 *
+	 * ⛔⭐ E `restano` E' UN PARAMETRO D'USCITA, NON UN LUSSO — §2.3, fase 3.
+	 *
+	 *     §2.3 impone due comportamenti DIVERSI quando lo stream non si apre:
+	 *     un **delta** si butta, una **chiave** si aspetta.  Chi deve
+	 *     scegliere e' questo modulo, che sa se il fotogramma e' una chiave;
+	 *     ⛔ ma il numero che spiega il perche' — quanti stream il client
+	 *     concede ancora — lo sa soltanto chi tiene il trasporto.  Senza
+	 *     riportarlo qui, la riga di registro che §2.3 pretende («e in
+	 *     tutt'e due i casi si scrive nel registro») direbbe «non si e'
+	 *     potuto» senza dire quanto manca, cioe' il sintomo *«schermo fermo,
+	 *     e nessuna riga che dica perche'»* del rilievo R1.9.
+	 *
+	 *     ⚠ Chi non lo sa scrive `0` e la riga lo dira'. */
+	bool (*video_apri)(void *ctx, int64_t *stream, uint64_t *restano);
 	/* Scrive byte su quello stream.  ⛔ `false` vuol dire «non sono entrati»,
 	 * e chi chiama AZZERA: non si chiude con FIN uno stream a cui manca un
 	 * pezzo, perche' FIN vuol dire «completo» (§6.2). */
@@ -331,6 +345,37 @@ int rcp_video_finisci(rcp_sessione *s);
  * fotogramma perso in silenzio e uno abbandonato di proposito hanno lo stesso
  * aspetto dal lato che riceve». */
 bool rcp_video_abbandona(rcp_sessione *s, const char *perche);
+
+/* ⛔⭐ §5.1 — L'ABBANDONO DI UN FOTOGRAMMA GIA' CHIUSO CON FIN MA ANCORA IN
+ *     CODA, cioe' **la scena che §5.1 descrive davvero**: «il server PUO'
+ *     chiamare `RESET_STREAM` su un fotogramma che non serve piu' — perche' ne
+ *     e' gia' partito uno piu' recente — e i byte non ancora spediti non
+ *     partono affatto».
+ *
+ * ⛔ Non e' la stessa cosa di `rcp_video_abbandona()`, e le due non si possono
+ *    fondere: quella abbandona il fotogramma **aperto**, a cui manca ancora un
+ *    pezzo da scrivere; questa abbandona uno **finito**, che per RCP e' gia'
+ *    partito e per il trasporto e' ancora fermo in coda.  Chi lo sa e' solo chi
+ *    tiene la coda; chi deve scrivere la riga, contare e riaccendere il debito
+ *    della chiave e' solo questo modulo.  ⇒ Il taglio passa di qui.
+ *
+ * `chiave` lo passa chi chiama perche' §5.2 vieta l'abbandono di una chiave
+ * **anche da valle**: qui si rifiuta, si scrive, e si restituisce `false`.
+ * `byte_non_usciti` va nella riga: «l'ho buttato prima di spendere banda» e
+ * «l'avevo gia' quasi spedito» sono due fatti diversi. */
+bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave,
+                                   size_t byte_non_usciti, const char *perche);
+
+/* ⛔ §2.3 — la riga obbligatoria di quando lo stream **non si apre**: «e in
+ * tutt'e due i casi si scrive nel registro».  La chiama `rcp_video_apri()` da
+ * se'; e' qui perche' un banco possa nominarla. */
+void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano);
+
+/* Quanti fotogrammi questa sessione ha spedito e quanti ne ha abbandonati.
+ * ⛔ I due numeri insieme, sempre: «zero abbandonati» detto da solo non
+ * distingue una linea che porta da un canale che non ha mai spedito niente. */
+void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
+                     uint32_t *abbandonati);
 
 /* La comodita': apre, scrive e chiude in una chiamata.  ⛔ Il tetto dei 16 MiB
  * si applica PRIMA di aprire lo stream, quindi su un fotogramma troppo grande
