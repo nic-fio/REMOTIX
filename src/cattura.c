@@ -62,6 +62,11 @@ struct Cattura
 	CatturaStrada strada;
 	CatturaColore colore;
 	uint32_t chiesta_larghezza, chiesta_altezza;
+	/* ⛔ La cadenza CHIESTA all'avvio, tenuta perche' `cattura_ridimensiona()`
+	 *    rifa' la stessa proposta: rimetterne una scritta a mano la' dentro
+	 *    vorrebbe dire che dopo un ridimensionamento il flusso gira a una cadenza
+	 *    diversa da quella con cui e' nato — e nessuna riga lo direbbe. */
+	uint32_t chiesti_al_secondo;
 	/* ⛔ Che la misura NEGOZIATA sia diversa da quella CHIESTA.  Si dice una
 	 *    volta sola e si tiene, perche' il richiamo del formato gira piu' volte.
 	 * ⚠ Vive perche' la tela sta per smettere di essere una costante
@@ -357,6 +362,95 @@ static int cursore_rimbalzo(void *chi, const CursoreForma *forma)
 	return fn(dove, forma);
 }
 
+/*
+ * ⛔⭐ I QUATTRO PARAMETRI DI CONSUMO — IN UN POSTO SOLO, e la ragione e' un
+ *     difetto trovato refutando, il 15 agosto 2026.
+ *
+ * `pw_stream_update_params()` NON aggiunge: **sostituisce l'intera lista**.  ⇒
+ * Chi rinegozia il formato passando il solo `EnumFormat` cancella `ParamBuffers`
+ * e i tre `ParamMeta` — fra cui quello del CURSORE, aggiunto il 14 agosto
+ * proprio perche' senza «`CURSORE_FORMA` era un canale senza sorgente».
+ *
+ * ⚠ Nel caso sano la richiamata del formato li rimette subito.  ⛔ Ma il caso
+ *   che `cattura.h` documenta come misurato — «il compositore risponde
+ *   *riuscito* e non manda nessun evento» — quella richiamata non la fa girare,
+ *   e la dichiarazione resterebbe vuota.  ⇒ Si ripetono TUTTI, sempre, da un
+ *   posto solo: due elenchi che devono restare uguali sono due elenchi che
+ *   divergono.
+ */
+static uint32_t parametri_di_consumo(Cattura *cattura, struct spa_pod_builder *costruttore,
+                                     const struct spa_pod *parametri[4])
+{
+	/*
+	 * ⛔ IL TIPO DEI DATI SI CONCORDA QUI, non nel formato: chi tace lascia il
+	 *    predefinito, che e' la memoria ordinaria.  E' la seconda meta' della
+	 *    regola 2 di `cattura.h` — dichiararne uno solo fa riuscire la
+	 *    negoziazione con dentro il contrario di quel che si voleva.
+	 *
+	 * ⛔ E il bit del DMA-BUF si accende SOLO se e' quella la strada chiesta.
+	 *    Lasciarlo acceso «per sicurezza» significherebbe lasciare al compositore
+	 *    la facolta' di consegnare descrittori che in memoria nessuno guarda:
+	 *    ogni fotogramma scartato in silenzio, e nessun errore.
+	 */
+	int tipi = (1 << SPA_DATA_MemFd) | (1 << SPA_DATA_MemPtr);
+	if (cattura->strada == CATTURA_STRADA_SCHEDA)
+		tipi = (1 << SPA_DATA_DmaBuf);
+
+	parametri[0] = spa_pod_builder_add_object(
+	    costruttore, SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_buffers,
+	    SPA_POD_CHOICE_RANGE_Int(4, 2, 8), SPA_PARAM_BUFFERS_dataType,
+	    SPA_POD_CHOICE_FLAGS_Int(tipi));
+
+	/*
+	 * ⛔ I METADATI SI CHIEDONO, O NON ARRIVANO — e senza di loro il produttore
+	 *    non ha modo di dirci nulla del fotogramma: ne' quale sia (`seq`), ne'
+	 *    quanta parte abbia ridipinto (`VideoDamage`).
+	 *
+	 * ⚠ Chiedere un metadato NON obbliga il produttore a darlo: chi legge deve
+	 *   reggere la sua assenza, e per questo ogni lettura controlla il puntatore
+	 *   e conta le assenze invece di darle per zero.
+	 */
+	parametri[1] = spa_pod_builder_add_object(
+	    costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
+	    SPA_POD_Id(SPA_META_Header), SPA_PARAM_META_size,
+	    SPA_POD_Int(sizeof(struct spa_meta_header)));
+	parametri[2] = spa_pod_builder_add_object(
+	    costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
+	    SPA_POD_Id(SPA_META_VideoDamage), SPA_PARAM_META_size,
+	    SPA_POD_CHOICE_RANGE_Int(sizeof(struct spa_meta_region) * 4,
+	                             sizeof(struct spa_meta_region) * 1,
+	                             sizeof(struct spa_meta_region) * 16));
+
+	/*
+	 * ⭐⭐ IL METADATO DEL CURSORE — e fino al 14 agosto 2026 non si chiedeva.
+	 *
+	 * ⛔ Il difetto che questa richiesta cura, `gnome.md` §1.1 punto 6 e §5.2:
+	 *    a `RecordVirtual` chiediamo `cursor-mode = 2` (`src/mutter.c:439`), cioe'
+	 *    «il cursore dammelo come METADATO invece che nei pixel» — e Mutter
+	 *    obbedisce in tutt'e due i versi: toglie il puntatore dall'immagine
+	 *    (`inhibit_cursor_overlay`) **e** lo mette nel metadato.  ⛔ Ma il
+	 *    metadato, come ogni metadato, arriva solo a chi lo chiede: senza questa
+	 *    riga si otteneva il PRIMO verso e non il secondo, cioe' nessun cursore
+	 *    da nessuna parte.
+	 *
+	 * ⚠ LA MISURA E' UN INTERVALLO, e i tre numeri sono quelli del client di
+	 *   prova di Mutter (`src/tests/remote-desktop-utils.c:218-225`): il metadato
+	 *   deve poter contenere `spa_meta_cursor` + `spa_meta_bitmap` + i pixel, e
+	 *   chiedendone uno FISSO troppo piccolo il produttore taglierebbe la
+	 *   bitmap.  Mutter offre 384x384 (`CURSOR_META_SIZE(384, 384)`).
+	 *
+	 * ⛔ E 384 > 256, che e' il tetto di `RCP.md` §7.2: il taglio lo fa
+	 *    `cursore.c`, DICHIARANDOLO, perche' il posto in cui i limiti del filo si
+	 *    fanno rispettare e' uno solo.
+	 */
+	parametri[3] = spa_pod_builder_add_object(
+	    costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
+	    SPA_POD_Id(SPA_META_Cursor), SPA_PARAM_META_size,
+	    SPA_POD_CHOICE_RANGE_Int(CURSORE_META_BYTE(384, 384), CURSORE_META_BYTE(1, 1),
+	                             CURSORE_META_BYTE(384, 384)));
+	return 4;
+}
+
 static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 {
 	Cattura *cattura = dati;
@@ -364,7 +458,6 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	uint8_t spazio[1024];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[4];
-	int tipi;
 
 	if (!param || id != SPA_PARAM_Format)
 		return;
@@ -419,76 +512,11 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	else
 		cattura->misura_divergente = FALSE;
 
-	/*
-	 * ⛔ IL TIPO DEI DATI SI CONCORDA QUI, non nel formato: chi tace lascia il
-	 *    predefinito, che e' la memoria ordinaria.  E' la seconda meta' della
-	 *    regola 2 di `cattura.h` — dichiararne uno solo fa riuscire la
-	 *    negoziazione con dentro il contrario di quel che si voleva.
-	 *
-	 * ⛔ E il bit del DMA-BUF si accende SOLO se e' quella la strada chiesta.
-	 *    Lasciarlo acceso «per sicurezza» significherebbe lasciare al compositore
-	 *    la facolta' di consegnare descrittori che in memoria nessuno guarda:
-	 *    ogni fotogramma scartato in silenzio, e nessun errore.
-	 */
-	tipi = (1 << SPA_DATA_MemFd) | (1 << SPA_DATA_MemPtr);
-	if (cattura->strada == CATTURA_STRADA_SCHEDA)
-		tipi = (1 << SPA_DATA_DmaBuf);
-
-	parametri[0] = spa_pod_builder_add_object(
-	    &costruttore, SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_buffers,
-	    SPA_POD_CHOICE_RANGE_Int(4, 2, 8), SPA_PARAM_BUFFERS_dataType,
-	    SPA_POD_CHOICE_FLAGS_Int(tipi));
-
-	/*
-	 * ⛔ I METADATI SI CHIEDONO, O NON ARRIVANO — e senza di loro il produttore
-	 *    non ha modo di dirci nulla del fotogramma: ne' quale sia (`seq`), ne'
-	 *    quanta parte abbia ridipinto (`VideoDamage`).
-	 *
-	 * ⚠ Chiedere un metadato NON obbliga il produttore a darlo: chi legge deve
-	 *   reggere la sua assenza, e per questo ogni lettura qui sotto controlla il
-	 *   puntatore e conta le assenze invece di darle per zero.
-	 */
-	parametri[1] = spa_pod_builder_add_object(
-	    &costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
-	    SPA_POD_Id(SPA_META_Header), SPA_PARAM_META_size,
-	    SPA_POD_Int(sizeof(struct spa_meta_header)));
-	parametri[2] = spa_pod_builder_add_object(
-	    &costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
-	    SPA_POD_Id(SPA_META_VideoDamage), SPA_PARAM_META_size,
-	    SPA_POD_CHOICE_RANGE_Int(sizeof(struct spa_meta_region) * 4,
-	                             sizeof(struct spa_meta_region) * 1,
-	                             sizeof(struct spa_meta_region) * 16));
-
-	/*
-	 * ⭐⭐ IL METADATO DEL CURSORE — e fino al 14 agosto 2026 NON si chiedeva.
-	 *
-	 * ⛔ Il difetto che questa richiesta cura, `gnome.md` §1.1 punto 6 e §5.2:
-	 *    a `RecordVirtual` chiediamo `cursor-mode = 2` (`src/mutter.c:439`), cioe'
-	 *    «il cursore dammelo come METADATO invece che nei pixel» — e Mutter
-	 *    obbedisce in tutt'e due i versi: toglie il puntatore dall'immagine
-	 *    (`inhibit_cursor_overlay`) **e** lo mette nel metadato.  ⛔ Ma il
-	 *    metadato, come ogni metadato, arriva solo a chi lo chiede: senza questa
-	 *    riga si otteneva il PRIMO verso e non il secondo, cioe' nessun cursore
-	 *    da nessuna parte, e `CURSORE_FORMA` (`RCP.md` §7.2) era un canale senza
-	 *    sorgente.
-	 *
-	 * ⚠ LA MISURA E' UN INTERVALLO, e i tre numeri sono quelli del client di
-	 *   prova di Mutter (`src/tests/remote-desktop-utils.c:218-225`): il metadato
-	 *   deve poter contenere `spa_meta_cursor` + `spa_meta_bitmap` + i pixel, e
-	 *   chiedendone uno FISSO troppo piccolo il produttore taglierebbe la
-	 *   bitmap.  Mutter offre 384x384 (`CURSOR_META_SIZE(384, 384)`).
-	 *
-	 * ⛔ E 384 > 256, che e' il tetto di `RCP.md` §7.2: il taglio lo fa
-	 *    `cursore.c`, DICHIARANDOLO, perche' il posto in cui i limiti del filo si
-	 *    fanno rispettare e' uno solo.
-	 */
-	parametri[3] = spa_pod_builder_add_object(
-	    &costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
-	    SPA_POD_Id(SPA_META_Cursor), SPA_PARAM_META_size,
-	    SPA_POD_CHOICE_RANGE_Int(CURSORE_META_BYTE(384, 384), CURSORE_META_BYTE(1, 1),
-	                             CURSORE_META_BYTE(384, 384)));
-
-	pw_stream_update_params(cattura->flusso, parametri, 4);
+	/* ⛔ E i quattro parametri di consumo li scrive `parametri_di_consumo()`, in
+	 *    un posto solo: li ripete anche `cattura_ridimensiona()`, e due elenchi
+	 *    che devono restare uguali sono due elenchi che divergono. */
+	pw_stream_update_params(cattura->flusso, parametri,
+	                        parametri_di_consumo(cattura, &costruttore, parametri));
 	pw_thread_loop_signal(cattura->ciclo, false);
 }
 
@@ -730,6 +758,46 @@ static void su_processo(void *dati)
 	if (byte > disponibili)
 		byte = disponibili;
 
+	/* ⛔⛔ LA GEOMETRIA DICHIARATA DEVE STARE DENTRO I BYTE CONSEGNATI — la
+	 *     guardia nata refutando, la notte del 15 agosto 2026, e prima non
+	 *     serviva a niente.
+	 *
+	 * ⚠ La misura viene dal FORMATO negoziato (`cattura->formato`), il passo e i
+	 *   byte vengono dal CHUNK del buffer vero: due fonti, e fra una
+	 *   rinegoziazione e i buffer nuovi possono appartenere a due generazioni
+	 *   diverse.  ⛔ Con la tela fissa non potevano divergere;
+	 *   `cattura_ridimensiona()` lo rende possibile.
+	 *
+	 * ⛔ E il danno non e' un'immagine storta: chi consuma legge
+	 *   `larghezza x 4` byte per riga, per `altezza` righe.  Se il passo e' piu'
+	 *   corto della larghezza dichiarata — cioe' nel verso «la tela si ALLARGA» —
+	 *   l'ultima riga finisce **oltre la memoria copiata**, e il figlio muore
+	 *   portandosi via il palco di un utente.
+	 *
+	 * ⇒ Si scarta e SI CONTA, che e' la stessa regola dello `stride == 0`: un
+	 *   fotogramma in meno costa 16 ms, una lettura fuori dai limiti costa il
+	 *   processo. */
+	/* ⚠ Solo sulla strada della MEMORIA: sul DMA-BUF i pixel non sono qui — c'e'
+	 *   un descrittore che vive sulla scheda — e `chunk->size` non descrive
+	 *   nessuna copia da leggere.  Applicare la guardia anche li' scarterebbe
+	 *   ogni fotogramma della scheda in silenzio, che e' il difetto opposto. */
+	if (cattura->strada == CATTURA_STRADA_MEMORIA
+	    && (cattura->formato.size.width == 0 || cattura->formato.size.height == 0
+	        || passo < cattura->formato.size.width * 4u
+	        || byte < (guint64) passo * cattura->formato.size.height))
+	{
+		cattura->conto.geometria_incoerente++;
+		if (cattura->conto.geometria_incoerente == 1)
+			registro_dice(AREA,
+			              "⛔ fotogramma SCARTATO: il formato dichiara %ux%u ma il buffer "
+			              "porta passo %u e %" G_GUINT64_FORMAT " byte (ne servirebbero %"
+			              G_GUINT64_FORMAT ").  ⚠ E' la finestra fra una rinegoziazione e "
+			              "i buffer nuovi: chi legge andrebbe oltre la memoria consegnata",
+			              cattura->formato.size.width, cattura->formato.size.height, passo,
+			              byte, (guint64) passo * cattura->formato.size.height);
+		goto restituisci;
+	}
+
 	info.pixel = NULL;
 	info.byte = byte;
 	info.fd = piano->fd >= 0 ? (int) piano->fd : -1;
@@ -954,6 +1022,7 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 	cattura->colore = colore;
 	cattura->chiesta_larghezza = larghezza;
 	cattura->chiesta_altezza = altezza;
+	cattura->chiesti_al_secondo = fotogrammi_al_secondo;
 	g_mutex_init(&cattura->lucchetto);
 	g_cond_init(&cattura->novita);
 
@@ -1055,6 +1124,203 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 guasto:
 	cattura_ferma(cattura);
 	return NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ *  ⭐⭐ IL CAMBIO DI MISURA A CALDO — vedi `cattura.h`
+ * ------------------------------------------------------------------ */
+
+CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza)
+{
+	uint8_t spazio[2048];
+	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
+	const struct spa_pod *parametri[5];
+	uint32_t quanti;
+	int esito;
+
+	if (!cattura || !cattura->flusso || !cattura->ciclo)
+		return CATTURA_RITELA_GUASTO;
+	/* ⛔ Lo zero non e' «fuori dai limiti»: e' una richiesta senza contenuto, e
+	 *    passarla al produttore vorrebbe dire chiedergli un monitor di area
+	 *    nulla.  ⚠ Il resto della regola — 200..8192 e la parita' — sta in
+	 *    `rcp_misura_ammessa()`, in un posto solo. */
+	if (!larghezza || !altezza)
+	{
+		registro_dice(AREA, "⛔ ridimensionamento a %ux%u: una misura vuota non si chiede",
+		              larghezza, altezza);
+		return CATTURA_RITELA_GUASTO;
+	}
+
+	pw_thread_loop_lock(cattura->ciclo);
+
+	/* ⛔⭐ LA GUARDIA OBBLIGATORIA — `kde.md` §8.2-bis: «senza, la rinegoziazione
+	 *     si morde la coda», e il difetto NON si vede su Trixie.
+	 *
+	 * ⛔⛔ E SI CONFRONTA CON LA MISURA CHE IL FLUSSO **HA**, NON CON QUELLA CHE
+	 *     GLI E' STATA CHIESTA — difetto trovato refutando, la notte del 15
+	 *     agosto 2026, e la prima stesura aveva sbagliato proprio qui.
+	 *
+	 *     `kde.md` §8.2-bis scrive la guardia come `misura_attuale ==
+	 *     misura_richiesta`, e **attuale** non e' **chiesta**: §4.5 dichiara
+	 *     normale che il compositore conceda una misura diversa da quella
+	 *     chiesta.  ⇒ Confrontando col chiesto, questa sequenza spegneva la
+	 *     funzione per sempre:
+	 *
+	 *       si chiede 1920x1080, il compositore non obbedisce (o concede altro)
+	 *       ⇒ `chiesta_*` = 1920x1080, il flusso e' rimasto dov'era
+	 *       ⇒ l'utente riprova la STESSA misura
+	 *       ⇒ «e' gia' chiesta»: nessuna richiesta parte, MAI PIU'.
+	 *
+	 *     E il registro avrebbe accusato la guardia giusta del difetto sbagliato.
+	 *
+	 * ⚠ Finche' il formato non e' noto non c'e' un «attuale»: allora si guarda il
+	 *   chiesto, che e' l'unica cosa che c'e' — e si dichiara qui invece di
+	 *   lasciarlo dedurre. */
+	if (cattura->formato_noto ? (larghezza == cattura->formato.size.width
+	                             && altezza == cattura->formato.size.height)
+	                          : (larghezza == cattura->chiesta_larghezza
+	                             && altezza == cattura->chiesta_altezza))
+	{
+		pw_thread_loop_unlock(cattura->ciclo);
+		registro_dettaglio(AREA,
+		                   "ridimensionamento a %ux%u: e' la misura che il flusso HA "
+		                   "gia', NON rinegozio (kde.md §8.2-bis)",
+		                   larghezza, altezza);
+		return CATTURA_RITELA_GIA_COSI;
+	}
+
+	/* ⛔ Un flusso morto non si rinegozia, e «morto» si CHIEDE allo stato invece
+	 *    di dedurlo dal silenzio: su un flusso in errore `update_params`
+	 *    riuscirebbe e non arriverebbe mai un fotogramma — cioe' il ripiego
+	 *    silenzioso che `CODER.md` §4.2 vieta. */
+	if (cattura->stato != PW_STREAM_STATE_PAUSED && cattura->stato != PW_STREAM_STATE_STREAMING)
+	{
+		enum pw_stream_state stato = cattura->stato;
+		/* ⛔ IL GUASTO SI COPIA PRIMA DI MOLLARE IL LUCCHETTO — difetto trovato
+		 *    refutando: `su_stato()` gira sul thread del ciclo e fa
+		 *    `g_free(guasto); guasto = g_strdup(...)`, quindi fra la `g_free` e
+		 *    l'assegnazione il campo e' un puntatore penzolante.  ⚠ E questo ramo
+		 *    si percorre **proprio mentre** il flusso sta morendo, cioe'
+		 *    nell'istante in cui `su_stato` sta girando: leggerlo dopo l'unlock e'
+		 *    leggere memoria liberata, e per una riga di registro. */
+		char *guasto = cattura->guasto ? g_strdup(cattura->guasto) : NULL;
+		pw_thread_loop_unlock(cattura->ciclo);
+		registro_dice(AREA,
+		              "⛔ ridimensionamento a %ux%u NON chiesto: il flusso e' «%s»%s%s",
+		              larghezza, altezza, pw_stream_state_as_string(stato),
+		              guasto ? " — " : "", guasto ? guasto : "");
+		g_free(guasto);
+		return CATTURA_RITELA_GUASTO;
+	}
+
+	/* ⛔ La misura CHIESTA si aggiorna PRIMA della richiesta, e sotto il lucchetto
+	 *    del ciclo: `su_parametri` gira sul thread di PipeWire e ci confronta
+	 *    contro il formato negoziato (la guardia «chiesto contro concesso»).
+	 *    Aggiornarla dopo vorrebbe dire far confrontare la risposta nuova con la
+	 *    domanda vecchia, cioe' dichiarare una divergenza che non c'e'. */
+	cattura->chiesta_larghezza = larghezza;
+	cattura->chiesta_altezza = altezza;
+	/* ⚠ E la divergenza si azzera: e' un fatto della negoziazione che sta per
+	 *   rifarsi, non una cicatrice della precedente. */
+	cattura->misura_divergente = FALSE;
+
+	/* ⛔ La stessa `proposta()` dell'avvio, con gli stessi colore e strada: una
+	 *    proposta scritta a mano qui sarebbe una seconda regola sul formato, e il
+	 *    giorno in cui una delle due cambiasse il flusso si riaprirebbe con un
+	 *    colore diverso da quello negoziato — senza nessun errore. */
+	parametri[0] = proposta(&costruttore, larghezza, altezza, cattura->chiesti_al_secondo,
+	                        cattura->colore, cattura->strada == CATTURA_STRADA_SCHEDA);
+	/* ⛔⭐ E CON LUI I QUATTRO PARAMETRI DI CONSUMO — difetto trovato refutando:
+	 *     `pw_stream_update_params()` NON aggiunge, **sostituisce l'intera
+	 *     lista**.  Passando il solo `EnumFormat` si cancellerebbero
+	 *     `ParamBuffers` e i tre `ParamMeta`, fra cui quello del CURSORE.  ⚠ Nel
+	 *     caso sano la richiamata del formato li rimette; ⛔ ma nel caso che
+	 *     `cattura.h` documenta — il compositore che risponde «riuscito» e non
+	 *     manda nessun evento — quella richiamata non gira, e il canale del
+	 *     puntatore resterebbe senza sorgente senza che nessuno lo dica. */
+	quanti = 1 + parametri_di_consumo(cattura, &costruttore, parametri + 1);
+	esito = pw_stream_update_params(cattura->flusso, parametri, quanti);
+	pw_thread_loop_unlock(cattura->ciclo);
+
+	if (esito < 0)
+	{
+		registro_dice(AREA, "⛔ `pw_stream_update_params()` a %ux%u ha risposto %d (%s)",
+		              larghezza, altezza, esito, spa_strerror(esito));
+		return CATTURA_RITELA_GUASTO;
+	}
+	registro_dice(AREA,
+	              "⭐ tela CHIESTA al produttore: %ux%u (`pw_stream_update_params`).  ⚠ E' la "
+	              "richiesta, non l'esito: la verita' la dice il fotogramma (DECISIONI.md "
+	              "§5.0-sexies)",
+	              larghezza, altezza);
+	return CATTURA_RITELA_CHIESTA;
+}
+
+gboolean cattura_risveglia(Cattura *cattura)
+{
+	uint8_t spazio[2048];
+	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
+	const struct spa_pod *parametri[5];
+	uint32_t l, a, quanti;
+	int esito;
+
+	if (!cattura || !cattura->flusso || !cattura->ciclo)
+		return FALSE;
+
+	pw_thread_loop_lock(cattura->ciclo);
+	if (cattura->stato != PW_STREAM_STATE_PAUSED && cattura->stato != PW_STREAM_STATE_STREAMING)
+	{
+		pw_thread_loop_unlock(cattura->ciclo);
+		return FALSE;
+	}
+	/* ⛔ La misura e' quella NEGOZIATA, non quella chiesta: qui non si sta
+	 *    cambiando niente — si sta ripetendo la stessa domanda per far ripartire
+	 *    il flusso.  ⚠ Rifare la proposta con la misura CHIESTA, in un momento in
+	 *    cui il compositore ne ha concessa un'altra (§4.5), sarebbe un
+	 *    ridimensionamento travestito da risveglio. */
+	l = cattura->formato_noto ? cattura->formato.size.width : cattura->chiesta_larghezza;
+	a = cattura->formato_noto ? cattura->formato.size.height : cattura->chiesta_altezza;
+	if (!l || !a)
+	{
+		pw_thread_loop_unlock(cattura->ciclo);
+		return FALSE;
+	}
+	parametri[0] = proposta(&costruttore, l, a, cattura->chiesti_al_secondo, cattura->colore,
+	                        cattura->strada == CATTURA_STRADA_SCHEDA);
+	quanti = 1 + parametri_di_consumo(cattura, &costruttore, parametri + 1);
+	esito = pw_stream_update_params(cattura->flusso, parametri, quanti);
+	pw_thread_loop_unlock(cattura->ciclo);
+
+	if (esito < 0)
+	{
+		registro_dice(AREA, "⛔ risveglio del flusso a %ux%u: %s", l, a, spa_strerror(esito));
+		return FALSE;
+	}
+	registro_dice(AREA,
+	              "⭐ flusso RIAVVIATO alla stessa misura (%ux%u) per farsi consegnare un "
+	              "fotogramma: su Wayland non si puo' chiedere «ridipingi», e questa e' la "
+	              "sola leva che abbiamo (`cattura.h`)",
+	              l, a);
+	return TRUE;
+}
+
+void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
+{
+	if (larghezza)
+		*larghezza = cattura ? cattura->chiesta_larghezza : 0;
+	if (altezza)
+		*altezza = cattura ? cattura->chiesta_altezza : 0;
+}
+
+gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
+{
+	if (!cattura || !cattura->formato_noto)
+		return FALSE; /* ⛔ «non e' stato negoziato», non «e' 0x0» */
+	if (larghezza)
+		*larghezza = cattura->formato.size.width;
+	if (altezza)
+		*altezza = cattura->formato.size.height;
+	return TRUE;
 }
 
 /* ------------------------------------------------------------------ *

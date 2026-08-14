@@ -297,7 +297,7 @@ alto qualcun altro.
 | `src/mutter.c:501-519` | `RecordVirtual` con `cursor-mode` + `is-platform` | ⭐ **niente**: l'API non prende misure |
 | `src/cattura.c:875-883` | `SPA_POD_Rectangle(&misura)` — rettangolo **fisso** | ⭐ **niente**: è già il verso giusto, ed è il motivo per cui la misura arriva esatta |
 | `src/cattura.c:891-915` | `cattura_avvia(nodo, larghezza, altezza, …)` | ⭐ **niente**: già parametrico |
-| **`src/cattura.c` — manca** | nessun modo di cambiare misura a flusso aperto | ⛔ **da aggiungere**: `cattura_ridimensiona(Cattura*, l, a)` = ricostruire il POD di `proposta()` e chiamare `pw_stream_update_params()`. `[M]` 41 ms, misura esatta, 20 di fila reggono |
+| ~~**`src/cattura.c` — manca**~~ ✅ **scritto il 15 agosto 2026** (`cattura_ridimensiona()`, con l'esito a tre valori e la guardia di `kde.md` §8.2-bis sulla misura **attuale**) | nessun modo di cambiare misura a flusso aperto | ⛔ **da aggiungere**: `cattura_ridimensiona(Cattura*, l, a)` = ricostruire il POD di `proposta()` e chiamare `pw_stream_update_params()`. `[M]` 41 ms, misura esatta, 20 di fila reggono |
 | `src/main.c:111-112` | `#define TELA_L 1920u` / `TELA_A 1080u` | ⛔ la costante diventa un **valore predefinito**: la misura vera arriva dal `CIAO`/`ADATTA_TELA` del client |
 | `src/figlio.c:2261` · `:2465-2466` | `tela_l`/`tela_a` da `argv[5]`/`argv[6]`, immutabili per tutta la vita del figlio | ⛔ devono diventare **variabili di stato del figlio**, aggiornabili |
 | `src/input.h` → `input_ritela()` | ⭐ **esiste già** (14 agosto) | va **chiamata** dopo ogni ridimensionamento riuscito |

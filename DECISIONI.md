@@ -1958,8 +1958,69 @@ ridimensionamento **a caldo**, sulla sessione viva, senza rifarla:
 
 ⇒ ⭐ **Il ri-attacco a misura diversa non è un problema aperto: è un caso già coperto**, su tre
 desktop su quattro, a un costo che l'utente non percepisce. Chi affronterà quel tema non deve
-studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` (che alla data di questa voce
-**non esiste ancora**: è l'unica riga di lavoro rimasta) e rileggere questa tabella.
+studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` e rileggere questa tabella.
+
+> ### ✅ ⭐⭐ SCRITTA E MISURATA — la notte del 15 agosto 2026
+>
+> *Questa voce diceva «`cattura_ridimensiona()` alla data di questa voce **non esiste ancora**: è
+> l'unica riga di lavoro rimasta». Adesso esiste, e con lei la catena intera.*
+>
+> **La catena, per nome**, e ogni anello sta dove sta la cosa che sa:
+>
+> | dove | che cosa |
+> |---|---|
+> | `src/pagina.html` | `chiedi_tela()` manda `ADATTA_TELA` con la misura della finestra, **all'attacco** |
+> | `src/rcp.c` `T_ADATTA_TELA` | applica §4.5 (limiti, parità, `video.misura_massima`) e gira la richiesta al palco. ⛔ **Non risponde subito**: segna una richiesta «in volo» |
+> | `src/webtransport.c` · `src/main.c` | portano la domanda oltre il confine di processo |
+> | `src/figlio.c` `figli_ritela()` | → `MSG_INPUT/RITELA` al figlio |
+> | `src/cattura.c` `cattura_ridimensiona()` | → `pw_stream_update_params()` |
+> | ⭐ e **la risposta torna indietro**: `MSG_TELA` → `rcp_tela_dal_palco()` → `TELA(ADATTATA)` |
+>
+> ⛔ **La risposta torna, e non si indovina**: la prima stesura di stanotte faceva dedurre al padre
+> l'esito **dai fotogrammi** («se ne arriva uno di misura diversa, il palco ha obbedito»), e quattro
+> agenti mandati a refutarla hanno trovato tre casi in cui deduceva male — fra cui **due
+> `ADATTA_TELA` incatenate**, cioè un utente che trascina il bordo della finestra. ⇒ Il figlio adesso
+> risponde portando **due** misure: quella *chiesta* (per riconoscere a quale richiesta risponde) e
+> quella *avuta* (`0x0` = non ce l'ha fatta).
+>
+> #### `[M]` Le misure della notte, sulla macchina di prova, utente `prova`, GNOME headless
+>
+> | | prima (14 ago) | adesso (15 ago) |
+> |---|---|---|
+> | ⭐⭐ dal canale video al primo fotogramma | **4,4 s** (659 «attese a vuoto») | **311 ms** |
+> | la tela in vigore all'attacco | 1920×1080 fissa | **1264×800** = la finestra del browser |
+> | la scala di disegno del client | 0,658 (`imageRendering: auto`) | **1,000** (`pixelated`) |
+> | il ridimensionamento a caldo (1264×800 → 1000×640) | non esisteva | ⭐ **6 ms** dalla risposta del palco alla chiave spedita |
+> | fotogrammi scartati per misura · trattenuti · errori | — | **0 · 0 · 0** |
+>
+> ⭐ **E il desktop lo dice da sé**: GNOME *Impostazioni → Displays* dentro la sessione remota
+> riporta **«Resolution 1264 × 800 (3:2)»** e **«Scale 100%»**. Non è una nostra riga di registro:
+> è il compositore che dichiara la misura che gli abbiamo chiesto.
+>
+> #### Le tre guardie: dove sono finite
+>
+> | guardia | stato |
+> |---|---|
+> | 1 · il tetto della misura | ✅ `rcp_misura_ammessa()`, e ⛔ **corretta stanotte**: i limiti sono quelli di §4.5 **per lato** (320..7680 × 240..4320), non i 200..8192 della prima stesura — che `ATTACCA` avrebbe rifiutato al ri-attacco |
+> | 2 · la scala di GNOME | ✅ **chiusa stanotte** come §5.0-sexies chiedeva («leggere la scala e **fallire**»): `mutter_scala_nostra()` + il rifiuto in `prendi_il_palco()`. ⚠ Si guarda il **nostro** monitor, non il peggiore della macchina: un portatile con lo schermo interno a 2,0 non ha nessun difetto. `[M]` sulla macchina di prova la scala del nostro «Meta-0» è **1,000**, e la riga si scrive anche quando è buona |
+> | 3 · chiesto contro concesso | ✅ in `cattura.c` (`su_parametri`), e da stanotte anche **nel figlio**: i 28 byte di §6.2 portano la misura del FOTOGRAMMA, non quella che si era chiesta |
+>
+> #### I tempi, e il perché di ciascuno
+>
+> | | valore | perché |
+> |---|---|---|
+> | `RCP_TELA_ATTESA_MS` | **3000 ms** | il fondo oltre cui si risponde `NON_ORA` comunque: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`, e §6.2 fa **trattenere fotogrammi** al client finché aspetta |
+> | `RCP_TELA_RICHIAMO_MS` | 500 ms, che raddoppia fino a 8 s | ogni quanto si **richiede** al palco di tornare alla tela in vigore, quando ne ha una sua |
+> | `TELA_FONDO_MS` (client) | 250 ms | chi trascina un bordo produce decine di `resize` al secondo, e ogni richiesta girata al palco costa un fotogramma |
+> | `RISVEGLIO_MS` (figlio) | 400 ms | ogni quanto si riavvia il flusso quando **una chiave è dovuta e la scena è ferma** — è la cura dei 4,4 secondi |
+>
+> ⛔ **E una cosa che il server NON fa, per una riga che manca a `RCP.md`**: quando il palco cambia
+> misura **senza che nessuno gliel'abbia chiesto**, il server **non adotta** la misura nuova e non
+> manda nessun `TELA`. La prima stesura lo faceva — sembrava gentile — ed è fatale: §6.2 dice che il
+> client trattiene una misura mai annunciata **solo finché ha una `ADATTA_TELA` senza risposta**, e
+> senza quella è `ERRORE_PROTOCOLLO`. ⇒ Si **richiede al palco di tornare**, con un'attesa che
+> cresce, e nel frattempo la sessione mostra l'ultima immagine buona (I1: brutta e viva). ⏳ La riga
+> che manca è in `RCP.md` §7.1: *che cosa fa un server quando il palco cambia misura da sé*.
 
 ⚠ E le tre guardie qui sopra valgono **a maggior ragione** al ri-attacco: è il momento in cui la
 misura cambia davvero, cioè il momento in cui una divergenza silenziosa fra chiesto e concesso
@@ -1979,6 +2040,25 @@ che vale per tutti».*
 
 **Ridimensionare la finestra del client non tocca mai il desktop.** Si adatta la vista; le
 finestre dell'utente non si muovono. Uguale su GNOME, KDE, XFCE e LXQt.
+
+> ### ⚠ E DAL 15 AGOSTO 2026 QUESTA VOCE VALE **DURANTE** LA SESSIONE, NON ALL'ATTACCO
+>
+> §5.0-sexies ha deciso che **la tela del server prende la misura della tela del client**, e quella
+> misura la si chiede **all'attacco di ogni sessione**. ⇒ All'attacco il desktop *cambia* misura, ed
+> è voluto: è la decisione dell'utente del 14 agosto.
+>
+> ⛔ **Ma le tre ragioni di questa voce non sono invecchiate**, e la terza meno che mai: su KWin
+> ridimensionare un output **ridispone le finestre dell'utente**. ⇒ Durante la sessione viva il
+> comportamento resta quello scritto qui — si riscala la vista, il desktop non si tocca — e
+> l'inseguimento della finestra sta dietro un interruttore **spento di suo** (invariante I6):
+>
+> | `?adatta=` | che cosa fa |
+> |---|---|
+> | *assente* (predefinito) | chiede la tela **all'attacco** e basta |
+> | `segui` | ⚠ la chiede **anche a ogni ridimensionamento** della finestra, con un fondo di 250 ms |
+> | `no` | ⛔ non la chiede mai: è la pagina di prima del 15 agosto, e serve al **confronto A/B** che il giudizio dell'utente richiede (`LEZIONI.md` §7.3) |
+>
+> ⚠ Si legge da `?` **e** da `#`, come `video` e `disposizione`.
 
 Le tre ragioni, e la terza è quella che ha deciso:
 

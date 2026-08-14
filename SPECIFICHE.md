@@ -505,10 +505,27 @@ e riscala il client — e non costa una riga in più, perché è lo stesso codic
 
 ### 6.4 «Adatta il desktop a questa finestra»
 
-Il ridimensionamento vero della tela resta come **scelta esplicita dell'utente**, mai come
-automatismo. Dove il compositore non lo sa fare la voce è **spenta, con la ragione dichiarata**.
-Quando si scriverà, si scriverà nella forma della **negoziazione PipeWire** — una strada sola per
-GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.
+Il ridimensionamento vero della tela si fa nella forma della **negoziazione PipeWire** — una strada
+sola per GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.
+
+> ### ⛔ CORRETTA IL 15 AGOSTO 2026 — «mai come automatismo» non è più vero, e la ragione è una decisione dell'utente
+>
+> *Questo paragrafo diceva: «Il ridimensionamento vero della tela resta come **scelta esplicita
+> dell'utente**, mai come automatismo. Dove il compositore non lo sa fare la voce è **spenta**».*
+>
+> ⛔ **La prima metà è stata rovesciata da `DECISIONI.md` §5.0-sexies** (14 agosto 2026, decisa
+> dall'utente): *«la tela del server si chiede della misura della tela del client»*, e quella misura
+> si chiede **all'attacco di ogni sessione**, senza che nessuno prema niente. ⇒ All'attacco è un
+> automatismo, ed è il punto: senza, tornano le bande nere, il testo interpolato, la conversione
+> delle coordinate e i quattro secondi di attesa fra il login e il desktop.
+>
+> ⚠ **La seconda metà vale ancora, e sta dove è sempre stata**: durante la sessione viva
+> l'inseguimento della finestra è **spento di suo** (`?adatta=segui` per accenderlo — vedi
+> `DECISIONI.md` §5.1), perché su KWin ridimensionare un output ridispone le finestre dell'utente.
+>
+> ⚠ **E «dove il compositore non lo sa fare la voce è spenta» vale per intero**: il server risponde
+> `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` e il client **DEVE** mostrarla spenta (`RCP.md` §7.1).
+> Non si finge che sia riuscito.
 
 ### 6.5 Multi-monitor
 

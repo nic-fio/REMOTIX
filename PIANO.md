@@ -734,6 +734,21 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
 **Produce**: la tela concordata all'attacco, la vista che riscala, il riattacco a misura diversa.
 
+> ⭐⭐ **METÀ È ARRIVATA NELLA FASE 4** — la notte del 15 agosto 2026, perché `DECISIONI.md`
+> §5.0-sexies l'ha resa la cura di quattro sintomi del mouse e del video, non un lavoro di
+> geometria. Sono già fatti e misurati: **la tela concordata all'attacco**, **il riattacco a misura
+> diversa** (`SESSIONE` concede la tela che il palco ha già) e il **ridimensionamento a caldo**
+> (`?adatta=segui`). Vedi `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+>
+> ⛔ **E quel che di questa fase resta APERTO, per intero:**
+> - il **ripiego su KWin ≤ 6.7.4 dichiarato nel registro**, che è il banco nominato qui sotto;
+> - ⛔ **il banco del riattacco che batte un tasto e muove il puntatore DOPO** — la riga qui sotto
+>   che parla dei dispositivi ricreati. `[M]` il 15 agosto si è visto nel registro che al cambio di
+>   geometria `libei` **ricrea davvero** i dispositivi assoluti («regione del puntatore per chiave»,
+>   quattro volte di fila), e che `input.c` li riaggancia — ⚠ ma a battere un tasto dopo il
+>   riattacco **non ci ha ancora provato nessuno**;
+> - il **multi-monitor** e tutto il resto di §6.5.
+
 **L'utente vede**: ridimensiona la finestra e l'immagine si adatta **senza che le finestre dentro
 si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la sessione adattata.
 

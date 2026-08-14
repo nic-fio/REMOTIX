@@ -182,6 +182,21 @@ const char *mutter_monitor_prodotto(const MutterSessione *sessione);
  */
 void mutter_monitor_conteggi(const MutterSessione *sessione, guint *prima, guint *dopo);
 
+/* ⛔⭐⭐ LA SCALA DEL NOSTRO MONITOR LOGICO — guardia 2 di `DECISIONI.md`
+ *     §5.0-sexies, e non e' un dato di diagnosi: e' una condizione di servizio.
+ *
+ * `[M]` 14 agosto 2026: con `org.gnome.desktop.interface scaling-factor = 2` i
+ * pixel del flusso restano quelli chiesti ma il monitor LOGICO prende scala 2,0,
+ * e il layout diventa `roundf(2133/2) x 2 = 2134 != 2133`.  ⛔ Quel layout **e'
+ * lo spazio delle coordinate dell'input**: il puntatore finisce altrove, e
+ * nessuna riga lo dice.  E' il sintomo che l'utente ha descritto per due giorni.
+ *
+ * ⚠ Si guarda il NOSTRO monitor e non il peggiore della macchina: un portatile
+ *   con lo schermo interno hi-dpi non ha nessun difetto, e la peggiore direbbe
+ *   2,0.
+ * ⛔ `-1` = non si e' potuta leggere, e NON vuol dire 1,0. */
+double mutter_scala_nostra(const MutterSessione *sessione);
+
 /* Ferma il CONTROLLO — e con lui la cattura — e libera tutto.  ⛔ Ogni monitor
  * virtuale non smontato resta attaccato a Mutter. */
 void mutter_chiudi(MutterSessione *sessione);

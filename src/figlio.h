@@ -157,6 +157,34 @@ typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
                               int16_t attivo_x, int16_t attivo_y,
                               const uint8_t *immagine, size_t byte);
 
+/* ⭐⭐ §7.1 — LA RISPOSTA ALLA TELA, e attraversa il confine nel verso del
+ *     cursore: la domanda esce con `figli_ritela()`, la risposta rientra di qui.
+ *
+ * ⛔ PERCHE' NON BASTAVA GUARDARE I FOTOGRAMMI, che e' quel che faceva la prima
+ *    stesura di questa catena: dal fotogramma si vede che la misura e' cambiata,
+ *    ⚠ ma non si vede **a quale richiesta risponde** — e i tre casi che non si
+ *    distinguono guardando i pixel sono tutti frequenti:
+ *
+ *      · il palco ha GIA' quella misura ⇒ non arrivera' nessun fotogramma nuovo,
+ *        e chi aspetta aspetterebbe il fondo dei tre secondi per niente;
+ *      · il palco non c'e' o non ce l'ha fatta ⇒ il fatto e' noto SUBITO, di la';
+ *      · due richieste incatenate — l'utente che trascina il bordo — ⇒ il
+ *        fotogramma della PRIMA verrebbe preso per la risposta della SECONDA, e
+ *        il desktop si assesterebbe sulla misura sbagliata **senza che nessun
+ *        conto se ne accorgesse**.
+ *
+ * `voluta_*`  la misura che era stata chiesta al palco: serve a riconoscere la
+ *             richiesta, non a dichiarare un esito.
+ * `avuta_*`   quel che il palco ha davvero.  ⛔ `0x0` = **non ce l'ha fatta**, ed
+ *             e' un fatto diverso da «ci sta provando» (`CODER.md` §3.10).
+ *
+ * ⚠ E arriva anche quando nessuno aveva chiesto niente: il palco puo' cambiare
+ *   misura da se' (un rimontaggio dopo una caduta della sessione grafica).  Chi
+ *   riceve decide che farne — qui si riferisce un fatto. */
+typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
+                           uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
+                           uint32_t avuta_a);
+
 /* Accende la tabella dei figli.  ⛔ Non genera niente: qui non si sa ancora
  * chi entrera'.
  *
@@ -169,7 +197,7 @@ typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
  *                    non e' sua, il rilievo non esce e la riga lo dice. */
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioDeposito deposita, FiglioCongedo congeda,
-                     FiglioCursore cursore, void *ctx);
+                     FiglioCursore cursore, FiglioTela tela, void *ctx);
 
 /* ⛔ Spegne tutti i figli e aspetta che siano morti.  ⚠ ASPETTA, e va detto:
  * sta **dopo** l'ultimo giro del ciclo `poll`, come `aiutante_spegni()` —
@@ -289,6 +317,28 @@ enum {
 
 bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b);
+
+/* ⭐⭐ «LA TELA DEL SERVER PRENDE LA MISURA DELLA TELA DEL CLIENT» — la catena
+ *     che il 14 agosto 2026 mancava, e con lei quattro sintomi (`DECISIONI.md`
+ *     §5.0-sexies, `fasi/rapporti/F4-IN-12`):
+ *
+ *   · le bande nere laterali      le due tele combaciano ⇒ niente da impaginare
+ *   · il testo interpolato        scala 1 ⇒ nessuno ricampiona l'immagine
+ *   · il ri-attacco a misura       `[M]` Mutter cambia a caldo in 41,6 ms,
+ *     diversa                      labwc in 5,1 ms
+ *   · ⭐⭐ i 4 secondi fra login    `pw_stream_update_params()` E' un riavvio del
+ *     e desktop                    flusso, e un riavvio CONSEGNA un buffer: su
+ *                                  Wayland il compositore manda solo quando la
+ *                                  scena cambia, e un desktop appena acceso e'
+ *                                  fermo (`[M]` 4,4 s, 659 «attese a vuoto»)
+ *
+ * ⛔ Torna `true` quando la DOMANDA e' partita, ⚠ non quando la tela e'
+ *    cambiata: fra le due c'e' un compositore che puo' concedere altro (§4.5),
+ *    dire «riuscito» senza fare niente (`[M]` labwc) o non farcela.  ⇒ Chi
+ *    aspetta l'esito lo legge nel FOTOGRAMMA: e' il primo che arriva alla misura
+ *    nuova, e il campo `larghezza`/`altezza` di `FiglioDeposito` lo porta. */
+bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
+                  uint32_t altezza);
 
 /* ⛔⭐ RICHIEDE A OGNI FIGLIO «CHI SEI», al massimo una volta ogni minuto.
  *

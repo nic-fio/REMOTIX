@@ -90,7 +90,7 @@ chiudesse a ogni sorpresa passerebbe questo banco al completo.
 |---|---|---|
 | 2 (§6.3) | un datagram di 4 byte, o con `tipo` != `0x0401`, si **scarta** | l'audio non esiste prima della **fase 7** |
 | 3 (§7.1) | il **secondo di grazia** sulle coordinate vecchie dopo `TELA(ADATTATA)` | `ADATTA_TELA` e l'input non esistono prima della **fase 6** |
-| 4 (§7.1) | `ADATTA_TELA(1921, 1081)` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **con la sessione ancora aperta** | idem — e il server della fase 1 il tipo `0x000B` non lo conosce affatto: cade nel ramo `default` di `banchi/rcp/rcp.c` come un tipo inventato |
+| 4 (§7.1) | una misura **fuori dai limiti** in `ADATTA_TELA` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **con la sessione ancora aperta** | ⭐ **non è più vero dal 15 agosto 2026**: `ADATTA_TELA` è servito, e il caso è provato da `banchi/04-b31-tela.c` (casi 5 e 17). ⚠ E l'esempio che stava qui — `1921×1081` — **era sbagliato**: sta DENTRO i limiti di §4.5 ed è dispari, quindi si tronca a `1920×1080` e si concede. Fuori dai limiti è, per esempio, `1600×230` (l'altezza minima è 240) |
 | 5 (§5.2, §7.4) | due `RICHIEDI_CHIAVE` a meno di 200 ms: la seconda **si puo' ignorare** | `RICHIEDI_CHIAVE` non esiste prima della **fase 3** |
 
 ⚠ **Scriverli qui oggi darebbe rosso su un messaggio che nessuno ha ancora

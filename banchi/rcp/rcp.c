@@ -418,6 +418,48 @@ struct rcp_sessione {
 	 * due volte non fa danno ma scrive due righe che dicono cose diverse
 	 * sullo stesso fatto. */
 	bool inp_rilasciato;
+
+	/* ⛔⭐⭐ L'`ADATTA_TELA` GIRATA AL PALCO E NON ANCORA RISPOSTA — §7.1, e la
+	 *     catena `figli_ritela()` → `cattura_ridimensiona()` (`DECISIONI.md`
+	 *     §5.0-sexies).
+	 *
+	 * ⛔ ESISTE PERCHE' LA RISPOSTA NON TORNA DA DOVE PARTE LA DOMANDA.  Il
+	 *    palco sta in un altro processo, e l'unico modo di sapere che il
+	 *    compositore ha obbedito e' **vedere arrivare un fotogramma alla misura
+	 *    nuova**: puo' volerci qualche decina di millisecondi (`[M]` Mutter 41,6
+	 *    ms, labwc 5,1 ms), puo' arrivarne uno di misura DIVERSA da quella
+	 *    chiesta (§4.5 lo permette), e puo' non arrivarne nessuno.
+	 *
+	 * ⛔ E QUESTO E' PRECISAMENTE IL MOTIVO PER CUI SERVE UN'ATTESA CON UN
+	 *    FONDO: §7.1 impone che *«a ogni `ADATTA_TELA` il server DEVE rispondere
+	 *    con un `TELA`, riuscito o no.  Un silenzio lascia il client ad
+	 *    aspettare per sempre»* — e sul client quel silenzio non e' solo
+	 *    un'attesa: §6.2 gli fa TRATTENERE i fotogrammi finche' una richiesta e'
+	 *    senza risposta, cioe' gli fa crescere la coda in memoria.
+	 *
+	 * ⚠ `tela_volo_da == 0` insieme a `tela_volo` falso: nessuna richiesta in
+	 *   volo.  E se ne arriva una seconda mentre la prima e' in volo, la seconda
+	 *   SOSTITUISCE la prima e il `TELA` che uscira' vale per tutt'e due: il
+	 *   conto sul client scenderebbe di uno solo — ⛔ per questo la prima si
+	 *   RISPONDE prima di accettare la seconda (vedi `T_ADATTA_TELA`). */
+	bool tela_volo;
+	uint32_t tela_volo_l, tela_volo_a;
+	uint64_t tela_volo_da;
+	/* ⛔ DA QUANDO il palco consegna una misura diversa dalla tela in vigore
+	 *    SENZA che nessuno gliel'abbia chiesto.  ⚠ Zero = sono d'accordo.
+	 *
+	 * ⛔ Non e' un doppione di `tela_volo_da`, ed e' l'altro caso della stessa
+	 *    famiglia: li' il disaccordo lo abbiamo voluto noi e si aspetta che
+	 *    finisca; qui non lo ha voluto nessuno, e la prima mossa e' **chiedere
+	 *    al palco di tornare** alla tela in vigore.  Se dopo
+	 *    `RCP_TELA_ATTESA_MS` non e' tornato, si adotta la sua misura: una
+	 *    sessione con una tela inattesa vale piu' di una sessione che non vede
+	 *    un pixel (`SPECIFICHE.md` §8.3, e I1 — «una sessione brutta vale piu'
+	 *    di una sessione chiusa»). */
+	uint64_t tela_disaccordo_da;
+	/* Quanto si aspetta prima di richiedere al palco di tornare: raddoppia a
+	 * ogni tentativo andato a vuoto, fino a `RCP_TELA_RICHIAMO_MAX_MS`. */
+	uint64_t tela_disaccordo_attesa;
 };
 
 /* Dichiarata qui perche' il limitatore dei tentativi, qui sotto, DEVE poter
@@ -2000,6 +2042,57 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		    chiesta_l, chiesta_a, s->max_l, s->max_a, tl, ta);
 	}
 
+	/* ⛔⭐⭐ E PRIMA DI CONCEDERE, SI CHIEDE CHE MISURA HA IL PALCO — la cura
+	 *     del RI-ATTACCO, `DECISIONI.md` §5.0-sexies («⏳ per quando si
+	 *     affrontera' il ri-attacco: la soluzione e' gia' misurata»).
+	 *
+	 * ⛔ Il caso: il palco sopravvive al client (invariante I4), la tela nasce a
+	 *    ogni attacco (§5.0).  Chi si stacca dal DeX con la tela a 1912x1044 e si
+	 *    riattacca dal portatile chiede 1920x1080 — e il palco continua a
+	 *    consegnare 1912x1044.  §6.2 vieta di spedire un fotogramma la cui misura
+	 *    non e' la tela in vigore ⇒ **zero pixel**, e la sola riga che lo direbbe
+	 *    sarebbe «tela in vigore X ma il fotogramma e' Y», detta una volta.
+	 *
+	 * ⇒ Si concede quel che il palco HA, e §4.5 lo permette per iscritto: «la
+	 *   tela concessa puo' essere diversa da quella chiesta».  ⭐ Poi la pagina
+	 *   manda il suo `ADATTA_TELA` e si arriva dove si voleva — ma passando per
+	 *   uno stato in cui i pixel arrivano invece che per uno in cui non arrivano.
+	 *
+	 * ⚠ E i limiti si ricontrollano TUTTI, perche' la misura del palco non e'
+	 *   passata da questo cancello: §4.5 (320..7680 x 240..4320, pari) e il tetto
+	 *   del decodificatore di QUESTO client.  ⛔ Se non li passa non si concede e
+	 *   non si tace: se ne occupa `rcp_tela_concessa()`, che al primo fotogramma
+	 *   chiedera' al palco di tornare. */
+	if (s->g.tela_del_palco) {
+		uint32_t pl = 0, pa = 0;
+		if (s->g.tela_del_palco(s->g.ctx, &pl, &pa) && pl && pa
+		    && (pl != tl || pa != ta)) {
+			if (pl < 320 || pl > 7680 || pa < 240 || pa > 4320 || (pl % 2)
+			    || (pa % 2))
+				reg(s, "⚠ il palco ha la tela %ux%u, che §4.5 non ammette in "
+				       "`SESSIONE` (320..7680 x 240..4320, pari): concedo %ux%u "
+				       "come chiesto, e al primo fotogramma si chiedera' al "
+				       "palco di venire qui",
+				    pl, pa, tl, ta);
+			else if (s->max_l && (pl > s->max_l || pa > s->max_a))
+				reg(s, "⚠ il palco ha la tela %ux%u, oltre il "
+				       "video.misura_massima di questo client (%ux%u): concedo "
+				       "%ux%u, e al primo fotogramma si chiedera' al palco di "
+				       "venire qui",
+				    pl, pa, s->max_l, s->max_a, tl, ta);
+			else {
+				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): chiesta la tela %ux%u, ma "
+				       "il palco di %s ne ha gia' una — %ux%u — e sopravvive al "
+				       "client (I4).  CONCESSA quella del palco: cosi' i "
+				       "fotogrammi arrivano da subito, e la pagina puo' chiedere "
+				       "la sua misura con `ADATTA_TELA`",
+				    tl, ta, s->utente, pl, pa);
+				tl = pl;
+				ta = pa;
+			}
+		}
+	}
+
 	uint8_t corpo[128];
 	scrittore w = {corpo, sizeof corpo, 0, false};
 	sc_byte(&w, 1); /* 1 = NUOVA */
@@ -2175,19 +2268,34 @@ bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
 	if (fuori_a)
 		*fuori_a = 0;
 	/* ⛔ Il tetto si controlla PRIMA di troncare: troncare 100000 al pari darebbe
-	 * 100000, cioe' un numero ancora capace di uccidere il compositore. */
-	if (larghezza < RCP_TELA_MINIMA || altezza < RCP_TELA_MINIMA ||
-	    larghezza > RCP_TELA_MASSIMA || altezza > RCP_TELA_MASSIMA)
+	 * 100000, cioe' un numero ancora capace di uccidere il compositore.
+	 *
+	 * ⛔⭐ E I LIMITI SONO QUELLI DI §4.5, PER LATO — corretti la notte del 15
+	 *     agosto 2026, refutando.  La prima stesura usava 200..8192 **su
+	 *     entrambi i lati**, e `RCP.md` §4.5 e' normativo: *«larghezza e altezza
+	 *     della tela DEVONO stare fra 320x240 e 7680x4320»*.  ⚠ Le due regole
+	 *     erano gia' divergenti — `ATTACCA` applicava §4.5 e `ADATTA_TELA` no —
+	 *     ed era **irraggiungibile** finche' `ADATTA_TELA` rispondeva sempre
+	 *     `COMPOSITORE_INCAPACE`.  ⛔ Il caso concreto: si stringe il bordo
+	 *     inferiore della finestra, `ADATTA_TELA(1600, 230)` veniva concessa, e
+	 *     al RI-ATTACCO la stessa misura veniva rifiutata da `ATTACCA` — il
+	 *     server che non concede in `SESSIONE` una tela che aveva concesso lui
+	 *     stesso in `TELA`.
+	 *
+	 * ⚠ E il tetto vero del compositore resta sotto: `[M]` oltre 16384 per lato
+	 *   `gnome-shell` muore, e 7680 e' molto sotto — vedi il riquadro in `rcp.h`. */
+	if (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA ||
+	    larghezza > RCP_TELA_L_MASSIMA || altezza > RCP_TELA_A_MASSIMA)
 		return false;
 	/* ⚠ In GIU', sempre: verso l'alto si uscirebbe dalla finestra del browser, e
 	 * il pixel di troppo tornerebbe come banda o come scala — cioe' come la cosa
 	 * che questa decisione toglie. */
 	l = larghezza & ~1u;
 	a = altezza & ~1u;
-	/* ⛔ E il troncamento non puo' far scendere sotto il minimo: 201 -> 200 e'
+	/* ⛔ E il troncamento non puo' far scendere sotto il minimo: 321 -> 320 e'
 	 * ancora ammesso, ma la regola si scrive invece di fidarsi che i numeri
 	 * tornino. */
-	if (l < RCP_TELA_MINIMA || a < RCP_TELA_MINIMA)
+	if (l < RCP_TELA_L_MINIMA || a < RCP_TELA_A_MINIMA)
 		return false;
 	if (fuori_l)
 		*fuori_l = l;
@@ -2270,6 +2378,207 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
 	 *    campi di misura devono dire la tela **in vigore dopo**, ed e' l'unico
 	 *    ordine in cui possono dirla senza copiarla in una variabile a parte. */
 	manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
+}
+
+/* ⛔⭐⭐ «IL PALCO DEVE SERVIRE LA TELA IN VIGORE» — e quando non lo fa, glielo si
+ *     RICHIEDE, con un'attesa che cresce.
+ *
+ * ⛔ E' l'unica uscita onesta dal disaccordo, e la ragione e' del protocollo:
+ *    §6.2 vieta di spedire un fotogramma la cui misura non e' la tela in vigore,
+ *    e §7.1 non da' al server nessun modo di cambiare la tela **di sua
+ *    iniziativa** — un `TELA` non richiesto e' `ERRORE_PROTOCOLLO` per il
+ *    client.  ⇒ Delle due parti in disaccordo, quella che deve muoversi e' il
+ *    palco, che e' nostro.
+ *
+ * ⚠ E l'attesa cresce perche' il caso in cui non si muove esiste (un compositore
+ *   che non sa ridimensionare): senza, questa riga chiederebbe la stessa cosa a
+ *   ogni fotogramma — sessanta rinegoziazioni al secondo, che e' la forma dei
+ *   30,8 GB di registro del 14 agosto in un altro punto della catena.
+ *
+ * ⚠ Nel frattempo la sessione mostra l'ultima immagine buona: brutta e viva
+ *   (I1).  Il registro lo dice a ogni tentativo, cosi' chi guarda distingue «il
+ *   desktop e' fermo» da «il desktop non c'e' piu'». */
+static void tela_richiama_il_palco(rcp_sessione *s, uint64_t ora_ms)
+{
+	if (!s->g.ritela) {
+		if (!s->tela_disaccordo_da) {
+			s->tela_disaccordo_da = ora_ms;
+			reg(s, "⛔ il palco non e' alla tela in vigore %ux%u e non ho un "
+			       "gancio per chiedergli di venirci: da qui i fotogrammi si "
+			       "scartano tutti (§6.2), e questa riga e' l'unica che lo dice",
+			    s->tela_l, s->tela_a);
+		}
+		return;
+	}
+	if (s->tela_disaccordo_da
+	    && ora_ms - s->tela_disaccordo_da < s->tela_disaccordo_attesa)
+		return; /* si e' gia' chiesto da poco: non si insiste a ogni fotogramma */
+
+	if (!s->tela_disaccordo_da) {
+		s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MS;
+		reg(s, "⛔ il palco non e' alla tela in vigore %ux%u: §6.2 vieta di "
+		       "spedire un fotogramma di misura diversa, quindi da qui non parte "
+		       "piu' niente.  Gli richiedo %ux%u — e insistero' con un'attesa che "
+		       "cresce, perche' un `TELA` che nessuno ha chiesto farebbe chiudere "
+		       "la sessione al client (§6.2)",
+		    s->tela_l, s->tela_a, s->tela_l, s->tela_a);
+	} else {
+		s->tela_disaccordo_attesa *= 2;
+		if (s->tela_disaccordo_attesa > RCP_TELA_RICHIAMO_MAX_MS)
+			s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MAX_MS;
+		reg(s, "⛔ il palco non e' ancora alla tela in vigore %ux%u: richiesta "
+		       "ripetuta, prossima fra %llu ms",
+		    s->tela_l, s->tela_a,
+		    (unsigned long long)s->tela_disaccordo_attesa);
+	}
+	s->tela_disaccordo_da = ora_ms;
+	s->g.ritela(s->g.ctx, s->tela_l, s->tela_a);
+}
+
+/* ⭐⭐ LA RISPOSTA DEL PALCO — vedi `rcp.h`, e i tre casi sono tre.
+ *
+ * ⛔⛔ E QUEL CHE QUESTA FUNZIONE **NON FA PIU'**, perche' era il difetto piu'
+ *     grave della prima stesura: **non manda mai un `TELA` che nessuno ha
+ *     chiesto.**
+ *
+ *     La prima stesura, quando il palco cambiava misura da solo, adottava la sua
+ *     e spediva `TELA` per non lasciare la sessione senza pixel.  ⚠ Sembrava la
+ *     scelta gentile e ⛔ era fatale: §6.2 dice che il client trattiene una
+ *     misura mai annunciata **solo finche' ha una `ADATTA_TELA` senza risposta**,
+ *     e li' non ne ha nessuna ⇒ `ERRORE_PROTOCOLLO`, sessione chiusa.  E il
+ *     fotogramma viaggia su uno stream suo, quindi puo' arrivare **prima** del
+ *     `TELA` che lo giustificherebbe: la meta' delle volte.
+ *
+ * ⇒ Il palco deve servire la tela in vigore, e se non ci sta gli si RICHIEDE,
+ *   con un'attesa che cresce.  ⚠ Nel frattempo la sessione mostra l'ultima
+ *   immagine buona: e' brutta e viva, che e' quel che I1 impone. */
+void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
+                        uint32_t avuta_l, uint32_t avuta_a, uint64_t ora_ms)
+{
+	if (!s || !s->sessione_spedita)
+		return;
+
+	/* --- 1. il palco non ce l'ha fatta --------------------------------- */
+	/* ⛔ `0x0` non e' una misura: e' «non ce l'ho fatta», e va distinto dal
+	 *    silenzio (`CODER.md` §3.10).  ⇒ Se stava rispondendo a una richiesta
+	 *    NOSTRA, si risponde `NON_ORA` **adesso** invece di far scadere il fondo:
+	 *    tre secondi di attesa per una notizia che c'e' gia'. */
+	if (!avuta_l || !avuta_a) {
+		if (s->tela_volo && voluta_l == s->tela_volo_l
+		    && voluta_a == s->tela_volo_a) {
+			reg(s, "il palco non ha potuto dare la tela %ux%u: NON_ORA subito, "
+			       "senza aspettare il fondo di %u ms (§7.1).  La tela resta "
+			       "%ux%u",
+			    voluta_l, voluta_a, (unsigned)RCP_TELA_ATTESA_MS, s->tela_l,
+			    s->tela_a);
+			s->tela_volo = false;
+			manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
+			           s->tela_a);
+		}
+		return;
+	}
+
+	/* --- 2. il palco e' dove deve essere -------------------------------- */
+	if (avuta_l == s->tela_l && avuta_a == s->tela_a) {
+		if (s->tela_disaccordo_da) {
+			reg(s, "⭐ il palco e' tornato alla tela in vigore %ux%u: il "
+			       "disaccordo e' finito",
+			    avuta_l, avuta_a);
+			s->tela_disaccordo_da = 0;
+			s->tela_disaccordo_attesa = 0;
+		}
+		/* ⛔ E se la richiesta in volo chiedeva PROPRIO questa misura, e' una
+		 *    risposta: il palco ce l'aveva gia'.  ⚠ Senza questa riga, chiedere
+		 *    la misura che c'e' gia' mentre un'altra e' in volo non si chiuderebbe
+		 *    con nessun fotogramma — e si finirebbe sul fondo dei tre secondi. */
+		if (s->tela_volo && voluta_l == s->tela_volo_l
+		    && voluta_a == s->tela_volo_a) {
+			s->tela_volo = false;
+			reg(s, "TELA(ADATTATA) %ux%u: il palco quella misura ce l'aveva gia'",
+			    avuta_l, avuta_a);
+			manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
+		}
+		return;
+	}
+
+	/* --- 3. il palco e' altrove ----------------------------------------- */
+	/* ⛔⭐ E SI ADOTTA **SOLO** SE RISPONDE ALLA NOSTRA RICHIESTA, cioe' se
+	 *     `voluta` e' quella che abbiamo chiesto.  ⚠ La misura AVUTA puo' essere
+	 *     un'altra ancora — §4.5 lo permette, e su KWin < 6.8 e' la strada
+	 *     normale — ma il RICONOSCIMENTO si fa sulla domanda, non sulla risposta.
+	 *     ⛔ Riconoscere sulla risposta era il difetto delle due richieste
+	 *     incatenate: il fotogramma della prima veniva preso per la risposta
+	 *     della seconda, e il desktop si assestava sulla misura sbagliata. */
+	if (s->tela_volo && voluta_l == s->tela_volo_l
+	    && voluta_a == s->tela_volo_a) {
+		if (avuta_l != voluta_l || avuta_a != voluta_a)
+			reg(s, "⚠ il palco ha concesso %ux%u dove si era chiesto %ux%u: §4.5 "
+			       "lo permette, e il `TELA` che parte adesso porta la misura "
+			       "VERA",
+			    avuta_l, avuta_a, voluta_l, voluta_a);
+		/* ⛔ Il tetto del decodificatore NON si scavalca nemmeno qui (§4.5): una
+		 *    tela che il client non sa decodificare e' uno schermo nero
+		 *    dichiarato invece che taciuto — ma pur sempre nero. */
+		if (s->max_l && (avuta_l > s->max_l || avuta_a > s->max_a)) {
+			reg(s, "⛔ il palco ha dato %ux%u, oltre il video.misura_massima di "
+			       "questo client (%ux%u): NON la adotto, e rispondo NON_ORA.  "
+			       "La tela resta %ux%u e al palco si richiede quella",
+			    avuta_l, avuta_a, s->max_l, s->max_a, s->tela_l, s->tela_a);
+			s->tela_volo = false;
+			manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
+			           s->tela_a);
+			tela_richiama_il_palco(s, ora_ms);
+			return;
+		}
+		s->tela_volo = false;
+		s->tela_disaccordo_da = 0;
+		s->tela_disaccordo_attesa = 0;
+		/* ⛔ E il resto lo fa la funzione che c'era gia': cambia la tela in
+		 *    vigore, apre il secondo di grazia sulle coordinate, segna il debito
+		 *    della chiave (§5.2) e spedisce `TELA(ADATTATA)`. */
+		rcp_tela_adattata_ora(s, avuta_l, avuta_a, ora_ms);
+		return;
+	}
+
+	/* ⛔ Nessuna richiesta nostra, o una richiesta diversa: il palco e' altrove
+	 *    di suo.  ⚠ Puo' essere un rimontaggio dopo una caduta della sessione
+	 *    grafica, o il fotogramma in ritardo di una richiesta gia' scaduta.  ⇒ Si
+	 *    RICHIEDE la tela in vigore, e non si adotta niente. */
+	tela_richiama_il_palco(s, ora_ms);
+}
+
+bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
+{
+	if (!s || !s->tela_volo)
+		return false;
+	if (lar)
+		*lar = s->tela_volo_l;
+	if (alt)
+		*alt = s->tela_volo_a;
+	return true;
+}
+
+/* ⛔ §7.1 — IL FONDO DELL'ATTESA: «a ogni `ADATTA_TELA` il server DEVE rispondere
+ *    con un `TELA`, riuscito o no».  Chiamata da `rcp_tempo()`, cioe' dall'unico
+ *    posto che vede scorrere il tempo anche quando non arriva un byte.
+ *
+ * ⚠ E il ritardo NON si misura da quando e' arrivato il messaggio ma da quando
+ *   la domanda e' PARTITA verso il palco: sono lo stesso istante oggi, e il
+ *   giorno in cui in mezzo ci fosse una coda non lo sarebbero piu'. */
+static void tela_scade(rcp_sessione *s, uint64_t ora_ms)
+{
+	if (!s->tela_volo)
+		return;
+	if (ora_ms - s->tela_volo_da < RCP_TELA_ATTESA_MS)
+		return;
+	reg(s, "⛔ ADATTA_TELA %ux%u: il palco non ha consegnato un fotogramma a "
+	       "quella misura entro %u ms — rispondo NON_ORA (§7.1: un silenzio "
+	       "lascerebbe il client ad aspettare per sempre, e §6.2 gli fa "
+	       "TRATTENERE i fotogrammi finche' aspetta).  La tela resta %ux%u",
+	    s->tela_volo_l, s->tela_volo_a, (unsigned)RCP_TELA_ATTESA_MS, s->tela_l,
+	    s->tela_a);
+	s->tela_volo = false;
+	manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l, s->tela_a);
 }
 
 void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
@@ -4167,33 +4476,149 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    compositore non regge» — cioe' la sessione di chi ci ospita che
 			 *    muore in silenzio. */
 			if (!rcp_misura_ammessa(chiesta_l, chiesta_a, &buona_l, &buona_a)) {
-				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: fuori dai limiti "
-				       "%u..%u (`cattura.h`) — la tela resta %ux%u",
-				    chiesta_l, chiesta_a, RCP_TELA_MINIMA,
-				    RCP_TELA_MASSIMA, s->tela_l, s->tela_a);
+				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: fuori dai limiti di §4.5 "
+				       "(%ux%u .. %ux%u) — la tela resta %ux%u",
+				    chiesta_l, chiesta_a, RCP_TELA_L_MINIMA, RCP_TELA_A_MINIMA,
+				    RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, s->tela_l, s->tela_a);
 				manda_tela(s, 2 /* RIFIUTATA */, 2 /* MISURA_FUORI_LIMITI */,
 				           s->tela_l, s->tela_a);
 				break;
 			}
-			/* ⛔⛔ E QUI SI DICHIARA QUEL CHE NON SAPPIAMO ANCORA FARE.
+			/* ⛔⛔ E IL TETTO DEL DECODIFICATORE SI RISPETTA ANCHE QUI — §4.5:
+			 *     *«la tela concessa DEVE rispettare `video.misura_massima` se il
+			 *     client l'ha dichiarata»*.  ⚠ Difetto trovato refutando: questo
+			 *     controllo c'era in `ATTACCA` — dove riduce in proporzione, coi
+			 *     lati pari, e lo dichiara — e **non** qui.  ⇒ Un client hi-dpi
+			 *     che chiedesse la misura della propria finestra in pixel fisici
+			 *     poteva far concedere una tela che il suo decodificatore non
+			 *     regge, e da li' non si tornava indietro: lo schermo si ferma e
+			 *     non riparte.
 			 *
-			 * La misura e' buona, il compositore la reggerebbe — `[M]` 14 agosto
-			 * 2026: Mutter la cambia a caldo in **41,6 ms** senza perdere un
-			 * fotogramma, labwc in **5,1 ms** — ⛔ ma la catena che porta la
-			 * richiesta dal filo fino a `pw_stream_update_params()` **non e'
-			 * ancora scritta**: manca `figli_ritela()` e manca
-			 * `cattura_ridimensiona()`.
+			 * ⚠ Si RIDUCE invece di rifiutare, perche' il client non ha sbagliato
+			 *   niente — ha chiesto la misura della sua finestra — e `TELA` gli
+			 *   dira' che cosa ha ottenuto.  E' la stessa scelta di §4.5 in
+			 *   `ATTACCA`, con lo stesso conto. */
+			if (s->max_l && (buona_l > s->max_l || buona_a > s->max_a)) {
+				uint32_t prima_l = buona_l, prima_a = buona_a;
+				uint32_t cl, ca;
+				/* Il lato che limita di piu': confronto incrociato, senza
+				 * divisioni in virgola mobile. */
+				if ((uint64_t)buona_l * s->max_a <= (uint64_t)buona_a * s->max_l) {
+					ca = s->max_a;
+					cl = (uint32_t)(((uint64_t)buona_l * s->max_a) / buona_a);
+				} else {
+					cl = s->max_l;
+					ca = (uint32_t)(((uint64_t)buona_a * s->max_l) / buona_l);
+				}
+				/* ⛔ E il risultato ripassa dalla stessa regola: la riduzione
+				 *    puo' aver prodotto un dispari o un numero sotto il minimo, e
+				 *    riscrivere qui la parita' vorrebbe dire averla in due
+				 *    posti. */
+				if (!rcp_misura_ammessa(cl, ca, &buona_l, &buona_a)) {
+					reg(s, "ADATTA_TELA %ux%u RIFIUTATA: ridotta al "
+					       "video.misura_massima (%ux%u) darebbe %ux%u, che §4.5 "
+					       "non ammette — la tela resta %ux%u",
+					    chiesta_l, chiesta_a, s->max_l, s->max_a, cl, ca,
+					    s->tela_l, s->tela_a);
+					manda_tela(s, 2 /* RIFIUTATA */, 2 /* MISURA_FUORI_LIMITI */,
+					           s->tela_l, s->tela_a);
+					break;
+				}
+				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ADATTA_TELA %ux%u supera il "
+				       "video.misura_massima di questo client (%ux%u) — ridotta a "
+				       "%ux%u, proporzioni tenute, entrambe pari",
+				    prima_l, prima_a, s->max_l, s->max_a, buona_l, buona_a);
+			}
+			/* ⭐⭐ E QUI COMINCIA LA CATENA CHE IL 14 AGOSTO 2026 MANCAVA.
 			 *
-			 * ⇒ Si risponde `COMPOSITORE_INCAPACE`, che e' **vero oggi** e lo
-			 *   dice al client invece di lasciarlo aspettare.  ⚠ E il registro
-			 *   nomina il pezzo mancante: un ripiego che non dice **quale** riga
-			 *   manca e' un ripiego che nessuno va a togliere (`CODER.md` §4.2). */
-			reg(s, "ADATTA_TELA %ux%u → %ux%u ammessa, ma RIFIUTATA per ora: "
-			       "manca la catena `figli_ritela()` → `cattura_ridimensiona()` "
-			       "(`DECISIONI.md` §5.0-sexies, lavoro 3).  La tela resta %ux%u",
-			    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
-			manda_tela(s, 2 /* RIFIUTATA */, 1 /* COMPOSITORE_INCAPACE */,
-			           s->tela_l, s->tela_a);
+			 * ⚠ Fino a ieri questo punto rispondeva `COMPOSITORE_INCAPACE`
+			 *   NOMINANDO il pezzo mancante — *«manca `figli_ritela()` →
+			 *   `cattura_ridimensiona()`»* — ed era vero.  Adesso i due pezzi ci
+			 *   sono, e la risposta non e' piu' una riga: e' un giro fino al
+			 *   compositore e ritorno.
+			 *
+			 * ⛔ IL PRIMO CASO E' QUELLO CHE NON DEVE MUOVERE NIENTE: la misura
+			 *    chiesta e' gia' quella in vigore.  ⚠ Non e' un caso di scuola —
+			 *    e' il piu' frequente di tutti: il client manda la misura della
+			 *    sua finestra a ogni ridimensionamento, e chi trascina un bordo
+			 *    ne manda venti al secondo.  Girarla al palco vorrebbe dire
+			 *    riavviare il flusso per niente, cioe' **perdere un fotogramma a
+			 *    ogni richiesta inutile** (`kde.md` §8.2-bis).
+			 *
+			 * ⚠ Ma solo se non c'e' gia' una richiesta in volo: se ce n'e' una, il
+			 *   palco sta andando ALTROVE, e questa e' un ripensamento che va
+			 *   girato per davvero. */
+			if (buona_l == s->tela_l && buona_a == s->tela_a && !s->tela_volo) {
+				/* ⛔ Risponde `TELA(ADATTATA)` e NON apre il debito della chiave:
+				 *    lo fa la forma «misura che c'era gia'» di
+				 *    `rcp_tela_adattata_ora()`, che esiste per questo. */
+				rcp_tela_adattata_ora(s, buona_l, buona_a, ora);
+				break;
+			}
+
+			/* ⛔ NESSUN GANCIO = COMPOSITORE_INCAPACE, ed e' la risposta VERA per
+			 *    chi ci ospita senza un palco: i banchi in-processo della fase 1
+			 *    e l'innesto di `banchi/01-b3-rcp-innesta.py`.  §7.1: «se il
+			 *    compositore non sa ridimensionare, il server DEVE rispondere con
+			 *    `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)`, e il client DEVE
+			 *    mostrare la voce come spenta.  NON DEVE fingere che sia
+			 *    riuscito». */
+			if (!s->g.ritela) {
+				reg(s, "ADATTA_TELA %ux%u → %ux%u ammessa, ma questo ospite non ha "
+				       "un palco da ridimensionare (gancio `ritela` non "
+				       "collegato): COMPOSITORE_INCAPACE, e la tela resta %ux%u",
+				    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
+				manda_tela(s, 2 /* RIFIUTATA */, 1 /* COMPOSITORE_INCAPACE */,
+				           s->tela_l, s->tela_a);
+				break;
+			}
+
+			/* ⛔⭐ UNA RICHIESTA IN VOLO SI RISPONDE PRIMA DI ACCETTARNE UN'ALTRA
+			 *     — §7.1: «l'n-esimo `TELA` risponde all'n-esima `ADATTA_TELA`».
+			 *
+			 * ⚠ Il client TIENE IL CONTO delle richieste senza risposta (§6.2, e
+			 *   ci decide se trattenere un fotogramma o chiudere la sessione).
+			 *   Se due `ADATTA_TELA` ricevessero un `TELA` solo, quel conto non
+			 *   tornerebbe piu' a zero e il client tratterrebbe fotogrammi per
+			 *   sempre — cioe' la sua memoria.  ⛔ Chi trascina un bordo ne manda
+			 *   proprio due di fila: non e' un caso raro, e' IL caso. */
+			if (s->tela_volo) {
+				reg(s, "ADATTA_TELA %ux%u arrivata mentre %ux%u era ancora in volo "
+				       "verso il palco: rispondo NON_ORA alla PRIMA (§7.1 vuole un "
+				       "TELA per ciascuna) e giro la seconda",
+				    buona_l, buona_a, s->tela_volo_l, s->tela_volo_a);
+				manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
+				           s->tela_a);
+				s->tela_volo = false;
+			}
+
+			/* ⛔ E il gancio dice se la DOMANDA e' partita, non se la tela e'
+			 *    cambiata: la prova arriva con un fotogramma, e la porta qui
+			 *    dentro `rcp_tela_concessa()`. */
+			if (!s->g.ritela(s->g.ctx, buona_l, buona_a)) {
+				reg(s, "⛔ ADATTA_TELA %ux%u → %ux%u: la richiesta NON e' partita "
+				       "verso il palco (nessun figlio, o il socket non l'ha "
+				       "presa).  NON_ORA, e la tela resta %ux%u",
+				    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
+				manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
+				           s->tela_a);
+				break;
+			}
+			s->tela_volo = true;
+			s->tela_volo_l = buona_l;
+			s->tela_volo_a = buona_a;
+			s->tela_volo_da = ora;
+			/* ⛔ E il disaccordo di prima si CHIUDE: da adesso il palco ha una
+			 *    richiesta nuova, e datare il fondo su un disaccordo vecchio lo
+			 *    farebbe scadere all'indietro. */
+			s->tela_disaccordo_da = 0;
+			s->tela_disaccordo_attesa = 0;
+			reg(s, "⭐ ADATTA_TELA %ux%u → %ux%u GIRATA al palco (`figli_ritela()` "
+			       "→ `cattura_ridimensiona()`).  ⚠ Nessun `TELA` adesso: la "
+			       "risposta e' il primo fotogramma alla misura nuova, e se non "
+			       "arriva entro %u ms si risponde NON_ORA (§7.1)",
+			    chiesta_l, chiesta_a, buona_l, buona_a,
+			    (unsigned)RCP_TELA_ATTESA_MS);
 			break;
 		}
 		default: {
@@ -4673,6 +5098,13 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		 *   `rcp_ricevi()`/`rcp_ricevi_input()` insieme al posto ripreso. */
 		rilascia_al_distacco(s, "silenzio di §5.3");
 	}
+
+	/* ⛔ §7.1 — il fondo dell'attesa dell'`ADATTA_TELA`.  ⚠ Sta QUI, e non dove
+	 *    arrivano i fotogrammi, per la lezione di `regola_battito` (pagata
+	 *    l'11 agosto con B6): una scadenza che scatta solo quando arriva
+	 *    qualcosa e' una scadenza che non scatta mai — e il caso che conta e'
+	 *    proprio quello in cui non arriva niente. */
+	tela_scade(s, ora);
 
 	uint64_t tetto = 0;
 	const char *quale = NULL;

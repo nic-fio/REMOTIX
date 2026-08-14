@@ -392,10 +392,18 @@ const TIPO = {
   RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007, VISTA: 0x0008,
   CURSORE_FORMA: 0x000A, CONGEDO: 0x000C,
   /* ⭐ I due del video, §7.1: la pagina CHIEDE una chiave, il server dice
-     l'esito di un `ADATTA_TELA`.  ⚠ `ADATTA_TELA` non lo manda ancora nessuno
-     alla fase 2 — ma il `TELA` va SAPUTO LEGGERE lo stesso, o il cambio di tela
-     arriverebbe come «un messaggio che non capisco» (§3). */
+     l'esito di un `ADATTA_TELA`. */
   RICHIEDI_CHIAVE: 0x000D, TELA: 0x000E,
+  /* ⭐⭐ E `ADATTA_TELA` ADESSO LO MANDA QUALCUNO — 15 agosto 2026.
+     ⚠ Fino a ieri qui c'era scritto «non lo manda ancora nessuno alla fase 2»,
+       e con quella riga mancavano quattro cose insieme (`DECISIONI.md`
+       §5.0-sexies): le bande nere ai lati, il testo interpolato, il ri-attacco
+       a misura diversa e i quattro secondi fra il login e il desktop.
+     ⛔ Lo manda `chiedi_tela()`, e la misura e' quella della finestra di
+       QUESTA pagina: e' il senso della decisione — «la tela del server prende
+       la misura della tela del client», cosi' la scala vale 1 e la conversione
+       delle coordinate diventa l'identita'. */
+  ADATTA_TELA: 0x000B,
 };
 
 /* ⛔ Il byte ALTO del `tipo` dice il canale — §2.5, e si legge dai primi due
@@ -1271,6 +1279,55 @@ function misura_vista() {
   return [Math.max(1, Math.round(l * r)), Math.max(1, Math.round(a * r))];
 }
 
+/* ⛔⭐⭐ LA MISURA DA CHIEDERE CON `ADATTA_TELA` — `DECISIONI.md` §5.0-sexies,
+ *     e non e' la stessa cosa della vista anche quando i numeri coincidono.
+ *
+ *     La VISTA (§7.1) dice al server quanti bit spendere e non ha vincoli:
+ *     «qualunque misura da 1×1 in su e' legale, dispari compresa».  La TELA e'
+ *     il desktop vero: ha un minimo, un massimo, e i lati PARI.
+ *
+ * ⛔ I tre vincoli sono gli stessi di `rcp_misura_ammessa()` (`src/rcp.h`), e
+ *    sono qui per non farsi rifiutare — NON per farli rispettare: chi li fa
+ *    rispettare e' il server, e un client che si autorizzasse da se' sarebbe la
+ *    seconda autorita' sullo stesso numero.  ⚠ Se questa riga e quella
+ *    divergessero, il server risponderebbe `TELA(MISURA_FUORI_LIMITI)` — che e'
+ *    una risposta, non una sessione persa (`RCP.md:483` punto 4).
+ *
+ * ⛔ E SI TRONCA AL PARI IN GIU', mai in su: verso l'alto si uscirebbe dalla
+ *    finestra, e il pixel di troppo tornerebbe come banda o come scala — cioe'
+ *    come la cosa che questa decisione toglie.  ⚠ Il pixel perso (al massimo uno
+ *    per lato) e' sfondo della pagina, non immagine: non viaggia sul filo.
+ *
+ * ⚠ IL MINIMO E' L'ECCEZIONE, e va detta invece di lasciarla scoprire: sotto
+ *   320×240 **non esiste nessuna tela che il protocollo permetta di chiedere**
+ *   (§4.5), quindi li' si chiede il minimo — cioe' si arrotonda IN SU — e
+ *   l'avanzo torna come banda.  ⛔ La riga «mai in su» della prima stesura era
+ *   falsa proprio li', e il codice faceva gia' la cosa giusta: adesso lo dicono
+ *   tutt'e due.
+ *
+ * ⛔ E I QUATTRO NUMERI SONO QUELLI DI §4.5, PER LATO — corretti la notte del 15
+ *    agosto 2026, refutando: la prima stesura diceva 200..8192 su tutt'e due i
+ *    lati, che e' quel che diceva `rcp_misura_ammessa()` **e non quel che dice
+ *    l'arbitro**.  ⚠ Il caso concreto e' il bordo inferiore tirato su: una tela
+ *    alta 230 veniva chiesta, concessa, e poi RIFIUTATA da `ATTACCA` al
+ *    ri-attacco — il server che non concede una tela che aveva concesso lui.
+ *
+ * ⚠ E il tetto vero del compositore sta molto piu' su: `[M]` 14 agosto 2026,
+ *   oltre **16384** per lato `gnome-shell` MUORE, e su labwc `32768×32768`
+ *   uccide il compositore con zero righe di registro.  7680 e' sotto tutt'e
+ *   due. */
+const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 7680;
+const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 4320;
+function tela_da_chiedere() {
+  const v = misura_vista();
+  const p = (n, min, max) => {
+    n = Math.min(max, Math.max(min, Math.round(n)));
+    return n - (n % 2);
+  };
+  return [p(v[0], TELA_L_MINIMA, TELA_L_MASSIMA),
+          p(v[1], TELA_A_MINIMA, TELA_A_MASSIMA)];
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    ⛔⭐ IL GIRO COMPLETO, ED ERA GIA' NEL PROTOCOLLO SENZA CHE NESSUNO LO
         RACCOGLIESSE.
@@ -1654,8 +1711,9 @@ class Schermo {
    * ⛔ LA TELA NON CAMBIA, e la riga qui sotto non la tocca.  §7.1: «`VISTA`
    *    NON DEVE far cambiare la tela, e in RCP/1 non cambia nemmeno la misura
    *    di quel che si codifica».  ⚠ Cambiare la tela e' un'ALTRA cosa, si
-   *    chiama `ADATTA_TELA` (§7.1), viaggia sul filo, la decide l'utente
-   *    (`SPECIFICHE.md` §6.4) e a RCP/1 non la manda nessuno.  Qui non parte
+   *    chiama `ADATTA_TELA` (§7.1), viaggia sul filo e la manda `chiedi_tela()`
+   *    — all'attacco sempre, a finestra ridimensionata solo con `?adatta=segui`
+   *    (`SPECIFICHE.md` §6.4, `DECISIONI.md` §5.1 e §5.0-sexies).  Qui non parte
    *    nessun messaggio: si decide **come si dipinge quel che e' gia'
    *    arrivato**, e `this.tela_l`/`this.tela_a` — la tela in vigore, quella
    *    che le regole di §6.2 confrontano coi fotogrammi — non compaiono.
@@ -1721,9 +1779,15 @@ class Schermo {
      *   nessuno).  Fuori da li' si lascia decidere al motore, che interpola.
      *
      * ⚠ E questo e' un RIPIEGO, non la cura: la cura e' che la scala VALGA 1,
-     *   cioe' che le due tele combacino (`DECISIONI.md` §5.0-sexies).  Finche'
-     *   manca `figli_ritela()` la scala resta diversa da 1 e il testo resta
-     *   interpolato — meglio di «a pixel vicino», peggio del vero. */
+     *   cioe' che le due tele combacino (`DECISIONI.md` §5.0-sexies).
+     * ⭐ E DAL 15 AGOSTO 2026 LA CURA C'E': `chiedi_tela()` manda `ADATTA_TELA`
+     *   all'attacco con la misura di questa finestra, la catena
+     *   `figli_ritela()` → `cattura_ridimensiona()` la porta fino al
+     *   compositore, e il fotogramma torna della misura giusta ⇒ `s === 1`,
+     *   `pixelated`, e nessuno ricampiona niente.  ⚠ Il ripiego resta per i tre
+     *   casi in cui la scala 1 non si ottiene: `?adatta=no`, un compositore che
+     *   non sa ridimensionare (`TELA(RIFIUTATA)`), e i millisecondi fra la
+     *   richiesta e il primo fotogramma nuovo. */
     this.tela.style.imageRendering = (s === 1) ? "pixelated" : "auto";
     return { scala: s, larghezza: wl, altezza: wa };
   }
@@ -1981,12 +2045,33 @@ class Schermo {
       /* ⛔ Le due strade, e sono opposte: una misura GIA' STATA IN VIGORE dopo
          che la tolleranza si e' chiusa e' un server che sbaglia (§6.2, «da quel
          fotogramma in poi una misura vecchia e' ERRORE_PROTOCOLLO»); una misura
-         MAI IN VIGORE puo' essere il `TELA` ancora in volo — vedi `trattieni`. */
+         MAI IN VIGORE puo' essere il `TELA` ancora in volo — vedi `trattieni`.
+
+         ⛔⛔ MA LA CONDIZIONE DI §6.2 VIENE PRIMA DI TUTT'E DUE — cura del 15
+         agosto 2026, trovata refutando, e senza di essa questa riga CHIUDEVA UNA
+         SESSIONE SANA con il gesto piu' comune che ci sia:
+
+           finestra 1920×1080 → si stringe → `TELA(1600×900)`, prima chiave, la
+           tolleranza si chiude → si riallarga com'era → `ADATTA_TELA(1920×1080)`
+           → il fotogramma alla misura nuova SORPASSA il suo `TELA` (stream
+           indipendenti, §6.2 lo dichiara normale) → `storiche` contiene
+           1920×1080 ⇒ `ERRORE_PROTOCOLLO`.
+
+         L'utente leggeva «il server ha mandato qualcosa che non torna con RCP»
+         per aver trascinato un bordo e averlo rimesso dov'era, e nel registro
+         del server non c'era niente: nessuno aveva sbagliato.
+
+         ⇒ §6.2 dice che la grandezza e' «una richiesta in volo», non «la misura
+         che il client ha chiesto»: finche' una `ADATTA_TELA` e' senza risposta,
+         QUALUNQUE misura puo' essere quella che il `TELA` in arrivo concede —
+         anche una gia' stata in vigore.  Si trattiene, e si rigiudica quando il
+         `TELA` arriva. */
+      if (this.attese_tela > 0) return this.trattieni(i, dati);
       if (this.storiche.has(m))
         return this.errore_protocollo("fotogramma " + i.numero + " alla misura "
           + m + ", che e' stata in vigore ma non lo e' piu': la tolleranza si e' "
-          + "chiusa sulla prima chiave alla misura nuova, e la tela in vigore e' "
-          + in_vigore + " (§6.2)");
+          + "chiusa sulla prima chiave alla misura nuova, la tela in vigore e' "
+          + in_vigore + " e NESSUNA ADATTA_TELA e' senza risposta (§6.2)");
       return this.trattieni(i, dati);
     }
     if (m !== in_vigore) {
@@ -2135,13 +2220,18 @@ class Schermo {
    * chiama questa, e da qui in poi una misura mai annunciata si TRATTIENE
    * invece di chiudere.
    *
-   * ⚠ In RCP/1 non la chiama nessuno, ed e' detto invece che taciuto: la voce
-   *   «adatta il desktop a questa finestra» e' di `SPECIFICHE.md` §6.4 e questa
-   *   pagina non ce l'ha ancora.  ⛔ Finche' non c'e', `attese_tela` vale zero
-   *   sempre, e il ramo giusto e' quello che chiude — che e' esattamente quel
-   *   che §6.2 vuole.  La riga sta qui perche' il giorno in cui la voce si
-   *   accende il contatore non venga dimenticato: senza, il primo utente che
-   *   trascina la finestra si vedrebbe chiudere la sessione. */
+   * ⭐⭐ E DAL 15 AGOSTO 2026 LA CHIAMA QUALCUNO: `chiedi_tela()`, all'attacco
+   *     di ogni sessione.  ⚠ Qui c'era scritto *«in RCP/1 non la chiama
+   *     nessuno… il giorno in cui la voce si accende il contatore non venga
+   *     dimenticato: senza, il primo utente che trascina la finestra si
+   *     vedrebbe chiudere la sessione»*.
+   *
+   * ⭐ Quel giorno e' oggi, e il contatore non e' stato dimenticato — ⛔ ma il
+   *    caso che quella riga temeva e' ADESSO la strada normale, non piu'
+   *    un'ipotesi: il fotogramma alla misura nuova puo' arrivare **prima** del
+   *    `TELA` che la concede (viaggiano su stream diversi, e niente ne ordina
+   *    la consegna), e senza questo conto la pagina chiuderebbe una sessione in
+   *    cui nessuno ha sbagliato. */
   adatta_tela_chiesta() {
     this.attese_tela++;
     this.riga("ADATTA_TELA spedita: le richieste senza risposta sono adesso "
@@ -2462,9 +2552,82 @@ function rinegozia_vista() {
   quadro_vista = requestAnimationFrame(function () {
     quadro_vista = 0;
     schermo.adatta_vista();
+    /* ⭐⭐ E se l'utente ha acceso «segui la finestra», la TELA insegue la
+     *     cornice: vedi `chiedi_tela()`.  ⛔ Spento di suo — §5.1 e I6. */
+    if (ADATTA === "segui") tela_forse_chiedi("la finestra e' cambiata");
   });
 }
 addEventListener("resize", rinegozia_vista);
+
+/* ══ ⭐⭐ `ADATTA_TELA` — LA META' CLIENT DELLA CATENA, 15 agosto 2026 ═══════
+ *
+ * ⛔ LA DECISIONE, con le parole dell'utente (`DECISIONI.md` §5.0-sexies, 14
+ *    agosto 2026): *«abbiamo due tele: quella del server e quella del client…
+ *    se i compositori sanno dare la misura esatta, non servono nemmeno le
+ *    conversioni»*.  ⇒ La tela del server si chiede della misura della tela del
+ *    client ⇒ **scala 1**, conversione identita', e le bande non esistono.
+ *
+ * ⛔⭐ E I TRE MOMENTI SONO DIVERSI, perche' tre voci di `DECISIONI.md` dicono
+ *     cose diverse e vanno rispettate tutt'e tre:
+ *
+ *   1. ⭐ ALL'ATTACCO — **sempre**.  E' §5.0-sexies alla lettera, ed e' anche la
+ *      cura dei quattro secondi fra il login e il desktop: `[M]` 14 agosto,
+ *      4,4 s di richieste di chiave e 659 «attese a vuoto», perche' Mutter non
+ *      consegna finche' la scena e' ferma.  ⭐ `pw_stream_update_params()` E' un
+ *      riavvio del flusso, e un riavvio **consegna un buffer**: chiedere la
+ *      tela all'attacco fa arrivare il fotogramma.
+ *
+ *   2. ⚠ A FINESTRA RIDIMENSIONATA — **solo se acceso**, `?adatta=segui`.  §5.1
+ *      dice il contrario per la sessione viva — *«ridimensionare la finestra
+ *      non tocca mai il desktop: si adatta la vista»* — e la terza delle sue tre
+ *      ragioni non e' invecchiata: su KWin ridimensionare un output
+ *      **ridispone le finestre dell'utente**.  ⇒ Sta dietro un interruttore
+ *      spento (invariante I6), e chi lo accende sa che sta guardando una cosa
+ *      nuova.
+ *
+ *   3. ⛔ MAI, con `?adatta=no`: e' la pagina di ieri, e serve al confronto A/B
+ *      che il giudizio dell'utente richiede (`LEZIONI.md` §7.3 — a giudicare e'
+ *      lui, e per giudicare servono le due immagini).
+ *
+ * ⚠ E il conto di §6.2: ogni `ADATTA_TELA` spedita si dichiara allo `Schermo`
+ *   (`adatta_tela_chiesta()`), perche' da quel momento un fotogramma con una
+ *   misura mai annunciata si TRATTIENE invece di chiudere la sessione. */
+/* ⛔ Si legge da `?` **e** da `#`, come `video` e `disposizione` (righe 647 e
+ *    5691): un interruttore che si accende solo in un modo e' un interruttore
+ *    che meta' delle volte non si accende, e nessuno lo dice.  ⚠ E il `#` conta:
+ *    e' il modo che non tocca il server, cioe' quello che si usa quando si
+ *    confronta A/B una pagina gia' servita. */
+const ADATTA =
+  new URLSearchParams(location.search).get("adatta")
+  || new URLSearchParams(location.hash.replace(/^#/, "")).get("adatta")
+  || "attacco";
+
+/* ⛔ Lo riempie la stretta di mano, quando il canale di controllo esiste: prima
+ *   di `SESSIONE` non c'e' niente a cui mandarlo (§7.1 ammette `ADATTA_TELA`
+ *   solo a sessione aperta, e il server congeda chi lo manda prima). */
+let chiedi_tela = null;
+let tela_chiesta_l = 0, tela_chiesta_a = 0;
+let tela_attesa = 0;
+
+/* ⛔⭐ IL FONDO CONTRO LA RAFFICA — e non e' prudenza: trascinare il bordo di una
+ *    finestra produce **decine di `resize` al secondo**, e ogni `ADATTA_TELA`
+ *    girata al palco e' un `pw_stream_update_params()`, cioe' un riavvio del
+ *    flusso.  ⚠ Il server si difende da se' (rifiuta la misura che c'e' gia', e
+ *    risponde `NON_ORA` alla richiesta superata), ⛔ ma difendersi non e' gratis:
+ *    ogni riavvio inutile costa un fotogramma, e a venti al secondo il desktop
+ *    si vedrebbe SINGHIOZZARE mentre si trascina il bordo.
+ *
+ * ⚠ 250 ms e' il tempo in cui una mano si ferma fra due trascinamenti, non una
+ *   misura: `[?]` va guardato sul DeX vero, dove il bordo si trascina davvero. */
+const TELA_FONDO_MS = 250;
+function tela_forse_chiedi(perche) {
+  if (!chiedi_tela) return;
+  if (tela_attesa) clearTimeout(tela_attesa);
+  tela_attesa = setTimeout(function () {
+    tela_attesa = 0;
+    chiedi_tela(perche);
+  }, TELA_FONDO_MS);
+}
 
 /* ⛔⭐ E QUI C'ERA UN `ResizeObserver`, SCRITTO E POI RITIRATO IL 13 AGOSTO 2026,
  * PERCHE' IL SUO CASO NON ESISTE.  La riga resta come nota, perche' senza di
@@ -2591,6 +2754,17 @@ async function collega(utente, parola) {
      *    faccia, che e' la forma d'errore che tutto questo lavoro esiste per
      *    evitare. */
     window.REMOTIX_INPUT = null;
+    /* ⛔⭐ E CON LUI LA META' `ADATTA_TELA` — cura del 15 agosto 2026, trovata
+     *     refutando.  ⚠ Restavano tre cose vive su una sessione morta: il
+     *     mittente (`chiedi_tela`), il fondo armato a 250 ms, e il bersaglio.
+     *     ⛔ Il fondo che scattava DOPO la chiusura chiamava `manda()` su un
+     *     canale morto e, se quella `Promise` si risolveva lo stesso (scrittura
+     *     gia' accodata), faceva contare al `Schermo` un'`ADATTA_TELA` che non
+     *     e' mai partita: un'attesa aperta per sempre, e i fotogrammi trattenuti
+     *     con lei. */
+    if (tela_attesa) { clearTimeout(tela_attesa); tela_attesa = 0; }
+    chiedi_tela = null;
+    tela_chiesta_l = tela_chiesta_a = 0;
   };
 
   wt.closed.then((info) => {
@@ -3143,6 +3317,71 @@ async function collega(utente, parola) {
          non sarebbe mai stato letto.  Non si aspetta: la stretta di mano e'
          finita, e §4.4 vieta di bloccare il ciclo. */
       ascolta_controllo(canale, congeda);
+
+      /* ══ ⭐⭐ `ADATTA_TELA` — E DA QUI IN POI LA SCALA VALE 1 ═══════════════
+       *
+       * ⛔ SI INSTALLA DOPO `ascolta_controllo()`, e l'ordine e' l'unica cosa
+       *    che conta in queste righe: la risposta `TELA` arriva sul canale di
+       *    controllo, e mandare la domanda prima che qualcuno ascolti vorrebbe
+       *    dire non leggere mai la risposta.  ⚠ `ascolta_controllo` non si
+       *    aspetta (`await`): e' un ciclo asincrono che parte e resta li'. */
+      chiedi_tela = function (perche) {
+        const m = tela_da_chiedere();
+        /* ⛔⭐ NON si chiede la misura VERSO CUI SI STA GIA' ANDANDO — e il
+         *    numero da guardare NON e' la tela in vigore.  Cura del 15 agosto
+         *    2026, trovata refutando: la prima stesura confrontava con
+         *    `schermo.tela_l`, che resta la misura VECCHIA finche' il `TELA` non
+         *    risponde — fino a tre secondi.  ⇒ Questa sequenza lasciava il
+         *    desktop della misura sbagliata **per sempre e in silenzio**:
+         *
+         *      finestra 1400 → si trascina a 1600 → parte `ADATTA_TELA(1600)`
+         *      → si rimette a 1400 PRIMA che il `TELA` arrivi → il confronto
+         *      vede `tela_l` ancora 1400, crede che non ci sia niente da
+         *      chiedere, e non manda niente → arriva `TELA(1600)`.
+         *
+         *    Fine: desktop 1600 in una finestra 1400, scala 0,875, testo
+         *    interpolato — cioe' il difetto giudicato dall'utente il 14 agosto —
+         *    e nessun altro `resize` a correggerlo.
+         *
+         * ⇒ Si confronta con il BERSAGLIO: l'ultima misura chiesta se una
+         *   richiesta e' senza risposta, la tela in vigore altrimenti. */
+        const bers_l = tela_chiesta_l || schermo.tela_l;
+        const bers_a = tela_chiesta_a || schermo.tela_a;
+        if (m[0] === bers_l && m[1] === bers_a) {
+          nota("la tela " + m[0] + "×" + m[1] + " e' gia' quella "
+             + (tela_chiesta_l ? "CHIESTA e in attesa di risposta"
+                               : "in vigore")
+             + " (" + perche + "): nessuna ADATTA_TELA da mandare");
+          return;
+        }
+        tela_chiesta_l = m[0]; tela_chiesta_a = m[1];
+        canale.manda(TIPO.ADATTA_TELA,
+                     new Scrittore().u32(m[0]).u32(m[1]).byte())
+          .then(function () {
+            /* ⛔ Il conto di §6.2 si muove SOLO se il messaggio e' uscito
+             *    davvero: segnarlo prima vorrebbe dire aspettare per sempre un
+             *    `TELA` che risponde a una domanda mai partita — e con lui
+             *    trattenere fotogrammi che andrebbero giudicati subito. */
+            schermo.adatta_tela_chiesta();
+            nota("ADATTA_TELA " + m[0] + "×" + m[1] + " spedita (" + perche
+               + "): la tela del server prende la misura di questa finestra, "
+               + "cosi' la scala vale 1 e le bande spariscono "
+               + "(DECISIONI.md §5.0-sexies)");
+          })
+          .catch(function (e) {
+            nota("⛔ l'ADATTA_TELA non e' potuta uscire: " + e);
+          });
+      };
+      /* ⛔ E la prima parte SUBITO, non al primo ridimensionamento: e' il
+       *    momento in cui il desktop e' fermo e Mutter non consegnerebbe
+       *    niente — `[M]` 4,4 secondi di attesa il 14 agosto — e il riavvio del
+       *    flusso che questa richiesta provoca **fa arrivare il fotogramma**. */
+      if (ADATTA === "no")
+        nota("⚠ `?adatta=no`: questa pagina NON chiede la tela della propria "
+           + "misura.  E' il comportamento di prima del 15 agosto 2026 — "
+           + "bande ai lati, testo interpolato — e sta qui per il confronto");
+      else
+        chiedi_tela("l'attacco");
     }
   }
 }
@@ -3164,6 +3403,12 @@ async function ascolta_controllo(canale, congeda) {
     }
     if (m.tipo === TIPO.TELA) {
       const esito_tela = l.u8(), motivo = l.u8(), tl = l.u32(), ta = l.u32();
+      /* ⛔ Il BERSAGLIO si azzera qui, e non altrove: da questo istante la
+         misura verso cui la pagina sta andando torna a essere la tela in vigore.
+         ⚠ Senza, il confronto di `chiedi_tela()` continuerebbe a misurarsi con
+         una richiesta gia' risposta, e un ridimensionamento successivo verso
+         quella stessa misura non partirebbe piu'. */
+      tela_chiesta_l = tela_chiesta_a = 0;
       if (esito_tela === 1) {
         schermo.tela_adattata(tl, ta);
       } else {
@@ -3171,6 +3416,20 @@ async function ascolta_controllo(canale, congeda) {
            mostrare la voce come spenta.  NON DEVE fingere che sia riuscito. */
         nota("TELA(RIFIUTATA, motivo " + motivo + "): la tela resta " + tl
            + "×" + ta + ", e la voce «adatta il desktop» va mostrata spenta");
+        /* ⛔⭐ E I DUE CAMPI DEL RIFIUTO SI LEGGONO, invece di buttarli: §7.1
+           dice che portano «la tela in vigore DOPO questo messaggio», e su un
+           rifiuto e' quella di prima.  ⚠ Sono l'unica riga che dice al client
+           **con che cosa continuare**, e se non combaciano con quel che la
+           pagina crede, a sbagliarsi e' la pagina.  ⛔ Difetto trovato
+           refutando: prima si scartavano, e una divergenza fra i due lati
+           sarebbe rimasta invisibile fino al primo fotogramma scartato. */
+        if (tl && ta && (tl !== schermo.tela_l || ta !== schermo.tela_a)) {
+          nota("⚠ e il TELA(RIFIUTATA) dichiara la tela in vigore " + tl + "×"
+             + ta + " mentre questa pagina credeva " + schermo.tela_l + "×"
+             + schermo.tela_a + ": vince il server (§7.1), e mi adeguo");
+          schermo.tela_adattata(tl, ta);
+          continue;
+        }
         /* ⛔ E l'attesa si chiude LO STESSO (§6.2): un rifiuto risponde a
            un'`ADATTA_TELA` quanto un'adozione, e i fotogrammi trattenuti in
            attesa di questo `TELA` vanno rigiudicati adesso — o restano in mano
@@ -3566,6 +3825,21 @@ if (VW) {
     schermo.tela_a = ta;
     VW.chiama("tela_adattata", [tl, ta]);
   };
+  /* ⛔⭐ E ANCHE `sessione`, che e' il terzo campo che deve restare DI QUA —
+   *     difetto trovato refutando, la notte del 15 agosto 2026, e precedente a
+   *     questo lavoro.
+   *
+   *     `this.sessione = true` sta dentro `negozia()`, che col worker acceso e'
+   *     dirottato di la': di qua il campo restava **falso per sempre**.  ⛔ E
+   *     `rinegozia_vista()` comincia con `if (!schermo.sessione) return;` ⇒ con
+   *     `?video=worker` il ridimensionamento della finestra non riadattava piu'
+   *     NIENTE, ne' la vista ne' (da stanotte) la tela — e non lo diceva. */
+  schermo.negozia = (function (prima) {
+    return function (codec, prof, stringa, tl, ta) {
+      schermo.sessione = true;
+      prima(codec, prof, stringa, tl, ta);
+    };
+  })(schermo.negozia);
 }
 
 $("modulo").addEventListener("submit", async (ev) => {

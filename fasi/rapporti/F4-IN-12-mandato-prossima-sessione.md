@@ -1,5 +1,25 @@
 # Mandato per la prossima sessione — un pezzo solo, e chiude quattro sintomi
 
+> # ✅ ⭐⭐ ESEGUITO — la notte del 15 agosto 2026
+>
+> **Il mandato è stato svolto per intero, e l'esito sta in
+> [`F4-IN-13-la-tela-che-cambia.md`](F4-IN-13-la-tela-che-cambia.md).** In breve:
+>
+> - ⛔ **il blocco di §3 è sciolto e non è servita la domanda all'utente**: le tre strade morte
+>   erano tre, la quarta (`podman` da utente, sul portatile) non era stata provata — e dentro
+>   `enter.sh` il `/srv/src` che si vede **è** `/media/REMOTIX/src`, cioè era un errore di percorso,
+>   non un montaggio mancante. Adesso ci sono due strade dichiarate: `src/Contenitore` (compilare) e
+>   `src/costruisci.sh` dentro `enter.sh` (far girare);
+> - ⭐ la catena `figli_ritela()` → `cattura_ridimensiona()` **c'è**, e con lei la risposta
+>   all'indietro (`MSG_TELA`) che la prima stesura non aveva;
+> - ⛔ **dieci difetti trovati refutando** la cura appena scritta — fra cui una lettura fuori dai
+>   limiti e due strade che chiudevano una sessione sana;
+> - `[M]` i quattro secondi fra login e desktop sono **311 ms**, la scala di disegno è **1,000**, e
+>   il desktop remoto dichiara da sé «Resolution 1264 × 800».
+>
+> ⚠ Il resto di questo documento **resta com'era scritto il 14 agosto**: è il mandato, non il
+> consuntivo, e le sue cinque ipotesi morte (§5) valgono ancora tutte.
+
 ⛔ **Scritto il 14 agosto 2026 a notte**, a lavoro **riuscito** ma non finito.
 ⭐ Giudizio dell'utente sul Samsung DeX, testuale: *«adesso è un'altra cosa»* — e poi, dopo le due
 cure finali: *«i 2 problemi segnalati sono risolti»*, *«anche su Linux mouse e tastiera

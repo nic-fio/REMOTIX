@@ -239,6 +239,66 @@ static double scala_dei_monitor_logici(GDBusConnection *bus)
 	return vista ? peggiore : -1.0;
 }
 
+/*
+ * ⛔⭐⭐ LA SCALA DEL **NOSTRO** MONITOR, e non la peggiore della macchina.
+ *
+ * ⛔ E LA DIFFERENZA E' LA RAGIONE PER CUI QUESTA FUNZIONE ESISTE.  La guardia
+ *    di §5.0-sexies dice di **fallire** se la scala non e' 1,0, e farlo sulla
+ *    «peggiore fra tutti i monitor logici» spegnerebbe il servizio su una
+ *    macchina sanissima: un portatile con lo schermo interno a 2,0 e il nostro
+ *    monitor virtuale a 1,0 non ha nessun difetto, e la peggiore direbbe 2,0.
+ *    ⇒ Si guarda il monitor logico che contiene il NOSTRO connettore, e basta.
+ *
+ * ⚠ Il monitor logico e' `(iiduba(ssss)a{sv})`: la scala e' il terzo campo, e il
+ *   sesto e' l'elenco dei monitor fisici che ci stanno sopra — di ciascuno il
+ *   primo campo e' il connettore.
+ *
+ * Ritorna -1 se non si e' potuta leggere, o se il nostro connettore non compare
+ * in nessun monitor logico.  ⛔ «Non lo so» non e' «1,0».
+ */
+static double scala_del_nostro(GDBusConnection *bus, const char *connettore)
+{
+	g_autoptr(GError) sbaglio = NULL;
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GVariant) logici = NULL;
+	GVariantIter iter;
+	GVariant *voce;
+
+	if (!bus || !connettore || !connettore[0])
+		return -1.0;
+	risposta = g_dbus_connection_call_sync(bus, NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY,
+	                                       "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
+	if (!risposta)
+		return -1.0;
+	logici = g_variant_get_child_value(risposta, 2);
+	g_variant_iter_init(&iter, logici);
+	while ((voce = g_variant_iter_next_value(&iter)))
+	{
+		g_autoptr(GVariant) v = voce;
+		g_autoptr(GVariant) s = g_variant_get_child_value(v, 2);
+		g_autoptr(GVariant) miei = g_variant_get_child_value(v, 5);
+		GVariantIter mi;
+		GVariant *m;
+
+		if (!g_variant_is_of_type(s, G_VARIANT_TYPE_DOUBLE))
+			continue;
+		g_variant_iter_init(&mi, miei);
+		while ((m = g_variant_iter_next_value(&mi)))
+		{
+			g_autoptr(GVariant) mm = m;
+			const char *c = NULL, *ven = NULL, *pro = NULL, *ser = NULL;
+
+			if (!g_variant_is_of_type(mm, G_VARIANT_TYPE("(ssss)")))
+				continue;
+			g_variant_get(mm, "(&s&s&s&s)", &c, &ven, &pro, &ser);
+			if (c && !strcmp(c, connettore))
+				return g_variant_get_double(s);
+		}
+	}
+	return -1.0;
+}
+
 static gboolean fra(char **elenco, guint quanti, const char *nome)
 {
 	guint i;
@@ -701,6 +761,29 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 const char *mutter_monitor_nostro(const MutterSessione *sessione)
 {
 	return sessione ? sessione->monitor : NULL;
+}
+
+/* ⛔⭐⭐ LA GUARDIA 2 DI §5.0-sexies, CHIUSA — e chiude un difetto che nessuna
+ *     riga di registro raccontava.
+ *
+ * ⚠ Fino al 15 agosto 2026 la scala si LEGGEVA e si DICEVA, e il commento sopra
+ *   `scala_dei_monitor_logici()` lo dichiarava: *«con la tela a misura fissa il
+ *   danno era teorico, con la tela alla misura del client e' concreto»*.  ⛔ Da
+ *   stanotte la tela E' alla misura del client, quindi il danno e' concreto: il
+ *   layout del monitor logico e i pixel del flusso non coincidono piu', **e lo
+ *   spazio delle coordinate dell'input e' il layout** ⇒ il puntatore va altrove.
+ *
+ * ⛔ Si chiede a Mutter, e si chiede DEL NOSTRO monitor: la scala peggiore della
+ *    macchina direbbe 2,0 su un portatile con lo schermo interno hi-dpi, e
+ *    spegnerebbe una sessione che non ha nessun difetto.
+ *
+ * Ritorna -1 se non si e' potuta leggere: ⛔ e chi chiama NON deve trattarlo
+ * come 1,0 — «non lo so» e «va bene» sono due fatti diversi. */
+double mutter_scala_nostra(const MutterSessione *sessione)
+{
+	if (!sessione || !sessione->bus || !sessione->monitor || !sessione->monitor[0])
+		return -1.0;
+	return scala_del_nostro(sessione->bus, sessione->monitor);
 }
 
 const char *mutter_monitor_prodotto(const MutterSessione *sessione)

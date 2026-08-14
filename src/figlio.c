@@ -126,7 +126,29 @@ enum {
 	 *     (`CURSORE_FORMA`, `RCP.md` §7.2) vive nel padre.
 	 * ⚠ E come il fotogramma va A PEZZI: un cursore 256x256 in BGRA fa 262 144
 	 *   byte, otto volte `PEZZO_MAX`. */
-	MSG_CURSORE = 13    /* figlio → padre */
+	MSG_CURSORE = 13,   /* figlio → padre */
+	/* ⭐⭐ LA RISPOSTA ALLA TELA — 15 agosto 2026, ed e' nata da una refutazione.
+	 *
+	 * ⛔ La prima stesura non aveva questo messaggio: il padre CHIEDEVA la tela e
+	 *    poi INDOVINAVA la risposta dai fotogrammi — «se ne arriva uno di misura
+	 *    diversa, allora il palco ha obbedito».  ⚠ E indovinare non bastava, per
+	 *    tre casi che non si distinguono guardando i pixel:
+	 *
+	 *      · il palco ha GIA' quella misura ⇒ non arrivera' nessun fotogramma
+	 *        nuovo, e il padre aspetterebbe il fondo dei tre secondi per niente;
+	 *      · il palco non c'e' o non ce l'ha fatta ⇒ il fatto e' noto SUBITO, e
+	 *        nel processo sbagliato;
+	 *      · due richieste incatenate (l'utente trascina il bordo) ⇒ il
+	 *        fotogramma della PRIMA sarebbe stato preso per la risposta della
+	 *        SECONDA, e il desktop si sarebbe assestato sulla misura sbagliata
+	 *        **senza che nessun conto se ne accorgesse**.
+	 *
+	 * ⇒ Il figlio risponde, e porta TUTT'E DUE i numeri: che cosa gli era stato
+	 *   chiesto (cosi' il padre riconosce a quale richiesta risponde) e che cosa
+	 *   il palco ha davvero (`0x0` = non ce l'ha fatta).  ⭐ E lo manda solo dopo
+	 *   aver VISTO un fotogramma a quella misura, tranne nel caso «ce l'ho gia'»:
+	 *   la verita' resta il fotogramma, questo e' il modo di dirla. */
+	MSG_TELA = 14       /* figlio → padre */
 };
 
 struct testa {
@@ -162,6 +184,14 @@ struct corpo_palco {
 	uint32_t flussi;          /* quanti codec hanno consegnato */
 	char monitor[64];
 	char guasto[224];
+};
+
+/* ⛔⭐ La risposta del palco alla richiesta di tela.  ⚠ `avuta_l == 0` vuol dire
+ *     «non ce l'ho fatta», e NON e' una misura: e' l'altra faccia dello zero di
+ *     `CODER.md` §3.10, dichiarata invece che dedotta dal silenzio. */
+struct corpo_tela {
+	uint32_t voluta_l, voluta_a;
+	uint32_t avuta_l, avuta_a;
 };
 
 /* ⛔ Che cosa il padre chiede al palco.  ⚠ `codec` a **0** vuol dire «smetti di
@@ -288,6 +318,7 @@ struct figli {
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
 	FiglioCursore cursore;
+	FiglioTela tela;
 	void *ctx;
 };
 
@@ -551,7 +582,7 @@ static struct figlio *cerca(struct figli *f, const char *utente)
 
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioDeposito deposita, FiglioCongedo congeda,
-                     FiglioCursore cursore, void *ctx)
+                     FiglioCursore cursore, FiglioTela tela, void *ctx)
 {
 	figli *f = (figli *)calloc(1, sizeof *f);
 	ssize_t n;
@@ -566,6 +597,7 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	f->deposita = deposita;
 	f->congeda = congeda;
 	f->cursore = cursore;
+	f->tela = tela;
 	f->ctx = ctx;
 	if (dir_rilievo && dir_rilievo[0]) {
 		snprintf(f->dir_rilievo, sizeof f->dir_rilievo, "%s", dir_rilievo);
@@ -1179,6 +1211,29 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		monta_pezzo(f, g, &c, corpo + sizeof c);
 		return true;
 	}
+	case MSG_TELA: {
+		struct corpo_tela c;
+		if (byte < sizeof c)
+			return true;
+		memcpy(&c, corpo, sizeof c);
+		/* ⛔⭐ §7.1 — LA RISPOSTA ALLA TELA, e il padre non la INDOVINA piu' dai
+		 *     fotogrammi: porta la misura CHIESTA (per riconoscere a quale
+		 *     richiesta risponde) e quella AVUTA (`0x0` = non ce l'ha fatta).
+		 * ⚠ La riga la scrive qui il padre perche' e' il lato che decide: il
+		 *   figlio ha gia' scritto la sua, con il perche'. */
+		registro_dice(REG_FIGLIO,
+		              c.avuta_l && c.avuta_a
+		                  ? "«%s»: il palco risponde alla tela — chiesta %ux%u, "
+		                    "AVUTA %ux%u"
+		                  : "«%s»: il palco NON ce l'ha fatta sulla tela %ux%u "
+		                    "(%ux%u): il client lo sapra' adesso invece che dopo "
+		                    "il fondo di §7.1",
+		              g->utente, c.voluta_l, c.voluta_a, c.avuta_l, c.avuta_a);
+		if (f->tela)
+			f->tela(f->ctx, g->utente, g->uid, c.voluta_l, c.voluta_a, c.avuta_l,
+			        c.avuta_a);
+		return true;
+	}
 	default:
 		registro_dice(REG_FIGLIO, "⚠ «%s» ha mandato un tipo che non conosco (%u)",
 		              g->utente, t->tipo);
@@ -1481,6 +1536,34 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
 	return true;
 }
 
+/* ⭐⭐ LA CATENA CHE MANCAVA — `figli_ritela()`, e da qui in poi il nome che
+ *     `DECISIONI.md` §5.0-sexies e il mandato della fase 4 nominano ESISTE.
+ *
+ * ⛔ E' UNA RIGA SOLA E DELEGA, e le due cose sono volute: il messaggio sul filo
+ *    fra padre e figlio resta **uno** (`MSG_INPUT`, azione `RITELA`), quindi nel
+ *    figlio c'e' un ramo solo da leggere.  ⚠ Una seconda busta avrebbe voluto un
+ *    secondo `struct corpo_*`, un secondo ramo e un secondo modo di sbagliare —
+ *    per portare due numeri che quello che c'e' porta gia'.
+ *
+ * ⛔ MA IL NOME NON E' COSMETICO, e non e' `figli_input()` con un'azione strana:
+ *    l'input e' un GESTO gia' convalidato da §7.3 che si inietta e si dimentica;
+ *    questa e' una richiesta di **riconfigurazione del palco** il cui esito non
+ *    torna da qui — torna con un fotogramma, minuti dopo o mai.  Due mestieri
+ *    diversi con due nomi diversi, e chi legge `main.c` vede la catena intera.
+ *
+ * `false` = non c'e' nessun figlio per quell'utente, o la domanda non e' partita
+ * — ⛔ e allora la tela NON cambiera', il che si dichiara invece di aspettare un
+ * fotogramma che non arrivera' (`CODER.md` §4.2). */
+bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
+                  uint32_t altezza)
+{
+	/* ⛔ `id = 0` e non l'ultimo id dell'input: §6.2 riserva lo zero a «nessun
+	 *    input», e questa non e' un'azione dell'utente su cui l'anello del
+	 *    ritardo debba misurare niente. */
+	return figli_input(f, utente, 0, FIGLI_INPUT_RITELA, 0, 0,
+	                   (int32_t)larghezza, (int32_t)altezza);
+}
+
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
 {
 	struct figlio *g;
@@ -1627,6 +1710,38 @@ static bool manda(uint16_t tipo, const void *corpo, size_t byte,
 		n += byte_coda;
 	}
 	return send(fd_figlio, busta, n, MSG_NOSIGNAL) == (ssize_t)n;
+}
+
+/* ⛔⭐ LA TELA CHE IL CLIENT HA CHIESTO, tenuta a parte da quella che il palco
+ *     DA'.  Sono due numeri diversi e servono a due cose diverse:
+ *
+ *       `tela_voluta_*`  quel che il client vuole ⇒ e' quel che si richiede al
+ *                        RIMONTAGGIO del palco, o le bande tornerebbero dopo
+ *                        ogni caduta della sessione grafica;
+ *       `tela_l`/`tela_a` quel che il palco consegna ⇒ e' quel che finisce nei
+ *                        28 byte di §6.2, e non si inventa.
+ *
+ * ⚠ Nascono uguali (la misura della riga di comando) e divergono al primo
+ *   `ADATTA_TELA` che il compositore non serve alla lettera (§4.5). */
+static uint32_t tela_voluta_l, tela_voluta_a;
+
+/* La risposta di §7.1 al padre.  ⛔ `avuta_l == 0` = «non ce l'ho fatta», ed e'
+ * un fatto diverso da «ci sto provando»: senza questa riga il padre aspetterebbe
+ * il fondo dei tre secondi per sapere una cosa che qui si sa subito. */
+static void rispondi_tela(uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
+                          uint32_t avuta_a)
+{
+	struct corpo_tela c;
+	c.voluta_l = voluta_l;
+	c.voluta_a = voluta_a;
+	c.avuta_l = avuta_l;
+	c.avuta_a = avuta_a;
+	if (!manda(MSG_TELA, &c, sizeof c, NULL, 0))
+		registro_dice(REG_FIGLIO,
+		              "⛔ la risposta sulla tela (%ux%u → %ux%u) non e' partita "
+		              "(%s): il padre aspettera' il fondo di §7.1 invece di "
+		              "saperlo adesso",
+		              voluta_l, voluta_a, avuta_l, avuta_a, strerror(errno));
 }
 
 static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
@@ -1819,6 +1934,30 @@ static uint8_t codec_chiesto;
  *    chiesta e un delta a chi si'. */
 static bool debito_chiave[3];
 static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
+/* ⛔ CONTATO A PARTE da `ciclo_guasti`, e non e' pignoleria: quel contatore
+ *    entra nel criterio «il ciclo non ha nemmeno provato a catturare» della riga
+ *    di riassunto.  Mettere qui i fotogrammi scartati per geometria incoerente
+ *    darebbe due fatti diversi sotto la stessa etichetta — la forma E8, dentro
+ *    la riga che esiste per smascherarla. */
+static uint64_t fotogrammi_incoerenti;
+/* ⛔⭐ L'ATTESA CHE CRESCE SULLA RIAPERTURA DEL CODIFICATORE — e la ragione e'
+ *     la stessa dei 30,8 GB di registro del 14 agosto: se `codificatore_nuovo()`
+ *     fallisce per una causa PERSISTENTE (memoria della GPU, profilo che non
+ *     regge quella misura, nodo occupato), `codificatore_di()` ritenterebbe
+ *     l'apertura **a ogni fotogramma** — sessanta contesti VAAPI al secondo, e
+ *     una riga di registro per ciascuno.  ⚠ Il fondo qui non nasconde niente: la
+ *     prima riga si scrive sempre, e la ripresa e' dichiarata. */
+static uint64_t codif_riprova_ms[3];
+static uint64_t codif_attesa_ms[3];
+#define CODIF_RIPROVA_MIN_MS 500u
+#define CODIF_RIPROVA_MAX_MS 10000u
+/* ⭐ Quando si e' riavviato il flusso l'ultima volta per farsi consegnare un
+ *    fotogramma su una scena ferma.  ⛔ Il fondo non e' prudenza: ogni riavvio
+ *    costa la rinegoziazione, e farne uno a ogni giro toglierebbe i fotogrammi
+ *    che si stanno cercando.  ⚠ 400 ms sta sotto ai 4,4 secondi misurati di due
+ *    ordini di grandezza e sopra al costo di un riavvio (`[M]` 41,6 ms). */
+static uint64_t risveglio_ms;
+#define RISVEGLIO_MS 400u
 static uint64_t ciclo_detto_ms;
 /* ⛔ La misura del punto 7, fatta e NON dedotta: il `pts` che Mutter attacca al
  *    fotogramma e' o non e' il nostro orologio monotono?  Si guarda una volta,
@@ -1928,6 +2067,13 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	if (codif[indice])
 		return codif[indice];
 
+	/* ⛔⭐ E NON SI RIPROVA A OGNI FOTOGRAMMA — vedi `codif_riprova_ms`.  ⚠ Il
+	 *    silenzio qui e' voluto e limitato: la riga che spiega il fallimento
+	 *    l'ha gia' scritta il tentativo precedente, e ripeterla sessanta volte
+	 *    al secondo e' il difetto che questa attesa esiste per non avere. */
+	if (codif_riprova_ms[indice] && registro_ora_ms() < codif_riprova_ms[indice])
+		return NULL;
+
 	memset(&r, 0, sizeof r);
 	r.codec = codec;
 	r.componente = NULL;
@@ -1976,10 +2122,27 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	if (!codif[indice])
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
 	if (!codif[indice]) {
-		registro_dice(REG_FIGLIO, "⛔ niente video per il codec %d: %s",
-		              (int)codec, errore);
+		/* ⛔ L'attesa cresce, e la riga lo DICE: senza, questo ramo scriveva il
+		 *    registro a raffica e bruciava un nucleo — la stessa forma dei 30,8
+		 *    GB del 14 agosto, in un altro punto del ciclo. */
+		codif_attesa_ms[indice] = codif_attesa_ms[indice]
+		                              ? codif_attesa_ms[indice] * 2
+		                              : CODIF_RIPROVA_MIN_MS;
+		if (codif_attesa_ms[indice] > CODIF_RIPROVA_MAX_MS)
+			codif_attesa_ms[indice] = CODIF_RIPROVA_MAX_MS;
+		codif_riprova_ms[indice] = registro_ora_ms() + codif_attesa_ms[indice];
+		registro_dice(REG_FIGLIO,
+		              "⛔ niente video per il codec %d: %s.  ⚠ Riprovo fra %llu "
+		              "ms — non a ogni fotogramma, o sarebbero sessanta contesti "
+		              "aperti e chiusi al secondo",
+		              (int)codec, errore,
+		              (unsigned long long)codif_attesa_ms[indice]);
 		return NULL;
 	}
+	/* ⭐ Riuscito: l'attesa si azzera, o la prossima caduta partirebbe dal fondo
+	 *    di quella di prima. */
+	codif_riprova_ms[indice] = 0;
+	codif_attesa_ms[indice] = 0;
 	registro_dice(REG_FIGLIO,
 	              "⭐ FASE 3: codificatore %d APERTO e TENUTO VIVO fra un "
 	              "fotogramma e l'altro, %ux%u a %d/s — senza questo la "
@@ -2306,10 +2469,71 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    la cucitura corretta il 12 agosto 2026 (`P2-6-montaggio.md` §5.1). */
 	if (mutter_monitor_cerca(mut)) {
 		guint prima = 0, dopo = 0;
+		double scala;
+
 		mutter_monitor_conteggi(mut, &prima, &dopo);
 		p.monitor_prima = prima;
 		p.monitor_dopo = dopo;
 		snprintf(p.monitor, sizeof p.monitor, "%s", mutter_monitor_nostro(mut));
+
+		/* ⛔⭐⭐ LA GUARDIA 2 DI §5.0-sexies, E DA STANOTTE E' UNA CONDIZIONE DI
+		 *     SERVIZIO — «leggere la scala e FALLIRE se non e' 1,0».
+		 *
+		 * ⚠ Fino a ieri si leggeva e si diceva, e bastava: con la tela fissa a
+		 *   1920x1080 il danno era teorico.  ⛔ Da stanotte la tela prende la
+		 *   misura del client, quindi il layout del monitor logico e i pixel del
+		 *   flusso divergono davvero — e quel layout **e' lo spazio delle
+		 *   coordinate dell'input**: `[M]` con `scaling-factor = 2` il layout di
+		 *   una tela 2133 diventa `1067 x 2 = 2134`, e il puntatore va altrove
+		 *   **senza che nessuna riga lo dica**.
+		 *
+		 * ⛔ E si FALLISCE invece di servire: un desktop che si vede e si comanda
+		 *    SBAGLIATO e' peggio di un desktop che non parte, perche' il secondo
+		 *    ha una riga che lo spiega e il primo no.  ⚠ E non e' una morte: il
+		 *    palco si rimonta con l'attesa che cresce, quindi appena l'utente
+		 *    cambia l'impostazione la sessione riparte da se'.
+		 *
+		 * ⛔ «Non lo so» NON e' «va bene»: se la scala non si e' potuta leggere si
+		 *    prosegue dichiarandolo, perche' rifiutare su un'assenza di dato
+		 *    spegnerebbe il servizio su una macchina che non ha nessun difetto. */
+		scala = mutter_scala_nostra(mut);
+		/* ⛔ E IL CASO BUONO SI SCRIVE, non si lascia al silenzio: «la guardia ha
+		 *    guardato e la scala e' 1,0» e «la guardia non e' stata percorsa»
+		 *    avrebbero la stessa faccia — che e' la forma d'errore che questo
+		 *    progetto paga piu' spesso.  ⚠ Una riga per montaggio del palco, non
+		 *    per fotogramma. */
+		if (scala == 1.0)
+			registro_dice(REG_FIGLIO,
+			              "⭐ guardia 2 (§5.0-sexies): la scala del nostro monitor "
+			              "«%s» e' 1,000 — lo spazio delle coordinate dell'input "
+			              "coincide con i pixel del flusso",
+			              p.monitor);
+		if (scala < 0)
+			registro_dice(REG_FIGLIO,
+			              "⚠ la scala del nostro monitor logico non si e' potuta "
+			              "leggere: PROSEGUO, e non dico 1,0 per abitudine "
+			              "(guardia 2 di DECISIONI.md §5.0-sexies)");
+		else if (scala != 1.0) {
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ SCALA %.3f sul NOSTRO monitor «%s» invece di 1,0: "
+			              "lo spazio delle coordinate dell'input non coincide con "
+			              "i pixel del flusso, e il puntatore andrebbe altrove "
+			              "senza che nulla lo dica.  ⇒ NON prendo il palco "
+			              "(guardia 2 di DECISIONI.md §5.0-sexies).  La cura e' "
+			              "una riga sola, sulla sessione di questo utente: "
+			              "`gsettings set org.gnome.desktop.interface "
+			              "scaling-factor 0` — poi la sessione riparte da se', "
+			              "senza riavviare niente",
+			              scala, p.monitor);
+			p.stato_sessione = 0;
+			snprintf(p.guasto, sizeof p.guasto,
+			         "scala %.3f invece di 1,0 sul monitor «%s»: il puntatore "
+			         "andrebbe altrove (guardia 2, DECISIONI.md §5.0-sexies)",
+			         scala, p.monitor);
+			cattura_fermo_libera(&fo);
+			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			return false;
+		}
 	} else {
 		snprintf(p.monitor, sizeof p.monitor, "(non l'ho saputo dire)");
 	}
@@ -2343,12 +2567,42 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *   nessuno», e qui non c'e' ancora nessuno — il canale di input nasce
 		 *   quando il client apre il suo stream, e questi due fotogrammi sono
 		 *   la diagnosi dell'accensione, non del movimento. */
-		if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
-		                     "flusso-hevc.265", istante_us, tela_l, tela_a, 0))
-			p.flussi++;
-		if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
-		                     "flusso-av1.obu", istante_us, tela_l, tela_a, 0))
-			p.flussi++;
+		/* ⛔⛔ E LA MISURA E' QUELLA DEL FOTOGRAMMA, non quella che si e'
+		 *     chiesta — difetto trovato refutando, la notte del 15 agosto 2026.
+		 *
+		 *     Qui il codificatore nasceva a `tela_l x tela_a` (il CHIESTO) e
+		 *     veniva alimentato con `fo.pixel`/`fo.stride` (l'ARRIVATO), senza la
+		 *     riconciliazione e senza la guardia sui byte, che vivono tutt'e due
+		 *     nel ciclo piu' sotto.  ⚠ Oggi il caso e' irraggiungibile — la
+		 *     proposta dichiara la misura come rettangolo FISSO, quindi o si
+		 *     ottiene o la negoziazione fallisce — ⛔ ma il codice nuovo
+		 *     RICONOSCE il caso «concesso diverso da chiesto» (§4.5) e lo
+		 *     proteggeva in un posto e non nell'altro: un'incoerenza dentro la
+		 *     stessa modifica.  ⇒ Qui si usa quel che i pixel sono, e la stessa
+		 *     guardia del ciclo decide se si possono toccare. */
+		if (fo.stride >= (guint64) fo.larghezza * 4u
+		    && fo.byte >= (guint64) fo.stride * fo.altezza) {
+			if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
+			                     "flusso-hevc.265", istante_us, fo.larghezza,
+			                     fo.altezza, 0))
+				p.flussi++;
+			if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
+			                     "flusso-av1.obu", istante_us, fo.larghezza,
+			                     fo.altezza, 0))
+				p.flussi++;
+			/* ⚠ E la misura del palco NON si scrive qui: `tela_l`/`tela_a` sono
+			 *   i PARAMETRI di questa funzione, non le variabili del ciclo —
+			 *   scriverci dentro sembrerebbe aggiornare il palco e non
+			 *   aggiornerebbe niente.  Ci pensa la riconciliazione al primo giro
+			 *   del ciclo, che e' l'unico posto in cui quel numero cambia. */
+		} else {
+			registro_dice(REG_FIGLIO,
+			              "⛔ la diagnosi dell'accensione NON codifica: il "
+			              "fotogramma dichiara %ux%u con passo %u e porta %llu "
+			              "byte — chi lo comprimesse leggerebbe oltre la copia",
+			              fo.larghezza, fo.altezza, fo.stride,
+			              (unsigned long long)fo.byte);
+		}
 		/* ⛔ E i contatori del ciclo ripartono da zero: questi due non sono
 		 *    fotogrammi del movimento, sono la diagnosi dell'accensione.
 		 *    Sommarli direbbe «due fotogrammi consegnati» a un utente che non
@@ -2464,6 +2718,13 @@ void figlio_vive(int argc, char **argv)
 	atteso_g = (gid_t)strtoul(argv[4], NULL, 10);
 	tela_l = (uint32_t)strtoul(argv[5], NULL, 10);
 	tela_a = (uint32_t)strtoul(argv[6], NULL, 10);
+	/* ⛔ La tela VOLUTA nasce uguale a quella di partenza e diverge al primo
+	 *    `ADATTA_TELA`: e' quella che si richiede al RIMONTAGGIO del palco.
+	 *    ⚠ Senza, un palco che cade dopo un ridimensionamento rinasceva alla
+	 *    misura della riga di comando, e le bande tornavano senza che nessuna
+	 *    riga collegasse le due cose. */
+	tela_voluta_l = tela_l;
+	tela_voluta_a = tela_a;
 	mia_matricola = strtoull(argv[7], NULL, 10);
 	dir_rilievo = argv[8];
 
@@ -2751,6 +3012,71 @@ void figlio_vive(int argc, char **argv)
 				if ((size_t)letti < sizeof t + sizeof ci)
 					continue;
 				memcpy(&ci, busta + sizeof t, sizeof ci);
+				/* ⛔⭐ LA TELA NON E' UN INPUT, e passa PRIMA della guardia qui
+				 *     sotto.  ⚠ Difetto trovato rileggendo, il 15 agosto 2026:
+				 *     `FIGLI_INPUT_RITELA` viaggia dentro `MSG_INPUT` per non
+				 *     avere due buste sul filo fra padre e figlio — ⛔ ma la
+				 *     guardia «non ho un canale verso il compositore» e' dei
+				 *     GESTI, e applicata alla tela avrebbe legato il
+				 *     ridimensionamento del monitor all'apertura di `libei`.
+				 *     ⇒ Il sintomo sarebbe stato: una sessione in cui l'input
+				 *     non si e' aperto (un `libei` che non risponde) resta anche
+				 *     con le bande nere e il testo interpolato, **e nessuna riga
+				 *     collega le due cose**. */
+				if (ci.azione == FIGLI_INPUT_RITELA) {
+					CatturaRitela r;
+					uint32_t ora_l = 0, ora_a = 0;
+
+					/* ⛔ La tela VOLUTA si ricorda PRIMA di provarci, e non e'
+					 *    la stessa cosa di `tela_l`/`tela_a` (che sono quel che
+					 *    il palco DA'): serve al rimontaggio.  ⚠ Senza, un palco
+					 *    che cade dopo un ridimensionamento rinasce alla misura
+					 *    di prima e le bande tornano — e nessuna riga collega le
+					 *    due cose. */
+					tela_voluta_l = (uint32_t)ci.a;
+					tela_voluta_a = (uint32_t)ci.b;
+
+					if (!cat) {
+						registro_dice(REG_FIGLIO,
+						              "§7.1: il padre chiede la tela %ux%u ma non "
+						              "c'e' nessun palco da ridimensionare: lo "
+						              "DICO subito invece di farlo aspettare, e la "
+						              "misura resta voluta per il rimontaggio",
+						              (unsigned)ci.a, (unsigned)ci.b);
+						rispondi_tela(tela_voluta_l, tela_voluta_a, 0, 0);
+						continue;
+					}
+					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
+					if (r == CATTURA_RITELA_CHIESTA) {
+						registro_dice(REG_FIGLIO,
+						              "⭐ §7.1: tela %ux%u CHIESTA al compositore.  "
+						              "La risposta al client parte quando arriva un "
+						              "fotogramma, non da questa riga",
+						              (unsigned)ci.a, (unsigned)ci.b);
+						continue;
+					}
+					if (r == CATTURA_RITELA_GIA_COSI) {
+						/* ⭐ Il flusso ha GIA' quella misura: non arrivera'
+						 *    nessun fotogramma «nuovo», perche' quelli che
+						 *    arrivano sono gia' della misura giusta.  ⇒ Si
+						 *    risponde subito, o il padre aspetterebbe il fondo
+						 *    dei tre secondi per una cosa gia' fatta. */
+						cattura_misura_negoziata(cat, &ora_l, &ora_a);
+						registro_dice(REG_FIGLIO,
+						              "§7.1: la tela %ux%u il palco ce l'ha gia' "
+						              "(negoziata %ux%u): rispondo subito",
+						              (unsigned)ci.a, (unsigned)ci.b, ora_l, ora_a);
+						rispondi_tela(tela_voluta_l, tela_voluta_a, ora_l, ora_a);
+						continue;
+					}
+					registro_dice(REG_FIGLIO,
+					              "⛔ §7.1: tela %ux%u NON chiesta — il flusso non e' "
+					              "in grado adesso.  Lo dico subito: il client avra' "
+					              "`TELA(NON_ORA)` invece di tre secondi di attesa",
+					              (unsigned)ci.a, (unsigned)ci.b);
+					rispondi_tela(tela_voluta_l, tela_voluta_a, 0, 0);
+					continue;
+				}
 				if (!palco_input) {
 					/* ⛔ «Non ho un canale di input» NON e' «il client ha
 					 *    sbagliato»: si DICHIARA e si tira avanti, e la
@@ -2793,19 +3119,11 @@ void figlio_vive(int argc, char **argv)
 					              quanti);
 					continue;
 				}
-				case FIGLI_INPUT_RITELA:
-					e = input_ritela(palco_input, (uint32_t)ci.a,
-					                 (uint32_t)ci.b);
-					registro_dice(REG_FIGLIO,
-					              e == 0 ? "§7.1: la tela in vigore e' %ux%u, "
-					                       "la regione del puntatore e' "
-					                       "rimappata"
-					                     : "⛔ §7.1: la tela e' %ux%u ma la "
-					                       "regione NON si e' rimappata: da qui "
-					                       "in poi il puntatore andrebbe dove "
-					                       "non deve",
-					              (unsigned)ci.a, (unsigned)ci.b);
-					continue;
+				/* ⛔ `FIGLI_INPUT_RITELA` non compare qui: e' servito PRIMA della
+				 *    guardia del canale di input, qualche riga piu' su, e la
+				 *    ragione sta li'.  ⚠ Se ricomparisse in questo `switch`
+				 *    sarebbero due strade per lo stesso messaggio, e la seconda
+				 *    non verrebbe mai percorsa — cioe' codice che sembra vivo. */
 				default:
 					registro_dice(REG_FIGLIO,
 					              "⛔ azione di input %u sconosciuta: NON "
@@ -2924,8 +3242,12 @@ void figlio_vive(int argc, char **argv)
 		if (!cat) {
 			uint64_t ora = registro_ora_ms();
 			if (ora >= palco_riprova_ms) {
-				if (prendi_il_palco(tela_l, tela_a, dir_rilievo, false, &mut,
-				                    &cat)) {
+				/* ⛔ Si rimonta alla tela VOLUTA, non a quella che il palco
+				 *    caduto aveva: quel che il client ha chiesto non muore con la
+				 *    sessione grafica.  ⚠ Se il compositore concedera' altro, la
+				 *    riconciliazione del punto 2 lo dira' e il padre lo sapra'. */
+				if (prendi_il_palco(tela_voluta_l, tela_voluta_a, dir_rilievo,
+				                    false, &mut, &cat)) {
 					registro_dice(REG_FIGLIO,
 					              "⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato "
 					              "dopo %llu ms di attesa — e il prossimo "
@@ -3021,6 +3343,43 @@ void figlio_vive(int argc, char **argv)
 				                  : "");
 			}
 
+			/* ⭐⭐ IL QUARTO SINTOMO — i 4 secondi fra il login e il desktop, e
+			 *     si curano QUI perche' qui stanno tutt'e due i fatti che
+			 *     servono: «qualcuno aspetta un fotogramma» e «non ne arriva
+			 *     nessuno».
+			 *
+			 * `[M]` 14 agosto 2026, registro delle 21:32:55: una richiesta di
+			 * chiave ogni 200 ms per **4,4 secondi** e **659 attese a vuoto**,
+			 * perche' un compositore Wayland consegna solo quando la scena
+			 * cambia — e un desktop appena acceso e' fermo.  ⇒ Il client chiede
+			 * l'immagine, il palco non ha niente da dare, e nessuno dei due
+			 * sbaglia.
+			 *
+			 * ⛔ Xpra ordina «ridipingi adesso» (`buffer_refresh`) e su Wayland
+			 *    non si puo'.  ⭐ La sola leva e' riavviare il flusso, che e'
+			 *    quel che fa `cattura_risveglia()`.
+			 *
+			 * ⚠ E si fa SOLO quando una chiave e' dovuta — cioe' quando c'e'
+			 *   davvero qualcuno che non puo' dipingere niente — e non piu' di
+			 *   una volta ogni `RISVEGLIO_MS`: ogni riavvio costa la
+			 *   rinegoziazione, e farne sessanta al secondo toglierebbe proprio
+			 *   i fotogrammi che si stanno cercando. */
+			if (presa == CATTURA_PRESA_ZERO && codec_chiesto < 3
+			    && debito_chiave[codec_chiesto]) {
+				uint64_t adesso_ms = registro_ora_ms();
+				if (adesso_ms - risveglio_ms >= RISVEGLIO_MS) {
+					risveglio_ms = adesso_ms;
+					registro_dice(REG_FIGLIO,
+					              "⭐ una CHIAVE e' dovuta e la scena e' ferma da "
+					              "%u ms: riavvio il flusso per farmi consegnare "
+					              "un fotogramma.  ⚠ Senza, l'utente guarda una "
+					              "pagina bianca finche' qualcosa non si muove sul "
+					              "desktop (`[M]` 4,4 s il 14 agosto 2026)",
+					              (unsigned)RISVEGLIO_MS);
+					cattura_risveglia(cat);
+				}
+			}
+
 			if (presa == CATTURA_PRESA_ZERO) {
 				/* ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE, e questo e' lo
 				 *    zero: il flusso e' stato attivo per tutta l'attesa e non
@@ -3070,6 +3429,169 @@ void figlio_vive(int argc, char **argv)
 				continue;
 			}
 			g_clear_error(&sbaglio);
+
+			/* ══ ⭐⭐ LA MISURA NUOVA E' ARRIVATA — e la dice IL FOTOGRAMMA ══
+			 *
+			 * ⛔ E' il punto in cui il ridimensionamento diventa un fatto, ed e'
+			 *    UNO SOLO apposta: la richiesta parte da `FIGLI_INPUT_RITELA`, ma
+			 *    fra la richiesta e i pixel c'e' un compositore che puo'
+			 *    concedere altro (`RCP.md` §4.5), rispondere «riuscito» senza
+			 *    fare niente (`[M]` labwc), o non farcela.  ⇒ Qui non si guarda
+			 *    che cosa si e' CHIESTO: si guarda che cosa e' ARRIVATO.
+			 *
+			 * ⛔⛔ E LE TRE COSE VANNO FATTE TUTT'E TRE, o il difetto e' peggiore
+			 *     di quello che si stava curando:
+			 *
+			 *   1. il CODIFICATORE si riapre alla misura nuova.  ⚠
+			 *      `codificatore_comprimi()` riceve i pixel e il passo, **non**
+			 *      larghezza e altezza (`codificatore.h`): alimentato con
+			 *      un'immagine piu' grande di quella per cui e' aperto non
+			 *      protesta — taglia o riempie, e il difetto si vede solo
+			 *      nell'immagine.  ⭐ E la riapertura porta con se' la chiave che
+			 *      §5.2 pretende («su HEVC in Chrome un delta alla misura nuova
+			 *      non solleva niente: il decodificatore continua a emettere
+			 *      fotogrammi alla misura VECCHIA»);
+			 *   2. la REGIONE DEL PUNTATORE si rimappa.  Senza, il puntatore
+			 *      resta nello spazio di prima e va altrove — il difetto misurato
+			 *      per due giorni sul DeX;
+			 *   3. `tela_l`/`tela_a` diventano quelli veri, perche' sono i numeri
+			 *      che finiscono nei 28 byte di §6.2 e che il padre confronta con
+			 *      la tela in vigore.  ⛔ Finche' non lo erano, quei due campi
+			 *      dicevano quel che il figlio aveva CHIESTO alla nascita: una
+			 *      misura DICHIARATA e mai verificata, cioe' la guardia 3 di
+			 *      §5.0-sexies aperta all'ultimo anello.
+			 *
+			 * ⚠ E il fotogramma di questo giro si spedisce LO STESSO, alla misura
+			 *   sua: e' il primo alla misura nuova, ed e' quello che al padre fa
+			 *   spedire `TELA(ADATTATA)` (§7.1).  Buttarlo vorrebbe dire
+			 *   rimandare di un giro la cosa che tutti stanno aspettando. */
+			/* ⛔⛔ E PRIMA DI TUTTO: IL FOTOGRAMMA DEVE CONTENERE QUEL CHE
+			 *     DICHIARA — la guardia nata refutando, la notte del 15 agosto
+			 *     2026, e la prima stesura la metteva DOPO la riconciliazione.
+			 *
+			 * `codificatore_comprimi()` riceve **i pixel e il passo**, non
+			 * larghezza e altezza: legge fino a `(altezza-1) x passo +
+			 * larghezza x 4` byte, e la geometria la conosce dalla sua apertura.
+			 * ⇒ Servono DUE controlli e non uno:
+			 *
+			 *   · `passo >= larghezza x 4`  — il verso «la tela si ALLARGA», che
+			 *     il solo controllo sui byte NON copre: con passo vecchio e
+			 *     larghezza nuova i conti tornano e la lettura esce lo stesso;
+			 *   · `byte >= passo x altezza` — il verso «la tela si ALZA».
+			 *
+			 * ⛔ E sta PRIMA della riconciliazione perche' un fotogramma che poi
+			 *    si scarta non deve aver gia' fatto riaprire i codificatori (un
+			 *    contesto VAAPI), rimappare il puntatore e spostare
+			 *    `tela_l`/`tela_a` su una misura che quei pixel non avevano.
+			 *
+			 * ⚠ `larghezza`/`altezza` a zero rendevano la vecchia guardia VUOTA
+			 *   (`byte < 0` e' sempre falso): si nominano, invece di fidarsi che
+			 *   i numeri tornino. */
+			if (!fo.larghezza || !fo.altezza || !fo.stride
+			    || fo.stride < (guint64) fo.larghezza * 4u
+			    || fo.byte < (guint64) fo.stride * fo.altezza) {
+				fotogrammi_incoerenti++;
+				if (fotogrammi_incoerenti == 1)
+					registro_dice(REG_FIGLIO,
+					              "⛔ fotogramma SCARTATO: dichiara %ux%u con passo %u "
+					              "e porta %llu byte — chi lo comprime leggerebbe "
+					              "oltre la copia (servono passo >= %llu e byte >= "
+					              "%llu).  ⚠ E' la finestra fra una rinegoziazione e "
+					              "i buffer nuovi",
+					              fo.larghezza, fo.altezza, fo.stride,
+					              (unsigned long long)fo.byte,
+					              (unsigned long long)((guint64)fo.larghezza * 4u),
+					              (unsigned long long)((guint64)fo.stride * fo.altezza));
+				cattura_fermo_libera(&fo);
+				continue;
+			}
+
+			if (fo.larghezza != tela_l || fo.altezza != tela_a) {
+				uint32_t chiesta_l = 0, chiesta_a = 0;
+				char errore[256];
+
+				cattura_misura_chiesta(cat, &chiesta_l, &chiesta_a);
+				registro_dice(REG_FIGLIO,
+				              "⭐⭐ TELA NUOVA DAL PALCO: %ux%u → %ux%u (chiesti al "
+				              "produttore %ux%u)%s.  Riapro il codificatore, "
+				              "rimappo il puntatore, e da qui i 28 byte di §6.2 "
+				              "portano la misura nuova",
+				              tela_l, tela_a, fo.larghezza, fo.altezza, chiesta_l,
+				              chiesta_a,
+				              (chiesta_l == fo.larghezza && chiesta_a == fo.altezza)
+				                  ? ""
+				                  : " — ⛔ CONCESSO DIVERSO DA CHIESTO (§4.5 lo "
+				                    "permette, ma nessuno lo direbbe se non questa "
+				                    "riga)");
+
+				/* 1. il codificatore, ⛔ TUTTI quelli vivi: il debito della
+				 *    chiave e' per codec, e un codificatore aperto e non
+				 *    ridimensionato consegnerebbe immagini tagliate al primo
+				 *    fotogramma dopo un cambio di codec. */
+				for (uint8_t c = 1; c < 3; c++) {
+					if (!codif[c])
+						continue;
+					if (!codificatore_ridimensiona(codif[c], fo.larghezza,
+					                               fo.altezza, errore,
+					                               sizeof errore)) {
+						registro_dice(REG_FIGLIO,
+						              "⛔⛔ il codificatore %u NON si e' riaperto a "
+						              "%ux%u (%s): lo BUTTO invece di alimentarlo "
+						              "con un'immagine che non e' la sua — meglio "
+						              "nessun fotogramma che uno tagliato",
+						              c, fo.larghezza, fo.altezza, errore);
+						codificatore_libera(codif[c]);
+						codif[c] = NULL;
+					}
+					/* ⛔ §5.2: il primo alla misura nuova DEVE essere una chiave.
+					 *    `codificatore_ridimensiona()` lo impone gia' da se'; il
+					 *    debito si segna lo stesso, perche' un codificatore
+					 *    BUTTATO qui sopra rinascera' dal `codificatore_di()` piu'
+					 *    sotto e quello non sa niente di questo cambio. */
+					debito_chiave[c] = true;
+				}
+
+				/* 2. la regione del puntatore.  ⚠ Se non c'e' canale di input non
+				 *    e' un guasto: e' una sessione senza input, e si tace qui
+				 *    perche' la riga l'ha gia' scritta chi non l'ha aperto. */
+				if (palco_input
+				    && input_ritela(palco_input, fo.larghezza, fo.altezza) != 0)
+					registro_dice(REG_FIGLIO,
+					              "⛔ la regione del puntatore NON si e' rimappata "
+					              "su %ux%u: da qui in poi il puntatore andrebbe "
+					              "dove non deve",
+					              fo.larghezza, fo.altezza);
+
+				/* 3. ⛔ E LE CHIAVI TENUTE SI BUTTANO — difetto trovato
+				 *    refutando: `tenuto[]` e' per CODEC, ma `tenuto_l`/`tenuto_a`
+				 *    sono una coppia sola.  ⇒ Dopo un ridimensionamento il codec
+				 *    non attivo conservava una chiave della misura VECCHIA che
+				 *    `MSG_RIMANDA_PALCO` avrebbe spedito dichiarando la misura
+				 *    NUOVA: il client avrebbe dimensionato la tela su un numero e
+				 *    ricevuto pixel di un altro — cioe' l'immagine stirata e il
+				 *    puntatore fuori posto, il difetto che questa catena esiste
+				 *    per chiudere. */
+				for (uint8_t c = 0; c < 3; c++) {
+					if (!tenuto[c])
+						continue;
+					free(tenuto[c]);
+					tenuto[c] = NULL;
+					tenuto_byte[c] = 0;
+					tenuto_chiave[c] = false;
+				}
+
+				/* 4. e la misura vera diventa la nostra. */
+				tela_l = fo.larghezza;
+				tela_a = fo.altezza;
+
+				/* 5. ⭐⭐ E SI RISPONDE AL PADRE, che sta aspettando questo
+				 *    numero: senza, lui dovrebbe INDOVINARE dai fotogrammi a
+				 *    quale richiesta risponde questa misura — e con due richieste
+				 *    incatenate indovinerebbe male.  ⚠ Si manda anche quando
+				 *    nessuno aveva chiesto niente (il palco che deriva da solo):
+				 *    e' un fatto, e chi lo riceve decide che farne. */
+				rispondi_tela(tela_voluta_l, tela_voluta_a, tela_l, tela_a);
+			}
 
 			istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
 			/* ⭐⭐ §6.2 — IL TIMBRO SI PRENDE QUI, nell'istante della cattura,

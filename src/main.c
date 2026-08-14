@@ -373,6 +373,30 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
 	return figli_input(p->f, utente, id, azione, codice, premuto, a, b);
 }
 
+/* ⭐⭐ LA CUCITURA DELLA TELA — e chiude la catena che il mandato della fase 4
+ *     chiamava per nome: `figli_ritela()` → `cattura_ridimensiona()`.
+ *
+ *     Chi sa che l'utente ha chiesto un'altra misura: `rcp.c`, che ha applicato
+ *     §7.1 e `rcp_misura_ammessa()` — intervallo, parita', e il tetto che tiene
+ *     in vita il compositore di chi ci ospita.
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     ⛔ Chi puo' davvero cambiarla: il FIGLIO, che ha il flusso PipeWire.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ *
+ * ⛔ E questa riga vale quattro sintomi, non uno (`DECISIONI.md` §5.0-sexies):
+ *    le bande nere laterali, il testo interpolato, il ri-attacco a misura
+ *    diversa, e ⭐ **i quattro secondi fra il login e il desktop** — perche'
+ *    `pw_stream_update_params()` e' un riavvio del flusso, e un riavvio
+ *    consegna un buffer anche a scena ferma. */
+static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
+                             uint32_t altezza)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return false;
+	return figli_ritela(p->f, utente, larghezza, altezza);
+}
+
 /* ⛔ Il figlio se n'e' andato.  ⚠ Non c'e' piu' nessun deposito da svuotare —
  * era la cura della fase 2 — ma la riga resta perche' il fatto e' un fatto: da
  * adesso quell'utente non ha piu' un palco, e le sue sessioni non vedranno piu'
@@ -387,6 +411,29 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	              "niente (I1, SPECIFICHE.md §8.3): una sessione ferma vale piu' "
 	              "di una sessione staccata, e il palco puo' rinascere",
 	              utente, (long)uid);
+	/* ⛔⭐ E LA MISURA DEL SUO PALCO SI DIMENTICA — difetto trovato refutando, la
+	 *     notte del 15 agosto 2026: quel numero serve al RI-ATTACCO
+	 *     (`SESSIONE` concede la tela che il palco ha gia'), e un numero di un
+	 *     palco morto e' peggio di nessun numero — fa concedere una tela che
+	 *     nessun fotogramma avra' mai. */
+	wt_palco_dimentica(utente);
+}
+
+/* ⭐⭐ LA RISPOSTA DEL PALCO SULLA TELA — §7.1, e attraversa il confine nel verso
+ *     del cursore: la domanda e' uscita con `figli_ritela()`, questa rientra.
+ *
+ * ⛔ E il padre non la INDOVINA piu' dai fotogrammi: il figlio dice a quale
+ *    richiesta risponde (`voluta`) e che cosa il palco ha davvero (`avuta`, con
+ *    `0x0` = non ce l'ha fatta).  ⚠ Senza, due `ADATTA_TELA` incatenate — un
+ *    utente che trascina il bordo — facevano prendere il fotogramma della prima
+ *    per la risposta della seconda. */
+static void tela_dal_palco(void *ctx, const char *utente, uid_t uid,
+                           uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
+                           uint32_t avuta_a)
+{
+	(void)ctx;
+	(void)uid;
+	wt_tela_dal_palco(utente, voluta_l, voluta_a, avuta_l, avuta_a);
 }
 
 int main(int argc, char **argv)
@@ -601,7 +648,8 @@ int main(int argc, char **argv)
 		              "silenzioso (CODER.md §4.2).");
 
 	prole = figli_accendi(TELA_L, TELA_A, dir_rilievo, deposita_fotogramma,
-	                      congeda_figlio, cursore_dal_palco, NULL);
+	                      congeda_figlio, cursore_dal_palco, tela_dal_palco,
+	                      NULL);
 	if (!prole)
 		registro_dice(REG_AVVIO,
 		              "⛔ la tabella dei figli non si accende: NESSUN utente "
@@ -649,6 +697,13 @@ int main(int argc, char **argv)
 	 *    istante: collegarlo dopo lascerebbe la prima sessione con un desktop
 	 *    che si vede e non si comanda, e nessuna riga che dica perche'. */
 	wt_input_gancio(input_al_figlio, &ponte);
+	/* ⭐⭐ E quello della TELA, nello stesso istante e per una ragione in piu':
+	 *     il client chiede la sua misura **all'attacco**, cioe' nel primo mezzo
+	 *     secondo di ogni sessione.  Un gancio collegato dopo il primo pacchetto
+	 *     farebbe rispondere `COMPOSITORE_INCAPACE` proprio alla richiesta che
+	 *     conta — e il client mostrerebbe «adatta il desktop» come spento su un
+	 *     server che sa farlo. */
+	wt_ritela_gancio(ritela_al_figlio, &ponte);
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;

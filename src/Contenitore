@@ -1,0 +1,78 @@
+# Contenitore — ⭐ COME SI COSTRUISCE REMOTIX_V2, e senza `sudo`.
+#
+# ---------------------------------------------------------------------------
+# ⛔ PERCHE' ESISTE: il blocco della notte del 14 agosto 2026
+#
+# `fasi/rapporti/F4-IN-12-mandato-prossima-sessione.md` §3 dichiarava un blocco:
+# *«Non sono riuscito a costruire il C.  E finche' non si costruisce, ogni riga
+# nuova e' codice che nessuno ha mai visto girare.»*  Le tre strade provate:
+#
+#   · questo portatile (`CHUWI`)        mancano `nghttp3`, `ngtcp2` e
+#                                       `libswscale` ⇒ `make` si ferma
+#   · macchina di prova (192.168.0.2)   niente `gcc`, niente `make`: il rootfs
+#                                       e' live in RAM
+#   · dentro `/media/REMOTIX/enter.sh`  `gcc` c'e', ⛔ ma `/media/REMOTIX` non e'
+#                                       montato e il `/srv/src` che si vede
+#                                       dentro NON e' quello dell'host
+#
+# ⭐ La quarta strada, ed e' quella che scioglie il blocco: **un contenitore
+#    costruito qui, senza privilegi** — `podman` da utente, l'albero dei sorgenti
+#    montato dentro, e il binario che esce **sull'host**.  ⛔ Nessun `sudo`:
+#    l'utente e' root solo DENTRO il contenitore, che e' precisamente il posto in
+#    cui `apt` serve.
+#
+# ---------------------------------------------------------------------------
+# ⛔ LE DUE LIBRERIE CHE NON SI PRENDONO DA `apt`, E PERCHE'
+#
+# Il `Makefile` chiede `ngtcp2 >= 1.25` e `nghttp3 >= 1.18`; Debian Trixie porta
+# 1.11 e 1.8.  ⚠ Non e' una preferenza di versione: `ngtcp2_crypto_ossl` — il
+# ponte verso l'API QUIC **nativa** di OpenSSL 3.5, quella su cui poggia
+# `src/tls.c` — nelle versioni dei pacchetti non c'e' affatto.  ⇒ Si costruiscono
+# dai sorgenti, qui dentro, una volta sola: l'immagine se le tiene.
+#
+# ⚠ E si fissano i TAG, non `main`: un'immagine che si ricostruisce fra un mese
+#   con due librerie diverse non e' la stessa immagine, e il giorno in cui il
+#   prodotto smettesse di compilare nessuno saprebbe se e' colpa nostra.
+#
+# ---------------------------------------------------------------------------
+#   podman build -t remotix-costruzione -f src/Contenitore src/
+#   bash src/costruisci-in-contenitore.sh
+FROM docker.io/library/debian:13
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ⛔ Le dipendenze sono quelle DICHIARATE nel `Makefile`, riga per riga: se una
+#    manca qui, `make dipendenze` lo dice per nome invece di far fallire il
+#    compilatore su un `#include` che nessuno collega alla libreria assente.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential pkg-config git ca-certificates \
+        cmake ninja-build \
+        libssl-dev libpam0g-dev \
+        libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
+        libavcodec-dev libavutil-dev libswscale-dev libva-dev \
+        libei-dev libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# nghttp3 — l'HTTP/3, cioe' la meta' che porta l'extended CONNECT (RFC 9220).
+RUN git clone --depth 1 -b v1.18.0 --recursive \
+        https://github.com/ngtcp2/nghttp3 /tmp/nghttp3 \
+    && cmake -B /tmp/nghttp3/build -S /tmp/nghttp3 -GNinja \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DENABLE_LIB_ONLY=ON -DBUILD_SHARED_LIBS=ON \
+    && ninja -C /tmp/nghttp3/build install \
+    && rm -rf /tmp/nghttp3
+
+# ngtcp2 — il QUIC, ⛔ con `ENABLE_OPENSSL`: e' quello che costruisce
+# `libngtcp2_crypto_ossl`, il ponte che il `Makefile` collega per PRIMO.
+RUN git clone --depth 1 -b v1.25.0 --recursive \
+        https://github.com/ngtcp2/ngtcp2 /tmp/ngtcp2 \
+    && cmake -B /tmp/ngtcp2/build -S /tmp/ngtcp2 -GNinja \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DENABLE_OPENSSL=ON -DENABLE_LIB_ONLY=ON -DBUILD_SHARED_LIBS=ON \
+    && ninja -C /tmp/ngtcp2/build install \
+    && rm -rf /tmp/ngtcp2
+
+RUN ldconfig
+ENV PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
+
+WORKDIR /albero/src

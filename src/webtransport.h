@@ -222,6 +222,36 @@ typedef bool (*wt_input_richiesta)(void *ctx, const char *utente, uint32_t id,
                                    int32_t a, int32_t b);
 void wt_input_gancio(wt_input_richiesta f, void *ctx);
 
+/* ⭐⭐ IL PONTE DELLA TELA — `RCP.md` §7.1, `DECISIONI.md` §5.0-sexies.
+ *
+ * ⛔ E' SEPARATO DA QUELLO DELL'INPUT, e non per simmetria: un input e' un gesto
+ *    gia' convalidato che si inietta e si dimentica, e il suo esito non serve a
+ *    nessuno sul filo.  Questa e' una richiesta di **riconfigurare il palco** la
+ *    cui risposta arriva **da un'altra parte** — con un fotogramma, decine di
+ *    millisecondi dopo o mai — e che il client sta aspettando (§7.1: «a ogni
+ *    `ADATTA_TELA` il server DEVE rispondere con un `TELA`»).
+ *
+ * ⚠ `true` = la domanda e' partita verso il figlio.  ⛔ NON «la tela e'
+ *   cambiata»: quello lo dira' `rcp_tela_concessa()`, quando i pixel arrivano
+ *   alla misura nuova. */
+typedef bool (*wt_ritela_richiesta)(void *ctx, const char *utente,
+                                    uint32_t larghezza, uint32_t altezza);
+void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx);
+
+/* ⭐⭐ E LA RISPOSTA RIENTRA DI QUI — §7.1.  La manda il figlio (`FiglioTela`) e
+ *     `main.c` la porta fin qui, perche' e' questo modulo che sa quali sessioni
+ *     sono di quell'utente.
+ *
+ * ⛔ `avuta_l == 0` = il palco non ce l'ha fatta ⇒ `TELA(NON_ORA)` subito,
+ *    invece dei tre secondi del fondo di §7.1. */
+void wt_tela_dal_palco(const char *utente, uint32_t voluta_l, uint32_t voluta_a,
+                       uint32_t avuta_l, uint32_t avuta_a);
+
+/* ⛔ Il palco di quell'utente non c'e' piu': la sua misura si dimentica.
+ * ⚠ «Non lo so» e «era 1920x1080» sono due fatti diversi, e il secondo — quando
+ *   e' falso — fa concedere al ri-attacco una tela che nessun fotogramma avra'. */
+void wt_palco_dimentica(const char *utente);
+
 /* ⛔ «Qualcuno di questo utente sta ancora guardando?»  Serve a decidere se
  *    spegnere il palco, e la risposta si CHIEDE all'elenco delle sessioni vive
  *    invece di tenersi un contatore a parte: due copie dello stesso insieme

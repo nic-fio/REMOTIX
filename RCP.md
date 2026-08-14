@@ -1638,7 +1638,23 @@ che si codifica**: i fotogrammi restano della misura della tela e il client risc
 (`SPECIFICHE.md` §6.1). Serve a due cose — a scegliere quanti bit spendere, perché una finestra
 piccola guardata su uno schermo piccolo non ne merita quanti una grande; e a rendere gratuito il
 giorno in cui `DECISIONI.md` §5.0-ter venisse chiusa. L'unico messaggio che cambia la tela è
-`ADATTA_TELA`, ed è una scelta esplicita dell'utente.
+`ADATTA_TELA`.
+
+> ⛔ **Qui c'era scritto anche «ed è una scelta esplicita dell'utente», e dal 15 agosto 2026 non è
+> più vero.** `DECISIONI.md` §5.0-sexies — decisa dall'utente il 14 agosto — fa chiedere al client
+> **la tela della propria finestra all'attacco di ogni sessione**, da sé. ⇒ `ADATTA_TELA` resta
+> l'unico messaggio che cambia la tela, ma non è più detto che dietro ci sia un dito: può esserci
+> l'attacco. ⚠ Per l'arbitro non cambia niente — il messaggio, i controlli e la risposta sono gli
+> stessi — e la riga si corregge perché **un documento che descrive un client che non esiste più
+> smette di essere l'arbitro**.
+>
+> ⏳ **E resta una riga da scrivere**, trovata refutando la notte del 15 agosto: *che cosa fa il
+> server quando il palco cambia misura **senza che nessun `ADATTA_TELA` gliel'abbia chiesto*** — un
+> rimontaggio della sessione grafica dopo una caduta, per esempio. §6.2 dà al client un solo modo di
+> accettare una misura inattesa (trattenere finché una richiesta è senza risposta), quindi un `TELA`
+> non sollecitato **fa chiudere una sessione sana**: il server oggi non lo manda, e RICHIEDE invece
+> al palco di tornare alla tela in vigore, con un'attesa che cresce. Funziona, ⚠ ma è una regola del
+> prodotto che l'arbitro non nomina.
 
 > ⚠ *Chiarito il 9 agosto 2026, e non era una sfumatura.* Questa riga diceva «serve al server per
 > sapere **a che misura codificare**», e ci sono due voci di `DECISIONI.md` che si contraddicono

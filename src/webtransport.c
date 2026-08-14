@@ -230,6 +230,12 @@ struct wt {
 	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha video»: una volta
 	 *    sola, e il perche' e' nella riga scritta allora. */
 	bool video_detto;
+	/* ⛔ L'ultima misura di fotogramma per cui si e' gia' scritto «non e' la tela
+	 *    in vigore».  ⚠ E' una MISURA e non un `bool` apposta: cosi' il fondo si
+	 *    riarma quando il fatto cambia, invece di tacere per sempre dopo la prima
+	 *    volta — ed e' un campo suo, perche' `video_detto` racconta un altro
+	 *    fatto e un flag per due fatti ne spegne uno. */
+	uint32_t tela_detta_l, tela_detta_a;
 	/* Quando si e' chiesta l'ultima chiave al figlio, per non chiederne una a
 	 * ogni battito mentre la prima e' ancora in viaggio.  ⛔ Non e' la grazia
 	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
@@ -997,6 +1003,43 @@ static int gancio_input_rilascia_tutto(void *ctx)
 	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0);
 }
 
+/* ⭐⭐ IL GANCIO DELLA TELA — §7.1, e la catena intera in una riga:
+ *
+ *     `rcp.c` (T_ADATTA_TELA) → questo → `main.c` → `figli_ritela()` →
+ *     `MSG_INPUT/RITELA` → `cattura_ridimensiona()` → `pw_stream_update_params()`
+ *
+ * ⛔ E la risposta NON torna da qui: torna con un fotogramma alla misura nuova,
+ *    che `video_a_una()` riporta a `rcp_tela_concessa()`.  ⚠ Chi leggesse questo
+ *    `true` come «la tela e' cambiata» rifarebbe l'errore che `wayvnc` fa con
+ *    l'esito della richiesta (`DECISIONI.md` §5.0-sexies, «la regola di forma
+ *    rubata a neatvnc»). */
+static wt_ritela_richiesta gancio_palco_ritela;
+static void *gancio_palco_ritela_ctx;
+
+void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx)
+{
+	gancio_palco_ritela = f;
+	gancio_palco_ritela_ctx = ctx;
+}
+
+static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!gancio_palco_ritela || !w->rcp)
+		return false;
+	/* ⛔ Invariante I3: la tela si cambia al palco di CHI HA CHIESTO, e il nome
+	 *    e' quello che PAM ha ammesso su questa sessione — non un parametro che
+	 *    viene dal filo.  Un utente che potesse ridimensionare il monitor di un
+	 *    altro sarebbe un difetto piccolo con una faccia grossa: il desktop
+	 *    dell'altro che cambia misura da solo. */
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return false;
+	return gancio_palco_ritela(gancio_palco_ritela_ctx, mio, larghezza, altezza);
+}
+
 static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
@@ -1499,16 +1542,26 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	 *     ⛔ Meglio nessun fotogramma che un fotogramma che mente. */
 	if (tl != l || ta != a) {
 		w->video_saltati++;
-		if (!w->video_detto) {
-			w->video_detto = true;
+		/* ⚠ Un fondo SUO, e non piu' `video_detto`: quel campo e' il fondo del
+		 *   messaggio «nessun codec negoziato», e un flag per due fatti diversi
+		 *   ne spegne uno quando l'altro parla.  ⛔ E qui il fondo si RIARMA a
+		 *   ogni cambio di tela, perche' il fatto e' cambiato. */
+		if (w->tela_detta_l != l || w->tela_detta_a != a) {
+			w->tela_detta_l = l;
+			w->tela_detta_a = a;
 			registro_dice(REG_RCP,
 			              "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
 			              "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
-			              "direbbe una misura e i pixel ne porterebbero un'altra",
+			              "direbbe una misura e i pixel ne porterebbero un'altra.  "
+			              "⚠ Al palco si sta richiedendo la tela in vigore",
 			              w->provenienza, tl, ta, l, a);
 		}
 		return;
 	}
+	/* ⭐ Tela e fotogramma sono d'accordo: il fondo del messaggio di sopra si
+	 *    disarma, cosi' il prossimo disaccordo si vedra' invece di essere
+	 *    scambiato per la coda di quello di prima. */
+	w->tela_detta_l = w->tela_detta_a = 0;
 
 	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 
@@ -1573,12 +1626,172 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
 	}
 }
 
+/* ⛔⭐⭐ LA MISURA CHE IL PALCO HA ADESSO, per utente — e sopravvive alla
+ *     connessione, come il palco (invariante I4).
+ *
+ * ⛔ SERVE AL RI-ATTACCO, ed e' l'unico posto del padre in cui quel numero
+ *    esiste: `rcp.c` conosce la tela CONCESSA, il figlio conosce quella VERA, e
+ *    fra i due passano solo fotogrammi.  ⇒ Si legge dal fotogramma — che e'
+ *    anche l'unica fonte che non mente (`DECISIONI.md` §5.0-sexies).
+ *
+ * ⚠ Non e' una cache da tenere fresca: e' un FATTO datato all'ultimo fotogramma
+ *   consegnato.  Se il palco muore e rinasce a un'altra misura, la prima riga di
+ *   `rcp_tela_concessa()` se ne accorge e chiede al palco di venire dov'e' la
+ *   tela in vigore.
+ *
+ * ⚠ Otto voci: `MAX_ATTACCATE` in `rcp.c` e' dello stesso ordine, e un utente
+ *   in piu' che non trova posto perde solo questa comodita' — riparte come
+ *   prima del 15 agosto 2026, cioe' concedendo quel che il client chiede. */
+#define WT_PALCHI 8
+static struct {
+	/* ⛔ 257 e non 64: e' la misura del campo `utente` di `rcp.c`.  ⚠ Con un
+	 *    campo piu' corto `snprintf` troncava in scrittura e `strcmp` confrontava
+	 *    il nome INTERO con quello troncato: la voce non si ritrovava mai, se ne
+	 *    prendeva una nuova a ogni fotogramma, e in otto giri la tabella era piena
+	 *    dello stesso nome — spenta **per tutti gli utenti della macchina**.
+	 *    Difetto trovato refutando, 15 agosto 2026. */
+	char utente[257];
+	uint32_t l, a;
+} palchi[WT_PALCHI];
+static bool palchi_pieni_detto;
+
+static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
+{
+	int libero = -1;
+
+	if (!utente || !utente[0] || !l || !a)
+		return;
+	for (int i = 0; i < WT_PALCHI; i++) {
+		if (palchi[i].utente[0] == '\0') {
+			if (libero < 0)
+				libero = i;
+			continue;
+		}
+		if (strcmp(palchi[i].utente, utente) != 0)
+			continue;
+		palchi[i].l = l;
+		palchi[i].a = a;
+		return;
+	}
+	if (libero < 0) {
+		/* ⛔ Il ripiego si DICHIARA (`CODER.md` §4.2), e una volta sola: senza
+		 *    questa riga il nono utente perdeva la cura del ri-attacco in
+		 *    silenzio, e il sintomo sarebbe stato «a me il desktop al riattacco
+		 *    non torna» per quel solo utente. */
+		if (!palchi_pieni_detto) {
+			palchi_pieni_detto = true;
+			registro_dice(REG_RCP,
+			              "⚠ RIPIEGO DICHIARATO: la tabella delle tele dei palchi "
+			              "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la "
+			              "tela verra' concessa come la chiede il client invece "
+			              "che come il palco ce l'ha",
+			              WT_PALCHI, utente);
+		}
+		return;
+	}
+	snprintf(palchi[libero].utente, sizeof palchi[libero].utente, "%s", utente);
+	palchi[libero].l = l;
+	palchi[libero].a = a;
+}
+
+/* ⛔⭐ IL PALCO E' MORTO: la sua misura non e' piu' un fatto, e' un ricordo.
+ *
+ * ⚠ Difetto trovato refutando: senza questa riga la voce restava, e al
+ *   ri-attacco `SESSIONE` concedeva **la misura di ieri** — quella di un palco
+ *   che non esiste piu'.  Il palco nuovo ne consegna un'altra, la sessione nasce
+ *   in disaccordo, e la cura del ri-attacco si ritorceva contro se stessa.
+ * ⛔ «Non lo so» e «era 1920x1080» sono due fatti diversi, e il secondo, quando
+ *    e' falso, e' peggio del primo. */
+void wt_palco_dimentica(const char *utente)
+{
+	if (!utente || !utente[0])
+		return;
+	for (int i = 0; i < WT_PALCHI; i++) {
+		if (strcmp(palchi[i].utente, utente) != 0)
+			continue;
+		registro_dice(REG_RCP,
+		              "la tela del palco di «%s» (%ux%u) si dimentica: quel palco "
+		              "non c'e' piu', e un numero vecchio spacciato per fatto e' "
+		              "peggio di nessun numero",
+		              utente, palchi[i].l, palchi[i].a);
+		memset(&palchi[i], 0, sizeof palchi[i]);
+		palchi_pieni_detto = false;
+		return;
+	}
+}
+
+/* ⭐⭐ LA RISPOSTA DEL PALCO SULLA TELA — §7.1, e arriva dal FIGLIO.
+ *
+ * ⛔ Va a TUTTE le sessioni di quell'utente, e non solo a chi ha chiesto: la
+ *    tela del palco e' una sola, e una sessione che non lo sapesse continuerebbe
+ *    a scartare ogni fotogramma per misura sbagliata.  ⚠ `rcp.c` decide da se'
+ *    se quel messaggio risponde a una SUA richiesta — qui non si sceglie. */
+void wt_tela_dal_palco(const char *utente, uint32_t voluta_l, uint32_t voluta_a,
+                       uint32_t avuta_l, uint32_t avuta_a)
+{
+	/* ⛔ E la tabella si aggiorna QUI e non solo dai fotogrammi: questa e' la
+	 *    notizia piu' fresca che il padre abbia sulla misura del palco, e arriva
+	 *    anche quando nessun fotogramma parte. */
+	palco_misura_segna(utente, avuta_l, avuta_a);
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		if (!w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !utente || strcmp(mio, utente) != 0)
+			continue;
+		rcp_tela_dal_palco(w->rcp, voluta_l, voluta_a, avuta_l, avuta_a,
+		                   w->conn ? ngtcp2_conn_get_timestamp(w->conn)
+		                                 / NGTCP2_MILLISECONDS
+		                           : 0);
+	}
+}
+
+static bool wt_palco_misura(const char *utente, uint32_t *l, uint32_t *a)
+{
+	if (!utente || !utente[0])
+		return false;
+	for (int i = 0; i < WT_PALCHI; i++) {
+		if (strcmp(palchi[i].utente, utente) != 0)
+			continue;
+		if (!palchi[i].l || !palchi[i].a)
+			return false;
+		if (l)
+			*l = palchi[i].l;
+		if (a)
+			*a = palchi[i].a;
+		return true;
+	}
+	return false;
+}
+
+/* ⛔ Il gancio che `rcp.c` chiama in `ATTACCA`.  ⚠ L'utente e' quello che PAM ha
+ *    ammesso su QUESTA sessione: chiedere il palco di un altro sarebbe dire a
+ *    questo client la misura del desktop di qualcun altro. */
+static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!w->rcp)
+		return false;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return false;
+	return wt_palco_misura(mio, l, a);
+}
+
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
 {
 	if (codec != 1 && codec != 2)
 		return;
+	/* ⛔ Si segna PRIMA di consegnare, e vale anche se non c'e' nessuna sessione
+	 *    a cui consegnare: e' un fatto del palco, non della connessione — ed e'
+	 *    esattamente il caso del ri-attacco, dove la sessione che vedra' quel
+	 *    numero **non esiste ancora**. */
+	palco_misura_segna(utente, larghezza, altezza);
 	for (wt *w = vive_prima; w; w = w->viva_dopo)
 		video_a_una(w, utente, codec, chiave, dati, byte, larghezza, altezza,
 		            istante_us, input);
@@ -1657,6 +1870,24 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 		g.input_posizione = gancio_input_posizione;
 		g.input_rilascia_tutto = gancio_input_rilascia_tutto;
 	}
+
+	/* ⭐⭐ §7.1 — IL GANCIO DELLA TELA, e si collega DA SOLO: non appartiene ai
+	 *     sei dell'input, e la ragione e' che senza di lui `rcp.c` ha una
+	 *     risposta giusta da dare — `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` —
+	 *     mentre senza i sei dell'input non ce l'ha.
+	 * ⚠ E come quelli, si collega solo se il ponte verso il palco c'e': un
+	 *   gancio collegato a vuoto direbbe a `rcp.c` «so ridimensionare» e poi
+	 *   lascerebbe il client ad aspettare un fotogramma che nessuno ha chiesto a
+	 *   nessuno. */
+	if (gancio_palco_ritela)
+		g.ritela = gancio_ritela;
+
+	/* ⛔⭐ E QUESTO SI COLLEGA SEMPRE, anche senza il ponte verso il palco: non
+	 *     chiede niente a nessuno — legge un numero che questo modulo ha gia',
+	 *     l'ultima misura consegnata dal palco di quell'utente.  ⚠ Se non c'e'
+	 *     ancora (primo attacco, nessun fotogramma) risponde `false`, e `rcp.c`
+	 *     concede quel che il client chiede: il comportamento di prima. */
+	g.tela_del_palco = gancio_tela_del_palco;
 
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un

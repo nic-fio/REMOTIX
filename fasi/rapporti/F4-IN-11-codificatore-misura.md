@@ -217,9 +217,11 @@ dimensionata sulla **vista** (`:1666`), con impaginazione a bande nere e mai sti
 `Math.round` (`:1256`), col commento *«niente arrotondamenti ai numeri pari, che sono un vincolo
 della TELA e che qui sarebbero la forma E2»*; la **tela** invece è forzata pari e limitata
 (`:2840-2841`, `pari = n - (n % 2)`, fra `320×240` e `7680×4320`).
-`[R]` La vista viaggia una volta sola, in `ATTACCA` (`:2843-2849`); ⛔ `VISTA` (0x0008) e
-`ADATTA_TELA` **non sono mai spedite** (`:2372-2376`, `:2056-2062`), quindi oggi il server non
-sa mai che la finestra è cambiata.
+`[R]` La vista viaggia una volta sola, in `ATTACCA`; ⛔ `VISTA` (0x0008) non è mai spedita, quindi
+il server non sa che la finestra è cambiata **per scegliere quanti bit spendere**.
+⭐ **`ADATTA_TELA` invece SI', dal 15 agosto 2026**: la pagina la manda all'attacco con la misura
+della propria finestra (`chiedi_tela()`), e con `?adatta=segui` anche a ogni ridimensionamento —
+`DECISIONI.md` §5.0-sexies e `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 `[R]` Le coordinate del mouse si convertono a `:3767-3782` e `:4159-4160`, con tre fattori
 (`sx/sy` fotogramma→tela, `vx/vy` tela→vetro, `bx0/by0` bande nere), in virgola mobile fino a un
 `Math.floor` finale (`:3814-3827`). ⇒ ⭐ **È esattamente questa catena che il disegno dell'utente

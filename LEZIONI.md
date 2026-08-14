@@ -1404,6 +1404,37 @@ dichiaravamo.**
 > su HEVC. **Il numero di v1 non era un tetto di Android: era il tetto di quel client.** Vale sia per
 > la previsione sbagliata sia per il giudizio che l'ha smentita — nessuno dei due si eredita.
 
+### 7.5 ⭐⭐ Una deduzione al posto di un messaggio è un difetto che aspetta
+
+*15 agosto 2026, notte. Trovata refutando la cura appena scritta, e vale per l'architettura, non
+per una riga.*
+
+La catena che porta la misura della finestra fino al compositore era scritta e funzionava. Il
+padre chiedeva al figlio di ridimensionare, e poi **deduceva l'esito dai fotogrammi**: *«se ne
+arriva uno di misura diversa, il palco ha obbedito»*. Era fedele a una regola giusta di questo
+progetto — *«la verità la dice il fotogramma, non l'esito della richiesta»* — e passava tutti i casi
+che avevo in mente.
+
+⛔ **Tre agenti mandati a smentirla hanno trovato tre casi che non avevo in mente**, e sono tutti
+comuni:
+
+| il caso | che cosa deduceva il padre |
+|---|---|
+| il palco ha **già** quella misura | «non ha ancora obbedito» ⇒ tre secondi di attesa per una cosa già fatta |
+| il palco **non c'è** o non ce l'ha fatta | «sta ancora provando» ⇒ tre secondi per una notizia che c'era subito |
+| **due richieste incatenate** (l'utente trascina il bordo) | il fotogramma della PRIMA preso per la risposta della SECONDA ⇒ desktop della misura sbagliata, **coi conti dei messaggi in ordine** |
+
+⇒ La cura non è stata «più controlli», ed è la parte che conta: è stata **un messaggio in più**, dal
+processo che sapeva al processo che decideva — con dentro *a quale domanda risponde* e *che cosa è
+successo davvero*.
+
+> **Quando un pezzo deve dedurre qualcosa che un altro pezzo sa già, la deduzione non è un
+> risparmio: è un difetto che aspetta il caso a cui non hai pensato.**
+
+⚠ E il segnale che la distingue da una deduzione legittima è **sempre lo stesso**: la deduzione
+regge finché gli eventi sono uno per volta, e cade appena se ne accavallano due. Se il caso «due
+richieste in volo» non ha una risposta ovvia, la deduzione va sostituita da un messaggio.
+
 ---
 
 ## 8. I vicoli ciechi già percorsi — da non rifare

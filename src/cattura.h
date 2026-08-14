@@ -329,6 +329,114 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
                        CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
                        GError **sbaglio);
 
+/* ------------------------------------------------------------------ *
+ *  ⭐⭐ IL CAMBIO DI MISURA A CALDO — `DECISIONI.md` §5.0-sexies
+ * ------------------------------------------------------------------ */
+
+/*
+ * L'esito della RICHIESTA, che ⛔ non e' l'esito del cambio.
+ *
+ * ⛔⭐ «LA VERITA' LA DICE IL FOTOGRAMMA, NON L'ESITO DELLA RICHIESTA» — la
+ *     regola di forma rubata a neatvnc, `DECISIONI.md` §5.0-sexies.  `[M]` 14
+ *     agosto 2026: chiedere a labwc la misura che l'output HA GIA' risponde
+ *     «riuscito» e non manda nessun evento; un serial vecchio risponde
+ *     «annullato» e non fa niente.  ⛔ `wayvnc` tratta *riuscito*, *fallito* e
+ *     *annullato* nello stesso ramo — da non copiare.
+ *
+ * ⇒ Qui si dice soltanto se la RICHIESTA e' partita.  Che il compositore abbia
+ *   obbedito lo dira' il formato negoziato (`cattura_consegna`) e, prima
+ *   ancora, il primo fotogramma alla misura nuova.
+ */
+typedef enum
+{
+	CATTURA_RITELA_CHIESTA = 0, /* la richiesta e' partita: aspetta il fotogramma */
+	/* ⭐ La misura chiesta e' gia' quella in vigore: NON si rinegozia.
+	 * ⛔ La guardia e' obbligatoria — `kde.md` §8.2-bis: senza,
+	 *    «la rinegoziazione si morde la coda». */
+	CATTURA_RITELA_GIA_COSI,
+	CATTURA_RITELA_GUASTO /* niente flusso, flusso morto, o misura vuota */
+} CatturaRitela;
+
+/*
+ * Chiede al produttore una misura NUOVA sul flusso GIA' APERTO.
+ *
+ * ⛔ NON rifa' la sessione e non tocca il monitor virtuale: rifa' la proposta di
+ *    formato e chiama `pw_stream_update_params()`, che e' il modo in cui
+ *    gnome-remote-desktop ridimensiona (`F4-IN-2`) ed e' quel che il banco
+ *    `banchi/04-in8-misura.c` ha misurato il 14 agosto 2026:
+ *
+ *      Mutter  `[M]` primo fotogramma nuovo a **41,6 ms**, nessun nero, sessione
+ *              ed EIS intatti; **20 ridimensionamenti in 2 s, 20 esatti**
+ *      labwc   `[M]` **5,1 ms**, **0 fotogrammi persi su 25**
+ *      KWin    ⛔ solo su `master` — vale il ripiego di `DECISIONI.md` §5.0-bis
+ *
+ * ⭐⭐ E C'E' UN SECONDO EFFETTO, MISURATO, CHE NON SI VEDE DAL NOME: **riavviare
+ *     il flusso fa arrivare un fotogramma**.  `[M]` 14 agosto 2026, registro
+ *     delle 21:32:55: fra il login e il primo fotogramma passavano **4,4
+ *     secondi** di richieste di chiave ogni 200 ms e **659 «attese a vuoto»**,
+ *     perche' su Wayland il compositore consegna solo quando la scena cambia e
+ *     un desktop appena acceso e' fermo.  ⛔ Xpra lo risolve con
+ *     `buffer_refresh` («ridipingi adesso») e a noi non serve: qui la leva e'
+ *     questa, e la cura del ritardo e' un effetto collaterale della cura delle
+ *     bande.
+ *
+ * ⚠ NON aspetta: torna subito.  Aspettare qui fermerebbe il ciclo del figlio,
+ *   che e' l'unico che ha (`CODER.md` §4.4).
+ *
+ * ⛔ E LA MISURA AMMESSA NON SI CONTROLLA QUI: la regola («200..8192, ed
+ *    entrambe PARI») vive in `rcp_misura_ammessa()` e la applica chi legge
+ *    `ADATTA_TELA` dal filo — vedi il riquadro in fondo a questo file.  Qui si
+ *    rifiuta solo lo ZERO, che e' un fatto diverso: una misura vuota non e'
+ *    «fuori dai limiti», e' una richiesta senza contenuto.
+ */
+CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza);
+
+/*
+ * ⭐⭐ «CONSEGNAMI UN FOTOGRAMMA ADESSO» — e su Wayland non si puo' chiedere.
+ *
+ * ⛔ IL FATTO, misurato: un compositore Wayland consegna un fotogramma **solo
+ *    quando qualcosa cambia** (`cattura.h`, regola 3), e un desktop appena
+ *    acceso e' fermo.  `[M]` 14 agosto 2026, registro del server: fra il login e
+ *    il primo fotogramma sono passati **4,4 secondi**, con una richiesta di
+ *    chiave ogni 200 ms e **659 «attese a vuoto»** — e in quei 4,4 secondi
+ *    l'utente guarda una pagina bianca.
+ *
+ * ⛔ Xpra lo risolve con `buffer_refresh` («ridipingi adesso») e a noi non
+ *    serve: su Wayland non si puo' ordinare a un compositore di ridipingere.
+ * ⭐ Ma la leva c'e' ed e' la stessa del ridimensionamento: **riavviare il flusso
+ *    fa arrivare un buffer**, ed e' precisamente quel che
+ *    `pw_stream_update_params()` E'.  Qui si rifanno gli stessi parametri, con
+ *    la stessa misura: non cambia niente, e il fotogramma arriva.
+ *
+ * ⚠ `[?]` E la marca e' questa, non `[M]`: che la rinegoziazione consegni un
+ *   buffer **su una scena ferma** e' dedotto dal meccanismo (il flusso riparte,
+ *   e ripartire vuol dire riallocare i buffer e ridipingere il primo), non
+ *   misurato.  La prova e' una sessione in cui il tempo fra il login e il primo
+ *   fotogramma scende sotto il secondo, e va fatta sulla macchina di prova.
+ *
+ * ⛔ Chi chiama deve METTERCI UN FONDO: a chiamarla a ogni giro si
+ *    rinegozierebbe sessanta volte al secondo — e ogni rinegoziazione costa il
+ *    fotogramma che si sta cercando di ottenere.
+ *
+ * `FALSE` = non si e' potuto chiedere (niente flusso, o flusso non attivo).
+ */
+gboolean cattura_risveglia(Cattura *cattura);
+
+/* La misura CHIESTA al produttore adesso — ⛔ non quella concessa: quella sta in
+ * `CatturaConsegna.larghezza/altezza` e vale solo dopo la negoziazione.  ⚠ Le due
+ * si confrontano, e chi le confonde riscrive il difetto che la guardia «chiesto
+ * contro concesso» esiste per vedere. */
+void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
+
+/* La misura NEGOZIATA, cioe' quella che i pixel hanno davvero.  ⛔ `FALSE` = il
+ * formato non e' stato ancora negoziato, che NON e' «e' 0x0» (`CODER.md` §3.10).
+ *
+ * ⚠ Serve a rispondere «la tela che chiedi ce l'ho gia'» senza aspettare un
+ *   fotogramma che non arriverebbe: e' l'unico caso in cui la richiesta si puo'
+ *   chiudere senza vedere i pixel, perche' i pixel di quella misura chi guarda
+ *   li ha gia' davanti. */
+gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
+
 /*
  * Aspetta il PROSSIMO fotogramma e ne consegna una copia.
  *
@@ -360,6 +468,11 @@ typedef struct
 	guint64 solo_cursore;   /* buffer marcati CORRUPTED: pixel stantii */
 	guint64 stride_zero;    /* ⛔ scartati invece che calcolati        */
 	guint64 senza_pixel;    /* mappatura assente o chunk vuoto         */
+	/* ⛔⭐ La geometria dichiarata dal FORMATO non sta dentro i byte del CHUNK:
+	 *     scartati, perche' chi li consuma leggerebbe oltre la copia.  ⚠ E' la
+	 *     finestra fra una rinegoziazione e i buffer nuovi, e prima di
+	 *     `cattura_ridimensiona()` non poteva esistere. */
+	guint64 geometria_incoerente;
 	/* ⭐ Il canale del cursore.  ⛔ I due primi sono DUE e non uno, ed e' la
 	 *    stessa regola dello zero e del fallimento: «il metadato non c'era» e
 	 *    «il metadato c'era» sono i due fatti che distinguono un puntatore

@@ -10,6 +10,12 @@ reference-cinnamon/
 build/
 target/
 *.o
+# ⛔ Il binario del server: si ricostruisce in venti secondi (`src/Contenitore`)
+#    ed e' legato alle librerie della macchina che l'ha costruito.  Uno in
+#    deposito sarebbe un binario che qualcuno prima o poi crede di poter lanciare
+#    altrove — e il sintomo di quel giorno e' «si collega e muore»
+#    (`/media/REMOTIX/tmp/riavvia-7700.sh`, trappola 1).
+src/remotix
 
 # Le registrazioni di B4 le rigenera `01-b4-registrazioni.py`: la fonte e'
 # il generatore, non i file binari.
