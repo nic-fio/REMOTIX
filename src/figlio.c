@@ -1791,6 +1791,26 @@ static uint32_t tenuto_input;
  *    un RISULTATO (`CatturaPresa` lo distingue dal guasto), non un difetto. */
 #define MOVIMENTO_ATTESA_S 0.25
 
+/* ⛔⭐ QUANTO SI ASPETTA PRIMA DI RIPROVARE A MONTARE IL PALCO, E PERCHE'
+ *     CRESCE.
+ *
+ * `[M]` 14 agosto 2026, sessione vera dell'utente: senza nessuna attesa il
+ * ciclo girava a vuoto e scriveva **30,8 GB di registro in pochi minuti**, 112
+ * milioni di righe identiche tutte nello stesso millisecondo.  ⇒ Il difetto non
+ * era «riprovare»: era **riprovare senza fermarsi mai**.
+ *
+ * ⚠ Il minimo e' un secondo perche' una sessione grafica che sta nascendo ci
+ *   mette secondi, e riprovare dieci volte al secondo non la fa nascere prima.
+ * ⚠ Il massimo e' mezzo minuto perche' oltre non si guadagna niente e si
+ *   perderebbe il caso vero: un utente che rifa' login su una macchina dove la
+ *   sessione e' appena tornata deve trovarla, non aspettare un quarto d'ora. */
+#define PALCO_RIPROVA_MIN_MS 1000
+#define PALCO_RIPROVA_MAX_MS 30000
+
+/* Quando si riprova, e quanto si e' aspettato l'ultima volta. */
+static uint64_t palco_riprova_ms;
+static uint64_t palco_attesa_ms;
+
 static Codificatore *codif[3];
 /* Quale codec il padre ha chiesto: 0 = nessuno, cioe' nessuno sta guardando. */
 static uint8_t codec_chiesto;
@@ -2134,13 +2154,40 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	return true;
 }
 
-/* ⛔ Il palco, preso una volta e TENUTO: `mutter` e `cattura` restano aperti
- *    finche' il figlio vive, perche' il monitor virtuale esiste finche' qualcuno
- *    consuma il flusso.  ⚠ E' l'invariante I4 fatta di processi: chi smonta il
- *    palco e' la morte del figlio, non la caduta di una connessione. */
-static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
-                            const char *dir_rilievo, MutterSessione **fuori_m,
-                            Cattura **fuori_c)
+/* ⛔ Il palco appartiene alla SESSIONE, non alla connessione: `mutter` e
+ *    `cattura` restano aperti finche' il figlio vive, perche' il monitor
+ *    virtuale esiste finche' qualcuno consuma il flusso.  ⚠ E' l'invariante I4
+ *    fatta di processi: chi smonta il palco e' la morte del figlio, non la
+ *    caduta di una connessione.
+ *
+ * ⛔⭐ MA IL PALCO PUO' NON ESSERCI, E SONO DUE CASI CHE SONO LO STESSO —
+ *     `[M]` dalla sessione vera dell'utente, 14 agosto 2026:
+ *
+ *   · **non c'e' ancora**: se alla nascita del figlio la sessione grafica non
+ *     esiste, questa funzione falliva e **nessuno ne riprovava un'altra**.  Al
+ *     login successivo l'invariante I2 consegnava all'utente **quel figlio
+ *     li'** — e l'utente ha visto «niente desktop» due volte di fila;
+ *   · **non c'e' piu'**: se la sessione grafica muore sotto un figlio vivo, il
+ *     flusso PipeWire va in `connection error`, `cattura_prendi` torna
+ *     **subito** con un guasto, e il ciclo girava a vuoto scrivendo il registro
+ *     a raffica — ⛔ **30,8 GB e 112 milioni di righe identiche**, cioe' il
+ *     disco di una macchina vera.
+ *
+ * ⇒ ⭐ Sono i due capi della stessa cosa — *il figlio non sa che il suo palco
+ *   non c'e' piu', o non c'e' ancora* — e la cura e' una sola: **il palco si
+ *   monta, si smonta e si RIMONTA**, con un'attesa che cresce.
+ * ⚠ E non si muore: `SPECIFICHE.md` §8.3 vieta di staccare, e una sessione
+ *   ferma vale piu' di una sessione chiusa.  ⛔ Ma un figlio **senza palco**
+ *   non e' una sessione ferma: e' un figlio che non serve a niente, e per
+ *   questo continua a riprovare invece di stare li'.
+ *
+ * `primo` = e' la nascita: si fa la diagnosi (i due fotogrammi che dimostrano
+ * che il palco funziona) e si scrive il rilievo.  ⚠ Su un rimontaggio no: quei
+ * due non sono fotogrammi del movimento, e rifarli azzererebbe i conti del
+ * ciclo a meta' di una sessione viva. */
+static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
+                            const char *dir_rilievo, bool primo,
+                            MutterSessione **fuori_m, Cattura **fuori_c)
 {
 	struct corpo_palco p;
 	GError *sbaglio = NULL;
@@ -2174,7 +2221,7 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		              p.guasto);
 		g_clear_error(&sbaglio);
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
-		return;
+		return false;
 	}
 	p.bus_aperto = 1;
 	g_object_unref(bus);
@@ -2205,7 +2252,7 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		              p.guasto);
 		g_clear_error(&sbaglio);
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
-		return;
+		return false;
 	}
 
 	/* ⛔ La cadenza si chiede UNA volta e con UN nome: `MOVIMENTO_FPS`.  Qui
@@ -2221,7 +2268,7 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		g_clear_error(&sbaglio);
 		mutter_chiudi(mut);
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
-		return;
+		return false;
 	}
 	*fuori_m = mut;
 	*fuori_c = cat;
@@ -2239,8 +2286,20 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		              "mai partito — e i due numeri sono diversi apposta",
 		              p.guasto);
 		g_clear_error(&sbaglio);
+		/* ⛔⭐ E QUI SI SMONTA, invece di restare con un palco a meta'.
+		 *
+		 *     Prima si tornava lasciando `*fuori_c` pieno: il ciclo trovava una
+		 *     cattura viva che non consegnava, e non aveva nessun modo di
+		 *     distinguerla da una sana.  ⚠ «Il flusso non e' mai partito» e «la
+		 *     scena e' ferma» sono due cose diverse (`cattura.h`), e questa e'
+		 *     la prima.  ⇒ Si smonta, e chi chiama riprovera'. */
+		cattura_fermo_libera(&fo);
+		cattura_ferma(cat);
+		mutter_chiudi(mut);
+		*fuori_c = NULL;
+		*fuori_m = NULL;
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
-		return;
+		return false;
 	}
 
 	/* ⛔ Il nome del monitor DOPO il primo fotogramma, non dopo `cattura_avvia`:
@@ -2279,24 +2338,106 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 * ⛔ §5.2: tutt'e due i primi devono essere una CHIAVE, e si chiede invece
 	 *    di sperarlo. */
 	debito_chiave[1] = debito_chiave[2] = true;
-	/* ⚠ `input = 0` e NON e' un valore di comodo: §6.2 dice «0 se nessuno», e
-	 *   qui non c'e' ancora nessuno — il canale di input nasce quando il client
-	 *   apre il suo stream, e questi due fotogrammi sono la diagnosi
-	 *   dell'accensione, non del movimento. */
-	if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
-	                     "flusso-hevc.265", istante_us, tela_l, tela_a, 0))
-		p.flussi++;
-	if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
-	                     "flusso-av1.obu", istante_us, tela_l, tela_a, 0))
-		p.flussi++;
-	/* ⛔ E i contatori del ciclo ripartono da zero: questi due non sono
-	 *    fotogrammi del movimento, sono la diagnosi dell'accensione.  Sommarli
-	 *    direbbe «due fotogrammi consegnati» a un utente che non ne ha visto
-	 *    nemmeno uno. */
-	ciclo_fotogrammi = ciclo_chiavi = 0;
+	if (primo) {
+		/* ⚠ `input = 0` e NON e' un valore di comodo: §6.2 dice «0 se
+		 *   nessuno», e qui non c'e' ancora nessuno — il canale di input nasce
+		 *   quando il client apre il suo stream, e questi due fotogrammi sono
+		 *   la diagnosi dell'accensione, non del movimento. */
+		if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
+		                     "flusso-hevc.265", istante_us, tela_l, tela_a, 0))
+			p.flussi++;
+		if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
+		                     "flusso-av1.obu", istante_us, tela_l, tela_a, 0))
+			p.flussi++;
+		/* ⛔ E i contatori del ciclo ripartono da zero: questi due non sono
+		 *    fotogrammi del movimento, sono la diagnosi dell'accensione.
+		 *    Sommarli direbbe «due fotogrammi consegnati» a un utente che non
+		 *    ne ha visto nemmeno uno. */
+		ciclo_fotogrammi = ciclo_chiavi = 0;
+	} else {
+		/* ⚠ Su un rimontaggio la diagnosi non si rifa': costerebbe ~80 ms di
+		 *   codifica a meta' di una sessione viva, e i due fotogrammi
+		 *   andrebbero a un client che sta gia' guardando.  ⛔ `p.flussi` resta
+		 *   0 e il registro lo dice: e' un rimontaggio, non una nascita. */
+		p.flussi = 0;
+	}
 
 	cattura_fermo_libera(&fo);
 	manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+
+	/* ⭐⭐ E LE DUE CUCITURE DEL PALCO STANNO QUI, non nel chiamante: chi
+	 *     rimonta il palco deve rimontarle **tutte**, e lasciarne una fuori
+	 *     vorrebbe dire un desktop che si vede e non si comanda — senza nessun
+	 *     errore da nessuna parte.
+	 *
+	 * ⛔ `cursore_apri()` vuole il destinatario **all'apertura**, e l'apertura
+	 *    avviene dentro `cattura_avvia()`: percio' la registrazione passa da
+	 *    `cattura.h`.  ⚠ Senza questa riga il tubo sarebbe scritto per intero e
+	 *    **vuoto**.
+	 * ⛔ E `input_apri()` va sulla sessione `RemoteDesktop` che `mutter.c` ha
+	 *    appena avviato: su un rimontaggio quella e' **un'altra sessione**, e un
+	 *    `Input` agganciato alla vecchia non iniettera' piu' niente. */
+	cattura_cursore(cat, cursore_al_padre, NULL);
+	if (palco_input) {
+		input_chiudi(palco_input);
+		palco_input = NULL;
+	}
+	{
+		char *sbaglio_input = NULL;
+		palco_input = input_apri(mut, tela_l, tela_a, &sbaglio_input);
+		if (palco_input)
+			registro_dice(REG_FIGLIO,
+			              "⭐⭐ IL CANALE DI INPUT E' APERTO sulla tela %ux%u: "
+			              "da adesso quel che l'utente fa nel browser arriva "
+			              "al desktop (§7.3)",
+			              tela_l, tela_a);
+		else
+			/* ⛔ E se non si apre NON si muore: `CODER.md` §4.2 — degradare,
+			 *    non fallire.  Un utente che vede il desktop e non lo comanda
+			 *    ha meno di quel che gli spetta; un utente a cui la sessione
+			 *    cade **non ha niente**.  ⚠ Ma il ripiego si DICHIARA. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ il canale di input NON si apre (%s): il desktop "
+			              "si VEDE ma non si COMANDA.  ⚠ La sessione resta in "
+			              "piedi — §8.3 vieta di staccare — e questa riga e' "
+			              "il ripiego dichiarato",
+			              sbaglio_input ? sbaglio_input : "nessun dettaglio");
+		free(sbaglio_input);
+	}
+	return true;
+}
+
+/* ⛔⭐ E IL PALCO SI SMONTA DAVVERO, tutti e tre i pezzi e in quest'ordine.
+ *
+ *     Prima l'input (che parla con la sessione `RemoteDesktop` di `mut`), poi
+ *     la cattura (che ha un filo suo e delle richiamate che girano di la'), poi
+ *     `mut`.  ⚠ All'incontrario si distruggerebbe la sessione mentre qualcuno
+ *     la sta usando.
+ *
+ * ⛔ E prima di tutto si RILASCIA quel che era rimasto giu' (`RCP.md` §11): il
+ *    palco che se ne va non porta via un Ctrl premuto, e al rimontaggio
+ *    l'utente si troverebbe un desktop inservibile senza collegare le due cose.
+ */
+static void smonta_il_palco(MutterSessione **m, Cattura **c)
+{
+	if (palco_input) {
+		int quanti = input_rilascia_tutto(palco_input);
+		if (quanti > 0)
+			registro_dice(REG_FIGLIO,
+			              "⭐ §7.3: il palco si smonta e %d fra tasti e "
+			              "pulsanti erano rimasti giu': rilasciati",
+			              quanti);
+		input_chiudi(palco_input);
+		palco_input = NULL;
+	}
+	if (*c) {
+		cattura_ferma(*c);
+		*c = NULL;
+	}
+	if (*m) {
+		mutter_chiudi(*m);
+		*m = NULL;
+	}
 }
 
 /* ⛔ L'ingresso del figlio.  `main.c` ci arriva PRIMA di qualunque altra cosa,
@@ -2407,48 +2548,21 @@ void figlio_vive(int argc, char **argv)
 	 *     fotogramma» c'e' **almeno un secondo garantito dal protocollo**, ed e'
 	 *     tutto il tempo che questo figlio ha per nascere, collegarsi al bus,
 	 *     catturare e codificare.  Aspettare una richiesta lo butterebbe via. */
-	prendi_il_palco(tela_l, tela_a, dir_rilievo, &mut, &cat);
-
-	/* ⭐⭐ FASE 4 — E QUI NASCE IL CANALE DI INPUT, subito dopo il palco e non
-	 *     prima: `ConnectToEIS` si chiede alla sessione `RemoteDesktop` che
-	 *     `mutter.c` ha appena avviato, e senza quella non c'e' niente a cui
-	 *     agganciarsi.
-	 *
-	 * ⛔ E se non si apre NON si muore: `CODER.md` §4.2 — degradare, non
-	 *    fallire.  Un utente che vede il desktop e non lo comanda ha meno di
-	 *    quel che gli spetta; un utente a cui la sessione cade **non ha
-	 *    niente**.  ⚠ Ma il ripiego si DICHIARA, e questa riga e' la
-	 *    dichiarazione: chi legge «il desktop non risponde» piu' tardi deve
-	 *    trovarla qui sopra, invece di cercare per un'ora dalla parte del
-	 *    filo. */
-	/* ⭐⭐ E LA FORMA DEL CURSORE SI AGGANCIA QUI, appena la cattura e' viva.
-	 *
-	 * ⛔ `cursore_apri()` vuole sapere il destinatario **all'apertura**, e
-	 *    l'apertura avviene dentro `cattura_avvia()`: percio' la registrazione
-	 *    passa da `cattura.h`.  ⚠ E senza questa riga il tubo sarebbe scritto
-	 *    per intero e **vuoto** — `SPA_META_Cursor` chiesto, il metadato letto,
-	 *    la forma costruita, e nessuno a cui consegnarla: cioe' la stessa forma
-	 *    di difetto che la fase 3 ha pagato due volte. */
-	if (cat)
-		cattura_cursore(cat, cursore_al_padre, NULL);
-
-	if (mut) {
-		char *sbaglio_input = NULL;
-		palco_input = input_apri(mut, tela_l, tela_a, &sbaglio_input);
-		if (palco_input)
-			registro_dice(REG_FIGLIO,
-			              "⭐⭐ IL CANALE DI INPUT E' APERTO sulla tela %ux%u: "
-			              "da adesso quel che l'utente fa nel browser arriva "
-			              "al desktop (§7.3)",
-			              tela_l, tela_a);
-		else
-			registro_dice(REG_FIGLIO,
-			              "⛔ il canale di input NON si apre (%s): il desktop "
-			              "si VEDE ma non si COMANDA.  ⚠ La sessione resta in "
-			              "piedi — §8.3 vieta di staccare — e questa riga e' "
-			              "il ripiego dichiarato",
-			              sbaglio_input ? sbaglio_input : "nessun dettaglio");
-		free(sbaglio_input);
+	if (!prendi_il_palco(tela_l, tela_a, dir_rilievo, true, &mut, &cat)) {
+		/* ⛔⭐ E SE ALLA NASCITA IL PALCO NON C'E', NON SI RESTA COSI' — e' il
+		 *     secondo difetto gemello, `[M]` dalla sessione vera dell'utente:
+		 *     un figlio nato senza sessione grafica non ne riprovava **mai**
+		 *     un'altra, e al login successivo l'invariante I2 gli consegnava
+		 *     quel figlio li'.  L'utente ha visto «niente desktop» due volte
+		 *     di fila per questa ragione. */
+		registro_dice(REG_FIGLIO,
+		              "⛔ SENZA PALCO alla nascita: la sessione grafica di "
+		              "«%s» non c'e' (ancora).  ⚠ NON esco — §8.3 vieta di "
+		              "staccare — e NON resto fermo: riprovo, la prima volta "
+		              "fra %d ms",
+		              utente, PALCO_RIPROVA_MIN_MS);
+		palco_riprova_ms = registro_ora_ms() + PALCO_RIPROVA_MIN_MS;
+		palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════ */
@@ -2504,8 +2618,16 @@ void figlio_vive(int argc, char **argv)
 			}
 			/* ⛔ Zero quando si sta catturando, il tetto quando non si
 			 *    cattura: cosi' il processo fermo non gira a vuoto e quello
-			 *    che lavora non perde tempo. */
-			pronto = poll(due, (nfds_t)quanti, codec_chiesto ? 0 : 1000);
+			 *    che lavora non perde tempo.
+			 * ⛔⭐ E «si sta catturando» vuole DUE cose: che qualcuno guardi
+			 *     **e** che il palco ci sia.  Con il solo `codec_chiesto`, un
+			 *     figlio che ha perso il palco mentre un client guardava
+			 *     girava con `poll` a zero — cioe' bruciava un nucleo intero
+			 *     senza catturare niente.  `[M]` e' la meta' silenziosa del
+			 *     difetto del 14 agosto: il registro si cura togliendo una
+			 *     riga, questo no. */
+			pronto = poll(due, (nfds_t)quanti,
+			              (codec_chiesto && cat) ? 0 : 1000);
 			pf.revents = due[0].revents;
 			/* ⭐ Se ha parlato `libei`, lo si serve SUBITO — prima ancora di
 			 *    leggere il padre: e' il percorso su cui si misura il
@@ -2519,6 +2641,32 @@ void figlio_vive(int argc, char **argv)
 				break;
 			}
 			if (pronto == 0)
+				break;
+			/* ⛔⛔⛔ E QUI STAVANO I QUATTRO SECONDI CHE L'UTENTE ASPETTAVA.
+			 *
+			 * `[M]` 14 agosto 2026, pila letta con `gdb` a 2,6 s dal login:
+			 * il figlio era fermo in `recvmsg` a `figlio.c:336`, cioe' in
+			 * questa riga, su **fd 3** — il socket del padre.
+			 *
+			 * ⛔ La riga sopra calcolava `pf.revents` e **nessuno lo
+			 *    guardava**.  Quando il `poll` si sveglia perche' ha parlato
+			 *    `libei` (due[1]) e il padre NON ha detto niente, `pronto` e'
+			 *    comunque > 0: si arrivava qui e si leggeva lo stesso — e il
+			 *    capo del FIGLIO e' **bloccante di proposito** (il padre mette
+			 *    `O_NONBLOCK` solo sul suo, e `socketpair` fa due descrizioni
+			 *    di file distinte).  ⇒ Il figlio restava dentro `recvmsg`
+			 *    finche' il padre non gli scriveva qualcosa, e **il ciclo dei
+			 *    fotogrammi non girava affatto**: il registro lo diceva, e
+			 *    nessuno l'aveva letto — *«0 fotogrammi consegnati, **0 attese
+			 *    a vuoto**»* per quattro secondi.
+			 *
+			 * ⚠ Ed e' la ragione per cui la tesi *«il ritardo non e' nostro,
+			 *   e' Mutter che non consegna su un desktop fermo»* era **falsa**:
+			 *   Mutter aveva i fotogrammi, e noi non eravamo li' a prenderli.
+			 *   ⭐ La riga di registro che avrebbe dovuto smascherarlo diceva
+			 *   *«scena ferma: Mutter consegna solo quando qualcosa cambia»* —
+			 *   cioe' accusava il compositore di un difetto nostro. */
+			if (!pf.revents)
 				break;
 
 			letti = ricevi_con_credenziali(fd_figlio, busta, sizeof busta, &chi,
@@ -2760,6 +2908,60 @@ void figlio_vive(int argc, char **argv)
 		if (palco_input)
 			input_gira(palco_input);
 
+		/* ── 1-ter. il palco che non c'e': si RIMONTA ─────────────────── */
+		/* ⛔⭐ I DUE DIFETTI GEMELLI SI CURANO QUI, ED E' LO STESSO POSTO
+		 *     PERCHE' SONO LO STESSO FATTO: *il figlio non sa che il suo palco
+		 *     non c'e' piu', o non c'e' ancora.*
+		 *
+		 *   · non c'e' ANCORA — la sessione grafica non esisteva alla nascita;
+		 *   · non c'e' PIU' — la sessione e' morta sotto un figlio vivo, e
+		 *     `cattura_prendi` ha dichiarato il guasto qui sotto.
+		 *
+		 * ⚠ E non si stacca (§8.3): la sessione RCP resta in piedi, il client
+		 *   resta collegato, e quando il palco torna il desktop ricompare da
+		 *   se'.  ⛔ Ma non si sta nemmeno fermi: un figlio senza palco non e'
+		 *   una sessione ferma, e' un figlio che non serve a niente. */
+		if (!cat) {
+			uint64_t ora = registro_ora_ms();
+			if (ora >= palco_riprova_ms) {
+				if (prendi_il_palco(tela_l, tela_a, dir_rilievo, false, &mut,
+				                    &cat)) {
+					registro_dice(REG_FIGLIO,
+					              "⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato "
+					              "dopo %llu ms di attesa — e il prossimo "
+					              "fotogramma sara' una CHIAVE (§5.2), perche' "
+					              "chi guarda ha perso il passato del flusso",
+					              (unsigned long long)palco_attesa_ms);
+					palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+					palco_riprova_ms = 0;
+					/* ⛔ §5.2: dopo un buco il client NON puo' decodificare un
+					 *    delta — il suo decodificatore non ha piu' il passato
+					 *    di questa catena.  Il debito si segna sul codec
+					 *    CHIESTO, non su tutti. */
+					if (codec_chiesto)
+						debito_chiave[codec_chiesto] = true;
+				} else {
+					/* ⛔ Si smonta quel che il tentativo ha lasciato a meta':
+					 *    un `mut` aperto senza cattura terrebbe un monitor
+					 *    virtuale che nessuno consuma. */
+					smonta_il_palco(&mut, &cat);
+					if (palco_attesa_ms < PALCO_RIPROVA_MIN_MS)
+						palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+					else
+						palco_attesa_ms *= 2;
+					if (palco_attesa_ms > PALCO_RIPROVA_MAX_MS)
+						palco_attesa_ms = PALCO_RIPROVA_MAX_MS;
+					palco_riprova_ms = ora + palco_attesa_ms;
+					registro_dice(REG_FIGLIO,
+					              "⛔ SENZA PALCO: il tentativo non e' riuscito "
+					              "— riprovo fra %llu ms.  ⚠ L'attesa cresce "
+					              "apposta: senza, questo ciclo scrive gigabyte "
+					              "di registro e brucia un nucleo",
+					              (unsigned long long)palco_attesa_ms);
+				}
+			}
+		}
+
 		/* ── 2. il fotogramma ────────────────────────────────────────── */
 		if (!codec_chiesto || !cat)
 			continue;
@@ -2792,12 +2994,31 @@ void figlio_vive(int argc, char **argv)
 				              "ciclo: %llu fotogrammi consegnati (%llu chiavi), "
 				              "%llu attese a vuoto (scena ferma: Mutter consegna "
 				              "solo quando qualcosa cambia), %llu guasti — codec "
-				              "%u, %d/s chiesti, attesa %.2f s",
+				              "%u, %d/s chiesti, attesa %.2f s%s",
 				              (unsigned long long)ciclo_fotogrammi,
 				              (unsigned long long)ciclo_chiavi,
 				              (unsigned long long)ciclo_zero,
 				              (unsigned long long)ciclo_guasti, codec_chiesto,
-				              MOVIMENTO_FPS, MOVIMENTO_ATTESA_S);
+				              MOVIMENTO_FPS, MOVIMENTO_ATTESA_S,
+				              /* ⛔⭐ E QUESTA CODA VALE QUANTO LA RIGA.
+				               *
+				               * `[M]` 14 agosto 2026: per quattro secondi il
+				               * registro diceva *«0 fotogrammi consegnati, 0
+				               * attese a vuoto (scena ferma: Mutter consegna
+				               * solo quando qualcosa cambia)»* — e chi lo
+				               * leggeva concludeva che il ritardo fosse di
+				               * Mutter.  ⛔ Era il contrario: **zero attese a
+				               * vuoto vuol dire che nessuno ha nemmeno provato
+				               * a catturare**, cioe' che il ciclo era fermo
+				               * altrove.  La riga aveva il numero giusto e la
+				               * parola sbagliata accanto. */
+				              (ciclo_fotogrammi == 0 && ciclo_zero == 0
+				               && ciclo_guasti == 0)
+				                  ? "  ⛔⛔ e ZERO attese a vuoto vuol dire che "
+				                    "il ciclo NON HA NEMMENO PROVATO a catturare: "
+				                    "NON e' «la scena e' ferma», e' questo "
+				                    "processo che sta da un'altra parte"
+				                  : "");
 			}
 
 			if (presa == CATTURA_PRESA_ZERO) {
@@ -2814,15 +3035,38 @@ void figlio_vive(int argc, char **argv)
 				continue;
 			}
 			if (presa != CATTURA_PRESA_FATTA) {
+				/* ⛔⛔ E QUI STAVANO I 30,8 GB DI REGISTRO.
+				 *
+				 * `[M]` 14 agosto 2026, sessione vera dell'utente: la
+				 * sessione grafica e' morta sotto un figlio vivo, il flusso
+				 * PipeWire e' andato in `connection error`, e
+				 * `cattura_prendi` da quel momento torna **subito** —
+				 * l'attesa di 0,25 s non si spende nemmeno, perche' lo
+				 * stato del flusso si guarda prima di aspettare
+				 * (`cattura.c`).  ⇒ Questo `continue` rimetteva il ciclo
+				 * in cima **milioni di volte al secondo**, e ogni giro
+				 * scriveva questa riga: 112 milioni di righe identiche,
+				 * tutte nello stesso millisecondo, e il disco pieno.
+				 *
+				 * ⇒ ⭐ Adesso il palco si SMONTA: `cat` diventa NULL, il
+				 *   ciclo non ci ripassa, e il rimontaggio con l'attesa
+				 *   che cresce sta al punto 1-ter.  ⚠ La riga si scrive
+				 *   **una volta per perdita**, non una per giro. */
 				ciclo_guasti++;
 				registro_dice(REG_FIGLIO,
-				              "⛔ la cattura non consegna piu' (presa %u: %s): "
-				              "il ciclo continua, e questa riga dice che non e' "
-				              "«la scena e' ferma»",
+				              "⛔⛔ IL PALCO SE N'E' ANDATO SOTTO I PIEDI "
+				              "(presa %u: %s).  ⚠ NON e' «la scena e' ferma»: "
+				              "e' la sessione grafica che non c'e' piu'.  Smonto "
+				              "il palco e lo rimonto quando torna — la sessione "
+				              "RCP resta in piedi (§8.3), e chi guarda vedra' "
+				              "l'ultima immagine finche' il desktop non ricompare",
 				              (unsigned)presa,
 				              sbaglio ? sbaglio->message : "nessun dettaglio");
 				g_clear_error(&sbaglio);
 				cattura_fermo_libera(&fo);
+				smonta_il_palco(&mut, &cat);
+				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
 				continue;
 			}
 			g_clear_error(&sbaglio);
@@ -2866,21 +3110,15 @@ void figlio_vive(int argc, char **argv)
 	 *     trova inservibile e non collega le due cose.
 	 * ⚠ E si fa anche qui, non solo alla fine di ogni connessione: questo e'
 	 *   l'ultimo istante in cui qualcuno puo' ancora farlo. */
-	if (palco_input) {
-		int quanti = input_rilascia_tutto(palco_input);
-		registro_dice(REG_FIGLIO,
-		              "il canale di input si chiude: %u iniettati, %u rifiutati "
-		              "dal compositore, %u non producibili con la disposizione, "
-		              "e %d rilasciati adesso (§7.3)",
-		              (unsigned)input_iniettato, (unsigned)input_rifiutati,
-		              (unsigned)input_non_producibili, quanti);
-		input_chiudi(palco_input);
-		palco_input = NULL;
-	}
-	if (cat)
-		cattura_ferma(cat);
-	if (mut)
-		mutter_chiudi(mut);
+	registro_dice(REG_FIGLIO,
+	              "il canale di input si chiude: %u iniettati, %u rifiutati "
+	              "dal compositore, %u non producibili con la disposizione (§7.3)",
+	              (unsigned)input_iniettato, (unsigned)input_rifiutati,
+	              (unsigned)input_non_producibili);
+	/* ⚠ E il rilascio lo fa `smonta_il_palco`, che e' lo STESSO smontaggio del
+	 *   rimontaggio: due strade per smontare il palco vorrebbero dire che una
+	 *   delle due, un giorno, dimentichera' un pezzo. */
+	smonta_il_palco(&mut, &cat);
 	registro_dice(REG_FIGLIO, "il figlio di «%s» ha smontato il palco ed esce",
 	              utente);
 	_exit(0);

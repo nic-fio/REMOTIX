@@ -861,17 +861,37 @@ PROLOGO = r"""
       }
       v[i] = somma / (LATO * LATO);
     }
+    /* ⭐ Ogni tanto si porta fuori la REGIONE CRUDA insieme alle celle che il
+       JavaScript ne ha ricavato.  ⛔ Serve a DUE cose, e la seconda e' quella
+       che ha fermato il primo giro vero di questo banco:
+         · il controllo del campionamento (le celle di JS contro quelle di
+           numpy: se differiscono, il lettore certificato sta leggendo
+           un'immagine che il banco non ha campionato come lui);
+         · ⛔⛔ **lo SCORRIMENTO**: `leggi_celle` gira con `ricerca=0` — lo
+           scorrimento non lo cerca, lo eredita.  Se nessuno lo misura sui
+           pixel VERI, `B.scorrimento` resta [0,0] e ogni CRC salta: `[M]` 14
+           agosto 2026, primo giro vero, **0 marche lette su 966** con la
+           catena perfettamente funzionante. */
+    if (B.crudi.length < B.crudi_voluti) {
+      let s = "";
+      for (let i = 0; i < d.length; i += 4)
+        s += String.fromCharCode(d[i], d[i + 1], d[i + 2]);
+      B.crudi.push({ l: REG_L, a: REG_A, ox: ox, oy: oy, b64: btoa(s),
+                     celle: v.slice(), scorrimento: [sx, sy] });
+    }
     return v;
   }
 
   /* ══ 7. IL RITIRO — si SVUOTA, cosi' due ritiri non contano due volte ═══ */
   B.prendi = function () {
+    const cr = B.crudi; B.crudi = [];
+    B.ultimi_crudi = cr;
     const c = B.campioni; B.campioni = [];
     const e = B.eventi; B.eventi = [];
     const s = B.spediti; B.spediti = [];
     const co = B.costo_lettura_us; B.costo_lettura_us = [];
     return { campioni: c, eventi: e, spediti: s, costo_lettura_us: co,
-             violazioni: B.violazioni.slice(0, 200),
+             crudi: cr, violazioni: B.violazioni.slice(0, 200),
              conti: Object.assign({}, B.conti), grana: B.grana,
              isolata: B.isolata, t_origine: B.t_origine,
              ora_pagina: performance.now(),
@@ -989,6 +1009,116 @@ def accoppia(campioni, spediti, eventi, finestra_ms=1500.0):
                 sonda["scomodo"] = c
                 break
         # ── il confine COMODO: il campo `input` dei 28 byte ────────────────
+        for c in campioni:
+            if (c.get("t1") or 0) < sonda["t_filo"]:
+                continue
+            if (c.get("t1") or 0) > sonda["t_filo"] + finestra_ms:
+                break
+            if c.get("input") is not None and c["input"] >= s["id"]:
+                sonda["comodo"] = c
+                break
+        for nome in ("scomodo", "comodo"):
+            c = sonda.get(nome)
+            if c is not None and c.get("t_dip") is not None:
+                sonda["ritardo_%s_ms" % nome] = c["t_dip"] - sonda["t_evento"]
+        sonde.append(sonda)
+    return sonde
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §4-bis  ⭐⭐ LA TASTIERA, ACCOPPIATA A PARTE — e NON e' una copia per pigrizia
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⛔ LA TESI DA REFUTARE (mandato O2, n. 3): *«la tastiera e il mouse hanno lo
+#    stesso ritardo»*.  ⚠ Non e' detto, e il motivo e' nel prodotto: in modo
+#    classico il mouse muove **un puntatore disegnato dalla pagina**
+#    (`SPECIFICHE.md` §7.1), che l'utente vede subito e senza rete; la tastiera
+#    deve fare **tutto il giro**.  ⇒ Mediarli darebbe un numero che l'utente
+#    sente in due modi diversi.
+#
+# ⛔ E l'accoppiamento non puo' essere lo stesso di `accoppia()`: l'eco di un
+#    tasto porta `(codice, premuto, seq)` e la `seq` la conta LA SCENA, non noi.
+#    Non si puo' prevedere l'eco atteso come si fa con le coordinate.  ⇒ Si
+#    riconosce dal codice e dal verso, e si pretende che la `seq` **avanzi** —
+#    altrimenti un tasto ripetuto appaierebbe l'eco di quello di prima, cioe'
+#    un ritardo piu' corto del vero ottenuto senza sbagliare nessun conto.
+def _seq_avanti(nuova, vecchia):
+    """La `seq` della scena e' a 11 bit e gira: «piu' recente» si decide
+    sull'anello, non con un `>` che al giro di boa direbbe di no."""
+    if vecchia is None or vecchia < 0:
+        return True
+    return 1 <= ((nuova - vecchia) & 0x7FF) <= 1024
+
+
+def accoppia_tasti(campioni, spediti, eventi, mappa, finestra_ms=500.0):
+    # ⛔⛔ LA FINESTRA E' 500 ms E NON 1500, E IL NUMERO E' MISURATO — `[M]` 14
+    #     agosto 2026, primo giro della tastiera: ne sono uscite **27 sonde su
+    #     584 con mediana 1 007 ms**, un numero verosimile e interamente falso.
+    #
+    #     I codici di prova sono dodici e si ripetono ogni ~840 ms.  Con una
+    #     finestra di 1 500 ms, una sonda che si e' persa il PROPRIO eco (il
+    #     «giu'» e il «su» partono a zero millisecondi l'uno dall'altro, e in
+    #     mezzo la scena non ha ridisegnato) trova quello dell'occorrenza
+    #     SUCCESSIVA dello stesso tasto — e il ritardo che ne esce e' il periodo
+    #     di ripetizione, non il ritardo.  ⛔ 1 007 ms ≈ 840 ms di periodo: il
+    #     numero diceva la mia cadenza, non il prodotto.
+    #
+    # ⇒ La finestra sta SOTTO il periodo di ripetizione: una sonda che non trova
+    #   il suo eco **non chiude**, invece di chiudere sul fotogramma sbagliato.
+    #   ⚠ E il denominatore lo dice: «27 su 584» era gia' un'accusa che nessuno
+    #     aveva letto.
+    """⛔ Le sonde della TASTIERA.  ⚠ Funzione PURA, come `accoppia()`.
+
+    `mappa` va da `event.code` (il nome del browser) al codice **evdev** che
+    esce sul filo, ed e' MISURATA (vedi `mappa_tasti`): ricopiare qui la
+    tabella di `src/pagina.html` vorrebbe dire avere due verita' e credere
+    alla nostra.
+    """
+    campioni = sorted(campioni, key=lambda c: c.get("t1") or 0)
+    per_chiave = {}
+    for e in eventi:
+        cod = mappa.get(e.get("codice"))
+        if cod is None:
+            continue
+        giu = 1 if e.get("tipo") == "keydown" else 0
+        per_chiave.setdefault((cod, giu), []).append(e)
+    for v in per_chiave.values():
+        v.sort(key=lambda e: e["t_evento"])
+
+    sonde, ultima_seq = [], None
+    for s in spediti:
+        if s.get("tipo") != RCP_POSIZIONE or s.get("id") is None:
+            continue
+        giu = 1 if s.get("premuto") else 0
+        sonda = {"id": s["id"], "codice": s.get("codice"), "premuto": giu,
+                 "t_filo": s["t_filo"], "istante_client_us": s.get("istante_us")}
+        ev = None
+        for e in per_chiave.get((s.get("codice"), giu), []):
+            if e["t_evento"] <= s["t_filo"] and (ev is None
+                                                 or e["t_evento"] > ev["t_evento"]):
+                ev = e
+        if ev is None:
+            sonda["perche"] = ("⛔ nessun evento del browser con questo codice "
+                               "prima della spedizione: NON ripiego sul "
+                               "`t_filo`, sarebbe il confine comodo travestito")
+            sonde.append(sonda)
+            continue
+        sonda["t_evento"] = ev["t_evento"]
+        sonda["t_ascolto"] = ev["t_ascolto"]
+        sonda["fidato"] = ev.get("fidato")
+        for c in campioni:
+            if (c.get("t1") or 0) < sonda["t_filo"]:
+                continue
+            if (c.get("t1") or 0) > sonda["t_filo"] + finestra_ms:
+                break
+            e = c.get("eco") or {}
+            if (e.get("tipo") == ECO_TASTO and e.get("codice") == s.get("codice")
+                    and bool(e.get("premuto")) == bool(giu)
+                    and c.get("due_marche")
+                    and _seq_avanti(e.get("seq"), ultima_seq)):
+                sonda["scomodo"] = c
+                ultima_seq = e.get("seq")
+                break
         for c in campioni:
             if (c.get("t1") or 0) < sonda["t_filo"]:
                 continue
@@ -2256,21 +2386,30 @@ def deposita(riga):
 # §11  LA MISURA — sulla catena vera
 # ═══════════════════════════════════════════════════════════════════════════
 def leggi_stato_scena(percorso_shm):
-    """⛔ Il blocco `stato_input` di `04-b30-scena.c`, letto col seqlock.
-
-    ⭐ Sta DOPO `struct stato_condiviso`, e l'offset non si indovina: si legge
-       dal campo `taglia` del primo blocco.  ⚠ Se la magia non torna, si dice
-       «non ho potuto guardare» invece di restituire zeri — che sarebbero
-       indistinguibili da «nessun evento e' arrivato».
-    """
+    """⛔ Il blocco `stato_input` di `04-b30-scena.c`, letto col seqlock."""
     try:
         with open(percorso_shm, "rb") as f:
             b = f.read()
     except OSError as e:
         return None, "⛔ non ho potuto leggere %s: %s" % (percorso_shm, e)
+    return leggi_stato_scena_da_byte(b)
+
+
+def leggi_stato_scena_da_byte(b):
+    """⛔ Il blocco `stato_input` di `04-b30-scena.c`, dai byte grezzi.
+
+    ⭐ Sta DOPO `struct stato_condiviso`, e l'offset non si indovina: si legge
+       dal campo `taglia` del primo blocco.  ⚠ Se la magia non torna, si dice
+       «non ho potuto guardare» invece di restituire zeri — che sarebbero
+       indistinguibili da «nessun evento e' arrivato».
+
+    ⛔ E i byte arrivano DA UN'ALTRA MACCHINA (la scena gira sul server): per
+       questo la funzione prende i byte e non un percorso.  Il seqlock lo
+       verifica chi chiama, su DUE istantanee — vedi `scena_dal_server()`.
+    """
     if len(b) < 16:
         return None, "⛔ il blocco e' troppo corto: %d byte" % len(b)
-    magia, versione, taglia = struct.unpack("<III", b[:12])
+    magia, _versione, taglia = struct.unpack("<III", b[:12])
     if magia != 0x524D5853:
         return None, ("⛔ magia %08x: non e' il blocco di una scena REMOTIX"
                       % magia)
@@ -2297,9 +2436,954 @@ def leggi_stato_scena(percorso_shm):
     return d, None
 
 
+# ───────────────────────────────────────────────────────────────────────────
+# §11.1  GLI ATTREZZI DEL GIRO — ssh, ponte, scena, palco
+# ───────────────────────────────────────────────────────────────────────────
+def _sshpw(comando, silenzioso=False, attesa=300):
+    """⛔ MAI una redirezione ATTORNO a `ssh`: la richiesta della parola di
+    `sudo` va sullo stderr, e una redirezione la mangia — il comando resta
+    appeso per sempre, in silenzio.  Pagata sei volte."""
+    r = subprocess.run(["python3", os.path.join(RADICE, "v1/strumenti/sshpw.py"),
+                        comando], capture_output=True, text=True, timeout=attesa)
+    if not silenzioso and r.returncode != 0:
+        dub("ssh ha risposto %d: %s" % (r.returncode, (r.stderr or "")[-200:]))
+    return r
+
+
+def _sudo(comando, **kw):
+    # ⚠ `sudo -S -p …` e MAI dentro una pipe: dentro una pipe `sudo` resta
+    #   appeso perche' la richiesta non arriva a nessuno.
+    return _sshpw("sudo -S -p 'Password sudo: ' " + comando, **kw)
+
+
+def metti_ritardo(a, ritorno_ms=0.0, andata_ms=0.0, giro="-"):
+    """⛔ Cambia i DUE ritardi del ponte senza riaccenderlo.
+
+    Riaccenderlo riaccenderebbe la sessione QUIC, e si confronterebbero
+    distribuzioni prese in condizioni diverse.  ⭐ E i rami sono due: `ritardo_ms`
+    e' il RITORNO (prodotto → cliente, il tratto 5) e `ritardo_andata_ms` e'
+    l'ANDATA (cliente → prodotto, il tratto 2) — la meta' che alla fase 3 non
+    esisteva.
+    """
+    testo = ("ritardo_ms=%s\\nritardo_andata_ms=%s\\nfuori_ordine=0\\n"
+             "giro=%s\\n" % (ritorno_ms, andata_ms, giro))
+    r = _sshpw("printf '%s' > %s" % (testo, a.comando_ponte), silenzioso=True)
+    return r.returncode == 0
+
+
+def scena_dal_server(a):
+    """⛔ Il blocco di stato della scena, letto DALL'ALTRA MACCHINA e col seqlock.
+
+    ⭐ Due istantanee in una sola andata: si pretende `seq` **pari e uguale**
+       nelle due.  ⚠ Se non lo e', si dice «non ho potuto guardare» — che non e'
+       «l'input non e' arrivato al desktop».  Sono due diagnosi diverse e
+       mandano a cercare in due posti diversi (`LEZIONI.md` §1.9).
+    """
+    r = _sudo("bash %s scena-stato" % a.terreno, silenzioso=True)
+    righe = [x.strip() for x in (r.stdout or "").splitlines() if len(x.strip()) > 40]
+    if len(righe) < 2:
+        return None, ("⛔ NON HO POTUTO GUARDARE il blocco della scena: "
+                      "«%s»" % ((r.stdout or "") + (r.stderr or ""))[-200:])
+    letti = []
+    for x in righe[-2:]:
+        try:
+            d, e = leggi_stato_scena_da_byte(base64.b64decode(x))
+        except Exception as exc:                     # noqa: BLE001
+            return None, "⛔ il blocco non si e' decodificato: %s" % exc
+        if d is None:
+            return None, e
+        letti.append(d)
+    if letti[0]["seq"] % 2 or letti[0]["seq"] != letti[1]["seq"]:
+        return None, ("⛔ il seqlock non si e' fermato (seq %d e %d): NON ho un "
+                      "conto coerente da consegnare"
+                      % (letti[0]["seq"], letti[1]["seq"]))
+    return letti[0], None
+
+
+def scena_uscite(a):
+    """⭐ `uscita_chiesta` e `uscita_confermata` dal PRIMO blocco della scena.
+
+    ⛔ `uscita_confermata` la scrive `wl_surface.enter`, cioe' **il compositore**:
+       e' l'unico modo di sapere su quale monitor la scena e' finita davvero.
+       ⚠ Vuota = «non lo so», che NON e' «e' sul mio» (Q1).
+    """
+    r = _sudo("bash %s scena-stato" % a.terreno, silenzioso=True)
+    righe = [x.strip() for x in (r.stdout or "").splitlines() if len(x.strip()) > 40]
+    if not righe:
+        return {"uscita_chiesta": None, "uscita_confermata": None,
+                "perche": "⛔ NON HO POTUTO GUARDARE il blocco della scena"}
+    b = base64.b64decode(righe[-1])
+    m = marca_modulo()
+    taglia = struct.calcsize(m.FORMATO_STATO)
+    if len(b) < taglia:
+        return {"uscita_chiesta": None, "uscita_confermata": None,
+                "perche": "⛔ il blocco e' %d byte, ne servono %d" % (len(b), taglia)}
+    campi = struct.unpack(m.FORMATO_STATO, b[:taglia])
+    def s(x):
+        return x.split(b"\0")[0].decode("utf-8", "replace")
+    return {"uscita_confermata": s(campi[31]) or None,
+            "uscita_chiesta": s(campi[32]) or None,
+            "disegni": campi[5], "giro_numero": campi[15],
+            "callback_in_volo_massimo": campi[38], "fidato": campi[40]}
+
+
+def monitor_del_prodotto(a):
+    """⛔ Quale monitor il prodotto sta catturando — LETTO DAL SUO REGISTRO.
+
+    ⚠ Non si deduce e non si scrive a mano: su questa macchina i monitor
+      virtuali sono piu' d'uno (il prodotto dell'utente, gli altri banchi), e un
+      nome indovinato metterebbe la scena sul palco di qualcun altro — `[M]` 13
+      agosto 2026, zero fotogrammi per dieci secondi con la catena perfetta.
+    """
+    r = _sudo("grep -aoh 'monitor «[^»]*»' %s | tail -1" % a.registro_prodotto,
+              silenzioso=True)
+    # ⛔ SI PRENDE L'ULTIMA RIGA, non tutto lo stdout — `[M]` 14 agosto 2026:
+    #    `sshpw` stampa anche «nicfio@…'s password:» e un avviso di `tput`, e la
+    #    prima stesura li portava dentro il nome del monitor.  ⇒ Q1 confrontava
+    #    «Meta-0» con «…password:\ntput…\nMeta-0» e dichiarava LA SCENA SUL
+    #    MONITOR SBAGLIATO: un rosso del banco travestito da rosso del prodotto.
+    righe = [x.strip() for x in (r.stdout or "").splitlines()
+             if "monitor «" in x]
+    if not righe:
+        return None
+    n = righe[-1]
+    n = n[n.index("monitor «") + len("monitor «"):]
+    n = n.split("»")[0].strip()
+    return n or None
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# §11.2  ⛔⛔ LA MAPPA DALLA VISTA ALLA TELA — e si MISURA, non si suppone
+# ───────────────────────────────────────────────────────────────────────────
+#
+# ⛔ Il problema, e nessuno l'aveva scritto: `event.clientX` sta nel sistema di
+#    coordinate del BROWSER, `RCP.md` §7.3 porta quelle della TELA REMOTA, e fra
+#    i due c'e' la scala della vista, le bande nere e l'arrotondamento per
+#    difetto di `cl_manda_puntatore` (`src/pagina.html`).  ⇒ Appaiare l'evento al
+#    messaggio «per coordinate» **fallisce sempre** se le due coordinate non
+#    sono nello stesso sistema, e il banco direbbe *«nessun evento con queste
+#    coordinate»* su una catena perfettamente funzionante.
+#
+# ⭐ E LA CURA NON E' UNA TOLLERANZA: e' scegliere le coordinate DELLA TELA e
+#    calcolare dove cliccare, invece di cliccare e sperare.  Cosi' la mappa
+#    diretta serve solo come CONTROLLO — e il controllo si stampa: «quanti
+#    messaggi spediti hanno un evento che ci cade sopra, su quanti».
+#
+# ⛔ Se quel numero non e' ~100 %, il banco lo DICHIARA e non aggiusta la
+#    tolleranza finche' passa: quella e' la mossa che `LEZIONI.md` §1.13 vieta.
+GEOMETRIA_VISTA = r"""
+(function () {
+  const t = document.getElementById("schermo");
+  if (!t) return {c_e: false, perche: "⛔ non c'e' nessuna tela «schermo»"};
+  const r = t.getBoundingClientRect();
+  const S = window.REMOTIX && window.REMOTIX.schermo;
+  const d = (S && S.dipinta) || null;
+  return {c_e: !!d, left: r.left, top: r.top, rw: r.width, rh: r.height,
+          cw: t.width, ch: t.height, d: d,
+          perche: d ? null : "⛔ `schermo.dipinta` non c'e' ancora: nessun "
+                             + "fotogramma e' stato disegnato, e senza non so "
+                             + "dove finisce l'immagine dentro il buffer"};
+})()
+"""
+
+
+class Vista:
+    """⛔ La conversione fra le coordinate del BROWSER e quelle della TELA.
+
+    ⭐ E' il gemello in Python di `cl_geometria()` + `cl_manda_puntatore()` di
+       `src/pagina.html`, scritto **due volte apposta**: se un giorno i due
+       divergono, il controllo della mappa se ne accorge invece di produrre
+       zero sonde senza dire perche'.
+    """
+
+    def __init__(self, g):
+        self.g = g
+        self.vx = g["rw"] / g["cw"] if g.get("cw") else 0.0
+        self.vy = g["rh"] / g["ch"] if g.get("ch") else 0.0
+        d = g.get("d") or {}
+        self.bx0, self.by0 = d.get("x", 0), d.get("y", 0)
+        f = d.get("fotogramma") or [0, 0]
+        self.tl, self.ta = int(f[0]), int(f[1])
+        self.sx = (d.get("l", 0) / f[0]) if f[0] else 0.0
+        self.sy = (d.get("a", 0) / f[1]) if f[1] else 0.0
+
+    def utilizzabile(self):
+        return all((self.vx, self.vy, self.sx, self.sy, self.tl, self.ta))
+
+    def a_tela(self, cx, cy):
+        """browser → tela remota, con la SATURAZIONE e l'arrotondamento del
+        prodotto (`cl_satura` + `Math.floor` + l'ultimo pixel valido)."""
+        px = ((cx - self.g["left"]) / self.vx - self.bx0) / self.sx
+        py = ((cy - self.g["top"]) / self.vy - self.by0) / self.sy
+        px = min(max(px, 0.0), float(self.tl))
+        py = min(max(py, 0.0), float(self.ta))
+        return (min(int(px // 1), self.tl - 1), min(int(py // 1), self.ta - 1))
+
+    def a_vista(self, X, Y):
+        """tela remota → browser, ⭐ al CENTRO del pixel: cosi' l'andata e il
+        ritorno tornano anche quando la scala non e' 1."""
+        cx = self.g["left"] + ((X + 0.5) * self.sx + self.bx0) * self.vx
+        cy = self.g["top"] + ((Y + 0.5) * self.sy + self.by0) * self.vy
+        return cx, cy
+
+
+# ⛔ I TASTI DELLA PROVA: F13…F24.  ⭐ Scelti cosi' e non a caso:
+#    · stanno nella tabella `CL_POSIZIONE` di `src/pagina.html`, quindi il
+#      prodotto li spedisce davvero (un `code` che non c'e' NON si spedisce);
+#    · **non producono nessuna LETTERA** ⇒ un tasto = un solo messaggio §7.3, e
+#      non due percorsi diversi (posizione e lettera) sotto la stessa etichetta;
+#    · non sono scorciatoie di GNOME: premerne uno non cambia il desktop sotto
+#      la misura, che e' la trappola di `LEZIONI.md` §1.1 vista dal lato
+#      dell'input.
+#    ⚠ Dodici codici distinti × due versi = 24 combinazioni: bastano perche' la
+#      stessa coppia non si ripeta dentro la finestra d'accoppiamento.
+TASTI_PROVA = [("F%d" % n, 112 + n) for n in range(13, 25)]
+
+
+def mappa_tasti(c, tasti=None):
+    """⛔ Da `event.code` al codice **evdev** che ESCE SUL FILO — e si MISURA.
+
+    ⚠ La tabella sta in `src/pagina.html`; ricopiarla qui vorrebbe dire avere
+      due verita' e credere alla nostra.  ⇒ Si preme un tasto per volta, ben
+      distanziato, e si legge che cosa e' uscito.
+    ⛔ E l'appaiamento in ORDINE qui e' lecito **solo** perche' i tasti vanno
+       uno alla volta a 300 ms di distanza e si PRETENDE il conto esatto: due
+       messaggi per tasto, ne' uno di piu' ne' uno di meno.  Se il conto non
+       torna, la mappa non si consegna — e senza mappa la tastiera non si
+       misura, invece di misurarla male.
+    """
+    tasti = tasti or TASTI_PROVA
+    c.valuta(SVUOTA, attendi=False)
+    for nome, vk in tasti:
+        for tipo in ("rawKeyDown", "keyUp"):
+            spara(c, "Input.dispatchKeyEvent", type=tipo, key=nome, code=nome,
+                  windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
+        time.sleep(0.30)
+    time.sleep(1.2)
+    r = c.valuta("window.__B30.prendi()", attendi=False)
+    sp = [x for x in ((r or {}).get("spediti") or [])
+          if x.get("tipo") == RCP_POSIZIONE]
+    sp.sort(key=lambda x: x["t_filo"])
+    atteso = 2 * len(tasti)
+    d = {"attesi": atteso, "usciti": len(sp), "mappa": {}}
+    if len(sp) != atteso:
+        d["perche"] = ("⛔ %d messaggi POSIZIONE_TASTO su %d attesi: la mappa "
+                       "NON si consegna, e la tastiera non si misura — meglio "
+                       "nessun numero che un numero appaiato male"
+                       % (len(sp), atteso))
+        return d
+    for i, (nome, _) in enumerate(tasti):
+        giu, su = sp[2 * i], sp[2 * i + 1]
+        if giu.get("codice") != su.get("codice") or not giu.get("premuto") \
+                or su.get("premuto"):
+            d["perche"] = ("⛔ la coppia giu'/su del tasto «%s» non torna "
+                           "(%s/%s): mappa non consegnata" % (nome, giu, su))
+            return d
+        d["mappa"][nome] = giu["codice"]
+    if len(set(d["mappa"].values())) != len(d["mappa"]):
+        d["perche"] = ("⛔ due `code` diversi danno lo stesso codice evdev: la "
+                       "mappa non e' iniettiva e l'accoppiamento sarebbe "
+                       "ambiguo")
+        return d
+    d["c_e"] = True
+    return d
+
+
+def coordinata(k, vista):
+    """⛔ COORDINATE DISTINTE A OGNI SONDA, e non e' un vezzo.
+
+    Due sonde con le stesse coordinate dipingono lo **stesso eco**, e
+    l'accoppiamento sceglierebbe il primo fotogramma buono — cioe' un ritardo
+    **piu' corto del vero**, ottenuto senza sbagliare nessun conto.  ⇒ 37 e 23
+    sono primi con l'ampiezza dei due intervalli: la coppia non si ripete prima
+    di 1 400 sonde.
+    """
+    X = 200 + (k * 37) % max(1, min(1400, vista.tl - 400))
+    Y = 140 + (k * 23) % max(1, min(700, vista.ta - 300))
+    return X, Y
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# §11.3  IL GIRO — si sintetizza, si ritira A FETTE, si accoppia
+# ───────────────────────────────────────────────────────────────────────────
+def spara(palco, metodo, **par):
+    """⛔⛔ MANDA UN COMANDO CDP **SENZA ASPETTARE LA RISPOSTA**.
+
+    `[M]` 14 agosto 2026, misurato su questo palco: `Input.dispatchMouseEvent`
+    **ritorna dopo 5,00 s esatti** — cinque chiamate di fila danno 5,049 · 5,018
+    · 5,025 · 5,025 · 5,013.  ⚠ Un numero cosi' stabile non e' carico: e' un
+    TETTO (l'attesa dell'ack dell'evento dal renderer).
+
+    ⛔ Aspettarlo vorrebbe dire **un input ogni cinque secondi**, cioe' dodici
+       sonde al minuto: il banco misurerebbe se' stesso invece del prodotto, ed
+       e' esattamente l'errore che Q9 esiste per trovare negli altri.
+
+    ⭐ E l'evento ARRIVA LO STESSO — a dirlo non e' questa funzione ma
+       `eventi_visti`, contato DENTRO la pagina: il denominatore letto dove la
+       cosa succede (`LEZIONI.md` §1.9, regola 4).  ⚠ E se un giorno non
+       arrivasse, Q0 direbbe «non ho niente da giudicare» invece di dare un
+       numero: nessun verde puo' nascere da qui.
+    ⚠ Le risposte in ritardo restano sul socket: `Cdp.chiama` salta i messaggi
+      con un `id` che non e' il suo, quindi non si mescolano.
+    """
+    c = getattr(palco, "c", palco)
+    c.n += 1
+    c.ws.manda(json.dumps({"id": c.n, "method": metodo, "params": par}))
+
+
+SVUOTA = ("window.__B30 ? (window.__B30.campioni.length = 0,"
+          " window.__B30.eventi.length = 0, window.__B30.spediti.length = 0,"
+          " window.__B30.costo_lettura_us.length = 0, true) : false")
+
+
+def ritira(c, dove):
+    """⛔ Si ritira DURANTE, non solo alla fine — e questa riga e' nata da un
+    difetto misurato (`[M]` 14 agosto 2026, questo banco).
+
+    La prima stesura chiamava `prendi()` dopo venti minuti di pagina accesa: il
+    ritiro portava fuori **settantamila** fotogrammi × 288 celle in un JSON
+    solo, e il banco restava appeso per minuti senza un errore.  ⚠ Il sintomo
+    era «il banco non risponde», che manda a cercare la rete.
+    ⇒ Si svuota a mano prima di cominciare (`SVUOTA`, che non porta fuori
+      niente) e si ritira ogni secondo.
+    """
+    r = c.valuta("window.__B30 ? window.__B30.prendi() : null", attendi=False)
+    if not isinstance(r, dict):
+        return None
+    dove["campioni"] += r.get("campioni") or []
+    dove["eventi"] += r.get("eventi") or []
+    dove["spediti"] += r.get("spediti") or []
+    dove["costo_lettura_us"] += r.get("costo_lettura_us") or []
+    dove["violazioni"] = r.get("violazioni") or dove.get("violazioni") or []
+    dove["ultimo"] = r
+    return r
+
+
+def fetta(c, vista, secondi, passo_s, k0, dove, sintetizza=True):
+    """Una fetta di giro: si sintetizza l'input e si ritira, insieme.
+
+    ⭐ Gli eventi si fanno con `Input.dispatchMouseEvent`, cioe' eventi
+       **FIDATI** (`isTrusted === true`) che entrano dal gestore del prodotto.
+       ⛔ Chiamare la funzione di spedizione della pagina sarebbe il confine
+       «comodissimo» travestito: salterebbe tutto il cammino dell'evento dentro
+       la pagina, che e' proprio il tratto 1a+1b.
+    """
+    fine = time.time() + secondi
+    prossimo = time.time() + 1.0
+    k = k0
+    while time.time() < fine:
+        if sintetizza and vista.utilizzabile():
+            X, Y = coordinata(k, vista)
+            cx, cy = vista.a_vista(X, Y)
+            try:
+                spara(c, "Input.dispatchMouseEvent", type="mouseMoved",
+                      x=cx, y=cy, button="none", buttons=0)
+            except Exception as e:                   # noqa: BLE001
+                dub("⚠ un evento non e' partito: %s" % str(e)[:80])
+            k += 1
+        time.sleep(passo_s)
+        if time.time() >= prossimo:
+            ritira(c, dove)
+            prossimo = time.time() + 1.0
+    return k
+
+
+def _vuoto():
+    return {"campioni": [], "eventi": [], "spediti": [], "costo_lettura_us": [],
+            "violazioni": [], "ultimo": None}
+
+
+def prepara_giro(d, vista, nome, ritorno_ms, andata_ms):
+    """Da un mucchio grezzo a un giro giudicabile: marche, mappa, sonde."""
+    for c in d["campioni"]:
+        leggi_due_marche(c)
+    eventi = []
+    for e in d["eventi"]:
+        if e.get("x") is None:
+            continue
+        X, Y = vista.a_tela(e["x"], e["y"])
+        eventi.append(dict(e, x=X, y=Y, x_vista=e["x"], y_vista=e["y"]))
+    # ⛔ IL CONTROLLO DELLA MAPPA, e si stampa col DENOMINATORE.
+    sopra = {(e["x"], e["y"]) for e in eventi}
+    coperti = sum(1 for s in d["spediti"]
+                  if s.get("tipo") == RCP_PUNTATORE
+                  and (s.get("x"), s.get("y")) in sopra)
+    tot = sum(1 for s in d["spediti"] if s.get("tipo") == RCP_PUNTATORE)
+    sonde = accoppia(d["campioni"], d["spediti"], eventi)
+    buone = [s for s in sonde if s.get("scomodo")]
+    return {"nome": nome,
+            "ritardo_ritorno_ms": ritorno_ms, "ritardo_andata_ms": andata_ms,
+            "campioni": d["campioni"], "spediti": d["spediti"],
+            "eventi": eventi, "sonde": sonde,
+            "mappa_coperti": coperti, "mappa_denominatore": tot,
+            "distribuzione": _d([s["ritardo_scomodo_ms"] for s in buone
+                                 if s.get("ritardo_scomodo_ms") is not None]),
+            "scomposizione": None}
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# §11.4  IL GIRO VERO
+# ───────────────────────────────────────────────────────────────────────────
+def giro_vero(a, precondizioni):
+    B = b17()
+    v = {"banco": "B30", "giro": a.giro, "host": a.host, "porta": a.porta,
+         "letto_nel_codice": {n: t for n, (_, t) in precondizioni.items()},
+         "giri": [], "senza_eco": [], "note": []}
+    os.makedirs(a.lavoro, exist_ok=True)
+
+    log("0. LE PORTE, contate — ⛔ 7448 · 7501 · 7561 · 7571 · 7700 non si toccano")
+    r = _sshpw("ss -tuln | grep -E ':(7448|7501|7561|7571|7700|76[0-9][0-9]|"
+               "77[0-2][0-9])\\b' | sort", silenzioso=True)
+    v["porte_prima"] = r.stdout
+    for riga in (r.stdout or "").strip().splitlines():
+        inf(riga.strip())
+
+    log("1. L'ANCORA DELL'OROLOGIO — ⛔ e NON passa dal ritardatore")
+    # ⛔ Due orologi monotoni di due macchine non hanno NESSUNA relazione: senza
+    #    l'ancora i tratti 2 e 5 sarebbero numeri che SEMBRANO un ritardo.
+    p = ponte_modulo()
+    parete = B.scarto_parete_monotono_us()
+    inf("CHUWI: parete − monotono = %d us (errore %d us)"
+        % (parete["scarto_us"], parete["errore_us"]))
+    anc_a = p.orologio_chiedi(a.host, a.ancora, campioni=1200, pausa_s=0.0005)
+    if not anc_a.get("c_e"):
+        ko(anc_a.get("perche"))
+        ko("⛔ senza ancora non si scrive nessun numero")
+        deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA", "giro": a.giro,
+                  "perche": "l'ancora dell'orologio non risponde",
+                  "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
+        return USCITA_NIENTE_DA_GIUDICARE
+    ok("ancora: scarto %d us, errore %d us (giro minimo %d us su %d campioni)"
+       % (anc_a["scarto_us"], anc_a["errore_us"], anc_a["giro_minimo_us"],
+          anc_a["campioni"]))
+
+    log("2. IL PALCO — Xvfb, Chrome, CDP")
+    palco = B.Palco(a.schermo, a.diagnosi, (1500, 1000),
+                    os.path.join(a.lavoro, "palco"), gpu=True)
+    try:
+        inf("Xvfb: " + palco.accendi())
+        c = palco
+        # ⛔ Il prologo si mette PRIMA di navigare: e' l'unico momento in cui si
+        #    puo' ascoltare in fase di cattura e avvolgere `WebTransport` senza
+        #    toccare `pagina.html` — cioe' senza misurare la pagina strumentata.
+        c.chiama("Page.addScriptToEvaluateOnNewDocument", source=PROLOGO)
+        url = "https://%s:%d/" % (a.host, a.porta)
+        inf("apro " + url)
+        c.chiama("Page.navigate", url=url)
+        time.sleep(2.5)
+        s = c.valuta(B.STATO, attendi=False)
+        if not (isinstance(s, dict) and s.get("pronto")):
+            inf("interstiziale del certificato: batto «thisisunsafe»")
+            B.batti(c, "thisisunsafe")
+            time.sleep(2.5)
+        s = B.aspetta(c, B.STATO, 40, lambda x: x.get("pronto"))
+        if not (isinstance(s, dict) and s.get("pronto")):
+            ko("⛔ la pagina non e' arrivata a `window.REMOTIX`: %s" % str(s)[:300])
+            return USCITA_NIENTE_DA_GIUDICARE
+        if not c.valuta("!!window.__B30", attendi=False):
+            ko("⛔ il PROLOGO non e' entrato: senza, non c'e' nessun `t0`, "
+               "nessun byte letto sul filo e nessun pixel")
+            return USCITA_NIENTE_DA_GIUDICARE
+        ok("pagina pronta, e il prologo del banco e' dentro")
+
+        log("3. Dentro come utente «%s»" % a.utente)
+        if not a.parola_file:
+            ko("⛔ serve --parola-file (0600).  La parola NON passa da argv")
+            return USCITA_USO
+        with open(a.parola_file) as f:
+            parola = f.read().strip()
+        c.valuta(B.ENTRA % (json.dumps(a.utente), json.dumps(parola)),
+                 attendi=False)
+        del parola
+        inf("credenziali inviate (mai da argv)")
+        s = B.aspetta(c, B.STATO, 60,
+                      lambda x: "sessione" in (x.get("registro") or "").lower()
+                      or (x.get("conti") or {}).get("stream", 0) > 0)
+
+        log("4. LA SCENA — ⛔ e va sul monitor CHE SI STA CATTURANDO")
+        # ⛔ L'ORDINE E' VINCOLANTE: sessione → SCENA → primo fotogramma.
+        #    Aspettare un fotogramma prima della scena e' un'attesa che non
+        #    finisce mai — su un desktop fermo Mutter non consegna niente
+        #    (`LEZIONI.md` §1.1 travestita da ordine delle operazioni).
+        acceso = False
+        for tentativo in range(8):
+            rs = _sudo("bash %s scena-avvia" % a.terreno, silenzioso=True,
+                       attesa=240)
+            if rs.returncode == 0:
+                acceso = True
+                inf((rs.stdout or "")[-400:])
+                break
+            time.sleep(3.0)
+        if not acceso:
+            ko("⛔ la scena non si e' accesa in 8 tentativi: NON misuro.  ⚠ Un "
+               "numero preso senza scena e' uno zero che accusa il prodotto "
+               "invece della scena")
+            deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA",
+                      "giro": a.giro, "perche": "la scena non si e' accesa",
+                      "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
+            return USCITA_NIENTE_DA_GIUDICARE
+        s = B.aspetta(c, B.STATO, 60,
+                      lambda x: (x.get("conti") or {}).get("dipinti", 0) > 0)
+        if not (s and (s.get("conti") or {}).get("dipinti", 0) > 0):
+            ko("⛔ nessun fotogramma dipinto CON LA SCENA ACCESA: %s"
+               % str((s or {}).get("registro"))[-400:])
+            deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA",
+                      "giro": a.giro, "perche": "niente dipinto",
+                      "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
+            return USCITA_NIENTE_DA_GIUDICARE
+        ok("dipinti: %s" % s["conti"]["dipinti"])
+
+        log("4-bis. ⛔ CHI CATTURA CHI — e la scena su quale monitor sta DAVVERO")
+        v["monitor_catturato"] = monitor_del_prodotto(a)
+        v["scena"] = scena_uscite(a)
+        (ok if v["monitor_catturato"] else ko)(
+            "il prodotto cattura il monitor «%s» (letto dal SUO registro)"
+            % v["monitor_catturato"])
+        (ok if v["scena"].get("uscita_confermata") else ko)(
+            "la scena e' su «%s» (chiesta «%s») — ⭐ e a dirlo e' "
+            "`wl_surface.enter`, cioe' il COMPOSITORE"
+            % (v["scena"].get("uscita_confermata"),
+               v["scena"].get("uscita_chiesta")))
+
+        log("4-ter. ⛔⛔ FUORI DALLA PANORAMICA — o si misura UNA MINIATURA")
+        # ⛔⛔⛔ IL DIFETTO CHE HA FERMATO IL PRIMO GIRO VERO, E NESSUN DOCUMENTO
+        #      LO NOMINAVA — `[M]` 14 agosto 2026, trovato GUARDANDO L'IMMAGINE.
+        #
+        #      Una sessione GNOME headless appena nata si apre **in Panoramica**
+        #      («Type to search», la dock, le miniature).  ⇒ La scena a schermo
+        #      intero non e' a schermo intero: e' **una miniatura riscalata a
+        #      0,79** dentro l'anteprima, e la Panoramica si tiene il fuoco.
+        #      Da fuori si vedeva:
+        #        · `eventi_puntatore = 0` sulla scena, con l'iniezione riuscita
+        #          (`input_iniettato` avanzava) ⇒ diagnosi «libei non consegna»;
+        #        · **0 marche lette su 966**, perche' una marca fatta di celle
+        #          da 24 px riscalata a 0,79 non ha piu' nessun CRC.
+        #      ⛔ Due sintomi che accusano due imputati diversi, e nessuno dei
+        #        due era colpevole.  ⭐ A trovarlo e' stato **guardare
+        #        l'immagine**, non leggere un numero: `CODER.md` I8.
+        #
+        # ⇒ La cura passa DAL CANALE DEL PRODOTTO, non da un `gdbus` di servizio:
+        #   si manda ESC come lo manderebbe l'utente, e cosi' la stessa mossa
+        #   **misura anche la tastiera** — se la Panoramica si chiude, il
+        #   cammino tasto → libei → compositore funziona, e lo si e' visto nei
+        #   pixel invece che in un registro.
+        v["panoramica"] = {"tentativi": 0, "tolta": False}
+        for tentativo in range(6):
+            v["panoramica"]["tentativi"] = tentativo + 1
+            for _ in range(2):
+                for tipo in ("rawKeyDown", "keyUp"):
+                    spara(c, "Input.dispatchKeyEvent", type=tipo, key="Escape",
+                          code="Escape", windowsVirtualKeyCode=27,
+                          nativeVirtualKeyCode=27)
+                time.sleep(0.5)
+            # ⚠ Il fuoco del PUNTATORE si accende solo quando un movimento gli
+            #   passa sopra: senza qualche movimento, «non ho il fuoco» e «non
+            #   ho ancora guardato» avrebbero lo stesso aspetto.
+            for i in range(8):
+                spara(c, "Input.dispatchMouseEvent", type="mouseMoved",
+                      x=200 + i * 37, y=200 + i * 23, button="none", buttons=0)
+                time.sleep(0.06)
+            time.sleep(1.0)
+            st, perche = scena_dal_server(a)
+            if st and st.get("ho_il_fuoco_puntatore"):
+                v["panoramica"]["tolta"] = True
+                v["panoramica"]["scena"] = st
+                ok("⭐ la Panoramica e' via al tentativo %d: la scena ha il "
+                   "fuoco del puntatore (%d eventi) e della tastiera (%d) — "
+                   "⭐ e la stessa mossa PROVA il cammino della TASTIERA fino "
+                   "al compositore, letta nei pixel"
+                   % (tentativo + 1, st["eventi_puntatore"], st["eventi_tasto"]))
+                break
+            inf("tentativo %d: la scena non ha ancora il fuoco (%s)"
+                % (tentativo + 1, perche or json.dumps(st)[:120]))
+        if not v["panoramica"]["tolta"]:
+            ko("⛔ la scena non prende il fuoco del puntatore: NON misuro.  ⚠ Un "
+               "numero preso adesso sarebbe preso su una MINIATURA dentro la "
+               "Panoramica di GNOME — scala 0,79, nessun CRC, nessun eco")
+            deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA",
+                      "giro": a.giro,
+                      "perche": "la Panoramica di GNOME non si e' chiusa: la "
+                                "scena resta una miniatura",
+                      "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
+            return USCITA_NIENTE_DA_GIUDICARE
+
+        log("5. ⛔ LA MAPPA dalla vista alla tela — si MISURA")
+        g = c.valuta(GEOMETRIA_VISTA, attendi=False)
+        v["geometria_vista"] = g
+        if not (isinstance(g, dict) and g.get("c_e")):
+            ko("⛔ %s" % (g or {}).get("perche", "geometria illeggibile"))
+            deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA",
+                      "giro": a.giro, "perche": "geometria della vista assente",
+                      "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
+            return USCITA_NIENTE_DA_GIUDICARE
+        vista = Vista(g)
+        inf("vista %gx%g · tela %dx%d · scala %.4f/%.4f · bande %d,%d"
+            % (g["rw"], g["rh"], vista.tl, vista.ta, vista.sx, vista.sy,
+               vista.bx0, vista.by0))
+        if not vista.utilizzabile():
+            ko("⛔ la mappa non e' calcolabile: %s" % json.dumps(g)[:200])
+            return USCITA_NIENTE_DA_GIUDICARE
+
+        log("5-ter. ⛔⛔ LO SCORRIMENTO DELLA MARCA — misurato sui PIXEL VERI")
+        # ⛔⛔ SENZA QUESTO PASSO NON SI LEGGE UNA MARCA — `[M]` 14 agosto 2026,
+        #     primo giro vero: **0 marche lette su 966**, con la catena, la
+        #     scena e il lettore tutti perfettamente funzionanti.
+        #
+        #     `leggi_celle` gira con `ricerca=0` **apposta**: le 144 celle sono
+        #     gia' campionate, e ricercare lo scorrimento su un'immagine
+        #     sintetica non vorrebbe dire niente.  ⇒ Lo scorrimento vero si
+        #     misura UNA VOLTA, sui pixel veri, e si passa al campionatore.
+        # ⭐ E la stessa regione cruda serve al controllo del campionamento: le
+        #    celle di JavaScript contro quelle di numpy.  Se differiscono, il
+        #    lettore certificato sta leggendo un'immagine che il banco non ha
+        #    campionato come lui, e ogni «marca letta» sarebbe un caso.
+        m = marca_modulo()
+        v["scorrimento"] = [0, 0]
+        v["campionamento"] = []
+        c.valuta("window.__B30.crudi_voluti = 4, window.__B30.crudi = [], true",
+                 attendi=False)
+        time.sleep(2.0)
+        rc = c.valuta("window.__B30.prendi()", attendi=False)
+        for cr in ((rc or {}).get("crudi") or []):
+            grezzo = base64.b64decode(cr["b64"])
+            np = m.np_o_muori("04-b30: lo scorrimento sui pixel veri")
+            img = np.frombuffer(grezzo, dtype=np.uint8).reshape(cr["a"], cr["l"], 3)
+            vero = m.leggi_marca(img, ricerca=2)
+            y = (img[:, :, :3].astype(np.float64) @ m.PESI_LUMA) / 255.0
+            celle_np = m._celle(y, m.GEOMETRIA, 0, 0) * 255.0
+            scarto = max(abs(float(x) - float(z))
+                         for x, z in zip(celle_np, cr["celle"]))
+            v["campionamento"].append(
+                {"regione": [cr.get("ox"), cr.get("oy")],
+                 "letta": vero.get("c_e"), "perche": vero.get("perche"),
+                 "contrasto": vero.get("contrasto"),
+                 "scorrimento_provato": vero.get("scorrimento_provato"),
+                 "scarto_celle_su_255": round(scarto, 4)})
+            if vero.get("c_e") and cr.get("oy") == 0:
+                v["scorrimento"] = vero["scorrimento_provato"]
+        for x in v["campionamento"]:
+            (ok if x["letta"] else ko)(
+                "regione %s: marca %s · scorrimento %s · contrasto %s · "
+                "JS contro numpy %.3f su 255%s"
+                % (x["regione"], "LETTA" if x["letta"] else "NO",
+                   x["scorrimento_provato"], x["contrasto"],
+                   x["scarto_celle_su_255"],
+                   "" if x["letta"] else " — %s" % str(x["perche"])[:120]))
+        c.valuta("window.__B30.crudi_voluti = 0, window.__B30.scorrimento = %s,"
+                 " true" % json.dumps(v["scorrimento"]), attendi=False)
+        inf("scorrimento in vigore per il campionamento: %s" % v["scorrimento"])
+
+        log("5-bis. ⛔ IL PALCO, dai due capi — si DICHIARA prima del numero")
+        v["palco_prima"] = B.palco_dichiarato(palco, a, a.registro_prodotto)
+        # ⛔ E il palco del SERVER si rilegge dal MIO albero: quello di `03-b17`
+        #    fa `pgrep -x remotix` su tutta la macchina, e in questo momento di
+        #    `remotix` ne girano parecchi — quello dell'utente sulla 7700 e
+        #    quelli degli altri nove anelli.  ⇒ L'unione dei loro descrittori
+        #    direbbe «hardware» anche se il MIO codificatore fosse in software.
+        rq = _sudo("bash %s palco" % a.terreno, silenzioso=True)
+        for riga in reversed((rq.stdout or "").splitlines()):
+            if riga.strip().startswith("{"):
+                try:
+                    v["palco_prima"]["server_mio"] = json.loads(riga.strip())
+                except ValueError:
+                    pass
+                break
+        B.stampa_palco(v["palco_prima"])
+        inf("⭐ il palco del MIO server (solo i miei processi): %s"
+            % json.dumps(v["palco_prima"].get("server_mio")))
+        # ⛔⛔ SU XVFB O SUL DESKTOP VERO?  Non si suppone: lo dice `xlsclients`.
+        #     Se il browser NON e' sull'Xvfb, il pezzo cieco in USCITA (16-40 ms)
+        #     ESISTE, e va sommato.  ⚠ E se non si e' potuto guardare si sceglie
+        #     la strada SCOMODA — cioe' si somma lo stesso.
+        cl = (v["palco_prima"].get("chuwi") or {}).get("clienti_sull_xvfb")
+        v["clienti_sull_xvfb"] = cl
+        v["su_xvfb"] = bool(cl)
+        inf("clienti attaccati a %s: %s  ⇒  su_xvfb = %s  (⛔ `None` non e' "
+            "«zero»: si sceglie comunque la strada scomoda)"
+            % (a.schermo, cl, v["su_xvfb"]))
+
+        log("6. ⛔ I TRE GIRI, INTRECCIATI — base · ritardo al RITORNO · "
+            "ritardo all'ANDATA")
+        # ⛔⭐ I GIRI SI INTRECCIANO, e non e' un vezzo: a blocchi il ritardo
+        #     iniettato si confonde con IL TEMPO (la macchina, il codificatore e
+        #     la cadenza non stanno fermi per due minuti), e la salita misurata
+        #     ne porta dentro la deriva.  Fette corte, alternate, tante volte:
+        #     cosi' la deriva colpisce tutti i valori allo stesso modo.
+        condizioni = [("base", 0.0, 0.0),
+                      ("ritorno", float(a.ritardo_ritorno), 0.0),
+                      ("andata", 0.0, float(a.ritardo_andata))]
+        mucchio = {n: _vuoto() for n, _, _ in condizioni}
+        mani = max(2, a.mani)
+        durata = max(4.0, a.secondi / mani)
+        k = 0
+        inf("%d mani da %.1f s per ciascuna delle %d condizioni "
+            "(≈ %.0f s in tutto), un input ogni %.0f ms"
+            % (mani, durata, len(condizioni), mani * durata * len(condizioni),
+               a.passo_ms))
+        for mano in range(mani):
+            for nome, rr, ra in condizioni:
+                if not metti_ritardo(a, rr, ra, "%s-m%d-%s" % (a.giro, mano, nome)):
+                    dub("⚠ non ho potuto scrivere il comando del ponte (%s)" % nome)
+                # ⛔ Si BUTTA l'assestamento: i fotogrammi in volo subito dopo un
+                #    cambio di N portano ancora il N di prima.
+                time.sleep(1.5)
+                c.valuta(SVUOTA, attendi=False)
+                k = fetta(c, vista, durata, a.passo_ms / 1000.0, k,
+                          mucchio[nome])
+                # ⚠ La coda: l'ultimo input deve poter arrivare al vetro prima
+                #   che si cambi condizione, o le sue sonde non chiudono mai.
+                time.sleep(1.2)
+                ritira(c, mucchio[nome])
+            inf("mano %d/%d fatta" % (mano + 1, mani))
+        metti_ritardo(a, 0.0, 0.0, a.giro)
+        # ⛔ Il ponte si legge MENTRE ha ritardato, non a zero: uno scarto
+        #    misurato a ritardo zero non dice niente su come consegna quando
+        #    ritarda.  ⚠ Qui la lettura e' l'ultima scritta dal ponte.
+        rp = _sshpw("cat %s" % a.verbale_ponte, silenzioso=True)
+        for riga in (rp.stdout or "").splitlines():
+            if riga.strip().startswith("{"):
+                try:
+                    v["ponte"] = json.loads(riga.strip())
+                except ValueError:
+                    pass
+                break
+
+        log("7. LO SCARTO FRA I DUE OROLOGI — l'ancora, riletta")
+        anc_b = p.orologio_chiedi(a.host, a.ancora, campioni=1200, pausa_s=0.0005)
+        v["ancora_apertura"], v["ancora_chiusura"] = anc_a, anc_b
+        v["parete"] = parete
+        if anc_b.get("c_e"):
+            v["deriva_ppm"] = p.deriva_ppm(anc_a, anc_b)
+            scarto_ancora = (anc_a["scarto_us"] + anc_b["scarto_us"]) // 2
+            v["errore_orologio_us"] = (parete["errore_us"]
+                                       + max(anc_a["errore_us"], anc_b["errore_us"]))
+        else:
+            dub("⚠ l'ancora di chiusura non ha risposto: la deriva resta `[?]`")
+            scarto_ancora = anc_a["scarto_us"]
+            v["errore_orologio_us"] = parete["errore_us"] + anc_a["errore_us"]
+        # ⛔⛔ IL VERSO.  `scarto_ancora_us` e' quanto va SOTTRATTO al monotono
+        #     del SERVER per portarlo sull'orologio della pagina:
+        #        server_us = pagina_ms*1000 + origine_us − parete + ancora
+        #     ⚠ Sbagliare il verso produce un numero che SEMBRA un ritardo:
+        #       grande, stabile e falso.
+        ultimo = (mucchio["base"].get("ultimo") or {})
+        origine_ms = ultimo.get("t_origine") or 0
+        v["origine_pagina_ms"] = origine_ms
+        v["scarto_ancora_us"] = (int(origine_ms * 1000) - parete["scarto_us"]
+                                 + scarto_ancora)
+        inf("scarto d'apertura %d us · di chiusura %s · deriva %s ppm · "
+            "scarto_ancora_us %d"
+            % (anc_a["scarto_us"], anc_b.get("scarto_us"),
+               round(v.get("deriva_ppm") or 0, 2), v["scarto_ancora_us"]))
+
+        log("8. Q9 — QUANTO COSTA IL BANCO, a fette alternate")
+        senza, con = _vuoto(), _vuoto()
+        for _ in range(2):
+            for leggi, dove in ((False, senza), (True, con)):
+                c.valuta("window.__B30.leggi = %s, true"
+                         % ("true" if leggi else "false"), attendi=False)
+                c.valuta(SVUOTA, attendi=False)
+                fetta(c, vista, 5.0, a.passo_ms / 1000.0, k, dove)
+                ritira(c, dove)
+        c.valuta("window.__B30.leggi = true, true", attendi=False)
+
+        def ritmo(d):
+            cc = d["campioni"]
+            if len(cc) < 5:
+                return None
+            iv = sorted(b["t1"] - x["t1"] for x, b in zip(cc, cc[1:])
+                        if 0 < b["t1"] - x["t1"] < 500)
+            return round(1000.0 / iv[len(iv) // 2], 2) if iv else None
+        v["fps_senza_lettura"] = ritmo(senza)
+        v["fps_con_lettura"] = ritmo(con)
+        inf("ritmo senza la lettura: %s · con la lettura: %s  (%d e %d "
+            "fotogrammi)" % (v["fps_senza_lettura"], v["fps_con_lettura"],
+                             len(senza["campioni"]), len(con["campioni"])))
+
+        log("9. ⛔⛔ Q4(a) — IL RILEVATORE DAVANTI A QUEL CHE NON C'E'")
+        # ⭐ Si sposta la FINESTRA DI LETTURA dell'eco su un'altra parte dello
+        #    STESSO fotogramma: pixel veri, stesso desktop, stessa catena — e li'
+        #    la marca dell'eco NON C'E'.  Se il lettore dicesse «si'» anche li',
+        #    direbbe si' a qualunque cosa, e ogni ritardo di questo banco
+        #    sarebbe un numero inventato.
+        #    ⛔ Spegnere la scena NON e' la strada: senza scena Mutter non
+        #       consegna un fotogramma, e al lettore non si mostra niente.
+        fuori = _vuoto()
+        c.valuta("window.__B30.finestra_eco = %s, true"
+                 % json.dumps([a.finestra_x, a.finestra_y]), attendi=False)
+        c.valuta(SVUOTA, attendi=False)
+        fetta(c, vista, 8.0, a.passo_ms / 1000.0, k, fuori)
+        ritira(c, fuori)
+        c.valuta("window.__B30.finestra_eco = [0, %d], true" % 240, attendi=False)
+        for x in fuori["campioni"]:
+            leggi_due_marche(x)
+        v["senza_eco"] = [x for x in fuori["campioni"] if x.get("visto_eco")]
+        v["senza_eco_finestra"] = [a.finestra_x, a.finestra_y]
+        falsi = [x for x in v["senza_eco"] if x.get("eco_marca", {}).get("c_e")]
+        (ok if (v["senza_eco"] and not falsi) else ko)(
+            "Q4(a): %d fotogrammi VERI guardati in (%d,%d), dove la marca "
+            "dell'eco non c'e' → %d falsi positivi"
+            % (len(v["senza_eco"]), a.finestra_x, a.finestra_y, len(falsi)))
+
+        log("9-bis. ⭐⭐ LA TASTIERA, MISURATA A PARTE — la tesi 3 del mandato")
+        # ⛔ *«La tastiera e il mouse hanno lo stesso ritardo»* non e' detto, e
+        #    mediarli darebbe un numero che l'utente sente in due modi diversi:
+        #    il mouse muove un puntatore DISEGNATO DALLA PAGINA (che si vede
+        #    subito, senza rete), la tastiera fa tutto il giro.
+        v["mappa_tasti"] = mappa_tasti(c)
+        tastiera = _vuoto()
+        if not v["mappa_tasti"].get("c_e"):
+            ko("⛔ %s" % v["mappa_tasti"].get("perche"))
+            inf("⚠ La tastiera NON si misura in questo giro, e si dice: un "
+                "numero appaiato male sarebbe peggio di nessun numero.")
+        else:
+            ok("mappa `event.code` → evdev, MISURATA: %s"
+               % json.dumps(v["mappa_tasti"]["mappa"]))
+            c.valuta(SVUOTA, attendi=False)
+            fine = time.time() + max(10.0, a.secondi / 2.0)
+            prossimo = time.time() + 1.0
+            i = 0
+            while time.time() < fine:
+                nome, vk = TASTI_PROVA[i % len(TASTI_PROVA)]
+                i += 1
+                # ⛔⛔ IL «GIU'» E IL «SU» SI SEPARANO, e non e' una finezza.
+                #
+                #     Mandandoli insieme, l'eco del «giu'» viene sovrascritto da
+                #     quello del «su» **prima che la scena ridisegni** (60 Hz =
+                #     16,7 ms): meta' delle sonde non puo' chiudere per
+                #     costruzione, e il banco misurerebbe solo quel che
+                #     sopravvive — cioe' un campione scelto dal difetto.
+                #     `[M]` 14 agosto: 27 sonde chiuse su 584.
+                #  ⇒ Ogni stato vive almeno un intervallo di quadro.
+                for tipo in ("rawKeyDown", "keyUp"):
+                    spara(c, "Input.dispatchKeyEvent", type=tipo, key=nome,
+                          code=nome, windowsVirtualKeyCode=vk,
+                          nativeVirtualKeyCode=vk)
+                    time.sleep(a.passo_ms / 1000.0)
+                if time.time() >= prossimo:
+                    ritira(c, tastiera)
+                    prossimo = time.time() + 1.0
+            time.sleep(1.2)
+            ritira(c, tastiera)
+            inf("tasti: %d messaggi sul filo, %d fotogrammi guardati"
+                % (len([x for x in tastiera["spediti"]
+                        if x.get("tipo") == RCP_POSIZIONE]),
+                   len(tastiera["campioni"])))
+        v["_tastiera_grezza"] = tastiera
+
+        log("10. LO STATO DELLA SCENA — ⛔ l'input e' ARRIVATO AL DESKTOP?")
+        scena_in, perche = scena_dal_server(a)
+        v["scena_input"] = scena_in
+        if scena_in is None:
+            ko(perche)
+        else:
+            ok("la scena ha ricevuto: puntatore %d · pulsante %d · rotella %d · "
+               "tasto %d  (fuoco puntatore %s, seat %s)"
+               % (scena_in["eventi_puntatore"], scena_in["eventi_pulsante"],
+                  scena_in["eventi_rotella"], scena_in["eventi_tasto"],
+                  scena_in["ho_il_fuoco_puntatore"], scena_in["seat_visto"]))
+
+        log("11. IL PALCO, RILETTO — un palco che cambia a meta' giro fa uscire "
+            "un numero che sembra buono")
+        v["palco_dopo"] = B.palco_dichiarato(palco, a, a.registro_prodotto)
+        v["palco_regge"] = B.confronta_palco(v.get("palco_prima"), v["palco_dopo"])
+        (ok if v["palco_regge"]["regge"] else ko)(
+            "il palco e' lo stesso ai due estremi" if v["palco_regge"]["regge"]
+            else "⛔ IL PALCO E' CAMBIATO DURANTE LA MISURA: "
+                 + " · ".join(v["palco_regge"]["perche"]))
+        v["grana"] = (mucchio["base"].get("ultimo") or {}).get("grana")
+        v["isolata"] = (mucchio["base"].get("ultimo") or {}).get("isolata")
+        v["costo_lettura_us"] = mucchio["base"]["costo_lettura_us"]
+    finally:
+        palco.spegni()
+
+    log("12. LE SONDE — si accoppia e si scompone")
+    for nome, rr, ra in condizioni:
+        g = prepara_giro(mucchio[nome], vista, nome, rr, ra)
+        g["scomposizione"] = scomponi(g["sonde"], v["scarto_ancora_us"])
+        v["giri"].append(g)
+        chiuse = sum(1 for s in g["sonde"] if s.get("scomodo"))
+        (ok if chiuse else ko)(
+            "%-8s ritorno %+5.1f · andata %+5.1f  ⇒  %4d spediti, %4d sonde, "
+            "%4d CHIUSE, mediana %s ms  (mappa: %d/%d)"
+            % (nome, rr, ra, len(g["spediti"]), len(g["sonde"]), chiuse,
+               g["distribuzione"].get("mediana"), g["mappa_coperti"],
+               g["mappa_denominatore"]))
+
+    log("12-bis. ⭐⭐ LA TASTIERA — lo stesso metro, la stessa scena, l'altro tasto")
+    # ⛔ Stesso strumento, stessa scena, stesso giro: i due numeri si possono
+    #    confrontare fra loro.  ⚠ Fra due GIRI diversi non si potrebbe.
+    tg = v.pop("_tastiera_grezza", None) or _vuoto()
+    v["tastiera"] = {"mappa": v.get("mappa_tasti")}
+    if v.get("mappa_tasti", {}).get("c_e") and tg["campioni"]:
+        for x in tg["campioni"]:
+            leggi_due_marche(x)
+        ev = [e for e in tg["eventi"] if e.get("codice")]
+        st = accoppia_tasti(tg["campioni"], tg["spediti"], ev,
+                            v["mappa_tasti"]["mappa"])
+        chiuse = [s for s in st if s.get("scomodo")]
+        v["tastiera"]["sonde"] = st
+        v["tastiera"]["distribuzione"] = _d(
+            [s["ritardo_scomodo_ms"] for s in chiuse
+             if s.get("ritardo_scomodo_ms") is not None])
+        v["tastiera"]["scomposizione"] = scomponi(st, v["scarto_ancora_us"])
+        (ok if chiuse else ko)(
+            "TASTIERA: %d messaggi, %d sonde, %d CHIUSE, mediana %s ms"
+            % (len([x for x in tg["spediti"] if x.get("tipo") == RCP_POSIZIONE]),
+               len(st), len(chiuse),
+               v["tastiera"]["distribuzione"].get("mediana")))
+    else:
+        dub("⚠ la tastiera non e' stata misurata in questo giro: %s"
+            % (v.get("mappa_tasti", {}).get("perche") or "nessun campione"))
+
+    r2 = _sshpw("ss -tuln | grep -E ':(7448|7501|7561|7571|7700|76[0-9][0-9]|"
+                "77[0-2][0-9])\\b' | sort", silenzioso=True)
+    v["porte_dopo"] = r2.stdout
+    if v["porte_dopo"] != v["porte_prima"]:
+        dub("⚠ le porte sono cambiate durante la misura")
+
+    dove = os.path.join(a.lavoro, "verbale-%s.json" % a.giro)
+    with open(dove, "w") as f:
+        json.dump(v, f, ensure_ascii=False)
+    inf("verbale: %s (%d byte)" % (dove, os.path.getsize(dove)))
+
+    g = stampa_verdetto(v)
+    base = next((x for x in v["giri"] if not x.get("ritardo_ritorno_ms")
+                 and not x.get("ritardo_andata_ms")), None) or {}
+    d = _d([s["ritardo_scomodo_ms"] for s in base.get("sonde", [])
+            if s.get("ritardo_scomodo_ms") is not None])
+    deposita({"banco": "B30", "tipo": "MISURA", "giro": a.giro,
+              "host": a.host, "porta": a.porta, "utente": a.utente,
+              "controlli": {k: bool(g[k].get("esito")) for k in TUTTI},
+              "distribuzione_ms": d,
+              "verdetto": verdetto(d, v.get("su_xvfb", False)),
+              "scomposizione": scomponi(base.get("sonde", []),
+                                        v.get("scarto_ancora_us", 0)),
+              "Q5": g["Q5"], "Q6": g["Q6"], "Q7": g["Q7"], "Q8": g["Q8"],
+              "scarto_ancora_us": v.get("scarto_ancora_us"),
+              "errore_orologio_us": v.get("errore_orologio_us"),
+              "deriva_ppm": v.get("deriva_ppm"),
+              "monitor_catturato": v.get("monitor_catturato"),
+              "scena": v.get("scena"), "scena_input": v.get("scena_input"),
+              "clienti_sull_xvfb": v.get("clienti_sull_xvfb"),
+              "su_xvfb": v.get("su_xvfb"),
+              "panoramica": v.get("panoramica"),
+              "scorrimento": v.get("scorrimento"),
+              "campionamento": v.get("campionamento"),
+              # ⭐ La TASTIERA, accanto al mouse e non mediata con lui
+              "tastiera": {
+                  "distribuzione_ms": (v.get("tastiera") or {}).get("distribuzione"),
+                  "scomposizione": (v.get("tastiera") or {}).get("scomposizione"),
+                  "mappa": (v.get("mappa_tasti") or {}).get("mappa"),
+              },
+              "palco": v.get("palco_prima"), "palco_regge": v.get("palco_regge"),
+              "ponte": v.get("ponte"), "verbale": dove,
+              "codice_uscita": codice_uscita(g)})
+    return codice_uscita(g)
+
+
 def misura(a):
-    """⛔ LA MISURA VERA.  Oggi non gira: il canale di input nasce mentre questo
-    banco si scrive, e il banco lo dice invece di fingere.
+    """⛔ LA MISURA VERA.
 
     ⭐ E la sequenza e' vincolante — la stessa di `03-b17`, piu' due passi:
 
@@ -2342,8 +3426,30 @@ def misura(a):
              ("T_PUNTATORE",)),
             ("il SERVER inietta l'input", os.path.join(RADICE, "src/input.c"),
              ("ei_device_pointer_motion_absolute", "ei_device_scroll")),
-            ("i GANCI sono cuciti", os.path.join(RADICE, "src/figlio.c"),
-             (".input_puntatore", "input_puntatore =")),
+            # ⛔⛔ E QUESTA RIGA E' STATA CORRETTA A MISURA GIA' PRONTA — `[M]`
+            #     14 agosto 2026, sera, anello O2.
+            #
+            #     Diceva: cerca `.input_puntatore` in **`src/figlio.c`**, e ne
+            #     trovava ZERO ⇒ «NON HO NIENTE DA GIUDICARE», uscita 3.  ⛔ Era
+            #     FALSO: la catena era cucita e funzionava (20 messaggi §7.3 sul
+            #     filo, l'eco nei pixel, il campo `input` dei 28 byte pieno).
+            #     I ganci si attaccano in **`src/webtransport.c`**
+            #     (`g.input_puntatore = gancio_input_puntatore`), perche' il
+            #     canale sta nel PADRE; il figlio, dall'altra parte del confine
+            #     di processo, CHIAMA `input_puntatore()` su `MSG_INPUT`.
+            #
+            #     ⭐ E' la stessa lezione della mattina presa dall'altro verso:
+            #     allora questo controllo aveva dato un falso VERDE (cinque
+            #     `0x0101` dentro i commenti), adesso un falso ROSSO — ⛔ e un
+            #     falso rosso su una precondizione **spegne la misura** senza
+            #     che nessuno guardi il prodotto.  ⇒ Si guardano tutt'e due i
+            #     lati del confine, e ciascuno col nome del suo file.
+            ("i GANCI sono ATTACCATI (nel padre)",
+             os.path.join(RADICE, "src/webtransport.c"),
+             ("g.input_puntatore =", "gancio_input_puntatore")),
+            ("il FIGLIO inietta (l'altro lato del confine)",
+             os.path.join(RADICE, "src/figlio.c"),
+             ("input_puntatore(palco_input", "MSG_INPUT")),
     ):
         try:
             with open(percorso, encoding="utf-8", errors="replace") as f:
@@ -2376,16 +3482,7 @@ def misura(a):
         return USCITA_NIENTE_DA_GIUDICARE
 
     log("⭐ IL CANALE C'E': si accende il giro")
-    ko("⛔ ma il giro vero non e' ancora stato scritto in questa funzione: "
-       "l'ordine dei passi sta nella docstring qui sopra, e va steso quando "
-       "l'anello si chiude per la prima volta.")
-    inf("⚠ Lo dico invece di fingere un giro: un banco che dichiara di aver "
-        "misurato e non ha misurato e' il difetto peggiore di tutti.")
-    deposita({"banco": "B30", "tipo": "MISURA NON ESEGUITA", "giro": a.giro,
-              "perche": "il canale c'e' ma il giro non e' steso",
-              "letto_nel_codice": {n: d for n, (_, d) in trovato.items()},
-              "codice_uscita": USCITA_NIENTE_DA_GIUDICARE})
-    return USCITA_NIENTE_DA_GIUDICARE
+    return giro_vero(a, trovato)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2410,6 +3507,31 @@ def principale():
     p.add_argument("--lavoro", default="/tmp/04-b30")
     p.add_argument("--shm-scena", default="/dev/shm/remotix-04-b30")
     p.add_argument("--giro", default=time.strftime("b30-%Y%m%d-%H%M%S"))
+    # ── quel che serve al GIRO VERO, e ciascuno con la sua ragione ──────────
+    p.add_argument("--terreno", default="/media/REMOTIX/src/04-b32-terreno.sh",
+                   help="⛔ lo script CHE STA DI LA': accende la scena, legge il "
+                        "blocco di stato.  Un banco non entra nella sessione di "
+                        "un utente da fuori")
+    p.add_argument("--registro-prodotto",
+                   default="/media/REMOTIX/tmp/04-b30/registro.log",
+                   help="⛔ da qui si legge QUALE MONITOR il prodotto cattura: "
+                        "non si deduce e non si scrive a mano")
+    p.add_argument("--verbale-ponte", default="/media/REMOTIX/tmp/04-b30/ponte.json")
+    p.add_argument("--ritardo-ritorno", type=float, default=25.0,
+                   help="N ms sul ramo prodotto → cliente (Q5, tratto 5)")
+    p.add_argument("--ritardo-andata", type=float, default=30.0,
+                   help="⭐ N ms sul ramo cliente → prodotto (Q6, tratto 2) — "
+                        "la meta' che alla fase 3 non esisteva")
+    p.add_argument("--mani", type=int, default=3,
+                   help="⛔ le condizioni si INTRECCIANO: a blocchi il ritardo "
+                        "iniettato si confonde con la deriva")
+    p.add_argument("--passo-ms", type=float, default=70.0,
+                   help="ogni quanto si sintetizza un input.  ⚠ Piu' fitto di "
+                        "un intervallo di quadro e gli eco intermedi non "
+                        "vengono mai dipinti: quelle sonde non chiudono")
+    p.add_argument("--finestra-x", type=int, default=700,
+                   help="Q4(a): dove guardare per NON trovare l'eco")
+    p.add_argument("--finestra-y", type=int, default=600)
     a = p.parse_args()
 
     if a.certifica:

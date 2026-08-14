@@ -214,6 +214,21 @@ comporta**, non come è fatto dentro: come dipinge, la tastiera nel browser, gli
 cursore, il ridimensionamento, il ritardo. ⚠ Il **trasporto no**: Xpra è su WebSocket, noi su
 WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` §1.6.
 
+> ### ✅ FATTO il 14 agosto 2026 — [`xpra.md`](xpra.md) — ⛔ **e in ritardo, con un prezzo pagato**
+>
+> ⛔ *Questo studio doveva stare **prima della pagina**, ed è stato fatto **dopo**: l'ha chiesto
+> l'utente una seconda volta, davanti al prodotto che finalmente si usava e con un difetto in mano
+> («il puntatore sembra catturato… studia la soluzione di XPRA»).*
+>
+> | che cosa ha trovato | |
+> |---|---|
+> | ⭐⭐ **il cursore lo veste il browser** (`css("cursor", "url(…) x y, auto")`), e la cattura del puntatore è **un bottone**, non un automatismo | ✅ **adottato lo stesso giorno** — e ha smontato §7.1, che contraddiceva §7.5 |
+> | ⭐⭐ **il primo fotogramma si CHIEDE** (`buffer_refresh` con `refresh-now`), non si aspetta | ⏳ **è il lavoro sul tempo di apparizione del desktop**, `[M]` 4,10 s su 5,21 spesi ad aspettare |
+> | ⭐ **il client dice la sua misura e il server ridimensiona** (`configure_display`) | ⏳ è `RCP.md` §4.5, e **oggi nessuno la mantiene** |
+>
+> ⇒ ⚠ **Il costo di aver saltato il punto 0 non è stato il tempo dello studio**: è il codice scritto
+> nel frattempo, e il difetto trovato dall'utente in trenta secondi d'uso invece che da noi.
+
 ---
 
 # IL SERVER E LA PAGINA

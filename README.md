@@ -1389,6 +1389,12 @@ domande di `LEZIONI.md` §3.
 con i quattro rapporti di dettaglio in `web/rapporti/`. ⚠ **È quello che invecchia più in fretta**:
 i compositori li congela Debian, i browser si aggiornano da soli.
 
+⭐⭐ **E il settimo, che non parla di una tecnologia ma di un PRODOTTO**: [`xpra.md`](xpra.md) — chi
+questo mestiere lo fa già, letto nel suo codice il 14 agosto 2026. ⛔ Doveva essere fatto **prima**
+della pagina (`PIANO.md` §1.3) ed è stato fatto **dopo**, su richiesta dell'utente: ⇒ nel frattempo
+avevamo scritto una specifica che si contraddiceva, e a trovarla è stato lui in trenta secondi
+d'uso.
+
 ⛔ **E accanto ai quattro, un quinto file che non è uno studio**:
 [`web/rapporti/S-esiti-sonda.md`](web/rapporti/S-esiti-sonda.md) — **gli esiti misurati** della sonda
 del browser (S7 · S1b · S5 · e le tre che aspettano un dispositivo), con la scena accanto a ogni

@@ -49,6 +49,7 @@ crederlo** (`CODER.md` §3.3). L'elenco vive qui e si riempie strada facendo.
 | **A8** | la pagina, modo tocco | `04-b28-gesti` | i sette gesti, e il passaggio automatico sul contesto | 7671-75 | ⭐ **24 su 25**, tre giri |
 | **A9** | le scorciatoie (sonda S3) | `04-b29-scorciatoie` | «arriva **e basta**?» — i tre stati, su due motori | 7681-85 | ⭐ **594 misure**, 74 buttate |
 | **A10** | i banchi di fase | `04-b30-anello-input` | ⭐ l'anello **input → vetro**, che alla fase 3 non era misurabile | 7691-95 | ⭐ **16 su 16**, e ⏳ `n=0` |
+| ⭐ **O2** | **il numero dell'anello** | `04-b30-*` (esteso) · `04-b32-terreno` · `04-b32-coda` · `04-b32-ritmo` | ⭐ **il ritardo input → vetro, con `n` e la scomposizione**, e la coda che cresce | **7721-25** | ⭐⭐ **~140 ms, n = 326 e 322**, 10 controlli su 11 |
 
 ⭐ **E le cuciture le tiene il coordinatore, non gli anelli** — `src/input.h`, `src/tastiera.h`,
 `src/cursore.h`, più `figlio.c`, `main.c` e il `Makefile`. ⛔ È la lezione di
@@ -379,6 +380,81 @@ rompersi. Il ripiego sparisce da sé adesso che la riga c'è.
 
 ⛔ **E il suo controllo di precondizione ha dato un FALSO VERDE**: cercava `0x0101` in `pagina.html`,
 ne trovava cinque, ed erano **tutti commenti**. ⚠ *Pagata dentro il banco che esiste per non pagarla.*
+
+---
+
+### ⭐⭐⭐ O2 — IL NUMERO C'È: **~140 ms fra la mano e il pixel**, e sono **due giri che concordano**
+
+*14 agosto 2026, pomeriggio. Rapporto in [`rapporti/F4-O2-anello-input.md`](rapporti/F4-O2-anello-input.md).*
+
+`[M]` **139,40 ms** (n = **326 su 326**) e **141,60 ms** (n = **322 su 322**), due giri indipendenti
+che concordano entro **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **Il tetto è 50 ms: si sfora
+di quasi tre volte.** Coi due pezzi ciechi dichiarati: **160-193 ms sullo schermo di un utente, più
+la rete.** ⚠ E sul prodotto di un'ora prima — senza la cura di O1 in `src/figlio.c` — erano
+**151,17 ms** (n = 573).
+
+⭐ **E la scomposizione dice che NESSUN TRATTO DOMINA** — la tesi 1 del mandato è **refutata**:
+
+| tratto | ms | | tratto | ms |
+|---|---|---|---|---|
+| **5** cattura → primo byte *(codifica compresa)* | **30,4** | | **4** la scena disegna → cattura | **16,2** |
+| **3** la scena riceve → disegna | **26,6** | | **1a** evento → il prodotto lo vede | **13,1** |
+| **2** byte usciti → la scena riceve | **26,0** | | **8** la decodifica **vera** | **0,75** |
+| **9** richiamo → 1° `drawImage` *(l'ATTESA)* | **25,6** | | **10** 1° → 2° `drawImage` *(il disegno VERO)* | **0,08** |
+
+⇒ I **sei** tratti maggiori valgono fra **13,1 e 30,4 ms** e fanno il **99 %**: curarne uno solo
+toglie al massimo il **22 %** del ritardo, e il tetto resterebbe sforato di due volte e mezzo.
+⚠ La codifica sta **dentro** il tratto 5 e vale **5,3 su 30,4**; la **decodifica** vale **0,75 ms**:
+«il collo di bottiglia è la codifica» resta falsa, e adesso con un numero sotto.
+⭐ **E la scomposizione è ripetibile quanto il totale**: nessun tratto si sposta di più di **1,6 ms**
+fra i due giri.
+
+⭐⭐ **E i tratti che il metro della fase 3 NON attraversava** (1a + 1b + 2 + 3) valgono **65,8 ms**,
+cioè **il 47 %**: ⛔ *il numero della fase 3 non vedeva quasi metà del ritardo che l'utente sente.*
+
+> #### ⛔⛔ E IL DIFETTO PIÙ GRAVE NON È UN TRATTO: È UNA CODA CHE CRESCE
+> `[M]` il server consegna **39,6** fotogrammi/s, la pagina ne dipinge **34,7**, e ⛔ **nessuno
+> butta l'avanzo** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ Il ritardo cresce di
+> **+108 ms al secondo**: 31,6 ms dopo 1 s → **4 650 ms dopo 43 s**. **Dopo un minuto l'utente
+> comanda un desktop che ha visto sei secondi fa, e tutti i contatori sono verdi.**
+> ⭐ **Curato** in `src/pagina.html` (ancora `F4-CODA-DEL-DECODIFICATORE`): si salta **il disegno**,
+> non la decodifica — nessun buco, nessuna chiave. `[M]` dopo: pendenza **−2 ms/s**, ritardo **1,3
+> ms** dopo 41 s.
+
+> #### ⛔ E LA TESI 2 — *«il ritmo è quanto ci consegna Mutter»* — **REFUTATA in questo regime**
+> `[M]` quattro conti nella stessa finestra di 30 s: la scena disegna **59,99/s**, Mutter ce ne
+> consegna **30,84** (il 51 %), il server ne spedisce **30,54**, la pagina ne dipinge **30,6** —
+> ⭐ e le **attese a vuoto sono 0,00/s**: ogni volta che abbiamo chiesto un fotogramma ce n'era già
+> uno pronto. ⇒ **Non stiamo aspettando Mutter: il limite è nel nostro ciclo.**
+> ⚠ `[?]` I 10,8/s che l'utente ha misurato dal suo video sono su un desktop **vero**, cioè in
+> regime di scarsità: le due misure rispondono a due domande diverse.
+
+> #### ⛔⛔ E LA TESI 3 (tastiera contro mouse) NON È CHIUSA — ⭐ e a dirlo è **la scomposizione**
+> `[M]` ultimo giro: **35 sonde chiuse su 296**, mediana **151,7 ms** contro i **141,6** del mouse
+> nello stesso giro. ⚠ Verosimile: *«la tastiera è 10 ms più lenta»*. ⛔ **È falso**, e la prova è
+> che la sua scomposizione **non è fisica**: `2 byte usciti → la scena riceve` = **−562,8 ms**,
+> negativo. ⇒ L'accoppiamento prende il fotogramma sbagliato, e **il totale da solo non lo direbbe
+> mai**: è il **guasto n. 12 della certificazione di A10** visto dal vivo.
+> ⇒ ⛔ **Il numero non è stato pubblicato.** Serve un eco della tastiera che non si sovrascriva
+> (lavoro mio su `04-b30-scena.c`).
+
+⭐ **Quel che invece è `[M]` e regge: il cammino della tastiera arriva al compositore** — `Escape`
+mandato dal canale del prodotto **chiude la Panoramica di GNOME**, quattro volte su quattro,
+verificato nei pixel; e la scena riceve **744** eventi di tastiera in un giro.
+
+⭐⭐ **E Q6 — il controllo del ramo d'ANDATA, che alla fase 3 non poteva esistere — PASSA sul ferro**:
+iniettando 30 ms il totale sale di **30,84** e il surplus compare **tutto nel tratto 2** (+33,49) e
+**in nessun altro**. ⇒ Metà dell'anello che non aveva nessuna taratura adesso ce l'ha.
+⛔ Q5 (ramo di ritorno) resta rosso **per 0,2 ms**: il surplus sta nel tratto giusto (+24,70 contro
+N = 25) ma il totale sale di 20,78. ⚠ **La tolleranza non è stata allargata.**
+
+**⛔ E i tre difetti che tenevano `n = 0` erano tutti del banco o del contorno, nessuno del canale:**
+
+| | |
+|---|---|
+| ⛔⛔ **la Panoramica di GNOME** | una sessione headless appena nata si apre in Panoramica: la scena «a schermo intero» era **una miniatura a 0,79** e la Panoramica teneva il fuoco. ⇒ `eventi_puntatore = 0` (diagnosi suggerita: «`libei` non consegna») **e** 0 marche lette su 966 (diagnosi suggerita: «l'eco non si legge»). ⭐ **A trovarlo è stato guardare l'immagine**, non leggere un numero |
+| ⛔ **`04-b30-scena.c`: `oy` sommato due volte** | le celle della **seconda** marca finivano fuori dalla loro zona di quiete, sullo sfondo del desktop. Sulla marca 1 (`oy = 0`) non si vedeva. ⭐ E la certificazione era verde 53 su 53: **i sedici guasti si innestano nel verbale, e nessuno dipinge un pixel** |
+| ⛔ **il controllo di precondizione di A10, falso ROSSO** | cercava i ganci in `figlio.c`; stanno in `webtransport.c` (il canale è del **padre**). ⚠ Stamattina lo stesso controllo aveva dato un falso **verde**: adesso guarda tutt'e due i lati del confine |
 
 ---
 

@@ -919,7 +919,25 @@ static void dipingi_marca_a(uint32_t *px, int32_t oy, uint32_t giro,
 	for (int i = 0; i < MARCA_BIT; i++) {
 		if (!bit[i]) continue;                  /* il nero c'e' gia' */
 		int r = i / MARCA_COLONNE, c = i % MARCA_COLONNE;
-		struct riquadro cella = { b.x + c * S.cella, b.y + oy + r * S.cella,
+		/* ⛔⛔ QUI `oy` ERA SOMMATO DUE VOLTE — `[M]` 14 agosto 2026, primo
+		 *     giro vero dell'anello O2, e ha prodotto **n = 0**.
+		 *
+		 *     `riquadro_marca_a(oy)` porta gia' `oy` dentro `b.y`; sommarlo
+		 *     di nuovo qui spostava le celle di UN'ALTRA regione piu' giu'.
+		 *     ⇒ Sulla marca 1 (`oy = 0`) non si vedeva niente: 0 + 0 = 0, e
+		 *     quella marca si leggeva benissimo.  ⛔ Sulla marca 2 (`oy` =
+		 *     una regione) la zona di quiete NERA restava al suo posto e le
+		 *     celle finivano **fuori**, sullo sfondo del desktop: il lettore
+		 *     guardava un rettangolo nero e diceva «contrasto 0,0016, la
+		 *     marca non c'e'» — vero, e con la catena perfettamente
+		 *     funzionante.
+		 *
+		 *     ⭐ E la certificazione era VERDE, 53 su 53: i sedici guasti si
+		 *     innestano nel VERBALE, e nessuno di loro dipinge un pixel.  ⇒ A
+		 *     trovarlo e' stato il passo «lo scorrimento sui PIXEL VERI», che
+		 *     legge le DUE regioni e stampa il contrasto di ciascuna — cioe'
+		 *     un controllo che guarda l'immagine invece del verbale. */
+		struct riquadro cella = { b.x + c * S.cella, b.y + r * S.cella,
 		                          S.cella, S.cella };
 		ritaglia(&cella, S.larghezza, S.altezza);
 		if (cella.w > 0 && cella.h > 0)

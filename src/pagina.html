@@ -201,7 +201,28 @@
        proprio nel caso in cui la lock non c'e'.  ⛔ E' legato a
        `data-disposizione`, che e' l'unico posto in cui la disposizione in vigore
        e' scritta (la scrive `metti_in_vigore`, ancora `F4-TOCCO`). */
-  body[data-disposizione="classico"] #schermo { cursor: none; }
+  /* ⛔⭐ CORRETTO IL 14 AGOSTO 2026, dal giudizio dell'utente sulla sessione
+     vera — e la cura viene da XPRA, che lui stesso ha indicato.
+
+     Qui c'era `body[data-disposizione="classico"] #schermo { cursor: none }`,
+     cioe' il puntatore del browser nascosto SEMPRE nel modo classico.  ⛔ Ma
+     nascosto sempre vuol dire che qualcun altro deve disegnarlo, e per farlo
+     seguire la mano serviva la **cattura** (`Pointer Lock`) — che e' proprio
+     quel che l'utente ha visto e non ha voluto: *«sembra che il puntatore venga
+     catturato dal desktop virtuale»*.
+
+     ⭐ La strada di Xpra `[R]` (`html5/js/Window.js`, `set_cursor_url`):
+        window_element.css("cursor", `url('…') ${x} ${y}, auto`);
+     cioe' **il cursore del browser INDOSSA la forma di quello remoto**, punto
+     attivo compreso.  ⇒ Di puntatori se ne vede **uno solo** — che era tutto il
+     motivo per cui §7.1 chiedeva la cattura — senza catturare niente, e si
+     muove alla velocita' della mano perche' lo muove il browser.
+
+     ⇒ Il `cursor: none` resta SOLO quando la cattura e' accesa davvero (opzione
+     dell'utente) e nel modo a TOCCO, dove il puntatore lo disegna la pagina
+     perche' il dito non ne ha uno. */
+  body[data-disposizione="classico"][data-agganciato="si"] #schermo { cursor: none; }
+  body[data-disposizione="tocco"] #schermo { cursor: none; }
   /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -1256,6 +1277,10 @@ class Schermo {
                    dipinti: 0, scartati_ordine: 0, scartati_misura: 0,
                    tollerati: 0, buchi: 0, chiavi_chieste: 0,
                    riconfigurazioni: 0, trattenuti: 0, corti: 0,
+                   /* ⭐ ancora `F4-CODA-DEL-DECODIFICATORE`: quanti fotogrammi
+                      si sono decodificati e NON disegnati perche' ne stavano
+                      gia' arrivando altri.  ⛔ Un ritmo che cala si dichiara. */
+                   saltati_coda: 0,
                    /* ⚠ Contato a parte da `dipinti`, e non insieme: `dipinti`
                       vuol dire «fotogrammi arrivati fino al vetro» ed e' il
                       metro della fase (I8) — la veglia del primo fotogramma lo
@@ -1857,6 +1882,51 @@ class Schermo {
      `requestAnimationFrame`: `web.md` §6.1.  Un giro di rAF in mezzo aggiunge
      fino a un intervallo di quadro a un tetto che ne vale due e mezzo. */
   dipingi(f) {
+    /* ⛔⭐⭐ ANCORA `F4-CODA-DEL-DECODIFICATORE` — INIZIO.
+     *
+     * ⛔⛔ IL DIFETTO, MISURATO: **niente butta il di piu', e il ritardo cresce
+     *     senza limite.**  `[M]` 14 agosto 2026, anello O2, banco `04-b30`,
+     *     scena in movimento a 58 disegni/s:
+     *
+     *       il server CONSEGNA          39,6 fotogrammi/s
+     *       la pagina DIPINGE           34,7 fotogrammi/s
+     *       ⇒ avanzo                     ~5/s, e **nessuno lo butta**
+     *       `scartati_ordine` 0 · `trattenuti` 0 · `corti` 0
+     *
+     *     ⇒ Il ritardo fra `decode()` e il richiamo del decodificatore sale di
+     *       **~108 ms al secondo**: `[M]` 31,6 ms dopo 1 s · 1 461 ms dopo 11 s
+     *       · 2 787 dopo 22 s · **4 650 ms dopo 43 s**.  ⛔ Dopo un minuto
+     *       l'utente comanda un desktop che ha visto sei secondi fa, e nessun
+     *       registro lo dice: i conti dei fotogrammi sono tutti verdi.
+     *
+     * ⛔ E IL COSTO CHE LO PRODUCE STA PROPRIO IN QUESTA FUNZIONE: `[M]` il
+     *    primo `drawImage` — quello che porta il `VideoFrame` nel deposito —
+     *    costa **34,03 ms** di mediana, e il secondo (`componi`, deposito →
+     *    tela visibile) **0,08 ms**.  ⇒ 425 volte tanto: il tratto che la
+     *    fase 3 chiamava «il disegno» e' per il 99,8 % **attesa**, e a 34 ms
+     *    per fotogramma questa pagina non puo' superare i 29/s.
+     *
+     * ⭐ LA CURA, e non chiede una chiave: **si salta il DISEGNO, non la
+     *    decodifica.**  Se dietro a questo fotogramma ce ne sono gia' altri in
+     *    coda, disegnarlo vuol dire spendere 34 ms per mostrare un'immagine
+     *    che e' gia' vecchia.  ⇒ Si chiude e si passa al successivo: il
+     *    decodificatore continua a decodificare tutto (la catena dei delta
+     *    NON si rompe, nessun buco, nessuna `RICHIEDI_CHIAVE`) e l'utente vede
+     *    sempre **l'ultimo** fotogramma invece del primo di una coda.
+     *
+     * ⚠ E la soglia e' 2, non 0: `[M]` in regime sano la coda vale ~1
+     *   fotogramma (31,6 ms a 33/s) perche' il decodificatore hardware tiene
+     *   una pipeline sua.  Con la soglia a 0 si butterebbe meta' del ritmo per
+     *   un'attesa che non e' un ritardo.
+     * ⛔ E il conto si tiene: un fotogramma buttato in silenzio e' un ritmo che
+     *   cala senza che nessuno sappia perche' (`I1` vuole che ogni discesa sia
+     *   dichiarata). */
+    if (this.dec && this.dec.decodeQueueSize > 2) {
+      this.conti.saltati_coda++;
+      try { f.close(); } catch (e) { /* gia' chiuso */ }
+      return;
+    }
+    /* ⬆⬆ ANCORA `F4-CODA-DEL-DECODIFICATORE` — FINE. */
     /* ⚠ `VideoFrame.format` si registra e NON si interpreta.  `[M]` 12 agosto
        2026: su Chrome con VA-API un fotogramma HEVC esce `BGRA` — che non dice
        che i 10 bit siano persi, dice come Chrome PRESENTA una tessitura di GPU;
@@ -3385,6 +3455,20 @@ function cl_elemento() {
 function cl_disegna() {
   const d = cl_elemento();
   if (!cl_noto || !cl_visibile) { d.style.display = "none"; return; }
+  /* ⛔⭐ E LA FRECCIA DISEGNATA SI TOGLIE DI MEZZO quando a disegnarla e' gia'
+   *     il browser — cioe' nel modo classico senza cattura (14 agosto 2026).
+   *
+   *     ⚠ Senza questa riga la cura del puntatore catturato produrrebbe
+   *     esattamente il difetto che §7.1 esiste per evitare: **due puntatori**,
+   *     quello del browser vestito da cursore remoto e questo disegnato sopra.
+   * ⭐ Nel modo a TOCCO invece resta, e deve: il dito non ha un cursore da
+   *    vestire, e il puntatore disegnato e' tutto il senso del trackpad
+   *    (`SPECIFICHE.md` §7.1). */
+  if (document.body.getAttribute("data-disposizione") === "classico"
+      && !cl_agganciato) {
+    d.style.display = "none";
+    return;
+  }
   const g = cl_geometria();
   d.style.display = "block";
   d.style.transform = "translate("
@@ -3428,6 +3512,31 @@ window.REMOTIX_PUNTATORE = {
     d.innerHTML = "";
     d.appendChild(t);
     cl_forma_punto = [f.punto_x || 0, f.punto_y || 0];
+    /* ⭐⭐ E LA STESSA FORMA LA INDOSSA IL CURSORE DEL BROWSER — la strada di
+     *     Xpra `[R]` (`html5/js/Window.js`, `set_cursor_url`), indicata
+     *     dall'utente il 14 agosto 2026:
+     *
+     *         css("cursor", `url('…') ${xhot} ${yhot}, auto`)
+     *
+     *     ⇒ Nel modo classico **senza cattura** di puntatori se ne vede uno
+     *     solo — quello del browser, con la forma di quello remoto e il punto
+     *     attivo giusto — e lo muove il browser, cioe' alla velocita' della
+     *     mano.  ⛔ Che era tutto il motivo per cui §7.1 chiedeva la cattura.
+     * ⚠ Il ripiego `, default` in coda NON e' una formalita': se l'immagine
+     *   fosse troppo grande per il motore, il CSS scarta la regola intera e
+     *   senza una seconda voce l'utente resterebbe **senza cursore**. */
+    try {
+      const tela = $("schermo");
+      if (tela) {
+        const hx = Math.max(0, Math.round(f.punto_x || 0));
+        const hy = Math.max(0, Math.round(f.punto_y || 0));
+        tela.style.cursor = "url(" + t.toDataURL("image/png") + ") "
+                          + hx + " " + hy + ", default";
+      }
+    } catch (e) {
+      nota("modo classico: la forma del cursore non si e' potuta vestire sul "
+         + "puntatore del browser (" + e + "): resta quella disegnata");
+    }
     cl_disegna();
     return true;
   },
@@ -3480,6 +3589,12 @@ function cl_aggancia() {
 function cl_su_lock() {
   const era = cl_agganciato;
   cl_agganciato = document.pointerLockElement === $("schermo");
+  /* ⛔ Il foglio di stile nasconde il puntatore del browser SOLO quando la
+   *    cattura e' viva: senza questa riga il `cursor: none` non si spegnerebbe
+   *    mai, e l'utente resterebbe senza freccia — che e' il difetto di prima
+   *    con un'altra faccia. */
+  document.body.setAttribute("data-agganciato", cl_agganciato ? "si" : "no");
+  cl_disegna();
   if (era && !cl_agganciato)
     nota("modo classico: `Pointer Lock` rilasciato — il puntatore torna a "
        + "seguire la posizione assoluta del mouse dentro la tela");
@@ -3546,8 +3661,20 @@ const cl_pulsanti_premuti = new Set();
 function cl_su_mousedown(ev) {
   if (!cl_utilizzabile()) return;
   ev.preventDefault();
-  /* Il gesto c'e': e' il momento in cui la lock si puo' chiedere. */
-  if (!cl_agganciato) cl_aggancia();
+  /* ⛔⭐ QUI SI CHIEDEVA LA CATTURA, e non si chiede piu': il primo clic sulla
+   *     tela agganciava il puntatore con `Pointer Lock`.
+   *
+   *     ⚠ E il motivo scritto in §7.1 — «senza, se ne vedrebbero DUE» — e' vero
+   *     ma **non richiede la cattura**: si risolve facendo indossare al cursore
+   *     del browser la forma di quello remoto (vedi il foglio di stile e
+   *     `cl_cursore_css`).  ⇒ La cattura restava a costare senza comprare
+   *     niente: `SPECIFICHE.md` §7.5 dice che il puntatore e' **assoluto, ed e'
+   *     l'unico percorso** — e la lock serve a dare gli SPOSTAMENTI, che non
+   *     usiamo.
+   *
+   * ⭐ Resta accendibile a mano (`REMOTIX.input_classico.aggancia()`), come in
+   *    Xpra, dove la cattura e' **un bottone che l'utente preme** `[R]` e non
+   *    scatta da sola al primo clic. */
   const c = CL_PULSANTE[ev.button];
   if (c === undefined) {
     nota("modo classico: pulsante " + ev.button + " senza codice evdev noto: "
@@ -5343,15 +5470,43 @@ function sc_costruisci() {
   if (sc_el) return sc_el;
   const b = document.createElement("div");
   b.id = "scorciatoie";
-  b.style.cssText = "position:fixed; left:0; right:0; bottom:0; z-index:12;"
+  b.style.cssText = "position:fixed; left:0; right:0; bottom:32px; z-index:12;"
     + "background:rgba(16,16,22,.94); color:#d8d8e0; font:13px/1.45 monospace;"
-    + "padding:.5rem .75rem; border-top:1px solid #444; display:none;"
+    + "padding:.35rem .75rem; border-top:1px solid #444; display:none;"
+    /* ⛔ `max-height` piccolo E chiuso di suo: la barra costa due righe finche'
+     *    l'utente non chiede il resto.  ⚠ Non si toglie del tutto — la riga di
+     *    stato dice se la tastiera arriva tutta o no, ed e' l'unica cosa che
+     *    l'utente deve poter leggere **senza chiedere**. */
     + "max-height:38vh; overflow:auto;";
   const s = document.createElement("div");
   s.id = "scorciatoie-stato";
+  /* ⛔⭐ L'ELENCO STA DIETRO UN CONTROLLO, E NON SOTTO GLI OCCHI — cura del
+   *     14 agosto 2026, dal giudizio dell'utente sulla sessione vera:
+   *     *«lo schermo appare strano»*.
+   *
+   *     ⚠ E il difetto non era il contenuto, era la MISURA: la barra stava
+   *     `fixed` in fondo, alta fino al **38 % della finestra**, e ci stampava
+   *     dentro tutte le combinazioni dichiarate — ⛔ **coprendo il desktop**,
+   *     che e' la cosa per cui il prodotto esiste.  L'utente ha visto il
+   *     proprio desktop schiacciato in alto e un muro di testo tecnico sotto.
+   *
+   * ⇒ ⭐ La dichiarazione di `SPECIFICHE.md` §7.3-bis **resta per intero** —
+   *   *«la pagina DICHIARA quali scorciatoie non puo' consegnare»* — ma
+   *   dichiarare non vuol dire **stampare addosso**: una riga sola sempre
+   *   visibile, e l'elenco a un clic di distanza.
+   * ⚠ E `<details>` e' chiuso di suo: chi non lo apre non paga un pixel. */
+  const det = document.createElement("details");
+  det.id = "scorciatoie-elenco";
+  det.style.cssText = "margin:.2rem 0 0 0;";
+  const sum = document.createElement("summary");
+  sum.id = "scorciatoie-riassunto";
+  sum.style.cssText = "cursor:pointer; opacity:.85;";
+  sum.textContent = "quali tasti non arrivano al desktop?";
+  det.appendChild(sum);
   const v = document.createElement("div");
   v.id = "scorciatoie-voci";
   v.style.cssText = "margin:.35rem 0;";
+  det.appendChild(v);
   const p = document.createElement("div");
   p.id = "scorciatoie-bottoni";
   p.style.cssText = "display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem;";
@@ -5375,7 +5530,7 @@ function sc_costruisci() {
     });
     p.appendChild(t);
   }
-  b.appendChild(s); b.appendChild(v); b.appendChild(p);
+  b.appendChild(s); b.appendChild(p); b.appendChild(det);
   document.body.appendChild(b);
   sc_el = b; sc_el_voci = v; sc_el_stato = s;
   return b;
@@ -5401,6 +5556,19 @@ function sc_dipingi() {
     sc_el_stato.appendChild(t2);
   }
   sc_el_voci.innerHTML = "";
+  /* ⭐ E il riassunto porta IL NUMERO, cosi' la riga chiusa dice gia' la cosa
+   *    che serve — «quanti tasti perdo?» — e l'elenco si apre solo se
+   *    interessa quali.  ⚠ Un riassunto che non dice niente e' un controllo che
+   *    nessuno apre. */
+  const riassunto = document.getElementById("scorciatoie-riassunto");
+  if (riassunto) {
+    riassunto.textContent = !p.misurato
+      ? "quali tasti non arrivano al desktop? (non misurato su questo motore)"
+      : (p.voci.length
+           ? ("quali tasti non arrivano al desktop? — ne risultano "
+              + p.voci.length)
+           : "nessun tasto perso su questo motore e in questo palco");
+  }
   if (!p.misurato) {
     const d = document.createElement("div");
     d.textContent = "[?] " + p.avviso;
@@ -5445,8 +5613,51 @@ function sc_dipingi() {
   }
 }
 
+/* ⛔⭐ IL BOTTONCINO, E PERCHE' STA IN UN ANGOLO — cura del 14 agosto 2026,
+ *     dal giudizio dell'utente sulla sessione vera: *«quella barra in basso
+ *     deve sparire, o non vedo il drawer di gnome»*.
+ *
+ *     ⚠ E aveva ragione nel posto peggiore: la barra stava `bottom:0` a tutta
+ *     larghezza, ⛔ **cioe' esattamente dove GNOME tiene il dock**.  Il prodotto
+ *     copriva con una propria dichiarazione la parte del desktop che l'utente
+ *     usa per aprire le applicazioni.
+ *
+ * ⇒ ⭐ La dichiarazione di `SPECIFICHE.md` §7.3-bis resta — ⛔ ma **non si
+ *   apre piu' da sola sopra il desktop**: sta dietro un bottoncino di 26 px
+ *   nell'ANGOLO in basso a sinistra, dove il dock (che GNOME centra) non passa.
+ * ⚠ E perche' l'obbligo di DICHIARARE resti soddisfatto senza coprire niente,
+ *   la prima volta che si comincia a comandare la riga va nel REGISTRO della
+ *   pagina — che l'utente puo' leggere senza che nessuno gli tolga un pixel. */
+let sc_bott = null, sc_detto = false;
+
+function sc_bottone() {
+  if (sc_bott) return sc_bott;
+  const t = document.createElement("button");
+  t.type = "button";
+  t.id = "scorciatoie-apri";
+  t.textContent = "⌨";
+  t.title = "quali tasti non arrivano al desktop remoto";
+  t.style.cssText = "position:fixed; left:4px; bottom:4px; z-index:13;"
+    + "width:26px; height:26px; padding:0; line-height:26px; text-align:center;"
+    + "font:14px monospace; opacity:.55; border-radius:4px; cursor:pointer;";
+  t.addEventListener("mouseenter", function () { t.style.opacity = "1"; });
+  t.addEventListener("mouseleave", function () { t.style.opacity = ".55"; });
+  t.addEventListener("click", function (ev) {
+    ev.preventDefault();
+    sc_costruisci();
+    sc_mostra(sc_el.style.display === "none");
+    /* ⚠ Il fuoco torna alla tela: un bottone che se lo tiene farebbe sparire
+       la tastiera dell'utente al primo clic. */
+    const tela = $("schermo"); if (tela && tela.focus) tela.focus();
+  });
+  document.body.appendChild(t);
+  sc_bott = t;
+  return t;
+}
+
 function sc_mostra(si) {
   sc_costruisci();
+  sc_bottone();
   sc_el.style.display = si === false ? "none" : "block";
   if (si !== false) sc_dipingi();
 }
@@ -5471,7 +5682,32 @@ setInterval(function () {
     comanda = !!((c && c.in_vigore) || (t && t.dita >= 0 && REMOTIX.tocco.disposizione
                                         && REMOTIX.tocco.disposizione() === "tocco"));
   } catch (e) { /* un'ancora non ancora montata: si riprova al giro dopo */ }
-  if (comanda && (!sc_el || sc_el.style.display === "none")) sc_mostra(true);
+  if (!comanda) return;
+  /* ⭐ Il bottoncino compare quando si comincia a comandare, e basta: niente
+   *    si apre sopra il desktop senza che l'utente l'abbia chiesto. */
+  sc_bottone();
+  if (sc_detto) return;
+  sc_detto = true;
+  /* ⛔ E QUI si onora §7.3-bis: la dichiarazione arriva **prima** che l'utente
+   *    provi le scorciatoie — che e' l'unico momento in cui serve — ⚠ ma va nel
+   *    REGISTRO, non addosso all'immagine.  Dichiarare dopo sarebbe raccontargli
+   *    perche' non ha funzionato. */
+  try {
+    const p = sc_perdute();
+    if (typeof nota === "function") {
+      nota(!p.misurato
+        ? ("⌨ scorciatoie: non misurate su questo motore — " + p.avviso
+           + ".  Il bottoncino in basso a sinistra apre l'elenco.")
+        : (p.voci.length
+             ? ("⌨ " + p.marca + " su questo browser NON comandano il desktop "
+                + "remoto " + p.voci.length + " combinazioni (fra cui Super, "
+                + "Alt+Tab, Alt+F4): le tiene il TUO computer.  Il bottoncino "
+                + "in basso a sinistra apre l'elenco, e c'e' un bottone per "
+                + "Ctrl+Alt+Canc.")
+             : ("⌨ " + p.marca + " su questo browser e in questo palco non "
+                + "risulta persa nessuna delle combinazioni provate.")));
+    }
+  } catch (e) { /* la sonda non e' pronta: si ridira' al giro dopo */ sc_detto = false; }
 }, 500);
 addEventListener("resize", function () { if (sc_el) sc_dipingi(); });
 
@@ -5481,7 +5717,11 @@ addEventListener("resize", function () { if (sc_el) sc_dipingi(); });
  *    a chiamarlo: senza, questa ancora non fa niente e non rompe niente. */
 window.REMOTIX_SCORCIATOIE = {
   entra: async function (elemento) {
-    sc_mostra(true);
+    /* ⚠ NON si apre piu' il pannello: si accende solo il bottoncino.  Entrare a
+     *   schermo intero e' il momento in cui l'utente vuole PIU' desktop, non
+     *   meno — aprirgli addosso una dichiarazione sarebbe il contrario di quel
+     *   che ha chiesto. */
+    sc_bottone();
     const r = await sc_entra_a_schermo_intero(elemento);
     sc_dipingi();
     return r;

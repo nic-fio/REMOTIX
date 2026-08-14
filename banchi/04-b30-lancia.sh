@@ -9,10 +9,16 @@
 #   bash banchi/04-b30-lancia.sh porta       copia src/ e i banchi sulla macchina
 #   bash banchi/04-b30-lancia.sh costruisci  `make` dentro il contenitore
 #   bash banchi/04-b30-lancia.sh scena-costruisci
-#   bash banchi/04-b30-lancia.sh accendi     prodotto (7692) + ponte (7691+7693)
+#   bash banchi/04-b30-lancia.sh terreno     ⭐ utente, sessione e parola
+#   bash banchi/04-b30-lancia.sh accendi     prodotto (7722) + ponte (7721+7723)
 #   bash banchi/04-b30-lancia.sh misura [secondi]
 #   bash banchi/04-b30-lancia.sh stato | registro | spegni | esiti
 #   bash banchi/04-b30-lancia.sh tutto
+#
+# ⛔⛔ LE PORTE SONO CAMBIATE — 14 agosto 2026, sera.
+#    Erano 7691-95 (l'anello A10 della mattina).  L'anello **O2** che riprende
+#    il lavoro ha 7721-25, e le due serie NON si mescolano: se un giorno il
+#    banco di A10 fosse ancora acceso su 7691, questo non lo tocca.
 #
 # ---------------------------------------------------------------------------
 # ⛔ LE REGOLE DI CASA CHE QUESTO FILE RISPETTA, E CIASCUNA E' STATA PAGATA
@@ -27,13 +33,14 @@
 # ---------------------------------------------------------------------------
 # ⛔⛔ LE PORTE, E LA CONVIVENZA CON GLI ALTRI NOVE ANELLI
 #
-#   MIE       7691 (il browser)  ·  7692 (il prodotto, dietro il ponte)
-#             7693 (l'ancora dell'orologio)  ·  7694-95 di riserva
+#   MIE       7721 (il browser)  ·  7722 (il prodotto, dietro il ponte)
+#             7723 (l'ancora dell'orologio)  ·  7724-25 di riserva
 #   ⛔ ALTRUI, e non si toccano:
 #             7448 · 7501 · 7561  (dell'utente)
 #             7571                (l'albero del deposito, lasciato acceso apposta)
+#             7700                ⛔⛔ **L'UTENTE CI STA LAVORANDO ADESSO**
 #             7601-05 A1 · 7611-15 A2 · 7621-25 A3 · 7631-35 A4 · 7641-45 A5
-#             7651-55 A6 · 7661-65 A7 · 7671-75 A8 · 7681-85 A9
+#             7651-55 A6 · 7661-65 A7 · 7671-75 A8 · 7681-85 A9 · 7691-95 A10
 #
 # ⭐ E il ban-file e il socket dei comandi sono MIEI: un ban condiviso fra dieci
 #   banchi e' un banco che ferma gli altri nove.
@@ -45,12 +52,17 @@ SSHPW="$RADICE/v1/strumenti/sshpw.py"
 FUORI=/media/REMOTIX/src
 ALBERO=$FUORI/04-b30-src
 DENTRO=/srv/src
-PORTA=7691
-PORTA_DENTRO=7692
-ANCORA=7693
+TERRENO=$FUORI/04-b32-terreno.sh
+PORTA=7721
+PORTA_DENTRO=7722
+ANCORA=7723
 IND=${IND:-192.168.0.2}
 LAV=/media/REMOTIX/tmp/04-b30
-UTENTE=${UTENTE:-nicfio}
+# ⛔ L'utente e' quello DEL BANCO, non `nicfio`: `SPECIFICHE.md` §5.1 da' una
+#    sola sessione grafica per utente, e `nicfio`, `prova` (dove l'utente sta
+#    lavorando ADESSO) e `provaa1` (il banco A1) ce l'hanno gia'.
+UTENTE=${UTENTE:-provao2}
+PAROLA=${PAROLA:-provao2-2026}
 PAROLA_QUI=${PAROLA_QUI:-/tmp/04-b30/parola}
 LAVORO_QUI=${LAVORO_QUI:-/tmp/04-b30}
 SCHERMO=${SCHERMO:-:90}
@@ -101,13 +113,16 @@ porte()
 
 porta()
 {
-	log "Porto i sorgenti e i banchi sulla macchina"
-	fuori "mkdir -p $ALBERO $LAV" || return 1
-	for f in "$RADICE"/src/*.c "$RADICE"/src/*.h "$RADICE"/src/Makefile \
-	         "$RADICE"/src/pagina.html; do
-		metti "$f" "$ALBERO/$(basename "$f")" || return 1
-	done
+	log "1. I sorgenti del prodotto, in un albero MIO (una COPIA)"
+	# ⛔ Il gemello di `rcp.c` va con loro: `costruisci.sh` li confronta, e senza
+	#    il confronto si costruirebbe un binario che nessuno ha guardato.
+	fuori "rm -rf $ALBERO/src $ALBERO/banchi && mkdir -p $ALBERO $LAV" || return 1
+	tar czf /tmp/04-b30-src.tgz -C "$RADICE" src banchi/rcp || { ko "tar fallito"; return 1; }
+	metti /tmp/04-b30-src.tgz "$ALBERO/src.tgz" || return 1
+	fuori "cd $ALBERO && tar xzf src.tgz && ls src/input.c src/pagina.html banchi/rcp/rcp.c" || return 1
+	log "2. E i banchi, accanto agli altri"
 	for f in 04-b30-anello-input.py 04-b30-ponte.py 04-b30-scena.c \
+	         04-b32-terreno.sh \
 	         03-marca.py 03-b17-ritardo.py 03-solo.py 02-pagina-misura-cdp.py; do
 		metti "$QUI/$f" "$FUORI/$f" || return 1
 	done
@@ -116,8 +131,10 @@ porta()
 
 costruisci()
 {
-	log "Costruisco il prodotto DENTRO il contenitore"
-	dentro "cd $DENTRO && make -j4"
+	log "Costruisco il prodotto DENTRO il contenitore, nell'albero 04-b30-src"
+	# ⛔ Il percorso ha l'albero dentro: `$DENTRO` da solo e' la cartella DEI
+	#    BANCHI, e un `make` li' dentro non costruirebbe niente di mio.
+	dentro "cd $DENTRO/04-b30-src/src && bash costruisci.sh"
 	return $?
 }
 
@@ -128,37 +145,66 @@ scena_costruisci()
 	#    scrivere su un eseguibile in esecuzione (ETXTBSY) e `gcc -o` lascia
 	#    un binario TRONCATO — cioe' un banco che parte e non si sa che cosa
 	#    esegue.  E' la lezione di `03-scena-accendi.sh`.
+	# ⛔ E la cartella sta sotto `$DENTRO`, non sotto `$LAV`: dentro il
+	#    contenitore `/media/REMOTIX/tmp` NON ESISTE (e' montato solo
+	#    `/media/REMOTIX/src` su `/srv/src`), e un `mkdir` li' dentro
+	#    fallirebbe in silenzio.
 	dentro "set -u
 	P=/usr/share/wayland-protocols
-	L=$LAV/scena
+	L=$DENTRO/04-b30-scena-lav
 	mkdir -p \$L
-	wayland-scanner client-header \$P/stable/xdg-shell/xdg-shell.xml \$L/xdg-shell-client-protocol.h
-	wayland-scanner private-code  \$P/stable/xdg-shell/xdg-shell.xml \$L/xdg-shell-protocol.c
-	wayland-scanner client-header \$P/stable/presentation-time/presentation-time.xml \$L/presentation-time-client-protocol.h
-	wayland-scanner private-code  \$P/stable/presentation-time/presentation-time.xml \$L/presentation-time-protocol.c
-	gcc -O2 -Wall -Wextra -o \$L/scena.nuovo $FUORI/04-b30-scena.c \\
+	cd \$L
+	wayland-scanner client-header \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
+	wayland-scanner private-code  \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
+	wayland-scanner client-header \$P/stable/presentation-time/presentation-time.xml presentation-time-client-protocol.h
+	wayland-scanner private-code  \$P/stable/presentation-time/presentation-time.xml presentation-time-protocol.c
+	gcc -O2 -Wall -Wextra -o \$L/scena.nuovo $DENTRO/04-b30-scena.c \\
 	    \$L/xdg-shell-protocol.c \$L/presentation-time-protocol.c \\
 	    -I\$L \$(pkg-config --cflags --libs wayland-client) -lrt
 	mv -f \$L/scena.nuovo \$L/04-b30-scena
-	\$L/04-b30-scena --uscite 2>&1 | head -20"
+	chmod 755 \$L \$L/04-b30-scena
+	echo COSTRUITA"
 	return $?
+}
+
+terreno()
+{
+	log "⭐ IL TERRENO — l'utente del banco, la sua sessione, e la parola QUI"
+	# ⛔ La parola resta su CHUWI e in un file 0600: **il browser sta qui**,
+	#    quindi e' il banco di QUESTA macchina che deve leggerla, e da `argv`
+	#    non ci passa mai (difetto D12).
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO utente" || return 1
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO sessione" || return 1
+	mkdir -p "$LAVORO_QUI" || return 1
+	umask 077
+	printf '%s' "$PAROLA" > "$PAROLA_QUI"
+	chmod 600 "$PAROLA_QUI"
+	ls -l "$PAROLA_QUI"
+	ok "la parola dell'utente del banco e' su CHUWI, 0600, e mai in un argv"
+}
+
+accendi()
+{
+	log "⭐ ACCENDO: prodotto ($PORTA_DENTRO) + ponte ($PORTA + $ANCORA)"
+	# ⛔ La scena NON si accende qui: la accende la MISURA, dopo che qualcuno e'
+	#    entrato nella sessione.  Il monitor virtuale nasce col FIGLIO, non col
+	#    server, e una scena accesa prima finirebbe «da qualche parte».
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO accendi" || return 1
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO ponte-accendi" || return 1
 }
 
 stato()
 {
 	log "Lo stato"
-	fuori "ss -tuln | grep -E ':($PORTA|$PORTA_DENTRO|$ANCORA)\b' || echo '(nessuna delle mie porte ascolta)'"
-	fuori "ls -la $LAV 2>/dev/null | head -20"
-	inf "⛔ e il blocco della scena, che dice se l'input ARRIVA AL DESKTOP:"
-	fuori "python3 $FUORI/04-b30-anello-input.py --verdetto /dev/null 2>&1 | head -3 || true"
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO stato"
 }
 
-registro() { fuori "tail -60 $LAV/registro.log"; }
+registro() { fuori "sudo -S -p 'Password sudo: ' bash $TERRENO registro ${1:-60}"; }
 
 spegni()
 {
 	log "Spengo — ⛔ SOLO le mie cose"
-	fuori "pkill -f 'porta $PORTA_DENTRO' ; pkill -f '04-b30-ponte' ; pkill -f '04-b30-scena' ; true"
+	fuori "sudo -S -p 'Password sudo: ' bash $TERRENO spegni"
 	ok "spente le mie; ⛔ le porte altrui non sono state toccate"
 }
 
@@ -167,11 +213,19 @@ esiti() { tail -5 "$QUI/04-b30-esiti.jsonl" 2>/dev/null || inf "(nessun esito)";
 misura()
 {
 	log "LA MISURA"
-	python3 "$QUI/04-b30-anello-input.py" --misura --host "$IND" \
+	# ⛔ `-u`: senza, la stampa resta nel buffer finche' il giro non finisce, e
+	#    un giro di due minuti sembra un banco appeso.  ⚠ E chi guarda un banco
+	#    appeso lo ammazza — perdendo la misura invece del difetto.
+	python3 -u "$QUI/04-b30-anello-input.py" --misura --host "$IND" \
 	    --porta "$PORTA" --porta-dentro "$PORTA_DENTRO" --ancora "$ANCORA" \
 	    --utente "$UTENTE" --parola-file "$PAROLA_QUI" \
-	    --secondi "${1:-25}" --schermo "$SCHERMO" --diagnosi "$DIAGNOSI" \
-	    --lavoro "$LAVORO_QUI" --shm-scena "/dev/shm/$SHM"
+	    --secondi "${1:-45}" --schermo "$SCHERMO" --diagnosi "$DIAGNOSI" \
+	    --lavoro "$LAVORO_QUI" --shm-scena "/dev/shm/$SHM" \
+	    --comando-ponte "$LAV/comando" --terreno "$TERRENO" \
+	    --registro-prodotto "$LAV/registro.log" \
+	    --verbale-ponte "$LAV/ponte.json" \
+	    --giro "${GIRO:-b30-$(date +%Y%m%d-%H%M%S)}" \
+	    ${MANI:+--mani $MANI} ${PASSO_MS:+--passo-ms $PASSO_MS}
 	u=$?
 	# ⛔⛔ E IL CODICE 3 SI RIPORTA, non si schiaccia su 0.  E' il difetto del
 	#     validatore della fase 1: usciva «conforme» avendo giudicato zero cose.
@@ -191,13 +245,13 @@ porte)            porte ;;
 porta)            porta ;;
 costruisci)       costruisci ;;
 scena-costruisci) scena_costruisci ;;
-accendi)          ko "⛔ da scrivere quando il canale di input c'e': oggi il"
-                  ko "   prodotto non ha ancora l'iniezione, e accendere un"
-                  ko "   giro che non puo' chiudere l'anello produrrebbe un"
-                  ko "   verbale vuoto con l'aria di una misura." ; exit 3 ;;
-misura)           misura "${2:-25}" ;;
+terreno)          terreno ;;
+accendi)          accendi ;;
+scena-avvia)      fuori "sudo -S -p 'Password sudo: ' bash $TERRENO scena-avvia ${2:-}" ;;
+scena-ferma)      fuori "sudo -S -p 'Password sudo: ' bash $TERRENO scena-ferma" ;;
+misura)           misura "${2:-45}" ;;
 stato)            stato ;;
-registro)         registro ;;
+registro)         registro "${2:-60}" ;;
 spegni)           spegni ;;
 esiti)            esiti ;;
 tutto)            certifica && finto && porte ;;
