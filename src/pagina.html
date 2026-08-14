@@ -221,6 +221,47 @@
      ⇒ Il `cursor: none` resta SOLO quando la cattura e' accesa davvero (opzione
      dell'utente) e nel modo a TOCCO, dove il puntatore lo disegna la pagina
      perche' il dito non ne ha uno. */
+  /* ⛔⛔ RIMESSO IL 14 AGOSTO 2026, LA SERA, e la ragione e' una MISURA che ha
+   *      demolito il ragionamento qui sopra.
+   *
+   *      `[M]` Dal DeX, due minuti d'uso: **134 fotogrammi, cioe' 1,1 al
+   *      secondo**.  Non e' un guasto: e' la conseguenza di due scelte giuste
+   *      messe insieme.  Mutter consegna un fotogramma **solo quando qualcosa
+   *      cambia** (`figlio.c`, «scena ferma»), e il cursore del desktop lo
+   *      prendiamo come **metadato** (`cursor-mode: CURSORE_METADATO`), cioe'
+   *      NON dipinto dentro l'immagine.  ⇒ Muovere il mouse sopra lo sfondo non
+   *      cambia un pixel, **quindi non arriva nessun fotogramma**.
+   *
+   * ⛔ E il trucco di Xpra qui sopra si regge tutto su un'assunzione che su
+   *    Android e' FALSA: che il cursore del browser si possa vestire.  Sul DeX
+   *    resta la freccia di Android, e sul desktop remoto **non si muove
+   *    niente**.  L'utente lo ha detto cosi': *«e' come se si perdessero gli
+   *    input»* — e non se ne perdeva nessuno (`sorpassi 0`, coda mai piena,
+   *    9 ms per uscire dal telefono): non si VEDEVA che arrivavano.
+   *
+   * ⇒ Il puntatore lo disegna la PAGINA, sempre, nel modo classico.  ⭐ Lo
+   *   disegna nel gestore del movimento, quindi va alla velocita' della MANO e
+   *   non a quella della rete — che era il vero scopo di §7.1, e si ottiene
+   *   senza catturare niente.
+   * ⚠ Il difetto che la cura di stamattina risolveva — «se ne vedrebbero DUE» —
+   *   torna a essere risolto da qui, che e' il posto dove stava prima. */
+  /* ⛔⛔ E `cursor: none` E' DURATO UNA SESSIONE — `[M]` 14 agosto 2026, 15:09,
+   *      DeX.  Rimesso su tutto il modo classico alle 15:07, e nella sessione
+   *      subito dopo: **4 clic e ZERO movimenti**, contro 165 · 227 · 320 · 200
+   *      nelle quattro sessioni precedenti.  Una variabile sola cambiata, e il
+   *      puntatore si e' fermato nell'angolo dell'immagine.
+   *
+   *      ⇒ Su Chrome per Android il cursore che si muove e' quello di ANDROID:
+   *      nasconderlo con `cursor: none` gli toglie anche gli eventi di
+   *      passaggio, e alla pagina non arriva piu' un movimento.  ⚠ `[?]` il
+   *      meccanismo esatto non e' letto in nessuna fonte: e' una correlazione a
+   *      una variabile sola, forte ma non spiegata, e sta dichiarata cosi'.
+   *
+   * ⇒ Il cursore del browser resta VISIBILE, e la freccia la disegniamo lo
+   *   stesso.  ⚠ Se ne vedono due sovrapposti — brutto, e §7.1 lo chiama un
+   *   difetto — ⛔ ma il difetto vero era il desktop che sembrava morto perche'
+   *   a 1,1 fotogrammi al secondo NIENTE si muove finche' non lo disegna il
+   *   client.  Fra due puntatori e nessuno, due. */
   body[data-disposizione="classico"][data-agganciato="si"] #schermo { cursor: none; }
   body[data-disposizione="tocco"] #schermo { cursor: none; }
   /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
@@ -247,7 +288,15 @@
 
   <div id="esito"></div>
   <div id="dichiarazione"></div>
-  <canvas id="schermo" width="16" height="16"></canvas>
+  <!-- ⛔⭐ `tabindex="-1"` E NON E' UN DETTAGLIO DI ACCESSIBILITA': senza, una
+       `<canvas>` NON e' focalizzabile, quindi le due `tela.focus()` che la
+       pagina chiama dopo l'accesso sono **colpi a vuoto**.  ⇒ Il fuoco resta
+       nel campo della parola d'ordine, e da li' `cl_nel_modulo()` scarta ogni
+       battuta finche' l'utente non clicca sulla tela: uno stato bistabile, che
+       si vede come «a volte la tastiera non va».  ⚠ `-1` e non `0`: si vuole
+       poterle dare il fuoco a programma, non metterla nel giro del tabulatore.
+       ⭐ noVNC ha la stessa riga (`core/rfb.js:233`); a noi mancava. -->
+  <canvas id="schermo" width="16" height="16" tabindex="-1"></canvas>
   <div id="registro"></div>
   <p class="nota">Fase 2: il primo fotogramma. Un'immagine ferma — niente tastiera, ancora.</p>
 </main>
@@ -1161,6 +1210,95 @@ function misura_vista() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   ⛔⭐ IL GIRO COMPLETO, ED ERA GIA' NEL PROTOCOLLO SENZA CHE NESSUNO LO
+        RACCOGLIESSE.
+
+   `RCP.md` §6.2 mette nei 28 byte d'intestazione un campo `input`: il numero
+   dell'ultimo comando che il desktop AVEVA GIA' APPLICATO nell'istante in cui
+   quel fotogramma e' stato catturato.  La pagina lo leggeva (riga «input:
+   v.getUint32(24)») ⛔ **e lo buttava via**: nessuno lo usava, e il terzo
+   numero di `CODER.md` §1-bis — il ritardo che l'utente sente — non si poteva
+   misurare da dove conta, cioe' dal client vero, sulla rete vera.
+
+   ⇒ Qui si tiene l'istante in cui ogni comando e' PARTITO, e quando torna
+     indietro dentro un fotogramma si fa la differenza.
+
+   ⚠ E SI DICHIARA COSA NON COMPRENDE: la misura si chiude quando il fotogramma
+     ARRIVA, non quando e' disegnato — restano fuori la decodifica e il disegno.
+     ⛔ Non e' quindi «quel che l'utente vede» per intero (invariante I8): e' un
+     limite INFERIORE, ed e' scritto qui perche' nessuno lo scambi per il totale.
+
+   ⚠ La mappa si pota: un comando che non torna piu' (perche' il desktop non ha
+     cambiato un pixel) resterebbe li' per sempre.  Si tengono gli ultimi 2000. */
+/* ⛔⭐ IL TRATTO «PRIMA DI NOI» e LA CODA DEL FILO — i due numeri che l'anello
+ *     della latenza ha indicato il 14 agosto 2026, e che nessuno raccoglieva.
+ *
+ *   · `prima`  = `performance.now() - event.timeStamp`: quanto e' passato fra
+ *     l'evento VERO e il nostro gestore.  ⛔ Non contiene NESSUN salto di rete.
+ *   · `coda`   = `desiredSize` dello scrittore del canale di input.  ⛔ Non lo
+ *     leggevamo MAI: se va sotto zero la coda cresce, e ogni battuta parte
+ *     dietro a tutti i movimenti di puntatore gia' accodati.  ⚠ E' l'unico
+ *     meccanismo che PEGGIORA COL CARICO — cioe' l'unico che spiega «sul
+ *     telefono e' peggio che sul portatile».
+ *
+ * ⚠ Si tengono separate le battute dai movimenti: mescolarle direbbe la media
+ *   di due cose diverse, e la tastiera e' quella di cui l'utente si lamenta. */
+const PRIMA = {
+  tasti: [], mosse: [], coda: null, coda_peggiore: null,
+  /* Quanti PUNTATORE sono stati sorpassati da uno piu' recente mentre il filo
+     era pieno.  ⭐ Un numero che cresce e' la prova che l'incolonnamento c'era. */
+  sorpassi: 0,
+  campione(ms, tipo) {
+    const d = performance.now() - ms;
+    if (!(d >= 0) || d > 10000) return;      /* basi d'orologio diverse: non e' una misura */
+    const a = (tipo === 0x0104 || tipo === 0x0105) ? this.tasti : this.mosse;
+    a.push(d);
+    if (a.length > 200) a.shift();
+  },
+  mediana(a) {
+    if (!a.length) return null;
+    const b = a.slice().sort((x, y) => x - y);
+    return b[Math.floor(b.length / 2)];
+  },
+};
+
+const GIRO = {
+  quando: new Map(),
+  campioni: [],          /* gli ultimi ritardi, in ms */
+  ultimo: null,
+  visti: 0,
+  parte(id) {
+    this.quando.set(id, performance.now());
+    if (this.quando.size > 2000) {
+      /* Le mappe di JavaScript conservano l'ordine d'inserimento: il primo e'
+         il piu' vecchio. */
+      const k = this.quando.keys().next();
+      if (!k.done) this.quando.delete(k.value);
+    }
+  },
+  torna(id) {
+    if (!id) return;                       /* 0 = «nessun input», §7.3 */
+    const t = this.quando.get(id);
+    if (t === undefined) return;           /* gia' contato, o gia' potato */
+    this.quando.delete(id);
+    const d = performance.now() - t;
+    if (!(d >= 0) || d > 60000) return;    /* un orologio che salta non e' una misura */
+    this.ultimo = d; this.visti++;
+    this.campioni.push(d);
+    if (this.campioni.length > 200) this.campioni.shift();
+  },
+  mediana() {
+    if (!this.campioni.length) return null;
+    const a = this.campioni.slice().sort((x, y) => x - y);
+    return a[Math.floor(a.length / 2)];
+  },
+  peggiore() {
+    if (!this.campioni.length) return null;
+    return this.campioni.reduce((m, x) => (x > m ? x : m), 0);
+  },
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
    `Schermo` — riceve gli stream del video, applica le regole di RCP e DIPINGE.
 
    ⛔ IL LETTORE DEI 28 BYTE E' SCRITTO QUI, DALLA TABELLA DI `RCP.md` §6.2, e
@@ -1174,8 +1312,19 @@ function misura_vista() {
 class Schermo {
   constructor(tela) {
     this.tela = tela;
+    /* ⛔⭐ `willReadFrequently` TOLTO il 14 agosto 2026, e la ragione e' una
+     *     misura di questa stessa pagina: il PRIMO `drawImage` costa **34 ms di
+     *     mediana**.  Quel flag dice al motore «leggero' spesso i pixel», e il
+     *     motore risponde tenendo la tela **in memoria invece che sulla GPU**.
+     *
+     *     ⚠ E qui non li legge NESSUNO: l'unico `getImageData` della pagina sta
+     *     nella sonda del codificatore, che ha una tela SUA (riga 748).  ⇒ Su
+     *     questa tela il flag non comprava niente e pagava il disegno di ogni
+     *     fotogramma — sul portatile non si nota, su un telefono si'.
+     * ⚠ E i 34 ms cadono sul thread principale, che e' lo STESSO che riceve i
+     *   tasti: e' ritardo che l'utente sente come «tastiera a scatti». */
     this.pennello = tela.getContext("2d", {
-      alpha: false, willReadFrequently: true,
+      alpha: false,
       desynchronized: DESINCRONIZZATA });
     this.codec = null;          /* il numero di §6.2: 1 o 2 */
     this.stringa = null;        /* la stringa di WebCodecs che la sonda ha provato */
@@ -1604,6 +1753,10 @@ class Schermo {
     if (i.codec !== this.codec)
       return this.errore_protocollo("il fotogramma porta codec " + i.codec
         + " e il negoziato e' " + this.codec + " (" + NOME_DEL_CODEC[this.codec] + ")");
+
+    /* ⭐ Il giro completo si chiude QUI: questo fotogramma dichiara quale
+       comando il desktop aveva gia' applicato quando e' stato catturato. */
+    GIRO.torna(i.input);
 
     /* 3. lo zero e' riservato (§6.2): vuol dire «nessun fotogramma». */
     if (i.numero === 0)
@@ -2641,14 +2794,95 @@ async function collega(utente, parola) {
       const flusso_input = await wt.createUnidirectionalStream();
       const scrittore_input = flusso_input.getWriter();
       let input_id = 0;
+      let puntatore_tenuto = null;      /* il corpo dell'ultimo PUNTATORE in attesa */
+      let scarico_programmato = false;
+      const spingi = (tipo, corpo) => {
+        scrittore_input.write(inquadra(tipo, corpo))
+          .catch((e) => nota("il canale di input non ha accettato un "
+                           + "messaggio: " + e));
+      };
       window.REMOTIX_INPUT = {
         /* §7.3: 0 e' riservato e vuol dire «nessun input», quindi si riparte
            da 1 e non da 0 quando il contatore gira. */
-        prossimo_id: () => (input_id = input_id >= 0xFFFFFFFF ? 1 : input_id + 1),
+        prossimo_id: () => {
+          input_id = input_id >= 0xFFFFFFFF ? 1 : input_id + 1;
+          /* ⭐ L'istante di PARTENZA del comando: l'altra meta' del giro, che
+             si chiude in `Schermo.consegna()` quando il numero torna dentro un
+             fotogramma (§6.2). */
+          GIRO.parte(input_id);
+          return input_id;
+        },
+        /* ⛔⭐⭐ IL SORPASSO DEL PUNTATORE — la cura dell'incolonnamento.
+         *
+         *   `[M]` 14 agosto 2026, dal DeX: giro **mediano 135 ms** (come sul
+         *   portatile) ma **peggiore 2161 ms**.  Una coda normale con una coda
+         *   lunghissima e rara non e' «la rete e' lenta»: e' **una fila**.
+         *
+         *   Muovendo il mouse partono decine di `PUNTATORE` al secondo.  Se la
+         *   salita non li smaltisce, si accodano nello scrittore — e la battuta
+         *   che l'utente da' DOPO parte **dietro a tutti quanti**, anche se
+         *   quei movimenti non interessano piu' a nessuno.
+         *
+         * ⇒ Quando il filo e' pieno, un `PUNTATORE` non si accoda: si TIENE DA
+         *   PARTE, e se ne arriva un altro prima che il filo si liberi quello
+         *   vecchio si butta.  ⭐ Buttarlo e' senza danno **e solo per lui**:
+         *   una posizione sorpassata non serve a nessuno, mentre §7.3 non
+         *   permette di perdere ne' un tasto ne' un pulsante.
+         *
+         * ⛔ E PRIMA DI UN TASTO O DI UN PULSANTE il puntatore tenuto da parte
+         *    SI SPINGE FUORI: altrimenti il clic arriverebbe con la posizione
+         *    vecchia, che e' il difetto «clicco sulla barra del titolo e prende
+         *    un'altra cosa» — cioe' il sintomo da cui siamo partiti.
+         *
+         * ⚠ Sul filo largo non cambia NIENTE: `desiredSize > 0` e questa strada
+         *   non si accende mai.  E i sorpassi si CONTANO, per non curare in
+         *   silenzio (`CODER.md` §4.2). */
         manda: (tipo, corpo) => {
-          scrittore_input.write(inquadra(tipo, corpo))
-            .catch((e) => nota("il canale di input non ha accettato un "
-                             + "messaggio: " + e));
+          /* ⛔⭐ SI GUARDA LA CODA, e prima non si guardava.  `desiredSize` e'
+           *     quanto lo scrittore e' ancora disposto ad accettare prima di
+           *     accumulare: sotto zero vuol dire che la salita non ce la fa e
+           *     che quel che scriviamo si mette IN FILA.  ⚠ Una battuta in fila
+           *     dietro a cinquanta movimenti di puntatore arriva quando non
+           *     serve piu' — ed e' esattamente il sintomo «la tastiera e'
+           *     laggata» che l'utente riferisce dal DeX.
+           * ⚠ Per ora si MISURA e si dichiara; scartare i movimenti vecchi e'
+           *   una cura che va decisa, non improvvisata (§7.3 non permette di
+           *   perdere ne' un tasto ne' un pulsante — solo un puntatore
+           *   sorpassato e' senza danno). */
+          try {
+            const d = scrittore_input.desiredSize;
+            if (typeof d === "number") {
+              PRIMA.coda = d;
+              if (PRIMA.coda_peggiore === null || d < PRIMA.coda_peggiore)
+                PRIMA.coda_peggiore = d;
+            }
+          } catch (e) { /* uno scrittore chiuso non e' una misura */ }
+
+          const pieno = (typeof PRIMA.coda === "number" && PRIMA.coda <= 0);
+          /* 0x0101 = PUNTATORE (§7.3).  ⚠ Scritto per numero e non per nome
+             perche' qui non c'e' ne' la tabella del modo classico ne' quella
+             del tocco: sono due nomi per lo stesso numero del protocollo. */
+          if (tipo === 0x0101 && pieno) {
+            if (puntatore_tenuto) PRIMA.sorpassi++;
+            puntatore_tenuto = corpo;
+            if (!scarico_programmato) {
+              scarico_programmato = true;
+              Promise.resolve(scrittore_input.ready).then(() => {
+                scarico_programmato = false;
+                if (puntatore_tenuto === null) return;
+                const c = puntatore_tenuto; puntatore_tenuto = null;
+                spingi(0x0101, c);
+              }, () => { scarico_programmato = false; });
+            }
+            return;
+          }
+          /* ⛔ Un tasto o un pulsante non parte mai PRIMA della posizione a cui
+             si riferisce. */
+          if (puntatore_tenuto !== null) {
+            const c = puntatore_tenuto; puntatore_tenuto = null;
+            spingi(0x0101, c);
+          }
+          spingi(tipo, corpo);
         },
       };
       nota("⭐ canale di input aperto (§2.5: uno solo, e questo e' quello)");
@@ -3338,6 +3572,21 @@ function cl_codifica(tipo, id, us, a, b) {
 }
 
 function cl_spedisci(tipo, a, b, ms) {
+  /* ⛔⭐ IL TRATTO CHE NON HA DENTRO NESSUN SALTO DI RETE, e la pagina lo
+   *     calcolava gia' — in `tocco_quando()` — solo per BUTTARLO nella stessa
+   *     espressione in cui lo calcolava.
+   *
+   *     `event.timeStamp` e' l'istante VERO dell'evento (su Android il
+   *     `uptimeMillis` del `PlatformEvent`, `[R]` Chromium); `performance.now()`
+   *     e' l'istante in cui il nostro gestore gira.  ⇒ La differenza e' tutto
+   *     cio' che sta PRIMA di noi: Bluetooth, `InputDispatcher` di Android,
+   *     l'IME, e la coda del thread principale — che sul thread principale
+   *     divide il tempo con la DECODIFICA DEL VIDEO (`?video=worker` e' spento
+   *     in via predefinita, riga 527).
+   * ⭐ Se questo numero e' grande sul DeX, il ritardo non e' della rete: e'
+   *    prima ancora che il messaggio esista.  E' la misura che separa le due
+   *    spiegazioni senza doverle discutere. */
+  if (typeof ms === "number") PRIMA.campione(ms, tipo);
   const id = cl_prossimo_id();
   const us = cl_istante_us(typeof ms === "number" ? ms : performance.now());
   const corpo = cl_codifica(tipo, id, us, a, b);
@@ -3464,11 +3713,10 @@ function cl_disegna() {
    * ⭐ Nel modo a TOCCO invece resta, e deve: il dito non ha un cursore da
    *    vestire, e il puntatore disegnato e' tutto il senso del trackpad
    *    (`SPECIFICHE.md` §7.1). */
-  if (document.body.getAttribute("data-disposizione") === "classico"
-      && !cl_agganciato) {
-    d.style.display = "none";
-    return;
-  }
+  /* ⛔ QUI C'ERA IL NASCONDIGLIO, tolto la sera del 14 agosto 2026 dalla stessa
+   *    misura che ha rimesso il `cursor: none` nel foglio di stile: sul DeX il
+   *    cursore del browser NON si veste, e la pagina restava senza freccia
+   *    sopra un'immagine che a 1,1 fotogrammi al secondo sembrava morta. */
   const g = cl_geometria();
   d.style.display = "block";
   d.style.transform = "translate("
@@ -3525,18 +3773,12 @@ window.REMOTIX_PUNTATORE = {
      * ⚠ Il ripiego `, default` in coda NON e' una formalita': se l'immagine
      *   fosse troppo grande per il motore, il CSS scarta la regola intera e
      *   senza una seconda voce l'utente resterebbe **senza cursore**. */
-    try {
-      const tela = $("schermo");
-      if (tela) {
-        const hx = Math.max(0, Math.round(f.punto_x || 0));
-        const hy = Math.max(0, Math.round(f.punto_y || 0));
-        tela.style.cursor = "url(" + t.toDataURL("image/png") + ") "
-                          + hx + " " + hy + ", default";
-      }
-    } catch (e) {
-      nota("modo classico: la forma del cursore non si e' potuta vestire sul "
-         + "puntatore del browser (" + e + "): resta quella disegnata");
-    }
+    /* ⛔ QUI SI VESTIVA IL CURSORE DEL BROWSER con la forma remota (la strada
+     *    di Xpra).  Tolto la sera del 14 agosto 2026: su Chrome per Android non
+     *    si veste, e uno stile in riga avrebbe comunque vinto sul `cursor:
+     *    none` del foglio, lasciando DUE puntatori dove il trucco funziona e
+     *    NESSUNO dove non funziona.  ⇒ La forma la porta la freccia disegnata
+     *    qui sopra, che e' l'unico percorso che vale su tutti i motori. */
     cl_disegna();
     return true;
   },
@@ -3632,9 +3874,49 @@ function cl_nel_modulo(ev) {
   return n === "INPUT" || n === "TEXTAREA" || n === "SELECT" || t.isContentEditable === true;
 }
 
-/* ── IL MOUSE ─────────────────────────────────────────────────────────────── */
+/* ── IL MOUSE ───────────────────────────────────────────────────────────────
+ * ⛔⛔ E IL MOVIMENTO ARRIVA DA DUE PORTE, non per abbondanza: perche' su
+ *      Android una delle due si chiude da sola.  `[M]` 14 agosto 2026, DeX:
+ *      i CLIC continuavano ad arrivare (35 di fila) mentre i MOVIMENTI erano
+ *      fermi da dodici secondi — cioe' la pagina era viva, il filo era vivo e
+ *      `cl_utilizzabile()` era vero, ma `mousemove` non veniva piu' consegnato.
+ *
+ *      La ragione: su Android gli eventi `mouse*` sono di COMPATIBILITA',
+ *      sintetizzati sopra i pointer events, e Chrome li sospende quando il
+ *      tocco e il mouse si contendono lo stesso dispositivo — e il DeX e'
+ *      esattamente quel caso, perche' lo schermo del telefono resta tattile.
+ *      ⚠ Un clic e' UN evento e sopravvive; il movimento e' un FLUSSO e no.
+ *
+ * ⇒ Si ascolta anche `pointermove`, che e' l'evento VERO.  ⭐ E non serve
+ *   nessuna scelta fra i due ne' nessuna deduplicazione: se arrivano tutt'e
+ *   due per lo stesso spostamento, il secondo cade da solo sul confronto «non
+ *   ha cambiato pixel» di `cl_manda_puntatore()`.  ⛔ Sceglierne uno a
+ *   indovinare sarebbe la forma di difetto che questa pagina paga oggi. */
+let cl_visti_mouse = 0, cl_visti_pointer = 0, cl_detto_sorgente = false;
+let cl_grezzo_x = -1, cl_grezzo_y = -1;   /* l'ultimo punto COME L'HA DATO IL BROWSER */
+
+function cl_su_pointermove(ev) {
+  /* Il dito ha la sua disposizione: qui passa solo cio' che e' un puntatore. */
+  if (ev.pointerType === "touch") return;
+  cl_visti_pointer++;
+  cl_su_mousemove(ev);
+}
+
 function cl_su_mousemove(ev) {
   if (!cl_utilizzabile()) return;
+  if (ev.type === "mousemove") cl_visti_mouse++;
+  /* ⭐ Si dichiara UNA volta quale delle due porte serve davvero: e' il dato
+     che il 14 agosto e' costato mezza giornata di deduzione sul registro del
+     server, che i movimenti li vede solo quando ci sono. */
+  if (!cl_detto_sorgente && cl_visti_mouse + cl_visti_pointer >= 20) {
+    cl_detto_sorgente = true;
+    nota("modo classico: i movimenti arrivano da `pointermove` "
+       + cl_visti_pointer + " volte e da `mousemove` " + cl_visti_mouse
+       + (cl_visti_mouse === 0
+          ? " ⛔ — questo motore NON consegna gli eventi di compatibilita' del"
+            + " mouse: senza `pointermove` il puntatore sarebbe fermo"
+          : ""));
+  }
   if (cl_agganciato) {
     /* Agganciati arrivano SPOSTAMENTI: il puntatore lo teniamo noi, ed e' per
        questo che si muove alla velocita' della mano e non della rete. */
@@ -3647,7 +3929,21 @@ function cl_su_mousemove(ev) {
        browser sarebbe visibile — non lo e', perche' `cursor: none` vale per
        tutta la disposizione classica, agganciati o no. */
     const g = cl_geometria();
-    if (!g.vx || !g.vy || !g.sx || !g.sy) return;
+    /* ⛔⭐ SI TIENE IL PUNTO GREZZO, ed e' la meta' che mancava per verificare
+     *     la conversione DA FUORI.  Il registro del server vede solo il punto
+     *     di TELA — cioe' il risultato — e da un risultato sbagliato non si
+     *     risale mai alla riga che sbaglia.  ⇒ Con il punto di partenza e il
+     *     punto d'arrivo affiancati, la formula si controlla a mano.
+     *     `[M]` 14 agosto 2026: mezza giornata persa perche' questo dato non
+     *     usciva da nessuna parte. */
+    cl_grezzo_x = ev.clientX; cl_grezzo_y = ev.clientY;
+    if (!g.vx || !g.vy || !g.sx || !g.sy) {
+      cl_ripiego("geometria-degenere",
+        "la geometria della tela e' degenere (vx=" + g.vx + " vy=" + g.vy
+        + " sx=" + g.sx + " sy=" + g.sy + "): il movimento NON si converte e"
+        + " si perde — detto invece che falsificato");
+      return;
+    }
     cl_px = ((ev.clientX - g.r.left) / g.vx - g.bx0) / g.sx;
     cl_py = ((ev.clientY - g.r.top) / g.vy - g.by0) / g.sy;
   }
@@ -3907,6 +4203,7 @@ function cl_entra(perche) {
   cl_in_vigore = true;
   const tela = $("schermo");
   tela.addEventListener("mousemove", cl_su_mousemove);
+  tela.addEventListener("pointermove", cl_su_pointermove);
   tela.addEventListener("mousedown", cl_su_mousedown);
   tela.addEventListener("wheel", cl_su_wheel, { passive: false });
   tela.addEventListener("contextmenu", cl_su_contextmenu);
@@ -3921,6 +4218,27 @@ function cl_entra(perche) {
   cl_visibile = true;
   cl_disegna();
   nota("modo classico in vigore" + (perche ? " — " + perche : ""));
+  /* ⛔⭐ E QUI SI DICHIARA LA GEOMETRIA, perche' il difetto del DeX del 14
+   *     agosto 2026 e' costato mezza giornata di deduzione su numeri presi dal
+   *     registro del SERVER — che le coordinate le vede gia' schiacciate e non
+   *     puo' dire da che cosa.  ⇒ Le tre grandezze che bastano a distinguere
+   *     «la mappatura sbaglia» da «la tela non ci sta nella finestra» si
+   *     scrivono qui, dove chi prova le legge sul telefono. */
+  try {
+    const g = cl_geometria(), t = $("schermo");
+    const fw = document.documentElement.clientWidth,
+          fh = document.documentElement.clientHeight;
+    nota("modo classico · finestra " + fw + "×" + fh + " CSS · tela sul vetro "
+       + Math.round(g.r.width) + "×" + Math.round(g.r.height)
+       + " a (" + Math.round(g.r.left) + "," + Math.round(g.r.top) + ")"
+       + " · buffer " + t.width + "×" + t.height
+       + " · fattore del vetro " + (devicePixelRatio || 1)
+       + " · ingrandimento " + tocco_zoom + "×"
+       + (g.r.width > fw + 1 || g.r.height > fh + 1
+          ? " ⛔ LA TELA ESCE DALLA FINESTRA: col mouse una parte del desktop"
+            + " NON si raggiunge"
+          : " — la tela ci sta nella finestra"));
+  } catch (e) { nota("⚠ la geometria non si e' potuta dichiarare: " + e); }
   return true;
 }
 
@@ -3928,6 +4246,7 @@ function cl_esci() {
   if (!cl_in_vigore) return true;
   const tela = $("schermo");
   tela.removeEventListener("mousemove", cl_su_mousemove);
+  tela.removeEventListener("pointermove", cl_su_pointermove);
   tela.removeEventListener("mousedown", cl_su_mousedown);
   tela.removeEventListener("wheel", cl_su_wheel);
   tela.removeEventListener("contextmenu", cl_su_contextmenu);
@@ -4848,6 +5167,28 @@ function esci_dal_tocco() {
   tela.removeEventListener("touchcancel", su_touchcancel);
   tocco_lascia_tutto("si esce dalla disposizione a tocco");
   if (tocco_ripiego_elemento) tocco_ripiego_elemento.style.display = "none";
+  /* ⛔⭐ E SI AZZERA L'INGRANDIMENTO, che senza questa riga SOPRAVVIVE al
+   *     cambio di disposizione — misurato sul DeX il 14 agosto 2026, ed e' il
+   *     difetto peggiore trovato in fase 4 dall'utente.
+   *
+   *     Il pizzico ingrandisce con una `transform: scale(z)` ancorata a
+   *     `0 0` (`tocco_ingrandisci`).  Sul DeX lo schermo tattile del telefono
+   *     c'e' lo stesso, quindi un pizzico parte anche quando si sta usando il
+   *     mouse; poi il primo `pointerdown` del mouse porta al modo classico —
+   *     ⛔ e la tela resta grande `z` volte la finestra, ancorata all'angolo in
+   *     alto a sinistra.  Col mouse non si PANORAMA: si raggiunge solo `1/z`
+   *     del desktop, e il resto e' irraggiungibile.  `[M]` con z ~1,66 il
+   *     puntatore copriva x da 32 a 1159 su 1920 e y da 12 a 379 su 1080.
+   *
+   * ⚠ E nessuno dei due pezzi sbagliava per conto suo: il pizzico e' giusto,
+   *   l'uscita dal tocco e' giusta.  L'ingrandimento non aveva un proprietario
+   *   — la stessa forma di difetto della fase 3 (`F5-desktop-vero.md`). */
+  if (tocco_zoom !== 1) {
+    nota("tocco: ingrandimento " + tocco_zoom + "× azzerato uscendo dal tocco — "
+       + "col mouse non si panorama, e quel che resta fuori dalla finestra "
+       + "sarebbe irraggiungibile");
+    tocco_ingrandisci(1);
+  }
 }
 
 function metti_in_vigore(modo, perche) {
@@ -5549,6 +5890,63 @@ function sc_dipingi() {
     + " · lock: " + (sc_lock_viva ? ("viva (" + sc_lock_forma + ")") : "no")
     + " — " + sc_lock_motivo;
   sc_el_stato.appendChild(t1);
+  /* ⛔⭐ LA GEOMETRIA DEL PUNTATORE, QUI DENTRO E NON NEL REGISTRO — e la
+   *     ragione e' d'uso, non di stile.  Il registro della pagina sta SOTTO la
+   *     tela, e sopra la tela la rotella e' nostra: per leggerlo bisognerebbe
+   *     fare acrobazie.  ⇒ I numeri che servono a verificare la conversione
+   *     stanno nel pannello che si apre con un tocco e resta in vista.
+   *
+   * ⚠ E ci sono TUTTI E DUE i capi: il punto come l'ha dato il browser e il
+   *   punto di tela che ne e' uscito.  Con uno solo non si verifica niente.
+   *   `[M]` 14 agosto 2026, difetto delle coordinate sul DeX. */
+  try {
+    const t3 = document.createElement("div");
+    const g = cl_geometria();
+    const fw = document.documentElement.clientWidth,
+          fh = document.documentElement.clientHeight;
+    const tl = $("schermo");
+    t3.textContent =
+      "Puntatore: schermo (" + cl_grezzo_x + "," + cl_grezzo_y + ") CSS"
+      + " → tela (" + cl_ux + "," + cl_uy + ") di " + g.tl + "×" + g.ta
+      + " · finestra " + fw + "×" + fh
+      + " · tela sul vetro " + Math.round(g.r.width) + "×" + Math.round(g.r.height)
+      + " a (" + Math.round(g.r.left) + "," + Math.round(g.r.top) + ")"
+      + " · buffer " + tl.width + "×" + tl.height
+      + " · bande (" + Math.round(g.bx0) + "," + Math.round(g.by0) + ")"
+      + " · scale s=" + (Math.round(g.sx * 1000) / 1000)
+      + "/" + (Math.round(g.sy * 1000) / 1000)
+      + " v=" + (Math.round(g.vx * 1000) / 1000)
+      + "/" + (Math.round(g.vy * 1000) / 1000)
+      + " · vetro " + (devicePixelRatio || 1) + "× · ingrandimento " + tocco_zoom + "×";
+    sc_el_stato.appendChild(t3);
+    /* ⭐ E IL NUMERO CHE DECIDE: il giro completo, misurato sul filo vero e sul
+       dispositivo vero.  ⚠ Si dichiara che NON comprende decodifica e disegno:
+       e' un limite inferiore, non «quel che l'utente vede» (I8). */
+    const t4 = document.createElement("div");
+    const med = GIRO.mediana(), peg = GIRO.peggiore();
+    t4.textContent = "Ritardo del giro (comando → fotogramma che lo contiene, "
+      + "arrivato — senza decodifica e disegno): "
+      + (med === null
+          ? "nessuna misura ancora"
+          : ("mediana " + Math.round(med) + " ms · peggiore "
+             + Math.round(peg) + " ms · ultimo "
+             + Math.round(GIRO.ultimo) + " ms · su " + GIRO.visti + " comandi"));
+    sc_el_stato.appendChild(t4);
+    /* ⭐ E il tratto che NON contiene rete, separato fra tasti e movimenti: e'
+       quello che dice se il ritardo e' del filo o di quel che viene prima. */
+    const t5 = document.createElement("div");
+    const pt = PRIMA.mediana(PRIMA.tasti), pm = PRIMA.mediana(PRIMA.mosse);
+    t5.textContent = "Prima di noi (evento → nostro gestore, nessuna rete "
+      + "dentro): tasti "
+      + (pt === null ? "—" : Math.round(pt) + " ms su " + PRIMA.tasti.length)
+      + " · movimenti "
+      + (pm === null ? "—" : Math.round(pm) + " ms su " + PRIMA.mosse.length)
+      + " · coda del filo "
+      + (PRIMA.coda === null ? "mai letta" : PRIMA.coda)
+      + " (peggiore " + (PRIMA.coda_peggiore === null ? "—" : PRIMA.coda_peggiore) + ")"
+      + " · puntatori sorpassati " + PRIMA.sorpassi;
+    sc_el_stato.appendChild(t5);
+  } catch (e) { /* il pannello non deve mai rompersi per una diagnosi */ }
   if (!cucito) {
     const t2 = document.createElement("div");
     t2.textContent = "⛔ il canale di input non e' cucito: i bottoni qui sotto "

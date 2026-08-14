@@ -1,0 +1,215 @@
+<!doctype html>
+<!--
+  ⛔⭐ LA VISTA SU DeX, MISURATA — banco di F4-AND-3.
+
+  Perche' esiste: la pagina del prodotto misura la vista con
+
+      misura_vista() = [ documentElement.clientWidth  * devicePixelRatio,
+                         documentElement.clientHeight * devicePixelRatio ]
+
+  e quella formula e' giusta SOLO SE il fattore di pagina (page scale /
+  «shrink to fit») vale 1.  `[M]` 13 agosto 2026, registro dell'utente
+  (`banchi/02-giudizio-dispositivo.py`, IMPRONTA_MANO_TRAVESTITA): lo stesso
+  telefono TOLTO dal dock dichiarava `screen 384x832 @ dpr 3.375` e
+  `finestra 816x1476` — e 816 x 3.375 = 2754 pixel su un vetro che ne ha 1080.
+  ⇒ La formula li' sbagliava di 2,55 volte, e nessuno se ne era accorto perche'
+    su DeX il fattore di pagina vale 1.
+
+  Questa pagina misura TUTTI i numeri insieme, li mostra grandi, e li rimisura
+  a ogni `resize` / `visualViewport.resize` / `fullscreenchange` / cambio di
+  `devicePixelRatio`.  ⛔ Non deduce niente: stampa e basta.
+
+  COME SI APRE DAL DeX:
+     1. sulla macchina:  python3 -m http.server 7911 --bind 0.0.0.0 \
+                           --directory /home/nicfio/Documenti/REMOTIX_V2/banchi
+     2. dal DeX, in Chrome:  http://192.168.0.2:7911/04-dex-vista.html
+        (l'indirizzo della macchina e' quello che `02-giudizio-dispositivo.py`
+         chiama SERVER_NIC_OS)
+     3. si legge, si preme «copia», si incolla nel rapporto
+     4. ⛔ si spegne il server: la 7911 non deve restare accesa
+  ⚠ La porta 7911 e' sopra la 7900 e non tocca 7448/7501/7561/7571/7700.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La vista su DeX</title>
+<style>
+  html { overflow-y: scroll; }   /* ⛔ come la pagina del prodotto: la barra c'e' sempre */
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; }
+  h1 { font-size: 1.1rem; margin: 0 0 .6rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align: left; padding: .25rem .5rem; border-bottom: 1px solid #8884; }
+  th { width: 42%; font-weight: 600; }
+  td { font-family: ui-monospace, monospace; }
+  .g { font-size: 1.5rem; font-weight: 700; font-family: ui-monospace, monospace;
+       padding: .5rem; border: 2px solid currentColor; margin-bottom: .8rem; }
+  .n { font-size: .85rem; opacity: .75; margin: .8rem 0; white-space: pre-wrap; }
+  button { padding: .5rem 1rem; font-size: 1rem; margin: .3rem .3rem 0 0; }
+  textarea { width: 100%; height: 9rem; font-family: ui-monospace, monospace;
+             font-size: .75rem; margin-top: .6rem; box-sizing: border-box; }
+  /* ⭐ La riga che risponde da sola alla domanda «e' a schermo intero?»
+     senza guardare la geometria: e' la media query del manifesto web, e
+     prende ANCHE l'F11 / il tasto schermo-intero del browser. */
+  #modo::after { content: "browser"; }
+  @media (display-mode: fullscreen)  { #modo::after { content: "fullscreen"; } }
+  @media (display-mode: standalone)  { #modo::after { content: "standalone"; } }
+  @media (display-mode: minimal-ui)  { #modo::after { content: "minimal-ui"; } }
+  @media (display-mode: window-controls-overlay) { #modo::after { content: "wco"; } }
+</style>
+</head>
+<body>
+<h1>La vista su DeX — misura, non deduzione</h1>
+<div class="g" id="vista">…</div>
+<div>
+  <button id="pieno">schermo intero</button>
+  <button id="rimisura">rimisura</button>
+  <button id="copia">copia tutto</button>
+</div>
+<table id="t"></table>
+<div class="n" id="nota"></div>
+<textarea id="testo" readonly></textarea>
+<script>
+"use strict";
+
+/* ⛔ LA PROVA DEL NOVE, e non e' un di piu': un rettangolo di tela largo
+   esattamente quanto la vista MISURATA, con una riga di pixel bianchi ogni
+   100.  Se la formula e' giusta, il rettangolo arriva al bordo del vetro e le
+   righe sono nitide; se c'e' un fattore di pagina, sborda o si sfoca.
+   ⚠ Si disegna solo su richiesta: una tela larga 2560 su un telefono in mano
+     sarebbe 8 MB di buffer per niente. */
+function misura() {
+  const d = document.documentElement;
+  const r = devicePixelRatio || 1;
+  const vv = window.visualViewport || null;
+  const m = {
+    quando: new Date().toISOString(),
+    ua: navigator.userAgent,
+    piattaforma_legacy: navigator.platform,
+    ua_dati: navigator.userAgentData
+      ? { mobile: navigator.userAgentData.mobile,
+          platform: navigator.userAgentData.platform } : null,
+    devicePixelRatio: r,
+    /* ⭐ Il fattore di pagina, che e' il pezzo mancante di `misura_vista()`. */
+    vv_scale:  vv ? vv.scale  : null,
+    vv_width:  vv ? vv.width  : null,
+    vv_height: vv ? vv.height : null,
+    vv_offsetLeft: vv ? vv.offsetLeft : null,
+    vv_offsetTop:  vv ? vv.offsetTop  : null,
+    vv_pageLeft: vv ? vv.pageLeft : null,
+    vv_pageTop:  vv ? vv.pageTop  : null,
+    clientWidth: d.clientWidth, clientHeight: d.clientHeight,
+    innerWidth: innerWidth, innerHeight: innerHeight,
+    outerWidth: outerWidth, outerHeight: outerHeight,
+    screen_width: screen.width, screen_height: screen.height,
+    screen_availWidth: screen.availWidth, screen_availHeight: screen.availHeight,
+    screen_colorDepth: screen.colorDepth,
+    screen_orientation: (screen.orientation || {}).type || null,
+    body_clientWidth: document.body.clientWidth,
+    /* ⛔ La misura del prodotto, verbatim da `src/pagina.html`. */
+    vista: [Math.max(1, Math.round(d.clientWidth  * r)),
+            Math.max(1, Math.round(d.clientHeight * r))],
+    /* ⭐ La stessa misura CORRETTA col fattore di pagina. */
+    vista_col_fattore: vv
+      ? [Math.max(1, Math.round(d.clientWidth  * r * vv.scale)),
+         Math.max(1, Math.round(d.clientHeight * r * vv.scale))] : null,
+    /* ⛔ La formula VECCHIA (`screen.width * dpr`) che il progetto ha gia'
+       trovato sbagliata a zoom ≠ 100 % (rilievo S5): si stampa per confronto. */
+    schermo_per_dpr: [Math.floor(screen.width * r), Math.floor(screen.height * r)],
+    /* ⭐ E il rapporto che tradisce lo zoom di pagina: se `screen.width` e
+       `clientWidth` sono nella stessa unita', il rapporto vale ~1. */
+    zoom_stimato: d.clientWidth ? +(screen.width / d.clientWidth).toFixed(4) : null,
+    fullscreenElement: !!document.fullscreenElement,
+    dm_fullscreen: matchMedia("(display-mode: fullscreen)").matches,
+    dm_standalone: matchMedia("(display-mode: standalone)").matches,
+    dm_browser: matchMedia("(display-mode: browser)").matches,
+    pointer_fine: matchMedia("(pointer: fine)").matches,
+    pointer_coarse: matchMedia("(pointer: coarse)").matches,
+    hover: matchMedia("(hover: hover)").matches,
+    maxTouchPoints: navigator.maxTouchPoints,
+    /* ⭐ La risoluzione vista dal CSS: `dppx` e' la SOLA via standard, e su
+       Chrome include lo zoom di pagina esattamente come `devicePixelRatio`. */
+    dppx: (function () {
+      for (let i = 0; i < 400; i++) {
+        const v = (i / 40).toFixed(4);
+        if (matchMedia("(resolution: " + v + "dppx)").matches) return +v;
+      }
+      return null;
+    })(),
+    memoria_gb: navigator.deviceMemory || null,
+    nuclei: navigator.hardwareConcurrency || null,
+    /* ⚠ Su Android esiste ma `[R]` vede un solo display finche' la feature
+       `AndroidUseDisplayTopology` non e' attiva: si stampa per saperlo. */
+    screen_isExtended: ("isExtended" in screen) ? screen.isExtended : null,
+    /* ⭐ Il 980 del foglio dello UA, se il meta viewport fosse spento: si
+       stampa il confronto, non il verdetto. */
+    novecentottanta_diviso_dpr: Math.round(980 / (devicePixelRatio || 1)),
+  };
+  return m;
+}
+
+const ETICHETTE = {
+  vista: "⭐ misura_vista() — quel che il prodotto dichiara al server",
+  vista_col_fattore: "⭐ la stessa, moltiplicata per visualViewport.scale",
+  schermo_per_dpr: "⛔ screen.width × dpr (la formula del rilievo S5)",
+  zoom_stimato: "⭐ screen.width / clientWidth — ⚠ SOLO a finestra massimizzata",
+};
+
+let ultimo = null;
+function mostra() {
+  const m = ultimo = misura();
+  document.getElementById("vista").textContent =
+    m.vista[0] + "×" + m.vista[1] + "   (dpr " + m.devicePixelRatio
+    + ", scale " + m.vv_scale + ")";
+  const t = document.getElementById("t");
+  t.textContent = "";
+  for (const k of Object.keys(m)) {
+    const tr = t.insertRow();
+    tr.insertCell().textContent = ETICHETTE[k] || k;
+    tr.insertCell().textContent = JSON.stringify(m[k]);
+  }
+  document.getElementById("testo").value = JSON.stringify(m, null, 1);
+  document.getElementById("nota").textContent =
+    "⛔ Le tre righe da leggere per prime:\n"
+    + "  1. `zoom_stimato` — ⚠ si legge SOLO a finestra massimizzata o a\n"
+    + "     schermo intero (altrimenti misura la finestra, non lo zoom).\n"
+    + "     Se allora non vale ~1, `screen.width` e `clientWidth` NON sono\n"
+    + "     nella stessa unita', e ogni conto che le mescola sbaglia di quel\n"
+    + "     fattore. `[M]` 13 agosto, DeX, finestra piena: valeva 1.2.\n"
+    + "  2. `vv_scale` — se non vale 1, `clientWidth × dpr` NON e' il numero\n"
+    + "     di pixel del vetro, e la vista dichiarata al server e' gonfiata.\n"
+    + "  3. `dm_fullscreen` — la media query prende anche l'F11, che\n"
+    + "     `document.fullscreenElement` non vede.";
+}
+
+document.getElementById("rimisura").onclick = mostra;
+document.getElementById("pieno").onclick = function () {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(function (e) {
+    document.getElementById("nota").textContent = "⛔ requestFullscreen: " + e;
+  });
+};
+document.getElementById("copia").onclick = function () {
+  const a = document.getElementById("testo");
+  a.select(); try { document.execCommand("copy"); } catch (e) {}
+  if (navigator.clipboard) navigator.clipboard.writeText(a.value).catch(function () {});
+};
+
+addEventListener("resize", mostra);
+addEventListener("fullscreenchange", mostra);
+if (window.visualViewport) {
+  visualViewport.addEventListener("resize", mostra);
+  visualViewport.addEventListener("scroll", mostra);
+}
+/* ⭐ Il cambio di `devicePixelRatio` NON manda `resize` da solo: l'unica via
+   standard e' una media query sulla risoluzione, che si riarma ogni volta.
+   Fonte: MDN, `Window.devicePixelRatio`, «Monitoring screen resolution or
+   zoom level changes». */
+(function arma() {
+  const mq = matchMedia("(resolution: " + (devicePixelRatio || 1) + "dppx)");
+  mq.addEventListener("change", function () { mostra(); arma(); }, { once: true });
+})();
+mostra();
+</script>
+</body>
+</html>
