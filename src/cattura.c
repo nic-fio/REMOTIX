@@ -11,6 +11,7 @@
 #include <drm_fourcc.h>
 #include <string.h>
 
+#include "cursore.h"
 #include "registro.h"
 
 #define AREA "cattura"
@@ -27,6 +28,16 @@
 #define REGIONI_MAX 16
 
 #define FD_MAX 8
+
+/*
+ * Quanti byte deve avere il metadato del cursore per portare una bitmap di
+ * `l x a`.  ⛔ E' la stessa formula di Mutter (`CURSOR_META_SIZE`,
+ * `meta-screen-cast-stream-src.c:63`) e sta qui perche' e' una grandezza della
+ * NEGOZIAZIONE PipeWire, non del filo: il tetto del filo e' 256 e sta in
+ * `cursore.h`.
+ */
+#define CURSORE_META_BYTE(l, a)                                                                    \
+	((int) (sizeof(struct spa_meta_cursor) + sizeof(struct spa_meta_bitmap) + (l) * (a) * 4))
 
 struct Cattura
 {
@@ -69,6 +80,22 @@ struct Cattura
 	gboolean qualcuno_aspetta;
 	CatturaFermo posto;
 	gboolean posto_pieno;
+
+	/* --- ⭐ IL CANALE DEL CURSORE ---------------------------------------- *
+	 *
+	 * ⛔ `cattura.c` NON conosce il filo: legge il metadato grezzo e lo passa a
+	 *    `cursore.c`, che e' il solo posto in cui la forma diventa una
+	 *    `CursoreForma` (vedi `cursore.h`).
+	 *
+	 * ⚠ Il modulo esiste sempre, anche se nessuno ascolta: cosi' i conteggi
+	 *   dicono se il metadato arriva DAVVERO, indipendentemente dal fatto che
+	 *   qualcuno lo consumi.  Chi ascolta si registra dopo, con
+	 *   `cattura_cursore`, e i due campi si leggono sotto il lucchetto perche'
+	 *   chi si registra sta su un altro thread. */
+	Cursore *cursore;
+	CursoreArrivata cursore_fn;
+	void *cursore_chi;
+	gboolean detto_il_cursore; /* il primo metadato si dice una volta */
 };
 
 /* ------------------------------------------------------------------ *
@@ -296,13 +323,41 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 	pw_thread_loop_signal(cattura->ciclo, false);
 }
 
+/*
+ * ⛔ IL RIMBALZO VERSO CHI ASCOLTA, e non e' una comodita': `cursore_apri` vuole
+ *    il destinatario al momento dell'apertura, ma il flusso parte prima che
+ *    qualcuno si registri.  Senza rimbalzo la prima forma — quella che arriva
+ *    con il primo movimento del puntatore — non avrebbe dove andare.
+ *
+ * ⚠ Gira sul thread di tempo reale di PipeWire: chi si registra qui non deve
+ *   aspettare niente (`cattura.h`, il riquadro del ciclo).
+ */
+static int cursore_rimbalzo(void *chi, const CursoreForma *forma)
+{
+	Cattura *cattura = chi;
+	CursoreArrivata fn;
+	void *dove;
+
+	g_mutex_lock(&cattura->lucchetto);
+	fn = cattura->cursore_fn;
+	dove = cattura->cursore_chi;
+	g_mutex_unlock(&cattura->lucchetto);
+
+	/* ⛔ Nessuno ascolta NON e' un errore: la forma si e' comunque contata, ed
+	 *    e' precisamente il caso in cui il banco misura la sorgente senza il
+	 *    filo. */
+	if (!fn)
+		return 0;
+	return fn(dove, forma);
+}
+
 static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 {
 	Cattura *cattura = dati;
 	uint32_t tipo, sottotipo;
 	uint8_t spazio[1024];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
-	const struct spa_pod *parametri[3];
+	const struct spa_pod *parametri[4];
 	int tipi;
 
 	if (!param || id != SPA_PARAM_Format)
@@ -363,8 +418,79 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	                             sizeof(struct spa_meta_region) * 1,
 	                             sizeof(struct spa_meta_region) * 16));
 
-	pw_stream_update_params(cattura->flusso, parametri, 3);
+	/*
+	 * ⭐⭐ IL METADATO DEL CURSORE — e fino al 14 agosto 2026 NON si chiedeva.
+	 *
+	 * ⛔ Il difetto che questa richiesta cura, `gnome.md` §1.1 punto 6 e §5.2:
+	 *    a `RecordVirtual` chiediamo `cursor-mode = 2` (`src/mutter.c:439`), cioe'
+	 *    «il cursore dammelo come METADATO invece che nei pixel» — e Mutter
+	 *    obbedisce in tutt'e due i versi: toglie il puntatore dall'immagine
+	 *    (`inhibit_cursor_overlay`) **e** lo mette nel metadato.  ⛔ Ma il
+	 *    metadato, come ogni metadato, arriva solo a chi lo chiede: senza questa
+	 *    riga si otteneva il PRIMO verso e non il secondo, cioe' nessun cursore
+	 *    da nessuna parte, e `CURSORE_FORMA` (`RCP.md` §7.2) era un canale senza
+	 *    sorgente.
+	 *
+	 * ⚠ LA MISURA E' UN INTERVALLO, e i tre numeri sono quelli del client di
+	 *   prova di Mutter (`src/tests/remote-desktop-utils.c:218-225`): il metadato
+	 *   deve poter contenere `spa_meta_cursor` + `spa_meta_bitmap` + i pixel, e
+	 *   chiedendone uno FISSO troppo piccolo il produttore taglierebbe la
+	 *   bitmap.  Mutter offre 384x384 (`CURSOR_META_SIZE(384, 384)`).
+	 *
+	 * ⛔ E 384 > 256, che e' il tetto di `RCP.md` §7.2: il taglio lo fa
+	 *    `cursore.c`, DICHIARANDOLO, perche' il posto in cui i limiti del filo si
+	 *    fanno rispettare e' uno solo.
+	 */
+	parametri[3] = spa_pod_builder_add_object(
+	    &costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
+	    SPA_POD_Id(SPA_META_Cursor), SPA_PARAM_META_size,
+	    SPA_POD_CHOICE_RANGE_Int(CURSORE_META_BYTE(384, 384), CURSORE_META_BYTE(1, 1),
+	                             CURSORE_META_BYTE(384, 384)));
+
+	pw_stream_update_params(cattura->flusso, parametri, 4);
 	pw_thread_loop_signal(cattura->ciclo, false);
+}
+
+/*
+ * ⭐ Il metadato del cursore, letto e consegnato a `cursore.c`.
+ *
+ * ⛔ SI LEGGE PRIMA DI OGNI `goto restituisci`, e la ragione era gia' scritta
+ *    nel riquadro di `su_processo`: un buffer marcato `CORRUPTED` e' un buffer
+ *    SENZA fotogramma, spedito **proprio perche'** il cursore si e' mosso.  Chi
+ *    leggesse il cursore dopo lo scarto perderebbe esattamente i buffer che il
+ *    cursore li' dentro ce l'hanno.
+ *
+ * ⚠ E si guarda `spa_meta` e non `spa_buffer_find_meta_data`: serve la
+ *   DIMENSIONE vera del metadato, o i controlli di `cursore.c` non hanno un
+ *   limite contro cui misurare i pixel della bitmap.
+ */
+static void guarda_cursore(Cattura *cattura, struct pw_buffer *pacco)
+{
+	struct spa_meta *meta;
+
+	if (!cattura->cursore)
+		return;
+
+	meta = spa_buffer_find_meta(pacco->buffer, SPA_META_Cursor);
+	if (!meta || !meta->data)
+	{
+		/* ⛔ «Non pervenuto» NON e' «nascosto»: si conta, e non si manda
+		 *    niente sul filo.  Chi legge zero `CURSORE_FORMA` piu' tardi deve
+		 *    poter distinguere «il puntatore non c'era» da «il metadato non
+		 *    l'abbiamo chiesto, o il produttore non l'ha dato». */
+		cattura->conto.cursore_assente++;
+		return;
+	}
+
+	cattura->conto.cursore_metadati++;
+	if (!cattura->detto_il_cursore)
+	{
+		cattura->detto_il_cursore = TRUE;
+		registro_dice(AREA, "⭐ il metadato del cursore ARRIVA: %u byte per buffer", meta->size);
+	}
+
+	if (cursore_metadato(cattura->cursore, meta->data, meta->size) < 0)
+		cattura->conto.cursore_malformati++;
 }
 
 /* Il danno: si guarda, si conta, e si consegna come INFORMAZIONE. */
@@ -440,6 +566,9 @@ static void su_processo(void *dati)
 	pacco = pw_stream_dequeue_buffer(cattura->flusso);
 	if (!pacco)
 		return;
+
+	/* ⛔ PRIMA DI OGNI SCARTO: vedi il riquadro di `guarda_cursore`. */
+	guarda_cursore(cattura, pacco);
 
 	if (pacco->buffer->n_datas == 0)
 		goto restituisci;
@@ -787,6 +916,15 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 	g_mutex_init(&cattura->lucchetto);
 	g_cond_init(&cattura->novita);
 
+	/* ⭐ Il modulo del cursore nasce SEMPRE, anche se nessuno ascolta: cosi' i
+	 *    conteggi rispondono a «il metadato arriva?» senza dipendere da chi lo
+	 *    consuma.  ⚠ Se non nasce non si fallisce: i pixel valgono piu' del
+	 *    puntatore (`CODER.md` §4.2), ma il ripiego si DICE. */
+	cattura->cursore = cursore_apri(cursore_rimbalzo, cattura);
+	if (!cattura->cursore)
+		registro_dice(AREA, "⛔ RIPIEGO: il modulo del cursore non si e' aperto — la forma del "
+		                    "puntatore non partira' (i fotogrammi si', tutti)");
+
 	cattura->ciclo = pw_thread_loop_new("remotix-cattura", NULL);
 	if (!cattura->ciclo)
 	{
@@ -1123,6 +1261,16 @@ const char *cattura_guasto(Cattura *cattura)
 	return cattura ? cattura->guasto : NULL;
 }
 
+void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
+{
+	if (!cattura)
+		return;
+	g_mutex_lock(&cattura->lucchetto);
+	cattura->cursore_fn = quando_cambia;
+	cattura->cursore_chi = chi;
+	g_mutex_unlock(&cattura->lucchetto);
+}
+
 void cattura_ferma(Cattura *cattura)
 {
 	if (!cattura)
@@ -1144,6 +1292,9 @@ void cattura_ferma(Cattura *cattura)
 		pw_context_destroy(cattura->contesto);
 	if (cattura->ciclo)
 		pw_thread_loop_destroy(cattura->ciclo);
+
+	/* ⛔ DOPO il thread, non prima: `guarda_cursore` gira di la'. */
+	cursore_chiudi(cattura->cursore);
 
 	g_free(cattura->posto.pixel);
 	g_mutex_clear(&cattura->lucchetto);

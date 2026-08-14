@@ -60,7 +60,8 @@ NOME    := remotix
 #    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
-            sessione.c cattura.c mutter.c codificatore.c
+            sessione.c cattura.c mutter.c codificatore.c \
+            input.c tastiera.c cursore.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -154,6 +155,25 @@ F3_CFLAGS := $(shell pkg-config --cflags libva)
 F3_LIBS   := $(shell pkg-config --libs   libva)
 override CFLAGS += $(F3_CFLAGS)
 
+# ⭐⭐ LE DUE DELLA FASE 4, innestate il 14 agosto 2026: **libei** e
+#     **xkbcommon**.  Le vuole il canale di input, e nessuna delle due si puo'
+#     sostituire con una nostra riga:
+#
+#   libei-1.0    `src/input.c` — e' L'UNICO modo di iniettare input in un
+#                compositore Wayland.  ⛔ Qui `CODER.md` §4.1-bis vale senza
+#                sconti: implementazione una sola, uguale ovunque.
+#                `[M]` 14 ago 2026, nel contenitore della macchina di prova:
+#                **1.3.901**.
+#
+#   xkbcommon    `src/tastiera.c` — la sola libreria che sappia rispondere alla
+#                domanda «con questa disposizione, quale tasto produce questa
+#                lettera?».  `[M]` 14 ago 2026: **1.7.0**.
+#
+# ⚠ Su Debian Trixie: `apt install libei-dev libxkbcommon-dev`.
+F4_CFLAGS := $(shell pkg-config --cflags libei-1.0 xkbcommon)
+F4_LIBS   := $(shell pkg-config --libs   libei-1.0 xkbcommon)
+override CFLAGS += $(F4_CFLAGS)
+
 ifneq ($(PREFISSO),)
 CFLAGS  += -I$(PREFISSO)/include
 LDFLAGS += -L$(PREFISSO)/lib -Wl,-rpath,$(PREFISSO)/lib
@@ -164,7 +184,7 @@ endif
 # ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
-        -lavcodec -lswscale -lavutil $(F2_LIBS) $(F3_LIBS)
+        -lavcodec -lswscale -lavutil $(F2_LIBS) $(F3_LIBS) $(F4_LIBS)
 
 .PHONY: tutto pulisci dipendenze impronte
 
@@ -243,7 +263,7 @@ dipendenze:
 main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
                   registro.h tls.h trasporto.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
-webtransport.o:   webtransport.h aiutante.h rcp.h registro.h
+webtransport.o:   webtransport.h aiutante.h rcp.h registro.h figlio.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
 comando.o:        comando.h rcp.h registro.h
 certificati.o:    certificati.h registro.h
@@ -263,12 +283,27 @@ aiutante.o:       aiutante.h registro.h
 #    privilegio: la meta' del padre non include niente della fase 2, la meta'
 #    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
 #    prodotto e basta, come `aiutante.c`.
-figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h
+figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
+                  input.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
 #    ngtcp2 non ha ne' una sessione grafica ne' un codificatore.
 sessione.o:       sessione.h registro.h
-cattura.o:        cattura.h registro.h
+cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
 codificatore.o:   codificatore.h registro.h
+
+# ⭐⭐ I TRE DELLA FASE 4 — e le loro righe non sono una formalita'.
+#
+# ⛔ `input.h`, `tastiera.h` e `cursore.h` sono le CUCITURE, e una cucitura la
+#    cambia il coordinatore mentre gli anelli scrivono l'attuazione: senza
+#    queste righe `make` lascerebbe in piedi un `.o` compilato contro il
+#    contratto di mezz'ora fa.  ⚠ Il sintomo non sarebbe un errore: sarebbe un
+#    programma che si collega e si comporta male — la forma d'errore piu' cara
+#    di tutte, perche' nessuno la collega alla modifica che l'ha prodotta.
+#    `[M]` 14 agosto 2026: il difetto e' stato segnalato dall'anello del
+#    cursore, che si era accorto che `cattura.o` non si rifaceva.
+input.o:          input.h tastiera.h registro.h mutter.h
+tastiera.o:       tastiera.h registro.h
+cursore.o:        cursore.h registro.h

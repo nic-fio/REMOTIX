@@ -8,6 +8,10 @@
  */
 #include "webtransport.h"
 
+/* ⛔ Solo per i `FIGLI_INPUT_*`: i numeri delle azioni stanno in un posto solo
+ *    (`figlio.h`), o fra due settimane saranno tre posti con tre valori. */
+#include "figlio.h"
+
 #include "aiutante.h"
 #include "rcp.h"
 #include "registro.h"
@@ -73,6 +77,11 @@ enum genere {
 	G_NONWT,   /* non lo e': e' di nghttp3 */
 	G_UNI_OK,  /* unidirezionale WebTransport, canale lecito ma non servito */
 	G_UNI_KO,  /* unidirezionale WebTransport, violazione gia' giudicata */
+	G_UNI_INPUT, /* ⭐ il canale di INPUT (0x01), servito dalla fase 4: i suoi
+	              *    byte vanno a `rcp_ricevi_input()`.  ⛔ Sta separato da
+	              *    `G_UNI_OK` apposta — dentro quel giudizio i byte si
+	              *    contano nel credito e SI SCARTANO, ed e' esattamente
+	              *    quel che l'input faceva fino al 14 agosto 2026. */
 };
 
 typedef struct {
@@ -896,6 +905,98 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
 /*        — non una copia dei due byte a mano, che il giorno in cui il numero  */
 /*        di sessione supera 63 diventerebbe muta e sbagliata.                 */
 
+/* ⭐⭐ I SEI GANCI DELL'INPUT — FASE 4, 14 agosto 2026.
+ *
+ * ⛔ PERCHE' SONO GANCI E NON CHIAMATE DIRETTE, e non e' stile: `rcp.c` vive in
+ *    DUE cartelle che il `Makefile` (`GEMELLATI`) pretende identiche byte per
+ *    byte, e la seconda copia `banchi/01-b3-rcp-innesta.py` la infila dentro
+ *    `examples/` di ngtcp2, dove `input.h` **non esiste**.  Un `#include` la'
+ *    dentro spegnerebbe B3, B5, B6, B8 e B11 in un colpo solo.
+ *
+ * ⛔ E PERCHE' PASSANO DI QUI E NON VANNO DRITTI AL PALCO: il palco e' in un
+ *    ALTRO PROCESSO (`figlio.c`), che gira come l'utente ed e' l'unico ad avere
+ *    la sessione grafica.  Questi sei portano il messaggio fino al ponte di
+ *    `main.c`, che e' l'unico che conosce tutt'e due i lati.
+ *
+ * ⚠ E il valore di ritorno e' quello di `input.h`, TRE stati: 0 consegnato,
+ *   -1 no, 1 «non producibile» (solo la lettera).  ⛔ Qui pero' il terzo non
+ *   si puo' distinguere — l'iniezione avviene oltre il confine di processo, e
+ *   la risposta non torna indietro.  ⇒ **Si risponde 0 = «consegnato al
+ *   palco»**, e chi conta davvero quel che il compositore ha PRESO e' il
+ *   figlio, che lo timbra sul fotogramma (§6.2).  Questa asimmetria e'
+ *   dichiarata e non nascosta: e' il prezzo del confine di processo. */
+static wt_input_richiesta gancio_palco_input;
+static void *gancio_palco_input_ctx;
+
+void wt_input_gancio(wt_input_richiesta f, void *ctx)
+{
+	gancio_palco_input = f;
+	gancio_palco_input_ctx = ctx;
+}
+
+static int input_al_palco(wt *w, uint32_t id, uint8_t azione, uint16_t codice,
+                          int premuto, int32_t a, int32_t b)
+{
+	const char *mio;
+	if (!gancio_palco_input || !w->rcp)
+		return -1;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return -1;
+	return gancio_palco_input(gancio_palco_input_ctx, mio, id, azione, codice,
+	                          premuto, a, b)
+	           ? 0
+	           : -1;
+}
+
+static int gancio_input_puntatore(void *ctx, uint32_t x, uint32_t y)
+{
+	wt *w = (wt *)ctx;
+	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_PUNTATORE,
+	                      0, 0, (int32_t)x, (int32_t)y);
+}
+
+static int gancio_input_pulsante(void *ctx, uint16_t codice, int premuto)
+{
+	wt *w = (wt *)ctx;
+	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_PULSANTE,
+	                      codice, premuto, 0, 0);
+}
+
+static int gancio_input_rotella(void *ctx, int32_t asse_x, int32_t asse_y)
+{
+	wt *w = (wt *)ctx;
+	/* ⛔ Il segno NON si tocca qui, e i mezzi scatti passano interi: `RCP.md`
+	 *    §7.3 mette l'inversione dentro `input_rotella()`, una volta sola.
+	 *    Invertirlo anche qui lo annullerebbe. */
+	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_ROTELLA, 0,
+	                      0, asse_x, asse_y);
+}
+
+static int gancio_input_lettera(void *ctx, uint32_t carattere)
+{
+	wt *w = (wt *)ctx;
+	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_LETTERA, 0,
+	                      0, (int32_t)carattere, 0);
+}
+
+static int gancio_input_posizione(void *ctx, uint16_t codice, int premuto)
+{
+	wt *w = (wt *)ctx;
+	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_POSIZIONE,
+	                      codice, premuto, 0, 0);
+}
+
+static int gancio_input_rilascia_tutto(void *ctx)
+{
+	wt *w = (wt *)ctx;
+	/* ⛔⭐ «La regola col rapporto danno/costo piu' alto del documento»
+	 *     (`RCP.md` §11).  ⚠ E il conto di quanti ne ha rilasciati resta al
+	 *     figlio: qui non torna indietro, e si risponde 0 — che vuol dire «la
+	 *     richiesta e' partita», non «non c'era niente». */
+	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0);
+}
+
 static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
@@ -1445,6 +1546,33 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	 * nel registro con due parole diverse. */
 }
 
+/* ⭐⭐ §7.2 — la forma del cursore a tutte le sessioni di quell'utente.
+ *
+ * ⛔ E il confronto del nome NON e' una formalita': il deposito e' di processo e
+ *    le sessioni sono di utenti diversi.  Mandare la forma del cursore di un
+ *    altro non e' un difetto grafico — e' l'immagine di quel che sta facendo
+ *    un'altra persona che finisce sullo schermo sbagliato. */
+void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
+                         uint16_t altezza, int16_t attivo_x, int16_t attivo_y,
+                         const uint8_t *immagine, size_t byte)
+{
+	if (!utente || !utente[0])
+		return;
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		if (!w->rcp)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || strcmp(mio, utente) != 0)
+			continue;
+		/* ⚠ Il ritorno non si guarda qui: `rcp.c` ha gia' scritto nel registro
+		 *   quale delle sue ragioni e' — e guardarlo anche noi metterebbe la
+		 *   stessa cosa due volte con due parole diverse. */
+		rcp_cursore_forma(w->rcp, larghezza, altezza, attivo_x, attivo_y,
+		                  immagine, byte);
+	}
+}
+
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
@@ -1513,6 +1641,23 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	g.video_fin = gancio_video_fin;
 	g.video_azzera = gancio_video_azzera;
 
+	/* ⭐⭐ §7.3 — IL CANALE DI INPUT.  ⛔ E si collegano TUTTI E SEI o nessuno:
+	 *     `rcp.c` guarda il primo e se c'e' pretende gli altri, perche' un
+	 *     canale che sapesse muovere il puntatore e non sapesse rilasciare un
+	 *     pulsante lascerebbe il desktop **peggio di come l'ha trovato**.
+	 * ⚠ E si collegano solo se il ponte verso il palco c'e': senza,
+	 *   `rcp.c` convalida lo stesso il messaggio (quello e' protocollo) e
+	 *   scrive che non l'ha iniettato.  «Non ho un canale di input» e «il
+	 *   client ha sbagliato» sono due fatti diversi. */
+	if (gancio_palco_input) {
+		g.input_puntatore = gancio_input_puntatore;
+		g.input_pulsante = gancio_input_pulsante;
+		g.input_rotella = gancio_input_rotella;
+		g.input_lettera = gancio_input_lettera;
+		g.input_posizione = gancio_input_posizione;
+		g.input_rilascia_tutto = gancio_input_rilascia_tutto;
+	}
+
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un
 	 *    orologio disarmato e uno scaduto non devono avere la stessa faccia. */
@@ -1548,6 +1693,37 @@ static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
 	 *    secondo intero prima che il desktop compaia — cioe' il numero che
 	 *    l'utente guarda. */
 	video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
+	regola_battito(w);
+}
+
+/* ⭐⭐ IL CANALE DI INPUT — la cucitura della fase 4, 14 agosto 2026.
+ *
+ * ⛔ Prima di oggi i byte dell'input arrivavano davvero e finivano in
+ *    `conta_credito()` **e basta**: il canale era lecito, la riga di registro
+ *    lo dichiarava («questa fase non lo serve»), e il client poteva muovere il
+ *    mouse per un'ora senza che al desktop arrivasse niente.  ⇒ Qui quella
+ *    tolleranza dichiarata si CHIUDE.
+ *
+ * ⚠ `stream` viaggia con i byte e non e' un di piu': `RCP.md` §2.5 ammette
+ *   **un solo** stream di input, e senza l'identificatore `rcp.c` non puo'
+ *   distinguere il secondo stream dalla continuazione del primo.  ⛔ E chi
+ *   ospita non lo puo' giudicare al posto suo: vede gli stream, ma non sa che
+ *   cosa sia «di input» finche' non ha letto i primi due byte del carico.
+ *
+ * ⚠ E il ritorno `false` si tratta come in `rcp_passa()`: la sessione e'
+ *   finita, e la capsula di chiusura l'ha gia' armata `chiudi_sessione()`. */
+static void rcp_passa_input(wt *w, int64_t stream, const uint8_t *dati,
+                            size_t len)
+{
+	uint64_t ora;
+	if (!w->rcp || len == 0)
+		return;
+	ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+	if (!rcp_ricevi_input(w->rcp, stream, dati, len, ora))
+		return;
+	/* ⛔ E il battito si rimette in riga anche di qui: un input puo' aver
+	 *    fatto scattare un congedo (una violazione di §7.3), e aspettare il
+	 *    giro dopo lascerebbe il motivo fermo in coda. */
 	regola_battito(w);
 }
 
@@ -1878,6 +2054,8 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	size_t n, consumati;
 	uint16_t tipo;
 	uint8_t canale;
+	const uint8_t *carico = NULL;
+	size_t carico_n = 0;
 	const char *guasto = NULL;
 
 	if (g) {
@@ -1899,6 +2077,15 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			 *   non contarli lascerebbe il client senza credito su
 			 *   una connessione viva (§2.3). */
 			conta_credito(w, stream_id, len);
+			return E_MIO;
+		case G_UNI_INPUT:
+			/* ⭐ Il canale di input, gia' riconosciuto: i byte si
+			 *    contano nel credito **e si consegnano**.  ⛔ Il
+			 *    credito prima della consegna: se la consegna facesse
+			 *    cadere la sessione, quei byte sono comunque arrivati
+			 *    e il conto di §2.3 non deve restare indietro. */
+			conta_credito(w, stream_id, len);
+			rcp_passa_input(w, stream_id, dati, len);
 			return E_MIO;
 		default:
 			break;
@@ -1929,7 +2116,15 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	consumati = g->pref.n;
 	tipo = (uint16_t)((g->pref.d[2 + n] << 8) | g->pref.d[2 + n + 1]);
 	canale = (uint8_t)(tipo >> 8);
-	bytes_libera(&g->pref);
+	/* ⛔ IL CARICO RCP COMINCIA QUI, e comincia **col `tipo`**: i due byte che
+	 *    abbiamo appena sbirciato per sapere di che canale si tratta sono del
+	 *    messaggio, non del preambolo.  ⚠ Sbirciarli e poi non consegnarli
+	 *    darebbe a `rcp.c` un messaggio senza intestazione — e il sintomo
+	 *    sarebbe «il primo input di ogni sessione e' malformato».
+	 * ⚠ E `bytes_libera()` e' stato spostato in fondo apposta: fino a quel
+	 *   momento `carico` punta dentro `g->pref`. */
+	carico = g->pref.d + 2 + n;
+	carico_n = g->pref.n - (2 + n);
 	conta_credito(w, stream_id, consumati);
 
 	switch (canale) {
@@ -1953,12 +2148,17 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		         "unidirezionale (§2.5)";
 		break;
 	}
-	g->genere = guasto ? G_UNI_KO : G_UNI_OK;
+	g->genere = guasto      ? G_UNI_KO
+	            : canale == 0x01 ? G_UNI_INPUT
+	                             : G_UNI_OK;
 	registro_dice(REG_WT,
 	              "stream unidirezionale %ld del client, sessione %llu, tipo "
 	              "0x%04x, canale 0x%02x — %s",
 	              (long)stream_id, (unsigned long long)sessione, tipo, canale,
 	              guasto ? "VIOLAZIONE"
+	              : canale == 0x01
+	                     ? "⭐ INPUT, e da oggi si SERVE: i byte vanno a "
+	                       "rcp_ricevi_input() (§7.3)"
 	                     : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i "
 	                       "byte si contano nel credito e si scartano, e "
 	                       "questa riga e' la tolleranza dichiarata (§3)");
@@ -1977,7 +2177,16 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			              "viaggia solo nella chiusura della sessione");
 			chiudi_sessione(w, RCP_ERRORE_PROTOCOLLO);
 		}
+	} else if (canale == 0x01) {
+		/* ⭐ Il primo pezzo del canale di input arriva insieme al
+		 *    preambolo che l'ha fatto riconoscere: si consegna SUBITO.
+		 *    ⛔ Aspettare il pacchetto dopo perderebbe il primo
+		 *    messaggio di ogni sessione — e il primo messaggio e'
+		 *    proprio quello che l'utente sente come «il primo clic non
+		 *    ha fatto niente». */
+		rcp_passa_input(w, stream_id, carico, carico_n);
 	}
+	bytes_libera(&g->pref);
 	return E_MIO;
 }
 

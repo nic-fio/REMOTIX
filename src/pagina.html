@@ -189,6 +189,26 @@
      candidato che il flex vorrebbe stringere. */
   body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
                                          margin: 0; }
+
+  /* ⛔⭐ IL PUNTATORE LO DISEGNA LA PAGINA — `SPECIFICHE.md` §7.1, ancora
+     `F4-INPUT-CLASSICO`.  «Il puntatore e' disegnato sopra il video, quello del
+     browser si nasconde (`cursor: none`), e il mouse fisico arriva da Pointer
+     Lock — che e' l'equivalente esatto del Pointer Capture di Android e ha lo
+     stesso motivo: senza, se ne vedrebbero DUE.»
+     ⚠ Il `cursor: none` sta qui e non in JavaScript, e vale per TUTTA la
+       disposizione classica — agganciati o no: nel ripiego senza Pointer Lock
+       il puntatore del browser sarebbe visibile, e i due puntatori tornerebbero
+       proprio nel caso in cui la lock non c'e'.  ⛔ E' legato a
+       `data-disposizione`, che e' l'unico posto in cui la disposizione in vigore
+       e' scritta (la scrive `metti_in_vigore`, ancora `F4-TOCCO`). */
+  body[data-disposizione="classico"] #schermo { cursor: none; }
+  /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
+     la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
+     puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
+     con `?video=worker` la tela e' del worker. */
+  #puntatore { position: fixed; left: 0; top: 0; width: 0; height: 0;
+               z-index: 9; pointer-events: none; display: none;
+               will-change: transform; }
 </style>
 </head>
 <body data-bannato="__BANNATO__" data-restano-ms="__RESTANO_MS__">
@@ -2140,7 +2160,16 @@ async function collega(utente, parola) {
    *    trasporto.  ⚠ E si azzera solo se il riferimento e' ANCORA IL NOSTRO —
    *    un tentativo nuovo ne ha gia' messo un altro, e portarselo via da qui
    *    farebbe rinascere lo stesso difetto un giro piu' tardi. */
-  const fine_sessione = () => { if (congeda_corrente === congeda) congeda_corrente = null; };
+  const fine_sessione = () => {
+    if (congeda_corrente === congeda) congeda_corrente = null;
+    /* ⛔ E il canale di input si AZZERA qui, che e' l'unico punto che sa quando
+     *    la sessione e' finita davvero.  ⚠ Senza, le due disposizioni
+     *    continuerebbero a scrivere su uno stream morto e crederebbero di
+     *    comandare: «non arriva» e «non l'ho mandato» avrebbero la stessa
+     *    faccia, che e' la forma d'errore che tutto questo lavoro esiste per
+     *    evitare. */
+    window.REMOTIX_INPUT = null;
+  };
 
   wt.closed.then((info) => {
     fine_sessione();
@@ -2518,6 +2547,50 @@ async function collega(utente, parola) {
     }
     esito("Ammesso, sessione " + (stato === 1 ? "nuova" : "ripresa") +
           ", tela " + tl + "×" + ta + ", desktop " + desktop, true);
+
+    /* ══ ⭐⭐ IL CANALE DI INPUT — la cucitura della fase 4, 14 agosto 2026 ══
+     *
+     * ⛔ Sta QUI e non dentro le due disposizioni, e non e' una preferenza:
+     *    `RCP.md` §2.5 concede al client **UNO** stream unidirezionale di
+     *    input, aperto dopo `SESSIONE` e tenuto aperto.  Due modi che se lo
+     *    aprissero ciascuno per se' ne aprirebbero due — e il secondo e' una
+     *    violazione che il server chiude.
+     *
+     * ⛔ E IL CONTATORE STA QUI PER LA STESSA RAGIONE: §7.3 vuole che l'`id`
+     *    cresca «di almeno uno su TUTTO il canale, non uno per tipo», perche'
+     *    e' quello che torna nel campo `input` dei fotogrammi (§6.2).  Con un
+     *    contatore per disposizione **non tornerebbe niente**, e il numero del
+     *    ritardo sarebbe costruito su una corrispondenza falsa.
+     *
+     * ⚠ Un solo `getWriter()` serializza le scritture: senza, i messaggi
+     *   potrebbero uscire in ordine diverso da quello in cui l'utente ha mosso
+     *   la mano.  ⛔ E `manda` NON aspetta la rete: un puntatore che aspetta e'
+     *   esattamente il ritardo che il puntatore disegnato dalla pagina esiste
+     *   per togliere (`SPECIFICHE.md` §7.1). */
+    try {
+      const flusso_input = await wt.createUnidirectionalStream();
+      const scrittore_input = flusso_input.getWriter();
+      let input_id = 0;
+      window.REMOTIX_INPUT = {
+        /* §7.3: 0 e' riservato e vuol dire «nessun input», quindi si riparte
+           da 1 e non da 0 quando il contatore gira. */
+        prossimo_id: () => (input_id = input_id >= 0xFFFFFFFF ? 1 : input_id + 1),
+        manda: (tipo, corpo) => {
+          scrittore_input.write(inquadra(tipo, corpo))
+            .catch((e) => nota("il canale di input non ha accettato un "
+                             + "messaggio: " + e));
+        },
+      };
+      nota("⭐ canale di input aperto (§2.5: uno solo, e questo e' quello)");
+    } catch (e) {
+      /* ⛔ Degradare, non fallire — e DICHIARARE: senza canale di input
+       *    l'utente vede il desktop e non lo comanda, il che e' meno di quel
+       *    che gli spetta ma infinitamente piu' di una sessione chiusa
+       *    (`SPECIFICHE.md` §8.3, «mai staccare»). */
+      window.REMOTIX_INPUT = null;
+      nota("⛔ il canale di input NON si e' aperto (" + e + "): questa sessione "
+         + "si GUARDA e non si comanda");
+    }
 
     /* ── DA QUI IN POI C'E' IL VIDEO (§2.5: non prima di SESSIONE) ──────── */
     if (!scelta_codec) {
@@ -2940,6 +3013,27 @@ if (VW) {
   }
   /* `adatta_vista()` e' l'unica che deve MISURARE di qua prima di partire. */
   schermo.adatta_vista = function () { VW.vista(); return misura_vista(); };
+
+  /* ⛔⭐ E DUE DEVONO LASCIARE LA MISURA ANCHE DI QUA — cucitura della fase 4,
+   *     14 agosto 2026, chiesta dall'anello del modo classico.
+   *
+   *     Col video nel worker, `negozia` e `tela_adattata` mandavano la tela **di
+   *     la'** e basta.  ⛔ Ma le coordinate dell'input sono **sulla tela**
+   *     (`RCP.md` §7.3), e a convertirle sono le due disposizioni, che vivono
+   *     **di qua**: senza questa riga leggerebbero la tela di prima e il
+   *     puntatore finirebbe **nel posto sbagliato**, ⚠ senza nessun errore da
+   *     nessuna parte — che e' la forma di difetto che questa fase ha gia'
+   *     incontrato tre volte. */
+  schermo.negozia = function (codec, prof, stringa, tl, ta) {
+    schermo.tela_l = tl;
+    schermo.tela_a = ta;
+    VW.chiama("negozia", [codec, prof, stringa, tl, ta]);
+  };
+  schermo.tela_adattata = function (tl, ta) {
+    schermo.tela_l = tl;
+    schermo.tela_a = ta;
+    VW.chiama("tela_adattata", [tl, ta]);
+  };
 }
 
 $("modulo").addEventListener("submit", async (ev) => {
@@ -2976,6 +3070,2468 @@ $("modulo").addEventListener("submit", async (ev) => {
     $("parola").value = "";
   }
 });
+
+/* ==========================================================================
+ * ⛔ ANCORE DELLA FASE 4 — aperte il 14 agosto 2026 dal coordinatore.
+ *
+ * Questo file lo tocca piu' di un anello insieme.  Ciascuno scrive SOLO dentro
+ * la propria ancora, e nessuno riscrive il file intero: e' la regola che l'11
+ * agosto ha impedito che un `--put` cancellasse la riga di un altro.
+ * ========================================================================== */
+
+/* ⬇⬇ ANCORA F4-INPUT-CLASSICO — INIZIO.  Il modo classico: `Pointer Lock`, il
+ *     puntatore disegnato dalla pagina, le lettere e le posizioni sul canale di
+ *     input (`RCP.md` §7.3, `SPECIFICHE.md` §7.1 e §7.3). */
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐ LA PRIMA DELLE DUE DISPOSIZIONI: IL MOUSE FISICO E LA TASTIERA VERA.
+ *
+ * `DECISIONI.md` §5-bis.0-bis: una pagina, DUE disposizioni.  Questa e' quella
+ * classica; il tocco sta nell'ancora `F4-TOCCO` (anello A8) e il passaggio fra
+ * le due e' suo.  ⛔ Qui non si legge nessun `userAgent` e non si decide
+ * nessun passaggio: si espone `window.REMOTIX_CLASSICO.entra()` — il nome che
+ * A8 chiama — e si obbedisce.
+ *
+ * ⛔ LE TRE COSE CHE QUESTA ANCORA DEVE, e ciascuna ha il suo banco in
+ *    `banchi/04-b27-classico.py`:
+ *
+ *   1. IL PUNTATORE LO DISEGNA LA PAGINA (`SPECIFICHE.md` §7.1).  Quello del
+ *      browser si nasconde (`cursor: none`, nel foglio di stile) e il mouse
+ *      fisico arriva da **Pointer Lock**: senza, se ne vedrebbero DUE.
+ *      ⭐ E il guadagno vero non e' l'estetica: e' la LATENZA PERCEPITA — il
+ *        puntatore si muove alla velocita' del dito, non della rete
+ *        (`DECISIONI.md` §5-bis.1 punto 1).
+ *
+ *   2. LE COORDINATE SONO INDICI DI PIXEL SULLA TELA, e si arrotondano PER
+ *      DIFETTO (`RCP.md` §7.3).  Su una tela 1920×1080 l'angolo in basso a
+ *      destra e' **1919, 1079**.  ⛔ Il riquadro del rilievo R1.16 dice che
+ *      cosa costa sbagliarlo: «una pagina che divide per il fattore di scala e
+ *      arrotonda per eccesso produce 1920 su una tela di 1920 — e il server
+ *      CHIUDE LA SESSIONE», cioe' proprio quel che `SPECIFICHE.md` §8.3 vieta.
+ *      ⇒ Qui si satura in virgola mobile E si arrotonda per difetto E si
+ *        satura di nuovo sull'intero: tre reti sulla stessa caduta, perche' la
+ *        caduta chiude la sessione dell'utente.
+ *
+ *   3. LA PAGINA RILASCIA TUTTO QUEL CHE HA PREMUTO QUANDO PERDE IL FUOCO
+ *      (`SPECIFICHE.md` §7.3-bis, O10).  La Keyboard Lock **si spegne da sola**
+ *      alla perdita del fuoco — cioe' esattamente nell'istante in cui un
+ *      modificatore resta giu' — e un Ctrl rimasto premuto in una sessione che
+ *      sopravvive al client rende il desktop inservibile al riattacco
+ *      (`RCP.md` §7.3, trappola 11 di `LEZIONI.md` §4).
+ *
+ * ⛔ E LE SCORCIATOIE NON SONO DI QUI: quel che il browser si tiene lo misura e
+ *    lo DICHIARA l'anello A9, nell'ancora `F4-SCORCIATOIE`.  Qui si mandano le
+ *    battute; chi non passa, non passa, e a dirlo e' lui.
+ *
+ * ── LE CUCITURE CHE CHIEDO ────────────────────────────────────────────────
+ *
+ *   window.REMOTIX_INPUT = {                     ⭐ la stessa che chiede A8
+ *     prossimo_id(): number,
+ *     manda(tipo: number, corpo: Uint8Array): void
+ *   }
+ *
+ * ⛔ Il contatore e' UNO SOLO per tocco e classico insieme: §7.3 vuole che
+ *    l'`id` cresca «su tutto il canale di input, non uno per tipo», ed e'
+ *    quello che torna nel campo `input` dei fotogrammi (§6.2).  Con due
+ *    contatori non tornerebbe niente.
+ *
+ * ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): finche' quell'oggetto non c'e' i
+ *   messaggi si costruiscono lo stesso, si numerano con un contatore locale e
+ *   **non partono**; restano in `REMOTIX.input_classico.spediti`, da dove li
+ *   legge il banco.  ⛔ E il ripiego si vede da fuori (`stato().filo_cucito`):
+ *   un ripiego silenzioso e' due comportamenti sotto la stessa etichetta.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* I cinque messaggi di `RCP.md` §7.3.  ⛔ Non si riusa `TIPO` (canale di
+   controllo) ne' `TIPO_INPUT` dell'ancora del tocco, che ne porta tre: qui
+   servono tutti e cinque, e due nomi per la stessa tabella sarebbero due
+   tabelle che possono divergere. */
+const CL_TIPO = { PUNTATORE: 0x0101, PULSANTE: 0x0102, ROTELLA: 0x0103,
+                  LETTERA: 0x0104, POSIZIONE_TASTO: 0x0105 };
+
+/* `MouseEvent.button` → evdev (`linux/input-event-codes.h`), §7.3: «i codici
+   dei pulsanti e dei tasti sono quelli di evdev».  ⚠ 3 e 4 sono i due laterali
+   e su alcuni mouse non esistono: un pulsante che non e' in tabella si
+   DICHIARA e non si spedisce, invece di spedire il sinistro. */
+const CL_PULSANTE = { 0: 0x110, 1: 0x112, 2: 0x111, 3: 0x113, 4: 0x114 };
+const CL_BTN_SINISTRO = 0x110;
+
+/* ⛔⭐ `KeyboardEvent.code` → evdev.  E' la conversione che §7.3 pretende, ed e'
+ * scritta QUI a mano dalla tabella del kernel: `web.md` §5.4 segnala che
+ * Chromium ne ha una canonica «senza buchi da 1 a 94», ma ricopiarla da un
+ * binario non e' una fonte che si possa rileggere.  ⚠ Le posizioni sono
+ * FISICHE: `KeyZ` e' il tasto dove sta la Z su una tastiera americana, e su una
+ * tedesca quello stesso tasto scrive una Y — che e' precisamente il motivo per
+ * cui le scorciatoie viaggiano come posizioni (§7.3).
+ *
+ * ⛔ Un `code` che non e' qui NON si spedisce e si DICHIARA: mandare un codice
+ *    a caso vorrebbe dire premere un altro tasto sul desktop dell'utente. */
+const CL_POSIZIONE = {
+  Escape: 1, Digit1: 2, Digit2: 3, Digit3: 4, Digit4: 5, Digit5: 6, Digit6: 7,
+  Digit7: 8, Digit8: 9, Digit9: 10, Digit0: 11, Minus: 12, Equal: 13,
+  Backspace: 14, Tab: 15, KeyQ: 16, KeyW: 17, KeyE: 18, KeyR: 19, KeyT: 20,
+  KeyY: 21, KeyU: 22, KeyI: 23, KeyO: 24, KeyP: 25, BracketLeft: 26,
+  BracketRight: 27, Enter: 28, ControlLeft: 29, KeyA: 30, KeyS: 31, KeyD: 32,
+  KeyF: 33, KeyG: 34, KeyH: 35, KeyJ: 36, KeyK: 37, KeyL: 38, Semicolon: 39,
+  Quote: 40, Backquote: 41, ShiftLeft: 42, Backslash: 43, KeyZ: 44, KeyX: 45,
+  KeyC: 46, KeyV: 47, KeyB: 48, KeyN: 49, KeyM: 50, Comma: 51, Period: 52,
+  Slash: 53, ShiftRight: 54, NumpadMultiply: 55, AltLeft: 56, Space: 57,
+  CapsLock: 58, F1: 59, F2: 60, F3: 61, F4: 62, F5: 63, F6: 64, F7: 65,
+  F8: 66, F9: 67, F10: 68, NumLock: 69, ScrollLock: 70, Numpad7: 71,
+  Numpad8: 72, Numpad9: 73, NumpadSubtract: 74, Numpad4: 75, Numpad5: 76,
+  Numpad6: 77, NumpadAdd: 78, Numpad1: 79, Numpad2: 80, Numpad3: 81,
+  Numpad0: 82, NumpadDecimal: 83, IntlBackslash: 86, F11: 87, F12: 88,
+  IntlRo: 89, Convert: 92, KanaMode: 93, NonConvert: 94, NumpadComma: 95,
+  NumpadEnter: 96, ControlRight: 97, NumpadDivide: 98, PrintScreen: 99,
+  AltRight: 100, Home: 102, ArrowUp: 103, PageUp: 104, ArrowLeft: 105,
+  ArrowRight: 106, End: 107, ArrowDown: 108, PageDown: 109, Insert: 110,
+  Delete: 111, AudioVolumeMute: 113, AudioVolumeDown: 114, AudioVolumeUp: 115,
+  Power: 116, NumpadEqual: 117, Pause: 119, Lang1: 122, Lang2: 123,
+  IntlYen: 124, MetaLeft: 125, MetaRight: 126, ContextMenu: 127,
+  BrowserSearch: 217, BrowserHome: 172, BrowserBack: 158, BrowserForward: 159,
+  MediaTrackNext: 163, MediaPlayPause: 164, MediaTrackPrevious: 165,
+  MediaStop: 166, BrowserRefresh: 173, F13: 183, F14: 184, F15: 185, F16: 186,
+  F17: 187, F18: 188, F19: 189, F20: 190, F21: 191, F22: 192, F23: 193,
+  F24: 194,
+};
+const CL_KEY_SHIFT_SX = 42, CL_KEY_SHIFT_DX = 54, CL_KEY_ALTGR = 100;
+
+/* ⛔ Maiusc, BlocMaiusc e AltGr NON sono comandi: «servono a FARE la lettera, e
+   restano nel percorso di LETTERA» (§7.3 e `SPECIFICHE.md` §7.3).  Premuti da
+   soli non producono NIENTE sul filo — la lettera che fanno arriva gia' fatta
+   in `ev.key`.  ⚠ Ma dentro un comando servono eccome: vedi la
+   risincronizzazione piu' sotto. */
+const CL_MODIFICATORI_LETTERA = new Set(["Shift", "CapsLock", "AltGraph"]);
+
+/* La tela di comodo quando non c'e' sessione, cosi' il modo si puo' provare su
+   una pagina servita da un `http.server` — e la si DICHIARA in `stato()`
+   invece di far credere che sia quella vera. */
+const CL_TELA_SENZA_SESSIONE = [1920, 1080];
+
+/* ⛔ Il guadagno del puntatore: `SPECIFICHE.md` §7.4 — «l'accelerazione la
+   applica il CLIENT: applicata da entrambi si sommerebbe».  `[?]` 1,0, cioe'
+   nessuna accelerazione: con `unadjustedMovement` il sistema non ne mette, e
+   quanto ne voglia una mano non lo decide un documento — si giudica usando. */
+const CL_GUADAGNO = 1.0;
+
+/* ⭐ `[M]` 14 agosto 2026: su Chrome 151/Linux **100 px di `deltaY` sono uno
+   scatto** — misurato dal rapporto fra `deltaY` e il `wheelDelta` legacy, che
+   conta gli scatti (vedi `cl_scatti`).  ⚠ `[?]` sugli altri motori: li' vale
+   `deltaMode`, che e' il campo normativo. */
+const CL_PX_PER_SCATTO = 100;
+
+const CL_SPEDITI = [];            /* l'anello per il banco (I6: da LEGGERE) */
+const CL_SPEDITI_MAX = 512;
+const CL_RIPIEGHI = [];           /* le degradazioni, dichiarate una volta */
+
+function cl_ripiego(nome, testo) {
+  if (CL_RIPIEGHI.indexOf(nome) >= 0) return;
+  CL_RIPIEGHI.push(nome);
+  nota("⚠ modo classico, RIPIEGO «" + nome + "»: " + testo);
+}
+
+/* ── IL FILO ──────────────────────────────────────────────────────────────
+   ⛔ `id`: cresce di almeno uno a OGNI messaggio, su tutto il canale.  Lo da'
+      la cucitura; il contatore locale e' il ripiego, e non restituisce mai 0
+      (§7.3: «0 e' riservato e vuol dire nessun input»). */
+let cl_id_locale = 0;
+function cl_prossimo_id() {
+  const c = window.REMOTIX_INPUT;
+  if (c && typeof c.prossimo_id === "function") return c.prossimo_id();
+  cl_id_locale = cl_id_locale >= 0xFFFFFFFF ? 1 : cl_id_locale + 1;
+  return cl_id_locale;
+}
+
+/* ⛔ L'`istante` di §7.3, rilievo R1.27: «in una pagina l'orologio monotono e'
+   in MILLISECONDI e la sua grana e' deliberatamente ingrossata: il client
+   scrive millisecondi × 1000 e NON DEVE far credere a una precisione che non
+   ha».  ⇒ Si arrotonda PRIMA di moltiplicare.  ⚠ Su una pagina isolata fra
+   origini Chrome concede molto di piu' di un millisecondo (vedi il rapporto
+   A7, punto 3): il numero fine c'e' e si butta via qui, perche' a decidere che
+   cosa viaggia sul filo e' `RCP.md`, non questa riga. */
+function cl_istante_us(ms) { return Math.round(ms) * 1000; }
+
+/* I corpi di §7.3, campo per campo.  Big-endian, nessun riempimento (§6.0). */
+function cl_codifica(tipo, id, us, a, b) {
+  const extra = { 0x0101: 8, 0x0102: 3, 0x0103: 8, 0x0104: 4, 0x0105: 3 }[tipo];
+  const m = new Uint8Array(12 + extra);
+  const v = new DataView(m.buffer);
+  v.setUint32(0, id);
+  /* u64 in due meta': `>>> 0` e' ToUint32, cioe' il modulo 2^32 giusto. */
+  v.setUint32(4, Math.floor(us / 4294967296));
+  v.setUint32(8, us >>> 0);
+  if (tipo === CL_TIPO.PUNTATORE) { v.setUint32(12, a); v.setUint32(16, b); }
+  else if (tipo === CL_TIPO.ROTELLA) { v.setInt32(12, a); v.setInt32(16, b); }
+  else if (tipo === CL_TIPO.LETTERA) { v.setUint32(12, a); }
+  else { v.setUint16(12, a); v.setUint8(14, b); }
+  return m;
+}
+
+function cl_spedisci(tipo, a, b, ms) {
+  const id = cl_prossimo_id();
+  const us = cl_istante_us(typeof ms === "number" ? ms : performance.now());
+  const corpo = cl_codifica(tipo, id, us, a, b);
+  const c = window.REMOTIX_INPUT;
+  const cucito = !!(c && typeof c.manda === "function");
+  if (cucito) {
+    try { c.manda(tipo, corpo); }
+    catch (e) { nota("⛔ il canale di input ha rifiutato un messaggio del modo classico: " + e); }
+  } else {
+    cl_ripiego("filo", "`REMOTIX_INPUT` non e' cucito: i messaggi si "
+             + "costruiscono e NON partono (restano in "
+             + "`REMOTIX.input_classico.spediti`)");
+  }
+  const letto = { tipo: tipo, id: id, istante: us, a: a, b: b,
+                  byte: corpo.length, sul_filo: cucito };
+  CL_SPEDITI.push(letto);
+  if (CL_SPEDITI.length > CL_SPEDITI_MAX) CL_SPEDITI.shift();
+  return letto;
+}
+
+/* ── LA GEOMETRIA ─────────────────────────────────────────────────────────
+   ⚠ E' il gemello rovesciato di `tocco_geometria()` (ancora `F4-TOCCO`): li'
+     si va da un dito alla tela, qui da un mouse alla tela e dalla tela al
+     vetro.  ⛔ Quando `REMOTIX_PUNTATORE` c'e' — cioe' adesso — l'autorita' sul
+     disegno e' UNA SOLA, questa: A8 ci delega e nasconde il suo ripiego. */
+function cl_tela() {
+  if (schermo.tela_l > 0 && schermo.tela_a > 0)
+    return [schermo.tela_l, schermo.tela_a];
+  return CL_TELA_SENZA_SESSIONE;
+}
+
+function cl_geometria() {
+  const tela = $("schermo");
+  const r = tela.getBoundingClientRect();
+  const t = cl_tela();
+  const d = schermo.dipinta;
+  /* Quanti pixel di buffer vale un pixel di tela, e dove comincia l'immagine
+     dentro il buffer: senza `dipinta` il puntatore finirebbe sulle bande. */
+  let bx0 = 0, by0 = 0, sx = tela.width / t[0], sy = tela.height / t[1];
+  if (d && d.fotogramma && d.fotogramma[0] > 0) {
+    bx0 = d.x; by0 = d.y;
+    sx = d.l / d.fotogramma[0]; sy = d.a / d.fotogramma[1];
+  }
+  const vx = tela.width ? r.width / tela.width : 0;
+  const vy = tela.height ? r.height / tela.height : 0;
+  return { r: r, bx0: bx0, by0: by0, sx: sx, sy: sy, vx: vx, vy: vy,
+           tl: t[0], ta: t[1] };
+}
+
+/* La posizione del puntatore, in coordinate di TELA e in virgola mobile.  ⛔ Si
+   arrotonda solo quando si spedisce: arrotondare qui vorrebbe dire che
+   muovere il mouse pianissimo non muove mai niente. */
+let cl_px = 0, cl_py = 0, cl_noto = false;
+let cl_ux = -1, cl_uy = -1;       /* l'ultimo intero SPEDITO */
+
+/* ⛔⭐ LA SATURAZIONE, ED E' LA RIGA CHE NON DEVE SBAGLIARE.
+ * §7.3: `0 ≤ x < tela_larghezza`.  Il server rifiuta con `ERRORE_PROTOCOLLO`
+ * una coordinata fuori intervallo — e chiudere la sessione perche' il mouse e'
+ * arrivato al bordo e' la cosa che §8.3 vieta.  ⇒ Si satura in virgola mobile
+ * (qui) e si arrotonda per difetto saturando di nuovo (in `cl_manda_puntatore`). */
+function cl_satura() {
+  const g = cl_tela();
+  if (!(cl_px >= 0)) cl_px = 0;
+  if (!(cl_py >= 0)) cl_py = 0;
+  if (cl_px > g[0]) cl_px = g[0];
+  if (cl_py > g[1]) cl_py = g[1];
+  cl_noto = true;
+}
+
+function cl_manda_puntatore(ms) {
+  const g = cl_tela();
+  /* ⛔ PER DIFETTO, e poi l'ultimo pixel valido: `Math.floor` di 1919,999 fa
+     1919; `Math.ceil` avrebbe fatto 1920 e il server avrebbe chiuso. */
+  let x = Math.floor(cl_px), y = Math.floor(cl_py);
+  if (x > g[0] - 1) x = g[0] - 1;
+  if (y > g[1] - 1) y = g[1] - 1;
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  /* Un puntatore che non ha cambiato pixel non ha niente da dire: e' quel che
+     fa anche un mouse vero, che manda uno spostamento solo quando c'e'. */
+  if (x === cl_ux && y === cl_uy) return null;
+  cl_ux = x; cl_uy = y;
+  return cl_spedisci(CL_TIPO.PUNTATORE, x, y, ms);
+}
+
+/* ── IL PUNTATORE DISEGNATO ───────────────────────────────────────────────
+ * ⛔ `SPECIFICHE.md` §7.1: «il puntatore e' disegnato sopra il video, quello del
+ *    browser si nasconde».  Il `cursor: none` sta nel foglio di stile, legato a
+ *    `body[data-disposizione="classico"]` — cioe' alla disposizione che A8
+ *    mette in vigore, in un posto solo.
+ *
+ * ⚠ E IL PREZZO SI DICHIARA (`web.md` §1.2 C, rilievo S4): un elemento SOPRA la
+ *   tela fa cadere il percorso overlay e la tela desincronizzata.  ⛔ E' un
+ *   prezzo non misurato — `[?]` — e sta scritto nel rapporto A7 con accanto la
+ *   misura da fare.  L'alternativa (disegnarlo DENTRO la tela) non e' possibile
+ *   da qui quando `?video=worker` e' acceso: la tela e' del worker. */
+let cl_el = null, cl_visibile = true, cl_forma_punto = [0, 0];
+
+function cl_elemento() {
+  if (cl_el) return cl_el;
+  const d = document.createElement("div");
+  d.id = "puntatore";
+  /* La freccia, con la punta esattamente in (0,0): il «punto attivo» di un
+     cursore e' li', e il messaggio `CURSORE_FORMA` (§7.2) ne porta un altro
+     quando arrivera' — vedi `forma()`. */
+  d.innerHTML = '<svg width="14" height="21" viewBox="0 0 14 21">'
+    + '<path d="M1 1 L1 16 L4.6 12.6 L7 18.6 L9.6 17.5 L7.2 11.7 L12.2 11.7 Z"'
+    + ' fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/>'
+    + '</svg>';
+  document.body.appendChild(d);
+  cl_el = d;
+  return d;
+}
+
+function cl_disegna() {
+  const d = cl_elemento();
+  if (!cl_noto || !cl_visibile) { d.style.display = "none"; return; }
+  const g = cl_geometria();
+  d.style.display = "block";
+  d.style.transform = "translate("
+    + (g.r.left + (g.bx0 + cl_px * g.sx) * g.vx - cl_forma_punto[0]) + "px,"
+    + (g.r.top + (g.by0 + cl_py * g.sy) * g.vy - cl_forma_punto[1]) + "px)";
+}
+
+/* ⛔ LA CUCITURA CHE A8 CHIEDE, con la sua firma esatta: le coordinate sono
+   quelle della TELA, «l'unico sistema di riferimento che tocco e classico hanno
+   in comune».  ⭐ E cosi' la freccia e' UNA SOLA: il dito e il mouse spingono lo
+   stesso puntatore (`DECISIONI.md` §5-bis.8). */
+window.REMOTIX_PUNTATORE = {
+  /* ⛔⭐ `cl_noto = true` — LA RIGA CHE MANCAVA, e il difetto era esattamente
+   *     la forma che questa fase ha incontrato quattro volte: **fra due pezzi
+   *     ciascuno corretto per conto suo**.
+   *
+   *     `cl_disegna()` non disegna finche' `cl_noto` e' falso — giusto: prima
+   *     del primo movimento non si sa dove sia il puntatore.  ⛔ Ma quel flag
+   *     lo accendeva **solo** il percorso del mouse: su una pagina che nasce in
+   *     disposizione a TOCCO e non entra mai nel modo classico, il dito muoveva
+   *     un puntatore che **non compariva mai** — senza nessun errore, da nessuna
+   *     parte.
+   * ⭐ Trovato dall'anello del tocco, che nel frattempo aveva **dichiarato il
+   *    ripiego** e disegnato un puntatore suo invece di tacere: il ripiego
+   *    sparisce da se' adesso che la riga c'e' (cucitura chiusa il 14 ago 2026). */
+  muovi: function (x, y) { cl_px = x; cl_py = y; cl_noto = true; cl_satura(); cl_disegna(); },
+  mostra: function () { cl_visibile = true; cl_disegna(); },
+  nascondi: function () { cl_visibile = false; cl_disegna(); },
+  /* ⚠ Il posto dove `CURSORE_FORMA` (`RCP.md` §7.2, anello A6) entrera': la
+     forma vera del cursore remoto piu' il suo punto attivo.  La firma e'
+     dichiarata nel rapporto A7 perche' A6 la adotti o la corregga; finche' non
+     la chiama nessuno, la freccia e' quella disegnata qui sopra. */
+  forma: function (f) {
+    if (!f || !f.larghezza || !f.altezza || !f.rgba) return false;
+    const t = document.createElement("canvas");
+    t.width = f.larghezza; t.height = f.altezza;
+    const im = t.getContext("2d").createImageData(f.larghezza, f.altezza);
+    im.data.set(f.rgba);
+    t.getContext("2d").putImageData(im, 0, 0);
+    const d = cl_elemento();
+    d.innerHTML = "";
+    d.appendChild(t);
+    cl_forma_punto = [f.punto_x || 0, f.punto_y || 0];
+    cl_disegna();
+    return true;
+  },
+  geometria: cl_geometria,
+};
+
+/* ── POINTER LOCK ─────────────────────────────────────────────────────────
+ * ⛔ «Il mouse fisico arriva da Pointer Lock — che e' l'equivalente esatto del
+ *    Pointer Capture di Android e ha lo stesso motivo: senza, se ne vedrebbero
+ *    DUE» (`SPECIFICHE.md` §7.1 e §7.4).
+ * ⚠ E la lock vuole un GESTO dell'utente: non si puo' chiedere all'ingresso
+ *   nel modo (A8 ci entra da solo al caricamento), si chiede al primo clic
+ *   sulla tela.  ⛔ Se non si ottiene, il modo NON smette di funzionare: si
+ *   ripiega sulla posizione assoluta del mouse dentro la tela e LO SI DICE. */
+let cl_agganciato = false, cl_lock_grezzo = null;
+
+function cl_aggancia() {
+  const tela = $("schermo");
+  if (!tela.requestPointerLock) {
+    cl_ripiego("pointer-lock",
+      "questo motore non ha `requestPointerLock`: il puntatore segue la "
+      + "posizione assoluta del mouse dentro la tela, e ai bordi si ferma");
+    return;
+  }
+  let p;
+  /* `unadjustedMovement` chiede gli spostamenti GREZZI, cioe' senza
+     l'accelerazione del sistema: §7.4 vuole che l'accelerazione la metta il
+     client, e con quella del sistema gia' dentro si sommerebbero. */
+  try { p = tela.requestPointerLock({ unadjustedMovement: true }); }
+  catch (e) { p = undefined; }
+  if (p && typeof p.then === "function") {
+    p.then(function () { cl_lock_grezzo = true; })
+     .catch(function () {
+       cl_lock_grezzo = false;
+       cl_ripiego("movimento-grezzo",
+         "`unadjustedMovement` rifiutato: gli spostamenti arrivano con "
+         + "l'accelerazione del sistema gia' applicata (§7.4)");
+       try { tela.requestPointerLock(); } catch (e2) { /* niente da fare */ }
+     });
+  } else {
+    /* Il vecchio `requestPointerLock()` senza promessa: non si sa se il
+       movimento sia grezzo, e non saperlo si dichiara. */
+    cl_lock_grezzo = null;
+    cl_ripiego("movimento-grezzo-ignoto",
+      "questo motore non torna una promessa da `requestPointerLock`: se il "
+      + "movimento sia grezzo o accelerato non e' leggibile");
+  }
+}
+
+function cl_su_lock() {
+  const era = cl_agganciato;
+  cl_agganciato = document.pointerLockElement === $("schermo");
+  if (era && !cl_agganciato)
+    nota("modo classico: `Pointer Lock` rilasciato — il puntatore torna a "
+       + "seguire la posizione assoluta del mouse dentro la tela");
+  if (!era && cl_agganciato)
+    nota("modo classico: `Pointer Lock` agganciato"
+       + (cl_lock_grezzo === true ? " (movimento grezzo)" : ""));
+}
+
+function cl_su_lock_errore() {
+  cl_agganciato = false;
+  cl_ripiego("pointer-lock-negato",
+    "il browser ha negato `Pointer Lock` (serve un gesto dell'utente, e a "
+    + "schermo intero uscito con `F11` alcuni motori lo negano sempre)");
+}
+
+/* ── QUANDO IL MODO E' UTILIZZABILE ───────────────────────────────────────
+ * ⛔⭐ E QUESTA RIGA E' UNA CURA, NON UNA PRUDENZA.  A8 mette in vigore la
+ *     disposizione classica AL CARICAMENTO, quando sullo schermo c'e' ancora il
+ *     modulo con utente e parola d'ordine.  Una tastiera catturata li' dentro
+ *     vorrebbe dire che l'utente NON PUO' PIU' SCRIVERE LA PROPRIA PAROLA — un
+ *     difetto che si vede solo provando ad accedere, cioe' dopo aver dichiarato
+ *     finita la fase.
+ * ⇒ Si comanda solo quando la tela e' accesa (c'e' un desktop da comandare) e
+ *   il fuoco non e' dentro un campo del modulo. */
+let cl_in_vigore = false;
+
+function cl_utilizzabile() {
+  return cl_in_vigore && document.body.dataset.schermo === "acceso";
+}
+
+function cl_nel_modulo(ev) {
+  const t = (ev && ev.target) || document.activeElement;
+  if (!t || !t.tagName) return false;
+  const n = t.tagName.toUpperCase();
+  return n === "INPUT" || n === "TEXTAREA" || n === "SELECT" || t.isContentEditable === true;
+}
+
+/* ── IL MOUSE ─────────────────────────────────────────────────────────────── */
+function cl_su_mousemove(ev) {
+  if (!cl_utilizzabile()) return;
+  if (cl_agganciato) {
+    /* Agganciati arrivano SPOSTAMENTI: il puntatore lo teniamo noi, ed e' per
+       questo che si muove alla velocita' della mano e non della rete. */
+    const g = cl_geometria();
+    const kx = (g.vx * g.sx) || 1, ky = (g.vy * g.sy) || 1;
+    cl_px += (ev.movementX || 0) * CL_GUADAGNO / kx;
+    cl_py += (ev.movementY || 0) * CL_GUADAGNO / ky;
+  } else {
+    /* Ripiego: la posizione assoluta dentro la tela.  ⚠ Qui il puntatore del
+       browser sarebbe visibile — non lo e', perche' `cursor: none` vale per
+       tutta la disposizione classica, agganciati o no. */
+    const g = cl_geometria();
+    if (!g.vx || !g.vy || !g.sx || !g.sy) return;
+    cl_px = ((ev.clientX - g.r.left) / g.vx - g.bx0) / g.sx;
+    cl_py = ((ev.clientY - g.r.top) / g.vy - g.by0) / g.sy;
+  }
+  cl_satura();
+  cl_disegna();
+  cl_manda_puntatore(ev.timeStamp);
+}
+
+const cl_pulsanti_premuti = new Set();
+
+function cl_su_mousedown(ev) {
+  if (!cl_utilizzabile()) return;
+  ev.preventDefault();
+  /* Il gesto c'e': e' il momento in cui la lock si puo' chiedere. */
+  if (!cl_agganciato) cl_aggancia();
+  const c = CL_PULSANTE[ev.button];
+  if (c === undefined) {
+    nota("modo classico: pulsante " + ev.button + " senza codice evdev noto: "
+       + "NON si spedisce (§7.3 vuole i codici di evdev, e inventarne uno "
+       + "premerebbe un altro pulsante sul desktop dell'utente)");
+    return;
+  }
+  cl_pulsanti_premuti.add(c);
+  cl_spedisci(CL_TIPO.PULSANTE, c, 1, ev.timeStamp);
+}
+
+function cl_su_mouseup(ev) {
+  const c = CL_PULSANTE[ev.button];
+  /* ⛔ Il rilascio si manda anche se il modo nel frattempo non e' piu'
+     utilizzabile: un pulsante che resta giu' e' la stessa trappola del Ctrl
+     rimasto giu' (§7.3, «al distacco si rilascia tutto»). */
+  if (c === undefined || !cl_pulsanti_premuti.has(c)) return;
+  ev.preventDefault();
+  cl_pulsanti_premuti.delete(c);
+  cl_spedisci(CL_TIPO.PULSANTE, c, 0, ev.timeStamp);
+}
+
+function cl_su_contextmenu(ev) {
+  /* Il menu del browser sopra un desktop remoto vorrebbe dire che il tasto
+     destro non arriva mai dall'altra parte. */
+  if (cl_utilizzabile()) ev.preventDefault();
+}
+
+/* ── LA ROTELLA ───────────────────────────────────────────────────────────
+ * ⛔⭐ IL SEGNO SI INVERTE QUI UNA VOLTA SOLA, E NON DI NUOVO.
+ *
+ * §7.3: «il client manda **+120 quando l'utente gira la rotella IN SU**, e il
+ * SERVER DEVE invertire l'asse verticale prima di passarlo a libei».  Nel
+ * browser `deltaY > 0` vuol dire che il contenuto va verso la FINE del
+ * documento, cioe' che l'utente ha girato IN GIU' (`[M]` 10 agosto 2026,
+ * `banchi/01-s7-esiti.jsonl`).  ⇒ Le due convenzioni sono opposte, e questa
+ * riga e' l'unico posto in cui la pagina le riconcilia.  ⛔ Invertirlo anche
+ * qui e anche nel server significa non invertirlo affatto, e lo schermo remoto
+ * scorre al contrario.
+ *
+ * ⚠ E I MEZZI SCATTI ESISTONO: «60 non DEVE essere arrotondato a zero».  ⇒ il
+ *   resto si accumula invece di sparire, o un trackpad che manda tre pixel per
+ *   volta non muoverebbe mai niente. */
+let cl_res_x = 0, cl_res_y = 0;
+
+function cl_scatti(ev) {
+  /* ⛔⭐ E QUI C'ERA `wheelDelta`, TOLTO IL 14 AGOSTO 2026 SU UNA MISURA.
+   *
+   * L'idea era buona: `wheelDelta` e' gia' in unita' da 120 per scatto, quindi
+   * non servirebbe nessuna costante nostra.  ⛔ **E' falso, e il mezzo scatto
+   * era la prova**: `[M]` 14 agosto 2026, Chrome 151 su Wayland
+   * (`banchi/04-b27-esiti.jsonl`, campo `strumento.rotelle`):
+   *
+   *     deltaY = -100  →  wheelDeltaY = 120     (uno scatto)
+   *     deltaY =  -50  →  wheelDeltaY = 120     ⛔ ANCORA UNO SCATTO
+   *
+   * ⇒ `wheelDelta` conta gli SCATTI arrotondati, non la quantita': mezzo
+   *   scatto ne esce come uno intero, e §7.3 dice l'opposto — «i mezzi scatti
+   *   esistono: 60 e' mezzo scatto e NON DEVE essere arrotondato a zero», ne'
+   *   gonfiato a 120.  ⭐ `deltaY` invece porta la quantita' vera.
+   *
+   * ⚠ E il rapporto fra le due letture da' la costante: 100 px = uno scatto su
+   *   questo motore `[M]`.  Resta `[?]` altrove, ed e' dichiarato. */
+  if (ev.deltaMode === 1) return [ev.deltaX / 3, ev.deltaY / 3];   /* righe */
+  if (ev.deltaMode === 2) {
+    cl_ripiego("rotella-pagine", "`deltaMode` a PAGINE: si contano 3 scatti "
+             + "per pagina, ed e' un `[?]`");
+    return [ev.deltaX * 3, ev.deltaY * 3];
+  }
+  return [ev.deltaX / CL_PX_PER_SCATTO, ev.deltaY / CL_PX_PER_SCATTO];
+}
+
+function cl_su_wheel(ev) {
+  if (!cl_utilizzabile()) return;
+  ev.preventDefault();
+  const s = cl_scatti(ev);
+  cl_res_x += s[0]; cl_res_y += s[1];
+  const ux = Math.round(cl_res_x * 120), uy = Math.round(cl_res_y * 120);
+  if (!ux && !uy) return;              /* troppo poco: si accumula, non si butta */
+  cl_res_x -= ux / 120; cl_res_y -= uy / 120;
+  /* `s` e' nel verso del CONTENUTO; sul filo va il verso della MANO. */
+  cl_spedisci(CL_TIPO.ROTELLA, ux, -uy, ev.timeStamp);
+}
+
+/* ── LA TASTIERA ──────────────────────────────────────────────────────────
+ * ⛔ §7.3: «`LETTERA` si usa quando si SCRIVE del testo; `POSIZIONE_TASTO`
+ *    quando e' premuto un modificatore di COMANDO — Ctrl, Alt, Super.  Maiusc e
+ *    AltGr non contano: servono a fare la lettera».
+ * ⇒ `Ctrl+C` non e' una `c`: e' 29 giu', 46 giu', 46 su, 29 su. */
+const cl_tasti_premuti = new Map();     /* code → codice evdev */
+
+function cl_comando(ev) {
+  const altgr = ev.getModifierState && ev.getModifierState("AltGraph");
+  return !!(ev.ctrlKey || ev.metaKey || (ev.altKey && !altgr));
+}
+
+/* ⛔⭐ LA RISINCRONIZZAZIONE, e cura un difetto che si vede solo usando.
+ * Maiusc premuto da solo non parte (fa la lettera).  Ma se DOPO averlo premuto
+ * l'utente preme Ctrl e poi C, il desktop remoto riceverebbe `Ctrl+C` invece di
+ * `Ctrl+Maiusc+C`: il Maiusc era stato saltato quando ancora non era un
+ * comando.  ⇒ Nell'istante in cui un comando entra in scena si guarda che cosa
+ * e' gia' giu' e lo si manda.  ⚠ E' la stessa cura che `web.md` §5.4 ha letto
+ * in Guacamole — «risincronizza lo stato dei modificatori» — applicata al
+ * confine fra i due percorsi invece che al mouse. */
+function cl_sincronizza_modificatori(ev, ms) {
+  if (!ev.getModifierState) return;
+  if (ev.getModifierState("Shift")
+      && !cl_tasti_premuti.has("ShiftLeft") && !cl_tasti_premuti.has("ShiftRight")) {
+    cl_tasti_premuti.set("ShiftLeft", CL_KEY_SHIFT_SX);
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, CL_KEY_SHIFT_SX, 1, ms);
+  }
+  if (ev.getModifierState("AltGraph") && !cl_tasti_premuti.has("AltRight")) {
+    cl_tasti_premuti.set("AltRight", CL_KEY_ALTGR);
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, CL_KEY_ALTGR, 1, ms);
+  }
+}
+
+function cl_su_keydown(ev) {
+  if (!cl_utilizzabile() || cl_nel_modulo(ev)) return;
+  /* ⚠ Una battuta che sta componendo un carattere (IME, tasti morti) NON e'
+     ancora una lettera: si dichiara e non si falsifica.  ⛔ E la lettera
+     composta oggi NON arriva affatto — vedi il rapporto A7: per averla serve un
+     elemento modificabile col fuoco (`web.md` §1.2 C), che e' proprio quel che
+     farebbe cadere il percorso di disegno.  E' la collisione che quel paragrafo
+     prevedeva, ed e' aperta. */
+  if (ev.isComposing || ev.keyCode === 229) {
+    cl_ripiego("composizione", "una battuta in composizione (IME o tasto "
+             + "morto) non produce niente: serve un elemento modificabile col "
+             + "fuoco, e `web.md` §1.2 C dice che cosa costa");
+    return;
+  }
+  const comando = cl_comando(ev);
+  const punti = Array.from(ev.key || "");
+
+  /* Maiusc / BlocMaiusc / AltGr da soli: fanno la lettera, non partono. */
+  if (!comando && CL_MODIFICATORI_LETTERA.has(ev.key)) { ev.preventDefault(); return; }
+
+  if (comando || punti.length !== 1) {
+    const codice = CL_POSIZIONE[ev.code];
+    if (codice === undefined) {
+      nota("modo classico: la posizione «" + ev.code + "» non ha un codice "
+         + "evdev in tabella: NON si spedisce (§7.3), e la battuta si perde — "
+         + "detto invece che falsificato");
+      return;
+    }
+    ev.preventDefault();
+    /* ⛔ La ripetizione automatica la fa il DESKTOP remoto, che il tasto ce
+       l'ha giu': rimandarla qui sarebbe un secondo «premuto» senza rilascio. */
+    if (ev.repeat || cl_tasti_premuti.has(ev.code)) return;
+    if (comando) cl_sincronizza_modificatori(ev, ev.timeStamp);
+    cl_tasti_premuti.set(ev.code, codice);
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ev.timeStamp);
+    return;
+  }
+
+  if (ev.key === "Dead") {
+    cl_ripiego("tasto-morto", "un tasto morto non produce da solo nessun "
+             + "carattere: vedi «composizione»");
+    return;
+  }
+  ev.preventDefault();
+  const p = punti[0].codePointAt(0);
+  /* §7.3: da 0 a 0x10FFFF, surrogati esclusi.  Un `codePointAt` su un carattere
+     intero non li produce; il controllo resta perche' il costo e' zero e la
+     conseguenza di sbagliare e' `ERRORE_PROTOCOLLO`. */
+  if (p >= 0xD800 && p <= 0xDFFF) return;
+  cl_spedisci(CL_TIPO.LETTERA, p, 0, ev.timeStamp);
+}
+
+function cl_su_keyup(ev) {
+  if (cl_nel_modulo(ev)) return;
+  const codice = cl_tasti_premuti.get(ev.code);
+  if (codice !== undefined) {
+    ev.preventDefault();
+    cl_tasti_premuti.delete(ev.code);
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 0, ev.timeStamp);
+    return;
+  }
+  /* Il Maiusc risincronizzato e' stato mandato come sinistro anche se giu' era
+     il destro: si rilascia su qualunque dei due torni su. */
+  if (ev.key === "Shift") {
+    for (const c of ["ShiftLeft", "ShiftRight"]) {
+      if (cl_tasti_premuti.has(c)) {
+        cl_spedisci(CL_TIPO.POSIZIONE_TASTO, cl_tasti_premuti.get(c), 0, ev.timeStamp);
+        cl_tasti_premuti.delete(c);
+      }
+    }
+  }
+}
+
+/* ⛔⭐ IL RILASCIO ALLA PERDITA DEL FUOCO — `SPECIFICHE.md` §7.3-bis (O10).
+ * «La Keyboard Lock si spegne da sola quando la pagina perde il fuoco, cioe'
+ * esattamente nell'istante in cui un modificatore resta premuto.»  ⇒ Quel che
+ * questa pagina ha premuto lo rilascia LEI, adesso: al riattacco ci pensa
+ * `RCP.md` §7.3, ma la sessione qui non si stacca affatto — resta viva con un
+ * Ctrl giu', e il desktop diventa inservibile senza che niente lo colleghi al
+ * momento in cui si e' cambiata finestra. */
+function cl_rilascia_tutto(perche) {
+  const ms = performance.now();
+  let n = 0;
+  for (const [code, codice] of cl_tasti_premuti) {
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 0, ms); n++;
+  }
+  cl_tasti_premuti.clear();
+  for (const c of cl_pulsanti_premuti) {
+    cl_spedisci(CL_TIPO.PULSANTE, c, 0, ms); n++;
+  }
+  cl_pulsanti_premuti.clear();
+  if (n) nota("modo classico: rilasciati " + n + " fra tasti e pulsanti — " + perche);
+  return n;
+}
+
+addEventListener("blur", function () {
+  cl_rilascia_tutto("la pagina ha perso il fuoco (la Keyboard Lock si spegne "
+                  + "da sola proprio qui — `SPECIFICHE.md` §7.3-bis, O10)");
+});
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible")
+    cl_rilascia_tutto("la pagina e' stata nascosta");
+});
+addEventListener("pagehide", function () {
+  cl_rilascia_tutto("la pagina se ne va");
+});
+
+/* ── ENTRARE E USCIRE ─────────────────────────────────────────────────────
+   ⛔ La firma e' quella che A8 chiama per nome (`entra_nel_classico` →
+      `REMOTIX_CLASSICO.entra`), e sta identica nel rapporto A7. */
+function cl_entra(perche) {
+  if (cl_in_vigore) return true;
+  cl_in_vigore = true;
+  const tela = $("schermo");
+  tela.addEventListener("mousemove", cl_su_mousemove);
+  tela.addEventListener("mousedown", cl_su_mousedown);
+  tela.addEventListener("wheel", cl_su_wheel, { passive: false });
+  tela.addEventListener("contextmenu", cl_su_contextmenu);
+  /* Il rilascio si ascolta sulla FINESTRA: un pulsante lasciato andare fuori
+     dalla tela non manderebbe mai il suo `mouseup` alla tela. */
+  addEventListener("mouseup", cl_su_mouseup, true);
+  addEventListener("keydown", cl_su_keydown, true);
+  addEventListener("keyup", cl_su_keyup, true);
+  document.addEventListener("pointerlockchange", cl_su_lock);
+  document.addEventListener("pointerlockerror", cl_su_lock_errore);
+  if (!cl_noto) { const t = cl_tela(); cl_px = t[0] / 2; cl_py = t[1] / 2; cl_satura(); }
+  cl_visibile = true;
+  cl_disegna();
+  nota("modo classico in vigore" + (perche ? " — " + perche : ""));
+  return true;
+}
+
+function cl_esci() {
+  if (!cl_in_vigore) return true;
+  const tela = $("schermo");
+  tela.removeEventListener("mousemove", cl_su_mousemove);
+  tela.removeEventListener("mousedown", cl_su_mousedown);
+  tela.removeEventListener("wheel", cl_su_wheel);
+  tela.removeEventListener("contextmenu", cl_su_contextmenu);
+  removeEventListener("mouseup", cl_su_mouseup, true);
+  removeEventListener("keydown", cl_su_keydown, true);
+  removeEventListener("keyup", cl_su_keyup, true);
+  document.removeEventListener("pointerlockchange", cl_su_lock);
+  document.removeEventListener("pointerlockerror", cl_su_lock_errore);
+  cl_rilascia_tutto("si esce dalla disposizione classica");
+  if (cl_agganciato && document.exitPointerLock) {
+    try { document.exitPointerLock(); } catch (e) { /* gia' sganciata */ }
+  }
+  cl_in_vigore = false;
+  cl_agganciato = false;
+  if (cl_el) cl_el.style.display = "none";
+  return true;
+}
+
+window.REMOTIX_CLASSICO = { entra: cl_entra, esci: cl_esci };
+
+/* ⛔ Quel che il banco legge.  ⚠ E' un oggetto DA LEGGERE (invariante I6):
+   niente qui dentro cambia quel che la pagina fa, e il verdetto del banco si
+   costruisce sui BYTE ricevuti dall'altro capo, non su questi campi
+   (`CODER.md` §3.8). */
+REMOTIX.input_classico = {
+  spediti: CL_SPEDITI,
+  ripieghi: CL_RIPIEGHI,
+  posizioni: CL_POSIZIONE,
+  stato: function () {
+    return {
+      in_vigore: cl_in_vigore,
+      utilizzabile: cl_utilizzabile(),
+      agganciato: cl_agganciato,
+      lock_grezzo: cl_lock_grezzo,
+      puntatore: [cl_px, cl_py],
+      ultimo_spedito: [cl_ux, cl_uy],
+      tasti_premuti: Array.from(cl_tasti_premuti.values()),
+      pulsanti_premuti: Array.from(cl_pulsanti_premuti),
+      tela: cl_tela(),
+      tela_di_comodo: !(schermo.tela_l > 0),
+      filo_cucito: !!(window.REMOTIX_INPUT),
+      spediti_in_tutto: CL_SPEDITI.length,
+      ripieghi: CL_RIPIEGHI.slice(),
+    };
+  },
+};
+
+/* ⬆⬆ ANCORA F4-INPUT-CLASSICO — FINE. */
+
+/* ⬇⬇ ANCORA F4-TOCCO — INIZIO.  La seconda disposizione: i sette gesti e il
+ *     passaggio AUTOMATICO sul contesto — non un'impostazione da cercare
+ *     (`DECISIONI.md` §5-bis.0-bis e §5-bis.3). */
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐ DUE DISPOSIZIONI VERE, E L'APPLICAZIONE SCEGLIE DA SE'.
+ *
+ * `DECISIONI.md` §5-bis.0-bis: «non e' il video che si adatta: sono DUE
+ * INTERFACCE, e il passaggio e' automatico sul contesto, non un'impostazione
+ * che l'utente deve andare a cercare».  ⛔ E il contesto si legge da CHE COSA
+ * C'E' — un puntatore fine? quanto e' grande la finestra? — **non** da «e'
+ * Android o e' Linux»: lo `userAgent` non compare in nessuna riga di qui sotto,
+ * e un telefono con un mouse Bluetooth attaccato prende il modo classico
+ * mentre un portatile con lo schermo tattile usato col dito prende il tocco.
+ *
+ * ⛔ IL MODO CLASSICO NON STA QUI: sta nell'ancora `F4-INPUT-CLASSICO`, sopra,
+ *    ed e' dell'anello A7.  Qui lo si CHIAMA per nome — vedi
+ *    `entra_nel_classico()` — e se non c'e' ancora si dichiara il ripiego
+ *    invece di rifarlo (`CODER.md` §4.2).
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* ⛔⭐ LE SOGLIE, IN MILLISECONDI E IN PIXEL — e sono la parte che si giudica
+ *     usandola, non leggendola (`DECISIONI.md` §5-bis.3).
+ *
+ * ⚠ Ogni numero qui sotto ha accanto DA DOVE VIENE.  Un numero senza
+ *   provenienza e' un numero che nessuno rimette in discussione, e questa
+ *   tabella e' dichiarata provvisoria per intero.
+ *
+ * ⛔ I pixel sono pixel CSS, non pixel fisici, e non e' una svista: il dito e'
+ *    largo dieci millimetri su qualunque schermo, e il pixel CSS e' l'unita'
+ *    che il browser tiene ancorata al millimetro (~96 per pollice) mentre il
+ *    pixel fisico raddoppia sui telefoni.  Misurare la sbavatura di un dito in
+ *    pixel fisici la raddoppierebbe passando da un portatile a un telefono. */
+const TOCCO_SOGLIE = {
+  /* Quanto puo' durare un contatto ed essere ancora un TAP.
+     `[S]` 180 ms — e' `ViewConfiguration.TAP_TIMEOUT` di Android ed e' anche il
+     `tap timeout` di default di libinput.  Due riferimenti indipendenti sullo
+     stesso numero. */
+  T_TAP: 180,
+  /* Quanto puo' scivolare un dito ed essere ancora fermo.
+     `[S]` ~9 px CSS — la `touch slop` di Android e' 8 dp. */
+  D_TAP: 9,
+  /* Quanto tempo dopo un tap si puo' ancora agganciare il TAP-E-MEZZO.
+     `[S]` 300 ms — il `doppio tap` di Android (`DOUBLE_TAP_TIMEOUT`).  ⛔ E non
+     e' un caso che sia lo stesso numero del doppio clic: vedi il riquadro
+     «TAP-E-MEZZO E DOPPIO CLIC SONO LO STESSO GESTO» qui sotto. */
+  T_SEQUENZA: 300,
+  /* ⭐ Quanto lontano puo' ricadere il secondo contatto ed essere ancora LO
+     STESSO DITO.  `[S]` 40 px CSS ~ 10 mm, e il numero viene da noi:
+     `SPECIFICHE.md` §7.1 dice «un dito e' largo ~10 mm» per giustificare il
+     modello a trackpad.  ⭐ Lo stesso decimo di millimetro che motiva il
+     puntatore disegnato e' quello che separa un tap-e-mezzo da un tap a due
+     dita: e' la soglia piu' importante di tutta questa tabella. */
+  D_STESSO_DITO: 40,
+  /* Di quanto deve cambiare la distanza fra due dita perche' sia un PIZZICO e
+     non una rotella.  `[?]` 24 px CSS — ipotizzato, mai misurato con un dito. */
+  D_PIZZICO: 24,
+  /* Quanti pixel CSS di trascinamento a due dita fanno UNO SCATTO di rotella
+     (120 unita', `RCP.md` §7.3).  `[?]` 40 px — ipotizzato.  ⛔ E NON e' il 114
+     misurato l'11 agosto: quello e' il fattore Firefox+Mutter fra uno scatto e
+     i pixel di scorrimento di UNA pagina, e `RCP.md` dice a chiare lettere che
+     non e' una costante del protocollo. */
+  PX_PER_SCATTO: 40,
+  /* Il guadagno del trackpad: 1 px CSS di dito → quanti px CSS di puntatore.
+     `[?]` 1,0 — cioe' il puntatore sta sotto il dito.  ⚠ Un guadagno > 1
+     compra distanza e vende precisione, ed e' esattamente il tipo di scelta
+     che §5-bis.3 dice di non decidere leggendo. */
+  GUADAGNO: 1.0,
+  /* Il tetto dell'ingrandimento della VISTA col pizzico (non
+     dell'applicazione: `SPECIFICHE.md` §7.2). */
+  ZOOM_MAX: 4.0,
+};
+
+/* I codici di evdev di `RCP.md` §7.3 — `linux/input-event-codes.h`. */
+const TOCCO_BTN = { SINISTRO: 0x110, DESTRO: 0x111, CENTRALE: 0x112 };
+/* ⛔ NON si riusa `TIPO`: quelli sono i messaggi del canale di CONTROLLO, e il
+   byte alto qui e' `0x01` cioe' il canale di INPUT (§2.5). */
+const TIPO_INPUT = { PUNTATORE: 0x0101, PULSANTE: 0x0102, ROTELLA: 0x0103 };
+const NOME_INPUT = { 0x0101: "PUNTATORE", 0x0102: "PULSANTE", 0x0103: "ROTELLA" };
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * IL FILO — `RCP.md` §7.3.
+ *
+ * ⛔ LA CUCITURA CHE CHIEDO, e sta scritta identica nel rapporto:
+ *
+ *     window.REMOTIX_INPUT = {
+ *       prossimo_id(): number,                        // §7.3
+ *       manda(tipo: number, corpo: Uint8Array): void
+ *     }
+ *
+ *   `prossimo_id` cresce di almeno uno a OGNI messaggio **su tutto il canale**
+ *   — non uno per tipo — e non restituisce mai 0, che §7.3 riserva per «nessun
+ *   input».  ⛔ Il contatore DEVE essere uno solo per tocco e classico
+ *   insieme: due contatori separati farebbero tornare nel campo `input` dei
+ *   fotogrammi (§6.2) un numero che non identifica niente.
+ *
+ * ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): finche' quell'oggetto non c'e', i
+ *   messaggi si costruiscono lo stesso, si numerano con un contatore locale e
+ *   **non partono**.  Restano nell'anello `REMOTIX.tocco.spediti`, che e' da
+ *   dove li legge `banchi/04-b28-gesti`.  ⇒ Il riconoscitore si misura senza
+ *   sessione, ed e' quel che rende il banco eseguibile su una pagina servita
+ *   da un `http.server` di Python.
+ * ══════════════════════════════════════════════════════════════════════════ */
+let tocco_id_locale = 0;
+function tocco_prossimo_id() {
+  const c = window.REMOTIX_INPUT;
+  if (c && typeof c.prossimo_id === "function") return c.prossimo_id();
+  tocco_id_locale = tocco_id_locale >= 0xFFFFFFFF ? 1 : tocco_id_locale + 1;
+  return tocco_id_locale;
+}
+
+/* ⛔ L'`istante` di §7.3: microsecondi dell'orologio monotono del CLIENT.  In
+   una pagina quell'orologio e' in MILLISECONDI e la sua grana e' ingrossata
+   apposta: si scrive `millisecondi × 1000` e NON si fa credere a una
+   precisione che non c'e' (rilievo R1.27).  ⇒ `Math.round` PRIMA di
+   moltiplicare, o i microsecondi finti rientrerebbero dalla finestra. */
+function tocco_istante_us(ms) { return Math.round(ms) * 1000; }
+
+const TOCCO_CORPO_EXTRA = { 0x0101: 8, 0x0102: 3, 0x0103: 8 };
+
+function tocco_codifica(tipo, id, us, a, b) {
+  const n = TOCCO_CORPO_EXTRA[tipo];
+  const m = new Uint8Array(12 + n);
+  const v = new DataView(m.buffer);
+  v.setUint32(0, id);
+  /* Il u64 in due meta': `>>> 0` e' ToUint32, cioe' il modulo 2^32 giusto. */
+  v.setUint32(4, Math.floor(us / 4294967296));
+  v.setUint32(8, us >>> 0);
+  if (tipo === TIPO_INPUT.PUNTATORE) { v.setUint32(12, a); v.setUint32(16, b); }
+  else if (tipo === TIPO_INPUT.PULSANTE) { v.setUint16(12, a); v.setUint8(14, b); }
+  else { v.setInt32(12, a); v.setInt32(16, b); }
+  return m;
+}
+
+/* ⛔⭐ E QUI SI RILEGGONO I BYTE APPENA SCRITTI, CON UN LETTORE CHE NON E' IL
+ *     LORO SCRITTORE.  `CODER.md` §3.8: «si verifica dal lato che deve
+ *     ricevere».  Il lato che riceve vero e' il server, e a questo giro non e'
+ *     mio; la cosa piu' vicina che posso dare al banco e' che i campi che
+ *     legge NON siano quelli che ho avuto in mente, ma quelli che sono
+ *     davvero finiti nell'array.  ⚠ Un banco che confrontasse le mie
+ *     intenzioni con le mie intenzioni sarebbe verde per costruzione. */
+function tocco_decodifica(tipo, corpo) {
+  const v = new DataView(corpo.buffer, corpo.byteOffset, corpo.byteLength);
+  const r = { nome: NOME_INPUT[tipo], tipo: tipo, id: v.getUint32(0),
+              istante: v.getUint32(4) * 4294967296 + v.getUint32(8) };
+  if (tipo === TIPO_INPUT.PUNTATORE) { r.x = v.getUint32(12); r.y = v.getUint32(16); }
+  else if (tipo === TIPO_INPUT.PULSANTE) { r.codice = v.getUint16(12); r.premuto = v.getUint8(14); }
+  else { r.asse_x = v.getInt32(12); r.asse_y = v.getInt32(16); }
+  return r;
+}
+
+/* L'anello dei messaggi, per il banco.  ⚠ E' un oggetto DA LEGGERE, non un
+   interruttore: non c'e' niente qui dentro che cambi quel che la pagina fa
+   (`CODER.md` §2, invariante I6). */
+const TOCCO_SPEDITI = [];
+const TOCCO_SPEDITI_MAX = 512;
+
+function tocco_spedisci(tipo, a, b, ms) {
+  const id = tocco_prossimo_id();
+  const us = tocco_istante_us(ms);
+  const corpo = tocco_codifica(tipo, id, us, a, b);
+  const c = window.REMOTIX_INPUT;
+  if (c && typeof c.manda === "function") {
+    try { c.manda(tipo, corpo); }
+    catch (e) { nota("⛔ il canale di input ha rifiutato un messaggio del tocco: " + e); }
+  }
+  const letto = tocco_decodifica(tipo, corpo);
+  letto.sul_filo = !!(c && typeof c.manda === "function");
+  TOCCO_SPEDITI.push(letto);
+  if (TOCCO_SPEDITI.length > TOCCO_SPEDITI_MAX) TOCCO_SPEDITI.shift();
+  return letto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * IL PUNTATORE — `SPECIFICHE.md` §7.1: lo disegna il CLIENT, e il dito lo
+ * trascina come su un trackpad.
+ *
+ * ⛔ LA CUCITURA CHE CHIEDO (la seconda, e va all'anello A7 o al coordinatore):
+ *
+ *     window.REMOTIX_PUNTATORE = {
+ *       muovi(x_tela: number, y_tela: number): void,
+ *       mostra(): void,
+ *       nascondi(): void
+ *     }
+ *
+ *   Le coordinate sono quelle della TELA (§7.3), non della vista: e' l'unico
+ *   sistema di riferimento che tocco e classico hanno in comune, e la
+ *   conversione verso il vetro la fa chi disegna.
+ *
+ * ⚠ RIPIEGO DICHIARATO, e il suo PREZZO si dichiara con lui: finche' quella
+ *   cucitura non c'e', il puntatore lo disegna un `<div>` **sopra** la tela.
+ *   ⛔ `web.md` S4 dice che un elemento sopra la tela fa cadere il percorso
+ *   overlay e la tela desincronizzata.  ⇒ Questo ripiego serve a mettere il
+ *   gesto sotto il dito di Nic OGGI; il puntatore definitivo si disegna DENTRO
+ *   la tela, e non e' mio.  Appena `REMOTIX_PUNTATORE` compare, il ripiego si
+ *   nasconde da solo.
+ * ══════════════════════════════════════════════════════════════════════════ */
+let tocco_ripiego_elemento = null;
+function tocco_puntatore_ripiego() {
+  if (!tocco_ripiego_elemento) {
+    const d = document.createElement("div");
+    d.id = "puntatore-di-ripiego";
+    d.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;z-index:9;"
+      + "pointer-events:none;display:none;"
+      + "border-left:2px solid #fff;border-top:2px solid #fff;"
+      + "border-right:9px solid transparent;border-bottom:14px solid transparent;"
+      + "filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000);";
+    document.body.appendChild(d);
+    tocco_ripiego_elemento = d;
+    nota("⚠ RIPIEGO: il puntatore del tocco e' un elemento SOPRA la tela — "
+         + "`web.md` S4 — perche' `REMOTIX_PUNTATORE` non c'e' ancora");
+  }
+  return tocco_ripiego_elemento;
+}
+
+/* La tela in vigore, e il rettangolo in cui il fotogramma e' stato dipinto.
+   ⛔ `schermo.dipinta` e' l'unico posto che sa DOVE dentro la tela sta
+   l'immagine, bande comprese: senza, il puntatore andrebbe a finire sulle
+   bande nere.  ⚠ Senza sessione non c'e' ne' l'una ne' l'altro: si dichiara
+   una tela di comodo e lo si scrive, invece di non funzionare affatto. */
+const TOCCO_TELA_SENZA_SESSIONE = [1920, 1080];
+function tocco_tela() {
+  if (schermo.tela_l > 0 && schermo.tela_a > 0) return [schermo.tela_l, schermo.tela_a];
+  return TOCCO_TELA_SENZA_SESSIONE;
+}
+
+/* Da tela a vetro e ritorno.  ⭐ Si passa da `getBoundingClientRect()`, che
+   tiene gia' dentro il fattore del dispositivo E l'ingrandimento del pizzico:
+   una trasformazione CSS entra nel rettangolo da sola, e cosi' non c'e' un
+   secondo posto in cui l'ingrandimento va ricordato (la forma E2 di
+   `REVIEWER.md`: due autorita' sullo stesso numero). */
+function tocco_geometria() {
+  const tela = $("schermo");
+  const r = tela.getBoundingClientRect();
+  const [tl, ta] = tocco_tela();
+  const d = schermo.dipinta;
+  /* Quanti pixel di buffer vale un pixel di tela, e dove comincia l'immagine. */
+  let bx0 = 0, by0 = 0, sx = tela.width / tl, sy = tela.height / ta;
+  if (d && d.fotogramma && d.fotogramma[0] > 0) {
+    bx0 = d.x; by0 = d.y;
+    sx = d.l / d.fotogramma[0]; sy = d.a / d.fotogramma[1];
+  }
+  /* Da pixel di buffer a pixel di vetro. */
+  const vx = tela.width ? r.width / tela.width : 0;
+  const vy = tela.height ? r.height / tela.height : 0;
+  return { r: r, bx0: bx0, by0: by0, sx: sx, sy: sy, vx: vx, vy: vy, tl: tl, ta: ta };
+}
+
+/* La posizione del puntatore, in coordinate di TELA e in virgola mobile: si
+   arrotonda solo quando si spedisce, o trascinare piano non muoverebbe mai
+   niente (ogni passo verrebbe mangiato dall'arrotondamento). */
+let tocco_px = 0, tocco_py = 0, tocco_puntatore_noto = false;
+
+/* ⛔⭐ E LA CUCITURA SI VERIFICA, NON SI SPERA — ed e' precisamente la lezione di
+ * `fasi/rapporti/F5-desktop-vero.md`: *il difetto della fase 3 non era DENTRO un
+ * pezzo, era FRA due pezzi ciascuno corretto per conto suo*.
+ *
+ * ⛔ IL DIFETTO TROVATO, 14 agosto 2026, leggendo l'ancora dell'anello A7:
+ *    `REMOTIX_PUNTATORE.muovi()` scrive la posizione e ridisegna, ma **non
+ *    accende il flag `cl_noto`** — che e' quello che `cl_disegna()` guarda per
+ *    decidere se il puntatore si vede.  ⇒ Su una pagina che nasce in
+ *    disposizione a TOCCO e non entra mai nel classico, `cl_noto` resta falso e
+ *    ⛔ **il puntatore non compare mai**: il dito trascina qualcosa di
+ *    invisibile.  Le due meta' sono corrette ciascuna per conto sua.
+ *
+ * ⭐ La cura e' UNA RIGA, e sta nell'ancora di A7 (che non e' mia):
+ *       muovi: function (x, y) { cl_px = x; cl_py = y; cl_noto = true; … }
+ *
+ * ⇒ Qui si CONTROLLA, una volta sola, che il puntatore condiviso si veda
+ *   davvero; se non si vede si dichiara e si ripiega sul nostro (`CODER.md`
+ *   §4.2).  ⚠ Appena la riga di sopra c'e', il controllo passa e il ripiego non
+ *   nasce nemmeno: non ci saranno mai due frecce. */
+let tocco_cucitura_giudicata = false, tocco_cucitura_rotta = false;
+function tocco_cucitura_verifica() {
+  if (tocco_cucitura_giudicata) return !tocco_cucitura_rotta;
+  tocco_cucitura_giudicata = true;
+  /* ⚠ `puntatore` e' l'identificatore che l'ancora `F4-INPUT-CLASSICO`
+     dichiara nel commento rivolto a questa: e' un accoppiamento, ed e' un
+     accoppiamento DICHIARATO — serve solo a giudicare la cucitura, mai a
+     cambiarne il contenuto. */
+  const e = document.getElementById("puntatore");
+  const visibile = !!e && e.getBoundingClientRect().width > 0
+                   && getComputedStyle(e).display !== "none";
+  if (!visibile) {
+    tocco_cucitura_rotta = true;
+    nota("⛔ CUCITURA ROTTA: `REMOTIX_PUNTATORE.muovi()` non rende visibile il "
+         + "puntatore in disposizione a tocco (manca `cl_noto = true` in "
+         + "`muovi`, ancora `F4-INPUT-CLASSICO`) — si ripiega sul puntatore "
+         + "di questa ancora");
+  }
+  return !tocco_cucitura_rotta;
+}
+
+function tocco_puntatore_disegna() {
+  const p = window.REMOTIX_PUNTATORE;
+  if (p && typeof p.muovi === "function" && !tocco_cucitura_rotta) {
+    if (tocco_ripiego_elemento) tocco_ripiego_elemento.style.display = "none";
+    p.muovi(tocco_px, tocco_py);
+    if (typeof p.mostra === "function") p.mostra();
+    if (tocco_cucitura_verifica()) return;
+    /* ⚠ La cucitura era rotta: si ricade sul ripiego, in questo stesso giro. */
+  }
+  const g = tocco_geometria();
+  const d = tocco_puntatore_ripiego();
+  d.style.display = modo_in_vigore === "tocco" ? "block" : "none";
+  d.style.left = (g.r.left + (g.bx0 + tocco_px * g.sx) * g.vx) + "px";
+  d.style.top = (g.r.top + (g.by0 + tocco_py * g.sy) * g.vy) + "px";
+}
+
+/* ⛔ Si satura, non si sfora: §7.3 impone `0 ≤ x < tela_larghezza`, e una
+   coordinata fuori intervallo il server la respinge con `ERRORE_PROTOCOLLO`.
+   ⚠ E `SPECIFICHE.md` §8.3 dice «mai staccare»: chiudere la sessione perche'
+     il dito e' arrivato al bordo sarebbe la peggiore delle risposte. */
+function tocco_muovi_puntatore(dx_vetro, dy_vetro, ms) {
+  const g = tocco_geometria();
+  /* Da pixel di vetro a pixel di tela: e' l'inverso esatto della catena di
+     sopra, ingrandimento compreso. */
+  const kx = (g.vx * g.sx) || 1, ky = (g.vy * g.sy) || 1;
+  tocco_px += dx_vetro * TOCCO_SOGLIE.GUADAGNO / kx;
+  tocco_py += dy_vetro * TOCCO_SOGLIE.GUADAGNO / ky;
+  tocco_px = Math.min(g.tl - 1, Math.max(0, tocco_px));
+  tocco_py = Math.min(g.ta - 1, Math.max(0, tocco_py));
+  tocco_puntatore_noto = true;
+  tocco_puntatore_disegna();
+  /* ⛔ NIENTE ACCORPAMENTO, e NIENTE `requestAnimationFrame`.  Due ragioni:
+     `CODER.md` §1-bis — «ogni memoria intermedia compra fluidita' e vende
+     risposta», e il ritardo pesa piu' dei fotogrammi — e `web.md` §6.2, dove
+     `[M]` il 13 agosto su Xvfb `requestAnimationFrame` NON GIRA MAI (0 quadri
+     in 3 secondi).  Un accorpamento appeso al quadro renderebbe il tocco muto
+     proprio sul banco. */
+  tocco_spedisci(TIPO_INPUT.PUNTATORE, Math.floor(tocco_px), Math.floor(tocco_py), ms);
+}
+
+function tocco_centra_puntatore() {
+  if (tocco_puntatore_noto) return;
+  const [tl, ta] = tocco_tela();
+  tocco_px = Math.floor(tl / 2); tocco_py = Math.floor(ta / 2);
+  tocco_puntatore_noto = true;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐ IL RICONOSCITORE DEI SETTE GESTI — `SPECIFICHE.md` §7.2.
+ *
+ * ⛔⛔ TAP-E-MEZZO E DOPPIO CLIC SONO LO STESSO GESTO, E NON SI SEPARANO.
+ *
+ * E' il risultato piu' importante di questo pezzo, ed e' una refutazione della
+ * frase «i sette gesti si distinguono senza ambiguita'».
+ *
+ * Il tap-e-mezzo e' «tap, poi premi e trascina».  Il doppio clic — che nella
+ * tabella dei sette NON C'E', e che l'utente fa cento volte al giorno per
+ * aprire un file — e' «tap, poi tap».  ⇒ Nell'istante in cui il secondo dito
+ * si appoggia, i due gesti hanno prodotto **esattamente la stessa sequenza di
+ * eventi**, e nessuna soglia in millisecondi o in pixel li distingue: la
+ * differenza sta tutta in quel che il dito fa DOPO.
+ *
+ * ⭐ E la cura non e' una soglia, e' un cambio di forma: **si preme al
+ *    contatto e si rilascia al distacco**.
+ *
+ *    | il dito si stacca subito e fermo | premuto, rilasciato ⇒ e' il secondo clic di un DOPPIO CLIC |
+ *    | il dito resta giu' e trascina    | premuto, il puntatore segue, rilasciato ⇒ TRASCINAMENTO |
+ *
+ *    Le due strade partono dallo stesso byte e divergono da sole.  ⇒ Nessuna
+ *    attesa, nessun ritardo aggiunto, e il doppio clic non si rompe.
+ *
+ * ⛔ La stesura «prudente» — aspettare T millisecondi per decidere se e' un
+ *    trascinamento — sembra piu' sicura e rompe il doppio clic ritardandone il
+ *    secondo colpo di T: e' la forma di errore che questo riquadro esiste per
+ *    impedire alla prossima riscrittura.
+ *
+ * ⚠ Il prezzo, ed e' dichiarato: sul filo un tap-e-mezzo e un doppio clic
+ *   sono la STESSA cosa, e a distinguerli e' il desktop remoto (dalla durata
+ *   della pressione).  Il che vuol dire che se il desktop remoto e' lento o il
+ *   filo e' congestionato, un doppio clic puo' arrivare come un trascinamento
+ *   di zero pixel — che e' innocuo — e non il contrario.
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ * ⛔⛔ E LA COPPIA CHE SI CONFONDE DAVVERO — la seconda refutazione.
+ *
+ * `DECISIONI.md` §5-bis.3 dice: «tap e trascinamento a due dita non si
+ * confondono — un tap e' breve e fermo».  ⭐ **E' vero, e nomina la coppia
+ * sbagliata.**  Quei due si separano con due soglie ovvie (180 ms, 9 px).
+ *
+ * La coppia che si confonde davvero e' **2 DITA TAP contro 1 DITO TAP
+ * RIPETUTO**, cioe' un clic destro che esce come un doppio clic sinistro.
+ * Succede quando le due dita **non si sovrappongono nel tempo**: indice giu'
+ * a 0 ms e su a 100, medio giu' a 130 e su a 230.  Ciascuno dei due contatti,
+ * per conto suo, e' un tap a un dito perfetto.
+ *
+ * ⛔ E non esiste una soglia in millisecondi che li separi, perche' la stessa
+ *    identica sequenza e' anche «clicco qui, poi clicco subito li'» — che e'
+ *    un gesto legittimo e frequente.  L'unica cura sarebbe **ritardare OGNI
+ *    clic sinistro di 300 ms** aspettando di vedere se arriva un secondo dito,
+ *    e trecento millisecondi su ogni clic e' il prezzo che `CODER.md` §1-bis
+ *    vieta (il tetto del ritardo NOSTRO e' 50 ms in tutto).
+ *
+ * ⇒ ⭐ LA SOGLIA DICHIARATA, ed e' una sovrapposizione e non un tempo:
+ *
+ *      **due dita fanno un gesto a due dita se sono giu' insieme per almeno
+ *      UN campione.  Sotto quella soglia sono due gesti a un dito, e il clic
+ *      destro esce come doppio clic sinistro.**
+ *
+ *   ⚠ Quanto sia frequente quel caso con un dito vero e' `[?]`: quanto si
+ *     scollano indice e medio di una mano non l'ha misurato nessuno qui.  E'
+ *     la prima cosa da mettere sotto il dito di Nic.
+ *
+ * ⭐ E il tap-e-mezzo NON cade in quella trappola, perche' li' la separazione
+ *    e' SPAZIALE e non temporale: due contatti che non si sovrappongono sono
+ *    lo stesso dito che ribatte se ricadono entro **40 px CSS ~ 10 mm** — la
+ *    larghezza del dito che `SPECIFICHE.md` §7.1 usa gia' per un'altra
+ *    ragione — e due dita diverse se ricadono piu' lontano.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+const tocco_dita = new Map();   /* identificatore → {x0,y0,x,y,px,py,t0} */
+let tocco_gesto = null;         /* il gesto in corso, o null */
+let tocco_ultimo_tap = null;    /* {t, x, y} — l'ultimo tap a un dito concluso */
+let tocco_bloccato = false;     /* il tasto sinistro tenuto giu' dal tap-e-mezzo */
+let tocco_zoom = 1;             /* l'ingrandimento della VISTA, non dell'applicazione */
+let tocco_ultimo_gesto = null;  /* il verdetto dell'ultimo gesto, coi suoi numeri */
+
+function tocco_distanza(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+
+function tocco_nuovo_gesto(t) {
+  return { t0: t, max_dita: 0, sposta: 0, deciso: null, durata_max: 0,
+           coppia: null, d0: 0, cx0: 0, cy0: 0, cx: 0, cy: 0,
+           acc_x: 0, acc_y: 0, zoom0: 1, x_fine: 0, y_fine: 0 };
+}
+
+function tocco_centroide() {
+  let x = 0, y = 0, n = 0;
+  for (const d of tocco_dita.values()) { x += d.x; y += d.y; n++; }
+  return n ? [x / n, y / n] : [0, 0];
+}
+
+function tocco_giu(id, x, y, t) {
+  if (tocco_dita.size === 0) {
+    /* ⭐ L'AGGANCIO DEL TAP-E-MEZZO, e si decide QUI — al contatto, non dopo. */
+    if (tocco_ultimo_tap
+        && (t - tocco_ultimo_tap.t) <= TOCCO_SOGLIE.T_SEQUENZA
+        && tocco_distanza(x, y, tocco_ultimo_tap.x, tocco_ultimo_tap.y)
+             <= TOCCO_SOGLIE.D_STESSO_DITO) {
+      tocco_bloccato = true;
+      tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.SINISTRO, 1, t);
+    }
+    tocco_gesto = tocco_nuovo_gesto(t);
+  }
+  tocco_dita.set(id, { x0: x, y0: y, x: x, y: y, px: x, py: y, t0: t });
+  const g = tocco_gesto;
+  g.max_dita = Math.max(g.max_dita, tocco_dita.size);
+  if (tocco_dita.size === 2) {
+    const v = Array.from(tocco_dita.values());
+    g.d0 = tocco_distanza(v[0].x, v[0].y, v[1].x, v[1].y);
+    const c = tocco_centroide(); g.cx0 = c[0]; g.cy0 = c[1]; g.cx = c[0]; g.cy = c[1];
+    g.zoom0 = tocco_zoom;
+    g.coppia = tocco_chiave_dita();
+  }
+  tocco_centra_puntatore();
+}
+
+/* La chiave dell'insieme di dita giu' in questo istante.  ⛔ Serve a una cosa
+   sola, e la spiega il riquadro qui sotto. */
+function tocco_chiave_dita() {
+  return Array.from(tocco_dita.keys()).sort().join(",");
+}
+
+/* ⛔ Aggiorna SOLO le posizioni, senza decidere niente.  Lo chiama il
+   `touchend`: quel che serve li' e' l'ultima posizione del dito che si stacca
+   — la confronta il tap-e-mezzo contro i 40 px — e NON un giro di
+   riconoscimento.  Vedi il riquadro qui sotto: e' meta' della cura. */
+function tocco_aggiorna(campioni) {
+  const g = tocco_gesto;
+  if (!g) return;
+  for (const c of campioni) {
+    const d = tocco_dita.get(c.id);
+    if (!d) continue;
+    d.px = d.x; d.py = d.y; d.x = c.x; d.y = c.y;
+    g.sposta = Math.max(g.sposta, tocco_distanza(d.x, d.y, d.x0, d.y0));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔ UN DITO CHE SI STACCA SOMIGLIA A UNO SCORRIMENTO — `[M]` 14 agosto 2026,
+ *     banco `04-b28-gesti.py`, caso G6, e la riga e' nata da un ROSSO.
+ *
+ * Il tap a TRE dita non produceva **nessun clic centrale**, e il gesto letto
+ * sulla carta era perfetto.  Il motivo:
+ *
+ *   il centro di DUE dita a −40 e 0  sta a −20
+ *   il centro di DUE dita a  0 e +40 sta a +20
+ *
+ * Tre dita che si staccano una per volta passano dal primo insieme al secondo
+ * **senza che nessun dito si sia mosso di un micron** — e il centro si sposta
+ * di 40 px, cioe' oltre i 9 px della sbavatura.  ⇒ Il riconoscitore decideva
+ * «rotella», e un gesto deciso non e' piu' un tap: il clic centrale non
+ * usciva mai.
+ *
+ * ⭐ E' una CONFUSIONE vera, non un errore di battitura, e vale per ogni gesto
+ *    a piu' di due dita: **la differenza fra due centri ha senso solo se e'
+ *    calcolata sullo STESSO insieme di dita.**
+ *
+ * ⇒ La cura e' in due pezzi:
+ *   1. il `touchend` non fa piu' un giro di riconoscimento (`tocco_aggiorna`);
+ *   2. quando l'insieme delle dita CAMBIA, il riferimento a due dita si
+ *      RIFONDA e non si decide niente in quel campione.
+ * ══════════════════════════════════════════════════════════════════════════ */
+function tocco_muovi(campioni, t) {
+  const g = tocco_gesto;
+  if (!g) return;
+  tocco_aggiorna(campioni);
+
+  if (tocco_dita.size === 1) {
+    /* ⛔ Un dito solo, MA il gesto ne aveva due: qualcuno ha staccato e resta
+       un residuo.  Non si muove niente.  Senza questa riga il puntatore fa un
+       salto ogni volta che si finisce di scorrere — l'altro dito si stacca
+       sempre un attimo prima — ed e' il difetto che si vede di piu'. */
+    if (g.max_dita > 1) return;
+    const d = tocco_dita.values().next().value;
+    if (g.deciso !== "puntatore") {
+      if (!tocco_bloccato && g.sposta <= TOCCO_SOGLIE.D_TAP) return;
+      /* ⚠ La sbavatura si CONSUMA: il primo campione che supera i 9 px non
+         muove niente.  Applicandolo, il puntatore salterebbe di dieci pixel
+         nell'istante in cui il gesto smette di essere un tap — e sarebbe uno
+         scatto visibile all'inizio di ogni trascinamento. */
+      g.deciso = "puntatore";
+      return;
+    }
+    tocco_muovi_puntatore(d.x - d.px, d.y - d.py, t);
+    return;
+  }
+
+  if (tocco_dita.size === 2) {
+    const v = Array.from(tocco_dita.values());
+    const d = tocco_distanza(v[0].x, v[0].y, v[1].x, v[1].y);
+    const c = tocco_centroide();
+    /* ⛔ L'insieme e' cambiato: si rifonda il riferimento e NON si decide.
+       E' la seconda meta' della cura del caso G6 — vedi il riquadro sopra. */
+    const chiave = tocco_chiave_dita();
+    if (g.coppia !== chiave) {
+      g.coppia = chiave;
+      g.d0 = d; g.cx0 = c[0]; g.cy0 = c[1]; g.cx = c[0]; g.cy = c[1];
+      g.zoom0 = tocco_zoom;
+      return;
+    }
+    /* ⛔⭐ ROTELLA CONTRO PIZZICO — e questa e' la TERZA confusione, quella che
+     *     la tabella dei sette non nomina affatto.  Sono tutt'e due «due dita
+     *     che si muovono», e nessuna delle due e' un tap: le soglie del tap non
+     *     le separano.
+     *
+     *     Si guardano DUE grandezze e si sceglie la piu' grande:
+     *       — di quanto e' cambiata la DISTANZA fra le dita  → pizzico
+     *       — di quanto si e' spostato il loro CENTRO        → rotella
+     *
+     * ⛔ E la decisione si prende UNA volta e si tiene per tutto il gesto.
+     *    Rigiudicare a ogni campione farebbe oscillare fra rotella e zoom
+     *    dentro lo stesso trascinamento, che e' peggio di sbagliare. */
+    if (g.deciso === null) {
+      const dd = Math.abs(d - g.d0);
+      const dc = tocco_distanza(c[0], c[1], g.cx0, g.cy0);
+      if (dd > TOCCO_SOGLIE.D_PIZZICO && dd > dc) g.deciso = "pizzico";
+      else if (dc > TOCCO_SOGLIE.D_TAP) g.deciso = "rotella";
+    }
+    if (g.deciso === "rotella") {
+      /* ⛔ IL SEGNO, e viene da `RCP.md` §7.3: «il client manda +120 quando
+         l'utente gira la rotella IN SU».  Due dita che scendono spingono il
+         foglio in giu', che e' quel che fa la rotella girata in su ⇒ dita giu'
+         (dy > 0, perche' y cresce verso il basso) = **+120**.
+         `[?]` L'asse ORIZZONTALE: `RCP.md` non ne fissa il verso e nessuno
+         l'ha misurato.  Qui si specchia il verticale, e resta da giudicare. */
+      g.acc_y += (c[1] - g.cy) / TOCCO_SOGLIE.PX_PER_SCATTO * 120;
+      g.acc_x += (c[0] - g.cx) / TOCCO_SOGLIE.PX_PER_SCATTO * 120;
+      /* ⛔ Mezzi scatti: §7.3 dice che 60 e' mezzo scatto e NON DEVE essere
+         arrotondato a zero.  ⇒ si spedisce a multipli di 60 e il resto resta
+         nell'accumulatore, invece di buttarlo. */
+      const qx = Math.trunc(g.acc_x / 60) * 60, qy = Math.trunc(g.acc_y / 60) * 60;
+      if (qx || qy) {
+        g.acc_x -= qx; g.acc_y -= qy;
+        tocco_spedisci(TIPO_INPUT.ROTELLA, qx, qy, t);
+      }
+    } else if (g.deciso === "pizzico") {
+      /* ⛔ Il pizzico ingrandisce la VISTA del client, non l'applicazione
+         (`SPECIFICHE.md` §7.2): non parte NIENTE sul filo, e la tela in vigore
+         non si tocca.  ⚠ RIPIEGO DICHIARATO: qui si ingrandisce con una
+         trasformazione CSS, che RICAMPIONA — ingrandendo si vede sfocato.
+         L'ingrandimento vero va dentro `componi()`, che non e' mio. */
+      const z = Math.min(TOCCO_SOGLIE.ZOOM_MAX,
+                         Math.max(1, g.zoom0 * (g.d0 ? d / g.d0 : 1)));
+      tocco_ingrandisci(z);
+    }
+    g.cx = c[0]; g.cy = c[1];
+  }
+}
+
+function tocco_su(id, t) {
+  const d = tocco_dita.get(id);
+  if (d && tocco_gesto) {
+    tocco_gesto.x_fine = d.x; tocco_gesto.y_fine = d.y;
+    /* ⛔⭐ LA DURATA SI MISURA PER CONTATTO, NON SUL GESTO INTERO — e questa
+     * riga e' nata da un ROSSO del banco, `[M]` 14 agosto 2026, caso G6.
+     *
+     * Misurata sul gesto (dal primo dito giu' all'ultimo su), la soglia dei
+     * 180 ms ⛔ **bocciava il tap a TRE dita**: tre dita non si appoggiano
+     * nello stesso istante e non si staccano nello stesso istante, e la somma
+     * degli scarti mangia da sola il bilancio.  Il clic centrale non usciva
+     * mai — e il gesto pulito, letto sulla carta, sembrava giusto.
+     *
+     * ⇒ Un tap e' breve se **OGNI contatto** e' durato meno di `T_TAP`.  E' la
+     *   regola di libinput, ed e' l'unica che sopravvive a piu' di un dito.
+     * ⚠ Non serve un tetto sul gesto intero: due contatti che durano poco e si
+     *   sovrappongono non possono dare un gesto lungo, e due che NON si
+     *   sovrappongono sono gia' due gesti distinti. */
+    tocco_gesto.durata_max = Math.max(tocco_gesto.durata_max, t - d.t0);
+  }
+  tocco_dita.delete(id);
+  if (tocco_dita.size > 0) return;
+
+  const g = tocco_gesto;
+  tocco_gesto = null;
+  if (!g) return;
+
+  if (tocco_bloccato) {
+    tocco_bloccato = false;
+    tocco_ultimo_tap = null;
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.SINISTRO, 0, t);
+    return;
+  }
+
+  const fermo = g.sposta <= TOCCO_SOGLIE.D_TAP;
+  const breve = g.durata_max <= TOCCO_SOGLIE.T_TAP;   /* per CONTATTO — vedi sopra */
+  /* ⛔ Il verdetto dell'ultimo gesto, con i NUMERI che l'hanno prodotto.  Serve
+     a una cosa sola, e non e' un ornamento: quando un gesto non esce, dice
+     QUALE delle tre condizioni ha ceduto — durata, sbavatura o decisione —
+     invece di lasciarlo dedurre.  `CODER.md` §3.7: non si deduce, si chiede. */
+  tocco_ultimo_gesto = { dita: g.max_dita, durata_max: Math.round(g.durata_max),
+                         sposta: Math.round(g.sposta * 10) / 10,
+                         deciso: g.deciso, fermo: fermo, breve: breve };
+  if (g.deciso !== null || !fermo || !breve) {
+    /* ⚠ Non era un tap.  ⛔ E qui si azzera l'aggancio del tap-e-mezzo: dopo
+       un trascinamento un contatto nuovo NON deve premere da solo. */
+    tocco_ultimo_tap = null;
+    return;
+  }
+
+  /* ⛔ IL CONTEGGIO E' IL MASSIMO DI DITA CONTEMPORANEE, non quelle che c'erano
+     all'inizio ne' quelle rimaste alla fine.  E' quel che rende innocuo il
+     secondo dito che si appoggia trenta millisecondi dopo: finche' i due si
+     sovrappongono anche per un solo campione, il gesto e' a due dita. */
+  const n = g.max_dita;
+  if (n === 1) {
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.SINISTRO, 1, t);
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.SINISTRO, 0, t);
+    tocco_ultimo_tap = { t: t, x: g.x_fine, y: g.y_fine };
+  } else if (n === 2) {
+    tocco_ultimo_tap = null;
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.DESTRO, 1, t);
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.DESTRO, 0, t);
+  } else if (n === 3) {
+    tocco_ultimo_tap = null;
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.CENTRALE, 1, t);
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.CENTRALE, 0, t);
+  } else {
+    /* ⚠ Quattro dita non sono nella tabella dei sette: non si inventa un
+       gesto, e si dichiara invece di tacere (`CODER.md` §4.2). */
+    tocco_ultimo_tap = null;
+    nota("⚠ tocco: " + n + " dita insieme — nessun gesto della tabella dei sette, ignorato");
+  }
+}
+
+/* ⛔ Il rilascio di tutto quel che e' premuto, e non e' una cortesia: e' la
+   stessa regola che `SPECIFICHE.md` §7.3-bis impone alla tastiera («la pagina
+   rilascia tutto quel che ha premuto quando perde il fuoco») e che `RCP.md`
+   §7.3 impone al server al distacco.  Un tasto sinistro rimasto giu' perche'
+   una notifica ha rubato il fuoco a meta' trascinamento rende il desktop
+   inservibile, e nessuno collega le due cose. */
+function tocco_lascia_tutto(perche) {
+  tocco_dita.clear();
+  tocco_gesto = null;
+  tocco_ultimo_tap = null;
+  if (tocco_bloccato) {
+    tocco_bloccato = false;
+    tocco_spedisci(TIPO_INPUT.PULSANTE, TOCCO_BTN.SINISTRO, 0, performance.now());
+    nota("tocco: rilasciato il sinistro tenuto giu' — " + perche);
+  }
+}
+
+function tocco_ingrandisci(z) {
+  tocco_zoom = z;
+  const tela = $("schermo");
+  tela.style.transformOrigin = "0 0";
+  tela.style.transform = z > 1.001 ? "scale(" + z + ")" : "";
+  tocco_puntatore_disegna();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * DAGLI EVENTI DEL BROWSER AI CAMPIONI.
+ *
+ * ⛔ L'orologio: si usa `event.timeStamp` — che e' l'istante VERO dell'evento —
+ *    e non `performance.now()`, che e' l'istante in cui il gestore e' stato
+ *    chiamato.  Fra i due c'e' la coda del thread principale, ed e' proprio la
+ *    grandezza che sposterebbe un tap sopra i 180 ms sotto carico.
+ * ⚠ Ma `timeStamp` non ha la stessa base su tutti i motori: si accetta solo se
+ *   e' plausibile — finito, positivo, e a meno di cinque secondi da
+ *   `performance.now()` — altrimenti si ripiega e SI DICHIARA.
+ * ══════════════════════════════════════════════════════════════════════════ */
+let tocco_orologio_ripiegato = false;
+function tocco_quando(ev) {
+  const ora = performance.now();
+  const t = ev.timeStamp;
+  if (Number.isFinite(t) && t > 0 && Math.abs(t - ora) < 5000) return t;
+  if (!tocco_orologio_ripiegato) {
+    tocco_orologio_ripiegato = true;
+    nota("⚠ RIPIEGO: `event.timeStamp` non e' sulla base di `performance.now()`"
+         + " (" + t + " contro " + Math.round(ora) + ") — le soglie dei gesti"
+         + " si misurano sull'istante del gestore, non su quello dell'evento");
+  }
+  return ora;
+}
+
+function tocco_campioni(lista) {
+  const out = [];
+  for (const t of lista) out.push({ id: t.identifier, x: t.clientX, y: t.clientY });
+  return out;
+}
+
+function su_touchstart(ev) {
+  ev.preventDefault();
+  const t = tocco_quando(ev);
+  for (const c of tocco_campioni(ev.changedTouches)) tocco_giu(c.id, c.x, c.y, t);
+}
+function su_touchmove(ev) {
+  ev.preventDefault();
+  tocco_muovi(tocco_campioni(ev.changedTouches), tocco_quando(ev));
+}
+function su_touchend(ev) {
+  ev.preventDefault();
+  const t = tocco_quando(ev);
+  /* ⛔ Si aggiorna la posizione PRIMA di staccare: `changedTouches` di un
+     `touchend` porta l'ultima posizione, ed e' quella che il tap-e-mezzo
+     confronta contro i 40 px. */
+  tocco_aggiorna(tocco_campioni(ev.changedTouches));
+  for (const c of tocco_campioni(ev.changedTouches)) tocco_su(c.id, t);
+}
+function su_touchcancel(ev) { tocco_lascia_tutto("il sistema ha annullato il tocco"); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ IL PASSAGGIO AUTOMATICO — `DECISIONI.md` §5-bis.0-bis.
+ *
+ * ⛔ IL CONTESTO SI LEGGE DA CHE COSA C'E', NON DAL SISTEMA OPERATIVO.  In
+ *    tutto questo blocco non compare `navigator.userAgent`, e non e' una
+ *    finezza: DeX e' Android con un mouse vero, un portatile e' Linux con uno
+ *    schermo tattile, e la domanda «Android o Linux?» risponde male a
+ *    tutt'e due.
+ *
+ * Le prove, dalla piu' forte alla piu' debole:
+ *
+ *   1. ⭐ **un evento di puntatore VERO** (`pointerdown`/`pointermove` con
+ *      `pointerType`).  E' l'unica prova che l'utente sta usando quel
+ *      dispositivo ADESSO, e non che ne ha uno attaccato.  ⚠ E serve perche'
+ *      `[?]` non e' misurato che Chrome per Android rivaluti `any-pointer:
+ *      fine` quando si attacca un mouse Bluetooth a sessione aperta;
+ *   2. `(any-pointer: fine)` — c'e' un puntatore fine sul dispositivo;
+ *   3. `(pointer: coarse)` — il puntatore PRIMARIO e' grosso, cioe' un dito;
+ *   4. ⚠ RIPIEGO: la larghezza della finestra, se `matchMedia` non risponde.
+ *
+ * ⛔ E il segno piu' forte VINCE su quello piu' debole solo fino al cambio
+ *    successivo dell'hardware: quando una media query cambia, l'osservazione
+ *    si butta e si riparte dal contesto.  ⇒ prendi il mouse e passa al
+ *    classico, tocca lo schermo e torna al tocco, stacca il mouse e il
+ *    contesto ricomanda.
+ * ══════════════════════════════════════════════════════════════════════════ */
+const TOCCO_LARGHEZZA_CLASSICO = 800;   /* px CSS, solo per il ripiego */
+
+let modo_in_vigore = null, modo_perche = "";
+let tocco_visto = null;      /* {tipo: "mouse"|"touch"|"pen", t} — l'ultimo usato */
+
+/* ⛔ La forzatura sta nella QUERY, non in un'impostazione dell'interfaccia.
+   §5-bis.0-bis vuole che l'utente non debba andare a cercare niente; questa
+   e' la via di servizio del banco e della diagnosi, e si DICHIARA nel
+   registro quando e' in vigore. */
+const TOCCO_FORZATA = (function () {
+  const v = new URLSearchParams(location.search).get("disposizione")
+         || new URLSearchParams(location.hash.replace(/^#/, "")).get("disposizione");
+  return (v === "tocco" || v === "classico") ? v : null;
+})();
+
+function tocco_interroga(q) {
+  try { const m = matchMedia(q); return typeof m.matches === "boolean" ? m.matches : null; }
+  catch (e) { return null; }
+}
+
+function contesto_letto() {
+  return {
+    puntatore_fine: tocco_interroga("(any-pointer: fine)"),
+    puntatore_grosso: tocco_interroga("(pointer: coarse)"),
+    passaggio: tocco_interroga("(any-hover: hover)"),
+    larghezza: document.documentElement.clientWidth || innerWidth || 0,
+    altezza: document.documentElement.clientHeight || innerHeight || 0,
+    usato: tocco_visto ? tocco_visto.tipo : null,
+    forzata: TOCCO_FORZATA,
+  };
+}
+
+function disposizione_dal_contesto(c) {
+  if (c.forzata)
+    return [c.forzata, "forzata da `?disposizione=" + c.forzata + "` — via di servizio, non un'impostazione"];
+  if (c.usato === "mouse" || c.usato === "pen")
+    return ["classico", "l'utente ha appena usato un puntatore fine (`pointerType=" + c.usato + "`)"];
+  if (c.usato === "touch")
+    return ["tocco", "l'utente ha appena usato un dito (`pointerType=touch`)"];
+  if (c.puntatore_fine === true)
+    return ["classico", "`(any-pointer: fine)` — c'e' un puntatore fine attaccato"];
+  if (c.puntatore_grosso === true)
+    return ["tocco", "`(pointer: coarse)` e nessun puntatore fine — un dito e basta"];
+  if (c.puntatore_fine === null || c.puntatore_grosso === null)
+    return [c.larghezza >= TOCCO_LARGHEZZA_CLASSICO ? "classico" : "tocco",
+            "⚠ RIPIEGO: `matchMedia` non risponde alle query sul puntatore, si guarda"
+            + " la larghezza (" + c.larghezza + " px CSS contro " + TOCCO_LARGHEZZA_CLASSICO + ")"];
+  return ["classico", "nessun puntatore grosso dichiarato"];
+}
+
+/* ⛔ La chiamata all'anello A7.  La firma assunta e' questa, ed e' scritta
+   identica nel rapporto perche' il coordinatore possa cucire le due meta':
+
+       window.REMOTIX_CLASSICO = {
+         entra(perche: string): void,
+         esci(): void
+       }
+
+   ⚠ `perche` puo' essere ignorato: serve solo perche' A7 sappia se sta
+     entrando da un gesto dell'utente — e `Pointer Lock` un gesto lo pretende.
+   ⚠ RIPIEGO DICHIARATO: se quell'oggetto non c'e', la disposizione classica
+     entra comunque in vigore (la si legge da `body[data-disposizione]`) ma
+     non fa niente, e il registro lo dice.  ⛔ Non si rifa' qui: e' l'ancora
+     di un altro. */
+let tocco_classico_lamentato = false;
+function entra_nel_classico(perche) {
+  const a7 = window.REMOTIX_CLASSICO;
+  if (a7 && typeof a7.entra === "function") { a7.entra(perche); return true; }
+  if (!tocco_classico_lamentato) {
+    tocco_classico_lamentato = true;
+    nota("⚠ RIPIEGO: la disposizione classica e' in vigore ma `REMOTIX_CLASSICO`"
+         + " non c'e' — l'ancora `F4-INPUT-CLASSICO` non e' stata cucita");
+  }
+  return false;
+}
+function esci_dal_classico() {
+  const a7 = window.REMOTIX_CLASSICO;
+  if (a7 && typeof a7.esci === "function") { a7.esci(); return true; }
+  return false;
+}
+
+function entra_nel_tocco() {
+  const tela = $("schermo");
+  /* ⛔ `touch-action: none` messo da qui e non dal foglio di stile: il foglio
+     e' di tutti, e in modo classico questa riga non deve esserci.  Senza,
+     il browser si tiene lo scorrimento e il pizzico e i gesti non arrivano. */
+  tela.style.touchAction = "none";
+  tela.addEventListener("touchstart", su_touchstart, { passive: false });
+  tela.addEventListener("touchmove", su_touchmove, { passive: false });
+  tela.addEventListener("touchend", su_touchend, { passive: false });
+  tela.addEventListener("touchcancel", su_touchcancel, { passive: false });
+  tocco_centra_puntatore();
+  tocco_puntatore_disegna();
+}
+function esci_dal_tocco() {
+  const tela = $("schermo");
+  tela.style.touchAction = "";
+  tela.removeEventListener("touchstart", su_touchstart);
+  tela.removeEventListener("touchmove", su_touchmove);
+  tela.removeEventListener("touchend", su_touchend);
+  tela.removeEventListener("touchcancel", su_touchcancel);
+  tocco_lascia_tutto("si esce dalla disposizione a tocco");
+  if (tocco_ripiego_elemento) tocco_ripiego_elemento.style.display = "none";
+}
+
+function metti_in_vigore(modo, perche) {
+  if (modo === modo_in_vigore) { modo_perche = perche; return; }
+  if (modo_in_vigore === "tocco") esci_dal_tocco();
+  if (modo_in_vigore === "classico") esci_dal_classico();
+  modo_in_vigore = modo; modo_perche = perche;
+  /* ⛔⭐ E QUESTA RIGA E' IL METRO DEL BANCO: la disposizione IN VIGORE si
+     legge da fuori, dal documento.  `CODER.md` §3: un banco che verificasse
+     «esiste una funzione che la cambia» sarebbe verde su una funzione che non
+     cambia niente. */
+  document.body.dataset.disposizione = modo;
+  if (modo === "tocco") entra_nel_tocco(); else entra_nel_classico(perche);
+  nota("disposizione: **" + modo + "** — " + perche);
+}
+
+function rivaluta_disposizione() {
+  const c = contesto_letto();
+  const [modo, perche] = disposizione_dal_contesto(c);
+  metti_in_vigore(modo, perche);
+}
+
+/* L'osservazione diretta: che cosa l'utente sta usando ADESSO. */
+addEventListener("pointerdown", function (ev) {
+  if (!ev.pointerType) return;
+  tocco_visto = { tipo: ev.pointerType, t: performance.now() };
+  rivaluta_disposizione();
+}, true);
+
+/* ⛔ E il cambio di hardware butta l'osservazione: se il mouse viene staccato,
+   «l'ultima volta ho usato il mouse» e' un fatto vecchio e sbagliato. */
+for (const q of ["(any-pointer: fine)", "(pointer: coarse)", "(any-hover: hover)"]) {
+  try {
+    const m = matchMedia(q);
+    const f = function () { tocco_visto = null; rivaluta_disposizione(); };
+    if (m.addEventListener) m.addEventListener("change", f);
+    else if (m.addListener) m.addListener(f);
+  } catch (e) { /* il ripiego sulla larghezza e' gia' in `disposizione_dal_contesto` */ }
+}
+addEventListener("resize", rivaluta_disposizione);
+
+/* ⛔ Il fuoco perso rilascia tutto — vedi `tocco_lascia_tutto`. */
+addEventListener("blur", function () { tocco_lascia_tutto("la pagina ha perso il fuoco"); });
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") tocco_lascia_tutto("la pagina e' stata nascosta");
+});
+
+/* ⚠ La prima valutazione si rimanda di un giro: l'ancora `F4-INPUT-CLASSICO`
+   sta SOPRA questa e definisce `REMOTIX_CLASSICO` in modo sincrono, ma se un
+   giorno la definisse dentro una promessa questa riga e' quel che evita di
+   entrare nel classico un istante prima che il classico esista. */
+queueMicrotask(rivaluta_disposizione);
+
+/* ⛔ Quel che il banco legge.  ⚠ E' un oggetto DA LEGGERE (invariante I6):
+   `rivaluta` non e' un interruttore — non impone niente, ricalcola dal
+   contesto e puo' rispondere quel che rispondeva prima. */
+REMOTIX.tocco = {
+  soglie: TOCCO_SOGLIE,
+  spediti: TOCCO_SPEDITI,
+  contesto: contesto_letto,
+  disposizione: function () { return modo_in_vigore; },
+  perche: function () { return modo_perche; },
+  rivaluta: rivaluta_disposizione,
+  stato: function () {
+    return { in_vigore: modo_in_vigore === "tocco",
+             dita: tocco_dita.size, bloccato: tocco_bloccato,
+             deciso: tocco_gesto ? tocco_gesto.deciso : null,
+             max_dita: tocco_gesto ? tocco_gesto.max_dita : 0,
+             puntatore: [tocco_px, tocco_py], zoom: tocco_zoom,
+             tela: tocco_tela(),
+             orologio_ripiegato: tocco_orologio_ripiegato,
+             ultimo_gesto: tocco_ultimo_gesto,
+             puntatore_cucito: !!(window.REMOTIX_PUNTATORE),
+             puntatore_cucitura_giudicata: tocco_cucitura_giudicata,
+             puntatore_cucitura_rotta: tocco_cucitura_rotta,
+             filo_cucito: !!(window.REMOTIX_INPUT),
+             classico_cucito: !!(window.REMOTIX_CLASSICO) };
+  },
+};
+
+/* ⬆⬆ ANCORA F4-TOCCO — FINE. */
+
+/* ⬇⬇ ANCORA F4-SCORCIATOIE — INIZIO.  Quel che il browser si tiene, DICHIARATO
+ *     e non falsificato — e i tre stati, non due (`SPECIFICHE.md` §7.3-bis). */
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ LA REGOLA CHE GOVERNA TUTTA QUESTA ANCORA
+ *
+ *     La pagina **DICHIARA** quali scorciatoie non puo' consegnare su questo
+ *     motore.  ⛔ Non si finge che funzionino, e non si inventa una scorciatoia
+ *     sostitutiva senza dirlo (`SPECIFICHE.md` §7.3-bis).
+ *
+ * ⛔⛔ E GLI STATI SONO TRE, NON DUE — il secondo e' il peggiore:
+ *
+ *       consegnata               arriva alla sessione remota, e basta
+ *       consegnata E RISERVATA   arriva alla pagina **e** il browser esegue
+ *                                anche il proprio comando
+ *       non consegnata           il browser (o il compositore) se la tiene
+ *
+ *     ⚠ Il secondo e' il peggiore perche' e' quello che **sembra funzionare**:
+ *       la sessione remota riceve la battuta, il banco che guarda solo di la'
+ *       stampa verde, e intanto sotto le mani dell'utente il browser ha
+ *       ricaricato la pagina o gli ha portato il fuoco nella barra degli
+ *       indirizzi.  ⇒ La misura non e' «arriva?» ma **«arriva E BASTA?»**
+ *
+ * ── QUEL CHE E' MISURATO, E CON CHE COSA ───────────────────────────────────
+ *
+ * `banchi/04-b29-scorciatoie.py` (sonda **S3**), `[M]` 14 agosto 2026, su
+ * GNOME/Wayland, iniettando dalla porta da cui entra una TASTIERA VERA
+ * (`org.gnome.Mutter.RemoteDesktop`) — non da CDP, che salterebbe a pie' pari
+ * lo strato degli acceleratori del browser, cioe' proprio quel che si misura.
+ * Gli esiti riga per riga stanno in `banchi/04-b29-esiti.jsonl`, con il palco
+ * scritto in ogni riga.
+ *
+ * ⛔ E IL FUOCO NON E' IL CONTORNO DELLA MISURA: E' UNA DELLE GRANDEZZE.
+ *    La Keyboard Lock **si spegne da sola quando la pagina perde il fuoco**
+ *    (O10) — percio' qui il fuoco si sorveglia, la lock si ricompra, e ogni
+ *    passaggio si DICHIARA.  ⚠ Il rilascio di quel che e' rimasto premuto lo
+ *    fa gia' l'ancora `F4-INPUT-CLASSICO` sul `blur`: qui non si duplica.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+const SC_RIPIEGHI = [];
+const SC_REGISTRO = [];            /* l'anello per il banco (I6: da LEGGERE) */
+const SC_REGISTRO_MAX = 256;
+
+function sc_nota(testo) {
+  SC_REGISTRO.push({ ms: Math.round(performance.now()), testo: testo });
+  if (SC_REGISTRO.length > SC_REGISTRO_MAX) SC_REGISTRO.shift();
+  nota(testo);
+}
+function sc_ripiego(nome, testo) {
+  if (SC_RIPIEGHI.indexOf(nome) >= 0) return;
+  SC_RIPIEGHI.push(nome);
+  sc_nota("⚠ scorciatoie, RIPIEGO «" + nome + "»: " + testo);
+}
+
+/* ── CHI E' QUESTO MOTORE ──────────────────────────────────────────────────
+ * ⛔ Si guarda una CAPACITA' quando c'e', e la stringa solo quando non c'e'
+ *    altro — e in quel caso si dichiara che si e' tirato a indovinare.  ⚠ La
+ *    famiglia serve a scegliere la riga del catalogo, non a decidere che cosa
+ *    funziona: quello lo decide la misura. */
+function sc_motore() {
+  const ua = navigator.userAgent || "";
+  let famiglia = "?", dedotta = true;
+  if (navigator.userAgentData && navigator.userAgentData.brands) {
+    famiglia = "blink"; dedotta = false;          /* solo Blink espone questo */
+  } else if (ua.indexOf("Gecko/") >= 0 && ua.indexOf("Firefox/") >= 0) {
+    famiglia = "gecko";
+  } else if (ua.indexOf("AppleWebKit") >= 0 && ua.indexOf("Chrome") < 0) {
+    famiglia = "webkit";
+  }
+  const versione = (ua.match(/(?:Chrome|Firefox|Version)\/(\d+)/) || [])[1] || null;
+  /* ⭐ In una PWA installata la lista riservata di Chrome e' **vuota**
+     (`web.md` §1.2 B) — cioe' un dominio fidato non compra solo l'assenza
+     dell'avviso: compra la tastiera intera.  ⚠ `[?]` su Chrome per Android, e
+     resta `[?]` finche' non c'e' un telefono su cui provarla. */
+  let installata = false;
+  try {
+    installata = !!(matchMedia("(display-mode: standalone)").matches
+                 || matchMedia("(display-mode: fullscreen)").matches
+                 || navigator.standalone);
+  } catch (e) { /* un motore che non conosce la richiesta: resta false */ }
+  return { famiglia: famiglia, famiglia_dedotta: dedotta, versione: versione,
+           installata: installata, ua: ua };
+}
+const SC_MOTORE = sc_motore();
+
+/* ── IL CATALOGO DI QUEL CHE SI PERDE ──────────────────────────────────────
+ * ⛔ Ogni voce porta la MARCA.  `[M]` vuol dire misurato da `04-b29` il 14
+ *    agosto 2026 su QUESTO motore e QUESTO palco; `[S]` letto in una specifica;
+ *    `[?]` non provato — e un motore non provato **non si deduce dagli altri**:
+ *    quel che si perde su Chrome non e' quel che si perde su Safari.
+ *
+ * La chiave e' `famiglia` → `palco` → { combinazione: stato }.  I palchi:
+ *    "finestra"        finestra normale, nessuna lock
+ *    "intero"          schermo intero da API, nessuna lock
+ *    "intero+lock"     schermo intero da API con la Keyboard Lock concessa
+ *    "F11"             schermo intero entrato con F11 — ⛔ la lock NON esiste
+ */
+const SC_CATALOGO = {
+    "blink": {
+      "F11": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Home": "consegnata-E-RISERVATA-non-prevenuta",
+        "Alt+Tab": "non-consegnata",
+        "Ctrl+D": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+F": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+H": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+O": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+P": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+R": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+S": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+I": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+T": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+U": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+W": "consegnata-E-RISERVATA-non-prevenuta",
+        "F11": "non-consegnata",
+        "F12": "consegnata-E-RISERVATA-non-prevenuta",
+        "F5": "consegnata-E-RISERVATA-non-prevenuta",
+        "Super+KeyD": "non-consegnata"
+      },
+      "finestra": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Ctrl+N": "non-consegnata",
+        "Ctrl+PageDown": "non-consegnata",
+        "Ctrl+PageUp": "non-consegnata",
+        "Ctrl+Shift+N": "non-consegnata",
+        "Ctrl+Shift+Tab": "non-consegnata",
+        "Ctrl+T": "non-consegnata",
+        "Ctrl+Tab": "non-consegnata",
+        "Ctrl+W": "non-consegnata",
+        "Super+KeyD": "non-consegnata"
+      },
+      "intero": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Escape": "non-consegnata",
+        "F11": "non-consegnata",
+        "Super+KeyD": "non-consegnata"
+      },
+      "intero+lock": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Super+KeyD": "non-consegnata"
+      }
+    },
+    "blink-app": {
+      "finestra": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Ctrl+F": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+H": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+P": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+R": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+S": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+I": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+T": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+U": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+W": "consegnata-E-RISERVATA-non-prevenuta",
+        "F11": "consegnata-E-RISERVATA-non-prevenuta",
+        "F12": "consegnata-E-RISERVATA-non-prevenuta",
+        "F5": "consegnata-E-RISERVATA-non-prevenuta",
+        "Super+KeyD": "non-consegnata"
+      },
+      "intero": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Ctrl+F": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+H": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+P": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+R": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+S": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+I": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+N": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+T": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+U": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+W": "consegnata-E-RISERVATA-non-prevenuta",
+        "Escape": "non-consegnata",
+        "F11": "consegnata-E-RISERVATA-non-prevenuta",
+        "F12": "consegnata-E-RISERVATA-non-prevenuta",
+        "F5": "consegnata-E-RISERVATA-non-prevenuta",
+        "Super+KeyD": "non-consegnata"
+      },
+      "intero+lock": {
+        "Alt+F2": "non-consegnata",
+        "Alt+F4": "non-consegnata",
+        "Alt+Tab": "non-consegnata",
+        "Super+KeyD": "non-consegnata"
+      }
+    },
+    "gecko": {
+      "finestra": {
+        "Ctrl+PageDown": "non-consegnata",
+        "Ctrl+PageUp": "non-consegnata",
+        "Ctrl+Shift+Tab": "non-consegnata",
+        "Ctrl+T": "non-consegnata",
+        "Ctrl+Tab": "non-consegnata",
+        "Super+KeyD": "non-consegnata"
+      },
+      "intero": {
+        "Alt+Home": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+D": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+F": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+P": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+PageDown": "non-consegnata",
+        "Ctrl+PageUp": "non-consegnata",
+        "Ctrl+R": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+I": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+J": "consegnata-E-RISERVATA-non-prevenuta",
+        "Ctrl+Shift+Tab": "non-consegnata",
+        "Ctrl+Tab": "non-consegnata",
+        "Ctrl+U": "consegnata-E-RISERVATA-non-prevenuta",
+        "Escape": "non-consegnata",
+        "F11": "non-consegnata",
+        "F12": "consegnata-E-RISERVATA-non-prevenuta",
+        "F5": "consegnata-E-RISERVATA-non-prevenuta",
+        "Super+KeyD": "non-consegnata"
+      }
+    }
+  };
+
+/* ⚠ Che cosa NON e' stato provato, e va detto insieme al resto: una `[?]`
+   dichiarata vale, una dedotta no. */
+const SC_NON_PROVATI = [
+  { motore: "webkit (Safari)", perche: "nessun ferro Apple sul banco del 14 agosto 2026" },
+  { motore: "blink su Android / DeX", perche: "nessun telefono e nessun DeX collegati" },
+  { motore: "gecko ≥ 151", perche: "sul banco c'era Firefox 140 ESR, che la lock non ce l'ha" },
+];
+
+/* ── LO SCHERMO INTERO E LA LOCK, NELLE DUE FORME ──────────────────────────
+ * ⛔ La pagina deve saperle ENTRAMBE (`SPECIFICHE.md` §7.3-bis):
+ *      la nuova   `requestFullscreen({ keyboardLock: "browser" })`  — WHATWG,
+ *                 8 maggio 2026, spedita da Safari 26.4 e Firefox 151 `[S]`
+ *      la vecchia `navigator.keyboard.lock()`                       — Chrome,
+ *                 Edge, e i motori che non hanno ancora la nuova
+ * ⚠ E si prova prima la NUOVA: e' quella che lo standard prescrive, e un
+ *   motore che le ha tutte e due deve vedersi chiedere quella giusta.
+ *
+ * ⛔ E «riuscito» non e' «concesso»: un motore che non conosce l'opzione
+ *    `keyboardLock` prende il dizionario, **ignora la chiave** e va a schermo
+ *    intero senza dire niente — il ripiego silenzioso che `CODER.md` §4.2
+ *    vieta.  ⇒ L'opzione si passa dentro un oggetto che REGISTRA se e' stata
+ *    letta, ed e' l'unico modo di distinguere «me l'ha data» da «ha fatto
+ *    finta di niente». */
+let sc_lock_forma = null;         /* "nuova" | "vecchia" | null */
+let sc_lock_viva = false;
+let sc_lock_motivo = "non ancora chiesta";
+
+function sc_intero_da_F11() {
+  /* ⛔ LA TRAPPOLA O10, PRIMA META': lo schermo intero entrato con `F11` NON
+     accende `document.fullscreenElement`, la lock **non esiste li' dentro**, e
+     il browser **non lo dice**.  ⇒ Si riconosce dalla geometria: schermo pieno
+     e nessun elemento a schermo intero. */
+  const pieno = (innerWidth >= screen.width - 2 && innerHeight >= screen.height - 2);
+  return pieno && !document.fullscreenElement;
+}
+
+async function sc_entra_a_schermo_intero(elemento) {
+  const bersaglio = elemento || document.documentElement;
+  if (sc_intero_da_F11()) {
+    sc_lock_forma = null; sc_lock_viva = false;
+    sc_lock_motivo = "lo schermo intero e' stato aperto con F11: la Keyboard "
+                   + "Lock non esiste li' dentro, e il browser non lo dice";
+    sc_ripiego("F11", sc_lock_motivo + " ⇒ le scorciatoie del browser restano "
+             + "tutte sue.  Per riaverle: uscire con F11 e rientrare dal bottone.");
+    return { schermo_intero: true, da: "F11", lock: false, motivo: sc_lock_motivo };
+  }
+  /* 1) la forma NUOVA */
+  let letta = false;
+  const opzioni = {};
+  try {
+    Object.defineProperty(opzioni, "keyboardLock",
+      { enumerable: true, get: function () { letta = true; return "browser"; } });
+  } catch (e) { /* un motore che non sa definire proprieta': si va di vecchia */ }
+  try {
+    await bersaglio.requestFullscreen(opzioni);
+  } catch (e) {
+    sc_nota("⛔ lo schermo intero e' stato rifiutato: " + e
+          + " — senza schermo intero NON c'e' Keyboard Lock, e le scorciatoie "
+          + "restano tutte del browser");
+    sc_lock_forma = null; sc_lock_viva = false;
+    sc_lock_motivo = "schermo intero rifiutato: " + e;
+    return { schermo_intero: false, lock: false, motivo: sc_lock_motivo };
+  }
+  if (letta) {
+    sc_lock_forma = "nuova"; sc_lock_viva = true;
+    sc_lock_motivo = "requestFullscreen({keyboardLock:'browser'}) — la forma WHATWG";
+    sc_nota("⭐ Keyboard Lock ottenuta nella forma nuova.");
+    return { schermo_intero: true, da: "API", lock: true, forma: "nuova" };
+  }
+  /* 2) la forma VECCHIA */
+  if (navigator.keyboard && navigator.keyboard.lock) {
+    try {
+      await navigator.keyboard.lock();
+      sc_lock_forma = "vecchia"; sc_lock_viva = true;
+      sc_lock_motivo = "navigator.keyboard.lock() — la forma di Chrome ed Edge";
+      sc_nota("⭐ Keyboard Lock ottenuta nella forma vecchia.");
+      return { schermo_intero: true, da: "API", lock: true, forma: "vecchia" };
+    } catch (e) {
+      sc_lock_forma = null; sc_lock_viva = false;
+      sc_lock_motivo = "navigator.keyboard.lock() ha rifiutato: " + e;
+    }
+  } else {
+    sc_lock_forma = null; sc_lock_viva = false;
+    sc_lock_motivo = "questo motore non ha NESSUNA delle due forme della "
+                   + "Keyboard Lock";
+  }
+  sc_ripiego("senza-lock", sc_lock_motivo + " ⇒ si va a schermo intero lo "
+           + "stesso, e le scorciatoie che il browser si tiene restano sue. "
+           + "Sono elencate qui sotto: non si finge che arrivino.");
+  return { schermo_intero: true, da: "API", lock: false, motivo: sc_lock_motivo };
+}
+
+async function sc_esci_da_schermo_intero() {
+  try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); }
+  catch (e) { /* non c'era */ }
+  sc_lock_viva = false; sc_lock_forma = null;
+  sc_lock_motivo = "uscita dallo schermo intero";
+  try { if (document.fullscreenElement) await document.exitFullscreen(); }
+  catch (e) { /* gia' fuori */ }
+}
+
+/* ⛔⛔ LA TRAPPOLA O10, SECONDA META', E MORDE DOVE FA PIU' MALE:
+ *     **la lock si spegne da sola quando la pagina perde il fuoco**, cioe'
+ *     esattamente nell'istante in cui un modificatore resta premuto.
+ *
+ *     ⇒ Qui si fanno DUE cose, e sono di due anelli diversi:
+ *        1. il rilascio di quel che e' premuto — lo fa gia' `F4-INPUT-CLASSICO`
+ *           sul `blur` (e `F4-TOCCO` per il suo), e qui NON si duplica;
+ *        2. la lock si segna per MORTA, e al ritorno del fuoco si RICOMPRA —
+ *           perche' nessun evento annuncia che se n'e' andata, e una pagina che
+ *           continuasse a crederla viva direbbe all'utente una bugia.
+ *
+ *     ⚠ E la ricompra puo' FALLIRE: `navigator.keyboard.lock()` non pretende
+ *       un gesto, ma se lo schermo intero e' caduto nel frattempo non c'e'
+ *       niente da ricomprare.  Il fallimento si DICHIARA, non si nasconde. */
+addEventListener("blur", function () {
+  if (!sc_lock_viva) return;
+  sc_lock_viva = false;
+  sc_lock_motivo = "la pagina ha perso il fuoco: la Keyboard Lock si e' spenta "
+                 + "da sola (O10) — si ricompra al ritorno";
+  sc_nota("⚠ " + sc_lock_motivo);
+  sc_dipingi();
+});
+addEventListener("focus", function () {
+  if (sc_lock_forma === null && !document.fullscreenElement) { sc_dipingi(); return; }
+  if (sc_lock_viva) return;
+  if (!document.fullscreenElement) {
+    sc_lock_motivo = "il fuoco e' tornato ma lo schermo intero non c'e' piu': "
+                   + "niente da ricomprare";
+    sc_dipingi();
+    return;
+  }
+  if (navigator.keyboard && navigator.keyboard.lock) {
+    navigator.keyboard.lock().then(function () {
+      sc_lock_viva = true; sc_lock_forma = "vecchia";
+      sc_lock_motivo = "ricomprata al ritorno del fuoco";
+      sc_nota("⭐ Keyboard Lock ricomprata al ritorno del fuoco.");
+      sc_dipingi();
+    }).catch(function (e) {
+      sc_lock_motivo = "la ricompra della lock e' fallita: " + e;
+      sc_nota("⛔ " + sc_lock_motivo);
+      sc_dipingi();
+    });
+  } else {
+    /* ⚠ La forma NUOVA sta dentro `requestFullscreen`, e non si puo' rifare
+       senza uscire e rientrare — che vorrebbe dire sbattere lo schermo in
+       faccia all'utente per una cosa che forse non gli serve.  ⇒ Si dichiara,
+       e si lascia decidere a lui dal bottone. */
+    sc_lock_motivo = "la lock era nella forma nuova: si ricompra solo uscendo e "
+                   + "rientrando a schermo intero — e non lo si fa di nascosto";
+    sc_dipingi();
+  }
+});
+document.addEventListener("fullscreenchange", function () {
+  if (!document.fullscreenElement && sc_lock_viva) {
+    sc_lock_viva = false; sc_lock_forma = null;
+    sc_lock_motivo = "lo schermo intero e' finito: con lui la lock";
+  }
+  sc_dipingi();
+});
+
+/* ── QUEL CHE SI PERDE, DETTO ALL'UTENTE ───────────────────────────────────
+ * ⛔ Non un elenco generico: quel che si perde **su questo motore, in questo
+ *    palco, adesso**.  Un avviso che dicesse sempre la stessa cosa sarebbe
+ *    falso in tre casi su quattro. */
+function sc_palco() {
+  if (sc_intero_da_F11()) return "F11";
+  if (!document.fullscreenElement) return "finestra";
+  return sc_lock_viva ? "intero+lock" : "intero";
+}
+
+/* ⭐ La finestra d'applicazione e' una RIGA A PARTE del catalogo, non una
+   sfumatura della sua: `[M]` 14 agosto 2026 su Chrome 151 in `--app` le
+   riservate del browser sono **zero gia' in finestra**, contro **otto** in una
+   scheda normale.  ⇒ Chiamarle con lo stesso nome vorrebbe dire dire all'utente
+   che perde otto scorciatoie che non perde. */
+function sc_famiglia() {
+  return SC_MOTORE.famiglia + (SC_MOTORE.installata ? "-app" : "");
+}
+
+function sc_perdute() {
+  const palco = sc_palco();
+  const riga = (SC_CATALOGO[sc_famiglia()] || {})[palco];
+  if (!riga) {
+    return { palco: palco, marca: "[?]", misurato: false, voci: [],
+             avviso: "su questo motore le scorciatoie NON sono state misurate: "
+                   + "non si sa che cosa si perde, e non lo si deduce dagli altri" };
+  }
+  /* ⚠ Il catalogo porta SOLO quel che si perde: le consegnate non ci sono
+     nemmeno.  Il filtro resta perche' costa zero e regge un catalogo scritto
+     un domani con dentro tutto. */
+  const voci = [];
+  for (const k in riga) {
+    if (riga[k] === "consegnata") continue;
+    voci.push({ combinazione: k, stato: riga[k] });
+  }
+  /* ⛔ Le riservate-E-consegnate vanno in cima: sono il caso che l'utente non
+     capirebbe da solo, perche' la sessione remota le riceve davvero. */
+  voci.sort(function (a, b) {
+    const p = function (v) { return v.stato === "consegnata-E-RISERVATA" ? 0 : 1; };
+    return p(a) - p(b) || (a.combinazione < b.combinazione ? -1 : 1);
+  });
+  return { palco: palco, marca: "[M] 14 agosto 2026", misurato: true, voci: voci };
+}
+
+/* ── I BOTTONI A SCHERMO — ⭐ UN REQUISITO, NON UN RIPIEGO DI FORTUNA ───────
+ * `web.md` §8-bis O7: *tre riferimenti maturi su tre danno all'utente un modo
+ * di mandare quel che il browser non lascia passare*.  ⇒ `Ctrl+Alt+Canc` non e'
+ * «non recuperabile»: e' **recuperabile in un altro modo**, e quel modo e'
+ * questo.
+ *
+ * ⛔ E i bottoni mandano POSIZIONI, non lettere (§7.3): `Ctrl+Alt+Canc` sul
+ *    filo e' 29 giu', 56 giu', 111 giu', 111 su, 56 su, 29 su.
+ *
+ * ⚠ LA CUCITURA CHE USO, e la dichiaro invece di supporla in silenzio: le
+ *   posizioni le spedisce `cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, giu,
+ *   ms)` dell'ancora `F4-INPUT-CLASSICO`, che a sua volta passa dalla cucitura
+ *   comune `window.REMOTIX_INPUT`.  ⛔ Se quella funzione non c'e', i bottoni
+ *   si mostrano SPENTI con scritto perche': un bottone che non manda niente e
+ *   non lo dice sarebbe la bugia peggiore di tutta questa ancora. */
+/* ⭐⭐ UN BOTTONE SOLO — deciso dall'utente il 14 agosto 2026.
+ *
+ * La domanda era: sei combinazioni non arriveranno mai al desktop remoto (le
+ * tiene il compositore del CLIENT, non il browser), e l'unico modo di darle e'
+ * un bottone a schermo — ma la barra toglie pixel all'immagine.  ⭐ La risposta:
+ * **solo `Ctrl+Alt+Canc`**.
+ *
+ * ⛔ E la ragione per cui quello resta e' diversa da quella degli altri cinque:
+ *    senza, **in una sessione bloccata non si entra piu'** — e' l'unica delle
+ *    sei che, mancando, lascia l'utente fuori invece che scomodo.
+ *    `SPECIFICHE.md` §7.3-bis lo chiama **un requisito, non un ripiego di
+ *    fortuna**: tre riferimenti maturi su tre lo fanno.
+ *
+ * ⚠ Gli altri cinque NON spariscono dal codice, e non e' pigrizia: restano
+ *   qui sotto **dichiarati e spenti**, con la loro ragione, perche' la scelta
+ *   e' di gusto e si rivede guardandola (`LEZIONI.md` §7.3 — un'interfaccia non
+ *   si giudica leggendola).  ⛔ Accenderne uno costa **una riga**: `attivo: true`.
+ *
+ * ⛔ E quel che NON si fa e' fingere: le cinque combinazioni spente **restano
+ *    del computer dell'utente**, e la pagina lo DICHIARA nella sua tavola
+ *    invece di lasciar credere che siano arrivate (`SPECIFICHE.md` §7.3-bis). */
+const SC_BOTTONI = [
+  { nome: "Ctrl+Alt+Canc", tasti: ["ControlLeft", "AltLeft", "Delete"],
+    attivo: true,
+    perche: "nessun browser la lascia passare, e nessuno la lascera' mai: "
+          + "la prende il sistema operativo del CLIENT prima del browser" },
+  { nome: "Ctrl+W", tasti: ["ControlLeft", "KeyW"], attivo: false,
+    perche: "il browser chiude la scheda" },
+  { nome: "Ctrl+T", tasti: ["ControlLeft", "KeyT"], attivo: false,
+    perche: "il browser apre una scheda" },
+  { nome: "Alt+F4", tasti: ["AltLeft", "F4"], attivo: false,
+    perche: "la prende il compositore del client" },
+  { nome: "Super", tasti: ["MetaLeft"], attivo: false,
+    perche: "la prende il compositore del client (e su Android/DeX ogni "
+          + "combinazione con Meta, per regola AOSP)" },
+];
+
+function sc_filo_cucito() {
+  return (typeof cl_spedisci === "function" && typeof CL_TIPO === "object"
+          && typeof CL_POSIZIONE === "object");
+}
+
+function sc_manda(nome, tasti) {
+  if (!sc_filo_cucito()) {
+    sc_nota("⛔ «" + nome + "» NON e' partita: il modo classico non e' cucito "
+          + "(manca `cl_spedisci`).  Il bottone non ha fatto niente, e questa "
+          + "riga esiste perche' non sembri che l'abbia fatto.");
+    return false;
+  }
+  const codici = [];
+  for (const t of tasti) {
+    const c = CL_POSIZIONE[t];
+    if (typeof c !== "number") {
+      /* ⛔ Un codice che non c'e' NON si spedisce: manderebbe un altro tasto
+         sul desktop dell'utente (la stessa regola di `CL_POSIZIONE`). */
+      sc_nota("⛔ «" + nome + "» non e' partita: la posizione «" + t
+            + "» non e' in tabella");
+      return false;
+    }
+    codici.push(c);
+  }
+  const ms = performance.now();
+  for (const c of codici) cl_spedisci(CL_TIPO.POSIZIONE_TASTO, c, 1, ms);
+  for (let i = codici.length - 1; i >= 0; i--) {
+    cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codici[i], 0, ms);
+  }
+  SC_MANDATI.push({ nome: nome, codici: codici, ms: Math.round(ms) });
+  if (SC_MANDATI.length > SC_REGISTRO_MAX) SC_MANDATI.shift();
+  sc_nota("⭐ «" + nome + "» mandata dal bottone come posizioni: "
+        + codici.join(", "));
+  return true;
+}
+const SC_MANDATI = [];
+
+/* ── LA BARRA ──────────────────────────────────────────────────────────────
+ * ⚠ Sta dentro il documento e non in un foglio a parte: la pagina e' servita
+ *   isolata fra origini e NON ha risorse esterne (`SPECIFICHE.md` §11.5). */
+let sc_el = null, sc_el_voci = null, sc_el_stato = null;
+
+function sc_costruisci() {
+  if (sc_el) return sc_el;
+  const b = document.createElement("div");
+  b.id = "scorciatoie";
+  b.style.cssText = "position:fixed; left:0; right:0; bottom:0; z-index:12;"
+    + "background:rgba(16,16,22,.94); color:#d8d8e0; font:13px/1.45 monospace;"
+    + "padding:.5rem .75rem; border-top:1px solid #444; display:none;"
+    + "max-height:38vh; overflow:auto;";
+  const s = document.createElement("div");
+  s.id = "scorciatoie-stato";
+  const v = document.createElement("div");
+  v.id = "scorciatoie-voci";
+  v.style.cssText = "margin:.35rem 0;";
+  const p = document.createElement("div");
+  p.id = "scorciatoie-bottoni";
+  p.style.cssText = "display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem;";
+  for (const spec of SC_BOTTONI) {
+    /* ⛔ Spento vuol dire **non disegnato**, non «disegnato e inerte»: un
+     *    bottone che c'e' e non fa niente e' peggio di un bottone che non c'e'.
+     *    ⚠ La combinazione resta comunque nella tavola delle dichiarate, dove
+     *    l'utente legge che quella battuta il suo computer se la tiene. */
+    if (!spec.attivo) continue;
+    const t = document.createElement("button");
+    t.type = "button";
+    t.textContent = spec.nome;
+    t.title = spec.perche;
+    t.style.cssText = "margin:0; padding:.25rem .6rem; font:12px monospace;";
+    t.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      sc_manda(spec.nome, spec.tasti);
+      /* ⚠ Il fuoco torna alla tela: un bottone che se lo tiene farebbe sparire
+         la tastiera dell'utente al primo clic. */
+      const tela = $("schermo"); if (tela && tela.focus) tela.focus();
+    });
+    p.appendChild(t);
+  }
+  b.appendChild(s); b.appendChild(v); b.appendChild(p);
+  document.body.appendChild(b);
+  sc_el = b; sc_el_voci = v; sc_el_stato = s;
+  return b;
+}
+
+function sc_dipingi() {
+  if (!sc_el) return;
+  const p = sc_perdute();
+  const cucito = sc_filo_cucito();
+  const nomi = { finestra: "finestra", intero: "schermo intero (senza lock)",
+                 "intero+lock": "schermo intero CON Keyboard Lock",
+                 F11: "schermo intero aperto con F11" };
+  sc_el_stato.innerHTML = "";
+  const t1 = document.createElement("div");
+  t1.textContent = "Tastiera: " + (nomi[p.palco] || p.palco)
+    + " · lock: " + (sc_lock_viva ? ("viva (" + sc_lock_forma + ")") : "no")
+    + " — " + sc_lock_motivo;
+  sc_el_stato.appendChild(t1);
+  if (!cucito) {
+    const t2 = document.createElement("div");
+    t2.textContent = "⛔ il canale di input non e' cucito: i bottoni qui sotto "
+                   + "NON mandano niente.";
+    sc_el_stato.appendChild(t2);
+  }
+  sc_el_voci.innerHTML = "";
+  if (!p.misurato) {
+    const d = document.createElement("div");
+    d.textContent = "[?] " + p.avviso;
+    sc_el_voci.appendChild(d);
+    return;
+  }
+  if (!p.voci.length) {
+    const d = document.createElement("div");
+    d.textContent = p.marca + " su questo motore e in questo palco non risulta "
+                  + "persa nessuna delle combinazioni provate.";
+    sc_el_voci.appendChild(d);
+    return;
+  }
+  const testa = document.createElement("div");
+  testa.textContent = p.marca + " — quel che il browser si tiene, e che quindi "
+                    + "NON comanda il desktop remoto:";
+  sc_el_voci.appendChild(testa);
+  for (const v of p.voci) {
+    const d = document.createElement("div");
+    /* ⛔ TRE testi e non due, e il terzo e' il piu' onesto:
+       · `non-consegnata`                        il browser (o il compositore) se la tiene
+       · `consegnata-E-RISERVATA`                arriva E il browser fa anche il suo
+       · `…-non-prevenuta`  ⇒ ⚠ `[?]`           misurata SENZA `preventDefault()`,
+         cioe' senza la cura che questa pagina applica su ogni battuta che
+         spedisce.  Dichiararla come persa sarebbe **falso in peggio**; tacerla
+         sarebbe falso in meglio.  ⇒ Si dichiara che non si sa. */
+    if (v.stato === "consegnata-E-RISERVATA-non-prevenuta") {
+      d.textContent = "  [?] " + v.combinazione + " — misurata senza la cura che "
+        + "questa pagina applica: potrebbe non perdersi affatto, e non lo do per buono";
+    } else if (v.stato === "consegnata-E-RISERVATA") {
+      d.textContent = "  ⛔ " + v.combinazione + " — arriva al desktop remoto MA "
+        + "il browser esegue anche il suo comando";
+    } else {
+      d.textContent = "  · " + v.combinazione + " — non arriva affatto";
+    }
+    sc_el_voci.appendChild(d);
+  }
+  for (const np of SC_NON_PROVATI) {
+    const d = document.createElement("div");
+    d.textContent = "  [?] " + np.motore + ": non provato — " + np.perche;
+    sc_el_voci.appendChild(d);
+  }
+}
+
+function sc_mostra(si) {
+  sc_costruisci();
+  sc_el.style.display = si === false ? "none" : "block";
+  if (si !== false) sc_dipingi();
+}
+
+/* ⚠ Un giro lento: la geometria puo' cambiare senza nessun evento (F11 su certi
+   motori non manda `resize` prima che la finestra si sia assestata), e il palco
+   dipinto va tenuto vero.  200 ms non pesano su niente che si misuri. */
+setInterval(function () { if (sc_el && sc_el.style.display !== "none") sc_dipingi(); }, 200);
+
+/* ⭐ E LA BARRA SI FA VEDERE DA SOLA QUANDO SI COMINCIA A COMANDARE, senza che
+   A7 o A8 debbano chiamarmi: si GUARDA il loro stato — che e' un oggetto **da
+   leggere** (I6) e non una cucitura da concordare — e appena una delle due
+   disposizioni entra in vigore la barra compare.
+   ⛔ Cosi' l'avviso «queste scorciatoie non arriveranno» sta davanti
+      all'utente **prima** che le provi, che e' l'unico momento in cui serve:
+      dichiararle dopo sarebbe raccontargli perche' non ha funzionato. */
+setInterval(function () {
+  let comanda = false;
+  try {
+    const c = REMOTIX.input_classico && REMOTIX.input_classico.stato();
+    const t = REMOTIX.tocco && REMOTIX.tocco.stato();
+    comanda = !!((c && c.in_vigore) || (t && t.dita >= 0 && REMOTIX.tocco.disposizione
+                                        && REMOTIX.tocco.disposizione() === "tocco"));
+  } catch (e) { /* un'ancora non ancora montata: si riprova al giro dopo */ }
+  if (comanda && (!sc_el || sc_el.style.display === "none")) sc_mostra(true);
+}, 500);
+addEventListener("resize", function () { if (sc_el) sc_dipingi(); });
+
+/* ── LA CUCITURA CHE OFFRO ────────────────────────────────────────────────
+ * ⭐ `window.REMOTIX_SCORCIATOIE` — quel che A7 (modo classico) e A8 (tocco)
+ *    possono chiamare quando la sessione parte.  ⛔ Nessuno dei due e' obbligato
+ *    a chiamarlo: senza, questa ancora non fa niente e non rompe niente. */
+window.REMOTIX_SCORCIATOIE = {
+  entra: async function (elemento) {
+    sc_mostra(true);
+    const r = await sc_entra_a_schermo_intero(elemento);
+    sc_dipingi();
+    return r;
+  },
+  esci: async function () { await sc_esci_da_schermo_intero(); sc_dipingi(); },
+  mostra: sc_mostra,
+  manda: sc_manda,
+  perdute: sc_perdute,
+};
+
+/* ⛔ Quel che il banco legge.  ⚠ E' un oggetto DA LEGGERE (invariante I6):
+   niente qui dentro cambia quel che la pagina fa. */
+REMOTIX.scorciatoie = {
+  catalogo: SC_CATALOGO,
+  non_provati: SC_NON_PROVATI,
+  bottoni: SC_BOTTONI,
+  mandati: SC_MANDATI,
+  ripieghi: SC_RIPIEGHI,
+  registro: SC_REGISTRO,
+  motore: SC_MOTORE,
+  stato: function () {
+    return {
+      motore: SC_MOTORE,
+      palco: sc_palco(),
+      schermo_intero_API: !!document.fullscreenElement,
+      schermo_intero_geometria: (innerWidth >= screen.width - 2
+                                 && innerHeight >= screen.height - 2),
+      intero_da_F11: sc_intero_da_F11(),
+      lock_viva: sc_lock_viva,
+      lock_forma: sc_lock_forma,
+      lock_motivo: sc_lock_motivo,
+      /* ⛔ Il FUOCO e' una delle grandezze misurate, non il contorno: la lock
+         si spegne quando se ne va (O10). */
+      fuoco: document.hasFocus(),
+      visibilita: document.visibilityState,
+      forme_disponibili: {
+        vecchia: !!(navigator.keyboard && navigator.keyboard.lock),
+        /* ⚠ La nuova non si sa senza chiederla: `[?]` finche' non si e' entrati
+           almeno una volta a schermo intero. */
+        nuova: sc_lock_forma === "nuova" ? true : null,
+      },
+      perdute: sc_perdute(),
+      filo_cucito: sc_filo_cucito(),
+      classico_cucito: !!(window.REMOTIX_CLASSICO),
+      ripieghi: SC_RIPIEGHI.slice(),
+    };
+  },
+};
+
+/* ⬆⬆ ANCORA F4-SCORCIATOIE — FINE. */
 </script>
 </body>
 </html>

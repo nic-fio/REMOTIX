@@ -95,11 +95,48 @@ const char *mutter_percorso_flusso(const MutterSessione *sessione);
 const char *mutter_percorso_controllo(const MutterSessione *sessione);
 
 /*
- * L'identificativo dichiarato a `RecordVirtual`: e' la chiave con cui si
- * riconosce, fra le regioni che libei annuncia, quella del nostro monitor.
- * Serve alla fase 4; qui si dichiara perche' e' deciso in questa chiamata.
+ * L'identificativo dichiarato a `RecordVirtual`.
+ *
+ * ⛔⛔ E NON SERVE A NIENTE — `[M]` 14 agosto 2026, e la riga qui sotto diceva
+ *      il contrario: *«e' la chiave con cui si riconosce, fra le regioni che
+ *      libei annuncia, quella del nostro monitor»*.
+ *
+ *      `handle_record_virtual` legge **`cursor-mode` e `is-platform` e basta**:
+ *      la nostra proprieta' `mapping-id` e' ignorata **in silenzio**.  La
+ *      chiave vera la genera Mutter (UUID) e la pubblica nei `Parameters` del
+ *      flusso: si legge con `mutter_mapping_id_pubblicato`, e il verso e'
+ *      **Mutter → noi**.  (`gnome.md` §9, `reference-gnome/rapporti/06-mutter-input.md`
+ *      §7.2.)
+ *
+ * ⚠ Resta esposto perche' il banco confronta i due valori: e' il modo di
+ *   MOSTRARE che sono diversi, invece di scriverlo soltanto.
  */
 const char *mutter_mapping_id(const MutterSessione *sessione);
+
+/*
+ * ⭐ La chiave VERA della regione del puntatore: l'UUID che Mutter genera e
+ *    pubblica nei `Parameters` del flusso.
+ *
+ * ⛔ NULL vuol dire «non lo so», e sono DUE casi che il registro separa: la
+ *    lettura della proprieta' e' fallita, oppure i `Parameters` non portano la
+ *    chiave.  Chi lo riceve riconosce la regione per geometria e lo DICHIARA.
+ *
+ * Si puo' chiamare solo dopo `mutter_apri` (serve il percorso del flusso).
+ */
+const char *mutter_mapping_id_pubblicato(MutterSessione *sessione);
+
+/*
+ * ⭐ Il descrittore del canale EIS, aperto da `ConnectToEIS` dentro
+ *    `mutter_apri` — nel punto della sequenza che il riferimento impone.
+ *
+ * ⛔ -1 vuol dire che il canale NON si e' aperto, e il registro dice perche'.
+ *    La sessione e' viva lo stesso (si guarda, non si comanda): e' la
+ *    degradazione dichiarata di `CODER.md` §4.2, non un guasto.
+ *
+ * ⚠ Il descrittore resta di questa sessione, che lo chiude in `mutter_chiudi`.
+ *   Chi lo da' a `libei` — che se ne appropria — ne passa un `dup`.
+ */
+int mutter_eis_fd(const MutterSessione *sessione);
 
 /*
  * ⭐ Cerca il monitor che abbiamo montato noi, e dice se l'ha trovato.

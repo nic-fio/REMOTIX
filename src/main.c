@@ -279,17 +279,48 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
                                 uint8_t codec, bool chiave, const uint8_t *dati,
                                 size_t byte, uint32_t larghezza,
-                                uint32_t altezza, uint64_t istante_us)
+                                uint32_t altezza, uint64_t istante_us,
+                                uint32_t input)
 {
 	(void)ctx;
 	(void)uid;
-	/* ⛔ `input` e' 0: §6.2 dice «l'identificatore dell'ultimo input iniettato
-	 *    prima della cattura, **0 se nessuno**», e in questa fase l'iniezione
-	 *    non c'e' ancora.  ⚠ Lo zero e' il valore che il documento riserva a
-	 *    «nessuno», non un riempimento: quando l'input arrivera' (fase 5) qui
-	 *    passera' il suo identificatore, e il campo e' gia' quello giusto. */
+	/* ⭐⭐ FASE 4 — E QUI `input` NON E' PIU' ZERO.
+	 *
+	 * ⚠ Questa riga diceva: «`input` e' 0 … quando l'input arrivera' (fase 5)
+	 *   qui passera' il suo identificatore».  ⛔ Due cose erano sbagliate: la
+	 *   fase e' la **4**, e soprattutto il numero **non nasce qui**.
+	 *
+	 * ⛔ Lo timbra IL FIGLIO, nell'istante della cattura, e arriva fin qui
+	 *    dentro il fotogramma.  Il padre sa che cosa ha **mandato** al palco;
+	 *    solo il figlio sa che cosa il compositore ha **preso** e quando ha
+	 *    catturato.  ⇒ Riempirlo qui direbbe «l'ultimo input spedito prima
+	 *    della spedizione», un numero piu' alto: e l'anello del ritardo
+	 *    (`DECISIONI.md` §2.6) misurerebbe un ritardo piu' corto del vero, in
+	 *    nostro favore.  `CODER.md` §1-bis: il confine si sposta nella
+	 *    direzione **scomoda**.
+	 * ⚠ E lo zero resta legittimo: §6.2 lo riserva a «nessuno», ed e' quel che
+	 *   vale finche' il client non ha aperto il suo canale di input. */
 	wt_video_diffondi(utente, codec, chiave, dati, byte, larghezza, altezza,
-	                  istante_us, 0);
+	                  istante_us, input);
+}
+
+/* ⭐⭐ LA FORMA DEL CURSORE, dal palco al filo — il terzo tubo che attraversa il
+ *     confine di processo, e l'unico che lo attraversa **all'incontrario**.
+ *
+ * ⛔ Il metadato del cursore arriva da PipeWire, cioe' nel figlio; il canale
+ *    `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.  ⚠ E la POSIZIONE non
+ *    viaggia: e' del client, che disegna il puntatore da se' — qui passa solo la
+ *    forma, e il ritardo di un giro di rete sulla forma e' il compromesso
+ *    accettato (`DECISIONI.md` §5-bis.4). */
+static void cursore_dal_palco(void *ctx, const char *utente, uid_t uid,
+                              uint16_t larghezza, uint16_t altezza,
+                              int16_t attivo_x, int16_t attivo_y,
+                              const uint8_t *immagine, size_t byte)
+{
+	(void)ctx;
+	(void)uid;
+	wt_cursore_diffondi(utente, larghezza, altezza, attivo_x, attivo_y, immagine,
+	                    byte);
 }
 
 /* ⛔⭐ LA CUCITURA FRA LA CHIAVE CHIESTA E IL CODIFICATORE — punto 4 della
@@ -312,6 +343,34 @@ static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
 	if (!p || !p->f)
 		return;
 	figli_video(p->f, utente, codec, chiave);
+}
+
+/* ⭐⭐ LA CUCITURA DELL'INPUT — fase 4, ed e' la gemella di quella qui sopra.
+ *
+ *     Chi sa che l'utente ha premuto: `rcp.c`, che ha convalidato il messaggio
+ *     secondo `RCP.md` §7.3 — intervalli, surrogati, coordinate sulla tela,
+ *     `id` crescente.
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     ⛔ Chi puo' davvero iniettarlo: il FIGLIO, che gira come l'utente ed e'
+ *     l'unico ad avere la sessione grafica — cioe' un altro processo.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**:
+ *       passa.
+ *
+ * ⛔ E QUESTA RIGA E' LA RAGIONE PER CUI LA FASE 4 ESISTE.  Senza, tutto il
+ *    resto sarebbe scritto e non collegato: `rcp.c` convaliderebbe i messaggi,
+ *    `input.c` saprebbe iniettare, e fra i due non passerebbe un byte — che e'
+ *    esattamente la forma di difetto che la fase 3 ha pagato due volte (la
+ *    chiave chiesta senza chiamante, e il monitor catturato che non era quello
+ *    su cui stava la shell).  ⚠ Le cuciture non hanno un proprietario, e per
+ *    questo nessun banco le guarda: questa ce l'ha. */
+static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
+                            uint8_t azione, uint16_t codice, int premuto,
+                            int32_t a, int32_t b)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return false;
+	return figli_input(p->f, utente, id, azione, codice, premuto, a, b);
 }
 
 /* ⛔ Il figlio se n'e' andato.  ⚠ Non c'e' piu' nessun deposito da svuotare —
@@ -542,7 +601,7 @@ int main(int argc, char **argv)
 		              "silenzioso (CODER.md §4.2).");
 
 	prole = figli_accendi(TELA_L, TELA_A, dir_rilievo, deposita_fotogramma,
-	                      congeda_figlio, NULL);
+	                      congeda_figlio, cursore_dal_palco, NULL);
 	if (!prole)
 		registro_dice(REG_AVVIO,
 		              "⛔ la tabella dei figli non si accende: NESSUN utente "
@@ -586,6 +645,10 @@ int main(int argc, char **argv)
 	 *    sessione senza la richiesta della sua chiave, cioe' con lo schermo
 	 *    fermo e nessuna riga che dica perche'. */
 	wt_video_gancio(video_chiedi, &ponte);
+	/* ⭐ E con lui quello dell'input, per la stessa ragione e nello stesso
+	 *    istante: collegarlo dopo lascerebbe la prima sessione con un desktop
+	 *    che si vede e non si comanda, e nessuna riga che dica perche'. */
+	wt_input_gancio(input_al_figlio, &ponte);
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;

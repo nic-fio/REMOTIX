@@ -1,0 +1,65 @@
+{"n":1,"tipo":"POSTO_LEGATO","versione":8}
+{"n":2,"tipo":"POSTO","capacita":3}
+{"n":3,"tipo":"SCHERMO","i":0,"l":1920,"a":1080,"nome":"Virtual remote monitor"}
+{"n":4,"tipo":"SCHERMO","i":1,"l":1600,"a":900,"nome":"Virtual remote monitor"}
+{"n":5,"tipo":"KEYMAP","formato":1,"byte":68403}
+{"n":6,"tipo":"PRONTA","larghezza":1600,"altezza":900,"schermo":"Virtual remote monitor"}
+{"n":7,"tipo":"FUOCO","dentro":1}
+{"n":8,"tipo":"MODIFICATORI","premuti":0,"bloccati":0,"gruppo":0}
+{"n":9,"tipo":"PUNTATORE_ENTRA","x":5.0,"y":5.0}
+{"n":10,"tipo":"PUNTATORE","x":5.0,"y":5.0}
+{"n":11,"tipo":"PUNTATORE","x":100.0,"y":100.0}
+{"n":12,"tipo":"PUNTATORE","x":1599.0,"y":899.0}
+{"n":13,"tipo":"PUNTATORE","x":800.0,"y":450.0}
+{"n":14,"tipo":"ASSE_SORGENTE","sorgente":0}
+{"n":15,"tipo":"ASSE_120","asse":0,"v120":-120}
+{"n":16,"tipo":"ASSE","asse":0,"valore":-10.00}
+{"n":17,"tipo":"ASSE_SORGENTE","sorgente":0}
+{"n":18,"tipo":"ASSE_120","asse":0,"v120":120}
+{"n":19,"tipo":"ASSE","asse":0,"valore":10.00}
+{"n":20,"tipo":"ASSE_SORGENTE","sorgente":0}
+{"n":21,"tipo":"ASSE_120","asse":0,"v120":-60}
+{"n":22,"tipo":"ASSE","asse":0,"valore":-5.00}
+{"n":23,"tipo":"ASSE_SORGENTE","sorgente":0}
+{"n":24,"tipo":"ASSE_120","asse":1,"v120":120}
+{"n":25,"tipo":"ASSE","asse":1,"valore":10.00}
+{"n":26,"tipo":"ASSE_SORGENTE","sorgente":0}
+{"n":27,"tipo":"ASSE_120","asse":1,"v120":-120}
+{"n":28,"tipo":"ASSE","asse":1,"valore":-10.00}
+{"n":29,"tipo":"BOTTONE","bottone":272,"premuto":1}
+{"n":30,"tipo":"BOTTONE","bottone":272,"premuto":0}
+{"n":31,"tipo":"TASTO","codice":30,"premuto":1}
+{"n":32,"tipo":"TASTO","codice":30,"premuto":0}
+{"n":33,"tipo":"TASTO","codice":30,"premuto":1}
+{"n":34,"tipo":"TASTO","codice":30,"premuto":0}
+{"n":35,"tipo":"PUNTATORE","x":533.0,"y":300.0}
+{"n":36,"tipo":"TASTO","codice":30,"premuto":1}
+{"n":37,"tipo":"TASTO","codice":30,"premuto":0}
+{"n":38,"tipo":"TASTO","codice":29,"premuto":1}
+{"n":39,"tipo":"MODIFICATORI","premuti":4,"bloccati":0,"gruppo":0}
+{"n":40,"tipo":"BOTTONE","bottone":272,"premuto":1}
+{"n":41,"tipo":"TASTO","codice":29,"premuto":0}
+{"n":42,"tipo":"MODIFICATORI","premuti":0,"bloccati":0,"gruppo":0}
+{"n":43,"tipo":"BOTTONE","bottone":272,"premuto":0}
+{"n":44,"tipo":"KEYMAP","formato":1,"byte":70138}
+{"n":45,"tipo":"MODIFICATORI","premuti":0,"bloccati":0,"gruppo":0}
+{"n":46,"tipo":"TASTO","codice":30,"premuto":1}
+{"n":47,"tipo":"TASTO","codice":30,"premuto":0}
+{"n":48,"tipo":"KEYMAP","formato":1,"byte":68403}
+{"n":49,"tipo":"MODIFICATORI","premuti":0,"bloccati":0,"gruppo":0}
+{"n":50,"tipo":"PUNTATORE_ESCE"}
+Terminated
+{"n":1,"tipo":"POSTO_LEGATO","versione":8}
+{"n":2,"tipo":"POSTO","capacita":3}
+{"n":3,"tipo":"SCHERMO","i":0,"l":1920,"a":1080,"nome":"Virtual remote monitor"}
+{"n":4,"tipo":"SCHERMO","i":1,"l":1280,"a":720,"nome":"Virtual remote monitor"}
+{"n":5,"tipo":"KEYMAP","formato":1,"byte":68403}
+{"n":6,"tipo":"PRONTA","larghezza":1280,"altezza":720,"schermo":"Virtual remote monitor"}
+{"n":7,"tipo":"FUOCO","dentro":1}
+{"n":8,"tipo":"MODIFICATORI","premuti":0,"bloccati":0,"gruppo":0}
+{"n":9,"tipo":"PUNTATORE_ENTRA","x":533.0,"y":300.0}
+{"n":10,"tipo":"PUNTATORE","x":640.0,"y":360.0}
+{"n":11,"tipo":"FUOCO","dentro":0}
+{"n":12,"tipo":"POSTO","capacita":1}
+{"n":13,"tipo":"POSTO","capacita":0}
+Terminated

@@ -1,0 +1,27 @@
+{"prova":"⭐ positivo: il simulatore vede una lettera che ESCE di sicuro","esito":"verde","dettaglio":"battuto il tasto 30 su «it», e' uscita «a»"}
+{"prova":"⭐ negativo: il simulatore DISTINGUE i livelli","esito":"verde","dettaglio":"tasto 26 senza Maiusc ⇒ «è» (U+00E8), e NON e' la «e'» accentata"}
+{"prova":"⭐ il simulatore applica i modificatori","esito":"verde","dettaglio":"Maiusc+26 ⇒ «é» (U+00E9): il simulatore APPLICA i modificatori"}
+{"prova":"«é» (U+00E9) su «it» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 42(Maiusc(sx))+26 esce «é» — la strada e' con modificatore"}
+{"prova":"«é» (U+00E9) su «us» ⇒ NON producibile","esito":"verde","dettaglio":"ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro"}
+{"prova":"«è» (U+00E8) su «it» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 26 esce «è» — la strada e' diretta"}
+{"prova":"«a» (U+0061) su «it» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 30 esce «a» — la strada e' diretta"}
+{"prova":"«A» (U+0041) su «us» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 42(Maiusc(sx))+30 esce «A» — la strada e' con modificatore"}
+{"prova":"«@» (U+0040) su «it» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 100(AltGr)+16 esce «@» — la strada e' con modificatore"}
+{"prova":"«@» (U+0040) su «us» ⇒ deve uscire","esito":"verde","dettaglio":"battendo 42(Maiusc(sx))+3 esce «@» — la strada e' con modificatore"}
+{"prova":"«😀» (U+1F600) su «it» ⇒ NON producibile","esito":"verde","dettaglio":"ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro"}
+{"prova":"«😀» (U+1F600) su «us» ⇒ NON producibile","esito":"verde","dettaglio":"ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro"}
+{"prova":"«中» (U+4E2D) su «it» ⇒ NON producibile","esito":"verde","dettaglio":"ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro"}
+{"prova":"⛔ «zz_non_esiste» non si carica ⇒ DEVE fallire e DIRLO","esito":"verde","dettaglio":"NULL, col motivo: «sconosciuta: la disposizione «zz_non_esiste» non si compila ([XKB-338] Couldn't find file \"symbols/zz_non_esiste\" in include paths)»"}
+{"prova":"⛔ «it(variante_che_non_esiste)» non si carica ⇒ DEVE fallire e DIRLO","esito":"verde","dettaglio":"NULL, col motivo: «sconosciuta: la disposizione «it(variante_che_non_esiste)» non si compila ([XKB-661] Couldn't process include statement for 'it(variante_che_non_esiste)')»"}
+{"prova":"⭐ i nomi delle due disposizioni si DISTINGUONO","esito":"verde","dettaglio":"«it [Italian]» contro «us [English (US)]»"}
+{"prova":"gli ingressi illegali NON si confondono col «non producibile»","esito":"verde","dettaglio":"surrogato ⇒ -1, fuori intervallo ⇒ -1 (attesi -1 e -1)"}
+{"prova":"sessione «it» + negoziata «us», «[» (U+005B) ⇒ deve uscire","esito":"verde","dettaglio":"battendo 100(AltGr)+9 sulla disposizione DELLA SESSIONE esce «[»"}
+{"prova":"sessione «us» + negoziata «it», «é» (U+00E9) ⇒ NON producibile","esito":"verde","dettaglio":"ha detto NO e non ha mandato niente"}
+{"prova":"sessione «it» + negoziata «it», «é» (U+00E9) ⇒ deve uscire","esito":"verde","dettaglio":"battendo 42(Maiusc(sx))+26 sulla disposizione DELLA SESSIONE esce «é»"}
+{"prova":"sessione «it» + negoziata «(nessuna)», «[» (U+005B) ⇒ deve uscire","esito":"verde","dettaglio":"battendo 100(AltGr)+9 sulla disposizione DELLA SESSIONE esce «[»"}
+{"prova":"⭐ due disposizioni vive insieme non si rimescolano","esito":"verde","dettaglio":"it⇒1 (2 pos.), poi us⇒0 (0 pos.), poi ANCORA it⇒1 (2 pos.)"}
+{"prova":"il registro: sessione «it» + negoziata «us» ⇒ DEVE dichiarare il ripiego","esito":"verde","dettaglio":"3 righe di registro, «RIPIEGO DICHIARATO» c'e'"}
+{"prova":"il registro: sessione «it» + negoziata «it» ⇒ NON deve gridare al ripiego","esito":"verde","dettaglio":"2 righe di registro, «RIPIEGO DICHIARATO» non c'e'"}
+{"prova":"il registro: sessione «us» + negoziata «us» ⇒ NON deve gridare al ripiego","esito":"verde","dettaglio":"2 righe di registro, «RIPIEGO DICHIARATO» non c'e'"}
+{"prova":"il registro: sessione «it» + negoziata «(nessuna)» ⇒ NON deve gridare al ripiego","esito":"verde","dettaglio":"1 righe di registro, «RIPIEGO DICHIARATO» non c'e'"}
+{"totale":26,"rosse":0,"esito":"verde"}

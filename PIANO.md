@@ -431,7 +431,7 @@ qualcun altro.
 > | ⭐ **l'architettura** | **ASSOLTA**: togliendo la codifica in hardware si perdono **31,7 ms** e **gli altri quattro tratti non si muovono** (Mutter −0,02 · filo −0,12 · decodifica −0,76) |
 > | ⭐ **la codifica in hardware** | **nel prodotto**, non su una copia: la chiave passa da **114,5 ms a 5,1**, il ritmo **raddoppia** |
 > | ⛔ **il tetto** | **SFORA** — 78,1 contro 50, e **sforerebbe anche a codifica gratis** |
-> | ⛔⛔ **il collo di bottiglia nuovo** | **il DISEGNO: 28,0 ms su 78,1, il 36 %** — contro i 5 ms della codifica |
+> | ⛔⛔ **il collo di bottiglia nuovo** | ⚠ ~~**il DISEGNO: 28,0 ms su 78,1, il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026** (deciso dall'utente, su due misure indipendenti della fase 4): **il disegno costa 2,25 ms `[M]`**; i 28,0 erano **l'ATTESA del fotogramma dalla GPU** più il disegno — un fotogramma HEVC in hardware esce opaco e la rilettura della marca del banco ne provoca il trasferimento. ⭐ Il totale 78,1 resta vero. `fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md` |
 >
 > ⛔ **E i tre limiti del giudizio sono scritti in `fasi/03-movimento.md`, non taciuti**: è su AV1
 > in software; HEVC in hardware **non è giudicabile** perché il browser dell'utente non lo dipinge;

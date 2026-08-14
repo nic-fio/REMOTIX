@@ -594,7 +594,7 @@ lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md
 | | |
 |---|---|
 | **la leva** | ⭐ **non è più solo di Chrome**: `keyboardLock` è entrato nello standard WHATWG l'**8 maggio 2026** e l'hanno spedito Safari 26.4 e Firefox 151 `[S]`. Chrome ed Edge restano sulla forma vecchia — ⚠ **la pagina deve saperle entrambe** |
-| **quanto si perde** | `[R]` la lista riservata di Chrome è di **dodici** comandi; **a schermo intero scende a due** — `F11` e l'uscita — **senza chiamare nessuna API**. Firefox ne ha **sei**, Safari **zero** |
+| **quanto si perde** | ⭐ **`[M]` 14 agosto 2026 — MISURATO, ed era `[R]`.** Su **Chrome 151** la tesi regge: a schermo intero **con la Keyboard Lock** le riservate del browser passano da **8 a 0** — restano esattamente `F11` ed `Escape`. ⛔ **E su Firefox 140 ESR è FALSA, in modo che non avremmo indovinato: a schermo intero PEGGIORA** (5 → **7**), e non ha **nessuna delle due forme** della lock. ⚠ Safari **non provato**, e resta `[?]`: non si deduce dagli altri |
 | ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`web.md` §1.2 B) |
 
 ⛔ **Gli stati sono tre, non due**, e il secondo è il peggiore *(`web.md` §8-bis, O8)*:
@@ -602,7 +602,7 @@ lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md
 | | |
 |---|---|
 | **consegnata** | arriva alla sessione remota, e basta |
-| ⛔ **consegnata *e* riservata** | la sessione remota riceve la battuta **e** il browser esegue il suo comando — su Firefox `Ctrl+Tab` è qui: *sembra intercettabile e non lo è* |
+| ⛔ **consegnata *e* riservata** | la sessione remota riceve la battuta **e** il browser esegue il suo comando. ⛔⭐ **E lo stato esiste, è MISURATO ed è LARGO**: `[M]` 14 agosto 2026, **18 combinazioni su 42** su Chrome in finestra ⇒ *una prova che guardasse solo il lato della sessione le avrebbe dichiarate **tutte verdi**.* ⭐ **E si spegne con `preventDefault()`**: 18 → 0 su Chrome, 15 → 0 su Firefox. ⚠ **L'esempio che c'era qui era sbagliato**: `Ctrl+Tab` di Firefox **non** è in questo stato — misurato, sta nel **terzo**, e la pagina non ne vede nemmeno il `keydown` |
 | **non consegnata** | il browser se la tiene |
 
 ⚠ **Da cui la misura non è «arriva?» ma «arriva *e basta*?»** — una prova che guarda solo il lato

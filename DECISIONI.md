@@ -1323,8 +1323,25 @@ blocco.*
 |---|---|---|---|
 | stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
 | ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-| richiamo → disegno finito | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
+| richiamo → disegno finito ⚠ *(vedi la nota sotto: il nome del tratto è stato corretto)* | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
 | **mediana disegno → vetro** | 73,66 / 67,79 | ⛔ **101,30** | ⛔ **+27,6 / +33,5** |
+
+> ### ⛔⛔ 14 agosto 2026 — **IL TRATTO «richiamo → disegno finito» PORTAVA UN NOME SBAGLIATO**
+>
+> *Corretto per decisione dell'utente, su due misure indipendenti della fase 4
+> (`fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md`), arrivate alla stessa
+> conclusione da due lati senza mettersi d'accordo.*
+>
+> ⭐ **I numeri restano**; ⛔ **il nome no.** `[M]` il disegno vero costa **2,25 ms**: quel tratto
+> misurava **l'attesa del fotogramma dalla GPU più il disegno**, perché un fotogramma HEVC
+> decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca ne provoca il
+> trasferimento GPU→CPU. ⭐ La prova che il confine era messo male: a **palco identico**, cambiando
+> codec, «decodifica» e «disegno» si muovono in **versi opposti** e la somma si conserva — ma
+> `drawImage` **non sa quale codec** ha prodotto il fotogramma.
+>
+> ⇒ ⭐ **La lezione, e vale oltre questo tratto**: una riga di scomposizione porta **un numero e un
+> nome**. Il numero era `[M]`; il nome era **dedotto** — e nessuna marca distingueva le due metà
+> della stessa riga.
 
 ⭐⭐ **La decisione, e non è «niente worker»: è DOVE passa il confine.**
 
@@ -2097,6 +2114,31 @@ testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fe
 > giudica leggendolo, si giudica usandolo. Questa tabella è quindi un **punto di partenza
 > dichiarato**, non un impegno: chi la trova diversa fra sei mesi non ha trovato un difetto.
 
+### 5-bis.3-bis ✅ ⭐ La barra porta **un bottone solo**: `Ctrl+Alt+Canc`
+
+*14 agosto 2026, deciso dall'utente davanti alla misura della fase 4.*
+
+⛔ **Il fatto che ha prodotto la domanda, ed è `[M]`** (`fasi/rapporti/F4-A9-scorciatoie.md`): sei
+combinazioni **non arriveranno mai** al desktop remoto — `Super`, `Super+D`, `Alt+Tab`, `Alt+F2`,
+`Alt+F4`, `Ctrl+Alt+Canc`. ⚠ E non è un limite del browser: **le prende il compositore del client**,
+e **nessuna API le riprenderà mai**. L'unico modo di darle è un bottone a schermo — che però toglie
+pixel all'immagine del desktop.
+
+**Scelto: uno solo.** ⛔ E la ragione per cui è quello e non un altro è di natura diversa dal gusto:
+senza `Ctrl+Alt+Canc`, **in una sessione bloccata l'utente non entra più** — è l'unica delle sei che,
+mancando, lo lascia **fuori** invece che scomodo. `SPECIFICHE.md` §7.3-bis la chiama *«un requisito,
+non un ripiego di fortuna»*, e tre riferimenti maturi su tre lo fanno.
+
+⚠ **Gli altri cinque restano scritti e spenti**, con la loro ragione accanto: la scelta è di gusto e
+si rivede **guardandola**, non leggendola (`LEZIONI.md` §7.3, la stessa riserva con cui l'utente ha
+confermato i sette gesti). ⛔ Accenderne uno costa **una riga**.
+⛔ **E spento vuol dire NON DISEGNATO**, non «disegnato e inerte»: un bottone che c'è e non fa niente
+è peggio di un bottone che non c'è. Le cinque combinazioni restano però **nella tavola delle
+dichiarate**, dove l'utente legge che quella battuta se la tiene il suo computer — ⭐ perché
+`SPECIFICHE.md` §7.3-bis vieta di **fingere** che siano arrivate, non di non offrirle.
+
+---
+
 ### 5-bis.4 🔸 Il canale del cursore, e il suo compromesso
 
 Il client deve sapere **che forma** disegnare: barretta sul testo, doppia freccia sui bordi,
@@ -2166,6 +2208,30 @@ esiste su nessun tasto — un'emoji, un alfabeto diverso — non esce **niente**
 premi Maiusc, premi 30, rilascia 30, rilascia Maiusc); la ripetizione non è nostra (wlroots
 scarta i tasti ripetuti, a ripetere è l'applicazione); e la disposizione dichiarata dal client
 — la «questione n.7» di v1 — non serve più per *interpretare*, solo per *scegliere* (5-bis.7).
+
+### 5-bis.6-bis ✅ ⭐ Gli accenti composti e le tastiere asiatiche restano **fuori, dichiarati**
+
+*14 agosto 2026, deciso dall'utente davanti alla misura della fase 4
+(`fasi/rapporti/F4-A7-pagina-classico.md`).*
+
+**Che cosa funziona già** `[M]`: la `à` italiana, perché sulla disposizione italiana **è un tasto
+suo** e passa dal percorso di `LETTERA` come tutte le altre.
+
+⛔ **Che cosa resta fuori**: i **tasti morti** (la `à` composta in due battute di una tastiera
+francese o «US international») e l'**IME** (cinese, giapponese, coreano). ⚠ E resta fuori
+**dichiarato**: la pagina lo scrive, e **non fa uscire una lettera diversa né tace** — che è la
+regola di `RCP.md` §7.3 applicata al lato del client.
+
+**Il prezzo che si è scelto di non pagare**, ed era previsto: per avere tasti morti e IME serve un
+**elemento modificabile col fuoco sopra la tela** — cioè `web.md` §1.2 C — e quell'elemento si mette
+**fra il puntatore e l'immagine**: ⛔ il percorso con cui la pagina disegna oggi la freccia **andrebbe
+rifatto**. ⇒ Costo certo e visibile, contro un guadagno che per l'utente di oggi è **zero**.
+
+⚠ **E si riapre da sé il giorno in cui servisse una tastiera straniera**: il lavoro è dichiarato, non
+perso. `LEZIONI.md` §2.4 — quel che cambia ciò che si vede sta dietro un interruttore finché
+qualcuno non l'ha guardato.
+
+---
 
 ### 5-bis.7 ✅ La disposizione si rinegozia all'attacco e al riattacco, come la risoluzione
 

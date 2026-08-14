@@ -645,10 +645,45 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	 *   vorra' le applicazioni X11 dentro la sessione la togliera' **da sola**,
 	 *   e misurera' quella.
 	 */
+	/*
+	 * ⛔⛔ E `--virtual-monitor` NON C'E' PIU' — 14 agosto 2026, fase 4, A1.
+	 *
+	 *     Fino a stamattina questa riga chiedeva `--virtual-monitor %ux%u`, e
+	 *     la sessione nasceva con **un monitor suo**.  ⇒ Poi `mutter.c:450`
+	 *     cattura con `RecordVirtual`, che **ne monta un SECONDO**, e registra
+	 *     quello: GNOME lascia barra, dock e finestre sul primo, ci mette solo
+	 *     lo sfondo sul secondo, e ⛔ **l'utente guarda uno schermo vuoto**.
+	 *
+	 * ⭐ MISURATO, non dedotto — `[M]` 14 agosto 2026, banco `04-b20`:
+	 *    con la riga di prima, il fotogramma preso dalla cattura e' il solo
+	 *    sfondo Debian (bordo della barra 0,01 contro la soglia 4; zero fronti
+	 *    di testo), e al client in 40 s non arriva **nessun** fotogramma —
+	 *    perche' su uno schermo dove non c'e' niente non cambia mai niente.
+	 *
+	 * ⇒ ⭐ IL DISEGNO E': la sessione **non ha monitor propri**, e l'unico
+	 *      monitor e' quello che monta la nostra cattura.  E' quel che
+	 *      `mutter.c:376` dichiarava gia' — *«il nostro `RecordVirtual` ne
+	 *      monta uno suo»* — e che questa riga tradiva.
+	 *
+	 * ⚠ IL PREZZO, E SI DICHIARA: prima del primo client la sessione e'
+	 *   **nera** (zero monitor).  Per una sessione **solo remota** va bene —
+	 *   nessuno la guarda — ⛔ ma non va bene per una sessione che deve vivere
+	 *   senza nessuno che la catturi, ed e' per questo che `PIANO.md:399` e
+	 *   `gnome.md` §108 («`--virtual-monitor` non e' opzionale») vanno
+	 *   riscritti: vedi `fasi/rapporti/F4-A1-desktop-vero.md`.
+	 *
+	 * ⚠ `larghezza` e `altezza` non entrano piu' in questa riga: adesso la
+	 *   misura la decide la negoziazione PipeWire della cattura
+	 *   (`meta-screen-cast-virtual-stream-src.c:601-606` `[R]`, che crea il
+	 *   monitor con `video_format->size`).  Restano nella firma perche' con
+	 *   loro si CONTROLLA quel che si e' ottenuto — vedi `sessione_assicura`.
+	 */
 	contenuto = g_strdup_printf("[Service]\n"
 	                            "ExecStart=\n"
-	                            "ExecStart=%s --headless --no-x11 --virtual-monitor %ux%u\n",
-	                            shell, larghezza, altezza);
+	                            "ExecStart=%s --headless --no-x11\n",
+	                            shell);
+	(void) larghezza;
+	(void) altezza;
 
 	g_mkdir_with_parents(cartella, 0700);
 	if (!g_file_set_contents(percorso, contenuto, -1, &sbaglio)) {
@@ -665,7 +700,25 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	 *    sufficiente».  Si rilegge dal gestore, e se un altro drop-in vince ci
 	 *    si ferma qui invece di scoprirlo dal nero sullo schermo dell'utente.
 	 */
-	atteso = g_strdup_printf("--virtual-monitor %ux%u", larghezza, altezza);
+	/*
+	 * ⛔⭐ E L'ATTESO E' CAMBIATO CON LA RIGA — forma d'errore E1, «il controllo
+	 *     e' giusto, l'atteso no».  Fino a stamattina qui si PRETENDEVA
+	 *     `--virtual-monitor %ux%u`: tolta la bandiera, questo controllo
+	 *     avrebbe fatto fallire il prodotto curato.
+	 *
+	 * ⛔⛔ E ADESSO SI GUARDA ANCHE UN'ASSENZA, che e' la meta' che conta.
+	 *
+	 *     `[M]` 14 agosto 2026: su questa macchina `--virtual-monitor` non lo
+	 *     chiedeva il prodotto — lo chiedeva
+	 *     `/etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf`,
+	 *     cioe' un drop-in **di sistema** valido per QUALUNQUE utente.  ⇒ Quella
+	 *     e' precisamente «una riga di configurazione che si puo' perdere»
+	 *     dell'invariante **I7**, e qui vale al contrario: non basta che il
+	 *     nostro drop-in ci sia, deve **vincere**.  Se il gestore dice ancora
+	 *     `--virtual-monitor`, la sessione nascerebbe col difetto e ci si ferma
+	 *     qui invece di scoprirlo dallo schermo vuoto dell'utente.
+	 */
+	atteso = g_strdup_printf("--headless --no-x11");
 	vigore = chiedi(mostra);
 	if (!vigore) {
 		registro_dice(REG_SESSIONE,
@@ -681,11 +734,23 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 		              atteso, vigore);
 		return FALSE;
 	}
+	if (strstr(vigore, "--virtual-monitor")) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ l'ExecStart in vigore chiede ANCORA «--virtual-monitor», e non "
+		              "sono io: c'e' un drop-in che vince sul mio (di solito "
+		              "/etc/systemd/user/%s.d/, che vale per tutti gli utenti).  ⚠ Cosi' "
+		              "la sessione nascerebbe con un monitor SUO, la cattura ne "
+		              "monterebbe un secondo, e l'utente guarderebbe uno schermo VUOTO.  "
+		              "ExecStart in vigore: %s",
+		              SESSIONE_UNITA_SHELL, vigore);
+		return FALSE;
+	}
 
 	registro_dice(REG_SESSIONE,
-	              "⭐ il monitor virtuale %ux%u lo chiede il PROGRAMMA (%s), e "
-	              "l'ExecStart in vigore lo conferma: %s",
-	              larghezza, altezza, percorso, vigore);
+	              "⭐ la sessione nascera' SENZA monitor propri, e lo chiede il PROGRAMMA "
+	              "(%s): l'unico monitor sara' quello che monta la nostra cattura, ed e' "
+	              "li' che GNOME mette la barra e la dock.  ExecStart in vigore: %s",
+	              percorso, vigore);
 	return TRUE;
 }
 
@@ -813,10 +878,35 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 	stato = sessione_stato(larghezza, altezza, &scelto);
 	switch (stato) {
 	case SESSIONE_SANA:
+		/*
+		 * ⛔⛔ E QUESTO NON E' PIU' IL CASO BUONO — 14 agosto 2026, fase 4, A1.
+		 *
+		 *     `SESSIONE_SANA` vuol dire «un monitor solo, «MetaVirtualMonitor»,
+		 *     della misura chiesta»: cioe' una sessione che si e' presa **un
+		 *     monitor suo**.  Poi la cattura ne monta un secondo e registra
+		 *     quello ⇒ ⛔ l'utente guarda uno schermo vuoto.  `[M]` misurato
+		 *     dal banco `04-b20` il 14 agosto 2026.
+		 *
+		 * ⇒ ⭐ Adesso il caso buono e' `SESSIONE_NERA` — zero monitor propri —
+		 *      e questo e' il DIFETTO.  ⛔ La faccio rinascere, e la ragione e'
+		 *      la stessa, rovesciata, che `sessione.h` da' per la nera: un
+		 *      monitor «MetaVirtualMonitor» esiste **solo** se qualcuno ha
+		 *      passato `--virtual-monitor`, cioe' solo in una sessione headless
+		 *      — cioe' nostra.  Non si porta via niente a nessuno.
+		 *
+		 * ⚠ E si rinasce SOLO qui, dove i monitor sono **uno**: se fossero due
+		 *   ci sarebbe una cattura viva (`SESSIONE_SCELTO_DA_SE`), e buttare
+		 *   giu' la sessione toglierebbe il desktop a un client attaccato.
+		 */
 		registro_dice(REG_SESSIONE,
-		              "la sessione grafica c'e' gia' e ha il monitor chiesto: non la "
-		              "tocco (il palco appartiene alla sessione, I4)");
-		return SESSIONE_SANA;
+		              "⛔ LA SESSIONE HA UN MONITOR SUO («%s» «%s» %ux%u): e' il difetto "
+		              "del desktop invisibile — la cattura ne montera' un SECONDO e "
+		              "l'utente guardera' quello, vuoto.  La faccio RINASCERE senza "
+		              "monitor propri, e lo scrivo qui perche' una sessione che sparisce "
+		              "senza una riga e' peggio del difetto",
+		              scelto.connettore, scelto.prodotto, scelto.larghezza,
+		              scelto.altezza);
+		break;
 	case SESSIONE_NON_LETTA:
 		registro_dice(REG_SESSIONE,
 		              "⛔ non ho potuto leggere lo stato della sessione: NON tocco "
@@ -825,29 +915,51 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              "per un'ipotesi");
 		return SESSIONE_NON_LETTA;
 	case SESSIONE_MISURA_ALTRA:
+		/* ⛔ E' lo stesso difetto di sopra con un'altra misura: un monitor
+		 *    «MetaVirtualMonitor» che la sessione non doveva avere. */
 		registro_dice(REG_SESSIONE,
-		              "⚠ la sessione c'e' e il suo monitor e' %ux%u invece di %ux%u: "
-		              "PROSEGUO con questa, perche' c'e' che cosa catturare e la misura "
-		              "di una sessione gia' viva non si cambia a caldo (gnome.md §8.2). "
-		              "Chi la vuole diversa la fa rinascere di proposito",
+		              "⛔ la sessione ha un monitor SUO, %ux%u invece dei %ux%u chiesti: "
+		              "e' il difetto del desktop invisibile con un'altra misura.  La "
+		              "faccio RINASCERE senza monitor propri",
 		              scelto.larghezza, scelto.altezza, larghezza, altezza);
-		return SESSIONE_MISURA_ALTRA;
+		break;
 	case SESSIONE_SCELTO_DA_SE:
+		/*
+		 * ⭐ E QUESTO, DOPO LA CURA, E' SPESSO IL CASO SANO: «Virtual remote
+		 *    monitor» e' il nome che Mutter da' al monitor di un `RecordVirtual`
+		 *    (`meta-screen-cast-virtual-stream-src.c:606-609` `[R]`), cioe' al
+		 *    monitor che monta la NOSTRA cattura quando un client e' attaccato.
+		 * ⛔ Non si tocca in nessun caso: rifarla nascere toglierebbe il
+		 *    desktop a chi lo sta guardando (I4).
+		 */
 		registro_dice(REG_SESSIONE,
-		              "⚠ la sessione c'e' ma il monitor non e' quello che ho chiesto io "
-		              "(%u monitor, il primo e' «%s»): PROSEGUO e lo dichiaro — "
-		              "rifarla nascere non curerebbe niente, perche' il monitor di "
-		              "troppo lo crea uno ScreenCast di qualcun altro",
+		              "la sessione c'e' con %u monitor, il primo e' «%s»: NON la tocco.  "
+		              "⭐ Dopo la cura del 14 agosto 2026 questo e' spesso il caso sano — "
+		              "«Virtual remote monitor» e' il monitor che monta la cattura quando "
+		              "un client e' attaccato, e buttarla giu' glielo toglierebbe (I4)",
 		              scelto.quanti, scelto.prodotto);
 		return SESSIONE_SCELTO_DA_SE;
 	case SESSIONE_NERA:
+		/*
+		 * ⛔⛔ E QUESTO NON E' PIU' UN GUASTO — 14 agosto 2026, fase 4, A1.
+		 *
+		 *     Fino a stamattina qui si faceva RINASCERE la sessione.  ⇒ Dopo la
+		 *     cura quella riga **distruggerebbe la sessione giusta a ogni
+		 *     chiamata**, e ne farebbe un'altra identica, all'infinito.
+		 *
+		 * ⭐ Zero monitor propri E' il fine: l'unico monitor lo monta la nostra
+		 *    cattura, e GNOME ci mette sopra la barra e la dock.
+		 * ⚠ Il prezzo si dichiara: prima del primo client la sessione e' NERA
+		 *    davvero — non ha niente da mostrare, e non deve mostrarlo a
+		 *    nessuno.  Per una sessione **solo remota** e' corretto.
+		 */
 		registro_dice(REG_SESSIONE,
-		              "⛔ LA SESSIONE C'E' ED E' NERA (zero monitor).  E' la forma esatta "
-		              "del difetto vissuto due giorni su questa macchina: viva, completa "
-		              "e senza niente da catturare.  La faccio RINASCERE, e lo scrivo "
-		              "qui perche' una sessione che sparisce senza una riga e' peggio di "
-		              "una sessione nera");
-		break;
+		              "⭐ la sessione c'e' e non ha monitor propri: e' esattamente quel "
+		              "che serve, e NON la tocco.  L'unico monitor lo montera' la "
+		              "cattura quando arriva il primo client, ed e' li' che GNOME mette "
+		              "la barra e la dock.  ⚠ Fino ad allora la sessione e' nera, e va "
+		              "bene: e' una sessione SOLO REMOTA");
+		return SESSIONE_NERA;
 	case SESSIONE_MORTA:
 		registro_dice(REG_SESSIONE, "nessuna sessione grafica: la avvio io");
 		break;
@@ -859,22 +971,28 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 	 *    Shell come prima cosa.  Scriverlo dopo significherebbe scriverlo per la
 	 *    sessione SUCCESSIVA — cioe' avere ragione domani.
 	 *
-	 * ⛔ E PRIMA DI BUTTARE GIU' QUELLA NERA: se il drop-in non si puo' mettere
-	 *    in vigore, farla rinascere darebbe un'altra sessione nera, e in piu'
-	 *    avremmo portato via all'utente quella che c'era.
+	 * ⛔ E PRIMA DI BUTTARE GIU' QUELLA COL MONITOR DI TROPPO: se il drop-in non
+	 *    si puo' mettere in vigore, farla rinascere darebbe un'altra sessione
+	 *    con lo stesso difetto, e in piu' avremmo portato via all'utente quella
+	 *    che c'era.
 	 */
 	if (!scrivi_dropin(larghezza, altezza)) {
 		registro_dice(REG_SESSIONE,
-		              "⛔ senza il drop-in in vigore la sessione nascerebbe NERA: non la "
-		              "faccio nascere affatto, e lo stato resta «%s»",
+		              "⛔ senza il drop-in in vigore la sessione rinascerebbe con lo "
+		              "stesso monitor di troppo, e l'utente riguarderebbe uno schermo "
+		              "vuoto: non la faccio nascere affatto, e lo stato resta «%s»",
 		              sessione_marca(stato));
 		return stato;
 	}
 
-	if (stato == SESSIONE_NERA && !sessione_termina()) {
+	/* ⛔ Si butta giu' solo quella col monitor SUO (uno solo, e nostro): mai la
+	 *    nera — che adesso e' quella giusta — e mai quella con due monitor, che
+	 *    ha una cattura viva sopra. */
+	if ((stato == SESSIONE_SANA || stato == SESSIONE_MISURA_ALTRA) &&
+	    !sessione_termina()) {
 		registro_dice(REG_SESSIONE,
-		              "⛔ la sessione nera non se n'e' andata: non ne avvio una seconda "
-		              "(una sessione grafica per utente, I2)");
+		              "⛔ la sessione col monitor di troppo non se n'e' andata: non ne "
+		              "avvio una seconda (una sessione grafica per utente, I2)");
 		return sessione_stato(larghezza, altezza, NULL);
 	}
 
@@ -882,12 +1000,21 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		return sessione_stato(larghezza, altezza, NULL);
 
 	/*
-	 * ⛔⭐ E QUI SI ASPETTA IL MONITOR, NON LA VITALITA'.
+	 * ⛔⭐ E QUI SI ASPETTA LA SESSIONE **SENZA MONITOR PROPRI**, non un monitor.
 	 *
-	 * v1 aspettava `sessione_viva()` e dichiarava «sessione grafica pronta»: e'
-	 * esattamente la domanda che ha risposto di si' per due giorni su una
-	 * macchina nera.  «E' viva» e «ha un monitor» sono due domande diverse, e
-	 * qui si fa la seconda.
+	 * ⚠ Fino al 14 agosto 2026 questa attesa finiva su `SESSIONE_SANA` — «c'e'
+	 *   un monitor». Era la domanda giusta per il disegno di prima, dove la
+	 *   sessione doveva portarsi un monitor suo; ⛔ dopo la cura e' la domanda
+	 *   ROVESCIATA, e aspettare `SANA` vorrebbe dire aspettare il difetto.
+	 *
+	 * ⭐ Resta pero' la lezione di v1, e non si torna a `sessione_viva()`: si
+	 *   guarda comunque **quanti monitor ci sono**, perche' e' l'unico modo di
+	 *   accorgersi che un drop-in di qualcun altro ha vinto sul nostro.  La
+	 *   domanda e' la stessa, e' l'atteso che si e' rovesciato.
+	 *
+	 * ⚠ La grazia serve ancora, e per la ragione opposta: `--virtual-monitor`
+	 *   creerebbe il monitor PRIMA che `DisplayConfig` risponda, quindi se dopo
+	 *   la grazia i monitor sono ancora zero, zero resteranno.
 	 */
 	scadenza = g_get_monotonic_time() + (gint64) ATTESA_AVVIO_MS * 1000;
 	while (g_get_monotonic_time() < scadenza) {
@@ -897,7 +1024,8 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		if (viva_da == 0) {
 			viva_da = g_get_monotonic_time();
 			registro_dice(REG_SESSIONE,
-			              "il compositore risponde; aspetto il MONITOR (grazia %d ms)",
+			              "il compositore risponde; guardo che NON si sia preso un "
+			              "monitor suo (grazia %d ms)",
 			              GRAZIA_MONITOR_MS);
 			continue;
 		}
@@ -905,31 +1033,32 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 			continue;
 
 		stato = sessione_stato(larghezza, altezza, &scelto);
-		if (stato == SESSIONE_SANA) {
+		if (stato == SESSIONE_NERA) {
 			if (avviata)
 				*avviata = true;
 			registro_dice(REG_SESSIONE,
-			              "⭐ sessione grafica pronta E con un monitor: «%s» «%s» "
-			              "%ux%u@%.3f",
-			              scelto.connettore, scelto.prodotto, scelto.larghezza,
-			              scelto.altezza, scelto.refresh);
-			return SESSIONE_SANA;
+			              "⭐ sessione grafica pronta e SENZA monitor propri: e' "
+			              "quel che serve.  Il monitor lo montera' la cattura al "
+			              "primo client, e la barra e la dock ci andranno sopra");
+			return SESSIONE_NERA;
 		}
 		if (stato != SESSIONE_MORTA && stato != SESSIONE_NON_LETTA) {
-			/* E' nata, e non e' quel che avevo chiesto: aspettare di piu' non
+			/* E' nata, e si e' presa un monitor: aspettare di piu' non
 			 * cambierebbe niente, e il numero da dare e' questo. */
 			if (avviata)
 				*avviata = true;
-			registro_dice(REG_SESSIONE, "⛔ la sessione e' nata, ed e' «%s»",
-			              sessione_marca(stato));
+			registro_dice(REG_SESSIONE,
+			              "⛔ la sessione e' nata E SI E' PRESA UN MONITOR («%s»): "
+			              "«%s».  Il mio drop-in non ha vinto, e l'utente "
+			              "guardera' uno schermo vuoto",
+			              scelto.prodotto, sessione_marca(stato));
 			return stato;
 		}
 	}
 
 	stato = sessione_stato(larghezza, altezza, NULL);
 	registro_dice(REG_SESSIONE,
-	              "⛔ la sessione grafica non ha dato un monitor entro %d secondi: resta "
-	              "«%s»",
+	              "⛔ la sessione grafica non ha risposto entro %d secondi: resta «%s»",
 	              ATTESA_AVVIO_MS / 1000, sessione_marca(stato));
 	return stato;
 }

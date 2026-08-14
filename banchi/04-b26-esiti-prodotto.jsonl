@@ -1,0 +1,13 @@
+{"cosa":"CURSORE_FORMA","modo":"--prodotto","momento":"forma-1","serie":1,"larghezza":48,"altezza":48,"attivo_x":6,"attivo_y":2,"nascosto":false,"lunghezza":9224,"lunghezza_attesa":9224,"violazioni":0}
+{"cosa":"tinta","punto":"A","colore":"#3465a5"}
+{"cosa":"fotogramma","punto":"A","x":400,"y":400,"larghezza":1920,"altezza":1080,"stride":7680}
+{"cosa":"tinta","punto":"B","colore":"#3465a4"}
+{"cosa":"fotogramma","punto":"B","x":1400,"y":400,"larghezza":1920,"altezza":1080,"stride":7680}
+{"cosa":"solo-movimento","movimenti":40,"forme_nuove":0}
+{"cosa":"CURSORE_FORMA","modo":"--prodotto","momento":"nascosto","serie":2,"larghezza":0,"altezza":0,"attivo_x":0,"attivo_y":0,"nascosto":true,"lunghezza":8,"lunghezza_attesa":8,"violazioni":0}
+{"cosa":"tocco","nascosti_nuovi":1}
+{"cosa":"CURSORE_FORMA","modo":"--prodotto","momento":"ritorno","serie":3,"larghezza":48,"altezza":48,"attivo_x":6,"attivo_y":2,"nascosto":false,"lunghezza":9224,"lunghezza_attesa":9224,"violazioni":0}
+{"cosa":"ritorno","forme_nuove":1}
+{"cosa":"CURSORE_FORMA","modo":"--prodotto","momento":"forma-2","serie":4,"larghezza":32,"altezza":32,"attivo_x":3,"attivo_y":1,"nascosto":false,"lunghezza":4104,"lunghezza_attesa":4104,"violazioni":0}
+{"cosa":"forma-diversa","forme_nuove":1}
+{"cosa":"conteggi","modo":"--prodotto","fotogrammi":52,"solo_cursore":0,"cursore_metadati":52,"cursore_assente":0,"cursore_malformati":0,"forme":4,"nascosti":1,"violazioni":0}

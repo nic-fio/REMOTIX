@@ -1,0 +1,96 @@
+08:02:40.903 cattura canale di input aperto: descrittore EIS 7
+08:02:40.908 cattura monitor virtuale montato: nodo PipeWire 68, flusso /org/gnome/Mutter/ScreenCast/Stream/u25
+B24: sessione aperta: nodo 68, descrittore EIS 7
+B24: mapping-id DICHIARATO da noi a RecordVirtual: «0ba9efbd-d8ae-4701-8e4b-f3a675f0b869»
+08:02:40.908 cattura mapping-id pubblicato da Mutter: «09f20677-f18a-41f1-864c-d1dc5dfd871b»  ⛔ DIVERSO da quello che avevamo dichiarato noi a RecordVirtual
+B24: mapping-id PUBBLICATO da Mutter nei Parameters: «09f20677-f18a-41f1-864c-d1dc5dfd871b»
+B24: flusso attivo a 1600x900 sul nodo 68
+08:02:40.962 cattura il nostro monitor e' Meta-1 («Virtual remote monitor»), 1 prima e 2 dopo
+B24: MONITOR Meta-1 («Virtual remote monitor»)
+08:02:40.962 input   canale di input aperto verso il compositore (libei), tela 1600x900
+08:02:41.063 input   posto «mutter default seat»: capacita' chieste
+08:02:41.113 input   dispositivo «remotix virtual pointer»: assoluto=0 scorrimento=1 bottoni=1 tastiera=0
+08:02:41.113 input   dispositivo «remotix virtual pointer» pronto (sequenza 1)
+08:02:41.163 input   dispositivo «remotix virtual keyboard»: assoluto=0 scorrimento=0 bottoni=0 tastiera=1
+08:02:41.168 tastiera xkbcommon (avviso): [XKB-107] (input string):1961:58: unrecognized keysym "XF86KbdInputAssistPrevgrou"
+08:02:41.168 tastiera xkbcommon (avviso): [XKB-107] (input string):1962:58: unrecognized keysym "XF86KbdInputAssistNextgrou"
+08:02:41.169 tastiera la sessione porta 2 disposizioni: si usa SOLO la prima (English (US))
+08:02:41.169 tastiera disposizione in vigore (consegnata dalla sessione): della sessione [English (US)]
+08:02:41.169 input   KEYMAP CAMBIATA: 68402 byte, impronta ac84656f (era: nessuna) → disposizione «della sessione [English (US)]»
+08:02:41.169 input   dispositivo «remotix virtual keyboard» pronto (sequenza 2)
+08:02:41.169 input   dispositivo «remotix shared virtual absolute pointer»: assoluto=1 scorrimento=1 bottoni=1 tastiera=0
+08:02:41.169 input   regione 0: 1920,0 1600x900 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:02:41.169 input   regione del puntatore per chiave: 1920,0 1600x900 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:02:41.169 input   regione 0: 1920,0 1600x900 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:02:41.169 input   regione del puntatore per chiave: 1920,0 1600x900 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:02:41.169 input   dispositivo «remotix shared virtual absolute pointer» pronto (sequenza 3)
+B24: PRONTO
+B24: punta 5 5 -> 0
+B24: punta 100 100 -> 0
+B24: punta 1599 899 -> 0
+B24: punta 800 450 -> 0
+B24: rotella 0 120 -> 0
+B24: rotella 0 -120 -> 0
+B24: rotella 0 60 -> 0
+B24: rotella 120 0 -> 0
+B24: rotella -120 0 -> 0
+B24: pulsante 272 1 -> 0
+B24: pulsante 272 0 -> 0
+B24: posizione 30 1 -> 0
+B24: posizione 30 0 -> 0
+08:02:47.594 tastiera U+0061 ⇒ 1 posizioni, l'ultima e' 30
+B24: lettera 97 -> 0
+B24: punta 533 300 -> 0
+B24: posizione 30 1 -> 0
+B24: posizione 30 0 -> 0
+B24: posizione 29 1 -> 0
+B24: pulsante 272 1 -> 0
+B24: STATO pronto=1 tasti_premuti=1 pulsanti_premuti=1 ricambi_puntatore=0 ricambi_tastiera=0 fotogrammi=48
+08:02:55.715 input   rilascio al distacco: 2 fra tasti e pulsanti (restano segnati 0 tasti e 0 pulsanti)
+B24: RILASCIATI 2
+B24: STATO pronto=1 tasti_premuti=0 pulsanti_premuti=0 ricambi_puntatore=0 ricambi_tastiera=0 fotogrammi=48
+B24: STATO pronto=1 tasti_premuti=0 pulsanti_premuti=0 ricambi_puntatore=0 ricambi_tastiera=0 fotogrammi=50
+08:03:13.068 input   la tastiera e' stata TOLTA dal compositore (ricambio n. 1)
+08:03:13.118 input   dispositivo «remotix virtual keyboard»: assoluto=0 scorrimento=0 bottoni=0 tastiera=1
+08:03:13.121 tastiera xkbcommon (avviso): [XKB-107] (input string):1968:58: unrecognized keysym "XF86KbdInputAssistPrevgrou"
+08:03:13.121 tastiera xkbcommon (avviso): [XKB-107] (input string):1969:58: unrecognized keysym "XF86KbdInputAssistNextgrou"
+08:03:13.124 tastiera modificatore 7: si preferisce il tasto 100 a 84 (una tastiera vera ha il primo)
+08:03:13.124 tastiera la sessione porta 2 disposizioni: si usa SOLO la prima (German)
+08:03:13.124 tastiera disposizione in vigore (consegnata dalla sessione): della sessione [German]
+08:03:13.124 input   KEYMAP CAMBIATA: 70137 byte, impronta d1c54543 (era: 68402 byte, impronta ac84656f) → disposizione «della sessione [German]»
+08:03:13.124 input   dispositivo «remotix virtual keyboard» pronto (sequenza 4)
+B24: STATO pronto=1 tasti_premuti=0 pulsanti_premuti=0 ricambi_puntatore=0 ricambi_tastiera=1 fotogrammi=51
+B24: posizione 30 1 -> 0
+B24: posizione 30 0 -> 0
+08:03:22.168 input   la tastiera e' stata TOLTA dal compositore (ricambio n. 2)
+08:03:22.218 input   dispositivo «remotix virtual keyboard»: assoluto=0 scorrimento=0 bottoni=0 tastiera=1
+08:03:22.221 tastiera xkbcommon (avviso): [XKB-107] (input string):1961:58: unrecognized keysym "XF86KbdInputAssistPrevgrou"
+08:03:22.221 tastiera xkbcommon (avviso): [XKB-107] (input string):1962:58: unrecognized keysym "XF86KbdInputAssistNextgrou"
+08:03:22.223 tastiera la sessione porta 2 disposizioni: si usa SOLO la prima (English (US))
+08:03:22.223 tastiera disposizione in vigore (consegnata dalla sessione): della sessione [English (US)]
+08:03:22.223 input   KEYMAP CAMBIATA: 68402 byte, impronta ac84656f (era: 70137 byte, impronta d1c54543) → disposizione «della sessione [English (US)]»
+08:03:22.223 input   dispositivo «remotix virtual keyboard» pronto (sequenza 5)
+B24: STATO pronto=1 tasti_premuti=0 pulsanti_premuti=0 ricambi_puntatore=0 ricambi_tastiera=2 fotogrammi=69
+B24: flusso attivo a 1280x720 sul nodo 68
+B24: RIDIMENSIONATO a 1280x720
+08:03:27.812 input   il puntatore e' stato TOLTO dal compositore (ricambio n. 1)
+08:03:27.812 input   dispositivo «remotix shared virtual absolute pointer»: assoluto=1 scorrimento=1 bottoni=1 tastiera=0
+08:03:27.812 input   regione 0: 1920,0 1280x720 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione del puntatore per chiave: 1920,0 1280x720 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione 0: 1920,0 1280x720 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione del puntatore per chiave: 1920,0 1280x720 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   dispositivo «remotix shared virtual absolute pointer» pronto (sequenza 6)
+08:03:27.812 input   il puntatore e' stato TOLTO dal compositore (ricambio n. 2)
+08:03:27.812 input   dispositivo «remotix shared virtual absolute pointer»: assoluto=1 scorrimento=1 bottoni=1 tastiera=0
+08:03:27.812 input   regione 0: 1920,0 1280x720 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione del puntatore per chiave: 1920,0 1280x720 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione 0: 1920,0 1280x720 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   regione del puntatore per chiave: 1920,0 1280x720 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:27.812 input   dispositivo «remotix shared virtual absolute pointer» pronto (sequenza 7)
+B24: STATO pronto=1 tasti_premuti=0 pulsanti_premuti=0 ricambi_puntatore=2 ricambi_tastiera=2 fotogrammi=72
+08:03:39.277 input   la tela cambia: 1600x900 → 1280x720
+08:03:39.277 input   regione 0: 1920,0 1280x720 (mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+08:03:39.277 input   regione del puntatore per chiave: 1920,0 1280x720 (di 1, mapping-id «09f20677-f18a-41f1-864c-d1dc5dfd871b»)
+B24: ritela 1280 720 -> 0
+B24: punta 640 360 -> 0
+Terminated

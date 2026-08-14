@@ -26,6 +26,10 @@ enum {
 	T_RESPINTO = 0x0005,
 	T_ATTACCA = 0x0006,
 	T_SESSIONE = 0x0007,
+	/* §7.2 — la FORMA del cursore, server → client, sul canale di controllo
+	 * (§5).  ⚠ La POSIZIONE non viaggia mai in questo verso: e' del client, che
+	 * disegna il puntatore da se' (`SPECIFICHE.md` §7.1). */
+	T_CURSORE_FORMA = 0x000A,
 	T_CONGEDO = 0x000C,
 	/* ⭐ §5.2, §7.1: «il client chiede una chiave».  Servito dal 12 agosto
 	 * 2026, insieme al canale video: finche' il video non c'era, questo tipo
@@ -36,6 +40,59 @@ enum {
 	T_BANCO_MARCA = 0x000F,
 	T_BANCO_ESITO = 0x0010,
 };
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ I TIPI DEL CANALE DI INPUT — §7.3, e il byte alto e' 0x01 (§2.5)        */
+enum {
+	T_PUNTATORE = 0x0101,
+	T_PULSANTE = 0x0102,
+	T_ROTELLA = 0x0103,
+	T_LETTERA = 0x0104,
+	T_POSIZIONE_TASTO = 0x0105,
+};
+
+/* ⛔ QUANTO OCCUPA IL CORPO DI CIASCUNO — §7.3, e i due campi comuni davanti.
+ *
+ *   u32 id + u64 istante                              = 12  (tutti)
+ *   PUNTATORE       + u32 x + u32 y                   = 20
+ *   PULSANTE        + u16 codice + u8 premuto         = 15
+ *   ROTELLA         + i32 asse_x + i32 asse_y         = 20
+ *   LETTERA         + u32 carattere                   = 16
+ *   POSIZIONE_TASTO + u16 codice + u8 premuto         = 15
+ *
+ * ⛔ §6.0: nessun campo e' allineato e nessun riempimento e' ammesso — quindi
+ *    15 e' quindici, non sedici.  E' esattamente la forma del difetto corretto
+ *    in §6.2 il 9 agosto 2026 (i «quattro byte che fanno tornare i conti»), e
+ *    su un messaggio di quindici byte una `struct` C ne conterebbe sedici su
+ *    ogni compilatore che questo progetto usa. */
+#define I_COMUNI 12u
+#define I_PUNTATORE (I_COMUNI + 8u)
+#define I_PULSANTE (I_COMUNI + 3u)
+#define I_ROTELLA (I_COMUNI + 8u)
+#define I_LETTERA (I_COMUNI + 4u)
+#define I_POSIZIONE (I_COMUNI + 3u)
+
+/* ⛔⭐ L'ACCUMULO DELL'INPUT E' PICCOLO **PER COSTRUZIONE**, e non e' una
+ *     scorciatoia: e' §6.1 applicata prima di allocare, portata all'estremo che
+ *     questo canale permette.
+ *
+ *     Sul canale di controllo la lunghezza dichiarata si puo' conoscere solo
+ *     leggendo il corpo (le capacita' di `CIAO` sono un elenco), quindi
+ *     l'accumulo cresce fino a 1 MiB.  ⛔ Qui no: i cinque tipi di §7.3 hanno
+ *     tutti una lunghezza FISSA e nota dal solo `tipo`.  ⇒ Appena i sei byte
+ *     dell'intestazione sono arrivati si sa gia' se la lunghezza e' quella
+ *     giusta, e una lunghezza sbagliata e' `ERRORE_PROTOCOLLO` PRIMA che un
+ *     solo byte di corpo venga accumulato (§6.1: «la lunghezza si controlla
+ *     prima di allocare»).
+ *
+ * ⭐ Da cui: 6 + 20 = 26 byte bastano per sempre, e stanno nella sessione senza
+ *    una `malloc`.  Chi annuncia un megabyte su questo stream non ottiene un
+ *    megabyte: ottiene un congedo dopo sei byte. */
+#define I_ACCUMULO 32u
+
+/* §7.1 — il secondo di grazia dopo un cambio di tela, in millisecondi.
+ * ⚠ Il confronto e' `<=`: «per un secondo» comprende il millesimo 1000. */
+#define TELA_GRAZIA 1000
 
 /* §7.5 — l'esito della funzione di banco. */
 enum {
@@ -297,6 +354,61 @@ struct rcp_sessione {
 	 * abbandono si veda, e un conteggio senza denominatore non e' una misura
 	 * (`LEZIONI.md` §1.9). */
 	uint32_t video_spediti, video_abbandonati;
+
+	/* ==================================================================== */
+	/* ⭐ IL CANALE DI INPUT — §2.5, §7.1, §7.3                             */
+
+	/* §2.5: lo stream di input e' **uno solo**.  ⛔ `inp_stream_noto` e non
+	 * «`inp_stream` vale -1»: uno stream 0 e' un identificatore legittimo, e
+	 * un sentinella preso da un valore valido e' quel che §6.0 vieta. */
+	bool inp_stream_noto;
+	int64_t inp_stream;
+	/* L'accumulo, fisso: vedi il riquadro di `I_ACCUMULO`. */
+	uint8_t inp_acc[I_ACCUMULO];
+	size_t inp_acc_len;
+
+	/* ⛔ §7.3: «l'`id` cresce di **almeno uno** a ogni messaggio, **su tutto
+	 *    il canale di input** — non uno per tipo».  ⇒ UN contatore, e uno
+	 *    solo: cinque contatori per tipo accetterebbero
+	 *    `PUNTATORE(4)` dopo `PULSANTE(9)`, e allora il campo `input` dei
+	 *    fotogrammi (§6.2) non tornerebbe piu' indietro coerente con niente.
+	 * ⚠ `0` = nessuno ancora, ed e' il valore che §7.3 riserva. */
+	uint32_t inp_ultimo_id;
+	/* ⛔ §6.2: quello che torna nel campo `input` dei fotogrammi — e avanza
+	 * SOLO quando il gancio ha risposto 0.  Vedi `rcp_input_ultimo_iniettato()`. */
+	uint32_t inp_ultimo_iniettato;
+	/* Il conto, e sono TRE numeri perche' i fatti sono tre: quanti arrivati,
+	 * quanti iniettati, quanti rifiutati da chi inietta.  ⛔ «Zero iniettati»
+	 * detto da solo non distingue un compositore muto da un client fermo. */
+	uint32_t inp_arrivati, inp_iniettati, inp_non_iniettati;
+	/* ⚠ §7.3: l'`istante` del client, in microsecondi.  ⛔ E NON LO CONSUMA
+	 *   NESSUNA REGOLA di questo modulo: «in una pagina l'orologio monotono e'
+	 *   in millisecondi e la sua grana e' deliberatamente ingrossata — il
+	 *   client scrive `millisecondi × 1000` e NON DEVE far credere a una
+	 *   precisione che non ha» (rilievo R1.27).  Sta qui per il registro e per
+	 *   la diagnosi — «quando l'utente ha mosso la mano» invece di «quando il
+	 *   byte e' arrivato» — e ⛔ nessuna misura si costruisce su di lui: il
+	 *   ritardo lo misura l'anello chiuso di `DECISIONI.md` §2.6, e il
+	 *   fotogramma porta indietro l'`id`, non l'istante. */
+	uint64_t inp_ultimo_istante_us;
+
+	/* ⛔ §7.1 / §3 eccezione 3 — IL SECONDO DI GRAZIA.  La tela PRECEDENTE e
+	 * il momento in cui e' stata sostituita: per un secondo una coordinata
+	 * valida su quella si SATURA alla nuova invece di chiudere la sessione.
+	 * ⚠ `tela_prec_l == 0` vuol dire «nessuna grazia in corso», ed e' lecito
+	 *   perche' una tela di larghezza zero non e' mai stata concessa (§4.5). */
+	uint32_t tela_prec_l, tela_prec_a;
+	uint64_t tela_grazia_da;
+	/* Quante coordinate ha salvato la grazia: §3 vuole che «ogni tolleranza
+	 * vada scritta nel registro», e un conteggio permette di accorgersi che
+	 * una tolleranza si e' messa a coprire il caso normale. */
+	uint32_t inp_grazie;
+	/* ⛔ §7.3, ultimo capoverso: il rilascio al distacco si fa **una volta
+	 * sola**.  Le tre strade che finiscono una connessione — congedo,
+	 * silenzio, errore — possono percorrersi in fila, e chiamare il gancio
+	 * due volte non fa danno ma scrive due righe che dicono cose diverse
+	 * sullo stesso fatto. */
+	bool inp_rilasciato;
 };
 
 /* Dichiarata qui perche' il limitatore dei tentativi, qui sotto, DEVE poter
@@ -304,6 +416,18 @@ struct rcp_sessione {
  * esiste (§3, e rilievo R9.1). */
 static void reg(rcp_sessione *s, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
+
+/* ⛔⭐ §7.3 — «Al distacco si rilascia tutto».  Dichiarata qui perche' la
+ *     chiamano TRE strade che stanno piu' in su di dove e' definita — il
+ *     congedo, il silenzio di §5.3 e la fine della sessione — e le tre sono
+ *     esattamente le tre che §7.3 nomina: «per congedo, per silenzio, per
+ *     errore».  Definita nella sezione del canale di input, dov'e' il resto. */
+static void rilascia_al_distacco(rcp_sessione *s, const char *perche);
+
+/* ⛔ §5.3 / rilievo R9.2 — il posto ripreso da chi torna a parlare.  Dichiarata
+ * qui perche' i byte del client entrano da DUE porte (`rcp_ricevi()` e
+ * `rcp_ricevi_input()`) e la seconda sta piu' in su della definizione. */
+static bool torna_a_parlare(rcp_sessione *s);
 
 /* ------------------------------------------------------------------------ */
 /* ⛔ IL REGISTRO DELLE SESSIONI ATTACCATE — §8.2 motivo 0x0F
@@ -1036,6 +1160,21 @@ static void congeda(rcp_sessione *s, uint8_t motivo, const char *dettaglio)
 		return;
 	reg(s, "congedo motivo=%#04x dettaglio=%s stato=%s", motivo, dettaglio,
 	    NOMI_STATO[s->stato]);
+	/* ⛔⭐ §7.3 — E PRIMA DI TUTTO IL RESTO SI RILASCIA QUEL CHE E' PREMUTO.
+	 *
+	 *     «Quando una connessione finisce — per congedo, per silenzio, per
+	 *     errore — il server DEVE rilasciare ogni tasto e ogni pulsante che
+	 *     risultano premuti».  ⛔ Sta QUI, dentro `congeda()`, e non accanto a
+	 *     ciascuna delle sue trenta chiamate: `RCP.md` §11 la chiama «la regola
+	 *     col rapporto danno/costo piu' alto del documento», e una regola con
+	 *     quel rapporto non si affida alla disciplina di chi scrive la
+	 *     trentunesima.  E' l'invariante I7 letta da dentro — la protezione sta
+	 *     nel programma, non in una riga che si puo' perdere.
+	 *
+	 * ⚠ Il sintomo che si compra: un Ctrl rimasto giu' in una sessione che
+	 *   sopravvive al client rende il desktop inservibile al riattacco, e
+	 *   nessuno collega le due cose. */
+	rilascia_al_distacco(s, "congedo");
 	uint8_t corpo[512];
 	scrittore w = {corpo, sizeof corpo, 0, false};
 	sc_byte(&w, motivo);
@@ -1995,8 +2134,29 @@ uint32_t rcp_video_ultimo_numero(const rcp_sessione *s)
 }
 
 /* ⛔ §7.1 — la tela e' cambiata, e §5.2 apre il debito SOLO se e' cambiata
- * davvero.  Vedi il riquadro in `rcp.h`. */
+ * davvero.  Vedi il riquadro in `rcp.h`.
+ *
+ * ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): questa forma non ha un orologio,
+ *   quindi NON puo' aprire il secondo di grazia di §7.1 sulle coordinate in
+ *   volo — e un ripiego silenzioso produce due comportamenti sotto la stessa
+ *   etichetta.  La riga di registro lo dice; chi serve `ADATTA_TELA` sul filo
+ *   usa `rcp_tela_adattata_ora()`. */
 void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
+{
+	if (!s || !s->sessione_spedita)
+		return;
+	if (lar != s->tela_l || alt != s->tela_a)
+		reg(s, "⚠ RIPIEGO DICHIARATO: `rcp_tela_adattata()` senza l'ora — il "
+		       "SECONDO DI GRAZIA di §7.1 sulle coordinate della tela vecchia "
+		       "NON si apre, e un `PUNTATORE` in volo verra' rifiutato con "
+		       "`ERRORE_PROTOCOLLO`.  Chi serve `ADATTA_TELA` sul filo chiami "
+		       "`rcp_tela_adattata_ora()`");
+	rcp_tela_adattata_ora(s, lar, alt, 0);
+}
+
+/* ⛔ §7.1 / §3 eccezione 3 — la forma che sa QUANDO, e apre la grazia. */
+void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
+                           uint64_t ora_ms)
 {
 	if (!s || !s->sessione_spedita)
 		return;
@@ -2015,6 +2175,13 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
 	       "largh./altezza alla nuova, e §5.2 vuole una CHIAVE alla misura "
 	       "nuova",
 	    s->tela_l, s->tela_a, lar, alt);
+	/* ⛔ §7.1, terza eccezione di §3 — LA GRAZIA SI APRE QUI, e la tela
+	 * precedente si tiene PRIMA di sostituirla: «gli input partiti prima che la
+	 * risposta arrivasse non sono un difetto del client».  ⚠ Un secondo, e non
+	 * di piu': oltre, il DEVE di §7.3 torna intero. */
+	s->tela_prec_l = s->tela_l;
+	s->tela_prec_a = s->tela_a;
+	s->tela_grazia_da = ora_ms;
 	s->tela_l = lar;
 	s->tela_a = alt;
 	s->serve_chiave = true;
@@ -2431,6 +2598,848 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
 	return rcp_video_finisci(s);
 }
 
+/* ========================================================================= */
+/* ⭐ IL CANALE DI INPUT — `RCP.md` §2.5, §3, §3.1, §6.0, §6.1, §7.1, §7.3   */
+/*                                                                           */
+/* ⛔ QUEL CHE QUESTA SEZIONE NON SA, ED E' LA META' DEL SUO MESTIERE:        */
+/*    non sa che cosa sia `libei`, non sa che cosa sia una disposizione di    */
+/*    tastiera, non sa che cosa sia un dispositivo.  Legge byte, li giudica   */
+/*    contro §7.3 riga per riga, e chiama uno dei cinque ganci.  L'altra      */
+/*    meta' — quella che tocca il desktop vero — sta in `src/input.c`.        */
+/*                                                                           */
+/* ⛔ E LA REGOLA DI RIGORE (§3) VALE QUI COME ALTROVE: un tipo che non si    */
+/*    conosce, una lunghezza che non torna, un campo fuori intervallo, un     */
+/*    messaggio nello stato sbagliato ⇒ `ERRORE_PROTOCOLLO`, col motivo, per  */
+/*    tutt'e due le strade di §3.1.  ⚠ Con UNA eccezione dichiarata, ed e' la */
+/*    terza dell'elenco di §3: il secondo di grazia di §7.1.                  */
+
+/* ⛔⭐ §7.3 — «Al distacco si rilascia tutto», e le quattro strade che
+ *     finiscono una connessione passano tutte di qui.
+ *
+ * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): se il gancio non c'e', questa
+ *   funzione scrive che non c'e' invece di tacere — perche' «nessun tasto era
+ *   premuto» e «non ho potuto rilasciare niente» hanno lo stesso aspetto, ed e'
+ *   `LEZIONI.md` §1.9 regola 1 sul campo in cui costa di piu': il sintomo di
+ *   tutt'e due e' un desktop che al riattacco non risponde. */
+static void rilascia_al_distacco(rcp_sessione *s, const char *perche)
+{
+	if (!s || s->inp_rilasciato)
+		return;
+	s->inp_rilasciato = true;
+	if (!s->g.input_rilascia_tutto) {
+		/* ⛔ Si scrive SOLO se questo canale ha visto passare qualcosa: su una
+		 * sessione senza input — i banchi in-processo, l'innesto di ngtcp2 —
+		 * la riga sarebbe rumore a ogni congedo, e il rumore fa smettere di
+		 * leggere il registro proprio dove serve. */
+		if (s->inp_arrivati)
+			reg(s, "⚠ RIPIEGO DICHIARATO (§7.3): la connessione finisce (%s) e "
+			       "questo server NON ha il gancio del rilascio — %u input erano "
+			       "arrivati e %u iniettati.  Se qualcosa e' rimasto premuto, "
+			       "resta premuto",
+			    perche, s->inp_arrivati, s->inp_iniettati);
+		return;
+	}
+	int quanti = s->g.input_rilascia_tutto(s->g.ctx);
+	reg(s, "⭐ §7.3 — RILASCIO AL DISTACCO (%s): %d fra tasti e pulsanti erano "
+	       "premuti e sono stati rilasciati.  ⚠ Zero e' un esito normale e NON "
+	       "e' un fallimento: vuol dire che non c'era niente giu'",
+	    perche, quanti);
+}
+
+/* ⛔ §3.1 applicata a questo canale: si scrive CHE COSA — il tipo, il campo, il
+ * valore, lo stato — e poi si congeda per tutt'e due le strade.  ⭐ Il `CONGEDO`
+ * esce sul canale di CONTROLLO anche quando la violazione e' arrivata sullo
+ * stream di input, ed e' §3.1 punto 2 alla lettera: «sul canale di controllo,
+ * **se il canale di controllo e' ancora utilizzabile**» — e qui di solito lo e'. */
+static void viola_input(rcp_sessione *s, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
+static void viola_input(rcp_sessione *s, const char *fmt, ...)
+{
+	char d[224];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(d, sizeof d, fmt, ap);
+	va_end(ap);
+	congeda(s, RCP_ERRORE_PROTOCOLLO, d);
+}
+
+/* Quanti byte di corpo prevede questo tipo di §7.3.  ⛔ `0` = tipo che questo
+ * canale non conosce, e allora e' `ERRORE_PROTOCOLLO` (§3): nessuno dei cinque
+ * ha corpo vuoto, quindi lo zero non e' ambiguo. */
+static uint32_t misura_input(uint16_t tipo)
+{
+	switch (tipo) {
+	case T_PUNTATORE:
+		return I_PUNTATORE;
+	case T_PULSANTE:
+		return I_PULSANTE;
+	case T_ROTELLA:
+		return I_ROTELLA;
+	case T_LETTERA:
+		return I_LETTERA;
+	case T_POSIZIONE_TASTO:
+		return I_POSIZIONE;
+	default:
+		return 0;
+	}
+}
+
+static const char *nome_input(uint16_t tipo)
+{
+	switch (tipo) {
+	case T_PUNTATORE:
+		return "PUNTATORE";
+	case T_PULSANTE:
+		return "PULSANTE";
+	case T_ROTELLA:
+		return "ROTELLA";
+	case T_LETTERA:
+		return "LETTERA";
+	case T_POSIZIONE_TASTO:
+		return "POSIZIONE_TASTO";
+	default:
+		return "?";
+	}
+}
+
+/* ⛔ I cinque ganci o nessuno — la stessa regola dei quattro del video, e per la
+ * stessa ragione: un canale che sapesse muovere il puntatore e non sapesse
+ * rilasciare un pulsante lascerebbe il desktop peggio di come l'ha trovato. */
+static bool ha_canale_input(const rcp_sessione *s)
+{
+	return s->g.input_puntatore && s->g.input_pulsante && s->g.input_rotella &&
+	       s->g.input_lettera && s->g.input_posizione;
+}
+
+/* ⛔⭐ IL SEGNAPUNTI DELL'INIEZIONE — e i tre esiti sono TRE, non due.
+ *
+ *   0  consegnato al compositore  ⇒ l'`id` avanza nel campo `input` di §6.2
+ *  -1  non consegnato             ⇒ NON avanza, e si scrive
+ *   1  (solo `LETTERA`) il carattere non e' producibile con la disposizione
+ *      della sessione ⇒ NON avanza, e §7.3 OBBLIGA a scriverlo: «il server DEVE
+ *      scriverlo nel registro e NON DEVE mandare un carattere diverso ne'
+ *      tacere».
+ *
+ * ⛔ Nessuno dei tre e' una violazione del CLIENT: il messaggio era valido, e
+ *    chiudere la sessione perche' il nostro compositore ha detto di no
+ *    punirebbe chi non ha sbagliato niente — «una sessione brutta vale piu' di
+ *    una sessione chiusa» (`CODER.md` §1). */
+static void segna_iniezione(rcp_sessione *s, uint16_t tipo, uint32_t id,
+                            int esito, const char *cosa)
+{
+	if (esito == 0) {
+		s->inp_iniettati++;
+		/* ⛔ §6.2: e' QUI che il numero che tornera' nei fotogrammi avanza —
+		 * nell'unico punto in cui «iniettato» e' un fatto e non una speranza. */
+		s->inp_ultimo_iniettato = id;
+		return;
+	}
+	s->inp_non_iniettati++;
+	if (esito == 1 && tipo == T_LETTERA)
+		reg(s, "⛔ §7.3: la LETTERA %s (input id=%u) NON e' producibile con la "
+		       "disposizione di questa sessione.  ⚠ Non si manda un carattere "
+		       "diverso e non si tace: la riga e' questa, e il campo `input` dei "
+		       "fotogrammi resta a %u perche' non e' stato iniettato niente",
+		    cosa, id, s->inp_ultimo_iniettato);
+	else
+		reg(s, "⚠ %s (input id=%u, %s) NON e' stato consegnato al compositore "
+		       "(esito %d): la sessione REGGE — il client non ha sbagliato "
+		       "niente — e il campo `input` di §6.2 resta a %u",
+		    nome_input(tipo), id, cosa, esito, s->inp_ultimo_iniettato);
+}
+
+/* ⛔ §7.3 — LE COORDINATE, e questa e' la funzione che ha gia' un rilievo
+ *    (R1.16) scritto contro di se'.
+ *
+ *   «`0 ≤ x < tela_larghezza`, `0 ≤ y < tela_altezza`.  Su una tela 1920×1080
+ *    l'angolo in basso a destra e' **1919, 1079**.»
+ *
+ * ⭐ Da cui i due casi che vanno tenuti separati, e sbagliarli e' costato un
+ *    rilievo: **1919 su una tela 1920 PASSA** — e' l'ultimo pixel, non un
+ *    errore — mentre **1920 su una tela 1920 NON passa**.  Il primo dei due e'
+ *    quello che un controllo scritto con `>` invece di `>=` rovina in silenzio,
+ *    e il sintomo sarebbe una colonna di pixel a destra che non si puo'
+ *    cliccare.
+ *
+ * ⛔ E IL SECONDO DI GRAZIA (§7.1, terza eccezione di §3) e' l'altra meta':
+ *    «una pagina che divide la posizione del mouse per il fattore di scala e
+ *    arrotonda per eccesso produce 1920 su una tela di 1920: una lettura lo
+ *    inietta, l'altra CHIUDE LA SESSIONE — e chiudere la sessione per un
+ *    arrotondamento e' la cosa che `SPECIFICHE.md` §8.3 vieta».  ⇒ Per un
+ *    secondo dopo un cambio di tela una coordinata valida sulla PRECEDENTE si
+ *    SATURA all'ultimo pixel valido invece di uccidere la sessione.
+ *
+ * ⚠ Fuori da quel secondo, e fuori da un cambio di tela, il DEVE di §7.3 resta
+ *   intero: chiudere.  ⛔ La grazia NON e' una tolleranza generale sulle
+ *   coordinate — sarebbe l'indulgenza che §3 esiste per togliere — ed e' per
+ *   questo che ha una data d'inizio e una durata.
+ *
+ * Restituisce `true` se si puo' iniettare; riempie `*sx`/`*sy` con quel che va
+ * iniettato (uguale all'ingresso, salvo saturazione). */
+static bool coordinate_ammesse(rcp_sessione *s, uint32_t id, uint32_t x,
+                               uint32_t y, uint64_t ora, uint32_t *sx,
+                               uint32_t *sy)
+{
+	*sx = x;
+	*sy = y;
+	/* ⛔ Il caso normale, e il confronto e' `<` perche' sono INDICI DI PIXEL. */
+	if (x < s->tela_l && y < s->tela_a)
+		return true;
+
+	bool grazia_aperta = s->tela_prec_l != 0 && s->tela_prec_a != 0 &&
+	                     ora >= s->tela_grazia_da &&
+	                     ora - s->tela_grazia_da <= TELA_GRAZIA;
+	if (grazia_aperta && x < s->tela_prec_l && y < s->tela_prec_a) {
+		*sx = x < s->tela_l ? x : s->tela_l - 1;
+		*sy = y < s->tela_a ? y : s->tela_a - 1;
+		s->inp_grazie++;
+		/* ⛔ §3: «ogni tolleranza va scritta nel registro.  Una tolleranza
+		 * silenziosa e' indistinguibile da un difetto». */
+		reg(s, "⭐ §7.1 SECONDO DI GRAZIA (%u-esima volta): input id=%u porta "
+		       "(%u,%u), valida sulla tela precedente %ux%u e fuori dalla tela "
+		       "in vigore %ux%u — SATURATA a (%u,%u) invece di chiudere.  Sono "
+		       "passati %llu ms su %d dal cambio di tela",
+		    s->inp_grazie, id, x, y, s->tela_prec_l, s->tela_prec_a, s->tela_l,
+		    s->tela_a, *sx, *sy,
+		    (unsigned long long)(ora - s->tela_grazia_da), TELA_GRAZIA);
+		return true;
+	}
+
+	/* ⛔ §3.1 punto 1: si dice CHE COSA, e si dice anche perche' la grazia non
+	 * copriva — «fuori intervallo» da solo manderebbe a cercare il difetto nel
+	 * client anche quando il difetto e' un secondo scaduto di un millisecondo. */
+	if (s->tela_prec_l && !grazia_aperta)
+		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela in vigore "
+		               "%ux%u (§7.3: 0<=x<%u, 0<=y<%u), e il secondo di grazia "
+		               "di §7.1 e' scaduto da %llu ms",
+		            id, x, y, s->tela_l, s->tela_a, s->tela_l, s->tela_a,
+		            (unsigned long long)(ora > s->tela_grazia_da + TELA_GRAZIA
+		                                     ? ora - s->tela_grazia_da -
+		                                           TELA_GRAZIA
+		                                     : 0));
+	else if (grazia_aperta)
+		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela in vigore "
+		               "%ux%u E fuori dalla precedente %ux%u — la grazia di §7.1 "
+		               "copre le coordinate della tela vecchia, non le "
+		               "coordinate sbagliate",
+		            id, x, y, s->tela_l, s->tela_a, s->tela_prec_l,
+		            s->tela_prec_a);
+	else
+		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela %ux%u — "
+		               "§7.3 vuole 0<=x<%u e 0<=y<%u, e l'angolo in basso a "
+		               "destra e' (%u,%u)",
+		            id, x, y, s->tela_l, s->tela_a, s->tela_l, s->tela_a,
+		            s->tela_l - 1, s->tela_a - 1);
+	return false;
+}
+
+/* Un messaggio di input intero, gia' inquadrato.  `false` = sessione finita. */
+static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
+                         uint32_t lung, uint64_t ora)
+{
+	lettore l = {corpo, lung, 0, false};
+	uint32_t id = le_u32(&l);
+	uint64_t istante = 0;
+	for (int i = 0; i < 8; i++)
+		istante = (istante << 8) | le_u8(&l);
+
+	/* ⛔ §7.3: «⛔ 0 e' riservato e vuol dire "nessun input"».  E' il valore che
+	 * §6.2 mette nel campo `input` dei fotogrammi quando non c'e' stato niente:
+	 * accettarlo qui vorrebbe dire che un fotogramma non puo' piu' dire «non e'
+	 * stato iniettato niente» senza dire anche «e' stato iniettato il primo» —
+	 * cioe' il valore sentinella implicito che §6.0 vieta. */
+	if (id == 0) {
+		viola_input(s, "%s con id=0: §7.3 riserva lo zero e gli da' il "
+		               "significato «nessun input» nel campo `input` dei "
+		               "fotogrammi (§6.2)",
+		            nome_input(tipo));
+		return false;
+	}
+	/* ⛔⭐ §7.3: «cresce di ALMENO UNO a ogni messaggio, SU TUTTO IL CANALE DI
+	 *     INPUT — non uno per tipo.  E' quello che torna nel campo `input` dei
+	 *     fotogrammi (§6.2), e con contatori separati non tornerebbe niente».
+	 *
+	 * ⚠ «Almeno uno» e non «esattamente uno»: i salti sono leciti — un client
+	 *   che scarta un evento suo non deve mentire sul numero — e quel che non e'
+	 *   lecito e' tornare indietro o ripetersi.
+	 *
+	 * ⛔ E il caso che smaschera i contatori separati e' uno solo, e va messo nel
+	 *    banco: `PULSANTE(9)` e poi `PUNTATORE(4)`.  Con un contatore per tipo
+	 *    quel 4 e' un legittimo «primo PUNTATORE» e passa; con la regola scritta
+	 *    e' una violazione.  Un banco che mandasse solo id crescenti dentro
+	 *    ciascun tipo non distinguerebbe le due implementazioni. */
+	if (id <= s->inp_ultimo_id) {
+		viola_input(s, "%s con id=%u, e l'ultimo id di QUESTO CANALE era %u: "
+		               "§7.3 vuole che cresca di almeno uno su tutto il canale, "
+		               "non uno per tipo",
+		            nome_input(tipo), id, s->inp_ultimo_id);
+		return false;
+	}
+
+	uint32_t precedente = s->inp_ultimo_id;
+	int esito = -1;
+	char cosa[96];
+
+	switch (tipo) {
+	case T_PUNTATORE: {
+		uint32_t x = le_u32(&l), y = le_u32(&l);
+		uint32_t sx = 0, sy = 0;
+		if (!coordinate_ammesse(s, id, x, y, ora, &sx, &sy))
+			return false;
+		s->inp_ultimo_id = id;
+		s->inp_ultimo_istante_us = istante;
+		snprintf(cosa, sizeof cosa, "(%u,%u)", sx, sy);
+		esito = ha_canale_input(s) ? s->g.input_puntatore(s->g.ctx, sx, sy) : -1;
+		break;
+	}
+	case T_PULSANTE:
+	case T_POSIZIONE_TASTO: {
+		uint16_t codice = le_u16(&l);
+		uint8_t premuto = le_u8(&l);
+		/* ⛔ §7.3: «1 = premuto, 0 = rilasciato», e §3 chiude su «un campo fuori
+		 * intervallo».  ⚠ Un 2 letto come «vero» sarebbe la forma esatta del
+		 * parser indulgente: due implementazioni che si comportano uguale
+		 * finche' una delle due non manda 2 per sbaglio, e allora il tasto resta
+		 * giu' per sempre e nessuno sa perche'. */
+		if (premuto > 1) {
+			viola_input(s, "%s id=%u codice=%u con premuto=%u: §7.3 ammette 1 "
+			               "(premuto) e 0 (rilasciato), e nient'altro",
+			            nome_input(tipo), id, codice, premuto);
+			return false;
+		}
+		s->inp_ultimo_id = id;
+		s->inp_ultimo_istante_us = istante;
+		snprintf(cosa, sizeof cosa, "codice evdev %u (%#x) %s", codice, codice,
+		         premuto ? "premuto" : "rilasciato");
+		if (!ha_canale_input(s))
+			esito = -1;
+		else if (tipo == T_PULSANTE)
+			esito = s->g.input_pulsante(s->g.ctx, codice, premuto);
+		else
+			esito = s->g.input_posizione(s->g.ctx, codice, premuto);
+		break;
+	}
+	case T_ROTELLA: {
+		/* ⛔ §6.0: `i32` in complemento a due.  Il cast da `uint32_t` a
+		 * `int32_t` e' definito dall'implementazione fino a C17; qui si fa a
+		 * mano, cosi' il valore non dipende dal compilatore. */
+		uint32_t ux = le_u32(&l), uy = le_u32(&l);
+		int32_t ax = (int32_t)(ux <= 0x7FFFFFFFu ? (int64_t)ux
+		                                         : (int64_t)ux - 4294967296LL);
+		int32_t ay = (int32_t)(uy <= 0x7FFFFFFFu ? (int64_t)uy
+		                                         : (int64_t)uy - 4294967296LL);
+		s->inp_ultimo_id = id;
+		s->inp_ultimo_istante_us = istante;
+		/* ⛔⛔ E QUI NON SI TOCCA NIENTE: ne' il segno, ne' l'arrotondamento.
+		 *
+		 *     Il segno dell'asse verticale lo inverte `input_rotella()`, UNA
+		 *     VOLTA SOLA e in un posto solo — sta scritto in `src/input.h` e in
+		 *     `RCP.md` §7.3, riquadro «Il segno della rotella», `[M]` 10 agosto
+		 *     2026.  ⛔ Invertirlo anche qui lo ANNULLA, e il sintomo — «la
+		 *     rotella va al contrario» — e' la forma d'errore E11 che quel
+		 *     riquadro esiste per evitare.
+		 *
+		 * ⚠ E i mezzi scatti esistono: 120 e' uno scatto, **60 e' mezzo scatto e
+		 *   NON si arrotonda a zero**.  `gnome.md` §9 dice che
+		 *   `ei_device_scroll_discrete` fa una divisione intera per 120 e se li
+		 *   mangia — ma quella e' una scelta di `input.c`, non di qui: da questo
+		 *   lato il numero passa intero, com'e' arrivato. */
+		snprintf(cosa, sizeof cosa, "asse_x=%ld asse_y=%ld (120 = uno scatto)",
+		         (long)ax, (long)ay);
+		esito = ha_canale_input(s) ? s->g.input_rotella(s->g.ctx, ax, ay) : -1;
+		break;
+	}
+	case T_LETTERA: {
+		uint32_t car = le_u32(&l);
+		/* ⛔ §7.3: «un VALORE SCALARE UNICODE: da 0 a 0x10FFFF, esclusi i
+		 * surrogati 0xD800-0xDFFF.  Fuori intervallo e' `ERRORE_PROTOCOLLO`».
+		 *
+		 * ⚠ «Valore scalare» e' il termine tecnico, e i surrogati sono
+		 *   precisamente quel che lo distingue da «punto di codice»: un
+		 *   controllo che si fermasse a `car > 0x10FFFF` lascerebbe passare
+		 *   0xD800, che in UTF-8 non si puo' nemmeno scrivere.  ⛔ E' il caso
+		 *   che una pagina produce da sola: JavaScript conta in UTF-16, e
+		 *   `charCodeAt` su un'emoji restituisce **meta' coppia surrogata**.
+		 *   Chi scrive il client con `charCodeAt` invece di `codePointAt` manda
+		 *   0xD83D, e il difetto va visto qui — non iniettato come se fosse una
+		 *   lettera.
+		 *
+		 * ⚠ E lo ZERO E' LECITO: U+0000 e' un valore scalare valido, e §7.3 dice
+		 *   «da 0».  ⛔ Non e' un doppione della regola sull'`id`, dove lo zero e'
+		 *   riservato: sono due campi diversi con due regole diverse, e
+		 *   ricopiare la prima sulla seconda rifiuterebbe un carattere che
+		 *   l'arbitro ammette. */
+		if (car > 0x10FFFFu) {
+			viola_input(s, "LETTERA id=%u con carattere U+%X: §7.3 vuole un "
+			               "valore scalare Unicode, da 0 a 0x10FFFF",
+			            id, car);
+			return false;
+		}
+		if (car >= 0xD800u && car <= 0xDFFFu) {
+			viola_input(s, "LETTERA id=%u con carattere U+%04X: e' meta' di una "
+			               "coppia surrogata, e §7.3 li esclude — un valore "
+			               "scalare Unicode non comprende 0xD800-0xDFFF",
+			            id, car);
+			return false;
+		}
+		s->inp_ultimo_id = id;
+		s->inp_ultimo_istante_us = istante;
+		snprintf(cosa, sizeof cosa, "U+%04X", car);
+		esito = ha_canale_input(s) ? s->g.input_lettera(s->g.ctx, car) : -1;
+		break;
+	}
+	default:
+		/* Non ci si arriva: `misura_input()` ha gia' rifiutato i tipi che non
+		 * conosce, prima di accumulare un byte.  La riga sta qui perche' il
+		 * giorno in cui i due elenchi si separassero lo dicesse qualcuno. */
+		viola_input(s, "tipo %#06x sul canale di input: §7.3 ne definisce cinque, "
+		               "da 0x0101 a 0x0105",
+		            tipo);
+		return false;
+	}
+
+	s->inp_arrivati++;
+	if (!ha_canale_input(s)) {
+		/* ⛔ «Non ho un canale di input» NON e' «il client ha sbagliato».  Il
+		 * messaggio era valido in ogni sua parte — l'abbiamo appena giudicato —
+		 * e chiudere qui punirebbe chi non ha sbagliato niente.  ⚠ E' la stessa
+		 * distinzione di `RCP_VIDEO_NIENTE_CANALE`, e il ripiego si DICHIARA
+		 * (`CODER.md` §4.2): la riga e' questa. */
+		s->inp_non_iniettati++;
+		reg(s, "⚠ %s id=%u %s: VALIDO e NON iniettato — questo server non ha i "
+		       "cinque ganci del canale di input (§7.3).  La sessione REGGE",
+		    nome_input(tipo), id, cosa);
+	} else {
+		segna_iniezione(s, tipo, id, esito, cosa);
+	}
+
+	/* ⚠ L'`istante` compare nel registro e in nessun conto: §7.3 dice che
+	 *   «nessuna regola di questo documento lo consuma», e che in una pagina la
+	 *   grana e' deliberatamente ingrossata — `millisecondi × 1000` (rilievo
+	 *   R1.27).  ⛔ Chi ne ricavasse un ritardo misurerebbe la grana del
+	 *   `performance.now()` di un browser, non il nostro anello. */
+	reg(s, "input id=%u (era %u) %s %s · istante del client %llu us ⚠ grana "
+	       "ingrossata, §7.3: nessuna misura ci si costruisce sopra",
+	    id, precedente, nome_input(tipo), cosa,
+	    (unsigned long long)istante);
+	return true;
+}
+
+/* ========================================================================= */
+/* ⭐ IL CURSORE — `RCP.md` §7.2, §5.5, §5, §6.1                             */
+/*                                                                           */
+/* ⛔ CHI CONTROLLA CHE COSA, e la riga si legge una volta sola:              */
+/*                                                                           */
+/*    · i limiti di **§5.5** — 256 per lato, il punto attivo dentro           */
+/*      l'immagine, `0×0` con `0,0` per il nascosto — li fa rispettare        */
+/*      `src/cursore.c` (A6), e QUI NON SI RICONTROLLANO.  Due controlli      */
+/*      sulla stessa regola in due posti diventano due regole diverse il      */
+/*      giorno in cui una cambia, ed e' la forma di difetto che `RCP.md` §0   */
+/*      esiste per impedire;                                                  */
+/*    · la **lunghezza del messaggio** e' di questo modulo, e §7.2 la scrive  */
+/*      con un DEVE: «la lunghezza del messaggio DEVE valere esattamente      */
+/*      `8 + larghezza × altezza × 4`».                                       */
+/*                                                                           */
+/* ⛔⭐ E LA CONSEGUENZA DI SBAGLIARLA E' NOSTRA, NON DEL CLIENT: §7.2 dice   */
+/*     che una lunghezza che non torna e' `ERRORE_PROTOCOLLO` — ma a          */
+/*     rilevarla e' CHI RICEVE.  ⇒ Un messaggio storto spedito da qui fa      */
+/*     chiudere la sessione **alla pagina**, e il registro del server non ne  */
+/*     saprebbe niente.  «Un cursore fatto di memoria altrui» e' il sintomo   */
+/*     che §7.2 nomina; la sessione persa e' quello che vede l'utente.        */
+/*                                                                           */
+/* ⇒ Da cui la regola di questa funzione: **nel dubbio non si manda**, e si   */
+/*   scrive perche' (`CODER.md` §4.2 — il ripiego si DICHIARA).  Un cursore   */
+/*   che non si aggiorna e' brutto; una sessione che cade e' rotta.           */
+
+int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
+                      int16_t attivo_x, int16_t attivo_y,
+                      const uint8_t *immagine, size_t immagine_n)
+{
+	if (!s)
+		return -1;
+	/* §5: il cursore vive sul canale di CONTROLLO, e prima di `SESSIONE` non
+	 * c'e' nessuno che lo disegni — il client non e' ancora attaccato (§4.5).
+	 * ⚠ Non e' una violazione di nessuno: e' una forma arrivata troppo presto
+	 *   dalla cattura, che parte prima che il client si attacchi. */
+	if (s->stato == S_FINITA || !s->sessione_spedita) {
+		reg(s, "⚠ CURSORE_FORMA %ux%u NON spedita: `SESSIONE` non e' partita "
+		       "(stato %s) — §5, e non e' un errore di nessuno: la cattura "
+		       "comincia prima che il client si attacchi",
+		    larghezza, altezza, NOMI_STATO[s->stato]);
+		return -1;
+	}
+
+	/* ⛔⭐ §5.5 — «UNA SOLA DELLE DUE A ZERO E' `ERRORE_PROTOCOLLO`», e questo
+	 *     controllo sta QUI ANCHE SE STA GIA' IN `cursore.c` — deciso dal
+	 *     coordinatore il 14 agosto 2026, dopo che questo rapporto lo aveva
+	 *     segnalato come buco aperto.
+	 *
+	 * ⛔ E NON e' tornare a duplicare i limiti di §5.5: la divisione e' un'altra,
+	 *    e va letta perche' e' la ragione per cui questa riga non contraddice il
+	 *    riquadro qui sopra —
+	 *
+	 *      `cursore.c` decide **che cos'e'** quel cursore: quanto e' grande,
+	 *                  dov'e' il punto attivo, se e' nascosto o non pervenuto;
+	 *      `rcp.c`     ⛔ non deve **EMETTERE** un messaggio che la specifica
+	 *                  vieta, MAI, da nessuna strada.
+	 *
+	 * ⛔⭐ E QUESTO E' L'UNICO CASO IN CUI IL CONTROLLO DI LUNGHEZZA — che e'
+	 *     giusto — **NON BASTA**: `0×5` da' `0 × 5 × 4 = 0` byte d'immagine,
+	 *     cioe' un messaggio di **otto byte** la cui lunghezza **TORNA**.  Il
+	 *     valore malformato passa proprio il controllo che dovrebbe fermarlo, e
+	 *     nessuna delle altre righe di questa funzione lo guarda.
+	 *
+	 * ⚠ Il prezzo di non averlo: se un domani qualcuno chiamasse questa funzione
+	 *   da una strada che non passa da `cursore.c`, il client riceverebbe un
+	 *   messaggio che §5.5 gli ORDINA di rifiutare ⇒ **cadrebbe la sessione per
+	 *   colpa nostra**, e il registro del server non ne saprebbe niente.
+	 *
+	 * ⛔ E la coppia si distingue solo con tutt'e due i casi nel banco: `0×0` e'
+	 *    il cursore NASCOSTO e **deve passare**, `0×5` e `5×0` no.  Un controllo
+	 *    che rifiutasse tutti gli zeri sarebbe verde col solo `0×0` — e farebbe
+	 *    sparire per sempre il cursore nascosto, cioe' il sintomo «il puntatore
+	 *    resta fermo quando entro in un campo di testo». */
+	if ((larghezza == 0) != (altezza == 0)) {
+		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: §5.5 vuole le due misure a "
+		       "zero INSIEME per il cursore nascosto, e «una sola delle due a "
+		       "zero e' ERRORE_PROTOCOLLO».  ⚠ La lunghezza TORNEREBBE (8 byte, "
+		       "nessun pixel): e' l'unico caso in cui il controllo di lunghezza "
+		       "non basta, e spedirla farebbe chiudere la sessione ALLA PAGINA",
+		    larghezza, altezza);
+		return -1;
+	}
+
+	/* ⛔ §7.2 — LA LUNGHEZZA, e si CALCOLA in un posto solo.
+	 *
+	 * ⚠ `(size_t)` sui fattori, e non e' pedanteria: `larghezza` e `altezza`
+	 *   sono `uint16_t` e in C promuovono a `int`.  `65535 * 65535 * 4` in
+	 *   `int` e' **traboccamento con segno**, cioe' comportamento indefinito —
+	 *   il compilatore e' libero di dare qualunque cosa, e con `-O2` di solito
+	 *   da' un numero piccolo.  E' lo stesso difetto che la certificazione del
+	 *   banco ha trovato il 14 agosto 2026 su `6u + lung`, in un altro campo e
+	 *   con lo stesso meccanismo: l'aritmetica stretta che nessuno guarda. */
+	size_t pixel = (size_t)larghezza * (size_t)altezza;
+	size_t byte_immagine = pixel * 4u;
+
+	/* ⛔ La lunghezza dichiarata dal chiamante e quella che §7.2 impone devono
+	 * combaciare.  ⭐ E il confronto NON e' una formalita': senza `immagine_n`
+	 * questa funzione leggerebbe `larghezza × altezza × 4` byte **sulla fiducia**
+	 * — cioe' farebbe esattamente quel che §7.2 descrive come «leggo quel che
+	 * c'e' e vado avanti», solo dal lato del mittente, dove il cursore fatto di
+	 * memoria altrui lo confezioniamo noi. */
+	if (byte_immagine != immagine_n) {
+		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: §7.2 vuole %zu byte "
+		       "d'immagine (8 + %ux%ux4 nel messaggio) e chi chiama ne porta "
+		       "%zu.  ⚠ Spedirla farebbe chiudere la sessione ALLA PAGINA per "
+		       "ERRORE_PROTOCOLLO, e questo registro non lo saprebbe",
+		    larghezza, altezza, byte_immagine, larghezza, altezza, immagine_n);
+		return -1;
+	}
+	/* ⛔ «Zero byte» e «nessun puntatore» sono due fatti diversi: il cursore
+	 * NASCOSTO di §5.5 e' `0×0` **e** nessun byte, e li' `NULL` e' giusto.  Con
+	 * una misura addosso, invece, un `NULL` e' un difetto di chi chiama — e
+	 * leggerlo sarebbe la fine del processo. */
+	if (byte_immagine && !immagine) {
+		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: la misura vuole %zu byte e "
+		       "il puntatore all'immagine e' NULL",
+		    larghezza, altezza, byte_immagine);
+		return -1;
+	}
+
+	/* ⛔ §6.1 — «nessun messaggio DEVE superare 1 MiB», inquadratura compresa
+	 * (rilievo B-14).  ⭐ QUESTA regola e' di questo modulo, non di `cursore.c`:
+	 * la' vive §5.5 (256 per lato), qui §6.1 — e sono due paragrafi diversi con
+	 * due numeri diversi.  ⚠ Al massimo che §5.5 concede, 256×256, il messaggio
+	 * pesa 262 158 byte: **passa**, e deve passare.  Un tetto messo male qui
+	 * ucciderebbe il cursore piu' grande che l'arbitro ammette. */
+	if (byte_immagine + 8u + 6u > MAX_MESSAGGIO) {
+		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: il messaggio peserebbe %zu "
+		       "byte e §6.1 ne ammette %u, inquadratura compresa.  ⚠ §5.5 ferma "
+		       "a 256 per lato e a quella misura sono 262 158: se si arriva qui, "
+		       "il limite di §5.5 non e' stato fatto rispettare a monte",
+		    larghezza, altezza, byte_immagine + 8u + 6u, MAX_MESSAGGIO);
+		return -1;
+	}
+
+	/* ⛔ §7.2 — GLI OTTO BYTE, IN QUEST'ORDINE E SENZA RIEMPIMENTO (§6.0):
+	 *   0 larghezza u16 · 2 altezza u16 · 4 attivo_x i16 · 6 attivo_y i16 · 8 …
+	 *
+	 * ⚠ `serie` di `CursoreForma` NON viaggia: e' il numero con cui `cursore.c`
+	 *   riconosce che la forma non e' cambiata, e §7.2 non lo prevede.  Metterlo
+	 *   sul filo sarebbe un campo che due implementazioni indovinano diverso.
+	 * ⚠ E la POSIZIONE non c'e', perche' §7.2 dice che «non viaggia mai in
+	 *   questo verso»: qui viaggia solo la forma. */
+	size_t n = 8u + byte_immagine;
+	uint8_t *corpo = (uint8_t *)malloc(n);
+	if (!corpo) {
+		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: memoria esaurita (%zu byte)",
+		    larghezza, altezza, n);
+		return -1;
+	}
+	scrittore w = {corpo, n, 0, false};
+	sc_u16(&w, larghezza);
+	sc_u16(&w, altezza);
+	/* §6.0: `i16` in complemento a due, big-endian.  La conversione verso
+	 * `uint16_t` e' definita dal linguaggio e da' esattamente quei bit. */
+	sc_u16(&w, (uint16_t)attivo_x);
+	sc_u16(&w, (uint16_t)attivo_y);
+	if (byte_immagine)
+		memcpy(corpo + 8, immagine, byte_immagine);
+	/* ⛔⭐ E SI SPEDISCE `n`, NON `w.len` — trovato dal banco al primo giro, il
+	 *     14 agosto 2026.
+	 *
+	 *     `scrittore` conta i byte che sono passati DA LUI, e l'immagine ci
+	 *     arriva con una `memcpy` che `w.len` non vede: dopo i quattro `sc_u16`
+	 *     vale **8**, e mandare `w.len` spediva un `CURSORE_FORMA` che dichiara
+	 *     `larghezza=16, altezza=16` con **otto byte di corpo**.
+	 *
+	 * ⛔ Cioe' esattamente la lunghezza che non torna, prodotta da noi: la pagina
+	 *    avrebbe chiuso con `ERRORE_PROTOCOLLO` a ogni cambio di forma del
+	 *    cursore, e il sintomo per l'utente sarebbe stato «la sessione cade
+	 *    quando muovo il mouse su un bordo».  ⚠ Il registro del server scriveva
+	 *    la riga giusta — «%zu byte di corpo = 8 + 16x16x4» — perche' la
+	 *    calcolava da `n`: **il registro diceva il vero e il filo un'altra
+	 *    cosa**, che e' la forma di difetto per cui `CODER.md` §3.8 vuole che si
+	 *    verifichi dal lato che riceve.
+	 *
+	 * ⭐ A vederlo non e' stata una rilettura: e' stato il giudice, che riapre i
+	 *    byte usciti e rifa' il conto di §7.2 su quelli. */
+	if (w.pieno || w.len != 8u) {
+		/* Non ci si arriva: `corpo` e' grande `n` e i campi sono otto byte.  La
+		 * riga c'e' perche' il giorno in cui non fosse piu' vero lo dicesse
+		 * qualcuno, invece di spedire un messaggio storto. */
+		reg(s, "⛔ CURSORE_FORMA NON spedita: gli otto byte dei campi non sono "
+		       "usciti (scritti %zu)",
+		    w.len);
+		free(corpo);
+		return -1;
+	}
+
+	/* ⛔⭐ L'IMMAGINE SI COPIA QUI DENTRO, E LA CHIAMATA NON LA TIENE.
+	 *
+	 *     `src/cursore.h` lo dice: «vive fino al richiamo successivo: chi la
+	 *     vuole tenere la copia».  ⇒ Quando questa funzione torna, questo modulo
+	 *     non ha piu' nessun puntatore a quei byte.
+	 *
+	 * ⚠ Il prezzo, dichiarato: i byte si copiano DUE volte — qui dentro
+	 *   `corpo`, e poi in `manda_messaggio()` che ci mette davanti i sei byte
+	 *   d'inquadratura.  ⛔ Si paga apposta: l'inquadratura di §6.1 si scrive in
+	 *   UN posto solo, e ricopiarla qui per risparmiare una `memcpy` metterebbe
+	 *   due lettori sullo stesso campo.  Al massimo di §5.5 sono 256 KiB su un
+	 *   evento che accade quando la FORMA cambia — non a ogni fotogramma, perche'
+	 *   `cursore.c` toglie i ripetuti. */
+	manda_messaggio(s, T_CURSORE_FORMA, corpo, n);
+	free(corpo);
+
+	if (larghezza == 0 && altezza == 0)
+		reg(s, "⭐ CURSORE_FORMA: cursore NASCOSTO (§5.5), 8 byte di corpo");
+	else
+		reg(s, "⭐ CURSORE_FORMA %ux%u spedita, punto attivo (%d,%d): %zu byte "
+		       "di corpo = 8 + %ux%ux4 (§7.2)",
+		    larghezza, altezza, attivo_x, attivo_y, n, larghezza, altezza);
+	return 0;
+}
+
+uint32_t rcp_input_ultimo_iniettato(const rcp_sessione *s)
+{
+	return s ? s->inp_ultimo_iniettato : 0;
+}
+
+uint32_t rcp_input_ultimo_id(const rcp_sessione *s)
+{
+	return s ? s->inp_ultimo_id : 0;
+}
+
+bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
+                      size_t len, uint64_t ora)
+{
+	if (!s)
+		return false;
+	if (s->stato == S_FINITA) {
+		/* ⚠ Come in `rcp_ricevi()`: e' l'unico posto da cui si osserva un
+		 *   client che spedisce dopo la fine (§4.2), e tacere renderebbe
+		 *   indistinguibile chi insiste da chi si e' fermato.  ⛔ Ma qui non si
+		 *   giudica «commiato o tentativo»: §8.1 il commiato lo vuole sul canale
+		 *   di CONTROLLO, e un `CONGEDO` su questo stream sarebbe comunque un
+		 *   canale nel verso sbagliato. */
+		reg(s, "⛔ %zu byte sullo stream di input %lld DOPO la fine della "
+		       "sessione da %s: §4.2 vieta di spedire su qualunque canale",
+		    len, (long long)stream, s->provenienza);
+		return false;
+	}
+
+	/* ⛔⭐ §2.5 — «lo stream di input si apre DOPO aver ricevuto `SESSIONE`».
+	 *
+	 *     ⚠ E la grandezza da guardare e' «`SESSIONE` E' PARTITA», non «lo stato
+	 *       e' attiva»: e' la stessa scelta gia' fatta per il video, e per la
+	 *       stessa ragione (vedi il campo `sessione_spedita`).
+	 *
+	 * ⛔⭐ E QUESTA VOLTA IL GIUDIZIO E' LEGITTIMO, mentre il gemello di P20 non
+	 *     lo era, e vale la pena dire perche': la' il CLIENT non poteva misurare
+	 *     l'ordine fra due stream indipendenti; qui il SERVER misura una cosa
+	 *     che ha fatto LUI — se ha spedito `SESSIONE` o no.  E' la «grandezza
+	 *     locale, monotona, indipendente dalla consegna» di P20, dal lato
+	 *     giusto: se `SESSIONE` non e' partita, il client non l'ha ricevuta, e
+	 *     nessuna perdita di pacchetti puo' cambiarlo. */
+	if (!s->sessione_spedita) {
+		viola_input(s, "byte sullo stream di input (%lld) prima che `SESSIONE` "
+		               "sia partita: §2.5 lo apre DOPO averla ricevuta (stato: "
+		               "%s)",
+		            (long long)stream, NOMI_STATO[s->stato]);
+		return false;
+	}
+
+	/* ⛔ §2.5: «**uno solo**, e tenuto aperto». */
+	if (!s->inp_stream_noto) {
+		s->inp_stream_noto = true;
+		s->inp_stream = stream;
+		reg(s, "⭐ canale di INPUT aperto sullo stream %lld (§2.5: uno solo, "
+		       "dopo `SESSIONE`, e tenuto aperto).  I ganci d'iniezione: %s",
+		    (long long)stream,
+		    ha_canale_input(s) ? "collegati" : "⚠ NON collegati");
+	} else if (stream != s->inp_stream) {
+		viola_input(s, "un SECONDO stream di input (%lld) mentre il primo (%lld) "
+		               "e' ancora quello: §2.5 ne ammette uno solo",
+		            (long long)stream, (long long)s->inp_stream);
+		return false;
+	}
+
+	/* ⛔ L'orologio del silenzio (§5.3) si azzera anche sui byte dell'input, e
+	 * non e' una comodita': senza questa riga chi usa il desktop **senza
+	 * scrivere niente sul canale di controllo** — cioe' chiunque stia solo
+	 * muovendo il mouse — perde il posto dopo trenta secondi mentre sta
+	 * lavorando.  §5.3 dice «senza un byte DAL CLIENT», e questi sono byte del
+	 * client. */
+	s->ultimo_byte = ora;
+	if (!torna_a_parlare(s))
+		return false;
+
+	while (len) {
+		/* ⛔⭐ LA LUNGHEZZA SI CONTROLLA SUI SEI BYTE DELL'INTESTAZIONE, PRIMA DI
+		 *     ACCUMULARE UN BYTE DI CORPO — §6.1: «la lunghezza si controlla
+		 *     prima di allocare.  Un ricevente che alloca `lunghezza` byte e poi
+		 *     verifica ha gia' regalato un megabyte a chiunque sappia scrivere
+		 *     sei byte».
+		 *
+		 * ⭐ Su questo canale si puo' fare fino in fondo, e sul controllo no: i
+		 *    cinque tipi di §7.3 hanno una lunghezza FISSA, nota dal solo
+		 *    `tipo`.  ⇒ L'accumulo non supera mai 26 byte, e chi annuncia un
+		 *    megabyte ne ottiene sei e un congedo. */
+		size_t spazio = I_ACCUMULO - s->inp_acc_len;
+		size_t quanti = len < spazio ? len : spazio;
+		if (quanti == 0) {
+			/* Non ci si arriva finche' la potatura qui sotto funziona: la riga
+			 * c'e' perche' il giorno in cui non funzionasse lo dicesse qualcuno,
+			 * invece di girare in tondo. */
+			viola_input(s, "accumulo dello stream di input pieno (%zu byte) "
+			               "senza un messaggio intero: e' un difetto NOSTRO",
+			            s->inp_acc_len);
+			return false;
+		}
+		memcpy(s->inp_acc + s->inp_acc_len, dati, quanti);
+		s->inp_acc_len += quanti;
+		dati += quanti;
+		len -= quanti;
+
+		for (;;) {
+			if (s->inp_acc_len < 6)
+				break;
+			lettore intest = {s->inp_acc, s->inp_acc_len, 0, false};
+			uint16_t tipo = le_u16(&intest);
+			uint32_t lung = le_u32(&intest);
+
+			/* ⛔ §2.5: su questo stream il byte alto e' 0x01.  Un `0x00` qui e'
+			 * «il canale di controllo su uno stream unidirezionale», un `0x03`
+			 * e' «il video dal client»: sono violazioni con nomi diversi, e §3.1
+			 * punto 1 vuole il nome. */
+			if ((tipo >> 8) != 0x01) {
+				const char *chi = (tipo >> 8) == 0x00   ? "il CONTROLLO, che vive "
+				                                          "solo sul primo stream "
+				                                          "bidirezionale"
+				                  : (tipo >> 8) == 0x02 ? "gli APPUNTI, che "
+				                                          "vogliono uno stream "
+				                                          "loro per trasferimento"
+				                  : (tipo >> 8) == 0x03 ? "il VIDEO, che e' del "
+				                                          "server e va nell'altro "
+				                                          "verso"
+				                  : (tipo >> 8) == 0x04 ? "l'AUDIO, che vive solo "
+				                                          "sui datagram"
+				                                        : "un canale che §2.5 non "
+				                                          "definisce";
+				/* ⚠ `0x%02x` e non `%#04x`: quest'ultimo, sul valore ZERO, non
+				 *   stampa il prefisso — scrive `0000` — e il canale di
+				 *   controllo e' proprio lo `0x00`.  Il byte alto piu'
+				 *   importante di tutti sarebbe stato l'unico illeggibile. */
+				viola_input(s, "tipo %#06x sullo stream di input: il byte alto "
+				               "0x%02x e' %s (§2.5)",
+				            tipo, (unsigned)(tipo >> 8), chi);
+				return false;
+			}
+
+			uint32_t attesa = misura_input(tipo);
+			if (attesa == 0) {
+				viola_input(s, "tipo %#06x sul canale di input: §7.3 ne "
+				               "definisce CINQUE — 0x0101 PUNTATORE, 0x0102 "
+				               "PULSANTE, 0x0103 ROTELLA, 0x0104 LETTERA, 0x0105 "
+				               "POSIZIONE_TASTO",
+				            tipo);
+				return false;
+			}
+			/* ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del
+			 * corpo.  Un ricevente che legge una lunghezza incoerente con quel
+			 * che il tipo prevede DEVE chiudere».  ⚠ E si dice da che parte
+			 * sbaglia: «in piu'» e «in meno» mandano a cercare due difetti
+			 * diversi nel client. */
+			if (lung != attesa) {
+				if (lung > MAX_CORPO)
+					viola_input(s, "%s (%#06x) annuncia %u byte di corpo: oltre "
+					               "il tetto di 1 MiB di §6.1, e §7.3 ne vuole "
+					               "%u esatti",
+					            nome_input(tipo), tipo, lung, attesa);
+				else
+					viola_input(s, "%s (%#06x) annuncia %u byte di corpo e §7.3 "
+					               "ne prevede %u (%u di id+istante piu' %u "
+					               "suoi): %s",
+					            nome_input(tipo), tipo, lung, attesa, I_COMUNI,
+					            attesa - I_COMUNI,
+					            lung > attesa ? "byte in PIU', e §6.0 non ammette "
+					                            "riempimento"
+					                          : "byte in MENO");
+				return false;
+			}
+			/* ⛔⭐ `(size_t)6u`, E NON `6u` — trovato dalla certificazione del
+			 *     banco il 14 agosto 2026, innestando il guasto
+			 *     `lunghezza-tardiva`.
+			 *
+			 *     `lung` e' `uint32_t`: `6u + lung` si calcola a **32 bit**, e
+			 *     con `lung = 0xFFFFFFFF` il risultato non e' 4 294 967 301 —
+			 *     e' **5**.  ⇒ Un confronto `inp_acc_len < 6u + lung` direbbe
+			 *     «il corpo e' tutto arrivato» dopo sei byte, e si leggerebbero
+			 *     quattro gigabyte di memoria altrui a partire da un accumulo di
+			 *     32.
+			 *
+			 * ⚠ Qui NON e' raggiungibile — il controllo `lung != attesa` sta
+			 *   sopra e chiude prima — ma «non raggiungibile oggi» e «non
+			 *   pericoloso» sono due fatti diversi: chi domani spostasse quel
+			 *   controllo di tre righe rimetterebbe la lettura fuori dai limiti
+			 *   senza che niente cambiasse colore.  ⭐ E' l'invariante I7 letta
+			 *   da dentro: la protezione sta nel programma, non nell'ordine in
+			 *   cui qualcuno ha lasciato due `if`. */
+			if (s->inp_acc_len < (size_t)6u + lung)
+				break; /* il corpo non e' tutto arrivato */
+
+			if (!tratta_input(s, tipo, s->inp_acc + 6, lung, ora))
+				return false;
+
+			size_t consumati = (size_t)6u + lung;
+			memmove(s->inp_acc, s->inp_acc + consumati,
+			        s->inp_acc_len - consumati);
+			s->inp_acc_len -= consumati;
+		}
+	}
+	return true;
+}
+
 /* ⛔ §5.2 e §7.1 — `RICHIEDI_CHIAVE`, servito dal 12 agosto 2026.
  *
  * ⚠ Fino a oggi questo tipo cadeva nel `default` dello switch e faceva
@@ -2584,6 +3593,10 @@ void rcp_libera(rcp_sessione *s)
 {
 	if (!s)
 		return;
+	/* ⛔ §7.3 — l'ultima delle strade, e la rete di sicurezza di tutte le altre:
+	 * qualunque cosa sia successa, di qui si passa.  ⚠ `inp_rilasciato` impedisce
+	 * da solo di rilasciare due volte. */
+	rilascia_al_distacco(s, "la sessione si libera");
 	/* ⛔ §6.2 — UNO STREAM VIDEO LASCIATO A META' SI AZZERA, NON SI ABBANDONA
 	 * AL TRASPORTO.  Un fotogramma aperto quando la sessione finisce e' per
 	 * definizione incompleto: azzerarlo lo dice, ed e' l'unica chiusura che
@@ -2643,6 +3656,9 @@ void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice)
 	reg(s, "la pagina ha chiuso la sessione, motivo %#04x: §4.2, la sessione "
 	       "e' finita (stato: %s)",
 	    codice, NOMI_STATO[s->stato]);
+	/* ⛔ §7.3: la terza strada — la pagina se ne va senza passare da
+	 * `congeda()`.  Un browser chiuso con la crocetta arriva di qui. */
+	rilascia_al_distacco(s, "la pagina ha chiuso la sessione");
 	if (s->attaccata) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
@@ -2991,6 +4007,10 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			reg(s, "il client si congeda, motivo=%#04x dettaglio=%s", motivo,
 			    ld < sizeof dett ? dett
 			                     : "(piu' lungo del campo: non riportato)");
+			/* ⛔ §7.3: e questa e' la strada PIU' BATTUTA di tutte quando il
+			 * prodotto e' sano — il client che se ne va per bene.  Se il
+			 * rilascio stesse solo in `congeda()` mancherebbe proprio qui. */
+			rilascia_al_distacco(s, "congedo del client");
 			s->stato = S_FINITA;
 			/* ⛔⭐ E IL POSTO LASCIATO SI SCRIVE, come negli altri tre punti —
 			 * cura della tarda serata dell'11 agosto 2026.
@@ -3069,7 +4089,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *   «sconosciuto» andava a cercare un difetto del client. */
 			bool del_server = tipo == T_ECCOMI || tipo == T_AMMESSO ||
 			                  tipo == T_RESPINTO || tipo == T_SESSIONE ||
-			                  tipo == 0x000A /* CURSORE_FORMA */ ||
+			                  tipo == T_CURSORE_FORMA ||
 			                  tipo == 0x000E /* TELA */ ||
 			                  tipo == T_BANCO_ESITO;
 			const char *del_client = NULL;
@@ -3127,6 +4147,61 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 	}
 }
 
+/* ⛔⭐ CHI HA TACIUTO TRENTA SECONDI NON E' PIU' ATTACCATO, E QUANDO TORNA A
+ *    PARLARE LO DEVE SAPERE — rilievo R9.2.
+ *
+ *    Il ramo del silenzio di `rcp_tempo()` lasciava il posto e metteva
+ *    `attaccata = false`, ma lo stato restava `S_ATTIVA`: da li' in poi il
+ *    server aveva DUE sessioni «attiva» per lo stesso utente — quel che I2
+ *    vieta — e la prima continuava a essere servita come se niente fosse, senza
+ *    aver mai ricevuto un `CONGEDO`, un motivo o un codice di chiusura.  §8.2:
+ *    «nessun client attaccato e vivo viene mai spodestato», e quello veniva
+ *    spodestato in silenzio.
+ *
+ * ⭐ Il posto si puo' RIPRENDERE, e non e' una concessione: §8.2 dice che «il
+ *    discrimine e' l'orologio del silenzio, non l'intenzione di chi arriva», e
+ *    il caso che l'orologio esiste per servire e' il telefono tornato dalla
+ *    galleria.  Se nessuno ha occupato il posto, quel client riprende
+ *    esattamente da dove era.
+ *
+ * ⛔ Se invece il posto e' stato preso, il congedo e' `GIA_ATTIVA_REMOTA` e la
+ *    frase che il client ne costruira' — «hai gia' una sessione attiva altrove»
+ *    — questa volta e' VERA.  ⚠ E resta vero che «chi viene rifiutato e' chi
+ *    arriva»: qui chi arriva e' lui, chi c'era e' l'altro.
+ *
+ * ⛔⭐ ED E' UNA FUNZIONE, dal 14 agosto 2026, perche' adesso i byte del client
+ *     entrano da DUE porte — `rcp_ricevi()` e `rcp_ricevi_input()`.  ⚠ Lasciarla
+ *     scritta a mano dentro la prima avrebbe voluto dire che chi torna a parlare
+ *     **muovendo il mouse** non riprende il posto, e il sintomo sarebbe stato:
+ *     il video riparte se scrivi, non se muovi la mano.  Due copie di uno stato
+ *     divergono, e questa e' la copia che non si e' fatta.
+ *
+ * Restituisce `false` se la sessione e' stata congedata. */
+static bool torna_a_parlare(rcp_sessione *s)
+{
+	if (s->stato != S_STACCATA)
+		return true;
+	if (posto_prendi(s->utente) == POSTO_PRESO) {
+		s->attaccata = true;
+		s->stato = S_ATTIVA;
+		/* ⛔ §7.3: il rilascio del distacco e' gia' avvenuto (il silenzio l'ha
+		 * fatto scattare), e questa sessione ricomincia con le mani libere: se
+		 * tacesse una seconda volta, il rilascio deve poter riscattare. */
+		s->inp_rilasciato = false;
+		reg(s, "⭐ posto RIPRESO da %s via %s dopo il silenzio: nessun "
+		       "altro lo aveva occupato (occupati adesso: %d)",
+		    s->utente, s->provenienza, posti_occupati());
+		return true;
+	}
+	reg(s, "⛔ %s torna a parlare dopo il silenzio, ma il suo posto e' "
+	       "di un altro client: §8.2 0x0F, e questa volta e' vero",
+	    s->utente);
+	congeda(s, RCP_GIA_ATTIVA_REMOTA,
+	        "il posto di questa sessione e' stato preso da un altro "
+	        "client mentre questa taceva");
+	return false;
+}
+
 bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 {
 	if (s->stato == S_FINITA) {
@@ -3163,48 +4238,11 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 	/* ⭐ L'orologio del silenzio si azzera QUI, sui byte di RCP. */
 	s->ultimo_byte = ora;
 
-	/* ⛔⭐ CHI HA TACIUTO TRENTA SECONDI NON E' PIU' ATTACCATO, E QUANDO TORNA
-	 *    A PARLARE LO DEVE SAPERE — rilievo R9.2.
-	 *
-	 *    Il ramo del silenzio di `rcp_tempo()` lasciava il posto e metteva
-	 *    `attaccata = false`, ma lo stato restava `S_ATTIVA`: da li' in poi il
-	 *    server aveva DUE sessioni «attiva» per lo stesso utente — quel che I2
-	 *    vieta — e la prima continuava a essere servita come se niente fosse,
-	 *    senza aver mai ricevuto un `CONGEDO`, un motivo o un codice di
-	 *    chiusura.  §8.2: «nessun client attaccato e vivo viene mai
-	 *    spodestato», e quello veniva spodestato in silenzio.
-	 *
-	 * ⭐ Il posto si puo' RIPRENDERE, e non e' una concessione: §8.2 dice che
-	 *    «il discrimine e' l'orologio del silenzio, non l'intenzione di chi
-	 *    arriva», e il caso che l'orologio esiste per servire e' il telefono
-	 *    tornato dalla galleria.  Se nessuno ha occupato il posto, quel client
-	 *    riprende esattamente da dove era.
-	 *
-	 * ⛔ Se invece il posto e' stato preso, il congedo e' `GIA_ATTIVA_REMOTA` e
-	 *    la frase che il client ne costruira' — «hai gia' una sessione attiva
-	 *    altrove» — questa volta e' VERA.  ⚠ E resta vero che «chi viene
-	 *    rifiutato e' chi arriva»: qui chi arriva e' lui, chi c'era e' l'altro.
-	 *
-	 * ⚠ La connessione non si chiude per il solo silenzio — quella scelta e'
+	/* ⚠ La connessione non si chiude per il solo silenzio — quella scelta e'
 	 *   dichiarata nel riquadro in cima e non cambia.  Quel che cambia e' che
-	 *   lo STATO dice il vero. */
-	if (s->stato == S_STACCATA) {
-		if (posto_prendi(s->utente) == POSTO_PRESO) {
-			s->attaccata = true;
-			s->stato = S_ATTIVA;
-			reg(s, "⭐ posto RIPRESO da %s via %s dopo il silenzio: nessun "
-			       "altro lo aveva occupato (occupati adesso: %d)",
-			    s->utente, s->provenienza, posti_occupati());
-		} else {
-			reg(s, "⛔ %s torna a parlare dopo il silenzio, ma il suo posto e' "
-			       "di un altro client: §8.2 0x0F, e questa volta e' vero",
-			    s->utente);
-			congeda(s, RCP_GIA_ATTIVA_REMOTA,
-			        "il posto di questa sessione e' stato preso da un altro "
-			        "client mentre questa taceva");
-			return false;
-		}
-	}
+	 *   lo STATO dice il vero.  Vedi `torna_a_parlare()`, rilievo R9.2. */
+	if (!torna_a_parlare(s))
+		return false;
 
 	/* ⛔ Si accumula A PEZZI e si drena dopo ciascuno: cosi' il tetto e' quello
 	 * di §6.1 e non quello di un buffer, e un pezzo grande non muore perche'
@@ -3326,6 +4364,8 @@ void rcp_canale_chiuso(rcp_sessione *s)
 	reg(s, "il canale di controllo si e' chiuso dal lato del server: "
 	       "§4.2, la sessione e' finita (stato: %s)",
 	    NOMI_STATO[s->stato]);
+	/* ⛔ §7.3: la quarta strada — il canale muore e non passa da `congeda()`. */
+	rilascia_al_distacco(s, "il canale di controllo si e' chiuso");
 	if (s->attaccata) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
@@ -3471,6 +4511,17 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		       "(posti occupati adesso: %d; stato: %s)",
 		    (unsigned long long)(ora - s->ultimo_byte), s->provenienza,
 		    posti_occupati(), NOMI_STATO[s->stato]);
+		/* ⛔⭐ §7.3 NOMINA IL SILENZIO PER PRIMO fra i tre modi in cui «una
+		 *     connessione finisce», ed e' il caso peggiore dei tre: qui il
+		 *     client non ha detto niente e non dira' piu' niente — e' il
+		 *     telefono morto in galleria — mentre la SESSIONE GRAFICA
+		 *     sopravvive (invariante I4).  Un Ctrl premuto un attimo prima
+		 *     che la linea cadesse resterebbe premuto sul desktop vero, e
+		 *     l'utente lo troverebbe cosi' al riattacco.
+		 * ⚠ E la sessione RCP non e' finita: qui si e' solo lasciato il
+		 *   posto.  Se torna a parlare, `inp_rilasciato` si riaccende in
+		 *   `rcp_ricevi()`/`rcp_ricevi_input()` insieme al posto ripreso. */
+		rilascia_al_distacco(s, "silenzio di §5.3");
 	}
 
 	uint64_t tetto = 0;

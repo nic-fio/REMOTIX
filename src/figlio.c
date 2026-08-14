@@ -70,6 +70,7 @@
  * questo, e non e' pulizia: e' la dichiarazione che root non ci parla. */
 #include "cattura.h"
 #include "codificatore.h"
+#include "input.h"
 #include "mutter.h"
 #include "sessione.h"
 
@@ -108,9 +109,24 @@ enum {
 	 *     nessun chiamante nel prodotto, e il palco sta in un ALTRO PROCESSO —
 	 *     questa e' la riga che attraversa il confine. */
 	MSG_VIDEO = 4,        /* padre → figlio */
+	/* ⭐⭐ FASE 4 — L'INPUT.  ⛔ E la ragione per cui attraversa il socket e'
+	 *     la stessa di `MSG_VIDEO`, ed e' un fatto dell'architettura, non una
+	 *     scelta: **`libei` parla con la sessione dell'utente, e la sessione
+	 *     dell'utente e' in QUESTO processo**, mentre QUIC, RCP e i byte del
+	 *     client stanno nel padre.  ⇒ Fra il tasto premuto nel browser e il
+	 *     tasto premuto sul desktop c'e' un confine di processo, e questa e'
+	 *     la riga che lo attraversa. */
+	MSG_INPUT = 5,        /* padre → figlio */
 	MSG_SONO = 10,      /* figlio → padre */
 	MSG_PALCO = 11,     /* figlio → padre */
-	MSG_FOTOGRAMMA = 12 /* figlio → padre */
+	MSG_FOTOGRAMMA = 12,/* figlio → padre */
+	/* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE, e attraversa il confine nel verso
+	 *     OPPOSTO all'input.  ⛔ Per la stessa ragione: il metadato del cursore
+	 *     arriva da PipeWire, cioe' nel figlio, e il canale su cui va spedito
+	 *     (`CURSORE_FORMA`, `RCP.md` §7.2) vive nel padre.
+	 * ⚠ E come il fotogramma va A PEZZI: un cursore 256x256 in BGRA fa 262 144
+	 *   byte, otto volte `PEZZO_MAX`. */
+	MSG_CURSORE = 13    /* figlio → padre */
 };
 
 struct testa {
@@ -158,6 +174,33 @@ struct corpo_video {
 	uint16_t riempi;
 };
 
+/* ⛔ Che cosa il padre chiede al desktop.  Le azioni sono quelle di `RCP.md`
+ *    §7.3 e i campi hanno i suoi tipi — ⚠ ma qui viaggiano gia' CONVALIDATI:
+ *    `rcp.c` ha fatto il suo mestiere, e questo confine non lo rifa'.
+ *
+ * ⭐ `id` c'e' perche' e' l'unica cosa che rende onesto il campo `input` dei
+ *    fotogrammi (§6.2): senza, il figlio saprebbe di aver iniettato **qualcosa**
+ *    e non **quale**. */
+struct corpo_input {
+	uint32_t id;       /* §7.3: cresce di almeno uno su tutto il canale */
+	uint8_t azione;    /* FIGLI_INPUT_* di `figlio.h` */
+	uint8_t premuto;   /* 1 premuto, 0 rilasciato */
+	uint16_t codice;   /* evdev: BTN_LEFT = 0x110, KEY_A = 30 */
+	int32_t a, b;      /* puntatore x/y · rotella assi · lettera in `a` */
+};
+
+/* ⛔ La forma del cursore che attraversa il confine.  ⚠ I limiti di `RCP.md`
+ *    §5.5 e §7.2 li ha gia' fatti rispettare `cursore.c`, dall'altra parte del
+ *    tubo: qui non si ricontrollano — ⛔ tranne quel che serve a non fidarsi di
+ *    un mittente, che nel padre e' un'altra cosa dal fidarsi di un modulo. */
+struct corpo_cursore {
+	uint16_t larghezza, altezza; /* 0x0 = nascosto (§5.5) */
+	int16_t attivo_x, attivo_y;
+	uint32_t totale;  /* byte dell'immagine intera: l x a x 4 */
+	uint32_t offset;
+	uint32_t pezzo;
+};
+
 struct corpo_fotogramma {
 	uint8_t codec; /* 1 = HEVC, 2 = AV1 — gli stessi numeri di §4.3/§6.2 */
 	uint8_t chiave;
@@ -167,10 +210,25 @@ struct corpo_fotogramma {
 	uint32_t totale; /* byte del fotogramma intero */
 	uint32_t offset; /* dove va questo pezzo */
 	uint32_t pezzo;  /* quanti byte in questo pezzo */
+	/* ⭐⭐ §6.2 — «l'identificatore dell'ultimo input INIETTATO prima della
+	 *     cattura, 0 se nessuno».
+	 *
+	 * ⛔⛔ E VIAGGIA DI QUI, non dal padre, ed e' la scelta che rende vero il
+	 *      campo invece di plausibile.  Il padre sa che cosa ha **mandato**;
+	 *      solo il figlio sa che cosa il compositore ha **preso**, e sa in che
+	 *      istante ha catturato.  ⇒ Riempirlo nel padre direbbe «l'ultimo
+	 *      input SPEDITO al palco prima della spedizione del fotogramma»: un
+	 *      numero piu' alto, e una promessa piu' grande di quella che il
+	 *      fotogramma puo' mantenere — cioe' l'anello del ritardo misurerebbe
+	 *      un ritardo piu' corto del vero, in nostro favore.
+	 * ⚠ `CODER.md` §1-bis: «il confine si sposta nella direzione SCOMODA». */
+	uint32_t input;
 };
 
 /* Il messaggio piu' lungo che passa di qui. */
 #define BUSTA_MAX (sizeof(struct testa) + sizeof(struct corpo_fotogramma) + PEZZO_MAX)
+_Static_assert(sizeof(struct corpo_cursore) <= sizeof(struct corpo_fotogramma),
+               "la busta e' dimensionata sul fotogramma: il cursore ci deve stare");
 
 /* ========================================================================== */
 /* IL PADRE                                                                    */
@@ -198,6 +256,17 @@ struct figlio {
 	uint8_t monta_codec, monta_chiave;
 	uint32_t monta_l, monta_a;
 	uint64_t monta_istante;
+	uint32_t monta_input; /* §6.2, e lo TIMBRA il figlio: vedi `corpo_fotogramma` */
+	/* ⭐ Il montaggio del CURSORE e' separato da quello del fotogramma, e non e'
+	 *    una comodita': i due arrivano **intrecciati** sullo stesso socket, e un
+	 *    montaggio solo farebbe di ogni cambio di forma un fotogramma buttato
+	 *    (e viceversa).  ⛔ E' la trappola dei pezzi fuori ordine vista da
+	 *    sopra: non e' il mittente a sbagliare, e' il ricevente a non avere
+	 *    due tavoli. */
+	uint8_t *cur_monta;
+	size_t cur_totale, cur_avuti;
+	uint16_t cur_l, cur_a;
+	int16_t cur_ax, cur_ay;
 	/* ⛔ Il conto dei fotogrammi arrivati da questo figlio.  ⚠ Sta qui e non
 	 *    in una variabile di modulo perche' e' PER FIGLIO: sommato fra due
 	 *    utenti direbbe che il palco funziona anche quando ne funziona uno
@@ -218,6 +287,7 @@ struct figli {
 	char percorso_mio[512]; /* /proc/self/exe risolto, per l'`exec` */
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
+	FiglioCursore cursore;
 	void *ctx;
 };
 
@@ -480,7 +550,8 @@ static struct figlio *cerca(struct figli *f, const char *utente)
 }
 
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
-                     FiglioDeposito deposita, FiglioCongedo congeda, void *ctx)
+                     FiglioDeposito deposita, FiglioCongedo congeda,
+                     FiglioCursore cursore, void *ctx)
 {
 	figli *f = (figli *)calloc(1, sizeof *f);
 	ssize_t n;
@@ -494,6 +565,7 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	f->tela_a = tela_a;
 	f->deposita = deposita;
 	f->congeda = congeda;
+	f->cursore = cursore;
 	f->ctx = ctx;
 	if (dir_rilievo && dir_rilievo[0]) {
 		snprintf(f->dir_rilievo, sizeof f->dir_rilievo, "%s", dir_rilievo);
@@ -890,6 +962,7 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 		g->monta_l = c->larghezza;
 		g->monta_a = c->altezza;
 		g->monta_istante = c->istante_us;
+		g->monta_input = c->input;
 	}
 	/* ⛔ I pezzi si accettano SOLO in ordine, e uno fuori posto butta tutto:
 	 *    ricucire un buco vorrebbe dire indovinare che cosa mancava, ed e'
@@ -938,10 +1011,89 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 	if (f->deposita)
 		f->deposita(f->ctx, g->utente, g->uid, g->monta_codec,
 		            g->monta_chiave != 0, g->monta, g->monta_totale, g->monta_l,
-		            g->monta_a, g->monta_istante);
+		            g->monta_a, g->monta_istante, g->monta_input);
 	free(g->monta);
 	g->monta = NULL;
 	g->monta_totale = g->monta_avuti = 0;
+}
+
+/* ⭐⭐ Un pezzo di CURSORE e' arrivato, e le credenziali erano giuste.
+ *
+ * ⚠ Perche' ha un montaggio suo e non riusa quello del fotogramma: i due
+ *   arrivano intrecciati sullo stesso socket, e con un tavolo solo ogni cambio
+ *   di forma butterebbe il fotogramma a meta' e viceversa. */
+static void monta_cursore(struct figli *f, struct figlio *g,
+                          const struct corpo_cursore *c, const uint8_t *dati)
+{
+	/* ⛔ Il tetto e' quello di `RCP.md` §5.5 — 256x256 in BGRA — e si fa
+	 *    rispettare QUI perche' qui il mittente e' un altro processo.  ⚠ Non e'
+	 *    un doppione dei limiti di `cursore.c`: quello e' un modulo di cui ci
+	 *    fidiamo, questo e' un socket. */
+	if (c->totale > (uint32_t)CURSORE_MAX_LATO * CURSORE_MAX_LATO * 4u) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s» annuncia un cursore di %u byte: oltre il tetto di "
+		              "§5.5 (%ux%u in BGRA).  Si butta",
+		              g->utente, c->totale, CURSORE_MAX_LATO, CURSORE_MAX_LATO);
+		return;
+	}
+
+	/* ⭐ Il nascosto arriva senza immagine, e si consegna subito: e' l'unico
+	 *    modo che il client ha di sapere che il puntatore e' sparito. */
+	if (c->totale == 0) {
+		if (f->cursore)
+			f->cursore(f->ctx, g->utente, g->uid, c->larghezza, c->altezza,
+			           c->attivo_x, c->attivo_y, NULL, 0);
+		return;
+	}
+	if (c->pezzo > PEZZO_MAX || (uint64_t)c->offset + c->pezzo > c->totale) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s»: pezzo di cursore fuori misura (offset %u + %u su "
+		              "%u): scartato",
+		              g->utente, c->offset, c->pezzo, c->totale);
+		free(g->cur_monta);
+		g->cur_monta = NULL;
+		g->cur_totale = g->cur_avuti = 0;
+		return;
+	}
+	if (c->offset == 0) {
+		free(g->cur_monta);
+		g->cur_monta = (uint8_t *)malloc(c->totale);
+		if (!g->cur_monta) {
+			g->cur_totale = g->cur_avuti = 0;
+			return;
+		}
+		g->cur_totale = c->totale;
+		g->cur_avuti = 0;
+		g->cur_l = c->larghezza;
+		g->cur_a = c->altezza;
+		g->cur_ax = c->attivo_x;
+		g->cur_ay = c->attivo_y;
+	}
+	/* ⛔ In ordine e basta, come il fotogramma: ricucire un buco vorrebbe dire
+	 *    indovinare che cosa mancava — e un cursore indovinato e' un cursore
+	 *    fatto di memoria altrui. */
+	if (!g->cur_monta || c->offset != g->cur_avuti || c->totale != g->cur_totale
+	    || c->larghezza != g->cur_l || c->altezza != g->cur_a) {
+		registro_dettaglio(REG_FIGLIO,
+		                   "«%s»: pezzo di cursore fuori ordine: butto la forma "
+		                   "a meta' (il client tiene quella di prima)",
+		                   g->utente);
+		free(g->cur_monta);
+		g->cur_monta = NULL;
+		g->cur_totale = g->cur_avuti = 0;
+		return;
+	}
+	memcpy(g->cur_monta + c->offset, dati, c->pezzo);
+	g->cur_avuti += c->pezzo;
+	if (g->cur_avuti < g->cur_totale)
+		return;
+
+	if (f->cursore)
+		f->cursore(f->ctx, g->utente, g->uid, g->cur_l, g->cur_a, g->cur_ax,
+		           g->cur_ay, g->cur_monta, g->cur_totale);
+	free(g->cur_monta);
+	g->cur_monta = NULL;
+	g->cur_totale = g->cur_avuti = 0;
 }
 
 /* ⛔ Restituisce `false` quando il figlio non c'e' piu' — e chi chiama DEVE
@@ -1005,6 +1157,16 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		              p.presa, p.monitor, p.monitor_prima, p.monitor_dopo,
 		              p.larghezza, p.altezza, p.stride, p.bit, p.flussi,
 		              p.guasto[0] ? " — " : "", p.guasto);
+		return true;
+	}
+	case MSG_CURSORE: {
+		struct corpo_cursore c;
+		if (byte < sizeof c)
+			return true;
+		memcpy(&c, corpo, sizeof c);
+		if (byte < sizeof c + c.pezzo)
+			return true;
+		monta_cursore(f, g, &c, corpo + sizeof c);
 		return true;
 	}
 	case MSG_FOTOGRAMMA: {
@@ -1260,6 +1422,65 @@ bool figli_chiedi_palco(figli *f, const char *utente)
  *    chiave chiesta zero volte costa **lo schermo fermo per sempre**.  Il fondo
  *    che evita la raffica sta dall'altra parte (`WT_CHIAVE_RICHIESTA_MS`), dove
  *    c'e' l'orologio della sessione. */
+/* ⭐⭐ FASE 4 — la meta' PADRE della cucitura dell'input.
+ *
+ * ⚠ Quanto e' corta, e perche' e' giusto che lo sia: qui non si convalida
+ *   niente e non si trasforma niente.  `rcp.c` ha gia' applicato `RCP.md` §7.3
+ *   per intero — intervalli, surrogati, coordinate sulla tela, `id` crescente —
+ *   e `input.c` applichera' le regole del compositore.  ⛔ Un controllo in piu'
+ *   in mezzo non e' prudenza: e' una **terza** regola che il giorno in cui una
+ *   delle due cambia resta indietro in silenzio.
+ *
+ * ⛔ E NON si tiene nessuno stato: nessun «ultimo id mandato», nessuna cache
+ *    del premuto.  Chi tiene il conto e' `input.c`, che e' l'unico che sappia
+ *    che cosa il compositore ha davvero preso — e due contatori sulla stessa
+ *    grandezza sono due verita' che divergono al primo messaggio perduto. */
+bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
+                 uint16_t codice, int premuto, int32_t a, int32_t b)
+{
+	struct figlio *g;
+	struct testa t;
+	struct corpo_input c;
+	uint8_t busta[sizeof t + sizeof c];
+
+	if (!f || !utente)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+
+	memset(&t, 0, sizeof t);
+	magia_scrivi(&t);
+	t.tipo = MSG_INPUT;
+	t.versione = FIGLIO_VERSIONE;
+	t.matricola = g->matricola;
+	t.uid_dichiarato = (uint32_t)g->uid;
+	t.byte = (uint32_t)sizeof c;
+	memset(&c, 0, sizeof c);
+	c.id = id;
+	c.azione = azione;
+	c.premuto = premuto ? 1u : 0u;
+	c.codice = codice;
+	c.a = a;
+	c.b = b;
+	memcpy(busta, &t, sizeof t);
+	memcpy(busta + sizeof t, &c, sizeof c);
+	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+		/* ⛔ `registro_dettaglio` e non `registro_dice`: un utente che muove il
+		 *    mouse produce decine di messaggi al secondo, e una riga per
+		 *    ciascuno seppellirebbe il registro proprio nel momento in cui
+		 *    serve leggerlo.  ⚠ Ma NON si tace: «l'input non e' arrivato al
+		 *    desktop» e' un fatto, e sparisce solo dalla parlantina. */
+		registro_dettaglio(REG_FIGLIO,
+		                   "⚠ l'input %u (azione %u) per «%s» non e' partito "
+		                   "(%s): quel gesto NON e' arrivato al desktop",
+		                   (unsigned)id, (unsigned)azione, utente,
+		                   strerror(errno));
+		return false;
+	}
+	return true;
+}
+
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
 {
 	struct figlio *g;
@@ -1334,6 +1555,7 @@ void figli_spegni(figli *f)
 		registro_dice(REG_FIGLIO, "il figlio di «%s» (pid %ld) e' spento",
 		              g->utente, (long)g->pid);
 		free(g->monta);
+		free(g->cur_monta);
 		memset(g, 0, sizeof *g);
 		g->fd = -1;
 	}
@@ -1342,6 +1564,20 @@ void figli_spegni(figli *f)
 
 /* ========================================================================== */
 /* ⭐ IL FIGLIO — da qui in giu' si gira come l'utente, e non si torna indietro */
+
+/* ⭐⭐ FASE 4 — il canale di input vive QUI, e non poteva vivere altrove:
+ *     `libei` parla con la sessione grafica, e la sessione grafica e' di questo
+ *     processo.
+ *
+ * ⛔ `input_iniettato` e' l'`id` dell'ultimo input che il COMPOSITORE HA PRESO
+ *    — non l'ultimo ricevuto, non l'ultimo tentato.  §6.2 promette che
+ *    «l'effetto di quell'input e' gia' nella scena», e di un input rifiutato
+ *    non c'e' nessun effetto da vedere.  ⇒ Avanza solo quando `input.c` ha
+ *    risposto 0. */
+static Input *palco_input;
+static uint32_t input_iniettato;
+static uint32_t input_rifiutati;
+static uint32_t input_non_producibili;
 
 static int fd_figlio = 3; /* il posto convenuto, messo li' da `diventa_ed_esegui` */
 static uint64_t mia_matricola;
@@ -1394,7 +1630,8 @@ static bool manda(uint16_t tipo, const void *corpo, size_t byte,
 }
 
 static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
-                             uint64_t istante_us, const uint8_t *dati, size_t byte)
+                             uint64_t istante_us, const uint8_t *dati, size_t byte,
+                             uint32_t input)
 {
 	size_t off = 0;
 	while (off < byte) {
@@ -1411,6 +1648,10 @@ static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
 		c.totale = (uint32_t)byte;
 		c.offset = (uint32_t)off;
 		c.pezzo = (uint32_t)q;
+		/* ⭐ §6.2 — e il valore arriva DALL'ISTANTE DELLA CATTURA, non da qui:
+		 *    fra la cattura e questa riga passa tutta la codifica, e leggerlo
+		 *    adesso direbbe un numero piu' alto del vero. */
+		c.input = input;
 		if (!manda(MSG_FOTOGRAMMA, &c, sizeof c, dati + off, q)) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ il pezzo a %zu di %zu non e' partito (%s): il "
@@ -1421,6 +1662,73 @@ static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
 		}
 		off += q;
 	}
+}
+
+/* ⭐⭐ LA FORMA DEL CURSORE, dal metadato di PipeWire al filo — e in mezzo c'e'
+ *     un confine di processo.
+ *
+ * ⛔ Questa e' la `CursoreArrivata` di `cursore.h`, e la chiama `cattura.c`
+ *    **dal thread di PipeWire**.  ⚠ Percio' NON tocca niente dello stato del
+ *    ciclo e non alloca: prende i byte, li spezza e li manda.  Un `malloc` qui
+ *    dentro sarebbe un `malloc` sul thread di tempo reale della cattura.
+ *
+ * ⚠ E l'immagine vive SOLO dentro la chiamata (lo dice `cursore.h`): si copia
+ *   nella busta e non se ne tiene nessun puntatore.
+ *
+ * Restituisce 0: da qui in poi la forma e' del padre, e il figlio non ha modo di
+ * sapere se il client l'ha ricevuta — ⛔ dirlo diversamente sarebbe fingere una
+ * conferma che non esiste. */
+static int cursore_al_padre(void *chi, const CursoreForma *f)
+{
+	size_t byte, off = 0;
+
+	(void)chi;
+	if (!f)
+		return -1;
+	byte = (size_t)f->larghezza * f->altezza * 4u;
+	/* ⭐ Il nascosto e' `0x0` con l'immagine a NULL, e va spedito **come
+	 *    messaggio**: e' l'unico modo che il client ha di sapere che il
+	 *    puntatore e' sparito, invece di continuare a disegnare l'ultima forma
+	 *    per sempre (§5.5). */
+	if (byte == 0) {
+		struct corpo_cursore c;
+		memset(&c, 0, sizeof c);
+		c.larghezza = f->larghezza;
+		c.altezza = f->altezza;
+		c.attivo_x = f->attivo_x;
+		c.attivo_y = f->attivo_y;
+		return manda(MSG_CURSORE, &c, sizeof c, NULL, 0) ? 0 : -1;
+	}
+	if (!f->immagine)
+		return -1;
+	while (off < byte) {
+		struct corpo_cursore c;
+		size_t q = byte - off;
+		if (q > PEZZO_MAX)
+			q = PEZZO_MAX;
+		memset(&c, 0, sizeof c);
+		c.larghezza = f->larghezza;
+		c.altezza = f->altezza;
+		c.attivo_x = f->attivo_x;
+		c.attivo_y = f->attivo_y;
+		c.totale = (uint32_t)byte;
+		c.offset = (uint32_t)off;
+		c.pezzo = (uint32_t)q;
+		if (!manda(MSG_CURSORE, &c, sizeof c, f->immagine + off, q)) {
+			/* ⛔ In parlantina, e per una ragione precisa: il cursore cambia
+			 *    forma decine di volte mentre il puntatore attraversa una
+			 *    finestra, e una riga per ciascuno coprirebbe il registro.
+			 *    ⚠ Ma NON si tace: una forma perduta a meta' lascia il client
+			 *    con il cursore di prima, che e' un difetto visibile. */
+			registro_dettaglio(REG_FIGLIO,
+			                   "il pezzo del cursore a %zu di %zu non e' "
+			                   "partito (%s): il client tiene la forma vecchia",
+			                   off, byte, strerror(errno));
+			return -1;
+		}
+		off += q;
+	}
+	return 0;
 }
 
 /* ⛔⭐ IL FIGLIO SI TIENE QUEL CHE HA CODIFICATO, e la ragione non e' la
@@ -1439,6 +1747,13 @@ static size_t tenuto_byte[3];
 static bool tenuto_chiave[3];
 static uint32_t tenuto_l, tenuto_a;
 static uint64_t tenuto_istante;
+/* ⛔ E anche il fotogramma TENUTO porta il suo `input`, quello dell'istante in
+ *    cui fu catturato — non quello di adesso.  ⚠ Rimandandolo con il numero
+ *    corrente si direbbe a chi rientra che un input appena arrivato e' gia'
+ *    nella scena di un'immagine ferma da minuti: e l'anello del ritardo lo
+ *    leggerebbe come un ritardo bassissimo.  E' la stessa ragione per cui si
+ *    rimanda **lo stesso** fotogramma e non uno nuovo. */
+static uint32_t tenuto_input;
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* ⭐⭐ FASE 3 — IL CICLO DEI FOTOGRAMMI, DENTRO IL FIGLIO                      */
@@ -1730,7 +2045,7 @@ static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_u
 static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
                              uint8_t numero, const char *dir_rilievo,
                              const char *nome_file, uint64_t istante_us,
-                             uint32_t tela_l, uint32_t tela_a)
+                             uint32_t tela_l, uint32_t tela_a, uint32_t input)
 {
 	CodificatoreFotogramma fg;
 	Codificatore *cod;
@@ -1790,7 +2105,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		ciclo_chiavi++;
 
 	manda_fotogramma(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
-	                 fg.byte);
+	                 fg.byte, input);
 	/* ⛔ Il fotogramma TENUTO e' ancora quello dell'accensione — «rimanda il
 	 *    palco» serve a chi rientra prima che il ciclo abbia consegnato il
 	 *    primo.  ⚠ E si tiene solo la CHIAVE: rimandare un delta a chi non ha
@@ -1807,6 +2122,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			tenuto_l = tela_l;
 			tenuto_a = tela_a;
 			tenuto_istante = istante_us;
+			tenuto_input = input;
 		}
 	}
 	/* ⛔ Il rilievo si scrive solo se qualcuno l'ha chiesto, e solo il primo:
@@ -1963,11 +2279,15 @@ static void prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 * ⛔ §5.2: tutt'e due i primi devono essere una CHIAVE, e si chiede invece
 	 *    di sperarlo. */
 	debito_chiave[1] = debito_chiave[2] = true;
+	/* ⚠ `input = 0` e NON e' un valore di comodo: §6.2 dice «0 se nessuno», e
+	 *   qui non c'e' ancora nessuno — il canale di input nasce quando il client
+	 *   apre il suo stream, e questi due fotogrammi sono la diagnosi
+	 *   dell'accensione, non del movimento. */
 	if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
-	                     "flusso-hevc.265", istante_us, tela_l, tela_a))
+	                     "flusso-hevc.265", istante_us, tela_l, tela_a, 0))
 		p.flussi++;
 	if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
-	                     "flusso-av1.obu", istante_us, tela_l, tela_a))
+	                     "flusso-av1.obu", istante_us, tela_l, tela_a, 0))
 		p.flussi++;
 	/* ⛔ E i contatori del ciclo ripartono da zero: questi due non sono
 	 *    fotogrammi del movimento, sono la diagnosi dell'accensione.  Sommarli
@@ -2089,6 +2409,48 @@ void figlio_vive(int argc, char **argv)
 	 *     catturare e codificare.  Aspettare una richiesta lo butterebbe via. */
 	prendi_il_palco(tela_l, tela_a, dir_rilievo, &mut, &cat);
 
+	/* ⭐⭐ FASE 4 — E QUI NASCE IL CANALE DI INPUT, subito dopo il palco e non
+	 *     prima: `ConnectToEIS` si chiede alla sessione `RemoteDesktop` che
+	 *     `mutter.c` ha appena avviato, e senza quella non c'e' niente a cui
+	 *     agganciarsi.
+	 *
+	 * ⛔ E se non si apre NON si muore: `CODER.md` §4.2 — degradare, non
+	 *    fallire.  Un utente che vede il desktop e non lo comanda ha meno di
+	 *    quel che gli spetta; un utente a cui la sessione cade **non ha
+	 *    niente**.  ⚠ Ma il ripiego si DICHIARA, e questa riga e' la
+	 *    dichiarazione: chi legge «il desktop non risponde» piu' tardi deve
+	 *    trovarla qui sopra, invece di cercare per un'ora dalla parte del
+	 *    filo. */
+	/* ⭐⭐ E LA FORMA DEL CURSORE SI AGGANCIA QUI, appena la cattura e' viva.
+	 *
+	 * ⛔ `cursore_apri()` vuole sapere il destinatario **all'apertura**, e
+	 *    l'apertura avviene dentro `cattura_avvia()`: percio' la registrazione
+	 *    passa da `cattura.h`.  ⚠ E senza questa riga il tubo sarebbe scritto
+	 *    per intero e **vuoto** — `SPA_META_Cursor` chiesto, il metadato letto,
+	 *    la forma costruita, e nessuno a cui consegnarla: cioe' la stessa forma
+	 *    di difetto che la fase 3 ha pagato due volte. */
+	if (cat)
+		cattura_cursore(cat, cursore_al_padre, NULL);
+
+	if (mut) {
+		char *sbaglio_input = NULL;
+		palco_input = input_apri(mut, tela_l, tela_a, &sbaglio_input);
+		if (palco_input)
+			registro_dice(REG_FIGLIO,
+			              "⭐⭐ IL CANALE DI INPUT E' APERTO sulla tela %ux%u: "
+			              "da adesso quel che l'utente fa nel browser arriva "
+			              "al desktop (§7.3)",
+			              tela_l, tela_a);
+		else
+			registro_dice(REG_FIGLIO,
+			              "⛔ il canale di input NON si apre (%s): il desktop "
+			              "si VEDE ma non si COMANDA.  ⚠ La sessione resta in "
+			              "piedi — §8.3 vieta di staccare — e questa riga e' "
+			              "il ripiego dichiarato",
+			              sbaglio_input ? sbaglio_input : "nessun dettaglio");
+		free(sbaglio_input);
+	}
+
 	/* ═══════════════════════════════════════════════════════════════════ */
 	/* ⭐⭐ IL CICLO DELLA FASE 3 — cattura, codifica, manda; e ascolta.    */
 	/*                                                                     */
@@ -2117,13 +2479,39 @@ void figlio_vive(int argc, char **argv)
 
 		/* ── 1. quel che il padre ha da dire, senza aspettare ────────── */
 		for (;;) {
+			struct pollfd due[2];
+			int quanti = 1;
+			int fd_ei;
+
 			pf.fd = fd_figlio;
 			pf.events = POLLIN;
 			pf.revents = 0;
+			due[0] = pf;
+			/* ⭐⭐ E IL DESCRITTORE DI `libei` STA NELLO STESSO `poll`, non in
+			 *     un sondaggio a intervalli.  ⛔ Non e' una comodita': un
+			 *     sondaggio ogni N millisecondi REGALA fino a N millisecondi
+			 *     all'utente **su ogni gesto**, e il tetto di `CODER.md`
+			 *     §1-bis e' 50 ms in tutto.  ⚠ Quando non si cattura questo
+			 *     `poll` aspetta un secondo intero: senza questa riga, un
+			 *     click su un desktop fermo arriverebbe **fino a un secondo
+			 *     dopo**. */
+			fd_ei = palco_input ? input_descrittore(palco_input) : -1;
+			if (fd_ei >= 0) {
+				due[1].fd = fd_ei;
+				due[1].events = POLLIN;
+				due[1].revents = 0;
+				quanti = 2;
+			}
 			/* ⛔ Zero quando si sta catturando, il tetto quando non si
 			 *    cattura: cosi' il processo fermo non gira a vuoto e quello
 			 *    che lavora non perde tempo. */
-			pronto = poll(&pf, 1, codec_chiesto ? 0 : 1000);
+			pronto = poll(due, (nfds_t)quanti, codec_chiesto ? 0 : 1000);
+			pf.revents = due[0].revents;
+			/* ⭐ Se ha parlato `libei`, lo si serve SUBITO — prima ancora di
+			 *    leggere il padre: e' il percorso su cui si misura il
+			 *    ritardo. */
+			if (pronto > 0 && quanti == 2 && due[1].revents)
+				input_gira(palco_input);
 			if (pronto < 0) {
 				if (errno == EINTR)
 					continue;
@@ -2208,13 +2596,110 @@ void figlio_vive(int argc, char **argv)
 					debito_chiave[cv.codec] = true;
 				continue;
 			}
+			if (t.tipo == MSG_INPUT) {
+				struct corpo_input ci;
+				int e;
+
+				if ((size_t)letti < sizeof t + sizeof ci)
+					continue;
+				memcpy(&ci, busta + sizeof t, sizeof ci);
+				if (!palco_input) {
+					/* ⛔ «Non ho un canale di input» NON e' «il client ha
+					 *    sbagliato»: si DICHIARA e si tira avanti, e la
+					 *    sessione resta in piedi.  ⚠ In parlantina: a
+					 *    sessanta messaggi al secondo una riga per ciascuno
+					 *    seppellirebbe il registro. */
+					registro_dettaglio(REG_FIGLIO,
+					                   "input %u (azione %u) e nessun canale "
+					                   "verso il compositore: NON iniettato",
+					                   (unsigned)ci.id, (unsigned)ci.azione);
+					input_rifiutati++;
+					continue;
+				}
+				switch (ci.azione) {
+				case FIGLI_INPUT_PUNTATORE:
+					e = input_puntatore(palco_input, (uint32_t)ci.a,
+					                    (uint32_t)ci.b);
+					break;
+				case FIGLI_INPUT_PULSANTE:
+					e = input_pulsante(palco_input, ci.codice, ci.premuto);
+					break;
+				case FIGLI_INPUT_ROTELLA:
+					/* ⛔ Il segno lo inverte `input_rotella()`, una volta
+					 *    sola: qui passa intero, mezzi scatti compresi. */
+					e = input_rotella(palco_input, ci.a, ci.b);
+					break;
+				case FIGLI_INPUT_LETTERA:
+					e = input_lettera(palco_input, (uint32_t)ci.a);
+					break;
+				case FIGLI_INPUT_POSIZIONE:
+					e = input_posizione(palco_input, ci.codice, ci.premuto);
+					break;
+				case FIGLI_INPUT_RILASCIA_TUTTO: {
+					int quanti = input_rilascia_tutto(palco_input);
+					registro_dice(REG_FIGLIO,
+					              "⭐ §7.3: rilasciati %d fra tasti e pulsanti "
+					              "che erano rimasti giu'.  ⚠ Zero NON e' un "
+					              "guasto: vuol dire che non c'era niente di "
+					              "premuto",
+					              quanti);
+					continue;
+				}
+				case FIGLI_INPUT_RITELA:
+					e = input_ritela(palco_input, (uint32_t)ci.a,
+					                 (uint32_t)ci.b);
+					registro_dice(REG_FIGLIO,
+					              e == 0 ? "§7.1: la tela in vigore e' %ux%u, "
+					                       "la regione del puntatore e' "
+					                       "rimappata"
+					                     : "⛔ §7.1: la tela e' %ux%u ma la "
+					                       "regione NON si e' rimappata: da qui "
+					                       "in poi il puntatore andrebbe dove "
+					                       "non deve",
+					              (unsigned)ci.a, (unsigned)ci.b);
+					continue;
+				default:
+					registro_dice(REG_FIGLIO,
+					              "⛔ azione di input %u sconosciuta: NON "
+					              "iniettata",
+					              (unsigned)ci.azione);
+					input_rifiutati++;
+					continue;
+				}
+
+				/* ⛔⭐ E QUI STA IL PUNTO DI TUTTA LA CUCITURA: il contatore
+				 *     avanza SOLO se il compositore ha preso.  §6.2 promette
+				 *     che «l'effetto di quell'input e' gia' nella scena», e
+				 *     di un input rifiutato non c'e' nessun effetto da
+				 *     vedere.  ⚠ Farlo avanzare comunque renderebbe il campo
+				 *     `input` una promessa che il fotogramma non mantiene —
+				 *     e l'anello del ritardo la crederebbe. */
+				if (e == 0) {
+					input_iniettato = ci.id;
+				} else if (e == 1) {
+					/* ⛔ Solo `input_lettera`: «non producibile con questa
+					 *    disposizione».  La riga nel registro l'ha gia'
+					 *    scritta `tastiera.c`, con dentro QUALE disposizione:
+					 *    qui si conta e basta, o la stessa cosa finirebbe due
+					 *    volte con due parole diverse. */
+					input_non_producibili++;
+				} else {
+					input_rifiutati++;
+					registro_dettaglio(REG_FIGLIO,
+					                   "input %u (azione %u): il compositore "
+					                   "non l'ha preso",
+					                   (unsigned)ci.id, (unsigned)ci.azione);
+				}
+				continue;
+			}
 			if (t.tipo == MSG_RIMANDA_PALCO) {
 				int quanti = 0;
 				for (uint8_t c = 1; c < 3; c++) {
 					if (!tenuto[c])
 						continue;
 					manda_fotogramma(c, tenuto_chiave[c], tenuto_l, tenuto_a,
-					                 tenuto_istante, tenuto[c], tenuto_byte[c]);
+					                 tenuto_istante, tenuto[c], tenuto_byte[c],
+					                 tenuto_input);
 					quanti++;
 				}
 				registro_dice(REG_FIGLIO,
@@ -2254,6 +2739,26 @@ void figlio_vive(int argc, char **argv)
 		}
 		if (fine)
 			break;
+
+		/* ── 1-bis. il canale di input, che ha una voce sua ──────────── */
+		/* ⛔⭐ `libei` NON e' una libreria che si chiama e basta: e' un pari
+		 *     che PARLA, e fra le cose che dice ci sono i due ricambi
+		 *     silenziosi di `gnome.md` §9 — un cambio di keymap distrugge e
+		 *     ricrea il dispositivo tastiera, un cambio di geometria tutti i
+		 *     dispositivi assoluti.  ⚠ E il puntatore agganciato al
+		 *     dispositivo vecchio smette di funzionare **senza errore**: chi
+		 *     non gira questo ciclo non vede nessun guasto, vede solo un
+		 *     desktop che a un certo punto non risponde piu'.
+		 * ⚠ Sta QUI, fra i messaggi del padre e la cattura, per la stessa
+		 *   ragione dell'ordine di sopra: non aspetta, e rimandarlo dopo la
+		 *   cattura gli farebbe pagare fino a un quarto di secondo. */
+		/* ⚠ E questa resta come rete di sicurezza, non come strada principale:
+		 *   la strada principale e' il `poll` qui sopra.  ⛔ Serve perche'
+		 *   `libei` puo' avere lavoro da fare senza che il descrittore sia
+		 *   leggibile (le scadenze sue), e un ciclo che si fidasse solo del
+		 *   descrittore le mancherebbe **senza nessun errore**. */
+		if (palco_input)
+			input_gira(palco_input);
 
 		/* ── 2. il fotogramma ────────────────────────────────────────── */
 		if (!codec_chiesto || !cat)
@@ -2323,10 +2828,18 @@ void figlio_vive(int argc, char **argv)
 			g_clear_error(&sbaglio);
 
 			istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
+			/* ⭐⭐ §6.2 — IL TIMBRO SI PRENDE QUI, nell'istante della cattura,
+			 *     e da nessun'altra parte.  ⛔ Leggerlo dopo la codifica
+			 *     direbbe «l'ultimo input iniettato prima della SPEDIZIONE»,
+			 *     che e' un numero piu' alto: l'anello del ritardo misurerebbe
+			 *     un ritardo piu' corto del vero — **in nostro favore**, cioe'
+			 *     la direzione in cui nessuno sbaglia per caso
+			 *     (`CODER.md` §1-bis, «il confine si sposta nella direzione
+			 *     scomoda»). */
 			codifica_e_manda(&fo, codec_chiesto == 1 ? CODIFICATORE_HEVC
 			                                         : CODIFICATORE_AV1,
 			                 codec_chiesto, NULL, NULL, istante_us, tela_l,
-			                 tela_a);
+			                 tela_a, input_iniettato);
 			cattura_fermo_libera(&fo);
 		}
 	}
@@ -2344,6 +2857,26 @@ void figlio_vive(int argc, char **argv)
 	              (unsigned long long)ciclo_zero,
 	              (unsigned long long)ciclo_guasti);
 
+	/* ⛔⭐ E PRIMA DI TUTTO IL RESTO SI RILASCIA QUEL CHE E' RIMASTO GIU'.
+	 *
+	 *     `RCP.md` §11 la chiama «la regola col rapporto danno/costo piu' alto
+	 *     del documento», e qui morde nel modo peggiore: il palco sopravvive al
+	 *     client (I4), quindi un Ctrl rimasto premuto **non se ne va con la
+	 *     connessione** — resta sul desktop dell'utente, che al riattacco lo
+	 *     trova inservibile e non collega le due cose.
+	 * ⚠ E si fa anche qui, non solo alla fine di ogni connessione: questo e'
+	 *   l'ultimo istante in cui qualcuno puo' ancora farlo. */
+	if (palco_input) {
+		int quanti = input_rilascia_tutto(palco_input);
+		registro_dice(REG_FIGLIO,
+		              "il canale di input si chiude: %u iniettati, %u rifiutati "
+		              "dal compositore, %u non producibili con la disposizione, "
+		              "e %d rilasciati adesso (§7.3)",
+		              (unsigned)input_iniettato, (unsigned)input_rifiutati,
+		              (unsigned)input_non_producibili, quanti);
+		input_chiudi(palco_input);
+		palco_input = NULL;
+	}
 	if (cat)
 		cattura_ferma(cat);
 	if (mut)

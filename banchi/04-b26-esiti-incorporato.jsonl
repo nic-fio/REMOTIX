@@ -1,0 +1,10 @@
+{"cosa":"CURSORE_FORMA","modo":"--incorporato","momento":"avvio","serie":1,"larghezza":0,"altezza":0,"attivo_x":0,"attivo_y":0,"nascosto":true,"lunghezza":8,"lunghezza_attesa":8,"violazioni":0}
+{"cosa":"tinta","punto":"A","colore":"#3465a5"}
+{"cosa":"fotogramma","punto":"A","x":400,"y":400,"larghezza":1920,"altezza":1080,"stride":7680}
+{"cosa":"tinta","punto":"B","colore":"#3465a4"}
+{"cosa":"fotogramma","punto":"B","x":1400,"y":400,"larghezza":1920,"altezza":1080,"stride":7680}
+{"cosa":"solo-movimento","movimenti":40,"forme_nuove":0}
+{"cosa":"tocco","nascosti_nuovi":0}
+{"cosa":"ritorno","forme_nuove":0}
+{"cosa":"forma-diversa","forme_nuove":0}
+{"cosa":"conteggi","modo":"--incorporato","fotogrammi":53,"solo_cursore":1,"cursore_metadati":53,"cursore_assente":0,"cursore_malformati":0,"forme":1,"nascosti":1,"violazioni":0}

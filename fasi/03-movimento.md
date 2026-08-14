@@ -497,7 +497,10 @@ il 7 % dei passi** sta fuori da quei due gruppi, con **due soli** valori anomali
 > schermo che ne mostra 30, **una volta su tre l'occhio vede lo stesso fotogramma due volte** — e
 > quello si sente, anche quando non c'è nessuno scatto.
 > ⛔ **Quindi la strada per «il massimo» non è togliere jitter: è alzare il ritmo** — e il ritmo lo
-> tiene giù il **disegno**, 28,0 ms su 78,1.
+> tiene giù un tratto da **28,0 ms su 78,1** che allora chiamavamo «il disegno».
+> ⚠ ⛔ **E quel nome era falso, corretto il 14 agosto 2026** (deciso dall'utente): il disegno costa
+> **2,25 ms** `[M]`, e i 28,0 erano **l'attesa del fotogramma dalla GPU** più il disegno. Il totale
+> resta vero. `fasi/rapporti/F4-A2-pagina-dipinge.md` e `F4-A10-anello-input.md`.
 
 ⚠ **I limiti di questa misura, dichiarati**: la registrazione stessa gira a 30,3/s, quindi **non può
 vedere niente di più veloce**; e un fotogramma perso dal registratore si conterebbe come una pausa

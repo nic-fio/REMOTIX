@@ -153,6 +153,83 @@ typedef struct {
 	/* ⛔ §5.1, §6.2: `RESET_STREAM` ⇒ il fotogramma e' **incompleto**, il
 	 * client lo butta, NON lo consegna, e lo tratta come un buco. */
 	void (*video_azzera)(void *ctx, int64_t stream);
+
+	/* ------------------------------------------------------------------ */
+	/* ⭐ I SEI GANCI DEL CANALE DI INPUT — `RCP.md` §7.3, e le firme sono
+	 *    quelle di `src/input.h` campo per campo.
+	 *
+	 * ⛔⭐ PERCHE' SONO GANCI E NON UN `#include "input.h"` — e non e' una
+	 *     preferenza di stile, e' il `Makefile`.
+	 *
+	 *     `src/input.h` dice, nella sua intestazione, che a chiamare quelle
+	 *     funzioni e' `rcp.c`.  ⛔ Ma `rcp.c` esiste in DUE cartelle —
+	 *     `src/` e `banchi/rcp/` — e il `Makefile` (variabile `GEMELLATI`)
+	 *     pretende che le due copie combacino byte per byte.  La seconda
+	 *     viene copiata da `banchi/01-b3-rcp-innesta.py` dentro
+	 *     `examples/` di ngtcp2, dove `input.h` **non c'e' e non ci puo'
+	 *     andare**: quel file elenca esattamente tre nomi
+	 *     (`rcp.c`, `rcp.h`, `autenticazione.c`).
+	 *     ⇒ Un `#include "input.h"` qui NON compila l'innesto, cioe' spegne
+	 *       B3, B5, B6, B8 e B11 in un colpo solo.
+	 *
+	 * ⭐ E la forma dei ganci e' quella che questo file gia' usa per le altre
+	 *    due cose che `rcp.c` non puo' conoscere: PAM (`verifica`) e gli
+	 *    stream (`video_*`).  «Riceve byte, restituisce byte, e chiede a chi
+	 *    lo ospita di fare» — l'intestazione di questo file, applicata.
+	 *
+	 * ⛔ SONO **OPZIONALI**, e la loro assenza NON e' una violazione del
+	 *    client: un server senza canale di input **convalida lo stesso** il
+	 *    messaggio (quello e' protocollo, e §3 non fa sconti) e poi scrive
+	 *    nel registro che non l'ha iniettato.  ⚠ «Non ho un canale di input»
+	 *    e «il client ha sbagliato» sono due fatti diversi, e chiudere la
+	 *    sessione per il primo punirebbe chi non ha sbagliato niente.
+	 *
+	 * ⚠ Chi li collega li collega TUTTI E CINQUE: `rcp.c` guarda il primo e
+	 *   se c'e' pretende gli altri, perche' un canale che sa muovere il
+	 *   puntatore e non sa rilasciare un pulsante lascia il desktop peggio di
+	 *   come l'ha trovato.
+	 *
+	 * ⛔ IL VALORE DI RITORNO E' QUELLO DI `input.h`, e sono TRE stati, non
+	 *    due: `0` consegnato al compositore · `-1` no · `1` — solo per
+	 *    `input_lettera` — «quel carattere NON e' producibile con la
+	 *    disposizione della sessione», che §7.3 obbliga a scrivere nel
+	 *    registro e vieta di sostituire con un'altra lettera o col silenzio. */
+	int (*input_puntatore)(void *ctx, uint32_t x, uint32_t y);
+	int (*input_pulsante)(void *ctx, uint16_t codice, int premuto);
+	/* ⛔⛔ IL SEGNO NON SI INVERTE QUI, E NON SI INVERTE IN `rcp.c`.
+	 *
+	 *     `RCP.md` §7.3 (riquadro «Il segno della rotella», `[M]` 10 agosto
+	 *     2026) impone al server di invertire l'asse verticale, e
+	 *     `src/input.h` dichiara che l'inversione avviene **dentro
+	 *     `input_rotella()`, una volta sola, in un posto solo**.  Invertirlo
+	 *     anche qui lo annullerebbe, e il sintomo — «la rotella va al
+	 *     contrario» — e' la forma d'errore E11 che quel riquadro esiste per
+	 *     evitare.
+	 * ⚠ E i mezzi scatti passano interi: 120 = uno scatto, 60 = mezzo, e
+	 *   `rcp.c` NON arrotonda. */
+	int (*input_rotella)(void *ctx, int32_t asse_x, int32_t asse_y);
+	int (*input_lettera)(void *ctx, uint32_t carattere);
+	int (*input_posizione)(void *ctx, uint16_t codice, int premuto);
+	/* ⛔⭐ §7.3, ultimo capoverso: «Al distacco si rilascia tutto.  Quando una
+	 *     connessione finisce — per congedo, per silenzio, per errore — il
+	 *     server DEVE rilasciare ogni tasto e ogni pulsante che risultano
+	 *     premuti».  ⭐ `RCP.md` §11 la chiama «la regola col rapporto
+	 *     danno/costo piu' alto del documento».
+	 *
+	 * ⛔ E il gancio sta QUI perche' i tre modi in cui «una connessione
+	 *    finisce» si osservano tutti e tre da dentro questo modulo, e da
+	 *    nessun'altra parte insieme: il congedo (`congeda()`), il silenzio di
+	 *    trenta secondi (`rcp_tempo()`), l'errore (`rcp_violazione()`).
+	 *
+	 * ⚠ `input.h` lo assegna anche a `figlio.c` («chiama
+	 *   `input_rilascia_tutto()` al distacco»), e le due chiamate non
+	 *   litigano: la funzione rilascia quel che RISULTA premuto e la seconda
+	 *   volta non trova niente da rilasciare — restituisce 0.  ⛔ Ma il
+	 *   doppione va coordinato, non subito: vedi il rapporto
+	 *   `fasi/rapporti/F4-A3-filo-input.md`.
+	 *
+	 * Restituisce quanti ne ha rilasciati, perche' il banco possa contarli. */
+	int (*input_rilascia_tutto)(void *ctx);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.
@@ -413,6 +490,146 @@ bool rcp_video_serve_chiave(const rcp_sessione *s);
 /* Il `numero` (§6.2) dell'ultimo fotogramma spedito.  ⛔ `0` vuol dire
  * «nessuno», ed e' il significato che §6.2 e §7.1 danno allo zero. */
 uint32_t rcp_video_ultimo_numero(const rcp_sessione *s);
+
+/* ========================================================================= */
+/* ⭐ IL CANALE DI INPUT — `RCP.md` §2.5, §3, §6.1, §7.1, §7.3               */
+/*                                                                           */
+/* ⛔ PERCHE' STA QUI E NON IN UN MODULO SUO — la stessa ragione del video.   */
+/*                                                                           */
+/* Delle regole di §7.3 quasi nessuna parla dei venti byte del messaggio:    */
+/* parlano dello **stato della sessione**.  «Lo stream di input si apre dopo */
+/* aver ricevuto `SESSIONE`, ed e' uno solo» e' §2.5; «le coordinate stanno  */
+/* dentro la tela» e' la tela concessa da `SESSIONE` (§4.5) o l'ultima di    */
+/* `TELA` (§7.1); «il secondo di grazia» e' il MOMENTO di quel `TELA`; e     */
+/* l'`id` che questo canale porta e' lo stesso numero che §6.2 fa tornare    */
+/* indietro nel campo `input` di ogni fotogramma.                            */
+/*                                                                           */
+/* ⇒ Un `input_filo.c` a parte dovrebbe ricopiarsi quello stato, e due copie */
+/*   di uno stato divergono.                                                 */
+/*                                                                           */
+/* ⛔ E QUEL CHE QUESTO MODULO NON FA, DICHIARATO: non conosce `libei`, non   */
+/*    conosce `xkbcommon`, non sa che cosa sia una disposizione di tastiera e */
+/*    non tiene il conto di che cosa e' premuto.  Decodifica, CONVALIDA e     */
+/*    consegna ai ganci qui sopra; l'altra meta' e' di `src/input.c`.         */
+
+/* ⛔ Byte arrivati sullo **stream di input** (§2.5: unidirezionale, aperto dal
+ *    client, **uno solo**, dopo `SESSIONE`, e tenuto aperto).
+ *
+ * `stream` e' l'identificatore che usa l'ospite — lo stesso numero che i ganci
+ * `video_*` si scambiano.  ⛔ Serve a una cosa sola, e non e' un lusso: §2.5
+ * dice «**uno solo**», e senza un identificatore questo modulo non puo'
+ * distinguere il secondo stream di input dalla continuazione del primo.  ⚠ Chi
+ * ospita non lo puo' giudicare al posto nostro: vede gli stream ma non sa che
+ * cosa sia «di input» finche' non ha letto i primi due byte del carico, e la
+ * regola di §2.5 e' di questo modulo insieme a tutte le altre.
+ *
+ * Restituisce `false` se la sessione e' finita (per congedo o per violazione),
+ * esattamente come `rcp_ricevi()`.
+ *
+ * ⛔ E l'orologio del silenzio (§5.3) si azzera anche QUI: i byte dell'input
+ *    sono byte del client come gli altri, e un utente che per trenta secondi
+ *    non fa che muovere il mouse **non e' silenzioso**.  Senza questa riga
+ *    perderebbe il posto mentre sta usando il desktop. */
+bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
+                      size_t len, uint64_t ora_ms);
+
+/* ⭐ §6.2, campo `input`: «l'identificatore dell'ultimo input **iniettato**
+ *    prima della cattura; 0 se nessuno».
+ *
+ * ⛔ **INIETTATO**, non «ricevuto», e la differenza si vede su ogni messaggio
+ *    che il compositore rifiuta o che una disposizione non sa produrre: quel
+ *    che il fotogramma promette e' che l'effetto di quell'input e' gia' nella
+ *    scena, e di un input non iniettato non c'e' nessun effetto da vedere.
+ *    ⇒ Questo numero avanza solo quando il gancio ha risposto 0.
+ *
+ * ⚠ Lo legge CHI CATTURA, nell'istante della cattura, e lo passa a
+ *   `rcp_video_apri()`.  ⛔ Non lo mette `rcp_video_apri()` da se', e non e'
+ *   una dimenticanza: «l'ultimo iniettato **prima della cattura**» e' un fatto
+ *   dell'istante della cattura, e quello lo conosce solo chi cattura — fra la
+ *   cattura e la chiamata passa tutta la codifica.  Prenderlo qui direbbe
+ *   «l'ultimo iniettato prima della SPEDIZIONE», che e' un numero piu' alto e
+ *   una promessa piu' grande di quella che il fotogramma puo' mantenere. */
+uint32_t rcp_input_ultimo_iniettato(const rcp_sessione *s);
+
+/* L'ultimo `id` **accettato** sul canale — iniettato o no.  ⛔ Per il registro e
+ * per il banco: insieme al precedente distingue «il compositore non ha preso
+ * niente» da «non e' arrivato niente», che e' `LEZIONI.md` §1.9 regola 1 sul
+ * campo dove costa di piu' (il sintomo di tutt'e due e' «il desktop non
+ * risponde»). */
+uint32_t rcp_input_ultimo_id(const rcp_sessione *s);
+
+/* ⛔ §7.1 — la versione di `rcp_tela_adattata()` che sa **quando**, e apre il
+ *    SECONDO DI GRAZIA: «dopo aver mandato `TELA(ADATTATA)` il server DEVE
+ *    accettare per un secondo coordinate di input valide sulla tela
+ *    PRECEDENTE, saturandole alla nuova e scrivendolo nel registro; passato
+ *    quel secondo, sono `ERRORE_PROTOCOLLO`».  E' la terza eccezione dichiarata
+ *    a §3.
+ *
+ * ⚠ `rcp_tela_adattata()` resta, fa tutto il resto e **non apre la grazia**:
+ *   non ha un orologio da cui farla partire.  Il ripiego si DICHIARA
+ *   (`CODER.md` §4.2) e lo dichiara una riga di registro, non questo commento. */
+void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
+                           uint64_t ora_ms);
+
+/* ========================================================================= */
+/* ⭐ IL CURSORE — `RCP.md` §7.2, §5.5, §5, §6.1                             */
+/*                                                                           */
+/* ⛔ PERCHE' I PARAMETRI SONO SCALARI E NON UN `const CursoreForma *`.       */
+/*                                                                           */
+/* `src/cursore.h` definisce `CursoreForma` ed e' il contratto giusto — ma    */
+/* `rcp.c` esiste in DUE cartelle e il `Makefile` (variabile `GEMELLATI`)     */
+/* pretende che combacino byte per byte; la seconda copia la porta            */
+/* `banchi/01-b3-rcp-innesta.py` dentro `examples/` di ngtcp2, e quel file    */
+/* elenca TRE nomi: `rcp.c`, `rcp.h`, `autenticazione.c`.  ⇒ Un              */
+/* `#include "cursore.h"` qui **non compila l'innesto**, cioe' spegne B3, B5, */
+/* B6, B8 e B11 in un colpo solo.  E' la stessa ragione dei ganci dell'input, */
+/* e la cura e' la stessa: i campi passano come scalari, e l'adattatore di    */
+/* sei righe che scarta `CursoreForma` sta dove `cursore.h` puo' essere       */
+/* incluso — cioe' dalla parte del coordinatore.                             */
+/*                                                                           */
+/* ⛔ E QUEL CHE QUESTA FUNZIONE **NON** CONTROLLA, DICHIARATO: i limiti di   */
+/*    §5.5 — 256 per lato, il punto attivo dentro l'immagine, `0×0` con       */
+/*    `0,0` per il nascosto, e «una sola delle due a zero e'                  */
+/*    ERRORE_PROTOCOLLO» — li fa rispettare `src/cursore.c`.  Qui non si      */
+/*    ricontrollano: due controlli sulla stessa regola in due posti diventano */
+/*    due regole diverse il giorno in cui una cambia.                        */
+
+/* Spedisce `CURSORE_FORMA` (§7.2) sul canale di controllo (§5).
+ *
+ * `larghezza`/`altezza`  ⛔ `0` e `0` insieme = cursore NASCOSTO (§5.5).
+ * `attivo_x`/`attivo_y`  il punto che «punta»; `0,0` se nascosto.
+ * `immagine`             `larghezza × altezza × 4` byte, BGRA PREMOLTIPLICATO.
+ *                        ⛔ `NULL` e' lecito **solo** se non ci sono byte da
+ *                        mandare.  ⚠ Si COPIA qui dentro: quando questa
+ *                        funzione torna, il chiamante puo' riusare il buffer —
+ *                        ed e' quel che `cursore.h` pretende, perche' li'
+ *                        l'immagine «vive fino al richiamo successivo».
+ * `immagine_n`           quanti byte ci sono DAVVERO dietro `immagine`.
+ *
+ * ⛔⭐ `immagine_n` NON e' ridondante, ed e' la ragione per cui questa firma non
+ *     prende solo la misura: §7.2 impone che la lunghezza del messaggio valga
+ *     **esattamente** `8 + larghezza × altezza × 4`, e senza sapere quanti byte
+ *     esistono davvero questa funzione ne leggerebbe `larghezza × altezza × 4`
+ *     **sulla fiducia** — cioe' farebbe, dal lato del mittente, precisamente il
+ *     «leggo quel che c'e' e vado avanti» che §7.2 nomina.  Il cursore fatto di
+ *     memoria altrui lo confezionerebbe il server.
+ *
+ * ⛔ Restituisce `0` se il messaggio E' PARTITO, `-1` se non e' partito — e in
+ *    quel caso il perche' e' nel registro, sempre.  ⚠ Nel dubbio NON si manda:
+ *    §7.2 fa rilevare la lunghezza sbagliata a CHI RICEVE, quindi un messaggio
+ *    storto spedito da qui fa chiudere la sessione **alla pagina** e il registro
+ *    del server non ne saprebbe niente.  Un cursore che non si aggiorna e'
+ *    brutto; una sessione che cade e' rotta (`SPECIFICHE.md` §8.3).
+ *
+ * ⛔⛔ DAL THREAD DEL CICLO, MAI DA QUELLO DI TEMPO REALE DELLA CATTURA.
+ *     `cattura.c` chiama `CursoreArrivata` sul thread di PipeWire
+ *     (`cursore_rimbalzo()`, e il riquadro del ciclo in `cattura.h`); questo
+ *     modulo non ha nessun lucchetto e `manda` scrive nella coda del trasporto.
+ *     Chi cuce i due DEVE far passare la forma per il ciclo — e nel prodotto ci
+ *     passa gia', perche' la cattura sta nel FIGLIO e la sessione nel padre. */
+int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
+                      int16_t attivo_x, int16_t attivo_y,
+                      const uint8_t *immagine, size_t immagine_n);
 
 /* ------------------------------------------------------------------------ */
 /* §4.4-bis — IL BAN DELL'INDIRIZZO, e le tre cose che il padrone di casa deve

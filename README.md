@@ -383,7 +383,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > |---|---|---|
 > | ⭐ **1** | ⭐⭐ **IL DESKTOP VERO — provato, non ancora curato.** Le due metà del prodotto si contraddicono: `sessione.c:650` crea la sessione **con** `--virtual-monitor`, `mutter.c:450` cattura con `RecordVirtual` che **ne monta un altro** ⇒ la shell resta sul primo e l'utente guarda il secondo, **vuoto**. ⛔ **La cura è in DUE posti**: togliere la bandiera **e** cambiare il controllo che rilegge l'`ExecStart`, che oggi la **pretende** | [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) |
 > | **2** | ⛔ **HEVC NON DIPINGE nel browser dell'utente**: 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ I banchi dicevano il contrario — avevano **scena sintetica** e **Chrome del banco** | `fasi/03-movimento.md` §0-ter |
-> | **3** | ⛔ **IL DISEGNO: 28,0 ms su 78,1 — il 36 %**, contro i **5 ms** della codifica | `fasi/rapporti/F3-E-anello-rimisurato.md` |
+> | **3** | ⚠ ~~**IL DISEGNO: 28,0 ms su 78,1 — il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026: non è il disegno (2,25 ms `[M]`), è l'ATTESA del fotogramma dalla GPU.** Il totale resta 78,1 | `fasi/rapporti/F4-A2-pagina-dipinge.md` · `F4-A10-anello-input.md` |
 >
 > #### ⭐ La macchina, com'è lasciata
 >
@@ -416,7 +416,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > |---|---|---|
 > | **1** | ⛔⛔ **FAR VEDERE IL DESKTOP VERO.** Il prodotto **aggiunge** un monitor virtuale alla sessione (`Meta-2`, *«2 prima e 3 dopo»*) e registra quello: GNOME ci mette **lo sfondo**, ma barra, dock e finestre restano sul **primario**. ⇒ **L'utente vede un secondo schermo vuoto, non il suo desktop** | ⭐ è **la domanda che l'utente ha fatto** — *«se il server non mostra il desktop, a che serve REMOTIX?»* — ed è `SPECIFICHE.md` §5.1. ⛔ **È rimasta nascosta per due fasi** dietro il giudizio della fase 2, *«è lo sfondo GNOME, è OK»*: **uno sfondo vuoto preso per un successo** |
 > | **2** | ⛔⛔ **HEVC NON DIPINGE nel browser dell'utente.** `[M]` 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ **I banchi dicevano il contrario** (1 047 dipinti, 30 fps): quel giro aveva una **scena sintetica** e un **Chrome del banco** | senza, **la codifica in hardware non è giudicabile** — e la fase l'ha già dentro |
-> | **3** | ⛔ **IL DISEGNO: 28,0 ms su 78,1, il 36 %** — contro i **5 ms** che ormai costa la codifica | è il collo di bottiglia nuovo, e **non era in nessun piano** |
+> | **3** | ⚠ ~~**IL DISEGNO: 28,0 ms su 78,1, il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026**: il disegno costa **2,25 ms**; i 28 erano **l'attesa del fotogramma dalla GPU** più il disegno | il collo di bottiglia c'è, ⭐ ma **non è dove c'era scritto** |
 >
 > ⭐⭐ **E `D1` è CHIUSO, a costo zero, leggendo il registro della sessione del giudizio** — con una
 > risposta **peggiore della domanda**: la strozzatura del debito di chiave **regge a 1/s quando il
@@ -436,12 +436,29 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | totale | codifica | **disegno** | fps | P1 |
 > |---|---|---|---|---|---|
 > | AV1 in software *(la 7561)* | **71,86 ms** | 39,67 | ⭐ 9,07 | 22,0 | ✅ |
-> | ⭐ **HEVC in hardware** *(la 7571, il deposito)* | **78,12 ms** | ⭐ 31,78 | ⛔ **28,00** | ⭐ **30,0** | ✅ |
+> | ⭐ **HEVC in hardware** *(la 7571, il deposito)* | **78,12 ms** | ⭐ 31,78 | ⛔ **28,00** ⚠ *(l'etichetta «disegno» è falsa: vedi il riquadro sotto)* | ⭐ **30,0** | ✅ |
 >
 > ⭐⭐ **L'ARCHITETTURA È ASSOLTA**: togliendo l'hardware si perdono **31,7 ms** e **gli altri quattro
 > tratti non si muovono** (Mutter −0,02 · filo −0,12 · decodifica −0,76). La chiave passa da
 > **114,5 ms a 5,1**, e il ritmo **raddoppia**.
 > ⛔ **Ma il tetto SFORA** — 78,1 contro 50, e **94-118 ms** sul vetro col pezzo cieco dichiarato.
+>
+> #### ⛔⛔⛔ 14 agosto 2026 — **QUESTA RIGA È UN'ETICHETTA FALSA SU UN NUMERO VERO**, e si corregge qui
+>
+> *Corretto per decisione dell'utente il 14 agosto 2026, su due misure indipendenti della fase 4:
+> `fasi/rapporti/F4-A2-pagina-dipinge.md` e `fasi/rapporti/F4-A10-anello-input.md`.*
+>
+> | | |
+> |---|---|
+> | ⭐ **che cosa resta vero** | il totale **78,1 ms** (n=379), e la scomposizione in cinque tratti |
+> | ⛔ **che cosa era falso** | **il nome del tratto**: non è «il disegno». `[M]` il disegno del flusso vero costa **2,25 ms** (5 giri, dispersione 0,30), e il controllo positivo su AV1 dà 6,25-8,45 contro i 9,07 della fase 3 ⇒ **il cronometro era tarato** |
+> | ⭐ **che cos'erano i 28 ms** | **l'ATTESA del fotogramma dalla GPU, più il disegno.** Un fotogramma HEVC decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca del banco (`03-b17:534`) ne provoca il trasferimento GPU→CPU; AV1 no |
+> | ⛔ **e la prova che il confine era messo male** | ⭐ cambiando codec **a palco identico**, «decodifica» e «disegno» si muovono in **versi opposti** — AV1 `6,315 + 9,105`, HEVC `0,730 + 27,995` — e **la somma si conserva**. ⚠ Ma `drawImage` **non sa quale codec ha prodotto il fotogramma**: ⇒ il costo non è entrato nel disegno, ha **attraversato il confine fra i due tratti** |
+> | ⭐ **il fatto nuovo che resta** | il costo del **client dopo il filo** raddoppia con HEVC: `[M]` **+10,5…+15,3 ms**. Quello è vero, ed è dove andare a cercare |
+>
+> ⛔ **E una cosa che fa una brutta figura, scritta perché non si perda**: la **cella di controllo di quel giro non è mai esistita** — il giro `con-gpu` ha provato HEVC, VP9 e H.264, e **non AV1**. Senza AV1 non c'era niente con cui confrontare.
+>
+> ⇒ ⭐ **Perché si corregge invece di annotarla**: chi legge «il collo di bottiglia è il disegno» si mette a ottimizzare un tratto che costa **2 ms** invece di uno che ne costa **28**. `LEZIONI.md` §7.2 — *ottimizzare nella direzione sbagliata è peggio che non ottimizzare*.
 >
 > > ### ⛔⛔⛔ E IL COLLO DI BOTTIGLIA NON È PIÙ LA CODIFICA: È IL DISEGNO
 > > **28,0 ms su 78,1 — il 36 %** — contro i **5 ms** che ormai costa la codifica.

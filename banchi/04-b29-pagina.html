@@ -1,0 +1,271 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>04-b29 — le scorciatoie che il browser si tiene</title>
+<!--
+  ⛔ LA PAGINA E' IL **LATO CHE RICEVE**, e qui i lati che ricevono sono DUE:
+     la sessione remota (che qui e' questa pagina) **e il browser**.  Percio'
+     questa pagina non registra solo «e' arrivato un keydown?»: registra anche
+     ogni traccia che il **browser** ha eseguito il proprio comando —
+     la perdita del fuoco, il cambio di scheda, l'uscita da schermo intero, la
+     stampa, il ridimensionamento (i DevTools), e la propria stessa morte.
+
+  ⛔ E scrive OGNI evento appena accade, con `keepalive`, perche' la prova
+     peggiore e' quella in cui il browser chiude la scheda: se la pagina
+     aspettasse la fine della prova per raccontare, il caso peggiore sarebbe
+     l'unico che non lascia traccia.
+-->
+<style>
+  body { font: 16px/1.5 monospace; margin: 0; padding: 1rem; background: #101014; color: #d8d8e0; }
+  #stato { font-size: 22px; }
+  .g { color: #7ec87e } .r { color: #ff7b72 } .a { color: #e8c07d }
+  #buco { width: 100%; height: 40vh; background: #1c1c26; border: 1px dashed #444; }
+</style>
+<body>
+<div id="stato">avvio…</div>
+<div id="riga"></div>
+<!-- ⚠ Un elemento modificabile con il fuoco: `web.md` §1.2 dice che senza,
+     accenti e tasti morti non si producono.  Qui non si misurano le lettere, ma
+     l'elemento c'e' lo stesso perche' il palco sia lo stesso del prodotto. -->
+<div id="buco" contenteditable="true" spellcheck="false"></div>
+
+<script>
+"use strict";
+
+// ── identita' di QUESTO caricamento ────────────────────────────────────────
+// ⛔ Serve a distinguere «la pagina e' viva» da «la pagina e' MORTA E RINATA»:
+//    un ricaricamento (Ctrl+R, F5) e una navigazione lasciano una pagina viva
+//    che risponde — e senza questo numero avrebbero l'aspetto di «non e'
+//    successo niente», cioe' proprio il caso «consegnata E riservata».
+const CARICO = Math.random().toString(36).slice(2, 10);
+const N_CARICO = (() => {
+  const n = (+sessionStorage.getItem('n_carico') || 0) + 1;
+  sessionStorage.setItem('n_carico', n);
+  return n;
+})();
+
+let seq_vista = -1;          // ultimo ordine eseguito
+let prova = null;            // identificativo della prova in corso
+let coda = [];               // eventi da spedire
+let gesto_in_attesa = null;  // azione che pretende un gesto dell'utente
+let previeni = false;        // il secondo giro: la pagina chiama preventDefault()
+
+function manda(tipo, dato) {
+  const riga = Object.assign({
+    t: tipo, prova: prova, carico: CARICO, n_carico: N_CARICO,
+    ms: Math.round(performance.now()), ora: Date.now()
+  }, dato || {});
+  try {
+    fetch('/ev', {
+      method: 'POST', keepalive: true,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(riga)
+    }).catch(() => {});
+  } catch (e) { /* la scheda sta morendo: si e' fatto il possibile */ }
+}
+
+// ── LA LOCK E' VIVA? ───────────────────────────────────────────────────────
+// ⛔ Nessun evento annuncia che la Keyboard Lock si e' spenta, e si spegne da
+//    sola alla perdita del fuoco (O10).  ⇒ Se ne tiene il conto qui, e il
+//    conto entra in OGNI riga di esito: senza, meta' delle prove di un palco
+//    «con lock» sarebbero state fatte senza lock, sotto la stessa etichetta.
+//    (`CODER.md` §3.9: due comportamenti sotto la stessa etichetta.)
+let lock_concessa = false;      // l'ultima chiamata e' riuscita
+let lock_persa_dal_fuoco = 0;   // quante volte il fuoco se l'e' portata via
+addEventListener('blur', () => { if (lock_concessa) { lock_concessa = false; lock_persa_dal_fuoco++; } });
+
+// ── il ritratto del palco, come lo vede la pagina ──────────────────────────
+function ritratto() {
+  return {
+    previeni: previeni,
+    lock_concessa: lock_concessa,
+    lock_persa_dal_fuoco: lock_persa_dal_fuoco,
+    fuoco: document.hasFocus(),
+    visibile: document.visibilityState,
+    schermo_intero: !!document.fullscreenElement,
+    // ⚠ due misure diverse dello schermo intero: l'API e la geometria.  Lo
+    //    schermo intero entrato con F11 NON accende `fullscreenElement`, e
+    //    senza la seconda misura sarebbe indistinguibile da «finestra».
+    iw: innerWidth, ih: innerHeight, ow: outerWidth, oh: outerHeight,
+    sw: screen.width, sh: screen.height,
+    ff_geom: (innerWidth >= screen.width - 2 && innerHeight >= screen.height - 2),
+    url: location.href
+  };
+}
+
+// ── tutto quel che la pagina sa vedere ─────────────────────────────────────
+for (const tipo of ['keydown', 'keyup']) {
+  addEventListener(tipo, (e) => {
+    manda(tipo, {
+      code: e.code, key: e.key, keyCode: e.keyCode,
+      ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey,
+      ripetuto: e.repeat, fidato: e.isTrusted, predefinito_impedito: e.defaultPrevented
+    });
+    // ⛔ Di difetto NON si chiama `preventDefault()`: la domanda del banco e'
+    //    «il browser fa anche il suo comando?», e impedirlo falserebbe la
+    //    risposta.
+    //
+    // ⭐ MA IL PRODOTTO LO CHIAMERA', e quella e' una domanda DIVERSA e
+    //    altrettanto importante: delle combinazioni che risultano «consegnata E
+    //    RISERVATA», **quante si curano con `preventDefault()` e quante no?**
+    //    Le prime sono un difetto della NOSTRA pagina se non lo chiama; le
+    //    seconde sono una perdita vera, da dichiarare all'utente.  ⇒ Il banco
+    //    gira DUE VOLTE, e la differenza fra i due giri e' la risposta.
+    if (previeni && tipo === 'keydown') e.preventDefault();
+    if (gesto_in_attesa) { const g = gesto_in_attesa; gesto_in_attesa = null; esegui_gesto(g); }
+  }, true);
+}
+addEventListener('blur',  () => manda('blur',  ritratto()));
+addEventListener('focus', () => manda('focus', ritratto()));
+addEventListener('resize', () => manda('resize', ritratto()));
+document.addEventListener('visibilitychange', () => manda('visibilita', ritratto()));
+document.addEventListener('fullscreenchange', () => manda('schermo_intero', ritratto()));
+document.addEventListener('fullscreenerror',  () => manda('schermo_intero_errore', {}));
+addEventListener('beforeprint', () => manda('stampa', {}));
+addEventListener('afterprint',  () => manda('stampa_finita', {}));
+addEventListener('contextmenu', () => manda('menu_contesto', {}));
+// ⛔ La pagina che muore lo dice: e' il caso peggiore, ed e' l'unico che
+//    altrimenti non lascerebbe niente su disco.
+addEventListener('pagehide', () => {
+  try { navigator.sendBeacon('/ev', JSON.stringify(Object.assign(
+    { t: 'muoio', prova: prova, carico: CARICO, n_carico: N_CARICO, ora: Date.now() }, ritratto()))); }
+  catch (e) {}
+});
+addEventListener('click', () => {
+  manda('clic', ritratto());
+  if (gesto_in_attesa) { const g = gesto_in_attesa; gesto_in_attesa = null; esegui_gesto(g); }
+});
+
+// ── le azioni che il pilota puo' chiedere ──────────────────────────────────
+async function esegui_gesto(g) {
+  const esito = { azione: g.azione };
+  try {
+    if (g.azione === 'schermo_intero') {
+      // ⚠ Le DUE forme, e la pagina deve saperle entrambe (`SPECIFICHE.md`
+      //    §7.3-bis): la nuova sta nelle opzioni di `requestFullscreen`, la
+      //    vecchia e' `navigator.keyboard.lock()`.
+      if (g.lock === 'nuova') {
+        // ⛔ IL MOTORE SI FA CONFESSARE, non si deduce dal numero di versione:
+        //    l'opzione si passa dentro un oggetto che REGISTRA se e' stata
+        //    letta.  Un motore che non conosce `keyboardLock` prende il
+        //    dizionario, ignora la chiave e va a schermo intero **senza dire
+        //    niente** — cioe' il ripiego silenzioso che `CODER.md` §4.2 vieta.
+        let letta = false;
+        const opzioni = {};
+        Object.defineProperty(opzioni, 'keyboardLock',
+          { enumerable: true, get() { letta = true; return 'browser'; } });
+        await document.documentElement.requestFullscreen(opzioni);
+        esito.forma = 'requestFullscreen({keyboardLock})';
+        esito.opzione_letta = letta;
+      } else {
+        await document.documentElement.requestFullscreen();
+        esito.forma = 'requestFullscreen()';
+      }
+      if (g.lock === 'vecchia') {
+        if (navigator.keyboard && navigator.keyboard.lock) {
+          await navigator.keyboard.lock();
+          esito.lock_chiesta = true; lock_concessa = true;
+        } else {
+          esito.lock_chiesta = false;
+          esito.lock_motivo = 'navigator.keyboard.lock assente';
+        }
+      }
+    } else if (g.azione === 'solo_lock') {
+      if (navigator.keyboard && navigator.keyboard.lock) {
+        await navigator.keyboard.lock(); esito.lock_chiesta = true; lock_concessa = true;
+      } else { esito.lock_chiesta = false; esito.lock_motivo = 'navigator.keyboard.lock assente'; }
+    } else if (g.azione === 'sblocca') {
+      if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+      lock_concessa = false;
+      if (document.fullscreenElement) await document.exitFullscreen();
+    }
+    esito.riuscita = true;
+  } catch (e) {
+    esito.riuscita = false; esito.errore = String(e);
+  }
+  Object.assign(esito, ritratto());
+  manda('gesto', esito);
+}
+
+async function esegui(o) {
+  if (o.azione === 'arma') {
+    prova = o.prova;
+    manda('armata', Object.assign({ combinazione: o.combinazione }, ritratto()));
+  } else if (o.azione === 'stato') {
+    manda('stato', ritratto());
+  } else if (o.azione === 'previeni') {
+    previeni = !!o.valore;
+    manda('previeni', { previeni: previeni });
+  } else if (o.azione === 'rilock') {
+    // ⚠ `navigator.keyboard.lock()` NON pretende un gesto: si puo' ricomprare
+    //    da sola, ed e' l'unico modo di tenere vivo un palco «con lock» fra due
+    //    prove separate da una perdita di fuoco.  ⛔ La forma NUOVA invece sta
+    //    dentro `requestFullscreen`, e per ricomprarla si dovrebbe uscire e
+    //    rientrare: li' non si finge, si dichiara.
+    const e = { forma: 'vecchia' };
+    if (navigator.keyboard && navigator.keyboard.lock) {
+      try { await navigator.keyboard.lock(); lock_concessa = true; e.ok = true; }
+      catch (err) { e.ok = false; e.errore = String(err); }
+    } else { e.ok = false; e.errore = 'navigator.keyboard.lock assente'; }
+    manda('rilock', Object.assign(e, ritratto()));
+  } else if (o.azione === 'capacita') {
+    // ⛔ Le due forme si CHIEDONO al motore, non si deducono dal numero di
+    //    versione: `[M]` vale solo su quel che il motore ha risposto.
+    let ff_opz = false;
+    try {
+      // il collaudo della forma nuova: si guarda se il dizionario delle opzioni
+      // viene LETTO — l'unico modo onesto senza entrare a schermo intero.
+      const sonda = {};
+      Object.defineProperty(sonda, 'keyboardLock', { get() { ff_opz = true; return 'browser'; } });
+      try { document.createElement('div').requestFullscreen(sonda).catch(() => {}); } catch (e) {}
+    } catch (e) {}
+    manda('capacita', {
+      lock_vecchia: !!(navigator.keyboard && navigator.keyboard.lock),
+      lock_nuova_opzione_letta: ff_opz,
+      ua: navigator.userAgent,
+      ua_dati: navigator.userAgentData ? JSON.stringify(navigator.userAgentData.brands) : null,
+      fs_abilitato: document.fullscreenEnabled,
+      ritratto: ritratto()
+    });
+  } else if (o.azione === 'gesto') {
+    // ⚠ pretende un gesto: si arma e si aspetta il tasto/clic che il pilota manda
+    // ⛔ E QUI DENTRO C'ERA IL DIFETTO CHE HA BUTTATO IL PRIMO GIRO: si armava
+    //    `gesto_in_attesa = o`, cioe' un oggetto la cui `azione` vale «gesto» —
+    //    non «schermo_intero».  `esegui_gesto` non riconosceva nessun ramo,
+    //    non faceva NIENTE, e rispondeva **`riuscita: true`**.  ⇒ Tre palchi su
+    //    cinque hanno girato con la pagina in finestra credendosi a schermo
+    //    intero, e il pilota li ha creduti perche' la riuscita era vera.
+    //    ⭐ E' `CODER.md` §3.9 in faccia: un componente che puo' decidere da se'
+    //    va CHIAMATO PER NOME e poi VERIFICATO — la verifica c'era
+    //    (`ottenuto_fullscreenElement`) ed e' l'unica ragione per cui il giro e'
+    //    stato buttato invece di pubblicato.
+    gesto_in_attesa = { azione: o.chiede, lock: o.lock };
+    manda('gesto_armato', { chiede: o.chiede, lock: o.lock });
+  } else if (o.azione === 'nulla') { /* niente */ }
+}
+
+// ── il filo con il pilota ──────────────────────────────────────────────────
+async function giro() {
+  try {
+    const r = await fetch('/ordine?visto=' + seq_vista, { cache: 'no-store' });
+    const o = await r.json();
+    if (o && o.seq !== undefined && o.seq !== seq_vista) {
+      seq_vista = o.seq;
+      await esegui(o);
+      manda('ordine_eseguito', { seq: o.seq, azione: o.azione });
+    }
+  } catch (e) { /* il pilota puo' non esserci ancora */ }
+  const r2 = ritratto();
+  document.getElementById('stato').innerHTML =
+    (r2.fuoco ? '<span class=g>FUOCO</span>' : '<span class=r>senza fuoco</span>') +
+    ' · ' + (r2.schermo_intero ? '<span class=g>schermo intero (API)</span>'
+                               : (r2.ff_geom ? '<span class=a>geometria piena</span>' : 'finestra')) +
+    ' · carico #' + N_CARICO + ' ' + CARICO;
+  setTimeout(giro, 150);
+}
+
+// il battito: dice al pilota che la pagina e' viva, e con che palco
+setInterval(() => manda('battito', ritratto()), 500);
+manda('nata', ritratto());
+giro();
+</script>
+</body>

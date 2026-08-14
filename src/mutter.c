@@ -4,7 +4,9 @@
 #include "mutter.h"
 
 #include <gio/gio.h>
+#include <gio/gunixfdlist.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "registro.h"
 
@@ -50,7 +52,12 @@ struct MutterSessione
 	char *cattura;   /* percorso della sessione ScreenCast    */
 	char *flusso;    /* percorso dello Stream                 */
 	uint32_t nodo;
-	char *mapping_id;
+	char *mapping_id;           /* quello che DICHIARIAMO noi a RecordVirtual */
+	char *mapping_id_pubblicato; /* ⛔ quello che Mutter GENERA e ci dice     */
+
+	/* Il canale di input, aperto da `ConnectToEIS` al punto giusto della
+	 * sequenza.  -1 = non aperto, e chi lo riceve lo DICHIARA. */
+	int eis;
 
 	/* ⛔ Il nostro schermo: due strade indipendenti, e se non concordano NULL. */
 	char *monitor;
@@ -361,6 +368,11 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	int quanti_prima;
 	GVariantBuilder proprieta;
 
+	/* ⛔ PRIMA di qualunque `goto guasto`: con `g_new0` varrebbe **0**, e la
+	 *    chiusura chiuderebbe il descrittore 0 — cioe' lo standard input di chi
+	 *    ci ospita.  «Non aperto» si scrive -1, non si lascia allo zero. */
+	sessione->eis = -1;
+
 	sessione->bus = bus_di_sessione(sbaglio);
 	if (!sessione->bus)
 		goto guasto;
@@ -399,15 +411,67 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		goto guasto;
 
 	/*
-	 * ⚠ QUI, E NON ALTROVE, VA `ConnectToEIS` QUANDO ARRIVERA' LA FASE 4.
+	 * ⭐ LA FASE 4 E' ARRIVATA, e `ConnectToEIS` sta QUI — nel punto che il
+	 *    commento della fase 2 aveva marcato.  *Innestato il 14 agosto 2026.*
 	 *
 	 * Il riferimento lo chiama subito dopo `CreateSession` e PRIMA di `Start`, e
 	 * non e' una preferenza: il compositore ha davanti una sessione non ancora
-	 * avviata, ed e' li' che accetta di aprire il canale.  ⛔ Non lo si scrive
-	 * adesso perche' la fase 2 non comanda niente, e un canale aperto che nessuno
-	 * legge sarebbe apparato ereditato — la cosa che il mandato di F2.2 vieta.
-	 * Chi lo innestera' trova qui il punto esatto.
+	 * avviata, ed e' li' che accetta di aprire il canale.
+	 *
+	 * ⚠ E poi si e' letto il codice (`reference-gnome/rapporti/06-mutter-input.md`
+	 *   §1.2, `[R]`): `handle_connect_to_eis` (`meta-remote-desktop-session.c:1929`)
+	 *   ⛔ **non chiama ne' `check_permission` ne' `check_can_notify`**, e
+	 *   `initialize_viewports` e' chiamata da `Start` se l'EIS esiste gia' e da
+	 *   `ConnectToEIS` se la sessione e' gia' avviata: **tutt'e due gli ordini
+	 *   reggono**.  Resta qui perche' e' l'ordine del riferimento, non perche'
+	 *   l'altro rompa.
+	 *
+	 * ⛔ E NON SI FALLISCE SE NON SI APRE: `CODER.md` §4.2.  Senza input la
+	 *    cattura funziona lo stesso — l'utente GUARDA e non comanda — e far
+	 *    cadere l'intera apertura per il canale di input sarebbe togliere la
+	 *    sessione a chi voleva solo vedere.  ⇒ Si dichiara, e `input_apri`
+	 *    fallira' con un errore che dice PERCHE'.
 	 */
+	{
+		g_autoptr(GError) sbaglio_eis = NULL;
+		g_autoptr(GUnixFDList) descrittori = NULL;
+		g_autoptr(GVariant) risposta = NULL;
+		GVariantBuilder senza_opzioni;
+		gint32 indice = -1;
+
+		sessione->eis = -1;
+		/*
+		 * ⛔ Nessuna opzione: `device-types` assente vuol dire «accendi tutto»
+		 *    — tastiera | puntatore | touchscreen (`meta-remote-desktop-session.c:1957-1959`
+		 *    `[R]`).  ⚠ E la `MetaEis` si crea UNA VOLTA SOLA per sessione: una
+		 *    seconda `ConnectToEIS` riuserebbe la stessa e **ignorerebbe** le
+		 *    opzioni nuove.  Chiedere tutto adesso e' l'unico modo di non
+		 *    scoprirlo alla fase 6.
+		 */
+		g_variant_builder_init(&senza_opzioni, G_VARIANT_TYPE("a{sv}"));
+		risposta = g_dbus_connection_call_with_unix_fd_list_sync(
+		    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
+		    g_variant_new("(a{sv})", &senza_opzioni), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
+		    ATTESA_CHIAMATA_MS, NULL, &descrittori, NULL, &sbaglio_eis);
+		if (!risposta)
+		{
+			registro_dice(AREA,
+			              "⚠ ConnectToEIS rifiutata (%s): la sessione si apre lo stesso, ma "
+			              "NESSUN input arrivera' al desktop",
+			              sbaglio_eis->message);
+		}
+		else
+		{
+			g_variant_get(risposta, "(h)", &indice);
+			sessione->eis = g_unix_fd_list_get(descrittori, indice, &sbaglio_eis);
+			if (sessione->eis < 0)
+				registro_dice(AREA, "⚠ ConnectToEIS ha risposto ma il descrittore non si legge "
+				                    "(%s): nessun input arrivera' al desktop",
+				              sbaglio_eis->message);
+			else
+				registro_dice(AREA, "canale di input aperto: descrittore EIS %d", sessione->eis);
+		}
+	}
 
 	/* --- 2. la cattura, che si registra sul controllo non ancora avviato --- */
 	g_variant_builder_init(&proprieta, G_VARIANT_TYPE("a{sv}"));
@@ -493,6 +557,76 @@ const char *mutter_mapping_id(const MutterSessione *sessione)
 	return sessione ? sessione->mapping_id : NULL;
 }
 
+int mutter_eis_fd(const MutterSessione *sessione)
+{
+	return sessione ? sessione->eis : -1;
+}
+
+/*
+ * ⛔⛔ IL `mapping-id` VIENE DA MUTTER, NON DA NOI — e il verso conta.
+ *
+ * `reference-gnome/rapporti/06-mutter-input.md` §7.2 `[≠]`, riletto nel codice
+ * il 14 agosto 2026:
+ *
+ *   - `handle_record_virtual` (`meta-screen-cast-session.c:747-765`) legge
+ *     **`cursor-mode` e `is-platform` e basta**: la nostra proprieta'
+ *     `mapping-id` viene **ignorata in silenzio**, senza un errore;
+ *   - `meta_screen_cast_stream_initable_init` (`meta-screen-cast-stream.c:445-458`)
+ *     chiama `meta_remote_desktop_session_acquire_mapping_id`, che genera un
+ *     **UUID casuale** (`:558-575`), e lo pubblica nella proprieta'
+ *     `Parameters` del flusso.
+ *
+ * ⇒ Cercare la regione di `libei` con l'UUID che abbiamo dichiarato NOI vuol
+ *   dire non trovarla mai, e cadere sul ripiego «prendo la prima» — che con
+ *   uno schermo solo funziona, e smette di funzionare esattamente il giorno in
+ *   cui gli schermi sono due.  E' il difetto che `input.c` non deve avere.
+ *
+ * ⚠ Si legge PIGRAMENTE, la prima volta che serve: la sequenza di
+ *   `mutter_apri` non si tocca (ci lavorano altri anelli), e questa lettura non
+ *   ha ragione di stare li' dentro.
+ */
+const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
+{
+	g_autoptr(GError) sbaglio = NULL;
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GVariant) valore = NULL;
+	char *letto = NULL;
+
+	if (!sessione || !sessione->bus || !sessione->flusso)
+		return NULL;
+	if (sessione->mapping_id_pubblicato)
+		return sessione->mapping_id_pubblicato;
+
+	risposta = chiama(sessione->bus, NOME_SCREENCAST, sessione->flusso,
+	                  "org.freedesktop.DBus.Properties", "Get",
+	                  g_variant_new("(ss)", IFACE_SC_FLUSSO, "Parameters"), G_VARIANT_TYPE("(v)"),
+	                  &sbaglio);
+	if (!risposta)
+	{
+		/* ⛔ Lettura NEGATA, non «non c'e'»: chi legge questa riga deve poter
+		 *    distinguere i due casi (`CODER.md` §3.10). */
+		registro_dice(AREA, "⚠ i Parameters del flusso non si leggono (%s): il mapping-id di "
+		                    "Mutter resta ignoto, NON dico che manchi",
+		              sbaglio->message);
+		return NULL;
+	}
+	g_variant_get(risposta, "(v)", &valore);
+	if (!g_variant_lookup(valore, "mapping-id", "s", &letto) || !letto || !*letto)
+	{
+		g_free(letto);
+		registro_dice(AREA, "⚠ i Parameters del flusso NON portano un mapping-id: la regione del "
+		                    "puntatore si dovra' riconoscere per geometria");
+		return NULL;
+	}
+
+	sessione->mapping_id_pubblicato = letto;
+	registro_dice(AREA, "mapping-id pubblicato da Mutter: «%s»%s", letto,
+	              g_strcmp0(letto, sessione->mapping_id) == 0
+	                  ? ""
+	                  : "  ⛔ DIVERSO da quello che avevamo dichiarato noi a RecordVirtual");
+	return sessione->mapping_id_pubblicato;
+}
+
 const char *mutter_monitor_nostro(const MutterSessione *sessione)
 {
 	return sessione ? sessione->monitor : NULL;
@@ -532,11 +666,15 @@ void mutter_chiudi(MutterSessione *sessione)
 			registro_dettaglio(AREA, "chiusura della sessione di controllo: %s", sbaglio->message);
 	}
 
+	if (sessione->eis >= 0)
+		close(sessione->eis);
+
 	g_clear_object(&sessione->bus);
 	g_free(sessione->controllo);
 	g_free(sessione->cattura);
 	g_free(sessione->flusso);
 	g_free(sessione->mapping_id);
+	g_free(sessione->mapping_id_pubblicato);
 	g_free(sessione->monitor);
 	g_free(sessione->monitor_prodotto);
 	for (guint i = 0; i < MONITOR_MAX; i++)

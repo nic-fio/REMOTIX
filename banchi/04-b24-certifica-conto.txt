@@ -1,0 +1,95 @@
+
+== 0. Lo stato iniziale, DICHIARATO (B0.1)
+    --  gnome-shell di prova: /usr/bin/gnome-shell --headless --no-x11 
+    --  monitor PRIMA: 'Meta-0' 
+
+== 1. I due programmi, compilati nel devroot
+
+⛔ GIRO DI CERTIFICAZIONE, con il guasto «conto» innestato.
+   Il banco DEVE diventare ROSSO.  Se resta verde, non sa vedere il difetto.
+Password sudo:     OK  iniettore e testimone in /tmp/04-b24
+
+== 2. L'iniettore — PRIMA del testimone, ed e' l'ordine misurato
+    OK  iniettore PRONTO
+        B24: mapping-id DICHIARATO da noi a RecordVirtual: «8f7975e2-a723-45c1-a57f-56a41931ec95»
+        07:45:28.521 cattura mapping-id pubblicato da Mutter: «4dafe357-8e11-4b85-8acd-79b3b3a31d52»  ⛔ DIVERSO da quello che avevamo dichiarato noi a RecordVirtual
+        B24: mapping-id PUBBLICATO da Mutter nei Parameters: «4dafe357-8e11-4b85-8acd-79b3b3a31d52»
+        B24: flusso attivo a 1600x900 sul nodo 68
+        B24: MONITOR Meta-1 («Virtual remote monitor»)
+        B24: ⛔ RIPIEGO DEL BANCO: `tastiera_apri_da_keymap` non e' attuata in src/tastiera.c (anello A5).  Apro la disposizione per NOME e IGNORO i 68402 byte di keymap che libei ha consegnato.  ⇒ ogni misura sulle LETTERE che segue vale [?], non [M].
+        07:45:28.774 input   regione 0: 1920,0 1600x900 (mapping-id «4dafe357-8e11-4b85-8acd-79b3b3a31d52»)
+        07:45:28.774 input   regione del puntatore per chiave: 1920,0 1600x900 (di 1, mapping-id «4dafe357-8e11-4b85-8acd-79b3b3a31d52»)
+        07:45:28.774 input   regione 0: 1920,0 1600x900 (mapping-id «4dafe357-8e11-4b85-8acd-79b3b3a31d52»)
+        07:45:28.774 input   regione del puntatore per chiave: 1920,0 1600x900 (di 1, mapping-id «4dafe357-8e11-4b85-8acd-79b3b3a31d52»)
+    OK  il mapping-id che DICHIARIAMO e quello che Mutter PUBBLICA sono DIVERSI:
+    --     nostro «8f7975e2-a723-45c1-a57f-56a41931ec95»  ≠  suo «4dafe357-8e11-4b85-8acd-79b3b3a31d52»
+    OK  e la regione si riconosce per CHIAVE, cioe' con quello di Mutter
+
+== 3. Il testimone — una finestra VERA, sul monitor 1600x900
+        {"n":1,"tipo":"POSTO_LEGATO","versione":8}
+        {"n":3,"tipo":"SCHERMO","i":0,"l":1920,"a":1080,"nome":"Virtual remote monitor"}
+        {"n":4,"tipo":"SCHERMO","i":1,"l":1600,"a":900,"nome":"Virtual remote monitor"}
+        {"n":5,"tipo":"KEYMAP","formato":1,"byte":68403}
+        {"n":6,"tipo":"PRONTA","larghezza":1600,"altezza":900,"schermo":"Virtual remote monitor"}
+    OK  testimone aperto sul monitor giusto
+
+== 4. ⭐ IL PUNTATORE — dove finisce davvero
+    OK  punta 100,100 → la finestra ha visto 100.0,100.0
+    OK  punta 1599,899 → la finestra ha visto 1599.0,899.0
+    OK  punta 800,450 → la finestra ha visto 800.0,450.0
+
+== 5. ⛔⛔ LA ROTELLA — il segno, nei DUE versi
+    --  il client manda +120 (l'utente gira IN SU)  → axis_value120=-120  axis=-10.0
+    --  il client manda -120 (l'utente gira IN GIU) → axis_value120=120 axis=10.0
+    OK  +120 (utente IN SU)  → axis_value120=-120.0 < 0: il contenuto SALE, come deve
+    OK  -120 (utente IN GIU) → axis_value120=120.0 > 0: il contenuto SCENDE
+    OK  e i due strumenti concordano: axis liscio -10.0 e 10.0
+
+== 5-bis. ⛔ I MEZZI SCATTI — 60 non si arrotonda a zero
+    OK  mezzo scatto (60) → axis_value120=-60 axis=-5.0: NON si arrotonda a zero
+    --  orizzontale: +120 → asse=1 v120=120  ·  -120 → asse=1 v120=-120
+    OK  l'orizzontale passa COM'E', nei due versi: giusto non invertirlo
+
+== 6. I PULSANTI e le POSIZIONI
+    OK  BTN_LEFT (272) → la finestra ha visto il bottone 272
+    OK  KEY_A (30) → la finestra ha visto il codice 30
+    OK  LETTERA U+0061 → la finestra ha visto il codice 30
+    --     ⚠ vale [?] e non [M]: sopra c'e' la riga «RIPIEGO DEL BANCO» (tastiera.c di A5)
+
+== 7. ⛔⛔ IL RILASCIO AL DISTACCO — si stacca CON UN TASTO PREMUTO
+    OK  controllo positivo: la finestra ha il fuoco e riceve i tasti
+    --  prima del rilascio: tasti_premuti=1 pulsanti_premuti=1
+    OK  il conto e' tenuto: 1 tasto e 1 pulsante
+    NO  input_rilascia_tutto() ne ha rilasciati «0» invece di 2
+    NO  la finestra NON ha visto il rilascio del tasto: il conto e' tornato, l'evento no
+    NO  la finestra NON ha visto il rilascio del bottone
+    NO  dopo il rilascio resta «tasti_premuti=1 pulsanti_premuti=1»
+
+== 8. ⛔ IL CONTROLLO DEL SILENZIO — dieci secondi senza iniettare
+    --  righe del testimone: 39 → 39 in dieci secondi di silenzio
+    OK  dieci secondi senza iniettare: ZERO eventi, e lo strumento ne ha gia' visti 39
+
+== 9. ⛔⛔ IL RICAMBIO DELLA KEYMAP — si cambia disposizione IN CORSA
+    --  disposizione di partenza: [('xkb', 'us')]
+    --  ricambi della tastiera: ricambi_tastiera=0 → ricambi_tastiera=1   ·   letture di keymap diverse: 1 → 2
+    --  e la finestra ha ricevuto una keymap nuova: {"n": 40, "tipo": "KEYMAP", "formato": 1, "byte": 70138}
+    OK  il ricambio c'e' stato, e il modulo l'ha VISTO
+    OK  dopo il ricambio i tasti arrivano ancora (codice 30)
+    --  disposizione rimessa: [('xkb', 'us')]
+
+== 10. ⛔⛔ IL RICAMBIO DELLA GEOMETRIA — cambia SOTTO il dispositivo in uso
+    --  ricambi del puntatore: ricambi_puntatore=0 → ricambi_puntatore=2
+    OK  il ricambio c'e' stato, e il modulo l'ha VISTO: ricambi_puntatore=2
+    OK  dopo il ricambio il puntatore si muove ancora: 640.0,360.0
+
+⚠ E LA META CHE RESTA APERTA, dichiarata invece che taciuta: alla fase 4 NON
+  c e ancora una sessione a cui RIATTACCARSI (PIANO.md, fase 5).  Qui si misura
+  il CONTEGGIO e l EVENTO che ne esce — non «al riattacco il Ctrl non era
+  rimasto giu».  Quella meta e della fase 5.
+
+== Il verdetto
+    B24 ROSSO — vedi le righe NO qui sopra.
+
+== Il congedo
+    --  quel che il testimone ha visto: /tmp/04-b24/04-b24-visto.jsonl
+    --  quel che l'iniettore ha detto:  /tmp/04-b24/iniettore.log

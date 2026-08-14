@@ -119,16 +119,43 @@ typedef struct figli figli;
  *     marcato `0x0301` fa riconfigurare al client un decodificatore su
  *     un'immagine che non si decodifica da sola.  ⇒ Qui viaggia quel che il
  *     codificatore ha LETTO dal flusso, non quel che si spera. */
+/* ⭐⭐ E `input` E' ARRIVATO CON LA FASE 4, per la stessa ragione per cui
+ *     `chiave` era arrivato con la 3: senza, il campo `input` di §6.2 sarebbe
+ *     **0 per costruzione** — ed e' esattamente quel che era, `input = 0` in
+ *     953 fotogrammi su 953 (`README.md`, 13 agosto 2026).
+ *
+ * ⛔ E lo riempie il FIGLIO, non il padre: solo lui sa che cosa il compositore
+ *    ha davvero preso, e in che istante ha catturato.  Riempirlo qui direbbe
+ *    «l'ultimo input spedito al palco», che e' un numero piu' alto e farebbe
+ *    misurare all'anello del ritardo un ritardo piu' corto del vero — in nostro
+ *    favore, che e' la direzione in cui non si sbaglia mai per caso. */
 typedef void (*FiglioDeposito)(void *ctx, const char *utente, uid_t uid,
                                uint8_t codec, bool chiave, const uint8_t *dati,
                                size_t byte, uint32_t larghezza,
-                               uint32_t altezza, uint64_t istante_us);
+                               uint32_t altezza, uint64_t istante_us,
+                               uint32_t input);
 
 /* ⛔ Un figlio se n'e' andato.  Serve al padre per lasciare quel che era suo —
  * per esempio il deposito del video, che oggi e' di PROCESSO (vedi il riquadro
  * di `video_forse()` in `webtransport.c`): un deposito che sopravvive al figlio
  * che lo ha riempito e' l'immagine di un utente che resta in casa. */
 typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
+
+/* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE, e attraversa il confine nel verso opposto
+ *     all'input: il metadato arriva da PipeWire (cioe' nel figlio) e il canale
+ *     `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.
+ *
+ * ⛔ `immagine` e' BGRA premoltiplicato, `larghezza x altezza x 4` byte, e vive
+ *    SOLO dentro la chiamata: chi la vuole tenere la copia.
+ * ⛔ `0x0` con `immagine` NULL = **cursore nascosto** (§5.5), e va consegnato
+ *    come messaggio: e' l'unico modo che il client ha di sapere che il
+ *    puntatore e' sparito, invece di disegnare l'ultima forma per sempre.
+ * ⚠ La POSIZIONE non passa di qui e non passa da nessuna parte in questo verso:
+ *   e' del client, che disegna il puntatore da se' (`SPECIFICHE.md` §7.1). */
+typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
+                              uint16_t larghezza, uint16_t altezza,
+                              int16_t attivo_x, int16_t attivo_y,
+                              const uint8_t *immagine, size_t byte);
 
 /* Accende la tabella dei figli.  ⛔ Non genera niente: qui non si sa ancora
  * chi entrera'.
@@ -141,7 +168,8 @@ typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
  *                    ⚠ Ci scrive **il figlio**, cioe' l'utente: se la cartella
  *                    non e' sua, il rilievo non esce e la riga lo dice. */
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
-                     FiglioDeposito deposita, FiglioCongedo congeda, void *ctx);
+                     FiglioDeposito deposita, FiglioCongedo congeda,
+                     FiglioCursore cursore, void *ctx);
 
 /* ⛔ Spegne tutti i figli e aspetta che siano morti.  ⚠ ASPETTA, e va detto:
  * sta **dopo** l'ultimo giro del ciclo `poll`, come `aiutante_spegni()` —
@@ -213,6 +241,54 @@ bool figli_chiedi_palco(figli *f, const char *utente);
  *   sa quando `SESSIONE` e' partita e quando §5.2 apre il debito.  `main.c` fa
  *   da ponte perche' e' l'unico che conosce tutt'e due i lati. */
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave);
+
+/* ⭐⭐ FASE 4 — L'INPUT ATTRAVERSA IL CONFINE DI PROCESSO.
+ *
+ * ⛔ La ragione e' un fatto dell'architettura, non una scelta: `libei` parla
+ *    con la sessione grafica dell'utente, e quella sessione ce l'ha **il
+ *    figlio**; QUIC, RCP e i byte del client stanno nel **padre**.  ⇒ Fra il
+ *    tasto premuto nel browser e il tasto premuto sul desktop c'e' un confine
+ *    di processo, e questa e' la funzione che lo attraversa.
+ *
+ * ⚠ Chi decide non e' questo file: e' `rcp.c`, che ha gia' convalidato il
+ *   messaggio secondo `RCP.md` §7.3 — intervalli, surrogati, coordinate sulla
+ *   tela, `id` crescente.  ⛔ Qui NON si riconvalida e NON si trasforma niente:
+ *   due controlli sullo stesso valore in due posti diventano due regole diverse
+ *   il giorno in cui una delle due cambia.
+ *
+ * ⛔ E IL SEGNO DELLA ROTELLA NON SI TOCCA NEMMENO QUI: si inverte una volta
+ *    sola, dentro `input_rotella()` (`src/input.h`, `RCP.md` §7.3).
+ *
+ * `id`      §7.3, l'identificatore del messaggio.  ⭐ E' quel che torna nel
+ *           campo `input` dei fotogrammi (§6.2) — ma **solo se il compositore
+ *           lo prende**: il figlio avanza il suo contatore quando l'iniezione
+ *           e' riuscita, non quando la richiesta e' partita.
+ * `codice`  evdev (`BTN_LEFT` = 0x110, `KEY_A` = 30), per pulsante e posizione.
+ * `a`/`b`   puntatore: `x`/`y` sulla tela · rotella: gli assi in unita' da 120
+ *           · lettera: il valore scalare Unicode in `a` · ritela: la tela nuova.
+ *
+ * `false` = non c'e' nessun figlio per quell'utente, o la richiesta non e'
+ * partita — ⛔ e allora quell'input non e' arrivato al desktop, il che si
+ * DICHIARA nel registro invece di essere taciuto (`CODER.md` §4.2). */
+enum {
+	FIGLI_INPUT_PUNTATORE = 1,
+	FIGLI_INPUT_PULSANTE = 2,
+	FIGLI_INPUT_ROTELLA = 3,
+	FIGLI_INPUT_LETTERA = 4,
+	FIGLI_INPUT_POSIZIONE = 5,
+	/* ⛔⭐ «La regola col rapporto danno/costo piu' alto del documento»
+	 *     (`RCP.md` §11): al distacco si rilascia TUTTO.  Un Ctrl rimasto giu'
+	 *     in una sessione che sopravvive al client rende il desktop
+	 *     inservibile al riattacco, e nessuno collega le due cose. */
+	FIGLI_INPUT_RILASCIA_TUTTO = 6,
+	/* ⛔ §7.1: la tela in vigore e' cambiata, rimappa la regione del puntatore
+	 *    assoluto.  Senza, `rcp.c` satura sulla tela nuova e il palco resta
+	 *    sulla vecchia — due lati con due verita' e nessun errore. */
+	FIGLI_INPUT_RITELA = 7
+};
+
+bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
+                 uint16_t codice, int premuto, int32_t a, int32_t b);
 
 /* ⛔⭐ RICHIEDE A OGNI FIGLIO «CHI SEI», al massimo una volta ogni minuto.
  *

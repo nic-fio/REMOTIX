@@ -16,7 +16,7 @@ un'approvazione al buio — è la forma della fase 2, e si ripete qui.
 | | totale | codifica | **disegno** | **fotogrammi/s** | P1 |
 |---|---|---|---|---|---|
 | **AV1 in software** *(la 7561, quel che girava fino a ieri)* | **71,86 ms** | 39,67 | ⭐ 9,07 | 22,0 | ✅ |
-| ⭐ **HEVC in hardware** *(la 7571, quel che guarderai)* | **78,12 ms** | ⭐ **31,78** | ⛔ **28,00** | ⭐ **30,0** | ✅ |
+| ⭐ **HEVC in hardware** *(la 7571, quel che guarderai)* | **78,12 ms** | ⭐ **31,78** | ⛔ **28,00** ⚠ *(non è «disegno»: vedi la riga 2 più sotto)* | ⭐ **30,0** | ✅ |
 | *(HEVC in software, per capire)* | 109,77 | ⛔ 63,22 | 28,99 | 14,6 | — |
 
 ⚠ **E il numero della fase è 78,1, non il 75,2 misurato prima su una copia**: quel giro aveva un
@@ -81,7 +81,7 @@ quelle note alle 23:00 del 13 agosto; ⛔ quelle superate saranno barrate e data
 | ✅ | ~~il numero con la codifica in hardware~~ | ⭐ **fatto**: 78,1 ms, P1 verde, sull'albero che guarderai |
 | ✅ | ~~la codifica in hardware nel prodotto~~ | ⭐ **fatta**: non più su una copia. Il ritorno indietro è **una riga** |
 | **1** | ⛔⛔ **Il numero SFORA**: 78,1 contro il tetto di **50** e il traguardo di **40** — e col pezzo cieco dichiarato sta fra **94 e 118 ms** sul vetro | ⚠ **è il fatto centrale**. ⛔ Ma guarda **prima** e leggi **dopo**: il numero non è la fluidità, e i due giudizi restano separati |
-| **2** | ⛔ **Il collo di bottiglia adesso è il DISEGNO**: 28,0 ms su 78,1, **il 36 %** — la codifica ne costa 5 | ⭐ **nessuno sul giudizio**, ma è **il primo lavoro della prossima fase**, e non era in nessun piano |
+| **2** | ⚠ ~~**Il collo di bottiglia adesso è il DISEGNO**: 28,0 ms su 78,1~~ ⇒ ⛔ **l'etichetta è FALSA, corretta il 14 agosto 2026**: il disegno costa **2,25 ms** `[M]`, i 28,0 erano **l'attesa del fotogramma dalla GPU**. Il totale resta vero (`F4-A2`, `F4-A10`) | ⭐ **nessuno sul giudizio**, ma è **il primo lavoro della prossima fase**, e non era in nessun piano |
 | **3** | ⛔ **I banchi browser misuravano sul tuo desktop** credendo di essere su uno schermo finto | ⭐ **nessuno**: riguarda i banchi. Ma spiega perché i numeri di ieri portavano dentro la contesa col tuo desktop |
 | **4** | ⏳ **6 banchi su 25 non hanno una certificazione che regge** — `B10 · B13` (scadute, **non rigirabili**: gli alberi dei loro guasti non esistono più) · `P5 · P5R` (non c'era il tempo, e **non sono state comprate**) · `03-b16` (aspetta il palco) · `03-b19` (mai provato) | ⚠ **poco sul prodotto**, ma va saputo: **non è che siano rosse — è che la loro riga verde descrive un prodotto di ieri**. ⭐ **P1 è stata rigirata stanotte** e regge |
 | **5** | ⛔ **22 file del prodotto non sono guardati da nessuna certificazione** | ⚠ **da sapere**: una riga verde continuerebbe a dire «certificato» su un prodotto che nel frattempo è un altro. **È lavoro di una fase sua** |

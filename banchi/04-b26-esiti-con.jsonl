@@ -1,0 +1,11 @@
+{"cosa":"CURSORE_FORMA","modo":"--sonda-con","momento":"forma-1","serie":1,"larghezza":48,"altezza":48,"attivo_x":6,"attivo_y":2,"nascosto":false,"lunghezza":9224,"lunghezza_attesa":9224,"violazioni":0}
+{"cosa":"tinta","punto":"A","colore":"#3465a5"}
+{"cosa":"tinta","punto":"B","colore":"#3465a4"}
+{"cosa":"solo-movimento","movimenti":40,"forme_nuove":0}
+{"cosa":"CURSORE_FORMA","modo":"--sonda-con","momento":"nascosto","serie":2,"larghezza":0,"altezza":0,"attivo_x":0,"attivo_y":0,"nascosto":true,"lunghezza":8,"lunghezza_attesa":8,"violazioni":0}
+{"cosa":"tocco","nascosti_nuovi":1}
+{"cosa":"CURSORE_FORMA","modo":"--sonda-con","momento":"ritorno","serie":3,"larghezza":48,"altezza":48,"attivo_x":6,"attivo_y":2,"nascosto":false,"lunghezza":9224,"lunghezza_attesa":9224,"violazioni":0}
+{"cosa":"ritorno","forme_nuove":1}
+{"cosa":"CURSORE_FORMA","modo":"--sonda-con","momento":"forma-2","serie":4,"larghezza":32,"altezza":32,"attivo_x":3,"attivo_y":1,"nascosto":false,"lunghezza":4104,"lunghezza_attesa":4104,"violazioni":0}
+{"cosa":"forma-diversa","forme_nuove":1}
+{"cosa":"conteggi","modo":"--sonda-con","buffer":49,"cursore_metadati":49,"cursore_assente":0,"byte_metadato":589872,"forme":4,"nascosti":1,"violazioni":0}

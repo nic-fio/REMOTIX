@@ -104,6 +104,8 @@
 #include <glib.h>
 #include <stdint.h>
 
+#include "cursore.h"
+
 typedef struct Cattura Cattura;
 
 /* ------------------------------------------------------------------ *
@@ -358,12 +360,42 @@ typedef struct
 	guint64 solo_cursore;   /* buffer marcati CORRUPTED: pixel stantii */
 	guint64 stride_zero;    /* ⛔ scartati invece che calcolati        */
 	guint64 senza_pixel;    /* mappatura assente o chunk vuoto         */
+	/* ⭐ Il canale del cursore.  ⛔ I due primi sono DUE e non uno, ed e' la
+	 *    stessa regola dello zero e del fallimento: «il metadato non c'era» e
+	 *    «il metadato c'era» sono i due fatti che distinguono un puntatore
+	 *    assente da un canale senza sorgente (`gnome.md` §1.1 punto 6). */
+	guint64 cursore_assente;
+	guint64 cursore_metadati;
+	guint64 cursore_malformati;
 	guint buffer_distinti;
 	CatturaBuffer tipi_visti[4]; /* ⛔ TUTTI i tipi visti, non solo l'ultimo */
 	guint quanti_tipi;
 } CatturaConteggi;
 
 void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
+
+/*
+ * ⭐⭐ LA CUCITURA DEL CURSORE — chi vuole la FORMA del puntatore si registra qui.
+ *
+ * ⛔ Questa e' l'UNICA riga che il canale del cursore aggiunge all'interfaccia
+ *    della cattura, e ci sta per una ragione precisa: `cattura.c` legge il
+ *    metadato grezzo di PipeWire ma **non conosce il filo**, e `cursore.h` vuole
+ *    il destinatario al momento dell'apertura — che avviene dentro
+ *    `cattura_avvia`, cioe' prima che chiunque possa registrarsi.
+ *
+ * ⚠ `quando_cambia` viene chiamata DAL THREAD DI TEMPO REALE di PipeWire, e vale
+ *   il riquadro in cima a questo file: non si aspetta niente li' dentro, e
+ *   l'immagine vive solo per la durata della chiamata (`cursore.h`).
+ *
+ * ⚠ Si puo' chiamare in qualsiasi momento, anche a cattura viva: le forme che
+ *   arrivano prima della registrazione si contano e non si mandano — ⛔ che NON
+ *   e' «non sono arrivate».  Chi si registra dopo il primo movimento del
+ *   puntatore riceve comunque la forma successiva.
+ *
+ * ⛔ E il taglio a 256, il «nascosto» e il «non e' cambiato» NON sono qui: sono
+ *    in `cursore.c`, che e' il posto che `cursore.h` gli assegna.
+ */
+void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi);
 
 /* Il flusso e' attivo ADESSO?  ⛔ «E' STATO attivo» non e' «lo e' ancora»: la
  * morte a meta' misura ha gia' prodotto una riga di tabella con dentro cinque

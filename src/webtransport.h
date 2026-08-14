@@ -165,6 +165,18 @@ const char *wt_perche_ha_da_dire(const wt *w);
  *
  * ⚠ I byte si COPIANO dentro la coda di ciascuna sessione: chi cattura puo'
  *   liberare il suo buffer subito dopo. */
+/* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE A CHI GUARDA (`RCP.md` §7.2).
+ *
+ * ⚠ La gemella di `wt_video_diffondi()`, e per la stessa ragione: la forma
+ *   nasce nel figlio di UN utente, e va a tutte le sessioni di QUELL'utente —
+ *   che possono essere piu' d'una (I4: il palco e' della sessione, non della
+ *   connessione).
+ * ⛔ `0x0` con `immagine` NULL = cursore nascosto, e si spedisce: e' l'unico
+ *    modo che il client ha di sapere che il puntatore e' sparito. */
+void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
+                         uint16_t altezza, int16_t attivo_x, int16_t attivo_y,
+                         const uint8_t *immagine, size_t byte);
+
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input);
@@ -189,6 +201,26 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
 typedef void (*wt_video_richiesta)(void *ctx, const char *utente, uint8_t codec,
                                    bool chiave);
 void wt_video_gancio(wt_video_richiesta f, void *ctx);
+
+/* ⭐⭐ FASE 4 — IL PONTE DELL'INPUT, e attraversa un confine di PROCESSO.
+ *
+ * ⛔ Chi sa che l'utente ha premuto: `rcp.c`, che ha convalidato il messaggio
+ *    di `RCP.md` §7.3.  Chi sa a quale sessione appartiene: questo modulo.
+ *    ⛔ Chi puo' davvero iniettarlo: il **figlio**, che gira come l'utente ed
+ *    e' l'unico ad avere la sessione grafica — cioe' un altro processo.
+ *    `main.c` fa da ponte perche' e' l'unico che conosce tutt'e due i lati.
+ *
+ * ⚠ `true` vuol dire «consegnato al palco», NON «il compositore l'ha preso»:
+ *   la risposta non torna indietro dal confine di processo.  ⭐ Chi conta quel
+ *   che il compositore ha preso davvero e' il figlio, che lo timbra sul
+ *   fotogramma (§6.2, campo `input`) — ed e' l'unico posto in cui quel numero
+ *   e' la verita' invece di una promessa.
+ *
+ * `azione` sono i `FIGLI_INPUT_*` di `figlio.h`. */
+typedef bool (*wt_input_richiesta)(void *ctx, const char *utente, uint32_t id,
+                                   uint8_t azione, uint16_t codice, int premuto,
+                                   int32_t a, int32_t b);
+void wt_input_gancio(wt_input_richiesta f, void *ctx);
 
 /* ⛔ «Qualcuno di questo utente sta ancora guardando?»  Serve a decidere se
  *    spegnere il palco, e la risposta si CHIEDE all'elenco delle sessioni vive

@@ -1,5 +1,37 @@
 # CORSIA E — L'anello rimisurato
 
+---
+
+> # ⛔⛔⛔ 14 AGOSTO 2026 — L'ETICHETTA «IL DISEGNO» È FALSA, E QUESTO DOCUMENTO NE È LA FONTE
+>
+> *Corretto per decisione dell'utente, su **due** misure indipendenti della fase 4 —
+> `F4-A2-pagina-dipinge.md` e `F4-A10-anello-input.md` — che sono arrivate alla stessa conclusione
+> da due lati diversi senza mettersi d'accordo.*
+>
+> ⛔ **Questo documento è quello che tutti gli altri citano**, quindi la correzione sta qui in testa
+> e non in fondo: chi lo apre deve incontrarla prima delle tabelle.
+>
+> | | |
+> |---|---|
+> | ⭐ **resta vero** | il totale **78,1 ms** (n=379) e la scomposizione in cinque tratti |
+> | ⛔ **era falso** | **il nome del tratto**. `[M]` il disegno del flusso vero costa **2,25 ms** (5 giri, dispersione 0,30); il controllo positivo su AV1 dà **6,25-8,45** contro i **9,07** scritti qui ⇒ il cronometro era tarato, il nome no |
+> | ⭐ **che cos'erano i 28 ms** | **l'attesa del fotogramma dalla GPU, più il disegno.** Un fotogramma HEVC decodificato in hardware esce **opaco** (`format = null`), e la rilettura della marca a `03-b17:534` ne provoca il trasferimento GPU→CPU. AV1 no |
+> | ⛔⭐ **la prova che il confine era messo male** | a **palco identico**, cambiando codec, «decodifica» e «disegno» si muovono in **versi opposti** — AV1 `6,315 + 9,105`, HEVC `0,730 + 27,995` — **e la somma si conserva**. ⚠ Ma `drawImage` **non sa quale codec** ha prodotto il fotogramma: ⇒ il costo non è entrato nel disegno, ha **attraversato il confine fra i due tratti** |
+> | ⭐ **il fatto nuovo, e questo regge** | il costo del **client dopo il filo** raddoppia con HEVC: `[M]` **+10,5…+15,3 ms** |
+>
+> ⛔ **E la cosa che fa la figura peggiore, scritta perché non si perda**: la **cella di controllo di
+> quel giro non è mai esistita** — `con-gpu` ha provato HEVC, VP9 e H.264 e **non AV1**. L'ipotesi
+> «il fotogramma vive sulla GPU e i `drawImage` pagano il trasferimento» era scritta qui dentro
+> **come `[?]` da misurare**, ed era giusta: nessuno l'ha misurata per un giorno, e nel frattempo la
+> riga è stata copiata in nove documenti **come se fosse `[M]`**.
+>
+> ⇒ ⭐ **La lezione, e non è sul codec**: un tratto di una scomposizione porta **due** cose — un
+> numero e un nome. Il numero l'avevamo misurato; il nome l'avevamo **dedotto**, e nessuna marca
+> distingueva le due metà della stessa riga.
+
+---
+
+
 > ## ⭐⭐⭐ IL MURO È CADUTO — 14 agosto, colpo secco alle 20:53
 >
 > *Il rapporto qui sotto è stato scritto alle 22:19 del 13, e la seconda metà della cura alle sonde
@@ -226,9 +258,9 @@ tre cose, non con una:
 **L'architettura è assolta.**
 
 ⇒ ⛔ **Ma `C → D` resta +6,3 ms**: HEVC in hardware è ancora **peggio** di AV1 in software, e la
-ragione è **una sola riga della tabella**: il disegno, **9,07 → 28,00**.
+ragione è **una sola riga della tabella**: il disegno, **9,07 → 28,00**. ⚠ ⛔ **ETICHETTA CORRETTA il 14 agosto 2026** — non è il disegno (2,25 ms `[M]`), è **l'attesa del fotogramma dalla GPU**: vedi il riquadro in testa a questo documento.
 
-> ### ⛔⛔⛔ **Il collo di bottiglia della fase 3 è il DISEGNO — 28,0 ms su 78,1, il 36 %**
+> ### ⛔⛔⛔ **Il collo di bottiglia della fase 3 è il DISEGNO — 28,0 ms su 78,1, il 36 %** ⚠ ⛔ **ETICHETTA CORRETTA il 14 agosto 2026** — non è il disegno (2,25 ms `[M]`), è **l'attesa del fotogramma dalla GPU**: vedi il riquadro in testa a questo documento.
 >
 > La codifica hardware ha fatto il suo lavoro e ha ceduto 31 ms. ⛔ Ma il codec che la rende
 > possibile ne aggiunge **19 sul disegno**, e l'hardware ne recupera **uno solo** (28,99 → 28,00).
@@ -426,7 +458,7 @@ numero con il proprio metro rosso si consegna con la riserva scritta accanto**, 
 | **A** HEVC software | 108,778 | ⛔ 61,766 | 29,250 | 14,53 |
 | **B** HEVC **hardware** | **75,230** | ⭐ **30,373** | ⛔ **25,105** | ⭐ **30,18** |
 
-⇒ ⛔⛔ **Il collo di bottiglia si è SPOSTATO: adesso è il DISEGNO.** La codifica hardware ha tolto
+⇒ ⛔⛔ **Il collo di bottiglia si è SPOSTATO: adesso è il DISEGNO.** La codifica hardware ha tolto ⚠ ⛔ **ETICHETTA CORRETTA il 14 agosto 2026** — non è il disegno (2,25 ms `[M]`), è **l'attesa del fotogramma dalla GPU**: vedi il riquadro in testa a questo documento.
 31 ms, ma il passaggio a HEVC ne ha aggiunti **16 sul disegno** (9,1 → 25,1) ⇒ il guadagno netto
 contro la configurazione di partenza è **−2,8 ms soltanto** (72,40 → 75,23: in realtà **+2,8**,
 cioè B è ancora **peggio** di C).
@@ -811,7 +843,7 @@ che ha sporcato i 74,58 del 13 agosto **non c'è**.
 
 | # | dove | che cosa |
 |---|---|---|
-| **0** | ⛔⛔⛔ **IL DISEGNO** — `src/pagina.html`, i due `drawImage` | ⭐ **il nuovo collo di bottiglia, e vale più di ogni altra cura rimasta**: **25,1 ms su 75,2** (il 33 %). Passando da AV1 a HEVC il disegno è salito da 9,1 a 29,2, e l'hardware ne ha recuperati solo 4. ⚠ L'ipotesi (il fotogramma decodificato in hardware vive sulla GPU e i `drawImage` pagano il trasferimento) è **una lettura, non una misura**: va misurata |
+| **0** | ⛔⛔⛔ **IL DISEGNO** — `src/pagina.html`, i due `drawImage` ⚠ ⛔ **CORRETTO il 14 ago 2026: non è il disegno — vedi il riquadro in testa** | ⭐ **il nuovo collo di bottiglia, e vale più di ogni altra cura rimasta**: **25,1 ms su 75,2** (il 33 %). Passando da AV1 a HEVC il disegno è salito da 9,1 a 29,2, e l'hardware ne ha recuperati solo 4. ⚠ L'ipotesi (il fotogramma decodificato in hardware vive sulla GPU e i `drawImage` pagano il trasferimento) è **una lettura, non una misura**: va misurata |
 | ~~**1**~~ | ✅ `src/pagina.html`, le sonde | **CHIUSA**: con la pagina `b41e4f16` la sessione negozia HEVC, concede 1920×1080 e consegna fotogrammi |
 | **2** | ⛔⛔ `/srv/src/03-B-src/` | l'albero della corsia B porta la **pagina vecchia** (`ec169e5d`). Chi lo accendesse così misurerebbe l'hardware **con la pagina che negozia AV1** — cioè col codificatore hardware **spento** — e concluderebbe che non serve a niente |
 | **3** | ⚠ `banchi/03-solo.py` | tre falsi rossi, tutti della stessa famiglia: (a) `ps pcpu` è la **media dalla nascita**, non il carico di adesso — `[M]` un processo al «50 %» stava allo 0,0 % su 4 s; (b) `--json` **non accetta le porte proprie**, quindi sul server ogni banco è estraneo a sé stesso; (c) e nemmeno i **pid propri** dell'altra macchina. ⇒ Le curo io **nel banco**, ma la cura giusta sta nell'arbitro |
@@ -824,7 +856,7 @@ che ha sporcato i 74,58 del 13 agosto **non c'è**.
 
 | # | | perché in quest'ordine |
 |---|---|---|
-| **1** | ⛔⛔⛔ **il DISEGNO**: perché `drawImage` costa **28,0 ms** con HEVC e **9,1** con AV1 | è **il 36 % del numero** e nessuno lo stava guardando. ⚠ Vale più di tutto il resto messo insieme: la codifica in hardware ne costa ormai **5** |
+| **1** | ⛔⛔⛔ **il DISEGNO**: perché `drawImage` costa **28,0 ms** con HEVC e **9,1** con AV1 ⚠ ⛔ **CORRETTO il 14 ago 2026: non è il disegno — vedi il riquadro in testa** | è **il 36 % del numero** e nessuno lo stava guardando. ⚠ Vale più di tutto il resto messo insieme: la codifica in hardware ne costa ormai **5** |
 | **1-bis** | ⚠ **due cure del BANCO, piccole e già identificate** | (a) `regime()` deve buttare **il transitorio della sessione**, non solo quello di ogni fetta — stanotte l'ho aggirato dichiarando il taglio; (b) `misura()` deve **depositare la riga anche se la stampa esplode**, o un'eccezione costa il verbale di registro **uscendo con lo stesso codice di un rosso legittimo** |
 | **2** | ⛔ **il giro a CINQUE punti sull'albero del DEPOSITO** — `--ritardi 0,5,10,25,60` | ⭐ è **il prossimo giro**, e vale doppio: misura **la configurazione che l'utente giudica**, non una sua parente. Decide fra *«errore proporzionale del 14 %»* e *«ginocchio»*, con le previsioni **scritte prima** |
 | **3** | ⚠ il resto del tratto 2 | in B vale **30,4 ms** di cui la codifica confessata è **~5** ⇒ ci sono **~25 ms** fra cattura e primo byte che **non sono codifica**, e non sono mai stati scomposti |
@@ -1006,7 +1038,7 @@ stanotte non c'è più, e **un banco curato che nessuno ha visto arrossire non �
 | ⭐ ~~**il numero con la codifica in hardware**~~ | ✅ **MISURATO la notte del 14: 75,23 ms**, ⛔ con P1 rosso dichiarato accanto |
 | ⛔ **quanto vale davvero il 75,23** | ⚠ `[?]` **la larghezza dell'errore**: il metro, su questo giro, non è tarato. ⭐ **Ma il surplus è localizzato** (tutto nel tratto 2, zero nel 3) e il ritmo non cala ⇒ resta `[?]` **la causa**, non più *dove*. Il giro a cinque punti la decide |
 | ⛔ **il ponte è colpevole o innocente?** | ⚠ `[?]`, e il mio scagionamento era **nullo** (letto a ritardo zero). ⭐ Adesso il banco legge il ponte **mentre ritarda**: la risposta esce dal prossimo giro **senza lavoro in più** |
-| ⛔⛔ **perché il DISEGNO costa 28 ms con HEVC e 9 con AV1** | `[?]`, ed è **il primo lavoro che resta**: **28,0 su 78,1 = il 36 %**, contro i **5 ms** che ormai costa la codifica |
+| ⛔⛔ **perché il DISEGNO costa 28 ms con HEVC e 9 con AV1** ⚠ ⛔ **CORRETTO il 14 ago 2026: non è il disegno — vedi il riquadro in testa** | `[?]`, ed è **il primo lavoro che resta**: **28,0 su 78,1 = il 36 %**, contro i **5 ms** che ormai costa la codifica |
 | ⛔ **perché la copia di B ha P1 rosso e il deposito no** | `[?]`: sullo stesso hardware e con la stessa pagina, la copia sbaglia di +6,98 e +12,11 **anche a regime**, il deposito sta entro ±3. ⚠ Qualcosa è cambiato nel travaso, e **non sappiamo che cosa** |
 | ⚠ **il transitorio d'avvio** | `[?]` **da dove venga**: mezzo giro a 130-165 ms prima di assestarsi a 78. ⛔ E il banco **non lo butta**: `regime()` scarta l'assestamento di ogni *fetta*, non quello della *sessione* |
 | ⛔⛔ **i 74,58 / 74,576 del 13 agosto** | ⚠ vanno riletti con la riserva del palco: **presi sul desktop dell'utente**, con la sua contesa dentro. ⭐ Il valore di oggi (**72,40**) è preso **sullo stesso palco** ⇒ i due si confrontano fra loro, ⛔ ma nessuno dei due è «l'anello su un palco pulito» |
@@ -1014,4 +1046,4 @@ stanotte non c'è più, e **un banco curato che nessuno ha visto arrossire non �
 | ⚠ **il tratto 6 (il disegno)** | i **9,105 ms** sono un **minimo**: due terzi del disegno sono **rimandati**, e finiscono nel pezzo cieco |
 | ⚠ **P5** | ⭐ non è più `[?]`: è `[M]` che il fenomeno **non si presenta** — 0 visti **e** 0 dichiarati dal prodotto. Resta `[?]` che cosa farebbe l'anello su una rete che riordinasse davvero |
 | ⚠ **E4 — quanto vale il tratto della codifica in hardware** | ⭐ **misurato la notte del 14** — vedi la tabella `A → B` |
-| ⛔ **`[?]` perché il DISEGNO triplichi con HEVC** | 9,11 → **29,25 ms** passando da AV1 a HEVC in software. L'ipotesi (il fotogramma decodificato in hardware vive sulla GPU e i `drawImage` pagano il trasferimento) è **una lettura, non una misura**. ⭐ È il primo posto dove guardare dopo la codifica: **20 ms sono più di quanto valga qualunque altra cura rimasta** |
+| ⛔ **`[?]` perché il DISEGNO triplichi con HEVC** ⚠ ⛔ **CORRETTO il 14 ago 2026: non è il disegno — vedi il riquadro in testa** | 9,11 → **29,25 ms** passando da AV1 a HEVC in software. L'ipotesi (il fotogramma decodificato in hardware vive sulla GPU e i `drawImage` pagano il trasferimento) è **una lettura, non una misura**. ⭐ È il primo posto dove guardare dopo la codifica: **20 ms sono più di quanto valga qualunque altra cura rimasta** |
