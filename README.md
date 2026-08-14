@@ -348,7 +348,55 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026.** ⇒ **LA FASE 3 È CHIUSA. E ADESSO SI FA VEDERE IL DESKTOP VERO**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, mattina.** ⇒ **LA FASE 3 È CHIUSA. LA 4 COMINCIA IN UNA SESSIONE NUOVA**
+>
+> *⭐ Deciso dall'utente: **la fase 4 si fa in una sessione nuova**. Questo riquadro è scritto per
+> chi la aprirà, **a codice fermo e a macchina in ordine**.*
+>
+> #### ⭐⭐ La fase 3 è chiusa, e su che cosa
+>
+> > ## *«Mi sembra abbastanza fluido, non il massimo ma pur sempre fluido.»*
+> > — l'utente, 14 agosto 2026, davanti alla sessione vera
+>
+> ⭐ **E il «non il massimo» è stato MISURATO dal video che ha registrato lui**: **20,9
+> fotogrammi/s**, e la causa **non è lo scatto — è il ritmo** (i passi della barra sono bimodali sui
+> due valori attesi, solo il 7 % fuori). ⇒ **Tre misure indipendenti concordano**: banco **21,98**,
+> registro del prodotto **~21**, occhio dell'utente **20,9**.
+>
+> | | |
+> |---|---|
+> | il numero | **78,1 ms** in hardware (P1 verde, n=379) · **71,86** in software, la configurazione **giudicata** |
+> | ⭐ l'architettura | **ASSOLTA**: tolta la codifica, gli altri quattro tratti **non si muovono** |
+> | ⭐ la codifica in hardware | **nel prodotto**: la chiave da **114,5 ms a 5,1**, ritmo **raddoppiato** |
+> | ⭐ `D1` | **chiuso** a costo zero — e il difetto vero era **un altro** da quello temuto |
+> | ⛔ il tetto | **SFORA**, e sforerebbe **anche a codifica gratis** |
+>
+> #### ⛔ I TRE LAVORI CHE LA FASE 3 CONSEGNA ALLA 4 — e vengono tutt'e tre dal giudizio
+>
+> | | | dove sta scritto |
+> |---|---|---|
+> | **1** | ⭐⭐ **IL DESKTOP VERO — provato, non ancora curato.** Le due metà del prodotto si contraddicono: `sessione.c:650` crea la sessione **con** `--virtual-monitor`, `mutter.c:450` cattura con `RecordVirtual` che **ne monta un altro** ⇒ la shell resta sul primo e l'utente guarda il secondo, **vuoto**. ⛔ **La cura è in DUE posti**: togliere la bandiera **e** cambiare il controllo che rilegge l'`ExecStart`, che oggi la **pretende** | [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) |
+> | **2** | ⛔ **HEVC NON DIPINGE nel browser dell'utente**: 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ I banchi dicevano il contrario — avevano **scena sintetica** e **Chrome del banco** | `fasi/03-movimento.md` §0-ter |
+> | **3** | ⛔ **IL DISEGNO: 28,0 ms su 78,1 — il 36 %**, contro i **5 ms** della codifica | `fasi/rapporti/F3-E-anello-rimisurato.md` |
+>
+> #### ⭐ La macchina, com'è lasciata
+>
+> | | |
+> |---|---|
+> | ⭐ **utente `prova`** (uid 1001, parola `prova2026`) | **si conserva, deciso dall'utente.** Sessione GNOME viva **senza `--virtual-monitor`** ⇒ ⭐ **è l'unico modo, oggi, di vedere il desktop vero** |
+> | `nicfio` | sessione sua con monitor proprio ⇒ ⛔ **su di lui il desktop NON si vede**, ed è §5.1: una sola sessione grafica per utente |
+> | porte sul server | `7448 · 7501 · 7561` (dell'utente, mai toccate) **+ `7571`**, lasciata **accesa apposta**: albero `02-figlio-src`, **34 file su 34 identici al deposito**. Si spegne con `bash banchi/02-figlio-lancia.sh spegni` |
+> | il catalogo | **19 banchi su 25** con una certificazione che regge — ⛔ e i sei che non ce l'hanno portano **ciascuno la sua ragione scritta**, nessuno è stato comprato |
+>
+> ⚠ **E una cosa che il prossimo deve sapere prima di misurare**: i banchi browser **girano sul
+> desktop dell'utente credendo di essere su uno schermo finto** (Chrome ignora `DISPLAY` e va su
+> Wayland da `XDG_SESSION_TYPE`). ⛔ **Non forzare `--ozone-platform=x11`**: sul vero Xvfb non c'è
+> GPU, HEVC non si decodifica, e si curerebbe la scena distruggendo la misura. ⇒ **Il palco si
+> DICHIARA e si verifica dall'altro capo**, non si sposta.
+>
+> ---
+>
+> ### ⭐⭐⭐⭐ Il dettaglio della notte del 13, e i due difetti trovati dal giudizio
 >
 > > ## ⭐ *«Mi sembra abbastanza fluido, non il massimo ma pur sempre fluido.»*
 > > — l'utente, 14 agosto 2026, e **la fase 3 si chiude qui**
