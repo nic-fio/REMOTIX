@@ -575,7 +575,43 @@ qualcun altro.
 
 ## Fase 4 — Si comanda
 
-**Produce**: il canale di input, il puntatore disegnato dalla pagina, le lettere e le posizioni —
+> ### ⭐⭐⭐ IL PRIMO LAVORO DELLA FASE 4 È IL **DESKTOP VERO** — deciso dall'utente il 14 agosto 2026
+>
+> *E non è una premessa alla fase: **è dentro la fase**, in testa.*
+>
+> ⛔ **La ragione, in una riga**: la fase 4 esiste perché *«l'utente **usa** il desktop»* — ma
+> **finché il desktop non si vede, non c'è niente da comandare**. I banchi del cursore, delle
+> lettere accentate e delle scorciatoie non avrebbero **dove guardare**: si misurerebbero su uno
+> schermo vuoto.
+>
+> **Il difetto, e la cura è in DUE posti non uno:**
+>
+> | | |
+> |---|---|
+> | `src/sessione.c:650` | crea la sessione con `--headless --no-x11 **--virtual-monitor %ux%u**` ⇒ GNOME mette la shell **su quel monitor** |
+> | `src/mutter.c:450` | cattura con **`RecordVirtual`**, che **ne monta un altro** e registra quello ⇒ **l'utente guarda il secondo, vuoto** |
+> | ⛔ **e la seconda metà della cura** | `src/sessione.c:668` **rilegge l'`ExecStart` in vigore e PRETENDE `--virtual-monitor %ux%u`** ⇒ tolta la bandiera, il controllo **fallirebbe**. *Il controllo è giusto, l'atteso no* |
+>
+> ⭐ **La tesi è già PROVATA, il 14 agosto, senza toccare il prodotto**: sessione dell'utente
+> `prova` avviata **senza** `--virtual-monitor` (`GetCurrentState` → **0 monitor**, la sessione
+> *«viva, completa e nera»* di `gnome.md` §3.1); collegato il client, `RecordVirtual` monta
+> **l'unico** monitor e ⭐ **la shell ci va sopra: barra, sfondo, dock**. La prova sta in
+> [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) e nell'immagine
+> `F3-verbali/desktop-vero-14ago.png`.
+>
+> ⚠ **Due cose da MISURARE prima di crederle, e non sono dettagli:**
+> 1. ⛔ **chi decide la misura del monitor** adesso che non la dà più la sessione: la dà
+>    `RecordVirtual`, e **che cosa succede se il client ne chiede un'altra?** È `RCP.md` §4.5, la
+>    tela concessa, e da qui in poi tocca questo pezzo;
+> 2. ⚠ **`PIANO.md` (questo file, più su) e `gnome.md` §108 dicono che `--virtual-monitor` non è
+>    opzionale**. ⇒ **Vanno riscritte**: sono vere solo per una sessione che deve vivere **senza
+>    nessuno che la catturi**.
+>
+> ⚠ **E l'utente `prova` si conserva** (deciso il 14 agosto): è l'unico posto dove oggi il desktop
+> vero si vede, perché `nicfio` ha già una sessione con un monitor suo e §5.1 ne ammette **una sola
+> per utente**.
+
+**Produce**: ⭐ **il desktop vero** (qui sopra) · il canale di input, il puntatore disegnato dalla pagina, le lettere e le posizioni —
 ⭐ **e le due disposizioni della pagina**, che è il lavoro ereditato dalle fasi A3 e A4 sciolte: il
 modo classico con `Pointer Lock`, e il tocco con i sette gesti, **con il passaggio automatico sul
 contesto** e non un'impostazione da cercare (`DECISIONI.md` §5-bis.0-bis).

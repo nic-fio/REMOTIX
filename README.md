@@ -373,9 +373,15 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > #### ⛔ I TRE LAVORI CHE LA FASE 3 CONSEGNA ALLA 4 — e vengono tutt'e tre dal giudizio
 >
+> > ⭐⭐⭐ **Il n. 1 è LA PRIORITÀ DELLA FASE 4**, deciso dall'utente il 14 agosto 2026 — e **non è
+> > una premessa alla fase: è dentro la fase, in testa**.
+> > ⛔ *La fase 4 esiste perché «l'utente **usa** il desktop». Finché il desktop non si vede, **non
+> > c'è niente da comandare**: i banchi del cursore, delle lettere accentate e delle scorciatoie
+> > **non avrebbero dove guardare**.*
+>
 > | | | dove sta scritto |
 > |---|---|---|
-> | **1** | ⭐⭐ **IL DESKTOP VERO — provato, non ancora curato.** Le due metà del prodotto si contraddicono: `sessione.c:650` crea la sessione **con** `--virtual-monitor`, `mutter.c:450` cattura con `RecordVirtual` che **ne monta un altro** ⇒ la shell resta sul primo e l'utente guarda il secondo, **vuoto**. ⛔ **La cura è in DUE posti**: togliere la bandiera **e** cambiare il controllo che rilegge l'`ExecStart`, che oggi la **pretende** | [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) |
+> | ⭐ **1** | ⭐⭐ **IL DESKTOP VERO — provato, non ancora curato.** Le due metà del prodotto si contraddicono: `sessione.c:650` crea la sessione **con** `--virtual-monitor`, `mutter.c:450` cattura con `RecordVirtual` che **ne monta un altro** ⇒ la shell resta sul primo e l'utente guarda il secondo, **vuoto**. ⛔ **La cura è in DUE posti**: togliere la bandiera **e** cambiare il controllo che rilegge l'`ExecStart`, che oggi la **pretende** | [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) |
 > | **2** | ⛔ **HEVC NON DIPINGE nel browser dell'utente**: 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ I banchi dicevano il contrario — avevano **scena sintetica** e **Chrome del banco** | `fasi/03-movimento.md` §0-ter |
 > | **3** | ⛔ **IL DISEGNO: 28,0 ms su 78,1 — il 36 %**, contro i **5 ms** della codifica | `fasi/rapporti/F3-E-anello-rimisurato.md` |
 >
