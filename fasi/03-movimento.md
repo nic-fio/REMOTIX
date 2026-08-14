@@ -471,6 +471,38 @@ perché quel giorno il numero si rifà senza riscrivere niente (`DECISIONI.md` �
 ⇒ ⭐ **La fase 3 si chiude qui**, ed è la regola: *una fase si chiude su una misura giudicata
 dall'utente, non su un documento completo* (`PIANO.md` §0.3).
 
+### ⭐⭐ E il giudizio è stato MISURATO — dalla registrazione fatta dall'utente
+
+*L'utente ha registrato il proprio schermo mentre guardava (`Screencast From 2026-08-14 07-47-30.webm`,
+10,5 s, 2560×1080, VP8 a 30,3/s). ⇒ **La sua impressione si può contare invece di crederla**: si
+segue il baricentro della barra bianca fotogramma per fotogramma.*
+
+| | |
+|---|---|
+| fotogrammi della registrazione | **318**, la barra visibile in **tutti** |
+| ⛔ **fotogrammi in cui il contenuto NON è cambiato** | **97 su 312 = 31,1 %** |
+| ⇒ ⭐ **ritmo del contenuto** | **20,9 fotogrammi/s** |
+| le pause | **83 volte 33 ms · 7 volte 66 ms** — ⭐ **mai più lunghe** |
+
+⭐⭐ **E tre misure indipendenti danno lo stesso numero**: il banco dell'anello **21,98/s**, il
+registro del prodotto **~21/s**, e ora **l'occhio dell'utente, da fuori, 20,9/s**. *Nessuna delle tre
+sa delle altre.*
+
+⛔ **E la causa del «non il massimo» è stata cercata, non supposta.** L'ipotesi naturale era
+*l'irregolarità* — che la barra avanzasse a scatti. **Falsa**: la distribuzione dei passi è
+**bimodale sui due valori attesi** (~7-8 colonne = un fotogramma di attesa, ~14-15 = due), e **solo
+il 7 % dei passi** sta fuori da quei due gruppi, con **due soli** valori anomali su 215.
+
+> ⇒ ⭐ **Il «non il massimo» non è instabilità: è il RITMO.** A 21 fotogrammi al secondo su uno
+> schermo che ne mostra 30, **una volta su tre l'occhio vede lo stesso fotogramma due volte** — e
+> quello si sente, anche quando non c'è nessuno scatto.
+> ⛔ **Quindi la strada per «il massimo» non è togliere jitter: è alzare il ritmo** — e il ritmo lo
+> tiene giù il **disegno**, 28,0 ms su 78,1.
+
+⚠ **I limiti di questa misura, dichiarati**: la registrazione stessa gira a 30,3/s, quindi **non può
+vedere niente di più veloce**; e un fotogramma perso dal registratore si conterebbe come una pausa
+del prodotto. ⇒ I 20,9/s sono un **limite inferiore**, e concordano con gli altri due numeri.
+
 ### ⛔ E i tre limiti del giudizio, scritti PRIMA che lo desse e non dopo
 
 | | |
