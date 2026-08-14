@@ -320,7 +320,9 @@
    *                   `dispatchPointerEvent()` viene PRIMA di
    *                   `maybeUpdatePointerIcon()`), quindi va rimisurata. */
   body[data-puntatore="disegnata"][data-disposizione="classico"] #schermo { cursor: none; }
-  body[data-puntatore="sistema"] #puntatore { display: none !important; }
+  /* ⚠ Solo sul CLASSICO: nel modo a tocco la freccia disegnata e' l'unico
+     puntatore che esista, perche' il dito non ne ha uno da vestire. */
+  body[data-puntatore="sistema"][data-disposizione="classico"] #puntatore { display: none !important; }
   /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -1703,6 +1705,26 @@ class Schermo {
     const wl = fl * s, wa = fa * s;
     this.tela.style.width = (wl / r) + "px";
     this.tela.style.height = (wa / r) + "px";
+    /* ⛔⭐ IL RICAMPIONAMENTO — e questa riga nasce da un giudizio dell'utente
+     *    sul DeX, 14 agosto 2026: «il testo del terminale risulta di bassa
+     *    qualita'».
+     *
+     * ⛔ Ed era un difetto NOSTRO, introdotto un'ora prima: finche' le bande
+     *    stavano nel buffer, a ridurre l'immagine era `drawImage` del contesto
+     *    2D — che interpola.  Tolte le bande, a ridurre e' il CSS, e
+     *    `image-rendering: pixelated` gli ordina di prendere **il pixel piu'
+     *    vicino**: su un terminale, cioe' su tratti spessi un pixel, e' il
+     *    modo peggiore possibile.
+     *
+     * ⇒ `pixelated` **solo quando la scala e' esattamente 1**, dove e' quel che
+     *   si vuole (nessun ricampionamento, nessuna sfocatura aggiunta da
+     *   nessuno).  Fuori da li' si lascia decidere al motore, che interpola.
+     *
+     * ⚠ E questo e' un RIPIEGO, non la cura: la cura e' che la scala VALGA 1,
+     *   cioe' che le due tele combacino (`DECISIONI.md` §5.0-sexies).  Finche'
+     *   manca `figli_ritela()` la scala resta diversa da 1 e il testo resta
+     *   interpolato — meglio di «a pixel vicino», peggio del vero. */
+    this.tela.style.imageRendering = (s === 1) ? "pixelated" : "auto";
     return { scala: s, larghezza: wl, altezza: wa };
   }
 
@@ -3853,8 +3875,22 @@ let cl_px = 0, cl_py = 0, cl_noto = false;
  *    freccia di sistema fino al prossimo `CURSORE_FORMA` — cioe' un banco che
  *    misura una condizione che non e' quella dichiarata. */
 let cl_veste = null;
-/* Il modo in vigore: `due` (il prodotto di oggi) · `sistema` · `disegnata`. */
-let cl_modo = "due";
+/* Il modo in vigore: `due` · `sistema` · `disegnata`.
+ *
+ * ⭐⭐ E il valore per difetto e' `sistema` dal 14 agosto 2026 a sera, su
+ *     giudizio dell'utente sul DeX: «continua a comparire il secondo
+ *     puntatore».
+ *
+ * ⛔ Quel secondo puntatore e' LA NOSTRA FRECCIA, e il motivo per cui sembra
+ *    «quella del server» e' che si comporta come tale: segue `cl_px`, che su
+ *    Chrome per Android **si aggiorna solo al clic** (noVNC #1727, i movimenti a
+ *    pulsanti alzati non arrivano) ⇒ resta piantata dove si e' cliccato
+ *    l'ultima volta, mentre il cursore di sistema si muove con la mano.
+ *
+ * ⇒ Sul classico se ne tiene UNO: quello di sistema, vestito con la forma
+ *   remota.  ⚠ Sul TOCCO la freccia disegnata **resta e deve restare**: il dito
+ *   non ha un cursore da vestire (`xpra.md` §2). */
+let cl_modo = "sistema";
 let cl_ux = -1, cl_uy = -1;       /* l'ultimo intero SPEDITO */
 
 /* ⛔⭐ LA SATURAZIONE, ED E' LA RIGA CHE NON DEVE SBAGLIARE.
