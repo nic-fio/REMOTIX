@@ -477,6 +477,40 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
  *   servito (vedi il registro di `rcp_ricevi`).  Questa funzione esiste
  *   perche' il giorno in cui lo sara', la regola di §6.2 stia **in un posto
  *   solo** — qui — invece di essere ricopiata accanto a chi manda il `TELA`. */
+/* ⛔⭐⭐ LA MISURA AMMESSA PER LA TELA — §7.1, e sta QUI perche' a doverla
+ *      applicare e' chi legge `ADATTA_TELA` dal filo.
+ *
+ * ⛔⛔ IL TETTO NON LO METTE NESSUN ALTRO, e sopra il tetto non c'e' un errore:
+ *     c'e' una **morte silenziosa**.  `[M]` 14 agosto 2026, misurato sui
+ *     compositori veri:
+ *
+ *       · oltre **16384** per lato `gnome-shell` MUORE («Failed to create
+ *         texture 2d») — e 16386 e' DENTRO il `MAX_SIZE` che Mutter
+ *         **dichiara**, cioe' il limite dichiarato mente;
+ *       · su labwc `32768x32768` uccide il compositore con **zero righe di
+ *         registro**, anche in modo prolisso.
+ *
+ * ⇒ Con la tela a misura fissa nessun client poteva arrivarci.  Da
+ *   `DECISIONI.md` §5.0-sexies la misura la CHIEDE il client ⇒ un client
+ *   qualunque potrebbe spegnere la sessione di chi lo ospita, e la guardia
+ *   diventa obbligatoria.
+ *
+ * ⚠ Il tetto e' 8192, molto sotto ai due punti di rottura: `[S]` e' il massimo
+ *   che MS-RDPEDISP ammette da vent'anni, quindi non e' un numero inventato da
+ *   noi, e nessuno schermo vero lo sfiora.
+ * ⛔ E la PARITA' e' NOSTRA, non dei compositori: `[M]` labwc concede anche le
+ *   misure dispari, ed e' il nostro 4:2:0 a rifiutarle
+ *   (`src/codificatore.c:1373`).  Si tronca in GIU' e si DICE, con `TELA` che
+ *   riporta la misura vera.
+ *
+ * `fuori_l`/`fuori_a` ricevono la misura ammessa piu' vicina (troncata al pari).
+ * Ritorna `false` se la richiesta e' fuori dai limiti: allora si risponde
+ * `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` e **non** si aggiusta in silenzio. */
+#define RCP_TELA_MINIMA 200u
+#define RCP_TELA_MASSIMA 8192u
+bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
+                        uint32_t *fuori_a);
+
 void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt);
 
 /* Per il registro, per il banco e per chi cattura.  ⛔ `false` quando la tela

@@ -187,8 +187,21 @@
   /* ⚠ `flex: none`: in una colonna flessibile l'altezza esplicita di un figlio
      e' comprimibile, e la tela e' alta quanto la finestra — cioe' proprio il
      candidato che il flex vorrebbe stringere. */
+  /* ⛔⭐ `margin: 0 auto` — ed e' la riga che sposta le bande FUORI dal buffer.
+   *
+   *    Il buffer della tela vale adesso esattamente il fotogramma
+   *    (`componi()`), quindi quando la finestra e' piu' larga dell'immagine
+   *    avanza dello spazio.  ⇒ Quello spazio lo riempie il GENITORE col suo
+   *    nero, e la tela ci sta in mezzo.  ⭐ Cosi'
+   *    `getBoundingClientRect().left` contiene gia' lo scostamento, e la
+   *    conversione del puntatore non deve sottrarre niente: e' esattamente
+   *    quel che fa noVNC (`core/rfb.js:228`, `margin: auto`) e il motivo per
+   *    cui nessuno dei sei progetti studiati ha piu' di uno stadio.
+   * ⚠ `background: #000` sta gia' su `#schermo` (riga sopra) e serve ancora,
+   *   per il primo istante prima che arrivi un fotogramma. */
   body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
-                                         margin: 0; }
+                                         margin: 0 auto; }
+  body[data-schermo="acceso"] main { background: #000; }
 
   /* ⛔⭐ IL PUNTATORE LO DISEGNA LA PAGINA — `SPECIFICHE.md` §7.1, ancora
      `F4-INPUT-CLASSICO`.  «Il puntatore e' disegnato sopra il video, quello del
@@ -251,11 +264,32 @@
    *      nelle quattro sessioni precedenti.  Una variabile sola cambiata, e il
    *      puntatore si e' fermato nell'angolo dell'immagine.
    *
-   *      ⇒ Su Chrome per Android il cursore che si muove e' quello di ANDROID:
-   *      nasconderlo con `cursor: none` gli toglie anche gli eventi di
-   *      passaggio, e alla pagina non arriva piu' un movimento.  ⚠ `[?]` il
-   *      meccanismo esatto non e' letto in nessuna fonte: e' una correlazione a
-   *      una variabile sola, forte ma non spiegata, e sta dichiarata cosi'.
+   *      ⇒ Se ne era dedotto: «su Chrome per Android nasconderlo con `cursor:
+   *      none` gli toglie anche gli eventi di passaggio».  ⚠ Era una `[?]`, e
+   *      stava dichiarata cosi'.
+   *
+   * ⛔⭐⭐ RITIRATA IL 14 AGOSTO 2026 A SERA — era una COINCIDENZA, e la misura
+   *      era vera senza che la spiegazione lo fosse.
+   *
+   *      `[R]` `git show 0075b4f:src/pagina.html`: la versione in vigore alle
+   *      15:09 registrava **`mousemove` e basta** — `pointermove` compariva solo
+   *      dentro un commento.  E su Samsung e' documentato da QUATTRO progetti
+   *      indipendenti (noVNC #1727, KasmVNC #222, Kasm workspaces #20,
+   *      moonlight-android #573) che Chrome consegna i `mousemove` **solo al
+   *      clic**.  ⇒ «4 clic e ZERO movimenti» e' la definizione letterale di
+   *      QUEL difetto, non di questo.
+   *
+   *      `[R]` E il meccanismo ipotizzato non esiste comunque: in Android
+   *      `ViewRootImpl.java` chiama `mView.dispatchPointerEvent(event)` **prima**
+   *      di `maybeUpdatePointerIcon(event)` — l'icona del puntatore e' un
+   *      EFFETTO del movimento, non una sua condizione.  E noVNC mette `cursor:
+   *      none` su OGNI dispositivo tattile (`core/util/cursor.js`) senza essere
+   *      rotto.
+   *
+   * ⚠ La riga qui sotto RESTA com'era, e non per inerzia: `due` e' il termine di
+   *   paragone dell'interruttore A/B, e un banco non deve cambiare il prodotto
+   *   solo esistendo.  A spegnere il cursore del browser e' adesso il modo
+   *   `disegnata`, che si accende a mano e si misura.
    *
    * ⇒ Il cursore del browser resta VISIBILE, e la freccia la disegniamo lo
    *   stesso.  ⚠ Se ne vedono due sovrapposti — brutto, e §7.1 lo chiama un
@@ -264,6 +298,29 @@
    *   client.  Fra due puntatori e nessuno, due. */
   body[data-disposizione="classico"][data-agganciato="si"] #schermo { cursor: none; }
   body[data-disposizione="tocco"] #schermo { cursor: none; }
+  /* ⭐⭐ L'INTERRUTTORE A/B DEL PUNTATORE — tre condizioni, UNA variabile,
+   *     commutabili A CALDO dentro la stessa sessione.
+   *
+   * ⛔ E' la cosa che ci e' mancata il 14 agosto 2026: per provare `cursor: none`
+   *    bisognava ricompilare, riavviare e rifare l'accesso, quindi fra una
+   *    condizione e l'altra cambiavano anche la sessione, la scena e il ritmo dei
+   *    fotogrammi.  ⇒ Con tre variabili in movimento la correlazione trovata era
+   *    una coincidenza (era `pointermove` che mancava), e ci sono voluti cinque
+   *    studi per scoprirlo.
+   *
+   *   · `due`       — quel che il prodotto fa oggi: il cursore di sistema E la
+   *                   freccia disegnata, sovrapposti.  ⛔ E' il DIFETTO, ed e' il
+   *                   termine di paragone: resta il valore per difetto perche'
+   *                   un banco non deve cambiare il prodotto solo esistendo.
+   *   · `sistema`   — la cura A: UN puntatore solo, quello di Android, che
+   *                   INDOSSA la forma remota.  La freccia disegnata sparisce.
+   *   · `disegnata` — solo la nostra freccia, cursore del browser nascosto.
+   *                   ⚠ E' la condizione che il 14 agosto sembrava impossibile:
+   *                   `[R]` il meccanismo ipotizzato non esiste (in Android
+   *                   `dispatchPointerEvent()` viene PRIMA di
+   *                   `maybeUpdatePointerIcon()`), quindi va rimisurata. */
+  body[data-puntatore="disegnata"][data-disposizione="classico"] #schermo { cursor: none; }
+  body[data-puntatore="sistema"] #puntatore { display: none !important; }
   /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -415,6 +472,9 @@ class Lettore {
   constructor(d) { this.v = new DataView(d.buffer, d.byteOffset, d.byteLength); this.o = 0; }
   u8()  { return this.v.getUint8(this.o++); }
   u16() { const x = this.v.getUint16(this.o); this.o += 2; return x; }
+  /* ⚠ Con segno, e serve davvero: il punto attivo di `CURSORE_FORMA` (§7.2) e'
+     un `i16`, e letto come `u16` un punto negativo diventa 65.000 pixel. */
+  i16() { const x = this.v.getInt16(this.o); this.o += 2; return x; }
   u32() { const x = this.v.getUint32(this.o); this.o += 4; return x; }
   str() { const n = this.u16(); const d = new Uint8Array(this.v.buffer, this.v.byteOffset + this.o, n); this.o += n; return new TextDecoder().decode(d); }
   resta() { return this.v.byteLength - this.o; }
@@ -1262,6 +1322,70 @@ const PRIMA = {
   },
 };
 
+/* ⛔⭐⭐ L'ETA' DELL'IMMAGINE NELL'ISTANTE IN CUI LA MANO SI MUOVE — e questo
+ *      numero smaschera un buco nel nostro.
+ *
+ * ⛔ «1,1 fotogrammi al secondo» (`[M]` 14 agosto 2026) e' una MEDIA su due
+ *    minuti, e una media non e' un'esperienza.  Quando il puntatore passa sopra
+ *    un pulsante GNOME lo illumina ⇒ i pixel cambiano ⇒ un fotogramma ARRIVA.
+ *    ⇒ Quella media puo' voler dire soltanto «per due minuti la mano si e' mossa
+ *    quasi sempre sopra lo sfondo», che e' una cosa diversa da «durante l'uso il
+ *    desktop e' congelato».  ⛔ Il nostro numero NON distingue i due mondi.
+ *
+ * ⇒ `eta` li distingue: `now - ultimo_fotogramma` campionato **a ogni
+ *   movimento**.  Se durante il movimento vale spesso piu' di 500 ms, la teoria
+ *   del riscontro visivo congelato ha la sua prova diretta; se vale poche
+ *   decine, quella teoria cade e il difetto e' nel puntatore.
+ *
+ * ⭐ E `forma_ms` chiude l'altra meta': quanto passa fra un movimento e il
+ *   `CURSORE_FORMA` che ne consegue.  ⚠ Se la forma cambiasse solo DOPO
+ *   l'arrivo di un fotogramma, avremmo una dipendenza dal video che non
+ *   dovrebbe esistere — la forma viaggia sul canale di controllo, non col
+ *   fotogramma.
+ *
+ * ⚠ Suggerite da una revisione esterna del 14 agosto 2026 (`problema.md`), che
+ *   ha centrato quel che ci mancava: separare **posizione**, **forma** e
+ *   **immagine**, che finora giudicavamo insieme. */
+const SCENA = {
+  ultimo: null,          /* `performance.now()` dell'ultimo fotogramma composto */
+  fotogrammi: 0,
+  eta: [],               /* eta' dell'immagine, campionata A OGNI MOVIMENTO */
+  atteso: null,          /* il movimento che sta aspettando un cambio di forma */
+  forma_ms: [],          /* movimento → `CURSORE_FORMA` */
+  forme: 0,
+  dipinto() { this.ultimo = performance.now(); this.fotogrammi++; },
+  movimento() {
+    if (this.ultimo === null) return;    /* prima del primo fotogramma non e' una misura */
+    const d = performance.now() - this.ultimo;
+    if (!(d >= 0) || d > 60000) return;
+    this.eta.push(d);
+    if (this.eta.length > 400) this.eta.shift();
+    /* ⚠ Solo il PRIMO movimento di una raffica apre l'attesa: rinnovarla a ogni
+       movimento misurerebbe sempre l'ultimo, cioe' quasi zero. */
+    if (this.atteso === null) this.atteso = performance.now();
+  },
+  forma_arrivata() {
+    this.forme++;
+    if (this.atteso === null) return;
+    const d = performance.now() - this.atteso;
+    this.atteso = null;
+    if (!(d >= 0) || d > 60000) return;
+    this.forma_ms.push(d);
+    if (this.forma_ms.length > 200) this.forma_ms.shift();
+  },
+  mediana(a) {
+    if (!a.length) return null;
+    const b = a.slice().sort((x, y) => x - y);
+    return b[Math.floor(b.length / 2)];
+  },
+  peggiore(a) { return a.length ? Math.max.apply(null, a) : null; },
+  /* ⭐ La quota che decide: quanti campioni stanno sopra mezzo secondo. */
+  vecchi(a, soglia) {
+    if (!a.length) return null;
+    return Math.round(100 * a.filter((x) => x > soglia).length / a.length);
+  },
+};
+
 const GIRO = {
   quando: new Map(),
   campioni: [],          /* gli ultimi ritardi, in ms */
@@ -1545,23 +1669,61 @@ class Schermo {
    *   accanto all'altra, divise per `devicePixelRatio` — che e' esattamente il
    *   fattore fra le due unita'.  Cosi' un pixel del buffer e' un pixel del
    *   vetro, e `image-rendering` non ha piu' niente da decidere. */
+  /* ⛔⭐⭐ LA CORNICE — e da qui in poi il BUFFER NON CONTIENE PIU' LE BANDE.
+   *
+   * ⛔ Fino al 14 agosto 2026 il buffer della tela era grande quanto la VISTA, e
+   *    `componi()` ci dipingeva dentro l'immagine centrata **piu' il nero
+   *    intorno**.  ⇒ Il nero era pixel veri, dentro il buffer, e la conversione
+   *    delle coordinate doveva sottrarlo: e' `bx0`, il nostro **secondo stadio**
+   *    su tre.  `[R]` Nessuno dei sei progetti studiati ne ha piu' di uno
+   *    (`F4-AND-4`), e la ragione e' esattamente questa: **loro le bande non le
+   *    mettono nel buffer.**
+   *
+   * ⇒ Adesso il buffer vale ESATTAMENTE il fotogramma (lo fa `componi()`), e
+   *   qui si decide solo **quanto e' grande sul vetro**.  Il nero che avanza e'
+   *   lo sfondo del genitore, non pixel nostri: non si dipinge, non si codifica,
+   *   non si sottrae.  ⭐ E `getBoundingClientRect()` porta gia' dentro lo
+   *   scostamento, cioe' il browser calcola per noi quel che `bx0` calcolava a
+   *   mano (noVNC `core/rfb.js:222-228`, Guacamole `display.css:47-57`).
+   *
+   * ⚠ Il conto si fa in pixel del DISPOSITIVO e si divide per il fattore solo
+   *   alla fine: cosi' un pixel del fotogramma resta un pixel del vetro quando
+   *   le misure coincidono — la proprieta' che la riga di prima otteneva, e che
+   *   non va persa nel cambio. */
+  cornice() {
+    const fl = this.deposito ? this.deposito.width : 0;
+    const fa = this.deposito ? this.deposito.height : 0;
+    const r = devicePixelRatio || 1;
+
+    if (!fl || !fa || !this.vista_l || !this.vista_a) return null;
+    /* «contain»: il piu' grande che ci sta, mai piu' di 1:1 — ingrandire un
+       fotogramma sarebbe sfocarlo per riempire il vetro, e non lo chiede
+       nessuno (`SPECIFICHE.md` §6.1). */
+    const s = Math.min(this.vista_l / fl, this.vista_a / fa, 1);
+    const wl = fl * s, wa = fa * s;
+    this.tela.style.width = (wl / r) + "px";
+    this.tela.style.height = (wa / r) + "px";
+    return { scala: s, larghezza: wl, altezza: wa };
+  }
+
   vista(l, a) {
     if (this.vista_l === l && this.vista_a === a) return false;
     const prima = this.vista_l ? this.vista_l + "×" + this.vista_a : "nessuna";
     this.vista_l = l; this.vista_a = a;
     this.conti.viste++;
-    /* ⚠ Questo svuota la tela — sempre, anche se il numero non cambiasse.
-       Per questo subito sotto si ricompone dal deposito. */
-    this.tela.width = l; this.tela.height = a;
     const r = devicePixelRatio || 1;
-    this.tela.style.width = (l / r) + "px";
-    this.tela.style.height = (a / r) + "px";
-    this.pennello.fillStyle = "#000";
-    this.pennello.fillRect(0, 0, l, a);
+    /* ⛔ Il buffer NON si tocca piu' qui: e' del fotogramma, e a dimensionarlo e'
+     *    `componi()`.  ⚠ Toccarlo lo svuoterebbe, ed e' il motivo per cui la
+     *    riga di prima doveva ridipingere subito. */
+    const c = this.cornice();
     this.riga("vista " + prima + " → " + l + "×" + a + " pixel fisici ("
               + Math.round(l / r) + "×" + Math.round(a / r) + " CSS, fattore "
               + r + "): la TELA resta " + this.tela_l + "×" + this.tela_a
-              + " — §7.1, qui si riscala e non si cambia la tela");
+              + (c ? " — cornice " + Math.round(c.larghezza) + "×"
+                     + Math.round(c.altezza) + " a scala "
+                     + (Math.round(c.scala * 1000) / 1000)
+                     + ", bande FUORI dal buffer"
+                   : " — nessun fotogramma ancora: cornice non calcolabile"));
     this.componi();
     return true;
   }
@@ -1624,28 +1786,37 @@ class Schermo {
    *    vedere, perche' su una finestra piccola sembrerebbe giusto. */
   componi() {
     if (!this.deposito) return false;
-    const cl = this.tela.width, ca = this.tela.height;
     const fl = this.deposito.width, fa = this.deposito.height;
-    if (!cl || !ca || !fl || !fa) return false;
-    const s = Math.min(cl / fl, ca / fa);
-    const dl = Math.max(1, Math.round(fl * s)), da = Math.max(1, Math.round(fa * s));
-    const dx = Math.floor((cl - dl) / 2), dy = Math.floor((ca - da) / 2);
+    if (!fl || !fa) return false;
+    /* ⛔⭐ IL BUFFER VALE ESATTAMENTE IL FOTOGRAMMA — nessuna scala, nessuna
+     *    banda, nessun centraggio dentro i pixel.  E' la mossa 1 di `F4-AND-4`
+     *    §«che cosa consiglio a noi», e da sola toglie DUE dei tre stadi della
+     *    conversione: `bx0` (che diventa 0 per costruzione) e la scala
+     *    buffer→immagine (che diventa 1).
+     * ⚠ Assegnare `width`/`height` svuota la tela, quindi si fa **solo** quando
+     *   la misura cambia davvero: farlo a ogni fotogramma sarebbe un
+     *   azzeramento sessanta volte al secondo. */
+    if (this.tela.width !== fl || this.tela.height !== fa) {
+      this.tela.width = fl; this.tela.height = fa;
+      this.cornice();
+    }
     try {
-      /* Le bande: si ridipingono a ogni giro, o quella di prima resterebbe
-         accesa sotto un'immagine diventata piu' grande. */
-      if (dl !== cl || da !== ca) {
-        this.pennello.fillStyle = "#000";
-        this.pennello.fillRect(0, 0, cl, ca);
-      }
-      this.pennello.drawImage(this.deposito, dx, dy, dl, da);
+      this.pennello.drawImage(this.deposito, 0, 0);
     } catch (e) {
       this.errori.push("drawImage: " + e);
       this.riga("⛔ drawImage ha lanciato: " + e);
       return false;
     }
     this.conti.ricomposizioni++;
-    this.dipinta = { l: dl, a: da, x: dx, y: dy, vista: [cl, ca],
-                     fotogramma: [fl, fa], scala: Math.round(s * 1000) / 1000 };
+    /* ⚠ `dipinta` resta, con la stessa forma di prima: la legge `cl_geometria()`
+     *   per convertire il puntatore.  ⭐ E adesso `x`/`y` valgono **0** e
+     *   `l`/`a` valgono il fotogramma ⇒ quella funzione, senza che una sua riga
+     *   cambi, calcola `bx0 = 0` e `sx = 1`: **la conversione collassa a uno
+     *   stadio da sola**.  E' voluto: una formula che si semplifica da se' non
+     *   puo' divergere da quella che disegna. */
+    this.dipinta = { l: fl, a: fa, x: 0, y: 0,
+                     vista: [this.tela.width, this.tela.height],
+                     fotogramma: [fl, fa], scala: 1 };
     document.body.dataset.schermo = "acceso";
     return true;
   }
@@ -2111,6 +2282,12 @@ class Schermo {
       return;
     }
     try { f.close(); } catch (e) { /* gia' chiuso */ }
+    /* ⭐ QUI l'immagine e' nuova davvero, ed e' l'unico punto dove lo e'.  ⛔ Non
+       in `componi()`: quella gira anche al ridimensionamento della finestra,
+       ricomponendo lo STESSO deposito — segnarla li' farebbe ringiovanire
+       un'immagine vecchia ogni volta che l'utente tocca la finestra, cioe'
+       falsificherebbe proprio la misura per cui `SCENA` esiste. */
+    SCENA.dipinto();
     /* ⚠ La vista si misura QUI SOLO SE non c'e' ancora — cioe' quasi mai, e mai
        due volte.  ⛔ Misurarla a ogni fotogramma sarebbe leggere `clientWidth`
        dentro il richiamo del decodificatore: una riorganizzazione del foglio
@@ -2981,11 +3158,40 @@ async function ascolta_controllo(canale, congeda) {
       continue;
     }
     if (m.tipo === TIPO.CURSORE_FORMA) {
-      /* ⚠ Conosciuto e non ancora usato: alla fase 2 non c'e' puntatore.  Si
-         DICE — un messaggio saltato in silenzio e uno mai arrivato hanno lo
-         stesso aspetto (§5.5 e' della fase 4). */
-      nota("CURSORE_FORMA ricevuto e non usato: la fase 2 non disegna il "
-         + "puntatore");
+      /* ⛔⭐⭐ FINO AL 14 AGOSTO 2026 QUESTO MESSAGGIO SI BUTTAVA — con un
+       *      `nota()` onesto che diceva «ricevuto e non usato».  ⚠ Nel frattempo
+       *      la decisione ✅ di `xpra.md` §2 («il cursore del browser veste la
+       *      forma remota») era stata presa, e `forma()` era stata SCRITTA: fra
+       *      la decisione e il codice mancava solo questa riga.  ⇒ Cucito. */
+      SCENA.forma_arrivata();
+      const lf = new Lettore(m.corpo);
+      const fl = lf.u16(), fa = lf.u16(), fx = lf.i16(), fy = lf.i16();
+      /* ⛔ La lunghezza si controlla PRIMA di leggere i pixel (§7.2): «leggo quel
+         che c'e' e vado avanti» qui produce un cursore fatto di memoria altrui. */
+      if (fl > 256 || fa > 256 || m.corpo.length !== 8 + fl * fa * 4) {
+        await congeda(MOT.ERRORE_PROTOCOLLO, "CURSORE_FORMA non torna: "
+          + fl + "×" + fa + " vuole " + (8 + fl * fa * 4) + " byte e ne sono "
+          + "arrivati " + m.corpo.length);
+        return;
+      }
+      if (!fl && !fa) { REMOTIX_PUNTATORE.forma_vuota(); continue; }
+      /* ⚠ Da BGRA PREMOLTIPLICATO (§7.2) a RGBA non premoltiplicato, che e' quel
+         che vuole `createImageData`.  ⛔ Due conversioni in una, e saltare la
+         seconda non si vedrebbe sui pixel pieni — solo sui BORDI morbidi del
+         cursore, che verrebbero troppo scuri.  E' il difetto che si nota solo
+         quando qualcuno guarda il cursore da vicino, cioe' mai. */
+      const src = m.corpo.subarray(8);
+      const rgba = new Uint8ClampedArray(fl * fa * 4);
+      for (let i = 0; i < fl * fa; i++) {
+        const o = i * 4, a = src[o + 3];
+        if (!a) continue;                       /* trasparente: resta a zero */
+        rgba[o]     = Math.round(src[o + 2] * 255 / a);   /* R, dal terzo byte */
+        rgba[o + 1] = Math.round(src[o + 1] * 255 / a);   /* G */
+        rgba[o + 2] = Math.round(src[o]     * 255 / a);   /* B, dal primo */
+        rgba[o + 3] = a;
+      }
+      REMOTIX_PUNTATORE.forma({ larghezza: fl, altezza: fa, rgba: rgba,
+                                punto_x: fx, punto_y: fy });
       continue;
     }
     await congeda(MOT.ERRORE_PROTOCOLLO, "sul canale di controllo e' arrivato "
@@ -3640,6 +3846,15 @@ function cl_geometria() {
    arrotonda solo quando si spedisce: arrotondare qui vorrebbe dire che
    muovere il mouse pianissimo non muove mai niente. */
 let cl_px = 0, cl_py = 0, cl_noto = false;
+/* ⭐ La regola CSS che veste il cursore del browser con la forma remota, tenuta
+ *    da parte: la forma arriva quando arriva, il modo si commuta quando vuole
+ *    l'utente, e i due istanti non coincidono.  ⛔ Senza questa variabile,
+ *    passare a `sistema` fra due cambi di forma lascerebbe il cursore vestito da
+ *    freccia di sistema fino al prossimo `CURSORE_FORMA` — cioe' un banco che
+ *    misura una condizione che non e' quella dichiarata. */
+let cl_veste = null;
+/* Il modo in vigore: `due` (il prodotto di oggi) · `sistema` · `disegnata`. */
+let cl_modo = "due";
 let cl_ux = -1, cl_uy = -1;       /* l'ultimo intero SPEDITO */
 
 /* ⛔⭐ LA SATURAZIONE, ED E' LA RIGA CHE NON DEVE SBAGLIARE.
@@ -3749,8 +3964,20 @@ window.REMOTIX_PUNTATORE = {
      forma vera del cursore remoto piu' il suo punto attivo.  La firma e'
      dichiarata nel rapporto A7 perche' A6 la adotti o la corregga; finche' non
      la chiama nessuno, la freccia e' quella disegnata qui sopra. */
+  /* ⚠ §5.5: larghezza 0 CON altezza 0 vuol dire «cursore nascosto», e non e' un
+     errore.  ⛔ Va trattato in tutti e due i modi: la freccia disegnata si
+     spegne E il cursore del browser si veste di `none`, o nel modo `sistema` il
+     puntatore resterebbe vestito dell'ultima forma valida sopra una scena che
+     lo vuole invisibile. */
+  forma_vuota: function () {
+    cl_veste = "none";
+    cl_visibile = false;
+    cl_applica_modo();
+    return true;
+  },
   forma: function (f) {
     if (!f || !f.larghezza || !f.altezza || !f.rgba) return false;
+    cl_visibile = true;
     const t = document.createElement("canvas");
     t.width = f.larghezza; t.height = f.altezza;
     const im = t.getContext("2d").createImageData(f.larghezza, f.altezza);
@@ -3766,24 +3993,69 @@ window.REMOTIX_PUNTATORE = {
      *
      *         css("cursor", `url('…') ${xhot} ${yhot}, auto`)
      *
-     *     ⇒ Nel modo classico **senza cattura** di puntatori se ne vede uno
-     *     solo — quello del browser, con la forma di quello remoto e il punto
-     *     attivo giusto — e lo muove il browser, cioe' alla velocita' della
-     *     mano.  ⛔ Che era tutto il motivo per cui §7.1 chiedeva la cattura.
+     * ⛔⭐ ERA STATA TOLTA la sera del 14 agosto con la motivazione «su Chrome
+     *     per Android non si veste».  ⚠ Quella motivazione non e' mai stata
+     *     misurata: la riga stava DENTRO questa funzione, e `forma()` **non ha
+     *     mai avuto un chiamante** — sul DeX non e' mai girata.  ⇒ Rimessa il
+     *     14 agosto 2026 a sera, come condizione `sistema` dell'interruttore.
+     * `[R]` E la strada regge su Android: Chromium `ViewAndroidDelegate.java`
+     *     traduce `cursor: url(...) hx hy` in `PointerIcon.create(bitmap,
+     *     hotspotX, hotspotY)` — il puntatore resta di SISTEMA, cambia solo
+     *     l'immagine.  Limiti di Blink: 128 DIP duro, 32 DIP morbido (oltre i
+     *     32 sparisce se tocca il bordo della vista).
      * ⚠ Il ripiego `, default` in coda NON e' una formalita': se l'immagine
      *   fosse troppo grande per il motore, il CSS scarta la regola intera e
      *   senza una seconda voce l'utente resterebbe **senza cursore**. */
-    /* ⛔ QUI SI VESTIVA IL CURSORE DEL BROWSER con la forma remota (la strada
-     *    di Xpra).  Tolto la sera del 14 agosto 2026: su Chrome per Android non
-     *    si veste, e uno stile in riga avrebbe comunque vinto sul `cursor:
-     *    none` del foglio, lasciando DUE puntatori dove il trucco funziona e
-     *    NESSUNO dove non funziona.  ⇒ La forma la porta la freccia disegnata
-     *    qui sopra, che e' l'unico percorso che vale su tutti i motori. */
+    try {
+      cl_veste = "url(" + t.toDataURL("image/png") + ") "
+               + cl_forma_punto[0] + " " + cl_forma_punto[1] + ", default";
+    } catch (e) {
+      /* ⛔ Si DICHIARA e non si tace: una tela «sporcata» da un'origine altrui
+         fa lanciare `toDataURL`, e senza questa riga il modo `sistema`
+         resterebbe vestito da freccia di sistema senza che nessuno sappia
+         perche' — cioe' un banco verde su una condizione mai applicata. */
+      cl_veste = null;
+      nota("la forma del cursore non e' diventata una regola CSS: " + e);
+    }
+    cl_applica_modo();
     cl_disegna();
     return true;
   },
   geometria: cl_geometria,
+  /* ⭐ L'interruttore, esposto: `REMOTIX_PUNTATORE.modo("sistema")`. */
+  modo: function (m) {
+    if (m !== "due" && m !== "sistema" && m !== "disegnata") return cl_modo;
+    cl_modo = m;
+    cl_applica_modo();
+    /* ⛔ Il cambio si SCRIVE nel registro con l'ora: senza, confrontando due
+       tratti di una stessa sessione non si sa piu' quale condizione era in
+       vigore in quale minuto — ed e' esattamente l'errore del 14 agosto. */
+    nota("puntatore: modo «" + m + "»"
+       + (m === "sistema" && !cl_veste
+            ? " ⚠ nessuna forma ancora ricevuta: il cursore resta quello di sistema"
+            : ""));
+    return cl_modo;
+  },
 };
+
+/* ⭐⭐ IL COMMUTATORE — e sta in un punto solo di proposito.
+ *
+ * ⛔ Due strade per accendere la stessa condizione sono due condizioni che il
+ *    giorno in cui divergono si chiamano ancora con lo stesso nome (`REVIEWER.md`
+ *    forma E2).  ⇒ Il foglio di stile riceve `data-puntatore`, lo stile in riga
+ *    riceve la vestizione, e a scriverli e' questa funzione sola. */
+function cl_applica_modo() {
+  document.body.dataset.puntatore = cl_modo;
+  const s = $("schermo");
+  if (!s) return;
+  /* ⚠ Lo stile in riga VINCE sul foglio: fuori dal modo `sistema` va tolto, non
+     sovrascritto con «auto» — altrimenti resterebbe a coprire il `cursor: none`
+     che il foglio mette nel modo `disegnata`, e le due condizioni diventerebbero
+     la stessa. */
+  if (cl_modo === "sistema" && cl_veste) s.style.cursor = cl_veste;
+  else s.style.removeProperty("cursor");
+  cl_disegna();
+}
 
 /* ── POINTER LOCK ─────────────────────────────────────────────────────────
  * ⛔ «Il mouse fisico arriva da Pointer Lock — che e' l'equivalente esatto del
@@ -3949,6 +4221,11 @@ function cl_su_mousemove(ev) {
   }
   cl_satura();
   cl_disegna();
+  /* ⭐ L'eta' dell'immagine si campiona QUI, nell'istante in cui la mano si
+     muove — non a fotogramma ricevuto.  E' tutta la differenza fra «quanti
+     fotogrammi al secondo in media» e «quanto e' vecchio quel che l'utente sta
+     guardando mentre punta». */
+  SCENA.movimento();
   cl_manda_puntatore(ev.timeStamp);
 }
 
@@ -3957,6 +4234,34 @@ const cl_pulsanti_premuti = new Set();
 function cl_su_mousedown(ev) {
   if (!cl_utilizzabile()) return;
   ev.preventDefault();
+  /* ⛔⛔⭐ IL CLIC PORTA LA PROPRIA POSIZIONE — 14 agosto 2026, sera.
+   *
+   * ⛔ Prima di questa riga il clic mandava SOLO `PULSANTE`, e `PULSANTE` (§7.3)
+   *    porta il tasto e basta: nessuna coordinata.  ⇒ Il server cliccava dove
+   *    stava il SUO puntatore, non dove l'utente aveva puntato.
+   *
+   * ⚠ Su un desktop normale e' innocuo: `mousemove` arriva di continuo e il
+   *   puntatore del server e' sempre aggiornato, quindi le due posizioni
+   *   coincidono sempre.  ⛔⛔ **Su Chrome per Android no**: `[M]` 14 agosto,
+   *   parole dell'utente — «se muovo il mouse il puntatore del server non si
+   *   muove; se lo muovo col tasto premuto allora si muove».  E' il difetto
+   *   **noVNC #1727** (`[S]` aperto dal 2022, specifico di Samsung, riprodotto
+   *   anche da moonlight-android #573, che e' un'app NATIVA): i movimenti a
+   *   pulsanti alzati non vengono consegnati alla pagina.
+   *
+   * ⇒ Il puntatore del server resta fermo dove l'ultimo trascinamento l'ha
+   *   lasciato, e OGNI CLIC PARTE DA LI'.  ⭐ Ed e' la descrizione esatta del
+   *   primo sintomo che l'utente aveva dato, due giorni prima: «il mouse ha
+   *   sempre problemi con le coordinate degli elementi (esempio barra della
+   *   finestra del terminale)».
+   *
+   * `[R]` E la cura e' quella di xpra, che il nostro studio aveva gia' indicata
+   *   e che nessuno aveva attaccato: `client/subsystem/pointer.py:115-123` — il
+   *   clic cancella la posizione in sospeso e **porta la propria**.
+   *
+   * ⚠ Non costa un messaggio in piu' quando non serve: `cl_manda_puntatore()`
+   *   tace se il pixel non e' cambiato. */
+  cl_su_mousemove(ev);
   /* ⛔⭐ QUI SI CHIEDEVA LA CATTURA, e non si chiede piu': il primo clic sulla
    *     tela agganciava il puntatore con `Pointer Lock`.
    *
@@ -4046,6 +4351,11 @@ function cl_scatti(ev) {
 function cl_su_wheel(ev) {
   if (!cl_utilizzabile()) return;
   ev.preventDefault();
+  /* ⛔ STESSO DIFETTO DEL CLIC, stessa cura: `ROTELLA` (§7.3) porta gli scatti e
+     non la posizione ⇒ senza questa riga si scorre la finestra che sta sotto il
+     puntatore VECCHIO del server.  ⚠ E l'evento `wheel` la posizione ce l'ha,
+     su Android come altrove. */
+  cl_su_mousemove(ev);
   const s = cl_scatti(ev);
   cl_res_x += s[0]; cl_res_y += s[1];
   const ux = Math.round(cl_res_x * 120), uy = Math.round(cl_res_y * 120);
@@ -4202,8 +4512,31 @@ function cl_entra(perche) {
   if (cl_in_vigore) return true;
   cl_in_vigore = true;
   const tela = $("schermo");
-  tela.addEventListener("mousemove", cl_su_mousemove);
-  tela.addEventListener("pointermove", cl_su_pointermove);
+  /* ⛔⛔ UNA PORTA SOLA, E QUESTA RIGA E' LA CURA DEL 14 AGOSTO 2026 A SERA.
+   *
+   * ⛔ Erano registrate TUTTE E DUE, e sul DeX scattano ENTRAMBE per lo stesso
+   *    movimento della mano.  `[M]` registro del server, sessione delle
+   *    18:26:48-18:27:47: su **219 movimenti veri, 184 spediti DUE VOLTE** —
+   *    l'84 % — con lo stesso istante del client e **un pixel di scarto**:
+   *
+   *      18:26:48.594  PUNTATORE (1092,208) · istante del client 20275000 us
+   *      18:26:48.594  PUNTATORE (1092,207) · istante del client 20275000 us
+   *
+   *    ⇒ Il puntatore sul server veniva spinto in due punti diversi per ogni
+   *    movimento, e l'iniezione girava al doppio del necessario.
+   *
+   * ⚠ E nessuna delle due registrazioni era sbagliata quando fu scritta:
+   *   `pointermove` e' entrato perche' su Samsung Chrome consegna i `mousemove`
+   *   **solo al clic** (noVNC #1727, KasmVNC #222, Kasm #20,
+   *   moonlight-android #573); `mousemove` e' rimasto perche' e' la strada del
+   *   desktop.  ⛔ Il difetto sta FRA le due — nessuno ha spento l'altra.  E'
+   *   l'ottava volta in questa fase che il guasto e' in una cucitura.
+   *
+   * ⇒ `PointerEvent` copre mouse, penna e dito su ogni motore che lo ha, e
+   *   `cl_su_pointermove` scarta gia' il dito (che ha la sua disposizione).  I
+   *   `mouse*` restano come RIPIEGO, e solo dove `PointerEvent` non esiste. */
+  if (window.PointerEvent) tela.addEventListener("pointermove", cl_su_pointermove);
+  else                     tela.addEventListener("mousemove", cl_su_mousemove);
   tela.addEventListener("mousedown", cl_su_mousedown);
   tela.addEventListener("wheel", cl_su_wheel, { passive: false });
   tela.addEventListener("contextmenu", cl_su_contextmenu);
@@ -4245,6 +4578,10 @@ function cl_entra(perche) {
 function cl_esci() {
   if (!cl_in_vigore) return true;
   const tela = $("schermo");
+  /* ⚠ Si tolgono tutt'e due senza chiedere quale fosse in vigore: togliere un
+     ascoltatore che non c'e' non e' un errore, e ricalcolare qui la condizione
+     di `cl_entra` sarebbe la stessa regola scritta in due posti — cioe' due
+     regole il giorno in cui una cambia. */
   tela.removeEventListener("mousemove", cl_su_mousemove);
   tela.removeEventListener("pointermove", cl_su_pointermove);
   tela.removeEventListener("mousedown", cl_su_mousedown);
@@ -5201,6 +5538,11 @@ function metti_in_vigore(modo, perche) {
      «esiste una funzione che la cambia» sarebbe verde su una funzione che non
      cambia niente. */
   document.body.dataset.disposizione = modo;
+  /* ⚠ E accanto alla disposizione si scrive SEMPRE anche il modo del puntatore,
+     anche quando nessuno l'ha ancora toccato: un attributo che compare solo dopo
+     il primo clic sull'interruttore darebbe al foglio di stile due stati diversi
+     con lo stesso nome «due». */
+  cl_applica_modo();
   if (modo === "tocco") entra_nel_tocco(); else entra_nel_classico(perche);
   nota("disposizione: **" + modo + "** — " + perche);
 }
@@ -5946,6 +6288,96 @@ function sc_dipingi() {
       + " (peggiore " + (PRIMA.coda_peggiore === null ? "—" : PRIMA.coda_peggiore) + ")"
       + " · puntatori sorpassati " + PRIMA.sorpassi;
     sc_el_stato.appendChild(t5);
+    /* ⭐⭐ L'ETA' DELL'IMMAGINE MENTRE LA MANO SI MUOVE — il numero che
+       distingue «il desktop e' congelato durante l'uso» da «la media e' bassa
+       perche' la mano stava sullo sfondo».  ⛔ I fotogrammi al secondo NON lo
+       distinguono, ed e' per questo che il conto qui accanto non bastava. */
+    const t6 = document.createElement("div");
+    const e_med = SCENA.mediana(SCENA.eta), e_peg = SCENA.peggiore(SCENA.eta);
+    const e_vec = SCENA.vecchi(SCENA.eta, 500);
+    const f_med = SCENA.mediana(SCENA.forma_ms);
+    t6.textContent = "Scena — immagine vecchia, misurata NELL'ISTANTE del "
+      + "movimento: "
+      + (e_med === null
+          ? "nessuna misura ancora"
+          : ("mediana " + Math.round(e_med) + " ms · peggiore "
+             + Math.round(e_peg) + " ms · " + e_vec + " % oltre mezzo secondo"
+             + " · su " + SCENA.eta.length + " movimenti"))
+      + " · fotogrammi dipinti " + SCENA.fotogrammi
+      + " · movimento → forma "
+      + (f_med === null ? "—" : Math.round(f_med) + " ms su " + SCENA.forma_ms.length)
+      + " · forme ricevute " + SCENA.forme;
+    sc_el_stato.appendChild(t6);
+    /* ⭐⭐ L'INTERRUTTORE A/B — tre bottoni, UNA variabile, nella stessa
+       sessione.  ⛔ E' il pezzo che il 14 agosto non c'era: senza, fra due
+       condizioni cambiavano anche la sessione e la scena, e la correlazione
+       misurata era una coincidenza. */
+    const t7 = document.createElement("div");
+    t7.appendChild(document.createTextNode("Puntatore (A/B): "));
+    [["due", "due sovrapposti — com'e' oggi"],
+     ["sistema", "uno solo, di sistema, vestito"],
+     ["disegnata", "solo la nostra freccia"]].forEach(function (v) {
+      const b = document.createElement("button");
+      b.textContent = (cl_modo === v[0] ? "▸ " : "") + v[0];
+      b.title = v[1];
+      b.style.cssText = "margin:2px;padding:6px 10px;font:inherit";
+      /* ⛔ Senza questo, il bottone RUBA IL FUOCO alla tela e la tastiera smette
+         di arrivare al desktop — cioe' il banco romperebbe proprio la cosa che
+         l'utente sta giudicando. */
+      b.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+      b.addEventListener("click", function () {
+        REMOTIX_PUNTATORE.modo(v[0]);
+        /* ⚠ I campioni si azzerano al cambio di condizione: mescolare le misure
+           di due condizioni sotto la stessa mediana e' il modo piu' rapido di
+           non concludere niente. */
+        SCENA.eta.length = 0; SCENA.forma_ms.length = 0; SCENA.atteso = null;
+        sc_dipingi();
+        const tl = $("schermo"); if (tl && tl.focus) tl.focus();
+      });
+      t7.appendChild(b);
+    });
+    sc_el_stato.appendChild(t7);
+    /* ⛔⭐⭐ LA CATTURA DEL PUNTATORE, RIMESSA COME INTERRUTTORE — 14 ago 2026.
+     *
+     * ⛔ Era stata TOLTA la mattina del 14 agosto, con una ragione che sembrava
+     *    solida: «con le coordinate assolute la cattura non compra niente e
+     *    costa il sequestro del puntatore» (`xpra.md` §2).
+     *
+     * ⛔⛔ Quella ragione dava per scontato che i movimenti ARRIVASSERO.  Sul
+     *     DeX dell'utente non arrivano: `[M]` 14 agosto, parole sue — «se muovo
+     *     il mouse il puntatore del server non si muove; se lo muovo col tasto
+     *     sinistro premuto allora si muove».  ⇒ E' il difetto **noVNC #1727**,
+     *     *«Moving hardware mouse without drag ignored on Chrome Android»*,
+     *     `[S]` aperto dal 2022, riprodotto da KasmVNC #222, Kasm #20 e
+     *     **moonlight-android #573 — che e' un'app NATIVA, senza CSS di
+     *     mezzo**.  Non e' una nostra particolarita' ed e' specifico di Samsung.
+     *
+     * ⭐ La cattura e' l'UNICO meccanismo che consegna movimenti a pulsanti
+     *   alzati, ed e' esattamente quel che fa il termine di paragone
+     *   dell'utente: `[S]` RDM ha «Use Pointer Capture», e l'ingegnere di
+     *   Devolutions la consiglia proprio su questo caso.
+     *
+     * ⚠ Resta un INTERRUTTORE e non un automatismo: sequestra il puntatore, si
+     *   esce con Esc, e l'utente ne aveva gia' segnalato il fastidio.  Chi
+     *   decide se diventi il comportamento normale e' lui, non questo pannello. */
+    const t8 = document.createElement("div");
+    t8.appendChild(document.createTextNode("Cattura del puntatore: "));
+    const bc = document.createElement("button");
+    bc.textContent = cl_agganciato ? "▸ accesa — premi Esc per uscire" : "spenta — accendi";
+    bc.style.cssText = "margin:2px;padding:6px 10px;font:inherit";
+    bc.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+    bc.addEventListener("click", function () {
+      /* ⚠ `requestPointerLock` vuole un gesto dell'utente: il clic su questo
+         bottone LO E', ed e' il motivo per cui l'interruttore e' un bottone e
+         non una riga di configurazione. */
+      if (cl_agganciato) { if (document.exitPointerLock) document.exitPointerLock(); }
+      else cl_aggancia();
+      SCENA.eta.length = 0; SCENA.forma_ms.length = 0; SCENA.atteso = null;
+      setTimeout(sc_dipingi, 100);   /* la lock risponde dopo, non subito */
+      const tl = $("schermo"); if (tl && tl.focus) tl.focus();
+    });
+    t8.appendChild(bc);
+    sc_el_stato.appendChild(t8);
   } catch (e) { /* il pannello non deve mai rompersi per una diagnosi */ }
   if (!cucito) {
     const t2 = document.createElement("div");

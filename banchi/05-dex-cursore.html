@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 — il cursore e gli eventi del mouse su DeX</title>
+<!--
+  ⛔⭐ QUESTA PAGINA ESISTE PER CHIUDERE UNA `[?]` SOLA, e la `[?]` vincola due
+       famiglie di cure del prodotto.
+
+  L'affermazione da provare o smentire, scritta in `src/pagina.html` e in
+  `fasi/rapporti/F4-DEX-punto-di-ripresa.md` §5:
+
+      «Su Chrome per Android il cursore che si muove e' quello di ANDROID:
+       nasconderlo con `cursor: none` gli toglie anche gli eventi di passaggio,
+       e alla pagina non arriva piu' un movimento.»
+
+  Oggi e' una CORRELAZIONE a una variabile sola (`[M]` 14 agosto 2026, 15:09:
+  4 clic e ZERO movimenti contro 165 · 227 · 320 · 200), **non un meccanismo**.
+  ⚠ E il numero «ZERO movimenti» era contato sul SERVER, cioe' a valle di cinque
+    filtri della pagina — non sugli eventi del DOM.  Qui si conta a MONTE.
+
+  ⛔⭐ E `F4-IN-4-android.md` §2.4 ha trovato che alle 15:09 la pagina ascoltava
+       **solo `mousemove`** (`git show 0075b4f:src/pagina.html`, riga 3909):
+       `pointermove` e' entrato alle 17:19.  Su Samsung e' documentato che Chrome
+       consegna i `mousemove` **solo al clic** (noVNC #1727).  ⇒ «4 clic e zero
+       movimenti» e' quel difetto, non il CSS.  ⚠ Questa pagina lo CONFERMA o lo
+       SMENTISCE, perche' conta le due porte **separatamente**.
+
+  ⛔ NON serve il prodotto: questa pagina non parla con nessun server, non ha
+     dipendenze, e si puo' aprire anche da `file://`.  Ma per il Pointer Lock e
+     per il tasto destro conviene servirla via HTTP.
+
+  COME SI USA (dal portatile):
+      python3 -m http.server 7912 --bind 0.0.0.0 \
+              --directory /home/nicfio/Documenti/REMOTIX_V2/banchi
+      # e poi si spegne, quando l'utente ha finito
+  Dal DeX, in Chrome:  http://192.168.0.3:7912/05-dex-cursore.html
+  ⚠ La porta 7912 e' scelta sopra la 7900 e fuori da 7448 · 7501 · 7561 · 7571 ·
+    7700 · 7721-7723 · 7911 (che e' della pagina 04).
+
+  CHE COSA DEVE FARE L'UTENTE — cinque prove da dieci secondi, in quest'ordine.
+  ⛔ In ognuna: **muovere il mouse SENZA FERMARSI dentro il riquadro grigio**, e
+     non cliccare (tranne dove scritto).  Poi «copia tutto» e incolla.
+
+  ⭐ E una prova che non costa niente, prima di tutte: aprire sul DeX
+     https://domeventviewer.com/mouse-event-viewer.html — una pagina di TERZI che
+     **non tocca la proprieta' `cursor`** (verificato) — e muovere il mouse senza
+     cliccare.  Se li' i `mousemove` non arrivano, il difetto e' di Chrome su
+     Samsung e non del nostro CSS.
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 14px/1.45 system-ui, sans-serif;
+         background: #12151a; color: #e6e8ec; }
+  header { padding: 10px 14px; background: #1b2029; position: sticky; top: 0; z-index: 5; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  #passo { font-size: 13px; color: #ffd479; }
+  main { padding: 12px 14px 40px; }
+  /* ⭐ IL BERSAGLIO: e' l'unico elemento con gli ascoltatori, ed e' l'elemento
+     su cui si cambia `cursor`.  Cosi' la variabile e' una sola. */
+  #tela { height: 210px; background: #262c36; border: 1px solid #3a4250;
+          border-radius: 6px; display: flex; align-items: center;
+          justify-content: center; color: #8f98a6; user-select: none;
+          touch-action: none; }
+  #tela[data-cursore="none"]   { cursor: none; }
+  /* ⚠ Le due regole `cursor: url(...)` NON stanno qui: le immagini si disegnano
+     su tela e si iniettano da JavaScript, cosi' la pagina resta un file solo e
+     non chiede niente alla rete. */
+  .fila { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  button { font: 13px system-ui, sans-serif; padding: 8px 12px; border-radius: 6px;
+           border: 1px solid #47526a; background: #2b3342; color: #e6e8ec; }
+  button.acceso { background: #3b6ea5; border-color: #6ea8e8; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+  th, td { border: 1px solid #333c4a; padding: 4px 7px; text-align: left; }
+  th { background: #1e2530; font-weight: 600; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .ok  { color: #7fdc8a; } .ko { color: #ff8f8f; } .nd { color: #8f98a6; }
+  textarea { width: 100%; height: 190px; font: 12px/1.35 monospace;
+             background: #0d1015; color: #cfd4dc; border: 1px solid #333c4a;
+             border-radius: 6px; margin-top: 10px; }
+  #vivo { font: 13px/1.5 monospace; white-space: pre; margin-top: 8px; color: #9ec9ff; }
+  p.n { color: #a6b0bf; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>05 — il cursore e gli eventi del mouse su Samsung DeX</h1>
+  <div id="passo">Premi «1 · cursore normale» e muovi il mouse nel riquadro per dieci secondi.</div>
+</header>
+<main>
+
+  <div id="tela">muovi qui dentro, senza fermarti</div>
+
+  <div class="fila">
+    <button id="b1">1 · cursore normale</button>
+    <button id="b2">2 · cursor: none</button>
+    <button id="b3">3 · cursor: url(32×32)</button>
+    <button id="b4">4 · cursor: url(96×96)</button>
+    <button id="b5">5 · Pointer Lock</button>
+    <button id="bstop">ferma</button>
+  </div>
+
+  <div id="vivo">—</div>
+
+  <table id="t">
+    <thead><tr>
+      <th>prova</th><th>durata</th><th>pointermove</th><th>mousemove</th>
+      <th>rawupdate</th><th>coalesced medio</th><th>coalesced max</th>
+      <th>al secondo</th><th>note</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="fila">
+    <button id="bcopia">copia tutto</button>
+    <button id="bazzera">azzera</button>
+  </div>
+
+  <p class="n">
+    ⭐ <b>Quel che decide la <code>[?]</code></b>: la riga «2 · cursor: none».
+    Se <code>pointermove</code> resta dello stesso ordine di grandezza della riga 1,
+    l'affermazione e' <b>FALSA</b> e la strada «il puntatore lo disegniamo noi» si
+    riapre. Se scende a <b>zero</b>, e' <b>VERA</b> e la cura del mouse deve andare
+    sul server.
+    <br>⭐ <b>Prova 3</b>: si deve <b>vedere</b> un cursore a mirino rosso.
+    Se resta la freccia di Android, <code>cursor: url()</code> su DeX non funziona
+    e la strada di xpra e' chiusa. <b>Prova 4</b>: stessa cosa a 96 px — se la 3
+    funziona e la 4 no, il limite e' la dimensione.
+    <br>⭐ <b>Prova 5</b>: guarda se il cursore di sistema <b>sparisce</b>, se
+    <code>movementX</code> e' diverso da zero, e che rapporto ha con lo spostamento
+    della mano.
+  </p>
+
+  <textarea id="testo" readonly></textarea>
+</main>
+
+<script>
+"use strict";
+
+/* ── I DUE CURSORI DISEGNATI QUI, senza file esterni ────────────────────────
+ * ⚠ Si generano su tela e si mettono in un `data:` URI: cosi' la pagina resta
+ *   un file solo e la prova non dipende da un secondo scaricamento. */
+function mirino(lato) {
+  const c = document.createElement("canvas");
+  c.width = c.height = lato;
+  const x = c.getContext("2d");
+  const m = lato / 2;
+  x.strokeStyle = "#ff2d2d"; x.lineWidth = Math.max(2, lato / 12);
+  x.beginPath(); x.moveTo(2, m); x.lineTo(lato - 2, m);
+                 x.moveTo(m, 2); x.lineTo(m, lato - 2); x.stroke();
+  x.strokeStyle = "#ffffff"; x.lineWidth = Math.max(1, lato / 24);
+  x.beginPath(); x.arc(m, m, m / 2.5, 0, 6.284); x.stroke();
+  return c.toDataURL("image/png");
+}
+const URL_PICCOLO = mirino(32), URL_GRANDE = mirino(96);
+/* Il punto attivo e' il CENTRO del mirino: se il browser lo rispetta, il centro
+   del mirino sta dove sta il puntatore. */
+const stile = document.createElement("style");
+stile.textContent =
+    '#tela[data-cursore="urlpic"] { cursor: url(' + URL_PICCOLO + ') 16 16, auto; }\n'
+  + '#tela[data-cursore="grande"] { cursor: url(' + URL_GRANDE  + ') 48 48, auto; }';
+document.head.appendChild(stile);
+
+const tela  = document.getElementById("tela");
+const passo = document.getElementById("passo");
+const vivo  = document.getElementById("vivo");
+const corpo = document.querySelector("#t tbody");
+
+/* ── I CONTATORI ────────────────────────────────────────────────────────────
+ * ⛔ Si contano gli eventi del DOM, a monte di qualunque filtro: e' il punto in
+ *    cui la misura del 14 agosto NON guardava. */
+let attiva = null;
+const zero = () => ({
+  nome: "", da: 0, a: 0,
+  pointermove: 0, mousemove: 0, rawupdate: 0,
+  coalesced_somma: 0, coalesced_n: 0, coalesced_max: 0,
+  tipi: {}, primo_x: null, ultimo_x: null,
+  movx_somma: 0, movy_somma: 0, movx_max: 0,
+  note: [],
+});
+
+function conta(ev) {
+  if (!attiva) return;
+  if (ev.type === "pointermove")     attiva.pointermove++;
+  else if (ev.type === "mousemove")  attiva.mousemove++;
+  else if (ev.type === "pointerrawupdate") { attiva.rawupdate++; return; }
+  attiva.tipi[ev.pointerType || "(mouse*)"] =
+      (attiva.tipi[ev.pointerType || "(mouse*)"] || 0) + 1;
+  if (ev.getCoalescedEvents) {
+    const n = ev.getCoalescedEvents().length;
+    attiva.coalesced_somma += n; attiva.coalesced_n++;
+    if (n > attiva.coalesced_max) attiva.coalesced_max = n;
+  }
+  if (attiva.primo_x === null) attiva.primo_x = ev.clientX;
+  attiva.ultimo_x = ev.clientX;
+  const mx = ev.movementX || 0, my = ev.movementY || 0;
+  attiva.movx_somma += Math.abs(mx); attiva.movy_somma += Math.abs(my);
+  if (Math.abs(mx) > attiva.movx_max) attiva.movx_max = Math.abs(mx);
+  dipingi();
+}
+
+/* ⚠ `pointerrawupdate` si registra SEMPRE, perche' `[R]` Chromium non lo genera
+ *   nemmeno se nessuno ascolta (`main_thread_event_queue.cc`,
+ *   `has_pointerrawupdate_handlers_`): senza ascoltatore il conto sarebbe zero
+ *   per costruzione e non direbbe niente. */
+for (const t of ["pointermove", "mousemove", "pointerrawupdate"]) {
+  tela.addEventListener(t, conta);
+}
+/* I clic servono solo a dire «la tela riceve eventi»: e' il controllo che la
+   sessione del 14 agosto aveva (4 clic) mentre i movimenti erano zero. */
+let clic = 0;
+tela.addEventListener("mousedown", function (ev) {
+  clic++; if (attiva) attiva.note.push("clic " + ev.button); dipingi();
+});
+tela.addEventListener("contextmenu", (ev) => ev.preventDefault());
+
+function dipingi() {
+  const a = attiva;
+  vivo.textContent =
+    "cursore: " + (tela.dataset.cursore || "(normale)")
+    + "   agganciato: " + (document.pointerLockElement === tela ? "SI" : "no")
+    + "   clic totali: " + clic + "\n"
+    + (a ? ("prova «" + a.nome + "»  da " + ((performance.now() - a.da) / 1000).toFixed(1) + " s\n"
+            + "  pointermove " + a.pointermove
+            + "   mousemove " + a.mousemove
+            + "   rawupdate " + a.rawupdate
+            + "   coalesced max " + a.coalesced_max
+            + "\n  movementX sommato " + a.movx_somma.toFixed(0)
+            + "   tipi " + JSON.stringify(a.tipi))
+          : "nessuna prova in corso");
+}
+
+const RISULTATI = [];
+
+function avvia(nome, cursore) {
+  ferma();
+  tela.dataset.cursore = cursore || "";
+  attiva = zero(); attiva.nome = nome; attiva.da = performance.now();
+  passo.textContent = "prova «" + nome + "» in corso: muovi il mouse nel riquadro, "
+                    + "senza fermarti, per dieci secondi. Poi premi «ferma» (o la prova dopo).";
+  dipingi();
+}
+
+function ferma() {
+  if (!attiva) return;
+  attiva.a = performance.now();
+  const s = (attiva.a - attiva.da) / 1000;
+  const r = {
+    prova: attiva.nome,
+    secondi: +s.toFixed(1),
+    pointermove: attiva.pointermove,
+    mousemove: attiva.mousemove,
+    pointerrawupdate: attiva.rawupdate,
+    coalesced_medio: attiva.coalesced_n
+        ? +(attiva.coalesced_somma / attiva.coalesced_n).toFixed(2) : null,
+    coalesced_max: attiva.coalesced_max,
+    pointermove_al_secondo: s > 0 ? +(attiva.pointermove / s).toFixed(1) : null,
+    rawupdate_al_secondo: s > 0 ? +(attiva.rawupdate / s).toFixed(1) : null,
+    tipi: attiva.tipi,
+    movementX_sommato: +attiva.movx_somma.toFixed(0),
+    movementX_massimo: +attiva.movx_max.toFixed(1),
+    spostamento_clientX: (attiva.primo_x === null) ? null
+        : +(attiva.ultimo_x - attiva.primo_x).toFixed(1),
+    note: attiva.note.join("; "),
+  };
+  RISULTATI.push(r);
+  const tr = document.createElement("tr");
+  const c = (v, cl) => "<td" + (cl ? ' class="' + cl + '"' : "") + ">"
+                     + (v === null || v === undefined ? "—" : v) + "</td>";
+  tr.innerHTML = "<td>" + r.prova + "</td>" + c(r.secondi + " s", "n")
+    + c(r.pointermove, "n") + c(r.mousemove, "n") + c(r.pointerrawupdate, "n")
+    + c(r.coalesced_medio, "n") + c(r.coalesced_max, "n")
+    + c(r.pointermove_al_secondo, "n") + c(r.note || "");
+  corpo.appendChild(tr);
+  attiva = null;
+  tela.dataset.cursore = "";
+  passo.textContent = "prova finita. Passa alla successiva, o «copia tutto».";
+  scrivi();
+  dipingi();
+}
+
+function scrivi() {
+  document.getElementById("testo").value = JSON.stringify({
+    quando: new Date().toISOString(),
+    ua: navigator.userAgent,
+    devicePixelRatio: devicePixelRatio,
+    schermo: screen.width + "x" + screen.height,
+    finestra: innerWidth + "x" + innerHeight,
+    vv_scale: (window.visualViewport && visualViewport.scale) || null,
+    maxTouchPoints: navigator.maxTouchPoints,
+    any_pointer_fine: matchMedia("(any-pointer: fine)").matches,
+    hover_hover: matchMedia("(hover: hover)").matches,
+    any_hover_hover: matchMedia("(any-hover: hover)").matches,
+    ha_getCoalescedEvents: typeof PointerEvent !== "undefined"
+        && "getCoalescedEvents" in PointerEvent.prototype,
+    ha_requestPointerLock: !!tela.requestPointerLock,
+    clic_totali: clic,
+    lock: LOCK,
+    prove: RISULTATI,
+  }, null, 1);
+}
+
+/* ── LA PROVA 5: POINTER LOCK ───────────────────────────────────────────────
+ * ⚠ Tre domande in una: la promessa si mantiene? il cursore di sistema
+ *   sparisce (lo dice l'utente a occhio)? e `movementX` in che spazio e'? */
+const LOCK = { chiesta: false, ottenuta: null, errore: null, uscita: null };
+function aggancia() {
+  LOCK.chiesta = true;
+  let p;
+  try { p = tela.requestPointerLock({ unadjustedMovement: true }); }
+  catch (e) { p = null; LOCK.errore = "eccezione: " + e; }
+  if (p && p.then) {
+    p.then(() => { LOCK.ottenuta = "si (unadjustedMovement)"; scrivi(); },
+           (e) => {
+             LOCK.errore = "unadjustedMovement rifiutato: " + e;
+             try { tela.requestPointerLock(); } catch (e2) { LOCK.errore += " | " + e2; }
+             scrivi();
+           });
+  } else {
+    try { tela.requestPointerLock(); } catch (e) { LOCK.errore = "" + e; }
+  }
+}
+document.addEventListener("pointerlockchange", function () {
+  const dentro = document.pointerLockElement === tela;
+  if (dentro && LOCK.ottenuta === null) LOCK.ottenuta = "si";
+  if (!dentro && LOCK.ottenuta) LOCK.uscita = "uscito";
+  dipingi(); scrivi();
+});
+document.addEventListener("pointerlockerror", function () {
+  LOCK.errore = "pointerlockerror"; scrivi();
+});
+
+document.getElementById("b1").onclick = () => avvia("1 cursore normale", "");
+document.getElementById("b2").onclick = () => avvia("2 cursor:none", "none");
+document.getElementById("b3").onclick = () => avvia("3 cursor:url 32", "urlpic");
+document.getElementById("b4").onclick = () => avvia("4 cursor:url 96", "grande");
+document.getElementById("b5").onclick = () => { avvia("5 pointer lock", ""); aggancia(); };
+document.getElementById("bstop").onclick = () => {
+  if (document.pointerLockElement) document.exitPointerLock();
+  ferma();
+};
+document.getElementById("bazzera").onclick = () => {
+  RISULTATI.length = 0; corpo.innerHTML = ""; clic = 0; scrivi(); dipingi();
+};
+document.getElementById("bcopia").onclick = function () {
+  const t = document.getElementById("testo");
+  t.select();
+  try { document.execCommand("copy"); } catch (e) { /* niente */ }
+  if (navigator.clipboard) navigator.clipboard.writeText(t.value).catch(() => {});
+  passo.textContent = "copiato: incollalo nel rapporto.";
+};
+
+scrivi(); dipingi();
+</script>
+</body>
+</html>

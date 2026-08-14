@@ -750,8 +750,23 @@ I desktop X11 come tipo di sessione sono fuori scope.
 |---|---|
 | **GNOME** | servito in v1 `[M]` |
 | **KDE Plasma** | servito in v1 `[M]` |
-| **XFCE** (labwc) | studiato, non ancora servito |
+| **XFCE** (labwc) | studiato, non ancora servito — ⛔ **e non è lo stesso caso di LXQt**, vedi sotto |
 | **LXQt** (labwc) | studiato, non ancora servito |
+
+> ### ⛔ «XFCE (labwc)» e «LXQt (labwc)» **non** sono la stessa riga — corretto il 14 agosto 2026
+>
+> Le due voci qui sopra hanno lo stesso compositore fra parentesi, e da quel giorno in poi sono
+> state lette come **un caso solo**. `[R]` **Non lo sono**, e la differenza morde proprio dove
+> serve la tela su misura (`DECISIONI.md` §5.0-sexies):
+>
+> | | |
+> |---|---|
+> | **XFCE** | ha `xfsettingsd`, **primo client della sessione**, che riscrive tutti gli output e **per impostazione predefinita spegne ogni output nuovo** (`displays-wayland.c:526-529`). ⚠ Il rischio **non è la misura** — il modo su misura sopravvive alle sue riapplicazioni — è `enabled = FALSE` |
+> | **LXQt** | **non ha niente di simile**: `lxqt-config-monitor` passa da KScreen, muore con `exit(1)`, e l'osservatore udev è dentro un ramo `if (isX11)` |
+>
+> ⚠ `[R]`, **non `[M]`**: né XFCE né LXQt sono installati sulle nostre macchine. La misura che
+> chiude la domanda è se `xfsettingsd` ci spenga davvero l'output, e se un output presente
+> **prima** del suo avvio conti come «nuovo» — se non conta, la cura è l'ordine di avvio.
 | **Cinnamon** | 📖 **studiato il 9 agosto, ultimo della fila** — vedi [`cinnamon.md`](cinnamon.md) |
 
 ⛔ **Su Cinnamon tre cose non esistono a monte**: `RecordVirtual`, libei, e **gli appunti** — né la

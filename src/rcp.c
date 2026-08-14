@@ -37,6 +37,15 @@ enum {
 	 * conforme che avesse visto un buco — il prezzo che il registro dichiarava
 	 * («la fase 1 non lo serve ancora»). */
 	T_RICHIEDI_CHIAVE = 0x000D,
+	/* ⭐ §7.1 — «il client chiede una tela di un'altra misura», e la risposta
+	 * `TELA` che ne dichiara l'esito.  ⛔ Serviti dal 14 agosto 2026: prima
+	 * `ADATTA_TELA` cadeva nel `default` e faceva **perdere la sessione** a un
+	 * client conforme, e `TELA` non veniva spedito **da nessuna riga** —
+	 * `rcp_tela_adattata_ora()` cambiava lo stato e scriveva nel registro, ma sul
+	 * filo non usciva niente.  E' la coppia che `DECISIONI.md` §5.0-sexies
+	 * accende. */
+	T_ADATTA_TELA = 0x000B,
+	T_TELA = 0x000E,
 	T_BANCO_MARCA = 0x000F,
 	T_BANCO_ESITO = 0x0010,
 };
@@ -2154,6 +2163,74 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
 	rcp_tela_adattata_ora(s, lar, alt, 0);
 }
 
+/* La dichiarazione, il perche' e le due misure che uccidono stanno in `rcp.h`:
+ * qui c'e' solo la regola. */
+bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
+                        uint32_t *fuori_a)
+{
+	uint32_t l, a;
+
+	if (fuori_l)
+		*fuori_l = 0;
+	if (fuori_a)
+		*fuori_a = 0;
+	/* ⛔ Il tetto si controlla PRIMA di troncare: troncare 100000 al pari darebbe
+	 * 100000, cioe' un numero ancora capace di uccidere il compositore. */
+	if (larghezza < RCP_TELA_MINIMA || altezza < RCP_TELA_MINIMA ||
+	    larghezza > RCP_TELA_MASSIMA || altezza > RCP_TELA_MASSIMA)
+		return false;
+	/* ⚠ In GIU', sempre: verso l'alto si uscirebbe dalla finestra del browser, e
+	 * il pixel di troppo tornerebbe come banda o come scala — cioe' come la cosa
+	 * che questa decisione toglie. */
+	l = larghezza & ~1u;
+	a = altezza & ~1u;
+	/* ⛔ E il troncamento non puo' far scendere sotto il minimo: 201 -> 200 e'
+	 * ancora ammesso, ma la regola si scrive invece di fidarsi che i numeri
+	 * tornino. */
+	if (l < RCP_TELA_MINIMA || a < RCP_TELA_MINIMA)
+		return false;
+	if (fuori_l)
+		*fuori_l = l;
+	if (fuori_a)
+		*fuori_a = a;
+	return true;
+}
+
+/* ⛔⭐ IL MESSAGGIO `TELA` SUL FILO — §7.1.
+ *
+ * ⚠ Fino al 14 agosto 2026 questo pezzo NON esisteva: `rcp_tela_adattata_ora()`
+ *   cambiava la tela in vigore, apriva la grazia e scriveva nel registro, ma il
+ *   client non riceveva **niente**.  ⇒ Un client che avesse chiesto una misura
+ *   sarebbe rimasto ad aspettare una risposta che nessuno spediva, e il difetto
+ *   si sarebbe visto come «l'adattamento non funziona» invece che come «non e'
+ *   scritto».  E' la forma di guasto che questo progetto paga piu' spesso: il
+ *   pezzo che manca **fra** due pezzi che ci sono.
+ *
+ * `esito`  1 = ADATTATA, 2 = RIFIUTATA
+ * `motivo` 0 se adattata; 1 = COMPOSITORE_INCAPACE, 2 = MISURA_FUORI_LIMITI,
+ *          3 = NON_ORA
+ * ⛔ E i due campi di misura sono **la tela IN VIGORE DOPO questo messaggio**,
+ *    non quella chiesta: su un rifiuto valgono quella di prima, ed e' l'unica
+ *    riga che dice al client con che cosa continuare. */
+static void manda_tela(rcp_sessione *s, uint8_t esito, uint8_t motivo,
+                       uint32_t lar, uint32_t alt)
+{
+	uint8_t corpo[10];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+
+	sc_byte(&w, esito);
+	sc_byte(&w, motivo);
+	sc_u32(&w, lar);
+	sc_u32(&w, alt);
+	if (w.pieno) {
+		reg(s, "⛔ TELA non spedita: il corpo non ci sta (difetto nostro)");
+		return;
+	}
+	manda_messaggio(s, T_TELA, corpo, w.len);
+	reg(s, "TELA spedita: esito %u, motivo %u, tela in vigore %ux%u (§7.1)",
+	    esito, motivo, lar, alt);
+}
+
 /* ⛔ §7.1 / §3 eccezione 3 — la forma che sa QUANDO, e apre la grazia. */
 void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
                            uint64_t ora_ms)
@@ -2169,6 +2246,9 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
 		reg(s, "TELA(ADATTATA) alla misura che c'era gia' (%ux%u): la tela in "
 		       "vigore non cambia e §5.2 NON apre il debito della chiave",
 		    lar, alt);
+		/* ⛔ Si risponde LO STESSO: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`,
+		 *    e un client che non ricevesse niente aspetterebbe per sempre. */
+		manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
 		return;
 	}
 	reg(s, "tela IN VIGORE cambiata da %ux%u a %ux%u (§7.1): da qui §6.2 lega "
@@ -2186,6 +2266,10 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
 	s->tela_a = alt;
 	s->serve_chiave = true;
 	s->serve_chiave_perche = "e' il primo alla misura nuova dopo TELA (§5.2)";
+	/* ⛔ E il messaggio esce DOPO che lo stato e' cambiato, non prima: i due
+	 *    campi di misura devono dire la tela **in vigore dopo**, ed e' l'unico
+	 *    ordine in cui possono dirla senza copiarla in una variabile a parte. */
+	manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
 }
 
 void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
@@ -4047,6 +4131,71 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			s->g.chiudi(s->g.ctx, motivo);
 			return false;
 		}
+		case T_ADATTA_TELA: {
+			/* ⛔⭐⭐ §7.1 — «il client chiede una tela di un'altra misura».
+			 *
+			 * ⚠ Fino al 14 agosto 2026 questo tipo cadeva nel `default` e faceva
+			 *   **perdere la sessione** a un client conforme, con la riga «la
+			 *   fase 1 non lo serve ancora».  ⛔ Ed era una violazione nostra:
+			 *   `RCP.md:483` punto 4 dice che una misura fuori limiti si rifiuta
+			 *   con `TELA(MISURA_FUORI_LIMITI)` **invece di chiudere**, e la
+			 *   ragione e' scritta accanto — «l'utente che trascina male una
+			 *   finestra non deve perdere la sessione».
+			 *
+			 * ⇒ Adesso si risponde sempre, e il client sa **con che cosa
+			 *   continuare**: i due campi di `TELA` portano la tela in vigore
+			 *   DOPO la risposta, che su un rifiuto e' quella di prima. */
+			uint32_t chiesta_l = le_u32(&l);
+			uint32_t chiesta_a = le_u32(&l);
+			uint32_t buona_l = 0, buona_a = 0;
+
+			if (l.corto) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "ADATTA_TELA corto: §7.1 vuole due u32");
+				return false;
+			}
+			if (!s->sessione_spedita) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "ADATTA_TELA prima di SESSIONE: §7.1 lo ammette solo a "
+				        "sessione aperta");
+				return false;
+			}
+			/* ⛔ Il tetto e la parita' stanno in UN posto solo, e non qui:
+			 *    `rcp_misura_ammessa()` (`rcp.h`).  Riscrivere qui la
+			 *    stessa regola vorrebbe dire averne due, e il giorno in cui una
+			 *    cambia il difetto e' «il server accetta una misura che il
+			 *    compositore non regge» — cioe' la sessione di chi ci ospita che
+			 *    muore in silenzio. */
+			if (!rcp_misura_ammessa(chiesta_l, chiesta_a, &buona_l, &buona_a)) {
+				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: fuori dai limiti "
+				       "%u..%u (`cattura.h`) — la tela resta %ux%u",
+				    chiesta_l, chiesta_a, RCP_TELA_MINIMA,
+				    RCP_TELA_MASSIMA, s->tela_l, s->tela_a);
+				manda_tela(s, 2 /* RIFIUTATA */, 2 /* MISURA_FUORI_LIMITI */,
+				           s->tela_l, s->tela_a);
+				break;
+			}
+			/* ⛔⛔ E QUI SI DICHIARA QUEL CHE NON SAPPIAMO ANCORA FARE.
+			 *
+			 * La misura e' buona, il compositore la reggerebbe — `[M]` 14 agosto
+			 * 2026: Mutter la cambia a caldo in **41,6 ms** senza perdere un
+			 * fotogramma, labwc in **5,1 ms** — ⛔ ma la catena che porta la
+			 * richiesta dal filo fino a `pw_stream_update_params()` **non e'
+			 * ancora scritta**: manca `figli_ritela()` e manca
+			 * `cattura_ridimensiona()`.
+			 *
+			 * ⇒ Si risponde `COMPOSITORE_INCAPACE`, che e' **vero oggi** e lo
+			 *   dice al client invece di lasciarlo aspettare.  ⚠ E il registro
+			 *   nomina il pezzo mancante: un ripiego che non dice **quale** riga
+			 *   manca e' un ripiego che nessuno va a togliere (`CODER.md` §4.2). */
+			reg(s, "ADATTA_TELA %ux%u → %ux%u ammessa, ma RIFIUTATA per ora: "
+			       "manca la catena `figli_ritela()` → `cattura_ridimensiona()` "
+			       "(`DECISIONI.md` §5.0-sexies, lavoro 3).  La tela resta %ux%u",
+			    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
+			manda_tela(s, 2 /* RIFIUTATA */, 1 /* COMPOSITORE_INCAPACE */,
+			           s->tela_l, s->tela_a);
+			break;
+		}
 		default: {
 			/* §7.1 + §3: un tipo sconosciuto sul canale di controllo non si
 			 * ignora — la connessione cade.
@@ -4100,9 +4249,10 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			case 0x0009:
 				del_client = "DISPOSIZIONE";
 				break;
-			case 0x000B:
-				del_client = "ADATTA_TELA";
-				break;
+			/* ⚠ `0x000B ADATTA_TELA` non compare piu' qui: dal 14 agosto 2026 ha
+			 *   un caso suo e non arriva mai al `default`.  Tolto invece di
+			 *   lasciato «per sicurezza»: un ramo irraggiungibile che nomina un
+			 *   tipo servito e' una riga che mente a chi legge. */
 			default:
 				break;
 			}

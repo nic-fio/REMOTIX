@@ -1748,7 +1748,14 @@ bene senza logica aggiuntiva.
 riga di avvio del compositore (`--virtual --width W --height H`) **prima** che la sessione
 parta, e la sessione parte al primo attacco.
 
-### 5.0-bis 🔸 Il riattacco a misura diversa su KDE < 6.8: degradazione dichiarata
+### 5.0-bis 🔸 Il riattacco a misura diversa su KDE ≤ 6.7.4: degradazione dichiarata
+
+> ⚠ *Il titolo diceva «KDE < 6.8», e §5.0-quater prometteva quella versione «a ottobre».*
+> ⛔ **Corretto il 14 agosto 2026**: `[R]` verificato su invent.kde.org, **`Plasma/6.8` non
+> esiste**, l'ultimo tag è **v6.7.4**, e i rami da `Plasma/6.3` a `Plasma/6.7` non hanno il
+> ridimensionamento a caldo — c'è **solo su `master`**, senza una data di rilascio. ⇒ Una
+> degradazione con una scadenza scritta invecchia peggio di una senza: qui la scadenza **non
+> c'è**, e va detto.
 
 È l'unico punto in cui il modello non può essere servito. A sessione viva KWin 6.3.6 non
 cambia misura `[M]`, e riavviarlo significherebbe uccidere la sessione — cioè distruggere
@@ -1864,6 +1871,106 @@ accusa l'architettura o il conto dei pixel.
 
 ⏳ **Resta aperta**, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.md`
 §6.1: oggi è una specifica scritta e **non attuata** (§5.0-quater ne racconta il pezzo difficile).
+
+### 5.0-sexies ✅ ⭐⭐ La tela del server prende la misura della tela del client — e la conversione delle coordinate **sparisce**
+
+*14 agosto 2026, sera, **decisa dall'utente** dopo una giornata in cui il mouse sul DeX è rimasto
+inutilizzabile attraverso quattro cure. Sue parole: «abbiamo due tele: quella del server e quella
+del client (la dimensione della finestra di rendering del browser). Bisogna solo convertire le
+coordinate» — e poi, chiedendo la verifica: «se questo è possibile, allora non servono più nemmeno
+le conversioni».*
+
+⭐ **Non rovescia §5.0-quinquies: la accende.** Quella decisione teneva la tela a 1920×1080 per una
+ragione di **metodo** («la fase 3 misura il tempo, non la geometria») e lasciava scritto ⏳ *«resta
+aperta, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.md` §6.1»*. È questa.
+
+| | |
+|---|---|
+| **la tela del server** | si chiede della misura della **tela del client**, arrotondata in giù al **pari** |
+| **la tela del client** | si stringe alla misura **concessa** ⇒ le due coincidono |
+| **la conversione** | `x_desktop = x_tela`: **l'identità** |
+| **le bande nere** | non esistono più *dentro* l'immagine: quel che avanza (≤1 px per asse) è **sfondo della pagina fuori dalla tela**, e non viaggia sul filo |
+
+> ⚠ **E il monito di §5.0-quinquies non è stato ignorato**, è stato letto: *«le bande nere non sono
+> la risoluzione… sono la forma della finestra, e cambiare la tela non le tocca»*. ⭐ È vero per il
+> cambio che quella voce esaminava — da 1920×1080 a 2560×1440, **sempre 16:9**. Qui la tela prende
+> il **rapporto del client**, quindi il monito non si applica: le bande spariscono perché sparisce
+> la differenza di forma che le genera.
+
+#### Le misure che l'hanno resa possibile — quattro banchi in parallelo, 14 agosto 2026
+
+| | misura esatta | cambio a caldo |
+|---|---|---|
+| **Mutter** (GNOME) | `[M]` **30 richieste su 30**, da 1×1 a 7680×4320, scala **1,000000**, passo senza riempimento | `[M]` primo fotogramma nuovo a **41,6 ms**, nessun nero, sessione ed EIS intatti; **20 ridimensionamenti in 2 s, 20 esatti** |
+| **labwc** (XFCE, LXQt) | `[M]` esatta **anche a larghezza dispari**; `1×1`, `1919×1079`, `32768×1080` tutte al pixel | `[M]` **5,1 ms**, **0 fotogrammi persi su 25** |
+| **KWin** (KDE) | `[R]` nessuna validazione: né minimo, né massimo, né parità, né multipli | ⛔ solo su `master` — vedi §5.0-bis |
+| **il codificatore** | `[M]` il vincolo è **pari, e basta** — non multiplo di 8 né di 16 | — |
+
+⛔ **Il vincolo del pari è NOSTRO, non dei compositori**: è il 4:2:0 (`src/codificatore.c:1373` e
+`:1512`). `[M]` In 4:4:4 passa anche il dispari. ⇒ Si tronca in **giù** (2133 → 2132) e **lo si
+dichiara** con `TELA(ADATTATA)`: un pixel detto vale più di un pixel nascosto in una scala.
+
+#### ⛔ Le tre guardie che dobbiamo scrivere noi — nessuno le fa a monte
+
+Tutte e tre scoperte misurando, e tutte e tre della stessa famiglia: **il silenzio**.
+
+1. **Il tetto della misura.** `[M]` Oltre **16384** per lato `gnome-shell` muore — e 16386 è
+   *dentro* il `MAX_SIZE` che Mutter **dichiara**, quindi il limite dichiarato mente. `[M]` Su
+   labwc `32768×32768` uccide il compositore **con zero righe di registro**. ⇒ Il tetto lo mette il
+   nostro codice, e un client non può sceglierlo senza limiti.
+2. ⛔⛔ **La scala di GNOME.** `[M]` Con `org.gnome.desktop.interface scaling-factor = 2` i pixel
+   restano quelli chiesti ma il monitor logico prende **scala 2,0**: il layout diventa
+   `roundf(2133/2) = 1067` e **1067×2 = 2134 ≠ 2133**. È lo spazio delle coordinate dell'**input**
+   ⇒ **il puntatore va altrove e nessuno lo dice.** Cura: leggere la scala e **fallire** se non è
+   `1,0`.
+3. **Chiesto contro concesso.** `[R]` `src/cattura.c:914` non confronta mai la misura **chiesta** a
+   PipeWire con quella **negoziata**, e `codificatore_comprimi()` riceve i pixel e il passo ma
+   **non** larghezza e altezza, quindi non può fare da testimone. ⛔ Oggi è irraggiungibile perché
+   si chiede sempre 1920×1080: **è questa decisione a renderlo raggiungibile**, e va chiuso
+   insieme, non dopo.
+
+#### La regola di forma, rubata a neatvnc
+
+⭐ `[M]` Chiedere a labwc la misura **che l'output ha già** risponde «riuscito» e **non manda
+nessun evento**; un serial vecchio risponde «annullato» e non fa niente. ⛔ `wayvnc` tratta
+*riuscito*, *fallito* e *annullato* nello stesso ramo — da non copiare. ⇒ **La verità la dice il
+fotogramma, non l'esito della richiesta.**
+
+#### ⏳ ⭐ Per quando si affronterà il RI-ATTACCO: la soluzione è già misurata, e sta qui
+
+*Annotato su richiesta dell'utente, 14 agosto 2026: «il problema della dimensione della finestra
+del browser si ripresenterà, ma la soluzione è già bella pronta».*
+
+⛔ **La domanda tornerà, ed è inevitabile**: §4.1 promette che **la sessione sopravvive al
+client**, e §5.0 che la tela **nasce a ogni attacco**. ⇒ Il giorno in cui l'utente si stacca dal
+DeX e si riattacca dal portatile, la finestra del browser ha **un'altra misura** — e la tela del
+server è quella di ieri. È esattamente il caso che oggi produrrebbe di nuovo bande, scala e
+conversione.
+
+⭐ **E la risposta non va cercata quel giorno: è stata misurata il 14 agosto 2026**, ed è il
+ridimensionamento **a caldo**, sulla sessione viva, senza rifarla:
+
+| | costo misurato | che cosa NON succede |
+|---|---|---|
+| **Mutter** (GNOME) | `[M]` primo fotogramma nuovo a **41,6 ms** · **20 ridimensionamenti in 2 s, 20 esatti** | nessun fotogramma nero, **sessione ed EIS intatti**, nessuna riconnessione |
+| **labwc** (XFCE, LXQt) | `[M]` **5,1 ms** · **0 fotogrammi persi su 25** | nessun fotogramma nero; il fotogramma successivo è già alla misura nuova |
+| **KWin** (KDE ≤ 6.7.4) | ⛔ non esiste | ⇒ vale il ripiego dichiarato di §5.0-bis, e **solo lì** |
+
+⇒ ⭐ **Il ri-attacco a misura diversa non è un problema aperto: è un caso già coperto**, su tre
+desktop su quattro, a un costo che l'utente non percepisce. Chi affronterà quel tema non deve
+studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` (che alla data di questa voce
+**non esiste ancora**: è l'unica riga di lavoro rimasta) e rileggere questa tabella.
+
+⚠ E le tre guardie qui sopra valgono **a maggior ragione** al ri-attacco: è il momento in cui la
+misura cambia davvero, cioè il momento in cui una divergenza silenziosa fra chiesto e concesso
+avrebbe le sue conseguenze.
+
+#### Su KDE non cambia niente: vale §5.0-bis
+
+⚠ *E §5.0-bis va corretta in un punto*: diceva «KDE < 6.8». `[R]` Verificato il 14 agosto su
+invent.kde.org: **`Plasma/6.8` non esiste**, l'ultimo tag è **v6.7.4**, e il ridimensionamento a
+caldo è **solo su `master`**, senza una data. ⇒ Si legga «KDE ≤ 6.7.4, e la versione che lo porta
+non è ancora uscita».
 
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 

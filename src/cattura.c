@@ -62,6 +62,12 @@ struct Cattura
 	CatturaStrada strada;
 	CatturaColore colore;
 	uint32_t chiesta_larghezza, chiesta_altezza;
+	/* ⛔ Che la misura NEGOZIATA sia diversa da quella CHIESTA.  Si dice una
+	 *    volta sola e si tiene, perche' il richiamo del formato gira piu' volte.
+	 * ⚠ Vive perche' la tela sta per smettere di essere una costante
+	 *   (`DECISIONI.md` §5.0-sexies): finche' si chiedeva sempre 1920x1080 una
+	 *   divergenza non poteva capitare, e infatti nessuno la guardava. */
+	gboolean misura_divergente;
 
 	/* --- i conteggi, che girano sul thread di tempo reale --------------- *
 	 * ⚠ SI CONTANO, NON SI STAMPANO: una riga di registro per fotogramma
@@ -377,6 +383,41 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	              cattura->formato.size.width, cattura->formato.size.height,
 	              cattura_colore_nome(cattura->formato.format),
 	              bit_per_canale(cattura->formato.format), (guint64) cattura->formato.modifier);
+
+	/* ⛔⛔ LA GUARDIA: chiesto contro concesso.
+	 *
+	 * ⚠ Fino al 14 agosto 2026 questa riga non c'era, e la riga di registro qui
+	 *   sopra diceva la misura negoziata **senza confrontarla con niente**: chi
+	 *   la leggeva vedeva un numero e non aveva modo di sapere se fosse quello
+	 *   chiesto.  ⛔ Con la tela a 1920x1080 fissa la divergenza non poteva
+	 *   capitare; `DECISIONI.md` §5.0-sexies la rende POSSIBILE, ed e' per
+	 *   questo che la guardia nasce insieme a quella decisione e non dopo.
+	 *
+	 * ⛔ E il danno che previene non e' un'immagine storta: e' che il puntatore
+	 *   finisca ALTROVE.  Se il compositore concede una misura diversa e nessuno
+	 *   lo dice, la conversione delle coordinate nasce sbagliata e il sintomo —
+	 *   misurato per due giorni su Samsung DeX — e' «il mouse ha problemi con le
+	 *   coordinate degli elementi».  ⇒ Un difetto che si dichiara costa un
+	 *   minuto; uno che tace e' costato una settimana.
+	 *
+	 * ⚠ Si DICE e non si chiude la sessione: chi sceglie che farne e' il
+	 *   chiamante, che sa se puo' ancora servire il client (`CODER.md` §4.2 — un
+	 *   ripiego silenzioso produce due comportamenti sotto la stessa etichetta). */
+	if (cattura->chiesta_larghezza && cattura->chiesta_altezza
+	    && (cattura->formato.size.width != cattura->chiesta_larghezza
+	        || cattura->formato.size.height != cattura->chiesta_altezza))
+	{
+		if (!cattura->misura_divergente)
+			registro_dice(AREA,
+			              "⛔ MISURA DIVERGENTE: chiesti %ux%u, concessi %ux%u — la "
+			              "conversione delle coordinate nasce sbagliata e il puntatore "
+			              "andra' altrove (`DECISIONI.md` §5.0-sexies)",
+			              cattura->chiesta_larghezza, cattura->chiesta_altezza,
+			              cattura->formato.size.width, cattura->formato.size.height);
+		cattura->misura_divergente = TRUE;
+	}
+	else
+		cattura->misura_divergente = FALSE;
 
 	/*
 	 * ⛔ IL TIPO DEI DATI SI CONCORDA QUI, non nel formato: chi tace lascia il

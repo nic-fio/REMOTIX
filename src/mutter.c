@@ -187,6 +187,58 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
 	return (int) quanti;
 }
 
+/* ⛔⛔ LA GUARDIA SULLA SCALA — e previene il difetto che NON si vede.
+ *
+ * `[M]` 14 agosto 2026: con `org.gnome.desktop.interface scaling-factor = 2` i
+ * pixel del flusso restano quelli chiesti, ma il monitor LOGICO prende scala
+ * **2,0** anche quando l'unica scala ammessa per quel modo e' 1,0
+ * (`meta-monitor.c:1988` scavalca la propria lista).  Il layout diventa allora
+ * `roundf(2133/2) = 1067`, e **1067x2 = 2134 != 2133**.
+ *
+ * ⇒ ⛔ E' lo spazio delle coordinate dell'INPUT: il puntatore finisce altrove, e
+ *   NESSUNA riga di registro lo dice.  E' esattamente il sintomo che l'utente ha
+ *   descritto per due giorni sul Samsung DeX — «il mouse ha sempre problemi con
+ *   le coordinate degli elementi».
+ *
+ * ⚠ Qui si LEGGE e si DICE; non si spegne niente.  Chi decide che farne e' il
+ *   chiamante: con la tela a misura fissa il danno era teorico, con la tela alla
+ *   misura del client (`DECISIONI.md` §5.0-sexies) e' concreto.
+ *
+ * Ritorna la scala peggiore trovata, o -1 se non si e' potuta leggere. */
+static double scala_dei_monitor_logici(GDBusConnection *bus)
+{
+	g_autoptr(GError) sbaglio = NULL;
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GVariant) logici = NULL;
+	GVariantIter iter;
+	GVariant *voce;
+	double peggiore = 1.0;
+	gboolean vista = FALSE;
+
+	risposta = g_dbus_connection_call_sync(bus, NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY,
+	                                       "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
+	if (!risposta)
+		return -1.0;
+	/* ⚠ Il figlio 2 e' l'elenco dei monitor LOGICI — `(iiduba(ssss)a{sv})` — e
+	 *   la scala e' il terzo campo.  Il figlio 1, che legge `elenca_monitor`,
+	 *   e' un'altra cosa: i monitor FISICI, che la scala non ce l'hanno. */
+	logici = g_variant_get_child_value(risposta, 2);
+	g_variant_iter_init(&iter, logici);
+	while ((voce = g_variant_iter_next_value(&iter)))
+	{
+		g_autoptr(GVariant) v = voce;
+		g_autoptr(GVariant) s = g_variant_get_child_value(v, 2);
+
+		if (!g_variant_is_of_type(s, G_VARIANT_TYPE_DOUBLE))
+			continue;
+		vista = TRUE;
+		if (g_variant_get_double(s) > peggiore)
+			peggiore = g_variant_get_double(s);
+	}
+	return vista ? peggiore : -1.0;
+}
+
 static gboolean fra(char **elenco, guint quanti, const char *nome)
 {
 	guint i;
@@ -228,6 +280,25 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 	if (quanti_dopo < 0)
 		return FALSE;
 	sessione->monitor_dopo = (guint) quanti_dopo;
+
+	/* ⛔ La scala si guarda QUI, una volta, appena il monitor virtuale esiste: e'
+	 *    il primo istante in cui c'e' qualcosa da guardare, ed e' prima che una
+	 *    sola coordinata sia stata convertita. */
+	{
+		double scala = scala_dei_monitor_logici(sessione->bus);
+
+		if (scala < 0)
+			registro_dice(AREA, "⚠ la scala dei monitor logici non si e' potuta leggere: "
+			                    "non dico 1,0 per abitudine");
+		else if (scala != 1.0)
+			registro_dice(AREA,
+			              "⛔ SCALA %.3f invece di 1,0 — lo spazio delle coordinate "
+			              "dell'input NON coincide con i pixel del flusso, e il puntatore "
+			              "andra' altrove senza che nulla lo dica.  Cura: "
+			              "`gsettings set org.gnome.desktop.interface scaling-factor 0` "
+			              "(`DECISIONI.md` §5.0-sexies, guardia 2)",
+			              scala);
+	}
 
 	for (i = 0; i < (guint) quanti_dopo && i < MONITOR_MAX; i++)
 	{

@@ -407,6 +407,24 @@ const char *cattura_guasto(Cattura *cattura);
 
 void cattura_ferma(Cattura *cattura);
 
+/* --- la misura ammessa: NON sta qui, e la ragione va detta ------------ *
+ *
+ * ⛔ La regola («200..8192, e larghezza e altezza PARI») vive in `rcp.h`, come
+ *    `rcp_misura_ammessa()`, e NON qui — anche se il motivo per cui il tetto
+ *    esiste e' tutto di questo livello: `[M]` 14 agosto 2026, oltre **16384**
+ *    per lato `gnome-shell` muore, e su labwc `32768x32768` uccide il
+ *    compositore **con zero righe di registro**.
+ *
+ * ⚠ Sta di la' perche' a doverla applicare e' chi legge `ADATTA_TELA` dal filo,
+ *   e `rcp.h` e' **volutamente autosufficiente** — include solo `stdbool`,
+ *   `stddef` e `stdint` — perche' la sua copia gemella compili dentro
+ *   `bsslserver` senza il resto dell'albero.  ⇒ Mettere la regola qui
+ *   costringerebbe `rcp.c` a includere questo file, cioe' a rompere quella
+ *   proprieta'.
+ * ⛔ E averla in DUE posti sarebbe peggio di tutt'e due: il giorno in cui una
+ *   cambia, il server accetta una misura che il compositore non regge, e la
+ *   sessione di chi ci ospita muore in silenzio. */
+
 /* --- i nomi, perche' chi scrive un manifesto non li reinventi --------- */
 const char *cattura_buffer_nome(CatturaBuffer buffer);
 const char *cattura_colore_nome(uint32_t formato_grezzo);
