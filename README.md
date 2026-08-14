@@ -348,7 +348,31 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **IL NUMERO C'È: 78,1 ms — E IL COLLO DI BOTTIGLIA È IL DISEGNO**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026.** ⇒ **LA FASE 3 È CHIUSA. E ADESSO SI FA VEDERE IL DESKTOP VERO**
+>
+> > ## ⭐ *«Mi sembra abbastanza fluido, non il massimo ma pur sempre fluido.»*
+> > — l'utente, 14 agosto 2026, e **la fase 3 si chiude qui**
+>
+> ⛔⛔ **Ma il giudizio ha prodotto DUE difetti che nessun banco aveva trovato, e sono il lavoro che
+> viene adesso.** Il dettaglio sta in [`fasi/03-movimento.md`](fasi/03-movimento.md) §0-ter e
+> §0-quater; il conto della notte in
+> [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).
+>
+> | | il lavoro, in ordine | perché prima |
+> |---|---|---|
+> | **1** | ⛔⛔ **FAR VEDERE IL DESKTOP VERO.** Il prodotto **aggiunge** un monitor virtuale alla sessione (`Meta-2`, *«2 prima e 3 dopo»*) e registra quello: GNOME ci mette **lo sfondo**, ma barra, dock e finestre restano sul **primario**. ⇒ **L'utente vede un secondo schermo vuoto, non il suo desktop** | ⭐ è **la domanda che l'utente ha fatto** — *«se il server non mostra il desktop, a che serve REMOTIX?»* — ed è `SPECIFICHE.md` §5.1. ⛔ **È rimasta nascosta per due fasi** dietro il giudizio della fase 2, *«è lo sfondo GNOME, è OK»*: **uno sfondo vuoto preso per un successo** |
+> | **2** | ⛔⛔ **HEVC NON DIPINGE nel browser dell'utente.** `[M]` 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ **I banchi dicevano il contrario** (1 047 dipinti, 30 fps): quel giro aveva una **scena sintetica** e un **Chrome del banco** | senza, **la codifica in hardware non è giudicabile** — e la fase l'ha già dentro |
+> | **3** | ⛔ **IL DISEGNO: 28,0 ms su 78,1, il 36 %** — contro i **5 ms** che ormai costa la codifica | è il collo di bottiglia nuovo, e **non era in nessun piano** |
+>
+> ⭐⭐ **E `D1` è CHIUSO, a costo zero, leggendo il registro della sessione del giudizio** — con una
+> risposta **peggiore della domanda**: la strozzatura del debito di chiave **regge a 1/s quando il
+> client dipinge** e ⛔ **si apre a 5/s quando NON dipinge**, cioè esattamente quando ogni chiave è
+> sprecata. ⚠ E lo scenario temuto — *«un abbandono legittimo ne genera sessanta illegittimi»* —
+> **non si è presentato**: `abbandonati 0`. *Il sintomo osservato era un altro da quello temuto.*
+>
+> ---
+>
+> ### ⭐⭐⭐⭐ Il numero della fase, e come è stato preso — **13 agosto 2026, notte**
 >
 > *La fase 3 ha il suo numero **con la codifica in hardware**, e la codifica in hardware è **nel
 > prodotto**, non su una copia. ⏳ **Manca solo il giudizio dell'utente**, preparato in

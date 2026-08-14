@@ -421,7 +421,26 @@ qualcun altro.
 
 ---
 
-## Fase 3 — Il movimento
+## Fase 3 — Il movimento ✅ **CHIUSA il 14 agosto 2026**
+
+> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«abbastanza fluido, non il massimo ma pur sempre fluido»*
+>
+> | | |
+> |---|---|
+> | **il numero** | **78,1 ms** con la codifica **in hardware** (P1 verde, n=379) · **71,86 ms** con AV1 in software, che è la configurazione **giudicata** |
+> | ⭐ **l'architettura** | **ASSOLTA**: togliendo la codifica in hardware si perdono **31,7 ms** e **gli altri quattro tratti non si muovono** (Mutter −0,02 · filo −0,12 · decodifica −0,76) |
+> | ⭐ **la codifica in hardware** | **nel prodotto**, non su una copia: la chiave passa da **114,5 ms a 5,1**, il ritmo **raddoppia** |
+> | ⛔ **il tetto** | **SFORA** — 78,1 contro 50, e **sforerebbe anche a codifica gratis** |
+> | ⛔⛔ **il collo di bottiglia nuovo** | **il DISEGNO: 28,0 ms su 78,1, il 36 %** — contro i 5 ms della codifica |
+>
+> ⛔ **E i tre limiti del giudizio sono scritti in `fasi/03-movimento.md`, non taciuti**: è su AV1
+> in software; HEVC in hardware **non è giudicabile** perché il browser dell'utente non lo dipinge;
+> e l'utente **non ha visto un desktop** ma un monitor aggiunto con dentro la scena dei banchi.
+>
+> ⭐⭐ **E il giudizio ha prodotto due difetti che nessun banco aveva trovato** — HEVC che non
+> dipinge nella sessione vera, e il prodotto che **aggiunge** un monitor invece di mostrare il
+> desktop. ⇒ *È esattamente il valore che il piano attribuiva al giudizio, e si è realizzato in
+> trenta secondi.*
 
 > ### ⭐⭐⭐ LA CODIFICA IN HARDWARE È ANTICIPATA QUI — deciso dall'utente il 13 agosto 2026, sera
 >

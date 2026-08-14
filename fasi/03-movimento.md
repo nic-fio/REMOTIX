@@ -463,9 +463,53 @@ perché quel giorno il numero si rifà senza riscrivere niente (`DECISIONI.md` �
 
 ---
 
-## Il giudizio dell'utente
+## Il giudizio dell'utente — ⭐ DATO il 14 agosto 2026, mattina
 
-⏳ *La fase si chiude su **una misura giudicata dall'utente**, non su un documento completo.*
+> ### ⭐ **«Mi sembra abbastanza fluido, non il massimo ma pur sempre fluido.»**
+> — l'utente, davanti a `https://192.168.0.2:7571/`, entrato come sé stesso
+
+⇒ ⭐ **La fase 3 si chiude qui**, ed è la regola: *una fase si chiude su una misura giudicata
+dall'utente, non su un documento completo* (`PIANO.md` §0.3).
+
+### ⛔ E i tre limiti del giudizio, scritti PRIMA che lo desse e non dopo
+
+| | |
+|---|---|
+| **1** | vale per la catena con **AV1 in software** — ⭐ ed è **esattamente** la configurazione su cui è stato misurato il numero (71,86 ms, ~22 fotogrammi/s) |
+| **2** | ⛔ **non** vale per la codifica in hardware: **il browser dell'utente non dipinge HEVC** (§0-ter) |
+| **3** | ⛔ **non ha visto un desktop**: ha visto **un monitor aggiunto** con dentro la scena dei banchi (§0-quater) |
+
+### ⭐⭐ E il giudizio ha prodotto DUE difetti che nessun banco aveva trovato
+
+*È il valore che il piano attribuiva al giudizio — «l'utente guarda **il suo** desktop, un'altra
+scena da quella misurata» — e si è realizzato in trenta secondi, due volte.*
+
+> ### ⛔⛔ §0-ter — Il browser dell'utente NON dipinge HEVC, e chiede chiavi a vuoto
+>
+> `[M]` dal registro del prodotto, sessione vera del 14 agosto:
+> ```
+> 1748 fotogrammi consegnati (118 chiavi) … 0 guasti — codec 1
+> [192.168.0.3]: §5.2 vuole una CHIAVE — richiesta girata al palco   ← 1 659 volte
+> ```
+> **Il server manda, il client rifiuta e richiede una chiave, per sempre.** Schermo nero.
+> ⛔ **E i banchi dicevano il contrario** — 1 047 fotogrammi dipinti, 30 fps esatti, `consegnati ==
+> dipinti`. La differenza: quel giro aveva **una scena sintetica e un Chrome lanciato dal banco**;
+> questo ha **il browser dell'utente e il suo desktop**.
+> ⇒ ⭐ *Un banco che dice sì e un utente che vede nero: il banco stava misurando un'altra cosa.*
+
+> ### ⛔⛔ §0-quater — Il prodotto non mostra il desktop: ne AGGIUNGE uno vuoto
+>
+> `[M]` dal registro: `il nostro monitor e' **Meta-2**, **2 prima e 3 dopo**` — il prodotto trova la
+> sessione grafica dell'utente e **le attacca un monitor nuovo**, poi registra quello. GNOME ci
+> disegna **lo sfondo** (va su tutti i monitor) ma **barra, dock e finestre restano sul primario**,
+> che nessuno guarda.
+> ⇒ ⛔ **L'utente non vede il suo desktop: vede un secondo schermo vuoto.** E senza input (fase 4)
+> lì non ci finirà mai niente da solo — quindi *«l'utente vede il desktop che si muove»* **non era
+> realizzabile per costruzione**.
+> ⛔⛔ **E la riga che ha nascosto tutto questo per due fasi** è il giudizio della fase 2 —
+> *«è lo sfondo GNOME, è OK»*: **uno sfondo vuoto preso per un successo**. ⇒ `SPECIFICHE.md` §5.1
+> vuole che la sessione remota **sia** la sessione grafica dell'utente. Non lo è ancora, ed è
+> **lavoro della fase 5**.
 
 ---
 
@@ -497,7 +541,38 @@ intoppi. Sono UNO, moltiplicato.** La catena:
 il sintomo — l'immagine che resta rotta **per un secondo intero** dopo un singolo intoppo — è
 precisamente quel che un utente chiama *«va a scatti»* senza saper dire perché.
 
-### ⭐ Come si chiude, e costa ZERO lavoro in più
+### ⭐⭐⭐ CHIUSO IL 14 AGOSTO 2026 — e la risposta è **peggiore della domanda**
+
+*Letto dal registro della sessione in cui l'utente ha dato il giudizio, come previsto: **costo
+zero**, nessun banco nuovo.*
+
+⛔ **La strozzatura a «una richiesta al secondo» NON tiene** — e non tiene **esattamente nel caso
+per cui esiste**. `[M]`, due sessioni vere dello stesso prodotto, stesso giorno:
+
+| sessione | intervalli fra due richieste di chiave | ritmo |
+|---|---|---|
+| **AV1** — il client dipinge | `33.558 · 34.585 · 35.586 · 36.586` | ⭐ **1 al secondo**: la strozzatura tiene |
+| ⛔ **HEVC** — il client NON dipinge | `40.160 · 40.360 · 40.560 · 40.760` | ⛔ **5 al secondo**, esatte |
+
+⇒ ⛔⛔ **Quando il client decodifica, la strozzatura funziona; quando NON decodifica — cioè quando
+ogni chiave è sprecata — si apre a cinque volte tanto.** `[M]` **1 659 richieste** in una sessione,
+ciascuna girata al palco, e **la chiave è il fotogramma più caro che esista**.
+
+⭐ **E i tre numeri che il punto aperto chiedeva, con la risposta accanto:**
+
+| | domanda | risposta misurata |
+|---|---|---|
+| **1** | quante volte scatta | **1 659** nella sessione del giudizio |
+| **2** | quanti delta per volta | ⚠ **nessuno**: `abbandonati 0` in tutta la sessione AV1 ⇒ **lo scenario temuto — «un abbandono legittimo ne genera fino a sessanta illegittimi» — NON si è presentato** |
+| **3** | quanto passa fino alla chiave | **200 ms** nel caso rotto, **1 000 ms** in quello sano |
+
+⇒ ⭐ **Il timore era mal posto e il difetto è un altro**: non è l'abbandono a generare richieste, è
+**il client che non decodifica**. E il freno che doveva contenerlo **si stacca proprio lì**.
+⚠ *Il punto era stato lasciato aperto per non decidere su un sintomo temuto invece che osservato
+(`LEZIONI.md` §2.6). Osservato, il sintomo era un altro.* ⛔ **Non si cura qui**: si cura dove nasce,
+cioè in fase 5 insieme al difetto di HEVC.
+
+### ⭐ Come si chiudeva, e costava ZERO lavoro in più
 
 Il prodotto **scrive già ogni abbandono nel registro**: `RCP.md` §5.1 lo impone — *«un fotogramma
 perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto dal lato che riceve»*.
