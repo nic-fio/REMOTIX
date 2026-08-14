@@ -588,7 +588,32 @@ qualcun altro.
 
 ---
 
-## Fase 4 — Si comanda
+## Fase 4 — Si comanda ✅ **CHIUSA il 14 agosto 2026**
+
+> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«mi sembra ok»*
+>
+> *e, sulle due ottimizzazioni che aveva chiesto: «la situazione mi sembra migliorata, la comparsa
+> del desktop è più immediata».*
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **che cosa vede** | **usa il desktop**: clicca, scrive, scorre, sposta le finestre. REMOTIX ha smesso di essere una dimostrazione |
+> | ⭐ **il numero della fase** | l'anello **input → vetro**: `[M]` **139,40 ms** (n=326) e **141,60** (n=322), due giri indipendenti che concordano entro **2,2 ms** |
+> | ⛔ **il tetto** | **SFORA** — 139 contro 50, e **160-193 ms** sul vetro coi due pezzi ciechi |
+> | ⛔⛔ **e nessun tratto domina** | sei tratti da ~25 ms ⇒ **nessuna cura singola porta 140 a 50**: è lavoro della **fase 8** |
+> | ⭐ **il login → desktop** | **5,11 s → 1,04-1,13 s**, e di quel secondo **1,00 è il fisso di §4.4-bis** |
+> | ⭐⭐ **e il ritardo non cresce più** | prima **+108 ms al secondo** (⛔ 4,6 s di ritardo dopo 43 s, **con tutti i contatori verdi**); adesso **−2 ms/s** |
+>
+> ⭐⭐ **E il giudizio dell'utente ha trovato SETTE difetti che nessuno dei dieci banchi vedeva** —
+> il monitor aggiunto, due server nostri sulla stessa sessione, la barra sul dock di GNOME, la
+> cattura del puntatore, il palco fallito tenuto per sempre, ⛔ e **una riga del coordinatore** che
+> costava quattro secondi al login. **Sette su sette stavano FRA i pezzi, nessuno dentro uno.**
+>
+> ⛔ **E si chiude con cinque cose dichiarate aperte**, messe davanti all'utente **prima** che
+> giudicasse: il ritardo che sfora · la tela che non è la sua (**36 % di banda nera** sul suo 21:9)
+> · il monitor chiesto sempre invece di guardare se c'è · un pezzo cieco dentro il tratto da 26 ms
+> · e **un browser solo**. Stanno in [`fasi/04-si-comanda.md`](fasi/04-si-comanda.md).
+
 
 > ### ⭐⭐⭐ IL PRIMO LAVORO DELLA FASE 4 È IL **DESKTOP VERO** — deciso dall'utente il 14 agosto 2026
 >

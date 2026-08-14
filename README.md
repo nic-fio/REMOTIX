@@ -348,7 +348,62 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, mattina.** ⇒ **LA FASE 3 È CHIUSA. LA 4 COMINCIA IN UNA SESSIONE NUOVA**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, sera.** ⇒ **LA FASE 4 È CHIUSA: SI COMANDA IL DESKTOP**
+>
+> > ## *«Mi sembra ok.»*
+> > — l'utente, 14 agosto 2026, dopo aver usato il proprio desktop dentro una scheda
+>
+> ⭐⭐ **REMOTIX ha smesso di essere una dimostrazione**: si apre una scheda, si clicca, si scrive,
+> si scorre, si spostano le finestre. E il cursore che si vede è **uno solo**.
+>
+> | | |
+> |---|---|
+> | ⭐ **il numero della fase** | l'anello **input → vetro**: `[M]` **139,40 ms** (n=326) e **141,60** (n=322) — due giri indipendenti, concordi entro **2,2 ms** |
+> | ⛔ **il tetto** | **SFORA**: 139 contro 50 · **160-193 ms** sul vetro coi due pezzi ciechi |
+> | ⛔⛔ **e nessun tratto domina** | 30,4 · 26,6 · 26,0 · 25,6 · 16,2 ms ⇒ **nessuna cura singola** porta 140 a 50. È la **fase 8** |
+> | ⭐ **il login → desktop** | **5,11 s → 1,04-1,13 s** (di cui **1,00 s** è il fisso di §4.4-bis) |
+> | ⭐⭐ **il ritardo non cresce più** | prima **+108 ms/s** — 4,6 s di ritardo dopo 43 s **con tutti i contatori verdi** — adesso **−2 ms/s** |
+> | ⭐ **e il `drawImage`** | primo **25,6 ms**, secondo **0,080** ⇒ **320 volte**: il disegno non è mai stato caro |
+>
+> ⭐⭐ **Dieci anelli in parallelo, e il lavoro del coordinatore sono state le CUCITURE** — perché il
+> palco vive in un **altro processo**: fra il tasto premuto nel browser e il tasto premuto sul
+> desktop c'è un confine che nessun pezzo poteva attraversare da solo. Tre tubi: l'input
+> (padre→figlio), la forma del cursore (figlio→padre), e il campo `input` dei fotogrammi, ⭐ che lo
+> **timbra il figlio nell'istante della cattura** — perché il padre sa che cosa ha *mandato* e solo
+> il figlio sa che cosa il compositore ha *preso*.
+>
+> #### ⭐⭐ E il giudizio dell'utente ha trovato SETTE difetti che i dieci banchi non vedevano
+>
+> | ha detto | c'era sotto |
+> |---|---|
+> | *«se il server non mostra il desktop, a che serve REMOTIX?»* | il monitor aggiunto e vuoto, preso per uno sfondo per **due fasi** |
+> | *«non si vede nessun desktop»* | **due server nostri** con un monitor a testa sulla stessa sessione |
+> | *«lo schermo appare strano»* | la dichiarazione delle scorciatoie sul **38 %** della finestra |
+> | *«non vedo il drawer di gnome»* | la barra **esattamente dove GNOME tiene il dock** |
+> | *«il puntatore sembra catturato… studia XPRA»* | ⭐ §7.1 che contraddiceva §7.5: la cattura **non comprava niente** |
+> | *«niente desktop»*, due volte | il figlio che tiene per sempre **un palco fallito** |
+> | *«il login è troppo lungo»* | ⛔ **una riga del coordinatore**: `poll()` su due descrittori, `pf.revents` mai guardato |
+>
+> ⛔ **Sette su sette stavano FRA i pezzi, nessuno dentro uno.**
+>
+> #### ⛔ Le CINQUE cose dichiarate aperte, messe davanti all'utente PRIMA che giudicasse
+>
+> 1. ⛔ **il ritardo sfora** — 139 contro 50, e nessun tratto domina ⇒ **fase 8**;
+> 2. ⛔ **la tela non è quella del client**: sul suo 21:9 il **36 % dei pixel è banda nera**
+>    (`RCP.md` §4.5 esiste e nessuno la mantiene) ⇒ **fase 6**;
+> 3. ⛔ **il monitor si chiede sempre** invece di guardare se la sessione ne ha già uno — contro
+>    `SPECIFICHE.md` §6.5, ed è quel che ha fatto vedere lo schermo nero;
+> 4. ⚠ **un pezzo cieco dentro il tratto da 26 ms**: manca una riga nel registro dell'iniezione per
+>    separare quattro imputati;
+> 5. ⚠ **un browser solo** (Chrome 151): Safari, iPhone e **DeX** restano `[?]` *dichiarate*.
+>
+> 📖 **E il settimo studio è nato oggi**: [`xpra.md`](xpra.md) — chiesto dall'utente, previsto da
+> `PIANO.md` §1.3 **prima** della pagina e fatto **dopo**. ⛔ Nel frattempo avevamo scritto una
+> specifica che si contraddiceva, e a trovarla è stato lui in trenta secondi d'uso.
+>
+> ---
+>
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, mattina.** ⇒ **LA FASE 3 È CHIUSA. LA 4 COMINCIA IN UNA SESSIONE NUOVA** *(superato dal riquadro qui sopra)*
 >
 > *⭐ Deciso dall'utente: **la fase 4 si fa in una sessione nuova**. Questo riquadro è scritto per
 > chi la aprirà, **a codice fermo e a macchina in ordine**.*

@@ -550,6 +550,130 @@ Aperte all'apertura della fase, e vanno **misurate prima di essere credute**:
 
 ---
 
-## Il giudizio dell'utente
+## Il giudizio dell'utente — ⭐ DATO il 14 agosto 2026
 
-⏳ *la fase si chiude qui, e su una misura giudicata da lui.*
+> ## *«Mi sembra ok.»*
+> — l'utente, 14 agosto 2026, dopo aver usato il desktop di `prova` dentro una scheda di Chrome
+>
+> e, poco prima, sulle due cose che aveva chiesto di ottimizzare:
+> > *«La situazione mi sembra migliorata. La comparsa del desktop è più immediata.»*
+
+⭐⭐ **E la fase si chiude qui**, come `PIANO.md` §0.2 impone: *«su una misura giudicata dall'utente,
+non su un documento completo»*.
+
+### ⭐ Che cosa il giudizio ha confermato, e con quale numero accanto
+
+| la sua frase | il numero che le corrisponde |
+|---|---|
+| *«la comparsa del desktop è più immediata»* | `[M]` **5,11 s → 1,04-1,13 s** (7 giri) — e di quel secondo, **1,00 s è il secondo fisso di §4.4-bis**: ⭐ quel che è nostro sono **34-124 ms** |
+| *«mi sembra ok»* (dopo qualche minuto d'uso) | `[M]` il ritardo **non cresce più**: pendenza da **+108 ms/s a −2 ms/s**, e **1,3 ms** dopo 41 s |
+
+### ⛔ E i limiti del giudizio, scritti PRIMA che lo desse e non dopo
+
+*Gli sono stati messi davanti in tavola prima della prova — «un giudizio dato senza sapere che cosa
+manca è un'approvazione al buio», la stessa regola con cui ha chiuso la fase 2.*
+
+| | |
+|---|---|
+| ⛔ **il ritardo SFORA** | `[M]` **139,40 ms** (n=326) contro un tetto di **50**. ⚠ Ha giudicato **con gli occhi**, non su quel numero — e i due non si sostituiscono |
+| ⛔ **nessun tratto domina** | sei tratti da ~25 ms: **nessuna cura singola** porta 140 a 50. È lavoro della **fase 8**, e va detto perché il giudizio non venga letto come «il ritardo è a posto» |
+| ⛔ **la tela non è la sua** | il suo schermo è **21:9**, il desktop remoto **16:9** ⇒ `[M]` dal suo video, **il 36 % dei pixel è banda nera**. Ha giudicato una finestra, non uno schermo pieno |
+| ⚠ **un browser solo** | **Chrome 151**. Safari, iPhone e DeX restano `[?]` **dichiarate, non dedotte** |
+| ⚠ **qualche minuto, non qualche ora** | i tre orologi della sessione sono della **fase 5**: l'abbandono lungo non è stato giudicato |
+
+### ⭐⭐ E il giudizio dell'utente ha trovato SETTE difetti che nessuno dei dieci banchi vedeva
+
+*Non è un aneddoto: è il conto della giornata, ed è la ragione per cui il piano fa chiudere le fasi
+così.*
+
+| che cosa ha detto | che cosa c'era sotto |
+|---|---|
+| *«se il server non mostra il desktop, a che serve REMOTIX?»* | il monitor aggiunto e vuoto — **due fasi** l'avevano preso per uno sfondo |
+| *«non si vede nessun desktop»* | **due server nostri** che montavano un monitor a testa sulla stessa sessione |
+| *«lo schermo appare strano»* | la dichiarazione delle scorciatoie che copriva il **38 %** della finestra |
+| *«non vedo il drawer di gnome»* | la barra piazzata **esattamente dove GNOME tiene il dock** |
+| *«il puntatore sembra catturato… studia XPRA»* | ⭐ `SPECIFICHE.md` §7.1 che contraddiceva §7.5: la cattura **non comprava niente** |
+| *«niente desktop»*, due volte | il figlio che tiene per sempre **un palco fallito** |
+| *«il tempo fra login e desktop è troppo lungo»* | ⛔ **una riga del coordinatore**: `poll()` su due descrittori e `pf.revents` mai guardato |
+
+⛔ **Sette su sette stavano FRA i pezzi, nessuno dentro uno** — ed è la lezione di
+`fasi/rapporti/F5-desktop-vero.md` verificata sette volte in una giornata sola.
+
+---
+
+## ⭐⭐ Il numero della fase — `[M]` 14 agosto 2026
+
+*L'anello **input → vetro**, che alla fase 3 non era misurabile: il campo `input` valeva 0 in 953
+fotogrammi su 953, perché il canale non esisteva.*
+
+| | |
+|---|---|
+| ⭐ **il numero** | **139,40 ms** (n = 326 su 326) e **141,60 ms** (n = 322 su 322), ⭐ **due giri indipendenti che concordano entro 2,2 ms** |
+| ⚠ **coi pezzi ciechi** | **160-193 ms** sullo schermo dell'utente, **più la rete** |
+| ⛔ **contro il tetto** | **50 ms**. Si sfora di quasi **tre volte**, e si scrive com'è |
+
+### ⭐ La scomposizione, e la risposta a «che cosa ottimizzo?»
+
+| tratto | mediana |
+|---|---|
+| cattura → primo byte | **30,4 ms** |
+| la scena riceve → disegna *(è il desktop remoto, non noi)* | 26,6 |
+| byte → scena | 26,0 |
+| richiamo → primo `drawImage` | 25,6 |
+| disegno → cattura | 16,2 |
+| decodifica | 0,75 |
+| ⭐ **il `drawImage` vero** | **0,08** |
+
+⇒ ⛔ **Nessun tratto domina**: sono sei tratti da ~25 ms. **Nessuna cura singola porta 140 a 50.**
+⭐ La somma dei tratti fa **139,08** contro un totale di **139,40** — scarto **0,32 ms**: la
+scomposizione è completa, non ha buchi.
+⭐⭐ **E i tratti che il metro della fase 3 NON attraversava valgono 65,8 ms, il 47 %**: metà del
+ritardo vero stava fuori dal vecchio metro.
+
+> ### ⭐⭐ E la prova sul ferro che l'etichetta corretta stamattina era giusta
+> Il **primo** `drawImage` costa **25,6-27,1 ms**, il **secondo 0,080** ⇒ **320-339 volte**.
+> ⛔ *Il disegno non è mai stato caro: era l'attesa del fotogramma dalla GPU.*
+
+---
+
+## ⭐⭐ Le due ottimizzazioni chieste dall'utente — e tutt'e due erano NOSTRE
+
+### 1. Il login → desktop: **5,11 s → 1,04-1,13 s**
+
+⛔⛔ **E la causa era una riga del coordinatore, scritta la mattina stessa.** Per far arrivare
+l'input più in fretta era stato messo il descrittore di `libei` nello stesso `poll()` del figlio —
+⛔ ma il codice dopo **non guardava `pf.revents`**: svegliandosi per `libei`, il figlio andava lo
+stesso a leggere il socket del padre, **bloccante**.
+⇒ *Una modifica fatta per risparmiare millisecondi sull'input costava **quattro secondi** al login.*
+⭐ **La cura è una riga**: `if (!pf.revents) break;`
+
+⚠ **E il registro lo diceva già**: *«0 fotogrammi consegnati, **0 attese a vuoto**»* — zero attese a
+vuoto vuol dire che il ciclo **non aveva nemmeno provato** a catturare. ⛔ Era scritto, ed è stato
+letto due volte come «la scena è ferma». *Il difetto ha resistito a due sonde leggere che davano
+risposte opposte: l'ha chiuso solo un debugger attaccato al processo.*
+
+### 2. ⭐⭐ E il ritardo CRESCEVA senza limite, con tutti i contatori verdi
+
+`[M]` il server consegnava **39,6 fotogrammi/s**, la pagina ne dipingeva **34,7**, e **nessuno
+buttava l'avanzo**: `scartati_ordine 0 · trattenuti 0 · corti 0`.
+
+| | |
+|---|---|
+| la crescita | ⛔ **+108 ms al secondo** |
+| dopo 43 s | ⛔ **4 650 ms** — si comandava un desktop visto **sei secondi prima** |
+| ⭐ curato | pendenza **−2 ms/s**, ritardo **1,3 ms** dopo 41 s |
+
+⇒ ⛔ **È il difetto che l'utente sentiva e che nessun contatore contava**: tutti verdi, e la coda del
+decodificatore che si allungava e basta.
+
+### ⭐ E i due difetti che potevano rovinare una macchina vera
+
+| | prima | dopo |
+|---|---|---|
+| il registro a raffica | **151,9 MB/s** (⛔ `[M]` **30,8 GB** scritti in una mattina) | **284 B/s** |
+| un nucleo bruciato a vuoto | **1,00** | **0,00** |
+| il desktop dopo che la sessione grafica torna | ⛔ **non tornava mai** | ⭐ **1,11 s, stesso figlio** |
+
+⚠ ⭐ **E il ciclo a vuoto ha DUE facce, e una è MUTA**: per questo il banco misura il registro **e**
+la CPU. E con un client muto **un difetto ne nasconde un altro** — serve un client che *chieda le
+chiavi*, come fa un client vero che non vede niente.
