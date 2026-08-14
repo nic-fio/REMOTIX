@@ -39,3 +39,7 @@ banchi/01-p5-copie-*/
 #     agenti lavoravano: la ricetta si committa, i 15 MB no.
 banchi/03-palco-lavoro/
 banchi/03-palco-profili/
+
+# ⚠ Il file di servizio con cui `03-solo-certifica.sh` si passa il codice
+#   d'uscita fra una funzione e l'altra: e' derivato, e a ogni giro cambia.
+banchi/.03-solo-ultimo
