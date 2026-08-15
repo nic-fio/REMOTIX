@@ -149,6 +149,58 @@ ferma** è dedotto dal meccanismo e confermato una volta; non è una misura ripe
 
 ---
 
+## 5-bis · ⭐⭐ IL QUARTO DI SECONDO SUL CLIC — e il numero che lo spiegava era nel registro da un giorno
+
+*15 agosto 2026, mattina. L'utente: «ridurre di qualche decimo di secondo il tempo fra il clic e
+quando il server riceve l'evento». ⛔ Non era cosmesi: `CODER.md` §1-bis fissa il **tetto a 50 ms**.*
+
+**La misura, sui suoi clic veri** (registro delle 05:25, 25 pressioni, metrica «clic ricevuto →
+primo fotogramma spedito»):
+
+```
+mediana 136 ms · peggiore 502 ms · migliore 0 ms
+```
+
+⛔ **La causa era una riga di `figlio.c` scritta alla fase 3**, e il suo commento la sfiorava:
+
+```c
+#define MOVIMENTO_ATTESA_S 0.25   /* quanto si aspetta un fotogramma */
+```
+
+Il ciclo del figlio legge i messaggi del padre **prima** dell'attesa. Un clic che arriva un
+millisecondo **dopo** che il ciclo è entrato in `cattura_prendi()` resta fermo nel socket per i 249
+ms che restano. ⚠ Su un desktop che si muove non si vede: il fotogramma arriva subito e il giro
+riparte. Su un desktop **fermo** — che è il caso in cui si clicca — si paga tutto, ogni volta.
+
+⭐⭐ **E il numero stava nel registro da un giorno**, stampato una volta al secondo:
+
+> `ciclo: 4 fotogrammi consegnati, 3 attese a vuoto …`
+
+*Tre-quattro attese a vuoto al secondo* vuol dire *quattro giri al secondo*, cioè *250 ms per giro*.
+La riga era stata scritta per rispondere a un'altra domanda («la scena è ferma o il ciclo è fermo?»)
+e conteneva la risposta a questa. ⛔ È la stessa forma del 14 agosto — *213 movimenti registrati
+mentre l'utente ne vedeva zero* — e ci sono passato sopra per due giorni.
+
+**Dopo**, stessa metrica, stessa scena, stessa macchina (`MOVIMENTO_ATTESA_S` 0,25 → **0,008**):
+
+| | prima | dopo |
+|---|---|---|
+| clic → primo fotogramma spedito | mediana **136 ms**, peggiore 502 | mediana **41 ms**, peggiore **47** |
+| il giro completo misurato dalla PAGINA (`GIRO`) | 135 ms (`[M]` 14 ago, DeX) | **55 ms**, peggiore 71 |
+| risvegli del ciclo | 4 al secondo | **122 al secondo** |
+
+⭐ E la **dispersione** è la prova che la diagnosi era giusta: prima i campioni andavano da 0 a 502
+ms, adesso stanno tutti fra 34 e 47. Un'attesa casuale fra 0 e 250 ms produce esattamente la prima
+distribuzione, e toglierla produce esattamente la seconda.
+
+⚠ **E resta un ripiego dichiarato**: 8 ms di attesa sono 4 ms di ritardo medio *aggiunto*, e 122
+risvegli al secondo. La cura vera è non aspettare a tempo — un descrittore che la cattura scrive
+quando il fotogramma è pronto, nello stesso `poll()` del socket del padre e di `libei`. ⛔ Non si è
+fatta subito perché tocca il posto di scambio di `cattura.c`, che gira sul thread di tempo reale di
+PipeWire: è una cura da misurare, non da improvvisare.
+
+---
+
 ## 6 · ⛔ QUEL CHE RESTA APERTO — dichiarato, non scoperto
 
 1. ⏳ **`RCP.md` §7.1 non dice che cosa fa il server quando il palco cambia misura da sé.** Oggi

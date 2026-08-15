@@ -1899,12 +1899,43 @@ static uint32_t tenuto_input;
  * ⚠ Non e' un tetto di cadenza: e' quanto si resta fermi PRIMA di tornare a
  *   guardare se il padre ha detto qualcosa.  ⭐ Qui si PUO' aspettare — questo
  *   e' un altro processo, e `CODER.md` §4.4 vieta l'attesa dentro il ciclo
- *   asincrono del server, non qui.  Ma non troppo: un `MSG_SPEGNITI` che
- *   arrivasse durante l'attesa resterebbe fermo tutto quel tempo.
+ *   asincrono del server, non qui.
  * ⛔ E su un desktop FERMO Mutter non consegna niente: questa attesa scade
  *    tutta, e il giro dopo ricomincia.  Zero fotogrammi su una scena ferma e'
- *    un RISULTATO (`CatturaPresa` lo distingue dal guasto), non un difetto. */
-#define MOVIMENTO_ATTESA_S 0.25
+ *    un RISULTATO (`CatturaPresa` lo distingue dal guasto), non un difetto.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔⛔ ED ERA 0,25 — cioe' UN QUARTO DI SECONDO DI RITARDO SU OGNI CLIC.
+ *
+ *     `[M]` 15 agosto 2026, misurato sui clic VERI dell'utente (registro delle
+ *     05:25, venticinque pressioni): **clic → primo fotogramma spedito, mediana
+ *     136 ms, peggiore 502 ms**.  E la riga di riassunto del ciclo diceva la
+ *     causa senza che nessuno la leggesse: **«3-4 attese a vuoto al secondo»**,
+ *     cioe' quattro giri al secondo, cioe' 250 ms per giro.
+ *
+ * ⛔ IL MECCANISMO, e la riga qui sopra lo diceva quasi: l'input del padre si
+ *    legge **prima** dell'attesa.  Un clic che arriva un millisecondo DOPO che
+ *    il ciclo e' entrato in `cattura_prendi()` resta fermo nel socket per i 249
+ *    ms che restano.  ⚠ Su un desktop che si muove non si vede — il fotogramma
+ *    arriva subito e il giro riparte; su un desktop FERMO, che e' il caso in cui
+ *    si clicca, si paga tutto.  ⇒ Ritardo medio atteso: **125 ms**, e il
+ *    misurato e' 136.
+ *
+ * ⇒ ⭐ Con 8 ms il ritardo medio aggiunto scende a **4 ms**, e il ciclo si
+ *   sveglia 125 volte al secondo invece di 4: e' un `poll()` a vuoto e una
+ *   attesa su condizione, cioe' niente accanto a sessanta fotogrammi al secondo
+ *   da convertire e comprimere.
+ *
+ * ⚠ E RESTA UN RIPIEGO, dichiarato: la cura VERA e' non aspettare affatto a
+ *   tempo — un descrittore che la cattura scrive quando un fotogramma e' pronto,
+ *   messo nello stesso `poll()` del socket del padre e di `libei`.  Allora il
+ *   ritardo aggiunto sarebbe **zero** invece di quattro millisecondi, e i
+ *   risvegli scenderebbero a quelli utili.  ⛔ Non si e' fatto stanotte perche'
+ *   tocca il posto di scambio di `cattura.c` (oggi il fotogramma si copia solo
+ *   se qualcuno sta gia' aspettando), e quel pezzo gira sul thread di tempo
+ *   reale di PipeWire: e' una cura da misurare, non da improvvisare.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#define MOVIMENTO_ATTESA_S 0.008
 
 /* ⛔⭐ QUANTO SI ASPETTA PRIMA DI RIPROVARE A MONTARE IL PALCO, E PERCHE'
  *     CRESCE.

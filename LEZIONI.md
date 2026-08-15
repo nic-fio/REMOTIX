@@ -1348,6 +1348,47 @@ lo faccia per quello.
 > worker dipingeva di più perché **c'era la coda**. Un vantaggio che esiste solo finché il sistema
 > non è al limite è un vantaggio che sparisce **il giorno in cui serve** (`web.md` §6.1).
 
+### 6.2-bis ⭐⭐ Un'attesa che protegge un anello è un ritardo per tutti gli altri
+
+*15 agosto 2026. Trovata perché l'utente ha detto «riduci di qualche decimo di secondo il tempo fra
+il clic e l'evento» — cioè per un numero che nessun banco guardava.*
+
+Il ciclo del figlio faceva, in quest'ordine: **leggi quel che dice il padre** (senza aspettare),
+poi **aspetta un fotogramma** fino a 250 ms. Sensato: il figlio è un altro processo, lì si può
+aspettare, e un quarto di secondo tiene basso il consumo su un desktop fermo.
+
+⛔ Ma l'input del padre arriva **durante** quell'attesa, e chi arriva un millisecondo dopo l'inizio
+resta fermo per i 249 ms che restano. `[M]` Sui clic veri dell'utente: **mediana 136 ms**, e la
+dispersione da 0 a 502 — la firma di un'attesa casuale, non di una rete lenta. Portando l'attesa a
+8 ms: **mediana 41 ms**, tutti i campioni fra 34 e 47.
+
+> **Un'attesa dimensionata su un anello (i fotogrammi) diventa il ritardo di ogni altro anello che
+> passa dallo stesso ciclo (l'input). E il secondo anello non compare in nessun conto, perché il
+> ciclo è stato scritto guardando il primo.**
+
+⚠ La domanda che lo smaschera si fa **prima** di scrivere il ciclo, e costa una riga: *«che altro
+entra da qui, e quanto lo faccio aspettare?»*.
+
+### 6.2-ter ⛔ Il numero che spiega tutto può essere nel registro da un giorno
+
+*Stessa notte, e la seconda volta in due giorni.*
+
+La causa dei 136 ms era stampata **una volta al secondo**, in una riga che nessuno collegava:
+
+> `ciclo: 4 fotogrammi consegnati, 3 attese a vuoto …`
+
+Tre-quattro attese a vuoto al secondo vuol dire quattro giri al secondo, cioè 250 ms per giro. ⛔ La
+riga era stata scritta per rispondere a **un'altra domanda** — «la scena è ferma, o il ciclo è
+fermo?» — e conteneva la risposta a questa senza che il suo autore lo sapesse.
+
+⚠ È la stessa forma del 14 agosto (*213 movimenti registrati dal server mentre l'utente ne vedeva
+zero*, `dex-mouse-aperto`): il registro aveva già il fatto, e per due giorni nessuno l'ha letto
+perché **cercava un'altra cosa**.
+
+> ⇒ Quando un numero non torna, prima di aggiungere una misura si rilegge il registro **cercando
+> quel numero**, non il difetto: le righe di riassunto sono scritte per una domanda sola, e ne
+> rispondono spesso a due.
+
 ### 6.3 Il ritmo lo decide il client, se il collegamento è veloce
 
 Il regolatore concede `MAX(2, rtt·fps/10⁶ + 2)` fotogrammi non riscontrati: su un collegamento veloce
