@@ -384,7 +384,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > prodotte. Qui si è fatto per curare **il mouse e il ritardo dei clic**, cioè per finire il mandato
 > della fase 4 — e tutti i rapporti della notte si chiamano `F4-IN-*`, compreso quello nuovo.
 > ⇒ **La fase 6 resta APERTA** con tre quarti del suo contenuto già fatto e misurato (`PIANO.md` dice
-> quali), e **la prossima è la 5 — la sessione**.
+> quali).
+>
+> ### ⭐⭐ E LA PROSSIMA È LA **5 — LA SESSIONE**, in una sessione di lavoro NUOVA
+>
+> *Deciso dall'utente il 15 agosto 2026.* Il mandato è scritto, a macchina in ordine e server
+> acceso: 📖 **[`fasi/rapporti/F5-IN-0-mandato.md`](fasi/rapporti/F5-IN-0-mandato.md)** — dentro ci
+> sono lo stato della macchina, **le due strade per costruire**, quel che della fase 5 è già vivo (e
+> va **provato**, non riscritto), e i quattro pezzi che mancano davvero.
+>
+> ⛔ **Il primo gesto è aprire `fasi/05-la-sessione.md`**, prima di scrivere una riga: la coda della
+> fase 4 quella regola l'ha violata, e porta la riserva in testa.
 >
 > ---
 >
