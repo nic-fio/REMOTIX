@@ -1947,6 +1947,39 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		return false;
 	}
 
+	/* ⛔⭐ §5.1 di `SPECIFICHE.md`, motivo `0x05 GIA_ATTIVA_LOCALE` — e viene
+	 *     PRIMA del posto, di proposito.
+	 *
+	 * ⛔ Chiedere il posto e poi rilasciarlo avrebbe lo stesso esito per questo
+	 *    client e uno DIVERSO per il registro: per un istante il posto
+	 *    risulterebbe occupato da chi sta per essere respinto, e un altro
+	 *    client dello stesso utente che arrivasse in quell'istante leggerebbe
+	 *    `0x0F` — «hai gia' una sessione attaccata» — che e' falso.
+	 *
+	 * ⚠ E il gancio e' opzionale: se non c'e', la regola NON e' applicata, e la
+	 *   riga di registro lo dice.  «Nessuna sessione locale» e «nessuno ha
+	 *   guardato» sono due fatti diversi (`LEZIONI.md` §1.9 regola 1). */
+	if (s->g.sessione_locale) {
+		char quale[160];
+
+		quale[0] = '\0';
+		if (s->g.sessione_locale(s->g.ctx, s->utente, quale, sizeof quale)) {
+			reg(s, "⛔ attacco NEGATO a %s da %s: ha gia' una sessione "
+			       "grafica LOCALE (%s) — §5.1, motivo 0x05",
+			    s->utente, s->provenienza,
+			    quale[0] ? quale : "senza dettaglio");
+			/* ⛔ Il dettaglio del corpo NON nomina la sessione altrui:
+			 * §8.2 dice che cosa il client puo' sapere. */
+			congeda(s, RCP_GIA_ATTIVA_LOCALE,
+			        "c'e' gia' una sessione grafica locale di questo "
+			        "utente");
+			return false;
+		}
+	} else {
+		reg(s, "⚠ nessun gancio «sessione_locale»: la regola di §5.1 (motivo "
+		       "0x05) NON e' applicata su questo server");
+	}
+
 	/* ⛔ §8.2 motivo 0x0F: chi viene rifiutato e' chi ARRIVA, non chi c'era. */
 	/* ⛔ Il posto si CHIEDE, e l'esito si scrive con quanti erano occupati.
 	 * ⚠ Il 10 agosto 2026 il terzo giro di B3 non riusciva a distinguere «il

@@ -47,9 +47,38 @@ auth       required     pam_nologin.so
 #      `autenticazione.c` chiama `pam_acct_mgmt` apposta.
 @include common-account
 
-# ── password e session non li usa nessuno alla fase 1 — il server non apre
-#    sessioni PAM e non cambia parole d'ordine.  ⛔ Si dichiarano lo stesso:
-#    senza una riga per un tipo, PAM ripiega su `other` per quel tipo, e un
-#    ripiego silenzioso e' quel che questo file esiste per togliere.
 @include common-password
+
+# ── session: ⛔⛔ E QUI ALLA FASE 5 IL FILE ERA SBAGLIATO — 15 agosto 2026
+#
+# Diceva: «session non lo usa nessuno alla fase 1 — il server non apre sessioni
+# PAM», e includeva `common-session-noninteractive`.  ⛔ Alla fase 5 il server le
+# sessioni PAM LE APRE — `figlio.c` chiama `pam_open_session`, ed e' quella
+# chiamata che fa nascere la sessione logind dell'utente.
+#
+# `[M]` 15 agosto 2026, macchina di prova, Debian 13:
+#
+#     /etc/pam.d/common-session-noninteractive   →  pam_unix, pam_umask
+#     /etc/pam.d/common-session                  →  pam_unix, pam_umask, **pam_systemd**
+#
+# ⇒ Con la pila «noninteractive» **`pam_systemd` non gira**, e allora:
+#   · l'utente non ha nessuna sessione logind;
+#   · ⛔ `is_headless()` di Mutter — che guarda se la sessione logind ha un seat
+#     (`DECISIONI.md` §4.3-bis) — non ha piu' NIENTE da guardare;
+#   · ⛔ la regola di §5.1 (motivi `0x04` e `0x05`) perde il suo soggetto.
+#
+# ⭐ E il difetto era invisibile per un accidente: `[M]` su questa macchina
+#    `/etc/pam.d/remotix` NON ERA INSTALLATO, quindi PAM ripiegava su `other` —
+#    che su Debian **non e' `pam_deny`**, come dice il riquadro qui sopra, ma
+#    include le pile comuni, `common-session` compresa.  ⇒ Installare questo
+#    file «come si deve» avrebbe ROTTO quel che l'assenza del file faceva
+#    funzionare.  E' `DECISIONI.md` §4.3-bis alla rovescia: non una condizione
+#    che ci salva per accidente, ma una nostra riga che l'avrebbe tolta.
+#
+# ⚠ `pam_systemd` si chiede ESPLICITAMENTE invece di includere `common-session`:
+#   quella pila porta anche quel che serve a chi si siede davanti alla macchina,
+#   ed e' la ragione per cui §«non si usa `login`» qui sopra esiste.  Chiedere
+#   una cosa sola per nome e' `CODER.md` §4.1 letta bene: si dipende da
+#   `pam_systemd`, non dalla politica interattiva di questa distribuzione.
 @include common-session-noninteractive
+session    optional     pam_systemd.so

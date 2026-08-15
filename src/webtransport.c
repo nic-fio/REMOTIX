@@ -1040,6 +1040,30 @@ static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
 	return gancio_palco_ritela(gancio_palco_ritela_ctx, mio, larghezza, altezza);
 }
 
+/* ⭐⭐ §5.1 — «QUEST'UTENTE HA GIA' UNA SESSIONE GRAFICA LOCALE?»
+ *
+ * ⛔ Il gancio verso `sentinella.c`, e vive qui per la stessa ragione degli
+ *    altri: `rcp.c` esiste in due copie e quella innestata in ngtcp2 non ha un
+ *    bus di sistema.  Chi non lo collega non applica la regola, e `rcp.c` lo
+ *    scrive nel registro invece di tacere. */
+static wt_locale_richiesta gancio_locale;
+static void *gancio_locale_ctx;
+
+void wt_locale_gancio(wt_locale_richiesta f, void *ctx)
+{
+	gancio_locale = f;
+	gancio_locale_ctx = ctx;
+}
+
+static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
+                                   size_t quanto)
+{
+	(void)ctx;
+	if (!gancio_locale)
+		return false;
+	return gancio_locale(gancio_locale_ctx, utente, quale, quanto);
+}
+
 static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
@@ -1781,6 +1805,49 @@ static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	return wt_palco_misura(mio, l, a);
 }
 
+size_t wt_sorveglia_locali(void)
+{
+	size_t congedate = 0;
+
+	if (!gancio_locale)
+		return 0;
+
+	/* ⛔ Si guarda la lista a ogni giro invece di tenere un elenco di utenti:
+	 *    una sessione puo' nascere e morire fra due ripassi, e un elenco che si
+	 *    aggiorna da solo e' un secondo stato da tenere d'accordo col primo —
+	 *    cioe' il modo in cui due verita' entrano in un programma. */
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		char quale[160];
+		const char *mio;
+
+		if (!w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !mio[0])
+			continue;
+
+		quale[0] = '\0';
+		if (!gancio_locale(gancio_locale_ctx, mio, quale, sizeof quale))
+			continue;
+
+		/* ⛔⭐ §5.1: «ha una sessione grafica REMOTA attiva e ne apre una
+		 *     LOCALE ⇒ **la locale vince**: la remota viene chiusa».
+		 *
+		 * ⭐ Ed e' l'unico punto del prodotto in cui il server porta via una
+		 *    sessione SANA — `DECISIONI.md` §4.1-bis lo ammette **solo** con un
+		 *    motivo dicibile, ed e' per questo che `0x04` esiste. */
+		registro_dice(REG_WT,
+		              "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
+		              "sessione remota viene chiusa — §5.1, motivo 0x04",
+		              mio, quale[0] ? quale : "senza dettaglio");
+		wt_congeda(w, RCP_SESSIONE_LOCALE_PREVALSA,
+		           "e' stata aperta una sessione grafica locale su questa "
+		           "macchina");
+		congedate++;
+	}
+	return congedate;
+}
+
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
@@ -1888,6 +1955,13 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *     ancora (primo attacco, nessun fotogramma) risponde `false`, e `rcp.c`
 	 *     concede quel che il client chiede: il comportamento di prima. */
 	g.tela_del_palco = gancio_tela_del_palco;
+
+	/* ⛔⭐ §5.1 — e si collega SOLO se il guardiano c'e', come tutti gli altri:
+	 *     un gancio collegato a vuoto direbbe a `rcp.c` «ho guardato, non c'e'
+	 *     nessuna sessione locale», che e' la bugia peggiore delle due — perche'
+	 *     e' indistinguibile dalla verita'. */
+	if (gancio_locale)
+		g.sessione_locale = gancio_sessione_locale;
 
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un

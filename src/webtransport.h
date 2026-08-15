@@ -238,6 +238,31 @@ typedef bool (*wt_ritela_richiesta)(void *ctx, const char *utente,
                                     uint32_t larghezza, uint32_t altezza);
 void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx);
 
+/* ⭐⭐ §5.1 — IL GUARDIANO DELLE SESSIONI GRAFICHE LOCALI, e serve a DUE cose
+ *     che sembrano una sola e non lo sono:
+ *
+ *   · ⛔ chi **arriva** e ha gia' una locale ⇒ rifiutato, `0x05 GIA_ATTIVA_LOCALE`
+ *     — la domanda la fa `rcp.c` una volta, all'`ATTACCA`;
+ *   · ⛔ chi **c'e' gia'** e apre una locale ⇒ la locale VINCE e la remota cade,
+ *     `0x04 SESSIONE_LOCALE_PREVALSA` — e questa nessuno la chiede: va
+ *     **sorvegliata**, ed e' `wt_sorveglia_locali()`.
+ *
+ * ⚠ I due codici stanno in `rcp.h` dal 9 agosto 2026 e fino al 15 **nessuna
+ *   riga di nessun `.c` li spediva** (rilievo B-7, la stessa forma).
+ *
+ * `quale` — se non NULL — riceve di che sessione si tratta, **per il registro
+ * del server**: §8.2 non permette di dire al client i fatti delle sessioni
+ * altrui, e infatti nel corpo del congedo non ci finisce. */
+typedef bool (*wt_locale_richiesta)(void *ctx, const char *utente, char *quale,
+                                    size_t quanto);
+void wt_locale_gancio(wt_locale_richiesta f, void *ctx);
+
+/* Il ripasso: per ogni sessione attaccata chiede al guardiano se quell'utente
+ * ha aperto una sessione grafica locale, e in tal caso la congeda con `0x04`.
+ * Restituisce quante ne ha congedate.  ⚠ Senza il gancio non fa niente e non si
+ * lamenta: la lamentela l'ha gia' fatta `rcp.c` all'attacco, una volta sola. */
+size_t wt_sorveglia_locali(void);
+
 /* ⭐⭐ E LA RISPOSTA RIENTRA DI QUI — §7.1.  La manda il figlio (`FiglioTela`) e
  *     `main.c` la porta fin qui, perche' e' questo modulo che sa quali sessioni
  *     sono di quell'utente.

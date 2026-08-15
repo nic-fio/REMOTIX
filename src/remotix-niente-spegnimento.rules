@@ -1,0 +1,73 @@
+/*
+ * remotix-niente-spegnimento.rules — la prima delle tre cinture di
+ * `DECISIONI.md` §4.7: «nessuno spegne il server».
+ *
+ * Si installa in /etc/polkit-1/rules.d/.  Il numero 50 e non 49: deve vincere
+ * su quella di v1 (`49-remotix-niente-spegnimento.rules`), che copriva tre
+ * azioni su dodici — vedi sotto.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔ PERCHE' NON BASTANO `power-off`, `reboot` E `halt` — [M] 15 agosto 2026
+ *
+ * La regola di v1 elencava quelle tre.  ⛔ Ma logind, quando sulla macchina ci
+ * sono sessioni di PIU' UTENTI, non chiede `power-off`: chiede
+ * `power-off-multiple-sessions`.  ⇒ La regola di v1 falliva **esattamente nel
+ * caso per cui era stata scritta** — la macchina con altri collegati — e nessuno
+ * l'avrebbe visto, perche' con un utente solo funziona.
+ *
+ * ⚠ E `*-ignore-inhibit` e' la terza forma: e' quel che viene chiesto a chi
+ *   spegne SCAVALCANDO un'inibizione — cioe' scavalcando la nostra, quella che
+ *   tiene su la sessione (`SessionManager.Inhibit`, §2.2 della fase 5).
+ *
+ * `[M]` Le dodici azioni sono state lette da
+ * `/usr/share/polkit-1/actions/org.freedesktop.login1.policy` sulla macchina di
+ * prova.  ⛔ `org.freedesktop.login1.halt` NON esiste su questo systemd: la
+ * regola di v1 aveva una riga morta.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐ ROOT NON HA BISOGNO DI UN'ECCEZIONE, ed e' stato MISURATO
+ *
+ * `[M]` 15 agosto 2026, dalla macchina di prova con questa regola in vigore:
+ *
+ *     da nicfio (ssh)   CanPowerOff = "no"
+ *     da root           CanPowerOff = "yes"
+ *
+ * ⛔ Perche' logind, prima di interrogare polkit, guarda le **capacita'** di chi
+ *    chiede: chi ha `CAP_SYS_BOOT` — cioe' root — e' autorizzato e polkit non
+ *    viene consultato affatto.  ⇒ `sudo systemctl poweroff` continua a
+ *    funzionare **senza che questa regola preveda niente**, e la manutenzione
+ *    della macchina resta quella di sempre.
+ *
+ * ⚠ E la conseguenza che morde davvero sta altrove: **la verifica di questa
+ *   regola NON si puo' fare dal server**, che gira da root e si sentirebbe
+ *   rispondere «yes» sempre.  Va fatta dal FIGLIO, dopo che e' diventato
+ *   l'utente.  Un controllo fatto dal posto sbagliato e' un controllo che dice
+ *   sempre di si'.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ `polkit.Result.NO`, MAI `AUTH_ADMIN`
+ *
+ * `"challenge"` **mostra** la voce nel menu invece di toglierla — vale su GNOME
+ * (`gnome.md` §5.1) e su KDE (`kde.md` §1579).  Una voce che compare e chiede
+ * una password e' peggio di una voce che non c'e': promette qualcosa.
+ */
+polkit.addRule(function (action, subject) {
+    var vietate = [
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions",
+        "org.freedesktop.login1.power-off-ignore-inhibit",
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.reboot-multiple-sessions",
+        "org.freedesktop.login1.reboot-ignore-inhibit",
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.suspend-multiple-sessions",
+        "org.freedesktop.login1.suspend-ignore-inhibit",
+        "org.freedesktop.login1.hibernate",
+        "org.freedesktop.login1.hibernate-multiple-sessions",
+        "org.freedesktop.login1.hibernate-ignore-inhibit"
+    ];
+
+    for (var i = 0; i < vietate.length; i++)
+        if (action.id == vietate[i])
+            return polkit.Result.NO;
+});

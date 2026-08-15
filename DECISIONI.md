@@ -699,6 +699,84 @@ processi, che è un costo noto e misurabile, non una sorpresa.
 *Conseguenze scritte: `fasi/02-primo-fotogramma.md`, e il prodotto delle fasi che toccano la
 sessione.*
 
+### 1.10-ter 🔸 ⛔⛔ `/run/user/<uid>` dell'utente ce lo dà il **linger**, non noi — ed è un requisito, non una fortuna
+
+*Scritta la sera del **15 agosto 2026**, alla fase 5, dopo un desktop che non si vedeva.*
+
+> ### ⛔ E la prima stesura di questa voce era SBAGLIATA — corretta la sera stessa
+>
+> Diceva: *«la pila PAM del servizio deve chiamare `pam_systemd`, e la nostra non lo faceva»*,
+> perché `remotix.pam` chiude con `common-session-noninteractive` — che su Debian 13 `[M]` **non**
+> contiene `pam_systemd`, mentre `common-session` sì.
+>
+> ⛔ **La premessa era falsa**: il prodotto **non apre nessuna sessione PAM**. `figlio.c:2428` lo
+> dichiara per esteso — *«`sessione_assicura()` farebbe NASCERE una sessione … quella è la strada
+> del login vero (`pam_open_session` → `pam_systemd`), e non è di questo mandato»* — e `grep` lo
+> conferma: in `src/` non esiste nessuna chiamata a `pam_open_session`. ⇒ Quale pila di sessione
+> stia in `remotix.pam` oggi **non cambia niente**, perché quella pila non viene mai eseguita.
+>
+> ⚠ La riga `session optional pam_systemd.so` resta nel file, ma **come porta aperta dichiarata**,
+> non come cura: il giorno in cui il prodotto aprisse davvero le sessioni, la pila «noninteractive»
+> non ne creerebbe nessuna.
+
+**Il fatto vero, misurato.** `/run/user/<uid>` — e con lui il socket del bus di sessione, senza il
+quale il figlio non ha niente da catturare — nasce perché l'utente ha il **linger** acceso
+(`loginctl enable-linger`). ⭐ È scritto da sempre nella ricetta che ha prodotto il primo desktop
+vero (`fasi/rapporti/F5-desktop-vero.md`, passo 1: *«utente `prova` (uid 1001), parola d'ordine,
+`enable-linger`»*) — ⛔ **ma non era scritto da nessuna parte che è un requisito del prodotto.**
+
+`[M]` **Il prezzo, pagato il 15 agosto:** dopo il riavvio della macchina — il cui rootfs vive in RAM
+— l'utente `prova` non esisteva più; ricreato il conto **senza linger**, il figlio ha scritto per
+tre volte *«runtime `/run/user/1001` ⛔ NON c'è, socket del bus ⛔ non c'è»* e l'utente ha visto uno
+**schermo nero**. ⚠ Il registro diceva esattamente che cosa mancava, e a nessuno era chiaro che
+quella riga fosse una condizione d'ambiente e non un difetto del codice.
+
+**Da cui, e sono tre obblighi come per l'headless di §4.3-bis:**
+
+1. il linger si **dichiara** fra i requisiti dell'utente servito, non si eredita da come la macchina
+   è stata preparata un giorno;
+2. il figlio, quando non trova il runtime, **nomina la causa probabile** invece del solo sintomo —
+   *«manca `/run/user/<uid>`: quell'utente ha il linger acceso?»*;
+3. ⏳ e resta aperta la domanda che sta sotto: se il prodotto debba **aprire lui** la sessione
+   (`pam_open_session`) invece di dipendere dal linger. ⚠ Oggi è dichiarato fuori mandato, e va bene
+   — ⛔ ma allora il linger è una **dipendenza del prodotto**, e come tale va installata e verificata.
+
+> ### ⭐⭐⭐ E LA DOMANDA 3 SI È CHIUSA LA SERA STESSA: **il prodotto apre lui la sessione**
+>
+> *15 agosto 2026, fase 5, dopo il via libera dell'utente. ⇒ Il linger **non serve più**: era un
+> puntello, e il puntello lo si toglie quando il muro sta in piedi.*
+>
+> ⛔ **La ragione non è di eleganza, è che senza sessione il compositore non parte affatto**: Mutter
+> chiede `sd_pid_get_session()` e si sente rispondere **ENXIO**, poi muore con *«Failed to find any
+> matching session»*. Il linger dà `/run/user/<uid>` e il bus, ⛔ ma mette i processi in
+> `user@<uid>.service`, che è uno scope di classe **`manager`** — non una sessione.
+>
+> **Dove**: `figlio.c`, `diventa_ed_esegui()` passo **2-bis** — dopo la chiusura dei descrittori e
+> **prima** di scendere all'uid. Con `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`,
+> `PAM_RHOST`, e ⛔ **nessun `XDG_SEAT`**: la sessione nasce **headless per costruzione**, che è
+> quel che §4.3-bis chiede da agosto e che finora avevamo per accidente.
+>
+> ⚠ `pam_end()` **senza** `pam_close_session()`, di proposito: la sessione logind appartiene al
+> processo **guida** — questo, dopo l'`exec` — e logind se la riprende quando lui muore. ⭐ È
+> l'invariante **I4** vista dal lato del sistema: il palco sopravvive al client perché sopravvive il
+> figlio.
+>
+> ⇒ ⭐ **E le variabili XDG smettono di essere inventate**: `XDG_SESSION_ID` la mette `pam_systemd` e
+> noi la **leggiamo** (`pam_getenvlist`). È la risposta all'osservazione dell'utente del 15 agosto.
+>
+> ### ⛔⛔ E VIENE CON UN VINCOLO DI DISPIEGAMENTO CHE NON ESISTEVA PRIMA
+>
+> `[M]` **Il server non deve girare dentro una sessione utente.** `pam_systemd`, quando chi chiama
+> sta già in una sessione, **non ne crea una seconda — e non lo dice**. ⇒ Un server avviato a mano
+> da `ssh` mette i suoi figli nella sessione di chi l'ha avviato, e il figlio resta senza runtime,
+> senza bus e senza compositore: **lo stesso schermo nero, per una causa nuova**.
+>
+> `[M]` Misurato: col vecchio `riavvia-7700.sh` (che usa `setsid` — stacca il terminale ma **non
+> cambia il cgroup**) il server stava in `session-127.scope`; con `systemd-run` sta in
+> `system.slice/remotix-7700.service`, e i figli aprono la loro. ⭐ In produzione il caso non esiste
+> — `remotix.service` è un'unità di sistema — ⚠ ma va **scritto**, perché un server avviato a mano è
+> rotto in un modo che non si vede.
+
 ### 1.11 ✅ Il tetto delle sessioni resta **16, fisso in compilazione**, fino alla fase 3
 
 *11 agosto 2026, sera, dall'utente, alla chiusura della fase 1.*
@@ -1474,6 +1552,112 @@ canale di controllo oggi **non ha addosso nessun tetto** e resta lì per sempre.
 sana — non è una sessione affatto — quindi questa regola non la protegge. **Ma quanto possa restare
 lì resta da decidere**, e non lo decide questa riga.
 
+### 4.1-ter ✅ ⭐⭐ Le due uscite non sono la stessa uscita: il filo che cade, e il logout
+
+*Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «distinguiamo il comportamento
+del PC usato dall'utente rispetto a quello che fa REMOTIX. Se l'utente chiude, spegne o riavvia il
+**proprio** PC, questo lo trattiamo come browser chiuso / connessione caduta. Se invece sceglie la
+voce «Esci/logout», allora significa che l'utente vuole **terminare la sessione**, il che comporta
+la chiusura di tutti i programmi che aveva in esecuzione».*
+
+§4.1-bis diceva **chi** chiude — l'utente, non il server. Questa dice che quell'utente ha **due
+gesti**, e che portano a due posti diversi.
+
+| il gesto | che cos'è per noi | l'esito |
+|---|---|---|
+| ⭐ **il filo cade** — scheda chiusa, browser chiuso, **il PC dell'utente spento o riavviato**, il campo perso in galleria | ⭐ **un caso solo**, e non c'è niente da distinguere: il PC dell'utente non è un attore del nostro modello | il posto si libera, **la sessione resta viva** (I4). Il `CONGEDO 0x01` parte se fa in tempo; se il PC muore di colpo non parte, e a liberare il posto è l'orologio del silenzio a 30 s (§4.4) — **stesso esito, altra strada** |
+| ⭐ **«Esci/logout» dal menu del desktop** | l'unico gesto che dichiara *«ho finito»* | ⛔ **la sessione finisce, e i programmi dell'utente si chiudono**. Niente a cui riattaccarsi |
+
+⭐ **Il guadagno di questa distinzione è che toglie lavoro invece di aggiungerne**: il lato client non
+deve rilevare niente — spegnimento, riavvio e chiusura della scheda sono **la stessa cosa già
+implementata e misurata** (`pagehide` → `CONGEDO`, `pagina.html:2504`).
+
+**E tre conseguenze che non sono state scelte, sono cadute da sole:**
+
+1. ⛔ **`org.gnome.desktop.lockdown disable-log-out` è VIETATA.** Toglieva la voce «Esci…» **e**
+   faceva rifiutare `org.gnome.SessionManager.Logout` (`gnome.md` §5.1). Adesso che il logout è una
+   funzione **promessa**, quella chiave toglierebbe la funzione. ⇒ per togliere Spegni/Riavvia/
+   Sospendi resta **solo** la regola polkit su logind, e ⭐ il congedo del server
+   (`sessione_termina()`) e il logout dell'utente **passano dalla stessa porta**.
+2. **`org.gnome.shell always-show-log-out` va acceso.** `[R]` `systemActions.js:394-410`: senza,
+   su una macchina con un utente e una sessione sola gnome-shell **non mostra** la voce. ⚠ Rovescia
+   `reference-gnome/rapporti/02-shell-blocco-voci.md:214` — *«va lasciata `false`»* — scritta quando
+   l'obiettivo era togliere voci, non darne una.
+3. **Fra il clic e la fine non tocchiamo niente**: un programma con lavoro non salvato fa comparire
+   il dialogo **di GNOME** dentro il desktop remoto, come se l'utente fosse al monitor (I8).
+
+### 4.1-quater ✅ ⭐ Dopo il logout la pagina torna al modulo di accesso — e il motivo è nuovo
+
+*Proposta e accettata dall'utente il **15 agosto 2026**: «concordo, la pagina torna al modulo di
+accesso».*
+
+Finito il logout, il browser sta guardando **l'ultimo fotogramma di un desktop che non esiste più**.
+La pagina **torna al modulo di accesso**, con sopra la riga *«la sessione è terminata»*: chi voleva
+uscire ha finito, chi ha cliccato per sbaglio rientra scrivendo la password e trova un desktop
+pulito. ⛔ **Non una schermata di chiusura**, che sarebbe un vicolo cieco da cui si esce ricaricando.
+
+⛔ **E serve un motivo nuovo — `0x10 SESSIONE_TERMINATA` (`RCP.md` §8.2)**, non il riuso di `0x01`:
+`CHIUSO_DALL_UTENTE` porta con sé la promessa *«riattacca e ritrovi tutto»*, che dopo un logout è
+**falsa**. Due esiti opposti sotto lo stesso codice sono la forma di difetto che `CODER.md` §4.2
+vieta: un ripiego silenzioso produce due comportamenti sotto la stessa etichetta.
+
+⚠ **E il difetto vero di questo percorso è l'ORDINE, non il codice**: quando Mutter cade, il palco
+cade con lui e il canale non serve più. Il motivo deve partire **prima**. È la stessa forma del
+rilievo **B-7** — un motivo che esiste e che nessuno spedisce in tempo.
+
+### 4.1-quinquies ✅ ⭐ Il logout ha anche una scorciatoia — `Ctrl+Alt+Fine`, e la gestisce la PAGINA
+
+*Voluta dall'utente il **15 agosto 2026**: «vorrei venire incontro all'utente per permettergli di
+effettuare il logout anche usando una combinazione di tasti». La combinazione l'ha scelta lui, fra
+tre proposte.*
+
+⛔ **Due combinazioni sono state provate e scartate PRIMA di scrivere una riga, e con una misura
+ciascuna** — vanno scritte qui o qualcuno le riproporrà:
+
+| scartata | perché, con la marca |
+|---|---|
+| ❌ `Ctrl+Alt+F12` — la prima idea dell'utente | `[R]` è il **predefinito di `switch-to-session-12`** (`org.gnome.mutter.wayland`), e Mutter la registra anche in headless perché il backend resta quello **nativo** (`keybindings.c:2797`, `NATIVE_KEYBINDINGS`). ⛔ È **`NON_MASKABLE`**: nessuna applicazione può prendersela. Iniettata, verrebbe ingoiata e Mutter proverebbe a passare a una console virtuale **che in headless non esiste** — un avviso nel registro e nient'altro. ⛔ **E sul PC dell'utente, se è Linux, non arriva neppure al browser**: la prende il suo compositore, per lo stesso identico motivo |
+| ❌ `Win+F12` — la seconda | ⭐ `[M]` **misurato in casa, 14 agosto**: nel catalogo della sonda S3 `Super+KeyD` è **`non-consegnata` in tutti e quattro i palchi** — finestra, schermo intero, schermo intero **con la Keyboard Lock concessa**, e PWA installata. Le combinazioni col tasto Windows **non arrivano mai** alla pagina. ⛔ E su Android e DeX **ogni** combinazione con Meta è persa per regola AOSP — cioè proprio dove serve di più (`SPECIFICHE.md` §7.3-bis) |
+
+✅ **Scelta: `Ctrl+Alt+Fine`.** ⭐ `[R]` **Non la lega nessuno**: cercata come `<Primary><Alt>End` in
+tutte le fonti di GNOME e di KDE che abbiamo in casa, zero riscontri. ⚠ **E i due prezzi, dichiarati
+perché l'utente li ha scelti sapendoli**: ha **due** modificatori invece di tre, quindi è più facile
+premerla per sbaglio; e ha un **precedente RDP che dice un'altra cosa** — lì `Ctrl+Alt+End` manda
+`Ctrl+Alt+Canc` alla sessione remota, quindi chi viene da RDP potrebbe aspettarsi quello.
+
+**⭐ La gestisce la PAGINA, non il desktop**, e le tre ragioni sono di peso diverso:
+
+1. **una volta invece di quattro**: legata al desktop andrebbe rifatta per GNOME, KDE, XFCE e LXQt,
+   ciascuno col suo modo — cioè quattro righe di configurazione, che è I7 in agguato;
+2. ⭐ **funziona quando serve**: legata al desktop, il tasto dovrebbe attraversare browser → rete →
+   `libei` → compositore, e non arriverebbe proprio nel caso in cui uno la cerca — col desktop che
+   non risponde più;
+3. **finisce nella stessa porta del menu**: `org.gnome.SessionManager.Logout`, cioè
+   `sessione_termina()`. ⇒ un solo percorso di uscita, non due che possono divergere.
+
+⛔ **E la pagina la ingoia con `preventDefault()`: nella sessione remota quella combinazione non
+arriverà mai.** È il prezzo di ogni scorciatoia di REMOTIX, e `SPECIFICHE.md` §7.3-bis obbliga a
+**dichiararlo** invece di lasciarlo scoprire.
+
+**Una cosa che viene con lei, e una che è stata tolta:**
+
+- ⭐ **una conferma a schermo** — *«terminare la sessione?»*. Dal menu il logout costa tre gesti
+  deliberati; una combinazione ne costa uno, e chiude **tutti** i programmi aperti. ⚠ La conferma è
+  anche la difesa dal fraintendimento RDP di qui sopra: chi si aspettava `Ctrl+Alt+Canc` legge che
+  cosa sta per succedere e annulla;
+- ⛔ **nessun bottone a schermo per il logout** — *tolto dall'utente il 15 agosto 2026: «per quello
+  basta la voce del menu di sistema»*. ⭐ **E aveva ragione contro l'argomento con cui gliel'avevo
+  proposto**: avevo trasferito al logout il ragionamento di `Ctrl+Alt+Canc` (`SPECIFICHE.md`
+  §7.3-bis), che il bottone ce l'ha perché **non ha nessuna voce di menu**. Il logout ce l'ha, e
+  quella voce si raggiunge **col puntatore e col dito** — quindi esiste anche dove la tastiera si
+  perde tutta, iPhone compreso. ⇒ ⚠ **La regola generale, da non ripagare**: un bottone a schermo si
+  giustifica quando **non esiste un'altra strada**, non quando la strada che c'è passa da un tasto.
+
+⚠ **E prima di essere promessa va MISURATA**: la sonda S3 (`banchi/04-b29-scorciatoie.py`) ha
+provato 42 combinazioni su due motori e `Ctrl+Alt+Fine` **non è fra quelle**. Si aggiunge, si misura
+su due motori, e se su uno non arriva la pagina lo **dichiara** — §7.3-bis: *non si finge che
+funzionino*.
+
 ### 4.2 ✅ Dopo 6 ore senza segni di vita la sessione viene chiusa
 
 *8 agosto 2026, proposta dall'utente.* Il valore resta, e con §4.3 il suo mestiere è chiarito:
@@ -1721,6 +1905,158 @@ senza un errore»* — su una macchina a **due** GPU smette di essere teorica.
 > ⚠ E una riga da capire, non ancora capita: `amdgpu_cs_ctx_create2 failed. (-13)` — la Radeon è
 > vista e **non apribile** (permesso negato). `[?]` Se sia già la regola udev di questo file o
 > altro, non è stato accertato. Non ostacola: il primario è quello giusto.
+
+### 4.6-quinquies ✅ ⛔ **Si misura sulla GPU INTEGRATA**, non sulla discreta
+
+*Vincolo posto dall'utente il **15 agosto 2026**, guardando la registrazione dell'Aquarium a 60 fps:
+«i test vanno fatti sulla GPU integrata, altrimenti "trucchiamo" il gioco. La solidità del sistema la
+si vede su GPU poco potenti, non mostri come la RX 6800».*
+
+⭐ **È una regola di metodo, e vale più della misura che l'ha provocata**: un numero preso sul ferro
+migliore non dice se il prodotto regge — dice quanto è veloce quel ferro. `LEZIONI.md` è pieno di
+misure che sembravano un risultato e erano una proprietà del banco.
+
+`[M]` **La macchina di prova ha due schede**, e fino a stasera **sceglieva il compositore**:
+
+| | indirizzo PCI | nodo | chi è |
+|---|---|---|---|
+| ✅ **si usa questa** | `0000:00:02.0` | `renderD128` | **Intel UHD 730** (`i915`), l'integrata |
+| ❌ esclusa | `0000:03:00.0` | `renderD129` | Radeon **RX 6800** (`amdgpu`) |
+
+⛔ **E non era una scelta: era un accidente.** Senza la regola udev di §4.6-ter — `[M]` non era
+installata, `/etc/udev/rules.d` era vuota — i gruppi `video`/`render` danno accesso a **tutte e
+due**, e `[M]` il compositore aveva preso la **Radeon**. ⇒ La misura dell'Aquarium delle 22:09 —
+60 fps inchiodati — è stata fatta **sulla scheda sbagliata**, e va rifatta.
+
+**La cura è quella già decisa in §4.6-ter, finalmente applicata**: `v1/banco/gpu-udev.sh` con
+l'indirizzo da **escludere**, che sposta il nodo in un gruppo senza membri. ⭐ `[M]` dopo il
+riavvio del gestore d'utente e della sessione, `gnome-shell` apre **6 descrittori su `renderD128`**:
+l'integrata, e solo quella.
+
+⚠ **E il prezzo resta quello che §4.6-ter dichiara**: negare il nodo lo nega a **tutta la sessione
+dell'utente**, non solo al compositore. Chi un giorno volesse la Radeon per altro — un
+transcodificatore, un gioco — la troverebbe chiusa, e nessuno collegherebbe la cosa a questo file.
+
+⏳ **E la fase 8 eredita una domanda in più**: la codifica hardware sceglie la sua scheda per conto
+proprio (VA-API). ⛔ Se il compositore disegna sull'integrata e il codificatore cerca la discreta —
+che qui è chiusa — il ripiego è in CPU, ed è il caso che `LEZIONI.md` §1.8 dice di **dichiarare**
+invece di subire.
+
+### 4.6-quater ✅ ⭐ Il confine del multi-tenant: la fase 5 regge **un utente per volta**, la 12 la macchina piena
+
+*Chiesto dall'utente il **15 agosto 2026** all'apertura della fase 5 — «poiché qui trattiamo le
+sessioni, mi chiedo se il multi-tenant non ricada in questa fase» — e deciso da lui lo stesso
+giorno: «potremmo anche lasciare in questa fase 1 solo utente, e nella fase 12 il multi-tenant».*
+
+⚠ **La domanda era buona perché i due documenti dicevano cose diverse**: `SPECIFICHE.md` §5.5 dice
+*«il multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitola la **fase 12** «Multi-tenant e il
+budget». Il confine, deciso:
+
+| | dove | perché lì |
+|---|---|---|
+| **il multi-tenant come funzione** — più sessioni remote insieme, il **budget** del codificatore, `BUDGET_PIENO 0x06`, il rifiuto che non fa peggiorare chi sta già lavorando, `MAX_ATTACCATE` che smette di essere un `#define` | **fase 12** | ⭐ hanno bisogno di **un numero vero**, e il numero vero lo dà il codificatore hardware della **fase 8**. Misurarle prima vuol dire misurarle due volte (`LEZIONI.md` §7.2) |
+| **un utente remoto per volta** | **fase 5** | è la scena che la fase promette, ed è già abbastanza carica: il logout col suo codice nuovo, le tre cinture di §4.7, il guardiano di logind, i tre orologi, il rilascio dei tasti, l'inibizione della sospensione, l'headless dichiarato |
+| ⛔ **il codice chiavato sull'utente**, e il guardiano di logind che **discrimina per utente** | ⭐ **fase 5, e non è rinviabile** — vedi il riquadro | ⛔ non perché sia importante: perché **non si può scrivere «per un utente solo»** |
+
+> ### ⛔⭐ Il pezzo che non si può rinviare, e la ragione è che la macchina lo smaschera da sola
+>
+> Il guardiano di logind che deve emettere `0x04` e `0x05` (`SPECIFICHE.md` §5.1) risponde a una
+> domanda che suona in **due modi diversissimi**:
+>
+> > *«c'è una sessione grafica locale?»* — oppure — *«c'è una sessione grafica locale **di questo
+> > utente**?»*
+>
+> ⛔ **Una riga di differenza nel codice, due prodotti diversi.** E la macchina di prova è **già**
+> nella configurazione che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**,
+> `prova` si collega da **remoto**. Scritto nel modo sbagliato, `prova` viene rifiutato con `0x05`
+> — *«c'è già una sessione grafica locale»* — **il primo giorno, alla prima prova**, perché la
+> sessione locale c'è davvero: è solo di un altro.
+>
+> ⭐ **Non serve inventare uno scenario multi-utente: è lo stato normale della macchina.** ⇒ Il banco
+> di `0x04`/`0x05` si scrive su quella coppia — locale `nicfio` e remota `prova`, che **devono
+> convivere senza toccarsi** — e costa quanto costerebbe comunque.
+
+⚠ **E quel che resta ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** in
+`rcp.c:490` dove `SPECIFICHE.md` §5.5 promette **dieci configurabile**. Oggi non morde — 16 > 10 —
+e la sua scadenza è la fase 12.
+
+### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
+
+*Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «no, nessuno può spegnere,
+riavviare, mettere in standby o sospensione il server, altrimenti si rischia di "buttare fuori"
+anche altri eventuali utenti collegati alla macchina».*
+
+⭐ **La ragione è la stessa che regge tutta la fase 5: la macchina è di più persone.** Spegnerla è
+l'unico gesto che porta via **tutte** le sessioni insieme — e chi lo compie, dal menu di un desktop,
+**non ha modo di vedere chi c'è collegato**. `SPECIFICHE.md` §11.3 lo prometteva già in una riga
+(*«spegnimento, riavvio, sospensione: tolti alla sessione remota»*); questa decisione la allarga
+— ⛔ **non «alla sessione remota»: a tutte** — e le dà per la prima volta un modo di essere
+mantenuta.
+
+**Tre cinture, e sono tre perché le strade sono tre:**
+
+| | |
+|---|---|
+| **1 · la regola polkit**, `no` su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` e le varianti `*-multiple-sessions` / `*-ignore-inhibit` | ⭐ **piatta, senza discriminante**: nessun `subject.local`, perché la decisione è «nessuno». ⭐ E copre **due strade con una riga sola**, perché guarda l'**azione** e non l'interfaccia: il menu del desktop **e** `systemctl poweroff` scritto in un terminale dentro la sessione. Su GNOME `CanShutdown` diventa falso e le voci **spariscono** (`gsm-manager.c`, `systemActions.js:340-359`). ⛔ **`no`, mai `auth_admin`**: `challenge` **mostra** la voce (`gnome.md` §5.1, `kde.md` §1579) |
+| **2 · `logind.conf`**: `HandlePowerKey`, `HandleSuspendKey`, `HandleHibernateKey`, `HandleLidSwitch` = `ignore` | ⛔ il **tasto fisico** e il coperchio **non passano da polkit**: logind agisce per conto proprio, e la prima cintura non li vede |
+| **3 · la sospensione automatica**: `Inhibit(…, SUSPEND\|IDLE)` **e** `sleep-inactive-ac-type=nothing` | ⚠ la prima cintura **ferma** la sospensione a inattività, ma l'utente vedrebbe lo stesso la notifica *«Automatic Suspend — Suspending soon»* `[M]` e poi un errore. Due cinture per **due sintomi diversi**: una impedisce il fatto, l'altra toglie la bugia dallo schermo |
+
+> ### ⭐⭐ E LA SERA STESSA LE TRE CINTURE SONO STATE INSTALLATE E MISURATE — `[M]` 15 agosto 2026
+>
+> *Sulla macchina di prova, dopo il riavvio. ⛔ E la misura ha corretto **due** cose che questa voce
+> diceva per deduzione.*
+>
+> | | |
+> |---|---|
+> | ⛔⛔ **la regola di v1 copriva tre azioni su dodici, e falliva ESATTAMENTE nel caso per cui era scritta** | `[M]` `org.freedesktop.login1.policy` elenca anche `*-multiple-sessions` e `*-ignore-inhibit`. ⛔ Quando sulla macchina ci sono sessioni di **più utenti**, logind non chiede `power-off`: chiede **`power-off-multiple-sessions`**, che la regola di v1 non nominava. ⇒ Con un utente solo funzionava, con due no — e nessuno l'avrebbe visto. ⚠ E `org.freedesktop.login1.halt` **non esiste** su questo systemd: quella riga era morta |
+> | ⭐ **root non ha bisogno di nessuna eccezione** — *e la riga qui sotto, che ne prometteva una, era sbagliata* | `[M]` con la regola in vigore: da `nicfio` `CanPowerOff="no"`, **da root `"yes"`**. ⛔ Prima di interrogare polkit, logind guarda le **capacità** di chi chiede: chi ha `CAP_SYS_BOOT` è autorizzato e polkit **non viene consultato affatto**. ⇒ `sudo systemctl poweroff` funziona senza che la regola preveda niente |
+> | ⛔⛔ **e da questo discende la trappola vera: la verifica NON si può fare dal server** | il server gira **da root**, quindi si sentirebbe rispondere `"yes"` sempre — un controllo che dice sempre di sì. ⇒ **La fa il FIGLIO**, dopo che è diventato l'utente. ⚠ Un controllo fatto dal posto sbagliato è peggio di un controllo che manca: il registro direbbe «verificato» |
+> | ⭐ **il tasto fisico era vivo** | `[M]` in `/etc/systemd/logind.conf` tutte le righe `Handle*` erano **commentate**, cioè il predefinito — e `HandlePowerKey=poweroff`. ⇒ Fino a stasera il pulsante spegneva il server con chiunque collegato sopra. Adesso `ignore`, `[M]` riletto da `systemd-analyze cat-config` |
+> | ⭐ **la sospensione ha una cintura più forte di polkit** | `sleep.conf.d` con `AllowSuspend=no` fa rifiutare la sospensione da **systemd**, non da polkit: `[M]` `CanSuspend="no"` **anche da root**. ⇒ Su suspend e hibernate la promessa è mantenuta anche contro l'amministratore |
+>
+> ⇒ **I due file stanno nel repository**, non solo sulla macchina — I7: `src/remotix-niente-spegnimento.rules`
+> e `src/remotix-tasti.conf`.
+
+⛔ **E quel che resta possibile va dichiarato adesso, non scoperto dopo: root.** ⭐ `[M]` root spegne
+perché ha `CAP_SYS_BOOT`, e logind lo autorizza **prima** di arrivare a polkit; e in ogni caso
+`systemctl --force poweroff` parla direttamente con PID 1. ⭐ **Ed è giusto che resti**: la macchina
+deve restare amministrabile, e lo spegnimento per manutenzione è un gesto dell'**amministratore**,
+non di un utente. ⇒ La promessa esatta, da scrivere così e non più larga:
+
+> **Nessun utente, da nessuna sessione — remota o locale — spegne, riavvia o sospende il server.**
+> Non «il server non si spegne».
+
+> ### ⭐⭐ E l'utente l'ha specificato meglio, lo stesso giorno
+>
+> > *«L'utente collegato a REMOTIX può solo fare espressamente il logout o, ovviamente, operare sul
+> > PC che sta utilizzando.»*
+>
+> ⭐ **Detta così, la regola smette di essere un elenco di divieti e diventa una regola sola**, ed è
+> la forma da tenere:
+>
+> | dentro il desktop remoto | ⭐ **un solo gesto che finisce qualcosa: il logout** (§4.1-ter). Spegnere, riavviare, sospendere, ibernare **non gli appartengono** — non perché siano pericolosi, ma perché **non sono suoi**: quella macchina la stanno usando anche altri |
+> |---|---|
+> | sul PC da cui è collegato | ⭐ **fa quel che vuole, ed è affar suo**: lo spegne, lo riavvia, chiude il coperchio. Per noi è **il filo che cade**, cioè il caso già misurato — e non c'è niente da rilevare, da distinguere o da vietare |
+>
+> ⛔ **Da cui il metro del banco di §1.1 della fase 5**, che è più forte di «le voci sono sparite»:
+> ⇒ *nel menu di sistema del desktop remoto resta «Esci…» **e nient'altro** di quella famiglia.*
+
+> ⛔ *Qui c'era una riga che diceva di scrivere **l'eccezione di root dentro la regola**, perché
+> altrimenti «perfino `sudo systemctl poweroff` fallirebbe». ⭐ La misura del 15 agosto l'ha smentita:
+> l'eccezione non serve, perché non è polkit a decidere per root. La regola resta **piatta**, come
+> l'utente l'ha voluta.*
+
+⭐ **E questa regola dà finalmente un mestiere a `0x0C SERVER_IN_CHIUSURA`**: se l'unico spegnimento
+legittimo è quello dell'amministratore, allora **quella è l'unica strada su cui i client vanno
+avvisati**, e la cura del rilievo B-7 (`main.c:850`, `trasporto_congeda_tutte`) smette di essere una
+riparazione e diventa **il percorso normale**.
+
+⚠ **E le tre cinture sono tutte righe di configurazione, cioè quel che l'invariante I7 vieta**: vanno
+**installate da noi** e **verificate dopo l'avvio**, come l'headless di §4.3-bis. ⭐ La verifica è si
+chiede a logind `CanPowerOff` / `CanReboot` / `CanSuspend` / `CanHibernate` e si pretende **`no`** —
+se risponde `yes` o `challenge`, la protezione non c'è e si dichiara il fallimento. ⛔ **E si chiede
+dal FIGLIO, che è l'utente**: dal server, che è root, la risposta è `yes` per costruzione, e il
+registro direbbe «verificato» avendo guardato la cosa sbagliata.
 
 ---
 

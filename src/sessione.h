@@ -231,6 +231,12 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *                   c'e'» (E8), e una sessione buttata giu' per una lettura
  *                   fallita e' un danno fatto per un'ipotesi
  */
+/* ⭐ Chiede la nascita della sessione grafica e TORNA SUBITO — fase 5.
+ * Si avvia solo da `SESSIONE_MORTA`; a scoprire che c'e' ci pensa chi riprova.
+ * ⛔ La usa il FIGLIO, che in un'attesa di 40 s smetterebbe di rispondere al
+ *    padre.  Il perche' per intero sta sopra la funzione in `sessione.c`. */
+bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);
+
 SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata);
 
 /*

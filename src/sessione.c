@@ -866,6 +866,49 @@ bool sessione_termina(void)
 }
 
 /* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FALLA NASCERE E TORNA SUBITO — 15 agosto 2026, fase 5.
+ *
+ * ⛔ PERCHE' NON BASTAVA `sessione_assicura()`, che pure fa la stessa cosa:
+ *    quella **aspetta** fino a `ATTESA_AVVIO_MS` (40 s), e chi la chiama e' il
+ *    figlio, cioe' l'unico processo che in quei 40 s deve continuare a
+ *    rispondere al padre.  ⚠ `LEZIONI.md` §6.2-bis: un'attesa che protegge un
+ *    anello e' un ritardo per tutti gli altri.
+ *
+ * ⭐ E l'attesa non serve, perche' esiste gia': il figlio riprova il palco con
+ *    un'attesa che raddoppia (1 s → 30 s).  ⇒ Qui si CHIEDE la nascita e si
+ *    torna; a scoprire che la sessione c'e' ci pensa il giro dopo.
+ *
+ * ⚠ Si avvia SOLO da `SESSIONE_MORTA`.  Gli altri stati li governa
+ *   `sessione_assicura()`, e rifarli qui vorrebbe dire due regole sullo stesso
+ *   fatto — cioe' due regole diverse il giorno in cui una cambia.
+ */
+bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
+{
+	SessioneStato stato = sessione_stato(larghezza, altezza, NULL);
+
+	if (stato != SESSIONE_MORTA) {
+		registro_dice(REG_SESSIONE,
+		              "non la faccio nascere: lo stato e' «%s», non «morta» — e "
+		              "gli altri casi li governa sessione_assicura()",
+		              sessione_marca(stato));
+		return false;
+	}
+
+	/* ⛔ Il drop-in PRIMA del comando: la misura del desktop ci sta dentro, e
+	 *    `gnome-session` fa partire l'unita' della Shell come prima cosa.
+	 *    Scriverlo dopo vorrebbe dire scriverlo per la sessione SUCCESSIVA. */
+	if (!scrivi_dropin(larghezza, altezza)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ senza il drop-in in vigore non la faccio nascere: "
+		              "nascerebbe col monitor di troppo, e l'utente riguarderebbe "
+		              "uno schermo vuoto");
+		return false;
+	}
+
+	return avvia() ? true : false;
+}
+
 SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata)
 {
 	SessioneMonitor scelto;

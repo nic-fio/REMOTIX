@@ -55,6 +55,7 @@
 #include <grp.h>
 #include <poll.h>
 #include <pwd.h>
+#include <security/pam_appl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -637,6 +638,22 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	return f;
 }
 
+/*
+ * ⛔ La conversazione di PAM per l'apertura della sessione: NON deve chiedere
+ *    niente.  `pam_open_session` non fa domande — e se ne facesse, rispondere a
+ *    caso sarebbe peggio che fallire (`CODER.md` §3.9: il fallimento si
+ *    dichiara).
+ */
+static int conversazione_muta_figlio(int n, const struct pam_message **m,
+                                     struct pam_response **r, void *dati)
+{
+	(void)n;
+	(void)m;
+	(void)dati;
+	*r = NULL;
+	return PAM_CONV_ERR;
+}
+
 /* ⛔ Quel che si fa DOPO il `fork` e PRIMA dell'`exec`, e in quest'ordine.
  *    Ogni permuta e' punita con un difetto diverso, e nessuno dei tre dice
  *    «hai sbagliato l'ordine» (forma d'errore E4):
@@ -655,7 +672,11 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
 	char *argv[10];
-	char *envp[9];
+	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
+	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
+	 *   testa, che e' quel che a Mutter mancava. */
+	char *envp[16];
+	char **ambiente_pam = NULL;
 	int na = 0, ne = 0;
 	uid_t r, e, s;
 	gid_t rg, eg, sg;
@@ -682,6 +703,77 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 		/* Ripiego dichiarato: la strada lenta, un descrittore per volta. */
 		for (int i = 4; i < 4096; i++)
 			close(i);
+	}
+
+	/*
+	 * 2-bis. ⛔⭐⭐ LA SESSIONE PAM — e questa riga il 15 agosto 2026 non c'era.
+	 *
+	 * ⛔ IL DIFETTO CHE CURA, misurato la sera del 15 agosto: senza una sessione
+	 *    logind il compositore **non parte affatto**.  Mutter chiede
+	 *    `sd_pid_get_session()`, si sente rispondere **ENXIO** — «questo processo
+	 *    non sta in nessuna sessione» — e muore con *«Failed to find any matching
+	 *    session»*.  ⚠ E il `linger` NON basta: da' `/run/user/<uid>` e il bus, ma
+	 *    mette i processi in `user@<uid>.service`, che e' uno scope di classe
+	 *    `manager` — non una sessione.
+	 *
+	 * ⛔ QUI C'ERA SCRITTO IL CONTRARIO, ed era giusto per un'altra fase: «far
+	 *    NASCERE una sessione e' del login vero, non di questo mandato».  ⭐ Alla
+	 *    fase 5 quel mandato **e' questo**: `PIANO.md` scrive «Produce: **PAM per
+	 *    intero**».
+	 *
+	 * ⭐ E LE TRE COSE CHE SI DICONO A `pam_systemd` hanno ciascuna un perche':
+	 *
+	 *   · `XDG_SESSION_TYPE=wayland` — l'unita' della Shell porta
+	 *     `ConditionEnvironment=XDG_SESSION_TYPE=wayland`: senza, il compositore
+	 *     non viene avviato AFFATTO, e non c'e' nessuna riga che dica perche';
+	 *   · `XDG_SESSION_CLASS=user` — `manager` e' quel che da' il linger, ed e'
+	 *     proprio la classe che a Mutter non basta;
+	 *   · ⛔ **nessun `XDG_SEAT`, e non e' una dimenticanza**: una sessione senza
+	 *     seat e' headless **per costruzione**, che e' quel che `DECISIONI.md`
+	 *     §4.3-bis chiede da agosto e che fino a oggi avevamo per accidente.
+	 *
+	 * ⚠ E `PAM_RHOST`: logind segna la sessione `Remote=yes`.  ⭐ Ripaga due volte
+	 *   — e' la seconda cintura del guardiano di §5.1 (`sentinella.c` discrimina
+	 *   sul seat, e questa e' la conferma indipendente) e fa comparire la
+	 *   provenienza nei registri di sistema.
+	 *
+	 * ⛔ `pam_end()` SENZA `pam_close_session()`, ed e' voluto: chiudere la
+	 *    sessione la porterebbe via subito.  La sessione logind appartiene al
+	 *    processo GUIDA — che e' questo, dopo l'`exec` — e logind se la riprende
+	 *    quando lui muore.  ⚠ Il che rende vera l'invariante I4 dal lato del
+	 *    sistema: il palco sopravvive al client perche' il figlio sopravvive.
+	 *
+	 * ⚠ E se PAM non ce la fa NON si esce: si prosegue e lo si scrive.  Una
+	 *   sessione senza logind e' rotta, ⛔ ma un figlio che muore qui non lascia
+	 *   nemmeno una riga a chi legge il registro (invariante I1).
+	 */
+	{
+		struct pam_conv conv_muta = { conversazione_muta_figlio, NULL };
+		pam_handle_t *pam = NULL;
+		int rv;
+
+		rv = pam_start("remotix", pw->pw_name, &conv_muta, &pam);
+		if (rv != PAM_SUCCESS) {
+			fprintf(stderr, "figlio: ⛔ pam_start: %s\n",
+			        pam_strerror(NULL, rv));
+		} else {
+			pam_putenv(pam, "XDG_SESSION_TYPE=wayland");
+			pam_putenv(pam, "XDG_SESSION_CLASS=user");
+			pam_set_item(pam, PAM_RHOST, "remotix");
+			pam_set_item(pam, PAM_TTY, "remotix");
+
+			rv = pam_open_session(pam, PAM_SILENT);
+			if (rv != PAM_SUCCESS) {
+				fprintf(stderr,
+				        "figlio: ⛔ pam_open_session: %s — il "
+				        "compositore non partira'\n",
+				        pam_strerror(pam, rv));
+			} else {
+				ambiente_pam = pam_getenvlist(pam);
+			}
+			/* ⛔ `pam_end` e non `pam_close_session`: vedi sopra. */
+			pam_end(pam, PAM_SUCCESS);
+		}
 	}
 
 	/* 3. i gruppi, poi il gid, poi l'uid — e mai al contrario. */
@@ -736,6 +828,17 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	envp[ne++] = e_shell;
 	envp[ne++] = e_runtime;
 	envp[ne++] = e_bus;
+	/* ⭐⭐ E QUI SI SMETTE DI INVENTARLE — l'osservazione dell'utente del 15
+	 *     agosto 2026: *«le variabili XDG dovrebbe impostarle il session
+	 *     manager, e in REMOTIX sembra che non vengano impostate»*.  Aveva
+	 *     ragione: nessuno le impostava perche' nessuno apriva la sessione.
+	 *     Adesso la apriamo, e quel che `pam_systemd` ci mette dentro si
+	 *     **legge** invece di dedurlo.
+	 * ⛔ `XDG_SESSION_ID` e' quella che conta: e' il filo che lega questo
+	 *    processo alla sessione logind, ed e' quel che Mutter cercava. */
+	for (int i = 0; ambiente_pam && ambiente_pam[i] && ne < 14; i++)
+		if (strncmp(ambiente_pam[i], "XDG_SESSION_ID=", 15) == 0)
+			envp[ne++] = ambiente_pam[i];
 	envp[ne] = NULL;
 
 	/* 6. la riga di comando del figlio, che e' quel che il banco leggera' in
@@ -1953,6 +2056,12 @@ static uint32_t tenuto_input;
 #define PALCO_RIPROVA_MIN_MS 1000
 #define PALCO_RIPROVA_MAX_MS 30000
 
+/* ⚠ Quanto si aspetta prima di ri-chiedere la NASCITA della sessione grafica.
+ *   Un minuto, e il numero viene dal fatto: `gnome-session` ci mette qualche
+ *   secondo a comparire sul bus, e i nostri ri-tentativi vanno da 1 a 30 s —
+ *   senza briglia ne avvieremmo una a ogni giro. */
+#define NASCITA_BRIGLIA_MS 60000
+
 /* Quando si riprova, e quanto si e' aspettato l'ultima volta. */
 static uint64_t palco_riprova_ms;
 static uint64_t palco_attesa_ms;
@@ -2424,19 +2533,67 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	              "cosa che il padre root NON puo' fare (P2-6-montaggio.md §5.4)",
 	              (long)geteuid());
 
-	/* ⛔ SI GUARDA, NON SI TOCCA.  `sessione_assicura()` farebbe NASCERE una
-	 *    sessione, e per un utente che non ha mai fatto login su questa
-	 *    macchina non c'e' nemmeno `/run/user/<uid>` a cui appoggiarla: quella
-	 *    e' la strada del login vero (`pam_open_session` → `pam_systemd`), e
-	 *    non e' di questo mandato.  ⚠ Dichiarato invece che scoperto. */
+	/*
+	 * ⛔⭐⭐ E ADESSO SI TOCCA — 15 agosto 2026, fase 5.
+	 *
+	 * ⛔ Qui c'era scritto «si guarda, non si tocca: far NASCERE una sessione e'
+	 *    del login vero, non di questo mandato», e per la fase 2 era giusto.
+	 *    ⭐ Alla fase 5 quel mandato **e' questo** — `PIANO.md`: «Produce: PAM
+	 *    per intero» — e da quando questo processo apre lui la sessione PAM
+	 *    (`diventa_ed_esegui`, passo 2-bis) `/run/user/<uid>` c'e' per
+	 *    costruzione: l'obiezione che quella riga portava e' caduta.
+	 *
+	 * ⛔ IL PREZZO DI NON FARLO, misurato la sera del 15 agosto: la macchina si
+	 *    riavvia, nessuno rifa' la sessione, e l'utente entra e **non vede
+	 *    niente**.  Il registro diceva tre volte «SESSIONE MORTA: guardo e non
+	 *    tocco», che e' una diagnosi perfetta di un prodotto che non fa il suo
+	 *    mestiere.
+	 *
+	 * ⚠ E NON SI ASPETTA: `sessione_fai_nascere()` chiede e torna.  L'attesa
+	 *   esiste gia' ed e' il nostro ciclo di ri-tentativi (1 s → 30 s); una
+	 *   seconda attesa dentro questo processo sarebbe 40 s in cui il padre non
+	 *   riceve piu' un fotogramma ne' una risposta (`LEZIONI.md` §6.2-bis).
+	 *
+	 * ⚠ E si chiede al piu' una volta al minuto: `gnome-session` ci mette
+	 *   qualche secondo a farsi vedere sul bus, e senza questa briglia ogni
+	 *   ri-tentativo ne avvierebbe un'altra.
+	 */
 	p.stato_sessione = (uint32_t)sessione_stato(tela_l, tela_a, NULL);
-	if (p.stato_sessione != SESSIONE_SANA)
+	if (p.stato_sessione == SESSIONE_MORTA) {
+		static uint64_t chiesta_ms;
+		uint64_t adesso_ms = registro_ora_ms();
+
+		if (chiesta_ms == 0 || adesso_ms - chiesta_ms > NASCITA_BRIGLIA_MS) {
+			chiesta_ms = adesso_ms;
+			registro_dice(REG_FIGLIO,
+			              "⭐ nessuna sessione grafica per «%s»: LA FACCIO "
+			              "NASCERE io (tela %ux%u) e torno subito — a "
+			              "trovarla ci pensa il prossimo tentativo",
+			              g_get_user_name(), tela_l, tela_a);
+			if (!sessione_fai_nascere(tela_l, tela_a))
+				registro_dice(REG_FIGLIO,
+				              "⛔ la sessione grafica di «%s» non e' "
+				              "partita: il palco restera' senza niente da "
+				              "catturare, e le righe di «sessione» qui "
+				              "sopra dicono perche'",
+				              g_get_user_name());
+		} else {
+			registro_dice(REG_FIGLIO,
+			              "la sessione grafica di «%s» non c'e' ancora: "
+			              "l'ho gia' chiesta %llu ms fa e aspetto che si "
+			              "faccia vedere sul bus",
+			              g_get_user_name(),
+			              (unsigned long long)(adesso_ms - chiesta_ms));
+		}
+	} else if (p.stato_sessione != SESSIONE_SANA) {
 		registro_dice(REG_FIGLIO,
 		              "⚠ la sessione grafica di questo utente e' «%s» (%u): "
-		              "guardo e non tocco — far NASCERE una sessione e' del "
-		              "login vero, non di qui",
+		              "non la tocco — gli stati diversi da «morta» li governa "
+		              "sessione_assicura(), e buttarne giu' una viva toglierebbe "
+		              "il desktop a chi lo guarda (I4)",
 		              sessione_marca((SessioneStato)p.stato_sessione),
 		              p.stato_sessione);
+	}
 
 	mut = mutter_apri(&sbaglio);
 	if (!mut) {

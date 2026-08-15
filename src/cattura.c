@@ -91,6 +91,17 @@ struct Cattura
 	gboolean qualcuno_aspetta;
 	CatturaFermo posto;
 	gboolean posto_pieno;
+	/* ⭐ La capienza del buffer del posto: si RIUSA invece di rifarlo a ogni
+	 *    fotogramma.  ⛔ Serve perche' adesso si copia SEMPRE (vedi sotto), e
+	 *    una `g_malloc`/`g_free` da 8 MB a sessanta al secondo dentro la
+	 *    richiamata di tempo reale sarebbe la cura peggiore del male. */
+	size_t posto_capienza;
+	/* ⛔ Quante volte un fotogramma non ancora consumato e' stato sostituito da
+	 *    uno piu' recente.  ⚠ NON e' un guasto — e' il comportamento voluto,
+	 *    «vince il piu' nuovo» — ma e' anche il numero che dice quanto spesso il
+	 *    consumatore e' in ritardo, e prima del 15 agosto 2026 quei fotogrammi
+	 *    erano PERSI invece che sostituiti. */
+	uint64_t sovrascritti;
 
 	/* --- ⭐ IL CANALE DEL CURSORE ---------------------------------------- *
 	 *
@@ -832,23 +843,65 @@ static void su_processo(void *dati)
 	if (cattura->su_fotogramma)
 		cattura->su_fotogramma(&info, cattura->dati);
 
-	/* --- il posto di chi aspetta ----------------------------------------- */
+	/* --- il posto dell'ULTIMO fotogramma ---------------------------------- *
+	 *
+	 * ⛔⛔⛔ E FINO AL 15 AGOSTO 2026 QUI C'ERA `if (qualcuno_aspetta && !posto_pieno)`,
+	 *      cioe' **il fotogramma si buttava se nessuno lo stava aspettando in
+	 *      quell'istante**.  Il commento che lo giustificava diceva: «copiare 8 MB
+	 *      per nessuno sarebbe lavoro dentro la richiamata di tempo reale, fatto
+	 *      per niente».  ⛔ Il ragionamento vale per il caso a regime e **sbaglia
+	 *      il caso che l'utente vede**.
+	 *
+	 * ⭐ IL SINTOMO, riferito dall'utente il 15 agosto: *«do il comando `exit` e
+	 *    il terminale sembra congelato: non appena muovo il mouse si chiude
+	 *    correttamente»*.
+	 *
+	 * ⇒ IL MECCANISMO: la finestra che si chiude produce una RAFFICA di
+	 *   fotogrammi.  Noi prendiamo il primo e passiamo ~20 ms a convertirlo e
+	 *   comprimerlo; ⛔ tutti quelli che arrivano in quei 20 ms trovano
+	 *   `qualcuno_aspetta == FALSE` e **vengono buttati**, compreso **l'ultimo** —
+	 *   quello con la finestra gia' sparita.  Poi la scena e' ferma, Mutter non
+	 *   manda piu' niente (cadenza 0/1: «un fotogramma quando cambia qualcosa»),
+	 *   e l'utente resta a guardare il PRIMO fotogramma della raffica.  Il
+	 *   movimento del mouse produce un fotogramma nuovo, e lo schermo si allinea.
+	 *
+	 * ⭐ LA CURA: si tiene SEMPRE l'ultimo.  Un posto solo, e vince il piu'
+	 *    recente — che e' anche la politica giusta per un desktop remoto: di un
+	 *    fotogramma vecchio non se ne fa niente nessuno.
+	 *
+	 * ⚠ E il costo che il vecchio commento temeva si paga MENO di prima, non di
+	 *   piu': il buffer si RIUSA (`posto_capienza`), quindi la richiamata di
+	 *   tempo reale fa una `memcpy` e non piu' una `g_free`+`g_malloc` da 8 MB.
+	 */
 	g_mutex_lock(&cattura->lucchetto);
-	if (cattura->qualcuno_aspetta && !cattura->posto_pieno)
 	{
 		CatturaFermo *f = &cattura->posto;
 
+		if (cattura->posto_pieno)
+			cattura->sovrascritti++;
+
 		f->byte = info.pixel ? byte : 0;
-		g_free(f->pixel);
-		f->pixel = NULL;
 		if (info.pixel)
 		{
 			/* ⛔ SI COPIA, NON SI TIENE IL PUNTATORE: al giro dopo il produttore
 			 *    ci riscrive dentro, e il fotogramma consegnato sarebbe un altro
 			 *    da quello di cui si racconta il danno e la sequenza — due misure
-			 *    sotto la stessa etichetta. */
-			f->pixel = g_malloc(byte);
+			 *    sotto la stessa etichetta.
+			 * ⭐ Ma l'allocazione si RIUSA quando basta: e' la stessa misura per
+			 *    tutta la sessione, tranne al cambio di tela. */
+			if (!f->pixel || cattura->posto_capienza < byte)
+			{
+				g_free(f->pixel);
+				f->pixel = g_malloc(byte);
+				cattura->posto_capienza = byte;
+			}
 			memcpy(f->pixel, info.pixel, byte);
+		}
+		else if (f->pixel)
+		{
+			g_free(f->pixel);
+			f->pixel = NULL;
+			cattura->posto_capienza = 0;
 		}
 		f->stride = passo;
 		f->larghezza = consegna.larghezza;
@@ -870,11 +923,13 @@ static void su_processo(void *dati)
 		                   "su %" G_GUINT64_FORMAT " fotogrammi: %u buffer distinti, danno "
 		                   "pieno %" G_GUINT64_FORMAT " parziale %" G_GUINT64_FORMAT " assente %"
 		                   G_GUINT64_FORMAT ", senza intestazione %" G_GUINT64_FORMAT
-		                   ", di solo cursore %" G_GUINT64_FORMAT,
+		                   ", di solo cursore %" G_GUINT64_FORMAT
+		                   ", ⭐ sostituiti nel posto %" G_GUINT64_FORMAT
+		                   " (prima del 15 ago erano PERSI)",
 		                   cattura->conto.arrivati, cattura->conto.buffer_distinti,
 		                   cattura->conto.danno_pieno, cattura->conto.danno_parziale,
 		                   cattura->conto.danno_assente, cattura->conto.senza_intestazione,
-		                   cattura->conto.solo_cursore);
+		                   cattura->conto.solo_cursore, cattura->sovrascritti);
 
 restituisci:
 	pw_stream_queue_buffer(cattura->flusso, pacco);
@@ -1422,7 +1477,13 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 
 	g_mutex_lock(&cattura->lucchetto);
 	cattura->qualcuno_aspetta = TRUE;
-	cattura->posto_pieno = FALSE;
+	/* ⛔⛔ E QUI C'ERA `cattura->posto_pieno = FALSE;` — la seconda meta' dello
+	 *     stesso difetto del 15 agosto 2026: chi arrivava a prendere un
+	 *     fotogramma **buttava via quello che trovava gia' pronto** e si metteva
+	 *     ad aspettarne un altro.  ⇒ Con la scena ferma quell'altro non arrivava
+	 *     mai, e l'ultimo fotogramma del cambiamento restava nel posto, non
+	 *     consegnato, fino al movimento successivo.
+	 * ⭐ Adesso: se c'e', si prende. */
 	scadenza = g_get_monotonic_time() + (gint64) (attesa_s * G_USEC_PER_SEC);
 	while (!cattura->posto_pieno)
 	{
@@ -1431,8 +1492,14 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	}
 	if (cattura->posto_pieno)
 	{
+		/* ⛔ Il buffer PASSA a chi consuma — che lo liberera' con
+		 *    `cattura_fermo_libera()` — quindi il posto resta senza, e la
+		 *    capienza torna a zero: il giro dopo se ne alloca uno nuovo.
+		 * ⚠ E' il prezzo onesto del riuso: si riusa finche' nessuno consuma
+		 *   (la raffica), e si rialloca quando qualcuno consuma davvero. */
 		*fuori = cattura->posto;
 		memset(&cattura->posto, 0, sizeof cattura->posto);
+		cattura->posto_capienza = 0;
 		cattura->posto_pieno = FALSE;
 		preso = TRUE;
 	}

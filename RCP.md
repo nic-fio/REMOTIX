@@ -2118,6 +2118,22 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x0D` | `TEMPO_SCADUTO` | ⭐ *nuovo, 9 ago*: un tetto di §4.6 è scaduto |
 | `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *nuovo, 9 ago*: l'attacco è ben formato ma non si può servire — un compositore che non parte, una disposizione che il sistema non conosce. **DEVE** portare il dettaglio nel corpo |
 | `0x0F` | `GIA_ATTIVA_REMOTA` | ⭐ *nuovo, 9 ago sera*: **c'è già un client attaccato a questa sessione**, e questa connessione viene **rifiutata** |
+| `0x10` | `SESSIONE_TERMINATA` | ⭐ *nuovo, 15 ago*: **l'utente è uscito dal desktop** («Esci/logout» dal menu di sistema). La sessione grafica è finita e i suoi programmi sono chiusi ⇒ ⛔ **non c'è niente a cui riattaccarsi**, e la pagina torna al **modulo di accesso** (`DECISIONI.md` §4.1-quater) |
+
+> ### ⛔ Perché `0x10` non è un doppione di `0x01` — 15 agosto 2026
+>
+> I due codici descrivono **due gesti dell'utente con esiti opposti**, e `DECISIONI.md` §4.1-ter li
+> separa: `0x01 CHIUSO_DALL_UTENTE` è il **filo che cade** — scheda chiusa, browser chiuso, il PC
+> dell'utente spento o riavviato — e porta la promessa *«riattacca e ritrovi tutto»*. `0x10` è il
+> **logout**, e quella promessa lì è **falsa**.
+>
+> ⛔ **Il vincolo che questo codice porta è sull'ordine, non sul contenuto**: quando il compositore
+> cade il palco cade con lui, e il canale non serve più. `0x10` **DEVE** partire **prima** che la
+> sessione grafica sia finita di morire. Un `0x10` definito e spedito troppo tardi è il rilievo
+> **B-7** con un nome nuovo.
+>
+> ⚠ **E chi riceve un `0x10` non deve riattaccare**: un client che ritentasse aprirebbe una sessione
+> **nuova**, non ritroverebbe la vecchia — che è esattamente ciò che l'utente ha chiesto di chiudere.
 
 > ### ⛔ Perché `0x0F` è stato aggiunto, e perché adesso — rilievo **R1.3**
 >

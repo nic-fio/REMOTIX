@@ -69,6 +69,7 @@
 #include "certificati.h"
 #include "comando.h"
 #include "figlio.h"
+#include "sentinella.h"
 #include "pagina.h"
 #include "rcp.h"
 #include "registro.h"
@@ -113,6 +114,15 @@
 
 /* 1 per l'UDP, 1 per l'ascoltatore TCP, il resto per le connessioni TCP. */
 #define MAX_POLL 64
+
+/* ⭐ §5.1 — ogni quanto si ripassano le sessioni grafiche locali.
+ *
+ * ⚠ Due secondi, e i due numeri che li giustificano sono uno per verso: e' il
+ *   RITARDO massimo fra «l'utente si e' seduto davanti alla macchina» e «la
+ *   sessione remota cade» — che nessuno guarda col cronometro — ed e' anche il
+ *   COSTO, perche' ogni ripasso e' una chiamata sincrona a logind dentro il
+ *   ciclo che consegna i fotogrammi (`LEZIONI.md` §6.2-bis). */
+#define RIPASSO_LOCALI_MS 2000
 
 static volatile sig_atomic_t si_ferma;
 
@@ -427,6 +437,18 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
  *    `0x0` = non ce l'ha fatta).  ⚠ Senza, due `ADATTA_TELA` incatenate — un
  *    utente che trascina il bordo — facevano prendere il fotogramma della prima
  *    per la risposta della seconda. */
+/* ⭐ §5.1 — l'adattatore fra il gancio di `webtransport.c` e `sentinella.c`.
+ *
+ * ⛔ E' qui e non la' perche' `webtransport.c` non conosce logind e non deve:
+ *    quel modulo sa **quali sessioni sono di quell'utente**, questo sa **chi
+ *    chiedere**.  Sono due mestieri, e tenerli separati e' quel che permette al
+ *    banco di innestare un guardiano finto senza toccare il trasporto. */
+static bool chiedi_sessione_locale(void *ctx, const char *utente, char *quale,
+                                   size_t quanto)
+{
+	return sentinella_locale((sentinella *)ctx, utente, quale, quanto);
+}
+
 static void tela_dal_palco(void *ctx, const char *utente, uid_t uid,
                            uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
                            uint32_t avuta_a)
@@ -454,7 +476,9 @@ int main(int argc, char **argv)
 	aiutante *pam_aiuto = NULL;  /* ⚠ non «aiuto»: quel nome e' gia' della funzione che stampa l'uso */
 	figli *prole = NULL;
 	struct ponte ponte;
+	sentinella *guardiano = NULL;
 	time_t ultimo_controllo_cert;
+	uint64_t ultimo_ripasso_locali = 0;
 	int esito = 1;
 
 	/* ⛔⭐ E QUESTA E' LA PRIMA RIGA DEL PROGRAMMA, PRIMA DI QUALUNQUE ALTRA
@@ -704,6 +728,21 @@ int main(int argc, char **argv)
 	 *     conta — e il client mostrerebbe «adatta il desktop» come spento su un
 	 *     server che sa farlo. */
 	wt_ritela_gancio(ritela_al_figlio, &ponte);
+
+	/* ⭐⭐ §5.1 — IL GUARDIANO DELLE SESSIONI LOCALI, e si collega PRIMA della
+	 *     pagina per la stessa ragione degli altri: la domanda `0x05` si fa
+	 *     all'`ATTACCA`, cioe' nel primo mezzo secondo di ogni sessione.  Un
+	 *     gancio collegato dopo il primo pacchetto lascerebbe entrare
+	 *     **proprio** la sessione che questa regola deve tenere fuori.
+	 *
+	 * ⛔ E se logind non c'e', `sentinella_apri()` ha gia' scritto nel registro
+	 *    che la regola NON e' in vigore: qui non si collega niente, e `rcp.c`
+	 *    lo dira' a ogni attacco.  ⚠ Non e' un motivo per non partire — I1: una
+	 *    sessione senza una regola vale piu' di nessuna sessione. */
+	guardiano = sentinella_apri();
+	if (guardiano)
+		wt_locale_gancio(chiedi_sessione_locale, guardiano);
+
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;
@@ -798,6 +837,23 @@ int main(int argc, char **argv)
 		 *    ogni giro: «prima che scada», non «quando e' scaduto»
 		 *    (§4.1-bis).  ⚠ Un minuto e' abbondante per un margine di due
 		 *    giorni, e non costa niente. */
+		/* ⭐⭐ §5.1 — IL RIPASSO DELLE SESSIONI LOCALI, ogni RIPASSO_LOCALI_MS.
+		 *
+		 * ⛔ Non e' l'`ATTACCA`: quella domanda la fa `rcp.c` una volta e
+		 *    basta.  Questa e' l'altra meta' della regola — «apre una sessione
+		 *    LOCALE mentre la remota e' viva» — e non la chiede nessuno: o la
+		 *    si guarda, o `0x04` resta un codice che nessuno spedisce.
+		 *
+		 * ⚠ Due secondi e non ogni giro: la domanda costa una chiamata sincrona
+		 *   a logind, e questo e' lo stesso ciclo che consegna i fotogrammi
+		 *   (`LEZIONI.md` §6.2-bis).  ⚠ E due secondi sono il ritardo massimo
+		 *   fra «l'utente si e' seduto davanti alla macchina» e «la sessione
+		 *   remota cade»: e' un'attesa che nessuno guarda col cronometro. */
+		if (guardiano && adesso - ultimo_ripasso_locali >= RIPASSO_LOCALI_MS) {
+			ultimo_ripasso_locali = adesso;
+			wt_sorveglia_locali();
+		}
+
 		if (time(NULL) - ultimo_controllo_cert >= 60) {
 			ultimo_controllo_cert = time(NULL);
 			if (certificati_ruota_se_serve(&cert)) {
@@ -955,6 +1011,10 @@ fine:
 	 *    `CODER.md` §4.4 vieta l'attesa DENTRO il ciclo, e questa e' la riga
 	 *    dopo l'ultimo giro. */
 	aiutante_spegni(pam_aiuto);
+	/* ⚠ Il guardiano prima della pagina e del trasporto: da qui in poi nessuno
+	 *   fa piu' domande su chi e' collegato, e tenere aperto un bus di sistema
+	 *   mentre si chiude non serve a niente. */
+	sentinella_chiudi(guardiano);
 	comando_chiudi(k);
 	pagina_chiudi(p);
 	trasporto_chiudi(t);

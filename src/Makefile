@@ -61,7 +61,7 @@ NOME    := remotix
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c \
-            input.c tastiera.c cursore.c
+            input.c tastiera.c cursore.c sentinella.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -290,6 +290,11 @@ figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
 #    ngtcp2 non ha ne' una sessione grafica ne' un codificatore.
 sessione.o:       sessione.h registro.h
+
+# ⭐ IL GUARDIANO DELLA FASE 5 — l'emittente che mancava a `0x04` e `0x05`.
+# ⚠ Non e' fra i `GEMELLATI` e non ci puo' andare: `rcp.c` lo raggiunge per
+#   GANCIO, perche' la copia innestata in ngtcp2 non ha un bus di sistema.
+sentinella.o:     sentinella.h registro.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
 codificatore.o:   codificatore.h registro.h

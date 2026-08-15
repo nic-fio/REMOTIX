@@ -1406,6 +1406,44 @@ Quindi la scala di ripiego 4K → 2K → 1080p serve al codificatore e alla band
 fotogrammi. Sapere che cosa non costa vale quanto sapere che cosa costa: toglie di mezzo le leve che
 non muovono niente.
 
+### 6.5 ⭐⭐ Un'ottimizzazione che ragiona sul **regime** è cieca alla **coda** — e la coda è quel che l'utente guarda
+
+*15 agosto 2026, fase 5. Trovata da un sintomo dell'utente, e la causa stava in un **commento
+nostro** che spiegava perché era giusta.*
+
+`cattura.c` consegnava il fotogramma **solo se qualcuno lo stava aspettando in quell'istante**, e la
+riga che lo giustificava diceva: *«copiare 8 MB per nessuno sarebbe lavoro dentro la richiamata di
+tempo reale, fatto per niente»*. ⭐ **Vero a regime**: se i fotogrammi scorrono, quello buttato è
+subito rimpiazzato dal prossimo e nessuno se ne accorge.
+
+⛔ **Falso nella coda**, ed è l'unico caso che si vede: una finestra che si chiude produce una
+raffica; noi prendiamo il primo fotogramma e passiamo ~20 ms a comprimerlo; quelli che arrivano nel
+frattempo si buttano, **compreso l'ultimo** — e dopo l'ultimo **non ne arriva nessuno**, perché la
+scena è ferma e il compositore manda solo quando cambia qualcosa. ⇒ L'utente resta a guardare il
+**primo** fotogramma di un cambiamento che è già finito, finché un gesto qualunque non ne produce un
+altro.
+
+**Il sintomo, com'è arrivato**: *«do `exit` e il terminale sembra congelato: appena muovo il mouse
+si chiude»*. ⭐ **Quella frase è la diagnosi**: se un fotogramma qualunque allinea lo schermo, quello
+giusto era stato prodotto e non consegnato.
+
+**Le tre regole che ne restano:**
+
+1. ⛔ **In una catena a raffiche, l'ultimo elemento non è uno come gli altri**: è quello che resta
+   sullo schermo. Un'ottimizzazione che scarta «tanto ne arriva un altro» va riletta chiedendosi
+   *«e se questo fosse l'ultimo?»*;
+2. ⚠ **il guadagno vero è stato più grande della cura**: non si perdeva solo l'ultimo — si perdevano
+   **tutti** quelli di ogni raffica, quindi ogni movimento era più a scatti del necessario, e nessuno
+   l'aveva mai notato perché il difetto si vedeva solo nella coda. ⇒ *Un difetto che si manifesta in
+   un caso limite può costare in tutti gli altri, in silenzio*;
+3. ⭐ **e il costo temuto non c'era**: tenendo sempre l'ultimo si **riusa** il buffer, e la
+   richiamata di tempo reale fa una `memcpy` invece di una `malloc`+`free` da 8 MB per fotogramma.
+   *L'ottimizzazione che si difendeva col costo era anche la più cara.*
+
+⚠ E la conferma è dell'utente, non di un banco: *«ora il terminale si chiude subito… il sistema mi
+sembra tremendamente responsivo, i tempi di risposta sono istantanei anche su Android»* — §7.3, il
+metro è quel che si vede.
+
 ---
 
 ## 7. Le lezioni sulla direzione
@@ -1557,6 +1595,33 @@ Nell'ordine, e ogni passo è una lezione delle sezioni precedenti messa in fila.
 7. **Far giudicare l'utente**, su quel che si vede, prima di dichiarare chiuso qualunque cosa.
 8. **Aggiornare i documenti nello stesso momento** in cui una misura li smentisce, con data e fonte.
    Un riferimento che invecchia in silenzio è peggio di nessun riferimento.
+
+### 9-bis ⭐⭐⭐ Quel che NON è del desktop, e ti aspetta lo stesso
+
+*Scritta il 15 agosto 2026, alla fine di una notte in cui il desktop remoto è sparito tre volte.
+⛔ **Di tutto quel che è costato, quasi niente era di GNOME**: era del sistema sotto — logind, PAM,
+udev, Mesa, PipeWire. ⇒ Su KDE, XFCE, LXQt e Cinnamon queste righe **si ripagano tali e quali**, e
+questa sezione esiste perché non si ripaghino due volte.*
+
+| il fatto | quanto è portabile | dove sta scritto |
+|---|---|---|
+| ⛔ **Il compositore vuole una SESSIONE logind di classe `user`** — non basta `/run/user/<uid>`, non basta il bus, **non basta il linger** (che dà uno scope di classe `manager`). Mutter chiede `sd_pid_get_session()`, si sente rispondere **ENXIO** e muore | ⭐⭐⭐ **totale**: quella chiamata la fa **ogni** compositore Wayland, non Mutter. È la prima cosa da verificare su un desktop nuovo, e il sintomo — *«non parte e non dice perché»* — è identico ovunque | `DECISIONI.md` §1.10-ter |
+| ⛔ **Il server non deve girare dentro una sessione utente**: `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**. Un server avviato a mano da `ssh` mette i figli nella sessione di chi l'ha avviato | ⭐⭐⭐ **totale**, ed è insidiosa perché in produzione (unità di sistema) non si vede mai: morde **solo in prova**, cioè dove si studia il desktop nuovo | `DECISIONI.md` §1.10-ter |
+| ⛔ **Senza seat non ci sono le ACL di `uaccess`** ⇒ l'utente **non può aprire la GPU** e Mesa ripiega su llvmpipe **senza un errore**. Su un desktop normale l'accesso lo dà logind con un'ACL a chi è seduto al seat; noi il seat non ce l'abbiamo **di proposito** | ⭐⭐⭐ **totale**, ed è il **prezzo dell'headless**: vale per qualunque compositore si faccia girare senza seat. ⚠ Il sintomo è «lento», non «rotto» | `fasi/05-la-sessione.md`, `DECISIONI.md` §4.6-quinquies |
+| ⛔ **Con due schede, quale usa il compositore lo decide il caso** se non c'è la regola udev | ⭐⭐ **totale** — e su KWin era già noto (`kde.md` §5.6: `findRenderDevice()` prende la prima che si apre). ⇒ Non era una stranezza di KDE: **era la regola generale, vista da una parte sola** | `DECISIONI.md` §4.6-ter e §4.6-quinquies |
+| ⛔ **Le variabili `XDG_*` non si inventano: le mette `pam_systemd` e si leggono.** Comporle a mano vuol dire dichiarare un valore al posto di averlo — e `XDG_RUNTIME_DIR` asserito è il difetto che non si vede finché la directory c'è | ⭐⭐⭐ **totale** | `DECISIONI.md` §1.10-ter |
+| ⛔ **La coda della raffica**: il fotogramma scartato «tanto ne arriva un altro» è **l'ultimo**, e dopo l'ultimo non arriva niente | ⭐⭐⭐ **totale**: sta in `cattura.c`, che è **lo stesso codice per tutti e quattro** i desktop | §6.5 |
+
+⭐ **E la conseguenza di metodo, che vale più dell'elenco**: quando su un desktop nuovo qualcosa non
+parte o va lento, ⛔ **la prima domanda non è «che cosa fa di strano questo compositore»** — è
+*«l'ambiente sotto è quello che il compositore si aspetta?»*: sessione, seat, gruppi, scheda,
+variabili. `[M]` Su GNOME, la notte del 15 agosto, la risposta è stata **quattro volte su cinque
+l'ambiente** e una volta il nostro codice — e ogni volta il sintomo puntava altrove.
+
+⚠ **E il rovescio, per onestà**: quel che invece **è** di GNOME e non si trasporta — `--headless
+--no-x11`, il drop-in dell'unità della Shell, `is_headless()`, le chiavi di lockdown,
+`always-show-log-out`, le dodici `switch-to-session-*` — va cercato di nuovo su ciascun desktop, e
+per quello servono le quindici domande della sezione 3.
 
 ---
 

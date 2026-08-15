@@ -53,6 +53,11 @@ enum {
 	RCP_TEMPO_SCADUTO = 0x0D,
 	RCP_SESSIONE_NON_SERVIBILE = 0x0E,
 	RCP_GIA_ATTIVA_REMOTA = 0x0F,
+	/* ⭐ 15 agosto 2026, `DECISIONI.md` §4.1-quater: l'utente e' USCITO dal
+	 * desktop («Esci/logout»).  ⛔ NON e' `0x01`: quello e' il filo che cade e
+	 * porta la promessa «riattacca e ritrovi tutto», che dopo un logout e'
+	 * falsa — la sessione grafica e' finita e i programmi sono chiusi. */
+	RCP_SESSIONE_TERMINATA = 0x10,
 };
 
 typedef struct rcp_sessione rcp_sessione;
@@ -284,6 +289,30 @@ typedef struct {
 	 * `false` = «non lo so» — nessun palco, o nessun fotogramma ancora.  ⚠ Non
 	 * e' «0x0»: la differenza e' la stessa di `rcp_tela_in_vigore()`. */
 	bool (*tela_del_palco)(void *ctx, uint32_t *larghezza, uint32_t *altezza);
+
+	/* ⛔⭐ «QUEST'UTENTE HA GIA' UNA SESSIONE GRAFICA LOCALE?» — §5.1 di
+	 *     `SPECIFICHE.md`, motivo `0x05 GIA_ATTIVA_LOCALE`.
+	 *
+	 * ⛔ E' UN GANCIO E NON UNA CHIAMATA A logind, per la stessa ragione dei
+	 *    sei dell'input: `rcp.c` esiste in DUE cartelle e la copia di
+	 *    `banchi/rcp/` viene innestata dentro `examples/` di ngtcp2, dove non
+	 *    c'e' ne' `gio-2.0` ne' un bus di sistema.  Un `#include <gio/gio.h>`
+	 *    qui spegnerebbe B3, B5, B6, B8 e B11 in un colpo solo.
+	 *
+	 * ⛔ E' OPZIONALE, e la sua assenza NON e' una violazione del client: chi
+	 *    non lo collega non applica la regola di §5.1, e ⛔ `rcp.c` lo SCRIVE
+	 *    NEL REGISTRO invece di tacere (`CODER.md` §4.2: il ripiego si
+	 *    dichiara).  ⚠ Una regola che non c'e' e una regola che dice «no» sono
+	 *    due fatti diversi, e nel registro devono restare tali.
+	 *
+	 * `descrizione` — se non NULL — riceve di che sessione si tratta, per il
+	 * registro del server.  ⛔ NON finisce nel corpo del congedo: §8.2 vieta di
+	 * dire al client i fatti delle sessioni altrui.
+	 *
+	 * Restituisce `true` se una sessione grafica **locale** di quell'utente
+	 * esiste adesso. */
+	bool (*sessione_locale)(void *ctx, const char *utente, char *descrizione,
+	                        size_t quanto);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.

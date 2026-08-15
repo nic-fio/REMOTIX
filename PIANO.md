@@ -693,6 +693,23 @@ assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza 
 **Produce**: PAM per intero, il palco che sopravvive al distacco, i tre orologi, una sola sessione
 grafica per utente.
 
+> ### ⭐ E il confine col multi-tenant è stato deciso il 15 agosto 2026 — `DECISIONI.md` §4.6-quater
+>
+> **Qui: un utente remoto per volta.** Niente budget, niente conteggio, `MAX_ATTACCATE` resta il
+> `#define` a 16 dichiarato come ripiego. Il multi-tenant come **funzione** — più sessioni insieme,
+> `BUDGET_PIENO`, il tetto configurabile — è della **fase 12**, perché ha bisogno di un numero vero
+> e il numero lo dà il codificatore hardware della **fase 8**.
+>
+> ⛔ **Con un pezzo che non si rinvia**: il guardiano di logind di `0x04`/`0x05` deve discriminare
+> **per utente**, e non è una scelta — è la macchina di prova che lo impone. `nicfio` ha la sessione
+> grafica **locale** e `prova` arriva da **remoto**: un guardiano che chieda *«c'è una sessione
+> locale?»* invece di *«di questo utente?»* rifiuta `prova` **il primo giorno**.
+>
+> ⭐ **E le quattro decisioni della sera del 15 agosto stanno tutte in `fasi/05-la-sessione.md`**: le
+> due uscite (§4.1-ter), il ritorno al modulo di accesso col motivo nuovo `0x10` (§4.1-quater), la
+> scorciatoia `Ctrl+Alt+Fine`, senza bottone a schermo (§4.1-quinquies), e ⛔ **nessuno spegne il
+> server** (§4.7).
+
 **L'utente vede**: chiude il client, va a pranzo, riapre — **e ritrova tutto com'era**.
 
 **Il banco**:

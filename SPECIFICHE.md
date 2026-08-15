@@ -304,6 +304,29 @@ connessione**. Si chiude il client e la sessione resta viva; ci si ricollega, an
 dispositivo, e si ritrova tutto. È l'invariante I4, ed è il difetto che in v1 rendeva la sessione
 inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
 
+### 5.2-bis ⭐ E finisce quando l'utente esce — le due uscite non sono la stessa
+
+*Deciso dall'utente il 15 agosto 2026 (`DECISIONI.md` §4.1-ter e §4.1-quater).*
+
+| il gesto dell'utente | che cosa succede |
+|---|---|
+| chiude la scheda, chiude il browser, **spegne o riavvia il proprio PC**, perde il campo | ⭐ **un caso solo**: il filo cade, la **sessione resta viva**, e chi torna ritrova tutto (§5.2). ⛔ Il PC dell'utente non è un attore del modello: non c'è niente da distinguere |
+| sceglie **«Esci/logout»** dal menu di sistema del desktop | ⛔ **la sessione finisce**, e con lei si chiudono tutti i programmi che l'utente aveva in esecuzione. La pagina torna al **modulo di accesso** con la riga *«la sessione è terminata»*, e il motivo sul filo è `SESSIONE_TERMINATA` (`RCP.md` §8.2 `0x10`) |
+
+⭐ **È l'unico gesto che dichiara «ho finito»**, e per questo la voce «Esci…» deve **esserci**: su
+GNOME va accesa esplicitamente, perché con un utente e una sessione sola la shell non la mostra.
+
+**E si raggiunge in due modi** *(deciso dall'utente il 15 agosto 2026, `DECISIONI.md`
+§4.1-quinquies)*:
+
+| | |
+|---|---|
+| la voce **«Esci…»** nel menu di sistema del desktop | la strada normale, e ⭐ **basta a sé stessa**: si raggiunge col puntatore e col dito, quindi c'è **su ogni dispositivo**, tastiera o no |
+| ⭐ la scorciatoia **`Ctrl+Alt+Fine`** | la gestisce **la pagina**, non il desktop: una sola volta per tutti e quattro i desktop, e funziona **anche se il desktop non risponde più**. ⛔ La pagina se la tiene, quindi nella sessione remota quella combinazione **non arriva mai**. ⛔ **Chiede conferma** — *«terminare la sessione?»* — perché chiude tutti i programmi aperti e costa un gesto solo, dove il menu ne costa tre |
+
+⛔ **E nessun bottone a schermo per il logout** *(deciso dall'utente il 15 agosto 2026)*: il bottone
+di §7.3-bis esiste per `Ctrl+Alt+Canc`, che **non ha nessuna voce di menu**. Il logout ce l'ha.
+
 ### 5.3 I tre orologi
 
 | Orologio | Quanto | Che cosa scatta |
@@ -835,7 +858,7 @@ via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, 
 |---|---|
 | **init** | systemd |
 | **distribuzioni** | rilevamento delle capacità e degradazione dichiarata; **Debian e Ubuntu** come riferimento |
-| **spegnimento, riavvio, sospensione** | **tolti** alla sessione remota |
+| ⛔ **spegnimento, riavvio, sospensione, ibernazione** | ⭐ **tolti a tutti** — *deciso dall'utente il 15 agosto 2026, `DECISIONI.md` §4.7*. ⛔ **Non solo alla sessione remota**: nemmeno chi è fisicamente davanti alla macchina, perché spegnere è l'unico gesto che porta via **tutte** le sessioni insieme e chi lo compie non vede chi c'è collegato. ⭐ **Dentro il desktop remoto l'utente ha un solo gesto che finisce qualcosa: il logout** (§5.2-bis); quel che fa sul **proprio** PC è affar suo, e per noi è il filo che cade. ⚠ Resta possibile a **root**, e deve restare: la macchina va amministrata, e i client attaccati lo vengono a sapere con `SERVER_IN_CHIUSURA` (`RCP.md` §8.2 `0x0C`) |
 | **GPU** | scelta per **id PCI** con una regola udev. ⚠ Negare il nodo lo nega a **tutta la sessione dell'utente**: chi usa l'altra scheda per altro va messo nel gruppo della regola |
 
 ### 11.4 L'accelerazione hardware
