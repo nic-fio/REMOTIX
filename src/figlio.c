@@ -70,6 +70,7 @@
 /* Solo il figlio ha bisogno del palco.  Il padre non include niente di tutto
  * questo, e non e' pulizia: e' la dichiarazione che root non ci parla. */
 #include "cattura.h"
+#include "sentinella.h"
 #include "codificatore.h"
 #include "input.h"
 #include "mutter.h"
@@ -149,7 +150,10 @@ enum {
 	 *   il palco ha davvero (`0x0` = non ce l'ha fatta).  ⭐ E lo manda solo dopo
 	 *   aver VISTO un fotogramma a quella misura, tranne nel caso «ce l'ho gia'»:
 	 *   la verita' resta il fotogramma, questo e' il modo di dirla. */
-	MSG_TELA = 14       /* figlio → padre */
+	MSG_TELA = 14,      /* figlio → padre */
+	/* ⭐ §7.6 — «la sessione grafica e' finita», e non l'ha chiesta nessun
+	 * client: l'utente ha scelto «Esci…» dal menu del desktop. */
+	MSG_SESSIONE_FINITA = 15 /* figlio → padre */
 };
 
 struct testa {
@@ -316,6 +320,8 @@ struct figli {
 	char dir_rilievo[256];
 	bool c_e_rilievo;
 	char percorso_mio[512]; /* /proc/self/exe risolto, per l'`exec` */
+	FiglioSessioneFinita su_sessione_finita;
+	void *ctx_sessione_finita;
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
 	FiglioCursore cursore;
@@ -1278,6 +1284,30 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		              s.socket_bus_c_e ? "c'e'" : "⛔ non c'e'");
 		return true;
 	}
+	case MSG_SESSIONE_FINITA:
+		/*
+		 * ⭐⭐ §7.6, il gemello: la sessione grafica e' finita e non gliel'ha
+		 *     chiesto nessun client — l'utente ha scelto «Esci…» nel menu del
+		 *     desktop.
+		 *
+		 * ⛔ E chi guarda deve saperlo ADESSO: tacendo, i client resterebbero
+		 *    su uno schermo fermo fino ai trenta secondi del silenzio, e poi
+		 *    leggerebbero «errore di rete» — che e' esattamente il rilievo B-7.
+		 */
+		registro_dice(REG_FIGLIO,
+		              "⭐ §7.6: la sessione grafica di «%s» E' FINITA (nessun "
+		              "client l'ha chiesta: l'utente e' uscito dal menu del "
+		              "desktop).  Chi guarda viene congedato con 0x10",
+		              g->utente);
+		if (f->su_sessione_finita)
+			f->su_sessione_finita(f->ctx_sessione_finita, g->utente, g->uid);
+		else
+			registro_dice(REG_FIGLIO,
+			              "⚠ nessun gancio «sessione finita»: i client di «%s» "
+			              "NON sono stati avvisati, e aspetteranno i trenta "
+			              "secondi del silenzio",
+			              g->utente);
+		return true;
 	case MSG_PALCO: {
 		struct corpo_palco p;
 		if (byte < sizeof p)
@@ -1665,6 +1695,22 @@ bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
 	 *    ritardo debba misurare niente. */
 	return figli_input(f, utente, 0, FIGLI_INPUT_RITELA, 0, 0,
 	                   (int32_t)larghezza, (int32_t)altezza);
+}
+
+/* ⭐ §7.6 — e delega a `figli_input()` come `figli_ritela()`, per la stessa
+ * ragione: una busta sola sul filo fra padre e figlio.  ⛔ Ma col nome suo,
+ * perche' i mestieri sono due e chi legge `main.c` deve vedere la catena. */
+void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
+{
+	if (!f)
+		return;
+	f->su_sessione_finita = fn;
+	f->ctx_sessione_finita = ctx;
+}
+
+bool figli_termina_sessione(figli *f, const char *utente)
+{
+	return figli_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, 0, 0);
 }
 
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
@@ -2559,6 +2605,44 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *   ri-tentativo ne avvierebbe un'altra.
 	 */
 	p.stato_sessione = (uint32_t)sessione_stato(tela_l, tela_a, NULL);
+	{
+		/*
+		 * ⭐⭐ «C'ERA E ADESSO NON C'E' PIU'» — §7.6, il gemello, e la
+		 *     distinzione che decide TUTTO il comportamento.
+		 *
+		 * ⛔ Una sessione MORTA vuol dire due cose opposte:
+		 *
+		 *   · non c'e' MAI stata (primo attacco, macchina appena riavviata)
+		 *     ⇒ la si fa nascere, ed e' quel che l'utente si aspetta;
+		 *   · c'era e l'utente e' USCITO dal menu del desktop
+		 *     ⇒ ⛔ NON si rifa': rifarla vorrebbe dire **impedirgli di
+		 *       uscire**.  Si avvisa chi guarda con `0x10`, e la prossima ne
+		 *       nascera' al prossimo attacco (`DECISIONI.md` §4.1-quater: «la
+		 *       pagina torna al modulo di accesso»).
+		 *
+		 * ⚠ E lo stesso vale se il compositore e' MORTO da solo: dal nostro
+		 *   lato e' indistinguibile da un logout, e il comportamento giusto e'
+		 *   lo stesso — dirlo a chi guarda invece di far ricomparire un
+		 *   desktop che l'utente aveva chiuso.
+		 */
+		static bool vista_viva;
+
+		if (p.stato_sessione != SESSIONE_MORTA &&
+		    p.stato_sessione != SESSIONE_NON_LETTA)
+			vista_viva = true;
+		else if (p.stato_sessione == SESSIONE_MORTA && vista_viva) {
+			vista_viva = false;
+			registro_dice(REG_FIGLIO,
+			              "⭐ §7.6: la sessione grafica C'ERA e adesso NON "
+			              "C'E' PIU' — l'utente e' uscito dal menu del "
+			              "desktop.  ⛔ NON la faccio rinascere: rifarla "
+			              "vorrebbe dire impedirgli di uscire.  Avviso il "
+			              "padre, che congeda chi guarda con 0x10");
+			manda(MSG_SESSIONE_FINITA, NULL, 0, NULL, 0);
+			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			return false;
+		}
+	}
 	if (p.stato_sessione == SESSIONE_MORTA) {
 		static uint64_t chiesta_ms;
 		uint64_t adesso_ms = registro_ora_ms();
@@ -2846,6 +2930,83 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              sbaglio_input ? sbaglio_input : "nessun dettaglio");
 		free(sbaglio_input);
 	}
+
+	/*
+	 * ⭐⭐ E QUI, UNA VOLTA SOLA PER SESSIONE, LE TRE COSE CHE VANNO FATTE
+	 *     QUANDO IL PALCO C'E' — e non prima, perche' prima non c'era una
+	 *     sessione a cui dirle.
+	 *
+	 * ⛔ «Scritto» non e' «in vigore» (`REVIEWER.md` E1): le due verifiche non
+	 *    servono a proteggere — proteggono la regola polkit e la sessione senza
+	 *    seat — servono a **sapere se quelle protezioni ci sono davvero**.  E le
+	 *    fa il figlio perche' e' l'utente: `[M]` root si sente rispondere «yes»
+	 *    da logind, che guarda `CAP_SYS_BOOT` prima di polkit.
+	 */
+	{
+		static bool gia_fatto;
+
+		if (!gia_fatto) {
+			sentinella *guardia;
+			char dettaglio[192];
+
+			gia_fatto = true;
+
+			/* 1. ⛔ La sospensione, e non e' teorica: `[M]` la notifica
+			 *    «Automatic Suspend» e' comparsa nel desktop remoto. */
+			sessione_inibisci();
+
+			guardia = sentinella_apri();
+			if (!guardia) {
+				registro_dice(REG_FIGLIO,
+				              "⚠ senza bus di sistema non posso VERIFICARE "
+				              "ne' l'headless ne' il divieto di spegnere: "
+				              "le protezioni possono esserci, ⛔ ma da qui "
+				              "non lo so — e «non lo so» non e' «va bene»");
+			} else {
+				/* 2. L'headless, che dal 15 agosto e' per costruzione. */
+				dettaglio[0] = '\0';
+				if (sentinella_senza_seat(guardia, dettaglio, sizeof dettaglio))
+					registro_dice(REG_FIGLIO,
+					              "⭐ VERIFICATO: la mia sessione non ha "
+					              "seat (%s) ⇒ Mutter e' headless, e il "
+					              "blocca-schermo di GNOME non ci revoca "
+					              "cattura e input (§4.3-bis)",
+					              dettaglio);
+				else
+					registro_dice(REG_FIGLIO,
+					              "⛔⛔ LA MIA SESSIONE NON E' HEADLESS "
+					              "(%s): questa sessione funziona finche' "
+					              "nessuno blocca lo schermo, e poi Mutter "
+					              "ci CHIUDE cattura e input rifiutando di "
+					              "ricrearli.  ⚠ Non esco — I1: una "
+					              "sessione con un rischio vale piu' di "
+					              "nessuna sessione — ma questa riga e' il "
+					              "fallimento dichiarato di §4.3-bis",
+					              dettaglio[0] ? dettaglio : "senza dettaglio");
+
+				/* 3. Le tre cinture di §4.7. */
+				dettaglio[0] = '\0';
+				if (sentinella_spegnimento_vietato(guardia, dettaglio,
+				                                   sizeof dettaglio))
+					registro_dice(REG_FIGLIO,
+					              "⭐ VERIFICATO: da questa sessione NON si "
+					              "spegne ne' si sospende la macchina (%s) "
+					              "— §4.7, e le tre cinture sono in vigore",
+					              dettaglio);
+				else
+					registro_dice(REG_FIGLIO,
+					              "⛔⛔ DA QUESTA SESSIONE SI PUO' SPEGNERE "
+					              "O SOSPENDERE LA MACCHINA (%s): §4.7 dice "
+					              "che nessuno deve poterlo fare, e la "
+					              "macchina e' di piu' persone.  ⇒ Manca la "
+					              "regola polkit, o non copre tutte e "
+					              "dodici le azioni",
+					              dettaglio[0] ? dettaglio : "senza dettaglio");
+				sentinella_chiudi(guardia);
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -3211,6 +3372,37 @@ void figlio_vive(int argc, char **argv)
 				 *     non si e' aperto (un `libei` che non risponde) resta anche
 				 *     con le bande nere e il testo interpolato, **e nessuna riga
 				 *     collega le due cose**. */
+				/*
+				 * ⭐⭐ §7.6 — «TERMINA LA SESSIONE», e sta QUI, prima della
+				 *     guardia dei gesti, per la stessa ragione della tela:
+				 *     uscire non e' un gesto, e legarlo all'apertura di
+				 *     `libei` vorrebbe dire che in una sessione dove l'input
+				 *     non si e' aperto **non si puo' nemmeno uscire**.
+				 *
+				 * ⛔ E il congedo `0x10` e' GIA' PARTITO quando questa riga
+				 *    gira: lo manda `rcp.c` prima di chiamare il gancio,
+				 *    perche' quando il compositore cade il palco cade con lui
+				 *    e il canale non serve piu' (`RCP.md` §7.6).
+				 */
+				if (ci.azione == FIGLI_INPUT_TERMINA) {
+					registro_dice(REG_FIGLIO,
+					              "⭐ §7.6: l'utente ha chiesto di USCIRE — "
+					              "chiudo la sessione grafica e con lei i "
+					              "suoi programmi.  Al prossimo attacco ne "
+					              "nascera' una NUOVA");
+					if (!sessione_termina())
+						registro_dice(REG_FIGLIO,
+						              "⛔ la sessione grafica NON e' "
+						              "finita: l'utente ha chiesto di "
+						              "uscire e il desktop e' ancora "
+						              "li'.  ⚠ Il client e' gia' stato "
+						              "congedato con 0x10, quindi "
+						              "adesso le due verita' non "
+						              "combaciano — e questa riga e' "
+						              "l'unico posto in cui si vede");
+					continue;
+				}
+
 				if (ci.azione == FIGLI_INPUT_RITELA) {
 					CatturaRitela r;
 					uint32_t ora_l = 0, ora_a = 0;

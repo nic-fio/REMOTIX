@@ -237,6 +237,19 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *    padre.  Il perche' per intero sta sopra la funzione in `sessione.c`. */
 bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);
 
+/* ⭐ Le impostazioni che la sessione deve avere PRIMA di nascere: le dodici
+ * scorciatoie delle console virtuali (che in headless Mutter ingoia per
+ * niente), la voce «Esci…» accesa, la sospensione automatica spenta, il
+ * blocca-schermo del desktop spento.  ⛔ Le mette il PRODOTTO e non un file di
+ * provisioning: invariante I7.  ⚠ Ogni schema si cerca prima — `g_settings_new`
+ * su uno schema assente ABORTISCE il processo. */
+void sessione_impostazioni(void);
+
+/* ⭐ Dice al gestore di sessione che qualcuno sta lavorando: `SUSPEND|IDLE`,
+ * ⛔ mai `LOGOUT`.  Restituisce il gettone, 0 se non e' andata.  ⚠ Non si
+ * rilascia: vale quanto la sessione.  (`DECISIONI.md` §4.7, terza cintura.) */
+guint32 sessione_inibisci(void);
+
 SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata);
 
 /*

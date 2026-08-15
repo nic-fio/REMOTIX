@@ -8,6 +8,7 @@
 
 #include <gio/gio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "registro.h"
 
@@ -213,6 +214,95 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
 		              (unsigned long long) costo);
 
 	return trovata;
+}
+
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ LE DUE VERIFICHE DEL FIGLIO — `DECISIONI.md` §4.3-bis e §4.7.
+ *
+ * ⛔ LE FA IL FIGLIO E NON IL SERVER, e non e' un dettaglio di dove sta il
+ *    codice: `[M]` 15 agosto 2026, con la regola polkit in vigore, `CanPowerOff`
+ *    risponde **«no» a `nicfio`** e **«yes» a root** — perche' logind guarda
+ *    `CAP_SYS_BOOT` PRIMA di interrogare polkit.  ⇒ Il server, che e' root, si
+ *    sentirebbe rispondere di si' sempre, e scriverebbe «verificato» avendo
+ *    guardato la cosa sbagliata.  Un controllo fatto dal posto sbagliato e'
+ *    peggio di un controllo che manca.
+ */
+static const char *AZIONI[] = { "CanPowerOff", "CanReboot", "CanSuspend", "CanHibernate", NULL };
+
+bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quanto)
+{
+	bool tutto_no = true;
+
+	if (dettaglio && quanto)
+		dettaglio[0] = '\0';
+	if (!s || !s->bus)
+		return false;
+
+	for (int i = 0; AZIONI[i]; i++) {
+		g_autoptr(GVariant) risposta =
+			chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, AZIONI[i], NULL,
+		               G_VARIANT_TYPE("(s)"));
+		const char *esito = NULL;
+		char pezzo[64];
+
+		if (!risposta) {
+			tutto_no = false;
+			esito = "(nessuna risposta)";
+		} else {
+			g_variant_get(risposta, "(&s)", &esito);
+			/* ⛔ «challenge» NON basta: vuol dire «si', chiedendo una
+			 *    parola d'ordine», e su GNOME **mostra la voce nel menu**
+			 *    invece di toglierla. */
+			if (g_strcmp0(esito, "no") != 0)
+				tutto_no = false;
+		}
+		g_snprintf(pezzo, sizeof pezzo, "%s=%s ", AZIONI[i], esito ? esito : "?");
+		if (dettaglio && quanto)
+			g_strlcat(dettaglio, pezzo, quanto);
+	}
+	return tutto_no;
+}
+
+bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto)
+{
+	g_autoptr(GVariant) risposta = NULL;
+	g_autofree char *percorso = NULL;
+	g_autoptr(GVariant) proprieta = NULL;
+	g_autoptr(GVariant) valore = NULL;
+	const char *seat = NULL;
+
+	if (quale && quanto)
+		quale[0] = '\0';
+	if (!s || !s->bus)
+		return false;
+
+	risposta = chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, "GetSessionByPID",
+	                  g_variant_new("(u)", (guint32)getpid()), G_VARIANT_TYPE("(o)"));
+	if (!risposta) {
+		/* ⛔ NESSUNA SESSIONE e' peggio di «con un seat»: senza sessione il
+		 *    compositore non parte affatto (`DECISIONI.md` §1.10-ter). */
+		if (quale && quanto)
+			g_strlcpy(quale, "nessuna sessione logind", quanto);
+		return false;
+	}
+	g_variant_get(risposta, "(o)", &percorso);
+
+	proprieta = chiama(s, percorso, "org.freedesktop.DBus.Properties", "Get",
+	                   g_variant_new("(ss)", IFACE_SESSIONE, "Seat"), G_VARIANT_TYPE("(v)"));
+	if (!proprieta)
+		return false;
+	g_variant_get(proprieta, "(v)", &valore);
+	/* La proprieta' `Seat` e' una struttura `(so)`: id e percorso. */
+	if (g_variant_is_of_type(valore, G_VARIANT_TYPE("(so)")))
+		g_variant_get(valore, "(&so)", &seat, NULL);
+	else if (g_variant_is_of_type(valore, G_VARIANT_TYPE_STRING))
+		seat = g_variant_get_string(valore, NULL);
+
+	if (quale && quanto)
+		g_snprintf(quale, quanto, "sessione %s, seat «%s»", percorso,
+		           seat && *seat ? seat : "(nessuno)");
+	return !seat || !*seat;
 }
 
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,

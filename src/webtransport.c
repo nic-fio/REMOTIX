@@ -1064,6 +1064,33 @@ static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
 	return gancio_locale(gancio_locale_ctx, utente, quale, quanto);
 }
 
+/* ⭐⭐ §7.6 — «l'utente ha chiesto di uscire». */
+static wt_termina_richiesta gancio_termina;
+static void *gancio_termina_ctx;
+
+void wt_termina_gancio(wt_termina_richiesta f, void *ctx)
+{
+	gancio_termina = f;
+	gancio_termina_ctx = ctx;
+}
+
+static void gancio_termina_sessione(void *ctx)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!gancio_termina || !w->rcp)
+		return;
+	/* ⛔ Invariante I3: si termina la sessione di CHI HA CHIESTO, e il nome e'
+	 *    quello che PAM ha ammesso su questa sessione — non un parametro che
+	 *    viene dal filo.  Un utente che potesse chiudere la sessione di un
+	 *    altro sarebbe il difetto piu' caro del documento. */
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return;
+	gancio_termina(gancio_termina_ctx, mio);
+}
+
 static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
@@ -1848,6 +1875,27 @@ size_t wt_sorveglia_locali(void)
 	return congedate;
 }
 
+size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
+                         const wt *tranne)
+{
+	size_t quante = 0;
+
+	if (!utente || !utente[0])
+		return 0;
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+
+		if (w == tranne || !w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || strcmp(mio, utente) != 0)
+			continue;
+		wt_congeda(w, motivo, dettaglio);
+		quante++;
+	}
+	return quante;
+}
+
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
@@ -1962,6 +2010,12 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *     e' indistinguibile dalla verita'. */
 	if (gancio_locale)
 		g.sessione_locale = gancio_sessione_locale;
+
+	/* ⭐ §7.6 — e si collega solo se c'e' chi puo' davvero terminare la
+	 *    sessione: senza, `rcp.c` congeda con `0x10` e scrive che il desktop
+	 *    non e' stato toccato, invece di far credere che sia finito. */
+	if (gancio_termina)
+		g.termina_sessione = gancio_termina_sessione;
 
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un

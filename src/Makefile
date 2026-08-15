@@ -284,7 +284,7 @@ aiutante.o:       aiutante.h registro.h
 #    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
 #    prodotto e basta, come `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
-                  input.h
+                  input.h sentinella.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di

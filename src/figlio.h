@@ -195,6 +195,21 @@ typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
  * `dir_rilievo`      dove il figlio scrive il crudo e i flussi, o NULL.
  *                    ⚠ Ci scrive **il figlio**, cioe' l'utente: se la cartella
  *                    non e' sua, il rilievo non esce e la riga lo dice. */
+/* ⭐⭐ §7.6 — «LA SESSIONE GRAFICA DI QUEST'UTENTE E' FINITA», e non gliel'ha
+ *     chiesto nessun client: l'utente ha scelto «Esci…» dal menu del desktop.
+ *
+ * ⛔ E' il gemello di `TERMINA_SESSIONE` visto dall'altro verso: la' l'ordine
+ *    arriva dal filo, qui il fatto arriva dal desktop.  ⚠ In tutt'e due i casi
+ *    chi guarda deve ricevere `0x10 SESSIONE_TERMINATA` — e non i trenta
+ *    secondi del silenzio seguiti da «errore di rete», che e' quel che
+ *    succederebbe tacendo (rilievo B-7).
+ *
+ * ⚠ Si registra a parte invece di allungare `figli_accendi()`: quella firma ha
+ *   gia' quattro richiami, e un quinto parametro in una riga di sei non lo
+ *   legge piu' nessuno. */
+typedef void (*FiglioSessioneFinita)(void *ctx, const char *utente, uid_t uid);
+void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx);
+
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioDeposito deposita, FiglioCongedo congeda,
                      FiglioCursore cursore, FiglioTela tela, void *ctx);
@@ -312,7 +327,12 @@ enum {
 	/* ⛔ §7.1: la tela in vigore e' cambiata, rimappa la regione del puntatore
 	 *    assoluto.  Senza, `rcp.c` satura sulla tela nuova e il palco resta
 	 *    sulla vecchia — due lati con due verita' e nessun errore. */
-	FIGLI_INPUT_RITELA = 7
+	FIGLI_INPUT_RITELA = 7,
+	/* ⭐ §7.6 di `RCP.md` — «l'utente ha chiesto di USCIRE».  ⛔ Non e' un
+	 *    gesto e non si inietta: viaggia in questa busta per la stessa ragione
+	 *    di `RITELA` — una sola busta fra padre e figlio, un solo ramo da
+	 *    leggere — e come quella passa PRIMA della guardia dei gesti. */
+	FIGLI_INPUT_TERMINA = 8
 };
 
 bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
@@ -337,6 +357,13 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
  *    dire «riuscito» senza fare niente (`[M]` labwc) o non farcela.  ⇒ Chi
  *    aspetta l'esito lo legge nel FOTOGRAMMA: e' il primo che arriva alla misura
  *    nuova, e il campo `larghezza`/`altezza` di `FiglioDeposito` lo porta. */
+/* ⭐ «TERMINA LA SESSIONE GRAFICA DI QUEST'UTENTE» — `RCP.md` §7.6, la seconda
+ * delle due uscite di `DECISIONI.md` §4.1-ter.  ⛔ Non e' il distacco: qui i
+ * programmi dell'utente si chiudono, e al prossimo attacco nasce una sessione
+ * NUOVA.  `false` = non c'e' nessun figlio per quell'utente, o la domanda non e'
+ * partita — e allora la sessione NON finira'. */
+bool figli_termina_sessione(figli *f, const char *utente);
+
 bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
                   uint32_t altezza);
 

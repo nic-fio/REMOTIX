@@ -91,6 +91,34 @@ void sentinella_chiudi(sentinella *s);
 bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
                        size_t quanto);
 
+/*
+ * ⭐ «LO SPEGNIMENTO E' DAVVERO VIETATO?» — `DECISIONI.md` §4.7, la verifica che
+ * l'invariante I7 pretende: le tre cinture sono righe di configurazione, e una
+ * protezione che vive in un file va **verificata**, non creduta.
+ *
+ * Chiede a logind `CanPowerOff`/`CanReboot`/`CanSuspend`/`CanHibernate` e
+ * pretende **`no`** da tutte e quattro.  ⛔ «challenge» NON basta: mostra la
+ * voce nel menu invece di toglierla.
+ *
+ * ⛔⛔ LA CHIAMA IL FIGLIO, MAI IL SERVER: `[M]` root si sente rispondere «yes»
+ *     perche' logind guarda `CAP_SYS_BOOT` prima di polkit.
+ */
+bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quanto);
+
+/*
+ * ⭐ «LA MIA SESSIONE E' SENZA SEAT?» — `DECISIONI.md` §4.3-bis, misura M2.
+ *
+ * Senza seat Mutter e' **headless**, ed e' l'unica forma in cui il blocca-schermo
+ * di GNOME non ci revoca cattura e input.  ⚠ Dal 15 agosto 2026 la sessione
+ * nasce senza seat **per costruzione** (`figlio.c`, passo 2-bis) — ⛔ ma
+ * «scritto» non e' «in vigore» (`REVIEWER.md` E1), e questa e' la riga che lo
+ * verifica DOPO l'avvio.
+ *
+ * `false` anche quando non c'e' nessuna sessione: e' un caso PEGGIORE, non
+ * migliore, e `quale` lo dice.
+ */
+bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
+
 /* Quante chiamate sono state fatte, e la piu' lenta in millisecondi — il numero
  * che dice se la scelta «sincrona» regge.  ⛔ Sta qui e non in un commento:
  * `CODER.md` §6 vuole che un ripiego si possa MISURARE, non credere. */

@@ -263,6 +263,23 @@ void wt_locale_gancio(wt_locale_richiesta f, void *ctx);
  * lamenta: la lamentela l'ha gia' fatta `rcp.c` all'attacco, una volta sola. */
 size_t wt_sorveglia_locali(void);
 
+/* ⭐⭐ §7.6 — «L'UTENTE HA CHIESTO DI USCIRE», e non e' il congedo.
+ *
+ * ⛔ Il congedo lascia la sessione viva (I4); questo la FINISCE, e con lei si
+ *    chiudono i programmi dell'utente.  Chi lo riceve deve terminare la
+ *    sessione grafica di QUELL'utente — il nome lo mette questo modulo, che sa
+ *    chi PAM ha ammesso su quella connessione, e non viene dal filo (I3). */
+typedef void (*wt_termina_richiesta)(void *ctx, const char *utente);
+void wt_termina_gancio(wt_termina_richiesta f, void *ctx);
+
+/* Congeda tutte le sessioni di un utente, saltando `tranne` (che di solito e'
+ * quella che ha appena chiesto, gia' congedata da `rcp.c`).  Restituisce
+ * quante.  ⛔ Serve a §7.6: la sessione grafica e' UNA (I2), quindi chi la
+ * guardasse da un secondo dispositivo resterebbe con uno schermo fermo per
+ * sempre. */
+size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
+                         const wt *tranne);
+
 /* ⭐⭐ E LA RISPOSTA RIENTRA DI QUI — §7.1.  La manda il figlio (`FiglioTela`) e
  *     `main.c` la porta fin qui, perche' e' questo modulo che sa quali sessioni
  *     sono di quell'utente.

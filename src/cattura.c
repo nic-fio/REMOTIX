@@ -428,9 +428,30 @@ static uint32_t parametri_di_consumo(Cattura *cattura, struct spa_pod_builder *c
 	parametri[2] = spa_pod_builder_add_object(
 	    costruttore, SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta, SPA_PARAM_META_type,
 	    SPA_POD_Id(SPA_META_VideoDamage), SPA_PARAM_META_size,
-	    SPA_POD_CHOICE_RANGE_Int(sizeof(struct spa_meta_region) * 4,
+	    /*
+	     * ⛔⭐ SEDICI REGIONI, NON QUATTRO — 15 agosto 2026, e il numero non e'
+	     *     a occhio: e' quello che Mutter conta.
+	     *
+	     * `[M]` Nel registro della sessione comparivano avvisi come
+	     *     «Not enough buffers (4) to accommodate damaged regions (6)».
+	     * ⚠ E NON parlano dei buffer di PipeWire, come sembra: leggendo
+	     *   `meta-screen-cast-stream-src.c:891` sono i **posti-regione** dentro
+	     *   QUESTO metadato.  Quando le regioni danneggiate sono piu' dei posti
+	     *   che abbiamo chiesto, Mutter rinuncia al danno fine e dichiara
+	     *   **danneggiato tutto il fotogramma**.
+	     *
+	     * ⇒ Chiedere il minimo indispensabile faceva degenerare proprio il caso
+	     *   in cui il danno serve: la scena che cambia in molti punti piccoli —
+	     *   una finestra che si apre, un terminale che scorre.
+	     *
+	     * ⚠ Il costo di chiederne di piu' e' qualche decina di byte per buffer:
+	     *   `spa_meta_region` sono 16 byte.  Il tetto sale a 32 perche' chi
+	     *   accetta 16 non ha ragione di rifiutarne 32, e la scelta resta del
+	     *   produttore.
+	     */
+	    SPA_POD_CHOICE_RANGE_Int(sizeof(struct spa_meta_region) * 16,
 	                             sizeof(struct spa_meta_region) * 1,
-	                             sizeof(struct spa_meta_region) * 16));
+	                             sizeof(struct spa_meta_region) * 32));
 
 	/*
 	 * ⭐⭐ IL METADATO DEL CURSORE — e fino al 14 agosto 2026 non si chiedeva.

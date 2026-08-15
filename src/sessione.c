@@ -867,6 +867,199 @@ bool sessione_termina(void)
 
 /* ------------------------------------------------------------------------- */
 /*
+ * ⭐⭐ LE IMPOSTAZIONI CHE LA SESSIONE DEVE AVERE PRIMA DI NASCERE — fase 5.
+ *
+ * ⛔ PERCHE' LE METTIAMO NOI, e non stanno in un file di provisioning: e'
+ *    l'invariante **I7**.  Una protezione che vive in una riga di
+ *    configurazione che qualcuno puo' non applicare non e' una protezione — e
+ *    `[M]` il 15 agosto 2026 il provisioning di v1, rieseguito dopo un riavvio,
+ *    ha rimesso in piedi lo stato SBAGLIATO e ci e' costato una serata.
+ *
+ * ⛔⛔ E `g_settings_new()` SU UNO SCHEMA CHE NON C'E' ABORTISCE IL PROCESSO —
+ *     non ritorna NULL: chiama `g_error()`.  ⇒ Ogni schema si CERCA prima, e se
+ *     manca si scrive una riga e si va avanti.  Un desktop senza
+ *     `org.gnome.shell` e' un desktop che non e' GNOME, non un guasto nostro.
+ */
+struct impostazione {
+	const char *schema;
+	const char *chiave;
+	const char *perche;
+};
+
+/* ⛔ Le dodici che Mutter INGOIA e che in headless non servono a niente.
+ *
+ * `[R]` `org.gnome.mutter.wayland` lega `<Primary><Alt>F1…F12` a
+ * `switch-to-session-1…12`, e `keybindings.c` le registra come
+ * **`META_KEY_BINDING_NON_MASKABLE`**: nessuna applicazione puo' prenderle,
+ * nemmeno chiedendo.  ⚠ In una sessione headless non c'e' NESSUNA console
+ * virtuale a cui passare: Mutter le intercetta, prova, fallisce e scrive un
+ * avviso.  ⇒ Dodici combinazioni tolte all'utente per niente. */
+static const char *SCORCIATOIE_VT[] = { "switch-to-session-1",  "switch-to-session-2",
+	                                "switch-to-session-3",  "switch-to-session-4",
+	                                "switch-to-session-5",  "switch-to-session-6",
+	                                "switch-to-session-7",  "switch-to-session-8",
+	                                "switch-to-session-9",  "switch-to-session-10",
+	                                "switch-to-session-11", "switch-to-session-12",
+	                                NULL };
+
+static GSettings *impostazioni_se_ci_sono(const char *schema)
+{
+	GSettingsSchemaSource *sorgente = g_settings_schema_source_get_default();
+	g_autoptr(GSettingsSchema) trovato = NULL;
+
+	if (!sorgente)
+		return NULL;
+	trovato = g_settings_schema_source_lookup(sorgente, schema, TRUE);
+	if (!trovato) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ lo schema «%s» non esiste su questa macchina: non lo tocco "
+		              "(e questo NON e' un guasto: e' un desktop diverso)",
+		              schema);
+		return NULL;
+	}
+	return g_settings_new(schema);
+}
+
+void sessione_impostazioni(void)
+{
+	g_autoptr(GSettings) wayland = impostazioni_se_ci_sono("org.gnome.mutter.wayland");
+	g_autoptr(GSettings) shell = impostazioni_se_ci_sono("org.gnome.shell");
+	g_autoptr(GSettings) energia =
+		impostazioni_se_ci_sono("org.gnome.settings-daemon.plugins.power");
+	g_autoptr(GSettings) sessione = impostazioni_se_ci_sono("org.gnome.desktop.session");
+	g_autoptr(GSettings) salvaschermo = impostazioni_se_ci_sono("org.gnome.desktop.screensaver");
+	const char *vuoto[] = { NULL };
+	int tolte = 0;
+
+	if (wayland) {
+		for (int i = 0; SCORCIATOIE_VT[i]; i++)
+			if (g_settings_set_strv(wayland, SCORCIATOIE_VT[i], vuoto))
+				tolte++;
+		registro_dice(REG_SESSIONE,
+		              "⭐ tolte %d scorciatoie Ctrl+Alt+F1…F12 su 12: in headless non "
+		              "c'e' nessuna console virtuale a cui passare, e Mutter le "
+		              "ingoiava senza poterle onorare (sono NON_MASKABLE: nemmeno la "
+		              "pagina potrebbe riprendersele)",
+		              tolte);
+	}
+
+	/*
+	 * ⭐ «Esci…» DEVE ESSERCI — `DECISIONI.md` §4.1-ter, deciso dall'utente il 15
+	 *    agosto 2026: e' l'unico gesto che termina la sessione.
+	 *
+	 * `[R]` `systemActions.js:394-410`: la voce compare solo se
+	 * `always-show-log-out` **oppure** ci sono piu' utenti **oppure** piu' di una
+	 * sessione in `/usr/share/…-sessions`.  ⇒ Su una macchina con un utente e una
+	 * sessione sola NON COMPARE, e senza di lei il logout non esiste.
+	 * ⚠ Rovescia `reference-gnome/rapporti/02-shell-blocco-voci.md:214`, che
+	 *   diceva «va lasciata false» — era scritto quando l'obiettivo era togliere
+	 *   voci, non darne una.
+	 */
+	if (shell && g_settings_set_boolean(shell, "always-show-log-out", TRUE))
+		registro_dice(REG_SESSIONE,
+		              "⭐ «Esci…» acceso (always-show-log-out): senza, su una macchina "
+		              "con un utente solo la voce NON compare, e il logout di §4.1-ter "
+		              "non esisterebbe");
+
+	/*
+	 * ⛔ LA SOSPENSIONE AUTOMATICA — `DECISIONI.md` §4.7, terza cintura.
+	 *
+	 * ⚠ E' la SECONDA meta' di una cura che ha due sintomi: polkit e `sleep.conf`
+	 *   **impediscono il fatto**, questa riga **toglie la bugia dallo schermo**.
+	 *   `[M]` 15 agosto 2026: la notifica «Automatic Suspend — Suspending soon
+	 *   because of inactivity» compariva nel desktop remoto; senza questa riga
+	 *   comparirebbe ancora, seguita da un fallimento silenzioso.
+	 */
+	if (energia) {
+		if (g_settings_set_string(energia, "sleep-inactive-ac-type", "nothing") &&
+		    g_settings_set_string(energia, "sleep-inactive-battery-type", "nothing"))
+			registro_dice(REG_SESSIONE,
+			              "⭐ sospensione automatica spenta (era «suspend» a 900 s, "
+			              "upstream e su Debian): la macchina e' di piu' persone, e "
+			              "chi la sospende le porta via a tutti");
+	}
+
+	/*
+	 * ⛔ E il blocca-schermo resta SPENTO — `DECISIONI.md` §4.3: «il blocco e' di
+	 *    REMOTIX, non del desktop».  Su GNOME entrare nel dialogo di sblocco fa
+	 *    chiudere a Mutter cattura, controllo e input, e RIFIUTARE di ricrearli:
+	 *    ci salva `is_headless()`, ⚠ ma una difesa che dipende da un'eccezione si
+	 *    aiuta togliendo l'occasione.
+	 */
+	if (sessione && g_settings_set_uint(sessione, "idle-delay", 0))
+		registro_dice(REG_SESSIONE, "⭐ inattivita' del desktop spenta (idle-delay 0)");
+	if (salvaschermo && g_settings_set_boolean(salvaschermo, "lock-enabled", FALSE))
+		registro_dice(REG_SESSIONE,
+		              "⭐ blocca-schermo del desktop spento (§4.3: il blocco e' di "
+		              "REMOTIX, e su GNOME quello del desktop ci REVOCA cattura e "
+		              "input invece di mostrare un blocco)");
+
+	g_settings_sync();
+}
+
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ L'INIBIZIONE DELLA SOSPENSIONE — `DECISIONI.md` §4.7, terza cintura.
+ *
+ * ⛔ IL FATTO CHE LA RENDE NECESSARIA, misurato: `[M]` 15 agosto 2026, nel
+ *    desktop remoto compariva la notifica **«Automatic Suspend — Suspending soon
+ *    because of inactivity»**.  `sleep-inactive-ac-type` vale `suspend` a 900 s,
+ *    upstream **e** su Debian.
+ *
+ * ⭐ E' la TERZA cintura e non un doppione delle altre due, perche' agisce a un
+ *    livello diverso: polkit e `sleep.conf` impediscono a chiunque di sospendere
+ *    la macchina; `sessione_impostazioni()` toglie la voglia a `gsd-power`;
+ *    questa dice al gestore di sessione **«c'e' qualcuno che lavora»**, che e'
+ *    l'unica delle tre che parla la lingua del desktop.
+ *
+ * ⛔⛔ I FLAG SONO 12 — `SUSPEND` (4) | `IDLE` (8) — E MAI IL BIT `LOGOUT` (1).
+ *     Con `LOGOUT` inibito, il logout dell'utente verrebbe **bloccato da noi**:
+ *     `DECISIONI.md` §4.1-ter dice che «Esci» e' l'unico gesto che termina la
+ *     sessione, e impedirlo sarebbe togliergli l'unica porta.
+ *
+ * Restituisce il gettone (0 se non e' andata).  ⚠ Non si rilascia mai: vale
+ * quanto la sessione, e muore con lei.
+ */
+guint32 sessione_inibisci(void)
+{
+	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+	guint32 gettone = 0;
+
+	if (!bus)
+		return 0;
+
+	risposta = g_dbus_connection_call_sync(
+		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
+		"org.gnome.SessionManager", "Inhibit",
+		g_variant_new("(susu)", "REMOTIX", 0u,
+	                      "una sessione remota e' viva: la macchina non deve "
+	                      "sospendersi ne' considerarsi inattiva",
+	                      (guint32)(4u | 8u)),
+		G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL,
+		&sbaglio);
+
+	if (!risposta) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ l'inibizione della sospensione NON e' passata (%s): la "
+		              "macchina puo' addormentarsi sotto una sessione viva.  ⚠ Le "
+		              "altre due cinture (polkit e sleep.conf) reggono lo stesso, ma "
+		              "questa e' quella che parla al desktop",
+		              sbaglio ? sbaglio->message : "senza motivo");
+		return 0;
+	}
+	g_variant_get(risposta, "(u)", &gettone);
+	registro_dice(REG_SESSIONE,
+	              "⭐ sospensione e inattivita' INIBITE al gestore di sessione "
+	              "(gettone %u, flag 12 = SUSPEND|IDLE — ⛔ mai LOGOUT, o toglieremmo "
+	              "all'utente l'unica porta per uscire)",
+	              gettone);
+	return gettone;
+}
+
+/* ------------------------------------------------------------------------- */
+/*
  * ⭐⭐ FALLA NASCERE E TORNA SUBITO — 15 agosto 2026, fase 5.
  *
  * ⛔ PERCHE' NON BASTAVA `sessione_assicura()`, che pure fa la stessa cosa:
@@ -905,6 +1098,11 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "uno schermo vuoto");
 		return false;
 	}
+
+	/* ⛔ LE IMPOSTAZIONI PRIMA DEL COMANDO, per la stessa ragione del drop-in:
+	 *    `gnome-session` fa partire la Shell come prima cosa, e una chiave
+	 *    scritta dopo vale per la sessione SUCCESSIVA — cioe' ha ragione domani. */
+	sessione_impostazioni();
 
 	return avvia() ? true : false;
 }

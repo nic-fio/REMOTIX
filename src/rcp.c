@@ -37,6 +37,9 @@ enum {
 	 * conforme che avesse visto un buco — il prezzo che il registro dichiarava
 	 * («la fase 1 non lo serve ancora»). */
 	T_RICHIEDI_CHIAVE = 0x000D,
+	/* ⭐ §7.6, 15 agosto 2026: «l'utente vuole uscire».  ⛔ Non e' il
+	 * `CONGEDO`, che lascia la sessione viva: questo la FINISCE. */
+	T_TERMINA_SESSIONE = 0x0011,
 	/* ⭐ §7.1 — «il client chiede una tela di un'altra misura», e la risposta
 	 * `TELA` che ne dichiara l'esito.  ⛔ Serviti dal 14 agosto 2026: prima
 	 * `ADATTA_TELA` cadeva nel `default` e faceva **perdere la sessione** a un
@@ -4247,6 +4250,11 @@ static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
 	case T_RICHIEDI_CHIAVE:
 		le_u32(&l);
 		break;
+	/* ⭐ §7.6: `TERMINA_SESSIONE` ha il corpo VUOTO — non c'e' niente da dire
+	 * oltre al fatto.  ⚠ E un corpo piu' lungo e' `ERRORE_PROTOCOLLO` come per
+	 * tutti gli altri (§6.1): non «si ignora quel che avanza». */
+	case T_TERMINA_SESSIONE:
+		break;
 	default:
 		/* un tipo che non arriveremo comunque a trattare: decide lo switch, e
 		 * la sua riga di registro e' piu' precisa di questa */
@@ -4423,6 +4431,43 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			}
 			avanti = tratta_richiedi_chiave(s, &l, ora);
 			break;
+		case T_TERMINA_SESSIONE:
+			/*
+			 * ⭐⭐ §7.6 — «HO FINITO», ed e' l'altra uscita di
+			 *     `DECISIONI.md` §4.1-ter.
+			 *
+			 * ⛔ SOLO A SESSIONE ATTACCATA: prima dell'`ATTACCA` non c'e'
+			 *    nessuna sessione grafica da terminare, e §3 non fa sconti.
+			 * ⚠ `S_STACCATA` va bene per la stessa ragione di
+			 *   `RICHIEDI_CHIAVE`: quel client la sessione ce l'ha, ha solo
+			 *   lasciato il posto per silenzio.
+			 */
+			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "TERMINA_SESSIONE nello stato sbagliato");
+				return false;
+			}
+			reg(s, "⭐ §7.6: %s ha chiesto di USCIRE — la sessione grafica "
+			       "finisce e i suoi programmi si chiudono.  ⛔ NON e' un "
+			       "distacco: al prossimo attacco ne nascera' una NUOVA",
+			    s->utente);
+			/*
+			 * ⛔⛔ L'ORDINE E' NORMATIVO, e non e' una preferenza: il congedo
+			 *     PRIMA, la richiesta di terminare DOPO.  Quando il
+			 *     compositore cade il palco cade con lui e il canale non
+			 *     serve piu' — un `0x10` spedito dopo e' un motivo che
+			 *     esiste e che nessuno riceve, cioe' il rilievo B-7.
+			 */
+			congeda(s, RCP_SESSIONE_TERMINATA,
+			        "l'utente ha chiesto di uscire dalla sessione");
+			if (s->g.termina_sessione)
+				s->g.termina_sessione(s->g.ctx);
+			else
+				reg(s, "⚠ nessun gancio «termina_sessione»: il client e' "
+				       "stato congedato con 0x10 ma la sessione grafica NON "
+				       "e' stata toccata.  ⛔ Le due verita' non combaciano, "
+				       "e questa riga e' l'unico posto in cui si vede");
+			return false;
 		case T_CONGEDO: {
 			/* ⛔⭐ QUATTRO COSE IN NOVE RIGHE — rilievo R9.5.
 			 *

@@ -1600,6 +1600,7 @@ non del mittente.
 | `0x000E` | `TELA` | ← | ⭐ *nuovo, 9 ago*: l'esito di `ADATTA_TELA` |
 | `0x000F` | `BANCO_MARCA` | → | ⭐ *nuovo, 9 ago notte*: **funzione di banco** — cambia la marca, con un ritardo noto (§7.5) |
 | `0x0010` | `BANCO_ESITO` | ← | ⭐ *nuovo, 9 ago notte*: l'esito di `BANCO_MARCA` (§7.5) |
+| `0x0011` | `TERMINA_SESSIONE` | → | ⭐ *nuovo, 15 ago*: **l'utente vuole uscire** — la sessione grafica finisce e i suoi programmi si chiudono (§7.6) |
 
 **I corpi** (`CIAO`, `ECCOMI`, `CREDENZIALI`, `AMMESSO`, `RESPINTO`, `ATTACCA`, `SESSIONE` stanno
 in §4.3-4.5):
@@ -2024,6 +2025,34 @@ BANCO_ESITO                                          server → client
 ⚠ **E `istante` non serve a misurare il ritardo**: serve al banco per **distinguere il ritardo che
 ha chiesto lui da quello che ha trovato**. Il ritardo lo misura il client, dal lato che riceve, come
 dice `DECISIONI.md` §2.6 — questo campo dice soltanto quando il server ha obbedito.
+
+---
+
+### 7.6 ⭐ `TERMINA_SESSIONE` — l'unico messaggio con cui il client chiude la SESSIONE
+
+*Nato il 15 agosto 2026 con la decisione dell'utente `DECISIONI.md` §4.1-ter.*
+
+```
+TERMINA_SESSIONE
+ └── (corpo vuoto)
+```
+
+⛔ **Non è «chiudi la connessione»**: quello si fa col `CONGEDO`, e lascia la sessione viva
+(invariante I4). Questo dice *«ho finito»*: la sessione grafica finisce e **i programmi dell'utente
+si chiudono**. Sono le due uscite di `DECISIONI.md` §4.1-ter, e il protocollo deve poterle
+distinguere — un client con un modo solo costringerebbe l'utente a scegliere fra non uscire mai e
+perdere il lavoro.
+
+| | |
+|---|---|
+| **chi lo manda** | il client, e **solo** dopo un gesto esplicito dell'utente: la scorciatoia `Ctrl+Alt+Fine` con la sua conferma. ⚠ La voce «Esci…» del menu del desktop **non passa di qui** — quella la esegue il desktop, e il server se ne accorge da sé |
+| **quando è valido** | ⛔ solo a sessione **attaccata**. Prima dell'`ATTACCA` non c'è nessuna sessione da terminare, e §3 non fa sconti: chi lo manda fuori posto riceve `ERRORE_PROTOCOLLO` |
+| **la risposta** | ⛔ un `CONGEDO` con motivo **`0x10 SESSIONE_TERMINATA`**, e **DEVE partire prima** che la sessione grafica finisca di morire: quando il compositore cade, il palco cade con lui e il canale non serve più. Un `0x10` spedito tardi è il rilievo **B-7** con un nome nuovo |
+| **e agli altri** | ⛔ il congedo va a **tutte** le sessioni di quell'utente, non solo a chi ha chiesto: la sessione grafica è una sola (I2), e chi la guardasse da un secondo dispositivo resterebbe con uno schermo fermo per sempre |
+
+⚠ **E non esiste una risposta «sto terminando»**: l'esito è il congedo. Un messaggio intermedio
+sarebbe una deduzione al posto di un fatto (`LEZIONI.md` §7.5), e l'unico fatto che conta è che la
+sessione sia finita.
 
 ---
 

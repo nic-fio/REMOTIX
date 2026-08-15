@@ -313,6 +313,25 @@ typedef struct {
 	 * esiste adesso. */
 	bool (*sessione_locale)(void *ctx, const char *utente, char *descrizione,
 	                        size_t quanto);
+
+	/* ⛔⭐ «L'UTENTE HA CHIESTO DI USCIRE» — `RCP.md` §7.6, `TERMINA_SESSIONE`.
+	 *
+	 * ⛔ E' l'altra meta' di `DECISIONI.md` §4.1-ter: il filo che cade lascia
+	 *    la sessione viva (I4), questo la FINISCE — e con lei si chiudono i
+	 *    programmi dell'utente.
+	 *
+	 * ⚠ Chiamato DOPO che il congedo `0x10` e' partito, e l'ordine e'
+	 *   normativo: quando il compositore cade, il palco cade con lui e il
+	 *   canale non serve piu'.  Un `0x10` spedito dopo e' il rilievo B-7 con un
+	 *   nome nuovo.
+	 *
+	 * ⛔ E' OPZIONALE: chi non lo collega non puo' servire §7.6, e `rcp.c`
+	 *    risponde `ERRORE_PROTOCOLLO`? ⚠ NO — risponde congedando lo stesso con
+	 *    `0x10` e scrivendo nel registro che la sessione non e' stata toccata.
+	 *    «Il client ha sbagliato» e «questo server non sa farlo» sono due fatti
+	 *    diversi, e punire il client per il secondo sarebbe punire chi non ha
+	 *    sbagliato niente. */
+	void (*termina_sessione)(void *ctx);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.

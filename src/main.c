@@ -398,6 +398,73 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
  *    diversa, e ⭐ **i quattro secondi fra il login e il desktop** — perche'
  *    `pw_stream_update_params()` e' un riavvio del flusso, e un riavvio
  *    consegna un buffer anche a scena ferma. */
+/*
+ * ⭐⭐ §7.6 di `RCP.md` — «L'UTENTE HA CHIESTO DI USCIRE».
+ *
+ * ⛔ DUE COSE, E IN QUEST'ORDINE:
+ *
+ *   1. si congedano **gli altri client di quell'utente** con `0x10`.  La
+ *      sessione grafica e' UNA (I2): chi la stesse guardando da un secondo
+ *      dispositivo resterebbe con uno schermo fermo per sempre, e nessuna riga
+ *      gli direbbe perche'.  ⚠ Chi ha chiesto e' gia' stato congedato da
+ *      `rcp.c`, e infatti si salta (`tranne`);
+ *   2. **poi** si chiede al figlio di terminare la sessione.
+ *
+ * ⛔ L'ordine e' normativo e non e' una preferenza: quando il compositore cade,
+ *    il palco cade con lui e i canali non servono piu'.  Un `0x10` spedito dopo
+ *    e' un motivo che esiste e che nessuno riceve — il rilievo B-7 con un nome
+ *    nuovo.
+ */
+static void termina_al_figlio(void *ctx, const char *utente)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	size_t altri;
+
+	if (!p || !p->f || !utente)
+		return;
+
+	altri = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+	                          "un altro client di questo utente ha chiuso la "
+	                          "sessione", NULL);
+	if (altri)
+		registro_dice(REG_WT,
+		              "⭐ §7.6: congedati con 0x10 anche %zu altri client di «%s» "
+		              "— la sessione grafica e' una sola (I2), e chi la stava "
+		              "guardando deve saperlo adesso, non fra trenta secondi",
+		              altri, utente);
+
+	if (!figli_termina_sessione(p->f, utente))
+		registro_dice(REG_AVVIO,
+		              "⛔ §7.6: la richiesta di terminare la sessione di «%s» NON "
+		              "e' partita verso il figlio: i client sono stati congedati "
+		              "con 0x10 e il desktop e' ancora li'.  ⚠ Due verita' sullo "
+		              "stesso fatto, e questa riga e' l'unico posto in cui si vede",
+		              utente);
+}
+
+/*
+ * ⭐ §7.6, il gemello: la sessione grafica e' finita e non l'ha chiesta nessun
+ *    client — l'utente e' uscito dal menu del desktop.
+ *
+ * ⛔ Chi guarda viene congedato con `0x10` ADESSO.  Tacendo, resterebbe su uno
+ *    schermo fermo fino ai trenta secondi del silenzio e poi leggerebbe «errore
+ *    di rete»: e' il rilievo B-7, e questa e' la riga che lo impedisce.
+ */
+static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
+{
+	size_t quanti;
+
+	(void)ctx;
+	(void)uid;
+	quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+	                           "la sessione grafica e' terminata", NULL);
+	registro_dice(REG_WT,
+	              "⭐ §7.6: la sessione di «%s» e' finita dal desktop — congedati "
+	              "%zu client con 0x10 (⚠ zero e' normale: puo' non guardare "
+	              "nessuno)",
+	              utente, quanti);
+}
+
 static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
                              uint32_t altezza)
 {
@@ -742,6 +809,14 @@ int main(int argc, char **argv)
 	guardiano = sentinella_apri();
 	if (guardiano)
 		wt_locale_gancio(chiedi_sessione_locale, guardiano);
+
+	/* ⭐ §7.6 — e si collega qui con gli altri: la scorciatoia `Ctrl+Alt+Fine`
+	 *    puo' arrivare col primo pacchetto utile della sessione, e un gancio
+	 *    collegato dopo lascerebbe l'utente a premere una combinazione che non
+	 *    fa niente — che e' peggio di non averla. */
+	wt_termina_gancio(termina_al_figlio, &ponte);
+	/* ⭐ E il gemello: il fatto che arriva dal desktop invece che dal filo. */
+	figli_gancio_sessione_finita(prole, sessione_finita_dal_figlio, &ponte);
 
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
