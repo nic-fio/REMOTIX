@@ -425,6 +425,22 @@ diversi sia il futuro multi-monitor.
 ⭐ Il caso mobile viene giusto da solo: il telefono si attacca e la tela nasce della forma del
 telefono — pixel veri, niente bande, niente scalatura.
 
+### 6.1 ✅ ⭐⭐ ATTUATA il 15 agosto 2026 — e questa tabella adesso descrive il prodotto
+
+*Fino a quella notte era il modello che si voleva; da lì è quel che il codice fa, misurato sulla
+macchina di prova e giudicato dall'utente su due client («sia su Linux sia su Android è tutto
+perfetto»).*
+
+| momento | che cosa succede davvero | `[M]` |
+|---|---|---|
+| **attacco** | la pagina manda `ADATTA_TELA` con la misura della propria finestra, e la tela diventa quella | tela **1264×800** in una finestra 1265×800, scala di disegno **1,000** |
+| **durante la sessione** | il client riscala, e il desktop non si tocca — ⚠ salvo l'interruttore `?adatta=segui`, **spento di suo** (I6, e `DECISIONI.md` §5.1) | il ridimensionamento a caldo costa **6 ms** |
+| **riattacco da un altro dispositivo** | `SESSIONE` concede **la tela che il palco ha già** (§4.5), così i pixel arrivano subito, e poi la pagina chiede la sua | **0 fotogrammi scartati** |
+
+⛔ **E la riga «È 1:1» è diventata vera in un senso più stretto di quel che sembrava**: non «un
+pixel del desktop per un pixel dello schermo», ma **un pixel del desktop per un pixel della
+finestra** — vedi §6.1-bis, che è stata corretta quella stessa notte.
+
 ### 6.1-bis ⛔ «La risoluzione del client», quando il client è una finestra
 
 *Chiarito il 9 agosto 2026. Il modello di §6.1 diceva «la sessione legge la risoluzione del
@@ -433,8 +449,31 @@ dentro uno schermo**, e le due misure sono diverse — a volte molto.*
 
 | | Che cosa è | Chi la usa |
 |---|---|---|
-| **la tela** | ⛔ **lo schermo del dispositivo, in pixel fisici** — non la finestra, e non i pixel logici del browser, che su un telefono sono meno di un terzo di quelli veri | si fissa **all'attacco** e non si muove |
+| **la tela** | ⛔ ~~lo schermo del dispositivo~~ → ⭐ **la FINESTRA, in pixel fisici** — corretto il 15 agosto 2026, vedi il riquadro qui sotto | si fissa **all'attacco** e cambia solo con `ADATTA_TELA` |
 | **la vista** | **la finestra**, cioè quanto la pagina ha davvero da disegnare, sempre in pixel fisici | si rinegozia a ogni ridimensionamento |
+
+> ## ⛔⛔ CORRETTA IL 15 AGOSTO 2026 — la tela è la FINESTRA, non lo schermo
+>
+> *Questa tabella diceva: la tela è **lo schermo del dispositivo**, «non la finestra», e «si fissa
+> all'attacco e non si muove». ⇒ Con quella regola tela e vista sono **quasi sempre diverse**, e da
+> lì discendono le bande, la scala ≠ 1 e la conversione delle coordinate.*
+>
+> ⛔ **L'ha rovesciata `DECISIONI.md` §5.0-sexies**, decisa dall'utente il 14 agosto 2026 dopo due
+> giorni in cui il mouse sul DeX è rimasto inutilizzabile: *«abbiamo due tele, quella del server e
+> quella del client… se i compositori sanno dare la misura esatta, non servono nemmeno le
+> conversioni»*. ⇒ La tela prende la misura della **finestra**, e con lei spariscono insieme
+> **quattro sintomi**: bande nere, testo interpolato, ri-attacco a misura diversa e i quattro
+> secondi fra login e desktop.
+>
+> ⚠ **E la ragione che questo paragrafo dava per scegliere lo schermo non è stata ignorata, è stata
+> pagata**: *«un desktop grande quanto la finestra che avevi aperto per caso resterebbe tale per
+> tutta la sessione — piccolo per sempre»*. ⛔ Era vero **finché la tela non si poteva cambiare**.
+> Adesso si cambia: a ogni riattacco sempre, e durante la sessione con `?adatta=segui`. La frase
+> «piccolo per sempre» non descrive più niente.
+>
+> ⭐ **E il «appena vai a schermo intero torna 1:1 e nitido» è diventato la condizione NORMALE**, non
+> il premio dello schermo intero: `[M]` scala **1,000** e `image-rendering: pixelated` in una
+> finestra qualunque.
 
 ⭐ **Perché lo schermo e non la finestra**, che era l'altra scelta possibile: la tela è **il desktop**,
 e un desktop grande quanto la finestra che avevi aperta per caso al primo collegamento resterebbe
@@ -451,7 +490,7 @@ esattamente la condizione in cui vista e tela coincidono e non si scala niente.
 | | |
 |---|---|
 | il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
-| **ruotare il telefono** dopo l'attacco | la tela **non gira**: si vedono le bande, o si riscala. Per cambiarla davvero c'è «adatta il desktop a questa finestra» (§6.4) |
+| **ruotare il telefono** dopo l'attacco | ⚠ di suo la tela **non gira**: si vedono le bande, o si riscala. ⭐ Con `?adatta=segui` la segue — ed è un interruttore spento (§6.4, `DECISIONI.md` §5.1) |
 | uno schermo 4K | la tela nasce 4K, e sono **cinque volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
 
 `[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre

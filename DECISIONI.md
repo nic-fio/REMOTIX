@@ -1779,7 +1779,27 @@ scendere anche la misura codificata sotto una certa soglia, con assestamento.
 davvero, e quanto pesa. Un'ottimizzazione decisa prima della misura è §7.2 di `LEZIONI.md` —
 ottimizzare nella direzione sbagliata.
 
-### 5.0-quater 🔸 Con il browser, «la risoluzione del client» sono due misure diverse
+### 5.0-quater 🔸 ⛔ ~~Con il browser, «la risoluzione del client» sono due misure diverse~~ → **la tela è la FINESTRA**
+
+> ## ⛔⛔ SUPERATA DA §5.0-sexies, e attuata il 15 agosto 2026
+>
+> *Questa voce sceglieva **lo schermo del dispositivo** come tela, e la finestra come vista. ⛔ È
+> stata rovesciata da §5.0-sexies — decisa dall'utente il 14 agosto — che prende **la finestra**:
+> tela e vista coincidono, la scala vale 1 e la conversione delle coordinate sparisce.*
+>
+> ⚠ **E le due ragioni di questa voce non erano sbagliate: erano legate a un vincolo che non c'è
+> più.** La prima diceva che una finestra piccola darebbe *«un desktop piccolo per tutta la
+> sessione»* — vero **finché la tela non si poteva cambiare**. Da quando `figli_ritela()` →
+> `cattura_ridimensiona()` esiste (`[M]` 6 ms a caldo, 15 agosto), la tela si rifà a ogni riattacco
+> e, con `?adatta=segui`, anche durante la sessione.
+>
+> ⭐ **E la `[?]` dello zoom di pagina, che questa voce lasciava aperta, si è chiusa da sé**: la
+> misura non si legge più dallo schermo — si legge dalla finestra, e il fattore di zoom ci è già
+> dentro. Un client con zoom ≠ 100 % non dichiara più una tela sbagliata: dichiara la sua.
+>
+> ⇒ Quel che resta valido qui sotto è la **distinzione fra tela e vista** e il perché sono due
+> grandezze diverse. Quel che cade è **quale delle due misure diventa la tela**.
+
 
 *9 agosto 2026, chiedendolo l'utente dopo il passaggio al client web: «resta da chiarire il
 comportamento della risoluzione avendo adesso come client un browser».*
@@ -1846,7 +1866,14 @@ l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.
 > ⚠ **E metà di S5 non è misurata**: il **DeX** non c'era. *«Il Chrome del portatile lo fa»* non dice
 > niente del Chrome del telefono — forma **E10** — e la seconda delle tre `[?]` resta intera.
 
-### 5.0-quinquies ✅ ⭐ La tela resta **1920×1080** — e adesso è una decisione, non un'eredità
+### 5.0-quinquies ✅ ⭐ ~~La tela resta **1920×1080**~~ → **accesa da §5.0-sexies il 14-15 agosto**
+
+> ⭐ **Questa voce si è chiusa da sé, come aveva previsto.** Diceva: *«resta aperta, e va nominata
+> alla fase in cui si accende, l'attuazione di `SPECIFICHE.md` §6.1»*. Quella fase è stata la **coda
+> della fase 4**: §5.0-sexies l'ha decisa il 14 agosto e il 15 la tela ha smesso di essere
+> 1920×1080 — prende la misura della finestra del client (`[M]` 1264×800 su una finestra 1265×800).
+> ⚠ Il ragionamento qui sotto **resta valido per il suo giorno**, e la sua ultima riga è quella che
+> ha aperto la porta.
 
 *13 agosto 2026, all'apertura della fase 3, **decisa dall'utente**. Era ereditata dalla scena di un
 banco e non era mai stata decisa da nessuno: `src/main.c:111` ha `TELA_L 1920` scritto a mano.*

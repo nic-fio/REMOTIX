@@ -141,6 +141,22 @@ la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
 > ⛔ **Il numero misurato, e il tetto è sforato**: `[M]` mediana **74,58 ms** cattura → vetro, che
 > con il pezzo cieco fanno **90-115 ms** sullo schermo dell'utente. ⛔⛔ **E il 78 % è nostro**: a
 > Mutter va il 22 %, il resto sta quasi tutto nel codificatore in software (`SPECIFICHE.md` §3.2).
+>
+> ### ⭐⭐ E il 15 agosto 2026 si è scoperto che c'era un SECONDO anello, e nessuno lo misurava
+>
+> Il numero qui sopra è **cattura → vetro** su una scena **in movimento**. ⛔ L'anello che l'utente
+> sente quando **clicca** è un altro — *input ricevuto → fotogramma che parte* — e si misura su una
+> scena **ferma**, che è la condizione in cui si clicca. Nessun banco lo guardava.
+>
+> `[M]` Misurato sui clic veri dell'utente: **mediana 136 ms, peggiore 502**. La causa era una sola
+> riga (`MOVIMENTO_ATTESA_S 0.25`): il ciclo del figlio legge i messaggi del padre **prima**
+> dell'attesa del fotogramma, e chi arriva durante l'attesa la paga tutta.
+> ⇒ Portata a 8 ms: **mediana 41 ms, peggiore 47** — dentro il tetto.
+>
+> ⚠ **La lezione è di metodo, non di numeri**: un'attesa dimensionata su un anello diventa il
+> ritardo di ogni altro anello che passa dallo stesso ciclo (`LEZIONI.md` §6.2-bis, `REVIEWER.md`
+> **E13**). E la riga di registro che lo spiegava — *«3 attese a vuoto al secondo»* — era stampata da
+> un giorno (§6.2-ter).
 
 ---
 
