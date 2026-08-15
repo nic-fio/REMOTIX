@@ -2108,6 +2108,24 @@ static uint32_t tenuto_input;
  *   senza briglia ne avvieremmo una a ogni giro. */
 #define NASCITA_BRIGLIA_MS 60000
 
+/*
+ * ⛔⭐ «L'UTENTE E' USCITO»: il terzo stato, e senza di lui il figlio RIFA' la
+ *     sessione tre secondi dopo averla lasciata morire.
+ *
+ * `[M]` 15 agosto 2026, banco del logout: il figlio ha riconosciuto la
+ * transizione («c'era e non c'e' piu'»), ha congedato il client con `0x10`, e
+ * al ri-tentativo successivo — con l'interruttore gia' riabbassato — ha visto
+ * una sessione MORTA come tante e l'ha fatta rinascere.  ⇒ L'utente sarebbe
+ * uscito e il desktop sarebbe tornato da solo.
+ *
+ * ⭐ Gli stati sono TRE, non due: «non c'e' mai stata» (si fa nascere), «c'e'»
+ *    (non si tocca), «l'utente l'ha chiusa» (⛔ NON si rifa' finche' non arriva
+ *    un attacco NUOVO).  ⚠ Il ritorno al primo stato lo decide l'arrivo di un
+ *    client — cioe' `MSG_VIDEO` con un codec — perche' e' quello il gesto con
+ *    cui l'utente dice «rivoglio un desktop».
+ */
+static bool sessione_chiusa_dall_utente;
+
 /* Quando si riprova, e quanto si e' aspettato l'ultima volta. */
 static uint64_t palco_riprova_ms;
 static uint64_t palco_attesa_ms;
@@ -2632,6 +2650,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			vista_viva = true;
 		else if (p.stato_sessione == SESSIONE_MORTA && vista_viva) {
 			vista_viva = false;
+			sessione_chiusa_dall_utente = true;
 			registro_dice(REG_FIGLIO,
 			              "⭐ §7.6: la sessione grafica C'ERA e adesso NON "
 			              "C'E' PIU' — l'utente e' uscito dal menu del "
@@ -2643,7 +2662,16 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			return false;
 		}
 	}
-	if (p.stato_sessione == SESSIONE_MORTA) {
+	if (p.stato_sessione == SESSIONE_MORTA && sessione_chiusa_dall_utente) {
+		/* ⛔ Il terzo stato: l'utente e' USCITO.  Rifarla adesso vorrebbe dire
+		 *    fargli ricomparire il desktop che ha appena chiuso — cioe'
+		 *    impedirgli di uscire.  Si aspetta un attacco NUOVO. */
+		registro_dettaglio(REG_FIGLIO,
+		                   "la sessione grafica di «%s» e' stata CHIUSA "
+		                   "dall'utente: non la rifaccio finche' non si "
+		                   "riattacca qualcuno",
+		                   g_get_user_name());
+	} else if (p.stato_sessione == SESSIONE_MORTA) {
 		static uint64_t chiesta_ms;
 		uint64_t adesso_ms = registro_ora_ms();
 
@@ -3334,6 +3362,18 @@ void figlio_vive(int argc, char **argv)
 					              "definisce: NON cambio niente",
 					              cv.codec);
 					continue;
+				}
+				/* ⭐ Il ritorno dal terzo stato al primo: qualcuno vuole di
+				 *    nuovo un desktop.  ⛔ E' QUI e non altrove perche'
+				 *    questo e' l'unico messaggio che dice «c'e' un client
+				 *    che guarda»: la nascita della sessione deve seguire
+				 *    una VOLONTA', non un orologio. */
+				if (cv.codec != 0 && sessione_chiusa_dall_utente) {
+					sessione_chiusa_dall_utente = false;
+					registro_dice(REG_FIGLIO,
+					              "⭐ §7.6: si riattacca qualcuno dopo un'uscita "
+					              "— da adesso la sessione grafica si puo' far "
+					              "rinascere, e sara' NUOVA");
 				}
 				if (cv.codec != codec_chiesto)
 					registro_dice(REG_FIGLIO,

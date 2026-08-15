@@ -118,6 +118,21 @@
   #avviso { padding: .8rem; border: 1px solid currentColor;
             color: #b3261e; margin-bottom: 1.2rem; font-size: .95rem; }
   #avviso:empty { display: none; }
+  /* ⭐ La conferma dell'uscita — `DECISIONI.md` §4.1-quinquies.  ⛔ Non e' un
+     `confirm()` del browser: quello FERMA il ciclo degli eventi della pagina,
+     cioe' la decodifica e il disegno, e per il tempo in cui l'utente pensa il
+     desktop si congela.  ⚠ Un dialogo che blocca il video per chiedere se
+     chiudere il video e' la forma piu' breve del difetto. */
+  #conferma { display: none; position: fixed; inset: 0; z-index: 40;
+              background: rgba(0,0,0,.72); align-items: center;
+              justify-content: center; }
+  #conferma.si { display: flex; }
+  #conferma > div { background: #16181d; color: #e8e8e8; padding: 1.6rem 1.8rem;
+                    border-radius: .6rem; max-width: 30rem; text-align: center;
+                    box-shadow: 0 .5rem 2rem rgba(0,0,0,.6); }
+  #conferma p { margin: 0 0 1.2rem; line-height: 1.45; }
+  #conferma button { margin: 0 .4rem; padding: .5rem 1.1rem; font-size: 1rem; }
+  #conferma .grave { background: #7a2020; color: #fff; border: 0; border-radius: .3rem; }
   #registro { margin-top: 1.5rem; font-family: ui-monospace, monospace;
               font-size: .8rem; white-space: pre-wrap; opacity: .8; }
   .nota { font-size: .8rem; opacity: .7; margin-top: 2rem; }
@@ -356,6 +371,16 @@
        poterle dare il fuoco a programma, non metterla nel giro del tabulatore.
        ⭐ noVNC ha la stessa riga (`core/rfb.js:233`); a noi mancava. -->
   <canvas id="schermo" width="16" height="16" tabindex="-1"></canvas>
+  <!-- ⭐ §7.6: la conferma dell'uscita.  ⛔ Fuori da `<main>` no: sta qui
+       perche' e' `position: fixed` e copre tutto lo stesso. -->
+  <div id="conferma" role="dialog" aria-modal="true" aria-labelledby="conferma-testo">
+    <div>
+      <p id="conferma-testo">Terminare la sessione?<br>
+      Tutti i programmi aperti nel desktop verranno chiusi.</p>
+      <button type="button" id="conferma-si" class="grave">Termina la sessione</button>
+      <button type="button" id="conferma-no">Annulla</button>
+    </div>
+  </div>
   <div id="registro"></div>
   <p class="nota">Fase 2: il primo fotogramma. Un'immagine ferma — niente tastiera, ancora.</p>
 </main>
@@ -394,6 +419,10 @@ const TIPO = {
   /* ⭐ I due del video, §7.1: la pagina CHIEDE una chiave, il server dice
      l'esito di un `ADATTA_TELA`. */
   RICHIEDI_CHIAVE: 0x000D, TELA: 0x000E,
+  /* ⭐⭐ §7.6, 15 agosto 2026 — «l'utente vuole USCIRE».  ⛔ Non e' il
+     `CONGEDO`: quello chiude la connessione e lascia la sessione viva (I4),
+     questo FINISCE la sessione e con lei i programmi dell'utente. */
+  TERMINA_SESSIONE: 0x0011,
   /* ⭐⭐ E `ADATTA_TELA` ADESSO LO MANDA QUALCUNO — 15 agosto 2026.
      ⚠ Fino a ieri qui c'era scritto «non lo manda ancora nessuno alla fase 2»,
        e con quella riga mancavano quattro cose insieme (`DECISIONI.md`
@@ -456,6 +485,11 @@ const MOTIVO = {
   0x0D: "tempo scaduto durante la stretta di mano",
   0x0E: "quella sessione non si puo' servire",
   0x0F: "quell'utente e' gia' collegato da un altro dispositivo",
+  /* ⭐ §7.6 e `DECISIONI.md` §4.1-quater, 15 agosto 2026.  ⛔ La frase e' DIVERSA
+     da quella di `0x01`, e la differenza e' tutta la decisione: `0x01` dice «ti
+     sei staccato» e promette che riattaccando ritrovi tutto; questa dice che la
+     sessione NON C'E' PIU', e chi rientra ne aprira' una nuova. */
+  0x10: "la sessione e' terminata: i programmi sono stati chiusi",
 };
 
 class Scrittore {
@@ -1232,9 +1266,19 @@ function veglia_primo_fotogramma(schermo, chiesta, concessa, codec) {
            + "proprio registro. ⇒ Quel che manca è l'immagine, e quel che la "
            + "trattiene è la differenza fra queste due misure."
          : "La tela concessa è quella chiesta (" + concessa[0] + "×"
-           + concessa[1] + "), quindi non è la tela a trattenerla: il motivo è "
-           + "dalla parte del server, e sta nel suo registro. Questa pagina non "
-           + "lo può leggere, e non lo indovina.");
+           + concessa[1] + "), quindi non è la tela a trattenerla.\n"
+           /* ⭐ E la causa PIU' PROBABILE si nomina, invece di rimandare al
+              registro del server — `[M]` 15 agosto 2026: dal primo attacco dopo
+              un riavvio della macchina al primo fotogramma passano ~32 secondi,
+              ed e' l'avvio a freddo di `gnome-session`.  ⛔ Prima di questa riga
+              il client restava attaccato, non vedeva niente, **e non gli
+              dicevamo perche'**: e' il caso in cui la pagina sa una cosa utile e
+              taceva. */
+           + "Se è il primo accesso dopo un riavvio della macchina, la sessione "
+           + "grafica sta nascendo adesso: ci mette una trentina di secondi, e "
+           + "il desktop comparirà da sé senza toccare niente. Se l'attesa va "
+           + "molto oltre, il motivo è dalla parte del server e sta nel suo "
+           + "registro: questa pagina non lo può leggere, e non lo indovina.");
     dichiarazione_scrivi();
   }, 1000);
   return id;
@@ -2477,6 +2521,11 @@ async function impronta() {
    `ERRORE_PROTOCOLLO` invece di tacere.  ⚠ Prima di stanotte quel ramo era un
    `esito(...)` e basta (rilievo B-4). */
 let congeda_corrente = null;
+/* ⭐ §7.6: il canale di controllo, per chi deve mandare `TERMINA_SESSIONE` da
+   fuori da `collega()`.  ⛔ Si azzera nello stesso punto di `congeda_corrente`
+   — quando la sessione e' FINITA — o `Ctrl+Alt+Fine` scriverebbe su un canale
+   morto e l'utente vedrebbe un'eccezione al posto di un'uscita. */
+let canale_corrente = null;
 
 /* ⛔⭐ E QUANDO L'UTENTE CHIUDE LA SCHEDA, LA PAGINA SI CONGEDA — §8.1, §8.2
  *     `CHIUSO_DALL_UTENTE` 0x01.  Misurato mancante l'11 agosto 2026, banco P5,
@@ -2747,6 +2796,7 @@ async function collega(utente, parola) {
    *    farebbe rinascere lo stesso difetto un giro piu' tardi. */
   const fine_sessione = () => {
     if (congeda_corrente === congeda) congeda_corrente = null;
+    if (canale_corrente === canale) canale_corrente = null;
     /* ⛔ E il canale di input si AZZERA qui, che e' l'unico punto che sa quando
      *    la sessione e' finita davvero.  ⚠ Senza, le due disposizioni
      *    continuerebbero a scrivere su uno stream morto e crederebbero di
@@ -2816,6 +2866,12 @@ async function collega(utente, parola) {
    *    che il server ha pagato dal suo lato (`webtransport.c`,
    *    `chiudi_sessione`: la capsula si RIMANDA). */
   congeda_corrente = congeda;
+  canale_corrente = canale;
+  /* ⛔ §7.3-bis: la pagina DICHIARA quel che non consegna.  `Ctrl+Alt+Fine` se
+     la tiene REMOTIX per uscire dalla sessione, quindi nel desktop remoto non
+     arrivera' mai — e va detto, non lasciato scoprire. */
+  nota("§7.6: «Ctrl+Alt+Fine» esce dalla sessione (con conferma).  ⚠ Quella "
+     + "combinazione se la tiene questa pagina: nel desktop remoto NON arriva");
 
   /* ⛔ Gli stream del video si cominciano ad ASCOLTARE ADESSO, non dopo
      `SESSIONE`: §2.5 vieta al server di aprirne uno prima, ed e' l'invariante
@@ -3399,6 +3455,13 @@ async function ascolta_controllo(canale, congeda) {
     if (m.tipo === TIPO.CONGEDO) {
       const mot = l.u8();
       esito(MOTIVO[mot] || ("congedato, motivo 0x" + mot.toString(16)), false);
+      /* ⭐⭐ §7.6 e `DECISIONI.md` §4.1-quater — «dopo il logout la pagina torna
+         al modulo di accesso», deciso dall'utente il 15 agosto 2026.
+         ⛔ E NON una schermata di chiusura: quella sarebbe un vicolo cieco da
+            cui si esce ricaricando.  Chi voleva uscire ha finito; chi ha
+            cliccato per sbaglio rientra scrivendo la parola d'ordine, e trova
+            un desktop pulito. */
+      if (mot === 0x10) torna_al_modulo();
       return;
     }
     if (m.tipo === TIPO.TELA) {
@@ -3842,12 +3905,140 @@ if (VW) {
   })(schermo.negozia);
 }
 
+/* ==========================================================================
+   ⭐⭐ §7.6 — USCIRE DALLA SESSIONE con `Ctrl+Alt+Fine`
+   ==========================================================================
+
+   ⛔ PERCHE' LA SCORCIATOIA LA TIENE LA PAGINA E NON IL DESKTOP — `DECISIONI.md`
+      §4.1-quinquies:
+
+        · una volta invece di quattro: legata al desktop andrebbe rifatta per
+          GNOME, KDE, XFCE e LXQt, e sarebbero quattro righe di configurazione,
+          cioe' I7 in agguato;
+        · ⭐ funziona QUANDO SERVE: legata al desktop il tasto dovrebbe
+          attraversare browser → rete → `libei` → compositore, e non arriverebbe
+          proprio nel caso in cui uno la cerca — col desktop che non risponde;
+        · finisce nella stessa porta del menu, `SessionManager.Logout`: un solo
+          percorso di uscita, non due che possono divergere.
+
+   ⛔ E LA COMBINAZIONE E' STATA SCELTA DALL'UTENTE FRA TRE, con due scartate a
+      misura: `Ctrl+Alt+F12` e' il predefinito di `switch-to-session-12` ed e'
+      `NON_MASKABLE` (sul PC Linux dell'utente non arriverebbe nemmeno al
+      browser); `Win+F12` non arriva MAI alla pagina — `[M]` `Super+KeyD` e'
+      «non consegnata» in tutti e quattro i palchi della sonda S3, e su Android
+      ogni combinazione con Meta e' persa per regola AOSP.
+
+   ⚠ IL PREZZO, DICHIARATO (§7.3-bis): questa combinazione la pagina se la
+     TIENE, quindi nella sessione remota **non arrivera' mai**.  `[R]` Cercata
+     come `<Primary><Alt>End` in tutte le fonti di GNOME e di KDE: non la lega
+     nessuno.                                                                */
+
+let logout_in_corso = false;
+
+/*
+ * ⭐ §4.1-quater: la pagina torna com'era prima dell'accesso.
+ *
+ * ⛔ La tela si SVUOTA, e non e' cosmetica: l'ultimo fotogramma e' l'immagine
+ *    di un desktop **che non esiste piu'**, e lasciarla li' direbbe una cosa
+ *    falsa a chi guarda — la stessa forma per cui `0x10` non poteva essere
+ *    `0x01`.  ⚠ 16x16 e' la misura con cui la `<canvas>` nasce nel documento:
+ *    si torna a quella, non a una qualunque.
+ */
+function torna_al_modulo() {
+  const tela = $("schermo");
+  if (tela) { tela.width = 16; tela.height = 16; }
+  logout_mostra(false);
+  logout_in_corso = false;
+  const u = $("utente");
+  if (u) { try { u.focus(); } catch (e) { /* un motore che non lo permette */ } }
+  nota("§7.6: la sessione e' terminata — la pagina e' tornata al modulo di "
+     + "accesso, e il prossimo accesso aprira' una sessione NUOVA");
+}
+
+function logout_visibile() {
+  const d = $("conferma");
+  return d && d.classList.contains("si");
+}
+
+function logout_mostra(si) {
+  const d = $("conferma");
+  if (!d) return;
+  d.classList.toggle("si", !!si);
+  if (si) {
+    /* ⛔ Il fuoco va su ANNULLA, non su «Termina»: chi ha premuto per sbaglio
+       preme Invio per togliersi il dialogo davanti, e con il fuoco sul pulsante
+       grave quel riflesso chiuderebbe la sessione. */
+    const no = $("conferma-no");
+    if (no) no.focus();
+  } else {
+    const tela = $("schermo");
+    if (tela) tela.focus();
+  }
+}
+
+async function logout_esegui() {
+  logout_mostra(false);
+  if (logout_in_corso) return;
+  logout_in_corso = true;
+  nota("§7.6: TERMINA_SESSIONE spedito — la sessione grafica finira' e i "
+     + "programmi aperti verranno chiusi");
+  try {
+    /* ⛔ Corpo VUOTO: §7.6 non ha niente da dire oltre al fatto.  ⚠ E non si
+       aspetta nessuna risposta «sto terminando»: l'esito e' il `CONGEDO` con
+       `0x10`, e un messaggio intermedio sarebbe una deduzione al posto di un
+       fatto (`LEZIONI.md` §7.5). */
+    if (canale_corrente) await canale_corrente.manda(TIPO.TERMINA_SESSIONE, new Uint8Array(0));
+    else nota("⛔ nessun canale di controllo: la richiesta di uscire NON e' partita");
+  } catch (e) {
+    logout_in_corso = false;
+    nota("⛔ TERMINA_SESSIONE non e' partito: " + e);
+    esito("Non si e' potuto uscire: " + (e && e.message ? e.message : e), false);
+  }
+}
+
+/* ⛔⭐ IN FASE DI CATTURA SU `window`, e non dentro il gestore della tastiera
+ *     classica: cosi' funziona qualunque cosa abbia il fuoco e qualunque modo
+ *     di input sia in vigore — ⚠ e soprattutto funziona anche quando il canale
+ *     dell'input **non si e' aperto**, che e' precisamente il caso in cui uno
+ *     vuole uscire. */
+window.addEventListener("keydown", function (ev) {
+  if (logout_visibile()) {
+    /* Col dialogo aperto la tastiera e' del dialogo, non del desktop. */
+    if (ev.key === "Escape") { ev.preventDefault(); logout_mostra(false); }
+    ev.stopPropagation();
+    return;
+  }
+  /* ⚠ `ev.code`, non `ev.key`: la posizione del tasto non cambia con la
+     disposizione, ed e' la stessa regola di §7.3 per tutto il resto. */
+  if (ev.code !== "End" || !ev.ctrlKey || !ev.altKey || ev.shiftKey || ev.metaKey)
+    return;
+  /* ⛔ Nel modulo di accesso no: li' non c'e' nessuna sessione da terminare. */
+  const dentro = ev.target && (ev.target.tagName === "INPUT"
+                            || ev.target.tagName === "TEXTAREA");
+  if (dentro || !canale_corrente) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  /* ⭐ La conferma, e non e' gentilezza: dal menu il logout costa tre gesti
+     deliberati, una combinazione ne costa uno — e chiude TUTTI i programmi.
+     ⚠ E' anche la difesa dal fraintendimento di chi viene da RDP, dove
+     `Ctrl+Alt+End` manda `Ctrl+Alt+Canc` alla sessione remota. */
+  logout_mostra(true);
+}, true);
+
+(function () {
+  const si = $("conferma-si"), no = $("conferma-no");
+  if (si) si.addEventListener("click", logout_esegui);
+  if (no) no.addEventListener("click", function () { logout_mostra(false); });
+})();
+
 $("modulo").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   $("vai").disabled = true;
   righe.length = 0;
   esito("", true);
   congeda_corrente = null;
+  canale_corrente = null;
+  logout_in_corso = false;
   try {
     await collega($("utente").value, $("parola").value);
   } catch (e) {

@@ -494,6 +494,45 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	 *     palco morto e' peggio di nessun numero — fa concedere una tela che
 	 *     nessun fotogramma avra' mai. */
 	wt_palco_dimentica(utente);
+
+	/*
+	 * ⭐⭐⭐ §7.6, IL GEMELLO — E STA QUI, NON NEL FIGLIO.  Difetto trovato dal
+	 *      banco del logout, 15 agosto 2026.
+	 *
+	 * ⛔ Il figlio aveva il codice per accorgersi che la sessione grafica era
+	 *    finita («c'era e adesso non c'e' piu'»), e `[M]` non e' mai scattato:
+	 *    **al logout il figlio muore col segnale 15**.  E' lui il processo
+	 *    GUIDA della sessione logind — la apre lui con `pam_open_session` — e
+	 *    quando la sessione finisce se lo porta via.  ⇒ Non puo' riferire un
+	 *    fatto che lo uccide.
+	 *
+	 * ⭐ Ma il padre lo RACCOGLIE, ed e' esattamente questa riga.  ⇒ Figlio
+	 *    morto = sessione grafica finita, sempre: il palco vive nel figlio, e
+	 *    la sessione logind pure.
+	 *
+	 * ⚠ E vale anche se il figlio e' morto per un guasto invece che per una
+	 *   scelta dell'utente: da qui non si distinguono, ⛔ e il comportamento
+	 *   giusto e' lo stesso — dirlo a chi guarda invece di lasciarlo davanti a
+	 *   uno schermo fermo per i trenta secondi del silenzio, che e' il rilievo
+	 *   B-7.  Il motivo `0x10` dice «la sessione e' terminata», che in tutt'e
+	 *   due i casi e' vero.
+	 *
+	 * ⛔ MA NON QUANDO SI STA SPEGNENDO IL SERVER: li' il motivo giusto e'
+	 *    `0x0C SERVER_IN_CHIUSURA`, e lo manda `main()` a tutte le sessioni.
+	 *    Dire `0x10` a chi sta per ricevere `0x0C` sarebbe dirgli che la sua
+	 *    sessione e' finita quando invece la ritrovera'.
+	 */
+	if (!si_ferma) {
+		size_t quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+		                                  "la sessione grafica e' terminata",
+		                                  NULL);
+		if (quanti)
+			registro_dice(REG_WT,
+			              "⭐ §7.6: il palco di «%s» se n'e' andato ⇒ la sessione "
+			              "grafica e' finita: congedati %zu client con 0x10 invece "
+			              "di lasciarli su uno schermo fermo",
+			              utente, quanti);
+	}
 }
 
 /* ⭐⭐ LA RISPOSTA DEL PALCO SULLA TELA — §7.1, e attraversa il confine nel verso

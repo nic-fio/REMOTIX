@@ -902,46 +902,90 @@ static const char *SCORCIATOIE_VT[] = { "switch-to-session-1",  "switch-to-sessi
 	                                "switch-to-session-11", "switch-to-session-12",
 	                                NULL };
 
-static GSettings *impostazioni_se_ci_sono(const char *schema)
+/*
+ * ⛔⛔ E NON BASTA CERCARE LO SCHEMA: VA CERCATA ANCHE LA CHIAVE.
+ *
+ * `[M]` 15 agosto 2026, e il prezzo e' stato un figlio morto di **segnale 5**
+ * (`SIGTRAP`) subito dopo aver scritto il drop-in: GLib, davanti a una chiave
+ * che nel suo schema non esiste, chiama `g_error()` — che **aborte il
+ * processo**, non ritorna un errore.  ⇒ Una chiave rinominata a monte fra due
+ * versioni di GNOME fa morire il figlio, e il sintomo che l'utente vede e'
+ * «il desktop non parte», senza nessun rapporto con la chiave.
+ *
+ * ⚠ Il commento sopra questa funzione lo diceva gia' per gli SCHEMI, e l'ho
+ *   scritto io: la lezione e' che una trappola conosciuta a meta' e' una
+ *   trappola.  ⇒ Qui si controllano tutte e due, e una chiave che manca e'
+ *   una riga di registro, non una morte.
+ */
+struct schema_aperto {
+	GSettings *impostazioni;
+	GSettingsSchema *schema;
+};
+
+static struct schema_aperto apri_schema(const char *nome)
 {
+	struct schema_aperto a = { NULL, NULL };
 	GSettingsSchemaSource *sorgente = g_settings_schema_source_get_default();
-	g_autoptr(GSettingsSchema) trovato = NULL;
 
 	if (!sorgente)
-		return NULL;
-	trovato = g_settings_schema_source_lookup(sorgente, schema, TRUE);
-	if (!trovato) {
+		return a;
+	a.schema = g_settings_schema_source_lookup(sorgente, nome, TRUE);
+	if (!a.schema) {
 		registro_dice(REG_SESSIONE,
 		              "⚠ lo schema «%s» non esiste su questa macchina: non lo tocco "
 		              "(e questo NON e' un guasto: e' un desktop diverso)",
-		              schema);
-		return NULL;
+		              nome);
+		return a;
 	}
-	return g_settings_new(schema);
+	a.impostazioni = g_settings_new_full(a.schema, NULL, NULL);
+	return a;
+}
+
+static void chiudi_schema(struct schema_aperto *a)
+{
+	g_clear_object(&a->impostazioni);
+	g_clear_pointer(&a->schema, g_settings_schema_unref);
+}
+
+/* ⛔ Il guardiano: la chiave c'e'?  Se no si dice e si va avanti. */
+static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
+                              const char *schema)
+{
+	if (!a->impostazioni || !a->schema)
+		return FALSE;
+	if (g_settings_schema_has_key(a->schema, chiave))
+		return TRUE;
+	registro_dice(REG_SESSIONE,
+	              "⚠ la chiave «%s» non esiste nello schema «%s» di questa "
+	              "macchina: non la tocco.  ⛔ E non e' una svista da ignorare — "
+	              "senza questo controllo GLib chiamerebbe `g_error()` e il "
+	              "processo MORIREBBE (segnale 5), col sintomo «il desktop non "
+	              "parte» e nessun rapporto con la chiave",
+	              chiave, schema);
+	return FALSE;
 }
 
 void sessione_impostazioni(void)
 {
-	g_autoptr(GSettings) wayland = impostazioni_se_ci_sono("org.gnome.mutter.wayland");
-	g_autoptr(GSettings) shell = impostazioni_se_ci_sono("org.gnome.shell");
-	g_autoptr(GSettings) energia =
-		impostazioni_se_ci_sono("org.gnome.settings-daemon.plugins.power");
-	g_autoptr(GSettings) sessione = impostazioni_se_ci_sono("org.gnome.desktop.session");
-	g_autoptr(GSettings) salvaschermo = impostazioni_se_ci_sono("org.gnome.desktop.screensaver");
+	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
+	struct schema_aperto shell = apri_schema("org.gnome.shell");
+	struct schema_aperto energia = apri_schema("org.gnome.settings-daemon.plugins.power");
+	struct schema_aperto sessione = apri_schema("org.gnome.desktop.session");
+	struct schema_aperto salvaschermo = apri_schema("org.gnome.desktop.screensaver");
 	const char *vuoto[] = { NULL };
 	int tolte = 0;
 
-	if (wayland) {
-		for (int i = 0; SCORCIATOIE_VT[i]; i++)
-			if (g_settings_set_strv(wayland, SCORCIATOIE_VT[i], vuoto))
-				tolte++;
+	for (int i = 0; SCORCIATOIE_VT[i]; i++)
+		if (c_e_la_chiave(&wayland, SCORCIATOIE_VT[i], "org.gnome.mutter.wayland") &&
+		    g_settings_set_strv(wayland.impostazioni, SCORCIATOIE_VT[i], vuoto))
+			tolte++;
+	if (tolte)
 		registro_dice(REG_SESSIONE,
 		              "⭐ tolte %d scorciatoie Ctrl+Alt+F1…F12 su 12: in headless non "
 		              "c'e' nessuna console virtuale a cui passare, e Mutter le "
 		              "ingoiava senza poterle onorare (sono NON_MASKABLE: nemmeno la "
 		              "pagina potrebbe riprendersele)",
 		              tolte);
-	}
 
 	/*
 	 * ⭐ «Esci…» DEVE ESSERCI — `DECISIONI.md` §4.1-ter, deciso dall'utente il 15
@@ -951,50 +995,51 @@ void sessione_impostazioni(void)
 	 * `always-show-log-out` **oppure** ci sono piu' utenti **oppure** piu' di una
 	 * sessione in `/usr/share/…-sessions`.  ⇒ Su una macchina con un utente e una
 	 * sessione sola NON COMPARE, e senza di lei il logout non esiste.
-	 * ⚠ Rovescia `reference-gnome/rapporti/02-shell-blocco-voci.md:214`, che
-	 *   diceva «va lasciata false» — era scritto quando l'obiettivo era togliere
-	 *   voci, non darne una.
 	 */
-	if (shell && g_settings_set_boolean(shell, "always-show-log-out", TRUE))
+	if (c_e_la_chiave(&shell, "always-show-log-out", "org.gnome.shell") &&
+	    g_settings_set_boolean(shell.impostazioni, "always-show-log-out", TRUE))
 		registro_dice(REG_SESSIONE,
 		              "⭐ «Esci…» acceso (always-show-log-out): senza, su una macchina "
 		              "con un utente solo la voce NON compare, e il logout di §4.1-ter "
 		              "non esisterebbe");
 
 	/*
-	 * ⛔ LA SOSPENSIONE AUTOMATICA — `DECISIONI.md` §4.7, terza cintura.
-	 *
-	 * ⚠ E' la SECONDA meta' di una cura che ha due sintomi: polkit e `sleep.conf`
-	 *   **impediscono il fatto**, questa riga **toglie la bugia dallo schermo**.
-	 *   `[M]` 15 agosto 2026: la notifica «Automatic Suspend — Suspending soon
-	 *   because of inactivity» compariva nel desktop remoto; senza questa riga
-	 *   comparirebbe ancora, seguita da un fallimento silenzioso.
+	 * ⛔ LA SOSPENSIONE AUTOMATICA — `DECISIONI.md` §4.7, terza cintura, ed e' la
+	 *    meta' che toglie la BUGIA dallo schermo: polkit e `sleep.conf`
+	 *    impediscono il fatto, questa riga impedisce la notifica «Automatic
+	 *    Suspend» seguita da un fallimento silenzioso.
 	 */
-	if (energia) {
-		if (g_settings_set_string(energia, "sleep-inactive-ac-type", "nothing") &&
-		    g_settings_set_string(energia, "sleep-inactive-battery-type", "nothing"))
-			registro_dice(REG_SESSIONE,
-			              "⭐ sospensione automatica spenta (era «suspend» a 900 s, "
-			              "upstream e su Debian): la macchina e' di piu' persone, e "
-			              "chi la sospende le porta via a tutti");
+	if (c_e_la_chiave(&energia, "sleep-inactive-ac-type",
+	                  "org.gnome.settings-daemon.plugins.power"))
+		g_settings_set_string(energia.impostazioni, "sleep-inactive-ac-type", "nothing");
+	if (c_e_la_chiave(&energia, "sleep-inactive-battery-type",
+	                  "org.gnome.settings-daemon.plugins.power")) {
+		g_settings_set_string(energia.impostazioni, "sleep-inactive-battery-type",
+		                      "nothing");
+		registro_dice(REG_SESSIONE,
+		              "⭐ sospensione automatica spenta (era «suspend» a 900 s, "
+		              "upstream e su Debian): la macchina e' di piu' persone, e chi "
+		              "la sospende le porta via a tutti");
 	}
 
-	/*
-	 * ⛔ E il blocca-schermo resta SPENTO — `DECISIONI.md` §4.3: «il blocco e' di
-	 *    REMOTIX, non del desktop».  Su GNOME entrare nel dialogo di sblocco fa
-	 *    chiudere a Mutter cattura, controllo e input, e RIFIUTARE di ricrearli:
-	 *    ci salva `is_headless()`, ⚠ ma una difesa che dipende da un'eccezione si
-	 *    aiuta togliendo l'occasione.
-	 */
-	if (sessione && g_settings_set_uint(sessione, "idle-delay", 0))
+	/* ⛔ E il blocca-schermo resta SPENTO — §4.3: su GNOME quello del desktop non
+	 *    mostra un blocco, ci REVOCA cattura e input. */
+	if (c_e_la_chiave(&sessione, "idle-delay", "org.gnome.desktop.session") &&
+	    g_settings_set_uint(sessione.impostazioni, "idle-delay", 0))
 		registro_dice(REG_SESSIONE, "⭐ inattivita' del desktop spenta (idle-delay 0)");
-	if (salvaschermo && g_settings_set_boolean(salvaschermo, "lock-enabled", FALSE))
+	if (c_e_la_chiave(&salvaschermo, "lock-enabled", "org.gnome.desktop.screensaver") &&
+	    g_settings_set_boolean(salvaschermo.impostazioni, "lock-enabled", FALSE))
 		registro_dice(REG_SESSIONE,
 		              "⭐ blocca-schermo del desktop spento (§4.3: il blocco e' di "
 		              "REMOTIX, e su GNOME quello del desktop ci REVOCA cattura e "
 		              "input invece di mostrare un blocco)");
 
 	g_settings_sync();
+	chiudi_schema(&wayland);
+	chiudi_schema(&shell);
+	chiudi_schema(&energia);
+	chiudi_schema(&sessione);
+	chiudi_schema(&salvaschermo);
 }
 
 /* ------------------------------------------------------------------------- */
