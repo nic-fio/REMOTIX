@@ -348,7 +348,44 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, sera.** ⇒ **LA FASE 4 È CHIUSA: SI COMANDA IL DESKTOP**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **15 agosto 2026, mattina.** ⇒ **LA FASE 6 È CHIUSA: LA TELA È LA FINESTRA**
+>
+> > ## *«Sia su Linux sia su Android (DeX) è tutto perfetto.»*
+> > — l'utente, 15 agosto 2026, dopo una notte di lavoro e tre difetti trovati da lui
+>
+> ⭐⭐ **Il desktop remoto prende la misura della finestra del browser**, e da questo discendono
+> quattro cose che l'utente vedeva come difetti separati: niente bande nere, testo nitido (scala di
+> disegno **1,000**), il ri-attacco che ritrova la sua misura, e il login che porta il desktop in
+> **311 ms** invece di 4,4 secondi. ⭐ La conferma che non viene da noi: GNOME *Impostazioni →
+> Displays*, **dentro** la sessione remota, dichiara «Resolution 1264 × 800».
+>
+> | | |
+> |---|---|
+> | ⭐ **il numero della fase** | la tela concordata all'attacco: `[M]` **1264×800** = la finestra, scala **1,000**, `pixelated` |
+> | ⭐ **login → desktop** | `[M]` **4,4 s → 311 ms** — e la cura non è il ridimensionamento: è che **riavviare il flusso consegna un buffer** quando una chiave è dovuta e la scena è ferma |
+> | ⭐⭐ **clic → fotogramma spedito** | `[M]` **136 ms → 41 ms** (peggiore 502 → 47), su scena FERMA. ⚠ Non è il numero di §1-bis (quello è su scena in movimento, 139 ms, e resta della fase 8): è l'anello che nessuno aveva misurato |
+> | ⭐ **il ridimensionamento a caldo** | `[M]` **6 ms** dalla risposta del palco alla chiave spedita |
+> | ⛔ **e il blocco della costruzione** | sciolto **senza chiedere all'utente**: `src/Contenitore` (podman da utente, sul portatile) e l'errore di percorso in `enter.sh` |
+>
+> ⛔⛔ **DIECI DIFETTI TROVATI REFUTANDO** la cura appena scritta (quattro agenti, mandato
+> avversariale), e **otto erano nati quella notte insieme a lei**: una lettura oltre la memoria
+> copiata, un messaggio che faceva chiudere una sessione sana, due `ADATTA_TELA` incatenate che
+> assestavano il desktop sulla misura sbagliata *con i conti in ordine*.
+>
+> ⛔⛔ **E TRE LI HA TROVATI L'UTENTE**, non i banchi — fra cui il più grosso della notte: *«su
+> Android il mouse non prende più i click»* erano **due sue sessioni che si contendevano il palco
+> diciassette volte al secondo**, e ogni giro ricreava i dispositivi di `libei` (`[M]` 640 ricambi).
+>
+> 📖 **Il documento di chiusura**: [`fasi/06-la-tela-e-la-vista.md`](fasi/06-la-tela-e-la-vista.md) ·
+> il rapporto tecnico [`fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`](fasi/rapporti/F4-IN-13-la-tela-che-cambia.md).
+>
+> ⛔ **E LA FASE 5 RESTA APERTA**: la 6 è stata fatta fuori ordine, perché `DECISIONI.md`
+> §5.0-sexies l'aveva resa la cura di quattro sintomi del mouse e del video. Il piano non è più una
+> fila, e `fasi/README.md` lo dice.
+>
+> ---
+>
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, sera.** ⇒ **LA FASE 4 È CHIUSA: SI COMANDA IL DESKTOP** *(superato dal riquadro qui sopra)*
 >
 > > ## *«Mi sembra ok.»*
 > > — l'utente, 14 agosto 2026, dopo aver usato il proprio desktop dentro una scheda

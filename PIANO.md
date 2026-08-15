@@ -730,15 +730,23 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
 ---
 
-## Fase 6 — La tela e la vista
+## Fase 6 — La tela e la vista ✅ **CHIUSA il 15 agosto 2026**
 
 **Produce**: la tela concordata all'attacco, la vista che riscala, il riattacco a misura diversa.
 
-> ⭐⭐ **METÀ È ARRIVATA NELLA FASE 4** — la notte del 15 agosto 2026, perché `DECISIONI.md`
-> §5.0-sexies l'ha resa la cura di quattro sintomi del mouse e del video, non un lavoro di
-> geometria. Sono già fatti e misurati: **la tela concordata all'attacco**, **il riattacco a misura
-> diversa** (`SESSIONE` concede la tela che il palco ha già) e il **ridimensionamento a caldo**
-> (`?adatta=segui`). Vedi `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+> ⭐⭐ **CHIUSA SUL GIUDIZIO DELL'UTENTE**, il 15 agosto 2026: *«sia su Linux sia su Android (DeX) è
+> tutto perfetto»*. Il documento di chiusura è [`fasi/06-la-tela-e-la-vista.md`](fasi/06-la-tela-e-la-vista.md),
+> il rapporto tecnico `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+>
+> ⛔ **È stata fatta FUORI ORDINE, e va detto**: è successa dentro il seguito della fase 4, perché
+> `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura di quattro sintomi del mouse e del video**,
+> non un lavoro di geometria. ⇒ **La fase 5 resta APERTA**, e il piano non è più una fila.
+>
+> ⛔ **E TRE COSE DI QUESTA FASE RESTANO APERTE**, dichiarate invece che chiuse per comodità:
+> il **banco del riattacco che batte un tasto dopo** (il fatto si è visto nel registro e l'utente ha
+> scritto in un terminale dopo un riattacco, ⛔ ma un banco non c'è); il **ripiego su KWin
+> dichiarato nel registro**, che non è verificabile finché KDE è la fase 10; e il **multi-monitor**
+> di §6.5, fuori scopo come funzione.
 >
 > ⛔ **E quel che di questa fase resta APERTO, per intero:**
 > - il **ripiego su KWin ≤ 6.7.4 dichiarato nel registro**, che è il banco nominato qui sotto;
