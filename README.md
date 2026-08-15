@@ -348,7 +348,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **15 agosto 2026, mattina.** ⇒ **LA FASE 6 È CHIUSA: LA TELA È LA FINESTRA**
+> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **15 agosto 2026, mattina.** ⇒ **LA CODA DELLA FASE 4 È CHIUSA: LA TELA È LA FINESTRA**
 >
 > > ## *«Sia su Linux sia su Android (DeX) è tutto perfetto.»*
 > > — l'utente, 15 agosto 2026, dopo una notte di lavoro e tre difetti trovati da lui
@@ -376,12 +376,15 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > Android il mouse non prende più i click»* erano **due sue sessioni che si contendevano il palco
 > diciassette volte al secondo**, e ogni giro ricreava i dispositivi di `libei` (`[M]` 640 ricambi).
 >
-> 📖 **Il documento di chiusura**: [`fasi/06-la-tela-e-la-vista.md`](fasi/06-la-tela-e-la-vista.md) ·
+> 📖 **Il documento**: [`fasi/04-si-comanda.md`](fasi/04-si-comanda.md), §«la coda della fase 4» ·
 > il rapporto tecnico [`fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`](fasi/rapporti/F4-IN-13-la-tela-che-cambia.md).
 >
-> ⛔ **E LA FASE 5 RESTA APERTA**: la 6 è stata fatta fuori ordine, perché `DECISIONI.md`
-> §5.0-sexies l'aveva resa la cura di quattro sintomi del mouse e del video. Il piano non è più una
-> fila, e `fasi/README.md` lo dice.
+> ⛔ **E QUESTA È LA FASE 4, NON LA 6** — corretto dall'utente il 15 agosto 2026, e la sua ragione
+> regge: il numero della fase lo dà il **perché** si è fatto il lavoro, non l'elenco delle cose
+> prodotte. Qui si è fatto per curare **il mouse e il ritardo dei clic**, cioè per finire il mandato
+> della fase 4 — e tutti i rapporti della notte si chiamano `F4-IN-*`, compreso quello nuovo.
+> ⇒ **La fase 6 resta APERTA** con tre quarti del suo contenuto già fatto e misurato (`PIANO.md` dice
+> quali), e **la prossima è la 5 — la sessione**.
 >
 > ---
 >

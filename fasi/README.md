@@ -16,12 +16,14 @@ Il modello sta in `../PIANO.md` §0.2. Le quattro regole, in breve:
 
 ---
 
-## ⛔ E il numero del file non è più l'ordine dei lavori
+## ⚠ Manca il `05`, e non è una dimenticanza
 
-*15 agosto 2026.* Manca `05-*.md` e c'è `06-la-tela-e-la-vista.md`: **la fase 6 è stata chiusa prima
-della 5**, perché `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura di quattro sintomi del
-mouse e del video** invece di un lavoro di geometria. ⇒ Il numero dice **quale** fase, non **quando**.
+*15 agosto 2026.* La fase 5 non è ancora stata aperta. ⛔ E la **coda della fase 4** — la notte in
+cui la tela è diventata la finestra del browser — sta **dentro `04-si-comanda.md`**, non in un
+documento suo: il numero della fase lo dà il **perché** si è fatto il lavoro, non l'elenco delle
+cose prodotte. Quel lavoro tocca contenuto della fase 6, e `PIANO.md` dice quali sue parti si
+trovano già fatte.
 
-⚠ E quel documento porta in testa la sua riserva di forma: è stato scritto **alla chiusura**, contro
-la regola qui sopra. Le misure però non sono ricordate — vengono dai registri del server e dai giri
-di banco, con l'ora accanto. ⛔ La regola resta: la prossima fase si apre col suo documento.
+⚠ Quella coda porta in testa la sua riserva di forma: è stata scritta **alla chiusura**, contro la
+regola qui sopra. Le misure però non sono ricordate — vengono dai registri del server e dai giri di
+banco, con l'ora accanto. ⛔ La regola resta: **la fase 5 si apre col suo documento**.

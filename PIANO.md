@@ -730,23 +730,31 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
 ---
 
-## Fase 6 — La tela e la vista ✅ **CHIUSA il 15 agosto 2026**
+## Fase 6 — La tela e la vista
 
 **Produce**: la tela concordata all'attacco, la vista che riscala, il riattacco a misura diversa.
 
-> ⭐⭐ **CHIUSA SUL GIUDIZIO DELL'UTENTE**, il 15 agosto 2026: *«sia su Linux sia su Android (DeX) è
-> tutto perfetto»*. Il documento di chiusura è [`fasi/06-la-tela-e-la-vista.md`](fasi/06-la-tela-e-la-vista.md),
-> il rapporto tecnico `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+> ## ⭐⭐ TRE QUARTI SONO GIÀ FATTI E MISURATI — nella **coda della fase 4**, il 15 agosto 2026
 >
-> ⛔ **È stata fatta FUORI ORDINE, e va detto**: è successa dentro il seguito della fase 4, perché
-> `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura di quattro sintomi del mouse e del video**,
-> non un lavoro di geometria. ⇒ **La fase 5 resta APERTA**, e il piano non è più una fila.
+> ⛔ **E non è un errore di numerazione**: il numero della fase lo dà il **perché** si è fatto il
+> lavoro, non l'elenco delle cose prodotte. `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura
+> di quattro sintomi del mouse e del video** — bande nere, testo interpolato, ri-attacco, e i 4
+> secondi fra login e desktop — cioè il pezzo che mancava alla **fase 4**. Tutti i rapporti di quella
+> notte si chiamano `F4-IN-*`. ⇒ Il documento sta in `fasi/04-si-comanda.md`, §«la coda della fase
+> 4»; il rapporto tecnico è `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
-> ⛔ **E TRE COSE DI QUESTA FASE RESTANO APERTE**, dichiarate invece che chiuse per comodità:
-> il **banco del riattacco che batte un tasto dopo** (il fatto si è visto nel registro e l'utente ha
-> scritto in un terminale dopo un riattacco, ⛔ ma un banco non c'è); il **ripiego su KWin
-> dichiarato nel registro**, che non è verificabile finché KDE è la fase 10; e il **multi-monitor**
-> di §6.5, fuori scopo come funzione.
+> | quel che questa fase chiede | stato |
+> |---|---|
+> | la **tela concordata all'attacco** | ✅ `[M]` la tela prende la misura della finestra, scala **1,000** |
+> | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, zero fotogrammi scartati |
+> | la **vista che riscala** | ✅ c'era dalla fase 2, e adesso la scala vale 1 quando le due tele combaciano |
+> | ⭐ *(in più)* il **ridimensionamento a caldo** | ✅ `[M]` 6 ms, dietro l'interruttore `?adatta=segui` (spento di suo, I6) |
+> | ⛔ il **ripiego su KWin dichiarato nel registro** | **APERTO**: non verificabile finché KDE è la fase 10. Il percorso di codice c'è (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 di `banchi/04-b31`, **su un ospite finto** |
+> | ⛔ il **banco del riattacco che BATTE UN TASTO dopo** | **APERTO**: il fatto si è visto nel registro (`libei` ricrea i dispositivi, `input.c` li riaggancia) e l'utente ha scritto in un terminale dopo un riattacco — ⛔ ma un banco che lo provi non c'è |
+> | ⛔ il **multi-monitor** | **APERTO**, e fuori scopo come funzione (§6.5) |
+>
+> ⇒ ⭐ **Quando questa fase si aprirà davvero, il suo lavoro è quel che resta in fondo a questa
+> tabella** — e le prime quattro righe si rimisurano invece di rifarle.
 >
 > ⛔ **E quel che di questa fase resta APERTO, per intero:**
 > - il **ripiego su KWin ≤ 6.7.4 dichiarato nel registro**, che è il banco nominato qui sotto;
