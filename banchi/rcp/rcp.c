@@ -2400,6 +2400,48 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
  *   desktop e' fermo» da «il desktop non c'e' piu'». */
 static void tela_richiama_il_palco(rcp_sessione *s, uint64_t ora_ms)
 {
+	/* ⛔⛔⛔ CHI NON HA IL POSTO NON COMANDA IL PALCO — e senza questa riga due
+	 *      sessioni dello stesso utente si CONTENDONO la tela, per sempre.
+	 *
+	 * `[M]` 15 agosto 2026, mattina, sessione VERA dell'utente — ed e' un difetto
+	 * che ho introdotto io stanotte, trovato dal suo «su Android il mouse non
+	 * prende piu' i click»:
+	 *
+	 *   05:10  il portatile attacca, tela 2544x926
+	 *   05:12  tace trenta secondi ⇒ STACCATO per silenzio, lascia il posto —
+	 *          ⛔ ma la sessione resta viva, col suo canale video acceso e la
+	 *          sua tela in vigore
+	 *   05:14  il telefono attacca, tela 2560x926
+	 *   05:14  da qui **diciassette richieste al secondo**: il portatile richiede
+	 *          2544, il telefono 2560, il portatile 2544 … per sempre
+	 *
+	 * ⇒ E ogni giro **riavvia il flusso PipeWire**, che su Mutter distrugge e
+	 *   ricrea i dispositivi di `libei`: `[M]` 640 «ricambi» del puntatore, e la
+	 *   regione dell'input mai d'accordo con la tela («⚠ la regione 2560x926 NON
+	 *   e' grande come la tela 2544x926: scalo le coordinate»).  ⛔ Il sintomo per
+	 *   l'utente non nomina niente di tutto questo: **i clic non prendono piu'**.
+	 *
+	 * ⛔ E l'attesa che cresce NON bastava, per una ragione che va detta: si
+	 *    azzera quando il palco arriva dove questa sessione lo vuole — che nel
+	 *    ping-pong succede a ogni giro.  Un fondo temporale non cura due padroni:
+	 *    cura un padrone insistente.
+	 *
+	 * ⇒ ⭐ La cura e' l'invariante che c'era gia': I2 dice **una sola sessione
+	 *   grafica per utente**, e il posto (§8.2 `0x0F`) e' il modo in cui questo
+	 *   modulo lo fa rispettare.  Chi il posto non ce l'ha **guarda** — non
+	 *   comanda.  ⚠ E quando torna a parlare il posto se lo riprende, e da quel
+	 *   momento comanda lui. */
+	if (!s->attaccata) {
+		if (!s->tela_disaccordo_da) {
+			s->tela_disaccordo_da = ora_ms;
+			reg(s, "⚠ il palco non e' alla tela in vigore %ux%u, ma questa "
+			       "sessione NON ha il posto (I2): non gli chiedo niente — "
+			       "comanda chi e' attaccato.  ⛔ Due sessioni che comandassero "
+			       "lo stesso palco se lo contenderebbero a ogni fotogramma",
+			    s->tela_l, s->tela_a);
+		}
+		return;
+	}
 	if (!s->g.ritela) {
 		if (!s->tela_disaccordo_da) {
 			s->tela_disaccordo_da = ora_ms;
@@ -4469,6 +4511,20 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				        "sessione aperta");
 				return false;
 			}
+			/* ⛔⭐ E QUI NON SERVE UNA GUARDIA SUL POSTO, e va detto perche' la
+			 *     prima stesura di questa cura ce l'aveva messa: sarebbe stata
+			 *     **codice morto che sembra vivo**.
+			 *
+			 * `torna_a_parlare()` gira in cima a `rcp_ricevi()`, prima di
+			 * qualunque messaggio: una sessione staccata per silenzio o si
+			 * riprende il posto (e allora comanda a pieno diritto) o viene
+			 * congedata con §8.2 `0x0F`.  ⇒ Chi arriva fin qui il posto ce l'ha
+			 * **sempre**, e un `if` che non puo' essere falso e' peggio di
+			 * niente: il giorno in cui quella regola cambiasse, nessuno saprebbe
+			 * che questa riga la stava duplicando.
+			 * ⚠ La guardia VIVA e' l'altra, in `tela_richiama_il_palco()`: li' la
+			 * sessione senza posto ci arriva davvero, perche' i FOTOGRAMMI le
+			 * arrivano anche quando tace (banco `04-b31`, caso 18). */
 			/* ⛔ Il tetto e la parita' stanno in UN posto solo, e non qui:
 			 *    `rcp_misura_ammessa()` (`rcp.h`).  Riscrivere qui la
 			 *    stessa regola vorrebbe dire averne due, e il giorno in cui una

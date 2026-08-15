@@ -249,6 +249,11 @@ static void raccogli(void)
 
 static uint64_t orologio;
 
+/* ⛔ Da dove arriva la prossima sessione: serve al caso 18, che ne vuole DUE —
+ *    e il posto di §8.2 e' per UTENTE, non per indirizzo, quindi due
+ *    provenienze diverse dello stesso utente si contendono lo stesso posto. */
+static const char *prossima_provenienza = "10.0.0.9:5000";
+
 static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
                                    const char *max_misura, bool con_ganci)
 {
@@ -271,7 +276,7 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	chiuso = false;
 	fuori_n = 0;
 	orologio = 1000;
-	s = rcp_apri(&g, "10.0.0.9:5000", orologio);
+	s = rcp_apri(&g, prossima_provenienza, orologio);
 	if (!s)
 		return NULL;
 
@@ -831,12 +836,102 @@ static void caso17(void)
 	rcp_libera(s);
 }
 
+/* 18 — ⛔⛔ IL PING-PONG FRA DUE SESSIONI DELLO STESSO UTENTE, e non e' un caso
+ *      di scuola: e' il difetto che l'utente ha visto la mattina del 15 agosto
+ *      2026, e me l'ha detto cosi' — «su Android il mouse non prende piu' i
+ *      click».
+ *
+ *      `[M]` dal registro della sua sessione vera:
+ *        05:10  il portatile attacca, tela 2544x926
+ *        05:12  tace trenta secondi ⇒ STACCATO per silenzio, lascia il posto —
+ *               ⛔ ma la sessione resta VIVA, col canale video acceso
+ *        05:14  il telefono attacca, tela 2560x926
+ *        05:14  **diciassette richieste al secondo**, per sempre: il portatile
+ *               richiede 2544, il telefono 2560, il portatile 2544 …
+ *      ⇒ ogni giro riavvia il flusso, Mutter ricrea i dispositivi di `libei`
+ *        (`[M]` 640 ricambi) e la regione dell'input non e' mai d'accordo con la
+ *        tela ⇒ **i clic finiscono altrove**.
+ *
+ *      ⇒ ATTESO: chi NON ha il posto non chiede niente al palco, e a un suo
+ *      `ADATTA_TELA` si risponde `NON_ORA` (I2: il palco lo comanda chi e'
+ *      attaccato). */
+static void caso18(void)
+{
+	rcp_sessione *uno, *due;
+	int richieste_prima;
+	bool bene;
+
+	rcp_azzera_registro_sessioni();
+	azzera_palco();
+
+	/* Il portatile: attacca e si prende la tela. */
+	prossima_provenienza = "10.0.0.9:5000";
+	uno = apri_sessione(1920, 1080, NULL, true);
+	manda_adatta(uno, 1600, 900);
+	palco_consegna(uno, orologio);
+
+	/* Tace trenta secondi: §5.3 gli toglie il posto, la sessione resta viva. */
+	orologio += 31000;
+	rcp_tempo(uno, orologio);
+	raccogli();
+	bene = strcmp(rcp_stato_nome(uno), "staccata-per-silenzio") == 0;
+
+	/* Il telefono attacca e PRENDE il posto, con una finestra di un'altra
+	 * misura.  ⚠ `apri_sessione` azzera l'orologio: si rimette dov'era, o il
+	 * silenzio del portatile scatterebbe di nuovo. */
+	if (bene) {
+		uint64_t quando = orologio;
+		prossima_provenienza = "10.0.0.24:34583";
+		due = apri_sessione(1920, 1080, NULL, true);
+		orologio = quando;
+		manda_adatta(due, 1280, 720);
+		palco_consegna(due, orologio);
+		richieste_prima = palco.quante_richieste;
+
+		/* Il palco adesso e' a 1280x720, e i suoi fotogrammi arrivano anche al
+		 * PORTATILE, che ha ancora 1600x900 come tela in vigore. */
+		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
+		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
+		raccogli();
+		bene = palco.quante_richieste == richieste_prima && quanti_tela == 0;
+
+		/* ⭐ E se il portatile torna a parlare, non gli si risponde «non ora»:
+		 *    lo si CONGEDA con §8.2 `0x0F` — «hai gia' una sessione attiva
+		 *    altrove», e questa volta e' vero.  ⚠ Lo fa `torna_a_parlare()` in
+		 *    cima a `rcp_ricevi()`, prima che il messaggio arrivi da nessuna
+		 *    parte: e' per questo che in `T_ADATTA_TELA` una guardia sul posto
+		 *    sarebbe codice morto.  ⛔ Quel che conta e' che il palco non venga
+		 *    toccato. */
+		if (bene) {
+			chiuso = false;
+			manda_adatta(uno, 1024, 768);
+			bene = palco.quante_richieste == richieste_prima && chiuso
+			    && motivo_chiusura == 0x0F;
+		}
+		/* ⭐ E il telefono, che il posto ce l'ha, comanda eccome. */
+		if (bene) {
+			chiuso = false;
+			manda_adatta(due, 1152, 648);
+			bene = palco.quante_richieste == richieste_prima + 1
+			    && palco.chiesta_l == 1152 && !chiuso;
+		}
+		rcp_libera(due);
+	}
+	esito("18 due sessioni, un palco solo", bene,
+	      "chi non ha il posto NON comanda (zero richieste al palco, e se torna "
+	      "a parlare e' 0x0F); chi ce l'ha si'",
+	      dillo());
+	rcp_libera(uno);
+	prossima_provenienza = "10.0.0.9:5000";
+}
+
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
 	void (*casi[])(void) = { caso1,  caso2,  caso3,  caso4,  caso5,  caso6,
 		                     caso7,  caso8,  caso9,  caso10, caso11, caso12,
-		                     caso13, caso14, caso15, caso16, caso17 };
+		                     caso13, caso14, caso15, caso16, caso17,
+		                     caso18 };
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;

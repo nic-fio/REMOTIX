@@ -107,9 +107,12 @@ GUASTI = [
      "\ttela_richiama_il_palco(s, ora_ms);\n}\n\nbool rcp_tela_in_volo",
      "\trcp_tela_adattata_ora(s, avuta_l, avuta_a, ora_ms);\n}\n\n"
      "bool rcp_tela_in_volo",
-     # ⚠ Anche il 14: adottare senza riconoscere la richiesta fa chiudere la
-     #   seconda con la risposta della prima.
-     [9, 14]),
+     # ⚠ Anche il 14 (adottare senza riconoscere la richiesta chiude la seconda
+     #   con la risposta della prima) e ⭐ anche il 18: una sessione che ADOTTA
+     #   la misura del palco non ha piu' motivo di richiamarlo, quindi il
+     #   ping-pong non parte — ⛔ ma al suo posto il client riceverebbe un `TELA`
+     #   non richiesto, cioe' il difetto peggiore invece di quello grosso.
+     [9, 14, 18]),
 
     # ⛔⭐ E QUESTO GUASTO TOCCA **DUE** RIGHE, e la ragione e' una lezione: la
     #     prima stesura ne toccava una sola e il guasto restava VERDE, perche' il
@@ -124,6 +127,17 @@ GUASTI = [
      ["\tif (larghezza < 200u || altezza < 200u ||",
       "\tif (l < 200u || a < 200u)"],
      [17]),
+
+    # ⛔⛔ IL GUASTO CHE L'UTENTE HA TROVATO PRIMA DEL BANCO — 15 agosto 2026,
+    #     mattina: «su Android il mouse non prende piu' i click».  Erano due sue
+    #     sessioni che si contendevano il palco a diciassette richieste al
+    #     secondo, e ogni giro ricreava i dispositivi di libei.
+    ("G11-ping-pong",
+     "una sessione SENZA POSTO comanda lo stesso il palco: due sessioni dello "
+     "stesso utente se lo contendono per sempre, e i clic finiscono altrove",
+     "\tif (!s->attaccata) {\n\t\tif (!s->tela_disaccordo_da) {",
+     "\tif (false && !s->attaccata) {\n\t\tif (!s->tela_disaccordo_da) {",
+     [18]),
 
     ("G10-rinuncia-taciuta",
      "il palco dice «non ce l'ho fatta» e il server tace: il client aspetta il "
