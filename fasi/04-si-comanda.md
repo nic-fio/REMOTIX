@@ -729,8 +729,8 @@ banco per primo. Quel che ha retto al posto suo è stato il mandato **avversaria
 
 | | |
 |---|---|
-| `banchi/04-b31-tela.c` | monta `rcp.c` **nudo**, con un palco finto che si può far rispondere in ritardo, concedere un'altra misura, o non rispondere affatto. **18 casi**, ciascuno con l'atteso dichiarato prima |
-| `banchi/04-b31-certifica.sh` | ⭐ **il controllo positivo**: innesta **11 guasti** in una copia di `rcp.c` e pretende che diventino rossi **i casi attesi** — non «che diventi rosso qualcosa» |
+| `banchi/04-b31-tela.c` | monta `rcp.c` **nudo**, con un palco finto che si può far rispondere in ritardo, concedere un'altra misura, o non rispondere affatto. **19 casi**, ciascuno con l'atteso dichiarato prima (⭐ il 19° aggiunto il 16 agosto 2026, vedi `fasi/05-la-sessione.md` §6-ter) |
+| `banchi/04-b31-certifica.sh` | ⭐ **il controllo positivo**: innesta **12 guasti** in una copia di `rcp.c` e pretende che diventino rossi **i casi attesi** — non «che diventi rosso qualcosa» |
 
 ⛔ **E il banco è stato corretto due volte dalla misura, non il contrario**: l'atteso di G1 diceva
 dieci casi e ne ha accesi sei; G9 restava verde perché un **secondo** controllo mascherava il guasto
@@ -777,6 +777,7 @@ le ore qui sono le sue.
 | ⭐⭐ clic → primo fotogramma spedito | 25 clic veri dell'utente, desktop fermo | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **136 ms** (peggiore 502) → dopo la cura **41 ms** (peggiore 47) | 15 ago |
 | il giro completo, misurato dalla pagina (`GIRO`) | 10 clic, portatile su rete locale | — | **55 ms**, peggiore 71 (era 135 dal DeX il 14 ago) | 15 ago |
 | il banco | `04-b31` | 18 verdi | **18 verdi**, e **11 guasti su 11** visti | 15 ago |
+| ⛔ **e il 16 agosto era 11/18** | `04-b31` | — | l'atteso di sette casi non contava la richiesta della nascita di `477d708`. ✅ **19/19 e 12 guasti su 12**, col caso 19 a guardia della cura | 16 ago |
 
 ⭐ **E la misura che non viene da noi**: GNOME *Impostazioni → Displays*, **dentro** la sessione
 remota, dichiara **«Resolution 1264 × 800 (3:2)»** e **«Scale 100%»**. È il compositore che dice la

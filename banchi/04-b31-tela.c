@@ -99,6 +99,41 @@ static struct {
 	uint32_t misura_l, misura_a;
 } palco;
 
+/* ⛔⛔⭐ LA RICHIESTA DELLA NASCITA — 16 agosto 2026, e ha tenuto questo banco
+ *      ROSSO PER UN GIORNO INTERO senza che nessuno se ne accorgesse.
+ *
+ *      Il 15 agosto la cura della coda dei tempi di accesso (commit `477d708`)
+ *      ha fatto una cosa in piu' e dichiarata: la sessione, appena si attacca,
+ *      **dice al palco a che misura deve nascere** invece di lasciarlo nascere
+ *      a una misura sua e poi cambiargliela.  Il registro lo scrive a ogni
+ *      accesso: *«§4.5: dico al palco che la tela di questa sessione e' NxM —
+ *      cosi' nasce gia' cosi' invece di nascere a una misura sua e doverla
+ *      cambiare (e il cambio e' una gara)»*.
+ *
+ *      ⇒ Da allora `apri_sessione()` lascia dietro di se' **una** richiesta al
+ *      palco, e sette casi su diciotto contavano ancora da zero.  ⛔ Tutti e
+ *      sette con lo STESSO scarto — una richiesta — e quattro di essi
+ *      mostravano anche «TELA usciti 0» che non era un secondo difetto: sono
+ *      scritti `bene = …; if (bene) { … }`, e caduta la prima condizione la
+ *      seconda meta' non veniva mai eseguita.  Un difetto solo, sette facce.
+ *
+ * ⭐ E LA CURA NON E' SOMMARE UNO.  Se questo banco si limitasse ad aspettarsi
+ *    un numero piu' grande, diventerebbe **cieco proprio sulla cosa che l'ha
+ *    reso rosso**: il giorno in cui la richiesta della nascita sparisse — cioe'
+ *    tornassero i diciassette secondi di coda — i conti tornerebbero lo stesso.
+ *    ⇒ Si fanno DUE cose:
+ *
+ *      1. i casi contano **da dopo la nascita**, con `dopo_la_nascita()`, che
+ *         dice a chi legge che la nascita esiste ed e' un'altra cosa;
+ *      2. ⭐ il **caso 19** prova la nascita per conto suo: se sparisce, e' LUI
+ *         a diventare rosso, e con un messaggio che nomina il difetto. */
+static int nascita_richieste;
+
+static int dopo_la_nascita(void)
+{
+	return palco.quante_richieste - nascita_richieste;
+}
+
 static void raccogli(void); /* legge quel che il server ha spedito, e svuota */
 
 static bool g_ritela(void *ctx, uint32_t l, uint32_t a)
@@ -324,6 +359,10 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	n = incornicia(busta, T_ATTACCA, corpo, (size_t)(p - corpo));
 	rcp_ricevi(s, busta, n, orologio);
 	raccogli();
+	/* ⛔ Qui la sessione ha gia' detto al palco a che misura nascere (§4.5): si
+	 *    segna quel che l'attacco ha lasciato, cosi' i casi possono contare da
+	 *    dopo.  ⚠ La ragione lunga sta su `nascita_richieste`. */
+	nascita_richieste = palco.quante_richieste;
 	return s;
 }
 
@@ -363,10 +402,10 @@ static const char *dillo(void)
 {
 	snprintf(detto, sizeof detto,
 	         "TELA usciti %d (esito %u motivo %u -> %ux%u), richieste al palco "
-	         "%d, tela in vigore %ux%u",
+	         "%d (di cui %d alla nascita, §4.5), tela in vigore %ux%u",
 	         quanti_tela, ultima_tela.esito, ultima_tela.motivo, ultima_tela.l,
-	         ultima_tela.a, palco.quante_richieste, ultima_tela.l,
-	         ultima_tela.a);
+	         ultima_tela.a, palco.quante_richieste, nascita_richieste,
+	         ultima_tela.l, ultima_tela.a);
 	return detto;
 }
 
@@ -390,7 +429,7 @@ static void caso1(void)
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 1600, 900);
 	/* ⛔ ATTESO: nessun `TELA` ancora — la risposta e' il fotogramma. */
-	bene = quanti_tela == 0 && palco.quante_richieste == 1
+	bene = quanti_tela == 0 && dopo_la_nascita() == 1
 	    && palco.chiesta_l == 1600 && palco.chiesta_a == 900;
 	if (bene) {
 		palco_consegna(s, orologio);
@@ -417,7 +456,7 @@ static void caso2(void)
 	manda_adatta(s, 1920, 1080);
 	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.motivo == 0
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && palco.quante_richieste == 0 && !chiuso;
+	    && dopo_la_nascita() == 0 && !chiuso;
 	esito("2 la misura che c'e' gia'", bene,
 	      "UN TELA(ADATTATA 1920x1080) subito, ZERO richieste al palco",
 	      dillo());
@@ -499,7 +538,7 @@ static void caso5(void)
 	manda_adatta(s, 100000, 100000);
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 2
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && palco.quante_richieste == 0 && !chiuso;
+	    && dopo_la_nascita() == 0 && !chiuso;
 	esito("5 misura fuori dai limiti", bene,
 	      "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI), sessione VIVA, palco intatto",
 	      dillo());
@@ -517,7 +556,7 @@ static void caso6(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 2133, 1201);
-	bene = palco.quante_richieste == 1 && palco.chiesta_l == 2132
+	bene = dopo_la_nascita() == 1 && palco.chiesta_l == 2132
 	    && palco.chiesta_a == 1200;
 	if (bene) {
 		palco_consegna(s, orologio);
@@ -600,21 +639,21 @@ static void caso9(void)
 	/* il palco dice di essere a 1280x720 senza che nessuno abbia chiesto */
 	rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 	raccogli();
-	primi = palco.quante_richieste;
+	primi = dopo_la_nascita();
 	bene = quanti_tela == 0 && primi == 1 && palco.chiesta_l == 1920
 	    && palco.chiesta_a == 1080;
 	if (bene) {
 		/* insiste: e il richiamo si ripete, ma non a ogni messaggio */
 		rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 		raccogli();
-		bene = quanti_tela == 0 && palco.quante_richieste == 1;
+		bene = quanti_tela == 0 && dopo_la_nascita() == 1;
 	}
 	if (bene) {
 		orologio += RCP_TELA_RICHIAMO_MS + 1;
 		rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 		raccogli();
 		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 0 && palco.quante_richieste == 2 && l == 1920
+		bene = quanti_tela == 0 && dopo_la_nascita() == 2 && l == 1920
 		    && a == 1080 && !chiuso;
 	}
 	esito("9 il palco fa di testa sua", bene,
@@ -642,7 +681,7 @@ static void caso10(void)
 	s = apri_sessione(1920, 1080, "2560x1440", true);
 	/* il client hi-dpi chiede la misura della sua finestra in pixel FISICI */
 	manda_adatta(s, 3840, 2160);
-	bene = palco.quante_richieste == 1 && palco.chiesta_l == 2560
+	bene = dopo_la_nascita() == 1 && palco.chiesta_l == 2560
 	    && palco.chiesta_a == 1440;
 	if (bene) {
 		palco_consegna(s, orologio);
@@ -830,7 +869,7 @@ static void caso17(void)
 	manda_adatta(s, 1600, 230);
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 2
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && palco.quante_richieste == 0 && !chiuso;
+	    && dopo_la_nascita() == 0 && !chiuso;
 	esito("17 sotto il minimo di §4.5", bene,
 	      "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", dillo());
 	rcp_libera(s);
@@ -925,13 +964,45 @@ static void caso18(void)
 	prossima_provenienza = "10.0.0.9:5000";
 }
 
+/* 19 — ⭐⭐ LA TELA SI DICHIARA ALLA NASCITA, e questo caso esiste perche' senza
+ *      di lui il banco sarebbe CIECO proprio dove e' stato rosso un giorno.
+ *
+ *      `477d708`, 15 agosto 2026: la sessione che si attacca dice subito al
+ *      palco a che misura nascere, invece di lasciarlo nascere a una misura sua
+ *      e cambiargliela dopo.  ⭐ E' la cura che ha tolto **diciassette secondi**
+ *      di coda ai tempi di accesso — «il cambio e' una gara», e la gara si
+ *      perdeva contro una scena ferma.
+ *
+ * ⛔ Gli altri casi adesso contano con `dopo_la_nascita()`, cioe' SCAVALCANO
+ *    questa richiesta.  ⇒ Se sparisse, loro resterebbero tutti verdi e la coda
+ *    tornerebbe in silenzio.  Questo caso e' l'unico che se ne accorgerebbe.
+ *
+ *    ATTESO: l'attacco lascia **una** richiesta al palco, ed e' alla misura che
+ *    il client ha chiesto in `ATTACCA` — non a una di riserva, non a zero. */
+static void caso19(void)
+{
+	rcp_sessione *s;
+	bool bene;
+
+	rcp_azzera_registro_sessioni();
+	azzera_palco();
+	s = apri_sessione(1600, 900, NULL, true);
+	bene = nascita_richieste == 1 && palco.chiesta_l == 1600
+	    && palco.chiesta_a == 900 && quanti_tela == 0 && !chiuso;
+	esito("19 la tela si dichiara alla nascita", bene,
+	      "UNA richiesta al palco gia' con l'ATTACCA, a 1600x900 (§4.5: nasce "
+	      "gia' cosi' invece di doverla cambiare — sono i 17 s di coda)",
+	      dillo());
+	rcp_libera(s);
+}
+
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
 	void (*casi[])(void) = { caso1,  caso2,  caso3,  caso4,  caso5,  caso6,
 		                     caso7,  caso8,  caso9,  caso10, caso11, caso12,
 		                     caso13, caso14, caso15, caso16, caso17,
-		                     caso18 };
+		                     caso18, caso19 };
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;

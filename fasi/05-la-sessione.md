@@ -921,10 +921,28 @@ già così invece di nascere a una misura sua e doverla cambiare (e il cambio è
 ⇒ ⛔ **L'atteso è vecchio, il prodotto è giusto** — la **quinta** volta in due giorni che un banco
 misura se stesso.
 
-⏳ **E la riparazione NON è stata fatta**, per una ragione: cambiare un *atteso* è esattamente il
-gesto che in questo progetto va fatto piano. ⚠ Non basta sommare uno: la richiesta della nascita va
-**nominata** dal banco — meglio ancora, provata da un caso suo — o il banco diventa cieco proprio
-sulla cura che l'ha reso rosso.
+### ✅ Riparato — e **non** sommando uno
+
+⛔ Sommare uno sarebbe stato il gesto sbagliato: il banco sarebbe tornato verde e **cieco proprio
+sulla cosa che l'aveva reso rosso**. Il giorno in cui la richiesta della nascita sparisse — cioè
+tornassero i diciassette secondi di coda — i conti tornerebbero lo stesso. ⇒ Due gesti invece di uno:
+
+1. i sette casi contano **da dopo la nascita** (`dopo_la_nascita()`), che dice a chi legge che la
+   nascita esiste ed è un'altra cosa. E la riga di esito la nomina: *«richieste al palco 2 (di cui 1
+   alla nascita, §4.5)»*;
+2. ⭐ **il caso 19 prova la nascita per conto suo**: *«UNA richiesta al palco già con l'`ATTACCA`, a
+   1600x900»*.
+
+⭐ **E il banco riparato è stato certificato prima di fidarsene** (`CODER.md` §3.3). `[M]` Innestato
+il guasto — la richiesta della nascita tolta dal prodotto:
+
+| | |
+|---|---|
+| i **18 casi vecchi** | ⛔ **tutti e diciotto VERDI** — la cecità era reale, non ipotetica |
+| il **caso 19** | ✅ **rosso, e solo lui** |
+
+⇒ ✅ **19 su 19**, e il guasto è entrato in `04-b31-certifica.sh` come **G12**, che pretende rosso
+esattamente il caso 19.
 
 ⭐ **E la lezione di processo è indipendente dall'esito**: il banco più forte che abbiamo su `rcp.c`
 è rimasto rosso un giorno intero perché **nessuno lo lancia**. Costa due secondi:

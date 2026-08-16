@@ -145,6 +145,25 @@ GUASTI = [
      "\tif (!avuta_l || !avuta_a) {",
      "\tif (false && (!avuta_l || !avuta_a)) {",
      [15]),
+
+    # ⛔⭐ G12 — 16 agosto 2026, e questo guasto e' nato da una CECITA' VERA, non
+    #     da un'ipotesi: per un giorno intero il banco e' stato 11/18 senza che
+    #     nessuno lo lanciasse, e la causa era che sette casi contavano da zero
+    #     le richieste al palco mentre `477d708` ne aveva aggiunta una alla
+    #     nascita.  ⇒ Riparati i sette (contano da `dopo_la_nascita()`), il
+    #     banco tornava verde — ⛔ **ma sarebbe diventato cieco proprio li'**.
+    #
+    #     `[M]` Innestato a mano prima di scrivere questa voce: tolta la
+    #     richiesta della nascita, i diciotto casi vecchi restano TUTTI VERDI.
+    #     ⇒ Senza il caso 19, i diciassette secondi di coda dei tempi di accesso
+    #     sarebbero potuti tornare in silenzio.
+    ("G12-niente-tela-alla-nascita",
+     "la sessione NON dice al palco a che misura nascere (§4.5): il palco nasce "
+     "a una misura sua e va ridimensionato dopo — ed e' la gara che costava "
+     "diciassette secondi di coda all'accesso",
+     "\tif (s->g.ritela) {\n\t\treg(s, \"⭐ §4.5: dico al palco che la tela di questa sessione e' %ux%u — \"",
+     "\tif (false && s->g.ritela) {\n\t\treg(s, \"⭐ §4.5: dico al palco che la tela di questa sessione e' %ux%u — \"",
+     [19]),
 ]
 
 righe = []

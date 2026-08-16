@@ -142,7 +142,7 @@ non i banchi — compreso il più grosso della notte. Il metro è quel che lui v
 
 - `fasi/04-si-comanda.md` §«la coda della fase 4» — il documento di chiusura, con le misure;
 - `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` — il rapporto tecnico, i dieci difetti refutati;
-- `banchi/04-b31-tela.c` (18 casi) e `banchi/04-b31-certifica.sh` (11 guasti innestati) — ⭐ **il
+- `banchi/04-b31-tela.c` (19 casi) e `banchi/04-b31-certifica.sh` (12 guasti innestati) — ⭐ **il
   modello di banco da copiare**: l'atteso dichiarato prima, e il controllo che i casi rossi siano
   **quelli attesi**;
 - `PIANO.md` §«Fase 5» e §«Fase 6» (quest'ultima con la tabella di quel che è già fatto);
