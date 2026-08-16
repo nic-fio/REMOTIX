@@ -142,9 +142,38 @@ lega `can-*` a `visible`.
 `rapporti/F4-IN-13-la-tela-che-cambia.md`): la tela è la finestra, `SESSIONE` concede la tela che il
 palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a caldo costa **6 ms**.
 
+> ### ✅ ⭐⭐ E IL RIATTACCO A MISURA DIVERSA È STATO MISURATO — 16 agosto 2026, **e l'ha fatto l'utente**
+>
+> *`banchi/05-b4` dichiara per iscritto di non poterlo provare: «`01-b3-cliente.py` non conosce
+> `ADATTA_TELA` (zero occorrenze; la pagina ne ha 45) ⇒ si misura col browser».*
+>
+> `[M]` Sessione aperta col browser **massimizzato** (`2544x926`), scheda chiusa, riattacco con la
+> finestra **ridotta**. La catena intera in **61 millisecondi**:
+>
+> ```
+> 17:11:00.875  ⚠ RIPIEGO DICHIARATO (§4.5): chiesta 1240x622, il palco ha 2544x926
+>                 → CONCESSA quella del palco, così i fotogrammi arrivano da subito
+> 17:11:00.887  ⭐ ADATTA_TELA 1240x622 GIRATA al palco            (+12 ms)
+> 17:11:00.935  ⭐ tela IN VIGORE cambiata da 2544x926 a 1240x622  (+60 ms)
+> ```
+>
+> | | |
+> |---|---|
+> | fotogrammi dopo il cambio | **62**, tutti a `1240x622` — **zero** alla misura vecchia |
+> | CHIAVE alla misura nuova (§5.2) | ✅ `fotogramma 2` |
+> | `NON lo spedisco` (il congelamento) · «il palco non è alla tela» (il *ballo*) | **0** e **0** |
+> | ⭐ **e quel che ha visto l'utente** | *«il desktop copre per intero lo schermo (che adesso è di dimensioni ridotte)»* · *«funziona»* |
+>
+> ⚠ **E una trappola del registro, pagata sul posto**: il primo conteggio diceva «1 fotogramma alla
+> misura vecchia dopo il cambio». ⛔ Era falso: una riga del registro aveva **perso il timestamp** —
+> due processi che scrivono sullo stesso file si erano accavallati — e senza data `$1 >= "17:11:00.935"`
+> la prendeva per buona, perché una parola ordina dopo una cifra. ⇒ *Un confronto su un campo che può
+> mancare non è un filtro, è una scommessa.*
+
 **Quel che resta a questa fase:**
 
-- ⛔ **il banco che, DOPO il riattacco a misura diversa, batte un tasto e muove il puntatore.** La
+- ⏳ **il tasto e il puntatore DOPO il riattacco a misura diversa** — ⚠ la prova qui sopra dice che i
+  **pixel** sono giusti, non che i **clic** finiscano dove punti. La
   ragione è misurata: al cambio di geometria **`libei` distrugge e ricrea i dispositivi assoluti**
   (`[M]` 15 ago, *«il puntatore è stato TOLTO dal compositore, ricambio n. 640»*), e un cambio di
   **keymap** ricrea la tastiera; il puntatore al dispositivo vecchio smette di funzionare **senza

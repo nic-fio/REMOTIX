@@ -326,13 +326,37 @@ taglio seguente, che così è durato meno del tetto. ⭐ L'ha smentito l'aritmet
 primo taglio è l'istante esatto in cui il registro cambia. ⇒ **Niente guardiani in background:
 `trap … EXIT INT TERM`.**
 
+## ✅ Il riattacco da una finestra di misura diversa — 16 agosto 2026, provato dall'utente
+
+`banchi/05-b4` dichiara di non poterlo provare («si misura col browser»). ⇒ Sessione aperta col
+browser massimizzato (`2544x926`), scheda chiusa, riattacco a finestra ridotta:
+
+```
+17:11:00.875  ⚠ RIPIEGO DICHIARATO (§4.5): chiesta 1240x622, il palco ha 2544x926
+17:11:00.887  ⭐ ADATTA_TELA 1240x622 GIRATA al palco             (+12 ms)
+17:11:00.935  ⭐ tela IN VIGORE cambiata da 2544x926 a 1240x622   (+60 ms)
+```
+
+⭐ **62 fotogrammi dopo il cambio, tutti alla misura nuova**, zero alla vecchia, zero `NON lo
+spedisco`, zero *ballo* — e l'utente: *«il desktop copre per intero lo schermo»*.
+
+⚠ **Trappola del registro**, pagata sul posto: un conteggio diceva «1 fotogramma alla misura vecchia
+dopo il cambio», ed era **falso**. Una riga aveva **perso il timestamp** (due processi che scrivono
+sullo stesso file si accavallano), e un filtro `$1 >= "ora"` la prendeva per buona perché una parola
+ordina dopo una cifra. ⇒ *Un confronto su un campo che può mancare non è un filtro, è una scommessa.*
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
-- ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
-  `gnome-session.CanShutdown` a **false** `[M]`. ⭐ La causa è di gnome-shell, e la dichiara il suo
-  sorgente: *«we don't get change notifications for [Polkit policy], so their value may be
-  outdated»* — la legge all'avvio e la tiene in cache. ⚠ **L'azione fallisce comunque** (logind
-  nega), ⛔ ma una voce che promette e non mantiene è quel che `DECISIONI.md` §4.7 voleva togliere.
+- ✅ ~~La voce «Power Off» resta nel menu~~ — **chiuso dall'utente il 16 agosto 2026**: *«il menù di
+  sistema è corretto. L'utente non può spegnere, riavviare o mandare in standby la macchina»*.
+  ⭐ **Tre voci su quattro sono sparite** (Riavvia, Sospendi, Iberna) `[M]`, e le quattro azioni sono
+  negate a chi conta — chiesto **dal figlio, che è l'utente vero**: `CanPowerOff = CanReboot =
+  CanSuspend = CanHibernate = no`. ⇒ §4.7 chiedeva che **nessuno possa spegnere**, e nessuno può.
+  ⚠ Resta la voce a schermo, e chi la preme si vede rifiutare da logind.
+  ⛔ **E la causa che questo documento le attribuiva è SMENTITA da una misura**: diceva «una cache di
+  gnome-shell letta all'avvio». `[M]` La sessione delle 17:13:07 del 16 agosto è nata **molto dopo**
+  che le regole polkit erano in vigore, e la voce c'è lo stesso. ⇒ La causa vera **non è accertata**,
+  e non si insegue: il difetto è cosmetico e l'utente l'ha giudicato accettabile.
 > ### ⭐⭐⭐ LA CODA: TROVATA, ed è il ridimensionamento contro una scena ferma
 >
 > `[M]` 16 agosto 2026, registro pulito e figlio finalmente **parlante** (vedi sotto). In un giro

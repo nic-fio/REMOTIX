@@ -333,10 +333,26 @@ di §7.3-bis esiste per `Ctrl+Alt+Canc`, che **non ha nessuna voce di menu**. Il
 |---|---|---|
 | **silenzio del client** | 30 secondi | il client si considera **staccato**, e il codificatore si libera |
 | **inattività dell'utente** | 30 minuti senza input | REMOTIX **stacca** il client: per rientrare servono utente e password |
-| **abbandono della sessione** | 6 ore senza alcun attacco | la sessione si chiude, **con congedo pulito** |
+| **abbandono della sessione** | ⭐ **60 minuti senza input** | la sessione si **chiude**, **con congedo pulito** (`0x03`) |
 
-Sono in scala: secondi, minuti, ore. Il secondo e il terzo sono **configurabili**, con quei
-valori come predefiniti.
+Sono in scala: secondi, minuti, minuti. Il secondo e il terzo sono **configurabili**, con quei
+valori come predefiniti, e ⛔ **il valore in vigore si scrive nel registro all'avvio** — un tetto da
+un'ora non lo verifica nessuno aspettando un'ora.
+
+> ### ⛔ Il terzo orologio è cambiato — deciso dall'utente il **16 agosto 2026**
+>
+> Diceva ~~«**6 ore** senza alcun **attacco**»~~. ⇒ *«Niente timeout delle 6 ore: se dopo 60 minuti
+> non c'è traccia di input la sessione viene killata.»*
+>
+> ⚠ **Cambiano due cose, non una**: il tetto (6 ore → 60 minuti) e **il criterio** — non più «nessuno
+> si è attaccato», ma «nessuno ha toccato niente». Uno che si attacca e resta a **guardare** non
+> rinnova più niente: il tetto si nutre degli stessi cinque gesti di §7.3 che nutrono l'orologio dei
+> 30 minuti.
+>
+> ⭐ **E la decisione è venuta da una misura chiesta apposta**: `[M]` una sessione abbandonata costa
+> **477 MB** (PSS, l'1,5 % della macchina) e **~0,017 %** di un nucleo, e in quattro minuti **non
+> cresce di un megabyte**. Non è una perdita, è un costo fisso — e l'utente ha scelto di pagarlo per
+> un'ora invece che per sei. Il ragionamento intero è in `DECISIONI.md` §4.8.
 
 ⭐ **Un client che tace è un client che si è staccato**, e nessuna connessione «tiene il posto».
 Chi arriva entra, senza timeout da aspettare: sparisce il caso «il telefono è morto in galleria e

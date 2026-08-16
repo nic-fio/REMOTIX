@@ -2134,7 +2134,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 |---|---|---|
 | `0x01` | `CHIUSO_DALL_UTENTE` | l'utente ha chiuso il client |
 | `0x02` | `INATTIVITA` | 30 minuti senza input (`SPECIFICHE.md` §5.3) |
-| `0x03` | `SESSIONE_ABBANDONATA` | 6 ore senza attacchi |
+| `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minuti senza input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *Diceva «6 ore senza attacchi»: cambiato il 16 agosto 2026 — cambia il tetto **e** il criterio, perché chi guarda senza toccare non rinnova niente. Il codice e il nome restano* |
 | `0x04` | `SESSIONE_LOCALE_PREVALSA` | l'utente ha aperto una sessione grafica locale |
 | `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
 | `0x06` | `BUDGET_PIENO` | la macchina non ha più capacità di codifica |

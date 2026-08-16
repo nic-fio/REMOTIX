@@ -2060,6 +2060,63 @@ registro direbbe «verificato» avendo guardato la cosa sbagliata.
 
 ---
 
+### 4.8 ✅ ⛔ Niente sei ore: **sessanta minuti senza input e la sessione si chiude**
+
+*Decisa dall'utente il **16 agosto 2026**, con queste parole: «niente timeout delle 6 ore: se dopo 60
+minuti non c'è traccia di input la sessione viene killata».*
+
+`SPECIFICHE.md` §5.3 aveva scritto **6 ore senza alcun attacco**. ⇒ Cambiano **due cose**, e vanno
+lette separate:
+
+| | prima | adesso |
+|---|---|---|
+| il tetto | 6 ore | **60 minuti** |
+| ⛔ **il criterio** | «nessuno si è **attaccato**» | «nessuno ha **toccato niente**» |
+
+⭐ **Il secondo cambio è il più grosso**, e va detto: uno che si attacca e resta a guardare non
+rinnova più niente. Il tetto si nutre degli stessi gesti dell'orologio dei 30 minuti — i cinque
+input di §7.3 — e non del fatto che una connessione esista.
+
+### ⭐ La decisione è venuta da un numero, e il numero è stato misurato apposta
+
+*L'utente aveva chiesto: «misura la memoria. Potrei anche decidere di diminuire drasticamente questo
+intervallo».*
+
+`[M]` 16 agosto 2026, sessione abbandonata, PSS (le librerie condivise contate una volta sola):
+
+| | |
+|---|---|
+| la sessione intera di `prova` | **477 MB** su 31 851 totali ⇒ **1,5 %** |
+| di cui `gnome-shell` | 182 MB |
+| di cui **il nostro figlio** (palco, cattura, codificatore) | **116 MB** |
+| CPU | ~0,017 % di un nucleo |
+| ⭐ **crescita in 4 minuti** | **nessuna**: 477 · 476 · 476 · 477 · 477 · 477 · 477 · 477 · 477 MB |
+
+⇒ **Non è una perdita, è un costo fisso.** ⚠ E la scelta, con quel numero davanti, è dell'utente: si
+paga per un'ora invece che per sei.
+
+### ⚠ E una complicazione è stata proposta e SCARTATA — dall'utente, con una misura di buon senso
+
+Avevo proposto di azzerare il tetto anche al **riaggancio**, temendo di uccidere una sessione mentre
+qualcuno la guardava. La risposta:
+
+> *«la tua ipotesi comporta il fatto che l'utente in 10 minuti non fa nemmeno un clic col mouse,
+> alquanto improbabile»*
+
+⭐ **Ed è giusta**: perché il danno avvenisse, uno dovrebbe rientrare e poi non toccare **niente** per
+il resto dell'ora. ⇒ Si conta l'input e basta — la regola più semplice, e anche la più facile da
+spiegare a chi la subisce.
+
+### Che cosa comporta, in codice
+
+- il motivo `0x03 SESSIONE_ABBANDONATA` di `RCP.md` §8.2 **esiste da sempre e non l'aveva mai spedito
+  nessuno**: adesso è il suo. ⚠ Di solito non lo riceverà nessuno — se il tetto scade è perché non
+  c'era più nessuno — ma chi c'è legge una frase invece di guardare uno schermo fermo;
+- **configurabile** (`--abbandono-s`), `0` = spento, e il valore in vigore **si scrive nel registro
+  all'avvio** insieme agli altri due: un tetto da un'ora non lo verifica nessuno aspettando un'ora.
+
+---
+
 ## 5. La geometria — la tela e la vista
 
 ### 5.0 ✅ La tela nasce a ogni attacco, e sta ferma finché il client resta

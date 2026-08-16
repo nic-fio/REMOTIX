@@ -373,6 +373,81 @@ static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
  *    chiave chiesta senza chiamante, e il monitor catturato che non era quello
  *    su cui stava la shell).  ⚠ Le cuciture non hanno un proprietario, e per
  *    questo nessun banco le guarda: questa ce l'ha. */
+/* ⛔⛔⭐ IL TERZO OROLOGIO DI §5.3, E NON E' PIU' QUELLO DELLE SEI ORE.
+ *
+ *     ✅ Deciso dall'utente il 16 agosto 2026, su misure prese apposta:
+ *
+ *       > *«niente timeout delle 6 ore: se dopo 60 minuti non c'e' traccia di
+ *       > input la sessione viene killata»*
+ *
+ *     `SPECIFICHE.md` §5.3 diceva «6 ore senza alcun attacco ⇒ la sessione si
+ *     chiude».  ⚠ Cambiano DUE cose, non una: il tetto (6 ore → 60 minuti) e
+ *     **il criterio** — non piu' «nessuno si e' attaccato», ma «nessuno ha
+ *     toccato niente».
+ *
+ * ⭐ E la decisione e' venuta da un numero, non da un'idea: `[M]` una sessione
+ *    abbandonata costa **477 MB** (PSS) e **~0,017 % di un nucleo**, e in quattro
+ *    minuti di osservazione non cresce di un megabyte — 477 · 476 · 476 · 477 ·
+ *    477 · 477 · 477 · 477 · 477.  ⇒ Non e' una perdita, e' un costo fisso; e
+ *    l'utente ha scelto di non pagarlo per un'ora invece che per sei.
+ *
+ * ⛔ CHE COSA CONTA COME «INPUT», e la distinzione e' tutta qui: i cinque gesti
+ *    veri.  ⚠ NON il rilascio al distacco (§7.3), che arriva proprio quando
+ *    l'utente se ne va e azzererebbe l'orologio nell'istante sbagliato; non la
+ *    ritela, che parte da sola al riattacco; non la richiesta di uscire.
+ *
+ * ⚠ E si e' considerato — e SCARTATO, con l'utente — di azzerare l'orologio
+ *   anche al riaggancio: *«la tua ipotesi comporta il fatto che l'utente in 10
+ *   minuti non fa nemmeno un clic col mouse, alquanto improbabile»*.  ⇒ Si conta
+ *   l'input e basta, che e' anche la regola piu' semplice da spiegare. */
+#define ABBANDONO_PREDEFINITO_MS 3600000u /* 60 minuti */
+static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
+
+/* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
+ *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
+ *    §5.1 vuole un utente remoto per volta (I2), e il multi-tenant e' della
+ *    fase 12. */
+#define QUANTI_PRESENTI 16
+static struct {
+	char utente[257];
+	uint64_t ultimo_input_ms;
+} presenti[QUANTI_PRESENTI];
+
+/* ⭐ «Qui c'e' stato un gesto adesso.»  Se l'utente non c'e' in tabella lo si
+ *    aggiunge: il primo gesto e' anche il primo segno di presenza. */
+static void presenza_segna(const char *utente, uint64_t ora_ms)
+{
+	int libero = -1;
+	if (!utente || !utente[0])
+		return;
+	for (int i = 0; i < QUANTI_PRESENTI; i++) {
+		if (presenti[i].utente[0] == '\0') {
+			if (libero < 0)
+				libero = i;
+			continue;
+		}
+		if (strcmp(presenti[i].utente, utente) == 0) {
+			presenti[i].ultimo_input_ms = ora_ms;
+			return;
+		}
+	}
+	if (libero < 0)
+		return; /* ⛔ Non e' un guasto da fermare tutto: al peggio quell'utente
+		         *    non ha l'orologio dell'abbandono, e la sessione resta. */
+	snprintf(presenti[libero].utente, sizeof presenti[libero].utente, "%s",
+	         utente);
+	presenti[libero].ultimo_input_ms = ora_ms;
+}
+
+static void presenza_dimentica(const char *utente)
+{
+	if (!utente)
+		return;
+	for (int i = 0; i < QUANTI_PRESENTI; i++)
+		if (strcmp(presenti[i].utente, utente) == 0)
+			presenti[i].utente[0] = '\0';
+}
+
 static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
                             uint8_t azione, uint16_t codice, int premuto,
                             int32_t a, int32_t b)
@@ -380,6 +455,11 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return false;
+	/* ⛔ SOLO i cinque gesti veri: la ragione sta sul riquadro qui sopra. */
+	if (azione == FIGLI_INPUT_PUNTATORE || azione == FIGLI_INPUT_PULSANTE ||
+	    azione == FIGLI_INPUT_ROTELLA || azione == FIGLI_INPUT_LETTERA ||
+	    azione == FIGLI_INPUT_POSIZIONE)
+		presenza_segna(utente, registro_ora_ms());
 	return figli_input(p->f, utente, id, azione, codice, premuto, a, b);
 }
 
@@ -440,6 +520,83 @@ static void termina_al_figlio(void *ctx, const char *utente)
 		              "con 0x10 e il desktop e' ancora li'.  ⚠ Due verita' sullo "
 		              "stesso fatto, e questa riga e' l'unico posto in cui si vede",
 		              utente);
+}
+
+/* ⛔⛔⭐ §5.3 — L'ABBANDONO SCADE, e la sessione si chiude.
+ *
+ *     ⚠ E l'ordine e' lo STESSO di §7.6 e per la stessa ragione normativa:
+ *     prima si dice a chi guarda PERCHE', poi si chiude.  Quando il compositore
+ *     cade il palco cade con lui, e un motivo spedito dopo e' un motivo che
+ *     nessuno riceve (rilievo B-7).
+ *
+ * ⭐ E il motivo e' `0x03 SESSIONE_ABBANDONATA`, che §8.2 aveva gia' e che
+ *    **nessuna riga di codice aveva mai spedito** — la stessa forma E1 di
+ *    `0x02` fino a stamattina.  ⚠ Di solito non lo ricevera' nessuno: se
+ *    l'orologio scade e' perche' non c'era piu' nessuno.  Ma «di solito» non e'
+ *    «mai», e chi c'e' deve leggere una frase invece di guardare uno schermo
+ *    fermo. */
+static void abbandono_scaduto(struct ponte *p, const char *utente,
+                              uint64_t fermo_ms)
+{
+	size_t quanti;
+
+	registro_dice(REG_AVVIO,
+	              "⭐ §5.3 — ABBANDONO: «%s» non tocca niente da %llu ms (tetto "
+	              "%llu).  ⛔ CHIUDO la sessione grafica, e con lei i suoi "
+	              "programmi: e' la decisione dell'utente del 16 agosto 2026, "
+	              "«se dopo 60 minuti non c'e' traccia di input la sessione "
+	              "viene killata»",
+	              utente, (unsigned long long)fermo_ms,
+	              (unsigned long long)abbandono_ms);
+
+	quanti = wt_congeda_utente(utente, RCP_SESSIONE_ABBANDONATA,
+	                           "sessione abbandonata: nessun input entro il "
+	                           "tetto di §5.3",
+	                           NULL);
+	if (quanti)
+		registro_dice(REG_WT,
+		              "⚠ §5.3: c'erano ANCORA %zu client attaccati a «%s», "
+		              "congedati con 0x03 prima di chiudere — guardavano senza "
+		              "toccare niente da un'ora",
+		              quanti, utente);
+
+	if (!figli_termina_sessione(p->f, utente))
+		registro_dice(REG_AVVIO,
+		              "⛔ §5.3: la richiesta di chiudere la sessione abbandonata "
+		              "di «%s» NON e' partita verso il figlio: i client sono "
+		              "stati congedati con 0x03 e il desktop e' ancora li'",
+		              utente);
+	/* ⛔ Si dimentica COMUNQUE: se la chiusura non e' passata, riprovare ogni
+	 *    giro riempirebbe il registro di una riga al secondo per un guasto che
+	 *    la prima riga ha gia' detto.  ⚠ E se una sessione nuova nascera', il
+	 *    suo primo gesto la rimettera' in tabella. */
+	presenza_dimentica(utente);
+}
+
+/* ⭐ Il giro dell'orologio.  ⚠ Chiamato a ogni passata del ciclo: non costa
+ *    niente (sedici confronti) e una scadenza che aspetta un evento e' una
+ *    scadenza che non scatta mai — la lezione di `regola_battito`. */
+static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
+{
+	if (!abbandono_ms || !p || !p->f)
+		return;
+	for (int i = 0; i < QUANTI_PRESENTI; i++) {
+		if (presenti[i].utente[0] == '\0')
+			continue;
+		if (ora_ms <= presenti[i].ultimo_input_ms)
+			continue;
+		if (ora_ms - presenti[i].ultimo_input_ms > abbandono_ms) {
+			/* ⛔ Una COPIA, non il puntatore: `abbandono_scaduto()` finisce
+			 *    chiamando `presenza_dimentica()`, che azzera proprio quella
+			 *    casella — e il nome serve fino all'ultima riga.
+			 * ⚠ `memcpy` e non `snprintf`: la sorgente ha la stessa misura
+			 *   della destinazione, e il compilatore non puo' saperlo. */
+			char chi[sizeof presenti[0].utente];
+			memcpy(chi, presenti[i].utente, sizeof chi);
+			chi[sizeof chi - 1] = '\0';
+			abbandono_scaduto(p, chi, ora_ms - presenti[i].ultimo_input_ms);
+		}
+	}
 }
 
 /*
@@ -663,6 +820,11 @@ int main(int argc, char **argv)
 		 * ⛔ `0` = spenta, ed e' un valore lecito e dichiarato. */
 		else if (strcmp(a, "--inattivita-s") == 0 && v)
 			rcp_inattivita_imposta((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
+		/* ⛔⭐ §5.3, il terzo: «se dopo 60 minuti non c'e' traccia di input la
+		 *     sessione viene killata» (decisione dell'utente, 16 agosto 2026).
+		 *     ⚠ `0` = spento, e allora nessuna sessione viene mai chiusa da se'. */
+		else if (strcmp(a, "--abbandono-s") == 0 && v)
+			abbandono_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -742,10 +904,13 @@ int main(int argc, char **argv)
 	 *    tiene occupata una macchina. */
 	registro_dice(REG_AVVIO,
 	              "⭐ §5.3, i tre orologi in vigore: silenzio del client 30 s "
-	              "(fisso) · inattivita' dell'utente %llu s%s · abbandono della "
-	              "sessione: ⛔ NON ANCORA IN VIGORE, nessun codice lo conta",
+	              "(fisso) · inattivita' dell'utente %llu s%s · ⛔ abbandono "
+	              "della sessione %llu s%s — e allo scadere la sessione grafica "
+	              "si CHIUDE, coi programmi aperti dentro",
 	              (unsigned long long)(rcp_inattivita() / 1000),
-	              rcp_inattivita() ? "" : " (SPENTA)");
+	              rcp_inattivita() ? "" : " (SPENTA)",
+	              (unsigned long long)(abbandono_ms / 1000),
+	              abbandono_ms ? "" : " (SPENTO)");
 
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di
@@ -973,6 +1138,10 @@ int main(int argc, char **argv)
 		 *   stata scritta (la lezione di `regola_battito`, pagata l'11 agosto
 		 *   con B6). */
 		adesso = registro_ora_ms();
+		/* ⛔ §5.3, il terzo orologio: si guarda a OGNI passata, non quando
+		 *    arriva qualcosa.  Il caso che conta e' proprio quello in cui non
+		 *    arriva piu' niente. */
+		abbandono_giro(&ponte, adesso);
 		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
 			aiutante_muovi(pam_aiuto, consegna_verdetto, &ponte);
 		aiutante_scaduti(pam_aiuto, adesso, consegna_verdetto, &ponte);
