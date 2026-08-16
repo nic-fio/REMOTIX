@@ -120,6 +120,24 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, e sotto c'è il
 **punto aperto** qui sotto.
 
+## ⏳ Il riattacco da uno schermo diverso — quel che il banco può dire, e quel che no
+
+`[M]` 16 agosto 2026, `banchi/05-b4-riattacco-altra-misura.sh`: ci si stacca da `2544x926` e si
+riattacca chiedendo `1280x720`, **sulla stessa sessione grafica viva**.
+
+⭐ **Verde su quel che si può misurare senza browser**: la sessione **resta** (I4), **non rinasce**
+(l'utente non perde i programmi), e i fotogrammi arrivano **subito** — alla tela del **palco**,
+perché §4.5 dichiara proprio questo: *«così i fotogrammi arrivano da subito, e la pagina può chiedere
+la sua misura con `ADATTA_TELA`»*.
+
+⛔ **E quel che il banco NON può provare, dichiarato invece che nascosto**: che la tela diventi poi
+`1280x720` dipende da `ADATTA_TELA`, che manda **la pagina** — e `01-b3-cliente.py` non lo conosce
+(zero occorrenze; `pagina.html` ne ha 45). ⇒ **Si misura col browser.**
+
+⚠ E la prima stesura di quel banco pretendeva la misura nuova e dava **rosso su prodotto giusto**:
+⛔ la **quarta** volta in un giorno che un banco misura se stesso. ⇒ *Quando un banco è rosso, la
+prima cosa da sospettare è l'atteso.*
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
