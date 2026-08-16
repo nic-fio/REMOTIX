@@ -265,13 +265,15 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    abbandono**, che ⚠ **incrocia** il punto 2.
 5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*.
-6. ⛔ **La sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
-   `libmutter` andava in asserzione fallita.
+6. ✅ **La sessione senza nessuno che guarda** — `[M]` 16 agosto, col browser. In v1 il monitor
+   virtuale spariva al distacco e `libmutter` andava in asserzione fallita: ⭐ **qui non succede**, e
+   il costo di un desktop che nessuno guarda è **praticamente zero**. Misure in §6-quater.
 7. ✅ **PAM per intero**: asincrono (`aiutante.c`) **e** la sessione PAM aperta dal figlio (passo
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Restano il 5, il 6, e i due orologi lunghi del 4** (30 minuti e 6 ore).
+⇒ ⭐ **Resta il 5** (distacco e riaggancio due volte di fila) **e i due orologi lunghi del 4** — 30
+minuti di inattività dell'utente e 6 ore di abbandono.
 
 ---
 
@@ -1008,6 +1010,50 @@ esattamente il caso 19.
 ```sh
 gcc -O1 -std=gnu11 -w -D_GNU_SOURCE -o /tmp/b31 banchi/04-b31-tela.c src/rcp.c && /tmp/b31
 ```
+
+## 6-quater · ✅ LA SESSIONE SENZA NESSUNO CHE GUARDA — 16 agosto 2026
+
+*In v1 era il caso che rompeva: il monitor virtuale spariva al distacco e `libmutter` andava in
+asserzione fallita. È il punto 6 di §2.*
+
+**L'atteso, dichiarato prima**: (1) la sessione grafica resta viva e col suo PID; (2) ⛔ zero
+asserzioni in `mutter.log`; (3) con nessuno che guarda, zero fotogrammi e CPU vicina a zero — ⚠ *se
+il figlio continuasse a catturare a vuoto sarebbe uno spreco che non vedrebbe nessuno*; (4) al
+riattacco si ritrova tutto.
+
+### `[M]` Due minuti con nessuno attaccato
+
+| | |
+|---|---|
+| **figlio** | **2 tick in 120 s** ⇒ ~0,017 % di un nucleo |
+| **gnome-shell** | 33 tick ⇒ 0,27 % |
+| **fotogrammi spediti** | **0** |
+| **righe nuove in `mutter.log`** | **0** — ⭐ il difetto di v1 non c'è |
+| figlio · gnome-shell · terminale | tutti e tre **vivi** |
+
+⭐ **Il confronto che dà il senso al numero**: con un client attaccato e la scena ferma il figlio
+consuma **0,63 tick al secondo**; senza nessuno, **0,017**. ⇒ **37 volte meno**: il ciclo di cattura
+si ferma davvero quando non guarda nessuno, non gira a vuoto.
+
+⭐ E il figlio non tace: ogni 60 secondi scrive *«"prova" ricontrollato: uid 1001, pid 476758, padre
+476313, 40 descrittori — il legame regge»*. Una sessione che nessuno guarda **dice di essere viva**.
+
+### `[M]` Il riattacco
+
+| | |
+|---|---|
+| `gnome-shell` | **390241** — lo stesso attraverso un riavvio del server, uno stacco per filo tagliato, i due minuti di nessuno e **tre** riattacchi |
+| avvii di sessione grafica | **0** ⇒ è un riattacco, non un accesso nuovo: l'utente non ha perso niente |
+| primo fotogramma | **CHIAVE `0x0301`**, come §5.2 pretende |
+| la tela, guardata nei pixel | **1113 colori diversi**, luminosità media 102 ⇒ non nera, non piatta |
+| l'input | ✅ un `Invio` tenuto 200 ms ⇒ **18 battute** arrivate al terminale, e `cl_tasti_premuti` vuoto dopo |
+
+⏳ **Quel che questa prova NON copre, dichiarato**: la finestra è di **due minuti**, non di ore.
+⇒ L'orologio delle **6 ore di abbandono** resta da provare, ed è l'ultimo dei tre di §5.3.
+
+⚠ E `mutter.log` contiene **7 righe `CRITICAL`** che non sono nostre: sono tutte alle 13:18 e 13:19, di
+due `gnome-shell` **che si stavano chiudendo** (*«has been already disposed»*), cioè rumore di
+smontaggio di GNOME al logout. Nessuna dalla sessione viva.
 
 ## 7 · Il giudizio dell'utente
 

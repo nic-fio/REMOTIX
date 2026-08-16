@@ -261,6 +261,25 @@ zero stacchi, pacchetti puntuali a 15 s fino all'ultimo. La riga di `SPECIFICHE.
 non contava: un contatore nella pagina ha mostrato 542 battiti su 544 possibili ⇒ quella scheda non
 era mai stata congelata, perché Chrome non congela una scheda sotto debugger.
 
+## ✅ Quanto costa un desktop che nessuno guarda — 16 agosto 2026
+
+*In v1 il monitor virtuale spariva al distacco e `libmutter` andava in asserzione fallita.*
+
+| `[M]` due minuti con nessuno attaccato | |
+|---|---|
+| figlio | **~0,017 % di un nucleo** (2 tick in 120 s) |
+| gnome-shell | 0,27 % |
+| fotogrammi spediti · righe nuove in `mutter.log` | **0** e **0** |
+
+⭐ **Il confronto**: con un client attaccato e la scena ferma il figlio consuma **0,63 tick/s**; senza
+nessuno, **0,017** — ⇒ **37 volte meno**. Il ciclo di cattura si ferma davvero, non gira a vuoto. E
+ogni 60 s il figlio scrive *«"prova" ricontrollato … il legame regge»*: una sessione che nessuno
+guarda **dice di essere viva**.
+
+⭐ Al riattacco: stesso `gnome-shell`, **zero** avvii di sessione, primo fotogramma **CHIAVE** (§5.2),
+tela con 1113 colori, e l'input torna a funzionare. ⏳ La finestra provata è di **due minuti**: le
+**6 ore** di abbandono restano da provare.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
