@@ -172,12 +172,28 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
 
 **Quel che resta a questa fase:**
 
-- ⏳ **il tasto e il puntatore DOPO il riattacco a misura diversa** — ⚠ la prova qui sopra dice che i
-  **pixel** sono giusti, non che i **clic** finiscano dove punti. La
-  ragione è misurata: al cambio di geometria **`libei` distrugge e ricrea i dispositivi assoluti**
-  (`[M]` 15 ago, *«il puntatore è stato TOLTO dal compositore, ricambio n. 640»*), e un cambio di
-  **keymap** ricrea la tastiera; il puntatore al dispositivo vecchio smette di funzionare **senza
-  errore** (`gnome.md` §9). Senza quel banco la prova è **verde per costruzione**;
+- ✅ **il tasto e il puntatore DOPO il riattacco a misura diversa** — ⭐ **chiuso il 16 agosto 2026, e
+  l'ha chiuso l'utente senza saperlo.** Il timore era misurato: al cambio di geometria **`libei`
+  distrugge e ricrea i dispositivi assoluti** (`[M]` 15 ago, *«il puntatore è stato TOLTO dal
+  compositore, ricambio n. 640»*), e il puntatore al dispositivo vecchio smette di funzionare **senza
+  errore** (`gnome.md` §9) ⇒ la prova sarebbe stata **verde per costruzione**.
+
+  `[M]` **E il ricambio è avvenuto davvero**, al ridimensionamento verso `1240x622`:
+
+  ```
+  17:11:00.918  il puntatore e' stato TOLTO dal compositore (ricambio n. 1)
+  17:11:00.918  il puntatore e' stato TOLTO dal compositore (ricambio n. 2)
+  ```
+
+  ⭐ **Un minuto dopo, alla misura nuova, l'utente ha aperto il menu di sistema col mouse e premuto
+  «Log Out»** (`17:12:05.742 §7.6: prova ha chiesto di USCIRE`, e la sua schermata mostra il menu
+  aperto): un bersaglio piccolo, nell'angolo. ⇒ **I clic finiscono dove punta, dopo il ricambio dei
+  dispositivi.** E lo stesso nell'altro verso, verso `2544x926`: `[M]` alle `17:13:09` trenta
+  `PUNTATORE` con coordinate fino a `2509`, coerenti con la tela nuova.
+
+  ⚠ **Quel che questa prova NON è**: un banco. È una misura su gesti veri, e vale per Mutter su
+  questa macchina. ⇒ Il banco resta desiderabile, ma non è più l'unica cosa che sta fra noi e il
+  sapere;
 - ⚠ **che fine fanno le finestre aperte** quando la tela rimpicciolisce e poi torna grande. È un
   comportamento del compositore, non nostro: va **dichiarato** dopo averlo guardato, non sperato;
 - **la tabella dei compositori**, che è la parte «studia bene i compositori» del punto:
@@ -570,7 +586,12 @@ regola udev regge anche su una sessione che nasce da sola.
 
 ⚠ **Il prezzo, dichiarato**: dal primo attacco al primo fotogramma passano **~32 secondi**, ed è
 l'avvio a freddo di `gnome-session`. Succede una volta per sessione, ⛔ ma in quei 32 s il client è
-attaccato e non vede niente — e oggi non gli diciamo perché. ⏳ Da coprire.
+attaccato e non vede niente — e oggi non gli diciamo perché.
+
+> ⭐ **E questo numero è VECCHIO: il 16 agosto l'avvio a freddo misura `[M]` 2353 ms**, non 32 s (vedi
+> §«venti giri dal browser»). ⇒ Il difetto di fondo resta — *mentre aspetti non ti diciamo perché* —
+> ma l'attesa è passata da mezzo minuto a due secondi e mezzo, e con essa l'urgenza. ⏳ Da coprire,
+> non da correre.
 
 ### 15 agosto 2026, 20:50 UTC — ⛔⛔ «il terminale è congelato finché non muovo il mouse»
 
