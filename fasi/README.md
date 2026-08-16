@@ -16,6 +16,42 @@ Il modello sta in `../PIANO.md` §0.2. Le quattro regole, in breve:
 
 ---
 
+> # ⛔⛔ I RAPPORTI DEGLI AGENTI NON SONO PIÙ SU DISCO — *16 agosto 2026*
+>
+> *Decisione dell'utente: «elimina i rapporti degli agenti: non dovrebbero servire più».*
+>
+> `fasi/rapporti/` e `web/rapporti/` — **94 file, 42 900 righe**, il 63 % di tutto quel che il
+> progetto aveva scritto — sono stati tolti.
+>
+> ## ⭐ Ma NON sono persi, e questo è il punto: come si recupera uno
+>
+> Sono usciti con `git rm`, quindi la storia li ha per intero. **L'ultimo commit in cui vivono è
+> `0c85e5c`**, e da lì si tira fuori qualunque rapporto senza rimetterlo su disco:
+>
+> ```
+> git show 0c85e5c:fasi/rapporti/F3-E-anello-rimisurato.md | less     # leggerne uno
+> git show 0c85e5c --stat -- fasi/rapporti | head -100                # vedere l'elenco
+> git checkout 0c85e5c -- fasi/rapporti/F4-O2-anello-input.md         # riportarne uno su disco
+> ```
+>
+> ## ⚠ E il prezzo, misurato prima di toglierli invece che scoperto dopo
+>
+> ⛔ **169 rimandi** dai documenti che restano puntavano dentro quei rapporti, verso **50 file
+> diversi**. Quei rimandi adesso nominano un file che su disco non c'è — ⭐ **e restano risolvibili**
+> con le tre righe qui sopra, perché il nome nel rimando è ancora il nome nella storia.
+>
+> ⚠ **I tre più citati**, perché sono quelli che qualcuno cercherà per primo:
+> `web/rapporti/S-esiti-sonda.md` (18 rimandi — ⛔ e non era un rapporto, erano **gli esiti misurati
+> della sonda del browser**, con la scena accanto a ogni numero), `F5-desktop-vero.md` e
+> `F2-6-giudizio.md` (9 ciascuno).
+>
+> ⇒ ⛔ **La regola che questo tocca è `LEZIONI.md` §9.8**, *«la fonte sta accanto alla misura»*: la
+> fonte **c'è ancora**, ma adesso sta in un commit invece che in un file. Chi cita un numero
+> misurato da qui in avanti lo sappia — e il posto giusto per un numero che deve sopravvivere è **il
+> documento di fase**, non il rapporto che lo ha prodotto.
+
+---
+
 ## ✅ Il `05` c'è, ed è chiuso — 16 agosto 2026
 
 `fasi/05-la-sessione.md`, aperto il 15 agosto **col suo documento e prima di una riga di codice**, e
