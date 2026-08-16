@@ -197,6 +197,15 @@ struct corpo_palco {
 struct corpo_tela {
 	uint32_t voluta_l, voluta_a;
 	uint32_t avuta_l, avuta_a;
+	/* ⭐⭐ «NON ANCORA» — 16 agosto 2026, e non e' un terzo numero: e' un terzo
+	 *     FATTO.  `avuta = 0x0` vuol dire «non ce l'ho fatta»; il silenzio
+	 *     voleva dire «sto ancora provando», ⛔ e il padre lo DEDUCEVA — cioe'
+	 *     non lo sapeva.  `LEZIONI.md` §7.5: una deduzione al posto di un
+	 *     messaggio e' un difetto che aspetta.
+	 *
+	 * ⇒ Con questo bit il padre RIMANDA il fondo di §7.1 invece di rispondere
+	 *   `NON_ORA` a una domanda che sta per avere una risposta vera. */
+	uint32_t attendi;
 };
 
 /* ⛔ Che cosa il padre chiede al palco.  ⚠ `codec` a **0** vuol dire «smetti di
@@ -322,6 +331,8 @@ struct figli {
 	char percorso_mio[512]; /* /proc/self/exe risolto, per l'`exec` */
 	FiglioSessioneFinita su_sessione_finita;
 	void *ctx_sessione_finita;
+	FiglioTelaAttendi su_tela_attendi;
+	void *ctx_tela_attendi;
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
 	FiglioCursore cursore;
@@ -1349,6 +1360,20 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
+		/* ⭐⭐ «ATTENDI» prima di tutto: non e' una risposta, e' la notizia che
+		 *     una risposta sta arrivando.  ⛔ Trattarla come le altre farebbe
+		 *     scattare il ramo «non ce l'ha fatta» — cioe' proprio la deduzione
+		 *     che questo messaggio esiste per togliere. */
+		if (c.attendi) {
+			registro_dice(REG_FIGLIO,
+			              "«%s»: il palco per la tela %ux%u non c'e' ANCORA — "
+			              "il fondo di §7.1 si rimanda",
+			              g->utente, c.voluta_l, c.voluta_a);
+			if (f->su_tela_attendi)
+				f->su_tela_attendi(f->ctx_tela_attendi, g->utente, g->uid,
+				                   c.voluta_l, c.voluta_a);
+			return true;
+		}
 		/* ⛔⭐ §7.1 — LA RISPOSTA ALLA TELA, e il padre non la INDOVINA piu' dai
 		 *     fotogrammi: porta la misura CHIESTA (per riconoscere a quale
 		 *     richiesta risponde) e quella AVUTA (`0x0` = non ce l'ha fatta).
@@ -1700,6 +1725,14 @@ bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
 /* ⭐ §7.6 — e delega a `figli_input()` come `figli_ritela()`, per la stessa
  * ragione: una busta sola sul filo fra padre e figlio.  ⛔ Ma col nome suo,
  * perche' i mestieri sono due e chi legge `main.c` deve vedere la catena. */
+void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx)
+{
+	if (!f)
+		return;
+	f->su_tela_attendi = fn;
+	f->ctx_tela_attendi = ctx;
+}
+
 void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
 {
 	if (!f)
@@ -1877,10 +1910,29 @@ static uint32_t tela_voluta_l, tela_voluta_a;
 /* La risposta di §7.1 al padre.  ⛔ `avuta_l == 0` = «non ce l'ho fatta», ed e'
  * un fatto diverso da «ci sto provando»: senza questa riga il padre aspetterebbe
  * il fondo dei tre secondi per sapere una cosa che qui si sa subito. */
+/* ⭐ «ATTENDI»: il palco non c'e' ANCORA, e la domanda avra' una risposta vera.
+ * ⛔ Non e' `0x0` — quello e' «non ce l'ho fatta» — ed e' il messaggio che
+ *    toglie al padre una deduzione (`LEZIONI.md` §7.5). */
+static void attendi_tela(uint32_t voluta_l, uint32_t voluta_a)
+{
+	struct corpo_tela c;
+	memset(&c, 0, sizeof c);
+	c.voluta_l = voluta_l;
+	c.voluta_a = voluta_a;
+	c.attendi = 1;
+	if (!manda(MSG_TELA, &c, sizeof c, NULL, 0))
+		registro_dice(REG_FIGLIO,
+		              "⛔ l'«attendi» sulla tela (%ux%u) non e' partito (%s): il "
+		              "padre fara' scadere il fondo di §7.1 su una domanda che "
+		              "stava per avere una risposta",
+		              voluta_l, voluta_a, strerror(errno));
+}
+
 static void rispondi_tela(uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
                           uint32_t avuta_a)
 {
 	struct corpo_tela c;
+	memset(&c, 0, sizeof c);
 	c.voluta_l = voluta_l;
 	c.voluta_a = voluta_a;
 	c.avuta_l = avuta_l;
@@ -2102,11 +2154,28 @@ static uint32_t tenuto_input;
 #define PALCO_RIPROVA_MIN_MS 1000
 #define PALCO_RIPROVA_MAX_MS 30000
 
-/* ⚠ Quanto si aspetta prima di ri-chiedere la NASCITA della sessione grafica.
- *   Un minuto, e il numero viene dal fatto: `gnome-session` ci mette qualche
- *   secondo a comparire sul bus, e i nostri ri-tentativi vanno da 1 a 30 s —
- *   senza briglia ne avvieremmo una a ogni giro. */
-#define NASCITA_BRIGLIA_MS 60000
+/*
+ * ⚠ Quanto si aspetta prima di ri-chiedere la NASCITA della sessione grafica.
+ *
+ * ⛔⛔ ERA UN MINUTO, ED ERA IL DIFETTO — 16 agosto 2026.  Il ragionamento
+ *     («`gnome-session` ci mette qualche secondo, e senza briglia ne
+ *     avvieremmo una a ogni giro») era giusto; ⛔ il numero no.
+ *
+ * `[M]` Dopo un logout il gestore d'utente si sta ancora spegnendo, e la
+ * sessione che avviamo in quell'istante **muore con lui**.  Con la briglia a un
+ * minuto il figlio non riprovava per sessanta secondi: il client aspettava,
+ * non vedeva niente e se ne andava.  ⇒ Un giro sì e uno no, che e' esattamente
+ * il ritmo che l'utente ha visto cinque volte di fila.
+ *
+ * ⭐ Dodici secondi: piu' del tempo che `gnome-session` ci mette a comparire sul
+ *    bus (`[M]` 3 s sulla macchina di prova, con margine per una macchina
+ *    carica), e abbastanza poco perche' un avvio fallito si recuperi mentre chi
+ *    guarda e' ancora li'.
+ *
+ * ⚠ E la briglia resta necessaria: senza, un ri-tentativo ogni secondo
+ *   avvierebbe dieci `gnome-session` prima che il primo si faccia vedere.
+ */
+#define NASCITA_BRIGLIA_MS 12000
 
 /*
  * ⛔⭐ «L'UTENTE E' USCITO»: il terzo stato, e senza di lui il figlio RIFA' la
@@ -2564,6 +2633,18 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	uint64_t istante_us;
 	MutterSessione *mut = NULL;
 	Cattura *cat = NULL;
+
+	/*
+	 * ⭐ E PRIMA DI TUTTO: se qualcuno sta aspettando una tela, glielo si dice.
+	 *
+	 * ⛔ Montare il palco dura SECONDI — la sessione che nasce, `ScreenCast`,
+	 *    la negoziazione di PipeWire — e in tutto quel tempo questa funzione
+	 *    non manda niente.  ⚠ Il fondo di §7.1 e' tre secondi: senza questa
+	 *    riga scadrebbe **dentro** il montaggio, cioe' proprio mentre la
+	 *    risposta si sta preparando.
+	 */
+	if (tela_l && tela_a)
+		attendi_tela(tela_l, tela_a);
 
 	memset(&p, 0, sizeof p);
 	/* ⛔ «Non ho potuto guardare» e' il valore di PARTENZA, non «sana»: con lo
@@ -3457,13 +3538,66 @@ void figlio_vive(int argc, char **argv)
 					tela_voluta_a = (uint32_t)ci.b;
 
 					if (!cat) {
+						/*
+						 * ⛔⛔ E QUI SI TACE, DI PROPOSITO — e fino al 16 agosto
+						 *     2026 si rispondeva «non ce l'ho fatta» subito.
+						 *
+						 * ⭐ Quella risposta sembrava una gentilezza — «lo dico
+						 *    subito invece di farlo aspettare» — ⛔ ed era la
+						 *    causa delle BANDE NERE viste dall'utente il 16
+						 *    agosto, per una catena in quattro passi:
+						 *
+						 *      1. il client chiede 2544x926 mentre il palco non
+						 *         c'e' ancora (server appena riavviato);
+						 *      2. rispondiamo `NON_ORA`, e `rcp.c` CHIUDE la
+						 *         richiesta: `tela_volo = false`;
+						 *      3. `[M]` 2,2 s dopo il palco monta — e monta alla
+						 *         misura VOLUTA, che ci siamo ricordati qui
+						 *         sopra: 2544x926, giusta;
+						 *      4. ⛔ ma per `rcp.c` non c'e' piu' nessuna
+						 *         richiesta in volo: vede un fotogramma di
+						 *         misura diversa dalla tela in vigore e
+						 *         **riporta il palco a 1920x1080**.  Bande.
+						 *
+						 * ⇒ «Non ce l'ho fatta» e «non ancora» sono due fatti
+						 *   diversi (`CODER.md` §3.10, e la stessa forma per cui
+						 *   lo zero non e' il fallimento).  Qui il palco non ha
+						 *   fallito: NON C'E'.  E §7.1 ha gia' la risposta
+						 *   giusta per questo caso — il fondo di tre secondi —
+						 *   ⭐ e la risposta vera arriva col FOTOGRAMMA, che e'
+						 *   esattamente quel che succede quando il palco monta
+						 *   alla misura voluta.
+						 *
+						 * ⚠ Il prezzo, dichiarato: se il palco NON monta entro i
+						 *   tre secondi, il client aspetta il fondo invece di
+						 *   saperlo subito.  ⛔ Tre secondi di attesa valgono
+						 *   meno delle bande nere per tutta la sessione.
+						 */
 						registro_dice(REG_FIGLIO,
-						              "§7.1: il padre chiede la tela %ux%u ma non "
-						              "c'e' nessun palco da ridimensionare: lo "
-						              "DICO subito invece di farlo aspettare, e la "
-						              "misura resta voluta per il rimontaggio",
+						              "§7.1: il padre chiede la tela %ux%u ma il "
+						              "palco non c'e' ANCORA: gli dico «ATTENDI», "
+						              "e riprovo SUBITO invece di finire l'attesa "
+						              "— c'e' qualcuno che aspetta",
 						              (unsigned)ci.a, (unsigned)ci.b);
-						rispondi_tela(tela_voluta_l, tela_voluta_a, 0, 0);
+						attendi_tela(tela_voluta_l, tela_voluta_a);
+						/*
+						 * ⛔⭐ E L'ATTESA SI AZZERA — 16 agosto 2026, e senza
+						 *     questa riga l'«attendi» non serviva a niente.
+						 *
+						 * `[M]` Il fondo di §7.1 veniva rimandato di tre
+						 * secondi UNA VOLTA, e poi il figlio taceva: fra un
+						 * tentativo e l'altro l'attesa raddoppia (1, 2, 4, 8
+						 * s…), e in quel silenzio il fondo scadeva lo stesso.
+						 *
+						 * ⇒ Una richiesta di tela e' la notizia che **qualcuno
+						 *   sta aspettando**: l'attesa che cresce serve a non
+						 *   bruciare un nucleo quando non guarda nessuno, non
+						 *   a far aspettare chi guarda.  ⚠ E cosi' il prossimo
+						 *   giro manda un altro «attendi», e il fondo si
+						 *   rimanda finche' il palco non c'e' davvero.
+						 */
+						palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+						palco_riprova_ms = 0;
 						continue;
 					}
 					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
@@ -3700,6 +3834,20 @@ void figlio_vive(int argc, char **argv)
 					              "apposta: senza, questo ciclo scrive gigabyte "
 					              "di registro e brucia un nucleo",
 					              (unsigned long long)palco_attesa_ms);
+					/*
+					 * ⭐⭐ E SI CONTINUA A DIRE «ATTENDI» — 16 agosto 2026, e
+					 *     senza questa riga la cura di prima non serviva a
+					 *     niente: dirlo UNA VOLTA sposta il fondo di §7.1 di
+					 *     tre secondi da adesso, e `[M]` il palco ci ha messo
+					 *     CINQUE secondi a montare dopo un logout.
+					 *
+					 * ⇒ Finche' c'e' una misura voluta e un palco che non c'e',
+					 *   il padre deve sapere a ogni giro che qualcuno ci sta
+					 *   ancora provando.  ⚠ E' l'opposto del silenzio: chi tace
+					 *   fa dedurre, e la deduzione era il difetto.
+					 */
+					if (tela_voluta_l && tela_voluta_a)
+						attendi_tela(tela_voluta_l, tela_voluta_a);
 				}
 			}
 		}

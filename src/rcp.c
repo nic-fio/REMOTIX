@@ -2162,6 +2162,41 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	       "disposizione=%s",
 	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
+
+	/*
+	 * ⭐⭐⭐ E IL PALCO LO SA SUBITO — 16 agosto 2026, e senza questa riga il
+	 *      palco nasceva a una misura che nessuno aveva chiesto.
+	 *
+	 * ⛔ IL DIFETTO, e ha tre facce che sembravano tre difetti: il figlio nasce
+	 *    con una tela predefinita (1920x1080) e la cambia solo quando arriva un
+	 *    `ADATTA_TELA`.  Finche' la pagina chiedeva 1920x1080 all'`ATTACCA` e si
+	 *    correggeva subito dopo, quel messaggio arrivava sempre — ⛔ ma era un
+	 *    ballo: ogni sessione nasceva sbagliata e si ridimensionava, e il
+	 *    ridimensionamento e' una gara (il fondo di §7.1, il palco che monta,
+	 *    `libei` che ricrea i dispositivi).  `[M]` si perdeva una volta su tre.
+	 *
+	 * ⇒ Curata la pagina — che adesso chiede la finestra fin dall'`ATTACCA`,
+	 *   come §5.0-sexies dice dal 14 agosto — il ballo e' sparito **e con lui
+	 *   il messaggio**: non c'e' piu' niente da correggere, quindi nessuno
+	 *   diceva piu' al figlio quanto e' grande la tela.  ⭐ Il palco nasceva a
+	 *   1920x1080 e i fotogrammi si buttavano tutti.
+	 *
+	 * ⇒ ⭐ Lo dice il SERVER, qui, nell'istante in cui la tela e' decisa.  E'
+	 *   il posto giusto per una ragione che vale oltre questo caso: **chi
+	 *   decide un numero e' chi deve dirlo a chi lo usa**.  Prima lo diceva il
+	 *   client di rimbalzo, e funzionava per accidente.
+	 *
+	 * ⚠ E non e' un `ADATTA_TELA` mascherato: non risponde a nessun messaggio e
+	 *   non manda niente sul filo.  Se il palco quella misura ce l'ha gia' — il
+	 *   ri-attacco — il figlio risponde «ce l'ho gia'» e non succede niente.
+	 */
+	if (s->g.ritela) {
+		reg(s, "⭐ §4.5: dico al palco che la tela di questa sessione e' %ux%u — "
+		       "cosi' nasce gia' cosi' invece di nascere a una misura sua e "
+		       "doverla cambiare (e il cambio e' una gara)",
+		    tl, ta);
+		s->g.ritela(s->g.ctx, tl, ta);
+	}
 	return true;
 }
 
@@ -2623,6 +2658,23 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 	 *    grafica, o il fotogramma in ritardo di una richiesta gia' scaduta.  ⇒ Si
 	 *    RICHIEDE la tela in vigore, e non si adotta niente. */
 	tela_richiama_il_palco(s, ora_ms);
+}
+
+bool rcp_tela_rimanda(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
+                      uint64_t ora_ms)
+{
+	if (!s || !s->tela_volo)
+		return false;
+	if (voluta_l != s->tela_volo_l || voluta_a != s->tela_volo_a)
+		return false;
+	/* ⭐ Si sposta l'inizio, non si allunga il fondo: cosi' il tetto di §7.1
+	 *    resta quello, e vale da quando c'e' davvero qualcuno che prova. */
+	s->tela_volo_da = ora_ms;
+	reg(s, "§7.1: il palco non c'e' ANCORA per la tela %ux%u — il fondo di %u ms "
+	       "si RIMANDA invece di rispondere NON_ORA a una domanda che sta per "
+	       "avere una risposta vera",
+	    voluta_l, voluta_a, (unsigned)RCP_TELA_ATTESA_MS);
+	return true;
 }
 
 bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)

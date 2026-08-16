@@ -280,6 +280,12 @@ void wt_termina_gancio(wt_termina_richiesta f, void *ctx);
 size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
                          const wt *tranne);
 
+/* ⭐ §7.1 — «il palco non c'e' ANCORA»: rimanda il fondo dei tre secondi sulle
+ * sessioni di quell'utente che stanno aspettando proprio quella misura.  ⛔ Non
+ * manda niente sul filo: sposta una scadenza, e toglie al padre una deduzione
+ * (`LEZIONI.md` §7.5). */
+void wt_tela_rimanda(const char *utente, uint32_t voluta_l, uint32_t voluta_a);
+
 /* ⭐⭐ E LA RISPOSTA RIENTRA DI QUI — §7.1.  La manda il figlio (`FiglioTela`) e
  *     `main.c` la porta fin qui, perche' e' questo modulo che sa quali sessioni
  *     sono di quell'utente.

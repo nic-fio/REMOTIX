@@ -470,9 +470,38 @@ async def principale(a) -> int:
             # ⚠ NON si manda niente per accertarsene: il quarto giro misura
             #   l'orologio del SILENZIO, e un byte lo azzererebbe.  Si ascolta e
             #   basta — che e' precisamente il lato che riceve.
-            print(f"   resto attaccato per {a.resta} s")
+            print(f"   resto attaccato per {a.resta} s"
+                  + (f", facendomi sentire ogni {a.vivo} s" if a.vivo else ""))
             try:
-                await asyncio.wait_for(cli.caduto.wait(), timeout=a.resta)
+                if a.vivo:
+                    # ⭐ `--vivo`: si manda una `VISTA` IDENTICA ogni tanto, solo
+                    #    per non farsi staccare dall'orologio del silenzio (§5.3).
+                    #
+                    # ⛔ SPENTO DI SUO, ed e' il punto: il comportamento
+                    #    predefinito — tacere — serve a MISURARE quell'orologio, e
+                    #    il commento qui sopra lo dice dal 10 agosto.  ⚠ Chi lo
+                    #    accende sta misurando un'altra cosa: la scena in cui il
+                    #    client c'e' e lavora, che e' quella del browser vero.
+                    #
+                    # ⚠ E `VISTA` con gli stessi numeri e' un no-op semantico: non
+                    #   cambia niente, e' lecita a sessione attiva (§7.1), e non
+                    #   chiede niente al palco — a differenza di `RICHIEDI_CHIAVE`,
+                    #   che gli farebbe rifare una chiave e falserebbe la misura.
+                    scaduto = asyncio.get_event_loop().time() + a.resta
+                    while asyncio.get_event_loop().time() < scaduto:
+                        quanto = min(a.vivo, scaduto - asyncio.get_event_loop().time())
+                        try:
+                            await asyncio.wait_for(cli.caduto.wait(), timeout=quanto)
+                            break
+                        except asyncio.TimeoutError:
+                            pass
+                        cli.manda(inquadra(0x0008,
+                                           struct.pack("!II", a.larghezza,
+                                                       a.altezza)))
+                    if not cli.caduto.is_set():
+                        raise asyncio.TimeoutError
+                else:
+                    await asyncio.wait_for(cli.caduto.wait(), timeout=a.resta)
             except asyncio.TimeoutError:
                 # ⛔ La bandiera si alza PRIMA di uscire: uscendo di qui
                 #    `connect()` chiude la connessione, e l'evento che ne segue
@@ -564,6 +593,9 @@ if __name__ == "__main__":
     p.add_argument("--disposizione", default="it")
     p.add_argument("--registra")
     p.add_argument("--resta", type=float, default=0)
+    # ⭐ Ogni quanti secondi farsi sentire (0 = mai, ed e' il predefinito:
+    #    tacere e' quel che serve a misurare l'orologio del silenzio).
+    p.add_argument("--vivo", type=float, default=0)
     p.add_argument("--segnale",
                    help="file da scrivere quando la sessione e' aperta")
     a = p.parse_args()

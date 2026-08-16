@@ -94,6 +94,11 @@
 #define SESSIONE_COMANDO_GNOME "exec gnome-session --session=gnome"
 #define SESSIONE_UNITA_SHELL "org.gnome.Shell@wayland.service"
 #define SESSIONE_UNITA_GESTORE "gnome-session-manager@gnome.service"
+/* ⛔ E la SECONDA unita' da aspettare: quando una sessione GNOME finisce, GNOME
+ * RIAVVIA il bus di sessione con questa.  Una sessione nuova avviata mentre gira
+ * nasce su un bus che sta per essere sostituito — e muore senza scrivere niente
+ * (`[M]` 16 agosto 2026: il suo registro resta a zero byte). */
+#define SESSIONE_UNITA_DBUS "gnome-session-restart-dbus.service"
 
 /*
  * ⛔ IL MONITOR SI SCEGLIE PER NOME, E IL NOME E' QUESTO.

@@ -1238,14 +1238,32 @@ function dichiara(sondaggio, scelto) {
  *    (`P2-6` §3: dall'accensione al deposito ~330 ms), e restano sotto la
  *    pazienza di chi guarda uno schermo bianco. */
 const ATTESA_PRIMO_FOTOGRAMMA_S = 6;
+/* ⭐ Quanto si aspetta prima di richiedere una tela rifiutata con `NON_ORA`.
+   ⚠ Quattro secondi: piu' del fondo di §7.1 (tre), perche' se il palco sta
+     arrivando deve avere il tempo di arrivare — `[M]` 2,2 s il 16 ago 2026. */
+const TELA_RICHIESTA_RIPETI_MS = 4000;
+let tela_richiesta_ripetuta = false;
 function veglia_primo_fotogramma(schermo, chiesta, concessa, codec) {
   const t0 = performance.now();
+  /* ⭐⭐ E SI DICE SUBITO, non dopo sei secondi — 16 agosto 2026, dal giudizio
+     dell'utente: «al secondo login il desktop ricompare dopo molti secondi».
+
+     `[M]` Nove secondi, misurati: dopo un logout la sessione grafica NON C'E'
+     PIU', e il login successivo la fa nascere da zero — `gnome-session` ci mette
+     quel che ci mette.  ⛔ Il difetto non e' l'attesa: e' che in quei nove
+     secondi la pagina **sapeva** che il desktop stava arrivando e taceva.
+     ⚠ Un'attesa dichiarata e' un'attesa; un'attesa muta e' un guasto. */
+  DICHIARAZIONI.video = "Collegato. Il desktop sta arrivando…\n"
+    + "Se è il primo accesso dopo un riavvio o dopo un'uscita, la sessione "
+    + "grafica sta nascendo adesso e ci mette qualche secondo: comparirà da sé.";
+  dichiarazione_scrivi();
   const id = setInterval(() => {
     if (schermo.conti.dipinti > 0) {
       clearInterval(id);
       /* ⭐ E quando arriva, la dichiarazione si TOGLIE: un avviso che resta
          dopo che il fatto e' passato insegna a non leggerlo. */
-      if (DICHIARAZIONI.video.indexOf("Nessun fotogramma") === 0) {
+      if (DICHIARAZIONI.video.indexOf("Nessun fotogramma") === 0
+          || DICHIARAZIONI.video.indexOf("Collegato.") === 0) {
         DICHIARAZIONI.video = "";
         dichiarazione_scrivi();
       }
@@ -3148,9 +3166,35 @@ async function collega(utente, parola) {
   nota("AMMESSO");
 
   /* ── ATTACCA (§4.5) ─────────────────────────────────────────────────── */
-  /* ⛔ I limiti sono normativi: fra 320×240 e 7680×4320, ed entrambe PARI. */
-  const pari = (n, min, max) => Math.max(min, Math.min(max, n - (n % 2)));
-  const tela_l = pari(1920, 320, 7680), tela_a = pari(1080, 240, 4320);
+  /* ⛔⭐⭐ LA TELA E' LA FINESTRA, E LO SI DICE SUBITO — 16 agosto 2026.
+   *
+   * ⛔ QUI C'ERA `1920×1080` FISSO, e ha retto un giorno solo.  La pagina
+   *    sapeva gia' quanto e' larga la finestra — la misura due righe piu' giu'
+   *    per la `vista` — e chiedeva lo stesso una tela che non c'entrava
+   *    niente, salvo poi correggersi subito con un `ADATTA_TELA`.
+   *
+   * ⇒ OGNI SESSIONE NASCEVA CON LA TELA SBAGLIATA E POI SI RIDIMENSIONAVA.
+   *   Finche' il palco esisteva gia' — un ri-attacco — non si vedeva: il
+   *   server concedeva la misura che il palco aveva (`tela_del_palco`).  ⛔ Ma
+   *   da quando la sessione NASCE (dopo un logout, dopo un riavvio) il palco
+   *   nasce a 1920×1080 e va ridimensionato, e quel ridimensionamento e' una
+   *   gara: il fondo di tre secondi di §7.1, il palco che monta, `libei` che
+   *   distrugge e ricrea i dispositivi.  `[M]` 16 agosto: la gara si perdeva
+   *   una volta su tre, e i sintomi erano tre facce dello stesso fatto —
+   *   bande nere, desktop «rotto», e input che non arriva (perche' la regione
+   *   del puntatore torna a 1920×1080 mentre la pagina manda coordinate in
+   *   2544×926).
+   *
+   * ⭐ Chiedendo SUBITO la misura giusta il palco nasce gia' cosi': niente
+   *    ridimensionamento, niente ricambio di dispositivi, niente gara.  Ed e'
+   *    esattamente quel che `DECISIONI.md` §5.0-sexies dice dal 14 agosto —
+   *    «la tela e' la finestra» — applicato anche al primo istante.
+   *
+   * ⚠ E i limiti restano normativi: `tela_da_chiedere()` li applica gia' (fra
+   *   320×240 e 7680×4320, entrambe PARI), ed e' la STESSA funzione che usa il
+   *   ridimensionamento — due regole sulla stessa misura diventerebbero due
+   *   regole diverse il giorno in cui una cambia. */
+  const [tela_l, tela_a] = tela_da_chiedere();
   /* ⛔ La vista si misura in UN posto solo — `misura_vista()`, la stessa che
      usa il ridimensionamento.  ⚠ Qui c'era `innerWidth × devicePixelRatio`, che
      conta anche la barra di scorrimento: si dichiarava al server una vista piu'
@@ -3454,7 +3498,11 @@ async function ascolta_controllo(canale, congeda) {
     const l = new Lettore(m.corpo);
     if (m.tipo === TIPO.CONGEDO) {
       const mot = l.u8();
-      esito(MOTIVO[mot] || ("congedato, motivo 0x" + mot.toString(16)), false);
+      /* ⚠ `0x10` NON e' un errore e non si dipinge come tale: e' l'esito di un
+         gesto che l'utente ha chiesto e confermato.  ⛔ Vestire di rosso una
+         cosa riuscita insegna a non fidarsi del rosso. */
+      esito(MOTIVO[mot] || ("congedato, motivo 0x" + mot.toString(16)),
+            mot === 0x10);
       /* ⭐⭐ §7.6 e `DECISIONI.md` §4.1-quater — «dopo il logout la pagina torna
          al modulo di accesso», deciso dall'utente il 15 agosto 2026.
          ⛔ E NON una schermata di chiusura: quella sarebbe un vicolo cieco da
@@ -3498,6 +3546,37 @@ async function ascolta_controllo(canale, congeda) {
            attesa di questo `TELA` vanno rigiudicati adesso — o restano in mano
            per sempre. */
         schermo.tela_rifiutata();
+        /* ⭐⭐ E SI RICHIEDE UNA VOLTA, dopo qualche secondo — 16 agosto 2026,
+           dalle BANDE NERE viste dall'utente.
+
+           ⛔ `NON_ORA` col motivo 3 vuol dire spesso «non ancora»: `[M]` il
+              palco non c'era perche' il server era appena ripartito, ed e'
+              montato 2,2 s dopo — alla misura giusta.  ⚠ Ma la richiesta era
+              gia' stata chiusa da quel rifiuto, e da li' in poi i due lati non
+              si rimettevano piu' d'accordo: il server riportava il palco alla
+              tela in vigore, e l'utente guardava un desktop piu' piccolo della
+              finestra per tutta la sessione.
+
+           ⭐ La cura sta dalla parte del CLIENT, e non e' un caso: `ADATTA_TELA`
+              e' una richiesta del client, quindi rifarla e' sempre lecito —
+              mentre un server che adottasse una misura di sua iniziativa
+              manderebbe un `TELA` che nessuno ha chiesto, e §6.2 fa chiudere
+              la sessione per quello.
+
+           ⚠ UNA VOLTA SOLA, e non un ciclo: se il compositore davvero non sa
+             ridimensionare (KWin ≤ 6.7.4, `DECISIONI.md` §5.0-bis) insistere
+             non lo insegna, e il ripiego dichiarato e' proprio tenersi la tela
+             vecchia. */
+        if (!tela_richiesta_ripetuta) {
+          tela_richiesta_ripetuta = true;
+          setTimeout(() => {
+            /* ⚠ `chiedi_tela()` decide DA SE' la misura e non chiede niente se
+               non c'e' niente da chiedere: qui non si duplica quel giudizio —
+               due regole sullo stesso fatto diventano due regole diverse il
+               giorno in cui una cambia. */
+            if (chiedi_tela) chiedi_tela("il NON_ORA poteva essere un «non ancora»");
+          }, TELA_RICHIESTA_RIPETI_MS);
+        }
       }
       continue;
     }
@@ -3945,8 +4024,40 @@ let logout_in_corso = false;
  *    si torna a quella, non a una qualunque.
  */
 function torna_al_modulo() {
+  /* ⛔⭐ QUATTRO COSE, E LA PRIMA VERSIONE NE FACEVA UNA SOLA — difetto visto
+   *     dall'utente il 16 agosto 2026: «si viene rinviati alla finestra di
+   *     login, ma questa e' sballata».
+   *
+   *     Svuotavo la tela e basta.  ⚠ Ma al primo fotogramma la pagina si mette
+   *     ADDOSSO un vestito — `data-schermo="acceso"` — e il foglio di stile la
+   *     trasforma in un desktop a tutta finestra: `main` senza larghezza
+   *     massima, sfondo nero, colonna flessibile.  ⇒ Il modulo di accesso
+   *     tornava dentro quel vestito: campi larghi quanto lo schermo, tutto
+   *     nero, il titolo perso.
+   *
+   * ⭐ La regola generale, che vale oltre questo caso: **chi accende uno stato
+   *    e' lo stesso che deve saperlo spegnere**.  Un ritorno che ripristina
+   *    meta' delle cose e' peggio di un ritorno che non c'e', perche' sembra
+   *    riuscito. */
+
+  /* 1. il vestito da desktop se ne va: e' quel che l'utente ha visto. */
+  delete document.body.dataset.schermo;
+
+  /* 2. ⛔ E IL PUNTATORE SI LIBERA, o il modulo non si puo' nemmeno compilare:
+   *    con la Pointer Lock attiva il mouse resta catturato dalla tela, e chi
+   *    guarda vede un cursore che non arriva ai campi. */
+  try { if (document.pointerLockElement) document.exitPointerLock(); }
+  catch (e) { /* un motore che non ce l'ha: non e' un guasto */ }
+
+  /* 3. ⚠ E si esce dallo schermo intero: un modulo di accesso a tutto schermo,
+   *    senza barra del browser, e' una pagina che sembra bloccata. */
+  try { if (document.fullscreenElement) document.exitFullscreen(); }
+  catch (e) { /* idem */ }
+
+  /* 4. la tela torna alla misura con cui nasce nel documento. */
   const tela = $("schermo");
   if (tela) { tela.width = 16; tela.height = 16; }
+
   logout_mostra(false);
   logout_in_corso = false;
   const u = $("utente");

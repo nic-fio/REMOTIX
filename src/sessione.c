@@ -52,6 +52,9 @@
 #define ATTESA_AVVIO_MS 40000
 #define CADENZA_CONTROLLO_MS 500
 #define ATTESA_RISPOSTA_MS 5000
+/* ⚠ Al bus si chiede solo se un nome ha un padrone: risponde il bus stesso, e
+ *   se ci mette piu' di mezzo secondo il problema non e' la sessione grafica. */
+#define ATTESA_NOME_MS 500
 #define ATTESA_USCITA_MS 10000
 
 /*
@@ -156,13 +159,68 @@ GDBusConnection *sessione_bus(GError **sbaglio)
 	return nostro;
 }
 
+/*
+ * ⛔⭐⭐ NON SI FA UNA DOMANDA A CHI NON C'E' — 16 agosto 2026, e questa riga
+ *      chiude il difetto che ha fatto provare cinque volte all'utente.
+ *
+ * `[M]` Il figlio, mentre la sessione grafica NASCE, restava **trenta secondi**
+ * dentro una chiamata sincrona a `GetCurrentState`, e finiva con
+ * *«NoReply: Message recipient disconnected»*.  ⛔ In quei trenta secondi non
+ * riprovava, non rispondeva al padre e non consegnava un fotogramma: il client
+ * si stancava e se ne andava.  ⇒ Il sintomo per l'utente era «il desktop non
+ * compare» oppure «si e' rotto tutto», una volta su tre.
+ *
+ * ⚠ E NON basta accorciare l'attesa: un secondo dentro una chiamata inutile e'
+ *   comunque un secondo in cui questo processo non fa il suo mestiere.  ⭐ La
+ *   domanda giusta e' un'altra, e costa niente: **quel nome ha un padrone?**
+ *   `NameHasOwner` risponde SEMPRE subito, perche' risponde il bus e non un
+ *   servizio che sta nascendo.
+ *
+ * ⇒ Se il padrone non c'e', la risposta e' «la sessione non c'e'» — che e'
+ *   esattamente quel che il chiamante voleva sapere, avuta in un millisecondo
+ *   invece che in trenta secondi.
+ */
+static gboolean nome_ha_padrone(GDBusConnection *bus, const char *nome)
+{
+	g_autoptr(GVariant) risposta = NULL;
+	gboolean c_e = FALSE;
+
+	if (!bus || !nome)
+		return FALSE;
+	risposta = g_dbus_connection_call_sync(
+		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+		"NameHasOwner", g_variant_new("(s)", nome), G_VARIANT_TYPE("(b)"),
+		G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_NOME_MS, NULL, NULL);
+	if (!risposta)
+		return FALSE;
+	g_variant_get(risposta, "(b)", &c_e);
+	return c_e;
+}
+
 /* Una chiamata a Mutter, senza dichiarare il tipo della risposta. */
 static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const char *oggetto,
                                  const char *interfaccia, const char *metodo, GError **sbaglio)
 {
+	if (!nome_ha_padrone(bus, nome)) {
+		/* ⛔⭐ E L'ERRORE E' `NAME_HAS_NO_OWNER`, non uno qualunque: la
+		 *     distinzione fra «non c'e'» (4) e «non ho potuto guardare» (5) esiste
+		 *     gia' in `sessione_stato()`, e si riconosce PROPRIO da questo codice.
+		 *     ⚠ La prima stesura metteva `G_IO_ERROR_NOT_FOUND`, che non combacia:
+		 *     ⛔ e allora ogni sessione risultava «LETTURA IGNOTA», il figlio non
+		 *     la faceva nascere — «gli stati diversi da morta non si toccano» — e
+		 *     `[M]` quattro giri di banco su quattro erano rossi.  Un errore
+		 *     giusto col nome sbagliato e' un errore sbagliato. */
+		g_set_error(sbaglio, G_DBUS_ERROR, G_DBUS_ERROR_NAME_HAS_NO_OWNER,
+		            "«%s» non ha un padrone sul bus: la sessione grafica non c'e' "
+		            "(o sta ancora nascendo).  ⛔ Non si CHIEDE a chi non c'e': la "
+		            "chiamata resterebbe in coda fino al tetto, e questo processo "
+		            "smetterebbe di rispondere per tutto quel tempo",
+		            nome);
+		return NULL;
+	}
 	return g_dbus_connection_call_sync(bus, nome, oggetto, interfaccia, metodo, NULL, NULL,
-	                                   G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL,
-	                                   sbaglio);
+	                                   G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_RISPOSTA_MS,
+	                                   NULL, sbaglio);
 }
 
 bool sessione_viva(void)
@@ -770,7 +828,20 @@ static gboolean avvia(void)
 	if (!ambiente)
 		return FALSE;
 
-	registro = g_build_filename(g_getenv("XDG_RUNTIME_DIR"), "remotix-sessione.log", NULL);
+	/*
+	 * ⛔⭐ IL REGISTRO DELLA SESSIONE NON PUO' STARE IN `XDG_RUNTIME_DIR` — 16
+	 *     agosto 2026, e la ragione e' che quella cartella **muore con la
+	 *     sessione**: quando il gestore d'utente si spegne, logind la porta via.
+	 *
+	 * ⇒ Il caso in cui quel registro serve di piu' — *«la sessione e' partita e
+	 *   e' morta subito, perche'?»* — e' esattamente il caso in cui non c'e'
+	 *   piu'.  `[M]` Cercandolo dopo un avvio fallito si trovava un file vuoto o
+	 *   nessun file.
+	 *
+	 * ⚠ `/tmp` e' del sistema e non dell'utente: sopravvive al gestore, e il
+	 *   nome porta l'uid perche' due utenti non si sovrascrivano a vicenda.
+	 */
+	registro = g_strdup_printf("/tmp/remotix-sessione-%ld.log", (long)getuid());
 	riga = g_strdup_printf("exec >>'%s' 2>&1; %s", registro, SESSIONE_COMANDO_GNOME);
 	argv[4] = riga;
 
@@ -811,10 +882,9 @@ static gboolean esci_gnome(guint32 modo)
  *    difetto 4 della fase 0).  E si guardano DUE cose — l'unita' e il processo —
  *    perche' `Logout` puo' lasciare il gestore vivo.
  */
-static gboolean unita_inattiva(void)
+static gboolean unita_ferma(const char *unita)
 {
-	char *argv[] = { "systemctl", "--user", "is-active", (char *) SESSIONE_UNITA_GESTORE,
-		         NULL };
+	char *argv[] = { "systemctl", "--user", "is-active", (char *)unita, NULL };
 	g_autofree char *stato = chiedi(argv);
 
 	if (!stato)
@@ -822,6 +892,28 @@ static gboolean unita_inattiva(void)
 	g_strstrip(stato);
 	return g_strcmp0(stato, "inactive") == 0 || g_strcmp0(stato, "failed") == 0 ||
 	       g_strcmp0(stato, "unknown") == 0;
+}
+
+static gboolean unita_inattiva(void)
+{
+	/*
+	 * ⛔⭐⭐ DUE UNITA', NON UNA — 16 agosto 2026, e la seconda l'ha nominata il
+	 *      giornale dell'utente dopo mezza giornata di ipotesi:
+	 *
+	 *        «Started gnome-session-restart-dbus.service —
+	 *         **Restart DBus after GNOME Session shutdown**»
+	 *
+	 * ⇒ Quando una sessione GNOME finisce, GNOME **riavvia il bus di sessione**.
+	 *   Una sessione nuova avviata in quella finestra nasce su un bus che sta per
+	 *   essere sostituito, e muore senza scrivere una riga: `[M]` il suo registro
+	 *   e' rimasto **vuoto, zero byte**, ed e' il motivo per cui la causa e'
+	 *   costata tanto — il difetto cancellava le proprie tracce.
+	 *
+	 * ⚠ E' la stessa forma di `SESSIONE_UNITA_GESTORE` qui sotto — «inattiva» e
+	 *   non «non piu' attiva» — applicata a un secondo pezzo che nessuno aveva
+	 *   guardato perche' nessuno sapeva che esistesse.
+	 */
+	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
 static gboolean aspetta_che_finisca(void)
@@ -1141,6 +1233,70 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "⛔ senza il drop-in in vigore non la faccio nascere: "
 		              "nascerebbe col monitor di troppo, e l'utente riguarderebbe "
 		              "uno schermo vuoto");
+		return false;
+	}
+
+	/*
+	 * ⛔⛔⛔ E PRIMA DI TUTTO: IL GESTORE D'UTENTE STA MORENDO? — 16 agosto 2026,
+	 *      ed e' la causa che ha fatto provare cinque volte all'utente.
+	 *
+	 * `[M]` Dopo un logout, `user@<uid>.service` **si spegne**: nel giornale si
+	 * legge *«Finished systemd-exit.service — Exit the Session»*, e con lui se ne
+	 * vanno `dbus.socket`, `pipewire.socket`, `session.slice`.  ⛔ Se in quel
+	 * momento noi lanciamo `gnome-session`, quello parte **dentro una sessione
+	 * che sta morendo** e muore con lei — senza un errore che lo dica.
+	 *
+	 * ⇒ Il sintomo era questo, e sembravano quattro difetti diversi: il desktop
+	 *   che non compare, che compare dopo trenta secondi, che compare «rotto», e
+	 *   l'input che non arriva.  `[M]` La sessione veniva avviata due o tre volte
+	 *   di fila (06:28:33, :46, :59) e solo l'ultima attecchiva.
+	 *
+	 * ⭐ La cura non e' aspettare a tempo: e' CHIEDERE.  Il gestore sa dire di se'
+	 *    «stopping», e finche' lo dice non si fa nascere niente — si torna
+	 *    indietro, e il ciclo dei ri-tentativi riprova fra poco.  ⚠ E' la stessa
+	 *    forma dell'«ATTENDI» di §7.1: **non si chiede a chi non c'e', e non si
+	 *    nasce dove si sta morendo**.
+	 */
+	{
+		char *argv[] = { "systemctl", "--user", "is-system-running", NULL };
+		g_autofree char *stato = chiedi(argv);
+
+		if (stato) {
+			g_strstrip(stato);
+			if (g_strcmp0(stato, "stopping") == 0) {
+				registro_dice(REG_SESSIONE,
+				              "⛔ il gestore d'utente sta SPEGNENDOSI "
+				              "(«stopping»): NON faccio nascere la sessione "
+				              "adesso — nascerebbe dentro una sessione che "
+				              "muore, e morirebbe con lei senza dire perche'.  "
+				              "⭐ Si riprova fra poco");
+				return false;
+			}
+		}
+	}
+
+	/*
+	 * ⛔⭐ E LA VECCHIA DEV'ESSERE FINITA DAVVERO, non «quasi».
+	 *
+	 * `unita_inattiva()` esiste da agosto e porta gia' la lezione giusta nel suo
+	 * commento: *«inattiva» e non «non piu' attiva»: `is-active` passa per
+	 * `deactivating`, e ripartire li' dentro e' un'altra prima esecuzione*.
+	 * ⇒ E' esattamente il nostro caso, visto da un'altra porta: `[M]` 16 agosto,
+	 * il primo avvio dopo un logout falliva perche' il gestore della sessione
+	 * precedente stava ancora chiudendo.
+	 *
+	 * ⚠ Non si aspetta qui dentro: si dice di no e si torna: chi ci chiama ha un
+	 *   ciclo di ri-tentativi che e' fatto apposta, e un'attesa dentro questa
+	 *   funzione sarebbe un figlio che smette di rispondere (`LEZIONI.md`
+	 *   §6.2-bis).
+	 */
+	if (!unita_inattiva()) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ la sessione grafica PRECEDENTE non e' ancora finita "
+		              "(«%s» non e' inattiva): non ne faccio nascere una seconda "
+		              "adesso — nascerebbe dentro quella che muore.  ⭐ Si riprova "
+		              "fra poco",
+		              SESSIONE_UNITA_GESTORE);
 		return false;
 	}
 

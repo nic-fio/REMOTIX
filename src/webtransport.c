@@ -1875,6 +1875,21 @@ size_t wt_sorveglia_locali(void)
 	return congedate;
 }
 
+void wt_tela_rimanda(const char *utente, uint32_t voluta_l, uint32_t voluta_a)
+{
+	uint64_t ora = registro_ora_ms();
+
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		if (!w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !utente || strcmp(mio, utente) != 0)
+			continue;
+		rcp_tela_rimanda(w->rcp, voluta_l, voluta_a, ora);
+	}
+}
+
 size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
                          const wt *tranne)
 {

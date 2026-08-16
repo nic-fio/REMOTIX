@@ -688,6 +688,25 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
  * tempi. */
 bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 
+/* ⭐⭐ «IL PALCO NON C'E' ANCORA»: il fondo di §7.1 si RIMANDA — 16 agosto 2026.
+ *
+ * ⛔ IL DIFETTO CHE CURA, misurato tre volte in una mattina: dopo un logout la
+ *    sessione grafica non c'e' piu', e il login successivo la fa nascere.  Il
+ *    client chiede la sua tela subito; il palco monta cinque secondi dopo — ⛔ ma
+ *    il fondo di `RCP_TELA_ATTESA_MS` scatta a tre, e da quel momento la
+ *    richiesta e' CHIUSA.  Quando il palco arriva alla misura giusta, per questo
+ *    modulo non risponde piu' a niente: lo si rimanda alla tela in vigore, e
+ *    l'utente guarda un desktop piu' piccolo della finestra — le BANDE NERE.
+ *
+ * ⚠ E non e' «alzare il timeout»: e' smettere di DEDURRE.  Il figlio sa se il
+ *   palco non c'e' ancora, e adesso lo dice (`LEZIONI.md` §7.5).  Il fondo
+ *   resta a tre secondi per tutti i casi in cui nessuno ha promesso niente.
+ *
+ * `true` se la richiesta in volo era proprio quella e il fondo e' stato
+ * rimandato.  ⛔ Non manda niente sul filo: sposta solo una scadenza. */
+bool rcp_tela_rimanda(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
+                      uint64_t ora_ms);
+
 /* Per il registro, per il banco e per chi cattura.  ⛔ `false` quando la tela
  * non c'e' ancora, che NON e' «0x0» (§6.0: niente valori sentinella). */
 bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);

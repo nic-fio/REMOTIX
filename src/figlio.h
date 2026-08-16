@@ -208,6 +208,12 @@ typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
  *   gia' quattro richiami, e un quinto parametro in una riga di sei non lo
  *   legge piu' nessuno. */
 typedef void (*FiglioSessioneFinita)(void *ctx, const char *utente, uid_t uid);
+
+/* ⭐ §7.1 — «il palco non c'e' ANCORA»: il figlio lo DICE, e il padre rimanda il
+ * fondo invece di dedurre un fallimento dal silenzio. */
+typedef void (*FiglioTelaAttendi)(void *ctx, const char *utente, uid_t uid,
+                                  uint32_t voluta_l, uint32_t voluta_a);
+void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx);
 void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx);
 
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,

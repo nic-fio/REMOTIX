@@ -465,6 +465,16 @@ static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
 	              utente, quanti);
 }
 
+/* ⭐ §7.1: il palco non c'e' ancora — si rimanda il fondo invece di rispondere
+ *    `NON_ORA` a una domanda che sta per avere una risposta vera. */
+static void tela_attendi_dal_figlio(void *ctx, const char *utente, uid_t uid,
+                                    uint32_t voluta_l, uint32_t voluta_a)
+{
+	(void)ctx;
+	(void)uid;
+	wt_tela_rimanda(utente, voluta_l, voluta_a);
+}
+
 static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
                              uint32_t altezza)
 {
@@ -856,6 +866,7 @@ int main(int argc, char **argv)
 	wt_termina_gancio(termina_al_figlio, &ponte);
 	/* ⭐ E il gemello: il fatto che arriva dal desktop invece che dal filo. */
 	figli_gancio_sessione_finita(prole, sessione_finita_dal_figlio, &ponte);
+	figli_gancio_tela_attendi(prole, tela_attendi_dal_figlio, &ponte);
 
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
