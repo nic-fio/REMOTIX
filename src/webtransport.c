@@ -998,9 +998,16 @@ static int gancio_input_rilascia_tutto(void *ctx)
 	wt *w = (wt *)ctx;
 	/* ⛔⭐ «La regola col rapporto danno/costo piu' alto del documento»
 	 *     (`RCP.md` §11).  ⚠ E il conto di quanti ne ha rilasciati resta al
-	 *     figlio: qui non torna indietro, e si risponde 0 — che vuol dire «la
-	 *     richiesta e' partita», non «non c'era niente». */
-	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0);
+	 *     FIGLIO: qui non torna indietro.
+	 *
+	 * ⛔⛔ E fino al 16 agosto 2026 qui si rispondeva `0` intendendo «la
+	 *      richiesta e' partita» — ma il chiamante lo scriveva nel registro
+	 *      come «0 erano premuti», che e' la faccia del verde su un rilascio
+	 *      mai avvenuto.  ⇒ Adesso si risponde `SENZA_CONTO`, che e' la
+	 *      verita': «fatto, e il numero chiedilo a chi lo sa». */
+	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0) == 0
+	           ? RCP_RILASCIO_SENZA_CONTO
+	           : RCP_RILASCIO_IMPOSSIBILE;
 }
 
 /* ⭐⭐ IL GANCIO DELLA TELA — §7.1, e la catena intera in una riga:

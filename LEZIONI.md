@@ -494,6 +494,32 @@ risultato entra nel documento come un fatto misurato.
 > chiave**, e che sfasciava l'immagine per sempre **in silenzio**. ⇒ *Una caccia partita da un
 > sospetto sbagliato non è tempo perso, purché finisca guardando il codice invece che il verdetto.*
 
+> ### ⭐⭐ La quinta regola: un numero che non si può conoscere non si stampa — 16 agosto 2026
+>
+> *La regola col rapporto danno/costo più alto di `RCP.md` — «al distacco si rilascia ogni tasto
+> premuto» — aveva un unico testimone nel registro, e quel testimone diceva **sempre zero**.*
+>
+> Il gancio `input_rilascia_tutto` prometteva, nel suo contratto: *«restituisce quanti ne ha
+> rilasciati, perché il banco possa contarli»*. ⛔ **Nel prodotto vero quel conto non può esistere
+> lì**: chi tiene la mappa dei tasti premuti è un **altro processo**, e la risposta non torna
+> indietro. Chi cuciva rispondeva `0` intendendo *«la richiesta è partita»*; chi stampava scriveva
+> *«0 fra tasti e pulsanti erano premuti»*.
+>
+> `[M]` Quattro distacchi col tasto e il pulsante davvero giù: la riga diceva `0`, e il figlio —
+> **dieci millisecondi più sotto, nello stesso file** — diceva `2`.
+>
+> 5. ⛔ **Quando chi risponde non può conoscere il numero, la risposta DEVE essere un valore che dice
+>    «non lo so», non uno zero.** Uno zero è una misura; «non lo so» è un'altra cosa, e le due non
+>    devono poter avere la stessa forma. ⭐ La cura è costata tre righe: il conto vero, `SENZA_CONTO`
+>    (*«fatto, e il numero lo sa un altro: cercalo lì»*), `IMPOSSIBILE` (*«non si è potuto chiedere:
+>    se qualcosa era premuto, resta premuto»*).
+>
+> ⚠ **E la ragione per cui questa è la peggiore delle cinque**: le altre quattro fanno leggere male
+> una misura. Questa fa **sembrare a posto una protezione che potrebbe non esserci** — e il modo di
+> fallire della protezione e quel che il registro dichiarava avevano lo **stesso identico aspetto**.
+> ⛔ Il commento che spiegava tutto era scritto, giusto, e a due funzioni di distanza da quella che
+> stampava: **un commento vero nel posto sbagliato non è una difesa.**
+
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
 Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque

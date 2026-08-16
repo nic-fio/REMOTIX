@@ -62,6 +62,12 @@ enum {
 
 typedef struct rcp_sessione rcp_sessione;
 
+/* ⛔⭐ Le due risposte NON-CONTO del gancio `input_rilascia_tutto` (§7.3): la
+ *     ragione per cui esistono e' scritta sul gancio, piu' sotto.  ⚠ Sono
+ *     negative apposta, cosi' un conto vero non puo' mai somigliarci. */
+#define RCP_RILASCIO_SENZA_CONTO (-1)
+#define RCP_RILASCIO_IMPOSSIBILE (-2)
+
 /* I ganci verso chi ospita.  Tre, e nessuno di piu'. */
 typedef struct {
 	void *ctx;
@@ -233,7 +239,29 @@ typedef struct {
 	 *   doppione va coordinato, non subito: vedi il rapporto
 	 *   `fasi/rapporti/F4-A3-filo-input.md`.
 	 *
-	 * Restituisce quanti ne ha rilasciati, perche' il banco possa contarli. */
+	 * ⛔⛔⭐ E LA RISPOSTA HA TRE VALORI, NON UNO — 16 agosto 2026, e l'ha
+	 *      trovata la prima prova col browser di questa regola.
+	 *
+	 *      Diceva «restituisce quanti ne ha rilasciati, perche' il banco possa
+	 *      contarli», e nel prodotto vero quel conto **non puo' esistere qui**:
+	 *      chi preme e chi rilascia e' il FIGLIO, un altro processo, e la
+	 *      risposta non torna indietro.  ⇒ `webtransport.c` rispondeva `0`
+	 *      intendendo «la richiesta e' partita», e `rcp.c` lo scriveva nel
+	 *      registro come «0 erano premuti».
+	 *
+	 *      `[M]` Misurato: quattro distacchi col tasto e il pulsante DAVVERO
+	 *      giu' — la riga diceva `0` e il figlio, due righe sotto, `2`.
+	 *      ⛔ E' `LEZIONI.md` §1.9 nel posto peggiore: la regola col rapporto
+	 *      danno/costo piu' alto del documento aveva l'unico testimone che
+	 *      diceva sempre «non c'era niente giu'», cioe' **la faccia del verde
+	 *      su un rilascio che non fosse avvenuto affatto**.
+	 *
+	 *   `>= 0`                     → il conto VERO (lo sa chi cuce: banchi in
+	 *                                processo, `04-b23`, `04-b24`);
+	 *   `RCP_RILASCIO_SENZA_CONTO` → chiesto, e il conto lo sa UN ALTRO — si
+	 *                                scrive dove cercarlo, non un numero;
+	 *   `RCP_RILASCIO_IMPOSSIBILE` → ⛔ NON si e' potuto chiedere: se qualcosa
+	 *                                era premuto, **resta premuto**. */
 	int (*input_rilascia_tutto)(void *ctx);
 
 	/* ⭐⭐ IL GANCIO DELLA TELA — §7.1 `ADATTA_TELA`, e `DECISIONI.md`

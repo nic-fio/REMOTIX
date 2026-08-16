@@ -240,11 +240,12 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 
 *Dal mandato §3 e §4 — nessuno di questi ha un banco, ed è esattamente il lavoro della fase.*
 
-1. ⛔ **Il rilascio dei tasti al distacco, CON UN TASTO PREMUTO DAVVERO.** `RCP.md` §11 la chiama
-   *«la regola col rapporto danno/costo più alto del documento»*. `[M]` **16 agosto, venti giri col
-   browser**: si legge *«RILASCIO AL DISTACCO: **0** fra tasti e pulsanti»* in tutti e venti — ⛔ cioè
-   la riga si scrive, e non ha mai avuto niente da rilasciare. **La prova non è mai stata fatta.**
-   ⇒ ⭐ **È il prossimo punto.**
+1. ✅ **Il rilascio dei tasti al distacco, CON UN TASTO PREMUTO DAVVERO** — `[M]` **16 agosto,
+   provato col browser su due delle quattro strade, e il testimone è il desktop vero.**
+   `RCP.md` §11 la chiama *«la regola col rapporto danno/costo più alto del documento»*.
+   ⇒ **Regge**, e i tempi sono quelli di §6-bis qui sotto. ⛔ Ma la prova ha trovato **due difetti**,
+   uno chiuso e uno aperto: la riga che diceva sempre `0` (chiusa) e **l'orologio del silenzio**
+   (punto 4, e adesso ha una misura).
 2. ✅ **L'inibizione della sospensione** — `[M]` 16 agosto, **20 giri su 20**: *«sospensione e
    inattività INIBITE al gestore di sessione (flag 12 = SUSPEND\|IDLE — mai LOGOUT)»*. ~~Quel che
    segue resta come cronaca di com'era:~~ `[M]` 15 agosto: la notifica **«Automatic Suspend —
@@ -256,8 +257,11 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 3. ✅ **L'headless si dichiara e si verifica dopo l'avvio** — `[M]` 16 agosto, **20 giri su 20**: il
    figlio scrive *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ Non è più «per
    accidente»: è un fatto letto dal nucleo a ogni sessione.
-4. **I tre orologi, ciascuno col suo banco**: 30 s di silenzio, 30 min di inattività, 6 ore di
-   abbandono. ⚠ Il terzo **incrocia** il punto 2.
+4. ⛔⛔ **I tre orologi**: 30 s di silenzio, 30 min di inattività, 6 ore di abbandono. ⚠ Il terzo
+   **incrocia** il punto 2. ⇒ ⭐ **E il primo è ROTTO, misurato il 16 agosto col browser mentre si
+   provava il punto 1**: conta i secondi in cui *l'utente non tocca niente*, non quelli in cui *il
+   client tace*. **Un secondo dispositivo entra e si prende il desktop di chi sta guardando.**
+   Il racconto e la misura sono in §6-ter; la cura e il suo costo in §4.
 5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*.
 6. ⛔ **La sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
@@ -266,7 +270,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Restano il 1, il 4, il 5 e il 6.**
+⇒ ⭐ **Restano il 4, il 5 e il 6** — e il 4 non è più «da provare»: è **da riparare**.
 
 ---
 
@@ -297,8 +301,10 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 
 | ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
 
-**Aperte:** ⭐ nessuna. ⇒ Il lavoro della fase è quello di §1, §2 e §3, e il prossimo gesto è il
-**banco**, non il codice.
+**Aperte:** ⭐ nessuna — ⛔ **ma dal 16 agosto c'è una RIPARAZIONE in coda, che non è una decisione**:
+l'orologio del silenzio conta i secondi sbagliati e un secondo dispositivo entra sul desktop di chi
+sta guardando (§6-bis). ⚠ Non aspetta una scelta dell'utente — `SPECIFICHE.md` §5.3 e `RCP.md` §8.2
+hanno già deciso, e il prodotto non li rispetta. **Aspetta solo il suo turno nel lavoro.**
 
 ### ⏳ Il secondo che si potrebbe recuperare, con la misura già fatta
 
@@ -625,6 +631,149 @@ reinstallata e `provision-server.sh` rieseguito.*
 | ⭐⭐ **certificato** | `banchi/05-b1-certifica.sh`, **3 guasti innestati, tutti e tre cadono dove devono**: tolto il seat → rossi 2 4 5 6; tolto l'utente → 5 6; tolto il tipo grafico → 6 |
 | ⛔ **e la certificazione ha scritto il banco, non solo controllato** | il guasto «il tipo grafico non si guarda più» non faceva cadere **niente** ⇒ nessun caso esercitava quel controllo. ⭐ Da lì è nato il **caso 6** — l'utente alla consolle in una sessione di testo, che `SPECIFICHE.md` §5.1 ammette esplicitamente («testuali e grafiche convivono») e che nessuno aveva provato |
 | ⏳ **quel che il banco NON prova**, dichiarato | non prova il filo (`0x05` non è mai uscito su una connessione vera), non prova `0x04` end-to-end, e ⛔ **non prova la scena con una sessione locale VERA**: sulla macchina non c'è nessuno alla consolle, e le sessioni del banco le crea PAM |
+
+## 6 · ⭐⭐ 16 AGOSTO 2026 — IL RILASCIO AL DISTACCO, PROVATO COL DESKTOP VERO
+
+*«Da adesso i test si fanno sul browser e non più su banchi ipotetici. Così misuriamo quello che
+succede davvero, non quello che simuliamo»* — l'utente, 16 agosto.
+
+### 6.1 Il testimone: un file che cresce di trenta righe al secondo
+
+⛔ Il problema di questa prova non era premere il tasto: era **vedere il danno**. «Un Ctrl rimasto
+giù» non si legge in una schermata.
+
+⭐ **La cura**: dentro la sessione grafica di `prova` gira un terminale con
+
+```sh
+while IFS= read -r _; do date +%s%N >> /tmp/testimone.txt; done
+```
+
+⇒ Ogni battuta di `Invio` che arriva al desktop scrive **una riga con l'istante in nanosecondi**.
+Un tasto rimasto giù si ripete da solo — è il desktop remoto a farlo, non la pagina (`pagina.html`
+lo dice: *«la ripetizione automatica la fa il DESKTOP remoto, che il tasto ce l'ha giù»*) — e il
+file cresce. Un tasto rilasciato ferma il file **all'istante**.
+
+| | |
+|---|---|
+| `[M]` **la ripetizione esiste, e si misura** | 1016 righe in ~30 s ⇒ **~33 battute al secondo** sul desktop vero |
+| `[M]` **il rilascio la ferma di netto** | fra l'ultima battuta e la riga del registro che dichiara il rilascio: **1 ms · 15 ms · 28 ms** nelle tre prove |
+
+⚠ **Che cosa è finto in questa prova, dichiarato**: il *keydown* nasce da `dispatchEvent` dentro la
+pagina, perché il pilota del browser non sa **tenere premuto** un tasto (manda sempre giù-e-su
+insieme). ⭐ Tutto il resto è vero: stesso gestore della pagina, stesso messaggio sul filo, stesso
+server, stesso `libei`, stesso desktop. E per la **chiusura della scheda** si è tolta alla pagina la
+sua rete di sicurezza (`cl_rilascia_tutto` su `blur`/`pagehide`), che è l'equivalente di un browser
+che muore: senza toglierla, **è la pagina a rilasciare e il server non ha mai niente da fare** — ed è
+questa la ragione per cui i venti giri del mattino leggevano sempre zero.
+
+### 6.2 Le due strade provate, e tutt'e due reggono
+
+| strada | come si è provocata | `[M]` esito |
+|---|---|---|
+| ⭐ **il silenzio di §5.3** — «il telefono morto in galleria» | `Invio` tenuto giù, poi il filo tagliato con `nft` sulla porta 7700 in tutt'e due i versi | `13:33:07.251 STACCATO per silenzio: 30949 ms` → `13:33:07.257 rilascio al distacco: **1**`. Ultima battuta del testimone: `13:33:07.229` — **28 ms prima** |
+| ⭐ **il congedo del client** — la scheda che si chiude | `Invio` **e** pulsante sinistro tenuti giù, rete della pagina tolta, scheda chiusa | `13:42:55.042 congedo del client` → `13:42:55.052 rilascio al distacco: **2**`. Ultima battuta: `13:42:55.037` — **15 ms prima** |
+
+⏳ **Le altre due strade di §7.3 non sono state provate** e lo si dichiara invece di lasciarlo
+credere: l'**errore di protocollo** (`viola_input()`) e la **liberazione della sessione**
+(`rcp_libera()`). ⚠ La seconda è la rete di sicurezza di tutte le altre, e passa dallo stesso
+`rilascia_al_distacco()` con la stessa guardia `inp_rilasciato`.
+
+### 6.3 ⛔⛔ E LA RIGA IN VETRINA DICEVA SEMPRE ZERO
+
+`[M]` In tutti e quattro i distacchi, a un millisecondo di distanza, il registro diceva **due cose
+diverse sullo stesso fatto**:
+
+```
+13:42:55.042 rcp     ⭐ §7.3 — RILASCIO AL DISTACCO (congedo del client): 0 fra tasti e pulsanti
+                        erano premuti e sono stati rilasciati
+13:42:55.052 input   rilascio al distacco: 2 fra tasti e pulsanti (restano segnati 0 e 0)
+```
+
+⛔ **Lo zero era strutturale, non un caso.** Chi tiene la mappa dei tasti premuti è il **figlio**, un
+altro processo; `webtransport.c` mandava la richiesta e rispondeva `0` intendendo *«è partita»*, e
+`rcp.c` lo scriveva come *«zero erano premuti»*. Il commento nel codice lo diceva pure — a due
+funzioni di distanza da quella che stampava.
+
+> ⚠ **È `LEZIONI.md` §1.9 nel posto peggiore che avesse.** La regola col rapporto danno/costo più
+> alto del documento aveva un unico testimone, e quel testimone diceva **sempre** «non c'era niente
+> giù» — cioè **la faccia del verde su un rilascio mai avvenuto**. Un difetto vero in
+> `input_rilascia_tutto()` sarebbe stato invisibile a chiunque leggesse quella riga.
+
+✅ **Chiuso**: il gancio ha tre risposte invece di un numero — il conto vero, `SENZA_CONTO`
+(«chiesto, e il numero lo sa il figlio: cercalo lì»), `IMPOSSIBILE` («⛔ non si è potuto chiedere: se
+qualcosa era premuto, resta premuto»). `[M]` Rimisurato dopo la cura:
+
+```
+13:54:24.166 rcp     ⭐ §7.3 — RILASCIO AL DISTACCO (congedo del client): richiesta MANDATA al
+                        palco.  ⚠ Questa riga NON porta il numero, perche' chi lo sa e' il figlio…
+13:54:24.172 input   rilascio al distacco: 2 fra tasti e pulsanti
+```
+
+## 6-bis · ⛔⛔⛔ L'OROLOGIO DEL SILENZIO CONTA LA COSA SBAGLIATA
+
+*Trovato per caso il 16 agosto, mentre si provava il §7.3: **due volte di fila il tasto si è
+rilasciato da solo prima che io tagliassi il filo**, e la ragione non era il §7.3.*
+
+`SPECIFICHE.md` §5.3 tiene **tre orologi separati, ciascuno col suo significato**:
+
+| orologio | quanto | che cosa misura |
+|---|---|---|
+| **silenzio del client** | 30 s | *«un client che tace è un client che si è staccato»* — ⭐ e il paragrafo dice **perché**: *«i 30 secondi coprono solo le interruzioni vere»* |
+| **inattività dell'utente** | 30 **minuti** senza input | *«chi resta mezz'ora a guardare un video senza toccare nulla viene staccato»* |
+
+⛔ **Oggi il prodotto li ha confusi**: `rcp.c` misura `ultimo_byte`, cioè l'ultimo byte **di RCP**
+arrivato dal client — e un client che guarda e non tocca **non manda niente**. ⇒ Trenta secondi
+senza toccare la tastiera valgono come «il client è sparito».
+
+`[M]` **La misura, col browser, e l'atteso dichiarato prima:**
+
+| | |
+|---|---|
+| `13:46:27.968` | `sessione aperta utente=prova via=[192.168.0.3]:53805` |
+| ⛔ `13:46:57.980` | `STACCATO per silenzio: 30013 ms senza un byte` — **posti occupati adesso: 0** |
+| ⭐ **e la connessione era viva** | per **111 secondi** QUIC non ha detto niente: nessun `trenta secondi di silenzio (§2.2)`, nessuna chiusura |
+| ⭐ `13:48:19.750` | un solo tasto: `posto RIPRESO … dopo il silenzio`, **stessa connessione `:53805`**, nessuna `sessione aperta` nuova |
+
+⇒ ⭐⭐ **I due orologi hanno misurato la stessa cosa e hanno dato risposte opposte.** Nel taglio vero
+del filo, QUIC ha dichiarato il silenzio a `13:33:43` — **esattamente 30 s dopo il taglio delle
+`13:33:13`**, cioè giusto. RCP l'aveva dichiarato a `13:33:07`, **36 secondi prima e senza motivo**.
+
+### ⛔ E il prezzo si paga, misurato
+
+`[M]` Prima scheda entrata e ferma (nessun input); dopo 30 s il posto risulta libero. **Seconda
+scheda, stesso utente:**
+
+```
+13:49:57.274 rcp  posto PRESO da prova via [192.168.0.3]:54839 (occupati adesso: 1)
+13:49:57.332 rcp  ⛔ [192.168.0.3]:53805: tela in vigore 2544x926 ma il fotogramma catturato e'
+                     1552x568 — NON lo spedisco (§6.2)
+```
+
+⇒ **Il secondo dispositivo è entrato e ha preso il desktop del primo, che era vivo e collegato.**
+E la prima scheda si è **congelata**, perché il nuovo arrivato ha ridimensionato il palco.
+
+⛔ È l'invariante **I2** rotta **nel caso che `RCP.md` §8.2 nomina per iscritto**:
+
+> *«Chi viene rifiutato è chi arriva, non chi c'era. Nessun client attaccato e vivo viene mai
+> spodestato da un altro.»* · *«Un client silenzioso da 30 secondi non è più attaccato, quindi non
+> occupa niente e il nuovo entra. Un client **vivo** occupa, e il nuovo è rifiutato. ⛔ Il discrimine
+> è l'orologio del silenzio»*
+
+⚠ Il discrimine c'è, ed è quello giusto. ⛔ **È l'orologio che è tarato sulla cosa sbagliata.**
+
+### ⭐ La cura, e non tocca il protocollo
+
+Il segno di vita giusto **esiste già e funziona**: è il pacchetto QUIC. `trasporto.c` ha il proprio
+orologio (`NGTCP2_ERR_IDLE_CLOSE`, i 30 s di §2.2) e nella prova del taglio ha risposto **al
+secondo**. ⇒ Basta che §5.3 guardi **l'ultimo pacchetto arrivato da quel peer** invece dell'ultimo
+byte di RCP.
+
+| | |
+|---|---|
+| **che cosa si tocca** | un campo in `connessione` (`trasporto.c`), assegnato dove il pacchetto entra · un accessore · un gancio in `rcp.h`/`webtransport.c` · una riga in `rcp_tempo()` |
+| ⭐ **che cosa NON si tocca** | **il protocollo**: nessun messaggio nuovo, nessun battito da aggiungere alla pagina, `RCP.md` invariato. ⚠ E `rcp.c` ha il gemello identico byte per byte in `banchi/rcp/` |
+| ⚠ **il caso da non rompere** | la scheda **congelata** dal browser dopo ~5 minuti in secondo piano (§5.3 la nomina): una scheda congelata smette anche di rispondere a QUIC ⇒ i due orologi restano d'accordo, il posto si libera lo stesso |
+| **la prova** | col browser: due schede, la prima ferma per un minuto, la seconda che tenta di entrare ⇒ **deve essere respinta** finché la prima è viva |
 
 ## 7 · Il giudizio dell'utente
 

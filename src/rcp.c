@@ -3163,6 +3163,34 @@ static void rilascia_al_distacco(rcp_sessione *s, const char *perche)
 		return;
 	}
 	int quanti = s->g.input_rilascia_tutto(s->g.ctx);
+	/* ⛔⛔⭐ TRE ESITI, TRE RIGHE DIVERSE — 16 agosto 2026, e prima ce n'era
+	 *      una sola che stampava `quanti` come se fosse sempre un conto.
+	 *
+	 *      Nel prodotto vero non lo e' MAI: chi tiene la mappa dei tasti
+	 *      premuti e' il figlio, e la sua risposta non torna indietro.  ⇒ La
+	 *      riga diceva «0 erano premuti» a ogni distacco, compresi i quattro
+	 *      in cui il figlio, subito sotto, scriveva `2`.
+	 *
+	 *      ⚠ Un numero inventato e' peggio di nessun numero, e qui era il
+	 *        peggiore possibile: uno ZERO su una regola il cui unico modo di
+	 *        fallire e' non rilasciare niente.  `LEZIONI.md` §1.9 — «vuoto» e
+	 *        «giusto» con la stessa faccia. */
+	if (quanti == RCP_RILASCIO_IMPOSSIBILE) {
+		reg(s, "⛔ §7.3 — RILASCIO AL DISTACCO (%s): NON si e' potuto chiedere "
+		       "il rilascio al palco.  ⚠ Se qualcosa era premuto, RESTA "
+		       "premuto: al riattacco il desktop puo' essere inservibile, e "
+		       "questa e' la riga che lo collega",
+		    perche);
+		return;
+	}
+	if (quanti == RCP_RILASCIO_SENZA_CONTO) {
+		reg(s, "⭐ §7.3 — RILASCIO AL DISTACCO (%s): richiesta MANDATA al palco. "
+		       " ⚠ Questa riga NON porta il numero, perche' chi lo sa e' il "
+		       "figlio: il conto vero e' la riga «rilascio al distacco: N fra "
+		       "tasti e pulsanti», qualche millisecondo piu' sotto",
+		    perche);
+		return;
+	}
 	reg(s, "⭐ §7.3 — RILASCIO AL DISTACCO (%s): %d fra tasti e pulsanti erano "
 	       "premuti e sono stati rilasciati.  ⚠ Zero e' un esito normale e NON "
 	       "e' un fallimento: vuol dire che non c'era niente giu'",

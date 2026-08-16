@@ -104,6 +104,8 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | «va lento» | **A2** (llvmpipe) · A5 (scheda sbagliata) |
 | «il terminale resta congelato finché non muovo il mouse» | la coda della raffica in `cattura.c` (`LEZIONI.md` §6.5) |
 | «si può spegnere la macchina» | A4 · B15 |
+| ⛔ «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | **l'orologio del silenzio**, qui sotto: 30 s senza toccare niente e il posto risulta libero |
+| «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: §7.3 rilascia entro **28 ms**, misurato — vedi qui sotto |
 
 ---
 
@@ -187,8 +189,49 @@ la sua misura con `ADATTA_TELA`»*.
 ⛔ la **quarta** volta in un giorno che un banco misura se stesso. ⇒ *Quando un banco è rosso, la
 prima cosa da sospettare è l'atteso.*
 
+## ⭐⭐ Il rilascio al distacco (§7.3), provato col desktop vero — 16 agosto 2026
+
+*«Al distacco si rilascia tutto»: `RCP.md` §11 la chiama la regola col rapporto danno/costo più alto
+del documento.* ⛔ Fino a oggi non era **mai stata esercitata**: il testimone diceva sempre zero.
+
+**Il metro**: dentro la sessione grafica gira `while IFS= read -r _; do date +%s%N >> file; done`.
+Un tasto rimasto giù si ripete da solo — `[M]` **~33 battute al secondo** — e il file cresce; un
+tasto rilasciato lo ferma di netto.
+
+| strada del distacco | `[M]` rilasciati | ⭐ quanto dopo l'ultima battuta |
+|---|---|---|
+| **silenzio di §5.3** (filo tagliato con `nft`, `Invio` giù) | **1** | 28 ms |
+| **congedo del client** (scheda chiusa, `Invio` **e** pulsante giù) | **2** | 15 ms |
+
+⚠ **La pagina si rilascia da sola** su `blur`, `visibilitychange` e `pagehide` — per questo dal
+browser il server non ha quasi mai niente da fare, ed è giusto così. ⛔ Ma proprio per questo la
+prova va fatta **togliendo alla pagina la sua rete**: altrimenti si certifica la pagina credendo di
+certificare il server.
+
+⏳ **Non provate**: l'errore di protocollo e `rcp_libera()`. Dichiarate, non nascoste.
+
+## ⛔⛔⛔ L'orologio del silenzio conta la cosa sbagliata — 16 agosto 2026
+
+`SPECIFICHE.md` §5.3 tiene **due orologi diversi**: *silenzio del client* (30 **secondi**, «il client
+è sparito») e *inattività dell'utente* (30 **minuti**, «non tocca niente»). ⛔ **Il prodotto li
+confonde**: misura `ultimo_byte` di RCP, e un client che guarda senza toccare non manda niente.
+
+| `[M]` misurato col browser | |
+|---|---|
+| `13:46:27` sessione aperta → `13:46:57` | ⛔ `STACCATO per silenzio: 30013 ms`, **posti occupati: 0** |
+| e per **111 secondi** | ⭐ QUIC non dice niente: la connessione era **viva** |
+| un solo tasto, `13:48:19` | `posto RIPRESO`, **stessa connessione**, nessuna sessione nuova |
+| ⛔⛔ **il prezzo** | seconda scheda dopo 30 s: `posto PRESO da prova` — e la prima, viva, si **congela** |
+
+⇒ È l'invariante **I2** rotta nel caso che `RCP.md` §8.2 nomina: *«un client vivo occupa, e il nuovo
+è rifiutato»*. ⭐ **La cura non tocca il protocollo**: il segno di vita giusto è il pacchetto QUIC, e
+`trasporto.c` lo conta già bene — nel taglio vero ha dichiarato il silenzio **al secondo**, mentre
+RCP l'aveva dichiarato **36 secondi prima e senza motivo**. Dettagli in `fasi/05-la-sessione.md`
+§6-bis.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
+- ⛔ **L'orologio del silenzio**, qui sopra: **da riparare**, ed è il difetto più grosso aperto.
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
   `gnome-session.CanShutdown` a **false** `[M]`. ⭐ La causa è di gnome-shell, e la dichiara il suo
   sorgente: *«we don't get change notifications for [Polkit policy], so their value may be
