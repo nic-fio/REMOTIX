@@ -133,8 +133,23 @@
   #conferma p { margin: 0 0 1.2rem; line-height: 1.45; }
   #conferma button { margin: 0 .4rem; padding: .5rem 1.1rem; font-size: 1rem; }
   #conferma .grave { background: #7a2020; color: #fff; border: 0; border-radius: .3rem; }
+  /* ⛔⭐ LA DIAGNOSTICA NON SI VEDE PIU' DI SUO — 16 agosto 2026, e l'ha chiesto
+     l'utente: «ricordati di eliminare quella finestra in basso nel browser sotto
+     al desktop».
+
+     ⚠ Ma NON si cancella, e la ragione e' scritta nei documenti: `04-b31-tela.c`
+     dichiara di non provare la pagina perche' «`src/pagina.html` ha i suoi
+     contatori (§6.2), e quelli si guardano dal browser».  Cancellarla vorrebbe
+     dire togliere l'unico testimone che il lato client abbia.
+
+     ⇒ Si SPEGNE e si lascia richiamabile: il testo continua a entrare nel DOM,
+     e torna a schermo con `?registro` nell'indirizzo oppure con
+     `REMOTIX.registro(true)` dalla console.  ⛔ Una diagnostica nascosta e' una
+     scelta; una diagnostica cancellata e' un pezzo di prodotto in meno. */
   #registro { margin-top: 1.5rem; font-family: ui-monospace, monospace;
               font-size: .8rem; white-space: pre-wrap; opacity: .8; }
+  body:not(.diagnostica) #registro,
+  body:not(.diagnostica) .nota { display: none; }
   .nota { font-size: .8rem; opacity: .7; margin-top: 2rem; }
 
   /* ⛔ LA DEGRADAZIONE SI DICHIARA — `CODER.md` §4.2: «ogni dipendenza mancante
@@ -401,6 +416,16 @@ const BANNATO = document.body.dataset.bannato === "si";
 const $ = (i) => document.getElementById(i);
 const righe = [];
 function nota(t) { righe.push(t); $("registro").textContent = righe.join("\n"); }
+
+/* ⭐ L'interruttore della diagnostica.  ⛔ Spenta di suo (vedi il foglio di stile):
+   il testo si accumula lo stesso, e chi diagnostica lo fa comparire senza
+   ricaricare niente.  ⚠ E' un oggetto DA LEGGERE e da accendere, non una
+   funzione che cambia il comportamento del prodotto (invariante I6). */
+function registro_visibile(acceso) {
+  document.body.classList.toggle("diagnostica", acceso !== false);
+  return document.body.classList.contains("diagnostica");
+}
+if (location.search.indexOf("registro") >= 0) registro_visibile(true);
 function esito(t, bene) { const e = $("esito"); e.textContent = t; e.className = bene ? "bene" : "male"; }
 
 /* ⚠ La frase del ban la mostra gia' il CSS, senza di noi.  Questa riga aggiunge
@@ -2745,6 +2770,9 @@ function tela_forse_chiedi(perche) {
 
 window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
                    stringhe_codec: stringhe_codec, versione: VERSIONE,
+                   /* ⭐ La diagnostica in fondo alla pagina: spenta di suo dal
+                      16 agosto 2026, si riaccende da qui o con `?registro`. */
+                   registro: registro_visibile,
                    /* ⭐ La scala delle misure e le sue dichiarazioni: da qui le
                       legge `banchi/02-pagina-misura-*`, che e' il banco che
                       prende il difetto delle due grandezze confuse.  ⚠ E' un

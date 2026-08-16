@@ -194,8 +194,19 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
   ⚠ **Quel che questa prova NON è**: un banco. È una misura su gesti veri, e vale per Mutter su
   questa macchina. ⇒ Il banco resta desiderabile, ma non è più l'unica cosa che sta fra noi e il
   sapere;
-- ⚠ **che fine fanno le finestre aperte** quando la tela rimpicciolisce e poi torna grande. È un
-  comportamento del compositore, non nostro: va **dichiarato** dopo averlo guardato, non sperato;
+- ✅ **che fine fanno le finestre aperte** quando la tela rimpicciolisce — ⭐ **chiuso dall'utente il
+  16 agosto 2026**, e con l'argomento giusto: *«il punto 1 si è chiuso nel momento in cui ho
+  riattaccato la sessione con il browser a finestra: se fosse accaduto qualcosa il terminale lasciato
+  aperto si sarebbe chiuso»*.
+
+  ⇒ `[M]` La tela è passata da `2544x926` a `1240x622` con un terminale aperto e un `cat /dev/urandom`
+  dentro: **la finestra è sopravvissuta, il processo pure** (PID 523560, 2 min 31 s), e il desktop è
+  rimasto usabile alla misura nuova — l'utente ci ha aperto il menu di sistema col mouse.
+
+  ⚠ **Quel che resta NON osservato**, e si scrive per non spacciarlo per provato: se una finestra
+  **più grande dello schermo nuovo** venga riportata dentro da Mutter o resti tagliata. ⛔ Il
+  terminale della prova era piccolo, quindi il caso non si è presentato. È cosmetica, è di GNOME, e
+  non blocca niente;
 - **la tabella dei compositori**, che è la parte «studia bene i compositori» del punto:
 
 | | ridimensiona a caldo? |
@@ -1263,6 +1274,105 @@ chiesto nessuno: è scaduto il tetto»*.
 > **una riga scritta quando esisteva un solo chiamante diventa falsa al secondo**, e nessun
 > compilatore lo dice.
 
+## 6-octies · ⭐⭐ LA PROVA CHE CONTA, E L'HA FATTA L'UTENTE — con un lavoro vero dentro
+
+*Tutte le prove di questa giornata avevano un desktop **vuoto**. ⛔ E un desktop vuoto è il testimone
+peggiore possibile per la domanda «la sessione è sopravvissuta?»: appena rinato è identico a com'era.*
+
+L'utente, il 16 agosto 2026, con parole sue:
+
+> *«Mi sono loggato con la finestra del browser massimizzata e ho lanciato un task nel terminale (un
+> ciclo infinito), poi ho chiuso il browser. Ho ridimensionato a finestra il browser, mi sono
+> ricollegato e il task nel terminale era ancora in esecuzione.»*
+
+`[M]` Il registro, riga per riga:
+
+```
+17:30:13.541  posto LASCIATO da prova            ← chiude il browser: e' un DISTACCO
+                                                   ⛔ nessun «USCIRE», nessun «avvio la sessione»
+17:30:36.535  posto PRESO da prova
+17:30:36.535  ⚠ RIPIEGO §4.5: chiesta 1240x622, il palco ha 2544x926 — e SOPRAVVIVE al client (I4)
+17:30:36.635  ⭐ tela IN VIGORE cambiata a 1240x622        (+100 ms)
+```
+
+`[M]` E il testimone vero, che nessuna prova mia aveva:
+
+```
+PID 523560   ELAPSED 02:31   %CPU 20.8   cat /dev/urandom
+```
+
+⇒ **Il lavoro dell'utente girava da due minuti e mezzo, attraverso un distacco di ventitré secondi e
+un cambio di misura.** Se la sessione fosse morta, sarebbe morto con lei.
+
+⭐ **In una prova sola ne chiude tre**: l'invariante **I4**, il **riattacco a misura diversa**, e — la
+sola che conta davvero — **la scena su cui questa fase si giudica**: *«chiude il client, va a pranzo,
+riapre, e ritrova tutto com'era»*.
+
+### ⚠ E la distinzione che aveva insospettito l'utente, perché ingannerà anche il prossimo
+
+L'utente aveva scritto: *«guarda che la sessione non è stata distrutta»*. ⭐ **Aveva visto una cosa
+vera** — ma sono **due** cose diverse che si chiamano tutt'e due «sessione»:
+
+| | che cos'è | destino |
+|---|---|---|
+| **il gestore d'utente** — `user@1001.service`, logind `8799`, `Class=manager` | il *linger*: il bus, `/run/user/1001`, i servizi d'utente | ⭐ **non muore mai**. `[M]` attivo dalle 13:13, ore prima. **È deliberato**: è la cura che ha portato il bus di sessione da **2,6 s a 18 ms** |
+| **la sessione grafica** — `gnome-session`, `gnome-shell`, logind `Class=user` `remotix` | il desktop, e i programmi dentro | ⛔ **questa** muore: al logout, e allo scadere dell'abbandono |
+
+⇒ Chi guarda `loginctl` o `/run/user/1001` dopo una chiusura **vede qualcosa di vivo e conclude che
+non è successo niente**. ⛔ Il solo testimone che non inganna è il **numero di processo** di
+`gnome-shell`, o un programma dell'utente che c'era prima.
+
 ## 7 · Il giudizio dell'utente
 
 *(la fase si chiude qui, non su un documento completo)*
+
+## ✅ CHIUSA IL 16 AGOSTO 2026 — autorizzata dall'utente
+
+⛔ **Non si scrive un verdetto che l'utente non ha dato.** Qui sotto ci sono le sue parole, con la
+data, e niente altro.
+
+| quando | che cosa ha detto | su che cosa |
+|---|---|---|
+| 16 ago | *«Se il tempo medio tra l'inserimento della password e la comparsa del desktop è circa 2 secondi va bene. Ma non va bene se i secondi diventano 18»* | il criterio dei tempi — `[M]` mediana **2087 ms**, peggiore caso a freddo **2353 ms** |
+| 16 ago | *«Mi ritengo più che soddisfatto così»* | i tempi, dopo la misura |
+| 16 ago | *«Il menù di sistema è corretto. L'utente non può spegnere, riavviare o mandare in standby la macchina»* | §1.1 e `DECISIONI.md` §4.7 |
+| 16 ago | *«Niente timeout delle 6 ore: se dopo 60 minuti non c'è traccia di input la sessione viene killata»* | il terzo orologio — `DECISIONI.md` §4.8 |
+| 16 ago | *«Funziona»* · *«Il desktop copre per intero lo schermo»* | il riattacco a misura diversa (§1.3) |
+| 16 ago | *«Il task nel terminale era ancora in esecuzione»* | ⭐ la scena su cui la fase si giudica (§6-octies) |
+| 16 ago | *«Possiamo considerare chiusa la fase 5?»* → **«procedi»** | la chiusura |
+
+### ⏳ Quel che passa alla fase successiva, dichiarato invece che nascosto
+
+⚠ **Chiusa non vuol dire completa**, e la fase 4 aveva passato le sue code a questa allo stesso modo.
+
+**Della fase 5:**
+
+1. ⏳ **Il banco del puntatore dopo il ricambio dei dispositivi.** `[M]` Provato oggi **con le mani
+   dell'utente** e passato, ⚠ ma niente lo rifà da solo domani;
+2. ⏳ **Le altre due strade di §7.3** — l'errore di protocollo e `rcp_libera()` — non esercitate;
+3. ⏳ **Il banco della sentinella non prova la scena con una sessione locale VERA**: sulla macchina non
+   c'è nessuno alla consolle;
+4. ⏳ **Mentre aspetta, al client non si dice perché.** ⭐ L'attesa è passata da ~32 s a **2353 ms**, e
+   con essa l'urgenza — ma il difetto di forma resta.
+
+**Code della fase 4 che passavano di qui e passano oltre** (§3): la riga mancante a `RCP.md` §7.1, gli
+8 ms di `MOVIMENTO_ATTESA_S`, i banchi RCP/1 che non esercitano `ADATTA_TELA`.
+
+**E una misura da rifare**: ⚠ i `[M]` **41 ms** di latenza sono di **prima** delle cure del 15 e del 16
+agosto, e su una configurazione diversa. **Il numero vero non lo sappiamo.**
+
+### ⭐ La lezione della giornata, in una riga
+
+> **Una riga di registro scritta quando esisteva un solo chiamante diventa falsa al secondo, e nessun
+> compilatore lo dice.**
+
+`[M]` Tre volte in un giorno, sulle protezioni più importanti che abbiamo: `RILASCIO AL DISTACCO: 0`
+che non poteva dire altro; il testo `0x02` della pagina che nominava l'orologio sbagliato;
+*«l'utente ha chiesto di USCIRE»* detto da un orologio. ⇒ Ed è la stessa forma di `LEZIONI.md` §1.9,
+che adesso ha la sua **quinta regola**.
+
+⚠ **E il corollario, pagato sette volte oggi**: quando una prova è rossa, la prima cosa da sospettare
+è **lo strumento** — l'atteso vecchio del banco della tela, il guardiano `sleep 100` che rimetteva il
+filo dentro il taglio successivo, il `mousemove` sintetico che non arrivava, il filtro sul timestamp
+di una riga che il timestamp non ce l'aveva, il contatore che ha svelato che Chrome non congela una
+scheda sotto automazione.
