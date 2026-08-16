@@ -119,6 +119,17 @@ enum {
 	 *     tasto premuto sul desktop c'e' un confine di processo, e questa e'
 	 *     la riga che lo attraversa. */
 	MSG_INPUT = 5,        /* padre → figlio */
+	/* ⭐⭐ §5-bis.7 — LA DISPOSIZIONE DI TASTIERA, e attraversa il confine
+	 *     per la stessa ragione dell'input: la disposizione la applica la
+	 *     SESSIONE dell'utente, che sta in questo processo, e a chiederla e'
+	 *     il client, che parla col padre.
+	 * ⛔ E ha una busta SUA invece di viaggiare dentro `MSG_INPUT` come
+	 *    `RITELA`: il nome e' una stringa di 64 byte, e infilarla nel corpo
+	 *    dell'input vorrebbe dire pagarla su OGNI movimento del mouse —
+	 *    decine al secondo — per una cosa che succede una volta per attacco.
+	 *    `CODER.md` §1-bis: ogni byte in piu' sul cammino caldo si paga in
+	 *    ritardo, ed e' il numero che pesa piu' dei fotogrammi. */
+	MSG_DISPOSIZIONE = 6, /* padre → figlio */
 	MSG_SONO = 10,      /* figlio → padre */
 	MSG_PALCO = 11,     /* figlio → padre */
 	MSG_FOTOGRAMMA = 12,/* figlio → padre */
@@ -231,6 +242,14 @@ struct corpo_input {
 	uint8_t premuto;   /* 1 premuto, 0 rilasciato */
 	uint16_t codice;   /* evdev: BTN_LEFT = 0x110, KEY_A = 30 */
 	int32_t a, b;      /* puntatore x/y · rotella assi · lettera in `a` */
+};
+
+/* ⭐ §5-bis.7: il nome di una disposizione XKB — `it`, `de(neo)`.  ⚠ 64
+ *    byte piu' il NUL, che e' il tetto che `RCP.md` §4.5 pone alla
+ *    stringa: la busta e' a misura fissa perche' cosi' il figlio non deve
+ *    fidarsi di una lunghezza che gli arriva dal socket. */
+struct corpo_disposizione {
+	char nome[65];
 };
 
 /* ⛔ La forma del cursore che attraversa il confine.  ⚠ I limiti di `RCP.md`
@@ -1675,6 +1694,56 @@ bool figli_chiedi_palco(figli *f, const char *utente)
  *    del premuto.  Chi tiene il conto e' `input.c`, che e' l'unico che sappia
  *    che cosa il compositore ha davvero preso — e due contatori sulla stessa
  *    grandezza sono due verita' che divergono al primo messaggio perduto. */
+/* ⭐⭐ §5-bis.7 — «METTI QUESTA DISPOSIZIONE NELLA SESSIONE».
+ *
+ * ⛔ Il difetto che questa funzione chiude, misurato dal banco `06-b34` il
+ *    16 agosto 2026: la disposizione dichiarata in `ATTACCA` veniva
+ *    convalidata e SCRITTA NEL REGISTRO, e li' finiva.  Riattaccandosi a
+ *    una sessione `it` dichiarando `us` arrivavano `è` e `ò`, che su `us`
+ *    non esistono su nessun tasto.
+ *
+ * ⭐ E il danno vero non e' l'accento: le scorciatoie viaggiano come
+ *    POSIZIONI (`SPECIFICHE.md` §7.3), e su una tastiera tedesca la `Z`
+ *    sta dove da noi sta la `Y` — senza rinegoziare, `Ctrl+Z` arriva come
+ *    `Ctrl+Y`, cioe' «rifai» invece di «annulla». */
+bool figli_disposizione(figli *f, const char *utente, const char *nome)
+{
+	struct figlio *g;
+	struct testa t;
+	struct corpo_disposizione c;
+	uint8_t busta[sizeof t + sizeof c];
+
+	if (!f || !utente || !nome || !*nome)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+
+	memset(&t, 0, sizeof t);
+	magia_scrivi(&t);
+	t.tipo = MSG_DISPOSIZIONE;
+	t.versione = FIGLIO_VERSIONE;
+	t.matricola = g->matricola;
+	t.uid_dichiarato = (uint32_t)g->uid;
+	t.byte = (uint32_t)sizeof c;
+	memset(&c, 0, sizeof c);
+	snprintf(c.nome, sizeof c.nome, "%s", nome);
+	memcpy(busta, &t, sizeof t);
+	memcpy(busta + sizeof t, &c, sizeof c);
+	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+		/* ⛔ `registro_dice` e non `dettaglio`: succede una volta per
+		 *    attacco, e se non parte l'utente resta con le scorciatoie
+		 *    sfasate — che e' precisamente il guasto che nessuno collega. */
+		registro_dice(REG_FIGLIO,
+		              "⚠ la disposizione «%s» per «%s» NON e' partita: la "
+		              "sessione tiene la sua, e le scorciatoie resteranno "
+		              "sfasate",
+		              nome, utente);
+		return false;
+	}
+	return true;
+}
+
 bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b)
 {
@@ -1869,6 +1938,9 @@ void figli_spegni(figli *f)
  *    non c'e' nessun effetto da vedere.  ⇒ Avanza solo quando `input.c` ha
  *    risposto 0. */
 static Input *palco_input;
+/* ⭐ §5-bis.7: la disposizione chiesta quando il palco non c'era ancora.
+ *    ⛔ Vuota = niente in attesa.  Si applica appena `input_apri()` riesce. */
+static char disposizione_in_attesa[65];
 static uint32_t input_iniettato;
 static uint32_t input_rifiutati;
 static uint32_t input_non_producibili;
@@ -3273,6 +3345,19 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	{
 		char *sbaglio_input = NULL;
 		palco_input = input_apri(mut, tela_l, tela_a, &sbaglio_input);
+		if (palco_input && disposizione_in_attesa[0]) {
+			/* ⛔ Prima di dire che il canale e' aperto: la disposizione
+			 *    chiesta all'attacco era arrivata a palco chiuso, e se non
+			 *    la si applica QUI l'utente batte i primi tasti sulla
+			 *    disposizione sbagliata — e `Ctrl+Z` fa «rifai». */
+			registro_dice(REG_FIGLIO,
+			              "⭐ §5-bis.7: applico adesso la disposizione «%s», "
+			              "che era stata chiesta quando il palco non c'era "
+			              "ancora",
+			              disposizione_in_attesa);
+			input_disposizione(palco_input, disposizione_in_attesa);
+			disposizione_in_attesa[0] = '\0';
+		}
 		if (palco_input)
 			registro_dice(REG_FIGLIO,
 			              "⭐⭐ IL CANALE DI INPUT E' APERTO sulla tela %ux%u: "
@@ -3812,6 +3897,36 @@ void figlio_vive(int argc, char **argv)
 					debito_chiave[cv.codec] = true;
 				continue;
 			}
+			if (t.tipo == MSG_DISPOSIZIONE) {
+				struct corpo_disposizione cd;
+
+				if ((size_t)letti < sizeof t + sizeof cd)
+					continue;
+				memcpy(&cd, busta + sizeof t, sizeof cd);
+				/* ⛔ Il NUL si impone NOI: la busta arriva da un socket, e
+				 *    una stringa non terminata letta come tale e' un difetto
+				 *    di memoria, non di tastiera. */
+				cd.nome[sizeof cd.nome - 1] = '\0';
+				/* ⚠ E se il palco non c'e' ancora, si DICHIARA: «non l'ho
+				 *   applicata» e «non c'era niente da applicare» sono due
+				 *   fatti diversi (`LEZIONI.md` §1.9 regola 1). */
+				if (!palco_input) {
+					/* ⛔ NON si butta: si TIENE.  `rcp.c` la chiede quando
+					 *    `SESSIONE` e' partita, e `libei` si apre qualche
+					 *    centesimo dopo — buttarla qui vorrebbe dire che la
+					 *    cura funziona su ogni attacco tranne il PRIMO. */
+					snprintf(disposizione_in_attesa,
+					         sizeof disposizione_in_attesa, "%s", cd.nome);
+					registro_dice(REG_FIGLIO,
+					              "⚠ disposizione «%s» chiesta ma il canale "
+					              "di input non c'e' ancora: TENUTA, si "
+					              "applica all'apertura del palco",
+					              cd.nome);
+				}
+				else
+					input_disposizione(palco_input, cd.nome);
+				continue;
+			}
 			if (t.tipo == MSG_INPUT) {
 				struct corpo_input ci;
 				int e;
@@ -3961,6 +4076,61 @@ void figlio_vive(int argc, char **argv)
 						palco_riprova_ms = 0;
 						continue;
 					}
+					/*
+					 * ⛔⛔⭐ SI RILASCIA TUTTO **PRIMA** DI RIDIMENSIONARE — e
+					 *       questa riga vale «su Android il mouse non prende
+					 *       piu' i click».
+					 *
+					 * `[R]` La catena e' tutta dentro Mutter, e nessun anello e'
+					 * nostro (misurata dalla sottofase 6.1, 16 agosto 2026):
+					 *
+					 *   1. `meta-eis-client.c:197-206` — al cambio di geometria
+					 *      `remove_viewport_devices()` chiama `eis_device_remove()`
+					 *      e ⛔ **non passa da `drop_device()`**, che e' l'unico
+					 *      posto in cui Mutter rilascia quel che era premuto;
+					 *   2. `meta-eis-client.c:612-621` — `handle_button()` **ingoia
+					 *      in silenzio** il rilascio di un pulsante non premuto *su
+					 *      quel* dispositivo, e dopo il ricambio il dispositivo e'
+					 *      un altro;
+					 *   3. `meta-seat-impl.c:899-908` — `update_button_count()` e'
+					 *      **del posto**, condiviso: il press del dispositivo morto
+					 *      lo tiene a 1, ogni press dopo lo porta a 2 (scartato) e
+					 *      ogni release lo riporta a 1 (scartato).  ⛔ **Non scende
+					 *      mai a zero**, e da li' in poi il desktop non prende piu'
+					 *      un clic — senza un errore da nessuna parte.
+					 *
+					 * ⇒ `[M]` Da `input.c` NON si recupera: press+release sul
+					 *   dispositivo nuovo fa 1→2→1 e non consegna niente.  ⭐ L'unico
+					 *   istante in cui il rilascio arriva a qualcuno e' **adesso**,
+					 *   finche' i dispositivi vecchi sono ancora vivi.
+					 *
+					 * ⚠ E il costo, dichiarato: chi tiene giu' un pulsante mentre la
+					 *   tela cambia se lo vede rilasciare.  ⛔ Vale infinitamente
+					 *   meno di un desktop che non prende piu' nessun clic per tutta
+					 *   la sessione — ed e' esattamente il rapporto danno/costo che
+					 *   `RCP.md` §11 dichiara il piu' alto del documento.
+					 *
+					 * ⚠ `!palco_input` non e' un guasto: e' una sessione senza
+					 *   input, e la riga l'ha gia' scritta chi non l'ha aperto.
+					 */
+					if (palco_input) {
+						int giu = input_rilascia_tutto(palco_input);
+						if (giu > 0)
+							registro_dice(REG_FIGLIO,
+							              "⭐ §7.1: RILASCIATI %d fra tasti e "
+							              "pulsanti PRIMA di ridimensionare — il "
+							              "cambio di tela fa ricreare i dispositivi "
+							              "di libei, e un pulsante premuto durante "
+							              "il ricambio resta giu' NEL POSTO per "
+							              "sempre (Mutter, `meta-seat-impl.c` "
+							              "`update_button_count()`): da li' in poi "
+							              "il desktop non prende piu' un clic",
+							              giu);
+						else
+							registro_dettaglio(REG_FIGLIO,
+							                   "§7.1: niente da rilasciare prima "
+							                   "del ridimensionamento (%d)", giu);
+					}
 					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
 					if (r == CATTURA_RITELA_CHIESTA) {
 						registro_dice(REG_FIGLIO,
@@ -3976,11 +4146,62 @@ void figlio_vive(int argc, char **argv)
 						 *    arrivano sono gia' della misura giusta.  ⇒ Si
 						 *    risponde subito, o il padre aspetterebbe il fondo
 						 *    dei tre secondi per una cosa gia' fatta. */
-						cattura_misura_negoziata(cat, &ora_l, &ora_a);
-						registro_dice(REG_FIGLIO,
-						              "§7.1: la tela %ux%u il palco ce l'ha gia' "
-						              "(negoziata %ux%u): rispondo subito",
-						              (unsigned)ci.a, (unsigned)ci.b, ora_l, ora_a);
+						/*
+						 * ⛔⛔ E IL «NON LO SO» NON SI SPEDISCE COME «NON CE
+						 *     L'HO FATTA» — difetto trovato **rileggendo** la
+						 *     notte del 16 agosto 2026, sottofase 6.3.
+						 *
+						 * `cattura_misura_negoziata()` torna `FALSE` quando il
+						 * formato **non e' stato ancora negoziato**, e in quel
+						 * caso ⛔ NON scrive niente nei due parametri: `ora_l` e
+						 * `ora_a` restano gli zeri con cui nascono.  ⚠ E per
+						 * `rispondi_tela()` lo zero non e' «non lo so»: e'
+						 * **«non ce l'ho fatta»** (`figlio.h`, `corpo_tela`), che
+						 * `rcp.c` gira al client come
+						 * `TELA(RIFIUTATA, NON_ORA)`.
+						 *
+						 * ⇒ Su una sessione **sana** il client si sentiva
+						 *   rispondere di no per una tela che il palco ha gia',
+						 *   e la pagina mostrava «adatta» come fallita.  ⛔ E' la
+						 *   forma di `CODER.md` §3.10 — *una lettura negata non
+						 *   e' una lettura che dice zero* — dentro il messaggio
+						 *   che esiste apposta per togliere una deduzione al
+						 *   padre (`LEZIONI.md` §7.5).
+						 *
+						 * ⚠ La finestra e' stretta e va detta: fra
+						 *   `cattura_avvia()` e la prima richiamata del formato.
+						 *   `[M]` 16 agosto 2026, 38 passaggi da questo ramo su
+						 *   banco 06-b35: **zero** con il formato ignoto — cioe'
+						 *   il difetto e' REALE e non l'ho visto scattare.  ⇒ La
+						 *   cura si scrive lo stesso, perche' il caso e' nominato
+						 *   dal codice e il prezzo di sbagliarlo e' un «no» a chi
+						 *   non ha sbagliato niente.
+						 *
+						 * ⭐ E la risposta giusta e' la misura CHIESTA: in questo
+						 *   ramo `cattura_ridimensiona()` ha risposto `GIA_COSI`
+						 *   proprio **perche'** la misura chiesta e' quella che
+						 *   il flusso ha (`cattura.c`, la guardia di §kde
+						 *   §8.2-bis: col formato ignoto confronta il chiesto).
+						 *   ⇒ Dirla non e' un'invenzione: e' l'unico numero che
+						 *   in quel ramo si sa per certo.
+						 */
+						if (!cattura_misura_negoziata(cat, &ora_l, &ora_a)) {
+							ora_l = tela_voluta_l;
+							ora_a = tela_voluta_a;
+							registro_dice(REG_FIGLIO,
+							              "⚠ §7.1: la tela %ux%u il palco ce l'ha "
+							              "gia', ma il formato NON e' ancora "
+							              "negoziato: rispondo con la misura "
+							              "CHIESTA.  ⛔ Uno zero qui vorrebbe dire "
+							              "«non ce l'ho fatta» a un client che non "
+							              "ha sbagliato niente (CODER.md §3.10)",
+							              (unsigned)ci.a, (unsigned)ci.b);
+						} else
+							registro_dice(REG_FIGLIO,
+							              "§7.1: la tela %ux%u il palco ce l'ha gia' "
+							              "(negoziata %ux%u): rispondo subito",
+							              (unsigned)ci.a, (unsigned)ci.b, ora_l,
+							              ora_a);
 						rispondi_tela(tela_voluta_l, tela_voluta_a, ora_l, ora_a);
 						continue;
 					}

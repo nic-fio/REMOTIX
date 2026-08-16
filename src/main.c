@@ -635,6 +635,17 @@ static void tela_attendi_dal_figlio(void *ctx, const char *utente, uid_t uid,
 	wt_tela_rimanda(utente, voluta_l, voluta_a);
 }
 
+/* ⭐ §5-bis.7 — e delega a `figli_disposizione()` come `ritela_al_figlio()`
+ *    delega a `figli_ritela()`: questo file e' il ponte, non la regola. */
+static bool disposizione_al_figlio(void *ctx, const char *utente,
+                                   const char *nome)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return false;
+	return figli_disposizione(p->f, utente, nome);
+}
+
 static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
                              uint32_t altezza)
 {
@@ -1044,6 +1055,7 @@ int main(int argc, char **argv)
 	 *     conta — e il client mostrerebbe «adatta il desktop» come spento su un
 	 *     server che sa farlo. */
 	wt_ritela_gancio(ritela_al_figlio, &ponte);
+	wt_disposizione_gancio(disposizione_al_figlio, &ponte);
 
 	/* ⭐⭐ §5.1 — IL GUARDIANO DELLE SESSIONI LOCALI, e si collega PRIMA della
 	 *     pagina per la stessa ragione degli altri: la domanda `0x05` si fa

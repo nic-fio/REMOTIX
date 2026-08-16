@@ -52,8 +52,18 @@ from aioquic.quic.events import QuicEvent
 
 CLIENT, SERVER = 1, 2
 T = {"CIAO": 0x0001, "ECCOMI": 0x0002, "CREDENZIALI": 0x0003, "AMMESSO": 0x0004,
-     "RESPINTO": 0x0005, "ATTACCA": 0x0006, "SESSIONE": 0x0007, "CONGEDO": 0x000C}
+     "RESPINTO": 0x0005, "ATTACCA": 0x0006, "SESSIONE": 0x0007,
+     # ⭐ La strada della TELA, entrata qui il 16 agosto 2026 (sottofase 6.6).
+     #    ⛔ `fasi/06-la-tela-e-la-vista.md` §0 punto 6: erano nel protocollo da
+     #    una settimana e questo cliente **non ne mandava nemmeno uno**.
+     "VISTA": 0x0008, "DISPOSIZIONE": 0x0009, "CURSORE_FORMA": 0x000A,
+     "ADATTA_TELA": 0x000B, "CONGEDO": 0x000C, "TELA": 0x000E,
+     "TERMINA_SESSIONE": 0x0011}
 NOME = {v: k for k, v in T.items()}
+# I due esiti e i tre motivi di `TELA` — §7.1.
+TELA_ESITO = {1: "ADATTATA", 2: "RIFIUTATA"}
+TELA_MOTIVO = {0: "-", 1: "COMPOSITORE_INCAPACE", 2: "MISURA_FUORI_LIMITI",
+               3: "NON_ORA"}
 MOTIVI = {0x07: "CREDENZIALI_ERRATE", 0x08: "TROPPI_TENTATIVI",
           0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
           0x0B: "ERRORE_PROTOCOLLO", 0x0D: "TEMPO_SCADUTO",
@@ -132,19 +142,79 @@ def _capsula_chiusura(d):
 
 
 class Registratore:
-    """Il formato di RCP.md §11.1, scritto una volta sola."""
+    """Il formato di RCP.md §11.1, scritto una volta sola.
+
+    ⛔⛔ LA MAGIA E' `RCPREG 0x00 0x02`, E FINO AL 16 AGOSTO 2026 NON LO ERA.
+
+    ⭐ **E' il difetto piu' grosso trovato dalla sottofase 6.6, e non era nel
+       prodotto: era fra due banchi.**  Il 12 agosto 2026 il formato di §11.1 e'
+    passato a `0x00 0x02` — il blocco porta il campo `fine` e cresce da 16 a 17
+    byte — e `01-b4-validatore.py` ha imparato a **rifiutare** il formato
+    vecchio, come §11.1 gli impone: *«un validatore vecchio deve RIFIUTARE il
+    formato nuovo, non leggerlo di traverso»*.
+
+    ⛔ Ma questo registratore ha continuato a scrivere `0x00 0x01`.  ⇒ Da quel
+       giorno **ogni traccia di B3 usciva 2 dall'arbitro** — «registrazione
+    malformata» — e le cinque chiamate `valida` di `01-b3-lancia.sh` fallivano
+    tutte, ⛔ facendo uscire **1** il banco intero.  ⚠ Nessuno dei due
+    programmi era rotto da solo: il validatore faceva **esattamente** quel che
+    la specifica gli chiede, e il registratore scriveva un formato che era
+    stato valido fino a quattro giorni prima.  E' la forma d'errore che nasce
+    fra due file, dove nessuna prova unitaria guarda.
+
+    ⚠ **E il rosso non era muto: era illeggibile.**  «La traccia e' malformata»
+      su un banco della stretta di mano manda a cercare un difetto del
+    *registratore* — che infatti c'era — ma solo dopo aver escluso il server, la
+    rete e il protocollo.  ⭐ Il banco che tiene chiusa questa porta e'
+    `06-b38-registratore.py`, e non prova il filo: prova che i due banchi
+    parlano la stessa lingua.
+    """
+
+    MAGIA = b"RCPREG\x00\x02"
+    CONTINUA, FIN, RESET = 0, 1, 2
 
     def __init__(self):
         self.blocchi = []
         self.scritta = False
+        # ⛔ Lo stream del canale di controllo, quello VERO.  §4.2: e' il primo
+        #    stream bidirezionale della sessione, e ⚠ **non e' lo 0** — in
+        #    HTTP/3 lo 0 e' gia' quello della CONNECT (rilievo R1.5).  Qui si
+        #    scriveva `0` fisso: un numero che non e' mai stato quello, e che
+        #    l'arbitro usa per P3 (§2.5, «un fotogramma sullo stream del canale
+        #    di controllo»).
+        self.stream = 0
 
-    def aggiungi(self, verso, carico, oscurati=()):
-        self.blocchi.append((verso, carico, list(oscurati)))
+    def aggiungi(self, verso, carico, oscurati=(), canale=0x00, stream=None,
+                 fine=CONTINUA):
+        self.blocchi.append([verso, canale, fine,
+                             self.stream if stream is None else stream,
+                             carico, list(oscurati)])
+
+    def segna_fine(self, verso, fine, stream=None):
+        """⛔ Come si e' chiuso lo stream, e da QUALE lato — §11.1.
+
+        ⭐ Non e' un dettaglio di formato: e' l'unico byte che permette
+           all'arbitro di distinguere **«il server non ha risposto»** da **«la
+        registrazione finisce qui»**.  §7.1 impone un `TELA` a ogni
+        `ADATTA_TELA`, e senza questo campo una traccia che finisce con una
+        richiesta in volo ha lo stesso aspetto nei due casi — la forma d'errore
+        **E8**, e stavolta sulla regola con il sintomo peggiore:
+        *«l'applicazione si e' piantata»*.
+
+        ⚠ Se l'ultimo blocco e' gia' di quel verso lo si marca; altrimenti si
+          aggiunge un blocco a carico **zero**, che e' il modo onesto di dire
+          «da questo lato non e' arrivato altro, e poi si e' chiuso».
+        """
+        if self.blocchi and self.blocchi[-1][0] == verso:
+            self.blocchi[-1][2] = fine
+            return
+        self.aggiungi(verso, b"", stream=stream, fine=fine)
 
     def scrivi(self, percorso):
-        out = bytearray(b"RCPREG\x00\x01" + struct.pack("!II", len(self.blocchi), 0))
-        for verso, carico, osc in self.blocchi:
-            out += struct.pack("!BBQIH", verso, 0x00, 0, len(carico), len(osc))
+        out = bytearray(self.MAGIA + struct.pack("!II", len(self.blocchi), 0))
+        for verso, canale, fine, stream, carico, osc in self.blocchi:
+            out += struct.pack("!BBBQIH", verso, canale, fine, stream,
+                               len(carico), len(osc))
             for ini, qua, imp in osc:
                 out += struct.pack("!II", ini, qua) + imp
             out += carico
@@ -340,17 +410,107 @@ async def attendi(cli, quale, attesa=10.0, reg=None):
     return nome, corpo, grezzo
 
 
-def scrivi_traccia(a, reg):
-    """La registrazione si scrive UNA volta sola, e anche se si e' fallito.
+async def chiedi_tela(cli, reg, lar, alt, tetto):
+    """⭐ `ADATTA_TELA(lar, alt)` e l'attesa del `TELA` — RCP.md §7.1.
+
+    Restituisce `(esito, motivo, tela_lar, tela_alt, ms)`, oppure `None` se il
+    tetto scade **senza nessuna risposta**.
+
+    ⛔⛔ IL TETTO E' LA MISURA, NON UNA COMODITA'.
+
+    §7.1: *«A ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`,
+    riuscito o no.  Un silenzio lascia il client ad aspettare per sempre una
+    risposta che non arrivera', e il sintomo e' "l'applicazione si e'
+    piantata"»*.  ⇒ Un cliente di prova che aspettasse **senza tetto**
+    riprodurrebbe il sintomo invece di misurarlo: il banco resterebbe appeso, e
+    chi guarda direbbe «il banco si e' piantato» — che e' la stessa frase, dal
+    lato sbagliato.
+
+    ⚠ E il tetto NON e' una regola del protocollo: §7.1 non dice **entro
+      quanto**.  ⛔ Quindi la scadenza non si registra come violazione dal
+      cliente: si registra il **silenzio**, e a giudicarlo e' l'arbitro, che
+      legge i byte e il campo `fine` di §11.1.  Il cliente misura; il verdetto
+      e' di `01-b4-validatore.py`.
+
+    ⚠ E si registra quel che arriva NEL FRATTEMPO — `CURSORE_FORMA` e i
+      fotogrammi arrivano quando vogliono — perche' una traccia con dei buchi
+      non e' giudicabile: §11.1 vuole i byte, non quelli che aspettavamo.
+    """
+    b = inquadra(T["ADATTA_TELA"], struct.pack("!II", lar, alt))
+    cli.manda(b)
+    reg.aggiungi(CLIENT, b)
+    print(f"   → ADATTA_TELA {lar}x{alt}")
+    t0 = time.monotonic()
+    scade = t0 + tetto
+    while True:
+        resta = scade - time.monotonic()
+        if resta <= 0:
+            ms = (time.monotonic() - t0) * 1000
+            print(f"   ⛔ NESSUN TELA dopo {ms:.0f} ms: §7.1 vuole una risposta "
+                  f"«riuscita o no».  ⚠ E' il silenzio che «lascia il client ad "
+                  f"aspettare per sempre»")
+            return None
+        try:
+            m = await asyncio.wait_for(cli.messaggi.get(), timeout=resta)
+        except asyncio.TimeoutError:
+            continue
+        if m is None:
+            print(f"   ⛔ il canale si e' chiuso mentre aspettavo il TELA: "
+                  f"{cli.caduta}")
+            return None
+        tipo, corpo, grezzo = m
+        reg.aggiungi(SERVER, grezzo)
+        nome = NOME.get(tipo, f"{tipo:#06x}")
+        if nome != "TELA":
+            print(f"   ·  nel frattempo: {nome} ({len(corpo)} byte)")
+            if nome == "CONGEDO":
+                mot = corpo[0] if corpo else 0
+                print(f"   ⛔ CONGEDO invece del TELA: motivo {mot:#04x} = "
+                      f"{MOTIVI.get(mot, '?')}")
+                return None
+            continue
+        ms = (time.monotonic() - t0) * 1000
+        if len(corpo) < 10:
+            print(f"   ⛔ TELA con un corpo di {len(corpo)} byte: §7.1 ne vuole "
+                  f"10 (u8, u8, u32, u32) — i byte sono nella traccia")
+            return None
+        es, mot = corpo[0], corpo[1]
+        tl, ta = struct.unpack("!II", corpo[2:10])
+        print(f"   ← TELA {TELA_ESITO.get(es, es)}"
+              f"/{TELA_MOTIVO.get(mot, mot)} tela in vigore {tl}x{ta} "
+              f"dopo {ms:.0f} ms")
+        return es, mot, tl, ta, ms
+
+
+def scrivi_traccia(a, reg, cli=None):
+    """La registrazione si scrive presto, e si RISCRIVE a ogni tappa.
 
     ⛔ «Non ho niente da giudicare» e «conforme» sono due cose diverse: un file
        vuoto non si scrive, cosi' chi lo cerca vede che non c'e' invece di
        giudicare zero blocchi.
+
+    ⚠⛔ **E dal 16 agosto 2026 si RISCRIVE, dove prima si scriveva una volta
+        sola.**  La guardia `scritta` era giusta finche' dopo `SESSIONE` questo
+    programma non registrava piu' niente: adesso registra l'`ADATTA_TELA`, il
+    `TELA`, la `VISTA` e la chiusura del canale — ⛔ e con la guardia in piedi
+    **la meta' interessante della traccia non arrivava nel file**.  Un banco
+    che chiude il file prima di fare la cosa che deve misurare consegna
+    all'arbitro una registrazione conforme e vuota.
+
+    ⭐ E il FIN si segna QUI, non nell'evento che lo riceve: i messaggi del
+       server passano per una coda, e marcare la fine dal gestore dell'evento
+    scriverebbe la chiusura **prima** di messaggi che nella traccia vengono
+    dopo.  ⛔ Sarebbe un byte falso proprio nel campo che §11.1 ha aggiunto per
+    non far confondere una fine con un'interruzione.
     """
-    if a.registra and reg.blocchi and not getattr(reg, "scritta", False):
-        reg.scrivi(a.registra)
-        reg.scritta = True
-        print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
+    if not (a.registra and reg.blocchi):
+        return
+    if cli is not None and cli.finito and not getattr(reg, "fine_segnata", False):
+        reg.segna_fine(SERVER, Registratore.FIN)
+        reg.fine_segnata = True
+    reg.scrivi(a.registra)
+    reg.scritta = True
+    print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
 
 
 def corpo_ciao():
@@ -380,7 +540,11 @@ async def principale(a) -> int:
         print(f"   CONNECT estesa: :status = {stato}")
         if stato != "200":
             return 1
-        cli.apri_controllo()
+        # ⛔ Lo stream VERO del canale di controllo finisce nella traccia: §11.1
+        #    lo chiede, e §2.5 ci fa poggiare sopra P3 — «un fotogramma sullo
+        #    stream del canale di controllo».  Con lo `0` scritto a mano quel
+        #    controllo dell'arbitro guardava un numero inventato.
+        reg.stream = cli.apri_controllo()
 
         # ⛔ LA TRACCIA SI SCRIVE ANCHE QUANDO LA STRETTA DI MANO NON RIESCE.
         #
@@ -418,7 +582,7 @@ async def principale(a) -> int:
                   + ("   ⭐ il secondo fisso c'e'" if ms >= 1000 else
                      "   ⛔ MENO DI UN SECONDO: §4.4-bis violata"))
             if ms < 1000:
-                scrivi_traccia(a, reg)
+                scrivi_traccia(a, reg, cli)
                 return 1
 
             # ── ATTACCA ─────────────────────────────────────────────────────
@@ -429,7 +593,7 @@ async def principale(a) -> int:
             reg.aggiungi(CLIENT, b)
             nome, corpo, grezzo = await attendi(cli, "SESSIONE", reg=reg)
         except Exception:
-            scrivi_traccia(a, reg)
+            scrivi_traccia(a, reg, cli)
             raise
         stato_s = corpo[0]
         lar, alt = struct.unpack("!II", corpo[1:9])
@@ -437,7 +601,60 @@ async def principale(a) -> int:
         desktop = corpo[11:11 + n].decode()
         print(f"   ⭐ SESSIONE: stato={stato_s} tela={lar}x{alt} desktop={desktop}")
 
-        scrivi_traccia(a, reg)
+        # ═══════════════════════════════════════════════════════════════════
+        # ⭐⛔ LA STRADA DELLA TELA — sottofase 6.6, 16 agosto 2026
+        #
+        #    ⛔ *«Nessuno dei due manda un `ADATTA_TELA`»*: da qui in poi non e'
+        #       piu' vero.  E c'e' una ragione in piu' per farlo **all'attacco**,
+        #       ed e' del 15 agosto: `DECISIONI.md` §5.0-sexies fa chiedere al
+        #       client *«la tela della propria finestra all'attacco di ogni
+        #       sessione, da se'»* — quindi questa non e' una prova di
+        #       laboratorio, e' quel che il client vero fa ogni volta.
+        #
+        # ⚠ E il conto in volo si tiene ANCHE QUI, non solo nell'arbitro: §6.2
+        #   lega al conto il modo in cui il client tratta i fotogrammi, e un
+        #   cliente di prova che non lo tenesse non potrebbe accorgersi di un
+        #   `TELA` che non ha chiesto.
+        tela_viva = (lar, alt)
+        esiti_tela = []
+        if a.adatta:
+            for al, aa, quando in a.adatta:
+                if quando:
+                    # ⭐ E' il ridimensionamento **a caldo**: la sessione e' gia'
+                    #    viva e in mezzo passano fotogrammi.  ⚠ Si aspetta con
+                    #    gli occhi aperti — un `sleep` non si accorgerebbe che
+                    #    la sessione e' caduta nel frattempo, e la misura
+                    #    dell'`ADATTA_TELA` sarebbe presa su una connessione
+                    #    morta (rilievi R8.2, R8.4).
+                    print(f"   ·  aspetto {quando} s a sessione viva")
+                    try:
+                        await asyncio.wait_for(cli.caduto.wait(), timeout=quando)
+                        print(f"   ⛔ caduta prima di poter chiedere la tela: "
+                              f"{cli.caduta}")
+                        scrivi_traccia(a, reg, cli)
+                        return 4
+                    except asyncio.TimeoutError:
+                        pass
+                r = await chiedi_tela(cli, reg, al, aa, a.attesa_tela)
+                esiti_tela.append(r)
+                if r is None:
+                    # ⛔ Il silenzio si REGISTRA e si esce con un codice suo: e'
+                    #    la scena di §7.1, e va distinta da «la sessione e'
+                    #    caduta» (4) e da «tutto bene» (0).
+                    scrivi_traccia(a, reg, cli)
+                    return 5
+                tela_viva = (r[2], r[3])
+        if a.vista:
+            # ⚠ `VISTA` NON DEVE far cambiare la tela (§7.1).  Se dopo questa
+            #   arriva un `TELA`, il filo lo dice e l'arbitro lo accusa: qui non
+            #   si giudica, si registra.
+            vl, va = a.vista
+            b = inquadra(T["VISTA"], struct.pack("!II", vl, va))
+            cli.manda(b)
+            reg.aggiungi(CLIENT, b)
+            print(f"   → VISTA {vl}x{va}   ⚠ non deve far cambiare la tela")
+
+        scrivi_traccia(a, reg, cli)
 
         # ⛔ IL SEGNALE DI «ATTACCATO», E PERCHE' NON BASTA UNA RIGA STAMPATA.
         #
@@ -526,9 +743,12 @@ async def principale(a) -> int:
                 #    dev'essere gia' riconoscibile come nostro.
                 cli.chiusa_da_noi = True
                 print(f"   ⭐ ancora attaccato dopo {a.resta} s: niente e' caduto")
+                scrivi_traccia(a, reg, cli)
                 return 0
             print(f"   ⛔ NON sono rimasto attaccato: {cli.caduta}")
+            scrivi_traccia(a, reg, cli)
             return 4
+        scrivi_traccia(a, reg, cli)
         return 0
 
 
@@ -610,6 +830,25 @@ if __name__ == "__main__":
     p.add_argument("--altezza", type=int, default=1080)
     p.add_argument("--disposizione", default="it")
     p.add_argument("--registra")
+    # ⭐ LA STRADA DELLA TELA — sottofase 6.6.
+    #
+    # ⛔ `--adatta LxH` oppure `LxH@S`: manda `ADATTA_TELA` e aspetta il `TELA`
+    #    che §7.1 impone.  Ripetibile, e con `@S` si aspettano S secondi PRIMA
+    #    di mandarla — ⭐ cosi' la stessa opzione copre le due scene della fase
+    #    6: la richiesta **all'attacco** (`DECISIONI.md` §5.0-sexies, il client
+    #    chiede la tela della propria finestra da se') e il **ridimensionamento
+    #    a caldo** a sessione avviata.
+    p.add_argument("--adatta", action="append", default=[], metavar="LxH[@S]",
+                   help="ADATTA_TELA (0x000B), ripetibile; @S = secondi di "
+                        "attesa prima di mandarla")
+    p.add_argument("--vista", metavar="LxH",
+                   help="VISTA (0x0008) dopo l'attacco — ⚠ §7.1: NON deve far "
+                        "cambiare la tela")
+    # ⚠ Il tetto NON e' una regola di RCP: §7.1 impone la risposta, non un
+    #   tempo.  Serve a non riprodurre il sintomo che si vuole misurare.
+    p.add_argument("--attesa-tela", type=float, default=5.0,
+                   help="quanto si aspetta un TELA prima di dichiarare il "
+                        "silenzio (⚠ non e' una regola di RCP.md)")
     p.add_argument("--resta", type=float, default=0)
     # ⭐ Ogni quanti secondi farsi sentire (0 = mai, ed e' il predefinito:
     #    tacere e' quel che serve a misurare l'orologio del silenzio).
@@ -618,6 +857,30 @@ if __name__ == "__main__":
                    help="file da scrivere quando la sessione e' aperta")
     a = p.parse_args()
     a.parola = parola_dagli_argomenti(a)
+
+    def misura(testo, dove):
+        """`LxH` o `LxH@S`.  ⛔ Un argomento storto si dice, non si indovina.
+
+        ⚠ Un banco che accettasse `1264-800` interpretandolo come puo' darebbe
+          una misura diversa da quella che chi lancia crede di aver chiesto, e
+          il numero finirebbe in un rapporto: la forma d'errore **E2**.
+        """
+        quando = 0.0
+        if "@" in testo:
+            testo, _, s = testo.partition("@")
+            try:
+                quando = float(s)
+            except ValueError:
+                print(f"   ⛔ {dove}: «{s}» non e' un numero di secondi")
+                sys.exit(2)
+        parti = testo.lower().split("x")
+        if len(parti) != 2 or not all(x.isdigit() for x in parti):
+            print(f"   ⛔ {dove}: «{testo}» non ha la forma LxH (es. 1264x800)")
+            sys.exit(2)
+        return int(parti[0]), int(parti[1]), quando
+
+    a.adatta = [misura(x, "--adatta") for x in a.adatta]
+    a.vista = misura(a.vista, "--vista")[:2] if a.vista else None
     try:
         sys.exit(asyncio.run(principale(a)))
     except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura

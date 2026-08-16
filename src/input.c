@@ -56,6 +56,65 @@
  *   ⛔ Non e' una ragione per non contare: la rete scatta quando il canale si
  *   chiude, e il distacco di un client **non** chiude la sessione (invariante
  *   I4 — il palco sopravvive al distacco).
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔⛔ IL RILASCIO CHE NON ARRIVA A NESSUNO — `[M]` 16 agosto 2026, banco
+ *       `06-b33`, e questo file NON lo puo' curare
+ *
+ * ⚠ *Questo riquadro e' la cosa piu' importante del file, e va letta prima di
+ *   toccare `dispositivo_tolto()`: il commento li' dentro diceva* «al ricambio
+ *   si rilascia sul dispositivo nuovo, che e' l'unico posto dove il rilascio
+ *   arriva» *— ed era **falso**.  Il rilascio sul dispositivo nuovo non arriva
+ *   da nessuna parte.*
+ *
+ * LA SCENA, misurata: si tiene giu' `BTN_LEFT`, il client chiede un
+ * `ADATTA_TELA`, Mutter ricrea i dispositivi assoluti, e **poi** si rilascia.
+ * ⇒ `[M]` il testimone dentro la sessione (una finestra Wayland vera) vede il
+ *   `premuto:1` e **non vede mai** il `premuto:0`.  ⛔ E da quel momento in poi
+ *   **nessun clic funziona piu'**, per sempre: il giro successivo, identico a
+ *   uno che era stato verde su tutto, consegna puntatore e tasti e **zero**
+ *   pulsanti.  E' *«su Android il mouse da' problemi: non prende piu' i click»*
+ *   (l'utente, 15 agosto 2026), in una forma che nessun registro dichiarava.
+ *
+ * LA CATENA, tutta `[R]` nel sorgente di Mutter, e nessun anello e' nostro:
+ *
+ *   1. `remove_viewport_devices` (`meta-eis-client.c:197-206`) chiama
+ *      `eis_device_remove()` e ⛔ **NON passa da `drop_device()`** — che e'
+ *      l'unico posto dove Mutter rilascia quel che era premuto.  Il dispositivo
+ *      vecchio se ne va **col pulsante ancora giu'**;
+ *   2. `handle_button` (`:612-621`) ingoia **in silenzio** un rilascio per un
+ *      pulsante che non risulta premuto sul dispositivo che lo riceve
+ *      (*«Duplicate press/release, should've been filtered by libeis»*) — e
+ *      dopo il ricambio il dispositivo e' un ALTRO, con le mappe pulite;
+ *   3. `meta_seat_impl_notify_button_in_impl` (`meta-seat-impl.c:899-908`) tiene
+ *      un conto **DEL POSTO**, condiviso fra tutti i dispositivi, e scarta
+ *      *«any repeated button press (for example from virtual devices)»*.  Il
+ *      press del dispositivo morto lo tiene a **1** per sempre ⇒ ogni press
+ *      successivo lo porta a 2 e viene scartato, ogni release lo riporta a 1 e
+ *      viene scartato.  ⛔ **Non scende mai a zero.**
+ *
+ * ⇒ ⛔ **Da qui non si recupera, e non e' una resa**: e' misurato.  Un
+ *   `press`+`release` sul dispositivo nuovo fa 1→2→1 e non consegna niente
+ *   (`[M]`); un `release` da solo lo ingoia il passo 2.  L'unico codice che
+ *   riporta il conto a zero e' `drop_device()`, cioe' **la caduta del canale
+ *   EIS** — e infatti `[M]` riaccendere il server sblocca il desktop.
+ *
+ * ⭐⭐ E LA CURA C'E', E' UNA RIGA, E NON STA IN QUESTO FILE: si rilascia
+ *     **PRIMA** di chiedere il ridimensionamento, finche' i dispositivi sono
+ *     ancora quelli che hanno ricevuto il press.  La funzione esiste gia' ed e'
+ *     `input_rilascia_tutto()`; il posto dove chiamarla e' `figlio.c:3964`,
+ *     subito **prima** di `cattura_ridimensiona(cat, tela_voluta_l,
+ *     tela_voluta_a)`.  `[M]` Simulata dal filo — rilasciando prima del
+ *     ricambio — il testimone vede il rilascio e i clic dopo il ricambio
+ *     tornano a funzionare, tutti.
+ *
+ * ⚠ `figlio.c` non e' di questo anello (sottofase 6.3), quindi qui la cura si
+ *   MISURA e si SCRIVE, non si applica.  ⛔ Quel che tocca a questo file e'
+ *   l'altra meta', ed e' quella che mancava: **smettere di dire che il rilascio
+ *   e' partito**.  Prima `manda_bottone()` tornava 0 e
+ *   `input_rilascia_tutto()` contava un rilascio avvenuto, cioe' il registro
+ *   diceva «fatto» mentre il desktop restava bloccato — la forma peggiore di
+ *   `CODER.md` §4.6, *il verde non e' vero*.
  */
 #include "input.h"
 
@@ -125,12 +184,22 @@ struct input
 
 	Tastiera *disposizione;
 	char *keymap_nome; /* il nome che libei pubblica, per VEDERE un ricambio */
+	/* ⭐ Quel che il CLIENT ha dichiarato in `ATTACCA` (`RCP.md` §4.5), cioe'
+	 *    la disposizione che §5-bis.7 dice di mettere nella sessione.  NULL
+	 *    finche' nessuno l'ha chiesta. */
+	char *negoziata;
 
 	/* ⛔⛔ IL CONTO.  Vedi il riquadro in testa al file. */
 	uint8_t tasti[BIT_BYTE(MAX_TASTO)];
 	uint8_t bottoni[BIT_BYTE(MAX_BOTTONE)];
 	unsigned quanti_tasti;
 	unsigned quanti_bottoni;
+
+	/* ⛔⛔ GLI ORFANI — quel che era premuto su un dispositivo CHE NON C'E'
+	 *     PIU'.  Vedi il riquadro «IL RILASCIO CHE NON ARRIVA A NESSUNO». */
+	uint8_t tasti_orfani[BIT_BYTE(MAX_TASTO)];
+	uint8_t bottoni_orfani[BIT_BYTE(MAX_BOTTONE)];
+	unsigned quanti_orfani;
 
 	/* I ricambi silenziosi, contati: il banco li legge invece di dedurli. */
 	unsigned ricambi_puntatore;
@@ -184,6 +253,31 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 	if (!in->tastiera_dev || !in->tastiera_attiva)
 		return -1;
 
+	/* ⛔ Come per i pulsanti: un tasto premuto su una tastiera che il
+	 *    compositore ha distrutto (cambio di keymap, `:762-781`) non si
+	 *    rilascia piu' — `handle_key` (`:638-645`) ha la stessa guardia di
+	 *    `handle_button`.  Si dice e si torna -1, invece di scrivere «fatto». */
+	if (!premuto && bit_leggi(in->tasti_orfani, codice))
+	{
+		bit_scrivi(in->tasti_orfani, codice, FALSE);
+		if (in->quanti_orfani)
+			in->quanti_orfani--;
+		if (bit_leggi(in->tasti, codice))
+		{
+			bit_scrivi(in->tasti, codice, FALSE);
+			if (in->quanti_tasti)
+				in->quanti_tasti--;
+		}
+		registro_dice(AREA,
+		              "⛔⛔ il rilascio del tasto 0x%X NON PARTE: era premuto su una tastiera che "
+		              "il compositore ha gia' tolto (ricambio n. %u), e `handle_key` scarta in "
+		              "silenzio un rilascio sul dispositivo nuovo (`meta-eis-client.c:638-645`).  "
+		              "⛔ Un modificatore che resta giu' rende il desktop inservibile (`RCP.md` "
+		              "§11): la cura e' rilasciare PRIMA del ricambio",
+		              codice, in->ricambi_tastiera);
+		return -1;
+	}
+
 	ei_device_keyboard_key(in->tastiera_dev, codice, premuto != 0);
 	batti_cornice(in, in->tastiera_dev);
 
@@ -209,6 +303,40 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 	}
 	if (!in->puntatore || !in->puntatore_attivo)
 		return -1;
+
+	/*
+	 * ⛔⛔ IL RILASCIO DI UN ORFANO NON PARTE, E SI DICE — vedi il riquadro in
+	 *     testa al file.  ⚠ Si CANCELLA il conto lo stesso: quel pulsante non e'
+	 *     piu' nostro da rilasciare, e tenerlo segnato farebbe riprovare per
+	 *     sempre una cosa che non puo' riuscire.
+	 *
+	 * ⭐ E si torna **-1**, non 0: `rcp.c` lo conta fra gli `input_rifiutati`,
+	 *   che e' la verita'.  Tornare 0 vorrebbe dire scrivere «fatto» accanto a
+	 *   un desktop che e' rimasto col pulsante giu' — e sono sei ore di
+	 *   diagnosi a chi legge il registro.
+	 */
+	if (!premuto && bit_leggi(in->bottoni_orfani, codice))
+	{
+		bit_scrivi(in->bottoni_orfani, codice, FALSE);
+		if (in->quanti_orfani)
+			in->quanti_orfani--;
+		if (bit_leggi(in->bottoni, codice))
+		{
+			bit_scrivi(in->bottoni, codice, FALSE);
+			if (in->quanti_bottoni)
+				in->quanti_bottoni--;
+		}
+		registro_dice(AREA,
+		              "⛔⛔ il rilascio del pulsante 0x%X NON PARTE: era premuto su un "
+		              "dispositivo che il compositore ha gia' tolto (ricambio n. %u), e Mutter "
+		              "scarta in silenzio un rilascio sul dispositivo nuovo "
+		              "(`meta-eis-client.c:612-621`).  ⛔ Il POSTO lo conta ancora giu' "
+		              "(`meta-seat-impl.c:899-908`) e da adesso NESSUN clic arriva piu': la cura "
+		              "e' rilasciare PRIMA di chiedere il ridimensionamento — `figlio.c:3964`, "
+		              "prima di `cattura_ridimensiona()`",
+		              codice, in->ricambi_puntatore);
+		return -1;
+	}
 
 	ei_device_button_button(in->puntatore, codice, premuto != 0);
 	batti_cornice(in, in->puntatore);
@@ -426,7 +554,28 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	 *   coordinatore), si passa **quella** al posto di questo NULL e non serve
 	 *   altro.  *(Riga lasciata da A5, 14 agosto 2026.)*
 	 */
-	nuova = tastiera_apri_da_keymap(testo, misura, NULL, &sbaglio);
+	/*
+	 * ⭐ E ADESSO LA NEGOZIATA ARRIVA FIN QUI — 16 agosto 2026, e fino a
+	 *    stasera era `NULL`.
+	 *
+	 * ⛔ Il commento che stava qui diceva che il NULL «per adesso e' giusto», e
+	 *    dichiarava la conseguenza: `tastiera.c` confronta la disposizione
+	 *    dichiarata dal client con quella vera della sessione e scrive
+	 *    `RIPIEGO DICHIARATO` se non combaciano — e con `NULL` quel confronto
+	 *    **non si faceva mai**.  `[M]` banco `06-b34`, primo giro: quella riga
+	 *    non compare in NESSUNO dei giri, nemmeno riattaccandosi dichiarando
+	 *    `us` a una sessione `it`.  ⇒ Chi la cercasse nel registro concluderebbe
+	 *    «combaciano sempre», che e' una cosa diversa da «non ho guardato»
+	 *    (`LEZIONI.md` §1.9 regola 1).
+	 *
+	 * ⚠ E adesso serve il doppio: attuata §5-bis.7 chiediamo NOI alla sessione
+	 *   di mettere quella disposizione, e questa riga e' l'unica che dice se
+	 *   l'abbiamo davvero ottenuta.  ⛔ Se `gsd-keyboard` ce la risovrascrivesse
+	 *   — e' il «contorno» di `CODER.md` §4.1-bis, quello che non si insegue —
+	 *   il ripiego comparirebbe QUI, invece di lasciare l'utente con `Ctrl+Z`
+	 *   sul tasto sbagliato e nessuna riga che lo spieghi.
+	 */
+	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
 	if (!nuova)
 	{
 		registro_dice(AREA, "⚠ la keymap consegnata da libei non si apre (%s): %s",
@@ -491,13 +640,47 @@ static void dispositivo_aggiunto(Input *in, struct ei_device *dispositivo)
 	}
 }
 
+/*
+ * ⛔⛔ Quel che era premuto su un dispositivo che se ne va diventa un ORFANO.
+ *
+ * Il riquadro in testa al file dice perche': il suo rilascio non arrivera' a
+ * nessuno, ne' sul dispositivo vecchio (che non c'e' piu') ne' sul nuovo (dove
+ * Mutter lo scarta in silenzio).  ⇒ Si SEGNA, e la riga si scrive **subito**,
+ * nell'istante in cui il danno si produce — non al rilascio, che e' mezzo
+ * secondo dopo e che chi legge il registro non collega piu' al ricambio.
+ *
+ * ⚠ E si scrive SOLO se c'era qualcosa di premuto: una riga a ogni ricambio
+ *   annegherebbe quella che conta (`[M]` 15 ricambi in tre minuti su un banco).
+ */
+static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint32_t massimo,
+                         unsigned quanti, const char *cosa)
+{
+	if (!quanti)
+		return;
+	for (uint32_t c = 0; c < massimo; c++)
+		if (bit_leggi(mappa, c) && !bit_leggi(orfani, c))
+		{
+			bit_scrivi(orfani, c, TRUE);
+			in->quanti_orfani++;
+		}
+	registro_dice(AREA,
+	              "⛔⛔ %u %s erano PREMUTI sul dispositivo che il compositore ha appena tolto: il "
+	              "loro rilascio non arrivera' a NESSUNO, e il posto li conta ancora giu'.  ⇒ Da "
+	              "adesso quel che passa da loro e' rotto finche' non cade il canale EIS.  La cura "
+	              "e' rilasciare PRIMA di chiedere il ridimensionamento (`figlio.c:3964`)",
+	              quanti, cosa);
+}
+
 static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 {
 	if (in->puntatore == dispositivo)
 	{
 		/* ⛔ E il conto di quel che era premuto NON si azzera: il dispositivo se
-		 *    n'e' andato, i tasti dell'utente no.  Al ricambio si rilascia sul
-		 *    dispositivo nuovo, che e' l'unico posto dove il rilascio arriva. */
+		 *    n'e' andato, i pulsanti dell'utente no.  ⚠ Ma NON si spera piu' di
+		 *    rilasciarli sul dispositivo nuovo — `[M]` 16 agosto 2026, non
+		 *    arriva: diventano ORFANI, e si dice. */
+		segna_orfani(in, in->bottoni, in->bottoni_orfani, MAX_BOTTONE, in->quanti_bottoni,
+		             "pulsanti");
 		ei_device_unref(in->puntatore);
 		in->puntatore = NULL;
 		in->puntatore_attivo = FALSE;
@@ -515,6 +698,15 @@ static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 	}
 	if (in->tastiera_dev == dispositivo)
 	{
+		/* ⚠ Al cambio di GEOMETRIA la tastiera non ricambia — `[R]`
+		 *   `remove_viewport_devices` guarda solo TOUCH e POINTER_ABSOLUTE
+		 *   (`meta-eis-client.c:197-206`), e `[M]` 16 agosto 2026: **zero**
+		 *   ricambi di tastiera su quindici del puntatore.  ⛔ Ma al cambio di
+		 *   KEYMAP si', `on_keymap_changed` (`:762-781`) la distrugge e la
+		 *   ricrea — e li' il difetto degli orfani ha la stessa forma.  E'
+		 *   la sottofase 6.2: qui si segna, cosi' quando lei lo misura il conto
+		 *   c'e' gia'. */
+		segna_orfani(in, in->tasti, in->tasti_orfani, MAX_TASTO, in->quanti_tasti, "tasti");
 		ei_device_unref(in->tastiera_dev);
 		in->tastiera_dev = NULL;
 		in->tastiera_attiva = FALSE;
@@ -802,6 +994,193 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 	return 0;
 }
 
+/*
+ * ⛔⭐⭐ LA DISPOSIZIONE NEGOZIATA ENTRA NELLA SESSIONE — §5-bis.7 attuata.
+ *
+ * ⛔⛔ E QUESTA E' LA RIGA PIU' DISCUTIBILE DEL FILE: SI PASSA DA `GSettings`,
+ *     CIOE' DAL «CONTORNO» CHE `CODER.md` §4.1-bis DICE DI NON INSEGUIRE.
+ *
+ * La regola dice: il **compositore** si insegue per forza, il contorno no.  E
+ * `org.gnome.desktop.input-sources` e' contorno in pieno — e' la chiave che
+ * legge **`gsd-keyboard`**, cioe' un demone di GNOME, non Mutter.
+ *
+ * ⇒ Perche' si fa lo stesso, e la prova di §4.1-bis applicata per intero
+ *   *(«quante implementazioni diverse dovrei inseguire, e quanto mi costa farla
+ *   da me?»)*:
+ *
+ *   · **farla da noi non si puo'.**  La disposizione della sessione la applica
+ *     il compositore, e ⛔ `libei` **non ha nessun verso client→server per la
+ *     keymap**: `ei_device_keyboard_get_keymap()` la CONSEGNA e basta.  Non
+ *     esiste un `ei_device_keyboard_set_keymap()`.  ⇒ Non e' «costa tanto»: e'
+ *     che la leva dal nostro lato **non c'e**';
+ *   · **e nemmeno Mutter la offre** sul suo D-Bus `RemoteDesktop`: c'e'
+ *     `NotifyKeyboardKeycode` e `NotifyKeyboardKeysym`, cioe' due modi di
+ *     BATTERE un tasto, nessuno di cambiare la disposizione;
+ *   · ⇒ resta l'unica leva che esista su GNOME, ed e' questa.
+ *
+ * ⛔ E allora si paga il prezzo di §4.1-bis **dichiarandolo**, che e' la parte
+ *    che quella regola non permette di saltare: **questa funzione e' di GNOME,
+ *    e su KDE non funzionera'** (li' la chiave e' `kxkbrc`, e la fase 11 dovra'
+ *    scriverne un'altra).  ⇒ Il posto giusto in cui vivra' e' `mutter.c`, con
+ *    il suo gemello in `kwin.c` — ⚠ ma `mutter.c` non e' mio stasera (la
+ *    sottofase 6.3 ci sta lavorando), e il rapporto consegna lo spostamento
+ *    come cucitura invece di farlo di nascosto.
+ *
+ * ⚠ E c'e' un secondo motivo per cui il ripiego va dichiarato e non dedotto:
+ *   `gsd-keyboard` puo' **risovrascriverci**.  Non lo si previene — sarebbe
+ *   inseguire il contorno — lo si MISURA: la riga che dice se l'abbiamo
+ *   ottenuta e' quella di `leggi_keymap()` al `DEVICE_ADDED` che segue, dove
+ *   adesso passa anche la negoziata (vedi il riquadro li').
+ */
+int input_disposizione(Input *in, const char *nome)
+{
+	g_autofree char *valore = NULL;
+	g_autofree char *xkb = NULL;
+	GSettingsSchemaSource *fonte;
+	g_autoptr(GSettingsSchema) schema = NULL;
+	g_autoptr(GSettings) impostazioni = NULL;
+	const char *par;
+
+	if (!in || !nome || !*nome)
+		return -1;
+
+	/*
+	 * ⛔⛔ NON SI CHIEDE DUE VOLTE LA STESSA COSA — ⚠ E LA DOMANDA GIUSTA E'
+	 *     «CHE COSA C'E' ADESSO?», NON «CHE COSA HO CHIESTO?».
+	 *
+	 * Non chiedere per niente conta: un ricambio di keymap costa a Mutter la
+	 * DISTRUZIONE e la ricreazione del dispositivo tastiera (`STUDI.md` §gnome
+	 * §9), e farlo a vuoto si vede.
+	 *
+	 * ⛔ Ma la prima stesura si ricordava **quel che aveva chiesto**
+	 *    (`g_strcmp0(in->negoziata, nome)`), ed era la forma **E1**: fra una
+	 *    richiesta e l'altra la disposizione della sessione puo' cambiare per
+	 *    mano di **qualcun altro** — l'utente dalle impostazioni, `gsd-keyboard`,
+	 *    o un banco.  `[M]` 16 agosto 2026: sessione riportata a `it` da fuori,
+	 *    client che riattacca dichiarando `de`, e il registro diceva
+	 *    *«disposizione «de»: gia' chiesta, non la richiedo»* — con la sessione
+	 *    italiana.  ⇒ **`Ctrl+Z` e' arrivato come `Ctrl+Y`**, cioe' esattamente
+	 *    il guasto che questa funzione esiste per curare.
+	 *
+	 * ⇒ Si chiede alla keymap VERA, quella che `libei` ci ha consegnato.
+	 * ⚠ E si salta SOLO su un `1` netto: `-1` vuol dire «non ho potuto dire», e
+	 *   su un non-so si CHIEDE — meglio un ricambio di troppo che una sessione
+	 *   con le scorciatoie sfasate e nessuna riga che lo spieghi.
+	 */
+	if (in->disposizione && tastiera_e_questa(in->disposizione, nome) == 1)
+	{
+		g_free(in->negoziata);
+		in->negoziata = g_strdup(nome);
+		registro_dettaglio(AREA,
+		                   "disposizione «%s»: la sessione la ha GIA' (verificato sulla keymap, "
+		                   "non sulla memoria), non la richiedo",
+		                   nome);
+		return 0;
+	}
+
+	/*
+	 * ⚠ Le due sintassi non sono la stessa, e confonderle e' un guasto muto:
+	 *   `RCP.md` §4.5 scrive la variante fra **parentesi** — `de(neo)` — e
+	 *   `org.gnome.desktop.input-sources` la scrive col **piu'** — `de+neo`.
+	 *   ⛔ Passando `de(neo)` a GNOME non si ottiene un errore: si ottiene una
+	 *   sorgente che non esiste, e la sessione resta con quella di prima —
+	 *   cioe' un ripiego silenzioso.
+	 */
+	par = strchr(nome, '(');
+	if (par)
+	{
+		const char *chiusa = strchr(par + 1, ')');
+		if (!chiusa)
+			return -1;
+		xkb = g_strdup_printf("%.*s+%.*s", (int) (par - nome), nome,
+		                      (int) (chiusa - par - 1), par + 1);
+	}
+	else
+		xkb = g_strdup(nome);
+
+	/*
+	 * ⛔ LO SCHEMA SI CERCA, NON SI DA' PER SCONTATO.  `g_settings_new()` su
+	 *    uno schema che non c'e' **abortisce il processo** — e il processo e'
+	 *    il figlio, cioe' il palco dell'utente.  ⇒ Su una macchina senza gli
+	 *    schemi di GNOME (un contenitore, un desktop diverso) il servizio deve
+	 *    degradare, non morire: `CODER.md` §4.2.
+	 */
+	fonte = g_settings_schema_source_get_default();
+	schema = fonte ? g_settings_schema_source_lookup(fonte, "org.gnome.desktop.input-sources",
+	                                                 TRUE)
+	               : NULL;
+	if (!schema)
+	{
+		registro_dice(AREA,
+		              "⚠ RIPIEGO DICHIARATO: lo schema «org.gnome.desktop.input-sources» non "
+		              "c'e' su questa macchina — la disposizione «%s» NON si applica, e la "
+		              "sessione tiene la sua. ⛔ Le LETTERE usciranno giuste lo stesso, le "
+		              "SCORCIATOIE no (RCP.md §7.3)",
+		              nome);
+		return -1;
+	}
+
+	/*
+	 * ⛔⛔⭐ E PRIMA DI CHIEDERE IL CAMBIO, SI RILASCIA TUTTO.
+	 *
+	 * ⭐ Non e' prudenza: e' la cura che l'anello del PUNTATORE (sottofase 6.1)
+	 *    ha misurato e scritto poche righe piu' su, applicata al posto in cui
+	 *    questa funzione la rende necessaria.
+	 *
+	 * ⛔ Il fatto, `[R]` `meta-eis-client.c:638-645`: un rilascio mandato sul
+	 *    dispositivo NUOVO per un tasto premuto sul VECCHIO viene **scartato in
+	 *    silenzio**.  ⇒ Un tasto che sta giu' nell'istante del ricambio diventa
+	 *    un ORFANO: il suo rilascio non parte, e non partira' mai.
+	 *
+	 * ⛔ E questa funzione **provoca il ricambio di proposito**: cambiare la
+	 *    disposizione distrugge e ricrea il dispositivo tastiera (`STUDI.md`
+	 *    §gnome §9).  ⇒ Se l'utente sta tenendo premuto un modificatore mentre
+	 *    la disposizione cambia — e succede: si riattacca da un'altra tastiera
+	 *    **mentre scrive** — quel modificatore resta giu' e il desktop diventa
+	 *    inservibile, che e' esattamente il danno di `RCP.md` §11.
+	 *
+	 * ⇒ La riga della cura, dall'anello del puntatore: *«la cura e' rilasciare
+	 *   PRIMA del ricambio»*.  Qui e' l'unico posto in cui il «prima» esiste
+	 *   ancora — dopo, il dispositivo e' gia' un altro.
+	 *
+	 * ⚠ E si fa anche quando non c'e' niente di premuto: `input_rilascia_tutto()`
+	 *   scrive **sempre** la sua riga, e uno zero dichiarato vale piu' di un
+	 *   silenzio (e' la ragione per cui quella funzione e' fatta cosi').
+	 */
+	input_rilascia_tutto(in);
+
+	impostazioni = g_settings_new("org.gnome.desktop.input-sources");
+	valore = g_strdup_printf("[('xkb','%s')]", xkb);
+
+	if (!g_settings_set_value(impostazioni, "sources", g_variant_new_parsed(valore)))
+	{
+		registro_dice(AREA, "⚠ la disposizione «%s» NON e' stata scritta in input-sources", nome);
+		return -1;
+	}
+	/* ⛔ E anche `current`, o GNOME resta sull'indice di prima quando la lista
+	 *    si accorcia — e l'indice fuori dalla lista vuol dire «nessuna». */
+	g_settings_set_uint(impostazioni, "current", 0);
+	g_settings_sync();
+
+	g_free(in->negoziata);
+	in->negoziata = g_strdup(nome);
+
+	/*
+	 * ⛔ E QUI NON SI DICE CHE E' IN VIGORE, perche' non lo sappiamo ancora.
+	 *    Fra questa riga e la disposizione applicata c'e' `gsd-keyboard` che
+	 *    legge la chiave, Mutter che ricompila la keymap, il dispositivo
+	 *    tastiera distrutto e ricreato, e `leggi_keymap()` che rilegge.
+	 *    ⚠ «L'ho chiesta» e «e' in vigore» sono due fatti diversi (forma E1), e
+	 *      la riga che constata il secondo e' «KEYMAP CAMBIATA», qualche
+	 *      millisecondo piu' sotto.
+	 */
+	registro_dice(AREA,
+	              "disposizione «%s» CHIESTA alla sessione (input-sources = %s) — §5-bis.7. "
+	              "⚠ chiesta, non ancora in vigore: lo dira' «KEYMAP CAMBIATA»",
+	              nome, valore);
+	return 0;
+}
+
 int input_pulsante(Input *in, uint16_t codice, int premuto)
 {
 	if (!in)
@@ -900,6 +1279,7 @@ int input_posizione(Input *in, uint16_t codice, int premuto)
 int input_rilascia_tutto(Input *in)
 {
 	int quanti = 0;
+	int orfani = 0;
 
 	if (!in)
 		return -1;
@@ -910,33 +1290,62 @@ int input_rilascia_tutto(Input *in)
 			/* ⛔ Il bit si spegne ANCHE se l'invio fallisce: se il dispositivo
 			 *    non c'e' piu', quel tasto non e' piu' nostro da rilasciare, e
 			 *    tenerlo segnato farebbe contare al banco un rilascio che non
-			 *    puo' avvenire.  ⚠ E si conta solo quel che e' PARTITO. */
-			if (manda_tasto(in, (uint16_t) c, 0) == 0)
+			 *    puo' avvenire.  ⚠ E si conta solo quel che e' PARTITO.
+			 *
+			 * ⛔⛔ E l'ORFANO si conta a parte: `manda_tasto()` ha gia' spento il
+			 *     bit e sceso il conto, quindi qui NON si tocca niente — farlo
+			 *     due volte porterebbe il contatore sotto zero, e un `unsigned`
+			 *     sotto zero e' quattro miliardi. */
+			if (bit_leggi(in->tasti_orfani, c))
+			{
+				(void) manda_tasto(in, (uint16_t) c, 0);
+				orfani++;
+			}
+			else if (manda_tasto(in, (uint16_t) c, 0) == 0)
 				quanti++;
 			else
 			{
 				bit_scrivi(in->tasti, c, FALSE);
-				in->quanti_tasti--;
+				if (in->quanti_tasti)
+					in->quanti_tasti--;
 			}
 		}
 	for (uint32_t c = 0; c < MAX_BOTTONE; c++)
 		if (bit_leggi(in->bottoni, c))
 		{
-			if (manda_bottone(in, (uint16_t) c, 0) == 0)
+			if (bit_leggi(in->bottoni_orfani, c))
+			{
+				(void) manda_bottone(in, (uint16_t) c, 0);
+				orfani++;
+			}
+			else if (manda_bottone(in, (uint16_t) c, 0) == 0)
 				quanti++;
 			else
 			{
 				bit_scrivi(in->bottoni, c, FALSE);
-				in->quanti_bottoni--;
+				if (in->quanti_bottoni)
+					in->quanti_bottoni--;
 			}
 		}
 
 	/* ⛔ Si scrive SEMPRE, anche quando sono zero: «non c'era niente premuto» e
 	 *    «non ho guardato» hanno lo stesso aspetto nel registro, e questa e' la
-	 *    regola con il rapporto danno/costo piu' alto di `RCP.md`. */
+	 *    regola con il rapporto danno/costo piu' alto di `RCP.md`.
+	 *
+	 * ⛔⛔ E GLI ORFANI SI DICHIARANO A PARTE, perche' sono un'altra cosa: non
+	 *     sono «rilasciati», sono «non rilasciabili».  Fino al 16 agosto 2026
+	 *     finivano dentro `quanti` e questa riga diceva un numero che
+	 *     assolveva. */
 	registro_dice(AREA, "rilascio al distacco: %d fra tasti e pulsanti (restano segnati %u tasti e "
-	                    "%u pulsanti)",
-	              quanti, in->quanti_tasti, in->quanti_bottoni);
+	                    "%u pulsanti)%s",
+	              quanti, in->quanti_tasti, in->quanti_bottoni,
+	              orfani ? " — ⛔ e vedi la riga sugli ORFANI qui sopra" : "");
+	if (orfani)
+		registro_dice(AREA,
+		              "⛔⛔ %d fra tasti e pulsanti NON si sono potuti rilasciare: erano premuti "
+		              "su dispositivi che il compositore ha tolto.  Il posto li conta ancora giu' "
+		              "e li' restano finche' non cade il canale EIS",
+		              orfani);
 	return quanti;
 }
 
@@ -967,6 +1376,7 @@ void input_chiudi(Input *in)
 	}
 	g_clear_pointer(&in->disposizione, tastiera_chiudi);
 	g_free(in->keymap_nome);
+	g_free(in->negoziata);
 	g_free(in->reg_per);
 	g_free(in);
 }
@@ -984,6 +1394,18 @@ void input_chiudi(Input *in)
  * ------------------------------------------------------------------ */
 void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
                  unsigned *ricambi_tastiera, int *pronto);
+
+/* ⛔ Il conto degli ORFANI, per il banco `06-b33`: quel che e' rimasto premuto
+ *    su un dispositivo che il compositore ha tolto.  ⚠ Sta in una funzione a
+ *    parte e non nella firma di sopra perche' `04-b24` la dichiara `extern` con
+ *    quella firma: cambiargliela sotto romperebbe un banco di un'altra fase,
+ *    che e' esattamente il tipo di rottura silenziosa che questo file combatte. */
+unsigned input_orfani(const Input *in);
+
+unsigned input_orfani(const Input *in)
+{
+	return in ? in->quanti_orfani : 0;
+}
 
 void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
                  unsigned *ricambi_tastiera, int *pronto)

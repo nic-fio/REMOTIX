@@ -104,9 +104,22 @@ GUASTI = [
      "⛔ il difetto piu' grave della prima stesura: il palco cambia da solo e "
      "il server ADOTTA la sua misura mandando un TELA che nessuno ha chiesto — "
      "che per §6.2 fa chiudere la sessione al client",
-     "\ttela_richiama_il_palco(s, ora_ms);\n}\n\nbool rcp_tela_in_volo",
+     # ⛔⭐ L'ANCORA E' SCADUTA UNA VOLTA, E SE NE E' ACCORTO SOLO IL
+     #     CERTIFICATORE — 16 agosto 2026, sottofase 6.4.
+     #
+     #     Diceva `…ora_ms);\n}\n\nbool rcp_tela_in_volo`, e il 16 agosto fra le
+     #     due funzioni e' nata `rcp_tela_rimanda()` (il fondo che si rimanda).
+     #     ⇒ Da quel momento questo guasto NON si innestava piu', e il piu'
+     #     grave dei dodici — il `TELA` non richiesto che fa chiudere una
+     #     sessione sana — non era piu' certificato da nessuno.
+     #
+     # ⭐ Che si sia visto e' merito del ramo `ANCORA`: un certificatore che
+     #    avesse contato «il guasto non e' rosso ⇒ va bene» avrebbe taciuto.
+     #    ⚠ Ma nessuno lo lanciava, e una diagnostica che nessuno legge non e'
+     #    diversa da una che tace.
+     "\ttela_richiama_il_palco(s, ora_ms);\n}\n\nbool rcp_tela_rimanda",
      "\trcp_tela_adattata_ora(s, avuta_l, avuta_a, ora_ms);\n}\n\n"
-     "bool rcp_tela_in_volo",
+     "bool rcp_tela_rimanda",
      # ⚠ Anche il 14 (adottare senza riconoscere la richiesta chiude la seconda
      #   con la risposta della prima) e ⭐ anche il 18: una sessione che ADOTTA
      #   la misura del palco non ha piu' motivo di richiamarlo, quindi il

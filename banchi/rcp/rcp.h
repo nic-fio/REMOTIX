@@ -293,6 +293,60 @@ typedef struct {
 	 *   il giorno in cui una cambia. */
 	bool (*ritela)(void *ctx, uint32_t larghezza, uint32_t altezza);
 
+	/* ⛔⭐⭐ I DUE GANCI DELLA DISPOSIZIONE — `DECISIONI.md` §5-bis.7, decisa
+	 *      dall'utente l'8 agosto 2026 e CONFERMATA il 16: *«per le tastiere
+	 *      vale il discorso delle risoluzioni: alla creazione della sessione o
+	 *      re-attach viene rinegoziata anche la tastiera»*.
+	 *
+	 * ⛔ Fino al 16 agosto 2026 quella decisione **non era mai stata eseguita**:
+	 *    `ATTACCA` convalidava la stringa e la scriveva nel registro, e li'
+	 *    finiva.  `[M]` (banco `06-b34`, caso 2): riattaccandosi a una sessione
+	 *    `it` dichiarando `us`, arrivavano `è` e `ò` — che su `us` **non
+	 *    esistono su nessun tasto**.  Cioe' la disposizione dichiarata non
+	 *    toccava niente.
+	 *
+	 * ⭐ E il danno vero NON e' la comodita' di due accenti — `SPECIFICHE.md`
+	 *    §7.3 e `DECISIONI.md` §5-bis.6: le lettere viaggiano come **lettere**,
+	 *    ma le scorciatoie viaggiano come **posizioni**, e le posizioni
+	 *    combaciano solo se le due disposizioni sono la stessa.  Su una
+	 *    tastiera tedesca la `Z` sta dove sulla nostra sta la `Y`:
+	 *    ⛔ **senza rinegoziare, `Ctrl+Z` finisce su un altro tasto** — e il
+	 *    sintomo che l'utente descrive e' «l'annulla non funziona», che nessuno
+	 *    collega alla disposizione.
+	 *
+	 * ⚠ Sono OPZIONALI come i cinque dell'input, e per la stessa ragione: un
+	 *   server senza palco convalida lo stesso il messaggio (quello e'
+	 *   protocollo) e poi DICHIARA di non averlo applicato.  ⛔ «Non ho un
+	 *   palco» e «il client ha sbagliato» sono due fatti diversi. */
+
+	/* «Questa macchina conosce questa disposizione?» — ⛔ e la risposta la sa
+	 * **XKB**, non un elenco scritto a mano.
+	 *
+	 *   `1`  si'          · `0`  no, e §4.5 vuole `SESSIONE_NON_SERVIBILE`
+	 *   `-1` ⛔ NON si e' potuto chiedere — e NON e' «no»: si dichiara.
+	 *
+	 * ⛔ Perche' e' un gancio e non una chiamata a `tastiera.c`: questo file e'
+	 *    **gemellato** con `banchi/rcp/rcp.c`, che si compila dentro gli
+	 *    `examples/` di ngtcp2 — dove `xkbcommon` non c'e' e non ci puo'
+	 *    andare.  Stessa ragione, e stessa forma, dei ganci dell'input. */
+	int (*disposizione_esiste)(void *ctx, const char *nome);
+
+	/* «Metti QUESTA disposizione nella sessione» — §5-bis.7 attuata.
+	 *
+	 * ⛔ Il verso e' questo e non l'altro: NON si traduce la lettera con una
+	 *    keymap nostra tenendo la sessione com'e'.  `tastiera.h` lo spiega e
+	 *    `tastiera.c` lo misura: con la nostra keymap e la loro sessione
+	 *    escono **caratteri diversi**, che §7.3 vieta.  ⇒ Si cambia la
+	 *    disposizione DELLA SESSIONE, e poi la si rilegge da `libei` come si e'
+	 *    sempre fatto: `[M]` il banco `06-b34` caso 2s misura che quel giro
+	 *    regge — dispositivo distrutto e ricreato, keymap riletta, carattere
+	 *    giusto.
+	 *
+	 * `true` = la richiesta e' partita.  ⚠ NON «e' in vigore»: chi lo sa e' il
+	 * figlio, e lo scrive lui.  Come per il rilascio, un numero inventato qui
+	 * sarebbe peggio di nessun numero. */
+	bool (*disposizione)(void *ctx, const char *nome);
+
 	/* ⛔⭐⭐ «CHE MISURA HA IL PALCO ADESSO?» — e senza questa domanda il
 	 *     RI-ATTACCO nasce con due verita'.
 	 *
@@ -759,6 +813,29 @@ bool rcp_tela_rimanda(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 /* Per il registro, per il banco e per chi cattura.  ⛔ `false` quando la tela
  * non c'e' ancora, che NON e' «0x0» (§6.0: niente valori sentinella). */
 bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
+
+/* ⛔⭐ LA VISTA — §7.1, e NON e' la tela.  16 agosto 2026, sottofase 6.4.
+ *
+ *   · la **tela** e' della SESSIONE: sopravvive al client (I4), la cambia solo
+ *     `ADATTA_TELA`, e vincola la misura dei fotogrammi (§6.2);
+ *   · la **vista** e' della CONNESSIONE: «la misura in cui il client
+ *     disegnera'», arriva con `ATTACCA` (§4.5) e la aggiorna `VISTA` (§7.1).
+ *
+ * ⛔ §7.1: «`VISTA` **NON DEVE** far cambiare la tela, e in RCP/1 non cambia
+ *    nemmeno la misura di quel che si codifica»: il server manda la tela intera
+ *    e il client riscala (`SPECIFICHE.md` §6.1).  ⇒ Chi legge questo numero lo
+ *    usa per **quanti bit spendere**, mai per che cosa codificare — una
+ *    finestra piccola guardata su uno schermo piccolo non merita i bit di una
+ *    grande.
+ *
+ * ⚠ E i suoi limiti sono ALTRI: rilievo R1.17 — «qualunque misura da **1x1 in
+ *   su** e' legale, **dispari compresa**».  ⛔ Chi ci applicasse i limiti della
+ *   tela chiuderebbe la sessione a chi stringe la finestra del browser, e su un
+ *   telefono a fattore 2,75 la vista e' dispari quasi sempre.
+ *
+ * `false` quando `SESSIONE` non e' ancora partita — che NON e' «0x0». */
+bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
+
 /* §4.3/§6.2: 1 = HEVC, 2 = AV1.  ⛔ `0` = non ancora negoziato. */
 uint8_t rcp_codec_negoziato(const rcp_sessione *s);
 /* ⛔ §5.2: «il prossimo fotogramma deve essere una chiave?».  La chiede chi

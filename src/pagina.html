@@ -1412,7 +1412,42 @@ function misura_vista() {
   /* ⛔ Qualunque misura da 1×1 in su e' legale per la vista (§7.1): niente
      arrotondamenti ai numeri pari, che sono un vincolo della TELA e che qui
      sarebbero la forma E2 — «mentire arrotondando a 320». */
-  return [Math.max(1, Math.round(l * r)), Math.max(1, Math.round(a * r))];
+  /* ⛔⛔⭐ E SI TRONCA IN GIU', NON SI ARROTONDA — 16 agosto 2026, banco
+   *      `06-b37-sfora.py`, e qui c'era `Math.round`.
+   *
+   * ⛔ `clientWidth` e' un INTERO di pixel CSS: a `devicePixelRatio` non intero
+   *    il browser lo arrotonda gia' lui, e moltiplicandolo si puo' ottenere fino
+   *    a mezzo pixel del dispositivo **che non esiste**.  Arrotondando ancora,
+   *    quel mezzo diventa un pixel intero DI TROPPO.
+   *
+   * ⛔⛔ E il pixel di troppo non resta un pixel: `[M]` Chrome 151, fattore del
+   *    dispositivo **1,5** (cioe' Windows al 150 %), finestra X 1001 — schermo
+   *    finto 1600×1000, 16 agosto 2026:
+   *
+   *      contenuto vero 979 px · `clientWidth` 653 × 1,5 = 979,5 → 980
+   *      ⇒ `tela_da_chiedere()` chiede 980 ⇒ il fotogramma e' 980
+   *      ⇒ 980 non ci sta in 979 ⇒ compare la BARRA ORIZZONTALE
+   *      ⇒ l'altezza utile cala di 22 px (630 → 608)
+   *      ⇒ `cornice()`: s = min(980/980, 608/630, 1) = **0,9651**
+   *      ⇒ `image-rendering: auto` ⇒ TUTTA l'immagine ricampionata.
+   *
+   *    Misurato sui PIXEL dello schermo (invariante I8): il disegno usciva
+   *    **945 px invece di 980**, su 4 larghezze di finestra su 12.  ⚠ E' esatta-
+   *    mente il difetto che l'utente ha giudicato il 14 agosto — «il testo del
+   *    terminale risulta di bassa qualita'» — per un'altra strada.
+   *
+   * ⇒ Il confine si sposta nella direzione SCOMODA (`CODER.md` §1-bis): meglio
+   *   dichiarare un pixel in MENO di quelli che ci sono — che costa al massimo
+   *   una riga di sfondo nero, invisibile e fuori dal buffer — che uno in piu',
+   *   che costa la nitidezza di tutto lo schermo.  ⭐ Ed e' la stessa regola che
+   *   `tela_da_chiedere()` gia' dichiarava due funzioni piu' sotto («SI TRONCA
+   *   AL PARI IN GIU', mai in su: verso l'alto si uscirebbe dalla finestra»):
+   *   quella riga diceva il vero e questa la contraddiceva.
+   *
+   * ⚠ Il prezzo, dichiarato: la vista puo' uscire di 1 pixel piu' piccola del
+   *   vero, e la tela fino a 2 (1 di troncatura + 1 di parita').  A dpr 1 non
+   *   cambia niente — `clientWidth × 1` e' gia' esatto. */
+  return [Math.max(1, Math.floor(l * r)), Math.max(1, Math.floor(a * r))];
 }
 
 /* ⛔⭐⭐ LA MISURA DA CHIEDERE CON `ADATTA_TELA` — `DECISIONI.md` §5.0-sexies,
@@ -2001,11 +2036,25 @@ class Schermo {
    *   «allungare deforma il testo e lo rende illeggibile».  Un desktop remoto
    *   e' quasi tutto testo.
    *
-   * ⭐ E il fattore non ha un tetto a 1: se la vista e' PIU' GRANDE della tela
-   *    l'immagine si INGRANDISCE fino a riempirla.  ⚠ Un `Math.min(1, …)`
-   *    sarebbe la stessa famiglia del difetto curato oggi — l'immagine piccola
-   *    in un angolo di una finestra grande — e sarebbe piu' difficile da
-   *    vedere, perche' su una finestra piccola sembrerebbe giusto. */
+   * ⛔⛔ E QUI C'ERA SCRITTO IL CONTRARIO DI QUEL CHE IL CODICE FA — corretto il
+   *      16 agosto 2026, banco `06-b37-pixel.py`, scena X4b.
+   *
+   *      Diceva: *«il fattore non ha un tetto a 1: se la vista e' PIU' GRANDE
+   *      della tela l'immagine si INGRANDISCE fino a riempirla.  Un
+   *      `Math.min(1, …)` sarebbe la stessa famiglia del difetto curato oggi»*.
+   *      ⛔ Ma `cornice()` il tetto ce l'ha — `Math.min(…, …, 1)` — e lo dichiara
+   *      due righe piu' su («il piu' grande che ci sta, mai piu' di 1:1»).
+   *
+   * `[M]` Misurato sui pixel: un fotogramma **640×480** in una finestra da 986
+   *      resta dipinto **640 px**, centrato, con due bande nere da 173 px, e
+   *      `image-rendering: pixelated`.  ⇒ NON si ingrandisce.
+   *
+   * ⭐ Ed e' la scelta giusta: ingrandire vorrebbe dire interpolare — cioe'
+   *    sfocare un desktop per riempire il vetro — mentre il caso «vista piu'
+   *    grande della tela» dura solo finche' l'`ADATTA_TELA` dell'attacco non
+   *    risponde.  ⚠ Il difetto che quella riga temeva (l'immagine piccola in un
+   *    angolo) era un'altra cosa: era la CORNICE ferma a 34rem, e l'ha curata
+   *    `cornice()` mettendo le due misure una accanto all'altra. */
   componi() {
     if (!this.deposito) return false;
     const fl = this.deposito.width, fa = this.deposito.height;
@@ -2749,6 +2798,29 @@ const ADATTA =
 let chiedi_tela = null;
 let tela_chiesta_l = 0, tela_chiesta_a = 0;
 let tela_attesa = 0;
+/* ⛔⭐⭐ LA VOCE SPENTA — `RCP.md` §7.1: «se il compositore non sa
+ *      ridimensionare … il client **DEVE** mostrare la voce come spenta.  NON
+ *      DEVE fingere che sia riuscito.»
+ *
+ * ⛔ Misurato il 16 agosto 2026, banco `06-b37-voce.py`, iniettando un
+ *    `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` nel canale di controllo:
+ *
+ *      · la pagina NON finge: nel registro c'e' la riga del rifiuto, e nessuna
+ *        riga dice che sia riuscito.  ✅ La seconda meta' di §7.1 e' rispettata;
+ *      · ⛔ ma la prima NO: con `?adatta=segui` acceso, dopo il rifiuto **ogni
+ *        ridimensionamento rimandava un `ADATTA_TELA`** — `[M]` 5 richieste in
+ *        4 ridimensionamenti — a un compositore che aveva gia' detto di non
+ *        saperlo fare.  ⇒ La voce non si spegneva mai.
+ *
+ * ⚠ E una voce da spegnere, nel senso di un comando sullo schermo, **in questa
+ *   pagina non esiste**: `[M]` 6 comandi in tutto, nessuno che nomini «adatta».
+ *   ⇒ Spegnerla vuol dire, qui, **smettere di chiedere e dirlo**.  Il giorno in
+ *   cui il comando ci sara', e' questa variabile che dovra' leggere.
+ *
+ * ⛔ SOLO `COMPOSITORE_INCAPACE` (motivo 1) spegne.  `MISURA_FUORI_LIMITI` (2)
+ *    e `NON_ORA` (3) sono rifiuti di QUESTA richiesta, non della funzione: il
+ *    primo si supera chiedendo un'altra misura, il secondo aspettando. */
+let tela_spenta = false;
 
 /* ⛔⭐ IL FONDO CONTRO LA RAFFICA — e non e' prudenza: trascinare il bordo di una
  *    finestra produce **decine di `resize` al secondo**, e ogni `ADATTA_TELA`
@@ -3502,7 +3574,23 @@ async function collega(utente, parola) {
        *    controllo, e mandare la domanda prima che qualcuno ascolti vorrebbe
        *    dire non leggere mai la risposta.  ⚠ `ascolta_controllo` non si
        *    aspetta (`await`): e' un ciclo asincrono che parte e resta li'. */
+      /* ⛔ La voce riparte ACCESA a ogni sessione, e non e' una svista: il
+         rifiuto lo ha dato **quel** compositore, e dopo un congedo si puo'
+         essere altrove.  ⚠ Chi accende uno stato e' lo stesso che deve saperlo
+         spegnere — qui si spegne dove si accende `chiedi_tela`. */
+      tela_spenta = false;
       chiedi_tela = function (perche) {
+        /* ⛔⭐ LA VOCE SPENTA, §7.1: se il compositore ha gia' detto che non sa
+         *    ridimensionare, non gli si chiede piu'.  ⚠ Insistere non lo
+         *    insegna, e il ripiego dichiarato di `SPECIFICHE.md` §6.3 e'
+         *    proprio tenersi la tela che c'e' e riscalare. */
+        if (tela_spenta) {
+          nota("«adatta il desktop» e' SPENTA (il compositore ha risposto "
+             + "COMPOSITORE_INCAPACE): non chiedo " + perche + ". La tela "
+             + "resta " + schermo.tela_l + "×" + schermo.tela_a
+             + " e questa pagina riscala (SPECIFICHE.md §6.3)");
+          return;
+        }
         const m = tela_da_chiedere();
         /* ⛔⭐ NON si chiede la misura VERSO CUI SI STA GIA' ANDANDO — e il
          *    numero da guardare NON e' la tela in vigore.  Cura del 15 agosto
@@ -3631,6 +3719,19 @@ async function ascolta_controllo(canale, congeda) {
            mostrare la voce come spenta.  NON DEVE fingere che sia riuscito. */
         nota("TELA(RIFIUTATA, motivo " + motivo + "): la tela resta " + tl
            + "×" + ta + ", e la voce «adatta il desktop» va mostrata spenta");
+        /* ⛔⭐ E ADESSO SI SPEGNE DAVVERO — 16 agosto 2026.  ⚠ Qui c'era solo
+           la riga di registro qui sopra, che DICE «va mostrata spenta» e non
+           spegne niente: una dichiarazione al posto di un'azione e' la forma
+           d'errore che questo progetto chiama «il verde che sembra vero». */
+        if (motivo === 1) {
+          tela_spenta = true;
+          DICHIARAZIONI.video = "Questo desktop non sa cambiare misura: "
+            + "l'immagine viene adattata alla finestra dal browser. "
+            + "(Il compositore ha risposto COMPOSITORE_INCAPACE.)";
+          dichiarazione_scrivi();
+          nota("⇒ «adatta il desktop» SPENTA per questa sessione: non manderò "
+             + "altre ADATTA_TELA (RCP.md §7.1)");
+        }
         /* ⛔⭐ E I DUE CAMPI DEL RIFIUTO SI LEGGONO, invece di buttarli: §7.1
            dice che portano «la tela in vigore DOPO questo messaggio», e su un
            rifiuto e' quella di prima.  ⚠ Sono l'unica riga che dice al client
@@ -3671,7 +3772,16 @@ async function ascolta_controllo(canale, congeda) {
              ridimensionare (KWin ≤ 6.7.4, `DECISIONI.md` §5.0-bis) insistere
              non lo insegna, e il ripiego dichiarato e' proprio tenersi la tela
              vecchia. */
-        if (!tela_richiesta_ripetuta) {
+        /* ⛔ E SOLO SUL MOTIVO 3 — 16 agosto 2026, banco `06-b37-voce.py`.
+           ⚠ Qui la condizione era sul solo contatore, cioe' la richiesta si
+           ripeteva **per qualunque motivo**: `[M]` con un `COMPOSITORE_INCAPACE`
+           iniettato partiva lo stesso, e portava scritto «il NON_ORA poteva
+           essere un non ancora» — un motivo che il server non aveva dato.
+           ⇒ Una riga di registro che nomina il motivo sbagliato manda a
+           cercare il difetto dalla parte sbagliata, e questa lo faceva.
+           ⚠ `MISURA_FUORI_LIMITI` (2) non si ripete apposta: la misura e'
+           quella, e a cambiarla e' il prossimo ridimensionamento. */
+        if (motivo === 3 && !tela_richiesta_ripetuta) {
           tela_richiesta_ripetuta = true;
           setTimeout(() => {
             /* ⚠ `chiedi_tela()` decide DA SE' la misura e non chiede niente se

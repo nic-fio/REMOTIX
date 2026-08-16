@@ -104,6 +104,55 @@ esattamente la forma del rilievo **R12-A.5**, rientrata da un'altra porta.
 di chi cura **D10**.  Qui si dichiara.
 
 ---------------------------------------------------------------------------
+⭐⛔ IL 16 AGOSTO 2026 QUESTO VALIDATORE HA IMPARATO LA **TELA** — sottofase 6.6
+
+`fasi/06-la-tela-e-la-vista.md` §0 punto 6: *«i banchi RCP/1 non esercitano la
+strada nuova: `01-b3-cliente.py` e `01-b4-validatore.py` restano verdi perche'
+il filo non e' cambiato, ⛔ ma **nessuno dei due manda un `ADATTA_TELA`»*.
+
+⛔ E non mandarlo non era il buco piu' grave: il buco era che **nessuno dei due
+   lo sapeva GIUDICARE**.  `ADATTA_TELA` e `TELA` stavano tutt'e due in
+`DOPO_SESSIONE`, cioe' erano ammessi in qualunque ordine e in qualunque numero,
+e le tre regole che §7.1 scrive in lettere maiuscole non erano applicate da
+nessuno:
+
+  **T1** §7.1  un `TELA` **non sollecitato** — §6.2 da' al client un solo modo
+               di accettare una misura inattesa (trattenere finche' una
+               richiesta e' senza risposta) ⇒ un `TELA` che non risponde a
+               niente **fa chiudere una sessione sana**
+  **T2** §6.2  **due** `TELA` per una sola `ADATTA_TELA` — *«l'n-esimo `TELA`
+               risponde all'n-esima `ADATTA_TELA`»*, e il conto si perde
+  **T3** §7.1  un `ADATTA_TELA` **senza risposta**: *«un silenzio lascia il
+               client ad aspettare per sempre una risposta che non arrivera',
+               e il sintomo e' "l'applicazione si e' piantata"»*
+  **T5** §7.1  la **tela in vigore** che contraddice il messaggio: i due campi
+               sono *«la tela in vigore DOPO questo messaggio»*, e un rifiuto
+               non cambia niente
+  **T6** §4.5  una tela **concessa** con un lato dispari o fuori dai limiti
+  **V1** §7.1  una `VISTA` **0** in un lato: *«qualunque misura da 1x1 in su»*
+  **V3** §7.1  una `VISTA` che **cambia la tela**: e' vietato, e sul filo si
+               presenta come un `TELA` che risponde a una `VISTA`
+
+⚠⛔ **E TRE COSE CHE QUESTO ARBITRO DICHIARA DI NON POTER FARE**, perche' un
+    controllo che non si puo' fare va dichiarato, non simulato:
+
+  1. ⛔ **le coordinate in volo di §7.1 NON SI GIUDICANO, e non per pigrizia:
+     il formato di §11.1 non registra il TEMPO.**  §7.1 impone che dopo un
+     `TELA(ADATTATA)` il server accetti *«per un secondo»* coordinate valide
+     sulla tela precedente, e *«passato quel secondo, sono
+     `ERRORE_PROTOCOLLO`»*.  ⇒ Una regola normativa con un orologio dentro,
+     contro un formato di registrazione che non porta nessun istante: **nessun
+     validatore che legga un `.rcpreg` potra' mai arbitrarla**.  E' un buco di
+     `RCP.md` §11.1, non di questo file, e sta scritto qui perche' chi legge
+     «13 su 13» non creda che quella riga sia coperta;
+  2. la **misura chiesta** e quella **concessa** non devono combaciare — §4.5:
+     *«la tela concessa puo' essere diversa da quella chiesta»* — quindi un
+     `TELA(ADATTATA)` che concede altro **non si accusa**;
+  3. un `ADATTA_TELA` **fuori dai limiti di §4.5 e' LECITO**: §7.1 gli dedica
+     un motivo di rifiuto, `MISURA_FUORI_LIMITI`.  ⛔ Un arbitro che lo
+     bocciasse renderebbe irraggiungibile un ramo che la specifica nomina.
+
+---------------------------------------------------------------------------
 ⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x02`, E IL VECCHIO SI RIFIUTA
 
 §11.1, 12 agosto 2026: il blocco porta `fine` — *0 continua · 1 FIN · 2
@@ -195,6 +244,12 @@ TIPI = {
     0x000E: ("TELA", SERVER),
     0x000F: ("BANCO_MARCA", CLIENT),
     0x0010: ("BANCO_ESITO", SERVER),
+    # ⛔ 0x0011 MANCAVA, ed e' del 15 agosto 2026 (§7.6).  Un arbitro che non
+    #    conosce un tipo che la specifica definisce non «non lo giudica»: lo
+    #    accusa come **tipo sconosciuto** (§7.1) e chiude la registrazione al
+    #    primo messaggio con cui l'utente esce dal desktop.  ⚠ E' un falso rosso
+    #    che aspettava soltanto la prima traccia con un'uscita dentro.
+    0x0011: ("TERMINA_SESSIONE", CLIENT),
 }
 
 CANALI = {0x00: "controllo", 0x01: "input", 0x02: "appunti",
@@ -207,6 +262,12 @@ MOTIVI = {
     0x07: "CREDENZIALI_ERRATE", 0x08: "TROPPI_TENTATIVI", 0x09: "NIENTE_IN_COMUNE",
     0x0A: "VERSIONE_INCOMPATIBILE", 0x0B: "ERRORE_PROTOCOLLO", 0x0C: "SERVER_IN_CHIUSURA",
     0x0D: "TEMPO_SCADUTO", 0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA",
+    # ⛔ E il 0x10 e' del 15 agosto 2026, insieme a `TERMINA_SESSIONE` (§7.6,
+    #    §8.2): e' la risposta **obbligatoria** a quel messaggio.  ⚠ Senza
+    #    questa riga l'arbitro accusava «motivo sconosciuto» proprio sul
+    #    congedo che la specifica impone — cioe' dava rosso al server che fa
+    #    l'unica cosa che §7.6 gli permette.
+    0x10: "SESSIONE_TERMINATA",
 }
 
 # Le capacita' di §4.3, con il lato che le puo' dichiarare.
@@ -282,12 +343,38 @@ class Lettore:
     def resta(self):
         return len(self.b) - self.i
 
-    def _prendi(self, n, che):
+    def _prendi(self, n, che, ammetti_oscurato=False):
         if self.resta() < n:
             raise NonConforme(
                 "RCP.md §6.1",
                 f"il corpo finisce prima di {che}: servivano {n} byte, ce ne sono {self.resta()}",
                 self.ass(), self.i)
+        # ⛔⛔ NON SI LEGGE DENTRO UN INTERVALLO OSCURATO — §11.1, e fino al
+        #     16 agosto 2026 questa guardia stava **solo** in `stringa()`.
+        #
+        # ⭐ Il difetto e' venuto fuori il giorno stesso in cui e' nato,
+        #    refutando: un intervallo oscurato messo sopra `tela_larghezza` di un
+        #    `TELA` faceva accusare *«concede tela_larghezza = 707406378, fuori
+        #    da 320..7680»* — e **707406378 e' `0x2A2A2A2A`**, cioe' il
+        #    riempimento di §11.1 letto come una misura.
+        #
+        # ⛔ Un rosso di protocollo su byte che il formato dichiara di aver
+        #    sostituito e' il peggiore dei falsi rossi: manda a cercare un
+        #    difetto del server dentro una scelta del registratore, e §11.1
+        #    chiede due frasi diverse per *«una registrazione malformata»* e
+        #    *«un filo non conforme»*.  ⇒ e' l'esito **2**.
+        # ⚠ `ammetti_oscurato` lo passa solo `stringa()` per i DATI della
+        #   stringa, che sono l'unica cosa che §11.1 esiste per nascondere
+        #   (§4.4, la parola d'ordine).  La sua LUNGHEZZA no: oscurarla
+        #   renderebbe il corpo illeggibile, che e' il falso rosso perpetuo
+        #   contro cui §11.1 e' stata scritta.
+        if not ammetti_oscurato and self.oscurato(self.i, n):
+            raise Malformata(
+                f"un intervallo oscurato copre {che}, allo scostamento "
+                f"{self.i} del carico (byte {self.ass()} nel file).  ⛔ §11.1 "
+                f"esiste per la parola d'ordine di §4.4: un registratore che "
+                f"oscura un campo NUMERICO rende quel campo ingiudicabile, e "
+                f"leggerlo darebbe un verdetto sui byte di riempimento 0x2A")
         v = self.b[self.i:self.i + n]
         self.i += n
         return v
@@ -319,7 +406,7 @@ class Lettore:
         inizio_campo = self.i
         n = self.u16(f"la lunghezza di {che}")
         dati_inizio = self.i
-        b = self._prendi(n, che)
+        b = self._prendi(n, che, ammetti_oscurato=True)
         if n < minimo:
             raise NonConforme(regola,
                               f"{che} e' lunga {n} byte, il minimo e' {minimo}",
@@ -396,6 +483,27 @@ def leggi_capacita(le, nome_messaggio, lato):
     return valori
 
 
+def misura_dichiarata(valore):
+    """`3840x2160` -> (3840, 2160).  ⛔ (None) se non ha quella forma.
+
+    ⚠ §4.3 non detta la sintassi di `video.misura_massima`, e questo arbitro
+      **non la inventa**: un valore che non si legge vale «non dichiarata», non
+      «zero».  Dedurre un limite da una stringa che non si capisce sarebbe
+      giudicare il server contro un numero che nessuno ha scritto.
+    """
+    if not valore:
+        return None
+    parti = valore.lower().split("x")
+    if len(parti) != 2 or not all(p.strip().isdigit() for p in parti):
+        return None
+    return int(parti[0]), int(parti[1])
+
+
+def entro_la_massima(massima, lar, alt):
+    """La misura sta dentro quella dichiarata dal client?  (None) = non dichiarata."""
+    return massima is None or (lar <= massima[0] and alt <= massima[1])
+
+
 def corpo(tipo, nome, le, lato, stato=None):
     """Legge il corpo secondo il tipo.  §4.3, §4.4, §4.5, §7.1.
 
@@ -407,6 +515,14 @@ def corpo(tipo, nome, le, lato, stato=None):
     if nome in ("CIAO", "ECCOMI"):
         le.u16("la versione")
         cap = leggi_capacita(le, nome, lato)
+        # ⛔ §4.5: *«La tela concessa DEVE rispettare `video.misura_massima` se
+        #    il client l'ha dichiarata»*.  ⚠ E' nella **stessa frase** dei
+        #    limiti e della parita', e fino al 16 agosto 2026 di quella frase
+        #    l'arbitro applicava due terzi: un `SESSIONE` che concedeva
+        #    7680x4320 a un client che aveva dichiarato `3840x2160` usciva
+        #    ⭐ conforme.  Trovato refutando, non rileggendo.
+        if stato is not None and nome == "CIAO":
+            stato.misura_massima = misura_dichiarata(cap.get("video.misura_massima"))
         if stato is not None and nome == "ECCOMI":
             # §4.3: `ECCOMI` porta la scelta del server, una sola.
             stato.codec = {"hevc": 1, "av1": 2}.get(
@@ -414,7 +530,11 @@ def corpo(tipo, nome, le, lato, stato=None):
     elif nome == "CREDENZIALI":
         le.stringa("l'utente", minimo=1, massimo=256, regola="RCP.md §4.4")
         le.stringa("la parola", minimo=1, massimo=1024, regola="RCP.md §4.4")
-    elif nome == "AMMESSO":
+    elif nome in ("AMMESSO", "TERMINA_SESSIONE"):
+        # ⛔ §7.6: «(corpo vuoto)», e §6.0 vieta il riempimento ⇒ `le.fine()`
+        #    in fondo a questa funzione fa il resto.  ⚠ Dichiararlo «non
+        #    giudicato» sarebbe stato piu' comodo e falso: un corpo vuoto e' un
+        #    corpo che si giudica, e un byte in piu' e' la forma di §6.0.
         pass
     elif nome == "RESPINTO":
         m = le.u8("il motivo")
@@ -455,11 +575,25 @@ def corpo(tipo, nome, le, lato, stato=None):
             raise NonConforme("RCP.md §4.5",
                               f"stato {st}: previsti 1 = NUOVA o 2 = RIPRESA",
                               le.base + le.i - 1, le.i - 1)
+        off_lar = le.i
         lar = le.u32("tela_larghezza")
         alt = le.u32("tela_altezza")
         le.stringa("il desktop", massimo=64, regola="RCP.md §4.5")
         # ⛔ LA TELA CONCESSA — e' questa che §6.2 lega a `largh.`/`altezza`.
         if stato is not None and lar is not None and alt is not None:
+            # ⛔ §4.5, la terza parte della frase: *«La tela concessa DEVE
+            #    rispettare `video.misura_massima` se il client l'ha
+            #    dichiarata»*.  ⚠ Il client che dichiara un tetto lo dichiara
+            #    perche' oltre quello **non decodifica**: una tela piu' grande
+            #    non e' una comodita' in piu', e' una sessione che non si vede.
+            if not entro_la_massima(stato.misura_massima, lar, alt):
+                m = stato.misura_massima
+                raise NonConforme(
+                    "RCP.md §4.5",
+                    f"SESSIONE concede una tela {lar}x{alt} mentre il client "
+                    f"aveva dichiarato video.misura_massima = {m[0]}x{m[1]} "
+                    f"in CIAO (§4.3)",
+                    le.base + off_lar, off_lar)
             stato.tela = (lar, alt)
     elif nome == "CONGEDO":
         m = le.u8("il motivo")
@@ -469,7 +603,41 @@ def corpo(tipo, nome, le, lato, stato=None):
                               "NON DEVE essere usato (§3.1)",
                               le.base + le.i - 1, le.i - 1)
         le.stringa("il dettaglio", regola="RCP.md §7.1")
-    elif nome in ("VISTA", "ADATTA_TELA"):
+    elif nome == "VISTA":
+        # ⛔ V1 — §7.1: *«qualunque misura da 1x1 in su e' legale, dispari
+        #    compresa»*.  ⚠ Quindi qui si controlla UNA cosa sola, e le altre
+        #    NON si controllano: i limiti 320x240..7680x4320 e la parita' sono
+        #    della TELA, e §7.1 li ha tolti alla vista la sera del 9 agosto
+        #    2026 (rilievo R1.17) perche' *«l'utente stringe la finestra del
+        #    browser a 300 pixel»* e con la riga vecchia il client aveva tre
+        #    scelte, tutte cattive.  ⛔ Un arbitro che li rimettesse
+        #    resusciterebbe R1.17 dal lato dell'arbitro.
+        off_lar = le.i
+        lar = le.u32("larghezza")
+        off_alt = le.i
+        alt = le.u32("altezza")
+        for eti, v, off in (("larghezza", lar, off_lar),
+                            ("altezza", alt, off_alt)):
+            if v == 0:
+                raise NonConforme(
+                    "RCP.md §7.1",
+                    f"VISTA con {eti} = 0: §7.1 dice «qualunque misura da 1x1 "
+                    f"in su e' legale» — lo zero non e' «in su», e non c'e' "
+                    f"nessun valore di «assente» dichiarato per questo campo "
+                    f"(§6.0)",
+                    le.base + off, off)
+    elif nome == "ADATTA_TELA":
+        # ⛔ E QUI NON SI CONTROLLA NIENTE, ED E' UNA DECISIONE.
+        #
+        #    §4.5 impone alla tela i limiti e la parita', ma quelli valgono per
+        #    `ATTACCA` e per la tela CONCESSA.  Una richiesta fuori limiti e'
+        #    **lecita**: §7.1 le dedica un motivo di rifiuto per nome —
+        #    `MISURA_FUORI_LIMITI` — e un motivo esiste per essere raggiunto.
+        #    ⛔ Un arbitro che bocciasse la richiesta renderebbe irraggiungibile
+        #       un ramo che la specifica nomina, e il banco che lo esercita
+        #       (`23-adatta-fuori-limiti`) diventerebbe impossibile da scrivere.
+        #    ⚠ E' la stessa forma di R1.17: applicare a un messaggio i limiti
+        #      di un altro perche' i campi si chiamano uguale.
         le.u32("larghezza")
         le.u32("altezza")
     elif nome == "DISPOSIZIONE":
@@ -501,13 +669,87 @@ def corpo(tipo, nome, le, lato, stato=None):
                               f"COMPOSITORE_INCAPACE, 2 = MISURA_FUORI_LIMITI, "
                               f"3 = NON_ORA",
                               le.base + le.i - 1, le.i - 1)
+        off_lar = le.i
         lar = le.u32("tela_larghezza")
+        off_alt = le.i
         alt = le.u32("tela_altezza")
         # ⛔ §7.1: questi due campi sono «la tela in vigore DOPO questo
         #    messaggio» — e lo sono **anche** quando l'esito e' RIFIUTATA, dove
         #    riportano quella di prima.  ⇒ si prende il campo, non si deduce
         #    dall'esito: e' il campo a essere definito cosi'.
+        #
+        # ⭐⛔ T5 — E DA QUI IN POI SI VERIFICA CHE IL CAMPO NON CONTRADDICA IL
+        #     MESSAGGIO CHE LO PORTA (16 agosto 2026, sottofase 6.6).
+        #
+        #     Fino a ieri il campo si prendeva e basta.  ⚠ Ma «la tela in
+        #     vigore DOPO questo messaggio» dopo un **RIFIUTO** e' per forza
+        #     quella di PRIMA: un rifiuto che cambiasse la tela sarebbe un
+        #     adattamento con l'etichetta sbagliata, cioe' la forma d'errore
+        #     **E2** — e il danno non e' teorico, perche' §6.2 lega
+        #     `largh.`/`altezza` di ogni fotogramma proprio a questo campo: il
+        #     client comincerebbe a **buttare come non conformi i fotogrammi
+        #     buoni**, o ad accettarne di sbagliati, senza che nessuno abbia
+        #     mandato un messaggio malformato.
         if stato is not None and lar is not None and alt is not None:
+            prima = stato.tela
+            # ⛔ La tela PRECEDENTE si conserva: e' la meta' del difetto D14 —
+            #    i fotogrammi gia' in volo la portano **legittimamente**, e
+            #    `02-filo-fotogramma.py` la vuole per aprire la grazia di §6.2.
+            stato.tela_prec = prima
+            if es == 2 and prima is not None and (lar, alt) != prima:
+                raise NonConforme(
+                    "RCP.md §7.1",
+                    f"TELA(RIFIUTATA) dichiara la tela in vigore {lar}x{alt}, "
+                    f"ma quella in vigore era {prima[0]}x{prima[1]} e un "
+                    f"rifiuto non la cambia: §7.1 definisce i due campi come "
+                    f"«la tela in vigore DOPO questo messaggio», e §6.2 ci "
+                    f"lega la misura di ogni fotogramma",
+                    le.base + off_lar, off_lar)
+            # ⛔ T6 — la tela CONCESSA rispetta §4.5: limiti e parita'.
+            #
+            #    ⚠ **E' una lettura, e va detta**: §7.1 non ripete i limiti per
+            #      `TELA`.  Si applicano lo stesso perche' §4.5 li dichiara
+            #      *«normativi»* per la tela e ne da' la ragione — *«i
+            #      codificatori video lavorano su blocchi, e una misura dispari
+            #      viene arrotondata da chi codifica, in silenzio»* — e quella
+            #      ragione vale identica per una tela concessa da `TELA`: §6.2
+            #      manda a quella misura tutti i fotogrammi che seguono.  ⇒ Se
+            #      valessero solo in `ATTACCA`, `ADATTA_TELA` sarebbe la porta
+            #      da cui rientra esattamente il difetto che §4.5 chiude.
+            #    ⛔ Se questa lettura fosse sbagliata, il posto da correggere e'
+            #       `RCP.md` §7.1 — una riga — non questo file.
+            if es == 1 and not entro_la_massima(stato.misura_massima, lar, alt):
+                # ⛔ La stessa frase di §4.5 vale qui: una tela **concessa** e'
+                #    una tela concessa, che arrivi da `SESSIONE` o da `TELA`.
+                #    ⚠ Se non valesse, `ADATTA_TELA` sarebbe la porta da cui si
+                #      supera un tetto che il client ha dichiarato per non
+                #      restare al buio.
+                m = stato.misura_massima
+                raise NonConforme(
+                    "RCP.md §4.5",
+                    f"TELA(ADATTATA) concede {lar}x{alt} mentre il client "
+                    f"aveva dichiarato video.misura_massima = {m[0]}x{m[1]}",
+                    le.base + off_lar, off_lar)
+            if es == 1:
+                for eti, v, off, mi, ma in (
+                        ("tela_larghezza", lar, off_lar, 320, 7680),
+                        ("tela_altezza", alt, off_alt, 240, 4320)):
+                    if not (mi <= v <= ma):
+                        raise NonConforme(
+                            "RCP.md §4.5",
+                            f"TELA(ADATTATA) concede {eti} = {v}, fuori da "
+                            f"{mi}..{ma}: §4.5 dichiara i limiti «normativi» "
+                            f"per la tela, e §6.2 manda ogni fotogramma a "
+                            f"questa misura",
+                            le.base + off, off)
+                    if v % 2:
+                        raise NonConforme(
+                            "RCP.md §4.5",
+                            f"TELA(ADATTATA) concede {eti} = {v}, dispari: "
+                            f"«una misura dispari viene arrotondata da chi "
+                            f"codifica, in silenzio» — e il rifiuto va detto "
+                            f"qui, dove si puo' dire perche'",
+                            le.base + off, off)
             stato.tela = (lar, alt)
             if es == 1:
                 stato.tela_da = "TELA(ADATTATA) (§7.1)"
@@ -529,7 +771,12 @@ ORDINE = ["CIAO", "ECCOMI", "CREDENZIALI", "AMMESSO", "ATTACCA", "SESSIONE"]
 #    La stretta di mano non ci sta dentro: §1 dice che «l'ordine dei cinque
 #    passi non ammette permute», e non che dopo il quinto tutto sia permesso.
 DOPO_SESSIONE = {"VISTA", "DISPOSIZIONE", "CURSORE_FORMA", "ADATTA_TELA",
-                 "RICHIEDI_CHIAVE", "TELA", "BANCO_MARCA", "BANCO_ESITO"}
+                 "RICHIEDI_CHIAVE", "TELA", "BANCO_MARCA", "BANCO_ESITO",
+                 # ⛔ §7.6: «solo a sessione **attaccata**.  Prima dell'ATTACCA
+                 #    non c'e' nessuna sessione da terminare, e §3 non fa
+                 #    sconti».  ⇒ sta qui dentro, e fuori di qui la macchina
+                 #    degli stati lo boccia gia' da se'.
+                 "TERMINA_SESSIONE"}
 
 
 class Stato:
@@ -560,11 +807,97 @@ class Stato:
         #    VIDEO: la tela concessa (§4.5) e il codec negoziato (§4.3).
         #    ⚠ `None` e' «non l'ho letto», e NON e' un valore predefinito.
         self.tela = None
+        self.tela_prec = None
         self.tela_da = "SESSIONE (§4.5)"
         self.codec = None
+        # ⭐⛔ IL CONTO DELLE RICHIESTE IN VOLO — 16 agosto 2026, sottofase 6.6.
+        #
+        #    §6.2 lo dice in una riga che vale per tutt'e due i lati: *«il
+        #    canale di controllo e' uno solo, affidabile e ordinato (§4.2) ⇒
+        #    l'n-esimo `TELA` risponde all'n-esima `ADATTA_TELA`, e chi trascina
+        #    una finestra ne manda due senza che il conto si perda»*.
+        #    ⇒ Qui il conto e' una CODA, non un contatore: serve lo scostamento
+        #      della richiesta rimasta senza risposta per poterla accusare.
+        # ⛔ §4.5: il tetto che il client dichiara in `CIAO`, e che §4.5 lega
+        #    alla tela CONCESSA — da `SESSIONE` e da `TELA`.
+        self.misura_massima = None
+        # ⛔ §8.1: chi ha gia' mandato il proprio `CONGEDO` non parla piu'.
+        self.congedato_da = set()
+        self.in_volo = []           # [(nb, ass, rel, misura)] le ADATTA_TELA
+        self.telate = 0             # quanti TELA hanno risposto
+        self.ultima_consumata = None  # l'ADATTA_TELA che l'ultimo TELA ha chiuso
+        self.ultimo_dal_client = None  # per distinguere «ha risposto a VISTA»
+        self.congedo = None         # (nb, ass) del CONGEDO, se e' passato
 
-    def ammette(self, nome):
-        """Il messaggio puo' arrivare adesso?  Restituisce None o il perche' no."""
+    def chiede_tela(self, nb, ass, rel, misura):
+        self.in_volo.append((nb, ass, rel, misura))
+
+    def risponde_tela(self, nb, ass, rel):
+        """⛔ T1 e T2: un `TELA` che non risponde a niente.
+
+        Le due frasi sono diverse di proposito, perche' mandano a guardare due
+        posti diversi: la **seconda risposta** e' un server che ha perso il
+        conto (§6.2), il `TELA` **spontaneo** e' un server che ha cambiato la
+        tela da se' — ed e' la riga che `RCP.md` §7.1 dichiara ⏳ **ancora da
+        scrivere**, quindi il rosso ha un valore in piu': dice che il prodotto
+        e' arrivato dove la specifica non e' ancora arrivata.
+        """
+        if self.in_volo:
+            self.ultima_consumata = self.in_volo.pop(0)
+            self.telate += 1
+            return
+        # ── T2: c'e' gia' stato un TELA che ha consumato una richiesta, e da
+        #    allora il client non ne ha mandate altre.
+        if self.ultima_consumata is not None:
+            vecchio = self.ultima_consumata
+            raise NonConforme(
+                "RCP.md §6.2",
+                f"secondo TELA per una sola ADATTA_TELA: la richiesta del "
+                f"blocco {vecchio[0]} (byte {vecchio[1]}) era gia' stata "
+                f"chiusa da un TELA precedente, e §6.2 vuole che «l'n-esimo "
+                f"TELA risponda all'n-esima ADATTA_TELA».  ⛔ Un TELA in piu' "
+                f"sposta di uno tutte le risposte che seguono, e il client "
+                f"trattiene o butta i fotogrammi contro la tela sbagliata",
+                ass, rel)
+        # ── T1: nessuna richiesta e' mai stata fatta.
+        dopo_vista = (" ⚠ ed e' arrivato subito dopo una VISTA: §7.1 dice che "
+                      "«VISTA NON DEVE far cambiare la tela», e «l'unico "
+                      "messaggio che cambia la tela e' ADATTA_TELA»"
+                      if self.ultimo_dal_client == "VISTA" else "")
+        raise NonConforme(
+            "RCP.md §7.1",
+            f"TELA non sollecitato: nessuna ADATTA_TELA e' senza risposta."
+            f"{dopo_vista}  ⛔ §6.2 da' al client un solo modo di accettare una "
+            f"misura inattesa — trattenere «finche' resta una ADATTA_TELA che "
+            f"il client ha spedito» — e «se nessuna ADATTA_TELA e' senza "
+            f"risposta non si trattiene niente»: questo TELA fa chiudere una "
+            f"sessione sana",
+            ass, rel)
+
+    def ammette(self, nome, verso=None):
+        """Il messaggio puo' arrivare adesso?  Restituisce None o il perche' no.
+
+        ⛔⛔ E DAL 16 AGOSTO 2026 GUARDA ANCHE **CHI** PARLA DOPO IL PROPRIO
+            `CONGEDO` — §8.1, e la lacuna e' stata trovata refutando.
+
+        L'arbitro accusava un `ADATTA_TELA` **senza risposta** seguito da un
+        `CONGEDO` (T3) e nello stesso momento assolveva la sequenza
+        `ADATTA_TELA · CONGEDO · TELA`, cioe' diceva insieme che la risposta
+        **non poteva piu' arrivare** e che **era arrivata**.  ⚠ Due verdetti
+        opposti sullo stesso fatto, e nessuno dei due sbagliato da solo.
+
+        ⭐ La riga che scioglie e' §8.1: *«Chi chiude DEVE mandare `CONGEDO` con
+           un motivo **prima** di chiudere la sessione»*.  ⇒ il `CONGEDO` e'
+        l'**ultimo** messaggio di quel lato; chi parla dopo il proprio congedo
+        ha dichiarato di chiudere e ha continuato.  ⚠ E vincola **solo il lato
+        che l'ha mandato**: §4.2 dice che il FIN chiude la sessione, ma un
+        `CONGEDO` non e' un FIN, e l'altro lato ha ancora il suo da mandare.
+        """
+        if verso is not None and verso in self.congedato_da:
+            chi = "client" if verso == CLIENT else "server"
+            return (f"il {chi} ha gia' mandato il suo CONGEDO, e §8.1 lo vuole "
+                    f"«prima di chiudere la sessione»: dopo di quello non "
+                    f"manda piu' niente, {nome} compreso")
         # ⛔ Dopo `RESPINTO` al client resta una cosa sola che puo' dire, ed e'
         #    `CONGEDO` (§4.4).  Qualunque altro messaggio — «e in particolare
         #    un secondo `CREDENZIALI`» — e' la violazione che §4.4 vieta.
@@ -683,6 +1016,8 @@ def valida(percorso):
     #    non sa ne' su che stream sia arrivato ne' che cosa fosse gia' passato.
     sessione_vista = False          # P1 — §2.5
     stream_di_controllo = set()     # P3 — §2.5
+    controllo_chiuso_dal_server = None   # T3 — §7.1
+    controllo_chiuso_dal_client = None   # T3 — §4.2, e la contraddizione
     flussi, ordine = {}, []
     for nb in range(quanti):
         if p + BLOCCO_BYTE > len(d):
@@ -749,11 +1084,62 @@ def valida(percorso):
                                   #    di lui sarebbe leggere il filo
                                   #    all'indietro.
                                   "tela": stato.tela,
-                                  "tela_da": stato.tela_da}
+                                  "tela_da": stato.tela_da,
+                                  # ⭐⛔ LE RICHIESTE IN VOLO QUANDO IL FLUSSO SI
+                                  #     APRE — §6.2, e senza di esse l'arbitro
+                                  #     uccideva sessioni sane.
+                                  #
+                                  #  §6.2: *«un fotogramma alla misura NUOVA puo'
+                                  #  arrivare PRIMA del `TELA` che la concede …
+                                  #  il client NON DEVE chiudere: trattiene il
+                                  #  fotogramma»*, e la condizione e' *«finche'
+                                  #  resta una `ADATTA_TELA` che il client ha
+                                  #  spedito»*.
+                                  #  ⛔ `02-filo-fotogramma.py` ha
+                                  #  `adatta_spedito()` e `adatta_in_volo`
+                                  #  scritti apposta per questo — e li nomina
+                                  #  per esteso *«nessun lettore che importa
+                                  #  questo file (01-b4-validatore.py …)»* —
+                                  #  ma B4 non gliel'ha mai detto: costruiva il
+                                  #  contesto e non dichiarava nessuna
+                                  #  richiesta in volo.  ⇒ La grazia di §6.2
+                                  #  era scritta, importata e **irraggiungibile**,
+                                  #  e ogni fotogramma arrivato prima del suo
+                                  #  `TELA` era ERRORE_PROTOCOLLO: la scena che
+                                  #  §6.2 descrive come quella in cui «nessuno
+                                  #  ha sbagliato».
+                                  "in_volo": [m for _, _, _, m in stato.in_volo
+                                              if m],
+                                  "tela_prec": stato.tela_prec}
                 ordine.append(stream)
             flussi[stream]["pezzi"].append((nb, verso, carico, fine, oscurati))
             continue
         if canale != CONTROLLO:
+            # ⛔⛔ IL `canale` DICHIARATO SI CONFRONTA COI BYTE, e fino al 16
+            #     agosto 2026 gli si credeva sulla parola.
+            #
+            #     §11.1 non descrive quel campo: lo **definisce** — *«canale: il
+            #     byte alto di `tipo` (§2.5)»*.  ⇒ Un blocco che porta un
+            #     messaggio di controllo dichiarandosi «appunti» non e' un
+            #     blocco di appunti: e' filo che **sparisce dal giudizio** con
+            #     un file valido per ogni altra riga di §11.1.  ⚠ E' la stessa
+            #     forma di `11-quanti-sotto-dichiarato`, dove l'esito e' **2**.
+            #
+            # ⭐ Trovato refutando: gli stessi byte della registrazione del
+            #    `TELA` non sollecitato, col `canale` scritto `0x02`, uscivano
+            #    ⭐ conforme.  Bastavano due byte per rendere invisibile una
+            #    violazione.
+            if lung >= 2:
+                alto = struct.unpack("!H", carico[:2])[0] >> 8
+                if alto != canale:
+                    raise Malformata(
+                        f"blocco {nb}: dichiara `canale = {canale:#04x}` "
+                        f"({CANALI[canale]}) ma il carico comincia con un tipo "
+                        f"il cui byte alto vale {alto:#04x}.  ⛔ §11.1 definisce "
+                        f"`canale` COME «il byte alto di tipo»: qui i due non "
+                        f"tornano, e un blocco dichiarato di un canale che il "
+                        f"validatore non giudica e' filo che sparisce dal "
+                        f"giudizio")
             print(f"   blocco {nb}: canale {CANALI[canale]} dal {chi}, "
                   f"{lung} byte — non giudicato da questo validatore")
             continue
@@ -788,11 +1174,26 @@ def valida(percorso):
                 raise NonConforme("RCP.md §7.1",
                                   f"{nome} non puo' arrivare dal {chi}",
                                   base + inizio_msg, inizio_msg)
-            perche = stato.ammette(nome)
+            perche = stato.ammette(nome, verso)
             if perche:
                 raise NonConforme("RCP.md §4 (l'ordine della stretta di mano)",
                                   f"{nome} nello stato sbagliato: {perche}",
                                   base + inizio_msg, inizio_msg)
+
+            # ⭐⛔ IL CONTO DELLA TELA — e si fa PRIMA di leggere il corpo.
+            #
+            #    T1 e T2 non dipendono da un solo byte del corpo: un `TELA` che
+            #    non risponde a niente e' sbagliato **qualunque cosa porti
+            #    dentro**, e il byte da mostrare e' il primo del messaggio.
+            #    ⚠ Leggere prima il corpo darebbe la precedenza a un difetto
+            #      minore — un motivo fuori elenco — e manderebbe la diagnosi a
+            #      guardare il campo invece della sequenza.
+            if nome == "ADATTA_TELA":
+                misura = (struct.unpack("!II", carico[le.i:le.i + 8])
+                          if lung_msg >= 8 else None)
+                stato.chiede_tela(nb, base + inizio_msg, inizio_msg, misura)
+            elif nome == "TELA":
+                stato.risponde_tela(nb, base + inizio_msg, inizio_msg)
 
             sotto = Lettore(carico[le.i:le.i + lung_msg], base + le.i,
                             [(o - le.i, q) for o, q in oscurati
@@ -806,7 +1207,47 @@ def valida(percorso):
             # ⛔ P1 — §2.5: da qui in poi il video e' lecito, e prima no.
             if nome == "SESSIONE" and verso == SERVER:
                 sessione_vista = True
+            if verso == CLIENT:
+                stato.ultimo_dal_client = nome
+            if nome == "CONGEDO":
+                stato.congedo = (nb, base + inizio_msg)
+                stato.congedato_da.add(verso)   # §8.1: da qui in poi tace
             le.i += lung_msg
+        # ⛔ COME SI E' CHIUSO IL CANALE DI CONTROLLO, E DA QUALE LATO.
+        #
+        #    Serve a T3 e a nient'altro: un `ADATTA_TELA` senza risposta e' una
+        #    violazione **solo se la risposta non puo' piu' arrivare**.  Se lo
+        #    stream continua, il file e' semplicemente finito prima — e
+        #    dichiararlo invece di accusare e' la stessa scelta che §6.2 impone
+        #    al video con `fine = 0`.
+        if fine in (FIN, RESET):
+            if verso == SERVER:
+                controllo_chiuso_dal_server = (nb, fine)
+            else:
+                # ⛔⛔ IL FIN DEL **CLIENT** NON ACCUSA IL SERVER, E NON PERCHE'
+                #     sia una fine minore: perche' li' `RCP.md` **si
+                #     contraddice**, e un arbitro che scegliesse in silenzio
+                #     una delle due letture darebbe un verdetto sul documento
+                #     spacciandolo per un verdetto sul filo.
+                #
+                #  · §7.1: *«A ogni `ADATTA_TELA` il server DEVE rispondere con
+                #    un `TELA`, riuscito o no»*;
+                #  · §4.2: *«un FIN su quello stream, **da una qualunque delle
+                #    due parti**, chiude la sessione.  Chi lo riceve … NON DEVE
+                #    continuare a spedire su nessun canale, **compreso quello
+                #    di controllo**»*.
+                #
+                #  ⇒ Un client che manda `ADATTA_TELA` e poi chiude mette il
+                #    server fra due `DEVE` che si escludono: rispondere viola
+                #    §4.2, tacere viola §7.1.  ⛔ **Non e' un caso di
+                #    laboratorio**: e' l'utente che ridimensiona la finestra e
+                #    chiude la scheda nello stesso gesto.
+                #  ⭐ `RCP.md` ha gia' sciolto il caso gemello per il `CONGEDO`
+                #     — §8.1, il riquadro dell'11 agosto, *«chi riceve un FIN
+                #     non e' "chi chiude"»* — e **non l'ha fatto per il
+                #     `TELA`**.  E' la riga che manca, e questo verdetto la
+                #     nomina invece di supplirla.
+                controllo_chiuso_dal_client = (nb, fine)
 
     # ⛔ IL CONTROLLO CHE C'ERA NON POTEVA FALLIRE, E MANCAVA QUELLO CHE SERVE.
     #
@@ -824,6 +1265,81 @@ def valida(percorso):
             f"restano {len(d) - p} byte dopo i {quanti} blocchi dichiarati: "
             f"o `quanti_blocchi` e' sotto-dichiarato — e allora c'e' del filo "
             f"che nessuno ha giudicato — o c'e' una coda che non e' del formato")
+
+    # =======================================================================
+    # ⭐⛔ T3 — L'`ADATTA_TELA` CHE NESSUN `TELA` HA MAI CHIUSO (§7.1)
+    #
+    #    *«A ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`,
+    #    riuscito o no.  Un silenzio lascia il client ad aspettare per sempre
+    #    una risposta che non arrivera', e il sintomo e' "l'applicazione si e'
+    #    piantata"»*.
+    #
+    # ⛔⛔ E QUI STA LA DECISIONE PIU' DELICATA DI TUTTA LA SOTTOFASE, perche'
+    #     sbagliarla produce un **falso rosso perpetuo**: una registrazione che
+    #     finisce mentre la sessione e' ancora viva non e' un server che tace —
+    #     e' un file che finisce.  ⚠ Ogni traccia di `01-b3-cliente.py` e' di
+    #     quella specie: il cliente si stacca da se' a `--resta` scaduto.
+    #
+    # ⭐ La distinzione si legge nei byte, e la porta il campo `fine` di §11.1 —
+    #    lo stesso campo entrato il 12 agosto per distinguere un fotogramma
+    #    abbandonato da uno troncato.  La risposta **non puo' piu' arrivare**
+    #    quando:
+    #      · il canale di controllo si e' chiuso **dal lato del server** (FIN o
+    #        RESET_STREAM su un blocco del server), oppure
+    #      · e' passato un `CONGEDO`, che §8 fa finire la sessione.
+    #    Fuori da questi due casi la completezza **non si giudica**, e si
+    #    dichiara — come §6.2 impone al video con `fine = 0`.
+    #
+    # ⚠⛔ **E il CONGEDO e' una lettura, non una riga di `RCP.md`.**  §7.1 dice
+    #     «DEVE rispondere» senza eccezioni, e il server ha `TELA(RIFIUTATA,
+    #     NON_ORA)` a disposizione anche mentre chiude: quindi congedare senza
+    #     rispondere **si accusa**.  La lettura opposta — «il congedo chiude
+    #     anche l'attesa» — e' difendibile, e per questo il verdetto la nomina:
+    #     se e' quella giusta, si corregge `RCP.md` §7.1 con una riga, non
+    #     questo file.
+    if stato.in_volo:
+        nb0, ass0, rel0, misura = stato.in_volo[0]
+        che = (f"{misura[0]}x{misura[1]}" if misura else "misura non letta")
+        if controllo_chiuso_dal_server is not None or stato.congedo is not None:
+            comesi = ("il canale di controllo si e' chiuso dal lato del server "
+                      f"({FINE[controllo_chiuso_dal_server[1]]} sul blocco "
+                      f"{controllo_chiuso_dal_server[0]})"
+                      if controllo_chiuso_dal_server is not None else
+                      f"e' passato un CONGEDO (blocco {stato.congedo[0]}, byte "
+                      f"{stato.congedo[1]}) — ⚠ e il server aveva "
+                      f"TELA(RIFIUTATA, NON_ORA) a disposizione anche mentre "
+                      f"chiudeva")
+            raise NonConforme(
+                "RCP.md §7.1",
+                f"ADATTA_TELA({che}) del blocco {nb0} senza nessun TELA che le "
+                f"risponda, e {comesi}: la risposta non puo' piu' arrivare.  "
+                f"⛔ «Un silenzio lascia il client ad aspettare per sempre, e "
+                f"il sintomo e' \"l'applicazione si e' piantata\"».  "
+                f"⚠ In volo ne restano {len(stato.in_volo)}",
+                ass0, rel0)
+        if controllo_chiuso_dal_client is not None:
+            print(f"   ⚠⛔ {len(stato.in_volo)} ADATTA_TELA senza risposta (la "
+                  f"prima al byte {ass0}), e il canale l'ha chiuso il "
+                  f"**CLIENT** (blocco {controllo_chiuso_dal_client[0]}).")
+            print("      ⛔ QUI RCP.md SI CONTRADDICE, e questo arbitro NON "
+                  "sceglie:")
+            print("        · §7.1 — «a ogni ADATTA_TELA il server DEVE "
+                  "rispondere, riuscito o no»;")
+            print("        · §4.2 — «un FIN da una qualunque delle due parti "
+                  "chiude la sessione;")
+            print("          chi lo riceve NON DEVE continuare a spedire, "
+                  "compreso il controllo».")
+            print("      ⇒ rispondere viola §4.2, tacere viola §7.1.  ⭐ §8.1 ha "
+                  "gia' sciolto")
+            print("        il caso gemello per il CONGEDO e non l'ha fatto per "
+                  "il TELA: e' una")
+            print("        riga che manca a RCP.md, non un difetto del filo.")
+        else:
+            print(f"   ⚠ {len(stato.in_volo)} ADATTA_TELA senza risposta, la "
+                  f"prima al byte {ass0} — ⛔ ma il canale di controllo NON si "
+                  f"e' chiuso e nessun CONGEDO e' passato: la registrazione "
+                  f"finisce mentre la sessione e' viva, e §7.1 NON si giudica "
+                  f"su questa traccia")
 
     # =======================================================================
     # ⭐⛔ IL CANALE VIDEO — le sei righe del 12 agosto 2026
@@ -864,9 +1380,30 @@ def valida(percorso):
             # ⛔ P5 — la tela IN VIGORE all'apertura di QUESTO flusso.
             if fl["tela"] is not None:
                 if fl["tela_da"].startswith("TELA"):
-                    ctx.adatta_tela(*fl["tela"])
+                    # ⛔⛔ SI PARTE DALLA TELA **PRECEDENTE** E POI SI SALTA, e
+                    #     non e' un giro di parole: `adatta_tela` ha un ritorno
+                    #     anticipato quando la misura non cambia — scritto
+                    #     apposta, perche' §7.1 fa rispondere `TELA` anche a chi
+                    #     chiede la misura che c'e' gia'.
+                    #
+                    #  ⚠ B4 costruiva il contesto con la tela di **fine file** e
+                    #    poi ci chiamava sopra `adatta_tela` con la **stessa**
+                    #    misura: per il giudice non era successo niente.  ⇒
+                    #    `tele_recenti` restava vuota, `coda_da_svuotare()`
+                    #    falsa, e la grazia di **D14** — i fotogrammi alla
+                    #    misura vecchia ancora in volo — **non si apriva mai**.
+                    #  ⛔ Un cambio di tela che l'arbitro non vedeva come un
+                    #     cambio: la sesta eccezione di §3 era importata,
+                    #     documentata e morta.
+                    if fl["tela_prec"] is not None:
+                        ctx.tela_larghezza, ctx.tela_altezza = fl["tela_prec"]
+                    ctx.adatta_tela(*fl["tela"], precedente=fl["tela_prec"])
                 else:
                     ctx.tela_larghezza, ctx.tela_altezza = fl["tela"]
+            # ⛔ E le richieste in volo, che sono l'altra meta' di §6.2: il
+            #    fotogramma alla misura nuova arrivato PRIMA del suo `TELA` si
+            #    trattiene, e trattenerlo «non e' un numero: e' una condizione».
+            ctx.adatta_in_volo = list(fl["in_volo"])
             b0 = fl["pezzi"][0]
             base0 = fl["base"]
 
@@ -942,6 +1479,16 @@ def valida(percorso):
           f"controllo e {di_video} sul canale video · {messaggi} messaggi "
           f"letti, {giudicati} col corpo giudicato · {flussi_video} flussi "
           f"video")
+    # ⛔ E IL DENOMINATORE DELLA TELA, dal 16 agosto 2026.  «Conforme» su una
+    #    traccia con **zero** ADATTA_TELA non dice niente sulle sette regole
+    #    della tela: le ha rispettate tutte per assenza di occasioni.  ⚠ E'
+    #    `LEZIONI.md` §1.9 applicato al capitolo nuovo — la stessa ragione per
+    #    cui i flussi video si contano.
+    print(f"   la tela: {stato.telate} coppie ADATTA_TELA/TELA chiuse · "
+          f"{len(stato.in_volo)} richieste ancora in volo · tela in vigore alla "
+          f"fine: "
+          + (f"{stato.tela[0]}x{stato.tela[1]} da {stato.tela_da}"
+             if stato.tela else "mai dichiarata"))
     # ⛔ E DAL 12 AGOSTO 2026 «NIENTE DA GIUDICARE» VUOLE **DUE** ZERI.
     #
     #    Prima bastava `messaggi == 0`, perche' il video non lo guardava

@@ -7,6 +7,8 @@
  *    difetti gia' pagati, e riscriverli senza la ragione significa ripagarli.
  */
 #include "webtransport.h"
+/* ⭐ §5-bis.7: la domanda «questa disposizione esiste?» la sa `tastiera.c`. */
+#include "tastiera.h"
 
 /* ⛔ Solo per i `FIGLI_INPUT_*`: i numeri delle azioni stanno in un posto solo
  *    (`figlio.h`), o fra due settimane saranno tre posti con tre valori. */
@@ -1029,6 +1031,65 @@ void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx)
 	gancio_palco_ritela_ctx = ctx;
 }
 
+static wt_disposizione_richiesta gancio_palco_disposizione;
+static void *gancio_palco_disposizione_ctx;
+
+void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx)
+{
+	gancio_palco_disposizione = f;
+	gancio_palco_disposizione_ctx = ctx;
+}
+
+/* ⭐⭐ §5-bis.7 — «metti questa disposizione», e va al palco di CHI HA
+ *     CHIESTO.  ⛔ Invariante I3, identica alla ritela: il nome dell'utente
+ *     e' quello che PAM ha ammesso su QUESTA sessione, mai un parametro che
+ *     viene dal filo.  Un utente che potesse cambiare la tastiera di un
+ *     altro sarebbe un difetto piccolo con una faccia grossa — il desktop
+ *     dell'altro che smette di rispondere alle scorciatoie. */
+static bool gancio_disposizione(void *ctx, const char *nome)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!gancio_palco_disposizione || !w->rcp)
+		return false;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return false;
+	return gancio_palco_disposizione(gancio_palco_disposizione_ctx, mio, nome);
+}
+
+/* ⭐⭐ «QUESTA MACCHINA CONOSCE QUESTA DISPOSIZIONE?» — e la risposta la da'
+ *     **XKB**, non un elenco scritto a mano.
+ *
+ * ⛔ Il difetto che chiude, `[M]` banco `06-b34` caso 5, 16 agosto 2026:
+ *    `hu`, `tr`, `gr` e `ua` esistono in `/usr/share/X11/xkb/symbols/` su
+ *    questa macchina e venivano rifiutate con `SESSIONE_NON_SERVIBILE`,
+ *    con la riga «disposizione sconosciuta a questa macchina» — una frase
+ *    FALSA.  ⇒ Un utente ungherese non entrava.
+ *
+ * ⭐ E la domanda si gira a `tastiera.c`, che e' gia' l'unico posto del
+ *    prodotto che sa compilare una disposizione: chiedere due volte la
+ *    stessa cosa in due modi diversi produce due risposte sotto la stessa
+ *    etichetta (forma E2).  ⚠ Copre anche la VARIANTE — `it(nonesiste)`
+ *    non compila — che l'elenco fisso non guardava affatto. */
+static int gancio_disposizione_esiste(void *ctx, const char *nome)
+{
+	Tastiera *t;
+	char *sbaglio = NULL;
+
+	(void)ctx;
+	if (!nome || !*nome)
+		return 0;
+	t = tastiera_apri(nome, &sbaglio);
+	if (!t) {
+		free(sbaglio);
+		return 0;
+	}
+	tastiera_chiudi(t);
+	return 1;
+}
+
 static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
 {
 	wt *w = (wt *)ctx;
@@ -2038,6 +2099,8 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 		g.input_pulsante = gancio_input_pulsante;
 		g.input_rotella = gancio_input_rotella;
 		g.input_lettera = gancio_input_lettera;
+		g.disposizione = gancio_disposizione;
+		g.disposizione_esiste = gancio_disposizione_esiste;
 		g.input_posizione = gancio_input_posizione;
 		g.input_rilascia_tutto = gancio_input_rilascia_tutto;
 	}

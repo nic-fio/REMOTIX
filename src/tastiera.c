@@ -712,6 +712,38 @@ const char *tastiera_disposizione(Tastiera *t)
 	return t ? t->nome : NULL;
 }
 
+/*
+ * ⛔⭐ La domanda che evita di chiedere due volte la stessa disposizione — e
+ *     che, soprattutto, evita di NON chiederla quando serve.
+ *
+ * ⚠ Il contratto in `tastiera.h` racconta il difetto che l'ha fatta nascere:
+ *   una memoria di «quel che ho chiesto» al posto di «quel che c'e'».  Qui la
+ *   risposta viene dalla keymap VERA, quella che `libei` ha consegnato, e si
+ *   confronta con quel che la disposizione nominata FAREBBE — non col suo nome.
+ *
+ * ⛔ E si riusa `fanno_la_stessa_cosa()`, che e' gia' l'unico posto in cui
+ *    questo confronto e' scritto: due confronti in due punti diventano due
+ *    regole diverse il giorno in cui una cambia (forma E2).
+ */
+int tastiera_e_questa(Tastiera *t, const char *nome)
+{
+	Tastiera *altra;
+	int uguali;
+
+	if (!t || !t->keymap || !nome || !*nome)
+		return -1;
+
+	/* ⚠ `NULL` come canale d'errore: qui non interessa PERCHE' non si compila —
+	 *   se non si compila, la domanda non ha risposta, e -1 lo dice. */
+	altra = tastiera_apri(nome, NULL);
+	if (!altra)
+		return -1;
+
+	uguali = fanno_la_stessa_cosa(t->keymap, t->gruppo, altra->keymap, altra->gruppo);
+	tastiera_chiudi(altra);
+	return uguali ? 1 : 0;
+}
+
 void tastiera_chiudi(Tastiera *t)
 {
 	if (!t)

@@ -118,6 +118,43 @@ int input_puntatore(Input *, uint32_t x, uint32_t y);
  */
 int input_ritela(Input *, uint32_t tela_l, uint32_t tela_a);
 
+/*
+ * ⛔⭐⭐ LA DISPOSIZIONE NEGOZIATA ENTRA NELLA SESSIONE — `DECISIONI.md`
+ *      §5-bis.7, decisa dall'utente l'8 agosto 2026 e CONFERMATA il 16.
+ *
+ * ⛔ E il verso e' QUESTO, non l'altro.  La strada corta sarebbe stata: tenere
+ *    la sessione com'e' e tradurre la lettera con una keymap NOSTRA, quella che
+ *    il client ha chiesto.  ⛔ `tastiera.h` spiega perche' e' sbagliata e
+ *    `tastiera.c` la misura: con la nostra keymap e la loro sessione escono
+ *    **caratteri diversi** — mandiamo il tasto 26 per la `[` di `us` e sullo
+ *    schermo, su una sessione `it`, compare una `è`.  Cioe' esattamente cio'
+ *    che `RCP.md` §7.3 vieta.
+ *
+ * ⇒ Si cambia la disposizione **della sessione**, e poi la si RILEGGE da
+ *   `libei` come si e' sempre fatto.  ⭐ Che quel giro regga non e' una
+ *   speranza: `[M]` 16 agosto 2026, banco `06-b34` caso 2s — cambiata la
+ *   disposizione della sessione, Mutter distrugge e ricrea il dispositivo
+ *   tastiera, `leggi_keymap()` rilegge, e al testimone dentro la sessione
+ *   arriva il carattere GIUSTO.
+ *
+ * ⛔⛔ E IL DANNO CHE QUESTA FUNZIONE CURA NON E' LA COMODITA' DI DUE ACCENTI.
+ *     `SPECIFICHE.md` §7.3: le lettere viaggiano come **lettere**, ma le
+ *     scorciatoie viaggiano come **posizioni** — e le posizioni combaciano solo
+ *     se le due disposizioni sono la stessa.  Su una tastiera tedesca la `Z`
+ *     sta dove sulla nostra sta la `Y` (evdev 21 contro 44): senza rinegoziare,
+ *     **`Ctrl+Z` arriva come `Ctrl+Y`**, cioe' «rifai» invece di «annulla».
+ *     ⚠ Il sintomo che l'utente descrive e' «l'annulla non funziona», e nessuno
+ *       lo collega alla disposizione.
+ *
+ * `nome` e' la stringa di `RCP.md` §4.5: `it`, `us`, `de(neo)`.
+ *
+ *   ritorna  0  la richiesta e' PARTITA.  ⚠ NON «e' in vigore»: il compositore
+ *               ci mette il suo tempo, e chi lo constata e' la riga di
+ *               `leggi_keymap()` al `DEVICE_ADDED` che segue;
+ *   ritorna -1  non e' partita, ed e' gia' dichiarato nel registro.
+ */
+int input_disposizione(Input *, const char *nome);
+
 /* `codice` e' evdev: `BTN_LEFT` = 0x110.  `premuto` 1 o 0. */
 int input_pulsante(Input *, uint16_t codice, int premuto);
 

@@ -49,6 +49,25 @@ enum {
 	 * accende. */
 	T_ADATTA_TELA = 0x000B,
 	T_TELA = 0x000E,
+	/* ⛔⭐ §7.1 — «la vista e' cambiata: nuove larghezza e altezza».  Servita
+	 *     dal 16 agosto 2026 (fase 6, sottofase 6.4): prima cadeva nel `default`
+	 *     con la riga «la fase 1 non lo serve ancora», e il prezzo era scritto
+	 *     li' per intero — **un client conforme che stringe la finestra perde la
+	 *     sessione**, cioe' alla lettera il sintomo che il rilievo R1.17 di §7.1
+	 *     e' stato scritto per rendere impossibile.
+	 *
+	 * ⚠ E quel che fa e' poco per una ragione dichiarata, non per pigrizia: §7.1
+	 *   dice che la vista **NON DEVE** far cambiare la tela e che «in RCP/1 non
+	 *   cambia nemmeno la misura di quel che si codifica».  ⇒ Si convalida, si
+	 *   tiene e si scrive.  La tela e' della SESSIONE, la vista della
+	 *   CONNESSIONE. */
+	T_VISTA = 0x0008,
+	/* ⭐ §7.1 `0x0009` — «la disposizione di tastiera e' cambiata».  ⛔ Servito
+	 *    dal 16 agosto 2026: prima cadeva nel `default` e CHIUDEVA la sessione
+	 *    a un client conforme, che e' il gemello esatto del difetto di `VISTA`.
+	 *    Attuata `DECISIONI.md` §5-bis.7, e' il messaggio con cui la tastiera
+	 *    si cambia **senza staccarsi**. */
+	T_DISPOSIZIONE = 0x0009,
 	T_BANCO_MARCA = 0x000F,
 	T_BANCO_ESITO = 0x0010,
 };
@@ -310,6 +329,11 @@ struct rcp_sessione {
 	 * sopra `rcp_chiave_indirizzo()`. */
 	char indirizzo[64];
 	char utente[257];
+	/* ⭐ La disposizione che il client ha DICHIARATO in `ATTACCA` (§4.5),
+	 *    tenuta per due cose: applicarla quando la sessione e' aperta
+	 *    (`DECISIONI.md` §5-bis.7), e riconoscere a `DISPOSIZIONE` (0x0009) se
+	 *    e' davvero cambiata.  ⚠ 64 byte piu' il NUL: e' il tetto di §4.5. */
+	char disposizione[65];
 	uint64_t da_quando;   /* quando e' cominciato lo stato corrente */
 	/* ⛔⛔⭐ DUE OROLOGI, NON UNO — e fino al 16 agosto 2026 ce n'era uno solo
 	 *      che faceva il mestiere di tutt'e due.
@@ -403,6 +427,28 @@ struct rcp_sessione {
 	 * qui non e' una misura: e' «non c'e' ancora nessuna tela», e `sessione_
 	 * spedita` e' il fatto che lo dice. */
 	uint32_t tela_l, tela_a;
+	/* ⛔⭐ LA VISTA — §7.1, e sta **accanto** alla tela apposta: sono due
+	 *     grandezze diverse e la riga che le separa e' normativa.
+	 *
+	 *   · la **tela** e' della SESSIONE: sopravvive al client (I4), la cambia
+	 *     solo `ADATTA_TELA`, e vincola la misura dei fotogrammi (§6.2);
+	 *   · la **vista** e' della CONNESSIONE: e' «la misura in cui il client
+	 *     disegnera'», arriva con `ATTACCA` (§4.5) e la aggiorna `VISTA`
+	 *     (§7.1).  ⛔ **NON DEVE** far cambiare la tela, e in RCP/1 non cambia
+	 *     nemmeno la misura di quel che si codifica: il server manda la tela
+	 *     intera e il client riscala (`SPECIFICHE.md` §6.1).
+	 *
+	 * ⚠ E i limiti sono ALTRI: §7.1, rilievo R1.17 — «qualunque misura da 1x1
+	 *   in su e' legale, dispari compresa».  I limiti della tela esistono per i
+	 *   blocchi del codificatore, e alla vista non si applicano perche' in
+	 *   RCP/1 la vista non tocca nessun codificatore.
+	 *
+	 * ⚠ Oggi questo numero non decide niente, ed e' dichiarato: serve «a
+	 *   scegliere quanti bit spendere» (§7.1), e la scelta dei bit e' della
+	 *   fase del codificatore.  ⛔ Ma si TIENE lo stesso, perche' l'alternativa
+	 *   e' leggerlo e buttarlo — cioe' un campo del protocollo che il server
+	 *   dichiara di aver capito e non ha da nessuna parte. */
+	uint32_t vista_l, vista_a;
 
 	/* ⛔ §6.2: il contatore dei fotogrammi.  `0` = **nessuno spedito**, ed e'
 	 * il significato che §7.1 da' allo zero in `RICHIEDI_CHIAVE`: qui non e'
@@ -1967,7 +2013,7 @@ static bool disposizione_ben_formata(const char *d, size_t n)
  *   scelta e' un elenco fisso.  ⛔ Quel che il banco prova e' **che i due
  *   guasti siano distinti**, non quali disposizioni esistano: il giorno in cui
  *   la domanda andra' a XKB, questa funzione cambia e B5 resta com'e'. */
-static bool disposizione_conosciuta(const char *d)
+static bool disposizione_nell_elenco(const char *d)
 {
 	static const char *NOTE[] = {"it", "us", "gb", "de", "fr", "es", "pt",
 	                             "ru", "se", "no", "dk", "fi", "pl", "cz",
@@ -1981,6 +2027,88 @@ static bool disposizione_conosciuta(const char *d)
 		if (strlen(NOTE[i]) == n && strncmp(NOTE[i], d, n) == 0)
 			return true;
 	return false;
+}
+
+/* ⛔⛔⭐ E ADESSO LA DOMANDA VA A XKB — 16 agosto 2026, banco `06-b34` caso 5.
+ *
+ *      L'elenco qui sopra era della fase 1, e la sua stessa nota diceva che «un
+ *      server vero lo chiede a XKB».  ⛔ `[M]` finche' ha deciso lui:
+ *      **`hu`, `tr`, `gr` e `ua` esistono in `/usr/share/X11/xkb/symbols/` su
+ *      questa macchina e venivano rifiutate** con `SESSIONE_NON_SERVIBILE`.
+ *      ⇒ Un utente ungherese si vedeva negare la sessione da un elenco scritto
+ *        a mano, e il registro gli diceva «disposizione sconosciuta a questa
+ *        macchina» — una frase FALSA, che e' il modo peggiore di sbagliare.
+ *
+ *      ⚠ E finche' la disposizione dichiarata non toccava niente il difetto
+ *        era invisibile: rifiutava e basta.  Attuata §5-bis.7, diventa la
+ *        differenza fra «l'ungherese lavora» e «l'ungherese non entra».
+ *
+ * ⛔ I TRE ESITI RESTANO TRE, e il terzo e' quello che costa: se il gancio non
+ *    c'e' (il gemello di `banchi/rcp/`, gli innesti a QUIC nudo) **non si e'
+ *    potuto chiedere**, e «non ho guardato» non e' «non esiste»
+ *    (`LEZIONI.md` §1.9 regola 1).  ⇒ Li' si ripiega sull'elenco della fase 1
+ *    **dichiarandolo**, invece di accettare tutto o rifiutare tutto in
+ *    silenzio.
+ *
+ *   `1` conosciuta · `0` no · `-1` non si e' potuto chiedere (gia' dichiarato) */
+static int disposizione_conosciuta(rcp_sessione *s, const char *d)
+{
+	if (s->g.disposizione_esiste) {
+		int r = s->g.disposizione_esiste(s->g.ctx, d);
+		if (r >= 0)
+			return r;
+		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): il gancio «disposizione_esiste» "
+		       "non ha saputo rispondere per «%s» — ripiego sull'elenco della "
+		       "fase 1, che NON e' quel che questa macchina ha davvero",
+		    d);
+	} else {
+		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): nessun gancio «disposizione_esiste» "
+		       "su questo server — la domanda «%s esiste?» NON e' andata a XKB, "
+		       "e la risposta viene dall'elenco fisso della fase 1",
+		    d);
+	}
+	return disposizione_nell_elenco(d) ? 1 : 0;
+}
+
+/* ⛔⭐ SI CHIEDE AL PALCO DI METTERE LA DISPOSIZIONE, E SI DICHIARA L'ESITO.
+ *
+ * `perche` dice da dove viene la richiesta — «l'attacco» oppure «DISPOSIZIONE
+ * (0x0009)» — e finisce nel registro: sei ore dopo, chi legge deve poter
+ * distinguere una disposizione messa al riattacco da una cambiata a mano
+ * dall'utente, perche' i due guasti che le seguono sono diversi.
+ *
+ * ⛔ Il ripiego si DICHIARA (`CODER.md` §4.2): senza il gancio la disposizione
+ *    NON viene applicata, e tacerlo vorrebbe dire lasciare l'utente con
+ *    `Ctrl+Z` sul tasto sbagliato e nessuna riga che lo spieghi.
+ *
+ * ⚠ `true` = la richiesta e' PARTITA, non «e' in vigore»: chi lo sa e' il
+ *   figlio, ed e' lui che scrive la riga col nome della keymap che `libei` gli
+ *   consegna davvero.  Stessa regola del rilascio al distacco — un numero (o
+ *   un esito) inventato qui sarebbe peggio di nessuno. */
+static void applica_disposizione(rcp_sessione *s, const char *perche)
+{
+	if (!s->disposizione[0])
+		return;
+	if (!s->g.disposizione) {
+		reg(s, "⚠ RIPIEGO DICHIARATO (§5-bis.7): %s ha dichiarato la "
+		       "disposizione «%s», ma questo server NON ha il gancio per "
+		       "applicarla — la sessione tiene quella che ha.  ⛔ Le LETTERE "
+		       "usciranno giuste lo stesso (si traduce sulla keymap della "
+		       "sessione), ma le SCORCIATOIE no: `Ctrl+Z` finira' sul tasto "
+		       "che quella posizione ha nell'ALTRA disposizione (§7.3)",
+		    perche, s->disposizione);
+		return;
+	}
+	if (s->g.disposizione(s->g.ctx, s->disposizione))
+		reg(s, "⭐ §5-bis.7: %s ha dichiarato «%s» — richiesta MANDATA al "
+		       "palco.  ⚠ Questa riga NON dice che sia in vigore: chi lo sa e' "
+		       "il figlio, e lo scrive con il nome che `libei` gli consegna",
+		    perche, s->disposizione);
+	else
+		reg(s, "⛔ §5-bis.7: %s ha dichiarato «%s» e la richiesta NON e' "
+		       "partita: la sessione tiene la disposizione che ha, e le "
+		       "scorciatoie resteranno sfasate",
+		    perche, s->disposizione);
 }
 
 static bool tratta_attacca(rcp_sessione *s, lettore *l)
@@ -1998,6 +2126,12 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	 *   `300x801` e `1x1`, che DEVONO passare. */
 	uint32_t vl = le_u32(l), va = le_u32(l);
 	char disp[65];
+	/* ⛔ …NIENTE tranne una cosa, ed e' la sola che §7.1 pretende: **da 1x1 in
+	 *    su**.  Uno zero non e' una vista piccola, e' l'assenza di una vista, e
+	 *    §6.0 vieta i valori sentinella impliciti — un client che manda 0 ha un
+	 *    difetto, e lasciarlo passare lo nasconderebbe insieme alla riga di
+	 *    registro che lo direbbe.  Il controllo vero e' piu' sotto, dopo che il
+	 *    troncamento e' stato escluso. */
 	size_t ld = le_str(l, disp, sizeof disp);
 	if (l->corto) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA troncato");
@@ -2010,11 +2144,24 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "tela fuori dai limiti o dispari");
 		return false;
 	}
+	/* ⛔ E l'UNICO limite della vista, §7.1: «qualunque misura da **1x1 in su**».
+	 *    ⚠ Sopra c'e' scritto che qui non si controlla niente, e questa riga non
+	 *    lo contraddice: «da 1x1 in su» e' l'intervallo che l'arbitro DICHIARA,
+	 *    e uno zero ne sta fuori come 100000 sta fuori dalla tela.  Chi lo
+	 *    lasciasse passare avrebbe un campo `u32` con un valore che non
+	 *    significa niente, e il difetto si vedrebbe piu' in la' — quando qualcuno
+	 *    ci dividesse. */
+	if (!vl || !va) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO,
+		        "vista con un lato a zero: §7.1 ammette qualunque misura da 1x1 "
+		        "in su, e lo zero non e' una misura");
+		return false;
+	}
 	if (!disposizione_ben_formata(disp, ld)) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "disposizione fuori forma");
 		return false;
 	}
-	if (!disposizione_conosciuta(disp)) {
+	if (!disposizione_conosciuta(s, disp)) {
 		/* ⛔ §8.2: SESSIONE_NON_SERVIBILE «DEVE portare il dettaglio nel
 		 * corpo», e `congeda()` ce lo mette.  Il dettaglio NON si mostra
 		 * all'utente (§8.2): la frase la costruisce il client dal codice. */
@@ -2024,6 +2171,11 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE, d);
 		return false;
 	}
+	/* ⛔ E la si tiene: serve piu' sotto, quando la sessione e' aperta e la si
+	 *    puo' finalmente APPLICARE (§5-bis.7).  ⚠ Prima di `SESSIONE` no: se
+	 *    l'attacco viene respinto (posto occupato, sessione locale) avremmo
+	 *    cambiato la disposizione a un utente che non e' entrato. */
+	snprintf(s->disposizione, sizeof s->disposizione, "%s", disp);
 
 	/* ⛔⭐ §5.1 di `SPECIFICHE.md`, motivo `0x05 GIA_ATTIVA_LOCALE` — e viene
 	 *     PRIMA del posto, di proposito.
@@ -2226,6 +2378,13 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		 *    non lo sono. */
 		s->tela_l = tl;
 		s->tela_a = ta;
+		/* ⛔ E la vista dell'`ATTACCA` SI TIENE, invece di essere letta e
+		 *    buttata: §4.5 la definisce come «la misura in cui il client
+		 *    disegnera'», e `VISTA` (§7.1) e' il messaggio che la CAMBIA — se
+		 *    non ci fosse un valore di partenza, il primo `VISTA` cambierebbe
+		 *    un campo che non e' mai stato niente. */
+		s->vista_l = vl;
+		s->vista_a = va;
 		s->sessione_spedita = true;
 		/* ⛔ §5.2, primo punto: «il primo fotogramma che il server spedisce
 		 * dopo `SESSIONE` DEVE essere una chiave». */
@@ -2237,6 +2396,27 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	       "disposizione=%s",
 	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
+
+	/* ⛔⭐⭐ E ADESSO LA DISPOSIZIONE SI APPLICA — `DECISIONI.md` §5-bis.7,
+	 *      decisa l'8 agosto 2026 e CONFERMATA dall'utente il 16.
+	 *
+	 * ⛔ Fino a stasera questa riga non c'era, e il messaggio piu' su —
+	 *    «disposizione=%s» — era **tutto quel che il server faceva** della
+	 *    stringa: la convalidava e la scriveva.  `[M]` banco `06-b34` caso 2:
+	 *    riattaccandosi a una sessione `it` dichiarando `us` arrivavano `è` e
+	 *    `ò`, che su `us` non esistono su nessun tasto.
+	 *
+	 * ⭐ E si fa QUI, dopo `SESSIONE`, non lassu' alla convalida: se l'attacco
+	 *    fosse stato respinto (posto occupato, sessione locale, tela fuori
+	 *    limiti) avremmo cambiato la disposizione a un utente che non e'
+	 *    entrato — e la sessione sopravvive al client (I4), quindi il danno
+	 *    resterebbe li' anche dopo.
+	 *
+	 * ⚠ E vale per l'attacco E per il riattacco, perche' `ATTACCA` e' lo stesso
+	 *   messaggio per tutt'e due: e' precisamente quel che §5-bis.7 chiede —
+	 *   *«alla creazione della sessione o re-attach viene rinegoziata anche la
+	 *   tastiera»*. */
+	applica_disposizione(s, "l'attacco");
 
 	/*
 	 * ⭐⭐⭐ E IL PALCO LO SA SUBITO — 16 agosto 2026, e senza questa riga il
@@ -2371,6 +2551,18 @@ bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
 	return true;
 }
 
+/* La dichiarazione, e perche' la vista NON e' la tela, stanno in `rcp.h`. */
+bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
+{
+	if (!s || !s->sessione_spedita)
+		return false;
+	if (lar)
+		*lar = s->vista_l;
+	if (alt)
+		*alt = s->vista_a;
+	return true;
+}
+
 bool rcp_video_serve_chiave(const rcp_sessione *s)
 {
 	return s && s->serve_chiave;
@@ -2400,6 +2592,27 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
 		       "`ERRORE_PROTOCOLLO`.  Chi serve `ADATTA_TELA` sul filo chiami "
 		       "`rcp_tela_adattata_ora()`");
 	rcp_tela_adattata_ora(s, lar, alt, 0);
+	/* ⛔⭐ E LA GRAZIA SI CHIUDE DAVVERO, invece di aprirsi con la data ZERO —
+	 *     16 agosto 2026, sottofase 6.4, trovato leggendo.
+	 *
+	 * ⚠ Senza queste due righe la riga qui sopra **diceva il falso**: `rcp_tela_
+	 *   adattata_ora(…, 0)` mette `tela_grazia_da = 0` e riempie `tela_prec_*`,
+	 *   e la grazia risulta APERTA per tutti gli istanti minori di
+	 *   `TELA_GRAZIA` — cioe' il primo secondo dell'orologio.  ⛔ Con un
+	 *   orologio monotono di sistema non si arriva mai li' e il difetto non si
+	 *   vede; ⚠ con l'orologio artificiale di un banco che parte da zero si',
+	 *   ed e' precisamente il posto in cui questo modulo viene montato nudo.
+	 *
+	 * ⇒ Un ripiego che dichiara una cosa e ne fa un'altra e' peggio del ripiego:
+	 *   e' la forma E2, due comportamenti sotto la stessa etichetta, ed e' quel
+	 *   che il `reg()` qui sopra esiste per NON essere.
+	 *
+	 * ⛔ E NON e' misurato da nessun banco, dichiarato invece che taciuto: per
+	 *    provarlo servirebbe un orologio che parte sotto il secondo, e la
+	 *    stretta di mano di §4.4-bis ne consuma gia' millecinquecento. */
+	s->tela_prec_l = 0;
+	s->tela_prec_a = 0;
+	s->tela_grazia_da = 0;
 }
 
 /* La dichiarazione, il perche' e le due misure che uccidono stanno in `rcp.h`:
@@ -2602,25 +2815,67 @@ static void tela_richiama_il_palco(rcp_sessione *s, uint64_t ora_ms)
 	    && ora_ms - s->tela_disaccordo_da < s->tela_disaccordo_attesa)
 		return; /* si e' gia' chiesto da poco: non si insiste a ogni fotogramma */
 
+	/* ⛔⭐⭐ A QUALE MISURA SI RICHIAMA IL PALCO, E NON E' SEMPRE LA TELA IN
+	 *      VIGORE — cura del 16 agosto 2026, banco `06-b36` caso 13.
+	 *
+	 * ⛔ LA SCENA, ed e' quella che il riquadro di §7.1 nomina per prima: *«un
+	 *    rimontaggio della sessione grafica dopo una caduta»*.  L'utente stringe
+	 *    la finestra, il server gira `ADATTA_TELA(1600x900)` al palco, e un
+	 *    istante dopo il palco si rimonta a 1024x768 di suo — cioe' NON in
+	 *    risposta a niente.  Il ramo 3 di `rcp_tela_dal_palco()` non riconosce
+	 *    la richiesta e finisce qui.
+	 *
+	 * ⛔ Richiamandolo alla tela IN VIGORE (1920x1080) il server contraddice la
+	 *    richiesta che ha girato lui stesso un istante prima, e **condanna al
+	 *    `NON_ORA` una `ADATTA_TELA` che stava per riuscire**: il palco torna a
+	 *    1920x1080, il fondo di §7.1 scade, e l'utente vede la sua finestra
+	 *    rifiutata da un server che gli ha chiesto lui di tornare indietro.
+	 *    ⚠ Nessun banco lo vedeva, perche' il conto dei `TELA` torna: uno solo,
+	 *    ed e' il `NON_ORA` — il verde all'imputato sbagliato.
+	 *
+	 * ⇒ Se una richiesta e' IN VOLO si richiama il palco a **quella** misura.
+	 *   ⛔ E non e' un `TELA` non sollecitato mascherato, che e' la cosa da non
+	 *   fare mai: sul filo non esce niente.  §3, eccezione 8: finche' c'e' una
+	 *   `ADATTA_TELA` senza risposta il client TRATTIENE i fotogrammi di una
+	 *   misura mai annunciata, quindi chiedere al palco la misura in volo e'
+	 *   esattamente la misura che il client e' pronto a ricevere.
+	 *
+	 * ⚠ E se il palco ci arriva, `rcp_tela_dal_palco()` la riconosce come
+	 *   risposta (`voluta` = quel che si e' chiesto) e il `TELA(ADATTATA)` esce
+	 *   per la strada normale: la richiesta dell'utente RIESCE invece di
+	 *   scadere. */
+	uint32_t verso_l = s->tela_volo ? s->tela_volo_l : s->tela_l;
+	uint32_t verso_a = s->tela_volo ? s->tela_volo_a : s->tela_a;
+
 	if (!s->tela_disaccordo_da) {
 		s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MS;
-		reg(s, "⛔ il palco non e' alla tela in vigore %ux%u: §6.2 vieta di "
-		       "spedire un fotogramma di misura diversa, quindi da qui non parte "
-		       "piu' niente.  Gli richiedo %ux%u — e insistero' con un'attesa che "
-		       "cresce, perche' un `TELA` che nessuno ha chiesto farebbe chiudere "
-		       "la sessione al client (§6.2)",
-		    s->tela_l, s->tela_a, s->tela_l, s->tela_a);
+		if (s->tela_volo)
+			reg(s, "⛔ il palco e' andato per conto suo MENTRE %ux%u era in volo: "
+			       "gli richiedo %ux%u — la misura IN VOLO, non la tela in vigore "
+			       "%ux%u.  ⚠ Richiamarlo indietro condannerebbe al NON_ORA una "
+			       "`ADATTA_TELA` che sta per riuscire, e §3 eccezione 8 dice che "
+			       "il client TRATTIENE i fotogrammi finche' aspetta la risposta",
+			    s->tela_volo_l, s->tela_volo_a, verso_l, verso_a, s->tela_l,
+			    s->tela_a);
+		else
+			reg(s, "⛔ il palco non e' alla tela in vigore %ux%u: §6.2 vieta di "
+			       "spedire un fotogramma di misura diversa, quindi da qui non "
+			       "parte piu' niente.  Gli richiedo %ux%u — e insistero' con "
+			       "un'attesa che cresce, perche' un `TELA` che nessuno ha "
+			       "chiesto farebbe chiudere la sessione al client (§6.2)",
+			    s->tela_l, s->tela_a, verso_l, verso_a);
 	} else {
 		s->tela_disaccordo_attesa *= 2;
 		if (s->tela_disaccordo_attesa > RCP_TELA_RICHIAMO_MAX_MS)
 			s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MAX_MS;
-		reg(s, "⛔ il palco non e' ancora alla tela in vigore %ux%u: richiesta "
-		       "ripetuta, prossima fra %llu ms",
-		    s->tela_l, s->tela_a,
+		reg(s, "⛔ il palco non e' ancora a %ux%u (tela in vigore %ux%u%s): "
+		       "richiesta ripetuta, prossima fra %llu ms",
+		    verso_l, verso_a, s->tela_l, s->tela_a,
+		    s->tela_volo ? ", con una richiesta in volo" : "",
 		    (unsigned long long)s->tela_disaccordo_attesa);
 	}
 	s->tela_disaccordo_da = ora_ms;
-	s->g.ritela(s->g.ctx, s->tela_l, s->tela_a);
+	s->g.ritela(s->g.ctx, verso_l, verso_a);
 }
 
 /* ⭐⭐ LA RISPOSTA DEL PALCO — vedi `rcp.h`, e i tre casi sono tre.
@@ -4483,6 +4738,29 @@ static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
 	 * tutti gli altri (§6.1): non «si ignora quel che avanza». */
 	case T_TERMINA_SESSIONE:
 		break;
+	/* ⛔⭐⭐ `ADATTA_TELA` E `VISTA` — due `u32` ciascuno (§7.1), e MANCAVANO
+	 *      tutt'e due: 16 agosto 2026, banco `06-b36` caso 20.
+	 *
+	 * ⚠ E' **R9.4 di nuovo**, sul messaggio piu' recente: il commento in cima a
+	 *   questa funzione racconta il difetto — «un `ATTACCA` con un byte in coda
+	 *   prendeva il posto, spediva `SESSIONE` e POI congedava» — e
+	 *   `ADATTA_TELA`, servito il 14 agosto, non e' mai entrato nell'elenco.
+	 *
+	 * ⛔ Il prezzo `[M]`: un `ADATTA_TELA` di 12 byte cadeva nel `default`,
+	 *    questa funzione restituiva `false` (cioe' «non lo giudico»), il ramo
+	 *    `T_ADATTA_TELA` girava la richiesta al palco **per intero** e solo il
+	 *    controllo `l.i != lung` DOPO lo switch congedava.  ⇒ Sul filo un `TELA`
+	 *    e poi un `CONGEDO`, e sul compositore un ridimensionamento vero — che
+	 *    riavvia il flusso PipeWire e su Mutter distrugge e ricrea i dispositivi
+	 *    di `libei`.  §3: «NON DEVE proseguire».
+	 *
+	 * ⚠ `VISTA` entra qui insieme perche' entra insieme nello switch: chi
+	 *   aggiunge un tipo e non aggiunge la sua riga qui riapre lo stesso buco. */
+	case T_ADATTA_TELA:
+	case T_VISTA:
+		le_u32(&l);
+		le_u32(&l);
+		break;
 	default:
 		/* un tipo che non arriveremo comunque a trattare: decide lo switch, e
 		 * la sua riga di registro e' piu' precisa di questa */
@@ -4788,6 +5066,174 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			s->g.chiudi(s->g.ctx, motivo);
 			return false;
 		}
+		case T_VISTA: {
+			/* ⛔⭐⭐ §7.1 — «la vista e' cambiata», ed e' il messaggio che
+			 *      questo server ha fatto pagare piu' caro senza servirlo.
+			 *
+			 * ⚠ Fino al 16 agosto 2026 cadeva nel `default` con la riga «e' del
+			 *   client e §7.1 lo definisce, ma la fase 1 non lo serve ancora», e
+			 *   il prezzo era dichiarato li' per intero: **un client conforme
+			 *   che stringe la finestra perde la sessione**.  ⛔ Ed e' alla
+			 *   lettera il sintomo che il rilievo R1.17 di §7.1 e' stato scritto
+			 *   per rendere impossibile: *«l'utente stringe la finestra del
+			 *   browser a 300 pixel […] con la riga vecchia il client aveva tre
+			 *   scelte, tutte cattive — mandare `VISTA(300x800)` e farsi
+			 *   chiudere la sessione perche' ha ridimensionato una finestra»*.
+			 *   Il documento ha tolto la riga cattiva dal lato del client; il
+			 *   server la applicava lo stesso.
+			 *
+			 * ⛔⭐ E QUEL CHE QUESTO RAMO **NON FA** E' LA META' NORMATIVA:
+			 *
+			 *   · **non tocca la tela**.  §7.1: «`VISTA` NON DEVE far cambiare
+			 *     la tela […] L'unico messaggio che cambia la tela e'
+			 *     `ADATTA_TELA`».  ⚠ La forma sbagliata qui non e' «chiude», e'
+			 *     «funziona troppo»: un server che prendesse la vista per una
+			 *     richiesta di tela farebbe rimpicciolire il desktop a chi ha
+			 *     solo stretto la finestra, e **senza mandare nessun `TELA`** —
+			 *     cioe' i due lati che si separano in silenzio (E2);
+			 *   · **non tocca il codificatore**.  §7.1: «in RCP/1 non cambia
+			 *     nemmeno la misura di quel che si codifica»; §6.2 lega
+			 *     `largh.`/`altezza` alla tela in vigore, e chi ne riceve altre
+			 *     chiude.  ⇒ Codificare alla vista farebbe chiudere il client;
+			 *   · **non risponde niente sul filo**.  §7.1 non prevede nessuna
+			 *     risposta a `VISTA`, e §6.2 fa chiudere la sessione al client
+			 *     davanti a un `TELA` che non ha chiesto: un «grazie ricevuto»
+			 *     scritto come `TELA` ucciderebbe la sessione;
+			 *   · **non applica i limiti della tela**.  §7.1 dopo R1.17:
+			 *     «qualunque misura da 1x1 in su e' legale, dispari compresa».
+			 *
+			 * ⇒ Convalida, tiene, scrive.  E' poco, ed e' quel che l'arbitro
+			 *   chiede: la tela e' della SESSIONE, la vista della CONNESSIONE. */
+			uint32_t nuova_l = le_u32(&l);
+			uint32_t nuova_a = le_u32(&l);
+
+			if (l.corto) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "VISTA corta: §7.1 vuole due u32");
+				return false;
+			}
+			/* ⛔ Lo stato: §7.1 mette `VISTA` fra i messaggi della sessione, e
+			 *    una vista senza una sessione non ha niente da descrivere.
+			 *    Stessa guardia di `ADATTA_TELA`, e per la stessa ragione. */
+			if (!s->sessione_spedita) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "VISTA prima di SESSIONE: §7.1 la ammette solo a "
+				        "sessione aperta");
+				return false;
+			}
+			/* ⛔ L'unico limite, e lo zero ne sta fuori — come in `ATTACCA`, e
+			 *    la regola e' scritta nei due posti perche' i due messaggi
+			 *    arrivano per strade diverse.  ⚠ Se un giorno diventassero tre,
+			 *    diventa una funzione. */
+			if (!nuova_l || !nuova_a) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "VISTA con un lato a zero: §7.1 ammette qualunque "
+				        "misura da 1x1 in su, e lo zero non e' una misura");
+				return false;
+			}
+			reg(s, "VISTA: la finestra del client passa da %ux%u a %ux%u (§7.1) "
+			       "— ⛔ la tela NON cambia e resta %ux%u, e in RCP/1 non cambia "
+			       "nemmeno la misura di quel che si codifica: il client "
+			       "riscala.  I limiti di §4.5 alla vista non si applicano "
+			       "(R1.17): qualunque misura da 1x1 in su, dispari compresa",
+			    s->vista_l, s->vista_a, nuova_l, nuova_a, s->tela_l, s->tela_a);
+			s->vista_l = nuova_l;
+			s->vista_a = nuova_a;
+			break;
+		}
+
+		case T_DISPOSIZIONE: {
+			/* ⛔⭐⭐ §7.1 `0x0009` — «la disposizione di tastiera e' cambiata»,
+			 *      ed e' il gemello esatto di `VISTA`: fino al 16 agosto 2026
+			 *      cadeva nello stesso `default` e **chiudeva la sessione a un
+			 *      client conforme**.  `[M]` banco `06-b34` caso 3: congedo
+			 *      `0x0b ERRORE_PROTOCOLLO`, connessione caduta.
+			 *
+			 * ⚠ Il sintomo, in una riga: *l'utente cambia disposizione di
+			 *   tastiera mentre lavora, e la sessione gli cade.*  E' la stessa
+			 *   forma che il rilievo R1.17 di §7.1 esiste per rendere
+			 *   impossibile — punire chi fa quel che l'arbitro definisce.
+			 *
+			 * ⭐ E adesso serve DAVVERO: attuata §5-bis.7, questo e' il
+			 *    messaggio con cui la disposizione si cambia **senza
+			 *    staccarsi**.  Senza di lui, l'unico modo di cambiare tastiera
+			 *    sarebbe chiudere la sessione e riattaccarsi.
+			 *
+			 * ⛔⛔ E QUI L'ARBITRO NON DICE UNA COSA CHE IL PRODOTTO DEVE
+			 *     DECIDERE: che cosa si fa se la disposizione e' ben formata ma
+			 *     **sconosciuta**.  A `ATTACCA` §4.5 lo dice (congedo
+			 *     `SESSIONE_NON_SERVIBILE`); a sessione aperta no.
+			 *
+			 *     ⇒ Qui si SCEGLIE di **non chiudere**: si tiene quella in
+			 *       vigore e si scrive perche'.  La ragione e' `SPECIFICHE.md`
+			 *       §8.3 — *«mai staccare»* — e I1: chiudere la sessione di chi
+			 *       ha scelto una tastiera che questa macchina non ha
+			 *       significa togliergli il lavoro per un guasto che non gli
+			 *       costa niente, visto che la tastiera di prima funziona
+			 *       ancora.  ⚠ A `ATTACCA` e' diverso, e giustamente: li' non
+			 *       c'e' nessuna sessione da salvare.
+			 *     ⚠ E' una regola del PRODOTTO che l'arbitro non nomina: va
+			 *       portata in `RCP.md` §7.1, e il rapporto la consegna. */
+			char nuova[65];
+			size_t ln = le_str(&l, nuova, sizeof nuova);
+
+			if (l.corto) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "DISPOSIZIONE corta: §7.1 vuole una stringa");
+				return false;
+			}
+			/* ⛔ Lo stato, come per `VISTA`: §7.1 mette `DISPOSIZIONE` fra i
+			 *    messaggi della sessione, e una disposizione senza sessione non
+			 *    ha niente da cambiare. */
+			if (!s->sessione_spedita) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "DISPOSIZIONE prima di SESSIONE: §7.1 la ammette solo "
+				        "a sessione aperta");
+				return false;
+			}
+			/* ⛔ La FORMA resta `ERRORE_PROTOCOLLO` anche qui, e non e' una
+			 *    disuguaglianza con la riga sopra: §4.5 tiene i due guasti
+			 *    distinti perche' sono due difetti diversi — chi manda
+			 *    «../../etc/passwd» ha un client rotto (o ostile), chi manda
+			 *    «hu» ha solo una tastiera che questa macchina non ha. */
+			if (!disposizione_ben_formata(nuova, ln)) {
+				congeda(s, RCP_ERRORE_PROTOCOLLO,
+				        "DISPOSIZIONE fuori forma");
+				return false;
+			}
+			if (!disposizione_conosciuta(s, nuova)) {
+				reg(s, "⚠ DISPOSIZIONE «%s»: questa macchina non ce l'ha.  ⛔ La "
+				       "sessione NON si chiude (§8.3, «mai staccare») e tiene "
+				       "«%s»: la tastiera di prima funziona ancora, e togliere "
+				       "il lavoro per una tastiera mancante costerebbe piu' del "
+				       "guasto.  ⚠ A `ATTACCA` §4.5 vuole il congedo, e li' e' "
+				       "giusto: non c'e' nessuna sessione da salvare",
+				    nuova, s->disposizione[0] ? s->disposizione : "quella della sessione");
+				break;
+			}
+			if (strcmp(nuova, s->disposizione) == 0) {
+				/* ⚠ Si scrive lo stesso: un client che rimanda la stessa
+				 *   disposizione non e' un guasto, ma un ricambio di keymap
+				 *   costa a Mutter la DISTRUZIONE del dispositivo tastiera
+				 *   (`STUDI.md` §gnome §9) — e non farlo per niente e' un
+				 *   risparmio che si vede. */
+				reg(s, "DISPOSIZIONE «%s»: e' gia' quella in vigore, non chiedo "
+				       "niente al palco (un ricambio inutile costerebbe la "
+				       "distruzione del dispositivo tastiera)",
+				    nuova);
+				break;
+			}
+			reg(s, "DISPOSIZIONE: da «%s» a «%s», a sessione APERTA (§7.1 0x0009)",
+			    s->disposizione[0] ? s->disposizione : "(nessuna)", nuova);
+			snprintf(s->disposizione, sizeof s->disposizione, "%s", nuova);
+			applica_disposizione(s, "DISPOSIZIONE (0x0009)");
+			/* ⛔ E NON si risponde niente sul filo: §7.1 non prevede nessuna
+			 *    risposta a `DISPOSIZIONE`, esattamente come per `VISTA`.  Un
+			 *    «grazie ricevuto» inventato qui sarebbe un messaggio non
+			 *    sollecitato, e §6.2 fa chiudere la sessione al client davanti
+			 *    a un messaggio che non ha chiesto. */
+			break;
+		}
 		case T_ADATTA_TELA: {
 			/* ⛔⭐⭐ §7.1 — «il client chiede una tela di un'altra misura».
 			 *
@@ -5002,26 +5448,27 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    stesso difetto che il capoverso qui sopra dichiara di aver
 			 *    corretto per i tipi del server.
 			 *
-			 * ⭐ E DAL 12 AGOSTO 2026 SONO **TRE**, non quattro: `0x000D
-			 *    RICHIEDI_CHIAVE` e' servito insieme al canale video, perche'
-			 *    §5.2 obbliga il client a mandarlo appena vede un buco — e
-			 *    farlo cadere qui vorrebbe dire chiudere la sessione di un
-			 *    client che sta facendo quel che l'arbitro gli impone.  ⛔ Gli
-			 *    altri tre restano fuori, e il prezzo resta quello scritto qui
-			 *    sotto: `ADATTA_TELA` vuole un compositore che sappia
-			 *    ridimensionare, e non e' di questo anello.
+			 * ⭐ E DAL 16 AGOSTO 2026 NE RESTA **UNO**: `0x0009 DISPOSIZIONE`.
+			 *    Gli altri tre se ne sono andati uno per volta, e ognuno
+			 *    portava via lo stesso prezzo — una sessione persa a un client
+			 *    conforme:
+			 *      · `0x000D RICHIEDI_CHIAVE` il 12 agosto, col canale video:
+			 *        §5.2 obbliga il client a mandarlo appena vede un buco;
+			 *      · `0x000B ADATTA_TELA` il 14 agosto, col palco che sa
+			 *        ridimensionare: §7.1 gli impone un `TELA` con un DEVE;
+			 *      · `0x0008 VISTA` il 16 agosto, sottofase 6.4: e' il piu'
+			 *        caro dei tre, perche' non richiedeva **niente** — la vista
+			 *        non tocca la tela, non tocca il codificatore e non ha
+			 *        risposta.  ⛔ Bastava tenerla, e per due fasi ha chiuso la
+			 *        sessione a chi stringeva la finestra del browser.
 			 *
-			 * ⚠ SERVIRLI e' un'altra cosa, e non e' di questa fase:
-			 *   `FASI.md` §01-filo-nudo dice «niente video, niente audio, niente
-			 *   input».  ⛔ Ma il prezzo va detto per intero, perche' non e'
-			 *   piccolo: finche' restano fuori, un client conforme che stringe
-			 *   la finestra (`VISTA`) o che vede un buco (`RICHIEDI_CHIAVE`,
-			 *   §5.2) o che chiede di adattare la tela (`ADATTA_TELA`, a cui
-			 *   §7.1 impone un `TELA` con un DEVE) **perde la sessione** — ed e'
-			 *   alla lettera il sintomo che il riquadro R1.17 di §7.1 e' stato
-			 *   scritto per rendere impossibile.  ⭐ Il registro adesso lo
-			 *   NOMINA: chi legge «non ancora servito in fase 1» sa che il
-			 *   difetto e' nostro e sa in quale fase sparisce; chi leggeva
+			 * ⚠ E `0x0009 DISPOSIZIONE` resta fuori con un prezzo VERO, non con
+			 *   una dimenticanza: rinegoziare una keymap distrugge e ricrea il
+			 *   dispositivo tastiera di `libei` (`STUDI.md` §gnome §9), e quella
+			 *   catena e' della sottofase 6.2.  ⛔ Finche' resta fuori, un client
+			 *   conforme che cambia disposizione **perde la sessione**, e questa
+			 *   riga e' quel che lo dice: chi legge «non ancora servito in fase
+			 *   1» sa che il difetto e' nostro e sa dove sparisce; chi leggeva
 			 *   «sconosciuto» andava a cercare un difetto del client. */
 			bool del_server = tipo == T_ECCOMI || tipo == T_AMMESSO ||
 			                  tipo == T_RESPINTO || tipo == T_SESSIONE ||
@@ -5030,12 +5477,12 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			                  tipo == T_BANCO_ESITO;
 			const char *del_client = NULL;
 			switch (tipo) {
-			case 0x0008:
-				del_client = "VISTA";
-				break;
-			case 0x0009:
-				del_client = "DISPOSIZIONE";
-				break;
+			/* ⚠ `0x0008 VISTA` non compare piu' qui: dal 16 agosto 2026 ha un
+			 *   caso suo e non arriva mai al `default` — come `0x000B` il 14.
+			 *   Tolto invece di lasciato «per sicurezza»: un ramo
+			 *   irraggiungibile che nomina un tipo servito e' una riga che
+			 *   mente a chi legge il registro, ed e' il difetto che questo
+			 *   stesso capoverso dichiara di aver corretto per gli altri. */
 			/* ⚠ `0x000B ADATTA_TELA` non compare piu' qui: dal 14 agosto 2026 ha
 			 *   un caso suo e non arriva mai al `default`.  Tolto invece di
 			 *   lasciato «per sicurezza»: un ramo irraggiungibile che nomina un

@@ -104,6 +104,35 @@ int tastiera_posizioni_per(Tastiera *, uint32_t carattere,
  */
 const char *tastiera_disposizione(Tastiera *);
 
+/*
+ * ⛔⭐ «QUESTA KEYMAP FA QUEL CHE FAREBBE `nome`?» — e serve a non chiedere due
+ *     volte la stessa disposizione.
+ *
+ * ⚠ Nasce da un difetto MISURATO il 16 agosto 2026, e il difetto era **la
+ *   memoria sbagliata**: `input_disposizione()` si ricordava *quel che aveva
+ *   chiesto* e saltava la richiesta se coincideva.  ⛔ Ma fra una richiesta e
+ *   l'altra la disposizione della sessione puo' cambiare **per mano di
+ *   qualcun altro** — l'utente dalle impostazioni di GNOME, o `gsd-keyboard`.
+ *   ⇒ Il banco l'ha colto in flagrante: sessione riportata a `it` da fuori,
+ *     client che riattacca dichiarando `de`, e il registro diceva
+ *     *«disposizione «de»: gia' chiesta, non la richiedo»* — con la sessione
+ *     italiana.  `Ctrl+Z` e' arrivato come `Ctrl+Y`.
+ *
+ * ⛔ E' la forma **E1** — *scritto non e' in vigore* — dentro la cura scritta
+ *    per §5-bis.7.  ⇒ La domanda giusta non e' «che cosa ho chiesto?» ma
+ *    **«che cosa c'e' adesso?»**, e la risposta la sa questa keymap.
+ *
+ * ⚠ E il confronto e' quello di sempre: due disposizioni sono la stessa se
+ *   **producono gli stessi caratteri sugli stessi tasti**, non se si chiamano
+ *   allo stesso modo (vedi il riquadro di `fanno_la_stessa_cosa` in `.c`).
+ *
+ *   ritorna  1  si', questa keymap fa quel che farebbe `nome`
+ *   ritorna  0  no
+ *   ritorna -1  ⛔ non si e' potuto dire (nome che non si compila, o NULL) —
+ *               e NON e' «no»: chi chiama deve poter distinguere.
+ */
+int tastiera_e_questa(Tastiera *, const char *nome);
+
 void tastiera_chiudi(Tastiera *);
 
 #endif /* REMOTIX_TASTIERA_H */

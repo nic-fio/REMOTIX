@@ -2909,6 +2909,44 @@ convenga dare alla sessione **più disposizioni insieme** — il sistema ne acce
 — per coprire il caso di chi passa da un telefono italiano a un portatile americano, che
 sospetto sia raro ma non l'ha misurato nessuno.
 
+> ### ⛔⛔ QUESTA DECISIONE NON È MAI STATA ATTUATA — `[M]` 16 agosto 2026, sottofase 6.2
+>
+> *Misurato sul prodotto vivo, utente `provat6`, porta 7721, con un testimone dentro la sessione
+> grafica: la disposizione che il client dichiara in `ATTACCA` viene **convalidata**
+> (`rcp.c:2013-2027`), **scritta nel registro** (`rcp.c:2237`), **e lì finisce**. Non arriva mai
+> alla tastiera.*
+>
+> | scena | atteso se la decisione fosse attuata | `[M]` misurato |
+> |---|---|---|
+> | sessione `it`, riattacco dichiarando **`us`** | `è` e `ò` irraggiungibili | **`aèò\@a`** — identico a `it` |
+> | sessione `it`, riattacco dichiarando **`de`** | `z` e `y` scambiate | **comportamento `it`** |
+> | la **sessione** passa `it`→`de` a palco vivo | keymap riletta, `azy\a` | ⭐ **`azy\a`** — questo pezzo funziona: `ricambi_tastiera` 0→1, impronta della keymap `8315b8d9`→`d1c54543`, «[German]» |
+>
+> ⇒ ⭐ **Quel che regge è la metà difficile**: quando la disposizione **della sessione** cambia,
+> Mutter distrugge e ricrea il dispositivo tastiera e `tastiera.c` rilegge la keymap nuova — le
+> lettere escono giuste. ⛔ **Quel che manca è la metà facile**: nessuno prende la disposizione
+> *del client* e la dà alla sessione. `input.c:429` passa `NULL` dove andrebbe la negoziata, e la
+> riga `RIPIEGO DICHIARATO` di `tastiera.c:693` **non compare in nessun giro** — cioè chi cercasse
+> quella riga nel registro concluderebbe *«combaciano sempre»*, che è diverso da *«non ho
+> guardato»*.
+>
+> ### ✅ E il 16 agosto 2026 l'utente l'ha CONFERMATA, messo davanti alle tre strade
+>
+> *Gli sono state poste come la scena che vive — «ti colleghi da un PC con tastiera diversa da
+> quella della sessione: chi decide?» — con le tre risposte possibili: **comanda la sessione** (e
+> si corregge la promessa di `SPECIFICHE.md` §7.3), **comanda il client** (e il server la applica),
+> **sceglie l'utente** con una voce nella pagina. ⇒ Ha scelto la seconda: **comanda il client**.*
+>
+> ⇒ La decisione dell'8 agosto **resta in piedi e si attua adesso**, nella fase 6.
+>
+> ⚠ **E il prezzo dichiarato prima della scelta, che resta un prezzo**: la pagina **non può sapere**
+> la disposizione fisica della tastiera di chi la guarda — la indovina dalla lingua dell'interfaccia
+> del browser (`src/pagina.html:2585-2624`, `[?]` dichiarata lì dallo stesso codice), e fuori dalle
+> lingue note **ripiega su `us`**. ⇒ Applicando quel nome alla sessione si cambia la tastiera vera su
+> un **indizio**. ⭐ Il danno resta morbido per §5-bis.6 — le lettere viaggiano come lettere, quindi
+> al massimo si spostano le **scorciatoie** e qualche accento — ⛔ ma la terza strada (l'utente
+> sceglie) resta la cura vera del difetto, e il codice della pagina la nomina già come tale.
+
 ### 5-bis.8 🔸 Mouse e tastiera fisici collegati al telefono
 
 *Domanda posta dall'utente il 9 agosto. La risposta è che il disegno già scelto li assorbe

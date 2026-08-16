@@ -243,6 +243,11 @@ typedef bool (*wt_ritela_richiesta)(void *ctx, const char *utente,
                                     uint32_t larghezza, uint32_t altezza);
 void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx);
 
+/* ⭐ §5-bis.7 — la disposizione al palco di CHI HA CHIESTO. */
+typedef bool (*wt_disposizione_richiesta)(void *ctx, const char *utente,
+                                          const char *nome);
+void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx);
+
 /* ⭐⭐ §5.1 — IL GUARDIANO DELLE SESSIONI GRAFICHE LOCALI, e serve a DUE cose
  *     che sembrano una sola e non lo sono:
  *

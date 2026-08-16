@@ -341,6 +341,12 @@ enum {
 	FIGLI_INPUT_TERMINA = 8
 };
 
+/* ⭐⭐ §5-bis.7 — la disposizione dichiarata dal client entra nella
+ *     sessione.  ⛔ `true` = la richiesta e' PARTITA, non «e' in vigore»:
+ *     chi lo constata e' la riga «KEYMAP CAMBIATA» del figlio, dopo che
+ *     Mutter ha distrutto e ricreato il dispositivo tastiera. */
+bool figli_disposizione(figli *f, const char *utente, const char *nome);
+
 bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b);
 

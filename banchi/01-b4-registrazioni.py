@@ -73,6 +73,31 @@ che la rispetta, che qui e' la `13-video-conforme` per cinque righe su sei.
 | `20-video-abbandonato` | ⭐ **P7** §11.1 — uscita **0**: `fine = 2` dice che il server ha abbandonato **di proposito**, il fotogramma si butta e la sessione regge (§5.1).  ⛔ E' la registrazione che dimostra a che cosa serve il campo nuovo: senza, era identica alla `19` |
 
 ---------------------------------------------------------------------------
+⭐⛔ E DAL 16 AGOSTO 2026 CI SONO LE REGISTRAZIONI DELLA **TELA** — sottofase 6.6
+
+*`fasi/06-la-tela-e-la-vista.md` §0 punto 6: `ADATTA_TELA` (0x000B), `TELA`
+(0x000E) e `VISTA` (0x0008) erano nel protocollo da una settimana e **nessuna
+registrazione li portava**.  Le sette regole che §7.1 scrive in lettere
+maiuscole erano regole che nessun ingresso faceva scattare.*
+
+| | |
+|---|---|
+| `22-tela-non-sollecitata` | **T1** §7.1 — e' anche la ⏳ riga che §7.1 dichiara mancante: *«che cosa fa il server quando il palco cambia misura da se'»* |
+| `23-tela-doppia` | **T2** §6.2 — *«l'n-esimo `TELA` risponde all'n-esima `ADATTA_TELA`»* |
+| `24` · `24bis` | **T3** §7.1 — il silenzio, per le sue due vie: il `CONGEDO` e il FIN del server |
+| `24ter` | ⭐ la stessa scena che **non** si accusa: la sessione e' viva, e la traccia e' solo finita prima |
+| `25` · `26` | esito e motivo fuori dai valori dichiarati |
+| `27-tela-rifiutata-cambia` | **T5** §7.1 — ogni campo e' valido e il **rapporto** fra i campi mente |
+| `28` · `29` | **T6** §4.5 — la tela **concessa** dispari, e fuori dai limiti |
+| `30-vista-cambia-tela` | **V3** §7.1 — *«`VISTA` NON DEVE far cambiare la tela»* |
+| `31-vista-legale` | ⭐ **V2** — 1x1, dispari, 300x800, 9000x5000: il rilievo **R1.17** che non deve rientrare dal lato dell'arbitro |
+| `32-vista-zero` | **V1** §7.1 — *«da 1x1 in su»* |
+| `33-adatta-fuori-limiti-rifiutata` | ⭐ la richiesta impossibile e' **lecita**: §7.1 le dedica `MISURA_FUORI_LIMITI` |
+| `34` · `35` | ⭐ il giro pieno, e due richieste in volo insieme |
+| `36` · `37` | l'ordine della stretta di mano, e i due tipi del 15 agosto (`TERMINA_SESSIONE`, `CONGEDO(0x10)`) |
+| `38`-`45` | ⛔ **le otto che non ha scritto chi ha scritto l'arbitro** — vedi il riquadro accanto al codice |
+
+---------------------------------------------------------------------------
 ⚠ E LA PAROLA D'ORDINE NON C'E'
 
 La registrazione conforme contiene un `CREDENZIALI` vero, con la parola
@@ -533,14 +558,29 @@ def costruisci():
     #    scena che §7.1 protegge con la sua eccezione 4.  ⭐ Corretta lo stesso
     #    giorno in «la tela **in vigore**», e questa e' la prova che lo tiene.
     #    ⚠ Senza di lei la regola nuova sarebbe severa quanto quella sbagliata.
+    #
+    # ⛔⛔ E IL 16 AGOSTO 2026 QUESTA REGISTRAZIONE E' CAMBIATA — sottofase 6.6,
+    #     e il cambiamento e' **una misura**, non una manutenzione.
+    #
+    #     Com'era scritta il 12 agosto, portava il `TELA(ADATTATA, 1280, 720)`
+    #     **senza nessun `ADATTA_TELA` prima**.  ⚠ Cioe' la registrazione che ha
+    #     corretto `RCP.md` §6.2 metteva in scena un filo che §7.1 **vieta**: un
+    #     `TELA` non sollecitato, che §6.2 dichiara far *«chiudere una sessione
+    #     sana»*.  Nessuno se n'era accorto perche' nessun arbitro contava le
+    #     richieste in volo — ed e' la forma d'errore E8 dentro un banco: la
+    #     scena giusta e quella vietata avevano lo stesso aspetto.
+    #
+    # ⭐ Adesso l'`ADATTA_TELA(1280, 720)` c'e', e la registrazione dice quel
+    #    che ha sempre voluto dire: **l'utente ha trascinato la finestra**.
     r = conforme()
+    r.blocco(CLIENT, msg(0x000B, struct.pack("!II", 1280, 720)))
     r.blocco(SERVER, msg(0x000E, struct.pack("!BBII", 1, 0, 1280, 720)))
     r = con_video((SERVER, intestazione(lar=1280, alt=720) + b"\x00" * 64, 7,
                    FIN), base=r)
     casi.append(("17bis-video-dopo-adatta-tela", r, 0, None,
-                 "⭐ P5 — 1280x720 dopo un TELA(ADATTATA, 1280, 720): la tela "
-                 "in vigore non e' piu' quella di SESSIONE, e il fotogramma "
-                 "e' conforme"))
+                 "⭐ P5 — 1280x720 dopo ADATTA_TELA + TELA(ADATTATA, 1280, "
+                 "720): la tela in vigore non e' piu' quella di SESSIONE, e il "
+                 "fotogramma e' conforme"))
 
     # ── 18. P6 — §5.2: il primo fotogramma dopo `SESSIONE` DEVE essere chiave
     r = con_video((SERVER, intestazione(tipo=DELTA) + b"\x00" * 64, 7, FIN))
@@ -583,6 +623,417 @@ def costruisci():
     casi.append(("21-formato-vecchio", r, 2, None,
                  "⛔ una registrazione «RCPREG 0x00 0x01», conforme in tutto il "
                  "resto: si RIFIUTA, non si legge di traverso"))
+
+    # =======================================================================
+    # ⭐⛔ 22-37 — LA TELA E LA VISTA, sottofase 6.6, 16 agosto 2026
+    #
+    # ⛔ `fasi/06-la-tela-e-la-vista.md` §0 punto 6: *«nessuno dei due manda un
+    #    `ADATTA_TELA`»*.  ⇒ `ADATTA_TELA` (0x000B), `TELA` (0x000E) e `VISTA`
+    #    (0x0008) erano nel protocollo da una settimana e **nessuna
+    #    registrazione li portava**: le sette regole di §7.1 sulla tela erano
+    #    regole che nessun ingresso faceva scattare.
+    #
+    # ⛔ E anche qui **due per regola**: quella che la viola e quella che la
+    #    rispetta.  Le positive non sono di cortesia — un arbitro severo sulla
+    #    tela e' esattamente cio' che ucciderebbe le sessioni sane, ed e' il
+    #    difetto che §7.1 ha gia' fatto una volta (rilievo R1.17, la vista coi
+    #    limiti della tela).
+    #
+    # Gli scostamenti dentro il corpo di `TELA`, contati dall'inizio del
+    # messaggio: 6 = esito · 7 = motivo · 8 = tela_larghezza · 12 = tela_altezza.
+    # Dentro `VISTA` e `ADATTA_TELA`: 6 = larghezza · 10 = altezza.
+    # =======================================================================
+    def tela(esito, motivo, lar, alt):
+        return msg(0x000E, struct.pack("!BBII", esito, motivo, lar, alt))
+
+    def adatta(lar, alt):
+        return msg(0x000B, struct.pack("!II", lar, alt))
+
+    def vista(lar, alt):
+        return msg(0x0008, struct.pack("!II", lar, alt))
+
+    # ── 22. ⛔ T1 §7.1 — un `TELA` NON SOLLECITATO ──────────────────────────
+    #    ⚠ E' il caso che la ⏳ riga mancante di §7.1 descrive per esteso: *«che
+    #      cosa fa il server quando il palco cambia misura senza che nessun
+    #      `ADATTA_TELA` gliel'abbia chiesto»*.  §6.2 risponde per lui: il
+    #      client non ha nessun modo di accettarlo, e **chiude una sessione
+    #      sana**.  Finche' quella riga non c'e', questo e' il verdetto.
+    r = conforme()
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    casi.append(("22-tela-non-sollecitata", r, 1,
+                 ("RCP.md §7.1", r.scostamento(6, 0)),
+                 "⛔ T1 — TELA(ADATTATA) senza nessuna ADATTA_TELA: il server "
+                 "cambia la tela da se'"))
+
+    # ── 23. ⛔ T2 §6.2 — DUE `TELA` per una sola `ADATTA_TELA` ──────────────
+    #    ⛔ Il byte accusato e' quello del **secondo**: il primo e' giusto, e
+    #       accusare lui manderebbe a cercare il difetto in una risposta
+    #       corretta.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    casi.append(("23-tela-doppia", r, 1,
+                 ("RCP.md §6.2", r.scostamento(8, 0)),
+                 "⛔ T2 — due TELA per una sola ADATTA_TELA: da qui in poi "
+                 "l'n-esimo TELA risponde all'(n+1)-esima richiesta"))
+
+    # ── 24. ⛔ T3 §7.1 — `ADATTA_TELA` SENZA RISPOSTA, e poi il CONGEDO ─────
+    #    ⛔ Il byte accusato e' quello della RICHIESTA, non del congedo: e' la
+    #       richiesta a essere rimasta appesa, ed e' li' che chi diagnostica
+    #       deve guardare.  ⚠ *«Il sintomo e' "l'applicazione si e' piantata"»*.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, msg(0x000C, struct.pack("!B", 0x01) + s("")))
+    casi.append(("24-adatta-senza-risposta", r, 1,
+                 ("RCP.md §7.1", r.scostamento(6, 0)),
+                 "⛔ T3 — ADATTA_TELA, poi un CONGEDO e nessun TELA: il server "
+                 "aveva TELA(RIFIUTATA, NON_ORA) anche mentre chiudeva"))
+
+    # ── 24-bis. ⛔ T3 per l'altra via: il canale di controllo si CHIUDE ─────
+    #    Nessun congedo, ma un FIN dal lato del server: la risposta non puo'
+    #    piu' arrivare, e il fatto e' nei byte — e' il campo `fine` di §11.1.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, b"", fine=FIN)
+    casi.append(("24bis-adatta-senza-risposta-fin", r, 1,
+                 ("RCP.md §7.1", r.scostamento(6, 0)),
+                 "⛔ T3 — ADATTA_TELA e poi il server chiude lo stream di "
+                 "controllo con FIN senza rispondere"))
+
+    # ── 24-ter. ⭐ LA STESSA SCENA CHE **NON** SI ACCUSA ────────────────────
+    #    ⛔ Identica alla 24 meno la fine: lo stream continua, nessun congedo.
+    #       Il TELA puo' ancora arrivare, e la registrazione e' solo **finita
+    #       prima**.  ⚠ Ogni traccia di `01-b3-cliente.py` e' di questa specie —
+    #       il cliente si stacca da se' — e un arbitro che accusasse qui
+    #       darebbe un **falso rosso perpetuo** su ogni giro di B3.
+    #    ⭐ E' la registrazione che tiene onesto T3, come la 17bis tiene onesto
+    #       P5: senza di lei, «accusa il silenzio» e «accusa la fine del file»
+    #       hanno lo stesso colore.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    casi.append(("24ter-adatta-in-volo-traccia-viva", r, 0, None,
+                 "⭐ T3 — una ADATTA_TELA in volo con la sessione ancora viva: "
+                 "non si accusa, si DICHIARA che non si giudica"))
+
+    # ── 25. ⛔ §7.1 — l'esito fuori dai due valori dichiarati ───────────────
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(3, 0, 1280, 720))
+    casi.append(("25-tela-esito-fuori", r, 1,
+                 ("RCP.md §7.1", r.scostamento(7, 6)),
+                 "⛔ TELA con esito 3: §7.1 ne definisce due, 1 = ADATTATA e "
+                 "2 = RIFIUTATA"))
+
+    # ── 26. ⛔ §7.1 — il motivo fuori dai tre dichiarati ────────────────────
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(2, 4, 1920, 1080))
+    casi.append(("26-tela-motivo-fuori", r, 1,
+                 ("RCP.md §7.1", r.scostamento(7, 7)),
+                 "⛔ TELA(RIFIUTATA) con motivo 4: §7.1 ne definisce tre — "
+                 "COMPOSITORE_INCAPACE, MISURA_FUORI_LIMITI, NON_ORA"))
+
+    # ── 27. ⛔ T5 §7.1 — il RIFIUTO che CAMBIA la tela ──────────────────────
+    #    ⛔ Il piu' insidioso dei sette: il messaggio e' ben formato, l'esito e
+    #       il motivo sono leciti, e **ogni campo preso da solo e' valido**.  E'
+    #       il rapporto fra i campi a mentire — il server dice «non ho
+    #       adattato» e dichiara in vigore una tela che non era in vigore.  ⚠ E
+    #       §6.2 ci lega la misura di ogni fotogramma che segue: da qui in poi
+    #       il client butta i fotogrammi buoni.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(2, 3, 1280, 720))
+    casi.append(("27-tela-rifiutata-cambia", r, 1,
+                 ("RCP.md §7.1", r.scostamento(7, 8)),
+                 "⛔ T5 — TELA(RIFIUTATA, NON_ORA) che dichiara in vigore "
+                 "1280x720 mentre la tela era 1920x1080"))
+
+    # ── 28. ⛔ T6 §4.5 — la tela CONCESSA con un lato DISPARI ───────────────
+    #    ⚠ E la RICHIESTA e' pari e dentro i limiti — 1280x720 — di proposito:
+    #      se anche la richiesta fosse dispari, il byte accusato sarebbe giusto
+    #      per due ragioni insieme, e non si saprebbe quale delle due regge.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(1, 0, 1281, 720))
+    casi.append(("28-tela-concessa-dispari", r, 1,
+                 ("RCP.md §4.5", r.scostamento(7, 8)),
+                 "⛔ T6 — TELA(ADATTATA) concede 1281x720: il lato dispari lo "
+                 "arrotonda il codificatore, in silenzio"))
+
+    # ── 29. ⛔ T6 §4.5 — la tela CONCESSA fuori dai limiti ──────────────────
+    #    ⛔ E l'ALTEZZA, non la larghezza: se l'arbitro accusasse sempre il
+    #       primo campo il byte sarebbe giusto per caso.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1920, 240))     # ⚠ la richiesta e' dentro i limiti
+    r.blocco(SERVER, tela(1, 0, 1920, 200))
+    casi.append(("29-tela-concessa-fuori-limiti", r, 1,
+                 ("RCP.md §4.5", r.scostamento(7, 12)),
+                 "⛔ T6 — TELA(ADATTATA) concede un'altezza di 200, sotto il "
+                 "minimo di 240"))
+
+    # ── 30. ⛔ V3 §7.1 — la `VISTA` che CAMBIA LA TELA ──────────────────────
+    #    *«VISTA NON DEVE far cambiare la tela … l'unico messaggio che cambia
+    #    la tela e' ADATTA_TELA»*.  Sul filo si presenta cosi': il client
+    #    ridimensiona la finestra, manda `VISTA`, e il server **adatta il
+    #    desktop** — che e' precisamente il comportamento che `?adatta=segui`
+    #    deve poter tenere SPENTO.
+    r = conforme()
+    r.blocco(CLIENT, vista(1280, 720))
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    casi.append(("30-vista-cambia-tela", r, 1,
+                 ("RCP.md §7.1", r.scostamento(7, 0)),
+                 "⛔ V3 — il server risponde a una VISTA con un TELA: la vista "
+                 "non deve far cambiare la tela"))
+
+    # ── 31. ⭐ V2 §7.1 — la vista 1x1 E' LEGALE, e non si accusa ────────────
+    #    ⛔ *«Qualunque misura da 1x1 in su e' legale, dispari compresa»*, e i
+    #       limiti della tela alla vista **non si applicano**: e' il rilievo
+    #       R1.17, e questa registrazione esiste perche' non rientri dal lato
+    #       dell'arbitro.  ⚠ Con la riga vecchia il client aveva tre scelte,
+    #       tutte cattive — e una era «farsi chiudere la sessione perche' ha
+    #       ridimensionato una finestra».
+    r = conforme()
+    r.blocco(CLIENT, vista(1, 1))
+    r.blocco(CLIENT, vista(393, 851))       # un telefono, lati dispari
+    r.blocco(CLIENT, vista(300, 800))       # sotto il minimo della tela
+    r.blocco(CLIENT, vista(9000, 5000))     # oltre il massimo della tela
+    casi.append(("31-vista-legale", r, 0, None,
+                 "⭐ V2 — 1x1, 393x851 dispari, 300x800 sotto il minimo della "
+                 "tela e 9000x5000 oltre il massimo: tutte legali (§7.1, "
+                 "R1.17)"))
+
+    # ── 32. ⛔ V1 §7.1 — la vista con un lato ZERO ──────────────────────────
+    #    «Da 1x1 in su»: lo zero non e' «in su», e §6.0 vieta i valori
+    #    sentinella impliciti — quindi non e' nemmeno «assente».
+    r = conforme()
+    r.blocco(CLIENT, vista(1280, 0))
+    casi.append(("32-vista-zero", r, 1,
+                 ("RCP.md §7.1", r.scostamento(6, 10)),
+                 "⛔ V1 — VISTA con altezza 0: §7.1 dice «da 1x1 in su»"))
+
+    # ── 33. ⭐ §7.1 — l'`ADATTA_TELA` FUORI LIMITI e' LECITA ────────────────
+    #    ⛔ E' il controllo di non-severita' piu' importante della serie: §7.1
+    #       dedica alla misura impossibile un motivo di rifiuto per nome —
+    #       `MISURA_FUORI_LIMITI` — e un motivo esiste per essere raggiunto.  Un
+    #       arbitro che bocciasse la richiesta renderebbe **irraggiungibile** un
+    #       ramo che la specifica nomina, e nessun banco potrebbe piu'
+    #       esercitarlo.
+    #    ⚠ E il rifiuto lascia la tela dov'era: 1920x1080, invariata.
+    r = conforme()
+    r.blocco(CLIENT, adatta(8000, 4320))
+    r.blocco(SERVER, tela(2, 2, 1920, 1080))
+    casi.append(("33-adatta-fuori-limiti-rifiutata", r, 0, None,
+                 "⭐ ADATTA_TELA(8000x4320) — fuori dai limiti di §4.5 — e "
+                 "TELA(RIFIUTATA, MISURA_FUORI_LIMITI) con la tela invariata: "
+                 "e' la strada che §7.1 prevede"))
+
+    # ── 34. ⭐ IL GIRO PIENO DELLA TELA, che deve uscire CONFORME ───────────
+    #    ⛔ Senza questa, «sedici su sedici» e' compatibile con un arbitro che
+    #       boccia **ogni** ADATTA_TELA — e sarebbe verde su tutte le
+    #       violazioni.  Qui dentro: la richiesta all'attacco, la risposta, il
+    #       fotogramma alla misura NUOVA (§6.2), una vista che cambia da sola,
+    #       un secondo adattamento durante la sessione, e un rifiuto onesto.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1264, 800))
+    r.blocco(SERVER, tela(1, 0, 1264, 800))
+    r.blocco(CLIENT, vista(1264, 800))
+    r = con_video((SERVER, intestazione(lar=1264, alt=800) + b"\x00" * 256, 7,
+                   FIN), base=r)
+    r.blocco(CLIENT, adatta(1920, 1080))
+    r.blocco(SERVER, tela(2, 1, 1264, 800))   # COMPOSITORE_INCAPACE
+    r.blocco(CLIENT, vista(640, 401))
+    casi.append(("34-tela-giro-pieno", r, 0, None,
+                 "⭐ il giro pieno: ADATTA_TELA → TELA(ADATTATA, 1264x800) → un "
+                 "fotogramma alla misura nuova → una seconda richiesta "
+                 "rifiutata con COMPOSITORE_INCAPACE, tela invariata"))
+
+    # ── 35. ⭐ §6.2 — DUE RICHIESTE IN VOLO INSIEME, e il conto regge ───────
+    #    *«Chi trascina una finestra ne manda due senza che il conto si
+    #    perda»*.  ⛔ Le due risposte arrivano in ordine, e la seconda dichiara
+    #    la tela finale: un arbitro che appaiasse per MISURA invece che per
+    #    ORDINE fallirebbe qui, perche' la prima risposta concede una misura
+    #    che il client non ha mai chiesto (§4.5 lo permette).
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(CLIENT, adatta(1600, 900))
+    r.blocco(SERVER, tela(1, 0, 1264, 800))   # ⚠ concessa DIVERSA dalla chiesta
+    r.blocco(SERVER, tela(1, 0, 1600, 900))
+    casi.append(("35-due-richieste-in-volo", r, 0, None,
+                 "⭐ due ADATTA_TELA in volo insieme e due TELA in ordine, con "
+                 "la prima che concede una misura mai chiesta (§4.5)"))
+
+    # ── 36. ⛔ §4 — `ADATTA_TELA` PRIMA di `SESSIONE` ───────────────────────
+    #    Non e' una regola della tela: e' la stretta di mano.  Sta qui perche'
+    #    un arbitro che imparasse la tela mettendo `ADATTA_TELA` fuori dalla
+    #    macchina degli stati aprirebbe questo buco senza accorgersene.
+    r = Registrazione()
+    r.blocco(CLIENT, CIAO)
+    r.blocco(SERVER, ECCOMI)
+    r.blocco(CLIENT, adatta(1280, 720))
+    casi.append(("36-adatta-prima-di-sessione", r, 1,
+                 ("RCP.md §4 (l'ordine della stretta di mano)",
+                  r.scostamento(2, 0)),
+                 "⛔ ADATTA_TELA prima che la sessione esista"))
+
+    # ── 37. ⭐ §7.6 e §8.2 — `TERMINA_SESSIONE` e il `CONGEDO(0x10)` ────────
+    #    ⛔ Due tipi entrati il **15 agosto 2026** che questo arbitro non
+    #       conosceva: `TERMINA_SESSIONE` (0x0011) sarebbe stato accusato come
+    #       «tipo sconosciuto» e il motivo `0x10 SESSIONE_TERMINATA` come
+    #       «motivo sconosciuto».  ⚠ Cioe' l'arbitro dava rosso al server che fa
+    #       l'unica cosa che §7.6 gli permette, sul messaggio con cui l'utente
+    #       esce dal desktop.  Questa registrazione tiene chiusa quella porta.
+    r = conforme()
+    r.blocco(CLIENT, msg(0x0011, b""))
+    r.blocco(SERVER, msg(0x000C, struct.pack("!B", 0x10) + s("uscita")),
+             fine=FIN)
+    casi.append(("37-termina-sessione", r, 0, None,
+                 "⭐ TERMINA_SESSIONE (0x0011) e CONGEDO(0x10 "
+                 "SESSIONE_TERMINATA): i due tipi del 15 agosto"))
+
+    # =======================================================================
+    # ⭐⛔ 38-45 — LE OTTO REGISTRAZIONI CHE NON HO SCRITTO IO
+    #
+    # ⛔ La sera del 16 agosto 2026, subito dopo che le sedici qui sopra
+    #    uscivano **41 su 41 al primo giro**, un agente e' stato mandato a
+    #    **smentire** questo arbitro leggendo `RCP.md` e non il validatore.  Ha
+    #    costruito 36 controesempi e ne ha trovati **14 divergenti**.
+    #
+    # ⚠ «41 su 41 al primo giro» era vero e non voleva dire quel che sembrava:
+    #   le registrazioni e le regole erano state scritte **nella stessa ora,
+    #   dalla stessa mano**, ed e' lo stato che `README.md` chiama «due
+    #   programmi che vanno d'accordo e non confermano niente».  ⛔ Il numero
+    #   che conta non e' quante ne passa un banco scritto da chi ha scritto
+    #   l'arbitro: e' quante ne passa **dopo** che qualcuno ha provato a
+    #   romperlo.
+    #
+    # ⭐ Queste otto sono quelle divergenze, portate qui perche' non si
+    #    riaprano.  Le altre — quelle fuori dal mandato della tela — sono
+    #    dichiarate nel rapporto della sottofase e restano `[?]`.
+    # =======================================================================
+
+    # ── 38. ⛔ §4.5 — `SESSIONE` oltre `video.misura_massima` ───────────────
+    #    §4.5 mette nella stessa frase i limiti, la parita' **e** questo tetto.
+    #    L'arbitro ne applicava due terzi.  ⚠ E il tetto non e' una preferenza:
+    #    il client lo dichiara perche' oltre quello **non decodifica**.
+    #    Il `CIAO` di `conforme()` dichiara 3840x2160.
+    r = conforme()
+    r.blocchi[5] = (SERVER, 0x00, 0,
+                    msg(0x0007, struct.pack("!B", 1)
+                        + struct.pack("!II", 7680, 4320) + s("gnome")),
+                    [], CONTINUA)
+    casi.append(("38-sessione-oltre-misura-massima", r, 1,
+                 ("RCP.md §4.5", r.scostamento(5, 7)),
+                 "⛔ SESSIONE concede 7680x4320 a un client che ha dichiarato "
+                 "video.misura_massima = 3840x2160"))
+
+    # ── 39. ⛔ §4.5 — e la stessa frase vale per la tela concessa da `TELA` ──
+    #    ⚠ Se non valesse, `ADATTA_TELA` sarebbe la porta da cui si supera un
+    #      tetto che il client ha dichiarato per non restare al buio.
+    r = conforme()
+    r.blocco(CLIENT, adatta(7680, 4320))
+    r.blocco(SERVER, tela(1, 0, 7680, 4320))
+    casi.append(("39-concessa-oltre-misura-massima", r, 1,
+                 ("RCP.md §4.5", r.scostamento(7, 8)),
+                 "⛔ TELA(ADATTATA) concede 7680x4320 oltre la "
+                 "video.misura_massima dichiarata in CIAO"))
+
+    # ── 40. ⛔ §8.1 — il `TELA` mandato DOPO il proprio `CONGEDO` ───────────
+    #    ⭐ E' la registrazione che ha sciolto una **contraddizione
+    #       dell'arbitro con se' stesso**: accusava `ADATTA_TELA · CONGEDO`
+    #       (nessuna risposta possibile) e assolveva `ADATTA_TELA · CONGEDO ·
+    #       TELA`, cioe' diceva insieme che la risposta non poteva piu' arrivare
+    #       **e** che era arrivata.  §8.1 sceglie: il congedo va *«prima di
+    #       chiudere la sessione»*, quindi e' l'ultimo messaggio di quel lato.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, msg(0x000C, struct.pack("!B", 0x01) + s("")))
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    casi.append(("40-tela-dopo-il-congedo", r, 1,
+                 ("RCP.md §4 (l'ordine della stretta di mano)",
+                  r.scostamento(8, 0)),
+                 "⛔ il server manda un TELA dopo il proprio CONGEDO: §8.1 lo "
+                 "vuole «prima di chiudere la sessione»"))
+
+    # ── 41. ⛔ §11.1 — il `canale` DICHIARATO che non e' il byte alto del tipo
+    #    ⭐ Bastavano due byte per rendere invisibile una violazione: gli stessi
+    #       byte della 22 — un `TELA` non sollecitato — col blocco dichiarato
+    #       `canale = 0x02`, uscivano ⭐ **conforme**.  §11.1 non descrive quel
+    #       campo, lo **definisce**: *«canale: il byte alto di tipo»*.
+    #    ⚠ E' la stessa forma della `11-quanti-sotto-dichiarato`: filo che
+    #      sparisce dal giudizio con un file valido per ogni altra riga.
+    r = conforme()
+    r.blocco(SERVER, tela(1, 0, 1280, 720), canale=0x02, stream=9)
+    casi.append(("41-canale-dichiarato-falso", r, 2, None,
+                 "⛔ un TELA non sollecitato dentro un blocco che si dichiara "
+                 "«appunti»: il giudizio lo saltava"))
+
+    # ── 42. ⛔ §11.1 — un intervallo oscurato sopra un campo NUMERICO ───────
+    #    ⭐ **Difetto nato e morto lo stesso giorno**: la regola nuova T6 leggeva
+    #       dentro l'intervallo e accusava *«concede tela_larghezza =
+    #       707406378»* — e 707406378 e' `0x2A2A2A2A`, il riempimento di §11.1
+    #       letto come una misura.  ⛔ Un rosso di protocollo su byte che il
+    #       formato dichiara di aver sostituito manda a cercare un difetto del
+    #       server dentro una scelta del registratore.
+    r = conforme()
+    corpo_t = struct.pack("!BBII", 1, 0, 1280, 720)
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER,
+             msg(0x000E, corpo_t[:2] + bytes([RIEMPIMENTO]) * 4 + corpo_t[6:]),
+             oscurati=[(6 + 2, 4, hashlib.sha256(corpo_t[2:6]).digest())])
+    casi.append(("42-oscurato-su-un-numero", r, 2, None,
+                 "⛔ un intervallo oscurato sopra tela_larghezza di TELA: §11.1 "
+                 "esiste per la parola d'ordine, e quel campo non si giudica"))
+
+    # ── 43. ⭐ §6.2 — IL FOTOGRAMMA ALLA MISURA NUOVA **PRIMA** DEL SUO `TELA`
+    #
+    #    ⛔ *«Un fotogramma alla misura NUOVA puo' arrivare PRIMA del `TELA` che
+    #       la concede … il client NON DEVE chiudere: trattiene il
+    #       fotogramma»*, e la condizione e' *«finche' resta una `ADATTA_TELA`
+    #       che il client ha spedito»*.
+    #    ⭐ Fino al 16 agosto 2026 questa registrazione usciva **1**: B4
+    #       costruiva il contesto del giudice **senza dichiarare nessuna
+    #       richiesta in volo**, e la grazia di §6.2 — scritta, importata, e
+    #       che nomina `01-b4-validatore.py` per esteso — era irraggiungibile.
+    #       ⇒ L'arbitro chiudeva *«una sessione in cui nessuno ha sbagliato»*.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, intestazione(lar=1280, alt=720) + b"\x00" * 128,
+             canale=VIDEO, stream=7, fine=FIN)
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    casi.append(("43-fotogramma-prima-del-tela", r, 0, None,
+                 "⭐ §6.2 — 1280x720 mentre una ADATTA_TELA e' senza risposta: "
+                 "si trattiene, non si chiude"))
+
+    # ── 44. ⭐ §6.2 / D14 — IL FOTOGRAMMA ALLA MISURA **VECCHIA** DOPO IL `TELA`
+    #    L'altro verso della stessa scena: il `TELA(ADATTATA)` e' passato e i
+    #    fotogrammi gia' in volo portano **legittimamente** la misura di prima.
+    #    ⛔ Usciva 1 per un secondo motivo, diverso dal 43: B4 chiamava
+    #       `adatta_tela()` su un contesto **gia'** alla misura nuova, e il
+    #       giudice ha un ritorno anticipato quando la misura non cambia — per
+    #       lui non era successo niente, e la coda non si apriva.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720))
+    r.blocco(SERVER, tela(1, 0, 1280, 720))
+    r.blocco(SERVER, intestazione(lar=1920, alt=1080) + b"\x00" * 128,
+             canale=VIDEO, stream=7, fine=FIN)
+    casi.append(("44-fotogramma-vecchio-dopo-il-tela", r, 0, None,
+                 "⭐ §6.2 D14 — 1920x1080 subito dopo TELA(ADATTATA, 1280x720): "
+                 "era gia' in volo, e si dipinge riscalato"))
+
+    # ── 45. ⭐⛔ LA CONTRADDIZIONE FRA §7.1 E §4.2, DICHIARATA E NON SCELTA ──
+    #    Il client manda `ADATTA_TELA` e **chiude** il canale.  §7.1 impone al
+    #    server di rispondere; §4.2 gli vieta di spedire dopo un FIN *«da una
+    #    qualunque delle due parti»*.  ⇒ I due `DEVE` si escludono, e non e'
+    #    un caso di laboratorio: e' l'utente che ridimensiona la finestra e
+    #    chiude la scheda nello stesso gesto.
+    #    ⛔ Esce **0** perche' non c'e' niente da accusare — ma il verdetto
+    #       **nomina** la contraddizione, invece di supplirla in silenzio.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1280, 720), fine=FIN)
+    casi.append(("45-adatta-poi-fin-del-client", r, 0, None,
+                 "⭐ ADATTA_TELA e poi il FIN del CLIENT: §7.1 e §4.2 si "
+                 "contraddicono, e l'arbitro lo dice invece di scegliere"))
 
     return casi
 
