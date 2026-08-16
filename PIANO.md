@@ -405,8 +405,11 @@ crollato»: **i pixel**.
 > risponde. ⇒ **Il banco di questa fase apre l'applicazione DOPO aver creato i dispositivi**, o
 > misura una scena che il prodotto non avrà mai.
 
-⚠ Qui la codifica è **software**, di proposito. L'accelerazione è la fase 8, e metterla prima
-significherebbe non sapere quale dei due pezzi sbaglia.
+⚠ Qui la codifica è **software**, di proposito: l'accelerazione viene dopo, e metterla prima
+significherebbe non sapere quale dei due pezzi sbaglia. ⭐ *E infatti è arrivata dopo, ma **prima**
+della fase che la prometteva: la codifica in hardware è entrata nel prodotto il **13 agosto 2026**,
+a fase 3 in corso, per poter misurare il prima e il dopo con lo stesso banco. La fase 8 non si
+chiama più «l'accelerazione»: si chiama **«la copia zero»**, ed è quel che ne resta.*
 
 ⛔ **E qui nasce la sessione GNOME, che v1 avviava senza mai averla studiata** — le trappole sono
 in `gnome.md` §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
@@ -869,20 +872,65 @@ degli appunti tiene **un solo tipo MIME**.
 
 ---
 
-## Fase 8 — L'accelerazione
+## Fase 8 — La copia zero
 
-**Produce**: HEVC in hardware su Intel, 10 bit, e la copia zero.
+> ## ⭐⭐ IL TITOLO È CAMBIATO, E DUE TERZI DELLA FASE SONO GIÀ FATTI — *16 agosto 2026*
+>
+> *Rilievo dell'utente all'apertura della fase 6: «gli ultimi test sono stati eseguiti con l'ausilio
+> della Intel integrata, e quindi usando l'accelerazione HW, o sbaglio?». **Non sbaglia**, ed è
+> scritto qui perché chi arriva a questa fase non cerchi lavoro già consegnato.*
+>
+> *Qui il titolo era **«L'accelerazione»** e la riga diceva: «**Produce**: HEVC in hardware su
+> Intel, 10 bit, e la copia zero».*
+>
+> **La codifica in hardware è entrata nel prodotto il 13 agosto 2026**, di proposito e con la
+> ragione scritta sopra alla fase 3: la catena si muoveva **da quel giorno**, quindi il *prima* e
+> il *dopo* si potevano misurare **con lo stesso banco e la stessa scena** — cosa che fra tre fasi
+> non sarebbe più stata vera. `src/codificatore.c:614` la chiama *«la fase 8 entrata di soppiatto
+> nella fase 2»*.
+>
+> | la promessa di questa fase | dov'è finita |
+> |---|---|
+> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** `src/figlio.c:2434` chiede `hevc_vaapi` su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e il ripiego su `libx265` **scrive di essere un ripiego**. `[M]` il tratto della codifica **61,77 → 30,37 ms**, i fotogrammi **14,53 → 30,18 al secondo** (`F3-E`, stesso palco, notte del 14 agosto), e oggi la chiamata al codificatore vale **5,3 ms** dentro quel tratto (fase 4, `hev1.2.4.L120.B0`, nodo aperto dai soli processi nostri) |
+> | ⚠ **10 bit** | ⛔ **nominali, e il muro è a monte, non qui.** `DECISIONI.md` §2.3-ter `[M]`: dalla cattura di Mutter dieci bit veri **non escono per nessuna strada** — MemFd dà BGRx, il DMA-BUF pure, e chiedendo i formati a 10 bit da soli si prende `no more input formats` su tutt'e due. `Main10` da qui vuol dire **otto bit promossi a dieci**. ⇒ La domanda non è più *«il nostro codice sa fare 10 bit?»* ma *«esiste una sorgente che ce li dia?»*, ed è **una domanda per la cattura**, non per la codifica |
+> | ⛔ **la copia zero** | **intatta — e non anticipata di proposito** (`README.md`: *«la copia zero NON si anticipa: resta alla fase 8»*). È tutto quel che segue |
+>
+> ⭐⭐ **E il conto della fase 4 dice che quel che resta pesa più di quel che è stato tolto.** Il
+> tratto più caro dell'anello è ancora `cattura → primo byte`, `[M]` **30,37 ms**, e dentro ci sta:
+>
+> | | ms | lo toglie la copia zero? |
+> |---|---|---|
+> | la conversione (swscale) | **5,6** | ⭐ **sì** |
+> | il caricamento sulla GPU | **2,9** | ⭐ **sì** |
+> | la codifica, **in hardware** | 5,3 | no — è già curata |
+> | ⛔ **e ~16 ms che nessuno dei tre spiega** | **~16** | ⏳ `[?]` **da scoprire, e stanno in questo tratto** |
+>
+> ⇒ ⭐ **8,5 ms sono esattamente il lavoro che la copia zero cancella** — convertire e ricaricare
+> sulla GPU un fotogramma che **sulla GPU ci stava già** — cioè **il doppio** di quel che la
+> codifica costa oggi. ⛔ E i ~16 ms non spiegati sono **nello stesso tratto**: è qui che si cercano,
+> e questa fase è l'unica che ha il motivo di guardarci dentro.
+
+**Produce**: la copia zero — il fotogramma va dalla cattura al codificatore **senza uscire dalla
+GPU**.
 
 **L'utente vede**: **la stessa immagine di prima**, e giudica che non sia peggiorata.
 
 **Il banco**, ed è la lezione che è costata di più:
 - ⛔ **si misurano i fotogrammi consegnati, non i millisecondi di CPU.** La fase 9 di v1 ha portato
   il costo per fotogramma da 41 ms a 6 mentre i fotogrammi consegnati **scendevano** da 29 a 22,7.
-  Un guadagno che si paga in fluidità non è un guadagno (`LEZIONI.md` §6.2);
+  Un guadagno che si paga in fluidità non è un guadagno (`LEZIONI.md` §6.2). ⛔⛔ **E qui morde
+  due volte**, perché la fase 4 ha trovato la coda che cresce: il server consegnava **39,6**
+  fotogrammi/s e la pagina ne dipingeva **34,7**. Un guadagno di millisecondi che si trasformasse
+  in fotogrammi che nessuno dipinge **peggiorerebbe il ritardo** invece di curarlo;
 - ⛔ **chiedere il codificatore per nome e verificare che abbia obbedito**: un codificatore che
   ripiega in CPU credendosi in GPU produce due misure sotto la stessa etichetta. Se non obbedisce,
-  si dichiara il fallimento (`LEZIONI.md` §1.8);
-- ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11).
+  si dichiara il fallimento (`LEZIONI.md` §1.8). ⭐ Il modo giusto è già nel prodotto e si riusa:
+  `componente_e_hardware()` **chiede al componente** quali formati accetta — una superficie, non
+  dei pixel — invece di leggere `_vaapi` dentro il nome;
+- ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11);
+- ⛔ **e il numero si rifà con lo STESSO banco e la STESSA scena della fase 4** (`03-b17-ritardo.py`),
+  o il prima e il dopo non si sottraggono. ⚠ Non basta il totale: si affiancano **i tratti**, perché
+  la domanda di questa fase è *«tolta la copia, gli altri restano dove sono?»*.
 
 ⛔ **E la copia zero si riapre dal lato giusto**: le due schermate che si alternavano non erano un
 problema di *acquire* ma di **release** — `can_reuse_pw_buffer` si arrende se manca
@@ -892,9 +940,34 @@ chiedere la timeline — che Mutter offre — oppure **trattenere** il `pw_buffe
 finita. ⚠ E **il DMA-BUF di Mutter non è un diff**: chi riprendesse la superficie di accumulo
 rifarebbe la cura che peggiorava le cose.
 
-⚠ Qui vive la trappola della GPU: con due schede, il compositore che disegna su quella sbagliata dà
-composizione in software **senza un errore**. La regola udev di `v1/banco/gpu-udev.sh` va applicata
-e verificata (`DECISIONI.md` §4.6-ter).
+⭐ **E la strada è aperta `[M]`**: Mutter il DMA-BUF **lo consegna davvero** — 388 fotogrammi, 4
+buffer, modificatore **LINEAR**, stride 7680 letto dal chunk (`DECISIONI.md` §2.3-ter). ⚠ Il
+formato resta **BGRx a 8 bit**: la copia zero si fa su quello, e i dieci bit non tornano da questa
+porta.
+
+> ### ✅ ⭐ La trappola della GPU è CHIUSA, e va detto perché nessuno la ricerchi — *15 agosto 2026*
+>
+> *Qui stava scritto: «con due schede, il compositore che disegna su quella sbagliata dà
+> composizione in software **senza un errore**. La regola udev di `v1/banco/gpu-udev.sh` va
+> applicata e verificata».*
+>
+> ⛔ **Ed era peggio di un rischio: era già successo.** `[M]` `/etc/udev/rules.d` era **vuota**, i
+> gruppi `video`/`render` davano accesso a tutt'e due le schede, e il compositore aveva preso la
+> **Radeon** — una misura di 60 fps buttata perché fatta sulla scheda sbagliata.
+>
+> ⭐ **La regola è stata applicata e verificata** (`DECISIONI.md` §4.6-ter): `gnome-shell` apre
+> **6 descrittori su `renderD128`**, l'integrata, e solo quella. ⇒ **Compositore e codificatore
+> stanno sulla stessa scheda** — che è precisamente la condizione senza la quale la copia zero non
+> avrebbe senso: un fotogramma non si passa senza copia fra due schede diverse.
+>
+> ⚠ **Il prezzo resta dichiarato**: negare il nodo lo nega a **tutta la sessione dell'utente**, non
+> al solo compositore.
+
+⏳ **Che cosa questa fase NON deve più portarsi dietro**, e dove sono andati:
+- i **10 bit veri** → una domanda per la **cattura**, e vive nelle fasi in cui la cattura si tocca;
+- ⚠ la **qualità di `EncSliceLP` contro l'entrypoint pieno** → `[?]` **mai misurata**: la codifica a
+  bassa potenza è veloce e **non è equivalente** alla piena. È il punto di lavoro fra qualità e
+  banda, cioè la **fase 9** — e se un giorno si scoprisse peggiore, si cura lì, non qui.
 
 ---
 
@@ -939,11 +1012,35 @@ guardato (I6).
 > | «è la strada per il traguardo dei **40 ms**» | ⛔ **no.** Il ritardo misurato è `[M]` **74,58 ms** cattura → vetro, e Mutter ne vale il **22 %** (16,66 su 74,6). Il **78 % è nostro**, ~39 ms nel tratto cattura → primo byte, **dominato dal codificatore in software**. ⇒ Cambiare compositore **lascerebbe intatti i 39 ms di codifica** |
 >
 > ⇒ ⛔ **Chi arriva a questa fase aspettandosi che porti il ritardo dentro il tetto resterà deluso**,
-> e va scritto qui perché nessuno ci conti sopra pianificando: il ritardo si cura **sulla codifica**,
-> ed è la **fase 8** (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
+> e va scritto qui perché nessuno ci conti sopra pianificando: il ritardo **non si cura cambiando
+> compositore** (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
 >
-> ⏳ `[?]` **Resta aperto e non è stato misurato** quanto scenderebbe il numero con un codificatore
-> **hardware**: è la domanda della fase 8, non di questa.
+> > #### ⛔⛔ E LA DOMANDA APERTA HA AVUTO RISPOSTA — *e la mezza promessa qui sopra è caduta anche lei, 16 agosto 2026*
+> >
+> > *Qui stava scritto: «⏳ `[?]` **Resta aperto e non è stato misurato** quanto scenderebbe il numero
+> > con un codificatore **hardware**: è la domanda della fase 8, non di questa» — e, un rigo prima,
+> > «il ritardo si cura **sulla codifica**, ed è la **fase 8**».*
+> >
+> > ⭐ **Misurato**, perché la codifica in hardware è entrata nel prodotto il 13 agosto, e la
+> > risposta sta in `fasi/rapporti/F3-E-anello-rimisurato.md`. ⛔ **Ed è a due facce**:
+> >
+> > | | `[M]`, stesso palco, notte del 14 agosto |
+> > |---|---|
+> > | ⭐ **il tratto della codifica** | **61,77 → 30,37 ms**, cioè **−31 ms**: il pezzo ha ceduto per intero, come il piano sperava |
+> > | ⭐⭐ **i fotogrammi consegnati** | **14,53 → 30,18 al secondo**, dipinti **1 407 → 2 949** — ⭐ **il doppio**. È la lezione di `LEZIONI.md` §6.2 applicata e **passata**: senza questo numero il −31 sarebbe stato metà della notizia |
+> > | ⭐ **e gli altri quattro tratti restano dove sono** | Mutter −0,01 · filo −0,07 · decodifica −0,72 ⇒ **l'architettura è assolta**: tolta la codifica, non è emerso niente di nascosto |
+> > | ⛔⛔ **ma il TOTALE non è sceso** | **72,40** (AV1 in software) **→ 75,23** (HEVC in hardware, n = 799): il codec che rende possibile l'hardware **sposta ~16 ms sul client** — l'attesa del fotogramma dalla GPU, che per un giorno si è chiamata «il disegno» |
+> >
+> > ⇒ ⛔ **Il collo di bottiglia si è SPOSTATO, non è sparito**, e adesso sta nel client: **28,0 ms
+> > su 78,1, il 36 %**, contro i **5** che ormai costa la codifica. ⭐ E si vede solo perché i tre
+> > giri esistevano tutti e tre: con due soli si sarebbe letto *«−33 ms, vittoria»* oppure
+> > *«+2,8 ms, l'hardware non serve»*, e **sono tutt'e due sbagliate**.
+> >
+> > ⇒ ⛔⛔ **La lezione, e vale per tutto il piano**: *«il ritardo si cura sulla fase N»* era vera
+> > **sul pezzo** e falsa **sul totale**. Il collo di bottiglia più grosso è stato tolto per intero,
+> > e il ritardo che l'utente sente non è migliorato — è raddoppiato il **ritmo**, che è un'altra
+> > grandezza. ⚠ Chi scrive la prossima riga che promette un tetto da una fase sola la scriva
+> > sapendo questo.
 
 ⭐ **E qui si guadagna comunque una cosa che vale**: KWin consegna **58,9** fotogrammi al secondo
 `[M]` senza che gli si debba rinegoziare niente, mentre su GNOME lo stesso risultato richiede una
