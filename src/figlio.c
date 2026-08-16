@@ -4015,18 +4015,56 @@ void figlio_vive(int argc, char **argv)
 					 *     ed e' la briglia dei 30 GB di registro.
 					 *
 					 * ⇒ Vedi `PALCO_NASCITA_RIPROVA_MS`: e' la cura del «al
-					 *   quarto login il desktop ha impiegato molti secondi». */
-					if (sta_nascendo(ora)) {
+					 *   quarto login il desktop ha impiegato molti secondi».
+					 *
+					 * ⛔⭐⭐⭐ E LA REGOLA VERA E' LA SECONDA CONDIZIONE, che
+					 *        e' costata quattro diagnosi sbagliate:
+					 *        **l'attesa che raddoppia e' per quando NON C'E'
+					 *        NESSUNO CHE GUARDA.**
+					 *
+					 * `[M]` 16 agosto 2026.  Appena il figlio ha avuto una riga
+					 * per dirlo, ha dato tutt'e due i pezzi insieme:
+					 *
+					 *   «⏳ senza palco e ASPETTO: mancano 4962 ms al prossimo
+					 *    tentativo (attesa in corso **30000 ms**, nascita
+					 *    chiesta **0 ms** fa)»
+					 *
+					 *   · `attesa in corso 30000` ⇒ l'attesa raddoppiava
+					 *     davvero, fino al tetto: 2, 4, 8, 16, 30 secondi;
+					 *   · `nascita chiesta 0 ms fa` ⇒ ⛔ e la guardia qui sopra
+					 *     non poteva scattare, perche' `nascita_chiesta_ms` si
+					 *     scrive SOLO quando la sessione risulta MORTA.
+					 *
+					 * ⭐ E i giri lenti sono ESATTAMENTE quelli in cui la
+					 *    sessione non e' morta: e' la precedente che sta ancora
+					 *    chiudendo (B7 di `SESSIONE.md`; `[M]` `loginctl` dice
+					 *    `State=closing`).  Il figlio, giustamente, non la
+					 *    tocca — buttarne giu' una viva toglierebbe il desktop a
+					 *    chi lo guarda (I4) — ⛔ ma poi si metteva ad aspettare
+					 *    TRENTA SECONDI un palco che arrivava in tre.
+					 *
+					 * ⇒ ⚠ La briglia dei 30 GB resta necessaria, ma il caso che
+					 *   curava era un altro: un figlio SENZA CLIENTE che
+					 *   rimontava all'infinito.  ⭐ Quando invece un cliente e'
+					 *   attaccato e sta chiedendo una tela, dall'altra parte c'e'
+					 *   una persona davanti a uno schermo fermo, e l'unica
+					 *   attesa difendibile e' la piu' corta.
+					 *
+					 * ⛔ E non costa niente: la riga di registro si scrive al
+					 *    massimo una volta al secondo comunque. */
+					if (sta_nascendo(ora) || (codec_chiesto && tela_voluta_l)) {
 						palco_attesa_ms = PALCO_NASCITA_RIPROVA_MS;
 						palco_riprova_ms = ora + palco_attesa_ms;
 						registro_dettaglio(REG_FIGLIO,
-						                   "senza palco, ma la sessione la "
-						                   "STIAMO facendo nascere (%llu ms "
-						                   "fa): riprovo fra %llu ms — fitto "
+						                   "senza palco e QUALCUNO GUARDA (o la "
+						                   "sessione sta nascendo, chiesta %llu "
+						                   "ms fa): riprovo fra %llu ms — fitto "
 						                   "apposta, l'attesa che raddoppia e' "
 						                   "per il palco che non c'e' PIU', "
 						                   "non per quello che non c'e' ANCORA",
-						                   (unsigned long long)(ora - nascita_chiesta_ms),
+						                   nascita_chiesta_ms
+						                       ? (unsigned long long)(ora - nascita_chiesta_ms)
+						                       : 0ULL,
 						                   (unsigned long long)palco_attesa_ms);
 						if (tela_voluta_l && tela_voluta_a)
 							attendi_tela(tela_voluta_l, tela_voluta_a);
