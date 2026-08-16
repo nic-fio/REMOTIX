@@ -2178,6 +2178,38 @@ static uint32_t tenuto_input;
 #define NASCITA_BRIGLIA_MS 12000
 
 /*
+ * ⛔⭐⭐ QUANTO SI RIPROVA MENTRE LA SESSIONE STA NASCENDO — e questo numero
+ *       e' la cura del difetto che l'utente ha visto quattro volte: *«al quarto
+ *       login il desktop ha impiegato molti secondi prima di ricomparire»*.
+ *
+ * ⛔⛔ LA CAUSA ERA L'ATTESA CHE RADDOPPIA, e il ragionamento che la giustifica
+ *     e' giusto per UN caso solo.  `PALCO_RIPROVA_MIN_MS` cresce 1 s → 2 s →
+ *     4 s → 8 s, e questo e' quel che serve quando il palco **non c'e' piu'**:
+ *     una sessione morta non torna perche' la si chiama piu' spesso, e senza
+ *     freno quel ciclo ha gia' scritto 30 GB di registro (14 agosto).
+ *
+ * ⛔ Ma quando il palco **non c'e' ANCORA** la stessa attesa e' esattamente il
+ *    difetto.  `[M]` 16 agosto 2026, venti giri cronometrati: `gnome-session`
+ *    si fa vedere sul bus dopo ~2,9 s, e i tentativi cadono a 0, 1, 3, 7 s.
+ *    ⇒ Se si fa vedere a 2,9 s lo troviamo a 3 s (100 ms persi, ed e' il caso
+ *    buono, mediana 3193 ms); ⛔ **se ci mette 3,2 s il tentativo delle 3 s lo
+ *    manca e il successivo e' a SETTE**.  L'utente aspetta quattro secondi di
+ *    puro orologio, con la sessione gia' pronta e nessuno che la guarda.
+ *
+ * ⭐ E si vede nella misura stessa: mediana 2880 ms, p90 **3891 ms**.  Quei due
+ *    numeri non sono una distribuzione, sono **due gradini** — il tentativo
+ *    delle 3 s e quello dopo.
+ *
+ * ⇒ I due casi che il commento del ciclo distingueva a parole — «non c'e'
+ *   ancora» e «non c'e' piu'» — adesso si distinguono anche nel tempo: finche'
+ *   siamo dentro la finestra della nascita si riprova ogni 200 ms, dopo torna
+ *   la briglia che raddoppia.  ⚠ Il costo e' sessanta chiamate D-Bus a un nome
+ *   che non risponde, in dodici secondi: niente.  Il guadagno e' fino a
+ *   quattro secondi di attesa a vuoto, e sono i secondi che l'utente vede.
+ */
+#define PALCO_NASCITA_RIPROVA_MS 200
+
+/*
  * ⛔⭐ «L'UTENTE E' USCITO»: il terzo stato, e senza di lui il figlio RIFA' la
  *     sessione tre secondi dopo averla lasciata morire.
  *
@@ -2198,6 +2230,22 @@ static bool sessione_chiusa_dall_utente;
 /* Quando si riprova, e quanto si e' aspettato l'ultima volta. */
 static uint64_t palco_riprova_ms;
 static uint64_t palco_attesa_ms;
+
+/* ⭐ Quando abbiamo chiesto la NASCITA della sessione grafica, 0 se mai.
+ *
+ * ⛔ Era una `static` dentro `prendi_il_palco()`, e da li' il ciclo dei
+ *    fotogrammi non poteva vederla — quindi non poteva distinguere «il palco
+ *    non c'e' ANCORA» da «non c'e' PIU'», e trattava i due casi con la stessa
+ *    attesa che raddoppia.  ⇒ Vedi `PALCO_NASCITA_RIPROVA_MS`. */
+static uint64_t nascita_chiesta_ms;
+
+/* Siamo dentro la finestra in cui una sessione chiesta puo' ancora farsi
+ * vedere?  ⚠ Se si', il palco che manca e' un palco che sta NASCENDO. */
+static bool sta_nascendo(uint64_t ora_ms)
+{
+	return nascita_chiesta_ms != 0 &&
+	       ora_ms - nascita_chiesta_ms <= NASCITA_BRIGLIA_MS;
+}
 
 static Codificatore *codif[3];
 /* Quale codec il padre ha chiesto: 0 = nessuno, cioe' nessuno sta guardando. */
@@ -2753,11 +2801,10 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		                   "riattacca qualcuno",
 		                   g_get_user_name());
 	} else if (p.stato_sessione == SESSIONE_MORTA) {
-		static uint64_t chiesta_ms;
 		uint64_t adesso_ms = registro_ora_ms();
 
-		if (chiesta_ms == 0 || adesso_ms - chiesta_ms > NASCITA_BRIGLIA_MS) {
-			chiesta_ms = adesso_ms;
+		if (!sta_nascendo(adesso_ms)) {
+			nascita_chiesta_ms = adesso_ms;
 			registro_dice(REG_FIGLIO,
 			              "⭐ nessuna sessione grafica per «%s»: LA FACCIO "
 			              "NASCERE io (tela %ux%u) e torno subito — a "
@@ -2776,7 +2823,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "l'ho gia' chiesta %llu ms fa e aspetto che si "
 			              "faccia vedere sul bus",
 			              g_get_user_name(),
-			              (unsigned long long)(adesso_ms - chiesta_ms));
+			              (unsigned long long)(adesso_ms - nascita_chiesta_ms));
 		}
 	} else if (p.stato_sessione != SESSIONE_SANA) {
 		registro_dice(REG_FIGLIO,
@@ -3345,8 +3392,36 @@ void figlio_vive(int argc, char **argv)
 			 *     senza catturare niente.  `[M]` e' la meta' silenziosa del
 			 *     difetto del 14 agosto: il registro si cura togliendo una
 			 *     riga, questo no. */
-			pronto = poll(due, (nfds_t)quanti,
-			              (codec_chiesto && cat) ? 0 : 1000);
+			/* ⛔⭐⭐ E L'ATTESA DEL `poll` SI ACCORCIA QUANDO C'E' UN
+			 *       TENTATIVO DOVUTO — 16 agosto 2026, e senza questa riga
+			 *       la cura di `PALCO_NASCITA_RIPROVA_MS` non arrivava a
+			 *       terra.
+			 *
+			 * ⛔ Il ciclo, senza palco, dormiva **un secondo fisso**.  ⇒ Un
+			 *    ri-tentativo fissato fra 200 ms non poteva scattare a 200
+			 *    ms: scattava al risveglio dopo, cioe' a mille.  Il numero
+			 *    piccolo sarebbe rimasto scritto nel sorgente e falso nei
+			 *    fatti — ed e' la forma «scritto non e' in vigore» che
+			 *    `REVIEWER.md` chiama E1, dentro la cura di un difetto di
+			 *    tempo.
+			 *
+			 * ⭐ Adesso ci si sveglia QUANDO il tentativo e' dovuto, non a
+			 *    cadenza fissa: il secondo resta come tetto (il padre deve
+			 *    poter parlare comunque), ma non e' piu' un pavimento. */
+			{
+				int attesa_ms = (codec_chiesto && cat) ? 0 : 1000;
+
+				if (!cat && palco_riprova_ms) {
+					uint64_t adesso = registro_ora_ms();
+
+					attesa_ms = palco_riprova_ms > adesso
+					                ? (int)(palco_riprova_ms - adesso)
+					                : 0;
+					if (attesa_ms > 1000)
+						attesa_ms = 1000;
+				}
+				pronto = poll(due, (nfds_t)quanti, attesa_ms);
+			}
 			pf.revents = due[0].revents;
 			/* ⭐ Se ha parlato `libei`, lo si serve SUBITO — prima ancora di
 			 *    leggere il padre: e' il percorso su cui si misura il
@@ -3821,6 +3896,36 @@ void figlio_vive(int argc, char **argv)
 					 *    un `mut` aperto senza cattura terrebbe un monitor
 					 *    virtuale che nessuno consuma. */
 					smonta_il_palco(&mut, &cat);
+					/* ⛔⭐ QUI SI DISTINGUONO I DUE CASI CHE IL COMMENTO QUI
+					 *     SOPRA NOMINAVA GIA', e fino al 16 agosto 2026 li
+					 *     trattava tutt'e due con la stessa attesa.
+					 *
+					 *   · non c'e' ANCORA — la sessione e' stata chiesta e
+					 *     `gnome-session` si sta alzando: ⭐ si riprova FITTO,
+					 *     perche' l'unica cosa che ci separa dal desktop e'
+					 *     accorgersene, e accorgersene costa una chiamata
+					 *     D-Bus a un nome che non c'e'.
+					 *   · non c'e' PIU' — o non arriva: ⚠ l'attesa raddoppia,
+					 *     ed e' la briglia dei 30 GB di registro.
+					 *
+					 * ⇒ Vedi `PALCO_NASCITA_RIPROVA_MS`: e' la cura del «al
+					 *   quarto login il desktop ha impiegato molti secondi». */
+					if (sta_nascendo(ora)) {
+						palco_attesa_ms = PALCO_NASCITA_RIPROVA_MS;
+						palco_riprova_ms = ora + palco_attesa_ms;
+						registro_dettaglio(REG_FIGLIO,
+						                   "senza palco, ma la sessione la "
+						                   "STIAMO facendo nascere (%llu ms "
+						                   "fa): riprovo fra %llu ms — fitto "
+						                   "apposta, l'attesa che raddoppia e' "
+						                   "per il palco che non c'e' PIU', "
+						                   "non per quello che non c'e' ANCORA",
+						                   (unsigned long long)(ora - nascita_chiesta_ms),
+						                   (unsigned long long)palco_attesa_ms);
+						if (tela_voluta_l && tela_voluta_a)
+							attendi_tela(tela_voluta_l, tela_voluta_a);
+						continue;
+					}
 					if (palco_attesa_ms < PALCO_RIPROVA_MIN_MS)
 						palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
 					else

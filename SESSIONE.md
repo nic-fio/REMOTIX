@@ -32,6 +32,28 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | A5 | la regola **udev** della scheda | provisioning | il compositore sceglie la GPU **a caso**; le misure valgono per quel ferro e non per il prodotto (§4.6-quinquies) |
 | A6 | ⛔ **il server NON gira dentro una sessione utente** | chi avvia il servizio | `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**: i figli restano senza runtime, senza bus e senza desktop. ⚠ In produzione non capita (unità di sistema); **capita solo in prova**, cioè dove si studia |
 
+> ### ⛔⛔ A6, la trappola dentro la trappola: `setsid` **non basta**
+>
+> `[M]` **16 agosto 2026.** Il server era stato riavviato via `ssh`, e
+> `riavvia-7700.sh` lo lanciava con `setsid` — messo lì per un'altra ragione giusta (`sudo` con
+> `use_pty` stronca quel che resta nel suo pseudo-terminale).
+>
+> ⇒ ⚠ **`setsid` stacca dal terminale, non dalla sessione di logind.** Il processo resta nel cgroup
+> della sessione `ssh` di chi ha dato il comando, e da lì A6 scatta in pieno: `[M]` `loginctl` non
+> mostrava **nessuna** sessione per `prova`, `/run/user/1001` non esisteva, e il registro ripeteva
+> *«NON ho il bus di sessione: Could not connect: No such file or directory»*. **Otto giri di banco
+> falliti su otto**, e la faccia del difetto era la solita: «il desktop non parte».
+>
+> ⭐ **La cura è farlo partire dove starebbe in produzione**: `systemd-run --unit=…`, cioè un'unità
+> di sistema transitoria in `system.slice`. ⛔ E **si verifica**, perché A6 è silenzioso per
+> costruzione: `riavvia-7700.sh` legge `/proc/PID/cgroup` del processo vivo e **rifiuta di dare
+> l'OK** se ci trova `user@` o `session-`.
+>
+> ⚠ E c'era un secondo insegnamento nello stesso file: ⛔ **lo script che avvia il prodotto non era
+> nel deposito** — viveva solo sulla macchina di prova. Le sue trappole erano scritte solo dentro se
+> stesso, nessuna revisione le ha mai lette, e quella nuova è costata un'ora di diagnosi su un
+> difetto che *questa tabella aveva già scritto*. ⇒ Adesso sta in `src/riavvia-7700.sh`.
+
 ---
 
 ## Parte B — quel che fa il prodotto, in quest'ordine

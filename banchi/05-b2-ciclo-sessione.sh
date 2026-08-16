@@ -75,7 +75,7 @@ for g in $(seq 1 "$GIRI"); do
 	#    rossa su codice giusto», che costa quanto quella verde su codice rotto.
 	bash "$ENTRA" --root "cd /srv/src/04-vero-src/banchi && timeout 120 python3 \
 	    01-b3-cliente.py --indirizzo 192.168.0.2 --porta 7700 --utente prova \
-	    --parola prova2026 --larghezza $L --altezza $A --resta 70 --vivo 8" \
+	    --parola prova2026 --larghezza $L --altezza $A --resta 70" \
 	    >/tmp/05-b2-cli-$g.log 2>&1
 
 	NUOVE=$(tail -n +$((RIGHE + 1)) "$REG")
