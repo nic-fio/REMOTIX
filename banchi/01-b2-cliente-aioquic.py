@@ -20,7 +20,7 @@ primo stream si aspetta un `CIAO`, e a un `ciao` minuscolo risponde come deve
 ⚠ E' esattamente il rosso del mattino del 10 agosto, quello che si era preso
   per un difetto del certificato: *«il rosso era della SONDA, non del
   certificato: mandava `ciao` e aspettava l'eco di B2, che con RCP innestato
-  non esiste piu'»* (`fasi/01-filo-nudo.md`, riga di B3).  Senza questa
+  non esiste piu'»* (`FASI.md` §01-filo-nudo, riga di B3).  Senza questa
   opzione lo stesso rosso si ripresenterebbe contro il prodotto, e sembrerebbe
   un difetto del server.
 

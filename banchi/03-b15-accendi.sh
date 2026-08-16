@@ -12,7 +12,7 @@
 # ===========================================================================
 # ⛔ IL PERIMETRO, E PERCHE' E' TUTTO PROPRIO
 #
-# `fasi/03-movimento.md`: «ogni step ha porta, file di ban e socket propri: in
+# `FASI.md` §03-movimento: «ogni step ha porta, file di ban e socket propri: in
 # fase 3 i banchi girano in parallelo per davvero, e due banchi che condividono
 # un ban-file si fermano a vicenda».
 #
@@ -112,7 +112,7 @@ scena-costruisci)
 	#     arrivato — `[M]` 13 agosto 2026, e il sintomo era «undefined reference
 	#     to wl_output_interface», cioe' una riga di link a cui mancavano le
 	#     librerie senza che niente lo dicesse.  ⭐ Un file non ha livelli di
-	#     virgolette (`fasi/00-ambiente.md` B3.3).
+	#     virgolette (`FASI.md` §00-ambiente B3.3).
 	log "Costruisco la scena dello step 2 (il sorgente NON si tocca)"
 	[ -f "$SCENA_C" ] || { ko "⛔ $SCENA_C non c'e': va portato con «porta»"; exit 2; }
 	for c in gcc pkg-config wayland-scanner; do
@@ -321,7 +321,7 @@ cattura-conta)
 	#     rosso finisce sul prodotto.
 	#
 	# ⛔ E sta QUI, in un file, invece che dentro `ssh → enter.sh → bash -c`:
-	#    un file non ha livelli di virgolette (`fasi/00-ambiente.md` B3.3), e la
+	#    un file non ha livelli di virgolette (`FASI.md` §00-ambiente B3.3), e la
 	#    prima stesura che ci infilava un `grep` con gli spazi contava zero su
 	#    un registro che la riga ce l'aveva — cioe' diceva «non e' successo»
 	#    dove il vero fatto era «non ho guardato».

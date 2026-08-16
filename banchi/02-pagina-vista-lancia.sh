@@ -108,7 +108,7 @@ X() { env -u WAYLAND_DISPLAY DISPLAY=$SCHERMO "$@"; }
 
 # ⛔ I server che non sono miei si contano PRIMA e DOPO.  ⚠ La 7561 e' quella
 #   che l'utente sta guardando: se questo conto cambia, l'ho rotta io.
-# ⛔ MAI UNA REDIREZIONE ATTORNO A `ssh` — `fasi/00-ambiente.md` B3.3, pagata
+# ⛔ MAI UNA REDIREZIONE ATTORNO A `ssh` — `FASI.md` §00-ambiente B3.3, pagata
 #    sei volte.  Qui di la' si legge e basta.
 vicini() {
 	local r=""

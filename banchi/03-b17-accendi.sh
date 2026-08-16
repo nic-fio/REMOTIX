@@ -16,7 +16,7 @@
 # ===========================================================================
 # ⛔ IL PERIMETRO, E PERCHE' E' TUTTO PROPRIO
 #
-# `fasi/03-movimento.md`: «ogni step ha porta, file di ban e socket propri».
+# `FASI.md` §03-movimento: «ogni step ha porta, file di ban e socket propri».
 #
 #   7605   ⭐ la porta che il BROWSER apre — ed e' il PONTE, non il prodotto
 #   7615      il prodotto vero, dietro il ponte, in ascolto su 0.0.0.0

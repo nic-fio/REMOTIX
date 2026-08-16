@@ -44,7 +44,7 @@
  *     (altro)              →  NON-CAPITO <riga>
  *
  * ⭐ `PING` non e' un ornamento: e' il denominatore della regola B0.3 di
- *    `fasi/01-filo-nudo.md`.  Un banco che chiama lo sblocco fra una prova e
+ *    `FASI.md` §01-filo-nudo.  Un banco che chiama lo sblocco fra una prova e
  *    l'altra deve poter dire «il comando c'era e ha risposto», o «il ban non e'
  *    scattato» e «lo sblocco non e' mai arrivato a nessuno» hanno lo stesso
  *    aspetto.
@@ -72,7 +72,7 @@
  *    tentazione ovvia.  Un `CHI` → `SONO remotix <pid>` avrebbe messo l'identita'
  *    **dentro il protocollo**, e li' due cose vanno storte insieme:
  *
- *      1. `RCP.md` §4.4-bis e `fasi/01-filo-nudo.md` B0.3 promettono che i due
+ *      1. `RCP.md` §4.4-bis e `FASI.md` §01-filo-nudo B0.3 promettono che i due
  *         server parlino lo stesso protocollo **byte per byte**.  Un verbo che
  *         capisce uno solo dei due lo rompe, ed e' la forma E2 di `REVIEWER.md`
  *         proprio nel punto che questo riquadro esiste per non ripetere;

@@ -54,7 +54,7 @@ arbitro che sbaglia: sopra il suo verde ci si costruisce.
 ---------------------------------------------------------------------------
 ⛔ E RIFERISCE **QUALE** BYTE, NON SOLO CHE E' ROSSO
 
-`fasi/01-filo-nudo.md` B4: sulla registrazione col riempimento, un validatore
+`FASI.md` §01-filo-nudo B4: sulla registrazione col riempimento, un validatore
 che non conosce §6.0 non vede il byte in piu': legge di traverso il messaggio
 SUCCESSIVO e dichiara non conforme quello.  **Rosso giusto, byte sbagliato** —
 e su una traccia vera manda la diagnosi a leggere il messaggio sbagliato.

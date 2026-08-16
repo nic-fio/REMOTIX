@@ -14,7 +14,7 @@
 
 *«Quando non si collega, ti dice PERCHE' non si collega.»*
 
-`fasi/01-filo-nudo.md` B12-C2, rilievo **R3.17**: si guasta il collegamento in
+`FASI.md` §01-filo-nudo B12-C2, rilievo **R3.17**: si guasta il collegamento in
 **tre modi** e si pretendono **tre diagnosi diverse** — nessuno in ascolto ·
 **UDP 7447 filtrato col TCP che risponde** · impronta non corrente.
 

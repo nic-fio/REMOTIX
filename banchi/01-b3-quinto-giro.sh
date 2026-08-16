@@ -33,7 +33,7 @@
 # La rotazione **automatica** a quattordici giorni.  Cambiare la chiave a mano
 # prova che la pagina sa ritirare l'impronta; che il server rigeneri **prima**
 # della scadenza resta senza banco, e il suo sintomo arriva due settimane dopo
-# la consegna.  Sta scritto in `fasi/01-filo-nudo.md`, B3.
+# la consegna.  Sta scritto in `FASI.md` §01-filo-nudo, B3.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 

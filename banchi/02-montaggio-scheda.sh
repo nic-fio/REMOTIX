@@ -30,7 +30,7 @@
 #     qui misura anche quelli, e ⛔ **non e' il numero di F2.6**.
 #
 # ⇒ Quel che questo file dimostra e' esattamente una cosa, ed e' quella che
-#   `fasi/02-primo-fotogramma.md` mette come metro della fase: **che
+#   `FASI.md` §02-primo-fotogramma mette come metro della fase: **che
 #   l'immagine del desktop compaia dentro la scheda**.
 #
 # ===========================================================================

@@ -14,7 +14,7 @@
 #
 # `v1/banchi/banco-compositori/misura-cattura` e' certificato, riproduce i
 # 36 ± 2 fotogrammi al secondo di Mutter, e resta il controllo positivo storico
-# di tutto il progetto (`fasi/00-ambiente.md`).  ⛔ Ma i pixel non li guarda mai:
+# di tutto il progetto (`FASI.md` §00-ambiente).  ⛔ Ma i pixel non li guarda mai:
 # legge tipo, fd, stride, danno e sequenza, e rimette il buffer in coda senza
 # toccare `piano->data`.
 #
@@ -107,7 +107,7 @@
 #
 # ⛔ Niente `2>/dev/null` in questo file, e nessuno stato d'uscita buttato in
 #    una catena di `|`.  Le tre voci 1, 3 e 8 di «Che cosa NON ha funzionato»
-#    di `fasi/00-ambiente.md` sono tre facce di quest'unica regola, e sono state
+#    di `FASI.md` §00-ambiente sono tre facce di quest'unica regola, e sono state
 #    pagate tutte e tre in un pomeriggio.
 #
 # ===========================================================================
@@ -286,7 +286,7 @@ compila()
 	# ⛔ MAI UNA REDIREZIONE ATTORNO A `enter.sh`: la richiesta di parola
 	#    d'ordine di `sudo` va sullo stderr, e una redirezione la mangia — il
 	#    comando resta appeso per sempre, in silenzio.  Dentro le virgolette
-	#    si', attorno no.  `fasi/00-ambiente.md` B3.3, pagata quattro volte.
+	#    si', attorno no.  `FASI.md` §00-ambiente B3.3, pagata quattro volte.
 	bash /media/REMOTIX/enter.sh "cd /srv/remotix/tmp/02-cattura && \
 	    gcc -O2 -Wall -o 02-cattura-fotogramma /srv/src/02-cattura-fotogramma.c \
 	        \$(pkg-config --cflags --libs libpipewire-0.3 gio-2.0 libdrm)"
@@ -533,7 +533,7 @@ avvia_scena()
 		# ⛔ `stdbuf -oL`: verso un file l'uscita e' bufferizzata a blocchi, e
 		#    alla chiusura della scena il suo registro resta nel buffer.  Il
 		#    registro vuoto sembra «la scena non ha detto niente», ed e' la
-		#    voce 12 di `fasi/00-ambiente.md`.
+		#    voce 12 di `FASI.md` §00-ambiente.
 		# ⛔ `--fs-screen-name` NON e' un dettaglio: e' la differenza fra
 		#    misurare la scena e misurare il buio (vedi il riquadro qui sopra).
 		stdbuf -oL mpv --no-config --fs --fs-screen-name="$SCHERMO" \
@@ -546,7 +546,7 @@ avvia_scena()
 		# La scena della fase 0, tenuta per il legame col controllo positivo
 		# storico.  ⛔ E si lancia con `pgrep -f`, mai `pgrep -x`: `comm` e'
 		# troncato a 15 caratteri e `weston-simple-egl` ne ha 17 — difetto di
-		# banco gia' pagato, `fasi/00-ambiente.md` B3 punto 1.
+		# banco gia' pagato, `FASI.md` §00-ambiente B3 punto 1.
 		#
 		# ⚠ E QUI LO SCHERMO NON SI PUO' DICHIARARE: `weston-simple-egl` non ha
 		#   un'opzione per scegliere l'uscita.  ⇒ Su una sessione che ha piu' di
@@ -653,7 +653,7 @@ misura()
 		#    resta nella tabella dei processi finche' nessuno lo raccoglie, e
 		#    «il pid esiste» non e' «il processo e' vivo».  Si legge lo STATO in
 		#    `ps`, che dice `Z`.  Difetto di banco gia' pagato — voce 8 di
-		#    `fasi/00-ambiente.md`.
+		#    `FASI.md` §00-ambiente.
 		stato=$(ps -o stat= -p "$pid_scena" | tr -d ' ')
 		if [ -z "$stato" ] || [ "${stato#Z}" != "$stato" ]; then
 			kill $pid_prod 2>/dev/null; wait $pid_prod 2>/dev/null

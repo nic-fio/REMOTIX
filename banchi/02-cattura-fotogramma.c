@@ -70,7 +70,7 @@
  *
  * Le tre guardie di uscita 2 sono le stesse che la fase 0 ha dovuto aggiungere
  * a `misura-cattura` DOPO averlo creduto (voci 1 e 8 di «Che cosa NON ha
- * funzionato» in `fasi/00-ambiente.md`): qui nascono insieme al programma.
+ * funzionato» in `FASI.md` §00-ambiente): qui nascono insieme al programma.
  *
  * ---------------------------------------------------------------------------
  * ⛔ L'ORDINE: PRIMA IL MONITOR, POI LA SCENA — e lo dice il programma, non chi
@@ -105,7 +105,7 @@
  *             collegandosi a un desktop appena montato
  *   `regime`  un fotogramma preso dopo `--dopo-scena` secondi di scena viva,
  *             saltandone `--scarta`.  Su Mutter a regime il danno e'
- *             **parziale** nel 98 % dei casi (`fasi/00-ambiente.md`: pieno 15,
+ *             **parziale** nel 98 % dei casi (`FASI.md` §00-ambiente: pieno 15,
  *             parziale 929)
  *
  * ⭐ E il confronto fra i due risponde a una domanda che i documenti oggi si
@@ -133,7 +133,7 @@
  * chi rallenta quel ciclo falsa la propria misura — quindi qui i fotogrammi al
  * secondo **non si stampano affatto**: il ritmo e' della fase 0 (36 ± 2) e della
  * fase 3.  Un numero di ritmo che uscisse da qui sarebbe un numero giusto per
- * una domanda che nessuno ha fatto, ed e' la voce 8 di `fasi/00-ambiente.md`.
+ * una domanda che nessuno ha fatto, ed e' la voce 8 di `FASI.md` §00-ambiente.
  *
  * ---------------------------------------------------------------------------
  * uso:
@@ -1069,7 +1069,7 @@ int main(int argc, char **argv)
 	/* Si aspetta che chi lancia dichiari la scena accesa.  ⛔ E se non arriva
 	 * mai non si misura lo stesso: si dichiara.  Una scena che non parte e un
 	 * compositore muto hanno lo stesso aspetto — voce 8 di
-	 * `fasi/00-ambiente.md`, e la terza faccia di uno stesso difetto. */
+	 * `FASI.md` §00-ambiente, e la terza faccia di uno stesso difetto. */
 	scadenza = g_get_monotonic_time() + (gint64) (attesa_scena * G_USEC_PER_SEC);
 	while (!g_file_test(segnale_scena, G_FILE_TEST_EXISTS) && g_get_monotonic_time() < scadenza)
 		g_usleep(50000);
@@ -1321,7 +1321,7 @@ int main(int argc, char **argv)
 	                "da qui sarebbe falsato da noi. Il ritmo e' della fase 0 (36 ± 2) e della "
 	                "fase 3.\",\n"
 	                "    \"⚠ 'negoziato' e 'chiesto' sono due campi diversi apposta: la voce "
-	                "12-bis di fasi/00-ambiente.md e' un'etichetta che dichiarava una misura che "
+	                "12-bis di FASI.md §00-ambiente e' un'etichetta che dichiarava una misura che "
 	                "il compositore non aveva mai onorato.\"\n"
 	                "  ]\n}\n");
 

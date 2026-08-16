@@ -39,7 +39,7 @@
 # ---------------------------------------------------------------------------
 # ⛔ LA PAROLA D'ORDINE DI `prova2` NON PASSA DA NESSUNA RIGA DI COMANDO
 #
-# `fasi/01-filo-nudo.md` la nomina fra i compromessi **non** accettati.  Qui la
+# `FASI.md` §01-filo-nudo la nomina fra i compromessi **non** accettati.  Qui la
 # parola:
 #
 #   · si legge da `/media/REMOTIX/credenziali-banchi` (0600), dove l'ha scritta

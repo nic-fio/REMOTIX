@@ -69,7 +69,7 @@ printf 's/%s/<NON SI STAMPA>/g\n' "$P2" > "$MASCHERA"
 # flusso che non sarebbe mai arrivato.  ⚠ Nessun errore, nessun messaggio:
 # l'attrezzo sembrava soltanto **lento**.
 #
-# ⛔ E' `fasi/00-ambiente.md` B3.3, gia' pagata **quattro volte** — due nella
+# ⛔ E' `FASI.md` §00-ambiente B3.3, gia' pagata **quattro volte** — due nella
 #    sola notte dell'11 agosto.  ⭐ La cura e' quella di `01-b12-lancia.sh`: si
 #    redirige **dentro** le virgolette e si legge il file dopo.
 #

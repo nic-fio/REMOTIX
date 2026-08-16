@@ -194,7 +194,7 @@ enum {
  * ⚠ E che cosa succede alla connessione di chi tace, il documento NON lo dice.
  *   Qui si sceglie di **lasciarla aperta** e liberare solo il posto: chiuderla
  *   sarebbe un congedo, e §8.2 non ha un motivo che voglia dire «taci da un
- *   po'».  La scelta e' dichiarata in `fasi/01-filo-nudo.md`, perche' e' un
+ *   po'».  La scelta e' dichiarata in `FASI.md` §01-filo-nudo, perche' e' un
  *   punto in cui RCP.md ammette due letture. */
 #define SILENZIO 30000
 
@@ -1570,7 +1570,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 * ⭐ Vince §2.4, perche' e' la piu' specifica e perche' e' quella scritta
 	 *    per risolvere proprio questo caso (rilievo R1.24).  ⚠ Il primo giro di
 	 *    questo modulo aveva applicato §9 alla lettera e ACCETTAVA un CIAO(2):
-	 *    lo ha trovato B5.  Sta in `fasi/01-filo-nudo.md`.
+	 *    lo ha trovato B5.  Sta in `FASI.md` §01-filo-nudo.
 	 *
 	 * ⚠ E il confronto e' con la versione del PERCORSO, che qui e' l'unica che
 	 *   il server serve.  Un server che servisse `/rcp/1` e `/rcp/2` passerebbe
@@ -4147,7 +4147,7 @@ static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
  *   PRIMA il parametro, perche' e' quello che il banco puo' correggere: dirgli
  *   «spenta» quando ha anche sbagliato il numero gli fa accendere la funzione e
  *   ritrovarsi lo stesso rifiuto, con un motivo diverso, al secondo giro.  La
- *   scelta e' dichiarata in `fasi/01-filo-nudo.md`.
+ *   scelta e' dichiarata in `FASI.md` §01-filo-nudo.
  *
  * ⛔ Regola 5: ogni `BANCO_MARCA` si scrive nel registro — anche i rifiuti.
  *    «Una sessione che dipinge quadratini colorati sul desktop di una persona
@@ -4365,7 +4365,7 @@ void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms)
 	 *      mandare i PING anche a sessione attiva — e' una DECISIONE, non una
 	 *      riparazione: cambia il significato dei 30 s di §2.2 per la scheda
 	 *      CONGELATA, che `SPECIFICHE.md` §5.3 dice doversi staccare.  E' scritta
-	 *      in `fasi/05-la-sessione.md` §6-bis e aspetta l'utente. */
+	 *      in `FASI.md` §05-la-sessione §6-bis e aspetta l'utente. */
 	if (ora_ms > s->ultima_vita && ora_ms - s->ultima_vita > SILENZIO / 2)
 		reg(s, "⚠ §5.3: fra due pacchetti da %s sono passati %llu ms, e il "
 		       "tetto del silenzio e' %u — il margine si sta assottigliando",
@@ -5012,7 +5012,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    ridimensionare, e non e' di questo anello.
 			 *
 			 * ⚠ SERVIRLI e' un'altra cosa, e non e' di questa fase:
-			 *   `fasi/01-filo-nudo.md` dice «niente video, niente audio, niente
+			 *   `FASI.md` §01-filo-nudo dice «niente video, niente audio, niente
 			 *   input».  ⛔ Ma il prezzo va detto per intero, perche' non e'
 			 *   piccolo: finche' restano fuori, un client conforme che stringe
 			 *   la finestra (`VISTA`) o che vede un buco (`RICHIEDI_CHIAVE`,

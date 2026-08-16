@@ -173,7 +173,7 @@ BYTE_PER_PIXEL = 4
 # appena montato il monitor virtuale.  Pretendere li' la scena dichiarata — o
 # anche solo pretendere che non sia una tinta piatta — vorrebbe dire scrivere una
 # prova che da' ROSSO su un banco perfettamente sano.  E' la voce 2 di
-# `fasi/00-ambiente.md`: *«la prova dell'headless cercava una frase che, se tutto
+# `FASI.md` §00-ambiente: *«la prova dell'headless cercava una frase che, se tutto
 # va bene, non compare mai»* — su una sessione sana avrebbe dato rosso per
 # sempre.  Uno sfondo GNOME a tinta unita e' plausibile, e non e' un difetto.
 #
@@ -745,7 +745,7 @@ def main():
                 # (`LEZIONI.md` §4 trappola 8).  ⇒ Qui l'assenza del `regime` e'
                 # la risposta giusta, non un rilievo: chiamarla rossa vorrebbe
                 # dire scrivere una prova che da' rosso su un banco sano — la
-                # voce 2 di `fasi/00-ambiente.md`.
+                # voce 2 di `FASI.md` §00-ambiente.
                 #
                 # ⛔ E il rovescio e' un rilievo vero: se sulla scena `fermo`
                 #    ARRIVASSE un fotogramma di regime, vorrebbe dire che sullo
@@ -794,7 +794,7 @@ def main():
             # ⚠ La firma si pretende solo sul fotogramma di REGIME.  Il `primo`
             #   e' preso PRIMA che la scena esista — pretendere la bandiera li'
             #   sarebbe rosso su un banco che funziona, che e' la voce 2 di
-            #   `fasi/00-ambiente.md` (una prova che cerca una frase che, se
+            #   `FASI.md` §00-ambiente (una prova che cerca una frase che, se
             #   tutto va bene, non compare mai).
             misure["danno"] = f.get("danno")
             misure["seq"] = f.get("seq")

@@ -9,7 +9,7 @@
 ---------------------------------------------------------------------------
 ⛔ CHE COSA MISURA, E PERCHE' NON BASTAVA QUEL CHE C'ERA
 
-Le proprieta' che `fasi/01-filo-nudo.md` assegna a B2 «perche' sono della
+Le proprieta' che `FASI.md` §01-filo-nudo assegna a B2 «perche' sono della
 libreria e nessun altro banco le guarda»:
 
     max_idle_timeout = 30 s imposto dal server      RCP.md §2.2

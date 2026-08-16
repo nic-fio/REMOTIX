@@ -238,7 +238,7 @@ viva() { pgrep -u "$U" -x gnome-shell >/dev/null; }
 #    non presidiata non gli risponde nessuno.
 # ⛔ E si aspetta `inactive`, NON «diverso da active»: `is-active` passa per
 #    `deactivating`, e ripartire li' dentro e' un'altra prima esecuzione
-#    (`fasi/00-ambiente.md`, difetto 4 della fase 0).
+#    (`FASI.md` §00-ambiente, difetto 4 della fase 0).
 ferma_e_aspetta()
 {
 	local scadenza=$((SECONDS + ${1:-60})) stato

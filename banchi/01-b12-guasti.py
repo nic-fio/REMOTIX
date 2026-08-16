@@ -25,7 +25,7 @@ essere creduto.**
   ⛔ *«Un banco che non e' mai diventato rosso non e' pulito: e' NON
      CERTIFICATO.»*
 
-`fasi/01-filo-nudo.md` B12-C1: ⛔ **un guasto costruito a mano PER OGNI BANCO, e
+`FASI.md` §01-filo-nudo B12-C1: ⛔ **un guasto costruito a mano PER OGNI BANCO, e
 sono dodici.**  *La prima stesura ne costruiva quattro per dodici banchi, e i
 due scoperti erano i banchi dei due difetti piu' cari di v1* (R3.7, R4.6).
 
@@ -451,7 +451,7 @@ def guasto(sigla, banco, titolo, dove, appiglio, sostituto, dimostra, marca,
     }
 
 
-# ── B7 — ⛔ IL GUASTO CHE `fasi/01-filo-nudo.md` NOMINA PER PRIMO ───────────
+# ── B7 — ⛔ IL GUASTO CHE `FASI.md` §01-filo-nudo NOMINA PER PRIMO ───────────
 guasto(
     "B7", "B7", "si toglie la spedizione del CONGEDO e si LASCIA il codice "
                 "nella chiusura",
@@ -481,7 +481,7 @@ guasto(
     #    arriva, quindi quella riga non c'e'.
     "il motivo nel CONGEDO sul canale: assente",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 · RCP.md §3.1, §8.1",
+    "FASI.md §01-filo-nudo B12-C1 · RCP.md §3.1, §8.1",
 )
 
 # ── B4 — il validatore che legge `lunghezza` come u16 ──────────────────────
@@ -510,7 +510,7 @@ guasto(
     #    giro sano, 7 nel giro col guasto.
     "⛔ atteso il byte",
     "leggero",
-    "fasi/01-filo-nudo.md B12-C1 · RCP.md §6.1",
+    "FASI.md §01-filo-nudo B12-C1 · RCP.md §6.1",
     nota="⛔ Il file guastato e' la COPIA in `01-b12-copie/`, e il banco di B4 "
          "va lanciato contro la copia: `01-b4-validatore.py` non si tocca.",
 )
@@ -562,7 +562,7 @@ guasto(
     #   SESSIONE», che esiste solo quando quel motivo arriva dove NON doveva.
     "CONGEDO invece di SESSIONE: motivo 0x0f = GIA_ATTIVA_REMOTA",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 · LEZIONI.md §2.1 · RCP.md §11",
+    "FASI.md §01-filo-nudo B12-C1 · LEZIONI.md §2.1 · RCP.md §11",
     nota="⚠ L'appiglio sta nell'ospite, non in `rcp.c`: `rcp_libera()` in "
          "`rcp.c` non ha chiamanti — li innesta `01-b3-rcp-innesta.py` nel "
          "`.cc`.  Se l'appiglio compare piu' di una volta il guasto NON si "
@@ -611,7 +611,7 @@ guasto(
     #    scelta esiste solo quando quel caso CADE.
     "§3.1 punto 3 su «capacita-ripetuta»",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.3",
+    "FASI.md §01-filo-nudo B12-C1 · RCP.md §4.3",
     nota="⭐ ESEGUIBILE dall'11 agosto 2026 (R12-A.37).  ⚠ E la marca qui "
          "sotto NON e' stata scelta a tavolino: e' stata **misurata** "
          "innestando il guasto e leggendo che cosa il banco stampa, poi "
@@ -641,7 +641,7 @@ guasto(
     #    che e' esattamente quel che questo guasto costruisce.
     "⭐ nessuna caduta",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.6",
+    "FASI.md §01-filo-nudo B12-C1 · RCP.md §4.6",
     nota="⚠ Catalogato e non eseguito: `01-b12-lancia.sh` non ha una riga di "
          "comando per B6, e il guasto va innestato in `rcp/rcp.c` e non nella "
          "copia di `examples/` — `01-b6-lancia.sh` ricopia il sorgente a ogni "
@@ -691,7 +691,7 @@ guasto(
     #   NON aver visto la frase, e la marca si vedrebbe per il motivo sbagliato.
     "risposte sotto il secondo. La piu' veloce:",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 · RCP.md §4.4-bis",
+    "FASI.md §01-filo-nudo B12-C1 · RCP.md §4.4-bis",
     # ⛔⭐ IL GIRO SANO DI B8 ESCE **5**, NON 0 — e non e' un atteso allargato
     #     finche' torna, che e' la strada disonesta che B13 ha insegnato a non
     #     prendere.  E' il quinto esito, che B8 dichiara da se': *«il BAN passa
@@ -782,7 +782,7 @@ guasto(
     "di dare il verde**",
     "il testo e' cambiato sotto il banco",
     "leggero",
-    "fasi/01-filo-nudo.md B12-C1 e B9 · PIANO.md §1.1",
+    "FASI.md §01-filo-nudo B12-C1 e B9 · PIANO.md §1.1",
     nota="⛔ CHE COSA QUESTA CERTIFICAZIONE DICE, E CHE COSA NON DICE — "
          "rilievo R12-A.8, e il titolo di questa voce e' stato corretto per "
          "questo.\n"
@@ -866,7 +866,7 @@ guasto(
     #    sano questa non compare mai (verificato: 0 nel sano, ≥1 nel guasto).
     "CAUSA-1-GUARDIA-PRE-PAM",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B12-C1 e B10 · SPECIFICHE.md §5.5",
+    "FASI.md §01-filo-nudo B12-C1 e B10 · SPECIFICHE.md §5.5",
     nota="⭐ ESEGUITO PER LA PRIMA VOLTA la sera dell'11 agosto 2026, insieme "
          "al banco che lo deve vedere (`01-b10-secondo-utente.py`, "
          "`01-b10-lancia.sh`).\n"
@@ -898,7 +898,7 @@ guasto(
     "in casa: qui si dichiara, non si rifa'",
     "",
     "gia-fatto",
-    "fasi/01-filo-nudo.md B11 · banchi/01-b11-guasto-innesta.py",
+    "FASI.md §01-filo-nudo B11 · banchi/01-b11-guasto-innesta.py",
     nota="⭐ PROVATO PER LA PRIMA VOLTA l'11 agosto 2026 — e non era «mai "
          "provato», era **mai lanciato**.  ⚠ Va lanciato **dalla macchina di "
          "chi guarda**, non dal server: `01-b11-lancia.sh` cerca "
@@ -941,7 +941,7 @@ guasto(
     "e B13.1 deve vedere **due impronte uguali**",
     "LE IMPRONTE COMBACIANO",
     "copia-di-file",
-    "fasi/01-filo-nudo.md B13.1 · RCP.md §4.1-bis",
+    "FASI.md §01-filo-nudo B13.1 · RCP.md §4.1-bis",
     # ⛔⭐ RESTA 3, E LA NOTTE FRA L'11 E IL 12 AGOSTO 2026 QUALCUNO — io — L'HA
     #     PORTATO A 1 PER MEZZ'ORA.  La riga e' tenuta perche' l'errore e'
     #     istruttivo e perche' e' PROPRIO quello che questo file vieta in fondo
@@ -1076,7 +1076,7 @@ guasto(
     "di sonde",
     "IRRAGGIUNGIBILE",
     "leggero",
-    "fasi/01-filo-nudo.md B12-C2, rilievo R3.17",
+    "FASI.md §01-filo-nudo B12-C2, rilievo R3.17",
     nota="⭐ La marca e' `IRRAGGIUNGIBILE`, ed e' scelta apposta: e' il nome che "
          "C2 puo' produrre SOLO quando gli manca una delle due sonde.  ⛔ Una "
          "marca come «udp-filtrato» sarebbe comparsa anche nel giro sano — e "
@@ -1119,7 +1119,7 @@ guasto(
     #    `[M]` sano 0 · guasto 1 · risano 0.
     "- credito uni DISPONIBILE a RCP all'apertura",
     "ricostruisce",
-    "fasi/01-filo-nudo.md B13.5 · RCP.md §2.3",
+    "FASI.md §01-filo-nudo B13.5 · RCP.md §2.3",
     nota="⚠ Catalogato e non eseguito in questo giro: costa una ricostruzione "
          "intera del server d'esempio, e il banco che lo vede (la sonda del "
          "trasporto) e' di B2, non di questo mandato.",
@@ -1150,7 +1150,7 @@ guasto(
 #      prefissi meno B12), e le voci che hanno un banco dietro sono **13** (le
 #      14 meno B10).  ⚠ Due insiemi che adesso coincidono — mentre prima di
 #      stasera erano 12 e 12 **diversi**, ed e' precisamente il modo in cui un
-#      conteggio smette di essere una misura (`fasi/01-filo-nudo.md`, il
+#      conteggio smette di essere una misura (`FASI.md` §01-filo-nudo, il
 #      riquadro sul denominatore).
 #
 # ⛔ E TUTT'E DUE I GUASTI SI INNESTANO SU UNA **COPIA INTERA** DEL PRODOTTO,
@@ -1224,7 +1224,7 @@ guasto(
     #    esiste per misurare).  Fra l'innesto e il giro non ci va nessuna
     #    compilazione fatta da qui.
     "leggero",
-    "fasi/01-filo-nudo.md B12-C1 · SPECIFICHE.md §11.5 · README.md «CHE COSA "
+    "FASI.md §01-filo-nudo B12-C1 · SPECIFICHE.md §11.5 · README.md «CHE COSA "
     "FARE ADESSO» punto 5",
     nota="⛔ CHE COSA QUESTA CERTIFICAZIONE DICE, E CHE COSA NON DICE.\n"
          "       Dice che P1 vede una regressione del PRODOTTO che passa per "
@@ -1287,7 +1287,7 @@ guasto(
     #    contro il binario di prima, che e' il difetto n.2 di questo file —
     #    il guasto che non e' stato innestato, con l'aria di esserlo.
     "ricostruisce",
-    "fasi/01-filo-nudo.md P5 · RCP.md §4.1-bis (R1.14) · README.md «CHE COSA "
+    "FASI.md §01-filo-nudo P5 · RCP.md §4.1-bis (R1.14) · README.md «CHE COSA "
     "FARE ADESSO» punto 5",
     nota="⭐⭐⭐ **P5 E' CERTIFICATO — `[M]` la notte fra l'11 e il 12 agosto "
          "2026, contro la copia sulla 7501: 0 → 1 → 0.**  Giro sano VERDE su "
@@ -1613,8 +1613,8 @@ guasto(
     #   a mano da un terminale sbaglia carattere e la marca non combacia piu'.
     "P7 la scena si muove — disegni consecutivi",
     "ricostruisce",
-    "fasi/03-movimento.md, step 2 «La scena che si dichiara» · "
-    "LEZIONI.md §1.1 e §1.7 · fasi/00-ambiente.md",
+    "FASI.md §03-movimento, step 2 «La scena che si dichiara» · "
+    "LEZIONI.md §1.1 e §1.7 · FASI.md §00-ambiente",
     nota="⛔ **03-scena NON e' un banco che giudica il prodotto: e' la SCENA**, "
          "e il prodotto non e' nemmeno in campo (la catena e' "
          "`03-scena.c → libx265 → ffmpeg`).  ⭐ E' a catalogo per la ragione "
@@ -1760,7 +1760,7 @@ guasto(
     #    con una riga sola «cresciuto» e «troncato» danno lo stesso numero.
     "il deposito si TRONCA invece di crescere",
     "leggero",
-    "LEZIONI.md §2.5-bis (il rootfs in RAM) · fasi/03-movimento.md step 2 · "
+    "LEZIONI.md §2.5-bis (il rootfs in RAM) · FASI.md §03-movimento step 2 · "
     "REVIEWER.md E1 (la catena dichiarata)",
     nota="⛔⛔ **QUESTA VOCE NON E' CERTIFICABILE OGGI, E NON PER LA MARCA "
          "MANCANTE: PERCHE' NON ESISTE IL CONTROLLO CHE POTREBBE DIVENTARE "
@@ -1813,7 +1813,7 @@ guasto(
     #    **0 nel sano, 1 nel guasto, 0 nel risanato**.
     "chiesto maxFramerate 120, FISSATO 60",
     "ricostruisce",
-    "fasi/03-movimento.md step 1 · STUDI.md §gnome §8.2 e §13 (M3) · "
+    "FASI.md §03-movimento step 1 · STUDI.md §gnome §8.2 e §13 (M3) · "
     "LEZIONI.md §1.1, §1.2, §1.8",
     nota="⭐⭐⭐ **IL BANCO E' STATO CURATO E POI CERTIFICATO — 13 agosto 2026 "
          "sera.**  Fino a stasera questa nota diceva «NON CERTIFICABILE: "
@@ -1914,7 +1914,7 @@ guasto(
     #    «impaginazione ACCESA  clientWidth×clientHeight [1361, 773]».
     "sano/V3s: rosso",
     "leggero",
-    "fasi/03-movimento.md step 4 · SPECIFICHE.md §6.1-bis · "
+    "FASI.md §03-movimento step 4 · SPECIFICHE.md §6.1-bis · "
     "RCP.md §6.2 e §5.2 · LEZIONI.md §1.1, §1.2",
     nota="⛔⛔ **SCADUTA E NON RIGIRABILE LA NOTTE DEL 13 AGOSTO 2026, E LA "
          "RAGIONE E' IL PALCO** — si scrive qui perche' il prossimo non ci "
@@ -2014,7 +2014,7 @@ guasto(
     #    criterio che R12-A.3 pretende, cioe' che il SANO non dica gia' la marca.
     "rossi nessuno (attesi ['P3'])",
     "leggero",
-    "fasi/03-movimento.md step 5 · STUDI.md §web §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
+    "FASI.md §03-movimento step 5 · STUDI.md §web §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
     "RCP.md §6.2 · LEZIONI.md §1.2, §1.13",
     nota="⭐⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA — 38/38 → 37/38 → 38/38, "
          "e la marca MISURATA.**  ⛔ E la nota che c'era qui prima diceva il "
@@ -2100,7 +2100,7 @@ guasto(
     #    e' dentro anche li'».
     "",
     "leggero",
-    "fasi/03-movimento.md §7 e §8 · DECISIONI.md §2.8 · STUDI.md §web §6.1 · "
+    "FASI.md §03-movimento §7 e §8 · DECISIONI.md §2.8 · STUDI.md §web §6.1 · "
     "LEZIONI.md §6.2",
     atteso_sano=1,
     nota="⛔ `atteso_sano = 1`, E NON E' UN ATTESO ALLARGATO: e' MISURATO.  "
@@ -2209,7 +2209,7 @@ guasto(
     #    certificazione, con la BUGIA che solo questo guasto fa dire.
     "(atteso ROSSO) il primo fotogramma (`numero` 1) e' una CHIAVE 0x0301",
     "leggero",
-    "fasi/03-movimento.md step 3 · RCP.md §5.2 e §6.2 · "
+    "FASI.md §03-movimento step 3 · RCP.md §5.2 e §6.2 · "
     "LEZIONI.md §1.1, §1.2",
     nota="⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA, E LA SCENA E' LA PIU' "
          "ECONOMICA DELLA FASE 3**: `python3 03-b15-movimento.py --certifica` "
@@ -2284,7 +2284,7 @@ guasto(
     "(atteso ROSSO) 2 delta saltati per mancanza di posto, e il server ha "
     "preparato la CHIAVE",
     "leggero",
-    "fasi/03-movimento.md step 6 · RCP.md §2.3 e §5.2 · "
+    "FASI.md §03-movimento step 6 · RCP.md §2.3 e §5.2 · "
     "LEZIONI.md §1.1, §1.2",
     nota="⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA**, stessa scena economica "
          "di `03-b15`: `python3 03-b18-credito.py --certifica` gira **su "
@@ -3277,7 +3277,7 @@ def _normalizza(r):
 # dove stanno la sessione grafica e il prodotto.  Nessuna delle due vede il
 # file dell'altra.  ⇒ Il conto vero e' l'UNIONE delle due, e fino a oggi
 # l'unione la faceva **una persona, a mano**, copiando le righe da una parte
-# all'altra (`fasi/01-filo-nudo.md`, R12-A.36, 11 agosto 2026).
+# all'altra (`FASI.md` §01-filo-nudo, R12-A.36, 11 agosto 2026).
 #
 # ⛔ **Un passo a mano in mezzo a una catena automatica e' un passo che prima o
 #    poi qualcuno salta**, e quando lo salta il conto delle certificazioni cala
@@ -3357,7 +3357,7 @@ def _normalizza(r):
 # ===========================================================================
 
 # La copia del server, e l'attrezzo che ci arriva.  ⛔ `sshpw.py --get`/`--put`
-# usano `scp`: ⚠ **mai una redirezione ATTORNO a `ssh`** (`fasi/00-ambiente.md`
+# usano `scp`: ⚠ **mai una redirezione ATTORNO a `ssh`** (`FASI.md` §00-ambiente
 # B3.3), e infatti qui non ce n'e' nessuna — i byte passano da `scp`, non da un
 # `cat` remoto catturato.
 SERVER_REGISTRO = "/media/REMOTIX/src/01-b12-registro.jsonl"

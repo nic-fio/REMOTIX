@@ -266,7 +266,7 @@ il suo denominatore è quel che `LEZIONI.md` §1.9 punto 4 vieta.
 > da §7.5 stessa è il **rilievo R3.4 della revisione del banco della fase 1**, e la motivazione
 > viene da `web/rapporti/S4-ritardo-disegno.md` §5.3 — **non da una frase dell'utente**. Le
 > decisioni che l'utente ha davvero pronunciato (§1.6, §1.8) portano qui la **frase virgolettata
-> con la data**; questa non ha né frase né voce, e `fasi/01-filo-nudo.md` la marcava ✅.
+> con la data**; questa non ha né frase né voce, e `FASI.md` §01-filo-nudo la marcava ✅.
 >
 > ⚠ **Perché la marca conta proprio su questa**: §7.5 aggiunge **due tipi di messaggio** e con essi
 > consuma la clausola di §9 che `RCP.md` §12 dichiara essere stata *«l'ultima occasione»*.
@@ -471,7 +471,7 @@ l'impronta: l'impronta si usa comunque (`RCP.md` §4.1-bis).
 > `serverCertificateHashes` `[S]`»*. `STUDI.md` §web §3.1 dichiarava di aver corretto **questo paragrafo**
 > lo stesso 9 agosto — ⛔ **e la correzione non era mai arrivata qui**, né in `RCP.md` §4.1-bis.
 > Tre documenti con la stessa frase falsa, uno dei quali è l'arbitro, e un rapporto che li dava per
-> curati. È la forma della voce 6 di `fasi/00-ambiente.md`: *la lezione era già scritta, la cura è
+> curati. È la forma della voce 6 di `FASI.md` §00-ambiente: *la lezione era già scritta, la cura è
 > rimasta una nota in un documento.*
 
 > ### ⛔ La proposta di far installare un'autorità nostra, e perché è stata scartata
@@ -578,7 +578,7 @@ comunque, perché una decisione presa citando un numero non misurato va sapendo 
 (`LEZIONI.md` §2.3-quater).
 
 ⭐ **La porta resta aperta a costo zero**: i tre controlli di S1a sono già scritti in
-`fasi/01-filo-nudo.md` e la pagina sonda è la stessa. Il giorno in cui passasse di mano un Mac o un
+`FASI.md` §01-filo-nudo e la pagina sonda è la stessa. Il giorno in cui passasse di mano un Mac o un
 iPhone, **la misura è un pomeriggio**.
 
 ### 1.9 ✅ ⭐ Tre tentativi falliti, poi il ban dell'indirizzo per 12 ore
@@ -632,10 +632,10 @@ non si falsifica.
 ⚠ **E una conseguenza sul lavoro, non sul prodotto**: i banchi partono tutti dallo stesso indirizzo e
 quello del limitatore fallisce di proposito. Con dodici ore, «si aspetta la scadenza» non è una cura:
 il banco si serve del comando di sblocco, e quello del limitatore **non lo chiama dentro il proprio
-giro** o non prova più niente (`fasi/01-filo-nudo.md`, regola B0.3).
+giro** o non prova più niente (`FASI.md` §01-filo-nudo, regola B0.3).
 
 *Conseguenze già scritte dove vanno: `RCP.md` §4.4-bis (riscritta per intero, e da 🔸 diventa ✅) e
-§8.2; `SPECIFICHE.md` §4.2; `fasi/01-filo-nudo.md` B0.3 e B8.*
+§8.2; `SPECIFICHE.md` §4.2; `FASI.md` §01-filo-nudo B0.3 e B8.*
 
 ---
 
@@ -696,7 +696,7 @@ un utente dall'altro **per costruzione** invece che per attenzione.
 ⚠ **Il prezzo, dichiarato**: un processo per sessione. Col tetto di §1.11 — 16 — sono sedici
 processi, che è un costo noto e misurabile, non una sorpresa.
 
-*Conseguenze scritte: `fasi/02-primo-fotogramma.md`, e il prodotto delle fasi che toccano la
+*Conseguenze scritte: `FASI.md` §02-primo-fotogramma, e il prodotto delle fasi che toccano la
 sessione.*
 
 ### 1.10-ter 🔸 ⛔⛔ `/run/user/<uid>` dell'utente ce lo dà il **linger**, non noi — ed è un requisito, non una fortuna
@@ -803,7 +803,7 @@ vogliono il codificatore. ⛔ Finché non c'è, è **codice presente che nessuno
 la stessa forma del contatore per indirizzo che **B5** ha trovato: si leggeva bene, e non faceva
 niente.
 
-*Conseguenze da scrivere: `SPECIFICHE.md` §5.5 e `fasi/01-filo-nudo.md`, «I ripieghi di fase».*
+*Conseguenze da scrivere: `SPECIFICHE.md` §5.5 e `FASI.md` §01-filo-nudo, «I ripieghi di fase».*
 
 ### 1.12 ✅ ⭐ La cura del congedo è **fuori fase, e dichiarata** — la fase 1 resta chiusa a 12 su 14
 
@@ -821,7 +821,7 @@ infilata dopo la chiusura non è una cura, è un cambiamento non dichiarato»*.
 |---|---|
 | ⛔ **la fase 1 non si riapre** | la certificazione resta **12 su 14** com'è stata consegnata. Un verdetto già dato non si tocca per un fatto successivo: si riaprisse per questo, «chiusa» smetterebbe di voler dire qualcosa |
 | ⭐ **e la cura non si arretra** | è **misurata** con lo stesso rigore della fase — l'atteso scritto prima, **due giri per motore**, il registro conservato in `banchi/01-p5-ff-registro-cura.log`. Toglierla dal prodotto per rimetterla fra una settimana significherebbe tenere in casa un difetto **noto e curato** per una ragione di calendario |
-| ⭐ **la cura è un'APPENDICE DATATA** | sta nel riquadro P5 di `fasi/01-filo-nudo.md`, sotto la cura descritta, e dice *«applicata e rimisurata la tarda serata dell'11»*. ⛔ Non entra nel conto della certificazione, e **non cambia un numero** di quel documento |
+| ⭐ **la cura è un'APPENDICE DATATA** | sta nel riquadro P5 di `FASI.md` §01-filo-nudo, sotto la cura descritta, e dice *«applicata e rimisurata la tarda serata dell'11»*. ⛔ Non entra nel conto della certificazione, e **non cambia un numero** di quel documento |
 
 ⛔ **Che cosa passa alla fase 2, e non si perde qui**: la **ricertificazione di P5**, che non passava
 proprio per questo difetto. ⚠ E vuole prima la cura della sua scena — `01-p5-lancia.sh` chiude
@@ -854,7 +854,7 @@ quella cura il giro nuovo sarebbe rosso per la scena, non per il prodotto.
 > casella dichiara che `src/rcp.c` e `banchi/rcp/rcp.c` sono identici byte per byte, e a farlo
 > rispettare è il `Makefile`, che li confronta a ogni costruzione.
 
-*Conseguenze scritte: `fasi/01-filo-nudo.md` (riquadro P5 e la tabella dei difetti), `README.md` e
+*Conseguenze scritte: `FASI.md` §01-filo-nudo (riquadro P5 e la tabella dei difetti), `README.md` e
 `RCP.md` §0-bis.*
 
 ---
@@ -937,7 +937,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > `[M]` — o ha una strada che VA-API non dichiara, o **ripiega in silenzio** (forma **E2**). Non è
 > misurato quale, e non si scrive come se lo fosse.
 
-*Conseguenze scritte: `fasi/02-primo-fotogramma.md`. ⭐ `RCP.md` **non richiede modifiche**.*
+*Conseguenze scritte: `FASI.md` §02-primo-fotogramma. ⭐ `RCP.md` **non richiede modifiche**.*
 
 > ### ⭐⭐⭐ 1.13-bis — **AV1 NON PUÒ ANDARE IN HARDWARE**, e la scala di preferenza ne esce rafforzata
 >
@@ -1803,7 +1803,7 @@ capiterà mai che ci sono 10 utenti contemporaneamente che si collegano con clie
 > filo solo** e la verifica PAM lo **blocca**, quindi dieci utenti che entrano insieme si mettono in
 > fila (con il secondo fisso di `RCP.md` §4.4-bis, l'ultimo aspetta **dieci secondi**); e la tabella
 > delle sessioni attaccate è un `#define` a **16**. ⛔ Non è una decisione che cambia: è una promessa
-> **non ancora dovuta**, e sta scritta in `SPECIFICHE.md` §5.5 e in `fasi/01-filo-nudo.md` perché il
+> **non ancora dovuta**, e sta scritta in `SPECIFICHE.md` §5.5 e in `FASI.md` §01-filo-nudo perché il
 > giorno in cui sarà dovuta si sappia da dove ripartire. *Portata fuori dal commento in `src/main.c`
 > l'11 agosto 2026, rilievo **R12C.17**.*
 
@@ -2024,7 +2024,7 @@ prima della copia zero è un budget da rifare.
 > ### ⚠ E le parole del 15 agosto dicono «fase 12»: restano
 >
 > La citazione di §4.6-quater — *«nella fase 12 il multi-tenant»* — **non è stata riscritta**, né
-> qui né in `fasi/05-la-sessione.md`: era il numero di allora, e correggere una frase fra virgolette
+> qui né in `FASI.md` §05-la-sessione: era il numero di allora, e correggere una frase fra virgolette
 > è il modo più veloce per non sapere più che cosa è stato detto davvero.
 > ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
 
@@ -2292,7 +2292,7 @@ l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.
 > **esattamente il difetto che questa decisione dice di esistere per evitare**.
 >
 > ⛔ **Quindi la ragione scritta accanto a questa decisione era `[?]` e adesso è FALSA su un motore
-> su due.** `fasi/01-filo-nudo.md` la giustificava così: *«`screen.width` cala di un terzo,
+> su due.** `FASI.md` §01-filo-nudo la giustificava così: *«`screen.width` cala di un terzo,
 > `devicePixelRatio` sale di un mezzo, **il prodotto resta**»*. Resta su Firefox. Su Chrome no.
 > È il caso di `LEZIONI.md` §2.3-quater preso in flagrante: *una decisione presa citando un
 > comportamento non misurato è presa a metà* — e stavolta il comportamento, misurato, va nell'altro
@@ -3227,7 +3227,7 @@ fa con un banco davanti, non su carta.
 > ogni candidata — costa una connessione, e qui ha eliminato una candidata dopo 333 righe.
 >
 > ⚠ *E il banco che ha prodotto questo `4 su 4` **aveva prima detto `0 su 4`**, per un difetto suo —
-> `set -o pipefail` più `grep -q`. La cronaca sta in `fasi/01-filo-nudo.md`, «che cosa NON ha
+> `set -o pipefail` più `grep -q`. La cronaca sta in `FASI.md` §01-filo-nudo, «che cosa NON ha
 > funzionato», ed è il motivo per cui questa riga porta la data e il nome dello script.*
 >
 > ⚠ **E un dettaglio che vale come odore**: il commento di `es_webtransport_server` dice *«Enable
@@ -3352,7 +3352,7 @@ fa con un banco davanti, non su carta.
 > > server all'avvio»**, cioè portava la provenienza sbagliata scritta accanto al numero giusto: è
 > > la **configurazione** del server — che cosa ha *chiesto* a ngtcp2 — non che cosa è *arrivato* al
 > > pari. ⛔ **È il corollario di `LEZIONI.md` §1.9 punto 5** — *un denominatore si legge dove la
-> > cosa succede* — contraddetto nel documento che lo cita, e `fasi/01-filo-nudo.md` la dichiara
+> > cosa succede* — contraddetto nel documento che lo cita, e `FASI.md` §01-filo-nudo la dichiara
 > > **il difetto peggiore della giornata** (*«l'ho violato io, quel pomeriggio, su una misura
 > > mia»*). ⭐ La cura non è togliere il numero: è **prenderlo dalla fonte giusta**, e la fonte
 > > giusta esisteva già — la sonda del trasporto ha letto gli stessi due valori dal pari.
@@ -3403,11 +3403,11 @@ fa con un banco davanti, non su carta.
 > **offriva 0-RTT** (due biglietti, `max_early_data_size` `0xffffffff`), che §2.3 vieta perché i
 > dati 0-RTT si possono ripetere e il secondo messaggio di RCP è `CREDENZIALI`; e concedeva **3**
 > stream unidirezionali invece dei 16 che §2.3 impone. ⚠ *Nessuno dei due ha un sintomo: la
-> sessione si apriva uguale. `fasi/01-filo-nudo.md` l'aveva previsto per il primo — «il sintomo di
+> sessione si apriva uguale. `FASI.md` §01-filo-nudo l'aveva previsto per il primo — «il sintomo di
 > 0-RTT acceso non esiste».*
 >
 > ⚠ *Questo riquadro è stato aggiunto il 10 agosto 2026, rilievo **R11.5**: la misura c'era e stava
-> in `README.md` e in `fasi/01-filo-nudo.md`, ma **non qui** — e §6.4 continuava a dichiararne
+> in `README.md` e in `FASI.md` §01-filo-nudo, ma **non qui** — e §6.4 continuava a dichiararne
 > quattro su sei ancora `[?]`. Tre righe dello stesso giorno e dello stesso banco che dicevano cose
 > diverse, e quella che un lettore ha diritto di prendere per buona è questa (`README.md`: «le
 > decisioni stanno in `DECISIONI.md`, una sola volta»). ⛔ **E non era simmetrica**: con la riga
@@ -3438,7 +3438,7 @@ fa con un banco davanti, non su carta.
 >
 > ⚠ *Il riquadro è del 10 agosto 2026, rilievo **R11.1**. `README.md` portava 482/333 sotto il
 > titolo «Che cosa è misurato `[M]`» — il posto in cui un numero senza provenienza pesa di più —
-> mentre questo documento e `fasi/01-filo-nudo.md` portavano 456/329 dello stesso giorno. ⛔ E la
+> mentre questo documento e `FASI.md` §01-filo-nudo portavano 456/329 dello stesso giorno. ⛔ E la
 > giustificazione che il README dava per non rimisurare era falsa: la misura si sa prendere, e
 > adesso è presa.*
 
@@ -3668,7 +3668,7 @@ lo aveva dato per inesistente.
 >
 > Le tre che seguono (§7.14, §7.15, §7.16) sono nate dalla revisione `fasi/rapporti/R11-documenti.md`
 > e stanno **qui** perché è qui che stanno le decisioni, una sola volta: `RCP.md`,
-> `fasi/01-filo-nudo.md` e `README.md` **rimandano**, non copiano.
+> `FASI.md` §01-filo-nudo e `README.md` **rimandano**, non copiano.
 >
 > ⛔ **Nessuna delle tre è decisa**, e la marca resta ❓ finché l'utente non parla — anche dove
 > scrivo quale mi sembra più difendibile. Due di esse (§7.14, §7.15) **cambiano i byte sul filo**,
@@ -3834,7 +3834,7 @@ canale è rotto è **conforme a §3.1 e in violazione di §8.1**, nello stesso d
 |---|---|---|
 | **la regola** | chi chiude manda `CONGEDO` **sempre**, tranne dopo `RESPINTO` | l'obbligo cade quando il canale di controllo non è utilizzabile; il motivo passa comunque dal punto 3 |
 | ⛔ **il byte sul filo** | i nove byte del `CONGEDO` **anche** quando il controllo è già chiuso o rotto — cioè un byte che spesso non può partire | **nessun byte** in quel caso: resta il solo codice d'errore applicativo della chiusura (§3.1 punto 3) |
-| **chi la applica oggi** | nessuno | ⛔ **il banco**: B5 e B11 verificano le chiusure *«nei tre punti di §3.1 col secondo condizionale»* (`fasi/01-filo-nudo.md`, rilievo R3.3) |
+| **chi la applica oggi** | nessuno | ⛔ **il banco**: B5 e B11 verificano le chiusure *«nei tre punti di §3.1 col secondo condizionale»* (`FASI.md` §01-filo-nudo, rilievo R3.3) |
 | **il prezzo** | un banco scritto su §8.1 **boccia un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale | §8.1 perde la forma assoluta, e va riscritta con la condizione dentro — una frase |
 
 **Il caso concreto.** Una violazione arriva su uno **stream unidirezionale** dopo che il canale di
@@ -3899,7 +3899,7 @@ ricevuto**, è ancora utilizzabile — ed è esattamente il punto che §7.14 chi
 (`0x000F`) e `BANCO_ESITO` (`0x0010`) — e §7.5 dichiara di venire dal **rilievo R3.4** della
 revisione del banco, con la motivazione da `web/rapporti/S4-ritardo-disegno.md` §5.3. ⛔ **Non c'è
 né una frase né una voce**, mentre le decisioni che l'utente ha pronunciato davvero (§1.6, §1.8,
-§1.9) portano qui la frase virgolettata con la data. `fasi/01-filo-nudo.md` la marcava ✅, cioè
+§1.9) portano qui la frase virgolettata con la data. `FASI.md` §01-filo-nudo la marcava ✅, cioè
 *«deciso dall'utente»*: corretta a 🔸 il 10 agosto.
 
 | | **A — era tua (✅)** | **B — è derivata (🔸)** |
@@ -3955,7 +3955,7 @@ la domanda è *se l'hai detta*.
 > ce l'ha: fino ad allora questa riga è **scritta e non provata**.
 
 *Posta l'11 agosto 2026 da una **misura**, non da una lettura: il banco **B6** (rilievo **R12-A.25**,
-e `fasi/01-filo-nudo.md` B6). Riguarda `RCP.md` §4.6. La domanda com'era posta resta qui sotto.*
+e `FASI.md` §01-filo-nudo B6). Riguarda `RCP.md` §4.6. La domanda com'era posta resta qui sotto.*
 
 **Il fatto, e sono due.** B6 ha chiuso la `[?]` **R3.27** — *da quale istante parte il primo tetto* —
 e la risposta è: **dall'apertura del canale di controllo**, non dalla fine del TLS. `RCP.md` §4.6

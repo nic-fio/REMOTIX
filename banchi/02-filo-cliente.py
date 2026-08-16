@@ -30,7 +30,7 @@ Questo programma e' il **terzo lettore**, in un terzo linguaggio, e ⛔ chi lo
 fa crescere **non guarda `src/`**.  Il suo valore non e' il verde: e' che chi
 lo scrive **deve scegliere** dove `RCP.md` ammette due letture — e quelle
 scelte sono l'esito piu' prezioso della fase, non un effetto collaterale.
-`fasi/01-filo-nudo.md` ne ha raccolte **dodici** per la stretta di mano; il
+`FASI.md` §01-filo-nudo ne ha raccolte **dodici** per la stretta di mano; il
 capitolo del video ne aggiunge **sette**, ed e' onesto separarle: ⛔ **quattro
 sono letture doppie vere** — due implementazioni conformi producono byte
 diversi per lo stesso ingresso — e ⚠ **tre sono regole DERIVATE**, cioe' che si

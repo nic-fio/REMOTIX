@@ -48,7 +48,7 @@ file**.
     per ogni caso, il motivo giusto per TUTT'E DUE le strade dichiarate —
     una `&&`, mai una `||`
 
-`fasi/01-filo-nudo.md` §C1 costruisce il guasto apposta: *«si toglie la
+`FASI.md` §01-filo-nudo §C1 costruisce il guasto apposta: *«si toglie la
 spedizione del `CONGEDO` e si lascia il codice nella chiusura: se B7 resta verde
 sta facendo una `||` dove serve una `&&`»*.  Con una `||` il punto 2 sparirebbe
 e il banco resterebbe verde.  Qui il punto 2 e il punto 3 hanno **due
@@ -246,7 +246,7 @@ ESCLUSI = [
 #       prodotto   OTTO  provocabili + sette esclusi = 15
 #
 # ⛔ *«Il numero da scrivere accanto a un esito e' quello del bersaglio che si e'
-#    acceso»* (`fasi/01-filo-nudo.md` B7).  ⚠ E se B7 puntato al prodotto
+#    acceso»* (`FASI.md` §01-filo-nudo B7).  ⚠ E se B7 puntato al prodotto
 #    continuasse a dire «sette su sette», il denominatore sarebbe sbagliato e il
 #    banco starebbe guardando dall'altra parte: sarebbe un verde per costruzione,
 #    la forma piu' vuota che ci sia.
@@ -1040,7 +1040,7 @@ async def _(campo, es):
 # posto in cui i due server divergono in modo visibile: il prodotto un percorso
 # di spegnimento adesso ce l'ha — `src/main.c` congeda tutti con
 # `SERVER_IN_CHIUSURA` prima di uscire — mentre l'innesto no.»*
-# (`fasi/01-filo-nudo.md` B7.)
+# (`FASI.md` §01-filo-nudo B7.)
 #
 # ⛔ E' l'ottavo motivo provocabile, e senza di lui B7 puntato al prodotto
 #    direbbe «sette su sette» **guardando dall'altra parte**.
@@ -1612,7 +1612,7 @@ async def principale(a):
         else:
             riga(quanti == 0, "SERVER_IN_CHIUSURA non e' producibile", testo)
             if quanti == 0:
-                inf("⚠ e `fasi/01-filo-nudo.md` B7 lo elencava fra «gli otto")
+                inf("⚠ e `FASI.md` §01-filo-nudo B7 lo elencava fra «gli otto")
                 inf("  motivi che questa fase sa produrre»: contro l'innesto")
                 inf("  sono sette")
             else:

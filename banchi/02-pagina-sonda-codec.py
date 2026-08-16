@@ -93,7 +93,7 @@ def grezzo(guasto=""):
 
 
 def costruisci_hevc(profondita, guasto=""):
-    """⛔ Annex-B puro, NESSUNA `description` — `fasi/02-primo-fotogramma.md` D1,
+    """⛔ Annex-B puro, NESSUNA `description` — `FASI.md` §02-primo-fotogramma D1,
     confermato dal pixel in F2-5 §3: `hev1.` e `hvc1.` vanno tutti e due, e
     Chromium decide la forma del flusso dalla PRESENZA della `description`, non
     dal prefisso."""

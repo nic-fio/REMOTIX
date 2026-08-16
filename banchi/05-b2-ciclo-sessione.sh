@@ -34,7 +34,7 @@
 #
 # ⚠ E fra un giro e l'altro si ESCE davvero, con `SessionManager.Logout(1)`:
 #   e' la porta del menu, non `pkill` — che ammazzerebbe anche il figlio e
-#   misurerebbe il proprio attrezzo (`fasi/05-la-sessione.md`).
+#   misurerebbe il proprio attrezzo (`FASI.md` §05-la-sessione).
 set -uo pipefail
 
 GIRI=${1:-3}

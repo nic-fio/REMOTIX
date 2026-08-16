@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # ⛔ PERCHE'
 #
-# `fasi/README.md` regola 4: *«il banco si certifica prima di essere creduto»*.
+# `FASI.md` regola 4: *«il banco si certifica prima di essere creduto»*.
 # Un banco verde puo' esserlo per due ragioni opposte — perche' il codice e'
 # giusto, o perche' il banco non guarda.  ⇒ Si rompe il codice **di proposito**,
 # in un punto noto, e si pretende che il banco diventi rosso **in quel caso li'**

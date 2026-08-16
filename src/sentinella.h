@@ -39,7 +39,7 @@
  *    rifiuteremmo da soli, e il registro direbbe tutt'e due le cose.
  *
  * ⚠ `Remote` si guarda lo stesso, come seconda cintura: quando `PAM_RHOST`
- *   sara' impostato (fase 5, `fasi/05-la-sessione.md` §1.4) diventera' vero per
+ *   sara' impostato (fase 5, `FASI.md` §05-la-sessione §1.4) diventera' vero per
  *   le nostre, e allora due criteri indipendenti diranno la stessa cosa.
  *
  * ---------------------------------------------------------------------------

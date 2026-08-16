@@ -20,7 +20,7 @@ tre e' un gusto:
     `navigator.sendBeacon`, che e' senza conferma — e la trappola gia' pagata
     di P5 e' esattamente li': *il tracciatore e' cieco su Chrome dentro
     `pagehide`, non esce ne' `sendBeacon` ne' la XHR sincrona, sei giri e zero
-    tracce* (`fasi/01-filo-nudo.md`).  Sei colonne a zero che sembravano un
+    tracce* (`FASI.md` §01-filo-nudo).  Sei colonne a zero che sembravano un
     silenzio del prodotto ed erano il silenzio del **portatore**.  Qui gli
     esiti partono con un `fetch` atteso mentre la scheda e' viva, e il banco
     chiude il browser solo dopo aver letto la riga `FINITO`.

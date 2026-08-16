@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ CHE COS'E', E CHE COSA NON E'
  *
- * E' il terzo anello della fase 2 (`fasi/02-primo-fotogramma.md`): prende i
+ * E' il terzo anello della fase 2 (`FASI.md` §02-primo-fotogramma): prende i
  * pixel che la cattura consegna e produce **un flusso che F2.4 mette sul filo e
  * F2.5 da' a `VideoDecoder`**.
  *
@@ -42,7 +42,7 @@
  *    volte (`[M]`, `fasi/rapporti/F2-3-codifica.md` §4.1).  Di quel file
  *    sopravvive **la forma** — il componente chiesto per nome, il divieto di
  *    ripiego silenzioso, il conto dei tempi, il divieto di `GLOBAL_HEADER` — e
- *    quasi nessuna riga.  E' la decisione **D5** di `fasi/02-primo-fotogramma.md`.
+ *    quasi nessuna riga.  E' la decisione **D5** di `FASI.md` §02-primo-fotogramma.
  *
  * ---------------------------------------------------------------------------
  * ⛔⭐ I CODEC SONO DUE, E LO SONO PER DECISIONE DELL'UTENTE
@@ -73,7 +73,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ LA FORMA DEI BYTE, CHE E' UNA DECISIONE E NON UN DETTAGLIO
  *
- * Decisione **D1** (`fasi/02-primo-fotogramma.md`, quattro ragioni lette in
+ * Decisione **D1** (`FASI.md` §02-primo-fotogramma, quattro ragioni lette in
  * `F2-3-codifica.md` §3.2): **Annex-B puro, e NESSUNA `description`**.
  *
  *     [00 00 00 01] VPS (32)

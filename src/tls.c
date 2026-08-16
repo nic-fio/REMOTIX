@@ -91,7 +91,7 @@ SSL_CTX *tls_contesto_quic(const char *pem, const char *key)
 	 *    possono RIPETERE, e il secondo messaggio di RCP e' `CREDENZIALI`;
 	 *    il guadagno sarebbe un giro di rete su una sessione che dura ore.
 	 *
-	 * ⚠ E il sintomo di 0-RTT acceso NON ESISTE (`fasi/01-filo-nudo.md`, B2):
+	 * ⚠ E il sintomo di 0-RTT acceso NON ESISTE (`FASI.md` §01-filo-nudo, B2):
 	 *   la sessione si apre uguale e i byte tornano uguali.  Le librerie lo
 	 *   offrono di serie, quindi lasciarlo com'e' non e' una scelta: e' una
 	 *   distrazione che nessun banco funzionale vede.  Qui si spegne

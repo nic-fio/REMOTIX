@@ -16,7 +16,7 @@ Ogni fase ha quattro cose, e la terza è quella che di solito si dimentica:
 | **che cosa produce** | in una riga |
 | **che cosa vede l'utente** | e giudica — è il criterio di chiusura, non il documento |
 | **il banco** | ⛔ **scritto prima di sviluppare**, non dopo |
-| **il documento** | `fasi/NN-nome.md`, **aperto quando si apre la fase** |
+| **il documento** | `fasi/NN-nome.md`, **aperto quando si apre la fase** — e alla chiusura diventa un capitolo di [`FASI.md`](FASI.md) |
 
 ### 0.1 La regola che tiene in piedi il resto
 
@@ -26,6 +26,23 @@ Ogni fase ha quattro cose, e la terza è quella che di solito si dimentica:
 Un documento scritto dopo è un **resoconto**, e in un resoconto le misure si *ricordano* invece di
 essere *registrate*. È `LEZIONI.md` §9.8: si aggiorna nello stesso momento, con la data e la
 fonte.
+
+> #### ⭐ E dove vive quel documento — *cambiato il 16 agosto 2026, per decisione dell'utente*
+>
+> ⚠ *La regola qui sopra **non è toccata**. Cambia solo il posto in cui il documento sta.*
+>
+> | | |
+> |---|---|
+> | **la fase in corso** | ha un file suo, `fasi/NN-nome.md`, aperto il giorno in cui si apre la fase ⇒ si lavora sempre su un file piccolo |
+> | **la fase chiusa** | diventa un **capitolo di `FASI.md`**, ripiegato dentro alla chiusura |
+>
+> ⇒ Il progetto tiene **dieci documenti a fase chiusa e undici mentre si lavora**, e non si edita
+> mai un file da settemila righe nel mezzo di una fase.
+>
+> ⛔ **E quel che questo NON allenta**: il capitolo non si scrive alla chiusura, si **sposta** un
+> documento che esisteva già. Un capitolo che comparisse in `FASI.md` senza essere mai esistito
+> come file avrebbe violato §0.1 — e **si vedrebbe**, perché le sue misure non avrebbero l'ora
+> accanto.
 
 ⭐ E ha un effetto collaterale che vale da solo: **se non sai scrivere il banco all'inizio, non hai
 ancora capito la fase.** Una fase che non sa dire come si misurerà non è pronta ad aprirsi.
@@ -193,7 +210,7 @@ quattro, e tre di esse cambiano quel che si scrive.*
 > il datagram. ⚠ E se la candidata cambia, **quelle due si rifanno**: un controllo positivo preso su
 > un motore diverso da quello del prodotto è la forma **E10**.
 >
-> Il conto completo, con i dispositivi che ciascuna pretende, sta in `fasi/01-filo-nudo.md`.
+> Il conto completo, con i dispositivi che ciascuna pretende, sta in `FASI.md` §01-filo-nudo.
 
 ⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero.** Nel browser **il nome del
 decodificatore non c'è**: la prova indiretta va costruita con cura — ritmo sostenuto, occupazione
@@ -451,7 +468,7 @@ qualcun altro.
 > | ⛔ **il tetto** | **SFORA** — 78,1 contro 50, e **sforerebbe anche a codifica gratis** |
 > | ⛔⛔ **il collo di bottiglia nuovo** | ⚠ ~~**il DISEGNO: 28,0 ms su 78,1, il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026** (deciso dall'utente, su due misure indipendenti della fase 4): **il disegno costa 2,25 ms `[M]`**; i 28,0 erano **l'ATTESA del fotogramma dalla GPU** più il disegno — un fotogramma HEVC in hardware esce opaco e la rilettura della marca del banco ne provoca il trasferimento. ⭐ Il totale 78,1 resta vero. `fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md` |
 >
-> ⛔ **E i tre limiti del giudizio sono scritti in `fasi/03-movimento.md`, non taciuti**: è su AV1
+> ⛔ **E i tre limiti del giudizio sono scritti in `FASI.md` §03-movimento, non taciuti**: è su AV1
 > in software; HEVC in hardware **non è giudicabile** perché il browser dell'utente non lo dipinge;
 > e l'utente **non ha visto un desktop** ma un monitor aggiunto con dentro la scena dei banchi.
 >
@@ -615,7 +632,7 @@ qualcun altro.
 > ⛔ **E si chiude con cinque cose dichiarate aperte**, messe davanti all'utente **prima** che
 > giudicasse: il ritardo che sfora · la tela che non è la sua (**36 % di banda nera** sul suo 21:9)
 > · il monitor chiesto sempre invece di guardare se c'è · un pezzo cieco dentro il tratto da 26 ms
-> · e **un browser solo**. Stanno in [`fasi/04-si-comanda.md`](fasi/04-si-comanda.md).
+> · e **un browser solo**. Stanno in [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda).
 
 
 > ### ⭐⭐⭐ IL PRIMO LAVORO DELLA FASE 4 È IL **DESKTOP VERO** — deciso dall'utente il 14 agosto 2026
@@ -714,7 +731,7 @@ assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza 
 > ⇒ ⭐ **Restano due cose sole**, e l'elenco è stato **tagliato** col criterio dell'utente — *«se i
 > punti non toccano il prodotto è solo rumore burocratico»*: `0x05` (l'utente con una sessione
 > grafica **locale**, che vuole una persona alla consolle) e il banco del puntatore dopo il ricambio
-> dei dispositivi. Dettagli in `fasi/05-la-sessione.md` §7.
+> dei dispositivi. Dettagli in `FASI.md` §05-la-sessione §7.
 
 **Produce**: PAM per intero, il palco che sopravvive al distacco, i tre orologi, una sola sessione
 grafica per utente.
@@ -731,7 +748,7 @@ grafica per utente.
 > grafica **locale** e `prova` arriva da **remoto**: un guardiano che chieda *«c'è una sessione
 > locale?»* invece di *«di questo utente?»* rifiuta `prova` **il primo giorno**.
 >
-> ⭐ **E le quattro decisioni della sera del 15 agosto stanno tutte in `fasi/05-la-sessione.md`**: le
+> ⭐ **E le quattro decisioni della sera del 15 agosto stanno tutte in `FASI.md` §05-la-sessione**: le
 > due uscite (§4.1-ter), il ritorno al modulo di accesso col motivo nuovo `0x10` (§4.1-quater), la
 > scorciatoia `Ctrl+Alt+Fine`, senza bottone a schermo (§4.1-quinquies), e ⛔ **nessuno spegne il
 > server** (§4.7).
@@ -794,7 +811,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > lavoro, non l'elenco delle cose prodotte. `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura
 > di quattro sintomi del mouse e del video** — bande nere, testo interpolato, ri-attacco, e i 4
 > secondi fra login e desktop — cioè il pezzo che mancava alla **fase 4**. Tutti i rapporti di quella
-> notte si chiamano `F4-IN-*`. ⇒ Il documento sta in `fasi/04-si-comanda.md`, §«la coda della fase
+> notte si chiamano `F4-IN-*`. ⇒ Il documento sta in `FASI.md` §04-si-comanda, §«la coda della fase
 > 4»; il rapporto tecnico è `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
 > | quel che questa fase chiede | stato |
@@ -1028,7 +1045,7 @@ questa fase.
 > copia zero è un budget da rifare. È §4.6-quater alla lettera, e non è cambiato niente.
 >
 > ⚠ **Le parole dell'utente del 15 agosto dicevano «fase 12»** (`DECISIONI.md` §4.6-quater,
-> `fasi/05-la-sessione.md`), e **restano scritte così** dove sono citate: era il numero di allora.
+> `FASI.md` §05-la-sessione), e **restano scritte così** dove sono citate: era il numero di allora.
 > ⭐ **La decisione non è cambiata — è cambiato l'ordine**: il confine fra «un utente per volta» e
 > «la macchina piena» è ancora quello che lui ha tracciato.
 

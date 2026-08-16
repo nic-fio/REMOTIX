@@ -30,7 +30,7 @@
 #
 # ⛔ E la redirezione sta DENTRO le virgolette, mai attorno a `enter.sh`: fuori
 #    si porterebbe via la richiesta di parola d'ordine di `sudo`, e lo script
-#    resterebbe appeso per sempre in silenzio (`fasi/00-ambiente.md` B3.3,
+#    resterebbe appeso per sempre in silenzio (`FASI.md` §00-ambiente B3.3,
 #    pagata quattro volte).
 # ---------------------------------------------------------------------------
 set -uo pipefail

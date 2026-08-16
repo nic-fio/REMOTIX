@@ -13,7 +13,7 @@
 ===========================================================================
 ⛔ CHE COSA E' QUESTO BANCO, E PERCHE' NON HA UN «PASSA»
 
-`fasi/01-filo-nudo.md` B9, ultima riga della tabella:
+`FASI.md` §01-filo-nudo B9, ultima riga della tabella:
 
     ⚠ **l'esito piu' prezioso non e' «passa»**: e' **ogni punto in cui chi lo
       scrive ha dovuto scegliere** perche' `RCP.md` ammetteva due letture.
@@ -73,7 +73,7 @@ descrivendo un documento che non esiste piu'.
 ===========================================================================
 ⛔ IL MECCANISMO DI B9, E QUESTO FILE NON LO PUO' GARANTIRE
 
-`fasi/01-filo-nudo.md` B9: la separazione fra chi scrive il cliente di prova e
+`FASI.md` §01-filo-nudo B9: la separazione fra chi scrive il cliente di prova e
 chi scrive il server **dev'essere un meccanismo, non una regola** — *«chi
 scrive il cliente riceve `RCP.md` e i suoi riferimenti, e non l'albero del
 server e della pagina»*.

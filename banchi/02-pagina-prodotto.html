@@ -100,7 +100,7 @@ const GUASTO = PARAMETRI.get("guasta") || "";
 const SCENA = PARAMETRI.get("scena") || "non dichiarata";
 
 /* Le sequenze che si danno al PRODOTTO.  ⛔ Niente `*-hvcc`: il prodotto manda
-   Annex-B senza `description` per decisione (`fasi/02-primo-fotogramma.md` D1),
+   Annex-B senza `description` per decisione (`FASI.md` §02-primo-fotogramma D1),
    e dargli byte hvcC misurerebbe una forma che sul filo non esiste.  ⛔ Niente
    `*-lossless-*`: quelle sono il caso di banco sui 10 bit veri di F2.5, non la
    catena. */
@@ -129,7 +129,7 @@ function scrivi(testo, classe) {
 }
 
 /* ⛔ Si ASPETTA la conferma del raccoglitore, e niente parte da dentro
-   `pagehide`: li' il tracciatore e' cieco su Chrome (`fasi/01-filo-nudo.md`). */
+   `pagehide`: li' il tracciatore e' cieco su Chrome (`FASI.md` §01-filo-nudo). */
 async function spedisci(dati) {
   dati.n = ++numero_riga;
   dati.giro = GIRO;

@@ -46,7 +46,7 @@
 #   c'e', e' 1920×1080 come chiesto, e contiene la scena «bandiera».
 #   ⚠ Se il giro sano NON uscisse 0, la certificazione **si ferma**: non si
 #     innesta un guasto su un banco gia' rosso, perche' il rosso di dopo non
-#     direbbe niente (`fasi/00-ambiente.md`, e la lezione di B13).
+#     direbbe niente (`FASI.md` §00-ambiente, e la lezione di B13).
 #
 #   | # | il guasto innestato nel .raw   | atteso | marca PRETESA           | marca VIETATA |
 #   |---|-------------------------------|--------|-------------------------|---------------|
@@ -206,7 +206,7 @@ if [ -z "$PREFISSO" ]; then
 	#    piu' recente invece di indovinarlo.  ⚠ E la lista si costruisce con un
 	#    glob, non con `ls` dentro una pipe: «nessun file» e «ls e' fallito»
 	#    hanno lo stesso aspetto in una catena di `|`, ed e' la voce 3 di
-	#    `fasi/00-ambiente.md` — «nessuna riga trovata» era una lettura negata.
+	#    `FASI.md` §00-ambiente — «nessuna riga trovata» era una lettura negata.
 	CANDIDATI=()
 	for m in "$QUI"/giro-*.json; do
 		case "$m" in *-verdetto.json) continue ;; esac

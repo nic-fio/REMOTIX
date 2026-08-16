@@ -53,18 +53,18 @@ zero, e non ha aperto quei file.
      cioe' promuove a caduta della sessione un fotogramma abbandonato dal
      server **di proposito**, che e' il caso normale di §5.1;
 
-  2. ⛔ **quale byte**, non solo che e' rosso.  `fasi/01-filo-nudo.md` B4: un
+  2. ⛔ **quale byte**, non solo che e' rosso.  `FASI.md` §01-filo-nudo B4: un
      arbitro che dice la cosa giusta accusando il byte sbagliato manda la
      diagnosi a leggere il messaggio sbagliato.  Ogni verdetto porta lo
      scostamento dentro l'intestazione e la riga di `RCP.md` che lo regge;
 
   3. ⛔ **la regola citata**, e si confronta.  Un rosso con la sezione
      sbagliata accanto e' verde per chi guarda il colore (rilievo R7.12 di
-     `fasi/01-filo-nudo.md`);
+     `FASI.md` §01-filo-nudo);
 
   4. ⭐⛔ **E IL QUARTO ESITO: `AMBIGUO`.**
 
-     `fasi/01-filo-nudo.md` §«I dodici punti in cui `RCP.md` ammette due
+     `FASI.md` §01-filo-nudo §«I dodici punti in cui `RCP.md` ammette due
      letture» e' l'esito piu' prezioso di B9, e nessun banco lo produceva: li
      ha trovati un programma scritto apposta, **dopo**.  Qui il quarto esito e'
      dentro il banco che gira ogni giorno.
@@ -109,7 +109,7 @@ continuasse a chiamarle ambiguita' starebbe giudicando il documento di ieri.*
    nessun caso» sono due fatti diversi, ed e' la forma **E8** rivolta contro il
    banco stesso.  Resta per due ragioni: `RCP.md` tornera' ad ammettere due
    letture — ne ha ammesse **dodici** nella sola fase 1
-   (`fasi/01-filo-nudo.md` B9) — e il guasto **G5**, *«il giudice della mattina
+   (`FASI.md` §01-filo-nudo B9) — e il guasto **G5**, *«il giudice della mattina
    del 12 agosto»*, fa produrre `AMBIGUO` al giudice a ogni certificazione.
    ⚠ Quel che G5 esercita e' il ramo del **giudice**, non quello che li stampa:
    coi quattro casi che pretendono `ERRORE_PROTOCOLLO`, un `AMBIGUO` e' un

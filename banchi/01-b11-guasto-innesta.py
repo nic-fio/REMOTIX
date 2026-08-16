@@ -10,7 +10,7 @@
 ===========================================================================
 ⛔ PERCHE' UN SERVER GUASTO, E PERCHE' SI BUTTA
 
-`fasi/01-filo-nudo.md`, B11, rilievo **R4.1**: la prima stesura del banco aveva
+`FASI.md` §01-filo-nudo, B11, rilievo **R4.1**: la prima stesura del banco aveva
 dodici violazioni verso il server e **nessuna verso la pagina**.  Ma `RCP.md`
 §3 e' scritta su «un'implementazione RCP», e §9 ha un **DEVE esplicito del
 client**.  ⭐ Per provare che la pagina applica §3 bisogna **mandarle qualcosa

@@ -622,7 +622,7 @@ def innesti():
             "  //    RCP e' `CREDENZIALI`.  Il guadagno sarebbe un giro di rete su\n"
             "  //    una sessione che dura ore.\n"
             "  //\n"
-            "  // ⚠ Il loro esempio lo accende, ed e' la norma: `fasi/01-filo-nudo.md`\n"
+            "  // ⚠ Il loro esempio lo accende, ed e' la norma: `FASI.md` §01-filo-nudo\n"
             "  //   lo aveva PREVISTO — «le librerie QUIC lo offrono per impostazione\n"
             "  //   predefinita» — e aveva anche scritto perche' nessun banco\n"
             "  //   funzionale se ne accorgerebbe: **il sintomo non esiste**.  La\n"

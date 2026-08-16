@@ -915,7 +915,7 @@ static gboolean esci_gnome(guint32 modo)
 
 /*
  * ⛔ «Inattiva» e non «non piu' attiva»: `is-active` passa per `deactivating`, e
- *    ripartire li' dentro e' un'altra prima esecuzione (`fasi/00-ambiente.md`,
+ *    ripartire li' dentro e' un'altra prima esecuzione (`FASI.md` §00-ambiente,
  *    difetto 4 della fase 0).  E si guardano DUE cose — l'unita' e il processo —
  *    perche' `Logout` puo' lasciare il gestore vivo.
  */

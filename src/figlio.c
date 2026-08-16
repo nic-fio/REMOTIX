@@ -2084,7 +2084,7 @@ static int cursore_al_padre(void *chi, const CursoreForma *f)
  *
  * ⚠ E si rimanda **lo stesso fotogramma**, non uno nuovo: la fase 2 e'
  *   un'immagine ferma, quella dell'accensione del palco
- *   (`fasi/02-primo-fotogramma.md`), e ricatturare qui vorrebbe dire consegnare
+ *   (`FASI.md` §02-primo-fotogramma), e ricatturare qui vorrebbe dire consegnare
  *   due immagini diverse sotto la stessa etichetta.  ⛔ Il ciclo dei fotogrammi
  *   e' della fase 3. */
 static uint8_t *tenuto[3];
@@ -4275,7 +4275,7 @@ void figlio_vive(int argc, char **argv)
 					 *
 					 * ⭐ E i giri lenti sono ESATTAMENTE quelli in cui la
 					 *    sessione non e' morta: e' la precedente che sta ancora
-					 *    chiudendo (B7 di `SESSIONE.md`; `[M]` `loginctl` dice
+					 *    chiudendo (B7 di `SPECIFICHE.md` §5.9; `[M]` `loginctl` dice
 					 *    `State=closing`).  Il figlio, giustamente, non la
 					 *    tocca — buttarne giu' una viva toglierebbe il desktop a
 					 *    chi lo guarda (I4) — ⛔ ma poi si metteva ad aspettare

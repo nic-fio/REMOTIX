@@ -538,7 +538,7 @@ Nell'ordine, e ciascuna col suo controllo positivo. **Nessuna richiede una riga 
 | **S3b** | la PWA su Chrome per Android | vale la tastiera intera (§1.2 B) |
 | **S4** | l'anello del ritardo, con il ritardo noto come controllo | dà il numero, e **la misura del pezzo cieco** |
 
-> ⛔ **E tre etichette della sonda NON sono nate qui**, contro quel che `fasi/01-filo-nudo.md`
+> ⛔ **E tre etichette della sonda NON sono nate qui**, contro quel che `FASI.md` §01-filo-nudo
 > dichiarava: **S5** (la tela che il client dichiara), **S6** (il carico utile di un datagram) e
 > **S7** (il segno della rotella) non compaiono in **nessuna riga** di questo documento — `[M]` 11
 > agosto 2026, `grep -cE '\bS5\b|\bS6\b|\bS7\b' web.md` → **0**, con il controllo positivo accanto

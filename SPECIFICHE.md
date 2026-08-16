@@ -430,7 +430,7 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > ⭐ **Non è una promessa rotta: è una promessa non ancora dovuta** — il multi-tenant è delle fasi da
 > 5 in poi. Sta qui perché il giorno in cui lo sarà, **questo è il posto da cui si riparte**: la
 > tabella delle sessioni smette di essere un `#define`.
-> Il confine per intero sta in `fasi/01-filo-nudo.md`, «Che cosa è stato sviluppato».
+> Il confine per intero sta in `FASI.md` §01-filo-nudo, «Che cosa è stato sviluppato».
 >
 > ### ⭐ E i due ripieghi hanno una scadenza, decisa dall'utente l'11 agosto 2026
 >
@@ -440,6 +440,128 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > |---|---|
 > | **il filo** | ✅ **CURATO il 12 agosto 2026** — **`DECISIONI.md` §1.10**, con un **processo aiutante** come deciso. ⭐ Il numero che ha spostato la decisione l'ha misurato **B8**: il blocco era di **1,0-2,2 s** a tentativo, ⛔ e **a metterlo era PAM** (`+1034 ms` oltre il secondo fisso sui respinti contro `+84` sugli ammessi). ⭐ E quel che è crollato è il numero giusto: **2259 → 3 ms** per chi *non* si sta autenticando (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
 > | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: qui sopra è scritto che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto e cambiarlo adesso vuol dire cambiarlo due volte. ⚠ **E il prezzo è questa riga**: per due fasi il codice dice **16** e questa sezione dice **dieci**, ed è la stessa forma che ha prodotto il difetto della finestra di cinque minuti (R12C.5) |
+
+---
+
+### 5.9 ⭐⭐ LA SCALETTA DI UNA SESSIONE, PASSO PER PASSO
+
+> #### ⛔ Perché questa scaletta sta QUI, e da dove viene
+>
+> *Era un documento suo, `SESSIONE.md`, nato il 16 agosto 2026 dal suggerimento dell'utente:
+> «prepara una nota in cui riporti la scaletta punto per punto di cosa deve avvenire per il
+> corretto set-up di una sessione». ⭐ È entrata qui il 16 agosto 2026, in §5, perché **descrive
+> il prodotto**, non una fase: dice che cosa deve essere vero perché una sessione esista.*
+>
+> ⚠ **E il resto di quel documento non è venuto qui**: erano le misure del 16 agosto, e stanno
+> in `FASI.md` §05-la-sessione, dove vivono le misure di quella fase.
+
+
+> ⛔ **Perché questo documento esiste, e perché non esisteva prima.**
+>
+> La mattina del **16 agosto 2026** l'utente ha provato cinque volte la stessa scena — collegati,
+> esci, ricollegati — e ogni volta ha trovato un difetto diverso: bande nere, desktop «rotto»,
+> nessun input, il desktop che compare dopo molti secondi. ⛔ Ogni volta si curava **il sintomo che
+> il registro mostrava**, e si tornava a provare.
+>
+> ⭐ Erano **quasi tutti lo stesso difetto**, visto da facce diverse: un passo di questa scaletta
+> che non era mai stato scritto, e quindi nemmeno verificato.
+>
+> ⇒ *«Prepara una nota in cui riporti la scaletta punto per punto di cosa deve avvenire per il
+> corretto set-up di una sessione»* — **suggerimento dell'utente**, ed è il documento che avrebbe
+> risparmiato quella mattina.
+
+⚠ **Come si legge**: la colonna «se manca» è quella che serve quando qualcosa non va. Si parte dal
+sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte mai dal codice.
+
+---
+
+### Parte A — quel che dev'essere vero PRIMA, e non lo fa il prodotto
+
+*Sta in `src/provisiona.sh`, e si verifica con `sudo bash src/provisiona.sh verifica`.*
+
+| # | che cosa | chi | se manca |
+|---|---|---|---|
+| A1 | l'**utente esiste** e ha una parola d'ordine | provisioning | PAM rifiuta: «utente o parola d'ordine non corretti» — e la diagnosi punta sulla parola |
+| A2 | ⛔ l'utente è nei gruppi **`video`** e **`render`** | provisioning | ⚠ **il sintomo è «lento», non «rotto»**: senza seat non arrivano le ACL di `uaccess`, Mesa ripiega su **llvmpipe** e il compositore disegna in software. `[M]` un comando nel terminale risponde dopo un secondo |
+| A3 | `/etc/pam.d/remotix` esiste **e chiama `pam_systemd`** | provisioning | nessuna sessione logind ⇒ il compositore **non parte affatto** (vedi B3) |
+| A4 | la regola **polkit** (12 azioni) e `logind.conf` | provisioning | un utente remoto può spegnere la macchina e portarla via a tutti (`DECISIONI.md` §4.7) |
+| A5 | la regola **udev** della scheda | provisioning | il compositore sceglie la GPU **a caso**; le misure valgono per quel ferro e non per il prodotto (§4.6-quinquies) |
+| A6 | ⛔ **il server NON gira dentro una sessione utente** | chi avvia il servizio | `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**: i figli restano senza runtime, senza bus e senza desktop. ⚠ In produzione non capita (unità di sistema); **capita solo in prova**, cioè dove si studia |
+
+> ### ⛔⛔ A6, la trappola dentro la trappola: `setsid` **non basta**
+>
+> `[M]` **16 agosto 2026.** Il server era stato riavviato via `ssh`, e
+> `riavvia-7700.sh` lo lanciava con `setsid` — messo lì per un'altra ragione giusta (`sudo` con
+> `use_pty` stronca quel che resta nel suo pseudo-terminale).
+>
+> ⇒ ⚠ **`setsid` stacca dal terminale, non dalla sessione di logind.** Il processo resta nel cgroup
+> della sessione `ssh` di chi ha dato il comando, e da lì A6 scatta in pieno: `[M]` `loginctl` non
+> mostrava **nessuna** sessione per `prova`, `/run/user/1001` non esisteva, e il registro ripeteva
+> *«NON ho il bus di sessione: Could not connect: No such file or directory»*. **Otto giri di banco
+> falliti su otto**, e la faccia del difetto era la solita: «il desktop non parte».
+>
+> ⭐ **La cura è farlo partire dove starebbe in produzione**: `systemd-run --unit=…`, cioè un'unità
+> di sistema transitoria in `system.slice`. ⛔ E **si verifica**, perché A6 è silenzioso per
+> costruzione: `riavvia-7700.sh` legge `/proc/PID/cgroup` del processo vivo e **rifiuta di dare
+> l'OK** se ci trova `user@` o `session-`.
+>
+> ⚠ E c'era un secondo insegnamento nello stesso file: ⛔ **lo script che avvia il prodotto non era
+> nel deposito** — viveva solo sulla macchina di prova. Le sue trappole erano scritte solo dentro se
+> stesso, nessuna revisione le ha mai lette, e quella nuova è costata un'ora di diagnosi su un
+> difetto che *questa tabella aveva già scritto*. ⇒ Adesso sta in `src/riavvia-7700.sh`.
+
+---
+
+### Parte B — quel che fa il prodotto, in quest'ordine
+
+| # | che cosa | dove | se manca / se va storto |
+|---|---|---|---|
+| B1 | **PAM autentica** (asincrono, l'aiutante) | `aiutante.c` | il filo si ferma per secondi (§1.10) |
+| B2 | nasce il **figlio**: gruppi → gid → uid, e si verifica col nucleo | `figlio.c` | un processo che gira come chi non deve |
+| B3 | ⛔⭐ il figlio **apre la sessione PAM**: `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`, `PAM_RHOST`, **nessun `XDG_SEAT`** | `figlio.c`, passo 2-bis | ⛔ Mutter chiede `sd_pid_get_session()`, riceve **ENXIO** e muore con *«Failed to find any matching session»*. ⚠ Il **linger** non basta: dà runtime e bus, ma mette i processi in uno scope di classe `manager` |
+| B4 | le variabili **`XDG_*`** si **leggono** da `pam_getenvlist`, non si inventano | `figlio.c` | un valore *dichiarato* al posto di uno *avuto*: regge finché regge |
+| B5 | il client **ATTACCA dichiarando la tela = la finestra** | `pagina.html` | ⛔ la sessione nasce con la tela sbagliata e va **ridimensionata**, e il ridimensionamento è una gara: bande nere, desktop «rotto», input nel posto sbagliato |
+| B6 | ⛔ il server **dice al palco la tela** nell'istante in cui la concede | `rcp.c`, dopo `SESSIONE` | il palco nasce a una misura che nessuno ha chiesto, e ogni fotogramma si butta |
+| B7 | ⛔ **la sessione precedente dev'essere FINITA** — il gestore d'utente **e** `gnome-session-restart-dbus.service` | `sessione.c` | ⛔ la sessione nuova nasce dentro quella che muore e **muore con lei senza scrivere una riga**: `[M]` il suo registro resta a **zero byte** |
+| B8 | si scrivono le **impostazioni**: `Ctrl+Alt+F*` svuotate, «Esci…» acceso, sospensione automatica spenta, blocca-schermo spento | `sessione.c` | il logout non ha una voce; la macchina si addormenta sotto una sessione viva |
+| B9 | si scrive il **drop-in** della Shell (`--headless --no-x11`, ⛔ **senza `--virtual-monitor`**) | `sessione.c` | con un monitor suo la sessione è «sana» per v1 e **nera** per noi |
+| B10 | si **avvia** `gnome-session`, e ⛔ **non si aspetta**: la risposta è il fotogramma | `sessione.c` + il ciclo di ri-tentativi | un figlio che aspetta 40 s è un figlio che non risponde al padre |
+| B11 | il figlio **dice «ATTENDI»** finché il palco non c'è, e riprova subito | `figlio.c` | il padre **deduce** un fallimento dal silenzio e risponde `NON_ORA`: da lì i due lati non si rimettono più d'accordo |
+| B12 | monta il **palco**: `RecordVirtual` → PipeWire → il monitor | `mutter.c`, `cattura.c` | nessun pixel |
+| B13 | apre il **canale di input** (`libei`) sulla tela | `input.c` | il desktop si vede e non si comanda |
+| B14 | **inibisce** sospensione e inattività (`SUSPEND\|IDLE`, ⛔ mai `LOGOUT`) | `sessione.c` | la notifica «Automatic Suspend», e la macchina che si addormenta |
+| B15 | ⭐ **verifica**: la sessione non ha seat, e da qui non si spegne | `figlio.c` + `sentinella.c` | «scritto non è in vigore» (E1). ⛔ E la fa **il figlio**: root si sente rispondere «yes» perché logind guarda `CAP_SYS_BOOT` prima di polkit |
+
+---
+
+### Parte C — l'uscita, che è l'altra metà
+
+| # | che cosa | se va storto |
+|---|---|---|
+| C1 | il **filo che cade** (scheda chiusa, PC spento, campo perso) ⇒ il posto si libera, **la sessione resta viva** (I4) | si perde il lavoro di chi voleva solo cambiare stanza |
+| C2 | **«Esci»** — dal menu o con `Ctrl+Alt+Fine` ⇒ la sessione finisce e i programmi si chiudono | — |
+| C3 | ⛔ il congedo **`0x10`** parte **PRIMA** che la sessione muoia, e va a **tutti** i client di quell'utente | chi guarda resta su uno schermo fermo per trenta secondi e legge «errore di rete» (rilievo B-7) |
+| C4 | ⛔ il figlio **non** rifà la sessione dopo un'uscita: aspetta un attacco nuovo | il desktop che l'utente ha appena chiuso **ricompare da solo** |
+| C5 | la pagina torna al **modulo di accesso**, e si rispoglia: via `data-schermo`, via la Pointer Lock, via lo schermo intero | un modulo di accesso dentro il vestito del desktop, col mouse ancora catturato |
+
+---
+
+### Parte D — dal sintomo al passo
+
+⭐ **È la tabella da leggere per prima quando qualcosa non va.**
+
+| il sintomo | il passo |
+|---|---|
+| «il desktop non compare» | B3 · B7 · A6 |
+| «compare dopo molti secondi» | B7 (l'avvio fallito si recupera in ~13 s) · B10 |
+| «bande nere ai lati» | B5 · B6 |
+| «il desktop è rotto» | B5 · B6 (la tela e il palco non combaciano) |
+| «nessun input» | B13 · **B6** (la regione del puntatore segue la tela: se la tela balla, i clic finiscono altrove) |
+| «va lento» | **A2** (llvmpipe) · A5 (scheda sbagliata) |
+| «il terminale resta congelato finché non muovo il mouse» | la coda della raffica in `cattura.c` (`LEZIONI.md` §6.5) |
+| «si può spegnere la macchina» | A4 · B15 |
+| «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | ✅ **l'orologio del silenzio**, `FASI.md` §05-la-sessione §6-bis — riparato il 16 agosto. ⚠ Se ricompare, cerca nel registro *«il margine si sta assottigliando»* |
+| «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: §7.3 rilascia entro **28 ms**, misurato — `FASI.md` §05-la-sessione §6 |
 
 ---
 

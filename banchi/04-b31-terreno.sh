@@ -30,7 +30,7 @@
 #    passa da 4,8 ms a 100 ms per fotogramma — cioe' il banco misurerebbe il
 #    ripiego invece del prodotto.
 #
-# ⛔ E **senza** `--virtual-monitor`: e' la cura di A1 (`fasi/04-si-comanda.md`
+# ⛔ E **senza** `--virtual-monitor`: e' la cura di A1 (`FASI.md` §04-si-comanda
 #    §A1).  Con quell'opzione la shell resta sul monitor di casa e il nostro
 #    `RecordVirtual` cattura uno schermo in piu', vuoto — cioe' il banco
 #    misurerebbe un difetto gia' curato da un altro anello, e non il proprio.

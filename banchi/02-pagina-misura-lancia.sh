@@ -34,7 +34,7 @@
 #    `nicfio` (`DECISIONI.md` §1.10-bis).
 #
 # ===========================================================================
-# ⛔ MAI UNA REDIREZIONE ATTORNO A `ssh` — `fasi/00-ambiente.md` B3.3, pagata
+# ⛔ MAI UNA REDIREZIONE ATTORNO A `ssh` — `FASI.md` §00-ambiente B3.3, pagata
 #    sei volte.  Qui non serve nessun `sudo` di la': si legge e basta.
 set -uo pipefail
 

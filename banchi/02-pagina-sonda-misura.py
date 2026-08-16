@@ -165,7 +165,7 @@ def grezzo(larghezza, altezza, guasto=""):
 
 def costruisci(codec, larghezza, altezza, guasto=""):
     """⛔ Annex-B puro per HEVC, unita' temporali di OBU per AV1, e NESSUNA
-    `description` per nessuno dei due — `fasi/02-primo-fotogramma.md` D1.  Sono
+    `description` per nessuno dei due — `FASI.md` §02-primo-fotogramma D1.  Sono
     le stesse forme con cui `02-pagina-sonda-codec.py` costruisce le quattro
     sonde del codec: una sonda che arrivasse in una forma diversa da quella
     della sessione misurerebbe un percorso che non e' quello del prodotto."""

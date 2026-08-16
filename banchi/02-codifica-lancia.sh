@@ -742,7 +742,7 @@ if [ "$CODIFICATORE" = prodotto ] && [ "$CODEC" = hevc ]; then
 		#      ⇒ Su questa strada il verdetto del misuratore e' un FALSO VERDE, e
 		#        quel che resta e' il CONTEGGIO DEI LIVELLI: 256 invece di 877.
 		#      ⚠ La stessa cosa era gia' stata scritta per la sonda S2 della fase 1
-		#        (`fasi/02-primo-fotogramma.md`): i bit veri si misurano ALLA
+		#        (`FASI.md` §02-primo-fotogramma): i bit veri si misurano ALLA
 		#        SORGENTE, o non si misurano.
 		python3 "$QUI/02-codifica-immagine.py" --livelli "$LAV/X.yuv" > "$LAV/X-livelli.json"
 		inf "misura dei bit dopo la conversione: $(cat "$LAV/X-livelli.json")"

@@ -280,7 +280,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
  *
  * ⛔ E si aspetta `inactive`, NON «diverso da active»: `is-active` passa per
  *    `deactivating`, e far ripartire una sessione li' dentro e' un'altra prima
- *    esecuzione (`fasi/00-ambiente.md`, difetto 4 della fase 0).
+ *    esecuzione (`FASI.md` §00-ambiente, difetto 4 della fase 0).
  */
 bool sessione_termina(void);
 

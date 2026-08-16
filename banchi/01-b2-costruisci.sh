@@ -31,7 +31,7 @@
 #   documentazione parla di qualcos'altro e' un campo che nessuno ha riletto.
 #
 # ---------------------------------------------------------------------------
-# L'ATTESO, DICHIARATO PRIMA (regola B0.4 di `fasi/01-filo-nudo.md`)
+# L'ATTESO, DICHIARATO PRIMA (regola B0.4 di `FASI.md` §01-filo-nudo)
 #
 #   1. BoringSSL compila                                   -> atteso: si'
 #   2. lsquic compila CON -DLSQUIC_WEBTRANSPORT=ON          -> atteso: si'

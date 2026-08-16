@@ -20,7 +20,7 @@
 #    solo i pezzi che passano e tacesse sugli altri sarebbe la peggiore delle
 #    prove: verde, e su niente.
 #
-# ⚠ E la regola **B0.4** di `fasi/01-filo-nudo.md` vale qui piu' che altrove:
+# ⚠ E la regola **B0.4** di `FASI.md` §01-filo-nudo vale qui piu' che altrove:
 #   *«l'atteso lo confronta il banco, non chi legge»*.  Ogni pezzo qui sotto
 #   esce con uno stato, e questo file lo **confronta** — non lo stampa e basta.
 #
@@ -35,7 +35,7 @@
 #  2. ⛔ **mai una redirezione ATTORNO a `ssh` o a `enter.sh`**.  La richiesta
 #     di parola d'ordine di `sudo` esce su **stderr**: buttandola via, nessuno
 #     puo' rispondere, e il comando resta **appeso per sempre, in silenzio**.
-#     ⚠ `fasi/00-ambiente.md` B3.3 — pagata **quattro volte**, due delle quali
+#     ⚠ `FASI.md` §00-ambiente B3.3 — pagata **quattro volte**, due delle quali
 #     nella sola notte dell'11 agosto 2026, e due di quelle **dentro i file
 #     che la trappola la descrivono in testa**;
 #

@@ -82,7 +82,7 @@ ragionava) e finisce stampato e nel registro dei fatti.
 ---------------------------------------------------------------------------
 ⛔ LA PAROLA D'ORDINE NON STA SULLA RIGA DI COMANDO — compromesso NON accettato
 
-`fasi/01-filo-nudo.md`, «quel che resta storto»: i banchi prendono la parola
+`FASI.md` §01-filo-nudo, «quel che resta storto»: i banchi prendono la parola
 sulla riga di comando, quindi finisce in `ps`.  Per `parola-di-prova` e' un
 compromesso dichiarato; ⛔ **per la parola generata di `prova2` non lo e'**.
 

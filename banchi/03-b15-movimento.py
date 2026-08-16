@@ -11,7 +11,7 @@
 ===========================================================================
 ⛔ CHE COSA PROVA, E PERCHE' OGNUNA DELLE SEI
 
-Sono le sei proprieta' che `fasi/03-movimento.md` chiede allo step 3, e
+Sono le sei proprieta' che `FASI.md` §03-movimento chiede allo step 3, e
 ciascuna ha accanto il sintomo che il suo rosso nomina:
 
   P1  i `numero` crescono di UNO per fotogramma, **compresi gli abbandonati**

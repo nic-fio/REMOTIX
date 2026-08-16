@@ -48,7 +48,7 @@ carica lo stesso e dice quante ore mancano; piu' il comando di sblocco.
 ===========================================================================
 ⛔ COME QUESTO BANCO SI PROCURA I CAMPIONI, E PERCHE' LA SCELTA VA DICHIARATA
 
-`fasi/01-filo-nudo.md` B8 lo dice in una riga: *«i campioni adesso costano: tre
+`FASI.md` §01-filo-nudo B8 lo dice in una riga: *«i campioni adesso costano: tre
 per indirizzo, poi il ban.  Le mediane vogliono molti campioni per caso, quindi
 il banco deve **variare l'indirizzo di provenienza** o **sbloccare fra un blocco
 e l'altro** — ⛔ e **dichiarare quale delle due fa**, perche' cambiano quel che
@@ -143,7 +143,7 @@ proprieta' diversa e **non la chiude**.
      HTTP**.  L'ospite risponde **200**, e la ragione sta nel suo commento: con
      un 4xx un intermediario o il browser possono sostituire il corpo, e la
      frase che l'utente DEVE leggere sparirebbe.  Qui si pretende **200**;
-  3. ⭐ **e la piu' importante delle tre**: `fasi/01-filo-nudo.md` B8 chiede
+  3. ⭐ **e la piu' importante delle tre**: `FASI.md` §01-filo-nudo B8 chiede
      *«le TRE mediane indistinguibili»*, e §4.4-bis vuole il ritardo fisso
      *«anche quando la risposta e' AMMESSO»*.  ⚠ Ma quel che §4.4 **vieta** di
      far sapere e' una cosa sola — **se un nome utente esista** — mentre
@@ -250,7 +250,7 @@ ROTAZIONI = [("inesistente", "sbagliata", "giusta"),
              ("giusta", "sbagliata", "inesistente")]
 
 # ⛔ I TRE NOMI DEL GIRO DEL BAN — e DEVONO essere diversi.
-#    `fasi/01-filo-nudo.md` B8: «con lo stesso nome tre volte, un server che
+#    `FASI.md` §01-filo-nudo B8: «con lo stesso nome tre volte, un server che
 #    avesse ancora il contatore per NOME della forma vecchia darebbe verde: il
 #    banco proverebbe la regola sbagliata.  E' la stessa forma con cui B5 ha
 #    trovato il contatore chiavato sulla porta».
@@ -375,7 +375,7 @@ def classifica(rec, caso):
 # e mostra il rifiuto — *tentativi esauriti* … chi e' stato bannato per errore e'
 # quasi sempre il proprietario».
 #
-# ⚠ E QUEL CHE QUESTA LETTURA **NON** E'.  `fasi/01-filo-nudo.md` B8 dice «si
+# ⚠ E QUEL CHE QUESTA LETTURA **NON** E'.  `FASI.md` §01-filo-nudo B8 dice «si
 #   legge il DOM, come per le otto frasi di B7».  Qui si legge **l'HTML servito**
 #   con un socket, non un DOM costruito da un browser: e' legittimo perche' la
 #   frase la scrive il server nel corpo e nessuno script la costruisce — quel
@@ -655,7 +655,7 @@ def piano_ban(indirizzi, utente, nomi):
     ⭐ Il quarto tentativo **ha la parola d'ordine giusta** e dev'essere rifiutato
        lo stesso: *«e' la riga che distingue un ban da un contatore, ed e' anche
        il sintomo che l'utente vedra' — l'ho scritta giusta e non mi fa entrare —
-       quindi e' voluto e va provato, non evitato»* (`fasi/01-filo-nudo.md` B8).
+       quindi e' voluto e va provato, non evitato»* (`FASI.md` §01-filo-nudo B8).
 
     ⛔ Tutti e quattro dallo STESSO indirizzo: il conto e' per indirizzo, e
        alternare qui vorrebbe dire non arrivare mai a tre."""
@@ -676,7 +676,7 @@ def piano_azzeramento(indirizzi, utente, inesistente):
     """⭐ IL CONTROLLO CHE DICE NO: 2 falliti · 1 riuscito · 2 falliti.
 
     *«Se il successo non azzerasse, il secondo blocco sarebbe gia' scattato»*
-    (`fasi/01-filo-nudo.md` B8).  ⛔ Contando tutti i fallimenti, il **terzo** —
+    (`FASI.md` §01-filo-nudo B8).  ⛔ Contando tutti i fallimenti, il **terzo** —
     cioe' il primo dopo il successo — sarebbe quello che fa scattare il ban su
     un server che non azzera.
 
@@ -1438,7 +1438,7 @@ def verdetto(a):
             # ⛔⭐ E QUI LE TRE COPPIE NON VALGONO LA STESSA COSA, ED E' UN PUNTO
             #    IN CUI I DOCUMENTI AMMETTONO DUE LETTURE.
             #
-            #    `fasi/01-filo-nudo.md` B8 chiede **le tre mediane
+            #    `FASI.md` §01-filo-nudo B8 chiede **le tre mediane
             #    indistinguibili**, e §4.4-bis vuole il ritardo fisso «anche
             #    quando la risposta e' AMMESSO».  ⚠ Ma quel che §4.4 VIETA di
             #    far sapere e' una cosa sola: se un nome utente esista — «il
@@ -1466,7 +1466,7 @@ def verdetto(a):
                 print(f"           ⚠ questa separazione NON dice niente che il "
                       f"filo non dica gia': «ammesso» e «respinto» sono due "
                       f"MESSAGGI diversi (§4.4).  Conta lo stesso — "
-                      f"`fasi/01-filo-nudo.md` B8 chiede le TRE mediane "
+                      f"`FASI.md` §01-filo-nudo B8 chiede le TRE mediane "
                       f"indistinguibili — ma nel suo contatore, e col colpevole "
                       f"nominato in fondo")
                 guasti_mediane += 1
@@ -1627,7 +1627,7 @@ def verdetto(a):
     print(f"    --  `[?]` letto con un socket, non con un browser: la frase la "
           f"scrive il server nel corpo e nessuno script la costruisce, quindi "
           f"quel che un browser mostrerebbe e' questo testo — ⚠ ma un motore "
-          f"vero non l'ha guardata, e `fasi/01-filo-nudo.md` B8 chiede il DOM "
+          f"vero non l'ha guardata, e `FASI.md` §01-filo-nudo B8 chiede il DOM "
           f"«come per le otto frasi di B7»")
     # ⛔ E DI QUALE SERVER PARLANO QUESTE TRE RIGHE — R12.2, e si stampa nel
     #    verdetto perche' chi legge un verdetto legge il verdetto.
@@ -1881,7 +1881,7 @@ def verdetto(a):
         #    stanotte l'imputato lo nomina `imputato_dei_tempi()`, che lo LEGGE
         #    nei numeri, invece di una frase costante (A18).
         print(f"    {ROSSO}⛔ B8: {guasti_mediane} coppie di mediane SI SEPARANO "
-              f"— «le tre mediane indistinguibili» di `fasi/01-filo-nudo.md` B8 "
+              f"— «le tre mediane indistinguibili» di `FASI.md` §01-filo-nudo B8 "
               f"non e' soddisfatta{GRIGIO}")
         print(f"    ⭐ ma la coppia che porta il SEGRETO — «inesistente − "
               f"sbagliata», l'unica che direbbe se un nome utente esiste — NON "

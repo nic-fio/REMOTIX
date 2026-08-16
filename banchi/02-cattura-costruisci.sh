@@ -26,7 +26,7 @@
 #
 # La richiesta di parola d'ordine di `sudo` va sullo stderr, e una redirezione
 # la mangia: il comando resta appeso per sempre, in silenzio.  Dentro le
-# virgolette si', attorno no.  `fasi/00-ambiente.md` B3.3, pagata **cinque**
+# virgolette si', attorno no.  `FASI.md` §00-ambiente B3.3, pagata **cinque**
 # volte — e la sesta l'ho evitata scrivendola qui invece di ricordarmela.
 #
 # ===========================================================================

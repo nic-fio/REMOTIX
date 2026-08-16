@@ -18,8 +18,9 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⛔ **E si chiude con SETTE cose dichiarate aperte**, messe davanti all'utente **prima** che
 > decidesse — perché un giudizio dato senza sapere che cosa manca è un'approvazione al buio. Stanno
-> nel riquadro «DA QUI SI RIPRENDE — 13 agosto» più sotto, e in
-> [`fasi/02-primo-fotogramma.md`](fasi/02-primo-fotogramma.md).
+> in [`FASI.md` §02-primo-fotogramma](FASI.md#02-primo-fotogramma). ⚠ *Stavano anche nel riquadro
+> «DA QUI SI RIPRENDE — 13 agosto» di questo file, potato il 16 agosto 2026: vedi la nota in
+> fondo a questo riquadro.*
 >
 > ⭐ **Il catalogo dei banchi è pieno: 15 su 15**, ed è il conto del **progetto** — le due copie del
 > registro unite e rispecchiate, 90 giri, *nessuna riga persa, nessuna inventata*.
@@ -207,7 +208,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > `RCP.md` §8.1 lo impone senza condizioni. Il posto se ne va dopo **30 secondi di silenzio**.
 > ⛔ **Su tutt'e due i motori.** La causa ha un nome: `src/pagina.html:620` azzera
 > `congeda_corrente` **un millisecondo dopo `SESSIONE`**, e il gestore di `pagehide` (riga 331) è
-> **codice morto**. ⭐ **La cura è di tre righe ed è scritta** in `fasi/01-filo-nudo.md`, riquadro
+> **codice morto**. ⭐ **La cura è di tre righe ed è scritta** in `FASI.md` §01-filo-nudo, riquadro
 > P5.
 >
 > ⭐⭐ **E in fondo alla stessa serata è stata APPLICATA e RIMISURATA**, `[M]` **due giri per
@@ -348,6 +349,23 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
+> ### ⛔ IL DIARIO È STATO POTATO — *16 agosto 2026*
+>
+> *Decisione dell'utente, rivedendo i documenti.* Questo file portava **nove** riquadri «DA QUI SI
+> RIPRENDE» impilati, uno per sessione di lavoro. ⛔ **Sei di essi erano già dichiarati morti dal
+> file stesso**, con la formula *(superato dal riquadro qui sopra)*: **485 righe**, il 31 % del
+> documento che si apre per primo.
+>
+> ⭐ **Sono usciti, e restano interi nella storia** — l'ultimo commit in cui vivono è **`47bd41c`**:
+>
+> ```
+> git show 47bd41c:README.md | less        # il README com'era, diario compreso
+> ```
+>
+> ⚠ **Nessuna misura è andata via con loro**: erano riquadri di *ripresa*, cioè stato di sessione,
+> e i numeri che citavano stanno in `FASI.md`. ⛔ Se ne trovi uno che non ci sta, è un difetto —
+> e la riga qui sopra dice dove rileggerlo.
+
 > ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **15 agosto 2026, mattina.** ⇒ **LA CODA DELLA FASE 4 È CHIUSA: LA TELA È LA FINESTRA**
 >
 > > ## *«Sia su Linux sia su Android (DeX) è tutto perfetto.»*
@@ -376,7 +394,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > Android il mouse non prende più i click»* erano **due sue sessioni che si contendevano il palco
 > diciassette volte al secondo**, e ogni giro ricreava i dispositivi di `libei` (`[M]` 640 ricambi).
 >
-> 📖 **Il documento**: [`fasi/04-si-comanda.md`](fasi/04-si-comanda.md), §«la coda della fase 4» ·
+> 📖 **Il documento**: [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda), §«la coda della fase 4» ·
 > il rapporto tecnico [`fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`](fasi/rapporti/F4-IN-13-la-tela-che-cambia.md).
 >
 > ⛔ **E QUESTA È LA FASE 4, NON LA 6** — corretto dall'utente il 15 agosto 2026, e la sua ragione
@@ -393,117 +411,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > sono lo stato della macchina, **le due strade per costruire**, quel che della fase 5 è già vivo (e
 > va **provato**, non riscritto), e i quattro pezzi che mancano davvero.
 >
-> ⛔ **Il primo gesto è aprire `fasi/05-la-sessione.md`**, prima di scrivere una riga: la coda della
+> ⛔ **Il primo gesto è aprire `FASI.md` §05-la-sessione**, prima di scrivere una riga: la coda della
 > fase 4 quella regola l'ha violata, e porta la riserva in testa.
->
-> ---
->
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, sera.** ⇒ **LA FASE 4 È CHIUSA: SI COMANDA IL DESKTOP** *(superato dal riquadro qui sopra)*
->
-> > ## *«Mi sembra ok.»*
-> > — l'utente, 14 agosto 2026, dopo aver usato il proprio desktop dentro una scheda
->
-> ⭐⭐ **REMOTIX ha smesso di essere una dimostrazione**: si apre una scheda, si clicca, si scrive,
-> si scorre, si spostano le finestre. E il cursore che si vede è **uno solo**.
->
-> | | |
-> |---|---|
-> | ⭐ **il numero della fase** | l'anello **input → vetro**: `[M]` **139,40 ms** (n=326) e **141,60** (n=322) — due giri indipendenti, concordi entro **2,2 ms** |
-> | ⛔ **il tetto** | **SFORA**: 139 contro 50 · **160-193 ms** sul vetro coi due pezzi ciechi |
-> | ⛔⛔ **e nessun tratto domina** | 30,4 · 26,6 · 26,0 · 25,6 · 16,2 ms ⇒ **nessuna cura singola** porta 140 a 50. È la **fase 8** |
-> | ⭐ **il login → desktop** | **5,11 s → 1,04-1,13 s** (di cui **1,00 s** è il fisso di §4.4-bis) |
-> | ⭐⭐ **il ritardo non cresce più** | prima **+108 ms/s** — 4,6 s di ritardo dopo 43 s **con tutti i contatori verdi** — adesso **−2 ms/s** |
-> | ⭐ **e il `drawImage`** | primo **25,6 ms**, secondo **0,080** ⇒ **320 volte**: il disegno non è mai stato caro |
->
-> ⭐⭐ **Dieci anelli in parallelo, e il lavoro del coordinatore sono state le CUCITURE** — perché il
-> palco vive in un **altro processo**: fra il tasto premuto nel browser e il tasto premuto sul
-> desktop c'è un confine che nessun pezzo poteva attraversare da solo. Tre tubi: l'input
-> (padre→figlio), la forma del cursore (figlio→padre), e il campo `input` dei fotogrammi, ⭐ che lo
-> **timbra il figlio nell'istante della cattura** — perché il padre sa che cosa ha *mandato* e solo
-> il figlio sa che cosa il compositore ha *preso*.
->
-> #### ⭐⭐ E il giudizio dell'utente ha trovato SETTE difetti che i dieci banchi non vedevano
->
-> | ha detto | c'era sotto |
-> |---|---|
-> | *«se il server non mostra il desktop, a che serve REMOTIX?»* | il monitor aggiunto e vuoto, preso per uno sfondo per **due fasi** |
-> | *«non si vede nessun desktop»* | **due server nostri** con un monitor a testa sulla stessa sessione |
-> | *«lo schermo appare strano»* | la dichiarazione delle scorciatoie sul **38 %** della finestra |
-> | *«non vedo il drawer di gnome»* | la barra **esattamente dove GNOME tiene il dock** |
-> | *«il puntatore sembra catturato… studia XPRA»* | ⭐ §7.1 che contraddiceva §7.5: la cattura **non comprava niente** |
-> | *«niente desktop»*, due volte | il figlio che tiene per sempre **un palco fallito** |
-> | *«il login è troppo lungo»* | ⛔ **una riga del coordinatore**: `poll()` su due descrittori, `pf.revents` mai guardato |
->
-> ⛔ **Sette su sette stavano FRA i pezzi, nessuno dentro uno.**
->
-> #### ⛔ Le CINQUE cose dichiarate aperte, messe davanti all'utente PRIMA che giudicasse
->
-> 1. ⛔ **il ritardo sfora** — 139 contro 50, e nessun tratto domina ⇒ **fase 8**;
-> 2. ⛔ **la tela non è quella del client**: sul suo 21:9 il **36 % dei pixel è banda nera**
->    (`RCP.md` §4.5 esiste e nessuno la mantiene) ⇒ **fase 6**;
-> 3. ⛔ **il monitor si chiede sempre** invece di guardare se la sessione ne ha già uno — contro
->    `SPECIFICHE.md` §6.5, ed è quel che ha fatto vedere lo schermo nero;
-> 4. ⚠ **un pezzo cieco dentro il tratto da 26 ms**: manca una riga nel registro dell'iniezione per
->    separare quattro imputati;
-> 5. ⚠ **un browser solo** (Chrome 151): Safari, iPhone e **DeX** restano `[?]` *dichiarate*.
->
-> 📖 **E il settimo studio è nato oggi**: [`STUDI.md` §xpra](STUDI.md#xpra) — chiesto dall'utente, previsto da
-> `PIANO.md` §1.3 **prima** della pagina e fatto **dopo**. ⛔ Nel frattempo avevamo scritto una
-> specifica che si contraddiceva, e a trovarla è stato lui in trenta secondi d'uso.
->
-> ---
->
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **14 agosto 2026, mattina.** ⇒ **LA FASE 3 È CHIUSA. LA 4 COMINCIA IN UNA SESSIONE NUOVA** *(superato dal riquadro qui sopra)*
->
-> *⭐ Deciso dall'utente: **la fase 4 si fa in una sessione nuova**. Questo riquadro è scritto per
-> chi la aprirà, **a codice fermo e a macchina in ordine**.*
->
-> #### ⭐⭐ La fase 3 è chiusa, e su che cosa
->
-> > ## *«Mi sembra abbastanza fluido, non il massimo ma pur sempre fluido.»*
-> > — l'utente, 14 agosto 2026, davanti alla sessione vera
->
-> ⭐ **E il «non il massimo» è stato MISURATO dal video che ha registrato lui**: **20,9
-> fotogrammi/s**, e la causa **non è lo scatto — è il ritmo** (i passi della barra sono bimodali sui
-> due valori attesi, solo il 7 % fuori). ⇒ **Tre misure indipendenti concordano**: banco **21,98**,
-> registro del prodotto **~21**, occhio dell'utente **20,9**.
->
-> | | |
-> |---|---|
-> | il numero | **78,1 ms** in hardware (P1 verde, n=379) · **71,86** in software, la configurazione **giudicata** |
-> | ⭐ l'architettura | **ASSOLTA**: tolta la codifica, gli altri quattro tratti **non si muovono** |
-> | ⭐ la codifica in hardware | **nel prodotto**: la chiave da **114,5 ms a 5,1**, ritmo **raddoppiato** |
-> | ⭐ `D1` | **chiuso** a costo zero — e il difetto vero era **un altro** da quello temuto |
-> | ⛔ il tetto | **SFORA**, e sforerebbe **anche a codifica gratis** |
->
-> #### ⛔ I TRE LAVORI CHE LA FASE 3 CONSEGNA ALLA 4 — e vengono tutt'e tre dal giudizio
->
-> > ⭐⭐⭐ **Il n. 1 è LA PRIORITÀ DELLA FASE 4**, deciso dall'utente il 14 agosto 2026 — e **non è
-> > una premessa alla fase: è dentro la fase, in testa**.
-> > ⛔ *La fase 4 esiste perché «l'utente **usa** il desktop». Finché il desktop non si vede, **non
-> > c'è niente da comandare**: i banchi del cursore, delle lettere accentate e delle scorciatoie
-> > **non avrebbero dove guardare**.*
->
-> | | | dove sta scritto |
-> |---|---|---|
-> | ⭐ **1** | ⭐⭐ **IL DESKTOP VERO — provato, non ancora curato.** Le due metà del prodotto si contraddicono: `sessione.c:650` crea la sessione **con** `--virtual-monitor`, `mutter.c:450` cattura con `RecordVirtual` che **ne monta un altro** ⇒ la shell resta sul primo e l'utente guarda il secondo, **vuoto**. ⛔ **La cura è in DUE posti**: togliere la bandiera **e** cambiare il controllo che rilegge l'`ExecStart`, che oggi la **pretende** | [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) |
-> | **2** | ⛔ **HEVC NON DIPINGE nel browser dell'utente**: 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ I banchi dicevano il contrario — avevano **scena sintetica** e **Chrome del banco** | `fasi/03-movimento.md` §0-ter |
-> | **3** | ⚠ ~~**IL DISEGNO: 28,0 ms su 78,1 — il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026: non è il disegno (2,25 ms `[M]`), è l'ATTESA del fotogramma dalla GPU.** Il totale resta 78,1 | `fasi/rapporti/F4-A2-pagina-dipinge.md` · `F4-A10-anello-input.md` |
->
-> #### ⭐ La macchina, com'è lasciata
->
-> | | |
-> |---|---|
-> | ⭐ **utente `prova`** (uid 1001, parola `prova2026`) | **si conserva, deciso dall'utente.** Sessione GNOME viva **senza `--virtual-monitor`** ⇒ ⭐ **è l'unico modo, oggi, di vedere il desktop vero** |
-> | `nicfio` | sessione sua con monitor proprio ⇒ ⛔ **su di lui il desktop NON si vede**, ed è §5.1: una sola sessione grafica per utente |
-> | porte sul server | `7448 · 7501 · 7561` (dell'utente, mai toccate) **+ `7571`**, lasciata **accesa apposta**: albero `02-figlio-src`, **34 file su 34 identici al deposito**. Si spegne con `bash banchi/02-figlio-lancia.sh spegni` |
-> | il catalogo | **19 banchi su 25** con una certificazione che regge — ⛔ e i sei che non ce l'hanno portano **ciascuno la sua ragione scritta**, nessuno è stato comprato |
->
-> ⚠ **E una cosa che il prossimo deve sapere prima di misurare**: i banchi browser **girano sul
-> desktop dell'utente credendo di essere su uno schermo finto** (Chrome ignora `DISPLAY` e va su
-> Wayland da `XDG_SESSION_TYPE`). ⛔ **Non forzare `--ozone-platform=x11`**: sul vero Xvfb non c'è
-> GPU, HEVC non si decodifica, e si curerebbe la scena distruggendo la misura. ⇒ **Il palco si
-> DICHIARA e si verifica dall'altro capo**, non si sposta.
 >
 > ---
 >
@@ -513,7 +422,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > > — l'utente, 14 agosto 2026, e **la fase 3 si chiude qui**
 >
 > ⛔⛔ **Ma il giudizio ha prodotto DUE difetti che nessun banco aveva trovato, e sono il lavoro che
-> viene adesso.** Il dettaglio sta in [`fasi/03-movimento.md`](fasi/03-movimento.md) §0-ter e
+> viene adesso.** Il dettaglio sta in [`FASI.md` §03-movimento](FASI.md#03-movimento) §0-ter e
 > §0-quater; il conto della notte in
 > [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).
 >
@@ -598,382 +507,6 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, notte.** ⇒ **LA SESSIONE NUOVA FA LA CODIFICA IN HARDWARE, DENTRO LA FASE 3** *(superato dal riquadro qui sopra)*
->
-> *Deciso dall'utente: ⭐ «**si anticipa la codifica HW alla fase 3. Per questo però dopo servirà una
-> nuova sessione**». ⛔ **La fase 3 NON è chiusa.***
->
-> #### Perché, in un numero
->
-> Il ritardo è **74,58 ms**, e ⛔ **39,17 — il 53 % — sono la codifica in software**. Gli altri
-> quattro tratti sommano **~35,4 ms**: `[R]` **dentro il tetto dei 50 e vicino al traguardo dei 40**.
-> ⇒ L'obiezione dell'utente, ed è quella giusta: *«senza accelerazione hw stiamo ragionando e
-> sviluppando su numeri non molto affidabili»*. Le fasi 4-7 ne produrrebbero altri uguali, **da
-> rifare dopo**.
->
-> ⭐ **E costa poco farlo adesso**: la catena che si muove **esiste da oggi**, il banco dell'anello è
-> scritto, la scena e la marca sono certificate ⇒ il *prima* e il *dopo* si misurano con **lo stesso
-> strumento e la stessa scena**, e i due numeri **si sottraggono davvero**. Fra tre fasi non sarebbe
-> più vero.
->
-> #### ⭐⭐ Si può fare — `[M]` verificato il 13 agosto sul server
->
-> ```
-> Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 e renderD129
-> VAProfileHEVCMain10     : VAEntrypointEncSliceLP    ← 10 bit, IN HARDWARE
-> VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
-> ```
->
-> ⛔ **E questa riga corregge un errore di oggi**: un agente aveva riferito *«su questo server non
-> c'è un codificatore hardware per nessuno dei due codec»*, e **nessuno l'aveva verificata**. È vera
-> per **AV1**, ⛔ **falsa per HEVC**. ⚠ Stessa forma dei «37 fotogrammi di Mutter»: una riga
-> **ripetuta invece che misurata**, che poi decide un piano.
->
-> #### ⛔⛔⛔ LO SCOGLIO NON C'ERA — **smentito la sera del 13, prima che partisse un agente**
->
-> Qui era scritto: *«il codec negoziato è AV1 perché la sonda HEVC di Chrome fallisce su Xvfb ⇒
-> senza un client che accetti HEVC l'anello intero non si misura. **Affrontalo per primo**»*.
-> ⛔ **Lo scoglio non c'era — ma la ragione vera è la TERZA, e le prime due erano sbagliate.**
->
-> | | chi | che cosa diceva | esito |
-> |---|---|---|---|
-> | 1ª | il piano del 13 notte | *«su Xvfb non c'è GPU ⇒ **è un problema di PALCO**, costruiscine uno»* | ⚠ **la premessa era giusta, la conseguenza no** |
-> | 2ª | il coordinatore, ore 20:33 | *«non era il palco: era la **bandiera** `--disable-gpu` del banco»* | ⛔ **mezza falsa** |
-> | 3ª | la corsia D, ore 22:00 | ⭐ **«Chrome ignora `DISPLAY` e va su Wayland da `XDG_SESSION_TYPE`: il banco non era MAI stato sull'Xvfb»** | ⭐ **e questa regge** |
->
-> `[M]` con la controprova che **non passa dal browser** — `xlsclients`, chi è davvero attaccato a
-> quello schermo:
->
-> | come si lancia Chrome | clienti **sull'Xvfb** | `screen` | webgl | HEVC |
-> |---|---|---|---|---|
-> | **come lo lancia il banco** | ⛔ **0** | **2560×1080** (il monitor dell'utente) | GPU Intel | true |
-> | `--ozone-platform=x11` | ⭐ **1** | 1280×1024 | *niente webgl* | **false** |
->
-> ⇒ ⛔⛔ **La cosa grossa non è il codec: è che i banchi browser di questo progetto misurano sul
-> desktop dell'utente credendo di essere su uno schermo finto.** Contesa non dichiarata, e ogni
-> verbale che dice «Xvfb» dice una cosa che non è. **È il primo lavoro di chi riprende.**
->
-> ⭐⭐ **E non è una dichiarazione: è una decodifica.** Il flusso uscito da `hevc_vaapi` è stato
-> fatto **dipingere** al Chrome del banco — `[M]` **5 giri su 5**, 1920×1080, **119 fotogrammi su
-> 120**, `powerEfficient: true`. **Il client c'è, ed è quello che c'era già.**
->
-> ⛔⛔ **E una seconda riga che cambia il bersaglio per sempre**: la codifica **AV1 in hardware NON
-> ESISTE** su questa macchina — `av1_vaapi` esce **218**, *«No usable encoding profile found»*, 3
-> giri su 3. ⇒ **Restare su AV1 vuol dire restare in software per sempre.** HEVC non è una
-> preferenza: è **l'unica strada** verso l'hardware, ed è misurata ai due capi.
->
-> ⚠ **La forma dell'errore, che è la terza volta in due giorni**: una riga **ripetuta invece che
-> misurata** stava per decidere il lavoro di una sessione intera. Qui però era peggio — ⛔ **il
-> banco si era accecato da solo e non l'aveva scritto**. ⇒ La lezione nuova: *un banco che risponde
-> «no» deve dire **con che palco** ha risposto*.
->
-> #### L'ordine del lavoro, riscritto
->
-> 1. ✅ ~~lo scoglio HEVC~~ — **chiuso**: resta una riga di cura alla sonda;
-> 2. ⭐ **la codifica HEVC in hardware nel prodotto**, **su una copia** finché non è misurata — è
->    adesso **il primo lavoro**, e la sua strada critica è **B → E**;
-> 3. ⭐ l'anello rimisurato con lo **STESSO** banco (`03-b17-ritardo.py`) e la **STESSA** scena;
-> 4. ⛔ **i CINQUE tratti affiancati**, non il totale: *tolta la codifica software, gli altri quattro
->    restano dove sono?* Se restano, l'architettura è **assolta**;
-> 5. ⚠ **i fotogrammi consegnati accanto ai millisecondi** — in v1 il costo scese da 41 ms a 6
->    **mentre i consegnati calavano da 29 a 22,7**;
-> 6. e **solo allora** il giudizio dell'utente.
->
-> ⚠ `EncSliceLP` è la codifica **a bassa potenza**: veloce, con limiti suoi — **non è equivalente**
-> alla piena, e va dichiarato accanto al numero. ⭐ Ma porta un'occasione: è l'entrypoint che
-> `STUDI.md` §web nomina come *«da verificare»* per i **sotto-livelli temporali**, cioè abbandonare un
-> fotogramma **senza rompere quelli dopo** — che oggi costa una chiave ogni volta.
-> ⛔ **La copia zero NON si anticipa**: resta alla fase 8.
->
-> ⭐⭐ **E L'ELENCO COMPLETO DI QUEL CHE C'È DA LAVORARE** — trentadue voci in sette gruppi, in
-> ordine di quando mordono, con dentro **le trappole già pagate** perché non si ripaghino — sta in
-> [`fasi/rapporti/F3-prossima-sessione.md`](fasi/rapporti/F3-prossima-sessione.md).
-> ⛔ **RIVISTO la sera del 13**: quel file è stato **raddrizzato coi fatti misurati** — la corsia A
-> è **cancellata**, la corsia K è **per metà già fatta** (il catalogo dice **24 banchi, 20
-> certificati, 4 mai provati**), e gli agenti scendono da **dieci a sei**.
-> ⇒ **Resta UNA voce bloccante**: il **punto cieco del catalogo** — nessuna certificazione guarda
-> `codificatore.c`, e il lavoro nuovo va proprio lì. ⚠ E va detta più precisa di com'era scritta:
-> `figlio.c` **a catalogo c'è**, nella lista di `03-b17` — ma `03-b17` **non è mai stato provato**,
-> quindi la rete c'è **sulla carta e non nei fatti**.
->
-> ⏳ **E i due punti che l'utente ha lasciato APERTI di proposito** stanno in
-> [`fasi/03-movimento.md`](fasi/03-movimento.md), ciascuno con scritto **come si chiude**: il debito
-> di chiave strozzato (si legge il registro della sessione del giudizio, **costa zero**) e *dove
-> finisce di contare il tetto dei 50 ms* (si risponde **dopo** la misura in hardware).
->
-> ---
->
-> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, sera. LA FASE 3 HA IL SUO NUMERO, E SFORA** *(superato dal riquadro qui sopra)*
->
-> *⛔ Scritto **a codice fermo**, con lo stato **verificato e non ricordato**. La fase 3 è stata
-> divisa in **cinque step** su richiesta dell'utente, uno o due agenti per step, sviluppo + prova +
-> correzione. ⏳ **La fase NON è chiusa**: manca la scrittura, non la misura.*
->
-> #### ⭐ Il numero, che è quel che la fase esisteva per produrre
->
-> **Ritardo cattura → vetro: mediana 74,58 ms** · p05 58,1 · p95 101,2 · p99 138,1 · errore
-> d'orologio **±0,63 ms**. ⛔ **Pezzo cieco 16-40 ms NON compreso** ⇒ sullo schermo dell'utente
-> **90-115 ms**, contro un tetto di **50**. ⇒ **SFORA i 50 e i 40.**
-> ⚠ Non è input→vetro (`input` = 0 in 953 su 953): il canale di input nasce alla fase 4, e al suo
-> posto c'è il controllo **P1**. Banco `03-b17-ritardo.py`, **31 controlli su 31**.
->
-> | dove se ne va | mediana | di chi è |
-> |---|---|---|
-> | ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
-> | disegno → cattura | 16,66 ms | Mutter (**22 %**) — è un intervallo di quadro a 60 Hz |
-> | richiamo → disegno finito | 10,51 ms | nostro |
-> | decodifica | 7,58 ms | ⭐ **il 10 %, in software** |
-> | il filo | 0,32 ms | — |
->
-> ⭐⭐ **IL MURO NON È DI MUTTER, e la prova è che il figlio non lo aspetta mai**: zero attese a
-> vuoto in 20 s. **58 ms su 74,6 sono nostri**, e quasi tutti nella codifica ⇒ **è la fase 8**.
->
-> #### ⛔ QUATTRO RIGHE CHE TRE DOCUMENTI DANNO PER FATTE E CHE OGGI SONO SMENTITE
->
-> 1. ⛔ **il muro dei 37 fotogrammi di Mutter NON SI RIPRODUCE**, e nemmeno i «sei decimi»: la
->    cella bassa dà **0,50 pulito e deterministico**. Con monitor a **120 Hz** e freno **90**: `[M]`
->    **61,4 fotogrammi/s, intervallo mediano 16,66 ms**. ⚠ **Il perché è `[R]`**: non un
->    **battimento** fra due orologi ma una **quantizzazione** letta nel codice di Mutter —
->    `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
->    16666,67 µs ⇒ chi cade sotto perderebbe un tick intero.
->    ⛔ ⚠ *Questa riga diceva «Legge verificata su **13 punti**, 8 confermano, **0 la smentiscono**».
->    **È falso**: `banchi/03-b14-esiti-griglia.jsonl` ha **due sole celle**, tutt'e due con
->    `scena_sul_mio_monitor: false`, e il banco stampa «la legge NON regge su 0 punti su 0».
->    Corretta il **13 agosto 2026**, rilievo del coordinatore della fase 3. ⇒ **M3 non è chiusa: è
->    mezza** (`STUDI.md` §gnome §13);*
-> 2. ⛔⛔ **ma quella cura NON è raggiungibile dal prodotto**: `MOVIMENTO_FPS 60` è una costante di
->    compilazione (`figlio.c:1465`), `main.c` non ha opzioni di cadenza, e **`RecordVirtual` non
->    prende la frequenza** (`mutter.h:82`) — i quattro monitor virtuali sono tutti **@60**. È `[M]`
->    sul banco e **zero in produzione**;
-> 3. ⛔ **la motivazione prestazionale della FASE 11 (KDE) non regge più**: il piano la giustifica
->    con *«KWin consegna 60 dove Mutter ne dà 37 — è la strada per il traguardo dei 40 ms»*. I 37
->    non esistono e Mutter vale il 22 %: cambiare compositore **lascerebbe intatti i 39 ms di
->    codifica**. La fase di KDE resta giusta come *«il secondo desktop»*; la promessa sul ritardo va
->    **riscritta o tolta**;
-> 4. ⛔ **`STUDI.md` §web §6.1 — «tutto in un worker dedicato» — è ATTUATA, MISURATA E RESPINTA**:
->    **+27,6/+33,5 ms** di mediana e **tetto −73 %** (127,6 → 33,9 dipinti/s a 1080p). ⭐ E il
->    meccanismo è nuovo: una `OffscreenCanvas` in un worker **si consegna al ritmo del quadro** —
->    è un `requestAnimationFrame` implicito che nessuno ha scritto. ⇒ Il divieto di §6.1 va esteso
->    **al meccanismo**, non alla sola parola. Il codice resta dietro `#video=worker`, **spento**.
->
-> #### ⭐ Che cosa il prodotto sa fare adesso, e non sapeva stamattina
->
-> **135 fotogrammi**, `numero` 1→135 · **132 delta e 3 chiavi** · il primo dopo `SESSIONE` è una
-> **chiave** con FIN · `RICHIEDI_CHIAVE` → chiave in ≤200 ms · **10 stream azzerati contro 18 con
-> FIN**, nessuna chiave abbandonata, **E8 provata sul filo** · **60,0 fotogrammi dipinti al secondo**
-> offrendone 60, tetto a saturazione **127,6/s** · ⭐ nei 28 byte finisce il **`pts` di Mutter**,
-> cioè l'istante **vero** della cattura (scarto dal nostro `CLOCK_MONOTONIC`: 11 347 µs).
-> ⭐ **Sei dei sette punti del prodotto sono chiusi**, e il deposito è sparito del tutto: il prezzo
-> dichiarato il 12 agosto — *«due utenti insieme non possono vedere tutt'e due il proprio»* — **è
-> pagato**.
->
-> #### ⛔ QUEL CHE MANCA PRIMA DI CHIEDERE IL GIUDIZIO — è scrittura, non misura
->
-> 1. ✅ ~~**i documenti**: ~35 righe in **nove file**~~ — ⭐ **FATTO il 13 agosto, sera.** Il registro
->    è stato **portato dentro il deposito** (`fasi/rapporti/F3-righe-da-riscrivere.md`, 206 righe) e
->    le righe sono state riscritte in **quindici file**: `SPECIFICHE.md` · `DECISIONI.md` ·
->    `LEZIONI.md` · `PIANO.md` · `STUDI.md` §gnome · `STUDI.md` §web · `RCP.md` · `CODER.md` · `README.md` ·
->    `fasi/03-movimento.md` (le tre sezioni vuote riempite) · `fasi/00-ambiente.md` ·
->    `fasi/02-primo-fotogramma.md` · `fasi/rapporti/F2-6-giudizio.md` ·
->    `fasi/rapporti/P2-5-pagina.md` · `fasi/rapporti/F2-5-pagina.md`.
->    ⚠ **E toccare `RCP.md` fa scadere la certificazione di B9**: è previsto, e va rigirata insieme
->    alle altre (punto 2);
-> 2. ⛔ **le certificazioni**: **10 su 15 sono scadute** perché `src/` è cambiato oggi, e i banchi
->    nuovi non sono a catalogo — ⚠ **SEI numerati** (`03-b14` · `03-b15` · `03-b16` · `03-b17` ·
->    `03-b18` · `03-b19`) **più tre** senza numero (`03-scena`, `03-marca`, `03-deposita`).
->    *⚠ Questa riga diceva «cinque banchi (`03-b14` … `03-b19`)» — **sei nomi per cinque banchi**,
->    e chi ricontava il catalogo ci andava a sbattere. Corretta la sera del 13 agosto 2026, contata
->    con `ls banchi/03-*`.* ⭐ Adesso si possono rigirare: la
->    pagina ha smesso di cambiare;
-> 3. ⛔ **`src/pagina.c:243`**: `strcmp(percorso, "/")` confronta il bersaglio **con la stringa di
->    ricerca dentro** ⇒ `/?qualunque-cosa` prende **404** (`[M]`: `/` → 200/166107 byte,
->    `/?video=worker` → 404/9). ⇒ **`?tela=desincronizzata` non è MAI stato raggiungibile**, e il
->    commento della pagina indica da sempre una strada che non esiste. Non visto da nessuno perché
->    i banchi servono la pagina da un `http.server` di Python, che il `?` lo ignora;
-> 4. ⚠ **la cura B-18 non è compilata né girata**: `rcp_video_niente_credito()` era l'unico dei tre
->    percorsi di abbandono di un delta a non accendere `serve_chiave` ⇒ **un solo delta saltato per
->    mancanza di posto sfasciava l'immagine per sempre e in silenzio** (il `numero` non è
->    consumato ⇒ nessun buco ⇒ il client non può chiedere la chiave; GOP infinito ⇒ non ne arriva
->    più una da sola). ✅ I due gemelli `rcp.c` **sono stati riallineati stasera** — divergevano, e
->    il prodotto **non compilava per nessuno**;
-> 5. **il giudizio dell'utente**: il desktop che si muove dentro una scheda.
->
-> ⚠⚠ **E UN RISCHIO DI CASA, misurato la sera del 13 agosto: `/tmp` è una tmpfs da 3,8 G al 94 %**,
-> **246 M liberi**. Ha già fatto fallire un giro di `03-b16` (Chrome non parte). ⛔ **Non è stata
-> svuotata di proposito**: dentro ci sono le prove dei giri di oggi — `/tmp/03-b17` (155 M, col
-> `verbale.json` dell'anello del ritardo), `/tmp/03-b19-dipinti` (128 M), `/tmp/remotix-f26-*`
-> (288 M) — e buttarle toglierebbe la **provenienza** dei numeri di questo riquadro. ⇒ **Si guarda
-> prima di cancellare**, e si comincia da `/tmp/claude-1000` (1,1 G) e `/tmp/google-chrome`
-> (227 M), che prove non ne portano.
->
-> #### ⭐⭐ E la lezione del metodo, che stavolta ha un conto
->
-> **Gli agenti mandati a REFUTARE hanno rifiutato CINQUE cure passate dal coordinatore, e avevano
-> ragione tutte e cinque**: la `ResizeObserver` (la premessa era falsa) · la seconda cura della
-> vista (caduta alla misura: `overflow-y: scroll` tiene `clientWidth` fermo) · il seqlock in
-> contesa (**200 letture su 200 riuscite**: la causa era un relitto a `seq` dispari) · *«quel che
-> manca ai 60 è di Mutter»* (**zero attese a vuoto**) · *«accendi su `Meta-3`»* (i monitor sono
-> **quattro**, il suo era `Meta-2`: avrebbe misurato il palco di un altro gruppo).
-> ⛔ **E un difetto che sembrava del prodotto era del BANCO**: il `STREAM_LIMIT_ERROR` nasceva da un
-> banco che annunciava il credito **dopo** la stretta di mano — cosa che l'RFC vieta — e poi accusava
-> il prodotto di non reggerlo. `ngtcp2` non aveva violato niente. ⭐ Ma cercandolo è uscito **B-18**,
-> che era vero e peggiore.
-> ⛔ **E un verde in catalogo lo produceva lo STRUMENTO**: `02-pagina-vista-prova.py` passava solo
-> grazie a `Page.captureScreenshot`, chiamata da un'opzione di stampa (`--copia`); senza, lo stesso
-> banco sul prodotto **sano** dava **5 pretese rosse** — e quelle quattro pretese non erano **mai
-> state innestate con un guasto**. Curato, e adesso **si giudica prima il palco**.
->
-> ---
->
-> ### ⭐⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026, a fase 2 chiusa**. ⇒ **LA PROSSIMA SESSIONE FA LA FASE 3** *(superato dal riquadro qui sopra)*
->
-> *Deciso dall'utente: «la prossima sessione si occuperà della fase 3». ⛔ Questo riquadro è scritto
-> **prima** di chiudere e **a codice fermo**, con lo stato **verificato e non ricordato** — è la
-> lezione che questa giornata è nata applicando, e che è stata mancata tre volte (11 agosto, 12
-> agosto, e stamattina alle 09:57).*
->
-> **Lo stato, verificato adesso:**
->
-> | | |
-> |---|---|
-> | ⭐ **albero** | pulito, `47e006e` |
-> | ⭐⭐⭐ **la fase 2** | **CHIUSA** sul giudizio dell'utente ⇒ [`fasi/rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md) |
-> | ⭐ **il catalogo** | **15 su 15**, e ⭐ è il conto del **progetto**: le due copie unite e rispecchiate, 90 giri. ⚠ **Ricontrollalo lo stesso** con `python3 banchi/01-b12-guasti.py --registro`: la fase 3 toccherà `rcp.c` e la pagina, e ⛔ **curare il prodotto fa scadere le certificazioni che lo guardavano** |
-> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, **quella che l'utente apre** — e la 7561 è anche **il bersaglio del metro**: si legge, non si tocca. Verificato: sono le sole tre `:7xxx` in ascolto |
-> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Ultimo giro: 13 agosto ore 08:08, **2,46 giorni su 7** |
->
-> #### ⛔ Le tre cose da decidere PRIMA di scrivere la fase 3
->
-> 1. ⛔⛔ **La risoluzione della tela.** `1920×1080` è **ereditato dalla scena di un banco, senza
->    decisione né misura**; in v1 era `2560×1080`. ⭐ E adesso ha un numero addosso: sullo schermo
->    dell'utente il desktop è dipinto all'**86%**, cioè **912 px di nero**. ⇒ **È la tela di tutte le
->    fasi che vengono dopo: prima si decide, meno costa.** Decisione dell'utente, non un rilievo;
-> 2. ⛔ **La scena si dichiara e si muove sempre** — `PIANO.md` fase 3: *«un client a schermo intero
->    che ridisegna a ogni richiamo del compositore»*. ⚠ **Tutte le misure di ritmo delle fasi 3-9 di
->    v1 sono state buttate per questo** (`LEZIONI.md` §1.1). Si sceglie la scena **prima** di scrivere
->    il banco;
-> 3. ⚠ **L'attesa dichiarata in anticipo**: su GNOME il traguardo dei **40 ms** probabilmente **non si
->    raggiunge**, per il muro dei 37 fotogrammi di Mutter. Il numero da battere è **≤ 50 ms**
->    (`SPECIFICHE.md` §3.2). Se la misura lo confermasse **non è un difetto nostro** — ed è una
->    ragione in più per la fase di KDE.
->
-> #### ⭐ Che cosa la fase 3 eredita, e che le morde addosso
->
-> - ⛔ **P15** — `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto dove un
->   orologio decide**. La fase 3 è tutta tempo: è lì che si scoprirà se regge;
-> - ⛔ **il metro non guarda a monte della cattura**, e con molti fotogrammi il punto cieco si allarga:
->   **M6** («il fotogramma è del giro prima») è l'unico che vede quel guasto, e ⛔ **non è mai stata
->   misurata sulla catena vera** perché manca la cattura del giro precedente. In fase 3 i giri
->   precedenti ci sono: **si può chiudere**;
-> - ⛔ **«due utenti, ciascuno vede la propria sessione»** non lo copre nessun banco (metà positiva
->   scoperta). Con il movimento diventa più caro sbagliarlo, non meno;
-> - ⚠ **M8 ha un controllo dichiarato NON APPLICABILE** (`giro`): il prodotto non conosce il nome del
->   giro del banco. In fase 3, con un contatore `numero` che cresce a ogni fotogramma, **si può
->   riaprire** — ⇒ `fasi/rapporti/F2-6-giudizio.md`. ⭐ **FATTO il 13 agosto**: la dichiarazione
->   *«non applicabile **per costruzione**»* **cade**, ed era il «per costruzione» a essere sbagliato;
-> - ⚠ **`02-figlio-accendi.sh:165`** conta i figli **di tutti** invece dei propri: si accende solo
->   quando due banchi girano in parallelo, e in fase 3 gireranno. ✅ **Curato il 13 agosto** — ⛔ `[R]`,
->   **non eseguito**: la cura è letta nel codice e non è stata girata.
->
-> #### ⚠ E due cose sul metodo, che hanno prodotto il risultato migliore di oggi
->
-> ⭐⭐ **Gli agenti si mandano a REFUTARE, non a verificare.** La riga su cui stavo per chiedere il
-> giudizio — *«12 guasti su 12, non ha più punti ciechi»* — è stata **refutata** da un agente mandato
-> a smentirla: uno dei dodici era **verde per costruzione**. Un agente mandato a *verificare* avrebbe
-> letto la stessa riga e confermato.
->
-> ⭐ **E il mandato deve ammettere il rifiuto.** La cura che avevo passato io (*«leggi `azzerati`»*)
-> era **sbagliata**, e chi curava l'ha rifiutata con un caso: avrebbe prodotto un **falso rosso**,
-> che accusa il prodotto — peggio del falso verde che sostituiva.
->
-> ---
->
-> ### ⭐⭐ DA QUI SI RIPRENDE — **13 agosto 2026**, mattina *(superato dal riquadro qui sopra)*
->
-> ⭐⭐⭐ **La fase 2 consegna: l'utente ha visto il proprio desktop dentro una scheda del browser**,
-> a schermo pieno, e ha detto *«è lo sfondo GNOME, è OK»*. La storia sta in
-> [`fasi/02-primo-fotogramma.md`](fasi/02-primo-fotogramma.md), che è **il documento da leggere per
-> primo** insieme a questo riquadro.
->
-> **Lo stato, verificato prima di scrivere** (albero pulito, `ec646d5`):
->
-> | | |
-> |---|---|
-> | ⭐ **il metro della fase** | ha girato **sulla catena vera del prodotto** — cattura di Mutter → codifica → filo → `VideoDecoder` → `getImageData`, **con la mira di F2.6 messa a sfondo del desktop** — e dice **PROMOSSO**: piano 1 (browser ⟷ `ffmpeg` sullo stesso flusso) **PSNR-Y 62,09 dB**, soglia 45, **12 guasti su 12** e zero ciechi. ⛔ **E vanno dette tre cose accanto**, o la riga dice più della misura ⇓ |
-> | ⛔ **1 — sul TUO desktop il metro dice BOCCIATO** | scena naturale, `cura-desktop-vero-20260813-103246`: **58,62 dB**, rosso su **M5**, e **8 guasti su 12** — senza la mira, M4, M7 e i marcatori di M-V si spengono. ⇒ *Il verde è del metro **con la mira**; sul desktop nudo il metro vede meno e trova un rosso.* ⛔ Il rosso **non è stato curato: è sparito quando è cambiata la scena** |
-> | ⭐ **2 — «12 su 12» adesso è vero, e stamattina non lo era** | vuol dire **«nessuno strumento spento»**, non «dodici guasti innestati sul prodotto»: sul prodotto ne sono innestati **tre**. ⛔ **E uno dei dodici era verde per costruzione** — M8 leggeva un contatore `reset` che la pagina chiama `azzerati`, quindi **valeva sempre 0**. Erano **11 vivi più un verde vuoto**. ⭐ Curato e ricertificato il 13 agosto (0 → 1 → 0, col controllo del **falso rosso** accanto): ⇒ `fasi/rapporti/F2-6-giudizio.md` |
-> | ⛔ **3 — il metro non guarda A MONTE della cattura** | il suo fondo di verità è **il buffer che il prodotto stesso ha catturato**: quale monitor, quale sessione, **quale utente** sono fuori dalla sua portata. ⇒ Se il prodotto catturasse il desktop di un altro utente, **il metro direbbe 62 dB e promosso** — ed è il difetto **numero 1** che l'utente ha trovato in una mattina. Lo copre `02-figlio-prova.py`, **rigirato il 13 agosto: 9 misure, 9 uscite 0** — ⛔ ma solo per **metà**: vedi le `[?]` |
-> | ⭐ **il catalogo** | **14 su 15** `[M]` 13 agosto, `01-b12-guasti.py --registro`: ⭐ **B9 ricertificato alle 10:06** sul testo di `RCP.md` uscito dalle cure P20-P21-P22 (0 → 3 → 0, marca vista nel rosso e assente nel verde). ⛔ **Resta P5R**, e la causa è dichiarata: l'ha fatto scadere **la cura del riscalamento** delle 08:56, che ha cambiato `remotix/pagina.html`. ⚠ **E il conto è quello di QUESTA copia**: l'unione col server è ferma alle 02:29 e da allora c'è un giro nuovo di qua — si rimette con `--unisci-col-server --rispecchia`. ⚠ *Questa riga diceva «13 su 15, restano B9 e P5R»: era vera alle 09:57 ed è scaduta alle 10:06 (R13.3)* |
-> | ⚠ **i server accesi su NIC-OS** | **7448** (prodotto di casa) · **7501** (bersaglio di P5) · ⭐ **7561**, che è **quella che l'utente apre** — gira **da root** (`banchi/02-figlio-accendi.sh`), e serve la pagina col riscalamento (`adatta_vista` **3**, verificato col conteggio). ⭐ `[M]` 13 agosto, ricontrollato: **34 file su 34** identici fra `src/` e l'albero del server, `pagina.html` **byte identica**, e ⛔ `/proc/…/exe` punta al binario **vero** — non a un `(deleted)`, che è la trappola già pagata due volte |
-> | ⏳ **la sola scadenza** | `bash banchi/01-s1b-eccezione.sh oggi`, **una volta al giorno fino al 18 agosto**. Fatto il 13 alle 08:08: **2,46 giorni su 7**, canale certificato, **4 controlli su 4**, e il profilo nuovo vede ancora l'avviso. ⚠ *Questa riga diceva «2,04», che è il giro del **12 sera**: il numero era stato copiato da un giro che non era quello che la frase nominava (R13.4)* |
->
-> #### ✅ Che cosa mancava per chiedere il giudizio — **fatto il 13 agosto, mattina tardi**
->
-> ⭐ **Il catalogo è pieno: 15 su 15**, e ⭐ **è il conto del progetto, non di una copia** — le due
-> copie del registro sono state unite e rispecchiate (90 giri, *nessuna riga persa, nessuna
-> inventata*, verificato contando riga per riga). ⛔ Finché l'unione non era fresca, quel numero era
-> «il conto di questa copia», e il `README` lo presentava come **il** numero.
->
-> ⇒ Adesso si chiede *«questo vale come primo fotogramma?»* — ⛔ **e insieme al verde vanno dette
-> tre cose**, o il giudizio è preso su metà quadro:
->
-> 1. **il piano 2 del metro non è applicabile** e lo dichiara — cioè **la catena intera, pagina ⟷
->    cattura, non è stata giudicata**. Il numero grezzo c'è ed è **54,11 dB**; a mancare è il margine
->    che lo rende leggibile: la perdita del codificatore (**55,08 dB**) deve stare **10 dB sotto** il
->    rumore della tela a 8 bit (**62,09 dB**), e ne sta 7,01. ⚠ *Questa riga diceva «la codifica perde
->    **meno** della tela», ed è **invertita**: PSNR più alto vuol dire errore più piccolo, quindi la
->    codifica perde **più** della tela — solo non abbastanza (R13-M.6). La frase giusta era di un
->    altro giro, quello del 12 agosto a QP 20, e si era portata avanti senza rifare il conto.*
->    ⛔ **E c'è un difetto nello strumento, dichiarato**: il messaggio che finisce negli esiti dice
->    *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py:610`);
-> 2. ⛔ **i dieci bit sono otto promossi**, e lo sono **a tutt'e due i capi** — `DECISIONI.md` §2.3-ter
->    (Mutter non li dà per nessuna strada) e la misura sul telefono (`copyTo` riuscito, 4 byte per
->    pixel);
-> 3. ⚠ **il telefono è stato misurato, ma non sull'hardware** — e la differenza conta. `[M]` 13
->    agosto, **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte**, HEVC Main10
->    e AV1 10 bit. ⛔ **Quel che NON ha risposta è «lo decodifica il silicio o la CPU?»**: senza cavo
->    dati non si legge `Created MediaCodec <nome>`, e il criterio A/B esce `valido: false` perché
->    misura **spesa fissa**. `[?]` dichiarata, e più stretta di com'era scritta.
->
-> #### ⚠ Le `[?]` aperte, dichiarate e non curate
->
-> ⛔⛔ **La più grande, e non era dichiarata da nessuna parte fino a oggi: «due utenti con due
-> sessioni vere, ciascuno vede LA PROPRIA» non lo copre nessun banco.** `[M]` 13 agosto:
-> `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti
-> **al nucleo**) non vede il desktop di `nicfio`, e un cliente RCP indipendente conta **zero**
-> fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella
-> macchina `prova` non ha mai fatto login, quindi **un prodotto che non consegnasse niente a nessuno
-> passerebbe allo stesso modo**. ⚠ `01-b10-secondo-utente.py`, `attrezzi-prova2.sh` e `02-pam-i3.py`
-> si fermano tutti **all'autenticazione**, non al vedere.
->
-> **M5** — uno scarto di **crominanza fra due decodificatori** (0,9791 contro un limite di 0,98): è
-> **l'unico rosso rimasto su catena sana**, ⛔ **non si riproduce sulla mira**, e **la soglia non è
-> stata allargata**. ⚠ *Diceva «l'unico rosso mai uscito dal metro», ed è più largo della misura: ai
-> giri delle 09:19-09:20 erano rossi anche **M0 e M1** (33,03 dB contro una soglia di 45), ed erano il
-> difetto dell'immagine piccola, poi curato (R13.12).* · **P15** (`RCP.md` §7.1, il secondo di grazia
-> sulle coordinate: l'ultimo posto dove un orologio decide) · **la risoluzione del desktop**,
-> `1920×1080`, ⛔ **ereditata dalla scena di un banco senza decisione né misura** — e in v1 era
-> **2560×1080**. ⚠ Le tre stanno adesso anche in `fasi/02-primo-fotogramma.md`, §«Che cosa resta
-> `[?]`», che è dove chi riprende le cerca.
->
-> #### ⭐ Le due lezioni nuove, e valgono più del codice
->
-> **`LEZIONI.md` §1.13** — *una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta
-> di un passo a ogni rilettura*, ⭐ **e l'elenco delle eccezioni è parte della tolleranza**: la
-> successione intera sta là, e qui non si ricopia. · **§1.14** — *un controllo che accetta «una delle
-> due strade» nasconde una strada rotta per sempre*.
->
-> ⚠ *Questo riquadro portava la successione a sette e §1.13 — che è **la fonte** — diceva ancora
-> «quattro volte» e dava P14 per una cura che regge. ⛔ Il rimando mandava a una sezione che
-> **contraddiceva chi la citava**: si è aggiornata la fonte, non i due che la citano (R13.6).*
->
-> ⭐⭐ **E la cosa che questa sessione ha dimostrato meglio di ogni numero**: i **tre** difetti più
-> gravi della giornata li ha trovati **l'utente in una mattina**, e nessuno dei 518 file di banco li
-> vedeva — il desktop di un altro utente, la pagina che restava vuota, l'immagine grande come un
-> francobollo. ⇒ `CODER.md` **I8** non è una frase: *il metro è quel che l'utente vede*.
->
-> ---
->
 > ### ⭐ DA QUI SI RIPRENDE — **12 agosto 2026**, notte
 >
 > **Lo stato**: albero pulito (`636f088`), **14 banchi su 14 certificati e valgono oggi**, terreno
@@ -996,7 +529,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⚠ **E una cosa sul metodo, da chi ha tenuto la tastiera**: la trappola *«mai una redirezione
 > **attorno** a `enter.sh`, o si mangia la richiesta di password di `sudo`»* — già in catalogo,
-> `fasi/00-ambiente.md` B3.3 — è stata ripetuta **due volte nella stessa notte**, e la seconda è
+> `FASI.md` §00-ambiente B3.3 — è stata ripetuta **due volte nella stessa notte**, e la seconda è
 > costata venti minuti di attesa su una compilazione che non stava compilando niente. ⇒ Vale la
 > pena renderla impossibile invece di ricordarsela.
 >
@@ -1064,7 +597,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > regge tre pezzi: il browser stava **sulla stessa macchina del server**, la pagina **non l'ha
 > servita il prodotto** (`GET /` zero volte su 48 righe), e la porta era la **7448** — la 7447 è
 > dell'innesto. Corretta l'11 agosto 2026; il conto per esteso è nella tabella qui sotto.*
-> **Il dettaglio, file per file, sta in `fasi/01-filo-nudo.md` §«Che cosa è stato sviluppato».**
+> **Il dettaglio, file per file, sta in `FASI.md` §01-filo-nudo §«Che cosa è stato sviluppato».**
 >
 > ⛔ **E quel che NON è provato, che è la metà che non si vede:**
 >
@@ -1112,7 +645,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⚠ **certificato e NON riverificabile** | **B7** — la marca pretesa era la parola `CONGEDO`, che il banco stampa anche nel giro **sano**: *«una marca che compare in tutt'e due i giri non è una marca»* |
 > | ⛔ **mai provati** | **B2 · B3 · B5 · B6 · B8 · B10 · B11** — sette |
 >
-> ⇒ Il registro è `banchi/01-b12-registro.jsonl`, e il conto per esteso sta in `fasi/01-filo-nudo.md`.
+> ⇒ Il registro è `banchi/01-b12-registro.jsonl`, e il conto per esteso sta in `FASI.md` §01-filo-nudo.
 >
 > #### ⭐ La regola dell'accesso è cambiata, e l'ha decisa l'utente — 10 agosto 2026
 >
@@ -1131,7 +664,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > decisione era **copiata** in quattro documenti invece che rimandata, che è proprio quel che le
 > convenzioni qui sotto vietano.*
 > ⇒ `DECISIONI.md` §1.9 — e con essa `RCP.md` §4.4-bis (da 🔸 a ✅), `SPECIFICHE.md` §4.2,
-> `fasi/01-filo-nudo.md` B0.3 e B8.
+> `FASI.md` §01-filo-nudo B0.3 e B8.
 >
 > ⭐ **Sostituisce la forma che avevo scritto io** — 5 in 5 minuti, finestra che raddoppia fino a 15
 > minuti, due contatori — e ⛔ **il filo non guadagna un byte**: `TROPPI_TENTATIVI` esisteva già.
@@ -1372,7 +905,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⛔ **e per questo i server dei banchi sopravvivono anche loro**: il 10 agosto due di essi tenevano
 > le porte otto ore dopo. Il banco adesso lo controlla prima di partire.
 > ⛔ **E dal 10 agosto sopravvive anche il ban di `RCP.md` §4.4-bis, che sta su file**: fra un banco
-> e l'altro si chiama il comando di sblocco, **mai dentro il giro di B8** (`fasi/01-filo-nudo.md`,
+> e l'altro si chiama il comando di sblocco, **mai dentro il giro di B8** (`FASI.md` §01-filo-nudo,
 > regola B0.3).
 >
 > ### ⛔ Tredici trappole in due giorni, e due rifatte il giorno dopo — quindici occorrenze
@@ -1421,7 +954,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ## Stato precedente — la sera del 9 agosto 2026
 >
-> **Fase 0 chiusa**: i banchi riproducono i numeri di v1 (`fasi/00-ambiente.md`).
+> **Fase 0 chiusa**: i banchi riproducono i numeri di v1 (`FASI.md` §00-ambiente).
 > **Nessuna riga di codice di prodotto ancora scritta.**
 >
 > La giornata ha cambiato il prodotto e poi ha controllato il cambiamento:
@@ -1436,7 +969,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ### Il prossimo passo
 >
-> ⭐ **`fasi/01-filo-nudo.md` è aperto e già revisionato**, con i banchi e **nessuna riga di
+> ⭐ **`FASI.md` §01-filo-nudo è aperto e già revisionato**, con i banchi e **nessuna riga di
 > prodotto scritta** — il documento si apre *prima* di sviluppare (`PIANO.md` §0.1).
 >
 > ⛔ **Due revisioni avversariali sul banco, prima del prodotto: 44 rilievi — 38 `[R]`, 6 `[?]`.**
@@ -1528,8 +1061,8 @@ cosa contengono le cartelle**. Completata l'11 agosto 2026, rilievo **R12C.1**.*
 |---|---|
 | ⭐⭐ `src/` | **il prodotto**: il server della fase 1 in C — **22 file, 9.647 righe** `[M]` 11 ago 2026. RCP/1 su WebTransport, i due certificati, la pagina servita dal server, il ban e il suo comando di sblocco. ⛔ **Non è in git**, e nessun banco lo accende ancora |
 | ⭐ `banchi/` | **i banchi della fase 1** e la sonda del browser, più `banchi/rcp/` — la copia **gemella** di `rcp.c`/`rcp.h`/`autenticazione.c`, oggi identica a quella di `src/` byte per byte. ⚠ Qui il bersaglio è **l'innesto** dentro `bsslserver`, non `src/` |
-| `web/rapporti/` | i quattro rapporti dello studio del browser, ⭐ **più `S-esiti-sonda.md`**, che è l'unico posto dove vivono i numeri **misurati** della sonda |
-| `fasi/` | un documento per fase, **aperto quando la fase si apre** — vedi `PIANO.md` §0.2. In `fasi/rapporti/` i verdetti delle revisioni avversariali: ⛔ **portano la loro data e non si riscrivono**, e quando uno è superato lo si dice **altrove**, con la data |
+| `fasi/` | ⚠ **c'è solo mentre una fase è aperta**, e contiene il documento di quella fase soltanto: alla chiusura diventa un capitolo di [`FASI.md`](FASI.md) e la cartella torna vuota (`PIANO.md` §0.1) |
+| ⛔ ~~`web/rapporti/`, `fasi/rapporti/`~~ | **tolte il 16 agosto 2026** per decisione dell'utente — 94 file di rapporti degli agenti. ⭐ Restano per intero nella storia: come si rilegge o si recupera un rapporto sta in **`FASI.md`**, in testa |
 | `v1/` | l'eredità di REMOTIX v1: **17.481 righe di C**, 4.563 di banchi, i documenti e le scene di taratura |
 | `reference-*/` | cloni dei progetti di riferimento — **non versionati**, si rifanno con `git clone` |
 

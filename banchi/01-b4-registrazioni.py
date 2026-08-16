@@ -10,7 +10,7 @@
 ---------------------------------------------------------------------------
 ⛔ UNA CONFORME, E LE ALTRE SONO I QUATTRO MODI DI NON ESSERLO
 
-`fasi/01-filo-nudo.md` B4: senza la registrazione **conforme**, «6 su 6» e'
+`FASI.md` §01-filo-nudo B4: senza la registrazione **conforme**, «6 su 6» e'
 compatibile con un validatore che **boccia tutto** — basta leggere `lunghezza`
 come `u16` invece di `u32`, due caratteri, e da quel momento l'arbitro dichiara
 non conforme ogni traccia con la diagnosi che punta su `RCP.md` §6.1 mentre il

@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 			 *    stampava solo la riga d'uso, e il 12 agosto 2026 e' costata un
 			 *    giro intero: mancava `--etichetta`, il banco ha letto «uscita 2»
 			 *    e la riga d'aiuto, e da fuori aveva l'aspetto di un produttore
-			 *    che non parte.  E' `fasi/00-ambiente.md` B3 punto 2 — *un'opzione
+			 *    che non parte.  E' `FASI.md` §00-ambiente B3 punto 2 — *un'opzione
 			 *    rifiutata non e' un difetto del bersaglio*. */
 			fprintf(stderr,
 			        "⛔ non capisco l'argomento «%s».\n"

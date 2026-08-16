@@ -166,7 +166,7 @@ fi
 if [ -n "$DIVERSI" ] || [ -n "$VECCHIO" ]; then
 	log "4. Si ricostruisce — e si guarda l'ESITO, non il binario"
 	# ⛔⭐ QUI C'ERA `>/dev/null 2>&1` **ATTORNO** A `enter.sh`, ED E' LA
-	#     TRAPPOLA CHE `fasi/00-ambiente.md` B3.3 DICHIARA PAGATA QUATTRO
+	#     TRAPPOLA CHE `FASI.md` §00-ambiente B3.3 DICHIARA PAGATA QUATTRO
 	#     VOLTE — questa e' la quinta.  `[M]` 12 agosto 2026, 15:22-15:32.
 	#
 	# `enter.sh` chiede la parola d'ordine di `sudo` con `sudo -v -S -p`: la

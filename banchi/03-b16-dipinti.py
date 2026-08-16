@@ -87,7 +87,7 @@ esattamente lo stesso aspetto di un guasto curato.
 | `[?]` **il cambio di `devicePixelRatio`** | sotto `Emulation.setDeviceMetricsOverride` non arriva **niente**: ne' `resize`, ne' `ResizeObserver`, ne' il `change` di `matchMedia("(resolution: Ndppx)")`.  ⇒ Il banco sta misurando **l'emulazione** e non il browser (`LEZIONI.md` §1.11): la domanda resta aperta e vuole uno zoom vero |
 
 ===========================================================================
-⛔ IL PERIMETRO — `fasi/03-movimento.md`: ogni step ha porta, schermo e registro
+⛔ IL PERIMETRO — `FASI.md` §03-movimento: ogni step ha porta, schermo e registro
    propri, o due banchi in parallelo si fermano a vicenda.
 
     porta HTTP    7604       (7448, 7501 e ⛔ 7561 non si toccano)

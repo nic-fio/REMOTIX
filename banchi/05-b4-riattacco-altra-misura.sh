@@ -18,7 +18,7 @@
 #   c'e' gia'), e il palco deve ridimensionarsi.
 #
 # ⇒ E' anche il caso VERO dell'utente: si stacca dal portatile e si riattacca
-#   dal telefono.  `fasi/05-la-sessione.md` lo tiene fra i punti aperti.
+#   dal telefono.  `FASI.md` §05-la-sessione lo tiene fra i punti aperti.
 #
 # ---------------------------------------------------------------------------
 # ⛔⛔ E LA PRIMA STESURA DI QUESTO BANCO AVEVA L'ATTESO SBAGLIATO — 16 agosto

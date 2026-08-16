@@ -6,7 +6,7 @@
 > ## 0. ⛔ Perché questo documento esiste, e perché viene prima
 >
 > *⚠ Il numero è del 10 agosto 2026, rilievo **R11.18**: quattro righe di questo documento
-> (§3, §5.2, §7.5, §11.1) e una di `fasi/01-filo-nudo.md` citavano «§0» come l'argomento portante,
+> (§3, §5.2, §7.5, §11.1) e una di `FASI.md` §01-filo-nudo citavano «§0» come l'argomento portante,
 > e §0 non esisteva — la numerazione cominciava da §0-bis. Adesso esiste, e non cambia una parola
 > del testo.*
 >
@@ -596,7 +596,7 @@ dominio.*
 | | |
 |---|---|
 | **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta. ⛔ **Dei byte DER del certificato** — non della chiave pubblica e non dei byte PEM. ⚠ *Il DER mancava qui e c'era in `DECISIONI.md` §1.5 riga 7 dal 9 agosto (rilievo R1.14): allineato la notte del 10 agosto 2026, ed è lo stesso danno di allora — chi calcola l'impronta sull'involucro sbagliato ottiene un confronto che **non combacia mai**, col sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta* |
-| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** (30,2 ms) e su **Firefox 140** (52,0 ms), e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `fasi/01-filo-nudo.md` |
+| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** (30,2 ms) e su **Firefox 140** (52,0 ms), e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `FASI.md` §01-filo-nudo |
 | ⚠ **e quel che i due motori NON provano** | sono due squadre che non ci conoscono, quindi il loro accordo vale — ⛔ **ma chi serviva era `aioquic`, non una nostra implementazione**: questo misura **il modello di fiducia**, non il server. E **Safari resta fuori per decisione** (`DECISIONI.md` §1.8) |
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
 | ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
@@ -901,7 +901,7 @@ scattato hanno lo stesso aspetto.
 > **chi ha dato il comando lo vede uscire con zero**. Dalla notte del 10 agosto 2026 le due
 > implementazioni parlano lo stesso protocollo di **una riga su un socket Unix `0600`** — `SBLOCCA
 > <indirizzo>` → `TOLTO` / `NON-BANNATO`, e `PING` → `PONG` per dire *«il comando c'è»*. Il racconto
-> per esteso sta in `fasi/01-filo-nudo.md` («Che cosa NON ha funzionato»), non qui.
+> per esteso sta in `FASI.md` §01-filo-nudo («Che cosa NON ha funzionato»), non qui.
 
 ⭐ **Il ritardo fisso resta, e non è ridondante rispetto al ban.** Il server **NON DEVE** rispondere a
 `CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è
@@ -964,7 +964,7 @@ il mittente non si falsifica. Il ban colpisce solo chi ha bussato per davvero.
 indirizzo**, e quello che prova questa regola fallisce di proposito. Con dodici ore, «si aspetta la
 scadenza» non è una cura — il banco si serve del comando di sblocco, e il banco del limitatore **non
 lo chiama dentro il proprio giro**, o non prova più niente. Il dettaglio sta in
-`fasi/01-filo-nudo.md`, regola **B0.3** e banco **B8**.
+`FASI.md` §01-filo-nudo, regola **B0.3** e banco **B8**.
 
 ### 4.5 `ATTACCA`
 
@@ -2121,7 +2121,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 > che si perde è **solo il byte sul canale morto**, cioè un byte che non partiva.
 >
 > ⭐ **E chiude un rosso su codice giusto**: **B5 e B11 applicavano già il condizionale di §3.1**
-> (`fasi/01-filo-nudo.md`, rilievo R3.3), e un banco scritto sulla forma assoluta **avrebbe bocciato
+> (`FASI.md` §01-filo-nudo, rilievo R3.3), e un banco scritto sulla forma assoluta **avrebbe bocciato
 > un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale.
 >
 > ⛔ **E le due decisioni dell'11 agosto non si sostituiscono.** §7.15 dice *quando* l'obbligo cade;

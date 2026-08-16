@@ -177,7 +177,7 @@ class Ignota(Exception):
 
 def processi_shell():
     """I pid di gnome-shell.  ⛔ `pgrep -x`: `comm` e' troncato a 15 caratteri
-    (`fasi/00-ambiente.md` B3.1), e «gnome-shell» ne ha 11 — ci sta.  Ma lo
+    (`FASI.md` §00-ambiente B3.1), e «gnome-shell» ne ha 11 — ci sta.  Ma lo
     stato d'uscita si guarda: 0 trovato, 1 nessuno, 2+ ERRORE."""
     e = subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", "gnome-shell"],
                        capture_output=True, text=True)

@@ -8,7 +8,7 @@
 ===========================================================================
 ⛔ PERCHE' ESISTE — la tesi da refutare
 
-`fasi/03-movimento.md` §0-ter, `[M]` 14 agosto 2026, sessione vera:
+`FASI.md` §03-movimento §0-ter, `[M]` 14 agosto 2026, sessione vera:
 
     1748 fotogrammi consegnati (118 chiavi) … 0 guasti — codec 1
     [192.168.0.3]: §5.2 vuole una CHIAVE — richiesta girata al palco  ×1659
@@ -123,7 +123,7 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 DEPOSITO = os.path.dirname(QUI)
 
-# ⛔ Le porte sono MIE — l'anello A2 ha 7611-7615 (`fasi/04-si-comanda.md`).
+# ⛔ Le porte sono MIE — l'anello A2 ha 7611-7615 (`FASI.md` §04-si-comanda).
 #    Senza porte proprie il ban per indirizzo che fa scattare un banco ferma
 #    gli altri nove che girano in parallelo.
 PORTA_HTTP = 7614

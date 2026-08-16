@@ -104,7 +104,7 @@
 # ---------------------------------------------------------------------------
 # ⛔ MAI UNA REDIREZIONE **ATTORNO** A `ssh` O A `enter.sh`
 #
-# `fasi/00-ambiente.md` B3.3, pagata **cinque** volte — la quinta il 12 agosto
+# `FASI.md` §00-ambiente B3.3, pagata **cinque** volte — la quinta il 12 agosto
 # 2026 dentro `attrezzi-allinea-innesto.sh`, cioe' nel file preso a modello
 # qui: `sudo -v -S -p` fermo **5 minuti e 28 secondi in silenzio**, coi sorgenti
 # gia' copiati e il binario ancora vecchio, cioe' la scena peggiore.
@@ -464,7 +464,7 @@ log "5. Si ricostruisce — con il file di casa, e si guarda l'ESITO"
 # ⛔⭐ E LA REDIREZIONE STA **DENTRO** LE VIRGOLETTE.  `enter.sh --root` chiama
 #     `sudo`, la domanda esce su stderr, e una redirezione messa attorno la
 #     mangia: il comando resta appeso per sempre, in silenzio — e il sintomo
-#     non e' un errore, e' un attrezzo «lento».  `fasi/00-ambiente.md` B3.3,
+#     non e' un errore, e' un attrezzo «lento».  `FASI.md` §00-ambiente B3.3,
 #     pagata cinque volte, l'ultima proprio nel file preso a modello qui.
 $SSH "rm -f $LOG_LA" || dub "⚠ non ho potuto togliere il registro vecchio: quel che leggero potrebbe essere di prima"
 $SSH_ROOT "bash $ENTRA --root \"bash $CASA costruisci > $LOG_DENTRO 2>&1\""

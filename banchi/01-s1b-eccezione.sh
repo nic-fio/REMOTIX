@@ -20,7 +20,7 @@
 # serve a sapere il numero: serve a sapere se quel numero regge sul campo.**
 # `STUDI.md` §web §8 lo dice con queste parole.
 #
-# ⛔ E S1 §4.2 P5 **non e' questa prova**.  `fasi/01-filo-nudo.md` manda a
+# ⛔ E S1 §4.2 P5 **non e' questa prova**.  `FASI.md` §01-filo-nudo manda a
 #    `S1 §4.2 P5` per S1b, ma P5 e' la prova del contesto sicuro (Service
 #    Worker, keyboard lock, appunti, `isSecureContext`).  **Nel rapporto S1 non
 #    esiste nessuna prova di banco sulla durata**: la durata e' solo sorgente

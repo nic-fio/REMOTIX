@@ -658,7 +658,7 @@ const PREFERENZA = ["hevc", "av1"];
    Chrome 151/Linux accetta `L30` su un flusso di livello 3.0 e dipinge 8 celle
    su 8 — cioe' il browser NON fa rispettare il livello, e un valore sbagliato
    non produce nessun sintomo di qua.  ⇒ Il controllo del livello sta DAL LATO
-   SERVER (`fasi/02-primo-fotogramma.md` D4), e quel che questa pagina puo'
+   SERVER (`FASI.md` §02-primo-fotogramma D4), e quel che questa pagina puo'
    fare e' una cosa sola: **usare nella sonda la stessa stringa che usera' nella
    sessione**, cosi' se questo motore rifiutasse un livello dichiarato piu' alto
    del vero se ne accorgerebbe sul pixel invece che a sessione aperta. */
@@ -903,7 +903,7 @@ const SONDE_MISURA = {
  * `[M]` 12 agosto 2026: `hev1.` e `hvc1.` vanno tutti e due in Annex-B puro —
  * Chromium decide la forma del flusso dalla PRESENZA della `description`, non
  * dal prefisso (F2-5 §3).  Qui non si manda nessuna `description`, per HEVC e
- * per AV1: `fasi/02-primo-fotogramma.md` D1.
+ * per AV1: `FASI.md` §02-primo-fotogramma D1.
  *
  * ⚠ `seq_level_idx` di AV1 NON e' il livello in chiaro: `4` vuol dire 3.0.  E'
  *   il tipo di campo su cui si sbaglia in silenzio, e per questo il conto sta
@@ -3106,7 +3106,7 @@ async function collega(utente, parola) {
     ["video.profondita", profondita_buone.join(",") || "8"],
     /* ⚠ `[?]` Il livello NON e' misurato: il browser non lo fa rispettare
        (`[M]` Chrome accetta L30 su un flusso 3.0 e dipinge).  Il controllo sta
-       dal lato server — `fasi/02-primo-fotogramma.md` D4 — e questa riga
+       dal lato server — `FASI.md` §02-primo-fotogramma D4 — e questa riga
        dichiara il valore che `STUDI.md` §web O12 indica per il traguardo. */
     ["video.livello", LIVELLO_DICHIARATO],
     /* ⛔⭐ IL TETTO DEL DECODIFICATORE, MISURATO SUL PIXEL — 13 agosto 2026.

@@ -47,7 +47,7 @@
 #   1. il server com'e' (tetto d'inattivita' predefinito)  -> atteso 30 000 ms
 #   2. il server con `--timeout=10s`                       -> atteso 10 000 ms
 #
-# ⛔ Il secondo giro non e' un doppione: `fasi/01-filo-nudo.md` chiede che il
+# ⛔ Il secondo giro non e' un doppione: `FASI.md` §01-filo-nudo chiede che il
 #    banco **possa cambiare `max_idle_timeout`** (rilievo R3.19).  Senza,
 #    quando B3 misurera' i suoi trenta secondi non potra' distinguere il tetto
 #    del protocollo da quello del trasporto — e una prova che non distingue

@@ -7,7 +7,7 @@
 #
 # E poi, da CHUWI, il registro si riporta nell'albero — ⛔ e questa riga fa
 # parte del banco, non e' un contorno: il registro che resta sul server e' il
-# registro che sparisce alla prossima risincronizzazione (`banchi/prodotto/LEGGIMI.md`):
+# registro che sparisce alla prossima risincronizzazione (`FASI.md` §00-ambiente):
 #
 #   scp nicfio@192.168.0.2:/media/REMOTIX/src/01-p1-esiti.jsonl banchi/01-p1-esiti.jsonl
 #

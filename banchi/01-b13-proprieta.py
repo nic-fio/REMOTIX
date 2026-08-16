@@ -15,7 +15,7 @@
 ===========================================================================
 ⛔ DA DOVE VIENE QUESTO BANCO
 
-`fasi/01-filo-nudo.md` B13, rilievo **R3.24**: sei proprieta' che la fase 1
+`FASI.md` §01-filo-nudo B13, rilievo **R3.24**: sei proprieta' che la fase 1
 **produce** e che nessuno dei dodici banchi guardava.  Tre hanno un ⛔ scritto
 in `RCP.md`.  ⭐ Non sono proprieta' difficili: sono proprieta' che nessuno
 aveva **assegnato a un banco**, ed e' la forma di buco piu' comune di tutte.
@@ -298,7 +298,7 @@ def proprieta_1(a):
 # ===========================================================================
 def proprieta_2(a):
     e = Esito(2, "la parola d'ordine in NESSUN registro prodotto dal giro",
-              "fasi/01-filo-nudo.md B13.2 · RCP.md §4.4: «non deve comparire in "
+              "FASI.md §01-filo-nudo B13.2 · RCP.md §4.4: «non deve comparire in "
               "nessun registro a nessun livello»")
     if not os.path.isdir(a.prodotti):
         return e.di(NON_MISURATO, f"⛔ {a.prodotti} non e' una cartella: il "
@@ -930,7 +930,7 @@ def stato_di_sessione(codice):
 
 def proprieta_6(a, filo):
     e = Esito(6, "che `stato` valga SEMPRE NUOVA",
-              "RCP.md §4.5 (1 = NUOVA, 2 = RIPRESA) · fasi/01-filo-nudo.md "
+              "RCP.md §4.5 (1 = NUOVA, 2 = RIPRESA) · FASI.md §01-filo-nudo "
               "B13.6: «che nessuno abbia scritto per prudenza un ramo RIPRESA»")
     st = filo.get("stato")
     e.guardate += 1
@@ -1359,7 +1359,7 @@ def certifica(a):
 def principale(a):
     print("== ⭐ B13 — le sei cose che la fase produce e che nessun banco "
           "guardava")
-    print("   fasi/01-filo-nudo.md B13, rilievo R3.24\n")
+    print("   FASI.md §01-filo-nudo B13, rilievo R3.24\n")
 
     if a.elenco:
         for n, t in ((1, "i due certificati sono DUE: impronte e scadenze diverse"),

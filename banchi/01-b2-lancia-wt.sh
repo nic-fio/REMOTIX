@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # CHE COSA MISURA
 #
-# `fasi/01-filo-nudo.md`, gruppo 2: **una sessione WebTransport su `/rcp/1`,
+# `FASI.md` §01-filo-nudo, gruppo 2: **una sessione WebTransport su `/rcp/1`,
 # e un byte che torna**.  Qui la si prova senza browser, col cliente di prova
 # — che e' necessario e NON sufficiente (`LEZIONI.md`: e' E10, la prova verde
 # sul client sbagliato).  Il browser viene dopo, e con la pagina.

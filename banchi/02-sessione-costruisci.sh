@@ -504,7 +504,7 @@ costruisci)
 	# ⛔ MAI UNA REDIREZIONE ATTORNO A `enter.sh`: la richiesta di parola
 	#    d'ordine di `sudo` va sullo stderr, e una redirezione la mangia — il
 	#    comando resta appeso per sempre, in silenzio.  Dentro le virgolette si',
-	#    attorno no.  `fasi/00-ambiente.md` B3.3, pagata cinque volte.
+	#    attorno no.  `FASI.md` §00-ambiente B3.3, pagata cinque volte.
 	PW=$(sed -n 's/^pass[[:space:]]*:[[:space:]]*//p' "$HOME/SERVER.ssh" 2>/dev/null)
 	if [ -z "$PW" ]; then
 		ko "⛔ non ho letto la parola di sudo da ~/SERVER.ssh: non e' «vuota», e'"

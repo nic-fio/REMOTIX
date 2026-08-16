@@ -78,7 +78,7 @@ PROFILO = {
         # ⛔⭐ L'ECO DI B2, e questa riga esiste per una trappola gia' pagata
         #     DUE volte.  Il server minimo di B2 **rimanda indietro** i byte
         #     ricevuti sugli stream che il client apre — e' il «byte che torna»
-        #     del gruppo 2 di `fasi/01-filo-nudo.md`.  Uno strumento che aspetta
+        #     del gruppo 2 di `FASI.md` §01-filo-nudo.  Uno strumento che aspetta
         #     quell'eco resta appeso contro il prodotto, che l'eco non ce l'ha,
         #     e il rosso che ne esce il 10 agosto 2026 e' stato diagnosticato
         #     per ore come «difetto del certificato».

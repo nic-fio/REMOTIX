@@ -12,7 +12,7 @@ chi comanda.
 ⛔ A CHE COSA SERVE, E PERCHE' NON E' SOLO DI B8
 
 `RCP.md` §4.4-bis: «si esce in due modi, non uno — la scadenza naturale, oppure
-un **comando di sblocco sul server**».  E `fasi/01-filo-nudo.md` regola **B0.3**
+un **comando di sblocco sul server**».  E `FASI.md` §01-filo-nudo regola **B0.3**
 lo rende il **vincolo piu' duro del capitolo**: il conto dei tentativi e' per
 indirizzo, tutti i banchi partono dallo stesso indirizzo, e ⛔ *«B7 fallisce un
 tentativo, B8 ne fallisce tre, e da li' in poi ogni banco di quella macchina e'
@@ -64,7 +64,7 @@ Le tre cure, e sono indipendenti l'una dall'altra:
        chiede al nucleo»* — e vale piu' di qualunque risposta che il server
        potesse mandare da se': una stringa nel protocollo la scrive il server,
        il pid lo scrive il kernel.  ⚠ Per questo NON si e' aggiunto nessun verbo
-       nuovo al protocollo: `RCP.md` §4.4-bis e `fasi/01-filo-nudo.md` promettono
+       nuovo al protocollo: `RCP.md` §4.4-bis e `FASI.md` §01-filo-nudo promettono
        che i due server parlino **lo stesso protocollo byte per byte**, e un
        verbo che uno solo dei due capisce sarebbe stata la forma **E2** di
        `REVIEWER.md` — due comportamenti sotto la stessa etichetta.  Il

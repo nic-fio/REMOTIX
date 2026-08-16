@@ -82,7 +82,7 @@
 # `RCP.md` §4.4-bis: **tre autenticazioni fallite dallo stesso indirizzo dentro
 # cinque minuti, e quell'indirizzo e' fuori per DODICI ORE**, con il ban su
 # file.  ⚠ E questa macchina e' l'indirizzo da cui lavorano anche gli altri
-# (`fasi/01-filo-nudo.md`, regola B0.3).
+# (`FASI.md` §01-filo-nudo, regola B0.3).
 #
 #   ⭐ QUESTO BANCO SPENDE **UN SOLO TENTATIVO FALLITO PER MOTORE**, e mai due
 #      in volo insieme.  L'ordine delle gambe non e' di comodo, e' la cura:

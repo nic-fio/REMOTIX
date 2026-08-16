@@ -21,7 +21,7 @@
 # ===========================================================================
 # ⛔ IL PERIMETRO, E PERCHE' E' TUTTO PROPRIO
 #
-# `fasi/03-movimento.md`: «ogni step ha porta, file di ban e socket propri: in
+# `FASI.md` §03-movimento: «ogni step ha porta, file di ban e socket propri: in
 # fase 3 i banchi girano in parallelo per davvero, e due banchi che condividono
 # un ban-file si fermano a vicenda».
 #

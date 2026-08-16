@@ -42,7 +42,7 @@
 #    seconda mancava in **quattordici casi su trentasei** e nessun banco se
 #    n'era accorto: bastava che arrivasse la prima.
 #
-# ⛔ Il guasto di `fasi/01-filo-nudo.md` §C1 — «si toglie la spedizione del
+# ⛔ Il guasto di `FASI.md` §01-filo-nudo §C1 — «si toglie la spedizione del
 #    `CONGEDO` e si lascia il codice nella chiusura» — deve far diventare
 #    ROSSO questo banco.  Se resta verde sta facendo una `||` dove serve una
 #    `&&`.
