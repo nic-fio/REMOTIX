@@ -2681,6 +2681,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	uint64_t istante_us;
 	MutterSessione *mut = NULL;
 	Cattura *cat = NULL;
+	/* ⏱ il cronometro dei passi — vedi il riquadro qui sotto */
+	const char *crono_nome = "";
+	uint64_t crono_ms = 0;
 
 	/*
 	 * ⭐ E PRIMA DI TUTTO: se qualcuno sta aspettando una tela, glielo si dice.
@@ -2694,6 +2697,42 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	if (tela_l && tela_a)
 		attendi_tela(tela_l, tela_a);
 
+	/*
+	 * ⛔⭐⭐ IL CRONOMETRO DENTRO I PASSI, e non e' un lusso: e' l'attrezzo che
+	 *       ho dovuto costruire dopo TRE diagnosi sbagliate di fila.
+	 *
+	 * `[M]` 16 agosto 2026.  La misura diceva «mediana 3,2 s, p90 21 s», e il
+	 * registro fra le due righe che delimitano il buco non aveva **una sola
+	 * riga**.  ⇒ Da fuori si poteva solo DEDURRE quale passo se li mangiava, e
+	 * ho dedotto male tre volte: prima l'attesa che raddoppia, poi il gestore
+	 * d'utente, poi il sondaggio a Mutter.  Ogni volta la cura era ragionevole
+	 * e la misura dopo diceva di no.
+	 *
+	 * ⭐ Un passo che puo' durare venti secondi e non lascia traccia e' un passo
+	 *    su cui si puo' solo tirare a indovinare — ed e' esattamente la forma
+	 *    che questo progetto paga da sempre (`LEZIONI.md` §1.9: il silenzio e la
+	 *    salute con la stessa faccia).
+	 *
+	 * ⚠ E si scrive solo quando il passo e' LENTO: un passo veloce non ha
+	 *   niente da dire, e riempire il registro di righe normali e' il modo di
+	 *   non far leggere quelle che contano.
+	 */
+#define PASSO_LENTO_MS 250
+#define CRONO_INIZIO(nome) \
+	do { \
+		crono_nome = (nome); \
+		crono_ms = registro_ora_ms(); \
+	} while (0)
+#define CRONO_FINE() \
+	do { \
+		uint64_t crono_durata = registro_ora_ms() - crono_ms; \
+		if (crono_durata >= PASSO_LENTO_MS) \
+			registro_dice(REG_FIGLIO, \
+			              "⏱ il passo «%s» ha impiegato %llu ms — e' LUI che " \
+			              "tiene fermo il figlio, non «la sessione che nasce»", \
+			              crono_nome, (unsigned long long)crono_durata); \
+	} while (0)
+
 	memset(&p, 0, sizeof p);
 	/* ⛔ «Non ho potuto guardare» e' il valore di PARTENZA, non «sana»: con lo
 	 *    zero del `memset` una via d'uscita anticipata avrebbe riferito
@@ -2706,7 +2745,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	/* ⛔⭐ IL BUS, ED E' LA MISURA CHE DECIDE TUTTO IL MANDATO.  `[M]` root non
 	 *     si collega qui; questo processo e' l'utente, e o si collega o dice
 	 *     perche'. */
+	CRONO_INIZIO("apri il bus di sessione");
 	bus = sessione_bus(&sbaglio);
+	CRONO_FINE();
 	if (!bus) {
 		snprintf(p.guasto, sizeof p.guasto, "bus di sessione: %s",
 		         sbaglio ? sbaglio->message : "(nessun dettaglio)");
@@ -2751,7 +2792,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *   qualche secondo a farsi vedere sul bus, e senza questa briglia ogni
 	 *   ri-tentativo ne avvierebbe un'altra.
 	 */
+	CRONO_INIZIO("leggi lo stato della sessione (GetCurrentState)");
 	p.stato_sessione = (uint32_t)sessione_stato(tela_l, tela_a, NULL);
+	CRONO_FINE();
 	{
 		/*
 		 * ⭐⭐ «C'ERA E ADESSO NON C'E' PIU'» — §7.6, il gemello, e la
@@ -2835,7 +2878,38 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		              p.stato_sessione);
 	}
 
+	/*
+	 * ⛔⭐⭐ NON SI MONTA SOPRA UN COMPOSITORE CHE NON HA RISPOSTO — 16 agosto
+	 *       2026, ed e' l'altra meta' di `ATTESA_SONDAGGIO_MS`.
+	 *
+	 * ⛔ `SESSIONE_NON_LETTA` non vuol dire «non c'e'» e non vuol dire «c'e'»:
+	 *    vuol dire **«ha il nome sul bus e non mi ha risposto»**, cioe' sta
+	 *    ancora nascendo.  ⇒ Andare avanti a montare vorrebbe dire fare a quello
+	 *    stesso compositore muto una chiamata piu' cara — `CreateSession` su
+	 *    RemoteDesktop, che in `mutter.c` ha un tetto di **quindici secondi**.
+	 *
+	 * ⚠ Cioe' si sposterebbe il blocco invece di toglierlo: il sondaggio corto
+	 *   servirebbe a niente, e il figlio resterebbe muto lo stesso.
+	 *
+	 * ⭐ La risposta giusta e' quella che il ciclo sa gia' usare: «non adesso».
+	 *    Si torna, si dice «ATTENDI» al padre, e si riprova fra 200 ms.
+	 */
+	if (p.stato_sessione == (uint32_t)SESSIONE_NON_LETTA) {
+		snprintf(p.guasto, sizeof p.guasto,
+		         "il compositore non ha risposto al sondaggio: sta ancora nascendo");
+		registro_dettaglio(REG_FIGLIO,
+		                   "il compositore di «%s» ha il nome sul bus ma non ha "
+		                   "risposto entro il sondaggio: NON provo a montarci "
+		                   "sopra — sarebbe una chiamata da quindici secondi a "
+		                   "chi non risponde.  Riprovo fra poco",
+		                   g_get_user_name());
+		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+		return false;
+	}
+
+	CRONO_INIZIO("monta il palco (mutter_apri)");
 	mut = mutter_apri(&sbaglio);
+	CRONO_FINE();
 	if (!mut) {
 		snprintf(p.guasto, sizeof p.guasto, "ScreenCast: %s",
 		         sbaglio ? sbaglio->message : "(nessun dettaglio)");
@@ -3870,6 +3944,38 @@ void figlio_vive(int argc, char **argv)
 		 *   una sessione ferma, e' un figlio che non serve a niente. */
 		if (!cat) {
 			uint64_t ora = registro_ora_ms();
+			/*
+			 * ⛔⭐ E SE SI STA SOLO ASPETTANDO, LO SI DICE — una volta al
+			 *     secondo, e non di piu'.
+			 *
+			 * `[M]` 16 agosto 2026: un giro su cinque metteva TRENTA secondi a
+			 * far comparire il desktop, e in quei trenta secondi il figlio non
+			 * scriveva **una riga**.  ⛔ Da fuori i due casi hanno la stessa
+			 * faccia — «sta provando e non ci riesce» e «non sta provando
+			 * affatto» — e la differenza e' tutta la diagnosi.  ⇒ Ho tirato a
+			 * indovinare tre volte, e tre volte la misura dopo ha detto di no.
+			 *
+			 * ⭐ Un'attesa che non si dichiara e' un'attesa che non si puo'
+			 *    curare.  Questa riga costa una riga al secondo e vale le tre
+			 *    diagnosi che mi ha risparmiato.
+			 */
+			if (ora < palco_riprova_ms) {
+				static uint64_t detto_ms;
+
+				if (ora - detto_ms >= 1000) {
+					detto_ms = ora;
+					registro_dice(REG_FIGLIO,
+					              "⏳ senza palco e ASPETTO: mancano %llu ms al "
+					              "prossimo tentativo (attesa in corso %llu ms, "
+					              "nascita chiesta %llu ms fa) — ⚠ non sto "
+					              "provando e fallendo: non sto provando",
+					              (unsigned long long)(palco_riprova_ms - ora),
+					              (unsigned long long)palco_attesa_ms,
+					              nascita_chiesta_ms
+					                  ? (unsigned long long)(ora - nascita_chiesta_ms)
+					                  : 0ULL);
+				}
+			}
 			if (ora >= palco_riprova_ms) {
 				/* ⛔ Si rimonta alla tela VOLUTA, non a quella che il palco
 				 *    caduto aveva: quel che il client ha chiesto non muore con la

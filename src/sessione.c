@@ -55,6 +55,40 @@
 /* ⚠ Al bus si chiede solo se un nome ha un padrone: risponde il bus stesso, e
  *   se ci mette piu' di mezzo secondo il problema non e' la sessione grafica. */
 #define ATTESA_NOME_MS 500
+
+/*
+ * ⛔⭐⭐ IL TETTO DEL SONDAGGIO, e questo numero e' la cura dei «molti secondi»
+ *       che l'utente ha visto — quella vera, dopo due diagnosi sbagliate.
+ *
+ * ⛔ `GetCurrentState` qui non serve per la RISPOSTA: serve per sapere **se il
+ *    compositore risponde**.  E il commento di `sessione_viva()` spiega perche'
+ *    dev'essere una chiamata vera e non `NameHasOwner`: `org.gnome.Shell`
+ *    prende il nome **prima** di `meta_context_start()`, quindi il nome c'e'
+ *    quando la Shell non e' ancora buona a niente.
+ *
+ * ⛔⛔ MA CON `ATTESA_RISPOSTA_MS` (5 s) QUEL SONDAGGIO DIVENTA UN'ATTESA.  Il
+ *     nome ha un padrone, la chiamata parte, e la Shell che sta ancora
+ *     nascendo non risponde: si resta li' cinque secondi buoni.  `[M]` 16
+ *     agosto 2026, giro numero 4 di dodici: fra «IL BUS DI SESSIONE E' MIO» e
+ *     la riga dopo passano **diciassette secondi**, e in mezzo il registro non
+ *     ha **una sola riga** — tre sondaggi da cinque secondi in fila.
+ *
+ * ⇒ ⚠ E in quei diciassette secondi il figlio non riprova, non risponde al
+ *   padre e non consegna un fotogramma.  E' **lo stesso difetto** che il
+ *   riquadro qui sotto dichiara curato: la cura copriva il caso «il nome non
+ *   c'e'», non il caso «il nome c'e' e chi lo tiene non risponde ancora».
+ *
+ * ⭐ Un compositore vivo risponde a `GetCurrentState` in un millisecondo.  Se
+ *    non risponde entro 400 ms **non e' pronto**, e quella e' gia' la risposta
+ *    che ci serve: si torna al ciclo, si dice «ATTENDI» al padre, e si riprova
+ *    fra 200 ms (`PALCO_NASCITA_RIPROVA_MS` in `figlio.c`).
+ *
+ * ⚠ E i due numeri lavorano INSIEME: senza questo tetto il ciclo non torna mai
+ *   indietro, e il ri-tentativo fitto non puo' scattare — `[M]` infatti non e'
+ *   scattato nemmeno una volta in ventidue giri.  Senza il ri-tentativo fitto
+ *   questo tetto scoprirebbe la prontezza fino a un secondo dopo.
+ */
+#define ATTESA_SONDAGGIO_MS 400
 #define ATTESA_USCITA_MS 10000
 
 /*
@@ -218,8 +252,11 @@ static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const c
 		            nome);
 		return NULL;
 	}
+	/* ⛔ `ATTESA_SONDAGGIO_MS`, non `ATTESA_RISPOSTA_MS`: qui si SONDA, e un
+	 *    sondaggio che aspetta cinque secondi non e' un sondaggio, e' un'attesa
+	 *    — vedi il riquadro sulla costante. */
 	return g_dbus_connection_call_sync(bus, nome, oggetto, interfaccia, metodo, NULL, NULL,
-	                                   G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_RISPOSTA_MS,
+	                                   G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_SONDAGGIO_MS,
 	                                   NULL, sbaglio);
 }
 

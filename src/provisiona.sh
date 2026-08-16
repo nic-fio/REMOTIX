@@ -66,6 +66,32 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	done
 	printf 'prova:prova2026\nprova2:prova2026\n' | chpasswd
 	ok "prova e prova2, in video e render"
+
+	# -------------------------------------------------------------------
+	# ⛔⭐ IL LINGER, e non e' una comodita': e' 2,6 secondi per ogni login
+	#
+	# `[M]` 16 agosto 2026, misurato sul registro.  Senza linger, il gestore
+	# d'utente (`user@UID.service`, cioe' `systemd --user` piu' il bus) MUORE a
+	# ogni logout e RINASCE al login dopo.  ⇒ Il figlio, che come prima cosa si
+	# collega al bus di sessione, restava dentro quella connessione:
+	#
+	#     senza linger   2,6 s (e 13,7 s al primo giro dopo un riavvio)
+	#     con linger     ⭐ 18 ms
+	#
+	# ⛔ E c'era di peggio: `loginctl` mostrava l'utente in `State=closing` per
+	#    decine di secondi, e due giri su dieci hanno aspettato 29 e 32 secondi
+	#    un gestore che non finiva di spegnersi.
+	#
+	# ⚠ E NON contraddice §1.10-ter, che rifiutava il linger COME SOSTITUTO
+	#   della sessione PAM: li' il problema era la classe (`manager` invece di
+	#   `user`), e resta vero.  ⭐ Qui il linger sta SOTTO la sessione PAM, non
+	#   al suo posto: la sessione di classe `user` la apre il prodotto lo
+	#   stesso, e il linger tiene solo il gestore caldo fra un login e l'altro.
+	# -------------------------------------------------------------------
+	for u in prova prova2; do
+		loginctl enable-linger "$u" >/dev/null 2>&1
+	done
+	ok "linger acceso: il gestore d'utente resta caldo fra un login e l'altro"
 	inf "⚠ i gruppi arrivano al compositore solo quando RINASCE il gestore"
 	inf "   d'utente: se cambi i gruppi a sessione viva, fermala prima"
 
@@ -150,6 +176,11 @@ tit "La verifica"
 for n in prova prova2; do
 	if id -nG "$n" 2>/dev/null | grep -qw render; then ok "$n e' in render"
 	else ko "$n NON e' in render: il compositore disegnera' in SOFTWARE"; fi
+	if [ "$(loginctl show-user "$n" -p Linger --value 2>/dev/null)" = "yes" ]; then
+		ok "$n ha il linger: il gestore d'utente non rinasce a ogni login"
+	else
+		ko "$n NON ha il linger: ogni login paghera' 2,6 s di gestore d'utente che nasce"
+	fi
 done
 
 [ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix c'e'" \
