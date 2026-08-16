@@ -250,11 +250,16 @@ nostro: **è del browser**. ⇒ Il margine è 2× e dipende dalla cortesia di Ch
 esce — accendere i nostri PING anche a sessione attiva — è in `fasi/05-la-sessione.md` §6-bis e
 **aspetta l'utente**, perché tocca la promessa di §5.3 sulla scheda congelata.
 
-⏳ **E quella promessa non è ancora verificata**: `[M]` 8 minuti e mezzo con la scheda in secondo
-piano ⇒ zero stacchi, pacchetti puntuali — ⛔ **ma la scheda non era congelata**, e lo dice un
-contatore messo apposta nella pagina: 542 battiti su 544 possibili. Chrome non congela una scheda
-sotto automazione. ⇒ **Serve una persona**: aprire la pagina in un browser normale, passare a
-un'altra scheda, lasciarla lì dieci minuti e guardare se compare `STACCATO per silenzio`.
+✅ **E adesso il margine è nostro**: dal 16 agosto i PING del trasporto restano accesi per tutta la
+sessione (prima solo nella finestra delle credenziali). ⇒ Il buco fra due pacchetti non può superare
+i 10 s, e la riga del margine non deve comparire mai.
+
+⛔ **L'obiezione che li teneva spenti era che una scheda congelata deve staccarsi — e non si
+stacca**: `[M]` browser dell'utente, senza automazione, scheda in secondo piano **undici minuti** ⇒
+zero stacchi, pacchetti puntuali a 15 s fino all'ultimo. La riga di `SPECIFICHE.md` §5.3 su questo è
+`[S]`, una previsione, e la misura la smentisce. ⚠ E una misura precedente fatta **con** l'automazione
+non contava: un contatore nella pagina ha mostrato 542 battiti su 544 possibili ⇒ quella scheda non
+era mai stata congelata, perché Chrome non congela una scheda sotto debugger.
 
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 

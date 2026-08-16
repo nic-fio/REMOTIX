@@ -877,6 +877,64 @@ apra la pagina in un browser normale, passi a un'altra scheda e la lasci lì **d
 registro del server dice tutto il resto da sé — se compare `STACCATO per silenzio`, la promessa di
 §5.3 regge e i PING sempre accesi la romperebbero; se non compare, la promessa **è già falsa oggi**.
 
+### ✅ L'HA CHIUSA L'UTENTE, e la promessa di §5.3 non si avvera
+
+`[M]` 16 agosto 2026, browser dell'utente, **senza automazione attaccata** — cioè nella condizione in
+cui Chrome congela davvero. Scheda in secondo piano per **undici minuti**:
+
+```
+15:54:38  posto PRESO da prova
+   …      nessuno stacco, nessun congedo, nessun silenzio di QUIC
+16:04:30  ⚠ fra due pacchetti sono passati 15002 ms
+16:05:30  ⚠ … 15002 ms
+16:06:00  ⚠ … 15002 ms
+16:07:25  posto LASCIATO   (l'utente chiude la scheda: congedo pulito)
+16:07:55  quic: trenta secondi di silenzio, staccato (§2.2)
+```
+
+⇒ ⛔ **La scheda in secondo piano non smette di rispondere**, e i 15 secondi arrivano puntuali ben
+oltre i cinque minuti del congelamento. La riga di `SPECIFICHE.md` §5.3 — *«una scheda congelata
+tace, quindi si stacca»* — è `[S]`, una **previsione** sul comportamento dei browser, e la misura la
+smentisce.
+
+⚠ **Quel che questa misura NON prova**, dichiarato: non prova che la scheda *fosse* congelata — dentro
+il browser dell'utente non si può guardare. ⭐ Ma per la decisione non cambia niente: **congelata o
+no, risponde**.
+
+### ✅ FATTO: i PING restano accesi per tutta la sessione
+
+`regola_tienila_viva()` accendeva i PING solo nella finestra delle credenziali. Adesso li tiene
+accesi finché la sessione non è `finita`.
+
+| l'obiezione che li teneva spenti | perché è caduta |
+|---|---|
+| *«cambierebbe il significato dei 30 secondi di §2.2»* | ⛔ **era già cambiato, e non da questi PING**: da §6-bis l'orologio conta i **pacchetti**. «Il client c'è» vuol dire già «risponde sul filo» — i PING non aggiungono quella semantica, la rendono **affidabile** |
+| *«la scheda congelata deve staccarsi»* | ⛔ misurato: **non si stacca**, undici minuti |
+| ⚠ **il prezzo, dichiarato** | un client con la **pagina** morta e la **rete** viva tiene il posto. ⭐ Ma lo teneva già, e chi torna su quella scheda ritrova la sua sessione (I4). Resta scoperto solo il client che smette di rispondere **anche sul filo** — e quello si stacca ai trenta secondi come sempre |
+
+⭐ **E il metro dell'accettazione è la riga del margine**: con i PING a 10 s il buco fra due pacchetti
+non può superare i 15, quindi *«il margine si sta assottigliando»* **non deve comparire mai**.
+
+`[M]` **Misurato, e il controllo positivo è la seconda riga:**
+
+| | atteso | visto |
+|---|---|---|
+| tre minuti fermo | zero righe-margine, posto tenuto | ✅ **0 righe-margine** (prima: una ogni 30 s), zero stacchi |
+| ⛔ **filo tagliato** | il posto si libera lo stesso: i PING non tengono in vita un morto | ✅ tagliato `16:13:26`, staccato `16:13:50` |
+
+⭐ **E la riga dello stacco porta la riparazione intera in una frase:**
+
+```
+16:13:50  STACCATO per silenzio: 30701 ms senza un PACCHETTO — e l'ultimo byte
+          di RCP e' di 238832 ms fa
+```
+
+⇒ **Trenta secondi** senza pacchetti contro **quattro minuti** senza che l'utente toccasse niente.
+Stamattina sarebbe stato il secondo numero a buttarlo fuori.
+
+⭐⭐ E i due orologi adesso **vanno d'accordo**: `rcp` alle `16:13:50`, `quic` alle `16:14:00` — dieci
+secondi di scarto. ⛔ Stamattina divergevano di **36 secondi, e nel verso sbagliato**.
+
 ## 6-ter · ⛔⛔ E IL BANCO DELLA TELA È ROSSO DA IERI, e nessuno se n'era accorto
 
 *Trovato il 16 agosto controllando che la riparazione dell'orologio non avesse rotto i banchi in

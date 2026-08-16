@@ -1242,23 +1242,58 @@ static void gancio_video_azzera(void *ctx, int64_t stream)
  *    almeno una volta prima che i 30 maturino.  Un keep-alive tarato al pelo
  *    del tetto e' un keep-alive che il primo pacchetto perso rende inutile.
  *
- * ⛔ E SI SPEGNE FUORI DA QUELLA FINESTRA, che e' la meta' che nessuno scrive.
- *    Tenere viva la connessione SEMPRE cambierebbe il significato dei 30
- *    secondi di §2.2 — «l'orologio del silenzio: scaduto, il client e'
- *    staccato» — e §4.6 la cura la chiede per UN tetto solo, l'unico dei tre
- *    che sia piu' lungo dell'inattivita' (60 > 30; gli altri due sono 5 e 10).
- *
  * ⚠ E un client MORTO muore lo stesso: RFC 9000 §10.1 rimette in moto il
  *   cronometro dell'inattivita' quando si RICEVE un pacchetto, non quando lo si
  *   manda.  I nostri PING tengono viva una connessione con qualcuno che
- *   risponde, non una con nessuno. */
+ *   risponde, non una con nessuno.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔⭐ E DAL 16 AGOSTO 2026 RESTANO ACCESI PER TUTTA LA SESSIONE.  Qui sotto
+ *      c'era scritto il contrario, e la ragione era questa:
+ *
+ *        ~~«Tenere viva la connessione SEMPRE cambierebbe il significato dei 30
+ *        secondi di §2.2 — l'orologio del silenzio: scaduto, il client e'
+ *        staccato»~~
+ *
+ *      ⇒ E' caduta in due passi, tutt'e due misurati.
+ *
+ *   1. ⛔ **La semantica era gia' cambiata**, e non da questi PING: da stamattina
+ *      §5.3 conta i PACCHETTI e non i byte di RCP (`rcp.c`, `ultima_vita`),
+ *      perche' contando i byte un utente che LEGGEVA perdeva il posto dopo
+ *      trenta secondi e un secondo dispositivo glielo portava via.  ⇒ «Il client
+ *      c'e'» vuol dire gia' «risponde sul filo».  Questi PING non aggiungono
+ *      quella semantica: la rendono **affidabile**.
+ *
+ *   2. ⛔⛔ **Senza, il margine e' del BROWSER e non nostro.**  `[M]` Con una
+ *      sessione ferma, i pacchetti arrivano ogni **15002 · 15005 · 15002 ms** —
+ *      quindici secondi esatti, meta' netta del tetto.  Un numero cosi' regolare
+ *      non e' traffico: e' il keep-alive di Chrome.  ⚠ Un browser diverso, o
+ *      Chrome che cambia quel numero, e i posti ricominciano a cadere sotto il
+ *      naso di chi legge.
+ *
+ * ⚠ E LA PREVISIONE DI `SPECIFICHE.md` §5.3 SULLA SCHEDA CONGELATA NON SI
+ *   AVVERA — «una scheda in secondo piano viene congelata dopo circa cinque
+ *   minuti, quindi tace, quindi si stacca».  `[M]` 16 agosto, browser vero
+ *   dell'utente senza automazione attaccata, scheda in secondo piano per
+ *   **undici minuti**: zero stacchi, pacchetti puntuali a 15 s fino all'ultimo.
+ *   ⛔ Quella riga e' `[S]`, una previsione sul comportamento dei browser, e la
+ *   misura la smentisce.
+ *
+ * ⚠ IL PREZZO, DICHIARATO: un client la cui PAGINA e' morta ma la cui RETE
+ *   risponde tiene il posto.  ⛔ Ma lo teneva gia' — vedi il punto 1 — e chi
+ *   torna su quella scheda ritrova la sua sessione, che e' l'invariante I4.  Il
+ *   caso che resta scoperto e' il client che smette di rispondere ANCHE sul
+ *   filo, e quello si stacca ai trenta secondi come sempre. */
 #define WT_TIENILA_VIVA_NS (10ULL * NGTCP2_SECONDS)
 
 static void regola_tienila_viva(wt *w, const char *stato)
 {
 	/* ⚠ Il nome dello stato e' il contratto: `rcp.h` li elenca tutti e sette
-	 *   per iscritto, e dice che chi li confronta deve saperlo. */
-	bool serve = stato && strcmp(stato, "attesa-credenziali") == 0;
+	 *   per iscritto, e dice che chi li confronta deve saperlo.  ⛔ Qui si
+	 *   nomina il solo stato in cui NON servono: dopo la fine non c'e' piu'
+	 *   niente da tenere vivo, e insistere sarebbe rumore su una connessione
+	 *   che sta chiudendo. */
+	bool serve = stato && strcmp(stato, "finita") != 0;
 
 	if (serve == w->tienila_viva)
 		return;
@@ -1266,12 +1301,11 @@ static void regola_tienila_viva(wt *w, const char *stato)
 	ngtcp2_conn_set_keep_alive_timeout(w->conn,
 	                                   serve ? WT_TIENILA_VIVA_NS : UINT64_MAX);
 	registro_dice(REG_WT,
-	              serve ? "⭐ PING del trasporto ACCESI ogni 10 s con %s: §4.6 "
-	                      "da' 60 s per digitare la parola d'ordine e "
-	                      "l'inattivita' di QUIC ne da' 30"
-	                    : "PING del trasporto spenti con %s: la finestra delle "
-	                      "credenziali e' chiusa, e i 30 s di §2.2 tornano a "
-	                      "essere l'orologio del silenzio",
+	              serve ? "⭐ PING del trasporto ACCESI ogni 10 s con %s: il "
+	                      "segno di vita di §5.3 lo produciamo NOI, non il "
+	                      "keep-alive del browser (che dava 15 s su 30 di tetto)"
+	                    : "PING del trasporto spenti con %s: la sessione e' "
+	                      "finita, non c'e' piu' niente da tenere vivo",
 	              w->provenienza);
 }
 
