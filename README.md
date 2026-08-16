@@ -1063,7 +1063,7 @@ cosa contengono le cartelle**. Completata l'11 agosto 2026, rilievo **R12C.1**.*
 | ⭐ `banchi/` | **i banchi della fase 1** e la sonda del browser, più `banchi/rcp/` — la copia **gemella** di `rcp.c`/`rcp.h`/`autenticazione.c`, oggi identica a quella di `src/` byte per byte. ⚠ Qui il bersaglio è **l'innesto** dentro `bsslserver`, non `src/` |
 | `fasi/` | ⚠ **c'è solo mentre una fase è aperta**, e contiene il documento di quella fase soltanto: alla chiusura diventa un capitolo di [`FASI.md`](FASI.md) e la cartella torna vuota (`PIANO.md` §0.1) |
 | ⛔ ~~`web/rapporti/`, `fasi/rapporti/`~~ | **tolte il 16 agosto 2026** per decisione dell'utente — 94 file di rapporti degli agenti. ⭐ Restano per intero nella storia: come si rilegge o si recupera un rapporto sta in **`FASI.md`**, in testa |
-| `v1/` | l'eredità di REMOTIX v1: **17.481 righe di C**, 4.563 di banchi, i documenti e le scene di taratura |
+| `v1/` | ⚠ **non è solo archivio, e questa riga lo diceva male**: l'eredità di REMOTIX v1 — 17.481 righe di C, i banchi, i documenti, le scene di taratura — ⭐ **ma dentro ci sono due cose VIVE**, `v1/banco/enter.sh` (il modo in cui si entra nella macchina di prova, **193 citazioni**) e `v1/strumenti/sshpw.py` (**81**, lo chiamano i banchi di V2). La mappa completa — vivo, archivio, morto, con le citazioni contate — sta in **`DECISIONI.md` §6.1** |
 | `reference-*/` | cloni dei progetti di riferimento — **non versionati**, si rifanno con `git clone` |
 
 ---

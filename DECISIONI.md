@@ -3022,6 +3022,55 @@ seconda copia. Verificato per impronta SHA-256, 103 file su 103.
 | `v1/documenti/` | PIANO, SPECIFICA, REFERENCE, protocollo-rdp, client-android, xrdp |
 | `v1/calibrazione/` | le tre scene della taratura del 1 agosto |
 
+> ### ⛔⛔ E QUESTA TABELLA OMETTEVA LE DUE SOLE PARTI DI `v1/` CHE SONO VIVE — *corretto il 16 agosto 2026*
+>
+> *Trovato censendo `v1/` file per file, su richiesta dell'utente. La tabella qui sopra ha **sei
+> righe** e le lascio com'erano — ⛔ ma `v1/banco/` e `v1/strumenti/` non ci sono, e sono
+> **l'attrezzatura corrente del progetto**. Chi leggeva questo paragrafo per sapere che cos'è `v1/`
+> si portava a casa che era tutto archivio. Non lo è.*
+>
+> ## La mappa vera: che cosa è **vivo**, che cosa è **archivio**, che cosa non serve a nessuno
+>
+> *`[M]` 16 agosto 2026, citazioni contate dai dieci documenti, da `src/`, da `banchi/` e da `web/`.*
+>
+> | | file | MB | citazioni | |
+> |---|---|---|---|---|
+> | ⭐⭐ **`v1/banco/`** | 13 | 0,2 | **enter.sh: 193** | **VIVO, e regge tutto**: `enter.sh` è il modo in cui si entra nella macchina di prova. Con `provision.sh`, `provision-server.sh`, `gpu-udev.sh` (applicato il 15 agosto, §4.6-ter), `server.sh`, `vm.sh` |
+> | ⭐⭐ **`v1/strumenti/sshpw.py`** | 1 | 0,01 | **81** | **VIVO**: lo chiamano decine di banchi di V2 |
+> | ⭐ `v1/remotix-c/` | 70 | 1,0 | 37 file su 70 | **archivio con valore**: è la miniera del riuso — `kwin.c` (822 righe) e `appunti_wlr.c` (796) sono nel piano delle fasi 11 e 12 |
+> | ⭐ `v1/banchi/banco-compositori/` | 74 | 0,7 | 4 | **archivio con valore**: le misure di KWin, wlroots e Mutter, che le fasi 11 e 12 rifaranno |
+> | ⭐ `v1/documenti/` | 6 | 0,5 | tutti e sei | **archivio con valore**: la storia del prezzo pagato (`LEZIONI.md` §0) |
+> | ⚠ `v1/calibrazione/` | 10 | ⛔ **90,2** | la cartella 1 volta, i file **0** | le tre scene a tre risoluzioni — **il 96 % del peso del progetto**. Vedi il riquadro sotto |
+> | ⚠ `v1/remotix-rust/` | 23 | 0,4 | **1**, ed è questa tabella | il ramo IronRDP, **chiuso il 3 agosto**. La lezione è scritta qui; il codice non la aggiunge |
+> | ⛔ `v1/banchi/` *(resto)* | ~190 | 4,1 | 17 | 86 `.log`, 8 `.png`, 10 archivi `.tgz/.gz/.xz`, 2 `.so`, gli esiti di esecuzioni del 1-8 agosto |
+> | ⛔ ~~`v1/tracce/`~~ | 8 | 0,4 | **0** | flussi `.h264` e log di provisioning **RDP** — e RDP è morto con §1.6. ✅ **Tolti il 16 agosto 2026** |
+> | ⛔ ~~`v1/banco/*.prima*`, `*.rust`~~ | 4 | 0,05 | **0** | **copie a mano** di `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, fatte prima di una modifica. ⚠ Una copia di riserva accanto all'originale è una trappola, non una rete: la rete è git. ✅ **Tolte il 16 agosto 2026** |
+>
+> ## ⛔⛔ E la cosa che cambia il ragionamento sui 90 MB: **toglierli non recupera niente**
+>
+> `[M]` il `.git` pesa **94,29 MiB** e i dieci `.mp4` ne sono **90,2** — cioè **il 96 %**. Sono dieci
+> file distinti, entrati una volta sola e mai più toccati.
+>
+> ⛔ **Ma `git rm` non li toglie dalla storia**: resterebbero nel `.git` e il peso non cambierebbe di
+> un byte. L'unica strada che recupera davvero è **riscrivere la storia**, e costa un prezzo che
+> questo progetto non può pagare:
+>
+> ⛔⛔ **quindici hash di commit sono citati nei documenti come ricette di recupero** — `0c85e5c`
+> per i 94 rapporti degli agenti, `47bd41c` per il diario potato del `README`, e altri tredici nei
+> verbali delle fasi. Una riscrittura li cambia **tutti**, e ogni ricetta punterebbe al nulla.
+>
+> ⇒ ⭐ **E non serve pagarlo**: `[M]` il repository **non ha un remote**, vive solo su questo disco.
+> Novantaquattro megabyte fermi in una cartella non costano niente a nessuno.
+>
+> ⇒ **Decisione: i `.mp4` restano.** ⚠ E si scrive qui perché nessuno riapra la questione contando
+> di nuovo i megabyte senza contare gli hash.
+>
+> ⭐ **Con un fatto che vale per la fase 9**: le scene **si rigenerano**, `v1/banco/calibrazione.sh`
+> le produce con `ffmpeg` alle tre risoluzioni native. ⚠ **Ma non byte per byte**: un `ffmpeg`
+> diverso dà un file diverso, e il confronto con i numeri del 1 agosto si romperebbe. ⇒ Chi alla
+> fase 9 volesse confrontarsi con la taratura di v1 **usi questi file**, non quelli che si
+> rigenererebbe.
+
 `LEZIONI.md` è stato promosso al livello di V2: è il fondamento di `CODER.md` e `REVIEWER.md`,
 che lo citano 29 volte su 20 sezioni.
 

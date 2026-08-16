@@ -1,21 +1,0 @@
-    --  recupero qemu-img (confinato in /media/REMOTIX/hosttools)
-    [1;32mOK[0m  qemu-img pronto
-
-[1;34m==> Chiave SSH per la VM[0m
-    [1;32mOK[0m  generata in /media/REMOTIX/vm/ssh/id_ed25519
-
-[1;34m==> Immagine Debian trixie[0m
-    --  scarico da cloud.debian.org, circa 400 MB...
-#=#=#                                                                          ######################################################################## 100.0%##O#-#                                                                         ##=O#- #                                                                                                                                                  0.0%                                                                           0.0%                                                                           0.2%                                                                           0.6%#                                                                          2.0%#####                                                                      7.2%###########                                                               16.5%##################                                                        25.9%#########################                                                 34.9%###############################                                           44.0%######################################                                    53.2%############################################                              62.4%###################################################                       71.6%##########################################################                80.7%################################################################          90.0%#######################################################################   98.9%######################################################################## 100.0%
-    [1;32mOK[0m  scaricata (416M)
-
-[1;34m==> Configurazione iniziale[0m
-    --  costruisco l'immagine di configurazione
-Password sudo: E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)
-E: Unable to lock directory /var/lib/apt/lists/
-W: Problem unlinking the file /var/cache/apt/pkgcache.bin - RemoveCaches (13: Permission denied)
-W: Problem unlinking the file /var/cache/apt/srcpkgcache.bin - RemoveCaches (13: Permission denied)
-/bin/bash: line 5: xorriso: command not found
-
-[1;31mERRORE[0m costruzione dell'immagine di configurazione fallita
-EXIT=1
