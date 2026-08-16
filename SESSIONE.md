@@ -120,6 +120,37 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, e sotto c'è il
 **punto aperto** qui sotto.
 
+## ⭐⭐⭐ VENTI GIRI DAL BROWSER VERO — la misura che l'utente aveva chiesto
+
+*«Fai il login/logout almeno venti volte e misura esattamente i tempi» · «per i test usa il browser,
+non il banco: è l'unico modo di misurare effettivamente quello che accade».*
+
+`[M]` 16 agosto 2026, Chrome su questo portatile → il server, venti cicli **accesso → desktop →
+`Ctrl+Alt+Fine` → conferma → modulo di accesso**, senza mai toccare il banco.
+
+| fase | mediana |
+|---|---|
+| nascita del figlio → tela dichiarata dal browser | 968 ms |
+| tela → avvio di `gnome-session` | 214 ms |
+| avvio → palco montato | 850 ms |
+| palco → **primo fotogramma spedito** | 45 ms |
+| ⭐ **TOTALE, «Collegati» → desktop** | **2087 ms** |
+
+⭐ **p90 2142 ms · minimo 1968 · massimo 2155.** ⇒ **187 ms di dispersione su venti giri**: nessuna
+punta, nessun giro lento.
+
+⭐ E le tre cose che facevano paura sono a zero:
+
+| che cosa | quante volte |
+|---|---|
+| fotogrammi a una misura diversa da quella chiesta | **0** (tutti e 263 a `1552x532`) |
+| «il palco non è alla tela in vigore» (il *ballo*) | **0** |
+| figlio fermo ad aspettare senza provare | **0** |
+| congedi `0x10` puliti | **21 su 21** |
+
+⚠ E il **secondo fisso** dell'ammissione è quasi metà del totale (968 ms su 2087): è la difesa dalla
+forza bruta, e adesso che il resto è sceso è **il pezzo più grosso che resta**.
+
 ## ⏳ Il riattacco da uno schermo diverso — quel che il banco può dire, e quel che no
 
 `[M]` 16 agosto 2026, `banchi/05-b4-riattacco-altra-misura.sh`: ci si stacca da `2544x926` e si
