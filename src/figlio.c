@@ -3649,7 +3649,29 @@ void figlio_vive(int argc, char **argv)
 			{
 				int attesa_ms = (codec_chiesto && cat) ? 0 : 1000;
 
-				if (!cat && palco_riprova_ms) {
+				/*
+				 * ⛔⭐⭐ E LO ZERO VUOL DIRE «ADESSO», NON «NON ARMATO» — 16
+				 *       agosto 2026, ed e' la SECONDA volta che questo numero
+				 *       inganna in questo file.
+				 *
+				 * `[M]` La tela del cliente arriva, il gestore mette
+				 * `palco_riprova_ms = 0` per dire «riprova subito», e questo
+				 * `poll` — che leggeva lo zero come «nessun tentativo in
+				 * agenda» — si metteva a dormire.  ⇒ Fra «la tela e' arrivata»
+				 * e «entro nel montaggio» passavano **2000 ms tondi**, cioe'
+				 * due dormite intere, e si buttava via meta' del guadagno della
+				 * cura della tela.
+				 *
+				 * ⚠ Lo zero come «non armato» aveva gia' fatto danni qui il 15
+				 *   agosto.  ⇒ Adesso ha UN significato solo: «il tentativo e'
+				 *   dovuto», e l'attesa e' sempre «quanto manca», zero
+				 *   compreso.
+				 *
+				 * ⛔ E non si gira a vuoto: il tentativo che segue rimette
+				 *    subito `palco_riprova_ms` nel futuro, quindi lo zero vale
+				 *    per un giro solo.
+				 */
+				if (!cat) {
 					uint64_t adesso = registro_ora_ms();
 
 					attesa_ms = palco_riprova_ms > adesso
