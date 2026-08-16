@@ -395,6 +395,19 @@ che deve saperlo spegnere»* — ⛔ ma nessuno l'aveva letta **al verso opposto
 ⚠ **E un secondo difetto dallo stesso sintomo**: si tornava al modulo solo per `0x10` e `0x02`, due
 motivi su quindici. Adesso per **ogni** congedo.
 
+## ⭐ Il banco di `rcp.c` gira a ogni costruzione
+
+`[M]` `banchi/04-b31-tela.c` — 19 casi sul modulo più delicato — è rimasto **rosso per un giorno
+intero** perché nessuno lo lanciava. ⛔ Un banco che nessuno lancia è rumore burocratico.
+
+⇒ Dal 16 agosto 2026 lo esegue `src/costruisci-in-contenitore.sh`, in due secondi:
+
+```
+⭐ 04-b31 (la tela,  passati 19, falliti 0):
+```
+
+⚠ **Non ferma la costruzione** — il binario può servire lo stesso — ma il rosso si vede.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ✅ ~~La voce «Power Off» resta nel menu~~ — **chiuso dall'utente il 16 agosto 2026**: *«il menù di

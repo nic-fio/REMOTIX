@@ -1406,27 +1406,47 @@ data, e niente altro.
 | 16 ago | *«Il task nel terminale era ancora in esecuzione»* | ⭐ la scena su cui la fase si giudica (§6-octies) |
 | 16 ago | *«Possiamo considerare chiusa la fase 5?»* → **«procedi»** | la chiusura |
 
-### ⏳ Quel che passa alla fase successiva, dichiarato invece che nascosto
+### ⏳ Quel che resta — ripulito col criterio dell'utente
 
-⚠ **Chiusa non vuol dire completa**, e la fase 4 aveva passato le sue code a questa allo stesso modo.
+> ⛔ *«Se i punti non toccano il prodotto è solo rumore burocratico»* — l'utente, 16 agosto 2026.
 
-**Della fase 5:**
+⭐ **E ha ragione**, e questo elenco è stato **tagliato** invece che difeso. Quel che era scritto qui
+e non cambiava niente è stato tolto, non spostato:
 
-1. ⏳ **Il banco del puntatore dopo il ricambio dei dispositivi.** `[M]` Provato oggi **con le mani
-   dell'utente** e passato, ⚠ ma niente lo rifà da solo domani;
-2. ⏳ **Le altre due strade di §7.3** — l'errore di protocollo e `rcp_libera()` — non esercitate;
-3. ✅ ~~`0x0F` non è mai uscito su una connessione vera~~ — **chiuso il 16 agosto**: provato da Android
-   contro il PC, §6-novies.
-4. ⏳ **Il banco della sentinella non prova la scena con una sessione locale VERA** (`0x05`): sulla macchina non
-   c'è nessuno alla consolle;
-5. ⏳ **Mentre aspetta, al client non si dice perché.** ⭐ L'attesa è passata da ~32 s a **2353 ms**, e
-   con essa l'urgenza — ma il difetto di forma resta.
+| tolto | perché non era un debito |
+|---|---|
+| ~~«due strade di §7.3 su quattro»~~ | passano tutte dallo **stesso imbuto** (`rilascia_al_distacco` + `inp_rilasciato`), e l'imbuto è esercitato due volte. Coperte per **costruzione**, non da provare |
+| ~~le tre code della fase 4~~ | le stavamo **traslocando da due fasi**. Se nessuno le fa non sono un elenco: sono un modo di non decidere. ⇒ Restano dove sono nate, in `fasi/04-si-comanda.md` |
+| ~~«la latenza va rimisurata»~~ | non è un punto aperto: è **un numero che non abbiamo**. Si prende quando serve un numero |
 
-**Code della fase 4 che passavano di qui e passano oltre** (§3): la riga mancante a `RCP.md` §7.1, gli
-8 ms di `MOVIMENTO_ATTESA_S`, i banchi RCP/1 che non esercitano `ADATTA_TELA`.
+**Resta questo, e sono due cose sole:**
 
-**E una misura da rifare**: ⚠ i `[M]` **41 ms** di latenza sono di **prima** delle cure del 15 e del 16
-agosto, e su una configurazione diversa. **Il numero vero non lo sappiamo.**
+1. ⭐ **`0x05` — l'utente ha già una sessione grafica LOCALE.** È l'unico pezzo di prodotto della fase
+   mai uscito su una scena vera: il banco lo prova con sessioni finte create da PAM, perché alla
+   consolle di quella macchina non si è mai seduto nessuno. ⇒ Si chiude come si è chiuso `0x0F`:
+   **con una persona**, che entra sul desktop locale e poi tenta da remoto;
+2. ⏳ **Un banco per il puntatore dopo il ricambio dei dispositivi.** ⚠ Non è carta: al cambio di
+   geometria `libei` distrugge e ricrea i dispositivi assoluti e **il puntatore vecchio smette di
+   funzionare senza errore** (`gnome.md` §9). Oggi è stato provato con le mani dell'utente e passa.
+
+### ⭐ E la cura al «banco che nessuno lancia», che è la stessa obiezione
+
+`[M]` `04-b31-tela.c` — 19 casi sul modulo più delicato — è rimasto **rosso per un giorno intero**
+perché nessuno lo lanciava. ⛔ Un banco che nessuno lancia **è** rumore burocratico.
+
+⚠ E la cura **non è un lanciatore**: di banchi che si giudicano da soli e girano senza macchina ce
+n'è **uno**, e uno script per lanciarne uno è la stessa burocrazia con un altro nome.
+
+⇒ **Gira da sé, dove si passa comunque**: `src/costruisci-in-contenitore.sh` lo compila e lo esegue a
+ogni costruzione, in due secondi.
+
+```
+⭐ costruito: …/src/remotix
+⭐ 04-b31 (la tela,  passati 19, falliti 0):
+```
+
+⛔ E **non ferma la costruzione**: il binario c'è e può servire. Ma il rosso si vede — ed era l'unica
+cosa che serviva.
 
 ### ⭐ La lezione della giornata, in una riga
 
