@@ -3886,6 +3886,18 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	 * lavorando.  §5.3 dice «senza un byte DAL CLIENT», e questi sono byte del
 	 * client. */
 	s->ultimo_byte = ora;
+	/* ⛔⭐ E ANCHE IL SEGNO DI VITA, per una ragione che viene prima della
+	 *     comodita': **un byte di RCP e' arrivato dentro un pacchetto**.  Se
+	 *     il byte c'e', il pacchetto c'era — dirlo qui non e' una scorciatoia,
+	 *     e' la stessa cosa detta dove si vede.
+	 *
+	 * ⚠ E rende `rcp_segno_di_vita()` una PURA AGGIUNTA: copre il caso in cui
+	 *   arrivano pacchetti SENZA byte di RCP — cioe' l'utente che guarda e non
+	 *   tocca, che e' il caso per cui e' nata.  ⛔ Senza questa riga i banchi
+	 *   in processo (`04-b31`, `01-b12`) non avrebbero nessun segno di vita:
+	 *   non passano dal trasporto, e si staccherebbero trenta secondi dopo
+	 *   l'apertura qualunque cosa facessero. */
+	s->ultima_vita = ora;
 	if (!torna_a_parlare(s))
 		return false;
 
@@ -5109,8 +5121,12 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 		giudica_dopo_la_fine(s, dati, len);
 		return false;
 	}
-	/* ⭐ L'orologio del silenzio si azzera QUI, sui byte di RCP. */
+	/* ⭐ L'orologio dell'INATTIVITA' dell'utente si azzera qui, sui byte di RCP
+	 *    — e con lui il segno di vita, perche' un byte arrivato e' un pacchetto
+	 *    arrivato.  ⚠ La ragione lunga sta sull'altra delle due chiamate, in
+	 *    `rcp_ricevi_input()`. */
 	s->ultimo_byte = ora;
+	s->ultima_vita = ora;
 
 	/* ⚠ La connessione non si chiude per il solo silenzio — quella scelta e'
 	 *   dichiarata nel riquadro in cima e non cambia.  Quel che cambia e' che

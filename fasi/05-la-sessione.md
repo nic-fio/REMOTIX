@@ -842,6 +842,40 @@ cambia quel numero, e i posti ricominciano a cadere sotto il naso di chi sta leg
 > §5.3 sulla scheda congelata **è già falsa oggi** — perché quei 15 secondi arrivano lo stesso — e la
 > decisione cambia forma.
 
+## 6-ter · ⛔⛔ E IL BANCO DELLA TELA È ROSSO DA IERI, e nessuno se n'era accorto
+
+*Trovato il 16 agosto controllando che la riparazione dell'orologio non avesse rotto i banchi in
+processo. ⭐ Non l'aveva rotto niente — era già rotto.*
+
+`banchi/04-b31-tela.c` monta `rcp.c` **nudo** con un palco finto: **18 casi, ciascuno con l'atteso
+dichiarato prima**. `fasi/04-si-comanda.md` lo chiama il banco della tela, e
+`fasi/rapporti/F5-IN-0-mandato.md` lo cita fra quelli da tenere verdi.
+
+`[M]` Ricostruito a mano su sette versioni di `rcp.c`, una per commit:
+
+| commit | esito | |
+|---|---|---|
+| `c7c57e5` | 17 / 0 | *«La tela del server prende la misura del client»* |
+| `2e061f6` · `a4c26fa` · `bbc93a2` | ⭐ **18 / 0** | |
+| ⛔ `477d708` | **11 / 7** | *«La tela era sbagliata dal primo istante»* — **la cura della coda dei tempi, ieri** |
+| `26d463c` · `d32cda6` | 11 / 7 | oggi, identico ⇒ **non è di oggi** |
+
+⇒ ⛔ **Sette casi su diciotto sono rossi da ieri**, e il banco non è stato rilanciato dopo la cura.
+⚠ I casi caduti sono 6, 9, 10, 17 e altri tre: tutti attorno alla **misura concessa** — che è
+esattamente quel che `477d708` ha cambiato, introducendo il ripiego dichiarato di §4.5 *«concessa la
+tela del palco»*.
+
+⏳ **E la diagnosi NON è fatta**: potrebbero essere **attesi vecchi** — la quinta volta in due giorni
+che un banco misura se stesso, ed è il sospetto giusto per primo (`SESSIONE.md`) — oppure il
+prodotto. ⛔ Si guarda caso per caso, non si conclude da qui.
+
+⭐ **E la lezione di processo è indipendente dall'esito**: il banco più forte che abbiamo su `rcp.c`
+è rimasto rosso un giorno intero perché **nessuno lo lancia**. Costa due secondi:
+
+```sh
+gcc -O1 -std=gnu11 -w -D_GNU_SOURCE -o /tmp/b31 banchi/04-b31-tela.c src/rcp.c && /tmp/b31
+```
+
 ## 7 · Il giudizio dell'utente
 
 *(la fase si chiude qui, non su un documento completo)*
