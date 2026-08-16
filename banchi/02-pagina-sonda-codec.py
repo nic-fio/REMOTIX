@@ -28,7 +28,7 @@
   dovrebbe.
 
 ⇒ ⭐ L'unica domanda che ha una risposta e' **il pixel**, e l'unico posto dove
-  si puo' porre e' **il dispositivo dell'utente** (`web.md` §9 lezione 2: *«il
+  si puo' porre e' **il dispositivo dell'utente** (`STUDI.md` §web §9 lezione 2: *«il
   browser sa e non risponde… la misura deve vivere nel prodotto»*).  Da cui
   queste quattro sonde: due tinte lontane in un fotogramma chiave di 64x48, una
   per codec e per profondita'.

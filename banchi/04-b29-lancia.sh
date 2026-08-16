@@ -61,7 +61,7 @@ case "$CHE" in
             --palchi finestra,schermo-intero-api --esiti "$E"
     ;;
   pwa)
-    # ⭐ La `[R]` di `web.md` §5.1 («In Apps mode, no keys are reserved») portata
+    # ⭐ La `[R]` di `STUDI.md` §web §5.1 («In Apps mode, no keys are reserved») portata
     #    a `[M]` senza un telefono: `--app=` apre la finestra d'applicazione, che
     #    e' lo stesso ramo di codice della PWA installata.
     #    ⚠ Resta `[?]` la meta' Android: non si deduce da qui.

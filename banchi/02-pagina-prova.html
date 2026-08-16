@@ -16,7 +16,7 @@
   ==========================================================================
   ⛔ PERCHE' ESISTE: PERCHE' `isConfigSupported()` NON E' UNA PROVA.
 
-  `web.md` §4.1 e §9.1: `hardwareAcceleration: "prefer-hardware"` riuscito,
+  `STUDI.md` §web §4.1 e §9.1: `hardwareAcceleration: "prefer-hardware"` riuscito,
   `powerEfficient: true` e fotogrammi corretti sono **tutti compatibili con la
   CPU**.  E' la forma d'errore **E1** — necessario preso per sufficiente —
   *«travestita da API ufficiale»*.  Lo stesso vale, un gradino piu' in basso,
@@ -56,7 +56,7 @@
   | **P3** il banco DISTINGUE   | due pattern con le stesse tinte in ordine diverso: i pixel letti da **A** devono classificarsi su A **e non** su B.  Un banco che ridipinge sempre la stessa cosa, o che riusa il fotogramma vecchio, da' la stessa risposta sui due |
   | **P4** la catena esiste     | ⭐ **il flusso VP9**, che ogni motore decodifica.  Se HEVC fallisce **e** VP9 riesce, il «no» e' di HEVC; se falliscono tutti e due, il «no» e' di questa pagina, e ⛔ **su HEVC non si scrive niente** |
 
-  ⛔ P4 e' quello che tiene in piedi il verdetto su **Firefox**.  `web.md` §2
+  ⛔ P4 e' quello che tiene in piedi il verdetto su **Firefox**.  `STUDI.md` §web §2
      da' `VideoDecoder` per presente in Firefox dalla 130 `[S]`, e non dice
      niente su HEVC per Firefox su Linux.  Senza P4, un rosso su Firefox
      sarebbe indistinguibile da un banco che su Firefox non funziona — che e'
@@ -87,13 +87,13 @@
   |---|---|
   | `VideoFrame.format` = `"I420P10"` (o `…P10…`) | ⭐ i 10 bit **sono arrivati fino al fotogramma**.  ⚠ Non fino allo schermo |
   | `VideoFrame.format` = `"I420"` su un flusso **Main10** | ⛔ il decodificatore ha **riportato l'uscita a 8 bit** senza dirlo: e' l'indizio di `DECISIONI.md` §2.3-bis, misurato |
-  | `VideoFrame.format` = `null` | ⛔ **non si conclude niente.**  `web.md` §1.2 A: sui fotogrammi decodificati in hardware il formato **non e' esposto**, ed e' `[S]` da una discussione W3C del 2023 mai riverificata.  Nullo e' «non lo dico», non «8 bit» |
+  | `VideoFrame.format` = `null` | ⛔ **non si conclude niente.**  `STUDI.md` §web §1.2 A: sui fotogrammi decodificati in hardware il formato **non e' esposto**, ed e' `[S]` da una discussione W3C del 2023 mai riverificata.  Nullo e' «non lo dico», non «8 bit» |
 
   ⛔ E LA TELA 2D NON PUO' RISPONDERE, per costruzione: `getImageData`
      restituisce **8 bit per canale**.  Qualunque numero letto di li' e' a 8
      bit anche se il fotogramma ne aveva 10.  ⇒ La domanda «i 10 bit arrivano
      allo schermo?» **resta `[?]`**, e la prova finale e' guardare una
-     sfumatura (`web.md` §1.2 A, `LEZIONI.md` §2.4).  La striscia di sfumatura
+     sfumatura (`STUDI.md` §web §1.2 A, `LEZIONI.md` §2.4).  La striscia di sfumatura
      in fondo al pattern e' li' per quel giorno.
 
   ⭐ Quel che si puo' fare, e si fa: `frame.copyTo()` sui piani veri.  Se il
@@ -128,7 +128,7 @@
   ==========================================================================
   ⛔ hvcC CONTRO ANNEX-B — la cucitura con F2.3, e si misura invece di dedurla
 
-  `web.md` §4.2 raccomanda **Annex-B senza `description`**.  Ma la scelta la fa
+  `STUDI.md` §web §4.2 raccomanda **Annex-B senza `description`**.  Ma la scelta la fa
   F2.3, e le due forme **non sono intercambiabili**: dare byte Annex-B a un
   decodificatore configurato con la `description`, o viceversa, e' uno scambio
   che a valle si vedrebbe come «immagine verde» o «niente», senza che nessuno
@@ -138,7 +138,7 @@
   ==========================================================================
   LA TELA: PERCHE' NON E' DESINCRONIZZATA — decisione di F2.5, dichiarata
 
-  `web.md` §6.1 vuole la tela **desincronizzata**, ed e' la strada giusta per
+  `STUDI.md` §web §6.1 vuole la tela **desincronizzata**, ed e' la strada giusta per
   il PRODOTTO: e' quella che accorcia il ritardo.  ⛔ Qui no, e la ragione e'
   che qui la misura **e' la rilettura**: su una tela desincronizzata
   `getImageData` legge da un buffer che il compositore puo' avere gia'
@@ -295,7 +295,7 @@ function colore_cella(pixel, larghezza, cella) {
    ⛔ Ritorna anche `margine` — la distanza alla seconda tinta piu' vicina
       divisa per quella alla prima.  Un margine vicino a 1 vuol dire «e' quasi
       un pareggio», e un pareggio letto come certezza e' la banda incerta
-      promossa a verdetto che `web.md` §4.3 vieta. */
+      promossa a verdetto che `STUDI.md` §web §4.3 vieta. */
 function classifica(colore, tinte) {
   let prima = null, seconda = null;
   for (const t of tinte) {
@@ -507,7 +507,7 @@ async function decodifica(sequenza, opzioni) {
     optimizeForLatency: true
   };
   if (opzioni.accelerazione) config.hardwareAcceleration = opzioni.accelerazione;
-  /* ⛔ La `description` c'e' SOLO nella forma hvcC.  `web.md` §4.2: Annex-B
+  /* ⛔ La `description` c'e' SOLO nella forma hvcC.  `STUDI.md` §web §4.2: Annex-B
      **senza** description e' la strada, e le due non sono intercambiabili. */
   const descrizione = ("descrizione" in opzioni)
       ? opzioni.descrizione : sequenza.descrizione;
@@ -850,7 +850,7 @@ async function prova_intestazioni(nome) {
  *
  * ⛔ Scrivere `[M] Chrome non decodifica HEVC` senza distinguerle sarebbe un
  *    `[M]` falso contro un componente innocente — la stessa forma che
- *    `web.md` §3.3 racconta come il rilievo piu' grave della revisione R2.
+ *    `STUDI.md` §web §3.3 racconta come il rilievo piu' grave della revisione R2.
  *
  * Questo sondaggio chiede la STESSA domanda a molte stringhe: le nostre, le
  * canoniche, un H.264 e un VP9 di controllo.  Se cadono **tutte** le HEVC e
@@ -905,7 +905,7 @@ async function sondaggio() {
   }
   await spedisci({ tipo: "SONDAGGIO", righe: righe });
   scrivi("⚠ Nessuna di queste righe e' una misura: `isConfigSupported` vero e' "
-       + "compatibile con una tela nera (web.md §4.1, forma E1).", "boh");
+       + "compatibile con una tela nera (STUDI.md §web §4.1, forma E1).", "boh");
 }
 
 /* ── P1 e P2: il lettore sa dire di si' e sa dire di no ─────────────────── */
@@ -970,7 +970,7 @@ async function prefissi() {
 
 /* ── Lo scambio delle due forme — la cucitura con F2.3, misurata ─────────── */
 async function scambio_forme() {
-  scrivi("— lo scambio hvcC / Annex-B (web.md §4.2)");
+  scrivi("— lo scambio hvcC / Annex-B (STUDI.md §web §4.2)");
   const annexb = await carica("A-10bit-annexb");
   const hvcc = await carica("A-10bit-hvcc");
   /* byte Annex-B, configurazione CON description */
@@ -985,7 +985,7 @@ async function scambio_forme() {
 
 /* ── I tre modi di `hardwareAcceleration` — registrati, MAI creduti ──────── */
 async function accelerazione() {
-  scrivi("— hardwareAcceleration: si registra, non prova niente (web.md §4.1)");
+  scrivi("— hardwareAcceleration: si registra, non prova niente (STUDI.md §web §4.1)");
   for (const modo of ["no-preference", "prefer-hardware", "prefer-software"]) {
     await prova_sequenza("A-10bit-annexb", {
       etichetta: "accelerazione-" + modo, accelerazione: modo,
@@ -1079,7 +1079,7 @@ async function giro() {
    *         HEVC — ⛔ **un ripiego che esiste solo con la GPU non e' un
    *         ripiego**, perche' mancherebbe esattamente dove serve.
    *
-   * ⚠ E `web.md` **O2** dichiarava AV1 «un vicolo cieco da entrambi i lati».
+   * ⚠ E `STUDI.md` §web **O2** dichiarava AV1 «un vicolo cieco da entrambi i lati».
    *   Quella riga vale per il codec PRINCIPALE; qui la domanda e' il ramo che
    *   non era stato percorso — e un vicolo cieco resta tale finche' nessuno
    *   misura l'altro ramo.

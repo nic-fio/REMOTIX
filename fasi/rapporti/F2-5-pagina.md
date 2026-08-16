@@ -86,7 +86,7 @@ il registro ha righe di **questo** giro, il raccoglitore ha servito N richieste,
 stampati — **e uno prima della misura, che è quello che conta**: il flusso **VP9** (P4).
 
 ⚠ Senza P4, un rosso su Firefox sarebbe indistinguibile fra «Firefox non fa HEVC» e «il banco non
-funziona su Firefox»: la forma **E10** vista dall'altra parte, e la stessa che `web.md` §3.3 racconta
+funziona su Firefox»: la forma **E10** vista dall'altra parte, e la stessa che `STUDI.md` §web §3.3 racconta
 come il rilievo più grave della revisione R2 — *«il controllo positivo era cieco, e la sua
 conclusione era la conclusione sbagliata su un dato mancante»*.
 
@@ -99,7 +99,7 @@ stesso e nessuno se ne accorge. Scritto **prima del giro**:
 |---|---|
 | `VideoFrame.format` = `I420P10` | ⭐ i 10 bit sono arrivati **fino al fotogramma**. ⚠ Non fino allo schermo |
 | `format` = `I420` su un flusso **Main10** | ⛔ uscita riportata a 8 bit senza dirlo: l'indizio di §2.3-bis, misurato |
-| `format` = `null` | ⛔ **non si conclude niente** (`web.md` §1.2 A): nullo è «non lo dico», non «8 bit» |
+| `format` = `null` | ⛔ **non si conclude niente** (`STUDI.md` §web §1.2 A): nullo è «non lo dico», non «8 bit» |
 
 ⛔ **E la tela 2D non può rispondere, per costruzione**: `getImageData` restituisce 8 bit per canale.
 Qualunque numero letto di lì è a 8 bit anche se il fotogramma ne aveva 10. Questo era scritto prima
@@ -164,13 +164,13 @@ API del browser sparisce proprio sul motore dove serve di più — quello che di
 
 | Trappola | Dove sta scritta | Come morde in F2.5, e che cosa si è fatto |
 |---|---|---|
-| **E1 — necessario preso per sufficiente** | `REVIEWER.md` §2, `web.md` §4.1 e §9.1, `LEZIONI.md` §1.11 | ⛔ `isConfigSupported()` vero è compatibile con **una tela nera**. Qui si chiama, si **registra** in una casella chiamata «che cosa avrebbe detto l'API», e **non entra in nessun verdetto**. ⭐ E il giro l'ha pagata sul serio: vedi la contraddizione fra API su Firefox |
-| **E10 — la prova verde sul client sbagliato** | `REVIEWER.md` §2, `web.md` §7 | vista **dall'altra parte**: un rosso su un motore dove il banco non funziona. Curata con P4 (VP9) |
-| **il controllo positivo cieco** | `web.md` §3.3 (rilievo R1 di R2) | *«con la porta chiusa la prova fallisce su tutti e due, il controllo è verde, e la conclusione è quella sbagliata su un dato mancante»*. Qui il controllo è **sullo stesso motore, nella stessa pagina, nello stesso giro** |
+| **E1 — necessario preso per sufficiente** | `REVIEWER.md` §2, `STUDI.md` §web §4.1 e §9.1, `LEZIONI.md` §1.11 | ⛔ `isConfigSupported()` vero è compatibile con **una tela nera**. Qui si chiama, si **registra** in una casella chiamata «che cosa avrebbe detto l'API», e **non entra in nessun verdetto**. ⭐ E il giro l'ha pagata sul serio: vedi la contraddizione fra API su Firefox |
+| **E10 — la prova verde sul client sbagliato** | `REVIEWER.md` §2, `STUDI.md` §web §7 | vista **dall'altra parte**: un rosso su un motore dove il banco non funziona. Curata con P4 (VP9) |
+| **il controllo positivo cieco** | `STUDI.md` §web §3.3 (rilievo R1 di R2) | *«con la porta chiusa la prova fallisce su tutti e due, il controllo è verde, e la conclusione è quella sbagliata su un dato mancante»*. Qui il controllo è **sullo stesso motore, nella stessa pagina, nello stesso giro** |
 | **zero e fallimento** | `LEZIONI.md` §1.9, `REVIEWER.md` §1 punto 4 | «nessun fotogramma» ha almeno cinque cause con lo stesso aspetto. Curata con i denominatori e **certificata** dal guasto `muto` (P6) |
 | **il denominatore** | `LEZIONI.md` §1.9 quarta regola | ⭐ **ha pagato subito**: Firefox non partiva e il banco ha scritto *«ZERO richieste: il browser non ha nemmeno aperto la pagina»* invece di «Firefox non decodifica niente» |
 | **E2 — due comportamenti sotto la stessa etichetta** | `REVIEWER.md` §2 | lo stesso Chrome dà **due risposte opposte** su Xvfb e su schermo vero. Curata portando **la scena in ogni riga** del registro |
-| **la trappola dell'`hvcC`** | `web.md` §4.2 | *«Chromium riparsa l'SPS e rifiuta la configurazione se i byte di prevenzione dell'emulazione cadono nel campo sbagliato»*. ⭐ **Ci è caduto il nostro generatore**, da un'altra porta: vedi sotto |
+| **la trappola dell'`hvcC`** | `STUDI.md` §web §4.2 | *«Chromium riparsa l'SPS e rifiuta la configurazione se i byte di prevenzione dell'emulazione cadono nel campo sbagliato»*. ⭐ **Ci è caduto il nostro generatore**, da un'altra porta: vedi sotto |
 | **O12 — il livello dichiarato** | `RCP.md` §4.3 | *«un livello troppo basso non dà un errore di rete: fa rifiutare la configurazione dal decodificatore»*. Innestato apposta — e **smentito su Chrome** |
 | **il tracciatore cieco dentro `pagehide`** | `fasi/01-filo-nudo.md`, banco P5 | *«né `sendBeacon` né la XHR sincrona escono: sei giri, zero tracce»*. ⛔ Questa pagina **non spedisce niente dentro `pagehide`**: ogni esito parte con un `fetch` **atteso** mentre la scheda è viva, e il banco chiude il browser solo dopo aver letto la riga `FINITO` |
 | **`LEZIONI.md` §1.8 — il componente che decide da sé** | | x265, lasciato scegliere, emetteva un profilo **che non avevamo chiesto**. Curata chiedendo il profilo per nome **e verificando che abbia obbedito** |
@@ -185,7 +185,7 @@ API del browser sparisce proprio sul motore dove serve di più — quello che di
 > proprio dentro i flag di compatibilità, e leggerlo così com'è sposta di uno tutto ciò che segue,
 > **livello compreso**. ⚠ E un livello a 0 non dà un errore di rete: è **O12**, e il sintomo sarebbe
 > stato *«Chrome non apre il flusso»* — cioè un `[M]` falso contro il browser. ⭐ È letteralmente la
-> trappola che `web.md` §4.2 attribuisce all'`hvcC`, solo che a caderci era **il nostro lettore**.
+> trappola che `STUDI.md` §web §4.2 attribuisce all'`hvcC`, solo che a caderci era **il nostro lettore**.
 >
 > **2. La profondità di bit nell'`hvcC` era scritta agli indici sbagliati** (19 e 20, che sono
 > `avgFrameRate`, invece di 17 e 18). Un flusso a 10 bit portava una descrizione che ne dichiarava 8.
@@ -227,7 +227,7 @@ software**: HEVC esiste solo attraverso la piattaforma (VA-API), e senza GPU spa
 ⚠ `vainfo` su questa macchina dichiara `VAProfileHEVCMain` e `VAProfileHEVCMain10` con
 `VAEntrypointVLD` `[M]` — il ferro c'è, ed è quel che Chrome usa.
 
-> ⭐ **E questo è il complemento esatto di `web.md` §4.1**, che dice il contrario per Android: *«su
+> ⭐ **E questo è il complemento esatto di `STUDI.md` §web §4.1**, che dice il contrario per Android: *«su
 > desktop `prefer-hardware` è una prova vera: il broker butta via del tutto la fabbrica dei
 > decodificatori software»* `[R]`. Misurato: su Linux **non c'è proprio nessuna fabbrica software per
 > HEVC**, quindi su questa piattaforma HEVC riuscito **implica** hardware. ⛔ Ma vale **qui**, non su
@@ -250,7 +250,7 @@ e **non dipingerebbe niente**. È la forma **E1** con la sua veste più convince
 indulgente, ma **due** che si confermano a vicenda.
 
 ⚠ E `powerEfficient: true` su un codec che il browser non decodifica affatto è la riga che chiude il
-discorso su quanto valga quel campo: `web.md` §4.1 lo trattava già come non-prova per l'hardware;
+discorso su quanto valga quel campo: `STUDI.md` §web §4.1 lo trattava già come non-prova per l'hardware;
 `[M]` **non è nemmeno una prova del supporto**.
 
 ### 3. ⭐ La `[?]` di F2.3 sui prefissi, chiusa
@@ -354,7 +354,7 @@ piano di 1 228 800 byte**, cioè 640 × 480 × 4. Su Firefox il controllo VP9 d�
 | ⛔ **quel che si può concludere** | **da JavaScript i 10 bit non sono osservabili**, né dal formato, né dai piani, né dalla tela — e adesso con un flusso a 10 bit veri sotto, non solo per argomento |
 | ⭐ **quel che si è misurato lo stesso** | Chrome **decodifica e dipinge correttamente** un Main10 a 10 bit veri: 8/8 celle. La domanda «lo decodifica?» ha risposta **sì**; quella «li conserva?» non ha risposta da qui |
 
-⇒ ⚠ **`web.md` §1.2 A va aggiornata su due punti**: l'indizio `[S]` del 2023 («`format` è `null`») è
+⇒ ⚠ **`STUDI.md` §web §1.2 A va aggiornata su due punti**: l'indizio `[S]` del 2023 («`format` è `null`») è
 superato da una misura (**è `BGRA`**), e la frase *«dal browser i 10 bit non sono leggibili»* passa da
 `[?]` a **`[M]`**, con il flusso a 10 bit veri come prova.
 
@@ -416,12 +416,12 @@ giudizio.
 - `DECISIONI.md` §2.7 (il massimo lo offre il server, l'altezza la mette il client) — ⭐ **applicata
   alla lettera**: Firefox senza HEVC non è un difetto di REMOTIX, è un fatto da dichiarare;
 - `RCP.md` §4.3 rilievo **O12** — smentito su Chrome/Linux (§5);
-- `web.md` §1.2 A — l'indizio `[S]` del 2023 superato da una misura (§6);
-- `web.md` §4.1 — il complemento per Linux desktop: nessuna fabbrica software per HEVC (§1).
+- `STUDI.md` §web §1.2 A — l'indizio `[S]` del 2023 superato da una misura (§6);
+- `STUDI.md` §web §4.1 — il complemento per Linux desktop: nessuna fabbrica software per HEVC (§1).
 
 ⭐ **Due decisioni piccole prese da me, e dichiarate:**
 
-1. **La tela del banco non è desincronizzata**, mentre `web.md` §6.1 la vuole così per il *prodotto*.
+1. **La tela del banco non è desincronizzata**, mentre `STUDI.md` §web §6.1 la vuole così per il *prodotto*.
    Ragione: qui la misura **è la rilettura**, e su una tela desincronizzata `getImageData` legge da un
    buffer che il compositore può avere già scambiato. Un'ambiguità nel punto in cui sta la misura
    vale meno di un millisecondo di ritardo in un banco. ⚠ Va detto perché nessuno legga questo file
@@ -448,11 +448,11 @@ giudizio.
 | ⛔ `[?]` **i 10 bit fino allo schermo** | ⭐ e adesso non è più un'ipotesi che non si chiuda da qui: è **misurato**. Due flussi con **220** e **573** livelli dipingono **233** e **236** — `getImageData` è a 8 bit, tetto 256. La prova resta **guardare la sfumatura** (`LEZIONI.md` §2.4), e i PNG sono su disco |
 | ⛔ `[?]` **i 10 bit servono a qualcosa, in fase 2?** | ⚠ **no, e non per colpa del browser**: F2.2 misura la sorgente a **8 bit** (Mutter dà BGRx/BGRA). In fase 2 il Main10 porta 8 bit promossi. La domanda diventa di F2.2 e della cattura, non della pagina |
 | ⛔ `[?]` **HEVC su Chrome per Android / DeX** | ⛔ **non misurato, e non è una dimenticanza**: vuole il dispositivo. *«Il Chrome del portatile lo fa»* non dice niente del Chrome del telefono — forma **E10** (`DECISIONI.md` §5-bis.0-ter). Il banco è lo stesso e la pagina è la stessa: il giorno che il dispositivo c'è, si apre quell'indirizzo |
-| ⛔ `[?]` **Safari / WebKit** | nessun dispositivo Apple. `web.md` §2 dà `VideoDecoder` da Safari 26 e HEVC pieno dalla 26.0 `[S]`, mai misurato da noi |
+| ⛔ `[?]` **Safari / WebKit** | nessun dispositivo Apple. `STUDI.md` §web §2 dà `VideoDecoder` da Safari 26 e HEVC pieno dalla 26.0 `[S]`, mai misurato da noi |
 | `[?]` **Firefox con `media.hevc.enabled`** | ⛔ **non provato di proposito**: si è misurato il Firefox **che l'utente ha**, senza toccare preferenze. Un flag che accende una strada che il browser di serie non ha produce un `[M]` che non vale per nessun utente (**E10**) |
 | `[?]` **un fotogramma chiave grande** | F2.3 misura IDR da **96 237 byte** lossless e **21 569** a CRF 20; le sequenze di questo banco stanno sotto i 4 KB. ⚠ Che il percorso regga un IDR da centinaia di KB **non è stato misurato qui** |
-| `[?]` **il ritardo** | F2.5 misura **che** il pixel arrivi, non **quando**. L'anello di `DECISIONI.md` §2.6 e i 16-40 ms del compositore (`web.md` §6.2) restano di S4 |
-| `[?]` **AV1** | `isConfigSupported` vero su tutti e due i motori, `powerEfficient: false` su tutti e due. Nessuna sequenza AV1 costruita: `web.md` **O2** lo dichiara vicolo cieco da entrambi i lati |
+| `[?]` **il ritardo** | F2.5 misura **che** il pixel arrivi, non **quando**. L'anello di `DECISIONI.md` §2.6 e i 16-40 ms del compositore (`STUDI.md` §web §6.2) restano di S4 |
+| `[?]` **AV1** | `isConfigSupported` vero su tutti e due i motori, `powerEfficient: false` su tutti e due. Nessuna sequenza AV1 costruita: `STUDI.md` §web **O2** lo dichiara vicolo cieco da entrambi i lati |
 | `[?]` **`av01`/`hev1` su altre GPU** | la misura di §1 è su **Intel UHD 730 / iHD**. Su AMD e NVIDIA il risultato può cambiare, e cambierebbe **per la stessa ragione** (il decodificatore è della piattaforma) |
 
 ---
@@ -576,7 +576,7 @@ la differenza fra `arriva` e `non-arriva`.
 ⏳ **Non ancora dato.** ⛔ E c'è una cosa precisa da fargli guardare, che nessun numero di questo
 rapporto può sostituire: **la striscia di sfumatura in fondo al pattern**, dipinta dal flusso Main10
 e da quello Main, una accanto all'altra. È la sola prova sui 10 bit che questo lato del progetto può
-produrre (`LEZIONI.md` §2.4, `web.md` §1.2 A), e i PNG sono già su disco.
+produrre (`LEZIONI.md` §2.4, `STUDI.md` §web §1.2 A), e i PNG sono già su disco.
 
 ---
 
@@ -616,7 +616,7 @@ era già lì come controllo positivo. ⛔ Ma è **`RCP.md` a decidere**, non la 
 ⇒ **VP9 in RCP/1 vorrebbe dire aprire RCP/2 o dichiarare un'eccezione a §9. AV1 non costa niente.**
 ⇒ La domanda da misurare non era più «quale codec regge», ma **«AV1 regge?»**.
 
-> ⚠ **E `web.md` O2 diceva che AV1 è «un vicolo cieco da entrambi i lati»** — il nostro ferro non lo
+> ⚠ **E `STUDI.md` §web O2 diceva che AV1 è «un vicolo cieco da entrambi i lati»** — il nostro ferro non lo
 > codifica in hardware `[M]`, e in decodifica non aggiunge niente che HEVC non dia. ⛔ Quella riga
 > vale per il codec **principale**, e resta vera. Qui si misura **il ramo che non era stato
 > percorso**: non «AV1 al posto di HEVC», ma **«AV1 dove HEVC non c'è»**. Un vicolo cieco resta tale
@@ -676,7 +676,7 @@ arrivano al fotogramma **e si vedono da JavaScript**.
 ⭐ **È il caso positivo che la tabella del «caso opposto» di §6 non aveva mai potuto riempire.** Su
 HEVC in hardware il formato era `BGRA` e la domanda restava senza risposta; qui il formato è
 `I420P10`, e la stessa domanda ha **risposta sì**. ⇒ La riga *«dal browser i 10 bit non sono
-leggibili»* di `web.md` §1.2 A **non vale per AV1 su Chrome**: lì lo sono.
+leggibili»* di `STUDI.md` §web §1.2 A **non vale per AV1 su Chrome**: lì lo sono.
 
 ⚠ **Su Firefox no**: il formato è `BGRX` a 1 228 800 byte in un piano solo, per **tutte** le
 sequenze. I 10 bit **arrivano** (la sfumatura dipinta ha 210 livelli distinti) ma **non sono
@@ -721,7 +721,7 @@ sullo stesso motore, con lo stesso codice di misura.**
 |---|---|
 | ⭐ **AV1 regge come ripiego** | quattro caselle su quattro, a 8 **e** a 10 bit, **in software**. Non serve RCP/2, non serve un'eccezione a §9: `av1` è già normativo in §4.3 e ha già `codec = 2` in §6.2 |
 | ⭐ **e non perde i 10 bit** | anzi, su Chrome è **l'unico** percorso di questo banco in cui i 10 bit si vedono da JavaScript |
-| ⚠ **il prezzo non è misurato qui** | ⛔ questo giro dice **che** AV1 arriva al pixel, **non a che ritmo**. `web.md` O2 e `DECISIONI.md` restano in piedi su tutto il resto: la codifica AV1 sul nostro ferro è **software** `[M]` 9 ago, e a 4K60 il costo non è stato misurato da nessuno |
+| ⚠ **il prezzo non è misurato qui** | ⛔ questo giro dice **che** AV1 arriva al pixel, **non a che ritmo**. `STUDI.md` §web O2 e `DECISIONI.md` restano in piedi su tutto il resto: la codifica AV1 sul nostro ferro è **software** `[M]` 9 ago, e a 4K60 il costo non è stato misurato da nessuno |
 | ⛔ **e la scala di preferenza non si rovescia** | `hevc,av1` resta l'ordine: HEVC dove c'è, AV1 dove HEVC non c'è. Questa misura riempie il **secondo** posto, non il primo |
 
 ## Le `[?]` che questa aggiunta lascia aperte

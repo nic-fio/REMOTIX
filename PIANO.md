@@ -178,7 +178,7 @@ quattro, e tre di esse cambiano quel che si scrive.*
 > ### ⛔ Corretto la notte del 9 agosto 2026 — rilievi **R3.4** e **R4.3**, e l'ordine era circolare
 >
 > Questo paragrafo dice *«prima di scegliere la libreria QUIC e prima di scrivere il filo»*, e
-> `web.md` §7 aggiunge *«nessuna richiede una riga di prodotto»*. **Tre delle misure non stanno in
+> `STUDI.md` §web §7 aggiunge *«nessuna richiede una riga di prodotto»*. **Tre delle misure non stanno in
 > piedi senza un server WebTransport**, cioè senza la libreria che si sta scegliendo:
 >
 > | | |
@@ -214,7 +214,7 @@ comporta**, non come è fatto dentro: come dipinge, la tastiera nel browser, gli
 cursore, il ridimensionamento, il ritardo. ⚠ Il **trasporto no**: Xpra è su WebSocket, noi su
 WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` §1.6.
 
-> ### ✅ FATTO il 14 agosto 2026 — [`xpra.md`](xpra.md) — ⛔ **e in ritardo, con un prezzo pagato**
+> ### ✅ FATTO il 14 agosto 2026 — [`STUDI.md` §xpra](STUDI.md#xpra) — ⛔ **e in ritardo, con un prezzo pagato**
 >
 > ⛔ *Questo studio doveva stare **prima della pagina**, ed è stato fatto **dopo**: l'ha chiesto
 > l'utente una seconda volta, davanti al prodotto che finalmente si usava e con un difetto in mano
@@ -245,7 +245,7 @@ tutto il progetto**. Se il banco non sa riprodurre un numero che sappiamo vero, 
 > ⛔ *13 agosto 2026, e va letto insieme alla riga qui sopra: **il 37 non si riproduce**. Alla
 > cadenza che chiedevamo Mutter consegna **31,5**; rinegoziando la sola cadenza, **61,4**. Non è il
 > banco che sbaglia: il 37 non è una proprietà del compositore — ⚠ e che sia il resto di una
-> divisione troncata è `[R]`, letto nel codice, **non misurato** (`gnome.md` §8.2; la «legge su 13
+> divisione troncata è `[R]`, letto nel codice, **non misurato** (`STUDI.md` §gnome §8.2; la «legge su 13
 > punti» che si leggeva qui il 13 agosto **è caduta la sera stessa**). ⇒ Il controllo positivo di
 > questa fase va rifatto **contro le celle pulite di `banchi/03-b14-esiti.jsonl`**, non contro il
 > numero.*
@@ -256,7 +256,7 @@ scene con `ffmpeg -f lavfi -i testsrc2`.
 **Si riusa**: tutto `v1/banchi/` (262 file), `v1/banco/` per il provisioning.
 
 ⛔ **Passo zero, e senza di questo la fase non parte: GNOME non è più installato sul server**
-`[M]` — `dpkg-query` dice *not-installed*, non c'è una `gnome.desktop` (`gnome.md` §2). Il
+`[M]` — `dpkg-query` dice *not-installed*, non c'è una `gnome.desktop` (`STUDI.md` §gnome §2). Il
 controllo positivo di tutto il progetto è la riproduzione dei ~37 fotogrammi di Mutter, e oggi
 non è eseguibile. Si rimette GNOME **prima** di credere a qualunque numero.
 
@@ -412,13 +412,13 @@ a fase 3 in corso, per poter misurare il prima e il dopo con lo stesso banco. La
 chiama più «l'accelerazione»: si chiama **«la copia zero»**, ed è quel che ne resta.*
 
 ⛔ **E qui nasce la sessione GNOME, che v1 avviava senza mai averla studiata** — le trappole sono
-in `gnome.md` §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
+in `STUDI.md` §gnome §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
 `gnome-session` si ri-esegue dentro una shell di login e si riporta dentro `~/.profile` `[R]`;
 `--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
 **viva, completa e nera**; il drop-in dell'unità della Shell oggi si scrive **solo per KWin**
 (`src/sessione.c:671`), quindi su GNOME va scritto adesso.
 
-⭐ E una prova da fare **guasta di proposito** (M9 di `gnome.md` §13): senza `--virtual-monitor`,
+⭐ E una prova da fare **guasta di proposito** (M9 di `STUDI.md` §gnome §13): senza `--virtual-monitor`,
 per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
 scambia per un difetto di cattura, e si cerca per mezza giornata dalla parte sbagliata.
 
@@ -551,7 +551,7 @@ qualcun altro.
   browser, che §1.2 metteva nella sonda: senza codifica, trasporto e decodifica non è eseguibile
   *(9 agosto 2026, rilievo **R3.4**)*. I suoi sette controlli e il **pezzo cieco** — 16-40 ms fra
   il disegno e il pixel acceso, che nessuna API vede e che **si dichiara accanto a ogni numero** —
-  stanno in `web.md` §6.3.
+  stanno in `STUDI.md` §web §6.3.
 
 **I numeri da raggiungere**: ritardo ≤ 50 ms, traguardo 40 (`SPECIFICHE.md` §3.2).
 
@@ -567,7 +567,7 @@ qualcun altro.
 >
 > | | |
 > |---|---|
-> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms** — cella **D**, pulita. ⚠ **Ma M3 di `gnome.md` §13 NON è chiusa: è mezza**, perché la causa non è misurata |
+> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms** — cella **D**, pulita. ⚠ **Ma M3 di `STUDI.md` §gnome §13 NON è chiusa: è mezza**, perché la causa non è misurata |
 > | ⛔ **ma la causa scritta era sbagliata, e quella nuova è `[R]`** | non un **battimento** fra due orologi ma una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs — ⛔ **letta nel codice, non misurata**. E i «sei decimi» **non si riproducono**: la cella bassa dà **0,50 pulito** |
 > | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h:82`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
 >
@@ -637,7 +637,7 @@ qualcun altro.
 >
 > ⭐ **La tesi è già PROVATA, il 14 agosto, senza toccare il prodotto**: sessione dell'utente
 > `prova` avviata **senza** `--virtual-monitor` (`GetCurrentState` → **0 monitor**, la sessione
-> *«viva, completa e nera»* di `gnome.md` §3.1); collegato il client, `RecordVirtual` monta
+> *«viva, completa e nera»* di `STUDI.md` §gnome §3.1); collegato il client, `RecordVirtual` monta
 > **l'unico** monitor e ⭐ **la shell ci va sopra: barra, sfondo, dock**. La prova sta in
 > [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) e nell'immagine
 > `F3-verbali/desktop-vero-14ago.png`.
@@ -646,7 +646,7 @@ qualcun altro.
 > 1. ⛔ **chi decide la misura del monitor** adesso che non la dà più la sessione: la dà
 >    `RecordVirtual`, e **che cosa succede se il client ne chiede un'altra?** È `RCP.md` §4.5, la
 >    tela concessa, e da qui in poi tocca questo pezzo;
-> 2. ⚠ **`PIANO.md` (questo file, più su) e `gnome.md` §108 dicono che `--virtual-monitor` non è
+> 2. ⚠ **`PIANO.md` (questo file, più su) e `STUDI.md` §gnome §108 dicono che `--virtual-monitor` non è
 >    opzionale**. ⇒ **Vanno riscritte**: sono vere solo per una sessione che deve vivere **senza
 >    nessuno che la catturi**.
 >
@@ -678,14 +678,14 @@ due motori: quel che si perde su Chrome non è quel che si perde su Safari.
 ⛔ **E qui si scopre che il cursore non arriva affatto**, il che rende `CURSORE_FORMA` (`RCP.md`
 §7.2) un canale senza sorgente: su Mutter chiediamo `cursor-mode=2` — cioè «dammi il cursore
 come metadato» — **ma non chiediamo `SPA_META_Cursor`**, quindi forma, posizione e punto attivo
-non vengono consegnati `[R]` (`gnome.md` §1.1 punto 6 e §5.2). Da chiedere qui, dove il canale
+non vengono consegnati `[R]` (`STUDI.md` §gnome §1.1 punto 6 e §5.2). Da chiedere qui, dove il canale
 nasce. ⭐ **Il verso è quello giusto per noi**: pixel puliti nell'immagine *e* la forma in banda
 laterale, che è esattamente ciò che serve al puntatore disegnato dal client.
 
 ⚠ **Due ricambi silenziosi di libei**, che mordono qui e alla fase 6: un cambio di **keymap**
 distrugge e ricrea il dispositivo tastiera, un cambio di **geometria** tutti i dispositivi
 assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza errore** `[R]`
-(`gnome.md` §9). Keymap e regioni si rileggono a **ogni** `DEVICE_ADDED`, non una volta all'avvio.
+(`STUDI.md` §gnome §9). Keymap e regioni si rileggono a **ogni** `DEVICE_ADDED`, non una volta all'avvio.
 
 **Si riusa**: `input.c` (906 righe, libei), `tastiera.c` (372, xkbcommon).
 
@@ -757,7 +757,7 @@ grafica per utente.
   quindi quel banco lì o non si scrive o **si scrive verde per costruzione**.*
 
 ⛔ **E due difetti che l'utente incontrerebbe lasciando la sessione ferma venti minuti**, tutt'e
-due su GNOME e tutt'e due mai affrontati in v1 (`gnome.md` §4 e §7):
+due su GNOME e tutt'e due mai affrontati in v1 (`STUDI.md` §gnome §4 e §7):
 
 | | |
 |---|---|
@@ -828,7 +828,7 @@ sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
 ⛔ **E il riattacco rinegozia anche la disposizione di tastiera** (`SPECIFICHE.md` §7.3), che su
 Mutter **distrugge e ricrea il dispositivo tastiera**; un cambio di geometria ricrea tutti i
 dispositivi assoluti. Il puntatore al dispositivo vecchio smette di funzionare **senza errore**
-`[R]` (`gnome.md` §9). Il banco del riattacco **deve battere un tasto e muovere il puntatore
+`[R]` (`STUDI.md` §gnome §9). Il banco del riattacco **deve battere un tasto e muovere il puntatore
 dopo**, non solo verificare che la sessione ci sia: è la forma «una prova verde col difetto vivo»
 esattamente dove si presenta.
 
@@ -857,7 +857,7 @@ questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
 
 ⭐ **Il lato indipendente del banco degli appunti c'è già, ed è gratis**: su GNOME la sponda X11
 di Mutter è incondizionata nei due versi, quindi **`xclip` funziona senza una nostra sessione**
-`[R]` (`gnome.md` §10). Copiare con `xclip` e leggere col client — invece di far parlare fra loro
+`[R]` (`STUDI.md` §gnome §10). Copiare con `xclip` e leggere col client — invece di far parlare fra loro
 due pezzi nostri — è l'arbitro esterno che a questa fase serviva e che non credevamo di avere.
 
 ⛔ **Tre trappole di Mutter, che il banco non vede e il prodotto sì**: `DisableClipboard` è **a
@@ -1067,7 +1067,7 @@ nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambi
 >
 > | quel che la riga diceva | che cosa dice la misura del 13 agosto |
 > |---|---|
-> | «Mutter ne dà **37**» | ⛔ **non si riproduce**. Alla cadenza che chiedevamo Mutter consegna **31,5** (mediana 33,31 ms); rinegoziando la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** — cioè **quanto KWin**. Il 37 non è una proprietà del compositore; ⚠ che sia il resto di una divisione troncata è `[R]`, letto nel codice e non misurato (`gnome.md` §8.2) |
+> | «Mutter ne dà **37**» | ⛔ **non si riproduce**. Alla cadenza che chiedevamo Mutter consegna **31,5** (mediana 33,31 ms); rinegoziando la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** — cioè **quanto KWin**. Il 37 non è una proprietà del compositore; ⚠ che sia il resto di una divisione troncata è `[R]`, letto nel codice e non misurato (`STUDI.md` §gnome §8.2) |
 > | «è la strada per il traguardo dei **40 ms**» | ⛔ **no.** Il ritardo misurato è `[M]` **74,58 ms** cattura → vetro, e Mutter ne vale il **22 %** (16,66 su 74,6). Il **78 % è nostro**, ~39 ms nel tratto cattura → primo byte, **dominato dal codificatore in software**. ⇒ Cambiare compositore **lascerebbe intatti i 39 ms di codifica** |
 >
 > ⇒ ⛔ **Chi arriva a questa fase aspettandosi che porti il ritardo dentro il tetto resterà deluso**,
@@ -1109,7 +1109,7 @@ già state confuse.
 
 **Si riusa**: `kwin.c` (822 righe), `appunti_wlr.c` (796).
 
-⚠ Le trappole sono già scritte in `kde.md`: `XDG_MENU_PREFIX` senza cui il cancello della cattura
+⚠ Le trappole sono già scritte in `STUDI.md` §kde: `XDG_MENU_PREFIX` senza cui il cancello della cattura
 non si apre; niente `InaccessiblePaths=` nel drop-in; il ridimensionamento **nella forma della
 negoziazione**, con la guardia contro il ciclo infinito che **non si vede su Trixie** e compare il
 giorno dell'aggiornamento a 6.8.
@@ -1119,14 +1119,14 @@ giorno dell'aggiornamento a 6.8.
 ## Fase 12 — XFCE e LXQt
 
 ⚠ *Era la **fase 11** fino al 16 agosto 2026 — stesso spostamento della 11, stessa ragione.*
-⛔ **E qui una trappola di lettura**: `xfce.md` e `lxqt.md` portano in testa *«per la fase 11»*, ma
+⛔ **E qui una trappola di lettura**: `STUDI.md` §xfce e `STUDI.md` §lxqt portano in testa *«per la fase 11»*, ma
 quella è **la fase 11 di v1** — sono studi dell'8 agosto 2026, scritti prima che questo piano
 esistesse. ⇒ Il numero in quei due titoli **non è questo numero**, e non va inseguito.
 
 **Produce**: il terzo e il quarto desktop, che condividono wlroots e quindi quasi tutto.
 
 **Si riusa**: `appunti_wlr.c` già scritto per questa famiglia; le risposte alle quattordici domande
-sono già in `xfce.md` §12 e `lxqt.md`.
+sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 
 ---
 

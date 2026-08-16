@@ -18,7 +18,7 @@
 # `stateful_ssl_host_state_delegate.cc:43`, col commento *«Certificate error
 # bypasses are remembered for one week»* (S1 §3.1).  ⛔ **Questa misura non
 # serve a sapere il numero: serve a sapere se quel numero regge sul campo.**
-# `web.md` §8 lo dice con queste parole.
+# `STUDI.md` §web §8 lo dice con queste parole.
 #
 # ⛔ E S1 §4.2 P5 **non e' questa prova**.  `fasi/01-filo-nudo.md` manda a
 #    `S1 §4.2 P5` per S1b, ma P5 e' la prova del contesto sicuro (Service

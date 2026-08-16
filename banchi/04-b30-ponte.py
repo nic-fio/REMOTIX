@@ -52,7 +52,7 @@ tutti e due sono controlli, non comodita'.
 
 ── 1. IL RITARDO NOTO (controllo P1) ───────────────────────────────────────────
 
-`web.md` §6.3: «il server ritarda di N millisecondi noti, e la mediana DEVE
+`STUDI.md` §web §6.3: «il server ritarda di N millisecondi noti, e la mediana DEVE
 salire di esattamente N.  Un banco che non lo fa non sa di misurare».
 
 ⛔ E il prodotto **non sa farlo**: `RCP.md` §7.5 prevede `BANCO_MARCA` col campo
@@ -114,7 +114,7 @@ salire di esattamente N.  Un banco che non lo fa non sa di misurare».
 
 ── 3. IL FUORI ORDINE (controllo P5) ──────────────────────────────────────────
 
-`web.md` §6.3: «i fotogrammi arrivano su stream indipendenti: un anello che non
+`STUDI.md` §web §6.3: «i fotogrammi arrivano su stream indipendenti: un anello che non
 lo regge misura la coda invece del ritardo».
 
 ⛔⭐ E LA PRIMA STESURA DI QUESTO PEZZO NON FABBRICAVA NIENTE — `[M]` 13 agosto

@@ -11,7 +11,7 @@ grafica, e lo dice con un numero d'uscita diverso per ogni stato.
 ===========================================================================
 
 Una sessione GNOME headless senza `--virtual-monitor` parte **viva, completa e
-nera** (`gnome.md` §3.1: in headless `needs_outputs=false`).  Viva vuol dire
+nera** (`STUDI.md` §gnome §3.1: in headless `needs_outputs=false`).  Viva vuol dire
 proprio viva: `IsSessionRunning` risponde `true`, il bus ha cinquanta nomi,
 Nautilus e il Terminale ci sono.  Manca una cosa sola — un monitor — e siccome
 manca in silenzio, chi misura la CATTURA su quella sessione legge zero
@@ -297,7 +297,7 @@ def raccogli_dal_bus():
         scena["gnome_session_pid"] = p
         if p:
             amb = ambiente_di(p)
-            # ⛔ La trappola di `gnome.md` §3.1: `gnome-session.in:3-14` si
+            # ⛔ La trappola di `STUDI.md` §gnome §3.1: `gnome-session.in:3-14` si
             #    ri-esegue dentro una shell di LOGIN se `$SHELL` sta in
             #    /etc/shells.  Il controllo vero e' `[ -n "$SHELL" ]`, quindi
             #    ASSENTE e VUOTA vanno tutt'e due bene: si registrano distinte
@@ -416,7 +416,7 @@ def giudica(scena, attesa_l, attesa_a):
         if scena.get("shell_var_presente") and scena.get("shell_var"):
             stati.add(7)
             dice(f"⛔ SHELL={scena['shell_var']!r} nell'ambiente di gnome-session: "
-                 "si e' ri-eseguito dentro una shell di login (gnome.md §3.1)")
+                 "si e' ri-eseguito dentro una shell di login (STUDI.md §gnome §3.1)")
         else:
             dice("SHELL " + ("vuota" if scena.get("shell_var_presente") else "assente")
                  + " nell'ambiente di gnome-session: la trappola §3.1 non ha morso")
@@ -446,7 +446,7 @@ def giudica(scena, attesa_l, attesa_a):
         if len(monitor) == 0:
             stati.add(1)
             dice("⛔ ZERO monitor: la sessione puo' essere viva e completa, e "
-                 "non c'e' NIENTE da disegnare (gnome.md §3.1)")
+                 "non c'e' NIENTE da disegnare (STUDI.md §gnome §3.1)")
         elif len(monitor) > 1:
             stati.add(3)
             dice(f"⛔ {len(monitor)} monitor: ne era stato chiesto uno solo")
@@ -503,7 +503,7 @@ def giudica(scena, attesa_l, attesa_a):
                 stati.add(6)
         if not chiesto_headless:
             dice("⚠ --headless NON e' sulla riga di comando: se l'headless c'e' e' "
-                 "per accidente (gnome.md §1.2, DECISIONI.md §4.3-bis)")
+                 "per accidente (STUDI.md §gnome §1.2, DECISIONI.md §4.3-bis)")
 
     if not stati:
         stati.add(0)

@@ -12,7 +12,7 @@ coda senza toccare `piano->data`.
 
 ⇒ **Un fotogramma NERO E VALIDO passerebbe la fase 0 con il massimo dei voti.**
   36 al secondo, quattro buffer riciclati, danno parziale, zero salti: tutto
-  verde, e sullo schermo il nulla.  ⛔ E il nero non e' teorico — `gnome.md` §3.1:
+  verde, e sullo schermo il nulla.  ⛔ E il nero non e' teorico — `STUDI.md` §gnome §3.1:
   in headless `needs_outputs=false`, quindi senza `--virtual-monitor` la sessione
   parte **viva, completa e nera**; `PIANO.md`, fase 2: *«una sessione nera e
   perfettamente viva e' la cosa che si scambia per un difetto di cattura, e si
@@ -163,7 +163,7 @@ BANDE = [
 ]
 
 # Il pixel e' BGRx/BGRA a 32 bit — l'unico formato che Mutter consegna
-# (`gnome.md` §8.3: «Solo BGRx e BGRA», R32 confermata riga per riga).
+# (`STUDI.md` §gnome §8.3: «Solo BGRx e BGRA», R32 confermata riga per riga).
 BYTE_PER_PIXEL = 4
 
 # ===========================================================================
@@ -179,7 +179,7 @@ BYTE_PER_PIXEL = 4
 #
 # ⭐ MA IL NERO SU `primo` RESTA ROSSO, ed e' il punto: un desktop nudo NERO e'
 #    la firma esatta della sessione senza monitor virtuale — viva, completa e
-#    nera (`gnome.md` §3.1, prova M9 di §13).  E' il guasto che questa sotto-fase
+#    nera (`STUDI.md` §gnome §3.1, prova M9 di §13).  E' il guasto che questa sotto-fase
 #    esiste per vedere, e sul `primo` si vede prima che altrove.
 MARCHE_ROSSE = {
     "primo":  {"FOTOGRAMMA NERO", "BYTE NON TORNANO",
@@ -282,7 +282,7 @@ def controlla_nero(fg, rilievi, misure):
         rilievi.append(("FOTOGRAMMA NERO",
                         "luminanza media %.2f (soglia %.1f) e massima %.2f (soglia %.1f) "
                         "su %d punti: il fotogramma e' valido e non contiene nulla. "
-                        "E' il guasto peggiore di F2.2 — gnome.md §3.1, sessione viva, "
+                        "E' il guasto peggiore di F2.2 — STUDI.md §gnome §3.1, sessione viva, "
                         "completa e nera"
                         % (media, SOGLIE["nero_luma_media"], massima,
                            SOGLIE["nero_luma_massima"], len(punti))))
@@ -311,7 +311,7 @@ def misura_profondita(fg, misure):
 
     ⭐ Qui il conto si fa **gia' alla cattura**, cosi' il difetto ha un imputato
        PRIMA di entrare nel codificatore.  ⚠ E con una differenza che va detta:
-       il buffer di Mutter e' BGRx a **8 bit per canale** (`gnome.md` §8.3 `[R]`),
+       il buffer di Mutter e' BGRx a **8 bit per canale** (`STUDI.md` §gnome §8.3 `[R]`),
        quindi i livelli qui si contano su 256 e non su 1024.  La domanda che
        questo conto risponde non e' «sono dieci bit?» — la risposta e' no per
        costruzione — ma **«sono almeno otto bit veri, o e' un percorso piu'
@@ -365,7 +365,7 @@ def misura_profondita_sfumatura(fg, misure):
     4** a 10 bit veri, contro **220 e 1,000** dopo un passaggio a 8 bit.
 
     ⚠ Qui il fondo scala e' 256 e non 1024, perche' il buffer di Mutter e' BGRx
-      (`gnome.md` §8.3 `[R]`).  Quindi la domanda a cui questo conto risponde e'
+      (`STUDI.md` §gnome §8.3 `[R]`).  Quindi la domanda a cui questo conto risponde e'
       **«sono almeno otto bit veri?»** — l'atteso e' ~256 livelli distinti e una
       frazione di multipli di 4 vicina a 0,25.  ⛔ Una frazione di multipli di 4
       pari a 1,000 direbbe che qualcuno lungo la strada e' passato per 6 bit.
@@ -880,7 +880,7 @@ def main():
             nero = any(q == "regime" and m == "FOTOGRAMMA NERO" for q, m, _ in rilievi_tutti)
             verdetto["danno_parziale_ma_intero"] = bool(firma_ok and not nero)
             print("\n   ⭐ il fotogramma di regime porta danno PARZIALE e la scena %s"
-                  % ("SI VEDE INTERA ⇒ il buffer e' intero (gnome.md §8.1: blit dell'intero "
+                  % ("SI VEDE INTERA ⇒ il buffer e' intero (STUDI.md §gnome §8.1: blit dell'intero "
                      "framebuffer), non un diff (cattura.h di v1)"
                      if firma_ok and not nero else
                      "NON si vede intera ⇒ il sospetto va sul diff di cattura.h"))

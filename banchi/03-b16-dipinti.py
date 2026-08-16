@@ -957,7 +957,7 @@ CASO_V3D = r"""
 # 6. IL GIUDIZIO — fuori dal browser
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# ⛔ `LEZIONI.md` §1.4 e `web.md` §6.3: si lavora **a distribuzioni**, non a
+# ⛔ `LEZIONI.md` §1.4 e `STUDI.md` §web §6.3: si lavora **a distribuzioni**, non a
 #    campioni, e ⛔ **l'avvio si butta**.  I primi fotogrammi sono l'avvio —
 #    il decodificatore che si configura, la tela che si alloca, il foglio che si
 #    riorganizza — e la distribuzione dell'avvio non e' quella del regime.

@@ -59,7 +59,7 @@ connessione nuova a ogni invocazione e la chiude uscendo.  Risultato misurato:
 «Ho iniettato un movimento» non e' «Mutter l'ha ricevuto».  Il controllo e'
 `org.gnome.Mutter.IdleMonitor.GetIdletime`, che **crolla** quando un evento
 arriva davvero — l'input che iniettiamo non e' marcato SYNTHETIC
-(`gnome.md` §7, `core/events.c:126-138`).  Se l'inattivita' non crolla, il
+(`STUDI.md` §gnome §7, `core/events.c:126-138`).  Se l'inattivita' non crolla, il
 movimento non e' arrivato e **tutto quel che segue non vale**: l'esito diventa
 `[?] scena mai avvenuta`, non un no.
 

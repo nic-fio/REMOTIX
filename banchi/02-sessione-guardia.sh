@@ -29,7 +29,7 @@
 #   ⛔ «la sessione e' VIVA» e «la sessione ha un MONITOR» sono DUE domande
 #      diverse, e se ne faceva una sola — quella che rispondeva di si'.
 #
-# In headless Mutter mette `needs_outputs = false` (`gnome.md` §3.1): senza
+# In headless Mutter mette `needs_outputs = false` (`STUDI.md` §gnome §3.1): senza
 # `--virtual-monitor` la sessione nasce perfetta e non ha niente da disegnare.
 # Chi avesse misurato la cattura la' sopra avrebbe letto **zero fotogrammi** e
 # sarebbe andato a cercare il difetto dentro PipeWire — `PIANO.md` fase 2, *«si

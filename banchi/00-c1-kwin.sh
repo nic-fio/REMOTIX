@@ -5,7 +5,7 @@
 #   bash 00-c1-kwin.sh [larghezza] [altezza] [durata] [memoria|dmabuf]
 #
 # ⛔ E LA STRADA DEI PIXEL VA DETTA, perche' sono due numeri diversi e il primo
-#    giro del 9 agosto 2026 ha confrontato la colonna sbagliata: `kde.md` §5.7
+#    giro del 9 agosto 2026 ha confrontato la colonna sbagliata: `STUDI.md` §kde §5.7
 #    misura 1080p a **59,2 a copia zero** e **43,3 in memoria**.  Misurato in
 #    memoria e confrontato col 59, il banco sembrava sbagliare di dieci
 #    fotogrammi mentre stava rispondendo giusto a un'altra domanda.
@@ -28,7 +28,7 @@
 #    viceversa (`LEZIONI.md` §1.1).  `weston-simple-egl` stampa da se' i propri
 #    fotogrammi al secondo: si legge da li'.
 #
-# ⚠ E si ricorda che KWin col backend virtuale disegna IN SOFTWARE (`kde.md`):
+# ⚠ E si ricorda che KWin col backend virtuale disegna IN SOFTWARE (`STUDI.md` §kde):
 #   il suo 59-60 e il 37 di Mutter non dicono «KWin e' piu' veloce», dicono che
 #   i due consegnano in modo diverso.  Il paragone che conta e' con se stessi.
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ dmabuf)  STRADA=--dmabuf ;;
 *) echo "strada sconosciuta: $STRADA_NOME (memoria | dmabuf)" >&2; exit 2 ;;
 esac
 
-# L'atteso, da `kde.md` §5.7 [M] 8 agosto 2026 — scritto qui perche' il banco
+# L'atteso, da `STUDI.md` §kde §5.7 [M] 8 agosto 2026 — scritto qui perche' il banco
 # dica da se' se ha risposto o no, invece di lasciarlo giudicare a memoria.
 case "${LARGHEZZA}x${ALTEZZA}-$STRADA_NOME" in
 1280x720-dmabuf)   ATTESO="59,4" ;;
@@ -99,10 +99,10 @@ attendi_file()
 
 pulisci
 echo "== C1: KWin --virtual ${LARGHEZZA}x${ALTEZZA}, $STRADA_NOME, stessa scena di Mutter =="
-echo "   atteso da kde.md §5.7: $ATTESO fps"
+echo "   atteso da STUDI.md §kde §5.7: $ATTESO fps"
 
 # `KWIN_WAYLAND_NO_PERMISSION_CHECKS` scavalca il cancello del file .desktop:
-# qui si misura la cattura, non il permesso (quello e' `kde.md` §3.3-bis).
+# qui si misura la cattura, non il permesso (quello e' `STUDI.md` §kde §3.3-bis).
 nohup setsid env KWIN_WAYLAND_NO_PERMISSION_CHECKS=1 \
     kwin_wayland --virtual --width "$LARGHEZZA" --height "$ALTEZZA" \
                  --no-lockscreen --socket="$SOCKET" \

@@ -79,7 +79,7 @@ massimo è 0 su tutti e tre i canali il registro dice:
 
 ```
 ⛔ il fotogramma consegnato e' NERO (massimo 0 su tutti e tre i canali): e' quel che
-   consegna una sessione senza monitor virtuale — gnome.md §3.1, guasto M9
+   consegna una sessione senza monitor virtuale — STUDI.md §gnome §3.1, guasto M9
 ```
 
 ⚠ E «nero» e «uniforme» sono **due marche diverse**, per la stessa ragione per cui lo sono nel
@@ -112,7 +112,7 @@ produce due comportamenti sotto la stessa etichetta.
 `v1/remotix-c/src/palco.c:598-628` tiene la copia zero **spenta su GNOME**, e la ragione scritta lì è
 *«il buffer che Mutter presta non è un fotogramma intero, è un diff»*.
 
-⭐ **Quella ragione è smentita da due strade indipendenti**: `gnome.md` §8.1 `[R]` (blit dell'intero
+⭐ **Quella ragione è smentita da due strade indipendenti**: `STUDI.md` §gnome §8.1 `[R]` (blit dell'intero
 framebuffer, stack di clip svuotato deliberatamente) e la misura di F2.2 `[M]` (danno **parziale** su
 410 fotogrammi su 410, e le sette bande **intere**). Oggi il mio giro lo conferma una terza volta:
 **388 fotogrammi, danno parziale su tutti, scena intera.**
@@ -122,7 +122,7 @@ framebuffer, stack di clip svuotato deliberatamente) e la misura di F2.2 `[M]` (
 | | |
 |---|---|
 | ⛔ quel che **cade** | il motivo scritto in `palco.c`: il diff non esiste |
-| ⚠ quel che **non** discende | che la copia zero su GNOME convenga. I **59 contro 43,3** sono di **KWin** (`kde.md` §5.7), e su GNOME il ritmo in memoria **non è mai stato misurato**: la fase 0 dà 36 ± 2 **sulla strada DMA-BUF** |
+| ⚠ quel che **non** discende | che la copia zero su GNOME convenga. I **59 contro 43,3** sono di **KWin** (`STUDI.md` §kde §5.7), e su GNOME il ritmo in memoria **non è mai stato misurato**: la fase 0 dà 36 ± 2 **sulla strada DMA-BUF** |
 | ⛔ quel che V2 fa oggi | la strada la **dichiara chi chiama**, e la fase 2 chiede la **memoria** per una ragione sua e scritta: **vuole i pixel leggibili**. Non è più un predefinito ereditato da un difetto |
 
 ⇒ La decisione «quale strada su GNOME» diventa una misura di **ritmo**, e il ritmo non è di questo
@@ -163,7 +163,7 @@ niente.
 | **C** | 10 bit, strada **scheda** | ⛔ **`no more input formats`** — identico |
 
 ⭐ **La `[?]` è chiusa, e non per deduzione**: da questa sorgente **dieci bit veri non escono, né via
-MemFd né via DMA-BUF**. La lettura del codice e la misura concordano — `gnome.md` §8.3 `[R]`,
+MemFd né via DMA-BUF**. La lettura del codice e la misura concordano — `STUDI.md` §gnome §8.3 `[R]`,
 `supported_formats[]` in `meta-screen-cast-stream-src.c` di Mutter 48.7 ha **due voci**, BGRx e BGRA,
 e la stessa tabella alimenta **anche** l'elenco con i modificatori.
 
@@ -484,7 +484,7 @@ atteso risanato 0   dopo ognuno, impronta 82270430c1823ff113a3f4627fbd8b61350e9c
                     9d2962cda643fc1d19afad6a
 costa           una presa da 12 s per il giro sano; i guasti sono copie di file
 esito           ⭐ [M] 12 agosto 2026, NIC-OS: 0 → 1 ×4 → 0. CERTIFICATO
-riferimento     fasi/rapporti/P2-2-cattura.md · F2-2-cattura.md · gnome.md §8.1 §8.3 §13 M9 ·
+riferimento     fasi/rapporti/P2-2-cattura.md · F2-2-cattura.md · STUDI.md §gnome §8.1 §8.3 §13 M9 ·
                 LEZIONI.md §1.9 §1.11 §4 trappole 1, 2, 6, 8 · REVIEWER.md E1, E2, E8, E9 ·
                 fasi/00-ambiente.md B3, voci 2, 8, 12-bis
 ```

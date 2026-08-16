@@ -67,7 +67,7 @@ E i quattro MARCATORI d'angolo, che servono a due cose insieme:
 ⛔ E LA TRAPPOLA PIU' CARA DI QUESTA FASE, CHE QUESTA MIRA CHIUDE
 
 `PIANO.md` fase 2: una sessione GNOME headless senza `--virtual-monitor`
-parte **viva, completa e NERA** (`gnome.md` §13, prova M9).
+parte **viva, completa e NERA** (`STUDI.md` §gnome §13, prova M9).
 
 ⛔ Due fotogrammi neri si assomigliano **perfettamente**: PSNR infinito.  Un
 metro che confronti soltanto cattura e decodifica darebbe **verde pieno** su

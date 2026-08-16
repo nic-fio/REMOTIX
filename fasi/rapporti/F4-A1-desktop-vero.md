@@ -243,7 +243,7 @@ il contrario sono al punto **6**.
 
 ---
 
-## 6. Le righe di `PIANO.md` e `gnome.md` da riscrivere
+## 6. Le righe di `PIANO.md` e `STUDI.md` §gnome da riscrivere
 
 ⛔ *Non le ho toccate: sono `.md` del deposito e si scrivono a codice fermo.*
 
@@ -252,9 +252,9 @@ il contrario sono al punto **6**.
 | `PIANO.md` | **399** | *«`--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti **viva, completa e nera**»* | ⛔ Vero solo per una sessione che deve vivere **senza nessuno che la catturi**. Per una sessione **solo remota** è il contrario: `--virtual-monitor` è **vietato**, perché la shell finisce sul monitor sbagliato. `[M]` §3.3 |
 | `PIANO.md` | **402-404** | *«una prova da fare **guasta di proposito**: senza `--virtual-monitor`, per imparare che aspetto ha il guasto»* | ⛔ Quella non è più «la prova guasta»: è **la configurazione giusta**. Il guasto da imparare adesso è l'opposto — la sessione che **si prende un monitor suo** — e ha un aspetto peggiore: non uno schermo nero, ma **uno schermo pieno di sfondo e zero fotogrammi consegnati** |
 | `PIANO.md` | **591-593** | il riquadro della fase 4: *«la cura è in DUE posti»* | ⛔ Sono **quattro** (§3.4), e i due in più sono quelli che, da soli, rompevano |
-| `gnome.md` | **108-109** (§3.1) | *«⛔ **E `--virtual-monitor` non è opzionale**: in headless `needs_outputs=false`, quindi senza quell'opzione la sessione parte **viva, completa e nera**»* | Il **fatto** resta vero `[R]`+`[M]`; ⛔ è la **conseguenza** che è rovesciata: per REMOTIX quella sessione nera è quella giusta, perché il monitor lo monta `RecordVirtual` e **GNOME ci mette la shell sopra** — misurato `[M]` 14 ago 2026 |
-| `gnome.md` | **111-112** | *«**La forma**: … drop-in … con `gnome-shell --headless --virtual-monitor WxH`»* | ⛔ La forma per REMOTIX è `gnome-shell --headless --no-x11`, **senza** monitor |
-| `gnome.md` | **551** (§13, M9) | *«prova **guasta di proposito**: `SHELL` non vuota, e `--virtual-monitor` assente»* | ⛔ L'assenza di `--virtual-monitor` non è più metà di un guasto. M9 resta valida per la sola `SHELL` non vuota |
+| `STUDI.md` §gnome | **108-109** (§3.1) | *«⛔ **E `--virtual-monitor` non è opzionale**: in headless `needs_outputs=false`, quindi senza quell'opzione la sessione parte **viva, completa e nera**»* | Il **fatto** resta vero `[R]`+`[M]`; ⛔ è la **conseguenza** che è rovesciata: per REMOTIX quella sessione nera è quella giusta, perché il monitor lo monta `RecordVirtual` e **GNOME ci mette la shell sopra** — misurato `[M]` 14 ago 2026 |
+| `STUDI.md` §gnome | **111-112** | *«**La forma**: … drop-in … con `gnome-shell --headless --virtual-monitor WxH`»* | ⛔ La forma per REMOTIX è `gnome-shell --headless --no-x11`, **senza** monitor |
+| `STUDI.md` §gnome | **551** (§13, M9) | *«prova **guasta di proposito**: `SHELL` non vuota, e `--virtual-monitor` assente»* | ⛔ L'assenza di `--virtual-monitor` non è più metà di un guasto. M9 resta valida per la sola `SHELL` non vuota |
 
 ---
 

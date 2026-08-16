@@ -39,13 +39,13 @@ di configurazione che si puo' perdere*. Quella riga si **era** persa, e la macch
 | `locale_utf8()` + `locale_esiste()` | 145-193 | la locale che dev'**esistere**, non solo dirsi UTF-8. ⭐ E sul ferro **ha morso davvero**: vedi §5 |
 | la forma di `scrivi_dropin()` | 569-623 | cartella `user.control`, file, `daemon-reload` — e la regola «il drop-in **prima** del comando» |
 | `avvia()` | 625-648 | `setsid --fork`, e il registro della sessione in `$XDG_RUNTIME_DIR` |
-| `esci_gnome()` con `Logout(1)`→`Logout(2)` | 699-711 | il congedo di `gnome.md` §3.2 |
+| `esci_gnome()` con `Logout(1)`→`Logout(2)` | 699-711 | il congedo di `STUDI.md` §gnome §3.2 |
 
 | ⛔ **lasciato li'** | righe | perche' |
 |---|---|---|
 | tutto il ramo **KWin**: `nome_occupato()`, `esci_kde_ordinato()`, `esci_kde_a_forza()`, `SESSIONE_COMANDO_KDE` | ~90 | V2 alla fase 2 serve GNOME. ⛔ E `TipoCompositore`/`compositore.h` **in V2 non esistono**: crearli sarebbe apparato per un compositore che questa fase non serve — ed e' proprio il parametro che nascondeva il difetto |
-| `scrivi_tema_cursore()` + `scrivi_cursore_vuoto()` + `cartella_cursori()` | ~120 | e' la cura del doppio puntatore di **KWin** (formato Xcursor scritto a mano). Su GNOME il cursore non sta dentro l'immagine catturata (`gnome.md` §5.2) |
-| `scrivi_regole_menu()` + `cartella_regole()` | ~35 | il **KIOSK** di KDE. Su GNOME l'equivalente e' il lockdown di dconf (`gnome.md` §5.1), che e' un lavoro suo |
+| `scrivi_tema_cursore()` + `scrivi_cursore_vuoto()` + `cartella_cursori()` | ~120 | e' la cura del doppio puntatore di **KWin** (formato Xcursor scritto a mano). Su GNOME il cursore non sta dentro l'immagine catturata (`STUDI.md` §gnome §5.2) |
+| `scrivi_regole_menu()` + `cartella_regole()` | ~35 | il **KIOSK** di KDE. Su GNOME l'equivalente e' il lockdown di dconf (`STUDI.md` §gnome §5.1), che e' un lavoro suo |
 | `ksmserverrc`, `XDG_MENU_PREFIX`, `XCURSOR_*`, `XDG_CONFIG_DIRS` | ~30 | leve di Plasma |
 | il parametro `comando` di `sessione_assicura()` | — | nessuno gli passava mai niente di diverso dal predefinito: una leva che moltiplicava le scene senza che nessuno la usasse |
 
@@ -112,7 +112,7 @@ sessione_assicura(1920, 1080)
   quindi assente e vuota sono la stessa cosa — ma **due cose diverse per chi misura**: vuota si vede
   in `/proc/<gnome-session-binary>/environ`, assente si confonde con «non ho letto l'ambiente». v1 la
   lasciava assente **per costruzione, senza saperlo**.
-- ⚠ **`XDG_SESSION_ID` NON si passa**, e la ragione e' scritta nel codice: `gnome.md` §3.1 avverte che
+- ⚠ **`XDG_SESSION_ID` NON si passa**, e la ragione e' scritta nel codice: `STUDI.md` §gnome §3.1 avverte che
   senza di essa Mutter puo' agganciare la sessione logind sbagliata — ma quella che erediteremmo e' la
   sessione di **chi ci ha avviati** (un ssh, cioe' `tty`), e regalargliela sarebbe mandarlo sulla
   sessione sbagliata con la nostra firma sopra. La scena misurata sana non la porta.
@@ -358,7 +358,7 @@ chiede: il conto lo rifa' chi innesta, **dopo** aver innestato, o rifarebbe due 
 | # | la `[?]` | perche' resta |
 |---|---|---|
 | 1 | ⛔ **Dove gira `sessione.c` nel prodotto vero** | il server di prova gira **dentro il contenitore**, dove non ci sono `systemd --user`, `$XDG_RUNTIME_DIR` d'utente ne' il bus di sessione. Il modulo e' stato provato **sull'host**, che e' dove la sessione vive. ⇒ O il server esce dal contenitore, o `sessione_assicura()` uscira' sempre **5** dichiarandolo. **E' una decisione del coordinatore, non una riga di codice** |
-| 2 | **Se `--virtual-monitor` regga un cambio di misura a caldo** | `ensure_virtual_monitor` esce prima se la misura non cambia (`gnome.md` §8.2). Il codice **non ci prova**: dichiara e prosegue. Se la fase 6 vorra' il ridimensionamento, e' li' che si misura |
+| 2 | **Se `--virtual-monitor` regga un cambio di misura a caldo** | `ensure_virtual_monitor` esce prima se la misura non cambia (`STUDI.md` §gnome §8.2). Il codice **non ci prova**: dichiara e prosegue. Se la fase 6 vorra' il ridimensionamento, e' li' che si misura |
 | 3 | ⚠ **Se la grazia di 5 000 ms basti su una macchina piu' lenta** | `[R]` il monitor lo crea `meta-context-main.c:592-597` **prima** che `DisplayConfig` risponda, quindi il fatto basterebbe gia'; la grazia e' prudenza sopra quel fatto. Sbaglia dalla parte che si vede (un falso «nera»), non da quella che si nasconde |
 | 4 | **Se la sessione **con** monitor sia altrettanto fragile allo `Shell.Screenshot`** | ereditata da F2.1, e **non riprovata di proposito**: non rifaccio cadere la sessione per una curiosita' |
 | 5 | ⚠ **`XDG_SESSION_ID` quando REMOTIX girera' come unita' di sistema** | oggi non si passa, e la scena sana non la porta. Da riguardare quando il server nasce da systemd invece che da una shell |

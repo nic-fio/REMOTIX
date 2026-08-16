@@ -211,7 +211,7 @@ tua):
  * SESSIONE — e' la verita', e con l'altra uscirebbero lettere sbagliate — e il
  * ripiego si DICHIARA nel registro (CODER.md §4.2).
  *
- * ⛔ Da chiamare a OGNI `DEVICE_ADDED`, non una volta all'avvio: gnome.md §9
+ * ⛔ Da chiamare a OGNI `DEVICE_ADDED`, non una volta all'avvio: STUDI.md §gnome §9
  *    misura che un cambio di keymap distrugge e ricrea il dispositivo tastiera,
  *    e il vecchio smette di funzionare SENZA ERRORE.
  */
@@ -271,13 +271,13 @@ scartano apposta, perché un lucchetto **resta acceso dopo** e cambierebbe la le
 ⚠ Ma se il BlocMaiusc è **già** acceso nella sessione, `Maiusc+a` dà `a` e non `A`: i nostri codici
 sono giusti e la lettera esce sbagliata lo stesso.
 
-`gnome.md` §9 dice dove sta la risposta: `EI_EVENT_KEYBOARD_MODIFIERS` **non arriva nemmeno su
+`STUDI.md` §gnome §9 dice dove sta la risposta: `EI_EVENT_KEYBOARD_MODIFIERS` **non arriva nemmeno su
 GNOME**, e la fonte vera sono le due proprietà D-Bus `CapsLockState`/`NumLockState` con
 `SYNC_CREATE` — che danno anche lo **stato iniziale**. ⇒ Se vuoi chiudere il caso, serve una via per
 farlo sapere a questo modulo, e la propongo così:
 
 ```c
-/* Lo stato dei due lucchetti nella sessione, da gnome.md §9 (le due proprieta'
+/* Lo stato dei due lucchetti nella sessione, da STUDI.md §gnome §9 (le due proprieta'
  * D-Bus).  Da richiamare quando cambiano: qui dentro non si preme mai un
  * lucchetto per fare una lettera, ma se e' gia' acceso la lettera cambia. */
 void tastiera_lucchetti(Tastiera *, int maiuscole_accese, int numeri_accesi);
@@ -330,7 +330,7 @@ del coordinatore, non questo pezzo.
 | ⛔ **sessione `it` + client `us`, l'utente scrive `[`** | ✅ `100(AltGr)+9` ⇒ **esce `[`** |
 | sessione `us` + client `it`, `é` | ✅ non producibile — la sessione non ce l'ha |
 | sessione `it` + client `it`, `é` · sessione `it` + nessuna negoziata, `[` | ✅ escono |
-| ⭐ **due disposizioni vive insieme non si rimescolano** (`gnome.md` §9: si riapre a ogni `DEVICE_ADDED`) | ✅ `it`⇒1, poi `us`⇒0, poi **ancora** `it`⇒1 con gli stessi codici |
+| ⭐ **due disposizioni vive insieme non si rimescolano** (`STUDI.md` §gnome §9: si riapre a ogni `DEVICE_ADDED`) | ✅ `it`⇒1, poi `us`⇒0, poi **ancora** `it`⇒1 con gli stessi codici |
 
 ⭐ **E il quarto guasto certifica proprio quello**: un'implementazione che si fida del nome negoziato
 invece che della keymap della sessione ⇒ il banco dice ROSSO, con il sintomo esatto che era stato

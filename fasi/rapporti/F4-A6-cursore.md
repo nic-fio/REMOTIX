@@ -32,7 +32,7 @@ Si ricontrolla con `sudo bash /media/REMOTIX/src/04-b26-lancia.sh tutto`; il dep
 
 ### 3.1 ⭐ Il `[R]` principale è diventato `[M]` — **prima** di curarlo
 
-> `gnome.md` §1.1 punto 6 / §5.2, `[R]`: *«chiediamo `cursor-mode=2` (metadato) ma non chiediamo il
+> `STUDI.md` §gnome §1.1 punto 6 / §5.2, `[R]`: *«chiediamo `cursor-mode=2` (metadato) ma non chiediamo il
 > metadato ⇒ il cursore non arriva affatto»*.
 
 | giro | che negoziazione | buffer | `SPA_META_Cursor` | `CURSORE_FORMA` |

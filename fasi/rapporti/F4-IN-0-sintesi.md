@@ -70,7 +70,7 @@ funzionare mentre il desktop remoto è a 1,1 fotogrammi al secondo.
 | `src/pagina.html:2983-2987` | `CURSORE_FORMA` arriva e viene **buttato** con un `nota()` |
 | `src/pagina.html:3752` | `forma: function (f)` — la funzione che veste il cursore **esiste** |
 | ovunque | **nessun chiamante**: l'unico altro posto dove il nome compare è un commento (`:3694`) |
-| `xpra.md` §2 | la decisione ✅ *«il cursore del browser veste la forma remota»*, **14 agosto** |
+| `STUDI.md` §xpra §2 | la decisione ✅ *«il cursore del browser veste la forma remota»*, **14 agosto** |
 
 ⇒ **La decisione è presa, il codice è scritto, il filo fra i due non è mai stato attaccato.**
 

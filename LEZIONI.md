@@ -27,7 +27,7 @@
 > |---|---|---|
 > | `REFERENCE.md` | `v1/documenti/REFERENCE.md` | erano le regole di compatibilita' con i client RDP altrui. **In V2 decade quasi per intero**, perche' i client sono nostri. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
 > | `PIANO.md`, `SPECIFICA.md` | `v1/documenti/` | il piano e la specifica di v1, chiusi alla fase 11 |
-> | `kde.md`, `gnome.md`, `xfce.md`, `lxqt.md` | qui, al livello di V2 | intatti: parlano di compositori, non di protocollo |
+> | `kde.md`, `gnome.md`, `xfce.md`, `lxqt.md` — e `cinnamon.md`, `web.md`, `xpra.md`, `gnome-remote-desktop.md` | ⭐ **capitoli di `STUDI.md`**, al livello di V2: cuciti in un documento solo il 16 agosto 2026, ⛔ senza togliere una riga | intatti: parlano di compositori, non di protocollo. ⚠ Si citano `STUDI.md` §kde, §gnome, §xfce, §lxqt — **le chiavi sono i nomi che avevano i file** |
 > | i banchi e i programmi di misura | `v1/banchi/` | intatti, e sono la cosa piu' riutilizzabile che v1 lascia |
 >
 > ⚠ **E una avvertenza sul riuso**, che e' §1.11 rivolta a noi: che una lezione sia scritta qui non
@@ -277,7 +277,7 @@ risultato entra nel documento come un fatto misurato.
 3. **Quando codice letto e misura si contraddicono, il sospetto va prima sulla misura.** Il codice
    non ha un ambiente: la misura sì, e l'ambiente è dove stanno gli errori.
 
-*Dettaglio: `REFERENCE.md` R32 (il riquadro di chiusura) e `kde.md` §5.1.*
+*Dettaglio: `REFERENCE.md` R32 (il riquadro di chiusura) e `STUDI.md` §kde §5.1.*
 
 > ### ⭐ La quarta regola, e l'ha imposta la fase 1 ripetendo l'errore tre volte in un'ora
 >
@@ -522,7 +522,7 @@ risultato entra nel documento come un fatto misurato.
 
 ### 1.10 Un permesso può dipendere da una variabile d'ambiente che nessuno documenta
 
-Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `kde.md`) — e per cinque
+Il cancello della cattura su KWin è un campo in un file `.desktop` (§3 di `STUDI.md` §kde) — e per cinque
 prove di fila ha negato, con il file scritto giusto, nel posto giusto, con il percorso giusto. La
 causa era **`XDG_MENU_PREFIX`**: senza quella variabile l'indice dei servizi di KDE si costruisce
 **vuoto**, e nessun `.desktop` viene trovato — nemmeno quelli di sistema. In una sessione del desktop
@@ -535,7 +535,7 @@ la riga decisiva stava in una categoria diversa da quella ovvia (`KWIN_UTILS`, n
 distingueva in una parola due cause con cure opposte — «non ho trovato il file» contro «l'ho trovato
 e il campo è vuoto». Cinque avvii di banco per indovinare, tre secondi per farselo dire.
 
-*Dettaglio: `kde.md` §3.3-bis.*
+*Dettaglio: `STUDI.md` §kde §3.3-bis.*
 
 ### 1.11 ⭐ Una prova indiretta prova quel che prova, non quel che speriamo
 
@@ -559,14 +559,14 @@ possibile solo con un backend EGL, ma il suo *contrario* non dice nulla se non s
 1. **Per ogni prova indiretta, si scrive cosa mostrerebbe il caso opposto.** Se non si sa dire come
    apparirebbe un compositore in software, la prova non distingue e va cambiata.
 2. **Se il componente sa rispondere, gli si chiede.** Su KWin la risposta esatta — driver e chip — è
-   una riga di D-Bus (`org.kde.KWin.supportInformation`, `kde.md` §5.3-bis). Mezza giornata di prove
+   una riga di D-Bus (`org.kde.KWin.supportInformation`, `STUDI.md` §kde §5.3-bis). Mezza giornata di prove
    indirette per un dato che il compositore regala.
 
 ⚠ E il corollario che tiene insieme questa lezione con §1.8: `KWIN_COMPOSE=O2` — l'interruttore che
 doveva *garantire* la GPU — **è inerte** (misurato). Quindi non basta «dire al componente cosa fare»:
 va anche **verificato che abbia obbedito**, e con una prova che sappia distinguere.
 
-*Dettaglio: `kde.md` §5.1, §5.3-bis, §5.4 e `REFERENCE.md` R32.*
+*Dettaglio: `STUDI.md` §kde §5.1, §5.3-bis, §5.4 e `REFERENCE.md` R32.*
 
 > ### ⛔ Il terzo caso, dal browser: **`Emulation.setDeviceMetricsOverride` misura l'emulazione, non il browser**
 >
@@ -602,7 +602,7 @@ e un meccanismo di autorizzazione che ispeziona *altri processi* o l'ambiente pu
 funzionare. Quando si irrigidisce un servizio che concede o riceve permessi, **la prova che il
 permesso funziona ancora va rifatta** — non è implicita.
 
-*Dettaglio: `kde.md` §3.3-bis e §5.6.*
+*Dettaglio: `STUDI.md` §kde §3.3-bis e §5.6.*
 
 ### 1.13 ⭐⭐ Una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta di un passo a ogni rilettura
 
@@ -676,7 +676,7 @@ e si sposta allo stesso modo.*
 
 **P1 è il controllo decisivo dell'anello del ritardo**: il server ritarda di **N millisecondi noti**
 e la mediana **deve salire di esattamente N**. Un banco che non lo supera non sa di misurare
-(`web.md` §6.3).
+(`STUDI.md` §web §6.3).
 
 ⛔ **Il difetto: eseguirlo A BLOCCHI** — prima un blocco di campioni senza ritardo, poi un blocco
 con il ritardo N. La differenza fra le due mediane contiene **due cose sommate**: il ritardo che si
@@ -778,12 +778,12 @@ che scrive una pretesa non ha modo di saperlo.*
 > | | `[M]` 13 agosto, stesso palco |
 > |---|---|
 > | `requestAnimationFrame` nel thread principale | ⛔ **0 quadri in 3 s** — non gira mai |
-> | una `OffscreenCanvas` trasferita a un worker | ⛔ si ferma a **56,4 dipinti/s ≈ il quadro dei 60 Hz**, con **13,4-21,7 ms** di costo extra per fotogramma (`web.md` §6.1) |
+> | una `OffscreenCanvas` trasferita a un worker | ⛔ si ferma a **56,4 dipinti/s ≈ il quadro dei 60 Hz**, con **13,4-21,7 ms** di costo extra per fotogramma (`STUDI.md` §web §6.1) |
 >
 > ⇒ ⏳ `[?]` **Sullo stesso Xvfb un cammino non vede nessun quadro e l'altro paga il quadro pieno.**
 > Sono due meccanismi diversi e possono essere veri tutti e due — ⛔ **ma finché non si sa quale
 > orologio scandisce il secondo, non si sa nemmeno quanto della penale del worker sia del palco e
-> quanto del meccanismo.** ⇒ È la ragione tecnica per cui `web.md` §6.1 **non si seppellisce senza
+> quanto del meccanismo.** ⇒ È la ragione tecnica per cui `STUDI.md` §web §6.1 **non si seppellisce senza
 > rifare il conto su hardware vero**: se quella penale è del palco, su una GPU cambia di segno.
 > ⚠ *Scritto come domanda aperta e non come conclusione: nessuno dei due numeri è in discussione, è
 > il loro accostamento che non ha ancora una spiegazione.*
@@ -1135,10 +1135,10 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 
 | **13** *(nuova)* | ⭐ **Uno schermo virtuale si RIDIMENSIONA a caldo?** | **sì**: la misura si concorda nella negoziazione PipeWire, cambiarla è una rinegoziazione | ⛔ **no su 6.3.6**: il modo è `const`, l'elenco è fissato nel costruttore, e `kde_output_management_v2` sa solo *scegliere* fra i modi annunciati. Risolto a monte (`kwin!7932`, milestone **6.8**) — **e per la stessa strada nostra**, la negoziazione PipeWire | `wlr_output_state_set_custom_mode` esiste e il backend headless la usa già [lettura, **da misurare**] |
 | **14** *(nuova)* | ⭐ **La clipboard di chi è?** | ⚠ **del compositore anche qui** — è `MetaSelection` `[R]` **9 ago**. Della sessione remota è solo la **porta** (`EnableClipboard`), e ⛔ **senza sessione la clipboard esiste lo stesso**: la sponda X11 è incondizionata nei due versi, `xclip` funziona | **del compositore**: `zwlr_data_control_manager_v1` v2, **nessun permesso**, e c'è anche se REMOTIX non c'è | lo stesso protocollo: `appunti_wlr.c` **è già scritto per questa famiglia** |
-| **15** *(nuova)* | ⭐ **C'è uno stato in cui il compositore REVOCA quel che ha già concesso, e chi ha il dito su quel pulsante?** | ⛔ **sì, ed è l'unico dei tre**: entrando nel dialogo di sblocco gnome-shell chiama `inhibit_remote_access()` e Mutter chiude ScreenCast, RemoteDesktop e InputCapture **rifiutando di ricrearli**. L'eccezione è `is_headless()` `[R]` — la nostra condizione, e **non l'abbiamo chiesta** (`gnome.md` §4) | `[?]` da verificare | `[?]` da verificare |
+| **15** *(nuova)* | ⭐ **C'è uno stato in cui il compositore REVOCA quel che ha già concesso, e chi ha il dito su quel pulsante?** | ⛔ **sì, ed è l'unico dei tre**: entrando nel dialogo di sblocco gnome-shell chiama `inhibit_remote_access()` e Mutter chiude ScreenCast, RemoteDesktop e InputCapture **rifiutando di ricrearli**. L'eccezione è `is_headless()` `[R]` — la nostra condizione, e **non l'abbiamo chiesta** (`STUDI.md` §gnome §4) | `[?]` da verificare | `[?]` da verificare |
 
 > ⭐ **La 15 è la domanda che questa lista non aveva**, ed è arrivata dallo studio di GNOME
-> *(`gnome.md` §14, dove è chiamata «la domanda 16» contando le righe `-bis`; qui prende il primo
+> *(`STUDI.md` §gnome §14, dove è chiamata «la domanda 16» contando le righe `-bis`; qui prende il primo
 > numero libero, perché in questo documento **non si rinumera**)*. La 3 chiede se esiste un
 > permesso; questa chiede se il permesso **può essere ritirato a caldo**, che è una cosa diversa e
 > più pericolosa: si va a chiedere il permesso una volta sola, all'inizio, e nessuno torna a
@@ -1146,7 +1146,7 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 
 > ## ⛔⛔ ~~I sei decimi di Mutter~~ → **MISURATO il 13 agosto: non è un battimento, è una griglia**
 >
-> *Questo riquadro, scritto il 9 agosto 2026 leggendo `gnome.md` §8.2, diceva: «`maxFramerate` è il
+> *Questo riquadro, scritto il 9 agosto 2026 leggendo `STUDI.md` §gnome §8.2, diceva: «`maxFramerate` è il
 > freno della cattura e insieme la frequenza del monitor virtuale. **Due orologi allo stesso numero
 > battono fra loro, e il battimento vale 0,61**. Costa tre celle e zero righe di prodotto, e se
 > riesce porta i 60 su GNOME». Era `[R]`, e portava accanto la propria riserva: «finché non è
@@ -1210,8 +1210,8 @@ pomeriggio, prima di scrivere una riga. Dove la risposta la conosciamo già, è 
 > > > valido.
 
 > ⚠ **La colonna wlroots e' stata riempita dopo** *(8 agosto 2026)*. Le celle «da misurare» qui sopra
-> hanno una risposta in **`xfce.md` §12**, che rifa' queste quattordici domande con la colonna
-> wlroots piena, e in **`lxqt.md` §4** per il caso in cui il compositore lo scegliamo noi. Questa
+> hanno una risposta in **`STUDI.md` §xfce §12**, che rifa' queste quattordici domande con la colonna
+> wlroots piena, e in **`STUDI.md` §lxqt §4** per il caso in cui il compositore lo scegliamo noi. Questa
 > tabella non e' stata riscritta di proposito: le due letture stanno bene una accanto all'altra, e
 > ciascuna porta la data della propria misura.
 
@@ -1226,7 +1226,7 @@ librerie ha caricato — non fidarsi di quel che il compositore scrive nel propr
 
 > ## ⚠ La colonna di KWin è stata riempita leggendo il codice, il 7 agosto 2026
 >
-> Lo studio sta in **[`kde.md`](kde.md)**, ed è la prova che questa lista funziona: **undici domande
+> Lo studio sta in **[`STUDI.md` §kde](STUDI.md#kde)**, ed è la prova che questa lista funziona: **undici domande
 > su undici hanno una risposta prima di scrivere una riga**. Ma tre cose vanno dette, e sono lezioni
 > a loro volta.
 >
@@ -1247,7 +1247,7 @@ librerie ha caricato — non fidarsi di quel che il compositore scrive nel propr
 > **3. Alla lista mancava una domanda, e su KDE è quella che costa più di tutte:**
 > **«si può cambiare la misura dello schermo virtuale a cattura viva?»** Su Mutter sì
 > (`pw_stream_update_params`), e la fase 6 ci ha costruito sopra la risoluzione dinamica. Su KWin
-> **no**: un output virtuale ha un solo modo, immutabile, e va chiuso e ricreato (`kde.md` §8). È la
+> **no**: un output virtuale ha un solo modo, immutabile, e va chiuso e ricreato (`STUDI.md` §kde §8). È la
 > **dodicesima domanda**, e chi apre il prossimo desktop la faccia insieme alla quinta.
 
 **Gli strumenti per rispondere esistono già** e stanno in `v1/banchi/banco-compositori/` — portati
@@ -1314,7 +1314,7 @@ catena. Un anello più veloce di quel che gli arriva non produce niente.
 > `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
 > 16666,67 µs ⇒ chi cade sotto **perderebbe un tick intero** — il resto di una **divisione
 > troncata**. *La sera del 13 agosto questa spiegazione era scritta qui come misurata: non lo è,
-> vedi il riquadro di §3 domanda 7 e `gnome.md` §8.2.*
+> vedi il riquadro di §3 domanda 7 e `STUDI.md` §gnome §8.2.*
 >
 > ⇒ ⛔ **Il tetto era di nuovo un numero che avevamo scritto noi, e stavolta era scritto due volte**:
 > una nella cadenza che chiedevamo, e una **nel modo in cui il compositore la converte**. La forma
@@ -1372,7 +1372,7 @@ lo faccia per quello.
 >
 > ⚠ **E il numero della catena vera aveva una spiegazione, che è la terza cosa da guardare**: il
 > worker dipingeva di più perché **c'era la coda**. Un vantaggio che esiste solo finché il sistema
-> non è al limite è un vantaggio che sparisce **il giorno in cui serve** (`web.md` §6.1).
+> non è al limite è un vantaggio che sparisce **il giorno in cui serve** (`STUDI.md` §web §6.1).
 
 ### 6.2-bis ⭐⭐ Un'attesa che protegge un anello è un ritardo per tutti gli altri
 
@@ -1570,7 +1570,7 @@ che la riga deve far fare.
 
 > ## ⭐ Un vicolo cieco che non era un vicolo cieco: la caccia della fase 9, nel posto sbagliato
 >
-> *Scritto il 9 agosto 2026 da `gnome.md` §1.3 e §8.1. `[R]`, e riapre una caccia chiusa male.*
+> *Scritto il 9 agosto 2026 da `STUDI.md` §gnome §1.3 e §8.1. `[R]`, e riapre una caccia chiusa male.*
 >
 > Le due schermate che si alternavano sono state inseguite per due fasi come un problema di
 > **acquire**: il buffer arriva col disegno in corso, quindi si aspetta la fence. La lettura del
@@ -1585,7 +1585,7 @@ che la riga deve far fare.
 > **offre**, e che oggi non chiediamo — oppure **trattenere** il `pw_buffer` fino a lettura
 > finita, che è quel che fa il riferimento, cioè il contrario di quel che avevamo concluso.
 >
-> ⚠ **È una lettura, non una misura**, ed è la lezione 4 di `gnome.md` §14: *una misura giusta
+> ⚠ **È una lettura, non una misura**, ed è la lezione 4 di `STUDI.md` §gnome §14: *una misura giusta
 > con una spiegazione inventata è più pericolosa di una misura sbagliata*, perché nessuno la
 > rimette in discussione. R29 è rimasta in piedi due fasi per questo.
 
@@ -1634,7 +1634,7 @@ questa sezione esiste perché non si ripaghino due volte.*
 | ⛔ **Il compositore vuole una SESSIONE logind di classe `user`** — non basta `/run/user/<uid>`, non basta il bus, **non basta il linger** (che dà uno scope di classe `manager`). Mutter chiede `sd_pid_get_session()`, si sente rispondere **ENXIO** e muore | ⭐⭐⭐ **totale**: quella chiamata la fa **ogni** compositore Wayland, non Mutter. È la prima cosa da verificare su un desktop nuovo, e il sintomo — *«non parte e non dice perché»* — è identico ovunque | `DECISIONI.md` §1.10-ter |
 | ⛔ **Il server non deve girare dentro una sessione utente**: `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**. Un server avviato a mano da `ssh` mette i figli nella sessione di chi l'ha avviato | ⭐⭐⭐ **totale**, ed è insidiosa perché in produzione (unità di sistema) non si vede mai: morde **solo in prova**, cioè dove si studia il desktop nuovo | `DECISIONI.md` §1.10-ter |
 | ⛔ **Senza seat non ci sono le ACL di `uaccess`** ⇒ l'utente **non può aprire la GPU** e Mesa ripiega su llvmpipe **senza un errore**. Su un desktop normale l'accesso lo dà logind con un'ACL a chi è seduto al seat; noi il seat non ce l'abbiamo **di proposito** | ⭐⭐⭐ **totale**, ed è il **prezzo dell'headless**: vale per qualunque compositore si faccia girare senza seat. ⚠ Il sintomo è «lento», non «rotto» | `fasi/05-la-sessione.md`, `DECISIONI.md` §4.6-quinquies |
-| ⛔ **Con due schede, quale usa il compositore lo decide il caso** se non c'è la regola udev | ⭐⭐ **totale** — e su KWin era già noto (`kde.md` §5.6: `findRenderDevice()` prende la prima che si apre). ⇒ Non era una stranezza di KDE: **era la regola generale, vista da una parte sola** | `DECISIONI.md` §4.6-ter e §4.6-quinquies |
+| ⛔ **Con due schede, quale usa il compositore lo decide il caso** se non c'è la regola udev | ⭐⭐ **totale** — e su KWin era già noto (`STUDI.md` §kde §5.6: `findRenderDevice()` prende la prima che si apre). ⇒ Non era una stranezza di KDE: **era la regola generale, vista da una parte sola** | `DECISIONI.md` §4.6-ter e §4.6-quinquies |
 | ⛔ **Le variabili `XDG_*` non si inventano: le mette `pam_systemd` e si leggono.** Comporle a mano vuol dire dichiarare un valore al posto di averlo — e `XDG_RUNTIME_DIR` asserito è il difetto che non si vede finché la directory c'è | ⭐⭐⭐ **totale** | `DECISIONI.md` §1.10-ter |
 | ⛔ **La coda della raffica**: il fotogramma scartato «tanto ne arriva un altro» è **l'ultimo**, e dopo l'ultimo non arriva niente | ⭐⭐⭐ **totale**: sta in `cattura.c`, che è **lo stesso codice per tutti e quattro** i desktop | §6.5 |
 

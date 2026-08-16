@@ -74,7 +74,7 @@
     ⇒ Si guarda `isConfigSupported` come FILTRO (se dice no, il pixel non
       arriva mai), e poi **si dipinge una sonda vera e si rileggono i pixel**.
       La misura vive nel prodotto perche' il dispositivo dell'utente e' l'unico
-      posto dove la domanda ha una risposta (`web.md` §9, lezione 2).
+      posto dove la domanda ha una risposta (`STUDI.md` §web §9, lezione 2).
 -->
 <html lang="it">
 <head>
@@ -183,7 +183,7 @@
                    white-space: pre-line; }
   #dichiarazione:empty { display: none; }
 
-  /* ⛔ La tela sta SOTTO il modulo e non sopra: `web.md` §1.2 C (rilievo S4) —
+  /* ⛔ La tela sta SOTTO il modulo e non sopra: `STUDI.md` §web §1.2 C (rilievo S4) —
      niente elementi sopra la tela, o cadono il percorso overlay e la tela
      desincronizzata.  ⚠ Alla fase 2 non c'e' ancora ne' l'uno ne' l'altra, ma
      la forma si decide adesso: scoprirlo alla fase 4 costa una riscrittura.
@@ -397,7 +397,7 @@
   /* ⚠ Solo sul CLASSICO: nel modo a tocco la freccia disegnata e' l'unico
      puntatore che esista, perche' il dito non ne ha uno da vestire. */
   body[data-puntatore="sistema"][data-disposizione="classico"] #puntatore { display: none !important; }
-  /* ⚠ E il prezzo si dichiara (`web.md` §1.2 C, rilievo S4): un elemento SOPRA
+  /* ⚠ E il prezzo si dichiara (`STUDI.md` §web §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
      con `?video=worker` la tela e' del worker. */
@@ -664,7 +664,7 @@ const PREFERENZA = ["hevc", "av1"];
    del vero se ne accorgerebbe sul pixel invece che a sessione aperta. */
 const LIVELLO_DICHIARATO = "5.1";
 
-/* ⛔ La tela desincronizzata di `web.md` §6.1 e' un guadagno di RITARDO, e alla
+/* ⛔ La tela desincronizzata di `STUDI.md` §web §6.1 e' un guadagno di RITARDO, e alla
    fase 2 il ritardo non e' ancora misurato (`DECISIONI.md` §2.6 e' di S4).
    ⚠ E costa una cosa precisa QUI: su una tela desincronizzata `getImageData`
      legge da un buffer che il compositore puo' avere gia' scambiato — cioe'
@@ -693,7 +693,7 @@ const LIVELLO_DICHIARATO = "5.1";
 const DESINCRONIZZATA =
   new URLSearchParams(location.search).get("tela") === "desincronizzata";
 
-/* ⛔⭐ IL WORKER DEDICATO DI `web.md` §6.1 — «WebTransport, decodifica e canvas
+/* ⛔⭐ IL WORKER DEDICATO DI `STUDI.md` §web §6.1 — «WebTransport, decodifica e canvas
  * tutti in un worker dedicato».  Era una decisione SCRITTA E MAI ATTUATA: fino
  * al 13 agosto 2026 questa pagina aveva un solo `<script>` e faceva tutto sul
  * thread principale.  ⇒ Adesso la strada c'e', e sta dietro un interruttore
@@ -1205,7 +1205,7 @@ const SONDAGGIO = (async function () {
  *    la frase per l'utente (nel riquadro) e i numeri per il registro.
  *
  * ⚠ E dichiara anche quel che NON sa: se il decodificatore sia hardware o
- *   software **da JavaScript non e' osservabile** (`web.md` §4.1: il dato
+ *   software **da JavaScript non e' osservabile** (`STUDI.md` §web §4.1: il dato
  *   esiste dentro Chromium, `IsPlatformDecoder()`, e non compare in nessuna
  *   interfaccia).  ⛔ Scrivere «software» perche' `powerEfficient` e' falso
  *   sarebbe inventare: `[M]` 12 agosto 2026 quello stesso campo risponde
@@ -2451,7 +2451,7 @@ class Schermo {
   }
 
   /* ⛔ Si dipinge DENTRO il richiamo del decodificatore e non su
-     `requestAnimationFrame`: `web.md` §6.1.  Un giro di rAF in mezzo aggiunge
+     `requestAnimationFrame`: `STUDI.md` §web §6.1.  Un giro di rAF in mezzo aggiunge
      fino a un intervallo di quadro a un tetto che ne vale due e mezzo. */
   dipingi(f) {
     /* ⛔⭐⭐ ANCORA `F4-CODA-DEL-DECODIFICATORE` — INIZIO.
@@ -2539,7 +2539,7 @@ class Schermo {
     /* ⚠ La vista si misura QUI SOLO SE non c'e' ancora — cioe' quasi mai, e mai
        due volte.  ⛔ Misurarla a ogni fotogramma sarebbe leggere `clientWidth`
        dentro il richiamo del decodificatore: una riorganizzazione del foglio
-       forzata sessanta volte al secondo, dentro il percorso che `web.md` §6.1
+       forzata sessanta volte al secondo, dentro il percorso che `STUDI.md` §web §6.1
        tiene corto apposta.  ⇒ Dopo la prima, a rimisurarla e' l'unico fatto che
        la cambia: il ridimensionamento della finestra, in fondo al file. */
     if (this.sessione && !this.vista_l) this.adatta_vista();
@@ -3107,7 +3107,7 @@ async function collega(utente, parola) {
     /* ⚠ `[?]` Il livello NON e' misurato: il browser non lo fa rispettare
        (`[M]` Chrome accetta L30 su un flusso 3.0 e dipinge).  Il controllo sta
        dal lato server — `fasi/02-primo-fotogramma.md` D4 — e questa riga
-       dichiara il valore che `web.md` O12 indica per il traguardo. */
+       dichiara il valore che `STUDI.md` §web O12 indica per il traguardo. */
     ["video.livello", LIVELLO_DICHIARATO],
     /* ⛔⭐ IL TETTO DEL DECODIFICATORE, MISURATO SUL PIXEL — 13 agosto 2026.
      *
@@ -3466,7 +3466,7 @@ async function collega(utente, parola) {
         .find((p) => profondita_buone.includes(Number(p))) || profondita_buone[0] || 8);
       /* ⛔ La stringa e' quella che la SONDA ha visto dipingere, non una scritta
          a mano: e' l'unica di cui si sappia che su questo motore arriva al
-         pixel (`web.md` §9 lezione 1 — una promessa di un'API va trattata come
+         pixel (`STUDI.md` §web §9 lezione 1 — una promessa di un'API va trattata come
          la dichiarazione di un compositore). */
       const provata = sondaggio.codec[nome][prof] || sondaggio.codec[nome][8];
       schermo.negozia(CODEC_RCP[nome], prof, provata.stringa, tl, ta);
@@ -3687,7 +3687,7 @@ async function ascolta_controllo(canale, congeda) {
     if (m.tipo === TIPO.CURSORE_FORMA) {
       /* ⛔⭐⭐ FINO AL 14 AGOSTO 2026 QUESTO MESSAGGIO SI BUTTAVA — con un
        *      `nota()` onesto che diceva «ricevuto e non usato».  ⚠ Nel frattempo
-       *      la decisione ✅ di `xpra.md` §2 («il cursore del browser veste la
+       *      la decisione ✅ di `STUDI.md` §xpra §2 («il cursore del browser veste la
        *      forma remota») era stata presa, e `forma()` era stata SCRITTA: fra
        *      la decisione e il codice mancava solo questa riga.  ⇒ Cucito. */
       SCENA.forma_arrivata();
@@ -3754,7 +3754,7 @@ function avvia_video(wt, congeda) {
       /* ⭐ Con il worker acceso lo stream CAMBIA PROPRIETARIO qui, e da questa
          riga in poi il fotogramma non tocca piu' il thread principale: i byte,
          le regole di §6.2, `decode()` e i due `drawImage` stanno di la'
-         (`web.md` §6.1).  ⛔ Quel che resta di qua, per fotogramma, e' il
+         (`STUDI.md` §web §6.1).  ⛔ Quel che resta di qua, per fotogramma, e' il
          `read()` qui sopra e questo trasferimento. */
       if (VW) { VW.manda_flusso(r.value); continue; }
       leggi_uno_stream(r.value, congeda);
@@ -3809,7 +3809,7 @@ async function leggi_uno_stream(stream, congeda) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ⭐⭐ IL WORKER DEDICATO — `web.md` §6.1, attuata il 13 agosto 2026.
+   ⭐⭐ IL WORKER DEDICATO — `STUDI.md` §web §6.1, attuata il 13 agosto 2026.
 
    ⛔ NON C'E' UN SECONDO FILE, e non e' una scorciatoia: `src/pagina.c` serve
       UNA pagina e basta (`componi(c, "200 OK", "text/html", …)`), quindi un
@@ -3937,7 +3937,7 @@ self.onmessage = function (ev) {
    o cambiasse nome, qui si romperebbe la composizione — e non il silenzio. */
 function sorgente_worker() {
   return [
-    "/* generato da pagina.html — `web.md` §6.1 */",
+    "/* generato da pagina.html — `STUDI.md` §web §6.1 */",
     "const DESINCRONIZZATA = " + JSON.stringify(DESINCRONIZZATA) + ";",
     "const NOME_DEL_CODEC = " + JSON.stringify(NOME_DEL_CODEC) + ";",
     "const CANALE = " + JSON.stringify(CANALE) + ";",
@@ -4391,7 +4391,7 @@ const CL_PULSANTE = { 0: 0x110, 1: 0x112, 2: 0x111, 3: 0x113, 4: 0x114 };
 const CL_BTN_SINISTRO = 0x110;
 
 /* ⛔⭐ `KeyboardEvent.code` → evdev.  E' la conversione che §7.3 pretende, ed e'
- * scritta QUI a mano dalla tabella del kernel: `web.md` §5.4 segnala che
+ * scritta QUI a mano dalla tabella del kernel: `STUDI.md` §web §5.4 segnala che
  * Chromium ne ha una canonica «senza buchi da 1 a 94», ma ricopiarla da un
  * binario non e' una fonte che si possa rileggere.  ⚠ Le posizioni sono
  * FISICHE: `KeyZ` e' il tasto dove sta la Z su una tastiera americana, e su una
@@ -4591,7 +4591,7 @@ let cl_veste = null;
  *
  * ⇒ Sul classico se ne tiene UNO: quello di sistema, vestito con la forma
  *   remota.  ⚠ Sul TOCCO la freccia disegnata **resta e deve restare**: il dito
- *   non ha un cursore da vestire (`xpra.md` §2). */
+ *   non ha un cursore da vestire (`STUDI.md` §xpra §2). */
 let cl_modo = "sistema";
 let cl_ux = -1, cl_uy = -1;       /* l'ultimo intero SPEDITO */
 
@@ -4631,7 +4631,7 @@ function cl_manda_puntatore(ms) {
  *    `body[data-disposizione="classico"]` — cioe' alla disposizione che A8
  *    mette in vigore, in un posto solo.
  *
- * ⚠ E IL PREZZO SI DICHIARA (`web.md` §1.2 C, rilievo S4): un elemento SOPRA la
+ * ⚠ E IL PREZZO SI DICHIARA (`STUDI.md` §web §1.2 C, rilievo S4): un elemento SOPRA la
  *   tela fa cadere il percorso overlay e la tela desincronizzata.  ⛔ E' un
  *   prezzo non misurato — `[?]` — e sta scritto nel rapporto A7 con accanto la
  *   misura da fare.  L'alternativa (disegnarlo DENTRO la tela) non e' possibile
@@ -5120,7 +5120,7 @@ function cl_comando(ev) {
  * l'utente preme Ctrl e poi C, il desktop remoto riceverebbe `Ctrl+C` invece di
  * `Ctrl+Maiusc+C`: il Maiusc era stato saltato quando ancora non era un
  * comando.  ⇒ Nell'istante in cui un comando entra in scena si guarda che cosa
- * e' gia' giu' e lo si manda.  ⚠ E' la stessa cura che `web.md` §5.4 ha letto
+ * e' gia' giu' e lo si manda.  ⚠ E' la stessa cura che `STUDI.md` §web §5.4 ha letto
  * in Guacamole — «risincronizza lo stato dei modificatori» — applicata al
  * confine fra i due percorsi invece che al mouse. */
 function cl_sincronizza_modificatori(ev, ms) {
@@ -5141,13 +5141,13 @@ function cl_su_keydown(ev) {
   /* ⚠ Una battuta che sta componendo un carattere (IME, tasti morti) NON e'
      ancora una lettera: si dichiara e non si falsifica.  ⛔ E la lettera
      composta oggi NON arriva affatto — vedi il rapporto A7: per averla serve un
-     elemento modificabile col fuoco (`web.md` §1.2 C), che e' proprio quel che
+     elemento modificabile col fuoco (`STUDI.md` §web §1.2 C), che e' proprio quel che
      farebbe cadere il percorso di disegno.  E' la collisione che quel paragrafo
      prevedeva, ed e' aperta. */
   if (ev.isComposing || ev.keyCode === 229) {
     cl_ripiego("composizione", "una battuta in composizione (IME o tasto "
              + "morto) non produce niente: serve un elemento modificabile col "
-             + "fuoco, e `web.md` §1.2 C dice che cosa costa");
+             + "fuoco, e `STUDI.md` §web §1.2 C dice che cosa costa");
     return;
   }
   const comando = cl_comando(ev);
@@ -5562,7 +5562,7 @@ function tocco_spedisci(tipo, a, b, ms) {
  *
  * ⚠ RIPIEGO DICHIARATO, e il suo PREZZO si dichiara con lui: finche' quella
  *   cucitura non c'e', il puntatore lo disegna un `<div>` **sopra** la tela.
- *   ⛔ `web.md` S4 dice che un elemento sopra la tela fa cadere il percorso
+ *   ⛔ `STUDI.md` §web S4 dice che un elemento sopra la tela fa cadere il percorso
  *   overlay e la tela desincronizzata.  ⇒ Questo ripiego serve a mettere il
  *   gesto sotto il dito di Nic OGGI; il puntatore definitivo si disegna DENTRO
  *   la tela, e non e' mio.  Appena `REMOTIX_PUNTATORE` compare, il ripiego si
@@ -5581,7 +5581,7 @@ function tocco_puntatore_ripiego() {
     document.body.appendChild(d);
     tocco_ripiego_elemento = d;
     nota("⚠ RIPIEGO: il puntatore del tocco e' un elemento SOPRA la tela — "
-         + "`web.md` S4 — perche' `REMOTIX_PUNTATORE` non c'e' ancora");
+         + "`STUDI.md` §web S4 — perche' `REMOTIX_PUNTATORE` non c'e' ancora");
   }
   return tocco_ripiego_elemento;
 }
@@ -5697,7 +5697,7 @@ function tocco_muovi_puntatore(dx_vetro, dy_vetro, ms) {
   tocco_puntatore_disegna();
   /* ⛔ NIENTE ACCORPAMENTO, e NIENTE `requestAnimationFrame`.  Due ragioni:
      `CODER.md` §1-bis — «ogni memoria intermedia compra fluidita' e vende
-     risposta», e il ritardo pesa piu' dei fotogrammi — e `web.md` §6.2, dove
+     risposta», e il ritardo pesa piu' dei fotogrammi — e `STUDI.md` §web §6.2, dove
      `[M]` il 13 agosto su Xvfb `requestAnimationFrame` NON GIRA MAI (0 quadri
      in 3 secondi).  Un accorpamento appeso al quadro renderebbe il tocco muto
      proprio sul banco. */
@@ -6422,7 +6422,7 @@ function sc_motore() {
   }
   const versione = (ua.match(/(?:Chrome|Firefox|Version)\/(\d+)/) || [])[1] || null;
   /* ⭐ In una PWA installata la lista riservata di Chrome e' **vuota**
-     (`web.md` §1.2 B) — cioe' un dominio fidato non compra solo l'assenza
+     (`STUDI.md` §web §1.2 B) — cioe' un dominio fidato non compra solo l'assenza
      dell'avviso: compra la tastiera intera.  ⚠ `[?]` su Chrome per Android, e
      resta `[?]` finche' non c'e' un telefono su cui provarla. */
   let installata = false;
@@ -6794,7 +6794,7 @@ function sc_perdute() {
 }
 
 /* ── I BOTTONI A SCHERMO — ⭐ UN REQUISITO, NON UN RIPIEGO DI FORTUNA ───────
- * `web.md` §8-bis O7: *tre riferimenti maturi su tre danno all'utente un modo
+ * `STUDI.md` §web §8-bis O7: *tre riferimenti maturi su tre danno all'utente un modo
  * di mandare quel che il browser non lascia passare*.  ⇒ `Ctrl+Alt+Canc` non e'
  * «non recuperabile»: e' **recuperabile in un altro modo**, e quel modo e'
  * questo.
@@ -7079,7 +7079,7 @@ function sc_dipingi() {
      *
      * ⛔ Era stata TOLTA la mattina del 14 agosto, con una ragione che sembrava
      *    solida: «con le coordinate assolute la cattura non compra niente e
-     *    costa il sequestro del puntatore» (`xpra.md` §2).
+     *    costa il sequestro del puntatore» (`STUDI.md` §xpra §2).
      *
      * ⛔⛔ Quella ragione dava per scontato che i movimenti ARRIVASSERO.  Sul
      *     DeX dell'utente non arrivano: `[M]` 14 agosto, parole sue — «se muovo

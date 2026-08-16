@@ -35,7 +35,7 @@
 #      sessione GNOME viva su NIC-OS da due giorni — gnome-shell 214465,
 #      IsSessionRunning true, cinquanta nomi sul bus, Nautilus e il Terminale
 #      accesi — rispondeva a GetCurrentState con **zero monitor e zero monitor
-#      logici**.  Il guasto di `gnome.md` §13 M9 non era da innestare: era
+#      logici**.  Il guasto di `STUDI.md` §gnome §13 M9 non era da innestare: era
 #      addosso alla macchina, e nessuno se n'era accorto.
 #
 # ⇒ Un banco della fase 2 che misurasse la cattura su quella sessione leggerebbe
@@ -233,7 +233,7 @@ avvia_sessione()
 viva() { pgrep -u "$U" -x gnome-shell >/dev/null; }
 
 # ⛔ Il congedo e' `Logout(2)`, non `systemctl --user stop`: `gnome-session` non
-#    esce dopo aver avviato il target, apre un fifo e dorme (`gnome.md` §3.2),
+#    esce dopo aver avviato il target, apre un fifo e dorme (`STUDI.md` §gnome §3.2),
 #    e `Logout(1)` mostra il dialogo se esiste un inibitore — in una sessione
 #    non presidiata non gli risponde nessuno.
 # ⛔ E si aspetta `inactive`, NON «diverso da active»: `is-active` passa per
@@ -436,7 +436,7 @@ riparti() # $1 = con|senza ; $2 = etichetta ; $3 = file scena (facoltativo)
 	fi
 	ok "sessione partita: $(pgrep -a -u "$U" -x gnome-shell | head -1)"
 	# ⚠ La Shell prende il nome sul bus PRIMA di `meta_context_start()`
-	#   (`gnome.md` §3.2): il nome non e' un indicatore di prontezza.  Si aspetta
+	#   (`STUDI.md` §gnome §3.2): il nome non e' un indicatore di prontezza.  Si aspetta
 	#   che GetCurrentState risponda, che e' il fatto che serve a noi.
 	sleep 3
 	misura "$2" "${3:-}"
@@ -518,7 +518,7 @@ dispositivi()
 #
 #   atteso sano     0  (SANA)
 #   guasto innestato:  si toglie `--virtual-monitor` dal drop-in — cioe' M9 di
-#                      `gnome.md` §13, il guasto fatto di proposito
+#                      `STUDI.md` §gnome §13, il guasto fatto di proposito
 #   atteso guasto   1  (NERA: ZERO MONITOR)
 #   atteso risanato 0
 #

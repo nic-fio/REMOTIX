@@ -317,7 +317,7 @@ cat <<FINE
   atteso guasto   1  ciascuno, con la marca pretesa E quella vietata
   atteso risanato 0  dopo ognuno, con l'impronta tornata quella di prima
   costa           copia-di-file (nessuna ricompilazione)
-  riferimento     fasi/rapporti/F2-2-cattura.md · gnome.md §3.1 §13 M9 ·
+  riferimento     fasi/rapporti/F2-2-cattura.md · STUDI.md §gnome §3.1 §13 M9 ·
                   LEZIONI.md §1.9 §4 trappola 8 · REVIEWER.md §1 punto 4, E1
 
 FINE

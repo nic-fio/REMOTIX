@@ -674,7 +674,7 @@ fine:
 }
 
 /*
- * ⛔ E si puo' chiamare PIU' VOLTE: `gnome.md` §9 dice che un cambio di keymap
+ * ⛔ E si puo' chiamare PIU' VOLTE: `STUDI.md` §gnome §9 dice che un cambio di keymap
  *    distrugge e ricrea il dispositivo tastiera, e `input.c` riapre a ogni
  *    `DEVICE_ADDED`.  ⇒ Due aperture vive insieme non devono ne' perdere ne'
  *    raddoppiare niente: si apre `it`, si apre `us`, e **si torna a chiedere

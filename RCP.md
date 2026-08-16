@@ -583,12 +583,12 @@ dominio.*
 
 > ⛔ *Corretta la notte del 9 agosto 2026, rilievo **R4.4** della revisione del banco della fase 1.*
 > La riga «chi resta fuori» diceva *«`[S]` WebKit non lo implementa: su Safari, iPhone e iPad la
-> strada è l'eccezione»*. **È falsa da ottobre 2025**, e `web.md` §3.1 e `DECISIONI.md` §1.7 erano
+> strada è l'eccezione»*. **È falsa da ottobre 2025**, e `STUDI.md` §web §3.1 e `DECISIONI.md` §1.7 erano
 > già stati corretti **lo stesso 9 agosto**: questo documento no.
 >
 > ⛔ **E il danno era di quelli che non fanno rumore, perché questo file è l'arbitro.** Chi lo
 > leggeva alla lettera scriveva il ramo *«su Safari l'impronta non serve, si va di eccezione o di
-> certificato vero»* — e lo scriveva **conforme alla specifica**, mentre chi leggeva `web.md`
+> certificato vero»* — e lo scriveva **conforme alla specifica**, mentre chi leggeva `STUDI.md` §web
 > pubblicava l'impronta per tutti e tre. Due implementazioni divergenti, entrambe con ragione.
 > ⚠ E un banco che avesse applicato il criterio *«una libreria che va con Chrome e non con Safari
 > non è una libreria che va»* avrebbe **bocciato entrambe le candidate**.
@@ -724,7 +724,7 @@ definiti in RCP/1:
 > mestiere che §11 gli assegna: *«client e server non si collaudano l'uno contro l'altro»*.
 >
 > ⚠ **Delle due cure si è scelta questa**, ed è 🔸 derivata: ammettere `_` invece di rinominare la
-> capacità. Rinominare toccherebbe un nome già citato in `web.md` e in `SPECIFICHE.md`, e il
+> capacità. Rinominare toccherebbe un nome già citato in `STUDI.md` §web e in `SPECIFICHE.md`, e il
 > trattino basso è la convenzione che il resto del documento usa nei nomi di campo
 > (`tela_larghezza`, `max_idle_timeout`).
 - un **valore** è testo UTF-8 stampabile, al massimo 256 byte;

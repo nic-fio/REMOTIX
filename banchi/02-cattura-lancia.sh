@@ -26,10 +26,10 @@
 #
 #   | dove sta scritto        | che cosa dice                                  |
 #   |-------------------------|------------------------------------------------|
-#   | `gnome.md` §3.1         | in headless `needs_outputs=false`: senza       |
+#   | `STUDI.md` §gnome §3.1         | in headless `needs_outputs=false`: senza       |
 #   |                         | `--virtual-monitor` la sessione parte **viva,  |
 #   |                         | completa e nera**                              |
-#   | `gnome.md` §13, M9      | e' una prova da fare **guasta di proposito**,  |
+#   | `STUDI.md` §gnome §13, M9      | e' una prova da fare **guasta di proposito**,  |
 #   |                         | per imparare che aspetto ha il guasto          |
 #   | `PIANO.md`, fase 2      | *«una sessione nera e perfettamente viva e' la |
 #   |                         | cosa che si scambia per un difetto di cattura, |
@@ -123,7 +123,7 @@
 #     servono i pixel leggibili — quindi MemFd e' la risposta a una nostra
 #     domanda, non una scoperta
 #   - **niente sulla codifica.** Da qui esce BGRx a 32 bit, che e' l'unico
-#     formato che Mutter consegna (`gnome.md` §8.3: «Solo BGRx e BGRA»). La
+#     formato che Mutter consegna (`STUDI.md` §gnome §8.3: «Solo BGRx e BGRA»). La
 #     conversione a 10 bit e' di F2.3
 #
 # ⚠ E la macchina ha DUE GPU (Intel `0000:00:02.0`, Radeon `0000:03:00.0`): un
@@ -210,7 +210,7 @@ elenco()
                                                                 esce, non quel che si spera
     misura negoziata                  1920×1080                 Mutter fa il monitor della
                                                                 misura chiesta (cattura.h)
-    formato negoziato                 BGRx                      gnome.md §8.3, R32 riga per
+    formato negoziato                 BGRx                      STUDI.md §gnome §8.3, R32 riga per
                                                                 riga: solo BGRx e BGRA
     stride                            ≥ 7680                    ⛔ si LEGGE dal chunk, mai
                                                                 calcolato (cattura.h)
@@ -230,7 +230,7 @@ elenco()
                                      buffer e vi ridipinge dentro SOLO la parte
                                      cambiata; fuori da quelle regioni ci sono i
                                      pixel del fotogramma di prima»*
-       `gnome.md` §8.1               dice di SI': *«⛔ falso: blit dell'intero
+       `STUDI.md` §gnome §8.1               dice di SI': *«⛔ falso: blit dell'intero
                                      framebuffer, stack di clip svuotato
                                      deliberatamente»*, dopo aver riletto Mutter
 

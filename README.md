@@ -447,7 +447,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    separare quattro imputati;
 > 5. ⚠ **un browser solo** (Chrome 151): Safari, iPhone e **DeX** restano `[?]` *dichiarate*.
 >
-> 📖 **E il settimo studio è nato oggi**: [`xpra.md`](xpra.md) — chiesto dall'utente, previsto da
+> 📖 **E il settimo studio è nato oggi**: [`STUDI.md` §xpra](STUDI.md#xpra) — chiesto dall'utente, previsto da
 > `PIANO.md` §1.3 **prima** della pagina e fatto **dopo**. ⛔ Nel frattempo avevamo scritto una
 > specifica che si contraddiceva, e a trovarla è stato lui in trenta secondi d'uso.
 >
@@ -681,7 +681,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⚠ `EncSliceLP` è la codifica **a bassa potenza**: veloce, con limiti suoi — **non è equivalente**
 > alla piena, e va dichiarato accanto al numero. ⭐ Ma porta un'occasione: è l'entrypoint che
-> `web.md` nomina come *«da verificare»* per i **sotto-livelli temporali**, cioè abbandonare un
+> `STUDI.md` §web nomina come *«da verificare»* per i **sotto-livelli temporali**, cioè abbandonare un
 > fotogramma **senza rompere quelli dopo** — che oggi costa una chiave ogni volta.
 > ⛔ **La copia zero NON si anticipa**: resta alla fase 8.
 >
@@ -740,7 +740,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    **È falso**: `banchi/03-b14-esiti-griglia.jsonl` ha **due sole celle**, tutt'e due con
 >    `scena_sul_mio_monitor: false`, e il banco stampa «la legge NON regge su 0 punti su 0».
 >    Corretta il **13 agosto 2026**, rilievo del coordinatore della fase 3. ⇒ **M3 non è chiusa: è
->    mezza** (`gnome.md` §13);*
+>    mezza** (`STUDI.md` §gnome §13);*
 > 2. ⛔⛔ **ma quella cura NON è raggiungibile dal prodotto**: `MOVIMENTO_FPS 60` è una costante di
 >    compilazione (`figlio.c:1465`), `main.c` non ha opzioni di cadenza, e **`RecordVirtual` non
 >    prende la frequenza** (`mutter.h:82`) — i quattro monitor virtuali sono tutti **@60**. È `[M]`
@@ -750,7 +750,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    non esistono e Mutter vale il 22 %: cambiare compositore **lascerebbe intatti i 39 ms di
 >    codifica**. La fase di KDE resta giusta come *«il secondo desktop»*; la promessa sul ritardo va
 >    **riscritta o tolta**;
-> 4. ⛔ **`web.md` §6.1 — «tutto in un worker dedicato» — è ATTUATA, MISURATA E RESPINTA**:
+> 4. ⛔ **`STUDI.md` §web §6.1 — «tutto in un worker dedicato» — è ATTUATA, MISURATA E RESPINTA**:
 >    **+27,6/+33,5 ms** di mediana e **tetto −73 %** (127,6 → 33,9 dipinti/s a 1080p). ⭐ E il
 >    meccanismo è nuovo: una `OffscreenCanvas` in un worker **si consegna al ritmo del quadro** —
 >    è un `requestAnimationFrame` implicito che nessuno ha scritto. ⇒ Il divieto di §6.1 va esteso
@@ -772,7 +772,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > 1. ✅ ~~**i documenti**: ~35 righe in **nove file**~~ — ⭐ **FATTO il 13 agosto, sera.** Il registro
 >    è stato **portato dentro il deposito** (`fasi/rapporti/F3-righe-da-riscrivere.md`, 206 righe) e
 >    le righe sono state riscritte in **quindici file**: `SPECIFICHE.md` · `DECISIONI.md` ·
->    `LEZIONI.md` · `PIANO.md` · `gnome.md` · `web.md` · `RCP.md` · `CODER.md` · `README.md` ·
+>    `LEZIONI.md` · `PIANO.md` · `STUDI.md` §gnome · `STUDI.md` §web · `RCP.md` · `CODER.md` · `README.md` ·
 >    `fasi/03-movimento.md` (le tre sezioni vuote riempite) · `fasi/00-ambiente.md` ·
 >    `fasi/02-primo-fotogramma.md` · `fasi/rapporti/F2-6-giudizio.md` ·
 >    `fasi/rapporti/P2-5-pagina.md` · `fasi/rapporti/F2-5-pagina.md`.
@@ -1431,7 +1431,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐ **il client è il browser** | cadono i due client nativi e cinque fasi di piano — `DECISIONI.md` §1.6 |
 > | **la sicurezza è a due livelli** | TLS per il trasporto, indirizzo/porta/utente/password per l'accesso — §1.7 |
 > | **la seconda connessione remota si rifiuta** | `RCP.md` §8.2, motivo `0x0F` |
-> | 📖 **il sesto studio** | [`web.md`](web.md), con quattro rapporti in `web/rapporti/` |
+> | 📖 **il sesto studio** | [`STUDI.md` §web](STUDI.md#web), con quattro rapporti in `web/rapporti/` |
 > | ⛔ **due revisioni avversariali** | **46 rilievi numerati** — **29** in `web/rapporti/R1-revisione-rcp.md` e **17** in `R2-revisione-web.md` — **più le 12 omissioni** `O1`-`O12` di `R2` §2, e tutti **prima del primo byte**. ⚠ *Diceva «**51** contraddizioni», e quel numero non si ritrova con nessun criterio scritto: 29 + 17 = 46, e nessuna somma dichiarata da nessuna parte dà 51 (rilievo **R11.20**, chiuso la notte del 10 agosto 2026 **dichiarando che cosa si conta**). Le omissioni si contano a parte perché non sono contraddizioni: sono righe che **non c'erano**, e per definizione nessun controllo delle citazioni le trova* |
 >
 > ### Il prossimo passo
@@ -1446,7 +1446,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > scritto da chi ci era passato prima.
 >
 > ⚠ **E la cura è uscita da quel file**: `RCP.md` §4.1-bis diceva ancora che WebKit non implementa
-> `serverCertificateHashes` — ed è **l'arbitro**; `web.md` ha riavuto i controlli negativi che i
+> `serverCertificateHashes` — ed è **l'arbitro**; `STUDI.md` §web ha riavuto i controlli negativi che i
 > rapporti prescrivevano; `PIANO.md` ha l'ordine corretto e due banchi ricollocati.
 >
 > ⭐ **E una decisione dell'utente ha chiuso il conto dei dispositivi**: **Apple è un di più, non un
@@ -1482,19 +1482,24 @@ E per chi scrive o revisiona, prima di toccare qualcosa:
 
 ---
 
-## Gli studi
+## Gli studi — ⭐ **tutti in un documento solo**, [`STUDI.md`](STUDI.md), dal 16 agosto 2026
+
+*Erano otto file nella radice. Sono diventati **otto capitoli** di un documento solo, per decisione
+dell'utente. ⛔ **Non un riassunto**: il testo è quello che era, riga per riga, con i titoli
+abbassati di un livello. ⇒ Un rimando che diceva `kde.md` §3.3-bis adesso dice `STUDI.md` §kde
+3.3-bis, e **le chiavi dei capitoli sono i nomi che avevano i file**.*
 
 Letture del codice, fatte prima di scrivere. I cinque dei desktop rispondono alle **quindici**
 domande di `LEZIONI.md` §3.
 
-[`gnome.md`](gnome.md) · [`kde.md`](kde.md) · [`xfce.md`](xfce.md) · [`lxqt.md`](lxqt.md) ·
-[`cinnamon.md`](cinnamon.md)
+[`STUDI.md` §gnome](STUDI.md#gnome) · [`STUDI.md` §kde](STUDI.md#kde) · [`STUDI.md` §xfce](STUDI.md#xfce) · [`STUDI.md` §lxqt](STUDI.md#lxqt) ·
+[`STUDI.md` §cinnamon](STUDI.md#cinnamon)
 
-⭐ **E il sesto, che non parla di un compositore**: [`web.md`](web.md) — il browser come client,
+⭐ **E il sesto, che non parla di un compositore**: [`STUDI.md` §web](STUDI.md#web) — il browser come client,
 con i quattro rapporti di dettaglio in `web/rapporti/`. ⚠ **È quello che invecchia più in fretta**:
 i compositori li congela Debian, i browser si aggiornano da soli.
 
-⭐⭐ **E il settimo, che non parla di una tecnologia ma di un PRODOTTO**: [`xpra.md`](xpra.md) — chi
+⭐⭐ **E il settimo, che non parla di una tecnologia ma di un PRODOTTO**: [`STUDI.md` §xpra](STUDI.md#xpra) — chi
 questo mestiere lo fa già, letto nel suo codice il 14 agosto 2026. ⛔ Doveva essere fatto **prima**
 della pagina (`PIANO.md` §1.3) ed è stato fatto **dopo**, su richiesta dell'utente: ⇒ nel frattempo
 avevamo scritto una specifica che si contraddiceva, e a trovarla è stato lui in trenta secondi
@@ -1506,10 +1511,10 @@ del browser (S7 · S1b · S5 · e le tre che aspettano un dispositivo), con la s
 numero e la ricontata che dice quali numeri hanno una provenienza su disco. ⚠ *I «quattro rapporti»
 qui sopra restano quattro: sono i rapporti degli **studi**, ed è un denominatore dichiarato.*
 
-⚠ **`gnome-remote-desktop.md` non è uno di questi** *(chiarito il 9 agosto 2026)*. Studia **il
+⚠ **`STUDI.md` §gnome-remote-desktop non è uno di questi** *(chiarito il 9 agosto 2026)*. Studia **il
 server RDP di GNOME**, cioè un concorrente sul filo che abbiamo buttato — non il desktop. Con RDP
 morto decade quasi per intero, ed è scritto su una versione che Trixie non ha (51.alpha contro
-48.1). **Su GNOME si legge [`gnome.md`](gnome.md)**, che parla di Mutter e resta valido.
+48.1). **Su GNOME si legge [`STUDI.md` §gnome](STUDI.md#gnome)**, che parla di Mutter e resta valido.
 
 ---
 

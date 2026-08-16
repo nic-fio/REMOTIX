@@ -462,7 +462,7 @@ static uint32_t parametri_di_consumo(Cattura *cattura, struct spa_pod_builder *c
 	/*
 	 * ⭐⭐ IL METADATO DEL CURSORE — e fino al 14 agosto 2026 non si chiedeva.
 	 *
-	 * ⛔ Il difetto che questa richiesta cura, `gnome.md` §1.1 punto 6 e §5.2:
+	 * ⛔ Il difetto che questa richiesta cura, `STUDI.md` §gnome §1.1 punto 6 e §5.2:
 	 *    a `RecordVirtual` chiediamo `cursor-mode = 2` (`src/mutter.c:439`), cioe'
 	 *    «il cursore dammelo come METADATO invece che nei pixel» — e Mutter
 	 *    obbedisce in tutt'e due i versi: toglie il puntatore dall'immagine
@@ -728,7 +728,7 @@ static void su_processo(void *dati)
 	 *    puntatore ha un canale suo — un movimento del mouse produce un buffer
 	 *    senza disegno: dentro ci sono i pixel stantii di due-quattro fotogrammi
 	 *    prima, e l'unica indicazione e' `SPA_CHUNK_FLAG_CORRUPTED`, che li'
-	 *    significa «non guardare il contenuto».  ⛔ `gnome.md` §8.3: i buffer di
+	 *    significa «non guardare il contenuto».  ⛔ `STUDI.md` §gnome §8.3: i buffer di
 	 *    solo cursore stantii **esistono anche su Mutter**.
 	 *
 	 * ⚠ Si scarta il FOTOGRAMMA, non il buffer: il metadato del cursore che
@@ -1286,14 +1286,14 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 
 	pw_thread_loop_lock(cattura->ciclo);
 
-	/* ⛔⭐ LA GUARDIA OBBLIGATORIA — `kde.md` §8.2-bis: «senza, la rinegoziazione
+	/* ⛔⭐ LA GUARDIA OBBLIGATORIA — `STUDI.md` §kde §8.2-bis: «senza, la rinegoziazione
 	 *     si morde la coda», e il difetto NON si vede su Trixie.
 	 *
 	 * ⛔⛔ E SI CONFRONTA CON LA MISURA CHE IL FLUSSO **HA**, NON CON QUELLA CHE
 	 *     GLI E' STATA CHIESTA — difetto trovato refutando, la notte del 15
 	 *     agosto 2026, e la prima stesura aveva sbagliato proprio qui.
 	 *
-	 *     `kde.md` §8.2-bis scrive la guardia come `misura_attuale ==
+	 *     `STUDI.md` §kde §8.2-bis scrive la guardia come `misura_attuale ==
 	 *     misura_richiesta`, e **attuale** non e' **chiesta**: §4.5 dichiara
 	 *     normale che il compositore conceda una misura diversa da quella
 	 *     chiesta.  ⇒ Confrontando col chiesto, questa sequenza spegneva la
@@ -1317,7 +1317,7 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 		pw_thread_loop_unlock(cattura->ciclo);
 		registro_dettaglio(AREA,
 		                   "ridimensionamento a %ux%u: e' la misura che il flusso HA "
-		                   "gia', NON rinegozio (kde.md §8.2-bis)",
+		                   "gia', NON rinegozio (STUDI.md §kde §8.2-bis)",
 		                   larghezza, altezza);
 		return CATTURA_RITELA_GIA_COSI;
 	}
@@ -1637,7 +1637,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	if (fuori->consegna.nero)
 		registro_dice(AREA, "⛔ il fotogramma consegnato e' NERO (massimo 0 su tutti e tre i "
 		                    "canali): e' quel che consegna una sessione senza monitor virtuale "
-		                    "— gnome.md §3.1, guasto M9");
+		                    "— STUDI.md §gnome §3.1, guasto M9");
 	else if (fuori->consegna.uniforme)
 		registro_dice(AREA, "⚠ il fotogramma consegnato e' UNIFORME: tutti i pixel uguali, e "
 		                    "questo non e' nero — e' un buffer mai dipinto");

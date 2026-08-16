@@ -130,7 +130,7 @@ violato **qualcos'altro** diventerebbe rosso, ma non c'è una prova che lo guard
 | **R4.11** | l'**isolamento fra origini** (`SPECIFICHE.md` §11.5) è un vincolo di prodotto della fase 1, e non compare | `[R]` |
 | **R4.12** | decisioni **copiate** invece che richiamate — contro `README.md` «Le convenzioni» e `PIANO.md` §0.3 regola 1 | `[R]` |
 | **R4.13** | S2: l'atteso «`[S]` sì da Chrome 108» è la marca del **supporto**, messa come atteso dell'**hardware** | `[R]` |
-| **R4.14** | S1b: `[?]` in `web.md` §8, `[R]` qui, e la promozione non è dichiarata | `[?]` |
+| **R4.14** | S1b: `[?]` in `STUDI.md` §web §8, `[R]` qui, e la promozione non è dichiarata | `[?]` |
 | **R4.15** | «questa tabella è costata il banco della rotella» non è quel che dice `LEZIONI.md` §2.3 | `[?]` |
 | **R4.16** | `GIA_ATTIVA_LOCALE` (`0x05`) non è dichiarato da nessuna fase | `[?]` |
 
@@ -225,7 +225,7 @@ non una piattaforma: con `serverCertificateHashes` in Safari 26.4 l'impronta si 
 **COSA CONTRADDICE** — `RCP.md` §4.1-bis, riga **«chi resta fuori»**: *«`[S]` WebKit **non lo
 implementa**: su **Safari, iPhone e iPad** la strada è l'eccezione — `[?]` **se funziona**, ed è la
 prima misura di S1 — oppure il certificato vero»*. Il paragrafo citato dice **il contrario** di quel
-che gli si fa dire. Il fatto vero sta in `web.md` §3.1 (WebKit l'ha implementato il 2 ottobre 2025,
+che gli si fa dire. Il fatto vero sta in `STUDI.md` §web §3.1 (WebKit l'ha implementato il 2 ottobre 2025,
 `NetworkTransportSessionCocoa.mm` `[R]`, spedito in Safari 26.4) e in `DECISIONI.md` §1.7, corretta
 lo stesso giorno — **`RCP.md` non è stata aggiornata**, ed è l'arbitro.
 
@@ -349,13 +349,13 @@ sa produrre, e la fase 2 eredita una negoziazione che mente.
 
 **DOVE** — `fasi/01-filo-nudo.md`, «Le decisioni prodotte», ultima riga: *«⏳ **`SPECIFICHE.md`
 §5.3 — la scheda congelata** | ⛔ **da dichiarare**: … Non è un difetto (`DECISIONI.md` §4.1), ma
-**oggi non è scritto da nessuna parte** (`web.md` §1.2 D)»*.
+**oggi non è scritto da nessuna parte** (`STUDI.md` §web §1.2 D)»*.
 
 **COSA CONTRADDICE** — `SPECIFICHE.md` §5.3, righe 259-265, che lo dichiara già, con la data e la
 fonte: *«⛔ **E una cosa che il client web aggiunge, dichiarata invece che scoperta** (9 agosto
-2026, `web.md` §1.2 D): una **scheda in secondo piano viene congelata dal browser dopo circa cinque
+2026, `STUDI.md` §web §1.2 D): una **scheda in secondo piano viene congelata dal browser dopo circa cinque
 minuti** `[S]`. Una scheda congelata tace, quindi **si stacca**, e la sessione resta viva ad
-aspettare»*. La frase «non è scritto da nessuna parte» è **di `web.md` §1.2 D**, che è invecchiata
+aspettare»*. La frase «non è scritto da nessuna parte» è **di `STUDI.md` §web §1.2 D**, che è invecchiata
 nel giro della stessa giornata: il documento di fase l'ha copiata invece di verificarla.
 
 **COME SI DIMOSTRA** — `grep -n "congelata" SPECIFICHE.md` restituisce la riga 260. ⛔ È la forma
@@ -397,7 +397,7 @@ stesso»*), B2 (*«più un ascoltatore **TCP** per la pagina»*), e la misura **
 compare l'isolamento fra origini.
 
 **COSA CONTRADDICE** — `SPECIFICHE.md` §11.5: *«⛔ **E come la pagina viene servita è un vincolo di
-prodotto, non un dettaglio** (`web.md` §8-bis, O11): va consegnata **isolata fra origini** — le due
+prodotto, non un dettaglio** (`STUDI.md` §web §8-bis, O11): va consegnata **isolata fra origini** — le due
 intestazioni che il browser pretende per dare alla pagina i cronometri a piena risoluzione e la
 memoria condivisa. ⚠ Non è una taratura del banco: **cambia come il server serve ogni risorsa della
 pagina**, e deciderlo dopo significa riscrivere il modo in cui la pagina è confezionata»*. La fase 1
@@ -406,9 +406,9 @@ c'è nessun'altra fase che dichiari questo vincolo.
 
 **COME SI DIMOSTRA** — due conseguenze, una nel prodotto e una nel banco di questo stesso documento.
 Nel prodotto: la pagina della fase 1 viene servita senza le due intestazioni, e alla fase 2 il
-worker di `web.md` §6.1 chiede la memoria condivisa e non la ottiene — si riconfeziona il modo in
+worker di `STUDI.md` §web §6.1 chiede la memoria condivisa e non la ottiene — si riconfeziona il modo in
 cui ogni risorsa viene servita, che è la riscrittura che §11.5 dice di voler evitare. Nel banco:
-**S4 è in questo documento**, e `web.md` §6.3 dichiara che *«senza le due intestazioni di isolamento
+**S4 è in questo documento**, e `STUDI.md` §web §6.3 dichiara che *«senza le due intestazioni di isolamento
 fra origini, su Firefox e Safari i cronometri hanno grana **1 ms** — su un tetto di 50»*. La riga di
 S4 nel documento riporta il controllo positivo e il pezzo cieco, e **tace sul righello**: la misura
 che decide metà del tetto viene presa con uno strumento la cui grana non è dichiarata.
@@ -449,10 +449,10 @@ quella è la misura, non la decisione.
 **DOVE** — `fasi/01-filo-nudo.md`, «Le misure», riga **S2**: *«HEVC Main10 **in hardware** |
 telefono vero | Atteso: `[S]` **sì da Chrome 108**»*.
 
-**COSA CONTRADDICE** — `web.md` §4.1: *«⛔ **su Android no**: quando non trova un decodificatore
+**COSA CONTRADDICE** — `STUDI.md` §web §4.1: *«⛔ **su Android no**: quando non trova un decodificatore
 HEVC hardware, Chromium ne sceglie **di proposito** uno **software** di MediaCodec `[R]`»*, e §4.2,
 dove il `[S]` di Chrome 108 riguarda *«HEVC Main10 **in WebCodecs**»* — cioè il **supporto**, non
-l'hardware. E `LEZIONI.md` §1.11 / forma d'errore **E1**, che `web.md` §1.1 punto 2 dichiara essere
+l'hardware. E `LEZIONI.md` §1.11 / forma d'errore **E1**, che `STUDI.md` §web §1.1 punto 2 dichiara essere
 *«il muro di v1 ricomparso un livello più in alto»*.
 
 **COME SI DIMOSTRA** — la casella «atteso» è quella che il banco confronta con la casella
@@ -471,19 +471,19 @@ questo il documento in cui diventerà un numero.
 **DOVE** — `fasi/01-filo-nudo.md`, «Le misure», riga **S1b**: *«durata dell'eccezione su Chrome |
 Atteso: **7 giorni `[R]`**»*.
 
-**COSA CONTRADDICE** — `web.md` §8, «Quel che questo studio NON sa»: *«`[?]` **la durata
-dell'eccezione su Chrome** | §3.3»*. La marca `[R]` viene da `web.md` §3.2
-(`kCertErrorBypassExpirationInSeconds = 604800`): **le due righe di `web.md` si contraddicono**, e
+**COSA CONTRADDICE** — `STUDI.md` §web §8, «Quel che questo studio NON sa»: *«`[?]` **la durata
+dell'eccezione su Chrome** | §3.3»*. La marca `[R]` viene da `STUDI.md` §web §3.2
+(`kCertErrorBypassExpirationInSeconds = 604800`): **le due righe di `STUDI.md` §web si contraddicono**, e
 il documento di fase ne ha scelta una **in silenzio**.
 
-**COME SI DIMOSTRA** — chi legge `web.md` §8 pianifica una misura per **sapere** il numero; chi
+**COME SI DIMOSTRA** — chi legge `STUDI.md` §web §8 pianifica una misura per **sapere** il numero; chi
 legge il documento di fase la pianifica per **confermarlo**, e a un banco che deve aspettare una
 settimana la differenza cambia la soglia di pazienza: un risultato a 6 giorni e 23 ore è un
 successo nel secondo caso e un dato nel primo. ⛔ `README.md` chiede che una `[?]` promossa sia
 dichiarata tale, con la fonte — qui la promozione c'è ed è probabilmente giusta, ma **non è
 scritta**, ed è la forma **E5**.
 
-**MARCA** — `[?]` — si chiude riconciliando `web.md` §3.2 e §8, non misurando.
+**MARCA** — `[?]` — si chiude riconciliando `STUDI.md` §web §3.2 e §8, non misurando.
 
 ---
 
@@ -539,7 +539,7 @@ le fasi**.
 | **tutti i codici numerici** | `0x09` `NIENTE_IN_COMUNE`, `0x0A` `VERSIONE_INCOMPATIBILE`, `0x0B` `ERRORE_PROTOCOLLO`, `0x0D` `TEMPO_SCADUTO`, `0x0E` `SESSIONE_NON_SERVIBILE`, `0x0F` `GIA_ATTIVA_REMOTA`: tutti concordi con §8.2 |
 | **le sei registrazioni guaste di B4** | ogni rimando (§6.1 · §6.0 · §4.3 · §2.5 · §1 · §6.2) punta al paragrafo che contiene davvero la regola |
 | **l'aritmetica del PCM** | 5 ms a 48 kHz, 2 canali, s16 = 480 campioni = 960 byte, + 12 di intestazione = **972**, sotto i ~1200 `[S]`. Torna |
-| **le nove misure della sonda** | 4 (`PIANO.md` §1.2) + 6 (`web.md` §7) con la sovrapposizione dichiarata, + le tre `[?]` che vivono davvero in `RCP.md` §5.3, `RCP.md` §7.3 e `SPECIFICHE.md` §6.1-bis |
+| **le nove misure della sonda** | 4 (`PIANO.md` §1.2) + 6 (`STUDI.md` §web §7) con la sovrapposizione dichiarata, + le tre `[?]` che vivono davvero in `RCP.md` §5.3, `RCP.md` §7.3 e `SPECIFICHE.md` §6.1-bis |
 | **`stato = NUOVA` come `[?]` promossa a fatto** | non lo è: il confine lo dichiara con un ⛔ e scrive *«non è implementata»*. È l'opposto di **E5** |
 | **il modello di `PIANO.md` §0.2** | tutte e otto le sezioni presenti, nell'ordine, comprese le due che si dimenticano sempre — «che cosa NON ha funzionato» e «il giudizio dell'utente» — **vuote per costruzione e dichiarate tali** |
 | **i due file di banco citati** | `banchi/00-sessione-gnome.sh` e `banchi/00-c1-kwin.sh` esistono sul disco |

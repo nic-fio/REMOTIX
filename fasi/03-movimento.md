@@ -114,11 +114,11 @@ Il taglio segue le dipendenze, non delle fette arbitrarie.
 
 | # | Step | Che cosa produce | Dipende da | Porta |
 |---|---|---|---|---|
-| **1** | ⭐ **La cadenza disaccoppiata** | la misura **M3** di `gnome.md` §13: `maxFramerate` rinegoziato **da solo**, a monitor fermo | — | 7601 |
+| **1** | ⭐ **La cadenza disaccoppiata** | la misura **M3** di `STUDI.md` §gnome §13: `maxFramerate` rinegoziato **da solo**, a monitor fermo | — | 7601 |
 | **2** | ⛔ **La scena che si dichiara** | la scena, il conto dei suoi disegni, la marca e il suo lettore | — | 7602 |
 | **3** | **Il prodotto: uno stream per fotogramma** | cattura continua · chiave/delta · l'intestazione da 28 byte · `RESET_STREAM` · il credito di stream | 1, 2 | 7603 |
 | **4** | **La pagina: i fotogrammi consegnati** | molti stream in parallelo · FIN contro RESET · l'ordine · il buco → `RICHIEDI_CHIAVE` · ⭐ **il conto dei fotogrammi DIPINTI** | 3 | 7604 |
-| **5** | ⭐ **L'anello del ritardo (S4)** | il numero, i sette controlli di `web.md` §6.3, e il pezzo cieco dichiarato | 4 | 7605 |
+| **5** | ⭐ **L'anello del ritardo (S4)** | il numero, i sette controlli di `STUDI.md` §web §6.3, e il pezzo cieco dichiarato | 4 | 7605 |
 
 ⛔ **Ogni step ha porta, file di ban e socket propri**: in fase 3 i banchi girano in parallelo per
 davvero, e due banchi che condividono un ban-file si fermano a vicenda.
@@ -237,7 +237,7 @@ Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (li
 > | ✅ **che cosa sopravvive** | tutto quel che sta in `banchi/03-b14-esiti.jsonl`: sette celle, **tutte** con `scena_sul_mio_monitor: true` — A (60/60 → 31,5), B (120/120 → 82,9), C (120/60 → 46,13), ⭐ **D (120/90 → 61,4, mediana 16,66, p99 20,43)** e i tre controlli. E con loro il **«sei decimi non si riproducono»** (la A dà 0,50 pulito) e il **«37 non si riproduce»** |
 > | ⛔ **che cosa cade** | la **legge della griglia verificata**. La quantizzazione torna `[R]`: resta la spiegazione migliore che abbiamo, coerente con la cella D, **ma è letta nel codice di Mutter, non misurata** |
 > | ⛔ **e cade anche** | il **riscontro incrociato**: in `banchi/03-b14-esiti-scena2.jsonl` la cella D porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s**, e il controllo di ritorno di quella scena non torna. ⇒ **il 61,4 ha una scena sola** |
-> | ⚠ **e M3** | **non è chiusa: è mezza** — il fatto è `[M]`, la causa `[R]`, il riscontro non c'è (`gnome.md` §13) |
+> | ⚠ **e M3** | **non è chiusa: è mezza** — il fatto è `[M]`, la causa `[R]`, il riscontro non c'è (`STUDI.md` §gnome §13) |
 >
 > ⭐⭐ **E la cosa che vale più della correzione**: la ragione del rifiuto è **la trappola numero uno
 > della giornata** — *la scena deve stare sul monitor che si sta catturando* — che stamattina era
@@ -417,7 +417,7 @@ del 13 agosto va rifatta o marcata `[?]`* — la scena poteva correre a vuoto se
 
 ### ⛔ 7. La pagina nel worker: scritta, misurata, e **sbagliata a metà**
 
-`web.md` §6.1 la prescriveva. Attuata, ha dato `[M]` **+27,6 / +33,5 ms** di mediana (73,66 / 67,79
+`STUDI.md` §web §6.1 la prescriveva. Attuata, ha dato `[M]` **+27,6 / +33,5 ms** di mediana (73,66 / 67,79
 → **101,30**) e **tetto −73,4 %** a 1080p (127,6 → **33,9** dipinti/s). ⛔ **Ma il totale nasconde
 la cosa che serve**, e la scomposizione la mostra:
 
@@ -658,7 +658,7 @@ finisce la **misura** — non fino a dove vale il **tetto**, che è questa doman
 1. **il pavimento con l'accelerazione vera non è misurato**, e non lo sarà finché la fase 8 non
    esiste;
 2. ⛔ **il pezzo cieco è a sua volta una `[?]`**: **16-40 ms** è una forbice larga **due volte e
-   mezzo**, e nessuna API JavaScript la espone (`web.md` §6.2). Decidere dove finisce di contare un
+   mezzo**, e nessuna API JavaScript la espone (`STUDI.md` §web §6.2). Decidere dove finisce di contare un
    tetto di **50** appoggiandosi a un numero che oscilla di **24** è decidere su niente — ed è la
    grandezza sostitutiva che `LEZIONI.md` §1.13 vieta.
 
@@ -747,7 +747,7 @@ fotogrammi di Mutter»: una riga **ripetuta** invece che **misurata**, che poi d
 
 ⚠ **`EncSliceLP` è la codifica «a bassa potenza»**: veloce, ma con limiti suoi di qualità e di
 funzioni. **Non è equivalente** alla codifica piena, e va dichiarato accanto al numero.
-⭐ **E porta un'occasione**: `EncSliceLP` è l'entrypoint che `web.md` nomina come *«da verificare»*
+⭐ **E porta un'occasione**: `EncSliceLP` è l'entrypoint che `STUDI.md` §web nomina come *«da verificare»*
 per i **sotto-livelli temporali** — cioè la strada per abbandonare un fotogramma **senza rompere
 quelli dopo**, che oggi costa una chiave ogni volta.
 

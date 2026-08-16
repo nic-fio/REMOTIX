@@ -167,11 +167,11 @@ Le sette bande, misurate sul fotogramma di regime (RGB medi al cuore di ciascuna
 | documento | diceva |
 |---|---|
 | `v1/remotix-c/src/cattura.h`, in testa | *«in zero-copy Mutter ricicla i propri buffer e vi ridipinge dentro SOLO la parte cambiata; fuori da quelle regioni ci sono i pixel del fotogramma che aveva usato quel buffer prima»* |
-| `gnome.md` §8.1 (Mutter riletto nel codice) | *«⛔ **falso**: blit dell'intero framebuffer, stack di clip svuotato deliberatamente»* |
+| `STUDI.md` §gnome §8.1 (Mutter riletto nel codice) | *«⛔ **falso**: blit dell'intero framebuffer, stack di clip svuotato deliberatamente»* |
 
 ⭐ **Misurato**: il fotogramma di regime porta danno **parziale** e le sette bande si vedono
 **intere**, con i valori qui sopra. ⇒ **Il buffer è intero anche con danno parziale**:
-`gnome.md` §8.1 ha ragione, e il commento in testa a `cattura.h` è **vecchio**.
+`STUDI.md` §gnome §8.1 ha ragione, e il commento in testa a `cattura.h` è **vecchio**.
 
 ⚠ E la posta era alta: se avesse avuto ragione `cattura.h`, la fase 2 avrebbe consegnato mezzo
 desktop e metà schermata vecchia, **senza un errore da nessuna parte**.
@@ -208,7 +208,7 @@ F2.3 chiama **F2.3-A** il guasto in cui *«la cattura consegna 8 bit, tutta la c
 l'etichetta continua a dire Main10»* — e nessuno se ne accorge guardando l'immagine, perché viene
 bene lo stesso.
 
-⛔ **Su GNOME non è un rischio: è una certezza, e l'imputato è la cattura.** `gnome.md` §8.3 `[R]`,
+⛔ **Su GNOME non è un rischio: è una certezza, e l'imputato è la cattura.** `STUDI.md` §gnome §8.3 `[R]`,
 letto riga per riga in Mutter 48.7: *«**Solo BGRx e BGRA**»* — formati a **8 bit per canale**.
 ⇒ **Da questa cattura non possono uscire dieci bit veri.** Un HEVC Main10 alimentato da qui porta
 8 bit promossi a 10.
@@ -297,7 +297,7 @@ essere dedotta.
 avevo scritto *«danno sul fotogramma primo: pieno»*, e la macchina ha risposto ⛔ **parziale su
 tutti e 410 i fotogrammi, il primo compreso**. Il ridisegno completo che mi aspettavo al montaggio
 del monitor virtuale **non è marcato come tale**. `[?]` Non lo spiego: lo dichiaro. È coerente con
-`gnome.md` §8.1 (il buffer è comunque intero), ed è un fatto in più per chi leggerà il danno come
+`STUDI.md` §gnome §8.1 (il buffer è comunque intero), ed è un fatto in più per chi leggerà il danno come
 segnale.
 
 ---
@@ -434,7 +434,7 @@ giro e nella riga di `02-cattura-esiti.jsonl`, campo `consegna_a_F2_3`:
 | **la scena** | «bandiera», riproducibile con `02-cattura-lancia.sh scena`, con la sfumatura a 256 livelli per rifare **lo stesso conto sullo stesso fotogramma** |
 
 ⛔ **E la cosa che F2.3 deve sapere prima di scrivere una riga**: **F2.3-A non è un rischio, è una
-certezza, e l'imputato è la cattura.** Mutter consegna solo BGRx/BGRA (`gnome.md` §8.3 `[R]`) ⇒ un
+certezza, e l'imputato è la cattura.** Mutter consegna solo BGRx/BGRA (`STUDI.md` §gnome §8.3 `[R]`) ⇒ un
 Main10 alimentato da qui porta **8 bit promossi a 10**. Il desiderato di `SPECIFICHE.md` §3.1 —
 10 bit per canale — **non può essere soddisfatto da questa sorgente**, e la promozione va
 **dichiarata** e non subita.
@@ -466,7 +466,7 @@ Main10 alimentato da qui porta **8 bit promossi a 10**. Il desiderato di `SPECIF
 ### Che cosa lascio al giro del **prodotto** (non a una sotto-fase)
 
 - ⛔ **`cattura.h` di v1 va corretto**: il paragrafo sul «diff» dei buffer riciclati è smentito dalla
-  misura di oggi, e `gnome.md` §8.1 lo aveva già smentito nel codice. Un riferimento che invecchia
+  misura di oggi, e `STUDI.md` §gnome §8.1 lo aveva già smentito nel codice. Un riferimento che invecchia
   in silenzio è peggio di nessun riferimento (`CODER.md` §0).
 - ⚠ **`palco.c` è 1545 righe** e il piano non gli dà una cifra: «per la parte di montaggio» va
   sciolto prima che qualcuno se lo porti dietro intero.
@@ -494,7 +494,7 @@ atteso risanato 0   dopo ognuno, con l'impronta tornata a
                     82270430c1823ff113a3f4627fbd8b61350e9cf19d2962cda643fc1d19afad6a
 costa           copia-di-file (nessuna ricompilazione)
 esito           ⭐ [M] 12 agosto 2026, NIC-OS: 0 → 1 ×4 → 0. CERTIFICATO
-riferimento     fasi/rapporti/F2-2-cattura.md · gnome.md §3.1, §8.1, §8.3, §13 M9 ·
+riferimento     fasi/rapporti/F2-2-cattura.md · STUDI.md §gnome §3.1, §8.1, §8.3, §13 M9 ·
                 LEZIONI.md §1.9, §1.11, §4 trappole 1, 2, 6, 8 ·
                 REVIEWER.md §1 punto 4, E1, E2, E8, E9 · fasi/00-ambiente.md B3, voci 2, 8, 12-bis
 ```

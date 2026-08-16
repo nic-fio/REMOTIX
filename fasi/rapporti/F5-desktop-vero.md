@@ -48,7 +48,7 @@ utente**: quella di `nicfio` esisteva già, con un monitor suo, dal 12 agosto.
 | **1** | utente `prova` (uid 1001), parola d'ordine, `enable-linger` |
 | **2** | ⭐ drop-in `zz-senza-monitor.conf`: `ExecStart=/usr/bin/gnome-shell --headless --no-x11` — ⛔ **senza `--virtual-monitor`** |
 | **3** | sessione avviata con la ricetta di `banchi/00-sessione-gnome.sh` (`gnome-session --session=gnome`, ambiente composto da zero) |
-| **4** | `[M]` **`GetCurrentState` → 0 monitor**: è la sessione *«viva, completa e nera»* di `gnome.md` §3.1 |
+| **4** | `[M]` **`GetCurrentState` → 0 monitor**: è la sessione *«viva, completa e nera»* di `STUDI.md` §gnome §3.1 |
 | **5** | l'utente si collega a `https://192.168.0.2:7571/` come `prova` |
 
 ### ⭐⭐⭐ L'esito
@@ -75,7 +75,7 @@ mette la shell.
    `RecordVirtual`. **Chi decide 1920×1080, e che cosa succede se il client ne chiede un'altra?**
    È la domanda di `RCP.md` §4.5 (la tela concessa), e adesso tocca questo pezzo.
 2. ⚠ **la sessione prima del primo client è NERA** (0 monitor). Per una sessione **solo remota** va
-   bene; ⛔ ma `PIANO.md:399` dice *«`--virtual-monitor` non è opzionale»* e `gnome.md` §108 lo
+   bene; ⛔ ma `PIANO.md:399` dice *«`--virtual-monitor` non è opzionale»* e `STUDI.md` §gnome §108 lo
    ripete: **quelle due righe adesso sono da riscrivere**, perché sono vere solo per una sessione
    che deve vivere **senza** nessuno che la catturi.
 

@@ -98,7 +98,7 @@ ricevuto». `[M]` 163 533 ms → **1 000 ms**.
 | | atteso | misurato `[M]` 12 ago 2026 |
 |---|---|---|
 | sano | **0** `SANA` | **0** |
-| guasto innestato: si toglie `--virtual-monitor` dal drop-in — cioè **M9** di `gnome.md` §13 | **1** `NERA: ZERO MONITOR` | **1**, e con quella marca |
+| guasto innestato: si toglie `--virtual-monitor` dal drop-in — cioè **M9** di `STUDI.md` §gnome §13 | **1** `NERA: ZERO MONITOR` | **1**, e con quella marca |
 | risanato | **0** | **0** |
 
 ⭐ **Girata due volte** (11:42 e 11:49), con la sessione vera fermata e riavviata **sei** volte in
@@ -163,12 +163,12 @@ F2.1 ha copiato per GNOME, cambiando solo il nome dell'unità e la riga.
 
 | dove sta scritto | che cosa dice | come sta qui `[M]` 12 ago 2026 |
 |---|---|---|
-| `gnome.md` §3.1 | `--virtual-monitor` **non è opzionale**: in headless `needs_outputs=false`, e senza quell'opzione la sessione parte *viva, completa e nera* | ⭐ **confermata, e trovata addosso alla macchina**: vedi §«Che cosa non ha funzionato» punto 1 |
-| `gnome.md` §3.1 | `SHELL` va messa vuota, o `gnome-session.in:3-14` si ri-esegue in una shell di login | ⭐ **la trappola non ha morso, e adesso si misura**: lo strumento legge `/proc/<gnome-session-binary>/environ`. ⚠ E leggendo `gnome-session.in` il controllo vero è `[ -n "$SHELL" ]`: **assente e vuota vanno tutt'e due bene**, e v1 la lascia *assente* (zero occorrenze di `SHELL` in `sessione.c`) |
-| `gnome.md` §3.2 | il nome `org.gnome.Shell` **non** è un indicatore di prontezza: è preso prima di `meta_context_start()` | il banco aspetta che `IsSessionRunning` risponda e che `GetCurrentState` risponda, non il nome |
-| `gnome.md` §3.2 | il congedo è `Logout(2)`; `Logout(1)` mostra il dialogo se c'è un inibitore | usato `Logout(2)` |
-| `gnome.md` §1.1 / §1.2 | il drop-in della Shell si scrive **solo per KWin**; e l'headless su GNOME lo abbiamo **per accidente** | ⚠ **`gnome.md` §1.1 è invecchiata su questa macchina**: vedi il `[≠]` più sotto |
-| `gnome.md` §13 M9 | la prova **guasta di proposito**: senza `--virtual-monitor`, per imparare che aspetto ha il guasto | ⭐ **fatta, ed è il guasto della certificazione**: `1 NERA: ZERO MONITOR` |
+| `STUDI.md` §gnome §3.1 | `--virtual-monitor` **non è opzionale**: in headless `needs_outputs=false`, e senza quell'opzione la sessione parte *viva, completa e nera* | ⭐ **confermata, e trovata addosso alla macchina**: vedi §«Che cosa non ha funzionato» punto 1 |
+| `STUDI.md` §gnome §3.1 | `SHELL` va messa vuota, o `gnome-session.in:3-14` si ri-esegue in una shell di login | ⭐ **la trappola non ha morso, e adesso si misura**: lo strumento legge `/proc/<gnome-session-binary>/environ`. ⚠ E leggendo `gnome-session.in` il controllo vero è `[ -n "$SHELL" ]`: **assente e vuota vanno tutt'e due bene**, e v1 la lascia *assente* (zero occorrenze di `SHELL` in `sessione.c`) |
+| `STUDI.md` §gnome §3.2 | il nome `org.gnome.Shell` **non** è un indicatore di prontezza: è preso prima di `meta_context_start()` | il banco aspetta che `IsSessionRunning` risponda e che `GetCurrentState` risponda, non il nome |
+| `STUDI.md` §gnome §3.2 | il congedo è `Logout(2)`; `Logout(1)` mostra il dialogo se c'è un inibitore | usato `Logout(2)` |
+| `STUDI.md` §gnome §1.1 / §1.2 | il drop-in della Shell si scrive **solo per KWin**; e l'headless su GNOME lo abbiamo **per accidente** | ⚠ **`STUDI.md` §gnome §1.1 è invecchiata su questa macchina**: vedi il `[≠]` più sotto |
+| `STUDI.md` §gnome §13 M9 | la prova **guasta di proposito**: senza `--virtual-monitor`, per imparare che aspetto ha il guasto | ⭐ **fatta, ed è il guasto della certificazione**: `1 NERA: ZERO MONITOR` |
 | `REVIEWER.md` §2 **E1** | necessario scambiato per sufficiente | l'opzione sulla riga di comando **non** basta: si legge anche il bus, e il disaccordo ha un codice suo |
 | `REVIEWER.md` §2 **E2** | un componente che decide da sé | ⭐ **preso sul campo**: vedi punto 3 di «Che cosa non ha funzionato» |
 | `REVIEWER.md` §2 **E8** | il silenzio scambiato per zero | ⭐ **pagata subito**: `Shell.Introspect.GetWindows` e `Shell.Screenshot` rispondono **AccessDenied** a un chiamante qualunque `[M]`. Un banco che avesse letto «zero finestre» avrebbe scritto «sessione vuota» dove il fatto era «non mi hanno fatto guardare» |
@@ -176,9 +176,9 @@ F2.1 ha copiato per GNOME, cambiando solo il nome dell'unità e la riga.
 | `fasi/00-ambiente.md`, difetto 4 della fase 0 | `pkill` lascia il gestore vivo, e si aspetta `inactive` e non «diverso da `active`» | riusato tale e quale |
 | `CODER.md` §3.9 / I7 | un componente che sceglie in autonomia produce due misure sotto la stessa etichetta; e la protezione sta nel programma, non in una riga di configurazione | ⛔ **oggi il monitor virtuale di GNOME è una riga di configurazione in `/etc`, ed è I7 violato**: vedi le cuciture |
 
-### ⚠ Un `[≠]`: `gnome.md` §1.1 e questa macchina non dicono la stessa cosa
+### ⚠ Un `[≠]`: `STUDI.md` §gnome §1.1 e questa macchina non dicono la stessa cosa
 
-`gnome.md` §1.1 scrive: *«Su GNOME la Shell parte con `ExecStart=/usr/bin/gnome-shell` secco, **senza
+`STUDI.md` §gnome §1.1 scrive: *«Su GNOME la Shell parte con `ExecStart=/usr/bin/gnome-shell` secco, **senza
 `--headless`**»*. `[M]` 12 agosto 2026:
 
 - l'unità **installata da Debian** dice davvero `ExecStart=/usr/bin/gnome-shell` secco — §1.1 ha
@@ -335,7 +335,7 @@ piccole prese da solo, dichiarate qui perché il coordinatore le porti dove vann
 | 2 | ⛔ **Perché la pagina non riceve il puntatore, visto che l'annuncio arriva** | l'anello che il piano incolpava è caduto: il compositore **ri-annuncia** `capabilities` al client già collegato. Il sospetto si sposta sul client — o sul fatto che *ricevere l'annuncio* non è *legarsi al `wl_pointer`* |
 | 3 | **Se il client partito prima riceva poi gli EVENTI**, e non solo l'annuncio | misurato l'annuncio, non gli eventi. Sono due fatti, e il secondo è di F2.6 |
 | 4 | **La tastiera nasce separatamente** | `capabilities(1)` è **solo** il puntatore: `ensure_virtual_device(KEYBOARD)` scatta al primo **tasto**, non al primo movimento `[R]`. Un banco che inietta solo movimento e poi si aspetta che si scriva misura una scena che non c'è. **Non misurato** |
-| 5 | **Se `--virtual-monitor` regga un cambio di misura a caldo** | `ensure_virtual_monitor` esce prima se la misura non cambia (`gnome.md` §8.2). Non provato: è F2.2/fase 6 |
+| 5 | **Se `--virtual-monitor` regga un cambio di misura a caldo** | `ensure_virtual_monitor` esce prima se la misura non cambia (`STUDI.md` §gnome §8.2). Non provato: è F2.2/fase 6 |
 | 6 | **Se la sessione con monitor sia altrettanto fragile** allo `Shell.Screenshot` | l'assert è su una texture 0×0, quindi *dovrebbe* sparire con un monitor. **Non riprovato di proposito**: non rifaccio cadere la sessione per una curiosità |
 | 7 | **Il rendering è in GPU?** | l'utente è nei gruppi `render`/`video` e Mutter dichiara i due renderer gbm — ma «ha aperto un render node ⇒ rende in GPU» è **E1**. Non misurato qui, e non è di questa sotto-fase |
 
@@ -364,7 +364,7 @@ piccole prese da solo, dichiarate qui perché il coordinatore le porti dove vann
 | ⛔ **F2.6 (giudizio) e chiunque apra un'applicazione** | l'ordine è **più stretto** di come lo scrive `PIANO.md`: il puntatore **non nasce con `Session.Start()`, nasce al primo movimento iniettato** (`meta-remote-desktop-session.c:290-321`, `:780-800`, `:940-960` `[R]`). Aprite l'applicazione **dopo il primo `NotifyPointerMotion`**, non dopo lo `Start`. E **la tastiera è un terzo momento ancora**: nasce al primo tasto |
 | ⛔ **F2.5 (pagina) e F2.6** | la spiegazione che il piano dà della `[?]` di S.4 — *«il seat non annuncia il puntatore e il client partito prima non si iscrive mai»* — **è contraddetta al primo anello** `[M]`: l'annuncio **arriva** (`capabilities(0)` → `capabilities(1)`), riprodotto due volte. ⇒ La caccia va spostata dal compositore al client. **Non riscrivete `PIANO.md` sulla mia parola: la misura è in `banchi/02-sessione-esiti.jsonl`, riga `dispositivi-ordine`, e si rifà in tre minuti** |
 | ⛔ **al coordinatore** | ⭐ **il monitor virtuale di GNOME oggi è una riga di configurazione in `/etc`, su un rootfs che vive in RAM — ed è I7 violato.** `provision-server.sh` mette `--headless --no-x11` e **non** `--virtual-monitor`. Due strade, e vanno decise da chi ha il quadro: **(a)** aggiungere `--virtual-monitor` a `provision-server.sh` — cura in un minuto, ma resta una riga di configurazione che si può perdere; **(b)** ⭐ **portarlo nel prodotto**, cioè togliere il `tipo == COMPOSITORE_KWIN` da `sessione.c:671` e scrivere il drop-in anche per GNOME con `larghezza`/`altezza`, che la funzione **già riceve e butta via**. È **I7**, ed è lavoro di prodotto: non l'ho fatto perché questo giro non tocca `src/` |
-| ⚠ **al coordinatore** | `gnome.md` §1.1 va aggiornata: sulla macchina l'headless è **chiesto** dal 9 agosto, non accidentale. E `gnome.md` §13 **M9 si può chiudere**: fatta, e con due sorprese (la fragilità allo screenshot, e il guasto già addosso alla macchina) |
+| ⚠ **al coordinatore** | `STUDI.md` §gnome §1.1 va aggiornata: sulla macchina l'headless è **chiesto** dal 9 agosto, non accidentale. E `STUDI.md` §gnome §13 **M9 si può chiudere**: fatta, e con due sorprese (la fragilità allo screenshot, e il guasto già addosso alla macchina) |
 | ⚠ **a chi eredita la macchina** | l'ho lasciata **sana**: gnome-shell con `--virtual-monitor 1920x1080`, un monitor `Meta-0`. ⛔ Ma il drop-in che gliel'ha data sta in `$XDG_RUNTIME_DIR` e **sparisce al primo riavvio**: dopo un riavvio la macchina torna nera. Si rimette con `bash /media/REMOTIX/f21/02-sessione-lancia.sh sano` |
 
 ---
@@ -384,7 +384,7 @@ testa a `02-sessione-lancia.sh`, funzione `certifica()`, righe `A_SANO=0 A_GUAST
     "guasto_dettaglio": "si riscrive $XDG_RUNTIME_DIR/systemd/user.control/"
                         "org.gnome.Shell@wayland.service.d/zz-f21-monitor.conf "
                         "togliendo `--virtual-monitor 1920x1080`, e si riavvia la "
-                        "sessione.  E' M9 di gnome.md §13, il guasto fatto di proposito",
+                        "sessione.  E' M9 di STUDI.md §gnome §13, il guasto fatto di proposito",
     "atteso_guasto":   1,      # NERA: ZERO MONITOR
     "marca_guasto":    "NERA: ZERO MONITOR",
     "atteso_risanato": 0,

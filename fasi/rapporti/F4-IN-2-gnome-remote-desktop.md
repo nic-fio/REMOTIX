@@ -1,7 +1,7 @@
 # F4-IN-2 · gnome-remote-desktop — l'input e la cattura, sulla nostra stessa API
 
 ⛔ Scritto il 14 agosto 2026. Bersaglio: **gnome-remote-desktop 48.1** e **mutter 48.7**, letti
-nel codice in `reference-gnome/`. ⚠ Questo rapporto **non** rifà `gnome-remote-desktop.md` nella
+nel codice in `reference-gnome/`. ⚠ Questo rapporto **non** rifà `STUDI.md` §gnome-remote-desktop nella
 radice (che è del percorso RDP): va oltre, sul **cursore** e sulla **cattura**.
 
 ---
@@ -154,7 +154,7 @@ Certificato: `grep -rn "CURSOR_MODE_EMBEDDED\|CURSOR_MODE_METADATA" src/*.c *.h`
 - `GRD_SCREEN_CAST_CURSOR_MODE_EMBEDDED` compare **solo** nella definizione dell'enum
   (`grd-session.h:39`): **zero usi**.
 
-⛔ **Correzione a `gnome-remote-desktop.md`:1 riga 564-566**, che dice *«salvo in modalità
+⛔ **Correzione a `STUDI.md` §gnome-remote-desktop:1 riga 564-566**, che dice *«salvo in modalità
 screen-share dove si usa `CURSOR_MODE_EMBEDDED`»*. `[R]` In 48.1 **non è vero**: `EMBEDDED` non è
 usato in nessun percorso. ⇒ Il riferimento fa la nostra stessa scelta, e la fa **ovunque**.
 

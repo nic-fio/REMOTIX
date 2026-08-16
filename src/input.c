@@ -20,7 +20,7 @@
  *      da noi** a `RecordVirtual`.  Mutter quella proprieta' la ignora, e
  *      l'UUID vero lo genera lui: v1 non trovava **mai** la regione per chiave
  *      e cadeva ogni volta sul ripiego «prendo la prima» — verde con uno
- *      schermo, storto con due (`mutter.h`, `gnome.md` §9);
+ *      schermo, storto con due (`mutter.h`, `STUDI.md` §gnome §9);
  *   2. `ei_device_scroll_discrete`: Mutter ne fa una **divisione intera per
  *      120** (`meta-eis-client.c:554`), e i mezzi scatti spariscono.  Qui si
  *      va di `scroll_delta`, dove Mutter forza `SOURCE_WHEEL`, salta
@@ -94,7 +94,7 @@
  *   diventate `60 / 120 = 0` e non avrebbero prodotto niente.
  *
  * ⚠ E il 12 e' di MUTTER, non del protocollo: su KWin `scroll_delta` non
- *   produce nessuno scatto (`kde.md` §7.2) e la strada e' `scroll_discrete`.
+ *   produce nessuno scatto (`STUDI.md` §kde §7.2) e la strada e' `scroll_discrete`.
  *   Il giorno che si scrive `kwin.c` questa costante NON si porta dietro.
  */
 #define UNITA_PER_DELTA 12.0

@@ -529,7 +529,7 @@ Aperte all'apertura della fase, e vanno **misurate prima di essere credute**:
    concessa **oggi nessuno la mantiene**: `[M]` client a 1280×720 ⇒ il server la concede, il palco
    cattura a 1920×1080 (costante di compilazione), `rcp` rifiuta ogni fotogramma — **145 prodotti,
    0 spediti, client nero senza errori**. ⏳ La cura è lavoro della fase 6 (`RCP.md` §4.5);
-2. ⚠ `PIANO.md` **399, 402-404, 591-593** e `gnome.md` **108-109, 111-112, 551** dicono che
+2. ⚠ `PIANO.md` **399, 402-404, 591-593** e `STUDI.md` §gnome **108-109, 111-112, 551** dicono che
    `--virtual-monitor` **non è opzionale**: ⛔ sono vere solo per una sessione che deve vivere
    **senza nessuno che la catturi**, e vanno riscritte. *(Righe individuate da A1, non toccate da
    lui: si riscrivono a codice fermo.)*

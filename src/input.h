@@ -68,7 +68,7 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a,
                   char **errore);
 
 /*
- * ⛔ I ricambi silenziosi di `libei`, che `gnome.md` §9 misura: un cambio di
+ * ⛔ I ricambi silenziosi di `libei`, che `STUDI.md` §gnome §9 misura: un cambio di
  *    keymap distrugge e ricrea il dispositivo tastiera, un cambio di geometria
  *    tutti i dispositivi assoluti — e il puntatore al dispositivo vecchio
  *    smette di funzionare SENZA ERRORE.  ⇒ Questa va chiamata dal ciclo del
@@ -126,7 +126,7 @@ int input_pulsante(Input *, uint16_t codice, int premuto);
  *    DENTRO — una volta sola, in un posto solo.  E' `[M]` 10 agosto 2026
  *    (`RCP.md` §7.3, riquadro «Il segno della rotella»): il client manda +120
  *    quando l'utente gira in su, e le due convenzioni sono opposte.
- * ⚠ E i mezzi scatti esistono: 60 NON si arrotonda a zero.  `gnome.md` §9 dice
+ * ⚠ E i mezzi scatti esistono: 60 NON si arrotonda a zero.  `STUDI.md` §gnome §9 dice
  *   che `ei_device_scroll_discrete` fa una divisione intera per 120 e se li
  *   mangia: la strada e' `scroll_delta`, dove la soglia vera e' 60.
  */

@@ -131,7 +131,7 @@ compositore_avvia()
 	# ⛔ `--headless` invece di `--nested`: nested aprirebbe una finestra sullo
 	#    schermo dell'utente.  E `--virtual-monitor` NON e' facoltativo — una
 	#    sessione headless senza monitor virtuale parte viva, completa e NERA
-	#    (`gnome.md` §13, prova M9), e la scena non avrebbe dove andare.
+	#    (`STUDI.md` §gnome §13, prova M9), e la scena non avrebbe dove andare.
 	rm -f "$LOG_COMP"
 	setsid --fork env \
 	    XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \

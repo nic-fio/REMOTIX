@@ -12,7 +12,7 @@ guardia non ascolta, e il ciclo della sessione usa il lucchetto **7511** che era
 ## 1. Che cosa era rotto, in una riga
 
 `v1/banco/provision-server.sh` §4 scriveva `--headless --no-x11` e **basta**. In headless Mutter
-mette `needs_outputs = false` (`gnome.md` §3.1) ⇒ la sessione nasce **viva, completa e nera**. La
+mette `needs_outputs = false` (`STUDI.md` §gnome §3.1) ⇒ la sessione nasce **viva, completa e nera**. La
 cura di F2.1 viveva in `$XDG_RUNTIME_DIR`, che il riavvio si porta via insieme a tutto il rootfs.
 ⇒ **la prima sessione nata dopo un riavvio sarebbe stata nera un'altra volta.**
 
@@ -133,7 +133,7 @@ DOVE:             v1/remotix-c/src/sessione.c:671, dentro sessione_assicura()
 
 COSA CONTRADDICE: · l'invariante I7 (CODER.md §2): «la protezione di un difetto noto sta nel
                     programma, non in una riga di configurazione che si puo' perdere».  Il difetto
-                    noto e' la sessione viva-e-nera (gnome.md §3.1, M9 di §13); la protezione oggi
+                    noto e' la sessione viva-e-nera (STUDI.md §gnome §3.1, M9 di §13); la protezione oggi
                     sta in provision-server.sh §4, cioe' in una riga di configurazione su un rootfs
                     che vive in RAM;
                   · e se stesso: sessione_assicura() RICEVE `larghezza` e `altezza` (righe 650-651)
@@ -268,7 +268,7 @@ l'unico drop-in che chiede il monitor è ora **quello persistente**; il `zz-f21-
 |---|---|
 | ⛔ **a chi scriverà il prodotto della fase 2** | il rilievo della §4. Finché `sessione.c:671` è com'è, **I7 resta violato** e questa cura è una riga di configurazione: protegge, ma si può perdere |
 | ⛔ **al coordinatore** | ⏳ **il riavvio vero**, quando 7448 e 7501 si potranno lasciar cadere. È l'unica prova che chiude la `[?]` della §2, e va fatta **prima** che la fase 2 misuri qualcosa di serio su questa macchina |
-| ⚠ **al coordinatore** | `gnome.md` §1.1 va aggiornata (l'headless su NIC-OS è **chiesto**, non accidentale) e adesso porta anche `--virtual-monitor`: la riga in vigore dal 12 agosto è `/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor 1920x1080` |
+| ⚠ **al coordinatore** | `STUDI.md` §gnome §1.1 va aggiornata (l'headless su NIC-OS è **chiesto**, non accidentale) e adesso porta anche `--virtual-monitor`: la riga in vigore dal 12 agosto è `/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor 1920x1080` |
 | ⚠ **a F2.6** | la guardia riguarda la sessione **dopo** la misura: se vi esce **79**, la sessione è caduta mentre misuravate — guardate `Shell.Screenshot` prima di guardare il vostro codice |
 
 ---

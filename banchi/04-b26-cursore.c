@@ -19,7 +19,7 @@
  * ===========================================================================
  * ⛔⛔ E LA PRIMA COSA CHE IL BANCO DEVE FAR VEDERE E' IL **DIFETTO**, non la cura
  *
- * `gnome.md` §1.1 punto 6 e' `[R]`: *«chiediamo `cursor-mode=2` (metadato) ma
+ * `STUDI.md` §gnome §1.1 punto 6 e' `[R]`: *«chiediamo `cursor-mode=2` (metadato) ma
  * non chiediamo il metadato ⇒ il cursore non arriva affatto»*.  ⛔ Un banco che
  * nasce verde non ha mai visto il difetto (`CODER.md` §3.4).  ⇒ Tre modi, e i
  * primi due sono **la stessa sonda con una riga di differenza**:

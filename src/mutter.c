@@ -513,13 +513,13 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	sessione->monitor_prima = quanti_prima > 0 ? (guint) quanti_prima : 0;
 	if (quanti_prima == 0)
 	{
-		/* ⛔ E ZERO MONITOR E' LA SESSIONE NERA, non un dettaglio: `gnome.md`
+		/* ⛔ E ZERO MONITOR E' LA SESSIONE NERA, non un dettaglio: `STUDI.md` §gnome
 		 *    §3.1 — in headless `needs_outputs=false`, e senza monitor la
 		 *    sessione e' viva, completa e nera.  Non si fallisce (il nostro
 		 *    `RecordVirtual` ne monta uno suo), ma si DICHIARA: chi legge zero
 		 *    fotogrammi piu' tardi deve avere questa riga sotto gli occhi. */
 		registro_dice(AREA, "⚠ la sessione grafica non ha NESSUN monitor: e' la sessione "
-		                    "«viva, completa e nera» di gnome.md §3.1");
+		                    "«viva, completa e nera» di STUDI.md §gnome §3.1");
 	}
 
 	/* --- 1. il controllo, creato e NON avviato ---------------------------- */

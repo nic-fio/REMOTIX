@@ -571,7 +571,7 @@ def servitore(porta, raccolta, pagina_html):
             self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(dati)))
             # ⛔⭐ LE TRE INTESTAZIONI DELL'ISOLAMENTO FRA ORIGINI, come le manda
-            #    il prodotto (`src/pagina.c`, `SPECIFICHE.md` §11.5, `web.md` O11).
+            #    il prodotto (`src/pagina.c`, `SPECIFICHE.md` §11.5, `STUDI.md` §web O11).
             #    ⚠ Non sono un ornamento del banco: `[M]` 14 agosto 2026 senza di
             #    esse `crossOriginIsolated` e' `false` e la grana di
             #    `performance.now()` cambia — cioe' il banco misurerebbe un
@@ -1015,7 +1015,7 @@ def gira(porta, diagnosi, esiti, registro, tela=(1920, 1080), attesa=30):
     scarica()
 
     # -- F9: la lettera accentata DIRETTA ------------------------------------
-    # ⛔⭐ `web.md` §1.2 C prevede il caso concreto: «si arriva alla fase 4, si
+    # ⛔⭐ `STUDI.md` §web §1.2 C prevede il caso concreto: «si arriva alla fase 4, si
     #    scopre che `^`+`e` non produce `ê` su nessun motore, si aggiunge il campo
     #    nascosto sopra la tela — e si perde la strada di disegno».  ⚠ Quella
     #    previsione vale per i tasti MORTI; su una disposizione italiana `à` e' un

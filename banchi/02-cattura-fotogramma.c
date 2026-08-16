@@ -16,10 +16,10 @@
  *   voti**: 36 al secondo, danno parziale, quattro buffer riciclati, zero salti
  *   di sequenza.  Tutto verde, e sullo schermo il nulla.
  *
- * ⛔ E il nero non e' un caso di scuola: `gnome.md` §3.1 dice che in headless
+ * ⛔ E il nero non e' un caso di scuola: `STUDI.md` §gnome §3.1 dice che in headless
  *   `needs_outputs=false`, quindi **senza `--virtual-monitor` la sessione parte
  *   viva, completa e nera**, ed e' la prova guasta M9 del piano di misure di
- *   `gnome.md` §13.  Il piano della fase 2 (`PIANO.md`) lo scrive a lettere
+ *   `STUDI.md` §gnome §13.  Il piano della fase 2 (`PIANO.md`) lo scrive a lettere
  *   intere: *«una sessione nera e perfettamente viva e' la cosa che si scambia
  *   per un difetto di cattura, e si cerca per mezza giornata dalla parte
  *   sbagliata»*.  Il fotogramma NERO E VALIDO e' il guasto peggiore di questa
@@ -115,7 +115,7 @@
  *     buffer e vi ridipinge dentro SOLO la parte cambiata; fuori da quelle
  *     regioni ci sono i pixel del fotogramma che aveva usato quel buffer
  *     prima»*;
- *   - `gnome.md` §8.1, che ha riletto il codice di Mutter, dice il contrario:
+ *   - `STUDI.md` §gnome §8.1, che ha riletto il codice di Mutter, dice il contrario:
  *     *«⛔ falso: blit dell'intero framebuffer, stack di clip svuotato
  *     deliberatamente»*.
  *
@@ -767,7 +767,7 @@ static const char *nome_colore(uint32_t c)
  *
  * ⛔ E LA PRIMA DELLE TRE HA GIA' UNA RISPOSTA CHE PESA SULL'INTERA FASE 2:
  *
- *    `gnome.md` §8.3 `[R]`, letto riga per riga nel codice di Mutter 48.7:
+ *    `STUDI.md` §gnome §8.3 `[R]`, letto riga per riga nel codice di Mutter 48.7:
  *    **«Solo BGRx e BGRA»**.  Sono formati a **8 bit per canale**.
  *
  *    ⇒ Da questa cattura NON possono uscire dieci bit veri.  Un HEVC Main10
@@ -1248,7 +1248,7 @@ int main(int argc, char **argv)
 	    "  \"consegna_a_F2_3\": {\n"
 	    "    \"bit_per_canale\": %d,\n"
 	    "    \"bit_per_canale_chi_lo_dice\": \"il FORMATO negoziato (%s). "
-	    "gnome.md §8.3 [R]: Mutter consegna SOLO BGRx e BGRA, che sono 8 bit per "
+	    "STUDI.md §gnome §8.3 [R]: Mutter consegna SOLO BGRx e BGRA, che sono 8 bit per "
 	    "canale — da questa cattura NON escono dieci bit veri\",\n"
 	    "    \"⛔ F2.3-A\": \"un HEVC Main10 alimentato da qui porta 8 bit promossi a "
 	    "10: l'etichetta dice Main10, l'immagine viene bene lo stesso, e l'imputato e' "

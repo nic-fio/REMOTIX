@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 		{
 			/* ⭐ LA DOMANDA DEI DIECI BIT, FATTA AL PRODUTTORE.
 			 *
-			 * `gnome.md` §8.3 `[R]` dice che Mutter consegna solo BGRx e BGRA.
+			 * `STUDI.md` §gnome §8.3 `[R]` dice che Mutter consegna solo BGRx e BGRA.
 			 * Chiedere un formato a dieci bit e ricevere un rifiuto trasforma
 			 * quella lettura in una MISURA — e il rifiuto va scritto, non
 			 * dedotto (`LEZIONI.md` §1.11). */
@@ -509,7 +509,7 @@ int main(int argc, char **argv)
 	    manifesto,
 	    "  \"consegna_a_F2_3\": {\n"
 	    "    \"bit_per_canale\": %d,\n"
-	    "    \"bit_per_canale_chi_lo_dice\": \"il FORMATO negoziato (%s), %s. gnome.md §8.3 "
+	    "    \"bit_per_canale_chi_lo_dice\": \"il FORMATO negoziato (%s), %s. STUDI.md §gnome §8.3 "
 	    "[R]: supported_formats[] di Mutter 48.7 ha DUE voci, BGRx e BGRA — da questa "
 	    "cattura NON escono dieci bit veri\",\n"
 	    "    \"⛔ F2.3-A\": \"un HEVC Main10 alimentato da qui porta 8 bit promossi a 10: "

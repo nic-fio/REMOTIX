@@ -85,7 +85,7 @@ distruggendo la misura.
 
 ⇒ Qui il palco e' **quello vero, di proposito**, e si **verifica dall'altro
    capo** — `screen`, `webgl`, le bandiere — e finisce nel verbale accanto a
-   ogni numero.  ⚠ Il **pezzo cieco** di `web.md` §6.2 (16-40 ms fra il disegno
+   ogni numero.  ⚠ Il **pezzo cieco** di `STUDI.md` §web §6.2 (16-40 ms fra il disegno
    e il pixel acceso) **esiste su questo palco** e non esisterebbe su Xvfb: qui
    non si misurano tempi, si contano pixel, e per questo non lo si dichiara
    accanto a un numero che non c'e'.

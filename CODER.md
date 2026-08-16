@@ -136,7 +136,7 @@ la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
 >
 > ⚠ **E si dichiara che cosa resta fuori anche quando non si può misurare**: fra il disegno finito
 > e il pixel acceso passano `[?]` **16-40 ms** che nessuna API espone. Si stimano e si scrivono
-> accanto al numero — ⛔ **ma non su Xvfb, dove quel pezzo non esiste** (`web.md` §6.2).
+> accanto al numero — ⛔ **ma non su Xvfb, dove quel pezzo non esiste** (`STUDI.md` §web §6.2).
 >
 > ⛔ **Il numero misurato, e il tetto è sforato**: `[M]` mediana **74,58 ms** cattura → vetro, che
 > con il pezzo cieco fanno **90-115 ms** sullo schermo dell'utente. ⛔⛔ **E il 78 % è nostro**: a

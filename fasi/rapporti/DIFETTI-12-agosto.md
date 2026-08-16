@@ -84,8 +84,8 @@ sbagliata.
 
 ### D8 — **`cattura.h` porta un commento che la misura smentisce**
 
-`cattura.h` e `gnome.md` §8.1 si contraddicevano sul buffer riciclato. Misurato: danno **parziale**
-e le sette bande **intere** ⇒ ha ragione `gnome.md`. ⛔ Se avesse avuto ragione il commento, la fase
+`cattura.h` e `STUDI.md` §gnome §8.1 si contraddicevano sul buffer riciclato. Misurato: danno **parziale**
+e le sette bande **intere** ⇒ ha ragione `STUDI.md` §gnome. ⛔ Se avesse avuto ragione il commento, la fase
 2 avrebbe consegnato **mezzo desktop senza un errore**.
 
 ### D9 — **`01-b0-chiamate.py`: 7 chiamate su 52 restano IGNOTE**

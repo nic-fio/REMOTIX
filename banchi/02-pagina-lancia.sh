@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 02-pagina-lancia.sh — F2.5: dal byte al PIXEL DIPINTO, su browser veri.
-#                       `PIANO.md` fase 2 · `web.md` §4 · `CODER.md` §2 (I8)
+#                       `PIANO.md` fase 2 · `STUDI.md` §web §4 · `CODER.md` §2 (I8)
 #
 #   bash banchi/02-pagina-lancia.sh                 i due motori, schermo finto
 #   SCHERMO=:0 bash banchi/02-pagina-lancia.sh      sullo schermo VERO
@@ -23,7 +23,7 @@
 #     `decode()` non lancia
 #     ⇒ «la pagina decodifica HEVC»
 #
-# ⛔ Tutte e tre sono compatibili con una tela **nera**.  `web.md` §9.1 lo dice
+# ⛔ Tutte e tre sono compatibili con una tela **nera**.  `STUDI.md` §web §9.1 lo dice
 #    per l'hardware — *«cambiare strato non regala immunita': una promessa di
 #    un'API va trattata come la dichiarazione di un compositore»* — e vale
 #    identico un gradino piu' in basso, sulla decodifica stessa.  L'invariante
@@ -48,7 +48,7 @@
 #
 # Senza, un rosso su Firefox sarebbe indistinguibile fra «Firefox non fa HEVC»
 # e «il banco non funziona su Firefox»: la forma d'errore **E10** vista
-# dall'altra parte, e la stessa che `web.md` §3.3 racconta come il rilievo piu'
+# dall'altra parte, e la stessa che `STUDI.md` §web §3.3 racconta come il rilievo piu'
 # grave della revisione R2 — *«il controllo positivo era cieco, e la sua
 # conclusione era la conclusione sbagliata su un dato mancante»*.
 #

@@ -87,7 +87,7 @@ che il mandato mi chiede di bocciare**, e lo farebbe in verde.
 ⛔ E la riga «cattura E pagina nere» e' la peggiore di tutte, perche' e' il
 guasto che questa fase produce da se': `PIANO.md` fase 2 avverte che una
 sessione GNOME headless senza `--virtual-monitor` parte **viva, completa e
-nera** (`gnome.md` §13, M9).  Due fotogrammi neri hanno PSNR **infinito**:
+nera** (`STUDI.md` §gnome §13, M9).  Due fotogrammi neri hanno PSNR **infinito**:
 il metro darebbe verde pieno su un desktop che non c'e'.  ⇒ **M-V viene
 prima di tutti gli altri, ed e' una porta: senza scena viva non si misura.**
 

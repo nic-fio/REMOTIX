@@ -11,7 +11,7 @@
 puntarlo sull'incognita.  Altrimenti un esito negativo e' ambiguo fra
 "l'incognita non funziona" e "il banco non funzionava".»*
 
-E il rovescio, che e' quello che qui costa di piu' (`web.md` §6.3, controllo
+E il rovescio, che e' quello che qui costa di piu' (`STUDI.md` §web §6.3, controllo
 **P3**): *«un rilevatore che dice sempre si' misura zero ed e' felice a
 torto»*.  ⇒ ogni controllo positivo qui dentro ha il suo gemello negativo, e
 un controllo positivo senza gemello NON conta.

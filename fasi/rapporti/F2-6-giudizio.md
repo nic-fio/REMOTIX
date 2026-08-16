@@ -381,8 +381,8 @@ piano cita senza numero, ne ha **1545**.
 | `LEZIONI.md` §1.9 | zero ≠ fallimento: **quattro** stati d'uscita, e la distinzione fra scena morta a monte e a valle |
 | `LEZIONI.md` §1.2 | il banco si certifica prima di essere creduto: 12 guasti su 12, **nello stesso giro** in cui è stato scritto |
 | `LEZIONI.md` §1.1 · `CODER.md` §3.2 | la scena si dichiara **e si muove**: senza il rumore seminato sul giro, M6 non esiste |
-| `PIANO.md` fase 2 · `gnome.md` §13 M9 | la sessione **viva, completa e nera**: due neri hanno PSNR **infinito**, e senza M-V il metro darebbe verde pieno su un desktop che non c'è |
-| `web.md` §4.1 · S2 §4.3 | cinque «sì» di fila da un decodificatore software puro |
+| `PIANO.md` fase 2 · `STUDI.md` §gnome §13 M9 | la sessione **viva, completa e nera**: due neri hanno PSNR **infinito**, e senza M-V il metro darebbe verde pieno su un desktop che non c'è |
+| `STUDI.md` §web §4.1 · S2 §4.3 | cinque «sì» di fila da un decodificatore software puro |
 
 ---
 

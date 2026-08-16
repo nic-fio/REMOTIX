@@ -11,7 +11,7 @@ intero. ⛔ **Nessun rilievo di R11 è riportato qui come nuovo**: dove R11 comp
 verificato **dove la cura è arrivata e dove no**. Il §A dice quali cure ho trovato complete.
 
 ⚠ **Il perimetro, dichiarato prima dei rilievi.** Bersaglio: `README.md`, `SPECIFICHE.md`, `RCP.md`,
-`DECISIONI.md`, `PIANO.md`, `LEZIONI.md`, `CODER.md`, `REVIEWER.md`, `web.md`,
+`DECISIONI.md`, `PIANO.md`, `LEZIONI.md`, `CODER.md`, `REVIEWER.md`, `STUDI.md` §web,
 `fasi/01-filo-nudo.md`, contro l'albero **come sta adesso** — cioè con `src/` presente, il ban in
 `banchi/rcp/rcp.c`, i banchi `01-b6/b8/b9/b12/b13/c2/s*` e `web/rapporti/S-esiti-sonda.md`.
 
@@ -47,7 +47,7 @@ COME SI DIMOSTRA:  fasi/01-filo-nudo.md:550, che apre «Che cosa è stato svilup
                    `SPECIFICHE.md` §1 alla FASE 1: la stretta di mano di RCP su
                    WebTransport, dai due lati, e la pagina servita dal server stesso».
                    ⛔ `grep -n 'src/' README.md SPECIFICHE.md RCP.md DECISIONI.md
-                   PIANO.md LEZIONI.md CODER.md web.md fasi/01-filo-nudo.md` non
+                   PIANO.md LEZIONI.md CODER.md STUDI.md §web fasi/01-filo-nudo.md` non
                    restituisce **una sola** riga che nomini questa cartella: le sole
                    occorrenze sono `v1/remotix-c/src/…`, `quiche/src/…`,
                    `/media/REMOTIX/src/…` e `src/sessione.c` di v1.  `[M]`
@@ -385,16 +385,16 @@ MARCA:             [R]
 
 ---
 
-## R12C.10 — «Le etichette `S1a…S7` sono nate in `web.md` §7»: S5, S6 e S7 **non compaiono in `web.md`**, in nessuna riga
+## R12C.10 — «Le etichette `S1a…S7` sono nate in `STUDI.md` §web §7»: S5, S6 e S7 **non compaiono in `STUDI.md` §web**, in nessuna riga
 
 ```
 DOVE:              fasi/01-filo-nudo.md righe 162-165
-COSA CONTRADDICE:  web.md §7 (righe 379-392), e web.md per intero
+COSA CONTRADDICE:  STUDI.md §web §7 (righe 379-392), e STUDI.md §web per intero
 COME SI DIMOSTRA:  fasi/01-filo-nudo.md:162-165 — «⭐ **E ogni riga porta il rimando puntuale
                    al rapporto dove vive la procedura**: le etichette `S1a…S7` **sono nate in
-                   `web.md` §7** e **non compaiono in nessuno dei quattro rapporti**».
+                   `STUDI.md` §web §7** e **non compaiono in nessuno dei quattro rapporti**».
                    ⛔ `grep -n '\bS5\b\|\bS6\b\|\bS7\b' web.md` → **nessuna riga** `[M]`.
-                   web.md §7 «Il piano delle misure» (righe 384-390) elenca **sei** voci:
+                   STUDI.md §web §7 «Il piano delle misure» (righe 384-390) elenca **sei** voci:
                    S1a, S1b, S2, S3a, S3b, S4.  S5, S6 e S7 non ci sono, e non sono da
                    nessun'altra parte di quel documento.
                    ⛔ E la frase che sbaglia è **quella che stabilisce la convenzione dei
@@ -555,16 +555,16 @@ MARCA:             [R]
 ## R12C.15 — `web/rapporti/S-esiti-sonda.md` è l'unico posto dove vivono le misure della sonda, e nessun documento lo nomina
 
 ```
-DOVE:              README.md riga 291 e riga 351; web.md riga 23; fasi/01-filo-nudo.md
+DOVE:              README.md riga 291 e riga 351; STUDI.md §web riga 23; fasi/01-filo-nudo.md
                    righe 593-605
 COSA CONTRADDICE:  l'esistenza di web/rapporti/S-esiti-sonda.md (238 righe, notte del
                    10 agosto), e README.md riga 392 («quando una misura contraddice un
                    documento, lo si aggiorna nello stesso momento, con la data e la fonte»)
 COME SI DIMOSTRA:  `grep -rn 'S-esiti' --include=*.md .` → **nessuna riga fuori dal file
                    stesso** `[M]`.
-                   README.md:291 — «📖 **il sesto studio** | `web.md`, con **quattro
+                   README.md:291 — «📖 **il sesto studio** | `STUDI.md` §web, con **quattro
                    rapporti** in `web/rapporti/`»; README.md:351 — «con i **quattro** rapporti
-                   di dettaglio in `web/rapporti/`»; web.md:23 — «Il dettaglio sta nei
+                   di dettaglio in `web/rapporti/`»; STUDI.md §web:23 — «Il dettaglio sta nei
                    **quattro rapporti** in `web/rapporti/`».  In `web/rapporti/` ci sono
                    adesso **sette** file: S1, S2, S3, S4, **S-esiti-sonda**, R1, R2.
                    ⚠ Non contesto il «quattro» — sono i rapporti degli studi, ed è un
@@ -660,7 +660,7 @@ prossimo di rifare la stessa caccia.*
 
 | Che cosa ho provato | Che cosa ho trovato |
 |---|---|
-| **i rimandi `<file>.md §<n>`, tutti e dieci i documenti, meccanicamente** | uno script che estrae ogni `<file>.md §<n>` e lo confronta con le intestazioni del bersaglio dà **undici** candidati, e **nove sono falsi positivi**: intervalli (`§2.2-2.3`, `§5-bis.1-2`, `§5-bis.6-7`), voci di elenco numerato dentro una sezione (`LEZIONI.md` §9.8, §0.5, §0.3 — esistono come punti 8, 5 e 3), `kde.md` §10.2-10.3. I due che restano sono `RCP.md §0` citato da `DECISIONI.md`:262 e :2374 — e **§0 adesso esiste** (R11.18 curato, `RCP.md`:6): non compare nel `grep -n '^#'` solo perché l'intestazione sta dentro una citazione (`> ## 0.`). ⚠ **Nessun rimando fra documenti è rotto.** I due che segnalo (R12C.9, R12C.10) non sono di questa forma: puntano a un `§` che esiste e non contiene la cosa |
+| **i rimandi `<file>.md §<n>`, tutti e dieci i documenti, meccanicamente** | uno script che estrae ogni `<file>.md §<n>` e lo confronta con le intestazioni del bersaglio dà **undici** candidati, e **nove sono falsi positivi**: intervalli (`§2.2-2.3`, `§5-bis.1-2`, `§5-bis.6-7`), voci di elenco numerato dentro una sezione (`LEZIONI.md` §9.8, §0.5, §0.3 — esistono come punti 8, 5 e 3), `STUDI.md` §kde §10.2-10.3. I due che restano sono `RCP.md §0` citato da `DECISIONI.md`:262 e :2374 — e **§0 adesso esiste** (R11.18 curato, `RCP.md`:6): non compare nel `grep -n '^#'` solo perché l'intestazione sta dentro una citazione (`> ## 0.`). ⚠ **Nessun rimando fra documenti è rotto.** I due che segnalo (R12C.9, R12C.10) non sono di questa forma: puntano a un `§` che esiste e non contiene la cosa |
 | **le diciannove `[R]` e le cinque `[?]` di R11, una per una** | ⭐ **curate**: R11.1 (il 482/333 è diventato 553/373/134/46 con la scomposizione che torna, e i 972/618 sono dichiarati un'altra cosa) · R11.2 (§9 manda a §2.2, e il riquadro racconta l'errore) · R11.3 (il terzo giro rifatto, e la `[?]` sull'impronta è dichiarata aperta in tre posti) · R11.4 (B11 13 su 13 recepito) · R11.5 (le sei proprietà: `DECISIONI.md`:2023 dice «non restano `[?]`») · R11.6 (la configurazione non è più presentata come misura) · R11.7 (il paragrafo su `--togli` riscritto, con quel che resta vero) · R11.8 (`CONNECTION_CLOSE` sparito da §4.4, §8.1 e `DECISIONI.md`:247) · R11.9 (§2.5 e §5: «stream 0» è diventato un riquadro storico) · R11.10 (§4.4-bis: il rifiuto del bannato aspetta anch'esso il secondo, con il riquadro che racconta la ricaduta) · R11.11 (§5.5 ha l'eccezione del cursore nascosto, e `DECISIONI.md` riga 17 ha l'altezza) · R11.12 (i 5 ms del PCM in `DECISIONI.md` riga 15) · R11.13 (riga 26 e «quattro tipi») · R11.14 (la rotella di v1) · R11.15 (§7.5 è 🔸 in tutt'e tre i posti, con `DECISIONI.md` §7.16 aperta) · R11.16 (la riga «vale su tutti e tre i motori» è sparita) · R11.17 (le tre righe di B3 hanno la data — ⚠ ma vedi R12C.14) · R11.18 (§0 esiste, `SPECIFICHE.md §2.3` è diventato «§2 punto 3») · R11.19 (il README distingue i 38 `[R]` dalle 6 `[?]`) · R11.20 (i due conteggi hanno il denominatore scritto) · R11.21 (⚠ chiuso e riaperto più grande, R12C.13) · R11.22, R11.23, R11.15 (portate in `DECISIONI.md` §7.14, §7.15, §7.16, con le due letture, il byte che cambia e il caso concreto) · R11.24 (il README dichiara il motore solo). **Non ho trovato una cura scritta e falsa** |
 | **i numeri che compaiono in più documenti** | **tornano tutti**: 553/373/134/46 (e 373+134+46 = 553) in `README`:28, `README`:164 e `01-filo-nudo`:644 · 456/329 come misura delle 08:00 in tutt'e tre · 972/618 sempre dichiarati «i due innesti insieme» · **2636 ms su 42** in `README`:87, `RCP`:699, `01-filo-nudo`:463 e :663, `DECISIONI`:247 · **1074-1085 ms** in `README`:34 e `01-filo-nudo`:651 · **972 byte** del PCM in `RCP`:923 e `01-filo-nudo`:602 e :280. ⛔ **Non ho trovato un numero con due valori** |
 | **i conteggi dichiarati** | tornano: `29 + 17 = 46` (`grep -cE '^## R1\.[0-9]+'` → 29, `grep -cE '^### '` → 17) · `28 + 16 = 44` per R3 e R4 · le **tredici** trappole del README (le ho contate: `grep -q` · `\| tail` *(rifatto)* · due percorsi in una stringa · `pkill -f` *(rifatto)* · porte di ieri · `>/dev/null` sulla password · `setsid` · `kill -0` · impronta tagliata · profilo mancante · `tail -60` · `respinto-poi-congedo` · il buffer di Python = 13, con 2 rifatte = **15 occorrenze**, e il denominatore è dichiarato) · le **ventisei** righe di `DECISIONI.md` §1.5 con la 8 caduta = **venticinque** in vigore, e il documento dichiara che quel ventisei non è il ventisei dei messaggi · **26 su 26** corpi di messaggio |

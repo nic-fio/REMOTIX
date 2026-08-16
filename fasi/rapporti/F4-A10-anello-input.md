@@ -118,7 +118,7 @@ scarto **0,00 ms**:
 
 | | | |
 |---|---|---|
-| in **USCITA** | `[?]` 16-40 ms | disegno finito → pixel acceso (`web.md` §6.2). ⛔ **non su Xvfb**, dove non esiste affatto |
+| in **USCITA** | `[?]` 16-40 ms | disegno finito → pixel acceso (`STUDI.md` §web §6.2). ⛔ **non su Xvfb**, dove non esiste affatto |
 | ⭐ in **INGRESSO** | `[?]` 4-12 ms | mano → `event.timeStamp`: dispositivo, nucleo e compositore **del client**. ⛔ **Nessuno lo aveva ancora nominato** |
 
 Sono in una funzione sola (`con_pezzi_ciechi`), così **non si può stampare un numero senza**.

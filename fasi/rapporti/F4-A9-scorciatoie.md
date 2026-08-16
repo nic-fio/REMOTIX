@@ -140,7 +140,7 @@ l'utente non capirebbe mai da solo, perché la sessione remota **riceve davvero*
 
 > ### ⛔ LA DECISIONE: i bottoni a schermo, e QUANTI
 >
-> `web.md` O7 dice che il bottone `Ctrl+Alt+Canc` è **un requisito, non un ripiego di fortuna**, e
+> `STUDI.md` §web O7 dice che il bottone `Ctrl+Alt+Canc` è **un requisito, non un ripiego di fortuna**, e
 > l'ho implementato. ⚠ Ma la misura dice che **le combinazioni irrecuperabili non sono una: sono
 > sei**, e sono tutte del **compositore del client** — `Ctrl+Alt+Canc`, `Super`, `Super+D`,
 > `Alt+Tab`, `Alt+F2`, `Alt+F4`.
@@ -386,7 +386,7 @@ strumento **non c'è**, e le righe di Firefox stanno su un solo strumento. ⚠ �
 
 ## 5. Le righe da riscrivere, col numero
 
-⛔ **Non le ho toccate io**: `SPECIFICHE.md` e `web.md` sono del deposito e le riscrive il
+⛔ **Non le ho toccate io**: `SPECIFICHE.md` e `STUDI.md` §web sono del deposito e le riscrive il
 coordinatore a codice fermo. Qui c'è la riga esatta, che cosa dice, e che cosa dovrebbe dire.
 
 ### 5.1 `SPECIFICHE.md` §7.3-bis
@@ -402,7 +402,7 @@ coordinatore a codice fermo. Qui c'è la riga esatta, che cosa dice, e che cosa 
 | **624-628** | ⚠ le due trappole della lock *(O10)* | ⭐ **CONFERMATE tutt'e due, `[M]`**, e la prima con il numero: entrato con `F11`, `lock()` **non solleva errore** e il palco resta quello senza lock — **18 riservate contro 0** |
 | **630-631** | `[?]` Keyboard Lock su **DeX**, PWA su **Chrome per Android** | ⛔ **Restano `[?]` tutt'e due** — non ho né telefono né DeX. ⚠ **La seconda NON va chiusa con la mia misura `--app`**: una finestra d'applicazione su Linux non è una PWA su Chrome per Android. Lo strumento che le chiude è in §4.3 |
 
-### 5.2 `web.md`
+### 5.2 `STUDI.md` §web
 
 | riga | dice adesso | ⇒ |
 |---|---|---|

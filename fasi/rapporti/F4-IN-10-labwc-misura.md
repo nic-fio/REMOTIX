@@ -114,7 +114,7 @@ global: output_manager v4 · screencopy v3
 ```
 
 `[R]` labwc lo crea in `reference-xfce/labwc/src/server.c` e non lo filtra per i client del
-socket normale (`server.c:344`, `return true` senza security context — già in `xfce.md` §3).
+socket normale (`server.c:344`, `return true` senza security context — già in `STUDI.md` §xfce §3).
 ⚠ **Nota di sicurezza che non era nel mandato**: un client qualunque della sessione può
 ridimensionare il desktop — e, come si vede al §4, **ucciderlo**.
 
@@ -428,8 +428,8 @@ non trova backend e **muore con `exit(1)`** (`[R]`
 **voce di menu, non un autostart**. E ⭐ l'osservatore udev che rilancerebbe
 `lxqt-config-monitor -l` a ogni cambio di display è **racchiuso in `if (isX11)`** — `[R]`
 `reference-lxqt/lxqt-session/lxqt-session/src/sessionapplication.cpp:88-125`.
-⚠ **Questo precisa `lxqt.md` riga 146**: il «secondo comandante della risoluzione» lì
-descritto esiste **solo nello scenario di ripiego a `xcb`**, che `lxqt.md` §3.2 già impone di
+⚠ **Questo precisa `STUDI.md` §lxqt riga 146**: il «secondo comandante della risoluzione» lì
+descritto esiste **solo nello scenario di ripiego a `xcb`**, che `STUDI.md` §lxqt §3.2 già impone di
 evitare. Nella sessione Wayland fatta bene **non esiste**.
 
 ⚠ Un solo residuo su LXQt, innocuo: `[R]`
@@ -445,7 +445,7 @@ Né `xfce4-session` né `lxqt-session` tirano dentro labwc: è **una scelta manu
 tutti e due i casi. `ls /usr/share/wayland-sessions/` → `labwc.desktop` c'è; `[✗]`
 `apt-cache policy lxqt-wayland-session` → **uscita vuota** (controllo positivo: `lxqt-panel`
 → `2.1.4-1`). ⇒ **XFCE-Wayland ha una sessione pacchettizzata, LXQt-su-labwc va composta a
-mano.** Conferma `lxqt.md` §1.
+mano.** Conferma `STUDI.md` §lxqt §1.
 
 ---
 

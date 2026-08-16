@@ -129,7 +129,7 @@
  *
  * ⛔ E il carico utile porta un CRC-16, che e' quel che rende dicibile «la
  *   marca NON c'e'».  Un rilevatore che dice sempre si' misura zero ed e'
- *   felice a torto (`web.md` §6.3, controllo P3).
+ *   felice a torto (`STUDI.md` §web §6.3, controllo P3).
  *
  *   sync      8 bit   0xB2, fisso
  *   versione  8 bit   0x01
@@ -143,7 +143,7 @@
  * ⚠ L'istante e' quello in cui il fotogramma e' stato COMPOSTO, non quello in
  *   cui e' comparso sullo schermo: fra i due c'e' il commit, il compositore e
  *   il pannello.  Chi misura il ritardo usa questo come istante di partenza e
- *   ci somma il pezzo cieco dichiarato (`web.md` §6.3).  ⛔ Chiamarlo «istante
+ *   ci somma il pezzo cieco dichiarato (`STUDI.md` §web §6.3).  ⛔ Chiamarlo «istante
  *   in cui il pixel si e' acceso» sarebbe la forma E1.
  *
  * ---------------------------------------------------------------------------

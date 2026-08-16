@@ -23,10 +23,10 @@
  *     un compositore che questa fase non serve);
  *   · `scrivi_tema_cursore()` + `scrivi_cursore_vuoto()` + `cartella_cursori()`
  *     — 120 righe di formato Xcursor a mano: e' la cura del doppio puntatore di
- *     KWin, e su GNOME **non serve** (`gnome.md` §5.2: la' il cursore non sta
+ *     KWin, e su GNOME **non serve** (`STUDI.md` §gnome §5.2: la' il cursore non sta
  *     dentro l'immagine catturata);
  *   · `scrivi_regole_menu()` + `cartella_regole()` — il KIOSK di KDE.  Su GNOME
- *     l'equivalente e' il **lockdown di dconf** (`gnome.md` §5.1), che e' un
+ *     l'equivalente e' il **lockdown di dconf** (`STUDI.md` §gnome §5.1), che e' un
  *     lavoro suo e non di questo anello;
  *   · `ksmserverrc`, `XDG_MENU_PREFIX`, `XCURSOR_*`, `XDG_CONFIG_DIRS` — tutte
  *     leve di Plasma;
@@ -273,7 +273,7 @@ bool sessione_viva(void)
 	 * ⛔ NON BASTA CHE IL NOME SIA OCCUPATO, per due ragioni diverse e tutte e
 	 *    due pagate: il nome di Mutter e' ATTIVABILE e chiederlo lo fa nascere;
 	 *    e `org.gnome.Shell` la Shell **lo prende prima di
-	 *    `meta_context_start()`** (`gnome.md` §3.2), quindi non e' un indicatore
+	 *    `meta_context_start()`** (`STUDI.md` §gnome §3.2), quindi non e' un indicatore
 	 *    di prontezza.  Si chiama un metodo vero e si guarda che la risposta
 	 *    ARRIVI — senza interpretarla: qui interessa una cosa sola.
 	 */
@@ -344,7 +344,7 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 	if (quanti == 0) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione «viva, "
-		              "completa e NERA» di gnome.md §3.1 — non c'e' niente da catturare");
+		              "completa e NERA» di STUDI.md §gnome §3.1 — non c'e' niente da catturare");
 		return SESSIONE_NERA;
 	}
 
@@ -600,7 +600,7 @@ static char **componi_ambiente(void)
 	 */
 	g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_TYPE=wayland"));
 	/*
-	 * ⛔ `SHELL` VUOTA, ed e' la trappola di `gnome.md` §3.1: `gnome-session.in:3-14`
+	 * ⛔ `SHELL` VUOTA, ed e' la trappola di `STUDI.md` §gnome §3.1: `gnome-session.in:3-14`
 	 *    si ri-esegue dentro una shell di LOGIN se `$SHELL` non e' vuota e sta in
 	 *    `/etc/shells` — cioe' si riporta dentro `~/.profile`, che e' `CODER.md`
 	 *    §4.5 in agguato dopo che l'ambiente e' stato composto con cura.
@@ -614,7 +614,7 @@ static char **componi_ambiente(void)
 	 */
 	g_ptr_array_add(ambiente, g_strdup("SHELL="));
 	/*
-	 * ⚠ E `XDG_SESSION_ID` NON si passa, di proposito.  `gnome.md` §3.1 avverte
+	 * ⚠ E `XDG_SESSION_ID` NON si passa, di proposito.  `STUDI.md` §gnome §3.1 avverte
 	 *   che senza di essa Mutter puo' agganciare la sessione logind sbagliata —
 	 *   ma quella che erediteremmo noi e' la sessione di CHI CI HA AVVIATI (un
 	 *   ssh, cioe' `tty`), e regalargliela sarebbe mandarlo sulla sessione
@@ -764,7 +764,7 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	 *   **nera** (zero monitor).  Per una sessione **solo remota** va bene —
 	 *   nessuno la guarda — ⛔ ma non va bene per una sessione che deve vivere
 	 *   senza nessuno che la catturi, ed e' per questo che `PIANO.md:399` e
-	 *   `gnome.md` §108 («`--virtual-monitor` non e' opzionale») vanno
+	 *   `STUDI.md` §gnome §108 («`--virtual-monitor` non e' opzionale») vanno
 	 *   riscritti: vedi `fasi/rapporti/F4-A1-desktop-vero.md`.
 	 *
 	 * ⚠ `larghezza` e `altezza` non entrano piu' in questa riga: adesso la

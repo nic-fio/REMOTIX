@@ -1682,7 +1682,7 @@ guasto(
     #    · la riga dell'elenco finale — ha i codici ANSI in mezzo.
     '{"lette_a_torto": [{"cella"',
     "leggero",
-    "web.md §6.3 controllo P3 · LEZIONI.md §1.2 e §1.9 · "
+    "STUDI.md §web §6.3 controllo P3 · LEZIONI.md §1.2 e §1.9 · "
     "fasi/rapporti/F2-6-giudizio.md (il «giro» di M8)",
     nota="⛔ **03-marca non giudica il prodotto: e' lo STRUMENTO DI MISURA**, e "
          "sopra ci sta il numero della fase.  Ci si appoggiano `03-b17` e "
@@ -1813,7 +1813,7 @@ guasto(
     #    **0 nel sano, 1 nel guasto, 0 nel risanato**.
     "chiesto maxFramerate 120, FISSATO 60",
     "ricostruisce",
-    "fasi/03-movimento.md step 1 · gnome.md §8.2 e §13 (M3) · "
+    "fasi/03-movimento.md step 1 · STUDI.md §gnome §8.2 e §13 (M3) · "
     "LEZIONI.md §1.1, §1.2, §1.8",
     nota="⭐⭐⭐ **IL BANCO E' STATO CURATO E POI CERTIFICATO — 13 agosto 2026 "
          "sera.**  Fino a stasera questa nota diceva «NON CERTIFICABILE: "
@@ -2014,7 +2014,7 @@ guasto(
     #    criterio che R12-A.3 pretende, cioe' che il SANO non dica gia' la marca.
     "rossi nessuno (attesi ['P3'])",
     "leggero",
-    "fasi/03-movimento.md step 5 · web.md §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
+    "fasi/03-movimento.md step 5 · STUDI.md §web §6.2 e §6.3 · SPECIFICHE.md §3.2 · "
     "RCP.md §6.2 · LEZIONI.md §1.2, §1.13",
     nota="⭐⭐⭐ **CERTIFICATO IL 13 AGOSTO 2026 SERA — 38/38 → 37/38 → 38/38, "
          "e la marca MISURATA.**  ⛔ E la nota che c'era qui prima diceva il "
@@ -2100,7 +2100,7 @@ guasto(
     #    e' dentro anche li'».
     "",
     "leggero",
-    "fasi/03-movimento.md §7 e §8 · DECISIONI.md §2.8 · web.md §6.1 · "
+    "fasi/03-movimento.md §7 e §8 · DECISIONI.md §2.8 · STUDI.md §web §6.1 · "
     "LEZIONI.md §6.2",
     atteso_sano=1,
     nota="⛔ `atteso_sano = 1`, E NON E' UN ATTESO ALLARGATO: e' MISURATO.  "

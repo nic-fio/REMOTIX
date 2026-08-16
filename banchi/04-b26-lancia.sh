@@ -113,7 +113,7 @@ terreno()
 	fi
 
 	# ⛔ Zero monitor E' il risultato atteso qui, e va DETTO: e' la sessione
-	#    «viva, completa e nera» di `gnome.md` §3.1.
+	#    «viva, completa e nera» di `STUDI.md` §gnome §3.1.
 	local stato
 	stato=$(sudo -u "$UTENTE" env XDG_RUNTIME_DIR="$XDG" \
 		DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG/bus" \

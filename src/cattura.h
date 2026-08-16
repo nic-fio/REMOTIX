@@ -70,7 +70,7 @@
  * **intere** nel fotogramma di regime.  ⇒ **il buffer e' intero anche quando il
  * danno e' parziale.**
  *
- * `[R]` `gnome.md` §8.1, Mutter riletto riga per riga, lo diceva gia': blit
+ * `[R]` `STUDI.md` §gnome §8.1, Mutter riletto riga per riga, lo diceva gia': blit
  * dell'INTERO framebuffer, stack di clip svuotato deliberatamente, vista
  * virtuale come `CoglOffscreen` persistente.  Le due strade concordano.
  *
@@ -135,7 +135,7 @@ typedef enum
  * Il colore che si CHIEDE.
  *
  * ⛔ E `CATTURA_COLORE_10BIT` non e' una speranza: e' **la domanda**, fatta al
- *    produttore invece che dedotta.  `gnome.md` §8.3 `[R]`, Mutter 48.7 riletto
+ *    produttore invece che dedotta.  `STUDI.md` §gnome §8.3 `[R]`, Mutter 48.7 riletto
  *    riga per riga (`meta-screen-cast-stream-src.c`, `supported_formats[]`):
  *    **due sole voci, BGRx e BGRA**, tutt'e due a 8 bit per canale.  ⇒ Da questa
  *    sorgente dieci bit veri non escono.
@@ -351,7 +351,7 @@ typedef enum
 {
 	CATTURA_RITELA_CHIESTA = 0, /* la richiesta e' partita: aspetta il fotogramma */
 	/* ⭐ La misura chiesta e' gia' quella in vigore: NON si rinegozia.
-	 * ⛔ La guardia e' obbligatoria — `kde.md` §8.2-bis: senza,
+	 * ⛔ La guardia e' obbligatoria — `STUDI.md` §kde §8.2-bis: senza,
 	 *    «la rinegoziazione si morde la coda». */
 	CATTURA_RITELA_GIA_COSI,
 	CATTURA_RITELA_GUASTO /* niente flusso, flusso morto, o misura vuota */
@@ -476,7 +476,7 @@ typedef struct
 	/* ⭐ Il canale del cursore.  ⛔ I due primi sono DUE e non uno, ed e' la
 	 *    stessa regola dello zero e del fallimento: «il metadato non c'era» e
 	 *    «il metadato c'era» sono i due fatti che distinguono un puntatore
-	 *    assente da un canale senza sorgente (`gnome.md` §1.1 punto 6). */
+	 *    assente da un canale senza sorgente (`STUDI.md` §gnome §1.1 punto 6). */
 	guint64 cursore_assente;
 	guint64 cursore_metadati;
 	guint64 cursore_malformati;

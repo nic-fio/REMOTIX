@@ -35,7 +35,7 @@
 #
 # ⛔⭐ PERCHE' IL BROWSER APRE IL PONTE E NON IL PRODOTTO
 #
-#    Il controllo P1 di `web.md` §6.3 chiede che «il server ritardi di N ms
+#    Il controllo P1 di `STUDI.md` §web §6.3 chiede che «il server ritardi di N ms
 #    noti e la mediana salga di esattamente N».  ⛔ Il prodotto **non sa
 #    farlo**: `RCP.md` §7.5 prevede `BANCO_MARCA(ritardo_ms)`, ma
 #    `src/rcp.c:53` ha `BANCO_ACCESO 0` e il ramo ACCETTATA

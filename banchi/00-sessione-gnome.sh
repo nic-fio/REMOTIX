@@ -79,7 +79,7 @@ CONF
 # ⛔ SHELL VUOTA, e non e' pignoleria: `gnome-session.in:3-14` si RI-ESEGUE
 #    dentro una shell di login se `$SHELL` sta in /etc/shells — cioe' si
 #    riporta dentro `~/.profile` e tutto quel che c'e' scritto li'.  E' la
-#    trappola di `LEZIONI.md` §5 e sta in `gnome.md` §3.1.
+#    trappola di `LEZIONI.md` §5 e sta in `STUDI.md` §gnome §3.1.
 #
 # ⛔ XDG_SESSION_TYPE=wayland SERVE: l'unita' della Shell porta
 #    `ConditionEnvironment=XDG_SESSION_TYPE=wayland`, e senza il compositore non
@@ -124,7 +124,7 @@ viva()
 #    Provato il 9 agosto 2026: fermare `gnome-session.target` lascia
 #    `gnome-session-manager@gnome.service` ATTIVA — `gnome-session` non esce dopo
 #    aver avviato il target, apre un fifo e dorme, uscendo a sessione smontata
-#    (`gnome.md` §3.2).  `Logout(1)` non basta: mostra il dialogo se esiste un
+#    (`STUDI.md` §gnome §3.2).  `Logout(1)` non basta: mostra il dialogo se esiste un
 #    inibitore, e in una sessione non presidiata non lo vede nessuno.
 ferma_e_aspetta()
 {
@@ -240,7 +240,7 @@ headless()
 
 	echo "NO: ne' chiesto ne' accidentale."
 	echo "    Con un seat assegnato il blocco schermo REVOCA cattura e input"
-	echo "    (gnome.md §4, DECISIONI.md §4.3-bis).  Le sessioni logind:"
+	echo "    (STUDI.md §gnome §4, DECISIONI.md §4.3-bis).  Le sessioni logind:"
 	loginctl list-sessions --no-legend | sed 's/^/    /'
 	return 1
 }

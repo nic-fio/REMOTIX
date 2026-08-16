@@ -134,7 +134,7 @@ risposta**. (`DECISIONI.md` §2.4)
 
 *13 agosto 2026, fase 3 step 5. Qui stava scritto, con la marca `[?]`: «il traguardo dei 40 ms
 probabilmente non è raggiungibile su GNOME, per lo stesso muro dei 60 fotogrammi: Mutter ne
-consegna 37 al secondo. Stima, non misura», e accanto il candidato di cura letto in `gnome.md`
+consegna 37 al secondo. Stima, non misura», e accanto il candidato di cura letto in `STUDI.md` §gnome
 §8.2. ⛔ **La misura adesso c'è, e smentisce la causa.***
 
 `[M]` **ritardo cattura → vetro: mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99 138,1,
@@ -159,7 +159,7 @@ tratto cattura→filo. A Mutter resta il **22 %**, che è un intervallo di quadr
 prove che lo dicono: la scena disegna **59,98/s con 0 attese**; il figlio del prodotto consegna
 **23,93/s con ZERO attese a vuoto**, cioè **non aspetta MAI Mutter**; e il codificatore è **in
 software**, dichiarato dal prodotto stesso (libsvtav1 / libx265). ⇒ La leva non è il compositore:
-è **la codifica** (`gnome.md` §8.2 e §13).
+è **la codifica** (`STUDI.md` §gnome §8.2 e §13).
 
 ⛔ **E il muro dei 37 fotogrammi non si riproduce.** Con monitor a **120** e freno **90** si
 ottengono `[M]` **61,4 fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**.
@@ -174,14 +174,14 @@ produzione** (`DECISIONI.md` §2.5).
 > sole celle, tutt'e due con `scena_sul_mio_monitor: false`, e il banco stesso stampa «la legge NON
 > regge su 0 punti su 0». **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3.
 > ⇒ Il **61,4 resta `[M]`** (cella D di `03-b14-esiti.jsonl`, pulita); il **perché è `[R]`**.
-> Dettaglio in `gnome.md` §8.2.*
+> Dettaglio in `STUDI.md` §gnome §8.2.*
 
 ⛔ **Dove finisce la misura, ed è la parte scomoda**: la misura si chiude al **disegno finito**,
 non al richiamo del decodificatore. Sono **11 ms su un tetto di 50** che la prima stesura si
 regalava — il numero è salito da **63,8 a 74,6** e lo si è lasciato salire (`CODER.md` §1-bis).
 
 ⚠ **E il pezzo cieco su Xvfb non esiste**: la stima 90-115 ms vale per lo schermo dell'utente, non
-per il banco (`web.md` §8).
+per il banco (`STUDI.md` §web §8).
 
 ---
 
@@ -362,7 +362,7 @@ ora non posso rientrare nella mia sessione». (`DECISIONI.md` §4.4)
 cambio di indirizzo. I 30 secondi coprono solo le interruzioni vere.
 
 ⛔ **E una cosa che il client web aggiunge, dichiarata invece che scoperta** *(9 agosto 2026,
-`web.md` §1.2 D)*: una **scheda in secondo piano viene congelata dal browser dopo circa cinque
+`STUDI.md` §web §1.2 D)*: una **scheda in secondo piano viene congelata dal browser dopo circa cinque
 minuti** `[S]`. Una scheda congelata tace, quindi **si stacca**, e la sessione resta viva ad
 aspettare — che è il comportamento giusto, ma va detto all'utente invece di sembrare un difetto.
 ⚠ L'esenzione documentata richiede un canale che WebTransport da solo non fornisce: chi volesse
@@ -682,7 +682,7 @@ lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md
 
 ### 7.3-bis Le scorciatoie che il browser si tiene — molto meno di quanto sembrava
 
-> ⛔ **Riscritta la sera del 9 agosto 2026 dalla misura S3** (`web.md` §5). Questa sezione diceva
+> ⛔ **Riscritta la sera del 9 agosto 2026 dalla misura S3** (`STUDI.md` §web §5). Questa sezione diceva
 > che la Keyboard Lock esiste *«solo su Chrome ed Edge»* e che `F11` e `Ctrl+Shift+I` sono perduti.
 > **Era sbagliata su tre punti**, e in meglio.
 
@@ -690,9 +690,9 @@ lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md
 |---|---|
 | **la leva** | ⭐ **non è più solo di Chrome**: `keyboardLock` è entrato nello standard WHATWG l'**8 maggio 2026** e l'hanno spedito Safari 26.4 e Firefox 151 `[S]`. Chrome ed Edge restano sulla forma vecchia — ⚠ **la pagina deve saperle entrambe** |
 | **quanto si perde** | ⭐ **`[M]` 14 agosto 2026 — MISURATO, ed era `[R]`.** Su **Chrome 151** la tesi regge: a schermo intero **con la Keyboard Lock** le riservate del browser passano da **8 a 0** — restano esattamente `F11` ed `Escape`. ⛔ **E su Firefox 140 ESR è FALSA, in modo che non avremmo indovinato: a schermo intero PEGGIORA** (5 → **7**), e non ha **nessuna delle due forme** della lock. ⚠ Safari **non provato**, e resta `[?]`: non si deduce dagli altri |
-| ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`web.md` §1.2 B) |
+| ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`STUDI.md` §web §1.2 B) |
 
-⛔ **Gli stati sono tre, non due**, e il secondo è il peggiore *(`web.md` §8-bis, O8)*:
+⛔ **Gli stati sono tre, non due**, e il secondo è il peggiore *(`STUDI.md` §web §8-bis, O8)*:
 
 | | |
 |---|---|
@@ -795,7 +795,7 @@ di **chi paga la banda** quando si copia una schermata da 8 MB su un collegament
 faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
 
 **Dalla parte del browser gli appunti non sono nostri**, il che tocca proprio il verso più usato —
-ma meno di quanto si temeva *(misura S3, 9 agosto 2026, `web.md` §5.3)*:
+ma meno di quanto si temeva *(misura S3, 9 agosto 2026, `STUDI.md` §web §5.3)*:
 
 | | |
 |---|---|
@@ -810,7 +810,7 @@ La regola resta quella di sempre: **si dichiara quel che non si può fare**, non
 
 ⚠ **Su tutti e tre gli stack gli appunti appartengono al compositore**, e ci sono anche senza di
 noi. Su GNOME la sessione remota non li possiede: possiede solo **la porta** per raggiungerli
-(`EnableClipboard`). *Corretto il 9 agosto 2026 da `gnome.md` §10 `[R]`; questa riga diceva il
+(`EnableClipboard`). *Corretto il 9 agosto 2026 da `STUDI.md` §gnome §10 `[R]`; questa riga diceva il
 contrario, ed è la stessa correzione di `DECISIONI.md` §5-ter.3 e `LEZIONI.md` §3 domanda 14.*
 
 ---
@@ -862,7 +862,7 @@ I desktop X11 come tipo di sessione sono fuori scope.
 > ⚠ `[R]`, **non `[M]`**: né XFCE né LXQt sono installati sulle nostre macchine. La misura che
 > chiude la domanda è se `xfsettingsd` ci spenga davvero l'output, e se un output presente
 > **prima** del suo avvio conti come «nuovo» — se non conta, la cura è l'ordine di avvio.
-| **Cinnamon** | 📖 **studiato il 9 agosto, ultimo della fila** — vedi [`cinnamon.md`](cinnamon.md) |
+| **Cinnamon** | 📖 **studiato il 9 agosto, ultimo della fila** — vedi [`STUDI.md` §cinnamon](STUDI.md#cinnamon) |
 
 ⛔ **Su Cinnamon tre cose non esistono a monte**: `RecordVirtual`, libei, e **gli appunti** — né la
 via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, e la decisione
@@ -891,7 +891,7 @@ costruttore. La scala di preferenza:
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
 
-⛔ **E con il client web l'AV1 è chiuso anche dall'altro lato** *(`web.md` §8-bis, O2)*: in
+⛔ **E con il client web l'AV1 è chiuso anche dall'altro lato** *(`STUDI.md` §web §8-bis, O2)*: in
 decodifica non porta niente che HEVC non dia già. Resta al secondo posto della scala **come porta
 aperta per l'hardware di domani**, non come strada da provare — e chi la riaprisse deve rimisurare
 entrambi i lati.
@@ -928,7 +928,7 @@ dichiara da solo.
 | **si collauda su** | ⛔ **almeno due motori diversi**, sempre. Un solo motore è un client solo, cioè il caso che questa regola vieta |
 | **si dichiara** | quali browser sono serviti, e **che cosa si perde su ciascuno** — le scorciatoie (§7.3-bis), gli appunti (§9), il certificato su Safari (`DECISIONI.md` §1.7) |
 
-⛔ **E come la pagina viene servita è un vincolo di prodotto, non un dettaglio** *(`web.md` §8-bis,
+⛔ **E come la pagina viene servita è un vincolo di prodotto, non un dettaglio** *(`STUDI.md` §web §8-bis,
 O11)*: va consegnata **isolata fra origini** — le due intestazioni che il browser pretende per dare
 alla pagina i cronometri a piena risoluzione e la memoria condivisa. ⚠ Non è una taratura del banco:
 **cambia come il server serve ogni risorsa della pagina**, e deciderlo dopo significa riscrivere il

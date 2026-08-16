@@ -31,7 +31,7 @@ alla sessione remota»* — e **nessuna riga di codice la mantiene**.
 | ✅ **regola polkit `no`** su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` (e le varianti `*-multiple-sessions`, `*-ignore-inhibit`) | `[R]` `gsm-manager.c`: `CanShutdown = !lockdown && (can_stop ‖ can_restart ‖ can_suspend ‖ can_hibernate)`, e ciascuno dei quattro è vero solo se logind risponde `yes` o `challenge` (`gsm-systemd.c:698-803`). Con tutt'e quattro a `no` ⇒ `CanShutdown` falso ⇒ gnome-shell nasconde **Spegni** e **Riavvia** (`systemActions.js:340-359`), e **Sospendi** cade per conto suo (`loginManager` `CanSuspend`). ⭐ **«Esci…» resta**, perché dipende solo da `disable-log-out` |
 
 ⛔ **`no`, mai `auth_admin`**: `"challenge"` **mostra** la voce — vale su GNOME e su KDE
-(`gnome.md` §5.1, `kde.md` §1579). ⚠ E la voce **sparisce**, non si ingrigisce: `system.js:218-226`
+(`STUDI.md` §gnome §5.1, `STUDI.md` §kde §1579). ⚠ E la voce **sparisce**, non si ingrigisce: `system.js:218-226`
 lega `can-*` a `visible`.
 
 > ### ✅ E LA PORTATA È DECISA — dall'utente, il 15 agosto 2026
@@ -71,7 +71,7 @@ lega `can-*` a `visible`.
   `SERVER_IN_CHIUSURA 0x0C` — ⭐ già emesso da `main.c:850`, cura del rilievo B-7. ⇒ **questo
   percorso va provato in questa fase**: adesso è l'unico spegnimento legittimo che esista;
 - gli altri desktop arrivano con le loro fasi (KDE è la 10): la regola polkit è **la stessa per
-  tutti e quattro** — `xfce.md` §618 dice che su XFCE non esiste nessuna chiave e restano solo
+  tutti e quattro** — `STUDI.md` §xfce §618 dice che su XFCE non esiste nessuna chiave e restano solo
   polkit e logind — ⛔ ma **si verifica desktop per desktop**, quando la fase arriva.
 
 ### 1.2 ⛔⛔ Chiusura della scheda **contro** «Esci» dal menu: due esiti, e oggi uno solo esiste
@@ -133,7 +133,7 @@ lega `can-*` a `visible`.
   bottone a schermo**: la voce del menu si raggiunge col dito e basta a sé stessa. ⚠ E le due strade
   finiscono **nella stessa** `sessione_termina()`: un solo percorso di uscita, o due che divergono;
 - ⚠ **e la nostra `sessione_termina()` resta valida**: chiude con `SessionManager.Logout`, che
-  `disable-log-out` avrebbe ucciso (`gnome.md` §5.1). ⭐ Vietando quella chiave, il congedo del
+  `disable-log-out` avrebbe ucciso (`STUDI.md` §gnome §5.1). ⭐ Vietando quella chiave, il congedo del
   server e il logout dell'utente **passano dalla stessa porta**, e la porta resta aperta.
 
 ### 1.3 Il riattacco da uno schermo di misura diversa — e i compositori
@@ -176,7 +176,7 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
   l'ha chiuso l'utente senza saperlo.** Il timore era misurato: al cambio di geometria **`libei`
   distrugge e ricrea i dispositivi assoluti** (`[M]` 15 ago, *«il puntatore è stato TOLTO dal
   compositore, ricambio n. 640»*), e il puntatore al dispositivo vecchio smette di funzionare **senza
-  errore** (`gnome.md` §9) ⇒ la prova sarebbe stata **verde per costruzione**.
+  errore** (`STUDI.md` §gnome §9) ⇒ la prova sarebbe stata **verde per costruzione**.
 
   `[M]` **E il ricambio è avvenuto davvero**, al ridimensionamento verso `1240x622`:
 
@@ -1432,7 +1432,7 @@ e non cambiava niente è stato tolto, non spostato:
    **con una persona**, che entra sul desktop locale e poi tenta da remoto;
 2. ⏳ **Un banco per il puntatore dopo il ricambio dei dispositivi.** ⚠ Non è carta: al cambio di
    geometria `libei` distrugge e ricrea i dispositivi assoluti e **il puntatore vecchio smette di
-   funzionare senza errore** (`gnome.md` §9). Oggi è stato provato con le mani dell'utente e passa.
+   funzionare senza errore** (`STUDI.md` §gnome §9). Oggi è stato provato con le mani dell'utente e passa.
 
 ### ⭐ E la cura al «banco che nessuno lancia», che è la stessa obiezione
 

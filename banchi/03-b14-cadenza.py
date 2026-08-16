@@ -12,7 +12,7 @@
 ⛔ L'IPOTESI, E CHE COSA LA FAREBBE CADERE
 ===========================================================================
 
-`gnome.md` §8.2, `[R]` 9 agosto 2026: `maxFramerate` fa **due mestieri
+`STUDI.md` §gnome §8.2, `[R]` 9 agosto 2026: `maxFramerate` fa **due mestieri
 insieme** — e' il freno della cattura **ed e'** la frequenza del monitor
 virtuale (`meta-screen-cast-virtual-stream-src.c:603`, `create_virtual_monitor`
 calcola `refresh_rate` dal `max_framerate` negoziato).  Stesso numero da

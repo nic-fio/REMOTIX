@@ -40,8 +40,8 @@ alcuni punti secondo me fuori sequenza»*.
 > ⇒ **L'ordine di adesso**: 6 · 7 · 8 la copia zero · 9 la qualità · **10 il multi-tenant** ·
 > 11 KDE · 12 XFCE e LXQt · 13 il servizio.
 >
-> ⛔ **Trappola di lettura, e vale per chi cerca all'indietro**: `kde.md`, `gnome.md`, `xfce.md` e
-> `lxqt.md` dicono in testa *«per la fase 11»*, ma quella è **la fase 11 di v1** — sono studi del
+> ⛔ **Trappola di lettura, e vale per chi cerca all'indietro**: `STUDI.md` §kde, `STUDI.md` §gnome, `STUDI.md` §xfce e
+> `STUDI.md` §lxqt dicono in testa *«per la fase 11»*, ma quella è **la fase 11 di v1** — sono studi del
 > 7-8 agosto 2026, scritti prima che questo piano esistesse. Quei numeri **non sono questi numeri**,
 > e infatti non sono stati toccati.
 

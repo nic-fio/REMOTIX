@@ -179,7 +179,7 @@ tutto quel che segue.
 
 `[M]` `screen 2560×1080`, e `screen.availWidth/availHeight` **2560×1080**: il
 DeX ha dato al monitor un modo **21:9**. È lo stesso monitor che il deposito
-nomina dappertutto come schermo dell'utente — `xpra.md` riga 122 *«il suo è
+nomina dappertutto come schermo dell'utente — `STUDI.md` §xpra riga 122 *«il suo è
 **21:9** (2560×1080)»*, `README.md` righe 531 e 599, `fasi/rapporti/F4-A2` riga
 58, `fasi/rapporti/F4-A9` riga 173.
 
@@ -855,7 +855,7 @@ dpr 1 **non poteva esistere**: nasce col dpr frazionario, cioè **nasce su DeX**
 | `src/pagina.html` righe 82, 94, 1030-1031, 1152-1161, 1399-1418, 1476-1500, 2115, 2145-2154, 5301, 5834 | il codice che misura, impagina, e i due difetti di §4 | `[R]` |
 | `DECISIONI.md` §5.0-ter (righe 1803-1841) | il rilievo **S5** e la `[?]` sul DeX che §4.3 chiude | `[R]` |
 | `PIANO.md` righe 290-293 | Samsung documenta l'emulatore DeX «alla densità e risoluzione equivalenti a DeX (**160 dpi**, 1080×1920)» | `[R]` di un `[S]` |
-| `xpra.md` riga 122, `README.md` 531/599 | il monitor dell'utente è **21:9, 2560×1080** | `[R]` |
+| `STUDI.md` §xpra riga 122, `README.md` 531/599 | il monitor dell'utente è **21:9, 2560×1080** | `[R]` |
 
 ⚠ **Nessuna misura di questo rapporto è stata fatta su un DeX da me: il
 dispositivo non c'è.** Tutto quel che è `[M]` viene da misure che **l'utente** ha

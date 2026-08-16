@@ -452,7 +452,7 @@ fosse vero è un clic ricorrente, non uno solo.
 >
 > ⛔ **Messe insieme: chi ha un dominio non compra l'assenza di un avviso, compra la tastiera
 > intera.** È una differenza di **prodotto**, non di comodità, e va detta a chi installa — perché
-> nessuno la dedurrebbe da sé. *(Dettaglio in `web.md` §1.2 B.)*
+> nessuno la dedurrebbe da sé. *(Dettaglio in `STUDI.md` §web §1.2 B.)*
 
 ⛔ **Scartata: la «via Plex»** — un dominio nostro che risolve agli indirizzi privati dei server,
 cioè certificato vero e zero fatica per l'utente. Sarebbe **un servizio da tenere in piedi per
@@ -468,7 +468,7 @@ l'impronta: l'impronta si usa comunque (`RCP.md` §4.1-bis).
 
 > ⛔ *Corretto la notte del 9 agosto 2026, rilievo **R4.4** della revisione del banco della fase 1.*
 > Qui c'era scritto *«`[?]` Safari e iPhone restano il buco dichiarato: WebKit non implementa
-> `serverCertificateHashes` `[S]`»*. `web.md` §3.1 dichiarava di aver corretto **questo paragrafo**
+> `serverCertificateHashes` `[S]`»*. `STUDI.md` §web §3.1 dichiarava di aver corretto **questo paragrafo**
 > lo stesso 9 agosto — ⛔ **e la correzione non era mai arrivata qui**, né in `RCP.md` §4.1-bis.
 > Tre documenti con la stessa frase falsa, uno dei quali è l'arbitro, e un rapporto che li dava per
 > curati. È la forma della voce 6 di `fasi/00-ambiente.md`: *la lezione era già scritta, la cura è
@@ -512,12 +512,12 @@ pagina (TCP) copre anche la connessione WebTransport (UDP) allo stesso indirizzo
 
 ⛔ **Chiusa leggendo, il 9 agosto 2026, per due motori su tre: la risposta è NO.** L'eccezione non
 copre WebTransport né su Chrome né su Firefox `[R]`, per due ragioni tecniche indipendenti
-(`web.md` §3.1). ⭐ **Quindi `serverCertificateHashes` non è un ripiego: è la strada**, su tutti e
+(`STUDI.md` §web §3.1). ⭐ **Quindi `serverCertificateHashes` non è un ripiego: è la strada**, su tutti e
 tre i motori. Resta da misurare **solo Safari**, e solo per sapere se lì l'impronta si possa
 risparmiare — che è una comodità, non una piattaforma.
 
 > ⚠ *Riscritta la notte del 9 agosto 2026, rilievo **R4.4**. La domanda era ancora aperta in questa
-> pagina mentre `web.md` §3.1 l'aveva già chiusa con due `[R]` letti nel codice: tenerla aperta
+> pagina mentre `STUDI.md` §web §3.1 l'aveva già chiusa con due `[R]` letti nel codice: tenerla aperta
 > faceva **pianificare una misura già fatta**, che è la forma del rilievo R1.25 di `RCP.md`.*
 
 > ## ⏳⏳ Il debito di sicurezza, dichiarato dall'utente e messo in evidenza
@@ -1193,7 +1193,7 @@ decimi di quel che gli si chiede (`LEZIONI.md` §3, domanda 6). Il tetto del rit
 del ritmo, **in buona parte lo pone il compositore**.
 
 > ⭐ **E il «nessuna leva nostra lo sposta» che questa voce diceva è stato tolto il 9 agosto
-> 2026.** `gnome.md` §8.2 ha trovato la causa dei sei decimi `[R]`: `maxFramerate` fa **due
+> 2026.** `STUDI.md` §gnome §8.2 ha trovato la causa dei sei decimi `[R]`: `maxFramerate` fa **due
 > mestieri insieme** — freno della cattura e frequenza del monitor virtuale — e due orologi allo
 > stesso numero battono fra loro. Da cui un candidato che costa **tre celle e zero righe di
 > prodotto**: negoziare alto e poi rinegoziare **la sola cadenza**, a monitor fermo.
@@ -1250,7 +1250,7 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 > > regge su **0 punti su 0**». **Corretto il 13 agosto 2026**, rilievo del coordinatore della
 > > fase 3, verificato sui due file di esiti. ⇒ Restano `[M]` il **61,4** e lo **0,50**, che vengono
 > > dalle celle pulite di `03-b14-esiti.jsonl`; **cade la legge**, e con lei la chiusura di M3
-> > (`gnome.md` §13).*
+> > (`STUDI.md` §gnome §13).*
 >
 > ⛔⛔ **Ma quella cura il prodotto oggi non la sa chiedere**, e va scritto qui o si scambia una
 > misura di banco per una prestazione: `MOVIMENTO_FPS 60` è una **costante di compilazione**
@@ -1291,13 +1291,13 @@ cosa sbagliata:
    ~36 a qualunque misura» è la frase giusta;
 2. ⏳ **non chiude M3.** La firma degli intervalli misurata oggi — mediana 33,3 ms, minimo 16,2, mai
    valori intermedi — è quella di due orologi a 60 che battono fra loro, cioè la lettura di
-   `gnome.md` §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
+   `STUDI.md` §gnome §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
    riuscisse, questa voce si riscrive.
 
 > ### ⚠ 13 agosto 2026 — **M3 riesce nel fatto, e questa voce va rimessa in discussione**
 >
 > *Punto 2 qui sopra: «se riuscisse, questa voce si riscrive». Il fatto è riuscito — ⛔ ma **M3 non
-> è chiusa**: la causa non è misurata (`gnome.md` §13).*
+> è chiusa**: la causa non è misurata (`STUDI.md` §gnome §13).*
 >
 > ⭐ **Il tetto non è del compositore, e la prova è `[M]`**: alla cadenza disaccoppiata GNOME
 > consegna **61,4** invece di 31,5, sulla stessa macchina e con la stessa scena.
@@ -1393,7 +1393,7 @@ alcune **molto più economiche da rispettare**.
 ### 2.8 ✅ ⛔ La **tela** non va nel worker — la **decodifica** sì. *Attuato, misurato, tenuto spento*
 
 *13 agosto 2026, fase 3. ⛔ Questa non è una prescrizione rinviata: è una prescrizione **eseguita**.
-`web.md` §6.1 diceva «WebTransport, decodifica e canvas tutti in un worker dedicato», come strada
+`STUDI.md` §web §6.1 diceva «WebTransport, decodifica e canvas tutti in un worker dedicato», come strada
 migliore. È stata scritta, misurata — e ⭐ **la misura l'ha spaccata in due**, non bocciata in
 blocco.*
 
@@ -1430,7 +1430,7 @@ blocco.*
 
 ⛔ **Il meccanismo, ed è la parte che vale oltre questo caso**: una `OffscreenCanvas` in un worker
 **si consegna al ritmo del quadro** — un `requestAnimationFrame` implicito che nessuno ha scritto.
-`transferControlToOffscreen` impegna al quadro **da sé**. ⇒ Il divieto di `web.md` §6.1 non è sulla
+`transferControlToOffscreen` impegna al quadro **da sé**. ⇒ Il divieto di `STUDI.md` §web §6.1 non è sulla
 parola: **è sul meccanismo**. ⛔⛔ E la prescrizione **conteneva la propria smentita**: prescriveva
 il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
 
@@ -1575,7 +1575,7 @@ implementata e misurata** (`pagehide` → `CONGEDO`, `pagina.html:2504`).
 **E tre conseguenze che non sono state scelte, sono cadute da sole:**
 
 1. ⛔ **`org.gnome.desktop.lockdown disable-log-out` è VIETATA.** Toglieva la voce «Esci…» **e**
-   faceva rifiutare `org.gnome.SessionManager.Logout` (`gnome.md` §5.1). Adesso che il logout è una
+   faceva rifiutare `org.gnome.SessionManager.Logout` (`STUDI.md` §gnome §5.1). Adesso che il logout è una
    funzione **promessa**, quella chiave toglierebbe la funzione. ⇒ per togliere Spegni/Riavvia/
    Sospendi resta **solo** la regola polkit su logind, e ⭐ il congedo del server
    (`sessione_termina()`) e il logout dell'utente **passano dalla stessa porta**.
@@ -1679,9 +1679,9 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
 
 | Desktop | Che cosa succede bloccando davvero |
 |---|---|
-| **GNOME** | ⛔ **la revoca.** Entrando nel dialogo di sblocco, gnome-shell chiama `inhibit_remote_access()` e Mutter **chiude ScreenCast, RemoteDesktop e InputCapture, rifiutando di ricrearli** (`gnome.md` §4). C'è l'eccezione `is_headless()`, che è il nostro caso — ma è letta nel codice e **mai misurata** |
-| **KDE** | ⛔ **la catena che si morde la coda.** A blocco attivo la nostra inibizione è ignorata (`powerdevilpolicyagent.cpp:509`); powerdevil spegne lo schermo a 10 minuti; con zero uscite KWin monta un output fittizio **con un filtro che inghiotte tutto l'input** (`kde.md` §10.2-10.3). Ci si blocca e non si sblocca più |
-| **XFCE, LXQt** | i loro demoni di inattività, e su LXQt `enableIdlenessWatcher=false` **viene riscritto a `true`** dal demone al primo avvio (`lxqt.md`) |
+| **GNOME** | ⛔ **la revoca.** Entrando nel dialogo di sblocco, gnome-shell chiama `inhibit_remote_access()` e Mutter **chiude ScreenCast, RemoteDesktop e InputCapture, rifiutando di ricrearli** (`STUDI.md` §gnome §4). C'è l'eccezione `is_headless()`, che è il nostro caso — ma è letta nel codice e **mai misurata** |
+| **KDE** | ⛔ **la catena che si morde la coda.** A blocco attivo la nostra inibizione è ignorata (`powerdevilpolicyagent.cpp:509`); powerdevil spegne lo schermo a 10 minuti; con zero uscite KWin monta un output fittizio **con un filtro che inghiotte tutto l'input** (`STUDI.md` §kde §10.2-10.3). Ci si blocca e non si sblocca più |
+| **XFCE, LXQt** | i loro demoni di inattività, e su LXQt `enableIdlenessWatcher=false` **viene riscritto a `true`** dal demone al primo avvio (`STUDI.md` §lxqt) |
 
 **Le tre ragioni della scelta**, in ordine di peso:
 
@@ -1710,7 +1710,7 @@ ragione scritta. Le quattro strade del «modo A» sono queste, tutte `[R]`:
 
 ### 4.3-bis 🔸 ⛔ Essere *headless* su GNOME è un requisito, non una fortuna
 
-*Scritta il 9 agosto 2026, leggendo `gnome.md` §4 e la lezione 3 del suo §14.*
+*Scritta il 9 agosto 2026, leggendo `STUDI.md` §gnome §4 e la lezione 3 del suo §14.*
 
 §4.3 dice che il blocca-schermo dei desktop resta spento, e per GNOME la ragione è la **revoca**:
 entrando nel dialogo di sblocco, Mutter chiude cattura, controllo e input **e rifiuta di
@@ -1733,10 +1733,10 @@ input **senza che nessuno colleghi le due cose**.
 
 ⭐ **È l'invariante I7 in una forma che non avevamo previsto.** I7 dice che la protezione di un
 difetto noto non sta in una riga di configurazione che si può perdere; qui non sta **da nessuna
-parte** — sta in un comportamento di ripiego di Mutter. `gnome.md` §14 lo scrive meglio: *una
+parte** — sta in un comportamento di ripiego di Mutter. `STUDI.md` §gnome §14 lo scrive meglio: *una
 condizione che ci salva per accidente va scritta come requisito.*
 
-⚠ E la misura che la chiude è **M2** di `gnome.md` §13: headless sì/no contro
+⚠ E la misura che la chiude è **M2** di `STUDI.md` §gnome §13: headless sì/no contro
 `inhibit_remote_access`. Fino ad allora la clausola di scadenza di §4.3 vale anche qui.
 
 ### 4.4 ✅ Un client che tace è un client che si è staccato
@@ -1872,7 +1872,7 @@ sono di più semplici:
   l'altra **non apribile**;
 - ⛔ **e la via ovvia è una trappola**: `InaccessiblePaths=` nell'unità del compositore dà la
   scheda giusta e **chiude il cancello della cattura** — 0 righe di registro sui permessi contro
-  13 (`kde.md` §3.3-bis). Si passa dai permessi del **nodo**;
+  13 (`STUDI.md` §kde §3.3-bis). Si passa dai permessi del **nodo**;
 - ⚠ **per id PCI, non per numero di nodo**: `renderD128` e `renderD129` si scambiano fra un
   avvio e l'altro, l'indirizzo PCI no.
 
@@ -2045,7 +2045,7 @@ mantenuta.
 
 | | |
 |---|---|
-| **1 · la regola polkit**, `no` su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` e le varianti `*-multiple-sessions` / `*-ignore-inhibit` | ⭐ **piatta, senza discriminante**: nessun `subject.local`, perché la decisione è «nessuno». ⭐ E copre **due strade con una riga sola**, perché guarda l'**azione** e non l'interfaccia: il menu del desktop **e** `systemctl poweroff` scritto in un terminale dentro la sessione. Su GNOME `CanShutdown` diventa falso e le voci **spariscono** (`gsm-manager.c`, `systemActions.js:340-359`). ⛔ **`no`, mai `auth_admin`**: `challenge` **mostra** la voce (`gnome.md` §5.1, `kde.md` §1579) |
+| **1 · la regola polkit**, `no` su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` e le varianti `*-multiple-sessions` / `*-ignore-inhibit` | ⭐ **piatta, senza discriminante**: nessun `subject.local`, perché la decisione è «nessuno». ⭐ E copre **due strade con una riga sola**, perché guarda l'**azione** e non l'interfaccia: il menu del desktop **e** `systemctl poweroff` scritto in un terminale dentro la sessione. Su GNOME `CanShutdown` diventa falso e le voci **spariscono** (`gsm-manager.c`, `systemActions.js:340-359`). ⛔ **`no`, mai `auth_admin`**: `challenge` **mostra** la voce (`STUDI.md` §gnome §5.1, `STUDI.md` §kde §1579) |
 | **2 · `logind.conf`**: `HandlePowerKey`, `HandleSuspendKey`, `HandleHibernateKey`, `HandleLidSwitch` = `ignore` | ⛔ il **tasto fisico** e il coperchio **non passano da polkit**: logind agisce per conto proprio, e la prima cintura non li vede |
 | **3 · la sospensione automatica**: `Inhibit(…, SUSPEND\|IDLE)` **e** `sleep-inactive-ac-type=nothing` | ⚠ la prima cintura **ferma** la sospensione a inattività, ma l'utente vedrebbe lo stesso la notifica *«Automatic Suspend — Suspending soon»* `[M]` e poi un errore. Due cinture per **due sintomi diversi**: una impedisce il fatto, l'altra toglie la bugia dallo schermo |
 
@@ -2259,7 +2259,7 @@ misure differiscono — su un telefono di un fattore tre, per via dei pixel logi
 1. la tela **è il desktop**: prendendola dalla finestra, un collegamento aperto per caso in una
    finestrella darebbe un desktop piccolo **per tutta la sessione** — e §5.3 ha già dichiarato che
    ingrandire non inventa dettaglio;
-2. ⭐ **la Keyboard Lock esiste solo a schermo intero** (`web.md` §5). Cioè il modo in cui questo
+2. ⭐ **la Keyboard Lock esiste solo a schermo intero** (`STUDI.md` §web §5). Cioè il modo in cui questo
    prodotto si usa davvero *è* lo schermo intero, che è **esattamente la condizione in cui vista e
    tela coincidono**. Il modello non ha un caso normale e un caso degradato: ha un caso normale che
    coincide con quello ottimo.
@@ -2546,10 +2546,10 @@ Le tre ragioni, e la terza è quella che ha deciso:
   facoltativa («adatta il desktop a questa finestra»), spenta dove il compositore non la sa
   fare, **con la ragione dichiarata** (`CODER.md` §4.2);
 - quando si scriverà, si scriverà **nella forma della negoziazione PipeWire** — decisione già
-  presa in `kde.md` §8.2 — perché è una strada sola per GNOME, wlroots e KDE 6.8, e su KDE si
+  presa in `STUDI.md` §kde §8.2 — perché è una strada sola per GNOME, wlroots e KDE 6.8, e su KDE si
   accende da sé all'aggiornamento;
 - ⚠ e includerà la **guardia obbligatoria** `if (misura_attuale == misura_richiesta) return;`
-  (`kde.md` §8.2-bis): senza, la rinegoziazione si morde la coda. Il difetto **non si vede su
+  (`STUDI.md` §kde §8.2-bis): senza, la rinegoziazione si morde la coda. Il difetto **non si vede su
   Trixie** e compare il giorno dell'aggiornamento a 6.8, quando nessuno lo sta più cercando.
 
 ### 5.2 🔸 ⛔ ~~Il codificatore lavora alla misura della finestra~~ → **no: lavora alla misura della tela**
@@ -2878,7 +2878,7 @@ francese o «US international») e l'**IME** (cinese, giapponese, coreano). ⚠ 
 regola di `RCP.md` §7.3 applicata al lato del client.
 
 **Il prezzo che si è scelto di non pagare**, ed era previsto: per avere tasti morti e IME serve un
-**elemento modificabile col fuoco sopra la tela** — cioè `web.md` §1.2 C — e quell'elemento si mette
+**elemento modificabile col fuoco sopra la tela** — cioè `STUDI.md` §web §1.2 C — e quell'elemento si mette
 **fra il puntatore e l'immagine**: ⛔ il percorso con cui la pagina disegna oggi la freccia **andrebbe
 rifatto**. ⇒ Costo certo e visibile, contro un guadagno che per l'utente di oggi è **zero**.
 
@@ -2970,7 +2970,7 @@ canale RDP che li trasportava, non il modo di parlare col desktop.
 
 | | Righe | Copre |
 |---|---|---|
-| `v1/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `xfce.md` §8 lo dà per funzionante così com'è |
+| `v1/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `STUDI.md` §xfce §8 lo dà per funzionante così com'è |
 | `v1/remotix-c/src/appunti_mutter.c` | 450 | GNOME, che ha una via sua |
 
 ### 5-ter.3 🔸 Di chi sono gli appunti cambia per desktop, e una trappola è già disinnescata
@@ -2982,7 +2982,7 @@ canale RDP che li trasportava, non il modo di parlare col desktop.
 | **GNOME** | ⚠ **anche qui del compositore** — vedi la correzione qui sotto: è `MetaSelection`; della sessione remota è solo **la porta** (`EnableClipboard` sull'oggetto RemoteDesktop) |
 | **KDE, wlroots** | del **compositore**: nessun permesso, e c'è anche se REMOTIX non c'è |
 
-> ⛔ **Corretta il 9 agosto 2026**, leggendo `gnome.md` §10, che lo aveva già scritto l'8 e che
+> ⛔ **Corretta il 9 agosto 2026**, leggendo `STUDI.md` §gnome §10, che lo aveva già scritto l'8 e che
 > nessuno aveva riportato qui. Diceva: *«della sessione remota: sta sull'oggetto RemoteDesktop, si
 > accende con `EnableClipboard`, e senza sessione non esiste»*. `[R]` Le prime due mezze frasi
 > descrivono la **porta**, non la proprietà; l'ultima è **falsa**: la sponda X11 di Mutter è
@@ -2992,14 +2992,14 @@ canale RDP che li trasportava, non il modo di parlare col desktop.
 > sessione, quindi il banco degli appunti può usarlo come lato indipendente — invece di far
 > parlare fra loro due pezzi nostri, che è ciò che `PIANO.md` §0.4 chiama non confermare niente.
 >
-> ⚠ **Tre trappole di Mutter, tutte `[R]` in `gnome.md` §10**, che chi scrive la fase 7 legge lì e
+> ⚠ **Tre trappole di Mutter, tutte `[R]` in `STUDI.md` §gnome §10**, che chi scrive la fase 7 legge lì e
 > non qui: `DisableClipboard` è **a senso unico** (dopo, gli annunci non tornano più — non si
 > chiama mai); la firma di `mime-types` è **asimmetrica** fra ingresso e uscita, e chi legge col
 > tipo sbagliato ottiene `NULL` **senza errore**; e il gestore interno degli appunti tiene **un
 > solo tipo MIME**.
 
 ⚠ **La trappola di GNOME, e perché non ci tocca più**: *«gnome-shell azzera la clipboard a ogni
-blocco schermo: ci strappa la proprietà in silenzio»* (`gnome.md`). Con §4.3 — il blocco è
+blocco schermo: ci strappa la proprietà in silenzio»* (`STUDI.md` §gnome). Con §4.3 — il blocco è
 nostro e quello dei desktop resta spento — il caso non si presenta. **Ma torna il giorno in cui
 qualcuno rimettesse il blocco del desktop**, ed è un'altra ragione per cui quella decisione va
 riletta e non data per scontata.
@@ -3142,7 +3142,7 @@ fa con un banco davanti, non su carta.
 > ⛔ **Non c'è nessuna API per stabilire una sessione, per aprire uno stream WebTransport, per
 > mandare un datagram WebTransport.** *«Il `CMakeLists` ha un flag che si chiama
 > `WEBTRANSPORT_SERVER_SUPPORT`»* ⇒ *«lsquic fa WebTransport»* è **esattamente** la forma **E1**, la
-> stessa che ha ucciso v1 e che `web.md` §9 punto 1 aveva già visto ricomparire travestita da API
+> stessa che ha ucciso v1 e che `STUDI.md` §web §9 punto 1 aveva già visto ricomparire travestita da API
 > (`prefer-hardware`). ⭐ **Terza volta in tre giorni, e stavolta l'ha fermata la lettura.**
 >
 > ⚠ **Quel che quelle quattro funzioni implicano, però, è più di quel che dicono**: per rispondere
@@ -3607,14 +3607,14 @@ questo non ce l'ha, e finché non ce l'ha ogni giudizio è `[?]`.
 
 ⭐ **Ma lo studio costa molto meno degli altri quattro, e va detto perché non venga rimandato
 per paura della mole.** Muffin **non è un compositore indipendente**: è un fork di Mutter,
-staccato ai tempi di GNOME 3, e ne eredita l'architettura. Quindi `cinnamon.md` non parte dal
-foglio bianco — **parte da `gnome.md` e cerca le differenze**. È una lettura in negativo:
+staccato ai tempi di GNOME 3, e ne eredita l'architettura. Quindi `STUDI.md` §cinnamon non parte dal
+foglio bianco — **parte da `STUDI.md` §gnome e cerca le differenze**. È una lettura in negativo:
 *questo pezzo di Mutter c'è ancora? è stato rinominato? è rimasto fermo a cinque anni fa?*
 
 **Le due domande che decidono, e vanno fatte per prime:**
 
 1. **si può creare uno schermo virtuale senza monitor?** Su GNOME è `RecordVirtual`; su KDE la
-   risposta negativa è stata il risultato più costoso di tutto lo studio (`kde.md` §8.1);
+   risposta negativa è stata il risultato più costoso di tutto lo studio (`STUDI.md` §kde §8.1);
 2. **quanti fotogrammi consegna la cattura, con una scena dichiarata e sempre in movimento?**
    Mutter 37, KWin 60, wlroots 61 `[M]`.
 
@@ -3622,7 +3622,7 @@ Poi le altre dodici di `LEZIONI.md` §3, e la ricetta di §9 — a partire dal p
 l'ha già fatto*, che su KDE aveva fatto trovare `KRdp` in un nono repository dopo che lo studio
 lo aveva dato per inesistente.
 
-> ## ✅ Lo studio è stato fatto il 9 agosto 2026 — sta in [`cinnamon.md`](cinnamon.md)
+> ## ✅ Lo studio è stato fatto il 9 agosto 2026 — sta in [`STUDI.md` §cinnamon](STUDI.md#cinnamon)
 >
 > Su `muffin` e `cinnamon` **6.7.4**, in `reference-cinnamon/`. **Tutto `[R]`, niente misurato.**
 >
@@ -3645,7 +3645,7 @@ lo aveva dato per inesistente.
 > backend, con la misura decisa all'avvio — l'equivalente del `--virtual --width W` di KWin, che
 > il modello della tela (§5.0) già assorbe.
 >
-> ⚠ **Se regga davvero è `[?]`, ed è la misura M1 del §9 di `cinnamon.md`**: che il gestore dei
+> ⚠ **Se regga davvero è `[?]`, ed è la misura M1 del §9 di `STUDI.md` §cinnamon**: che il gestore dei
 > monitor sia finto non dice che il renderer lo sia. Può anche riuscire **consegnando zero
 > fotogrammi**, che è il modo peggiore perché sembra funzionare (`REVIEWER.md` E1).
 >
@@ -3659,7 +3659,7 @@ lo aveva dato per inesistente.
 > che pesano — `RecordVirtual`, libei, la clipboard — sono **funzionalità che Mint può portare in
 > qualunque momento**, esattamente come KDE ha portato il ridimensionamento con `kwin!7932`. Chi
 > riapre questa voce **ricloni `muffin` e rifaccia le quattro ricerche** prima di fidarsi di
-> `cinnamon.md`: un riferimento che invecchia in silenzio è peggio di nessun riferimento
+> `STUDI.md` §cinnamon: un riferimento che invecchia in silenzio è peggio di nessun riferimento
 > (`LEZIONI.md` §9.8).
 
 ---

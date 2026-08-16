@@ -3,7 +3,7 @@
  *
  * ⛔ QUESTO FILE E' DEL COORDINATORE (vedi `input.h`, stessa ragione).
  *
- * Il difetto che questo modulo esiste per curare — `gnome.md` §1.1 punto 6 e
+ * Il difetto che questo modulo esiste per curare — `STUDI.md` §gnome §1.1 punto 6 e
  * §5.2, ed e' `[R]`: chiediamo a Mutter `cursor-mode=2`, cioe' «dammi il
  * cursore come METADATO invece che nei pixel», ⛔ ma NON chiediamo
  * `SPA_META_Cursor` ⇒ forma, posizione e punto attivo non arrivano affatto, e

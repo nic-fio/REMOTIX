@@ -66,7 +66,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore);
  * sessione** — e' la verita', e con l'altra uscirebbero lettere sbagliate — e
  * il ripiego si DICHIARA nel registro (`CODER.md` §4.2).
  *
- * ⛔ Da chiamare a OGNI `DEVICE_ADDED`, non una volta all'avvio: `gnome.md` §9
+ * ⛔ Da chiamare a OGNI `DEVICE_ADDED`, non una volta all'avvio: `STUDI.md` §gnome §9
  *    misura che un cambio di keymap distrugge e ricrea il dispositivo tastiera,
  *    e il vecchio smette di funzionare **senza errore**.
  */

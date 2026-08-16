@@ -33,7 +33,7 @@ farebbe scadere le certificazioni sotto ai gruppi ancora al lavoro.
 |---|---|---|
 | `RCP.md` §6.2 | ⛔ il trattenimento **non ha tetto in byte**: §7.1 obbliga il server a rispondere, ma un server che non risponde fa crescere la coda del client **senza limite**. La riga manca | da fare |
 | `RCP.md` §6.2 | il paragrafo del trattenuto non dice se il contatore vada su «richieste in volo» o su «fotogrammi». Risolto nel codice (fotogrammi contati una volta sola anche se rigiudicati due volte), **non nel documento** | da fare |
-| `web.md` §6.3, riquadro **P5** | la causa misurata: il fuori ordine nasce dalla **dimensione** del fotogramma, non solo dalla rete — `stream_video` scatta al completamento dello stream ⇒ l'ordine d'arrivo è quello delle dimensioni, e una chiave grossa viene scavalcata dai delta. E **costa una chiave** | da fare |
+| `STUDI.md` §web §6.3, riquadro **P5** | la causa misurata: il fuori ordine nasce dalla **dimensione** del fotogramma, non solo dalla rete — `stream_video` scatta al completamento dello stream ⇒ l'ordine d'arrivo è quello delle dimensioni, e una chiave grossa viene scavalcata dai delta. E **costa una chiave** | da fare |
 | ~~`LEZIONI.md` (§1.x nuova)~~ | ⛔⛔⛔ **NON SI SCRIVE: È SMENTITA.** Diceva *«su Xvfb `requestAnimationFrame` non gira mai — 0 quadri in 3 s, **con e senza GPU**, `visibilityState` visible ⇒ ogni cammino di prodotto che ci passa dietro è codice morto sul banco, e vale per TUTTI i banchi browser del progetto»*. `[M]` **13 agosto sera, `banchi/03-quadri.py`, 3 giri per configurazione su Chrome 151, Xvfb**: **con la GPU 153-167 quadri** in 3 s · **con `--disable-gpu` 164-173** · **con `--headless=new` 180-181**. ⇒ **rAF gira, in tutt'e tre.** ⚠ Se il giro originale aveva un palco diverso (un worker — dove `requestAnimationFrame` non esiste per costruzione — o una finestra non mappata), **va dichiarato QUALE**: com'era scritta, la riga condannava a «codice morto» il cammino del disegno di ogni banco del progetto | ⛔ **CADUTA — 13 ago sera** |
 | `LEZIONI.md` §1.11 | il caso: `Emulation.setDeviceMetricsOverride` cambia `clientWidth` **senza** emettere `resize`; un banco che ci si appoggia misura l'emulazione, non il browser | da fare |
 | `fasi/03-movimento.md` | «Che cosa è stato sviluppato» e «Che cosa non ha funzionato» | da fare |
@@ -83,7 +83,7 @@ documenti citano come fatto. ⭐ **Queste due righe reggono**, perché vengono d
 | `DECISIONI.md` §2.5 (r. 981, riquadro 997), r. 873, r. 2547; §2.5-bis r. 1012 | il «tetto di Mutter accettato» va rimesso in discussione |
 | `PIANO.md` fase 3, r. 442-448 | l'esperimento è fatto: l'esito non è «riesce» né «non riesce», è **«riesce con un numero diverso»** |
 | `LEZIONI.md` r. 734-750 (il riquadro dei sei decimi), r. 717 (domanda 7), §6.1 r. 848 | il battimento va sostituito dalla quantizzazione sui tick, ⚠ **marcata `[R]`** |
-| `gnome.md` §8.2 r. 316-325, §13 r. 482 | ⛔ *diceva «**M3 si può chiudere**»: **no**. Il fatto è `[M]`, la causa `[R]`, il riscontro su una seconda scena non c'è ⇒ **M3 resta mezza**. Corretto il 13 ago 2026, stesso rilievo* |
+| `STUDI.md` §gnome §8.2 r. 316-325, §13 r. 482 | ⛔ *diceva «**M3 si può chiudere**»: **no**. Il fatto è `[M]`, la causa `[R]`, il riscontro su una seconda scena non c'è ⇒ **M3 resta mezza**. Corretto il 13 ago 2026, stesso rilievo* |
 | ⭐⭐ `LEZIONI.md` §1.1 | **la trappola n. 1 è tornata a mordere il risultato che la citava**: il banco aveva scritto `scena_sul_mio_monitor: false` nel proprio file e nessuno l'ha guardato. ⇒ *un banco che dichiara la propria invalidità non serve a niente se chi legge guarda solo il risultato* — scritto come **§1.1-bis** |
 
 ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
@@ -210,12 +210,12 @@ tutti e quattro i monitor virtuali sono **1920×1080@60**, confermato da `03-sce
 | `SPECIFICHE.md` §3.2 + `CODER.md` §1-bis | ⛔ **dove finisce la misura**: al **disegno finito**, non al richiamo del decodificatore — 11 ms su un tetto di 50 |
 | `DECISIONI.md` §2.5, §2.4 | il muro dei 37 come causa del ritardo |
 | `DECISIONI.md` §1.5 r. 26, `RCP.md` §7.5 | la funzione di banco **non dà il ritardo noto**: `BANCO_ACCESO 0`, il ramo ACCETTATA è uno stub |
-| `web.md` §6.1 | «tutto in un worker dedicato» — ⛔ `src/pagina.html` **non ha nessun worker**, e `desynchronized` è **spento** (`:407`) |
-| `web.md` §8, §6.2 | il pezzo cieco **su Xvfb non esiste** |
+| `STUDI.md` §web §6.1 | «tutto in un worker dedicato» — ⛔ `src/pagina.html` **non ha nessun worker**, e `desynchronized` è **spento** (`:407`) |
+| `STUDI.md` §web §8, §6.2 | il pezzo cieco **su Xvfb non esiste** |
 | `LEZIONI.md` §1.2/§2.2 | ⭐ **una certificazione può essere verde perché prova il giudice nell'unità sbagliata** (quella del lettore invece dell'acquisizione) |
 | `LEZIONI.md` §1.9 | «zero fuori ordine» non è «regge», è «non si è presentato» |
 | `LEZIONI.md` §1.13 | P1 a blocchi confonde ritardo e deriva: si **intreccia**, non si allarga la tolleranza |
-| `gnome.md` §8.2/§13 | il collo sulla catena vera è **il codificatore in software**, non `maxFramerate` |
+| `STUDI.md` §gnome §8.2/§13 | il collo sulla catena vera è **il codificatore in software**, non `maxFramerate` |
 
 ⏳ `[?]`: P5 sulla catena vera · **il secondo motore** (solo Chrome 151 misurato, §11.5 ne vuole
 due) · il cieco · se il decodificatore di Chrome su Xvfb sia hardware · quanto scenderebbe con un
@@ -230,7 +230,7 @@ codificatore hardware · la coda (p99 fra 101 e 307 ms fra un giro e l'altro, ca
 
 ---
 
-## ⛔ Il worker di `web.md` §6.1 — attuato, misurato, RESPINTO (13 agosto 2026, sera)
+## ⛔ Il worker di `STUDI.md` §web §6.1 — attuato, misurato, RESPINTO (13 agosto 2026, sera)
 
 `[M]` stessa macchina, stessa sessione, **stessa pagina** (cambia solo l'interruttore), stesso
 strumento rigirato per il «prima» e per il «dopo» (`banchi/03-b19-ritardo-worker.py`).
@@ -253,7 +253,7 @@ cinque volte. Errore d'orologio ±0,63-0,65 ms.
 | richiamo → disegno finito (`drawImage` ×2) | 9,63 | 9,11 | **27,19** | **+17,6** ⛔ |
 | **somma dei tre** | 16,87 | 15,30 | **41,15** | **+24,3 / +25,9** |
 
-⇒ ⭐ **`web.md` §6.1 non è sbagliata per intero: è sbagliata a metà.** La **decodifica** fuori dal
+⇒ ⭐ **`STUDI.md` §web §6.1 non è sbagliata per intero: è sbagliata a metà.** La **decodifica** fuori dal
 thread principale guadagna davvero **−3,44 ms** (7,17 → 3,73) — il decodificatore consegna prima
 quando non contende. È la **tela** che affonda il conto.
 

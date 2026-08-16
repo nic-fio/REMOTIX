@@ -130,7 +130,7 @@ delta a 1920×1080, con la combinazione esatta della sessione vera — **sei gir
 /media/REMOTIX/tmp/02-figlio/registro.log"`.
 
 **Il pezzo cieco**: `[?]` **16-40 ms** fra il disegno e il pixel acceso, che nessuna API vede
-(`web.md` §6.2). ⭐ **Su questo palco ESISTE** — è il desktop vero, non Xvfb. ⚠ Qui non entra in
+(`STUDI.md` §web §6.2). ⭐ **Su questo palco ESISTE** — è il desktop vero, non Xvfb. ⚠ Qui non entra in
 nessun numero, perché §3.1 **conta pixel, non tempi**: si dichiara perché il confronto col §3.2
 sia leggibile.
 

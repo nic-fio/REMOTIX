@@ -10,7 +10,7 @@
  * Si parla alle interfacce DIRETTE del compositore, non a `xdg-desktop-portal`:
  * il portale chiede il permesso a un utente seduto davanti allo schermo, e in
  * una sessione senza monitor quell'interazione non puo' avvenire (`CODER.md`
- * §4.3).  E' anche la via del riferimento (`gnome-remote-desktop.md` §5).
+ * §4.3).  E' anche la via del riferimento (`STUDI.md` §gnome-remote-desktop §5).
  *
  * ---------------------------------------------------------------------------
  * ⛔ L'ORDINE NON AMMETTE PERMUTE, e ogni permuta la punisce con un errore
@@ -105,7 +105,7 @@ const char *mutter_percorso_controllo(const MutterSessione *sessione);
  *      la nostra proprieta' `mapping-id` e' ignorata **in silenzio**.  La
  *      chiave vera la genera Mutter (UUID) e la pubblica nei `Parameters` del
  *      flusso: si legge con `mutter_mapping_id_pubblicato`, e il verso e'
- *      **Mutter → noi**.  (`gnome.md` §9, `reference-gnome/rapporti/06-mutter-input.md`
+ *      **Mutter → noi**.  (`STUDI.md` §gnome §9, `reference-gnome/rapporti/06-mutter-input.md`
  *      §7.2.)
  *
  * ⚠ Resta esposto perche' il banco confronta i due valori: e' il modo di

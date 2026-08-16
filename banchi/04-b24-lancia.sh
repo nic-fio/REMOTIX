@@ -365,7 +365,7 @@ PY
 [ $? -ne 0 ] && ESITO=1
 
 log "5-bis. ⛔ I MEZZI SCATTI — 60 non si arrotonda a zero"
-# `gnome.md` §9: `ei_device_scroll_discrete` fa una divisione INTERA per 120 e
+# `STUDI.md` §gnome §9: `ei_device_scroll_discrete` fa una divisione INTERA per 120 e
 # se li mangia.  `src/input.c` va di `scroll_delta`, dove la soglia e' 60.
 read -r V_MEZZO A_MEZZO <<< "$(rotella 60)"
 if [ -z "$V_MEZZO$A_MEZZO" ] || { [ "$V_MEZZO" = None ] && [ "$A_MEZZO" = None ]; }; then

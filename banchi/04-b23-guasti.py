@@ -123,7 +123,7 @@ GUASTI = {
         "spiega":
             "⚠ §7.3: «i mezzi scatti esistono: 60 e' mezzo scatto e NON DEVE "
             "essere arrotondato a zero».  E' la divisione intera per 120 che "
-            "`gnome.md` §9 attribuisce a `ei_device_scroll_discrete`: qui la fa "
+            "`STUDI.md` §gnome §9 attribuisce a `ei_device_scroll_discrete`: qui la fa "
             "`rcp.c`, e lo scorrimento fine sparisce senza un errore",
         "rossi": {"ok-rotella-mezzo-scatto"},
     },

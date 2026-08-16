@@ -29,7 +29,7 @@ la prova ROSSA con l'ingresso sbagliato.
 ===========================================================================
 ⛔ LE DUE FORME, E NON SONO INTERCAMBIABILI — la cucitura con F2.3
 
-`web.md` §4.2 dice che la strada e' **Annex-B senza `description`**: e' legale,
+`STUDI.md` §web §4.2 dice che la strada e' **Annex-B senza `description`**: e' legale,
 e' quel che `hevc_vaapi` gia' produce, e in Chromium risparmia un'allocazione e
 una copia per fotogramma `[R]`.  E avverte che la strada dell'`hvcC` ha una
 trappola: Chromium riparsa l'SPS e **rifiuta la configurazione** se i byte di
@@ -69,7 +69,7 @@ perdita di x265 spostano un canale di qualche decina — non di cento.
 
 ⚠ La striscia di sfumatura in fondo NON serve al banco: serve all'occhio
   dell'utente (`LEZIONI.md` §2.4 — il metro e' quel che si vede), perche' i
-  10 bit dal browser **non sono leggibili** (`web.md` §1.2 A) e la prova
+  10 bit dal browser **non sono leggibili** (`STUDI.md` §web §1.2 A) e la prova
   finale su quelli e' guardare una sfumatura.  Qui c'e' perche' sia gia' nel
   fotogramma quando la fase 2 arrivera' a farla guardare.
 
@@ -165,7 +165,7 @@ def disegna(ordine):
         })
     # ⚠ La sfumatura: 640 passi su 640 colonne.  A 8 bit ne sopravvivono 256,
     #   e le strisce si vedono; a 10 bit no.  Non e' misurabile da JavaScript
-    #   (`web.md` §1.2 A): e' li' per l'occhio.
+    #   (`STUDI.md` §web §1.2 A): e' li' per l'occhio.
     for y in range(utile, ALTEZZA):
         base = y * LARGHEZZA * 3
         for x in range(LARGHEZZA):
@@ -396,7 +396,7 @@ def codifica(grezzo, profondita, sorgente10=False, lossless=False):
         "-i", "pipe:0",
         "-c:v", "libx265", "-pix_fmt", pix, "-profile:v", profilo,
         "-x265-params", parametri,
-        # ⚠ BT.709, e dichiarato nel flusso: `web.md` O3 — l'HDR non si
+        # ⚠ BT.709, e dichiarato nel flusso: `STUDI.md` §web O3 — l'HDR non si
         #   promette, si codifica BT.709, ed e' una scelta del SERVER.  Qui il
         #   server e' questo script.
         "-color_primaries", "bt709", "-color_trc", "bt709",
@@ -472,7 +472,7 @@ def sguscia(u):
     ⚠ E il livello a 0 non da' un errore di rete: `RCP.md` §4.3 rilievo O12 —
       **fa rifiutare la configurazione dal decodificatore**, e il sintomo
       sarebbe stato «Chrome non apre il flusso», cioe' un `[M]` falso contro
-      il browser.  ⭐ E' letteralmente la trappola che `web.md` §4.2 attribuisce
+      il browser.  ⭐ E' letteralmente la trappola che `STUDI.md` §web §4.2 attribuisce
       all'`hvcC` — *«Chromium riparsa l'SPS e rifiuta la configurazione se i
       byte di prevenzione dell'emulazione cadono nel campo sbagliato»* — solo
       che qui a caderci era **il nostro lettore**, non il loro.
@@ -553,7 +553,7 @@ def costruisci_hvcc(parametri):
        profilo, tier e livello dell'`hvcC` sono **gli stessi 12 byte** del
        `profile_tier_level` dell'SPS, e ricopiarli da li' e' l'unico modo di
        non avere due verita' sullo stesso flusso.  ⚠ E' anche la ragione per
-       cui `web.md` §4.2 sconsiglia questa strada: sono byte che qualcuno deve
+       cui `STUDI.md` §web §4.2 sconsiglia questa strada: sono byte che qualcuno deve
        ricopiare giusti, e Chromium riparsa l'SPS e rifiuta se non tornano."""
     sps = next((u for u in parametri if tipo_nalu(u) == 33), None)
     if sps is None:
@@ -867,7 +867,7 @@ def costruisci_vp9(nome_pattern):
        puo' distinguerle, e scriverebbe «Firefox non decodifica HEVC» avendo
        misurato il proprio difetto.  E' `LEZIONI.md` §1.9 regola 2 — *«questo
        strumento sa trovare qualcosa che c'e' di sicuro?»* — e la stessa forma
-       che `web.md` §3.3 racconta come il rilievo piu' grave della revisione R2.
+       che `STUDI.md` §web §3.3 racconta come il rilievo piu' grave della revisione R2.
 
     VP9 e' il flusso scelto perche' e' l'unico codec video che **tutti e tre**
     i motori decodificano senza brevetti di mezzo, e perche' e' gia' il
@@ -965,7 +965,7 @@ def costruisci_av1(nome_pattern, sorgente10):
       un'eccezione a §9.  **AV1 non costa niente**: e' gia' normativo, e ha
       gia' il suo `codec = 2` in `RCP.md` §6.2.
 
-    ⚠ E `web.md` **O2** dichiarava AV1 *«un vicolo cieco da entrambi i lati»* —
+    ⚠ E `STUDI.md` §web **O2** dichiarava AV1 *«un vicolo cieco da entrambi i lati»* —
       il nostro ferro non lo codifica in hardware `[M]`, e in decodifica non
       aggiunge niente che HEVC non dia.  ⛔ Quella riga vale per il codec
       **principale**; qui la domanda e' un'altra: **regge come ripiego, dove

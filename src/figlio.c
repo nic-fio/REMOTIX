@@ -4124,7 +4124,7 @@ void figlio_vive(int argc, char **argv)
 		/* ── 1-bis. il canale di input, che ha una voce sua ──────────── */
 		/* ⛔⭐ `libei` NON e' una libreria che si chiama e basta: e' un pari
 		 *     che PARLA, e fra le cose che dice ci sono i due ricambi
-		 *     silenziosi di `gnome.md` §9 — un cambio di keymap distrugge e
+		 *     silenziosi di `STUDI.md` §gnome §9 — un cambio di keymap distrugge e
 		 *     ricrea il dispositivo tastiera, un cambio di geometria tutti i
 		 *     dispositivi assoluti.  ⚠ E il puntatore agganciato al
 		 *     dispositivo vecchio smette di funzionare **senza errore**: chi

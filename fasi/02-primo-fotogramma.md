@@ -130,7 +130,7 @@ lì non si ricopia qui**.
 **senza** `--virtual-monitor`. `GetCurrentState` → **zero monitor**, con `IsSessionRunning` true,
 cinquanta nomi sul bus, Nautilus e Terminale accesi.
 
-⇒ **Il guasto M9 di `gnome.md` §13 non è stato innestato: era già addosso alla macchina.** Una
+⇒ **Il guasto M9 di `STUDI.md` §gnome §13 non è stato innestato: era già addosso alla macchina.** Una
 cattura puntata lì avrebbe misurato **zero fotogrammi** cercandoli dentro PipeWire, e l'imputato
 sarebbe stata la cattura.
 
@@ -215,7 +215,7 @@ l'avrebbe avvertita. È una trappola di prodotto, non di banco.
 | ⛔ **`ffmpeg` non rifiuta un flusso corrotto: lo conceala** | due storpiature su tre escono con stato **0** `[M]` ⇒ un giudizio sulla decodifica **non si prende mai dallo stato d'uscita**: si prende sui pixel |
 | ⛔ **il codec non è un rivelatore di corruzione** | un byte girato nell'intestazione di uno slice ha lasciato il fotogramma **identico bit per bit** `[M]` — numero da avere in mano se qualcuno propone scorciatoie attorno alle garanzie di QUIC |
 | ⚠ **x265 sceglie da sé** | `bframes=4` e `open-gop` di default, che nessuno ha chiesto: costano **un fotogramma di ritardo** contro un tetto di 50 ms. v1 li vietava a mano ⇒ si decide, non si eredita |
-| ⭐ **`cattura.h` e `gnome.md` §8.1 si contraddicevano** | sul buffer riciclato. Misurato: danno **parziale** e le sette bande **intere** ⇒ ha ragione `gnome.md`, il commento nel codice è vecchio. ⛔ Se avesse avuto ragione `cattura.h`, la fase 2 avrebbe consegnato **mezzo desktop senza un errore** |
+| ⭐ **`cattura.h` e `STUDI.md` §gnome §8.1 si contraddicevano** | sul buffer riciclato. Misurato: danno **parziale** e le sette bande **intere** ⇒ ha ragione `STUDI.md` §gnome, il commento nel codice è vecchio. ⛔ Se avesse avuto ragione `cattura.h`, la fase 2 avrebbe consegnato **mezzo desktop senza un errore** |
 | ⛔ **la `[?]` del piano sull'ordine di `libei` è contraddetta** | `[M]`, riprodotta due volte: un client Wayland tenuto vivo *attraverso* la nascita del puntatore **riceve** `capabilities(0)` → `capabilities(1)`. La spiegazione *«non si iscrive mai»* **non regge**, e la caccia si sposta dal compositore al client. ⭐ E la regola vera è più stretta del piano: `ensure_virtual_device()` sta nei gestori di `NotifyPointerMotion*`, **non** in `Start()` — il puntatore nasce al **primo movimento iniettato**, la tastiera al **primo tasto** `[R]` |
 | ⛔ **E2 preso sul campo** | sul server ci sono **due** monitor virtuali, `Meta-0`/`MetaVirtualMonitor` e `Meta-1`/`Virtual remote monitor`, **entrambi 1920×1080@60**: li distingue **il nome del prodotto**, non la misura. Sceglierne uno «per misura» o «per indice» è la forma E2 |
 

@@ -110,7 +110,7 @@ si spostano nella direzione scomoda:
 ═══════════════════════════════════════════════════════════════════════════════
 
   ⭐ **in USCITA** — gia' noto: fra il disegno finito e il pixel acceso passano
-     `[?]` **16-40 ms** che nessuna API JavaScript vede (`web.md` §6.2).
+     `[?]` **16-40 ms** che nessuna API JavaScript vede (`STUDI.md` §web §6.2).
      ⛔ **ma non su Xvfb**, dove non c'e' compositore e quel pezzo **non esiste
      affatto**: la stima e' per lo schermo di un utente, non per il banco.
 
@@ -368,7 +368,7 @@ def regime(campioni, **kw):
 # ⛔⛔ I DUE PEZZI CIECHI, IN UNA FUNZIONE SOLA
 #
 #    Perche' non si possa stampare un numero senza.  Quello in uscita e' della
-#    fase 3 (`web.md` §6.2); ⭐ quello in INGRESSO e' nuovo, e nessuno lo aveva
+#    fase 3 (`STUDI.md` §web §6.2); ⭐ quello in INGRESSO e' nuovo, e nessuno lo aveva
 #    ancora nominato.
 # ═══════════════════════════════════════════════════════════════════════════
 CIECO_USCITA_MIN_MS, CIECO_USCITA_MAX_MS = 16.0, 40.0
@@ -388,7 +388,7 @@ def con_pezzi_ciechi(ms, su_xvfb=True):
     return ("%.1f ms MISURATI  +  [?] %.0f-%.0f ms di pezzo cieco in INGRESSO "
             "(mano → `event.timeStamp`: dispositivo, nucleo e compositore del "
             "CLIENT, nessuna API della pagina li vede)  +  [?] %.0f-%.0f ms di "
-            "pezzo cieco in USCITA (disegno finito → pixel acceso, `web.md` "
+            "pezzo cieco in USCITA (disegno finito → pixel acceso, `STUDI.md` §web "
             "§6.2)  ⇒ %.1f-%.1f ms sullo schermo di un utente, PIU' LA RETE.  %s"
             % (ms, CIECO_INGRESSO_MIN_MS, CIECO_INGRESSO_MAX_MS,
                CIECO_USCITA_MIN_MS, CIECO_USCITA_MAX_MS,
@@ -777,7 +777,7 @@ PROLOGO = r"""
       const suo = init && init.output;
       const mio = Object.assign({}, init, {
         output: function (f) {
-          /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `web.md` §6.3. ─────────── */
+          /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `STUDI.md` §web §6.3. ─────────── */
           const t1 = performance.now();
           const pts = f.timestamp;
           const l = f.displayWidth || f.codedWidth;
@@ -1247,7 +1247,7 @@ def scomponi(sonde, scarto_ancora_us=0):
                 "della pagina lo vede: `event.timeStamp` e' gia' il dopo"}
     r["C2 ⛔ [?] pezzo cieco in USCITA (disegno finito → pixel acceso)"] = {
         "stima_ms": [CIECO_USCITA_MIN_MS, CIECO_USCITA_MAX_MS], "marca": "[?]",
-        "fonte": "web.md §6.2",
+        "fonte": "STUDI.md §web §6.2",
         "nota": "⚠ su Xvfb non c'e' compositore: in QUESTO ambiente non esiste "
                 "affatto.  La stima e' per lo schermo di un utente"}
     return r

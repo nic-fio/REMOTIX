@@ -240,7 +240,7 @@ stato sbagliato, e non è stato fatto.**
 | | | |
 |---|---|---|
 | in **INGRESSO** | `[?]` **4-12 ms** | mano → `event.timeStamp`: dispositivo, nucleo e compositore **del client** |
-| in **USCITA** | `[?]` **16-40 ms** | disegno finito → pixel acceso (`web.md` §6.2) — ⭐ e qui **esiste**, perché `xlsclients` dice **0 clienti sull'Xvfb**: il browser sta su un compositore vero |
+| in **USCITA** | `[?]` **16-40 ms** | disegno finito → pixel acceso (`STUDI.md` §web §6.2) — ⭐ e qui **esiste**, perché `xlsclients` dice **0 clienti sull'Xvfb**: il browser sta su un compositore vero |
 
 ⇒ **139,4-141,6 + 20-52 = 160-193 ms sullo schermo di un utente, più la rete.**
 

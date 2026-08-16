@@ -78,7 +78,7 @@ su quattro fronti: la macchina a stati, il figlio e la cattura, la pagina, e le 
 | 2 | ⛔ il `TELA` **non richiesto** quando il palco cambia da sé | §6.2 non dà al client nessun modo di accettarlo ⇒ `ERRORE_PROTOCOLLO`: **sessione chiusa in cui nessuno ha sbagliato** |
 | 3 | ⛔ due `ADATTA_TELA` incatenate: il fotogramma della prima preso per la risposta della seconda | il desktop si assesta sulla misura **sbagliata**, coi conti dei messaggi in ordine ⇒ bande e testo interpolato, e niente che lo dica |
 | 4 | ⛔ il ritorno a una misura **già stata in vigore** con una richiesta in volo | il client chiudeva la sessione per aver trascinato un bordo e averlo rimesso dov'era |
-| 5 | ⛔ la guardia di `kde.md` §8.2-bis confrontava il **chiesto** invece dell'**attuale** | dopo un tentativo andato a vuoto, «adatta il desktop» **non funzionava più**, per sempre |
+| 5 | ⛔ la guardia di `STUDI.md` §kde §8.2-bis confrontava il **chiesto** invece dell'**attuale** | dopo un tentativo andato a vuoto, «adatta il desktop» **non funzionava più**, per sempre |
 | 6 | ⛔ `ADATTA_TELA` non rispettava `video.misura_massima` (§4.5) | su un client hi-dpi: tela che il decodificatore non regge ⇒ **schermo nero senza ritorno** |
 | 7 | ⛔ i limiti della tela erano 200..8192 invece dei 320×240..7680×4320 di §4.5 | una tela concessa da `TELA` veniva **rifiutata da `ATTACCA`** al ri-attacco |
 | 8 | ⛔ `cattura->guasto` letto **dopo** aver mollato il lucchetto | lettura di memoria liberata, proprio mentre la sessione grafica muore |

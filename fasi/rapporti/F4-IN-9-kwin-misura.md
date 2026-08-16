@@ -21,7 +21,7 @@
 
 | Clausola | Esito |
 |---|---|
-| «di misura arbitraria **scelta dal client**» | ⛔ **REFUTATA in pratica.** Vera nel protocollo [R], ma la strada richiede `--drm`, che **non parte da una sessione senza seat** [M, kde.md M2, 7 ago]. Su `--virtual` la misura la sceglie **la riga di comando di KWin**, non il client. |
+| «di misura arbitraria **scelta dal client**» | ⛔ **REFUTATA in pratica.** Vera nel protocollo [R], ma la strada richiede `--drm`, che **non parte da una sessione senza seat** [M, STUDI.md §kde M2, 7 ago]. Su `--virtual` la misura la sceglie **la riga di comando di KWin**, non il client. |
 | «cambiarla a sessione aperta **senza rompere il flusso**» | ⛔ **REFUTATA due volte.** Non esiste in nessun Plasma rilasciato [R, verificato oggi contro upstream]. E quando arriverà, «senza rompere il flusso» è comunque falso: rifà lo swapchain, rinegozia il formato PipeWire, ridispone le finestre dell'utente. |
 | «non impone né arrotondamenti né limiti» | ✅ **CONFERMATA su 6.3.6** — e in modo quasi imbarazzante: non c'è *nessuna* validazione. ⚠ Ma diventa falsa su `master` (limiti **200×200 … 10000×10000**), e **c'è già oggi un arrotondamento silenzioso** in `--virtual`, in un punto che nessuno aveva guardato: vedi la domanda 3, caso (c). |
 
@@ -43,12 +43,12 @@ Il percorso della misura, passaggio per passaggio, tutto in `reference-kde/kwin/
 
 ⛔ **E qui la strada si chiude, per due `[M]` già in casa:**
 
-- `--virtual` **non sa creare uscite virtuali**: `VirtualBackend` non ridefinisce `createVirtualOutput()`, si cade sulla base che torna `nullptr` → `sendFailed("Could not find output")` [R `core/outputbackend.cpp:80-83`]. Confermato sul banco: [M, kde.md M7a, 8 ago].
-- `--drm` **non parte da una sessione senza seat**: esce con stato 1 su `Activate()` [M, kde.md M2, 7 ago]. Averlo vorrebbe dire occupare la console fisica, cioè smettere di essere un servizio remoto che convive con l'utente locale.
+- `--virtual` **non sa creare uscite virtuali**: `VirtualBackend` non ridefinisce `createVirtualOutput()`, si cade sulla base che torna `nullptr` → `sendFailed("Could not find output")` [R `core/outputbackend.cpp:80-83`]. Confermato sul banco: [M, STUDI.md §kde M7a, 8 ago].
+- `--drm` **non parte da una sessione senza seat**: esce con stato 1 su `Activate()` [M, STUDI.md §kde M2, 7 ago]. Averlo vorrebbe dire occupare la console fisica, cioè smettere di essere un servizio remoto che convive con l'utente locale.
 
 ### ⭐ Ma la misura esatta si ottiene lo stesso — dalla riga di comando
 
-Il pezzo che `kde.md` non aveva seguito fino in fondo. Su `--virtual` le uscite si creano all'avvio, e la misura passa **intatta**:
+Il pezzo che `STUDI.md` §kde non aveva seguito fino in fondo. Su `--virtual` le uscite si creano all'avvio, e la misura passa **intatta**:
 
 - `main_wayland.cpp:470-488` — `--width` e `--height` sono letti con un `toInt()` e basta: **nessun controllo oltre «è un intero»**, nessun minimo, nessun massimo, nessuna parità [R];
 - `main_wayland.cpp:507-511` — `addOutput({.geometry = QRect(QPoint(), initialWindowSize), .scale = outputScale})` [R];
@@ -122,7 +122,7 @@ if (m_source && m_source->followsStreamSize()) {
 
 ### (c) ⛔ L'arrotondamento silenzioso che ci riguarda **OGGI**
 
-Sta nella riga che abbiamo appena letto per la strada `--virtual`, e non era in `kde.md`:
+Sta nella riga che abbiamo appena letto per la strada `--virtual`, e non era in `STUDI.md` §kde:
 
 [R] `backends/virtual/virtual_backend.cpp:106`
 ```cpp
@@ -131,7 +131,7 @@ output->init(info.geometry.topLeft(), info.geometry.size() * info.scale, info.sc
 
 `QSize * qreal` **arrotonda all'intero più vicino** [S, documentazione Qt: *«Multiplies the given size by the given factor, and returns the result rounded to the nearest integer»*]. Con `--scale 1` non succede niente. Con qualunque scala frazionaria, `--width 2133 --scale 1.5` diventa **3200**, e nessuno lo dice: né un errore, né un avviso.
 
-⭐ **Si passa sempre `--scale 1` e i pixel veri.** È la stessa conclusione di `kde.md` §8.4, ma per un meccanismo diverso e su un'altra riga di codice — lì era `chooseScale()` che buttava via la scala del protocollo, qui è una moltiplicazione che arrotonda i pixel.
+⭐ **Si passa sempre `--scale 1` e i pixel veri.** È la stessa conclusione di `STUDI.md` §kde §8.4, ma per un meccanismo diverso e su un'altra riga di codice — lì era `chooseScale()` che buttava via la scala del protocollo, qui è una moltiplicazione che arrotonda i pixel.
 
 ---
 
@@ -145,11 +145,11 @@ output->init(info.geometry.topLeft(), info.geometry.size() * info.scale, info.sc
 - `.modes = {mode}` è una lista di **un solo elemento**, quindi nemmeno kscreen avrebbe qualcosa da scegliere;
 - e sulla nostra configurazione `--virtual` l'uscita virtuale **non esiste affatto**.
 
-**L'unica via oggi è (A), chiudere e rifare lo stream.** Il prezzo, con i numeri che abbiamo: chiudere lo stream **distrugge l'uscita** [R `screencastmanager.cpp:65-67`]; rimettere in piedi il solo flusso costa **65, 65 e 67 ms** su tre giri [M, kde.md M7b, 8 ago]; su KDE **non trascina l'input** (EIS è indipendente dallo screencast), che è il vantaggio su GNOME.
+**L'unica via oggi è (A), chiudere e rifare lo stream.** Il prezzo, con i numeri che abbiamo: chiudere lo stream **distrugge l'uscita** [R `screencastmanager.cpp:65-67`]; rimettere in piedi il solo flusso costa **65, 65 e 67 ms** su tre giri [M, STUDI.md §kde M7b, 8 ago]; su KDE **non trascina l'input** (EIS è indipendente dallo screencast), che è il vantaggio su GNOME.
 
 ### ⭐ Domani: il codice esiste, ma non è in nessun Plasma rilasciato
 
-**Questa è la correzione che questo rapporto porta a `kde.md`.** Lo studio dava il ridimensionamento come *«milestone 6.8, cioè ottobre 2026»*. Verificato **oggi** contro `invent.kde.org` [R, upstream]:
+**Questa è la correzione che questo rapporto porta a `STUDI.md` §kde.** Lo studio dava il ridimensionamento come *«milestone 6.8, cioè ottobre 2026»*. Verificato **oggi** contro `invent.kde.org` [R, upstream]:
 
 | Ramo | `canResize` in `drm_virtual_output.h` |
 |---|---|
@@ -157,20 +157,20 @@ output->init(info.geometry.topLeft(), info.geometry.size() * info.scale, info.sc
 | `Plasma/6.8` | ⛔ **il ramo non esiste** |
 | `master` | ✅ presente |
 
-L'ultimo tag pubblicato è **v6.7.4**. Cioè: il ridimensionamento è **solo su `master`**, la 6.8 **non è ancora stata nemmeno ramificata**, e Trixie è ferma a 6.3.6. La sostanza di `kde.md` regge — «non è una funzionalità perduta, è una che arriva» — ma **la data è più lontana di quanto il documento lascia credere**, e nessuna delle versioni che un utente può installare oggi ce l'ha.
+L'ultimo tag pubblicato è **v6.7.4**. Cioè: il ridimensionamento è **solo su `master`**, la 6.8 **non è ancora stata nemmeno ramificata**, e Trixie è ferma a 6.3.6. La sostanza di `STUDI.md` §kde regge — «non è una funzionalità perduta, è una che arriva» — ma **la data è più lontana di quanto il documento lascia credere**, e nessuna delle versioni che un utente può installare oggi ce l'ha.
 
 Quando arriverà, il meccanismo è quello previsto [R, `master`]:
 - `backends/drm/drm_virtual_output.cpp:141-144`, `canResize()` → `true`;
 - `:146-154`, `resize()` costruisce un nuovo `OutputMode` con la misura **tale e quale** (nessun arrotondamento), `setState`, poi `Q_EMIT m_backend->outputsQueried()`;
 - `plugins/screencast/screencaststream.cpp:783-784`, il rettangolo diventa un `CHOICE_RANGE` **solo** se `m_source->followsStreamSize()`; per un'uscita reale `min = max = default`, cioè nessuna rinegoziazione.
 
-⛔ **E «senza rompere il flusso» resta falso.** `outputsQueried()` fa ripartire la riconfigurazione degli output: è esattamente il ciclo segnalato in revisione [I, Nick Haghiri, 3 luglio 2026, già in `kde.md` §8.2-bis], e la guardia è obbligatoria, non un'ottimizzazione — [R] `plugins/screencast/outputscreencastsource.cpp:170-173` (`master`):
+⛔ **E «senza rompere il flusso» resta falso.** `outputsQueried()` fa ripartire la riconfigurazione degli output: è esattamente il ciclo segnalato in revisione [I, Nick Haghiri, 3 luglio 2026, già in `STUDI.md` §kde §8.2-bis], e la guardia è obbligatoria, non un'ottimizzazione — [R] `plugins/screencast/outputscreencastsource.cpp:170-173` (`master`):
 ```cpp
 if (m_output->pixelSize() == size) {
     return;
 }
 ```
-Resta poi tutto il prezzo di `kde.md` §8.3: le finestre si ridispongono, e il `PlacementTracker` è indicizzato **sulla geometria dell'output**, quindi tornare a una misura già vista teleporta indietro le finestre.
+Resta poi tutto il prezzo di `STUDI.md` §kde §8.3: le finestre si ridispongono, e il `PlacementTracker` è indicizzato **sulla geometria dell'output**, quindi tornare a una misura già vista teleporta indietro le finestre.
 
 ---
 
@@ -216,7 +216,7 @@ const double scaleX = std::clamp(dpiX / targetDpi, 1.0, maxScaleX);
 
 Alla creazione `modeSize == physicalSize`, quindi `dpi` vale **esattamente 25,4** su entrambi gli assi, **qualunque misura chiediamo**. E 25,4 sta sotto entrambi i `targetDpi` possibili — 30,5 per lo schermo grande (`:878-883`) e 96 per il monitor normale (`:886`) — quindi `std::clamp(dpi/targetDpi, 1.0, …)` dà **1.0**. In più `:903-906` riporta a 1.0 tutto ciò che sta sotto 1,20 (*«Low-but-not-1 scale factors look like a blurry mess»*).
 
-⭐ **Una misura strana non fa cambiare il fattore di scala. Il desktop non diventa illeggibile, e non per fortuna: per una proprietà del conto che non dipende dalla misura.** E la scala chiesta nel protocollo viene comunque buttata via e ricalcolata (`outputconfigurationstore.cpp:507`, `607-656`, già in `kde.md` §8.4): si passa `scale = 1` e i pixel veri.
+⭐ **Una misura strana non fa cambiare il fattore di scala. Il desktop non diventa illeggibile, e non per fortuna: per una proprietà del conto che non dipende dalla misura.** E la scala chiesta nel protocollo viene comunque buttata via e ricalcolata (`outputconfigurationstore.cpp:507`, `607-656`, già in `STUDI.md` §kde §8.4): si passa `scale = 1` e i pixel veri.
 
 ### ⚠ Ma il ragionamento vale **solo alla creazione** — e il giorno del ridimensionamento a caldo va rimisurato
 
@@ -228,7 +228,7 @@ Alla creazione `modeSize == physicalSize`, quindi `dpi` vale **esattamente 25,4*
 
 ## Quel che questo rapporto NON dice
 
-- ⛔ **Nessuna misura nuova. Su `192.168.0.2` gira GNOME, non KDE**: non c'era niente su cui misurare e non ho inventato nulla. Ogni `[M]` citata qui è di `kde.md` (banchi del 7 e 8 agosto) ed è **attribuita**. Le domande 3(a), 3(c), 5 e 6 sono **`[R]` pura**.
+- ⛔ **Nessuna misura nuova. Su `192.168.0.2` gira GNOME, non KDE**: non c'era niente su cui misurare e non ho inventato nulla. Ogni `[M]` citata qui è di `STUDI.md` §kde (banchi del 7 e 8 agosto) ed è **attribuita**. Le domande 3(a), 3(c), 5 e 6 sono **`[R]` pura**.
 - **Non risponde alla domanda di prodotto, ma solo a un suo quarto.** La decisione («scala 1 su tutti e quattro i desktop») ha qui la risposta per **KDE soltanto**. GNOME/Mutter, XFCE, LXQt e Cinnamon non li ho guardati. ⛔ La conversione delle coordinate **non sparisce** finché non c'è un sì su tutti e quattro.
 - **Non dice se `stream_virtual_output` con `--drm` funzioni davvero** con una misura dispari come 2133×772: è lettura del codice. `--drm` non parte sul nostro banco [M, M2] e la validazione **non è misurabile con `--virtual`** [M, M11] — dove ogni misura, buona o assurda, riceve lo stesso `Could not find output`.
 - **Non dice quanto costi davvero un ridimensionamento a caldo** — buco video, fotogrammi persi, input perduto. Il codice non è in nessun Plasma rilasciato, quindi **oggi non è misurabile da nessuna parte**, nemmeno compilando: servirebbe un `master` di kwin *e* di kpipewire.

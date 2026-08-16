@@ -64,7 +64,7 @@ favorisce chi misura si sceglie da se' se nessuno la nomina»*.
   fianco come il numero che il metro di `03-b17` produce oggi.
 
 ⛔ **E il PEZZO CIECO resta fuori da tutt'e due**: fra la tela leggibile e il
-  pixel acceso passano `[?]` **16-40 ms** che nessuna API vede (`web.md` §6.2,
+  pixel acceso passano `[?]` **16-40 ms** che nessuna API vede (`STUDI.md` §web §6.2,
   `CODER.md` §1-bis).  Si dichiara accanto a ogni numero — ⭐ **e qui esiste**,
   perche' questo banco gira sul **desktop vero**, non su Xvfb.
 
@@ -669,7 +669,7 @@ def stampa(fuori, casi):
                      ("%.2f" % db["mediana"]) if db["n"] else "—"))
         d = dist([c["fino_alla_tela_leggibile"] for c in regime])
         if d["n"]:
-            inf("⛔ [?] col PEZZO CIECO (%g-%g ms, `web.md` §6.2, nessuna API "
+            inf("⛔ [?] col PEZZO CIECO (%g-%g ms, `STUDI.md` §web §6.2, nessuna API "
                 "lo vede, e su questo palco ESISTE): %.1f – %.1f ms"
                 % (PEZZO_CIECO[0], PEZZO_CIECO[1],
                    d["mediana"] + PEZZO_CIECO[0], d["mediana"] + PEZZO_CIECO[1]))

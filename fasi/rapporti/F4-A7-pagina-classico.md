@@ -24,9 +24,9 @@ disegnata dalla pagina, che si muove alla velocità della mano e non della rete 
 | ✅ **quel che già funziona** | su una disposizione italiana `à` è un tasto **diretto**: viaggia come `LETTERA` U+00E0 — `[M]` 14 agosto 2026, caso `B2ter-accento` |
 | ⛔ **quel che NON funziona** | i **tasti morti** e l'IME (`^`+`e` → `ê`, la tastiera di Android, il cinese): oggi non producono niente, e la pagina lo **dichiara** invece di falsificare (ripiego `composizione`) |
 
-`web.md` §1.2 C aveva previsto esattamente questo scontro, e il prezzo è vero: per avere la
+`STUDI.md` §web §1.2 C aveva previsto esattamente questo scontro, e il prezzo è vero: per avere la
 composizione serve **un elemento modificabile con il fuoco**, e un elemento sopra la tela **fa
-cadere il percorso overlay** su cui è costruito tutto §6 di `web.md`.
+cadere il percorso overlay** su cui è costruito tutto §6 di `STUDI.md` §web.
 
 > **La domanda per Nic**: la fase 4 deve saper scrivere `ê` con `^`+`e`, o basta che scriva le
 > lettere che la sua tastiera ha per intero? ⚠ Non è una domanda tecnica: è quanto vale, per chi
@@ -136,7 +136,7 @@ giudica). Il verdetto si rifà sui byte già registrati, senza browser:
    cliente CDP) con dieci banchi in parallelo. È la scena, non il prodotto: adesso un colpo che non
    torna **si scrive e non uccide la misura**.
 7. `[?]` **Il prezzo del puntatore disegnato non è misurato.** È un `<div>` **sopra** la tela, e
-   `web.md` §1.2 C dice che un elemento sopra la tela fa cadere il percorso overlay e la tela
+   `STUDI.md` §web §1.2 C dice che un elemento sopra la tela fa cadere il percorso overlay e la tela
    desincronizzata. **Quanto costi in fotogrammi dipinti nessuno l'ha misurato**: si misura con
    `banchi/03-b16-dipinti.py` a puntatore acceso e spento, ed è una misura di **A2**, non mia.
    ⛔ Disegnarlo *dentro* la tela — la cura vera — oggi non è possibile da qui: con `?video=worker`

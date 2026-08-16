@@ -89,7 +89,7 @@ vicini() {
 }
 
 # ⛔ Tutto quel che va fatto DENTRO la sessione dell'utente passa di qui: uid,
-#    gid, ambiente composto da zero.  ⚠ `SHELL` vuota (`gnome.md` §3.1) e
+#    gid, ambiente composto da zero.  ⚠ `SHELL` vuota (`STUDI.md` §gnome §3.1) e
 #    `XDG_SESSION_TYPE=wayland` (senza, l'unita' della Shell non parte affatto
 #    per via del suo `ConditionEnvironment`).
 come_utente() {
@@ -168,7 +168,7 @@ sessione)
 
 	# ⛔ Se c'e' una sessione viva, la si CONGEDA e si aspetta `inactive` — non
 	#    «diverso da active»: `is-active` passa per `deactivating`, e ripartire
-	#    li' dentro e' un'altra prima esecuzione (`gnome.md`, fase 0 difetto 4).
+	#    li' dentro e' un'altra prima esecuzione (`STUDI.md` §gnome, fase 0 difetto 4).
 	if pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1; then
 		inf "c'e' gia' una sessione: la congedo (Logout 2)"
 		come_utente gdbus call --session -d org.gnome.SessionManager \

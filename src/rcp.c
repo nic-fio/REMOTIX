@@ -3566,7 +3566,7 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *     riquadro esiste per evitare.
 		 *
 		 * ⚠ E i mezzi scatti esistono: 120 e' uno scatto, **60 e' mezzo scatto e
-		 *   NON si arrotonda a zero**.  `gnome.md` §9 dice che
+		 *   NON si arrotonda a zero**.  `STUDI.md` §gnome §9 dice che
 		 *   `ei_device_scroll_discrete` fa una divisione intera per 120 e se li
 		 *   mangia — ma quella e' una scelta di `input.c`, non di qui: da questo
 		 *   lato il numero passa intero, com'e' arrivato. */
@@ -4905,7 +4905,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    sua finestra a ogni ridimensionamento, e chi trascina un bordo
 			 *    ne manda venti al secondo.  Girarla al palco vorrebbe dire
 			 *    riavviare il flusso per niente, cioe' **perdere un fotogramma a
-			 *    ogni richiesta inutile** (`kde.md` §8.2-bis).
+			 *    ogni richiesta inutile** (`STUDI.md` §kde §8.2-bis).
 			 *
 			 * ⚠ Ma solo se non c'e' gia' una richiesta in volo: se ce n'e' una, il
 			 *   palco sta andando ALTROVE, e questa e' un ripensamento che va

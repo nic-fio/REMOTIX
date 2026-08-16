@@ -227,7 +227,7 @@
  *
  * ⛔ E il carico utile porta un CRC-16, che e' quel che rende dicibile «la
  *   marca NON c'e'».  Un rilevatore che dice sempre si' misura zero ed e'
- *   felice a torto (`web.md` §6.3, controllo P3).
+ *   felice a torto (`STUDI.md` §web §6.3, controllo P3).
  *
  *   sync      8 bit   0xB2, fisso
  *   versione  8 bit   0x01
@@ -241,7 +241,7 @@
  * ⚠ L'istante e' quello in cui il fotogramma e' stato COMPOSTO, non quello in
  *   cui e' comparso sullo schermo: fra i due c'e' il commit, il compositore e
  *   il pannello.  Chi misura il ritardo usa questo come istante di partenza e
- *   ci somma il pezzo cieco dichiarato (`web.md` §6.3).  ⛔ Chiamarlo «istante
+ *   ci somma il pezzo cieco dichiarato (`STUDI.md` §web §6.3).  ⛔ Chiamarlo «istante
  *   in cui il pixel si e' acceso» sarebbe la forma E1.
  *
  * ---------------------------------------------------------------------------
@@ -1641,7 +1641,7 @@ static void tas_keymap(void *d, struct wl_keyboard *k, uint32_t f, int32_t fd,
 {
 	(void)d; (void)k; (void)f; (void)taglia;
 	/* ⛔ Il descrittore si CHIUDE: il protocollo lo passa al client e chi non
-	 *    lo chiude perde un fd a ogni cambio di disposizione — e `gnome.md` §9
+	 *    lo chiude perde un fd a ogni cambio di disposizione — e `STUDI.md` §gnome §9
 	 *    dice che un cambio di keymap rifa' il dispositivo, quindi qui si
 	 *    passa piu' di una volta. */
 	if (fd >= 0) close(fd);

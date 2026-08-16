@@ -64,7 +64,7 @@ Con queste sezioni, in quest'ordine — è il modello di `PIANO.md` §0.2 ristre
 | **Che cosa deve produrre** | in una frase, e in termini di cosa l'utente vede o di cosa il banco misura |
 | ⛔ **Il banco** | **scritto prima del prodotto**: la scena dichiarata, che cosa si conta, il **controllo positivo** («lo strumento sa trovare qualcosa che c'è di sicuro?»), il **caso opposto** («che aspetto avrebbe il contrario?»), e **come questo banco si certifica** — sano N → guasto M → risanato N, con i numeri attesi **scritti prima del giro** |
 | **Che cosa si riusa da v1** | file e **righe vere**, contate — non le cifre del piano ricopiate. Se il piano dice 1060 righe e il file ne ha altre, si scrive quel che c'è e si segnala |
-| ⛔ **Le trappole già pagate che mordono qui** | citate con il paragrafo: `LEZIONI.md`, `gnome.md`, `web.md`, `REVIEWER.md` §2 (le forme E1-E11). Non se ne inventano: si vanno a leggere |
+| ⛔ **Le trappole già pagate che mordono qui** | citate con il paragrafo: `LEZIONI.md`, `STUDI.md` §gnome, `STUDI.md` §web, `REVIEWER.md` §2 (le forme E1-E11). Non se ne inventano: si vanno a leggere |
 | **Le `[?]` da misurare** | quel che non si sa, scritto come non saputo |
 | **Le cuciture** | che cosa questa sotto-fase **chiede** alle altre cinque e che cosa **promette** loro. È la sezione che il coordinatore userà per rimettere insieme il lavoro |
 
@@ -113,7 +113,7 @@ stesso giro*, o il conto non cala mai.
 | `LEZIONI.md` | il metodo di misura. Si legge **la parte che riguarda la propria area**, e si cita col paragrafo |
 | `SPECIFICHE.md` | che cosa il prodotto promette all'utente |
 | `RCP.md` | l'arbitro del filo. Obbligatorio per **F2.4**, utile a **F2.3** e **F2.5** |
-| il documento d'area | `gnome.md` per F2.1, `web.md` per F2.5 e F2.6, `cinnamon.md`/`kde.md` solo se serve un confronto |
+| il documento d'area | `STUDI.md` §gnome per F2.1, `STUDI.md` §web per F2.5 e F2.6, `STUDI.md` §cinnamon/`STUDI.md` §kde solo se serve un confronto |
 | `fasi/01-filo-nudo.md` | com'è fatto un documento di fase quando è finito, e le trappole della fase appena chiusa |
 
 ---

@@ -12,7 +12,7 @@
 Il mandato: *«il lettore della marca: la funzione che, dato un fotogramma
 decodificato, restituisce il numero del disegno e l'istante — e ⛔ che sa
 anche dire "la marca non c'e'".  Un rilevatore che dice sempre si' misura zero
-ed e' felice a torto»* (`web.md` §6.3, controllo **P3**).
+ed e' felice a torto»* (`STUDI.md` §web §6.3, controllo **P3**).
 
 ⇒ `leggi_marca()` ha DUE uscite, non una:
 

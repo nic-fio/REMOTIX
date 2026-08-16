@@ -41,7 +41,7 @@
       schermo vero: qui si dichiara **che cosa l'API espone**, che e' un fatto
       del motore, e **non** che la lock funzioni.
 
-  ⭐ Ed e' il senso di questo punto: `web.md` §7 dice che ogni misura va fatta
+  ⭐ Ed e' il senso di questo punto: `STUDI.md` §web §7 dice che ogni misura va fatta
      **sul dispositivo vero** (forma d'errore E10).  Questa e' la meta' che il
      portatile puo' dare; la meta' su DeX resta non misurata, e la pagina lo
      scrive da se' nel registro invece di lasciarlo dedurre.
@@ -148,7 +148,7 @@ function manda(riga) {
 }
 
 /* ── Che cosa il motore ESPONE ────────────────────────────────────────────
-   ⛔ «L'API c'e'» non e' «la lock funziona»: e' la lezione di `web.md` §9.1 —
+   ⛔ «L'API c'e'» non e' «la lock funziona»: e' la lezione di `STUDI.md` §web §9.1 —
       una promessa di un'API va trattata come la dichiarazione di un
       compositore.  Qui si dichiara solo la presenza, ed e' scritto nel campo. */
 const api = {
@@ -162,7 +162,7 @@ const api = {
   clipboard_write: !!(navigator.clipboard && navigator.clipboard.write),
   fullscreenEnabled: !!document.fullscreenEnabled,
   webtransport: (typeof WebTransport !== "undefined"),
-  nota: "presenza dell'API, NON funzionamento — §7.3-bis e web.md §9.1",
+  nota: "presenza dell'API, NON funzionamento — §7.3-bis e STUDI.md §web §9.1",
 };
 manda(Object.assign({}, api));
 $("api").textContent = JSON.stringify(api);

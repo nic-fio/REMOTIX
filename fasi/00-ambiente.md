@@ -89,7 +89,7 @@ nuove, che sono banco.
 | `v1/banchi/banco-compositori/` | portato sul ferro in `/media/REMOTIX/tmp/`, ricompilato nel `devroot` |
 | ⭐ `banchi/00-sessione-gnome.sh` | **nuovo**: avvia una sessione GNOME senza monitor con l'ambiente composto da zero, e **verifica** che sia headless invece di sperarlo (`DECISIONI.md` §4.3-bis) |
 | ⭐ `banchi/00-c1-wlroots.sh` | **nuovo**: la certificazione di `misura-wlroots`, il terzo banco, su sway e labwc |
-| ⭐ `banchi/00-c1-kwin.sh` | **nuovo**: la certificazione C1 — lo stesso strumento su KWin, con l'atteso di `kde.md` §5.7 stampato prima della misura |
+| ⭐ `banchi/00-c1-kwin.sh` | **nuovo**: la certificazione C1 — lo stesso strumento su KWin, con l'atteso di `STUDI.md` §kde §5.7 stampato prima della misura |
 | ⭐ `banchi/00-rimetti-macchina.sh` | **nuovo**: rimette in piedi la macchina partendo da **prima del disco**, che è il passo che nessuno script conteneva |
 | ⭐ `v1/banchi/banco-compositori/misura-cattura.c` | **corretto**: ora distingue lo zero dal fallimento |
 | ⭐ `v1/banchi/banco-compositori/banco.sh` | **corretto** due volte: `stdbuf -oL` sulla scena, e la verifica che la scena sia viva prima di credere al numero |
@@ -108,7 +108,7 @@ congedo è **`Logout(2)`**, non `systemctl --user stop`.
 
 | Che cosa | Misurato | Data |
 |---|---|---|
-| GNOME installato sul server | ⛔ **no** (`dpkg-query` → not-installed) — conferma `gnome.md` §2 | 9 ago |
+| GNOME installato sul server | ⛔ **no** (`dpkg-query` → not-installed) — conferma `STUDI.md` §gnome §2 | 9 ago |
 | `vainfo` installato | ⛔ **no** | 9 ago |
 | `nicfio` nei gruppi `render`/`video` | ⛔ **no** (`nicfio sudo`) | 9 ago |
 | `/media` montata, `/etc/fstab` | montata; ⚠ **fstab vuoto**, come `LEZIONI.md` §2.5-bis | 9 ago |
@@ -120,7 +120,7 @@ congedo è **`Logout(2)`**, non `systemctl --user stop`.
 
 | Che cosa | Atteso | Misurato | Data |
 |---|---|---|---|
-| Mutter / gnome-shell | 48.7 (Trixie) | ✅ **48.7**, `gnome-session` 48.0 — le versioni che `gnome.md` ha studiato | 9 ago |
+| Mutter / gnome-shell | 48.7 (Trixie) | ✅ **48.7**, `gnome-session` 48.0 — le versioni che `STUDI.md` §gnome ha studiato | 9 ago |
 | `nicfio` nei gruppi | `render`, `video` | ✅ `nicfio sudo video render` | 9 ago |
 | `libei1` | presente | ✅ 1.3.901 | 9 ago |
 | `weston-simple-egl` per la scena | presente | ⛔ **ASSENTE il 13 agosto 2026** — `[M]`. Era ✅ `/usr/bin/weston-simple-egl` il 9 ago, ed è sparito: **il rootfs sta in RAM** e la macchina che si rimette da sé non si rimette *completa* (`LEZIONI.md` §2.5-bis). ⇒ La scena della fase 3 è **la nostra** (`banchi/03-scena.c`), e non dipende da un pacchetto | 9 ago → **13 ago** |
@@ -162,7 +162,7 @@ ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `Re
 > gli si chiedeva Mutter consegna **31,5**, e rinegoziando la sola cadenza (monitor 120, freno 90)
 > ne consegna `[M]` **61,4**. ⚠ Che il 37 fosse il resto di una **divisione troncata** è la
 > spiegazione più probabile, ed è `[R]` — letta nel codice di Mutter, **non misurata**
-> (`gnome.md` §8.2; la «legge su 13 punti» che si leggeva qui il 13 agosto **è caduta la sera
+> (`STUDI.md` §gnome §8.2; la «legge su 13 punti» che si leggeva qui il 13 agosto **è caduta la sera
 > stessa**).*
 > ⇒ **Il controllo positivo del progetto va rifatto contro le celle pulite di
 > `banchi/03-b14-esiti.jsonl`, non contro il numero**, e con la scena della fase 3 — che **conta le
@@ -175,7 +175,7 @@ ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `Re
 | C2 — la stessa scena **ferma** | crolla | **0,00**, con flusso attivo e formato negoziato | ✅ | 9 ago |
 | C4 — giri ripetuti senza rimettere niente | uguali | sei giri, dispersione **33,7-37,8** | ✅ | 9 ago |
 | C3 — nodo inesistente | «fallito», non «zero» | ⛔ **dava 0,00 e uscita 0** → corretto, ora `GUASTO` e uscita 2 | ✅ dopo cura | 9 ago |
-| **C1 — lo stesso strumento su KWin** | **59,2** `[M]` `kde.md` §5.7 | ⭐ **58,92** (1180 fotogrammi, mediana 17,0 ms) | ✅ | 9 ago |
+| **C1 — lo stesso strumento su KWin** | **59,2** `[M]` `STUDI.md` §kde §5.7 | ⭐ **58,92** (1180 fotogrammi, mediana 17,0 ms) | ✅ | 9 ago |
 | C1-bis — KWin **in memoria** | 43,3 `[M]` 8 ago | ⚠ **49,67** — più alto dell'atteso, vedi sotto | ⚠ | 9 ago |
 
 ⭐ **C1 è la certificazione che vale più di tutte, e non era «un altro numero»**: dice che lo
@@ -196,7 +196,7 @@ causa. Non tocca la certificazione, che passa sulla colonna a copia zero.
 
 ⭐ **E la distribuzione degli intervalli dice più del solo numero**: `min 16,2 · mediana 33,3 ·
 p95 33,5`. I fotogrammi arrivano a **uno o due periodi di quadro**, mai a metà — cioè due orologi
-a 60 che battono fra loro, che è esattamente il meccanismo che `gnome.md` §8.2 legge nel codice
+a 60 che battono fra loro, che è esattamente il meccanismo che `STUDI.md` §gnome §8.2 legge nel codice
 (`maxFramerate` fa da freno alla cattura **e** da frequenza al monitor virtuale). ⚠ **Non è la
 prova della cura**: è la prova che la spiegazione è compatibile con quel che si vede. La cura
 resta l'esperimento M3 della fase 3.
@@ -252,7 +252,7 @@ numero coerente su due modelli opposti non era scontato: è un'informazione, non
 
 | Che cosa | Perché non qui |
 |---|---|
-| le **tabelle per risoluzione** (720p → 4K) di Mutter e KWin | esistono già `[M]` in `kde.md` §5.7 e in `LEZIONI.md` §3. Rifarle adesso sarebbe misurare prima di avere la domanda: servono alla fase 8 (l'accelerazione) e alla 10 (KDE) |
+| le **tabelle per risoluzione** (720p → 4K) di Mutter e KWin | esistono già `[M]` in `STUDI.md` §kde §5.7 e in `LEZIONI.md` §3. Rifarle adesso sarebbe misurare prima di avere la domanda: servono alla fase 8 (l'accelerazione) e alla 10 (KDE) |
 | le scene `video` e `carico` | idem: rispondono a domande delle fasi 3 e 9 |
 | `adb`, Desktop AVD, il telefono vero | l'ambiente Android serve alla **sonda della fase 2**, e l'utente ha chiesto di lasciarlo stare per ora. ⚠ *Riletto il 9 agosto sera: `adb` e l'AVD **non servono più affatto** (non c'è più un'applicazione Android), e **il telefono vero serve alla fase 1**. Vedi la voce corretta in «Che cosa resta `[?]`»* |
 
@@ -314,7 +314,7 @@ Plasma session», qui **non dà nessun errore**.
 ⛔ **E la prima cura era sbagliata a sua volta**: aspettare che `is-active` fosse *diverso da
 `active`* si sblocca dopo mezzo secondo, perché passa da **`deactivating`** — cioè si riparte
 dentro l'intervallo di smontaggio, che è il difetto che la guardia doveva togliere. Si aspetta
-`inactive`. E il congedo giusto è **`Logout(2)`** (`gnome.md` §3.2): `systemctl --user stop` non
+`inactive`. E il congedo giusto è **`Logout(2)`** (`STUDI.md` §gnome §3.2): `systemctl --user stop` non
 ferma il gestore, e `Logout(1)` mostrerebbe un dialogo che in una sessione non presidiata non
 vede nessuno.
 
@@ -410,8 +410,8 @@ progettato quanto il modo in cui riesce.
 ### 11. ⛔ Confrontato con la colonna sbagliata, il banco sembrava sbagliare di dieci fotogrammi
 
 Il primo giro di C1 ha misurato KWin **in memoria** (49,67) e l'ha confrontato con i **59-60** di
-`kde.md`, che sono la colonna a **copia zero**. Per qualche minuto il banco è sembrato sbagliare;
-stava rispondendo giusto a un'altra domanda. La tabella di `kde.md` §5.7 ha due colonne, e a 1080p
+`STUDI.md` §kde, che sono la colonna a **copia zero**. Per qualche minuto il banco è sembrato sbagliare;
+stava rispondendo giusto a un'altra domanda. La tabella di `STUDI.md` §kde §5.7 ha due colonne, e a 1080p
 dice 59,2 e 43,3.
 
 ⭐ **La cura è nel banco, non nella memoria di chi legge**: ora `00-c1-kwin.sh` prende la strada
@@ -519,7 +519,7 @@ secondi il difetto che al revisore era costato una lettura di `strings`.
 ### Un `[?]` del revisore chiuso a nostro favore
 
 Sospettava che il **49,67** di KWin in memoria fosse una cattura a 720p etichettata 1080p —
-ipotesi acuta, perché 49,6 è esattamente la cella 720p di `kde.md` §5.7. **Smentita da un dato già
+ipotesi acuta, perché 49,6 è esattamente la cella 720p di `STUDI.md` §kde §5.7. **Smentita da un dato già
 registrato**: quella corsa aveva stampato `formato negoziato: 1920x1080`. Il `[?]` sul 49,67 resta
 aperto, ma con una causa candidata in meno invece che una in più.
 
@@ -586,7 +586,7 @@ accanto**, o attribuirebbe il tetto alla cosa sbagliata:
    misura», non «GNOME non regge il 4K».
 2. ⏳ **E il tetto non è ancora `[M]` come limite: è `[M]` come stato attuale.** Gli intervalli
    misurati oggi — mediana **33,3 ms**, minimo **16,2**, mai valori intermedi — sono la firma di due
-   orologi a 60 che battono fra loro, cioè esattamente il meccanismo che `gnome.md` §8.2 legge nel
+   orologi a 60 che battono fra loro, cioè esattamente il meccanismo che `STUDI.md` §gnome §8.2 legge nel
    codice. La cura candidata (**M3**: negoziare alto e rinegoziare la sola cadenza) costa **zero
    righe di prodotto** e non è stata provata. È in `PIANO.md` fase 3.
    > ⭐ ⚠ *13 agosto 2026: **M3 è stata provata e il fatto riesce** — monitor 120, freno 90, `[M]`
@@ -594,7 +594,7 @@ accanto**, o attribuirebbe il tetto alla cosa sbagliata:
    > che lo sostituisce (una **quantizzazione** sui tick) è `[R]`, non `[M]`: la «legge verificata
    > su 13 punti» scritta il pomeriggio del 13 agosto **è caduta la sera stessa**, perché le due
    > celle della griglia portavano `scena_sul_mio_monitor: false`. ⇒ **M3 resta mezza**
-   > (`gnome.md` §13).*
+   > (`STUDI.md` §gnome §13).*
 
 ⚠ La differenza fra le due frasi non è accademica: *«Mutter non va oltre 36»* chiude la questione,
 *«Mutter non va oltre 36 finché nessuno separa i due orologi»* la lascia aperta a costo zero. Oggi

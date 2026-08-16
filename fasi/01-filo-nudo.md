@@ -30,7 +30,7 @@ in fondo a questo documento
 > | **sei cose prodotte non le guardava nessuno** | fra cui che **i due certificati siano due**, e che la parola d'ordine non finisca in un registro. ⭐ Nasce **B13** — R3.24 |
 >
 > ⚠ **E tre cure sono cadute fuori da questo file**, perché la stonatura era altrove: `RCP.md`
-> §4.1-bis e §7.3, i controlli negativi nei banchi di `web.md`, e la riga della fase 0 che manda la
+> §4.1-bis e §7.3, i controlli negativi nei banchi di `STUDI.md` §web, e la riga della fase 0 che manda la
 > sonda alla fase 2. Sono elencate in fondo, sotto «Le cure fuori da questo documento».
 
 ---
@@ -82,7 +82,7 @@ Apple no**.*
 |---|---|---|
 | S2, S5, S3a | ⭐ **il telefono Android** con Chrome | ✅ **sì** — e non va configurato: si apre un indirizzo |
 | S3a, S5 | ⭐ un dispositivo **DeX** (la lock esiste solo da **Android 16 QPR1**) | ✅ **sì** — ⚠ `[?]` **da verificare che sia almeno Android 16 QPR1**, o S3a misura l'assenza della lock e la scambia per una perdita di scorciatoie |
-| ⛔ **S3a su Firefox** | **Firefox ≥ 151**: `requestFullscreen({keyboardLock})` è entrato nello standard l'8 maggio 2026 e Gecko l'ha spedito **nella 151** `[S]` | ⛔ **no**: il Firefox della macchina da cui si prova è la **140.0** `[M]` 9 ago. ⭐ *Trovato dalla regola B0.6 — annotare la versione esatta — al primo giro in cui è servita: `web.md` §2 dichiara di aver letto Gecko **151-153**, e su questa macchina c'è tre versioni indietro. Chi misurasse S3a qui misurerebbe **l'assenza della lock**, e la scambierebbe per scorciatoie perdute* |
+| ⛔ **S3a su Firefox** | **Firefox ≥ 151**: `requestFullscreen({keyboardLock})` è entrato nello standard l'8 maggio 2026 e Gecko l'ha spedito **nella 151** `[S]` | ⛔ **no**: il Firefox della macchina da cui si prova è la **140.0** `[M]` 9 ago. ⭐ *Trovato dalla regola B0.6 — annotare la versione esatta — al primo giro in cui è servita: `STUDI.md` §web §2 dichiara di aver letto Gecko **151-153**, e su questa macchina c'è tre versioni indietro. Chi misurasse S3a qui misurerebbe **l'assenza della lock**, e la scambierebbe per scorciatoie perdute* |
 | S2 | un **PC collegato** per `chrome://inspect` — il controllo C, l'unico canale che risponde davvero | ✅ sì |
 | S7 | sessione GNOME e `libei` | ✅ `banchi/00-sessione-gnome.sh`, `libei1` 1.3.901 `[M]` |
 | tutti | il `devroot`, la macchina di prova, la cache dei pacchetti | ✅ fase 0 |
@@ -170,7 +170,7 @@ una prova e l'altra falsa la prova successiva.*
 
 ⛔ **Tutte sul dispositivo vero, mai su un browser di comodo** (`DECISIONI.md` §5-bis.0-ter).
 ⭐ **E ogni riga porta il rimando puntuale al posto dove vive la procedura** — ⛔ **che per tre di
-loro non è un rapporto, e va detto**: `S1a`, `S1b`, `S2`, `S3a`, `S3b` e `S4` sono nate in `web.md`
+loro non è un rapporto, e va detto**: `S1a`, `S1b`, `S2`, `S3a`, `S3b` e `S4` sono nate in `STUDI.md` §web
 §7 e **non compaiono in nessuno dei quattro rapporti**, dove le prove si chiamano in quattro modi
 incompatibili e due rapporti usano `P1…Pn` per cose di natura opposta (R3.28). ⛔ **`S5`, `S6` e
 `S7` invece non sono nate lì**: `[M]` 11 agosto 2026, `grep -cE '\bS5\b|\bS6\b|\bS7\b' web.md` →
@@ -179,7 +179,7 @@ file). Sono nate **in questo documento**, dalle domande di `SPECIFICHE.md` §6.1
 `RCP.md` §5.3 (S6) e `RCP.md` §7.3 (S7), e rimandano **lì** perché non esiste un rapporto che le
 contenga.
 
-> ⚠ *Questa riga diceva* «le etichette `S1a…S7` **sono nate in `web.md` §7**» *— e §7 di `web.md` ne
+> ⚠ *Questa riga diceva* «le etichette `S1a…S7` **sono nate in `STUDI.md` §web §7**» *— e §7 di `STUDI.md` §web ne
 > elenca **sei**, non nove. ⛔ Era la riga che **stabilisce la convenzione dei rimandi**, e le due
 > righe che la seguono in questo stesso capitolo ne erano la smentita: S5 rimanda a
 > `SPECIFICHE.md §6.1-bis`, S7 a `RCP.md §7.3` — cioè non a un rapporto. Corretta l'11 agosto 2026,
@@ -208,7 +208,7 @@ rapporti.*
 | | |
 |---|---|
 | **si misura** | dopo quanti giorni l'avviso ricompare sulla pagina |
-| **atteso** | **7 giorni** — `[S]`→`[R]` da `kCertErrorBypassExpirationInSeconds = 604800`. ⚠ **La promozione di marca è dichiarata qui**: `web.md` §8 la teneva ancora `[?]`, e le due righe di `web.md` si contraddicevano (R4.14) |
+| **atteso** | **7 giorni** — `[S]`→`[R]` da `kCertErrorBypassExpirationInSeconds = 604800`. ⚠ **La promozione di marca è dichiarata qui**: `STUDI.md` §web §8 la teneva ancora `[?]`, e le due righe di `STUDI.md` §web si contraddicevano (R4.14) |
 | ⛔ **il controllo** | **l'impronta del certificato DELLA PAGINA, letta all'inizio e alla fine, deve essere la stessa.** Senza, un certificato rigenerato da un riavvio fa scrivere «l'eccezione è durata quattro giorni» e la frase che si dirà all'utente nasce sbagliata (R3.15) |
 | ⚠ **il calendario** | è l'unica misura che richiede **sette giorni di tempo reale**, e la fase non si chiude prima. Se si accelera spostando l'orologio della macchina, ⭐ il controllo diventa *«a sei giorni l'eccezione c'è ancora»* — che è un controllo vero |
 | ⏳ **giorno 0 preso, l'orologio è in moto** | `[M]` **2026-08-10T21:10:01Z** — **Chrome 151.0.7922.108**, profilo persistente in `~/.remotix-s1b/profilo`, schermo finto `Xvfb :77 1280x1024x24`, sito `https://192.168.0.2:7452`, certificato **ECDSA P-256 a 3650 giorni** con SAN `IP Address:192.168.0.2` (⛔ **non** `localhost`, che in Chrome ha una corsia riservata, e ⛔ **non** in navigazione privata). Registro `banchi/01-s1b-stato.jsonl`. **Il verdetto è del 17-18 agosto 2026** |
@@ -318,7 +318,7 @@ funzionale lo vede mai. Le librerie QUIC lo offrono **per impostazione predefini
 | **si misura** | su **Safari macOS e iOS separati**: una sessione WebTransport dietro la sola eccezione del certificato |
 | ⛔ **i tre controlli, non uno** | **P2** la connessione **con l'impronta pubblicata deve riuscire** — *stesso browser, stessa pagina, stesso giro* · **P3** ⛔ **con l'impronta sbagliata di un byte deve FALLIRE** · **P4** con un certificato a **30 giorni** deve fallire **per durata** |
 | ⛔ **perché P3 è quello che mancava** | senza, una pagina che guarda **la promessa sbagliata** — considera «riuscita» la costruzione dell'oggetto invece di attendere `ready` — fa riuscire **anche** la prova con l'impronta storpiata, e il banco scrive un `[M]` falso *«su Safari l'eccezione copre WebTransport»* **contro due `[R]` letti nel codice di Chromium e di Gecko** (R3.1). S1 §4.4: *«solo con P2 verde e **P3 rosso** il risultato di P1 significa qualcosa»* |
-| ⚠ **che cosa decide** | **una comodità, non una piattaforma**: `serverCertificateHashes` è spedito anche in **Safari 26.4** (`web.md` §3.1) — *la prima stesura citava `RCP.md` §4.1-bis a sostegno, e §4.1-bis diceva il contrario perché non era stata aggiornata. Curata (R4.4)* |
+| ⚠ **che cosa decide** | **una comodità, non una piattaforma**: `serverCertificateHashes` è spedito anche in **Safari 26.4** (`STUDI.md` §web §3.1) — *la prima stesura citava `RCP.md` §4.1-bis a sostegno, e §4.1-bis diceva il contrario perché non era stata aggiornata. Curata (R4.4)* |
 
 ### S6 — quanto porta davvero un datagram  ·  `RCP.md §5.3`
 
@@ -2041,9 +2041,9 @@ perfetta.
 | | |
 |---|---|
 | quanti **stream al secondo** regga ciascun browser | `RCP.md` §2.3 — banco della **fase 3** |
-| **Safari su HTTP/2 e TCP** | l'unico motore che ci ripiega, e il nostro server non lo parla: ⏳ **va deciso** se implementarlo o dichiarare Safari fuori dal ripiego (`web.md` §3.2, O5) |
+| **Safari su HTTP/2 e TCP** | l'unico motore che ci ripiega, e il nostro server non lo parla: ⏳ **va deciso** se implementarlo o dichiarare Safari fuori dal ripiego (`STUDI.md` §web §3.2, O5) |
 | ⭐ **S1a — l'eccezione su Safari e su iOS** | ✅ **resta `[?]` per decisione**, non per dimenticanza (`DECISIONI.md` §1.8). ⛔ E finché è `[?]`, *«funziona su iPhone»* **non si scrive nella documentazione del prodotto** |
-| i **10 bit** fino allo schermo | tre indizi contrari, nessuno è una misura (`web.md` §1.2 A). Verifica alla **fase 2**, e la prova finale è **guardare una sfumatura** |
+| i **10 bit** fino allo schermo | tre indizi contrari, nessuno è una misura (`STUDI.md` §web §1.2 A). Verifica alla **fase 2**, e la prova finale è **guardare una sfumatura** |
 | il **pezzo cieco** di S4 | 16-40 ms fra il disegno e il pixel acceso, e nessuna API JavaScript lo vede: la stima **si dichiara accanto a ogni numero** |
 | ⚠ **che a rifiutare l'impronta vecchia sia il CONFRONTO dell'impronta** | il terzo giro di B3 lo dava per dimostrato, e non lo è: l'esito registrato dichiara **tre cause con lo stesso aspetto** — UDP filtrato, impronta non del certificato servito, certificato oltre i 14 giorni — e nessuno le ha distinte. ⛔ Si chiude con un controllo che le separi, non con la frase *«il browser confronta davvero»* (R11.3) |
 | ⭐ **~~e la seconda metà del criterio di B2 sul terzo giro~~ — CHIUSA** | il giro è stato **rifatto la sera del 10 agosto**, su decisione dell'utente, e adesso passa pieno: la sonda manda un `CIAO` conforme e accetta `ECCOMI`, invece dell'eco di B2 che il server non fa più. ⭐ E registra **sempre** un esito, anche quando il server tace: prima restava appesa, e «il browser non è partito», «la sessione non si è aperta» e «il server non ha risposto» avevano lo stesso aspetto (R11.3) |
@@ -2070,10 +2070,10 @@ Curate lo stesso giorno, o sarebbero rimaste note in un documento.*
 
 | | |
 |---|---|
-| `RCP.md` §4.1-bis | diceva ancora *«`[S]` WebKit non lo implementa»*, mentre `web.md` §3.1 e `DECISIONI.md` §1.7 erano stati corretti il 9 agosto. ⛔ **È l'arbitro**: chi lo leggeva alla lettera scriveva il ramo sbagliato **restando conforme** (R4.4) |
+| `RCP.md` §4.1-bis | diceva ancora *«`[S]` WebKit non lo implementa»*, mentre `STUDI.md` §web §3.1 e `DECISIONI.md` §1.7 erano stati corretti il 9 agosto. ⛔ **È l'arbitro**: chi lo leggeva alla lettera scriveva il ramo sbagliato **restando conforme** (R4.4) |
 | `RCP.md` §7.3 | attribuiva al banco della rotella di v1 una tabella di conversione: `LEZIONI.md` §2.3 dice che è costato **una stringa di registro cercata male** (R4.15) |
-| `web.md` §3.3, §4.3, §6.3 | i **controlli negativi** che i rapporti prescrivono e che la sintesi aveva perso — è la cura che `R2` aveva ordinato *«prima di scrivere una riga di banco»* (R3.1) |
-| `web.md` §8 | la durata dell'eccezione su Chrome era `[?]` in §8 e `[R]` in §3.2, **nello stesso documento** (R4.14) |
+| `STUDI.md` §web §3.3, §4.3, §6.3 | i **controlli negativi** che i rapporti prescrivono e che la sintesi aveva perso — è la cura che `R2` aveva ordinato *«prima di scrivere una riga di banco»* (R3.1) |
+| `STUDI.md` §web §8 | la durata dell'eccezione su Chrome era `[?]` in §8 e `[R]` in §3.2, **nello stesso documento** (R4.14) |
 | `fasi/00-ambiente.md` | dichiara che l'ambiente della sonda serve *«alla fase 2, non prima»*, mentre `PIANO.md` §1.2 la mette prima di tutto nella fase 1 (R3.14) |
 | `PIANO.md` §1.2 | la sonda era di quattro misure e **S4 non è eseguibile in questa fase** |
 
@@ -2092,7 +2092,7 @@ la forma di difetto che questo progetto paga più spesso.*
 | `SPECIFICHE.md` §5.5 | ⛔ prometteva dieci sessioni insieme mentre la fase 1 gira su **un filo solo con PAM sincrona**: il ripiego era dichiarato **solo in un commento di `src/main.c`** (R12C.17) |
 | `DECISIONI.md` §5.0-quater | la `[?]` su cui poggiava è misurata, e va **nell'altro verso** — `LEZIONI.md` §2.3-quater preso in flagrante (R12C.8) |
 | `DECISIONI.md` §7.17 | ❓ **nuova**, aperta da una misura di B6 e non da una lettura |
-| `web.md` §7 · §8 | le etichette della sonda, e S1b che non è più *«da avviare»* |
+| `STUDI.md` §web §7 · §8 | le etichette della sonda, e S1b che non è più *«da avviare»* |
 
 ---
 

@@ -40,7 +40,7 @@ l'iniezione non c'e' ancora*»).
     misurato: **quanto sta fra il disegno e la cattura**.
 
 ═══════════════════════════════════════════════════════════════════════════════
-⛔ LA FORMA DELL'ANELLO, E L'ORDINE E' VINCOLANTE — `web.md` §6.3
+⛔ LA FORMA DELL'ANELLO, E L'ORDINE E' VINCOLANTE — `STUDI.md` §web §6.3
 ═══════════════════════════════════════════════════════════════════════════════
 
       t1 = performance.now()      ⛔ PRIMA RIGA del richiamo del decodificatore
@@ -57,7 +57,7 @@ l'iniezione non c'e' ancora*»).
 ⛔⛔ IL PEZZO CIECO, E SI DICHIARA ACCANTO A OGNI NUMERO
 ═══════════════════════════════════════════════════════════════════════════════
 
-`web.md` §6.2: fra il disegno e il pixel acceso passano **1,5-2,5 intervalli di
+`STUDI.md` §web §6.2: fra il disegno e il pixel acceso passano **1,5-2,5 intervalli di
 quadro, cioe' 16-40 ms a 60 Hz** — quanto tutto il nostro tetto — e **nessuna
 API JavaScript li vede**.  ⇒ Ogni numero di questo banco esce con la stessa
 riga accanto, e la funzione `con_pezzo_cieco()` la scrive: chi stampa un numero
@@ -119,7 +119,7 @@ I SETTE CONTROLLI, E TRE SONO TRAPPOLE NOTE
 
   P6  ⛔ LA GRANA DELL'OROLOGIO.  Senza COOP+COEP i cronometri cadono su una
       griglia da 1 ms, su un tetto di 50.  ⚠ E' un **vincolo di prodotto**
-      (`SPECIFICHE.md` §11.5, `web.md` O11), non una taratura del banco: il
+      (`SPECIFICHE.md` §11.5, `STUDI.md` §web O11), non una taratura del banco: il
       prodotto le serve gia' (`src/pagina.c:32-35`).  Qui si MISURA la grana
       ottenuta, e si dichiara.
 
@@ -208,7 +208,7 @@ def dist(v, scala=1.0):
 
 
 # ⛔ IL PEZZO CIECO, IN UNA FUNZIONE, PERCHE' NON SI POSSA STAMPARE UN NUMERO
-#    SENZA.  `web.md` §6.2, `[?]`: nessuna API JavaScript lo vede.
+#    SENZA.  `STUDI.md` §web §6.2, `[?]`: nessuna API JavaScript lo vede.
 CIECO_MIN_MS, CIECO_MAX_MS = 16.0, 40.0
 
 
@@ -216,7 +216,7 @@ def con_pezzo_cieco(ms):
     if ms is None:
         return "—"
     return ("%.1f ms MISURATI  +  [?] %.0f-%.0f ms di pezzo cieco "
-            "(disegno → pixel acceso, `web.md` §6.2, nessuna API lo vede)  "
+            "(disegno → pixel acceso, `STUDI.md` §web §6.2, nessuna API lo vede)  "
             "⇒ %.1f-%.1f ms sullo schermo di un utente"
             % (ms, CIECO_MIN_MS, CIECO_MAX_MS, ms + CIECO_MIN_MS, ms + CIECO_MAX_MS))
 
@@ -315,7 +315,7 @@ def leggi_celle(celle):
 #    ogni script della pagina: quando `pagina.html` scrive
 #    `new VideoDecoder(...)` trova gia' il nostro involucro.
 #
-# ⛔ E L'ORDINE DI `web.md` §6.3 E' NELLA STRUTTURA, NON IN UN COMMENTO:
+# ⛔ E L'ORDINE DI `STUDI.md` §web §6.3 E' NELLA STRUTTURA, NON IN UN COMMENTO:
 #      riga 1 dell'involucro  →  t1
 #      riga 2                 →  il richiamo del PRODOTTO, che disegna
 #      riga 3                 →  la lettura dei pixel
@@ -349,7 +349,7 @@ PROLOGO = r"""
   };
   window.__B17 = B;
 
-  /* ══ 0-bis  IL WORKER — `web.md` §6.1 ══════════════════════════════════
+  /* ══ 0-bis  IL WORKER — `STUDI.md` §web §6.1 ══════════════════════════════════
      ⛔ PERCHE' QUESTO BANCO E' CAMBIATO, e va detto accanto ai numeri.
 
      `src/pagina.html` sa mettere «WebTransport, decodifica e canvas» in un
@@ -547,7 +547,7 @@ PROLOGO = r"""
       const suo = init && init.output;
       const mio = Object.assign({}, init, {
         output: function (f) {
-          /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `web.md` §6.3. ─────────── */
+          /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `STUDI.md` §web §6.3. ─────────── */
           const t1 = performance.now();
           const pts = f.timestamp;
           const l = f.displayWidth || f.codedWidth;
@@ -761,7 +761,7 @@ PROLOGO_WORKER = r"""
     const suo = init && init.output;
     const mio = Object.assign({}, init, {
       output: function (f) {
-        /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `web.md` §6.3. ─────────── */
+        /* ─── RIGA 1: `t1`.  ⛔ PRIMA di tutto, `STUDI.md` §web §6.3. ─────────── */
         const t1 = performance.now();
         const pts = f.timestamp;
         const l = f.displayWidth || f.codedWidth;
@@ -1769,7 +1769,7 @@ def scomponi(campioni):
             d(lambda c: c.get("ritardo_cattura_disegno_ms")),
         "8 ⛔ [?] disegno → PIXEL ACCESO (pezzo cieco, nessuna API lo vede)":
             {"stima_ms": [CIECO_MIN_MS, CIECO_MAX_MS], "marca": "[?]",
-             "fonte": "web.md §6.2",
+             "fonte": "STUDI.md §web §6.2",
              "nota": "⚠ su Xvfb non c'e' compositore: in QUESTO ambiente non "
                      "esiste affatto.  La stima e' per lo schermo di un utente"},
     }
@@ -1897,7 +1897,7 @@ def arricchisci(campioni, orologi):
         # ⛔⭐ DOVE FINISCE IL NUMERO, E LA PRIMA STESURA LO CHIUDEVA TROPPO
         #     PRESTO — corretto il 13 agosto 2026, a numeri gia' in mano.
         #
-        #     `web.md` §6.3 costruisce l'anello con `t1` come prima riga del
+        #     `STUDI.md` §web §6.3 costruisce l'anello con `t1` come prima riga del
         #     richiamo; ma §6.2 dice che il pezzo cieco sta «fra **il disegno**
         #     e il pixel acceso».  ⇒ Il confine fra quel che si misura e quel
         #     che si stima non e' `t1`: e' la fine del DISEGNO.  Chiudere a
@@ -2398,7 +2398,7 @@ def principale():
     p.add_argument("--lavoro", default="/tmp/03-b17")
     p.add_argument("--verbale", default="/tmp/03-b17/verbale.json")
     p.add_argument("--senza-gpu", action="store_true")
-    # ⭐ L'interruttore di `web.md` §6.1, misurato invece che creduto.
+    # ⭐ L'interruttore di `STUDI.md` §web §6.1, misurato invece che creduto.
     p.add_argument("--video-worker", action="store_true",
                    help="apre la pagina con «?video=worker»")
     p.add_argument("--gancio-scena", help="il comando che ACCENDE la scena, "

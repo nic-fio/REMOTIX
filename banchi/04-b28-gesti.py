@@ -854,7 +854,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     #  intermittente, in fasi diverse a ogni giro.  Il banco gira sul desktop
     #  VERO dell'utente (e' quel che il mandato chiede): quando la finestra
     #  finisce dietro un'altra, il renderer smette di produrre quadri — e' lo
-    #  stesso fatto che `web.md` §6.2 misura su Xvfb, «senza schermo non c'e'
+    #  stesso fatto che `STUDI.md` §web §6.2 misura su Xvfb, «senza schermo non c'e'
     #  scanout» — e l'assenso all'evento di input non arriva mai.
     #  ⇒ Si dichiara alla pagina che il fuoco ce l'ha, e si porta la finestra
     #    davanti.  ⚠ E' una dichiarazione sulla SCENA, non una cura del

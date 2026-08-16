@@ -1,7 +1,7 @@
 # F4-IN-3 · XPRA, IL SERVER — quando lo schermo è fermo e il mouse si muove
 
 *Studio dell'input, 14 agosto 2026. Bersaglio: il **server** di xpra (Python), ⛔ non il client
-HTML5 — quello è già in `xpra.md` e in `F4-AND-4-come-fanno-gli-altri.md`.*
+HTML5 — quello è già in `STUDI.md` §xpra e in `F4-AND-4-come-fanno-gli-altri.md`.*
 
 | | |
 |---|---|
@@ -130,7 +130,7 @@ curiosità del server GTK e non una cosa che arriva davvero in un browser.*
 
 ⛔⛔ **E il punto che ci riguarda di più**: xpra `[R]` **non mette `cursor: none` da nessuna
 parte** — la freccia `#shadow_pointer` **convive** con il cursore vero del browser (che intanto
-veste la forma remota via `set_cursor_url`, vedi `xpra.md` §2).
+veste la forma remota via `set_cursor_url`, vedi `STUDI.md` §xpra §2).
 
 ⇒ ⭐ **Lo stato che abbiamo consegnato ieri — «due puntatori sovrapposti», descritto in
 `F4-DEX-punto-di-ripresa.md` §5 come una resa — è ESATTAMENTE quel che xpra spedisce di
@@ -420,7 +420,7 @@ stesso identico limite nostro (§5.5).
 
 ⛔⛔ **Quindi la terza parte della frase da refutare regge**: `buffer_refresh` **non è una cura
 per il difetto del puntatore**, e non lo è nemmeno per xpra. È una cura per **altre due cose**:
-il **primo** fotogramma dopo l'accesso (che è il difetto che `xpra.md` §1 aveva già colto) e il
+il **primo** fotogramma dopo l'accesso (che è il difetto che `STUDI.md` §xpra §1 aveva già colto) e il
 ripristino dopo un errore di decodifica.
 
 ### 4.4 ⚠ Il ridisegno differito di qualità: c'è, è bello — e in questo commit **non lo chiama nessuno**
@@ -540,7 +540,7 @@ if self.desktop_size_server != (root_w, root_h):
 
 ⇒ ⭐⭐ **il server rimanda indietro la misura VERA più il MASSIMO che sa fare**, e lo fa dal
 segnale `size-changed` di GDK (`xpra/server/subsystem/gtk.py:132,143-156`), non dalla chiamata.
-⛔ **`RCP.md` §4.5 «la tela concessa» non ha questo ritorno**: da noi `[M]` (`xpra.md` §3) un
+⛔ **`RCP.md` §4.5 «la tela concessa» non ha questo ritorno**: da noi `[M]` (`STUDI.md` §xpra §3) un
 client che chiede 1280×720 riceve la concessione e poi *nessun fotogramma*, «client nero senza
 errori». **Il pezzo mancante è tre righe: dire al client che cosa hai potuto fare davvero.**
 
@@ -702,7 +702,7 @@ ma ⛔ **è una decisione dell'utente**, perché cambia la faccia del prodotto.
 | # | domanda | risposta per **il server di xpra** |
 |---|---|---|
 | **1** | quando il mouse si muove e non cambia niente, che cosa viaggia? | ⭐⭐ `[R]` **tre cose, nessuna delle quali è un fotogramma**: `pointer-position` da un timer a **20 ms** (`shadow/shadow_server_base.py:33,429,446-470` → `source/pointer.py:82`); `cursor-data` da un timer a `batch.delay/4` con pavimento **10 ms** (`source/cursor.py:97-109`), su Wayland svegliato dal compositore (`wayland/server/subsystem/cursor.py:86-99`); `cursor-default` quando il puntatore esce dall'area (`subsystem/cursor.py:139-158`). ⛔ Tutte su un canale **a priorità più alta dei fotogrammi** (`source/client_connection.py:213`) |
-| **2** | chi disegna il puntatore, e che cosa succede quando la forma cambia? | `[R]` **Nessuno dei tre modelli soli: due insieme.** Il cursore del sistema *veste* la forma remota (`xpra.md` §2, `set_cursor_url`), e **in più**, in modo shadow, il client dipinge un `<img id="shadow_pointer">` mosso dal server (`xpra-html5/html5/js/Client.js:3394-3433`, `css/client.css:443-453`). ⛔ **Xpra non mette `cursor: none` da nessuna parte**: i due puntatori convivono di proposito. Quando la forma cambia parte `cursor-data` (`source/cursor.py:116-136`), con protezione contro il doppione (`:121-124`) |
+| **2** | chi disegna il puntatore, e che cosa succede quando la forma cambia? | `[R]` **Nessuno dei tre modelli soli: due insieme.** Il cursore del sistema *veste* la forma remota (`STUDI.md` §xpra §2, `set_cursor_url`), e **in più**, in modo shadow, il client dipinge un `<img id="shadow_pointer">` mosso dal server (`xpra-html5/html5/js/Client.js:3394-3433`, `css/client.css:443-453`). ⛔ **Xpra non mette `cursor: none` da nessuna parte**: i due puntatori convivono di proposito. Quando la forma cambia parte `cursor-data` (`source/cursor.py:116-136`), con protezione contro il doppione (`:121-124`) |
 | **3** | il client chiede la misura al server? | ⭐ `[R]` **Sì, e il server la esegue creando una modalità video che non esiste**: `display-configure` → `_apply_desktop_size` → `set_screen_size` → `add_screen_size` con `XRRCreateMode` (`x11/subsystem/display.py:442`, `x11/bindings/randr.pyx:853-895`). Unità: **pixel**, più `desktop-size-unscaled` e un DPI a parte. Se non ce la fa: modalità **più vicina per area** (`x11/subsystem/display.py:456-469`), e ⭐ **rimanda al client la misura vera più il massimo** (`source/display.py:171-179`), oltre a una notifica visibile se il DPI si scosta (`x11/subsystem/display.py:635-640`) |
 | **4** | quanti stadi ha la conversione delle coordinate, e dove vive l'offset? | ⭐ `[R]` **Uno solo**, e vive **nel server**: `_adjust_pointer` (`subsystem/pointer.py:235-262`) toglie la differenza fra dov'è la finestra sul server e dove il client l'ha mappata (`ws.mapped_at`); in shadow, `shadow/pointer.py:21-40` somma l'origine della finestra. ⛔ **La pagina non calcola nessun offset** (`F4-AND-4` §3: niente `getBoundingClientRect`). ⇒ i nostri **tre** stadi non hanno riscontro in nessuno dei cinque |
 | **5** | come si misura e come si limita la latenza dell'input? | `[R]` **Accorpamento «l'ultimo vince» con UNA casella, non una coda** (`client/subsystem/pointer.py:151-153`), a **5 ms** legati al ritmo del monitor (`:68-76`); ⭐ **il clic cancella la posizione in sospeso** (`:115-123`); scarto per numero d'ordine **sui movimenti sì, sui clic disattivato a mano** (`subsystem/pointer.py:595-600` contro `:314-319`). Sull'uscita: undici numeri (§6.1) e un anello di regolazione chiuso in quattro punti (§6.3) |

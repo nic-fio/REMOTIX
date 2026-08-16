@@ -5,7 +5,7 @@
 
 ⛔⛔ LA DOMANDA NON E' «ARRIVA?» MA «ARRIVA **E BASTA**?»
 
-    Gli stati sono TRE, non due (`SPECIFICHE.md` §7.3-bis, `web.md` §8-bis O8):
+    Gli stati sono TRE, non due (`SPECIFICHE.md` §7.3-bis, `STUDI.md` §web §8-bis O8):
 
       consegnata              arriva alla sessione remota, e basta
       consegnata E RISERVATA  arriva ALLA PAGINA **e** il browser esegue anche
@@ -193,7 +193,7 @@ class Iniettore:
             time.sleep(pausa)
 
     def rilascia_tutto(self):
-        """⛔ La cura del modificatore rimasto giu' (`web.md` §5.4 punto 1).
+        """⛔ La cura del modificatore rimasto giu' (`STUDI.md` §web §5.4 punto 1).
         Qui non e' un vezzo: un Ctrl rimasto premuto fra due prove trasforma
         ogni misura successiva in una misura di un'altra combinazione."""
         for c in list(self.premuti):
@@ -359,7 +359,7 @@ class Motore:
                    '--start-maximized']
             if self.nome == 'chrome-app':
                 # ⭐ LA MISURA CHE PORTA UNA `[R]` A `[M]` SENZA UN TELEFONO.
-                #    `web.md` §5.1 legge nel codice di Chromium
+                #    `STUDI.md` §web §5.1 legge nel codice di Chromium
                 #    «// In Apps mode, no keys are reserved» e ne ricava che in
                 #    una **PWA installata** la lista riservata e' VUOTA.  ⛔ Quel
                 #    ramo del codice non e' di Android: e' della **finestra

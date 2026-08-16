@@ -25,7 +25,7 @@
  *
  *    `SPECIFICHE.md` §11.5 le rende un vincolo di PRODOTTO: senza, su Firefox e
  *    Safari i cronometri della pagina cadono su una griglia da 1 ms — su un
- *    tetto di 50 (`web.md` §6.3, P6) — e la memoria condivisa non esiste.
+ *    tetto di 50 (`STUDI.md` §web §6.3, P6) — e la memoria condivisa non esiste.
  *
  * ⚠ E si mettono su OGNI risposta, non solo sulla pagina: e' quel che «cambia
  *   come il server serve ogni risorsa» significa in byte. */
@@ -218,7 +218,7 @@ static void servi(pagina *p, cliente *c)
 	 *
 	 * ⛔ E LA CONSEGUENZA VERA NON E' IL WORKER, e' che `pagina.html`
 	 *    documenta da sempre DUE interruttori che si accendono dalla stringa
-	 *    di ricerca — `?tela=desincronizzata` (§6.1 di `web.md`) e
+	 *    di ricerca — `?tela=desincronizzata` (§6.1 di `STUDI.md` §web) e
 	 *    `?video=worker` — e **nessuno dei due e' mai stato raggiungibile
 	 *    attraverso il prodotto**: il commento indicava una strada che il
 	 *    server chiudeva con un 404.  ⚠ Nessuno se n'era accorto perche' i

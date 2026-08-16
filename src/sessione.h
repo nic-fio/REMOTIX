@@ -16,7 +16,7 @@
  * promette: si chiama «assicura» e per GNOME non assicura la cosa senza cui non
  * c'e' niente da catturare.
  *
- * ⛔ E in headless Mutter mette `needs_outputs = false` (`gnome.md` §3.1):
+ * ⛔ E in headless Mutter mette `needs_outputs = false` (`STUDI.md` §gnome §3.1):
  *    senza `--virtual-monitor` la sessione parte **viva, completa e nera**.
  *    Viva vuol dire proprio viva — `IsSessionRunning` risponde `true`,
  *    cinquanta nomi sul bus, Nautilus e il Terminale accesi — e manca una cosa
@@ -140,7 +140,7 @@
  */
 typedef enum {
 	SESSIONE_SANA = 0,          /* un monitor solo, del nome e della misura chiesti */
-	SESSIONE_NERA = 1,          /* viva, e ZERO monitor — il guasto M9 di gnome.md §13 */
+	SESSIONE_NERA = 1,          /* viva, e ZERO monitor — il guasto M9 di STUDI.md §gnome §13 */
 	SESSIONE_MISURA_ALTRA = 2,  /* un monitor, ma non della misura chiesta */
 	SESSIONE_SCELTO_DA_SE = 3,  /* prodotto diverso da quello chiesto, o piu' d'uno ← E2 */
 	SESSIONE_MORTA = 4,         /* nessun compositore: il bus non risponde */
@@ -171,7 +171,7 @@ typedef struct {
  * il bus si chiude, la libreria chiama `raise(SIGTERM)` per conto nostro.  Al
  * logout `dbus.service` dell'utente si ferma — e ha un colpevole con nome e
  * riga, `gnome-session-ctl.c:130-133` fa `StopUnit("dbus.service")`
- * (`gnome.md` §3.3) — e REMOTIX moriva li': non ucciso da systemd ne' da
+ * (`STUDI.md` §gnome §3.3) — e REMOTIX moriva li': non ucciso da systemd ne' da
  * nessun altro, ma da se stesso.  La pila che lo dimostra e' del 4 agosto 2026.
  * Per il bus di SISTEMA il difetto non esiste: quello resta.
  *
@@ -227,7 +227,7 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *                   headless — cioe' nostra.  Non si porta via niente a nessuno
  *   MISURA_ALTRA    ⚠ DICHIARA e prosegue: c'e' qualcosa da catturare, e la
  *                   misura di una sessione gia' viva non si cambia a caldo
- *                   (`gnome.md` §8.2: `ensure_virtual_monitor` esce prima se la
+ *                   (`STUDI.md` §gnome §8.2: `ensure_virtual_monitor` esce prima se la
  *                   misura non cambia — e che regga un cambio a caldo e' `[?]`)
  *   SCELTO_DA_SE    ⚠ DICHIARA, elenca TUTTI i monitor per nome, e prosegue.
  *                   Rifarla nascere non curerebbe niente: chi crea il monitor
@@ -274,7 +274,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
  * `Logout(1)` e' l'uscita ordinata senza domande.  Ma puo' anche non succedere
  * nulla — un programma con modifiche non salvate ha il diritto di INIBIRE
  * l'uscita, e `Logout(1)` in quel caso mostra il dialogo, che in una sessione
- * non presidiata non chiude nessuno (`gnome.md` §3.2).  Dopo dieci secondi si
+ * non presidiata non chiude nessuno (`STUDI.md` §gnome §3.2).  Dopo dieci secondi si
  * insiste con `Logout(2)`, **dichiarandolo nel registro**: e' una perdita
  * possibile di lavoro non salvato, e chi legge deve poterla ricostruire.
  *

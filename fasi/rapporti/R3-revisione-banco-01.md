@@ -9,7 +9,7 @@ difetto che cercano?* Cioè, per ciascuno: **che aspetto avrebbe il caso in cui 
 difetto è vivo?**
 
 > ⛔ **Non ho ricevuto il ragionamento di chi l'ha scritto** (`PIANO.md` §0.4, pratica 1). Ho letto il
-> documento, `REVIEWER.md`, `LEZIONI.md` §1 e §2, `PIANO.md` §0, `RCP.md`, `web.md`, i rapporti
+> documento, `REVIEWER.md`, `LEZIONI.md` §1 e §2, `PIANO.md` §0, `RCP.md`, `STUDI.md` §web, i rapporti
 > `S1`-`S4` e `R2`, `fasi/00-ambiente.md` e i tre banchi in `banchi/`. Non ho misurato niente e non ho
 > toccato nessun file del progetto: questo rapporto è l'unico che scrivo (`REVIEWER.md` §5).
 
@@ -250,7 +250,7 @@ MARCA: [R]
 DOVE:             fasi/01-filo-nudo.md, la tabella dei tre gruppi («B1 … Nessuna riga di
                   prodotto» · «B2 … senza di esso il resto non ha su che cosa girare» ·
                   «l'ordine non è decorativo»), e B12 riga «l'anello del ritardo»
-COSA CONTRADDICE: sé stesso; e web.md §7 («Nessuna richiede una riga di prodotto»)
+COSA CONTRADDICE: sé stesso; e STUDI.md §web §7 («Nessuna richiede una riga di prodotto»)
 ```
 
 **Come si dimostra.** Tre delle nove misure di B1 hanno bisogno di **un server che parli
@@ -598,7 +598,7 @@ MARCA: [R]
 ```
 DOVE:             fasi/01-filo-nudo.md, B1 riga S3b («la PWA su Chrome per Android»), e
                   «Che cosa deve produrre» («apre https://192.168.0.2:7447 nel browser»)
-COSA CONTRADDICE: web.md §1.2 B e §3.2 — «dietro un'eccezione di certificato, su Chrome
+COSA CONTRADDICE: STUDI.md §web §1.2 B e §3.2 — «dietro un'eccezione di certificato, su Chrome
                   il Service Worker NON si installa [R] ⇒ niente PWA»;
                   SPECIFICHE.md §7.3-bis — «una PWA vuole un certificato fidato»
 ```
@@ -618,7 +618,7 @@ S3b si misura **su Chrome desktop**, ma allora è la forma d'errore **E10** con 
 lo stesso documento vieta due righe più su — *«il Chrome del portatile lo fa» non dice niente del
 Chrome del telefono*.
 
-⭐ **E la posta in gioco è già scritta e non è alta**: `web.md` §1.2 B, corretto da `R2`, conclude che
+⭐ **E la posta in gioco è già scritta e non è alta**: `STUDI.md` §web §1.2 B, corretto da `R2`, conclude che
 fra schermo intero + lock e PWA *«ballano `F11` e poco altro»*, e che è *«un vantaggio, non una
 categoria diversa»*. Una misura che costa un dominio per guadagnare `F11` va pesata con quel numero
 davanti.
@@ -637,7 +637,7 @@ DOVE:             fasi/01-filo-nudo.md, B1 riga S2, e «Le misure» → riga S2,
 COSA CONTRADDICE: LEZIONI.md §1.11 regola 2 («se il componente sa rispondere, gli si
                   chiede»); web/rapporti/S2-decodifica.md §4.4 controllo C
                   (media-internals, «il ground truth del banco su Android»);
-                  web.md §4.1 («prefer-hardware riuscito, powerEfficient: true e
+                  STUDI.md §web §4.1 («prefer-hardware riuscito, powerEfficient: true e
                   fotogrammi corretti sono TUTTI compatibili con la CPU»)
 ```
 
@@ -646,7 +646,7 @@ COSA CONTRADDICE: LEZIONI.md §1.11 regola 2 («se il componente sa rispondere, 
 **(a) Il canale diretto esiste su Android e non è nel banco.** S2 lo scrive: su Chromium
 `media_codec_video_decoder.cc` registra `is_software_codec` con il **nome** che arriva da
 `MediaCodec.getName()`, ed è raggiungibile su Android via `chrome://inspect` e debug remoto. Non è
-una interfaccia JavaScript — `web.md` §9 punto 2 ha ragione a dire che *«il browser sa e non
+una interfaccia JavaScript — `STUDI.md` §web §9 punto 2 ha ragione a dire che *«il browser sa e non
 risponde»* **da JavaScript** — ma il banco non è JavaScript: il banco è chi guarda. `LEZIONI.md`
 §1.11 regola 2 è nata su mezza giornata di prove indirette per un dato che il compositore regalava
 via D-Bus; qui il dato lo regala il browser via `chrome://inspect`, e il banco della fase 1 sceglie
@@ -661,7 +661,7 @@ resta.
 
 **(b) L'atteso in tabella è la forma d'errore che tutto S2 esiste per denunciare.** La colonna
 «Atteso» della riga S2 dice `[S] sì da Chrome 108`. Chrome 108 documenta il **supporto a HEVC Main10
-in WebCodecs**, non la decodifica **in hardware** — ed è esattamente la distinzione su cui `web.md`
+in WebCodecs**, non la decodifica **in hardware** — ed è esattamente la distinzione su cui `STUDI.md` §web
 §1.1 punto 2 costruisce la seconda delle cinque cose che lo studio ha cambiato. Scrivere quel `[S]`
 come atteso di una misura di *hardware* mette **E1 nella casella dell'aspettativa**: chi misura parte
 sapendo che «dovrebbe essere sì», e le tre prove indirette sono di quelle che si leggono con
@@ -777,7 +777,7 @@ quattro, e tre stanno nel banco che il documento mette per primo:
 1. **l'eccezione concessa sul certificato della pagina** — è lo stato che S1a e S1b *misurano*. Al
    secondo giro non c'è più nessun avviso da concedere: S1a misura una connessione su un certificato
    già fidato e conclude che l'eccezione copre WebTransport, che è la conclusione **opposta** a quella
-   di `web.md` §3.1 e sarebbe un `[M]` falso contro due `[R]`;
+   di `STUDI.md` §web §3.1 e sarebbe un `[M]` falso contro due `[R]`;
 2. **il certificato della sessione già ruotato** dalla terza riga di B3: al giro dopo l'impronta nella
    pagina è già quella nuova, e la prova *«della scheda lasciata aperta due settimane»* non ha più
    niente da mostrare;
@@ -813,7 +813,7 @@ MARCA: [R]
 ```
 DOVE:             fasi/01-filo-nudo.md, B11 riga C2: «si punta il banco su una porta dove
                   non c'è nessuno | ⛔ deve dire «sono fallito», non «zero»»
-COSA CONTRADDICE: web/rapporti/R2-revisione-web.md rilievo R1 e web.md §3.3 — il caso
+COSA CONTRADDICE: web/rapporti/R2-revisione-web.md rilievo R1 e STUDI.md §web §3.3 — il caso
                   concreto è testualmente «il firewall del server blocca UDP 7447»;
                   LEZIONI.md §1.9
 ```
@@ -858,7 +858,7 @@ COSA CONTRADDICE: fasi/00-ambiente.md, «I sedici rilievi non ancora curati» �
                   invariante I7
 ```
 
-**Come si dimostra.** `00-c1-kwin.sh` stampa `atteso da kde.md §5.7: 59,2 fps` e poi lascia il
+**Come si dimostra.** `00-c1-kwin.sh` stampa `atteso da STUDI.md §kde §5.7: 59,2 fps` e poi lascia il
 confronto a chi guarda: lo stato d'uscita è quello del misuratore, non del confronto. La revisione
 della fase 0 l'ha trovato e la cura è dichiarata **non fatta**, rimandata al «prossimo giro».
 
@@ -1244,7 +1244,7 @@ COSA CONTRADDICE: web/rapporti/S1-certificato.md §4.2 (P1…P5),
 ```
 
 **Come si dimostra.** Le etichette `S1a`, `S1b`, `S3a`, `S3b`, `S5`, `S6`, `S7` **non compaiono in
-nessuno dei quattro rapporti**: sono nate in `web.md` §7 e sono state ereditate qui. Nei rapporti —
+nessuno dei quattro rapporti**: sono nate in `STUDI.md` §web §7 e sono state ereditate qui. Nei rapporti —
 che sono il posto dove stanno le procedure, i comandi `openssl`, le sequenze di prova e i controlli —
 le prove si chiamano in **quattro modi diversi e incompatibili**, e due rapporti usano `P1…Pn` per
 cose di natura opposta: in S1 `P1`-`P5` sono prove **del prodotto**, in S4 `P1`-`P7` sono controlli
@@ -1316,7 +1316,7 @@ MARCA: [R]
    la caduta della connessione solo dove `RCP.md` §3 la impone.
 
 8. **Una `[?]` promossa a fatto in silenzio (E5)**: non ho trovato niente. Le `[?]` sono marcate, la
-   sezione «Che cosa resta `[?]`» c'è ed è coerente con `web.md` §8, e il riquadro sul confine della
+   sezione «Che cosa resta `[?]`» c'è ed è coerente con `STUDI.md` §web §8, e il riquadro sul confine della
    fase — *«chi legge `stato = NUOVA` qui non deve credere che la ripresa sia implementata e non
    provata: **non è implementata**»* — è la forma giusta di dichiarare un confine, ed è il pezzo
    migliore del documento.
@@ -1358,6 +1358,6 @@ correggono. I `[?]` si passano al coder perché li misuri: la misura chiude il c
 | **da misurare** | R3.25, R3.26, R3.27 — `[?]`, e sono del coder |
 
 ⛔ **E questa non è un'assoluzione di quel che non ho toccato.** Ho letto i dodici banchi contro
-`RCP.md`, `LEZIONI.md` §1 e §2, `web.md` e i quattro rapporti; della conformità del banco al
+`RCP.md`, `LEZIONI.md` §1 e §2, `STUDI.md` §web e i quattro rapporti; della conformità del banco al
 protocollo si occupa un'altra revisione, e di quel che nessuno dei due ha guardato **non ho trovato
 niente**, che non è «è giusto» (`REVIEWER.md` §0 e §5).
