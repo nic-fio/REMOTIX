@@ -4123,10 +4123,32 @@ window.addEventListener("keydown", function (ev) {
      disposizione, ed e' la stessa regola di §7.3 per tutto il resto. */
   if (ev.code !== "End" || !ev.ctrlKey || !ev.altKey || ev.shiftKey || ev.metaKey)
     return;
-  /* ⛔ Nel modulo di accesso no: li' non c'e' nessuna sessione da terminare. */
-  const dentro = ev.target && (ev.target.tagName === "INPUT"
-                            || ev.target.tagName === "TEXTAREA");
-  if (dentro || !canale_corrente) return;
+  /* ⛔⭐⭐ NEL MODULO DI ACCESSO NO — ma la prima stesura chiedeva la cosa
+   *       SBAGLIATA, e il difetto l'ha trovato il browser il 16 agosto 2026.
+   *
+   * ⛔ Diceva: «se l'evento parte da un `INPUT`, lascia perdere».  ⚠ Ma dopo
+   *    l'accesso il fuoco RESTA sul campo del modulo — che intanto e' stato
+   *    nascosto — quindi `ev.target.tagName` e' `INPUT` **anche a sessione
+   *    aperta**, e `Ctrl+Alt+Fine` non faceva NIENTE.
+   *
+   * `[M]` Misurato col browser vero: il tasto arriva perfetto
+   * (`code:"End"`, ctrl e alt veri, niente shift/meta) e il bersaglio e'
+   * `INPUT` ⇒ si usciva dal gestore senza fare nulla.  ⭐ Dal vivo non si
+   * vedeva quasi mai perche' basta un clic sul desktop a spostare il fuoco:
+   * si vede se si preme la combinazione SUBITO dopo essere entrati.
+   *
+   * ⇒ ⭐ La domanda giusta e' un'altra, e c'era gia': **«c'e' una sessione da
+   *   terminare?»** — cioe' `canale_corrente`.  Il campo di testo si protegge
+   *   solo se e' davvero SULLO SCHERMO (`offsetParent`), che e' il caso vero da
+   *   difendere: uno che sta scrivendo in una casella non vuole uscire.
+   *
+   * ⚠ E' la forma E6: una proprieta' DEDOTTA («c'e' un input ⇒ siamo nel
+   *   modulo») al posto del fatto («c'e' una sessione?»). */
+  if (!canale_corrente) return;
+  const dentro = ev.target
+              && (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA")
+              && ev.target.offsetParent !== null;
+  if (dentro) return;
   ev.preventDefault();
   ev.stopPropagation();
   /* ⭐ La conferma, e non e' gentilezza: dal menu il logout costa tre gesti
