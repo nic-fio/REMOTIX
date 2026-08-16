@@ -2258,6 +2258,39 @@ static bool sessione_chiusa_dall_utente;
 static uint64_t palco_riprova_ms;
 static uint64_t palco_attesa_ms;
 
+/*
+ * ⛔⭐⭐⭐ «LA TELA DEL CLIENTE E' ARRIVATA» — e senza questo il palco nasceva
+ *        alla misura sbagliata, sempre.
+ *
+ * `[M]` 16 agosto 2026, e questa e' la causa comune di TUTTI i sintomi che
+ * l'utente ha elencato: bande nere, «desktop rotto», «nessun input», «ci mette
+ * molti secondi».  La catena:
+ *
+ *   1. il figlio nasce con `1920x1080` — il valore della tabella dei figli,
+ *      cioe' un RIPIEGO — perche' al `fork` la finestra del cliente non e'
+ *      ancora dichiarata;
+ *   2. monta subito il palco a quella misura e spedisce una chiave sbagliata;
+ *   3. ~650 ms dopo arriva la tela vera (`2544x926`) e servirebbe un
+ *      ridimensionamento;
+ *   4. ⛔ ma su Wayland il ridimensionamento si compie SOLO quando il
+ *      compositore consegna un fotogramma nuovo — e un desktop appena nato non
+ *      cambia niente.  `[M]` «1 fotogrammi consegnati, **3538 attese a vuoto**
+ *      (scena ferma: Mutter consegna solo quando qualcosa cambia)».
+ *
+ * ⇒ Si aspettava che qualcosa si muovesse da se': tredici, diciassette, trenta
+ *   secondi.  ⭐ Mezzo secondo di attesa qui li toglie tutti.
+ *
+ * ⚠ E NON si aspetta all'infinito: l'invariante I1 vieta di stare fermi per
+ *   prudenza.  Passato `TELA_ATTESA_MS` si parte col ripiego — meglio un
+ *   desktop da ridimensionare che nessun desktop.
+ */
+static bool tela_dal_cliente;
+
+/* ⚠ Quanto si concede alla tela del cliente prima di partire col ripiego.
+ *   `[M]` Ne bastano ~650: mezzo secondo di margine e non uno di piu', perche'
+ *   oltre si comincia a far aspettare chi ha gia' premuto «Collegati». */
+#define TELA_ATTESA_MS 1200
+
 /* ⭐ Quando abbiamo chiesto la NASCITA della sessione grafica, 0 se mai.
  *
  * ⛔ Era una `static` dentro `prendi_il_palco()`, e da li' il ciclo dei
@@ -2737,6 +2770,59 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	                   "entro nel montaggio del palco (tela %ux%u): dico al padre "
 	                   "di attendere",
 	                   tela_l, tela_a);
+
+	/*
+	 * ⛔⭐⭐⭐ NON SI FA NASCERE NIENTE FINCHE' NON SI SA A CHE MISURA.
+	 *
+	 * ⭐ E' la cura della coda dei tempi di login, e la ragione sta per intero
+	 *    nel riquadro di `tela_dal_cliente`: un palco montato al ripiego va
+	 *    ridimensionato, e su Wayland il ridimensionamento si compie solo quando
+	 *    il compositore consegna un fotogramma — cioe' MAI, su un desktop appena
+	 *    nato che non si muove.
+	 *
+	 * ⚠ Mezzo secondo di attesa qui vale tredici secondi di gara dopo.
+	 *
+	 * ⛔ E si aspetta con un TETTO, non all'infinito: l'invariante I1 vieta di
+	 *    stare fermi per prudenza.  Se il cliente non dichiara la sua finestra
+	 *    entro `TELA_ATTESA_MS`, si parte col ripiego e si DICHIARA — meglio un
+	 *    desktop da ridimensionare che nessun desktop.
+	 */
+	if (!tela_dal_cliente) {
+		static uint64_t primo_giro_ms;
+		uint64_t adesso = registro_ora_ms();
+
+		if (primo_giro_ms == 0)
+			primo_giro_ms = adesso;
+		if (adesso - primo_giro_ms < TELA_ATTESA_MS) {
+			registro_dettaglio(REG_FIGLIO,
+			                   "aspetto la tela del cliente prima di far nascere "
+			                   "qualcosa (%llu ms su %d): montare al ripiego "
+			                   "vorrebbe dire ridimensionare, e il "
+			                   "ridimensionamento su una scena ferma non si "
+			                   "compie",
+			                   (unsigned long long)(adesso - primo_giro_ms),
+			                   TELA_ATTESA_MS);
+			p.stato_sessione = (uint32_t)SESSIONE_NON_LETTA;
+			snprintf(p.guasto, sizeof p.guasto,
+			         "aspetto la tela del cliente");
+			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			return false;
+		}
+		if (!tela_dal_cliente) {
+			static bool detto;
+
+			if (!detto) {
+				detto = true;
+				registro_dice(REG_FIGLIO,
+				              "⚠ il cliente non ha dichiarato la sua finestra "
+				              "entro %d ms: parto col ripiego %ux%u.  ⛔ Il "
+				              "desktop nascera' a una misura che nessuno ha "
+				              "chiesto e andra' ridimensionato — ma un desktop "
+				              "da ridimensionare batte nessun desktop (I1)",
+				              TELA_ATTESA_MS, tela_l, tela_a);
+			}
+		}
+	}
 	if (tela_l && tela_a)
 		attendi_tela(tela_l, tela_a);
 	registro_dettaglio(REG_FIGLIO, "l'«attendi» e' partito: adesso il bus");
@@ -3763,6 +3849,21 @@ void figlio_vive(int argc, char **argv)
 					 *    due cose. */
 					tela_voluta_l = (uint32_t)ci.a;
 					tela_voluta_a = (uint32_t)ci.b;
+					/* ⭐ Da adesso la tela e' QUELLA DEL CLIENTE, non il ripiego
+					 *    della riga di comando: vedi `tela_dal_cliente`. */
+					if (!tela_dal_cliente) {
+						tela_dal_cliente = true;
+						/* ⭐ E si riprova SUBITO: aspettare il prossimo
+						 *    ri-tentativo vorrebbe dire buttare via il mezzo
+						 *    secondo che si e' appena aspettato apposta. */
+						palco_riprova_ms = 0;
+						registro_dice(REG_FIGLIO,
+						              "⭐ la tela del CLIENTE e' arrivata (%ux%u): "
+						              "da adesso si puo' far nascere la sessione "
+						              "alla misura giusta, senza ridimensionarla "
+						              "dopo",
+						              tela_voluta_l, tela_voluta_a);
+					}
 
 					if (!cat) {
 						/*
@@ -4156,7 +4257,14 @@ void figlio_vive(int argc, char **argv)
 					 *
 					 * ⛔ E non costa niente: la riga di registro si scrive al
 					 *    massimo una volta al secondo comunque. */
-					if (sta_nascendo(ora) || (codec_chiesto && tela_voluta_l)) {
+					/* ⛔⭐ E «sto aspettando la tela del cliente» e' un «non
+				 *     ancora», non un fallimento: `[M]` 16 agosto 2026, senza
+				 *     questa terza condizione il rifiuto della guardia finiva
+				 *     nell'attesa che raddoppia, e la sessione nasceva a 3,2 s
+				 *     invece che a 1,1 — cioe' la cura si mangiava meta' del
+				 *     suo guadagno. */
+				if (sta_nascendo(ora) || !tela_dal_cliente ||
+				    (codec_chiesto && tela_voluta_l)) {
 						palco_attesa_ms = PALCO_NASCITA_RIPROVA_MS;
 						palco_riprova_ms = ora + palco_attesa_ms;
 						registro_dettaglio(REG_FIGLIO,
