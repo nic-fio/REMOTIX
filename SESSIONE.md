@@ -364,6 +364,37 @@ misura: una sessione abbandonata costa **477 MB** e **non cresce**.*
 valeva 20 s) e *«l'utente ha chiesto di uscire»* (non l'aveva chiesto nessuno). ⭐ Curate. ⇒ *Una riga
 scritta quando esisteva un solo chiamante diventa falsa al secondo, e nessun compilatore lo dice.*
 
+## ✅ Il secondo dispositivo è respinto — provato da Android, 16 agosto 2026
+
+`[M]` Sessione attiva sul PC, tentativo da un **telefono vero** (altra rete, altro motore):
+
+```
+17:50:00.664  ammesso utente=prova da=[192.168.0.24]     ← la parola era GIUSTA
+17:50:00.742  posto NEGATO: lo occupa un altro client di questo stesso utente
+17:50:00.742  congedo motivo=0x0f, stato=attesa-attacca
+```
+
+⭐ **Prima ammesso, poi negato** (o il telefono si sentirebbe dire una bugia sulla parola d'ordine);
+la sessione del PC **non si accorge di niente** — i fotogrammi continuavano a partire; **zero**
+tentativi falliti contati, quindi nessun ban (§4.4-bis); e sul telefono si legge *«quell'utente e'
+gia' collegato da un altro dispositivo»*.
+
+## ⛔⛔ Il modulo d'accesso restava SOTTO il desktop — 16 agosto 2026
+
+*Segnalato dall'utente tre volte, sempre più seccato. ⛔ E le prime due volte ho tolto la cosa
+sbagliata, guardando la schermata invece del foglio di stile.*
+
+Il «vestito da desktop» (`body[data-schermo="acceso"]`) faceva quattro cose — via il margine, la tela
+per prima, sfondo nero, colonna flessibile — ⛔ **e non nascondeva niente**. Titolo, avviso, **modulo
+d'accesso**, esito e dichiarazioni restavano nella colonna sotto la tela: le «bande» erano **i campi
+del modulo** su fondo nero. ⇒ Pagina più alta della finestra, barra di scorrimento, clic mangiati.
+
+⭐ La regola era già scritta nel commento di `torna_al_modulo()` — *«chi accende uno stato è lo stesso
+che deve saperlo spegnere»* — ⛔ ma nessuno l'aveva letta **al verso opposto**.
+
+⚠ **E un secondo difetto dallo stesso sintomo**: si tornava al modulo solo per `0x10` e `0x02`, due
+motivi su quindici. Adesso per **ogni** congedo.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ✅ ~~La voce «Power Off» resta nel menu~~ — **chiuso dall'utente il 16 agosto 2026**: *«il menù di

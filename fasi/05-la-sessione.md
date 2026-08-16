@@ -1322,6 +1322,71 @@ vera** — ma sono **due** cose diverse che si chiamano tutt'e due «sessione»:
 non è successo niente**. ⛔ Il solo testimone che non inganna è il **numero di processo** di
 `gnome-shell`, o un programma dell'utente che c'era prima.
 
+## 6-novies · ✅⭐ IL SECONDO DISPOSITIVO È RESPINTO — provato da Android, 16 agosto 2026
+
+*`fasi/05-la-sessione.md` §1.4 dichiarava che questa strada era provata **solo su un ospite finto**:
+«non prova il filo». ⇒ Provata dall'utente con un **telefono vero**, altra rete, altro motore.*
+
+`[M]` Sessione attiva sul PC (`192.168.0.3`), tentativo da Android (`192.168.0.24`):
+
+```
+17:50:00.664  ammesso utente=prova da=[192.168.0.24]      ← la parola d'ordine era GIUSTA
+17:50:00.742  posto NEGATO a prova: lo occupa un altro client di questo stesso utente
+17:50:00.742  congedo motivo=0x0f — «c'e' gia' un client attaccato», stato=attesa-attacca
+```
+
+| l'atteso di `RCP.md` §8.2 | `[M]` |
+|---|---|
+| **prima ammesso, poi negato** — o il telefono si sentirebbe dire una bugia sulla parola | ✅ `ammesso` e poi `posto NEGATO` |
+| motivo **`0x0F`**, non un errore generico | ✅ e `stato=attesa-attacca`: fermato **prima** di toccare il desktop |
+| *«chi viene rifiutato è chi arriva, non chi c'era»* | ✅ i fotogrammi del PC continuavano a partire (`1571`, `1572`…) durante il rifiuto; `occupati adesso: 1`, nessun `posto LASCIATO` |
+| ⭐ **`0x0F` non conta come tentativo fallito** (§4.4-bis: *«chi prova a riattaccarsi tre volte dal telefono si bannerebbe da sé»*) | ✅ **zero** tentativi contati, nessun ban |
+| e la frase che legge l'utente | ✅ *«quell'utente e' gia' collegato da un altro dispositivo»*, sul modulo pulito |
+
+⭐ **E la pagina torna al modulo**: è la correzione fatta dieci minuti prima (§6-decies). Senza,
+`0x0f` avrebbe prodotto la schermata rotta — cioè un difetto al posto di un rifiuto corretto.
+
+## 6-decies · ⛔⛔ IL MODULO D'ACCESSO SOTTO IL DESKTOP — tre segnalazioni per una causa
+
+*L'utente, tre volte, sempre più seccato: «ho notato solo una sezione della finestra» · «devi
+togliermi quella barra perché mi blocca tutto» · «ancora quella cazzo di barra del login? LEVALA!»*
+
+⛔ **E le prime due volte ho tolto la cosa sbagliata**, guardando la schermata invece del foglio di
+stile: prima la barra delle scorciatoie `⌨`, poi la striscia di diagnostica. ⚠ Andavano tolte
+entrambe — il bottoncino `⌨` sta a 4 px dall'angolo in basso a sinistra, cioè dove si va a cercare le
+cose del **desktop**, e si preme mirando altro — **ma non erano la causa**.
+
+### La causa
+
+Il «vestito da desktop» (`body[data-schermo="acceso"]`) faceva **quattro** cose: via il margine, la
+tela per prima (`order: -1`), sfondo nero, colonna flessibile. ⛔ **E non nascondeva niente.**
+
+⇒ Titolo, avviso, **modulo d'accesso**, esito e dichiarazioni restavano nella colonna **sotto la
+tela**. Le bande bianche e nere della schermata dell'utente **erano i campi del modulo** su fondo
+nero, col bottone «Collegati» sotto. La pagina diventava più alta della finestra: barra di
+scorrimento, mezzo desktop fuori, e i clic della fascia bassa mangiati.
+
+⭐ **La regola era già scritta**, nel commento di `torna_al_modulo()`: *«chi accende uno stato è lo
+stesso che deve saperlo spegnere; un ritorno che ripristina metà delle cose è peggio di un ritorno
+che non c'è, perché sembra riuscito»*. ⛔ Nessuno l'aveva letta **al verso opposto**: *chi accende il
+vestito da desktop deve nascondere quel che il desktop sostituisce.*
+
+### E un secondo difetto trovato per strada, dallo stesso sintomo
+
+```js
+if (mot === 0x10 || mot === 0x02) torna_al_modulo();
+```
+
+⛔ Si tornava al modulo per **due motivi su quindici**. Per `0x0c` (il server si spegne), `0x03`
+(abbandonata), **`0x0f` (già collegato altrove)**, `0x07`, e gli errori di rete, la pagina restava
+vestita da desktop col modulo sotto. ⇒ Adesso **ogni** `CONGEDO` torna al modulo: il discrimine non è
+il motivo, è il fatto — *una sessione finita si rientra dal modulo*.
+
+> ⚠ **E il costo del mio metodo, dichiarato**: ho riavviato il server **due volte mentre l'utente
+> stava provando**, buttandolo fuori a metà (`congedo motivo=0x0c`), dopo aver detto che avrei
+> chiesto. ⛔ Una correzione consegnata addosso a chi sta misurando non è una consegna: è un'altra
+> variabile nella sua misura.
+
 ## 7 · Il giudizio dell'utente
 
 *(la fase si chiude qui, non su un documento completo)*
@@ -1350,9 +1415,11 @@ data, e niente altro.
 1. ⏳ **Il banco del puntatore dopo il ricambio dei dispositivi.** `[M]` Provato oggi **con le mani
    dell'utente** e passato, ⚠ ma niente lo rifà da solo domani;
 2. ⏳ **Le altre due strade di §7.3** — l'errore di protocollo e `rcp_libera()` — non esercitate;
-3. ⏳ **Il banco della sentinella non prova la scena con una sessione locale VERA**: sulla macchina non
+3. ✅ ~~`0x0F` non è mai uscito su una connessione vera~~ — **chiuso il 16 agosto**: provato da Android
+   contro il PC, §6-novies.
+4. ⏳ **Il banco della sentinella non prova la scena con una sessione locale VERA** (`0x05`): sulla macchina non
    c'è nessuno alla consolle;
-4. ⏳ **Mentre aspetta, al client non si dice perché.** ⭐ L'attesa è passata da ~32 s a **2353 ms**, e
+5. ⏳ **Mentre aspetta, al client non si dice perché.** ⭐ L'attesa è passata da ~32 s a **2353 ms**, e
    con essa l'urgenza — ma il difetto di forma resta.
 
 **Code della fase 4 che passavano di qui e passano oltre** (§3): la riga mancante a `RCP.md` §7.1, gli

@@ -150,6 +150,21 @@
               font-size: .8rem; white-space: pre-wrap; opacity: .8; }
   body:not(.diagnostica) #registro,
   body:not(.diagnostica) .nota { display: none; }
+  /* ⛔⭐ E CON LORO IL BOTTONCINO «⌨» E LA SUA BARRA — 16 agosto 2026, e l'ha
+     chiesto l'utente mentre provava: «devi togliermi quella barra perche' mi
+     blocca tutto».
+     ⚠ Il codice NON la apriva da solo — apriva solo il bottoncino, e la
+     dichiarazione di §7.3-bis andava nel registro, non sull'immagine.  ⛔ Ma il
+     bottoncino sta a 4 px dall'angolo in basso a sinistra, cioe' esattamente
+     dove si va a cercare le cose del DESKTOP: si preme mirando altro, e la
+     barra che si apre ha `z-index:12` sopra la tela e si mangia i clic di
+     tutta la fascia bassa.
+     ⇒ `!important` perche' quei due elementi hanno lo stile in linea.
+     ⚠ IL PREZZO, DICHIARATO: l'avviso «queste scorciatoie non arriveranno al
+       desktop» non si vede piu' di suo.  Torna con `?registro`, insieme al
+       resto della diagnostica. */
+  body:not(.diagnostica) #scorciatoie,
+  body:not(.diagnostica) #scorciatoie-apri { display: none !important; }
   .nota { font-size: .8rem; opacity: .7; margin-top: 2rem; }
 
   /* ⛔ LA DEGRADAZIONE SI DICHIARA — `CODER.md` §4.2: «ogni dipendenza mancante
@@ -232,6 +247,35 @@
   body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
                                          margin: 0 auto; }
   body[data-schermo="acceso"] main { background: #000; }
+
+  /* ⛔⛔⭐ E IL MODULO D'ACCESSO SPARISCE — 16 agosto 2026, e l'ha trovato
+   *      l'utente con una schermata, dopo averlo segnalato tre volte:
+   *      «ancora quella barra del login? LEVALA!»
+   *
+   *      ⛔ Il «vestito da desktop» faceva quattro cose — via il margine, la
+   *      tela per prima (`order: -1`), sfondo nero, colonna flessibile — ⚠ **e
+   *      non nascondeva niente**.  Il modulo, il titolo, l'esito e le
+   *      dichiarazioni restavano nella colonna SOTTO la tela: le bande bianche
+   *      e nere che l'utente vedeva erano **i campi del modulo** su fondo nero,
+   *      e il bottone «Collegati» sotto di loro.
+   *
+   *      ⇒ La pagina diventava piu' alta della finestra, con una barra di
+   *      scorrimento e mezzo desktop fuori: «mi impedisce di fare qualunque
+   *      cosa».
+   *
+   * ⭐ E la regola e' quella che `torna_al_modulo()` scrive nel suo commento —
+   *    «chi accende uno stato e' lo stesso che deve saperlo spegnere» — ⛔ ma
+   *    applicata al verso opposto, che nessuno aveva guardato: **chi accende il
+   *    vestito da desktop deve anche nascondere quel che il desktop sostituisce.**
+   *
+   * ⚠ `#conferma` e `#puntatore` NON sono in elenco apposta: hanno
+   *   `position: fixed`, stanno fuori dalla colonna e devono restare — il primo
+   *   e' il dialogo del logout, il secondo il puntatore disegnato. */
+  body[data-schermo="acceso"] h1,
+  body[data-schermo="acceso"] #avviso,
+  body[data-schermo="acceso"] #modulo,
+  body[data-schermo="acceso"] #esito,
+  body[data-schermo="acceso"] #dichiarazione { display: none; }
 
   /* ⛔⭐ IL PUNTATORE LO DISEGNA LA PAGINA — `SPECIFICHE.md` §7.1, ancora
      `F4-INPUT-CLASSICO`.  «Il puntatore e' disegnato sopra il video, quello del
@@ -3546,7 +3590,30 @@ async function ascolta_controllo(canale, congeda) {
          §5.3: «per rientrare servono utente e password».  ⚠ Senza questa riga
          l'utente inattivo restava davanti a un desktop congelato senza un modo
          di rientrare che non fosse ricaricare la pagina a mano. */
-      if (mot === 0x10 || mot === 0x02) torna_al_modulo();
+      /* ⛔⛔⭐ SI TORNA AL MODULO PER **OGNI** CONGEDO — 16 agosto 2026, e
+       *      l'ha visto l'utente con una schermata: il desktop congelato in
+       *      alto, il bottone «Collegati» e la riga dell'esito sotto, e la
+       *      pagina piu' alta della finestra.  «Mi impedisce di fare qualunque
+       *      cosa.»
+       *
+       *      ⛔ Qui c'era `if (mot === 0x10 || mot === 0x02)`: **due motivi su
+       *      quindici**.  Per tutti gli altri — `0x0c` il server che si spegne,
+       *      `0x03` la sessione abbandonata, `0x0f` gia' collegato altrove,
+       *      `0x07` credenziali sbagliate — la pagina restava VESTITA DA
+       *      DESKTOP (`data-schermo="acceso"`, tela a tutta finestra) col
+       *      modulo ricomparso sotto.
+       *
+       * ⭐ E il commento sopra `torna_al_modulo()` diceva gia' la regola giusta:
+       *    «chi accende uno stato e' lo stesso che deve saperlo spegnere; un
+       *    ritorno che ripristina meta' delle cose e' peggio di un ritorno che
+       *    non c'e', perche' sembra riuscito».  ⚠ La funzione era scritta bene:
+       *    era COLLEGATA a due casi soli.  ⇒ Il discrimine non e' il motivo,
+       *    e' il fatto: **un `CONGEDO` finisce la sessione**, sempre, e da li'
+       *    per rientrare si passa dal modulo.
+       *
+       * ⚠ `esito()` sopra ha gia' detto PERCHE', ciascuno con la sua frase: il
+       *   ritorno al modulo non cancella la spiegazione, la rende usabile. */
+      torna_al_modulo();
       return;
     }
     if (m.tipo === TIPO.TELA) {
