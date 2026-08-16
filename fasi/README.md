@@ -16,7 +16,23 @@ Il modello sta in `../PIANO.md` §0.2. Le quattro regole, in breve:
 
 ---
 
-## ⚠ Manca il `05`, e non è una dimenticanza
+## ✅ Il `05` c'è, ed è chiuso — 16 agosto 2026
+
+`fasi/05-la-sessione.md`, aperto il 15 agosto **col suo documento e prima di una riga di codice**, e
+chiuso il 16 **sul giudizio dell'utente** (§7 raccoglie le sue parole, con la data — non un verdetto
+scritto da noi).
+
+⭐ **E la prova che l'ha chiusa l'ha fatta l'utente**, con un lavoro vero dentro: un ciclo infinito
+in un terminale, il browser chiuso, la finestra rimpicciolita, il rientro — e il ciclo girava
+ancora. ⛔ Tutte le prove nostre avevano un desktop **vuoto**, che appena rinato è identico a com'era:
+il testimone peggiore possibile per la domanda «è sopravvissuta?».
+
+⏳ **E la fase 6 non si apre subito**: l'utente ha chiesto prima una revisione di `PIANO.md`, *«che ha
+alcuni punti secondo me fuori sequenza»*.
+
+---
+
+## ⚠ ~~Manca il `05`~~ — com'era scritto il 15 agosto, e si conserva
 
 *15 agosto 2026.* La fase 5 non è ancora stata aperta. ⛔ E la **coda della fase 4** — la notte in
 cui la tela è diventata la finestra del browser — sta **dentro `04-si-comanda.md`**, non in un

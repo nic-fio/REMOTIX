@@ -688,7 +688,30 @@ assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza 
 
 ---
 
-## Fase 5 — La sessione
+## Fase 5 — La sessione ✅ **CHIUSA il 16 agosto 2026**
+
+> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«funziona»* · *«il task nel terminale era ancora in esecuzione»*
+>
+> *E la prova che vale l'ha fatta lui, con un lavoro VERO dentro: si logga massimizzato, lancia un
+> ciclo infinito nel terminale, chiude il browser, rimpicciolisce la finestra, rientra — e il ciclo
+> girava ancora. ⛔ Tutte le prove nostre avevano un desktop **vuoto**, che è il testimone peggiore
+> possibile: appena rinato è identico a com'era.*
+>
+> | | |
+> |---|---|
+> | ⭐ **l'accesso** | `[M]` **2087 ms** di mediana su venti giri dal browser, **187 ms** di dispersione; peggiore caso a freddo **2353 ms**. ⛔ La mattina era 3211 ms di mediana con **p90 17255** e max **18158** |
+> | ⭐ **la coda dei 17 secondi** | trovata: il palco nasceva alla tela di ripiego e il ridimensionamento **non si compie su una scena ferma**. ⇒ il figlio aspetta la tela del cliente |
+> | ⭐ **§7.3, il rilascio al distacco** | provato sul **desktop vero** con un testimone che conta le battute: un tasto rimasto giù si ripete **33 volte al secondo**, e il rilascio lo ferma in **15-28 ms** |
+> | ⭐ **i tre orologi** | il silenzio contava **l'utente invece del client** (un secondo dispositivo entrava sul desktop di chi stava leggendo: **I2 rotta**) ⇒ riparato sui pacchetti · l'inattività (`0x02`) **non esisteva** ⇒ fatta · le 6 ore diventano **60 minuti**, per decisione dell'utente su una misura di memoria |
+> | ⭐ **`0x0F`** | il secondo dispositivo è respinto, provato **da un telefono vero** — mai uscito prima su una connessione vera |
+> | ⭐ **la sessione senza nessuno che guarda** | costa **0,017 %** di un nucleo e **477 MB** che non crescono. In v1 `libmutter` andava in asserzione fallita |
+> | ⛔ **e tre righe di registro mentivano** | `RILASCIO AL DISTACCO: 0` che non poteva dire altro · il testo `0x02` della pagina che nominava l'orologio sbagliato · *«l'utente ha chiesto di uscire»* detto da un orologio. ⇒ `LEZIONI.md` §1.9 ha la sua **quinta regola** |
+> | ⛔ **e il modulo d'accesso stava sotto il desktop** | da sempre: il «vestito da desktop» non nascondeva niente. Trovato dall'utente, in tre segnalazioni |
+>
+> ⇒ ⭐ **Restano due cose sole**, e l'elenco è stato **tagliato** col criterio dell'utente — *«se i
+> punti non toccano il prodotto è solo rumore burocratico»*: `0x05` (l'utente con una sessione
+> grafica **locale**, che vuole una persona alla consolle) e il banco del puntatore dopo il ricambio
+> dei dispositivi. Dettagli in `fasi/05-la-sessione.md` §7.
 
 **Produce**: PAM per intero, il palco che sopravvive al distacco, i tre orologi, una sola sessione
 grafica per utente.
@@ -746,6 +769,17 @@ risveglio c'è ancora.
 logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
 ---
+
+> ## ⏳⛔ PRIMA DELLA FASE 6: IL PIANO VA RIVISTO — rilievo dell'utente, 16 agosto 2026
+>
+> Alla chiusura della fase 5, l'utente: *«prima dobbiamo rivedere il piano che ha alcuni punti
+> secondo me fuori sequenza»*.
+>
+> ⇒ ⛔ **La fase 6 non si apre finché quella revisione non è fatta.** ⚠ E il sospetto ha già un
+> precedente in questo stesso documento: la fase 6 dichiara che **tre quarti del suo lavoro sono già
+> fatti** — nella coda della **fase 4** — perché *«il numero della fase lo dà il perché si è fatto il
+> lavoro, non l'elenco delle cose prodotte»*. Un piano in cui una fase nasce già fatta per tre quarti
+> è esattamente il posto dove guardare.
 
 ## Fase 6 — La tela e la vista
 
