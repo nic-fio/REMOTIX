@@ -345,6 +345,25 @@ dopo il cambio», ed era **falso**. Una riga aveva **perso il timestamp** (due p
 sullo stesso file si accavallano), e un filtro `$1 >= "ora"` la prendeva per buona perché una parola
 ordina dopo una cifra. ⇒ *Un confronto su un campo che può mancare non è un filtro, è una scommessa.*
 
+## ✅ Il terzo orologio: 60 minuti senza input e la sessione si chiude — 16 agosto 2026
+
+*Deciso dall'utente (`DECISIONI.md` §4.8) al posto delle 6 ore di `SPECIFICHE.md` §5.3, e su una
+misura: una sessione abbandonata costa **477 MB** e **non cresce**.*
+
+⭐ Provato **a 20 secondi** invece che a un'ora — `riavvia-7700.sh --abbandono-s 20`:
+
+```
+17:22:53.004  ⭐ §5.3 — ABBANDONO: «prova» non tocca niente da 20065 ms (tetto 20000)
+17:22:53.004  congedo motivo=0x03
+17:22:53.011  ⭐ §5.3: la sessione e' ABBANDONATA — chiudo la sessione grafica
+```
+
+⇒ `gnome-shell` spenta, pagina al modulo d'accesso con *«la sessione è stata abbandonata»*.
+
+⚠ **E al primo giro il registro mentiva due volte**: diceva *«da un'ora»* (il tetto è configurabile e
+valeva 20 s) e *«l'utente ha chiesto di uscire»* (non l'aveva chiesto nessuno). ⭐ Curate. ⇒ *Una riga
+scritta quando esisteva un solo chiamante diventa falsa al secondo, e nessun compilatore lo dice.*
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ✅ ~~La voce «Power Off» resta nel menu~~ — **chiuso dall'utente il 16 agosto 2026**: *«il menù di

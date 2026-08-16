@@ -1768,9 +1768,11 @@ void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
 	f->ctx_sessione_finita = ctx;
 }
 
-bool figli_termina_sessione(figli *f, const char *utente)
+bool figli_termina_sessione(figli *f, const char *utente, int perche)
 {
-	return figli_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, 0, 0);
+	/* ⛔ Il `perche'` viaggia nel campo `a`, che era libero: la ragione sta su
+	 *    `FIGLI_USCITA_*` in `figlio.h`. */
+	return figli_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, perche, 0);
 }
 
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
@@ -3841,11 +3843,20 @@ void figlio_vive(int argc, char **argv)
 				 *    e il canale non serve piu' (`RCP.md` §7.6).
 				 */
 				if (ci.azione == FIGLI_INPUT_TERMINA) {
+					/* ⛔ Si dice la causa VERA, non quella di sempre: questa
+					 *    riga per un giorno ha detto «l'utente ha chiesto»
+					 *    anche quando a chiedere era un orologio. */
 					registro_dice(REG_FIGLIO,
-					              "⭐ §7.6: l'utente ha chiesto di USCIRE — "
-					              "chiudo la sessione grafica e con lei i "
-					              "suoi programmi.  Al prossimo attacco ne "
-					              "nascera' una NUOVA");
+					              ci.a == FIGLI_USCITA_ABBANDONO
+					                  ? "⭐ §5.3: la sessione e' ABBANDONATA — "
+					                    "chiudo la sessione grafica e con lei i "
+					                    "suoi programmi.  ⚠ Non l'ha chiesto "
+					                    "nessuno: e' scaduto il tetto, e il "
+					                    "numero sta nella riga del padre"
+					                  : "⭐ §7.6: l'utente ha chiesto di USCIRE — "
+					                    "chiudo la sessione grafica e con lei i "
+					                    "suoi programmi.  Al prossimo attacco ne "
+					                    "nascera' una NUOVA");
 					if (!sessione_termina())
 						registro_dice(REG_FIGLIO,
 						              "⛔ la sessione grafica NON e' "

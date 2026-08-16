@@ -368,7 +368,21 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
  * programmi dell'utente si chiudono, e al prossimo attacco nasce una sessione
  * NUOVA.  `false` = non c'e' nessun figlio per quell'utente, o la domanda non e'
  * partita — e allora la sessione NON finira'. */
-bool figli_termina_sessione(figli *f, const char *utente);
+/* ⛔⭐ E IL PERCHE' VIAGGIA COL MESSAGGIO — 16 agosto 2026, e prima no.
+ *
+ *     Il figlio scriveva «⭐ §7.6: l'utente ha chiesto di USCIRE» **per ogni**
+ *     chiusura, perche' l'unico che gliela chiedeva era §7.6.  ⛔ Dal momento in
+ *     cui gliela chiede anche l'orologio dell'abbandono (§5.3), quella riga
+ *     afferma una causa che non conosce — e `[M]` l'ha affermata al primo giro
+ *     della prova, con nessun utente che avesse chiesto niente.
+ *
+ * ⚠ Non serve un messaggio nuovo: il campo `a` della busta era libero. */
+enum {
+	FIGLI_USCITA_UTENTE = 0,   /* §7.6: l'ha chiesto una persona */
+	FIGLI_USCITA_ABBANDONO = 1 /* §5.3: e' scaduto il tetto, non l'ha chiesto nessuno */
+};
+
+bool figli_termina_sessione(figli *f, const char *utente, int perche);
 
 bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
                   uint32_t altezza);

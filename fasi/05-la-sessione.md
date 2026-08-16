@@ -290,8 +290,8 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    mentre si provava il punto 1 (contava i secondi in cui *l'utente non tocca niente* invece di
    quelli in cui *il client tace*: un secondo dispositivo entrava e si prendeva il desktop di chi
    stava guardando). **Riparato e provato in tre punti**, §6-bis. ✅ **30 min di inattività**: fatto il 16 agosto,
-   motivo `0x02` di §8.2 che era dichiarato e mai spedito — §6-quinquies. ⏳ Resta **6 ore di
-   abbandono**, che ⚠ **incrocia** il punto 2, e ⛔ il server dichiara all'avvio che non è in vigore.
+   motivo `0x02` di §8.2 che era dichiarato e mai spedito — §6-quinquies. ✅ **il terzo**: niente 6 ore — **60 minuti
+   senza input e la sessione si chiude** (`DECISIONI.md` §4.8), provato a 20 s in §6-septies.
 5. ✅ **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*. ⇒ `[M]` 16 agosto: **cinque giri**, tre col distacco pulito e
    **due col filo tagliato**. Indistinguibili fra loro, e ⭐ **niente si accumula** — §6-sexies.
@@ -302,8 +302,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Resta solo l'orologio delle 6 ore** del punto 4 — e §5.3 lo vuole configurabile, quindi si
-proverà in dieci secondi come l'altro.
+⇒ ⭐ **I sette punti di §2 sono chiusi.**
 
 ---
 
@@ -1205,6 +1204,43 @@ background: **`trap ... EXIT INT TERM`**, che toglie il taglio comunque vada.
 > ⭐ Rifatto pulito, il taglio B ha staccato a `30939 ms`. **Nessun difetto del prodotto** — e la
 > regola resta quella di `SESSIONE.md`: *quando un banco è rosso, la prima cosa da sospettare è
 > l'atteso* (o lo strumento).
+
+## 6-septies · ✅ IL TERZO OROLOGIO — 60 minuti senza input, provato a 20 secondi
+
+*Deciso dall'utente il 16 agosto 2026 (`DECISIONI.md` §4.8), e provato subito: «procedi con il tetto
+dei 20 secondi».* ⭐ È esattamente il modo di provare un tetto lungo senza tenere occupata una
+macchina — il meccanismo a valori corti, il numero letto nella riga d'avvio.
+
+```
+17:22:53.004  ⭐ §5.3 — ABBANDONO: «prova» non tocca niente da 20065 ms (tetto 20000)
+17:22:53.004  congedo motivo=0x03
+17:22:53.011  rilascio al distacco: 0 fra tasti e pulsanti
+17:22:53.011  ⭐ §5.3: la sessione e' ABBANDONATA — chiudo la sessione grafica
+```
+
+| | |
+|---|---|
+| lo scatto | **20065 ms** su un tetto di 20000 |
+| `gnome-shell` | **spenta** |
+| la pagina | tornata al modulo d'accesso con *«la sessione è stata abbandonata»* |
+| ⭐ il congedo `0x03` | spedito **prima** di chiudere, come l'ordine normativo di §7.6 impone |
+
+### ⛔ E al primo giro il registro ha detto DUE bugie — la stessa malattia di tutta la giornata
+
+| la riga | perché era falsa |
+|---|---|
+| *«guardavano senza toccare niente **da un'ora**»* | il tetto è **configurabile**, e in quel giro valeva **20 secondi**. «Un'ora» è vero solo col predefinito ⇒ una riga che afferma un numero che non conosce |
+| *«⭐ §7.6: **l'utente ha chiesto** di USCIRE»* | ⛔ **nessuno aveva chiesto niente**: a chiudere era un orologio. Il figlio scriveva quella frase per *ogni* chiusura, perché fino a stamattina l'unico a chiedergliela era §7.6 |
+
+⭐ **Curate tutt'e due**, e la seconda senza aggiungere un messaggio al protocollo interno: il campo
+`a` della busta era libero, e adesso porta il **perché** (`FIGLI_USCITA_UTENTE` /
+`FIGLI_USCITA_ABBANDONO`). Rimisurato, le righe dicono `20065 ms (tetto 20000)` e *«⚠ Non l'ha
+chiesto nessuno: è scaduto il tetto»*.
+
+> ⚠ **È la terza volta in un giorno** che una riga di registro afferma una causa o un numero che non
+> possiede — dopo `RILASCIO AL DISTACCO: 0` e il testo `0x02` della pagina. ⇒ Non è sfortuna: è che
+> **una riga scritta quando esisteva un solo chiamante diventa falsa al secondo**, e nessun
+> compilatore lo dice.
 
 ## 7 · Il giudizio dell'utente
 

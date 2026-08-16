@@ -513,7 +513,7 @@ static void termina_al_figlio(void *ctx, const char *utente)
 		              "guardando deve saperlo adesso, non fra trenta secondi",
 		              altri, utente);
 
-	if (!figli_termina_sessione(p->f, utente))
+	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_UTENTE))
 		registro_dice(REG_AVVIO,
 		              "⛔ §7.6: la richiesta di terminare la sessione di «%s» NON "
 		              "e' partita verso il figlio: i client sono stati congedati "
@@ -557,10 +557,13 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 		registro_dice(REG_WT,
 		              "⚠ §5.3: c'erano ANCORA %zu client attaccati a «%s», "
 		              "congedati con 0x03 prima di chiudere — guardavano senza "
-		              "toccare niente da un'ora",
-		              quanti, utente);
+		              "toccare niente da %llu ms (tetto %llu).  ⛔ E il numero si "
+		              "SCRIVE invece di dirlo a parole: il tetto e' configurabile, "
+		              "e «un'ora» sarebbe vero solo col valore predefinito",
+		              quanti, utente, (unsigned long long)fermo_ms,
+		              (unsigned long long)abbandono_ms);
 
-	if (!figli_termina_sessione(p->f, utente))
+	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_ABBANDONO))
 		registro_dice(REG_AVVIO,
 		              "⛔ §5.3: la richiesta di chiudere la sessione abbandonata "
 		              "di «%s» NON e' partita verso il figlio: i client sono "
