@@ -4,6 +4,42 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **16 agosto 2026, sera.** ⇒ **SI APRE LA FASE 6, IN UNA SESSIONE NUOVA**
+>
+> *Deciso dall'utente: «per fase 6 apro una nuova sessione».*
+>
+> ## Il primo gesto
+>
+> ⛔ **Aprire `fasi/06-...md` PRIMA di scrivere una riga di codice** — `PIANO.md` §0.1: il documento
+> di fase si apre all'inizio e si riempie strada facendo. ⚠ La cartella `fasi/` **è vuota adesso**,
+> e non è un errore: ci sta solo la fase in corso.
+>
+> ## Che cosa è successo oggi, e non è codice
+>
+> | | |
+> |---|---|
+> | ✅ **la fase 5 è chiusa** | sul giudizio dell'utente, con un lavoro vero dentro — `FASI.md` §05-la-sessione |
+> | ⭐ **il piano è stato rivisto** | *«alcuni punti secondo me fuori sequenza»*. La **fase 8** non è più «l'accelerazione» ma **«la copia zero»** (la codifica in hardware era già entrata il 13 agosto); il **multi-tenant** passa davanti ai desktop nuovi ed **era la 12, è la 10** — KDE 11, XFCE/LXQt 12 (`DECISIONI.md` §4.6-sexies) |
+> | ⭐⭐ **la documentazione è passata da 111 file a 10** | gli otto studi in `STUDI.md`, i sei documenti di fase in `FASI.md`, i 94 rapporti degli agenti tolti, `SESSIONE.md` sciolto, il diario del `README` potato di 485 righe già dichiarate morte |
+> | ⭐ **e `v1/` ha una mappa** | `DECISIONI.md` §6.1 — ⛔ perché l'inventario **ometteva le due parti vive**: `v1/banco/enter.sh` e `v1/strumenti/sshpw.py` |
+>
+> ## ⛔ Le tre cose da sapere prima di cercare qualcosa
+>
+> 1. **i rapporti degli agenti non sono più su disco.** Un rimando che nomina `fasi/rapporti/…`
+>    resta valido: si rilegge dalla storia, e la ricetta sta in testa a `FASI.md`;
+> 2. **gli studi si citano come `STUDI.md` §kde**, le fasi come `FASI.md` §03-movimento — le chiavi
+>    sono i nomi che avevano i file;
+> 3. ⛔ **e non si producono nuovi file di rapporto**: quel che una fase misura va **nel documento
+>    della fase**, che è l'unico posto da cui un numero sopravvive.
+>
+> ## ⏳ Quel che resta aperto, e aspetta una parola
+>
+> `v1/remotix-rust/` (7 163 righe, ramo chiuso, **una citazione**) e il resto di `v1/banchi/` (86
+> log, 8 png, 10 archivi). ⚠ Toglierli **non recupera spazio** — la storia li tiene comunque — e il
+> guadagno sarebbe solo di ordine.
+
+---
+
 > ## Stato al 13 agosto 2026 — ⭐⭐⭐ **LA FASE 2 È CHIUSA: il desktop è dentro una scheda**
 >
 > ✅ **Chiusa il 13 agosto 2026, sul giudizio dell'utente**, che ha riaperto
