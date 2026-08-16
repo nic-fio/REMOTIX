@@ -865,9 +865,31 @@ dichiarato prima**. `fasi/04-si-comanda.md` lo chiama il banco della tela, e
 esattamente quel che `477d708` ha cambiato, introducendo il ripiego dichiarato di §4.5 *«concessa la
 tela del palco»*.
 
-⏳ **E la diagnosi NON è fatta**: potrebbero essere **attesi vecchi** — la quinta volta in due giorni
-che un banco misura se stesso, ed è il sospetto giusto per primo (`SESSIONE.md`) — oppure il
-prodotto. ⛔ Si guarda caso per caso, non si conclude da qui.
+### ⭐ La diagnosi, fatta: **una causa sola**, e il prodotto ha ragione
+
+`[M]` Tutti e sette i rossi hanno **lo stesso identico scarto**: `richieste al palco` è **esattamente
+una in più** dell'atteso.
+
+| caso | atteso | visto |
+|---|---|---|
+| 1 · 6 · 9 · 10 | richieste al palco **1** | **2** |
+| 2 · 5 · 17 | richieste al palco **0** | **1** |
+
+⇒ ⭐ **È la richiesta della NASCITA**, quella che `477d708` ha aggiunto apposta e che il registro
+dichiara a ogni sessione: *«§4.5: dico al palco che la tela di questa sessione è NxM — così nasce
+già così invece di nascere a una misura sua e doverla cambiare (e il cambio è una gara)»*.
+
+⚠ E il «TELA usciti 0» dei casi 1, 6, 9, 10 **non è un secondo difetto**: quei casi sono scritti
+`bene = …; if (bene) { palco_consegna(…); … }`, quindi caduta la prima condizione la seconda metà
+**non viene mai eseguita**. Un solo difetto, sette facce.
+
+⇒ ⛔ **L'atteso è vecchio, il prodotto è giusto** — la **quinta** volta in due giorni che un banco
+misura se stesso.
+
+⏳ **E la riparazione NON è stata fatta**, per una ragione: cambiare un *atteso* è esattamente il
+gesto che in questo progetto va fatto piano. ⚠ Non basta sommare uno: la richiesta della nascita va
+**nominata** dal banco — meglio ancora, provata da un caso suo — o il banco diventa cieco proprio
+sulla cura che l'ha reso rosso.
 
 ⭐ **E la lezione di processo è indipendente dall'esito**: il banco più forte che abbiamo su `rcp.c`
 è rimasto rosso un giorno intero perché **nessuno lo lancia**. Costa due secondi:
