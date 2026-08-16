@@ -21,7 +21,13 @@
  * quel che si e' chiesto.  ⛔ Senza questa attesa un rifiuto — «no more input
  * formats» — sarebbe silenzioso, e si manifesterebbe molto piu' tardi come
  * schermo nero. */
-#define ATTESA_AVVIO_S 10
+/* ⛔⭐ Quanto si aspetta che il flusso PipeWire si AGGANCI, in un tentativo.
+ *
+ * ⚠ Era `ATTESA_AVVIO_S`, dieci secondi, e quei dieci secondi ERANO la coda dei
+ *   tempi di login: vedi il riquadro nel punto in cui si usa.  ⛔ La costante
+ *   vecchia e' stata TOLTA, non lasciata li' inutilizzata: una costante che non
+ *   comanda piu' niente e' una trappola per chi legge. */
+#define ATTESA_AGGANCIO_MS 10000
 
 /* Quante regioni danneggiate si portano al massimo.  Oltre, si dichiara che il
  * fotogramma vale tutto: e' il caso sicuro. */
@@ -1168,12 +1174,60 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 		goto guasto;
 	}
 
-	scadenza = g_get_monotonic_time() + (gint64) ATTESA_AVVIO_S * G_USEC_PER_SEC;
+	/*
+	 * ⛔⭐⭐⭐ E QUI STAVANO I DIECI SECONDI — 16 agosto 2026, ed e' la coda che
+	 *        ha resistito a cinque diagnosi.
+	 *
+	 * `[M]` I giri lenti del banco davano **12854** e **12866 ms**: dodici
+	 * millisecondi di differenza fra due giri diversi.  ⇒ ⚠ Un numero COSTANTE
+	 * non e' una variazione, e' un **tetto** — e 12,86 s e' esattamente 2,86 s
+	 * (`gnome-session` che si alza) **piu' dieci secondi tondi**, cioe' questa
+	 * attesa che scade.  I giri da 24,8 s sono lo stesso tetto **due volte**.
+	 *
+	 * ⭐ E il confronto che decide: quando il compositore e' pronto, questo
+	 *    aggancio costa `[M]` **sedici millisecondi**.  ⇒ Aspettarne diecimila
+	 *    non e' prudenza, e' un tentativo che si rifiuta di fallire.
+	 *
+	 * ⛔⛔ E POI LA MISURA HA DETTO DI NO — 16 agosto 2026, e questa e' la parte
+	 *     che va scritta invece che cancellata.
+	 *
+	 * Avevo accorciato questo tetto a 1500 ms ragionando cosi': «chi chiama
+	 * riprova ogni 200 ms, quindi un tentativo lungo non aggiunge possibilita',
+	 * aggiunge solo il tempo in cui non se ne fanno altri».  ⭐ Il ragionamento
+	 * regge ancora.  ⛔ Ma il fatto no: col tetto corto **la coda dei tempi non
+	 * e' cambiata**, e questa riga di cronometro — che si scrive appena
+	 * l'aggancio supera 250 ms — **non e' comparsa nemmeno una volta**.
+	 *
+	 * ⇒ ⚠ Se il cronometro tace, i secondi non sono qui.  ⭐ Quindi il tetto
+	 *   torna a dieci secondi: non si porta a casa una modifica di cui la
+	 *   misura ha smentito il motivo, per quanto il ragionamento sembri buono.
+	 *   Un cambiamento senza una prova a sostegno e' un debito, non una cura.
+	 *
+	 * ⭐ Resta il CRONOMETRO, e quello e' guadagno puro: adesso, se un giorno i
+	 *    secondi saranno qui, si vedra' invece di doverlo dedurre.
+	 */
+	scadenza = g_get_monotonic_time() + (gint64)(ATTESA_AGGANCIO_MS * 1000);
 	while (cattura->stato != PW_STREAM_STATE_PAUSED &&
 	       cattura->stato != PW_STREAM_STATE_STREAMING &&
 	       cattura->stato != PW_STREAM_STATE_ERROR && g_get_monotonic_time() < scadenza)
 		pw_thread_loop_timed_wait(cattura->ciclo, 1);
 	pw_thread_loop_unlock(cattura->ciclo);
+	{
+		/* ⭐ E si DICHIARA quanto e' costato, se e' costato: era l'ultima
+		 *    regione del montaggio senza un cronometro, ed e' per questo che
+		 *    ci sono volute cinque diagnosi. */
+		gint64 speso_ms = (g_get_monotonic_time() -
+		                   (scadenza - (gint64)(ATTESA_AGGANCIO_MS * 1000))) / 1000;
+
+		if (speso_ms >= 250)
+			registro_dice(AREA,
+			              "⏱ l'aggancio del flusso PipeWire e' costato %lld ms "
+			              "(stato %d, tetto %d ms) — ⚠ quando il compositore e' "
+			              "pronto costa una decina di millisecondi: questo vuol "
+			              "dire che pronto non era",
+			              (long long)speso_ms, (int)cattura->stato,
+			              ATTESA_AGGANCIO_MS);
+	}
 
 	if (cattura->stato == PW_STREAM_STATE_ERROR)
 	{
@@ -1189,7 +1243,10 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 	if (cattura->stato != PW_STREAM_STATE_PAUSED && cattura->stato != PW_STREAM_STATE_STREAMING)
 	{
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-		            "la cattura non ha dato segno di vita entro %d secondi", ATTESA_AVVIO_S);
+		            "la cattura non si e' agganciata entro %d ms: ⚠ NON vuol dire "
+		            "«rotta», vuol dire «il compositore non e' ancora pronto» — e "
+		            "chi chiama riprova fra poco",
+		            ATTESA_AGGANCIO_MS);
 		goto guasto;
 	}
 

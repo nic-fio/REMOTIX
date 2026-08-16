@@ -127,7 +127,35 @@ sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, 
   sorgente: *«we don't get change notifications for [Polkit policy], so their value may be
   outdated»* — la legge all'avvio e la tiene in cache. ⚠ **L'azione fallisce comunque** (logind
   nega), ⛔ ma una voce che promette e non mantiene è quel che `DECISIONI.md` §4.7 voleva togliere.
-- ⛔⛔ **LA CODA: un giro su sette costa 13-18 secondi**, e la causa NON è ancora accertata. `[M]`
+> ### ⭐⭐⭐ LA CODA: TROVATA, ed è il ridimensionamento contro una scena ferma
+>
+> `[M]` 16 agosto 2026, registro pulito e figlio finalmente **parlante** (vedi sotto). In un giro
+> lento:
+>
+> - fotogrammi spediti: **uno solo, e a `1920x1080`** — cioè alla tela di **riserva**, non a quella
+>   chiesta dal cliente (`2544x926`);
+> - righe «TELA NUOVA DAL PALCO»: **zero** — il ridimensionamento **non è mai avvenuto**;
+> - e il ciclo lo diceva: *«1 fotogrammi consegnati, **3538 attese a vuoto** (scena ferma: Mutter
+>   consegna solo quando qualcosa cambia)»*.
+>
+> ⇒ ⛔ **Il palco nasce alla tela sbagliata.** Il figlio viene generato con `1920x1080` (il valore
+> della tabella dei figli) **prima** che il cliente dichiari la sua finestra, monta il palco a quella
+> misura, e spedisce una chiave sbagliata. Poi arriva `2544x926` e serve un ridimensionamento —
+> ⛔ **ma su Wayland il ridimensionamento si compie solo quando il compositore consegna un
+> fotogramma nuovo, e su un desktop appena nato non cambia niente.** ⇒ Si aspetta che qualcosa si
+> muova da sé.
+>
+> ⭐ **E questa è la causa comune di tutti i sintomi che l'utente ha elencato il 16 agosto**: bande
+> nere (fotogramma alla misura sbagliata), «desktop rotto», «nessun input» (la regione del puntatore
+> segue la tela), «ci mette molti secondi». ⚠ B5 e B6 di questa tabella lo dicevano già a parole; la
+> cura scritta (`rcp.c` §4.5, dire al palco la tela) **arriva troppo tardi**, perché il figlio ha
+> già montato.
+>
+> ⇒ ⭐ **La cura**: il figlio non deve far nascere la sessione né montare il palco **finché non sa la
+> tela del cliente** — che arriva ~650 ms dopo. Si perde mezzo secondo e si toglie del tutto la gara.
+
+- ⛔⛔ **LA CODA: un giro su sette costa 13-18 secondi** — ⭐ **causa trovata**, vedi il riquadro qui
+  sopra. Qui resta il diario di come ci si è arrivati, che vale più della causa. `[M]`
   Quel che si è ESCLUSO con la misura, e ognuno era una diagnosi che sembrava giusta:
 
   | ipotesi | come è stata esclusa |
@@ -144,9 +172,20 @@ sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, 
   `mutter_apri`** — `ATTESA_AVVIO_S 10` in `cattura.c` e `ATTESA_NODO_MS 10000` in `mutter.c`.
   Dieci secondi più l'avvio del compositore fanno proprio i diciassette.
 
-  ⛔ **E la lezione vale più della causa**: cinque diagnosi, tutte plausibili, tutte smentite dalla
-  misura successiva — perché il pezzo di programma che ci mette i secondi **non aveva una riga di
-  registro**. ⇒ *Un'attesa che non si dichiara è un'attesa su cui si può solo tirare a indovinare.*
+  ⛔⛔ **E LA RAGIONE PER CUI CI SONO VOLUTE SEI DIAGNOSI È UNA SOLA, ed è la peggiore possibile:
+  il figlio non aveva la parlantina.**
+
+  `[M]` Il figlio **non è un `fork`**: è un `execve` di `remotix-figlio`. ⇒ Non ereditava il
+  flag `--parlantina`, e **ogni `registro_dettaglio()` di `figlio.c` finiva nel nulla, in silenzio,
+  senza un errore.** ⚠ Metà della strumentazione di quel file non è mai arrivata al registro.
+
+  ⭐ E ha mentito nella direzione peggiore: cercando la coda, ho concluso per ore che certi rami
+  «non scattavano mai» *perché la loro riga non compariva* — mentre scattavano eccome. ⇒ È la forma
+  **E8** (`LEZIONI.md` §1.9) dentro lo strumento che serve a smascherarla: «non l'ha fatto» e «non
+  me l'ha detto» con la stessa faccia.
+
+  ⇒ *Una diagnostica che tace non è neutra: **mente**.* E la prima cosa da verificare su uno
+  strumento non è che dica il vero, è che **dica**.
 
 - ⭐ **Curato**: l'attesa fra un tentativo e l'altro raddoppiava fino a 30 s **anche mentre un
   cliente stava a guardare uno schermo fermo**. `[M]` Il registro: *«attesa in corso 30000 ms,

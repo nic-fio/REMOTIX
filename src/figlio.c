@@ -688,7 +688,9 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char a_utente[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_matr[40];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	char *argv[10];
+	/* ⚠ Undici: dieci parole piu' il NULL — e l'undicesima e' `--parlantina`,
+	 *   che si aggiunge solo se il padre ce l'ha (vedi sotto). */
+	char *argv[11];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -876,6 +878,31 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	argv[na++] = a_a;
 	argv[na++] = a_matr;
 	argv[na++] = f->c_e_rilievo ? (char *)f->dir_rilievo : (char *)"-";
+	/*
+	 * ⛔⭐⭐⭐ E LA PARLANTINA SI PASSA AL FIGLIO — 16 agosto 2026, ed e' il
+	 *        difetto che mi ha fatto perdere una giornata intera.
+	 *
+	 * ⛔ Il figlio NON e' un fork: e' un `execve` di `remotix-figlio`.  ⇒ Non
+	 *    eredita le variabili del padre, e `registro_parlantina()` nel figlio
+	 *    restava **spenta** — anche quando il server era partito con
+	 *    `--parlantina`.
+	 *
+	 * ⚠ Quindi **ogni `registro_dettaglio()` di `figlio.c` finiva nel nulla**,
+	 *   in silenzio, senza un errore.  `[M]` Ed e' costato caro: cercando la
+	 *   coda dei tempi di login ho concluso per ore che certi rami «non
+	 *   scattavano mai», perche' la loro riga non compariva — mentre scattavano
+	 *   eccome.  ⭐ La diagnostica che tace non e' neutra: **mente**, e mente
+	 *   nella direzione peggiore, cioe' «quel codice non gira».
+	 *
+	 * ⇒ E' la forma E8 (`LEZIONI.md` §1.9) dentro lo strumento che serve a
+	 *   smascherarla: «non l'ha fatto» e «non me l'ha detto» con la stessa
+	 *   faccia.
+	 *
+	 * ⚠ In coda e opzionale: il figlio legge `argc >= 9` e questo e' il decimo,
+	 *   quindi una riga di comando senza non si rompe.
+	 */
+	if (registro_parla_molto())
+		argv[na++] = (char *)"--parlantina";
 	argv[na] = NULL;
 
 	execve(f->percorso_mio, argv, envp);
@@ -2694,8 +2721,25 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    riga scadrebbe **dentro** il montaggio, cioe' proprio mentre la
 	 *    risposta si sta preparando.
 	 */
+	/*
+	 * ⛔⭐⭐ E LA PRIMA RIGA LA SCRIVE IL FIGLIO, PRIMA DI PARLARE COL PADRE.
+	 *
+	 * `[M]` 16 agosto 2026: nel buco dei ventuno secondi l'unica riga al
+	 * confine la scriveva **il padre** (quando riceveva l'«attendi»), e da una
+	 * riga del padre non si sa quando il FIGLIO l'ha mandata — si sa quando il
+	 * padre l'ha letta.  ⛔ E' la forma E6, il mittente dedotto invece che
+	 * chiesto, dentro il confine che serviva a delimitare il difetto.
+	 *
+	 * ⇒ Adesso il figlio dice «sto per parlare» e «ho parlato», e fra le due
+	 *   righe c'e' solo `manda()`: se i secondi stanno li', si vedono.
+	 */
+	registro_dettaglio(REG_FIGLIO,
+	                   "entro nel montaggio del palco (tela %ux%u): dico al padre "
+	                   "di attendere",
+	                   tela_l, tela_a);
 	if (tela_l && tela_a)
 		attendi_tela(tela_l, tela_a);
+	registro_dettaglio(REG_FIGLIO, "l'«attendi» e' partito: adesso il bus");
 
 	/*
 	 * ⛔⭐⭐ IL CRONOMETRO DENTRO I PASSI, e non e' un lusso: e' l'attrezzo che
@@ -3306,6 +3350,12 @@ void figlio_vive(int argc, char **argv)
 	tela_voluta_a = tela_a;
 	mia_matricola = strtoull(argv[7], NULL, 10);
 	dir_rilievo = argv[8];
+	/* ⭐ La parlantina, se il padre ce l'ha passata: vedi il riquadro in
+	 *    `figli_esegui()`.  ⛔ Senza, ogni `registro_dettaglio` di questo file
+	 *    e' scritto e non arriva a nessuno. */
+	for (int i = 9; i < argc; i++)
+		if (strcmp(argv[i], "--parlantina") == 0)
+			registro_parlantina(true);
 
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
@@ -3430,6 +3480,34 @@ void figlio_vive(int argc, char **argv)
 		struct pollfd pf;
 		int pronto;
 		bool fine = false;
+
+		/*
+		 * ⛔⭐⭐ IL BATTITO DEL CICLO, e serve perche' senza di lui ho passato
+		 *       una giornata a leggere il sorgente invece che i fatti.
+		 *
+		 * `[M]` 16 agosto 2026: nei giri lenti passavano DICIOTTO SECONDI fra
+		 * due righe che nel codice sono a poche istruzioni di distanza, e in
+		 * mezzo il figlio non scriveva niente.  Da fuori i casi possibili erano
+		 * tre — bloccato in una chiamata, fermo ad aspettare, o il ciclo che non
+		 * gira — ⛔ e i primi due li avevo gia' strumentati e tacevano.  ⇒ Resta
+		 * il terzo, e per vederlo serve una riga che si scrive **comunque**.
+		 *
+		 * ⚠ Una al secondo, e solo finche' non c'e' palco: quando il desktop va,
+		 *   questa riga non compare mai.
+		 */
+		if (!cat) {
+			static uint64_t battito_ms;
+			uint64_t adesso = registro_ora_ms();
+
+			if (adesso - battito_ms >= 1000) {
+				battito_ms = adesso;
+				registro_dice(REG_FIGLIO,
+				              "♥ ciclo VIVO senza palco: codec %u, tela voluta "
+				              "%ux%u, prossimo tentativo fra %lld ms",
+				              (unsigned)codec_chiesto, tela_voluta_l, tela_voluta_a,
+				              (long long)((int64_t)palco_riprova_ms - (int64_t)adesso));
+			}
+		}
 
 		/* ── 1. quel che il padre ha da dire, senza aspettare ────────── */
 		for (;;) {
