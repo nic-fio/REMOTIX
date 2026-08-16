@@ -451,6 +451,14 @@ void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice);
 const char *rcp_stato_nome(const rcp_sessione *s);
 const char *rcp_utente(const rcp_sessione *s);
 
+/* ⛔⭐ §5.3 — «il client e' ancora li'»: la chiama il TRASPORTO dopo ogni
+ *     pacchetto DECIFRATO E AUTENTICATO, e da lei dipende l'orologio dei trenta
+ *     secondi.  ⚠ Non dall'ultimo byte di RCP: quello e' l'orologio della
+ *     *inattivita' dell'utente*, che e' di trenta MINUTI e non di trenta
+ *     secondi.  La ragione lunga — e la misura che l'ha imposta — sta sul campo
+ *     `ultima_vita` in `rcp.c`. */
+void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms);
+
 /* ⛔ Azzera il registro delle sessioni attive.  Serve SOLO al banco, fra una
  * prova e l'altra: in un server vero non lo chiama nessuno. */
 void rcp_azzera_registro_sessioni(void);

@@ -127,6 +127,11 @@ ngtcp2_tstamp wt_battito_ns(const wt *w);
  * quando `wt_battito_ns()` e' passato. */
 void wt_batti(wt *w, ngtcp2_tstamp ts);
 
+/* ⛔⭐ §5.3 — «il client e' ancora li'».  La chiama `trasporto.c` dopo ogni
+ *     pacchetto che ngtcp2 ha ACCETTATO, ed e' l'unica cosa che si muove quando
+ *     l'utente guarda e non tocca niente. */
+void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts);
+
 /* ⛔ §8.1 — chi chiude DEVE mandare `CONGEDO` col motivo e ripeterlo nel codice
  * della chiusura, «mai con un silenzio».  La chiama il trasporto quando il
  * server si spegne: `RCP_SERVER_IN_CHIUSURA` (§8.2, `0x0C`).  Rilievo B-7. */

@@ -3296,6 +3296,18 @@ bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso)
 	                    ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 }
 
+/* ⛔⭐ §5.3 — il segno di vita che viene dal filo.  Una riga di ponte, e la
+ *     ragione per cui esiste sta su `rcp_segno_di_vita()`.
+ *
+ * ⚠ Passa PRIMA che la sessione RCP esista (la connessione QUIC c'e', il canale
+ *   di controllo no): allora non c'e' niente da segnare e va bene cosi' — chi
+ *   non e' ancora attaccato non tiene nessun posto. */
+void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts)
+{
+	if (w && w->rcp)
+		rcp_segno_di_vita(w->rcp, ts / NGTCP2_MILLISECONDS);
+}
+
 void wt_batti(wt *w, ngtcp2_tstamp ts)
 {
 	if (w->rcp)

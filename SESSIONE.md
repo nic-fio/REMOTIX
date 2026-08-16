@@ -104,7 +104,7 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | «va lento» | **A2** (llvmpipe) · A5 (scheda sbagliata) |
 | «il terminale resta congelato finché non muovo il mouse» | la coda della raffica in `cattura.c` (`LEZIONI.md` §6.5) |
 | «si può spegnere la macchina» | A4 · B15 |
-| ⛔ «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | **l'orologio del silenzio**, qui sotto: 30 s senza toccare niente e il posto risulta libero |
+| «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | ✅ **l'orologio del silenzio**, qui sotto — riparato il 16 agosto. ⚠ Se ricompare, cerca nel registro *«il margine si sta assottigliando»* |
 | «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: §7.3 rilascia entro **28 ms**, misurato — vedi qui sotto |
 
 ---
@@ -210,7 +210,7 @@ certificare il server.
 
 ⏳ **Non provate**: l'errore di protocollo e `rcp_libera()`. Dichiarate, non nascoste.
 
-## ⛔⛔⛔ L'orologio del silenzio conta la cosa sbagliata — 16 agosto 2026
+## ✅ L'orologio del silenzio contava la cosa sbagliata — trovato e riparato il 16 agosto 2026
 
 `SPECIFICHE.md` §5.3 tiene **due orologi diversi**: *silenzio del client* (30 **secondi**, «il client
 è sparito») e *inattività dell'utente* (30 **minuti**, «non tocca niente»). ⛔ **Il prodotto li
@@ -223,15 +223,35 @@ confonde**: misura `ultimo_byte` di RCP, e un client che guarda senza toccare no
 | un solo tasto, `13:48:19` | `posto RIPRESO`, **stessa connessione**, nessuna sessione nuova |
 | ⛔⛔ **il prezzo** | seconda scheda dopo 30 s: `posto PRESO da prova` — e la prima, viva, si **congela** |
 
-⇒ È l'invariante **I2** rotta nel caso che `RCP.md` §8.2 nomina: *«un client vivo occupa, e il nuovo
-è rifiutato»*. ⭐ **La cura non tocca il protocollo**: il segno di vita giusto è il pacchetto QUIC, e
-`trasporto.c` lo conta già bene — nel taglio vero ha dichiarato il silenzio **al secondo**, mentre
-RCP l'aveva dichiarato **36 secondi prima e senza motivo**. Dettagli in `fasi/05-la-sessione.md`
-§6-bis.
+⇒ Era l'invariante **I2** rotta nel caso che `RCP.md` §8.2 nomina: *«un client vivo occupa, e il
+nuovo è rifiutato»*.
+
+### ✅ La cura, e non tocca il protocollo
+
+**Due campi, due orologi** (`rcp.c`): `ultima_vita` = l'ultimo pacchetto **decifrato e autenticato**
+(il CLIENT, 30 secondi) · `ultimo_byte` = l'ultimo byte di RCP (l'UTENTE, 30 minuti — quello lungo
+non c'è ancora, ma adesso ha il suo campo). Lo alimenta `trasporto.c` dopo ogni
+`ngtcp2_conn_read_pkt()` **riuscito** — ⛔ solo riuscito: un datagram UDP qualunque terrebbe occupato
+il posto di un altro.
+
+| la controprova, tre punti | `[M]` |
+|---|---|
+| 90 s senza toccare niente | ✅ nessuno stacco, `occupati: 1` per tutti e 90 |
+| seconda scheda mentre la prima è viva e ferma | ✅ `posto NEGATO … lo occupa un altro client di questo stesso utente`, `congedo motivo=0x0f` |
+| ⛔ **il controllo positivo**: filo tagliato | ✅ `STACCATO per silenzio: 30015 ms senza un PACCHETTO — e l'ultimo byte di RCP è di 66695 ms fa` |
+
+⚠ **Su che cosa poggia**: che fra due pacchetti passi meno di 30 s. I PING del trasporto sono accesi
+solo nella finestra delle credenziali (e per una ragione scritta). ⇒ Il prodotto **sorveglia da sé**
+quell'assunzione: se il buco supera metà del tetto lo scrive — *«il margine si sta assottigliando»*.
+
+⛔ **E alla prima corsa l'ha già scritto**: `[M]` sessione ferma 260 s, il posto tiene, ma il buco fra
+due pacchetti è **15004 · 15005 · 15002 ms** — quindici secondi esatti. È un keep-alive, e non è il
+nostro: **è del browser**. ⇒ Il margine è 2× e dipende dalla cortesia di Chrome. La decisione che ne
+esce — accendere i nostri PING anche a sessione attiva — è in `fasi/05-la-sessione.md` §6-bis e
+**aspetta l'utente**, perché tocca la promessa di §5.3 sulla scheda congelata.
 
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
-- ⛔ **L'orologio del silenzio**, qui sopra: **da riparare**, ed è il difetto più grosso aperto.
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
   `gnome-session.CanShutdown` a **false** `[M]`. ⭐ La causa è di gnome-shell, e la dichiara il suo
   sorgente: *«we don't get change notifications for [Polkit policy], so their value may be

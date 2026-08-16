@@ -257,11 +257,12 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 3. ✅ **L'headless si dichiara e si verifica dopo l'avvio** — `[M]` 16 agosto, **20 giri su 20**: il
    figlio scrive *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ Non è più «per
    accidente»: è un fatto letto dal nucleo a ogni sessione.
-4. ⛔⛔ **I tre orologi**: 30 s di silenzio, 30 min di inattività, 6 ore di abbandono. ⚠ Il terzo
-   **incrocia** il punto 2. ⇒ ⭐ **E il primo è ROTTO, misurato il 16 agosto col browser mentre si
-   provava il punto 1**: conta i secondi in cui *l'utente non tocca niente*, non quelli in cui *il
-   client tace*. **Un secondo dispositivo entra e si prende il desktop di chi sta guardando.**
-   Il racconto e la misura sono in §6-ter; la cura e il suo costo in §4.
+4. **I tre orologi**: ✅ **30 s di silenzio** — era **rotto**, trovato il 16 agosto col browser
+   mentre si provava il punto 1 (contava i secondi in cui *l'utente non tocca niente* invece di
+   quelli in cui *il client tace*: un secondo dispositivo entrava e si prendeva il desktop di chi
+   stava guardando). **Riparato e provato in tre punti**, §6-bis. ⏳ Restano **30 min di
+   inattività** — ⭐ e il campo giusto adesso c'è, si chiama `ultimo_byte` — e **6 ore di
+   abbandono**, che ⚠ **incrocia** il punto 2.
 5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*.
 6. ⛔ **La sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
@@ -270,7 +271,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Restano il 4, il 5 e il 6** — e il 4 non è più «da provare»: è **da riparare**.
+⇒ ⭐ **Restano il 5, il 6, e i due orologi lunghi del 4** (30 minuti e 6 ore).
 
 ---
 
@@ -301,10 +302,10 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 
 | ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
 
-**Aperte:** ⭐ nessuna — ⛔ **ma dal 16 agosto c'è una RIPARAZIONE in coda, che non è una decisione**:
-l'orologio del silenzio conta i secondi sbagliati e un secondo dispositivo entra sul desktop di chi
-sta guardando (§6-bis). ⚠ Non aspetta una scelta dell'utente — `SPECIFICHE.md` §5.3 e `RCP.md` §8.2
-hanno già deciso, e il prodotto non li rispetta. **Aspetta solo il suo turno nel lavoro.**
+**Aperte:** ⭐ nessuna. ⚠ Il 16 agosto ne è passata una che **non era una decisione**: l'orologio del
+silenzio contava i secondi sbagliati (§6-bis). `SPECIFICHE.md` §5.3 e `RCP.md` §8.2 avevano già
+deciso, e il prodotto non li rispettava — ⇒ **riparato senza chiedere**, perché non c'era niente da
+scegliere.
 
 ### ⏳ Il secondo che si potrebbe recuperare, con la misura già fatta
 
@@ -770,10 +771,76 @@ byte di RCP.
 
 | | |
 |---|---|
-| **che cosa si tocca** | un campo in `connessione` (`trasporto.c`), assegnato dove il pacchetto entra · un accessore · un gancio in `rcp.h`/`webtransport.c` · una riga in `rcp_tempo()` |
+| **che cosa si tocca** | `s->ultima_vita` in `rcp.c` accanto a `ultimo_byte` (**due campi, due orologi**) · `rcp_segno_di_vita()` · il ponte `wt_segno_di_vita()` · la chiamata in `trasporto.c` dopo `ngtcp2_conn_read_pkt()` |
 | ⭐ **che cosa NON si tocca** | **il protocollo**: nessun messaggio nuovo, nessun battito da aggiungere alla pagina, `RCP.md` invariato. ⚠ E `rcp.c` ha il gemello identico byte per byte in `banchi/rcp/` |
+| ⛔ **e SOLO se `rv == 0`** | il pacchetto dev'essere **decifrato e autenticato**: un datagram UDP qualunque non basta, o chiunque potrebbe tenere occupato il posto di un altro spedendo pacchetti col suo indirizzo |
 | ⚠ **il caso da non rompere** | la scheda **congelata** dal browser dopo ~5 minuti in secondo piano (§5.3 la nomina): una scheda congelata smette anche di rispondere a QUIC ⇒ i due orologi restano d'accordo, il posto si libera lo stesso |
-| **la prova** | col browser: due schede, la prima ferma per un minuto, la seconda che tenta di entrare ⇒ **deve essere respinta** finché la prima è viva |
+
+### ✅ FATTA, e la controprova è di tre punti — 16 agosto 2026
+
+⛔ **Due su tre non bastavano**: se avessi provato solo che il posto non si perde, avrei potuto aver
+**spento** l'orologio invece di ripararlo. Il terzo punto è il controllo positivo.
+
+| | l'atteso, dichiarato prima | `[M]` |
+|---|---|---|
+| 1 | entro e **non tocco niente per 90 s** ⇒ nessuno stacco | ✅ `occupati: 1` a +15/30/45/60/75/90 s, zero stacchi (prima si staccava a 30 s) |
+| 2 | **seconda scheda** mentre la prima è viva e ferma ⇒ **respinta** | ✅ `posto NEGATO a prova … lo occupa un altro client di questo stesso utente` · `congedo motivo=0x0f` |
+| 3 | ⛔ **taglio il filo** ⇒ il posto si libera **davvero**, e a 30 s netti | ✅ `STACCATO per silenzio: 30015 ms senza un PACCHETTO … e l'ultimo byte di RCP è di 66695 ms fa` |
+
+⭐ **La riga nuova porta tutt'e due i numeri**, ed è la differenza in una riga sola: 30 s senza
+pacchetti *contro* 66 s senza che l'utente toccasse niente. Prima sarebbe stato il secondo numero a
+buttare fuori l'utente.
+
+### ⚠ E su che cosa poggia la cura, scritto invece che sperato
+
+⛔ **La riparazione ha un'assunzione**: che fra un pacchetto e l'altro passi meno di 30 s. Nessuno la
+garantisce — i PING del trasporto sono accesi **solo** nella finestra delle credenziali, e per una
+ragione scritta (`webtransport.c`, `regola_tienila_viva()`: tenerli sempre accesi cambierebbe il
+significato dei 30 s di §2.2). Durante la sessione i pacchetti arrivano perché **qualcosa si muove**
+— fotogrammi, cursore, riscontri — e su una scena ferma non è detto che si muova abbastanza spesso.
+
+⇒ ⭐ **Quindi l'assunzione si sorveglia da sola**: `rcp_segno_di_vita()` scrive nel registro quando
+il buco fra due pacchetti supera **metà** del tetto.
+
+> ⛔ **Ed è la lezione della mattina applicata alla sua stessa cura**: una protezione che poggia su
+> qualcosa che nessuno può guardare è la protezione che si scopre rotta da un utente buttato fuori
+> mentre leggeva.
+
+### ⛔⭐ E LA SORVEGLIANZA HA PARLATO ALLA PRIMA CORSA
+
+`[M]` Sessione ferma **260 secondi**, nessuno che tocca niente. ✅ Il posto ha tenuto per tutti e
+260. ⛔ **Ma la riga del margine è comparsa 8 volte**, e il numero è impressionante per quanto è
+regolare:
+
+```
+15:31:00.007  ⚠ §5.3: fra due pacchetti sono passati 15004 ms, e il tetto è 30000
+15:31:30.016  ⚠ §5.3: fra due pacchetti sono passati 15005 ms, e il tetto è 30000
+15:32:00.019  ⚠ §5.3: fra due pacchetti sono passati 15002 ms, e il tetto è 30000
+```
+
+⇒ **Quindici secondi esatti.** Un numero così preciso non è traffico: è **un keep-alive**, e ⛔ **non
+è il nostro** — i nostri PING in quella finestra sono spenti. È il browser.
+
+⚠ **Quindi il margine è 2×, e dipende dalla cortesia di Chrome.** Un browser diverso, o Chrome che
+cambia quel numero, e i posti ricominciano a cadere sotto il naso di chi sta leggendo.
+
+> ### ⛔ LA DECISIONE CHE NE ESCE, e non la prendo da solo
+>
+> **La cura vera**: accendere i PING del trasporto **anche a sessione attiva**, così il segno di
+> vita lo produce il server su un orologio suo invece di sperare in quello del browser. ⭐ Costa una
+> riga in `regola_tienila_viva()`.
+>
+> ⚠ **Ma la ragione per cui oggi sono spenti è scritta**, e va guardata bene:
+>
+> | l'obiezione scritta in `webtransport.c` | tiene? |
+> |---|---|
+> | *«Tenere viva la connessione SEMPRE cambierebbe il significato dei 30 secondi di §2.2»* | ⭐ **No, per il client MORTO**: RFC 9000 §10.1 rimette in moto il cronometro quando si **riceve**, non quando si manda. Un client morto non risponde ai nostri PING e muore lo stesso — e lo dice il commento stesso, due righe più sotto |
+> | ⛔ **ma tiene per la scheda CONGELATA** | `SPECIFICHE.md` §5.3 promette che una scheda messa in secondo piano e congelata dal browser dopo ~5 minuti **tace, quindi si stacca**. Se il servizio di rete del browser continua a rispondere ai nostri PING mentre la pagina è congelata, quella promessa cade: il posto resterebbe occupato da uno zombie |
+>
+> ⇒ ⏳ **E la domanda si può misurare invece che discutere**: *una scheda in secondo piano, congelata,
+> risponde ancora a QUIC?* Sei minuti di prova col browser. ⛔ Se risponde, allora la promessa di
+> §5.3 sulla scheda congelata **è già falsa oggi** — perché quei 15 secondi arrivano lo stesso — e la
+> decisione cambia forma.
 
 ## 7 · Il giudizio dell'utente
 

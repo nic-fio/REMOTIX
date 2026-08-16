@@ -740,7 +740,23 @@ static void leggi_pacchetto(trasporto *t, const struct sockaddr *locale,
 	path.remote.addr = (ngtcp2_sockaddr *)&c->remoto;
 	path.remote.addrlen = c->remotolen;
 
-	rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, dati, len, adesso_ns());
+	{
+		ngtcp2_tstamp ora = adesso_ns();
+		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, dati, len, ora);
+		/* ⛔⭐ §5.3 — E QUI, E SOLO SE `rv == 0`: il pacchetto e' stato
+		 *     DECIFRATO E AUTENTICATO.  ⚠ Un datagram che arriva non basta —
+		 *     chiunque ne puo' spedire uno con l'indirizzo di un altro, e
+		 *     terrebbe occupato il posto di quell'altro.
+		 *
+		 * ⭐ E' il segno di vita che mancava: fino al 16 agosto 2026 §5.3
+		 *    guardava l'ultimo byte di RCP, cioe' l'ultima volta che l'UTENTE
+		 *    aveva toccato qualcosa, e trenta secondi passati a leggere una
+		 *    pagina bastavano a far dichiarare sparito un client vivo.  ⛔ Il
+		 *    prezzo, misurato: un secondo dispositivo entrava e prendeva il
+		 *    desktop del primo. */
+		if (rv == 0 && c->w)
+			wt_segno_di_vita(c->w, ora);
+	}
 	if (rv != 0) {
 		if (rv == NGTCP2_ERR_DRAINING || rv == NGTCP2_ERR_IDLE_CLOSE ||
 		    rv == NGTCP2_ERR_CLOSING) {

@@ -260,7 +260,31 @@ struct rcp_sessione {
 	char indirizzo[64];
 	char utente[257];
 	uint64_t da_quando;   /* quando e' cominciato lo stato corrente */
-	uint64_t ultimo_byte; /* l'ultimo byte arrivato DAL CLIENT (§5.3) */
+	/* ⛔⛔⭐ DUE OROLOGI, NON UNO — e fino al 16 agosto 2026 ce n'era uno solo
+	 *      che faceva il mestiere di tutt'e due.
+	 *
+	 *      `SPECIFICHE.md` §5.3 ne tiene DUE, con due significati diversi:
+	 *
+	 *        · «silenzio del CLIENT», 30 SECONDI — «un client che tace e' un
+	 *          client che si e' staccato», e il paragrafo dice perche': *«i 30
+	 *          secondi coprono solo le interruzioni vere»*;
+	 *        · «inattivita' dell'UTENTE», 30 MINUTI — «chi resta mezz'ora a
+	 *          guardare un video senza toccare nulla viene staccato».
+	 *
+	 *      ⛔ `ultimo_byte` misura il SECONDO e veniva usato per il PRIMO: un
+	 *         client che guarda e non tocca non manda niente, e trenta secondi
+	 *         senza toccare la tastiera valevano «il client e' sparito».
+	 *
+	 *      `[M]` 16 agosto, col browser: sessione aperta, nessun input, e a
+	 *      30013 ms «STACCATO per silenzio, posti occupati: 0» — mentre la
+	 *      connessione era viva (QUIC non ha fiatato per 111 s, e un solo tasto
+	 *      ha ripreso il posto sulla STESSA connessione).  ⛔ E il prezzo si e'
+	 *      pagato: una seconda scheda e' entrata e ha preso il desktop del
+	 *      primo, che si e' congelato.  E' I2 rotta nel caso che `RCP.md` §8.2
+	 *      nomina per iscritto — *«un client vivo occupa, e il nuovo e'
+	 *      rifiutato»*. */
+	uint64_t ultimo_byte; /* l'ultimo byte di RCP dal client: l'UTENTE (§5.3) */
+	uint64_t ultima_vita; /* l'ultimo pacchetto autenticato: il CLIENT (§5.3) */
 	uint64_t cred_arrivo; /* quando e' arrivato CREDENZIALI */
 	bool cred_buone;      /* il verdetto, gia' calcolato ma non ancora detto */
 	uint8_t cred_motivo;  /* se non buone */
@@ -4122,6 +4146,10 @@ rcp_sessione *rcp_apri(const rcp_ganci *g, const char *provenienza,
 	s->stato = S_ATTESA_CIAO;
 	s->da_quando = ora_ms;
 	s->ultimo_byte = ora_ms;
+	/* ⛔ E ANCHE QUESTO parte da adesso, non da zero: una sessione appena
+	 *    aperta non ha ancora visto passare un pacchetto per le mani di questo
+	 *    modulo, e uno zero la farebbe staccare per silenzio al primo giro. */
+	s->ultima_vita = ora_ms;
 	snprintf(s->provenienza, sizeof s->provenienza, "%s",
 	         provenienza ? provenienza : "?");
 	rcp_chiave_indirizzo(s->provenienza, s->indirizzo, sizeof s->indirizzo);
@@ -4225,6 +4253,63 @@ const char *rcp_stato_nome(const rcp_sessione *s)
 }
 
 const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : ""; }
+
+/* ⛔⭐ §5.3 — «IL CLIENT E' ANCORA LI'», e lo dice il TRASPORTO, non RCP.
+ *
+ *     La chiama `trasporto.c` dopo ogni pacchetto che `ngtcp2_conn_read_pkt()`
+ *     ha accettato: cioe' **decifrato e autenticato**.  ⛔ Non basta che un
+ *     datagram UDP arrivi — chiunque puo' spedirne uno con l'indirizzo di un
+ *     altro, e terrebbe occupato il posto di qualcun altro.
+ *
+ * ⭐ E' l'unico segno di vita che esiste quando l'utente guarda e non tocca, ed
+ *    e' quello GIUSTO: nella prova del 16 agosto il filo e' stato tagliato alle
+ *    13:33:13 e questo orologio l'ha dichiarato alle 13:33:43 — **trenta
+ *    secondi netti**, mentre quello dei byte di RCP l'aveva dichiarato 36
+ *    secondi PRIMA, e a torto.
+ *
+ * ⚠ Nessun messaggio nuovo, nessun battito da aggiungere alla pagina: il
+ *   segnale c'era gia' e nessuno lo passava di qui. */
+void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms)
+{
+	if (!s || s->stato == S_FINITA)
+		return;
+	/* ⛔⭐⭐ E IL BUCO FRA DUE PACCHETTI SI SORVEGLIA, perche' questa
+	 *      riparazione POGGIA SU UN'ASSUNZIONE: che fra un pacchetto e l'altro
+	 *      passi meno del tetto di §5.3.
+	 *
+	 * ⛔ Nessuno la garantisce.  I PING del trasporto sono accesi SOLO nella
+	 *    finestra delle credenziali, e per una ragione scritta
+	 *    (`webtransport.c`, `regola_tienila_viva()`: tenerli sempre accesi
+	 *    cambierebbe il significato dei 30 s di §2.2).  ⇒ Durante la sessione
+	 *    i pacchetti arrivano perche' QUALCOSA si muove — fotogrammi, cursore,
+	 *    riscontri — e su una scena ferma con nessuno che tocca niente non e'
+	 *    detto che si muova abbastanza spesso.
+	 *
+	 * ⚠ Quindi quando il buco supera META' del tetto lo si SCRIVE.  E' l'unico
+	 *   modo di vedere ARRIVARE il giorno in cui non basta piu', invece di
+	 *   scoprirlo da un utente buttato fuori mentre leggeva — cioe' di non
+	 *   rifare, nella cura, il difetto che la cura e' venuta a togliere: una
+	 *   protezione che poggia su qualcosa che nessuno puo' guardare.
+	 *
+	 * ⛔⭐ `[M]` E ALLA PRIMA CORSA QUESTA RIGA HA GIA' PARLATO, 16 agosto 2026:
+	 *      sessione ferma per 260 s, il posto ha tenuto — ⛔ ma il buco fra due
+	 *      pacchetti e' **15004, 15005, 15002 ms**, cioe' QUINDICI SECONDI
+	 *      ESATTI, meta' netta del tetto.
+	 *
+	 *      ⇒ Il margine e' 2x, ed e' regolarissimo perche' NON E' NOSTRO: e' il
+	 *      keep-alive del browser.  ⚠ Un browser diverso, o Chrome che cambia
+	 *      quel numero, e i posti ricominciano a cadere.  ⛔ La cura vera —
+	 *      mandare i PING anche a sessione attiva — e' una DECISIONE, non una
+	 *      riparazione: cambia il significato dei 30 s di §2.2 per la scheda
+	 *      CONGELATA, che `SPECIFICHE.md` §5.3 dice doversi staccare.  E' scritta
+	 *      in `fasi/05-la-sessione.md` §6-bis e aspetta l'utente. */
+	if (ora_ms > s->ultima_vita && ora_ms - s->ultima_vita > SILENZIO / 2)
+		reg(s, "⚠ §5.3: fra due pacchetti da %s sono passati %llu ms, e il "
+		       "tetto del silenzio e' %u — il margine si sta assottigliando",
+		    s->provenienza, (unsigned long long)(ora_ms - s->ultima_vita),
+		    (unsigned)SILENZIO);
+	s->ultima_vita = ora_ms;
+}
 
 /* ⛔ L'accumulo cresce a richiesta fino al tetto di §6.1 (vedi MAX_ACCUMULO).
  *
@@ -5291,14 +5376,24 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 	 *      «restare attiva» sono due cose diverse, e la seconda non era
 	 *      dichiarata da nessuna parte.  Il ritorno da qui sta in
 	 *      `rcp_ricevi()`: il posto si riprende se e' libero. */
+	/* ⛔⭐ E SI GUARDA `ultima_vita`, NON `ultimo_byte` — la riparazione del 16
+	 *     agosto 2026, e la ragione lunga sta sul campo, in cima al file.
+	 *
+	 * ⚠ `ultimo_byte` non sparisce: e' l'orologio dell'INATTIVITA' DELL'UTENTE
+	 *   (30 minuti, §5.3), che questo modulo non ha ancora e che adesso ha il
+	 *   suo campo pronto e giusto.  ⛔ Tenerne uno solo per due mestieri e' il
+	 *   difetto che abbiamo appena pagato: non si rifa'. */
 	if (s->stato == S_ATTIVA && s->attaccata &&
-	    ora - s->ultimo_byte > SILENZIO) {
+	    ora - s->ultima_vita > SILENZIO) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
 		s->stato = S_STACCATA;
-		reg(s, "STACCATO per silenzio: %llu ms senza un byte da %s "
+		reg(s, "STACCATO per silenzio: %llu ms senza un PACCHETTO da %s — e "
+		       "l'ultimo byte di RCP e' di %llu ms fa (§5.3: qui conta il "
+		       "client che tace, non l'utente che non tocca) "
 		       "(posti occupati adesso: %d; stato: %s)",
-		    (unsigned long long)(ora - s->ultimo_byte), s->provenienza,
+		    (unsigned long long)(ora - s->ultima_vita), s->provenienza,
+		    (unsigned long long)(ora - s->ultimo_byte),
 		    posti_occupati(), NOMI_STATO[s->stato]);
 		/* ⛔⭐ §7.3 NOMINA IL SILENZIO PER PRIMO fra i tre modi in cui «una
 		 *     connessione finisce», ed e' il caso peggiore dei tre: qui il
