@@ -3977,12 +3977,38 @@ void figlio_vive(int argc, char **argv)
 				}
 			}
 			if (ora >= palco_riprova_ms) {
+				/* ⛔⭐ E SI CRONOMETRA L'INTERO TENTATIVO, non i suoi tre passi
+				 *     principali.
+				 *
+				 * `[M]` 16 agosto 2026: i tre cronometri dentro
+				 * `prendi_il_palco` tacevano — nessun passo sopra 250 ms — e
+				 * pero' in diciannove secondi i tentativi erano DIECI, cioe'
+				 * quasi due secondi l'uno.  ⇒ Il tempo stava in un pezzo che
+				 * nessun cronometro copriva, e il candidato e' lo SMONTAGGIO di
+				 * un tentativo fallito a meta': chiude oggetti su un
+				 * compositore che non risponde, e `mutter.c` li' aspetta fino a
+				 * QUINDICI secondi.
+				 *
+				 * ⚠ Lezione, e vale oltre questo difetto: **un cronometro sui
+				 *   passi che sospetti misura i tuoi sospetti.**  Quello che
+				 *   serve sta attorno al giro intero. */
+				uint64_t tentativo_ms = registro_ora_ms();
+				bool preso;
+
 				/* ⛔ Si rimonta alla tela VOLUTA, non a quella che il palco
 				 *    caduto aveva: quel che il client ha chiesto non muore con la
 				 *    sessione grafica.  ⚠ Se il compositore concedera' altro, la
 				 *    riconciliazione del punto 2 lo dira' e il padre lo sapra'. */
-				if (prendi_il_palco(tela_voluta_l, tela_voluta_a, dir_rilievo,
-				                    false, &mut, &cat)) {
+				preso = prendi_il_palco(tela_voluta_l, tela_voluta_a, dir_rilievo,
+				                        false, &mut, &cat);
+				if (registro_ora_ms() - tentativo_ms >= 250)
+					registro_dice(REG_FIGLIO,
+					              "⏱ il TENTATIVO INTERO (%s) ha impiegato "
+					              "%llu ms — e i cronometri dei singoli passi "
+					              "tacciono: il tempo sta fuori da loro",
+					              preso ? "riuscito" : "fallito",
+					              (unsigned long long)(registro_ora_ms() - tentativo_ms));
+				if (preso) {
 					registro_dice(REG_FIGLIO,
 					              "⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato "
 					              "dopo %llu ms di attesa — e il prossimo "

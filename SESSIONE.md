@@ -107,6 +107,19 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 
 ---
 
+## ⏱ I tempi, misurati (16 agosto 2026, 20 giri, GPU integrata)
+
+| fase | mediana | p90 | max |
+|---|---|---|---|
+| login → richiesta della sessione | 244 ms | 300 ms | 301 ms |
+| ⛔ richiesta → palco montato | **2907 ms** | 16969 ms | 17885 ms |
+| palco → primo fotogramma | 84 ms | 89 ms | 91 ms |
+| ⭐ **TOTALE login → desktop** | **3211 ms** | 17255 ms | 18158 ms |
+
+⭐ **Il giro tipico è 3,2 s**, e di questi ~2,9 sono `gnome-session` che si alza: quel che facciamo noi
+sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, e sotto c'è il
+**punto aperto** qui sotto.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
@@ -114,5 +127,30 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
   sorgente: *«we don't get change notifications for [Polkit policy], so their value may be
   outdated»* — la legge all'avvio e la tiene in cache. ⚠ **L'azione fallisce comunque** (logind
   nega), ⛔ ma una voce che promette e non mantiene è quel che `DECISIONI.md` §4.7 voleva togliere.
-- ⏳ Il **primo avvio dopo un logout** a volte fallisce e si recupera in ~13 s: `[M]` col banco
-  automatico, 3 giri su 5 puliti al primo colpo, gli altri dopo un ri-tentativo.
+- ⛔⛔ **LA CODA: un giro su sette costa 13-18 secondi**, e la causa NON è ancora accertata. `[M]`
+  Quel che si è ESCLUSO con la misura, e ognuno era una diagnosi che sembrava giusta:
+
+  | ipotesi | come è stata esclusa |
+  |---|---|
+  | l'attesa che raddoppia (1→2→4→…→30 s) | ⭐ era **vera** e curata (vedi sotto), ma la coda resta |
+  | il gestore d'utente che rinasce | curato col **linger**: bus 2,6 s → **18 ms** `[M]`, coda invariata |
+  | il sondaggio a Mutter da 5 s | tetto sceso a 400 ms, coda invariata; e `[M]` quel tetto non scatta mai |
+  | un passo lento dentro `prendi_il_palco` | ⏱ i tre cronometri **tacciono**: nessun passo sopra 250 ms |
+  | il figlio che aspetta invece di provare | ⏳ **nessuna riga**: non sta aspettando |
+
+  ⇒ ⚠ Nei 17 secondi il figlio **non scrive niente, non aspetta e non ha passi lenti**: le tre cose
+  insieme non tornano, quindi manca ancora un pezzo di strumentazione. ⭐ **Il sospettato che
+  resta**, ed è l'unica regione non ancora cronometrata: il **montaggio della cattura dopo
+  `mutter_apri`** — `ATTESA_AVVIO_S 10` in `cattura.c` e `ATTESA_NODO_MS 10000` in `mutter.c`.
+  Dieci secondi più l'avvio del compositore fanno proprio i diciassette.
+
+  ⛔ **E la lezione vale più della causa**: cinque diagnosi, tutte plausibili, tutte smentite dalla
+  misura successiva — perché il pezzo di programma che ci mette i secondi **non aveva una riga di
+  registro**. ⇒ *Un'attesa che non si dichiara è un'attesa su cui si può solo tirare a indovinare.*
+
+- ⭐ **Curato**: l'attesa fra un tentativo e l'altro raddoppiava fino a 30 s **anche mentre un
+  cliente stava a guardare uno schermo fermo**. `[M]` Il registro: *«attesa in corso 30000 ms,
+  nascita chiesta 0 ms fa»* — e i due numeri insieme dicono tutto: raddoppiava, e la guardia non
+  poteva scattare perché si arma solo quando la sessione risulta **morta**, mentre i giri lenti sono
+  proprio quelli in cui la precedente **sta ancora chiudendo** (`State=closing`). ⇒ Adesso: se
+  qualcuno guarda, si riprova ogni **200 ms**. p90 da 21,2 s a 17,3 s, e le punte a 30 s sparite.
