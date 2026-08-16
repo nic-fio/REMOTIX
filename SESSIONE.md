@@ -306,6 +306,26 @@ poi scatta 10051 ms dopo l'ultimo.
 tornava al modulo, così l'utente inattivo restava davanti a un desktop congelato. ✅ Tutt'e due
 corretti.
 
+## ✅ Distacco e riaggancio, cinque giri di fila — 16 agosto 2026
+
+*«Un banco che passa solo da macchina pulita non è un banco, è una dimostrazione.»* ⇒ Tre giri col
+distacco **pulito** (scheda chiusa) e due col distacco **sporco** (filo tagliato).
+
+| su tutti e sei gli attacchi | |
+|---|---|
+| primi fotogrammi, e quanti erano **CHIAVE** (§5.2) | **6 su 6** |
+| avvii di sessione grafica | **0** — nessun giro è un accesso nuovo |
+| smontaggi del palco | **0** |
+| descrittori del figlio | **41**, sempre — ⭐ niente si accumula |
+| `gnome-shell` | **390241**, sempre |
+| tempi ai tre giri puliti | 1430 → 1318 → **1164 ms**: calano, non crescono |
+
+⚠ E il difetto emerso era **dello strumento**, la settima volta in due giorni: un guardiano
+`(sleep 100; nft delete) &` del taglio precedente ha rimesso il filo **nove secondi dentro** il
+taglio seguente, che così è durato meno del tetto. ⭐ L'ha smentito l'aritmetica — 100 s dopo il
+primo taglio è l'istante esatto in cui il registro cambia. ⇒ **Niente guardiani in background:
+`trap … EXIT INT TERM`.**
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e

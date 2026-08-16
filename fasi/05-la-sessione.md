@@ -263,8 +263,9 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    stava guardando). **Riparato e provato in tre punti**, §6-bis. ✅ **30 min di inattività**: fatto il 16 agosto,
    motivo `0x02` di §8.2 che era dichiarato e mai spedito — §6-quinquies. ⏳ Resta **6 ore di
    abbandono**, che ⚠ **incrocia** il punto 2, e ⛔ il server dichiara all'avvio che non è in vigore.
-5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
-   un banco, è una dimostrazione»*.
+5. ✅ **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
+   un banco, è una dimostrazione»*. ⇒ `[M]` 16 agosto: **cinque giri**, tre col distacco pulito e
+   **due col filo tagliato**. Indistinguibili fra loro, e ⭐ **niente si accumula** — §6-sexies.
 6. ✅ **La sessione senza nessuno che guarda** — `[M]` 16 agosto, col browser. In v1 il monitor
    virtuale spariva al distacco e `libmutter` andava in asserzione fallita: ⭐ **qui non succede**, e
    il costo di un desktop che nessuno guarda è **praticamente zero**. Misure in §6-quater.
@@ -272,7 +273,8 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Resta il 5** (distacco e riaggancio due volte di fila) **e l'orologio delle 6 ore** del punto 4.
+⇒ ⭐ **Resta solo l'orologio delle 6 ore** del punto 4 — e §5.3 lo vuole configurabile, quindi si
+proverà in dieci secondi come l'altro.
 
 ---
 
@@ -1113,6 +1115,67 @@ ma è la conseguenza da tenere davanti agli occhi.
 ⭐ **E nemmeno la corsa vera da 30 minuti si fa**, con la ragione scritta: il meccanismo è provato, e
 l'unica cosa che una corsa da mezz'ora aggiungerebbe è che `1800000 ms` sono trenta minuti — che è
 aritmetica, non una misura. ⇒ *Un tetto si prova sul meccanismo e si legge sul numero.*
+
+## 6-sexies · ✅ DISTACCO E RIAGGANCIO DUE VOLTE DI FILA — 16 agosto 2026
+
+> *«Un banco che passa solo da macchina pulita non è un banco, è una dimostrazione»* — il mandato,
+> punto 5 di §2.
+
+⇒ Quindi **cinque giri, di due specie**: tre col distacco **pulito** (la scheda si chiude, congedo
+`0x10`) e due col distacco **sporco** (il filo tagliato, stacco per silenzio di §5.3).
+
+**L'atteso, dichiarato prima**: i giri devono essere **indistinguibili fra loro**, e ⛔ *niente deve
+accumularsi* — è quello il modo in cui questa roba si rompe alla seconda volta.
+
+### `[M]` I tre giri puliti
+
+| | giro 1 | giro 2 | giro 3 |
+|---|---|---|---|
+| ms fino al desktop | 1430 | 1318 | **1164** |
+| primo fotogramma | CHIAVE | CHIAVE | CHIAVE |
+| **descrittori del figlio** | **41** | **41** | **41** |
+| `gnome-shell` | 390241 | 390241 | 390241 |
+| battute arrivate al testimone | +18 | +18 | +18 |
+| tasti rimasti giù | 0 | 0 | 0 |
+
+⭐ E i tempi **calano** invece di crescere: 1430 → 1318 → 1164 ms.
+
+### `[M]` I due giri sporchi — il filo tagliato
+
+| | taglio A | taglio B |
+|---|---|---|
+| stacco | `30492 ms senza un PACCHETTO` | `30939 ms` |
+| descrittori, prima e dopo | 41 → 41 | 41 → 41 |
+| riaggancio successivo | ✅ 1245 ms, 894 colori | ✅ 2007 ms, 894 colori |
+
+### ⭐ Il bilancio, su tutti e sei gli attacchi
+
+| | |
+|---|---|
+| primi fotogrammi, e quanti erano **CHIAVE** (§5.2) | **6 su 6** |
+| avvii di sessione grafica | **0** — nessun giro è un accesso nuovo |
+| smontaggi del palco | **0** — il palco sopravvive a tutti i distacchi |
+| descrittori del figlio | **41**, sempre |
+| `gnome-shell` | **390241**, sempre |
+
+### ⛔ E il difetto che è saltato fuori era il MIO, la settima volta in due giorni
+
+Il taglio B, la prima volta, **non ha staccato**: il posto restava occupato e sembrava un difetto
+grosso — *«il server non fa scattare i suoi orologi quando l'uscita è bloccata»*.
+
+⭐ **L'ha smentito l'aritmetica, prima che scrivessi la conclusione.** Attorno al taglio A avevo messo
+un guardiano di sicurezza, `(sleep 100; nft delete table) &`. Taglio A alle `16:42:53`; +100 s =
+**`16:44:33`** — l'istante esatto in cui nel registro si fermano le righe `NON spedito`. ⇒ Il
+guardiano del taglio A ha **rimesso il filo nove secondi dentro il taglio B**: B è durato 9 secondi,
+non 40, cioè sotto il tetto.
+
+⚠ **E la seconda stesura si è ammazzata da sola**: `pkill -f "sleep 100"` ha ucciso lo script che lo
+conteneva, perché quel testo stava nella sua stessa riga di comando. ⇒ Niente guardiani in
+background: **`trap ... EXIT INT TERM`**, che toglie il taglio comunque vada.
+
+> ⭐ Rifatto pulito, il taglio B ha staccato a `30939 ms`. **Nessun difetto del prodotto** — e la
+> regola resta quella di `SESSIONE.md`: *quando un banco è rosso, la prima cosa da sospettare è
+> l'atteso* (o lo strumento).
 
 ## 7 · Il giudizio dell'utente
 
