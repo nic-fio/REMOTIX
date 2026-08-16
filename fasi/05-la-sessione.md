@@ -842,6 +842,41 @@ cambia quel numero, e i posti ricominciano a cadere sotto il naso di chi sta leg
 > §5.3 sulla scheda congelata **è già falsa oggi** — perché quei 15 secondi arrivano lo stesso — e la
 > decisione cambia forma.
 
+### ⛔ La misura è stata fatta, e la risposta è «NON LO SO» — e lo dice il contatore
+
+`[M]` 16 agosto, scheda in secondo piano per **8 minuti e 30 secondi**, senza toccarla mai.
+
+| | |
+|---|---|
+| ✅ stacchi per silenzio | **zero**, il posto tenuto per tutti e 8 i minuti |
+| ✅ i pacchetti | puntuali: `15003 · 15018 · 15006 · 15001 · 15002 ms` fino all'ultimo |
+| ⛔ **la scheda era congelata?** | **NO** |
+
+⭐ **E la risposta a quest'ultima riga vale più delle prime due**, perché senza sarei uscito con una
+conclusione falsa. Nella pagina era armato un contatore che batte una volta al secondo:
+
+```
+battiti: 542   ·   attesi se MAI congelata: 544   ·   JS fermo da: 0 s
+```
+
+⇒ ⛔ **542 su 544**: il JavaScript della scheda ha girato a pieno regime tutto il tempo — **non era
+congelata, e non era nemmeno rallentata** (una scheda in secondo piano normale prende i timer
+strozzati a uno al minuto: sarebbero stati ~9, non 542).
+
+⚠ **Il motivo è lo strumento**: Chrome **non congela una scheda sotto automazione** — il debugger si
+attacca e stacca a ogni comando, e questo la esenta. ⇒ La prova ha misurato *una scheda nascosta*,
+non *una scheda congelata*, e **sono due cose diverse**.
+
+> ⭐ **È `LEZIONI.md` §1.9 regola 2 che paga il biglietto**: il controllo positivo — *«questo
+> strumento sa distinguere il caso che mi interessa?»* — è costato tre righe di JavaScript e ha
+> impedito di scrivere «la scheda congelata risponde a QUIC» da una prova in cui **nessuna scheda si
+> è mai congelata**.
+
+⏳ **Quindi la domanda resta aperta, e non la può chiudere l'automazione**: serve un essere umano che
+apra la pagina in un browser normale, passi a un'altra scheda e la lasci lì **dieci minuti**. Il
+registro del server dice tutto il resto da sé — se compare `STACCATO per silenzio`, la promessa di
+§5.3 regge e i PING sempre accesi la romperebbero; se non compare, la promessa **è già falsa oggi**.
+
 ## 6-ter · ⛔⛔ E IL BANCO DELLA TELA È ROSSO DA IERI, e nessuno se n'era accorto
 
 *Trovato il 16 agosto controllando che la riparazione dell'orologio non avesse rotto i banchi in

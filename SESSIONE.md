@@ -250,6 +250,12 @@ nostro: **è del browser**. ⇒ Il margine è 2× e dipende dalla cortesia di Ch
 esce — accendere i nostri PING anche a sessione attiva — è in `fasi/05-la-sessione.md` §6-bis e
 **aspetta l'utente**, perché tocca la promessa di §5.3 sulla scheda congelata.
 
+⏳ **E quella promessa non è ancora verificata**: `[M]` 8 minuti e mezzo con la scheda in secondo
+piano ⇒ zero stacchi, pacchetti puntuali — ⛔ **ma la scheda non era congelata**, e lo dice un
+contatore messo apposta nella pagina: 542 battiti su 544 possibili. Chrome non congela una scheda
+sotto automazione. ⇒ **Serve una persona**: aprire la pagina in un browser normale, passare a
+un'altra scheda, lasciarla lì dieci minuti e guardare se compare `STACCATO per silenzio`.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e
