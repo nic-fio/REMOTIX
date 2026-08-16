@@ -1806,7 +1806,7 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 >
 > ⛔ **E che cosa NON è chiuso, perché «non chiuso» e «non misurato» sono due stati diversi.** La
 > misura è su **Mutter**, e questa sezione vincola **cinque** desktop. Se a normalizzare è `libei`,
-> il numero vale ovunque; se normalizza il compositore, la fase 10 troverà un segno diverso su KWin.
+> il numero vale ovunque; se normalizza il compositore, la fase di KDE (la 11) troverà un segno diverso su KWin.
 > `[?]` **resta per gli altri quattro**, e il banco è rieseguibile su KWin senza cambiare una riga
 > della pagina (`banchi/01-s7-rotella.sh` + `01-s7-pagina.html`).
 >

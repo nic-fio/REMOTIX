@@ -28,7 +28,7 @@ sopravvivono le tre regole e nessuna delle strutture.*
 | lasciato fuori | perché |
 |---|---|
 | `cattura_dmabuf()` — girare la strada **a cattura viva** | esisteva perché **AVC420 si codifica in GPU e RemoteFX in CPU**, e quale dei due si spedisse si sapeva solo al `CapsAdvertise` di RDP. ⛔ In V2 non c'è RDP e non c'è quel bivio: la strada si dichiara all'avvio |
-| `cattura_ridimensiona()` + `misura_negoziabile` | è la risoluzione dinamica della **fase 6** e il ramo KWin 6.8 della **fase 10**. Portarlo adesso vuol dire mantenere per due mesi un codice che nessuno esegue |
+| `cattura_ridimensiona()` + `misura_negoziabile` | è la risoluzione dinamica della **fase 6** e il ramo KWin 6.8 della **fase 11** (KDE). Portarlo adesso vuol dire mantenere per due mesi un codice che nessuno esegue |
 | `REMOTIX_MISURA_INTERVALLO`, `REMOTIX_FENCE_MS`, `REMOTIX_FOTO` | tre interruttori d'ambiente per esperimenti chiusi. ⚠ E l'invariante **I7**: una protezione che vive in una variabile d'ambiente si perde |
 | l'attesa della **fence** (`poll` sul DMA-BUF) | serve a chi **importa** il buffer sulla scheda, cioè alla fase 8. Qui la strada della scheda si dichiara e non si legge |
 | `superficie.c` (675) | l'import sulla scheda: fase 8. F2.2 vuole i pixel **leggibili** |
@@ -172,7 +172,7 @@ qui porta **8 bit promossi a 10**. Il desiderato di `SPECIFICHE.md` §3.1 **non 
 sorgente GNOME**, su nessuna delle due strade, e la promozione va **dichiarata** e non subita.
 
 ⚠ **E quel che questo NON chiude**: che *nessun* compositore dia dieci bit. È misurato su **Mutter
-48.7**. KWin e wlroots non sono stati chiesti — è la fase 10, e la domanda adesso ha un metodo.
+48.7**. KWin e wlroots non sono stati chiesti — è la fase di KDE (la 11), e la domanda adesso ha un metodo.
 
 ### 3. E la `[?]` che resta aperta, dichiarata invece che assolta
 

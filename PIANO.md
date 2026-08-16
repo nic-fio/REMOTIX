@@ -559,7 +559,7 @@ qualcun altro.
 >
 > *Qui stava scritto: «su GNOME il traguardo dei 40 ms probabilmente non si raggiunge, per il muro
 > dei 37 fotogrammi di Mutter; se la misura lo confermasse non è un difetto nostro — ed è una
-> ragione in più per la fase 10». E accanto: «prima di dichiararlo si prova la cadenza
+> ragione in più per la fase di KDE». E accanto: «prima di dichiararlo si prova la cadenza
 > disaccoppiata… se riesce, GNOME entra nel traguardo; se non riesce, il muro diventa `[M]`».*
 >
 > ⛔ **L'esito non è «riesce» né «non riesce». È: «riesce con un numero diverso, e il prodotto non
@@ -723,7 +723,7 @@ grafica per utente.
 >
 > **Qui: un utente remoto per volta.** Niente budget, niente conteggio, `MAX_ATTACCATE` resta il
 > `#define` a 16 dichiarato come ripiego. Il multi-tenant come **funzione** — più sessioni insieme,
-> `BUDGET_PIENO`, il tetto configurabile — è della **fase 12**, perché ha bisogno di un numero vero
+> `BUDGET_PIENO`, il tetto configurabile — è della **fase 10**, perché ha bisogno di un numero vero
 > e il numero lo dà il codificatore hardware della **fase 8**.
 >
 > ⛔ **Con un pezzo che non si rinvia**: il guardiano di logind di `0x04`/`0x05` deve discriminare
@@ -803,7 +803,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, zero fotogrammi scartati |
 > | la **vista che riscala** | ✅ c'era dalla fase 2, e adesso la scala vale 1 quando le due tele combaciano |
 > | ⭐ *(in più)* il **ridimensionamento a caldo** | ✅ `[M]` 6 ms, dietro l'interruttore `?adatta=segui` (spento di suo, I6) |
-> | ⛔ il **ripiego su KWin dichiarato nel registro** | **APERTO**: non verificabile finché KDE è la fase 10. Il percorso di codice c'è (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 di `banchi/04-b31`, **su un ospite finto** |
+> | ⛔ il **ripiego su KWin dichiarato nel registro** | **APERTO**: non verificabile finché KDE è la fase 11. Il percorso di codice c'è (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 di `banchi/04-b31`, **su un ospite finto** |
 > | ⛔ il **banco del riattacco che BATTE UN TASTO dopo** | **APERTO**: il fatto si è visto nel registro (`libei` ricrea i dispositivi, `input.c` li riaggancia) e l'utente ha scritto in un terminale dopo un riattacco — ⛔ ma un banco che lo provi non c'è |
 > | ⛔ il **multi-monitor** | **APERTO**, e fuori scopo come funzione (§6.5) |
 >
@@ -988,9 +988,68 @@ l'invariante I1, ed è la ferita da cui nasce.
 ⚠ E ciò che cambia quel che si vede sta **dietro un interruttore spento** finché l'utente non l'ha
 guardato (I6).
 
+⭐ **E questa fase adesso ha un secondo cliente, che prima non aveva**: la scala di degradazione è
+**il modo in cui si fa stare più gente sulla stessa macchina**. Un budget senza la scala sa dire
+solo *«no»*; con la scala sa dire *«sì, più piccolo»* — ed è la fase 10, che viene subito dopo.
+
+⏳ **E qui arriva una domanda che la fase 8 le ha passato**: `[?]` la qualità dell'entrypoint
+`EncSliceLP` — la codifica a **bassa potenza**, quella che il prodotto usa — contro quello **pieno**,
+a parità di banda. **Non è mai stata misurata**, e il punto di lavoro fra qualità e banda è di
+questa fase.
+
 ---
 
-## Fase 10 — KDE
+## Fase 10 — Multi-tenant e il budget
+
+> ## ⭐⭐ SPOSTATA QUI DALLA CODA DEL PIANO — *16 agosto 2026, decisione dell'utente*
+>
+> *Era la **fase 12**, dopo i tre desktop nuovi. L'utente: «PRIMA si chiude lo sviluppo anche con il
+> multi-tenant, e solo dopo si pensa agli altri DE».*
+>
+> ⚠ **Le fasi dei desktop non sono state declassate: sono state riconosciute per quel che sono.**
+> Producono **larghezza** — il secondo, terzo e quarto desktop — su una forma che il multi-tenant
+> può ancora cambiare. E l'argomento non è nuovo: è **lo stesso** con cui `DECISIONI.md` §4.6-quater
+> aveva rimandato il multi-tenant dopo la fase 8 — *«misurarle prima vuol dire misurarle due volte»*
+> (`LEZIONI.md` §7.2) — applicato dall'altro capo:
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **la profondità prima della larghezza** | se il multi-tenant tocca la sessione o il budget, la modifica va riverificata **su quattro desktop invece che su uno**. È «misurarle due volte», moltiplicato per quattro |
+> | ⛔ **e il budget è un budget di GPU, e la GPU è UNA** | il numero si misura su `renderD128` — la stessa iGPU che compone **ogni** desktop. È una proprietà **della macchina**, non del desktop: misurata una volta, le fasi 11 e 12 la ereditano. Misurata dopo, non si sa più quale numero appartenga a che cosa |
+> | ⭐ **e la dipendenza inversa non esiste** | niente qui dentro ha bisogno di KDE, XFCE o LXQt |
+> | ⚠ **e la macchina di prova è GIÀ multi-utente** | `nicfio` locale + `prova` remoto che devono convivere: §4.6-quater lo chiama *«lo stato normale della macchina, non uno scenario da inventare»* |
+>
+> ⚠ **E quel che questa fase NON evita, detto per intero**: l'architettura c'è già in buona parte —
+> `figlio.c:80` dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non si sta scansando
+> una riscrittura strutturale; si sta evitando di **misurare un numero di macchina quattro volte**.
+>
+> ⛔ **E la precedenza che resta, e va rispettata**: questa fase sta **dopo la 8**. La copia zero
+> cambia **quanto costa una sessione** in memoria e banda di GPU — e il budget misurato prima della
+> copia zero è un budget da rifare. È §4.6-quater alla lettera, e non è cambiato niente.
+>
+> ⚠ **Le parole dell'utente del 15 agosto dicevano «fase 12»** (`DECISIONI.md` §4.6-quater,
+> `fasi/05-la-sessione.md`), e **restano scritte così** dove sono citate: era il numero di allora.
+> ⭐ **La decisione non è cambiata — è cambiato l'ordine**: il confine fra «un utente per volta» e
+> «la macchina piena» è ancora quello che lui ha tracciato.
+
+**Produce**: più utenti insieme, il budget del codificatore, il rifiuto motivato.
+
+**L'utente vede**: due sessioni vere in contemporanea; e quando la macchina è piena, un messaggio
+che **dice perché**.
+
+**Il banco**: si satura il codificatore di proposito e si verifica che l'undicesimo riceva
+`BUDGET_PIENO` — e che **i dieci che stavano lavorando non peggiorino** (`DECISIONI.md` §4.6-bis).
+
+⚠ **E il debito con la scadenza scritta è di questa fase**: `MAX_ATTACCATE` è un `#define` a **16**
+in `rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che lo segue — dove `SPECIFICHE.md` §5.5
+promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade.
+
+---
+
+## Fase 11 — KDE
+
+⚠ *Era la **fase 10** fino al 16 agosto 2026: il multi-tenant le è passato davanti, e la ragione sta
+nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambiato il suo posto.*
 
 **Produce**: il secondo desktop.
 
@@ -999,7 +1058,7 @@ guardato (I6).
 > ## ⛔⛔ La motivazione PRESTAZIONALE di questa fase è caduta — *13 agosto 2026*
 >
 > *Qui stava scritto: «E qui si insegue il numero desiderato: KWin consegna 60 fotogrammi al secondo
-> dove Mutter ne dà 37 `[M]`. La fase 10 non è solo "servire più desktop": è la strada per i 60 a 4K
+> dove Mutter ne dà 37 `[M]`. La fase di KDE non è solo "servire più desktop": è la strada per i 60 a 4K
 > e per il traguardo dei 40 ms».*
 >
 > ⚠⚠ **La fase resta, e resta giusta: è «il secondo desktop», ed è la ragione per cui era stata
@@ -1057,24 +1116,17 @@ giorno dell'aggiornamento a 6.8.
 
 ---
 
-## Fase 11 — XFCE e LXQt
+## Fase 12 — XFCE e LXQt
+
+⚠ *Era la **fase 11** fino al 16 agosto 2026 — stesso spostamento della 11, stessa ragione.*
+⛔ **E qui una trappola di lettura**: `xfce.md` e `lxqt.md` portano in testa *«per la fase 11»*, ma
+quella è **la fase 11 di v1** — sono studi dell'8 agosto 2026, scritti prima che questo piano
+esistesse. ⇒ Il numero in quei due titoli **non è questo numero**, e non va inseguito.
 
 **Produce**: il terzo e il quarto desktop, che condividono wlroots e quindi quasi tutto.
 
 **Si riusa**: `appunti_wlr.c` già scritto per questa famiglia; le risposte alle quattordici domande
 sono già in `xfce.md` §12 e `lxqt.md`.
-
----
-
-## Fase 12 — Multi-tenant e il budget
-
-**Produce**: più utenti insieme, il budget del codificatore, il rifiuto motivato.
-
-**L'utente vede**: due sessioni vere in contemporanea; e quando la macchina è piena, un messaggio
-che **dice perché**.
-
-**Il banco**: si satura il codificatore di proposito e si verifica che l'undicesimo riceva
-`BUDGET_PIENO` — e che **i dieci che stavano lavorando non peggiorino** (`DECISIONI.md` §4.6-bis).
 
 ---
 

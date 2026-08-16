@@ -212,7 +212,7 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
 | | ridimensiona a caldo? |
 |---|---|
 | **Mutter** (GNOME) | ✅ `[M]` — è la strada su cui la coda della fase 4 è stata misurata |
-| ⛔ **KWin** | **no fino a `v6.7.4` compreso** — `[R]` verificato su invent.kde.org il 14 ago: il ridimensionamento c'è **solo su `master`**, `Plasma/6.8` **non esiste** e non ha data. Riavviare KWin ucciderebbe la sessione, cioè proprio il distacco che il modello offre ⇒ **ripiego dichiarato** (`DECISIONI.md` §5.0-bis): si tiene la tela vecchia e riscala il client. ⛔ La riga nel registro (`COMPOSITORE_INCAPACE`) esiste nel codice ed è provata **su un ospite finto** — verificabile davvero solo alla **fase 10** |
+| ⛔ **KWin** | **no fino a `v6.7.4` compreso** — `[R]` verificato su invent.kde.org il 14 ago: il ridimensionamento c'è **solo su `master`**, `Plasma/6.8` **non esiste** e non ha data. Riavviare KWin ucciderebbe la sessione, cioè proprio il distacco che il modello offre ⇒ **ripiego dichiarato** (`DECISIONI.md` §5.0-bis): si tiene la tela vecchia e riscala il client. ⛔ La riga nel registro (`COMPOSITORE_INCAPACE`) esiste nel codice ed è provata **su un ospite finto** — verificabile davvero solo alla **fase 11** (KDE) |
 | **labwc** (XFCE, LXQt) | ⚠ e il rischio non è la misura: su **XFCE** `xfsettingsd` è il primo client della sessione e **spegne ogni output nuovo** (`enabled = FALSE`); su **LXQt** non c'è niente di simile (`SPECIFICHE.md` §11.2) |
 | **muffin** (Cinnamon) | la riga peggiore, e prima del ridimensionamento mancano `RecordVirtual`, libei e gli appunti |
 
@@ -269,12 +269,17 @@ non ricada in questa fase».*
 ✅ **Deciso dall'utente lo stesso giorno: «potremmo anche lasciare in questa fase 1 solo utente, e
 nella fase 12 il multi-tenant».** ⇒ `DECISIONI.md` §4.6-quater, dove il confine vive per intero.
 ⚠ La domanda era buona perché i documenti dicevano cose diverse: `SPECIFICHE.md` §5.5 dice *«il
-multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitola la fase 12 «Multi-tenant e il budget».
+multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitolava la fase 12 «Multi-tenant e il budget».
+
+> ⚠ **E quella fase adesso è la 10, non la 12** — spostata dall'utente il **16 agosto 2026**
+> (`DECISIONI.md` §4.6-sexies): *«PRIMA si chiude lo sviluppo anche con il multi-tenant, e solo
+> dopo si pensa agli altri DE»*. ⭐ **Il confine deciso qui non è cambiato**, è cambiato il posto in
+> fila. ⛔ E la frase virgolettata qui sopra **resta com'era detta**: era il numero di quel giorno.
 
 | | dove | in breve |
 |---|---|---|
 | **un utente remoto per volta** | ⭐ **questa fase** | nessuna prova di due sessioni remote insieme, nessun budget, nessun conteggio |
-| **più sessioni insieme, il budget, `BUDGET_PIENO`, `MAX_ATTACCATE` configurabile** | **fase 12** | hanno bisogno di un numero vero, e lo dà il codificatore hardware della **fase 8** |
+| **più sessioni insieme, il budget, `BUDGET_PIENO`, `MAX_ATTACCATE` configurabile** | **fase 10** | hanno bisogno di un numero vero, e lo dà il codificatore hardware della **fase 8** |
 | ⛔ **il codice chiavato sull'utente**, e il guardiano di logind che **discrimina per utente** | ⭐ **questa fase, e non è rinviabile** | ⛔ non perché sia importante: perché **non si può scrivere «per un utente solo»** |
 
 ⛔ **E la ragione per cui l'ultima riga non si rinvia è che la macchina la smaschera da sola.** Il
@@ -287,8 +292,8 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 ⇒ ⭐ **Il banco di `0x04`/`0x05` si scrive su quella coppia** — locale `nicfio` e remota `prova`, che
 **devono convivere senza toccarsi** — e costa quanto costerebbe comunque.
 
-⚠ **E il ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** (`rcp.c:490`) dove
-§5.5 promette **dieci configurabile**. Oggi non morde, e la sua scadenza è la fase 12.
+⚠ **E il ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** (`rcp.c:568`) dove
+§5.5 promette **dieci configurabile**. Oggi non morde, e la sua scadenza è la fase 10.
 
 ---
 
@@ -356,7 +361,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 | ✅ ~~`disable-log-out`?~~ **vietata** · ✅ ~~`always-show-log-out`?~~ **acceso** | cadute per conseguenza, non per scelta |
 | ✅ **nessuno spegne il server**, chi è davanti alla macchina compreso — e l'utente remoto ha **il solo logout** | `DECISIONI.md` §4.7, `SPECIFICHE.md` §11.3, 15 agosto |
 | ✅ **il logout si raggiunge in due modi**: la voce del menu e `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` e ❌ `Win+F12` scartate **con una misura ciascuna**, ❌ **nessun bottone a schermo** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 agosto |
-| ✅ **il multi-tenant è della fase 12** — qui **un utente remoto per volta**, ⛔ ma il guardiano di logind discrimina **per utente** | `DECISIONI.md` §4.6-quater, 15 agosto |
+| ✅ **il multi-tenant è della fase 10** — qui **un utente remoto per volta**, ⛔ ma il guardiano di logind discrimina **per utente** | `DECISIONI.md` §4.6-quater, 15 agosto |
 
 | ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
 

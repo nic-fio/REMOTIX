@@ -80,7 +80,7 @@ supposto. Serve a chiudere **M6** e a riaprire il `giro` di **M8** (qui sotto).
 
 Su GNOME il traguardo dei **40 ms** probabilmente **non si raggiunge**, per il muro dei 37
 fotogrammi di Mutter. ⛔ Se la misura lo confermasse **non è un difetto nostro** — ed è una ragione
-in più per la fase 10. Il numero da battere resta **≤ 50 ms**.
+in più per la fase di KDE. Il numero da battere resta **≤ 50 ms**.
 
 ⭐ **Ma prima di dichiararlo si prova la cadenza disaccoppiata**, ed è lo **step 1** proprio perché
 costa **tre celle e zero righe di prodotto**.

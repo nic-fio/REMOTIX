@@ -126,7 +126,7 @@ sta nell'API, sta nel compositore. È precisamente perché `RCP.md` §7.3 aveva 
 ## 1.5 Che cosa resta `[?]`
 
 ⚠ **La misura è su Mutter, e §7.3 vincola cinque desktop.** Se `libei` normalizza, il numero vale
-ovunque; se normalizza il compositore, la fase 10 troverà un segno diverso su KWin. **Non è chiuso da
+ovunque; se normalizza il compositore, la fase di KDE (la 11) troverà un segno diverso su KWin. **Non è chiuso da
 questa misura**, e il banco è rieseguibile su KWin senza cambiare una riga della pagina.
 
 ---

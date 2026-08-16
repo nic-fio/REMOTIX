@@ -116,7 +116,7 @@ i tre orologi ciascuno con la sua prova.
 |---|---|
 | ⏳ **la riga che manca a `RCP.md` §7.1** | che cosa fa il server quando il palco cambia misura **da sé**. Oggi lo richiama e non manda nessun `TELA` — funziona, ⛔ ma è una regola del prodotto che l'arbitro non nomina |
 | ⚠ **i 4 ms di ritardo medio aggiunto** | `MOVIMENTO_ATTESA_S` è 8 ms ed è un **ripiego dichiarato**: la cura vera è un descrittore che la cattura scrive quando il fotogramma è pronto, nello stesso `poll()` del padre e di `libei`. Tocca il posto di scambio di `cattura.c`, che gira sul thread di tempo reale |
-| ⚠ **il ripiego su KWin dichiarato nel registro** | non verificabile finché KDE è la fase 10 |
+| ⚠ **il ripiego su KWin dichiarato nel registro** | non verificabile finché KDE è la fase 11 |
 | `[?]` **il mezzo pixel del `margin: 0 auto`** | giudizio dell'utente sul DeX: «tutto perfetto» ⇒ **non si presenta**, ma nessuno l'ha misurato |
 | ⚠ **i banchi RCP/1 non esercitano `ADATTA_TELA`** | `01-b3-cliente.py` e `01-b4-validatore.py` restano verdi perché il filo non è cambiato |
 

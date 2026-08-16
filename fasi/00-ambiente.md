@@ -476,7 +476,7 @@ scritte perché **non sono state pagate dal codice: sono state pagate mentre lo 
 | `[?]` **la coda di Mutter** | la mediana degli intervalli è ferma a 33,3 ms su sei giri, ma il massimo va da 33,6 a 75,0. Da dove venga quella coda non è stato guardato |
 | `[?]` **la Radeon negata** | `amdgpu_cs_ctx_create2 failed (-13)`: da capire se sia la regola udev di `DECISIONI.md` §4.6-ter. Non ostacola |
 | ⏳ **l'ambiente Android** | SDK, `adb`, Desktop AVD e il telefono vero: non ancora toccati. ⛔ *Diceva «servono alla sonda della **fase 2**, non prima». **Corretto la notte del 9 agosto 2026**, rilievo **R3.14** della revisione del banco della fase 1: `DECISIONI.md` §1.6 ha tolto l'applicazione Android — quindi **SDK, `adb` e l'emulatore non servono più a niente** — e `PIANO.md` §1.2 ha spostato la sonda alla **fase 1**, «prima di tutto». **Il telefono vero invece serve, e serve prima**: è lo strumento di misura di S2, S3a e S5. Il censimento completo di quel che manca sta in `fasi/01-filo-nudo.md`, «Le dipendenze»* |
-| **il budget in pixel al secondo** | `vainfo` dice **quali** profili, non **quanti** pixel: il numero di sessioni è fase 12 |
+| **il budget in pixel al secondo** | `vainfo` dice **quali** profili, non **quanti** pixel: il numero di sessioni è fase 10 |
 | **il decodificatore HEVC dell'emulatore** | non si è riusciti a stabilire che ne esponga uno hardware — e non importa, perché nessun numero si dichiara lì |
 
 ---

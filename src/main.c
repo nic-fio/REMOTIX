@@ -406,7 +406,7 @@ static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
  *    §5.1 vuole un utente remoto per volta (I2), e il multi-tenant e' della
- *    fase 12. */
+ *    fase 10. */
 #define QUANTI_PRESENTI 16
 static struct {
 	char utente[257];

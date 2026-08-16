@@ -745,10 +745,10 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    compilazione (`figlio.c:1465`), `main.c` non ha opzioni di cadenza, e **`RecordVirtual` non
 >    prende la frequenza** (`mutter.h:82`) — i quattro monitor virtuali sono tutti **@60**. È `[M]`
 >    sul banco e **zero in produzione**;
-> 3. ⛔ **la motivazione prestazionale della FASE 10 (KDE) non regge più**: il piano la giustifica
+> 3. ⛔ **la motivazione prestazionale della FASE 11 (KDE) non regge più**: il piano la giustifica
 >    con *«KWin consegna 60 dove Mutter ne dà 37 — è la strada per il traguardo dei 40 ms»*. I 37
 >    non esistono e Mutter vale il 22 %: cambiare compositore **lascerebbe intatti i 39 ms di
->    codifica**. La fase 10 resta giusta come *«il secondo desktop»*; la promessa sul ritardo va
+>    codifica**. La fase di KDE resta giusta come *«il secondo desktop»*; la promessa sul ritardo va
 >    **riscritta o tolta**;
 > 4. ⛔ **`web.md` §6.1 — «tutto in un worker dedicato» — è ATTUATA, MISURATA E RESPINTA**:
 >    **+27,6/+33,5 ms** di mediana e **tetto −73 %** (127,6 → 33,9 dipinti/s a 1080p). ⭐ E il
@@ -855,7 +855,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > 3. ⚠ **L'attesa dichiarata in anticipo**: su GNOME il traguardo dei **40 ms** probabilmente **non si
 >    raggiunge**, per il muro dei 37 fotogrammi di Mutter. Il numero da battere è **≤ 50 ms**
 >    (`SPECIFICHE.md` §3.2). Se la misura lo confermasse **non è un difetto nostro** — ed è una
->    ragione in più per la fase 10.
+>    ragione in più per la fase di KDE.
 >
 > #### ⭐ Che cosa la fase 3 eredita, e che le morde addosso
 >

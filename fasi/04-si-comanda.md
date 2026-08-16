@@ -855,7 +855,7 @@ secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = qua
 |---|---|
 | ⏳ **la riga che manca a `RCP.md` §7.1** | che cosa fa il server quando il palco cambia misura **da sé**. Oggi lo richiama e non manda nessun `TELA` — funziona, ma è una regola del prodotto che l'arbitro non nomina |
 | ⛔ **il banco del riattacco che BATTE UN TASTO dopo** | `PIANO.md` lo chiede per questa fase. `[M]` si è visto nel registro che `libei` ricrea i dispositivi al cambio di geometria e che `input.c` li riaggancia, ⛔ **e l'utente ha scritto in un terminale dopo un riattacco** — ma un banco che lo provi non c'è |
-| ⛔ **il ripiego su KWin dichiarato nel registro** | `PIANO.md` lo chiede per questa fase e **non è verificabile**: KDE è la fase 10, e su questa macchina non c'è. Il percorso di codice esiste (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 del banco, **su un ospite finto** |
+| ⛔ **il ripiego su KWin dichiarato nel registro** | `PIANO.md` lo chiede per questa fase e **non è verificabile**: KDE è la fase 11, e su questa macchina non c'è. Il percorso di codice esiste (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 del banco, **su un ospite finto** |
 | `[?]` **il mezzo pixel del `margin: 0 auto`** | quando `clientWidth × devicePixelRatio` è dispari. ⭐ Giudizio dell'utente sul DeX: *«tutto perfetto»* ⇒ **non si presenta**, ma nessuno l'ha misurato |
 | ⚠ **i 4 ms di ritardo medio aggiunto** | l'attesa di 8 ms è un **ripiego dichiarato**: la cura vera è un descrittore che la cattura scrive quando il fotogramma è pronto, nello stesso `poll()` del padre e di `libei` |
 | ⚠ **il multi-monitor** | `SPECIFICHE.md` §6.5, fuori scopo come funzione |

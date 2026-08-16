@@ -243,7 +243,7 @@ dice quante regioni c'erano e con che chiave.
    ⚠ **La causa non è stata trovata.** ⇒ Il testimone è diventato una finestra Wayland nostra
    (`04-b24-testimone.c`), che è più vicina alla verità — fra `libei` e la pagina c'erano Mutter
    *e* il browser — ⛔ **ma il ponte con `deltaY` scende da `[M]` a `[S]`** (§3.3).
-   **Resta aperto**: chi rifà S7 per gli altri compositori (fase 10) troverà questo muro.
+   **Resta aperto**: chi rifà S7 per gli altri compositori (la fase di KDE, la 11) troverà questo muro.
 
 2. ⛔ **Il contatore dei ricambi era cieco**, e il banco ha stampato «non riprodotto» su un
    difetto che era avvenuto (§3.5). Trovato dal lato che riceve, non da una rilettura.

@@ -80,7 +80,7 @@ trovato niente»**, mai «è giusto».
 problema dei test: per android è molto più complicato, mentre lo è meno per linux».*
 
 Il binario Android si sposta **da dopo la fase 4 a dopo la fase 9**, e può poi procedere in
-parallelo alle fasi 10-11, che sono lavoro di server e non toccano il filo.
+parallelo alle fasi dei desktop nuovi (11-12), che sono lavoro di server e non toccano il filo.
 
 ⛔ **Ma lo spostamento porta via una difesa**, e va compensata. Android non stava alla fase 4 per
 fare prima: era il **secondo lettore del protocollo**, l'unica cosa capace di accorgersi che
@@ -690,7 +690,7 @@ figlio **meno** privilegiato del padre fa la cosa che blocca; qui un figlio **di
 privilegiato fa la cosa che il padre non può fare. ⇒ La forma del server non è stata scelta due
 volte: è stata scelta una volta e applicata due.
 
-⭐ **E paga oltre la fase 2**: è la strada naturale verso il multi-tenant della **fase 12**, e isola
+⭐ **E paga oltre la fase 2**: è la strada naturale verso il multi-tenant della **fase 10**, e isola
 un utente dall'altro **per costruzione** invece che per attenzione.
 
 ⚠ **Il prezzo, dichiarato**: un processo per sessione. Col tetto di §1.11 — 16 — sono sedici
@@ -1843,7 +1843,7 @@ Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agos
 >
 > ⭐ E la tabella del budget qui sopra resta `[?]` per un'altra ragione: `vainfo` dice **quali
 > profili** ci sono, non **quanti pixel al secondo**. Il numero di sessioni va misurato saturando,
-> ed è la fase 12.
+> ed è la fase 10.
 
 **Da cui il disegno**: nessun numero cablato nel programma. Il server tiene un **budget** — sa
 quanto sta già codificando e quanto può — e il dieci è il valore predefinito di un massimo
@@ -1942,19 +1942,23 @@ proprio (VA-API). ⛔ Se il compositore disegna sull'integrata e il codificatore
 che qui è chiusa — il ripiego è in CPU, ed è il caso che `LEZIONI.md` §1.8 dice di **dichiarare**
 invece di subire.
 
-### 4.6-quater ✅ ⭐ Il confine del multi-tenant: la fase 5 regge **un utente per volta**, la 12 la macchina piena
+### 4.6-quater ✅ ⭐ Il confine del multi-tenant: la fase 5 regge **un utente per volta**, la fase del multi-tenant la macchina piena
+
+> ⚠ **Il numero di quella fase è cambiato il 16 agosto 2026 — era la 12, adesso è la 10** — e il
+> **confine qui deciso è intatto**: vedi **§4.6-sexies**. Il titolo diceva *«la 12 la macchina
+> piena»*, e adesso dice la cosa senza il numero, che era la parte fragile.
 
 *Chiesto dall'utente il **15 agosto 2026** all'apertura della fase 5 — «poiché qui trattiamo le
 sessioni, mi chiedo se il multi-tenant non ricada in questa fase» — e deciso da lui lo stesso
 giorno: «potremmo anche lasciare in questa fase 1 solo utente, e nella fase 12 il multi-tenant».*
 
 ⚠ **La domanda era buona perché i due documenti dicevano cose diverse**: `SPECIFICHE.md` §5.5 dice
-*«il multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitola la **fase 12** «Multi-tenant e il
+*«il multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitolava la **fase 12** «Multi-tenant e il
 budget». Il confine, deciso:
 
 | | dove | perché lì |
 |---|---|---|
-| **il multi-tenant come funzione** — più sessioni remote insieme, il **budget** del codificatore, `BUDGET_PIENO 0x06`, il rifiuto che non fa peggiorare chi sta già lavorando, `MAX_ATTACCATE` che smette di essere un `#define` | **fase 12** | ⭐ hanno bisogno di **un numero vero**, e il numero vero lo dà il codificatore hardware della **fase 8**. Misurarle prima vuol dire misurarle due volte (`LEZIONI.md` §7.2) |
+| **il multi-tenant come funzione** — più sessioni remote insieme, il **budget** del codificatore, `BUDGET_PIENO 0x06`, il rifiuto che non fa peggiorare chi sta già lavorando, `MAX_ATTACCATE` che smette di essere un `#define` | **fase 10** | ⭐ hanno bisogno di **un numero vero**, e il numero vero lo dà il codificatore hardware della **fase 8**. Misurarle prima vuol dire misurarle due volte (`LEZIONI.md` §7.2) |
 | **un utente remoto per volta** | **fase 5** | è la scena che la fase promette, ed è già abbastanza carica: il logout col suo codice nuovo, le tre cinture di §4.7, il guardiano di logind, i tre orologi, il rilascio dei tasti, l'inibizione della sospensione, l'headless dichiarato |
 | ⛔ **il codice chiavato sull'utente**, e il guardiano di logind che **discrimina per utente** | ⭐ **fase 5, e non è rinviabile** — vedi il riquadro | ⛔ non perché sia importante: perché **non si può scrivere «per un utente solo»** |
 
@@ -1977,8 +1981,52 @@ budget». Il confine, deciso:
 > convivere senza toccarsi** — e costa quanto costerebbe comunque.
 
 ⚠ **E quel che resta ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** in
-`rcp.c:490` dove `SPECIFICHE.md` §5.5 promette **dieci configurabile**. Oggi non morde — 16 > 10 —
-e la sua scadenza è la fase 12.
+`rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che dichiara di seguirlo — dove `SPECIFICHE.md`
+§5.5 promette **dieci configurabile**. Oggi non morde — 16 > 10 — e la sua scadenza è la fase 10.
+⚠ *Il riferimento diceva `rcp.c:490`, e il `#define` sta a **568**: corretto il 16 agosto 2026
+rileggendo il file. ⛔ Un numero di riga invecchia in silenzio — è il motivo per cui accanto c'è
+anche il nome della costante.*
+
+### 4.6-sexies ✅ ⭐⭐ L'ordine cambia: il multi-tenant **prima** dei desktop nuovi
+
+*Deciso dall'utente il **16 agosto 2026**, rivedendo il piano prima di aprire la fase 6: «PRIMA si
+chiude lo sviluppo anche con il multi-tenant, e solo dopo si pensa agli altri DE».*
+
+⛔ **Il confine di §4.6-quater NON cambia**: «un utente per volta» resta della fase 5, «la macchina
+piena» resta della fase del multi-tenant, e il codice chiavato sull'utente resta non rinviabile.
+⭐ **Cambia solo dove quella fase sta nella fila** — e con lei il suo numero:
+
+| | prima | ⭐ adesso |
+|---|---|---|
+| Multi-tenant e il budget | fase **12** | **fase 10** |
+| KDE | fase 10 | **fase 11** |
+| XFCE e LXQt | fase 11 | **fase 12** |
+| La qualità e la degradazione | fase 9 | **fase 9**, invariata — e adesso ha un secondo cliente: la scala di degradazione è **il modo** in cui più sessioni stanno sulla stessa macchina |
+| Il servizio | fase 13 | **fase 13**, invariata — ⛔ e resta ultima **per una ragione**: §7.16 le fa **togliere dal binario** le marche di banco `BANCO_MARCA`/`BANCO_ESITO`, che le fasi dei desktop useranno per misurarsi. Metterla prima vorrebbe dire togliere il metro e poi provare tre desktop nuovi senza |
+
+⭐ **La ragione è quella di §4.6-quater, applicata dall'altro capo.** Là si diceva: *«misurare il
+budget prima del codificatore hardware vuol dire misurarlo due volte»* (`LEZIONI.md` §7.2). Qui:
+⛔ **il budget è un budget di GPU, e la GPU è una** — `renderD128`, la stessa iGPU che compone
+**ogni** desktop. È una proprietà **della macchina**, non del desktop. Misurata prima, le fasi 11 e
+12 la ereditano; misurata dopo tre desktop nuovi, non si sa più quale numero appartenga a che cosa.
+⇒ E se il multi-tenant tocca la sessione o il budget, la modifica va riverificata **su quattro
+desktop invece che su uno**.
+
+⚠ **E quel che questa decisione NON compra, detto per intero**: l'architettura multi-tenant c'è già
+in buona parte — `figlio.c:80` dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non
+si sta scansando una riscrittura strutturale; si sta evitando una misura ripetuta quattro volte.
+È un argomento più debole di quel che sembra, e tira nella stessa direzione lo stesso.
+
+⛔ **La precedenza che resta**: il multi-tenant sta **dopo la fase 8**, e la ragione è invariata —
+la **copia zero** cambia quanto costa una sessione in memoria e banda di GPU, e un budget misurato
+prima della copia zero è un budget da rifare.
+
+> ### ⚠ E le parole del 15 agosto dicono «fase 12»: restano
+>
+> La citazione di §4.6-quater — *«nella fase 12 il multi-tenant»* — **non è stata riscritta**, né
+> qui né in `fasi/05-la-sessione.md`: era il numero di allora, e correggere una frase fra virgolette
+> è il modo più veloce per non sapere più che cosa è stato detto davvero.
+> ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 

@@ -207,7 +207,7 @@ nascosto = `0×0` con punto attivo `0,0`. `rcp.c` non deve rifarli — deve fida
 sono puliti e la forma arriva in banda laterale; con 1 il puntatore finisce nell'immagine e l'utente
 ne vedrebbe **due** (`SPECIFICHE.md` §7.1). ⛔ **Non ho toccato `mutter.c`.**
 
-### 5.5 ⚠ Per la fase 10 (KDE) e per wlroots — la trappola che qui NON è scattata
+### 5.5 ⚠ Per la fase 11 (KDE) e per wlroots — la trappola che qui NON è scattata
 
 Su Mutter **non serve** nessun tema di cursore trasparente: `cursor-mode = 2` toglie il puntatore
 dai pixel da sé (`inhibit_cursor_overlay`), ed è misurato. ⛔ **Ma se un giorno servisse, il canale

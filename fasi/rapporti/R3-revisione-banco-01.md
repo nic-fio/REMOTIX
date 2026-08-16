@@ -1104,7 +1104,7 @@ un ⛔ scritto in `RCP.md`.
 | **3** | ⛔ **che il server non offra 0-RTT e non disabiliti la migrazione** (`RCP.md` §2.3) | sono due proprietà della **libreria scelta da B2**, e le librerie QUIC offrono 0-RTT per impostazione predefinita. Il sintomo di 0-RTT acceso è che `CREDENZIALI` si può **ripetere** — cioè un difetto di sicurezza che non produce nessun sintomo funzionale, mai |
 | **4** | **che `max_idle_timeout` sia davvero 30 s e sia imposto dal server** (`RCP.md` §2.2) | è il numero da cui dipendono B3 (R3.19), B6 e l'intero modello del client staccato. Nessuno lo legge |
 | **5** | **la pagina servita in TCP**, che è il secondo mestiere che il server acquista in questa fase | nessun banco verifica che la pagina si carichi, che pubblichi l'impronta **corrente**, e che l'endpoint da cui si ritira l'impronta aggiornata (§4.1-bis) esista. B3 lo presuppone in una riga |
-| **6** | **il campo `desktop` di `SESSIONE`** | sul ferro c'è solo GNOME: un server che risponde `gnome` costante passa. Il valore `sconosciuto` — e i quattro desktop che le fasi 10-11 aggiungeranno — non hanno controllo positivo, e `RCP.md` §4.5 vieta al client di cambiare comportamento su quel campo proprio perché è per la diagnosi |
+| **6** | **il campo `desktop` di `SESSIONE`** | sul ferro c'è solo GNOME: un server che risponde `gnome` costante passa. Il valore `sconosciuto` — e i quattro desktop che le fasi dei desktop nuovi (11-12) aggiungeranno — non hanno controllo positivo, e `RCP.md` §4.5 vieta al client di cambiare comportamento su quel campo proprio perché è per la diagnosi |
 
 ⚠ **E una settima che non è un buco ma un confine da rileggere**: la fase dichiara che `stato` vale
 sempre `NUOVA`. Nessun banco verifica che valga **sempre** `NUOVA` — cioè che nessuno abbia scritto
@@ -1142,7 +1142,7 @@ lo chiuderebbe costa un comando**: si misura con la gsetting nei due stati e si 
 
 **(b) Un compositore per una riga che ne vincola cinque.** `RCP.md` §7.3 vale per GNOME, KDE, XFCE,
 LXQt e Cinnamon. La misura è su Mutter. Se `libei` normalizza, il numero vale ovunque; se la
-normalizzazione è del compositore, la fase 10 troverà un segno diverso su KWin e non saprà se
+normalizzazione è del compositore, la fase di KDE (la 11) troverà un segno diverso su KWin e non saprà se
 correggere il protocollo o il server. ⚠ La fase 0 ha già fatto la cosa giusta in un caso identico —
 ha misurato **tre** famiglie di compositori nello stesso pomeriggio, e ha scritto che la riga di sway
 *«vale doppio, perché il modello è l'opposto»*. Qui la stessa domanda ha una sola risposta.

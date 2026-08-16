@@ -30,6 +30,21 @@ il testimone peggiore possibile per la domanda «è sopravvissuta?».
 ⏳ **E la fase 6 non si apre subito**: l'utente ha chiesto prima una revisione di `PIANO.md`, *«che ha
 alcuni punti secondo me fuori sequenza»*.
 
+> ### ✅ ⭐ La revisione è stata fatta il 16 agosto 2026, e ha cambiato due cose
+>
+> | | |
+> |---|---|
+> | ⭐ **la fase 8 non è più «l'accelerazione»: è «la copia zero»** | la codifica in hardware era già entrata nel prodotto il **13 agosto**, e i 10 bit sono un muro **a monte** (la cattura). Restava la copia zero, ed è tutta la fase |
+> | ⭐⭐ **il multi-tenant passa davanti ai desktop nuovi** — *«PRIMA si chiude lo sviluppo anche con il multi-tenant, e solo dopo si pensa agli altri DE»* | **era la fase 12, è la fase 10**; KDE 10 → **11**, XFCE/LXQt 11 → **12**. La 9 e la 13 restano dove sono (`DECISIONI.md` §4.6-sexies) |
+>
+> ⇒ **L'ordine di adesso**: 6 · 7 · 8 la copia zero · 9 la qualità · **10 il multi-tenant** ·
+> 11 KDE · 12 XFCE e LXQt · 13 il servizio.
+>
+> ⛔ **Trappola di lettura, e vale per chi cerca all'indietro**: `kde.md`, `gnome.md`, `xfce.md` e
+> `lxqt.md` dicono in testa *«per la fase 11»*, ma quella è **la fase 11 di v1** — sono studi del
+> 7-8 agosto 2026, scritti prima che questo piano esistesse. Quei numeri **non sono questi numeri**,
+> e infatti non sono stati toccati.
+
 ---
 
 ## ⚠ ~~Manca il `05`~~ — com'era scritto il 15 agosto, e si conserva
