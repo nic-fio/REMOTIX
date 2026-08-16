@@ -474,6 +474,24 @@ async def principale(a) -> int:
                   + (f", facendomi sentire ogni {a.vivo} s" if a.vivo else ""))
             try:
                 if a.vivo:
+                    # ⛔⛔ E QUESTA OPZIONE E' UNA TRAPPOLA — 16 agosto 2026.
+                    #
+                    #    `VISTA` (0x0008) e' nel protocollo, ⛔ ma QUESTO server
+                    #    non la serve ancora: risponde `ERRORE_PROTOCOLLO` e
+                    #    CHIUDE.  `[M]` Su venti giri di misura, tre sessioni
+                    #    sono morte a 8 secondi per colpa di questa riga, e i
+                    #    tempi risultavano «10,4 s» — un numero del banco, non
+                    #    del prodotto.
+                    #
+                    # ⭐ La lezione, che l'utente ha detto meglio: *«per i test
+                    #    usa il browser, non il banco — e' l'unico modo di
+                    #    misurare quello che accade davvero»*.  Un client di
+                    #    prova che manda quel che il vero client non manda non
+                    #    misura il prodotto: misura se stesso.
+                    raise SystemExit(
+                        "⛔ --vivo manda VISTA (0x0008), che questo server non "
+                        "serve: chiuderebbe la sessione con ERRORE_PROTOCOLLO. "
+                        "Per misurare i tempi si usa il BROWSER.")
                     # ⭐ `--vivo`: si manda una `VISTA` IDENTICA ogni tanto, solo
                     #    per non farsi staccare dall'orologio del silenzio (§5.3).
                     #
