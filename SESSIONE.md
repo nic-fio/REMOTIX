@@ -149,7 +149,25 @@ punta, nessun giro lento.
 | congedi `0x10` puliti | **21 su 21** |
 
 ⚠ E il **secondo fisso** dell'ammissione è quasi metà del totale (968 ms su 2087): è la difesa dalla
-forza bruta, e adesso che il resto è sceso è **il pezzo più grosso che resta**.
+forza bruta — senza, si leggerebbe **col cronometro** la differenza fra «l'utente non esiste» e «la
+parola è sbagliata», che §4.4 vieta di dire a parole.
+
+### ⭐ E il caso peggiore: il primo accesso della giornata
+
+`[M]` Stessa prova col browser, ma con **la sessione grafica mai avviata** — nessun desktop in
+memoria, tutto da freddo:
+
+| | |
+|---|---|
+| nascita del figlio → tela dal browser | 1074 ms |
+| tela → avvio di `gnome-session` | 229 ms |
+| avvio → palco | 952 ms |
+| palco → primo fotogramma | 98 ms |
+| ⭐ **TOTALE a freddo** | **2353 ms** |
+
+⇒ ⭐ **Il caso peggiore riproducibile è 2,4 secondi**, non diciotto. ⚠ E il criterio è dell'utente:
+*«se il tempo medio fra la parola d'ordine e la comparsa del desktop è circa 2 secondi va bene. Ma
+non va bene se i secondi diventano 18»*.
 
 ## ⏳ Il riattacco da uno schermo diverso — quel che il banco può dire, e quel che no
 

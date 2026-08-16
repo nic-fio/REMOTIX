@@ -241,23 +241,32 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 *Dal mandato §3 e §4 — nessuno di questi ha un banco, ed è esattamente il lavoro della fase.*
 
 1. ⛔ **Il rilascio dei tasti al distacco, CON UN TASTO PREMUTO DAVVERO.** `RCP.md` §11 la chiama
-   *«la regola col rapporto danno/costo più alto del documento»*. `[M]` nel registro si legge
-   *«rilascio al distacco: 0 fra tasti e pulsanti»* — ⛔ cioè la prova non è mai stata fatta.
-2. ⛔⛔ **L'inibizione della sospensione.** `[M]` 15 agosto: la notifica **«Automatic Suspend —
+   *«la regola col rapporto danno/costo più alto del documento»*. `[M]` **16 agosto, venti giri col
+   browser**: si legge *«RILASCIO AL DISTACCO: **0** fra tasti e pulsanti»* in tutti e venti — ⛔ cioè
+   la riga si scrive, e non ha mai avuto niente da rilasciare. **La prova non è mai stata fatta.**
+   ⇒ ⭐ **È il prossimo punto.**
+2. ✅ **L'inibizione della sospensione** — `[M]` 16 agosto, **20 giri su 20**: *«sospensione e
+   inattività INIBITE al gestore di sessione (flag 12 = SUSPEND\|IDLE — mai LOGOUT)»*. ~~Quel che
+   segue resta come cronaca di com'era:~~ `[M]` 15 agosto: la notifica **«Automatic Suspend —
    Suspending soon because of inactivity»** compare in due schermate del desktop remoto.
    `sleep-inactive-ac-type` vale `suspend` a **900 s**. La cura è una chiamata:
    `SessionManager.Inhibit(…, 12)` = `SUSPEND|IDLE` **insieme**, ⛔ **mai** il bit `LOGOUT`.
    ⚠ `energia.c` **non esiste in `src/`**: va portato da `v1/remotix-c/src/energia.c`.
    ⚠ E senza questa, il banco delle **sei ore** non misura niente.
-3. ⚠ **L'headless si dichiara e si verifica dopo l'avvio**, e se non c'è **si fallisce dicendolo**
-   (`DECISIONI.md` §4.3-bis). Oggi ce l'abbiamo **per accidente**.
+3. ✅ **L'headless si dichiara e si verifica dopo l'avvio** — `[M]` 16 agosto, **20 giri su 20**: il
+   figlio scrive *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ Non è più «per
+   accidente»: è un fatto letto dal nucleo a ogni sessione.
 4. **I tre orologi, ciascuno col suo banco**: 30 s di silenzio, 30 min di inattività, 6 ore di
    abbandono. ⚠ Il terzo **incrocia** il punto 2.
 5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*.
 6. ⛔ **La sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
    `libmutter` andava in asserzione fallita.
-7. **PAM per intero**: già asincrono (`aiutante.c`, `DECISIONI.md` §1.10) — resta da provare.
+7. ✅ **PAM per intero**: asincrono (`aiutante.c`) **e** la sessione PAM aperta dal figlio (passo
+   2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
+   fermato»*.
+
+⇒ ⭐ **Restano il 1, il 4, il 5 e il 6.**
 
 ---
 
@@ -286,8 +295,25 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 | ✅ **il logout si raggiunge in due modi**: la voce del menu e `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` e ❌ `Win+F12` scartate **con una misura ciascuna**, ❌ **nessun bottone a schermo** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 agosto |
 | ✅ **il multi-tenant è della fase 12** — qui **un utente remoto per volta**, ⛔ ma il guardiano di logind discrimina **per utente** | `DECISIONI.md` §4.6-quater, 15 agosto |
 
+| ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
+
 **Aperte:** ⭐ nessuna. ⇒ Il lavoro della fase è quello di §1, §2 e §3, e il prossimo gesto è il
 **banco**, non il codice.
+
+### ⏳ Il secondo che si potrebbe recuperare, con la misura già fatta
+
+`[M]` L'accesso costa **2087 ms** di mediana, e **968** sono il figlio che aspetta: il browser
+dichiara la misura della sua finestra **solo dopo essere stato ammesso**, e prima di allora la
+sessione non può nascere perché non si sa a che misura.
+
+⇒ Se la misura arrivasse **col saluto** — come già fa il tetto del decodificatore — la sessione
+nascerebbe **durante** il secondo fisso invece che dopo: accesso a **~1,2 s**. ⛔ E il secondo fisso
+resterebbe intatto: cambia *quando si dichiara la misura*, non *quando si risponde*, quindi il
+canale del cronometro resta chiuso.
+
+⚠ **Il costo**: `RCP.md`, `pagina.html`, `rcp.c` **e il suo gemello identico byte per byte** in
+`banchi/rcp/`, `figlio.c`, il client di banco, più una prova per il caso «client vecchio che non lo
+manda». **Mezza giornata**, e nel pezzo più delicato del programma.
 
 ---
 
