@@ -155,21 +155,22 @@ sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, 
 > cliente**. ⚠ Con un tetto (`TELA_ATTESA_MS`), perché I1 vieta di stare fermi per prudenza: se il
 > cliente non la dichiara, si parte col ripiego e lo si **dichiara**.
 >
-> ### ⭐⭐ E la misura, 20 giri, prima e dopo
+> ### ⭐⭐⭐ E la misura, 20 giri, prima e dopo
 >
-> | | prima | dopo |
+> | fase | ⛔ prima | ⭐ dopo |
 > |---|---|---|
-> | ⛔ **richiesta → palco** | 2907 ms · p90 **16969** | **~900 ms**, costante (839-980) |
-> | ⭐ **totale al desktop** | 3211 ms · p90 **17255** · max **18158** | ~4200 ms · **max 5146** |
+> | login → richiesta | 244 ms | 1192 ms |
+> | **richiesta → palco** | 2907 ms · p90 **16969** | **900 ms** · p90 950 |
+> | palco → 1° fotogramma | 84 ms | 85 ms |
+> | ⭐ **TOTALE al desktop** | 3211 ms · p90 **17255** · max **18158** | **2164 ms** · p90 **2242** · max **2294** |
 > | fotogrammi alla misura sbagliata | 1 su 1 a `1920x1080` | ⭐ **nessuno**: tutti a `2544x926` |
 >
-> ⇒ ⭐ **La coda è sparita**: da diciassette secondi a cinque. ⚠ E la mediana cresce di un secondo,
-> perché adesso il secondo fisso dell'ammissione sta sul percorso critico — la sessione non può
-> nascere prima che il cliente sia ammesso. ⭐ È uno scambio che conviene: **un secondo sempre**
-> contro **diciassette un giro su sette**.
+> ⇒ ⭐ **Mediana −33%, p90 −87%, massimo −87%.** E i venti giri stanno fra **2067 e 2294 ms**: la
+> dispersione totale è **227 ms**, cioè il tempo del desktop adesso è un *numero*, non un intervallo.
 >
-> ⏳ **Quel che resta da guadagnare**: il padre conosce la finestra chiesta già dall'`ATTACCA`, cioè
-> **prima** che scada il secondo fisso. Mandandola al figlio subito si recupererebbero ~950 ms.
+> ⚠ `login → richiesta` cresce da 244 ms a 1192 perché adesso il **secondo fisso** dell'ammissione
+> sta sul percorso critico: la sessione non può nascere prima che il cliente sia ammesso e abbia
+> dichiarato la finestra. ⭐ Ed è pagato con gli interessi dal pezzo dopo.
 
 - ⛔⛔ **LA CODA: un giro su sette costa 13-18 secondi** — ⭐ **causa trovata**, vedi il riquadro qui
   sopra. Qui resta il diario di come ci si è arrivati, che vale più della causa. `[M]`
