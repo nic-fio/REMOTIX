@@ -464,7 +464,12 @@ const MOT = {
    si dice PERCHE', con una frase e non con un numero. */
 const MOTIVO = {
   0x01: "la sessione e' stata chiusa dall'utente",
-  0x02: "silenzio troppo lungo: la sessione e' scaduta",
+  /* ⛔ Diceva «silenzio troppo lungo» — 16 agosto 2026, ed era l'orologio
+     SBAGLIATO: il silenzio di §5.3 dura trenta SECONDI e non manda nessun
+     congedo (libera solo il posto).  `0x02` sono i trenta MINUTI senza che
+     l'utente tocchi niente, e §5.3 dice pure che cosa serve per rientrare. */
+  0x02: "sei stato mezz'ora senza toccare niente: per rientrare servi tu, "
+      + "con la tua parola d'ordine — i programmi sono rimasti aperti",
   0x03: "la sessione e' stata abbandonata",
   0x04: "ha prevalso la sessione locale su quella macchina",
   0x05: "quell'utente e' gia' collegato localmente",
@@ -3509,7 +3514,11 @@ async function ascolta_controllo(canale, congeda) {
             cui si esce ricaricando.  Chi voleva uscire ha finito; chi ha
             cliccato per sbaglio rientra scrivendo la parola d'ordine, e trova
             un desktop pulito. */
-      if (mot === 0x10) torna_al_modulo();
+      /* ⛔ E ANCHE `0x02`, per la stessa ragione e con le stesse parole di
+         §5.3: «per rientrare servono utente e password».  ⚠ Senza questa riga
+         l'utente inattivo restava davanti a un desktop congelato senza un modo
+         di rientrare che non fosse ricaricare la pagina a mano. */
+      if (mot === 0x10 || mot === 0x02) torna_al_modulo();
       return;
     }
     if (m.tipo === TIPO.TELA) {

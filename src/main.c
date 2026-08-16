@@ -650,6 +650,19 @@ int main(int argc, char **argv)
 			dir_rilievo = argv[++i];
 		else if (strcmp(a, "--parlantina") == 0)
 			registro_parlantina(true);
+		/* ⛔⭐ §5.3 — il secondo dei tre orologi, e il documento vuole che sia
+		 *     configurabile: *«il secondo e il terzo sono configurabili, con
+		 *     quei valori come predefiniti»*.
+		 *
+		 * ⚠ IN SECONDI, non in minuti, e la ragione e' che un tetto da
+		 *   mezz'ora **non si puo' provare** se il minimo e' un minuto: si
+		 *   aspetta mezz'ora ogni volta, cioe' non lo si prova mai.  ⭐ Coi
+		 *   secondi il meccanismo si esercita in dieci, e il NUMERO
+		 *   predefinito si legge nella riga che il server scrive all'avvio.
+		 *
+		 * ⛔ `0` = spenta, ed e' un valore lecito e dichiarato. */
+		else if (strcmp(a, "--inattivita-s") == 0 && v)
+			rcp_inattivita_imposta((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -714,6 +727,25 @@ int main(int argc, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 
 	registro_dice(REG_AVVIO, "REMOTIX_V2 — fase 1, il filo nudo");
+
+	/* ⛔⭐ I TRE OROLOGI DI §5.3 SI SCRIVONO ALL'AVVIO, e non e' decorazione.
+	 *
+	 *     Un tetto da mezz'ora si prova in due modi: aspettando mezz'ora, o
+	 *     leggendo il numero.  ⚠ Il primo non lo fa nessuno — «significa tenere
+	 *     il PC occupato», parole dell'utente il 16 agosto 2026 — quindi senza
+	 *     questa riga il valore in vigore non lo verifica MAI nessuno, ed e'
+	 *     esattamente la forma E1 («scritto non e' in vigore») che ci e' gia'
+	 *     costata cara.
+	 *
+	 * ⭐ Cosi' il MECCANISMO si prova a valori corti (`--inattivita-s 10`) e il
+	 *    NUMERO si legge qui.  Sono due verifiche diverse, e nessuna delle due
+	 *    tiene occupata una macchina. */
+	registro_dice(REG_AVVIO,
+	              "⭐ §5.3, i tre orologi in vigore: silenzio del client 30 s "
+	              "(fisso) · inattivita' dell'utente %llu s%s · abbandono della "
+	              "sessione: ⛔ NON ANCORA IN VIGORE, nessun codice lo conta",
+	              (unsigned long long)(rcp_inattivita() / 1000),
+	              rcp_inattivita() ? "" : " (SPENTA)");
 
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di

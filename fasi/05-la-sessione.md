@@ -260,9 +260,9 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 4. **I tre orologi**: ✅ **30 s di silenzio** — era **rotto**, trovato il 16 agosto col browser
    mentre si provava il punto 1 (contava i secondi in cui *l'utente non tocca niente* invece di
    quelli in cui *il client tace*: un secondo dispositivo entrava e si prendeva il desktop di chi
-   stava guardando). **Riparato e provato in tre punti**, §6-bis. ⏳ Restano **30 min di
-   inattività** — ⭐ e il campo giusto adesso c'è, si chiama `ultimo_byte` — e **6 ore di
-   abbandono**, che ⚠ **incrocia** il punto 2.
+   stava guardando). **Riparato e provato in tre punti**, §6-bis. ✅ **30 min di inattività**: fatto il 16 agosto,
+   motivo `0x02` di §8.2 che era dichiarato e mai spedito — §6-quinquies. ⏳ Resta **6 ore di
+   abbandono**, che ⚠ **incrocia** il punto 2, e ⛔ il server dichiara all'avvio che non è in vigore.
 5. **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
    un banco, è una dimostrazione»*.
 6. ✅ **La sessione senza nessuno che guarda** — `[M]` 16 agosto, col browser. In v1 il monitor
@@ -272,8 +272,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **Resta il 5** (distacco e riaggancio due volte di fila) **e i due orologi lunghi del 4** — 30
-minuti di inattività dell'utente e 6 ore di abbandono.
+⇒ ⭐ **Resta il 5** (distacco e riaggancio due volte di fila) **e l'orologio delle 6 ore** del punto 4.
 
 ---
 
@@ -1054,6 +1053,66 @@ si ferma davvero quando non guarda nessuno, non gira a vuoto.
 ⚠ E `mutter.log` contiene **7 righe `CRITICAL`** che non sono nostre: sono tutte alle 13:18 e 13:19, di
 due `gnome-shell` **che si stavano chiudendo** (*«has been already disposed»*), cioè rumore di
 smontaggio di GNOME al logout. Nessuna dalla sessione viva.
+
+## 6-quinquies · ✅ L'INATTIVITÀ DEI 30 MINUTI — e come si prova un tetto lungo senza aspettarlo
+
+> *«30 minuti di inattività va bene testare, ma le 6 ore proprio no, significa tenere il PC occupato
+> 6 ore»* — l'utente, 16 agosto 2026.
+
+⭐ **E il vincolo ha migliorato il lavoro**, perché la risposta era già scritta in `SPECIFICHE.md`
+§5.3: *«il secondo e il terzo sono **configurabili**, con quei valori come predefiniti»*. ⇒ Due
+verifiche invece di una, e nessuna tiene occupata una macchina:
+
+| che cosa | come si prova |
+|---|---|
+| **il meccanismo** | a valori corti: `riavvia-7700.sh --inattivita-s 10` |
+| **il numero in vigore** | ⭐ si **legge**, perché il server lo scrive all'avvio |
+
+```
+⭐ §5.3, i tre orologi in vigore: silenzio del client 30 s (fisso) ·
+   inattivita' dell'utente 1800 s · abbandono della sessione:
+   ⛔ NON ANCORA IN VIGORE, nessun codice lo conta
+```
+
+⛔ **Senza quella riga il valore predefinito non lo verificherebbe mai nessuno**, ed è la forma E1
+(«scritto non è in vigore») — la stessa che stamattina è costata cara due volte.
+
+### ⛔ E `RCP_INATTIVITA = 0x02` era proprio quello: dichiarato e mai usato
+
+`rcp.h` aveva il motivo di §8.2, `RCP.md` §8.2 lo documentava — e **non c'era una riga di codice che
+lo spedisse**. Un motivo di congedo che un'altra implementazione avrebbe dovuto gestire per niente.
+
+### `[M]` Le due prove, con l'atteso dichiarato prima
+
+| | atteso | visto |
+|---|---|---|
+| entro e **non tocco niente** | congedo `0x02` a ~10 s, e la pagina torna al modulo | ✅ `16:31:13 INATTIVITA': 10048 ms (tetto 10000)` · `congedo motivo=0x02` · la pagina è tornata al modulo d'accesso |
+| ⛔ **controllo positivo**: un tasto ogni 4 s per 32 s | **zero** scatti finché si lavora | ✅ input alle `16:34:23 · 27 · 31 · 36`, zero scatti; poi `16:34:46.979`, **10051 ms dopo l'ultimo** |
+| la sessione grafica | resta (I4) | ✅ `gnome-shell` 390241, terminale aperto, **0** avvii |
+
+⚠ **E la prima stesura del controllo positivo misurava sé stessa** — la sesta volta in due giorni.
+Lo stimolo era un `mousemove` sintetico, e al server **non è arrivato niente**: la sessione è caduta
+per inattività e sembrava un difetto del prodotto. ⭐ Il registro l'ha smentito prima che scrivessi
+la conclusione: `input id=` **zero**. ⇒ Rifatto con un tasto — uno stimolo già provato end-to-end
+oggi — è passato.
+
+### ⛔ La pagina diceva la cosa sbagliata per `0x02`
+
+Il testo era *«silenzio troppo lungo: la sessione è scaduta»*, cioè **l'altro orologio**: il silenzio
+dura trenta *secondi* e non manda nessun congedo. ✅ Adesso dice *«sei stato mezz'ora senza toccare
+niente: per rientrare servi tu, con la tua parola d'ordine — i programmi sono rimasti aperti»*, e
+⭐ **torna al modulo d'accesso** come §5.3 pretende (*«per rientrare servono utente e password»*):
+prima solo `0x10` lo faceva, e l'utente inattivo restava davanti a un desktop congelato.
+
+### ⏳ Il terzo orologio, e perché la corsa da 30 minuti non si fa
+
+⛔ **L'abbandono a 6 ore non esiste ancora**, e il server lo **dichiara** invece di tacerlo.
+⚠ Quando si farà, allo scadere **chiude la sessione**: i programmi aperti se ne vanno. Lo dice §5.3,
+ma è la conseguenza da tenere davanti agli occhi.
+
+⭐ **E nemmeno la corsa vera da 30 minuti si fa**, con la ragione scritta: il meccanismo è provato, e
+l'unica cosa che una corsa da mezz'ora aggiungerebbe è che `1800000 ms` sono trenta minuti — che è
+aritmetica, non una misura. ⇒ *Un tetto si prova sul meccanismo e si legge sul numero.*
 
 ## 7 · Il giudizio dell'utente
 

@@ -3,6 +3,18 @@
 # disco.  ⛔ La pagina si legge UNA VOLTA all'avvio (pagina.c:627): senza questo
 # riavvio, una pagina nuova sul disco non arriva a nessuno.
 #
+#   bash riavvia-7700.sh [opzioni in piu' per il server]
+#
+# ⭐ Le opzioni in piu' finiscono in coda a quelle fisse, ed e' quel che rende
+#    provabili i tetti lunghi di §5.3 SENZA aspettarli:
+#
+#      bash riavvia-7700.sh --inattivita-s 10
+#
+#    esercita l'orologio dei trenta minuti in dieci secondi.  ⛔ E il valore IN
+#    VIGORE il server lo scrive all'avvio, cosi' non si prova un tetto credendo
+#    di provarne un altro — ed e' anche l'unico modo di verificare il numero
+#    predefinito senza tenere occupata una macchina per mezz'ora.
+#
 # ---------------------------------------------------------------------------
 # ⛔⛔ QUESTO FILE VIVEVA SOLO SULLA MACCHINA DI PROVA, e non e' un dettaglio.
 #
@@ -102,7 +114,7 @@ systemd-run \
   --ban-file "$LAV/ban" \
   --comando-socket "$LAV/comando.sock" \
   --rilievo "$LAV/rilievo" \
-  --parlantina >/dev/null
+  --parlantina "$@" >/dev/null
 
 i=0
 NUOVO=""

@@ -280,6 +280,32 @@ guarda **dice di essere viva**.
 tela con 1113 colori, e l'input torna a funzionare. ⏳ La finestra provata è di **due minuti**: le
 **6 ore** di abbandono restano da provare.
 
+## ✅ L'inattività dei 30 minuti — e come si prova un tetto lungo senza aspettarlo
+
+`RCP_INATTIVITA = 0x02` era **dichiarato in `rcp.h` e mai spedito**: la forma «scritto non è in
+vigore». ✅ Dal 16 agosto c'è, ed è **configurabile** come §5.3 pretende.
+
+⭐ **Due verifiche invece di una, e nessuna tiene occupata la macchina:**
+
+| | |
+|---|---|
+| il **meccanismo** | `riavvia-7700.sh --inattivita-s 10` ⇒ si esercita in dieci secondi |
+| il **numero in vigore** | si **legge**: il server lo scrive all'avvio |
+
+```
+⭐ §5.3, i tre orologi in vigore: silenzio del client 30 s (fisso) ·
+   inattivita' dell'utente 1800 s · abbandono della sessione:
+   ⛔ NON ANCORA IN VIGORE, nessun codice lo conta
+```
+
+`[M]` Fermo ⇒ `INATTIVITA': 10048 ms (tetto 10000)`, congedo `0x02`, pagina al modulo d'accesso, e la
+sessione grafica **resta** (I4). ⛔ Controllo positivo — un tasto ogni 4 s per 32 s ⇒ **zero scatti**,
+poi scatta 10051 ms dopo l'ultimo.
+
+⚠ La pagina diceva *«silenzio troppo lungo»* per `0x02`, cioè **l'altro orologio**; e solo `0x10`
+tornava al modulo, così l'utente inattivo restava davanti a un desktop congelato. ✅ Tutt'e due
+corretti.
+
 ## ⚠ Quel che ancora NON è a posto, dichiarato
 
 - ⛔ **La voce «Power Off» resta nel menu** anche con tutte e quattro le `Can*` a «no» e

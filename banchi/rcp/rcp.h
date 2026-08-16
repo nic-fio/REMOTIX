@@ -459,6 +459,19 @@ const char *rcp_utente(const rcp_sessione *s);
  *     `ultima_vita` in `rcp.c`. */
 void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms);
 
+/* ⛔⭐ §5.3 — IL SECONDO OROLOGIO: «30 minuti senza input ⇒ REMOTIX stacca il
+ *     client, e per rientrare servono utente e password».  Il congedo esce col
+ *     motivo `0x02 INATTIVITA` di §8.2.
+ *
+ * ⚠ CONFIGURABILE perche' §5.3 lo pretende — *«il secondo e il terzo sono
+ *   configurabili, con quei valori come predefiniti»* — e **0 vuol dire
+ *   spenta**: chi guarda un video per ore su una macchina sua non vuole essere
+ *   buttato fuori.  ⛔ Chi cuce DEVE scrivere nel registro il valore in vigore:
+ *   un tetto da mezz'ora che nessuno puo' leggere si prova solo aspettando
+ *   mezz'ora, ed e' il modo di non provarlo mai. */
+void rcp_inattivita_imposta(uint64_t ms);
+uint64_t rcp_inattivita(void);
+
 /* ⛔ Azzera il registro delle sessioni attive.  Serve SOLO al banco, fra una
  * prova e l'altra: in un server vero non lo chiama nessuno. */
 void rcp_azzera_registro_sessioni(void);

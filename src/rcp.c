@@ -168,12 +168,28 @@ enum {
  * non occupa piu' il posto, e chi arriva entra.  E' la regola che fa sparire
  * il caso «il telefono e' morto in galleria e ora non posso rientrare».
  *
- * ⭐ E si misura **sui byte di RCP**, non su quelli di QUIC: il trasporto manda
- *    riscontri e battiti per conto suo, e un orologio appoggiato a quelli
- *    direbbe «vivo» di un client che non parla da un'ora.  E' esattamente la
- *    distinzione che il banco di B3 esiste per fare (rilievo R3.19): con
- *    `max_idle_timeout` a 120 secondi, un server SENZA questa nozione
- *    resterebbe verde perche' a chiudere sarebbe QUIC.
+ * ⛔⛔⭐ E QUI SOTTO C'ERA SCRITTO IL CONTRARIO DI QUEL CHE IL CODICE FA — 16
+ *      agosto 2026, corretto insieme alla riparazione dell'orologio.
+ *
+ *      Diceva: ~~«si misura sui byte di RCP, non su quelli di QUIC: il
+ *      trasporto manda riscontri e battiti per conto suo, e un orologio
+ *      appoggiato a quelli direbbe "vivo" di un client che non parla da
+ *      un'ora»~~.  ⚠ Il timore era vero e va guardato in faccia, non cancellato:
+ *      **un client vivo sul filo ma con la pagina morta adesso tiene il posto.**
+ *
+ * ⭐ Ma la scelta si e' rovesciata su una misura, non su un'opinione: contando i
+ *    byte di RCP, **un utente che LEGGEVA perdeva il posto dopo trenta
+ *    secondi** — non tocca niente, non manda niente — e un secondo dispositivo
+ *    glielo portava via.  `[M]` 16 agosto: `STACCATO per silenzio` a 30013 ms
+ *    con la connessione viva, e poi `posto PRESO` da una seconda scheda mentre
+ *    la prima guardava.  ⇒ Contare i byte non misurava «il client c'e'»:
+ *    misurava «l'utente sta digitando», che e' l'ALTRO orologio di §5.3, quello
+ *    da trenta MINUTI.
+ *
+ * ⭐ E il rilievo R3.19 resta soddisfatto, perche' non si e' appaltato l'orologio
+ *    a QUIC: il tetto dei trenta secondi resta NOSTRO, e quel che si guarda e'
+ *    l'ultimo pacchetto **decifrato e autenticato** (`ultima_vita`).  Con
+ *    `max_idle_timeout` a 120 secondi questo server stacca lo stesso a 30.
  *
  * ⚠ E che cosa succede alla connessione di chi tace, il documento NON lo dice.
  *   Qui si sceglie di **lasciarla aperta** e liberare solo il posto: chiuderla
@@ -181,6 +197,41 @@ enum {
  *   po'».  La scelta e' dichiarata in `fasi/01-filo-nudo.md`, perche' e' un
  *   punto in cui RCP.md ammette due letture. */
 #define SILENZIO 30000
+
+/* ⛔⭐ IL SECONDO OROLOGIO DI §5.3 — «inattivita' dell'utente», e fino al 16
+ *     agosto 2026 NON ESISTEVA.
+ *
+ *     `SPECIFICHE.md` §5.3: *«30 minuti senza input ⇒ REMOTIX **stacca** il
+ *     client: per rientrare servono utente e password»*, e *«"input" e' quel
+ *     che l'utente manda, non quel che guarda: chi resta mezz'ora a guardare un
+ *     video senza toccare nulla viene staccato.  Il costo e' piccolo —
+ *     riattaccarsi e' rapido»*.  `RCP.md` §8.2 gli da' gia' il motivo `0x02`.
+ *
+ * ⛔ E `RCP_INATTIVITA = 0x02` stava in `rcp.h` **senza una riga che lo usasse**:
+ *    la forma E1, «scritto non e' in vigore».  Un motivo di congedo dichiarato
+ *    nel protocollo e mai spedito e' una promessa che un'altra implementazione
+ *    avrebbe dovuto gestire per niente.
+ *
+ * ⭐ QUESTO si misura sui byte di RCP (`ultimo_byte`), ed e' il mestiere per cui
+ *    quel campo esiste — liberato lo stesso giorno da quello che non era suo.
+ *
+ * ⚠ CONFIGURABILE, e §5.3 lo pretende: *«il secondo e il terzo sono
+ *   configurabili, con quei valori come predefiniti»*.  ⛔ E il valore in vigore
+ *   si SCRIVE nel registro all'avvio: cosi' il numero si legge invece di
+ *   aspettarlo mezz'ora — che e' anche l'unico modo di provarlo senza tenere
+ *   occupata una macchina. */
+#define INATTIVITA_PREDEFINITA 1800000u /* 30 minuti */
+static uint64_t inattivita_ms = INATTIVITA_PREDEFINITA;
+
+void rcp_inattivita_imposta(uint64_t ms)
+{
+	/* ⛔ Zero vuol dire SPENTA, ed e' un valore lecito: chi guarda un video per
+	 *    ore su una macchina sua non vuole essere buttato fuori.  ⚠ Si dichiara
+	 *    a chi cuce, che lo scrive nel registro. */
+	inattivita_ms = ms;
+}
+
+uint64_t rcp_inattivita(void) { return inattivita_ms; }
 
 /* ⛔⭐ IL TETTO DI §6.1 E' DEL **MESSAGGIO**, NON DEL CORPO — rilievo B-14,
  *     10 agosto 2026 notte.
@@ -5422,6 +5473,41 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		 *   posto.  Se torna a parlare, `inp_rilasciato` si riaccende in
 		 *   `rcp_ricevi()`/`rcp_ricevi_input()` insieme al posto ripreso. */
 		rilascia_al_distacco(s, "silenzio di §5.3");
+	}
+
+	/* ⛔⭐ §5.3 — L'INATTIVITA' DELL'UTENTE, il secondo dei tre orologi.
+	 *
+	 *     «30 minuti senza input ⇒ REMOTIX stacca il client: per rientrare
+	 *     servono utente e password.»  ⇒ E' un CONGEDO, non uno stacco per
+	 *     silenzio: la connessione si chiude col motivo `0x02`, e la pagina
+	 *     torna al modulo d'accesso.
+	 *
+	 * ⛔ E l'ordine con l'orologio di sopra NON e' indifferente: prima il
+	 *    silenzio.  Un client che ha smesso di rispondere sul filo dev'essere
+	 *    dichiarato staccato — cosi' chi arriva entra (§8.2) — e non
+	 *    congedato per inattivita', che vorrebbe dire «l'utente c'era e non
+	 *    toccava niente».  ⚠ Sono due cose diverse e producono due frasi
+	 *    diverse per chi legge.
+	 *
+	 * ⚠ E si guarda `s->attaccata`: una sessione che il posto non ce l'ha non
+	 *   ha un utente da dichiarare inattivo.  ⭐ La SESSIONE GRAFICA sopravvive
+	 *   comunque (I4): questo congedo stacca il client, non chiude il desktop —
+	 *   quello e' il TERZO orologio, ed e' un'altra cosa. */
+	if (inattivita_ms && s->stato == S_ATTIVA && s->attaccata &&
+	    ora - s->ultimo_byte > inattivita_ms) {
+		char d[192];
+		snprintf(d, sizeof d,
+		         "%llu ms senza input dell'utente (tetto %llu): §5.3, e per "
+		         "rientrare servono utente e parola d'ordine",
+		         (unsigned long long)(ora - s->ultimo_byte),
+		         (unsigned long long)inattivita_ms);
+		reg(s, "⭐ §5.3 — INATTIVITA': %s.  ⚠ La sessione grafica RESTA (I4): "
+		       "si stacca il client, non si chiude il desktop",
+		    d);
+		congeda(s, RCP_INATTIVITA, d);
+		/* ⛔ `false` come per gli altri tetti: la sessione e' finita, e chi
+		 *    chiama non deve continuare a lavorarci sopra. */
+		return false;
 	}
 
 	/* ⛔ §7.1 — il fondo dell'attesa dell'`ADATTA_TELA`.  ⚠ Sta QUI, e non dove
