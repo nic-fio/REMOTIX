@@ -52,6 +52,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdatomic.h>
 #include <grp.h>
 #include <poll.h>
 #include <pwd.h>
@@ -61,6 +62,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -69,8 +71,10 @@
 
 /* Solo il figlio ha bisogno del palco.  Il padre non include niente di tutto
  * questo, e non e' pulizia: e' la dichiarazione che root non ci parla. */
+#include "audio.h"
 #include "cattura.h"
 #include "sentinella.h"
+#include "suono.h"
 #include "codificatore.h"
 #include "input.h"
 #include "mutter.h"
@@ -130,6 +134,24 @@ enum {
 	 *    `CODER.md` §1-bis: ogni byte in piu' sul cammino caldo si paga in
 	 *    ritardo, ed e' il numero che pesa piu' dei fotogrammi. */
 	MSG_DISPOSIZIONE = 6, /* padre → figlio */
+	/* ⭐⭐ FASE 7 — L'AUDIO, e attraversa il confine per la TERZA volta con la
+	 *     stessa ragione di `MSG_VIDEO` e `MSG_INPUT`, che ormai e' una legge
+	 *     dell'architettura e non una scelta:
+	 *
+	 *       **PipeWire parla con la sessione dell'utente, e la sessione
+	 *       dell'utente e' in QUESTO processo**; i datagram di `RCP.md` §6.3
+	 *       li scrive il padre, che tiene QUIC.
+	 *
+	 * ⛔ E il figlio CODIFICA prima di mandare, invece di spedire i campioni
+	 *    crudi.  Non e' un'ottimizzazione qualunque: 20 ms di PCM stereo sono
+	 *    **3840 byte**, lo stesso blocco in Opus ne misura `[M]` **241-439**.
+	 *    Spedire crudo vorrebbe dire pagare **dieci volte** il socket per
+	 *    ogni blocco, cinquanta volte al secondo, su un percorso che
+	 *    `CODER.md` §1-bis dice di misurare in ritardo.
+	 * ⚠ Il prezzo, dichiarato: il codec lo negozia il PADRE (§4.3) e a
+	 *   codificare e' il figlio, quindi il numero deve attraversare il
+	 *   confine — ed e' esattamente quel che questo messaggio porta. */
+	MSG_AUDIO = 7,        /* padre → figlio */
 	MSG_SONO = 10,      /* figlio → padre */
 	MSG_PALCO = 11,     /* figlio → padre */
 	MSG_FOTOGRAMMA = 12,/* figlio → padre */
@@ -164,7 +186,20 @@ enum {
 	MSG_TELA = 14,      /* figlio → padre */
 	/* ⭐ §7.6 — «la sessione grafica e' finita», e non l'ha chiesta nessun
 	 * client: l'utente ha scelto «Esci…» dal menu del desktop. */
-	MSG_SESSIONE_FINITA = 15 /* figlio → padre */
+	MSG_SESSIONE_FINITA = 15, /* figlio → padre */
+	/* ⭐⭐ FASE 7 — UN BLOCCO D'AUDIO GIA' CODIFICATO, pronto per il datagram.
+	 *
+	 * ⛔ NON va a pezzi come il fotogramma e il cursore, e non e' una
+	 *    semplificazione: un blocco che non entra in un datagram **non si puo'
+	 *    spedire affatto** (`RCP.md` §6.3, «un datagram, un blocco»), quindi un
+	 *    blocco piu' grande di `PEZZO_MAX` sarebbe gia' un difetto a monte.
+	 *    ⚠ Il piu' grosso che RCP/1 preveda e' il PCM: 960 byte.
+	 *
+	 * ⛔ E se il socket e' pieno il blocco SI BUTTA invece di aspettare: §6.3
+	 *    vieta la ritrasmissione, e un figlio che si bloccasse a scrivere
+	 *    fermerebbe la CATTURA DEL DESKTOP — l'audio in ritardo costerebbe i
+	 *    fotogrammi. */
+	MSG_BLOCCO = 16 /* figlio → padre */
 };
 
 struct testa {
@@ -264,6 +299,26 @@ struct corpo_cursore {
 	uint32_t pezzo;
 };
 
+/* ⛔ Che cosa il padre chiede all'audio.  `codec` sono i numeri di `RCP.md`
+ *    §6.3 — 1 = Opus, 2 = PCM — e ⚠ **non** quelli di §6.2: li' 1 e' HEVC.
+ *    `0` = «spegni»: nessuno sta ascoltando, e la cattura si ferma mentre il
+ *    sink resta (invariante I4, come il palco). */
+struct corpo_audio {
+	uint8_t codec;
+	uint8_t riempi[3];
+};
+
+/* Un blocco gia' codificato.  `istante_us` e' l'orologio monotono del figlio,
+ * del PRIMO campione del blocco (§6.3) — ⛔ e lo mette il figlio per la stessa
+ * ragione per cui mette `input` nei fotogrammi: e' l'unico che sappia quando i
+ * campioni sono stati presi davvero. */
+struct corpo_blocco {
+	uint8_t codec;
+	uint8_t riempi[3];
+	uint32_t byte;
+	uint64_t istante_us;
+};
+
 struct corpo_fotogramma {
 	uint8_t codec; /* 1 = HEVC, 2 = AV1 — gli stessi numeri di §4.3/§6.2 */
 	uint8_t chiave;
@@ -339,6 +394,11 @@ struct figlio {
 	/* ⛔ Che cosa il padre ha gia' chiesto a questo palco: si tiene per non
 	 *    ripetere lo stesso comando a ogni giro di `poll`. */
 	uint8_t video_codec_chiesto;
+	/* ⛔ L'ultimo codec d'audio chiesto a questo figlio, per non ripetere la
+	 *    stessa richiesta a ogni battito — e per scrivere la riga di registro
+	 *    solo quando il fatto CAMBIA.  ⚠ `0` = spento, ed e' lo stato iniziale
+	 *    di ogni figlio: nessuno ascolta finche' qualcuno non si attacca. */
+	uint8_t audio_codec_chiesto;
 };
 
 struct figli {
@@ -352,6 +412,12 @@ struct figli {
 	void *ctx_sessione_finita;
 	FiglioTelaAttendi su_tela_attendi;
 	void *ctx_tela_attendi;
+	/* ⭐ FASE 7 — i blocchi d'audio.  ⚠ Ha un contesto SUO e non usa `ctx`
+	 *    come `deposita`/`congeda`/`cursore`: quelli li aggancia `main.c` in
+	 *    blocco, questo lo aggancia chi possiede il canale audio, e legarli
+	 *    insieme vorrebbe dire accendere l'audio per forza dove c'e' il video. */
+	FiglioBlocco su_blocco;
+	void *ctx_blocco;
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
 	FiglioCursore cursore;
@@ -1401,6 +1467,32 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		monta_pezzo(f, g, &c, corpo + sizeof c);
 		return true;
 	}
+	case MSG_BLOCCO: {
+		struct corpo_blocco c;
+		if (byte < sizeof c)
+			return true;
+		memcpy(&c, corpo, sizeof c);
+		if (byte < sizeof c + c.byte)
+			return true;
+		/* ⛔⭐ E QUI IL CODEC SI CONTROLLA, invece di fidarsi.
+		 *
+		 *     Il figlio gira come l'utente e il padre e' privilegiato: un
+		 *     numero che attraversa quel confine e' un ingresso, non un dato.
+		 *     ⚠ Un `codec` che §6.3 non definisce finirebbe **dentro il
+		 *     datagram** e il client lo scarterebbe — cioe' l'audio non
+		 *     arriverebbe, senza che nessuna riga dica il perche'. */
+		if (c.codec != 1 && c.codec != 2) {
+			registro_dice(REG_FIGLIO,
+			              "⛔ «%s» manda un blocco d'audio con codec %u, che "
+			              "§6.3 non definisce (1 = Opus, 2 = PCM): BUTTATO",
+			              g->utente, c.codec);
+			return true;
+		}
+		if (f->su_blocco)
+			f->su_blocco(f->ctx_blocco, g->utente, g->uid, c.codec,
+			             c.istante_us, corpo + sizeof c, c.byte);
+		return true;
+	}
 	case MSG_TELA: {
 		struct corpo_tela c;
 		if (byte < sizeof c)
@@ -1829,6 +1921,14 @@ void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx)
 	f->ctx_tela_attendi = ctx;
 }
 
+void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx)
+{
+	if (!f)
+		return;
+	f->su_blocco = fn;
+	f->ctx_blocco = ctx;
+}
+
 void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
 {
 	if (!f)
@@ -1842,6 +1942,63 @@ bool figli_termina_sessione(figli *f, const char *utente, int perche)
 	/* ⛔ Il `perche'` viaggia nel campo `a`, che era libero: la ragione sta su
 	 *    `FIGLI_USCITA_*` in `figlio.h`. */
 	return figli_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, perche, 0);
+}
+
+bool figli_audio(figli *f, const char *utente, uint8_t codec)
+{
+	struct figlio *g;
+	struct testa t;
+	struct corpo_audio c;
+	uint8_t busta[sizeof t + sizeof c];
+
+	if (!f || !utente)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+	/* ⛔⭐ E CON IL CODEC INVARIATO IL MESSAGGIO PARTE LO STESSO, se il codec
+	 *     non e' zero — ed e' l'INVARIANTE I5, non una svista.
+	 *
+	 *     «Il volume appartiene alla sessione: chi si collega lo trova al
+	 *     massimo.»  ⚠ Con la scorciatoia «niente di nuovo da dire» il secondo
+	 *     che si collega non manderebbe niente, e troverebbe il volume dove
+	 *     l'aveva lasciato il primo — cioe' uno stato che **il client non puo'
+	 *     ne' vedere ne' spiegare**, che e' la ragione per cui I5 esiste.
+	 *
+	 * ⚠ Il prezzo e' un messaggio da otto byte per attacco: si paga una volta
+	 *   per collegamento, non per blocco. */
+	if (codec == g->audio_codec_chiesto && codec == 0)
+		return true; /* spento, e resta spento: non c'e' niente da dire */
+
+	memset(&t, 0, sizeof t);
+	magia_scrivi(&t);
+	t.tipo = MSG_AUDIO;
+	t.versione = FIGLIO_VERSIONE;
+	t.matricola = g->matricola;
+	t.uid_dichiarato = (uint32_t)g->uid;
+	t.byte = (uint32_t)sizeof c;
+	memset(&c, 0, sizeof c);
+	c.codec = codec;
+	memcpy(busta, &t, sizeof t);
+	memcpy(busta + sizeof t, &c, sizeof c);
+	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+		registro_dice(REG_FIGLIO,
+		              "⚠ la richiesta d'audio a «%s» (codec %u) non e' partita "
+		              "(%s): quella sessione non sentira' niente, e questa riga "
+		              "e' il perche'",
+		              utente, codec, strerror(errno));
+		return false;
+	}
+	registro_dice(REG_FIGLIO,
+	              codec ? "⭐ FASE 7: alla sessione di «%s» ho chiesto di "
+	                      "catturare l'audio, codec %u (%s)"
+	                    : "alla sessione di «%s» ho chiesto di SMETTERE di "
+	                      "catturare l'audio (codec %u): non ascolta piu' "
+	                      "nessuno, e il sink resta in piedi (I4)",
+	              utente, codec,
+	              codec == 1 ? "Opus" : codec == 2 ? "PCM" : "-");
+	g->audio_codec_chiesto = codec;
+	return true;
 }
 
 bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
@@ -2425,6 +2582,334 @@ static uint64_t ora_monotona_us(void)
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	return (uint64_t)t.tv_sec * 1000000u + (uint64_t)(t.tv_nsec / 1000);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ FASE 7 — L'AUDIO DENTRO IL FIGLIO
+ *
+ * ⛔⛔ E LA PRIMA COSA E' UN VINCOLO, NON UN'ARCHITETTURA: il richiamo dei
+ *      campioni gira sul **thread di PipeWire, in tempo reale**.
+ *
+ *      Chi ci scrive dentro una chiamata che aspetta — un lucchetto conteso,
+ *      una `send` su un socket, una `malloc` sfortunata — **non ferma soltanto
+ *      l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del
+ *      desktop compresa**.  ⚠ Cioe' l'audio si porterebbe via i fotogrammi, e
+ *      il sintomo sarebbe «il video scatta», che non nomina l'audio.
+ *      (`v1/remotix-c/src/suono.h`, e `LEZIONI.md` §5.)
+ *
+ * ⇒ Fra il thread di PipeWire e il ciclo del figlio ci sta un **anello a un
+ *   produttore e un consumatore**, senza lucchetti: il produttore muove solo
+ *   `testa`, il consumatore solo `coda`, e i due indici sono atomici.  Il
+ *   richiamo copia e torna.
+ *
+ * ⛔ E QUANDO L'ANELLO E' PIENO SI BUTTA IL PIU' VECCHIO, come per i datagram
+ *    (`RCP.md` §6.3): il suono in ritardo non serve a nessuno.  ⚠ Ma qui si
+ *    butta **contando**, e il conto va nel registro — perche' un anello che
+ *    trabocca in silenzio e' un difetto di ritmo che nessuno vedra' mai.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Un secondo di suono.  ⚠ Non e' un cuscino per la fluidita': e' lo spazio fra
+ * due giri del ciclo del figlio, che con il video acceso e' di ~8 ms
+ * (`MOVIMENTO_ATTESA_S`).  Un secondo e' due ordini di grandezza di margine, e
+ * costa 192 KiB — che e' meno di un fotogramma. */
+#define AUDIO_ANELLO_FOTOGRAMMI 48000u
+
+static int16_t audio_anello[AUDIO_ANELLO_FOTOGRAMMI * AUDIO_CANALI];
+static _Atomic uint32_t audio_testa; /* lo muove SOLO il thread di PipeWire */
+static _Atomic uint32_t audio_coda;  /* lo muove SOLO il ciclo del figlio */
+static _Atomic uint64_t audio_traboccati; /* fotogrammi buttati dal produttore */
+
+/* ⛔ L'orologio dell'audio e' il CONTO DEI CAMPIONI, non `CLOCK_MONOTONIC`.
+ *
+ *    `RCP.md` §6.3 vuole «l'istante del PRIMO campione del blocco», e il primo
+ *    campione ha un istante suo che dipende dalla scheda, non dal momento in
+ *    cui il nostro ciclo si e' svegliato.  ⚠ Usare l'ora di parete al momento
+ *    dell'invio metterebbe nel campo **quando l'abbiamo spedito**, che e' un
+ *    numero piu' alto e ballerino: il client lo userebbe per riordinare e
+ *    riordinerebbe sul nostro jitter invece che sul suono.
+ *
+ * ⇒ `audio_base_us` e' l'ora vera del primo campione catturato; da li' in poi
+ *   il tempo lo conta la frequenza.  ⛔ E quando l'anello trabocca la base si
+ *   SPOSTA dei campioni persi, o l'orologio racconterebbe un suono continuo
+ *   dove c'e' stato un buco. */
+static uint64_t audio_base_us;
+static uint64_t audio_consumati; /* fotogrammi gia' usciti, dalla base */
+
+static void audio_anello_azzera(void)
+{
+	atomic_store(&audio_testa, 0);
+	atomic_store(&audio_coda, 0);
+	atomic_store(&audio_traboccati, 0);
+	audio_base_us = 0;
+	audio_consumati = 0;
+}
+
+/*
+ * Il richiamo dei campioni.  ⛔ GIRA IN TEMPO REALE: si copia e si torna.
+ *
+ * ⚠ Nessuna riga di registro qui dentro, ed e' voluto: `registro_dice()` scrive
+ *   su un descrittore, e una scrittura che si blocca dentro questo richiamo
+ *   costa i fotogrammi del desktop.  Il traboccamento si CONTA qui e si SCRIVE
+ *   di la', dal ciclo.
+ */
+static void audio_campioni(const int16_t *campioni, uint32_t fotogrammi, void *ctx)
+{
+	uint32_t testa, coda, liberi;
+	(void)ctx;
+
+	if (!fotogrammi || !campioni)
+		return;
+
+	testa = atomic_load_explicit(&audio_testa, memory_order_relaxed);
+	coda = atomic_load_explicit(&audio_coda, memory_order_acquire);
+
+	/* ⛔ Un posto resta sempre vuoto: e' l'unico modo di distinguere «pieno»
+	 *    da «vuoto» con due soli indici. */
+	liberi = (coda + AUDIO_ANELLO_FOTOGRAMMI - testa - 1u) % AUDIO_ANELLO_FOTOGRAMMI;
+	if (fotogrammi > liberi) {
+		/* Si tiene la CODA del blocco, cioe' il suono piu' recente. */
+		uint32_t buttati = fotogrammi - liberi;
+		atomic_fetch_add_explicit(&audio_traboccati, buttati, memory_order_relaxed);
+		campioni += (size_t)buttati * AUDIO_CANALI;
+		fotogrammi = liberi;
+		if (!fotogrammi)
+			return;
+	}
+
+	for (uint32_t i = 0; i < fotogrammi; i++) {
+		uint32_t p = (testa + i) % AUDIO_ANELLO_FOTOGRAMMI;
+		audio_anello[p * AUDIO_CANALI] = campioni[i * AUDIO_CANALI];
+		audio_anello[p * AUDIO_CANALI + 1] = campioni[i * AUDIO_CANALI + 1];
+	}
+	atomic_store_explicit(&audio_testa,
+	                      (testa + fotogrammi) % AUDIO_ANELLO_FOTOGRAMMI,
+	                      memory_order_release);
+}
+
+/* Quanti fotogrammi sono pronti da consumare. */
+static uint32_t audio_pronti(void)
+{
+	uint32_t testa = atomic_load_explicit(&audio_testa, memory_order_acquire);
+	uint32_t coda = atomic_load_explicit(&audio_coda, memory_order_relaxed);
+	return (testa + AUDIO_ANELLO_FOTOGRAMMI - coda) % AUDIO_ANELLO_FOTOGRAMMI;
+}
+
+/* ═══ FASE 7 — lo stato dell'audio nel figlio ═══════════════════════════════
+ *
+ * ⛔ `son` e `acod` hanno DUE VITE DIVERSE, ed e' la stessa divisione del palco
+ *    (invariante I4):
+ *
+ *      `son`   il SINK, e' della **sessione**: nasce col primo ascoltatore e
+ *              non muore piu' finche' vive il figlio.  ⚠ Farlo sparire a ogni
+ *              distacco interromperebbe il suono a chi ascolta **dentro** la
+ *              sessione e lascerebbe le applicazioni gia' aperte su un
+ *              dispositivo morto (`v1/remotix-c/src/suono.h`);
+ *      `acod`  il CODIFICATORE, e' della **connessione**: dipende dal codec
+ *              che quella connessione ha negoziato (§4.3), e si rifa' quando
+ *              il codec cambia. */
+static suono *son;
+static audio_cod *acod;
+/* Quale codec audio il padre ha chiesto: 0 = nessuno sta ascoltando. */
+static uint8_t audio_codec;
+static uint64_t audio_blocchi_spediti, audio_blocchi_persi;
+static uint64_t audio_detto_us;
+
+/*
+ * Accende, cambia o spegne l'audio.  `codec` 0 = spegni (§6.3: 1 Opus, 2 PCM).
+ *
+ * ⛔ SPEGNERE FERMA LA CATTURA, NON IL SINK — invariante I4.  Il dispositivo su
+ *    cui le applicazioni suonano appartiene alla sessione; il consumo del
+ *    monitor appartiene a chi ascolta.
+ */
+static void audio_regola_figlio(uint8_t codec)
+{
+	if (codec == audio_codec)
+		return;
+
+	/* Si ferma sempre prima: `suono_ascolto_ferma()` ASPETTA il thread di
+	 * PipeWire, e chi torna di li' e' autorizzato a toccare quel che il
+	 * richiamo usava — l'anello compreso. */
+	if (audio_codec) {
+		suono_ascolto_ferma(son);
+		audio_cod_chiudi(acod);
+		acod = NULL;
+		registro_dice(REG_FIGLIO,
+		              "l'audio si SPEGNE: %llu blocchi spediti, %llu persi, "
+		              "%llu fotogrammi traboccati.  ⭐ Il sink resta (I4)",
+		              (unsigned long long)audio_blocchi_spediti,
+		              (unsigned long long)audio_blocchi_persi,
+		              (unsigned long long)atomic_load(&audio_traboccati));
+	}
+	audio_codec = 0;
+
+	if (!codec)
+		return;
+
+	/* ⛔ Il sink si monta UNA VOLTA SOLA per la vita del figlio. */
+	if (!son) {
+		son = suono_apri();
+		if (!son) {
+			/* ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): il desktop continua a
+			 *   funzionare senza audio, e questa riga e' la sola differenza
+			 *   fra «degradato» e «rotto in silenzio».  Il registro del
+			 *   perche' l'ha gia' scritto `suono_apri()`. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ il sink dell'audio non si monta: questa sessione "
+			              "resta SENZA SUONO.  ⚠ Il desktop continua — e' un "
+			              "ripiego dichiarato, non un guasto taciuto");
+			return;
+		}
+	}
+	/* ⛔ Invariante I5: chi si collega trova il volume AL MASSIMO.  Si rifa' a
+	 *    ogni collegamento e non solo alla creazione, perche' un cursore
+	 *    lasciato in basso e' uno stato che il client non puo' vedere ne'
+	 *    spiegare. */
+	suono_volume_massimo(son);
+
+	acod = audio_cod_apri(codec);
+	if (!acod) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ il codificatore audio per il codec %u non si apre: "
+		              "questa sessione resta senza suono", codec);
+		return;
+	}
+
+	audio_anello_azzera();
+	if (!suono_ascolto_avvia(son, audio_campioni, NULL)) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ la cattura del monitor non parte: senza suono");
+		audio_cod_chiudi(acod);
+		acod = NULL;
+		return;
+	}
+	/* ⛔⛔ E SI VERIFICA DI AVERE LA PRIORITA' DI TEMPO REALE, invece di
+	 *      sperarci — invariante I7: «la protezione di un difetto noto sta nel
+	 *      programma, non in una riga di configurazione che si puo' perdere».
+	 *
+	 *      ⚠ Qui la riga di configurazione serve per forza (un rlimit lo
+	 *      concede l'unita', non il codice), ⇒ quel che il programma puo' fare
+	 *      e' **accorgersi che manca e dirlo**.
+	 *
+	 * ⛔ E' R26 di v1, `[M]` 5 agosto 2026 e ritrovata il 17: con
+	 *    `RLIMIT_RTPRIO` a zero PipeWire non puo' chiedere `SCHED_FIFO`, e il
+	 *    suo anello dei dati raccoglie i campioni a priorita' normale **mentre
+	 *    in questo stesso processo il codificatore video si prende un core**.
+	 *    Il sintomo non e' un errore: e' audio che scoppietta **quando il
+	 *    desktop lavora**, e che a desktop fermo non si riproduce — cioe'
+	 *    invisibile a ogni banco che guardi i byte invece del tempo. */
+	{
+		struct rlimit rl;
+		if (getrlimit(RLIMIT_RTPRIO, &rl) == 0 && rl.rlim_cur == 0)
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ RLIMIT_RTPRIO = 0: PipeWire NON potra' chiedere "
+			              "la priorita' di tempo reale, e l'audio scoppiettera' "
+			              "QUANDO IL DESKTOP LAVORA.  ⚠ Non e' un difetto del "
+			              "codice: manca `LimitRTPRIO=20` nell'unita' di "
+			              "sistema (R26 di v1).  ⭐ Con la priorita', quel che "
+			              "il client sente e quel che consegniamo coincidono "
+			              "campione per campione");
+		else if (getrlimit(RLIMIT_RTPRIO, &rl) == 0)
+			registro_dice(REG_FIGLIO,
+			              "⭐ priorita' di tempo reale concessa dall'unita': "
+			              "RLIMIT_RTPRIO = %lu (R26)",
+			              (unsigned long)rl.rlim_cur);
+	}
+
+	audio_codec = codec;
+	audio_blocchi_spediti = audio_blocchi_persi = 0;
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 7: l'audio si ACCENDE — codec %u (%s), blocchi da %u "
+	              "fotogrammi, sink nodo %u",
+	              codec, codec == 1 ? "Opus" : "PCM", audio_cod_blocco(acod),
+	              suono_nodo(son));
+}
+
+/*
+ * Svuota l'anello, un blocco per volta, e spedisce al padre.
+ *
+ * ⛔ Si chiama a ogni giro del ciclo, PRIMA della parte video: la parte video
+ *    esce con `continue` quando nessuno guarda, e l'audio ci finirebbe dentro
+ *    per caso — cioe' una sessione con l'audio acceso e il video spento non
+ *    suonerebbe, e nessuna riga direbbe perche'.
+ */
+static void audio_svuota(void)
+{
+	uint32_t blocco;
+	int16_t campioni[AUDIO_BLOCCO_OPUS * AUDIO_CANALI];
+	uint8_t fuori[AUDIO_FUORI_MAX];
+	uint64_t traboccati;
+
+	if (!audio_codec || !acod)
+		return;
+	blocco = audio_cod_blocco(acod);
+
+	/* ⛔ Il traboccamento si legge QUI e non nel richiamo: la' non si puo'
+	 *    scrivere nel registro senza rischiare i fotogrammi del desktop. */
+	traboccati = atomic_exchange(&audio_traboccati, 0);
+	if (traboccati) {
+		/* ⭐ E la base dell'orologio si SPOSTA dei campioni persi, o gli
+		 *    `istante` racconterebbero un suono continuo dove c'e' stato un
+		 *    buco — e il client riordinerebbe su una bugia (§6.3). */
+		audio_base_us += traboccati * 1000000u / AUDIO_FREQUENZA;
+		registro_dice(REG_FIGLIO,
+		              "⚠ l'anello dell'audio ha traboccato di %llu fotogrammi "
+		              "(%llu ms): il ciclo non lo svuota abbastanza in fretta.  "
+		              "⛔ Non e' la rete: e' qui",
+		              (unsigned long long)traboccati,
+		              (unsigned long long)(traboccati * 1000u / AUDIO_FREQUENZA));
+	}
+
+	while (audio_pronti() >= blocco) {
+		uint32_t coda = atomic_load_explicit(&audio_coda, memory_order_relaxed);
+		size_t n = 0;
+		uint64_t istante;
+
+		for (uint32_t i = 0; i < blocco; i++) {
+			uint32_t p = (coda + i) % AUDIO_ANELLO_FOTOGRAMMI;
+			campioni[i * AUDIO_CANALI] = audio_anello[p * AUDIO_CANALI];
+			campioni[i * AUDIO_CANALI + 1] = audio_anello[p * AUDIO_CANALI + 1];
+		}
+		atomic_store_explicit(&audio_coda,
+		                      (coda + blocco) % AUDIO_ANELLO_FOTOGRAMMI,
+		                      memory_order_release);
+
+		if (!audio_base_us)
+			audio_base_us = ora_monotona_us();
+		istante = audio_base_us + audio_consumati * 1000000u / AUDIO_FREQUENZA;
+		audio_consumati += blocco;
+
+		if (audio_cod_passa(acod, campioni, fuori, &n)) {
+			struct corpo_blocco c;
+			memset(&c, 0, sizeof c);
+			c.codec = audio_codec;
+			c.byte = (uint32_t)n;
+			c.istante_us = istante;
+			/* ⛔ Se non parte SI BUTTA e si conta: §6.3 vieta la
+			 *    ritrasmissione, e un figlio che aspettasse di poter scrivere
+			 *    fermerebbe la cattura del desktop. */
+			if (!manda(MSG_BLOCCO, &c, sizeof c, fuori, n))
+				audio_blocchi_persi++;
+			else
+				audio_blocchi_spediti++;
+		}
+	}
+
+	/* Una riga al secondo, con dentro gli ZERO: «il ciclo non gira», «la
+	 * sessione non suona» e «i blocchi non partono» devono avere tre facce
+	 * diverse (`CODER.md` §3.10). */
+	{
+		uint64_t adesso = ora_monotona_us();
+		if (adesso - audio_detto_us >= 1000000u) {
+			audio_detto_us = adesso;
+			registro_dettaglio(REG_FIGLIO,
+			                   "audio: %llu blocchi spediti, %llu persi, "
+			                   "%llu fotogrammi in attesa nell'anello — codec %u",
+			                   (unsigned long long)audio_blocchi_spediti,
+			                   (unsigned long long)audio_blocchi_persi,
+			                   (unsigned long long)audio_pronti(), audio_codec);
+		}
+	}
+}
+
 
 static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
                            size_t byte)
@@ -3767,6 +4252,17 @@ void figlio_vive(int argc, char **argv)
 					if (attesa_ms > 1000)
 						attesa_ms = 1000;
 				}
+				/* ⛔⭐ E CON L'AUDIO ACCESO IL CICLO NON PUO' DORMIRE UN
+				 *     SECONDO.  L'anello si riempie a 48 000 fotogrammi al
+				 *     secondo qualunque cosa faccia il video: un'attesa da
+				 *     1000 ms lo farebbe traboccare **mentre il desktop e'
+				 *     fermo**, cioe' proprio quando l'utente sta ascoltando
+				 *     musica senza toccare niente.
+				 * ⚠ 5 ms e' un blocco di PCM (§5.3): il ciclo si sveglia in
+				 *   tempo per portarne via uno per volta, invece di
+				 *   accumularne e poi buttarli. */
+				if (audio_codec && attesa_ms > 5)
+					attesa_ms = 5;
 				pronto = poll(due, (nfds_t)quanti, attesa_ms);
 			}
 			pf.revents = due[0].revents;
@@ -3895,6 +4391,34 @@ void figlio_vive(int argc, char **argv)
 				 *    l'ha chiesta. */
 				if (cv.chiave && cv.codec)
 					debito_chiave[cv.codec] = true;
+				continue;
+			}
+			if (t.tipo == MSG_AUDIO) {
+				struct corpo_audio ca;
+
+				if ((size_t)letti < sizeof t + sizeof ca)
+					continue;
+				memcpy(&ca, busta + sizeof t, sizeof ca);
+				if (ca.codec > 2) {
+					registro_dice(REG_FIGLIO,
+					              "⛔ il padre chiede il codec audio %u, che "
+					              "§6.3 non definisce: NON cambio niente",
+					              ca.codec);
+					continue;
+				}
+				/* ⛔ Il codec INVARIATO non e' un messaggio inutile: e'
+				 *    qualcuno che si e' appena collegato, e l'invariante I5
+				 *    gli deve il volume al massimo.  ⚠ Rimettere in piedi
+				 *    cattura e codificatore invece no: quello
+				 *    interromperebbe il suono a chi sta gia' ascoltando. */
+				if (ca.codec && ca.codec == audio_codec) {
+					suono_volume_massimo(son);
+					registro_dettaglio(REG_FIGLIO,
+					                   "si collega qualcun altro: volume al "
+					                   "massimo (I5), cattura invariata");
+					continue;
+				}
+				audio_regola_figlio(ca.codec);
 				continue;
 			}
 			if (t.tipo == MSG_DISPOSIZIONE) {
@@ -4567,6 +5091,15 @@ void figlio_vive(int argc, char **argv)
 			}
 		}
 
+		/* ── 1-bis. l'audio ──────────────────────────────────────────── */
+		/* ⛔ PRIMA del `continue` della parte video, e non e' un dettaglio di
+		 *    ordine: quel `continue` scatta ogni volta che nessuno guarda, e
+		 *    l'audio ci finirebbe dentro per caso.  ⇒ Una sessione con l'audio
+		 *    acceso e il video spento **non suonerebbe**, e nessuna riga direbbe
+		 *    perche'.  ⚠ Il caso non e' teorico: e' quel che succede a chi
+		 *    ascolta musica con la scheda del browser in secondo piano. */
+		audio_svuota();
+
 		/* ── 2. il fotogramma ────────────────────────────────────────── */
 		if (!codec_chiesto || !cat)
 			continue;
@@ -4924,6 +5457,17 @@ void figlio_vive(int argc, char **argv)
 	 *   rimontaggio: due strade per smontare il palco vorrebbero dire che una
 	 *   delle due, un giorno, dimentichera' un pezzo. */
 	smonta_il_palco(&mut, &cat);
+	/* ⛔ E l'audio si spegne PRIMA di uscire, nell'ordine giusto:
+	 *    `audio_regola_figlio(0)` ferma la cattura e ASPETTA il thread di
+	 *    PipeWire.  ⚠ Uscire con quel thread ancora vivo vorrebbe dire lasciarlo
+	 *    scrivere nell'anello di un processo che sta morendo — e il difetto si
+	 *    presenterebbe una volta ogni tanto, all'uscita, che e' il posto in cui
+	 *    nessuno guarda. */
+	audio_regola_figlio(0);
+	if (son) {
+		suono_chiudi(son);
+		son = NULL;
+	}
 	registro_dice(REG_FIGLIO, "il figlio di «%s» ha smontato il palco ed esce",
 	              utente);
 	_exit(0);

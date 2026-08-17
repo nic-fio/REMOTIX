@@ -4,7 +4,51 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **17 agosto 2026, mattina**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **17 agosto 2026, sera**
+>
+> ## ⭐⭐ L'AUDIO SI SENTE. Il giudizio dell'utente: **«problema audio risolto»**
+>
+> *Dato su un **video di YouTube** riprodotto nella sessione remota — non su un tono di banco.*
+>
+> | | |
+> |---|---|
+> | **la misura** | **49,95 blocchi/s ricevuti contro 50 prodotti** — perdita **zero**, **2 buchi** (dell'avvio), coda stabile a 311-341 ms |
+> | **che cosa è stato costruito** | il verso d'uscita dei **datagram** (non esisteva), il codificatore **Opus/PCM** senza dipendenze nuove, il **sink PipeWire** e la cattura del monitor, la cucitura padre↔figlio, e il ricevente nella pagina |
+> | ⭐ **e il volume GOVERNA** | `[M]` pieno 0,3536 · 25 % 0,0078 · muto 0,0 ⇒ chiusa la segnalazione dell'utente dell'8 agosto, *«se abbasso il volume l'audio resta sempre alto»* |
+> | ⏳ **e gli appunti NON sono cominciati** | è l'altra metà della fase, e si fa in una **sessione nuova** (deciso dall'utente) |
+>
+> 📖 **Il documento è `fasi/07-audio-e-appunti.md`**, e il suo riquadro di testa dice lo stato
+> della macchina, le porte occupate e le trappole degli appunti: da lì si riparte senza archeologia.
+>
+> ## ⛔⛔ E LA COSA CHE VALE PIÙ DEL RISULTATO — sette «fa schifo» prima del «risolto»
+>
+> Il banco `07-b43` era **verde su cinque giri su cinque** — 440 Hz esatti, ampiezza esatta, i due
+> difetti innestati visti tutti e due — **e l'utente sentiva «jitter pazzesco»**. ⇒ **I8 non è una
+> formalità**: cinque verdi non sostituiscono un orecchio.
+>
+> ⛔ **Sei cure su otto erano difetti VERI che non erano quello che l'utente sentiva** (§6.8 del
+> documento di fase): la coalescenza col video (i cui fotogrammi erano da **70-1300 byte**), la
+> priorità di tempo reale, il riempimento GSO, il pacchetto che buttavo con dentro i **riscontri**.
+> Ognuna sembrava confermata dal ragionamento e nessuna dalla misura.
+>
+> ⭐⭐ **La causa era in una riga**: si spediva **un solo datagram per passata di scrittura**, e le
+> passate sono ~25 al secondo contro **50** blocchi prodotti. Uno passava, uno moriva. ⚠ E la
+> **forma** del numero era l'indizio: *esattamente* la metà — una perdita di rete non è mai
+> esattamente la metà, un'aritmetica sì.
+>
+> ## ⭐⭐⭐ LA LEZIONE, e non è sull'audio: `LEZIONI.md` §2.6
+>
+> Avevo i numeri di **tre anelli su quattro** — il figlio, il server, la sessione. ⛔ **Del lato che
+> ASCOLTA non si sapeva niente.** Il giorno in cui quei contatori sono esistiti la diagnosi è durata
+> **un passaggio**, e il conto ha chiuso al decimale assolvendo tre imputati in un colpo.
+>
+> ⚠ **E tre passi su quattro li ha fatti l'utente**: l'intuizione sul datagram troppo piccolo, la
+> cartella di v1 dove **R26** aspettava scritta dal 5 agosto, e il video con la sessione monitorata
+> byte per byte — il giro che ha prodotto il numero.
+>
+> ---
+>
+> # ⭐⭐⭐⭐ E IL PUNTO DI RIPRESA DEL MATTINO, che vale ancora — **17 agosto 2026**
 >
 > ## ⛔⛔ La decisione di ieri sera cambia che cosa È il prodotto: **il dynamic resolution è uscito**
 >

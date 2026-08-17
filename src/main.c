@@ -355,6 +355,36 @@ static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
 	figli_video(p->f, utente, codec, chiave);
 }
 
+/* ⭐⭐ LA CUCITURA DELL'AUDIO — fase 7, ed e' la terza della stessa famiglia.
+ *
+ *     Chi sa che una sessione ha negoziato un codec audio: `rcp.c` (§4.3).
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     ⛔ Chi ha PipeWire: il FIGLIO, che gira come l'utente — un altro processo.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ */
+static void audio_chiedi(void *ctx, const char *utente, uint8_t codec)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return;
+	figli_audio(p->f, utente, codec);
+}
+
+/* Il verso di ritorno: un blocco gia' codificato, dalla sessione al filo.
+ *
+ * ⛔ E qui NON si controlla niente e non si sceglie niente: la guardia I3 — che
+ *    l'utente che ha PRODOTTO il suono sia quello che PAM ha ammesso su quella
+ *    sessione — sta dentro `wt_audio_diffondi`, accanto a quella dei pixel.
+ *    ⚠ Rifarla qui vorrebbe dire due posti che dicono la stessa cosa, e un
+ *    giorno uno dei due la direbbe diversa. */
+static void audio_blocco(void *ctx, const char *utente, uid_t uid, uint8_t codec,
+                         uint64_t istante_us, const uint8_t *dati, size_t byte)
+{
+	(void)ctx;
+	(void)uid;
+	wt_audio_diffondi(utente, codec, istante_us, dati, byte);
+}
+
 /* ⭐⭐ LA CUCITURA DELL'INPUT — fase 4, ed e' la gemella di quella qui sopra.
  *
  *     Chi sa che l'utente ha premuto: `rcp.c`, che ha convalidato il messaggio
@@ -402,6 +432,9 @@ static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
  *   l'input e basta, che e' anche la regola piu' semplice da spiegare. */
 #define ABBANDONO_PREDEFINITO_MS 3600000u /* 60 minuti */
 static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
+/* ⛔ Il tono di prova della fase 7: `0` = spento, ed e' il valore di ogni
+ *    installazione normale (invariante I6). */
+static uint32_t audio_prova_hz;
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
@@ -839,6 +872,16 @@ int main(int argc, char **argv)
 		 *     ⚠ `0` = spento, e allora nessuna sessione viene mai chiusa da se'. */
 		else if (strcmp(a, "--abbandono-s") == 0 && v)
 			abbandono_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
+		/* ⛔⭐ FUNZIONE DI BANCO — fase 7: un tono di prova al posto dell'audio
+		 *     della sessione.  ⚠ Serve a mettere in prova il codificatore, il
+		 *     datagram e il browser con un segnale noto **campione per
+		 *     campione**, invece di accendere cinque anelli e restare con
+		 *     cinque imputati.
+		 *
+		 * ⛔ Spento se nessuno lo accende — invariante I6 — e quando e' acceso
+		 *    il server lo SCRIVE nel registro a ogni sessione. */
+		else if (strcmp(a, "--audio-prova") == 0 && v)
+			audio_prova_hz = (uint32_t)strtoul(argv[++i], NULL, 10);
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -925,6 +968,13 @@ int main(int argc, char **argv)
 	              rcp_inattivita() ? "" : " (SPENTA)",
 	              (unsigned long long)(abbandono_ms / 1000),
 	              abbandono_ms ? "" : " (SPENTO)");
+
+	/* ⛔ E il tono di prova si dichiara QUI, prima di ogni sessione: un server
+	 *    che suonasse un tono senza dirlo sarebbe un difetto travestito da
+	 *    funzione.  ⚠ `wt_audio_prova()` scrive la sua riga solo quando e'
+	 *    acceso, ed e' voluto: un registro che ripete «spento» a ogni avvio
+	 *    non si legge piu'. */
+	wt_audio_prova(audio_prova_hz);
 
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di
@@ -1044,6 +1094,7 @@ int main(int argc, char **argv)
 	 *    sessione senza la richiesta della sua chiave, cioe' con lo schermo
 	 *    fermo e nessuna riga che dica perche'. */
 	wt_video_gancio(video_chiedi, &ponte);
+	wt_audio_gancio(audio_chiedi, &ponte);
 	/* ⭐ E con lui quello dell'input, per la stessa ragione e nello stesso
 	 *    istante: collegarlo dopo lascerebbe la prima sessione con un desktop
 	 *    che si vede e non si comanda, e nessuna riga che dica perche'. */
@@ -1079,6 +1130,10 @@ int main(int argc, char **argv)
 	/* ⭐ E il gemello: il fatto che arriva dal desktop invece che dal filo. */
 	figli_gancio_sessione_finita(prole, sessione_finita_dal_figlio, &ponte);
 	figli_gancio_tela_attendi(prole, tela_attendi_dal_figlio, &ponte);
+	/* ⭐ FASE 7: i blocchi d'audio salgono di qui.  ⚠ DOPO `figli_accendi`,
+	 *    come tutti gli altri ganci: prima non c'e' una tabella a cui
+	 *    agganciarli. */
+	figli_gancio_blocco(prole, audio_blocco, NULL);
 
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
@@ -1133,6 +1188,16 @@ int main(int argc, char **argv)
 		attesa = trasporto_attesa_ms(t);
 		if (attesa < 0 || attesa > 1000)
 			attesa = 1000;
+		/* ⛔ Col tono di prova acceso il ciclo si sveglia ogni 10 ms, perche' i
+		 *    blocchi li genera `wt_batti()` e con un'attesa da un secondo ne
+		 *    uscirebbero cinquanta in un colpo — cioe' una raffica che la coda
+		 *    dei datagram butterebbe, e il registro direbbe «buttati» per un
+		 *    difetto fabbricato dal banco.
+		 * ⚠ NON serve all'audio vero: quello lo ritma PipeWire, che nel `poll`
+		 *   ci sta con un descrittore suo.  ⇒ Questa riga muore con la
+		 *   sorgente di prova, e non e' un debito nascosto. */
+		if (audio_prova_hz && attesa > 10)
+			attesa = 10;
 
 		if (poll(fds, n + npagina + ncomando + naiuto + nfigli, attesa) < 0) {
 			if (errno == EINTR)

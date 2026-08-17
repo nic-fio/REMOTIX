@@ -1,0 +1,264 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07-b40 · la sonda dell'audio</title>
+<!--
+  07-b40 — LA SONDA DELL'AUDIO, la prima domanda della fase 7.
+
+  ⛔ Risponde a A1 di `fasi/07-audio-e-appunti.md` §3: il browser decodifica
+     Opus?  E la risposta NON e' `isConfigSupported`, che e' una dichiarazione:
+     si codifica un tono a 440 Hz, si danno al decodificatore i PACCHETTI NUDI
+     — nessun contenitore, come impone `RCP.md` §6.3, «un datagram, un blocco
+     di Opus» — e si guarda che cosa esce.
+
+  ⭐ E porta con se' il proprio controllo positivo, che e' la meta' che conta:
+     `LEZIONI.md` §2.2 — «il banco contava i blocchi mentre l'audio era rumore
+     a fondo scala, e restava verde».  Qui il giudice deve dare ROSSO su cinque
+     guasti innestati apposta, o il suo verde non vale niente.
+-->
+<body style="font:14px monospace;padding:1rem">
+<pre id="esito">misuro…</pre>
+<script>
+const FREQ = 48000, CANALI = 2, BLOCCO = 960 /* 20 ms, RCP.md §5.3 */,
+      BLOCCHI = 50, TONO = 440, AMPIEZZA = 0.5;
+
+/* ------------------------------------------------------------------ */
+/* IL GIUDICE — misura il SEGNALE, non il traffico                     */
+/*                                                                     */
+/* `hz`       la frequenza dominante:  un server a 44 100 Hz la sposta */
+/* `rms`      l'ampiezza:  un guadagno sbagliato la sposta             */
+/* `purezza`  quanta parte dell'energia sta nella riga:  distingue un  */
+/*            tono da RUMORE, che e' il difetto di v1 che nessun conta-*/
+/*            blocchi vedeva                                           */
+/* ⛔ E «niente da giudicare» e' un esito SUO, non uno zero: CODER.md  */
+/*    §3.10 — una lettura negata non e' una lettura che dice zero.     */
+/* ------------------------------------------------------------------ */
+function giudica(s) {
+  const m = s.length;
+  if (m === 0) return {esito: "NIENTE DA GIUDICARE", campioni: 0};
+  let rms = 0;
+  for (let i = 0; i < m; i++) rms += s[i] * s[i];
+  rms = Math.sqrt(rms / m);
+  let picco = 0, hz = 0, somma = 0;
+  for (let f = 100; f <= 2000; f++) {           /* Goertzel, passo 1 Hz */
+    const w = 2 * Math.cos(2 * Math.PI * f / FREQ);
+    let s1 = 0, s2 = 0;
+    for (let i = 0; i < m; i++) { const t = w * s1 - s2 + s[i]; s2 = s1; s1 = t; }
+    const p = Math.max(0, s1 * s1 + s2 * s2 - w * s1 * s2);
+    somma += p;
+    if (p > picco) { picco = p; hz = f; }
+  }
+  return {esito: "GIUDICATO", campioni: m, hz, rms: +rms.toFixed(4),
+          purezza: somma > 0 ? +(picco / somma).toFixed(4) : null};
+}
+
+/* il tono, interlacciato come lo manderebbe il server */
+function tono(i0, n) {
+  const d = new Float32Array(n * CANALI);
+  for (let i = 0; i < n; i++) {
+    const v = AMPIEZZA * Math.sin(2 * Math.PI * TONO * (i0 + i) / FREQ);
+    d[i * CANALI] = v; d[i * CANALI + 1] = v;
+  }
+  return d;
+}
+
+async function capacita() {
+  const c = {AudioDecoder: typeof AudioDecoder, AudioEncoder: typeof AudioEncoder,
+             AudioWorklet: typeof AudioWorklet, WebTransport: typeof WebTransport};
+  for (const [n, cfg] of [["opus_decodifica", {codec:"opus", sampleRate:FREQ, numberOfChannels:CANALI}],
+                          ["opus_codifica",   {codec:"opus", sampleRate:FREQ, numberOfChannels:CANALI, bitrate:96000}]]) {
+    const api = n.endsWith("decodifica") ? self.AudioDecoder : self.AudioEncoder;
+    try { c[n + "_dichiarata"] = api ? (await api.isConfigSupported(cfg)).supported : "API assente"; }
+    catch (e) { c[n + "_dichiarata"] = "errore: " + e; }
+  }
+  return c;
+}
+
+/* ⭐ IL GIRO VERO: codifica → pacchetti nudi → decodifica → giudizio */
+async function giroOpus() {
+  if (typeof AudioEncoder !== "function" || typeof AudioDecoder !== "function")
+    return {esito: "IMPOSSIBILE", perche: "WebCodecs audio non c'e' su questo motore"};
+  const pacchetti = []; let errEnc = null, errDec = null;
+  const enc = new AudioEncoder({
+    output: (c) => { const b = new Uint8Array(c.byteLength); c.copyTo(b);
+                     pacchetti.push({byte: b, ts: c.timestamp}); },
+    error: (e) => { errEnc = String(e); }
+  });
+  enc.configure({codec: "opus", sampleRate: FREQ, numberOfChannels: CANALI, bitrate: 96000});
+  for (let b = 0; b < BLOCCHI; b++)
+    enc.encode(new AudioData({format: "f32", sampleRate: FREQ, numberOfFrames: BLOCCO,
+      numberOfChannels: CANALI, timestamp: b * 20000, data: tono(b * BLOCCO, BLOCCO)}));
+  await enc.flush();
+  if (errEnc) return {esito: "CODIFICA FALLITA", perche: errEnc};
+
+  const uscita = [];
+  const dec = new AudioDecoder({
+    output: (a) => { const f = new Float32Array(a.numberOfFrames);
+                     a.copyTo(f, {planeIndex: 0, format: "f32-planar"});
+                     uscita.push(f); a.close(); },
+    error: (e) => { errDec = String(e); }
+  });
+  dec.configure({codec: "opus", sampleRate: FREQ, numberOfChannels: CANALI});
+  for (const p of pacchetti)
+    dec.decode(new EncodedAudioChunk({type: "key", timestamp: p.ts, data: p.byte}));
+  await dec.flush();
+  if (errDec) return {esito: "DECODIFICA FALLITA", perche: errDec,
+                      pacchetti: pacchetti.length};
+
+  let n = 0; for (const u of uscita) n += u.length;
+  const s = new Float32Array(n); let o = 0;
+  for (const u of uscita) { s.set(u, o); o += u.length; }
+  const salta = Math.min(4800, n >> 2);          /* 100 ms d'innesco, scartati */
+  const byte = pacchetti.map(p => p.byte.length);
+  return {esito: "FATTO", pacchetti: pacchetti.length,
+          byte_min: Math.min(...byte), byte_max: Math.max(...byte),
+          byte_totali: byte.reduce((a, b) => a + b, 0),
+          giudizio: giudica(s.subarray(salta)),
+          rms_atteso: +(AMPIEZZA / Math.SQRT2).toFixed(4)};
+}
+
+/* ⛔ IL CONTROLLO POSITIVO DEL GIUDICE — cinque guasti, e deve vederli tutti */
+function controlloPositivo() {
+  const N = 48000, c = {};
+  { const s = new Float32Array(N);
+    for (let i = 0; i < N; i++) s[i] = AMPIEZZA * Math.sin(2*Math.PI*TONO*i/FREQ);
+    c["0 sano 48000"] = giudica(s); }
+  { const s = new Float32Array(N);          /* campionato a 44100, dichiarato 48000 */
+    for (let i = 0; i < N; i++) s[i] = AMPIEZZA * Math.sin(2*Math.PI*TONO*i/44100);
+    c["1 44100 spacciati"] = giudica(s); }
+  { const b = new DataView(new ArrayBuffer(N*2));   /* PCM big-endian (RCP.md §5.3) */
+    for (let i = 0; i < N; i++)
+      b.setInt16(i*2, Math.round(AMPIEZZA*32767*Math.sin(2*Math.PI*TONO*i/FREQ)), false);
+    const s = new Float32Array(N);
+    for (let i = 0; i < N; i++) s[i] = b.getInt16(i*2, true) / 32768;
+    c["2 big-endian"] = giudica(s); }
+  { const p = new Float32Array(N);          /* canali NON interlacciati: L…L R…R */
+    for (let i = 0; i < N/2; i++) { const v = AMPIEZZA*Math.sin(2*Math.PI*TONO*i/FREQ);
+                                    p[i] = v; p[i + N/2] = v; }
+    const d = new Float32Array(N/2);        /* il client lo srotola come interlacciato */
+    for (let i = 0; i < N/2; i++) d[i] = p[i*2];
+    c["3 non interlacciati"] = giudica(d); }
+  c["4 silenzio"] = giudica(new Float32Array(N));
+  c["5 niente letto"] = giudica(new Float32Array(0));
+  return c;
+}
+
+/* ------------------------------------------------------------------ */
+/* A2 — QUANTI BYTE PORTA DAVVERO UN DATAGRAM                          */
+/*                                                                     */
+/* ⛔ `RCP.md` §5.3 la dichiara `[?]` PER NOME: il PCM e' dimensionato a */
+/*    5 ms = 960 byte di campioni + 12 d'intestazione = 972, su un      */
+/*    carico utile STIMATO `[S]` ~1200.  «Se il numero fosse piu' basso */
+/*    di 972, il PCM scende ancora» — e il PCM e' il controllo positivo */
+/*    di Opus, quindi questo numero non e' un dettaglio di rete.        */
+/*                                                                     */
+/* ⚠ Si chiede al SERVER VERO, non a un server di comodo: e' lui che    */
+/*   dichiara i parametri di trasporto.  Nessuna credenziale, nessuna   */
+/*   sessione: si apre, si legge e si congeda.                          */
+/* ------------------------------------------------------------------ */
+async function datagramMisura() {
+  const q = new URLSearchParams(location.search);
+  const url = q.get("wt"), b64 = q.get("impronta");
+  if (!url || !b64) return {esito: "NON CHIESTA",
+                            come: "?wt=https://host:porta/rcp/1&impronta=<base64 SHA-256 del DER>"};
+  if (typeof WebTransport !== "function")
+    return {esito: "IMPOSSIBILE", perche: "WebTransport non c'e' su questo motore"};
+  const bin = atob(b64), val = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) val[i] = bin.charCodeAt(i);
+  try {
+    const wt = new WebTransport(url, {serverCertificateHashes: [{algorithm: "sha-256", value: val}]});
+    /* ⛔ `wt.ready` puo' NON tornare mai — ne' risolta ne' respinta.  Senza
+       tetto la sonda muore per scadenza del lanciatore, e l'esito diventa
+       «nessun portatore»: cioe' il motivo sbagliato scritto al posto di
+       quello vero (`CODER.md` §3.10). */
+    const TETTO_MS = 10000;
+    const scaduta = Symbol("scaduta");
+    const esito = await Promise.race([
+      wt.ready.then(() => "pronta"),
+      new Promise(r => setTimeout(() => r(scaduta), TETTO_MS))
+    ]);
+    if (esito === scaduta) {
+      try { wt.close(); } catch (e) {}
+      return {esito: "SCADUTA", url, tetto_ms: TETTO_MS,
+              perche: "`wt.ready` non e' tornata: ne' aperta ne' rifiutata"};
+    }
+    const subito = wt.datagrams.maxDatagramSize;
+    await new Promise(r => setTimeout(r, 800));       /* dopo la prima misura del percorso */
+    const dopo = wt.datagrams.maxDatagramSize;
+    wt.close({closeCode: 1, reason: "sonda A2"});
+    const PCM_5MS = 12 + 480 * 2;                      /* RCP.md §5.3, intestazione compresa */
+    return {esito: "MISURATO", url, max_subito: subito, max_dopo_800ms: dopo,
+            pcm_5ms_serve: PCM_5MS, pcm_ci_sta: dopo >= PCM_5MS,
+            margine_byte: dopo - PCM_5MS};
+  } catch (e) { return {esito: "FALLITA", perche: String(e)}; }
+}
+
+/* ------------------------------------------------------------------ */
+/* ⭐⭐ L'ULTIMO ANELLO: i pacchetti DEL NOSTRO SERVER, decodificati qui.
+ *
+ * ⛔ Il giro di `giroOpus()` prova che questo motore sa decodificare Opus —
+ *    ma l'Opus che ha CODIFICATO LUI.  ⚠ Due implementazioni della stessa
+ *    specifica che vanno d'accordo con se stesse non confermano niente
+ *    (`PIANO.md` §0.4): il pacchetto che conta e' quello che esce da
+ *    `libopus` dentro il nostro server.
+ *
+ * ⇒ Qui si legge il JSONL che `01-b3-cliente.py --audio-scrivi` ha raccolto
+ *   dal filo, e si da' al decodificatore del browser.  ⭐ Nessuna credenziale
+ *   e nessuna sessione: i byte sono gia' stati presi.
+ * ------------------------------------------------------------------ */
+async function opusDalServer() {
+  const q = new URLSearchParams(location.search);
+  if (!q.get("pacchetti")) return {esito: "NON CHIESTA", come: "?pacchetti=1"};
+  if (typeof AudioDecoder !== "function")
+    return {esito: "IMPOSSIBILE", perche: "AudioDecoder non c'e'"};
+
+  let righe;
+  try {
+    const t = await (await fetch("/pacchetti.jsonl", {cache: "no-store"})).text();
+    righe = t.split("\n").filter(x => x.trim()).map(x => JSON.parse(x));
+  } catch (e) { return {esito: "FALLITA", perche: "non leggo i pacchetti: " + e}; }
+  if (!righe.length) return {esito: "NIENTE DA GIUDICARE", pacchetti: 0};
+
+  const codec = righe[0].codec;
+  if (codec !== 1)
+    return {esito: "NON OPUS", codec,
+            perche: "questo file porta codec " + codec + ", non 1"};
+
+  const uscita = [];
+  let err = null;
+  const dec = new AudioDecoder({
+    output: (a) => { const f = new Float32Array(a.numberOfFrames);
+                     a.copyTo(f, {planeIndex: 0, format: "f32-planar"});
+                     uscita.push(f); a.close(); },
+    error: (e) => { err = String(e); }
+  });
+  dec.configure({codec: "opus", sampleRate: FREQ, numberOfChannels: CANALI});
+  for (const r of righe) {
+    const bin = atob(r.byte), d = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) d[i] = bin.charCodeAt(i);
+    dec.decode(new EncodedAudioChunk({type: "key", timestamp: r.istante, data: d}));
+  }
+  await dec.flush();
+  if (err) return {esito: "DECODIFICA FALLITA", perche: err, pacchetti: righe.length};
+
+  let n = 0; for (const u of uscita) n += u.length;
+  const s = new Float32Array(n); let o = 0;
+  for (const u of uscita) { s.set(u, o); o += u.length; }
+  const salta = Math.min(4800, n >> 2);
+  const byte = righe.map(r => atob(r.byte).length);
+  return {esito: "FATTO", pacchetti: righe.length, campioni: n,
+          byte_min: Math.min(...byte), byte_max: Math.max(...byte),
+          giudizio: giudica(s.subarray(salta))};
+}
+
+(async () => {
+  const r = {motore: navigator.userAgent,
+             capacita: await capacita(),
+             opus_giro_vero: await giroOpus(),
+             opus_dal_server: await opusDalServer(),
+             datagram: await datagramMisura(),
+             giudice_controllo_positivo: controlloPositivo()};
+  document.getElementById("esito").textContent = JSON.stringify(r, null, 2);
+  /* il portatore: il banco lo raccoglie di la', invece di leggere uno scatto */
+  try { await fetch("/esito", {method: "POST", body: JSON.stringify(r)}); } catch (e) {}
+})();
+</script>

@@ -141,6 +141,45 @@ typedef void (*FiglioDeposito)(void *ctx, const char *utente, uid_t uid,
  * che lo ha riempito e' l'immagine di un utente che resta in casa. */
 typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
 
+/* ⭐⭐ FASE 7 — UN BLOCCO D'AUDIO GIA' CODIFICATO, dalla sessione al filo.
+ *
+ * ⛔ Arriva **codificato**, non crudo, e la ragione e' un numero: 20 ms di PCM
+ *    stereo sono 3840 byte, lo stesso blocco in Opus ne misura `[M]` 241-439.
+ *    Spedire crudo costerebbe dieci volte il socket, cinquanta volte al
+ *    secondo — su un percorso che `CODER.md` §1-bis dice di misurare in
+ *    ritardo, non in comodita' di chi scrive.
+ *
+ * `codec`      1 = Opus, 2 = PCM.  ⚠ Sono i numeri di `RCP.md` **§6.3**, e NON
+ *              quelli di §6.2: li' 1 e' HEVC.  La coincidenza dei valori e'
+ *              una trappola, e chi scambiasse le due tabelle otterrebbe un
+ *              datagram formalmente valido con dentro il codec sbagliato.
+ * `istante_us` l'orologio monotono del figlio, del PRIMO campione del blocco.
+ *              ⛔ Lo mette il figlio per la stessa ragione per cui mette
+ *              `input` nei fotogrammi: e' l'unico che sappia **quando** i
+ *              campioni sono stati presi.  Il padre saprebbe solo quando sono
+ *              arrivati, che e' un numero piu' alto e sempre in nostro favore.
+ * `dati`       vive SOLO dentro la chiamata: chi lo vuole tenere lo copia.
+ */
+typedef void (*FiglioBlocco)(void *ctx, const char *utente, uid_t uid,
+                             uint8_t codec, uint64_t istante_us,
+                             const uint8_t *dati, size_t byte);
+void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx);
+
+/*
+ * «Cattura l'audio di quest'utente, e codificalo cosi'» — oppure «smetti».
+ *
+ * `codec` 1 = Opus, 2 = PCM, **0 = spegni**.  ⛔ Lo zero non e' un sentinella
+ *         implicito: e' il valore che §4.3/§6.3 riservano a «nessun codec
+ *         negoziato», e qui vuol dire la stessa cosa — non ascolta nessuno.
+ *
+ * ⚠ Spegnere ferma la CATTURA, non il sink: il dispositivo su cui le
+ *   applicazioni suonano appartiene alla sessione (invariante I4, come il
+ *   palco), e farlo sparire a ogni distacco interromperebbe il suono a chi
+ *   sta ascoltando dentro la sessione e lascerebbe le applicazioni gia'
+ *   aperte su un dispositivo morto.
+ */
+bool figli_audio(figli *f, const char *utente, uint8_t codec);
+
 /* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE, e attraversa il confine nel verso opposto
  *     all'input: il metadato arriva da PipeWire (cioe' nel figlio) e il canale
  *     `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.

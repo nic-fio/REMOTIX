@@ -1,0 +1,11 @@
+{
+ "nome": "5-muto",
+ "descrizione": "stesso tono, ma il sink MUTO — la scena che ha aperto la misura di §kde §10.5",
+ "atteso_a_parole": "rms < 0,01 ⇒ VERDE; se arriva ancora segnale ⇒ ROSSO(VOLUME-NON-ARRIVA), e la cura si chiama «monitor.channel-volumes», in suono.c",
+ "hz": 440,
+ "finestra_s": 2,
+ "rms_base": 0.3536,
+ "rms_da_giro": "1-sano",
+ "scala_col_guadagno": true,
+ "rosso_atteso": null
+}

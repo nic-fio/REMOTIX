@@ -1,0 +1,11 @@
+{
+ "nome": "2-silenzio",
+ "descrizione": "la sessione NON suona niente: il sink esiste, il monitor consegna, nessuno ci scrive dentro",
+ "atteso_a_parole": "blocchi > 0 e rms < 0,01 ⇒ il banco DEVE dire ROSSO(SILENZIO), e distinguerlo da «non ho misurato»",
+ "hz": 440,
+ "finestra_s": 2,
+ "rms_base": 0.3536,
+ "rms_da_giro": null,
+ "scala_col_guadagno": true,
+ "rosso_atteso": "SILENZIO"
+}

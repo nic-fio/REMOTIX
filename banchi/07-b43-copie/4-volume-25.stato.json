@@ -1,0 +1,19 @@
+{
+ "sink_nome": "remotix",
+ "sink_id": 81,
+ "monitor_channel_volumes": true,
+ "channel_volumes": [
+  0.015625,
+  0.015625
+ ],
+ "mute": false,
+ "legami_in_ingresso": 2,
+ "nodi_audio_sink": [
+  "remotix"
+ ],
+ "scena_suona": true,
+ "tono_hz": 440,
+ "tono_vivo_alla_fine": true,
+ "cliente_uscita": 0,
+ "finestra_s": 2
+}

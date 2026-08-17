@@ -60,7 +60,7 @@ NOME    := remotix
 #    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
-            sessione.c cattura.c mutter.c codificatore.c \
+            sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
@@ -184,7 +184,11 @@ endif
 # ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
-        -lavcodec -lswscale -lavutil $(F2_LIBS) $(F3_LIBS) $(F4_LIBS)
+        -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS)
+# ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
+#   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
+#   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
+#   con un errore che non nomina la fase che l'ha introdotto.
 
 .PHONY: tutto pulisci dipendenze impronte
 
@@ -263,7 +267,7 @@ dipendenze:
 main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
                   registro.h tls.h trasporto.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
-webtransport.o:   webtransport.h aiutante.h rcp.h registro.h figlio.h
+webtransport.o:   webtransport.h aiutante.h rcp.h registro.h figlio.h audio.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
 comando.o:        comando.h rcp.h registro.h
 certificati.o:    certificati.h registro.h
@@ -284,7 +288,7 @@ aiutante.o:       aiutante.h registro.h
 #    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
 #    prodotto e basta, come `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
-                  input.h sentinella.h
+                  input.h sentinella.h audio.h suono.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
@@ -298,6 +302,21 @@ sentinella.o:     sentinella.h registro.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
 codificatore.o:   codificatore.h registro.h
+
+# ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del
+#   prodotto, e l'innesto in ngtcp2 non ha niente da far suonare.
+#   ⛔ Non aggiunge una dipendenza: Opus passa da `libavcodec`, che c'e' gia'
+#      per il video ed e' collegata a `libopus` `[M]` 17 ago 2026.
+audio.o:          audio.h registro.h
+
+# ⭐ IL SUONO DELLA SESSIONE — fase 7: il sink virtuale e la cattura del suo
+#   MONITOR.  ⛔ Nella sessione non c'e' niente da catturare e va CREATO: `[M]`
+#   5 agosto 2026, con pipewire/wireplumber tutti attivi `wpctl status` mostra
+#   zero device, zero sink, zero source — e' il caso normale di un server senza
+#   scheda sonora.  ⚠ Il riferimento (`gnome-remote-desktop`) apre la cattura
+#   sui sink che TROVA e un sink non lo crea mai: col suo codice, qui, non
+#   arriverebbe un campione — e senza un errore da nessuna parte.
+suono.o:          suono.h registro.h audio.h
 
 # ⭐⭐ I TRE DELLA FASE 4 — e le loro righe non sono una formalita'.
 #

@@ -1,0 +1,11 @@
+{
+ "nome": "3-frequenza",
+ "descrizione": "la sessione suona 660 Hz mentre il banco ne aspetta 440",
+ "atteso_a_parole": "660 Hz ⇒ il banco DEVE dire ROSSO(FREQUENZA)",
+ "hz": 440,
+ "finestra_s": 2,
+ "rms_base": 0.3536,
+ "rms_da_giro": null,
+ "scala_col_guadagno": true,
+ "rosso_atteso": "FREQUENZA"
+}

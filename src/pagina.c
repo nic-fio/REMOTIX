@@ -277,6 +277,48 @@ static void servi(pagina *p, cliente *c)
 		return;
 	}
 
+	/* ⛔⭐ IL DIARIO DELLA PAGINA — dove i numeri del CLIENT diventano leggibili.
+	 *
+	 *      `[M]` 17 agosto 2026, e nasce da un difetto di metodo mio: per
+	 *      quattro cure di fila ho inseguito il jitter dell'audio avendo i
+	 *      numeri di **tre anelli su quattro** — il figlio dice quanti blocchi
+	 *      produce, il server quanti ne spedisce, e **della pagina non si
+	 *      sapeva niente**: quanti ne arrivano, quanti se ne suonano, quanti
+	 *      buchi fa la riproduzione.
+	 *
+	 * ⛔ E il riquadro di diagnostica della pagina non bastava: quando il
+	 *    desktop e' acceso la pagina e' a tutto schermo e quel riquadro **non
+	 *    e' raggiungibile**.  ⇒ Chiedere all'utente di leggerlo era chiedergli
+	 *    una cosa che non si puo' fare.
+	 *
+	 * ⚠ E' un endpoint di DIAGNOSI, non di protocollo: non apre una sessione,
+	 *   non tocca lo stato, e quel che scrive finisce nel registro come una
+	 *   riga qualunque.  ⛔ Il corpo si tronca e si ripulisce prima di
+	 *   scriverlo: arriva da fuori, quindi e' un ingresso, non un dato. */
+	if (strcmp(percorso, "/diario") == 0) {
+		char pulito[400];
+		size_t j = 0;
+		/* ⚠ Il testo arriva nella STRINGA DI RICERCA, non in un corpo: questo
+		 *   server le richieste non le legge oltre la riga iniziale, e una
+		 *   `GET` con la query e' quel che la pagina puo' mandare senza che
+		 *   nessuno aggiunga un lettore di corpi.  ⛔ `bersaglio` e' la riga
+		 *   intera com'e' arrivata: il `?` lo si salta a mano. */
+		const char *b = strchr(bersaglio, '?');
+		b = b ? b + 1 : "";
+		for (size_t i = 0; b[i] && j + 1 < sizeof pulito; i++) {
+			unsigned char x = (unsigned char)b[i];
+			/* Solo stampabili ASCII: una riga di registro non deve poter
+			 * portare un a-capo (spezzerebbe il registro in due) ne' byte di
+			 * controllo. */
+			pulito[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
+		}
+		pulito[j] = '\0';
+		registro_dice(REG_PAGINA, "📄 la pagina di %s dice: %s",
+		              c->provenienza, pulito);
+		componi(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
+		return;
+	}
+
 	if (strcmp(percorso, "/") != 0 && strcmp(percorso, "/index.html") != 0) {
 		componi(c, "404 Not Found", "text/plain; charset=utf-8",
 		        "non c'e'\n", 9, NULL);

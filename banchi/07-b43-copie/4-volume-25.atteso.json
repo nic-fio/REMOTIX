@@ -1,0 +1,11 @@
+{
+ "nome": "4-volume-25",
+ "descrizione": "stesso tono, ma il cursore del volume del sink al 25 % — §kde §10.5",
+ "atteso_a_parole": "rms = rms(1-sano) x channelVolumes letto dal grafo (~0,0055) ⇒ VERDE; se resta a 0.3536 ⇒ ROSSO(VOLUME-NON-ARRIVA)",
+ "hz": 440,
+ "finestra_s": 2,
+ "rms_base": 0.3536,
+ "rms_da_giro": "1-sano",
+ "scala_col_guadagno": true,
+ "rosso_atteso": null
+}

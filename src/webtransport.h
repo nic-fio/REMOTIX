@@ -316,6 +316,74 @@ void wt_palco_dimentica(const char *utente);
  *    divergono, e quella che sbaglia lascia il palco acceso per sempre. */
 bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec);
 
+/* ═══ L'AUDIO — fase 7, `RCP.md` §5.3 e §6.3 ═══════════════════════════════
+ *
+ * ⛔ L'audio vive SOLO sui datagram, e da questo discende tutto quel che segue:
+ *    un blocco che non parte NON si conserva.  §6.3 — «nessuna ritrasmissione,
+ *    nessun riordino» — e il verso d'uscita non fa eccezione al verso
+ *    d'ingresso.
+ */
+
+/*
+ * Consegna un blocco d'audio a tutte le sessioni di `utente`.
+ *
+ * `codec`      1 = Opus, 2 = PCM (§6.3).  ⚠ NON sono i numeri del video.
+ * `istante_us` l'orologio monotono del server, del PRIMO campione del blocco.
+ * `dati`       il blocco gia' codificato: un pacchetto Opus, o i campioni PCM
+ *              s16 **little-endian** interlacciati (§5.3, l'unica eccezione
+ *              dichiarata all'ordine di rete).
+ *
+ * ⛔ Chi chiama NON deve preoccuparsi di chi ascolta: la guardia di I3 — che
+ *    l'utente che ha PRODOTTO il suono sia quello che PAM ha ammesso su quella
+ *    sessione — sta qui dentro, come per i fotogrammi.
+ */
+void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
+                       const uint8_t *dati, size_t byte);
+
+/* C'e' qualcuno che sta ascoltando `utente`, e con quale codec?  ⛔ Serve a non
+ * far lavorare il codificatore per nessuno — la stessa domanda che
+ * `wt_video_qualcuno_guarda` fa per i pixel. */
+bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec);
+
+/*
+ * I quattro numeri che raccontano l'audio di una sessione.
+ *
+ * ⛔ `buttati` e `rifiutati` sono due fatti DIVERSI e non si sommano:
+ *    «buttati» = la coda era piena o il blocco era troppo grande, cioe' **noi**
+ *    non ce l'abbiamo fatta; «rifiutati» = ngtcp2 non l'ha messo nel pacchetto.
+ *    ⚠ Un solo contatore per due cause e' la forma d'errore che `LEZIONI.md`
+ *    §2.2 descrive: un numero che non dice mai dove guardare.
+ */
+void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
+                    uint64_t *rifiutati, size_t *in_coda);
+
+/*
+ * ⛔ FUNZIONE DI BANCO — accende un tono di prova a `hz` Hz su ogni sessione
+ *    ammessa.  `0` = spento, ed e' il valore di ogni installazione normale.
+ *
+ * ⭐ Serve a mettere in prova TRE anelli su cinque (codificatore · datagram ·
+ *    browser) con un segnale noto campione per campione, invece di accenderne
+ *    cinque e restare con cinque imputati.  ⚠ Non prova il RITMO: quello lo
+ *    dara' la cattura, che ha un orologio suo.
+ *
+ * ⚠ E' l'invariante I6, e quando e' acceso lo SCRIVE nel registro.
+ */
+void wt_audio_prova(uint32_t hz);
+
+/*
+ * ⭐⭐ LA CUCITURA DELL'AUDIO — la gemella di `wt_video_gancio`.
+ *
+ *     Chi sa che una sessione ha negoziato un codec audio: `rcp.c` (§4.3).
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     ⛔ Chi puo' davvero catturare: il FIGLIO, che ha PipeWire — cioe' un
+ *     altro processo.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e non decide niente: passa.
+ *
+ * `codec` 1 = Opus, 2 = PCM, **0 = non ascolta piu' nessuno**.
+ */
+typedef void (*wt_audio_richiesta)(void *ctx, const char *utente, uint8_t codec);
+void wt_audio_gancio(wt_audio_richiesta f, void *ctx);
+
 /* I quattro numeri del video di una sessione, per il registro e per i banchi.
  * ⛔ Insieme, sempre: «zero abbandonati» detto da solo non distingue una linea
  *    che porta da un canale che non ha mai spedito niente. */

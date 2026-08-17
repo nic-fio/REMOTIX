@@ -3086,6 +3086,7 @@ async function collega(utente, parola) {
      server che si comporta bene. */
   schermo.riparti();
   avvia_video(wt, congeda);
+  avvia_audio(wt);
 
   /* ⛔⭐ E IL CASO IN CUI NON SI MANDA NIENTE — `muto`, §4.2 e DECISIONI.md §7.14.
    *
@@ -3211,6 +3212,26 @@ async function collega(utente, parola) {
   const profondita_buone = [8, 10].filter((p) =>
     codec_buoni.some((n) => sondaggio.codec[n][p] && sondaggio.codec[n][p].arriva));
 
+  /* ⭐ Si CHIEDE al motore se sa decodificare Opus, e la risposta decide che
+     cosa si dichiara.  ⛔ Non e' un verdetto ma un filtro (forma E1): un `no`
+     qui non e' un difetto, e' un browser che suonera' in PCM. */
+  let audio_codec_dichiarabile = "pcm";
+  if (typeof AudioDecoder === "function") {
+    let ok = false;
+    try {
+      ok = (await AudioDecoder.isConfigSupported(
+              { codec: "opus", sampleRate: 48000, numberOfChannels: 2 })).supported === true;
+    } catch (e) { ok = false; }
+    if (ok) audio_codec_dichiarabile = "opus,pcm";
+    else nota("⚠ questo motore non decodifica Opus: `audio.codec` dichiara "
+            + "il solo «pcm» (§4.3 lo impone a entrambi ed e' la base sempre "
+            + "disponibile).  ⛔ Dichiarare «opus» avrebbe OBBLIGATO il server "
+            + "a sceglierlo, e non si sarebbe sentito niente");
+  } else {
+    nota("⚠ questo motore non ha `AudioDecoder`: `audio.codec` dichiara il "
+       + "solo «pcm»");
+  }
+
   const cap = [
     ["video.codec", codec_buoni.join(",")],
     ["video.profondita", profondita_buone.join(",") || "8"],
@@ -3244,7 +3265,26 @@ async function collega(utente, parola) {
      *    telefono. */
     ["video.misura_massima", (sondaggio.misura && sondaggio.misura.massima)
         ? sondaggio.misura.massima[0] + "x" + sondaggio.misura.massima[1] : ""],
-    ["audio.codec", "opus,pcm"],
+    /* ⛔⛔ E QUI SI CHIEDE PRIMA DI DICHIARARE — rilievo 1 della revisione
+     *      avversariale del 17 agosto 2026, e il difetto era grosso.
+     *
+     *      Qui c'era `"opus,pcm"`, costante, sempre.  ⚠ Ma §4.3 dice che «chi
+     *      sceglie e' il server, dentro l'intersezione, seguendo l'ordine di
+     *      preferenza DEL CLIENT» — quindi dichiarare `opus` per primo su un
+     *      motore che non lo sa decodificare **obbliga il server a sceglierlo**:
+     *      cinquanta datagram al secondo che finiscono in un `continue`, e in
+     *      pagina la riga «⭐ audio in arrivo — codec 1 (Opus)».
+     *
+     * ⛔ E il danno e' doppio, esattamente come §4.3 lo descrive: il PCM esiste
+     *    per essere **il controllo positivo di Opus quando Opus non si
+     *    negozia** — e qui Opus si negoziava benissimo, su un browser che non
+     *    lo sa suonare, cosi' il controllo positivo non entrava mai in gioco.
+     *
+     * ⭐ Il video, dieci schermate piu' su in questo stesso file, fa gia' cosi':
+     *    `isConfigSupported` come FILTRO, e la capacita' che non si sa
+     *    sostenere si omette.  ⚠ `pcm` non si filtra e non si puo' filtrare:
+     *    §4.3 lo impone a entrambi, ed e' l'unica strada che resta. */
+    ["audio.codec", audio_codec_dichiarabile],
     ["input.tocco", "no"],
     ["appunti.testo", "si"],
     ["client.nome", "remotix-pagina 0.1.0"],
@@ -3889,6 +3929,392 @@ async function ascolta_controllo(canale, congeda) {
  *    consegna al decodificatore (§6.2).  In WebTransport la differenza si legge
  *    cosi': il `read()` che finisce con `done` e' un FIN, quello che LANCIA e'
  *    un `RESET_STREAM`. */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐ L'AUDIO — fase 7.  `RCP.md` §5.3 (il formato) e §6.3 (il datagram).
+ *
+ * ⛔ E LA PRIMA COSA DA CAPIRE E' CHE QUI NON SI ASPETTA NIENTE.
+ *
+ *    Il video vive su stream: se un fotogramma tarda, si aspetta, perche' un
+ *    fotogramma monco non si puo' dipingere.  L'audio vive su datagram, e §6.3
+ *    dice l'opposto: «nessuna ritrasmissione, nessun riordino: chi riceve
+ *    SCARTA i datagram arrivati in ritardo rispetto a quelli gia' consumati».
+ *    ⇒ Un blocco che arriva tardi non si suona: si butta e si conta.
+ *
+ * ⛔⭐ E IL RITARDO E' UNA SCELTA, NON UN RESIDUO.
+ *
+ *     Il riferimento (`gnome-remote-desktop`) tiene un regolatore di latenza a
+ *     **300 ms** (`STUDI.md` §gnome §11).  Per noi sono **sei volte** il tetto
+ *     del video (`CODER.md` §1-bis: 50 ms), e copiarlo vorrebbe dire spendere
+ *     in memoria tutto quel che il resto del progetto spende per non spenderlo.
+ *     ⚠ Ma zero non e' un'opzione: senza un cuscino ogni datagram in ritardo e'
+ *     un buco udibile, e i buchi si sentono piu' del ritardo.
+ *
+ *     ⇒ `AUDIO_CUSCINO_MS` e' il compromesso, ed e' 🔸 DERIVATO: sta scritto
+ *       qui perche' l'utente lo senta e dica se e' giusto, non perche' sia
+ *       dimostrato.  ⏳ Il giorno in cui lo giudica, va in `DECISIONI.md`.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+const AUDIO_FREQUENZA = 48000, AUDIO_CANALI = 2;
+/* ⛔⛔ 250 ms, E IL 60 DI PRIMA ERA UNA SCELTA SBAGLIATA MIA — 17 agosto 2026.
+ *
+ *      L'utente ha sentito «jitter pazzesco» quattro volte di fila mentre io
+ *      curavo il trasporto.  ⚠ Il cuscino di 60 ms era stato scelto guardando
+ *      il tetto del VIDEO (50 ms, `CODER.md` §1-bis) — cioe' misurando l'audio
+ *      col metro di un'altra cosa.
+ *
+ * ⛔ La ragione per cui non regge: **il video si decodifica e si dipinge sullo
+ *    STESSO thread** che programma l'audio.  Ogni fotogramma e' un blocco di
+ *    lavoro sul thread principale; quando quel lavoro supera il cuscino, la
+ *    riproduzione si e' gia' svuotata, `a.prossimo` finisce dietro `ora`, il
+ *    cuscino si riarma — e ogni riarmo e' un BUCO.  A 50 fotogrammi al secondo
+ *    di video, capita di continuo.
+ *
+ * ⚠ E il riferimento lo diceva: `gnome-remote-desktop` tiene **300 ms**
+ *   (`STUDI.md` §gnome §11).  Io l'avevo scritto nel commento e poi avevo
+ *   scelto un quinto di quel numero, per un tetto che non e' dell'audio.
+ *
+ * ⭐ Il prezzo e' dichiarato: 250 ms fra quel che si vede e quel che si sente.
+ *    ⏳ E il numero lo giudica l'utente — se e' troppo, la cura vera non e'
+ *    abbassarlo ma togliere l'audio dal thread principale (un `AudioWorklet`
+ *    con un anello), che e' lavoro suo. */
+const AUDIO_CUSCINO_MS = 250;
+const AUDIO_CUSCINO_MAX_MS = 600; /* oltre, si butta invece di accumulare */
+
+let AUDIO = null;
+
+/* Chiude il contesto e il decodificatore della sessione precedente.
+ * ⛔ Si chiama anche dal congedo: un contesto che sopravvive alla sessione
+ *    tiene aperto un dispositivo audio per una connessione che non c'e' piu'. */
+function audio_ferma() {
+  const a = AUDIO;
+  if (!a) return;
+  AUDIO = null;
+  if (a.dire) { clearInterval(a.dire); a.dire = null; }
+  for (const s of a.in_volo) { try { s.stop(); } catch (e) {} }
+  a.in_volo.length = 0;
+  if (a.dec) { try { a.dec.close(); } catch (e) {} a.dec = null; }
+  if (a.ctx) { try { a.ctx.close(); } catch (e) {} a.ctx = null; }
+}
+
+/* ⛔ Ogni scarto si DICHIARA, con un fondo.  `RCP.md` §3, ultima riga: «ogni
+ *    tolleranza va scritta nel registro — una tolleranza silenziosa e'
+ *    indistinguibile da un difetto».  Rilievo 6: quattro strade incrementavano
+ *    un contatore che nessuno leggeva e non chiamavano `nota()`.
+ * ⚠ Il fondo e' 1-poi-ogni-100: senza, uno scarto continuo riempirebbe la
+ *   pagina invece di raccontarla — e un registro che ripete non si legge piu'. */
+function scarto_dillo(a, perche) {
+  a.scartati_detti = (a.scartati_detti || 0) + 1;
+  if (a.scartati_detti === 1 || a.scartati_detti % 100 === 0)
+    nota("⚠ datagram audio scartato (" + perche + ") — in tutto "
+       + a.scartati_detti + " (§6.3: si scarta, non si chiude)");
+}
+
+function audio_conti() {
+  if (!AUDIO) return null;
+  const a = AUDIO;
+  return {
+    ricevuti: a.ricevuti, suonati: a.suonati, scartati_vecchi: a.scartati_vecchi,
+    scartati_corti: a.scartati_corti, scartati_tipo: a.scartati_tipo,
+    scartati_pieno: a.scartati_pieno, errori: a.errori,
+    codec: a.codec, in_coda_ms: Math.round(a.coda_ms()),
+    contesto: a.ctx ? a.ctx.state : "(nessuno)"
+  };
+}
+
+/*
+ * Il ricevente: un datagram, un blocco.
+ *
+ * ⛔ L'inquadratura di §6.3 e' 12 byte, in ordine di RETE, e un datagram piu'
+ *    corto o con un `tipo` diverso da `0x0401` **si scarta scrivendolo nel
+ *    registro** — e' la seconda eccezione dichiarata a §3, perche' un datagram
+ *    e' per definizione inaffidabile e chiudere la connessione per un pacchetto
+ *    corrotto sarebbe una punizione della rete, non del mittente.
+ */
+function avvia_audio(wt) {
+  if (!wt.datagrams) { nota("⛔ questo motore non ha i datagram: niente audio"); return; }
+
+  /* ⛔⛔ E PRIMA DI TUTTO SI CHIUDE QUEL CHE C'ERA — rilievo 2 della revisione
+   *      avversariale del 17 agosto 2026, e il difetto uccideva la sessione.
+   *
+   *      `avvia_audio` si chiama a ogni `collega()`, cioe' a ogni riattacco
+   *      SENZA ricaricare la pagina.  ⛔ Ogni giro costruiva un `AudioContext`
+   *      nuovo e non chiudeva il vecchio, che restava vivo — e' collegato a
+   *      `destination` e ha sorgenti schedulate.  Al settimo giro Chrome
+   *      rifiuta (sei contesti per documento) e l'eccezione parte da dentro il
+   *      `for(;;)` del lettore dei datagram: **la promessa si rifiuta e i
+   *      datagram non arrivano piu' per tutta la sessione**, senza una riga.
+   *
+   * ⭐ Il video il suo decodificatore lo chiude gia': qui si fa uguale. */
+  audio_ferma();
+
+  const a = {
+    ctx: null, prossimo: 0, codec: 0, dec: null,
+    ricevuti: 0, suonati: 0, errori: 0,
+    scartati_vecchi: 0, scartati_corti: 0, scartati_tipo: 0, scartati_pieno: 0,
+    in_volo: [],
+    detto_tipo: false, detto_corti: false, detto_pieno: false,
+    coda_ms() { return this.ctx ? Math.max(0, (this.prossimo - this.ctx.currentTime) * 1000) : 0; }
+  };
+  AUDIO = a;
+
+  /* ⛔ Il contesto si crea alla PRIMA consegna e non prima: un `AudioContext`
+     creato senza un gesto dell'utente nasce `suspended` su tutti e tre i
+     motori, e resta li' senza dire niente.  ⚠ Chi lo creasse all'avvio
+     leggerebbe «tutto a posto» e non sentirebbe nulla — che e' precisamente la
+     forma «una prova verde col difetto vivo». */
+  function contesto() {
+    if (a.ctx) return a.ctx;
+    a.ctx = new (window.AudioContext || window.webkitAudioContext)(
+      { sampleRate: AUDIO_FREQUENZA, latencyHint: "interactive" });
+    a.prossimo = 0;
+    if (a.ctx.state === "suspended") {
+      /* ⚠ RIPIEGO DICHIARATO: si tenta, e se il motore lo nega si SCRIVE.  Il
+         suono partira' al primo clic, e l'utente deve sapere perche'. */
+      a.ctx.resume().catch(() => {});
+      nota("⚠ il contesto audio nasce sospeso (nessun gesto dell'utente "
+         + "ancora): il suono parte al primo clic sulla pagina");
+    }
+    return a.ctx;
+  }
+
+  function suona(campioni, fotogrammi) {
+    const ctx = contesto();
+    const buf = ctx.createBuffer(AUDIO_CANALI, fotogrammi, AUDIO_FREQUENZA);
+    for (let c = 0; c < AUDIO_CANALI; c++) {
+      const canale = buf.getChannelData(c);
+      for (let i = 0; i < fotogrammi; i++) canale[i] = campioni[i * AUDIO_CANALI + c];
+    }
+    const s = ctx.createBufferSource();
+    s.buffer = buf;
+    s.connect(ctx.destination);
+
+    const ora = ctx.currentTime;
+    /* ⛔ Il cuscino si RIARMA quando la coda si e' svuotata — cioe' quando un
+       buco c'e' gia' stato.  Senza, ogni buco lascerebbe la riproduzione
+       incollata al presente e il buco dopo arriverebbe subito. */
+    if (a.prossimo < ora + 0.001) {
+      /* ⛔ QUESTO E' IL BUCO, e adesso si conta.  Ogni riarmo del cuscino e'
+         un salto nel suono: senza un contatore, «arriva tutto» e «arriva tutto
+         a scatti» hanno lo stesso aspetto da questa parte. */
+      a.riarmi = (a.riarmi || 0) + 1;
+      a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+    }
+
+    /* ⛔⛔ E QUI C'ERA UN DIFETTO CHE IL COMMENTO NASCONDEVA — rilievo 3 della
+     *      revisione avversariale del 17 agosto 2026.
+     *
+     *      Diceva: «buttare il piu' VECCHIO qui vuol dire non accodare questo e
+     *      riportare l'orologio al presente», e riportava `a.prossimo` a
+     *      `ora + 60 ms`.  ⛔ **La prima meta' non era quello che il codice
+     *      faceva**: tutto cio' che era gia' passato per `s.start(t)` con `t`
+     *      fino a 240 ms nel futuro e' schedulato DENTRO l'`AudioContext` e non
+     *      e' piu' annullabile — non se ne teneva un riferimento e non si
+     *      chiamava mai `stop()`.
+     *
+     *      ⇒ Riportare l'orologio indietro non buttava niente: **schedulava i
+     *      blocchi successivi SOPRA quelli che stavano ancora suonando**.  Il
+     *      risultato non e' un buco, e' un segnale raddoppiato — che §6.3 non
+     *      ammette e che si sente come distorsione, non come un salto.
+     *
+     * ⭐ La cura: si tengono i riferimenti e si FERMANO davvero. */
+    if ((a.prossimo - ora) * 1000 > AUDIO_CUSCINO_MAX_MS) {
+      a.scartati_pieno++;
+      if (!a.detto_pieno) {
+        a.detto_pieno = true;
+        nota("⚠ la coda audio ha superato " + AUDIO_CUSCINO_MAX_MS + " ms: "
+           + "si ferma quel che e' in volo e si riparte dal presente (§6.3)");
+      }
+      for (const vecchia of a.in_volo) { try { vecchia.stop(); } catch (e) {} }
+      a.in_volo.length = 0;
+      a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+      return;
+    }
+    s.start(a.prossimo);
+    /* ⛔ Si tiene il riferimento finche' non ha finito, e non un istante di
+       piu': `onended` lo toglie da se', o questo elenco crescerebbe per tutta
+       la sessione — che sarebbe la perdita curata dal rilievo 2 in un'altra
+       forma. */
+    a.in_volo.push(s);
+    s.onended = () => { const i = a.in_volo.indexOf(s); if (i >= 0) a.in_volo.splice(i, 1); };
+    a.prossimo += fotogrammi / AUDIO_FREQUENZA;
+    a.suonati++;
+  }
+
+  function pcm(vista, da) {
+    const byte = vista.byteLength - da;
+    const fotogrammi = Math.floor(byte / (2 * AUDIO_CANALI));
+    if (fotogrammi === 0) return;
+    const f = new Float32Array(fotogrammi * AUDIO_CANALI);
+    /* ⛔ LITTLE-endian, ed e' l'unica eccezione dichiarata all'ordine di rete
+       (§5.3).  ⚠ Leggerlo big-endian non da' un errore: da' RUMORE A FONDO
+       SCALA — il difetto di v1 che nessun conta-blocchi vedeva. */
+    for (let i = 0; i < fotogrammi * AUDIO_CANALI; i++)
+      f[i] = vista.getInt16(da + i * 2, true) / 32768;
+    suona(f, fotogrammi);
+  }
+
+  /* ⛔ Torna `false` invece di lanciare — rilievo 5.  `configure()` lancia in
+     modo sincrono quando la configurazione non e' sostenuta, e l'eccezione
+     usciva da qui, attraversava il `for(;;)` del lettore (che non aveva un
+     `try`) e uccideva i datagram per tutta la sessione, in silenzio.
+     ⚠ E il residuo era peggiore del guasto: `a.dec` era gia' assegnato, quindi
+     il giro dopo prendeva il corto circuito `if (a.dec) return` e usava un
+     decodificatore MAI CONFIGURATO. */
+  function opus_apri() {
+    if (a.dec) return true;
+    if (a.dec_fallito) return false;
+    const d = new AudioDecoder({
+      output: (dato) => {
+        const n = dato.numberOfFrames;
+        const f = new Float32Array(n * AUDIO_CANALI);
+        /* ⚠ `copyTo` con `f32` da' i canali INTERLACCIATI, che e' la forma che
+           `suona()` aspetta.  Chiederlo `f32-planar` e srotolarlo a mano
+           produrrebbe lo stesso suono con un giro in piu'. */
+        try { dato.copyTo(f, { planeIndex: 0, format: "f32" }); }
+        catch (e) { a.errori++; dato.close(); return; }
+        dato.close();
+        suona(f, n);
+      },
+      error: (e) => { a.errori++; nota("⛔ decodificatore Opus: " + e); }
+    });
+    try {
+      d.configure({ codec: "opus", sampleRate: AUDIO_FREQUENZA,
+                    numberOfChannels: AUDIO_CANALI });
+    } catch (e) {
+      /* ⛔ Si dichiara UNA volta e non si riprova: §3 di `RCP.md` — «ogni
+         tolleranza va scritta nel registro; una tolleranza silenziosa e'
+         indistinguibile da un difetto». */
+      a.dec_fallito = true;
+      try { d.close(); } catch (e2) {}
+      nota("⛔ il decodificatore Opus non si configura su questo motore ("
+         + e + "): questa sessione resta senza audio.  ⚠ Il video continua");
+      return false;
+    }
+    a.dec = d;
+    return true;
+  }
+
+  /* ⛔ E LA PAGINA DICE I SUOI CONTI, ogni 5 s.  Era l'unico anello della
+     catena senza numeri: il server sa quanti blocchi ha spedito, il figlio
+     quanti ne ha prodotti, e di qua non si sapeva **niente** — quanti ne
+     arrivano, quanti se ne suonano, quanti buchi.  ⚠ Ed e' esattamente dove il
+     difetto e' rimasto nascosto per quattro cure di fila. */
+  a.dire = setInterval(() => {
+    const c = audio_conti();
+    if (!c) return;
+    const riga = "audio: ricevuti " + c.ricevuti + " suonati " + c.suonati
+       + " BUCHI " + (a.riarmi || 0) + " vecchi " + c.scartati_vecchi
+       + " pieni " + c.scartati_pieno + " errori " + c.errori
+       + " coda " + c.in_coda_ms + "ms ctx " + c.contesto;
+    nota(riga);
+    /* ⛔ E si manda anche AL SERVER, che e' l'unico posto dove i numeri dei
+       quattro anelli stanno sulla stessa pagina.  ⚠ Il riquadro qui sopra non
+       basta: col desktop acceso la pagina e' a tutto schermo e quel riquadro
+       non e' raggiungibile — chiederlo all'utente e' chiedergli una cosa che
+       non si puo' fare. */
+    fetch("/diario?" + encodeURIComponent(riga), { cache: "no-store" })
+      .catch(() => {});
+  }, 5000);
+
+  (async function () {
+    let lettore;
+    try { lettore = wt.datagrams.readable.getReader(); }
+    catch (e) { nota("niente datagram in lettura: " + e); return; }
+    /* ⛔ UNA RETE ATTORNO AL CICLO, e non e' prudenza generica: senza, una
+       qualunque eccezione qui dentro rifiuta la promessa e i datagram si
+       fermano **per tutta la sessione, senza una riga** — che e' il modo in
+       cui il rilievo 5 uccideva l'audio.  ⚠ E si DICHIARA: un ciclo che muore
+       in silenzio e un server che non manda niente hanno la stessa faccia. */
+    try {
+    for (;;) {
+      let r;
+      try { r = await lettore.read(); }
+      catch (e) { nota("i datagram si sono fermati: " + e); return; }
+      if (r.done) return;
+
+      const b = r.value;
+      if (b.byteLength < 12) {
+        a.scartati_corti++;
+        if (!a.detto_corti) {
+          a.detto_corti = true;
+          nota("⚠ datagram piu' corto di 12 byte: scartato (§6.3).  ⛔ Non "
+             + "chiude la connessione — sarebbe punire la rete, non il mittente");
+        }
+        continue;
+      }
+      const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+      const tipo = v.getUint16(0);
+      if (tipo !== 0x0401) {
+        a.scartati_tipo++;
+        if (!a.detto_tipo) {
+          a.detto_tipo = true;
+          nota("⚠ datagram con tipo 0x" + tipo.toString(16)
+             + ": RCP/1 ne definisce uno solo, 0x0401.  Scartato (§6.3)");
+        }
+        continue;
+      }
+      const codec = v.getUint16(2);
+
+      /* ⛔⭐ §6.3 ALLA LETTERA: «chi riceve SCARTA i datagram arrivati in
+       *     ritardo rispetto a quelli gia' consumati».
+       *
+       *     `istante` e' l'orologio monotono del SERVER, del primo campione del
+       *     blocco.  ⚠ Non si confronta col nostro (§6.2 lo vieta per il video
+       *     e la ragione e' la stessa): si confronta solo con gli altri
+       *     `istante` dello stesso server, che e' esattamente quel che serve
+       *     per dire «questo viene prima di quello che ho gia' suonato».
+       *
+       * ⛔ Senza questa riga un datagram riordinato dalla rete suonerebbe un
+       *    pezzo di passato IN MEZZO al presente: non un buco, un GLITCH — e
+       *    sarebbe attribuito al codificatore. */
+      const istante = v.getBigUint64(4);
+      if (a.ultimo_istante !== undefined && istante <= a.ultimo_istante) {
+        a.scartati_vecchi++;
+        scarto_dillo(a, "istante non piu' recente: la rete l'ha riordinato");
+        continue;
+      }
+      a.ultimo_istante = istante;
+
+      a.ricevuti++;
+      if (a.codec !== codec) {
+        a.codec = codec;
+        nota("⭐ FASE 7: audio in arrivo — codec " + codec
+           + (codec === 1 ? " (Opus)" : codec === 2 ? " (PCM)" : " (⛔ ignoto)")
+           + ", 48 000 Hz, 2 canali");
+      }
+
+      if (codec === 2) { pcm(v, 12); continue; }
+      if (codec === 1) {
+        if (typeof AudioDecoder !== "function") {
+          /* ⛔ Non dovrebbe succedere piu': dalla cura del rilievo 1 la pagina
+             `opus` non lo dichiara affatto su un motore senza `AudioDecoder`.
+             ⚠ Se questa riga compare, e' il SERVER che ha scelto un codec fuori
+             dall'intersezione — cioe' §4.3 violata — e va vista. */
+          a.errori++;
+          scarto_dillo(a, "⛔ il server manda Opus e questo motore non ha "
+                        + "`AudioDecoder`: §4.3 dice che non poteva sceglierlo");
+          continue;
+        }
+        if (!opus_apri()) { a.errori++; continue; }
+        try {
+          a.dec.decode(new EncodedAudioChunk({
+            type: "key", timestamp: Number(v.getBigUint64(4)),
+            data: new Uint8Array(b.buffer, b.byteOffset + 12, b.byteLength - 12)
+          }));
+        } catch (e) { a.errori++; }
+        continue;
+      }
+      /* Un codec che RCP/1 non definisce: si scarta, come il tipo ignoto. */
+      a.scartati_tipo++;
+      scarto_dillo(a, "codec " + codec + ", che RCP/1 non definisce");
+    }
+    } catch (e) {
+      nota("⛔ il lettore dei datagram si e' fermato per un'eccezione (" + e
+         + "): da qui in poi questa sessione NON ha audio.  ⚠ Il video "
+         + "continua — e' un ripiego dichiarato, non un guasto taciuto");
+    }
+  })();
+}
+
 function avvia_video(wt, congeda) {
   (async function () {
     let lettore;
@@ -4291,6 +4717,14 @@ function torna_al_modulo() {
    *    e' lo stesso che deve saperlo spegnere**.  Un ritorno che ripristina
    *    meta' delle cose e' peggio di un ritorno che non c'e', perche' sembra
    *    riuscito. */
+
+  /* 0. ⛔ L'AUDIO SI SPEGNE PER PRIMO — e la regola qui sopra dice perche':
+   *    «chi accende uno stato e' lo stesso che deve saperlo spegnere».  Un
+   *    `AudioContext` che sopravvive al ritorno al modulo tiene aperto un
+   *    dispositivo audio per una sessione che non c'e' piu', e al riattacco
+   *    se ne aggiunge un altro: al settimo il motore rifiuta e l'audio non
+   *    torna piu' (rilievo 2 della revisione del 17 agosto 2026). */
+  audio_ferma();
 
   /* 1. il vestito da desktop se ne va: e' quel che l'utente ha visto. */
   delete document.body.dataset.schermo;

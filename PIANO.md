@@ -864,6 +864,20 @@ questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
 
 ## Fase 7 — Audio e appunti
 
+> ## ⭐⭐ L'AUDIO È FATTO — 17 agosto 2026, sul giudizio dell'utente: **«problema audio risolto»**
+>
+> *Dato su un **video di YouTube** riprodotto nella sessione remota.* `[M]` **49,95 blocchi/s
+> ricevuti contro 50 prodotti** — perdita **zero**, 2 buchi (dell'avvio), coda 311-341 ms.
+> ⭐ E il volume **governa**: pieno 0,3536 · 25 % 0,0078 · muto 0,0.
+>
+> ⏳ **Restano gli appunti**, che non sono stati cominciati: si fanno in una sessione nuova
+> (deciso dall'utente). ⇒ 📖 `fasi/07-audio-e-appunti.md`, riquadro di testa.
+>
+> ⛔ **E la lezione della fase non è sull'audio**: cinque giri di banco verdi e l'utente sentiva
+> «jitter pazzesco». `LEZIONI.md` §2.7 — *non c'è miglior strumento di diagnosi che monitorare una
+> sessione vera, byte per byte*. Le decisioni prodotte stanno in `DECISIONI.md` **§5-quater**, che
+> prima di oggi non esisteva.
+
 **Produce**: Opus e PCM in uscita; appunti testuali nei due versi.
 
 **L'utente sente e vede**: la musica, e il copia-incolla che funziona in tutt'e due i versi.

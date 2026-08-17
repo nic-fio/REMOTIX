@@ -15,10 +15,12 @@
 #include "figlio.h"
 
 #include "aiutante.h"
+#include "audio.h"
 #include "rcp.h"
 #include "registro.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +140,87 @@ typedef struct {
  *    numero il credito e' finito comunque, e questa tabella non e' il tetto che
  *    morde. */
 #define WT_INVOLO_MAX 32
+
+/* ⛔⭐ IL DATAGRAM DELL'AUDIO — fase 7, e i due numeri hanno una misura dietro.
+ *
+ * `WT_DGRAM_BYTE` — quanto puo' essere lungo il carico di un datagram nostro.
+ *    Il piu' grosso che RCP/1 preveda e' il **PCM**: `RCP.md` §5.3 lo fissa a
+ *    5 ms = 480 campioni = 960 byte, piu' i 12 dell'intestazione di §6.3 =
+ *    **972**, piu' il prefisso di RFC 9297 (al massimo 8) = **980**.
+ *    ⚠ `[M]` 17 agosto 2026, sonda `banchi/07-b40`: il datagram che i browser
+ *    accettano davvero contro il nostro server e' **1024 byte su Chrome 151**
+ *    (fisso) e **1024 → 1214 su Firefox 140esr**.  ⇒ Il PCM ci sta per **52
+ *    byte** sul motore piu' stretto, e questo tetto non e' un numero tondo
+ *    scelto a caso: e' quel 1024 misurato.
+ *
+ * `WT_DGRAM_MAX` — quanti blocchi possono aspettare.  ⛔ Non e' una memoria per
+ *    la fluidita': e' **lo spazio fra due passate di scrittura**.  Otto blocchi
+ *    sono 40 ms di PCM e 160 di Opus; oltre, il piu' vecchio non serve piu' a
+ *    nessuno e §6.3 dice che si butta.
+ *
+ * ⛔⭐ E QUESTO NUMERO E' STATO CAMBIATO A 32 E RIMESSO A 8 NELLO STESSO GIRO,
+ *     perche' la diagnosi che lo aveva alzato era SBAGLIATA — 17 agosto 2026.
+ *
+ *     Il primo giro dava **402 blocchi su 600** in 3 s (resa 67 %), con zero
+ *     blocchi persi.  Ho letto «la coda e' il tetto del ritmo» e l'ho alzata:
+ *     a 32 la resa e' passata a **80 %** — cioe' e' migliorata, il che sembrava
+ *     confermare.  ⛔ Non confermava niente: 2,01 s su 3 e 4,01 su 5 sono
+ *     **(T − 1)**, non una frazione.  Il terzo giro l'ha deciso: **9,01 s su
+ *     10**.  ⇒ Non era una resa: era **un secondo fisso all'inizio**, e la coda
+ *     non c'entrava.
+ *
+ * ⚠ La lezione e' di metodo: due punti stavano su una retta per il caso, e
+ *   «il numero e' migliorato» ha quasi comprato una modifica sbagliata.  Il
+ *   terzo punto costava trenta secondi.  ⭐ Il numero e' tornato a 8 perche'
+ *   `[M]` a 8 i blocchi persi erano gia' **zero**: era sufficiente, e un
+ *   valore piu' alto sarebbe rimasto qui senza una ragione. */
+#define WT_DGRAM_BYTE 1024
+#define WT_DGRAM_MAX 8
+
+/* ⛔⛔ IL TETTO DEI RIMANDI NON E' PIU' UN TEMPO: E' LA CODA, e basta.
+ *
+ *      `[M]` 17 agosto 2026, dai contatori della PAGINA dell'utente — i primi
+ *      che questo progetto abbia avuto dal lato che ascolta:
+ *
+ *        ricevuti 1149 · suonati 1149 · BUCHI 23 · coda 191 ms
+ *
+ *      ⭐ `ricevuti == suonati` sempre: la pagina suona tutto quel che le
+ *      arriva, e non e' lei il difetto.  ⛔ Ma le arrivano **39,8 blocchi al
+ *      secondo invece di 50**, e con quel deficit un cuscino di 250 ms si
+ *      svuota in 1,25 s: **23 buchi in 30 secondi**, uno ogni 1,3 s.  Il conto
+ *      chiude al decimale, e dice che il difetto e' tutto sul FILO.
+ *
+ *      ⇒ Un blocco buttato dopo N rinvii e' un buco garantito.  Il solo tetto
+ *      onesto e' **la coda**: otto blocchi = 160 ms di Opus, e oltre quelli il
+ *      piu' vecchio non serve piu' a nessuno (§6.3).  ⚠ Questo numero resta
+ *      alto solo per non lasciare un ciclo senza fondo — non e' una politica.
+ *
+ * ⛔ E la guardia sulla congestione e' uscita da qui: `cwnd_left` alto o basso
+ *    non cambia che cosa conviene fare con un blocco che non e' ancora partito.
+ *    ⚠ Era una condizione che buttava il blocco **proprio quando la finestra
+ *    era stretta**, cioe' quando serviva di piu' aspettare.
+ *
+ * ⛔ Quante PASSATE di scrittura un blocco si puo' rimandare prima di buttarlo.
+ *
+ * ⚠ Era **8**, e non bastava: `[M]` 17 agosto 2026 il giudice leggeva ancora
+ *   **465 Hz invece di 440** — e quel numero E' la perdita, perche' concatenare
+ *   i blocchi superstiti comprime il tempo (440 / (1 − 0,054) ≈ 465).
+ *
+ * ⛔ Il tetto vero non e' questo numero: e' **la coda**.  Otto blocchi di PCM
+ *    sono 40 ms, e oltre quelli il piu' vecchio si butta comunque (§6.3).  ⇒ Un
+ *    tetto basso sui rimandi non protegge da niente e butta un blocco che
+ *    sarebbe partito: il ritardo lo governa gia' la coda. */
+#define WT_DGRAM_RIMANDI_MAX 4096
+
+/* ⛔ Il tono di prova (`--audio-prova`), `0` = spento.  Sta in cima e non
+ *    accanto alla sua funzione perche' lo legge anche `wt_battito_ns()`, che
+ *    viene molto prima — vedi il riquadro dell'orologio li'. */
+static uint32_t audio_prova_hz;
+
+/* ⭐ Il gancio verso il figlio, per la stessa ragione: lo chiama `audio_regola()`,
+ *    che sta molto prima di `wt_audio_gancio()`. */
+static wt_audio_richiesta gancio_audio;
+static void *gancio_audio_ctx;
 
 /* Le richieste HTTP/3: qui ne serve una sola cosa — distinguere la CONNECT
  * estesa di WebTransport da tutto il resto. */
@@ -268,6 +351,57 @@ struct wt {
 	 *    restituisce, e dedurlo da «l'ultimo aperto sulla connessione» sarebbe
 	 *    indovinare. */
 	int64_t video_stream_ultimo;
+
+	/* ═══ L'AUDIO DI QUESTA SESSIONE — fase 7 ══════════════════════════ */
+	/*
+	 * ⛔⭐ L'AUDIO NON E' IL VIDEO, E LA DIFFERENZA E' TUTTA QUI SOTTO.
+	 *
+	 *     Il video vive su stream (affidabili): i byte che non entrano in un
+	 *     pacchetto RESTANO in coda e partono dopo, ed e' obbligatorio —
+	 *     saldare un messaggio a byte monchi fabbricherebbe una violazione
+	 *     del client (vedi `NGTCP2_ERR_STREAM_DATA_BLOCKED` in `wt_scrivi`).
+	 *
+	 *     L'audio vive su datagram, e `RCP.md` §6.3 dice l'opposto con parole
+	 *     sue: «nessuna ritrasmissione, nessun riordino».  ⇒ Un blocco che non
+	 *     parte NON si conserva: si BUTTA, e si conta.
+	 *
+	 * ⭐ E si buttano i PIU' VECCHI, non i piu' nuovi — e' la regola che v1
+	 *    aveva gia' trovato (`v1/remotix-c/src/altoparlante.h`): «il suono in
+	 *    ritardo non serve a nessuno, e una coda che cresce all'infinito
+	 *    finirebbe per mangiare la memoria del server per riprodurre un rumore
+	 *    di mezzo minuto fa».
+	 */
+	struct {
+		uint8_t d[WT_DGRAM_BYTE];
+		size_t n;
+	} dgram[WT_DGRAM_MAX];
+	size_t ndgram, dgram_testa;
+	uint64_t dgram_id; /* l'identificativo che ngtcp2 riporta negli esiti */
+
+	bool audio_acceso;
+	uint8_t audio_codec;
+	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha audio»: una volta
+	 *    sola, come `video_detto`, e per la stessa ragione. */
+	bool audio_detto;
+	/* ⛔ «Il pari non accetta datagram»: detto una volta.  ⚠ `RCP.md` §2.2 li
+	 *    PRETENDE, ma §6.3 vieta di chiudere la connessione per un fatto dei
+	 *    datagram — quindi si dichiara e si tace, non si uccide. */
+	bool dgram_negati_detto;
+	uint64_t audio_spediti, audio_buttati, audio_rifiutati;
+	/* ⛔ RIMANDATI e RIFIUTATI sono due fatti diversi e non si sommano: il
+	 *    primo e' «il pacer ha detto non adesso» e il blocco parte lo stesso un
+	 *    attimo dopo; il secondo e' «buttato».  Un contatore solo per due esiti
+	 *    opposti direbbe che l'audio si perde anche quando arriva tutto. */
+	uint64_t audio_rimandati;
+	/* Quante PASSATE di fila il blocco in testa e' stato rimandato. */
+	unsigned dgram_rimandi;
+	/* L'istante dell'ultimo rimando: dentro la stessa passata non si richiede. */
+	ngtcp2_tstamp dgram_rimando_ts;
+
+	/* Il tono di prova (`--audio-prova`), che di norma non esiste. */
+	audio_cod *tono_cod;
+	uint64_t tono_prossimo_us; /* l'istante del prossimo blocco */
+	uint64_t tono_i;           /* l'indice del campione: la fase e' continua */
 
 	/* La lista delle sessioni vive, per la diffusione dei fotogrammi. */
 	wt *viva_dopo;
@@ -680,7 +814,84 @@ static void batti_fra(wt *w, uint64_t ms)
 
 ngtcp2_tstamp wt_battito_ns(const wt *w)
 {
-	return w->battito_ms ? w->battito : UINT64_MAX;
+	ngtcp2_tstamp b = w->battito_ms ? w->battito : UINT64_MAX;
+
+	/* ⛔⭐ E IL TONO DI PROVA HA UN OROLOGIO SUO — `[M]` 17 agosto 2026.
+	 *
+	 *     Primo giro contro il cliente di prova: **9 blocchi in 3 secondi**,
+	 *     dove il PCM a 5 ms ne vuole 600.  ⚠ Il contenuto era giusto (960 byte,
+	 *     codec 2, zero scarti): sbagliato era il RITMO, perche' i blocchi li
+	 *     genera `wt_batti()` e `wt_batti()` si sveglia col battito di QUIC —
+	 *     che e' lungo centinaia di millisecondi.
+	 *
+	 * ⭐ La cura NON e' alzare il tetto per passata: quello produrrebbe una
+	 *    raffica seguita da un silenzio, cioe' lo stesso numero di blocchi con
+	 *    un difetto in piu'.  E' dire al ciclo QUANDO il prossimo blocco e'
+	 *    dovuto.
+	 *
+	 * ⚠ E muore con la sorgente di prova: l'audio vero lo ritma **PipeWire**,
+	 *   che nel `poll` ci sta con un descrittore suo e sveglia il ciclo da se'.
+	 */
+	/* ⛔⛔ LE CONDIZIONI SONO LE STESSE DI `tono_passo()`, ED E' UNA CURA —
+	 *      rilievo 4 della revisione avversariale del 17 agosto 2026.
+	 *
+	 *      Qui c'era `audio_prova_hz && w->audio_acceso`, e li' ci sono anche
+	 *      `w->chiusura < 0` e `w->rcp`.  ⛔ **In ogni caso coperto da una
+	 *      guardia e non dall'altra questa funzione tornava un istante NEL
+	 *      PASSATO e nessuno lo spostava piu'** — perche' a spostarlo e' solo
+	 *      `tono_passo`, che invece usciva subito.
+	 *
+	 *      ⇒ `trasporto_attesa_ms()` leggeva «gia' scaduto», `poll()` tornava
+	 *      con **timeout 0**, `wt_batti()` non cambiava niente, e si
+	 *      ricominciava: **ciclo stretto al 100 % di CPU**.
+	 *
+	 * ⚠ E il caso non e' di laboratorio: un BROWSER chiude la sessione
+	 *   WebTransport e **tiene viva la connessione QUIC** — e' scritto in
+	 *   questo stesso file — e li' `w->rcp` diventa NULL mentre `audio_acceso`
+	 *   resta acceso, perche' nessuna riga lo spegne.  ⛔ Il server avrebbe
+	 *   girato a vuoto fino al tetto d'inattivita' di QUIC, e piu' a lungo se
+	 *   il browser lo teneva vivo con dei PING.
+	 *
+	 * ⭐ E la lezione e' che due guardie per lo stesso fatto divergono: chi
+	 *    tocchera' `tono_passo` deve toccare anche questa. */
+	/* ⛔⛔ E UN DATAGRAM IN CODA VUOLE ESSERE RIPROVATO SUBITO — `[M]` 17 agosto
+	 *      2026, dalla sessione VERA dell'utente: *«fa schifo come prima»*.
+	 *
+	 *      Con la congestione a posto (`cwnd_left` 40 KB) il **22 %** dei
+	 *      blocchi non partiva lo stesso.  ⛔ La ragione non era il rifiuto: era
+	 *      che **nessuno programmava un secondo tentativo**.  Un blocco
+	 *      rifiutato restava in coda finche' qualcos'altro non faceva scrivere
+	 *      la connessione — cioe' l'arrivo del blocco DOPO, 20 ms piu' tardi.
+	 *      ⇒ Il ritentativo c'era, il suo orologio no.
+	 *
+	 * ⚠ Un millisecondo, non di piu': e' l'ordine di grandezza in cui il pacer
+	 *   cambia idea, ed e' 1/20 di un blocco di Opus.  ⛔ E il tetto ai
+	 *   risvegli lo pone la coda: quando e' vuota questa riga non scatta.
+	 *
+	 * ⭐ Ed e' la stessa cura che il tono di prova aveva gia' — scritta li' e
+	 *    non qui, perche' allora l'audio vero non esisteva.  Il difetto era
+	 *    dentro quella asimmetria. */
+	if (w->ndgram > 0 && w->chiusura < 0) {
+		ngtcp2_tstamp t = ngtcp2_conn_get_timestamp(w->conn) + NGTCP2_MILLISECONDS;
+		if (t < b)
+			b = t;
+	}
+
+	if (audio_prova_hz && w->audio_acceso && w->chiusura < 0 && w->rcp) {
+		/* ⛔ Il primo blocco e' DOVUTO SUBITO.  `[M]` 17 agosto 2026: senza
+		 *    questa riga il tono aspettava il battito normale prima di
+		 *    partire, e mancava **esattamente un secondo** in testa a ogni
+		 *    presa — 2,01 s su 3, 4,01 su 5, 9,01 su 10.  ⚠ Il sintomo
+		 *    sembrava una resa (67 %, 80 %, 90 %), e una resa fa cercare il
+		 *    difetto nel RITMO; era invece un ritardo d'avvio, che sta in un
+		 *    posto completamente diverso. */
+		if (!w->tono_prossimo_us)
+			return 0;
+		ngtcp2_tstamp t = w->tono_prossimo_us * NGTCP2_MICROSECONDS;
+		if (t < b)
+			b = t;
+	}
+	return b;
 }
 
 const char *wt_stato_rcp(const wt *w)
@@ -729,7 +940,339 @@ const char *wt_perche_ha_da_dire(const wt *w)
 
 bool wt_ha_da_dire(const wt *w)
 {
-	return w->chiusura >= 0 || !coda_vuota(w);
+	/* ⛔ E i datagram contano: senza questa riga i blocchi dell'audio
+	 *    resterebbero in coda fino alla prossima cosa da spedire, cioe' il
+	 *    suono uscirebbe **a scatti dettati dal video**.  ⚠ E' la stessa forma
+	 *    del difetto di `MOVIMENTO_ATTESA_S` (`CODER.md` §1-bis): il ritmo di
+	 *    un anello che diventa il ritardo di un altro anello. */
+	return w->chiusura >= 0 || !coda_vuota(w) || w->ndgram > 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ I DATAGRAM — l'audio di §6.3.                                          */
+
+/* ⭐ L'intero a lunghezza variabile per il prefisso di RFC 9297 e' quello che
+ *    c'e' gia' — `varint_scrivi()`, in cima a questo file.  ⛔ Ne era stata
+ *    scritta una seconda copia qui, ed e' stato il compilatore ad accorgersene:
+ *    due implementazioni della stessa regola divergono, ed e' la forma del
+ *    difetto che il controllo delle tre copie (R12.3) esiste per impedire fra
+ *    file — non c'e' ragione di ammetterla dentro lo stesso file. */
+
+/* Quanti byte accetta il pari in un DATAGRAM, `0` = non ne accetta affatto. */
+static uint64_t dgram_tetto_del_pari(const wt *w)
+{
+	const ngtcp2_transport_params *p;
+	if (!w->conn)
+		return 0;
+	p = ngtcp2_conn_get_remote_transport_params(w->conn);
+	return p ? p->max_datagram_frame_size : 0;
+}
+
+/*
+ * Accoda un carico gia' composto (prefisso RFC 9297 compreso).
+ *
+ * ⛔ Quando la coda e' piena si butta IL PIU' VECCHIO — §6.3 e la lezione di
+ *    v1.  ⚠ E si conta: «l'audio non arriva» e «l'audio arriva e lo butto»
+ *    devono avere due righe diverse, che e' esattamente la ragione per cui
+ *    `trasporto.c` scriveva lo scarto in ingresso fin dalla fase 1.
+ */
+static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
+{
+	size_t coda;
+
+	if (n > WT_DGRAM_BYTE) {
+		/* ⛔ E SI CONTA E SI SCRIVE, invece di tornare `false` e sperare che
+		 *    il chiamante guardi — rilievo 13 della revisione del 17 agosto
+		 *    2026.  Oggi questa strada e' irraggiungibile perche' `audio_a_una`
+		 *    controlla lo stesso tetto tre righe prima: ⚠ **due controlli per
+		 *    una regola sola, e solo uno dei due sapeva dire di essere
+		 *    scattato**.  Il giorno in cui arriva il secondo chiamante — e con
+		 *    `figlio.c` sta arrivando — un blocco sparirebbe senza traccia. */
+		w->audio_buttati++;
+		registro_dice(REG_WT,
+		              "⛔ %s: blocco d'audio di %zu byte oltre il tetto di %u — "
+		              "BUTTATO.  ⚠ Se questa riga compare, il tetto e' stato "
+		              "controllato in due posti e uno dei due sbaglia",
+		              w->provenienza, n, (unsigned)WT_DGRAM_BYTE);
+		return false;
+	}
+
+	if (w->ndgram == WT_DGRAM_MAX) {
+		w->dgram_testa = (w->dgram_testa + 1) % WT_DGRAM_MAX;
+		w->ndgram--;
+		w->audio_buttati++;
+	}
+	coda = (w->dgram_testa + w->ndgram) % WT_DGRAM_MAX;
+	memcpy(w->dgram[coda].d, d, n);
+	w->dgram[coda].n = n;
+	w->ndgram++;
+	return true;
+}
+
+static void dgram_togli_testa(wt *w)
+{
+	if (w->ndgram == 0)
+		return;
+	w->dgram_testa = (w->dgram_testa + 1) % WT_DGRAM_MAX;
+	w->ndgram--;
+}
+
+/*
+ * Scrive UN datagram in un pacchetto suo.
+ *
+ * ⛔ Uno per pacchetto, e non e' pigrizia: `RCP.md` §6.3 dice «un datagram, un
+ *    blocco di Opus», quindi il pacchetto non ha niente da coalizzare che
+ *    valga il rischio.  ⚠ Mescolare `writev_datagram` e `writev_stream` nello
+ *    stesso pacchetto pretende la disciplina del flag `MORE` su tutt'e due, e
+ *    un errore li' non produce un guasto: produce byte validi nell'ordine
+ *    sbagliato.
+ *
+ * Torna `true` quando il pacchetto e' stato composto e va spedito.
+ */
+static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
+                             uint8_t *dest, size_t destlen, ngtcp2_tstamp ts,
+                             ngtcp2_ssize *nfuori)
+{
+	int accettato = 0;
+	ngtcp2_vec v;
+	ngtcp2_ssize nw;
+
+	if (w->ndgram == 0)
+		return false;
+
+	/* ⛔⭐ E NON SI RIPROVA DENTRO LA STESSA PASSATA — `[M]` 17 agosto 2026.
+	 *
+	 *     `ngtcp2_conn_write_aggregate_pkt2` richiama questa funzione piu'
+	 *     volte per comporre un lotto di pacchetti, **con lo stesso `ts`**.  Il
+	 *     primo tetto sui rimandi si consumava tutto li' dentro, in un
+	 *     microsecondo: otto rimandi e poi il blocco buttato, senza che fosse
+	 *     passato **un istante** in cui il pacer potesse cambiare idea.
+	 *     ⇒ 1064 datagram buttati lo stesso, con 8008 rimandi «riusciti» in un
+	 *     conto che sembrava dire il contrario.
+	 *
+	 * ⭐ Il pacer decide sul TEMPO: se ha rifiutato a questo `ts`, rifiutera'
+	 *    anche adesso.  Si torna subito, senza chiedere — e il rimando vale
+	 *    per una passata intera, che e' l'unita' in cui il pacer si muove. */
+	if (w->dgram_rimando_ts == ts)
+		return false;
+
+	v.base = w->dgram[w->dgram_testa].d;
+	v.len = w->dgram[w->dgram_testa].n;
+
+	/* ⛔⛔ `MORE` E NON `NONE`, ED E' LA CURA DEL DIFETTO CHE L'UTENTE HA SENTITO.
+	 *
+	 *      `[M]` 17 agosto 2026, sessione VERA dell'utente da un'altra macchina:
+	 *      **1578 blocchi spediti e 1606 RIFIUTATI** — piu' della meta'
+	 *      dell'audio non partiva — e la riga di diagnosi diceva la causa senza
+	 *      lasciare margini: **`cwnd_left = 0`**.
+	 *
+	 *      ⇒ Non era la rete e non era il pacer: era **il video che si mangia
+	 *      tutta la finestra di congestione**.  Un datagram da 230 byte non
+	 *      trovava posto perche' chiedeva **un pacchetto suo**, e un pacchetto
+	 *      suo la finestra non lo concedeva mai.
+	 *
+	 * ⭐ Con `MORE` il datagram non chiede un pacchetto: **entra in quello che il
+	 *    video sta gia' scrivendo**.  Un pacchetto da 1452 byte che porta pixel
+	 *    ha spazio da vendere per 230 byte di suono, e quel pacchetto la
+	 *    finestra lo sta gia' concedendo.  ⇒ L'audio viaggia dove passa il video
+	 *    invece di contendergli il posto.
+	 *
+	 * ⛔⛔⛔ E `PADDING` NON E' UN DETTAGLIO: E' LA CURA — l'intuizione e' dell'utente
+	 *       («forse il datagram e' troppo piccolo?»), e il manuale di ngtcp2 le
+	 *       da' ragione in una riga:
+	 *
+	 *         «This function only writes multiple packets if **the first packet
+	 *          is path_max_tx_udp_payload_size bytes long**.»
+	 *         «Because GSO requires that the aggregated packets have the same
+	 *          length, NGTCP2_WRITE_DATAGRAM_FLAG_PADDING is recommended.»
+	 *
+	 *       Il nostro datagram e' il **primo** pacchetto di ogni passata, ed e'
+	 *       da ~250 byte invece che pieno.  ⇒ **Fa collassare l'intero lotto GSO
+	 *       a un pacchetto solo**: non e' l'audio che non entra, e' l'audio che
+	 *       — piccolo e primo — **strozza tutta la scrittura, sua e del video**.
+	 *
+	 * ⚠ `[M]` 17 agosto 2026, sessione vera dell'utente: `cwnd_left` 33-56 KB
+	 *   liberi, `quanto del pacer` 14440 costante, e **839 blocchi rifiutati su
+	 *   2278**.  Ne' congestione ne' buffer: era la geometria del lotto.
+	 *
+	 * ⭐ Con `MORE` il pacchetto lo riempie il video; con `PADDING` viene
+	 *    riempito comunque quando il video non ha niente da metterci.  Le due
+	 *    insieme: l'audio non paga il riempimento quando c'e' traffico, e non
+	 *    strozza il lotto quando non ce n'e'.
+	 *
+	 * ⛔ `NGTCP2_ERR_WRITE_MORE` qui non e' un errore: vuol dire «il datagram e'
+	 *    dentro, continua a riempire il pacchetto».  Chi lo leggesse come un
+	 *    guasto butterebbe un blocco gia' spedito. */
+	nw = ngtcp2_conn_writev_datagram(w->conn, path, pi, dest, destlen, &accettato,
+	                                 NGTCP2_WRITE_DATAGRAM_FLAG_MORE |
+	                                     NGTCP2_WRITE_DATAGRAM_FLAG_PADDING,
+	                                 ++w->dgram_id, &v, 1, ts);
+	if (nw == NGTCP2_ERR_WRITE_MORE) {
+		/* ⭐ Il blocco e' nel pacchetto in composizione: si toglie dalla coda. */
+		w->audio_spediti++;
+		w->dgram_rimandi = 0;
+		dgram_togli_testa(w);
+
+		/* ⛔⛔⛔ E SI CONTINUA A INFILARNE, finche' ce ne stanno — `[M]` 17
+		 *       agosto 2026, dalla sessione dell'utente con un video vero:
+		 *       il figlio produce **50 blocchi al secondo** e il server ne
+		 *       rifiuta **25 al secondo**.  ⚠ Esattamente la meta', e la
+		 *       precisione di quel numero e' l'indizio: non e' congestione,
+		 *       e' **aritmetica**.
+		 *
+		 *       Spedivo **un solo datagram per passata di scrittura**, e le
+		 *       passate sono ~25 al secondo.  ⇒ Uno passava e uno restava in
+		 *       coda, per sempre, finche' non lo buttavo dopo 64 rinvii.
+		 *       ⛔ Il tetto non era ne' la rete ne' il pacer: era **il mio
+		 *       ciclo**, che ne offriva uno per volta.
+		 *
+		 * ⚠ E lo spazio c'era da vendere: un pacchetto e' **1452 byte** e un
+		 *   blocco di Opus ne misura **230**.  Ce ne stanno sei, e i fotogrammi
+		 *   video di questa scena sono da 70-1300 byte — cioe' il pacchetto
+		 *   restava mezzo vuoto mentre l'audio veniva buttato. */
+		while (w->ndgram > 0) {
+			ngtcp2_vec v2;
+			int acc2 = 0;
+			ngtcp2_ssize nw2;
+
+			v2.base = w->dgram[w->dgram_testa].d;
+			v2.len = w->dgram[w->dgram_testa].n;
+			nw2 = ngtcp2_conn_writev_datagram(
+				w->conn, path, pi, dest, destlen, &acc2,
+				NGTCP2_WRITE_DATAGRAM_FLAG_MORE |
+					NGTCP2_WRITE_DATAGRAM_FLAG_PADDING,
+				++w->dgram_id, &v2, 1, ts);
+			if (nw2 == NGTCP2_ERR_WRITE_MORE) {
+				w->audio_spediti++;
+				dgram_togli_testa(w);
+				continue; /* ce n'e' ancora posto: si prosegue */
+			}
+			if (nw2 > 0) {
+				/* Il pacchetto si e' chiuso.  ⛔ Se ha preso anche questo
+				 *    blocco lo si toglie; in ogni caso il pacchetto VA
+				 *    SPEDITO — buttarlo porterebbe via i riscontri. */
+				if (acc2) {
+					w->audio_spediti++;
+					dgram_togli_testa(w);
+				}
+				*nfuori = nw2;
+				return true;
+			}
+			break; /* `0` o un errore: si riprova alla passata dopo */
+		}
+		return false;
+	}
+	if (nw < 0) {
+		/* ⛔ E QUI NON SI UCCIDE LA CONNESSIONE.  §6.3 e' esplicito nel verso
+		 *    opposto — «chiudere la connessione per un pacchetto corrotto
+		 *    sarebbe una punizione della rete, non del mittente» — e la stessa
+		 *    ragione vale in uscita: un blocco d'audio che non parte non e' un
+		 *    motivo per togliere il desktop a chi lo sta usando. */
+		registro_dice(REG_WT,
+		              "⛔ %s: datagram di %zu byte NON scritto (%s) — il blocco "
+		              "si BUTTA (§6.3: nessuna ritrasmissione).  Spediti %llu, "
+		              "buttati %llu",
+		              w->provenienza, v.len, ngtcp2_strerror((int)nw),
+		              (unsigned long long)w->audio_spediti,
+		              (unsigned long long)(w->audio_buttati + 1));
+		w->audio_buttati++;
+		dgram_togli_testa(w);
+		return false;
+	}
+
+	if (accettato) {
+		w->audio_spediti++;
+		w->dgram_rimandi = 0;
+		dgram_togli_testa(w);
+	} else if (w->dgram_rimandi < WT_DGRAM_RIMANDI_MAX) {
+		/* ⛔⛔ NON SI BUTTA: SI RIMANDA — e la differenza vale il 38 % dell'audio.
+		 *
+		 *      `[M]` 17 agosto 2026, audio VERO in PCM con il video acceso:
+		 *      **1163 datagram rifiutati su 3001**, e il giudice leggeva
+		 *      **464 Hz invece di 440** con purezza 0,29 — perche' concatenare
+		 *      quel che resta fa saltare la fase ogni due blocchi.  ⚠ Il suono
+		 *      non era «con qualche buco»: era **un altro suono**.
+		 *
+		 * ⛔⭐ E LA CAUSA NON ERA QUELLA SCRITTA QUI.  Il commento diceva «nel
+		 *     pacchetto non ci stava, quindi non ci starebbe mai».  La misura
+		 *     dice il contrario: `cwnd_left` = **12 198 byte** contro 973
+		 *     chiesti, destlen 1452.  ⇒ Non e' ne' il buffer ne' la
+		 *     congestione: e' il **pacer** di QUIC, che dice «non adesso».
+		 *     E «non adesso» diventa «mai» solo se lo buttiamo noi.
+		 *
+		 * ⚠ E il tetto resta: la coda tiene otto blocchi, e chi non ci sta si
+		 *   butta comunque (§6.3).  Rimandare non e' accumulare — sposta il
+		 *   blocco di qualche centinaio di microsecondi, non di mezzo secondo. */
+		w->dgram_rimandi++;
+		w->audio_rimandati++;
+		w->dgram_rimando_ts = ts;
+		/* ⛔⛔⛔ E NON SI TORNA SUBITO: SE UN PACCHETTO C'E', VA SPEDITO.
+		 *
+		 *       `[M]` 17 agosto 2026, e questo era il difetto che teneva in
+		 *       piedi tutti gli altri.  Il manuale di ngtcp2 lo dice e io
+		 *       l'avevo letto male:
+		 *
+		 *         «The function returns the written length of packet … because
+		 *          packet is nearly full and the library decided to make a
+		 *          complete packet.  **|*paccepted| might be zero or nonzero**.»
+		 *
+		 *       ⇒ `nw > 0` con `accettato == 0` vuol dire: **il datagram non e'
+		 *       entrato, MA UN PACCHETTO COMPLETO E' STATO SCRITTO** — con
+		 *       dentro i riscontri e i byte del video.  ⛔ Tornando `false` qui
+		 *       quel pacchetto veniva **buttato**: la passata proseguiva e
+		 *       riscriveva `dest` da capo.
+		 *
+		 * ⛔⛔ Il prezzo non era l'audio: erano **i RISCONTRI**.  Buttare un
+		 *      pacchetto su cinque che porta ACK fa sbagliare a QUIC la misura
+		 *      del percorso — e da li' vengono il pacer che non apre, la
+		 *      finestra che non cresce e il ritmo a singhiozzo.  ⚠ Cioe' il
+		 *      difetto **fabbricava** i sintomi che stavo inseguendo. */
+	} else {
+		/* ⚠ Qui il rimando non si puo' piu' fare: o la congestione e' vera
+		 *   (`cwnd_left` sotto la misura del blocco), o si e' gia' rimandato
+		 *   troppe volte e il blocco e' vecchio.  ⛔ Allora si butta davvero,
+		 *   ed e' quel che §6.3 vuole: il suono in ritardo non serve. */
+		w->audio_rifiutati++;
+		/* ⛔ `registro_dice` e non `registro_dettaglio`: il secondo e'
+		 *    SOPPRESSO quando la parlantina e' spenta, cioe' in ogni
+		 *    installazione normale — e allora «l'audio buttato» e «l'audio mai
+		 *    arrivato» tornano ad avere la stessa faccia, che e' esattamente
+		 *    quel che i due contatori esistono per impedire (rilievo 6).
+		 * ⚠ Con un fondo: una riga ogni 100 scarti, o un guasto continuo
+		 *   riempirebbe il registro invece di raccontarlo. */
+		if (w->audio_rifiutati == 1 || w->audio_rifiutati % 100 == 0)
+			/* ⛔⭐ E LA CAUSA SI CHIEDE, invece di elencarne tre.
+			 *
+			 *     ngtcp2 da' `0` per tre motivi diversi — controllo di
+			 *     congestione, spazio nel buffer, limite di amplificazione — e
+			 *     la prima stesura di questa riga li elencava tutti e tre,
+			 *     cioe' non ne nominava nessuno (rilievo 10 della revisione).
+			 *     ⚠ `LEZIONI.md` §1.9: una deduzione scritta accanto a un
+			 *     numero che nessuno ha misurato.
+			 *
+			 * ⭐ `cwnd_left` la separa: se e' **zero** e' la congestione, e
+			 *    allora buttare e' la cosa sbagliata da fare — quel blocco
+			 *    entrerebbe fra qualche centinaio di microsecondi.  Se e'
+			 *    **grande**, la causa e' un'altra e va cercata altrove. */
+			registro_dice(REG_WT,
+			              "⚠ %s: datagram di %zu byte NON messo nel pacchetto "
+			              "(destlen %zu) — buttato (§6.3).  Rifiutati %llu.  "
+			              "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s",
+			              w->provenienza, v.len, destlen,
+			              (unsigned long long)w->audio_rifiutati,
+			              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+			              ngtcp2_conn_get_send_quantum(w->conn),
+			              ngtcp2_conn_get_cwnd_left(w->conn) < v.len
+			                  ? " ⇒ E' LA CONGESTIONE: il blocco non ci sta ADESSO"
+			                  : " ⇒ NON e' la congestione: guarda il quanto");
+		dgram_togli_testa(w);
+	}
+
+	if (nw > 0) {
+		*nfuori = nw;
+		return true;
+	}
+	return false;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1590,6 +2133,74 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
  *   questa e' la riga che attraversa il confine.  ⚠ Sta qui e non in `rcp.c`
  *   perche' `rcp.c` non conosce i figli, e non in `main.c` perche' `main.c` non
  *   conosce lo stato della sessione. */
+/*
+ * ⭐ IL CANALE AUDIO SI ACCENDE, e NON passa dal codec del video.
+ *
+ * ⛔ Sta in una funzione sua e non dentro `video_regola()` per un motivo che
+ *    si vede solo scrivendolo: quella torna subito quando `video.codec` non e'
+ *    negoziato — che e' il caso legittimo di un client della fase 1 — e
+ *    l'audio ci finirebbe dentro per caso.  Le due negoziazioni sono
+ *    indipendenti in `RCP.md` §4.3, e vanno lette indipendenti anche qui.
+ */
+static void audio_regola(wt *w)
+{
+	uint32_t l, a;
+	uint8_t codec;
+	const char *utente;
+
+	if (!w->rcp || w->chiusura >= 0 || w->audio_acceso)
+		return;
+
+	/* ⛔ Invariante I3: niente suono prima che `SESSIONE` sia partita.  E' la
+	 *    stessa guardia del video, per la stessa ragione — chi non e' passato
+	 *    dal validatore non riceve un pixel, e nemmeno un campione. */
+	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
+		return;
+
+	codec = rcp_audio_negoziato(w->rcp);
+	if (codec == 0) {
+		if (!w->audio_detto) {
+			w->audio_detto = true;
+			registro_dice(REG_RCP,
+			              "%s: nessun codec audio negoziato (§4.3) — questa "
+			              "sessione non ha audio",
+			              w->provenienza);
+		}
+		return;
+	}
+
+	utente = rcp_utente(w->rcp);
+	if (!utente || !utente[0])
+		return;
+
+	w->audio_acceso = true;
+	w->audio_codec = codec;
+	/* ⛔ E IL TONO DI PROVA SI NOMINA QUI, a ogni sessione — rilievo 8.
+	 *    `wt_audio_prova()` scrive una riga sola, all'avvio: chi legge il
+	 *    registro un'ora dopo vedeva «canale audio acceso» e **non aveva modo
+	 *    di sapere che quel che l'utente sente e' un segnale di banco**.
+	 *    L'interruttore di I6 c'era; la dichiarazione che deve seguirlo no. */
+	registro_dice(REG_RCP,
+	              "⭐ FASE 7: canale audio ACCESO per «%s» da %s — codec %u (%s), "
+	              "48 000 Hz, 2 canali (§5.3).  Il pari accetta datagram di %llu "
+	              "byte%s",
+	              utente, w->provenienza, codec,
+	              codec == 1 ? "Opus" : "PCM",
+	              (unsigned long long)dgram_tetto_del_pari(w),
+	              audio_prova_hz
+	                  ? "  ⚠⚠ E QUEL CHE SI SENTIRA' E' IL TONO DI PROVA, non il "
+	                    "desktop: `--audio-prova` e' acceso (funzione di banco, I6)"
+	                  : "");
+
+	/* ⛔ E si chiede al figlio di catturare — ma NON col tono di prova acceso:
+	 *    li' la sorgente e' questo processo, e accendere anche la cattura vera
+	 *    vorrebbe dire due sorgenti sullo stesso canale.  ⚠ Il client sentirebbe
+	 *    le due mescolate e il banco misurerebbe una scena che il prodotto non
+	 *    avra' mai. */
+	if (gancio_audio && !audio_prova_hz)
+		gancio_audio(gancio_audio_ctx, utente, codec);
+}
+
 static void video_regola(wt *w, uint64_t ora_ms)
 {
 	uint32_t l = 0, a = 0;
@@ -2029,6 +2640,217 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
 		            istante_us, input);
 }
 
+/* ------------------------------------------------------------------------ */
+/* ⭐ IL BLOCCO D'AUDIO CHE ARRIVA DALLA SESSIONE, CONSEGNATO A UNA SESSIONE. */
+
+static void audio_a_una(wt *w, const char *utente, uint8_t codec,
+                        uint64_t istante_us, const uint8_t *dati, size_t byte)
+{
+	uint8_t buf[WT_DGRAM_BYTE];
+	size_t p = 0;
+	uint64_t tetto;
+	const char *mio;
+
+	if (!w->audio_acceso || w->audio_codec != codec)
+		return;
+	if (!w->rcp || !w->conn || w->chiusura >= 0)
+		return;
+
+	/* ⛔⭐ INVARIANTE I3, E VALE PER IL SUONO ESATTAMENTE COME PER I PIXEL.
+	 *
+	 *     `[M]` 12 agosto 2026 il difetto si presento' sul video: «prova» ricevette
+	 *     un fotogramma conforme, e il fotogramma era il desktop di «nicfio».
+	 *     ⛔ Sull'audio lo stesso difetto e' PEGGIO da accorgersene: un desktop
+	 *     sbagliato si riconosce guardandolo, una telefonata sbagliata no. */
+	mio = rcp_utente(w->rcp);
+	if (!mio || !utente || strcmp(mio, utente) != 0)
+		return;
+
+	tetto = dgram_tetto_del_pari(w);
+	if (tetto == 0) {
+		if (!w->dgram_negati_detto) {
+			w->dgram_negati_detto = true;
+			registro_dice(REG_RCP,
+			              "⛔ %s: il pari NON accetta datagram "
+			              "(`max_datagram_frame_size` = 0) — questa sessione non "
+			              "avra' audio.  ⚠ `RCP.md` §2.2 li PRETENDE, ma §6.3 "
+			              "vieta di chiudere per un fatto dei datagram: si "
+			              "dichiara e si tace",
+			              w->provenienza);
+		}
+		return;
+	}
+
+	/* Il prefisso di RFC 9297: il quarto dell'identificativo dello stream su
+	 * cui vive la sessione WebTransport.  ⛔ Senza, il browser scarta il
+	 * datagram **senza un errore**: non e' un nostro campo, e' l'involucro. */
+	p = varint_scrivi(buf, (uint64_t)w->sessione / 4);
+
+	/* L'inquadratura di `RCP.md` §6.3, in ordine di rete. */
+	if (p + 12 + byte > sizeof buf || (uint64_t)(p + 12 + byte) > tetto) {
+		w->audio_buttati++;
+		if (w->audio_buttati == 1 || w->audio_buttati % 100 == 0)
+			registro_dice(REG_WT,
+			              "⛔ %s: blocco d'audio di %zu byte troppo grande "
+			              "(prefisso %zu + 12 + %zu, tetto del pari %llu) — "
+			              "buttato.  Buttati %llu",
+			              w->provenienza, byte, p, byte,
+			              (unsigned long long)tetto,
+			              (unsigned long long)w->audio_buttati);
+		return;
+	}
+	buf[p++] = 0x04;
+	buf[p++] = 0x01; /* tipo `0x0401`, l'unico definito in RCP/1 */
+	buf[p++] = 0x00;
+	buf[p++] = codec; /* `codec` u16: 1 = Opus, 2 = PCM */
+	for (int i = 7; i >= 0; i--)
+		buf[p++] = (uint8_t)(istante_us >> (8 * i)); /* `istante` u64 */
+	memcpy(buf + p, dati, byte);
+	p += byte;
+
+	dgram_accoda(w, buf, p);
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ IL TONO DI PROVA — la sorgente che certifica il filo, e NIENT'ALTRO.    */
+/*
+ * ⛔⭐ PERCHE' ESISTE, E PERCHE' NON E' UNA SCORCIATOIA
+ *
+ *     La catena dell'audio ha cinque anelli: il sink nella sessione, la
+ *     cattura del monitor, il codificatore, il datagram, il browser che suona.
+ *     Accenderli tutti insieme e poi non sentire niente lascia **cinque
+ *     imputati** — ed e' esattamente il modo in cui questo progetto ha perso
+ *     le sue giornate peggiori (`LEZIONI.md` §10).
+ *
+ *     Questa sorgente ne mette in prova **tre soli** — codificatore, datagram,
+ *     browser — con un segnale di cui si conosce **ogni campione in anticipo**.
+ *     ⇒ Se il tono esce a 440 Hz dall'altra parte, il filo e' assolto e quel
+ *     che resta e' la cattura.  Se non esce, la cattura non c'entra.
+ *
+ * ⛔ E' SPENTO se nessuno lo accende (`--audio-prova`), ed e' l'invariante I6:
+ *    quel che cambia cio' che l'utente sente sta dietro un interruttore spento
+ *    finche' non l'ha guardato.  ⚠ Quando e' acceso lo SCRIVE, a ogni sessione:
+ *    un server che suonasse un tono senza dirlo sarebbe un difetto travestito
+ *    da funzione.
+ *
+ * ⚠ E quel che questa sorgente NON prova, dichiarato: il ritmo.  I blocchi
+ *   escono a raffica quando il battito e' lungo, invece che uno ogni 20 ms —
+ *   e' il difetto che v1 pago' su `SendSamples2` (`altoparlante.h`, «il client
+ *   BUTTA i blocchi corti»).  Il ritmo lo dara' la cattura, che ha un orologio
+ *   suo; qui si guarda il CONTENUTO, non la cadenza.
+ */
+void wt_audio_gancio(wt_audio_richiesta f, void *ctx)
+{
+	gancio_audio = f;
+	gancio_audio_ctx = ctx;
+}
+
+void wt_audio_prova(uint32_t hz)
+{
+	audio_prova_hz = hz;
+	if (hz)
+		registro_dice(REG_WT,
+		              "⚠ TONO DI PROVA ACCESO a %u Hz — ogni sessione ammessa "
+		              "sentira' un tono invece del desktop.  ⛔ E' una funzione "
+		              "di banco (I6): in un'installazione normale non si accende",
+		              hz);
+}
+
+static void tono_passo(wt *w, ngtcp2_tstamp ts)
+{
+	/* ⛔ Un tetto per passata: senza, un battito lungo genererebbe cento
+	 *    blocchi in un colpo, la coda ne butterebbe novantadue e il registro
+	 *    direbbe «buttati» per un difetto che non e' della rete. */
+	int quanti = 0;
+	uint64_t ora_us;
+	const char *utente;
+
+	if (!audio_prova_hz || !w->audio_acceso || w->chiusura >= 0 || !w->rcp)
+		return;
+
+	utente = rcp_utente(w->rcp);
+	if (!utente || !utente[0])
+		return;
+
+	if (!w->tono_cod) {
+		w->tono_cod = audio_cod_apri(w->audio_codec);
+		if (!w->tono_cod) {
+			/* ⛔ Si spegne questa sessione, non il server: il registro l'ha
+			 *    gia' detto dentro `audio_cod_apri`. */
+			w->audio_acceso = false;
+			return;
+		}
+	}
+
+	ora_us = ts / NGTCP2_MICROSECONDS;
+	if (w->tono_prossimo_us == 0)
+		w->tono_prossimo_us = ora_us;
+
+	while (ora_us >= w->tono_prossimo_us && quanti < WT_DGRAM_MAX) {
+		int16_t campioni[AUDIO_BLOCCO_OPUS * AUDIO_CANALI];
+		uint8_t fuori[AUDIO_FUORI_MAX];
+		size_t n = 0;
+		uint32_t blocco = audio_cod_blocco(w->tono_cod);
+
+		for (uint32_t i = 0; i < blocco; i++) {
+			/* ⭐ La fase e' CONTINUA fra un blocco e l'altro (`tono_i` non si
+			 *    azzera): ripartire da zero a ogni blocco produrrebbe uno
+			 *    scatto ogni 20 ms, cioe' un difetto udibile fabbricato dal
+			 *    banco e attribuito al codificatore. */
+			double t = (double)(w->tono_i + i) / (double)AUDIO_FREQUENZA;
+			double v = 0.5 * sin(2.0 * M_PI * (double)audio_prova_hz * t);
+			int16_t s = (int16_t)(v * 32767.0);
+			campioni[i * AUDIO_CANALI] = s;
+			campioni[i * AUDIO_CANALI + 1] = s;
+		}
+		w->tono_i += blocco;
+
+		if (audio_cod_passa(w->tono_cod, campioni, fuori, &n))
+			audio_a_una(w, utente, w->audio_codec, w->tono_prossimo_us, fuori, n);
+
+		w->tono_prossimo_us += (uint64_t)blocco * 1000000ULL / AUDIO_FREQUENZA;
+		quanti++;
+	}
+}
+
+void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
+                       const uint8_t *dati, size_t byte)
+{
+	if (codec != 1 && codec != 2)
+		return;
+	for (wt *w = vive_prima; w; w = w->viva_dopo)
+		audio_a_una(w, utente, codec, istante_us, dati, byte);
+}
+
+bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
+{
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		if (!w->audio_acceso || !w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !utente || strcmp(mio, utente) != 0)
+			continue;
+		if (codec)
+			*codec = w->audio_codec;
+		return true;
+	}
+	return false;
+}
+
+void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
+                    uint64_t *rifiutati, size_t *in_coda)
+{
+	if (spediti)
+		*spediti = w ? w->audio_spediti : 0;
+	if (buttati)
+		*buttati = w ? w->audio_buttati : 0;
+	if (rifiutati)
+		*rifiutati = w ? w->audio_rifiutati : 0;
+	if (in_coda)
+		*in_coda = w ? w->ndgram : 0;
+}
+
 bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
 {
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
@@ -2171,6 +2993,7 @@ static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
 	 *    secondo intero prima che il desktop compaia — cioe' il numero che
 	 *    l'utente guarda. */
 	video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
+	audio_regola(w);
 	regola_battito(w);
 }
 
@@ -3187,6 +4010,80 @@ void wt_libera(wt *w)
 	 *     I1 vieta di calare il ritmo **per prudenza mentre qualcuno guarda**;
 	 *     qui non guarda piu' nessuno, e il palco (I4) resta in piedi: si ferma
 	 *     solo il ciclo dei fotogrammi. */
+	/* ⛔⭐ I CONTI DELL'AUDIO SI SCRIVONO, e prima non li leggeva NESSUNO —
+	 *     rilievo 6 della revisione del 17 agosto 2026: `wt_audio_conti()` non
+	 *     aveva un solo chiamante in tutto `src/`, quindi `audio_spediti`,
+	 *     `audio_buttati` e `audio_rifiutati` non raggiungevano mai una riga.
+	 *     ⚠ Su un server normale «l'audio buttato» e «l'audio mai arrivato»
+	 *     avevano esattamente la stessa faccia — che e' il difetto che quei
+	 *     contatori esistono per togliere.
+	 * ⭐ Si scrive alla fine della sessione perche' e' l'istante in cui il
+	 *    conto e' completo, e con dentro gli ZERO: `CODER.md` §3.10. */
+	if (w->audio_acceso) {
+		uint64_t sp, bu, ri;
+		size_t coda;
+		wt_audio_conti(w, &sp, &bu, &ri, &coda);
+		registro_dice(REG_RCP,
+		              "audio di %s, conto finale: %llu blocchi spediti, %llu "
+		              "buttati (coda piena o troppo grandi), %llu rifiutati da "
+		              "ngtcp2, %llu RIMANDATI dal pacer e poi partiti, %zu "
+		              "ancora in coda — codec %u",
+		              w->provenienza, (unsigned long long)sp,
+		              (unsigned long long)bu, (unsigned long long)ri,
+		              (unsigned long long)w->audio_rimandati, coda,
+		              w->audio_codec);
+	}
+	/* ⛔⛔ E SI SPEGNE LA CATTURA DELL'AUDIO SE NESSUNO ASCOLTA PIU'.
+	 *
+	 *     `[M]` 17 agosto 2026, prima accensione dell'audio vero: la sessione si
+	 *     era chiusa alle 07:49:58 — «conto finale: 397 blocchi» — e il figlio
+	 *     alle **07:50:10 stava ancora catturando e codificando**, 50 blocchi al
+	 *     secondo, per nessuno.  ⚠ Non lo diceva nessun errore: lo diceva la
+	 *     riga di riassunto del figlio, che esiste apposta.
+	 *
+	 * ⛔ E' la stessa forma dello spegnimento del palco qui sotto, per la stessa
+	 *    ragione: cattura e codifica esistono solo perche' qualcuno guarda o
+	 *    ascolta.  ⚠ E come li', il SINK resta in piedi (I4): a spegnersi e' il
+	 *    consumo del monitor, non il dispositivo su cui le applicazioni suonano.
+	 *
+	 * ⭐ Sta DOPO l'uscita dall'elenco delle vive, in cima a questa funzione, o
+	 *    `wt_audio_qualcuno_ascolta()` troverebbe se stessa e non spegnerebbe
+	 *    mai — che e' il difetto che il palco ha gia' evitato cosi'. */
+	if (w->audio_acceso && w->rcp && gancio_audio) {
+		const char *mio = rcp_utente(w->rcp);
+		if (mio && mio[0] && !wt_audio_qualcuno_ascolta(mio, NULL)) {
+			registro_dice(REG_RCP,
+			              "l'ultima sessione di «%s» se ne va: la cattura "
+			              "dell'audio si ferma (il sink resta, e' l'invariante "
+			              "I4)",
+			              mio);
+			gancio_audio(gancio_audio_ctx, mio, 0);
+		}
+	}
+	/* Il codificatore del tono di prova, se questa sessione ne aveva uno. */
+	if (w->tono_cod) {
+		/* ⭐ E i conti del CODIFICATORE, che rispondono a una domanda che i
+		 *    contatori del filo non fanno: `RCP.md` §6.3 dice che l'`istante`
+		 *    e' quello del primo campione del blocco, e `audio.h` dichiara che
+		 *    Opus «puo' non produrre un pacchetto per ogni blocco offerto».
+		 *    ⛔ Se le due cose fossero vere insieme, l'istante scritto sul filo
+		 *    apparterrebbe a un blocco diverso da quello spedito.  Questi due
+		 *    numeri lo dicono. */
+		uint64_t entrati = 0, usciti = 0;
+		audio_cod_conti(w->tono_cod, &entrati, &usciti);
+		registro_dice(REG_RCP,
+		              "codificatore audio di %s: %llu blocchi entrati, %llu "
+		              "usciti%s",
+		              w->provenienza, (unsigned long long)entrati,
+		              (unsigned long long)usciti,
+		              entrati == usciti
+		                  ? " — ⭐ uno per uno: l'`istante` di §6.3 appartiene "
+		                    "al blocco che parte"
+		                  : " — ⛔ NON uno per uno: l'`istante` scritto sul filo "
+		                    "puo' non essere quello del blocco spedito");
+		audio_cod_chiudi(w->tono_cod);
+		w->tono_cod = NULL;
+	}
 	if (w->video_acceso && w->rcp && gancio_palco) {
 		const char *mio = rcp_utente(w->rcp);
 		if (mio && mio[0] && !wt_video_qualcuno_guarda(mio, NULL)) {
@@ -3417,6 +4314,8 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	 *    qualcosa dopo, e su un client che tace dopo le credenziali non sarebbe
 	 *    partito mai. */
 	video_regola(w, ts / NGTCP2_MILLISECONDS);
+	audio_regola(w);
+	tono_passo(w, ts);
 
 	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
 	 *
@@ -3504,6 +4403,18 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 *    ogni giro, che e' precisamente il ciclo che non avanza. */
 	w->nbloccati = 0;
 	w->troppi_bloccati = false;
+
+	/* ⭐ I DATAGRAM PRIMA DEGLI STREAM, e la ragione e' il ritardo.
+	 *
+	 * ⛔ Un blocco d'audio che aspetta la coda del video arriva in ritardo di
+	 *    un fotogramma, e in ritardo non serve (§6.3).  ⚠ E non affama gli
+	 *    stream: la coda dei datagram e' lunga otto, quindi al massimo otto
+	 *    pacchetti passano davanti — poi `w->ndgram` e' zero e si prosegue. */
+	{
+		ngtcp2_ssize ndg = 0;
+		if (dgram_scrivi_uno(w, path, pi, dest, destlen, ts, &ndg))
+			return ndg;
+	}
 
 	for (;;) {
 		int64_t stream_id = -1;

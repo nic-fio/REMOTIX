@@ -2540,6 +2540,20 @@ uint8_t rcp_codec_negoziato(const rcp_sessione *s)
 	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
 }
 
+uint8_t rcp_audio_negoziato(const rcp_sessione *s)
+{
+	if (!s)
+		return 0;
+	/* §6.3: «`codec`: 1 = Opus, 2 = PCM (§5.3)».  ⛔ Come per il video, la
+	 * traduzione dal nome negoziato al numero sul filo sta QUI e in nessun
+	 * altro posto. */
+	if (strcmp(s->audio, "opus") == 0)
+		return 1;
+	if (strcmp(s->audio, "pcm") == 0)
+		return 2;
+	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
+}
+
 bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
 {
 	if (!s || !s->sessione_spedita)

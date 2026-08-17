@@ -1273,9 +1273,24 @@ rete.*
 > ⚠ **La forma dell'errore è quella di `LEZIONI.md` §2.2**, dove il banco contava i blocchi mentre
 > l'audio era rumore a fondo scala. Qui non sarebbe arrivato nemmeno il rumore.
 >
-> `[?]` **Quanto porti davvero un datagram su ciascun motore va misurato**, non dedotto: è una riga
-> della sonda del browser, e la pagina lo sa chiedere in una chiamata. Se il numero fosse più basso
-> di 972, il PCM scende ancora — è per questo che i 5 ms sono scritti qui e non dedotti altrove.
+> ⭐⭐ **MISURATO — `[M]` 17 agosto 2026, e la stima era ottimista di un quinto.**
+>
+> | | Chrome 151 | Firefox 140esr |
+> |---|---|---|
+> | subito dopo `ready` | **1024** byte | **1024** byte |
+> | dopo 800 ms | **1024** byte | ⭐ **1214** byte |
+>
+> ⇒ Il PCM di questo paragrafo (972 byte, intestazione compresa) **ci sta**, ma su Chrome per
+> **52 byte** — cioè per meno del 6 %. ⛔ La riga che apriva la `[?]` — *«se il numero fosse più
+> basso di 972, il PCM scende ancora»* — **non scatta**, e i 5 ms restano.
+>
+> ⚠ E i due motori non danno lo stesso numero né lo stesso numero nel tempo: Firefox parte da 1024
+> e **cresce a 1214** quando ha misurato il percorso. ⇒ Chi dimensionasse i blocchi leggendo
+> `maxDatagramSize` **una volta sola** prenderebbe il numero peggiore senza saperlo.
+>
+> `[?]` **Resta aperto il percorso non locale**: questa misura è su rete locale, via cavo. Su rete
+> mobile il percorso può portare meno, e il PCM è la strada **senza margine** — proprio quella su
+> cui si ripiega quando Opus non si negozia. La sonda è `banchi/07-b40`.
 
 ⛔ **Il little-endian del PCM è l'unica eccezione all'ordine di rete di §6, ed è deliberata**: sono
 un carico utile, come i byte di HEVC, non un campo di protocollo. Scritta qui perché un'eccezione

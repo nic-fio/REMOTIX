@@ -838,6 +838,16 @@ bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 
 /* §4.3/§6.2: 1 = HEVC, 2 = AV1.  ⛔ `0` = non ancora negoziato. */
 uint8_t rcp_codec_negoziato(const rcp_sessione *s);
+
+/*
+ * §4.3/§6.3: 1 = Opus, 2 = PCM.  ⛔ `0` = non ancora negoziato.
+ *
+ * ⚠ I numeri NON sono gli stessi del video, e la coincidenza dei valori 1 e 2
+ *   e' una trappola: li' 1 e' HEVC, qui 1 e' Opus.  Sono due tabelle di due
+ *   paragrafi diversi (§6.2 e §6.3), e chi passasse l'uno dove va l'altro
+ *   otterrebbe un datagram formalmente valido con dentro il codec sbagliato.
+ */
+uint8_t rcp_audio_negoziato(const rcp_sessione *s);
 /* ⛔ §5.2: «il prossimo fotogramma deve essere una chiave?».  La chiede chi
  * codifica, perche' e' lui che decide il tipo di fotogramma. */
 bool rcp_video_serve_chiave(const rcp_sessione *s);

@@ -37,6 +37,7 @@ sono cadute prima — e il registro dice quale delle due (rilievi R8.2, R8.4).
 import argparse
 import asyncio
 import hashlib
+import json
 import os
 import ssl
 import struct
@@ -252,6 +253,20 @@ class Cliente(QuicConnectionProtocol):
         #    «QUIC ha chiuso da se'» e «il server ha chiuso la sessione» sono i
         #    due imputati che il quarto giro esiste per separare.
         self.caduta = None
+        # ═══ L'AUDIO — fase 7 ═════════════════════════════════════════════
+        # ⛔ I contatori sono SEI e non uno, e ognuno nomina una regola diversa
+        #    di §6.3: chi li sommasse otterrebbe un numero che non dice mai
+        #    dove guardare (`LEZIONI.md` §2.2).
+        self.a_ricevuti = 0      # datagram arrivati e conformi
+        self.a_corti = 0         # < 12 byte: §6.3 li fa scartare
+        self.a_tipo = 0          # `tipo` != 0x0401
+        self.a_prefisso = 0      # il prefisso RFC 9297 non e' la nostra sessione
+        self.a_vecchi = 0        # `istante` non piu' recente: §6.3
+        self.a_codec = None      # il codec dichiarato nei datagram
+        self.a_byte = 0
+        self.a_ultimo_istante = None
+        # I blocchi come sono arrivati, per il giudice di `07-b42`.
+        self.a_blocchi = []
         self.caduto = asyncio.Event()
         # ⛔ E LA TERZA CAUSA: CHE LA CONNESSIONE L'ABBIAMO CHIUSA NOI.
         #
@@ -297,8 +312,71 @@ class Cliente(QuicConnectionProtocol):
         self._quic.send_stream_data(self.controllo, dati, end_stream=False)
         self.transmit()
 
+    def _audio_datagram(self, d: bytes) -> None:
+        """Un datagram di WebTransport: prefisso RFC 9297, poi §6.3.
+
+        ⛔ Ogni scarto ha un contatore SUO.  «Non ho sentito niente» deve poter
+           dire *perche'*: il prefisso sbagliato, il tipo sbagliato, il blocco
+           corto e il blocco vecchio sono quattro difetti diversi con lo stesso
+           sintomo, e senza quattro contatori si cerca per ore dalla parte
+           sbagliata.
+        """
+        # Il prefisso: il quarto dell'identificativo dello stream della sessione.
+        q, i = _varint(d, 0)
+        if q is None:
+            self.a_prefisso += 1
+            return
+        if self.sessione is not None and q != self.sessione // 4:
+            # ⛔ Non e' un dettaglio di involucro: un prefisso sbagliato fa
+            #    scartare il datagram AL BROWSER, senza un errore da nessuna
+            #    parte — cioe' «l'audio non arriva» e basta.
+            self.a_prefisso += 1
+            return
+        c = d[i:]
+        if len(c) < 12:
+            self.a_corti += 1
+            return
+        tipo = int.from_bytes(c[0:2], "big")
+        if tipo != 0x0401:
+            self.a_tipo += 1
+            return
+        codec = int.from_bytes(c[2:4], "big")
+        istante = int.from_bytes(c[4:12], "big")
+        # §6.3: «chi riceve scarta i datagram arrivati in ritardo rispetto a
+        # quelli gia' consumati».
+        if self.a_ultimo_istante is not None and istante <= self.a_ultimo_istante:
+            self.a_vecchi += 1
+            return
+        self.a_ultimo_istante = istante
+        self.a_ricevuti += 1
+        self.a_byte += len(c) - 12
+        if self.a_codec is None:
+            self.a_codec = codec
+            print(f"   [audio] ⭐ primo datagram: codec {codec} "
+                  f"({'Opus' if codec == 1 else 'PCM' if codec == 2 else '⛔ ignoto'}), "
+                  f"{len(c) - 12} byte di carico, prefisso {q} "
+                  f"(sessione {self.sessione})")
+        elif self.a_codec != codec:
+            # ⚠ Il codec non cambia a meta' sessione: §4.3 lo negozia una volta.
+            print(f"   [audio] ⛔ il codec e' CAMBIATO: {self.a_codec} → {codec}")
+            self.a_codec = codec
+        self.a_blocchi.append({"istante": istante, "codec": codec,
+                               "byte": bytes(c[12:])})
+
     def quic_event_received(self, event: QuicEvent) -> None:
         nome = type(event).__name__
+        # ═══ L'AUDIO — fase 7, `RCP.md` §6.3 ══════════════════════════════
+        #
+        # ⛔ Il datagram si legge QUI, prima di ogni altra cosa, e NON si passa
+        #    allo strato H3 di aioquic: e' un datagram di WebTransport, non di
+        #    HTTP/3 puro, e il suo primo campo e' il prefisso di RFC 9297.
+        #
+        # ⚠ E quel che questo lettore fa di piu' del browser e' il MOTIVO per
+        #   cui esiste (`PIANO.md` §1.1): il browser dice «non sento niente»;
+        #   questo dice QUALE regola di §6.3 e' stata violata e a quale byte.
+        if nome == "DatagramFrameReceived":
+            self._audio_datagram(event.data)
+            return
         # ⛔ LA FINE DELLA CONNESSIONE SI STAMPA, SEMPRE.
         #
         #    E' l'unica riga che distingue «il tetto d'inattivita' di QUIC ha
@@ -482,6 +560,30 @@ async def chiedi_tela(cli, reg, lar, alt, tetto):
         return es, mot, tl, ta, ms
 
 
+def scrivi_audio(a, cli):
+    """I blocchi d'audio su disco, e i sei contatori a schermo.
+
+    ⛔ I contatori si stampano SEMPRE, anche a zero: `CODER.md` §3.10 — «una
+       lettura negata non e' una lettura che dice zero».  Un giro che non
+       stampa niente e uno che ha ricevuto zero datagram devono avere due
+       facce diverse.
+    """
+    if cli is None:
+        return
+    print(f"   [audio] ricevuti {cli.a_ricevuti} · {cli.a_byte} byte di carico · "
+          f"codec {cli.a_codec if cli.a_codec is not None else '(nessuno)'}")
+    print(f"   [audio] scartati — corti {cli.a_corti} · tipo {cli.a_tipo} · "
+          f"prefisso {cli.a_prefisso} · vecchi {cli.a_vecchi}")
+    if not a.audio_scrivi:
+        return
+    import base64
+    with open(a.audio_scrivi, "w") as f:
+        for b in cli.a_blocchi:
+            f.write(json.dumps({"istante": b["istante"], "codec": b["codec"],
+                                "byte": base64.b64encode(b["byte"]).decode()}) + "\n")
+    print(f"   [audio] blocchi scritti in {a.audio_scrivi} ({len(cli.a_blocchi)})")
+
+
 def scrivi_traccia(a, reg, cli=None):
     """La registrazione si scrive presto, e si RISCRIVE a ogni tappa.
 
@@ -513,9 +615,14 @@ def scrivi_traccia(a, reg, cli=None):
     print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
 
 
-def corpo_ciao():
+def corpo_ciao(audio="opus,pcm"):
+    # ⛔ `audio` si puo' restringere dalla riga di comando, e NON e' un trucco:
+    #    e' quel che dichiara un client che Opus non lo sa fare.  §4.3 impone
+    #    `pcm` a entrambi proprio per questo — e' «la base sempre disponibile»,
+    #    e il controllo positivo di Opus.  ⇒ `--audio-codec pcm` esercita la
+    #    negoziazione, non la scavalca.
     voci = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
-            ("audio.codec", "opus,pcm"), ("video.livello", "5.1"),
+            ("audio.codec", audio), ("video.livello", "5.1"),
             ("video.misura_massima", "3840x2160"), ("appunti.testo", "si"),
             ("input.tocco", "no"), ("client.nome", "cliente-di-prova 0.1.0")]
     out = struct.pack("!HH", 1, len(voci))
@@ -554,7 +661,7 @@ async def principale(a) -> int:
         #    prima.  ⭐ Il validatore di B4 e' l'arbitro anche del rifiuto.
         try:
             # ── CIAO ────────────────────────────────────────────────────────
-            b = inquadra(T["CIAO"], corpo_ciao())
+            b = inquadra(T["CIAO"], corpo_ciao(a.audio_codec))
             cli.manda(b)
             reg.aggiungi(CLIENT, b)
             nome, corpo, grezzo = await attendi(cli, "ECCOMI", reg=reg)
@@ -582,7 +689,7 @@ async def principale(a) -> int:
                   + ("   ⭐ il secondo fisso c'e'" if ms >= 1000 else
                      "   ⛔ MENO DI UN SECONDO: §4.4-bis violata"))
             if ms < 1000:
-                scrivi_traccia(a, reg, cli)
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
                 return 1
 
             # ── ATTACCA ─────────────────────────────────────────────────────
@@ -593,7 +700,7 @@ async def principale(a) -> int:
             reg.aggiungi(CLIENT, b)
             nome, corpo, grezzo = await attendi(cli, "SESSIONE", reg=reg)
         except Exception:
-            scrivi_traccia(a, reg, cli)
+            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
             raise
         stato_s = corpo[0]
         lar, alt = struct.unpack("!II", corpo[1:9])
@@ -631,7 +738,7 @@ async def principale(a) -> int:
                         await asyncio.wait_for(cli.caduto.wait(), timeout=quando)
                         print(f"   ⛔ caduta prima di poter chiedere la tela: "
                               f"{cli.caduta}")
-                        scrivi_traccia(a, reg, cli)
+                        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
                         return 4
                     except asyncio.TimeoutError:
                         pass
@@ -641,7 +748,7 @@ async def principale(a) -> int:
                     # ⛔ Il silenzio si REGISTRA e si esce con un codice suo: e'
                     #    la scena di §7.1, e va distinta da «la sessione e'
                     #    caduta» (4) e da «tutto bene» (0).
-                    scrivi_traccia(a, reg, cli)
+                    scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
                     return 5
                 tela_viva = (r[2], r[3])
         if a.vista:
@@ -654,7 +761,7 @@ async def principale(a) -> int:
             reg.aggiungi(CLIENT, b)
             print(f"   → VISTA {vl}x{va}   ⚠ non deve far cambiare la tela")
 
-        scrivi_traccia(a, reg, cli)
+        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
 
         # ⛔ IL SEGNALE DI «ATTACCATO», E PERCHE' NON BASTA UNA RIGA STAMPATA.
         #
@@ -743,12 +850,12 @@ async def principale(a) -> int:
                 #    dev'essere gia' riconoscibile come nostro.
                 cli.chiusa_da_noi = True
                 print(f"   ⭐ ancora attaccato dopo {a.resta} s: niente e' caduto")
-                scrivi_traccia(a, reg, cli)
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
                 return 0
             print(f"   ⛔ NON sono rimasto attaccato: {cli.caduta}")
-            scrivi_traccia(a, reg, cli)
+            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
             return 4
-        scrivi_traccia(a, reg, cli)
+        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
         return 0
 
 
@@ -849,6 +956,14 @@ if __name__ == "__main__":
     p.add_argument("--attesa-tela", type=float, default=5.0,
                    help="quanto si aspetta un TELA prima di dichiarare il "
                         "silenzio (⚠ non e' una regola di RCP.md)")
+    # ═══ L'AUDIO — fase 7 ═════════════════════════════════════════════════
+    p.add_argument("--audio-codec", default="opus,pcm",
+                   help="che cosa dichiarare in `audio.codec` (§4.3).  "
+                        "⛔ `pcm` da solo e' legittimo ed e' il controllo "
+                        "positivo di Opus, non un aggiramento")
+    p.add_argument("--audio-scrivi", default="",
+                   help="dove scrivere i blocchi d'audio ricevuti, in JSONL — "
+                        "il giudice di `07-b42` legge questo")
     p.add_argument("--resta", type=float, default=0)
     # ⭐ Ogni quanti secondi farsi sentire (0 = mai, ed e' il predefinito:
     #    tacere e' quel che serve a misurare l'orologio del silenzio).

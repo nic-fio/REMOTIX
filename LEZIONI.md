@@ -1109,6 +1109,49 @@ Ogni ipotesi che chiede «collegati e dimmi» costa un suo intervento. Da cui:
 3. le prove le fa il banco; all'utente si chiede **il giudizio**, che è l'unica cosa che il banco non
    sa dare.
 
+### 2.7 ⭐⭐⭐ Non c'è miglior strumento di diagnosi che monitorare una sessione VERA, byte per byte
+
+*Detta dall'utente il 17 agosto 2026, alla fine di una caccia durata un pomeriggio — e la sua
+frase è il titolo perché è la sua parola: «proviamo a riprodurre un video da YouTube, tu monitora
+la sessione su ogni singolo byte, così risolviamo una volta per tutte».*
+
+⛔ **È quel gesto che ha rotto lo stallo, e nient'altro.** Prima c'erano: cinque giri di banco
+**verdi**, un giudice certificato su sei casi, una revisione avversariale con tredici rilievi, e
+**otto cure** di cui sei erano difetti veri che non erano quello che l'utente sentiva. Nessuna di
+quelle cose ha trovato la causa.
+
+⭐ **L'ha trovata una sessione vera, guardata mentre succedeva.** Trenta secondi di YouTube con il
+registro aperto hanno dato il numero: il figlio produce **50 blocchi al secondo**, il server ne
+rifiuta **25**. Esattamente la metà.
+
+**Perché funziona, e perché il banco no.** Il banco è una scena che **hai scelto tu**: contiene i
+difetti che sapevi immaginare. Una sessione vera contiene quelli che non sapevi — e in più li
+mette **tutti insieme**, che è la condizione in cui vivono. ⚠ Qui i cinque verdi erano onesti: il
+banco misurava il **contenuto** (frequenza, ampiezza, purezza) e il difetto era nel **ritmo**.
+
+**Le tre condizioni perché «monitorare» sia diagnosi e non contemplazione:**
+
+| | |
+|---|---|
+| ⛔ **tutti gli anelli, sulla stessa riga** | qui erano quattro — chi produce, chi codifica, chi spedisce, **chi ascolta** — e del quarto non si sapeva niente. Finché è così, ogni cura sembra confermata dal ragionamento e nessuna dalla misura |
+| ⛔ **si registra PRIMA che parta** | la registrazione si accende e *poi* si dice all'utente «vai»: un difetto che dura trenta secondi non si riprende |
+| ⭐ **si guarda la FORMA del numero, non solo il valore** | la perdita era *esattamente* la metà. Una perdita di rete non è mai esattamente la metà; **un'aritmetica sì**. Un rapporto troppo tondo accusa un conteggio, non il mondo |
+
+**E la cosa che è costata di più**: il quarto anello — il lato che **ascolta** — non aveva un
+posto dove parlare. La pagina ha un riquadro di diagnostica, ⛔ ma col desktop acceso è a tutto
+schermo e **non è raggiungibile**: chiederne la lettura all'utente è chiedergli una cosa che non
+si può fare. ⭐ La cura è costata **trenta righe** — un endpoint (`/diario`) su cui il client
+scrive i suoi numeri, che finiscono nel **registro del server** accanto agli altri tre.
+
+⇒ ⭐ Con i quattro anelli sulla stessa riga la diagnosi è durata **un passaggio**: *50 prodotti →
+40 consegnati → deficit 20 % → cuscino 250 ms → un buco ogni 1,25 s*. Misurati: **23 in 30
+secondi**. Il conto ha chiuso al decimale e ha **assolto tre imputati in un colpo**.
+
+⚠ **E non contraddice §1.1 né il valore dei banchi**: il banco serve a *ripetere* e a *certificare*.
+Ma quando l'utente dice «fa schifo» e il banco dice verde, ⛔ **non si cura al buio: si guarda una
+sessione vera**. È `CODER.md` §3.8 — *«si verifica dal lato che deve ricevere»* — applicata alla
+sessione intera invece che a un anello.
+
 ---
 
 ## 3. Che cosa chiedere a un compositore nuovo

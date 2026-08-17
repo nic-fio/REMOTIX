@@ -3125,6 +3125,72 @@ riletta e non data per scontata.
 
 ---
 
+## 5-quater. L'audio
+
+*Aperto il 17 agosto 2026. ⛔ Fino a quel giorno **questo capitolo non esisteva**: le scelte
+dell'audio stavano sparse fra `SPECIFICHE.md` §10, `RCP.md` §5.3 e l'invariante I5 — cioè in tre
+posti e in nessuno. Il documento di fase lo aveva dichiarato all'apertura.*
+
+### 5-quater.1 🔸 Opus passa da `libavcodec`, non da `libopus`
+
+`[M]` 17 agosto 2026: `libavcodec` 61.19.101 sulla macchina di prova **è già collegato a
+`libopus.so.0`** e dichiara l'encoder `libopus`. ⇒ Il `Makefile` **non cambia** e non si aggiunge
+un pacchetto a **due** ambienti di costruzione (il contenitore del portatile e il `devroot` del
+server), dove `opus.pc` non c'è.
+
+⚠ **Il prezzo, dichiarato**: un `AVPacket` per blocco, cioè 50 allocazioni al secondo. È meno del
+prezzo di una dipendenza da installare due volte e ricordare per sempre (`LEZIONI.md` §2.5-bis).
+
+### 5-quater.2 🔸 Il bitrate di Opus: **96 kbit/s**
+
+Derivato, non deciso dall'utente. È la banda a cui Opus è trasparente per la musica secondo la sua
+documentazione `[S]`; `[M]` un blocco da 20 ms misura **241-439 byte**, che sta nel datagram con
+margine largo. ⏳ **Da rivedere il giorno in cui qualcuno giudichi la qualità**, non prima.
+
+### 5-quater.3 🔸 Il cuscino di riproduzione: **250 ms**, e non è un numero libero
+
+⛔ **Era 60 ms, ed era sbagliato**: scelto guardando il tetto del **video** (50 ms, `CODER.md`
+§1-bis) — cioè misurando l'audio col metro di un'altra cosa. Il riferimento
+(`gnome-remote-desktop`) ne tiene **300** (`STUDI.md` §gnome §11).
+
+**La ragione per cui 60 non regge**: il video si decodifica e si dipinge **sullo stesso thread**
+che programma l'audio. Quando quel lavoro supera il cuscino la riproduzione si è già svuotata, e
+**ogni riarmo è un buco**.
+
+⚠ **Il prezzo è dichiarato**: 250 ms fra quel che si vede e quel che si sente. ⛔ E se un giorno
+desse fastidio, **la cura non è stringerlo**: è togliere l'audio dal thread principale con un
+`AudioWorklet`. ⏳ L'utente ha detto *«risolto»*, non *«e il ritardo va bene»*: quel giudizio manca.
+
+### 5-quater.4 ✅ ⭐⭐ Un blocco che non parte si RIMANDA, non si butta — e a decidere è la coda
+
+*17 agosto 2026, dopo che l'utente ha detto sette volte «fa schifo» su un banco verde.*
+
+`RCP.md` §6.3 dice *«nessuna ritrasmissione, nessun riordino»*, ⛔ **e non dice «si butta al primo
+rifiuto»**: quella era una lettura mia, e valeva il **50 %** dell'audio.
+
+| | |
+|---|---|
+| ⛔ **quel che NON si fa** | buttare un blocco perché il pacer ha detto «non adesso»: quel blocco parte qualche centinaio di microsecondi dopo, e buttarlo è **un buco garantito** |
+| ⭐ **quel che decide** | **la coda**: otto blocchi = 160 ms di Opus. Oltre quelli il più vecchio non serve più a nessuno, ed **è lì** che §6.3 morde |
+| ⭐ **e si spediscono più blocchi per pacchetto** | un pacchetto è **1452 byte**, un blocco di Opus **230**: ce ne stanno sei. ⛔ Spedirne uno per passata di scrittura, con ~25 passate al secondo contro 50 blocchi prodotti, perdeva **esattamente la metà** |
+
+⚠ **E la forma del numero era l'indizio**: *esattamente* la metà. Una perdita di rete non è mai
+esattamente la metà; un'aritmetica sì (`LEZIONI.md` §2.7).
+
+### 5-quater.5 ✅ ⛔ La priorità di tempo reale si concede **dall'unità**, e il programma la VERIFICA
+
+**R26 di v1** (`~/Documenti/REMOTIX/REFERENCE.md`, `[M]` 5 agosto 2026): un processo con
+`RLIMIT_RTPRIO` a zero **non può chiedere `SCHED_FIFO`**. PipeWire ci prova, gli viene negato, e il
+suo anello dei dati raccoglie i campioni a priorità normale ⛔ **mentre nello stesso processo il
+codificatore video si prende un core**. Il sintomo non è un errore: è **audio che scoppietta quando
+il desktop lavora**, invisibile a ogni controllo sul filo.
+
+⇒ `LimitRTPRIO=20` e `LimitNICE=-11` **nell'unità systemd**. ⭐ E poiché un rlimit il codice non se
+lo può dare, il figlio **lo legge e scrive una riga ⛔ se manca**: è l'invariante **I7** applicata
+dove la protezione *deve* stare in una configurazione — una riga persa si vede invece di tacere.
+
+---
+
 ## 6. Il codice che si eredita
 
 ### 6.1 ✅ Il patrimonio di v1 è qui, e versionato
