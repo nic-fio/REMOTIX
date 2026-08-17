@@ -610,7 +610,7 @@ dentro uno schermo**, e le due misure sono diverse — a volte molto.*
 
 | | Che cosa è | Chi la usa |
 |---|---|---|
-| **la tela** | ⛔ ~~lo schermo del dispositivo~~ → ⭐ **la FINESTRA, in pixel fisici** — corretto il 15 agosto 2026, vedi il riquadro qui sotto | si fissa **all'attacco** e cambia solo con `ADATTA_TELA` |
+| **la tela** | ⛔ ~~lo schermo del dispositivo~~ → ⭐ **la FINESTRA, in pixel fisici** — corretto il 15 agosto 2026, vedi il riquadro qui sotto | si fissa **all'attacco e al riattacco**, con `ADATTA_TELA`, e ⛔ **non cambia più per tutta la sessione** (§5.1-bis, 17 agosto 2026) |
 | **la vista** | **la finestra**, cioè quanto la pagina ha davvero da disegnare, sempre in pixel fisici | si rinegozia a ogni ridimensionamento |
 
 > ## ⛔⛔ CORRETTA IL 15 AGOSTO 2026 — la tela è la FINESTRA, non lo schermo

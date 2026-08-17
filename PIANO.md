@@ -241,7 +241,7 @@ WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` �
 > |---|---|
 > | ⭐⭐ **il cursore lo veste il browser** (`css("cursor", "url(…) x y, auto")`), e la cattura del puntatore è **un bottone**, non un automatismo | ✅ **adottato lo stesso giorno** — e ha smontato §7.1, che contraddiceva §7.5 |
 > | ⭐⭐ **il primo fotogramma si CHIEDE** (`buffer_refresh` con `refresh-now`), non si aspetta | ⏳ **è il lavoro sul tempo di apparizione del desktop**, `[M]` 4,10 s su 5,21 spesi ad aspettare |
-> | ⭐ **il client dice la sua misura e il server ridimensiona** (`configure_display`) | ⏳ è `RCP.md` §4.5, e **oggi nessuno la mantiene** |
+> | ⭐ **il client dice la sua misura e il server ridimensiona** (`configure_display`) | ✅ **fatto, ma solo a un capo**: la misura si dice e si prende **all'attacco e al riattacco** (`RCP.md` §4.5, `ADATTA_TELA`). ⛔ *Durante* la sessione no — uscito il 17 agosto 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra qui fa una cosa che noi **abbiamo deciso di non fare**, non una che ci manca |
 >
 > ⇒ ⚠ **Il costo di aver saltato il punto 0 non è stato il tempo dello studio**: è il codice scritto
 > nel frattempo, e il difetto trovato dall'utente in trenta secondi d'uso invece che da noi.
@@ -839,6 +839,11 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 **L'utente vede**: ridimensiona la finestra e l'immagine si adatta **senza che le finestre dentro
 si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la sessione adattata.
 
+> ⭐ **E dal 17 agosto 2026 questa frase è vera sempre, non «salvo un interruttore»** — l'immagine
+> si adatta e **il desktop non si tocca mai**, su ogni compositore (`DECISIONI.md` §5.1-bis).
+> ⚠ Il prezzo dichiarato: se la finestra cambia **forma**, o il tablet si **ruota**, le proporzioni
+> non combaciano più e si vedono le bande. Per riavere la misura giusta ci si **riattacca**.
+
 **Il banco**: il ripiego su KWin < 6.8 **dichiarato nel registro** — si verifica che la riga ci
 sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
 
@@ -1127,9 +1132,26 @@ già state confuse.
 **Si riusa**: `kwin.c` (822 righe), `appunti_wlr.c` (796).
 
 ⚠ Le trappole sono già scritte in `STUDI.md` §kde: `XDG_MENU_PREFIX` senza cui il cancello della cattura
-non si apre; niente `InaccessiblePaths=` nel drop-in; il ridimensionamento **nella forma della
-negoziazione**, con la guardia contro il ciclo infinito che **non si vede su Trixie** e compare il
-giorno dell'aggiornamento a 6.8.
+non si apre; niente `InaccessiblePaths=` nel drop-in.
+
+> ### ⛔⭐ E UNA TRAPPOLA È USCITA DAL PIANO IL 17 AGOSTO 2026 — `DECISIONI.md` §5.1-bis
+>
+> Qui c'era la terza: *«il ridimensionamento **nella forma della negoziazione**, con la guardia
+> contro il ciclo infinito che non si vede su Trixie e compare il giorno dell'aggiornamento a
+> 6.8»*. ⛔ **Non è più lavoro di questa fase**, perché non è più lavoro di nessuna: il
+> ridimensionamento a caldo è uscito dal prodotto — *«non voglio mettere delle eccezioni nel
+> progetto»* — ed è uscito **proprio per non avere un ramo KDE diverso da quello GNOME**.
+>
+> ⚠ **Quel che questa fase deve ancora fare, e che non è la stessa cosa**: rispondere
+> `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` all'`ADATTA_TELA` che il client manda **all'attacco e al
+> riattacco**, così che la pagina riscali e lo dichiari (§6.3). ⭐ E su KDE è il **caso normale**,
+> non il ramo povero: KWin ≤ 6.7.4 prende la misura dalla riga di avvio (`--virtual --width W
+> --height H`) e non la cambia più. Il percorso di codice esiste già ed è provato sull'ospite
+> finto (caso 11 di `banchi/04-b31`).
+>
+> ⭐ **Il guadagno del taglio si vede qui**: la fase 11 non deve più portare una funzione, deve
+> solo dichiarare un rifiuto — e la guardia contro il ciclo infinito di `kwin!7932`, che sarebbe
+> stata un difetto invisibile su Trixie e vivo dopo l'aggiornamento, non ci riguarda più.
 
 ---
 

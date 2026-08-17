@@ -1594,7 +1594,7 @@ non del mittente.
 | `0x0008` | `VISTA` | → | la vista è cambiata: nuove larghezza e altezza |
 | `0x0009` | `DISPOSIZIONE` | → | la disposizione di tastiera è cambiata |
 | `0x000A` | `CURSORE_FORMA` | ← | forma e punto attivo del puntatore |
-| `0x000B` | `ADATTA_TELA` | → | l'utente ha chiesto «adatta il desktop a questa finestra» |
+| `0x000B` | `ADATTA_TELA` | → | «adatta il desktop a questa finestra» — ⚠ dal nostro client **solo all'attacco e al riattacco** (§7.1); il protocollo lo ammette a sessione aperta da chiunque |
 | `0x000C` | `CONGEDO` | ↔ | motivo |
 | `0x000D` | `RICHIEDI_CHIAVE` | → | ⭐ *nuovo, 9 ago*: serve un fotogramma chiave (§5.2) |
 | `0x000E` | `TELA` | ← | ⭐ *nuovo, 9 ago*: l'esito di `ADATTA_TELA` |
@@ -1648,6 +1648,19 @@ giorno in cui `DECISIONI.md` §5.0-ter venisse chiusa. L'unico messaggio che cam
 > l'attacco. ⚠ Per l'arbitro non cambia niente — il messaggio, i controlli e la risposta sono gli
 > stessi — e la riga si corregge perché **un documento che descrive un client che non esiste più
 > smette di essere l'arbitro**.
+>
+> ### ⛔⛔ E DAL 17 AGOSTO 2026 DIETRO NON C'È **MAI** UN DITO — `DECISIONI.md` §5.1-bis
+>
+> Il ridimensionamento a caldo è uscito dal prodotto (*«non voglio mettere delle eccezioni nel
+> progetto»*): **la nostra pagina manda `ADATTA_TELA` solo all'attacco e al riattacco**, e
+> ridimensionare la finestra non ne produce nessuno.
+>
+> ⛔⭐ **Ma questa è una scelta del NOSTRO client, non una regola del protocollo, e le due non si
+> confondono**: RCP/1 continua ad ammettere `ADATTA_TELA` **in qualunque momento a sessione
+> aperta**, e il server **DEVE** continuare a rispondere con un `TELA` a chiunque lo mandi. ⚠ Un
+> arbitro che scrivesse «il client non lo manda durante la sessione» dichiarerebbe **non conforme
+> un client conforme** — e il primo a rimetterci sarebbe il nostro, il giorno in cui la decisione
+> cambiasse. La riga sta qui perché descrive **chi lo manda oggi**, non che cosa è lecito.
 >
 > ⏳ **E resta una riga da scrivere**, trovata refutando la notte del 15 agosto: *che cosa fa il
 > server quando il palco cambia misura **senza che nessun `ADATTA_TELA` gliel'abbia chiesto*** — un
