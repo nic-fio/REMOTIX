@@ -456,70 +456,112 @@ qualcun altro.
 
 ---
 
-> # ⭐⭐⭐ DA QUI SI RIPRENDE — **la grafica su Firefox**, 17 agosto 2026 sera
+> # ⭐⭐⭐ DA QUI SI RIPRENDE — **la grafica su Firefox**, secondo giro, 17 agosto 2026
 >
-> *Deciso dall'utente: «nella prossima sessione ci occupiamo della grafica in Firefox: prima
-> sistemiamo quella».*
+> *L'artefatto è **VIVO** dopo la cura della profondità: rivisto dall'utente alle 15:26 sul
+> binario di oggi. ⛔ E in questo giro sono morte **altre tre** ipotesi, tutte con la misura
+> accanto. Chi riprende non le rifà.*
 >
-> ## Il sintomo
+> ## Il sintomo, invariato
 >
 > Su **Firefox 140 ESR** il desktop mostra **blocchi rettangolari** nelle zone ferme, e col tempo
-> smette di aggiornarsi. ⚠ Su Chrome no. Firefox negozia **AV1** (l'HEVC non lo decodifica), e AV1
-> su questo ferro è **in software** — quindi è anche lento, ed è per progetto (`figlio.c`: `av1_vaapi`
-> esce 218, `vainfo` dà AV1 in sola decodifica).
+> smette di aggiornarsi. ⚠ Su Chrome no. Firefox negozia **AV1**, e l'AV1 su questo ferro è in
+> software da tutt'e due i lati.
 >
-> ## ⛔ QUATTRO IPOTESI SONO GIÀ MORTE — non si rifanno. 📖 `LEZIONI.md` §2.8
+> ## ⛔ LE IPOTESI MORTE SONO SETTE. Non se ne rifà nessuna.
 >
 > | l'ipotesi | come è morta |
 > |---|---|
-> | il nostro flusso AV1 è rotto | ⛔ **falsa**: 6 fotogrammi presi **dal filo** e dati a **libdav1d** — lo stesso decodificatore di Firefox — danno un'immagine **perfetta** |
-> | l'allineamento 962 → 968 di SVT-AV1 | ⛔ **falsa**: 2560×**962** codificato e ridecodificato torna **2560×962 esatti**, PSNR **43,3 dB** (meglio del 960 allineato) |
-> | la pagina riceve una misura sbagliata | ⛔ **falsa**: la pagina lo dice da sé — *codificato 2560×962 · mostrato 2560×962 · tela 2560×962* |
-> | il decodificatore del browser sbaglia | ⛔ **falso**: zero errori riportati, e il filtro che li avrebbe portati al server funziona |
+> | il nostro flusso AV1 è rotto | ⛔ 6 fotogrammi dal **filo** dati a **libdav1d** → immagine perfetta |
+> | l'allineamento 962 → 968 di SVT-AV1 | ⛔ 2560×962 ricodificato torna 2560×962, PSNR 43,3 dB |
+> | la pagina riceve una misura sbagliata | ⛔ la pagina lo dice da sé: codificato = mostrato = tela |
+> | il decodificatore del browser sbaglia e lo dice | ⛔ zero errori riportati, e il filtro funziona |
+> | ⭐ **il percorso di DISEGNO della pagina** | ⛔ **falso, e adesso ha il suo testimone**: tre giri col Firefox VERO, 2 800 fotogrammi, tela tirata giù in PNG a 1588×914, 2548×924 e 2508×872 — **nitida a 1:1**, testo del terminale tagliente, `dipinti == consegnati`, `saltati_coda 0`, `buchi 0` |
+> | ⭐ **la profondità (10 bit dichiarati 8)** | ⛔ **falso**: la cura è in servizio dal 17 agosto e l'utente **rivede l'artefatto lo stesso** |
+> | ⭐⭐ **xrdp / RemoteFX** (vedi sotto) | ⛔ **assolto a questo carico**: controllo con la stessa forma di danno, occhi dell'utente, pulito |
 >
-> ⇒ **Resta il percorso di DISEGNO della pagina**, che non ha mai avuto un testimone indipendente:
-> la cattura pulita usa il cliente Python, che non dipinge niente.
+> ## ⚠ IL QUINTO ANELLO — si guarda il portatile via **xrdp**, e va saputo
 >
-> ## ⭐ I due fili da cui ripartire
+> `[M]` La sessione grafica del portatile **non è locale**: è `Xorg :10` avviato da **xrdp**
+> (2560×1080), e `~/.xorgxrdp.10.log` dice **`got RFX capture`** — RemoteFX, un codec **a
+> tessere**. ⇒ La catena ha **cinque** anelli, non quattro, e il quinto ha per guasti tipici
+> proprio «blocchi» e «non si aggiorna più».
 >
-> 1. la pagina dichiara **`formato BGRX`**. Un fotogramma AV1 esce in `I420`: Firefox lo consegna
->    **già convertito in RGB**. ⇒ Guardare `dipingi()` e il `drawImage(f, 0, 0)` sul deposito;
-> 2. `?video=worker` — il **secondo** percorso di disegno — su Firefox **non dipinge affatto**: la
->    pagina carica (il server logga `GET /?video=worker`), la sonda gira, poi niente. ⚠ `VideoDecoder`
->    dentro un `Worker` su 140 ESR è la sospettata, **non verificata**.
+> ⛔ **Ma è stato messo alla prova e ha retto.** Il controllo è `banchi/07-b47-controllo-xrdp.html`
+> (da rifare se serve): una finestra 2560×1040 che **ridipinge la finestra INTERA venti volte al
+> secondo** — la stessa forma di danno di `componi()` — con dentro zone ferme di dettaglio fine.
+> ⭐ Due modi (`1` = solo il riquadro, `2` = finestra intera): **nessun artefatto in nessuno dei
+> due**. ⇒ xrdp non è l'imputato, ma ⚠ **resta fra i piedi in ogni misura visiva** e la prossima
+> prova si fa **in locale**, deciso dall'utente.
 >
-> ## ⚙ Gli strumenti che stasera sono nati, e come si usano
+> ## ⭐ E IL DATO CHE ORIENTA TUTTO IL RESTO
 >
+> `[M]` 15:26, sessione VERA dell'utente **mentre vedeva l'artefatto**:
 > ```
-> # i fotogrammi presi DAL FILO, e AV1 dichiarato da solo — cioè quel che fa Firefox
-> python3 banchi/01-b3-cliente.py --porta 7730 --utente prova --parola prova2026 \
->     --video-codec av1 --video-profondita 8 \
->     --video-scrivi /srv/remotix/tmp/07-appunti/f.obu --resta 12
-> # e il decodificatore TERZO
-> ffmpeg -f obu -i f.obu -y g%02d.png
+> dipinti 23  video 23→23  salt 0  buchi 0  ord 0  mis 0  err 0
 > ```
-> ⚠ Il cliente gira **dentro** `enter.sh` (lì c'è `aioquic`); `/media/REMOTIX` si vede come
-> `/srv/remotix`, `/media/REMOTIX/src` come `/srv/src`.
+> ⇒ Zero perdite, zero buchi, zero scarti, zero errori del decodificatore. **La pagina ha dipinto
+> tutto quel che le è arrivato, e lo crede giusto.** ⛔ Quindi non manca un fotogramma: **sono
+> corrotti i pixel dentro i fotogrammi che arrivano**, e nessun contatore lo può vedere.
 >
-> ⭐ E **la pagina racconta al server**: la misura vera di ogni fotogramma, i guasti del
-> decodificatore, e ogni 5 s `tasti N · ultimo · classico · schermo · dipinti · fuoco`. Si leggono
-> con `grep "la pagina di" …/registro.log`.
+> ## ⭐ IL PASSO SEGUENTE, ed è uno solo: **AVERE IN MANO L'IMMAGINE SBAGLIATA**
+>
+> Finché l'artefatto lo descrive una frase, ogni ipotesi è compatibile. La sua **forma** —
+> quanto è grande una tessera, se è spazzatura o è immagine vecchia, dove sta — nomina il
+> meccanismo da sola.
+>
+> 1. l'utente riproduce **in locale** (niente xrdp) e si fotografa lo schermo;
+> 2. ⭐ e poi la prova che spacca in due il sospetto, da fare nella pagina: dallo **stesso**
+>    `VideoFrame` si prende `f.copyTo()` (i piani grezzi del decodificatore) **e** si rilegge la
+>    tela con `getImageData` dopo il `drawImage`. Se i piani sono già sbagliati, l'imputato è il
+>    decodificatore del browser (e allora il flusso che gli diamo ha qualcosa che a `libdav1d` da
+>    riga di comando non diamo); se i piani sono buoni e la tela no, l'imputato è
+>    `drawImage(VideoFrame)`.
+>
+> ## ⚙ GLI STRUMENTI NATI IN QUESTO GIRO — restano, e si usano così
+>
+> ⭐ **`banchi/07-b46-testimone-disegno.py`** — guida il **Firefox vero** col protocollo
+> **Marionette** (niente geckodriver, niente `xdotool` a coordinate): apre il prodotto, si
+> collega, legge i dodici contatori, e **tira giù la tela in PNG**.
+> ```
+> python3 banchi/07-b46-testimone-disegno.py --porta 7730 --secondi 45 \
+>     --larghezza 2560 --altezza 1010 [--worker] [--visibile]
+> ```
+> ⚠ `--visibile` vuole `DISPLAY` addosso; senza, gira headless. ⛔ E headless **non ha GPU**: se
+> un giorno il sospetto tornasse sul percorso accelerato, headless non lo può vedere.
+>
+> ⭐ **La pagina adesso dice anche quel che NON ha dipinto**, ogni 5 s nel registro del server:
+> `video consegnati→dipinti · salt · buchi · ord · mis · err`. Si legge con
+> `grep "la pagina di" …/registro.log`.
+>
+> ## ⛔ E UN DIFETTO NOSTRO, RIPRODOTTO E CON LA CAUSA IN MANO: `?video=worker`
+>
+> Su Firefox il worker **non dipinge niente**, e il server dice perché:
+> ```
+> nessuno stream unidirezionale per il fotogramma: il client ne concede ancora 0
+> … il delta che veniva dopo il 1023
+> ```
+> ⇒ Gli stream trasferiti al worker **non vengono mai letti**, quindi non si chiudono mai: si
+> esauriscono i **1024** stream unidirezionali di credito e da lì in poi il server non può più
+> spedire niente. ⛔ E `postMessage` **non lancia**: il commento di `pagina.html` («se un motore
+> non lo permettesse, `postMessage` lancia — e allora si DICE») poggia su una premessa **falsa**.
+> ⇒ La cura è un **riscontro**: se entro N ms il worker non ha letto il primo byte, lo si dichiara
+> e si ripiega — invece di consumare il credito in silenzio.
 >
 > ## ⚙ Lo stato della macchina
 >
 > | | |
 > |---|---|
-> | il server della caccia | **7730**, unità `remotix-7730.service`, albero `/media/REMOTIX/src/07-appunti-src`, lavoro `/media/REMOTIX/tmp/07-appunti` |
-> | ⛔ le porte occupate | 7448 · 7700 · 7710 · 7720 · **7730** — un banco nuovo prende la sua |
+> | il server della caccia | **7730**, `remotix-7730.service`, albero `/media/REMOTIX/src/07-appunti-src`, lavoro `/media/REMOTIX/tmp/07-appunti` |
+> | ricostruito e riacceso | 17 agosto, 16:38 — porta `pagina.html` e `pagina.c` di oggi |
 > | si riaccende con | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
-> | ⚠ il browser mette in cache | serve **`Ctrl+Maiusc+R`**: un ricaricamento normale ha già falsificato una misura |
+> | ⛔ le porte occupate | 7448 · 7700 · 7710 · 7720 · **7730** |
+> | ⚠ il browser mette in cache | serve **`Ctrl+Maiusc+R`**: la pagina è cambiata due volte |
 >
-> ## ⛔⛔ E UNA VERIFICA È IN SCADENZA, NON PREVENTIVA
+> ## ⛔⛔ E LA VERIFICA SU CHROME È ANCORA IN SCADENZA
 >
-> La cura della profondità (§4.3 che attraversa il confine) è **in servizio** e cambia quel che
-> riceve **anche Chrome**: fino al 17 agosto prendeva un flusso a 10 bit dichiarato 8, adesso ne
-> prende uno a 8 bit dichiarato 8. ⚠ **Nessuno ha più guardato Chrome dopo quella modifica.**
-> ⇒ Dieci minuti di collegamento da Windows, e si guarda se il desktop è come lo si ricordava.
+> La cura della profondità cambia quel che riceve **anche Chrome**, e dopo quella modifica Chrome
+> non l'ha più guardato nessuno. ⚠ Dieci minuti, e si guarda se il desktop è come lo si ricordava.
 >
 > ---
 

@@ -175,7 +175,18 @@ static void componi(cliente *c, const char *stato, const char *tipo,
 
 static void servi(pagina *p, cliente *c)
 {
-	char metodo[16] = {0}, percorso[256] = {0}, bersaglio[256] = {0};
+	/* ⛔⭐ MILLE E NON DUECENTOCINQUANTASEI — 17 agosto 2026, e la ragione e'
+	 *     una misura che MENTIVA.  Il diario della pagina (`/diario?…`) viaggia
+	 *     nella stringa di ricerca, percento-codificato: 250 byte di bersaglio
+	 *     sono meno di 150 caratteri veri, e appena la riga ha portato anche i
+	 *     conti del video arrivava al registro TAGLIATA A META' — «… buchi%» —
+	 *     senza che niente lo dicesse.  ⚠ Il numero che manca ha lo stesso
+	 *     aspetto del numero che vale zero.
+	 * ⛔ E CRESCONO TUTT'E DUE, o non cresce niente: il bersaglio e' una COPIA
+	 *    di `percorso` presa prima del taglio al `?` (riga sotto), quindi il
+	 *    tetto vero lo pone `percorso`.  ⚠ Allargare il solo `bersaglio`
+	 *    sarebbe stata una cura che non cura, con l'aria di averlo fatto. */
+	char metodo[16] = {0}, percorso[1024] = {0}, bersaglio[1024] = {0};
 	const char *sp1, *sp2;
 	char indirizzo[64];
 	uint64_t restano = 0;
@@ -240,7 +251,9 @@ static void servi(pagina *p, cliente *c)
 	 *   dopo questa cura gli interruttori si accendono davvero, e un registro
 	 *   che scrivesse `/` per `/?tela=desincronizzata` renderebbe invisibile
 	 *   proprio l'unica cosa che questa riga ha appena reso possibile. */
-	memcpy(bersaglio, percorso, sizeof bersaglio - 1);
+	/* ⚠ La misura la detta la SORGENTE: cosi' la riga regge anche il giorno in
+	 *   cui i due vettori non fossero piu' lunghi uguali. */
+	memcpy(bersaglio, percorso, sizeof percorso - 1);
 	percorso[strcspn(percorso, "?#")] = 0;
 
 	/* ⛔ La chiave del ban la fa `rcp.c`, non questo file: `rcp.h` lo dice con
@@ -296,7 +309,10 @@ static void servi(pagina *p, cliente *c)
 	 *   riga qualunque.  ⛔ Il corpo si tronca e si ripulisce prima di
 	 *   scriverlo: arriva da fuori, quindi e' un ingresso, non un dato. */
 	if (strcmp(percorso, "/diario") == 0) {
-		char pulito[400];
+		/* ⚠ Piu' CORTO di `bersaglio` apposta: cosi' il tetto che si tocca per
+		 *   primo e' questo, che sa dirlo — e non quello di la', che tronca
+		 *   zitto. */
+		char pulito[900];
 		size_t j = 0;
 		/* ⚠ Il testo arriva nella STRINGA DI RICERCA, non in un corpo: questo
 		 *   server le richieste non le legge oltre la riga iniziale, e una
@@ -313,8 +329,12 @@ static void servi(pagina *p, cliente *c)
 			pulito[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
 		}
 		pulito[j] = '\0';
-		registro_dice(REG_PAGINA, "📄 la pagina di %s dice: %s",
-		              c->provenienza, pulito);
+		/* ⛔ E UN TAGLIO SI DICHIARA.  Una riga tagliata in silenzio ha la
+		 *    faccia di una riga corta, e chi la legge conta i numeri che ci
+		 *    sono invece di accorgersi di quelli che mancano. */
+		registro_dice(REG_PAGINA, "📄 la pagina di %s dice: %s%s",
+		              c->provenienza, pulito,
+		              j + 1 >= sizeof pulito ? "  ⛔TAGLIATA QUI" : "");
 		componi(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
 		return;
 	}

@@ -1,0 +1,138 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>controllo — e' xrdp?</title>
+<style>
+  html, body { margin: 0; background: #101418; color: #d8dee4; overflow: hidden;
+               font-family: monospace; }
+  canvas { display: block; }
+  #aiuto { position: fixed; top: 6px; right: 12px; font: 14px monospace;
+           background: #000a; padding: 6px 10px; border: 1px solid #445;
+           color: #ffd479; z-index: 9; }
+</style>
+<body>
+<div id="aiuto">1 / 2 = modo &nbsp;·&nbsp; SPAZIO = fermo/mosso &nbsp;·&nbsp; <b id="stato">MOSSO</b>
+  &nbsp;·&nbsp; <span id="orologio">0.0 s</span> &nbsp;·&nbsp; Alt+F4 per chiudere</div>
+<canvas id="t"></canvas>
+<script>
+/* IL CONTROLLO — la stessa forma della scena di REMOTIX, senza REMOTIX:
+   una ZONA MOSSA (testo che scorre, ~20 volte al secondo) dentro un mare di
+   ZONE FERME piene di dettaglio fine.  Se i blocchi rettangolari compaiono
+   anche qui, l'imputato non e' il nostro video: e' l'anello che sta DOPO il
+   server X — cioe' xrdp/RemoteFX. */
+const t = document.getElementById("t");
+const p = t.getContext("2d", { alpha: false });
+let L = 0, A = 0, mosso = true, t0 = performance.now(), n = 0;
+
+/* ⛔⭐ IL MODO, e la prima versione di questa pagina sbagliava proprio qui.
+ *
+ *   modo 1 — si sporca SOLO il riquadro che si muove.  E' quel che fa una
+ *            pagina normale, e NON e' quel che fa REMOTIX.
+ *   modo 2 — si ridipinge la FINESTRA INTERA a ogni fotogramma, mentre il
+ *            contenuto cambia solo nel riquadro.  ⭐ E' la forma di danno del
+ *            prodotto: `componi()` porta il deposito sulla tela con un
+ *            `drawImage` pieno ogni volta, quindi per il server X sono due
+ *            milioni e mezzo di pixel venti volte al secondo anche a desktop
+ *            fermo.  ⇒ E' QUESTA la pressione da mettere su xrdp. */
+let modo = 2;
+
+/* Lo sfondo fermo si dipinge UNA VOLTA su una tela fuori schermo, e poi si
+   ricopia: cosi' il costo del disegno resta basso e quel che si mette alla
+   prova e' il TRASPORTO, non il browser. */
+let sfondo = null;
+
+function misura() {
+  L = t.width = innerWidth; A = t.height = innerHeight;
+  sfondo = document.createElement("canvas");
+  sfondo.width = L; sfondo.height = A;
+  p2 = sfondo.getContext("2d", { alpha: false });
+  dipingi_fermo(p2);
+  p.drawImage(sfondo, 0, 0);
+}
+let p2 = null;
+
+/* ── LE ZONE FERME: si dipingono UNA VOLTA, e non si toccano piu' ──────────
+   E' proprio quel che il difetto riferito colpisce: «blocchi rettangolari
+   nelle zone ferme». */
+function dipingi_fermo(p) {
+  p.fillStyle = "#101418"; p.fillRect(0, 0, L, A);
+
+  /* una griglia di righe da UN pixel: il dettaglio piu' fine che esista, ed e'
+     il primo a cadere sotto un codec a tessere */
+  p.strokeStyle = "#2b3b4d"; p.lineWidth = 1;
+  for (let x = 0.5; x < L; x += 8) { p.beginPath(); p.moveTo(x, 0); p.lineTo(x, A); p.stroke(); }
+  for (let y = 0.5; y < A; y += 8) { p.beginPath(); p.moveTo(0, y); p.lineTo(L, y); p.stroke(); }
+
+  /* rettangoli di colore pieno: se una tessera resta indietro, qui si vede
+     come un quadrato del colore sbagliato */
+  const colori = ["#c0392b", "#27ae60", "#2980b9", "#f39c12", "#8e44ad", "#16a085"];
+  for (let i = 0; i < 60; i++) {
+    p.fillStyle = colori[i % colori.length];
+    p.fillRect(40 + (i % 12) * 130, A - 260 + Math.floor(i / 12) * 44, 110, 34);
+  }
+
+  /* testo fermo, piccolo: la seconda cosa che un codec a tessere impasta */
+  p.fillStyle = "#9fb3c8"; p.font = "13px monospace";
+  for (let r = 0; r < 26; r++)
+    p.fillText("ZONA FERMA — questa riga non cambia mai: se diventa un blocco, "
+             + "il guasto e' a valle del server X   [riga " + r + "]",
+               Math.floor(L / 2) + 20, 60 + r * 18);
+
+  p.strokeStyle = "#ffd479"; p.lineWidth = 2;
+  p.strokeRect(20, 40, Math.floor(L / 2) - 60, A - 320);
+  p.fillStyle = "#ffd479"; p.font = "16px monospace";
+  p.fillText("ZONA MOSSA ↓  (~20 al secondo)", 30, 32);
+}
+
+/* ── LA ZONA MOSSA: solo dentro il riquadro, come un terminale che scorre ── */
+const RIGHE = [];
+for (let i = 0; i < 400; i++)
+  RIGHE.push("-rwxr-xr-x 1 root root " + (10000 + i * 137) + " Jun  4  2025  "
+           + "programma-" + i.toString(36) + "  ·  " + "0123456789abcdef".repeat(2));
+
+let cima = 0;
+function scorri() {
+  if (!mosso) return;
+  /* ⭐ IL DANNO DELLA STESSA FORMA DEL PRODOTTO: tutta la finestra, ogni volta,
+     col contenuto che cambia in un pezzo solo. */
+  if (modo === 2) p.drawImage(sfondo, 0, 0);
+  const x = 26, y = 46, l = Math.floor(L / 2) - 68, a = A - 332;
+  p.fillStyle = "#0b0f13"; p.fillRect(x, y, l, a);
+  p.font = "13px monospace";
+  const quante = Math.floor(a / 16);
+  for (let i = 0; i < quante; i++) {
+    const r = RIGHE[(cima + i) % RIGHE.length];
+    p.fillStyle = (i % 7 === 0) ? "#7ee787" : "#c9d1d9";
+    p.fillText(r, x + 8, y + 16 + i * 16);
+  }
+  cima = (cima + 1) % RIGHE.length;
+  n++;
+}
+
+setInterval(scorri, 50);                       /* 20 al secondo */
+setInterval(() => {
+  document.getElementById("orologio").textContent =
+    ((performance.now() - t0) / 1000).toFixed(1) + " s · " + n + " disegni";
+}, 200);
+
+addEventListener("keydown", (e) => {
+  if (e.code === "Digit1" || e.code === "Digit2") {
+    modo = (e.code === "Digit1") ? 1 : 2;
+    if (modo === 1) p.drawImage(sfondo, 0, 0);
+    aggiorna_stato(); e.preventDefault(); return;
+  }
+  if (e.code !== "Space") return;
+  mosso = !mosso;
+  aggiorna_stato();
+  e.preventDefault();
+});
+function aggiorna_stato() {
+  document.getElementById("stato").textContent =
+    (mosso ? "MOSSO" : "FERMO") + " · modo " + modo
+    + (modo === 2 ? " (finestra INTERA ridipinta, come REMOTIX)"
+                  : " (solo il riquadro)");
+}
+addEventListener("resize", misura);
+misura();
+aggiorna_stato();
+</script>
+</body>

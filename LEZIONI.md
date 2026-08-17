@@ -1198,6 +1198,32 @@ disegno — `?video=worker` — **non dipinge affatto** su Firefox: la pagina si
 gira, poi niente. `VideoDecoder` dentro un `Worker` su Firefox 140 ESR è la sospettata, e non è
 stata verificata.
 
+#### ⛔⛔ Il seguito del 17 agosto, secondo giro: **CONTA GLI ANELLI, E POI CONTALI DI NUOVO**
+
+Le quattro ipotesi di sopra ne lasciavano una sola in piedi — «resta il percorso di DISEGNO della
+pagina» — e anche **quella è morta**, misurata: un testimone che guida il **Firefox vero** col
+protocollo Marionette (`banchi/07-b46-testimone-disegno.py`) ha tirato giù **la tela in PNG** su
+tre geometrie, 2 800 fotogrammi, `dipinti == consegnati`, `saltati_coda 0`, `buchi 0`, e
+l'immagine è **nitida a 1:1**, testo del terminale compreso.
+
+⛔ **E nel farlo è saltato fuori un anello che nessuno aveva contato**: la sessione grafica del
+portatile non è locale, è **xrdp** (`Xorg :10`, `got RFX capture` = **RemoteFX**, un codec **a
+tessere**). ⇒ Fra la nostra tela e gli occhi dell'utente c'era un **quinto** anello, con per
+guasti tipici proprio «blocchi rettangolari» e «col tempo non si aggiorna più».
+
+⚠ **E non era lui** — messo alla prova con un controllo della stessa forma di danno (finestra
+intera ridipinta venti volte al secondo), gli occhi dell'utente, pulito. ⭐ Ma la lezione non è
+il verdetto, è che **per due giorni si è ragionato su una catena a quattro anelli che ne aveva
+cinque**, e nessun documento lo diceva. §2.7 dice «servono TUTTI gli anelli»: la parte difficile
+non è misurarli, è **sapere quanti sono**. ⇒ Prima di attribuire un difetto **visivo**, si scrive
+la catena per intero — compreso come l'utente sta *guardando*.
+
+⭐ **E il contatore che ha spostato la caccia**: da quando la pagina racconta anche
+`consegnati→dipinti · salt · buchi · ord · mis · err`, la sessione vera dell'utente **mentre
+vedeva l'artefatto** ha detto `23→23` e cinque zeri. ⇒ Non manca nessun fotogramma: **sono
+corrotti i pixel dentro quelli che arrivano**. Un difetto che nessun contatore può vedere si
+cerca in un modo solo — **guardando l'immagine sbagliata**, non i numeri.
+
 ⭐ **E il difetto 1 è quello che insegna di più**: non era un difetto *di Firefox*, era un difetto
 **nostro e universale** che un motore indulgente assorbiva. ⇒ Il secondo lettore non trova i difetti
 dell'altro: trova **i propri**, che erano lì da sempre.

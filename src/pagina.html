@@ -4284,6 +4284,27 @@ function avvia_audio(wt) {
        + " classico " + (typeof cl_in_vigore !== "undefined" && cl_in_vigore ? "si" : "NO")
        + " schermo " + (document.body.dataset.schermo || "-")
        + " dipinti " + (schermo && schermo.conti ? schermo.conti.dipinti : "?")
+       /* ⛔⭐ E IL VIDEO DICE ANCHE **QUEL CHE NON HA DIPINTO** — 17 agosto 2026.
+        *
+        *     `dipinti` da solo e' un numero che sale, e un numero che sale
+        *     sembra sempre sano.  ⚠ I tre modi in cui l'immagine si ferma NON
+        *     si distinguono guardandolo: il decodificatore resta indietro e si
+        *     salta il disegno (`saltati_coda`), la catena dei delta si spezza
+        *     (`buchi`), oppure i fotogrammi arrivano e si scartano per ordine o
+        *     per misura.  ⇒ Sono la stessa famiglia dell'audio, e la cura e'
+        *     la stessa: si conta dal lato che CONSUMA, e si mette tutto sulla
+        *     stessa riga degli altri anelli.
+        * ⚠ `consegnati→dipinti` sono due grandezze diverse apposta: la prima e'
+        *   quel che il FILO ha portato, la seconda quel che e' arrivato al
+        *   vetro.  Se divergono, la distanza fra le due dice DOVE si perde. */
+       + (schermo && schermo.conti
+            ? " video " + schermo.conti.consegnati + "→" + schermo.conti.dipinti
+              + " salt " + schermo.conti.saltati_coda
+              + " buchi " + schermo.conti.buchi
+              + " ord " + schermo.conti.scartati_ordine
+              + " mis " + schermo.conti.scartati_misura
+              + " err " + (schermo.errori ? schermo.errori.length : "?")
+            : " video ?")
        + " fuoco " + (document.hasFocus() ? "si" : "NO");
     nota(riga);
     /* ⛔ E si manda anche AL SERVER, che e' l'unico posto dove i numeri dei
