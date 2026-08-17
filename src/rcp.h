@@ -413,6 +413,63 @@ typedef struct {
 	 *    «Il client ha sbagliato» e «questo server non sa farlo» sono due fatti
 	 *    diversi, e punire il client per il secondo sarebbe punire chi non ha
 	 *    sbagliato niente. */
+	/* ------------------------------------------------------------------ */
+	/* ⭐⭐ I CINQUE GANCI DEGLI APPUNTI — `RCP.md` §7.4, §5.4, §2.5.
+	 *
+	 * ⛔ SONO CINQUE E NON UNO, e la divisione ricalca quella del protocollo:
+	 *    tre guardano il FILO (aprire uno stream, scriverci, chiuderlo) e due
+	 *    guardano la SESSIONE (offrire, rispondere).  Un gancio solo che
+	 *    «manda gli appunti» non saprebbe dire la differenza fra i due versi,
+	 *    e i due versi non sono simmetrici: da una parte si annuncia, dall'altra
+	 *    si tira.
+	 *
+	 * ⛔ E SONO **OPZIONALI**: un ospite che non li collega non ha gli appunti,
+	 *    e ⛔ `rcp.c` lo SCRIVE NEL REGISTRO invece di tacere.  ⚠ «Questo server
+	 *    non ha gli appunti» e «il client ha sbagliato» sono due fatti diversi:
+	 *    un `APPUNTI_ANNUNCIO` che arriva a un server senza canale si CONVALIDA
+	 *    lo stesso — quello e' protocollo, e §3 non fa sconti — e poi si dichiara
+	 *    di non averlo servito.
+	 *
+	 * ⚠ Chi li collega li collega TUTTI E CINQUE: `rcp.c` guarda il primo e se
+	 *   c'e' pretende gli altri.  Un canale che sapesse annunciare e non sapesse
+	 *   rispondere a chi incolla lascerebbe **appesa l'applicazione che
+	 *   incolla** — e il sintomo e' «il desktop si e' piantato».
+	 *
+	 * ⛔⭐ E PERCHE' NON SI RIUSANO I `video_*`, che aprono uno stream uguale:
+	 *     `video_apri` ricorda quale stream ha aperto, perche' §5.1 gli fa
+	 *     azzerare **il precedente** quando ne parte uno piu' recente.  Un
+	 *     trasferimento di appunti che passasse di li' diventerebbe il
+	 *     «fotogramma precedente» del prossimo — cioe' verrebbe azzerato a
+	 *     meta' da una regola che non lo riguarda. */
+
+	/* ⛔ §2.5: apre uno stream **unidirezionale nuovo** dal server verso il
+	 * client.  ⚠ `false` = «non adesso», e allora NON e' partito un byte —
+	 * meglio di mezzo messaggio.  `restano` riceve quanti stream il client
+	 * concede ancora, come per il video, e chi non lo sa scrive `0`. */
+	bool (*appunti_apri)(void *ctx, int64_t *stream, uint64_t *restano);
+	/* Scrive byte su quello stream.  `false` = «non sono entrati». */
+	bool (*appunti_scrivi)(void *ctx, int64_t stream, const uint8_t *dati,
+	                       size_t len);
+	/* ⛔ Chiude lo stream con FIN: il trasferimento e' finito.  ⚠ A differenza
+	 * del video, qui FIN non e' un'affermazione sul contenuto — la lunghezza
+	 * sta gia' nell'inquadratura di §6.1 — e' la fine del trasferimento. */
+	void (*appunti_fin)(void *ctx, int64_t stream);
+
+	/* ⭐ «IL CLIENT HA COPIATO DEL TESTO»: lo si offra alla sessione.
+	 *
+	 * ⛔ NON porta il testo, ed e' il «si annuncia e poi si tira» di §7.4:
+	 *    il testo si chiedera' a chi ce l'ha quando qualcuno incollera' davvero.
+	 * `true` = la richiesta e' partita.  ⚠ NON «la sessione ce l'ha»: chi lo sa
+	 * e' il compositore, e lo scrive chi cuce. */
+	bool (*appunti_offri)(void *ctx);
+
+	/* ⭐ La risposta a chi, dentro la sessione, sta incollando.  `testo` NULL =
+	 * «non ce l'ho», ⛔ **che e' comunque una risposta** ed e' quella che
+	 * sblocca chi incolla.  `serial` e' il numero che la sessione ha dato alla
+	 * sua richiesta, e torna indietro tale e quale. */
+	bool (*appunti_risposta)(void *ctx, uint32_t serial, const char *testo,
+	                         size_t byte);
+
 	void (*termina_sessione)(void *ctx);
 } rcp_ganci;
 
@@ -896,6 +953,67 @@ uint32_t rcp_video_ultimo_numero(const rcp_sessione *s);
  *    perderebbe il posto mentre sta usando il desktop. */
 bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
                       size_t len, uint64_t ora_ms);
+
+/* ========================================================================= */
+/* ⭐⭐ GLI APPUNTI — `RCP.md` §7.4, §5.4, §2.5                              */
+/*                                                                           */
+/* ⛔ SOLO TESTO SEMPLICE IN UTF-8, e non c'e' nessun campo che dichiari un   */
+/*    tipo: §7.4 lo scrive con queste parole — «non esiste perche' non c'e'   */
+/*    niente da scegliere».  `DECISIONI.md` §5-ter.1, decisa dall'utente il   */
+/*    9 agosto 2026 e riconfermata il 17.                                    */
+
+/* ⛔ §5.4 — il tetto di un trasferimento.  ⚠ **1 000 000 byte, non 1 MiB**, e
+ *    la ragione e' scritta in §5.4: il messaggio che lo porta ha sei byte di
+ *    inquadratura e quattro di identificatore, e un tetto uguale a quello del
+ *    messaggio (§6.1, 1 MiB) renderebbe **illegale il testo grande esattamente
+ *    quanto il tetto**. */
+#define RCP_APPUNTI_TETTO 1000000u
+
+/*
+ * I byte di uno stream del canale appunti (§2.5, byte alto `0x02`).
+ *
+ * ⛔ A differenza dell'input, qui gli stream sono **uno per trasferimento**, e
+ *    quindi ce n'e' piu' d'uno vivo insieme: questo modulo ne tiene una piccola
+ *    tabella, e `fin` e' quel che le libera un posto.
+ *
+ * ⚠ `fin` = «lo stream e' finito».  ⛔ E NON vuol dire «il messaggio e'
+ *   completo»: la lunghezza sta nell'inquadratura di §6.1, e un messaggio a
+ *   meta' su uno stream che finisce e' `ERRORE_PROTOCOLLO` — non un messaggio
+ *   corto.
+ *
+ * Restituisce `false` se la sessione e' finita, come `rcp_ricevi()`.
+ */
+bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
+                        size_t len, bool fin, uint64_t ora_ms);
+
+/*
+ * ⭐ «LA SESSIONE HA COPIATO QUESTO TESTO» — si annuncia al client (§7.4).
+ *
+ * ⛔ Il testo si TIENE, e non si spedisce: §7.4 annuncia e poi aspetta un
+ *    `APPUNTI_CHIEDI`.  «Chi copia un documento intero non lo spedisce a
+ *    nessuno finche' qualcuno non incolla».
+ *
+ * ⛔ E oltre `RCP_APPUNTI_TETTO` **non si annuncia affatto** (§5.4), e la riga
+ *    va nel registro: NON si tronca — «un testo troncato incollato in un
+ *    terminale e' peggio di un testo mancante».
+ *
+ * `false` = non e' partito nessun annuncio, e il registro dice perche'.
+ */
+bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte);
+
+/*
+ * ⭐ «QUALCUNO NELLA SESSIONE STA INCOLLANDO»: si chiede al client il testo che
+ *    aveva annunciato (`APPUNTI_CHIEDI`).
+ *
+ * `serial` e' il numero della richiesta dalla parte della sessione, e questo
+ * modulo lo tiene da parte per restituirlo con la risposta.
+ *
+ * ⛔ `false` = la domanda non e' partita — nessun annuncio vivo dal client,
+ *    nessun canale, o lo stream non si e' aperto.  ⚠ E allora chi ospita DEVE
+ *    rispondere «non ce l'ho» a chi incolla, subito: il debito verso il
+ *    compositore non si estingue da solo.
+ */
+bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms);
 
 /* ⭐ §6.2, campo `input`: «l'identificatore dell'ultimo input **iniettato**
  *    prima della cattura; 0 se nessuno».

@@ -61,7 +61,7 @@ NOME    := remotix
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
-            input.c tastiera.c cursore.c sentinella.c
+            input.c tastiera.c cursore.c sentinella.c appunti.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -288,7 +288,7 @@ aiutante.o:       aiutante.h registro.h
 #    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
 #    prodotto e basta, come `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
-                  input.h sentinella.h audio.h suono.h
+                  input.h sentinella.h audio.h suono.h appunti.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
@@ -331,3 +331,9 @@ suono.o:          suono.h registro.h audio.h
 input.o:          input.h tastiera.h registro.h mutter.h
 tastiera.o:       tastiera.h registro.h
 cursore.o:        cursore.h registro.h
+
+# ⭐ GLI APPUNTI DELLA SESSIONE — fase 7.  ⚠ Non e' fra i `GEMELLATI` e non ci
+#    puo' andare: parla D-Bus (`gio-2.0`), che dentro gli `examples/` di ngtcp2
+#    non c'e'.  ⛔ E' la stessa ragione per cui `rcp.c` raggiunge questo modulo
+#    per GANCI e non per `#include`.
+appunti.o:        appunti.h registro.h

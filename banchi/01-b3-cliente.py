@@ -281,6 +281,32 @@ class Cliente(QuicConnectionProtocol):
         # ⭐ «Terminata da noi» e «terminata da qualcun altro» sono due fatti
         #    diversi e adesso hanno due righe diverse (CODER.md §3.9, §4.2).
         self.chiusa_da_noi = False
+        # ═══ GLI APPUNTI — fase 7, §7.4 ═══════════════════════════════════
+        # ⛔ QUESTO CLIENTE E' IL SECONDO LETTORE DI `RCP.md` (`PIANO.md` §1.1),
+        #    e i tre messaggi di §7.4 entrano qui perche' altrimenti il filo
+        #    degli appunti sarebbe validato da UNA SOLA implementazione — la
+        #    pagina, scritta dalla stessa mano del server.
+        #
+        # ⚠ Il montaggio e' PER STREAM, non uno solo: §2.5 dice «uno stream per
+        #   trasferimento», quindi ce n'e' piu' d'uno vivo insieme.  ⛔ Con un
+        #   accumulo unico due trasferimenti intrecciati si mescolerebbero, ed e'
+        #   esattamente il difetto che l'identificatore di §7.4 esiste per
+        #   togliere — trovarlo qui vorrebbe dire non trovarlo mai.
+        self.app_in = {}          # stream_id -> bytearray, il montaggio
+        self.app_mio_id = 0       # §7.4: ciascun lato numera i PROPRI, da 1
+        self.app_mio_testo = ""
+        self.app_suo_id = 0       # l'ultimo annuncio del server
+        self.app_suo_len = 0
+        self.app_ricevuto = None  # l'ultimo testo che il server ci ha mandato
+        self.app_annunci = []     # [(id, byte)] tutti gli annunci del server
+        self.app_chiesti = []     # [id] i trasferimenti che il server ci ha chiesto
+        self.app_serviti = 0
+        self.app_violazioni = []  # quel che NON torna con §7.4, con il nome
+        self.app_evento = asyncio.Event()
+        # Il preambolo degli stream unidirezionali del server, per stream:
+        # `0x40 0x54` piu' il varint della sessione.  `None` = non e' nostro.
+        self.uni_pref = {}
+        self.uni_genere = {}
 
     def _cade(self, perche: str) -> None:
         """La prima causa vince: le successive sono conseguenze, non cause."""
@@ -311,6 +337,137 @@ class Cliente(QuicConnectionProtocol):
     def manda(self, dati):
         self._quic.send_stream_data(self.controllo, dati, end_stream=False)
         self.transmit()
+
+    # ══════════════════════════════════════════════════════════════════════
+    # GLI APPUNTI — §7.4, e i tre messaggi letti da `RCP.md` e non dal C
+    # ══════════════════════════════════════════════════════════════════════
+
+    def appunti_manda(self, tipo, corpo):
+        """Un messaggio del canale appunti, sul suo stream unidirezionale.
+
+        ⛔ Uno stream per messaggio, e si chiude con FIN.  §2.5 dice «uno per
+           trasferimento» e questo cliente ha scelto la lettura piu' stretta —
+           la stessa del server — perche' a legare i messaggi di un
+           trasferimento e' il campo `trasferimento` (§7.4), non lo stream.
+           ⚠ Se le due implementazioni avessero letto §2.5 in modo diverso, il
+             filo funzionerebbe lo stesso: e' la prova che la riga e' ambigua e
+             che l'ambiguita' non morde.  Va scritta nel documento di fase.
+        """
+        sid = self._http.create_webtransport_stream(
+            self.sessione, is_unidirectional=True)
+        self._quic.send_stream_data(sid, inquadra(tipo, corpo), end_stream=True)
+        self.transmit()
+        return sid
+
+    def appunti_annuncia(self, testo):
+        """«Ho del testo nuovo» — §7.4, `APPUNTI_ANNUNCIO`."""
+        d = testo.encode("utf-8")
+        self.app_mio_id = 1 if self.app_mio_id >= 0xFFFFFFFF else self.app_mio_id + 1
+        self.app_mio_testo = testo
+        self.appunti_manda(0x0201, struct.pack("!II", self.app_mio_id, len(d)))
+        print(f"   [app]  annunciato il trasferimento {self.app_mio_id}, "
+              f"{len(d)} byte")
+        return self.app_mio_id
+
+    def appunti_chiedi(self, trasferimento=None):
+        """«Mandamelo» — §7.4, `APPUNTI_CHIEDI`."""
+        t = self.app_suo_id if trasferimento is None else trasferimento
+        self.appunti_manda(0x0202, struct.pack("!I", t))
+        print(f"   [app]  chiesto il trasferimento {t}")
+        return t
+
+    def _appunti_uno(self, tipo, corpo):
+        """Un messaggio intero del canale appunti, gia' srotolato da §6.1."""
+        if tipo == 0x0201:                                   # ANNUNCIO
+            if len(corpo) != 8:
+                self.app_violazioni.append(
+                    f"APPUNTI_ANNUNCIO con {len(corpo)} byte: §7.4 ne vuole 8")
+                return
+            t, n = struct.unpack("!II", corpo)
+            self.app_suo_id, self.app_suo_len = t, n
+            self.app_annunci.append((t, n))
+            print(f"   [app]  ⭐ il server annuncia il trasferimento {t}, {n} byte")
+            self.app_evento.set()
+            return
+        if tipo == 0x0202:                                   # CHIEDI
+            if len(corpo) != 4:
+                self.app_violazioni.append(
+                    f"APPUNTI_CHIEDI con {len(corpo)} byte: §7.4 ne vuole 4")
+                return
+            (t,) = struct.unpack("!I", corpo)
+            self.app_chiesti.append(t)
+            print(f"   [app]  ⭐ il server chiede il trasferimento {t}")
+            # ⛔ §7.4: «un identificatore che non corrisponde a nessun annuncio
+            #    vivo e' ERRORE_PROTOCOLLO».  ⚠ Qui NON si chiude la sessione:
+            #    questo e' un banco, e il suo mestiere e' REGISTRARE che il
+            #    server ha sbagliato, non punirlo — se chiudesse, il giro
+            #    finirebbe e nessuno leggerebbe piu' niente.
+            if t == 0 or t > self.app_mio_id:
+                self.app_violazioni.append(
+                    f"APPUNTI_CHIEDI per il trasferimento {t}, e io ne ho "
+                    f"annunciati {self.app_mio_id} (§7.4)")
+                return
+            d = self.app_mio_testo.encode("utf-8")
+            self.appunti_manda(0x0203, struct.pack("!I", t) + d)
+            self.app_serviti += 1
+            print(f"   [app]  serviti {len(d)} byte al server (trasferimento {t})")
+            self.app_evento.set()
+            return
+        if tipo == 0x0203:                                   # TESTO
+            if len(corpo) < 4:
+                self.app_violazioni.append(
+                    f"APPUNTI_TESTO con {len(corpo)} byte: §7.4 ne vuole >= 4")
+                return
+            (t,) = struct.unpack("!I", corpo[:4])
+            d = corpo[4:]
+            if t != self.app_suo_id:
+                self.app_violazioni.append(
+                    f"APPUNTI_TESTO per il trasferimento {t}, e l'annuncio vivo "
+                    f"e' il {self.app_suo_id} (§7.4)")
+            if len(d) != self.app_suo_len:
+                self.app_violazioni.append(
+                    f"APPUNTI_TESTO porta {len(d)} byte e l'annuncio ne "
+                    f"dichiarava {self.app_suo_len} (§7.4)")
+            # ⛔ §5.4: «il testo DEVE essere UTF-8».  Si decodifica STRETTO: un
+            #    decodificatore indulgente metterebbe caratteri di sostituzione
+            #    al posto di un errore, e il banco direbbe verde su un testo che
+            #    non e' quello che era stato copiato.
+            try:
+                self.app_ricevuto = d.decode("utf-8")
+            except UnicodeDecodeError as e:
+                self.app_violazioni.append(f"APPUNTI_TESTO non e' UTF-8: {e}")
+                self.app_ricevuto = None
+            print(f"   [app]  ⭐ arrivati {len(d)} byte dal server "
+                  f"(trasferimento {t})")
+            self.app_evento.set()
+            return
+        self.app_violazioni.append(
+            f"tipo {tipo:#06x} sul canale appunti: §7.4 ne definisce TRE")
+
+    def _appunti_stream(self, sid, dati, fine):
+        """I byte di uno stream unidirezionale del SERVER, canale appunti.
+
+        ⛔ Il preambolo di WebTransport si consuma qui: `0x40 0x54` piu' il
+           varint della sessione.  ⚠ E si tiene per stream, perche' un
+           pacchetto puo' tagliarlo in mezzo.
+        """
+        b = self.app_in.setdefault(sid, bytearray())
+        b += dati
+        while True:
+            if len(b) < 6:
+                break
+            tipo, lung = struct.unpack("!HI", b[:6])
+            if len(b) < 6 + lung:
+                break
+            corpo = bytes(b[6:6 + lung])
+            del b[:6 + lung]
+            self._appunti_uno(tipo, corpo)
+        if fine:
+            if b:
+                self.app_violazioni.append(
+                    f"lo stream di appunti {sid} e' finito con {len(b)} byte "
+                    "che non fanno un messaggio (§6.1)")
+            self.app_in.pop(sid, None)
 
     def _audio_datagram(self, d: bytes) -> None:
         """Un datagram di WebTransport: prefisso RFC 9297, poi §6.3.
@@ -414,6 +571,97 @@ class Cliente(QuicConnectionProtocol):
             #   n'era accorto perche' l'eco erano quattro byte; centosedici
             #   bastano a far cadere tutto.
             return
+        # ⛔⭐ GLI STREAM UNIDIREZIONALI DEL SERVER — §2.5, e da qui passano il
+        #     video (0x03) e gli appunti (0x02).  ⚠ Non tutti sono nostri: fra
+        #     gli unidirezionali del server ci sono il canale di controllo di
+        #     HTTP/3 e i due di QPACK, che sono di `aioquic`.  Uno stream
+        #     WebTransport si riconosce dal suo tipo, `0x54` — che come `0x41`
+        #     non sta in un byte: sul filo sono `0x40 0x54`.
+        if nome == "StreamDataReceived" and (event.stream_id & 0x03) == 0x03:
+            sid = event.stream_id
+            g = self.uni_genere.get(sid)
+            if g == "h3":
+                pass                       # e' di `aioquic`: gli si lascia
+            elif g == "wt":
+                self._appunti_stream(sid, event.data, event.end_stream)
+                return
+            elif g == "altro":
+                # ⛔⛔ NOSTRO MA NON SERVITO — e questo ramo mancava, il 17
+                #     agosto 2026, con una conseguenza che non somigliava alla
+                #     causa.
+                #
+                #     Senza di lui uno stream gia' giudicato «altro» (il VIDEO,
+                #     0x03) ricadeva nel ramo «non so ancora che cos'e'» a OGNI
+                #     pacchetto: il primo byte del carico non e' `0x40`, quindi
+                #     veniva ribattezzato «h3» ⛔ **e i byte di un fotogramma
+                #     finivano dentro lo strato HTTP/3 di `aioquic`**.
+                #
+                # ⚠ Il sintomo era `Only one QPACK decoder stream is allowed`,
+                #   cioe' un errore di HTTP/3 su una connessione dove HTTP/3 non
+                #   c'entrava niente — e la connessione cadeva a meta' giro.
+                #   ⛔ Un difetto del banco travestito da difetto di protocollo.
+                return
+            else:
+                # ⛔⛔ SI DECIDE SUL PRIMO BYTE, NON SUI PRIMI DUE — e la
+                #     differenza e' costata un giro intero, il 17 agosto 2026.
+                #
+                #     La prima stesura accumulava finche' non aveva **due** byte
+                #     e poi confrontava con `0x40 0x54`.  ⛔ Ma gli stream QPACK
+                #     del server portano **un byte solo** (il tipo, 0x02 e 0x03)
+                #     e poi tacciono: quel byte finiva nell'accumulo e non
+                #     arrivava mai ad `aioquic`.  ⇒ Il suo strato HTTP/3 non
+                #     vedeva gli stream del pari, non consegnava le
+                #     intestazioni della CONNECT, e questo programma restava ad
+                #     aspettare — ⛔ **finche' il server non lo congedava con
+                #     `TEMPO_SCADUTO` per non aver mai aperto il canale di
+                #     controllo** (§4.6).
+                #
+                # ⚠ E il rosso finiva sul SERVER, che aveva fatto esattamente
+                #   quel che §4.6 gli dice di fare.  E' `LEZIONI.md` §2.3: «una
+                #   prova che boccia il codice giusto costa quanto una che
+                #   promuove quello sbagliato».
+                #
+                # ⭐ La cura non e' accumulare meglio: e' **non accumulare
+                #    affatto** quel che non e' nostro.  Uno stream WebTransport
+                #    comincia per `0x40` (il varint del tipo 0x54 non sta in un
+                #    byte); qualunque altro primo byte e' di `aioquic`, e i suoi
+                #    byte non devono passare di qui nemmeno per un giro.
+                if not event.data:
+                    return
+                if event.data[0] != 0x40:
+                    self.uni_genere[sid] = "h3"
+                else:
+                    p = self.uni_pref.setdefault(sid, bytearray())
+                    p += event.data
+                    if len(p) < 2 or p[1] != 0x54:
+                        if len(p) >= 2:
+                            # ⚠ `0x40` seguito da altro: non e' WebTransport.
+                            #   ⛔ E i byte trattenuti si sono gia' persi per
+                            #     `aioquic` — quindi si DICHIARA, invece di
+                            #     tacere e lasciarlo rompere piu' avanti.
+                            self.uni_genere[sid] = "altro"
+                            self.uni_pref.pop(sid, None)
+                            print(f"   [wt]   ⚠ stream uni {sid} comincia per "
+                                  f"0x40 0x{p[1]:02x}: non e' WebTransport, e i "
+                                  f"suoi byte sono stati trattenuti")
+                        return
+                    q, i = _varint(bytes(p), 2)
+                    if q is None:
+                        return             # il varint della sessione non e' tutto qui
+                    self.uni_genere[sid] = "wt"
+                    resto = bytes(p[i:])
+                    self.uni_pref.pop(sid, None)
+                    # ⛔ Il byte alto dice il canale, e i due byte del `tipo`
+                    #    sono del MESSAGGIO: si sbircia senza consumarli.
+                    if len(resto) >= 1 and resto[0] == 0x02:
+                        self._appunti_stream(sid, resto, event.end_stream)
+                    else:
+                        # ⚠ Il video (0x03) e tutto il resto: questo cliente non
+                        #   li serve, e lo DICE invece di tacere — «ricevuto e
+                        #   non usato» e «mai arrivato» non devono avere la
+                        #   stessa faccia.
+                        self.uni_genere[sid] = "altro"
+                    return
         if nome == "StreamDataReceived" and event.stream_id == self.sessione:
             # la capsula di chiusura della sessione (§3.1 punto 3)
             codice, nuda = _capsula_chiusura(event.data)
@@ -558,6 +806,38 @@ async def chiedi_tela(cli, reg, lar, alt, tetto):
               f"/{TELA_MOTIVO.get(mot, mot)} tela in vigore {tl}x{ta} "
               f"dopo {ms:.0f} ms")
         return es, mot, tl, ta, ms
+
+
+def scrivi_appunti(a, cli):
+    """L'esito degli appunti, in JSON, per il giudice del banco.
+
+    ⛔ E i fatti si scrivono TUTTI, anche quelli che non servono a questo giro:
+       «nessun annuncio», «annuncio senza testo» e «testo diverso da quello
+       copiato» sono tre difetti con lo stesso sintomo, e un file che portasse
+       solo il verdetto li renderebbe indistinguibili (`LEZIONI.md` §1.9).
+
+    ⛔ E le VIOLAZIONI di §7.4 si scrivono anche quando il giro e' verde: un
+       server che consegna il testo giusto violando il protocollo lungo la
+       strada e' un server che il banco deve bocciare — «funziona» non e'
+       «e' conforme».
+    """
+    if not a.appunti_scrivi:
+        return
+    esito = {
+        "annunci_dal_server": cli.app_annunci,
+        "chiesti_dal_server": cli.app_chiesti,
+        "serviti_al_server": cli.app_serviti,
+        "mio_id": cli.app_mio_id,
+        "mio_testo": cli.app_mio_testo,
+        # ⛔ `None` = non e' arrivato niente, `""` = e' arrivata una stringa
+        #    vuota.  Sono due fatti diversi, e JSON li tiene separati.
+        "ricevuto": cli.app_ricevuto,
+        "violazioni": cli.app_violazioni,
+    }
+    with open(a.appunti_scrivi, "w") as f:
+        json.dump(esito, f, ensure_ascii=False, indent=1)
+    print(f"   [app]  esito scritto in {a.appunti_scrivi} "
+          f"({len(cli.app_violazioni)} violazioni di §7.4)")
 
 
 def scrivi_audio(a, cli):
@@ -781,6 +1061,51 @@ async def principale(a) -> int:
         if a.segnale:
             with open(a.segnale, "w") as f:
                 f.write("attaccato\n")
+
+        # ═══ GLI APPUNTI — §7.4 ═══════════════════════════════════════════
+        #
+        # ⛔ E il verso `dispositivo → sessione` si annuncia PRIMA di scrivere
+        #    il segnale?  NO, e la ragione e' l'ordine dei due lati del banco:
+        #    il segnale dice «sono attaccato», e il lato che copia con `xclip`
+        #    aspetta proprio quello.  Annunciare prima vorrebbe dire annunciare
+        #    quando l'altro lato non e' ancora pronto a guardare.
+        if a.appunti_copia:
+            cli.appunti_annuncia(a.appunti_copia)
+
+        if a.appunti_attendi:
+            # ⛔ SI ASPETTA UN ANNUNCIO, E POI LO SI CHIEDE — §7.4: «si annuncia
+            #    e si chiede, invece di spingere».  ⚠ E i due passi si contano
+            #    separati: «non e' arrivato nessun annuncio» e «l'annuncio e'
+            #    arrivato e il testo no» sono due difetti diversi con lo stesso
+            #    sintomo (`LEZIONI.md` §1.9).
+            print(f"   [app]  aspetto un annuncio dal server, fino a "
+                  f"{a.appunti_attendi} s")
+            fine = time.monotonic() + a.appunti_attendi
+            while not cli.app_annunci and time.monotonic() < fine:
+                cli.app_evento.clear()
+                try:
+                    await asyncio.wait_for(cli.app_evento.wait(),
+                                           timeout=max(0.1, fine - time.monotonic()))
+                except asyncio.TimeoutError:
+                    break
+            if not cli.app_annunci:
+                print("   [app]  ⛔ nessun annuncio dal server entro il tempo")
+            else:
+                cli.appunti_chiedi()
+                fine = time.monotonic() + a.appunti_attendi
+                while cli.app_ricevuto is None and time.monotonic() < fine:
+                    cli.app_evento.clear()
+                    try:
+                        await asyncio.wait_for(cli.app_evento.wait(),
+                                               timeout=max(0.1, fine - time.monotonic()))
+                    except asyncio.TimeoutError:
+                        break
+                if cli.app_ricevuto is None:
+                    print("   [app]  ⛔ l'annuncio e' arrivato e il testo NO")
+                else:
+                    print(f"   [app]  ⭐ ricevuti {len(cli.app_ricevuto)} "
+                          f"caratteri: «{cli.app_ricevuto[:60]}»")
+        scrivi_appunti(a, cli)
         if a.resta:
             # ⛔ SI RESTA CON GLI OCCHI APERTI, NON DORMENDO — rilievi R8.2/R8.4.
             #
@@ -964,6 +1289,17 @@ if __name__ == "__main__":
     p.add_argument("--audio-scrivi", default="",
                    help="dove scrivere i blocchi d'audio ricevuti, in JSONL — "
                         "il giudice di `07-b42` legge questo")
+    # ═══ GLI APPUNTI — fase 7, §7.4 ═══════════════════════════════════════
+    p.add_argument("--appunti-copia", default="",
+                   help="annuncia questo testo al server (verso dispositivo → "
+                        "sessione) e poi resta a servirlo quando lo chiede")
+    p.add_argument("--appunti-attendi", type=float, default=0,
+                   help="aspetta fino a N secondi un annuncio dal server, lo "
+                        "chiede, e scrive il testo che arriva (verso sessione → "
+                        "dispositivo)")
+    p.add_argument("--appunti-scrivi", default="",
+                   help="dove scrivere l'esito degli appunti, in JSON — il "
+                        "banco `07-b45` legge questo")
     p.add_argument("--resta", type=float, default=0)
     # ⭐ Ogni quanti secondi farsi sentire (0 = mai, ed e' il predefinito:
     #    tacere e' quel che serve a misurare l'orologio del silenzio).

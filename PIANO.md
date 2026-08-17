@@ -870,8 +870,19 @@ questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
 > ricevuti contro 50 prodotti** — perdita **zero**, 2 buchi (dell'avvio), coda 311-341 ms.
 > ⭐ E il volume **governa**: pieno 0,3536 · 25 % 0,0078 · muto 0,0.
 >
-> ⏳ **Restano gli appunti**, che non sono stati cominciati: si fanno in una sessione nuova
-> (deciso dall'utente). ⇒ 📖 `fasi/07-audio-e-appunti.md`, riquadro di testa.
+> ## ⭐⭐ E GLI APPUNTI FUNZIONANO — **«clipboard funziona in entrambi i versi»**
+>
+> *Giudizio dell'utente col browser, 17 agosto 2026 sera, porta 7730.* Solo testo, nei due versi:
+> `appunti.c` nuovo, i tre messaggi di §7.4 nel filo, la cucitura nei due processi e il lato
+> browser. ⇒ 📖 `fasi/07-audio-e-appunti.md` §4.5, §6.9, §9.2-bis.
+>
+> ⛔ **E l'arbitro esterno del banco NON ESISTE**: `gnome-shell` gira con `--no-x11`, quindi `xclip`
+> non ha nessuna sponda a cui parlare, e un client Wayland senza fuoco non possiede la selezione.
+> ⇒ Quel giudizio è **l'unica prova** che questa metà della fase abbia — e la riga di §2.4 che
+> prometteva un arbitro gratis è stata riscritta.
+>
+> ⭐ *E la richiesta d'apertura diceva «testo formattato»: chiesto all'utente, che ha confermato
+> «solo testo semplice» — `DECISIONI.md` §5-ter.4.*
 >
 > ⛔ **E la lezione della fase non è sull'audio**: cinque giri di banco verdi e l'utente sentiva
 > «jitter pazzesco». `LEZIONI.md` §2.7 — *non c'è miglior strumento di diagnosi che monitorare una

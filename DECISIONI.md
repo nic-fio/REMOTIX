@@ -3123,6 +3123,66 @@ nostro e quello dei desktop resta spento — il caso non si presenta. **Ma torna
 qualcuno rimettesse il blocco del desktop**, ed è un'altra ragione per cui quella decisione va
 riletta e non data per scontata.
 
+### 5-ter.4 ✅ «Testo formattato» è stato richiesto, e la decisione del 9 agosto REGGE
+
+*17 agosto 2026, all'apertura del lavoro sugli appunti.* La richiesta diceva *«la copia
+server↔client di **testo formattato**»*. ⛔ Contraddiceva §5-ter.1, che è **parola dell'utente del 9
+agosto**: *«solo testo»*, niente formati ricchi.
+
+**Chiesto prima di scrivere una riga, e l'utente ha scelto «solo testo semplice».** ⇒ §5-ter.1 non
+si tocca.
+
+⚠ **E il costo dell'altra strada era protocollare, non di fatica**: `RCP.md` §7.4 ha costruito i tre
+messaggi **senza nessun campo che dichiari il tipo**, con la ragione scritta accanto — *«non esiste
+perché non c'è niente da scegliere»*. Per l'HTML servirebbe quel campo, e `RCP.md` §9 vieta di
+aggiungere campi a messaggi esistenti dentro una versione maggiore: **la finestra è chiusa dal 10
+agosto 2026**. ⇒ Sarebbe stato **RCP/2**, più quattro documenti da correggere.
+
+⭐ E v1 l'HTML lo portava (`v1/remotix-c/src/scambio.c:56`, il formato registrato «HTML Format»):
+non è una cosa impossibile, è una cosa **lasciata fuori di proposito**.
+
+### 5-ter.5 🔸 La corsa fra `Ctrl+V` e l'annuncio: la richiesta ASPETTA, e i tasti non si ritardano
+
+*17 agosto 2026, scrivendo il canale.* `SPECIFICHE.md` §9 nomina la corsa e rifiuta la cura del
+riferimento con un numero: Xpra ritarda **ogni battuta di 100 ms**, e per noi *«sono due volte il
+tetto del ritardo»*.
+
+**La corsa**: l'utente batte `Ctrl+V` nel browser; i tasti e l'annuncio degli appunti partono
+insieme su due canali diversi, e il desktop — ricevuto il `Ctrl+V` — chiede il testo **subito**.
+⛔ La prima incollata di ogni testo nuovo tornerebbe vuota, e la seconda funzionerebbe.
+
+⭐ **La sostituzione**: la richiesta di incolla **si mette in coda** invece di tornare vuota, e la
+domanda al client parte quando l'annuncio arriva. Costa zero, e **non tocca un solo tasto**.
+
+⏳ Ragionata, **non misurata**: la scena che la prova è quella dell'utente.
+
+### 5-ter.6 🔸 Due fondi di tempo, e sono due perché i debiti sono due
+
+| dove | quanto | che debito paga |
+|---|---|---|
+| ⛔ **nel figlio** | **4 s** | il debito verso **Mutter**: un `SelectionTransfer` senza risposta lascia appesa a tempo indeterminato l'applicazione che incolla, e l'utente vede **un desktop piantato** |
+| ⚠ **nel padre** | **8 s** | che il **canale** non resti bloccato: senza, un client che non risponde una volta manda in coda tutte le incollate successive |
+
+⭐ **E il fondo verso Mutter sta nel FIGLIO, non nel padre**: il padre può non avere nessun client
+(la sessione sopravvive al client — I4), il client può sparire, il padre stesso può morire. Il
+debito verso il compositore resta di chi ha la sessione.
+
+⚠ I due numeri sono diversi **apposta**: coincidendo scadrebbero insieme, e un testo arrivato al
+millesimo giusto non troverebbe più nessuno da servire da nessuna delle due parti.
+
+### 5-ter.7 🔸 Uno stream per MESSAGGIO, non per trasferimento — dove §2.5 ammetteva due letture
+
+`RCP.md` §2.5 dice *«uno stream **per trasferimento**»*. ⚠ Un trasferimento dalla parte del server è
+fatto di due messaggi lontani nel tempo: l'annuncio adesso, il testo **se e quando** qualcuno chiede.
+
+⇒ **Uno stream per messaggio**, perché si copia molto più spesso di quanto si incolli: tenere aperto
+uno stream fra i due vorrebbe dire tenerlo aperto **per sempre** nella maggioranza dei casi, e §2.5
+concede al server un numero finito di stream.
+
+⭐ Si può fare perché a legare i messaggi di un trasferimento **non è lo stream**: è il campo
+`trasferimento` (rilievo R1.11). ⭐ E il cliente di prova, leggendo **solo `RCP.md`**, ha fatto la
+stessa scelta — la riga è ambigua, ma l'ambiguità non morde.
+
 ---
 
 ## 5-quater. L'audio

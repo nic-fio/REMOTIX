@@ -26,7 +26,16 @@ fase 7»*); ⛔ quel che resta della 6 **resta aperto e non si chiude da sé**.
 > | **la scena** | un video di **YouTube** riprodotto nella sessione remota, giudicato a orecchio |
 > | ⛔ **e prima ci sono stati sette «fa schifo»** | §6.8, ed è il capitolo che insegna: sei cure su otto erano difetti **veri** che non erano quello che l'utente sentiva |
 >
-> ## ⏳ QUEL CHE VIENE ADESSO: **gli appunti**, e non è stato cominciato
+> ## ⭐⭐ E GLI APPUNTI SONO FATTI — **«clipboard funziona in entrambi i versi»**, 17 ago 2026 sera
+>
+> *Giudizio dell'utente col browser, porta 7730.* ⇒ 📖 §4.5 (che cosa è stato scritto), §6.9
+> (⛔ l'arbitro esterno del banco **non esiste**, e perché), §9.2-bis (il verdetto, e che cosa non
+> dice).
+>
+> ⛔ **Nessun banco automatico ha mai visto passare un byte di appunti**: quel giudizio è l'unica
+> prova che questa metà della fase abbia.
+>
+> *Quel che segue era il piano di partenza, ed è rimasto vero tranne §2.4:*
 >
 > Il piano è §0 e §2 di questo documento; tutto quel che serve è già scritto lì:
 >
@@ -204,14 +213,27 @@ secondo aspetta costa tre righe.
 Stesso §2.3-quinquies, il corollario: quel che resta dal giro prima viene annunciato alla
 connessione **e sembra un risultato**.
 
-### 2.4 · ⭐ Il lato indipendente degli appunti c'è già, ed è gratis
+### 2.4 · ⛔ Il lato indipendente degli appunti NON c'è — *corretto il 17 agosto 2026, misurando*
 
-`STUDI.md` §gnome §10 `[R]`: su GNOME **la sponda X11 di Mutter è incondizionata nei due versi**,
-zero controlli sul fuoco ⇒ **`xclip` funziona senza una nostra sessione**.
+> ⛔⛔ **QUESTO PARAGRAFO DICEVA IL CONTRARIO, E LA MISURA LO HA SMENTITO.**
+> Diceva: *«il lato indipendente c'è già, ed è gratis — `STUDI.md` §gnome §10 `[R]`: la sponda X11
+> di Mutter è incondizionata nei due versi ⇒ **`xclip` funziona senza una nostra sessione**. È
+> l'arbitro esterno che a questa fase serviva e che non credevamo di avere.»*
+>
+> ⛔ `[M]` 17 agosto 2026: il compositore gira come **`gnome-shell --headless --no-x11`**, cioè
+> **XWayland non parte affatto**. La riga di `STUDI.md` è vera del **codice** di Mutter e falsa
+> delle **nostre sessioni** — ed è una `[R]` letta nel sorgente, non una `[M]` presa sulla
+> macchina.
+>
+> ⚠ E il ripiego su un client Wayland vero (GTK) non regge neanche lui: per possedere la selezione
+> serve il *serial* di un evento d'ingresso, e in una sessione headless non arriva a nessuno.
+>
+> ⇒ 📖 **§6.9**, che è il capitolo che insegna: i tre tentativi, la causa vera, e perché REMOTIX ci
+> riesce lo stesso.
 
-⇒ Il banco copia con `xclip` e legge col client — invece di far parlare fra loro due pezzi
-nostri, che `PIANO.md` §0.4 chiama *«non confermare niente»*. **È l'arbitro esterno che a questa
-fase serviva e che non credevamo di avere.**
+⇒ **Che cosa resta.** Il verso `dispositivo → sessione` un arbitro ce l'ha — il **cliente di
+prova**, che ha letto solo `RCP.md` (`PIANO.md` §1.1). ⛔ Il verso `sessione → dispositivo` no, e
+oggi lo giudica **l'utente**: è l'invariante I8, non un ripiego.
 
 ### 2.5 · ⛔ E il secondo lettore resta il cliente di prova
 
@@ -421,6 +443,111 @@ sono `[?]`, e li chiude il banco.
 
 ---
 
+### 4.5 · ⭐⭐ GLI APPUNTI — **17 agosto 2026, sera**, e sono la seconda metà della fase
+
+*Ordine di lavoro dell'utente: «prima l'audio, poi gli appunti» (§0.1). L'audio è chiuso col suo
+giudizio; questa sezione è quel che è stato scritto dopo.*
+
+> ### ⛔ E LA DOMANDA DELL'UTENTE ERA «TESTO FORMATTATO» — chiusa prima di scrivere una riga
+>
+> L'apertura di questa sessione chiedeva *«la copia server↔client di **testo formattato**»*.
+> ⛔ `DECISIONI.md` §5-ter.1 dice l'opposto, **con parole sue del 9 agosto**: *«per la clipboard ho
+> idea precisa: solo testo»* — niente immagini, niente file, **niente formati ricchi**.
+>
+> ⚠ E non era una sfumatura: `RCP.md` §7.4 ha costruito i tre messaggi **senza nessun campo che
+> dichiari il tipo**, e ci ha scritto accanto la ragione — *«non esiste perché non c'è niente da
+> scegliere»*. Per l'HTML servirebbe quel campo, e §9 vieta di aggiungere campi a messaggi esistenti
+> dentro una versione maggiore: **la finestra è chiusa dal 10 agosto**.
+>
+> ⭐ Chiesto all'utente prima di scrivere codice, e **ha scelto «solo testo semplice»**. ⇒ La
+> decisione del 9 agosto regge, e questa riga esiste perché la prossima volta che qualcuno legge
+> «formattato» sappia che la domanda è già stata fatta.
+
+#### 4.5.1 · I sei file, e che cosa fa ciascuno
+
+| file | che cosa porta |
+|---|---|
+| ⭐ `src/appunti.h` + `.c` (**nuovi**, ~640 righe) | il lato **Mutter**, portato da `v1/…/appunti_mutter.c` con le quattro trappole disinnescate sul posto. ⛔ Solo testo: i tipi MIME vivono lì dentro e non escono |
+| `src/figlio.c` | quattro messaggi nuovi sul socket padre↔figlio (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), il **terzo tavolo di montaggio** e il **fondo di tempo** di chi incolla |
+| `src/rcp.c` + `.h` | i tre messaggi di §7.4, la tabella degli stream in arrivo, i cinque ganci nuovi, e la **cura della corsa con `Ctrl+V`** |
+| `src/webtransport.c` + `.h` | il canale `0x02` in arrivo (`G_UNI_APPUNTI`) e i tre ganci che aprono uno stream verso il client |
+| `src/main.c` | la **quarta cucitura** della stessa famiglia: video, input, audio, appunti |
+| `src/pagina.html` | il lato browser: `clipboardchange` dove c'è, l'evento `paste` dove non c'è, e la scrittura negli appunti locali col ripiego dichiarato |
+
+⭐ **E `mutter.h` ha una riga nuova sola**: `mutter_bus()`. Gli appunti vivono sulla **stessa**
+sessione `RemoteDesktop` del palco, e aprire una seconda connessione al bus vorrebbe dire un secondo
+nome sul bus — cioè un mittente che Mutter non riconosce come proprietario della sessione.
+
+#### 4.5.2 · ⛔⭐⭐ LA CORSA FRA `Ctrl+V` E L'ANNUNCIO, e la cura NON è quella di Xpra
+
+`SPECIFICHE.md` §9 la nomina e dichiara di **non** volerla risolvere come il riferimento:
+
+> *«una trappola che tutti e tre i riferimenti letti disinnescano a mano: la corsa fra `Ctrl+V` e la
+> lettura degli appunti. Xpra la risolve ritardando **ogni battuta di 100 ms** — ⛔ per noi sono
+> **due volte il tetto del ritardo**: quella cura non si copia, si sostituisce.»*
+
+**La corsa, per esteso.** L'utente batte `Ctrl+V` nel browser. I tasti partono sul canale di input;
+l'annuncio degli appunti parte sul canale appunti e fa la stessa strada. ⛔ Ma il desktop, ricevuto
+il `Ctrl+V`, chiede il testo **subito** — e l'annuncio può non essere ancora arrivato. ⇒ **La prima
+incollata di ogni testo nuovo tornerebbe vuota**, e la seconda funzionerebbe: il sintomo peggiore
+che ci sia, perché «a volte non va» non manda a cercare da nessuna parte.
+
+⭐ **La sostituzione costa zero e non tocca nessun tasto**: la richiesta di incolla **si mette in
+coda** invece di tornare vuota, e la domanda al client parte **quando l'annuncio arriva**
+(`rcp.c`, `rcp_appunti_chiedi` e il ramo `T_APPUNTI_ANNUNCIO` di `tratta_appunti`).
+
+⚠ E l'attesa è limitata da qualcun altro, non da un timer nostro in più: il **fondo di 4 s del
+figlio** risponde «non ce l'ho» a chi incolla se l'annuncio non arriva mai.
+
+#### 4.5.3 · ⛔ I DUE FONDI DI TEMPO, e sono due perché i debiti sono due
+
+Questa è la parte che nessun banco avrebbe chiesto e che il prodotto sì.
+
+| dove | quanto | che debito paga |
+|---|---|---|
+| ⛔ **nel figlio** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | il debito verso **Mutter**. Un `SelectionTransfer` senza risposta lascia appesa **a tempo indeterminato** l'applicazione che sta incollando, e quel che l'utente vede è **un desktop piantato** — un difetto che nessuno collega agli appunti |
+| ⚠ **nel padre** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | che il **canale** non resti bloccato. Senza, un client che non risponde una volta manda in coda **tutte le incollate successive**: «gli appunti hanno funzionato una volta e poi mai più» |
+
+⭐ **E il fondo verso Mutter sta nel FIGLIO, non nel padre**, per una ragione che non è di comodità:
+il padre può non avere nessun client attaccato (la sessione sopravvive al client — invariante I4), il
+client può sparire a metà trasferimento, e il padre stesso può morire. ⛔ Il debito verso il
+compositore invece resta di chi ha la sessione, **e la sessione è nel figlio**.
+
+⚠ E i due numeri sono diversi **apposta**: stringerli fino a coincidere li farebbe scadere insieme,
+e un testo arrivato al millesimo giusto non troverebbe più nessuno da servire da nessuna delle due
+parti.
+
+#### 4.5.4 · 🔸 Dove §2.5 ammetteva due letture, e quale si è presa
+
+`RCP.md` §2.5 dice che il canale appunti vuole uno stream *«uno **per trasferimento**»*. ⚠ Un
+trasferimento dalla nostra parte è fatto di **due messaggi lontani nel tempo** — `APPUNTI_ANNUNCIO`
+adesso, `APPUNTI_TESTO` **se e quando** qualcuno chiede.
+
+⇒ Si è presa la lettura **uno stream per messaggio**, e la ragione è un conto: si copia molto più
+spesso di quanto si incolli, quindi tenere aperto uno stream fra i due messaggi vorrebbe dire
+tenerlo aperto **per sempre** nella stragrande maggioranza dei casi — e §2.5 concede al server un
+numero finito di stream.
+
+⭐ **E si può fare, perché a legare i messaggi di un trasferimento NON è lo stream**: è il campo
+`trasferimento`, che esiste esattamente per questo (rilievo R1.11, 9 agosto 2026).
+
+⚠ Il prezzo, dichiarato: un client che contasse gli stream per contare i trasferimenti conterebbe il
+doppio. Nessuna riga di `RCP.md` gli dice di farlo, e il campo che deve guardare ce l'ha. ⭐ Il
+cliente di prova ha fatto **la stessa scelta leggendo solo il documento**, il che dice che la riga è
+ambigua ma che l'ambiguità non morde.
+
+#### 4.5.5 · ⛔ Due valori che venivano LETTI E BUTTATI, e la stessa forma del rilievo B-1
+
+| dove | che cosa succedeva |
+|---|---|
+| `src/rcp.c` (`CIAO`) | `appunti.testo` era in `NOMI_NOTI` come nome lecito e il **valore veniva buttato**. ⇒ Il server non poteva né evitare di annunciare a chi non li aveva chiesti, né rifiutare byte sul canale `0x02` da un client che non li aveva dichiarati — cioè **una capacità usata senza negoziarla**, che è il caso che §4.3 esiste per rendere impossibile |
+| `src/pagina.html` (`ECCOMI`) | idem: la pagina lo stampava nella riga dell'`ECCOMI` e non lo teneva da nessuna parte. ⇒ Non avrebbe potuto accendere niente |
+
+⚠ È **la stessa forma del rilievo B-1** su `video.misura_massima` (10 agosto 2026): un valore del
+protocollo che si dichiara di aver capito e non si ha da nessuna parte.
+
+---
+
 ## 5 · Le misure
 
 *(si riempie strada facendo — la scena dichiarata accanto a ogni numero)*
@@ -444,6 +571,9 @@ sono `[?]`, e li chiude il banco.
 | ⭐ **il datagram che non partiva** | 0 % di perdita | da **38,5 %** a **0,3 %**: 2994 spediti, 8 rifiutati, 1 buttato per coda piena su ~3003. ⚠ Su **Opus** la perdita era già **zero** (0 su 747): il difetto mordeva il **PCM**, che costa 13 volte la banda | `[M]` 17 ago 2026 |
 | ⭐ **libopus non accumula** | `[?]` | **1000 blocchi entrati, 1000 usciti, zero EAGAIN** ⇒ l'`istante` di §6.3 appartiene al blocco che parte | `[M]` 17 ago 2026, `07-b44` |
 | ⚠ **il pre-skip di Opus** | non dichiarato da nessuno | `initial_padding` = **312 campioni = 6,50 ms**, **costante** su mille pacchetti. Il decodificatore lo toglie da sé, quindi end-to-end si cancella | `[M]` 17 ago 2026, `07-b44` |
+| ⭐⭐ **gli appunti si aprono su una sessione GNOME VERA** | `EnableClipboard` concesso | ⭐ `appunti della sessione accesi (solo testo, nei due versi) su /org/gnome/Mutter/RemoteDesktop/Session/u1`. ⛔ È la prima e per ora **unica** prova che `appunti.c` funziona contro Mutter | `[M]` 17 ago 2026, porta 7730, utente `prova` |
+| ⛔⛔ **XWayland NON esiste nelle nostre sessioni** | `xclip` doveva funzionare (§2.4) | `gnome-shell --headless --no-x11` ⇒ **nessuna sponda X11**. ⚠ I due socket in `/tmp/.X11-unix` sono avanzi del **15 agosto**: un banco che li avesse presi per buoni avrebbe misurato una sessione morta | `[M]` 17 ago 2026 |
+| ⛔ **e nessun client Wayland ordinario possiede la selezione lì dentro** | l'arbitro doveva copiare | `wl-copy` dice **«This seat has no keyboard»**; un client GTK dice `COPIATO` ⛔ **e al compositore non arriva niente** — il prodotto, che è strumentato, non registra **nessun** `SelectionOwnerChanged`. ⚠ Nemmeno con una finestra presentata, e nemmeno con un client REMOTIX attaccato (cioè con la tastiera virtuale di libei presente) | `[M]` 17 ago 2026, tre tentativi |
 | ⭐⭐ **la trappola del volume, riprodotta** | il volume deve arrivare | due sink gemelli, PipeWire **1.4.2**: con `monitor.channel-volumes=true` il monitor legge **0,3535 · 0,0055 · 0,0000** al 100 % · 25 % · muto; ⛔ **senza**, legge **0,3535 sempre, muto compreso** | `[M]` 17 ago 2026, `07-b43` |
 
 ---
@@ -674,6 +804,80 @@ diagnostica della pagina non bastava, perché col desktop acceso la pagina è a 
 riquadro **non è raggiungibile** — chiederne la lettura all'utente era chiedergli una cosa che non
 si può fare.
 
+### 6.9 · ⛔⛔ L'ARBITRO ESTERNO DEGLI APPUNTI NON ESISTE — e §2.4 prometteva il contrario
+
+*17 agosto 2026, sera, alla prima accensione del banco `07-b45`.*
+
+§2.4 di questo documento diceva, in grassetto: *«il lato indipendente del banco degli appunti c'è
+già, ed è gratis»* — `xclip` funziona senza una nostra sessione, perché la sponda X11 di Mutter è
+incondizionata (`STUDI.md` §gnome §10 `[R]`).
+
+⛔ **È vero del codice di Mutter e falso delle nostre sessioni.** `[M]`: il compositore gira come
+
+```
+gnome-shell --headless --no-x11
+```
+
+⇒ **XWayland non parte affatto.** Non c'è nessuna sponda X11 da usare.
+
+⚠ **E la trappola dentro la trappola**: `/tmp/.X11-unix` conteneva `X0` e `X1`, di proprietà di
+`prova`. Un banco che avesse creduto a quei socket avrebbe puntato a una sessione **morta dal 15
+agosto** e avrebbe dato il rosso al prodotto. ⛔ Il passo 0 di `07-b45` li cercava proprio così: la
+prima stesura del banco conteneva il difetto che il banco esisteva per evitare.
+
+#### E il ripiego non ha retto neanche lui
+
+L'arbitro è stato rifatto su **GTK/GDK** — un client Wayland vero, che è anche *meglio*: prova la
+strada che percorre un'applicazione, non una sponda che i nostri utenti non hanno. ⛔ Non funziona
+lo stesso, e le cause provate sono state tre:
+
+| tentativo | esito |
+|---|---|
+| `Gdk.Display.get_default()` | **`None`**: senza `Gtk.init()` non c'è display. ⚠ E il messaggio d'errore accusava **la sessione** di non esistere mentre la sessione era viva — `CODER.md` §3.11, il sospetto va prima sulla misura |
+| `Gdk.Display.open(None)` | **aborto**, `gdk_display_open() was called before gtk_init()` |
+| `Gtk.init_check()` | ⭐ il display si apre, `set()` riesce, ⛔ **e al compositore non arriva niente** |
+
+⛔ **La causa vera è di protocollo**: per `wl_data_device.set_selection` serve il *serial* di un
+evento d'ingresso, e a un client senza superficie a fuoco non arriva nessun evento. ⚠ Presentare
+una finestra non è bastato, e nemmeno avere un client REMOTIX attaccato — cioè con la tastiera
+virtuale di libei presente, che era il primo sospetto (`wl-copy` dice **«This seat has no
+keyboard»**). ⇒ **Due cause plausibili per lo stesso sintomo, e la prima non era quella.**
+
+⭐ **E questo spiega perché REMOTIX invece ci riesce**: `appunti.c` passa dalla sessione
+`RemoteDesktop` di Mutter, che è **la via privilegiata e non chiede il fuoco**. È esattamente il
+motivo per cui quella via esiste — e il banco l'ha dimostrato per contrasto.
+
+⏳ **Che cosa resta da decidere**: un arbitro esterno per il verso `sessione → dispositivo` va
+trovato in un'applicazione **vera con una finestra a fuoco**, pilotata dall'input di REMOTIX — cioè
+la scena dell'utente. ⚠ Oppure si accetta che quel verso lo giudichi **lui**, che è l'invariante I8
+e non un ripiego.
+
+### 6.10 · ⛔ E DUE DIFETTI DEL CLIENTE DI PROVA, tutt'e due miei, tutt'e due travestiti
+
+Scrivendo il canale appunti nel secondo lettore di `RCP.md`.
+
+**1. Aspettavo DUE byte per riconoscere uno stream unidirezionale.** Gli stream QPACK del server
+ne portano **uno solo** (il tipo, `0x02` e `0x03`) e poi tacciono: quel byte finiva nel mio
+accumulo e non arrivava mai ad `aioquic`. ⇒ Il suo strato HTTP/3 non consegnava le intestazioni
+della CONNECT, il cliente restava ad aspettare, ⛔ **e il server lo congedava con `TEMPO_SCADUTO`
+per non aver mai aperto il canale di controllo** (§4.6).
+
+⚠ **Il rosso finiva sul server**, che aveva fatto esattamente quel che §4.6 gli dice di fare.
+`LEZIONI.md` §2.3: *«una prova che boccia il codice giusto costa quanto una che promuove quello
+sbagliato»*. ⭐ La cura non è accumulare meglio: è **non accumulare affatto** quel che non è nostro —
+uno stream WebTransport comincia per `0x40`, e ogni altro primo byte è di `aioquic`.
+
+**2. Il giudizio «altro» non aveva un ramo suo.** Uno stream già riconosciuto come video (`0x03`)
+ricadeva nel ramo «non so ancora che cos'è» a **ogni pacchetto**, veniva ribattezzato «h3», ⛔ e i
+byte di un fotogramma finivano dentro lo strato HTTP/3. ⚠ Il sintomo era
+`Only one QPACK decoder stream is allowed` — **un errore di HTTP/3 su una connessione dove HTTP/3
+non c'entrava niente**, e la connessione cadeva a metà giro.
+
+⭐ Tutt'e due sono la stessa forma: **un difetto del banco travestito da difetto del prodotto**, ed è
+la ragione per cui `PIANO.md` §0.3.4 vuole il banco certificato prima di essere creduto.
+
+---
+
 ### 6.4 · ⭐⭐ La revisione avversariale — **tredici rilievi, e quattro erano seri**
 
 *17 agosto 2026, su `audio.c`, `webtransport.c`, `pagina.html`, `rcp.c`, `main.c`. Il revisore ha
@@ -747,8 +951,29 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 - ⛔ **la priorità in tempo reale del percorso audio**: `LEZIONI.md` §5 dice che va **concessa
   dall'unità di sistema** e che il sintomo di quando manca è *«audio che scoppietta quando il
   desktop lavora»*. Nessuno ha guardato che cosa concede oggi l'unità di REMOTIX;
-- ⏳ **tutto il capitolo appunti**: questa mezza giornata è stata sull'audio, per decisione
-  dell'utente.
+- ⛔⛔ **GLI APPUNTI NON HANNO MAI GIRATO CONTRO NIENTE** — 17 agosto 2026, sera. Il codice c'è, si
+  compila senza un avvertimento e il banco in processo di `rcp.c` resta verde (19 su 19), ⛔ **ma
+  nessun byte di appunti è mai passato su un filo vero**. ⚠ È lo stato che `PIANO.md` §0.3.4 chiama
+  per nome: *«il banco si certifica prima di essere creduto»* — e questo banco (`07-b45`) non è
+  stato certificato né girato;
+- ⛔ **`DISPLAY` della sessione di `prova` è `[?]`**: la sponda X11 di Mutter esiste `[R]`
+  (`STUDI.md` §gnome §10), ma su quale numero la sessione headless la esponga non lo ha misurato
+  nessuno. ⚠ Il passo 0 di `07-b45` la **cerca** e si ferma se non la trova, invece di provare `:0`
+  — ma se non c'è, **l'arbitro esterno di §2.4 non esiste** e il banco va ripensato;
+- ⛔ **`xclip` sulla macchina di prova è `[?]`**: il banco lo controlla e si ferma, ⚠ e il ripiego
+  «due pezzi nostri che si parlano» **non si prende**: `PIANO.md` §0.4 lo chiama «non confermare
+  niente»;
+- ⚠ **dove stia `clipboardchange` su Chrome è `[?]`**: la proposta WICG lo mette su
+  `navigator.clipboard`, altre letture su `document`. ⭐ La pagina prova **tutt'e due** e **scrive
+  quale ha trovato**, così la prima sessione su Chrome risponde alla domanda invece di lasciarla
+  aperta;
+- ⛔ **scrivere negli appunti locali può essere negato**, e non è un difetto: `writeText()` vuole il
+  fuoco, e su Firefox anche un gesto «caldo». ⭐ Il testo **non si perde** — si tiene da parte e ci
+  va al primo clic — ⚠ ma nessuno ha misurato **quanto spesso** serva quel secondo giro;
+- ⛔ **il verso che si usa di più non è mai stato provato da un dito umano**: «copio un indirizzo sul
+  telefono e lo incollo nella sessione» (`DECISIONI.md` §5-ter.1) è la scena che l'utente
+  giudicherà, e la cura della corsa con `Ctrl+V` (§4.5.2) è **ragionata, non misurata**;
+- ⏳ **il DeX e il telefono**, come per l'audio: `[?]`, e ce l'ha l'utente.
 
 ---
 
@@ -768,7 +993,36 @@ Dato su un **video di YouTube** riprodotto nella sessione remota, e confermato d
 | **buchi nella riproduzione** | **2**, e fermi — nessun nuovo buco in venti secondi |
 | coda | stabile a **311-341 ms** |
 
-⏳ **Restano gli appunti**, che questa fase non ha ancora cominciato.
+### 9.2-bis · ⭐⭐⭐ GLI APPUNTI: **«clipboard funziona in entrambi i versi»** — 17 agosto 2026
+
+*Dato dall'utente col browser, sulla porta 7730, sessione dell'utente `prova`.*
+
+⛔ **È il metro I8, e non lo sostituisce niente**: nessun banco automatico ha mai visto passare un
+byte di appunti — l'arbitro esterno che §2.4 prometteva **non esiste** (§6.9), e quel verdetto è
+l'unica prova che questa metà della fase abbia.
+
+⭐ **E copre tutt'e due i versi**, cioè anche quello che `DECISIONI.md` §5-ter.1 dichiara il più
+usato: *«copio un indirizzo sul telefono e lo incollo nel browser remoto»*.
+
+⭐ **E con lui passa, di striscio, la cura della corsa con `Ctrl+V`** (§4.5.2): il verso
+`dispositivo → sessione` **è** quella corsa: l'annuncio e i tasti partono insieme, e se la cura non
+avesse funzionato la prima incollata sarebbe tornata vuota.
+
+> ⚠ **Quel che il verdetto NON dice**, e va scritto perché non venga letto per più di quel che è:
+>
+> - **su quale browser**: la riga del registro della pagina — quella che dice se `clipboardchange`
+>   c'è e **dove sta** — non è stata riportata. ⇒ Resta `[?]` se il verso
+>   `dispositivo → sessione` abbia funzionato per **sorveglianza** (Chrome) o per **`Ctrl+V` sulla
+>   pagina** (Firefox e Safari). Sono due strade diverse (§4.5, `pagina.html`), e sapere quale ha
+>   retto cambia che cosa si dichiara all'utente in §9 di `SPECIFICHE.md`;
+> - **niente numeri**: nessuna misura di quanto testo, di quanto tempo, né del secondo giro quando
+>   il browser nega la scrittura negli appunti;
+> - **il DeX e il telefono** restano `[?]`, come per l'audio.
+
+⇒ **La fase 7 ha adesso i suoi due giudizi**: *«problema audio risolto»* e *«clipboard funziona in
+entrambi i versi»*. ⛔ E la **fase 6 resta aperta**: il suo §8 aspetta ancora il giudizio su due
+scene (il trascinamento del bordo e il clic tenuto giù), e quel che resta della 6 **non si chiude da
+sé**.
 
 ### 9.2 · ⛔⛔ E PRIMA DEL «RISOLTO» CI SONO STATI SETTE «FA SCHIFO»
 

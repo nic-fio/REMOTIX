@@ -385,6 +385,63 @@ static void audio_blocco(void *ctx, const char *utente, uid_t uid, uint8_t codec
 	wt_audio_diffondi(utente, codec, istante_us, dati, byte);
 }
 
+/* ⭐⭐ LA CUCITURA DEGLI APPUNTI — fase 7, ed e' la QUARTA della stessa
+ *     famiglia (video, input, audio, appunti).
+ *
+ *     Chi sa che una sessione ha negoziato `appunti.testo`: `rcp.c` (§4.3).
+ *     Chi sa a quale sessione appartiene: `webtransport.c`.
+ *     ⛔ Chi parla col compositore: il FIGLIO — la clipboard e' di Mutter
+ *        (`STUDI.md` §gnome §10), e Mutter parla con la sessione dell'utente.
+ *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ */
+static bool appunti_offri_al_figlio(void *ctx, const char *utente)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return false;
+	return figli_appunti_offri(p->f, utente);
+}
+
+static bool appunti_risposta_al_figlio(void *ctx, const char *utente,
+                                       uint32_t serial, const char *testo,
+                                       size_t byte)
+{
+	struct ponte *p = (struct ponte *)ctx;
+	if (!p || !p->f)
+		return false;
+	return figli_appunti_risposta(p->f, utente, serial, testo, byte);
+}
+
+/* I due versi di ritorno, dal desktop al filo.
+ *
+ * ⛔ E anche qui NON si controlla niente: la guardia I3 — che il testo vada
+ *    alla connessione di CHI l'ha copiato — sta dentro `webtransport.c`,
+ *    accanto a quella dei pixel e a quella del suono. */
+static void appunti_dalla_sessione(void *ctx, const char *utente, uid_t uid,
+                                   const char *testo, size_t byte)
+{
+	(void)ctx;
+	(void)uid;
+	wt_appunti_dalla_sessione(utente, testo, byte);
+}
+
+static void appunti_richiesta_dalla_sessione(void *ctx, const char *utente,
+                                             uid_t uid, uint32_t serial)
+{
+	struct ponte *p = (struct ponte *)ctx;
+
+	(void)uid;
+	/* ⛔⛔ E SE NON C'E' NESSUNO A CUI CHIEDERE SI RISPONDE SUBITO, a mani
+	 *      vuote.  Il figlio ha un fondo di tempo che lo coprirebbe comunque,
+	 *      ⚠ ma qui la risposta si sa GIA': far aspettare quattro secondi chi
+	 *      incolla quando la risposta e' certa e' un desktop che sembra
+	 *      piantato per una cosa che avevamo capito subito. */
+	if (wt_appunti_richiesta(utente, serial))
+		return;
+	if (p && p->f)
+		figli_appunti_risposta(p->f, utente, serial, NULL, 0);
+}
+
 /* ⭐⭐ LA CUCITURA DELL'INPUT — fase 4, ed e' la gemella di quella qui sopra.
  *
  *     Chi sa che l'utente ha premuto: `rcp.c`, che ha convalidato il messaggio
@@ -1134,6 +1191,15 @@ int main(int argc, char **argv)
 	 *    come tutti gli altri ganci: prima non c'e' una tabella a cui
 	 *    agganciarli. */
 	figli_gancio_blocco(prole, audio_blocco, NULL);
+	/* ⭐⭐ FASE 7 — GLI APPUNTI, nei due versi, e i due ganci si agganciano
+	 *     insieme: `webtransport.c` non collega il canale se ne manca uno, e
+	 *     `figli_gancio_appunti` rifiuta di agganciarne uno solo.  ⚠ Meta'
+	 *     canale l'utente la vede come «gli appunti non funzionano», che e' la
+	 *     stessa faccia di «gli appunti non ci sono». */
+	wt_appunti_gancio(appunti_offri_al_figlio, appunti_risposta_al_figlio,
+	                  &ponte);
+	figli_gancio_appunti(prole, appunti_dalla_sessione,
+	                     appunti_richiesta_dalla_sessione, &ponte);
 
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)

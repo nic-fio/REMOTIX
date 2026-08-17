@@ -55,6 +55,7 @@
 #include <stdatomic.h>
 #include <grp.h>
 #include <poll.h>
+#include <pthread.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <signal.h>
@@ -71,6 +72,7 @@
 
 /* Solo il figlio ha bisogno del palco.  Il padre non include niente di tutto
  * questo, e non e' pulizia: e' la dichiarazione che root non ci parla. */
+#include "appunti.h"
 #include "audio.h"
 #include "cattura.h"
 #include "sentinella.h"
@@ -152,6 +154,21 @@ enum {
 	 *   codificare e' il figlio, quindi il numero deve attraversare il
 	 *   confine — ed e' esattamente quel che questo messaggio porta. */
 	MSG_AUDIO = 7,        /* padre → figlio */
+	/* ⭐⭐ FASE 7 — GLI APPUNTI, e attraversano il confine per la QUARTA volta
+	 *     con la stessa ragione del video, dell'input e dell'audio: **la
+	 *     clipboard e' del compositore** (`STUDI.md` §gnome §10), e col
+	 *     compositore parla questo processo; §7.4 lo scrive il padre.
+	 *
+	 * ⛔ `MSG_APPUNTI_OFFERTA` NON porta il testo, ed e' il «si annuncia e poi
+	 *    si tira» di §7.4 applicato di qua: il testo del client si chiede
+	 *    quando qualcuno nella sessione incolla davvero.  ⚠ Chi copia un
+	 *    documento intero sul telefono non lo fa attraversare il socket finche'
+	 *    quel momento non arriva — e nella maggior parte dei casi non arriva. */
+	MSG_APPUNTI_OFFERTA = 8,  /* padre → figlio */
+	/* ⛔ E questo invece lo porta, **a pezzi**: e' la risposta a una richiesta
+	 *    della sessione, e il tetto di §5.4 e' 1 000 000 byte — trenta volte
+	 *    `PEZZO_MAX`. */
+	MSG_APPUNTI_DAL_CLIENT = 9, /* padre → figlio */
 	MSG_SONO = 10,      /* figlio → padre */
 	MSG_PALCO = 11,     /* figlio → padre */
 	MSG_FOTOGRAMMA = 12,/* figlio → padre */
@@ -199,7 +216,23 @@ enum {
 	 *    vieta la ritrasmissione, e un figlio che si bloccasse a scrivere
 	 *    fermerebbe la CATTURA DEL DESKTOP — l'audio in ritardo costerebbe i
 	 *    fotogrammi. */
-	MSG_BLOCCO = 16 /* figlio → padre */
+	MSG_BLOCCO = 16, /* figlio → padre */
+	/* ⭐⭐ FASE 7 — «LA SESSIONE HA COPIATO QUESTO TESTO», e va **a pezzi** come
+	 *     il fotogramma e il cursore.
+	 *
+	 * ⛔ Arriva GIA' LETTO, e non e' una comodita': l'annuncio di §7.4 porta
+	 *    `u32 lunghezza`, e nessuno sa quanto e' lungo un testo senza averlo
+	 *    letto.  ⇒ Il «si annuncia e poi si tira» vive sul FILO, dove serve;
+	 *    di qua il testo c'e' gia'.
+	 * ⛔ E arriva gia' convalidato UTF-8, gia' senza zeri in mezzo e gia' entro
+	 *    il tetto: quei tre controlli stanno in `appunti.c`, dove il testo
+	 *    esiste ancora intero e dove si sa QUALE dei tre ha morso. */
+	MSG_APPUNTI_DALLA_SESSIONE = 17, /* figlio → padre */
+	/* ⭐⭐ «QUALCUNO NELLA SESSIONE STA INCOLLANDO» — e il padre DEVE rispondere,
+	 *     anche a mani vuote: un `SelectionTransfer` senza risposta lascia
+	 *     appesa a tempo indeterminato l'applicazione che incolla, e il sintomo
+	 *     e' «il desktop si e' piantato» (`src/appunti.h`). */
+	MSG_APPUNTI_VUOLE = 18 /* figlio → padre */
 };
 
 struct testa {
@@ -319,6 +352,32 @@ struct corpo_blocco {
 	uint64_t istante_us;
 };
 
+/* ⛔ IL TESTO DEGLI APPUNTI, e va a pezzi nei DUE versi.
+ *
+ * ⚠ Una struttura sola per i due versi, e non e' pigrizia: i due messaggi
+ *   portano lo stesso oggetto — un testo lungo fino a 1 000 000 byte — e
+ *   `serial` e' l'unica differenza.  ⛔ Nel verso figlio → padre vale **0** e
+ *   non vuol dire niente: la sessione ha copiato, non ha chiesto.
+ *
+ * ⛔ E il `totale` NON e' ridondante rispetto a `pezzo`: chi riceve alloca sul
+ *    primo pezzo e rifiuta i pezzi fuori ordine, esattamente come per il
+ *    fotogramma — ricucire un buco vorrebbe dire indovinare che cosa mancava,
+ *    e un testo con un buco indovinato incollato in un terminale e' peggio di
+ *    un testo mancante (§5.4, con le sue parole). */
+struct corpo_appunti {
+	uint32_t serial; /* padre → figlio: la richiesta di Mutter.  Altrimenti 0 */
+	uint32_t totale; /* byte del testo intero, zero finale ESCLUSO */
+	uint32_t offset;
+	uint32_t pezzo;
+	/* ⛔ «Non ce l'ho», e va detto con un campo invece che con `totale = 0`.
+	 *    Un testo vuoto e' un fatto LECITO — la clipboard svuotata — e «non ho
+	 *    quel che mi hai chiesto» e' un altro fatto: schiacciarli sullo stesso
+	 *    valore e' la faccia comune di «vuoto» e «proibito» che `LEZIONI.md`
+	 *    §1.9 vieta.  ⚠ E i due portano a due chiamate diverse verso Mutter. */
+	uint8_t niente;
+	uint8_t riempi[3];
+};
+
 struct corpo_fotogramma {
 	uint8_t codec; /* 1 = HEVC, 2 = AV1 — gli stessi numeri di §4.3/§6.2 */
 	uint8_t chiave;
@@ -347,6 +406,8 @@ struct corpo_fotogramma {
 #define BUSTA_MAX (sizeof(struct testa) + sizeof(struct corpo_fotogramma) + PEZZO_MAX)
 _Static_assert(sizeof(struct corpo_cursore) <= sizeof(struct corpo_fotogramma),
                "la busta e' dimensionata sul fotogramma: il cursore ci deve stare");
+_Static_assert(sizeof(struct corpo_appunti) <= sizeof(struct corpo_fotogramma),
+               "la busta e' dimensionata sul fotogramma: gli appunti ci devono stare");
 
 /* ========================================================================== */
 /* IL PADRE                                                                    */
@@ -399,6 +460,13 @@ struct figlio {
 	 *    solo quando il fatto CAMBIA.  ⚠ `0` = spento, ed e' lo stato iniziale
 	 *    di ogni figlio: nessuno ascolta finche' qualcuno non si attacca. */
 	uint8_t audio_codec_chiesto;
+	/* ⭐ FASE 7 — il TERZO tavolo di montaggio, e la ragione e' quella scritta
+	 *    sopra `cur_monta`: fotogrammi, cursori e appunti arrivano
+	 *    **intrecciati** sullo stesso socket, e chi ne avesse due soli farebbe
+	 *    di ogni testo copiato un fotogramma buttato.  ⚠ Un tavolo per tipo, e
+	 *    il conto torna qualunque cosa arrivi prima. */
+	uint8_t *app_monta;
+	size_t app_totale, app_avuti;
 };
 
 struct figli {
@@ -418,6 +486,16 @@ struct figli {
 	 *    insieme vorrebbe dire accendere l'audio per forza dove c'e' il video. */
 	FiglioBlocco su_blocco;
 	void *ctx_blocco;
+	/* ⭐ FASE 7 — gli appunti.  ⚠ Contesto SUO come quello dei blocchi, e per
+	 *    la stessa ragione: chi possiede il canale degli appunti non e' chi
+	 *    aggancia il video, e legarli vorrebbe dire accendere gli appunti per
+	 *    forza dove c'e' il video.
+	 * ⛔ I due ganci si agganciano insieme o per niente (`figlio.h`): uno che
+	 *    sapesse ricevere il testo della sessione e non sapesse servire chi
+	 *    incolla lascerebbe appesa l'applicazione che incolla. */
+	FiglioAppuntiTesto su_appunti_testo;
+	FiglioAppuntiRichiesta su_appunti_richiesta;
+	void *ctx_appunti;
 	FiglioDeposito deposita;
 	FiglioCongedo congeda;
 	FiglioCursore cursore;
@@ -1286,6 +1364,90 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
  * ⚠ Perche' ha un montaggio suo e non riusa quello del fotogramma: i due
  *   arrivano intrecciati sullo stesso socket, e con un tavolo solo ogni cambio
  *   di forma butterebbe il fotogramma a meta' e viceversa. */
+/* ⭐⭐ FASE 7 — il testo degli appunti che la SESSIONE ha copiato, un pezzo per
+ *     volta.  Stesso stampo del cursore, e le differenze sono due e dichiarate:
+ *
+ *       · il tetto e' quello di `RCP.md` §5.4 — **1 000 000 byte** — e si fa
+ *         rispettare QUI perche' qui il mittente e' un altro processo.  ⚠ Non
+ *         e' un doppione del controllo di `appunti.c`: quello e' un modulo di
+ *         cui ci fidiamo, questo e' un socket;
+ *       · si alloca **un byte in piu'** e ci si mette lo zero: da qui in poi il
+ *         testo viaggia come stringa, e `appunti.c` ha gia' garantito che non
+ *         ne contenga uno in mezzo.
+ */
+static void monta_appunti(struct figli *f, struct figlio *g,
+                          const struct corpo_appunti *c, const uint8_t *dati)
+{
+	if (c->totale > APPUNTI_TETTO) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s» annuncia %u byte di appunti: oltre il tetto di "
+		              "§5.4 (%u).  Si butta, e NON si tronca — un testo tagliato "
+		              "incollato in un terminale e' peggio di un testo mancante",
+		              g->utente, c->totale, APPUNTI_TETTO);
+		return;
+	}
+	/* ⚠ Zero byte e' un fatto LECITO: la clipboard svuotata.  Si consegna, e
+	 *   chi riceve decide — non e' compito di questo tavolo. */
+	if (c->totale == 0) {
+		if (f->su_appunti_testo)
+			f->su_appunti_testo(f->ctx_appunti, g->utente, g->uid, "", 0);
+		return;
+	}
+	if (c->pezzo > PEZZO_MAX || (uint64_t)c->offset + c->pezzo > c->totale) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s»: pezzo di appunti fuori misura (offset %u + %u su "
+		              "%u): scartato",
+		              g->utente, c->offset, c->pezzo, c->totale);
+		free(g->app_monta);
+		g->app_monta = NULL;
+		g->app_totale = g->app_avuti = 0;
+		return;
+	}
+	if (c->offset == 0) {
+		free(g->app_monta);
+		g->app_monta = (uint8_t *)malloc((size_t)c->totale + 1u);
+		if (!g->app_monta) {
+			registro_dice(REG_FIGLIO,
+			              "⛔ «%s»: %u byte di appunti non entrano in memoria",
+			              g->utente, c->totale);
+			g->app_totale = g->app_avuti = 0;
+			return;
+		}
+		g->app_totale = c->totale;
+		g->app_avuti = 0;
+	}
+	/* ⛔ In ordine e basta, come il fotogramma e il cursore.  ⚠ E qui il buco
+	 *    indovinato sarebbe **peggio**: un fotogramma sbagliato dura 20 ms, un
+	 *    testo sbagliato lo si incolla in un terminale. */
+	if (!g->app_monta || c->offset != g->app_avuti
+	    || c->totale != g->app_totale) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s»: pezzo di appunti fuori ordine (aspettavo %zu, e' "
+		              "arrivato %u): il testo si BUTTA intero",
+		              g->utente, g->app_avuti, c->offset);
+		free(g->app_monta);
+		g->app_monta = NULL;
+		g->app_totale = g->app_avuti = 0;
+		return;
+	}
+	memcpy(g->app_monta + c->offset, dati, c->pezzo);
+	g->app_avuti += c->pezzo;
+	if (g->app_avuti < g->app_totale)
+		return;
+
+	g->app_monta[g->app_totale] = 0;
+	registro_dice(REG_FIGLIO,
+	              "⭐ «%s» ha copiato %zu byte di testo nella sessione: al "
+	              "client (§7.4)",
+	              g->utente, g->app_totale);
+	if (f->su_appunti_testo)
+		f->su_appunti_testo(f->ctx_appunti, g->utente, g->uid,
+		                    (const char *)g->app_monta, g->app_totale);
+	free(g->app_monta);
+	g->app_monta = NULL;
+	g->app_totale = g->app_avuti = 0;
+}
+
 static void monta_cursore(struct figli *f, struct figlio *g,
                           const struct corpo_cursore *c, const uint8_t *dati)
 {
@@ -1491,6 +1653,41 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		if (f->su_blocco)
 			f->su_blocco(f->ctx_blocco, g->utente, g->uid, c.codec,
 			             c.istante_us, corpo + sizeof c, c.byte);
+		return true;
+	}
+	case MSG_APPUNTI_DALLA_SESSIONE: {
+		struct corpo_appunti c;
+		if (byte < sizeof c)
+			return true;
+		memcpy(&c, corpo, sizeof c);
+		if (byte < sizeof c + c.pezzo)
+			return true;
+		monta_appunti(f, g, &c, corpo + sizeof c);
+		return true;
+	}
+	case MSG_APPUNTI_VUOLE: {
+		struct corpo_appunti c;
+		if (byte < sizeof c)
+			return true;
+		memcpy(&c, corpo, sizeof c);
+		/* ⛔⛔ E SE NESSUNO ASCOLTA SI RISPONDE COMUNQUE, subito e a mani vuote.
+		 *
+		 *      Il caso e' reale e frequente: la sessione sopravvive al client
+		 *      (invariante I4), quindi qualcuno puo' incollare **quando non c'e'
+		 *      nessun client attaccato**.  ⚠ Tacere qui lascerebbe appesa a
+		 *      tempo indeterminato l'applicazione che incolla, e il sintomo —
+		 *      «il desktop si e' piantato» — non nomina ne' gli appunti ne' il
+		 *      distacco.  ⇒ Il fondo di tempo non basta: si risponde ORA. */
+		if (!f->su_appunti_richiesta) {
+			registro_dice(REG_FIGLIO,
+			              "«%s» sta incollando (richiesta %u) e nessuno serve "
+			              "gli appunti: rispondo «non ce l'ho» subito, invece di "
+			              "lasciare appeso chi incolla",
+			              g->utente, c.serial);
+			figli_appunti_risposta(f, g->utente, c.serial, NULL, 0);
+			return true;
+		}
+		f->su_appunti_richiesta(f->ctx_appunti, g->utente, g->uid, c.serial);
 		return true;
 	}
 	case MSG_TELA: {
@@ -1929,6 +2126,146 @@ void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx)
 	f->ctx_blocco = ctx;
 }
 
+void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
+                          FiglioAppuntiRichiesta richiesta, void *ctx)
+{
+	if (!f)
+		return;
+	/* ⛔ Insieme o per niente (`figlio.h`): chi agganciasse il solo `testo`
+	 *    saprebbe portare al client quel che la sessione copia e non saprebbe
+	 *    servire chi incolla — e quel «non saprebbe» si vede come un desktop
+	 *    piantato.  ⇒ Si dichiara e non si aggancia niente, invece di
+	 *    agganciare meta' canale. */
+	if ((testo != NULL) != (richiesta != NULL)) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ i due ganci degli appunti si agganciano insieme o per "
+		              "niente, e ne e' arrivato uno solo (%s): NON ne aggancio "
+		              "nessuno",
+		              testo ? "manca chi serve chi incolla"
+		                    : "manca chi porta il testo al client");
+		return;
+	}
+	f->su_appunti_testo = testo;
+	f->su_appunti_richiesta = richiesta;
+	f->ctx_appunti = ctx;
+}
+
+bool figli_appunti_offri(figli *f, const char *utente)
+{
+	struct figlio *g;
+	struct testa t;
+	uint8_t busta[sizeof t];
+
+	if (!f || !utente)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+
+	memset(&t, 0, sizeof t);
+	magia_scrivi(&t);
+	t.tipo = MSG_APPUNTI_OFFERTA;
+	t.versione = FIGLIO_VERSIONE;
+	t.matricola = g->matricola;
+	t.uid_dichiarato = (uint32_t)g->uid;
+	t.byte = 0;
+	memcpy(busta, &t, sizeof t);
+	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+		registro_dice(REG_FIGLIO,
+		              "⚠ l'offerta degli appunti a «%s» non e' partita (%s): "
+		              "dentro quella sessione non si potra' incollare quel che "
+		              "il client ha copiato, e questa riga e' il perche'",
+		              utente, strerror(errno));
+		return false;
+	}
+	registro_dettaglio(REG_FIGLIO,
+	                   "«%s»: offerto alla sessione il testo del client (§7.4)",
+	                   utente);
+	return true;
+}
+
+bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
+                            const char *testo, size_t byte)
+{
+	struct figlio *g;
+	size_t off = 0;
+
+	if (!f || !utente)
+		return false;
+	g = cerca(f, utente);
+	if (!g || g->fd < 0 || g->uscendo)
+		return false;
+
+	/* ⛔ Il tetto si fa rispettare anche in QUESTO verso, e la ragione e'
+	 *    diversa da quella di §5.4: qui il testo viene dal **client**, cioe' da
+	 *    fuori.  ⚠ `rcp.c` lo ha gia' rifiutato sul filo; questa e' la seconda
+	 *    porta, quella che protegge il figlio da un padre con un difetto. */
+	if (testo && byte > APPUNTI_TETTO) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ «%s»: %zu byte di appunti dal client, oltre il tetto "
+		              "di §5.4 (%u): rispondo «non ce l'ho» invece di troncare",
+		              utente, byte, APPUNTI_TETTO);
+		testo = NULL;
+		byte = 0;
+	}
+
+	/* ⛔ Il caso «niente» e quello «testo vuoto» partono per strade diverse, e
+	 *    la differenza arriva fino a Mutter: `SelectionWriteDone(false)` contro
+	 *    un descrittore aperto e chiuso senza byte.  ⚠ Chi incolla vede «non
+	 *    c'era niente da incollare» nel primo caso e una riga vuota nel
+	 *    secondo, che sono due cose diverse. */
+	do {
+		struct testa t;
+		struct corpo_appunti c;
+		uint8_t busta[sizeof t + sizeof c + PEZZO_MAX];
+		size_t q = 0;
+
+		if (testo) {
+			q = byte - off;
+			if (q > PEZZO_MAX)
+				q = PEZZO_MAX;
+		}
+
+		memset(&t, 0, sizeof t);
+		magia_scrivi(&t);
+		t.tipo = MSG_APPUNTI_DAL_CLIENT;
+		t.versione = FIGLIO_VERSIONE;
+		t.matricola = g->matricola;
+		t.uid_dichiarato = (uint32_t)g->uid;
+		t.byte = (uint32_t)(sizeof c + q);
+		memset(&c, 0, sizeof c);
+		c.serial = serial;
+		c.totale = testo ? (uint32_t)byte : 0;
+		c.offset = (uint32_t)off;
+		c.pezzo = (uint32_t)q;
+		c.niente = testo ? 0 : 1;
+		memcpy(busta, &t, sizeof t);
+		memcpy(busta + sizeof t, &c, sizeof c);
+		if (q)
+			memcpy(busta + sizeof t + sizeof c, testo + off, q);
+		if (send(g->fd, busta, sizeof t + sizeof c + q, MSG_NOSIGNAL)
+		    != (ssize_t)(sizeof t + sizeof c + q)) {
+			/* ⛔⛔ E QUESTO E' IL CASO CHE LASCIA APPESO CHI INCOLLA, quindi la
+			 *      riga e' in chiaro e dice il sintomo: senza, si cercherebbe
+			 *      il difetto nel desktop invece che in un socket pieno. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ «%s»: la risposta agli appunti (richiesta %u, %zu "
+			              "di %zu byte) non e' partita (%s).  ⚠ L'applicazione "
+			              "che sta incollando resta appesa finche' il figlio non "
+			              "va in fondo al suo tempo",
+			              utente, serial, off, byte, strerror(errno));
+			return false;
+		}
+		off += q;
+	} while (testo && off < byte);
+
+	registro_dettaglio(REG_FIGLIO,
+	                   "«%s»: risposta agli appunti (richiesta %u) — %s",
+	                   utente, serial,
+	                   testo ? "consegnata" : "«non ce l'ho»");
+	return true;
+}
+
 void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
 {
 	if (!f)
@@ -2101,6 +2438,36 @@ static char disposizione_in_attesa[65];
 static uint32_t input_iniettato;
 static uint32_t input_rifiutati;
 static uint32_t input_non_producibili;
+
+/* ⭐⭐ FASE 7 — GLI APPUNTI DELLA SESSIONE, e stanno di qua per la stessa
+ *     ragione di `palco_input`: la clipboard e' del compositore, e col
+ *     compositore parla questo processo (`src/appunti.h`). */
+static Appunti *palco_appunti;
+
+/*
+ * ⛔⛔ IL FONDO DI TEMPO DI CHI INCOLLA, E STA NEL FIGLIO — non nel padre.
+ *
+ * Un `SelectionTransfer` senza risposta lascia appesa **a tempo
+ * indeterminato** l'applicazione che sta incollando, e il sintomo e' «il
+ * desktop si e' piantato».  ⇒ Qualcuno deve rispondere sempre.
+ *
+ * ⭐ E quel qualcuno e' QUESTO processo, non il padre, per una ragione che non
+ *    e' di comodita': il padre puo' non avere nessun client attaccato (la
+ *    sessione sopravvive al client — invariante I4), il client puo' sparire a
+ *    meta' trasferimento, e il padre stesso puo' morire.  ⛔ Il debito verso
+ *    Mutter invece resta di chi ha la sessione, e la sessione e' qui.
+ *
+ * ⚠ Il padre risponde SUBITO quando sa gia' di non poter servire (nessun gancio
+ *   agganciato): questo fondo copre l'altro caso — il client c'e' e non
+ *   risponde.
+ */
+#define APPUNTI_ATTESA_MS 4000
+#define APPUNTI_IN_VOLO 8
+static struct {
+	bool usato;
+	uint32_t serial;
+	uint64_t scade_ms;
+} appunti_in_volo[APPUNTI_IN_VOLO];
 
 static int fd_figlio = 3; /* il posto convenuto, messo li' da `diventa_ed_esegui` */
 static uint64_t mia_matricola;
@@ -2303,6 +2670,291 @@ static int cursore_al_padre(void *chi, const CursoreForma *f)
 		off += q;
 	}
 	return 0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* ⭐⭐ FASE 7 — GLI APPUNTI: le due richiamate che attraversano il confine.    */
+/*                                                                            */
+/* ⛔⛔ E GIRANO SUL THREAD DEGLI APPUNTI, non su questo ciclo — `appunti.h`,  */
+/*      «il contratto del thread».  ⇒ Qui dentro si puo' SCRIVERE SUL SOCKET  */
+/*      (un `send` su SEQPACKET e' atomico per messaggio) e NIENT'ALTRO:      */
+/*      ⛔ `libei` non e' rientrante (`input.h`), e la tabella dei            */
+/*      trasferimenti in volo la tocca solo questo thread — vedi sotto.       */
+
+/* ⛔ La tabella la scrivono DUE thread: quello degli appunti, che ci mette i
+ *    serial, e il ciclo del figlio, che li scade.  ⚠ Un lucchetto per una
+ *    tabella di otto voci e' meno di quel che costa un difetto che si presenta
+ *    una volta ogni mille incollate. */
+static pthread_mutex_t appunti_lucchetto = PTHREAD_MUTEX_INITIALIZER;
+
+static void appunti_dalla_sessione(const char *testo, size_t byte, void *dati)
+{
+	size_t off = 0;
+
+	(void)dati;
+
+	/* ⚠ Il tetto l'ha gia' fatto rispettare `appunti.c`, che e' dove il testo
+	 *   esiste intero.  ⛔ Questa riga NON e' un doppione: e' la promessa che
+	 *   `monta_appunti()` dall'altra parte non riceva mai un `totale` che
+	 *   rifiuterebbe — cioe' che il difetto, se ci fosse, si veda **qui** e non
+	 *   come un testo sparito senza spiegazione. */
+	if (byte > APPUNTI_TETTO) {
+		registro_dice(REG_APPUNTI,
+		              "⛔ %zu byte oltre il tetto di §5.4 (%u) sono arrivati "
+		              "fin qui: NON si spediscono.  ⚠ Se questa riga compare, "
+		              "il controllo di `appunti.c` ha una falla",
+		              byte, APPUNTI_TETTO);
+		return;
+	}
+
+	do {
+		struct corpo_appunti c;
+		size_t q = byte - off;
+
+		if (q > PEZZO_MAX)
+			q = PEZZO_MAX;
+		memset(&c, 0, sizeof c);
+		c.serial = 0; /* la sessione ha copiato, non ha chiesto */
+		c.totale = (uint32_t)byte;
+		c.offset = (uint32_t)off;
+		c.pezzo = (uint32_t)q;
+		if (!manda(MSG_APPUNTI_DALLA_SESSIONE, &c, sizeof c,
+		           q ? testo + off : NULL, q)) {
+			/* ⛔ In chiaro e non in dettaglio: un testo copiato che non arriva
+			 *    al client e' un fatto che l'utente VEDE — incolla sul telefono
+			 *    e trova quel che c'era prima.  ⚠ E' anche il caso in cui il
+			 *    silenzio somiglia di piu' al funzionamento. */
+			registro_dice(REG_APPUNTI,
+			              "⛔ il pezzo a %zu di %zu byte non e' partito verso il "
+			              "padre (%s): quel che la sessione ha copiato NON "
+			              "arrivera' al client",
+			              off, byte, strerror(errno));
+			return;
+		}
+		off += q;
+	} while (off < byte);
+}
+
+static void appunti_vuole_incollare(uint32_t serial, void *dati)
+{
+	struct corpo_appunti c;
+	uint64_t adesso = registro_ora_ms();
+	int posto = -1;
+
+	(void)dati;
+
+	pthread_mutex_lock(&appunti_lucchetto);
+	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
+		if (!appunti_in_volo[i].usato) {
+			posto = i;
+			break;
+		}
+	if (posto >= 0) {
+		appunti_in_volo[posto].usato = true;
+		appunti_in_volo[posto].serial = serial;
+		appunti_in_volo[posto].scade_ms = adesso + APPUNTI_ATTESA_MS;
+	}
+	pthread_mutex_unlock(&appunti_lucchetto);
+
+	/* ⛔ La tabella e' piena: si risponde SUBITO «non ce l'ho» invece di
+	 *    aggiungere un debito che nessuno scadra'.  ⚠ Otto incollate insieme
+	 *    non e' un caso normale — se questa riga compare, o qualcuno tiene giu'
+	 *    Ctrl+V, o le risposte non stanno tornando. */
+	if (posto < 0) {
+		registro_dice(REG_APPUNTI,
+		              "⛔ gia' %d richieste di incolla in volo: la %u si chiude "
+		              "subito con «non ce l'ho», invece di restare senza "
+		              "risposta",
+		              APPUNTI_IN_VOLO, serial);
+		appunti_rispondi(palco_appunti, serial, NULL, 0);
+		return;
+	}
+
+	memset(&c, 0, sizeof c);
+	c.serial = serial;
+	if (!manda(MSG_APPUNTI_VUOLE, &c, sizeof c, NULL, 0)) {
+		/* ⛔ Non e' partita: si risponde ADESSO, senza aspettare il fondo.
+		 *    Il fondo serve a chi non risponde; qui sappiamo gia' che non
+		 *    rispondera' nessuno. */
+		registro_dice(REG_APPUNTI,
+		              "⛔ la richiesta di incolla %u non e' partita verso il "
+		              "padre (%s): rispondo «non ce l'ho» subito, o chi incolla "
+		              "resta appeso",
+		              serial, strerror(errno));
+		pthread_mutex_lock(&appunti_lucchetto);
+		appunti_in_volo[posto].usato = false;
+		pthread_mutex_unlock(&appunti_lucchetto);
+		appunti_rispondi(palco_appunti, serial, NULL, 0);
+	}
+}
+
+/* Chi era in volo e non ha avuto risposta entro il fondo: si risponde a mani
+ * vuote.  ⛔ Gira sul ciclo del figlio, a ogni giro di `poll`. */
+static void appunti_scadi(uint64_t adesso)
+{
+	uint32_t scaduti[APPUNTI_IN_VOLO];
+	int quanti = 0;
+
+	pthread_mutex_lock(&appunti_lucchetto);
+	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
+		if (appunti_in_volo[i].usato && adesso >= appunti_in_volo[i].scade_ms) {
+			scaduti[quanti++] = appunti_in_volo[i].serial;
+			appunti_in_volo[i].usato = false;
+		}
+	pthread_mutex_unlock(&appunti_lucchetto);
+
+	/* ⛔ Fuori dal lucchetto: `appunti_rispondi` fa chiamate D-Bus sincrone, e
+	 *    tenerlo preso mentre si aspetta il bus bloccherebbe il thread degli
+	 *    appunti su ogni segnale nuovo. */
+	for (int i = 0; i < quanti; i++) {
+		registro_dice(REG_APPUNTI,
+		              "⚠ nessuna risposta dal client per la richiesta %u entro "
+		              "%d ms: chiudo con «non ce l'ho».  ⛔ Chi incolla vede una "
+		              "incollata vuota, che e' molto meglio di un desktop "
+		              "appeso",
+		              scaduti[i], APPUNTI_ATTESA_MS);
+		appunti_rispondi(palco_appunti, scaduti[i], NULL, 0);
+	}
+}
+
+/*
+ * Il testo che il CLIENT ha copiato, montato un pezzo per volta.
+ *
+ * ⛔ Un tavolo solo, e basta: le richieste si servono **una per volta** sul filo
+ *    (`rcp.c` non ne tiene due aperte verso lo stesso client), e due montaggi
+ *    intrecciati qui vorrebbero dire due testi mescolati — cioe' esattamente
+ *    quel che l'identificatore di trasferimento di §7.4 esiste per evitare.
+ *    ⚠ Se un giorno il padre ne aprisse due, questa funzione **lo dice** invece
+ *    di mescolare: il `serial` che cambia a meta' montaggio butta tutto.
+ */
+static struct {
+	bool aperto;
+	uint32_t serial;
+	uint8_t *dati;
+	size_t totale, avuti;
+} appunti_montaggio;
+
+static void appunti_montaggio_libera(void)
+{
+	free(appunti_montaggio.dati);
+	appunti_montaggio.dati = NULL;
+	appunti_montaggio.aperto = false;
+	appunti_montaggio.totale = appunti_montaggio.avuti = 0;
+}
+
+static bool appunti_riscuoti(uint32_t serial);
+
+static void appunti_dal_client(const struct corpo_appunti *c, const uint8_t *dati)
+{
+	/* ⛔ «Non ce l'ho» arriva come CAMPO, non come lunghezza zero: un testo
+	 *    vuoto e' un fatto lecito e diverso.  ⇒ Due strade, e due chiamate
+	 *    diverse verso Mutter. */
+	if (c->niente) {
+		appunti_montaggio_libera();
+		if (appunti_riscuoti(c->serial))
+			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		else
+			registro_dettaglio(REG_APPUNTI,
+			                   "«non ce l'ho» per la richiesta %u, che non e' "
+			                   "piu' in volo: gia' scaduta, e Mutter ha gia' "
+			                   "avuto la sua risposta",
+			                   c->serial);
+		return;
+	}
+
+	if (c->totale > APPUNTI_TETTO) {
+		registro_dice(REG_APPUNTI,
+		              "⛔ il padre annuncia %u byte di appunti, oltre il tetto "
+		              "di §5.4 (%u): rispondo «non ce l'ho» invece di troncare",
+		              c->totale, APPUNTI_TETTO);
+		appunti_montaggio_libera();
+		if (appunti_riscuoti(c->serial))
+			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		return;
+	}
+
+	if (c->offset == 0) {
+		appunti_montaggio_libera();
+		appunti_montaggio.dati = (uint8_t *)malloc((size_t)c->totale + 1u);
+		if (!appunti_montaggio.dati) {
+			registro_dice(REG_APPUNTI,
+			              "⛔ %u byte di appunti dal client non entrano in "
+			              "memoria: rispondo «non ce l'ho»",
+			              c->totale);
+			if (appunti_riscuoti(c->serial))
+				appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+			return;
+		}
+		appunti_montaggio.aperto = true;
+		appunti_montaggio.serial = c->serial;
+		appunti_montaggio.totale = c->totale;
+		appunti_montaggio.avuti = 0;
+	}
+
+	/* ⛔ In ordine, dello stesso trasferimento, e della stessa misura.  Un
+	 *    pezzo che non torna butta tutto e RISPONDE: lasciare il montaggio
+	 *    aperto a meta' vorrebbe dire un `SelectionTransfer` che aspetta il
+	 *    fondo di tempo per niente. */
+	if (!appunti_montaggio.aperto || c->serial != appunti_montaggio.serial
+	    || c->offset != appunti_montaggio.avuti
+	    || c->totale != appunti_montaggio.totale
+	    || (uint64_t)c->offset + c->pezzo > c->totale) {
+		registro_dice(REG_APPUNTI,
+		              "⛔ pezzo di appunti fuori posto (richiesta %u, offset %u "
+		              "di %u): butto il testo intero e rispondo «non ce l'ho»",
+		              c->serial, c->offset, c->totale);
+		appunti_montaggio_libera();
+		if (appunti_riscuoti(c->serial))
+			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		return;
+	}
+
+	memcpy(appunti_montaggio.dati + c->offset, dati, c->pezzo);
+	appunti_montaggio.avuti += c->pezzo;
+	if (appunti_montaggio.avuti < appunti_montaggio.totale)
+		return;
+
+	appunti_montaggio.dati[appunti_montaggio.totale] = 0;
+	/* ⛔ Si riscuote PRIMA di rispondere: se il serial non e' piu' in volo, il
+	 *    fondo di tempo lo ha gia' chiuso con Mutter, e una seconda
+	 *    `SelectionWriteDone` sullo stesso trasferimento e' un messaggio che
+	 *    Mutter non aspetta piu'. */
+	if (appunti_riscuoti(appunti_montaggio.serial)) {
+		registro_dice(REG_APPUNTI,
+		              "⭐ %zu byte dal client consegnati a chi sta incollando "
+		              "(richiesta %u)",
+		              appunti_montaggio.totale, appunti_montaggio.serial);
+		appunti_rispondi(palco_appunti, appunti_montaggio.serial,
+		                 (const char *)appunti_montaggio.dati,
+		                 appunti_montaggio.totale);
+	} else {
+		registro_dice(REG_APPUNTI,
+		              "⚠ il testo per la richiesta %u e' arrivato DOPO il fondo "
+		              "di %d ms: si butta, perche' Mutter ha gia' avuto la sua "
+		              "risposta.  ⛔ Chi ha incollato ha visto una incollata "
+		              "vuota, ed e' il prezzo dichiarato del fondo",
+		              appunti_montaggio.serial, APPUNTI_ATTESA_MS);
+	}
+	appunti_montaggio_libera();
+}
+
+/* Il serial c'era davvero fra quelli in volo?  ⛔ Toglierlo dalla tabella e
+ * servirlo sono due cose sole, e stanno qui insieme: un serial servito e
+ * lasciato in tabella verrebbe scaduto dopo, e Mutter riceverebbe **due**
+ * `SelectionWriteDone` per lo stesso trasferimento. */
+static bool appunti_riscuoti(uint32_t serial)
+{
+	bool c_era = false;
+
+	pthread_mutex_lock(&appunti_lucchetto);
+	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
+		if (appunti_in_volo[i].usato && appunti_in_volo[i].serial == serial) {
+			appunti_in_volo[i].usato = false;
+			c_era = true;
+			break;
+		}
+	pthread_mutex_unlock(&appunti_lucchetto);
+	return c_era;
 }
 
 /* ⛔⭐ IL FIGLIO SI TIENE QUEL CHE HA CODIFICATO, e la ragione non e' la
@@ -3864,6 +4516,54 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	}
 
 	/*
+	 * ⭐⭐ E LA TERZA CUCITURA DEL PALCO: GLI APPUNTI — fase 7.
+	 *
+	 * ⛔ Va rimontata **insieme alle altre due**, e per la stessa ragione: su un
+	 *    rimontaggio la sessione `RemoteDesktop` e' **un'altra**, e un `Appunti`
+	 *    agganciato alla vecchia non riceverebbe piu' nessun segnale — senza
+	 *    nessun errore da nessuna parte.  ⚠ Il sintomo sarebbe «gli appunti
+	 *    hanno smesso di funzionare a un certo punto», che non nomina il
+	 *    rimontaggio.
+	 *
+	 * ⛔ E si CHIUDE prima di riaprire, non si lascia il vecchio in piedi:
+	 *    `appunti_chiudi()` non chiama mai `DisableClipboard` (trappola 1 di
+	 *    `appunti.h`), quindi chiudere qui non brucia la clipboard della
+	 *    sessione grafica — chiude solo il nostro thread e le sottoscrizioni.
+	 */
+	if (palco_appunti) {
+		appunti_chiudi(palco_appunti);
+		palco_appunti = NULL;
+	}
+	{
+		GError *sbaglio_app = NULL;
+
+		palco_appunti = appunti_apri(mutter_bus(mut),
+		                             mutter_percorso_controllo(mut),
+		                             &sbaglio_app);
+		if (palco_appunti) {
+			appunti_ascolta(palco_appunti, appunti_dalla_sessione,
+			                appunti_vuole_incollare, NULL);
+			registro_dice(REG_FIGLIO,
+			              "⭐⭐ GLI APPUNTI SONO APERTI, nei due versi e solo "
+			              "testo: da adesso quel che si copia nel desktop si "
+			              "puo' incollare sul dispositivo, e viceversa (§7.4)");
+		} else {
+			/* ⛔ E se non si aprono NON si muore: `CODER.md` §4.2 — degradare,
+			 *    non fallire.  Un utente senza appunti ha meno di quel che gli
+			 *    spetta; un utente a cui la sessione cade non ha niente.
+			 *    ⚠ Ma il ripiego si DICHIARA, o «gli appunti non funzionano» e
+			 *    «gli appunti non sono mai partiti» hanno la stessa faccia. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ gli appunti NON si aprono (%s): il desktop si vede "
+			              "e si comanda, ma il copia-incolla fra i due mondi non "
+			              "c'e'.  ⚠ La sessione resta in piedi, e questa riga e' "
+			              "il ripiego dichiarato",
+			              sbaglio_app ? sbaglio_app->message : "nessun dettaglio");
+		}
+		g_clear_error(&sbaglio_app);
+	}
+
+	/*
 	 * ⭐⭐ E QUI, UNA VOLTA SOLA PER SESSIONE, LE TRE COSE CHE VANNO FATTE
 	 *     QUANDO IL PALCO C'E' — e non prima, perche' prima non c'era una
 	 *     sessione a cui dirle.
@@ -3964,6 +4664,18 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
 			              quanti);
 		input_chiudi(palco_input);
 		palco_input = NULL;
+	}
+	/* ⛔⭐ E GLI APPUNTI SI CHIUDONO PRIMA DELLA SESSIONE, non dopo: le due
+	 *     sottoscrizioni e il thread vivono su `mutter_bus()`, che e' della
+	 *     `MutterSessione` chiusa tre righe piu' giu'.  ⚠ Chiudere al contrario
+	 *     lascerebbe un thread che parla su un bus gia' andato.
+	 * ⛔ E NON si chiama `DisableClipboard` (trappola 1 di `appunti.h`): chi la
+	 *    chiamasse allo smontaggio si ritroverebbe, al rimontaggio, appunti
+	 *    morti **per il resto della sessione grafica**. */
+	if (palco_appunti) {
+		appunti_chiudi(palco_appunti);
+		palco_appunti = NULL;
+		appunti_montaggio_libera();
 	}
 	if (*c) {
 		cattura_ferma(*c);
@@ -4266,6 +4978,19 @@ void figlio_vive(int argc, char **argv)
 				pronto = poll(due, (nfds_t)quanti, attesa_ms);
 			}
 			pf.revents = due[0].revents;
+			/* ⛔⛔ E QUI SI PAGA IL DEBITO VERSO CHI STA INCOLLANDO, a ogni
+			 *      risveglio del ciclo — anche quando il `poll` e' scaduto a
+			 *      vuoto.
+			 *
+			 *      ⚠ E' l'unico posto in cui il fondo di `APPUNTI_ATTESA_MS`
+			 *        puo' scattare: il thread degli appunti non ha un orologio
+			 *        (aspetta segnali di D-Bus, e se non ne arrivano dorme per
+			 *        sempre), quindi una richiesta senza risposta resterebbe
+			 *        appesa finche' qualcuno non copia qualcos'altro.
+			 *      ⛔ Cioe' senza questa riga il fondo esisterebbe scritto e non
+			 *        scatterebbe mai — la forma peggiore di una protezione:
+			 *        quella che si legge nel codice e non c'e'. */
+			appunti_scadi(registro_ora_ms());
 			/* ⭐ Se ha parlato `libei`, lo si serve SUBITO — prima ancora di
 			 *    leggere il padre: e' il percorso su cui si misura il
 			 *    ritardo. */
@@ -4419,6 +5144,44 @@ void figlio_vive(int argc, char **argv)
 					continue;
 				}
 				audio_regola_figlio(ca.codec);
+				continue;
+			}
+			/* ⭐⭐ FASE 7 — «IL CLIENT HA COPIATO DEL TESTO»: si offre alla
+			 *     sessione, e da li' in poi qualcuno potra' incollarlo.
+			 * ⛔ Non porta il testo, ed e' il «si annuncia e poi si tira» di
+			 *    §7.4: il testo si chiede quando qualcuno incolla davvero. */
+			if (t.tipo == MSG_APPUNTI_OFFERTA) {
+				GError *sb = NULL;
+
+				if (!palco_appunti) {
+					/* ⚠ Non e' un guasto: e' il palco che non c'e' ancora, o
+					 *   gli appunti che non si sono aperti (il ripiego
+					 *   dichiarato piu' su).  Si dice, e si va avanti. */
+					registro_dettaglio(REG_APPUNTI,
+					                   "il client ha copiato del testo e gli "
+					                   "appunti della sessione non ci sono: "
+					                   "l'offerta cade");
+					continue;
+				}
+				if (!appunti_offri(palco_appunti, &sb))
+					registro_dice(REG_APPUNTI,
+					              "⛔ l'offerta alla sessione non e' riuscita "
+					              "(%s): dentro il desktop non si potra' "
+					              "incollare quel che il client ha copiato",
+					              sb ? sb->message : "nessun dettaglio");
+				g_clear_error(&sb);
+				continue;
+			}
+			/* ⭐⭐ E LA RISPOSTA A CHI STA INCOLLANDO, che arriva **a pezzi**. */
+			if (t.tipo == MSG_APPUNTI_DAL_CLIENT) {
+				struct corpo_appunti ca;
+
+				if ((size_t)letti < sizeof t + sizeof ca)
+					continue;
+				memcpy(&ca, busta + sizeof t, sizeof ca);
+				if ((size_t)letti < sizeof t + sizeof ca + ca.pezzo)
+					continue;
+				appunti_dal_client(&ca, busta + sizeof t + sizeof ca);
 				continue;
 			}
 			if (t.tipo == MSG_DISPOSIZIONE) {

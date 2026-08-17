@@ -683,6 +683,11 @@ const char *mutter_percorso_controllo(const MutterSessione *sessione)
 	return sessione ? sessione->controllo : NULL;
 }
 
+GDBusConnection *mutter_bus(const MutterSessione *sessione)
+{
+	return sessione ? sessione->bus : NULL;
+}
+
 const char *mutter_mapping_id(const MutterSessione *sessione)
 {
 	return sessione ? sessione->mapping_id : NULL;

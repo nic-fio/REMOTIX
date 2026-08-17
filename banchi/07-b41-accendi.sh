@@ -49,8 +49,20 @@ while [ $# -gt 0 ]; do
 done
 
 QUI=$(cd "$(dirname "$0")/.." && pwd)
-ALBERO=/media/REMOTIX/src/07-audio-src
-LAV=/media/REMOTIX/tmp/07-audio
+# ⛔⭐ ALBERO E CARTELLA DI LAVORO SI POSSONO SPOSTARE — 17 agosto 2026, e serve
+#     al banco degli appunti (`07-b45`).
+#
+#     La regola dei banchi in parallelo dice «porta, ban-file e socket propri»,
+#     ⛔ e taceva sull'ALBERO: due banchi che spingono sorgenti nella stessa
+#     cartella si sovrascrivono a vicenda, e chi compila per secondo compila
+#     quel che ha portato l'altro.  ⚠ Il sintomo sarebbe «ho misurato una
+#     modifica che non avevo fatto», che e' la forma D5 — un binario stantio che
+#     resta verde — travestita da banco vicino.
+# ⚠ I predefiniti NON cambiano: chi chiamava questo copione senza dire niente
+#   ottiene esattamente quel che otteneva prima.
+ALBERO=${ALBERO:-/media/REMOTIX/src/07-audio-src}
+LAV=${LAV:-/media/REMOTIX/tmp/07-audio}
+UTENTE_SESSIONE=${UTENTE_SESSIONE:-}
 UNITA=remotix-$PORTA
 
 if [ "$SPEGNI" = 1 ]; then
@@ -62,6 +74,11 @@ if [ "$SPEGNI" = 1 ]; then
 fi
 
 echo "⏳ 1/3 · porto i sorgenti in $ALBERO"
+# ⛔ Il nome dell'albero attraversa il confine del contenitore: dentro
+#    `enter.sh` la cartella `/media/REMOTIX/src` si vede come `/srv/src`, e qui
+#    c'era il nome SCRITTO A MANO.  ⚠ Con un albero diverso si compilava quello
+#    di prima e si accendeva quello nuovo (che non esisteva): «ha compilato» e
+#    «ha compilato QUELLO GIUSTO» avevano la stessa faccia.
 # ⛔ SENZA `sudo`, e la ragione e' costata un giro: `printf … | sudo -S` mangia
 #    lo stdin, che qui E' lo stream del `tar`.  Il sintomo era «gzip: stdin: not
 #    in gzip format», cioe' il `tar` che leggeva la parola d'ordine.
@@ -81,7 +98,7 @@ tar -C "$QUI" --exclude='*.o' --exclude='src/remotix' -czf - src banchi/rcp | \
 	ssh -o BatchMode=yes "$MACCHINA" \
 	"mkdir -p $ALBERO && tar -C $ALBERO -xzf -"
 
-echo "⏳ 2/3 · compilo dentro il contenitore"
+echo "⏳ 2/3 · compilo dentro il contenitore — albero $ALBERO"
 # ⛔ Si chiama `costruisci.sh`, non `make`: e' lui che sa dove stanno ngtcp2 e
 #    nghttp3 (in `/srv/src/b2`, non in `/usr`), ⭐ e fa due cose che un `make`
 #    nudo non fa — cancella il binario PRIMA, cosi' «c'e'» vuol dire «e' di
@@ -93,7 +110,7 @@ echo "⏳ 2/3 · compilo dentro il contenitore"
 if ! ssh -o BatchMode=yes "$MACCHINA" \
 	"printf '%s\n' '$PAROLA' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
 	 'PREFISSO=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 \
-	  bash /srv/src/07-audio-src/src/costruisci.sh 2>&1 | tail -25'"; then
+	  bash /srv/src/$(basename "$ALBERO")/src/costruisci.sh 2>&1 | tail -25'"; then
 	echo "⛔ la compilazione e' fallita: NON accendo niente" >&2
 	exit 1
 fi

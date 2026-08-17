@@ -96,6 +96,51 @@ enum {
  *    in §6.2 il 9 agosto 2026 (i «quattro byte che fanno tornare i conti»), e
  *    su un messaggio di quindici byte una `struct` C ne conterebbe sedici su
  *    ogni compilatore che questo progetto usa. */
+/* ------------------------------------------------------------------------ */
+/* ⭐ I TIPI DEL CANALE APPUNTI — §7.4, e il byte alto e' 0x02 (§2.5)         */
+enum {
+	T_APPUNTI_ANNUNCIO = 0x0201, /* «ho del testo nuovo» */
+	T_APPUNTI_CHIEDI = 0x0202,   /* «mandamelo» */
+	T_APPUNTI_TESTO = 0x0203,    /* UTF-8 */
+};
+
+/* ⛔ QUANTO OCCUPA IL CORPO DI CIASCUNO — §7.4.
+ *
+ *   ANNUNCIO  u32 trasferimento + u32 lunghezza        = 8, FISSA
+ *   CHIEDI    u32 trasferimento                        = 4, FISSA
+ *   TESTO     u32 trasferimento + byte fino alla fine  = 4 + n, VARIABILE
+ *
+ * ⛔⭐ E LA SECONDA LUNGHEZZA NON C'E', ed e' una correzione del 9 agosto 2026
+ *     (rilievo R1.20): `APPUNTI_TESTO` portava un `u32 lunghezza` **dentro** un
+ *     messaggio che ha gia' la sua lunghezza nell'inquadratura di §6.1 — due
+ *     verita' sullo stesso fatto, che e' il difetto che §2.2 vieta con quelle
+ *     parole.  ⇒ Il testo si legge **fino alla fine del messaggio**, e il tetto
+ *     e' quello di §5.4. */
+#define A_ANNUNCIO 8u
+#define A_CHIEDI 4u
+#define A_TESTO_MINIMO 4u
+
+/* ⛔ Quanti stream del canale appunti si tengono aperti insieme.
+ *
+ * §2.5 ne vuole «uno **per trasferimento**», e non pone un tetto al numero di
+ * trasferimenti: il tetto lo pone questo modulo, perche' ogni stream aperto e'
+ * un accumulo che vive nella sessione.  ⚠ Otto e' largo: nel verso client →
+ * sessione un trasferimento e' un annuncio e un testo, e piu' di due o tre
+ * insieme vuol dire che qualcuno tiene giu' la copia.
+ *
+ * ⛔ E quando la tabella e' piena NON si chiude la sessione: si butta il piu'
+ *    vecchio SENZA byte in sospeso, e ⛔ **si scrive nel registro** (§3: «ogni
+ *    tolleranza va scritta nel registro; una tolleranza silenziosa e'
+ *    indistinguibile da un difetto»).  ⚠ Se sono tutti a meta' di un messaggio,
+ *    allora quella e' una violazione vera e si congeda: significa che il client
+ *    apre stream e non li finisce. */
+#define A_STREAM_MAX 8
+
+/* ⛔ Il fondo delle richieste di incolla, in millisecondi — vedi il riquadro in
+ *    `rcp_tempo()`.  ⚠ Piu' LARGO dei 4000 ms del figlio, e la ragione e'
+ *    scritta li': i due fondi pagano due debiti diversi. */
+#define APPUNTI_FONDO 8000
+
 #define I_COMUNI 12u
 #define I_PUNTATORE (I_COMUNI + 8u)
 #define I_PULSANTE (I_COMUNI + 3u)
@@ -514,6 +559,78 @@ struct rcp_sessione {
 	 * quanti iniettati, quanti rifiutati da chi inietta.  ⛔ «Zero iniettati»
 	 * detto da solo non distingue un compositore muto da un client fermo. */
 	uint32_t inp_arrivati, inp_iniettati, inp_non_iniettati;
+
+	/* ==================================================================== */
+	/* ⭐ IL CANALE APPUNTI — §7.4, §5.4, §2.5                              */
+
+	/* ⛔⭐ CIASCUN LATO NUMERA I PROPRI TRASFERIMENTI, da 1 e crescendo (§7.4,
+	 *     rilievo R1.11).  ⇒ Due contatori, e sono di due proprietari diversi:
+	 *     ⛔ confonderli e' esattamente il difetto che l'identificatore e' nato
+	 *     per togliere — «con due annunci aperti nei due versi, l'utente copia
+	 *     di qua mentre incolla di la', e le due implementazioni appaiano le
+	 *     richieste agli annunci in ordine diverso e **si scambiano i testi**».
+	 *
+	 * ⚠ `0` = «nessun annuncio ancora», e §7.4 riserva lo zero: i trasferimenti
+	 *   cominciano da 1.  Non e' un sentinella implicito (§6.0), e' quello
+	 *   dichiarato dal protocollo. */
+	uint32_t app_mio_id;  /* l'ultimo che ho annunciato IO */
+	uint32_t app_suo_id;  /* l'ultimo che ha annunciato il CLIENT */
+	uint32_t app_suo_len; /* quanti byte diceva quell'annuncio */
+
+	/* ⛔ Il testo che la SESSIONE ha copiato, tenuto qui in attesa che qualcuno
+	 *    lo chieda.  §7.4: «si annuncia e si chiede, invece di spingere».
+	 *
+	 * ⚠ Ce n'e' UNO solo, ed e' l'attuale: §7.4 dice che un `APPUNTI_CHIEDI`
+	 *   arrivato quando l'annuncio e' gia' stato superato da uno piu' recente
+	 *   **si serve con il testo attuale**, e il mittente lo scrive nel registro.
+	 *   ⇒ Tenere i vecchi non servirebbe a niente e sarebbe memoria che cresce
+	 *   con ogni copia. */
+	char *app_testo;
+	size_t app_testo_n;
+
+	/* ⛔ I serial delle richieste della SESSIONE in attesa del testo del client.
+	 *
+	 * ⚠ Ce ne puo' essere piu' d'uno: due programmi che incollano insieme sono
+	 *   due `SelectionTransfer`, e il filo porta un `APPUNTI_CHIEDI` solo — la
+	 *   risposta li serve **tutti**, perche' chiedono lo stesso identificatore
+	 *   di trasferimento, cioe' lo stesso testo. */
+	uint32_t app_serial[A_STREAM_MAX];
+	int app_serial_n;
+	/* ⛔ Un `APPUNTI_CHIEDI` per il lotto in coda e' gia' partito?  ⚠ Serve
+	 *    perche' le richieste possono arrivare PRIMA dell'annuncio (vedi
+	 *    `rcp_appunti_chiedi`), e allora la domanda parte quando l'annuncio
+	 *    arriva: senza questo flag ne partirebbe una per ogni richiesta gia' in
+	 *    coda, e il client riceverebbe tre `CHIEDI` per un testo solo. */
+	bool app_chiesto;
+
+	/* Gli stream in arrivo, uno per trasferimento (§2.5).  ⛔ L'accumulo e'
+	 * allocato a richiesta e **dopo** aver convalidato la lunghezza dichiarata:
+	 * §6.1 — «un ricevente che alloca `lunghezza` byte e poi verifica ha gia'
+	 * regalato un megabyte a chiunque sappia scrivere sei byte». */
+	struct {
+		bool usato;
+		int64_t stream;
+		uint8_t testa[6];
+		size_t testa_n;
+		uint16_t tipo;
+		uint32_t lung;
+		uint8_t *corpo;
+		size_t corpo_n;
+	} app_in[A_STREAM_MAX];
+
+	/* Il conto, e i fatti sono quattro perche' si diagnosticano separatamente:
+	 * quanti annunci ho fatto, quanti me ne hanno chiesti, quanti ne ho
+	 * ricevuti dal client, quanti gliene ho chiesti io. */
+	uint32_t app_annunciati, app_serviti, app_ricevuti, app_chiesti;
+	/* Quando la PRIMA richiesta del lotto si e' messa in coda: il fondo di
+	 * `rcp_tempo()` conta da qui. */
+	uint64_t app_chiesto_ms;
+
+	/* ⛔ §4.3: il client ha dichiarato `appunti.testo = si`?  ⚠ `false` e' lo
+	 *    stato iniziale ed e' il valore giusto: un `CIAO` senza quella capacita'
+	 *    e' un client che non vuole gli appunti, non un client che li vuole di
+	 *    serie. */
+	bool negozia_appunti;
 	/* ⚠ §7.3: l'`istante` del client, in microsecondi.  ⛔ E NON LO CONSUMA
 	 *   NESSUNA REGOLA di questo modulo: «in una pagina l'orologio monotono e'
 	 *   in millisecondi e la sua grana e' deliberatamente ingrossata — il
@@ -1737,6 +1854,21 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			snprintf(c_audio, sizeof c_audio, "%s", valore);
 		else if (strcmp(nome, "video.misura_massima") == 0)
 			snprintf(c_misura, sizeof c_misura, "%s", valore);
+		/* ⭐⭐ §7.4 — `appunti.testo`, e fino al 17 agosto 2026 questo valore
+		 *     veniva riconosciuto come nome lecito e poi **buttato**: era
+		 *     esattamente la forma del rilievo B-1 su `video.misura_massima`.
+		 *
+		 * ⛔ E serve a due cose che senza di lui non si possono fare: NON
+		 *    annunciare appunti a un client che non li ha chiesti, e RIFIUTARE
+		 *    byte sul canale `0x02` da un client che non li ha dichiarati —
+		 *    cioe' una capacita' usata senza negoziarla, che e' il caso che §4.3
+		 *    esiste per rendere impossibile.
+		 * ⚠ Qualunque valore diverso da `si` vale `no`: §4.3 dice che i valori
+		 *   di questa capacita' sono due, e un terzo valore e' un client che
+		 *   dichiara una cosa che il documento non definisce — si tratta come il
+		 *   no, e la riga della negoziazione lo scrive. */
+		else if (strcmp(nome, "appunti.testo") == 0)
+			s->negozia_appunti = strcmp(valore, "si") == 0;
 	}
 	/* ⛔⭐ IL TETTO DEL DECODIFICATORE SI CONSERVA — rilievo B-1, 10 agosto
 	 *     2026 notte.  §4.5: «la tela concessa DEVE rispettare
@@ -4347,6 +4479,760 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	return true;
 }
 
+/* ========================================================================== */
+/* ⭐⭐ GLI APPUNTI — §7.4, §5.4, §2.5                                        */
+/*                                                                            */
+/* ⛔ E IL VERSO CHE SI USA DI PIU' E' QUELLO CHE COSTA PIU' LAVORO: «copio un */
+/*    indirizzo sul telefono e lo incollo nella sessione» (`DECISIONI.md`      */
+/*    §5-ter.1).  Di la' il testo ce l'abbiamo gia'; di qua bisogna andarlo a  */
+/*    chiedere **mentre qualcuno sta aspettando col dito su Ctrl+V**.          */
+
+static bool ha_canale_appunti(const rcp_sessione *s)
+{
+	return s->g.appunti_apri && s->g.appunti_scrivi && s->g.appunti_fin
+	       && s->g.appunti_offri && s->g.appunti_risposta;
+}
+
+static void viola_appunti(rcp_sessione *s, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
+static void viola_appunti(rcp_sessione *s, const char *fmt, ...)
+{
+	char d[224];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(d, sizeof d, fmt, ap);
+	va_end(ap);
+	congeda(s, RCP_ERRORE_PROTOCOLLO, d);
+}
+
+/*
+ * Spedisce UN messaggio del canale appunti, sul suo stream, e lo chiude.
+ *
+ * ⛔⭐ UNO STREAM PER MESSAGGIO, E NON PER TRASFERIMENTO — ed e' un punto in cui
+ *     §2.5 ammette due letture, quindi la scelta si scrive qui invece di
+ *     restare implicita (`PIANO.md` §0.4).
+ *
+ *     §2.5 dice «uno **per trasferimento**».  Un trasferimento dalla nostra
+ *     parte e' fatto di due messaggi lontani nel tempo — `APPUNTI_ANNUNCIO`
+ *     adesso, `APPUNTI_TESTO` **se e quando** qualcuno chiede — e tenere aperto
+ *     uno stream fra i due vorrebbe dire tenerlo aperto **per sempre** nella
+ *     stragrande maggioranza dei casi: si copia molto piu' spesso di quanto si
+ *     incolli, e §2.5 concede al server un numero finito di stream.
+ *
+ * ⭐ E si puo' fare, perche' a legare i messaggi di un trasferimento NON e' lo
+ *    stream: e' il campo `trasferimento`, che esiste esattamente per questo
+ *    (rilievo R1.11, 9 agosto 2026).  Chi riceve appaia per identificatore, e
+ *    su quale stream sia arrivato non lo guarda nessuno.
+ *
+ * ⚠ Il prezzo, dichiarato: un client che contasse gli stream per contare i
+ *   trasferimenti conterebbe il doppio.  Nessuna riga di `RCP.md` gli dice di
+ *   farlo, e il campo che deve guardare ce l'ha.
+ */
+static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
+                          size_t corpo_n, const char *coda, size_t coda_n)
+{
+	uint8_t testa[6];
+	int64_t stream = 0;
+	uint64_t restano = 0;
+
+	if (!ha_canale_appunti(s))
+		return false;
+
+	if (!s->g.appunti_apri(s->g.ctx, &stream, &restano)) {
+		/* ⛔ Non e' partito un byte, ed e' meglio di mezzo messaggio.  ⚠ La riga
+		 *    dice **quanti stream restano**, chiesti a chi tiene il trasporto:
+		 *    senza quel numero «non si e' potuto» non manda da nessuna parte —
+		 *    e' la stessa ragione del `restano` del video (§2.3). */
+		reg(s, "⛔ APPUNTI: nessuno stream unidirezionale per il messaggio "
+		       "%#06x — il client ne concede ancora %llu (§2.5 ne vuole uno per "
+		       "trasferimento)",
+		    tipo, (unsigned long long)restano);
+		return false;
+	}
+
+	testa[0] = (uint8_t)(tipo >> 8);
+	testa[1] = (uint8_t)(tipo & 0xFF);
+	{
+		uint32_t lung = (uint32_t)(corpo_n + coda_n);
+		testa[2] = (uint8_t)(lung >> 24);
+		testa[3] = (uint8_t)(lung >> 16);
+		testa[4] = (uint8_t)(lung >> 8);
+		testa[5] = (uint8_t)lung;
+	}
+
+	if (!s->g.appunti_scrivi(s->g.ctx, stream, testa, sizeof testa)
+	    || (corpo_n && !s->g.appunti_scrivi(s->g.ctx, stream, corpo, corpo_n))
+	    || (coda_n
+	        && !s->g.appunti_scrivi(s->g.ctx, stream, (const uint8_t *)coda,
+	                                coda_n))) {
+		/* ⛔ Si chiude lo stream lo stesso: uno stream aperto e muto tiene un
+		 *    posto nel conto del client e non diventa mai un messaggio — «vuoto
+		 *    e proibito con la stessa faccia», dal lato di chi aspetta.
+		 * ⚠ Il FIN su un messaggio a meta' e' meno peggio di nessun FIN: chi
+		 *   riceve trova un'inquadratura incompleta e lo dice, invece di
+		 *   aspettare byte che non arriveranno. */
+		reg(s, "⛔ APPUNTI: il messaggio %#06x non e' entrato in coda sullo "
+		       "stream %lld: chiudo lo stream a meta'",
+		    tipo, (long long)stream);
+		s->g.appunti_fin(s->g.ctx, stream);
+		return false;
+	}
+	s->g.appunti_fin(s->g.ctx, stream);
+	return true;
+}
+
+bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
+{
+	uint8_t corpo[A_ANNUNCIO];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+	char *copia;
+
+	if (!s || !testo)
+		return false;
+
+	/* ⛔ §5.4 — «testo piu' grande: non si annuncia affatto, e il mittente lo
+	 *    scrive nel registro.  NON DEVE essere troncato».  ⚠ E il confronto e'
+	 *    `>`: un testo grande **esattamente** quanto il tetto e' lecito, ed e'
+	 *    il caso al limite per cui §5.4 ha scelto 1 000 000 invece di 1 MiB. */
+	if (byte > RCP_APPUNTI_TETTO) {
+		reg(s, "⛔ APPUNTI: la sessione ha copiato %zu byte, oltre il tetto di "
+		       "§5.4 (%u): NON si annuncia, e NON si tronca — un testo tagliato "
+		       "incollato in un terminale e' peggio di un testo mancante",
+		    byte, RCP_APPUNTI_TETTO);
+		return false;
+	}
+
+	if (!s->sessione_spedita || s->stato == S_FINITA) {
+		/* ⚠ Non e' un errore di nessuno: la sessione grafica sopravvive al
+		 *   client (I4), quindi si puo' copiare quando non c'e' ancora — o non
+		 *   c'e' piu' — nessuno a cui annunciarlo.  ⛔ Ma il testo si TIENE:
+		 *   chi si attacchera' dopo lo ritrova, ed e' il caso che `STUDI.md`
+		 *   §gnome §10 chiama «chi si ricollega». */
+		reg(s, "APPUNTI: la sessione ha copiato %zu byte e non c'e' nessuno a "
+		       "cui annunciarli (stato %s): il testo si tiene per chi si "
+		       "attacchera'",
+		    byte, NOMI_STATO[s->stato]);
+	}
+
+	if (!s->negozia_appunti) {
+		reg(s, "APPUNTI: la sessione ha copiato %zu byte e il client non ha "
+		       "dichiarato `appunti.testo` (§4.3): non si annuncia niente",
+		    byte);
+		return false;
+	}
+
+	copia = (char *)malloc(byte + 1u);
+	if (!copia) {
+		reg(s, "⛔ APPUNTI: %zu byte copiati dalla sessione non entrano in "
+		       "memoria: niente annuncio",
+		    byte);
+		return false;
+	}
+	memcpy(copia, testo, byte);
+	copia[byte] = 0;
+	free(s->app_testo);
+	s->app_testo = copia;
+	s->app_testo_n = byte;
+
+	/* ⛔ §7.4: «ciascun lato numera **i propri** trasferimenti, da 1 e
+	 *    crescendo».  ⚠ Lo zero e' riservato — vuol dire «nessun annuncio» —
+	 *    quindi al giro del contatore si salta, come fa il `numero` dei
+	 *    fotogrammi di §6.2 per la stessa ragione. */
+	s->app_mio_id = s->app_mio_id == 0xFFFFFFFFu ? 1u : s->app_mio_id + 1u;
+
+	if (!s->sessione_spedita || s->stato == S_FINITA)
+		return false;
+
+	sc_u32(&w, s->app_mio_id);
+	sc_u32(&w, (uint32_t)byte);
+	if (w.pieno)
+		return false;
+
+	if (!manda_appunti(s, T_APPUNTI_ANNUNCIO, corpo, w.len, NULL, 0))
+		return false;
+
+	s->app_annunciati++;
+	reg(s, "⭐ APPUNTI §7.4: annunciato al client il trasferimento %u — %zu byte "
+	       "di testo copiati nella sessione.  ⚠ Non si spedisce niente finche' "
+	       "non li chiede",
+	    s->app_mio_id, byte);
+	return true;
+}
+
+bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms)
+{
+	uint8_t corpo[A_CHIEDI];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+
+	if (!s)
+		return false;
+
+	if (!s->sessione_spedita || s->stato == S_FINITA) {
+		reg(s, "APPUNTI: qualcuno nella sessione incolla (richiesta %u) e non "
+		       "c'e' nessun client attaccato (stato %s)",
+		    serial, NOMI_STATO[s->stato]);
+		return false;
+	}
+
+	/* ⛔ La richiesta si mette in coda PRIMA di spedire: se il testo arrivasse
+	 *    fra la spedizione e l'annotazione — impossibile oggi, il modulo e' a un
+	 *    filo solo — la risposta non troverebbe nessuno da servire.  ⚠ E' la
+	 *    stessa forma della regola «prima si conta il credito, poi si consegna»
+	 *    di `webtransport.c`: l'ordine costa zero e toglie una classe di
+	 *    difetti. */
+	if (s->app_serial_n >= A_STREAM_MAX) {
+		reg(s, "⛔ APPUNTI: gia' %d richieste di incolla in attesa del testo del "
+		       "client: la %u non entra.  ⚠ Chi ospita deve rispondere «non ce "
+		       "l'ho» a questa, o l'applicazione che incolla resta appesa",
+		    s->app_serial_n, serial);
+		return false;
+	}
+	s->app_serial[s->app_serial_n++] = serial;
+	/* ⛔ L'orologio del fondo parte dalla PRIMA richiesta del lotto, non
+	 *    dall'ultima: e' la prima che sta aspettando, ed e' la sua attesa che
+	 *    va limitata. */
+	if (s->app_serial_n == 1)
+		s->app_chiesto_ms = ora_ms;
+
+	/* ⛔⭐⭐ E SE IL CLIENT NON HA ANCORA ANNUNCIATO NIENTE, SI ASPETTA — e
+	 *      questa e' la cura della corsa fra `Ctrl+V` e la lettura degli
+	 *      appunti, che `SPECIFICHE.md` §9 nomina e dichiara di NON voler
+	 *      risolvere come Xpra.
+	 *
+	 *      La corsa, per esteso: l'utente batte `Ctrl+V` nel browser.  I tasti
+	 *      partono sul canale di input e arrivano al desktop; l'annuncio degli
+	 *      appunti parte sul canale appunti e fa la stessa strada.  ⛔ Ma il
+	 *      desktop, ricevuto il `Ctrl+V`, chiede il testo **subito** — e
+	 *      l'annuncio puo' non essere ancora arrivato.  ⇒ La PRIMA incollata di
+	 *      ogni testo nuovo tornerebbe vuota.
+	 *
+	 * ⛔ La cura di Xpra e' ritardare **ogni battuta di 100 ms**: §9 la rifiuta
+	 *    con un numero — «per noi sono due volte il tetto del ritardo», cioe' si
+	 *    pagherebbe su ogni tasto di ogni sessione per una cosa che succede
+	 *    quando si incolla.
+	 *
+	 * ⭐ La sostituzione costa zero e non tocca nessun tasto: la richiesta si
+	 *    METTE IN CODA e la domanda parte quando l'annuncio arriva (vedi
+	 *    `T_APPUNTI_ANNUNCIO` in `tratta_appunti`).  ⚠ E l'attesa e' gia'
+	 *    limitata da qualcun altro: il fondo di tempo del figlio risponde «non
+	 *    ce l'ho» a chi incolla se l'annuncio non arriva mai — ⛔ e quel fondo
+	 *    sta li' perche' il debito verso il compositore e' suo, non nostro. */
+	if (s->app_suo_id == 0) {
+		reg(s, "⭐ APPUNTI: qualcuno nella sessione incolla (richiesta %u) e "
+		       "l'annuncio del client non e' ancora arrivato: la domanda ASPETTA "
+		       "l'annuncio invece di tornare vuota (§9 — la corsa con `Ctrl+V`, "
+		       "curata senza ritardare i tasti)",
+		    serial);
+		return true;
+	}
+	/* ⚠ Un `CHIEDI` per il lotto, non uno per richiesta: due programmi che
+	 *   incollano insieme chiedono lo stesso trasferimento, cioe' lo stesso
+	 *   testo, e la risposta li serve tutti. */
+	if (s->app_chiesto) {
+		reg(s, "APPUNTI: la richiesta %u si accoda al trasferimento %u gia' "
+		       "chiesto: una domanda sola, e la risposta le serve tutte",
+		    serial, s->app_suo_id);
+		return true;
+	}
+
+	sc_u32(&w, s->app_suo_id);
+	if (w.pieno || !manda_appunti(s, T_APPUNTI_CHIEDI, corpo, w.len, NULL, 0)) {
+		s->app_serial_n--;
+		return false;
+	}
+
+	s->app_chiesto = true;
+	s->app_chiesti++;
+	reg(s, "⭐ APPUNTI §7.4: chiesto al client il trasferimento %u (%u byte "
+	       "annunciati) — qualcuno nella sessione sta incollando (richiesta %u)",
+	    s->app_suo_id, s->app_suo_len, serial);
+	return true;
+}
+
+/* La domanda che era rimasta in attesa dell'annuncio: adesso c'e'.
+ * ⛔ `false` = non e' partita, e allora le richieste in coda restano appese al
+ *    fondo di tempo del figlio. */
+static bool appunti_chiedi_l_arretrato(rcp_sessione *s)
+{
+	uint8_t corpo[A_CHIEDI];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+
+	if (s->app_serial_n == 0 || s->app_chiesto || s->app_suo_id == 0)
+		return false;
+
+	sc_u32(&w, s->app_suo_id);
+	if (w.pieno || !manda_appunti(s, T_APPUNTI_CHIEDI, corpo, w.len, NULL, 0))
+		return false;
+
+	s->app_chiesto = true;
+	s->app_chiesti++;
+	reg(s, "⭐ APPUNTI §9: l'annuncio %u e' arrivato, e c'erano gia' %d "
+	       "richieste di incolla ad aspettarlo: la domanda parte ADESSO.  E' la "
+	       "corsa con `Ctrl+V`, vinta senza ritardare un solo tasto",
+	    s->app_suo_id, s->app_serial_n);
+	return true;
+}
+
+/* Serve TUTTE le richieste in attesa con lo stesso testo: chiedono lo stesso
+ * identificatore di trasferimento, cioe' lo stesso contenuto.  ⛔ E la coda si
+ * svuota **prima** di rispondere: una risposta che rientrasse qui dentro non
+ * deve ritrovare le richieste che sta gia' servendo. */
+static void appunti_servi_in_attesa(rcp_sessione *s, const char *testo,
+                                    size_t byte)
+{
+	uint32_t serial[A_STREAM_MAX];
+	int quanti = s->app_serial_n;
+
+	memcpy(serial, s->app_serial, sizeof serial);
+	s->app_serial_n = 0;
+	s->app_chiesto = false;
+
+	if (!s->g.appunti_risposta) {
+		reg(s, "⛔ APPUNTI: %d richieste di incolla senza nessun gancio che "
+		       "risponda: chi incolla resta appeso finche' non scade il fondo "
+		       "dall'altra parte del confine",
+		    quanti);
+		return;
+	}
+	for (int i = 0; i < quanti; i++)
+		s->g.appunti_risposta(s->g.ctx, serial[i], testo, byte);
+	if (quanti)
+		reg(s, "⭐ APPUNTI: %zu byte dal client consegnati a %d richieste di "
+		       "incolla",
+		    byte, quanti);
+}
+
+/* Un messaggio intero del canale appunti.  `false` = la sessione e' finita. */
+static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
+                           uint32_t lung)
+{
+	lettore l = {corpo, lung, 0, false};
+	uint32_t trasf;
+
+	switch (tipo) {
+	case T_APPUNTI_ANNUNCIO: {
+		uint32_t quanti;
+
+		trasf = le_u32(&l);
+		quanti = le_u32(&l);
+		if (l.corto)
+			return true; /* la misura fissa e' gia' stata convalidata */
+
+		/* ⛔ §7.4: i trasferimenti si numerano «da 1 e crescendo», e lo zero e'
+		 *    riservato.  Un annuncio con `trasferimento = 0` non e' un annuncio
+		 *    povero: e' un identificatore che non si potra' mai chiedere. */
+		if (trasf == 0) {
+			viola_appunti(s, "APPUNTI_ANNUNCIO con trasferimento 0: §7.4 li "
+			                 "numera da 1, e lo 0 vuol dire «nessun annuncio»");
+			return false;
+		}
+		/* ⛔ §5.4: il tetto vincola prima di tutto chi spedisce, ma chi riceve
+		 *    un annuncio piu' grande non deve prepararsi ad accoglierlo: e' un
+		 *    client che ha violato §5.4, e §3 non fa sconti. */
+		if (quanti > RCP_APPUNTI_TETTO) {
+			viola_appunti(s, "APPUNTI_ANNUNCIO di %u byte: §5.4 si ferma a %u, e "
+			                 "oltre il tetto NON si annuncia affatto",
+			              quanti, RCP_APPUNTI_TETTO);
+			return false;
+		}
+
+		s->app_suo_id = trasf;
+		s->app_suo_len = quanti;
+		reg(s, "⭐ APPUNTI §7.4: il client annuncia il trasferimento %u — %u "
+		       "byte.  ⚠ Non si tira niente finche' qualcuno nella sessione non "
+		       "incolla",
+		    trasf, quanti);
+
+		/* ⛔ E lo si OFFRE alla sessione, subito: senza questo passo il
+		 *    compositore non e' proprietario della selezione, e dentro il
+		 *    desktop **non si puo' nemmeno provare a incollare** — il tasto non
+		 *    fa niente, e non c'e' nessun errore da nessuna parte. */
+		if (!s->g.appunti_offri) {
+			reg(s, "⚠ APPUNTI: nessun gancio per offrire alla sessione — il "
+			       "client ha copiato del testo e dentro il desktop non si "
+			       "potra' incollare.  ⛔ Non e' un errore del client: e' questo "
+			       "server che non ha quel canale");
+			return true;
+		}
+		if (!s->g.appunti_offri(s->g.ctx))
+			reg(s, "⛔ APPUNTI: l'offerta del trasferimento %u alla sessione non "
+			       "e' riuscita: dentro il desktop non si potra' incollare quel "
+			       "che il client ha copiato",
+			    trasf);
+
+		/* ⭐⭐ E QUI SI VINCE LA CORSA CON `Ctrl+V`: se qualcuno stava gia'
+		 *     incollando quando l'annuncio e' arrivato, la domanda parte adesso
+		 *     invece di essere tornata vuota un momento fa (§9, e il riquadro di
+		 *     `rcp_appunti_chiedi`). */
+		appunti_chiedi_l_arretrato(s);
+		return true;
+	}
+
+	case T_APPUNTI_CHIEDI: {
+		trasf = le_u32(&l);
+		if (l.corto)
+			return true;
+
+		/* ⛔ §7.4: «un `APPUNTI_CHIEDI` con un identificatore che non
+		 *    corrisponde a nessun annuncio vivo e' `ERRORE_PROTOCOLLO`».  ⚠ E
+		 *    «vivo» comprende quelli superati: vedi il caso subito sotto, che e'
+		 *    la QUINTA eccezione dichiarata a §3. */
+		if (trasf == 0 || trasf > s->app_mio_id) {
+			viola_appunti(s, "APPUNTI_CHIEDI per il trasferimento %u, che non "
+			                 "corrisponde a nessun annuncio: ne ho fatti %u "
+			                 "(§7.4)",
+			              trasf, s->app_mio_id);
+			return false;
+		}
+		if (!s->app_testo) {
+			/* ⚠ Puo' succedere: si e' annunciato, e poi il palco si e' smontato
+			 *   portandosi via il testo.  Non e' colpa del client, e §3.1 vuole
+			 *   che si dica invece di tacere. */
+			reg(s, "⛔ APPUNTI: il client chiede il trasferimento %u e il testo "
+			       "non c'e' piu': non gli arrivera' niente",
+			    trasf);
+			return true;
+		}
+		/* ⛔⭐ LA QUINTA ECCEZIONE DICHIARATA A §3 — §7.4: «un `APPUNTI_CHIEDI`
+		 *     che arriva quando l'annuncio e' gia' stato superato da uno piu'
+		 *     recente **si serve con il testo attuale**, e il mittente lo scrive
+		 *     nel registro: e' la corsa normale fra due persone che copiano, non
+		 *     un errore».
+		 * ⚠ E si RISPONDE con l'identificatore CHIESTO, non con quello attuale:
+		 *   il client aspetta una risposta alla sua domanda, e cambiargli il
+		 *   numero sotto sarebbe una risposta che non sa appaiare. */
+		if (trasf != s->app_mio_id)
+			reg(s, "⚠ APPUNTI §7.4: il client chiede il trasferimento %u, che e' "
+			       "gia' stato superato dal %u: lo servo con il testo ATTUALE "
+			       "(%zu byte).  E' la corsa normale fra due che copiano, non un "
+			       "errore",
+			    trasf, s->app_mio_id, s->app_testo_n);
+
+		{
+			uint8_t testa_corpo[A_TESTO_MINIMO];
+			scrittore w = {testa_corpo, sizeof testa_corpo, 0, false};
+
+			sc_u32(&w, trasf);
+			if (w.pieno)
+				return true;
+			if (manda_appunti(s, T_APPUNTI_TESTO, testa_corpo, w.len,
+			                  s->app_testo, s->app_testo_n)) {
+				s->app_serviti++;
+				reg(s, "⭐ APPUNTI §7.4: spediti %zu byte al client "
+				       "(trasferimento %u)",
+				    s->app_testo_n, trasf);
+			}
+		}
+		return true;
+	}
+
+	case T_APPUNTI_TESTO: {
+		const char *testo;
+		size_t byte;
+
+		trasf = le_u32(&l);
+		if (l.corto)
+			return true;
+		testo = (const char *)corpo + A_TESTO_MINIMO;
+		byte = lung - A_TESTO_MINIMO;
+
+		/* ⛔ §7.4: «un `APPUNTI_TESTO` che nessuno ha chiesto e'
+		 *    `ERRORE_PROTOCOLLO`: gli appunti si tirano, non si spingono». */
+		if (s->app_serial_n == 0) {
+			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) che "
+			                 "nessuno ha chiesto: §7.4 — gli appunti si tirano, "
+			                 "non si spingono",
+			              trasf, byte);
+			return false;
+		}
+		if (trasf != s->app_suo_id) {
+			viola_appunti(s, "APPUNTI_TESTO per il trasferimento %u mentre "
+			                 "l'annuncio vivo del client e' il %u: i messaggi di "
+			                 "trasferimenti diversi non si mescolano (§7.4)",
+			              trasf, s->app_suo_id);
+			return false;
+		}
+		/* ⛔ E l'annuncio diceva quanti byte: se il testo ne porta altri, uno
+		 *    dei due messaggi mente.  §6.1 — «una lunghezza incoerente con quel
+		 *    che il tipo prevede».  ⚠ Qui la lunghezza attesa non viene dal
+		 *    tipo, viene dall'annuncio dello stesso lato: e' la stessa regola
+		 *    applicata a una promessa che il client ha fatto lui. */
+		if (byte != s->app_suo_len) {
+			viola_appunti(s, "APPUNTI_TESTO porta %zu byte e l'annuncio %u ne "
+			                 "dichiarava %u (§7.4)",
+			              byte, trasf, s->app_suo_len);
+			return false;
+		}
+		/* ⛔ §5.4: «il testo DEVE essere UTF-8 valido».  ⚠ E si convalida QUI,
+		 *    prima di farlo attraversare il confine di processo: un testo non
+		 *    valido consegnato al compositore e' un difetto NOSTRO che ha la
+		 *    faccia di un difetto del desktop. */
+		if (!utf8_valido(testo, byte)) {
+			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) non e' "
+			                 "UTF-8 valido, e §5.4 lo pretende",
+			              trasf, byte);
+			return false;
+		}
+		/* ⛔⭐ E NIENTE ZERI IN MEZZO — rilievo R9.11 applicato a questo canale.
+		 *
+		 *     `utf8_valido()` lo accetta (`c < 0x80`), ⛔ ma da qui in poi il
+		 *     testo attraversa un confine di processo e arriva a `appunti.c`,
+		 *     che lo consegna al compositore.  ⚠ E il verso OPPOSTO lo rifiuta
+		 *     gia' (`appunti.c`, `leggi_il_testo`): accettarlo di qua vorrebbe
+		 *     dire due regole diverse per la stessa grandezza nei due versi,
+		 *     cioe' un testo che si puo' incollare nel desktop e non si puo'
+		 *     copiare da dentro.
+		 * ⚠ E NON si usa `testo_stampabile()`, che sarebbe la funzione «gia'
+		 *   pronta»: quella rifiuta anche `\n` e `\t`, ⛔ cioe' rifiuterebbe
+		 *   **qualunque testo copiato da un editor**.  La regola giusta e' piu'
+		 *   stretta di UTF-8 e piu' larga di «stampabile». */
+		if (memchr(testo, 0, byte)) {
+			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) porta "
+			                 "uno zero in mezzo: quel che si incollerebbe "
+			                 "sarebbe piu' corto di quel che l'annuncio prometteva",
+			              trasf, byte);
+			return false;
+		}
+
+		s->app_ricevuti++;
+		appunti_servi_in_attesa(s, testo, byte);
+		return true;
+	}
+
+	default:
+		/* ⛔ §7.4 ne definisce TRE, e il byte alto e' gia' stato riconosciuto
+		 *    come `0x02`: qui siamo su un tipo del canale appunti che non
+		 *    esiste.  §3: non si ignora. */
+		viola_appunti(s, "tipo %#06x sul canale appunti: §7.4 ne definisce TRE — "
+		                 "0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO",
+		              tipo);
+		return false;
+	}
+}
+
+/* Il posto di questo stream nella tabella, creandolo se serve.  NULL = non c'e'
+ * posto, e chi chiama ha gia' congedato. */
+static int appunti_posto(rcp_sessione *s, int64_t stream)
+{
+	int libero = -1;
+
+	for (int i = 0; i < A_STREAM_MAX; i++)
+		if (s->app_in[i].usato && s->app_in[i].stream == stream)
+			return i;
+	for (int i = 0; i < A_STREAM_MAX; i++)
+		if (!s->app_in[i].usato) {
+			libero = i;
+			break;
+		}
+	/* ⛔ Pieno: si butta il primo che NON ha byte in sospeso — uno stream aperto
+	 *    e vuoto non porta via niente a nessuno — e ⛔ si scrive nel registro,
+	 *    perche' §3 vuole che ogni tolleranza si veda. */
+	if (libero < 0)
+		for (int i = 0; i < A_STREAM_MAX; i++)
+			if (s->app_in[i].testa_n == 0 && !s->app_in[i].corpo) {
+				reg(s, "⚠ APPUNTI: %d stream aperti insieme (§2.5 ne vuole uno "
+				       "per trasferimento): lascio andare il %lld, che non "
+				       "aveva byte in sospeso",
+				    A_STREAM_MAX, (long long)s->app_in[i].stream);
+				libero = i;
+				break;
+			}
+	if (libero < 0) {
+		/* ⛔ Tutti a meta' di un messaggio: e' un client che apre stream e non
+		 *    li finisce, e non e' piu' una tolleranza — e' §3. */
+		viola_appunti(s, "%d stream di appunti aperti insieme e tutti a meta' di "
+		                 "un messaggio: §2.5 ne vuole uno per trasferimento",
+		              A_STREAM_MAX);
+		return -1;
+	}
+
+	free(s->app_in[libero].corpo);
+	memset(&s->app_in[libero], 0, sizeof s->app_in[libero]);
+	s->app_in[libero].usato = true;
+	s->app_in[libero].stream = stream;
+	return libero;
+}
+
+static void appunti_posto_libera(rcp_sessione *s, int i)
+{
+	free(s->app_in[i].corpo);
+	memset(&s->app_in[i], 0, sizeof s->app_in[i]);
+}
+
+bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
+                        size_t len, bool fin, uint64_t ora)
+{
+	int i;
+
+	if (!s)
+		return false;
+	if (s->stato == S_FINITA) {
+		reg(s, "⛔ %zu byte sullo stream di appunti %lld DOPO la fine della "
+		       "sessione da %s: §4.2 vieta di spedire su qualunque canale",
+		    len, (long long)stream, s->provenienza);
+		return false;
+	}
+
+	/* ⛔ §2.5, come l'input: niente prima che `SESSIONE` sia partita. */
+	if (!s->sessione_spedita) {
+		viola_appunti(s, "byte sullo stream di appunti (%lld) prima che "
+		                 "`SESSIONE` sia partita (stato: %s)",
+		              (long long)stream, NOMI_STATO[s->stato]);
+		return false;
+	}
+
+	/* ⛔ §4.3: il client non ha dichiarato `appunti.testo`, e adesso ne manda.
+	 *    ⚠ NON e' una tolleranza: e' una capacita' non negoziata usata lo
+	 *    stesso, cioe' il caso che §4.3 esiste per rendere impossibile. */
+	if (!s->negozia_appunti) {
+		viola_appunti(s, "byte sul canale appunti da un client che non ha "
+		                 "dichiarato `appunti.testo` in `CIAO` (§4.3)");
+		return false;
+	}
+
+	s->ultimo_byte = ora;
+	s->ultima_vita = ora;
+	if (!torna_a_parlare(s))
+		return false;
+
+	i = appunti_posto(s, stream);
+	if (i < 0)
+		return false;
+
+	while (len) {
+		/* Prima i sei byte dell'inquadratura (§6.1), e uno alla volta se serve:
+		 * un pacchetto puo' tagliarla in mezzo. */
+		if (s->app_in[i].testa_n < 6) {
+			size_t manca = 6 - s->app_in[i].testa_n;
+			size_t quanti = len < manca ? len : manca;
+
+			memcpy(s->app_in[i].testa + s->app_in[i].testa_n, dati, quanti);
+			s->app_in[i].testa_n += quanti;
+			dati += quanti;
+			len -= quanti;
+			if (s->app_in[i].testa_n < 6)
+				break;
+
+			{
+				lettore intest = {s->app_in[i].testa, 6, 0, false};
+				uint16_t tipo = le_u16(&intest);
+				uint32_t lung = le_u32(&intest);
+				uint32_t attesa_min, attesa_max;
+
+				/* ⛔ §2.5: su questo stream il byte alto e' 0x02. */
+				if ((tipo >> 8) != 0x02) {
+					viola_appunti(s, "tipo %#06x sullo stream di appunti: il "
+					                 "byte alto 0x%02x non e' il canale appunti "
+					                 "(§2.5)",
+					              tipo, (unsigned)(tipo >> 8));
+					return false;
+				}
+				/* ⛔ La lunghezza si convalida PRIMA di allocare — §6.1, e sui
+				 *    tre tipi di §7.4 si sa gia' che cosa aspettarsi: due hanno
+				 *    misura fissa e il terzo ha un minimo e un tetto.
+				 * ⭐ Quindi chi annuncia un megabyte su un `CHIEDI` non ottiene
+				 *    un megabyte: ottiene sei byte e un congedo. */
+				switch (tipo) {
+				case T_APPUNTI_ANNUNCIO:
+					attesa_min = attesa_max = A_ANNUNCIO;
+					break;
+				case T_APPUNTI_CHIEDI:
+					attesa_min = attesa_max = A_CHIEDI;
+					break;
+				case T_APPUNTI_TESTO:
+					attesa_min = A_TESTO_MINIMO;
+					attesa_max = A_TESTO_MINIMO + RCP_APPUNTI_TETTO;
+					break;
+				default:
+					viola_appunti(s, "tipo %#06x sul canale appunti: §7.4 ne "
+					                 "definisce TRE — 0x0201 ANNUNCIO, 0x0202 "
+					                 "CHIEDI, 0x0203 TESTO",
+					              tipo);
+					return false;
+				}
+				if (lung < attesa_min || lung > attesa_max) {
+					viola_appunti(s, "il messaggio %#06x annuncia %u byte di "
+					                 "corpo e §7.4 ne vuole fra %u e %u: %s",
+					              tipo, lung, attesa_min, attesa_max,
+					              lung < attesa_min
+					                  ? "byte in MENO"
+					                  : "byte in PIU' — e oltre il tetto di §5.4 "
+					                    "il testo non si annuncia affatto");
+					return false;
+				}
+				s->app_in[i].tipo = tipo;
+				s->app_in[i].lung = lung;
+				s->app_in[i].corpo_n = 0;
+				if (lung) {
+					s->app_in[i].corpo = (uint8_t *)malloc(lung);
+					if (!s->app_in[i].corpo) {
+						reg(s, "⛔ APPUNTI: %u byte di corpo non entrano in "
+						       "memoria: butto il messaggio e chiudo lo stream",
+						    lung);
+						appunti_posto_libera(s, i);
+						return true;
+					}
+				}
+			}
+		}
+
+		/* Poi il corpo. */
+		{
+			size_t manca = s->app_in[i].lung - s->app_in[i].corpo_n;
+			size_t quanti = len < manca ? len : manca;
+
+			if (quanti) {
+				memcpy(s->app_in[i].corpo + s->app_in[i].corpo_n, dati, quanti);
+				s->app_in[i].corpo_n += quanti;
+				dati += quanti;
+				len -= quanti;
+			}
+			if (s->app_in[i].corpo_n < s->app_in[i].lung)
+				break;
+		}
+
+		{
+			uint16_t tipo = s->app_in[i].tipo;
+			uint32_t lung = s->app_in[i].lung;
+			uint8_t *corpo = s->app_in[i].corpo;
+			bool vivo;
+
+			/* ⛔ Il posto si azzera PRIMA di trattare il messaggio: `tratta_
+			 *    appunti` puo' spedire (e quindi rientrare in questo modulo), e
+			 *    un posto lasciato mezzo pieno sarebbe uno stato che nessuno sa
+			 *    piu' a chi appartiene.  ⚠ `corpo` resta valido: la memoria e'
+			 *    nostra finche' non la liberiamo tre righe piu' giu'. */
+			s->app_in[i].corpo = NULL;
+			s->app_in[i].corpo_n = 0;
+			s->app_in[i].testa_n = 0;
+			s->app_in[i].lung = 0;
+
+			vivo = tratta_appunti(s, tipo, corpo, lung);
+			free(corpo);
+			if (!vivo)
+				return false;
+		}
+	}
+
+	/* ⛔ §6.1 e §2.5: uno stream che finisce a meta' di un messaggio non porta
+	 *    un messaggio corto — porta una lunghezza che non torna.  ⚠ E qui NON
+	 *    si congeda: il messaggio a meta' non ha ancora fatto niente, e chiudere
+	 *    la sessione per uno stream troncato punirebbe anche il client a cui
+	 *    e' caduta la rete a meta' trasferimento.  ⇒ Si dichiara e si butta —
+	 *    ed e' una tolleranza SCRITTA (§3). */
+	if (fin) {
+		if (s->app_in[i].testa_n || s->app_in[i].corpo)
+			reg(s, "⚠ APPUNTI: lo stream %lld e' finito con un messaggio a meta' "
+			       "(%zu byte d'intestazione, %zu di corpo su %u): si butta.  "
+			       "Non congedo — un trasferimento troncato non e' un client che "
+			       "sbaglia",
+			    (long long)stream, s->app_in[i].testa_n, s->app_in[i].corpo_n,
+			    s->app_in[i].lung);
+		appunti_posto_libera(s, i);
+	}
+	return true;
+}
+
 /* ⛔ §5.2 e §7.1 — `RICHIEDI_CHIAVE`, servito dal 12 agosto 2026.
  *
  * ⚠ Fino a oggi questo tipo cadeva nel `default` dello switch e faceva
@@ -4538,6 +5424,23 @@ void rcp_libera(rcp_sessione *s)
 		memset(s->acc, 0, s->acc_cap);
 		free(s->acc);
 	}
+	/* ⛔⭐ E GLI APPUNTI SI LIBERANO QUI, tutti e due i lati.
+	 *
+	 * ⛔ E si AZZERANO prima, come l'accumulo e per una ragione della stessa
+	 *    famiglia: quel che l'utente copia e' spesso proprio quel che non
+	 *    vorrebbe lasciare in giro — una parola d'ordine incollata da un gestore
+	 *    di credenziali passa **per intero** da questo buffer.  ⚠ `free()` non
+	 *    azzera niente, e questo processo serve TUTTI gli utenti della macchina
+	 *    (`SPECIFICHE.md` §5.5). */
+	if (s->app_testo) {
+		memset(s->app_testo, 0, s->app_testo_n);
+		free(s->app_testo);
+	}
+	for (int i = 0; i < A_STREAM_MAX; i++)
+		if (s->app_in[i].corpo) {
+			memset(s->app_in[i].corpo, 0, s->app_in[i].lung);
+			free(s->app_in[i].corpo);
+		}
 	memset(s, 0, sizeof *s);
 	free(s);
 }
@@ -5826,6 +6729,34 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 {
 	if (s->stato == S_FINITA)
 		return false;
+
+	/* ⛔⛔ IL FONDO DELLE RICHIESTE DI INCOLLA, e senza di lui il canale
+	 *      appunti funziona una volta sola.
+	 *
+	 *      Il caso: si chiede il testo al client (`APPUNTI_CHIEDI`) e il client
+	 *      non risponde mai — si e' staccato, o non sa servire quel
+	 *      trasferimento.  ⛔ La coda non si svuota, `app_chiesto` resta vero, e
+	 *      da li' in poi **ogni incollata successiva si accoda a una domanda che
+	 *      non avra' mai risposta**: il sintomo e' «gli appunti hanno funzionato
+	 *      una volta e poi mai piu'», che nessuno collega a un client che non ha
+	 *      risposto mezz'ora fa.
+	 *
+	 * ⚠ E questo fondo e' piu' LARGO di quello del figlio (4 s) apposta: la'
+	 *   si paga il debito verso il compositore — chi incolla ha gia' avuto la
+	 *   sua risposta vuota — qui si rimette in sesto il canale.  ⛔ Stringerlo
+	 *   fino a coincidere farebbe scadere le due cose insieme, e un testo
+	 *   arrivato al millesimo giusto non troverebbe piu' nessuno da servire da
+	 *   nessuna delle due parti. */
+	if (s->app_serial_n > 0 && ora - s->app_chiesto_ms > APPUNTI_FONDO) {
+		reg(s, "⚠ APPUNTI: %d richieste di incolla senza risposta dal client "
+		       "dopo %llu ms (fondo %d): la coda si svuota.  ⛔ Chi incollava ha "
+		       "gia' avuto la sua risposta vuota dal figlio; questo fondo serve a "
+		       "non lasciare il canale bloccato per le incollate DOPO",
+		    s->app_serial_n, (unsigned long long)(ora - s->app_chiesto_ms),
+		    APPUNTI_FONDO);
+		s->app_serial_n = 0;
+		s->app_chiesto = false;
+	}
 
 	/* ⛔ §4.4-bis: il ritardo fisso vale ANCHE per AMMESSO.  Applicarlo solo
 	 * ai rifiuti rimetterebbe il tempismo dall'altra parte, e la distinzione

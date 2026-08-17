@@ -3087,6 +3087,13 @@ async function collega(utente, parola) {
   schermo.riparti();
   avvia_video(wt, congeda);
   avvia_audio(wt);
+  /* ⭐⭐ FASE 7 — e gli appunti si accendono QUI, con gli altri due canali e per
+   *     la stessa ragione: il server puo' annunciare un testo copiato **subito
+   *     dopo `SESSIONE`** — chi si ricollega trova gia' qualcosa negli appunti
+   *     della sessione, ed e' proprio il caso che `STUDI.md` §gnome §10 chiama
+   *     «chi si ricollega».  ⛔ Accendere dopo perderebbe quell'annuncio, e il
+   *     sintomo sarebbe «gli appunti funzionano dalla seconda copia in poi». */
+  appunti_prepara(wt, congeda);
 
   /* ⛔⭐ E IL CASO IN CUI NON SI MANDA NIENTE — `muto`, §4.2 e DECISIONI.md §7.14.
    *
@@ -3321,6 +3328,7 @@ async function collega(utente, parola) {
     return;
   }
   let scelta_codec = "", scelta_profondita = "";
+  let scelta_appunti = false;
   {
     const l = new Lettore(m.corpo);
     const ver = l.u16(), quante = l.u16();
@@ -3359,9 +3367,22 @@ async function collega(utente, parola) {
          dal server non e' un permesso di indovinare. */
       if (nome === "video.codec") scelta_codec = valore;
       if (nome === "video.profondita") scelta_profondita = valore;
+      /* ⭐⭐ FASE 7 — §7.4: gli appunti si accendono solo se il server li ha
+         dichiarati.  ⛔ E fino al 17 agosto 2026 questo valore veniva LETTO e
+         BUTTATO: la pagina lo stampava nella riga dell'ECCOMI e non lo teneva
+         da nessuna parte, cioe' non avrebbe potuto accendere niente. */
+      if (nome === "appunti.testo") scelta_appunti = valore === "si";
     }
     nota("ECCOMI: versione " + ver + " — " + scelte.join(" · "));
   }
+  /* ⭐⭐ FASE 7 — GLI APPUNTI SI ACCENDONO QUI, e non dove si accendono video e
+   *     audio, per una ragione di ordine: `appunti.testo` lo si sa solo adesso.
+   * ⛔ Ma l'ASCOLTO comincia prima (`appunti_prepara`, sopra), perche' §2.5
+   *    vieta al server di aprire uno stream prima di `SESSIONE` e per accorgersi
+   *    che il divieto e' stato violato bisogna stare in ascolto: mettersi in
+   *    ascolto dopo renderebbe la violazione indistinguibile da un server che si
+   *    comporta bene.  E' la stessa scelta, con le stesse parole, del video. */
+  avvia_appunti(scelta_appunti);
 
   /* ── CREDENZIALI (§4.4) ─────────────────────────────────────────────── */
   await canale.manda(TIPO.CREDENZIALI, new Scrittore().str(utente).str(parola).byte());
@@ -4315,6 +4336,404 @@ function avvia_audio(wt) {
   })();
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ⭐⭐ GLI APPUNTI — `RCP.md` §7.4, `SPECIFICHE.md` §9, fase 7
+
+   ⛔ SOLO TESTO SEMPLICE, nei due versi — `DECISIONI.md` §5-ter.1, decisa
+      dall'utente il 9 agosto 2026 e riconfermata il 17.  Niente immagini,
+      niente file, niente formati ricchi.
+
+   ⛔⛔ E DA QUESTA PARTE GLI APPUNTI NON SONO NOSTRI — §9.  E' la differenza
+        che governa tutto quel che segue: nel desktop remoto la clipboard e' del
+        compositore e ci parliamo quando vogliamo; qui e' del browser, che ce la
+        concede solo a certe condizioni e in modo diverso su ogni motore.
+
+   ⚠ Da cui la regola di §9, applicata alla lettera: **si dichiara quel che non
+     si puo' fare**, non si fa finta.  Ogni ripiego qui sotto scrive nel
+     registro della pagina che cos'e' e perche'.
+
+   ── I DUE VERSI, e non sono simmetrici ──────────────────────────────────
+
+   `sessione → dispositivo` — copio nel desktop remoto, incollo sul telefono:
+     il server annuncia, noi chiediamo subito, e il testo va SCRITTO nella
+     clipboard locale.  ⛔ «Subito» e non «quando l'utente incolla»: l'utente
+     incollera' **fuori da questa pagina**, e li' non lo vediamo.
+
+   `dispositivo → sessione` — copio sul telefono, incollo nel desktop remoto:
+     bisogna accorgersi che la clipboard locale e' cambiata, e questo e' il
+     verso che si usa di piu' (§5-ter.1) ed e' il piu' difficile.
+
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const T_APPUNTI = { ANNUNCIO: 0x0201, CHIEDI: 0x0202, TESTO: 0x0203 };
+
+/* §5.4: 1 000 000 byte, **non** 1 MiB.  Vedi il riquadro in `rcp.h`. */
+const APPUNTI_TETTO = 1000000;
+
+const APPUNTI = {
+  acceso: false,
+  wt: null,
+  congeda: null,
+  /* §7.4: ciascun lato numera **i propri** trasferimenti, da 1 e crescendo. */
+  mio_id: 0,
+  /* Quel che ho annunciato io e che il server puo' chiedermi. */
+  mio_testo: "",
+  /* L'ultimo annuncio del server, e i suoi byte. */
+  suo_id: 0,
+  suo_len: 0,
+  /* ⛔ Il testo arrivato dal server che NON si e' ancora potuto scrivere nella
+     clipboard: vedi `scrivi_negli_appunti`.  ⚠ Non e' un errore, e' il permesso
+     che manca — e si riprova al primo gesto dell'utente. */
+  in_attesa_di_gesto: null,
+  /* Quel che ho letto per ultimo dalla clipboard locale: serve a non annunciare
+     dieci volte lo stesso testo.  ⛔ E a non rimandare indietro al server quel
+     che il server ci ha appena dato — che sarebbe l'eco, la stessa forma che
+     `appunti.c` disinnesca con `session-is-owner`. */
+  ultimo_letto: null,
+  conti: { annunciati: 0, chiesti: 0, ricevuti: 0, serviti: 0, scritti: 0,
+           non_scritti: 0 },
+};
+
+/* ⛔ Uno stream per messaggio, come fa il server: a legare i messaggi di un
+ *    trasferimento e' il campo `trasferimento`, non lo stream (§7.4, rilievo
+ *    R1.11).  ⚠ E si aspetta la chiusura: sul canale appunti il ritardo non e'
+ *    quello del puntatore, e un messaggio a meta' non serve a nessuno. */
+async function appunti_manda(tipo, corpo) {
+  if (!APPUNTI.wt) return false;
+  try {
+    const flusso = await APPUNTI.wt.createUnidirectionalStream();
+    const w = flusso.getWriter();
+    await w.write(inquadra(tipo, corpo));
+    await w.close();
+    return true;
+  } catch (e) {
+    nota("⛔ appunti: il messaggio 0x" + tipo.toString(16) + " non e' partito ("
+       + e + ")");
+    return false;
+  }
+}
+
+/*
+ * ⭐ SCRIVERE NELLA CLIPBOARD LOCALE — e qui casca il permesso.
+ *
+ * ⛔ `navigator.clipboard.writeText()` vuole che il documento abbia il FUOCO, e
+ *    su Firefox vuole anche un gesto dell'utente ancora «caldo».  ⚠ Quando il
+ *    testo arriva dal server, di gesto non ce n'e' nessuno: e' il desktop
+ *    remoto che ha copiato.
+ *
+ * ⇒ Si PROVA, e se non si puo' il testo si TIENE DA PARTE e si riprova al primo
+ *   gesto dell'utente.  ⛔ E si scrive nel registro tutte e due le volte: §9 —
+ *   «si dichiara quel che non si puo' fare, non si fa finta».  ⚠ Un testo
+ *   perduto in silenzio e' peggio di un testo che arriva un secondo dopo: nel
+ *   secondo caso l'utente ripete il gesto, nel primo incolla quel che c'era
+ *   prima **credendo** che sia quel che ha copiato.
+ */
+async function scrivi_negli_appunti(testo) {
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    nota("⛔ §9: questo browser non ha `navigator.clipboard.writeText`: quel "
+       + "che si copia nel desktop remoto NON arrivera' negli appunti di questo "
+       + "dispositivo.  Non e' un guasto, e' una funzione che non c'e'");
+    APPUNTI.conti.non_scritti++;
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(testo);
+    APPUNTI.conti.scritti++;
+    APPUNTI.in_attesa_di_gesto = null;
+    /* ⛔ E si ricorda quel che si e' scritto: al prossimo giro la sorveglianza
+     *    della clipboard lo rivedra' come «cambiata», e senza questa riga lo
+     *    rimanderebbe al server — cioe' l'eco, e i due lati si rincorrerebbero.
+     *    E' la stessa cosa che `session-is-owner` disinnesca dall'altra parte. */
+    APPUNTI.ultimo_letto = testo;
+    nota("⭐ appunti: " + testo.length + " caratteri dal desktop remoto sono "
+       + "adesso negli appunti di questo dispositivo");
+    return true;
+  } catch (e) {
+    APPUNTI.in_attesa_di_gesto = testo;
+    APPUNTI.conti.non_scritti++;
+    nota("⚠ §9: il browser non concede di scrivere negli appunti adesso (" + e
+       + ").  ⭐ Il testo NON e' perduto: e' messo da parte e ci va al primo "
+       + "clic o tasto su questa pagina");
+    return false;
+  }
+}
+
+/*
+ * ⭐ LEGGERE LA CLIPBOARD LOCALE — e qui ci sono DUE strade, non una, perche'
+ *    i motori non danno la stessa cosa (`SPECIFICHE.md` §9, misura S3).
+ *
+ *   1. ⭐ `clipboardchange`, su Chrome dalla 144 (13 gennaio 2026) — e la
+ *      motivazione scritta nella proposta sono **i client di desktop remoto**.
+ *      Ci si accorge della copia **quando avviene**, quindi l'annuncio e' gia'
+ *      dal server prima che l'utente batta `Ctrl+V`;
+ *   2. l'evento **`paste`**, che c'e' su tutti: quando l'utente batte `Ctrl+V`
+ *      con la pagina a fuoco, il browser ci consegna il testo **senza chiedere
+ *      nessun permesso**.  ⛔ E' il ripiego per Firefox e Safari, dove
+ *      `clipboardchange` non esiste e ogni lettura costerebbe il menu «Incolla»
+ *      con un secondo di attesa.
+ *
+ * ⛔⛔ E LA CORSA FRA `Ctrl+V` E L'ANNUNCIO NON SI CURA QUI.
+ *
+ *      Sulla strada 2 l'annuncio parte **nello stesso momento** in cui i tasti
+ *      partono, e il desktop remoto puo' chiedere il testo prima che l'annuncio
+ *      arrivi.  ⚠ Xpra la risolve ritardando **ogni battuta di 100 ms**, e
+ *      §9 lo rifiuta con un numero: «per noi sono due volte il tetto del
+ *      ritardo».
+ *      ⭐ La cura sta dall'altra parte e non costa un millisecondo a nessun
+ *         tasto: il server METTE IN CODA la richiesta di incolla e la serve
+ *         quando l'annuncio arriva (`rcp.c`, `rcp_appunti_chiedi`).
+ */
+async function appunti_annuncia(testo) {
+  if (!APPUNTI.acceso || typeof testo !== "string") return;
+  if (testo === APPUNTI.ultimo_letto) return; /* niente di nuovo, e niente eco */
+
+  const byte = new TextEncoder().encode(testo);
+  /* ⛔ §5.4: oltre il tetto **non si annuncia affatto**, e NON si tronca — «un
+   *    testo troncato incollato in un terminale e' peggio di un testo
+   *    mancante».  ⚠ E lo si dice: senza questa riga l'utente vedrebbe una
+   *    incollata vuota e non saprebbe perche'. */
+  if (byte.length > APPUNTI_TETTO) {
+    nota("⛔ §5.4: " + byte.length + " byte negli appunti, oltre il tetto di "
+       + APPUNTI_TETTO + ": NON si annunciano al desktop remoto, e non si "
+       + "tagliano.  Un testo troncato e' peggio di un testo mancante");
+    return;
+  }
+
+  APPUNTI.ultimo_letto = testo;
+  APPUNTI.mio_testo = testo;
+  APPUNTI.mio_id = APPUNTI.mio_id >= 0xFFFFFFFF ? 1 : APPUNTI.mio_id + 1;
+
+  const c = new Scrittore().u32(APPUNTI.mio_id).u32(byte.length).byte();
+  if (await appunti_manda(T_APPUNTI.ANNUNCIO, c)) {
+    APPUNTI.conti.annunciati++;
+    nota("appunti: annunciato al desktop remoto il trasferimento "
+       + APPUNTI.mio_id + " — " + byte.length + " byte.  ⚠ Non parte niente "
+       + "finche' qualcuno di la' non incolla (§7.4)");
+  }
+}
+
+/* I messaggi del canale appunti che arrivano dal server. */
+async function appunti_ricevuti(byte, completo) {
+  if (!completo) {
+    nota("⚠ appunti: uno stream azzerato a meta': il trasferimento si butta");
+    return;
+  }
+  /* ⛔ L'inquadratura di §6.1 si legge PRIMA di guardare qualunque cosa, e la
+   *    lunghezza si controlla: un messaggio che dichiara piu' byte di quelli
+   *    arrivati non e' un messaggio corto, e' una lunghezza che non torna. */
+  if (byte.length < 6) {
+    await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+      "uno stream di appunti con " + byte.length + " byte: §6.1 vuole almeno "
+      + "i sei dell'inquadratura");
+    return;
+  }
+  const v = new DataView(byte.buffer, byte.byteOffset, byte.byteLength);
+  const tipo = v.getUint16(0), lung = v.getUint32(2);
+  if (6 + lung !== byte.length) {
+    await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+      "un messaggio di appunti dichiara " + lung + " byte di corpo e ne sono "
+      + "arrivati " + (byte.length - 6) + " (§6.1)");
+    return;
+  }
+  const corpo = new Lettore(byte.subarray(6));
+
+  if (tipo === T_APPUNTI.ANNUNCIO) {
+    if (lung !== 8) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_ANNUNCIO con " + lung + " byte di corpo: §7.4 ne vuole 8");
+      return;
+    }
+    APPUNTI.suo_id = corpo.u32();
+    APPUNTI.suo_len = corpo.u32();
+    if (APPUNTI.suo_len > APPUNTI_TETTO) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_ANNUNCIO di " + APPUNTI.suo_len + " byte: §5.4 si ferma a "
+        + APPUNTI_TETTO);
+      return;
+    }
+    /* ⛔ E si chiede SUBITO, invece di aspettare che l'utente incolli: l'utente
+     *    incollera' **fuori da questa pagina**, dove non lo vediamo.  ⚠ Il
+     *    prezzo e' che il testo attraversa il filo anche se nessuno lo
+     *    incollera' mai — ed e' un prezzo che si paga in byte una volta per
+     *    copia, contro una funzione che altrimenti non esisterebbe. */
+    const c = new Scrittore().u32(APPUNTI.suo_id).byte();
+    if (await appunti_manda(T_APPUNTI.CHIEDI, c)) APPUNTI.conti.chiesti++;
+    return;
+  }
+
+  if (tipo === T_APPUNTI.CHIEDI) {
+    if (lung !== 4) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_CHIEDI con " + lung + " byte di corpo: §7.4 ne vuole 4");
+      return;
+    }
+    const chiesto = corpo.u32();
+    /* ⛔ §7.4: un identificatore che non corrisponde a nessun annuncio vivo e'
+     *    ERRORE_PROTOCOLLO.  ⚠ Ma un annuncio SUPERATO si serve col testo
+     *    attuale — e' la quinta eccezione dichiarata a §3, ed e' la corsa
+     *    normale fra due che copiano. */
+    if (chiesto === 0 || chiesto > APPUNTI.mio_id) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_CHIEDI per il trasferimento " + chiesto + ", che non "
+        + "corrisponde a nessuno dei " + APPUNTI.mio_id + " che ho annunciato "
+        + "(§7.4)");
+      return;
+    }
+    if (chiesto !== APPUNTI.mio_id)
+      nota("⚠ §7.4: il desktop remoto chiede il trasferimento " + chiesto
+         + ", superato dal " + APPUNTI.mio_id + ": lo servo col testo ATTUALE");
+
+    const testo = new TextEncoder().encode(APPUNTI.mio_testo);
+    const c = new Uint8Array(4 + testo.length);
+    new DataView(c.buffer).setUint32(0, chiesto);
+    c.set(testo, 4);
+    if (await appunti_manda(T_APPUNTI.TESTO, c)) {
+      APPUNTI.conti.serviti++;
+      nota("⭐ appunti: " + testo.length + " byte spediti al desktop remoto "
+         + "(trasferimento " + chiesto + ") — qualcuno di la' sta incollando");
+    }
+    return;
+  }
+
+  if (tipo === T_APPUNTI.TESTO) {
+    if (lung < 4) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_TESTO con " + lung + " byte di corpo: §7.4 ne vuole almeno 4");
+      return;
+    }
+    const trasf = corpo.u32();
+    /* ⛔ §7.4: «un APPUNTI_TESTO che nessuno ha chiesto e' ERRORE_PROTOCOLLO:
+     *    gli appunti si tirano, non si spingono». */
+    if (trasf !== APPUNTI.suo_id) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_TESTO per il trasferimento " + trasf + " mentre l'annuncio "
+        + "vivo e' il " + APPUNTI.suo_id + ": i messaggi di trasferimenti "
+        + "diversi non si mescolano (§7.4)");
+      return;
+    }
+    const dati = byte.subarray(6 + 4);
+    if (dati.length !== APPUNTI.suo_len) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_TESTO porta " + dati.length + " byte e l'annuncio ne "
+        + "dichiarava " + APPUNTI.suo_len + " (§7.4)");
+      return;
+    }
+    /* ⛔ `fatal: true`: §5.4 pretende UTF-8 valido, e un decodificatore
+     *    indulgente metterebbe negli appunti dell'utente dei caratteri di
+     *    sostituzione al posto di un errore — cioe' un testo silenziosamente
+     *    diverso da quello che ha copiato. */
+    let testo;
+    try {
+      testo = new TextDecoder("utf-8", { fatal: true }).decode(dati);
+    } catch (e) {
+      await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+        "APPUNTI_TESTO non e' UTF-8 valido, e §5.4 lo pretende");
+      return;
+    }
+    APPUNTI.conti.ricevuti++;
+    await scrivi_negli_appunti(testo);
+    return;
+  }
+
+  await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
+    "tipo 0x" + tipo.toString(16) + " sul canale appunti: §7.4 ne definisce "
+    + "TRE — 0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO");
+}
+
+/* La versione del thread principale: il gemello di quella del guscio del
+   worker, e i due nomi combaciano apposta. */
+function __appunti_arrivati(byte, completo) {
+  appunti_ricevuti(byte, completo).catch((e) =>
+    nota("⛔ appunti: il messaggio dal server ha fatto eccezione (" + e + ")"));
+}
+
+/* ⛔ L'ascolto prima della negoziazione: senza `congeda` in mano, uno stream di
+ *    appunti che arrivasse prima di `SESSIONE` — che §2.5 vieta — non avrebbe
+ *    nessuno a cui dirlo. */
+function appunti_prepara(wt, congeda) {
+  APPUNTI.wt = wt;
+  APPUNTI.congeda = congeda;
+}
+
+function avvia_appunti(negoziato) {
+  APPUNTI.acceso = negoziato;
+
+  if (!negoziato) {
+    nota("gli appunti sono spenti su questa sessione: il server non ha "
+       + "dichiarato `appunti.testo` (§4.3)");
+    return;
+  }
+
+  /* ── Verso dispositivo → sessione, strada 1: la sorveglianza ───────────── */
+  /* ⛔⭐ DOVE STIA `clipboardchange` E' `[?]`, E SI PROVANO TUTT'E DUE I POSTI.
+   *
+   *     La proposta WICG lo mette su `navigator.clipboard`, che estende
+   *     `EventTarget`; altre letture lo danno su `document`.  ⚠ Questa pagina
+   *     non ha ancora MISURATO quale sia il posto giusto su Chrome 144+ — e'
+   *     una `[?]` dichiarata, non un fatto.
+   *
+   * ⇒ Si aggancia dove c'e', e ⛔ **si scrive quale dei due si e' trovato**:
+   *   cosi' la prima sessione su Chrome risponde alla domanda invece di
+   *   lasciarla aperta.  ⚠ E se non c'e' ne' l'uno ne' l'altro non e' un
+   *   guasto: e' Firefox, dove `clipboardchange` non esiste (§9, misura S3), e
+   *   resta la strada del `Ctrl+V`. */
+  let sorvegliata = "";
+  const aggancia = (dove, nome) => {
+    if (!dove || sorvegliata) return;
+    if (!("onclipboardchange" in dove)) return;
+    try {
+      dove.addEventListener("clipboardchange", () => {
+        if (!navigator.clipboard || !navigator.clipboard.readText) return;
+        navigator.clipboard.readText()
+          .then((t) => appunti_annuncia(t))
+          .catch((e) => nota("⚠ appunti: la clipboard e' cambiata e non si e' "
+                           + "potuta leggere (" + e + "): resta la strada del "
+                           + "`Ctrl+V`"));
+      });
+      sorvegliata = nome;
+    } catch (e) { /* niente: resta il ripiego, ed e' dichiarato sotto */ }
+  };
+  aggancia(navigator.clipboard, "navigator.clipboard");
+  aggancia(document, "document");
+
+  /* ── Verso dispositivo → sessione, strada 2: l'evento `paste` ──────────── */
+  /* ⛔ Si aggancia SEMPRE, anche dove la sorveglianza c'e', e non e' un
+   *    doppione: `clipboardchange` vuole il fuoco, e se l'utente copia in
+   *    un'altra finestra e torna qui a incollare, l'evento puo' non essere mai
+   *    arrivato.  ⚠ Il costo di averli tutti e due e' zero: `appunti_annuncia`
+   *    non annuncia niente se il testo non e' cambiato. */
+  document.addEventListener("paste", (ev) => {
+    if (!APPUNTI.acceso || !ev.clipboardData) return;
+    const t = ev.clipboardData.getData("text/plain");
+    if (t) appunti_annuncia(t);
+    /* ⛔ E NON si chiama `preventDefault()`: i tasti devono arrivare al desktop
+     *    remoto per la loro strada (§7.3), o l'utente avrebbe copiato senza
+     *    aver mai incollato. */
+  });
+
+  /* ── Il testo che aspettava un gesto per entrare negli appunti ─────────── */
+  const riprova = () => {
+    if (APPUNTI.in_attesa_di_gesto === null) return;
+    const t = APPUNTI.in_attesa_di_gesto;
+    APPUNTI.in_attesa_di_gesto = null;
+    scrivi_negli_appunti(t);
+  };
+  document.addEventListener("pointerdown", riprova, true);
+  document.addEventListener("keydown", riprova, true);
+
+  /* ⛔ §9: «si dichiara quel che non si puo' fare».  Questa riga e' quella
+   *    dichiarazione, ed e' diversa su ogni motore — quindi si scrive quel che
+   *    si e' TROVATO, non quel che ci si aspettava di trovare. */
+  nota("⭐ appunti accesi, solo testo, nei due versi (§7.4).  "
+     + (sorvegliata
+          ? "⭐ Questo browser sorveglia la clipboard: `clipboardchange` sta su "
+          + "`" + sorvegliata + "` — quel che copi qui arriva al desktop remoto "
+          + "da solo"
+          : "⚠ Questo browser NON sorveglia la clipboard: quel che copi qui "
+          + "arriva al desktop remoto quando batti `Ctrl+V` su questa pagina "
+          + "(§9 — su Firefox e Safari `clipboardchange` non esiste)"));
+}
+
 function avvia_video(wt, congeda) {
   (async function () {
     let lettore;
@@ -4373,8 +4792,16 @@ async function leggi_uno_stream(stream, congeda) {
   const alto = byte[0];
   if (alto === CANALE.VIDEO) { schermo.stream_video(byte, completo); return; }
   if (alto === CANALE.APPUNTI) {
-    nota("uno stream di appunti (0x02) ricevuto e non usato: la fase 2 non ha "
-       + "gli appunti (§5.4 e' della fase 5)");
+    /* ⭐⭐ FASE 7 — gli appunti, e ⛔ NON si trattano qui dentro.
+     *
+     *   Questa funzione viaggia nel worker con `toString()`, cioe' gira in due
+     *   posti diversi: di la' non esistono ne' `navigator.clipboard` ne' il
+     *   filo su cui rispondere.  ⇒ I byte tornano a chi ha il filo, e chi ha il
+     *   filo e' sempre il thread principale.
+     * ⚠ E `__appunti_arrivati` e' definita in DUE modi — nel guscio del worker
+     *   e' un `postMessage`, di qua e' una chiamata diretta.  E' lo stesso
+     *   meccanismo con cui `nota()` funziona da tutt'e due le parti. */
+    __appunti_arrivati(byte, completo);
     return;
   }
   await congeda(MOT.ERRORE_PROTOCOLLO, "uno stream unidirezionale del server "
@@ -4409,7 +4836,11 @@ let devicePixelRatio = 1;          /* ⛔ nel worker non esiste: lo manda il di 
 let __vista = [1, 1];              /* la vista MISURATA dal thread principale */
 let __oc = null, schermo = null;
 
-function __posta(m) { self.postMessage(m); }
+/* ⚠ \`trasferisci\` e' arrivato con la fase 7: un testo di appunti puo' pesare un
+   milione di byte (§5.4), e copiarlo fra i due thread sarebbe un megabyte in
+   piu' per ogni copia.  ⛔ Chi non lo passa non paga niente: \`postMessage\` con
+   una lista vuota si comporta esattamente come prima. */
+function __posta(m, trasferisci) { self.postMessage(m, trasferisci || []); }
 
 /* \`misura_vista()\` legge il foglio (\`documentElement.clientWidth\`): qui non
    c'e' nessun foglio.  ⛔ E NON si indovina — la misura, doppia passata della
@@ -4418,6 +4849,13 @@ function misura_vista() { return __vista.slice(); }
 
 /* \`nota()\` scrive nel registro della pagina, che e' un nodo del DOM. */
 function nota(t) { __posta({ t: "riga", riga: t }); }
+
+/* ⭐ Gli appunti (§7.4) tornano di la': qui non c'e' ne' \`navigator.clipboard\`
+   ne' il filo su cui rispondere.  ⛔ E i byte si TRASFERISCONO, non si copiano:
+   un testo puo' arrivare a un milione di byte (§5.4). */
+function __appunti_arrivati(byte, completo) {
+  __posta({ t: "appunti", byte: byte, completo: completo }, [byte.buffer]);
+}
 
 /* \`document\`: \`Schermo\` ne usa DUE cose sole — il deposito e la marca
    «acceso».  ⛔ Il deposito diventa una \`OffscreenCanvas\`, che ha la stessa
@@ -4591,6 +5029,12 @@ function accendi_worker() {
     }
     if (m.t === "congeda") {
       if (congeda_corrente) congeda_corrente(m.motivo, m.perche);
+      return;
+    }
+    /* ⭐⭐ FASE 7 — uno stream di appunti che il worker ha riconosciuto e non
+     *     puo' servire: di la' non c'e' ne' la clipboard ne' il filo. */
+    if (m.t === "appunti") {
+      __appunti_arrivati(m.byte, m.completo);
       return;
     }
   };

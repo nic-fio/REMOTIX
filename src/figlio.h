@@ -180,6 +180,78 @@ void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx);
  */
 bool figli_audio(figli *f, const char *utente, uint8_t codec);
 
+/* ------------------------------------------------------------------------- */
+/* ⭐⭐ FASE 7 — GLI APPUNTI, e attraversano il confine per la QUARTA volta con
+ *     la stessa ragione del video, dell'input e dell'audio:
+ *
+ *       **la clipboard e' del compositore, e il compositore parla con la
+ *       sessione dell'utente, che e' nel FIGLIO**; i messaggi di `RCP.md` §7.4
+ *       li scrive il padre, che tiene QUIC.
+ *
+ * ⛔ SOLO TESTO — `DECISIONI.md` §5-ter.1, decisa dall'utente il 9 agosto 2026
+ *    e riconfermata il 17.  I tipi MIME non attraversano il socket: vivono in
+ *    `appunti.c` e non escono di li' (`src/appunti.h`).
+ *
+ * ⛔ E IL TESTO VA A PEZZI, come il fotogramma e il cursore: il tetto di §5.4 e'
+ *    **1 000 000 byte**, trenta volte `PEZZO_MAX`.
+ */
+
+/*
+ * ⭐ «LA SESSIONE HA COPIATO QUESTO TESTO» — il verso desktop → dispositivo.
+ *
+ * ⛔ Arriva GIA' LETTO, gia' convalidato UTF-8 e gia' entro il tetto di §5.4:
+ *    quei tre controlli stanno in `appunti.c`, dove il testo esiste ancora
+ *    intero e dove si sa **quale** dei motivi ha fatto fallire.  ⚠ Un testo
+ *    oltre il tetto non arriva qui affatto — §5.4 dice «non si annuncia», e la
+ *    riga sta nel registro del figlio.
+ *
+ * `testo` e' terminato da zero e vive SOLO dentro la chiamata.
+ */
+typedef void (*FiglioAppuntiTesto)(void *ctx, const char *utente, uid_t uid,
+                                   const char *testo, size_t byte);
+
+/*
+ * ⭐ «QUALCUNO NELLA SESSIONE STA INCOLLANDO» — il verso dispositivo → desktop,
+ *    ed e' la meta' che si usa di piu' (`DECISIONI.md` §5-ter.1).
+ *
+ * ⛔⛔ VA RISPOSTO SEMPRE, con `figli_appunti_risposta()`, anche a mani vuote e
+ *      anche se il client non risponde mai.  Un `SelectionTransfer` senza
+ *      risposta lascia appesa **a tempo indeterminato** l'applicazione che sta
+ *      incollando, e quel che l'utente vede e' un desktop piantato — un difetto
+ *      che nessuno collega agli appunti.  ⇒ Chi riceve questa richiamata tiene
+ *      un fondo di tempo.
+ *
+ * `serial` e' il numero di Mutter, e va restituito tale e quale.
+ */
+typedef void (*FiglioAppuntiRichiesta)(void *ctx, const char *utente, uid_t uid,
+                                       uint32_t serial);
+
+/* ⚠ I due ganci si collegano insieme o per niente: un padre che sapesse
+ *   ricevere il testo della sessione e non sapesse servire chi incolla
+ *   lascerebbe il desktop **peggio di come l'ha trovato** — vedi sopra. */
+void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
+                          FiglioAppuntiRichiesta richiesta, void *ctx);
+
+/*
+ * «IL CLIENT HA DEL TESTO NEGLI APPUNTI»: il figlio lo offre alla sessione, e
+ * da li' in poi qualcuno potra' incollarlo.
+ *
+ * ⛔ NON porta il testo, e non e' una dimenticanza: e' il «si annuncia e poi si
+ *    tira» di §7.4 applicato di qua.  Il testo lo si chiede quando qualcuno
+ *    incolla davvero — cioe' con `FiglioAppuntiRichiesta` — e chi copia un
+ *    documento intero sul telefono non lo spedisce a nessuno finche' quel
+ *    momento non arriva.
+ */
+bool figli_appunti_offri(figli *f, const char *utente);
+
+/*
+ * La risposta a una `FiglioAppuntiRichiesta`.  Con `testo` NULL dichiara di non
+ * avercelo — ⛔ **che e' comunque una risposta**, ed e' quella che sblocca chi
+ * sta incollando.
+ */
+bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
+                            const char *testo, size_t byte);
+
 /* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE, e attraversa il confine nel verso opposto
  *     all'input: il metadato arriva da PipeWire (cioe' nel figlio) e il canale
  *     `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.

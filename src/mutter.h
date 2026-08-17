@@ -70,6 +70,11 @@
 #ifndef REMOTIX_MUTTER_H
 #define REMOTIX_MUTTER_H
 
+/* ⚠ `gio` e non solo `glib`: dalla fase 7 questo file dichiara `mutter_bus()`,
+ *   che restituisce una `GDBusConnection`.  ⛔ Senza, il tipo e' sconosciuto e
+ *   il compilatore lo prende per `int *` — e l'errore compare in `mutter.c`,
+ *   non qui, cioe' lontano dalla riga che l'ha prodotto. */
+#include <gio/gio.h>
 #include <glib.h>
 #include <stdint.h>
 
@@ -93,6 +98,20 @@ uint32_t mutter_nodo(const MutterSessione *sessione);
  * la fase 4 parlera' per muovere il puntatore. */
 const char *mutter_percorso_flusso(const MutterSessione *sessione);
 const char *mutter_percorso_controllo(const MutterSessione *sessione);
+
+/*
+ * ⭐ FASE 7 — il bus di sessione su cui questa sessione e' stata aperta.
+ *
+ * ⛔ Si CHIEDE a chi ce l'ha invece di aprirne un secondo, e la ragione non e'
+ *    l'economia: gli appunti vivono sulla **stessa** sessione `RemoteDesktop`
+ *    del palco (`EnableClipboard` su `mutter_percorso_controllo()`), e una
+ *    seconda connessione al bus vorrebbe dire un secondo nome sul bus — cioe'
+ *    un mittente che Mutter non riconosce come il proprietario della sessione.
+ *
+ * ⚠ Resta di proprieta' della `MutterSessione`, che lo chiude in
+ *   `mutter_chiudi()`: chi lo usa lo usa **finche' la sessione vive**.
+ */
+GDBusConnection *mutter_bus(const MutterSessione *sessione);
 
 /*
  * L'identificativo dichiarato a `RecordVirtual`.

@@ -345,6 +345,43 @@ void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
  * `wt_video_qualcuno_guarda` fa per i pixel. */
 bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec);
 
+/* ========================================================================= */
+/* ⭐⭐ GLI APPUNTI — `RCP.md` §7.4, fase 7                                   */
+
+/* «Il client ha copiato del testo: offrilo alla sessione di `utente`.»       */
+typedef bool (*wt_appunti_offerta)(void *ctx, const char *utente);
+/* «Ecco il testo per chi sta incollando nella sessione di `utente`.»
+ * ⛔ `testo` NULL = «non ce l'ho», che e' comunque una risposta. */
+typedef bool (*wt_appunti_consegna)(void *ctx, const char *utente,
+                                    uint32_t serial, const char *testo,
+                                    size_t byte);
+/* ⚠ I due si agganciano insieme: senza tutt'e due il canale non si collega
+ *   affatto, e `rcp.c` lo dichiara nel registro invece di servire meta' filo. */
+void wt_appunti_gancio(wt_appunti_offerta offri, wt_appunti_consegna risposta,
+                       void *ctx);
+
+/*
+ * ⭐ «LA SESSIONE DI `utente` HA COPIATO QUESTO TESTO»: si annuncia al client
+ *    (§7.4), e il testo si tiene finche' qualcuno non lo chiede.
+ *
+ * ⛔ La guardia di I3 — che il testo vada alla connessione di CHI l'ha copiato
+ *    — sta qui dentro, come per i fotogrammi e per l'audio.
+ */
+void wt_appunti_dalla_sessione(const char *utente, const char *testo,
+                               size_t byte);
+
+/*
+ * ⭐ «QUALCUNO NELLA SESSIONE DI `utente` STA INCOLLANDO»: si chiede al client
+ *    il testo che aveva annunciato.
+ *
+ * ⛔ `false` = la domanda NON e' partita — nessun client attaccato, nessun
+ *    annuncio vivo, nessuno stream.  ⚠ E allora chi chiama **deve rispondere
+ *    subito «non ce l'ho»** a chi incolla: il debito verso il compositore non
+ *    si estingue da solo, e un desktop che aspetta una risposta che non
+ *    arrivera' e' un desktop che l'utente vede piantato.
+ */
+bool wt_appunti_richiesta(const char *utente, uint32_t serial);
+
 /*
  * I quattro numeri che raccontano l'audio di una sessione.
  *

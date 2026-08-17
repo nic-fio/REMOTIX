@@ -86,6 +86,13 @@ enum genere {
 	              *    `G_UNI_OK` apposta — dentro quel giudizio i byte si
 	              *    contano nel credito e SI SCARTANO, ed e' esattamente
 	              *    quel che l'input faceva fino al 14 agosto 2026. */
+	G_UNI_APPUNTI, /* ⭐ il canale APPUNTI (0x02), servito dalla fase 7: i suoi
+	                *    byte vanno a `rcp_ricevi_appunti()`.  ⛔ Sta separato da
+	                *    `G_UNI_INPUT` per una ragione che non e' di ordine: qui
+	                *    gli stream sono **uno per trasferimento** (§2.5), quindi
+	                *    ce n'e' piu' d'uno vivo insieme e la FINE di ciascuno
+	                *    e' un fatto — mentre lo stream di input e' uno solo e
+	                *    resta aperto. */
 };
 
 typedef struct {
@@ -1815,6 +1822,130 @@ static void gancio_video_azzera(void *ctx, int64_t stream)
 	coda_butta_stream(w, stream);
 }
 
+/* ------------------------------------------------------------------------- */
+/* ⭐⭐ FASE 7 — I TRE GANCI DEL CANALE APPUNTI VERSO IL CLIENT (§2.5, §7.4).  */
+/*                                                                            */
+/* ⛔⭐ E NON SONO I `video_*` RIUSATI, benche' aprano lo stesso genere di      */
+/*     stream: `gancio_video_apri()` RICORDA quale stream ha aperto            */
+/*     (`video_stream_ultimo`), perche' §5.1 gli fa azzerare **il precedente** */
+/*     quando ne parte uno piu' recente.  Un trasferimento di appunti che      */
+/*     passasse di li' diventerebbe «il fotogramma precedente» del prossimo    */
+/*     fotogramma — ⛔ cioe' verrebbe azzerato a meta' da una regola che non lo */
+/*     riguarda, e il sintomo sarebbe «gli appunti arrivano tagliati quando il */
+/*     desktop si muove».                                                      */
+
+static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
+{
+	wt *w = (wt *)ctx;
+	uint8_t pre[16];
+	size_t n = 0;
+	int64_t id = -1;
+
+	if (restano)
+		*restano = 0;
+	if (!w->conn || w->sessione == -1 || w->guasto)
+		return false;
+	if (restano)
+		*restano = ngtcp2_conn_get_streams_uni_left2(w->conn);
+
+	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
+		registro_dettaglio(REG_WT,
+		                   "nessuno stream unidirezionale per gli appunti: il "
+		                   "client ne concede ancora %llu (§2.5 ne vuole uno per "
+		                   "trasferimento)",
+		                   (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
+			                   w->conn));
+		return false;
+	}
+
+	n += varint_scrivi(pre + n, 0x54);
+	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
+
+	if (!coda_metti(w, id, pre, n, false)) {
+		/* ⛔ Stesso trattamento del video: uno stream aperto e muto tiene un
+		 *    posto nel conto del client e non diventa mai un messaggio. */
+		ngtcp2_conn_shutdown_stream_write(w->conn, 0, id, 0);
+		registro_dice(REG_WT,
+		              "⛔ il preambolo di WebTransport (%zu byte) non entra in "
+		              "coda: stream %ld azzerato, nessun trasferimento di appunti",
+		              n, (long)id);
+		return false;
+	}
+	*stream = id;
+	return true;
+}
+
+static bool gancio_appunti_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
+                                  size_t len)
+{
+	return coda_metti((wt *)ctx, stream, dati, len, false);
+}
+
+static void gancio_appunti_fin(void *ctx, int64_t stream)
+{
+	wt *w = (wt *)ctx;
+	/* ⛔ Il FIN e' un elemento della coda come gli altri, e NON si scrive
+	 *    subito: deve uscire DOPO i byte che lo precedono. */
+	if (!coda_metti(w, stream, NULL, 0, true))
+		registro_dice(REG_WT,
+		              "⛔ il FIN dello stream %ld degli appunti non entra in "
+		              "coda: il messaggio e' uscito e lo stream resta aperto",
+		              (long)stream);
+}
+
+/* ------------------------------------------------------------------------- */
+/* ⭐⭐ E I DUE GANCI VERSO LA SESSIONE — «offri» e «rispondi».                */
+/*                                                                            */
+/* ⛔ Passano da `main.c` come quelli dell'input, e per la stessa ragione:     */
+/*    `webtransport.c` conosce il filo e non conosce i figli, e chi cuce i due */
+/*    mondi e' l'unico che conosce tutt'e due i lati.                         */
+
+static wt_appunti_offerta gancio_palco_appunti_offri;
+static wt_appunti_consegna gancio_palco_appunti_risposta;
+static void *gancio_palco_appunti_ctx;
+
+void wt_appunti_gancio(wt_appunti_offerta offri, wt_appunti_consegna risposta,
+                       void *ctx)
+{
+	gancio_palco_appunti_offri = offri;
+	gancio_palco_appunti_risposta = risposta;
+	gancio_palco_appunti_ctx = ctx;
+}
+
+static bool gancio_appunti_offri(void *ctx)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!gancio_palco_appunti_offri || !w->rcp)
+		return false;
+	/* ⛔ Invariante I3: si offre alla sessione DI CHI HA CHIESTO, e il nome e'
+	 *    quello che PAM ha ammesso su questa connessione — non un parametro che
+	 *    viene dal filo.  Un utente che potesse mettere del testo negli appunti
+	 *    di un altro sarebbe una via di comunicazione fra sessioni che nessuno
+	 *    ha chiesto. */
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return false;
+	return gancio_palco_appunti_offri(gancio_palco_appunti_ctx, mio);
+}
+
+static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
+                                    const char *testo, size_t byte)
+{
+	wt *w = (wt *)ctx;
+	const char *mio;
+
+	if (!gancio_palco_appunti_risposta || !w->rcp)
+		return false;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return false;
+	return gancio_palco_appunti_risposta(gancio_palco_appunti_ctx, mio, serial,
+	                                     testo, byte);
+}
+
+
 /* ⛔⭐ I PING DEL TRASPORTO MENTRE SI ASPETTANO LE CREDENZIALI — `RCP.md` §4.6,
  *     riquadro R1.8, che e' normativo e comincia con un ⛔.  Rilievo B-2, curato
  *     il 10 agosto 2026 notte.
@@ -2822,6 +2953,60 @@ void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
 		audio_a_una(w, utente, codec, istante_us, dati, byte);
 }
 
+/* ------------------------------------------------------------------------- */
+/* ⭐⭐ E LE DUE PORTE DAL FIGLIO VERSO IL FILO.                               */
+
+static void appunti_a_una(wt *w, const char *utente, const char *testo,
+                          size_t byte)
+{
+	const char *mio;
+
+	if (!w->rcp)
+		return;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0] || strcmp(mio, utente) != 0)
+		return;
+	rcp_appunti_dalla_sessione(w->rcp, testo, byte);
+}
+
+void wt_appunti_dalla_sessione(const char *utente, const char *testo,
+                               size_t byte)
+{
+	if (!utente || !testo)
+		return;
+	for (wt *w = vive_prima; w; w = w->viva_dopo)
+		appunti_a_una(w, utente, testo, byte);
+}
+
+bool wt_appunti_richiesta(const char *utente, uint32_t serial)
+{
+	if (!utente)
+		return false;
+	/* ⛔ Si ferma al PRIMO che risponde di si', e non e' un'ottimizzazione: per
+	 *    l'invariante I2 un utente ha **una sola** connessione remota viva alla
+	 *    volta (§5.1, `GIA_ATTIVA_REMOTA`), quindi il primo e' l'unico.  ⚠ Se
+	 *    un giorno I2 cambiasse, questa riga sarebbe il posto in cui si decide
+	 *    A CHI si chiede — e allora la scelta andrebbe scritta, non lasciata
+	 *    all'ordine di una lista. */
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		uint64_t ora;
+
+		if (!w->rcp || !w->conn)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !mio[0] || strcmp(mio, utente) != 0)
+			continue;
+		/* ⛔ L'orologio si chiede a ngtcp2, che e' quello con cui `rcp_tempo()`
+		 *    misurera' il fondo: due orologi diversi sulla stessa grandezza
+		 *    darebbero un fondo che scade prima o dopo di quel che dice. */
+		ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+		if (rcp_appunti_chiedi(w->rcp, serial, ora))
+			return true;
+	}
+	return false;
+}
+
 bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
 {
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
@@ -2907,6 +3092,24 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	g.video_scrivi = gancio_video_scrivi;
 	g.video_fin = gancio_video_fin;
 	g.video_azzera = gancio_video_azzera;
+
+	/* ⭐⭐ §7.4 — IL CANALE APPUNTI, e si collegano TUTTI E CINQUE o nessuno.
+	 *
+	 * ⛔ E la condizione e' il ponte verso il palco, come per l'input: senza,
+	 *    `rcp.c` convaliderebbe i messaggi (quello e' protocollo) e poi
+	 *    dichiarerebbe di non aver servito niente.  ⚠ Ma i tre del FILO
+	 *    dipendono solo dal trasporto, non dal palco: agganciarli tutti insieme
+	 *    e' una scelta, e la ragione e' che meta' canale non serve a nessuno —
+	 *    annunciare al client un testo che poi non si puo' spedire, o spedirgli
+	 *    quel che ha copiato la sessione senza poter servire chi incolla, sono
+	 *    due meta' che l'utente vede come «gli appunti non funzionano». */
+	if (gancio_palco_appunti_offri && gancio_palco_appunti_risposta) {
+		g.appunti_apri = gancio_appunti_apri;
+		g.appunti_scrivi = gancio_appunti_scrivi;
+		g.appunti_fin = gancio_appunti_fin;
+		g.appunti_offri = gancio_appunti_offri;
+		g.appunti_risposta = gancio_appunti_risposta;
+	}
 
 	/* ⭐⭐ §7.3 — IL CANALE DI INPUT.  ⛔ E si collegano TUTTI E SEI o nessuno:
 	 *     `rcp.c` guarda il primo e se c'e' pretende gli altri, perche' un
@@ -3025,6 +3228,27 @@ static void rcp_passa_input(wt *w, int64_t stream, const uint8_t *dati,
 	/* ⛔ E il battito si rimette in riga anche di qui: un input puo' aver
 	 *    fatto scattare un congedo (una violazione di §7.3), e aspettare il
 	 *    giro dopo lascerebbe il motivo fermo in coda. */
+	regola_battito(w);
+}
+
+/* ⭐⭐ FASE 7 — i byte del canale APPUNTI (0x02), §2.5 e §7.4.
+ *
+ * ⛔ E `fin` arriva fin qui, mentre per l'input non arrivava: la' lo stream e'
+ *    uno solo e resta aperto, qui e' **uno per trasferimento** e la sua fine
+ *    e' l'unico modo che `rcp.c` ha di liberare il posto in tabella.  ⚠ Senza,
+ *    il canale funzionerebbe per i primi otto trasferimenti e poi smetterebbe
+ *    — cioe' il difetto peggiore da diagnosticare: quello che compare dopo. */
+static void rcp_passa_appunti(wt *w, int64_t stream, const uint8_t *dati,
+                              size_t len, bool fin)
+{
+	uint64_t ora;
+	if (!w->rcp)
+		return;
+	if (len == 0 && !fin)
+		return;
+	ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+	if (!rcp_ricevi_appunti(w->rcp, stream, dati, len, fin, ora))
+		return;
 	regola_battito(w);
 }
 
@@ -3348,7 +3572,7 @@ enum esito { E_MIO, E_ATTENDI, E_HTTP3 };
  *   di QPACK, che sono di nghttp3.  Uno stream WebTransport si riconosce dal
  *   suo tipo, 0x54 — che come 0x41 non sta in un byte: sul filo sono 0x40 0x54. */
 static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
-                             size_t len, bytes *riunito)
+                             size_t len, bool fin, bytes *riunito)
 {
 	stream_giudizio *g = giudizio_trova(w, stream_id);
 	uint64_t sessione = 0;
@@ -3387,6 +3611,15 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			 *    e il conto di §2.3 non deve restare indietro. */
 			conta_credito(w, stream_id, len);
 			rcp_passa_input(w, stream_id, dati, len);
+			return E_MIO;
+		case G_UNI_APPUNTI:
+			/* ⭐ Il canale appunti, gia' riconosciuto.  ⛔ Il credito PRIMA
+			 *    della consegna, come per l'input, e per la stessa ragione: se
+			 *    la consegna facesse cadere la sessione, quei byte sono
+			 *    comunque arrivati e il conto di §2.3 non deve restare
+			 *    indietro. */
+			conta_credito(w, stream_id, len);
+			rcp_passa_appunti(w, stream_id, dati, len, fin);
 			return E_MIO;
 		default:
 			break;
@@ -3449,8 +3682,9 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		         "unidirezionale (§2.5)";
 		break;
 	}
-	g->genere = guasto      ? G_UNI_KO
+	g->genere = guasto           ? G_UNI_KO
 	            : canale == 0x01 ? G_UNI_INPUT
+	            : canale == 0x02 ? G_UNI_APPUNTI
 	                             : G_UNI_OK;
 	registro_dice(REG_WT,
 	              "stream unidirezionale %ld del client, sessione %llu, tipo "
@@ -3460,6 +3694,10 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	              : canale == 0x01
 	                     ? "⭐ INPUT, e da oggi si SERVE: i byte vanno a "
 	                       "rcp_ricevi_input() (§7.3)"
+	              : canale == 0x02
+	                     ? "⭐ APPUNTI, e dalla fase 7 si SERVONO: i byte vanno "
+	                       "a rcp_ricevi_appunti() (§7.4).  ⚠ Uno stream per "
+	                       "trasferimento, quindi di questi ce n'e' piu' d'uno"
 	                     : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i "
 	                       "byte si contano nel credito e si scartano, e "
 	                       "questa riga e' la tolleranza dichiarata (§3)");
@@ -3486,6 +3724,15 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		 *    proprio quello che l'utente sente come «il primo clic non
 		 *    ha fatto niente». */
 		rcp_passa_input(w, stream_id, carico, carico_n);
+	} else if (canale == 0x02) {
+		/* ⭐ Come per l'input: il primo pezzo arriva insieme al preambolo che
+		 *    l'ha fatto riconoscere, e si consegna SUBITO.  ⛔ Aspettare il
+		 *    pacchetto dopo perderebbe il primo messaggio di ogni
+		 *    trasferimento — e su questo canale un trasferimento e' spesso UN
+		 *    messaggio solo, quindi si perderebbe il trasferimento intero.
+		 * ⚠ E il `fin` viaggia con lui: uno stream che porta un messaggio corto
+		 *   puo' arrivare tutto insieme, preambolo e FIN compresi. */
+		rcp_passa_appunti(w, stream_id, carico, carico_n, fin);
 	}
 	bytes_libera(&g->pref);
 	return E_MIO;
@@ -3502,7 +3749,7 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	 *    tutto: fra loro c'e' il canale di controllo di HTTP/3 e i due di
 	 *    QPACK, che sono di nghttp3 e non nostri. */
 	if ((stream_id & 0x03) == 0x02)
-		return smista_uni(w, stream_id, dati, len, riunito);
+		return smista_uni(w, stream_id, dati, len, fin, riunito);
 
 	/* Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e
 	 * gli stream WebTransport arrivano tutti di li'. */
