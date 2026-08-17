@@ -4,7 +4,37 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **16 agosto 2026, sera.** ⇒ **SI APRE LA FASE 6, IN UNA SESSIONE NUOVA**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **17 agosto 2026, mattina**
+>
+> ## ⛔⛔ La decisione di ieri sera cambia che cosa È il prodotto: **il dynamic resolution è uscito**
+>
+> *«Non voglio mettere delle eccezioni nel progetto. Il dynamic resolution esce dalle funzionalità
+> di Remotix.»* — l'utente, dopo averlo provato sul tablet. ⇒ `DECISIONI.md` **§5.1-bis**, ed è il
+> primo posto da leggere: la voce dice che cosa esce, che cosa resta, e perché la ragione è il
+> prodotto e non il codice.
+>
+> | | |
+> |---|---|
+> | ⛔ **che cosa esce** | cambiare la misura della tela **mentre la sessione è viva**. Tolti da `src/pagina.html` l'interruttore `?adatta=segui`, `TELA_FONDO_MS`, `tela_forse_chiedi()` e il ramo del `resize` |
+> | ⭐ **che cosa resta** | la tela nasce con la misura della finestra **alla nascita e al riattacco** della sessione (§5.0-sexies, intatta). Poi il client riscala e il desktop non si tocca più |
+> | ⚠ **il prezzo, dichiarato** | se la finestra cambia **forma** o il tablet si **ruota**, le bande si vedono — e **non è un difetto da curare**: è la scelta. Per riavere la misura giusta ci si **riattacca** |
+> | ⛔ **quel che NON esce** | `ADATTA_TELA` resta nel protocollo e la catena server resta viva **per intero**: la usa il riattacco. Chi la togliesse credendola figlia dell'inseguimento **romperebbe il riattacco** |
+> | ⭐ **e la fase 11 (KDE) si alleggerisce** | non deve più portare il ridimensionamento «nella forma della negoziazione»: deve solo **dichiarare un rifiuto**, che su KWin ≤ 6.7.4 è il caso normale |
+>
+> **Misurato dopo il taglio** (`fasi/06-...md` §4.3-bis): **12 combinazioni su 12 verdi**, sei scene
+> per due motori, zero rosse. ⏱ ~7 minuti a rifarla tutta.
+>
+> ## ⏳ Le due cose che aspettano una tua parola
+>
+> 1. ⛔ **il lanciatore `06-b37-lancia.sh tutti tutte` dà dodici rossi finti** — non riapre il
+>    browser dopo la prima scena (`spegni_motore` uccide il pid sbagliato). Il prodotto è sano, il
+>    banco no. ⇒ **finché non è curato, si lancia una scena per volta**;
+> 2. ⏳ **il prodotto dopo il taglio non l'hai ancora visto tu**: la prova sul DeX vero non è stata
+>    fatta. Quel che è provato è che la funzione non c'è più e che nient'altro si è rotto.
+>
+> ---
+>
+> ## 📌 E il punto di ripresa di ieri, che vale ancora — **16 agosto 2026, sera**
 >
 > *Deciso dall'utente: «per fase 6 apro una nuova sessione».*
 >

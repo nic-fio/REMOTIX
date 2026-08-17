@@ -336,6 +336,32 @@ interpolato*.
 | i tre modi di `?adatta=` | `no` **0** · spento di suo **0** · `segui` **4 su 4**, con i 4 `resize` arrivati in tutti e tre — ⇒ **I6 rispettata** |
 | la voce spenta su `COMPOSITORE_INCAPACE` | ⛔ prima: **non fingeva mai il successo, ma non si spegneva** (5 `ADATTA_TELA` dopo il rifiuto) ⇒ dopo la cura **0 e 0**, guardia attiva 4/4 |
 
+### 4.3-bis · ⛔⭐ 17 AGOSTO 2026 — la stessa pagina **senza** il ridimensionamento a caldo
+
+*`DECISIONI.md` §5.1-bis: la funzione è uscita dal prodotto. Le due righe qui sopra sono la misura
+di ieri e restano come storia; queste sono la misura di oggi, sulla pagina che la fase consegna.*
+
+⛔ **Perché rimisurare tutto e non solo le due scene toccate**: dalla pagina è stato **tolto
+codice**, e le altre quattro scene la leggono. Una regressione lì non l'avrebbe vista nessuno.
+
+| | `[M]` 17 agosto 2026, `06-b37`, ogni scena in un'invocazione sua |
+|---|---|
+| ⭐ **la batteria intera** | **12 combinazioni su 12 verdi** — sei scene (`numeri` · `pixel` · `sfora` · `coordinate` · `modi` · `voce`) per due motori (Chrome, Firefox), **zero righe rosse** |
+| ⭐ i modi di `?adatta=`, **rovesciati di senso** | `no` **0** · predefinito **0** · `segui` **0**, con **4 `resize` su 4** arrivati in tutti e tre ⇒ la tela **non si tocca a sessione viva**, nemmeno con l'indirizzo vecchio |
+| ⭐⭐ **i controlli positivi**, che ieri non c'erano | **spia VEDE** in tutti i giri (una `chiedi_tela` chiamata a mano viene contata) e `typeof tela_forse_chiedi` = **`undefined`**. ⛔ Senza di loro quei tre zeri sarebbero stati verdi **anche a spia rotta** |
+| la voce spenta, V4 con la domanda nuova | dopo un `COMPOSITORE_INCAPACE` iniettato: **4 resize arrivati, 0 arrivi a `chiedi_tela`**, `tela_spenta` = `True`, e la dichiarazione all'utente esce: *«Questo desktop non sa cambiare misura: l'immagine viene adattata alla finestra dal browser»* |
+| il palco, giudicato prima del prodotto | **183-184 quadri in 3 s · 6 `resize` battuti → 6 arrivati** (`LEZIONI.md` §1.15 non si riproduce qui) |
+| ⏱ **quanto costa rifarla** | **~35 s a scena** · ~3 min 30 s un motore · **~7 minuti** la batteria intera su due motori |
+
+> ### ⛔ E UN DIFETTO DEL BANCO, NON DEL PRODOTTO — da curare, non curato
+>
+> `bash banchi/06-b37-lancia.sh tutti tutte` dà **dodici rossi finti**: dopo la prima scena il
+> browser non si riapre («nessuna finestra X per il pid …») perché `spegni_motore` uccide il pid
+> del wrapper e non quello che tiene la finestra. ⭐ **I banchi si sono comportati bene** — si sono
+> fermati invece di misurare, cioè hanno distinto «zero» da «non ho guardato» — ⚠ ma chi lancia
+> quella riga la prossima volta perde mezz'ora a cercare un difetto che non c'è.
+> ⇒ **Finché non è curato, si lancia una scena per volta.**
+
 ### 4.4 · La tela sul filo, e l'arbitro
 
 | | `[M]` |
