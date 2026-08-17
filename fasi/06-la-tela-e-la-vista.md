@@ -21,7 +21,7 @@ rifanno**:
 | la **tela concordata all'attacco** | ✅ `[M]` 1264×800 in una finestra 1265×800, scala **1,000** |
 | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, **0** fotogrammi scartati |
 | la **vista che riscala** | ✅ c'era dalla fase 2; la scala vale 1 quando le due tele combaciano |
-| il **ridimensionamento a caldo** | ✅ `[M]` 6 ms, dietro `?adatta=segui`, spento di suo (I6) |
+| ~~il **ridimensionamento a caldo**~~ | ⛔ **USCITO dal prodotto il 17 agosto 2026** (`DECISIONI.md` §5.1-bis). Era `[M]` 6 ms su Mutter e **impossibile** su KWin ≤ 6.7.4: l'utente ha tolto l'eccezione invece di mantenerla |
 
 ⛔ **E quel che resta APERTO, che è il lavoro vero di questa fase:**
 

@@ -418,7 +418,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⭐ **il numero della fase** | la tela concordata all'attacco: `[M]` **1264×800** = la finestra, scala **1,000**, `pixelated` |
 > | ⭐ **login → desktop** | `[M]` **4,4 s → 311 ms** — e la cura non è il ridimensionamento: è che **riavviare il flusso consegna un buffer** quando una chiave è dovuta e la scena è ferma |
 > | ⭐⭐ **clic → fotogramma spedito** | `[M]` **136 ms → 41 ms** (peggiore 502 → 47), su scena FERMA. ⚠ Non è il numero di §1-bis (quello è su scena in movimento, 139 ms, e resta della fase 8): è l'anello che nessuno aveva misurato |
-> | ⭐ **il ridimensionamento a caldo** | `[M]` **6 ms** dalla risposta del palco alla chiave spedita |
+> | ⭐ **il ridimensionamento a caldo** | `[M]` **6 ms** dalla risposta del palco alla chiave spedita. ⚠ **E dal 17 agosto 2026 non è più una funzione dell'utente**: la tela si adatta all'attacco e al **riattacco** — che è dove questi 6 ms si pagano — e mai a sessione viva (`DECISIONI.md` §5.1-bis) |
 > | ⛔ **e il blocco della costruzione** | sciolto **senza chiedere all'utente**: `src/Contenitore` (podman da utente, sul portatile) e l'errore di percorso in `enter.sh` |
 >
 > ⛔⛔ **DIECI DIFETTI TROVATI REFUTANDO** la cura appena scritta (quattro agenti, mandato

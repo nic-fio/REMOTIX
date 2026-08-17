@@ -1,25 +1,35 @@
 #!/usr/bin/env python3
-"""06-b37-modi.py — ⛔ I TRE MODI DI `?adatta=`, E L'INVARIANTE **I6**.
+"""06-b37-modi.py — ⛔ LA TELA NON SI TOCCA A SESSIONE VIVA, IN NESSUN MODO.
 
     python3 banchi/06-b37-modi.py <porta> <display> <pid> <nome> <esiti>
 
-`CODER.md` **I6**: «cio' che cambia quel che si VEDE sta dietro un interruttore
-spento finche' l'utente non lo guarda».  ⇒ Le due domande, e sono diverse:
+⛔⛔ QUESTO BANCO HA CAMBIATO MESTIERE IL 17 AGOSTO 2026, e va detto perche' il
+   nome del file e' rimasto quello di prima.  Misurava **i tre modi di
+   `?adatta=`** e l'invariante **I6** — cioe' che l'interruttore
+   dell'inseguimento fosse davvero spento di suo, e che acceso inseguisse.
 
-  · **lo spento e' davvero spento?**  Non «l'interruttore esiste»: che con
-    l'interruttore in posizione di riposo il cammino **non venga percorso**.
-  · **`segui` fa UNA cosa sola?**  Cioe' insegue la finestra, e nient'altro.
+⭐ Poi l'utente ha deciso (`DECISIONI.md` §5.1-bis): *«non voglio mettere delle
+   eccezioni nel progetto.  Il dynamic resolution esce dalle funzionalita' di
+   Remotix»*.  L'interruttore non esiste piu', e con lui la domanda su I6.
+
+⇒ ⛔ **QUEL CHE QUESTO BANCO SORVEGLIA ADESSO E' CHE LA FUNZIONE NON RIENTRI**:
+   che ridimensionare la finestra a sessione aperta **non mandi niente sul filo**,
+   qualunque cosa ci sia nell'indirizzo.  ⚠ E' una guardia contro il ritorno, non
+   una prova di una funzione: il giorno in cui qualcuno riscrivesse
+   `tela_forse_chiedi()` credendo di curare le bande nere, questo diventa rosso.
 
 ⛔ L'ATTESO, DICHIARATO PRIMA — ridimensionando la finestra 4 volte a sessione
    aperta, le richieste di tela che partono devono essere:
 
-     `?adatta=no`      0   (`SPECIFICHE.md` §6.4 · e' la pagina di ieri)
-     *(niente)*        0   (di suo si chiede SOLO all'attacco — §6.4, §5.0-sexies)
-     `?adatta=segui`   4   (una per ridimensionamento, dietro il fondo di 250 ms)
+     *(niente)*        0   (si chiede SOLO all'attacco e al riattacco — §5.0-sexies)
+     `?adatta=no`      0   (`SPECIFICHE.md` §6.4 · non chiede mai, nemmeno all'attacco)
+     `?adatta=segui`   0   ⭐ IL VALORE CHE NON ESISTE PIU': un indirizzo vecchio,
+                           un segnalibro, un banco non aggiornato.  Deve valere il
+                           predefinito e **non riattivare niente**
 
-⭐ IL CONTROLLO POSITIVO, e senza di lui i due zeri non valgono niente: nello
+⭐ IL CONTROLLO POSITIVO, e senza di lui i tre zeri non valgono niente: nello
    stesso giro si conta quanti `resize` la pagina ha RICEVUTO.  Uno zero con 4
-   resize arrivati e' un interruttore spento; uno zero con 0 resize e' un banco
+   resize arrivati e' una funzione che non c'e'; uno zero con 0 resize e' un banco
    che non ha stimolato nulla (`CODER.md` §3.10).
 """
 import importlib.util
@@ -50,7 +60,7 @@ PREPARA = """(function () {
 
 def giro(modo):
     """⛔ Ogni modo vuole un CARICAMENTO suo: `ADATTA` si legge una volta sola,
-       all'avvio della pagina (`src/pagina.html:2776`)."""
+       all'avvio della pagina (`const ADATTA` in `src/pagina.html`)."""
     try:
         B.com("location.hash = %r; location.reload(); 'ricarico'"
               % ("adatta=" + modo if modo else ""), 3)
@@ -74,14 +84,15 @@ def giro(modo):
             "resize_arrivati": resize}
 
 
-print("== 06-b37 · %s — i tre modi di `?adatta=` (I6)" % B.nome, flush=True)
+print("== 06-b37 · %s — la tela non si tocca a sessione viva (§5.1-bis)"
+      % B.nome, flush=True)
 if not B.aspetta_pagina() or not B.trova_finestra():
     print("    NO  pagina o finestra assenti", flush=True)
     sys.exit(3)
 if not B.giudica_palco():
     sys.exit(4)
 
-atteso = {"no": 0, "": 0, "segui": 4}
+atteso = {"no": 0, "": 0, "segui": 0}
 guasti = 0
 for modo in ("no", "", "segui"):
     r = giro(modo)
@@ -103,14 +114,16 @@ for modo in ("no", "", "segui"):
         guasti += 1
         continue
     if n == atteso[modo]:
-        print("    OK  %s" % ("lo spento e' DAVVERO spento (0 richieste con 4 "
-                              "resize arrivati)" if atteso[modo] == 0 else
-                              "«segui» insegue la finestra: una richiesta per "
-                              "ridimensionamento, e nient'altro"), flush=True)
+        print("    OK  la tela non si tocca a sessione viva (0 richieste con 4 "
+              "resize arrivati)", flush=True)
     else:
-        print("    NO  %d richieste invece di %d: %s"
-              % (n, atteso[modo], [c["perche"] for c in r["chieste"]]),
-              flush=True)
+        # ⛔ E il rosso qui ha UN significato solo, che vale la pena scrivere:
+        #    il ridimensionamento a caldo e' RIENTRATO.  Non «il conto e'
+        #    diverso»: la funzione che l'utente ha tolto il 17 agosto 2026 e'
+        #    tornata viva (`DECISIONI.md` §5.1-bis).
+        print("    NO  ⛔ IL RIDIMENSIONAMENTO A CALDO E' RIENTRATO: %d "
+              "richieste invece di 0 — %s"
+              % (n, [c["perche"] for c in r["chieste"]]), flush=True)
         guasti += 1
 
 sys.exit(1 if guasti else 0)

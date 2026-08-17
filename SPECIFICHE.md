@@ -595,7 +595,7 @@ perfetto»).*
 | momento | che cosa succede davvero | `[M]` |
 |---|---|---|
 | **attacco** | la pagina manda `ADATTA_TELA` con la misura della propria finestra, e la tela diventa quella | tela **1264×800** in una finestra 1265×800, scala di disegno **1,000** |
-| **durante la sessione** | il client riscala, e il desktop non si tocca — ⚠ salvo l'interruttore `?adatta=segui`, **spento di suo** (I6, e `DECISIONI.md` §5.1) | il ridimensionamento a caldo costa **6 ms** |
+| **durante la sessione** | ⛔ il client riscala, e il desktop **non si tocca mai** — dal 17 agosto 2026 non c'è più nemmeno l'interruttore che lo faceva (`DECISIONI.md` §5.1-bis) | ~~il ridimensionamento a caldo costa **6 ms**~~ — misurato, e uscito lo stesso: costava poco su Mutter e **non si poteva fare** su KWin ≤ 6.7.4 |
 | **riattacco da un altro dispositivo** | `SESSIONE` concede **la tela che il palco ha già** (§4.5), così i pixel arrivano subito, e poi la pagina chiede la sua | **0 fotogrammi scartati** |
 
 ⛔ **E la riga «È 1:1» è diventata vera in un senso più stretto di quel che sembrava**: non «un
@@ -629,8 +629,9 @@ dentro uno schermo**, e le due misure sono diverse — a volte molto.*
 > ⚠ **E la ragione che questo paragrafo dava per scegliere lo schermo non è stata ignorata, è stata
 > pagata**: *«un desktop grande quanto la finestra che avevi aperto per caso resterebbe tale per
 > tutta la sessione — piccolo per sempre»*. ⛔ Era vero **finché la tela non si poteva cambiare**.
-> Adesso si cambia: a ogni riattacco sempre, e durante la sessione con `?adatta=segui`. La frase
-> «piccolo per sempre» non descrive più niente.
+> Adesso si cambia **a ogni attacco e a ogni riattacco** — ⚠ *durante* la sessione no, e dal 17
+> agosto 2026 nemmeno dietro un interruttore (`DECISIONI.md` §5.1-bis). La frase «piccolo per
+> sempre» non descrive più niente lo stesso: bastava riattaccarsi.
 >
 > ⭐ **E il «appena vai a schermo intero torna 1:1 e nitido» è diventato la condizione NORMALE**, non
 > il premio dello schermo intero: `[M]` scala **1,000** e `image-rendering: pixelated` in una
@@ -651,7 +652,7 @@ esattamente la condizione in cui vista e tela coincidono e non si scala niente.
 | | |
 |---|---|
 | il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
-| **ruotare il telefono** dopo l'attacco | ⚠ di suo la tela **non gira**: si vedono le bande, o si riscala. ⭐ Con `?adatta=segui` la segue — ed è un interruttore spento (§6.4, `DECISIONI.md` §5.1) |
+| **ruotare il telefono** dopo l'attacco | ⛔ la tela **non gira**: si vedono le bande, e il client riscala impaginando (§6.2). ⚠ Ed è il comportamento **dichiarato**, non un difetto da curare: l'interruttore che la faceva girare è uscito il 17 agosto 2026 (`DECISIONI.md` §5.1-bis). ⭐ Per riavere la misura giusta ci si **riattacca** |
 | uno schermo 4K | la tela nasce 4K, e sono **cinque volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
 
 `[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
@@ -719,9 +720,10 @@ sola per GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiorna
 > automatismo, ed è il punto: senza, tornano le bande nere, il testo interpolato, la conversione
 > delle coordinate e i quattro secondi di attesa fra il login e il desktop.
 >
-> ⚠ **La seconda metà vale ancora, e sta dove è sempre stata**: durante la sessione viva
-> l'inseguimento della finestra è **spento di suo** (`?adatta=segui` per accenderlo — vedi
-> `DECISIONI.md` §5.1), perché su KWin ridimensionare un output ridispone le finestre dell'utente.
+> ⛔ **La seconda metà vale ancora, e dal 17 agosto 2026 vale in modo più netto**: durante la
+> sessione viva la tela **non si tocca mai**, e non c'è più nemmeno l'interruttore per farlo
+> (`DECISIONI.md` §5.1-bis — *«non voglio mettere delle eccezioni nel progetto»*). Su KWin ≤ 6.7.4
+> ridimensionare un output non si può affatto, e dove si può ridispone le finestre dell'utente.
 >
 > ⚠ **E «dove il compositore non lo sa fare la voce è spenta» vale per intero**: il server risponde
 > `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` e il client **DEVE** mostrarla spenta (`RCP.md` §7.1).

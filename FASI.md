@@ -5221,7 +5221,9 @@ secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = qua
   chiuse e i quattro tempi (`RCP_TELA_ATTESA_MS`, `RCP_TELA_RICHIAMO_MS`, `TELA_FONDO_MS`,
   `RISVEGLIO_MS`);
 - `DECISIONI.md` **§5.1** — vale **durante** la sessione, non all'attacco: l'inseguimento della
-  finestra sta dietro `?adatta=segui`, spento di suo (I6);
+  finestra sta dietro `?adatta=segui`, spento di suo (I6). ⛔ **E il 17 agosto 2026 è uscito del
+  tutto** — `DECISIONI.md` **§5.1-bis**, decisione dell'utente: *«non voglio mettere delle
+  eccezioni nel progetto»*. Durante la sessione la tela non si tocca, e non c'è più interruttore;
 - `SPECIFICHE.md` **§6.4** e `RCP.md` **§7.1** — corrette: *«mai come automatismo»* non è più vero
   all'attacco, e il perché è scritto con la data;
 - `LEZIONI.md` **§7.5** (una deduzione al posto di un messaggio), **§6.2-bis** (un'attesa che

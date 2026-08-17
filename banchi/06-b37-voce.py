@@ -30,6 +30,15 @@ riuscito.»
      «insistere non lo insegna».
   V4 ⛔ con `?adatta=segui` acceso, dopo il rifiuto **ogni** ridimensionamento
      manda un `ADATTA_TELA` nuovo, per sempre: la voce non si spegne mai.
+
+⛔⛔ E V4 HA CAMBIATO DOMANDA IL 17 AGOSTO 2026 — `DECISIONI.md` §5.1-bis, e la
+   riga qui sopra e' la storia, non l'atteso.  Il ridimensionamento a caldo e'
+   **uscito dal prodotto** per decisione dell'utente, e con lui l'interruttore
+   `?adatta=segui`.  ⇒ L'atteso di V4 non e' piu' «zero richieste che passano la
+   guardia», e' **zero arrivi a `chiedi_tela`**: la scena che produceva il
+   difetto non puo' piu' esistere.  ⚠ V1-V3 non cambiano: la voce spenta serve
+   ancora, perche' la tela si chiede a ogni **riattacco** e la ripetizione su
+   `NON_ORA` (4 s) e' viva.
 """
 import importlib.util
 import json
@@ -196,9 +205,22 @@ B.scrivi({"tipo": "voce-rifiuto", "motivo": 1, "righe": righe1,
           "richieste_dopo": chieste2, "congedi": B.js("window.__b37_congedi")},
          iniezione="si")
 
-# --- V4: con `?adatta=segui`, la voce si spegne mai? ------------------------
-print("\n    --  V4 · la stessa scena con `?adatta=segui` acceso", flush=True)
-prima = json.loads(B.val("JSON.stringify(fetch)")) if False else None
+# --- V4: la scena del 16 agosto NON ESISTE PIU' -----------------------------
+# ⛔⛔ QUESTA VERIFICA HA CAMBIATO SENSO IL 17 AGOSTO 2026, `DECISIONI.md`
+#    §5.1-bis.  Chiedeva: «con `?adatta=segui` acceso, dopo un rifiuto la voce si
+#    spegne o si continua a chiedere per sempre?» — e il 16 agosto trovo' il
+#    difetto (`[M]` 5 richieste in 4 ridimensionamenti).
+#
+# ⭐ Adesso l'inseguimento e' USCITO dal prodotto, e con lui l'interruttore.  ⇒ La
+#    domanda non e' piu' «la voce si spegne», e' **«la funzione e' davvero
+#    uscita, anche con addosso l'indirizzo vecchio e un rifiuto?»**  L'atteso
+#    passa da «zero richieste che passano la guardia» a **zero arrivi**.
+#
+# ⚠ E `?adatta=segui` si tiene APPOSTA: e' il segnalibro di chi aveva la pagina
+#   di ieri.  Un valore che non esiste piu' deve valere il predefinito e non
+#   riaccendere niente.
+print("\n    --  V4 · l'indirizzo vecchio `?adatta=segui` non riaccende niente",
+      flush=True)
 try:
     B.com("location.hash = 'adatta=segui'; location.reload(); 'ricarico'", 3)
 except Exception:
@@ -210,72 +232,66 @@ if not B.aspetta_pagina(20):
 time.sleep(1.5)
 modo = B.val("ADATTA")
 print("        `ADATTA` vale «%s» dopo il ricaricamento" % modo, flush=True)
-if modo != "segui":
-    print("    NO  V4: l'interruttore non si e' acceso: scena non misurata",
-          flush=True)
+B.val(PREPARA)
+B.val(RIFIUTA % 1)
+time.sleep(1.0)
+B.val("window.__b37_chieste = []; window.__b37_r2 = 0;"
+      " addEventListener('resize', function(){ window.__b37_r2++; });"
+      " 'contatore acceso'")
+g = B.geometria()
+for i in range(4):
+    B.ridimensiona(g["l"] - 10 * (i + 1), g["a"])
+    time.sleep(0.5)
+time.sleep(1.2)
+dopo = B.js("window.__b37_chieste")
+# ⛔⭐ IL CONTROLLO POSITIVO, e senza di lui lo zero qui sopra non vale niente:
+#    «la funzione non c'e'» e «il banco non ha stimolato niente» hanno lo stesso
+#    aspetto (`CODER.md` §3.10, §4.6).
+# ⚠ Si chiama `chiedi_tela` e non piu' `tela_forse_chiedi()`: quest'ultima e'
+#   uscita col fondo, e chiamarla darebbe un `ReferenceError` che il banco
+#   leggerebbe come «zero richieste» — cioe' un verde per il motivo sbagliato.
+diag = B.js("""({ resize: window.__b37_r2, sessione: !!schermo.sessione,
+                  quadro: quadro_vista, adatta: ADATTA,
+                  chiedi: typeof chiedi_tela,
+                  fondo: typeof tela_forse_chiedi })""")
+print("    --  controllo: %d resize arrivati · sessione=%s · quadro=%s · "
+      "ADATTA=%s · chiedi_tela=%s · tela_forse_chiedi=%s"
+      % (diag["resize"], diag["sessione"], diag["quadro"], diag["adatta"],
+         diag["chiedi"], diag["fondo"]), flush=True)
+if diag["fondo"] != "undefined":
+    print("    NO  ⛔ `tela_forse_chiedi` ESISTE ANCORA: il fondo del "
+          "ridimensionamento a caldo e' rientrato (§5.1-bis)", flush=True)
     guasti += 1
-else:
-    B.val(PREPARA)
-    B.val(RIFIUTA % 1)
-    time.sleep(1.0)
-    B.val("window.__b37_chieste = []; window.__b37_r2 = 0;"
-          " addEventListener('resize', function(){ window.__b37_r2++; });"
-          " 'contatore acceso'")
-    g = B.geometria()
-    for i in range(4):
-        B.ridimensiona(g["l"] - 10 * (i + 1), g["a"])
-        time.sleep(0.5)
-    time.sleep(1.2)
-    dopo = B.js("window.__b37_chieste")
-    # ⛔⭐ IL CONTROLLO POSITIVO, e senza di lui lo zero qui sopra non vale
-    #    niente: «la voce e' spenta» e «il banco non ha stimolato niente» hanno
-    #    lo stesso aspetto (`CODER.md` §3.10, §4.6).
-    diag = B.js("""({ resize: window.__b37_r2, sessione: !!schermo.sessione,
-                      quadro: quadro_vista, adatta: ADATTA,
-                      chiedi: typeof chiedi_tela })""")
-    print("    --  controllo: %d resize arrivati · sessione=%s · quadro=%s · "
-          "ADATTA=%s · chiedi_tela=%s"
-          % (diag["resize"], diag["sessione"], diag["quadro"], diag["adatta"],
-             diag["chiedi"]), flush=True)
-    B.val("tela_forse_chiedi('controllo positivo del banco')")
-    time.sleep(1.0)
-    positivo = B.js("window.__b37_chieste")
-    if len(positivo) <= len(dopo):
-        print("    NO  ⛔ il controllo positivo NON scatta: la spia non vede "
-              "nemmeno una richiesta chiamata a mano ⇒ lo zero qui sopra e' "
-              "del BANCO, non del prodotto, e non si giudica niente",
-              flush=True)
-        guasti += 1
-        dopo = None
-    elif diag["resize"] < 4:
-        print("    NO  ⛔ solo %d resize su 4 sono arrivati alla pagina: lo "
-              "zero e' del PALCO, non del prodotto" % diag["resize"],
-              flush=True)
-        guasti += 1
-        dopo = None
-    if dopo is None:
-        sys.exit(1)
-    print("    --  V4: dopo il rifiuto e 4 ridimensionamenti, la pagina ha "
-          "chiesto ancora %d volte" % len(dopo), flush=True)
+B.val("chiedi_tela('controllo positivo del banco')")
+time.sleep(1.0)
+positivo = B.js("window.__b37_chieste")
+if len(positivo) <= len(dopo):
+    print("    NO  ⛔ il controllo positivo NON scatta: la spia non vede "
+          "nemmeno una richiesta chiamata a mano ⇒ lo zero qui sopra e' "
+          "del BANCO, non del prodotto, e non si giudica niente", flush=True)
+    guasti += 1
+    dopo = None
+elif diag["resize"] < 4:
+    print("    NO  ⛔ solo %d resize su 4 sono arrivati alla pagina: lo "
+          "zero e' del PALCO, non del prodotto" % diag["resize"], flush=True)
+    guasti += 1
+    dopo = None
+if dopo is None:
+    sys.exit(1)
+B.scrivi({"tipo": "voce-segui-uscito", "modo": modo,
+          "richieste_dopo_rifiuto": dopo}, iniezione="si")
+if dopo:
     for c in dopo:
         print("        «%s» misura %s · guardia %s"
               % (c["perche"], c["misura"], c["spenta"]), flush=True)
-    passate = [c for c in dopo if not c["spenta"]]
-    if dopo and not passate:
-        print("    OK  V4: la pagina arriva ancora a `chiedi_tela` a ogni "
-              "ridimensionamento (%d volte) ⛔ ma con la guardia SPENTA in "
-              "tutte: la funzione vera esce senza mandare niente" % len(dopo),
-              flush=True)
-        dopo = []
-    B.scrivi({"tipo": "voce-segui", "richieste_dopo_rifiuto": dopo},
-             iniezione="si")
-    if dopo:
-        print("    ⛔  V4: ⛔⛔ la voce NON si spegne: dopo un "
-              "`COMPOSITORE_INCAPACE` ogni ridimensionamento rimanda un "
-              "`ADATTA_TELA` — e il compositore ha gia' detto che non sa farlo",
-              flush=True)
-    else:
-        print("    OK  V4: dopo il rifiuto la pagina NON chiede piu': la voce "
-              "e' spenta", flush=True)
+    print("    NO  ⛔⛔ IL RIDIMENSIONAMENTO A CALDO E' RIENTRATO: %d arrivi a "
+          "`chiedi_tela` dopo 4 ridimensionamenti — la funzione e' uscita dal "
+          "prodotto il 17 agosto 2026 (`DECISIONI.md` §5.1-bis)" % len(dopo),
+          flush=True)
+    guasti += 1
+else:
+    print("    OK  V4: 4 resize arrivati, 0 arrivi a `chiedi_tela` — la tela "
+          "non si tocca a sessione viva, nemmeno con l'indirizzo vecchio",
+          flush=True)
 
 sys.exit(1 if guasti else 0)

@@ -1883,8 +1883,9 @@ class Schermo {
    *    NON DEVE far cambiare la tela, e in RCP/1 non cambia nemmeno la misura
    *    di quel che si codifica».  ⚠ Cambiare la tela e' un'ALTRA cosa, si
    *    chiama `ADATTA_TELA` (§7.1), viaggia sul filo e la manda `chiedi_tela()`
-   *    — all'attacco sempre, a finestra ridimensionata solo con `?adatta=segui`
-   *    (`SPECIFICHE.md` §6.4, `DECISIONI.md` §5.1 e §5.0-sexies).  Qui non parte
+   *    — ⭐ **all'attacco e al riattacco, e in nessun altro momento** dal 17
+   *    agosto 2026, quando il ridimensionamento a caldo e' uscito
+   *    (`SPECIFICHE.md` §6.4, `DECISIONI.md` §5.1-bis e §5.0-sexies).  Qui non parte
    *    nessun messaggio: si decide **come si dipinge quel che e' gia'
    *    arrivato**, e `this.tela_l`/`this.tela_a` — la tela in vigore, quella
    *    che le regole di §6.2 confrontano coi fotogrammi — non compaiono.
@@ -2742,9 +2743,25 @@ function rinegozia_vista() {
   quadro_vista = requestAnimationFrame(function () {
     quadro_vista = 0;
     schermo.adatta_vista();
-    /* ⭐⭐ E se l'utente ha acceso «segui la finestra», la TELA insegue la
-     *     cornice: vedi `chiedi_tela()`.  ⛔ Spento di suo — §5.1 e I6. */
-    if (ADATTA === "segui") tela_forse_chiedi("la finestra e' cambiata");
+    /* ⛔⛔⭐ E NON SUCCEDE NIENT'ALTRO: LA TELA NON SI TOCCA MAI A SESSIONE VIVA.
+     *
+     * ⛔ Decisione dell'utente, 17 agosto 2026 (`DECISIONI.md` §5.1-bis): *«non
+     *    voglio mettere delle eccezioni nel progetto.  Il dynamic resolution
+     *    esce dalle funzionalita' di Remotix»*.  ⚠ Qui c'era una riga —
+     *    `if (ADATTA === "segui") tela_forse_chiedi(...)` — e con lei un fondo
+     *    di 250 ms, un interruttore e un banco: **tolte tutte il 17 agosto**.
+     *
+     * ⭐ E LA RIGA CHE RESTA E' LA FUNZIONE INTERA: `adatta_vista()` riscala
+     *   l'immagine dentro la cornice nuova.  E' §5.1 alla lettera, dall'8
+     *   agosto — *«ridimensionare la finestra non tocca mai il desktop: si
+     *   adatta la vista»* — e adesso non ha piu' eccezioni.
+     *
+     * ⚠ QUEL CHE NON E' USCITO, e va detto perche' i due si somigliano: la tela
+     *   si chiede ancora **alla nascita e al riattacco** della sessione
+     *   (`chiedi_tela("l'attacco")`, §5.0-sexies).  Li' non c'e' nessuna
+     *   eccezione da mettere — la misura si sa prima che il palco esista, e ogni
+     *   compositore la sa prendere, chi per negoziazione e chi dalla riga di
+     *   avvio.  L'eccezione era **cambiarla a caldo**, ed e' quella che esce. */
   });
 }
 addEventListener("resize", rinegozia_vista);
@@ -2757,8 +2774,8 @@ addEventListener("resize", rinegozia_vista);
  *    conversioni»*.  ⇒ La tela del server si chiede della misura della tela del
  *    client ⇒ **scala 1**, conversione identita', e le bande non esistono.
  *
- * ⛔⭐ E I TRE MOMENTI SONO DIVERSI, perche' tre voci di `DECISIONI.md` dicono
- *     cose diverse e vanno rispettate tutt'e tre:
+ * ⛔⭐ E I MOMENTI ERANO TRE, DAL 17 AGOSTO 2026 SONO DUE — il secondo e' uscito
+ *     con la funzione, e resta scritto perche' si sappia che cosa non c'e' piu':
  *
  *   1. ⭐ ALL'ATTACCO — **sempre**.  E' §5.0-sexies alla lettera, ed e' anche la
  *      cura dei quattro secondi fra il login e il desktop: `[M]` 14 agosto,
@@ -2767,17 +2784,23 @@ addEventListener("resize", rinegozia_vista);
  *      riavvio del flusso, e un riavvio **consegna un buffer**: chiedere la
  *      tela all'attacco fa arrivare il fotogramma.
  *
- *   2. ⚠ A FINESTRA RIDIMENSIONATA — **solo se acceso**, `?adatta=segui`.  §5.1
- *      dice il contrario per la sessione viva — *«ridimensionare la finestra
- *      non tocca mai il desktop: si adatta la vista»* — e la terza delle sue tre
- *      ragioni non e' invecchiata: su KWin ridimensionare un output
- *      **ridispone le finestre dell'utente**.  ⇒ Sta dietro un interruttore
- *      spento (invariante I6), e chi lo accende sa che sta guardando una cosa
- *      nuova.
+ *   2. ⛔⛔ ~~A FINESTRA RIDIMENSIONATA, con `?adatta=segui`~~ — **USCITO IL 17
+ *      AGOSTO 2026**, `DECISIONI.md` §5.1-bis, e con lui l'interruttore, il
+ *      fondo e il banco dei modi.  Parole dell'utente: *«non voglio mettere
+ *      delle eccezioni nel progetto.  Il dynamic resolution esce dalle
+ *      funzionalita' di Remotix»*.
  *
- *   3. ⛔ MAI, con `?adatta=no`: e' la pagina di ieri, e serve al confronto A/B
- *      che il giudizio dell'utente richiede (`LEZIONI.md` §7.3 — a giudicare e'
- *      lui, e per giudicare servono le due immagini).
+ *      ⚠ E l'eccezione era misurabile, non un'impressione: su Mutter cambiare la
+ *        tela a caldo costa `[M]` 6 ms e funziona; su KWin ≤ 6.7.4 —
+ *        cioe' Debian Trixie, e fino a Forky — **non si puo'**
+ *        (`stream_virtual_output` risponde `Could not find output` per ogni
+ *        misura, `[M]` 8 agosto).  ⇒ Tenerla avrebbe voluto dire un prodotto che
+ *        fa una cosa diversa a seconda di chi ci ospita.
+ *
+ *   3. ⛔ MAI, con `?adatta=no`: e' la pagina di prima del 15 agosto, e serve al
+ *      confronto A/B che il giudizio dell'utente richiede (`LEZIONI.md` §7.3 — a
+ *      giudicare e' lui, e per giudicare servono le due immagini).  ⭐ E' l'unico
+ *      valore di `?adatta=` rimasto: qualunque altra cosa vale il predefinito.
  *
  * ⚠ E il conto di §6.2: ogni `ADATTA_TELA` spedita si dichiara allo `Schermo`
  *   (`adatta_tela_chiesta()`), perche' da quel momento un fotogramma con una
@@ -2797,7 +2820,6 @@ const ADATTA =
  *   solo a sessione aperta, e il server congeda chi lo manda prima). */
 let chiedi_tela = null;
 let tela_chiesta_l = 0, tela_chiesta_a = 0;
-let tela_attesa = 0;
 /* ⛔⭐⭐ LA VOCE SPENTA — `RCP.md` §7.1: «se il compositore non sa
  *      ridimensionare … il client **DEVE** mostrare la voce come spenta.  NON
  *      DEVE fingere che sia riuscito.»
@@ -2812,6 +2834,14 @@ let tela_attesa = 0;
  *        4 ridimensionamenti — a un compositore che aveva gia' detto di non
  *        saperlo fare.  ⇒ La voce non si spegneva mai.
  *
+ * ⚠ E QUELLA SECONDA SCENA NON ESISTE PIU' dal 17 agosto 2026: senza
+ *   inseguimento non ci sono «ogni ridimensionamento» da rimandare
+ *   (`DECISIONI.md` §5.1-bis).  ⛔ Ma `tela_spenta` **non e' uscito con lei**, e
+ *   il caso vivo che lo giustifica e' un altro: la RIPETIZIONE su `NON_ORA`
+ *   (`TELA_RICHIESTA_RIPETI_MS`, 4 s) e il **riattacco**, dove si chiede di
+ *   nuovo — a un compositore che magari e' lo stesso di prima e ha gia' detto
+ *   di no.
+ *
  * ⚠ E una voce da spegnere, nel senso di un comando sullo schermo, **in questa
  *   pagina non esiste**: `[M]` 6 comandi in tutto, nessuno che nomini «adatta».
  *   ⇒ Spegnerla vuol dire, qui, **smettere di chiedere e dirlo**.  Il giorno in
@@ -2822,25 +2852,29 @@ let tela_attesa = 0;
  *    primo si supera chiedendo un'altra misura, il secondo aspettando. */
 let tela_spenta = false;
 
-/* ⛔⭐ IL FONDO CONTRO LA RAFFICA — e non e' prudenza: trascinare il bordo di una
- *    finestra produce **decine di `resize` al secondo**, e ogni `ADATTA_TELA`
- *    girata al palco e' un `pw_stream_update_params()`, cioe' un riavvio del
- *    flusso.  ⚠ Il server si difende da se' (rifiuta la misura che c'e' gia', e
- *    risponde `NON_ORA` alla richiesta superata), ⛔ ma difendersi non e' gratis:
- *    ogni riavvio inutile costa un fotogramma, e a venti al secondo il desktop
- *    si vedrebbe SINGHIOZZARE mentre si trascina il bordo.
+/* ⛔⛔⭐ QUI C'ERANO `TELA_FONDO_MS` E `tela_forse_chiedi()`, E SONO USCITI IL 17
+ *      AGOSTO 2026 CON LA FUNZIONE CHE SERVIVANO.  La lapide resta perche' senza
+ *      di essa il fondo verrebbe riproposto il giorno in cui qualcuno rimette
+ *      l'inseguimento — e sarebbe la cura giusta di un problema che non abbiamo
+ *      piu'.
  *
- * ⚠ 250 ms e' il tempo in cui una mano si ferma fra due trascinamenti, non una
- *   misura: `[?]` va guardato sul DeX vero, dove il bordo si trascina davvero. */
-const TELA_FONDO_MS = 250;
-function tela_forse_chiedi(perche) {
-  if (!chiedi_tela) return;
-  if (tela_attesa) clearTimeout(tela_attesa);
-  tela_attesa = setTimeout(function () {
-    tela_attesa = 0;
-    chiedi_tela(perche);
-  }, TELA_FONDO_MS);
-}
+ * ⚠ CHE COSA FACEVANO: trascinare il bordo di una finestra produce **decine di
+ *   `resize` al secondo**, e ogni `ADATTA_TELA` girata al palco e' un
+ *   `pw_stream_update_params()`, cioe' un riavvio del flusso.  Il fondo di
+ *   250 ms aspettava che la mano si fermasse prima di chiederne una sola.
+ *
+ * ⛔ PERCHE' SONO USCITI: `DECISIONI.md` §5.1-bis — *«non voglio mettere delle
+ *    eccezioni nel progetto.  Il dynamic resolution esce dalle funzionalita' di
+ *    Remotix»*.  Senza inseguimento non c'e' nessuna raffica da smorzare: la
+ *    tela si chiede **una volta per sessione**, all'attacco, e li' il fondo non
+ *    c'entra niente (`chiedi_tela("l'attacco")` e' una chiamata diretta).
+ *
+ * ⭐ E IL SERVER TIENE LE SUE DIFESE LO STESSO, che non erano ridondanti: la
+ *   guardia «la misura chiesta e' gia' quella in vigore» (`rcp.c`) e il
+ *   `NON_ORA` sulla richiesta superata servono al **riattacco**, dove il palco
+ *   esiste gia' e puo' avere un'altra misura.  ⚠ Chi le togliesse credendole
+ *   figlie del fondo starebbe togliendo la guardia obbligatoria di `STUDI.md`
+ *   §kde §8.2-bis, che e' un'altra cosa e resta obbligatoria. */
 
 /* ⛔⭐ E QUI C'ERA UN `ResizeObserver`, SCRITTO E POI RITIRATO IL 13 AGOSTO 2026,
  * PERCHE' IL SUO CASO NON ESISTE.  La riga resta come nota, perche' senza di
@@ -2974,12 +3008,16 @@ async function collega(utente, parola) {
     /* ⛔⭐ E CON LUI LA META' `ADATTA_TELA` — cura del 15 agosto 2026, trovata
      *     refutando.  ⚠ Restavano tre cose vive su una sessione morta: il
      *     mittente (`chiedi_tela`), il fondo armato a 250 ms, e il bersaglio.
-     *     ⛔ Il fondo che scattava DOPO la chiusura chiamava `manda()` su un
-     *     canale morto e, se quella `Promise` si risolveva lo stesso (scrittura
-     *     gia' accodata), faceva contare al `Schermo` un'`ADATTA_TELA` che non
-     *     e' mai partita: un'attesa aperta per sempre, e i fotogrammi trattenuti
-     *     con lei. */
-    if (tela_attesa) { clearTimeout(tela_attesa); tela_attesa = 0; }
+     *
+     * ⛔ IL FONDO NON C'E' PIU' dal 17 agosto 2026 (`DECISIONI.md` §5.1-bis: il
+     *    ridimensionamento a caldo e' uscito), e con lui il `clearTimeout` che
+     *    stava qui.  ⚠ Ma le altre due righe NON sono figlie sue e restano: un
+     *    `chiedi_tela` vivo su un canale morto chiamerebbe `manda()` nel vuoto, e
+     *    un bersaglio non azzerato farebbe credere alla sessione DOPO che una
+     *    richiesta e' ancora in volo.
+     * ⭐ E la cura del 15 agosto non e' invecchiata di senso: il caso che la
+     *   fece scrivere — la richiesta all'attacco che scatta mentre la sessione
+     *   si chiude — capita ancora, solo senza timer di mezzo. */
     chiedi_tela = null;
     tela_chiesta_l = tela_chiesta_a = 0;
   };

@@ -48,6 +48,15 @@ sarebbe il difetto che quella regola vieta.
 (ridimensionare non tocca il compositore), e in negativo §1.1 — smettere di inseguire i client
 altrui era lo stesso ragionamento applicato al filo.
 
+> ### ⛔⭐ E IL 17 AGOSTO 2026 HA PRODOTTO IL SUO CASO PIÙ NETTO — §5.1-bis
+>
+> *«Non voglio mettere delle eccezioni nel progetto.»* Il ridimensionamento a caldo funzionava su
+> Mutter (`[M]` 6 ms) e **non si poteva fare** su KWin ≤ 6.7.4. ⇒ È uscito dal prodotto invece di
+> restare dietro un interruttore. ⚠ **La regola che se ne ricava, e vale in avanti**: se una
+> funzione si può fare su un compositore e non su un altro, la domanda da portare all'utente non è
+> *«come la nascondiamo»* ma *«la teniamo?»* — e la risposta finora è stata no. Si dipende dal
+> compositore, e proprio per questo **non si dipende da quale**.
+
 *Scritta anche in `CODER.md` §4.1-bis, con la verifica corrispondente in `REVIEWER.md` E11 —
 le due devono restare in coppia, altrimenti è una regola non verificata.*
 
@@ -2231,8 +2240,10 @@ ottimizzare nella direzione sbagliata.
 > ⚠ **E le due ragioni di questa voce non erano sbagliate: erano legate a un vincolo che non c'è
 > più.** La prima diceva che una finestra piccola darebbe *«un desktop piccolo per tutta la
 > sessione»* — vero **finché la tela non si poteva cambiare**. Da quando `figli_ritela()` →
-> `cattura_ridimensiona()` esiste (`[M]` 6 ms a caldo, 15 agosto), la tela si rifà a ogni riattacco
-> e, con `?adatta=segui`, anche durante la sessione.
+> `cattura_ridimensiona()` esiste (`[M]` 6 ms a caldo, 15 agosto), la tela si rifà **a ogni
+> attacco e a ogni riattacco**. ⛔ *Durante* la sessione no, e dal 17 agosto 2026 nemmeno dietro un
+> interruttore: §5.1-bis l'ha tolto. ⚠ Ma la voce resta curata lo stesso — «piccolo per sempre»
+> voleva dire *per tutta la sessione*, e una sessione si riattacca.
 >
 > ⭐ **E la `[?]` dello zoom di pagina, che questa voce lasciava aperta, si è chiusa da sé**: la
 > misura non si legge più dallo schermo — si legge dalla finestra, e il fattore di zoom ci è già
@@ -2517,14 +2528,19 @@ finestre dell'utente non si muovono. Uguale su GNOME, KDE, XFCE e LXQt.
 >
 > ⛔ **Ma le tre ragioni di questa voce non sono invecchiate**, e la terza meno che mai: su KWin
 > ridimensionare un output **ridispone le finestre dell'utente**. ⇒ Durante la sessione viva il
-> comportamento resta quello scritto qui — si riscala la vista, il desktop non si tocca — e
-> l'inseguimento della finestra sta dietro un interruttore **spento di suo** (invariante I6):
+> comportamento resta quello scritto qui — si riscala la vista, il desktop non si tocca.
+>
+> ### ⛔⛔ E DAL 17 AGOSTO 2026 NON C'È PIÙ NEMMENO L'INTERRUTTORE — vedi **§5.1-bis**
+>
+> L'inseguimento della finestra stava dietro `?adatta=segui`, spento di suo (I6). **È uscito dal
+> prodotto**: *«non voglio mettere delle eccezioni nel progetto»*. ⇒ Questa voce torna a valere
+> come fu scritta l'8 agosto, **senza eccezioni**, e i valori di `?adatta=` restano due:
 >
 > | `?adatta=` | che cosa fa |
 > |---|---|
-> | *assente* (predefinito) | chiede la tela **all'attacco** e basta |
-> | `segui` | ⚠ la chiede **anche a ogni ridimensionamento** della finestra, con un fondo di 250 ms |
+> | *assente* (predefinito) | chiede la tela **all'attacco e al riattacco**, e basta |
 > | `no` | ⛔ non la chiede mai: è la pagina di prima del 15 agosto, e serve al **confronto A/B** che il giudizio dell'utente richiede (`LEZIONI.md` §7.3) |
+> | ~~`segui`~~ | ⛔ **tolto il 17 agosto 2026**. Un indirizzo vecchio che lo porta vale il predefinito e non riaccende niente — sorvegliato da `banchi/06-b37-modi.py` |
 >
 > ⚠ Si legge da `?` **e** da `#`, come `video` e `disposizione`.
 
@@ -2551,6 +2567,71 @@ Le tre ragioni, e la terza è quella che ha deciso:
 - ⚠ e includerà la **guardia obbligatoria** `if (misura_attuale == misura_richiesta) return;`
   (`STUDI.md` §kde §8.2-bis): senza, la rinegoziazione si morde la coda. Il difetto **non si vede su
   Trixie** e compare il giorno dell'aggiornamento a 6.8, quando nessuno lo sta più cercando.
+
+### 5.1-bis ✅ ⛔⛔ Il ridimensionamento a caldo **esce dal prodotto** — 17 agosto 2026
+
+*«Ecco la mia decisione. Non voglio mettere delle eccezioni nel progetto. Il dynamic resolution
+esce dalle funzionalità di Remotix.»*
+
+**Quel che esce:** cambiare la misura della tela **mentre la sessione è viva**. L'interruttore
+`?adatta=segui`, il fondo `TELA_FONDO_MS`, `tela_forse_chiedi()` e il ramo del `resize` sono tolti
+da `src/pagina.html`.
+
+**Quel che resta, ed è la logica di prima:** ⭐ *la tela nasce con la dimensione della finestra del
+client, nel momento della nascita **o del riattacco** della sessione* — §5.0-sexies, intatta. Da lì
+in poi il desktop non si tocca più: il client riscala (§5.1, che torna a valere **senza eccezioni**,
+com'era scritta l'8 agosto).
+
+#### Perché — e la ragione non è il codice, è il prodotto
+
+⛔ **L'eccezione era misurata, non temuta.** Su Mutter cambiare la tela a caldo costa `[M]` **6 ms**
+e funziona. Su KWin ≤ 6.7.4 — cioè **Debian Trixie, e fino a Forky** — `stream_virtual_output`
+risponde **`Could not find output` a ogni misura** (`[M]` 8 agosto 2026, cinque misure provate,
+`VirtualBackend` non ridefinisce `createVirtualOutput()`). ⇒ Tenerla avrebbe voluto dire **un
+prodotto che fa una cosa diversa a seconda di chi ci ospita**, con un ramo condizionato al
+compositore e un banco per ciascun ramo.
+
+⚠ **E non basta aspettare che KDE si aggiorni.** `kwin!7932` «Resizable Virtual Monitors» è unita
+(29 luglio 2026, milestone 6.8, **14 ottobre 2026**) e nella nostra stessa forma — negoziazione
+PipeWire — ma:
+
+- `[R]` verificato il **17 agosto 2026** su invent.kde.org: l'ultimo tag è ancora **v6.7.4**,
+  `Plasma/6.8` non esiste;
+- Debian stabile non aggiorna Plasma ⇒ l'eccezione sarebbe rimasta **per anni**, non per due mesi;
+- ⛔ e **anche dove funziona fa un danno**: ridimensionare un output **ridispone le finestre
+  dell'utente** (la chiave del `PlacementTracker` contiene la geometria dell'output, quindi tornando
+  a una misura già vista le finestre vengono teleportate). La versione «giusta» scompiglia il
+  lavoro; quella «rotta» lo lascia fermo.
+
+#### ⚠ E la richiesta dell'utente che questa decisione ha superato
+
+*17 agosto 2026, prima della decisione*: **«l'utente trascina i bordi e rilascia, e solo allora
+avviene il ridisegno»**. Era attuabile, e la nota tecnica resta perché il giorno in cui qualcuno la
+riproponesse la ritroverebbe uguale:
+
+> Il bordo della finestra **non è nel documento**: lo trascina il gestore delle finestre. Alla
+> pagina non arriva né `mousedown`, né `mouseup`, né `pointerup`, e un evento «il ridimensionamento
+> è finito» **non esiste in nessun motore**. ⇒ «Ha rilasciato» si può solo **dedurre** — «sono
+> passati N ms senza un altro `resize`» — ed era esattamente ciò che il fondo di 250 ms faceva.
+
+**Conseguenze:**
+- ⛔ **le bande nere restano possibili, e sono il comportamento dichiarato**: se dopo l'attacco la
+  finestra cambia forma (ridimensionata, o il tablet **ruotato**), le proporzioni non combaciano più
+  e il client riscala impaginando — `SPECIFICHE.md` §6.2, «si impagina, non si stira». Non è un
+  difetto da curare: è la scelta;
+- ⭐ **`ADATTA_TELA` resta nel protocollo** (`RCP.md` §7.1) e la catena server resta viva **per
+  intero** — la usa l'attacco, e la usa il **riattacco**, dove il palco esiste già con la misura di
+  un altro dispositivo. ⚠ Chi la togliesse credendola figlia dell'inseguimento romperebbe il
+  riattacco;
+- `banchi/06-b37-modi.py` cambia mestiere: da «i tre modi di `?adatta=`» a **guardia contro il
+  ritorno** — 0 richieste in tutti i modi, `?adatta=segui` compreso, che ora è solo un segnalibro
+  vecchio;
+- `banchi/06-b37-voce.py` V4 cambia domanda: da «la voce si spegne?» a «la funzione è davvero
+  uscita?». ⚠ V1–V3 restano: la voce spenta serve ancora, perché la tela si chiede a ogni riattacco
+  e la ripetizione su `NON_ORA` è viva;
+- ⛔ e **la fase 11 (KDE) non eredita più niente da decidere qui**: il ripiego dichiarato di §6.3 —
+  `COMPOSITORE_INCAPACE`, il client riscala — diventa il comportamento **normale** di tutti,
+  non il ramo povero di uno.
 
 ### 5.2 🔸 ⛔ ~~Il codificatore lavora alla misura della finestra~~ → **no: lavora alla misura della tela**
 

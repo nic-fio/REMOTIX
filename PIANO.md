@@ -819,7 +819,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > | la **tela concordata all'attacco** | ✅ `[M]` la tela prende la misura della finestra, scala **1,000** |
 > | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, zero fotogrammi scartati |
 > | la **vista che riscala** | ✅ c'era dalla fase 2, e adesso la scala vale 1 quando le due tele combaciano |
-> | ⭐ *(in più)* il **ridimensionamento a caldo** | ✅ `[M]` 6 ms, dietro l'interruttore `?adatta=segui` (spento di suo, I6) |
+> | ⛔ *(in più)* ~~il **ridimensionamento a caldo**~~ | **USCITO dal prodotto il 17 agosto 2026** — `DECISIONI.md` §5.1-bis, decisione dell'utente: *«non voglio mettere delle eccezioni nel progetto»*. ⚠ Era `[M]` 6 ms su Mutter, e **impossibile** su KWin ≤ 6.7.4 |
 > | ⛔ il **ripiego su KWin dichiarato nel registro** | **APERTO**: non verificabile finché KDE è la fase 11. Il percorso di codice c'è (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 di `banchi/04-b31`, **su un ospite finto** |
 > | ⛔ il **banco del riattacco che BATTE UN TASTO dopo** | **APERTO**: il fatto si è visto nel registro (`libei` ricrea i dispositivi, `input.c` li riaggancia) e l'utente ha scritto in un terminale dopo un riattacco — ⛔ ma un banco che lo provi non c'è |
 > | ⛔ il **multi-monitor** | **APERTO**, e fuori scopo come funzione (§6.5) |
