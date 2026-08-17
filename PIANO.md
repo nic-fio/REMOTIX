@@ -456,6 +456,73 @@ qualcun altro.
 
 ---
 
+> # ⭐⭐⭐ DA QUI SI RIPRENDE — **la grafica su Firefox**, 17 agosto 2026 sera
+>
+> *Deciso dall'utente: «nella prossima sessione ci occupiamo della grafica in Firefox: prima
+> sistemiamo quella».*
+>
+> ## Il sintomo
+>
+> Su **Firefox 140 ESR** il desktop mostra **blocchi rettangolari** nelle zone ferme, e col tempo
+> smette di aggiornarsi. ⚠ Su Chrome no. Firefox negozia **AV1** (l'HEVC non lo decodifica), e AV1
+> su questo ferro è **in software** — quindi è anche lento, ed è per progetto (`figlio.c`: `av1_vaapi`
+> esce 218, `vainfo` dà AV1 in sola decodifica).
+>
+> ## ⛔ QUATTRO IPOTESI SONO GIÀ MORTE — non si rifanno. 📖 `LEZIONI.md` §2.8
+>
+> | l'ipotesi | come è morta |
+> |---|---|
+> | il nostro flusso AV1 è rotto | ⛔ **falsa**: 6 fotogrammi presi **dal filo** e dati a **libdav1d** — lo stesso decodificatore di Firefox — danno un'immagine **perfetta** |
+> | l'allineamento 962 → 968 di SVT-AV1 | ⛔ **falsa**: 2560×**962** codificato e ridecodificato torna **2560×962 esatti**, PSNR **43,3 dB** (meglio del 960 allineato) |
+> | la pagina riceve una misura sbagliata | ⛔ **falsa**: la pagina lo dice da sé — *codificato 2560×962 · mostrato 2560×962 · tela 2560×962* |
+> | il decodificatore del browser sbaglia | ⛔ **falso**: zero errori riportati, e il filtro che li avrebbe portati al server funziona |
+>
+> ⇒ **Resta il percorso di DISEGNO della pagina**, che non ha mai avuto un testimone indipendente:
+> la cattura pulita usa il cliente Python, che non dipinge niente.
+>
+> ## ⭐ I due fili da cui ripartire
+>
+> 1. la pagina dichiara **`formato BGRX`**. Un fotogramma AV1 esce in `I420`: Firefox lo consegna
+>    **già convertito in RGB**. ⇒ Guardare `dipingi()` e il `drawImage(f, 0, 0)` sul deposito;
+> 2. `?video=worker` — il **secondo** percorso di disegno — su Firefox **non dipinge affatto**: la
+>    pagina carica (il server logga `GET /?video=worker`), la sonda gira, poi niente. ⚠ `VideoDecoder`
+>    dentro un `Worker` su 140 ESR è la sospettata, **non verificata**.
+>
+> ## ⚙ Gli strumenti che stasera sono nati, e come si usano
+>
+> ```
+> # i fotogrammi presi DAL FILO, e AV1 dichiarato da solo — cioè quel che fa Firefox
+> python3 banchi/01-b3-cliente.py --porta 7730 --utente prova --parola prova2026 \
+>     --video-codec av1 --video-profondita 8 \
+>     --video-scrivi /srv/remotix/tmp/07-appunti/f.obu --resta 12
+> # e il decodificatore TERZO
+> ffmpeg -f obu -i f.obu -y g%02d.png
+> ```
+> ⚠ Il cliente gira **dentro** `enter.sh` (lì c'è `aioquic`); `/media/REMOTIX` si vede come
+> `/srv/remotix`, `/media/REMOTIX/src` come `/srv/src`.
+>
+> ⭐ E **la pagina racconta al server**: la misura vera di ogni fotogramma, i guasti del
+> decodificatore, e ogni 5 s `tasti N · ultimo · classico · schermo · dipinti · fuoco`. Si leggono
+> con `grep "la pagina di" …/registro.log`.
+>
+> ## ⚙ Lo stato della macchina
+>
+> | | |
+> |---|---|
+> | il server della caccia | **7730**, unità `remotix-7730.service`, albero `/media/REMOTIX/src/07-appunti-src`, lavoro `/media/REMOTIX/tmp/07-appunti` |
+> | ⛔ le porte occupate | 7448 · 7700 · 7710 · 7720 · **7730** — un banco nuovo prende la sua |
+> | si riaccende con | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
+> | ⚠ il browser mette in cache | serve **`Ctrl+Maiusc+R`**: un ricaricamento normale ha già falsificato una misura |
+>
+> ## ⛔⛔ E UNA VERIFICA È IN SCADENZA, NON PREVENTIVA
+>
+> La cura della profondità (§4.3 che attraversa il confine) è **in servizio** e cambia quel che
+> riceve **anche Chrome**: fino al 17 agosto prendeva un flusso a 10 bit dichiarato 8, adesso ne
+> prende uno a 8 bit dichiarato 8. ⚠ **Nessuno ha più guardato Chrome dopo quella modifica.**
+> ⇒ Dieci minuti di collegamento da Windows, e si guarda se il desktop è come lo si ricordava.
+>
+> ---
+
 ## Fase 3 — Il movimento ✅ **CHIUSA il 14 agosto 2026**
 
 > ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«abbastanza fluido, non il massimo ma pur sempre fluido»*
