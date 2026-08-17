@@ -459,7 +459,27 @@ const BANNATO = document.body.dataset.bannato === "si";
 
 const $ = (i) => document.getElementById(i);
 const righe = [];
-function nota(t) { righe.push(t); $("registro").textContent = righe.join("\n"); }
+/* ⛔⭐⭐ E LE RIGHE CHE CONTANO VANNO AL SERVER, da QUI — 17 agosto 2026.
+ *
+ *      Il riquadro della pagina, col desktop acceso, e' a tutto schermo e non e'
+ *      raggiungibile: chiederlo all'utente e' chiedergli una cosa che non si
+ *      puo' fare.  ⚠ E l'inoltro c'era gia', ma **solo nel ramo del worker** —
+ *      che e' spento di serie (`VIDEO_WORKER`), quindi non passava di li'
+ *      nessuno.  ⛔ Il quinto difetto della stessa famiglia in una sera: una
+ *      strada scritta su un ramo che nessuno percorre.
+ *
+ * ⚠ Si filtra — la misura del fotogramma e i guasti — perche' mandarle tutte
+ *   costerebbe una `fetch` per riga, e alcune righe sono per fotogramma. */
+function nota(t) {
+  righe.push(t);
+  $("registro").textContent = righe.join("\n");
+  if (t.indexOf("MISURA") >= 0 || t.indexOf("⛔") >= 0) {
+    try {
+      fetch("/diario?" + encodeURIComponent("PAGINA " + t), { cache: "no-store" })
+        .catch(() => {});
+    } catch (e) { /* il racconto non rompe quel che racconta */ }
+  }
+}
 
 /* ⭐ L'interruttore della diagnostica.  ⛔ Spenta di suo (vedi il foglio di stile):
    il testo si accumula lo stesso, e chi diagnostica lo fa comparire senza
@@ -2566,6 +2586,28 @@ class Schermo {
        finestra» — la forma E2 di `REVIEWER.md`. */
     const fl = f.displayWidth || f.codedWidth;
     const fa = f.displayHeight || f.codedHeight;
+    /* ⛔⭐⭐ LA MISURA VERA DEL FOTOGRAMMA, DETTA UNA VOLTA — 17 agosto 2026.
+     *
+     *      §6.2 dice che la misura di un fotogramma DEVE essere la tela in
+     *      vigore, e questa pagina ci si fida.  ⛔ Ma il codificatore puo'
+     *      ALLINEARE: `[M]` con la tela 2560x962, SVT-AV1 dichiara nel suo
+     *      registro `width / height : 2560 / 968` — otto righe in piu'.
+     *
+     *      ⚠ Se l'AV1 porta la misura di resa (`render_size`), `displayHeight`
+     *        dice 962 e non succede niente; se NON la porta, qui arrivano 968 e
+     *        il deposito e' piu' alto della tela.  ⛔ I due casi si distinguono
+     *        solo guardando i numeri, e nessuno li guardava.
+     *
+     * ⇒ Si dichiarano tutti e tre — codificato, mostrato, tela — la prima volta
+     *   e a ogni cambio.  ⛔ NON a ogni fotogramma: sessanta righe al secondo
+     *   coprirebbero il registro, ed e' il difetto che questa riga curerebbe. */
+    if (this.ultima_misura !== fl + "x" + fa + "/" + f.codedWidth + "x" + f.codedHeight) {
+      this.ultima_misura = fl + "x" + fa + "/" + f.codedWidth + "x" + f.codedHeight;
+      this.riga("MISURA fotogramma · codificato " + f.codedWidth + "x"
+              + f.codedHeight + " · mostrato " + fl + "x" + fa
+              + " · tela in vigore " + this.tela_l + "x" + this.tela_a
+              + " · formato " + (f.format === undefined ? "assente" : f.format));
+    }
     try {
       if (!this.deposito) this.deposito = document.createElement("canvas");
       if (this.deposito.width !== fl || this.deposito.height !== fa) {
@@ -3072,11 +3114,15 @@ async function collega(utente, parola) {
    *    `chiudi_sessione`: la capsula si RIMANDA). */
   congeda_corrente = congeda;
   canale_corrente = canale;
-  /* ⛔ §7.3-bis: la pagina DICHIARA quel che non consegna.  `Ctrl+Alt+Fine` se
-     la tiene REMOTIX per uscire dalla sessione, quindi nel desktop remoto non
-     arrivera' mai — e va detto, non lasciato scoprire. */
-  nota("§7.6: «Ctrl+Alt+Fine» esce dalla sessione (con conferma).  ⚠ Quella "
-     + "combinazione se la tiene questa pagina: nel desktop remoto NON arriva");
+  /* ⭐⭐ §7.3-bis: la pagina DICHIARA quel che non consegna — e dal 17 agosto
+     2026 non c'e' PIU' NIENTE da dichiarare.  Qui si annunciava che
+     `Ctrl+Alt+Fine` se la teneva la pagina; l'utente l'ha fatta togliere, e
+     adesso **ogni combinazione arriva al desktop remoto**.
+     ⚠ Si dice lo stesso, perche' e' un fatto che all'utente serve: per uscire
+       si usa «Esci…» dal menu del desktop, come su una macchina vera. */
+  nota("⭐ §7.3-bis: questa pagina non si tiene NESSUNA combinazione di tasti — "
+     + "arrivano tutte al desktop remoto.  Per uscire: «Esci…» dal menu di "
+     + "sistema del desktop, come su una macchina vera");
 
   /* ⛔ Gli stream del video si cominciano ad ASCOLTARE ADESSO, non dopo
      `SESSIONE`: §2.5 vieta al server di aprirne uno prima, ed e' l'invariante
@@ -4222,10 +4268,23 @@ function avvia_audio(wt) {
   a.dire = setInterval(() => {
     const c = audio_conti();
     if (!c) return;
+    /* ⛔⭐ E QUI DENTRO VIAGGIA ANCHE LO STATO DELLA PAGINA, non solo l'audio.
+     *
+     *     Questo e' l'unico messaggio che si sa arrivare al server ogni cinque
+     *     secondi qualunque cosa succeda — `[M]` ha continuato ad arrivare anche
+     *     mentre il desktop era fermo, ed e' cosi' che si e' saputo che il
+     *     thread principale era VIVO.  ⇒ Attaccargli i quattro numeri che
+     *     distinguono «i tasti non arrivano» da «arrivano e non servono a
+     *     niente» costa zero e toglie un giro di domande all'utente. */
     const riga = "audio: ricevuti " + c.ricevuti + " suonati " + c.suonati
        + " BUCHI " + (a.riarmi || 0) + " vecchi " + c.scartati_vecchi
        + " pieni " + c.scartati_pieno + " errori " + c.errori
-       + " coda " + c.in_coda_ms + "ms ctx " + c.contesto;
+       + " coda " + c.in_coda_ms + "ms ctx " + c.contesto
+       + " | tasti " + TASTI_VISTI + " ultimo " + (TASTI_ULTIMO || "-")
+       + " classico " + (typeof cl_in_vigore !== "undefined" && cl_in_vigore ? "si" : "NO")
+       + " schermo " + (document.body.dataset.schermo || "-")
+       + " dipinti " + (schermo && schermo.conti ? schermo.conti.dipinti : "?")
+       + " fuoco " + (document.hasFocus() ? "si" : "NO");
     nota(riga);
     /* ⛔ E si manda anche AL SERVER, che e' l'unico posto dove i numeri dei
        quattro anelli stanno sulla stessa pagina.  ⚠ Il riquadro qui sopra non
@@ -4365,6 +4424,38 @@ function avvia_audio(wt) {
 
    ══════════════════════════════════════════════════════════════════════════ */
 
+/*
+ * ⛔⛔ IL RACCONTO DEGLI APPUNTI, BYTE PER BYTE — 17 agosto 2026, sera, e non e'
+ *      strumentazione di lusso: e' `LEZIONI.md` §2.7, la lezione che l'utente
+ *      ha insegnato durante l'audio — *«riproduci un video e monitora byte per
+ *      byte»* — applicata al primo difetto che non si e' lasciato dedurre.
+ *
+ * Il caso: su Firefox il verso dispositivo → sessione non funziona, e il
+ * registro del server dice una cosa sola — **non arriva nessun
+ * `APPUNTI_ANNUNCIO`**.  ⛔ Quel silenzio ha SEI cause possibili nella pagina, e
+ * dal server hanno tutte la stessa faccia:
+ *
+ *   1. gli appunti non sono accesi (`appunti.testo` non negoziato);
+ *   2. il `Ctrl+V` non arriva a `cl_su_keydown`;
+ *   3. arriva, e non e' riconosciuto come incolla;
+ *   4. e' riconosciuto, e l'evento `paste` non nasce lo stesso;
+ *   5. si ripiega su `readText()` e il browser lo nega;
+ *   6. il testo si legge e l'annuncio non parte.
+ *
+ * ⇒ Ogni passo scrive una riga, e la riga va **al server** oltre che al
+ *   registro della pagina.  ⛔ Il riquadro della pagina non basta: col desktop
+ *   acceso si e' a tutto schermo e quel riquadro non e' raggiungibile —
+ *   chiederlo all'utente e' chiedergli una cosa che non si puo' fare.  ⚠ E' la
+ *   stessa ragione, con le stesse parole, per cui l'audio manda i suoi conti.
+ */
+function app_diario(riga) {
+  nota("appunti · " + riga);
+  try {
+    fetch("/diario?" + encodeURIComponent("APPUNTI " + riga),
+          { cache: "no-store" }).catch(() => {});
+  } catch (e) { /* il racconto non deve poter rompere quel che racconta */ }
+}
+
 const T_APPUNTI = { ANNUNCIO: 0x0201, CHIEDI: 0x0202, TESTO: 0x0203 };
 
 /* §5.4: 1 000 000 byte, **non** 1 MiB.  Vedi il riquadro in `rcp.h`. */
@@ -4392,6 +4483,13 @@ const APPUNTI = {
   ultimo_letto: null,
   conti: { annunciati: 0, chiesti: 0, ricevuti: 0, serviti: 0, scritti: 0,
            non_scritti: 0 },
+  /* ⛔ Dove sta `clipboardchange`, o stringa vuota: e' la SORVEGLIANZA, e la
+     sua assenza cambia tutto il verso dispositivo → sessione. */
+  sorvegliata: "",
+  /* ⛔ Quando l'evento `paste` e' arrivato l'ultima volta.  ⚠ Serve a NON
+     chiedere il permesso quando la strada gratis ha gia' funzionato: vedi
+     `appunti_su_incolla`. */
+  ultimo_paste_ms: 0,
 };
 
 /* ⛔ Uno stream per messaggio, come fa il server: a legare i messaggi di un
@@ -4484,8 +4582,18 @@ async function scrivi_negli_appunti(testo) {
  *         quando l'annuncio arriva (`rcp.c`, `rcp_appunti_chiedi`).
  */
 async function appunti_annuncia(testo) {
-  if (!APPUNTI.acceso || typeof testo !== "string") return;
-  if (testo === APPUNTI.ultimo_letto) return; /* niente di nuovo, e niente eco */
+  if (!APPUNTI.acceso || typeof testo !== "string") {
+    app_diario("annuncio saltato: "
+               + (APPUNTI.acceso ? "non e' testo" : "appunti spenti"));
+    return;
+  }
+  /* ⚠ E questo NON e' un difetto: e' l'eco, o una copia gia' annunciata.  ⛔ Ma
+     va detto lo stesso, o «l'ho gia' mandato» e «non l'ho mai mandato» hanno la
+     stessa faccia dal server — che e' proprio il caso che stiamo cercando. */
+  if (testo === APPUNTI.ultimo_letto) {
+    app_diario("annuncio saltato: identico all'ultimo (eco o copia ripetuta)");
+    return;
+  }
 
   const byte = new TextEncoder().encode(testo);
   /* ⛔ §5.4: oltre il tetto **non si annuncia affatto**, e NON si tronca — «un
@@ -4506,9 +4614,10 @@ async function appunti_annuncia(testo) {
   const c = new Scrittore().u32(APPUNTI.mio_id).u32(byte.length).byte();
   if (await appunti_manda(T_APPUNTI.ANNUNCIO, c)) {
     APPUNTI.conti.annunciati++;
-    nota("appunti: annunciato al desktop remoto il trasferimento "
-       + APPUNTI.mio_id + " — " + byte.length + " byte.  ⚠ Non parte niente "
-       + "finche' qualcuno di la' non incolla (§7.4)");
+    app_diario("⭐ ANNUNCIATO il trasferimento " + APPUNTI.mio_id + " — "
+               + byte.length + " byte");
+  } else {
+    app_diario("⛔ l'annuncio " + APPUNTI.mio_id + " NON e' partito sul filo");
   }
 }
 
@@ -4640,6 +4749,87 @@ async function appunti_ricevuti(byte, completo) {
     + "TRE — 0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO");
 }
 
+/*
+ * ⭐⭐ IL `Ctrl+V`, E LA STRADA CHE FIREFOX LASCIA — 17 agosto 2026, sera,
+ *     scritta dopo che l'utente ha provato su Firefox e il verso
+ *     dispositivo → sessione NON ha funzionato.
+ *
+ * ⛔⛔ LA CAUSA ERA UNA RIGA NOSTRA, non un limite del browser.
+ *
+ *      `cl_su_keydown()` chiama `ev.preventDefault()` su ogni **comando** — e
+ *      `Ctrl+V` e' un comando.  ⇒ **Il browser non esegue l'incolla, quindi
+ *      l'evento `paste` non nasce mai**, e il ripiego di §9 era scritto e non
+ *      poteva scattare.  ⚠ Su Chrome non si vedeva: li' il testo arriva dalla
+ *      sorveglianza (`clipboardchange`), che non passa dai tasti.
+ *      ⛔ `[M]` Nella sessione Firefox il server non ha ricevuto **nemmeno un**
+ *        `APPUNTI_ANNUNCIO`: solo `CHIEDI`.  La pagina non aveva niente da
+ *        annunciare perche' non aveva mai letto niente.
+ *
+ * ⛔ E LA CURA OVVIA NON SI PUO' FARE: un elemento modificabile nascosto e a
+ *    fuoco — la strada di tutti i client web — spegnerebbe **tutta la
+ *    tastiera**, perche' `cl_nel_modulo()` esce subito quando il fuoco e' su un
+ *    `TEXTAREA` o un `contenteditable`.  ⚠ E' la collisione che `STUDI.md`
+ *    §web §1.2 C aveva previsto: «serve un elemento modificabile col fuoco, che
+ *    e' proprio quel che farebbe cadere il percorso di disegno».
+ *
+ * ⇒ DUE STRADE, e la seconda parte solo se la prima non ha consegnato:
+ *
+ *   1. ⭐ **non si chiama `preventDefault()` sul `Ctrl+V`**: il browser fa il
+ *      suo incolla, l'evento `paste` nasce, e il testo arriva **gratis**.
+ *      ⚠ Sulla tela non c'e' niente di modificabile, quindi quell'incolla non
+ *        scrive da nessuna parte: costa zero;
+ *   2. ⚠ se dopo `ATTESA_PASTE` ms nessun `paste` e' arrivato, si chiede
+ *      `readText()` — che vale perche' **`Ctrl+V` E' un gesto dell'utente**.
+ *      ⛔ Su Firefox costa il menu «Incolla», ed e' esattamente il prezzo che
+ *         `SPECIFICHE.md` §9 dichiara: «là ogni lettura costa il menu Incolla,
+ *         con un secondo di attesa».
+ *
+ * ⛔ E i tasti partono lo stesso, per la loro strada (§7.3): questa funzione
+ *    NON tocca l'input, e non e' un caso — quel che l'utente sta facendo e'
+ *    incollare **nel desktop remoto**, e senza i tasti non incollerebbe niente.
+ */
+const APPUNTI_ATTESA_PASTE = 180;
+
+function appunti_su_incolla() {
+  if (!APPUNTI.acceso) {
+    app_diario("Ctrl+V visto, ma gli appunti NON sono accesi");
+    return;
+  }
+  app_diario("Ctrl+V visto · sorveglianza=«"
+             + (APPUNTI.sorvegliata || "nessuna") + "»");
+  /* ⛔ Con la sorveglianza accesa non si fa niente: il testo e' gia' arrivato
+   *    quando l'utente ha copiato, e chiedere il permesso adesso sarebbe un
+   *    menu in faccia per una cosa che si sa gia'. */
+  if (APPUNTI.sorvegliata) {
+    app_diario("sorveglianza accesa: non chiedo niente, il testo arriva da se'");
+    return;
+  }
+
+  const prima = APPUNTI.ultimo_paste_ms;
+  setTimeout(() => {
+    /* La strada gratis ha consegnato: non si chiede niente a nessuno. */
+    if (APPUNTI.ultimo_paste_ms !== prima) {
+      app_diario("l'evento `paste` e' arrivato: strada gratis, nessun permesso");
+      return;
+    }
+    app_diario("nessun `paste` in " + APPUNTI_ATTESA_PASTE
+               + " ms: chiedo `readText()` (§9, il prezzo dichiarato)");
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      nota("⚠ §9: questo browser non consegna l'evento `paste` e non ha "
+         + "`readText`: quel che copi qui NON puo' arrivare al desktop remoto.  "
+         + "Non e' un guasto, e' una funzione che non c'e'");
+      return;
+    }
+    navigator.clipboard.readText()
+      .then((t) => {
+        app_diario("`readText()` ha dato " + (t ? t.length : 0) + " caratteri");
+        appunti_annuncia(t);
+      })
+      .catch((e) => app_diario("⛔ `readText()` NEGATO (" + e + "): quel che hai "
+                             + "copiato qui non arriva al desktop remoto"));
+  }, APPUNTI_ATTESA_PASTE);
+}
+
 /* La versione del thread principale: il gemello di quella del guscio del
    worker, e i due nomi combaciano apposta. */
 function __appunti_arrivati(byte, completo) {
@@ -4659,10 +4849,10 @@ function avvia_appunti(negoziato) {
   APPUNTI.acceso = negoziato;
 
   if (!negoziato) {
-    nota("gli appunti sono spenti su questa sessione: il server non ha "
-       + "dichiarato `appunti.testo` (§4.3)");
+    app_diario("SPENTI: il server non ha dichiarato `appunti.testo` (§4.3)");
     return;
   }
+  app_diario("ACCESI (§4.3 negoziata)");
 
   /* ── Verso dispositivo → sessione, strada 1: la sorveglianza ───────────── */
   /* ⛔⭐ DOVE STIA `clipboardchange` E' `[?]`, E SI PROVANO TUTT'E DUE I POSTI.
@@ -4695,6 +4885,7 @@ function avvia_appunti(negoziato) {
   };
   aggancia(navigator.clipboard, "navigator.clipboard");
   aggancia(document, "document");
+  APPUNTI.sorvegliata = sorvegliata;
 
   /* ── Verso dispositivo → sessione, strada 2: l'evento `paste` ──────────── */
   /* ⛔ Si aggancia SEMPRE, anche dove la sorveglianza c'e', e non e' un
@@ -4704,7 +4895,9 @@ function avvia_appunti(negoziato) {
    *    non annuncia niente se il testo non e' cambiato. */
   document.addEventListener("paste", (ev) => {
     if (!APPUNTI.acceso || !ev.clipboardData) return;
+    APPUNTI.ultimo_paste_ms = Date.now();
     const t = ev.clipboardData.getData("text/plain");
+    app_diario("evento `paste` arrivato · " + (t ? t.length : 0) + " caratteri");
     if (t) appunti_annuncia(t);
     /* ⛔ E NON si chiama `preventDefault()`: i tasti devono arrivare al desktop
      *    remoto per la loro strada (§7.3), o l'utente avrebbe copiato senza
@@ -4999,7 +5192,26 @@ function accendi_worker() {
   V.w.onmessage = function (ev) {
     const m = ev.data;
     if (m.t === "pronto") { V.pronto = true; return; }
-    if (m.t === "riga") { nota("video · " + m.riga); return; }
+    if (m.t === "riga") {
+      nota("video · " + m.riga);
+      /* ⛔⭐ E LE RIGHE CHE CONTANO VANNO AL SERVER.  Col desktop acceso la
+       *     pagina e' a tutto schermo e il riquadro non e' raggiungibile:
+       *     chiederle all'utente e' chiedergli una cosa che non si puo' fare.
+       *     ⚠ Si filtra — la misura e i guasti — perche' mandarle tutte
+       *     costerebbe una `fetch` per fotogramma. */
+      /* ⚠ `>= 0` e non `=== 0`: la riga arriva col prefisso «video · »
+       *   che le mette il costruttore di `Schermo` — e un filtro sul PREFISSO
+       *   non trovava mai niente.  ⛔ Il quarto difetto della stessa famiglia
+       *   in una sera: una condizione scritta su una forma dei dati che non
+       *   si e' guardata. */
+      if (m.riga.indexOf("MISURA") >= 0 || m.riga.indexOf("⛔") >= 0) {
+        try {
+          fetch("/diario?" + encodeURIComponent("VIDEO " + m.riga),
+                { cache: "no-store" }).catch(() => {});
+        } catch (e) { /* il racconto non rompe quel che racconta */ }
+      }
+      return;
+    }
     if (m.t === "acceso") { document.body.dataset.schermo = m.valore; return; }
     if (m.t === "stile") { $("schermo").style[m.chiave] = m.valore; return; }
     if (m.t === "conti") {
@@ -5107,8 +5319,17 @@ if (VW) {
 }
 
 /* ==========================================================================
-   ⭐⭐ §7.6 — USCIRE DALLA SESSIONE con `Ctrl+Alt+Fine`
+   ⭐⭐ §7.6 — USCIRE DALLA SESSIONE
    ==========================================================================
+
+   ⛔⭐⭐ E DAL 17 AGOSTO 2026 NON C'E' PIU' UNA SCORCIATOIA, per decisione
+        dell'utente: *«eliminiamo la combinazione di tasti.  Se l'utente vuole
+        sloggarsi lo fa dal menu di sistema.  In questo modo mettiamo in
+        sicurezza l'ambiente»*.  La via d'uscita e' **«Esci…» dal menu del
+        desktop remoto**, garantita da `DECISIONI.md` §4.1-ter.
+        ⇒ Quel che segue racconta perche' la scorciatoia c'era e come e' finita;
+          il codice che la ascoltava e' stato tolto piu' in basso, con la misura
+          che l'ha condannata.
 
    ⛔ PERCHE' LA SCORCIATOIA LA TIENE LA PAGINA E NON IL DESKTOP — `DECISIONI.md`
       §4.1-quinquies:
@@ -5237,55 +5458,61 @@ async function logout_esegui() {
   }
 }
 
-/* ⛔⭐ IN FASE DI CATTURA SU `window`, e non dentro il gestore della tastiera
- *     classica: cosi' funziona qualunque cosa abbia il fuoco e qualunque modo
- *     di input sia in vigore — ⚠ e soprattutto funziona anche quando il canale
- *     dell'input **non si e' aperto**, che e' precisamente il caso in cui uno
- *     vuole uscire. */
+/* ⛔⭐⭐ QUANTI TASTI LA PAGINA HA VISTO — e questo ascoltatore e'
+ *      INCONDIZIONATO: gira a modo classico spento, a canale d'input chiuso e
+ *      col dialogo aperto.
+ *
+ *      ⇒ «zero tasti visti» vuol dire **i tasti non arrivano alla pagina**
+ *        (fuoco altrove, o se li tiene qualcuno prima di lei); un numero che
+ *        cresce mentre il desktop non risponde vuol dire che il difetto sta
+ *        DOPO — e sono due indagini in due punti opposti del filo.
+ * ⚠ `LEZIONI.md` §1.9: senza questo contatore i due casi hanno la stessa
+ *   faccia.  ⭐ Ed e' proprio lui ad aver chiuso il caso di `Ctrl+Alt+Fine`,
+ *   qui sotto. */
+let TASTI_VISTI = 0;
+let TASTI_ULTIMO = "";
+
+/*
+ * ⛔⭐⭐ LA SCORCIATOIA D'USCITA E' STATA TOLTA — 17 agosto 2026, deciso
+ *      dall'utente: *«eliminiamo la combinazione di tasti.  Se l'utente vuole
+ *      sloggarsi lo fa dal menu di sistema.  In questo modo mettiamo in
+ *      sicurezza l'ambiente»*.
+ *
+ * ⛔ QUI C'ERA `Ctrl+Alt+Fine`, e non arrivava mai.  `[M]` 17 agosto 2026, dal
+ *    portatile Linux dell'utente: **quella combinazione la prende il desktop
+ *    LOCALE prima del browser** — chiude la sessione del PC, non quella remota.
+ *    ⚠ Su Windows funzionava, perche' li' non la aggancia nessuno: era una
+ *      scorciatoia scelta su un sistema solo e provata su un sistema solo.
+ *
+ * ⭐⭐ E TOGLIERLA NON E' UNA RINUNCIA, E' UN GUADAGNO — due, per la precisione:
+ *
+ *   1. `SPECIFICHE.md` §7.3-bis dichiara come una PERDITA ogni combinazione che
+ *      la pagina si tiene: quella non arriva mai al desktop remoto.  ⇒ Adesso
+ *      **non se ne tiene nessuna**, e non c'e' piu' niente da dichiarare;
+ *   2. la via d'uscita vera resta quella che l'utente gia' conosce — **«Esci…»
+ *      dal menu del desktop** — ed e' GARANTITA da una decisione sua del 15
+ *      agosto (`DECISIONI.md` §4.1-ter): `src/sessione.c` accende
+ *      `always-show-log-out`, e `disable-log-out` e' **vietata**.
+ *
+ * ⚠ `RCP.md` §7.6 (`TERMINA_SESSIONE`, `0x0011`) resta nel protocollo e questo
+ *   client **non lo manda piu' da nessun gesto**: il fatto «l'utente ha finito»
+ *   viaggia dal desktop al server per la sua strada (`MSG_SESSIONE_FINITA`), che
+ *   e' quella che §7.6 descrive per prima.  ⛔ Il messaggio non si toglie dal
+ *   documento: §9 vieta di togliere tipi dentro una versione maggiore, e un
+ *   client di domani potrebbe averne un gesto.
+ */
 window.addEventListener("keydown", function (ev) {
+  TASTI_VISTI++;
+  TASTI_ULTIMO = (ev.code || "?")
+                 + (ev.ctrlKey ? "+ctrl" : "") + (ev.altKey ? "+alt" : "")
+                 + (ev.shiftKey ? "+maiusc" : "");
+  /* ⚠ Il dialogo di conferma non lo apre piu' nessuno (vedi sopra), ma se ci
+   *   fosse la tastiera sarebbe sua: la riga resta perche' la funzione che lo
+   *   mostra e' ancora raggiungibile dal ripiego di §7.6 di domani. */
   if (logout_visibile()) {
-    /* Col dialogo aperto la tastiera e' del dialogo, non del desktop. */
     if (ev.key === "Escape") { ev.preventDefault(); logout_mostra(false); }
     ev.stopPropagation();
-    return;
   }
-  /* ⚠ `ev.code`, non `ev.key`: la posizione del tasto non cambia con la
-     disposizione, ed e' la stessa regola di §7.3 per tutto il resto. */
-  if (ev.code !== "End" || !ev.ctrlKey || !ev.altKey || ev.shiftKey || ev.metaKey)
-    return;
-  /* ⛔⭐⭐ NEL MODULO DI ACCESSO NO — ma la prima stesura chiedeva la cosa
-   *       SBAGLIATA, e il difetto l'ha trovato il browser il 16 agosto 2026.
-   *
-   * ⛔ Diceva: «se l'evento parte da un `INPUT`, lascia perdere».  ⚠ Ma dopo
-   *    l'accesso il fuoco RESTA sul campo del modulo — che intanto e' stato
-   *    nascosto — quindi `ev.target.tagName` e' `INPUT` **anche a sessione
-   *    aperta**, e `Ctrl+Alt+Fine` non faceva NIENTE.
-   *
-   * `[M]` Misurato col browser vero: il tasto arriva perfetto
-   * (`code:"End"`, ctrl e alt veri, niente shift/meta) e il bersaglio e'
-   * `INPUT` ⇒ si usciva dal gestore senza fare nulla.  ⭐ Dal vivo non si
-   * vedeva quasi mai perche' basta un clic sul desktop a spostare il fuoco:
-   * si vede se si preme la combinazione SUBITO dopo essere entrati.
-   *
-   * ⇒ ⭐ La domanda giusta e' un'altra, e c'era gia': **«c'e' una sessione da
-   *   terminare?»** — cioe' `canale_corrente`.  Il campo di testo si protegge
-   *   solo se e' davvero SULLO SCHERMO (`offsetParent`), che e' il caso vero da
-   *   difendere: uno che sta scrivendo in una casella non vuole uscire.
-   *
-   * ⚠ E' la forma E6: una proprieta' DEDOTTA («c'e' un input ⇒ siamo nel
-   *   modulo») al posto del fatto («c'e' una sessione?»). */
-  if (!canale_corrente) return;
-  const dentro = ev.target
-              && (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA")
-              && ev.target.offsetParent !== null;
-  if (dentro) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  /* ⭐ La conferma, e non e' gentilezza: dal menu il logout costa tre gesti
-     deliberati, una combinazione ne costa uno — e chiude TUTTI i programmi.
-     ⚠ E' anche la difesa dal fraintendimento di chi viene da RDP, dove
-     `Ctrl+Alt+End` manda `Ctrl+Alt+Canc` alla sessione remota. */
-  logout_mostra(true);
 }, true);
 
 (function () {
@@ -6190,7 +6417,29 @@ function cl_su_keydown(ev) {
          + "detto invece che falsificato");
       return;
     }
-    ev.preventDefault();
+    /* ⛔⭐⭐ E IL `Ctrl+V` E' L'UNICO COMANDO CHE NON SI ANNULLA — fase 7.
+     *
+     *     `preventDefault()` su un comando impedisce al browser di eseguirlo, e
+     *     per ogni altra combinazione e' quel che vogliamo: `Ctrl+W` NON deve
+     *     chiudere la scheda, deve andare al desktop remoto.
+     *     ⛔ Ma sul `Ctrl+V` quel divieto **impedisce l'incolla del browser, e
+     *     quindi impedisce all'evento `paste` di nascere** — cioe' spegne
+     *     l'unica strada che Firefox e Safari lasciano per far arrivare al
+     *     desktop remoto quel che si e' copiato qui (§9).
+     *
+     * ⚠ `[M]` 17 agosto 2026: su Firefox il server non ha ricevuto NEMMENO UN
+     *   `APPUNTI_ANNUNCIO` in tutta la sessione.  Su Chrome non si vedeva,
+     *   perche' li' il testo arriva dalla sorveglianza e non dai tasti — ⛔ un
+     *   difetto che si presenta su un motore solo, e su quello meno provato.
+     *
+     * ⭐ E lasciarlo passare NON costa niente: sulla tela non c'e' nessun
+     *    elemento modificabile, quindi l'incolla del browser non scrive da
+     *    nessuna parte.  ⛔ E i tasti partono lo stesso, tre righe piu' sotto:
+     *    quel che l'utente sta facendo e' incollare **nel desktop remoto**. */
+    const e_incolla = ev.ctrlKey && !ev.altKey && !ev.metaKey
+                      && (ev.key === "v" || ev.key === "V");
+    if (e_incolla) appunti_su_incolla();
+    else ev.preventDefault();
     /* ⛔ La ripetizione automatica la fa il DESKTOP remoto, che il tasto ce
        l'ha giu': rimandarla qui sarebbe un secondo «premuto» senza rilascio. */
     if (ev.repeat || cl_tasti_premuti.has(ev.code)) return;

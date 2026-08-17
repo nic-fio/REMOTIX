@@ -307,6 +307,17 @@ class Cliente(QuicConnectionProtocol):
         # `0x40 0x54` piu' il varint della sessione.  `None` = non e' nostro.
         self.uni_pref = {}
         self.uni_genere = {}
+        # ═══ IL VIDEO PRESO DAL FILO — fase 3/7, 17 agosto 2026 ═══════════
+        # ⛔ NON per dipingerlo: per SEPARARE il nostro flusso dal
+        #    decodificatore del browser.  «Gli artefatti sono nostri» e «sono
+        #    suoi» hanno la stessa faccia guardando lo schermo, e si dividono in
+        #    un modo solo — dando gli STESSI BYTE a un terzo decodificatore che
+        #    non e' nessuno dei due (`ffmpeg`/`dav1d`).
+        # ⚠ E i byte sono quelli del FILO, non quelli del rilievo: fra il
+        #   codificatore e il browser c'e' tutto il trasporto, e un difetto li'
+        #   in mezzo il rilievo non lo vedrebbe.
+        self.v_in = {}          # stream_id -> bytearray in montaggio
+        self.v_fotogrammi = []  # [(numero, chiave, larghezza, altezza, dati)]
 
     def _cade(self, perche: str) -> None:
         """La prima causa vince: le successive sono conseguenze, non cause."""
@@ -444,6 +455,45 @@ class Cliente(QuicConnectionProtocol):
         self.app_violazioni.append(
             f"tipo {tipo:#06x} sul canale appunti: §7.4 ne definisce TRE")
 
+    def _decidi_canale(self, sid, carico, fine):
+        """Il byte alto del `tipo` dice il canale (§2.5), e adesso c'e'."""
+        self.uni_pref.pop(sid, None)
+        if carico[0] == 0x02:
+            self.uni_genere[sid] = "wt"
+            self._appunti_stream(sid, carico, fine)
+        elif carico[0] == 0x03:
+            self.uni_genere[sid] = "video"
+            self._video_stream(sid, carico, fine)
+        else:
+            # ⚠ Un canale che questo cliente non serve: lo DICE invece di
+            #   tacere — «ricevuto e non usato» e «mai arrivato» non devono
+            #   avere la stessa faccia.
+            self.uni_genere[sid] = "altro"
+            print(f"   [wt]   ⚠ stream uni {sid}, canale 0x{carico[0]:02x}: "
+                  f"lecito e non servito da questo cliente (§2.5)")
+
+    def _video_stream(self, sid, dati, fine):
+        """Uno stream del canale VIDEO (§6.2): uno stream, un fotogramma.
+
+        ⛔ E la fine dello stream E' la fine del fotogramma — ma **solo con un
+           FIN**: uno stream azzerato porta un fotogramma incompleto, che §6.2
+           impone di BUTTARE e non di consegnare al decodificatore.
+        ⚠ Qui `aioquic` non distingue i due casi su questo cammino, quindi si
+          registra quel che si e' visto e si dichiara: chi legge il file sa che
+          i fotogrammi sono quelli finiti con FIN.
+        """
+        b = self.v_in.setdefault(sid, bytearray())
+        b += dati
+        if not fine:
+            return
+        del self.v_in[sid]
+        if len(b) < 28:
+            print(f"   [vid]  ⛔ stream {sid} finito con {len(b)} byte: §6.2 "
+                  f"vuole 28 di intestazione")
+            return
+        tipo, codec, l, a, numero, istante, inp = struct.unpack("!HHIIIQI", bytes(b[:28]))
+        self.v_fotogrammi.append((numero, tipo == 0x0301, l, a, bytes(b[28:])))
+
     def _appunti_stream(self, sid, dati, fine):
         """I byte di uno stream unidirezionale del SERVER, canale appunti.
 
@@ -577,55 +627,58 @@ class Cliente(QuicConnectionProtocol):
         #     HTTP/3 e i due di QPACK, che sono di `aioquic`.  Uno stream
         #     WebTransport si riconosce dal suo tipo, `0x54` — che come `0x41`
         #     non sta in un byte: sul filo sono `0x40 0x54`.
+        # ⛔⭐ GLI STREAM UNIDIREZIONALI DEL SERVER — §2.5: di qui passano il
+        #     video (0x03) e gli appunti (0x02).  ⚠ Non tutti sono nostri: fra
+        #     gli unidirezionali del server ci sono il canale di controllo di
+        #     HTTP/3 e i due di QPACK, che sono di `aioquic`.
+        #
+        # ⛔⛔ E SI DECIDE SOLO QUANDO C'E' DA DECIDERE — tre volte in una sera
+        #      il difetto e' stato lo stesso, e vale la pena scriverlo una volta
+        #      per tutte: **classificare su byte che non sono ancora arrivati**.
+        #
+        #      1. si aspettavano DUE byte per riconoscere il preambolo, e gli
+        #         stream QPACK ne portano UNO ⇒ inghiottiti, e il server ci
+        #         congedava per `TEMPO_SCADUTO`;
+        #      2. il giudizio «altro» non aveva un ramo suo ⇒ i byte del video
+        #         finivano nello strato HTTP/3;
+        #      3. `[M]` **il primo pacchetto di uno stream video porta il solo
+        #         preambolo — `40 54 00`, tre byte, carico ZERO** ⇒ si decideva
+        #         «non e' ne' appunti ne' video» su uno stream che era video, e
+        #         si buttava tutto il resto.
+        #
+        # ⇒ La regola: finche' il byte che decide non e' arrivato, lo stato e'
+        #   «lo so che e' nostro e non so ancora che cos'e'» — che e' uno stato
+        #   VERO, non un giudizio.  ⛔ `LEZIONI.md` §1.9: «non lo so» e «non lo
+        #   e'» non devono avere la stessa faccia.
         if nome == "StreamDataReceived" and (event.stream_id & 0x03) == 0x03:
             sid = event.stream_id
+            if os.environ.get("B3_SPIA"):
+                print(f"   [spia] uni {sid} genere={self.uni_genere.get(sid)} "
+                      f"len={len(event.data)} fin={event.end_stream} "
+                      f"primi={bytes(event.data[:6]).hex()}")
             g = self.uni_genere.get(sid)
             if g == "h3":
                 pass                       # e' di `aioquic`: gli si lascia
             elif g == "wt":
                 self._appunti_stream(sid, event.data, event.end_stream)
                 return
+            elif g == "video":
+                self._video_stream(sid, event.data, event.end_stream)
+                return
             elif g == "altro":
-                # ⛔⛔ NOSTRO MA NON SERVITO — e questo ramo mancava, il 17
-                #     agosto 2026, con una conseguenza che non somigliava alla
-                #     causa.
-                #
-                #     Senza di lui uno stream gia' giudicato «altro» (il VIDEO,
-                #     0x03) ricadeva nel ramo «non so ancora che cos'e'» a OGNI
-                #     pacchetto: il primo byte del carico non e' `0x40`, quindi
-                #     veniva ribattezzato «h3» ⛔ **e i byte di un fotogramma
-                #     finivano dentro lo strato HTTP/3 di `aioquic`**.
-                #
-                # ⚠ Il sintomo era `Only one QPACK decoder stream is allowed`,
-                #   cioe' un errore di HTTP/3 su una connessione dove HTTP/3 non
-                #   c'entrava niente — e la connessione cadeva a meta' giro.
-                #   ⛔ Un difetto del banco travestito da difetto di protocollo.
+                return                     # nostro, e questo cliente non lo serve
+            elif g == "wt-attesa":
+                # Il preambolo c'e' gia': manca il byte che dice il canale.
+                p = self.uni_pref.setdefault(sid, bytearray())
+                p += event.data
+                if p:
+                    self._decidi_canale(sid, bytes(p), event.end_stream)
                 return
             else:
-                # ⛔⛔ SI DECIDE SUL PRIMO BYTE, NON SUI PRIMI DUE — e la
-                #     differenza e' costata un giro intero, il 17 agosto 2026.
-                #
-                #     La prima stesura accumulava finche' non aveva **due** byte
-                #     e poi confrontava con `0x40 0x54`.  ⛔ Ma gli stream QPACK
-                #     del server portano **un byte solo** (il tipo, 0x02 e 0x03)
-                #     e poi tacciono: quel byte finiva nell'accumulo e non
-                #     arrivava mai ad `aioquic`.  ⇒ Il suo strato HTTP/3 non
-                #     vedeva gli stream del pari, non consegnava le
-                #     intestazioni della CONNECT, e questo programma restava ad
-                #     aspettare — ⛔ **finche' il server non lo congedava con
-                #     `TEMPO_SCADUTO` per non aver mai aperto il canale di
-                #     controllo** (§4.6).
-                #
-                # ⚠ E il rosso finiva sul SERVER, che aveva fatto esattamente
-                #   quel che §4.6 gli dice di fare.  E' `LEZIONI.md` §2.3: «una
-                #   prova che boccia il codice giusto costa quanto una che
-                #   promuove quello sbagliato».
-                #
-                # ⭐ La cura non e' accumulare meglio: e' **non accumulare
-                #    affatto** quel che non e' nostro.  Uno stream WebTransport
-                #    comincia per `0x40` (il varint del tipo 0x54 non sta in un
-                #    byte); qualunque altro primo byte e' di `aioquic`, e i suoi
-                #    byte non devono passare di qui nemmeno per un giro.
+                # ⛔ Si decide sul PRIMO byte: uno stream WebTransport comincia
+                #    per `0x40` (il varint del tipo 0x54 non sta in un byte);
+                #    qualunque altro primo byte e' di `aioquic`, e i suoi byte
+                #    non devono passare di qui nemmeno per un giro.
                 if not event.data:
                     return
                 if event.data[0] != 0x40:
@@ -633,34 +686,23 @@ class Cliente(QuicConnectionProtocol):
                 else:
                     p = self.uni_pref.setdefault(sid, bytearray())
                     p += event.data
-                    if len(p) < 2 or p[1] != 0x54:
-                        if len(p) >= 2:
-                            # ⚠ `0x40` seguito da altro: non e' WebTransport.
-                            #   ⛔ E i byte trattenuti si sono gia' persi per
-                            #     `aioquic` — quindi si DICHIARA, invece di
-                            #     tacere e lasciarlo rompere piu' avanti.
-                            self.uni_genere[sid] = "altro"
-                            self.uni_pref.pop(sid, None)
-                            print(f"   [wt]   ⚠ stream uni {sid} comincia per "
-                                  f"0x40 0x{p[1]:02x}: non e' WebTransport, e i "
-                                  f"suoi byte sono stati trattenuti")
+                    if len(p) < 2:
+                        return
+                    if p[1] != 0x54:
+                        self.uni_genere[sid] = "altro"
+                        self.uni_pref.pop(sid, None)
+                        print(f"   [wt]   ⚠ stream uni {sid} comincia per 0x40 "
+                              f"0x{p[1]:02x}: non e' WebTransport, e i suoi byte "
+                              f"sono stati trattenuti")
                         return
                     q, i = _varint(bytes(p), 2)
                     if q is None:
-                        return             # il varint della sessione non e' tutto qui
-                    self.uni_genere[sid] = "wt"
+                        return         # il varint della sessione non e' tutto qui
                     resto = bytes(p[i:])
-                    self.uni_pref.pop(sid, None)
-                    # ⛔ Il byte alto dice il canale, e i due byte del `tipo`
-                    #    sono del MESSAGGIO: si sbircia senza consumarli.
-                    if len(resto) >= 1 and resto[0] == 0x02:
-                        self._appunti_stream(sid, resto, event.end_stream)
-                    else:
-                        # ⚠ Il video (0x03) e tutto il resto: questo cliente non
-                        #   li serve, e lo DICE invece di tacere — «ricevuto e
-                        #   non usato» e «mai arrivato» non devono avere la
-                        #   stessa faccia.
-                        self.uni_genere[sid] = "altro"
+                    self.uni_genere[sid] = "wt-attesa"
+                    self.uni_pref[sid] = bytearray(resto)
+                    if resto:
+                        self._decidi_canale(sid, resto, event.end_stream)
                     return
         if nome == "StreamDataReceived" and event.stream_id == self.sessione:
             # la capsula di chiusura della sessione (§3.1 punto 3)
@@ -808,6 +850,32 @@ async def chiedi_tela(cli, reg, lar, alt, tetto):
         return es, mot, tl, ta, ms
 
 
+def scrivi_video(a, cli):
+    """I fotogrammi presi dal filo, per un decodificatore TERZO.
+
+    ⛔ E si chiama DOPO l'attesa di `--resta`, non prima: alla riga in cui la
+       sessione si apre non e' ancora arrivato nessun fotogramma, e un file
+       vuoto direbbe «il server non manda video» su un server che lo manda.
+       ⚠ E' costato un giro, il 17 agosto 2026 — un difetto del banco con la
+         faccia di un difetto del prodotto, il terzo della giornata.
+    """
+    if not a.video_scrivi or not cli.v_fotogrammi:
+        if a.video_scrivi:
+            print("   [vid]  ⛔ nessun fotogramma preso dal filo: niente file")
+        return
+    # ⛔ I fotogrammi si concatenano NELL'ORDINE DEL NUMERO (§6.2): gli stream
+    #    sono indipendenti e possono arrivare fuori ordine, e un flusso rimesso
+    #    in fila male darebbe artefatti che sarebbero NOSTRI del banco — cioe'
+    #    la risposta sbagliata alla domanda che questo file esiste per fare.
+    ordinati = sorted(cli.v_fotogrammi, key=lambda f: f[0])
+    with open(a.video_scrivi, "wb") as f:
+        for _, _, _, _, d in ordinati:
+            f.write(d)
+    chiavi = sum(1 for x in ordinati if x[1])
+    print(f"   [vid]  {len(ordinati)} fotogrammi ({chiavi} chiavi), "
+          f"{ordinati[0][2]}x{ordinati[0][3]}, scritti in {a.video_scrivi}")
+
+
 def scrivi_appunti(a, cli):
     """L'esito degli appunti, in JSON, per il giudice del banco.
 
@@ -895,13 +963,19 @@ def scrivi_traccia(a, reg, cli=None):
     print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
 
 
-def corpo_ciao(audio="opus,pcm"):
+def corpo_ciao(audio="opus,pcm", video="hevc,av1", prof="8,10"):
     # ⛔ `audio` si puo' restringere dalla riga di comando, e NON e' un trucco:
     #    e' quel che dichiara un client che Opus non lo sa fare.  §4.3 impone
     #    `pcm` a entrambi proprio per questo — e' «la base sempre disponibile»,
     #    e il controllo positivo di Opus.  ⇒ `--audio-codec pcm` esercita la
     #    negoziazione, non la scavalca.
-    voci = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
+    # ⛔ E anche il VIDEO si puo' restringere, dal 17 agosto 2026: serve a
+    #    esercitare il ramo AV1 senza un browser di mezzo.  ⚠ Non e' un trucco —
+    #    e' quel che dichiara un client che l'HEVC non lo sa decodificare, cioe'
+    #    **esattamente Firefox**.  §4.3 fa scegliere al server dentro
+    #    l'intersezione, e restringere l'intersezione e' un uso del protocollo,
+    #    non un aggiramento.
+    voci = [("video.codec", video), ("video.profondita", prof),
             ("audio.codec", audio), ("video.livello", "5.1"),
             ("video.misura_massima", "3840x2160"), ("appunti.testo", "si"),
             ("input.tocco", "no"), ("client.nome", "cliente-di-prova 0.1.0")]
@@ -941,7 +1015,7 @@ async def principale(a) -> int:
         #    prima.  ⭐ Il validatore di B4 e' l'arbitro anche del rifiuto.
         try:
             # ── CIAO ────────────────────────────────────────────────────────
-            b = inquadra(T["CIAO"], corpo_ciao(a.audio_codec))
+            b = inquadra(T["CIAO"], corpo_ciao(a.audio_codec, a.video_codec, a.video_profondita))
             cli.manda(b)
             reg.aggiungi(CLIENT, b)
             nome, corpo, grezzo = await attendi(cli, "ECCOMI", reg=reg)
@@ -969,7 +1043,7 @@ async def principale(a) -> int:
                   + ("   ⭐ il secondo fisso c'e'" if ms >= 1000 else
                      "   ⛔ MENO DI UN SECONDO: §4.4-bis violata"))
             if ms < 1000:
-                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 1
 
             # ── ATTACCA ─────────────────────────────────────────────────────
@@ -980,7 +1054,7 @@ async def principale(a) -> int:
             reg.aggiungi(CLIENT, b)
             nome, corpo, grezzo = await attendi(cli, "SESSIONE", reg=reg)
         except Exception:
-            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
             raise
         stato_s = corpo[0]
         lar, alt = struct.unpack("!II", corpo[1:9])
@@ -1018,7 +1092,7 @@ async def principale(a) -> int:
                         await asyncio.wait_for(cli.caduto.wait(), timeout=quando)
                         print(f"   ⛔ caduta prima di poter chiedere la tela: "
                               f"{cli.caduta}")
-                        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+                        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                         return 4
                     except asyncio.TimeoutError:
                         pass
@@ -1028,7 +1102,7 @@ async def principale(a) -> int:
                     # ⛔ Il silenzio si REGISTRA e si esce con un codice suo: e'
                     #    la scena di §7.1, e va distinta da «la sessione e'
                     #    caduta» (4) e da «tutto bene» (0).
-                    scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+                    scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                     return 5
                 tela_viva = (r[2], r[3])
         if a.vista:
@@ -1041,7 +1115,7 @@ async def principale(a) -> int:
             reg.aggiungi(CLIENT, b)
             print(f"   → VISTA {vl}x{va}   ⚠ non deve far cambiare la tela")
 
-        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
 
         # ⛔ IL SEGNALE DI «ATTACCATO», E PERCHE' NON BASTA UNA RIGA STAMPATA.
         #
@@ -1175,12 +1249,12 @@ async def principale(a) -> int:
                 #    dev'essere gia' riconoscibile come nostro.
                 cli.chiusa_da_noi = True
                 print(f"   ⭐ ancora attaccato dopo {a.resta} s: niente e' caduto")
-                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 0
             print(f"   ⛔ NON sono rimasto attaccato: {cli.caduta}")
-            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+            scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
             return 4
-        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli)
+        scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
         return 0
 
 
@@ -1282,6 +1356,16 @@ if __name__ == "__main__":
                    help="quanto si aspetta un TELA prima di dichiarare il "
                         "silenzio (⚠ non e' una regola di RCP.md)")
     # ═══ L'AUDIO — fase 7 ═════════════════════════════════════════════════
+    p.add_argument("--video-scrivi", default="",
+                   help="dove scrivere i fotogrammi presi DAL FILO, cosi' come "
+                        "sono — per darli a un decodificatore terzo e separare "
+                        "il nostro flusso da quello del browser")
+    p.add_argument("--video-codec", default="hevc,av1",
+                   help="che cosa dichiarare in `video.codec` (§4.3).  "
+                        "⛔ `av1` da solo e' quel che dichiara Firefox, che "
+                        "l'HEVC non lo decodifica")
+    p.add_argument("--video-profondita", default="8,10",
+                   help="che cosa dichiarare in `video.profondita` (§4.3)")
     p.add_argument("--audio-codec", default="opus,pcm",
                    help="che cosa dichiarare in `audio.codec` (§4.3).  "
                         "⛔ `pcm` da solo e' legittimo ed e' il controllo "

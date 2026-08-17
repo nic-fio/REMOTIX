@@ -347,12 +347,12 @@ static void cursore_dal_palco(void *ctx, const char *utente, uid_t uid,
  *   il sintomo era «il desktop si ferma e non riparte piu'», e non nominava ne'
  *   la chiave ne' il codificatore. */
 static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
-                         bool chiave)
+                         uint8_t profondita, bool chiave)
 {
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return;
-	figli_video(p->f, utente, codec, chiave);
+	figli_video(p->f, utente, codec, profondita, chiave);
 }
 
 /* ⭐⭐ LA CUCITURA DELL'AUDIO — fase 7, ed e' la terza della stessa famiglia.

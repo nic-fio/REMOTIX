@@ -203,8 +203,15 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
  *     · l'ultima sessione di quell'utente se ne va ⇒ `codec = 0`, cioe'
  *       «smetti di catturare».  ⚠ Il palco (I4) resta in piedi: si ferma solo
  *       il ciclo dei fotogrammi. */
+/* ⛔⭐⭐ `profondita` E' ARRIVATA IL 17 AGOSTO 2026, e non e' un campo in piu':
+ *      e' la cura di un difetto misurato.  Il codec attraversava questo
+ *      confine e la profondita' NO — il figlio se la scriveva da se' (`10`,
+ *      un letterale), e il flusso usciva a 10 bit mentre `ECCOMI` ne
+ *      dichiarava 8.  ⚠ Su Chrome+HEVC non si vedeva (il decodificatore si
+ *      riconfigura dal flusso); su Firefox+AV1 il desktop si INCHIODAVA.
+ * ⚠ `0` = non negoziata: chi riceve NON deve sceglierne una per conto suo. */
 typedef void (*wt_video_richiesta)(void *ctx, const char *utente, uint8_t codec,
-                                   bool chiave);
+                                   uint8_t profondita, bool chiave);
 void wt_video_gancio(wt_video_richiesta f, void *ctx);
 
 /* ⭐⭐ FASE 4 — IL PONTE DELL'INPUT, e attraversa un confine di PROCESSO.

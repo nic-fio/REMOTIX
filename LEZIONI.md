@@ -1154,6 +1154,61 @@ sessione intera invece che a un anello.
 
 ---
 
+### 2.8 ⭐⭐⭐ UN SECONDO MOTORE È UN SECONDO LETTORE — e fa emergere i difetti che l'unico lettore non poteva vedere
+
+*17 agosto 2026, sera, parole dell'utente dopo un'ora su Firefox: «Firefox sta facendo emergere una
+serie di bug nascosti davvero grossa».*
+
+`PIANO.md` §0.4 dice che due pezzi nostri che vanno d'accordo **non confermano niente**, e per il
+protocollo il progetto ha pagato il prezzo di un secondo lettore: `01-b3-cliente.py`, scritto in un
+altro linguaggio leggendo **solo** `RCP.md`.
+
+⛔ **Per il PRODOTTO quel prezzo non era mai stato pagato.** Tutto — video, input, appunti,
+scorciatoie — era stato misurato su **un motore solo**, della famiglia di Chrome, e su **un sistema
+solo**. Un browser che conferma se stesso è esattamente la stessa cosa di due nostri pezzi che si
+parlano.
+
+**Che cosa è venuto fuori in un'ora, aprendo la stessa pagina su Firefox:**
+
+| # | il difetto | perché non si vedeva |
+|---|---|---|
+| 1 | ⛔ la **profondità dichiarata era 8 e sul filo ne andavano 10** — `figlio.c` aveva `r.profondita = 10` scritto a mano, e il numero negoziato **non attraversava il confine di processo** | ⚠ **c'era su tutt'e due i browser**: HEVC porta i suoi parametri nel flusso (VPS/SPS) e il decodificatore di Chrome si riconfigurava da sé. AV1 no — la pagina configura `av01.…08` e dav1d si fida |
+| 2 | ⛔ `Ctrl+Alt+Fine` **non arrivava mai alla pagina**: sul portatile Linux quella combinazione se la prende il desktop locale | scelta e provata su Windows, dove non la aggancia nessuno |
+| 3 | ⛔ il `preventDefault()` sul `Ctrl+V` **impediva all'evento `paste` di nascere**, cioè spegneva l'unica strada che Firefox lascia agli appunti | su Chrome il testo arriva dalla **sorveglianza** (`clipboardchange`), che non passa dai tasti |
+| 4 | ⚠ **AV1 gira in software** su questo ferro, e si vede: il desktop è lento | nessuno aveva mai negoziato AV1 — Chrome sceglie HEVC, che qui è in hardware |
+
+#### ⏳ E il quinto — gli artefatti su Firefox — è ancora aperto, ma quattro ipotesi sono MORTE
+
+*Scritto perché nessuno le rifaccia: un'ipotesi eliminata da una misura vale quanto una confermata.*
+
+| l'ipotesi | come è morta |
+|---|---|
+| ⛔ «il flusso AV1 che spediamo è rotto» | **falsa.** Sei fotogrammi presi **dal filo** e dati a **libdav1d** — lo stesso decodificatore che usa Firefox — danno un'immagine **perfetta**: sfondo liscio, testo del terminale nitido, nessun blocco |
+| ⛔ «SVT-AV1 allinea 962 a 968 e il conto non torna» | **falsa, e misurata a parte**: 2560×**962** codificato e ridecodificato torna **2560×962 esatti**, PSNR **43,3 dB** — meglio del 960 allineato (42,6). L'encoder riempie dentro e scrive la misura di resa; dav1d ritaglia giusto |
+| ⛔ «la pagina riceve una misura diversa da quella dichiarata» | **falsa.** La pagina lo dice da sé: *codificato 2560×962 · mostrato 2560×962 · tela in vigore 2560×962* |
+| ⛔ «il decodificatore del browser sbaglia e lo dice» | **falso**: zero errori riportati, e il filtro che li avrebbe portati al server funzionava |
+
+⇒ **Resta un pezzo solo, e non era mai stato messo alla prova**: il percorso di **disegno** della
+pagina. ⚠ La cattura pulita usa il cliente Python, che non dipinge niente — e su Chrome quel
+percorso non ha mai avuto un testimone indipendente.
+
+⭐ **Il dato nuovo da cui ripartire**: la pagina dichiara `formato BGRX`. Un fotogramma decodificato
+da AV1 esce in `I420`; Firefox lo consegna **già convertito in RGB**. ⏳ E il secondo percorso di
+disegno — `?video=worker` — **non dipinge affatto** su Firefox: la pagina si carica e la sonda
+gira, poi niente. `VideoDecoder` dentro un `Worker` su Firefox 140 ESR è la sospettata, e non è
+stata verificata.
+
+⭐ **E il difetto 1 è quello che insegna di più**: non era un difetto *di Firefox*, era un difetto
+**nostro e universale** che un motore indulgente assorbiva. ⇒ Il secondo lettore non trova i difetti
+dell'altro: trova **i propri**, che erano lì da sempre.
+
+⛔ **La regola che ne segue**: una funzione provata su un motore solo è provata quanto un protocollo
+letto da una sola implementazione. ⚠ E non basta «funziona anche su Firefox»: va provato **il verso
+che quel motore percorre diversamente** — che è il caso 3, dove le due strade sono due percorsi di
+codice interi.
+
+---
+
 ## 3. Che cosa chiedere a un compositore nuovo
 
 Questa è la lista che a GNOME abbiamo composto in otto fasi. Al prossimo desktop si fa in un

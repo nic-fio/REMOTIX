@@ -2656,6 +2656,39 @@ static uint32_t numero_prossimo(uint32_t ultimo)
 	return n;
 }
 
+uint8_t rcp_profondita_negoziata(const rcp_sessione *s)
+{
+	/* ⛔⭐⭐ E QUESTO LETTORE NON C'ERA, e la sua assenza e' costata il difetto
+	 *      piu' caro trovato finora — 17 agosto 2026, sera, su Firefox.
+	 *
+	 *      §4.3 fa negoziare `video.profondita` e la scelta finisce qui dentro.
+	 *      ⛔ Ma **nessuno la leggeva**: il figlio scriveva `r.profondita = 10`
+	 *      a mano, per ogni codec, e il flusso usciva a 10 bit **mentre
+	 *      `ECCOMI` ne dichiarava 8**.
+	 *
+	 * ⚠ Su Chrome non si vedeva: HEVC porta i suoi parametri dentro il flusso
+	 *   (VPS/SPS) e il decodificatore si riconfigura da se'.  ⛔ Su Firefox +
+	 *   AV1 no: la pagina configura `av01.0.12M.08` — la profondita' NEGOZIATA
+	 *   — e dav1d si fida della stringa.  `[M]` prima artefatti, poi il
+	 *   decodificatore si pianta e il desktop si ferma.
+	 *
+	 * ⭐ Ed e' la stessa forma di `LEZIONI.md` §7.5: **due verita' sullo stesso
+	 *    fatto, e nessuna riga che le leghi**.  Il codec attraversava il
+	 *    confine di processo, la profondita' no — e nessun banco poteva
+	 *    vederlo, perche' i due numeri vivono in due processi diversi.
+	 *
+	 * ⚠ `0` = non ancora negoziata, e NON e' «8»: chi non ha negoziato non ha
+	 *   una profondita', e sceglierne una per lui sarebbe rifare a mano il
+	 *   difetto che questa funzione esiste per togliere. */
+	if (!s || !s->profondita[0])
+		return 0;
+	if (strcmp(s->profondita, "8") == 0)
+		return 8;
+	if (strcmp(s->profondita, "10") == 0)
+		return 10;
+	return 0;
+}
+
 uint8_t rcp_codec_negoziato(const rcp_sessione *s)
 {
 	if (!s)

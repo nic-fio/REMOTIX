@@ -294,7 +294,25 @@ struct corpo_tela {
 struct corpo_video {
 	uint8_t codec;  /* 1 = HEVC, 2 = AV1, 0 = spegni */
 	uint8_t chiave; /* ⛔ §5.2: il prossimo DEVE essere una chiave */
-	uint16_t riempi;
+	/* ⛔⭐⭐ LA PROFONDITA' NEGOZIATA — 17 agosto 2026, e questo campo e' la cura
+	 *      di un difetto misurato, non un'aggiunta di comodita'.
+	 *
+	 *      Fino a stasera il codec attraversava questo confine e la profondita'
+	 *      NO: il figlio scriveva `r.profondita = 10` a mano, per ogni codec.
+	 *      ⇒ Il flusso usciva a **10 bit mentre `ECCOMI` ne dichiarava 8**
+	 *      (§4.3), e nessun banco poteva vederlo — i due numeri vivono in due
+	 *      PROCESSI diversi.
+	 *
+	 * ⚠ Su Chrome+HEVC non si vedeva: HEVC porta i suoi parametri nel flusso
+	 *   (VPS/SPS) e il decodificatore si riconfigura da se'.
+	 * ⛔ Su Firefox+AV1 sì: la pagina configura la stringa con la profondita'
+	 *   NEGOZIATA (`av01.0.12M.08`) e dav1d si fida di quella.  `[M]` prima
+	 *   artefatti, poi il decodificatore si pianta e il desktop si ferma.
+	 *
+	 * ⚠ `0` = non negoziata, e NON vuol dire 8: chi riceve NON deve sceglierne
+	 *   una per conto suo — sarebbe rifare a mano il difetto appena tolto. */
+	uint8_t profondita;
+	uint8_t riempi;
 };
 
 /* ⛔ Che cosa il padre chiede al desktop.  Le azioni sono quelle di `RCP.md`
@@ -455,6 +473,8 @@ struct figlio {
 	/* ⛔ Che cosa il padre ha gia' chiesto a questo palco: si tiene per non
 	 *    ripetere lo stesso comando a ogni giro di `poll`. */
 	uint8_t video_codec_chiesto;
+	/* ⛔ E la profondita' con lui: vedi `corpo_video`.  ⚠ `0` = mai chiesta. */
+	uint8_t video_prof_chiesta;
 	/* ⛔ L'ultimo codec d'audio chiesto a questo figlio, per non ripetere la
 	 *    stessa richiesta a ogni battito — e per scrivere la riga di registro
 	 *    solo quando il fatto CAMBIA.  ⚠ `0` = spento, ed e' lo stato iniziale
@@ -2338,7 +2358,8 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec)
 	return true;
 }
 
-bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
+bool figli_video(figli *f, const char *utente, uint8_t codec,
+                 uint8_t profondita, bool chiave)
 {
 	struct figlio *g;
 	struct testa t;
@@ -2350,7 +2371,13 @@ bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
 	g = cerca(f, utente);
 	if (!g || g->fd < 0 || g->uscendo)
 		return false;
-	if (codec == g->video_codec_chiesto && !chiave)
+	/* ⛔ E la profondita' entra nel confronto: un secondo client che negozia
+	 *    8 bit dove il primo aveva 10 e' «qualcosa di nuovo da dire», anche se
+	 *    il codec e' lo stesso.  ⚠ Senza questa riga il messaggio non
+	 *    partirebbe, e il flusso resterebbe alla profondita' del PRIMO — cioe'
+	 *    esattamente la bugia che questo campo esiste per togliere. */
+	if (codec == g->video_codec_chiesto && profondita == g->video_prof_chiesta
+	    && !chiave)
 		return true; /* niente di nuovo da dire */
 
 	memset(&t, 0, sizeof t);
@@ -2363,6 +2390,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
 	memset(&c, 0, sizeof c);
 	c.codec = codec;
 	c.chiave = chiave ? 1u : 0u;
+	c.profondita = profondita;
 	memcpy(busta, &t, sizeof t);
 	memcpy(busta + sizeof t, &c, sizeof c);
 	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
@@ -2383,6 +2411,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave)
 		              utente, codec, chiave ? " — e la prima dev'essere una "
 		                                      "CHIAVE (§5.2)" : "");
 	g->video_codec_chiesto = codec;
+	g->video_prof_chiesta = profondita;
 	return true;
 }
 
@@ -3193,10 +3222,26 @@ static bool sta_nascendo(uint64_t ora_ms)
 static Codificatore *codif[3];
 /* Quale codec il padre ha chiesto: 0 = nessuno, cioe' nessuno sta guardando. */
 static uint8_t codec_chiesto;
+/* ⛔⭐⭐ E LA PROFONDITA' CHE IL PADRE HA NEGOZIATO (§4.3) — 17 agosto 2026.
+ *
+ *      Qui c'era un letterale, tre righe piu' in la': `r.profondita = 10`, per
+ *      OGNI codec e qualunque cosa fosse stata negoziata.  ⛔ Il flusso usciva
+ *      a 10 bit mentre `ECCOMI` ne dichiarava 8 — **due verita' sullo stesso
+ *      fatto, in due processi diversi**, e nessun banco poteva vederle insieme.
+ *
+ * ⚠ `0` = il padre non l'ha ancora detta.  ⛔ E NON vale 8: finche' non si sa,
+ *   non si apre nessun codificatore — «non lo so» e «e' otto» sono due fatti
+ *   diversi, ed e' proprio la loro confusione che ha prodotto il difetto. */
+static uint8_t profondita_chiesta;
 /* ⛔ §5.2 — il debito della chiave, uno per codec: chiederla per l'HEVC non la
  *    produce sull'AV1, e trattarli insieme darebbe una chiave a chi non l'ha
  *    chiesta e un delta a chi si'. */
 static bool debito_chiave[3];
+/* ⛔ Con quale profondita' ciascun codificatore e' stato APERTO.  ⚠ Si tiene qui
+ *    e non si chiede a `codificatore.h`: quel modulo non ha un lettore per la
+ *    profondita', e aggiungerne uno per una domanda che si puo' ricordare
+ *    sarebbe allargare un'interfaccia per pigrizia di chi chiama. */
+static uint8_t codif_prof[3];
 static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
 /* ⛔ CONTATO A PARTE da `ciclo_guasti`, e non e' pignoleria: quel contatore
  *    entra nel criterio «il ciclo non ha nemmeno provato a catturare» della riga
@@ -3653,9 +3698,46 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 {
 	CodificatoreRichiesta r;
 	char errore[256];
+	uint8_t prof = profondita_chiesta;
 
 	if (indice > 2)
 		return NULL;
+
+	/* ⛔⭐ SENZA PROFONDITA' NEGOZIATA NON SI APRE NIENTE, e non e' prudenza:
+	 *     aprirne uno «tanto per» vorrebbe dire scegliere noi quel che §4.3 fa
+	 *     scegliere al padre — cioe' rimettere il letterale con un altro nome.
+	 * ⚠ Non ci si arriva nella pratica: `MSG_VIDEO` porta i due numeri
+	 *   insieme, e il ciclo non cattura finche' non e' arrivato.  La riga c'e'
+	 *   perche' il giorno in cui ci si arrivasse lo dicesse qualcuno. */
+	if (prof != 8 && prof != 10) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ nessun codificatore: il padre non ha detto quale "
+		              "profondita' e' stata negoziata (§4.3, ho «%u»).  ⚠ NON ne "
+		              "scelgo una io: sarebbe la bugia del 17 agosto rimessa a "
+		              "mano",
+		              prof);
+		return NULL;
+	}
+
+	/* ⛔⭐ E SE LA PROFONDITA' E' CAMBIATA, IL CODIFICATORE SI RIFA'.
+	 *
+	 *     Il palco sopravvive al client (I4): il secondo che si collega puo'
+	 *     aver negoziato 8 dove il primo aveva 10.  ⚠ Tenendo quello vecchio, il
+	 *     flusso resterebbe alla profondita' del PRIMO e il secondo vedrebbe
+	 *     artefatti — cioe' lo stesso difetto di stasera, con un'altra causa.
+	 * ⛔ E il prossimo fotogramma dev'essere una CHIAVE: un codificatore nuovo
+	 *    non ha il passato del flusso (§5.2). */
+	if (codif[indice] && codif_prof[indice] != prof) {
+		registro_dice(REG_FIGLIO,
+		              "⭐ la profondita' negoziata e' cambiata (%u → %u): rifaccio "
+		              "il codificatore %u, e il prossimo fotogramma sara' una "
+		              "CHIAVE (§5.2)",
+		              codif_prof[indice], prof, indice);
+		codificatore_libera(codif[indice]);
+		codif[indice] = NULL;
+		codif_prof[indice] = 0;
+		debito_chiave[indice] = true;
+	}
 	if (codif[indice])
 		return codif[indice];
 
@@ -3675,7 +3757,11 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	r.fotogrammi_al_secondo = MOVIMENTO_FPS;
 	r.modo = CODIFICATORE_QUALITA_CRF;
 	r.qualita = 20;
-	r.profondita = 10;
+	/* ⛔⭐⭐ QUI C'ERA `10`, SCRITTO A MANO — ed e' il difetto misurato il 17
+	 *      agosto 2026 su Firefox: si dichiarava 8 in `ECCOMI` (§4.3) e si
+	 *      mandavano 10 sul filo.  ⇒ Adesso e' quel che il padre ha negoziato,
+	 *      e la riga sopra rifiuta di aprire se non lo sa. */
+	r.profondita = prof;
 	r.formato = CODIFICATORE_PIXEL_BGRX;
 	r.chiavi_ogni = 0;
 
@@ -3713,6 +3799,8 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 
 	if (!codif[indice])
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+	if (codif[indice])
+		codif_prof[indice] = prof;
 	if (!codif[indice]) {
 		/* ⛔ L'attesa cresce, e la riga lo DICE: senza, questo ramo scriveva il
 		 *    registro a raffica e bruciava un nucleo — la stessa forma dei 30,8
@@ -5109,6 +5197,15 @@ void figlio_vive(int argc, char **argv)
 					                    "(codec %u): non guarda piu' nessuno, e "
 					                    "il palco resta in piedi (I4).  %d/s",
 					              cv.codec, MOVIMENTO_FPS);
+				/* ⛔ E la profondita' con lui: sono lo stesso fatto, e
+				 *    separarli e' esattamente quel che si e' appena curato. */
+				if (cv.profondita && cv.profondita != profondita_chiesta) {
+					registro_dice(REG_FIGLIO,
+					              "⭐ §4.3: il padre ha negoziato %u bit "
+					              "(prima %u)",
+					              cv.profondita, profondita_chiesta);
+					profondita_chiesta = cv.profondita;
+				}
 				codec_chiesto = cv.codec;
 				/* ⛔ §5.2: il debito si segna sul codec CHIESTO, non su tutti.
 				 *    Chiedere una chiave per l'HEVC non ne produce una

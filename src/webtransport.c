@@ -2377,7 +2377,8 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		              "§5.2 vuole che il PRIMO sia una CHIAVE",
 		              utente, w->provenienza, codec, l, a);
 		if (gancio_palco)
-			gancio_palco(gancio_palco_ctx, utente, codec, true);
+			gancio_palco(gancio_palco_ctx, utente, codec,
+			             rcp_profondita_negoziata(w->rcp), true);
 		return;
 	}
 
@@ -2386,7 +2387,8 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	    && ora_ms - w->chiave_chiesta_ms >= WT_CHIAVE_RICHIESTA_MS) {
 		w->chiave_chiesta_ms = ora_ms;
 		if (gancio_palco)
-			gancio_palco(gancio_palco_ctx, utente, codec, true);
+			gancio_palco(gancio_palco_ctx, utente, codec,
+			             rcp_profondita_negoziata(w->rcp), true);
 		registro_dettaglio(REG_RCP,
 		                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
 		                   "palco di «%s» (codec %u)",
@@ -4338,7 +4340,9 @@ void wt_libera(wt *w)
 			              "l'ultima sessione di «%s» se ne va: il palco smette "
 			              "di catturare (il figlio resta, e' l'invariante I4)",
 			              mio);
-			gancio_palco(gancio_palco_ctx, mio, 0, false);
+			/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
+			 *   lui non vuol dire niente. */
+			gancio_palco(gancio_palco_ctx, mio, 0, 0, false);
 		}
 	}
 	if (w->rcp)

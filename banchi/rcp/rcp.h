@@ -896,6 +896,13 @@ bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 /* §4.3/§6.2: 1 = HEVC, 2 = AV1.  ⛔ `0` = non ancora negoziato. */
 uint8_t rcp_codec_negoziato(const rcp_sessione *s);
 
+/* ⭐⭐ La profondita' negoziata in §4.3 — **8** o **10**, `0` se non c'e'.
+ *
+ * ⛔ E VA LETTA, o si manda sul filo una profondita' diversa da quella
+ *    dichiarata: e' il difetto misurato il 17 agosto 2026 su Firefox, e il
+ *    riquadro per esteso sta sull'attuazione in `rcp.c`. */
+uint8_t rcp_profondita_negoziata(const rcp_sessione *s);
+
 /*
  * §4.3/§6.3: 1 = Opus, 2 = PCM.  ⛔ `0` = non ancora negoziato.
  *

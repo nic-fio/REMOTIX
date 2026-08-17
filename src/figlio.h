@@ -400,7 +400,12 @@ bool figli_chiedi_palco(figli *f, const char *utente);
  * ⚠ Chi decide non e' questo file e non e' `main.c`: e' `webtransport.c`, che
  *   sa quando `SESSIONE` e' partita e quando §5.2 apre il debito.  `main.c` fa
  *   da ponte perche' e' l'unico che conosce tutt'e due i lati. */
-bool figli_video(figli *f, const char *utente, uint8_t codec, bool chiave);
+/* ⛔⭐ `profondita` (8 o 10, `0` = non negoziata) e' arrivata il 17 agosto 2026:
+ *     senza, il figlio se la scriveva da se' e il flusso usciva a una
+ *     profondita' DIVERSA da quella dichiarata in `ECCOMI` (§4.3).  Il riquadro
+ *     per esteso sta su `struct corpo_video` in `figlio.c`. */
+bool figli_video(figli *f, const char *utente, uint8_t codec,
+                 uint8_t profondita, bool chiave);
 
 /* ⭐⭐ FASE 4 — L'INPUT ATTRAVERSA IL CONFINE DI PROCESSO.
  *
