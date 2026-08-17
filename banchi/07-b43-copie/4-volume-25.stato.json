@@ -1,6 +1,6 @@
 {
  "sink_nome": "remotix",
- "sink_id": 81,
+ "sink_id": 76,
  "monitor_channel_volumes": true,
  "channel_volumes": [
   0.015625,
