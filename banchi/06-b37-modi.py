@@ -27,10 +27,18 @@
                            un segnalibro, un banco non aggiornato.  Deve valere il
                            predefinito e **non riattivare niente**
 
-⭐ IL CONTROLLO POSITIVO, e senza di lui i tre zeri non valgono niente: nello
-   stesso giro si conta quanti `resize` la pagina ha RICEVUTO.  Uno zero con 4
-   resize arrivati e' una funzione che non c'e'; uno zero con 0 resize e' un banco
-   che non ha stimolato nulla (`CODER.md` §3.10).
+⭐ I CONTROLLI POSITIVI SONO TRE, e senza di loro i tre zeri non valgono niente —
+   quando l'atteso e' zero dappertutto, TUTTO quel che non guarda e' verde:
+
+   1. quanti `resize` la pagina ha RICEVUTO (dev'essere 4): uno zero con 0 resize
+      e' un banco che non ha stimolato nulla, non un prodotto sano;
+   2. ⭐ **la spia vede?**  Si chiama `chiedi_tela` a mano e si pretende che il
+      conto salga.  ⛔ Difetto di QUESTO banco, trovato il 17 agosto 2026: finche'
+      l'atteso di `segui` era 4, quel 4 faceva da controllo positivo senza dirlo;
+      azzerati tutti gli attesi, una spia rotta darebbe zero — cioe' verde — su
+      un prodotto che inseguisse la finestra a ogni pixel;
+   3. ⭐ `typeof tela_forse_chiedi` dev'essere `undefined`: e' la prova DIRETTA
+      che la funzione e' uscita, e non dipende da nessuna spia.
 """
 import importlib.util
 import os
@@ -78,10 +86,31 @@ def giro(modo):
     time.sleep(1.0)
     chieste = B.js("window.__b37_chieste")
     resize = B.js("window.__b37_r")
+    # ⛔⭐⭐ IL CONTROLLO POSITIVO DELLA SPIA, e senza di lui questo banco NON SA
+    #      FALLIRE — difetto suo, trovato il 17 agosto 2026 rileggendo la
+    #      riscrittura di quello stesso giorno.
+    #
+    # ⚠ Finche' l'atteso di `segui` era 4, quel 4 faceva da controllo positivo
+    #   SENZA DIRLO: una spia che non si fosse installata avrebbe dato 0 dove ne
+    #   servivano 4, e il banco sarebbe diventato rosso.  ⛔ Da quando gli attesi
+    #   sono ZERO DAPPERTUTTO quella prova e' sparita con l'atteso che la
+    #   conteneva: una spia rotta darebbe zero — cioe' VERDE — su un prodotto
+    #   qualunque, anche su uno che insegue la finestra a ogni pixel.
+    #
+    # ⇒ Si chiama `chiedi_tela` a mano e si pretende che la spia LO VEDA.  ⚠ E'
+    #   `chiedi_tela` e non `tela_forse_chiedi()`: quest'ultima e' uscita col
+    #   fondo, e chiamarla darebbe un `ReferenceError` che il banco leggerebbe
+    #   come «zero richieste» — un verde per il motivo sbagliato, di nuovo.
+    B.val("chiedi_tela('controllo positivo del banco')")
+    time.sleep(0.5)
+    positivo = len(B.js("window.__b37_chieste")) - len(chieste)
+    # ⭐ E la prova DIRETTA che la funzione e' uscita, che non dipende da nessuna
+    #   spia: il fondo non deve nemmeno esistere nella pagina.
+    fondo = B.js("typeof tela_forse_chiedi")
     B.ridimensiona(g["l"], g["a"])
     time.sleep(0.5)
     return {"modo": modo or "(niente)", "ADATTA": vero, "chieste": chieste,
-            "resize_arrivati": resize}
+            "resize_arrivati": resize, "positivo": positivo, "fondo": fondo}
 
 
 print("== 06-b37 · %s — la tela non si tocca a sessione viva (§5.1-bis)"
@@ -104,13 +133,29 @@ for modo in ("no", "", "segui"):
     n = len(r["chieste"])
     B.scrivi({"tipo": "modi", **r}, iniezione="si")
     print("    --  `?adatta=%-6s` ⇒ ADATTA=«%s» · %d resize arrivati · %d "
-          "richieste di tela (atteso %d)"
-          % (r["modo"], r["ADATTA"], r["resize_arrivati"], n, atteso[modo]),
+          "richieste di tela (atteso %d) · spia %s · tela_forse_chiedi «%s»"
+          % (r["modo"], r["ADATTA"], r["resize_arrivati"], n, atteso[modo],
+             "VEDE" if r["positivo"] >= 1 else "CIECA", r["fondo"]),
           flush=True)
     if r["resize_arrivati"] < 4:
         print("    NO  solo %d resize su 4 sono arrivati: il conto delle "
               "richieste non e' giudicabile — e' il PALCO"
               % r["resize_arrivati"], flush=True)
+        guasti += 1
+        continue
+    # ⛔ I DUE CONTROLLI CHE RENDONO GIUDICABILE LO ZERO, e vanno PRIMA di
+    #    giudicarlo: senza, «la funzione non c'e'» e «il banco non guarda» hanno
+    #    lo stesso aspetto (`CODER.md` §3.10, §4.6).
+    if r["positivo"] < 1:
+        print("    NO  ⛔ la spia NON vede una richiesta chiamata a mano ⇒ lo "
+              "zero e' del BANCO, non del prodotto: non si giudica niente",
+              flush=True)
+        guasti += 1
+        continue
+    if r["fondo"] != "undefined":
+        print("    NO  ⛔ `tela_forse_chiedi` esiste ancora (typeof «%s»): il "
+              "fondo del ridimensionamento a caldo e' rientrato (§5.1-bis)"
+              % r["fondo"], flush=True)
         guasti += 1
         continue
     if n == atteso[modo]:
