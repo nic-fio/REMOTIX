@@ -107,6 +107,8 @@ systemd-run \
   --property=StandardOutput=append:"$LAV/registro.log" \
   --property=StandardError=append:"$LAV/registro.log" \
   --property=KillMode=mixed \
+  --property=LimitRTPRIO=20 \
+  --property=LimitNICE=-11 \
   "$SRC/remotix" \
   --indirizzo 0.0.0.0 --nome 192.168.0.2 --porta 7700 \
   --certificati "$LAV/certificati" \
