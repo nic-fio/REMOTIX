@@ -571,6 +571,100 @@ banco — sulla sua scena.
 
 ---
 
+#### ⛔⛔ 4.9-ter · E LA CURA HA ROTTO CHROME — 20 agosto 2026, due sintomi e una causa sola
+
+*⭐ La cura di §5.4 era stata misurata **su Firefox soltanto**. L'utente l'ha aperta su Chrome, e
+in dieci minuti sono usciti due difetti che sembravano di due famiglie diverse.*
+
+**La causa, `[M]` in dodici righe di banco isolato:**
+
+| | |
+|---|---|
+| la specifica | `transferFromImageBitmap` porta la tela alla misura dell'immagine |
+| **Firefox** | ⭐ lo fa: tela 16×16 → **1588×914** (testimone Marionette) |
+| ⛔ **Chrome** | **NO**: `prima=[16,16] dopo=[16,16]` con un'immagine 2544×926 |
+
+**E i due sintomi, tutt'e due suoi:**
+
+1. l'immagine finiva **rimpicciolita in un buffer di 16×16** e stirata dal CSS ⇒ *«non si vede più
+   bene, mancano gli elementi della shell»*;
+2. ⛔ **l'input moriva**: `cl_geometria()` calcola `vx = larghezza sul vetro / tela.width`, cioè
+   **~124 invece di ~0,8** ⇒ ogni clic finiva in un punto fra 0 e 16, nell'angolo in alto a
+   sinistra. Il registro del server lo diceva alla lettera: `PUNTATORE (5,5) · (4,5) · (3,5)`.
+   L'utente: *«se clicco il quadrato del dash non compare il drawer»*.
+
+⭐ **La cura**: la misura **si scrive**, prima del trasferimento, e si guarda quella **vera**
+(`this.tela.width`) invece di fidarsi. ⇒ La riga si corregge da sé su qualunque motore, senza
+chiedere a nessuno chi sia — `CODER.md` §3.9, *si chiede per nome e si verifica che sia stato dato*,
+applicato all'**uscita**.
+
+⛔ **La riga da portarsi via**: **un solo motore non è una prova, è mezza prova.** Ed è per questo
+che da oggi c'è `banchi/07-b51-due-browser.py`, che fa i due giri da sé.
+
+#### ⛔⛔⭐ 4.9-quater · IL DESKTOP SENZA SHELL — e non era nostro né della pagina
+
+*Poi la shell è sparita anche su Firefox, con **tutti i contatori verdi**: `dipinti == consegnati`,
+zero buchi, zero errori, zero tardive. La pagina dipingeva fedelmente quel che le arrivava — e quel
+che le arrivava era **solo lo sfondo**.*
+
+`[M]` Mutter, interrogato con `GetCurrentState`, ha detto la cosa che nessun registro diceva:
+
+| monitor | misura | posizione | primario |
+|---|---|---|---|
+| `Meta-1` | 2544×926 | (0,0) | ⭐ **sì** — qui GNOME tiene barra e dock |
+| `Meta-0` | 2532×840 | (2544,0) | ⛔ no — **ed è quello che catturavamo** |
+
+⇒ ⛔ **Due figli di due server nostri sulla stessa sessione di `prova`** — le porte 7700 e 7730 —
+ognuno col suo monitor virtuale. Su GNOME **barra e dock stanno solo sul primario**: il secondario
+porta lo sfondo e basta. È il difetto «due server nostri sulla stessa sessione» della fase 4,
+tornato a mordere, ⚠ **e questa volta travestito da difetto della cura appena messa**.
+
+⭐⭐ **E adesso il prodotto lo DICE** — `src/mutter.c`, `mutter_monitor_cerca()`: se un monitor
+c'era già, esce una riga che nomina il sintomo *e* la cura (*«l'utente vedrà solo lo sfondo, con
+tutti i contatori verdi… quasi sempre è un altro server nostro sulla stessa sessione»*).
+⛔ **E la guardia è stata provata, non creduta**: rifatto il difetto apposta con un secondo server
+sulla 7740, `[M]` la riga è uscita — *«C'ERANO GIÀ 1 monitor su questa sessione (Meta-0)»*.
+
+⚠ **Non si fallisce**: un monitor che c'era già può essere legittimo (uno schermo vero). Si dichiara.
+
+#### ⭐⭐ 4.9-quinquies · IL BANCO CHE FA I DUE GIRI DA SÉ — `banchi/07-b51-due-browser.py`
+
+*Nato da una frase dell'utente: «non voglio fare più test: hai il controllo del PC, sistema tutto e
+fai le prove su chrome e firefox».*
+
+Per ogni browser — Firefox col protocollo **Marionette**, Chrome col protocollo di **diagnosi
+(CDP)** — quattro domande diverse: la **misura** della tela (`t.width` deve valere la tela in
+vigore: è il difetto di Chrome), i **contatori**, l'**input** *letto dal capo che riceve* (si clicca
+un punto noto e si legge nel registro del **server** dove è arrivato), e l'**immagine** in PNG.
+
+⭐ **E ha due bersagli, non uno**: l'angolo *e* il centro. Col solo angolo, una conversione che
+collassasse tutto nell'angolo — cioè il difetto vero — darebbe **verde**.
+
+⛔⛔ **E la sua prima stesura era sbagliata, il che vale la pena scrivere**: confrontava il **numero
+d'ordine** dell'input, che **riparte da 1 a ogni sessione** ⇒ diceva *«nessun input nuovo»* mentre
+il registro del server portava il clic **arrivato giusto**. Un rosso del banco addosso a un
+prodotto sano — `LEZIONI.md` §1.2. Adesso confronta le **righe nuove**.
+
+⚠ **E aspetta che il palco sia libero fra un browser e l'altro**: `[M]` un browser ucciso non chiude
+la sessione, la chiude il tempo morto di QUIC — **oltre 20 secondi** — e il secondo giro trovava il
+palco occupato accusando la pagina di un difetto del banco.
+
+**`[M]` L'esito, 20 agosto 2026, porta 7730:**
+
+| | firefox | chrome |
+|---|---|---|
+| misura della tela | ⭐ buffer = tela | ⭐ buffer = tela (1584×856) |
+| contatori | ⭐ `dipinti == consegnati`, zero tardive/errori | ⭐ idem |
+| clic in (40,12) | ⭐ arrivato in **(40,12)** | ⭐ **(40,12)** |
+| clic al centro | ⭐ arrivato in **(794,457)**, scarto **0** | ⭐ **(792,428)**, scarto **0** |
+| immagine | ⭐ desktop intero, barra compresa | ⭐ idem |
+
+⚠ **E quel che questo banco NON dice**: gira **headless**, cioè **senza GPU** ⇒ il codec negoziato
+può non essere quello della sessione vera. **Gli artefatti di §4.9 non li vede e non li cerca**: il
+loro strumento resta l'occhio dell'utente.
+
+---
+
 ## 5 · ⛔ Che cosa NON ha funzionato
 
 *Si riempie anche quando fa una brutta figura. ⭐ E in questa fase la parte più istruttiva non sono

@@ -341,6 +341,44 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 		return FALSE;
 	sessione->monitor_dopo = (guint) quanti_dopo;
 
+	/* ⛔⛔⭐ UN MONITOR C'ERA GIA', E L'UTENTE VEDREBBE SOLO LO SFONDO.
+	 *
+	 * `[M]` 20 agosto 2026, e sono costati un'ora: sulla sessione di «prova»
+	 * c'erano DUE figli di due server nostri (le porte 7700 e 7730), ognuno col
+	 * suo monitor virtuale — `Meta-1` 2544x926 **primario** e `Meta-0` 2532x840,
+	 * il nostro.
+	 *
+	 * ⛔ E su GNOME **barra e dock stanno solo sul monitor PRIMARIO**: il
+	 *    secondario porta lo sfondo e basta.  ⇒ Il desktop arrivava, i contatori
+	 *    erano tutti verdi (`dipinti == consegnati`, zero buchi, zero errori) e
+	 *    l'utente diceva «mancano gli elementi della shell».  **Nessuna riga di
+	 *    nessun registro lo raccontava.**
+	 *
+	 * ⚠ Non si FALLISCE, e la ragione e' che questo non e' sempre un difetto: un
+	 *   monitor che c'era gia' puo' essere legittimo (una sessione con uno
+	 *   schermo vero).  ⛔ Ma si DICE, forte, con la cura accanto — perche' il
+	 *   sintomo che produce non ha nessun altro modo di essere diagnosticato
+	 *   (`CODER.md` §4.2, e `LEZIONI.md` §1.16: gli strumenti erano tutti verdi).
+	 */
+	if (quanti_prima > 0)
+	{
+		GString *elenco = g_string_new(NULL);
+		guint j;
+
+		for (j = 0; j < quanti_prima && j < MONITOR_MAX; j++)
+			g_string_append_printf(elenco, "%s%s", j ? ", " : "",
+			                       sessione->prima[j] ? sessione->prima[j] : "?");
+		registro_dice(AREA,
+		              "⛔ C'ERANO GIA' %u monitor su questa sessione (%s) e il nostro si "
+		              "aggiunge: su GNOME la barra e il dock stanno SOLO sul monitor "
+		              "PRIMARIO, che resta il loro ⇒ l'utente vedra' il nostro, cioe' "
+		              "SOLO LO SFONDO, con tutti i contatori verdi.  ⚠ Quasi sempre e' "
+		              "un ALTRO server nostro attaccato alla stessa sessione: si spegne "
+		              "quello, oppure ogni server usa un utente suo",
+		              quanti_prima, elenco->str);
+		g_string_free(elenco, TRUE);
+	}
+
 	/* ⛔ La scala si guarda QUI, una volta, appena il monitor virtuale esiste: e'
 	 *    il primo istante in cui c'e' qualcosa da guardare, ed e' prima che una
 	 *    sola coordinata sia stata convertita. */

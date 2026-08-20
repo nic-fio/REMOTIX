@@ -4103,6 +4103,14 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
 
 	/* ⭐ LO SCATTO A COMANDO — il riquadro sta sopra `scatto_segnale()`. */
+	/* ⛔ E un `SIGUSR2` arrivato quando non c'era niente in corso NON resta
+	 *    appeso.  `[M]` 20 agosto 2026: uno scatto chiuso a mano sei minuti
+	 *    prima aveva lasciato `scatto_stop` a 1, e lo scatto SEGUENTE si e'
+	 *    chiuso al primo fotogramma — «1 fotogrammi in `scatto-flusso.obu`».
+	 *    ⚠ Il rilievo c'era e sembrava buono: e' la forma peggiore, un verde
+	 *    che ha guardato un fotogramma solo (`LEZIONI.md` §1.9). */
+	if (scatto_stop && scatto_stato == 0)
+		scatto_stop = 0;
 	if (scatto_chiesto) {
 		scatto_chiesto = 0;
 		if (scatto_stato != 0) {

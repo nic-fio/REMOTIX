@@ -2344,11 +2344,35 @@ class Schermo {
         return;
       }
       this.mostrata = n;
-      const cambia = (this.f_l !== fl || this.f_a !== fa);
+      const cambia = (this.f_l !== fl || this.f_a !== fa
+                      || this.tela.width !== fl || this.tela.height !== fa);
 
       this.f_l = fl; this.f_a = fa;
-      /* ⭐ Qui la tela prende la misura del fotogramma DA SE': non si scrive
-         `width`, quindi non si svuota niente. */
+      /* ⛔⛔⭐ E LA MISURA DELLA TELA SI SCRIVE, NON SI SPERA — 20 agosto 2026.
+       *
+       * ⚠ La specifica dice che `transferFromImageBitmap` porta la tela alla
+       *   misura dell'immagine, e **Firefox lo fa**: `[M]` col testimone, tela
+       *   16x16 → 1588x914.  ⛔ **Chrome NO**: `[M]` banco isolato di 12 righe,
+       *   `prima=[16,16] dopo=[16,16]` con un'immagine 2544x926.
+       *
+       * ⛔⛔ E il difetto che ne veniva NON era «l'immagine e' un po' storta»,
+       *     erano DUE sintomi che sembravano di due difetti diversi:
+       *       1. l'immagine finiva rimpicciolita in un buffer di 16x16 e
+       *          stirata dal CSS ⇒ «non si vede piu' bene, mancano gli
+       *          elementi della shell»;
+       *       2. ⛔ e l'INPUT moriva: `cl_geometria()` calcola
+       *          `vx = larghezza sul vetro / tela.width`, cioe' ~124 invece di
+       *          ~0,8 ⇒ ogni clic finiva in un punto fra 0 e 16, nell'angolo in
+       *          alto a sinistra.  L'utente: «se clicco il quadrato del dash
+       *          non compare il drawer».
+       *
+       * ⇒ ⭐ Si SCRIVE, e prima del trasferimento: scrivere `width` svuota la
+       *   tela, e subito dopo il trasferimento la riempie.  E si guarda la
+       *   misura VERA (`this.tela.width`), non solo quella del fotogramma
+       *   precedente: cosi' la riga si corregge da se' su qualunque motore,
+       *   senza chiedere a nessuno chi sia — `CODER.md` §3.9, *si chiede per
+       *   nome e si verifica che sia stato dato*. */
+      if (cambia) { this.tela.width = fl; this.tela.height = fa; }
       this.bm.transferFromImageBitmap(bmp);
       this.conti.dipinti++;
       /* ⭐ E l'immagine e' nuova davvero solo qui — la stessa ragione della
