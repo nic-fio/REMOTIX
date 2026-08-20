@@ -4843,6 +4843,20 @@ const APPUNTI = {
   /* L'ultimo annuncio del server, e i suoi byte. */
   suo_id: 0,
   suo_len: 0,
+  /* ⛔⭐ I TRASFERIMENTI CHE HO CHIESTO IO e che aspettano risposta — e non e'
+   * un lusso: §7.4 dice due cose che sembrano una sola.
+   *
+   *   1. «un `APPUNTI_TESTO` che nessuno ha chiesto e' ERRORE_PROTOCOLLO: gli
+   *      appunti si TIRANO, non si spingono»;
+   *   2. ⚠ «un `APPUNTI_CHIEDI` che arriva quando l'annuncio e' gia' stato
+   *      superato si serve **col testo attuale**: e' la corsa normale fra due
+   *      che copiano, NON un errore» — la quinta eccezione dichiarata a §3.
+   *
+   * ⇒ La prima si controlla su QUEL CHE HO CHIESTO, non su «l'annuncio vivo»:
+   *   la risposta a una mia richiesta porta il numero della RICHIESTA, e se
+   *   nel frattempo e' arrivato un annuncio piu' nuovo quel numero e' vecchio
+   *   **per costruzione**. */
+  chiesti: new Set(),
   /* ⛔ Il testo arrivato dal server che NON si e' ancora potuto scrivere nella
      clipboard: vedi `scrivi_negli_appunti`.  ⚠ Non e' un errore, e' il permesso
      che manca — e si riprova al primo gesto dell'utente. */
@@ -4867,6 +4881,34 @@ const APPUNTI = {
  *    trasferimento e' il campo `trasferimento`, non lo stream (§7.4, rilievo
  *    R1.11).  ⚠ E si aspetta la chiusura: sul canale appunti il ritardo non e'
  *    quello del puntatore, e un messaggio a meta' non serve a nessuno. */
+/* ⛔⭐ LO STATO DEGLI APPUNTI SI AGGANCIA QUI, E NON NEL RIQUADRO DI
+ *     `window.REMOTIX` PIU' SOPRA — 20 agosto 2026, e l'errore l'ho fatto io.
+ *
+ * Serve al banco della corsa di §7.4 (`banchi/07-b53`): `APPUNTI` e' un
+ * `const` di modulo, e Marionette esegue in una sandbox dove le dichiarazioni
+ * lessicali della pagina non si vedono («ReferenceError: APPUNTI is not
+ * defined»).
+ *
+ * ⛔⛔ Ma metterlo nel riquadro di `window.REMOTIX`, che gira MOLTO prima di
+ *     questa riga, legge un `const` dentro la sua zona morta: `ReferenceError`
+ *     che ferma **tutto il resto dello script**.  `[M]` Il sintomo non
+ *     nominava niente di tutto questo: il modulo d'accesso perdeva il suo
+ *     gestore e mandava la pagina in `GET /?utente=…&parola=…`, cioe' «il
+ *     login non funziona piu'».
+ * ⚠ E la parola d'ordine finiva nella barra dell'indirizzo: un difetto di
+ *   ordine di dichiarazione diventato, per due minuti, un difetto di privatezza.
+ *
+ * ⛔ E' un oggetto DA LEGGERE come gli altri (I6); il banco che lo scrive
+ *    dichiara di farlo. */
+if (window.REMOTIX) {
+  window.REMOTIX.appunti = APPUNTI;
+  window.REMOTIX.appunti_tipi = T_APPUNTI;
+  /* ⚠ `appunti_manda` e' una `function`, quindi sta gia' su `window` di suo:
+   *   si nomina lo stesso, perche' un banco non debba sapere quale forma di
+   *   dichiarazione abbiamo usato. */
+  window.REMOTIX.appunti_manda = (t, c) => appunti_manda(t, c);
+}
+
 async function appunti_manda(tipo, corpo) {
   if (!APPUNTI.wt) return false;
   try {
@@ -5036,8 +5078,32 @@ async function appunti_ricevuti(byte, completo) {
      *    prezzo e' che il testo attraversa il filo anche se nessuno lo
      *    incollera' mai — ed e' un prezzo che si paga in byte una volta per
      *    copia, contro una funzione che altrimenti non esisterebbe. */
-    const c = new Scrittore().u32(APPUNTI.suo_id).byte();
-    if (await appunti_manda(T_APPUNTI.CHIEDI, c)) APPUNTI.conti.chiesti++;
+    /* ⛔⛔⭐ IL RICORDO SI SEGNA **PRIMA** DI MANDARE, e l'identificatore e'
+     *      quello che si e' messo nel messaggio — non quello che sara' vivo
+     *      dopo.
+     *
+     * ⚠ `[M]` 20 agosto 2026, trovato dal banco `07-b53` su Chrome mezz'ora
+     *   dopo la prima cura: `appunti_manda` e' `await`, e la RISPOSTA puo'
+     *   arrivare prima che l'attesa si sciolga.  Segnando dopo, il gestore di
+     *   `APPUNTI_TESTO` trovava il ricordo vuoto e chiudeva la sessione —
+     *   cioe' la cura funzionava su Firefox e falliva su Chrome per un decimo
+     *   di millisecondo di differenza.
+     * ⚠ E si segna `id`, non `APPUNTI.suo_id` riletto dopo: fra l'invio e la
+     *   riga seguente puo' essere arrivato un annuncio piu' nuovo, e si
+     *   ricorderebbe un numero che non e' stato chiesto da nessuno. */
+    const id = APPUNTI.suo_id;
+    const c = new Scrittore().u32(id).byte();
+    APPUNTI.chiesti.add(id);
+    /* ⚠ Il ricordo non cresce all'infinito: di richieste in volo ce ne sono
+     *   pochissime, e il tetto e' una rete, non una regola. */
+    if (APPUNTI.chiesti.size > 32) {
+      const primo = APPUNTI.chiesti.values().next().value;
+      APPUNTI.chiesti.delete(primo);
+    }
+    if (await appunti_manda(T_APPUNTI.CHIEDI, c))
+      APPUNTI.conti.chiesti++;
+    else
+      APPUNTI.chiesti.delete(id);   /* non e' partito: non arrivera' risposta */
     return;
   }
 
@@ -5082,17 +5148,52 @@ async function appunti_ricevuti(byte, completo) {
       return;
     }
     const trasf = corpo.u32();
-    /* ⛔ §7.4: «un APPUNTI_TESTO che nessuno ha chiesto e' ERRORE_PROTOCOLLO:
-     *    gli appunti si tirano, non si spingono». */
-    if (trasf !== APPUNTI.suo_id) {
+    /* ⛔⛔⭐ QUI LA SESSIONE SI CHIUDEVA, ED ERA COLPA NOSTRA — 20 agosto 2026,
+     *      difetto riferito dall'utente: «si e' bloccato Firefox con la
+     *      clipboard».
+     *
+     * ⚠ Non era un blocco del browser: era QUESTA riga che mandava
+     *   `ERRORE_PROTOCOLLO` e chiudeva la sessione, e da fuori si vede come
+     *   un'immagine che si ferma.  `[M]` il registro del server, 19:04:06:
+     *   la sessione ha annunciato **due volte in un millisecondo** lo stesso
+     *   testo (trasferimenti 3 e 4, 1 155 byte); la pagina ha chiesto il 3; il
+     *   server — **correttamente** — l'ha servito col testo attuale; e la
+     *   pagina l'ha chiamato errore.
+     *
+     * ⛔ Il confronto era col trasferimento VIVO, e §7.4 dice un'altra cosa:
+     *   l'errore e' un testo **che nessuno ha chiesto**.  Un testo chiesto da
+     *   me e servito in ritardo e' la **quinta eccezione dichiarata a §3** —
+     *   la stessa che questa pagina applica gia' correttamente quando e' LEI a
+     *   servire (vedi il ramo `CHIEDI` qui sopra).  ⇒ L'asimmetria era il
+     *   difetto: la stessa regola scritta due volte, e la seconda diversa. */
+    if (!APPUNTI.chiesti.has(trasf)) {
       await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
-        "APPUNTI_TESTO per il trasferimento " + trasf + " mentre l'annuncio "
-        + "vivo e' il " + APPUNTI.suo_id + ": i messaggi di trasferimenti "
-        + "diversi non si mescolano (§7.4)");
+        "APPUNTI_TESTO per il trasferimento " + trasf + ", che NON ho mai "
+        + "chiesto (l'annuncio vivo e' il " + APPUNTI.suo_id + "): §7.4 dice "
+        + "che gli appunti si tirano, non si spingono");
       return;
     }
+    /* ⛔⭐ E IL RICORDO NON SI CANCELLA QUANDO SI USA — difetto trovato dal
+     *     banco `07-b53` il 20 agosto 2026, mezz'ora dopo la cura.
+     *
+     * ⚠ Cancellandolo, una SECONDA risposta per lo stesso trasferimento —
+     *   legittima, perche' lo stesso identificatore puo' essere chiesto due
+     *   volte e §7.4 non lo vieta — trovava il ricordo vuoto e chiudeva la
+     *   sessione.  ⇒ La domanda giusta e' «l'ho MAI chiesto?», non «ne ho una
+     *   in volo?»: la prima e' la regola di §7.4, la seconda e' una macchina a
+     *   stati che nessuno ha scritto.
+     * ⚠ Il ricordo non cresce: il tetto di 32 sopra lo tiene. */
+    const superato = (trasf !== APPUNTI.suo_id);
+    if (superato)
+      nota("⚠ §7.4: il testo del trasferimento " + trasf + " arriva quando "
+         + "l'annuncio vivo e' il " + APPUNTI.suo_id + ": e' la corsa normale "
+         + "fra due che copiano, e il testo e' quello ATTUALE");
     const dati = byte.subarray(6 + 4);
-    if (dati.length !== APPUNTI.suo_len) {
+    /* ⛔ E la lunghezza si controlla SOLO sul trasferimento vivo: su uno
+     *    superato il server ha servito il testo di ADESSO, che non e' quello
+     *    annunciato allora — pretendere la misura vecchia sarebbe rifiutare
+     *    proprio quel che l'eccezione permette. */
+    if (!superato && dati.length !== APPUNTI.suo_len) {
       await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
         "APPUNTI_TESTO porta " + dati.length + " byte e l'annuncio ne "
         + "dichiarava " + APPUNTI.suo_len + " (§7.4)");

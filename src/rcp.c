@@ -602,6 +602,17 @@ struct rcp_sessione {
 	 *    arriva: senza questo flag ne partirebbe una per ogni richiesta gia' in
 	 *    coda, e il client riceverebbe tre `CHIEDI` per un testo solo. */
 	bool app_chiesto;
+	/* ⛔⭐ E QUALE, non solo «se».  §7.4 dice due cose che sembrano una:
+	 *     un `APPUNTI_TESTO` che NESSUNO ha chiesto e' `ERRORE_PROTOCOLLO`, ma
+	 *     una richiesta servita quando l'annuncio e' gia' stato superato si
+	 *     serve **col testo attuale** e non e' un errore (la quinta eccezione
+	 *     di §3).  ⇒ Il confronto va fatto con quel che HO CHIESTO, non con
+	 *     l'annuncio vivo: fra la domanda e la risposta il client puo' aver
+	 *     annunciato di nuovo, e allora il numero e' vecchio per costruzione.
+	 * ⚠ `[M]` 20 agosto 2026: e' successo davvero, nel verso opposto — la
+	 *   PAGINA chiudeva la sessione per questo, e l'utente vedeva «Firefox si
+	 *   e' bloccato con la clipboard». */
+	uint32_t app_chiesto_id;
 
 	/* Gli stream in arrivo, uno per trasferimento (§2.5).  ⛔ L'accumulo e'
 	 * allocato a richiesta e **dopo** aver convalidato la lunghezza dichiarata:
@@ -4795,6 +4806,7 @@ bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms)
 	}
 
 	s->app_chiesto = true;
+	s->app_chiesto_id = s->app_suo_id;
 	s->app_chiesti++;
 	reg(s, "⭐ APPUNTI §7.4: chiesto al client il trasferimento %u (%u byte "
 	       "annunciati) — qualcuno nella sessione sta incollando (richiesta %u)",
@@ -4818,6 +4830,7 @@ static bool appunti_chiedi_l_arretrato(rcp_sessione *s)
 		return false;
 
 	s->app_chiesto = true;
+	s->app_chiesto_id = s->app_suo_id;
 	s->app_chiesti++;
 	reg(s, "⭐ APPUNTI §9: l'annuncio %u e' arrivato, e c'erano gia' %d "
 	       "richieste di incolla ad aspettarlo: la domanda parte ADESSO.  E' la "
@@ -4998,19 +5011,38 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			              trasf, byte);
 			return false;
 		}
-		if (trasf != s->app_suo_id) {
-			viola_appunti(s, "APPUNTI_TESTO per il trasferimento %u mentre "
-			                 "l'annuncio vivo del client e' il %u: i messaggi di "
-			                 "trasferimenti diversi non si mescolano (§7.4)",
-			              trasf, s->app_suo_id);
+		/* ⛔⛔⭐ E QUI SI CHIUDEVA LA SESSIONE PER UNA CORSA NORMALE — la stessa
+		 *      riga, con lo stesso sbaglio, che il 20 agosto 2026 nella PAGINA
+		 *      ha prodotto «Firefox si e' bloccato con la clipboard».
+		 *
+		 * ⚠ Il confronto era con l'annuncio VIVO: se fra la nostra domanda e la
+		 *   sua risposta il client ha annunciato di nuovo (due copie in un
+		 *   millisecondo — `[M]`, succede), la risposta porta il numero VECCHIO
+		 *   per costruzione, e §7.4 dice che si serve col testo attuale e **non
+		 *   e' un errore**.  ⇒ Si confronta con quel che si e' CHIESTO. */
+		if (trasf != s->app_chiesto_id && trasf != s->app_suo_id) {
+			viola_appunti(s, "APPUNTI_TESTO per il trasferimento %u, che non ho "
+			                 "mai chiesto (ho chiesto il %u, l'annuncio vivo e' "
+			                 "il %u): §7.4 — gli appunti si tirano, non si "
+			                 "spingono",
+			              trasf, s->app_chiesto_id, s->app_suo_id);
 			return false;
 		}
+		if (trasf != s->app_suo_id)
+			reg(s, "⚠ APPUNTI §7.4: il testo del trasferimento %u arriva quando "
+			       "l'annuncio vivo e' il %u: e' la corsa normale fra due che "
+			       "copiano, e il testo e' quello ATTUALE",
+			    trasf, s->app_suo_id);
 		/* ⛔ E l'annuncio diceva quanti byte: se il testo ne porta altri, uno
 		 *    dei due messaggi mente.  §6.1 — «una lunghezza incoerente con quel
 		 *    che il tipo prevede».  ⚠ Qui la lunghezza attesa non viene dal
 		 *    tipo, viene dall'annuncio dello stesso lato: e' la stessa regola
 		 *    applicata a una promessa che il client ha fatto lui. */
-		if (byte != s->app_suo_len) {
+		/* ⚠ E la misura si pretende SOLO sul trasferimento vivo: su uno
+		 *   superato il client ha servito il testo di ADESSO, che non e' quello
+		 *   annunciato allora — pretendere la lunghezza vecchia rifiuterebbe
+		 *   proprio quel che l'eccezione permette. */
+		if (trasf == s->app_suo_id && byte != s->app_suo_len) {
 			viola_appunti(s, "APPUNTI_TESTO porta %zu byte e l'annuncio %u ne "
 			                 "dichiarava %u (§7.4)",
 			              byte, trasf, s->app_suo_len);

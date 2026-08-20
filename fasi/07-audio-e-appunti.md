@@ -1041,3 +1041,69 @@ verdi non lo sostituiscono.
    esatto**, e da lì la diagnosi ha smesso di essere una serie di ipotesi.
 
 ---
+
+### 9.3 · ⛔⛔⭐ «SI È BLOCCATO FIREFOX CON LA CLIPBOARD» — e non era Firefox
+
+*20 agosto 2026, difetto riferito dall'utente mentre provava i due browser. ⚠ Non era un blocco del
+browser: era **la nostra pagina** che mandava `ERRORE_PROTOCOLLO` e chiudeva la sessione — e da
+fuori si vede come un'immagine che si ferma.*
+
+**`[M]` Il registro del server, 19:04:06, e la catena sta in quattro righe:**
+
+```
+19:04:06.560  annunciato al client il trasferimento 3 — 1155 byte
+19:04:06.560  annunciato al client il trasferimento 4 — 1155 byte   ← stesso millisecondo
+19:04:06.569  il client chiede il 3, superato dal 4: lo servo col testo ATTUALE
+19:04:06.612  il client si congeda, motivo=0x0b — «i messaggi di trasferimenti
+              diversi non si mescolano (§7.4)»
+```
+
+⇒ ⭐ **Il server aveva ragione e la pagina torto**, e l'arbitro è scritto: `RCP.md` §7.4 dice
+*«un `APPUNTI_CHIEDI` che arriva quando l'annuncio è già stato superato si serve **con il testo
+attuale** … è la corsa normale fra due che copiano, **non un errore**»* — la **quinta eccezione
+dichiarata a §3**. La pagina applicava la regola generale e ignorava l'eccezione.
+
+⛔⛔ **E lo stesso sbaglio era scritto nei DUE capi**: `rcp.c` chiudeva la sessione nel caso
+speculare (il client che serve una richiesta superata). ⚠ La pagina, invece, applicava l'eccezione
+**correttamente** quando era lei a *servire*: la stessa regola scritta due volte, e la seconda
+diversa — è la forma **E2** dentro un solo file.
+
+**La cura, ai due capi**: l'errore è un testo **che nessuno ha mai chiesto**, non un testo con un
+numero vecchio. ⇒ Si confronta con **quel che si è chiesto** (`APPUNTI.chiesti` nella pagina,
+`app_chiesto_id` nel server), e la lunghezza si pretende **solo** sul trasferimento vivo — su uno
+superato il testo servito è quello di *adesso*.
+
+#### ⭐⭐ E il banco ne ha trovati altri DUE, tutti e due miei, dopo la cura
+
+*È il valore di `banchi/07-b53-appunti-corsa.py`, ed è il motivo per cui esiste.*
+
+| | il difetto | come si presentava |
+|---|---|---|
+| 1 | **cancellavo il ricordo al primo uso** | una seconda risposta per lo stesso trasferimento — legittima — trovava il ricordo vuoto e chiudeva la sessione. ⇒ La domanda giusta è *«l'ho MAI chiesto?»*, non *«ne ho una in volo?»* |
+| 2 | ⛔ **segnavo la richiesta DOPO l'`await`** | e la risposta può arrivare prima che l'attesa si sciolga: ⭐ **verde su Firefox, rosso su Chrome**, per un decimo di millisecondo. ⇒ Il fatto si segna **prima** di consegnare, e si segna l'identificatore che si è messo nel messaggio — non quello riletto dopo |
+
+⛔ **Il secondo è la ragione per cui un banco solo non basta**: la stessa cura, sullo stesso
+prodotto, nello stesso minuto, **passava su un motore e falliva sull'altro**.
+
+#### ⚙ Il banco, e perché riproduce uno STATO invece di una coincidenza
+
+⚠ `[M]` La finestra vera dura quanto la lettura della clipboard dalla sessione: **sotto il
+millisecondo** su rete locale. Sei copie a raffica dentro la sessione (`wl-copy`, 15 ms l'una
+dall'altra) **non l'hanno aperta nemmeno una volta**. ⇒ Il banco mette la pagina **esattamente
+nello stato** che ha chiuso la sessione dell'utente: chiede un trasferimento e fa arrivare — prima
+della risposta — un annuncio più nuovo. ⛔ È bianco, tocca `REMOTIX.appunti`, **e lo dichiara**:
+quel che verifica è la **regola**, non il tempismo.
+
+⭐ **E si certifica**: rimessa la riga vecchia, `[M]` il banco vede la sessione chiudersi con
+`motivo=0x0b` — la stessa faccia del difetto dell'utente. Rimessa la cura, **4 giri su 4 verdi,
+Firefox e Chrome**.
+
+⛔ **E un difetto che ho fatto mentre curavo**, perché è la parte che insegna: per esporre lo stato
+al banco avevo agganciato `APPUNTI` al riquadro `window.REMOTIX`, che gira **molto prima** della sua
+dichiarazione — leggere un `const` nella sua zona morta ferma **tutto il resto dello script**.
+⚠ Il sintomo non nominava niente di tutto questo: il modulo d'accesso perdeva il suo gestore e la
+pagina finiva in `GET /?utente=…&parola=…`, cioè **la parola d'ordine nella barra dell'indirizzo**.
+Un difetto di ordine di dichiarazione diventato, per due minuti, un difetto di privatezza.
+
+---
+
