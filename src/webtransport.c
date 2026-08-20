@@ -2761,8 +2761,31 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
 {
-	if (codec != 1 && codec != 2)
+	/* ⛔⛔ QUESTA RIGA HA BUTTATO IN SILENZIO OGNI FOTOGRAMMA H.264 — 20 agosto
+	 *     2026, e ci e' voluto mezz'ora per trovarla.
+	 *
+	 * Il codec 3 e' entrato in `RCP.md` §6.2 e questa guardia ne conosceva due:
+	 * il figlio codificava (5 940 byte, CHIAVE, 1,6 ms in hardware), il padre
+	 * riceveva («fotogramma da «prova»: codec 3»), e qui **il fotogramma
+	 * spariva senza una riga**.  ⇒ Sessione viva, contatori a zero, e nessun
+	 * registro che nominasse la causa.
+	 *
+	 * ⭐ Adesso il numero massimo viene da UN posto — `RCP_CODEC_VIDEO_MAX` —
+	 *    e il rifiuto **si dichiara** (una riga sola, non una per fotogramma:
+	 *    a sessanta al secondo sarebbe il difetto dei 30,8 GB). */
+	if (codec < 1 || codec > RCP_CODEC_VIDEO_MAX) {
+		static uint8_t detto;
+
+		if (detto != codec) {
+			detto = codec;
+			registro_dice(REG_WT,
+			              "⛔ fotogramma con codec %u BUTTATO: §6.2 ne definisce "
+			              "%u (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ La riga si "
+			              "scrive una volta per numero, non una per fotogramma",
+			              codec, (unsigned) RCP_CODEC_VIDEO_MAX);
+		}
 		return;
+	}
 	/* ⛔ Si segna PRIMA di consegnare, e vale anche se non c'e' nessuna sessione
 	 *    a cui consegnare: e' un fatto del palco, non della connessione — ed e'
 	 *    esattamente il caso del ri-attacco, dove la sessione che vedra' quel

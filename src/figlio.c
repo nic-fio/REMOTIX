@@ -3258,7 +3258,14 @@ static bool sta_nascendo(uint64_t ora_ms)
 	       ora_ms - nascita_chiesta_ms <= NASCITA_BRIGLIA_MS;
 }
 
-static Codificatore *codif[3];
+#define CODEC_MAX 4
+/* ⛔ QUATTRO POSTI PER TRE CODEC, e il conto e' voluto: l'indice E' il numero
+ *    di §6.2 (1 = HEVC, 2 = AV1, 3 = H.264) e il posto 0 resta vuoto.  ⚠ Un
+ *    array «stretto» con una sottrazione dentro sarebbe la stessa cosa scritta
+ *    peggio: il giorno in cui un codec nuovo prendesse il 4, la sottrazione
+ *    andrebbe corretta in sei punti e il registro direbbe numeri diversi da
+ *    quelli del protocollo. */
+static Codificatore *codif[CODEC_MAX];
 /* Quale codec il padre ha chiesto: 0 = nessuno, cioe' nessuno sta guardando. */
 static uint8_t codec_chiesto;
 /* ⛔⭐⭐ E LA PROFONDITA' CHE IL PADRE HA NEGOZIATO (§4.3) — 17 agosto 2026.
@@ -3275,12 +3282,20 @@ static uint8_t profondita_chiesta;
 /* ⛔ §5.2 — il debito della chiave, uno per codec: chiederla per l'HEVC non la
  *    produce sull'AV1, e trattarli insieme darebbe una chiave a chi non l'ha
  *    chiesta e un delta a chi si'. */
-static bool debito_chiave[3];
+/* ⛔⛔⭐ QUATTRO POSTI, come `codif[]` — e questa riga e' costata un giro il 20
+ *      agosto 2026.  Con `[3]` il codec **3** scriveva FUORI DAI LIMITI, e il
+ *      byte che si sporcava era la variabile accanto: il registro diceva
+ *      «⭐ §4.3: il padre ha negoziato 8 bit (prima **1**)» a ogni richiesta di
+ *      chiave, cioe' un difetto di memoria travestito da difetto di
+ *      negoziazione.  ⇒ Zero fotogrammi, e nessuna riga che nominasse la causa.
+ * ⚠ L'indice E' il numero di §6.2: chi aggiunge un codec allarga QUESTI array,
+ *   e sono quattro.  Cercarli si cerca cosi': `grep "\[CODEC_MAX\]"`. */
+static bool debito_chiave[CODEC_MAX];
 /* ⛔ Con quale profondita' ciascun codificatore e' stato APERTO.  ⚠ Si tiene qui
  *    e non si chiede a `codificatore.h`: quel modulo non ha un lettore per la
  *    profondita', e aggiungerne uno per una domanda che si puo' ricordare
  *    sarebbe allargare un'interfaccia per pigrizia di chi chiama. */
-static uint8_t codif_prof[3];
+static uint8_t codif_prof[CODEC_MAX];
 static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
 /* ⛔ CONTATO A PARTE da `ciclo_guasti`, e non e' pignoleria: quel contatore
  *    entra nel criterio «il ciclo non ha nemmeno provato a catturare» della riga
@@ -3295,8 +3310,8 @@ static uint64_t fotogrammi_incoerenti;
  *     l'apertura **a ogni fotogramma** — sessanta contesti VAAPI al secondo, e
  *     una riga di registro per ciascuno.  ⚠ Il fondo qui non nasconde niente: la
  *     prima riga si scrive sempre, e la ripresa e' dichiarata. */
-static uint64_t codif_riprova_ms[3];
-static uint64_t codif_attesa_ms[3];
+static uint64_t codif_riprova_ms[CODEC_MAX];
+static uint64_t codif_attesa_ms[CODEC_MAX];
 #define CODIF_RIPROVA_MIN_MS 500u
 #define CODIF_RIPROVA_MAX_MS 10000u
 /* ⭐ Quando si e' riavviato il flusso l'ultima volta per farsi consegnare un
@@ -3802,6 +3817,28 @@ static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
  *    preset di x265. */
 #define QP_HARDWARE 26
 
+/* ⛔ Il numero di §6.2 e il codec del codificatore sono due alfabeti diversi, e
+ *    la traduzione sta in UNA funzione: il giorno in cui divergessero, a
+ *    divergere sarebbe una riga sola.  ⚠ Un numero ignoto NON diventa un codec
+ *    «per continuare»: si dichiara e non si codifica niente. */
+static CodecVideo codec_del_numero(uint8_t numero)
+{
+	switch (numero) {
+	case 1:
+		return CODIFICATORE_HEVC;
+	case 2:
+		return CODIFICATORE_AV1;
+	case 3:
+		return CODIFICATORE_H264;
+	default:
+		registro_dice(REG_FIGLIO,
+		              "⛔ numero di codec ignoto (%u): §6.2 ne conosce tre, e non "
+		              "ne invento un quarto",
+		              numero);
+		return (CodecVideo) 0;
+	}
+}
+
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
@@ -3809,7 +3846,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	char errore[256];
 	uint8_t prof = profondita_chiesta;
 
-	if (indice > 2)
+	if (indice >= CODEC_MAX)
 		return NULL;
 
 	/* ⛔⭐ SENZA PROFONDITA' NEGOZIATA NON SI APRE NIENTE, e non e' prudenza:
@@ -3887,9 +3924,14 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *    sotto lo stesso nome, che e' la forma E2.  Qui il registro dice quale
 	 *    dei due e' vivo, e `codificatore_nome()` porta il nodo dentro il nome.
 	 */
-	if (codec == CODIFICATORE_HEVC) {
+	/* ⭐⭐ E DAL 20 AGOSTO ANCHE H.264 SI PROVA IN HARDWARE, per la stessa
+	 *     ragione di HEVC e con la stessa misura accanto: `[M]` 13 agosto 2026,
+	 *     `h264_vaapi` **3,11-3,16 ms** per fotogramma a 1920x1080 10 bit, 20
+	 *     Mbit/s, 120 fotogrammi su 120 — il piu' veloce dei quattro provati.
+	 * ⛔ E `libx264` resta il ripiego DICHIARATO, non la strada. */
+	if (codec == CODIFICATORE_HEVC || codec == CODIFICATORE_H264) {
 		CodificatoreRichiesta hw = r;
-		hw.componente = "hevc_vaapi";
+		hw.componente = (codec == CODIFICATORE_H264) ? "h264_vaapi" : "hevc_vaapi";
 		hw.nodo_rendering = NODO_RENDERING;
 		hw.potenza = POTENZA_RENDERING;
 		/* ⛔ In hardware non c'e' il CRF: si chiede QP, e si scrive QP. */
@@ -3943,7 +3985,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 
 static void codificatori_libera(void)
 {
-	for (uint8_t i = 0; i < 3; i++) {
+	for (uint8_t i = 0; i < CODEC_MAX; i++) {
 		if (!codif[i])
 			continue;
 		codificatore_libera(codif[i]);
@@ -4030,7 +4072,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	/* ⛔ §5.2 — E QUI LA CHIAVE CHIESTA DIVENTA UNA CHIAVE VERA.  ⚠ Si chiede
 	 *    PRIMA di comprimere: dopo sarebbe tardi di un fotogramma, e quel
 	 *    fotogramma e' proprio quello che il client sta aspettando. */
-	if (numero < 3 && debito_chiave[numero]) {
+	if (numero < CODEC_MAX && debito_chiave[numero]) {
 		codificatore_chiedi_chiave(cod);
 		debito_chiave[numero] = false;
 	}
@@ -4671,7 +4713,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *     sono quelli che il ciclo usera'.
 	 * ⛔ §5.2: tutt'e due i primi devono essere una CHIAVE, e si chiede invece
 	 *    di sperarlo. */
-	debito_chiave[1] = debito_chiave[2] = true;
+	debito_chiave[1] = debito_chiave[2] = debito_chiave[3] = true;
 	if (primo) {
 		/* ⚠ `input = 0` e NON e' un valore di comodo: §6.2 dice «0 se
 		 *   nessuno», e qui non c'e' ancora nessuno — il canale di input nasce
@@ -4698,6 +4740,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 				p.flussi++;
 			if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
 			                     "flusso-av1.obu", istante_us, fo.larghezza,
+			                     fo.altezza, 0))
+				p.flussi++;
+			/* ⭐ Il terzo, dal 20 agosto: un client che negozia H.264 trova il
+			 *    primo fotogramma gia' in deposito come gli altri due, invece di
+			 *    aspettare che qualcosa si muova sul desktop. */
+			if (codifica_e_manda(&fo, CODIFICATORE_H264, 3, dir_rilievo,
+			                     "flusso-h264.264", istante_us, fo.larghezza,
 			                     fo.altezza, 0))
 				p.flussi++;
 			/* ⚠ E la misura del palco NON si scrive qui: `tela_l`/`tela_a` sono
@@ -5352,7 +5401,16 @@ void figlio_vive(int argc, char **argv)
 				if ((size_t)letti < sizeof t + sizeof cv)
 					continue;
 				memcpy(&cv, busta + sizeof t, sizeof cv);
-				if (cv.codec > 2) {
+				/* ⛔⭐ IL TETTO E' 3 DAL 20 AGOSTO 2026 (H.264, §1.13-ter), e
+				 *     questa riga e' costata un giro: il padre negoziava gia'
+				 *     il codec 3 e il figlio lo RIFIUTAVA qui — «il padre
+				 *     chiede il codec 3, che §6.2 non definisce» — con la
+				 *     sessione viva, zero fotogrammi e la pagina che non
+				 *     sapeva perche'.
+				 * ⚠ Il numero massimo sta in UN posto solo: qui.  Un secondo
+				 *   controllo altrove con un numero suo e' esattamente il
+				 *   difetto appena pagato. */
+				if (cv.codec > CODIFICATORE_H264) {
 					registro_dice(REG_FIGLIO,
 					              "⛔ il padre chiede il codec %u, che §6.2 non "
 					              "definisce: NON cambio niente",
@@ -6224,7 +6282,10 @@ void figlio_vive(int argc, char **argv)
 			 *   una volta ogni `RISVEGLIO_MS`: ogni riavvio costa la
 			 *   rinegoziazione, e farne sessanta al secondo toglierebbe proprio
 			 *   i fotogrammi che si stanno cercando. */
-			if (presa == CATTURA_PRESA_ZERO && codec_chiesto < 3
+			/* ⚠ `codec_chiesto` sta dentro l'array, e il limite e' UNO: chi
+			 *   aggiunge un codec non deve trovarne un secondo scritto a mano
+			 *   qui (era `< 3`, ed e' rimasto indietro il 20 agosto). */
+			if (presa == CATTURA_PRESA_ZERO && codec_chiesto < CODEC_MAX
 			    && debito_chiave[codec_chiesto]) {
 				uint64_t adesso_ms = registro_ora_ms();
 				if (adesso_ms - risveglio_ms >= RISVEGLIO_MS) {
@@ -6388,7 +6449,7 @@ void figlio_vive(int argc, char **argv)
 				 *    chiave e' per codec, e un codificatore aperto e non
 				 *    ridimensionato consegnerebbe immagini tagliate al primo
 				 *    fotogramma dopo un cambio di codec. */
-				for (uint8_t c = 1; c < 3; c++) {
+				for (uint8_t c = 1; c < CODEC_MAX; c++) {
 					if (!codif[c])
 						continue;
 					if (!codificatore_ridimensiona(codif[c], fo.larghezza,
@@ -6462,8 +6523,11 @@ void figlio_vive(int argc, char **argv)
 			 *     la direzione in cui nessuno sbaglia per caso
 			 *     (`CODER.md` §1-bis, «il confine si sposta nella direzione
 			 *     scomoda»). */
-			codifica_e_manda(&fo, codec_chiesto == 1 ? CODIFICATORE_HEVC
-			                                         : CODIFICATORE_AV1,
+			/* ⛔ La mappa numero → codec sta QUI e in nessun altro posto: con
+			 *    due codec un `? :` bastava, col terzo un `? :` annidato
+			 *    direbbe «AV1» di ogni numero che non conosce — e il sintomo
+			 *    sarebbe un flusso AV1 spedito con l'etichetta 3. */
+			codifica_e_manda(&fo, codec_del_numero(codec_chiesto),
 			                 codec_chiesto, NULL, NULL, istante_us, tela_l,
 			                 tela_a, input_iniettato);
 			cattura_fermo_libera(&fo);

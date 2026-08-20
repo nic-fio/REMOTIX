@@ -86,6 +86,11 @@ static uint32_t lb_bit(LettoreBit *l, int quanti)
 	return v;
 }
 
+/* ⭐ Exp-Golomb CON SEGNO — serve all'SPS di H.264 (le liste di scala e gli
+ *    scostamenti del conteggio d'ordine), e a HEVC qui non serviva.
+ * ⛔ La mappatura e' quella dello standard (9.1.1): k → (-1)^(k+1) * ceil(k/2). */
+static int32_t lb_se(LettoreBit *l);
+
 /* Exp-Golomb senza segno, quello di H.265. */
 static uint32_t lb_ue(LettoreBit *l)
 {
@@ -186,6 +191,12 @@ static void annexb_leggi(const uint8_t *d, size_t byte, FormaAnnexB *f)
 	}
 }
 
+static int32_t lb_se(LettoreBit *l)
+{
+	uint32_t k = lb_ue(l);
+	return (k & 1) ? (int32_t) ((k + 1) / 2) : -(int32_t) (k / 2);
+}
+
 /* Toglie gli emulation prevention byte: `00 00 03` → `00 00`.
  * ⛔ Senza questo passo un SPS che contenga quella sequenza si legge storto, e
  *    il numero che ne esce (la profondita' di bit) sarebbe sbagliato SENZA
@@ -213,6 +224,199 @@ static uint32_t rovescia32(uint32_t v)
 		v >>= 1;
 	}
 	return r;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ H.264 — LA STESSA FORMA, CON I NUMERI DI UN ALTRO STANDARD
+ *
+ * ⛔ E i numeri sono diversi in un punto che si sbaglia una volta sola: in HEVC
+ *    il tipo di NAL sta nei **sei bit** dopo il primo (`(b >> 1) & 0x3F`), in
+ *    H.264 nei **cinque bit bassi** del primo (`b & 0x1F`).  Un lettore che
+ *    usasse la formula sbagliata leggerebbe un IDR (5) come un NAL di tipo 2,
+ *    cioe' direbbe «questa chiave non e' una chiave» **di una chiave vera**.
+ *
+ * ⚠ E i parameter set di H.264 sono DUE, non tre: non c'e' il VPS.  Chiedere
+ *   anche quello rifiuterebbe ogni chiave valida.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#define NAL264_NON_IDR 1
+#define NAL264_IDR 5
+#define NAL264_SPS 7
+#define NAL264_PPS 8
+
+typedef struct {
+	bool ha_sps, ha_pps, ha_idr;
+	bool parametri_prima_dell_idr;
+	bool primo_vcl_e_chiave;
+	size_t sps_offset, sps_byte;
+} FormaAnnexB264;
+
+static void annexb264_leggi(const uint8_t *d, size_t byte, FormaAnnexB264 *f)
+{
+	bool visto_vcl = false;
+	bool p_sps = false, p_pps = false;
+	size_t corpo;
+
+	memset(f, 0, sizeof(*f));
+	corpo = annexb_prossimo(d, byte, 0, NULL);
+	while (corpo < byte) {
+		size_t dove_dopo;
+		size_t prossimo = annexb_prossimo(d, byte, corpo, &dove_dopo);
+		size_t fine = (prossimo < byte) ? dove_dopo : byte;
+		int tipo = d[corpo] & 0x1F;
+
+		if (tipo == NAL264_SPS) {
+			f->ha_sps = true;
+			p_sps = true;
+			if (!f->sps_byte) {
+				f->sps_offset = corpo;
+				f->sps_byte = fine - corpo;
+			}
+		} else if (tipo == NAL264_PPS) {
+			f->ha_pps = true;
+			p_pps = true;
+		} else if (tipo >= NAL264_NON_IDR && tipo <= NAL264_IDR) {
+			bool chiave = (tipo == NAL264_IDR);
+			if (!visto_vcl) {
+				visto_vcl = true;
+				f->primo_vcl_e_chiave = chiave;
+			}
+			if (chiave) {
+				f->ha_idr = true;
+				if (p_sps && p_pps)
+					f->parametri_prima_dell_idr = true;
+			}
+			p_sps = p_pps = false;
+		}
+		corpo = prossimo;
+	}
+}
+
+/* Le liste di scala dell'SPS: non se ne legge il contenuto, si SALTANO — ma si
+ * saltano leggendole, perche' sono a lunghezza variabile e chi le contasse a
+ * byte sballerebbe tutto quel che viene dopo (cioe' la misura e la profondita').
+ */
+static void salta_liste_scala(LettoreBit *l, int quante)
+{
+	for (int i = 0; i < quante && !l->finito; i++) {
+		if (!lb_bit(l, 1))
+			continue;
+		int misura = (i < 6) ? 16 : 64;
+		int ultimo = 8, prossimo = 8;
+		for (int j = 0; j < misura && !l->finito; j++) {
+			if (prossimo)
+				prossimo = (ultimo + lb_se(l) + 256) % 256;
+			ultimo = prossimo ? prossimo : ultimo;
+		}
+	}
+}
+
+/*
+ * ⭐ L'SPS di H.264 — e serve alle stesse due cose dell'SPS di HEVC: la
+ *    profondita' VERA (il secondo testimone di E2) e il LIVELLO, che finisce
+ *    nella stringa `avc1.<profilo><vincoli><livello>` che il browser riceve.
+ *
+ * ⛔ E la misura si legge fino al RITAGLIO.  Senza, una tela 1588x914 (non
+ *    multipla di 16) si leggerebbe 1600x928 — cioe' il testimone accuserebbe di
+ *    misura sbagliata un flusso giusto, che e' il falso rosso di `LEZIONI.md`
+ *    §1.2.  ⚠ E le unita' del ritaglio dipendono dal sottocampionamento: 4:2:0
+ *    conta due pixel per unita' in orizzontale e due in verticale.
+ */
+static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessione *c)
+{
+	uint8_t *rbsp;
+	size_t n;
+	LettoreBit l;
+	uint32_t profilo, livello, chroma = 1, largh_mb, alt_mapunit;
+	uint32_t sotto_l = 2, sotto_a = 2;
+	uint32_t taglio_sx = 0, taglio_dx = 0, taglio_su = 0, taglio_giu = 0;
+	int solo_fotogrammi;
+
+	if (byte < 5)
+		return false;
+	rbsp = malloc(byte);
+	if (!rbsp)
+		return false;
+	/* ⛔ Il byte d'intestazione del NAL si salta PRIMA di togliere l'emulazione:
+	 *    non fa parte dell'RBSP, e contarlo sposterebbe ogni bit di otto. */
+	n = togli_emulazione(nal + 1, byte - 1, rbsp, byte);
+	lb_apri(&l, rbsp, n);
+
+	profilo = lb_bit(&l, 8);
+	(void) lb_bit(&l, 8);        /* i vincoli + i bit riservati */
+	livello = lb_bit(&l, 8);
+	(void) lb_ue(&l);            /* seq_parameter_set_id */
+
+	/* ⚠ Solo i profili «alti» portano il formato del croma e la profondita': su
+	 *   Baseline/Main NON ci sono, e leggerli sposterebbe tutto il resto.  E'
+	 *   l'elenco dello standard (7.3.2.1.1), scritto per esteso apposta. */
+	if (profilo == 100 || profilo == 110 || profilo == 122 || profilo == 244 || profilo == 44
+	    || profilo == 83 || profilo == 86 || profilo == 118 || profilo == 128 || profilo == 138
+	    || profilo == 139 || profilo == 134 || profilo == 135) {
+		chroma = lb_ue(&l);
+		if (chroma == 3)
+			(void) lb_bit(&l, 1);          /* separate_colour_plane_flag */
+		c->profondita_flusso = 8 + (int) lb_ue(&l);   /* luma */
+		(void) lb_ue(&l);                  /* croma: si legge e non si usa */
+		(void) lb_bit(&l, 1);              /* qpprime_y_zero_transform_bypass */
+		if (lb_bit(&l, 1))
+			salta_liste_scala(&l, chroma == 3 ? 12 : 8);
+	} else {
+		/* ⛔ Non e' «8 bit per abitudine»: su questi profili lo standard
+		 *    DICE 8 e 4:2:0, quindi e' un fatto letto, non un valore
+		 *    predefinito (`CODER.md` §3.10). */
+		c->profondita_flusso = 8;
+		chroma = 1;
+	}
+	if (chroma == 0) { sotto_l = 1; sotto_a = 1; }
+	else if (chroma == 2) { sotto_l = 2; sotto_a = 1; }
+	else if (chroma == 3) { sotto_l = 1; sotto_a = 1; }
+
+	(void) lb_ue(&l);                      /* log2_max_frame_num_minus4 */
+	{
+		uint32_t tipo_ordine = lb_ue(&l);
+		if (tipo_ordine == 0) {
+			(void) lb_ue(&l);
+		} else if (tipo_ordine == 1) {
+			(void) lb_bit(&l, 1);
+			(void) lb_se(&l);
+			(void) lb_se(&l);
+			uint32_t quanti = lb_ue(&l);
+			for (uint32_t i = 0; i < quanti && !l.finito && i < 256; i++)
+				(void) lb_se(&l);
+		}
+	}
+	(void) lb_ue(&l);                      /* max_num_ref_frames */
+	(void) lb_bit(&l, 1);                  /* gaps_in_frame_num_value_allowed */
+	largh_mb = lb_ue(&l) + 1;
+	alt_mapunit = lb_ue(&l) + 1;
+	solo_fotogrammi = (int) lb_bit(&l, 1);
+	if (!solo_fotogrammi)
+		(void) lb_bit(&l, 1);              /* mb_adaptive_frame_field_flag */
+	(void) lb_bit(&l, 1);                  /* direct_8x8_inference_flag */
+	if (lb_bit(&l, 1)) {                   /* frame_cropping_flag */
+		taglio_sx = lb_ue(&l);
+		taglio_dx = lb_ue(&l);
+		taglio_su = lb_ue(&l);
+		taglio_giu = lb_ue(&l);
+	}
+	free(rbsp);
+	if (l.finito)
+		return false;
+
+	c->profilo_flusso = (int) profilo;
+	c->livello_flusso = (int) livello;
+	{
+		uint32_t unita_l = (chroma == 0) ? 1 : sotto_l;
+		uint32_t unita_a = (uint32_t) ((chroma == 0 ? 1 : sotto_a) * (2 - solo_fotogrammi));
+		uint32_t larghezza = largh_mb * 16;
+		uint32_t altezza = alt_mapunit * 16 * (uint32_t) (2 - solo_fotogrammi);
+		uint32_t via_l = (taglio_sx + taglio_dx) * unita_l;
+		uint32_t via_a = (taglio_su + taglio_giu) * unita_a;
+
+		c->larghezza_flusso = (larghezza > via_l) ? larghezza - via_l : larghezza;
+		c->altezza_flusso = (altezza > via_a) ? altezza - via_a : altezza;
+	}
+	return true;
 }
 
 /*
@@ -628,12 +832,46 @@ static void di(char *dove, size_t quanto, const char *fmt, ...)
  */
 static const char *nome_predefinito(CodecVideo codec)
 {
-	return codec == CODIFICATORE_HEVC ? "libx265" : "libsvtav1";
+	switch (codec) {
+	case CODIFICATORE_HEVC:
+		return "libx265";
+	/* ⚠ `libx264` come `libx265`: e' il RIPIEGO in software, e sulla macchina
+	 *   di prova non si percorre — H.264 va in hardware (`h264_vaapi`).  La
+	 *   scelta della licenza e' la stessa gia' fatta per HEVC, non una nuova. */
+	case CODIFICATORE_H264:
+		return "libx264";
+	default:
+		return "libsvtav1";
+	}
 }
 
 static enum AVCodecID id_di(CodecVideo codec)
 {
-	return codec == CODIFICATORE_HEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_AV1;
+	switch (codec) {
+	case CODIFICATORE_HEVC:
+		return AV_CODEC_ID_HEVC;
+	case CODIFICATORE_H264:
+		return AV_CODEC_ID_H264;
+	default:
+		return AV_CODEC_ID_AV1;
+	}
+}
+
+/* ⛔ Il nome per il registro sta in UN posto solo: fino al 20 agosto 2026 era
+ *    un `? :` ripetuto in sei righe, e col terzo codec ognuna avrebbe detto
+ *    «AV1» di un flusso H.264 — sei bugie da correggere una per una. */
+static const char *nome_codec(CodecVideo codec)
+{
+	switch (codec) {
+	case CODIFICATORE_HEVC:
+		return "HEVC";
+	case CODIFICATORE_H264:
+		return "H.264";
+	case CODIFICATORE_AV1:
+		return "AV1";
+	default:
+		return "codec ignoto";
+	}
 }
 
 /*
@@ -697,9 +935,16 @@ static bool accetta_formato(const AVCodec *c, enum AVPixelFormat voluto)
 
 static VAProfile profilo_va(CodecVideo codec, int profondita)
 {
-	if (codec != CODIFICATORE_HEVC)
-		return VAProfileNone;
-	return profondita == 10 ? VAProfileHEVCMain10 : VAProfileHEVCMain;
+	if (codec == CODIFICATORE_HEVC)
+		return profondita == 10 ? VAProfileHEVCMain10 : VAProfileHEVCMain;
+	/* ⛔ H.264 QUI E' A 8 BIT E BASTA, e si dichiara invece di provare:
+	 *    `High10` esiste nello standard ma `[M]` `vainfo` su questa macchina
+	 *    porta `VAProfileH264High` e non il 10 bit — e chi chiedesse 10 bit
+	 *    otterrebbe `VAProfileNone`, cioe' il ripiego in software, con lo
+	 *    stesso nome e un ritmo dieci volte peggiore (la forma E2). */
+	if (codec == CODIFICATORE_H264)
+		return profondita == 10 ? VAProfileNone : VAProfileH264High;
+	return VAProfileNone;
 }
 
 /*
@@ -992,6 +1237,47 @@ static int opzioni_hevc(Codificatore *c, char *errore, size_t errore_byte)
 	return 0;
 }
 
+/*
+ * ⭐ H.264 IN SOFTWARE — le stesse cinque scelte di `opzioni_hevc()`, e non e'
+ *    una copia per pigrizia: sono scelte che non dipendono dal codec, e i nomi
+ *    dei parametri di x264 SI', quindi non si possono condividere.
+ *
+ * ⛔ E i nomi diversi non sono un dettaglio: `frame-threads` di x265 in x264
+ *    NON ESISTE — si chiamano `threads` e `sliced-threads`.  ⚠ E x264
+ *    **rifiuta** un parametro che non conosce (a differenza di libsvtav1, che
+ *    `[M]` lo ignora e continua): qui uno sbaglio si vede subito, ed e' il
+ *    verso buono.
+ */
+static int opzioni_h264(Codificatore *c, char *errore, size_t errore_byte)
+{
+	char parametri[512];
+	char qualita[64] = "";
+
+	/* ⛔ In x264 il senza-perdita non e' un `lossless=1`: e' `qp=0`. */
+	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS)
+		snprintf(qualita, sizeof(qualita), "qp=0:");
+	else
+		snprintf(qualita, sizeof(qualita), "crf=%d:", c->qualita_corrente);
+
+	snprintf(parametri, sizeof(parametri),
+	         "%s"
+	         "bframes=0:"          /* un fotogramma B = un fotogramma di ritardo */
+	         "open-gop=0:"         /* §5.2 vuole una chiave che si decodifichi da sola */
+	         "repeat-headers=1:"   /* SPS+PPS davanti a OGNI IDR, per chi entra dopo */
+	         "rc-lookahead=0:threads=1:sliced-threads=0:"
+	         "keyint=%d:min-keyint=%d:"
+	         "log-level=error",
+	         qualita,
+	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1,
+	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1);
+
+	if (av_opt_set(c->ctx->priv_data, "x264-params", parametri, 0) < 0) {
+		di(errore, errore_byte, "libx264 ha rifiutato i parametri «%s»", parametri);
+		return -1;
+	}
+	return 0;
+}
+
 static int opzioni_av1(Codificatore *c, char *errore, size_t errore_byte)
 {
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
@@ -1090,9 +1376,20 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	c->ctx->framerate = (AVRational){ (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30), 1 };
 	c->ctx->max_b_frames = 0;   /* ⛔ deciso, non ereditato: vedi opzioni_hevc() */
 	c->ctx->gop_size = r->chiavi_ogni ? (int) r->chiavi_ogni : INT_MAX;
-	c->ctx->profile = (r->codec == CODIFICATORE_HEVC)
-	                      ? (r->profondita == 10 ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN)
-	                      : AV_PROFILE_AV1_MAIN;
+	switch (r->codec) {
+	case CODIFICATORE_HEVC:
+		c->ctx->profile = (r->profondita == 10) ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
+		break;
+	/* ⭐ High (100), che e' quel che dichiara la stringa gia' verificata sul
+	 *    browser: `avc1.640032` — `64` = profile_idc 100, `00` = nessun
+	 *    vincolo, `32` = livello 5.0 (`banchi/07-b48`, 300 su 300). */
+	case CODIFICATORE_H264:
+		c->ctx->profile = AV_PROFILE_H264_HIGH;
+		break;
+	default:
+		c->ctx->profile = AV_PROFILE_AV1_MAIN;
+		break;
+	}
 
 	/*
 	 * ⛔ IL COLORE SI DICHIARA, O F2.6 MISURA LA MATRICE INVECE DEI PIXEL.
@@ -1150,6 +1447,8 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		esito = opzioni_vaapi(c, errore, errore_byte);
 	else if (r->codec == CODIFICATORE_HEVC)
 		esito = opzioni_hevc(c, errore, errore_byte);
+	else if (r->codec == CODIFICATORE_H264)
+		esito = opzioni_h264(c, errore, errore_byte);
 	else
 		esito = opzioni_av1(c, errore, errore_byte);
 	if (esito < 0) {
@@ -1193,7 +1492,7 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	if (c->ctx->codec->id != id_di(r->codec))
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "«%s» non e' un codificatore %s", c->ctx->codec->name,
-		   r->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1");
+		   nome_codec(r->codec));
 	else if (strcmp(c->ctx->codec->name, c->componente->name) != 0)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "chiesto «%s», aperto «%s»", c->componente->name, c->ctx->codec->name);
@@ -1406,7 +1705,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	}
 	if (c->componente->id != id_di(richiesta->codec)) {
 		di(errore, errore_byte, "«%s» non e' un codificatore %s", nome,
-		   richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1");
+		   nome_codec(richiesta->codec));
 		free(c);
 		return NULL;
 	}
@@ -1440,7 +1739,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	if (c->hardware)
 		snprintf(c->nome, sizeof(c->nome),
 		         "%s %s via %s (in HARDWARE · %s · %s · %s)",
-		         richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1",
+		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
 		         c->componente->name, c->conf.nodo, c->conf.fornitore_va,
 		         c->conf.bassa_potenza ? "⚠ EncSliceLP, bassa potenza — NON e' la "
@@ -1448,7 +1747,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		                               : "EncSlice, piena");
 	else
 		snprintf(c->nome, sizeof(c->nome), "%s %s via %s (in software)",
-		         richiesta->codec == CODIFICATORE_HEVC ? "HEVC" : "AV1",
+		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
 		         c->componente->name);
 
@@ -1673,6 +1972,29 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 		if (!c->conf.letto_dal_flusso && f.sps_byte)
 			c->conf.letto_dal_flusso =
 			    leggi_sps_hevc(dati + f.sps_offset, f.sps_byte, &c->conf);
+	} else if (c->richiesta.codec == CODIFICATORE_H264) {
+		FormaAnnexB264 f;
+
+		annexb264_leggi(dati, byte, &f);
+		*chiave = f.primo_vcl_e_chiave;
+		if (byte >= 4
+		    && !(dati[0] == 0 && dati[1] == 0
+		         && (dati[2] == 1 || (dati[2] == 0 && dati[3] == 1)))) {
+			registro_dice(REG_CODIFICA,
+			              "⛔ il fotogramma H.264 non comincia con un codice di inizio: "
+			              "sembra a prefisso di lunghezza (avcC), e il browser senza "
+			              "`description` vuole Annex-B");
+			return false;
+		}
+		if (f.primo_vcl_e_chiave && !f.parametri_prima_dell_idr) {
+			registro_dice(REG_CODIFICA,
+			              "⛔ chiave H.264 senza SPS+PPS davanti: in Annex-B il chunk "
+			              "«key» deve portarli, o chi si collega dopo resta nero");
+			return false;
+		}
+		if (!c->conf.letto_dal_flusso && f.sps_byte)
+			c->conf.letto_dal_flusso =
+			    leggi_sps_h264(dati + f.sps_offset, f.sps_byte, &c->conf);
 	} else {
 		FormaObu f;
 		obu_leggi(dati, byte, &f);

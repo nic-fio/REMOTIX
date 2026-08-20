@@ -158,6 +158,51 @@ def costruisci_hevc(profondita, guasto=""):
     return uscita
 
 
+def costruisci_h264(profondita, guasto=""):
+    """⛔ Annex-B puro, NESSUNA `description` — la stessa scelta di HEVC, e per
+    la stessa ragione: senza `description` il browser prende il flusso in
+    Annex-B, ed e' la forma che il nostro codificatore emette.
+
+    ⚠ E SOLO 8 BIT, dichiarato invece che dimenticato: `[M]` `vainfo` su questa
+      macchina porta `VAProfileH264High` e non il 10 bit, quindi una sonda a 10
+      bit misurerebbe una strada che il server **non sa produrre in hardware** —
+      e chi la vedesse verde crederebbe di avere una cosa che non ha."""
+    if profondita != 8:
+        return None
+    dati = grezzo(guasto)
+    comando = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-y",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{LARGHEZZA}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-frames:v", "1",
+        # ⛔ Il profilo si CHIEDE PER NOME: `high` e' quel che dichiara la
+        #    stringa `avc1.6400xx` che la pagina manda a `VideoDecoder`.  Se
+        #    x264 emettesse un altro profilo, la stringa e i byte
+        #    direbbero due cose diverse — ed e' il difetto che il 13 agosto ha
+        #    fatto perdere il codec del prodotto (vedi il riquadro sopra).
+        "-profile:v", "high",
+        "-x264-params", "log-level=none:bframes=0:repeat-headers=1",
+        # ⛔ LA SEI DI x264 SI TOGLIE DAI BYTE, non con un'opzione — perche'
+        #    l'opzione non c'e'.  `[M]` 20 agosto 2026: x264 scrive sempre una
+        #    SEI «user data unregistered» con dentro la propria riga di comando,
+        #    **1 402 byte** — piu' del fotogramma stesso — che finirebbero in
+        #    base64 dentro `pagina.html`.  ⚠ `+bitexact` NON la toglie (provato).
+        #    ⇒ Si toglie il NAL di tipo 6 con un filtro di flusso, che e' una
+        #    cosa dichiarata e verificabile: la sonda si ridecodifica subito
+        #    dopo, e se il filtro avesse tolto troppo le due tinte non
+        #    tornerebbero.
+        "-bsf:v", "filter_units=remove_types=6",
+        "-color_primaries", "bt709", "-color_trc", "bt709",
+        "-colorspace", "bt709",
+        "-f", "h264", "pipe:1",
+    ]
+    codice, uscita, errori = esegui(comando, entrata=dati)
+    if codice != 0 or len(uscita) < 64:
+        errore(f"libx264 non ha prodotto la sonda a {profondita} bit",
+               errori.decode("utf-8", "replace")[-800:])
+    return uscita
+
+
 def costruisci_av1(profondita, guasto=""):
     """⛔ Nessuna `description`: AV1 in WebCodecs prende le unita' temporali di
     OBU cosi' come sono (F2-5, aggiunta del 12 agosto).  Qui si passa da IVF
@@ -194,8 +239,9 @@ def tinte_del_flusso(flusso, codec, profondita):
     appena prodotto e si guarda che le due meta' siano ancora due tinte
     diverse.  Senza, «la sonda ha due tinte» sarebbe una proprieta' della
     SORGENTE, non del flusso che finira' nel prodotto."""
+    formato = {"hevc": "hevc", "h264": "h264"}.get(codec, "obu")
     comando = ["ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
-               "-f", "hevc" if codec == "hevc" else "obu", "-i", "pipe:0",
+               "-f", formato, "-i", "pipe:0",
                "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]
     codice, uscita, errori = esegui(comando, entrata=flusso)
     if codice != 0 or len(uscita) < LARGHEZZA * ALTEZZA * 3:
@@ -216,10 +262,16 @@ def tinte_del_flusso(flusso, codec, profondita):
 
 def costruisci_tutte(guasto=""):
     fuori = {}
-    for codec in ("hevc", "av1"):
+    costruttori = {"hevc": costruisci_hevc, "h264": costruisci_h264,
+                   "av1": costruisci_av1}
+    for codec in ("hevc", "h264", "av1"):
         for profondita in (8, 10):
-            flusso = (costruisci_hevc(profondita, guasto) if codec == "hevc"
-                      else costruisci_av1(profondita, guasto))
+            flusso = costruttori[codec](profondita, guasto)
+            # ⛔ «Non c'e'» si SALTA dichiarandolo, e non si scrive una voce
+            #    vuota: una sonda vuota nella pagina direbbe «provato e non
+            #    arriva» di una cosa mai provata (`LEZIONI.md` §1.9).
+            if flusso is None:
+                continue
             lette, guai = tinte_del_flusso(flusso, codec, profondita)
             fuori[f"{codec}-{profondita}"] = {
                 "codec": codec, "profondita": profondita,

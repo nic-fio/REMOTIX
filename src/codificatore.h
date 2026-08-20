@@ -184,6 +184,17 @@
 typedef enum {
 	CODIFICATORE_HEVC = 1,
 	CODIFICATORE_AV1 = 2,
+	/* ⭐⭐ H.264 — entrato il 20 agosto 2026, `DECISIONI.md` §1.13-ter.
+	 *
+	 * ⛔ E il numero 3 SI AGGIUNGE, non si riusa: il 2 resta AV1 per sempre,
+	 *    perche' un client vecchio che dicesse «2» e ricevesse H.264 non se ne
+	 *    accorgerebbe — dipingerebbe spazzatura senza un errore.
+	 *
+	 * La ragione, ed e' dell'utente: **Firefox per Android non ha ne' HEVC ne'
+	 * AV1**, quindi per quel browser il prodotto non esisteva.  E la misura
+	 * dice il resto: H.264 e' l'unico codec in HARDWARE ai due capi — 3,11 ms
+	 * sul server (il piu' veloce dei quattro) e in hardware sul tablet. */
+	CODIFICATORE_H264 = 3,
 } CodecVideo;
 
 /*

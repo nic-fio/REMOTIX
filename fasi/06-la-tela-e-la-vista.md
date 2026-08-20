@@ -665,6 +665,67 @@ loro strumento resta l'occhio dell'utente.
 
 ---
 
+#### ⭐⭐⭐ 4.9-sexies · L'IMPUTATO VERO ERA IL DECODIFICATORE AV1 DI FIREFOX — 20 agosto 2026
+
+*⛔ E la §4.9 aveva ragione a metà: la tela 2D **era** un difetto, e curarla ha ripulito Chrome. Ma
+su Firefox i blocchi restavano, e la loro causa era un'altra. **Erano due difetti sovrapposti**, ed
+è per questo che ogni ipotesi singola sembrava smentita.*
+
+**Il banco che li ha separati** (`banchi/07-b52`, guidato da me, non dall'utente): si muove la
+scena — la panoramica di GNOME che si apre e si chiude venti volte — e si prendono **tre immagini
+dello stesso istante**.
+
+| anello | come si guarda | esito |
+|---|---|---|
+| la **cattura** | `SIGUSR1` → `scatto-ingresso.bgrx`, i pixel che il codificatore ha in mano | ⭐ **pulita**: panoramica, dock, testo nitido |
+| il **flusso spedito** | `scatto-flusso.obu` ridato a `ffmpeg/dav1d` — **22 delta della stessa catena** | ⭐ **pulito** |
+| **Chrome**, stessi byte | 32 fotogrammi, scena mossa | ⭐ **pulito** |
+| ⛔ **Firefox**, stessi byte | 31 fotogrammi, `dipinti == consegnati`, zero buchi, zero errori | ⛔ **blocchi rettangolari** |
+
+⇒ ⭐ **Una variabile sola separa il pulito dal rotto, ed è il decodificatore.** I byte sono buoni —
+lo dicono due decodificatori indipendenti — e Firefox li dipinge sbagliati **senza dichiarare
+nessun errore**: `err 0`, `buchi 0`, `ord 0`, `mis 0`.
+
+⚠ **E prima di accusarlo si è controllata la cosa nostra**: `ffprobe` sul flusso dà `Main`,
+`yuv420p`, `bt709`, `tv` — cioè **8 bit**, esattamente quel che la pagina aveva chiesto
+(`av01.0.13M.08`). L'ipotesi «10 bit dichiarati 8» resta morta come il 17 agosto.
+
+#### ⭐⭐ E LA CURA ERA GIÀ DECISA: H.264 — attuato lo stesso giorno
+
+*La decisione dell'utente del 17 agosto (§1.13-ter) era nata per un'altra ragione — Firefox per
+Android non ha né HEVC né AV1 — e si è rivelata **anche** la cura di questo difetto.*
+
+**`[M]` La misura, stessa scena e stesso banco, con H.264:** Firefox, **35 consegnati = 35
+dipinti**, zero tardive, zero buchi, zero errori — ⭐ **e nessun blocco**. La stessa immagine che
+un'ora prima era a pezzi.
+
+**Che cosa è stato scritto** (il lavoro che §1.13-ter dichiarava «non ancora fatto»):
+
+| dove | che cosa |
+|---|---|
+| `RCP.md` §4.3, §6.2 | `h264` nell'elenco negoziabile, `3` nel registro dei numeri. ⛔ Il `2` resta AV1 **per sempre** |
+| `rcp.h` | ⭐ `RCP_CODEC_VIDEO_MAX`, perché il numero più alto stia in **un posto solo** |
+| `rcp.c` | `NOSTRO_CODEC` diventa `hevc,h264` — AV1 esce dalla negoziazione |
+| `codificatore.c` | `h264_vaapi` in hardware (`[M]` **1,6 ms** per fotogramma) e `libx264` come ripiego dichiarato; il lettore **Annex-B di H.264** (l'IDR sta nei *cinque* bit bassi, non nei sei di HEVC) e l'**SPS** letto fino al ritaglio, che è quel che permette di dire la profondità e la misura VERE |
+| `figlio.c` | il terzo posto in **quattro** array per-codec, e la mappa numero → codec in una funzione sola |
+| `pagina.html` | la sonda `h264-8` e la scala delle misure, **generate** dai due programmi di `banchi/` e non scritte a mano; `avc1.6400<livello in esadecimale>`; e le frasi all'utente che nominavano AV1 |
+
+⛔⛔ **E i tre difetti che ha scoperto entrare, tutti della stessa famiglia — «un numero nuovo in
+cinque posti, e uno resta indietro»:**
+
+1. ⛔⛔ **quattro array per-codec erano lunghi 3** (indici 0-2): il codec **3** scriveva **fuori dai
+   limiti** e sporcava la variabile accanto. Il sintomo era una riga che diceva *«§4.3: il padre ha
+   negoziato 8 bit (prima **1**)»* a ogni richiesta di chiave — **un difetto di memoria travestito
+   da difetto di negoziazione**, con zero fotogrammi e nessuna riga che nominasse la causa;
+2. ⛔ **il figlio rifiutava il codec 3** con un tetto scritto a mano (*«che §6.2 non definisce»*) —
+   e almeno questo *lo diceva*;
+3. ⛔⛔ **`wt_video_diffondi()` buttava ogni fotogramma H.264 IN SILENZIO**: il figlio codificava
+   (5 940 byte, CHIAVE, 1,6 ms), il padre riceveva, e lì il fotogramma spariva **senza una riga**.
+   ⇒ Adesso il tetto viene da `RCP_CODEC_VIDEO_MAX` e il rifiuto **si dichiara** (una riga per
+   numero, non per fotogramma).
+
+---
+
 ## 5 · ⛔ Che cosa NON ha funzionato
 
 *Si riempie anche quando fa una brutta figura. ⭐ E in questa fase la parte più istruttiva non sono

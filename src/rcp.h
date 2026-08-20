@@ -781,6 +781,17 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
  * `fuori_l`/`fuori_a` ricevono la misura ammessa piu' vicina (troncata al pari).
  * Ritorna `false` se la richiesta e' fuori dai limiti: allora si risponde
  * `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` e **non** si aggiusta in silenzio. */
+/* ⛔⭐ IL NUMERO PIU' ALTO CHE §6.2 DEFINISCE PER IL VIDEO — 1 = HEVC,
+ *     2 = AV1, 3 = H.264 (`DECISIONI.md` §1.13-ter, 20 agosto 2026).
+ *
+ * ⚠ Sta QUI, in `rcp.h`, perche' e' un fatto del PROTOCOLLO e lo leggono tre
+ *   moduli: `figlio.c` (che rifiuta un numero ignoto del padre),
+ *   `webtransport.c` (che rifiuta un fotogramma con un numero ignoto) e
+ *   `rcp.c`.  ⛔ Il 20 agosto quei tre posti avevano tre numeri scritti a mano,
+ *   e ne e' rimasto indietro uno: **ogni fotogramma H.264 e' stato buttato in
+ *   silenzio** per mezz'ora, con la sessione viva e i contatori a zero. */
+#define RCP_CODEC_VIDEO_MAX 3u
+
 #define RCP_TELA_L_MINIMA 320u
 #define RCP_TELA_L_MASSIMA 7680u
 #define RCP_TELA_A_MINIMA 240u

@@ -738,16 +738,31 @@ function base64ABytes(b64) {
 /* I due codec di RCP/1 (§4.3), e i loro numeri nell'intestazione (§6.2).
    ⛔ `vp9` non c'e' e non e' una dimenticanza: §4.3 lo porta come l'esempio
       canonico di valore che un'implementazione RCP/1 DEVE IGNORARE. */
-const CODEC_RCP = { hevc: 1, av1: 2 };
-const NOME_DEL_CODEC = { 1: "hevc", 2: "av1" };
+/* ⛔ Il 2 resta AV1 PER SEMPRE, anche adesso che AV1 e' uscito dal prodotto
+   (§1.13-ter): riusare un numero vorrebbe dire che un client vecchio, sentendo
+   «2», dipingerebbe spazzatura senza un errore. */
+const CODEC_RCP = { hevc: 1, av1: 2, h264: 3 };
+const NOME_DEL_CODEC = { 1: "hevc", 2: "av1", 3: "h264" };
 
-/* ⛔ L'ORDINE DI PREFERENZA NON SI ROVESCIA (`DECISIONI.md` §1.13): resta
-   `hevc,av1`.  HEVC e' il primo perche' e' quello che il telefono decodifica in
-   hardware; AV1 riempie le caselle che HEVC lascia vuote.  ⚠ Fra i due decide
-   comunque il SERVER (§4.3: «chi sceglie e' il server, dentro l'intersezione,
-   seguendo l'ordine di preferenza del client»): questo elenco e' una
-   preferenza, non una scelta. */
-const PREFERENZA = ["hevc", "av1"];
+/* ⛔⭐⭐ AV1 E' USCITO, ENTRA H.264 — 20 agosto 2026, `DECISIONI.md` §1.13-ter,
+   deciso dall'utente: *«la scelta e' obbligata: dobbiamo abbandonare AV1»*.
+
+   La causa e' sua: **Firefox per Android non ha ne' HEVC ne' AV1**, quindi per
+   quel browser il prodotto non esisteva — e questo contraddice la riga
+   d'apertura del `README`.  ⭐ E la misura ha aggiunto la seconda meta': H.264
+   e' l'unico codec **in hardware ai due capi** (3,11 ms sul server, il piu'
+   veloce dei quattro; hardware sul tablet).
+
+   ⛔⛔ E il 20 agosto se n'e' aggiunta una terza, misurata sul prodotto: con
+   AV1, **Firefox dipinge blocchi rettangolari** dove Chrome e `ffmpeg/dav1d`,
+   **sugli stessi byte e nello stesso istante**, sono puliti.  ⇒ L'imputato
+   della caccia agli artefatti e' il suo decodificatore AV1, e togliere AV1 e'
+   anche la cura di quel difetto (`fasi/06` §4.9-sexies).
+
+   ⚠ HEVC resta il primo dove c'e' (§1.13); il ripiego universale, che era AV1,
+   adesso e' H.264.  Fra i due decide comunque il SERVER (§4.3): questo elenco
+   e' una preferenza, non una scelta. */
+const PREFERENZA = ["hevc", "h264"];
 
 /* ⚠ `video.livello` (§4.3) e' il livello massimo che questa pagina dichiara di
    saper decodificare, e ⛔ NON e' misurabile da qui: `[M]` 12 agosto 2026,
@@ -875,6 +890,9 @@ const SONDE = {
   "hevc-10": { l: 64, a: 48, profondita: 10,
     sinistra: [220, 32, 32], destra: [48, 64, 220],
     dati: "AAAAAUABDAH//wIgAAADAJAAAAMAAAMAHpKAkAAAAAFCAQECIAAAAwCQAAADAAADAB6gIIMTZZKuTK5qBAQCCAAAAwAIAAADAPBAAAAAAUQBwXPQiQAAASgBrwhg8uNd/+ouHxvIZX1sZuIy31OEOnKUfcA=" },
+  "h264-8": { l: 64, a: 48, profondita: 8,
+    sinistra: [220, 32, 32], destra: [48, 64, 220],
+    dati: "AAAAAWdkAAqssgj01AgIBQAAAwABAAADADwPEiZIAAAAAWjrw8siwAAAAWWIhAn//tRp8yyLLSk937M4NZQLew/zjAIhSG3ce2CuQf84k6/nWQ==" },
   "av1-8": { l: 64, a: 48, profondita: 8,
     sinistra: [220, 32, 32], destra: [48, 64, 220],
     dati: "EgAKDQAAAAKv95tfIgQEAggyHhAAqAAAAkAAALSD6kViA0bZ9DMc0xkZdVxYxfhr9w==" },
@@ -982,6 +1000,26 @@ const SONDE_MISURA = {
       sinistra: [220, 32, 32], destra: [48, 64, 220],
       dati: "AAAAAUABDAH//wFgAAADAJAAAAMAAAMAlpKAkAAAAAFCAQEBYAAAAwCQAAADAAADAJagAeAgAhxZZKkkyuagQEAggAAAAwCAAAAPBAAAAAFEAcFytGJAAAABKAGvCEER6Lx47duXTlu3bt3Dhu3bt2zZs2bNmzZs2bNmzZtA+e6Xf/cVH6HUtsEv5/K6k2bYBRCuJwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwFS4nuIy31FEYAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMA/6hm2AVAgiiAAAADAAADAAADAAADAAADAAADAAADAAAVrcdGQAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAABtyTDfQQAAADAAADAAADAAADAAADAAADAAADAAADAAB02TXrAAADAAADAAADAAADAAADAAADAAADAAADAClghwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAC27qIyAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwFbAAADAAADAAADAAADAAADAAADAAADAAADAAADAAFH3XRkAAADAAADAAADAAADAAADAAADAAADAAADANGAAAADAAADAAADAAADAAADAAADAAADAAADAAADABxGX9iAAAADAAADAAADAAADAAADAAADAAADAAATsAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwDAkUvWAAADAAADAAADAAADAAADAAADAAADAAADAKiAAAADAAADAAADAAADAAADAAADAAADAAADAAADA3bNexAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMDWgAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAACIzRoyAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAApYAAADAAADAAADAAADAAADAAADAAADAAADAAAPczvsQAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEFAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABzWe9iAAAADAAADAAADAAADAAADAAADAAADAAAiYAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAALlvm9YAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAEBAAAADAAADAAADAAADAAADAAADAAADAAADAABSt93rAAADAAADAAADAAADAAADAAADAAADAAADAIOAAAADAAADAAADAAADAAADAAADAAADAAADAAB7GhdiAAADAAADAAADAAADAAADAAADAAADAAADAKKAAAADAAADAAADAAADAAADAAADAAADAAADAACyb9vWAAADAAADAAADAAADAAADAAADAAADAAADAR0AAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAOw0XsQAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMBVwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwABXd/3rAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwJSAAADAAADAAADAAADAAADAAADAAADAAADAAHKaP2IAAADAAADAAADAAADAAADAAADAAADAAADAs4AAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAkk3KMgAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAQEAAADAAADAAADAAADAAADAAADAAADAAADAALpwG9YAAADAAADAAADAAADAAADAAADAAADAAAEvAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwADpNJ7EAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAABYQAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMABG5u0ZAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAg4AAADAAADAAADAAADAAADAAADAAADAAADAAUjgN6wAAADAAADAAADAAADAAADAAADAAADAAAJeAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAF7JPesAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAACXgAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMABqyT3rAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAl4AAADAAADAAADAAADAAADAAADAAADAAADAAdFpPYgAAADAAADAAADAAADAAADAAADAAADAAALCAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAIJN2jIAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEHAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMACMzdoyAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABBwAAADAAADAAADAAADAAADAAADAAADAAADAAl03aMgAAADAAADAAADAAADAAADAAADAAADAAAQcAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwAJ3wG9YAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEvAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMACn8BvWAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAABLwAAADAAADAAADAAADAAADAAADAAADAAADAArfAb1gAAADAAADAAADAAADAAADAAADAAADAAAS8AAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAAwALPwG9YAAAAwAAAwAAAwAAAwAAAwAAAwAAAwAAEvAAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAUHGB9EAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAMAAmI=" },
   ],
+  h264: [
+    { l: 320, a: 240, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkAA2ssgKD9NQICAUAAAMAAQAAAwA8DxQqSAAAAAFo68PLIsAAAAFliIQJ//7UafMsiy0pPd+zODWUGf7u3t1RgUL4NrIYBW/uMQFSxLCAAHV7ZLgQDtM24DgwAqgAJ5GDY3zbnlwGPDC5j8Sn8F1C30BB" },
+    { l: 640, a: 480, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkAB6ssgFAe01AgIBQAAADABAAAAMDwPFi5IAAAAABaOvDyyLAAAABZYiECf/+1GnzLIstKT3fszg1lBn+7t7dUYFC+DcZZla1IABXF/nGARBkgAAAAwAvWhhvtpo6eBMB7yMABJwRWraUqROAlcbmdo141rEBoxnQx1BBZ/KA4gZEDIgZEDIgZkD2gisFIA3IInBjQRuDCggMGQZh" },
+    { l: 1280, a: 720, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkAB+ssgCgC3TUCAgFAAADAAEAAAMAPA8YMkgAAAABaOvDyyLAAAABZYiECf/+1GnzLIstKT3fszg1lBn+7t7dUYFC+DcZZla1IAAAAwAAAwAAIy3+cYBEGSAAs7Mwg6NfpkldQAAACgbUAtYFiiLAYyJUCehTQcGMYFHi8BNIrgbKNIIqErDXh0BOAvAfENELyF4D4gAB4QAA3IAAbkAAQSAAHzAAFEAADcgAB8QABG4AAwoAAf0AASgAARmAAM6AAHxAAFEAAD4gACiAACNwABuQABSAABG4AA3IAApAAAl8AAgkAAW0AATgAAUAAATgW8E=" },
+    { l: 1920, a: 1080, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkACissgDwBE/LNQICAUAAAAMAQAAADwPGDJIAAAABaOvDyyLAAAABZYiECf/+1GnzLIstKT3fszg1lBn+7t7dUYFC+DcZZla1IAAAAwAAAwAAAwAAiyX84wCIMkAUlmYQdGv0ySuoAAADAAC/NoAc8AG1gEcABjIBMgAnoArAAeWAYwAUeAW4AXmAVwAbKAaQAioAmwA2YA6gBMABeAB8QBogDMgC8AD4gAAAGtAAAAMDcgAAAwBuQAAAEEgAAAMCKwAAAwBRAAADAA3IAAADAfEAAAMARuAAAAyIAAADAhMAAAMAZEAAAA+IAAADAogAAAMAfEAAABRAAAADA+IAAAMAogAAAwAjcAAABuQAAAMBSAAAAwBG4AAADcgAAAMCkAAAAwCgAAADACXwAAAIJAAAAwGVAAADAE8AAAMAEwAAAwAFEAAAAwFEAAADAFEAAAMAFEAAAAUQAAADAUQAAAMAUQAAAwAUQAAABRAAAAMBRAAAAwBRAAADABRAAAAFEAAAAwFEAAADAFEAAAMAFEAAAAUQAAADAUQAAAMAUQAAAwAUQAAABRAAAAMBRAAAAwBRAC3h" },
+    { l: 2560, a: 1440, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkADKssgBQAWtNQICAUAAAAwAQAAADA8DxgySAAAAAAWjrw8siwAAAAWWIhAn//tRp8yyLLSk937M4NZQZ/u7e3VGBQvg3GWZWtSAAAAMAAAMAAAMAAAMCR3/5xgEQZIACzszCDo1+mSV1AAADAAADAIhLgADZAABtYACOAABjIACdgACegAFhAAINgAMYAAUeAAuwABeYACuAAGygANIAAioABQwADZgAHUAAUQAAvAAB8QADRAAMiAAXgAA+IAAAAwABuQAAAwAADcgAAAMAAG5AAAADAAQSAAADAAAfEAAAAwAA+IAAAAMAB8QAAAMAAD4gAAADAAI3AAADAAAZEAAAAwABKYAAAAMADIgAAAMAAHxAAAADAAUQAAADAAA+IAAAAwACiAAAAwAAHxAAAAMAAUQAAAMAABG4AAADAADcgAAAAwAKQAAAAwAAjcAAAAMABuQAAAMAAFIAAAMAAATwAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUgAAAwAABSAAAAMAAFIAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAAAwAAUQAAAwAABRAAAAMAAFEAAAMAAAUQAAADAABRAAADAAAFEAAW8Q==" },
+    { l: 3840, a: 2160, rl: 64, ra: 48, profondita: 8,
+      sinistra: [220, 32, 32], destra: [48, 64, 220],
+      dati: "AAAAAWdkADOssgB4AIfTUCAgFAAAAwAEAAADAPA8YMkgAAAAAWjrw8siwAAAAWWIhAn//tRp8yyLLSk937M4NZQZ/u7e3VGBQvg3GWZWtSAAAAMAAAMAAAMAAAMAAJhf/nGARBkgAAAs7Mwg6NfpkldQAAADAAADAAIhLgAAAwDZAAADABtYAAAI4AAAAwGMgAAAoAAAAwAnoAAAFrAAAAfGAAADAxgAAAMBR4AAALsAAAMAXmAAACuAAAAbKAAADSAAAAioAAAEyAAABBoAAAMCUAAAAwHxAAADANoAAAMApAAAAwBeAAADAD4gAAAZAAADABkQAAADAAADAAAM6AAAAwAAAwAABnQAAAMAAAMAAAMDOgAAAwAAAwAAAwGdAAADAAADAAADANyAAAADAAADAAB8QAAAAwAAAwAAPiAAAAMAAAMAAB8QAAADAAADAAARuAAAAwAAAwAADIgAAAMAAAMAAAfEAAADAAADAAAFEAAAAwAAAwAAAwPiAAADAAADAAADAogAAAMAAAMAAAMB8QAAAwAAAwAAAwFEAAADAAADAAADAPiAAAADAAADAACiAAADAAADAAADAI3AAAADAAADAABuQAAAAwAAAwAAUgAAAwAAAwAAAwBG4AAAAwAAAwAANyAAAAMAAAMAACkAAAMAAAMAAAMAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKQAAAwAAAwAAAwApAAADAAADAAADACkAAAMAAAMAAAMAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAAAwAAAwAAKIAAAAMAAAMAACiAAAADAAADAAAogAAALeE=" },
+  ],
   av1: [
     { l: 320, a: 240, rl: 64, ra: 48, profondita: 8,
       sinistra: [220, 32, 32], destra: [48, 64, 220],
@@ -1033,6 +1071,22 @@ function stringhe_codec(nome, profondita, livello) {
     const idc = Math.max(30, Math.round((maggiore + minore / 10) * 30));
     return ["hev1." + profilo + ".L" + idc + ".B0",
             "hev1." + profilo + ".L93.B0"];
+  }
+  if (nome === "h264") {
+    /* ⛔ `avc1.PPCCLL` in ESADECIMALE, e non e' una sfumatura: `64` = profilo
+     *    100 (High), `00` = nessun vincolo, `32` = livello **50**, cioe' 5.0.
+     *    Scriverlo in decimale darebbe `avc1.100050`, che nessun motore
+     *    accetta — e il sintomo sarebbe «H.264 non arriva al pixel» su un
+     *    browser che lo decodifica in hardware.
+     * ⭐ La prima stringa e' quella gia' verificata sul Firefox dell'utente:
+     *    `avc1.640032`, 300 fotogrammi su 300 senza errori (`banchi/07-b48`).
+     * ⚠ E la profondita' non entra nella stringa: High e' 8 bit.  Un H.264 a
+     *   10 bit sarebbe High10 (`6e`), che questo prodotto non produce — vedi
+     *   `profilo_va()` in `codificatore.c`. */
+    const idc = Math.max(10, Math.round((maggiore + minore / 10) * 10));
+    const esa = (n) => (n < 16 ? "0" : "") + n.toString(16);
+    return ["avc1.6400" + esa(idc),
+            "avc1.64001f"];   /* il ripiego: livello 3.1 */
   }
   if (nome === "av1") {
     /* seq_level_idx = (maggiore − 2) × 4 + minore.  5.1 → 13, 3.0 → 4. */
@@ -1380,23 +1434,30 @@ function dichiara(sondaggio, scelto) {
   if (mm.perche) righe.push(mm.perche);
   for (const r of righe) nota("sonda video · " + r);
 
+  /* ⚠ Le due caselle sono quelle di `PREFERENZA`: dal 20 agosto 2026 sono
+   *   HEVC e H.264, e AV1 non si guarda piu' (§1.13-ter).  ⛔ E se un giorno
+   *   `PREFERENZA` cambiasse ancora, queste righe vanno riscritte con lei:
+   *   una frase all'utente che nomina un codec che non si negozia piu' e'
+   *   peggio di nessuna frase. */
   const hevc = sondaggio.codec.hevc || {};
-  const av1 = sondaggio.codec.av1 || {};
+  const h264 = sondaggio.codec.h264 || {};
   const hevc_c = !!(hevc[8] && hevc[8].arriva) || !!(hevc[10] && hevc[10].arriva);
-  const av1_c = !!(av1[8] && av1[8].arriva) || !!(av1[10] && av1[10].arriva);
-  if (!hevc_c && !av1_c) {
+  const h264_c = !!(h264[8] && h264[8].arriva) || !!(h264[10] && h264[10].arriva);
+  if (!hevc_c && !h264_c) {
     DICHIARAZIONI.codec = "Questo browser non porta nessuno dei due codec video "
-      + "fino ai pixel: né HEVC né AV1. La sessione può aprirsi, ma non ci sarà "
-      + "immagine. Su Linux il decodificatore HEVC di Chrome è quello della "
-      + "scheda grafica, e senza scheda grafica non c'è; Firefox non fa HEVC "
-      + "affatto.";
-  } else if (!hevc_c && av1_c) {
-    /* ⭐ Il ripiego negoziato di `DECISIONI.md` §1.13, dichiarato all'utente. */
-    DICHIARAZIONI.codec = "Questo browser non decodifica HEVC: si usa AV1, che è "
-      + "il ripiego previsto. L'immagine c'è; il consumo di banda a parità di "
-      + "qualità può essere diverso.";
-  } else if (scelto && scelto.codec === "av1" && hevc_c) {
-    DICHIARAZIONI.codec = "Il server ha scelto AV1 anche se questo browser "
+      + "fino ai pixel: né HEVC né H.264. La sessione può aprirsi, ma non ci "
+      + "sarà immagine. Su Linux il decodificatore HEVC di Chrome è quello "
+      + "della scheda grafica, e senza scheda grafica non c'è; Firefox non fa "
+      + "HEVC affatto — e H.264, che dovrebbe esserci ovunque, qui non è "
+      + "arrivato al pixel.";
+  } else if (!hevc_c && h264_c) {
+    /* ⭐ Il ripiego universale di §1.13-ter, dichiarato all'utente.  ⚠ E non si
+     *   promette che sia in hardware: da JavaScript non è osservabile. */
+    DICHIARAZIONI.codec = "Questo browser non decodifica HEVC: si usa H.264, "
+      + "che è il ripiego previsto ed è quello supportato ovunque. L'immagine "
+      + "c'è; il consumo di banda a parità di qualità è più alto.";
+  } else if (scelto && scelto.codec === "h264" && hevc_c) {
+    DICHIARAZIONI.codec = "Il server ha scelto H.264 anche se questo browser "
       + "decodifica HEVC.";
   } else {
     DICHIARAZIONI.codec = "";
@@ -1408,7 +1469,7 @@ function dichiara(sondaggio, scelto) {
       + "E questo browser non ha dipinto nemmeno alla misura minima prevista "
       + "dal protocollo (320×240): l'immagine potrebbe non arrivare affatto.";
   dichiarazione_scrivi();
-  return { hevc: hevc_c, av1: av1_c };
+  return { hevc: hevc_c, h264: h264_c };
 }
 
 /* ⛔⭐ LA DICHIARAZIONE DI QUEL CHE NON ARRIVA — `CODER.md` §4.2, e il difetto

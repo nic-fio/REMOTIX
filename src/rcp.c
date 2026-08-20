@@ -1625,7 +1625,22 @@ static const char *prima_comune(const char *elenco_client, const char *nostro,
 }
 
 /* Quel che questo server dichiara. */
-#define NOSTRO_CODEC "hevc,av1"
+/* ⛔⭐⭐ AV1 E' USCITO — 20 agosto 2026, `DECISIONI.md` §1.13-ter, deciso
+ *     dall'utente: «la scelta e' obbligata: dobbiamo abbandonare AV1».
+ *
+ * Le tre ragioni, e la terza e' arrivata per ultima:
+ *   1. **Firefox per Android** non ha ne' HEVC ne' AV1 ⇒ per quel browser il
+ *      prodotto non esisteva, contro la promessa di §1.6;
+ *   2. `[M]` AV1 era l'unico codec **senza hardware da nessuna parte** in
+ *      questo impianto — software ai due capi;
+ *   3. ⛔ `[M]` 20 agosto: con AV1 **Firefox dipinge blocchi rettangolari**
+ *      dove Chrome e `ffmpeg/dav1d`, **sugli stessi byte e nello stesso
+ *      istante**, sono puliti.  Era l'imputato della caccia agli artefatti.
+ *
+ * ⚠ Il numero 2 di §6.2 resta AV1 per sempre: non si riusa (un client vecchio
+ *   che sentisse «2» dipingerebbe spazzatura senza un errore).  Qui esce dalla
+ *   NEGOZIAZIONE, non dal registro dei numeri. */
+#define NOSTRO_CODEC "hevc,h264"
 #define NOSTRA_PROFONDITA "8,10"
 #define NOSTRO_AUDIO "opus,pcm"
 
@@ -2700,8 +2715,13 @@ uint8_t rcp_codec_negoziato(const rcp_sessione *s)
 	 * §0 di `RCP.md` esiste per togliere. */
 	if (strcmp(s->codec, "hevc") == 0)
 		return 1;
+	/* ⚠ `av1` resta QUI e non in `NOSTRO_CODEC`: il numero e' assegnato per
+	 *   sempre (§6.2), e questa riga e' la sua tomba dichiarata — non si
+	 *   negozia piu', ma se comparisse si tradurrebbe giusto. */
 	if (strcmp(s->codec, "av1") == 0)
 		return 2;
+	if (strcmp(s->codec, "h264") == 0)
+		return 3;
 	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
 }
 

@@ -1080,7 +1080,17 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 >   l'utente**, e va ripreso: è `[?]` se sia il pieno/limitato (`16-235` contro `0-255`) o la
 >   matrice.
 >
-> **Il lavoro che ne segue, e non è ancora fatto**: `RCP.md` §4.3 e §6.2 (il registro dei codec,
+> ⛔⛔⭐ **E IL 20 AGOSTO 2026 SE N'È AGGIUNTA UNA TERZA, MISURATA SUL PRODOTTO**: con AV1,
+> **Firefox dipinge blocchi rettangolari** dove Chrome e `ffmpeg/dav1d` — **sugli stessi byte e
+> nello stesso istante** — sono puliti. ⇒ Il decodificatore AV1 di Firefox era **l'imputato della
+> caccia agli artefatti**, e questa decisione ne è anche la cura. Le tre immagini dello stesso
+> istante stanno in [`fasi/06` §4.9-sexies](fasi/06-la-tela-e-la-vista.md).
+>
+> ⭐⭐ **ATTUATA il 20 agosto 2026**, e misurata sulla stessa scena che mostrava i blocchi: Firefox
+> **35 consegnati = 35 dipinti**, zero tardive, zero buchi, zero errori, **nessun blocco**. E il
+> banco dei due browser (`banchi/07-b51`) dà **4 su 4 su tutt'e due**.
+>
+> **Il lavoro che ne è seguito, e adesso è FATTO**: `RCP.md` §4.3 e §6.2 (il registro dei codec,
 > oggi `1` = HEVC e `2` = AV1: il terzo numero **si aggiunge**, non si riusa) · `codificatore.c`
 > (`h264_vaapi` **e** il lettore dei NAL che riconosce l'IDR, perché §5.2 vuole la chiave vera) ·
 > `figlio.c` (il terzo codec nelle strutture per-codec) · `pagina.html` (`CODEC_RCP`, la scala di

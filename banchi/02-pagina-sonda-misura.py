@@ -199,6 +199,18 @@ def costruisci(codec, larghezza, altezza, guasto=""):
             "-x265-params", "log-level=none:bframes=0:info=0",
         ] + colore + ["-f", "hevc", "pipe:1"]
         minimo = 64
+    elif codec == "h264":
+        # ⛔ Le stesse scelte di HEVC, coi nomi di x264 — e la SEI si toglie dai
+        #    byte, perche' x264 non ha l'interruttore (vedi
+        #    `02-pagina-sonda-codec.py`).  ⚠ Senza, sei gradini porterebbero
+        #    1 402 byte di testo ciascuno dentro `pagina.html`.
+        comando = comune + [
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-frames:v", "1",
+            "-profile:v", "high",
+            "-x264-params", "log-level=none:bframes=0:repeat-headers=1",
+            "-bsf:v", "filter_units=remove_types=6",
+        ] + colore + ["-f", "h264", "pipe:1"]
+        minimo = 64
     else:
         comando = comune + [
             "-c:v", "libaom-av1", "-pix_fmt", "yuv420p", "-frames:v", "1",
@@ -240,7 +252,7 @@ def riletto(flusso, codec):
       si legge da `showinfo`, non dai pixel."""
     misura = ["ffprobe", "-v", "error", "-select_streams", "v:0",
               "-show_entries", "stream=width,height", "-of", "csv=p=0",
-              "-f", "hevc" if codec == "hevc" else "obu", "pipe:0"]
+              "-f", {"hevc": "hevc", "h264": "h264"}.get(codec, "obu"), "pipe:0"]
     codice, uscita, errori = esegui(misura, entrata=flusso)
     if codice != 0 or b"," not in uscita:
         return None, None, "ffprobe: " + errori.decode("utf-8", "replace")[-400:]
@@ -250,7 +262,7 @@ def riletto(flusso, codec):
         return None, None, "ffprobe ha detto «" + uscita.decode().strip() + "»"
 
     comando = ["ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
-               "-f", "hevc" if codec == "hevc" else "obu", "-i", "pipe:0",
+               "-f", {"hevc": "hevc", "h264": "h264"}.get(codec, "obu"), "-i", "pipe:0",
                "-vf", f"scale={RILETTURA_L}:{RILETTURA_A}",
                "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]
     codice, uscita, errori = esegui(comando, entrata=flusso)
@@ -272,7 +284,7 @@ def riletto(flusso, codec):
 
 def costruisci_tutte(guasto=""):
     fuori = {}
-    for codec in ("hevc", "av1"):
+    for codec in ("hevc", "h264", "av1"):
         gradini = []
         precedente = None
         for larghezza, altezza in SCALA:

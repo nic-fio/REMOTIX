@@ -822,6 +822,38 @@ acceso, che nessuna API vede*. ⛔ Era stato scritto come **ritardo** e nessuno 
 stesso tratto si potessero rompere anche i **pixel**. ⇒ Un pezzo cieco dichiarato per un numero è
 cieco **per tutti** i numeri.
 
+### 1.17 ⛔⛔⭐ **Un numero nuovo entra in CINQUE posti, e uno resta sempre indietro**
+
+*Scritta il 20 agosto 2026, aggiungendo il codec **3** (H.264) a un protocollo che ne aveva due.
+⛔ I difetti sono usciti tutti e tre nella stessa mezz'ora, e nessuno dei tre era nel pezzo che si
+stava scrivendo.*
+
+| dove | che cosa faceva | come si presentava |
+|---|---|---|
+| ⛔⛔ **quattro array per-codec lunghi `[3]`** | il codec 3 scriveva **fuori dai limiti** | *«il padre ha negoziato 8 bit (prima **1**)»* ripetuto: **un difetto di memoria travestito da difetto di negoziazione** |
+| ⛔ **un tetto scritto a mano** nel figlio | rifiutava il 3 | almeno **lo diceva** — ed è l'unico dei tre che si è trovato leggendo il registro |
+| ⛔⛔ **una guardia SILENZIOSA** nel padre | buttava ogni fotogramma del codec nuovo | **niente**: sessione viva, codificatore che lavora (5 940 byte, 1,6 ms), contatori a zero, e nessuna riga |
+
+**Le tre regole che ne escono:**
+
+1. ⭐ **Il numero massimo sta in UN posto solo, e in quello che definisce il fatto** — qui
+   `rcp.h`, perché è il protocollo a dire quanti codec esistono, non i tre moduli che lo leggono.
+   ⛔ Tre costanti uguali scritte a mano non sono ridondanza: sono **tre occasioni di divergere**,
+   e diverge sempre quella che nessuno rilegge;
+2. ⛔ **Un `return` senza registro è un difetto che si paga a peso d'oro.** La guardia silenziosa è
+   costata mezz'ora con tutti gli strumenti verdi, ⚠ ed era scritta *bene*: rifiutava un valore che
+   non conosceva. Le mancava una riga sola. ⇒ **Ogni scarto si dichiara** — una volta per causa,
+   non una per fotogramma (`LEZIONI.md` §1.9 e i 30,8 GB di §6);
+3. ⚠ **Un array indicizzato da un valore di protocollo si dimensiona sul protocollo**, e il nome
+   della costante lo dice (`CODEC_MAX`). ⛔ Un `[3]` con dentro «tanto i codec sono due» è un
+   commento che nessuno rilegge quando ne arriva un terzo.
+
+⭐ **E la riga che le tiene insieme**: quando si aggiunge un valore a un'enumerazione che attraversa
+un confine — di modulo, di processo, di protocollo — **si cerca il valore vecchio, non il file**:
+`grep -n "codec != 1 && codec != 2"` avrebbe trovato in un secondo la guardia che è costata la
+mezz'ora. È la stessa riga di §1.2 sul `keyint=1` copiato in due banchi: *si cerca la riga, non il
+file*.
+
 ---
 
 ## 2. Come si prova

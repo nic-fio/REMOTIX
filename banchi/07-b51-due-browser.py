@@ -344,6 +344,15 @@ def chrome():
         shutil.rmtree(t, ignore_errors=True)
 
 
+# ⛔ E si aspetta anche PRIMA del primo giro, non solo fra i due: il banco
+#    precedente puo' aver lasciato una sessione che il tempo morto di QUIC non
+#    ha ancora chiuso, e il primo browser troverebbe il palco occupato —
+#    `[M]` 20 agosto 2026, ed e' successo: «lo schermo non si e' acceso in 40 s»
+#    su un prodotto sano.
+if not palco_libero(30):
+    print("⚠ il palco non risulta libero: il primo giro potrebbe trovarlo "
+          "occupato, e si vedra' nel suo verdetto")
+
 esiti = []
 for nome, f in (("firefox", firefox), ("chrome", chrome)):
     if o.solo and o.solo != nome:
