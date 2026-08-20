@@ -470,6 +470,73 @@ la scena originale.
 
 ---
 
+### 4.9 · ⭐⭐⭐ LA CACCIA AGLI ARTEFATTI È CHIUSA — 17 agosto 2026 sera, e **la colpa non era nostra**
+
+*Per due giorni l'utente ha visto **blocchi rettangolari** nelle zone ferme del desktop, e la
+caccia ha ucciso sette ipotesi una per volta (l'elenco stava nel riquadro di ripresa di
+`PIANO.md`). ⛔ L'ottava non era nell'elenco, perché **stava dopo l'ultimo punto che un programma
+sa leggere**.*
+
+**Il sintomo, con la sua misura**: blocchi da **64×192** che si spostano col contenuto. `[M]` La
+sessione vera dell'utente, **mentre li vedeva**, diceva `dipinti 23 · video 23→23 · salt 0 · buchi
+0 · ord 0 · mis 0 · err 0`. ⇒ Non mancava un fotogramma: **erano corrotti i pixel dentro i
+fotogrammi che arrivavano**, e nessun contatore lo poteva vedere.
+
+#### Gli imputati, scagionati uno per uno e con la misura accanto
+
+| imputato | la prova |
+|---|---|
+| la cattura / Mutter | ⭐ `scatto-ingresso.bgrx`, preso **mentre i blocchi erano in vista**: **pulito** |
+| il codificatore, 300 delta in catena | gli stessi byte ridati a `ffmpeg`: **0 superblocchi rovinati su 600**, scarto medio **1,68** livelli |
+| la forma dei pezzi sul filo | **300** unità temporali, **1** fotogramma ciascuna, nessuno nascosto |
+| `VideoDecoder` del browser | `copyTo()` contro la verità: **0 fuori posto** su 300 fotogrammi, peggio **2,9** livelli |
+| la tela **riletta** | `getImageData()` dopo il `drawImage`, **stessa tela e stessi istanti**: **0 su 180 000** superblocchi |
+| ⛔⛔ la tela **DIPINTA sullo schermo** | **fotografata col cellulare: i rettangoli ci sono** |
+
+⇒ ⭐⭐ **I pixel entrano giusti nella tela e si rompono quando la tela va allo schermo.** Nessun
+programma può leggerli lì: `getImageData` legge il **magazzino** della tela, non quel che il
+compositore ha **acceso**. È la forma peggiore di punto cieco, perché ogni banco che rilegge la
+tela è verde **per costruzione**.
+
+⛔ **E non è il browser**: Firefox **e** Chrome fanno lo stesso. ⛔ **E non è la GPU in generale**:
+`ffplay` e YouTube — che dipingono in un **`<video>`** — sono **puliti** sulla stessa macchina e
+nello stesso momento. ⇒ È la strada della **`<canvas>` 2D**.
+
+#### ⭐⭐ La cura, misurata prima di essere creduta
+
+Dipingere con **`createImageBitmap()` + `transferFromImageBitmap()`** su un contesto
+**`bitmaprenderer`**, che il magazzino 2D non ce l'ha. **Il giudizio dell'utente sulla stessa
+scena**: *«NIENTE ARTEFATTI!»*
+
+⚠ **Che cosa comporta nel prodotto**, e non è una riga: oggi il fotogramma passa da **due** tele 2D
+(`deposito_p.drawImage(f)` e poi `componi()` → `pennello.drawImage(deposito)`). ⭐ Il **cursore non
+è dipinto sulla tela** — è un cursore CSS — quindi la tela visibile non deve comporre niente e
+`bitmaprenderer` le basta. ⚠ Si perde il **centraggio dentro il buffer**, che si rifà col CSS, e va
+**misurato il costo**: `createImageBitmap` è asincrona, e il ritardo è il numero per cui esiste la
+fase 3.
+
+#### ⚙ I tre strumenti nati in questa caccia, e restano
+
+| | |
+|---|---|
+| ⭐ **lo scatto a comando** (`src/figlio.c`, `SIGUSR1`/`SIGUSR2`) | il figlio chiede una **chiave** e mette su disco, dallo stesso istante, `scatto-ingresso.bgrx` (i pixel che il codificatore ha in mano), `scatto-flusso.obu` (i byte spediti) e `scatto-uscita.bgrx`. ⛔ Non è un interruttore di prodotto: scrive solo con `--rilievo`. ⚠ Lo scatto arriva al **padre** e va **inoltrato**, perché `systemctl kill --kill-whom=main` consegna solo a lui — e `--kill-whom=all` direbbe «muori» a `gnome-shell` |
+| ⭐ **`banchi/07-b48-tela-contro-verita.html`** | fabbrica una verità sintetica, la codifica con `ffmpeg`, la ridà al `VideoDecoder` del browser e confronta **`copyTo` contro la verità** *e* **`getImageData` contro la verità**. ⛔ **Non ha una riga di REMOTIX dentro**, ed è per questo che il suo verde vale |
+| ⭐ **`banchi/07-b49-occhi-sulla-tela.py`** | non misura: tiene la scena in vista con **una** variabile cambiata (`gfx.webrender.software`) e la fa **guardare all'utente**. È l'unico strumento che vede dove `getImageData` è cieco |
+
+⛔ **E il banco si è certificato da sé prima di essere creduto** (`PIANO.md` §0.3.4): coi guasti
+**iniettati** — `certifica AV1` e `certifica H264` — dice *«è la decodifica: la tela ha ricevuto
+pixel già rotti e li ha dipinti fedelmente»*, cioè **sa vedere il difetto che cerca**.
+
+#### ⚠ E una misura che non c'entrava con la caccia, ma va tenuta
+
+`[M]` Con H.264 in **hardware** su questa macchina il decodificatore converte il colore con una
+scala diversa da `ffmpeg`: **5 000 superblocchi «fuori posto» su 126 fotogrammi**, peggio **30,3**
+livelli — ⚠ ma **liscio e uniforme**, **+8 livelli sulle zone chiare**: *non* è un guasto a
+blocchi. ⇒ Non è l'imputato di questa caccia, ma **è un colore sbagliato per l'utente**, e va
+ripreso quando H.264 entra nel prodotto (`DECISIONI.md` §1.13-ter).
+
+---
+
 ## 5 · ⛔ Che cosa NON ha funzionato
 
 *Si riempie anche quando fa una brutta figura. ⭐ E in questa fase la parte più istruttiva non sono

@@ -1,0 +1,608 @@
+[
+ [
+  "certifica AV1",
+  {
+   "flusso": "av1",
+   "codec": "av01.0.12M.08",
+   "modo": "entrambi",
+   "ritmo": 16,
+   "soglia": 6,
+   "guasto": true,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.3,
+    "tela": -0.3
+   },
+   "decodificatore": {
+    "fuori_posto": 1,
+    "peggio": 59.8,
+    "fotogrammi": 1,
+    "primi": [
+     {
+      "n": 100,
+      "x": 1280,
+      "y": 128,
+      "atteso": 77,
+      "avuto": 137,
+      "scarto": 60
+     }
+    ]
+   },
+   "tela": {
+    "fuori_posto": 1,
+    "peggio": 51.3,
+    "fotogrammi": 1,
+    "primi": [
+     {
+      "n": 100,
+      "x": 1280,
+      "y": 128,
+      "atteso": 77,
+      "avuto": 128,
+      "scarto": 51
+     }
+    ]
+   },
+   "verdetto": "\u26d4 \u00c8 LA DECODIFICA: la tela ha ricevuto pixel gi\u00e0 rotti e li ha dipinti fedelmente."
+  }
+ ],
+ [
+  "certifica H264",
+  {
+   "flusso": "h264",
+   "codec": "avc1.640032",
+   "modo": "entrambi",
+   "ritmo": 16,
+   "soglia": 6,
+   "guasto": true,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.1,
+    "tela": -0.1
+   },
+   "decodificatore": {
+    "fuori_posto": 5000,
+    "peggio": 59.8,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "tela": {
+    "fuori_posto": 5000,
+    "peggio": 51.3,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "verdetto": "\u26d4 \u00c8 LA DECODIFICA: la tela ha ricevuto pixel gi\u00e0 rotti e li ha dipinti fedelmente."
+  }
+ ],
+ [
+  "AV1  60/s",
+  {
+   "flusso": "av1",
+   "codec": "av01.0.12M.08",
+   "modo": "entrambi",
+   "ritmo": 16,
+   "soglia": 6,
+   "guasto": false,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.3,
+    "tela": -0.3
+   },
+   "decodificatore": {
+    "fuori_posto": 0,
+    "peggio": 2.9,
+    "fotogrammi": 0,
+    "primi": []
+   },
+   "tela": {
+    "fuori_posto": 0,
+    "peggio": 2.9,
+    "fotogrammi": 0,
+    "primi": []
+   },
+   "verdetto": "\u2b50 NESSUN superblocco fuori posto: questa strada, cos\u00ec esercitata, \u00e8 pulita. \u21d2 Il difetto sta in COME il prodotto la usa (ritmo, code, `close()`), non in lei."
+  }
+ ],
+ [
+  "AV1  a tutta",
+  {
+   "flusso": "av1",
+   "codec": "av01.0.12M.08",
+   "modo": "entrambi",
+   "ritmo": 0,
+   "soglia": 6,
+   "guasto": false,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.3,
+    "tela": -0.3
+   },
+   "decodificatore": {
+    "fuori_posto": 0,
+    "peggio": 2.9,
+    "fotogrammi": 0,
+    "primi": []
+   },
+   "tela": {
+    "fuori_posto": 0,
+    "peggio": 2.9,
+    "fotogrammi": 0,
+    "primi": []
+   },
+   "verdetto": "\u2b50 NESSUN superblocco fuori posto: questa strada, cos\u00ec esercitata, \u00e8 pulita. \u21d2 Il difetto sta in COME il prodotto la usa (ritmo, code, `close()`), non in lei."
+  }
+ ],
+ [
+  "H264 60/s",
+  {
+   "flusso": "h264",
+   "codec": "avc1.640032",
+   "modo": "entrambi",
+   "ritmo": 16,
+   "soglia": 6,
+   "guasto": false,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.1,
+    "tela": -0.1
+   },
+   "decodificatore": {
+    "fuori_posto": 5000,
+    "peggio": 30.3,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "tela": {
+    "fuori_posto": 5000,
+    "peggio": 30.3,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "verdetto": "\u26d4 \u00c8 LA DECODIFICA: la tela ha ricevuto pixel gi\u00e0 rotti e li ha dipinti fedelmente."
+  }
+ ],
+ [
+  "H264 a tutta",
+  {
+   "flusso": "h264",
+   "codec": "avc1.640032",
+   "modo": "entrambi",
+   "ritmo": 0,
+   "soglia": 6,
+   "guasto": false,
+   "fotogrammi_dati": 300,
+   "fotogrammi_usciti": 300,
+   "errori_decodificatore": 0,
+   "guasti_misura": 0,
+   "primo_guasto": "",
+   "scostamento_comune": {
+    "decodificatore": -0.1,
+    "tela": -0.1
+   },
+   "decodificatore": {
+    "fuori_posto": 5000,
+    "peggio": 30.3,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "tela": {
+    "fuori_posto": 5000,
+    "peggio": 30.3,
+    "fotogrammi": 126,
+    "primi": [
+     {
+      "n": 0,
+      "x": 1088,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1152,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1216,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1280,
+      "y": 192,
+      "atteso": 181,
+      "avuto": 189,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1344,
+      "y": 192,
+      "atteso": 179,
+      "avuto": 187,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1408,
+      "y": 192,
+      "atteso": 174,
+      "avuto": 182,
+      "scarto": 8
+     },
+     {
+      "n": 0,
+      "x": 1536,
+      "y": 256,
+      "atteso": 201,
+      "avuto": 208,
+      "scarto": 7
+     },
+     {
+      "n": 0,
+      "x": 1664,
+      "y": 320,
+      "atteso": 215,
+      "avuto": 207,
+      "scarto": 8
+     }
+    ]
+   },
+   "verdetto": "\u26d4 \u00c8 LA DECODIFICA: la tela ha ricevuto pixel gi\u00e0 rotti e li ha dipinti fedelmente."
+  }
+ ]
+]

@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07-b50 — che cosa accetta questo browser</title>
+<!--
+  07-b50 — CHE COSA ACCETTA QUESTO BROWSER                 17 agosto 2026
+
+  ⛔ PERCHE' ESISTE: *«sono preoccupato che Chrome avesse smesso di funzionare
+     bene»* — l'utente, 17 agosto 2026 sera.  E il fatto sotto la
+     preoccupazione e' misurato: in agosto Chrome negoziava **HEVC in
+     hardware**; oggi la sua sessione ha negoziato **`codec 2`, cioe' AV1**.
+
+  ⭐ Questo banco chiede al browser, per ogni stringa, tre cose diverse che
+     nessuna riga di registro distingue:
+
+       1. la accetta?                        `isConfigSupported`
+       2. la accetta CHIEDENDO L'HARDWARE?   `hardwareAcceleration: "prefer-hardware"`
+       3. la accetta VIETANDO l'hardware?    `"prefer-software"`
+
+     ⚠ La differenza fra 1 e 2 e' quella che conta: un «si'» generico puo'
+       essere un «si', in software» — e su un N100 non e' la stessa cosa.
+
+  ⛔ E NON DICE CHE DIPINGE.  `isConfigSupported` e' una promessa, non un
+     pixel: `LEZIONI.md` §1.9.  La sonda del prodotto dipinge davvero, questa
+     no — e lo dichiara qui invece di lasciarlo credere.
+
+  L'esito lo manda al server nella QUERY di una GET, cosi' finisce nel registro
+  del banco e lo si legge senza guardare lo schermo: e' lo stesso trucco del
+  `/diario` del prodotto.
+-->
+<style>
+ body{background:#101216;color:#e6e6e6;font:13px/1.5 monospace;padding:14px}
+ td,th{border:1px solid #333;padding:2px 8px} table{border-collapse:collapse}
+ .si{color:#3fb950} .no{color:#f85149}
+</style>
+<h1 style="font-size:16px">07-b50 — che cosa accetta questo browser</h1>
+<div id="uscita">…</div>
+<script>
+const STRINGHE = [
+  ["HEVC Main",        "hev1.1.6.L93.B0"],
+  ["HEVC Main (hvc1)", "hvc1.1.6.L93.B0"],
+  ["HEVC Main10",      "hev1.2.4.L120.B0"],
+  /* ⛔ LE STRINGHE CHE COSTRUISCE IL PRODOTTO, e sono altre: `pagina.html`
+   *    parte da `LIVELLO_DICHIARATO = "5.1"` e fa idc = 5,1 x 30 = **153**.
+   *    ⇒ Quel che la sonda del prodotto chiede non e' quel che chiedeva
+   *      questo banco, e la sessione Chrome delle 16:22 ha detto «no a tutte
+   *      le stringhe provate» mentre `L93` qui rispondeva SI. */
+  ["HEVC 8bit L5.1  (prodotto)",  "hev1.1.6.L153.B0"],
+  ["HEVC 10bit L5.1 (prodotto)",  "hev1.2.4.L153.B0"],
+  ["HEVC 10bit L3.1 (ripiego)",   "hev1.2.4.L93.B0"],
+  ["AV1 10 bit",                  "av01.0.12M.10"],
+  ["AV1 Main L3.0",    "av01.0.04M.08"],
+  ["AV1 Main L4.0",    "av01.0.12M.08"],
+  ["H.264 Baseline",   "avc1.42E01E"],
+  ["H.264 Main",       "avc1.4D401F"],
+  ["H.264 High 4.0",   "avc1.640028"],
+  ["H.264 High 5.0",   "avc1.640032"],
+  ["VP9 profilo 0",    "vp09.00.10.08"],
+  ["VP9 profilo 2",    "vp09.02.10.10"],
+  ["VP8",              "vp8"],
+];
+
+async function chiedi(codec, come) {
+  const cfg = { codec, codedWidth: 2560, codedHeight: 962 };
+  if (come) cfg.hardwareAcceleration = come;
+  try {
+    const r = await VideoDecoder.isConfigSupported(cfg);
+    return r.supported ? "si" : "no";
+  } catch (e) {
+    return "guasto";
+  }
+}
+
+(async function () {
+  if (!("VideoDecoder" in window)) {
+    document.getElementById("uscita").textContent =
+      "⛔ questo browser non ha WebCodecs";
+    fetch("/esito?" + encodeURIComponent("NIENTE-WEBCODECS " + navigator.userAgent));
+    return;
+  }
+  const righe = [], breve = [];
+  for (const [nome, c] of STRINGHE) {
+    const [g, hw, sw] = await Promise.all([chiedi(c), chiedi(c, "prefer-hardware"),
+                                           chiedi(c, "prefer-software")]);
+    righe.push([nome, c, g, hw, sw]);
+    breve.push(c + "=" + g + "/" + hw + "/" + sw);
+  }
+  document.getElementById("uscita").innerHTML =
+    "<p>" + navigator.userAgent + "</p><table><tr><th>codec</th><th>stringa</th>"
+    + "<th>generico</th><th>chiedendo hardware</th><th>vietando hardware</th></tr>"
+    + righe.map(r => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td>"
+        + r.slice(2).map(v => '<td class="' + (v === "si" ? "si" : "no") + '">' + v + "</td>").join("")
+        + "</tr>").join("")
+    + "</table><p>generico / hardware / software</p>";
+  window.RISULTATO = righe;
+  fetch("/esito?" + encodeURIComponent(
+    (navigator.userAgent.includes("Chrome") ? "CHROME " : "FIREFOX ") + breve.join(" ")));
+})();
+</script>

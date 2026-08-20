@@ -781,6 +781,16 @@ static struct figlio *cerca(struct figli *f, const char *utente)
 	return NULL;
 }
 
+/* ⭐ Lo scatto arriva al PADRE e va girato ai figli: vedi il riquadro dentro
+ *    `figli_muovi()`.  ⛔ Qui si segna e basta — il lavoro si fa nel giro, non
+ *    dentro un gestore di segnale. */
+static volatile sig_atomic_t scatto_da_inoltrare = 0;
+
+static void scatto_inoltro_segnale(int quale)
+{
+	scatto_da_inoltrare = (quale == SIGUSR2) ? 2 : 1;
+}
+
 figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioDeposito deposita, FiglioCongedo congeda,
                      FiglioCursore cursore, FiglioTela tela, void *ctx)
@@ -793,6 +803,9 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	for (int i = 0; i < MAX_FIGLI; i++)
 		f->v[i].fd = -1;
 	f->prossima_matricola = 1;
+	/* ⭐ Lo scatto a comando: il riquadro sta dentro `figli_muovi()`. */
+	signal(SIGUSR1, scatto_inoltro_segnale);
+	signal(SIGUSR2, scatto_inoltro_segnale);
 	f->tela_l = tela_l;
 	f->tela_a = tela_a;
 	f->deposita = deposita;
@@ -1758,6 +1771,32 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 {
 	if (!f)
 		return;
+
+	/* ⭐ L'INOLTRO DELLO SCATTO — il padre non fotografa niente: sa soltanto
+	 *    dove stanno i figli, e li' i pixel ci sono.
+	 *
+	 * ⛔ E l'inoltro esiste per una ragione precisa, non per eleganza: il figlio
+	 *    gira con l'uid dell'utente e chi diagnostica non e' quell'utente;
+	 *    l'unica strada senza parola d'ordine e' `systemctl kill --kill-whom=main`,
+	 *    che consegna il segnale AL SOLO PADRE.  ⚠ La strada `--kill-whom=all`
+	 *    consegnerebbe anche a `gnome-shell`, per cui `SIGUSR1` vuol dire
+	 *    «muori»: si spegnerebbe la scena che si voleva fotografare. */
+	if (scatto_da_inoltrare) {
+		int quale = scatto_da_inoltrare == 2 ? SIGUSR2 : SIGUSR1;
+
+		scatto_da_inoltrare = 0;
+		for (int i = 0; i < MAX_FIGLI; i++) {
+			struct figlio *g = &f->v[i];
+
+			if (!g->usato || g->uscendo || g->pid <= 0)
+				continue;
+			kill(g->pid, quale);
+			registro_dice(REG_FIGLIO,
+			              "⭐ scatto: %s inoltrato al figlio di «%s» (pid %ld)",
+			              quale == SIGUSR2 ? "SIGUSR2" : "SIGUSR1", g->utente,
+			              (long)g->pid);
+		}
+	}
 
 	for (int i = 0; i < MAX_FIGLI; i++) {
 		struct figlio *g = &f->v[i];
@@ -3636,6 +3675,76 @@ static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
 	registro_dice(REG_FIGLIO, "rilievo scritto: %s (%zu byte)", percorso, byte);
 }
 
+/* ------------------------------------------------------------------ *
+ *  ⭐ LO SCATTO A COMANDO — `SIGUSR1` e `SIGUSR2`, 17 agosto 2026
+ *
+ *  Serve a UNA cosa: separare i tre imputati degli artefatti a blocchi
+ *  di 64 px misurati sul video dell'utente (cattura · codificatore ·
+ *  browser).  Al `SIGUSR1` il figlio chiede una CHIAVE e poi mette su
+ *  disco, dallo stesso istante:
+ *
+ *    `scatto-ingresso.bgrx`  i pixel che il codificatore HA IN MANO
+ *    `scatto-flusso.obu`     i byte che spediamo, dalla chiave in poi
+ *    `scatto-uscita.bgrx`    l'ingresso dell'ULTIMO fotogramma accodato
+ *
+ *  ⇒ Se i blocchi stanno gia' nel BGRX, la colpa e' a MONTE del
+ *    codificatore; se compaiono solo decodificando il flusso con un
+ *    decodificatore diverso, e' il CODIFICATORE; se nessuno dei due li
+ *    ha, resta il BROWSER.
+ *
+ *  ⛔ Non e' un interruttore di prodotto: scrive solo se `--rilievo` c'e',
+ *     si arma una volta per segnale, e `SIGUSR2` lo chiude subito (senza,
+ *     su una scena ferma si aspetterebbero i fotogrammi che non arrivano).
+ * ------------------------------------------------------------------ */
+#define SCATTO_FOTOGRAMMI 300
+
+/* ⛔ E LA CARTELLA SE LA TIENE LUI, invece di leggerla dal parametro.
+ *
+ * `[M]` 17 agosto 2026, e il primo scatto e' andato perso cosi': nel GIRO
+ * principale `codifica_e_manda()` viene chiamata con `dir_rilievo = NULL`
+ * (riga del `codec_chiesto`) — la cartella vera arriva solo alla prima
+ * codifica, quella dell'accensione.  ⇒ `rilievo_scrivi()` usciva in silenzio,
+ * e la riga di registro diceva «ingresso 2560x962, 9850880 byte» di un file
+ * che non era stato scritto: la forma peggiore, un verde che non ha guardato
+ * niente (`LEZIONI.md` §1.9). */
+static const char *scatto_dir = NULL;
+
+static volatile sig_atomic_t scatto_chiesto = 0;
+static volatile sig_atomic_t scatto_stop = 0;
+static int scatto_stato = 0; /* 0 fermo · 1 aspetto la chiave · 2 accodo */
+static int scatto_restano = 0;
+static FILE *scatto_fp = NULL;
+static unsigned long long scatto_quanti = 0;
+
+static void scatto_segnale(int quale)
+{
+	if (quale == SIGUSR2)
+		scatto_stop = 1;
+	else
+		scatto_chiesto = 1;
+}
+
+/* Chiude il flusso e scrive l'ultimo ingresso.  `perche` finisce nel registro,
+ * cosi' un rilievo troncato non si confonde con uno finito. */
+static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
+                          const char *perche)
+{
+	if (scatto_fp) {
+		fclose(scatto_fp);
+		scatto_fp = NULL;
+	}
+	scatto_stato = 0;
+	scatto_restano = 0;
+	if (fo && fo->pixel)
+		rilievo_scrivi(dir_rilievo, "scatto-uscita.bgrx", fo->pixel,
+		               (size_t)fo->byte);
+	registro_dice(REG_FIGLIO,
+	              "⭐ SCATTO FINITO (%s): %llu fotogrammi in "
+	              "`scatto-flusso.obu`, e `scatto-uscita.bgrx` e' l'ingresso "
+	              "dell'ULTIMO di quelli",
+	              perche, scatto_quanti);
+}
+
 /* ⛔ La stessa richiesta di codifica di `main.c` prima del 12 agosto 2026 —
  *    CRF 20, 10 bit chiesti su una sorgente a 8 (promozione DICHIARATA dal
  *    codificatore), BGRx, chiavi a richiesta.  ⚠ Non e' stata «riscritta»: e'
@@ -3992,6 +4101,68 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 *    sessanta file al secondo non sono un rilievo, sono un disco pieno. */
 	if (ciclo_fotogrammi <= 2)
 		rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
+
+	/* ⭐ LO SCATTO A COMANDO — il riquadro sta sopra `scatto_segnale()`. */
+	if (scatto_chiesto) {
+		scatto_chiesto = 0;
+		if (scatto_stato != 0) {
+			registro_dice(REG_FIGLIO,
+			              "⚠ SCATTO: ce n'e' gia' uno in corso, il segnale "
+			              "non ne apre un secondo");
+		} else if (!fo->pixel) {
+			/* ⛔ Sulla strada della scheda i pixel non sono qui: si DICE,
+			 *    invece di scrivere un file vuoto con l'aria di un rilievo. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ SCATTO impossibile: i pixel non sono in memoria "
+			              "(strada della scheda), non c'e' niente da scrivere");
+		} else if (!scatto_dir || !scatto_dir[0] || strcmp(scatto_dir, "-") == 0) {
+			registro_dice(REG_FIGLIO,
+			              "⛔ SCATTO impossibile: il server non ha una cartella "
+			              "di rilievo (`--rilievo`), non c'e' dove scrivere");
+		} else {
+			codificatore_chiedi_chiave(cod);
+			scatto_stato = 1;
+			scatto_quanti = 0;
+			registro_dice(REG_FIGLIO,
+			              "⭐ SCATTO chiesto: ho domandato una CHIAVE, e da "
+			              "quella metto su disco ingresso e flusso in «%s»",
+			              scatto_dir);
+		}
+	}
+	if (scatto_stato == 1 && fg.chiave && fo->pixel) {
+		char percorso[512];
+
+		/* ⛔ `rilievo_scrivi()` dice DA SE' se ha scritto o no: la riga qui
+		 *    sotto racconta la geometria, non l'esito — e le due cose non si
+		 *    mescolano piu'. */
+		rilievo_scrivi(scatto_dir, "scatto-ingresso.bgrx", fo->pixel,
+		               (size_t)fo->byte);
+		registro_dice(REG_FIGLIO,
+		              "⭐ SCATTO: ingresso %ux%u, stride %u, %llu byte — il "
+		              "flusso comincia da QUESTA chiave",
+		              fo->larghezza, fo->altezza, fo->stride,
+		              (unsigned long long)fo->byte);
+		snprintf(percorso, sizeof percorso, "%s/scatto-flusso.obu", scatto_dir);
+		scatto_fp = fopen(percorso, "wb");
+		if (!scatto_fp)
+			registro_dice(REG_FIGLIO, "⛔ SCATTO %s: %s", percorso,
+			              strerror(errno));
+		scatto_stato = scatto_fp ? 2 : 0;
+		scatto_restano = SCATTO_FOTOGRAMMI;
+	}
+	if (scatto_stato == 2 && scatto_fp) {
+		if (fwrite(fg.dati, 1, fg.byte, scatto_fp) != fg.byte)
+			registro_dice(REG_FIGLIO,
+			              "⛔ SCATTO: scrittura corta sul flusso — il file NON "
+			              "e' decodificabile fino in fondo");
+		scatto_quanti++;
+		if (scatto_stop || --scatto_restano <= 0) {
+			scatto_chiudi(scatto_dir, fo,
+			              scatto_stop ? "chiuso a mano con SIGUSR2"
+			                          : "raggiunti i fotogrammi chiesti");
+			scatto_stop = 0;
+		}
+	}
 
 	codificatore_rilascia(cod);
 	return true;
@@ -4808,6 +4979,8 @@ void figlio_vive(int argc, char **argv)
 	tela_voluta_a = tela_a;
 	mia_matricola = strtoull(argv[7], NULL, 10);
 	dir_rilievo = argv[8];
+	/* ⭐ Lo scatto se la tiene: vedi il riquadro sopra `scatto_dir`. */
+	scatto_dir = dir_rilievo;
 	/* ⭐ La parlantina, se il padre ce l'ha passata: vedi il riquadro in
 	 *    `figli_esegui()`.  ⛔ Senza, ogni `registro_dettaglio` di questo file
 	 *    e' scritto e non arriva a nessuno. */
@@ -4818,6 +4991,9 @@ void figlio_vive(int argc, char **argv)
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
 	signal(SIGPIPE, SIG_IGN);
+	/* ⭐ Lo scatto a comando: il riquadro sta sopra `scatto_segnale()`. */
+	signal(SIGUSR1, scatto_segnale);
+	signal(SIGUSR2, scatto_segnale);
 
 	/* ⛔ Se il server muore, questo processo muore con lui: nessun orfano
 	 *    attaccato al monitor virtuale di un utente.  ⚠ E si arma DOPO il calo

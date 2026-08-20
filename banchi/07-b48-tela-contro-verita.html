@@ -1,0 +1,435 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07-b48 — la tela contro la verità</title>
+<!--
+  07-b48 — LA TELA CONTRO LA VERITÀ                        17 agosto 2026
+
+  ⛔ CHE COSA CHIEDE, e perché nessun banco di prima poteva chiederlo.
+
+  L'utente vede blocchi rettangolari da 64 px nella sessione vera.  Il 17
+  agosto si è misurato che NON sono di nessuno dei tre anelli di prima:
+
+    · la cattura   `scatto-ingresso.bgrx` preso mentre i blocchi erano in
+                   vista è PULITO (scrivania intera, nessun blocco);
+    · il codificatore, e la catena dei delta: gli stessi byte decodificati da
+                   `ffmpeg` danno l'immagine giusta — differenza media 1,68
+                   dopo 300 delta, ZERO superblocchi rovinati su 600.
+
+  ⇒ Resta il browser.  E dentro il browser ci sono DUE pezzi, non uno:
+
+       il DECODIFICATORE (`VideoDecoder` di WebCodecs)
+       il DISEGNO        (`drawImage` su una tela 2D)
+
+  ⭐ E questo banco li separa, perché ha una cosa che prima non c'era: LA
+     VERITÀ.  `verita.json` porta, per ognuno dei 300 fotogrammi, la media
+     della luma di ognuno dei 40x15 = 600 superblocchi, calcolata da `ffmpeg`
+     sullo STESSO flusso.  Non si confronta «diverso da prima»: si confronta
+     con quel che quei byte VOGLIONO DIRE.
+
+  ⚠ E il metro è la MEDIA di un blocco, non un'impronta esatta, per una
+    ragione precisa: fra `copyTo` (che dà la luma nuda) e `getImageData` (che
+    dà RGB dopo una conversione di colore) un'impronta esatta direbbe
+    «diverso» dappertutto e non vedrebbe niente.  Una media con una soglia
+    ignora la conversione e vede un blocco che porta l'immagine sbagliata —
+    che è di quel che si parla: uno stantìo si scosta di decine di livelli.
+
+  COME SI LEGGE L'ESITO
+    · sbagliano tutti e due  ⇒ è la DECODIFICA: la tela ha ricevuto pixel già
+                               rotti, e li ha dipinti fedelmente;
+    · sbaglia solo la tela   ⇒ è il DISEGNO: `drawImage` o la strada verso la
+                               GPU;
+    · non sbaglia nessuno    ⇒ il difetto NON è in questa strada, e allora è
+                               nel modo in cui il PRODOTTO la usa (ritmo,
+                               `close()`, code) — e il banco lo dice invece di
+                               lasciarlo credere.
+
+  COME SI LANCIA:  bash banchi/07-b48-lancia.sh   (poi si apre l'indirizzo che
+  stampa)  ⛔ Serve `http://localhost`: WebCodecs vuole un contesto sicuro, e
+  un `file://` non lo è.
+
+  INTERRUTTORI (nella barra dell'indirizzo)
+    ?modo=entrambi     (predefinito)  decodificatore E tela
+    ?modo=decodificatore              solo `copyTo`, la tela non si tocca
+    ?modo=tela                        solo `drawImage` + `getImageData`
+    ?ritmo=16          (predefinito)  ms fra un pezzo e l'altro (16 ≈ 60/s)
+    ?ritmo=0                          a tutta forza: massimo carico
+    ?soglia=6          (predefinito)  di quanto si deve scostare una media
+    ?flusso=av1        (predefinito)  AV1 — su questo tablet in SOFTWARE
+    ?flusso=h264                      gli STESSI fotogrammi in H.264 — qui in
+                                      HARDWARE, e la verità è la stessa
+    ?guasto=1                         il controllo positivo: sporca un blocco
+-->
+<style>
+  body { background:#101216; color:#e6e6e6; font:14px/1.5 monospace; margin:0; padding:16px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sotto { color:#9aa; margin-bottom:14px; }
+  #stato { font-size:16px; margin:10px 0; }
+  .esito { font-size:20px; padding:10px; margin:12px 0; border-left:5px solid #555; }
+  .buono { background:#12301c; border-color:#3fb950; }
+  .rotto { background:#3a1416; border-color:#f85149; }
+  table { border-collapse:collapse; margin-top:10px; }
+  td,th { border:1px solid #333; padding:3px 8px; text-align:right; }
+  th { background:#1b1f26; }
+  #tela { max-width:100%; border:1px solid #333; margin-top:12px; }
+  /* ⛔ `?vista=1`: la tela a 1:1, senza scala — serve quando la prova
+     e' l'OCCHIO e non la rilettura, e una tela rimpicciolita
+     ricampionerebbe proprio la strada che si sta esaminando. */
+  body.vista { padding:0; }
+  body.vista #tela { max-width:none; margin:0; border:0; }
+  body.vista h1, body.vista .sotto, body.vista #tabella { display:none; }
+  .nota { color:#9aa; }
+</style>
+
+<h1>07-b48 — la tela contro la verità</h1>
+<div class="sotto">300 fotogrammi AV1 di cui si conosce l'immagine giusta, dati al browser
+e riletti in due punti: <b>copyTo</b> (il decodificatore) e <b>getImageData</b> (la tela).</div>
+
+<div id="stato">…</div>
+<div id="esito"></div>
+<div id="tabella"></div>
+<canvas id="tela"></canvas>
+
+<script>
+const P = new URLSearchParams(location.search);
+const MODO   = P.get("modo")   || "entrambi";
+const RITMO  = P.has("ritmo")  ? Number(P.get("ritmo"))  : 16;
+const SOGLIA = P.has("soglia") ? Number(P.get("soglia")) : 6;
+/* ⭐ L'A/B FRA I DUE CODEC, e non è un lusso: su questo tablet `vainfo` dà
+ *    H.264 e HEVC e VP9 in hardware e ⛔ NESSUN profilo AV1.  ⇒ Lo stesso
+ *    contenuto, la stessa verità, e la sola cosa che cambia è se la decodifica
+ *    passa dalla CPU o dal ferro.
+ *    ⚠ La verità è la stessa per tutti e due, e non è un'assunzione: `[M]` 17
+ *      agosto 2026, le medie dei 300x600 superblocchi della ricodifica H.264
+ *      si scostano da quelle dell'AV1 di 0,030 in media e 1,0 al massimo. */
+const FLUSSO = P.get("flusso") === "h264" ? "h264" : "av1";
+const FILE_FLUSSO = FLUSSO === "h264" ? "h264.264"        : "flusso.obu";
+const FILE_INDICE = FLUSSO === "h264" ? "indice264.json"  : "indice.json";
+const CODEC  = P.get("codec")
+            || (FLUSSO === "h264" ? "avc1.640032" : "av01.0.12M.08");
+/* ⛔ IL CONTROLLO POSITIVO — `PIANO.md` §0.3 punto 4: «il banco si certifica
+ *    prima di essere creduto».  Con `?guasto=1` si sporca A MANO un
+ *    superblocco (il 100, sul fotogramma 100) subito dopo la rilettura: se il
+ *    banco NON lo segnala, non sa vedere quel che cerca, e ogni suo verde è
+ *    un verde che non ha guardato niente (`LEZIONI.md` §1.9). */
+const GUASTO = P.get("guasto") === "1";
+/* ⭐⭐ COME SI DIPINGE, ed è nato da una misura del 17 agosto 2026.
+ *
+ * `ffplay` e YouTube — che dipingono in un `<video>` — sono PULITI sullo
+ * schermo; il banco su Firefox E su Chrome — che dipingono in una `<canvas>`
+ * 2D — fa quadrati da 64x192; e la stessa tela RILETTA con `getImageData` è
+ * pulita.  ⇒ I pixel entrano giusti nella tela e si rompono quando la tela
+ * viene portata sullo schermo.
+ *
+ * ⇒ `?disegno=bitmap` prova l'altra strada: `createImageBitmap` +
+ *   `transferFromImageBitmap` su un contesto `bitmaprenderer`, che NON ha il
+ *   backing store 2D e non fa quel caricamento.
+ * ⛔ E lì `getImageData` non esiste: il banco lo DICE invece di riportare uno
+ *   zero che non ha misurato. */
+const DISEGNO = P.get("disegno") === "bitmap" ? "bitmap" : "2d";
+if (P.get("vista") === "1") document.body.classList.add("vista");
+
+const stato = document.getElementById("stato");
+const tela  = document.getElementById("tela");
+let ctx = null;
+
+function dice(t) { stato.textContent = t; }
+
+/* ⛔ La media della luma di ogni superblocco, dalla luma NUDA che `copyTo`
+ *    consegna: nessuna conversione di colore di mezzo, quindi confrontabile
+ *    con quella di `ffmpeg` senza tolleranze inventate. */
+function medie_da_luma(y, stride, bx, by, S) {
+  const out = new Float32Array(bx * by);
+  for (let j = 0; j < by; j++)
+    for (let i = 0; i < bx; i++) {
+      let s = 0;
+      for (let r = 0; r < S; r++) {
+        const base = (j * S + r) * stride + i * S;
+        for (let c = 0; c < S; c++) s += y[base + c];
+      }
+      out[j * bx + i] = s / (S * S);
+    }
+  return out;
+}
+
+/* ⚠ E qui la luma si RICOSTRUISCE dall'RGB (BT.709), perché la tela non ne ha
+ *   altra.  E' proprio per questo che il metro è una media con una soglia. */
+function medie_da_rgba(d, larghezza, bx, by, S, bgr) {
+  const ir = bgr ? 2 : 0, ib = bgr ? 0 : 2;
+  const out = new Float32Array(bx * by);
+  for (let j = 0; j < by; j++)
+    for (let i = 0; i < bx; i++) {
+      let s = 0;
+      for (let r = 0; r < S; r++) {
+        let p = ((j * S + r) * larghezza + i * S) * 4;
+        for (let c = 0; c < S; c++, p += 4)
+          s += 0.2126 * d[p + ir] + 0.7152 * d[p + 1] + 0.0722 * d[p + ib];
+      }
+      out[j * bx + i] = s / (S * S);
+    }
+  return out;
+}
+
+/* La luma di `ffmpeg` è a fondoscala TV (16-235); quella che torna dalla tela
+ * è a fondoscala pieno (0-255).  ⛔ Si dichiara la conversione invece di
+ * tarare la soglia finché i numeri tornano. */
+function tv_da_pieno(v) { return 16 + v * (235 - 16) / 255; }
+
+/* ⛔⭐ LO SCOSTAMENTO COMUNE SI TOGLIE, ED È LA DIFFERENZA FRA DUE MALATTIE.
+ *
+ * `[M]` 17 agosto 2026: col decodificatore H.264 **in hardware** questo banco
+ * ha segnato 5 000 superblocchi «fuori posto» su 126 fotogrammi — e guardandoli
+ * erano tutti **+8 su zone chiare**, lisci, uguali nei due punti di rilettura.
+ * Non un pixel sbagliato: una CONVERSIONE DI COLORE diversa da quella di
+ * `ffmpeg`, dentro il decodificatore.
+ *
+ * ⇒ Un difetto che sposta TUTTO di poco è una convenzione; uno che sposta UN
+ *   blocco di molto è il guasto che cerchiamo.  Si toglie la mediana dello
+ *   scarto del fotogramma — che è lo scostamento comune — e si giudica quel
+ *   che resta.  ⚠ E si riporta anche il grezzo, perché una convenzione
+ *   sbagliata è comunque un colore sbagliato per l'utente. */
+function mediana(v) {
+  const w = Float64Array.from(v).sort();
+  const n = w.length;
+  return n % 2 ? w[(n - 1) / 2] : (w[n / 2 - 1] + w[n / 2]) / 2;
+}
+
+(async function () {
+  if (!("VideoDecoder" in window)) {
+    dice("⛔ questo browser non ha WebCodecs: il banco non è eseguibile qui");
+    return;
+  }
+  dice("prendo il flusso («" + FLUSSO + "») e la verità…");
+  const [ind, ver, buf] = await Promise.all([
+    fetch(FILE_INDICE).then(r => r.json()),
+    fetch("verita.json").then(r => r.json()),
+    fetch(FILE_FLUSSO).then(r => r.arrayBuffer()),
+  ]);
+  dice("presi: flusso " + buf.byteLength + " byte, verità " + ver.n + " fotogrammi");
+  const S = ver.blocco, BX = ver.bx, BY = ver.by;
+  const N = Math.min(ind.pezzi.length, ver.n);
+
+  dice("chiedo al browser se sa fare «" + CODEC + "»…");
+  const sost = await VideoDecoder.isConfigSupported({ codec: CODEC, optimizeForLatency: true });
+  dice("il browser dice " + (sost.supported ? "SI" : "NO") + " a «" + CODEC + "»");
+  if (!sost.supported) { dice("⛔ il browser dice no a " + CODEC); return; }
+
+  tela.width = ver.l; tela.height = ver.a;
+  ctx = DISEGNO === "bitmap"
+      ? tela.getContext("bitmaprenderer")
+      : tela.getContext("2d", { willReadFrequently: true });
+
+  /* i conti */
+  let usciti = 0, errori = 0;
+  const rotti_dec = [], rotti_tela = [];   // {n, bx, by, atteso, avuto, scarto}
+  let peggio_dec = 0, peggio_tela = 0, comune_dec = 0, comune_tela = 0;
+
+  /* ⛔⛔ I LAVORI SI ASPETTANO, E QUESTA RIGA E' NATA DA UN BANCO CIECO.
+   *
+   * `[M]` 17 agosto 2026: sei giri su sei davano ZERO fuori posto — compresi i
+   * due col guasto innestato.  ⚠ `dec.flush()` promette che i fotogrammi sono
+   * USCITI, non che quel che io ci faccio sopra sia FINITO: il gestore
+   * `output` è asincrono (c'è dentro un `await copyTo`), e il verdetto si
+   * scriveva mentre le misure erano ancora in volo.
+   * ⇒ Zero perché non aveva guardato, non zero perché era pulito — la forma
+   *   che `LEZIONI.md` §1.9 chiama la più cara, e che solo il controllo
+   *   positivo distingue da un verde vero. */
+  const lavori = [];
+  let avviso_formato = false, guasti_misura = 0, primo_guasto = "";
+
+  const dec = new VideoDecoder({
+    output: (frame) => { lavori.push(misura_fotogramma(frame)); },
+    error: (e) => { errori++; dice("⛔ il decodificatore si è lamentato: " + e); },
+  });
+
+  /* ⛔ E QUESTO NON PUO' RIFIUTARE.  Un `await` che rifiuta qui farebbe
+   *    saltare `Promise.all(lavori)` e la pagina resterebbe MUTA — che è
+   *    esattamente com'e' stata per sei giri: il rifiuto di `copyTo` non lo
+   *    raccoglieva nessuno, e il banco «non finiva» senza dire perché. */
+  async function misura_fotogramma(frame) {
+    try {
+      await misura_davvero(frame);
+    } catch (e) {
+      guasti_misura++;
+      if (!primo_guasto) { primo_guasto = "" + e; dice("⛔ misura: " + primo_guasto); }
+      try { frame.close(); } catch (_) {}
+    }
+  }
+
+  async function misura_davvero(frame) {
+      const n = usciti++;
+      const atteso = ver.medie[n];
+      try {
+        if (MODO !== "tela") {
+          /* ⛔ DUE CURE, tutt'e due nate da un rosso del banco su SE STESSO
+           *    (17 agosto 2026, giro `?guasto=1`): `copyTo` sbagliava TUTTO il
+           *    fotogramma 0 — `avuto 90` uniforme — mentre la tela, sullo
+           *    stesso fotogramma, era perfetta.  Un difetto che sta da una
+           *    parte sola della stessa immagine non è del browser: è di chi
+           *    legge.
+           *
+           *  1. IL RITAGLIO SI DICHIARA.  Senza, `copyTo` consegna la misura
+           *     CODIFICATA del fotogramma, che è padded ai multipli del
+           *     blocco, e le righe non cadono dove si crede.
+           *     ⛔ E il FORMATO no: `[M]` 17 agosto 2026, Firefox rifiuta
+           *       `format: "I420"` con «I420 is unsupported in
+           *       ParseVideoFrameCopyToOptions» — si prende quel che il
+           *       fotogramma ha e SI GUARDA che sia planare.
+           *  2. IL FIANCO NON SI CONDIVIDE.  `output` è asincrono e il
+           *     decodificatore ne può avere due in volo: un solo fianco per
+           *     tutti vuol dire che il secondo riscrive quel che il primo sta
+           *     ancora misurando. */
+          const ritaglio = { x: 0, y: 0, width: BX * S, height: BY * S };
+          const opz = { rect: ritaglio };
+          /* ⭐ `[M]` 17 agosto 2026: su Firefox il fotogramma AV1 esce **BGRX**
+           *    — la conversione di colore l'ha già fatta il decodificatore, e
+           *    non c'è nessuna luma nuda da leggere.  ⇒ La si ricostruisce da
+           *    lì come dalla tela: i due punti restano diversi (uno è PRIMA di
+           *    `drawImage`, l'altro DOPO), e il confronto resta onesto perché
+           *    la scala è la stessa per tutti e due. */
+          const fmt = frame.format || "";
+          const rgb = /^(RGBA|RGBX|BGRA|BGRX)/.test(fmt);
+          if (!rgb && !/^(I420|I422|I444|NV12)/.test(fmt)) {
+            /* ⛔ Niente luma nuda da leggere: si DICE, invece di misurare
+             *    byte che non si sa che cosa siano. */
+            if (!avviso_formato) {
+              avviso_formato = true;
+              dice("⛔ `copyTo` non dà un formato planare (è «" + frame.format
+                   + "»): la rilettura del decodificatore non è eseguibile");
+            }
+            frame.close();
+            return;
+          }
+          const fianco = new ArrayBuffer(frame.allocationSize(opz));
+          const piani = await frame.copyTo(fianco, opz);
+          let m;
+          if (rgb) {
+            const d = new Uint8Array(fianco, piani[0].offset,
+                                     piani[0].stride * (BY * S));
+            m = medie_da_rgba(d, piani[0].stride / 4, BX, BY, S, fmt[0] === "B");
+            for (let k = 0; k < m.length; k++) m[k] = tv_da_pieno(m[k]);
+          } else {
+            const y = new Uint8Array(fianco, piani[0].offset,
+                                     piani[0].stride * (BY * S));
+            m = medie_da_luma(y, piani[0].stride, BX, BY, S);
+          }
+          if (GUASTO && n === 100) m[100] += 60;   /* il guasto innestato */
+          const com_d = mediana(m.map((v, k) => v - atteso[k]));
+          if (Math.abs(com_d) > Math.abs(comune_dec)) comune_dec = com_d;
+          for (let k = 0; k < m.length; k++) {
+            const sc = Math.abs(m[k] - atteso[k] - com_d);
+            if (sc > peggio_dec) peggio_dec = sc;
+            if (sc > SOGLIA && rotti_dec.length < 5000)
+              rotti_dec.push({ n, x: (k % BX) * S, y: ((k / BX) | 0) * S,
+                               atteso: atteso[k], avuto: Math.round(m[k]), scarto: Math.round(sc) });
+          }
+        }
+        if (MODO !== "decodificatore" && DISEGNO === "bitmap") {
+          /* ⛔ Si dipinge e basta: qui la prova è l'OCCHIO, non la rilettura. */
+          const bm = await createImageBitmap(frame);
+          ctx.transferFromImageBitmap(bm);
+        } else if (MODO !== "decodificatore") {
+          ctx.drawImage(frame, 0, 0);
+          const d = ctx.getImageData(0, 0, BX * S, BY * S).data;
+          const m = medie_da_rgba(d, BX * S, BX, BY, S, false);
+          if (GUASTO && n === 100) m[100] += 60;   /* il guasto innestato */
+          const com_t = mediana(m.map((v, k) => tv_da_pieno(v) - atteso[k]));
+          if (Math.abs(com_t) > Math.abs(comune_tela)) comune_tela = com_t;
+          for (let k = 0; k < m.length; k++) {
+            const sc = Math.abs(tv_da_pieno(m[k]) - atteso[k] - com_t);
+            if (sc > peggio_tela) peggio_tela = sc;
+            if (sc > SOGLIA && rotti_tela.length < 5000)
+              rotti_tela.push({ n, x: (k % BX) * S, y: ((k / BX) | 0) * S,
+                                atteso: atteso[k], avuto: Math.round(tv_da_pieno(m[k])), scarto: Math.round(sc) });
+          }
+        }
+      } finally {
+        frame.close();
+      }
+      if ((n % 20) === 0)
+        dice(`fotogramma ${n + 1}/${N} · superblocchi fuori posto: decodificatore ${rotti_dec.length} · tela ${rotti_tela.length}`);
+  }
+
+  dec.configure({ codec: CODEC, optimizeForLatency: true });
+
+  const dati = new Uint8Array(buf);
+  for (let i = 0; i < N; i++) {
+    const [off, len] = ind.pezzi[i];
+    dec.decode(new EncodedVideoChunk({
+      type: ind.chiave[i] ? "key" : "delta",
+      timestamp: i * 16666,
+      data: dati.subarray(off, off + len),
+    }));
+    if (RITMO > 0) await new Promise(r => setTimeout(r, RITMO));
+  }
+  await dec.flush();
+  dec.close();
+  /* ⛔ E QUI si aspettano le misure, non i fotogrammi: vedi il riquadro su
+   *    `lavori`.  Senza questa riga il banco è cieco e non lo dice. */
+  await Promise.all(lavori);
+
+  /* --- l'esito, e si dice che cosa vuol dire ------------------------------ */
+  const dec_rotto  = rotti_dec.length  > 0;
+  const tela_rotta = rotti_tela.length > 0;
+  let verdetto, classe;
+  if (MODO === "entrambi" && dec_rotto && tela_rotta) {
+    verdetto = "⛔ È LA DECODIFICA: la tela ha ricevuto pixel già rotti e li ha dipinti fedelmente.";
+    classe = "rotto";
+  } else if (MODO === "entrambi" && !dec_rotto && tela_rotta) {
+    verdetto = "⛔ È IL DISEGNO: il decodificatore consegna i pixel giusti, la tela no.";
+    classe = "rotto";
+  } else if (dec_rotto || tela_rotta) {
+    verdetto = "⛔ Superblocchi fuori posto (modo «" + MODO + "»).";
+    classe = "rotto";
+  } else {
+    verdetto = "⭐ NESSUN superblocco fuori posto: questa strada, così esercitata, è pulita. "
+             + "⇒ Il difetto sta in COME il prodotto la usa (ritmo, code, `close()`), non in lei.";
+    classe = "buono";
+  }
+  document.getElementById("esito").innerHTML =
+    `<div class="esito ${classe}">${verdetto}</div>`;
+
+  const riga = (nome, rotti, peggio) =>
+    `<tr><td style="text-align:left">${nome}</td><td>${rotti.length}</td>` +
+    `<td>${peggio.toFixed(1)}</td><td>${new Set(rotti.map(r => r.n)).size}</td></tr>`;
+  let html = `<table><tr><th style="text-align:left">dove si è riletto</th>`
+           + `<th>superblocchi oltre soglia</th><th>scarto peggiore</th><th>fotogrammi toccati</th></tr>`;
+  if (MODO !== "tela")            html += riga("copyTo — il decodificatore", rotti_dec, peggio_dec);
+  if (MODO !== "decodificatore")  html += riga("getImageData — la tela", rotti_tela, peggio_tela);
+  html += `</table><p class="nota">${N} fotogrammi · soglia ${SOGLIA} livelli di luma · `
+        + `ritmo ${RITMO} ms · flusso ${FLUSSO} · codec ${CODEC} · errori del decodificatore: ${errori}</p>`;
+
+  const primi = (nome, r) => r.length
+    ? `<p class="nota">primi fuori posto — ${nome}:</p><table><tr><th>fotogramma</th><th>x</th><th>y</th>`
+      + `<th>atteso</th><th>avuto</th><th>scarto</th></tr>`
+      + r.slice(0, 12).map(v => `<tr><td>${v.n}</td><td>${v.x}</td><td>${v.y}</td>`
+      + `<td>${v.atteso}</td><td>${v.avuto}</td><td>${v.scarto}</td></tr>`).join("") + `</table>`
+    : "";
+  html += primi("decodificatore", rotti_dec) + primi("tela", rotti_tela);
+  document.getElementById("tabella").innerHTML = html;
+
+  /* ⭐ L'ESITO ANCHE IN FORMA LEGGIBILE DA UN PROGRAMMA — 17 agosto 2026.
+   *    Il banco lo guida il testimone Marionette (`07-b48-testimone.py`), non
+   *    un paio d'occhi: leggere i numeri dal DOM vorrebbe dire farsi dettare
+   *    la misura dall'impaginazione.  ⛔ E non è una comodità: è l'utente che
+   *    ha detto «se non mi dai il tempo di fare le prove non si va da nessuna
+   *    parte» — chi cambia la pagina deve anche poterla provare da sé. */
+  window.RISULTATO = {
+    flusso: FLUSSO, codec: CODEC, modo: MODO, ritmo: RITMO, soglia: SOGLIA,
+    disegno: DISEGNO,
+    tela_misurata: DISEGNO === "2d",
+    guasto: GUASTO, fotogrammi_dati: N, fotogrammi_usciti: usciti,
+    errori_decodificatore: errori,
+    guasti_misura: guasti_misura, primo_guasto: primo_guasto,
+    scostamento_comune: { decodificatore: +comune_dec.toFixed(1),
+                          tela: +comune_tela.toFixed(1) },
+    decodificatore: { fuori_posto: rotti_dec.length, peggio: +peggio_dec.toFixed(1),
+                      fotogrammi: new Set(rotti_dec.map(r => r.n)).size,
+                      primi: rotti_dec.slice(0, 8) },
+    tela:            { fuori_posto: rotti_tela.length, peggio: +peggio_tela.toFixed(1),
+                       fotogrammi: new Set(rotti_tela.map(r => r.n)).size,
+                       primi: rotti_tela.slice(0, 8) },
+    verdetto: verdetto,
+  };
+  dice(`finito: ${usciti} fotogrammi usciti su ${N} dati`);
+})();
+</script>

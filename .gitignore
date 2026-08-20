@@ -49,3 +49,4 @@ banchi/03-palco-profili/
 # ⚠ Il file di servizio con cui `03-solo-certifica.sh` si passa il codice
 #   d'uscita fra una funzione e l'altra: e' derivato, e a ogni giro cambia.
 banchi/.03-solo-ultimo
+banchi/07-b48-dati/

@@ -473,7 +473,10 @@ const righe = [];
 function nota(t) {
   righe.push(t);
   $("registro").textContent = righe.join("\n");
-  if (t.indexOf("MISURA") >= 0 || t.indexOf("⛔") >= 0) {
+  /* ⚠ `MARCA` e' entrata il 17 agosto 2026 insieme alla riga del browser: le
+   *   marche del progetto hanno un significato, e mettere un `⛔` su una riga
+   *   che non e' un difetto solo per farla partire sarebbe barare col filtro. */
+  if (t.indexOf("MISURA") >= 0 || t.indexOf("MARCA") >= 0 || t.indexOf("⛔") >= 0) {
     try {
       fetch("/diario?" + encodeURIComponent("PAGINA " + t), { cache: "no-store" })
         .catch(() => {});
@@ -490,6 +493,79 @@ function registro_visibile(acceso) {
   return document.body.classList.contains("diagnostica");
 }
 if (location.search.indexOf("registro") >= 0) registro_visibile(true);
+
+/* ⛔⭐ CHI STA PARLANDO — e finora il registro non lo diceva.
+ *
+ * `[M]` 17 agosto 2026: il registro del server portava «⛔ HEVC: NON arriva al
+ * pixel su questo browser» senza dire QUALE browser fosse.  ⇒ Due sessioni
+ * dallo stesso indirizzo — Firefox, che HEVC non ce l'ha, e Chrome, che ce
+ * l'ha in hardware — producevano righe indistinguibili, e la diagnosi si e'
+ * fermata su «o l'uno o l'altro» per tutta una serata.
+ *
+ * ⚠ E non e' una riga di comodo: `SPECIFICHE.md` §3.2 mette il ritardo fra i
+ *   numeri del prodotto, e su questa macchina la differenza fra HEVC in
+ *   hardware e AV1 in software e' proprio quel numero.  Sapere chi parla e'
+ *   la premessa per sapere perche' ha scelto male. */
+nota("MARCA browser: " + navigator.userAgent
+     + " · schermo " + screen.width + "x" + screen.height
+     + " · dpr " + (window.devicePixelRatio || 1)
+     + " · WebCodecs " + (typeof VideoDecoder === "undefined" ? "NON c'e'" : "c'e'"));
+
+/* ⛔⭐ E IL SISTEMA OPERATIVO A PARTE, perche' l'`userAgent` non lo dice piu'.
+ *
+ * ⚠ Chrome RIDUCE l'`userAgent` apposta: scrive sempre `X11; Linux x86_64` sul
+ *   desktop e maschera il modello su Android.  ⇒ La riga qui sopra distingue i
+ *   motori ma NON distingue le macchine, che e' proprio quel che serve quando
+ *   lo stesso browser va bene su una e male su un'altra.
+ *
+ * Le due strade sono diverse per costruzione, e si prendono tutt'e due:
+ *   · Chromium: `userAgentData.getHighEntropyValues()` — asincrona, e da'
+ *     piattaforma, versione del SISTEMA, architettura, modello;
+ *   · Firefox: niente di tutto quello, ma ha `navigator.oscpu`.
+ *
+ * ⛔ E si dichiara DA DOVE viene ogni valore, invece di stampare una riga che
+ *   sembra la stessa cosa su tutti i browser: una fonte diversa e' un dato
+ *   diverso, ed e' la forma E2 di `CODER.md` §3.10. */
+(function () {
+  function racconta(fonte, d) {
+    /* ⛔ Un campo vuoto si DICHIARA vuoto: `versione=` seguito da niente si
+     *   legge come «non l'ho guardato», e su Linux Chrome la versione del
+     *   sistema non la dice davvero.  Zero e assenza sono due cose diverse
+     *   (`CODER.md` §3.10). */
+    nota("MARCA sistema (" + fonte + "): "
+         + Object.keys(d).map(function (k) {
+             var v = d[k];
+             return k + "=" + (v === "" || v === undefined || v === null
+                               ? "(non dichiarata)" : v);
+           }).join(" · "));
+  }
+  var uad = navigator.userAgentData;
+  if (uad && uad.getHighEntropyValues) {
+    uad.getHighEntropyValues(["platform", "platformVersion", "architecture",
+                              "bitness", "model", "fullVersionList"])
+      .then(function (v) {
+        racconta("userAgentData", {
+          piattaforma: v.platform,
+          versione: v.platformVersion,
+          arch: v.architecture + "/" + v.bitness,
+          modello: v.model || "(non dichiarato)",
+          mobile: uad.mobile,
+          browser: (v.fullVersionList || []).map(function (b) {
+            return b.brand + " " + b.version;
+          }).join(", "),
+        });
+      })
+      .catch(function (e) { racconta("userAgentData NEGATO", { perche: "" + e }); });
+  } else {
+    racconta("navigator", {
+      oscpu: navigator.oscpu || "(non dichiarato)",
+      piattaforma: navigator.platform || "(non dichiarata)",
+      lingua: navigator.language,
+      nuclei: navigator.hardwareConcurrency || "(non dichiarati)",
+      memoria_GB: navigator.deviceMemory || "(non dichiarata)",
+    });
+  }
+})();
 function esito(t, bene) { const e = $("esito"); e.textContent = t; e.className = bene ? "bene" : "male"; }
 
 /* ⚠ La frase del ban la mostra gia' il CSS, senza di noi.  Questa riga aggiunge
@@ -1090,7 +1166,20 @@ async function sonda_una(nome, profondita) {
     esito.perche = r.perche;
   }
   if (!esito.perche)
-    esito.perche = "isConfigSupported ha detto no a tutte le stringhe provate";
+    /* ⛔⭐ E SI DICE **QUALE** STRINGA E **CHE COSA** HA RISPOSTO.
+     *
+     * `[M]` 17 agosto 2026, e questa riga e' costata una serata: il registro
+     * diceva «no a tutte le stringhe provate», e nessuno poteva sapere quali
+     * fossero ne' chi avesse risposto.  Misurando lo stesso Chrome con le
+     * stringhe che questa funzione costruisce — `hev1.1.6.L153.B0` e
+     * `hev1.2.4.L153.B0` — la risposta era **si', e in hardware**.
+     * ⇒ Un «no» senza il nome di chi l'ha detto non e' una diagnosi: e' un
+     *   vicolo cieco che si riapre ogni volta.  E i dati c'erano gia' tutti,
+     *   in `esito.api`, e non li leggeva nessuno. */
+    esito.perche = "isConfigSupported ha detto no a tutte le stringhe provate: "
+                 + esito.api.map(function (a) {
+                     return a.stringa + " → " + a.isConfigSupported;
+                   }).join(" · ");
   return esito;
 }
 

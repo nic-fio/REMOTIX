@@ -788,6 +788,40 @@ che scrive una pretesa non ha modo di saperlo.*
 > ⚠ *Scritto come domanda aperta e non come conclusione: nessuno dei due numeri è in discussione, è
 > il loro accostamento che non ha ancora una spiegazione.*
 
+### 1.16 ⛔⛔⭐ **`getImageData` legge il magazzino, non lo schermo** — e per due giorni ha detto che andava tutto bene
+
+*Scritta il 17 agosto 2026, fase 6. ⛔ È la lezione più cara del progetto finora: due giorni di
+caccia, sette ipotesi uccise, e l'imputato stava **dopo** l'ultimo punto che un programma sa
+leggere.*
+
+L'utente vedeva **blocchi rettangolari da 64×192** sul desktop remoto. Ogni strumento diceva che
+non c'erano: i contatori della pagina (`video 23→23`, zero buchi, zero errori), il flusso ridato a
+`libdav1d`, `copyTo()` sul `VideoFrame` — ⭐ e `getImageData()` **sulla stessa tela e negli stessi
+istanti**: **0 superblocchi fuori posto su 180 000**.
+
+⛔ **Poi la tela è stata fotografata col cellulare, e i rettangoli c'erano.**
+
+⇒ ⭐⭐ **Fra il magazzino della tela e il pixel acceso c'è un tratto che nessuna API attraversa** —
+composizione, driver, pannello. Un banco che rilegge la tela con `getImageData` è verde **per
+costruzione** in tutto quel tratto: non «sbaglia», **non ci arriva**.
+
+**Le tre regole che ne escono, e non valgono solo per la tela:**
+
+1. ⛔ **Un banco dichiara fin dove arriva a guardare.** «Ho riletto i pixel» non è «ho visto quel
+   che vede l'utente», e la differenza va scritta **accanto al verde**, non scoperta dopo;
+2. ⭐ **Quando l'utente vede un difetto e ogni strumento è verde, l'imputato è dove gli strumenti
+   non arrivano** — non «l'utente si sbaglia». È I8 nella sua forma più scomoda: il metro è il suo
+   occhio, e qui era **l'unico strumento che vedeva**;
+3. ⭐ **E allora il banco cambia mestiere**: `07-b49` non misura niente. Tiene la scena in vista
+   con **una** variabile cambiata e chiede all'utente di guardare. ⚠ Un banco che non misura è
+   legittimo — purché dichiari che il giudizio è suo (§1.9 al contrario: qui è il *verde* che non
+   ha guardato niente).
+
+⚠ **E il pezzo cieco era già scritto**, in `STUDI.md` §web §6.3: *16-40 ms fra il disegno e il pixel
+acceso, che nessuna API vede*. ⛔ Era stato scritto come **ritardo** e nessuno aveva pensato che nello
+stesso tratto si potessero rompere anche i **pixel**. ⇒ Un pezzo cieco dichiarato per un numero è
+cieco **per tutti** i numeri.
+
 ---
 
 ## 2. Come si prova

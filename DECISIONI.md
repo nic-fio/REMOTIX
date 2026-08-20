@@ -1047,6 +1047,49 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > formato, **si rilegge quel che si è prodotto** — è `CODER.md` §3.9 (*si chiede per nome e si
 > verifica che sia stato dato*) applicato all'**uscita**, non solo all'ingresso.
 
+> ### ⛔⛔⭐ 1.13-ter — **AV1 ESCE DAL PRODOTTO, ENTRA H.264** — ✅ deciso dall'utente il 17 agosto 2026
+>
+> *La frase è sua: **«la scelta è obbligata: dobbiamo abbandonare AV1»**.*
+>
+> **La causa, ed è sua**: ⛔ **Firefox per Android non supporta né HEVC né AV1.** ⇒ Per quel
+> browser il prodotto **non esisteva**, il che contraddice la riga d'apertura del `README` —
+> *«nessun client da installare, basta un browser moderno»* — cioè §1.6.
+>
+> ⭐ **E la misura la conferma dai due capi** (`vainfo` sul CHUWI + i numeri di §1.13-bis):
+>
+> | codec | decodifica sul tablet | Firefox Android | codifica sul server |
+> |---|---|---|---|
+> | HEVC | ⭐ hardware | ⛔ **no** | ⭐ hardware, **3,16 ms** |
+> | AV1 | ⛔ **nessun profilo** | sì | ⛔ **non esiste**, solo software |
+> | **H.264** | ⭐ hardware | ⭐ sì | ⭐ hardware, **3,11 ms** — il più veloce |
+> | VP9 | ⭐ hardware | sì | ⭐ hardware, 6,95-7,28 ms |
+>
+> ⇒ ⛔ **AV1 era l'unico codec senza hardware da nessuna parte** in questo impianto: sul server per
+> §1.13-bis, sul tablet dell'utente per `vainfo`. Il ripiego costava CPU **ai due capi**.
+>
+> ⭐ **E la stringa non va indovinata, è già `[M]`**: **`avc1.640032`** (High, livello 5.0) —
+> Firefox l'accetta e ne decodifica **300 fotogrammi su 300 con zero errori** (`banchi/07-b48`,
+> 17 agosto 2026).
+>
+> ⚠ **Due misure dello stesso banco che serviranno scrivendo il codificatore:**
+> - il fotogramma che WebCodecs consegna su Firefox è **`BGRX`**, non planare: la conversione di
+>   colore la fa già il decodificatore;
+> - ⛔ il decodificatore H.264 **in hardware** su questa macchina converte con una **scala di
+>   colore diversa da `ffmpeg`**: **+8 livelli sulle zone chiare**, liscio e uniforme (peggio
+>   **30,3** livelli su 126 fotogrammi). Non è un guasto a blocchi, **ma è un colore sbagliato per
+>   l'utente**, e va ripreso: è `[?]` se sia il pieno/limitato (`16-235` contro `0-255`) o la
+>   matrice.
+>
+> **Il lavoro che ne segue, e non è ancora fatto**: `RCP.md` §4.3 e §6.2 (il registro dei codec,
+> oggi `1` = HEVC e `2` = AV1: il terzo numero **si aggiunge**, non si riusa) · `codificatore.c`
+> (`h264_vaapi` **e** il lettore dei NAL che riconosce l'IDR, perché §5.2 vuole la chiave vera) ·
+> `figlio.c` (il terzo codec nelle strutture per-codec) · `pagina.html` (`CODEC_RCP`, la scala di
+> preferenza, e il flusso di prova della sonda — che è **dipinto davvero** e va fabbricato).
+>
+> ⚠ **E che cosa NON dice questa decisione**: HEVC **resta**, ed è ancora il primo della scala dove
+> c'è (§1.13). Esce **AV1**, che era il ripiego universale; il ripiego universale diventa H.264.
+
+
 ---
 
 ## 2. I numeri
@@ -2662,6 +2705,38 @@ cui §5.0-ter venisse chiusa **il protocollo non cambi** (`RCP.md` §6.2, §7.1)
 Tela 1080p vista da uno schermo 4K = desktop ingrandito, quindi morbido. Ingrandire non
 inventa dettaglio. La via d'uscita è la voce «adatta il desktop», ed è il motivo per cui la
 misura iniziale della tela conta — vedi la domanda aperta §7.1.
+
+---
+
+### 5.4 ✅ ⭐⭐⭐ La tela visibile si dipinge con **`bitmaprenderer`**, non con la tela 2D — 17 agosto 2026
+
+**Deciso sul giudizio dell'utente** — *«NIENTE ARTEFATTI!»* — dopo due giorni di caccia ai
+**blocchi rettangolari da 64×192** che vedeva nelle zone ferme.
+
+⛔ **La causa non era nostra, ed è fuori dalla portata di qualunque banco che rilegga i pixel**: la
+`<canvas>` **2D** riceve i pixel giusti e si rompe **andando allo schermo**. Le prove, una per
+imputato, stanno in [`fasi/06-la-tela-e-la-vista.md` §4.9](fasi/06-la-tela-e-la-vista.md) —
+cattura pulita, codificatore pulito (0 superblocchi rovinati su 600), `copyTo` pulito, `getImageData`
+**0 su 180 000** — ⛔ **e la stessa tela fotografata col cellulare che mostra i rettangoli**.
+
+⇒ ⭐ **`getImageData` legge il magazzino, non lo schermo.** Un banco che rilegge la tela è verde
+**per costruzione**, e per due giorni ha detto che andava tutto bene.
+
+**La cura**: `createImageBitmap()` + `transferFromImageBitmap()` su un contesto **`bitmaprenderer`**,
+che il magazzino 2D non ce l'ha. ⚠ Non è un'ottimizzazione e non è un interruttore: è **la** strada
+di disegno del prodotto (`niente eccezioni`, §0).
+
+**Che cosa cambia nel prodotto, e che cosa no:**
+
+| | |
+|---|---|
+| ⛔ **le due tele 2D spariscono** | oggi il fotogramma passa da `deposito_p.drawImage(f)` **e poi** da `pennello.drawImage(deposito)`: due copie e due magazzini |
+| ⭐ **il deposito non serve più** | `transferFromImageBitmap` **dimensiona la tela da sé**, e al ridimensionamento della finestra il contenuto **resta**: la ragione per cui il deposito esisteva (§5.1, il nero fino al fotogramma dopo) cade da sola |
+| ⭐ **il cursore non è toccato** | è un cursore **CSS**, non è dipinto sulla tela ⇒ la tela visibile non deve **comporre** niente |
+| ⚠ **il centraggio si fa col CSS** | quando la finestra è più larga dell'immagine. Le bande erano già **fuori** dal buffer (§5.0-sexies), quindi non si perde una misura |
+| ⚠ **e il costo va misurato** | `createImageBitmap` è **asincrona**: entra nel percorso del ritardo, che è il numero per cui esiste la fase 3. `[?]` finché non c'è la misura |
+| ⛔ **il ripiego si dichiara** | se `getContext("bitmaprenderer")` non c'è, si torna alla tela 2D **e lo si scrive nel registro** — `CODER.md` §4.2. Non è un'eccezione per compositore: è una capacità che manca |
+
 
 ---
 
