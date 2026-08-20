@@ -537,6 +537,40 @@ ripreso quando H.264 entra nel prodotto (`DECISIONI.md` §1.13-ter).
 
 ---
 
+#### ⭐⭐ 4.9-bis · LA CURA È NEL PRODOTTO — 20 agosto 2026, e aspetta il giudizio
+
+`src/pagina.html`: la tela visibile prende il contesto **`bitmaprenderer`** e il fotogramma ci
+arriva con **una sola** conversione (`createImageBitmap`) invece dei **due `drawImage`** di prima.
+⛔ **Spariscono tutt'e due le tele 2D**: quella del deposito — `[M]` **34,03 ms** di mediana per
+fotogramma, il costo che la fase 4 aveva misurato — e quella della vista.
+
+| che cosa cambia | e perché non rompe niente |
+|---|---|
+| **il deposito non c'è più** | `transferFromImageBitmap` dimensiona la tela da sé, e nessuno riscrive `width` ⇒ al ridimensionamento della finestra il fotogramma **resta**. La ragione per cui il deposito esisteva (§5.1, il nero durante un buco) cade da sola |
+| **la cornice si rifà solo alla misura nuova** | è CSS, e farla a ogni fotogramma sarebbe la riorganizzazione del foglio che `adatta_vista()` evita apposta |
+| ⛔ **`createImageBitmap` è asincrona** | ⇒ ogni fotogramma porta un **numero d'ordine** e una **epoca**: chi arriva dopo uno più nuovo si butta e **si conta** (`tardive`), e chi arriva da una sessione morta non dipinge sopra quella viva |
+| ⛔ **e il ripiego si dichiara** | senza `bitmaprenderer` o `createImageBitmap` si torna alla tela 2D **e la riga lo dice**. ⭐ E `?tela=2d` accende la strada vecchia a richiesta: serve a **confrontare**, ed è l'unico modo di rifare quel confronto il giorno in cui il sintomo tornasse |
+
+**`[M]` La misura di oggi, col testimone Marionette sul Firefox vero** (porta 7730, tela
+1588×914, sessione `prova`): `dipinti == consegnati` (11→11, 12→12) · `salt 0` · `buchi 0` ·
+`ord 0` · `mis 0` · ⭐ **`tard 0`** · `err 0` · tela tirata giù in PNG, **nitida a 1:1**.
+⭐ **E il controllo delle due strade, una variabile sola**: su `/` la tela risponde
+`getContext("2d") → null` (cioè il magazzino 2D **non c'è**) e la riga del registro dichiara
+`bitmaprenderer`; su `/?tela=2d` risponde `2d`, `ricomposizioni 1`, e dipinge come prima.
+⛔ **E un banco è stato corretto perché la sua lettura non esiste più**: `02-giudizio-catena.py`
+leggeva i pixel con `t.getContext("2d")` **sulla tela del prodotto** — adesso ricopia in una tela
+sua. ⚠ Quel che rilegge resta il magazzino, non lo schermo (§1.16).
+
+⛔⛔ **E il numero che ancora NON c'è**: `[?]` **quanto costa `createImageBitmap`**. Il conto da
+battere è quello del `drawImage` che ha sostituito (34,03 ms), e finché non è misurato **non si
+dichiara un guadagno**. ⚠ Serve una scena in movimento, cioè l'apparecchio della fase 3.
+
+⏳ **E manca il giudizio, che è l'unica cosa che chiude questa caccia**: nessun banco vede questo
+difetto (§1.16), quindi la 4.9 resta aperta finché l'utente non guarda **il prodotto** — non il
+banco — sulla sua scena.
+
+---
+
 ## 5 · ⛔ Che cosa NON ha funzionato
 
 *Si riempie anche quando fa una brutta figura. ⭐ E in questa fase la parte più istruttiva non sono

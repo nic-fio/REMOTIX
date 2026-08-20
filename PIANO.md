@@ -477,7 +477,13 @@ qualcun altro.
 >
 > ## ⭐ IL LAVORO CHE VIENE, in quest'ordine
 >
-> **1. ⭐⭐ La cura dentro `src/pagina.html`** — è quel che l'utente **vede**, e va davanti a tutto.
+> **1. ⭐⭐ La cura dentro `src/pagina.html`** — ⭐ **FATTA il 20 agosto 2026**, ed è in servizio
+> sulla **7730**: `dipinti == consegnati`, `tard 0`, `err 0`, tela nitida a 1:1 col testimone
+> Marionette (`fasi/06` §4.9-bis). ⏳ **Aspetta il giudizio dell'utente**, che è l'unica cosa che
+> può chiuderla: nessun banco vede questo difetto. ⚠ E resta `[?]` **quanto costa
+> `createImageBitmap`** — il conto da battere è 34,03 ms del `drawImage` che sostituisce.
+>
+> *Quel che è stato fatto, per chi rilegge:* è quel che l'utente **vede**, e andava davanti a tutto.
 > Spariscono le **due** tele 2D (`deposito_p.drawImage(f)` e `pennello.drawImage(deposito)`); la
 > tela visibile diventa `bitmaprenderer`; il deposito **non serve più** perché
 > `transferFromImageBitmap` dimensiona la tela da sé e il contenuto sopravvive al

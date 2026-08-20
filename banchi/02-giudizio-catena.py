@@ -118,7 +118,18 @@ DIPINTA = """
 (function () {
   const t = document.getElementById("schermo");
   if (!t || t.width < 32) return { guaio: "tela al minimo" };
-  const p = t.getContext("2d", { willReadFrequently: true });
+  /* ⛔ Dal 17 agosto 2026 la tela del prodotto e' `bitmaprenderer`
+     (`DECISIONI.md` §5.4): il contesto 2D non c'e' piu' e `getContext("2d")`
+     torna **null**.  ⇒ Si ricopia in una tela del BANCO — `drawImage` di una
+     tela in un'altra funziona qualunque sia il contesto di partenza — e si
+     rilegge di la'.
+     ⚠ E quel che si rilegge resta il MAGAZZINO, non lo schermo
+       (`LEZIONI.md` §1.16): questa lettura vede la geometria, non gli
+       artefatti — e non ha mai visto altro. */
+  const cp = document.createElement("canvas");
+  cp.width = t.width; cp.height = t.height;
+  const p = cp.getContext("2d", { willReadFrequently: true });
+  p.drawImage(t, 0, 0);
   const im = p.getImageData(0, 0, t.width, t.height).data;
   const SOGLIA = 60, MINIMI = 4;
   let x0 = -1, x1 = -1, y0 = -1, y1 = -1;
@@ -145,7 +156,18 @@ DIPINTA = """
 IMPACCHETTA = """
 (function () {
   const t = document.getElementById("schermo");
-  const p = t.getContext("2d", { willReadFrequently: true });
+  /* ⛔ Dal 17 agosto 2026 la tela del prodotto e' `bitmaprenderer`
+     (`DECISIONI.md` §5.4): il contesto 2D non c'e' piu' e `getContext("2d")`
+     torna **null**.  ⇒ Si ricopia in una tela del BANCO — `drawImage` di una
+     tela in un'altra funziona qualunque sia il contesto di partenza — e si
+     rilegge di la'.
+     ⚠ E quel che si rilegge resta il MAGAZZINO, non lo schermo
+       (`LEZIONI.md` §1.16): questa lettura vede la geometria, non gli
+       artefatti — e non ha mai visto altro. */
+  const cp = document.createElement("canvas");
+  cp.width = t.width; cp.height = t.height;
+  const p = cp.getContext("2d", { willReadFrequently: true });
+  p.drawImage(t, 0, 0);
   const im = p.getImageData(0, 0, t.width, t.height).data;
   const n = t.width * t.height;
   const rgb = new Uint8Array(n * 3);

@@ -789,6 +789,17 @@ const LIVELLO_DICHIARATO = "5.1";
 const DESINCRONIZZATA =
   new URLSearchParams(location.search).get("tela") === "desincronizzata";
 
+/* ⛔⭐⭐ `?tela=2d` — LA STRADA VECCHIA, E SERVE A CONFRONTARE, NON A SCEGLIERE.
+ *
+ * `DECISIONI.md` §5.4: la tela visibile e' `bitmaprenderer`, e la 2D e' quella
+ * su cui l'utente vedeva i blocchi.  ⛔ Questo interruttore NON e'
+ * un'alternativa offerta a chi usa il prodotto: e' lo strumento che ha chiuso
+ * la caccia, cioe' **la stessa pagina con UNA variabile cambiata** — ed e'
+ * l'unico modo di rifare quel confronto il giorno in cui il sintomo tornasse.
+ * ⚠ Chi lo accende sta accendendo la strada che rompe i pixel su questo ferro,
+ *   e la riga del registro lo dice ogni volta. */
+const TELA_2D = new URLSearchParams(location.search).get("tela") === "2d";
+
 /* ⛔⭐ IL WORKER DEDICATO DI `STUDI.md` §web §6.1 — «WebTransport, decodifica e canvas
  * tutti in un worker dedicato».  Era una decisione SCRITTA E MAI ATTUATA: fino
  * al 13 agosto 2026 questa pagina aveva un solo `<script>` e faceva tutto sul
@@ -1786,9 +1797,43 @@ class Schermo {
      *     fotogramma — sul portatile non si nota, su un telefono si'.
      * ⚠ E i 34 ms cadono sul thread principale, che e' lo STESSO che riceve i
      *   tasti: e' ritardo che l'utente sente come «tastiera a scatti». */
-    this.pennello = tela.getContext("2d", {
-      alpha: false,
-      desynchronized: DESINCRONIZZATA });
+    /* ⛔⭐⭐⭐ LA STRADA DEL DISEGNO — `bitmaprenderer`, e NON la tela 2D.
+     *
+     * `DECISIONI.md` §5.4, 17 agosto 2026, sul giudizio dell'utente: «NIENTE
+     * ARTEFATTI!».  ⛔ E la ragione non e' un'ottimizzazione: per due giorni
+     * l'utente ha visto **blocchi rettangolari da 64x192** che nessuno
+     * strumento sapeva vedere.
+     *
+     * ⛔⛔ La causa, misurata imputato per imputato (`fasi/06` §4.9): i pixel
+     *     ENTRANO GIUSTI nella tela — `copyTo` sul `VideoFrame` **0 fuori
+     *     posto**, `getImageData` dopo il `drawImage` **0 su 180 000** — e si
+     *     rompono **andando allo schermo**.  La stessa tela, fotografata col
+     *     cellulare, portava i rettangoli.
+     * ⇒ ⭐ `getImageData` legge il MAGAZZINO, non lo schermo: fra i due c'e' un
+     *   tratto che nessuna API attraversa (`LEZIONI.md` §1.16).  Non e' il
+     *   browser (Firefox e Chrome uguali) e non e' la GPU (un `<video>` e'
+     *   pulito): e' la strada della `<canvas>` **2D**.
+     *
+     * ⭐⭐ E QUESTA STRADA NE TOGLIE DUE, NON UNA: il contesto `bitmaprenderer`
+     *     non ha magazzino 2D, e il fotogramma ci arriva con **una sola**
+     *     conversione (`createImageBitmap`) invece dei **due `drawImage`** di
+     *     prima — quello nel deposito, che `[M]` costava **34,03 ms** di
+     *     mediana, e quello dal deposito alla vista.
+     *
+     * ⛔ IL RIPIEGO SI DICHIARA (`CODER.md` §4.2): se il motore non ha
+     *    `bitmaprenderer` o `createImageBitmap` si torna alla tela 2D **e lo si
+     *    scrive nel registro**, perche' su quella strada gli artefatti
+     *    tornerebbero e nessun contatore lo direbbe.  ⚠ Non e' un'eccezione per
+     *    compositore: e' una capacita' che manca al browser. */
+    this.bm = null; this.pennello = null;
+    if (!TELA_2D && typeof createImageBitmap === "function") {
+      try { this.bm = tela.getContext("bitmaprenderer"); }
+      catch (e) { this.bm = null; }
+    }
+    if (!this.bm)
+      this.pennello = tela.getContext("2d", {
+        alpha: false,
+        desynchronized: DESINCRONIZZATA });
     this.codec = null;          /* il numero di §6.2: 1 o 2 */
     this.stringa = null;        /* la stringa di WebCodecs che la sonda ha provato */
     this.profondita = 8;
@@ -1863,6 +1908,23 @@ class Schermo {
      *   fotogramma non si sa se sia ancora disegnabile.  Il prezzo del deposito
      *   e' noto e si paga; quello dell'altra strada e' un `[?]`. */
     this.deposito = null; this.deposito_p = null;
+    /* ⭐ La strada `bitmaprenderer` non ha deposito: la tela TIENE il suo
+     * fotogramma.  Quel che serve e' la sua MISURA (la legge `cornice()`) e due
+     * numeri d'ordine, perche' `createImageBitmap` e' **asincrona**.
+     * ⛔ Senza il numero d'ordine due immagini potrebbero arrivare al vetro
+     *    scambiate — e il sintomo sarebbe «ogni tanto il desktop torna
+     *    indietro di un fotogramma», che nessuno saprebbe attribuire. */
+    this.f_l = 0; this.f_a = 0;
+    this.serie = 0;                            /* l'ultimo fotogramma AVVIATO */
+    this.mostrata = 0;                         /* l'ultimo fotogramma ARRIVATO al vetro */
+    /* ⛔ E l'EPOCA, che non e' la stessa cosa: i numeri d'ordine si azzerano
+     *    con la sessione, quindi da soli non distinguono «e' vecchio» da «e' di
+     *    un'ALTRA sessione».  Un'immagine in conversione mentre il client
+     *    riattacca tornerebbe con `n` piu' grande di `mostrata` (che riparte da
+     *    zero) e finirebbe al vetro: il desktop del tentativo di prima sopra
+     *    quello nuovo — che §riparti chiama «peggio del nero, perche' sembra
+     *    vivo».  ⇒ L'epoca sale e non torna mai indietro. */
+    this.epoca = 0;
     this.dipinta = null;                       /* l'ultimo rettangolo dipinto, per il registro */
     this.formato = null;                       /* `VideoFrame.format`, per il registro */
     this.ultimo_consegnato = null;             /* §6.2: «l'ultimo GIA' CONSEGNATO» */
@@ -1898,11 +1960,31 @@ class Schermo {
                       metro della fase (I8) — la veglia del primo fotogramma lo
                       legge.  Un ridimensionamento che lo facesse salire direbbe
                       «e' arrivata un'immagine» tirando una finestra. */
+                   /* ⭐ Le immagini che `createImageBitmap` ha consegnato
+                      DOPO una piu' nuova, e che si buttano per non far tornare
+                      indietro il desktop.  ⛔ Contate, non silenziose: se
+                      salissero, la strada asincrona costa piu' di quel che
+                      rende e la riga di §5.4 va riletta. */
+                   tardive: 0,
                    ricomposizioni: 0, viste: 0 };
     /* I richiami verso il canale di controllo, messi da `collega()`. */
     this.su_chiave = null;
     this.su_errore_protocollo = null;
     this.su_riga = (t) => nota("video · " + t);
+    /* ⛔ E SI DICE SEMPRE QUALE STRADA E' IN VIGORE, non solo quando si ripiega:
+     *    un ripiego silenzioso e' vietato (`CODER.md` §4.2), e qui il silenzio
+     *    costerebbe caro — le due strade danno la stessa immagine a ogni
+     *    strumento che rilegge i pixel, e differiscono SOLO davanti agli occhi
+     *    dell'utente (`LEZIONI.md` §1.16). */
+    this.riga(this.bm
+      ? "⭐ la tela si dipinge con `bitmaprenderer` (§5.4): niente magazzino 2D"
+      : (TELA_2D
+         ? "⚠ `?tela=2d`: STRADA VECCHIA a richiesta — e' quella su cui gli "
+           + "artefatti si vedono, e serve solo a confrontare"
+         : "⛔ RIPIEGO: questo browser non ha `bitmaprenderer` o "
+           + "`createImageBitmap`, quindi si dipinge sulla tela 2D — la strada "
+           + "su cui §5.4 ha misurato i blocchi.  Non e' una scelta: e' una "
+           + "capacita' che manca"));
   }
 
   riga(t) { if (this.su_riga) this.su_riga(t); }
@@ -1921,6 +2003,13 @@ class Schermo {
        cambia misura — un'immagine vecchia sotto una sessione nuova, che e'
        peggio del nero perche' sembra viva. */
     this.deposito = null; this.deposito_p = null; this.dipinta = null;
+    /* ⛔ E la stessa ragione vale per la tela della strada nuova: senza questa
+       riga il desktop del tentativo di prima resterebbe **acceso** sotto una
+       sessione nuova, che e' peggio del nero perche' sembra vivo.
+       ⚠ `transferFromImageBitmap(null)` e' il modo dichiarato di svuotarla. */
+    this.f_l = 0; this.f_a = 0; this.serie = 0; this.mostrata = 0;
+    this.epoca++;
+    if (this.bm) { try { this.bm.transferFromImageBitmap(null); } catch (e) { /* gia' vuota */ } }
     this.codec = null; this.stringa = null;
     this.tollerate = new Map(); this.storiche = new Set(); this.finestra = false;
     this.ultimo_consegnato = null; this.atteso = null;
@@ -2032,8 +2121,11 @@ class Schermo {
    *   le misure coincidono — la proprieta' che la riga di prima otteneva, e che
    *   non va persa nel cambio. */
   cornice() {
-    const fl = this.deposito ? this.deposito.width : 0;
-    const fa = this.deposito ? this.deposito.height : 0;
+    /* ⚠ La misura del fotogramma NON si legge piu' dal deposito: sulla strada
+     *   `bitmaprenderer` il deposito non esiste, e le due strade devono
+     *   incorniciare allo stesso modo.  ⇒ La tengono `f_l`/`f_a`, che scrivono
+     *   tutt'e due nel punto in cui il fotogramma diventa visibile. */
+    const fl = this.f_l, fa = this.f_a;
     const r = devicePixelRatio || 1;
 
     if (!fl || !fa || !this.vista_l || !this.vista_a) return null;
@@ -2166,9 +2258,20 @@ class Schermo {
    *    angolo) era un'altra cosa: era la CORNICE ferma a 34rem, e l'ha curata
    *    `cornice()` mettendo le due misure una accanto all'altra. */
   componi() {
+    /* ⭐⭐ SULLA STRADA `bitmaprenderer` NON SI RICOMPONE NIENTE, e non e' una
+     *     mancanza: la tela **tiene** il fotogramma trasferito anche quando la
+     *     finestra cambia, perche' `transferFromImageBitmap` dimensiona il
+     *     buffer da se' e nessuno riscrive `width` (che e' la riga che
+     *     svuoterebbe).  ⇒ Al ridimensionamento resta da rifare **solo la
+     *     cornice**, cioe' il CSS.
+     * ⛔ Ed e' esattamente la ragione per cui il deposito esisteva (§5.1: il
+     *    nero fino al fotogramma dopo, che durante un BUCO non arriva): quella
+     *    ragione qui cade da sola, senza una copia in piu' per fotogramma. */
+    if (this.bm) { this.cornice(); return false; }
     if (!this.deposito) return false;
     const fl = this.deposito.width, fa = this.deposito.height;
     if (!fl || !fa) return false;
+    this.f_l = fl; this.f_a = fa;
     /* ⛔⭐ IL BUFFER VALE ESATTAMENTE IL FOTOGRAMMA — nessuna scala, nessuna
      *    banda, nessun centraggio dentro i pixel.  E' la mossa 1 di `F4-AND-4`
      *    §«che cosa consiglio a noi», e da sola toglie DUE dei tre stadi della
@@ -2200,6 +2303,71 @@ class Schermo {
                      fotogramma: [fl, fa], scala: 1 };
     document.body.dataset.schermo = "acceso";
     return true;
+  }
+
+  /* ⭐⭐⭐ `mostra()` — IL FOTOGRAMMA AL VETRO SENZA PASSARE DA UNA TELA 2D.
+   *
+   * `DECISIONI.md` §5.4.  Una conversione sola (`createImageBitmap`) e un
+   * trasferimento (`transferFromImageBitmap`): nessun magazzino 2D, quindi
+   * nessuno dei blocchi che l'utente vedeva.
+   *
+   * ⛔ E IL PREZZO E' CHE E' ASINCRONA, che va guardato in faccia:
+   *
+   *   1. **l'ordine non e' garantito** — due immagini potrebbero arrivare
+   *      scambiate, e il desktop tornerebbe indietro di un fotogramma.  ⇒ Ogni
+   *      fotogramma porta il suo numero, e chi arriva tardi si BUTTA e si
+   *      CONTA (`conti.tardive`).  ⚠ Buttarlo senza contarlo sarebbe un ritmo
+   *      che cala senza che nessuno sappia perche' (`I1`);
+   *   2. **il `VideoFrame` si chiude quando l'immagine c'e'**, non prima:
+   *      chiuderlo subito dopo la chiamata lascerebbe la conversione senza
+   *      sorgente.  ⛔ E si chiude anche quando fallisce, o la riserva del
+   *      decodificatore si esaurisce e il video si ferma in silenzio;
+   *   3. ⚠ **e il ritardo che aggiunge non e' ancora misurato**: `[?]` finche'
+   *      non c'e' il numero.  Il conto vecchio da battere e' `[M]` 34,03 ms del
+   *      `drawImage` nel deposito, che questa strada NON fa piu'. */
+  mostra(f, fl, fa) {
+    const n = ++this.serie, e0 = this.epoca;
+
+    createImageBitmap(f).then((bmp) => {
+      try { f.close(); } catch (e) { /* gia' chiuso */ }
+      /* ⛔ Due modi di essere in ritardo, e vanno distinti: un'immagine di
+         un'ALTRA sessione (epoca diversa) e una piu' vecchia di quella gia' al
+         vetro.  La prima non e' un ritardo del disegno — e' una sessione morta
+         — e infatti non entra nel conto delle `tardive`. */
+      if (e0 !== this.epoca) {
+        try { bmp.close(); } catch (e) { /* gia' chiusa */ }
+        return;
+      }
+      if (n <= this.mostrata) {
+        this.conti.tardive++;
+        try { bmp.close(); } catch (e) { /* gia' chiusa */ }
+        return;
+      }
+      this.mostrata = n;
+      const cambia = (this.f_l !== fl || this.f_a !== fa);
+
+      this.f_l = fl; this.f_a = fa;
+      /* ⭐ Qui la tela prende la misura del fotogramma DA SE': non si scrive
+         `width`, quindi non si svuota niente. */
+      this.bm.transferFromImageBitmap(bmp);
+      this.conti.dipinti++;
+      /* ⭐ E l'immagine e' nuova davvero solo qui — la stessa ragione della
+         strada vecchia: `SCENA` non deve ringiovanire per un ridimensionamento. */
+      SCENA.dipinto();
+      if (this.sessione && !this.vista_l) this.adatta_vista();
+      /* ⚠ La cornice si rifa' SOLO quando la misura cambia: e' CSS, cioe' una
+         riorganizzazione del foglio, e farla sessanta volte al secondo sarebbe
+         il difetto che `adatta_vista()` evita apposta. */
+      if (cambia) this.cornice();
+      this.dipinta = { l: fl, a: fa, x: 0, y: 0,
+                       vista: [this.tela.width, this.tela.height],
+                       fotogramma: [fl, fa], scala: 1 };
+      document.body.dataset.schermo = "acceso";
+    }).catch((e) => {
+      try { f.close(); } catch (e2) { /* gia' chiuso */ }
+      this.errori.push("createImageBitmap: " + e);
+      this.riga("⛔ il fotogramma non e' diventato un'immagine: " + e);
+    });
   }
 
   /* ⛔⭐ `TELA(ADATTATA)` — §7.1, e QUI NON SI RICONFIGURA NIENTE.
@@ -2697,6 +2865,10 @@ class Schermo {
               + " · tela in vigore " + this.tela_l + "x" + this.tela_a
               + " · formato " + (f.format === undefined ? "assente" : f.format));
     }
+    /* ⭐ IL BIVIO: sulla strada di §5.4 il fotogramma non entra in nessuna tela
+     *    2D — va dritto a `createImageBitmap`.  Il resto di questa funzione e'
+     *    il RIPIEGO, e resta identico a com'era. */
+    if (this.bm) { this.mostra(f, fl, fa); return; }
     try {
       if (!this.deposito) this.deposito = document.createElement("canvas");
       if (this.deposito.width !== fl || this.deposito.height !== fa) {
@@ -4392,6 +4564,10 @@ function avvia_audio(wt) {
               + " buchi " + schermo.conti.buchi
               + " ord " + schermo.conti.scartati_ordine
               + " mis " + schermo.conti.scartati_misura
+              /* ⭐ La quarta strada per cui un fotogramma non arriva al vetro,
+                 aperta il 17 agosto 2026 con §5.4: l'immagine e' arrivata
+                 DOPO una piu' nuova.  ⛔ Zero e' il numero atteso. */
+              + " tard " + schermo.conti.tardive
               + " err " + (schermo.errori ? schermo.errori.length : "?")
             : " video ?")
        + " fuoco " + (document.hasFocus() ? "si" : "NO");
@@ -5254,6 +5430,10 @@ function sorgente_worker() {
   return [
     "/* generato da pagina.html — `STUDI.md` §web §6.1 */",
     "const DESINCRONIZZATA = " + JSON.stringify(DESINCRONIZZATA) + ";",
+    /* ⛔ Senza questa riga il worker romperebbe con `TELA_2D is not defined`:
+       la classe e' la STESSA del prodotto, e le costanti che legge devono
+       attraversare il confine con lei. */
+    "const TELA_2D = " + JSON.stringify(TELA_2D) + ";",
     "const NOME_DEL_CODEC = " + JSON.stringify(NOME_DEL_CODEC) + ";",
     "const CANALE = " + JSON.stringify(CANALE) + ";",
     "const MOT = " + JSON.stringify(MOT) + ";",
