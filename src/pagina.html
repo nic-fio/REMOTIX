@@ -5237,12 +5237,18 @@ async function appunti_ricevuti(byte, completo) {
  *        `APPUNTI_ANNUNCIO`: solo `CHIEDI`.  La pagina non aveva niente da
  *        annunciare perche' non aveva mai letto niente.
  *
- * ⛔ E LA CURA OVVIA NON SI PUO' FARE: un elemento modificabile nascosto e a
- *    fuoco — la strada di tutti i client web — spegnerebbe **tutta la
- *    tastiera**, perche' `cl_nel_modulo()` esce subito quando il fuoco e' su un
- *    `TEXTAREA` o un `contenteditable`.  ⚠ E' la collisione che `STUDI.md`
- *    §web §1.2 C aveva previsto: «serve un elemento modificabile col fuoco, che
- *    e' proprio quel che farebbe cadere il percorso di disegno».
+ * ⛔⭐ «LA CURA OVVIA NON SI PUO' FARE» — ED ERA FALSO, corretto il 20 agosto
+ *     2026 dopo che l'utente ha riferito il difetto su Firefox VERO.
+ *
+ *     Qui c'era scritto: «un elemento modificabile nascosto e a fuoco
+ *     spegnerebbe tutta la tastiera, perche' `cl_nel_modulo()` esce subito
+ *     quando il fuoco e' su un `TEXTAREA`».  ⚠ Vero il fatto, sbagliata la
+ *     conclusione: bastava **nominare l'eccezione** in `cl_nel_modulo()`
+ *     invece di rinunciare.  ⇒ Il campo prende il fuoco per 400 ms, l'evento
+ *     `paste` nasce, i tasti continuano ad andare al desktop remoto.
+ * ⛔ E il prezzo di quella rinuncia lo ha pagato l'utente: su Firefox il
+ *    `paste` non nasce affatto — non c'e' niente di modificabile — e il
+ *    ripiego `readText()` apre il menu «Incolla» che nessuno sta guardando.
  *
  * ⇒ DUE STRADE, e la seconda parte solo se la prima non ha consegnato:
  *
@@ -5262,11 +5268,92 @@ async function appunti_ricevuti(byte, completo) {
  */
 const APPUNTI_ATTESA_PASTE = 180;
 
+/* ⛔⭐⭐⭐ IL CAMPO NASCOSTO CHE FA NASCERE L'EVENTO `paste` — 20 agosto 2026.
+ *
+ * ⛔ IL DIFETTO CHE CURA, riferito dall'utente: *«su Firefox la clipboard da
+ *    server a client funziona, il contrario no»*.
+ *
+ * ⚠ La strada gratis di §9 e' l'evento `paste`, e quell'evento **nasce solo se
+ *   il bersaglio del fuoco e' modificabile**.  Su questa pagina non c'e' NIENTE
+ *   di modificabile — la tela non lo e' — quindi su Firefox il `Ctrl+V`
+ *   dell'utente non produce nessun `paste`, si cade sul ripiego
+ *   `navigator.clipboard.readText()` e li' Firefox chiede il **menu «Incolla»**:
+ *   un bottoncino che l'utente non sta guardando, perche' sta guardando il
+ *   desktop remoto.  ⇒ Da fuori: «non funziona».
+ *   ⚠ E in un browser headless il difetto NON si vede: li' l'evento `paste`
+ *     arriva lo stesso, ed e' per questo che quattro banchi verdi non l'avevano
+ *     mai preso.
+ *
+ * ⭐ LA CURA E' UN CAMPO DI TESTO NASCOSTO che prende il fuoco **solo per il
+ *    tempo del `Ctrl+V`**: l'incolla del browser ha dove andare, l'evento
+ *    `paste` nasce con dentro il testo, e non si chiede nessun permesso a
+ *    nessuno.  ⇒ Niente menu, niente attesa, e la stessa strada su tutti i
+ *    motori.
+ *
+ * ⛔ E NON RESTA IN MEZZO: si svuota e restituisce il fuoco subito dopo.  ⚠ Un
+ *    campo modificabile che tenesse il fuoco si mangerebbe le lettere che
+ *    l'utente batte per il desktop remoto — e sarebbe una cura peggiore del
+ *    male. */
+const INCOLLA_FUOCO_MS = 400;
+let incolla_campo = null;
+let incolla_restituisci = 0;
+
+function incolla_campo_prendi() {
+  if (!incolla_campo) {
+    incolla_campo = document.createElement("textarea");
+    incolla_campo.id = "incolla-nascosto";
+    incolla_campo.setAttribute("aria-hidden", "true");
+    incolla_campo.setAttribute("tabindex", "-1");
+    incolla_campo.setAttribute("autocomplete", "off");
+    incolla_campo.spellcheck = false;
+    /* ⚠ Fuori dallo sguardo ma DENTRO il documento e disegnato: `display:none`
+     *   o `visibility:hidden` non prendono il fuoco, e senza fuoco non c'e'
+     *   nessun incolla.  ⛔ E `pointer-events:none` perche' non intercetti mai
+     *   un clic diretto al desktop remoto. */
+    incolla_campo.style.cssText =
+      "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;"
+      + "border:0;padding:0;margin:0;pointer-events:none;z-index:-1";
+    document.body.appendChild(incolla_campo);
+  }
+  incolla_campo.value = "";
+  try { incolla_campo.focus({ preventScroll: true }); } catch (e) { incolla_campo.focus(); }
+  clearTimeout(incolla_restituisci);
+  /* ⭐⭐ E LA SECONDA STRADA, che non dipende da `clipboardData`: quel che il
+   *     browser ha **incollato davvero nel campo**.
+   *
+   * ⛔ Serve perche' l'evento `paste` puo' arrivare VUOTO — `[M]` misurato — e
+   *    allora l'unico posto dove il testo esiste e' il campo stesso: l'incolla
+   *    del browser lo ha scritto li' senza chiedere niente a nessuno.
+   * ⚠ E non e' un doppione: `appunti_annuncia` non annuncia due volte lo stesso
+   *   testo (salta gli identici), quindi le due strade insieme costano zero. */
+  setTimeout(() => {
+    const t = incolla_campo ? incolla_campo.value : "";
+    if (t) {
+      app_diario("il campo dell'incolla porta " + t.length + " caratteri: "
+                 + "strada del CAMPO (l'evento `paste` non e' bastato)");
+      APPUNTI.ultimo_paste_ms = Date.now();
+      appunti_annuncia(t);
+    }
+  }, 120);
+  incolla_restituisci = setTimeout(() => {
+    incolla_campo.value = "";
+    /* ⛔ Il fuoco torna al corpo: da li' i tasti riprendono la loro strada
+     *    normale verso il desktop remoto (§7.3). */
+    try { incolla_campo.blur(); } catch (e) { /* niente */ }
+    try { document.body.focus(); } catch (e) { /* niente */ }
+  }, INCOLLA_FUOCO_MS);
+}
+
 function appunti_su_incolla() {
   if (!APPUNTI.acceso) {
     app_diario("Ctrl+V visto, ma gli appunti NON sono accesi");
     return;
   }
+  /* ⭐ Prima di tutto: si da' all'incolla del browser un posto dove andare.
+   *    ⚠ Anche dove la sorveglianza c'e' (Chrome): costa un `focus()` e toglie
+   *    di mezzo il caso in cui la sorveglianza non abbia visto la copia perche'
+   *    e' avvenuta in un'altra finestra. */
+  incolla_campo_prendi();
   app_diario("Ctrl+V visto · sorveglianza=«"
              + (APPUNTI.sorvegliata || "nessuna") + "»");
   /* ⛔ Con la sorveglianza accesa non si fa niente: il testo e' gia' arrivato
@@ -5292,13 +5379,33 @@ function appunti_su_incolla() {
          + "Non e' un guasto, e' una funzione che non c'e'");
       return;
     }
+    /* ⛔⛔⭐ E SE `readText()` NON RISPONDE, LO SI DICE ALL'UTENTE — 20 agosto
+     *      2026, e senza questa riga il difetto e' INVISIBILE.
+     *
+     * `[M]` Su Firefox in sessione **Wayland** la promessa di `readText()`
+     * resta appesa: il browser ha aperto il suo bottoncino «Incolla» e aspetta
+     * un clic.  ⛔ La promessa non si risolve e non fallisce: nessun `then`,
+     * nessun `catch`, **nessuna riga** — e l'utente vede una cosa che «non
+     * funziona» senza niente da leggere.  ⇒ Il silenzio si rompe qui. */
+    let risposto = false;
+    setTimeout(() => {
+      if (risposto) return;
+      nota("⚠ §9: Firefox chiede il PERMESSO per leggere i tuoi appunti e "
+         + "aspetta: cerca il bottoncino «Incolla» comparso vicino al "
+         + "puntatore e cliccalo.  ⭐ Finche' non lo fai, quel che hai copiato "
+         + "qui NON arriva al desktop remoto — e non e' un guasto nostro");
+    }, 1500);
     navigator.clipboard.readText()
       .then((t) => {
+        risposto = true;
         app_diario("`readText()` ha dato " + (t ? t.length : 0) + " caratteri");
         appunti_annuncia(t);
       })
-      .catch((e) => app_diario("⛔ `readText()` NEGATO (" + e + "): quel che hai "
-                             + "copiato qui non arriva al desktop remoto"));
+      .catch((e) => {
+        risposto = true;
+        app_diario("⛔ `readText()` NEGATO (" + e + "): quel che hai "
+                 + "copiato qui non arriva al desktop remoto");
+      });
   }, APPUNTI_ATTESA_PASTE);
 }
 
@@ -5367,24 +5474,76 @@ function avvia_appunti(negoziato) {
    *    non annuncia niente se il testo non e' cambiato. */
   document.addEventListener("paste", (ev) => {
     if (!APPUNTI.acceso || !ev.clipboardData) return;
-    APPUNTI.ultimo_paste_ms = Date.now();
     const t = ev.clipboardData.getData("text/plain");
     app_diario("evento `paste` arrivato · " + (t ? t.length : 0) + " caratteri");
-    if (t) appunti_annuncia(t);
+    /* ⛔⛔⭐ UN `paste` VUOTO NON E' UNA CONSEGNA — 20 agosto 2026.
+     *
+     * ⚠ Qui `ultimo_paste_ms` si segnava PRIMA di guardare se ci fosse del
+     *   testo.  ⇒ Un evento che arriva con **zero caratteri** — `[M]` succede,
+     *   l'ho misurato — spegneva il ripiego `readText()` («l'evento paste e'
+     *   arrivato: strada gratis»), e allora NON PROVAVA PIU' NIENTE: la
+     *   clipboard del dispositivo non arrivava mai al desktop remoto, e nessuna
+     *   riga diceva perche'.
+     * ⇒ Si segna solo quando il testo c'e' davvero. */
+    if (t) {
+      APPUNTI.ultimo_paste_ms = Date.now();
+      appunti_annuncia(t);
+    }
     /* ⛔ E NON si chiama `preventDefault()`: i tasti devono arrivare al desktop
      *    remoto per la loro strada (§7.3), o l'utente avrebbe copiato senza
      *    aver mai incollato. */
   });
 
   /* ── Il testo che aspettava un gesto per entrare negli appunti ─────────── */
-  const riprova = () => {
+  /* ⛔⛔⭐ E IL GESTO NON PUO' ESSERE IL `Ctrl+V` — 20 agosto 2026, difetto
+   *      trovato dal banco `07-b54` mentre si curava un altro difetto.
+   *
+   * ⚠ Il `Ctrl+V` e' l'istante in cui l'utente sta INCOLLANDO quel che ha
+   *   appena copiato lui.  Scrivendoci sopra il testo che veniva dal desktop
+   *   remoto si distruggono gli appunti dell'utente **proprio mentre li usa** —
+   *   e il verso dispositivo → sessione manderebbe al desktop remoto il testo
+   *   che il desktop remoto ci aveva mandato: un'eco al posto della copia.
+   * ⛔ `[M]` E' successo davvero, e il registro lo mostra in tre righe:
+   *   «`readText()` ha dato 37 caratteri» — i 37 del testo REMOTO — e poi
+   *   «annuncio saltato: identico all'ultimo».
+   * ⇒ Ogni altro gesto va bene; questo no. */
+  const riprova = (ev) => {
     if (APPUNTI.in_attesa_di_gesto === null) return;
+    /* ⛔ E i gesti DELLA CLIPBOARD non contano: `Ctrl+V` e' l'utente che
+     *    incolla, `Ctrl+C`/`Ctrl+X` e' l'utente che copia.  In tutti e tre i
+     *    casi gli appunti sono SUOI in quell'istante, e scriverci sopra il
+     *    testo che aspettava vorrebbe dire rubargli la copia di mano.
+     * ⚠ `[M]` 20 agosto 2026: col solo `Ctrl+V` escluso, il banco ha visto il
+     *   testo remoto entrare al `Ctrl+C` — e il desktop remoto ha ricevuto
+     *   indietro il PROPRIO testo invece di quello dell'utente. */
+    if (ev && ev.type === "keydown" && ev.ctrlKey && !ev.altKey && !ev.metaKey
+        && ["v", "V", "c", "C", "x", "X"].indexOf(ev.key) >= 0) {
+      app_diario("c'e' un testo che aspetta un gesto, ma il gesto e' un "
+                 + "`Ctrl+" + ev.key.toUpperCase() + "`: NON glielo scrivo "
+                 + "sopra — in questo istante gli appunti sono dell'utente");
+      return;
+    }
     const t = APPUNTI.in_attesa_di_gesto;
     APPUNTI.in_attesa_di_gesto = null;
     scrivi_negli_appunti(t);
   };
   document.addEventListener("pointerdown", riprova, true);
   document.addEventListener("keydown", riprova, true);
+  /* ⛔⭐ E SE L'UTENTE COPIA, IL TESTO IN ATTESA SI BUTTA.
+   *
+   * ⚠ Non e' prudenza: il testo aspettava un gesto per entrare negli appunti
+   *   del dispositivo, ma se nel frattempo l'utente ha copiato qualcosa di suo,
+   *   quel posto e' occupato da una cosa che vale di piu' — la sua.  ⇒ Si
+   *   dichiara e si butta, invece di scriverci sopra al primo clic. */
+  const l_utente_ha_copiato = () => {
+    if (APPUNTI.in_attesa_di_gesto === null) return;
+    APPUNTI.in_attesa_di_gesto = null;
+    app_diario("l'utente ha copiato qualcosa di suo: BUTTO il testo che veniva "
+               + "dal desktop remoto e aspettava un gesto — i suoi appunti "
+               + "valgono di piu'");
+  };
+  document.addEventListener("copy", l_utente_ha_copiato, true);
+  document.addEventListener("cut", l_utente_ha_copiato, true);
 
   /* ⛔ §9: «si dichiara quel che non si puo' fare».  Questa riga e' quella
    *    dichiarazione, ed e' diversa su ogni motore — quindi si scrive quel che
@@ -6609,6 +6768,20 @@ function cl_utilizzabile() {
 function cl_nel_modulo(ev) {
   const t = (ev && ev.target) || document.activeElement;
   if (!t || !t.tagName) return false;
+  /* ⛔⭐⭐ IL CAMPO DELL'INCOLLA E' L'UNICA ECCEZIONE, ED E' DICHIARATA QUI —
+   *      20 agosto 2026.
+   *
+   * Questa guardia esiste per una cosa sola: mentre l'utente scrive nel modulo
+   * d'accesso, i tasti sono del MODULO e non del desktop remoto.  ⛔ Ma il
+   * campo nascosto che fa nascere l'evento `paste` (§9, `incolla_campo_prendi`)
+   * e' un `TEXTAREA` **che l'utente non vede e non usa**: se lo si trattasse
+   * come il modulo, per 400 ms dopo ogni `Ctrl+V` la tastiera smetterebbe di
+   * arrivare al desktop remoto — cioe' proprio l'incolla che l'utente sta
+   * facendo non partirebbe.
+   * ⚠ E' l'ostacolo che il riquadro di §9 dava per insormontabile («la cura
+   *   ovvia non si puo' fare»): si puo', a patto di nominare l'eccezione
+   *   invece di allargare la regola. */
+  if (t.id === "incolla-nascosto") return false;
   const n = t.tagName.toUpperCase();
   return n === "INPUT" || n === "TEXTAREA" || n === "SELECT" || t.isContentEditable === true;
 }

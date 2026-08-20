@@ -1107,3 +1107,79 @@ Un difetto di ordine di dichiarazione diventato, per due minuti, un difetto di p
 
 ---
 
+### 9.4 · ⛔⛔⭐ «DA SERVER A CLIENT FUNZIONA, IL CONTRARIO NO» — su Firefox, e le cause erano TRE
+
+*20 agosto 2026, riferito dall'utente. ⚠ E il verso che non funzionava è quello che nessun banco
+aveva mai provato **con i tasti veri su un browser vero**: `07-b45` misurava il protocollo, non il
+percorso del browser.*
+
+#### La riproduzione, ed è la parte che decide
+
+⛔ **In headless il difetto NON si vede**: l'evento `paste` arriva lo stesso. Neanche su X11 (Xvfb).
+⭐ Si vede in **un compositore Wayland annidato** (`cage`), con il testo copiato da **un'altra
+applicazione** — cioè l'ambiente dell'utente. `[M]` Il diario della pagina, tre righe:
+
+```
+appunti · Ctrl+V visto · sorveglianza=«nessuna»
+appunti · evento `paste` arrivato · 0 caratteri          ← VUOTO
+appunti · l'evento `paste` è arrivato: strada gratis, nessun permesso
+```
+
+e `annunciati: 0`: **non è mai partito niente**.
+
+#### Le tre cause, e sono tutte nostre
+
+| | la causa | perché mordeva |
+|---|---|---|
+| 1 | ⛔ **un `paste` vuoto contava come consegna** | `ultimo_paste_ms` si segnava **prima** di guardare se ci fosse del testo ⇒ il ripiego `readText()` veniva spento («strada gratis») e non si provava più niente |
+| 2 | ⛔ **non c'era niente di modificabile a fuoco** | e l'evento `paste` nasce solo lì. ⚠ Il commento di §9 diceva *«la cura ovvia non si può fare»* perché un `TEXTAREA` a fuoco spegne la tastiera (`cl_nel_modulo`) — ⭐ **era falso**: bastava **nominare l'eccezione** invece di rinunciare |
+| 3 | ⛔ **il testo «in attesa di gesto» rubava gli appunti** | il testo venuto dal desktop remoto aspettava un gesto per entrare negli appunti locali, e il gesto poteva essere **il `Ctrl+V` dell'utente** — cioè gli si scriveva sopra la copia proprio mentre la incollava. `[M]` Il banco l'ha visto: il desktop remoto riceveva **indietro il proprio testo** |
+
+#### Le cure, e sono quattro
+
+⭐ **Il campo nascosto** (`incolla_campo_prendi`): prende il fuoco **solo per i 400 ms del `Ctrl+V`**,
+l'incolla del browser ha dove andare, l'evento `paste` nasce col testo dentro, e **non si chiede
+nessun permesso**. ⛔ E `cl_nel_modulo()` lo esenta per nome: i tasti continuano ad andare al
+desktop remoto — il banco lo verifica battendo una lettera **dopo** ogni incolla.
+
+⭐ **La seconda strada**: dopo 120 ms si legge **quel che il browser ha davvero incollato nel
+campo**. Non dipende da `clipboardData`, che può arrivare vuoto. `[M]` Su X11 è la strada che ha
+consegnato: *«il campo dell'incolla porta 45 caratteri»*.
+
+⭐ **Un `paste` vuoto non conta**, quindi il ripiego `readText()` resta disponibile.
+
+⭐ **E il testo in attesa non si scrive mai su un gesto della clipboard** (`Ctrl+V`, `Ctrl+C`,
+`Ctrl+X`), ⛔ e **si butta** se l'utente copia qualcosa di suo: *«i suoi appunti valgono di più»*.
+
+⛔ **E il silenzio si rompe**: se `readText()` non risponde entro 1,5 s — su Wayland Firefox apre il
+suo bottoncino «Incolla» e **aspetta**, senza risolvere né fallire — la pagina lo **dice** all'utente
+invece di lasciarlo davanti a una cosa che «non funziona».
+
+#### ⚙ Il banco — `banchi/07-b54-appunti-due-versi.py`, e misura QUATTRO caselle
+
+*sessione→client e client→sessione, per Firefox e per Chrome, ⭐ più una quinta: **la tastiera è
+ancora viva dopo l'incolla?*** — perché una cura che aggiusta gli appunti e spegne i tasti sarebbe
+un pessimo affare.
+
+⛔ **E non usa nessun permesso speciale**: le preferenze di prova di Firefox
+(`dom.events.testing.asyncClipboard`) spegnerebbero proprio il difetto che si cerca. La clipboard si
+riempie con un `Ctrl+C` **vero** e si legge con un `Ctrl+V` **vero**. ⚠ E il gesto che sblocca la
+scrittura dev'essere un **clic del guidatore**: un evento fabbricato in JavaScript non è
+un'«attivazione dell'utente», e il browser rifiuta lo stesso.
+
+**`[M]` L'esito, 20 agosto 2026 — quattro ambienti:**
+
+| ambiente | firefox | chrome |
+|---|---|---|
+| headless | ⭐ ⭐ ⭐ | ⭐ ⭐ ⭐ |
+| X11 (Xvfb, browser veri) | ⭐ ⭐ ⭐ | ⭐ ⭐ ⭐ |
+| Wayland (`cage` annidato) | ⭐ ⭐ ⭐ | *(non provato)* |
+| copia da **un'altra applicazione** → incolla nel prodotto (X11) | ⭐ | — |
+
+⚠ **E quel che NON si è potuto provare, dichiarato**: il caso «Wayland **+** clipboard di un'altra
+applicazione **+** tasti sintetici» resta rosso, e ⛔ **non è il prodotto**: Wayland consegna gli
+appunti solo a fronte di un evento d'input **vero** (serve il *serial* del compositore), che un tasto
+finto non ha. ⇒ Su quel percorso l'ultima parola è di una tastiera vera — cioè dell'utente.
+
+---
+

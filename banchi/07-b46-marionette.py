@@ -62,7 +62,14 @@ class Marionette:
         return self.chiama("WebDriver:TakeScreenshot", {"full": False})
 
 
-def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000):
+def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
+            schermo=None):
+    """⭐ `schermo=":99"` accende un Firefox VERO su uno schermo virtuale.
+
+    ⛔ Serve perche' `--headless` NON e' un browser vero dove conta: `[M]` 20
+    agosto 2026, l'evento `paste` arriva in headless anche senza un elemento
+    modificabile a fuoco, e su un browser con schermo NO.  ⇒ Un difetto della
+    clipboard che l'utente vede si puo' misurare solo qui."""
     """Accende un Firefox con un profilo nuovo e Marionette aperta."""
     profilo = tempfile.mkdtemp(prefix="remotix-ff-")
     prefs = {
@@ -84,7 +91,14 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     if headless:
         cmd.append("--headless")
     log = open(os.path.join(profilo, "uscita.log"), "wb")
-    p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
+    amb = dict(os.environ)
+    if schermo:
+        amb["DISPLAY"] = schermo
+        # ⛔ Su una sessione Wayland, `DISPLAY` da solo non basta: Firefox
+        #    prenderebbe comunque Wayland e ignorerebbe lo schermo virtuale.
+        amb.pop("WAYLAND_DISPLAY", None)
+        amb["MOZ_ENABLE_WAYLAND"] = "0"
+    p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=amb)
     for _ in range(120):
         try:
             m = Marionette(porta)
