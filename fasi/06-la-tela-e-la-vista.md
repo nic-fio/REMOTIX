@@ -911,3 +911,58 @@ WebCodecs, cioè l'unico modo che REMOTIX ha di disegnare il desktop: non è una
 (MSE con un `<video>`): è lavoro vero, cambia le proprietà di ritardo, e va deciso — non è un
 interruttore. ⭐ Chrome per Android ha WebCodecs, e lì la strada c'è.
 
+## ⏳ 21 agosto 2026 — **quanto costerebbe MSE**, misurato prima di scrivere il percorso
+
+*Il vincolo dell'utente: «supportare pienamente Chrome e Firefox in Linux, Windows e Android».
+⛔ Firefox per Android non ha WebCodecs, quindi coprirlo vuol dire un **secondo percorso di
+disegno**: `MediaSource` con un `<video>`, a MP4 frammentato invece che ad Annex-B. ⇒ Il prezzo si
+misura prima, non dopo — banco `banchi/07-b57-quanto-costa-mse.py`.*
+
+### La misura — stesso ferro, stesso flusso (i nostri 150 fotogrammi, 2560×962, H.264 High 5.0)
+
+| | Firefox | Chrome |
+|---|---|---|
+| WebCodecs, 60/s | **60,5 ms** | **50,9 ms** |
+| MSE, 60/s | 285,4 ms — ⛔ **+225 ms** | 465,6 ms — ⛔ **+415 ms** |
+| MSE, 10/s | 246 ms — ⚠ **+17 ms** | 570 ms — **+348 ms** |
+| coda di riproduzione | 310–650 ms | 520–715 ms |
+
+⛔ **Il tetto dichiarato è 50 ms** (`SPECIFICHE.md` §3.2). ⇒ A ritmo utile MSE lo sfonda di un
+ordine di grandezza, e non per lentezza del decodificatore: il `<video>` **tiene una coda apposta**,
+perché il suo mestiere è la riproduzione fluida, non il ritardo basso.
+
+⚠ **Il limite della misura, dichiarato**: lo schermo del banco è un `Xvfb` **senza GPU**, quindi tutte
+e due le strade decodificano in software. ⭐ Ma la coda di presentazione non è una proprietà della
+scheda video, e il confronto è fra due strade **nello stesso identico posto**.
+
+⚠ **E l'inseguimento non salva**: saltare al bordo vivo porta la mediana di Firefox a 265 ms con
+**40 salti** su 150 fotogrammi — cioè un'immagine che scatta. Si scambia ritardo con scatti.
+
+### ⛔ Cinque difetti del banco, e ognuno avrebbe prodotto un numero falso
+
+Questo banco ha mentito **cinque volte** prima di misurare, e vale la pena elencarle perché sono
+tutte della stessa famiglia — *lo strumento misurava se stesso*:
+
+1. `"null"` letto come un esito: Chrome dava tre righe rosse **e funzionava**;
+2. alimentare a 10/s un MP4 che si dichiara a 60 fps: il `<video>` corre a 60, resta a secco, e
+   `requestVideoFrameCallback` vede **due** fotogrammi su cento;
+3. misurare **l'avvio** invece del regime: mediana 2,7 s con una coda di 160 ms;
+4. ⛔ **nessun gesto dell'utente**: senza un tocco il `<video>` non parte affatto — coda 3,5 s,
+   *zero* fotogrammi buttati, e sembrava «MSE bufferizza» mentre era «non è mai partito»;
+5. ⛔ **`ffmpeg -framerate` non vale per il demuxer H.264**: il file usciva a **25 fps** mentre lo
+   alimentavo a 60, e la coda che chiamavo «di MSE» era la mia differenza di ritmo. Si vede da
+   `currentTime = 5,98 s` con 150 fotogrammi: 150/25 = 6 s. ⇒ Si usa `-r`, e **si verifica con
+   `ffprobe`** invece di credere alla riga di comando.
+
+⭐ Il difetto 4 è stato trovato **da un numero incoerente**, non da un errore: «coda 3,5 s **e zero
+fotogrammi buttati**» non può descrivere un decodificatore in affanno. Un banco che avesse
+riportato solo la mediana non l'avrebbe mai fatto vedere.
+
+### ⏳ Che cosa resta da decidere — e non si decide qui
+
+⛔ Con questi numeri, «Firefox per Android pienamente supportato» e «ritardo sotto i 50 ms» **non
+stanno insieme**. ⇒ La scelta è dell'utente, e le opzioni sono nominate: accettare su quel motore un
+ritardo di un'altra classe, oppure dichiararlo non supportato finché Mozilla non porta WebCodecs su
+Android. ⚠ La misura definitiva è sul telefono, che l'hardware ce l'ha; il banco si serve alla rete
+di casa con `banchi/07-b57-servi-al-telefono.py`.
+

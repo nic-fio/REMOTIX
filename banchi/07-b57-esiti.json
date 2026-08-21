@@ -1,0 +1,183 @@
+[
+ {
+  "browser": "firefox",
+  "giri": [
+   {
+    "giro": "WebCodecs 10/s",
+    "esito": {
+     "strada": "webcodecs",
+     "mandati": 150,
+     "usciti": 150,
+     "errori": 0,
+     "presentati": 150,
+     "ms_per_mandarli": 15143,
+     "ritardo": {
+      "n": 150,
+      "mediana": 229.4,
+      "p90": 238.4,
+      "peggio": 252.5,
+      "meglio": 163.3
+     },
+     "video": {
+      "fermo": true,
+      "pronto": 0,
+      "rete": 0,
+      "tempo": 0,
+      "errore": null
+     },
+     "ritmo": 100,
+     "codec": "avc1.640032",
+     "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    }
+   },
+   {
+    "giro": "MSE 10/s",
+    "esito": {
+     "strada": "mse",
+     "insegui": false,
+     "salti": 0,
+     "fps": 10,
+     "play_rifiutato": null,
+     "mandati": 150,
+     "presentati": 103,
+     "buttati": 51,
+     "totali": 299,
+     "coda_ms": 387,
+     "ms_per_mandarli": 15300,
+     "ritardo": {
+      "n": 62,
+      "mediana": 246.7,
+      "p90": 444.4,
+      "peggio": 578.3,
+      "meglio": 85.5
+     },
+     "ritardo_con_avvio": {
+      "n": 103,
+      "mediana": 188.5,
+      "p90": 314.6,
+      "peggio": 578.3,
+      "meglio": 30.8
+     },
+     "video": {
+      "fermo": false,
+      "pronto": 2,
+      "rete": 2,
+      "tempo": 14.91,
+      "errore": null
+     },
+     "ritmo": 100,
+     "codec": "avc1.640032",
+     "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    }
+   },
+   {
+    "giro": "MSE 10/s inseguo",
+    "esito": {
+     "strada": "mse",
+     "insegui": true,
+     "salti": 40,
+     "fps": 10,
+     "play_rifiutato": null,
+     "mandati": 150,
+     "presentati": 69,
+     "buttati": 10,
+     "totali": 102,
+     "coda_ms": 650,
+     "ms_per_mandarli": 15138,
+     "ritardo": {
+      "n": 29,
+      "mediana": 265.2,
+      "p90": 542.6,
+      "peggio": 559.2,
+      "meglio": 72.6
+     },
+     "ritardo_con_avvio": {
+      "n": 69,
+      "mediana": 104.4,
+      "p90": 381.3,
+      "peggio": 559.2,
+      "meglio": 1.2
+     },
+     "video": {
+      "fermo": false,
+      "pronto": 2,
+      "rete": 2,
+      "tempo": 14.93,
+      "errore": null
+     },
+     "ritmo": 100,
+     "codec": "avc1.640032",
+     "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    }
+   },
+   {
+    "giro": "WebCodecs 60/s",
+    "esito": {
+     "strada": "webcodecs",
+     "mandati": 150,
+     "usciti": 150,
+     "errori": 0,
+     "presentati": 150,
+     "ms_per_mandarli": 3045,
+     "ritardo": {
+      "n": 150,
+      "mediana": 60.5,
+      "p90": 68.3,
+      "peggio": 77.5,
+      "meglio": 40.9
+     },
+     "video": {
+      "fermo": true,
+      "pronto": 0,
+      "rete": 0,
+      "tempo": 0,
+      "errore": null
+     },
+     "ritmo": 16,
+     "codec": "avc1.640032",
+     "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    }
+   },
+   {
+    "giro": "MSE 60/s",
+    "esito": {
+     "strada": "mse",
+     "insegui": false,
+     "salti": 0,
+     "fps": 60,
+     "play_rifiutato": null,
+     "mandati": 150,
+     "presentati": 47,
+     "buttati": 25,
+     "totali": 169,
+     "coda_ms": 310,
+     "ms_per_mandarli": 2498,
+     "ritardo": {
+      "n": 34,
+      "mediana": 285.4,
+      "p90": 307.5,
+      "peggio": 313.9,
+      "meglio": 48.9
+     },
+     "ritardo_con_avvio": {
+      "n": 47,
+      "mediana": 281.1,
+      "p90": 306.9,
+      "peggio": 313.9,
+      "meglio": 36.7
+     },
+     "video": {
+      "fermo": false,
+      "pronto": 2,
+      "rete": 2,
+      "tempo": 2.5,
+      "errore": null
+     },
+     "ritmo": 16,
+     "codec": "avc1.640032",
+     "browser": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    }
+   }
+  ]
+ }
+]

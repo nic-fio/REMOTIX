@@ -1,0 +1,331 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07-b57 — quanto costa MSE</title>
+<!--
+  07-b57 — QUANTO COSTA MSE RISPETTO A WebCodecs              21 agosto 2026
+
+  ⛔ PERCHE' ESISTE.  `[M]` Firefox per Android **non ha WebCodecs** — ne'
+     `VideoDecoder` ne' `AudioDecoder` — mentre ha WebTransport e decodifica
+     H.264 **in hardware** attraverso MSE.  ⇒ Per coprirlo servirebbe un
+     secondo percorso di disegno: `MediaSource` con un `<video>`, alimentato a
+     MP4 frammentato invece che ad Annex-B.
+
+  ⛔ E il prezzo di quel percorso e' proprio la cosa che questo prodotto tiene
+     sotto controllo: `SPECIFICHE.md` §3.2 mette il ritardo fra i numeri del
+     prodotto, con un tetto di **50 ms**.  MSE bufferizza.  ⇒ Prima di scrivere
+     una riga di quel percorso si misura QUANTO, invece di stimarlo.
+
+  ⭐ E si misura sullo STESSO flusso e sulla STESSA macchina: i 300 fotogrammi
+     che il nostro codificatore ha prodotto (2560x962, High 5.0), dati una
+     volta a WebCodecs e una volta a MSE.
+
+  Che cosa cronometra, e le due misure NON sono la stessa cosa — si dichiara:
+
+    strada=webcodecs   da `decode(chunk)` alla richiamata di uscita, piu' il
+                       primo `requestAnimationFrame` dopo aver dipinto.
+                       ⇒ decodifica + consegna alla tela.
+
+    strada=mse         da `appendBuffer(frammento)` all'istante di PRESENTAZIONE
+                       che `requestVideoFrameCallback` dichiara.
+                       ⇒ decodifica + coda di riproduzione + composizione.
+
+  ⚠ La seconda comprende **piu' cose** della prima, e apposta: la domanda non e'
+    «quanto ci mette il decodificatore» — e' «quanto tempo passa fra il byte che
+    arriva dalla rete e il pixel», che e' il numero dell'utente.
+
+    ?strada=mse|webcodecs   ?ritmo=16   ?quanti=200   ?insegui=1
+
+  ⚠ `insegui=1` accende l'inseguimento: se la coda di riproduzione cresce, si
+    salta avanti.  E' la cura ovvia, e va misurata anche lei invece di darla
+    per buona.
+-->
+<style>
+ body{background:#0f1115;color:#e6e6e6;font:13px/1.5 monospace;padding:12px}
+ video,canvas{width:640px;height:240px;background:#000;display:block;margin:8px 0}
+ b{color:#3fb950}
+</style>
+<h1 style="font-size:15px">07-b57 — quanto costa MSE</h1>
+<!-- ⛔⛔ IL BOTTONE NON E' UN VEZZO — `[M]` 21 agosto 2026, dal telefono.
+     Senza un tocco vero il `<video>` non parte (i browser non fanno partire da
+     soli quel che non e' stato chiesto), e allora i frammenti si accumulano:
+     coda 3,5 s, zero campioni a regime, zero fotogrammi buttati.  ⇒ Sembrava
+     «MSE bufferizza tre secondi» ed era «nessuno ha premuto play».
+     ⚠ E non e' nemmeno una forzatura: chi usa un desktop remoto la pagina la
+     tocca — e' la prima cosa che fa. -->
+<button id="via" style="font:16px monospace;padding:14px 22px;margin:8px 0">
+  ▶ tocca qui per cominciare</button>
+<div id="dice">…</div>
+<video id="v" muted playsinline></video>
+<canvas id="c" width="16" height="16"></canvas>
+<script>
+const P = new URLSearchParams(location.search);
+const STRADA = P.get("strada") === "webcodecs" ? "webcodecs" : "mse";
+const RITMO  = +(P.get("ritmo") || 16);
+const QUANTI = +(P.get("quanti") || 200);
+const INSEGUI = P.get("insegui") === "1";
+const CODEC = "avc1.640032";
+const dice = (t) => { document.getElementById("dice").textContent = t; };
+
+function riassunto(v) {
+  const a = v.slice().sort((x, y) => x - y);
+  const q = (p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : 0;
+  return { n: a.length, mediana: +q(0.5).toFixed(1), p90: +q(0.9).toFixed(1),
+           peggio: +(a[a.length - 1] || 0).toFixed(1),
+           meglio: +(a[0] || 0).toFixed(1) };
+}
+
+/* Le scatole di primo livello di un MP4: `init` e' tutto quel che sta prima del
+ * primo `moof`, poi ogni `moof`+`mdat` e' un fotogramma (ffmpeg
+ * `frag_every_frame`). */
+function spezza(buf) {
+  const d = new DataView(buf), u = new Uint8Array(buf);
+  const scatole = [];
+  let i = 0;
+  while (i + 8 <= u.length) {
+    const n = d.getUint32(i);
+    const t = String.fromCharCode(u[i + 4], u[i + 5], u[i + 6], u[i + 7]);
+    if (n < 8) break;
+    scatole.push([t, i, n]);
+    i += n;
+  }
+  const primo = scatole.findIndex((s) => s[0] === "moof");
+  const init = u.subarray(0, scatole[primo][1]);
+  const pezzi = [];
+  for (let k = primo; k < scatole.length; k += 2) {
+    const a = scatole[k], b = scatole[k + 1];
+    if (!b || a[0] !== "moof" || b[0] !== "mdat") break;
+    pezzi.push(u.subarray(a[1], b[1] + b[2]));
+  }
+  return { init, pezzi };
+}
+
+async function per_mse() {
+  if (typeof MediaSource === "undefined")
+    return { guaio: "questo browser non ha MediaSource" };
+  const tipo = 'video/mp4; codecs="' + CODEC + '"';
+  if (!MediaSource.isTypeSupported(tipo))
+    return { guaio: "MSE non accetta " + tipo };
+
+  dice("scarico l'MP4 frammentato (6,6 MB)… se ci mette, e' la rete di casa");
+  /* ⛔⛔ IL FILE DEV'ESSERE DICHIARATO ALLO STESSO RITMO CON CUI LO ALIMENTO —
+   *      `[M]` 21 agosto 2026, difetto del banco.
+   *
+   * ⚠ MSE riproduce alla velocita' che il file DICHIARA, non a quella con cui
+   *   arrivano i byte.  Alimentando a 10/s un MP4 che si dichiara a 60 fps, il
+   *   `<video>` corre a 60, resta a secco, riparte a scatti — e
+   *   `requestVideoFrameCallback` vede **due** fotogrammi su cento.  ⇒ Non era
+   *   una misura di MSE: era una misura di un file sbagliato. */
+  const FPS = RITMO >= 50 ? 10 : 60;
+  const buf = await (await fetch(FPS === 10 ? "h264-frammentato-10.mp4"
+                                            : "h264-frammentato.mp4",
+                                 { cache: "no-store" })).arrayBuffer();
+  const { init, pezzi } = spezza(buf);
+  const n = Math.min(QUANTI, pezzi.length);
+  dice("MSE · init " + init.length + " byte · " + pezzi.length + " frammenti, ne uso " + n);
+
+  const v = document.getElementById("v");
+  const ms = new MediaSource();
+  v.src = URL.createObjectURL(ms);
+  const sb = await new Promise((ok) => {
+    ms.addEventListener("sourceopen", () => ok(ms.addSourceBuffer(tipo)), { once: true });
+  });
+  sb.mode = "segments";
+
+  const coda = [];
+  let occupato = false;
+  const spingi = () => {
+    if (occupato || !coda.length || sb.updating) return;
+    occupato = true;
+    sb.appendBuffer(coda.shift());
+  };
+  sb.addEventListener("updateend", () => { occupato = false; spingi(); });
+  coda.push(init); spingi();
+  await new Promise((ok) => setTimeout(ok, 120));
+
+  const messo = new Float64Array(n).fill(NaN);
+  const ritardi = [];
+  const regime = [];
+  const visti = new Set();
+  let salti = 0, coda_max = 0;
+
+  const guarda = (adesso, meta) => {
+    const idx = Math.round((meta.mediaTime || 0) * FPS);
+    if (idx >= 0 && idx < n && !visti.has(idx) && !isNaN(messo[idx])) {
+      visti.add(idx);
+      ritardi.push((meta.presentationTime || adesso) - messo[idx]);
+      /* ⛔ A REGIME, e a parte: l'avvio di un `<video>` comprende l'attesa che
+       *    il browser decida di partire, che sono SECONDI e non sono il
+       *    ritardo di un desktop remoto gia' in corso.  `[M]` 21 agosto 2026:
+       *    mediana 2,7 s con una coda di 160 ms — cioe' il numero era tutto
+       *    avvio.  ⇒ Si scarta il primo terzo e si dichiara. */
+      if (idx >= Math.floor(n / 3)) regime.push((meta.presentationTime || adesso) - messo[idx]);
+    }
+    try {
+      const b = v.buffered;
+      if (b.length) {
+        const c = (b.end(b.length - 1) - v.currentTime) * 1000;
+        if (c > coda_max) coda_max = +c.toFixed(0);
+      }
+    } catch (e) { /* niente */ }
+    if (INSEGUI) {
+      try {
+        const b = v.buffered;
+        if (b.length && b.end(b.length - 1) - v.currentTime > 0.15) {
+          v.currentTime = b.end(b.length - 1) - 0.05;
+          salti++;
+        }
+      } catch (e) { /* niente */ }
+    }
+    v.requestVideoFrameCallback(guarda);
+  };
+  if (!v.requestVideoFrameCallback)
+    return { guaio: "questo browser non ha `requestVideoFrameCallback`: non so "
+                  + "dire quando il fotogramma e' arrivato allo schermo" };
+  v.requestVideoFrameCallback(guarda);
+  /* ⛔ E NON SI ASPETTA `play()`: la sua promessa si scioglie quando la
+   *    riproduzione COMINCIA, e cominciare vuol dire avere dei dati — che
+   *    arrivano dal ciclo qui sotto.  `[M]` 21 agosto 2026: aspettandola, il
+   *    banco si e' bloccato 120 secondi su ogni giro MSE.  ⇒ Si lancia e si
+   *    prende nota del rifiuto quando arriva. */
+  let play_rifiutato = null;
+  v.play().catch((e) => { play_rifiutato = String(e && e.name || e); });
+
+  const t0 = performance.now();
+  let allineato = false;
+  for (let i = 0; i < n; i++) {
+    messo[i] = performance.now();
+    coda.push(pezzi[i]);
+    spingi();
+    /* ⭐ UNA VOLTA SOLA, dopo un secondo: si salta al bordo vivo.  ⚠ Un desktop
+     *   remoto non riparte dall'inizio del filmato — non c'e' un inizio: c'e'
+     *   quel che sta succedendo adesso. */
+    if (!allineato && performance.now() - t0 > 1000) {
+      allineato = true;
+      try {
+        const b = v.buffered;
+        if (b.length) v.currentTime = Math.max(0, b.end(b.length - 1) - 0.05);
+      } catch (e) { /* niente */ }
+    }
+    await new Promise((ok) => setTimeout(ok, RITMO));
+  }
+  /* ⚠ Si aspetta che la coda finisca di uscire: quel che si sta misurando e'
+   *   proprio la coda, quindi tagliarla qui falserebbe il numero. */
+  const fine = performance.now();
+  await new Promise((ok) => setTimeout(ok, 3000));
+
+  /* ⛔ E si dice quanti ne ha BUTTATI e quanto era profonda la coda: senza
+   *    questi due numeri, «pochi fotogrammi visti» non distingue «il banco non
+   *    li ha contati» da «il browser non ce l'ha fatta». */
+  let buttati = null, totali = null;
+  try {
+    const q = v.getVideoPlaybackQuality();
+    buttati = q.droppedVideoFrames; totali = q.totalVideoFrames;
+  } catch (e) { /* niente */ }
+  return { strada: "mse", insegui: INSEGUI, salti, fps: FPS, play_rifiutato,
+           mandati: n, presentati: ritardi.length,
+           buttati, totali, coda_ms: coda_max,
+           ms_per_mandarli: +(fine - t0).toFixed(0),
+           ritardo: riassunto(regime), ritardo_con_avvio: riassunto(ritardi) };
+}
+
+async function per_webcodecs() {
+  if (typeof VideoDecoder === "undefined")
+    return { guaio: "questo browser non ha WebCodecs" };
+  dice("scarico il flusso Annex-B (6,6 MB) e l'indice…");
+  const [buf, ind] = await Promise.all([
+    fetch("h264-150.264", { cache: "no-store" }).then((r) => r.arrayBuffer()),
+    fetch("indice264-150.json", { cache: "no-store" }).then((r) => r.json()),
+  ]);
+  const u = new Uint8Array(buf);
+  const n = Math.min(QUANTI, ind.pezzi.length);
+  const tela = document.getElementById("c");
+  const bm = tela.getContext("bitmaprenderer");
+
+  const messo = new Float64Array(n).fill(NaN);
+  const ritardi = [], regime = [];
+  let usciti = 0, errori = 0, i_uscita = 0;
+
+  const dec = new VideoDecoder({
+    output: (f) => {
+      const idx = i_uscita++;
+      const t_out = performance.now();
+      createImageBitmap(f).then((b) => {
+        if (tela.width !== f.displayWidth) {
+          tela.width = f.displayWidth; tela.height = f.displayHeight;
+        }
+        bm.transferFromImageBitmap(b);
+        requestAnimationFrame((t) => {
+          if (idx >= n || isNaN(messo[idx])) return;
+          ritardi.push(t - messo[idx]);
+          /* ⛔ Lo stesso taglio dell'altra strada: si confrontano due REGIMI. */
+          if (idx >= Math.floor(n / 3)) regime.push(t - messo[idx]);
+        });
+      }).finally(() => f.close());
+      usciti++;
+      void t_out;
+    },
+    error: () => { errori++; },
+  });
+  dec.configure({ codec: CODEC, optimizeForLatency: true });
+
+  const t0 = performance.now();
+  for (let i = 0; i < n; i++) {
+    const [off, len] = ind.pezzi[i];
+    messo[i] = performance.now();
+    dec.decode(new EncodedVideoChunk({
+      type: ind.chiave[i] ? "key" : "delta",
+      timestamp: Math.round(i * 1e6 / 60),
+      data: u.subarray(off, off + len),
+    }));
+    await new Promise((ok) => setTimeout(ok, RITMO));
+  }
+  const fine = performance.now();
+  await dec.flush().catch(() => {});
+  await new Promise((ok) => setTimeout(ok, 1500));
+
+  return { strada: "webcodecs", mandati: n, usciti, errori,
+           presentati: ritardi.length,
+           ms_per_mandarli: +(fine - t0).toFixed(0),
+           ritardo: riassunto(ritardi) };
+}
+
+function stato_del_video() {
+  const v = document.getElementById("v");
+  let err = null;
+  try { err = v.error ? (v.error.code + ":" + v.error.message) : null; } catch (e) {}
+  return { fermo: v.paused, pronto: v.readyState, rete: v.networkState,
+           tempo: +(v.currentTime || 0).toFixed(2), errore: err };
+}
+
+(async function () {
+  const bottone = document.getElementById("via");
+  dice("tocca il bottone: senza un gesto il <video> non parte, e la misura "
+     + "verrebbe fuori sbagliata");
+  await new Promise((ok) => bottone.addEventListener("click", ok, { once: true }));
+  bottone.remove();
+
+  let r;
+  /* ⛔ E UNA GUARDIA CHE RIFERISCE COMUNQUE: `[M]` da Chrome per Android non e'
+   *    arrivato NIENTE, e «non e' arrivato niente» non dice se la pagina si sia
+   *    rotta, sia rimasta appesa, o non sia mai partita.  ⇒ Dopo il tempo
+   *    massimo si manda quel che c'e', compreso lo stato del `<video>`. */
+  const guardia = new Promise((ok) => setTimeout(
+    () => ok({ guaio: "TEMPO SCADUTO (120 s): non ha finito",
+               video: stato_del_video() }), 120000));
+  try {
+    r = await Promise.race([
+      STRADA === "mse" ? per_mse() : per_webcodecs(), guardia]);
+  } catch (e) {
+    r = { guaio: String(e && e.message || e), video: stato_del_video() };
+  }
+  if (!r.video) r.video = stato_del_video();
+  r.ritmo = RITMO; r.codec = CODEC; r.browser = navigator.userAgent;
+  window.RISULTATO = r;
+  dice(JSON.stringify(r));
+  /* ⭐ E l'esito torna al server del banco, cosi' si misura da un TELEFONO
+   *    senza doverlo leggere sullo schermo: e' lo stesso trucco del `/diario`
+   *    del prodotto. */
+  try { fetch("/esito?" + encodeURIComponent(JSON.stringify(r)),
+              { cache: "no-store" }); } catch (e) { /* niente */ }
+})();
+</script>

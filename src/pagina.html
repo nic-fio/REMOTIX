@@ -511,6 +511,59 @@ nota("MARCA browser: " + navigator.userAgent
      + " · dpr " + (window.devicePixelRatio || 1)
      + " · WebCodecs " + (typeof VideoDecoder === "undefined" ? "NON c'e'" : "c'e'"));
 
+/* ⛔⛔⭐ CHE COSA SA FARE QUESTO BROWSER **SENZA** WebCodecs — 21 agosto 2026.
+ *
+ * ⛔ Firefox per Android non ha WebCodecs (`[M]` Firefox 154 su Android 16, e
+ *    Mozilla lo dichiara: il supporto su mobile «is still missing»).  ⇒ Su quel
+ *    motore REMOTIX non puo' disegnare un pixel, e **nessuna scelta di codec lo
+ *    cambia**: la strada e' una sola in tutta questa pagina.
+ *
+ * ⭐ La sola strada alternativa che i browser offrono e' **MSE** — `MediaSource`
+ *    con un `<video>` — e allora la domanda da misurare e' un'altra: *quali
+ *    codec quel motore accetta da MSE, e quali decodifica in HARDWARE?*
+ *
+ * ⚠ `mediaCapabilities.decodingInfo()` e' l'unico posto in cui il web dica
+ *   qualcosa sull'hardware: `powerEfficient` vuol dire «non ci brucio la
+ *   batteria», che sui telefoni e' il modo in cui si vede un decodificatore
+ *   vero.  ⛔ Non e' una promessa di hardware — nessuna API lo e' — ed e'
+ *   comunque piu' di quanto dica `isTypeSupported`.
+ *
+ * ⇒ Questa riga esiste per DECIDERE, e va tolta quando la decisione e' presa.
+ */
+(async function marca_senza_webcodecs() {
+  const CANDIDATI = [
+    ["H.264 High",  'video/mp4; codecs="avc1.640028"'],
+    ["H.264 Base",  'video/mp4; codecs="avc1.42E01E"'],
+    ["VP9",         'video/webm; codecs="vp09.00.10.08"'],
+    ["VP8",         'video/webm; codecs="vp8"'],
+    ["AV1",         'video/mp4; codecs="av01.0.04M.08"'],
+    ["HEVC",        'video/mp4; codecs="hvc1.1.6.L93.B0"'],
+  ];
+  const pezzi = [];
+  const mse = (typeof MediaSource !== "undefined");
+  for (const [nome, tipo] of CANDIDATI) {
+    let acc = mse && MediaSource.isTypeSupported(tipo) ? "si" : "no";
+    let hw = "?";
+    try {
+      if (navigator.mediaCapabilities && navigator.mediaCapabilities.decodingInfo) {
+        const r = await navigator.mediaCapabilities.decodingInfo({
+          type: "media-source",
+          video: { contentType: tipo, width: 1920, height: 1080,
+                   bitrate: 4000000, framerate: 30 } });
+        hw = r.supported ? (r.powerEfficient ? "HW" : (r.smooth ? "sw-fluido" : "sw"))
+                         : "no";
+      }
+    } catch (e) { hw = "guasto"; }
+    pezzi.push(nome + "=" + acc + "/" + hw);
+  }
+  nota("MARCA senza-webcodecs: sicuro=" + (window.isSecureContext ? "si" : "NO")
+     + " · MediaSource " + (mse ? "c'e'" : "NON c'e'")
+     + " · VideoDecoder " + (typeof VideoDecoder === "undefined" ? "no" : "si")
+     + " · AudioDecoder " + (typeof AudioDecoder === "undefined" ? "no" : "si")
+     + " · WebTransport " + (typeof WebTransport === "undefined" ? "no" : "si")
+     + " · [MSE/decodingInfo] " + pezzi.join(" "));
+})();
+
 /* ⛔⭐ E IL SISTEMA OPERATIVO A PARTE, perche' l'`userAgent` non lo dice piu'.
  *
  * ⚠ Chrome RIDUCE l'`userAgent` apposta: scrive sempre `X11; Linux x86_64` sul
