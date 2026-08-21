@@ -1110,6 +1110,80 @@ testo»* — con `XDG_RUNTIME_DIR` che puntava a `/run/user/1001`, l'utente dell
 ⭐ **La lezione**: **un banco parametrico a metà è peggio di uno fisso** — quello fisso almeno si
 rifiuta di partire.
 
+## 8-ter · ⛔⛔⭐ 21 agosto 2026, notte — **l'audio non perde per colpa del trasporto: perde per la spirale delle chiavi**
+
+*Nasce dal `[M]` di §8: «il server ha scartato 2 200 datagram, e scrive anche perché». Il mandato
+diceva di guardare **come trattiamo i datagram rispetto agli stream**. ⛔ Era l'imputato sbagliato.*
+
+### Le quattro porte da cui un datagram non esce, e quella che morde
+
+| # | dove | chi decide |
+|---|---|---|
+| 1 | la coda di 8 posti è piena | **noi** — `[M]` non c'entra quasi mai (0-1 blocchi) |
+| 2 | un tentativo per passata | **noi** |
+| 3 | `writev_datagram` torna 0 | ngtcp2 |
+| 4 | **4 096 rimandi di fila → buttato** | **noi** — ⛔ è questa, e accanto c'è sempre `cwnd_left = 0` |
+
+### ⭐⭐ Ma la causa è a monte, e il codice l'aveva già nominata come ipotesi
+
+`[M]` Tre giri, stessa scena, `netem` sulla sola porta del banco, 30 s:
+
+| scena | audio spediti | rifiutati | purezza | banda sul filo |
+|---|---|---|---|---|
+| **3 Mbit, desktop FERMO** | **6 009** / 6 000 | 3 | ⭐ **1,000** | 1,82 su 3 |
+| 3 Mbit, desktop **che si muove** | **397** | 6 061 | ⛔ **0,18** | 3,39 |
+| **15 Mbit**, desktop che si muove | 5 997 | 15 | ⭐ **1,000** | 3,08 |
+
+⇒ ⭐ **Stessa banda, stesso audio, esiti opposti: non è la banda, è il video.** E non è nemmeno quanto
+costa l'audio: `[M]` con **Opus** — **1/32** del PCM, l'**1,6 %** del collegamento — allo stesso
+gradino si perde ancora il **58 %**.
+
+⛔⛔ **La causa è la spirale di §5.2**, e sta scritta come *ipotesi* in `webtransport.c` da prima che
+qualcuno la misurasse:
+
+- nei giri stretti il video consegna **solo chiavi** (144/144, 148/148, 107/107, 138/138, 149/149),
+  contro **2 su 1 019** a 15 Mbit;
+- il registro conta **806 richieste di chiave** e **173 righe** *«la CHIAVE N tiene ancora ~60 000
+  byte in coda e §5.2 vieta di abbandonarla: si ASPETTA»*;
+- una chiave da 60 KB su 3 Mbit occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede
+  una **ogni 150** ⇒ ⛔ **se ne chiede una nuova prima che la precedente sia uscita**;
+- in quei 160 ms nascono 32 blocchi PCM, e ognuno trova `cwnd_left = 0`.
+
+### ⛔ Perché l'audio perde e il video no — e **nessuno l'ha deciso**
+
+Il video sta su **stream**: se non passa adesso, ngtcp2 lo tiene, lo spezza e lo ritrasmette — può
+solo arrivare **tardi**. Il datagram non si spezza, non si ritrasmette, non può aspettare: **ogni
+scarsità la paga per intero l'audio**. ⇒ È quel che succede **se non si decide**.
+
+⚠ **E così com'è non è uno scambio, è un incidente**: l'audio chiede l'1,6 % del collegamento e ne
+perde il 58 %, mentre il video ne prende il 93 % in chiavi **che si autoalimentano**. Uno scambio
+deliberato sarebbe proporzionale; questo distrugge il flusso piccolo a favore di quello che è grande
+**perché sta andando male**.
+
+### ⭐ E quattro varianti del trasporto che NON cambiano niente valgono quanto una cura
+
+`[M]` allo stesso gradino: base **397** · senza il ritorno anticipato per passata **278** · senza
+`PADDING` **406** · senza `MORE`, in un pacchetto suo **514** · con la **riserva reattiva** (il video
+cede la passata) **371**.
+
+⇒ ⭐⭐ **La finestra non è contesa: è già piena.** Rinunciare a scrivere altro video **non libera quel
+che è già in volo e non è ancora stato riscontrato**. È la ragione per cui la cura non può stare nel
+pacer, e per cui le tre porte «nostre» erano l'imputato sbagliato.
+
+### Le tre forme, e la scelta
+
+| | prezzo |
+|---|---|
+| 🔸 **A · la chiave non si richiede più in fretta di quanto ci metta a uscire** — `WT_CHIAVE_RICHIESTA_MS` da costante a funzione della banda misurata | ⭐ **l'unica che attacca la causa, e non toglie niente all'audio**. ⚠ Prezzo **visibile**: su linea stretta l'immagine resta rotta più a lungo dopo una perdita |
+| **B · riserva di finestra preventiva** (non reattiva, quella è misurata a zero) | cappa il video a `cwnd − pavimento`: < 3 % quando c'è spazio, morde quando è stretta — cioè quando serve. `[?]` **non misurata**: tocca l'ordine di scrittura degli stream |
+| **C · l'audio si adatta prima di morire** | ⛔ **da sola non basta, ed è misurato**: 1/32 della banda perde ancora il 58 %. Complemento, non cura |
+
+> 🔸 **Scelta del coordinatore: si scrive A.** Le altre due spostano il conto; A toglie la causa. ⏳ E
+> il suo prezzo è **visibile all'utente**, quindi la riga sta scritta perché lo giudichi lui.
+
+⏳ `[?]` **E resta una cosa non misurata**: la spirale è provata col **cliente di prova**, non contro
+un browser vero. Quella prova la fa il coordinatore sul prodotto riunito.
+
 ## 9 · Il giudizio dell'utente
 
 *La fase si chiude su una misura giudicata dall'utente, non su un documento completo.

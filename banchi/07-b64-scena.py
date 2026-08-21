@@ -198,6 +198,25 @@ def monitor_catturato():
     return m[-1] if m else None
 
 
+def monitor_atteso(tetto_s=25.0):
+    """⛔ IL NOME DEL MONITOR SI ASPETTA — e la prima stesura no.
+
+       `[M]` 21 agosto 2026: il registro scrive «monitor «Meta-0»» ~2,9 s dopo
+       l apertura della sessione, e M3 (il tono che suona) arriva prima.  ⇒ Chi
+       legge il registro a M3 non trova il nome, la scena non parte, e il giro
+       si chiama lo stesso «il desktop lavora».  ⚠ Nei giri di ieri il difetto
+       NON si vedeva perche' il registro conteneva ancora la riga della sessione
+       precedente: cioe' funzionava per un motivo sbagliato, ed e' la forma
+       peggiore — un banco che smette di funzionare quando lo si pulisce."""
+    fine = time.time() + tetto_s
+    while time.time() < fine:
+        u = monitor_catturato()
+        if u:
+            return u
+        time.sleep(0.5)
+    return None
+
+
 def carico_accendi(quanti):
     """⛔ Due carichi, e sono due cose diverse:
          · la SCENA, che fa lavorare la cattura e il codificatore del figlio —
@@ -207,7 +226,7 @@ def carico_accendi(quanti):
        ⚠ Si dichiara quale dei due e' partito: se la scena non parte, il giro
          resta valido ma NON e' piu' «il desktop lavora», ed e' un'altra cosa."""
     stato = {"scena": None, "bruciatori": 0, "scena_perche_no": None}
-    usc = monitor_catturato()
+    usc = monitor_atteso()
     if os.access(SCENA_BIN, os.X_OK) and usc:
         log = open(os.path.join(LAV, "scena.log"), "ab")
         p = subprocess.Popen(
@@ -347,11 +366,23 @@ def giro(a):
     esiti["carico_prima"] = open("/proc/loadavg").read().split()[:3]
 
     # ── il cliente parte per primo: e' lui che apre la sessione ────────────
+    # ⭐ `--codec opus` serve al mandato sui datagram: l Opus e' quel che gira
+    #    nelle sessioni vere, e costa 1/13 della banda del PCM.  ⚠ Il giudice
+    #    dell orecchio non lo sa decodificare — con Opus si conta il TRASPORTO,
+    #    e lo si dichiara invece di far finta di aver ascoltato.
     cmd = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
-           "--utente %s --parola-file %s/parola --audio-codec pcm "
-           "--audio-scrivi %s/%s.jsonl --segnale %s/%s.segnale --resta %d"
-           % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV,
-              DENTRO_LAV, a.nome, DENTRO_LAV, a.nome, a.secondi))
+           "--utente %s --parola-file %s/parola --audio-codec %s "
+           "--audio-scrivi %s/%s.jsonl --segnale %s/%s.segnale "
+           "%s --resta %d"
+           % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, a.codec,
+              DENTRO_LAV, a.nome, DENTRO_LAV, a.nome,
+              # ⛔ SENZA `--adatta` IL VIDEO NON PARTE, e il giro misurerebbe
+              #    l audio da solo chiamandolo «audio contro video».  §6.6: il
+              #    server manda fotogrammi dopo l `ADATTA_TELA`, che la pagina
+              #    manda da se e il cliente di prova no.
+              ("--adatta %s --video-scrivi %s/%s.265" % (a.tela, DENTRO_LAV, a.nome)
+               if a.video == "si" else ""),
+              a.secondi))
     fcli = open(base + ".txt", "wb")
     cli = subprocess.Popen(["bash", "/media/REMOTIX/enter.sh", "--root", cmd],
                            stdout=fcli, stderr=fcli)
@@ -515,7 +546,8 @@ def giro(a):
         esiti["registro_audio"] = [r.strip() for r in
                                    open(os.path.join(LAV, "registro.log"), errors="replace")
                                    if "audio" in r or "R26" in r or "RTPRIO" in r
-                                   or "traboccat" in r][-25:]
+                                   or "traboccat" in r or "datagram" in r
+                                   or "cwnd_left" in r][-40:]
     except Exception:
         pass
     json.dump(esiti, open(base + ".esito.json", "w"), ensure_ascii=False, indent=1)
@@ -536,6 +568,11 @@ def principale():
     g.add_argument("--bruciatori", type=int, default=int(os.environ.get("BRUCIATORI", "20")))
     g.add_argument("--hz", type=int, default=440)
     g.add_argument("--secondi", type=int, default=30)
+    g.add_argument("--video", default="si", choices=["si", "no"],
+                   help="il cliente chiede la tela, cosi il video FLUISCE")
+    g.add_argument("--tela", default="1920x1080")
+    g.add_argument("--codec", default="pcm", choices=["pcm", "opus"],
+                   help="che cosa il cliente dichiara in audio.codec")
     g.add_argument("--nice", type=int, default=None,
                    help="rende il percorso audio piu cortese o meno (renice)")
     g.add_argument("--cpu", type=int, default=-1,
