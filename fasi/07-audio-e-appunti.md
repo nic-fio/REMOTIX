@@ -922,60 +922,43 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 
 ---
 
-## 8 · Che cosa resta `[?]`
+## 8 · Che cosa resta `[?]` — **riscritto il 21 agosto 2026**
 
-*Al 17 agosto 2026, dopo la sonda e prima del prodotto.*
+> ⛔ **Questa sezione mentiva.** Era ferma al 17 agosto *«dopo la sonda e prima del prodotto»* ed
+> elencava come aperte cose chiuse quella sera stessa dal giudizio dell'utente — *«problema audio
+> risolto»*, *«clipboard funziona in entrambi i versi»*. ⚠ Un documento di fase che racconta uno
+> stato di quattro giorni fa è la specie di difetto contro cui `PIANO.md` §0.1 esiste: chi lo legge
+> rifà lavoro già fatto, o cerca un guasto dove non c'è. ⇒ Qui c'è lo stato **vero**, e l'elenco
+> vecchio è stato tolto invece di essere lasciato accanto.
 
-- ⛔ **il dispositivo dell'utente**: Opus decodificato è `[M]` su Chrome 151 e Firefox 140esr **di
-  questo portatile**. Su **Samsung DeX** e sul telefono resta `[?]`, ed è la forma d'errore
-  **E10**. ⚠ Il telefono ce l'ha l'utente: **si chiede a lui, non si aggira**;
-- ⛔ **il datagram su rete non locale**: 1024/1214 sono presi **su cavo**. Il PCM sta dentro il
-  1024 di Chrome per 52 byte, e su rete mobile il percorso può portare meno;
-- ⛔⛔ **NESSUNO HA ANCORA SENTITO NIENTE CON UN ORECCHIO.** Tutto il verde di oggi viene da
-  giudici che misurano campioni: frequenza, ampiezza, purezza. ⚠ Il metro della fase è **I8** —
-  *«il metro è quel che l'utente vede»* — e per l'audio è quel che **sente**;
-- ⛔ **la pagina non ha mai suonato contro il prodotto**: `avvia_audio()` è scritta, la sintassi
-  regge, i pacchetti del nostro server sono decodificati da tutt'e due i motori `[M]` — ma il giro
-  *browser attaccato al prodotto che suona* non l'ha fatto nessuno. ⚠ E lì vivono le cose che
-  nessun banco può vedere: il cuscino di 60 ms, i buchi udibili, il ritardo;
-- ⛔ **la pagina non è mai stata ascoltata da un orecchio**: il ricevente è scritto e la sintassi
-  regge, ma il giro fatto è *server → cliente di prova → giudice* e *pacchetti → browser →
-  giudice*. ⚠ **Nessuno ha ancora sentito un suono uscire da un altoparlante**, ed è il metro
-  della fase (I8);
-- ⏳ **A3, il cuscino di 60 ms**: scritto e non misurato. Il riferimento tiene **300 ms**, che per
-  noi sono sei volte il tetto del video. ⚠ È 🔸 derivato: **lo giudica l'utente**, sentendolo;
-- ⏳ **il bitrate di Opus, 96 kbit/s**: scelto da me per misurare, non deciso — e `SPECIFICHE.md`
-  §10 non lo nomina;
-- ⚠ **il tono di prova non prova il ritmo dell'audio VERO**: la sua cadenza gliela dà il battito
-  di QUIC, quella dell'audio vero la darà PipeWire. Sono due orologi diversi;
-- ⛔ **la priorità in tempo reale del percorso audio**: `LEZIONI.md` §5 dice che va **concessa
-  dall'unità di sistema** e che il sintomo di quando manca è *«audio che scoppietta quando il
-  desktop lavora»*. Nessuno ha guardato che cosa concede oggi l'unità di REMOTIX;
-- ⛔⛔ **GLI APPUNTI NON HANNO MAI GIRATO CONTRO NIENTE** — 17 agosto 2026, sera. Il codice c'è, si
-  compila senza un avvertimento e il banco in processo di `rcp.c` resta verde (19 su 19), ⛔ **ma
-  nessun byte di appunti è mai passato su un filo vero**. ⚠ È lo stato che `PIANO.md` §0.3.4 chiama
-  per nome: *«il banco si certifica prima di essere creduto»* — e questo banco (`07-b45`) non è
-  stato certificato né girato;
-- ⛔ **`DISPLAY` della sessione di `prova` è `[?]`**: la sponda X11 di Mutter esiste `[R]`
-  (`STUDI.md` §gnome §10), ma su quale numero la sessione headless la esponga non lo ha misurato
-  nessuno. ⚠ Il passo 0 di `07-b45` la **cerca** e si ferma se non la trova, invece di provare `:0`
-  — ma se non c'è, **l'arbitro esterno di §2.4 non esiste** e il banco va ripensato;
-- ⛔ **`xclip` sulla macchina di prova è `[?]`**: il banco lo controlla e si ferma, ⚠ e il ripiego
-  «due pezzi nostri che si parlano» **non si prende**: `PIANO.md` §0.4 lo chiama «non confermare
-  niente»;
-- ⚠ **dove stia `clipboardchange` su Chrome è `[?]`**: la proposta WICG lo mette su
-  `navigator.clipboard`, altre letture su `document`. ⭐ La pagina prova **tutt'e due** e **scrive
-  quale ha trovato**, così la prima sessione su Chrome risponde alla domanda invece di lasciarla
-  aperta;
-- ⛔ **scrivere negli appunti locali può essere negato**, e non è un difetto: `writeText()` vuole il
-  fuoco, e su Firefox anche un gesto «caldo». ⭐ Il testo **non si perde** — si tiene da parte e ci
-  va al primo clic — ⚠ ma nessuno ha misurato **quanto spesso** serva quel secondo giro;
-- ⛔ **il verso che si usa di più non è mai stato provato da un dito umano**: «copio un indirizzo sul
-  telefono e lo incollo nella sessione» (`DECISIONI.md` §5-ter.1) è la scena che l'utente
-  giudicherà, e la cura della corsa con `Ctrl+V` (§4.5.2) è **ragionata, non misurata**;
-- ⏳ **il DeX e il telefono**, come per l'audio: `[?]`, e ce l'ha l'utente.
+### ⛔ Difetti veri, aperti
 
----
+- ⛔ **La coda dell'audio si assesta a 400–420 ms**, misurata sulla prima sessione Android
+  (Chrome, 21 agosto). ⚠ Nella stessa sessione il video non ha **un solo** fotogramma tardivo, quindi
+  non è la rete: è una coda del percorso audio, e qualcuno l'ha scelta. ⏳ **Non diagnosticata.**
+  ⇒ Chiude quando si sa **chi** la sceglie e quanto costa abbassarla.
+
+### ⏳ Aperti perché nessuno li ha ancora misurati
+
+- ⏳ **Nessuno ha ancora ascoltato l'audio da un telefono**: su Chrome per Android i contatori sono
+  verdi (8 935 blocchi ricevuti, 8 933 suonati, 2 buchi in 3 min 30) ⚠ ma il metro della fase è
+  **I8**, e per l'audio è **quel che l'utente sente**;
+- ⏳ **il cuscino di 60 ms (A3)** e **il bitrate di Opus (96 kbit/s)**: scritti, mai misurati contro
+  un giudizio. Sono 🔸 derivati, non decisi;
+- ⏳ **il datagram su rete non locale**: 1024/1214 byte sono presi **su cavo**;
+- ⏳ **la priorità in tempo reale del percorso audio**: l'unità concede `LimitRTPRIO=20`
+  (`07-b41`), ⚠ ma nessuno ha guardato che cosa ne fa PipeWire dentro il figlio.
+
+### ⭐ Chiusi dal 17 al 21 agosto — e qui c'è scritto **come**
+
+| era aperto | chiuso da |
+|---|---|
+| «gli appunti non hanno mai girato contro niente» | il giudizio dell'utente del 17 agosto sera, e poi i banchi `07-b53`, `07-b54`, `07-b56` |
+| «l'arbitro esterno del banco non esiste» | ⭐ vero, e **non si aggira**: §6.9. I banchi guidano browser veri con Marionette e CDP, e la sessione con `wl-copy`/`wl-paste` |
+| `DISPLAY` della sessione di «prova» · `xclip` sulla macchina di prova | ⛔ non servono più: la sponda X11 non c'è (`gnome-shell --no-x11`), e i banchi non la usano |
+| l'incolla col **mouse** (tasto destro → «Incolla») | §9.5 — quattro anelli, e `07-b56`: 3 su 3 per motore |
+| la clipboard del desktop **persa al collegamento** | §9.6 — il figlio rende alla sessione il testo che aveva lei |
+
 
 ## 9 · Il giudizio dell'utente
 

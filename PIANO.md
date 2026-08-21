@@ -1360,3 +1360,59 @@ codice che poi si butta.
 5. Un rilievo si chiude con **una misura**, non con una discussione.
 6. La fase si chiude quando **l'utente ha guardato e ha detto la sua** — non quando il documento è
    pieno.
+
+---
+
+# ⏳ PUNTO DI RIPRESA — 21 agosto 2026, sera
+
+*Dall'utente: «nella prossima sessione chiudiamo tutti i punti ancora aperti. Firefox per Android
+non ci rallenterà più».*
+
+## Quel che è deciso e non si riapre
+
+| | |
+|---|---|
+| **Firefox per Android** | ⛔ **NON SUPPORTATO** — `DECISIONI.md` §7.18. Il prodotto non prende più la strada MSE da solo; resta dietro `?disegno=mse` come prova, e la fase 13 decide se buttarla |
+| **REMOTIX non rincorre i difetti dei browser** | `DECISIONI.md` §0.1-bis. «Pienamente supportato» vuol dire *funziona, e sai in che condizioni* — non *uguale dappertutto* |
+| **come una sessione locale** | `DECISIONI.md` §5-ter.8: niente trucchi, niente pulsanti nostri. Su Firefox l'incolla col mouse costa un clic **di Firefox**, e §5-ter.9 lo accetta |
+
+## I punti aperti, con che cosa li chiude
+
+### Fase 7 — audio e appunti
+
+1. ⛔ **La coda dell'audio a 400–420 ms** (prima sessione Android, Chrome). ⚠ Nella stessa sessione
+   il video non ha un fotogramma tardivo ⇒ non è la rete. **Non diagnosticata.** ⇒ Chiude quando si
+   sa chi sceglie quel numero e quanto costa abbassarlo. **È l'unico difetto vero aperto.**
+2. ⏳ **Nessuno ha ascoltato l'audio da un telefono**: i contatori sono verdi, il metro della fase
+   (I8) è l'orecchio.
+3. ⏳ Il cuscino di 60 ms e il bitrate di Opus: 🔸 derivati, mai giudicati.
+4. ⏳ Il datagram su rete non locale; la priorità in tempo reale dentro il figlio.
+
+### Fase 6 — la tela e la vista
+
+5. ⏳ **Il colore del decodificatore H.264 in hardware**: `[?]` +8 livelli sulle zone chiare.
+6. ⏳ **`?video=worker` non esercitato** (il credito degli stream unidirezionali di QUIC si esaurisce).
+7. ⏳ Il costo di `createImageBitmap`, mai misurato.
+8. ⏳ Il DeX e la GPU vera: il mezzo pixel non arriva su Xvfb.
+
+### Il ferro e le prove
+
+9. ⏳ **Windows non l'ha mai visto nessuno**: il vincolo dichiara Chrome e Firefox su Linux,
+   **Windows** e Android. Delle tre piattaforme, due sono misurate.
+10. ⭐ **E gli strumenti per non disturbare l'utente ci sono**: `07-b58` (browser senza WebCodecs,
+    da tavolo), `07-b59` (**Firefox per Android vero, in un emulatore**, giro completo da solo),
+    `07-b56` (incolla col mouse), `07-b51`/`07-b53`/`07-b54` (le regressioni). ⚠ E `LEZIONI.md`
+    §1.19: **chi apre chiude** — i banchi lavorano sul desktop di una persona.
+
+## Come si riparte, in due comandi
+
+```
+ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti \
+  bash banchi/07-b41-accendi.sh --porta 7730 --hz 0
+python3 banchi/07-b51-due-browser.py        # la strada normale, 4 controlli per motore
+```
+
+⚠ **Una trappola che ha morso più volte oggi**: il posto della sessione è **uno**, e quello di prima
+resta attaccato per una ventina di secondi. Due banchi di fila senza aspettare danno un rosso che
+non è del prodotto.
+
