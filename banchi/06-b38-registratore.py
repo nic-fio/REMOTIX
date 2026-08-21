@@ -61,7 +61,23 @@ def importa_il_cliente():
              "aioquic.h3", "aioquic.h3.connection", "aioquic.h3.events",
              "aioquic.quic", "aioquic.quic.configuration",
              "aioquic.quic.events"]
-    vero = "aioquic" in sys.modules
+    # ⛔⛔ E «c'e' aioquic?» SI CHIEDE A CHI LO SA, non a `sys.modules` — 21
+    #     agosto 2026.
+    #
+    #     `"aioquic" in sys.modules` guarda i moduli **gia' importati**, e a
+    #     questo punto del programma non ne ha importato nessuno: era **sempre
+    #     falso**.  ⇒ Anche con `aioquic` installato per davvero questo banco
+    #     (a) piantava i surrogati SOPRA la libreria vera e (b) stampava
+    #     «SURROGATO».  ⚠ Cioe' la riga che il banco esiste per dichiarare —
+    #     *«e si dichiara»* — diceva sempre la stessa cosa, e nessuno poteva
+    #     accorgersene: una dichiarazione che non puo' cambiare valore non e'
+    #     una dichiarazione.
+    #
+    # ⭐ `find_spec` risponde alla domanda vera: «si potrebbe importare?».
+    try:
+        vero = importlib.util.find_spec("aioquic") is not None
+    except (ImportError, ValueError):
+        vero = False
     if not vero:
         class Niente:
             pass

@@ -952,30 +952,72 @@ pazzesco»*, e ha funzionato: i buchi sono spariti. ⛔ Il prezzo era **dichiara
 ⭐ Il video, sulla stessa sessione, sta sotto i 50 ms del suo tetto ⇒ **la distanza fra i due è tutta
 qui dentro**, e non è la rete.
 
-#### ⭐ La misura, presa su una sessione VERA di Windows — 21 agosto, `07-b60`
+#### ⛔⛔ La prima lettura di questa misura era MIA, ed era SBAGLIATA in quattro punti
 
-*Chrome su Windows (192.168.0.21), un video riprodotto ~4 minuti, tutti gli anelli sulla stessa riga.*
+> *Scritto dal coordinatore la sera del 21 agosto leggendo i contatori del diario; **smentito due ore
+> dopo** dall'agente A1 con i numeri **dello stesso registro**. Resta scritto perché la forma
+> dell'errore vale più della correzione.*
 
-| anello | `[M]` |
+| avevo scritto | `[M]` è invece |
 |---|---|
-| chi **produce** (il figlio) | **50 blocchi/s spediti, 0 persi** per tutta la sessione; l'anello interno resta fra 0 e 832 fotogrammi (≤ 17 ms) |
-| chi **ascolta** (la pagina) | 10 621 ricevuti · 10 617 suonati · **BUCHI 4** (tutti dell'avvio: il numero non sale più) · vecchi 0 · errori 0 |
-| la **coda** della pagina | **239–270 ms** per i primi due minuti — cioè **esattamente il cuscino** — poi scende a **70–110 ms** e lì resta |
-| il **video** | 5 334 consegnati → 5 334 dipinti, salt 0 · buchi 0 · ord 0 · mis 0 · **tard 0** |
-| la **rete** | nessun errore UDP del kernel, nessun datagram scartato dal server |
+| «coda **239-270 ms** per i primi due minuti» | ⛔ sono **389-539 ms**. I 239-270 sono la coda **dopo il primo riarmo** |
+| «**BUCHI 4**, tutti dell'avvio, il numero non sale più» | ⛔ **1 all'avvio e 3 in mezzo alla sessione** (18:00:14, :19, :29), ognuno con una perdita di datagram nella stessa finestra |
+| «il conto chiude e **assolve tutti gli altri anelli**: non si perde niente» | ⛔ **si perde**: 61 blocchi = **1 226 ms**, lo 0,58 %. In un'altra sessione dello stesso registro: **684 blocchi, 13,7 s, il 9,43 %** — e in 25 s dentro quella, **il 47 %** |
+| «nessun datagram **scartato dal server**» | ⛔ il server ne ha scartati **2 200**, ⭐ e **scrive anche perché**: prima «il quanto del pacer», poi `cwnd_left = 0` |
 
-⭐ **Il conto chiude e assolve tutti gli altri anelli**: non si perde niente, da nessuna parte. Il
-ritardo è **accumulato apposta**, da noi, in un punto solo.
+⚠ **Come ho sbagliato, perché è la lezione**: ogni anello **contava se stesso** e diceva la verità.
+Il figlio: «50,00 spediti al secondo, 0 persi» — vero. La pagina: «10 621 ricevuti, 10 617 suonati»
+— vero. ⛔ **Nessuno dei due contava quel che stava in mezzo**, e la sottrazione non l'ha fatta
+nessuno: 50,00 spediti contro **49,71** ricevuti. Ho letto quattro colonne verdi e ho scritto
+«assolve tutti»: è la stessa forma di `LEZIONI.md` §1.20 — **un numero che nessuno confronta** — con
+l'aggravante che il numero mancante andava *calcolato*, non solo letto.
 
-⛔⭐ **E la cura vera è già nominata nel codice, dal giorno in cui il numero è stato alzato**:
-*«se è troppo, la cura non è abbassarlo ma **togliere l'audio dal thread principale** — un
-`AudioWorklet` con un anello»*. ⚠ Abbassare 250 e basta **ripaga in buchi** quel che si guadagna in
-sincronia: è la strada del 17 agosto, percorsa al contrario.
+#### ⭐⭐ E la `[?]` della coda che scende è CHIUSA: **la coda non è un cuscino, è un serbatoio a senso unico**
 
-`[?]` **E un fatto che non torna, dichiarato invece che spiegato**: nella seconda metà della
-sessione la coda **scende a 70–110 ms e ci resta**, senza un buco in più. ⇒ Se il cuscino fosse
-l'unico termine non potrebbe. Va capito **prima** di costruire l'`AudioWorklet`, perché potrebbe
-voler dire che a regime 250 non servono.
+`a.prossimo` avanzava di `n/48000` **per ogni blocco che arriva**, mai col tempo che passa. ⇒
+
+```
+coda(n) = coda(n-1) + (ricevuti − attesi) × 20 ms,   riarmata a 250 quando tocca zero
+```
+
+⛔ **Ogni datagram perduto toglie 20 ms di cuscino per sempre**, e le uniche cose che lo rialzano
+sono un **BUCO udibile** o il traboccamento a 600. Il modello riproduce la curva vera: **39 finestre
+pulite, scarto medio 15 ms, massimo 72** ⇒ **spiega**.
+
+⇒ ⛔ **I 70-110 ms non erano «un regime»**: erano il margine residuo dopo l'ultima raffica di
+perdite, campionati 25 s prima della fine della sessione. La stessa discesa, 80 secondi prima, era
+arrivata a 79 ms **e aveva fatto un buco**.
+
+⭐⭐ **E questo cambia la cura.** In questi dati **non c'è un solo indizio** che il thread principale
+abbia svuotato la riproduzione: il video ha dipinto 119-136 fotogrammi ogni 5 s **senza saltarne
+uno**. ⇒ L'`AudioWorklet` **non è la prima cura**, e il *«jitter pazzesco»* del 17 agosto è spiegato
+per intero da **perdite + serbatoio**: con un cuscino di 60 ms bastavano **tre blocchi persi**.
+
+#### ⭐ La cura scritta: l'orologio si àncora all'`istante` del server
+
+Invece di accodare (`prossimo += durata`), la riproduzione si àncora all'**`istante` che il server
+mette già in ogni datagram** (`RCP.md` §6.3). Con l'ancora, una perdita **non consuma cuscino**: il
+blocco dopo va al suo posto nel tempo, non in fondo alla fila. ⛔ `AUDIO_CUSCINO_MS` **non è stato
+abbassato**: con l'ancora deve coprire solo il jitter d'arrivo, che nessuno ha ancora misurato.
+
+⚠ **E la cura NON è provata dove conta**: sulla rete di casa, in 100 s, `mancati 0` — la scena non ha
+avuto occasione di mostrare il difetto. Quel che è provato è che **non rompe niente** (60 s: coda
+251-259 piatta, BUCHI 0, pieni 0, `usciti 2806 su 2823`) e che l'algoritmo ha le proprietà dichiarate
+(`07-b61-ancora.js`: **22 casi su 22**, che ritaglia `suona()` da `pagina.html` e la **esegue**).
+
+#### ⛔ E si aprono due cose nuove, che prima non si vedevano
+
+1. ⛔ **Il server butta i datagram dell'audio** per il quanto del pacer e per la finestra di
+   congestione, **mentre gli stream del video non perdono niente**. È del trasporto, non della
+   pagina, e nessuno l'aveva mai guardato;
+2. ⏳ **un terzo termine c'è davvero, ma non è quello che sospettavo**: la **deriva fra gli
+   orologi**, `[M]` **0,7-1,4 ms/s** fra l'orologio del server e la scheda audio del client.
+   L'ancora non la cura, e prima o poi porta al tetto dei 600 ms. Va deciso se correggerla.
+
+`[?]` **E una sentinella che non è mai scattata**: se il decodificatore Opus **ricostruisse**
+l'`istante` invece di riportarlo, l'ancora tornerebbe in silenzio a essere la scaletta di prima. La
+pagina adesso lo dichiarerebbe — ⚠ ma nelle sessioni di prova non si è perso niente, quindi la
+sentinella non ha ancora parlato.
 
 ### ⭐ E l'audio a scatti su Windows NON era nostro
 

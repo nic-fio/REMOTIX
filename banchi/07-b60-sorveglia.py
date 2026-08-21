@@ -37,6 +37,34 @@
      `AUDIO_CUSCINO_MS`: e' li' che nascono i 400 ms fra quel che si vede e
      quel che si sente, ed e' il difetto aperto della fase 7 (§8).
 
+⛔⭐ E R26 ADESSO HA UNA RISPOSTA -- 21 agosto 2026, sera, banchi 07-b64:
+
+   1. NESSUN thread del percorso audio ha SCHED_FIFO, ne' nei demoni della
+      sessione ne' dentro il figlio -- e nemmeno un `nice` negativo: sono tutti
+      `normale`, `nice 0`.  Questa sonda lo diceva gia'.
+   2. Ma il MOTIVO non era quello scritto qui sotto.  `LimitRTPRIO=20`
+      nell'unita' ARRIVA: il figlio ha `RLIMIT_RTPRIO = 20`.  Non basta lo
+      stesso, per due ragioni indipendenti, tutt'e due misurate:
+        a. su questo kernel (7.0, NIC-OS) `SCHED_FIFO` e' rifiutato a
+           QUALUNQUE processo che stia in un cgroup diverso dalla radice --
+           cioe' a ogni processo che systemd governa.  `chrt -f 10 /bin/true`
+           fallisce DA ROOT in una slice e riesce nella radice: e'
+           `CONFIG_RT_GROUP_SCHED` con cgroup v2 unificato;
+        b. e comunque `rtkit-daemon` e' spento e il gruppo `pipewire` e' vuoto,
+           quindi i demoni della sessione (`RLIMIT_RTPRIO = 0`) non potrebbero
+           chiederlo in nessun caso.
+   3. Percio' la riga che il prodotto scrive -- "priorita' di tempo reale
+      concessa dall'unita': RLIMIT_RTPRIO = 20 (R26)" -- e' vera del rlimit e
+      FALSA dell'effetto: nessuno la usa e nessuno potrebbe.
+   4. Che differenza fa: su venti core, NESSUNA (il `data-loop` aspetta 6 us su
+      un quanto di 5,33 ms).  Su un core solo col codificatore -- che e' la
+      frase di R26 alla lettera -- ~10,5 scoppiettii al secondo, e la cortesia
+      li toglie: `nice -11` -> ~2,9/s, `nice -20` -> 0,27/s e purezza 1,000.
+
+⛔ E QUEL CHE QUESTA SONDA NON VEDEVA: i contatori restano TUTTI VERDI
+   mentre l'audio e' rotto -- 0 persi, 0 traboccati, resa dei campioni 1,000.
+   Il difetto sta nei CAMPIONI, e lo sente solo `07-b64-orecchio.py`.
+
 Uso (dal portatile):  python3 banchi/07-b60-sorveglia.py [--porta 7730] [--secondi 300]
 """
 import argparse, os, re, subprocess, sys, time
@@ -102,7 +130,14 @@ def processi_utente(uid):
     return fuori
 
 def thread_stat(pid, tid):
-    """(nome, utime+stime in tick, rt_priority, policy) — dal /proc del thread."""
+    """(nome, utime+stime, rt_priority, policy, ATTESA IN CODA, quanti).
+
+    ⭐ L'ATTESA IN CODA e' l'aggiunta del 21 agosto sera, e senza di lei
+       questa sonda diceva soltanto CHE COSA e' un thread, non SE ha avuto la
+       CPU quando gli serviva.  Sta in `schedstat`, secondo campo, in
+       nanosecondi: e' il tempo passato pronto-ma-non-in-esecuzione.  Diviso
+       per i quanti da' l'unico numero confrontabile col quanto di PipeWire
+       (5,33 ms a 256 fotogrammi)."""
     try:
         d = open("/proc/%d/task/%d/stat" % (pid, tid)).read()
     except Exception:
@@ -113,8 +148,15 @@ def thread_stat(pid, tid):
     campi = d[b+2:].split()
     # campi[0] e' `state`, cioe' il 3o del formato: utime=14 → indice 11
     utime = int(campi[11]); stime = int(campi[12])
+    nice = int(campi[16])
     rtprio = int(campi[37]); policy = int(campi[38])
-    return nome, utime + stime, rtprio, policy
+    attesa = quanti = 0
+    try:
+        sc = open("/proc/%d/task/%d/schedstat" % (pid, tid)).read().split()
+        attesa, quanti = int(sc[1]), int(sc[2])
+    except Exception:
+        pass
+    return nome, utime + stime, rtprio, policy, attesa, quanti, nice
 
 POLITICA = {0: "normale", 1: "FIFO", 2: "RR", 3: "batch", 5: "idle", 6: "deadline"}
 
@@ -143,7 +185,7 @@ while time.time() - inizio < SECONDI:
         pid = pid_unita()
         if pid == 0:
             dico("%s ⛔ IL SERVER NON C'E' PIU'" % ora); prima_t = adesso; continue
-    caldi, rt_negati, dopo = [], [], {}
+    caldi, audiofili, rt_negati, dopo = [], [], [], {}
     procs = albero(pid)
     for q in processi_utente(1001):
         if q not in procs:
@@ -162,17 +204,32 @@ while time.time() - inizio < SECONDI:
             s = thread_stat(p, t)
             if not s:
                 continue
-            nome, tick, rtprio, policy = s
-            dopo[(p, t)] = tick
+            nome, tick, rtprio, policy, attesa, quanti, nice = s
+            dopo[(p, t)] = (tick, attesa, quanti)
             v = prima.get((p, t))
             if v is None:
                 continue
-            uso = (tick - v) / HZ / dt * 100.0
+            uso = (tick - v[0]) / HZ / dt * 100.0
+            att_ms = (attesa - v[1]) / 1e6
+            qn = quanti - v[2]
             etichetta = "%s/%s[%d]" % (comm, nome, t)
-            if uso >= 8.0:
-                caldi.append("%s %.0f%%%s" % (etichetta, uso,
-                             "" if policy == 0 else " " + POLITICA.get(policy, str(policy))
-                             + str(rtprio)))
+            # ⛔ I thread del percorso audio si scrivono SEMPRE, anche a
+            #   zero: sono quelli di cui parla R26, e con la sola soglia
+            #   sparivano proprio quando erano tranquilli -- cioe' nel caso che
+            #   serve come confronto (`CODER.md` 3.10).
+            audio = ("data-loop" in nome or "remotix-suono" in nome
+                     or comm in ("pipewire", "pipewire-pulse", "wireplumber"))
+            if uso >= 8.0 or (audio and "data-loop" in nome):
+                riga = ("%s %.0f%% att %.1fms/%d=%.0fus%s"
+                        % (etichetta, uso, att_ms, qn,
+                           att_ms * 1000.0 / qn if qn else 0.0,
+                           "" if policy == 0 else " " + POLITICA.get(policy, str(policy))
+                           + str(rtprio)))
+                # I `data-loop` stanno in una lista LORO: mescolati agli altri
+                # e tagliati a sei, il taglio li buttava fuori proprio quando
+                # erano tranquilli — e sono la ragione per cui questa sonda
+                # esiste.
+                (audiofili if ("data-loop" in nome) else caldi).append(riga)
             # ⛔ R26: il thread dei dati di PipeWire DEVE essere in tempo reale
             if ("pw-data" in nome or "data-loop" in nome or "pw-rt" in nome) and policy == 0:
                 rt_negati.append(etichetta)
@@ -203,11 +260,11 @@ while time.time() - inizio < SECONDI:
                 s2 = thread_stat(p, int(t))
                 if not s2:
                     continue
-                nome, _, rtprio, policy = s2
+                nome, _, rtprio, policy, _a, _q, nice2 = s2
                 if ("pw-" in nome or "data-loop" in nome or "audio" in nome.lower()
                         or "opus" in nome.lower() or "pipewire" in comm):
-                    dico("%s   R26 %s/%s[%s] → %s%d" % (ora, comm, nome, t,
-                         POLITICA.get(policy, str(policy)), rtprio))
+                    dico("%s   R26 %s/%s[%s] → %s%d nice %d" % (ora, comm, nome, t,
+                         POLITICA.get(policy, str(policy)), rtprio, nice2))
         try:
             lim = open("/proc/%d/limits" % pid).read()
             for r in lim.splitlines():
@@ -219,12 +276,19 @@ while time.time() - inizio < SECONDI:
         sessione_vista = False
         dico("%s ⛔ SESSIONE CHIUSA" % ora)
     pezzi = ["CPU carico %s" % carico]
+    if audiofili:
+        pezzi.append("AUDIO " + " · ".join(sorted(audiofili)))
     if caldi:
         pezzi.append("· ".join(sorted(caldi, reverse=True)[:6]))
     if d_udp:
         pezzi.append("⛔ UDP " + " ".join(d_udp))
     if rt_negati:
-        pezzi.append("⛔ SENZA TEMPO REALE: " + " ".join(sorted(set(rt_negati))))
+        # ⚠ La frase e' cambiata il 21 agosto sera: NON e' "manca
+        #   LimitRTPRIO nell'unita'".  Il rlimit c'e'; e' il kernel che rifiuta
+        #   SCHED_FIFO fuori dal cgroup radice (07-b64).  Chi legge questa riga
+        #   non deve andare a cercare una riga di unita' che c'e' gia'.
+        pezzi.append("SENZA TEMPO REALE (atteso su questo kernel — vedi 07-b64): "
+                     + " ".join(sorted(set(rt_negati))))
     dico("%s CPU %s" % (ora, "  ".join(pezzi[1:]) if len(pezzi) > 1 else "carico " + carico))
 OUT.write("# fine\n")
 '''

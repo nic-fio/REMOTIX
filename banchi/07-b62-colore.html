@@ -1,0 +1,217 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07-b62 — il colore, per canale e per livello</title>
+<!--
+  07-b62 — IL COLORE DEL DECODIFICATORE, PER CANALE E PER LIVELLO   21 ago 2026
+
+  ⛔ QUESTA PAGINA NON DÀ VERDETTI, e non è pigrizia: dà i NUMERI GREZZI —
+     la media di R, G e B dentro ogni riquadro — e il giudizio lo fa
+     `07-b62-testimone.py` in Python, dove si può confrontare con la formula
+     e con `ffmpeg` nello stesso posto.  Una pagina che giudica da sé è una
+     pagina che va riaperta a mano ogni volta che il giudizio cambia.
+
+  ⛔ E NON legge la media di un superblocco (è il metro di `07-b48`, che non
+     sa distinguere una matrice sbagliata da un blocco rovinato): legge i TRE
+     CANALI separati dentro riquadri di colore NOTO.
+
+  DUE PUNTI DI LETTURA, e sono due domande diverse:
+    · `copyTo`      — quel che il decodificatore consegna, prima di ogni
+                      disegno.  ⚠ Su Firefox l'H.264 esce BGRX: la
+                      conversione di colore l'ha già fatta il decodificatore,
+                      ed è precisamente l'imputata.
+    · `getImageData`— quel che la tela ha in magazzino dopo `drawImage`.
+                      ⚠ Resta il MAGAZZINO, non lo schermo (fase 06 §1.16):
+                      per il colore va bene, perché quel che manca dopo è la
+                      gestione del profilo del monitor, che non è nostra.
+
+  INTERRUTTORI
+    ?variante=x264-dichiarato   quale flusso (vedi `verita.json`)
+    ?hw=prefer-hardware         | prefer-software | no-preference
+    ?lettura=entrambi           | copyto | tela
+    ?fotogramma=-1              quale misurare (-1 = l'ultimo)
+    ?guasto=0                   ⛔ il controllo positivo: aggiunge N livelli a
+                                ogni campione sopra 180 — cioè innesta
+                                ESATTAMENTE il difetto sospettato («+8 sulle
+                                zone chiare»).  Se il banco non lo accusa,
+                                ogni suo verde è un verde che non ha guardato.
+    ?guadagno=1                 ⛔ il SECONDO controllo positivo, e cura un
+                                difetto diverso: moltiplica ogni campione per
+                                G.  Un intervallo sbagliato è esattamente
+                                questo — un guadagno — e la riga «guadagno»
+                                del testimone deve ritrovarlo.  Senza questo,
+                                il discriminatore «matrice o intervallo?» non
+                                è mai stato messo alla prova.
+-->
+<style>
+ body{background:#101216;color:#e6e6e6;font:13px/1.5 monospace;margin:0;padding:14px}
+ h1{font-size:17px;margin:0 0 6px} .sotto{color:#9aa;margin-bottom:10px}
+ #stato{font-size:15px;margin:8px 0}
+ table{border-collapse:collapse;margin-top:8px} td,th{border:1px solid #333;padding:2px 7px;text-align:right}
+ th{background:#1b1f26} td.n{text-align:left}
+ canvas{max-width:100%;border:1px solid #333;margin-top:10px;image-rendering:auto}
+</style>
+<h1>07-b62 — il colore, per canale e per livello</h1>
+<div class="sotto">riquadri di YUV noto → H.264 → il browser. Si leggono <b>R, G, B</b>, non una media di luma.</div>
+<div id="stato">…</div>
+<div id="tabella"></div>
+<canvas id="tela"></canvas>
+<script>
+const P = new URLSearchParams(location.search);
+const VARIANTE  = P.get("variante") || "x264-dichiarato";
+const HW        = P.get("hw") || "no-preference";
+const LETTURA   = P.get("lettura") || "entrambi";
+const QUALE     = P.has("fotogramma") ? Number(P.get("fotogramma")) : -1;
+const GUASTO    = P.has("guasto") ? Number(P.get("guasto")) : 0;
+const GUADAGNO  = P.has("guadagno") ? Number(P.get("guadagno")) : 1;
+const CODEC     = P.get("codec") || "avc1.640032";
+
+const stato = document.getElementById("stato");
+const tela  = document.getElementById("tela");
+function dice(t){ stato.textContent = t; }
+
+/* ⛔ IL GUASTO INNESTATO si applica AL CAMPIONE LETTO, non alla verità: così
+ *    misura la SENSIBILITÀ del banco e non cambia il metro.  E imita il
+ *    difetto sospettato alla lettera — solo le zone chiare.
+ * ⛔⛔ E NON si sottrae niente da nessuna parte: né una mediana, né uno
+ *    scostamento comune, né una normalizzazione.  Un difetto «liscio e
+ *    uniforme» — che è la forma in cui la `[?]` è scritta — È uno scostamento
+ *    comune: un metro che lo toglie prima di giudicare cerca proprio quel che
+ *    ha appena cancellato.  ⚠ È il difetto per cui la scena delle coordinate
+ *    di `06-b37` dà zero su un errore vero. */
+function sporca(v){
+  let x = v * GUADAGNO;
+  if (GUASTO && x > 180) x += GUASTO;
+  return Math.max(0, Math.min(255, x));
+}
+
+/* La media dei tre canali dentro un riquadro, da un buffer RGBA/BGRA. */
+function medie_riquadri(dati, stride_px, riquadri, ir, ig, ib){
+  const out = {};
+  for (const q of riquadri){
+    let sr=0, sg=0, sb=0;
+    for (let r=q.y; r<q.y+q.h; r++){
+      let p = (r*stride_px + q.x)*4;
+      for (let c=0; c<q.w; c++, p+=4){
+        sr += sporca(dati[p+ir]); sg += sporca(dati[p+ig]); sb += sporca(dati[p+ib]);
+      }
+    }
+    const n = q.w*q.h;
+    out[q.nome] = [sr/n, sg/n, sb/n];
+  }
+  return out;
+}
+
+(async function(){
+  if (!("VideoDecoder" in window)){ dice("⛔ niente WebCodecs qui"); return; }
+  dice("prendo la verità e il flusso «"+VARIANTE+"»…");
+  const [ver, ind, buf] = await Promise.all([
+    fetch("verita.json").then(r=>r.json()),
+    fetch(VARIANTE+".json").then(r=>r.json()),
+    fetch(VARIANTE+".264").then(r=>r.arrayBuffer()),
+  ]);
+  const L = ver.l, A = ver.a, RQ = ver.riquadri;
+  const N = ind.pezzi.length;
+  const BERSAGLIO = QUALE < 0 ? N + QUALE : QUALE;
+
+  const conf = { codec: CODEC, optimizeForLatency: true,
+                 hardwareAcceleration: HW, codedWidth: L, codedHeight: A };
+  let sost;
+  try { sost = await VideoDecoder.isConfigSupported(conf); }
+  catch(e){ dice("⛔ isConfigSupported: "+e); return; }
+  if (!sost.supported){ dice("⛔ il browser dice NO a "+CODEC+" con hw="+HW);
+    window.RISULTATO = {errore:"config non supportata", variante:VARIANTE, hw:HW}; return; }
+
+  tela.width = L; tela.height = A;
+  const ctx = tela.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" });
+
+  let usciti = 0, errori = 0, formato = "", misurato = false;
+  let medie_copyto = null, medie_tela = null, nota_copyto = "";
+  const lavori = [];
+
+  const dec = new VideoDecoder({
+    output: f => { lavori.push(misura(f)); },
+    error:  e => { errori++; dice("⛔ il decodificatore si lamenta: "+e); },
+  });
+
+  async function misura(frame){
+    const n = usciti++;
+    try {
+      if (!formato) formato = frame.format || "(nessun formato)";
+      if (n !== BERSAGLIO){ frame.close(); return; }
+      misurato = true;
+      /* --- 1 · quel che il DECODIFICATORE consegna -------------------- */
+      if (LETTURA !== "tela"){
+        const fmt = frame.format || "";
+        if (/^(RGBA|RGBX|BGRA|BGRX)/.test(fmt)){
+          const opz = { rect: {x:0, y:0, width:L, height:A} };
+          const fianco = new ArrayBuffer(frame.allocationSize(opz));
+          const piani = await frame.copyTo(fianco, opz);
+          const d = new Uint8Array(fianco, piani[0].offset, piani[0].stride*A);
+          const bgr = fmt[0] === "B";
+          medie_copyto = medie_riquadri(d, piani[0].stride/4, RQ,
+                                        bgr?2:0, 1, bgr?0:2);
+        } else {
+          /* ⛔ Planare: il decodificatore NON ha convertito, e allora non c'è
+           *    nessuna conversione sua da misurare qui.  Si DICE, invece di
+           *    convertire noi e attribuirgli il nostro conto. */
+          nota_copyto = "formato planare («"+fmt+"»): il decodificatore non "
+                      + "converte il colore, la conversione la fa il disegno";
+        }
+      }
+      /* --- 2 · quel che finisce nel magazzino della tela --------------- */
+      if (LETTURA !== "copyto"){
+        ctx.drawImage(frame, 0, 0);
+        const d = ctx.getImageData(0, 0, L, A).data;
+        medie_tela = medie_riquadri(d, L, RQ, 0, 1, 2);
+      }
+    } catch(e){
+      nota_copyto = nota_copyto || ("⛔ misura: "+e);
+    } finally { try{ frame.close(); }catch(_){} }
+  }
+
+  dec.configure(conf);
+  const dati = new Uint8Array(buf);
+  for (let i=0; i<N; i++){
+    const [off,len] = ind.pezzi[i];
+    dec.decode(new EncodedVideoChunk({
+      type: ind.chiave[i] ? "key" : "delta",
+      timestamp: i*33333,
+      data: dati.subarray(off, off+len),
+    }));
+    if ((i%10)===0) dice("dato "+(i+1)+"/"+N);
+  }
+  await dec.flush();
+  /* ⛔ `flush()` dice che i fotogrammi sono USCITI, non che le mie misure sono
+   *    FINITE: dentro `misura` c'è un `await copyTo`.  Senza questa riga il
+   *    banco scrive il verdetto mentre legge ancora (`07-b48`, 17 agosto). */
+  await Promise.all(lavori);
+  try{ dec.close(); }catch(_){}
+
+  window.RISULTATO = {
+    variante: VARIANTE, hw_chiesto: HW, codec: CODEC,
+    formato_fotogramma: formato,
+    fotogrammi_dati: N, fotogrammi_usciti: usciti,
+    fotogramma_misurato: BERSAGLIO, misurato: misurato,
+    errori: errori, guasto: GUASTO, guadagno: GUADAGNO, nota_copyto: nota_copyto,
+    copyto: medie_copyto, tela: medie_tela,
+  };
+  dice("finito: "+usciti+"/"+N+" fotogrammi · formato «"+formato+"» · "
+       +(medie_copyto?"copyTo letto":"copyTo NON letto")
+       +" · "+(medie_tela?"tela letta":"tela NON letta"));
+
+  /* una tabellina per l'occhio, sulle sole barre: la lettura vera la fa il
+     testimone */
+  const mostra = medie_copyto || medie_tela;
+  if (mostra){
+    let h = "<table><tr><th class=n>riquadro</th><th>Y</th><th>U</th><th>V</th>"
+          + "<th>R atteso</th><th>G</th><th>B</th><th>R letto</th><th>G</th><th>B</th></tr>";
+    for (const q of RQ) if (/^(barra100|limite)/.test(q.nome)){
+      const m = mostra[q.nome], e = q.rgb_709tv;
+      h += `<tr><td class=n>${q.nome}</td><td>${q.Y}</td><td>${q.U}</td><td>${q.V}</td>`
+         + `<td>${e[0].toFixed(0)}</td><td>${e[1].toFixed(0)}</td><td>${e[2].toFixed(0)}</td>`
+         + `<td>${m[0].toFixed(1)}</td><td>${m[1].toFixed(1)}</td><td>${m[2].toFixed(1)}</td></tr>`;
+    }
+    document.getElementById("tabella").innerHTML = h + "</table>";
+  }
+})();
+</script>

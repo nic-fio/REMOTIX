@@ -125,12 +125,43 @@ trap spegni EXIT
 # ⛔ Ogni giro dichiara il suo ATTESO **prima**, e poi si guarda.  L'ordine non
 #    e' cosmetico: e' la regola B0.4, ed e' l'unica cosa che distingue una
 #    misura da una spiegazione di quel che e' successo.
-giro() # $1 = nome, $2 = atteso (una riga), $3.. = opzioni del cliente
+#
+# ⛔⛔⛔ E DAL 21 AGOSTO 2026 L'ATTESO SI **CONFRONTA**, non si stampa soltanto.
+#
+# *Rilievi 4 e 5 della revisione avversariale dei sei banchi (agente A9).*
+#
+# Fino a stamattina questa funzione:
+#   · prendeva `local e=$?` del cliente, lo **stampava** e non lo usava piu';
+#   · riceveva l'atteso in `$2`, lo **stampava** e non lo usava piu'.
+#
+# ⛔ Il risultato misurato dal revisore: **un server che non rispondesse MAI a
+#    un `ADATTA_TELA` usciva verde da tutti e cinque i giri**.  Il cliente
+#    torna **5** («nessun TELA») con la connessione ancora viva, l'arbitro —
+#    giustamente — non accusa una traccia che finisce a sessione viva, e questo
+#    banco stampava *«⭐ tutti i giri della tela sono conformi»* sopra un
+#    prodotto che la tela non la implementa affatto.
+#
+# ⚠ E il banco **conosceva gia'** questo modo di sbagliare: il riquadro qui
+#   sopra racconta le cinque tracce conformi del 16 agosto in cui *«la tela non
+#   veniva esercitata affatto»*, e dice che a smascherarle era stato **il
+#   denominatore** — *«0 coppie ADATTA_TELA/TELA chiuse»*.  ⛔ Quel numero
+#   l'arbitro lo **stampa** a ogni giro, e `giro()` non lo leggeva.
+#
+# ⭐ Adesso ogni giro dichiara PRIMA tre numeri, e tutt'e tre si confrontano:
+#   l'uscita del **cliente**, le **coppie chiuse** che l'arbitro conta, e la
+#   **tela in vigore alla fine** che l'arbitro legge dai byte.
+#
+# ⛔ Il verdetto resta dell'ARBITRO — questi tre non sono un secondo giudice
+#    del protocollo: sono il **denominatore**, cioe' la prova che la scena e'
+#    stata esercitata.  «Conforme» senza denominatore vuol dire «non ho
+#    guardato», ed e' la differenza fra `LEZIONI.md` §1.3 e una misura.
+giro() # nome · uscita-cliente-attesa · coppie-attese · tela-finale-attesa · atteso · -- · opzioni
 {
-	local nome=$1 atteso=$2; shift 2
+	local nome=$1 uc=$2 coppie=$3 telafine=$4 atteso=$5; shift 6
 	log "$nome"
 	inf "⛔ ATTESO, dichiarato prima: $atteso"
-	rm -f "$LAV/$nome.rcpreg" "$LAV/$nome.txt"
+	inf "   e i tre numeri: cliente=$uc · coppie chiuse=$coppie · tela alla fine=$telafine"
+	rm -f "$LAV/$nome.rcpreg" "$LAV/$nome.txt" "$LAV/$nome-arbitro.txt"
 	dentro "python3 -u $DENTRO_ALB/banchi/01-b3-cliente.py \
 --indirizzo $IND --porta $PORTA --utente $UTENTE \
 --parola-file $DENTRO_PAROLA --registra $DENTRO_LAV/$nome.rcpreg \
@@ -138,42 +169,78 @@ $* > $DENTRO_LAV/$nome.txt 2>&1"
 	local e=$?
 	sed 's/^/    | /' "$LAV/$nome.txt" 2>/dev/null
 	inf "il cliente esce $e   (0 = a posto · 4 = caduta · 5 = ⛔ nessun TELA)"
-	# ⛔ E il verdetto lo da' l'ARBITRO, non il cliente: non si collauda il
-	#    server contro il client (§11).
+	if [ "$e" != "$uc" ]; then
+		ko "⛔ il cliente esce $e e l'atteso era $uc"
+		[ "$e" = 5 ] && ko "   ⛔⛔ 5 = NESSUN TELA: il server non risponde ad ADATTA_TELA"
+		BENE=1
+	fi
 	if [ ! -f "$LAV/$nome.rcpreg" ]; then
 		ko "nessuna traccia da giudicare per «$nome»"
 		BENE=1
 		return 1
 	fi
-	python3 "$ALB/banchi/01-b4-validatore.py" "$LAV/$nome.rcpreg"
-	local g=$?
+	python3 "$ALB/banchi/01-b4-validatore.py" "$LAV/$nome.rcpreg" \
+	    2>&1 | tee "$LAV/$nome-arbitro.txt"
+	local g=${PIPESTATUS[0]}
 	case "$g" in
 	0) ok "⭐ l'arbitro dichiara CONFORME la traccia «$nome»" ;;
 	1) ko "⛔ NON CONFORME — e il byte e la regola stanno qui sopra" ; BENE=1 ;;
 	2) ko "⚠ la REGISTRAZIONE e' rotta: e' un difetto di banco, non del filo" ; BENE=1 ;;
 	3) ko "⚠ niente da giudicare: il cliente non ha registrato niente" ; BENE=1 ;;
 	esac
+
+	# ── ⭐ IL DENOMINATORE, letto dalla riga che l'arbitro stampa gia' ──────
+	local c t
+	c=$(sed -n 's/.*la tela: \([0-9]*\) coppie.*/\1/p' "$LAV/$nome-arbitro.txt" | tail -1)
+	t=$(sed -n 's/.*tela in vigore alla fine: \([0-9]*x[0-9]*\).*/\1/p' \
+	    "$LAV/$nome-arbitro.txt" | tail -1)
+	[ -n "$c" ] || c="(l'arbitro non l'ha detto)"
+	[ -n "$t" ] || t="(mai dichiarata)"
+	if [ "$c" = "$coppie" ]; then
+		inf "coppie ADATTA_TELA/TELA chiuse: $c — come dichiarato"
+	else
+		ko "⛔ coppie chiuse: $c, l'atteso era $coppie — ⚠ la scena NON e' stata esercitata"
+		BENE=1
+	fi
+	if [ "$telafine" = "?" ]; then
+		# ⛔ «?» NON e' «va bene qualunque cosa»: e' «l'atteso e' due, e si
+		#    dichiara invece di sceglierne uno».  Il numero si stampa e resta
+		#    agli occhi di chi legge — che e' meno di un confronto, e va detto.
+		inf "tela in vigore alla fine: $t   ⚠ NON pretesa (due strade legali)"
+	elif [ "$t" = "$telafine" ]; then
+		inf "tela in vigore alla fine: $t — come dichiarato"
+	else
+		ko "⛔ tela alla fine: $t, l'atteso era $telafine"
+		BENE=1
+	fi
 	return "$g"
 }
 
-giro "1-tela-all-attacco" \
-     "TELA(ADATTATA, 1264x800) — e' la scena di DECISIONI.md §5.0-sexies" \
+# ⛔ E la tela di partenza e' quella del `SESSIONE`: `--larghezza/--altezza` del
+#    cliente valgono 1920x1080, e i giri che NON la cambiano finiscono li'.
+giro "1-tela-all-attacco" 0 1 "1264x800" \
+     "TELA(ADATTATA, 1264x800) — e' la scena di DECISIONI.md §5.0-sexies" -- \
      --adatta 1264x800 --resta 3
 
-giro "2-tela-a-caldo" \
-     "due coppie ADATTA_TELA/TELA in ordine, la seconda a sessione viva" \
+giro "2-tela-a-caldo" 0 2 "1600x900" \
+     "due coppie ADATTA_TELA/TELA in ordine, la seconda a sessione viva" -- \
      --adatta 1264x800 --adatta 1600x900@2 --resta 3
 
-giro "3-fuori-limiti" \
-     "TELA(RIFIUTATA, MISURA_FUORI_LIMITI) e la tela INVARIATA — §4.5, §7.1" \
+giro "3-fuori-limiti" 0 1 "1920x1080" \
+     "TELA(RIFIUTATA, MISURA_FUORI_LIMITI) e la tela INVARIATA — §4.5, §7.1" -- \
      --adatta 8000x4320 --resta 2
 
-giro "4-lato-dispari" \
-     "⭐ o TELA(RIFIUTATA, MISURA_FUORI_LIMITI), o una tela concessa PARI: §4.5 vieta il dispari" \
+# ⚠ Qui l'atteso sulla tela finale e' DUE: o il rifiuto (1920x1080), o una
+#   concessione pari (1280x800).  ⛔ Un atteso «uno dei due» non si confronta
+#   con una stringa sola, e fingere che ce ne sia uno solo sarebbe scegliere al
+#   posto del prodotto — quindi qui il numero si DICHIARA e non si pretende, e
+#   la riga lo dice invece di lasciarlo credere.
+giro "4-lato-dispari" 0 1 "?" \
+     "⭐ o TELA(RIFIUTATA, MISURA_FUORI_LIMITI) con 1920x1080, o una tela concessa PARI: §4.5 vieta il dispari.  ⚠ La tela finale qui NON si pretende: sono due strade tutt'e due legali" -- \
      --adatta 1281x800 --resta 2
 
-giro "5-vista-non-tocca-la-tela" \
-     "nessun TELA dopo la VISTA — §7.1: «VISTA NON DEVE far cambiare la tela»" \
+giro "5-vista-non-tocca-la-tela" 0 1 "1264x800" \
+     "nessun TELA dopo la VISTA — §7.1: «VISTA NON DEVE far cambiare la tela».  ⛔ E la tela alla fine DEVE essere ancora 1264x800: se la VISTA l'avesse cambiata, questo numero lo direbbe" -- \
      --adatta 1264x800 --vista 640x401 --resta 3
 
 # ---------------------------------------------------------------------------

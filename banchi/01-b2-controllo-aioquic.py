@@ -36,6 +36,7 @@ stata «no» sarebbe caduto l'arbitro.
 ---------------------------------------------------------------------------
 """
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -49,7 +50,13 @@ from aioquic.h3.events import (
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.events import ProtocolNegotiated, QuicEvent
 
-CERTIFICATI = Path("/media/REMOTIX/b2-certificati")
+# ⛔ La cartella dei certificati si puo' SPOSTARE, e il 21 agosto 2026 questa
+#    riga era un percorso fisso: `/media/REMOTIX` non esiste sul portatile, e
+#    il controllo positivo — l'unico programma del banco che sa aprire una
+#    sessione WebTransport senza browser — non si poteva far girare in locale.
+#    ⚠ Cioe' il banco che esiste per distinguere «la candidata non regge» da
+#      «l'ambiente non regge» era esso stesso legato a UN ambiente solo.
+CERTIFICATI = Path(os.environ.get("CERTIFICATI", "/media/REMOTIX/b2-certificati"))
 # ⛔ Il percorso e' quello di `RCP.md` §2.2: l'identita' del protocollo vive
 #    li', al posto dell'ALPN che una pagina non puo' scegliere.  Un percorso
 #    diverso si rifiuta con 404 — ed e' §3 applicata al primo byte.

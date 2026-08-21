@@ -334,6 +334,24 @@ static void raccogli(void)
 
 static uint64_t orologio;
 
+/* ⛔⭐ L'ORA A CUI NASCE LA CONNESSIONE, E QUANTO DURA IL SECONDO FISSO.
+ *
+ * Erano due letterali dentro `apri_sessione()` — 1000 e 1500 — e sono diventati
+ * due variabili il **21 agosto 2026**, per un caso solo: la **data zero** di
+ * `rcp_tela_adattata()` (caso 24).  ⚠ Con la nascita a 1000 e il secondo fisso
+ * a 1500 la sessione si apre a 2500 ms, e a 2500 ms **nessun** difetto legato a
+ * `tela_grazia_da = 0` puo' vedersi: `2500 - 0 > TELA_GRAZIA`.
+ *
+ * ⛔ E NON e' un trucco per far passare un caso: e' l'unico modo di mettere
+ *    l'orologio dove il difetto vive.  §4.4-bis vuole che fra `CREDENZIALI` e
+ *    `AMMESSO` passi **almeno** un secondo, e `rcp.c:6941` scrive `< 1000`
+ *    ⇒ mille millisecondi esatti sono conformi.  Chi cambiasse quel `<` in
+ *    `<=` farebbe fallire il caso 24 con «la sessione non si e' aperta», e la
+ *    riga qui sotto e' quel che glielo spiega.
+ * ⛔ `azzera()` li rimette com'erano: valgono per una sola apertura. */
+static uint64_t orologio_nascita = 1000;
+static uint64_t attesa_credenziali = 1500;
+
 /* ⛔ La vista dell'`ATTACCA`, quando un caso ne vuole una DIVERSA dalla tela.
  *    ⚠ Non si puo' usare «0 = non scelta» come sentinella: lo zero e'
  *    precisamente il valore che il caso 23 deve poter mandare, e un valore
@@ -375,7 +393,7 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	chiuso = false;
 	fuori_n = 0;
 	memset(&iniettato, 0, sizeof iniettato);
-	orologio = 1000;
+	orologio = orologio_nascita;
 	s = rcp_apri(&g, "10.0.0.9:5000", orologio);
 	if (!s)
 		return NULL;
@@ -401,7 +419,7 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	mettestr(&p, "prova2026");
 	n = incornicia(busta, T_CREDENZIALI, corpo, (size_t)(p - corpo));
 	rcp_ricevi(s, busta, n, orologio);
-	orologio += 1500;
+	orologio += attesa_credenziali;
 	rcp_tempo(s, orologio);
 
 	p = corpo;
@@ -505,6 +523,8 @@ static void azzera(void)
 	quanti_tela = 0;
 	sessione_l = sessione_a = 0;
 	vista_scelta = false;
+	orologio_nascita = 1000;
+	attesa_credenziali = 1500;
 	registro_azzera();
 }
 
@@ -661,7 +681,17 @@ static void caso5(void)
 	orologio += RCP_TELA_ATTESA_MS + 1;
 	rcp_tempo(s, orologio);
 	raccogli();
-	riga = dice_insieme("NON_ORA", "1600x900", "3000 ms");
+	/* ⛔⛔ E SI CERCA «rispondo NON_ORA», NON «NON_ORA» — 21 agosto 2026, e a
+	 *     dirlo e' stato il guasto `H21`, che fino a stamattina non esisteva.
+	 *
+	 *     La riga che `rcp.c` scrive quando GIRA la richiesta al palco dice
+	 *     gia': *«se non arriva entro 3000 ms si risponde NON_ORA»* — e porta
+	 *     dentro tutt'e tre i pezzi che questo caso cercava.  ⇒ Il caso era
+	 *     verde **prima ancora che il fondo scadesse**, e sarebbe rimasto verde
+	 *     con `tela_scade()` completamente muta: cioe' non provava la riga che
+	 *     dice di provare.  ⚠ Trovato solo perche' il guasto e' stato scritto:
+	 *     e' esattamente il motivo per cui un caso senza guasto non e' un caso. */
+	riga = dice_insieme("rispondo NON_ORA", "1600x900", "3000 ms");
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 3
 	    && !chiuso && riga;
 	snprintf(detto, sizeof detto, "TELA esito %u motivo %u; il registro %s",
@@ -781,7 +811,13 @@ static void caso8(void)
 	s = rimpicciolisci(&t0);
 	registro_azzera();
 	manda_puntatore(s, 1, 1900, 1000, t0 + 1500);
-	riga = dice_insieme("scaduto", "500", "1280x720");
+	/* ⛔ «scaduto da 500 ms», NON «500» — 21 agosto 2026, rilievo 3 della
+	 *    revisione avversariale.  ⚠ `strstr("500")` combacia con **1500**, che
+	 *    e' il numero che questo stesso caso mette nell'orologio: la riga
+	 *    poteva dire «scaduto da 1500 ms» — cioe' sbagliare di mille — e il
+	 *    caso restava verde.  Una ricerca troppo corta e' un verde che si
+	 *    prende un altro numero. */
+	riga = dice_insieme("scaduto da 500 ms", "grazia", "1280x720");
 	bene = chiuso && motivo_chiusura == RCP_ERRORE_PROTOCOLLO
 	    && iniettato.quanti == 0 && riga;
 	snprintf(detto, sizeof detto,
@@ -1399,6 +1435,98 @@ static void caso23(void)
 	rcp_libera(s);
 }
 
+/* 24 — ⛔⭐ LA DATA ZERO DI `rcp_tela_adattata()` — la `[?]` di
+ *      `fasi/06-la-tela-e-la-vista.md` §7.2, *«il secondo di grazia curato e
+ *      non misurato»*, e il 21 agosto 2026 smette di esserlo.
+ *
+ *      ⛔ La `[?]` diceva: *«per provarlo servirebbe un orologio che parte
+ *         sotto il secondo, e la stretta di mano ne consuma gia' 1500»*.
+ *      ⭐ Vera per un server vero, **falsa per questo banco**: qui l'orologio
+ *         e' una variabile di questo file, e §4.4-bis chiede **almeno** un
+ *         secondo, non millecinquecento (`rcp.c:6941` scrive `< 1000`).
+ *         ⇒ Nascita a 0, secondo fisso a 1000 esatti: la sessione si apre a
+ *         **1000 ms**, che e' l'ultimo istante in cui `tela_grazia_da = 0`
+ *         tiene ancora la grazia aperta (`ora - 0 <= TELA_GRAZIA`).
+ *
+ *      Che cosa cura `rcp.c:2845-2847`: `rcp_tela_adattata()` — la forma
+ *      SENZA orologio — chiama `rcp_tela_adattata_ora(…, 0)`, che riempie
+ *      `tela_prec_*` e mette `tela_grazia_da = 0`.  ⛔ Senza le tre righe che
+ *      richiudono la grazia subito dopo, la riga di registro qui accanto
+ *      DICHIARA che la grazia non si apre e la grazia **e' aperta**: due
+ *      comportamenti sotto la stessa etichetta, la forma E2.
+ *
+ *      ⚠ E il difetto e' irraggiungibile su un server vero — l'orologio
+ *        monotono non passa mai per il primo secondo — quindi la cura e'
+ *        DIFENSIVA e va provata dove vive: qui.
+ *
+ *      ATTESO: con `rcp_tela_adattata()` (senza ora) la tela cambia da
+ *      1280x720 a 800x600, e un `PUNTATORE` a (1000,700) — legale sulla tela
+ *      VECCHIA, fuori dalla nuova — a 1000 ms CHIUDE con `ERRORE_PROTOCOLLO`,
+ *      non viene iniettato, e il registro NON nomina la grazia.
+ *      ⭐ Piu' il controllo positivo nello stesso caso: la stessa scena con
+ *      `rcp_tela_adattata_ora()` DEVE invece dare la grazia, o non si starebbe
+ *      provando la data zero — si starebbe provando che la grazia non c'e'. */
+static void caso24(void)
+{
+	rcp_sessione *s;
+	bool senza_ora, con_ora, bene;
+	int iniettati_senza, iniettati_con;
+
+	/* ── a) la forma SENZA orologio: la grazia NON si apre ─────────────── */
+	azzera();
+	orologio_nascita = 0;
+	attesa_credenziali = 1000;   /* §4.4-bis: «almeno» un secondo, e 1000 lo e' */
+	s = apri_sessione(1280, 720, NULL, true, true);
+	if (!s || chiuso) {
+		esito("24 la data zero del ripiego senza orologio", false,
+		      "la sessione si apre a 1000 ms esatti",
+		      "⛔ la sessione NON si e' aperta: §4.4-bis chiede piu' di 1000 ms, "
+		      "e allora questo caso va riscritto invece che creduto");
+		if (s)
+			rcp_libera(s);
+		return;
+	}
+	rcp_tela_adattata(s, 800, 600);
+	raccogli();
+	manda_puntatore(s, 1, 1000, 700, orologio);
+	iniettati_senza = iniettato.quanti;
+	/* ⛔ E SI CERCA `"SECONDO DI GRAZIA ("`, NON `"SECONDO DI GRAZIA"`: la riga
+	 *    del RIPIEGO DICHIARATO nomina la grazia per dire che NON si apre, e
+	 *    una sottostringa nuda la trova.  ⚠ E' la stessa crepa che il revisore
+	 *    ha trovato al caso 8 (`strstr("500")` che combacia con «1500 ms»): una
+	 *    ricerca troppo corta e' un verde che si prende un'altra riga. */
+	senza_ora = chiuso && motivo_chiusura == RCP_ERRORE_PROTOCOLLO
+	         && iniettati_senza == 0 && !dice("SECONDO DI GRAZIA (");
+	rcp_libera(s);
+
+	/* ── b) ⭐ IL CONTROLLO POSITIVO: con l'ora, la grazia c'e' davvero ─── */
+	azzera();
+	orologio_nascita = 0;
+	attesa_credenziali = 1000;
+	s = apri_sessione(1280, 720, NULL, true, true);
+	rcp_tela_adattata_ora(s, 800, 600, orologio);
+	raccogli();
+	manda_puntatore(s, 1, 1000, 700, orologio);
+	iniettati_con = iniettato.quanti;
+	con_ora = !chiuso && iniettati_con == 1 && dice("SECONDO DI GRAZIA (");
+	rcp_libera(s);
+
+	bene = senza_ora && con_ora;
+	/* ⛔ E ogni termine si dice PER SE': un «visto» che riassume tre condizioni
+	 *    in una parola manda a cercare nel posto sbagliato. */
+	snprintf(detto, sizeof detto,
+	         "senza ora: %s · %d iniettati · grazia %s   ||   con ora: %s · "
+	         "%d iniettati · grazia %s",
+	         senza_ora ? "chiusa ERRORE_PROTOCOLLO" : "⛔ NON come atteso",
+	         iniettati_senza, senza_ora ? "non nominata" : "⛔ da guardare",
+	         con_ora ? "viva" : "⛔ NON come atteso", iniettati_con,
+	         con_ora ? "dichiarata" : "⛔ da guardare");
+	esito("24 la data zero del ripiego senza orologio", bene,
+	      "senza ora la grazia NON si apre (ERRORE_PROTOCOLLO a 1000 ms); con "
+	      "l'ora la stessa scena la apre — o non si starebbe provando la data zero",
+	      detto);
+}
+
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
@@ -1406,7 +1534,7 @@ int main(int argc, char **argv)
 	                        caso6,  caso7,  caso8,  caso9,  caso10,
 	                        caso11, caso12, caso13, caso14, caso15,
 	                        caso16, caso17, caso18, caso19, caso20,
-	                        caso21, caso22, caso23};
+	                        caso21, caso22, caso23, caso24};
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;

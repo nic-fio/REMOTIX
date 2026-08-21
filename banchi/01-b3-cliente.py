@@ -233,6 +233,29 @@ class Cliente(QuicConnectionProtocol):
         self.arrivati = bytearray()
         self.messaggi = asyncio.Queue()
         self.finito = False
+        # ⛔⛔ IL REGISTRATORE STA QUI, E NON NELLA CODA — 21 agosto 2026.
+        #
+        #    Fino a oggi ogni messaggio del server finiva nella traccia **nel
+        #    momento in cui qualcuno lo tirava fuori dalla coda** (`attendi()`
+        #    e `chiedi_tela()`).  ⇒ Un messaggio che arriva quando nessuno
+        #    aspetta — cioe' durante `--resta`, che e' quasi tutta la vita di
+        #    una sessione — NON entrava nella traccia affatto.
+        #
+        # ⛔ E le due regole che ci cadevano dentro sono proprio le due che
+        #    §7.1 affida all'arbitro:
+        #      · **T1** — un `TELA` NON SOLLECITATO;
+        #      · **V3** — un `TELA` dopo una `VISTA`.
+        #    L'arbitro le sa accusare (`01-b4-registrazioni.py` casi 22 e 30,
+        #    `06-b38-mutazioni.py`), ma su registrazioni **costruite**: da una
+        #    traccia di questo cliente non potevano uscire mai.  ⇒ Il giro 5 di
+        #    `06-b38-tela.sh` — *«nessun TELA dopo la VISTA»* — era **verde per
+        #    costruzione**, che `LEZIONI.md` dice essere peggio di nessun caso.
+        #
+        # ⭐ La cura e' di posto, non di logica: si registra dove i byte
+        #    ARRIVANO (`_sfoglia`), non dove vengono consumati.  ⚠ E cosi'
+        #    l'ordine dei blocchi e' quello del filo, che e' quel che §11.1
+        #    chiede.  Trovato con `06-b40-lancia.sh`, casi 6 e 9.
+        self.reg = None
         # ⛔ §3.1 punto 3: il motivo viaggia ANCHE nel codice d'errore
         #    applicativo con cui si chiude la sessione WebTransport.  Si
         #    conserva, perche' e' la seconda delle due strade — e il giorno in
@@ -746,6 +769,16 @@ class Cliente(QuicConnectionProtocol):
             corpo = bytes(self.arrivati[6:6 + lung])
             grezzo = bytes(self.arrivati[:6 + lung])
             del self.arrivati[:6 + lung]
+            # ⛔ SI REGISTRA QUI, all'arrivo: vedi il riquadro su `self.reg`.
+            if self.reg is not None:
+                self.reg.aggiungi(SERVER, grezzo)
+                if NOME.get(tipo) in ("TELA", "CURSORE_FORMA") \
+                        and self.messaggi.qsize() > 0:
+                    # ⚠ «E' arrivato mentre ce n'erano gia' altri in coda» non
+                    #   e' una violazione: e' un fatto, e chi guarda deve
+                    #   poterlo leggere senza aprire la traccia.
+                    print(f"   ·  [filo] {NOME.get(tipo)} arrivato con "
+                          f"{self.messaggi.qsize()} messaggi gia' in coda")
             self.messaggi.put_nowait((tipo, corpo, grezzo))
 
 
@@ -762,8 +795,11 @@ async def attendi(cli, quale, attesa=10.0, reg=None):
     #    PRIMA di essere messo nella traccia, e `b3-terza.rcpreg` — cioe'
     #    l'unico oggetto che il terzo giro esiste per produrre — non arrivava
     #    mai all'arbitro di B4.  ⭐ Il rifiuto e' una misura, non un incidente.
-    if reg is not None:
-        reg.aggiungi(SERVER, grezzo)
+    #    ⭐ E dal 21 agosto 2026 la riga `reg.aggiungi()` NON e' piu' qui: si
+    #       registra all'ARRIVO, dentro `Cliente._sfoglia()`, o i messaggi che
+    #       nessuno aspetta non entrano nella traccia (riquadro in `__init__`).
+    #       ⚠ `reg` resta nella firma perche' i chiamanti lo passano, e
+    #         toglierlo sarebbe una modifica piu' larga di quel che serve.
     if quale and nome != quale:
         if nome == "CONGEDO":
             motivo = corpo[0] if corpo else 0
@@ -827,7 +863,7 @@ async def chiedi_tela(cli, reg, lar, alt, tetto):
                   f"{cli.caduta}")
             return None
         tipo, corpo, grezzo = m
-        reg.aggiungi(SERVER, grezzo)
+        # ⭐ (registrato all'arrivo da `Cliente._sfoglia()`, non qui)
         nome = NOME.get(tipo, f"{tipo:#06x}")
         if nome != "TELA":
             print(f"   ·  nel frattempo: {nome} ({len(corpo)} byte)")
@@ -1006,6 +1042,11 @@ async def principale(a) -> int:
         #    stream del canale di controllo».  Con lo `0` scritto a mano quel
         #    controllo dell'arbitro guardava un numero inventato.
         reg.stream = cli.apri_controllo()
+        # ⛔ E il registratore si consegna al CLIENTE, perche' da qui in poi i
+        #    byte del server si registrano dove arrivano (riquadro in
+        #    `Cliente.__init__`).  ⚠ Prima di questa riga non puo' essere
+        #    arrivato niente: il canale di controllo non esisteva.
+        cli.reg = reg
 
         # ⛔ LA TRACCIA SI SCRIVE ANCHE QUANDO LA STRETTA DI MANO NON RIESCE.
         #

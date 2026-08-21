@@ -85,7 +85,10 @@ GUASTI = [
      '\t\treg(s, "⭐ §7.1 SECONDO DI GRAZIA (%u-esima volta): input id=%u porta "',
      '\t\treg(s, "input id=%.0s%u porta "',
      # ⚠ Anche l'11: la sua seconda meta' pretende la riga sul pixel 1280.
-     [6, 11]),
+     # ⭐ E dal 21 agosto anche il 24: il suo CONTROLLO POSITIVO pretende che la
+     #   grazia, con l'ora, si dichiari — se non si dichiara piu', il caso 24
+     #   non sta piu' provando la data zero, e deve dirlo.
+     [6, 11, 24]),
 
     ("H5-grazia-non-satura",
      "la grazia accetta la coordinata vecchia e la inietta COSI' COM'E' invece "
@@ -234,6 +237,56 @@ GUASTI = [
      "\tcase T_ADATTA_TELA:\n\tcase T_VISTA:\n\t\tle_u32(&l);\n\t\tle_u32(&l);\n\t\tbreak;",
      "\tcase 0x100B:\n\tcase 0x1008:\n\t\tle_u32(&l);\n\t\tle_u32(&l);\n\t\tbreak;",
      [22]),
+
+    # ------------------------------------------------------------------ #
+    #  G · ⛔ I TRE CASI CHE NON AVEVANO NESSUN GUASTO — 21 agosto 2026,   #
+    #      rilievo 2 della revisione avversariale dei sei banchi.          #
+    #                                                                      #
+    #      Il revisore ha misurato la cosa peggiore che si possa misurare  #
+    #      su un certificatore: togliendo i casi 4, 5 e 10 dall'array di   #
+    #      `main()` il banco restava verde e questo file stampava lo       #
+    #      stesso «19 su 19».  ⇒ Tre casi su ventitre' erano CREDUTI, non  #
+    #      certificati — e due dei tre sono punti che la 6.4 dichiara di   #
+    #      chiudere (`MISURA_FUORI_LIMITI` e `NON_ORA` nel registro).      #
+    # ------------------------------------------------------------------ #
+    ("H20-fuori-limiti-muto",
+     "⛔ `MISURA_FUORI_LIMITI` si risponde ma la riga NON dice piu' NE' il "
+     "limite violato NE' la tela con cui si continua: il byte sul filo resta "
+     "giusto, e chi diagnostica vede un rifiuto senza sapere perche' "
+     "(`RCP.md` §3.1 punto 1).  ⚠ E' il caso 4, che fino al 21 agosto 2026 "
+     "nessun guasto toccava",
+     '\t\t\t\treg(s, "ADATTA_TELA %ux%u RIFIUTATA: fuori dai limiti di §4.5 "\n'
+     '\t\t\t\t       "(%ux%u .. %ux%u) — la tela resta %ux%u",\n'
+     '\t\t\t\t    chiesta_l, chiesta_a, RCP_TELA_L_MINIMA, RCP_TELA_A_MINIMA,\n'
+     '\t\t\t\t    RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, s->tela_l, s->tela_a);',
+     '\t\t\t\treg(s, "ADATTA_TELA RIFIUTATA");',
+     [4]),
+
+    ("H21-non-ora-muto",
+     "⛔ il `NON_ORA` del FONDO si risponde e non si DICHIARA: sparisce dalla "
+     "riga il tetto in millisecondi, e con lui l'unico modo di distinguere «il "
+     "palco e' lento» da «il palco non ha risposto affatto» (§7.1).  ⚠ E' il "
+     "caso 5, anch'esso senza guasto fino al 21 agosto 2026",
+     '\treg(s, "⛔ ADATTA_TELA %ux%u: il palco non ha consegnato un fotogramma a "\n'
+     '\t       "quella misura entro %u ms — rispondo NON_ORA (§7.1: un silenzio "\n'
+     '\t       "lascerebbe il client ad aspettare per sempre, e §6.2 gli fa "\n'
+     '\t       "TRATTENERE i fotogrammi finche\' aspetta).  La tela resta %ux%u",\n'
+     '\t    s->tela_volo_l, s->tela_volo_a, (unsigned)RCP_TELA_ATTESA_MS, s->tela_l,\n'
+     '\t    s->tela_a);',
+     '\treg(s, "ADATTA_TELA: NON_ORA");',
+     [5]),
+
+    ("H22-grazia-con-la-data-zero",
+     "⛔⛔ LA DATA ZERO: `rcp_tela_adattata()` — la forma SENZA orologio — "
+     "torna a lasciare `tela_grazia_da = 0` e `tela_prec_*` pieni, cioe' la "
+     "grazia di §7.1 APERTA per tutto il primo secondo dell'orologio, mentre "
+     "la riga di registro accanto DICHIARA che non si apre.  ⚠ Due "
+     "comportamenti sotto la stessa etichetta (forma E2), e la `[?]` di "
+     "`fasi/06-la-tela-e-la-vista.md` §7.2 diceva che non si poteva provare: "
+     "si prova, e sono i casi 10 e 24",
+     "\ts->tela_prec_l = 0;\n\ts->tela_prec_a = 0;\n\ts->tela_grazia_da = 0;\n}",
+     "\t(void)0;\n}",
+     [24]),
 ]
 
 righe = []
@@ -252,6 +305,45 @@ for nome, spiega, cerca, sost, rossi in GUASTI:
 open(os.path.join(lavoro, "elenco.tsv"), "w", encoding="utf-8").write(
     "\n".join(righe) + "\n")
 PITONE
+PITONE_USCITA=$?
+
+# ---------------------------------------------------------------------------
+# ⛔⛔⛔ IL BUCO CHE STAVA QUI, e l'ha trovato la revisione avversariale dei sei
+#       banchi il 21 agosto 2026 (agente A9, rilievo 1).
+#
+# Questo script non ha `set -e`, e l'uscita del blocco Python qui sopra **non
+# la guardava nessuno**.  ⇒ Se il Python moriva a meta' — un'ancora cambiata,
+# un errore di sintassi, il disco pieno — `elenco.tsv` restava vuoto o non
+# nasceva affatto, il `while ... done < elenco.tsv` non entrava **nemmeno una
+# volta**, `stato` restava 0, e questo certificatore stampava
+# *«⭐ tutti i guasti innestati diventano rossi»* **con uscita 0**.
+#
+# ⚠ E il numero **19** non compariva da nessuna parte: nessun `wc -l`, nessun
+#   contatore.  ⇒ «19 su 19» era una frase del documento, non una misura del
+#   banco — che e' esattamente la forma `E2` (un verde che nessuno ha contato).
+#
+# ⭐ Adesso i guasti si CONTANO tre volte, e i tre numeri devono coincidere:
+#   quanti il Python ne ha scritti · quanti ce n'erano da innestare · quanti
+#   ne sono stati davvero girati.
+ATTESI=${ATTESI:-22}     # ⛔ era 19 fino al 21 agosto 2026: +H20, +H21, +H22
+if [ "$PITONE_USCITA" -ne 0 ]; then
+	printf '  \033[1;31mNO\033[0m  il generatore dei guasti e uscito %s: NON si certifica niente\n' \
+		"$PITONE_USCITA"
+	exit 2
+fi
+if [ ! -s "$LAVORO/elenco.tsv" ]; then
+	printf '  \033[1;31mNO\033[0m  «%s» non ce o e vuoto: nessun guasto da innestare\n' \
+		"$LAVORO/elenco.tsv"
+	exit 2
+fi
+SCRITTI=$(wc -l < "$LAVORO/elenco.tsv")
+if [ "$SCRITTI" -ne "$ATTESI" ]; then
+	printf '  \033[1;31mNO\033[0m  il generatore ha scritto %s guasti e ne erano dichiarati %s\n' \
+		"$SCRITTI" "$ATTESI"
+	printf '        ⛔ o si aggiorna ATTESI, o qualcosa non si e generato.\n'
+	exit 2
+fi
+printf '  \033[1;32mOK\033[0m  %s guasti generati, quanti ne erano dichiarati\n' "$SCRITTI"
 
 printf '\n== 06-b36: certificazione del banco (i guasti innestati) ==\n\n'
 
@@ -268,7 +360,9 @@ else
 fi
 
 stato=0
+girati=0
 while IFS=$'\t' read -r nome rossi _ spiega; do
+	girati=$((girati + 1))
 	if [ "$rossi" = "ANCORA" ]; then
 		printf '  \033[1;33m??\033[0m  %-26s l ancora non si trova nel codice: il guasto\n' "$nome"
 		printf '        non e stato innestato — %s\n' "$spiega"
@@ -303,8 +397,18 @@ while IFS=$'\t' read -r nome rossi _ spiega; do
 done < "$LAVORO/elenco.tsv"
 
 printf '\n'
+# ⛔ IL TERZO CONTO — e sta qui perche' un `while` che legge da un file puo'
+#    finire prima senza dirlo (una riga malformata, un `read` che fallisce).
+if [ "$girati" -ne "$SCRITTI" ]; then
+	printf '  \033[1;31mNO\033[0m  girati %s guasti su %s scritti: il ciclo si e fermato prima\n' \
+		"$girati" "$SCRITTI"
+	stato=1
+fi
+
 if [ $stato -eq 0 ]; then
-	printf '  ⭐ tutti i guasti innestati diventano rossi: il banco vede quel che dice di vedere.\n\n'
+	printf '  ⭐ %s guasti su %s: tutti innestati, tutti rossi nei casi dichiarati prima.\n' \
+		"$girati" "$ATTESI"
+	printf '  ⭐ il banco vede quel che dice di vedere.\n\n'
 else
 	printf '  ⛔ almeno un guasto resta verde o non si innesta: quel caso il banco NON lo guarda.\n\n'
 fi

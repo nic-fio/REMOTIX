@@ -2535,6 +2535,18 @@ class Schermo {
     this.epoca = 0;
     this.dipinta = null;                       /* l'ultimo rettangolo dipinto, per il registro */
     this.formato = null;                       /* `VideoFrame.format`, per il registro */
+    /* ⛔⭐ IL COSTO DEL DISEGNO, MISURATO — §4.9 lo lasciava `[?]`: «il ritardo
+     * che aggiunge non e' ancora misurato».  Sta nel percorso di TUTTI i
+     * fotogrammi, e il tetto e' 50 ms (`CODER.md` §1-bis).
+     * ⛔ E il confine si sposta nella direzione SCOMODA: `bmp_ms` conta dalla
+     *    CHIAMATA a `createImageBitmap` fino all'immagine IN MANO — l'attesa in
+     *    coda compresa, che e' tempo che il fotogramma passa fermo.  Il confine
+     *    comodo (solo il lavoro del motore) non e' misurabile da qui e sarebbe
+     *    piu' piccolo.
+     * ⚠ Due `performance.now()` per fotogramma: 60 al secondo sono ~4 µs, cioe'
+     *   sotto il rumore di quel che misurano. */
+    this.bmp_ms = [];                          /* createImageBitmap: chiamata → immagine */
+    this.vetro_ms = [];                        /* immagine in mano → tela trasferita */
     this.ultimo_consegnato = null;             /* §6.2: «l'ultimo GIA' CONSEGNATO» */
     this.atteso = null;
     this.sospeso = false;                      /* c'e' un buco aperto (§5.2) */
@@ -2938,8 +2950,15 @@ class Schermo {
    *      `drawImage` nel deposito, che questa strada NON fa piu'. */
   mostra(f, fl, fa) {
     const n = ++this.serie, e0 = this.epoca;
+    const t_bmp = performance.now();
 
     createImageBitmap(f).then((bmp) => {
+      /* ⛔ Si segna PRIMA di qualunque scarto: un'immagine buttata perche'
+         tardiva e' costata comunque il suo tempo, e non contarla farebbe
+         sembrare la strada piu' rapida di quel che e'. */
+      const d_bmp = performance.now() - t_bmp;
+      this.bmp_ms.push(d_bmp);
+      if (this.bmp_ms.length > 200) this.bmp_ms.shift();
       try { f.close(); } catch (e) { /* gia' chiuso */ }
       /* ⛔ Due modi di essere in ritardo, e vanno distinti: un'immagine di
          un'ALTRA sessione (epoca diversa) e una piu' vecchia di quella gia' al
@@ -2984,7 +3003,10 @@ class Schermo {
        *   senza chiedere a nessuno chi sia — `CODER.md` §3.9, *si chiede per
        *   nome e si verifica che sia stato dato*. */
       if (cambia) { this.tela.width = fl; this.tela.height = fa; }
+      const t_vetro = performance.now();
       this.bm.transferFromImageBitmap(bmp);
+      this.vetro_ms.push(performance.now() - t_vetro);
+      if (this.vetro_ms.length > 200) this.vetro_ms.shift();
       this.conti.dipinti++;
       /* ⭐ E l'immagine e' nuova davvero solo qui — la stessa ragione della
          strada vecchia: `SCENA` non deve ringiovanire per un ridimensionamento. */
@@ -5265,9 +5287,70 @@ const AUDIO_FREQUENZA = 48000, AUDIO_CANALI = 2;
  * ⭐ Il prezzo e' dichiarato: 250 ms fra quel che si vede e quel che si sente.
  *    ⏳ E il numero lo giudica l'utente — se e' troppo, la cura vera non e'
  *    abbassarlo ma togliere l'audio dal thread principale (un `AudioWorklet`
- *    con un anello), che e' lavoro suo. */
+ *    con un anello), che e' lavoro suo.
+ *
+ * ⛔⛔⛔ E QUELLA RIGA QUI SOPRA HA MANDATO LA CACCIA DALLA PARTE SBAGLIATA —
+ *       21 agosto 2026, `banchi/07-b61-conto-audio.py` sul registro della
+ *       sessione di Windows del giorno prima.
+ *
+ *   L'utente aveva confermato *«il ritardo di 400 ms fra audio e video»*, e
+ *   §8 attribuiva i 400 a questi 250 piu' la catena.  ⛔ **Il conto non
+ *   tornava, e nessuno l'aveva fatto**: nella stessa sessione la coda misurata
+ *   sta a **519 ms** al primo campione — piu' del doppio del cuscino — e
+ *   finisce a **70**.  Un cuscino di 250 non puo' valere ne' 519 ne' 70.
+ *
+ *   ⭐ Il conto vero, `[M]` su 43 campioni, e sono DUE termini e nessuno dei
+ *   due e' il thread principale:
+ *
+ *     1. ⛔ **la coda si ACCORCIA a ogni datagram perduto, per sempre.**
+ *        `a.prossimo` avanzava di `n/48000` **per ogni blocco che arriva**, mai
+ *        per il tempo che passa: se un blocco non arriva, il successivo viene
+ *        suonato subito dopo il precedente e i suoi 20 ms di cuscino sono persi
+ *        e non tornano piu'.  ⇒ Il cuscino e' un **serbatoio a senso unico**:
+ *        scende a scaletta fino allo zero, li' fa un BUCO udibile, si riarma a
+ *        250 e ricomincia.  `[M]` nella sessione vera: 61 blocchi perduti in
+ *        3 min 30 (0,58 %), la coda da 419 a 79, **tre BUCHI in mezzo alla
+ *        sessione** — non all'avvio, come §8 credeva.
+ *
+ *     2. ⛔ **e all'attacco la coda si GONFIA**, per la stessa ragione al
+ *        contrario: il figlio ha un anello pieno e lo svuota in un lampo, e
+ *        quei blocchi entrano nella scaletta a 20 ms l'uno anche se sono
+ *        arrivati tutti insieme.  `[M]` 519 ms al primo campione, cioe' 270 ms
+ *        di ritardo regalato che nessuno aveva chiesto.
+ *
+ *   ⇒ ⭐⭐ **La cura non e' un `AudioWorklet` e non e' abbassare il 250.**  E'
+ *     che l'orologio di riproduzione si ancori all'`istante` del server — che
+ *     `RCP.md` §6.3 mette **in ogni datagram** e che questa funzione buttava
+ *     via dopo averlo usato solo per scartare i riordini.  Con l'ancora:
+ *
+ *     · un blocco perduto lascia un buco lungo quanto lui e **non tocca il
+ *       cuscino** — il serbatoio smette di avere un senso unico;
+ *     · una raffica all'attacco **non si accumula**: i blocchi hanno gia' il
+ *       loro posto nel tempo, e arrivare presto non li fa suonare tardi;
+ *     · ⇒ il ritardo diventa **uguale alla costante**, e finalmente la
+ *       costante vuol dire qualcosa.  ⛔ Prima non voleva dire niente: la
+ *       misura vagava fra 70 e 539 ms **con `AUDIO_CUSCINO_MS` fermo a 250**.
+ *
+ *   ⚠ E l'`AudioWorklet` resta una cosa buona, ma per un'altra ragione e dopo
+ *     questa: in questa sessione **non c'e' un solo indizio** che il thread
+ *     principale abbia svuotato la riproduzione — i tre buchi hanno tutti una
+ *     perdita di datagram nella stessa finestra, e il video ha dipinto 119-136
+ *     fotogrammi ogni 5 s senza saltarne uno.  ⛔ Il commento del 17 agosto
+ *     nominava una causa che questi numeri non mostrano, e la sua cura curava
+ *     quella.  ⇒ 📖 `fasi/07` §8.
+ *
+ * ⛔ IL 250 NON SI ABBASSA QUI E ORA, e non e' prudenza: con l'ancora il
+ *    cuscino serve solo piu' a coprire il **jitter di arrivo**, che e' un
+ *    numero che nessuno ha ancora misurato.  Prima si misura quello, poi si
+ *    sceglie — abbassarlo adesso sarebbe la strada del 17 agosto percorsa al
+ *    contrario, che e' proprio quel che non si rifa'. */
 const AUDIO_CUSCINO_MS = 250;
 const AUDIO_CUSCINO_MAX_MS = 600; /* oltre, si butta invece di accumulare */
+/* ⛔ Il margine che separa «uguale» da «maggiore» quando si confronta la coda
+   col cuscino.  ⚠ Non e' pignoleria: senza, a regime la coda vale ESATTAMENTE
+   il cuscino e il confronto scattava per il rumore dell'aritmetica — vedi il
+   difetto raccontato dentro `suona()`. */
+const AUDIO_ANCORA_MARGINE_MS = 5;
 
 let AUDIO = null;
 
@@ -5305,6 +5388,19 @@ function audio_conti() {
     ricevuti: a.ricevuti, suonati: a.suonati, scartati_vecchi: a.scartati_vecchi,
     scartati_corti: a.scartati_corti, scartati_tipo: a.scartati_tipo,
     scartati_pieno: a.scartati_pieno, errori: a.errori,
+    mancati: a.mancati, mancati_volte: a.mancati_volte,
+    /* ⛔ `riarmi` e `tirate` ESCONO DI QUI e non solo dalla riga del registro —
+     *    21 agosto 2026, ed e' un difetto di banco che ha quasi comprato un
+     *    verde falso.  `AUDIO` e' dichiarato con `let`, quindi **non e' una
+     *    proprieta' dell'oggetto globale** e uno script di Marionette non lo
+     *    vede; `audio_conti()`, che e' una dichiarazione di funzione, lo vede.
+     *    ⇒ Il banco leggeva `BUCHI` come `null` e avrebbe scambiato «coda
+     *    ferma a 270» per salute quando poteva essere «si riarma a ogni
+     *    blocco», che e' la stessa misura e il difetto peggiore. */
+    riarmi: a.riarmi || 0, tirate: a.tirate || 0,
+    usciti: a.usciti, tagliati: a.tagliati, sospesi: a.sospesi, salti_suono: a.salti_suono,
+    uscita_ms: a.uscita_ms() === null ? null : Math.round(a.uscita_ms()),
+    aoff_ms: a.aoff_ms(),
     codec: a.codec, in_coda_ms: Math.round(a.coda_ms()),
     contesto: a.ctx ? a.ctx.state : "(nessuno)"
   };
@@ -5342,7 +5438,67 @@ function avvia_audio(wt) {
     scartati_vecchi: 0, scartati_corti: 0, scartati_tipo: 0, scartati_pieno: 0,
     in_volo: [],
     detto_tipo: false, detto_corti: false, detto_pieno: false,
-    coda_ms() { return this.ctx ? Math.max(0, (this.prossimo - this.ctx.currentTime) * 1000) : 0; }
+    /* ⭐ L'ANCORA: quanti secondi bisogna aggiungere all'`istante` del server
+       (in secondi) per avere l'ora dell'`AudioContext` in cui quel campione
+       deve suonare.  ⛔ `null` = non ancora agganciata; si aggancia al primo
+       blocco e si RIAGGANCIA solo quando la riproduzione si e' svuotata. */
+    base: null,
+    /* L'ora in cui il primo blocco ancora in scaletta comincera' a suonare.
+       ⛔ Finche' non e' passata, l'ancora si puo' ancora tirare indietro senza
+       che si senta: e' la cura della raffica dell'attacco. */
+    primo_suono: null, tirate: 0,
+    /* Quanto dura un blocco, in microsecondi, PRESO DAL BLOCCO decodificato e
+       non stimato dagli arrivi: serve a contare quelli che non arrivano. */
+    passo_us: 0,
+    /* ⛔ I DATAGRAM CHE NON SONO ARRIVATI — il contatore che mancava.
+       ⚠ Non e' `scartati_*`: quelli sono arrivati e li abbiamo buttati noi.
+       Questi non sono arrivati affatto, e prima di oggi da questa parte NON
+       ERANO UN EVENTO: `ricevuti` saliva solo un po' piu' piano, e un numero
+       che sale sembra sempre sano. */
+    mancati: 0, mancati_volte: 0,
+    /* ⛔ `usciti` = blocchi che hanno raggiunto la loro fine naturale;
+       `tagliati` = fermati prima.  ⚠ Sono l'unico paio di numeri di questa
+       pagina che sa dire «non si sente niente» mentre tutti gli altri sono
+       verdi. */
+    usciti: 0, tagliati: 0,
+    /* Blocchi buttati perche' il contesto aveva l'orologio fermo. */
+    sospesi: 0,
+    /* I salti visti sull'`istante` che ESCE dal decodificatore.  ⛔ Vanno
+       confrontati con `mancati`, che li conta sul filo: se il filo perde e qui
+       non si vede niente, il motore ricostruisce il timestamp e l'ancora non
+       ancora piu' niente. */
+    salti_suono: 0,
+    /* L'ultimo blocco messo in scaletta: il suo `istante` e l'ora in cui
+       suonera', per il metro della distanza fra audio e video. */
+    ult_ist_us: 0, ult_quando_perf: 0,
+    coda_ms() { return this.ctx ? Math.max(0, (this.prossimo - this.ctx.currentTime) * 1000) : 0; },
+    /* ⭐ LA META' AUDIO DEL METRO DI §9.7-bis, e non serve ne' microfono ne'
+     *    scena: `RCP.md` §6.2 e §6.3 mettono **lo stesso orologio del server**
+     *    nell'intestazione del fotogramma e nel datagram dell'audio.
+     *
+     *    `aoff` = (ora del client in cui il campione SUONA) − (istante del
+     *    server di quel campione).  ⚠ Contiene lo scarto ignoto fra i due
+     *    orologi, ma quello e' **costante**: quando il percorso video
+     *    pubblichera' il suo `voff` — l'ora del client in cui il fotogramma e'
+     *    arrivato al vetro, meno l'`istante` di quel fotogramma — la
+     *    differenza `aoff − voff` sara' la **distanza fra quel che si sente e
+     *    quel che si vede**, in millisecondi, con la costante che si elide.
+     *
+     * ⛔ E ci sta dentro anche `outputLatency`, che nessuno aveva mai
+     *    misurato: programmare un suono per l'istante T vuol dire che esce dal
+     *    dispositivo a T + `outputLatency`, e su Windows non e' zero. */
+    uscita_ms() {
+      const c = this.ctx;
+      if (!c) return null;
+      const u = (typeof c.outputLatency === "number" && c.outputLatency > 0)
+                  ? c.outputLatency : (c.baseLatency || 0);
+      return u * 1000;
+    },
+    aoff_ms() {
+      if (!this.ult_ist_us) return null;
+      const u = this.uscita_ms();
+      return Math.round(this.ult_quando_perf + (u || 0) - this.ult_ist_us / 1000);
+    }
   };
   AUDIO = a;
 
@@ -5356,6 +5512,12 @@ function avvia_audio(wt) {
     a.ctx = new (window.AudioContext || window.webkitAudioContext)(
       { sampleRate: AUDIO_FREQUENZA, latencyHint: "interactive" });
     a.prossimo = 0;
+    /* ⛔ E l'ancora si stacca col contesto: `a.base` e' un'ora dell'orologio
+       del contesto, e un contesto nuovo riparte da zero.  ⚠ Tenerla varrebbe
+       programmare il suono a centinaia di secondi nel futuro — cioe' silenzio
+       perfetto, senza un errore da nessuna parte. */
+    a.base = null;
+    a.primo_suono = null;
     if (a.ctx.state === "suspended") {
       /* ⚠ RIPIEGO DICHIARATO: si tenta, e se il motore lo nega si SCRIVE.  Il
          suono partira' al primo clic, e l'utente deve sapere perche'. */
@@ -5366,8 +5528,47 @@ function avvia_audio(wt) {
     return a.ctx;
   }
 
-  function suona(campioni, fotogrammi) {
+  /* ⛔ `ist_us` NON e' facoltativo: e' l'`istante` di §6.3 del primo campione
+   *    del blocco, ed e' quel che ancora la riproduzione al tempo del server
+   *    invece che alla successione degli arrivi.  ⚠ Se manca — non dovrebbe
+   *    mai — si ripiega sulla successione, cioe' sul comportamento vecchio, e
+   *    si SCRIVE: un ripiego silenzioso qui rimetterebbe il serbatoio a senso
+   *    unico senza che nessuno se ne accorga. */
+  function suona(campioni, fotogrammi, ist_us) {
     const ctx = contesto();
+
+    /* ⛔⛔ FINCHE' IL CONTESTO E' SOSPESO NON SI PROGRAMMA NIENTE — 21 agosto
+     *     2026, e questo difetto l'ha trovato un banco misurando l'ambiente
+     *     invece del prodotto.
+     *
+     *     Un `AudioContext` sospeso ha `currentTime` FERMO.  ⚠ Non e' un caso
+     *     di banco: e' lo stato in cui nasce su tutti e tre i motori finche'
+     *     l'utente non tocca la pagina, e questa funzione lo dichiara gia'
+     *     poche righe piu' su.
+     *
+     *     ⛔ Con l'orologio fermo ogni conto di questa funzione perde senso:
+     *     «fra quanto suonera'» diventa «quanto ne ho accumulato», che cresce
+     *     senza limite.  `[M]` su Firefox headless: la coda leggeva **270 ms
+     *     fermi**, `BUCHI 0`, `pieni 0`, `suonati == ricevuti` — e **usciti 0**,
+     *     cioe' silenzio pieno.  Con lo scheduler di prima, la stessa scena
+     *     buttava 274 blocchi per traboccamento.
+     *
+     * ⇒ Un blocco che arriva mentre il contesto e' fermo si BUTTA e si conta:
+     *   quando l'utente tocchera' la pagina sara' vecchio comunque, e tenerlo
+     *   vorrebbe dire cominciare la sessione con in cassa tutto il silenzio che
+     *   l'ha preceduta.  ⛔ E l'ancora si stacca, perche' andra' riagganciata
+     *   a un orologio che non e' quello di adesso. */
+    if (ctx.state !== "running") {
+      a.sospesi++;
+      a.base = null;
+      a.primo_suono = null;
+      if (a.sospesi === 1 || a.sospesi % 500 === 0)
+        nota("⚠ il contesto audio e' «" + ctx.state + "»: il suo orologio e' "
+           + "fermo e i blocchi si buttano invece di accumularli — in tutto "
+           + a.sospesi + ".  ⛔ Il suono parte al primo clic sulla pagina");
+      return;
+    }
+
     const buf = ctx.createBuffer(AUDIO_CANALI, fotogrammi, AUDIO_FREQUENZA);
     for (let c = 0; c < AUDIO_CANALI; c++) {
       const canale = buf.getChannelData(c);
@@ -5378,15 +5579,105 @@ function avvia_audio(wt) {
     s.connect(ctx.destination);
 
     const ora = ctx.currentTime;
-    /* ⛔ Il cuscino si RIARMA quando la coda si e' svuotata — cioe' quando un
-       buco c'e' gia' stato.  Senza, ogni buco lascerebbe la riproduzione
-       incollata al presente e il buco dopo arriverebbe subito. */
-    if (a.prossimo < ora + 0.001) {
-      /* ⛔ QUESTO E' IL BUCO, e adesso si conta.  Ogni riarmo del cuscino e'
-         un salto nel suono: senza un contatore, «arriva tutto» e «arriva tutto
-         a scatti» hanno lo stesso aspetto da questa parte. */
-      a.riarmi = (a.riarmi || 0) + 1;
-      a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+    a.passo_us = Math.round(fotogrammi * 1e6 / AUDIO_FREQUENZA);
+
+    if (!(ist_us > 0)) {
+      if (!a.detto_senza_istante) {
+        a.detto_senza_istante = true;
+        nota("⚠ un blocco audio e' arrivato senza `istante` (§6.3): si "
+           + "ripiega sulla successione degli arrivi, e con quel ripiego "
+           + "ogni datagram perduto accorcia il cuscino per sempre");
+      }
+      ist_us = 0;
+    }
+
+    /* ⭐⭐ L'ANCORA — e sostituisce «il blocco va dopo quello di prima».
+     *
+     *     `quando` non dipende da quanti blocchi sono arrivati: dipende
+     *     dall'`istante` di QUESTO blocco.  ⇒ Se ne mancano tre, il quarto
+     *     suona 80 ms dopo il primo, cioe' al posto suo, e il cuscino resta
+     *     quello che era.  E se ne arrivano venti insieme, suonano lo stesso
+     *     a 20 ms l'uno dall'altro invece di accodarsi in fondo. */
+    let quando;
+    if (ist_us > 0) {
+      const t = ist_us / 1e6;
+      if (a.base === null) a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
+      quando = a.base + t;
+      /* ⛔ QUESTO E' IL BUCO, e adesso si conta.  Il blocco e' arrivato
+         talmente tardi che il suo posto nel tempo e' gia' passato: non si puo'
+         suonare nel passato, e l'ancora si sposta in avanti di tutto il
+         cuscino.  ⚠ E' l'unica cosa che RIALZA la coda, ed e' udibile. */
+      if (quando < ora + 0.001) {
+        a.riarmi = (a.riarmi || 0) + 1;
+        a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
+        quando = a.base + t;
+      }
+      /* ⛔⭐ E QUI C'E' LA RAFFICA DELL'ATTACCO, che l'ancora DA SOLA non cura
+       *     — `[M]` `banchi/07-b61-ancora.js`, 21 agosto 2026: con la sola
+       *     ancora una raffica di 20 blocchi lasciava la coda a **290 ms** e
+       *     buttava un blocco per traboccamento.  ⚠ Il banco l'ha detto prima
+       *     che il codice arrivasse su una sessione, ed e' la ragione per cui
+       *     esiste.
+       *
+       *     Il perche': l'ancora si aggancia al PRIMO blocco, e se il figlio
+       *     ha un anello pieno i venti che arrivano dietro hanno gia' il loro
+       *     posto 20, 40, 400 ms piu' in la'.  L'ancora impedisce che il
+       *     ritardo cresca all'infinito, ⛔ ma il cuscino resta quello che la
+       *     raffica ha imposto.
+       *
+       * ⭐ La cura, e vale SOLO finche' non si e' sentito ancora niente: se il
+       *    blocco andrebbe piu' in la' di un cuscino, l'ancora si tira
+       *    indietro fino a lui.  ⛔ E si puo' fare senza che si senta proprio
+       *    perche' niente ha ancora suonato: quel che e' in scaletta e' tutto
+       *    nel futuro, e `stop()` su una sorgente che non ha ancora cominciato
+       *    non taglia nessun suono.  ⚠ Dopo il primo suono questa strada e'
+       *    CHIUSA — li' tirare indietro l'ancora vorrebbe dire sovrapporre i
+       *    blocchi, che e' il rilievo 3 del 17 agosto rifatto.
+       *
+       * ⛔⛔⛔ E LA PRIMA SCRITTURA DI QUESTE OTTO RIGHE FACEVA TACERE TUTTO —
+       *       21 agosto 2026, `07-b61-sessione.py` su una sessione vera.
+       *
+       *   Diceva `(quando - ora) * 1000 > AUDIO_CUSCINO_MS`, ⚠ contro un
+       *   valore che a regime vale **esattamente** `AUDIO_CUSCINO_MS`: il
+       *   rumore dell'aritmetica a virgola mobile lo faceva scattare **a ogni
+       *   blocco** — `[M]` `tirate 4506` su 4508 ricevuti.  ⛔ E ogni scatto
+       *   ferma quel che e' in scaletta: ogni blocco veniva annullato dal
+       *   successivo 230 ms prima del suo turno.
+       *
+       *   ⛔⛔ IL SINTOMO ERA IL SILENZIO, E TUTTI I CONTATORI ERANO VERDI:
+       *   `coda 270 ms` ferma, `BUCHI 0`, `pieni 0`, `suonati == ricevuti`.
+       *   E' `LEZIONI.md` §2.2 alla lettera — *«il banco contava e il difetto
+       *   cambiava il suono»* — e questa volta il conta-blocchi era **il mio**.
+       *
+       *   ⇒ Due cure, e servono tutt'e due:
+       *     1. la finestra si CHIUDE: `a.primo_suono` si scrive una volta sola
+       *        e non si aggiorna mai piu', quindi `ora < a.primo_suono` e' vero
+       *        solo per il primo cuscino di vita della sessione — la raffica, e
+       *        nient'altro;
+       *     2. un margine, perche' «uguale» non diventi «maggiore» per un bit.
+       *
+       *   ⭐ E la terza, che vale piu' delle altre due: `usciti`/`tagliati`
+       *      qui sotto, cioe' un contatore che distingue **un blocco messo in
+       *      scaletta da un blocco che ha suonato davvero**.  Senza di lui
+       *      questo difetto sarebbe arrivato all'utente. */
+      if (a.primo_suono !== null && ora < a.primo_suono
+          && (quando - ora) * 1000 > AUDIO_CUSCINO_MS + AUDIO_ANCORA_MARGINE_MS) {
+        for (const vecchia of a.in_volo) { try { vecchia.stop(); } catch (e) {} }
+        a.in_volo.length = 0;
+        a.tirate = (a.tirate || 0) + 1;
+        a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
+        quando = a.base + t;
+      }
+      /* ⛔ UNA VOLTA SOLA.  Aggiornarlo riaprirebbe la finestra per sempre, ed
+         e' precisamente il difetto qui sopra. */
+      if (a.primo_suono === null) a.primo_suono = quando;
+    } else {
+      /* Il ripiego dichiarato: la vecchia scaletta per successione. */
+      if (a.prossimo < ora + 0.001) {
+        a.riarmi = (a.riarmi || 0) + 1;
+        a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+      }
+      quando = a.prossimo;
     }
 
     /* ⛔⛔ E QUI C'ERA UN DIFETTO CHE IL COMMENTO NASCONDEVA — rilievo 3 della
@@ -5406,7 +5697,7 @@ function avvia_audio(wt) {
      *      ammette e che si sente come distorsione, non come un salto.
      *
      * ⭐ La cura: si tengono i riferimenti e si FERMANO davvero. */
-    if ((a.prossimo - ora) * 1000 > AUDIO_CUSCINO_MAX_MS) {
+    if ((quando - ora) * 1000 > AUDIO_CUSCINO_MAX_MS) {
       a.scartati_pieno++;
       if (!a.detto_pieno) {
         a.detto_pieno = true;
@@ -5415,21 +5706,80 @@ function avvia_audio(wt) {
       }
       for (const vecchia of a.in_volo) { try { vecchia.stop(); } catch (e) {} }
       a.in_volo.length = 0;
-      a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+      /* ⛔ Con l'ancora, «pieno» vuol dire che l'ancora stessa e' andata
+         troppo indietro — l'orologio del server e quello della scheda audio
+         non camminano alla stessa velocita' — e la cura e' spostare l'ANCORA,
+         non l'orologio.  ⚠ Spostare `a.prossimo` e basta non servirebbe a
+         niente: il blocco dopo lo ricalcolerebbe dall'`istante`. */
+      if (ist_us > 0) a.base = ora + AUDIO_CUSCINO_MS / 1000 - ist_us / 1e6;
+      else a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
       return;
     }
-    s.start(a.prossimo);
+    s.start(quando);
+    /* ⛔⭐ E QUI SI SORVEGLIA L'IPOTESI SU CUI POGGIA TUTTA LA CURA.
+     *
+     *     L'ancora funziona **solo se** l'`istante` che esce dal
+     *     decodificatore e' quello che il server ha messo nel datagram.
+     *     ⚠ WebCodecs dice che `AudioData.timestamp` e' il `timestamp` del
+     *     pezzo che l'ha prodotto, ⛔ ma un motore che se lo costruisse
+     *     sommando le durate darebbe una successione SENZA BUCHI anche quando
+     *     dei datagram si perdono — e l'ancora tornerebbe a essere, in
+     *     silenzio, la scaletta per successione del 17 agosto.
+     *
+     * ⇒ Si contano i salti visti QUI e si confrontano con i `mancati` contati
+     *   sul filo.  Se il filo dice «ne mancano 61» e qui non se ne vede
+     *   nessuno, l'ipotesi e' falsa su questo motore e va scritto. */
+    if (a.ult_ist_us && ist_us > a.ult_ist_us && a.passo_us > 0) {
+      const salto = ist_us - a.ult_ist_us;
+      if (salto > a.passo_us * 1.5)
+        a.salti_suono += Math.round(salto / a.passo_us) - 1;
+    }
+    if (a.mancati > 0 && a.salti_suono === 0 && !a.detto_ancora_finta
+        && a.suonati > 200) {
+      a.detto_ancora_finta = true;
+      nota("⛔ il filo dice che mancano " + a.mancati + " datagram, ma "
+         + "l'`istante` che esce dal decodificatore non ha nessun salto: su "
+         + "questo motore il timestamp e' RICOSTRUITO, non riportato ⇒ "
+         + "l'ancora vale quanto la scaletta di prima, e il cuscino torna a "
+         + "essere un serbatoio a senso unico");
+    }
+    /* La meta' audio del metro: l'`istante` del server e l'ora del client in
+       cui quel campione suonera', nello stesso orologio di `performance.now()`
+       che il percorso video usa per i suoi tempi. */
+    a.ult_ist_us = ist_us;
+    a.ult_quando_perf = performance.now() + (quando - ora) * 1000;
     /* ⛔ Si tiene il riferimento finche' non ha finito, e non un istante di
        piu': `onended` lo toglie da se', o questo elenco crescerebbe per tutta
        la sessione — che sarebbe la perdita curata dal rilievo 2 in un'altra
        forma. */
     a.in_volo.push(s);
-    s.onended = () => { const i = a.in_volo.indexOf(s); if (i >= 0) a.in_volo.splice(i, 1); };
-    a.prossimo += fotogrammi / AUDIO_FREQUENZA;
+    /* ⛔⭐ E QUI SI DISTINGUE «MESSO IN SCALETTA» DA «HA SUONATO» — 21 agosto
+     *     2026, ed e' il contatore che ha visto il difetto peggiore di questa
+     *     giornata (raccontato qui sopra: una sessione muta con tutti i
+     *     contatori verdi).
+     *
+     *     `suonati` conta le chiamate a `start()`.  ⚠ Non e' la stessa cosa:
+     *     una sorgente fermata prima del suo turno passa da `start()` e non si
+     *     sente.  ⇒ Al termine si guarda **l'orologio**: se e' finita prima
+     *     della sua fine naturale, e' stata tagliata.
+     * ⚠ La tolleranza di 5 ms non e' generosita': `currentTime` avanza a
+     *   quanti di 128 campioni (2,7 ms) e la fine naturale non cade mai
+     *   esattamente su un quanto. */
+    const fine = quando + fotogrammi / AUDIO_FREQUENZA;
+    s.onended = () => {
+      const i = a.in_volo.indexOf(s); if (i >= 0) a.in_volo.splice(i, 1);
+      if (ctx.currentTime + 0.005 < fine) a.tagliati++; else a.usciti++;
+    };
+    /* ⚠ `a.prossimo` non governa piu' la scaletta: resta perche' `coda_ms()`
+       la legge, ed e' la fine dell'ultimo blocco messo in scaletta.  ⛔ E si
+       calcola da `quando`, non sommando: sommare rimetterebbe la scaletta per
+       successione dentro la misura, e la misura direbbe 250 mentre il suono
+       esce a 90. */
+    a.prossimo = quando + fotogrammi / AUDIO_FREQUENZA;
     a.suonati++;
   }
 
-  function pcm(vista, da) {
+  function pcm(vista, da, ist_us) {
     const byte = vista.byteLength - da;
     const fotogrammi = Math.floor(byte / (2 * AUDIO_CANALI));
     if (fotogrammi === 0) return;
@@ -5439,7 +5789,7 @@ function avvia_audio(wt) {
        SCALA — il difetto di v1 che nessun conta-blocchi vedeva. */
     for (let i = 0; i < fotogrammi * AUDIO_CANALI; i++)
       f[i] = vista.getInt16(da + i * 2, true) / 32768;
-    suona(f, fotogrammi);
+    suona(f, fotogrammi, ist_us);
   }
 
   /* ⛔ Torna `false` invece di lanciare — rilievo 5.  `configure()` lancia in
@@ -5456,13 +5806,19 @@ function avvia_audio(wt) {
       output: (dato) => {
         const n = dato.numberOfFrames;
         const f = new Float32Array(n * AUDIO_CANALI);
+        /* ⭐ E L'`istante` TORNA INDIETRO DA SOLO: e' il `timestamp` con cui il
+           blocco e' entrato nel decodificatore (piu' sotto), e WebCodecs lo
+           riporta identico sull'`AudioData` che ne esce.  ⛔ Senza, l'ancora
+           non si potrebbe agganciare sull'Opus — cioe' sul percorso vero — e
+           varrebbe solo per il PCM, che e' il ripiego. */
+        const ist_us = dato.timestamp;
         /* ⚠ `copyTo` con `f32` da' i canali INTERLACCIATI, che e' la forma che
            `suona()` aspetta.  Chiederlo `f32-planar` e srotolarlo a mano
            produrrebbe lo stesso suono con un giro in piu'. */
         try { dato.copyTo(f, { planeIndex: 0, format: "f32" }); }
         catch (e) { a.errori++; dato.close(); return; }
         dato.close();
-        suona(f, n);
+        suona(f, n, ist_us);
       },
       error: (e) => { a.errori++; nota("⛔ decodificatore Opus: " + e); }
     });
@@ -5502,7 +5858,22 @@ function avvia_audio(wt) {
     const riga = "audio: ricevuti " + c.ricevuti + " suonati " + c.suonati
        + " BUCHI " + (a.riarmi || 0) + " vecchi " + c.scartati_vecchi
        + " pieni " + c.scartati_pieno + " errori " + c.errori
-       + " coda " + c.in_coda_ms + "ms ctx " + c.contesto
+       /* ⛔ `mancati` sta accanto a `ricevuti` apposta: sono la stessa
+          grandezza vista dai due lati, e finche' il primo mancava «ricevuti
+          10621» sembrava un conto che chiude.  ⚠ `volte` non e' ridondante —
+          61 in una volta sola e 61 in trenta volte si sentono diversamente. */
+       + " mancati " + c.mancati + " volte " + c.mancati_volte
+       /* ⛔ `usciti` accanto a `suonati`, e la distanza fra i due e' la sola
+          cosa che distingue una sessione che suona da una muta. */
+       + " usciti " + c.usciti + " tagliati " + c.tagliati + " sospesi " + c.sospesi + " salti " + c.salti_suono
+       + " coda " + c.in_coda_ms + "ms"
+       /* ⭐ La meta' audio del metro della distanza (§9.7-bis), e l'unico
+          termine del ritardo che nessuno aveva mai guardato: `usc` e' quanto
+          il dispositivo di uscita aggiunge DOPO che noi abbiamo programmato
+          il suono. */
+       + " usc " + (c.uscita_ms === null ? "?" : c.uscita_ms) + "ms"
+       + " aoff " + (c.aoff_ms === null ? "?" : c.aoff_ms)
+       + " ctx " + c.contesto
        + " | tasti " + TASTI_VISTI + " ultimo " + (TASTI_ULTIMO || "-")
        + " classico " + (typeof cl_in_vigore !== "undefined" && cl_in_vigore ? "si" : "NO")
        + " schermo " + (document.body.dataset.schermo || "-")
@@ -5600,6 +5971,39 @@ function avvia_audio(wt) {
         scarto_dillo(a, "istante non piu' recente: la rete l'ha riordinato");
         continue;
       }
+      /* ⛔⭐ E QUI SI CONTANO QUELLI CHE NON SONO ARRIVATI — 21 agosto 2026.
+       *
+       *     Fino a stamattina un datagram perduto **non era un evento da
+       *     questa parte**: `ricevuti` saliva un po' piu' piano e basta.  ⇒ Il
+       *     figlio diceva «8256 spediti, **0 persi**» (vero: la sua
+       *     spedizione non fallisce), la pagina diceva «vecchi 0, errori 0»
+       *     (vero: non ha buttato niente), ⛔ e in mezzo, `[M]` sulla sessione
+       *     del 21 agosto, **61 blocchi in 3 min 30 non sono mai arrivati** —
+       *     1,2 secondi di audio, e nella sessione di un'ora prima 684.
+       *
+       * ⭐ Il conto non chiede niente al protocollo: `istante` c'e' gia', e la
+       *    distanza fra due `istante` consecutivi dice quanti blocchi ci
+       *    stavano in mezzo.  ⚠ Il passo si prende dall'ultimo blocco
+       *    DECODIFICATO, non stimato dagli arrivi: stimarlo dagli arrivi
+       *    sarebbe circolare — e' l'errore che ha fatto sbagliare il primo
+       *    giro del banco `07-b61`, che accusava il prodotto di un difetto
+       *    suo. */
+      if (a.ultimo_istante !== undefined && a.passo_us > 0) {
+        const salto = Number(istante - a.ultimo_istante);
+        const quanti = Math.round(salto / a.passo_us) - 1;
+        /* ⚠ La soglia e' 1,5 passi e non «piu' di un passo»: l'`istante` e'
+           preso dalla cattura e non da un metronomo, e chiamare «perdita» un
+           passo di 21 ms invece di 20 riempirebbe il contatore di rumore. */
+        if (quanti >= 1 && salto > a.passo_us * 1.5) {
+          a.mancati += quanti;
+          a.mancati_volte++;
+          if (a.mancati_volte === 1 || a.mancati_volte % 100 === 0)
+            nota("⚠ " + quanti + " datagram audio non sono ARRIVATI (salto di "
+               + Math.round(salto / 1000) + " ms fra due `istante`) — in tutto "
+               + a.mancati + " in " + a.mancati_volte + " volte.  ⛔ Non sono "
+               + "scartati da noi: non sono mai arrivati");
+        }
+      }
       a.ultimo_istante = istante;
 
       a.ricevuti++;
@@ -5610,7 +6014,7 @@ function avvia_audio(wt) {
            + ", 48 000 Hz, 2 canali");
       }
 
-      if (codec === 2) { pcm(v, 12); continue; }
+      if (codec === 2) { pcm(v, 12, Number(istante)); continue; }
       if (codec === 1) {
         if (typeof AudioDecoder !== "function") {
           /* ⛔ Non dovrebbe succedere piu': dalla cura del rilievo 1 la pagina
@@ -6731,6 +7135,7 @@ const GUSCIO_WORKER = `
 let devicePixelRatio = 1;          /* ⛔ nel worker non esiste: lo manda il di la' */
 let __vista = [1, 1];              /* la vista MISURATA dal thread principale */
 let __oc = null, schermo = null;
+let __gia_detto = false;           /* il guasto del video si dice UNA volta */
 
 /* ⚠ \`trasferisci\` e' arrivato con la fase 7: un testo di appunti puo' pesare un
    milione di byte (§5.4), e copiarlo fra i due thread sarebbe un megabyte in
@@ -6781,6 +7186,30 @@ function tela_finta(oc) {
   };
 }
 
+/* ⛔⭐ \`GIRO\` — E NON PUO' STARE DI QUA, per un motivo che non e' comodita':
+   la mappa \`quando\` la riempie \`GIRO.parte(id)\` sul percorso dell'INPUT, che
+   vive sul thread principale col filo.  ⇒ Di qua c'e' solo il ritorno, e si
+   rimanda.  ⚠ \`if (!id)\` e' la stessa guardia del \`GIRO\` vero (§7.3, «0 =
+   nessun input»): senza, questo sarebbe un \`postMessage\` PER FOTOGRAMMA su
+   una scena dove quasi nessun fotogramma porta un input.
+   ⚠ E il salto costa: sul percorso worker il numero del giro completo porta
+   dentro un \`postMessage\` in piu' — si dichiara accanto al numero. */
+const GIRO = { torna: function (id) { if (id) __posta({ t: "giro", input: id }); } };
+
+/* ⛔⭐ \`SCENA\` — e qui il rimando NON puo' essere per fotogramma: \`dipinto()\`
+   gira su OGNI fotogramma dipinto, ed e' il percorso che §6.1 tiene corto.
+   ⇒ Si tiene di qua, e quel che attraversa il confine e' l'ETA' dell'ultimo
+   fotogramma — una DURATA, non un istante: gli istanti dei due contesti non si
+   possono confrontare (\`performance.now()\` in un worker parte dalla nascita
+   del worker, non da quella del documento).
+   ⚠ E il prezzo si dichiara: l'eta' viaggia con lo specchio dei contatori,
+   cioe' ogni 100 ms.  ⇒ Sul percorso worker \`SCENA.eta\` puo' essere vecchia
+   fino a 100 ms, e la soglia che quel numero serve a giudicare e' 500. */
+const SCENA = {
+  ultimo: null, fotogrammi: 0,
+  dipinto() { this.ultimo = performance.now(); this.fotogrammi++; },
+};
+
 /* \`leggi_uno_stream\` chiude la sessione passando da qui: il filo e' di la'. */
 function congeda(motivo, perche) {
   __posta({ t: "congeda", motivo: motivo, perche: perche });
@@ -6792,6 +7221,11 @@ function congeda(motivo, perche) {
    con il worker lo stato vero sta di qua.  ⇒ Si rimanda a fette, non a ogni
    fotogramma: un \`postMessage\` per fotogramma dentro il percorso che §6.1
    tiene corto sarebbe pagare la misura con la cosa misurata. */
+function __riassunto(a) {
+  if (!a || !a.length) return null;
+  const b = a.slice().sort(function (x, y) { return x - y; });
+  return { n: b.length, med: b[Math.floor(b.length / 2)], peg: b[b.length - 1] };
+}
 function specchia() {
   if (!schermo) return;
   __posta({ t: "conti", conti: Object.assign({}, schermo.conti),
@@ -6804,6 +7238,18 @@ function specchia() {
              trattenuti: schermo.trattenuti.length,
              formato: schermo.formato, dipinta: schermo.dipinta,
              errori: schermo.errori.slice(-8),
+             /* ⭐ L'eta' dell'ultimo fotogramma, in millisecondi: una DURATA,
+                che si puo' leggere di la'.  ⚠ \`null\` = nessun fotogramma
+                ancora, e non e' «zero». */
+             scena: { eta: SCENA.ultimo === null ? null
+                            : performance.now() - SCENA.ultimo,
+                      fotogrammi: SCENA.fotogrammi },
+             /* ⛔ Il costo del disegno si manda RIASSUNTO, non a campioni:
+                duecento numeri dieci volte al secondo sarebbero ~30 KB/s di
+                clonazione dentro il percorso che §6.1 tiene corto — pagare la
+                misura con la cosa misurata. */
+             bmp: __riassunto(schermo.bmp_ms),
+             vetro: __riassunto(schermo.vetro_ms),
              tela: __oc ? [__oc.width, __oc.height] : null } });
 }
 
@@ -6835,8 +7281,26 @@ self.onmessage = function (ev) {
     if (typeof f === "function") f.apply(schermo, m.argomenti || []);
     specchia(); return;
   }
-  /* ⭐ E QUI ENTRA IL VIDEO: uno stream TRASFERITO, letto di qua. */
-  if (m.t === "flusso") { leggi_uno_stream(m.flusso, congeda); return; }
+  /* ⭐ E QUI ENTRA IL VIDEO: uno stream TRASFERITO, letto di qua.
+   *
+   * ⛔⭐ E LA PROMESSA SI RACCOGLIE — 21 agosto 2026, ed e' il difetto che ha
+   *     tenuto nascosto l'altro.  \`leggi_uno_stream\` e' \`async\`: un nome
+   *     mancante dentro \`Schermo\` diventa una promessa rifiutata **che nessuno
+   *     guarda**, e il worker continua a ricevere stream e a rompersi in
+   *     silenzio.  \`[M]\` cosi' e' stato per otto giorni: zero fotogrammi, zero
+   *     righe, e il sospetto puntato sul TRASFERIMENTO — che invece funziona.
+   * ⛔ Si dice UNA volta e non a ogni fotogramma: trenta righe al secondo
+   *    sarebbero un secondo silenzio. */
+  if (m.t === "flusso") {
+    leggi_uno_stream(m.flusso, congeda).catch(function (e) {
+      if (__gia_detto) return;
+      __gia_detto = true;
+      nota("⛔ il percorso del video nel worker si e' rotto, e da qui in poi "
+           + "NON dipinge piu' niente: " + (e && (e.message || e))
+           + " — questa riga si scrive una volta sola");
+    });
+    return;
+  }
 };
 `;
 
@@ -6851,6 +7315,16 @@ function sorgente_worker() {
        la classe e' la STESSA del prodotto, e le costanti che legge devono
        attraversare il confine con lei. */
     "const TELA_2D = " + JSON.stringify(TELA_2D) + ";",
+    /* ⛔⭐ 21 agosto 2026 — E MANCAVANO TRE NOMI, non uno: `VIA_MSE`, `GIRO` e
+       `SCENA`.  `[M]` col percorso worker acceso contro il prodotto vero
+       (banco `07-b63`), la pagina dipingeva **zero** fotogrammi e il worker
+       diceva `GIRO is not defined` a OGNI fotogramma — dentro una promessa
+       senza `catch`, cioe' in perfetto silenzio.
+       ⇒ La regola generale: quando `Schermo` acquista una dipendenza da un
+       nome globale, o quel nome attraversa il confine da qui, o il worker si
+       rompe **muto**.  ⚠ E non lo dice nessun controllo: il sorgente si
+       COMPONE, quindi non c'e' un `import` che fallisca. */
+    "const VIA_MSE = " + JSON.stringify(VIA_MSE) + ";",
     "const NOME_DEL_CODEC = " + JSON.stringify(NOME_DEL_CODEC) + ";",
     "const CANALE = " + JSON.stringify(CANALE) + ";",
     "const MOT = " + JSON.stringify(MOT) + ";",
@@ -6865,7 +7339,7 @@ function sorgente_worker() {
 
 /* Il worker, visto dal thread principale. */
 function accendi_worker() {
-  const V = { pronto: false, flussi: 0, w: null };
+  const V = { pronto: false, flussi: 0, w: null, riscontro_fatto: false };
   const url = URL.createObjectURL(
     new Blob([sorgente_worker()], { type: "text/javascript" }));
   V.w = new Worker(url);
@@ -6876,8 +7350,32 @@ function accendi_worker() {
      non si COPIA e non si legge di qua: cambia proprietario.  ⚠ Se un motore
      non lo permettesse, `postMessage` lancia — e allora si DICE, invece di
      ripiegare in silenzio sul thread principale e chiamarlo worker. */
+  /* ⛔⭐ IL RISCONTRO — 21 agosto 2026, e nasce da un difetto vero.
+   *
+   * `[M]` Col worker acceso contro il prodotto, il server ha aperto **665**
+   * stream unidirezionali in 23 s e la pagina ha dipinto **zero** fotogrammi,
+   * senza una riga.  ⛔ Il ripiego dichiarato qui sotto non scattava, perche'
+   * la sua premessa e' falsa: `postMessage` NON lancia — lo stream si
+   * trasferisce benissimo, ed e' quel che il worker ci fa dentro che si rompe.
+   * ⇒ Serve un riscontro sul RISULTATO, non sulla chiamata: se dopo N stream
+   *   trasferiti non e' stato dipinto niente, si DICE — a voce alta e al
+   *   server, perche' col desktop a tutto schermo il riquadro non si vede.
+   * ⚠ E si dice e basta, NON si ripiega: ripiegare sul thread principale
+   *   vorrebbe dire misurare una strada e chiamarla con il nome dell'altra. */
+  V.controlla = function () {
+    if (V.riscontro_fatto || V.flussi < 60) return;
+    if (schermo.conti.dipinti > 0) { V.riscontro_fatto = true; return; }
+    V.riscontro_fatto = true;
+    const r = "⛔ MISURA: il worker ha ricevuto " + V.flussi + " stream del "
+            + "video e non ha dipinto NIENTE.  ⇒ `?video=worker` su questo "
+            + "motore non funziona: si torna a `/` senza la stringa di ricerca.";
+    nota(r);
+    try { fetch("/diario?" + encodeURIComponent("VIDEO " + r),
+                { cache: "no-store" }).catch(() => {}); } catch (e) { /* zitto */ }
+  };
   V.manda_flusso = function (f) {
-    try { V.w.postMessage({ t: "flusso", flusso: f }, [f]); V.flussi++; }
+    try { V.w.postMessage({ t: "flusso", flusso: f }, [f]); V.flussi++;
+          V.controlla(); }
     catch (e) {
       nota("⛔ lo stream del video non si e' potuto trasferire al worker ("
            + e + "): il video di questa sessione NON arriva.  ⚠ E non ripiego "
@@ -6930,10 +7428,26 @@ function accendi_worker() {
                        "attese_tela", "formato", "dipinta"])
         if (k in s) schermo[k] = s[k];
       if (s.errori) schermo.errori = s.errori;
+      /* ⭐ `SCENA` vive di qua perche' i movimenti del puntatore sono di qua:
+         il worker manda l'ETA' dell'ultimo fotogramma e l'istante si ricostruisce
+         nel MIO orologio.  ⚠ Vecchia fino a 100 ms, che e' il passo dello
+         specchio — dichiarato accanto al guscio. */
+      if (s.scena) {
+        if (s.scena.eta !== null && s.scena.eta >= 0)
+          SCENA.ultimo = performance.now() - s.scena.eta;
+        SCENA.fotogrammi = s.scena.fotogrammi;
+      }
       V.tela = s.tela || null;
       V.trattenuti = s.trattenuti;
+      /* ⭐ Il costo del disegno, gia' riassunto di la': un banco lo legge da
+         `REMOTIX.video.bmp` senza dover sapere dove il disegno e' avvenuto. */
+      V.bmp = s.bmp || null;
+      V.vetro = s.vetro || null;
       return;
     }
+    /* ⭐ Il giro completo input → fotogramma: la partenza e' di qua (`GIRO.parte`
+       sul percorso dell'input), quindi anche l'arrivo va contato di qua. */
+    if (m.t === "giro") { GIRO.torna(m.input); return; }
     /* ⭐ I due richiami che tornano sul FILO, e il filo e' di qua: la
        `RICHIEDI_CHIAVE` di §5.2 e la chiusura di §3.  ⚠ Si passa dalle stesse
        proprieta' che `collega()` riempie gia' — cosi' il percorso del
@@ -6966,8 +7480,35 @@ function accendi_worker() {
 /* ⛔ Si accende AL CARICAMENTO e non alla connessione, e non e' anticipo
    inutile: cosi' il worker esiste — e un banco che debba guardarci dentro ha
    dove attaccarsi — PRIMA che esista un `VideoDecoder` da osservare.  ⚠ E a
-   riposo non fa niente: aspetta un messaggio. */
-const VW = VIDEO_WORKER ? accendi_worker() : null;
+   riposo non fa niente: aspetta un messaggio.
+
+   ⛔ E LE DUE STRADE INSIEME NON SI FANNO, e si DICE invece di rompersi muti:
+      `MuxMP4` e le sue quindici funzioni delle scatole MP4 non attraversano il
+      confine (`sorgente_worker()` compone, non importa), quindi
+      `?video=worker&disegno=mse` darebbe `MuxMP4 is not defined` alla prima
+      riconfigurazione — che e' esattamente la famiglia di guasto che il
+      21 agosto e' costata otto giorni.  ⚠ Vince MSE, perche' e' la strada che
+      su un motore senza WebCodecs e' l'UNICA. */
+const VW = (function () {
+  if (!VIDEO_WORKER) return null;
+  if (VIA_MSE) {
+    nota("⛔ `?video=worker` e `?disegno=mse` insieme NON si possono: il "
+       + "confezionatore MP4 non attraversa il confine del worker.  ⇒ Tengo "
+       + "MSE (senza, su un motore senza WebCodecs non si disegna niente) e "
+       + "LASCIO il worker spento.");
+    return null;
+  }
+  return accendi_worker();
+})();
+
+/* ⭐ Da qui un banco legge come sta andando il percorso worker — quanti stream
+   gli sono stati trasferiti, se e' vivo, e il costo del disegno gia' riassunto.
+   ⚠ E' un oggetto DA LEGGERE (I6): niente qui dentro cambia quel che la pagina
+   fa.  ⛔ `null` quando l'interruttore e' spento, e «spento» e' il predefinito.
+   ⭐ E accanto `GIRO`, che e' il giro completo input → fotogramma: e' il numero
+      di `CODER.md` §1-bis (tetto 50 ms), e finora lo si poteva leggere soltanto
+      dalla riga di racconto — cioe' arrotondato e ogni cinque secondi. */
+if (window.REMOTIX) { window.REMOTIX.video = VW; window.REMOTIX.giro = GIRO; }
 
 /* ⛔⭐ E QUI LE CHIAMATE DI FUORI SI DIROTTANO.  `collega()` e
  * `ascolta_controllo()` parlano a `schermo` come hanno sempre fatto: con
