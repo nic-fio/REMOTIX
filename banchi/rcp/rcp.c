@@ -2152,23 +2152,73 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	return true;
 }
 
+/* ⛔⛔⭐ L'ALFABETO DEL NOME — 21 agosto 2026, banco `06-b34` caso 8, e
+ *      ⚠ E' LA FORMA D1 SOPRAVVISSUTA ALLA PROPRIA CURA.
+ *
+ *      Il 16 agosto l'elenco fisso delle 20 disposizioni e' stato tolto e la
+ *      domanda «questa macchina ce l'ha?» e' andata a XKB (il gancio
+ *      `disposizione_esiste`, `webtransport.c:1626` → `tastiera.c`).  ⛔ Ma
+ *      DAVANTI a quel gancio era rimasto un SECONDO elenco scritto a mano, e
+ *      nessuno l'aveva guardato: **quali caratteri sono ammessi nel nome**.
+ *
+ * `[M]` Misurato chiedendolo al sistema attraverso il prodotto stesso
+ *   (`06-b34-tabella.c elenco`, cioe' `src/tastiera.c`), su tutte le **590**
+ *   coppie disposizione/variante che `/usr/share/X11/xkb/rules/evdev.lst`
+ *   dichiara sulla macchina di prova: **589 si compilano**, cioe' la macchina
+ *   le ha.  ⛔ E **9 di quelle 589 hanno una maiuscola nel nome**:
+ *
+ *     de(T3)   ie(CloGaelach)   ie(UnicodeExpert)   in(tamilnet_TAB)
+ *     in(tamilnet_TSCII)   jp(OADG109A)   lk(tam_TAB)
+ *     ru(phonetic_YAZHERTY)   ua(macOS)
+ *
+ *   `[M]` Sul filo, prima di questa cura: `de(T3)`, `jp(OADG109A)` e
+ *   `ua(macOS)` ricevevano **`0x0b ERRORE_PROTOCOLLO`** — che e' PEGGIO di
+ *   `SESSIONE_NON_SERVIBILE`, perche' dice «il tuo client e' rotto» e manda a
+ *   cercare il guasto dall'altra parte del filo.
+ *
+ * ⛔ E l'altro verso, sempre misurato: `it()` — variante VUOTA — era ben
+ *    formata per questa funzione e mal formata per `tastiera.c:forma_valida`,
+ *    ⇒ usciva `0x0e` su una stringa **fuori forma**.  §4.5 vuole i due guasti
+ *    DISTINTI, e li' erano uniti.
+ *
+ * ⇒ ⭐ LA CURA E' CHE LA FORMA SIA UNA SOLA: qui si usa lo stesso alfabeto di
+ *   `tastiera.c:carattere_ammesso()` — `[A-Za-z0-9_-]` — e la stessa regola
+ *   sulla variante vuota.  ⛔ Due controlli di forma scritti due volte danno
+ *   due risposte sotto la stessa etichetta, che e' la forma d'errore **E2**.
+ *
+ * ⚠ E la difesa che questa funzione porta NON si allenta: il punto, la barra e
+ *   la virgola restano fuori dall'alfabeto, quindi `../../etc/passwd` e `it,`
+ *   sono rifiutati come prima — ed e' l'unica cosa che questa funzione
+ *   protegge, perche' la stringa finisce dentro la macchina degli `include`
+ *   di XKB, che apre file per nome (`tastiera.c:172`).
+ *
+ * ⚠ Il prezzo dichiarato: `IT` passa la forma e va al gancio, che risponde
+ *   «non ce l'ho» ⇒ `0x0e` invece di `0x0b`.  XKB distingue le maiuscole e
+ *   `symbols/IT` non esiste: «ben formata, ignota» E' la risposta giusta.
+ */
+static bool disposizione_carattere_ammesso(char c)
+{
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+	       (c >= '0' && c <= '9') || c == '_' || c == '-';
+}
+
 static bool disposizione_ben_formata(const char *d, size_t n)
 {
 	/* §4.5: un nome XKB, eventualmente con la variante fra parentesi. */
 	if (n < 1 || n > 64)
 		return false;
 	size_t i = 0;
-	while (i < n && ((d[i] >= 'a' && d[i] <= 'z') || (d[i] >= '0' && d[i] <= '9')))
+	while (i < n && disposizione_carattere_ammesso(d[i]))
 		i++;
 	if (i == 0)
 		return false;
 	if (i == n)
 		return true;
-	if (d[i] != '(' || d[n - 1] != ')')
+	/* ⛔ `n < i + 3` = la variante e' VUOTA (`it()`): fuori forma, non ignota. */
+	if (d[i] != '(' || d[n - 1] != ')' || n < i + 3)
 		return false;
 	for (size_t k = i + 1; k + 1 < n; k++)
-		if (!((d[k] >= 'a' && d[k] <= 'z') || (d[k] >= '0' && d[k] <= '9') ||
-		      d[k] == '_' || d[k] == '-'))
+		if (!disposizione_carattere_ammesso(d[k]))
 			return false;
 	return true;
 }

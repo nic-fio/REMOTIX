@@ -18,6 +18,12 @@
 #   sudo bash .../06-b33-terreno.sh carico        ⚠ uptime: ogni misura di tempo lo porta
 #   sudo bash .../06-b33-terreno.sh registro <n>  la coda del registro del server
 #   sudo bash .../06-b33-terreno.sh conta <str>   quante volte <str> sta nel registro
+#   sudo bash .../06-b33-terreno.sh iniettore-accendi <LxA>  ⛔⛔ §7.1: il
+#                                                 risveglio della cattura, senza
+#                                                 nessun ADATTA_TELA
+#   sudo bash .../06-b33-terreno.sh iniettore-di "<comando>"
+#   sudo bash .../06-b33-terreno.sh iniettore-dice <n>   solo le righe B33R
+#   sudo bash .../06-b33-terreno.sh iniettore-spegni
 #   sudo bash .../06-b33-terreno.sh pulisci
 #
 # ===========================================================================
@@ -78,6 +84,9 @@ RILIEVO=$LAV/rilievo
 VISTO=$LAV/visto.jsonl
 INVII=$LAV/invii.txt
 TESTIMONE=$LAV/06-b33-testimone
+INIETTORE=$LAV/06-b33-risveglio
+INILOG=$LAV/06-b33-risveglio.log
+INIFIFO=$LAV/06-b33-risveglio.fifo
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -171,11 +180,40 @@ sessione)
 	DIR="/run/user/$UID_B/systemd/user.control/$UNITA.d"
 	FILE="$DIR/zz-senza-monitor.conf"
 	install -d -o "$UID_B" -g "$UID_B" -m 700 "$DIR" || { ko "⛔ non ho fatto $DIR"; exit 2; }
-	printf '[Service]\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' > "$FILE"
+	# ⛔⭐ `MUTTER_DEBUG` — 21 agosto 2026, e serve a trasformare in `[M]` una
+	#     catena che finora era tutta `[R]` dentro Mutter.
+	#
+	#     Con `MUTTER_DEBUG=eis,input` il compositore stampa da se' le due righe
+	#     che decidono la diagnosi di §7.1:
+	#       ✅ `Dropping repeated press of button 0x110, count 2`
+	#          ⇒ il conto del POSTO e' rimasto giu' (`meta-seat-impl.c:899-908`)
+	#       ⛔ `Releasing pressed buttons while destroying virtual input device`
+	#          ⇒ se COMPARISSE, Mutter avrebbe una rete che rilascia da se', e
+	#            tutta la lettura del sorgente sarebbe da rifare.
+	#
+	# ⚠ Si mette come `Environment=` nel drop-in perche' la sessione la lancia
+	#   `gnome-session`, non noi: una variabile esportata qui non arriverebbe.
+	#   ⛔ Ed e' SPENTO di predefinito: il chiacchiericcio di `input` su una
+	#   sessione viva riempie il giornale, e un banco che cambia il carico della
+	#   macchina misura anche quello.
+	if [ -n "${MUTTER_DEBUG:-}" ]; then
+		printf '[Service]\nEnvironment=MUTTER_DEBUG=%s\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' \
+			"$MUTTER_DEBUG" > "$FILE"
+		inf "⭐ MUTTER_DEBUG=$MUTTER_DEBUG nel drop-in"
+	else
+		printf '[Service]\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' > "$FILE"
+	fi
 	chown "$UID_B:$UID_B" "$FILE"
 	inf "scritto $FILE"
 
 	if pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1; then
+		# ⛔ E si DICE che il drop-in nuovo NON e' in vigore: `gnome-shell` ha
+		#    letto il suo ambiente all'avvio, e riscrivere il file non cambia
+		#    niente a un processo gia' partito.  ⚠ Chi vuole `MUTTER_DEBUG` deve
+		#    passare da `sessione-via` — e senza questa riga crederebbe di
+		#    averlo acceso.
+		[ -n "${MUTTER_DEBUG:-}" ] && \
+			ko "⚠ MA la sessione e' gia' viva: MUTTER_DEBUG NON e' in vigore. Fai «sessione-via» prima"
 		ok "c'e' gia' una sessione viva — non la rifaccio"
 		exec bash "$0" monitor
 	fi
@@ -211,7 +249,12 @@ sessione)
 		#    l'`ExecStart` in vigore torna a quello di SISTEMA, con
 		#    `--virtual-monitor`.
 		install -d -o "$UID_B" -g "$UID_B" -m 700 "$DIR" || { ko "⛔ non ho rifatto $DIR"; exit 2; }
-		printf '[Service]\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' > "$FILE"
+		if [ -n "${MUTTER_DEBUG:-}" ]; then
+			printf '[Service]\nEnvironment=MUTTER_DEBUG=%s\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' \
+				"$MUTTER_DEBUG" > "$FILE"
+		else
+			printf '[Service]\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11\n' > "$FILE"
+		fi
 		chown "$UID_B:$UID_B" "$FILE"
 	else
 		ok "il gestore di sessione e' inactive: gnome-session puo' ripartire"
@@ -378,6 +421,100 @@ terminale-via)
 
 invii)
 	printf 'INVII %s\n' "$(wc -l < "$INVII" 2>/dev/null || echo 0)"
+	exit 0 ;;
+
+# ---------------------------------------------------------------------------
+# ⛔⛔ L'INIETTORE DI §7.1 — la seconda porta del clic che muore
+# ---------------------------------------------------------------------------
+iniettore-accendi)
+	# sudo bash 06-b33-terreno.sh iniettore-accendi <LxA>
+	#
+	# ⛔ Gira DENTRO la sessione di `provai6`, come lui: apre una sessione
+	#    `RemoteDesktop` sua, monta un monitor virtuale suo e chiama
+	#    `cattura_risveglia()` — la funzione del prodotto.  ⚠ NON e' il server:
+	#    qui non c'e' QUIC e non c'e' `rcp.c`, ed e' voluto (`CODER.md` §3.6).
+	#
+	# ⛔ E NON si accende insieme al server della 7781: due sessioni
+	#    `RemoteDesktop` sullo stesso utente montano due monitor, e il testimone
+	#    finirebbe su quello sbagliato — cioe' misurerebbe un silenzio.
+	#
+	# ⛔⛔ LO STDIN E' UNA FIFO APERTA IN LETTURA **E SCRITTURA** (`exec 3<>`), e
+	#      non e' un vezzo: una fifo aperta in sola lettura da' **EOF** ogni
+	#      volta che l'ultimo scrittore chiude, cioe' dopo OGNI comando — e il
+	#      programma uscirebbe con 5 («stdin chiuso senza fine») al primo giro.
+	#      Il sintomo sarebbe «l'iniettore muore da solo», e nessuno lo
+	#      collegherebbe alla fifo.
+	M=${2:-1264x800}
+	log "L'iniettore del risveglio, tela $M"
+	[ -x "$INIETTORE" ] || { ko "⛔ $INIETTORE non c'e': fai «06-b33-risveglio-costruisci.sh»"; exit 2; }
+	if pid=$(mio_pid); then
+		ko "⛔ il server della $PORTA e' acceso (pid $pid): spegnilo, o le sessioni sono due"
+		exit 2
+	fi
+	pkill -u "$UID_B" -f 06-b33-risveglio 2>/dev/null; sleep 1
+	rm -f "$INIFIFO"; mkfifo -m 666 "$INIFIFO" || { ko "⛔ la fifo non si crea"; exit 2; }
+	: > "$INILOG"; chmod 666 "$INILOG"
+	come_utente setsid --fork sh -c \
+		"exec >>'$INILOG' 2>&1; exec 3<>'$INIFIFO'; exec '$INIETTORE' --tela $M <&3"
+	g=0
+	while [ $g -lt 120 ]; do
+		grep -qa '^B33R: PRONTO' "$INILOG" 2>/dev/null && break
+		grep -qa '^B33R: ERRORE' "$INILOG" 2>/dev/null && break
+		sleep 0.5; g=$((g+1))
+	done
+	if grep -qa '^B33R: PRONTO' "$INILOG" 2>/dev/null; then
+		ok "l'iniettore e' PRONTO dopo $((g/2)) s"
+		grep -a '^B33R: ' "$INILOG" | sed 's/^/        /'
+		exit 0
+	fi
+	ko "⛔ l'iniettore NON e' pronto:"
+	tail -25 "$INILOG" 2>/dev/null | sed 's/^/        /'
+	exit 3 ;;
+
+iniettore-di)
+	# sudo bash 06-b33-terreno.sh iniettore-di "pulsante 272 1"
+	shift
+	pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1 || {
+		ko "⛔ l'iniettore non e' vivo: il comando «$*» non lo legge nessuno"; exit 3; }
+	printf '%s\n' "$*" > "$INIFIFO"
+	exit 0 ;;
+
+iniettore-spegni)
+	if pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1; then
+		printf 'fine\n' > "$INIFIFO" 2>/dev/null
+		g=0
+		while [ $g -lt 20 ]; do
+			pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1 || break
+			sleep 0.5; g=$((g+1))
+		done
+		pkill -9 -u "$UID_B" -f 06-b33-risveglio 2>/dev/null
+	fi
+	rm -f "$INIFIFO"
+	ok "iniettore spento"
+	exit 0 ;;
+
+giornale)
+	# ⛔⭐ QUEL CHE DICE MUTTER DI SE STESSO — la voce del compositore, che non
+	#     e' ne' la nostra ne' quella del testimone.  Serve solo con
+	#     `MUTTER_DEBUG` acceso (vedi «sessione»).
+	#
+	#   sudo bash 06-b33-terreno.sh giornale [da-quando] [filtro]
+	journalctl _UID="$UID_B" --since "${2:--3 min}" --no-pager -o cat 2>/dev/null \
+		| grep -Ea "${3:-Dropping repeated|Releasing pressed buttons|Updating viewports|Counting release}"
+	exit 0 ;;
+
+giornale-tutto)
+	journalctl _UID="$UID_B" --since "${2:--3 min}" --no-pager -o cat 2>/dev/null | tail -n "${3:-200}"
+	exit 0 ;;
+
+iniettore-registro)
+	tail -n "${2:-80}" "$INILOG" 2>/dev/null
+	exit 0 ;;
+
+iniettore-dice)
+	# ⛔ Solo le righe dell'iniettore, non il registro del prodotto: sono due
+	#    voci diverse e mescolarle e' il modo di credere a chi manda.
+	grep -a '^B33R: ' "$INILOG" 2>/dev/null | tail -n "${2:-40}"
 	exit 0 ;;
 
 # ---------------------------------------------------------------------------

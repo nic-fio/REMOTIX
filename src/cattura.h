@@ -418,6 +418,35 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
  *    rinegozierebbe sessanta volte al secondo — e ogni rinegoziazione costa il
  *    fotogramma che si sta cercando di ottenere.
  *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔⛔ E IL PREZZO NASCOSTO, che il nome non lascia sospettare — `[M]` 21
+ *       agosto 2026, banco `banchi/06-b33-risveglio.*`
+ *
+ * **QUESTA CHIAMATA DISTRUGGE E RICREA I DISPOSITIVI DI INPUT.**  Non e' un
+ * effetto collaterale piccolo: e' la **seconda porta** del *clic che muore*
+ * (`fasi/06-la-tela-e-la-vista.md` §4.6 e §7.1).
+ *
+ * `[M]` Tre risvegli su scena ferma, **zero** `ADATTA_TELA`: tre ricambi del
+ * puntatore (delta 1, 1, 1, letto da `input_conto()`).
+ *
+ * `[R]` La catena, tutta dentro Mutter 48.7:
+ *   `pw_stream_update_params()` → il produttore rinegozia →
+ *   `meta_screen_cast_virtual_stream_src_enable()`
+ *   (`meta-screen-cast-virtual-stream-src.c:283`) chiama
+ *   `meta_eis_viewport_notify_changed()` → `viewports-changed` →
+ *   `update_viewports()` → `remove_viewport_devices()`, che ⛔ **non passa da
+ *   `drop_device()`** e quindi non rilascia niente.
+ *
+ * ⇒ ⛔⛔ **Se un pulsante e' premuto quando questa funzione parte, il desktop
+ *   non prende piu' un clic per tutta la sessione** — `[M]`, e si guarisce solo
+ *   facendo cadere il canale EIS.  ⚠ Il momento in cui `figlio.c:6365` la
+ *   chiama e' *«la scena e' ferma e una chiave e' dovuta»*, cioe' **esattamente
+ *   il momento in cui l'utente puo' tenere giu' il mouse su un desktop fermo**.
+ *
+ * ⇒ Chi chiama deve **guardare se c'e' qualcosa di premuto** prima di
+ *   risvegliare.  ⛔ La cura di `figlio.c:3964` — rilasciare prima di
+ *   `cattura_ridimensiona()` — **non copre questa strada**.
+ *
  * `FALSE` = non si e' potuto chiedere (niente flusso, o flusso non attivo).
  */
 gboolean cattura_risveglia(Cattura *cattura);

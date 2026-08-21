@@ -28,7 +28,9 @@ lanciatore confronta quello e non il totale.
 
   G1  «tengo il puntatore VECCHIO»   ⇒ C2 (nessun puntatore dopo il riattacco)
   G2  «la regione si legge una volta sola»  ⇒ C2 (regione mai nota ⇒ -1)
-  G3  «gli orfani non si segnano»    ⇒ R1 e R2 (il registro torna a mentire)
+  G3  «gli orfani non si segnano»    ⇒ ⛔ NON PIU' CERTIFICABILE QUI dal 21
+      agosto 2026 (vedi il riquadro sotto): il suo controllo positivo vive in
+      `06-b33-risveglio.sh tenuto`, caso T1
   G4  «il ricambio si conta solo sull'aggiunta»  ⇒ C6 (ricambi = 0)
   G5  «la tastiera si riaggancia ma non si riattiva»  ⇒ C3 e C4
 """
@@ -106,9 +108,30 @@ GUASTI = {
 	if (in->ricambi_puntatore)
 		return;""",
     ),
+    # ⛔⛔ G3 NON SI PUO' PIU' CERTIFICARE IN `06-b33` — `[M]` 21 agosto 2026, e
+    #     non e' un difetto del guasto: e' la CURA che gli ha tolto la scena.
+    #
+    #     `figlio.c:3964` rilascia tutto **prima** di `cattura_ridimensiona()`.
+    #     ⇒ Al ricambio non c'e' piu' niente di premuto, `segna_orfani()` non
+    #     viene chiamata **nemmeno nel prodotto sano**, e toglierla non cambia
+    #     una virgola.  `[M]` Certificazione del 21 agosto: G3 innestato accende
+    #     **zero** casi, e i giri sano e risanato in modo `tenuto` sono identici
+    #     a lui.
+    #
+    # ⚠ Fino a oggi lo script diceva lo stesso *«⭐ G3 ha acceso il caso
+    #   dichiarato (R1)»*, perche' R1 era rosso anche col prodotto SANO — per la
+    #   cura, non per il guasto — e il confronto era per APPARTENENZA.  E' il
+    #   rilievo n. 1 della revisione avversariale del 21 agosto.
+    #
+    # ⭐ E la scena dove `segna_orfani()` gira davvero c'e', ed e' nuova:
+    #   `banchi/06-b33-risveglio.sh tenuto` — un pulsante tenuto giu' durante un
+    #   `cattura_risveglia()`, che la cura NON copre (§7.1).  Li' il caso T1
+    #   legge proprio la riga degli orfani.  ⇒ Il giorno che la seconda porta
+    #   sara' curata, anche quella scena perdera' G3, e allora il guasto andra'
+    #   spostato su una prova di unita' invece che su una scena.
     "G3": (
         "gli orfani non si segnano: il registro torna a dire «fatto»",
-        "R1",
+        "nessuno",
         """		segna_orfani(in, in->bottoni, in->bottoni_orfani, MAX_BOTTONE, in->quanti_bottoni,
 		             "pulsanti");""",
         """		/* guasto G3 innestato */""",

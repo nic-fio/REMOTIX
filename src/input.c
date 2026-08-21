@@ -115,6 +115,62 @@
  *   `input_rilascia_tutto()` contava un rilascio avvenuto, cioe' il registro
  *   diceva «fatto» mentre il desktop restava bloccato — la forma peggiore di
  *   `CODER.md` §4.6, *il verde non e' vero*.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔⛔ E LA PORTA E' UNA SECONDA — `[M]` 21 agosto 2026, banco
+ *       `banchi/06-b33-risveglio.*`.  ⚠ LA CURA DI SOPRA **NON LA COPRE**.
+ *
+ * ⛔ **Il ricambio NON dipende dalla tela.**  `[M]` con `banchi/06-b33-risveglio`,
+ *    sessione ferma e nessun `ADATTA_TELA`: **tre `cattura_risveglia()`, tre
+ *    ricambi del puntatore** (delta di `ricambi_puntatore` = 1, 1, 1) e **zero**
+ *    chiamate a `cattura_ridimensiona()`.
+ *
+ * `[R]` E la riga di Mutter che lo spiega:
+ *   `cattura_risveglia()` chiama `pw_stream_update_params()` → il produttore
+ *   rinegozia → `meta_screen_cast_virtual_stream_src_enable()`
+ *   (`meta-screen-cast-virtual-stream-src.c:283`) chiama
+ *   `meta_eis_viewport_notify_changed()` → `viewports-changed`
+ *   (`meta-eis.c:319-323`) → `update_viewports()` (`meta-eis-client.c:1049-1062`)
+ *   → `remove_viewport_devices()`.  ⇒ **La stessa catena del ridimensionamento,
+ *   ma senza che nessuno abbia cambiato misura.**
+ *
+ * ⛔ E `figlio.c:6365` chiama `cattura_risveglia()` **proprio su un desktop
+ *    fermo**, quando la presa e' ZERO e una chiave e' dovuta — cioe' nel
+ *    momento esatto in cui l'utente puo' star tenendo giu' il mouse su una
+ *    scena che non si muove.
+ *
+ * `[M]` La misura, scena `06-b33-risveglio.sh tenuto` (21 ago 2026, carico
+ * 1,58-10,7, testimone Wayland dentro la sessione):
+ *   · `BTN_LEFT` giu' → **1** risveglio → il rilascio **non arriva MAI** al
+ *     testimone, e il **clic fresco successivo nemmeno** ⇒ da li' il desktop
+ *     non prende piu' un clic;
+ *   · ⭐ e la **tastiera continua a funzionare** (Ctrl giu'+su e un Invio
+ *     fresco arrivano tutti): la tastiera non e' un dispositivo di viewport;
+ *   · ⭐ la scena col `cattura_ridimensiona()` al posto del risveglio da'
+ *     **esattamente lo stesso esito**: sono due porte sulla stessa stanza.
+ *
+ * `[M]` E la voce di Mutter, con `MUTTER_DEBUG=eis,input`, allineata al
+ * millisecondo (18:41:16-30 del 21 ago 2026):
+ *   `EIS: Updating viewports` — e ⛔ **NESSUN** *«Releasing pressed buttons»*
+ *   accanto ⇒ il dispositivo vecchio muore col pulsante giu';
+ *   poi `INPUT: Dropping repeated press of button 0x110, count 2` e
+ *   `INPUT: Dropping repeated release of button 0x110, count 1` ⇒ il conto del
+ *   POSTO non torna piu' a zero.
+ *
+ * ⭐⭐ E QUEL CHE INVECE GUARISCE, `[M]` lo stesso giorno: **la caduta del
+ *     canale EIS**, e basta quella.  Staccando e riattaccando il cliente EIS —
+ *     ⛔ **con lo stesso `gnome-shell`, verificato per pid** — i clic tornano
+ *     ad arrivare.  `[R]` Il perche': `meta_eis_client_disconnect()`
+ *     (`:1075`) e' l'unico chiamante di `drop_device()`, che rilascia quel che
+ *     era premuto; e nel giornale si vedono le sei righe *«Releasing pressed
+ *     buttons while destroying virtual input device»* proprio li'.
+ *
+ * ⚠ E per attuare quella guarigione **non basta questo file**: `input_apri()`
+ *   riusa il descrittore che `mutter.c` tiene da parte, e finche' QUELLO resta
+ *   aperto Mutter non vede nessun distacco.  ⇒ Servirebbe una `ConnectToEIS`
+ *   nuova, cioe' una riga in `mutter.c`.  `[R]`
+ *   `meta-remote-desktop-session.c:1943-1969`: `session->eis` si riusa, e ogni
+ *   chiamata aggiunge un cliente ⇒ la sessione e il palco NON si toccano.
  */
 #include "input.h"
 

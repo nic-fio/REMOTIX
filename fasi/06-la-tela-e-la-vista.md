@@ -961,6 +961,87 @@ sono chiusi (il giro sano come metro, la marca dopo l'accensione, lo stato d'usc
 stato rifatto**. La scena di contesa (`06-b39-*`) è **pronta e non lanciata**: aspetta la finestra,
 perché sposterebbe i millisecondi di tutti gli altri banchi accesi.
 
+### 5.7 · ⭐⭐ 21 agosto 2026 — **la seconda porta del clic che muore, misurata**, e la cura che NON si può fare
+
+*Banco nuovo `banchi/06-b33-risveglio.*`: collega `cattura.c` e `input.c` del **prodotto** e li chiama
+da riga di comando, col testimone Wayland dentro la sessione di `provai6`. Tela 1264×800,
+`MUTTER_DEBUG=eis,input`.*
+
+| scena | `[M]` | carico |
+|---|---|---|
+| **S0** controllo zero, clic senza ricambi | il testimone lo vede: giù e su | 5,67 |
+| **S1** tre `cattura_risveglia()`, mano alzata | ⭐ **3 risvegli → 3 ricambi** (delta `[1,1,1]`) con **0** `cattura_ridimensiona()` ⇒ **§7.1 è vera** | 1,86-2,19 |
+| **S2** `BTN_LEFT` giù, **un** risveglio | ⛔ il rilascio **non arriva mai**, e **il clic fresco successivo nemmeno** ⇒ desktop morto ai clic. ⭐ La **tastiera** continua a funzionare | 1,58→10,68 |
+| **S3** la stessa scena con `cattura_ridimensiona()` | **esito identico**: sono due porte sulla stessa stanza | 3,76 |
+| **S4** si rompe, poi si stacca il cliente EIS | ⭐ **i clic tornano**, con lo **stesso `gnome-shell`** (pid verificato prima e dopo) | 1,39 |
+
+#### ⭐ La catena `[R]` di §7.1-bis diventa `[M]` — e per un pelo non veniva smentita a torto
+
+Dal giornale di Mutter, al millisecondo: `EIS: Updating viewports` **senza** nessun «Releasing
+pressed buttons» accanto; poi `Dropping repeated press of button 0x110, count 2` e
+`Dropping repeated release of button 0x110, count 1`. Il rilascio del pulsante tenuto **non compare
+affatto**: `handle_button` lo ingoia prima che il posto lo veda.
+
+⚠⭐ **E la precisazione vale quanto la misura**: la riga «Releasing pressed buttons» **c'è**, sei
+volte — ma **al distacco**. ⛔ Una ricerca di assenza sull'intero giornale avrebbe **smentito §7.1-bis
+a torto**. La lettura regge nella forma precisa: assente *accanto a `Updating viewports`*, presente
+al disconnect.
+
+#### ⛔ E l'ipotesi «la cura è più piccola di quanto sembri» è SMENTITA
+
+*(Era del coordinatore: `button_count[]` è del **posto**, non del dispositivo, quindi un rilascio da
+un dispositivo nuovo potrebbe far scendere il conto.)* ⛔ **No**: `handle_button`
+(`meta-eis-client.c:612-621`) guarda `device->button_state`, che **sul dispositivo nuovo è pulito**,
+e un rilascio da lì non arriva mai a `meta_seat_impl_notify_button_in_impl`. L'invariante è
+`count = Σ bit vivi + trapelati`, e per consegnare un rilascio serve `count == 1` con un bit vivo,
+che ha già incrementato ⇒ **irrecuperabile**. L'unica strada resta `drop_device()`.
+
+#### Le quattro forme della cura, col prezzo — e la scelta
+
+| | dove | prezzo |
+|---|---|---|
+| **A · prevenzione**: non ci si risveglia con qualcosa premuto | guardia in `figlio.c` + una finestra in `input.c/.h` | ⭐ **nessun trascinamento rotto**. ⚠ Su desktop fermo con un tasto giù la chiave non parte ⇒ **un client appena attaccato può restare bianco finché non si rilascia**. Si sana da sé, e la scena è rara: un trascinamento *muove* la scena |
+| **B · si rilascia prima del risveglio** | una riga in `figlio.c` | ⛔ **taglia OGNI trascinamento su desktop fermo** — è la «cura ovvia vietata» di §7.1. Citata solo per il confronto |
+| **C · recupero**: si riattacca il canale EIS quando il danno c'è | `input.c` (vede già `quanti_orfani > 0`) + `mutter_eis_riattacca()` in `mutter.c` | `[M]` funziona (S4). ⚠ Taglia il trascinamento in corso — **che però era già morto**. ⭐ Copre **le porte che non controlliamo**: `monitors-changed` (due giri), il cambio di keymap, e quel che Mutter aggiungerà |
+| **D · si toglie il risveglio**: la chiave si rifà dall'ultimo fotogramma | `figlio.c` + `codificatore.c` | toglie la porta alla radice, ⛔ ma **non sostituisce** il risveglio: al login non c'è nessun fotogramma da rifare, e i 4,4 secondi tornano. E costa ~9,8 MB di copia a 2560×962 |
+
+> ### 🔸 **Scelta del coordinatore: A + C** — derivata, non decisa dall'utente
+>
+> **A da sola non basta**, e la ragione è in §7.1-bis: le porte non sono una. `cattura_risveglia()`
+> è quella che controlliamo; `monitors-changed` ne fa **due giri**, il cambio di keymap è un'altra, e
+> la funzione che le apre tutte è entrata in **Mutter 48.5** — cioè è **nuova**, e ne arriveranno.
+> ⇒ Una cura che copre solo la porta di casa nostra **scade al prossimo aggiornamento di GNOME**.
+> ⚠ E il prezzo di **C** non è un prezzo: il trascinamento che taglia **era già morto** (S2).
+> ⏳ **Il prezzo di A invece è visibile all'utente** — la finestra bianca finché non si rilascia — e
+> i prezzi visibili li giudica lui: la riga sta qui perché la veda, non per essere già decisa.
+
+⛔ **E un vincolo trovato misurando, che cambia il preventivo di C**: `input_apri()` **riusa il
+descrittore** che `mutter.c` tiene da parte, e finché quello resta aperto Mutter non vede nessun
+distacco e `drop_device()` non gira. ⇒ **La cura non sta dentro `input.c`.** `[R]`
+`meta-remote-desktop-session.c:1943-1969`: `session->eis` si riusa e ogni `ConnectToEIS` aggiunge un
+cliente, quindi sessione e palco non si toccano.
+
+#### ⛔ Un fatto nuovo che tocca la certificazione di `06-b33`
+
+Con la cura di `figlio.c:3964`, `segna_orfani()` **non gira nemmeno nel prodotto sano** ⇒ **G3 non è
+più certificabile in `06-b33`**: la sua scena vive adesso in `06-b33-risveglio.sh tenuto` (caso T1).
+⏳ Quel banco **non ha ancora una certificazione con guasto innestato**, ed è il buco più grosso di
+questa consegna — dichiarato dall'autore per primo.
+
+#### ⭐ E i cinque rilievi della revisione su `06-b33`: chiusi
+
+Il mondo si **legge** dal registro; R1/R2 sono pretese **solo col difetto vivo**; **T4 nuovo** — il
+clic fresco, che è il danno vero e **non lo misurava nessuno**; R1 cerca il marcatore **dei
+pulsanti**; C6 conta **nella finestra del ridimensionamento** (prima `rp >= 1` era soddisfatto dai
+risvegli); giro sano e risanato **in tutt'e due i modi**; **uguaglianza dell'insieme** invece di
+appartenenza; l'esito del giudice propagato. ⭐ Col certificatore nuovo, **G3 accende zero casi** — e
+il vecchio avrebbe stampato *«⭐ G3 ha acceso R1»*.
+
+⛔ **E cinque difetti del banco nuovo, dichiarati dall'autore**, di cui il più grave: il rilascio del
+pulsante tenuto e quello del clic fresco **non si distinguono** per posizione rispetto al `RITELA` —
+l'ordine con cui Wayland consegna `configure` e `button` è **una corsa**. Il confine giusto è il
+**press fresco**. Prima della correzione, T4 usciva giallo su un giro sano.
+
 ## 6 · Le decisioni prodotte
 
 - ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
@@ -1108,16 +1189,52 @@ la decide l'utente.
   è provato **sull'ospite finto**, e la **riga di registro** che lo dichiara adesso è pretesa da un
   banco (`06-b36` casi 1-2) — che è quel che `SPECIFICHE.md` §6.3 chiedeva.
 
-### 7.3 · E i tre difetti che la decisione dell'utente rende urgenti
+### 7.3 · ✅ ~~E i tre difetti che la decisione dell'utente rende urgenti~~ — **erano già chiusi, e il documento mentiva da cinque giorni**
 
-*Sottofase 6.2, secondo giro, in corso.*
+> ⛔ **Questa sezione elencava tre difetti che il prodotto non ha.** Misurati sul vivo il 21 agosto
+> 2026 (porta 7721, utente `provat6`, sessione GNOME vera con testimone dentro, carico 0,20-0,60):
 
-1. ⛔ `rcp.c:1970` — l'**elenco fisso** rifiuta disposizioni che la macchina **ha**: `hu`, `tr`, `gr`,
-   `ua` ricevono `SESSIONE_NON_SERVIBILE`. ⇒ Con §5-bis.7 attuata, **un utente ungherese si vedrebbe
-   negare la sessione**. *«Curare D1 senza D3 significa spedire una regressione»*;
-2. ⛔ la **variante fra parentesi** non la controlla nessuno: `it(nonesiste)` apre la sessione;
-3. ⛔ `DISPOSIZIONE` (`0x0009`) **a sessione aperta chiude la connessione** — lo stesso `default` in
-   cui cadeva `VISTA`, ed è il messaggio con cui la disposizione si cambierebbe **senza staccarsi**.
+| il documento diceva | `[M]` il prodotto fa |
+|---|---|
+| `hu` `tr` `gr` `ua` ricevono `SESSIONE_NON_SERVIBILE` | ⭐ **aprono la sessione**, tutte e quattro |
+| `it(nonesiste)` apre la sessione | ⭐ **`0x0E SESSIONE_NON_SERVIBILE`** |
+| `DISPOSIZIONE` a sessione aperta chiude la connessione | ⭐ **connessione viva**, `KEYMAP CAMBIATA → de [German]`, nessun messaggio sul filo |
+
+⇒ Li aveva chiusi la cucitura del **16 agosto**: la domanda «esiste?» va a XKB
+(`webtransport.c:1626` → `tastiera.c`), la variante ci entra perché `it(nonesiste)` non compila, e
+`T_DISPOSIZIONE` ha il suo `case` (`rcp.c:6207`). ⚠ Nessuno aveva riletto questa sezione, ed è la
+stessa specie di difetto di `fasi/07` §8: **un documento fermo a quattro giorni fa manda a cercare un
+guasto dove non c'è**.
+
+⭐ **E non ci si è fermati a «la sessione si apre»**, che è il metro che questa fase vieta: il
+testimone dentro la sessione ha registrato **il carattere**, con l'atteso calcolato da `tastiera.c`
+chiamato da fuori — `hu`→`ű`,`ő` · `tr`→`ğ` · `gr`→`α` · `ua`→`ї` · `de(T3)`→`‑`, **tutti arrivati**,
+più il negativo (`it` non produce `ű`, e la riga che lo dichiara c'è).
+
+#### ⛔⭐ Ma al loro posto ce n'era uno VERO: **la forma D1 sopravvissuta alla propria cura**
+
+La cura del 16 agosto ha tolto l'elenco fisso di venti nomi, ⛔ **e davanti al gancio è rimasto un
+secondo elenco scritto a mano: l'alfabeto ammesso nel nome**, che accettava solo `[a-z0-9]`.
+
+`[M]` Chiedendolo al sistema **attraverso il prodotto**, su tutte le **590** coppie
+disposizione/variante di `evdev.lst`: **589 si compilano**, e **nove hanno una maiuscola** —
+`de(T3)`, `ie(CloGaelach)`, `ie(UnicodeExpert)`, `in(tamilnet_TAB)`, `in(tamilnet_TSCII)`,
+`jp(OADG109A)`, `lk(tam_TAB)`, `ru(phonetic_YAZHERTY)`, `ua(macOS)`. ⛔ Sul filo ricevevano
+**`0x0B ERRORE_PROTOCOLLO`** — che è **peggio** di `SESSIONE_NON_SERVIBILE`, perché dice *«il tuo
+client è rotto»* e manda a cercare il guasto dall'altra parte del filo. E `it()` (variante vuota)
+prendeva `0x0E` su una stringa **fuori forma**: i due guasti di §4.5 uniti.
+
+⇒ **Curato** (`rcp.c:2155`, e il gemello allineato byte per byte): un solo
+`disposizione_carattere_ammesso()` con l'alfabeto **identico** a quello di `tastiera.c`, più il
+rifiuto della variante vuota. ⚠ Due controlli di forma scritti due volte davano due risposte sotto
+la stessa etichetta: è la forma **E2**. La difesa non si allenta — punto, barra, virgola e
+`../../etc/passwd` restano fuori. ⭐ Prezzo dichiarato: `IT` adesso passa la forma e riceve `0x0E`
+invece di `0x0B`, ed è la risposta giusta (XKB distingue le maiuscole).
+
+⭐ **Rosso→verde certificato** sulla stessa macchina: caso 8, **7 righe rosse su 17** col binario di
+prima → **17 su 17** col curato; e quattro guasti innestati che accendono il caso dichiarato.
+
+
 
 ---
 

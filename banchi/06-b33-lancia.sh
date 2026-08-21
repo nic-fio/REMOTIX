@@ -118,12 +118,24 @@ testimone|tenuto|cura)
 	rimonta || exit 3
 	sudo_mio bash "$T" testimone "$TELA_A" || { ko "⛔ IL BANCO: il testimone non si apre"; exit 3; }
 	ok "l'applicazione e' APERTA, e nessun client e' attaccato"
+	# ⛔⛔ IL `--da` SI MISURA, NON SI SCRIVE — rilievo della revisione
+	#      avversariale, 21 agosto 2026.  Era la costante **5**, che vale solo
+	#      con UN monitor: le righe di apertura del testimone sono
+	#      `POSTO_LEGATO + SCHERMO×N + POSTO + KEYMAP + PRONTA`, e con due
+	#      `wl_output` diventano sei.
+	DA=$(sudo_mio bash "$T" righe | awk '{print $2}')
+	inf "il testimone aveva gia' ${DA:-?} righe: il giudizio parte da li'"
 	cliente "b33-$COSA" "$MODO" \
 		"testimone Wayland aperto PRIMA dello stacco, modo $MODO"
+	# ⛔⛔ E L'ESITO DEL GIUDICE SI GUARDA — rilievo della stessa revisione:
+	#      `ESITO` era mosso solo da `ko()`, quindi questo copione usciva **0**
+	#      anche con tutti i casi rossi.  Un numero stampato e non confrontato
+	#      e' un difetto (`CODER.md` §3.4).
 	sudo_mio python3 "$SRC/banchi/06-b33-giudice.py" --visto "$LAV/visto.jsonl" \
-		--registro "$LAV/registro.log" --da 5 --modo "$MODO" \
+		--registro "$LAV/registro.log" --da "${DA:-5}" --modo "$MODO" \
 		--etichetta "b33-$COSA" --tela-b "$TELA_B" --esiti "$ESITI" \
-		--scena "testimone Wayland aperto prima dello stacco"
+		--scena "testimone Wayland aperto prima dello stacco" \
+		|| ko "⛔ il giudice ha dei rossi nel giro «$COSA»"
 	carico
 	exit $ESITO ;;
 
@@ -196,12 +208,19 @@ quattro)
 	exit 0 ;;
 
 tutto)
-	bash "$0" "$PAROLA_SUDO" testimone
-	bash "$0" "$PAROLA_SUDO" terminale
-	bash "$0" "$PAROLA_SUDO" tenuto
-	bash "$0" "$PAROLA_SUDO" cura
-	bash "$0" "$PAROLA_SUDO" quattro
-	exit 0 ;;
+	# ⛔⛔ GLI ESITI DEI SOTTO-GIRI SI SOMMANO — rilievo della revisione
+	#      avversariale, 21 agosto 2026: qui c'era `exit 0`, e i cinque esiti
+	#      finivano nel nulla.  ⇒ Chi lanciava «tutto» da uno script vedeva
+	#      sempre successo, quale che fosse il colore dei casi.
+	for g in testimone terminale tenuto cura quattro; do
+		bash "$0" "$PAROLA_SUDO" "$g" || ESITO=1
+	done
+	if [ "$ESITO" -eq 0 ]; then
+		ok "⭐ tutti e cinque i giri sono verdi"
+	else
+		ko "⛔ almeno un giro non e' verde: guarda i sotto-giri qui sopra"
+	fi
+	exit $ESITO ;;
 
 *)
 	echo "⛔ non so fare «$COSA»"; exit 2 ;;

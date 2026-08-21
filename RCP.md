@@ -996,6 +996,16 @@ parentesi: `it`, `us`, `de(neo)`. Il server **DEVE** rifiutare con `ERRORE_PROTO
 che non ha questa forma, e **DEVE** congedare con `SESSIONE_NON_SERVIBILE` una disposizione ben
 formata che il sistema non conosce — sono due guasti diversi, e vanno distinti.
 
+⚠ **La forma, per esteso**: `[A-Za-z0-9_-]+` eventualmente seguito da `(` `[A-Za-z0-9_-]+` `)`.
+⛔ Le **maiuscole** e il **trattino basso** ci stanno perché il sistema li usa davvero — `[M]`
+21 agosto 2026, chiesto al sistema *attraverso il prodotto*: su **589** coppie disposizione/variante
+che una macchina Debian compila, **9 hanno una maiuscola** (`de(T3)`, `jp(OADG109A)`, `ua(macOS)`,
+`ru(phonetic_YAZHERTY)`, `ie(CloGaelach)`…) e **102 un trattino basso**. Un alfabeto più stretto le
+rifiuterebbe con `ERRORE_PROTOCOLLO`, cioè **accusando il client di un guasto della macchina** — che
+è peggio di un congedo, perché manda a cercare il difetto dall'altra parte del filo.
+⛔ E la **variante vuota** — `it()` — è **fuori forma**: `ERRORE_PROTOCOLLO`, non
+`SESSIONE_NON_SERVIBILE`.
+
 Il server risponde `SESSIONE`:
 
 ```
@@ -1648,6 +1658,12 @@ CONGEDO
  ├── u8      motivo           §8.2
  └── stringa dettaglio        per il registro, non per l'utente; può essere vuota
 ```
+
+⛔ **`DISPOSIZIONE` a sessione aperta: una disposizione ben formata ma sconosciuta NON chiude la
+sessione.** Il server **DEVE** scriverlo nel registro e **DEVE** tenere in vigore quella di prima.
+⚠ È diverso da `ATTACCA` (§4.5), dove il congedo `SESSIONE_NON_SERVIBILE` è giusto perché non c'è
+nessuna sessione da salvare: qui la tastiera di prima funziona ancora, e togliere all'utente il
+lavoro aperto costerebbe **più del guasto** (`SPECIFICHE.md` §8.3, «mai staccare»).
 
 ⚠ `VISTA` **NON DEVE** far cambiare la tela, e ⛔ **in RCP/1 non cambia nemmeno la misura di quel
 che si codifica**: i fotogrammi restano della misura della tela e il client riscala

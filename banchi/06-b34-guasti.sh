@@ -5,6 +5,8 @@
 #
 #   sudo bash .../06-b34-guasti.sh keymap-una-volta   guasto A, poi caso2s
 #   sudo bash .../06-b34-guasti.sh tasti-col-vecchio  guasto B, poi caso4
+#   sudo bash .../06-b34-guasti.sh senza-cura         guasto C, poi caso7
+#   sudo bash .../06-b34-guasti.sh forma-aperta       guasto D, poi caso8
 #   sudo bash .../06-b34-guasti.sh sano               rimette il binario buono
 #
 # ===========================================================================
@@ -23,8 +25,12 @@
 #   PRIMA quale caso deve diventare rosso e con quale carattere.
 #
 # ===========================================================================
-# ⛔ I DUE GUASTI, E DOVE VIVONO
+# ⛔ I QUATTRO GUASTI, E DOVE VIVONO
 # ===========================================================================
+#
+# ⚠ Erano due fino al 21 agosto 2026; C e D sono nati con i casi 7 e 8, e
+#   nascono **insieme a loro** — non dopo, che e' il modo in cui l'ancora del
+#   guasto B era nata scaduta.
 #
 #  A. **`keymap-una-volta`** — in `src/tastiera.c`, che e' MIO.
 #     `tastiera_apri_da_keymap()` si tiene il **primo** testo di keymap e
@@ -112,6 +118,32 @@ verifica_innesto() {
 	fi
 }
 
+# ⛔⛔⭐ IL CONTROLLO POSITIVO HA UN BIT — 21 agosto 2026, rilievo 4 di A9.
+#
+#      Questo copione finiva con `exit 0` INCONDIZIONATO dopo aver lanciato il
+#      caso.  ⛔ Cioè il controllo positivo — lo strumento che esiste per dire
+#      *«il banco sa diventare rosso»* — usciva **verde anche se il banco era
+#      rimasto verde col guasto dentro**, che è esattamente la cosa che deve
+#      scoprire.  ⚠ Il guardiano senza guardiano.
+#
+# ⇒ Qui il verdetto si ROVESCIA: il caso DEVE tornare != 0.  Un caso verde con
+#   il guasto innestato è un fallimento DEL BANCO, e questo copione esce 1.
+pretendi_rosso() {
+	local caso=$1
+	bash "$LANCIA" "$caso"
+	local u=$?
+	printf '\n'
+	if [ "$u" -ne 0 ]; then
+		ok "⭐ CONTROLLO POSITIVO SUPERATO: «$caso» e diventato ROSSO (uscita $u)"
+		ok "   ⇒ quando torna verde sul binario sano, quel verde vale qualcosa"
+		exit 0
+	fi
+	ko "⛔⛔ IL BANCO NON SA VEDERE IL GUASTO: «$caso» e rimasto VERDE con"
+	ko "    l innesto dentro (uscita $u).  ⇒ Ogni verde che quel caso ha dato"
+	ko "    finora non prova niente (CODER.md §3.4)."
+	exit 1
+}
+
 accendi_con() {
 	local albero=$1 come=$2
 	# ⛔ LA SESSIONE TORNA SU «it» PRIMA DEL RIAVVIO, e non e' pignoleria: il
@@ -176,8 +208,7 @@ PY
 	sleep 2
 	bash "$TERRENO" testimone >/dev/null 2>&1
 	log "…e adesso il caso 2s, che DEVE diventare rosso"
-	bash "$LANCIA" caso2s
-	exit 0 ;;
+	pretendi_rosso caso2s ;;
 
 tasti-col-vecchio)
 	log "GUASTO B — «i tasti se ne vanno col dispositivo» (src/input.c, NON mio)"
@@ -190,23 +221,40 @@ tasti-col-vecchio)
 import sys
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
-ancora = """	if (in->tastiera_dev == dispositivo)
-	{
+# ⛔⛔⭐ L'ANCORA E' STATA RIFATTA — 21 agosto 2026, rilievo 2 della revisione
+#      avversariale di A9, e l'ancora di prima era **NATA SCADUTA**.
+#
+#      Cercava `if (in->tastiera_dev == dispositivo) { ei_device_unref(...)`.
+#      ⛔ Zero occorrenze: fra la graffa e l'`unref` oggi c'e' `segna_orfani()`
+#      piu' otto righe di commento (`src/input.c:709`).  ⚠ La cura e il guasto
+#      che doveva provarla sono entrati **nello stesso commit**, e il guasto non
+#      e' mai stato rilanciato ⇒ il caso 4b — la scena di `RCP.md` §11, quella
+#      col rapporto danno/costo piu' alto del documento — e' rimasto **senza
+#      nessun controllo positivo**, e verde.
+#
+# ⭐ E l'ancora nuova e' scelta apposta perche' NON possa nascere scaduta due
+#    volte: si aggancia alla riga di `segna_orfani`, che E' la cura, ⇒ il
+#    giorno che la cura cambia forma l'innesto fallisce **rumorosamente** in
+#    `verifica_innesto` invece di applicarsi a un punto che non c'e' piu'.
+ancora = """		segna_orfani(in, in->tasti, in->tasti_orfani, MAX_TASTO, in->quanti_tasti, "tasti");
 		ei_device_unref(in->tastiera_dev);
 		in->tastiera_dev = NULL;
 		in->tastiera_attiva = FALSE;
 		in->ricambi_tastiera++;"""
-innesto = """	if (in->tastiera_dev == dispositivo)
-	{
+innesto = """		/* ⛔⛔ GUASTO INNESTATO — 06-b34-guasti.sh «tasti-col-vecchio».
+		 *     NON e' codice di prodotto: sta solo nell'albero della copia.
+		 *     «I tasti se ne sono andati col dispositivo»: al posto di
+		 *     `segna_orfani()` si azzera la mappa, cioe' esattamente la riga
+		 *     che il commento di `input.c` dichiara di NON scrivere.
+		 *   ⇒ ATTESO: nessuna riga «erano PREMUTI sul dispositivo che il
+		 *     compositore ha appena tolto», nessuna riga sugli ORFANI, e
+		 *     «rilascio al distacco: 0» — cioe' uno ZERO che si legge come
+		 *     «non c'era niente premuto». */
+		memset(in->tasti, 0, sizeof in->tasti);
+		in->quanti_tasti = 0;
 		ei_device_unref(in->tastiera_dev);
 		in->tastiera_dev = NULL;
 		in->tastiera_attiva = FALSE;
-		/* ⛔⛔ GUASTO INNESTATO — 06-b34-guasti.sh «tasti-col-vecchio».
-		 *     NON e' codice di prodotto: sta solo nell'albero della copia.
-		 *     «I tasti se ne sono andati col dispositivo»: e' esattamente la
-		 *     riga che il commento qui sopra dichiara di NON scrivere. */
-		memset(in->tasti, 0, sizeof in->tasti);
-		in->quanti_tasti = 0;
 		in->ricambi_tastiera++;"""
 if ancora not in s:
     print("⛔ ancora non trovata in input.c"); sys.exit(3)
@@ -219,8 +267,107 @@ PY
 	sleep 2
 	bash "$TERRENO" testimone >/dev/null 2>&1
 	log "…e adesso il caso 4, che DEVE diventare rosso in 4b"
-	bash "$LANCIA" caso4
-	exit 0 ;;
+	pretendi_rosso caso4 ;;
+
+senza-cura)
+	# ⛔⛔ GUASTO C — «la disposizione dichiarata NON si applica», cioe' §5-bis.7
+	#     TOLTA.  ⚠ Vive in `src/rcp.c`, che qui e' una COPIA.
+	#
+	# ⭐ Perche' serve, e non e' una formalita': il caso 7 e' uscito VERDE su
+	#    cinque disposizioni esotiche.  Finche' nessuno gli ha fatto fare rosso,
+	#    «la disposizione viene rinegoziata» e «quei caratteri arrivano
+	#    comunque» hanno lo stesso colore (`CODER.md` §3.4).
+	log "GUASTO C — «la cura di §5-bis.7 TOLTA» (src/rcp.c, la COPIA)"
+	inf "ATTESO dichiarato PRIMA: il caso 7 diventa ROSSO su TUTTE le esotiche."
+	inf "   La sessione resta «it», e i caratteri esotici NON sono producibili:"
+	inf "   arriva «aa» invece di «aűa», «11» invece di «1α1» — e il registro"
+	inf "   scrive «U+0171 non e' producibile».  ⚠ Il canarino c'e' lo stesso,"
+	inf "   quindi la prova e' ROSSA e non INVALIDA: e' esattamente la"
+	inf "   distinzione che «06-b34-leggi.py» esiste per fare."
+	inf "⛔ E il caso 7-neg deve restare VERDE: guasta o no, la ű su «it» non"
+	inf "   arriva.  ⇒ Un controllo negativo che diventasse rosso qui direbbe"
+	inf "   che stava misurando un'altra cosa."
+	rifai_copia
+	python3 - "$GUASTO/src/rcp.c" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+ancora = """static void applica_disposizione(rcp_sessione *s, const char *perche)
+{
+	if (!s->disposizione[0])
+		return;
+"""
+innesto = """static void applica_disposizione(rcp_sessione *s, const char *perche)
+{
+	if (!s->disposizione[0])
+		return;
+	/* ⛔⛔ GUASTO INNESTATO — 06-b34-guasti.sh «senza-cura».
+	 *     NON e' codice di prodotto: sta solo nell'albero della copia.
+	 *     E' §5-bis.7 tolta: la disposizione dichiarata si registra e non si
+	 *     chiede mai al palco.  ⚠ Il registro tace, ed e' apposta: il guasto
+	 *     da riprodurre e' quello di PRIMA della cura, che era silenzioso. */
+	if (1)
+		return;
+"""
+if ancora not in s:
+    print("⛔ ancora non trovata in rcp.c"); sys.exit(3)
+open(p, "w", encoding="utf-8").write(s.replace(ancora, innesto, 1))
+print("innestato")
+PY
+	verifica_innesto "$GUASTO/src/rcp.c" "GUASTO INNESTATO"
+	# ⛔ E il GEMELLO va guastato allo stesso modo, o `Makefile:96` rifiuta di
+	#    compilare: `src/rcp.c` e `banchi/rcp/rcp.c` devono combaciare byte per
+	#    byte (R12.3).  ⚠ Senza questa riga il controllo positivo fallirebbe
+	#    per una ragione che non c'entra niente col guasto.
+	cp "$GUASTO/src/rcp.c" "$GUASTO/banchi/rcp/rcp.c"
+	costruisci
+	accendi_con "$GUASTO" "GUASTO C (§5-bis.7 tolta)"
+	sleep 2
+	bash "$TERRENO" testimone >/dev/null 2>&1
+	log "…e adesso il caso 7, che DEVE diventare rosso"
+	pretendi_rosso caso7 ;;
+
+forma-aperta)
+	# ⛔⛔ GUASTO D — «il controllo di forma non controlla niente».
+	#
+	# ⭐ Il caso 8 e' gia' certificato per meta' da un rosso VERO: col binario
+	#    di ieri sei righe erano rosse (`de(T3)` e compagni prendevano 0x0B).
+	#    ⛔ Ma l'ALTRA meta' — le righe che devono essere RIFIUTATE — non e'
+	#      mai stata vista rossa, e un banco che non sa diventare rosso da
+	#      quella parte non prova che la difesa ci sia ancora.
+	log "GUASTO D — «la forma non si controlla» (src/rcp.c, la COPIA)"
+	inf "ATTESO dichiarato PRIMA: il caso 8 diventa ROSSO sulle righe «fuori"
+	inf "   forma», che prenderanno 0x0E (o apriranno) invece di 0x0B."
+	inf "⛔ E «../../etc/passwd» arriverebbe dentro la macchina degli include di"
+	inf "   XKB: e' precisamente la cosa che quella funzione protegge."
+	rifai_copia
+	python3 - "$GUASTO/src/rcp.c" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+ancora = """	/* §4.5: un nome XKB, eventualmente con la variante fra parentesi. */
+	if (n < 1 || n > 64)
+		return false;
+"""
+innesto = ancora + """	/* ⛔⛔ GUASTO INNESTATO — 06-b34-guasti.sh «forma-aperta».
+	 *     NON e' codice di prodotto: sta solo nell'albero della copia.
+	 *     La forma non si guarda: qualunque stringa lunga da 1 a 64 byte
+	 *     passa, e la sola difesa resta quel che XKB si rifiuta di aprire. */
+	return true;
+"""
+if ancora not in s:
+    print("⛔ ancora non trovata in rcp.c"); sys.exit(3)
+open(p, "w", encoding="utf-8").write(s.replace(ancora, innesto, 1))
+print("innestato")
+PY
+	verifica_innesto "$GUASTO/src/rcp.c" "GUASTO INNESTATO"
+	cp "$GUASTO/src/rcp.c" "$GUASTO/banchi/rcp/rcp.c"
+	costruisci
+	accendi_con "$GUASTO" "GUASTO D (la forma non si controlla)"
+	sleep 2
+	bash "$TERRENO" testimone >/dev/null 2>&1
+	log "…e adesso il caso 8, che DEVE diventare rosso sulle «fuori forma»"
+	pretendi_rosso caso8 ;;
 
 sano)
 	log "Rimetto il binario SANO"

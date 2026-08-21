@@ -9,6 +9,8 @@
 #   sudo bash .../06-b34-lancia.sh caso3        DISPOSIZIONE (0x0009) a sessione aperta
 #   sudo bash .../06-b34-lancia.sh caso4        ⛔ il tasto premuto al distacco (§11)
 #   sudo bash .../06-b34-lancia.sh caso5        disposizione ignota o malformata
+#   sudo bash .../06-b34-lancia.sh caso7        ⛔ le disposizioni ESOTICHE, e il metro e' IL CARATTERE
+#   sudo bash .../06-b34-lancia.sh caso8        ⛔ l'ALFABETO del nome: le varianti che la macchina HA
 #   sudo bash .../06-b34-lancia.sh tutti
 #
 # ===========================================================================
@@ -120,8 +122,23 @@ PRE='P:1:1 P:1:0 A:0.8 P:1:1 P:1:0 A:0.8 P:1:1 P:1:0 A:1.2'
 SONDA_ACC='U:61 U:E8 U:F2 U:5C U:40 U:61'
 SONDA_ZY='U:61 U:7A U:79 U:5C U:61'
 
+# ⛔⛔⭐ IL BIT CHE DISTINGUE VERDE DA ROSSO — 21 agosto 2026, rilievo 4 della
+#      revisione avversariale di A9.
+#
+#      Questo copione **non usciva mai diverso da zero**: stampava `NO` in rosso
+#      e poi tornava 0, e i casi 3, 4a e 5 non avevano nemmeno un `ok`/`ko`.
+#      ⛔ Un banco che non ha un bit non si puo' incatenare a niente — non a un
+#      `if`, non a una costruzione, non a un altro banco — e sopra tutto: chi lo
+#      lancia deve **leggere** per sapere com'e' andata.  ⚠ E' `LEZIONI.md`
+#      §1.2 nella sua forma piu' banale: la misura c'era, il giudizio no.
+#
+# ⇒ Da qui in poi ogni `ko` alza `ESITO`, e il copione esce con quello.
+#   ⚠ `dub` NON lo alza: un «non so» non e' un rosso, ed e' l'unico modo di
+#     tenere separati «ho misurato e non va» e «non ho potuto misurare».
+#     Quest'ultimo ha un codice suo, 9, che `batti` gia' ritorna.
+ESITO=0
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
-ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
+ko()  { ESITO=1; printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 dub() { printf '    \033[1;33m??\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -192,6 +209,42 @@ leggi() {
 
 registra() {
 	printf '%s\n' "$1" >> "$ESITI"
+}
+
+# ⛔⭐ sonda_attacca <prefisso> <disposizione> <atteso>
+#
+#   L'atteso e' una parola sola: `APRE` · `0x0B` · `0x0E`.
+#
+# ⛔ Nasce il 21 agosto 2026 dal rilievo 4 di A9: il caso 5 stampava «sessione»
+#    e «congedo» e **non li confrontava con niente**, quindi non poteva essere
+#    ne' verde ne' rosso — e infatti il suo atteso e' rimasto rovesciato per
+#    cinque giorni senza che nessuno se ne accorgesse.  ⚠ Un banco senza
+#    verdetto non invecchia male: **non invecchia affatto**, perche' nessuno
+#    puo' vedere quando ha smesso di dire il vero.
+sonda_attacca() {
+	local pre=$1 d=$2 atteso=$3
+	local et; et="$pre-$(printf '%s' "$d" | tr -c 'a-zA-Z0-9' '_')"
+	[ "$et" = "$pre-" ] && et="$pre-vuota"
+	SCENA="$pre: ATTACCA con disposizione «$d»"
+	batti "$et" "$d" "A:0.2" >/dev/null 2>&1
+	local esito
+	esito=$(python3 -c "
+import json
+try:
+    j=json.load(open('$LAVH/$et-cliente.json'))
+    if j.get('sessione'): print('APRE')
+    else:
+        c=str(j.get('congedo'))
+        print('0x0B' if '0x0b' in c else ('0x0E' if '0x0e' in c else c))
+except Exception:
+    print('NIENTE')
+")
+	if [ "$esito" = "$atteso" ]; then
+		ok "$(printf '%-26s %s' "«$d»" "$esito")"
+	else
+		ko "$(printf '%-26s %s   ⛔ ATTESO %s' "«$d»" "$esito" "$atteso")"
+	fi
+	registra "{\"caso\":\"$pre\",\"disposizione\":\"$d\",\"atteso\":\"$atteso\",\"misurato\":\"$esito\",\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }
 
 CASO=${1:-tutti}
@@ -269,7 +322,17 @@ fai_caso2() {
 	else
 		inf "⛔ «RIPIEGO DICHIARATO» NON compare: il confronto non e' stato fatto"
 	fi
-	registra "{\"caso\":\"2\",\"us\":$vus,\"de\":$vde,\"ricambi\":[$r0,$r1],\"keymap\":[$k0,$k1],\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	# ⛔⭐ E IL VERDETTO ESCE DAL JSON — 21 agosto 2026, rilievo 4 di A9: i due
+	#     verdetti sul carattere erano calcolati e scritti **solo** dentro
+	#     `$ESITI`, cioe' nessuno li vedeva mai.
+	if [ "$vus" -eq 0 ] && [ "$vde" -eq 0 ]; then
+		ok "il carattere combacia in tutt'e due i giri (us e de)"
+	else
+		ko "⛔ ROSSO sul carattere: us=$vus de=$vde (0 = combacia)"
+	fi
+	[ "$k1" -gt "$k0" ] && ok "la keymap e' cambiata al riattacco (§5-bis.7 attuata)" \
+		|| ko "⛔ KEYMAP CAMBIATA fermo a $k0: la disposizione dichiarata non ha toccato niente"
+	registra "{\"caso\":\"2\",\"us\":$vus,\"de\":$vde,\"ricambi\":[$r0,$r1],\"keymap\":[$k0,$k1],\"esito\":$ESITO,\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }
 
 fai_caso2s() {
@@ -349,6 +412,9 @@ fai_caso2s() {
 	inf "ricambi_tastiera: $r0 → $r1   ·   KEYMAP CAMBIATA: $k0 → $k1"
 	[ "$r1" -gt "$r0" ] && ok "il ricambio C'E' STATO ed e' contato" \
 		|| ko "⛔ ricambi_tastiera NON e' cresciuto: il dispositivo non e' rinato"
+	# ⛔ E anche qui il verdetto sul carattere esce dal JSON (rilievo 4 di A9).
+	[ "$v" -eq 0 ] && ok "il carattere combacia: «azy\\a» sulla sessione tedesca" \
+		|| ko "⛔ ROSSO sul carattere (verdetto $v): la keymap usata non e' quella della sessione"
 	cresciuto | grep -E 'KEYMAP CAMBIATA|TOLTA dal compositore|disposizione in vigore' | tail -8 | sed 's/^/        /'
 	registra "{\"caso\":\"2s\",\"verdetto\":$v,\"ricambi\":[$r0,$r1],\"keymap\":[$k0,$k1],\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 	bash "$TERRENO" disposizione it >/dev/null 2>&1
@@ -376,7 +442,31 @@ for k in ('sessione','disposizione_mandata','dopo_disposizione','congedo','error
 " 2>&1 | tail -8
 	inf "— che cosa ha scritto il server —"
 	cresciuto | grep -iE 'congedo|0x0009|DISPOSIZIONE' | tail -6 | sed 's/^/        /'
-	registra "{\"caso\":\"3\",\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	# ⛔⭐ E ADESSO C'E' UN VERDETTO — 21 agosto 2026, rilievo 4 di A9.
+	#     Questo caso stampava un JSON e non diceva mai se fosse andato bene:
+	#     l'atteso era dichiarato in cinque righe e non confrontato con niente.
+	#     ⛔ Un numero stampato e non confrontato e' un difetto.
+	local c3viva c3keymap
+	c3viva=$(python3 -c "
+import json
+d=json.load(open('$LAVH/c3-cliente.json'))
+print(1 if (d.get('sessione') and not d.get('congedo') and not d.get('errore')
+            and 'viva' in str(d.get('dopo_disposizione'))) else 0)
+" 2>/dev/null || echo 0)
+	c3keymap=$(cresciuto | grep -c "KEYMAP CAMBIATA.*disposizione «de " 2>/dev/null | head -1)
+	if [ "${c3viva:-0}" = 1 ]; then
+		ok "la connessione e RESTATA VIVA e nessun messaggio e arrivato sul filo"
+	else
+		ko "⛔ ROSSO: 0x0009 a sessione aperta NON lascia viva la connessione —"
+		ko "   e il sintomo per l utente e «cambio tastiera e la sessione cade»"
+	fi
+	if [ "${c3keymap:-0}" -ge 1 ]; then
+		ok "e la keymap della sessione e passata a «de» (riga KEYMAP CAMBIATA)"
+	else
+		ko "⛔ ROSSO: nessuna «KEYMAP CAMBIATA … disposizione «de …»: il"
+		ko "   messaggio non ha cambiato niente, cioe non serve a niente"
+	fi
+	registra "{\"caso\":\"3\",\"viva\":${c3viva:-0},\"keymap_de\":${c3keymap:-0},\"esito\":$ESITO,\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }
 
 fai_caso4() {
@@ -402,13 +492,39 @@ fai_caso4() {
 	batti c4a it "$PRE U:61" --lascia-premuto 42
 	inf "— il distacco col Maiusc giu' —"
 	cresciuto | grep -iE 'rilascio al distacco|RILASCIO AL DISTACCO' | tail -4 | sed 's/^/        /'
+	# ⛔⭐ 4a HA UN VERDETTO — 21 agosto 2026, rilievo 4 di A9.  Qui non c'e'
+	#     nessun ricambio di dispositivo: il Maiusc e' premuto sullo STESSO
+	#     dispositivo con cui ci si stacca, quindi il rilascio DEVE partire e
+	#     DEVE essere contato.  ⇒ «rilascio al distacco: 0» qui e' un rosso
+	#     secco, senza le sottigliezze degli orfani di 4b.
+	local ril4a
+	ril4a=$(cresciuto | grep 'rilascio al distacco:' | tail -1 \
+	        | sed 's/.*rilascio al distacco: \([0-9]*\).*/\1/')
+	inf "il «rilascio al distacco» di 4a: ${ril4a:-(nessuno)}"
+	if [ "${ril4a:-0}" -ge 1 ] 2>/dev/null; then
+		ok "il Maiusc e stato rilasciato e CONTATO (${ril4a})"
+	else
+		ko "⛔ ROSSO: «rilascio al distacco: ${ril4a:-nessuna riga}» — un tasto"
+		ko "   premuto sullo stesso dispositivo con cui ci si stacca DEVE"
+		ko "   partire, e qui non e partito (RCP.md §11)"
+	fi
 	sleep 1
 	azzera_testimone
 	SCENA="caso4a-B: riattacco dichiarando «us», e si guarda se il Maiusc e’ rimasto giu’"
 	batti c4ab us "$PRE U:61 U:7A"
 	inf "— riattacco (dichiarata «us»): minuscole o MAIUSCOLE? —"
-	leggi '' ''
-	registra "{\"caso\":\"4a\",\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	leggi 'az' ''
+	local v4a=$?
+	# ⛔ E il testimone si CONFRONTA, non si guarda: «az» minuscolo = il Maiusc
+	#    non e' rimasto giu'.  «AZ» = e' rimasto, ed e' il desktop inservibile
+	#    di `RCP.md` §11.
+	case $v4a in
+	0) ok "al riattacco arrivano MINUSCOLE: il Maiusc non e rimasto giu" ;;
+	3) ko "⛔ INVALIDA: dal testimone non e arrivato niente — non si e misurato" ;;
+	*) ko "⛔ ROSSO: al riattacco NON arriva «az» — se sono MAIUSCOLE, il Maiusc"
+	   ko "   e rimasto premuto nella sessione e il desktop e inservibile" ;;
+	esac
+	registra "{\"caso\":\"4a\",\"rilascio\":${ril4a:-null},\"verdetto\":$v4a,\"esito\":$ESITO,\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 
 	# --- 4b: il dispositivo RINASCE mentre il tasto e' giu' ----------------
 	log "CASO 4b ⛔⛔ — il dispositivo RINASCE mentre il tasto e' premuto"
@@ -443,7 +559,15 @@ fai_caso4() {
 	#    guarda troppo indietro trova sempre qualcosa, ed e' la stessa forma
 	#    d'errore del canarino: si crede di aver visto l'evento e si e' visto
 	#    quello di prima.
-	local marca4b
+	# ⛔⭐ E LA SPIA LASCIA UNA TRACCIA, invece di dirlo solo a video — 21 agosto
+	#     2026.  Il verdetto di 4b deve poter distinguere «la scena non e'
+	#     avvenuta» da «il prodotto ha sbagliato», e la prova che la scena e'
+	#     avvenuta dev'essere **indipendente da quel che il prodotto scrive
+	#     sugli orfani** — altrimenti il controllo positivo, che gli orfani li
+	#     toglie, verrebbe letto come «il banco non ha provocato niente».
+	local marca4b scena4b
+	scena4b=$LAVH/c4b-scena
+	rm -f "$scena4b"
 	marca4b=$(stat -c %s "$LOG" 2>/dev/null || echo 0)
 	(
 		g=0
@@ -452,6 +576,7 @@ fai_caso4() {
 			   | grep -q 'POSIZIONE_TASTO codice evdev 42 .* premuto'; then
 				printf '    --  ⭐ il Maiusc E GIU: adesso cambio la disposizione\n'
 				bash "$TERRENO" disposizione de >/dev/null 2>&1
+				: > "$scena4b"
 				exit 0
 			fi
 			sleep 0.1; g=$((g+1))
@@ -528,20 +653,70 @@ fai_caso4() {
 	# ⚠ E che il desktop resti sano lo dice il testimone, non questo numero:
 	#   `[M]` arriva «az» minuscolo perche' **Mutter rilascia da se'** i tasti
 	#   del dispositivo che distrugge (misurato dal controllo positivo B).
-	local orfani
+	# ⛔⛔⭐ E IL VERDETTO E' CAMBIATO UNA TERZA VOLTA — 21 agosto 2026, rilievo 3
+	#      della revisione avversariale di A9, ⛔ **e il ramo verde era la firma
+	#      della scena MANCATA**.
+	#
+	#      Diceva: `ril4b >= 1` ⇒ *«il rilascio e' PARTITO sul dispositivo
+	#      nuovo»*, verde.  ⛔ Ma se la scena RIESCE — cioe' se il dispositivo
+	#      muore col tasto giu' — `segna_orfani()` (`input.c:709`) marca quel
+	#      tasto come orfano, e `input_rilascia_tutto()` (`input.c:1299`) conta
+	#      gli orfani **in una variabile diversa**: `quanti` resta a **zero**.
+	#      ⇒ `ril4b >= 1` si puo' ottenere **soltanto se il ricambio non e'
+	#        avvenuto**, cioe' quel verde certificava che la scena NON era
+	#        successa.  ⚠ E' il difetto peggiore che un banco possa avere: dava
+	#        il colore giusto per la ragione opposta.
+	#
+	#      ⛔ E il conto che l'avrebbe smascherato — `r0 → r1` — era **stampato
+	#        e mai confrontato**, mentre il caso 2s lo confronta davvero.
+	#        *«Ogni numero che il banco stampa e non confronta e' un difetto.»*
+	#
+	# ⇒ IL VERDETTO ADESSO HA DUE PIANI, e il primo NON e' sul prodotto:
+	#
+	#   1. **la scena e' avvenuta?**  E la prova NON puo' venire da quel che il
+	#      prodotto scrive sugli orfani — sarebbe circolare, e il controllo
+	#      positivo (che gli orfani li toglie) verrebbe letto come «il banco non
+	#      ha provocato niente».  ⇒ Le due prove indipendenti sono:
+	#        · la spia ha visto il **tasto 42 premuto** e SOLO ALLORA ha cambiato
+	#          la disposizione (il file `c4b-scena`);
+	#        · `r1 > r0`: il dispositivo tastiera e' **davvero** morto.
+	#      Se una manca ⇒ non e' rosso, e' **IL BANCO**.
+	#   2. solo allora si guarda il prodotto:
+	#      · `0` **con** la riga sugli ORFANI  = onesto, ed e' VERDE;
+	#      · `0` **senza** nessuna riga        = ⛔ il silenzio, ed e' il difetto
+	#        (ed e' esattamente quel che produce il guasto «tasti-col-vecchio»);
+	#      · `>= 1` con la scena avvenuta      = ⛔ il tasto NON e' stato marcato
+	#        orfano: il conto degli orfani ha perso il ricambio.
+	local orfani scena_orfani
 	orfani=$(cresciuto | grep -c 'ORFANI\|NON PARTE' 2>/dev/null | head -1)
+	scena_orfani=$(cresciuto | grep -c 'erano PREMUTI sul dispositivo che il compositore ha appena tolto' 2>/dev/null | head -1)
 	inf "righe che dichiarano un ORFANO in questo caso: ${orfani:-0}"
-	if [ "${ril4b:-0}" -ge 1 ] 2>/dev/null; then
-		ok "il rilascio e PARTITO sul dispositivo nuovo (conto ${ril4b})"
+	inf "righe «erano PREMUTI sul dispositivo appena tolto»: ${scena_orfani:-0}"
+	inf "ricambi_tastiera: $r0 → $r1   (⛔ adesso CONFRONTATO, non solo stampato)"
+	[ -f "$scena4b" ] && inf "la spia ha cambiato la keymap COL TASTO GIU: si" \
+		|| inf "la spia ha cambiato la keymap COL TASTO GIU: NO"
+
+	if [ ! -f "$scena4b" ] || [ "${r1:-0}" -le "${r0:-0}" ]; then
+		ko "⛔ IL BANCO, NON IL PRODOTTO: la scena di 4b NON e avvenuta."
+		ko "   spia col tasto giu: $([ -f "$scena4b" ] && echo si || echo NO) · ricambi $r0 → $r1"
+		ko "   ⇒ il dispositivo non e morto col tasto giu, e QUALUNQUE colore"
+		ko "     sul prodotto sarebbe rubato.  Rimedio: allungare l attesa fra"
+		ko "     il tasto e il cambio di keymap, e rilanciare."
+	elif [ "${ril4b:-0}" -ge 1 ] 2>/dev/null; then
+		ko "⛔ ROSSO: la scena E avvenuta, eppure «rilascio al distacco:"
+		ko "   ${ril4b}» conta dei rilasci NORMALI — cioe il tasto premuto sul"
+		ko "   dispositivo morto NON e stato marcato orfano.  Il conto degli"
+		ko "   orfani ha perso il ricambio, ed e il difetto che 4b cerca."
 	elif [ "${orfani:-0}" -ge 1 ]; then
-		ok "⭐ zero rilasci, ma l ORFANO E DICHIARATO: e la verita, non un silenzio"
-		inf "   (il rilascio non poteva partire: meta-eis-client.c:638-645 lo scarta)"
+		ok "⭐ la scena E avvenuta, zero rilasci, e l ORFANO E DICHIARATO:"
+		inf "   e la verita, non un silenzio (il rilascio non poteva partire:"
+		inf "   meta-eis-client.c:638-645 lo scarta senza errore)"
 	else
 		ko "⛔ ROSSO: «rilascio al distacco: ${ril4b:-?}» e NESSUNA riga sugli"
 		ko "   orfani — cioe uno ZERO che si legge come «non c era niente premuto»."
 		ko "   ⚠ E su un compositore che non ci coprisse, il Maiusc resterebbe giu."
 	fi
-	registra "{\"caso\":\"4b\",\"ricambi\":[$r0,$r1],\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	registra "{\"caso\":\"4b\",\"ricambi\":[$r0,$r1],\"rilascio\":${ril4b:-null},\"orfani\":${orfani:-0},\"scena_orfani\":${scena_orfani:-0},\"esito\":$ESITO,\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 	bash "$TERRENO" disposizione it >/dev/null 2>&1
 }
 
@@ -551,31 +726,40 @@ fai_caso5() {
 	att "«RCP.md» §4.5 vuole i due guasti DISTINTI:"
 	att "   fuori forma          ⇒ ERRORE_PROTOCOLLO (0x0B)"
 	att "   ben formata, ignota  ⇒ SESSIONE_NON_SERVIBILE (0x0E)"
-	att "⛔ E «rcp.c:1970» risponde da un ELENCO FISSO di 20 nomi, non a XKB:"
-	att "   ⇒ «hu» e «tr» esistono su questa macchina ma NON sono nell'elenco:"
-	att "     l'atteso e' che vengano RIFIUTATI, ed e' un difetto, non la regola."
-	att "   ⇒ «it(nonesiste)» e' ben formato e l'elenco guarda solo «it»:"
-	att "     l'atteso e' che PASSI, e che la variante non la controlli nessuno."
+	# ⛔⭐ L'ATTESO DI QUESTO CASO E' CAMBIATO — 21 agosto 2026, e non perche'
+	#     abbia cambiato idea io: perche' e' cambiato IL CODICE.
+	#
+	#     La stesura di ieri diceva *«hu e tr esistono su questa macchina ma
+	#     NON sono nell'elenco: l'atteso e' che vengano RIFIUTATI»* e *«la
+	#     variante non la controlla nessuno: it(nonesiste) PASSA»*.  ⛔ Tutt'e
+	#     due le righe adesso sono FALSE: la cura del 16 agosto ha portato la
+	#     domanda a XKB (`webtransport.c:1626` → `tastiera.c`), e la variante
+	#     ci entra dentro perche' `it(nonesiste)` non compila.
+	#
+	# ⚠ Si riscrive l'atteso invece di lasciarlo: un atteso che descrive il
+	#   codice di ieri fa leggere una cura come una regressione.
+	att "⭐ CAMBIATO il 21 agosto 2026 — la domanda «esiste?» adesso va a XKB:"
+	att "   ⇒ «hu» e «tr» esistono su questa macchina: l'atteso e' che PASSINO."
+	att "   ⇒ «it(nonesiste)» e' ben formato ma non compila: RIFIUTATA con 0x0E."
+	att "   ⇒ «it()» e' FUORI FORMA (variante vuota): l'atteso e' 0x0B, non 0x0E."
+	att "   ⇒ «IT» e' ben formato ma questa macchina non ce l'ha (XKB distingue"
+	att "     le maiuscole): l'atteso e' 0x0E — e fino al 21 agosto era 0x0B."
 	segna
-	for d in "zz" "it(qwertz)" "it(nonesiste)" "de(neo)" "hu" "tr" "../../etc/passwd" "IT" "it," ""; do
-		local et; et=$(printf '%s' "$d" | tr -c 'a-zA-Z0-9' '_')
-		[ -z "$et" ] && et=vuota
-		SCENA="caso5: ATTACCA con disposizione «$d»"
-		printf '\n    \033[1m«%s»\033[0m\n' "$d"
-		batti "c5-$et" "$d" "A:0.2"
-		python3 -c "
-import json
-try:
-    d=json.load(open('$LAVH/c5-$et-cliente.json'))
-    print('        sessione: %s' % (d.get('sessione'),))
-    print('        congedo : %s' % (d.get('congedo'),))
-except Exception as e:
-    print('        ⛔ nessun esito: %s' % e)
-" 2>&1 | tail -4
-	done
+	# ⛔ Ogni riga ha il suo atteso ACCANTO, e viene confrontato: prima erano
+	#    dieci stampe senza giudizio.
+	sonda_attacca c5 "zz"                 0x0E
+	sonda_attacca c5 "it(qwertz)"         0x0E
+	sonda_attacca c5 "it(nonesiste)"      0x0E
+	sonda_attacca c5 "it()"               0x0B
+	sonda_attacca c5 "de(neo)"            APRE
+	sonda_attacca c5 "hu"                 APRE
+	sonda_attacca c5 "tr"                 APRE
+	sonda_attacca c5 "../../etc/passwd"   0x0B
+	sonda_attacca c5 "IT"                 0x0E
+	sonda_attacca c5 "it,"                0x0B
+	sonda_attacca c5 ""                   0x0B
 	inf "— che cosa ha scritto il server —"
 	cresciuto | grep -iE 'congedo motivo|disposizione' | tail -20 | sed 's/^/        /'
-	registra "{\"caso\":\"5\",\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }
 
 fai_caso6() {
@@ -620,7 +804,238 @@ fai_caso6() {
 	registra "{\"caso\":\"6\",\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }
 
+# ===========================================================================
+# ⛔⛔ CASO 7 — LA DISPOSIZIONE ESOTICA, E IL METRO E' **IL CARATTERE**
+# ===========================================================================
+#
+# ⭐ Il caso 5 guarda se la sessione si APRE.  ⛔ «Si apre» non e' la misura:
+#    un server che accettasse `hu` e poi lasciasse la sessione italiana
+#    aprirebbe benissimo la sessione **e scriverebbe le lettere sbagliate**.
+#    ⇒ Qui si guarda il CARATTERE che esce dall'altra parte, che e' l'unica
+#      cosa che l'utente ungherese sente.
+#
+# ⛔ E l'atteso NON lo scrivo io: lo calcola `06-b34-tabella.c esotiche`,
+#    cioe' `src/tastiera.c` — lo stesso file che nel prodotto risponde al
+#    gancio `disposizione_esiste` e che traduce le LETTERE in posizioni.
+#
+#      hu   ű U+0171 → evdev 43     ő U+0151 → 26     z → 21 (QWERTZ)
+#      tr   ı U+0131 → 23           ğ U+011F → 26
+#      gr   α U+03B1 → 30           ⛔ canarino «1», non «a»
+#      ua   ї U+0457 → 27           ⛔ canarino «1», non «a»
+#      it   ű        → NON PRODUCIBILE   ⭐ e' il controllo negativo
+#
+# ⚠⚠ E IL CANARINO NON E' SEMPRE LA «a» — ed e' un difetto che questo banco
+#    avrebbe avuto se l'atteso me lo fossi scritto a mano: su `gr` il tasto 30
+#    fa una **α**, e la `a` non esiste affatto.  Con il canarino `a` ogni prova
+#    greca sarebbe uscita **INVALIDA**, e avrei letto un difetto del banco come
+#    «il fuoco non c'era».  ⇒ Il canarino di ciascuna disposizione lo sceglie
+#    la tabella, chiedendolo alla disposizione.
+#
+# ⛔⛔ E UN SECONDO INCIAMPO SCHIVATO DALLA STESSA TABELLA: la `ı` turca
+#    (U+0131) **e' producibile anche su `it`** (Maiusc+AltGr+23).  ⇒ Usarla
+#    come prova per `tr` avrebbe dato un banco **VERDE anche a disposizione NON
+#    rinegoziata** — `CODER.md` §3.4 in piena regola.  La prova che discrimina
+#    e' la **ğ**, che su `it` non esiste.
+#
+# ⇒ L'ATTESO IN DUE COLONNE, come vuole il mandato avversariale:
+#     rinegoziata      ⇒ «<canarino><esotico><canarino>»
+#     NON rinegoziata  ⇒ «<canarino><canarino>» e nel registro la riga
+#                        «U+xxxx non e' producibile … NON mandato niente»
+#   ⚠ I due esiti si distinguono in un carattere, e nessuno dei due e' un
+#     errore visibile: il secondo e' «la mia tastiera non scrive», che nessuno
+#     collega alla disposizione.
+fai_caso7() {
+	log "CASO 7 ⛔⛔ — LE DISPOSIZIONI ESOTICHE, e si giudica IL CARATTERE"
+	inf "carico: $(carico)"
+	att "l'atteso e' quello di «06-b34-tabella.c esotiche», cioe' del PRODOTTO"
+
+	# prova7 <disposizione> <U+ esotico> <canarino> <canarino in esadecimale> <atteso utf8>
+	prova7() {
+		local disp=$1 cp=$2 can=$3 canx=$4 atteso=$5
+		local et; et="c7-$(printf '%s-%s' "$disp" "$cp" | tr -c 'a-zA-Z0-9-' '_')"
+
+		# ⛔ Si riparte SEMPRE da «it»: senza, la seconda prova esotica
+		#    troverebbe la sessione gia' cambiata dalla prima e misurerebbe
+		#    «e' rimasta com'era» credendo di misurare «e' cambiata».
+		bash "$TERRENO" disposizione it >/dev/null 2>&1
+		sleep 1.5
+		segna
+		local k0; k0=$(keymap_ora)
+		azzera_testimone
+		SCENA="caso7: sessione «it», il client dichiara «$disp» e batte U+$cp"
+		printf '\n    \033[1m%s · U+%s\033[0m\n' "$disp" "$cp"
+		att "rinegoziata ⇒ «$atteso»   ·   NON rinegoziata ⇒ «$can$can»"
+		batti "$et" "$disp" "$PRE U:$canx U:$cp U:$canx"
+		leggi "$atteso" "$can"
+		local v=$?
+		local k1; k1=$(keymap_ora)
+		inf "KEYMAP CAMBIATA: $k0 → $k1"
+		# ⛔⛔ E NON BASTA CHE IL CONTATORE CRESCA — difetto del banco trovato
+		#     dal controllo positivo C, 21 agosto 2026.  Col guasto innestato
+		#     la PRIMA prova stampava lo stesso «la keymap E' cambiata», perche'
+		#     il figlio era appena nato e la sua prima keymap conta come un
+		#     cambio: `KEYMAP CAMBIATA: … (era: nessuna) → «della sessione
+		#     [Italian]»`.  ⚠ Un verde su una riga che dice «Italian» mentre il
+		#     client ha dichiarato «hu» e' il verde peggiore che ci sia.
+		#   ⇒ Si pretende che la riga NOMINI la disposizione dichiarata.
+		if cresciuto | grep -q "KEYMAP CAMBIATA.*disposizione «$disp "; then
+			ok "la keymap della sessione e' cambiata E la riga nomina «$disp»"
+		else
+			ko "⛔ nessuna «KEYMAP CAMBIATA … disposizione «$disp …»: la"
+			ko "   disposizione dichiarata NON e' quella che e' andata in vigore"
+		fi
+		cresciuto | grep -iE 'non e. producibile|KEYMAP CAMBIATA|5-bis.7' | tail -4 | sed 's/^/        /'
+		registra "{\"caso\":\"7\",\"disposizione\":\"$disp\",\"carattere\":\"U+$cp\",\"verdetto\":$v,\"keymap\":[$k0,$k1],\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	}
+
+	prova7 hu  171 a 61 $'aűa'
+	prova7 hu  151 a 61 $'aőa'
+	prova7 tr  11F a 61 $'ağa'
+	prova7 gr  3B1 1 31 $'1α1'
+	prova7 ua  457 1 31 $'1ї1'
+	# ⭐⭐ E LA VARIANTE CON LA MAIUSCOLA, che fino al 21 agosto non arrivava
+	#     nemmeno a chiedere: `de(T3)`, la disposizione TIPOGRAFICA tedesca.
+	# ⛔ Il carattere non e' scelto da me: `06-b34-tabella.c posizione` dice che
+	#    `‑` U+2011 (trattino unificatore) su `de(T3)` sta su **195+100+53** —
+	#    tre tasti, e il 195 e' il **livello 5**, che il `de` normale non ha
+	#    affatto.  ⇒ Con la sola `de` quel carattere NON e' producibile, e la
+	#    prova distingue «ha caricato la variante» da «ha caricato la
+	#    disposizione e buttato la variante», che e' il guasto vero da temere.
+	prova7 "de(T3)" 2011 a 61 $'a‑a'
+
+	# ⭐⭐ IL CONTROLLO NEGATIVO, e vive DENTRO il caso: la stessa ű su una
+	#     sessione dichiarata «it» NON deve arrivare, e il registro deve dirlo.
+	#     ⛔ Senza di lui il verde di sopra non distingue «la disposizione e'
+	#       stata applicata» da «questo carattere arriva comunque».
+	log "CASO 7-neg ⭐ — la stessa «ű» dichiarando «it»: NON deve arrivare"
+	att "atteso «aa» (la ű sparisce) + la riga «U+0171 non e' producibile»"
+	bash "$TERRENO" disposizione it >/dev/null 2>&1
+	sleep 1.5
+	segna
+	azzera_testimone
+	SCENA="caso7-neg: sessione e client su «it», si batte la ű ungherese"
+	batti c7-neg it "$PRE U:61 U:171 U:61"
+	leggi 'aa' a
+	local vn=$?
+	local nonprod
+	nonprod=$(cresciuto | grep -c "U+0171 non e. producibile")
+	inf "righe «U+0171 non e' producibile»: $nonprod"
+	if [ "$vn" -eq 0 ] && [ "$nonprod" -ge 1 ]; then
+		ok "⭐ il controllo negativo TIENE: la ű non arriva, e il server lo DICE"
+	else
+		ko "⛔ il controllo negativo NON tiene (verdetto $vn, righe $nonprod):"
+		ko "   allora il verde delle prove esotiche non prova la rinegoziazione"
+	fi
+	registra "{\"caso\":\"7-neg\",\"verdetto\":$vn,\"non_producibile\":$nonprod,\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
+	bash "$TERRENO" disposizione it >/dev/null 2>&1
+}
+
+# ===========================================================================
+# ⛔⛔ CASO 8 — IL SECONDO ELENCO SCRITTO A MANO: **L'ALFABETO DEL NOME**
+# ===========================================================================
+#
+# ⭐ La cura del 16 agosto ha tolto l'elenco fisso delle 20 disposizioni e ha
+#    portato la domanda a XKB.  ⛔ Ma DAVANTI al gancio e' rimasto un secondo
+#    elenco scritto a mano, e nessuno l'aveva guardato: **quali caratteri sono
+#    ammessi nel nome** (`disposizione_ben_formata`, `rcp.c`).
+#
+# `[M]` 21 agosto 2026, misurato chiedendolo al sistema attraverso il prodotto
+#   (`06-b34-tabella.c elenco`, cioe' `src/tastiera.c`), su tutte le **590**
+#   coppie disposizione/variante che `/usr/share/X11/xkb/rules/evdev.lst`
+#   dichiara su questa macchina:
+#
+#     589 su 590 si compilano — questa macchina le HA (l'unica che no e'
+#         `custom`, che e' un segnaposto senza file)
+#     ⛔ 9 di quelle 589 hanno una MAIUSCOLA nel nome, e il controllo di
+#        forma di `rcp.c` ammetteva solo `[a-z0-9]` + `[_-]` nella variante:
+#
+#          de(T3)  ie(CloGaelach)  ie(UnicodeExpert)  in(tamilnet_TAB)
+#          in(tamilnet_TSCII)  jp(OADG109A)  lk(tam_TAB)
+#          ru(phonetic_YAZHERTY)  ua(macOS)
+#
+# ⇒ E' la forma D1 sopravvissuta alla propria cura: un tedesco che usa la T3
+#   (la disposizione tipografica) non riceve nemmeno «questa macchina non ce
+#   l'ha» — riceve **ERRORE_PROTOCOLLO**, cioe' «il tuo client e' rotto».
+#   ⛔ E' il peggiore dei due, perche' manda a cercare il guasto dall'altra
+#     parte del filo.
+#
+# ⚠ E l'altro verso: `it()` — variante VUOTA — era **ben formata** per `rcp.c`
+#   e mal formata per `tastiera.c`, ⇒ arrivava `SESSIONE_NON_SERVIBILE` a una
+#   stringa fuori forma.  §4.5 vuole i due guasti distinti, e li' erano uniti.
+fai_caso8() {
+	log "CASO 8 ⛔⛔ — l'ALFABETO del nome: le varianti che la macchina HA"
+	inf "carico: $(carico)"
+	att "⛔ L'ATTESO LO DA' IL SISTEMA, non io: le 9 qui sotto si compilano su"
+	att "   questa macchina (misurato da «06-b34-tabella.c elenco»), quindi"
+	att "   DEVONO aprire la sessione.  Un 0x0B su una di loro e' un difetto."
+	att "⇒ deve APRIRE:  de(T3) ie(CloGaelach) jp(OADG109A) ua(macOS)"
+	att "                ru(phonetic_YAZHERTY) hu(102_qwerty_dot_dead)"
+	att "⇒ deve dare 0x0B (fuori forma):   it()  it,  ../../etc/passwd  «»"
+	att "⇒ deve dare 0x0E (ben formata, ignota):   it(nonesiste)  zz  IT"
+	segna
+
+	# ⛔ Si usa `sonda_attacca`, che e' la stessa del caso 5: due sonde scritte
+	#    due volte danno due risposte sotto la stessa etichetta (forma E2).
+	sonda8() { sonda_attacca c8 "$1" "$2"; }
+
+	local ESITO8_PRIMA=$ESITO
+	printf '\n    \033[1mle varianti che la macchina HA — devono APRIRE\033[0m\n'
+	sonda8 "de(T3)"                  APRE
+	sonda8 "ie(CloGaelach)"          APRE
+	sonda8 "jp(OADG109A)"            APRE
+	sonda8 "ua(macOS)"               APRE
+	sonda8 "ru(phonetic_YAZHERTY)"   APRE
+	sonda8 "hu(102_qwerty_dot_dead)" APRE
+	sonda8 "de(neo)"                 APRE
+	printf '\n    \033[1mfuori forma — devono dare 0x0B ERRORE_PROTOCOLLO\033[0m\n'
+	sonda8 "it()"                    0x0B
+	sonda8 "it,"                     0x0B
+	sonda8 "../../etc/passwd"        0x0B
+	sonda8 "it(a"                    0x0B
+	sonda8 "it(a)b"                  0x0B
+	sonda8 ""                        0x0B
+	printf '\n    \033[1mben formate ma ignote — devono dare 0x0E SESSIONE_NON_SERVIBILE\033[0m\n'
+	sonda8 "zz"                      0x0E
+	sonda8 "IT"                      0x0E
+	sonda8 "it(nonesiste)"           0x0E
+	sonda8 "custom"                  0x0E
+
+	printf '\n'
+	[ "$ESITO" = "$ESITO8_PRIMA" ] && ok "⭐ CASO 8 VERDE" \
+		|| printf '    \033[1;31mNO\033[0m  ⛔ CASO 8 ROSSO — vedi le righe qui sopra\n'
+	inf "— che cosa ha scritto il server —"
+	cresciuto | grep -iE 'congedo motivo|disposizione' | tail -12 | sed 's/^/        /'
+}
+
+# ===========================================================================
+# ⛔⭐ LA TABELLA SI COSTRUISCE E SI ESEGUE — 21 agosto 2026, rilievo 5 di A9
+# ===========================================================================
+#
+# Il documento di fase vantava *«l'atteso lo calcola il prodotto»*, ⛔ e
+# `06-b34-tabella.c` **non era costruito ne' eseguito da nessuno script**: era
+# citato in due commenti.  ⚠ Un pregio che nessun copione esercita e' un pregio
+# che si puo' perdere senza che niente diventi rosso.
+#
+# ⇒ Adesso `tabella` e' un caso come gli altri, e i casi 7 e 8 lo chiamano
+#   PRIMA di misurare: se l'atteso non si puo' calcolare, non si misura.
+TAB=$LAVH/06-b34-tabella
+fai_tabella() {
+	log "TABELLA — l'atteso, calcolato da «src/tastiera.c» (il PRODOTTO)"
+	if ! bash /media/REMOTIX/enter.sh --root \
+		"cd $CB && cc -O2 -o $LAVC/06-b34-tabella 06-b34-tabella.c ../src/tastiera.c \
+		 ../src/registro.c \$(pkg-config --cflags --libs xkbcommon glib-2.0)" ; then
+		ko "⛔ IL BANCO: «06-b34-tabella.c» NON si costruisce — senza di lui"
+		ko "   l atteso dei casi 7 e 8 sarebbe una mia opinione"
+		return 9
+	fi
+	ok "costruita: $TAB"
+	bash /media/REMOTIX/enter.sh --root "$LAVC/06-b34-tabella esotiche 2>/dev/null" \
+		| sed 's/^/        /'
+	return 0
+}
+
 case "$CASO" in
+tabella) fai_tabella ;;
 caso1)  fai_caso1 ;;
 caso2)  fai_caso2 ;;
 caso2s) fai_caso2s ;;
@@ -628,9 +1043,18 @@ caso3)  fai_caso3 ;;
 caso4)  fai_caso4 ;;
 caso5)  fai_caso5 ;;
 caso6)  fai_caso6 ;;
-tutti)  fai_caso1; fai_caso2; fai_caso2s; fai_caso3; fai_caso4; fai_caso5; fai_caso6 ;;
+caso7)  fai_tabella && fai_caso7 ;;
+caso8)  fai_tabella && fai_caso8 ;;
+tutti)  fai_tabella; fai_caso1; fai_caso2; fai_caso2s; fai_caso3; fai_caso4; fai_caso5; fai_caso6; fai_caso7; fai_caso8 ;;
 *) ko "caso sconosciuto: $CASO"; exit 2 ;;
 esac
 
 log "Fatto — esiti in $ESITI"
 inf "carico finale: $(carico)"
+# ⛔ E il verdetto esce anche dalla porta di servizio: `$?`.
+if [ "$ESITO" = 0 ]; then
+	ok "⭐ VERDE — nessun «NO» in tutto il giro"
+else
+	printf '    \033[1;31mNO\033[0m  ⛔ ROSSO — c e almeno un «NO» qui sopra\n'
+fi
+exit "$ESITO"

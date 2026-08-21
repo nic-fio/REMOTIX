@@ -98,9 +98,16 @@ giro() { # $1 = etichetta · $2 = modo
 	cliente "$1-nasc" attacco  > /dev/null 2>&1
 	sudo_mio bash "$T" testimone "$TELA_A" > /dev/null 2>&1 || {
 		ko "⛔ IL BANCO: il testimone non si apre"; return 3; }
+	# ⛔⛔ IL `--da` SI MISURA, NON SI SCRIVE — rilievo della revisione
+	#      avversariale, 21 agosto 2026.  Era la costante **5**, che vale solo
+	#      con UN monitor: le righe di apertura del testimone sono
+	#      `POSTO_LEGATO + SCHERMO×N + POSTO + KEYMAP + PRONTA`, e con due
+	#      `wl_output` diventano sei.  ⇒ Il giudice salterebbe la prima riga
+	#      vera, o ne conterebbe una d'apertura come se fosse una misura.
+	DA=$(sudo_mio bash "$T" righe | awk '{print $2}')
 	cliente "$1" "$2" > "$LAV/$1-cliente.log" 2>&1
 	sudo_mio python3 "$SRC/banchi/06-b33-giudice.py" --visto "$LAV/visto.jsonl" \
-		--registro "$LAV/registro.log" --da 5 --modo "$2" --etichetta "$1" \
+		--registro "$LAV/registro.log" --da "${DA:-5}" --modo "$2" --etichetta "$1" \
 		--tela-b "$TELA_B" --scena "certifica $1" --esiti "$ESITI"
 	return 0
 }
@@ -118,21 +125,65 @@ for r in reversed(righe):
 EOF
 }
 
+# ⛔⛔ LA SCENA HA RETTO? — rilievo della revisione avversariale, 21 ago 2026.
+#
+# Il giudice sapeva gia' dire «IL BANCO, NON IL PRODOTTO», ⛔ ma questo
+# certificatore non lo leggeva mai.  ⇒ Un giro **completamente fallito** — il
+# client che non regge la stretta di mano con sette banchi sullo stesso iGPU —
+# produceva un insieme di rossi che **contiene** il caso dichiarato, e il
+# certificatore stampava «⭐ Gn ha acceso il caso dichiarato».
+scena_regge() { python3 - "$ESITI" "$1" <<'EOF'
+import json, sys
+righe = [json.loads(x) for x in open(sys.argv[1], encoding="utf-8") if x.strip()]
+for r in reversed(righe):
+    if r["etichetta"] == sys.argv[2]:
+        print("SI" if r.get("scena_valida", True) else "NO")
+        break
+else:
+    print("NO")
+EOF
+}
+
 log "0. La copia SANA di input.c, che e' quel che si rimette dopo ogni guasto"
 cp "$SRC/src/input.c" "$SANO" || { ko "non ho fatto la copia"; exit 2; }
 ok "salvata in $SANO ($(wc -l < "$SANO") righe)"
 : > "$ESITI"
 
+# ⛔⛔ IL GIRO SANO SI FA IN TUTT'E DUE I MODI — rilievo della revisione
+#      avversariale, 21 agosto 2026, ed e' il piu' grave dei cinque.
+#
+#      Fino a oggi il giro sano girava **solo in modo `comanda`**, e il modo
+#      `tenuto` compariva **soltanto** col guasto G3.  ⇒ I casi R1, R2, T2, T3 e
+#      T4 non avevano MAI una riga sana di riferimento: qualunque cosa
+#      facessero col guasto innestato, non c'era niente con cui confrontarla.
+#      ⛔ E infatti R1 era rosso col prodotto SANO — per la cura di
+#      `figlio.c:3964`, non per G3 — e lo script stampava lo stesso «⭐ G3 ha
+#      acceso il caso dichiarato».  Un controllo positivo che si certifica da
+#      solo non certifica niente (`CODER.md` §3.4).
+sano_in_due_modi() { # $1 = etichetta base
+	local m R S
+	for m in comanda tenuto; do
+		log "   · giro $1 in modo $m"
+		giro "$1-$m" "$m"
+		S=$(scena_regge "$1-$m")
+		if [ "$S" != SI ]; then
+			ko "⛔ IL BANCO: la scena del giro $1-$m non ha retto"
+			return 3
+		fi
+		R=$(rossi "$1-$m")
+		if [ -z "$R" ]; then
+			ok "il giro $1-$m non ha nessun rosso"
+		else
+			ko "⛔ il giro $1-$m ha dei rossi: $R"
+			return 3
+		fi
+	done
+	return 0
+}
+
 log "1. Il giro SANO — ⛔ e se questo non e' verde non si certifica niente"
 dentro "bash $DENTRO/src/costruisci.sh" > "$LAV/costr-sano.log" 2>&1
-giro sano comanda
-R=$(rossi sano)
-if [ -z "$R" ]; then
-	ok "il giro sano non ha nessun rosso"
-else
-	ko "⛔ il giro SANO ha dei rossi: $R — il banco non e' certificabile"
-	exit 3
-fi
+sano_in_due_modi sano || { ko "⛔ il banco non e' certificabile"; exit 3; }
 
 for G in $GUASTI; do
 	CASO=$(python3 "$QUI/06-b33-guasti.py" --elenco | grep -A1 "^$G " | \
@@ -147,17 +198,51 @@ for G in $GUASTI; do
 		ko "$G non compila:"; tail -5 "$LAV/costr-$G.log" | sed 's/^/        /'
 		continue
 	fi
+	# ⚠ «nessuno» e' un atteso come gli altri, e non un caso da cercare: G1 e'
+	#   il NON-GUASTO, e il suo atteso e' **l'insieme vuoto**.  ⛔ Senza questa
+	#   riga il confronto per uguaglianza cercherebbe un caso di nome «nessuno».
+	[ "$CASO" = nessuno ] && CASO=""
 	MODO=comanda
-	case "$CASO" in R*) MODO=tenuto ;; esac
+	case "$CASO" in R*|T*) MODO=tenuto ;; esac
 	giro "$G" "$MODO"
+	# ⛔⛔ PRIMA la scena, POI il verdetto: senza questa riga un giro
+	#      completamente fallito certificava OGNI guasto (vedi `scena_regge`).
+	S=$(scena_regge "$G")
+	if [ "$S" != SI ]; then
+		ko "⛔ IL BANCO: la scena del giro $G non ha retto ⇒ non si puo' dire"
+		ko "   niente su $G.  ⚠ Non e' «il guasto non si vede»: e' «non ho"
+		ko "   guardato», e i due non hanno lo stesso colore"
+		continue
+	fi
 	R=$(rossi "$G")
 	inf "casi rossi: ${R:-nessuno}"
-	case " $R " in
-	*" $CASO "*) ok "⭐ $G ha acceso il caso dichiarato ($CASO)" ;;
-	*) ko "⛔ $G NON ha acceso $CASO — ha acceso «${R:-nulla}».  ⚠ O il guasto "
-	   ko "   non e' quello che credo, o il controllo non sa vederlo: si "
-	   ko "   corregge l'ATTESO con la ragione scritta accanto, non il verdetto" ;;
-	esac
+	# ⛔⛔ UGUAGLIANZA DELL'INSIEME, non appartenenza — rilievo della revisione
+	#      avversariale, 21 agosto 2026.  Con `case " $R " in *" $CASO "*` un
+	#      giro in cui **tutto** e' rosso contiene per forza il caso dichiarato,
+	#      e passava.  ⇒ Adesso si pretende che il guasto abbia acceso QUEL caso
+	#      **e nessun altro**: se ne accende altri, o il guasto non e' chirurgico
+	#      o il banco sta vedendo due cose insieme, e in tutt'e due i casi la
+	#      certificazione non vale.
+	ATTESO=$(printf '%s\n' $CASO | sort | tr '\n' ' ')
+	OTTENUTO=$(printf '%s\n' $R | sort | tr '\n' ' ')
+	if [ "$ATTESO" = "$OTTENUTO" ] && [ -z "$CASO" ]; then
+		# ⛔ «Non accende niente, come dichiarato» NON e' «il controllo positivo
+		#    ha reso»: e' un guasto che questo banco **non sa distinguere**, e
+		#    va detto con quelle parole invece di stampare una stella.
+		#    ⚠ Vale per G1 (il NON-guasto, che e' voluto) e da oggi per G3, a
+		#      cui la cura di `figlio.c:3964` ha tolto la scena.
+		inf "⚠ $G non accende NESSUN caso, ed e' quel che dichiara: questo banco"
+		inf "   NON lo distingue dal prodotto sano.  ⇒ Il suo controllo positivo"
+		inf "   deve stare altrove, o non esiste (vedi il riquadro in"
+		inf "   06-b33-guasti.py)"
+	elif [ "$ATTESO" = "$OTTENUTO" ]; then
+		ok "⭐ $G ha acceso ESATTAMENTE il caso dichiarato ($CASO)"
+	else
+		ko "⛔ $G doveva accendere «${ATTESO% }» e ha acceso «${OTTENUTO:-nulla}»."
+		ko "   ⚠ O il guasto non e' quello che credo, o il controllo non sa"
+		ko "   vederlo, o ne vede piu' di uno: si corregge l'ATTESO con la"
+		ko "   ragione scritta accanto, non il verdetto"
+	fi
 done
 
 log "3. Si rimette il file SANO e si ricostruisce"
@@ -168,9 +253,9 @@ if grep -q 'costruito' "$LAV/costr-risana.log"; then
 else
 	ko "⛔ il risanamento NON ha ricostruito: l'albero resta GUASTO"
 fi
-giro risanato comanda
-R=$(rossi risanato)
-[ -z "$R" ] && ok "il giro risanato non ha nessun rosso" || ko "⛔ risanato con rossi: $R"
+# ⛔ E anche il risanato in TUTT'E DUE i modi: se il modo `tenuto` non tornasse
+#    come il giro sano, il guasto non sarebbe stato tolto per davvero.
+sano_in_due_modi risanato || ko "⛔ il giro risanato non e' tornato come il sano"
 
 log "Esito"
 inf "esiti: $ESITI"
