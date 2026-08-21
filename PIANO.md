@@ -1374,38 +1374,53 @@ non ci rallenterà più».*
 |---|---|
 | **Firefox per Android** | ⛔ **NON SUPPORTATO** — `DECISIONI.md` §7.18. Il prodotto non prende più la strada MSE da solo; resta dietro `?disegno=mse` come prova, e la fase 13 decide se buttarla |
 | **REMOTIX non rincorre i difetti dei browser** | `DECISIONI.md` §0.1-bis. «Pienamente supportato» vuol dire *funziona, e sai in che condizioni* — non *uguale dappertutto* |
-| ⭐ **Chrome per Android** | **esperienza completa, audio e video perfetti** — giudizio dell'utente, 21 agosto sera. Chiude l'ultimo difetto vero della fase 7 |
+| ⭐ **Chrome per Android** | **esperienza completa, audio e video perfetti** — giudizio dell'utente, 21 agosto sera: ogni flusso è pulito, `[M]` zero perdite su ogni anello. ⛔ **Non** chiude il ritardo fra audio e video, che l'utente ha confermato un'ora dopo ed è il punto 1 qui sotto |
 | **come una sessione locale** | `DECISIONI.md` §5-ter.8: niente trucchi, niente pulsanti nostri. Su Firefox l'incolla col mouse costa un clic **di Firefox**, e §5-ter.9 lo accetta |
 
 ## I punti aperti, con che cosa li chiude
 
 ### Fase 7 — audio e appunti
 
-⭐ **Difetti veri aperti: nessuno.** La coda dell'audio a 400–420 ms **non è più un punto aperto** —
-l'utente ha ascoltato da un telefono: *«Chrome su Android offre un'esperienza completa: audio e video
-perfetti»* (`fasi/07-audio-e-appunti.md` §9.7, 21 agosto sera). ⇒ Con quella frase cadono insieme
-**tre** voci che stavano qui: la coda non diagnosticata, «nessuno ha ascoltato da un telefono», e il
-cuscino di 60 ms + il bitrate di Opus, che erano 🔸 derivati e adesso sono giudicati **sul
-risultato**.
+1. ⛔⛔ **IL RITARDO DELL'AUDIO SUL VIDEO — ~400 ms, confermato dall'orecchio e DIAGNOSTICATO.**
+   *«Il ritardo di 400 ms tra audio e video in generale te lo confermo»* — l'utente, 21 agosto sera,
+   dal PC Windows. ⭐ **La causa è nostra e ha un nome**: `AUDIO_CUSCINO_MS = 250` in `pagina.html`,
+   alzato da 60 il 17 agosto per togliere i buchi, col prezzo scritto nel commento. Il resto della
+   catena aggiunge il poco che manca ai 400.
+   ⭐ **E la misura c'è**, su una sessione vera di Windows (`07-b60`): produttore 50 blocchi/s con
+   0 persi, pagina 10 621 ricevuti / 10 617 suonati / 4 buchi tutti dell'avvio, video 5 334→5 334
+   senza un tardivo, coda **239–270 ms** — cioè esattamente il cuscino. ⇒ **Nessun anello perde
+   niente: il ritardo è accumulato apposta, in un punto solo.**
+   ⛔ **La cura non è abbassare il numero** (ripaga in buchi quel che dà in sincronia): è
+   **togliere l'audio dal thread principale** — `AudioWorklet` con un anello — ed è già nominata nel
+   codice. ⏳ `[?]` Prima però va capito perché nella seconda metà della sessione la coda **scende a
+   70–110 ms e ci resta**: se a regime bastano quelli, il lavoro è un altro.
+   ⇒ 📖 `fasi/07-audio-e-appunti.md` §8 e §9.7-bis.
+2. ⏳ Il datagram su rete **non locale** (i byte sono presi su cavo, e il giudizio è su rete di casa);
+   la **priorità in tempo reale** dentro il figlio (**R26**) — ⚠ sospettata per l'audio a scatti di
+   Windows e **scagionata**: quello era il PC dell'utente.
 
-1. ⏳ Il datagram su rete **non locale** (i byte sono presi su cavo, e il giudizio è su rete di casa);
-   la **priorità in tempo reale** dentro il figlio.
+⭐ **E quel che il giudizio dell'utente CHIUDE davvero**: «nessuno ha ascoltato l'audio da un
+telefono» (adesso sì) e «il bitrate di Opus mai giudicato» (96 kbit/s suonano puliti). ⛔ Il cuscino
+no: quello è il punto 1.
 
 ### Fase 6 — la tela e la vista
 
-2. ⏳ **Il colore del decodificatore H.264 in hardware**: `[?]` +8 livelli sulle zone chiare.
-3. ⏳ **`?video=worker` non esercitato** (il credito degli stream unidirezionali di QUIC si esaurisce).
-4. ⏳ Il costo di `createImageBitmap`, mai misurato.
-5. ⏳ Il DeX e la GPU vera: il mezzo pixel non arriva su Xvfb.
+3. ⏳ **Il colore del decodificatore H.264 in hardware**: `[?]` +8 livelli sulle zone chiare.
+4. ⏳ **`?video=worker` non esercitato** (il credito degli stream unidirezionali di QUIC si esaurisce).
+5. ⏳ Il costo di `createImageBitmap`, mai misurato.
+6. ⏳ Il DeX e la GPU vera: il mezzo pixel non arriva su Xvfb.
 
 ### Il ferro e le prove
 
-6. ⏳ **Windows non l'ha mai visto nessuno**: il vincolo dichiara Chrome e Firefox su Linux,
-   **Windows** e Android. Delle tre piattaforme, due sono misurate — ⭐ e **Android adesso è
-   giudicata**, non solo misurata.
-7. ⭐ **E gli strumenti per non disturbare l'utente ci sono**: `07-b58` (browser senza WebCodecs,
+7. ⭐ **Windows: provato il 21 agosto sera, su Chrome, con l'audio e gli appunti addosso** — ed è
+   la prima volta dopo il «100 %» del 16 agosto, che era di prima della fase 7. `[M]` sessione di
+   ~4 minuti, zero perdite su ogni anello (`07-b60`). ⏳ Resta da provare **Firefox su Windows**, e
+   resta il ritardo del punto 1, che è di tutte le piattaforme.
+8. ⭐ **E gli strumenti per non disturbare l'utente ci sono**: `07-b58` (browser senza WebCodecs,
     da tavolo), `07-b59` (**Firefox per Android vero, in un emulatore**, giro completo da solo),
-    `07-b56` (incolla col mouse), `07-b51`/`07-b53`/`07-b54` (le regressioni). ⚠ E `LEZIONI.md`
+    `07-b56` (incolla col mouse), `07-b51`/`07-b53`/`07-b54` (le regressioni), ⭐ e **`07-b60`
+    (sorveglia una sessione VERA: tutti gli anelli, i thread e il tempo reale sulla stessa
+    riga)** — è quello che ha scagionato REMOTIX dall'audio a scatti di Windows. ⚠ E `LEZIONI.md`
     §1.19: **chi apre chiude** — i banchi lavorano sul desktop di una persona.
 
 ## Come si riparte, in due comandi

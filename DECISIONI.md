@@ -4458,6 +4458,20 @@ c'è, ed è giudicato — non dedotto dai contatori.
 ⚠ **E questo è §0.1-bis applicato per intero**: *«pienamente supportato»* qui vuol dire **funziona, e
 sai in che condizioni** — non *uguale dappertutto*.
 
+> ### ⛔ E UN'ORA DOPO L'UTENTE HA PRECISATO, dal PC Windows — la riga «che cosa chiude» era troppo generosa
+>
+> *«Il ritardo di 400 ms tra audio e video in generale te lo confermo.»*
+>
+> ⛔ **Il difetto non è chiuso, e non è di una piattaforma**: è `AUDIO_CUSCINO_MS = 250` in
+> `pagina.html` (alzato da 60 il 17 agosto per togliere i buchi, col prezzo dichiarato nel
+> commento) più la catena di cattura, codifica e decodifica. ⇒ `fasi/07-audio-e-appunti.md` §8.
+>
+> ⭐ **Quel che questa decisione conserva**: su Chrome per Android **ogni flusso è pulito** — zero
+> perdite su ogni anello, `[M]` due volte. ⚠ Quel che **non** conserva è la lettura *«e quindi non
+> c'è più niente da curare sull'audio»*: un difetto di **sincronia** non appare in nessun contatore
+> che guardi un flusso per volta, e questa è la seconda volta in cinque giorni che questa fase
+> produce quattro anelli verdi e un'esperienza sbagliata (`LEZIONI.md` §2.7).
+
 ### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
 
 > ## ✅ **CINQUE SECONDI** — deciso dall'utente l'**11 agosto 2026**

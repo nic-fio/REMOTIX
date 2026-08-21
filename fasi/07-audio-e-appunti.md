@@ -359,7 +359,7 @@ certifica prima di essere creduto. Il prodotto è §4.2.
 | ⭐⭐ `src/webtransport.c` | il **verso d'uscita dei datagram**, che non esisteva: la coda (8 blocchi, e chi non ci sta si **butta** — §6.3 vieta la ritrasmissione), il prefisso di **RFC 9297**, l'inquadratura di §6.3, `wt_audio_diffondi()` con la guardia **I3**, e `audio_regola()` che accende il canale |
 | `src/rcp.c` + `.h` | `rcp_audio_negoziato()`: da `opus`/`pcm` ai numeri `1`/`2` di §6.3, **in un posto solo** |
 | `src/main.c` | `--audio-prova <hz>`: la sorgente di prova, **spenta** se nessuno la accende (I6) |
-| ⭐ `src/pagina.html` | il **ricevente**: legge i datagram, applica §6.3 (corti · tipo · **istante non più recente**), decodifica Opus con `AudioDecoder` o srotola il PCM, e suona con un cuscino di **60 ms** |
+| ⭐ `src/pagina.html` | il **ricevente**: legge i datagram, applica §6.3 (corti · tipo · **istante non più recente**), decodifica Opus con `AudioDecoder` o srotola il PCM, e suona con un cuscino di **250 ms** ⛔ *(era 60: alzato il 17 agosto per togliere i buchi, ed è la causa del ritardo di §8)* |
 | `banchi/01-b3-cliente.py` | ⭐ il **secondo lettore cresce con la fase** (`PIANO.md` §1.1): riceve i datagram e tiene **sei contatori**, uno per ogni regola di §6.3 che può essere violata |
 | `banchi/07-b41-accendi.sh` · `07-b42-giudice.py` | il server del banco (porta, ban-file e socket **propri**) e il giudice che *ascolta* |
 | ⭐ `banchi/07-b43-audio-vero.sh` · `07-b43-giudizio.py` | il banco dell'audio **vero**: la sessione suona, il client raccoglie, il giudice ascolta. Porta **7720**, albero e socket propri |
@@ -931,15 +931,58 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 > rifà lavoro già fatto, o cerca un guasto dove non c'è. ⇒ Qui c'è lo stato **vero**, e l'elenco
 > vecchio è stato tolto invece di essere lasciato accanto.
 
-### ⭐ Difetti veri, aperti: **nessuno** — 21 agosto 2026, sera
+### ⛔ Difetti veri, aperti — **uno, e adesso ha un nome** (riscritto la sera del 21 agosto)
 
-⭐ **La coda dell'audio non è più un punto aperto**, e non perché sia stata diagnosticata: perché
-**l'utente ha ascoltato**. *«Chrome su Android offre un'esperienza completa: audio e video
-perfetti»* — §9.7. ⇒ I 400–420 ms restano scritti come **numero misurato** (§«la prima sessione
-Android»), non come difetto: è il metro **I8** che decide, e per l'audio I8 è l'orecchio.
+> ⛔ **Un'ora fa qui c'era scritto «difetti veri aperti: nessuno».** Era il giudizio *«audio e video
+> perfetti»* preso alla lettera, ⚠ e l'utente lo ha precisato subito dopo, sul PC Windows:
+> *«**il ritardo di 400 ms fra audio e video in generale te lo confermo**»*. ⇒ Il difetto c'è, è
+> **generale** (non di una piattaforma), ed è **udibile**: quel che si vede e quel che si sente non
+> stanno insieme.
 
-⚠ **E quel numero non si cancella**: se un giorno qualcuno lo abbassa, lo fa perché serve a un'altra
-scena — non per chiudere un difetto, che non c'è.
+⛔ **IL RITARDO DELL'AUDIO SUL VIDEO — ~400 ms, e la causa è nostra e scritta.**
+
+`[M]` **`src/pagina.html`: `AUDIO_CUSCINO_MS = 250`** — non 60. Il 60 è stato alzato a 250 il
+**17 agosto**, e il commento del codice dice perché: *«il video si decodifica e si dipinge sullo
+**stesso thread** che programma l'audio; quando quel lavoro supera il cuscino la riproduzione si è
+già svuotata e il cuscino si riarma — e ogni riarmo è un BUCO»*. ⚠ Fu la cura del *«jitter
+pazzesco»*, e ha funzionato: i buchi sono spariti. ⛔ Il prezzo era **dichiarato nel commento** —
+*«250 ms fra quel che si vede e quel che si sente»* — e adesso l'utente lo ha sentito.
+
+**La somma che fa i 400**: 250 di cuscino + la cattura, la codifica Opus, il filo, la decodifica.
+⭐ Il video, sulla stessa sessione, sta sotto i 50 ms del suo tetto ⇒ **la distanza fra i due è tutta
+qui dentro**, e non è la rete.
+
+#### ⭐ La misura, presa su una sessione VERA di Windows — 21 agosto, `07-b60`
+
+*Chrome su Windows (192.168.0.21), un video riprodotto ~4 minuti, tutti gli anelli sulla stessa riga.*
+
+| anello | `[M]` |
+|---|---|
+| chi **produce** (il figlio) | **50 blocchi/s spediti, 0 persi** per tutta la sessione; l'anello interno resta fra 0 e 832 fotogrammi (≤ 17 ms) |
+| chi **ascolta** (la pagina) | 10 621 ricevuti · 10 617 suonati · **BUCHI 4** (tutti dell'avvio: il numero non sale più) · vecchi 0 · errori 0 |
+| la **coda** della pagina | **239–270 ms** per i primi due minuti — cioè **esattamente il cuscino** — poi scende a **70–110 ms** e lì resta |
+| il **video** | 5 334 consegnati → 5 334 dipinti, salt 0 · buchi 0 · ord 0 · mis 0 · **tard 0** |
+| la **rete** | nessun errore UDP del kernel, nessun datagram scartato dal server |
+
+⭐ **Il conto chiude e assolve tutti gli altri anelli**: non si perde niente, da nessuna parte. Il
+ritardo è **accumulato apposta**, da noi, in un punto solo.
+
+⛔⭐ **E la cura vera è già nominata nel codice, dal giorno in cui il numero è stato alzato**:
+*«se è troppo, la cura non è abbassarlo ma **togliere l'audio dal thread principale** — un
+`AudioWorklet` con un anello»*. ⚠ Abbassare 250 e basta **ripaga in buchi** quel che si guadagna in
+sincronia: è la strada del 17 agosto, percorsa al contrario.
+
+`[?]` **E un fatto che non torna, dichiarato invece che spiegato**: nella seconda metà della
+sessione la coda **scende a 70–110 ms e ci resta**, senza un buco in più. ⇒ Se il cuscino fosse
+l'unico termine non potrebbe. Va capito **prima** di costruire l'`AudioWorklet`, perché potrebbe
+voler dire che a regime 250 non servono.
+
+### ⭐ E l'audio a scatti su Windows NON era nostro
+
+*L'utente, dopo la sessione sorvegliata: «audio a scatti non accaduto, era un problema del mio PC
+Windows».* ⚠ Si scrive lo stesso, e per due ragioni: la sorveglianza di `07-b60` è servita a
+**escludere** REMOTIX con i numeri, e il sospetto che pendeva su di noi — **R26**, il `data-loop` di
+PipeWire senza tempo reale — resta aperto ma **non è questo**.
 
 ### ⏳ Aperti perché nessuno li ha ancora misurati
 
@@ -953,9 +996,9 @@ scena — non per chiudere un difetto, che non c'è.
 | era aperto | chiuso da |
 |---|---|
 | «gli appunti non hanno mai girato contro niente» | il giudizio dell'utente del 17 agosto sera, e poi i banchi `07-b53`, `07-b54`, `07-b56` |
-| «la coda dell'audio a 400–420 ms», ⛔ l'unico difetto vero aperto | ⭐ il giudizio dell'utente del 21 agosto sera: **«audio e video perfetti»** su Chrome per Android — §9.7 |
+| ⛔ ~~«la coda dell'audio a 400–420 ms»~~ | **NON è chiusa, e la riga sbagliata è durata un'ora**: l'utente ha precisato *«il ritardo di 400 ms fra audio e video te lo confermo»* ⇒ è tornata in §8, con la causa |
 | «nessuno ha ancora ascoltato l'audio da un telefono» | ⭐ adesso qualcuno l'ha ascoltato, ed è l'utente — §9.7 |
-| «il cuscino di 60 ms (A3) e il bitrate di Opus: 🔸 derivati, mai giudicati» | ⭐ giudicati **sul risultato** dal 21 agosto: sono i valori che hanno prodotto quell'ascolto. ⚠ Restano derivati come *numeri* — quel che è chiuso è il dubbio se **rendano** |
+| «il bitrate di Opus: 🔸 derivato, mai giudicato» | ⭐ giudicato **sul risultato**: 96 kbit/s hanno prodotto un ascolto che l'utente chiama pulito. ⛔ **Il cuscino no**: quello è 250, non 60, ed è il difetto di §8 |
 | «l'arbitro esterno del banco non esiste» | ⭐ vero, e **non si aggira**: §6.9. I banchi guidano browser veri con Marionette e CDP, e la sessione con `wl-copy`/`wl-paste` |
 | `DISPLAY` della sessione di «prova» · `xclip` sulla macchina di prova | ⛔ non servono più: la sponda X11 non c'è (`gnome-shell --no-x11`), e i banchi non la usano |
 | l'incolla col **mouse** (tasto destro → «Incolla») | §9.5 — quattro anelli, e `07-b56`: 3 su 3 per motore |
@@ -1361,3 +1404,24 @@ condizioni*** (`DECISIONI.md` §0.1-bis):
 | il giudizio vale per | **Chrome per Android**, Samsung DeX, rete di casa |
 | ⛔ **non** vale per | **Firefox per Android** — dichiarato incompatibile dall'utente lo stesso giorno (`DECISIONI.md` §7.18) |
 | resta non misurato | il **datagram su rete non locale**, e la **priorità in tempo reale** dentro il figlio |
+
+#### ⛔ 9.7-bis · E un'ora dopo, la precisazione che RIAPRE il difetto — **«400 ms fra audio e video, te lo confermo»**
+
+> *«Su Windows ci siamo quasi, però a un certo punto l'audio è a scatti.»* → sessione sorvegliata
+> con `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo di
+> 400 ms tra audio e video in generale te lo confermo.**»* — l'utente, 21 agosto 2026, sera.
+
+⛔ **Due verdetti in una frase, e vanno separati**:
+
+| | |
+|---|---|
+| l'audio **a scatti** | ⭐ **non è nostro** — non si è ripresentato sotto sorveglianza, ed è del suo PC |
+| il ritardo **fra audio e video** | ⛔ **è nostro, è generale, ed è confermato dall'orecchio**: ~400 ms |
+
+⚠ **E il primo giudizio non era sbagliato: era meno preciso.** *«Audio e video perfetti»* voleva dire
+*ogni flusso è pulito* — ed è vero, `[M]`: zero perdite su ogni riga di ogni anello. ⛔ Quel che non
+è pulito è la **distanza fra i due**, e un difetto di sincronia non si vede in nessun contatore che
+guardi un flusso alla volta. ⇒ **Va scritto qui**, perché è la forma di difetto che questa fase sa
+fabbricare meglio: quattro anelli tutti verdi, e l'esperienza sbagliata.
+
+⇒ La causa, la misura sulla sessione di Windows e la cura nominata stanno in **§8**.
