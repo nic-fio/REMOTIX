@@ -987,15 +987,17 @@ telefono, e il verso video → schermo non ha un difetto da nominare.
 di `PREFERENZA` — non il ripiego. ⚠ L'H.264 di §1.13-ter resta necessario (Firefox desktop non fa
 HEVC), ma su questo telefono non è servito.
 
-### ⚠ E l'unico numero che non è buono: **la coda dell'audio, 401 → 421 ms**
+### ✅ ~~E l'unico numero che non è buono: **la coda dell'audio, 401 → 421 ms**~~ — **chiusa dall'orecchio dell'utente**
 
 Il diario la riporta a ogni giro e **cresce**: 401 ms a 10:37:39, 421 ms a 10:37:49, e lì resta.
-⛔ Quattro decimi di secondo di ritardo dell'audio si sentono — e il video, nella stessa sessione,
-non ha un fotogramma tardivo. ⇒ Non è la rete: è la coda del percorso audio.
+Il video, nella stessa sessione, non ha un fotogramma tardivo ⇒ non è la rete: è la coda del
+percorso audio.
 
-⏳ **Non è diagnosticato**, e va guardato prima di dire che l'audio su Android funziona: `2 buchi`
-in tre minuti e mezzo sono pochi, ma una coda che si assesta a 420 ms non è un caso — è una scelta
-di qualcuno, e va trovata.
+⭐ **E la sera del 21 agosto l'utente ha ascoltato**: *«Chrome su Android offre un'esperienza
+completa: audio e video perfetti»* (`fasi/07-audio-e-appunti.md` §9.7). ⇒ Il numero resta scritto
+qui **come numero misurato**, e smette di essere un difetto: il metro è **I8**, e per l'audio I8 è
+l'orecchio, non il diario. ⚠ La riga si tiene perché se un giorno una scena più esigente
+(un metronomo, le labbra in campo) chiederà meno coda, si riparte da qui — non da zero.
 
 ## ⭐⭐ 21 agosto 2026 — **il secondo percorso di disegno**: MP4 frammentato su MSE
 

@@ -4440,6 +4440,24 @@ chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il s
 > renderà?» andava misurata prima di costruire**, e il numero c'era già: `07-b57`, centinaia di
 > millisecondi contro un tetto di 50.
 
+### 7.19 ✅ **Chrome per Android è PIENAMENTE SUPPORTATO** — giudizio dell'utente, 21 agosto 2026 sera
+
+*L'utente, dopo aver usato una sessione vera dal telefono: «**Chrome su Android offre un'esperienza
+completa: audio e video perfetti**».*
+
+⭐ **È il gemello di §7.18, ed è la ragione per cui quella si poteva prendere**: dichiarare un motore
+non supportato è sostenibile solo se sulla stessa piattaforma ce n'è uno che rende. Su Android
+c'è, ed è giudicato — non dedotto dai contatori.
+
+| | |
+|---|---|
+| che cosa chiude | ⛔ **l'ultimo difetto vero della fase 7**: la coda dell'audio a 400–420 ms. ⇒ `fasi/07-audio-e-appunti.md` §9.7 e §8 |
+| ⚠ il numero resta scritto | 401 → 421 ms, `[M]` sulla prima sessione Android. Smette di essere un **difetto**, non di essere una **misura**: il metro è I8, e per l'audio I8 è l'orecchio |
+| in che condizioni | Samsung DeX, Android 16, **rete di casa**, codec negoziato **HEVC in hardware**. ⏳ Il datagram su rete non locale resta non misurato |
+
+⚠ **E questo è §0.1-bis applicato per intero**: *«pienamente supportato»* qui vuol dire **funziona, e
+sai in che condizioni** — non *uguale dappertutto*.
+
 ### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
 
 > ## ✅ **CINQUE SECONDI** — deciso dall'utente l'**11 agosto 2026**

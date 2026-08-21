@@ -931,21 +931,20 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 > rifà lavoro già fatto, o cerca un guasto dove non c'è. ⇒ Qui c'è lo stato **vero**, e l'elenco
 > vecchio è stato tolto invece di essere lasciato accanto.
 
-### ⛔ Difetti veri, aperti
+### ⭐ Difetti veri, aperti: **nessuno** — 21 agosto 2026, sera
 
-- ⛔ **La coda dell'audio si assesta a 400–420 ms**, misurata sulla prima sessione Android
-  (Chrome, 21 agosto). ⚠ Nella stessa sessione il video non ha **un solo** fotogramma tardivo, quindi
-  non è la rete: è una coda del percorso audio, e qualcuno l'ha scelta. ⏳ **Non diagnosticata.**
-  ⇒ Chiude quando si sa **chi** la sceglie e quanto costa abbassarla.
+⭐ **La coda dell'audio non è più un punto aperto**, e non perché sia stata diagnosticata: perché
+**l'utente ha ascoltato**. *«Chrome su Android offre un'esperienza completa: audio e video
+perfetti»* — §9.7. ⇒ I 400–420 ms restano scritti come **numero misurato** (§«la prima sessione
+Android»), non come difetto: è il metro **I8** che decide, e per l'audio I8 è l'orecchio.
+
+⚠ **E quel numero non si cancella**: se un giorno qualcuno lo abbassa, lo fa perché serve a un'altra
+scena — non per chiudere un difetto, che non c'è.
 
 ### ⏳ Aperti perché nessuno li ha ancora misurati
 
-- ⏳ **Nessuno ha ancora ascoltato l'audio da un telefono**: su Chrome per Android i contatori sono
-  verdi (8 935 blocchi ricevuti, 8 933 suonati, 2 buchi in 3 min 30) ⚠ ma il metro della fase è
-  **I8**, e per l'audio è **quel che l'utente sente**;
-- ⏳ **il cuscino di 60 ms (A3)** e **il bitrate di Opus (96 kbit/s)**: scritti, mai misurati contro
-  un giudizio. Sono 🔸 derivati, non decisi;
-- ⏳ **il datagram su rete non locale**: 1024/1214 byte sono presi **su cavo**;
+- ⏳ **il datagram su rete non locale**: 1024/1214 byte sono presi **su cavo**. ⚠ Il giudizio di
+  §9.7 è su rete di casa, e vale per **quella**;
 - ⏳ **la priorità in tempo reale del percorso audio**: l'unità concede `LimitRTPRIO=20`
   (`07-b41`), ⚠ ma nessuno ha guardato che cosa ne fa PipeWire dentro il figlio.
 
@@ -954,6 +953,9 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 | era aperto | chiuso da |
 |---|---|
 | «gli appunti non hanno mai girato contro niente» | il giudizio dell'utente del 17 agosto sera, e poi i banchi `07-b53`, `07-b54`, `07-b56` |
+| «la coda dell'audio a 400–420 ms», ⛔ l'unico difetto vero aperto | ⭐ il giudizio dell'utente del 21 agosto sera: **«audio e video perfetti»** su Chrome per Android — §9.7 |
+| «nessuno ha ancora ascoltato l'audio da un telefono» | ⭐ adesso qualcuno l'ha ascoltato, ed è l'utente — §9.7 |
+| «il cuscino di 60 ms (A3) e il bitrate di Opus: 🔸 derivati, mai giudicati» | ⭐ giudicati **sul risultato** dal 21 agosto: sono i valori che hanno prodotto quell'ascolto. ⚠ Restano derivati come *numeri* — quel che è chiuso è il dubbio se **rendano** |
 | «l'arbitro esterno del banco non esiste» | ⭐ vero, e **non si aggira**: §6.9. I banchi guidano browser veri con Marionette e CDP, e la sessione con `wl-copy`/`wl-paste` |
 | `DISPLAY` della sessione di «prova» · `xclip` sulla macchina di prova | ⛔ non servono più: la sponda X11 non c'è (`gnome-shell --no-x11`), e i banchi non la usano |
 | l'incolla col **mouse** (tasto destro → «Incolla») | §9.5 — quattro anelli, e `07-b56`: 3 su 3 per motore |
@@ -1332,3 +1334,30 @@ né il protocollo sanno che cosa contiene la clipboard del desktop; il figlio s�
 | la corsa di §7.4 (`07-b53`) · la tela e il clic (`07-b51`) | ⭐ · ⭐ 4/4 | ⭐ · ⭐ 4/4 |
 | il bottoncino «Incolla» di Firefox | ⚠ **ogni volta** | mai |
 
+
+### 9.7 · ⭐⭐⭐ CHROME PER ANDROID: **«un'esperienza completa, audio e video perfetti»** — 21 agosto 2026, sera
+
+> *«Chrome su Android offre un'esperienza completa: audio e video perfetti.»* — l'utente.
+
+⭐ **È il giudizio che mancava a questa fase**, ed è quello che il §2.1 pretendeva fin dall'inizio:
+*si ascolta, non si contano i blocchi*. I contatori della prima sessione Android erano verdi già la
+mattina — **8 935 blocchi ricevuti, 8 933 suonati, 2 buchi in 3 min 30** — ma un contatore verde non
+ha mai chiuso niente qui dentro.
+
+⛔ **E chiude il difetto che al mattino era l'unico vero aperto**: la coda dell'audio che si assestava
+a **401 → 421 ms**. ⚠ La misura non era sbagliata, e non è stata «spiegata»: è stata **giudicata**.
+Quattro decimi di secondo di coda si sentono in una scena — un metronomo, un video con le labbra in
+campo — e in questa non si sono sentiti. ⇒ Il numero resta scritto dov'è, come numero; smette di
+essere un difetto.
+
+⭐ **Con questo, l'audio della fase 7 ha tre giudizi dell'utente, su tre mezzi diversi**: il video di
+YouTube da desktop (§9.1), gli appunti nei due versi (§9.2-bis), e adesso **un telefono**.
+
+⚠ **E il confine si scrive, perché "pienamente supportato" vuol dire *funziona, e sai in che
+condizioni*** (`DECISIONI.md` §0.1-bis):
+
+| | |
+|---|---|
+| il giudizio vale per | **Chrome per Android**, Samsung DeX, rete di casa |
+| ⛔ **non** vale per | **Firefox per Android** — dichiarato incompatibile dall'utente lo stesso giorno (`DECISIONI.md` §7.18) |
+| resta non misurato | il **datagram su rete non locale**, e la **priorità in tempo reale** dentro il figlio |
