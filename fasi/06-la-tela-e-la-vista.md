@@ -1042,3 +1042,25 @@ motore non lo accetta».
 | la strada normale (WebCodecs) | ⭐ intatta: `07-b51` 4 controlli su 4 per motore |
 | Firefox per Android | ⏳ **da provare sul telefono** — è il motore per cui esiste |
 
+### ⛔ E il primo giro su Firefox Android è fallito — **«caricato» non vuol dire «dipinto»**
+
+*L'utente, 21 agosto 2026: «non funziona». `[M]` E la pagina aveva già scritto il perché nel
+registro del server:*
+
+```
+sonda video · ⛔ H264: NON arriva al pixel — il `<video>` ha caricato ma i pixel
+              non sono quelli della sonda (sinistra 0,0,0, destra 0,0,0)
+```
+
+⭐ **Zero-zero-zero su tutti e due i lati è nero, non «un colore sbagliato».** ⇒ Il flusso era
+giusto — il `<video>` lo aveva **caricato**, quindi il muxer funziona anche sul telefono — e a
+sbagliare era **il momento della lettura**: `loadeddata` dice che il fotogramma è stato
+*decodificato*, non che sia stato **presentato**, e `drawImage` da un `<video>` che non ha ancora
+presentato niente copia nero.
+
+⛔ La sonda accusava il flusso di un difetto del proprio cronometro. ⇒ Adesso fa presentare il
+fotogramma (`play()` muto + `requestVideoFrameCallback` dove c'è) e **rilegge fino a dodici volte**,
+e ⭐ **riconosce il nero** invece di trasformarlo in un verdetto.
+
+⚠ È la stessa famiglia dei cinque difetti del banco `07-b57`: *lo strumento misurava se stesso*.
+

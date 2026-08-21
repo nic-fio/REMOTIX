@@ -1328,23 +1328,59 @@ function sonda_mse_una(sonda, stringa, rl, ra, p) {
           sb.appendBuffer(inizio);
         } catch (e) { chiudi({ arriva: false, perche: "MSE: " + String(e) }); }
       }, { once: true });
-      v.addEventListener("loadeddata", () => {
+      /* ⛔⛔⭐ «CARICATO» NON VUOL DIRE «DIPINTO» — 21 agosto 2026, e il difetto
+       *      l'ha trovato l'utente su Firefox per Android.
+       *
+       * ⚠ `loadeddata` dice che il fotogramma e' stato DECODIFICATO; non dice
+       *   che sia stato **presentato**, e `drawImage` da un `<video>` che non ha
+       *   ancora presentato niente copia **nero**.  `[M]` La sonda leggeva
+       *   `sinistra 0,0,0 · destra 0,0,0` e dichiarava «i pixel non sono quelli
+       *   della sonda» — cioe' accusava il flusso di un difetto del momento in
+       *   cui era stato letto.
+       *
+       * ⇒ Si prova PIU' VOLTE, e prima si fa presentare il fotogramma:
+       *   `requestVideoFrameCallback` dice quando ce n'e' uno sullo schermo;
+       *   dove non c'e', un piccolo salto (`seeked`) costringe il motore a
+       *   tirarlo fuori.  ⚠ E il nero si riconosce e si riprova invece di
+       *   diventare un verdetto. */
+      const leggi = () => {
         try {
           p.drawImage(v, 0, 0, rl, ra);
           const dati = p.getImageData(0, 0, rl, ra).data;
           const b = 4;
           const sx = colore_medio(dati, rl, b, b, rl / 2 - b, ra - b);
           const dx = colore_medio(dati, rl, rl / 2 + b, b, rl - b, ra - b);
-          const bene = sx && dx &&
+          const nero = sx && dx && sx[0] + sx[1] + sx[2] + dx[0] + dx[1] + dx[2] < 24;
+          const bene = sx && dx && !nero &&
             lontananza(sx, sonda.sinistra) < lontananza(sx, sonda.destra) &&
             lontananza(dx, sonda.destra) < lontananza(dx, sonda.sinistra);
-          chiudi({ arriva: !!bene, formato: "mse",
+          return { arriva: !!bene, nero: !!nero, formato: "mse",
                    misura: [v.videoWidth, v.videoHeight],
                    letture: { sinistra: sx, destra: dx },
-                   perche: bene ? null : "il `<video>` ha caricato ma i pixel "
-                          + "non sono quelli della sonda (sinistra " + sx
-                          + ", destra " + dx + ")" });
-        } catch (e) { chiudi({ arriva: false, perche: "lettura: " + String(e) }); }
+                   perche: bene ? null : (nero
+                     ? "il `<video>` non aveva ancora presentato niente: la "
+                       + "tela e' tornata nera"
+                     : "il `<video>` ha caricato ma i pixel non sono quelli "
+                       + "della sonda (sinistra " + sx + ", destra " + dx + ")") };
+        } catch (e) { return { arriva: false, nero: false,
+                               perche: "lettura: " + String(e) }; }
+      };
+      v.addEventListener("loadeddata", () => {
+        /* ⭐ Farlo presentare: si prova a suonarlo (e' muto, dura un
+         *    fotogramma) e in parallelo si chiede un salto minimo. */
+        try { v.play().catch(() => {}); } catch (e) { /* niente */ }
+        try { v.currentTime = 0; } catch (e) { /* niente */ }
+        let quante = 0;
+        const riprova = () => {
+          if (finito) return;
+          const r = leggi();
+          if (r.arriva || (!r.nero && quante >= 2) || quante >= 12) return chiudi(r);
+          quante++;
+          setTimeout(riprova, 120);
+        };
+        if (v.requestVideoFrameCallback)
+          v.requestVideoFrameCallback(() => riprova());
+        setTimeout(riprova, 120);
       }, { once: true });
       v.addEventListener("error", () => chiudi({ arriva: false,
         perche: "il `<video>` ha rifiutato il flusso" }), { once: true });
