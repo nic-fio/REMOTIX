@@ -333,6 +333,11 @@ struct wt {
 	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
 	 * fondo di una richiesta ripetuta verso il palco. */
 	uint64_t chiave_chiesta_ms;
+	/* ⭐ Quanto misurava l'ultima CHIAVE spedita, in byte, e l'ultimo intervallo
+	 *    che le e' stato applicato — servono a `chiave_intervallo_ms()`, e il
+	 *    secondo esiste solo per non ripetere la stessa riga di registro
+	 *    cinquanta volte al secondo. */
+	uint64_t chiave_byte, chiave_attesa_detta_ms;
 	uint32_t video_diffusi, video_saltati;
 
 	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
@@ -2152,6 +2157,109 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
  *    ogni battito ne manderebbe una e il figlio codificherebbe solo chiavi. */
 #define WT_CHIAVE_RICHIESTA_MS 150
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔⛔ E 150 ms NON BASTANO QUANDO LA LINEA E' STRETTA — 21 agosto 2026,
+ *       banco `07-b65`, e il difetto e' un ciclo che si autoalimenta.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * `[M]` La misura, e la scena e' dichiarata: sessione vera, tono nel sink,
+ * desktop che si muove, `netem` a **3 Mbit/s** sulla sola porta del banco,
+ * trenta secondi.
+ *
+ *   | scena (stessa banda, stesso audio) | audio spedito | purezza |
+ *   |---|---|---|
+ *   | desktop **fermo**                  | **6 009** / 6 000 | **1,000** |
+ *   | desktop **che si muove**           | **397**           | **0,18**  |
+ *
+ * ⛔ Non e' la banda e non e' quanto costa l'audio: con **Opus**, cioe' **1/32**
+ *    della banda del PCM, allo stesso gradino se ne perde ancora il **58 %**.
+ *
+ * ⭐⭐ E' QUESTA COSTANTE.  Nei giri stretti il video consegna **solo chiavi**
+ *     (144 su 144, 148 su 148, 149 su 149; a 15 Mbit erano 2 su 1 019), il
+ *     registro conta **806 richieste di chiave** e **173 righe** «la CHIAVE N
+ *     tiene ancora ~60 000 byte in coda e §5.2 vieta di abbandonarla».
+ *
+ *       una chiave da 60 KB su 3 Mbit occupa la finestra per  **160 ms**
+ *       questa costante ne concede una ogni                   **150 ms**
+ *
+ *     ⇒ **Chiediamo la chiave nuova prima che la precedente sia uscita.**  In
+ *     quei 160 ms nascono 32 blocchi di PCM (8 di Opus) e ognuno trova
+ *     `cwnd_left = 0`: il datagram non si spezza, non si ritrasmette e non puo'
+ *     aspettare, quindi e' l'unico che puo' pagare.
+ *
+ * ⛔ E la cura NON e' spostare l'audio davanti al video: `07-b65` ha provato
+ *    QUATTRO varianti del trasporto (niente ritorno anticipato per passata ·
+ *    niente `PADDING` · niente `MORE` · la riserva, cioe' il video che cede la
+ *    passata quando ci sono datagram in coda) e i blocchi spediti restano
+ *    278-514 contro i 397 di partenza, cioe' dentro la varianza.
+ *    ⭐ **La finestra non e' contesa: e' gia' piena** di byte di video in volo,
+ *    e rinunciare a scriverne altri non libera quel che e' gia' partito e non e'
+ *    ancora stato riscontrato.  Il posto lo libera solo un riscontro.
+ *
+ * ⇒ **L'intervallo diventa una funzione della banda misurata**: non si chiede
+ *   una chiave nuova prima che una chiave della misura dell'ultima abbia avuto
+ *   il tempo di uscire.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * 🔸 DERIVATA, E IL PREZZO E' VISIBILE ALL'UTENTE — si dichiara, non si
+ *    sottintende (`LEZIONI.md` §2.3-quater, `CODER.md` I6)
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⛔ **Su linea stretta l'immagine resta rotta piu' a lungo dopo una perdita.**
+ *    E' esattamente quel che si compra: prima il desktop chiedeva una chiave
+ *    ogni 150 ms e la linea non gliela lasciava uscire (quindi restava rotto
+ *    LO STESSO, e in piu' distruggeva l'audio); adesso aspetta il tempo che la
+ *    chiave impiega davvero, e in cambio il suono passa.
+ *
+ * ⚠ Il giudizio e' dell'utente: questi due numeri — il tetto e il margine — non
+ *   sono dimostrati, sono derivati.  Vanno in `DECISIONI.md` il giorno in cui
+ *   lui li ascolta e li guarda insieme.
+ *
+ * ⛔ IL TETTO ESISTE PERCHE' UNA CHIAVE CHE NON SI CHIEDE PIU' E' UNO SCHERMO
+ *    FERMO PER SEMPRE.  `SPECIFICHE.md` I1: «una sessione brutta vale piu' di
+ *    una sessione chiusa» — ma **ferma** non e' **brutta**, e' chiusa a meta'.
+ *    Due secondi e' il piu' lungo che si accetti di restare rotti.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⭐ IL PRIMA/DOPO, MISURATO — `07-b65`, 21 agosto 2026, sera
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⛔ I due binari differiscono per UNA riga (`chiave_intervallo_ms()` che torna
+ *    sempre la costante), e i giri sono ALTERNATI: con la varianza vista qui
+ *    — 397 contro 1372 blocchi fra due giri identici — due giri di fila della
+ *    stessa parte non dimostrerebbero niente.
+ *
+ * | scena (30 s, PCM)          | attesa | audio PRIMA | audio DOPO | video PRIMA | video DOPO |
+ * |---|---|---|---|---|---|
+ * | 3 Mbit, desktop **fermo**  | 150 (inerte) | 6 009 | **6 002** | 1 | 1 |
+ * | 15 Mbit, desktop mosso     | 150 (inerte) | 4 076 · 3 944 | 3 984 · 3 830 | 743 · 742 | 683 · 677 |
+ * | 3 Mbit, desktop mosso      | ~171   | 371 · 462 | **1 552 · 1 595 · 1 725** | 115 · 99 | 89 · 128 |
+ * | 1 Mbit, desktop mosso      | 600-1000 | **15** | **577** | 57 | **47** |
+ *
+ * ⭐ **Dove c'e' banda la cura si dichiara INERTE**: a 15 Mbit ha scritto «la
+ *    banda misurata basta: resta il fondo di 150 ms» **100 volte su 101**, e i
+ *    due binari si comportano uguale — la differenza dell'8 % sui fotogrammi
+ *    li' e' varianza della scena, non un prezzo.
+ *
+ * ⛔⛔ **IL PREZZO, MISURATO E NON DEDOTTO**: a 1 Mbit le richieste di chiave
+ *      scendono da **178 a 68** (−62 %) e il video consegna **57 → 47**
+ *      fotogrammi, **−18 %** — e sono tutti chiavi, quindi l'immagine si
+ *      aggiorna meno spesso.  ⇒ E' esattamente «su linea stretta l'immagine
+ *      resta rotta piu' a lungo dopo una perdita», in numeri.  In cambio
+ *      l'audio passa da **15 a 577** blocchi.
+ *
+ * ⚠ E QUEL CHE LA CURA **NON** FA, dichiarato perche' non se ne prenda di piu'
+ *   di quel che da': a 3 Mbit l'audio resta al **27 %** e i fotogrammi
+ *   consegnati sono ancora **tutti chiavi**.  ⇒ La spirale non e' spenta, e' solo
+ *   piu' lenta.  Il motore vero sta a monte, ed e' scritto accanto a
+ *   `video_sgombra()`. */
+#define WT_CHIAVE_TETTO_MS 2000
+
+/* ⛔ Il margine: la chiave dev'essere USCITA, non «quasi uscita».  Un quinto
+ *    in piu' del tempo calcolato copre il fatto che la stima della banda e' una
+ *    stima e che nel frattempo passa anche l'audio. */
+#define WT_CHIAVE_MARGINE_PC 120
+
 /* ⛔ Quanti stream uni servono al video PRIMA di dire «senza credito»: `RCP.md`
  *    §2.3 vuole che l'input ne trovi sempre uno, e il video non deve mangiarsi
  *    l'ultimo posto.  ⚠ Il numero e' il minimo che §2.3 riserva a RCP diviso a
@@ -2179,6 +2287,40 @@ static void involo_pulisci(wt *w)
  *   passato a ngtcp2 non lo riprendiamo, e azzerare li' non risparmierebbe piu'
  *   niente.  ⇒ Un fotogramma senza byte in coda esce dall'elenco senza che si
  *   scriva niente: non e' stato abbandonato, e' stato spedito. */
+/*
+ * ⛔⛔⛔ E QUI STA IL MOTORE DELLA SPIRALE — trovato il 21 agosto 2026 misurando
+ *       la cura di `WT_CHIAVE_TETTO_MS`, e NON e' quel che credevo.
+ *
+ *       Questa funzione si chiama a OGNI fotogramma che arriva dal palco, e
+ *       abbandona i delta ancora fermi in coda perche' «ne e' partito uno piu'
+ *       recente» (§5.1).  Su una linea larga non abbandona quasi mai.  ⛔ Su
+ *       una linea stretta un delta non fa in tempo a uscire in 33 ms, quindi
+ *       viene abbandonato **sempre**, e ogni abbandono accende il debito di
+ *       §5.2 dentro `rcp.c`.
+ *
+ *       `[M]` Il registro di un giro a 3 Mbit lo dice **28 volte al secondo**:
+ *       «⛔ FOTOGRAMMA NON SPEDITO: e' un delta e §5.2 vuole una CHIAVE (un
+ *       delta e' stato abbandonato nella coda (§5.1))».  ⇒ Il debito non si
+ *       spegne mai, ogni fotogramma consegnato e' una CHIAVE (115 su 115, 99 su
+ *       99, 128 su 128), ogni chiave riempie la finestra e i datagram
+ *       dell'audio trovano `cwnd_left = 0`.
+ *
+ * ⚠⚠ E LA MIA PRIMA DIAGNOSI CONTAVA LA RIGA SBAGLIATA: avevo cercato «vuole
+ *     una CHIAVE», che compare in DUE messaggi diversi — la RICHIESTA che parte
+ *     da `video_regola()` e il RIFIUTO che scrive `rcp.c`.  Le «806 richieste di
+ *     chiave» del primo rapporto erano in gran parte rifiuti.  ⇒ Contate
+ *     separatamente: **105 richieste contro 346 rifiuti** nello stesso giro.
+ *     La riga che si somiglia si conta a parte, o la diagnosi punta a monte di
+ *     dove sta il difetto.
+ *
+ * ⇒ ⏳ **La cura vera sarebbe qui**, e non e' stata scritta: abbandonare un
+ *   delta solo quando e' davvero senza speranza (una soglia sulla coda) invece
+ *   che a ogni fotogramma piu' recente.  §5.1 lo **permette**, non lo
+ *   **impone**.  Cosi' sotto congestione il video calerebbe di RITMO restando
+ *   fatto di delta, invece di diventare un flusso di sole chiavi.
+ *   ⛔ Non l'ho scritta perche' il coordinatore ha chiesto **una cura per
+ *   volta**, e questa e' una decisione di prodotto che tocca §5.1.
+ */
 static void video_sgombra(wt *w, const char *perche)
 {
 	if (!w->rcp || !w->conn)
@@ -2273,6 +2415,129 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
  *    l'audio ci finirebbe dentro per caso.  Le due negoziazioni sono
  *    indipendenti in `RCP.md` §4.3, e vanno lette indipendenti anche qui.
  */
+/*
+ * ⭐⭐ OGNI QUANTO SI PUO' RICHIEDERE UNA CHIAVE — e la banda si MISURA.
+ *
+ * ⛔ La regola: non si chiede una chiave nuova prima che una chiave della
+ *    misura dell'ultima abbia avuto il tempo di **uscire davvero**.  Il perche'
+ *    e i numeri stanno accanto a `WT_CHIAVE_TETTO_MS`.
+ *
+ * ⛔⭐ E LA BANDA NON SI INDOVINA: la danno due numeri che ngtcp2 misura da se',
+ *     e sono gli stessi con cui decide quanto spedire —
+ *
+ *         banda ≈ cwnd / smoothed_rtt        (byte per secondo)
+ *         tempo di una chiave = byte × smoothed_rtt / cwnd
+ *
+ *     ⚠ Non e' una banda «della linea»: e' **la banda che il controllo di
+ *       congestione sta concedendo adesso**, che e' precisamente la velocita'
+ *       con cui la chiave uscira'.  Usare la capacita' del collegamento
+ *       darebbe un numero piu' bello e sbagliato.
+ *
+ * ⛔ E SE LA STIMA NON C'E' ANCORA, IL RIPIEGO SI DICHIARA — `CODER.md` §4.2 e
+ *    §3.10: all'inizio della connessione `smoothed_rtt` e `cwnd` non hanno
+ *    ancora un valore, e la misura di una chiave non esiste finche' non ne e'
+ *    partita una.  ⇒ In quei casi si torna alla costante di prima e si scrive
+ *    **quale** dei tre casi e', invece di far passare un numero inventato per
+ *    un numero misurato.  ⚠ `*come` non e' un ornamento del registro: e'
+ *    l'unica cosa che distingue «la cura sta lavorando» da «la cura non e'
+ *    ancora accesa», e senza di lei le due hanno la stessa faccia.
+ */
+static uint64_t chiave_intervallo_ms(wt *w, const char **come)
+{
+	ngtcp2_conn_info info;
+	uint64_t ms;
+	size_t in_coda = 0;
+
+	if (!w->conn) {
+		*come = "ripiego: non c'e' connessione";
+		return WT_CHIAVE_RICHIESTA_MS;
+	}
+
+	/* ⛔⭐⭐ PRIMA DI OGNI STIMA: SE LA CHIAVE PRECEDENTE E' ANCORA QUI, LA
+	 *       RISPOSTA NON E' UNA STIMA — E' UN FATTO.
+	 *
+	 *       La frase del difetto e' «chiediamo una chiave nuova prima che la
+	 *       precedente sia partita», e questo ciclo sa **se e' partita**: sono
+	 *       gli stessi byte che `video_sgombra()` conta per dire «la CHIAVE N
+	 *       tiene ancora %zu byte in coda e §5.2 vieta di abbandonarla».
+	 *
+	 * ⭐ Guardare qui invece di calcolare e' meglio per una ragione che vale
+	 *    oltre questa riga: una stima puo' sbagliare, un byte in coda no.  La
+	 *    banda misurata resta sotto, come **fondo** per i byte gia' consegnati
+	 *    a ngtcp2 e non ancora riscontrati — quelli la coda non li vede piu'.
+	 *
+	 * ⛔ E il tetto vale ANCHE qui, ed e' la ragione per cui esiste: se la
+	 *    linea non porta via la chiave, dopo due secondi se ne richiede una
+	 *    lo stesso.  Uno schermo fermo per sempre non e' «brutto», e' chiuso a
+	 *    meta' (I1). */
+	for (size_t i = 0; i < w->ninvolo; i++)
+		if (w->involo[i].vivo && w->involo[i].chiave)
+			in_coda += coda_byte_stream(w, w->involo[i].stream);
+	if (in_coda > 0) {
+		*come = "🔸 la CHIAVE precedente non e' ancora uscita (byte in coda)";
+		/* ⚠ Il fondo del registro e' lo stesso della strada calcolata: la riga
+		 *   la scrive quel ramo, qui basta il tetto. */
+		return WT_CHIAVE_TETTO_MS;
+	}
+
+	if (!w->chiave_byte) {
+		*come = "ripiego: nessuna CHIAVE ancora spedita, la sua misura non esiste";
+		return WT_CHIAVE_RICHIESTA_MS;
+	}
+	memset(&info, 0, sizeof info);
+	ngtcp2_conn_get_conn_info(w->conn, &info);
+	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
+		*come = "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra";
+		return WT_CHIAVE_RICHIESTA_MS;
+	}
+
+	/* tempo (ns) = byte × rtt(ns) / cwnd(byte) → ms, piu' il margine.
+	 * ⚠ L'ordine dei fattori e' quello che non trabocca: 60 000 × 30 000 000 =
+	 *   1,8e12, largamente dentro un `uint64_t`. */
+	ms = w->chiave_byte * info.smoothed_rtt / info.cwnd / NGTCP2_MILLISECONDS;
+	ms = ms * WT_CHIAVE_MARGINE_PC / 100u;
+
+	if (ms <= WT_CHIAVE_RICHIESTA_MS) {
+		*come = "la banda misurata basta: resta il fondo di 150 ms";
+		return WT_CHIAVE_RICHIESTA_MS;
+	}
+	if (ms > WT_CHIAVE_TETTO_MS) {
+		*come = "⛔ la banda non basterebbe nemmeno per il tetto: fermo a 2 s, "
+		        "e l'immagine resta rotta piu' a lungo";
+		ms = WT_CHIAVE_TETTO_MS;
+	} else {
+		*come = "🔸 dalla banda misurata (cwnd/rtt)";
+	}
+
+	/* ⛔ IL PREZZO SI SCRIVE, e una volta sola per ogni volta che cambia: e'
+	 *    visibile all'utente (l'immagine resta rotta piu' a lungo) e i prezzi
+	 *    visibili li giudica lui.  ⚠ Con un fondo, o a cinquanta battiti al
+	 *    secondo questa riga riempirebbe il registro invece di raccontarlo. */
+	if (w->chiave_attesa_detta_ms == 0
+	    || (ms > w->chiave_attesa_detta_ms
+	        ? ms - w->chiave_attesa_detta_ms
+	        : w->chiave_attesa_detta_ms - ms) >= 100) {
+		w->chiave_attesa_detta_ms = ms;
+		registro_dice(REG_RCP,
+		              "🔸 %s: la CHIAVE si potra' richiedere ogni %llu ms invece "
+		              "di %u — l'ultima misurava %llu byte e la banda MISURATA e' "
+		              "%llu kbit/s (cwnd %llu byte / rtt %llu ms, i due numeri "
+		              "che ngtcp2 usa per decidere quanto spedire).  ⛔ IL PREZZO: "
+		              "su linea stretta l'immagine resta rotta piu' a lungo dopo "
+		              "una perdita.  ⭐ In cambio l'audio passa: chiedere la "
+		              "chiave nuova prima che la vecchia sia uscita teneva "
+		              "`cwnd_left` a zero e distruggeva i datagram (banco 07-b65)",
+		              w->provenienza, (unsigned long long)ms,
+		              (unsigned)WT_CHIAVE_RICHIESTA_MS,
+		              (unsigned long long)w->chiave_byte,
+		              (unsigned long long)(info.cwnd * 8ull * NGTCP2_SECONDS
+		                                   / info.smoothed_rtt / 1000ull),
+		              (unsigned long long)info.cwnd,
+		              (unsigned long long)(info.smoothed_rtt / NGTCP2_MILLISECONDS));
+	}
+	return ms;
+}
+
 static void audio_regola(wt *w)
 {
 	uint32_t l, a;
@@ -2383,16 +2648,23 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	}
 
 	/* ⛔ E qui la chiave chiesta arriva davvero al codificatore. */
-	if (rcp_video_serve_chiave(w->rcp)
-	    && ora_ms - w->chiave_chiesta_ms >= WT_CHIAVE_RICHIESTA_MS) {
-		w->chiave_chiesta_ms = ora_ms;
-		if (gancio_palco)
-			gancio_palco(gancio_palco_ctx, utente, codec,
-			             rcp_profondita_negoziata(w->rcp), true);
-		registro_dettaglio(REG_RCP,
-		                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
-		                   "palco di «%s» (codec %u)",
-		                   w->provenienza, utente, codec);
+	{
+		const char *come = NULL;
+		uint64_t attesa = chiave_intervallo_ms(w, &come);
+
+		if (rcp_video_serve_chiave(w->rcp)
+		    && ora_ms - w->chiave_chiesta_ms >= attesa) {
+			w->chiave_chiesta_ms = ora_ms;
+			if (gancio_palco)
+				gancio_palco(gancio_palco_ctx, utente, codec,
+				             rcp_profondita_negoziata(w->rcp), true);
+			registro_dettaglio(REG_RCP,
+			                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
+			                   "palco di «%s» (codec %u), dopo %llu ms di attesa "
+			                   "(%s)",
+			                   w->provenienza, utente, codec,
+			                   (unsigned long long)attesa, come);
+		}
 	}
 }
 
@@ -2483,6 +2755,13 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	e = rcp_video_spedisci(w->rcp, chiave, dati, byte, istante_us, input, ora_ms);
 	if (e == RCP_VIDEO_SPEDITO) {
 		w->video_diffusi++;
+		/* ⭐ La misura dell'ultima CHIAVE, e serve a `chiave_intervallo_ms()`:
+		 *    e' il numero da cui si calcola quanto ci mette a uscire.  ⛔ Si
+		 *    prende QUI, dov'e' un fatto, invece di stimarla da una media —
+		 *    `[M]` sul banco 07-b65 una chiave a 1080p misura ~60 000 byte, ma
+		 *    dipende dalla scena e una costante mentirebbe sulla meta' di esse. */
+		if (chiave)
+			w->chiave_byte = (uint64_t)byte;
 		involo_aggiungi(w, w->video_stream_ultimo,
 		                rcp_video_ultimo_numero(w->rcp), chiave);
 		return;

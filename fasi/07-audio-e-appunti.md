@@ -1181,6 +1181,66 @@ pacer, e per cui le tre porte «nostre» erano l'imputato sbagliato.
 > 🔸 **Scelta del coordinatore: si scrive A.** Le altre due spostano il conto; A toglie la causa. ⏳ E
 > il suo prezzo è **visibile all'utente**, quindi la riga sta scritta perché lo giudichi lui.
 
+### ⭐⭐ La cura A è scritta e misurata — e a 1 Mbit l'audio consegnato fa **×38**
+
+`chiave_intervallo_ms()` in `webtransport.c`, e ⭐ **la banda si misura invece di indovinarla**:
+`cwnd / smoothed_rtt`, cioè **i due numeri che ngtcp2 usa lui stesso** per decidere quanto spedire. La
+misura dell'ultima chiave è presa **dove è un fatto**, non da una costante. Fondo 150 ms, margine
++20 %, ⛔ tetto **2 s** — *una chiave che non si chiede più è uno schermo fermo, e fermo non è brutto:
+è chiuso a metà* (I1).
+
+⭐ **E il ripiego è dichiarato, non silenzioso**: tre casi distinti nel registro (niente connessione ·
+nessuna chiave ancora spedita · ngtcp2 senza rtt né finestra). `[M]` A 15 Mbit ha scritto **100 volte
+su 101** *«la banda misurata basta: resta il fondo di 150 ms»* — ⭐ **la cura dice da sé quando non
+sta lavorando**.
+
+`[M]` Giri **alternati** (con la varianza vista — 397 contro 1 372 fra due giri base identici — due
+giri di fila non dimostrano niente), due binari che differiscono per **una riga**, 30 s, PCM:
+
+| scena | attesa | audio **prima** | audio **dopo** | video prima → dopo |
+|---|---|---|---|---|
+| 3 Mbit, desktop **fermo** *(il controllo)* | 150, inerte | 6 009 | 6 002 | 1 → 1 |
+| 15 Mbit, mosso | 150, inerte | 4 076 · 3 944 | 3 984 · 3 830 | 743 → 683 |
+| **3 Mbit, mosso** | ~171 | 371 · 462 | ⭐ **1 552 · 1 595 · 1 725** | 115 → 89 |
+| **1 Mbit, mosso** | 600-1000 | **15** | ⭐⭐ **577** | 57 → **47** |
+
+⭐ A 3 Mbit l'audio fa **×3,3-×4,2**, e i due gruppi **non si sovrappongono**. A 1 Mbit fa **×38**, e
+le richieste di chiave crollano **178 → 68**.
+
+⚠ **E il prezzo è misurato, non dedotto**: a 1 Mbit il video consegna **57 → 47 fotogrammi (−18 %)**,
+tutti chiavi ⇒ l'immagine si aggiorna meno spesso. È esattamente *«su linea stretta l'immagine resta
+rotta più a lungo»*, in numeri. ⚠ A 15 Mbit la cura è **inerte**: l'−8 % lì è varianza della scena,
+non un prezzo.
+
+⛔ **E quel che la cura NON fa, dichiarato**: a 3 Mbit l'audio resta al **27 %** e i fotogrammi sono
+ancora **tutti chiavi**. **La spirale non è spenta: è più lenta.**
+
+### ⏳ E il motore vero sta un passo più a monte — `video_sgombra()`
+
+⭐ Trovato **dopo** aver scritto la cura, ed è la ragione per cui la cura aiuta ma non basta:
+`video_sgombra()` gira a **ogni** fotogramma e abbandona i delta ancora in coda perché *«ne è partito
+uno più recente»* (§5.1). Su linea larga non abbandona quasi mai; **su linea stretta un delta non
+esce in 33 ms, quindi viene abbandonato sempre** — e ogni abbandono riaccende il debito di §5.2.
+`[M]` Il registro lo dice **28 volte al secondo**.
+
+⇒ ⛔ **Il debito lo riarma l'abbandono, non la richiesta**: limitare le richieste rallenta la spirale,
+non la spegne.
+
+⏳ **La cura vera sarebbe lì**: abbandonare un delta solo quando è **davvero senza speranza** (una
+soglia sulla coda) invece che a ogni fotogramma più recente — ⭐ **§5.1 lo permette, non lo impone**.
+Così sotto congestione il video calerebbe di **ritmo** restando fatto di delta, invece di diventare un
+flusso di sole chiavi. ⛔ **Non è stata scritta**: una cura per volta, e questa tocca §5.1 — è una
+**decisione di prodotto**. Il ragionamento e i numeri stanno accanto a `video_sgombra()` perché non
+si perdano.
+
+### ⛔ E un difetto di banco che aveva spostato la diagnosi a monte
+
+`[M]` La riga *«vuole una CHIAVE»* compare in **due messaggi diversi**: la **richiesta** che parte da
+`video_regola()` e il **rifiuto** che scrive `rcp.c`. Le «806 richieste di chiave» del primo rapporto
+erano in gran parte **rifiuti**: contate a parte, nello stesso giro, sono **105 richieste contro 346
+rifiuti**. ⇒ **Due righe che si somigliano vanno contate separate, o la diagnosi punta dove il
+difetto non è.**
+
 ⏳ `[?]` **E resta una cosa non misurata**: la spirale è provata col **cliente di prova**, non contro
 un browser vero. Quella prova la fa il coordinatore sul prodotto riunito.
 
