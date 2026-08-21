@@ -1161,3 +1161,29 @@ centro della tela lo **chiede alla pagina**.
 scorre, **in software e senza GPU**. Sul telefono, che decodifica H.264 in hardware, il rapporto è
 un'altra cosa — e lì la misura la fa l'utente.
 
+#### ⛔ «Non si vede il desktop» — la cornice non veniva mai chiamata
+
+*Subito dopo la cura dell'input: il desktop era sparito.*
+
+⛔ `cornice()` è quel che dà alla tela la sua **misura sul vetro**, e sulla strada di WebCodecs la
+chiama il disegno (`componi()`). ⇒ Su questa strada il disegno non passa di lì: la tela restava
+larga **sedici pixel** — la misura con cui la `<canvas>` nasce nel documento — e il `<video>`, che
+adesso le sta incollato dietro, la seguiva fedelmente **in un francobollo invisibile**.
+
+⭐ La misura del fotogramma su questa strada si sa (è la tela concessa): si scrive in `f_l`/`f_a`,
+dove le due strade la tengono, e si incornicia.
+
+#### ⚠ E il banco era **verde** mentre l'utente non vedeva niente
+
+`07-b58` contava i fotogrammi e leggeva i contatori: tutti buoni. ⛔ Non guardava **dove finisce
+l'immagine sul vetro**, che è l'unica cosa che l'utente vede. ⇒ Adesso lo misura, e boccia due casi
+distinti:
+
+| controllo | che difetto prende |
+|---|---|
+| il `<video>` occupa una frazione ragionevole della finestra | il francobollo |
+| il `<video>` è **incollato** al rettangolo della tela (±2 px) | i gesti che finirebbero nel posto sbagliato, perché la superficie che li riceve non sta dove si vede l'immagine |
+
+`[M]` Adesso: `tela [1270, 704] · video [1270, 704] · finestra [1270, 705]`, 6 eventi di input al
+server, 499 fotogrammi consegnati e 123 presentati, 0 buchi.
+

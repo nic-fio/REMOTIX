@@ -45,6 +45,18 @@ STATO = """
   return { webcodecs: typeof VideoDecoder !== 'undefined',
            conti: S ? S.conti : null,
            ritardo: S ? S.mse_ritardo : null,
+           /* ⛔ E DOVE FINISCE SUL VETRO, non solo quanti pixel porta: `[M]` 21
+            *    agosto 2026 il `<video>` era largo SEDICI pixel — la tela non
+            *    veniva incorniciata — e il banco, che contava solo i
+            *    fotogrammi, era verde mentre l'utente non vedeva niente. */
+           vetro: (function () {
+             const t = document.getElementById('schermo');
+             const rt = t ? t.getBoundingClientRect() : null;
+             const rv = v ? v.getBoundingClientRect() : null;
+             return { tela: rt ? [Math.round(rt.width), Math.round(rt.height)] : null,
+                      video: rv ? [Math.round(rv.width), Math.round(rv.height)] : null,
+                      finestra: [innerWidth, innerHeight] };
+           })(),
            video: v ? { l: v.videoWidth, a: v.videoHeight,
                         t: +(v.currentTime || 0).toFixed(2),
                         fermo: v.paused, pronto: v.readyState,
@@ -195,11 +207,24 @@ def main():
     if not c.get("consegnati"):
         v["guai"].append("⛔ nessun fotogramma consegnato: la sessione non ha "
                          "portato video")
-    elif not v.get("input_nuovi"):
+    elif True:
+        g = (v.get("stato") or {}).get("vetro") or {}
+        tela, vid, fin = g.get("tela"), g.get("video"), g.get("finestra")
+        if not vid or not tela:
+            v["guai"].append("⛔ non trovo la tela o il `<video>` sul vetro")
+        elif vid[0] < fin[0] * 0.5 or vid[1] < fin[1] * 0.3:
+            v["guai"].append("⛔ IL `<video>` E' UN FRANCOBOLLO: %sx%s in una "
+                             "finestra %sx%s — il desktop non si vede"
+                             % (vid[0], vid[1], fin[0], fin[1]))
+        elif abs(vid[0] - tela[0]) > 2 or abs(vid[1] - tela[1]) > 2:
+            v["guai"].append("⛔ il `<video>` (%sx%s) non e' incollato alla tela "
+                             "(%sx%s): i gesti finirebbero nel posto sbagliato"
+                             % (vid[0], vid[1], tela[0], tela[1]))
+    if not v["guai"] and not v.get("input_nuovi"):
         v["guai"].append("⛔ L'INPUT NON ARRIVA: un tasto e un clic non hanno "
                          "prodotto nessuna riga `input id=` nel registro del "
                          "server")
-    elif not c.get("dipinti"):
+    if not v["guai"] and not c.get("dipinti"):
         v["guai"].append("⛔ %d fotogrammi consegnati e ZERO presentati dal "
                          "`<video>`: la strada MSE non dipinge"
                          % c["consegnati"])
@@ -216,6 +241,7 @@ c = st.get("conti") or {}
 print("WebCodecs: %s · schermo acceso: %s" % (st.get("webcodecs"), v.get("schermo_acceso")))
 print("input arrivati al server: %s (%s)"
       % (v.get("input_nuovi"), (v.get("input_esempio") or "nessuno")[:90]))
+print("sul vetro: %s" % ((v.get("stato") or {}).get("vetro")))
 print("consegnati %s · dipinti %s · buchi %s · ritardo %s ms · video %s"
       % (c.get("consegnati"), c.get("dipinti"), c.get("buchi"),
          st.get("ritardo"), st.get("video")))

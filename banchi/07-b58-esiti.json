@@ -1,16 +1,16 @@
 {
  "guai": [],
  "schermo_acceso": true,
- "input_nuovi": 4,
- "input_esempio": "15:18:07.176 rcp     input id=4 (era 3) PULSANTE codice evdev 272 (0x110) rilasciato · istante del client 20578000 us ⚠ grana ingrossata, §7",
+ "input_nuovi": 6,
+ "input_esempio": "15:23:05.889 rcp     input id=306 (era 305) PULSANTE codice evdev 272 (0x110) rilasciato · istante del client 20869000 us ⚠ grana ingrossata",
  "stato": {
   "webcodecs": false,
   "conti": {
-   "stream": 351,
-   "completi": 351,
+   "stream": 499,
+   "completi": 499,
    "azzerati": 0,
-   "consegnati": 351,
-   "dipinti": 196,
+   "consegnati": 499,
+   "dipinti": 123,
    "scartati_ordine": 0,
    "scartati_misura": 0,
    "tollerati": 0,
@@ -23,13 +23,27 @@
    "tardive": 0,
    "ricomposizioni": 0,
    "viste": 1,
-   "salti_mse": 31
+   "salti_mse": 58
   },
-  "ritardo": 50,
+  "ritardo": 235,
+  "vetro": {
+   "tela": [
+    1270,
+    704
+   ],
+   "video": [
+    1270,
+    704
+   ],
+   "finestra": [
+    1270,
+    705
+   ]
+  },
   "video": {
    "l": 1270,
    "a": 704,
-   "t": 18.63,
+   "t": 18.79,
    "fermo": false,
    "pronto": 1,
    "errore": null

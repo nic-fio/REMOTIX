@@ -3459,6 +3459,19 @@ class Schermo {
     }
     this.conti.riconfigurazioni++;
     this.dec_l = l; this.dec_a = a;
+    /* ⛔⛔⭐ E LA CORNICE VA CHIAMATA ANCHE QUI — 21 agosto 2026, e senza questa
+     *      riga il desktop **non si vedeva affatto**.
+     *
+     * ⚠ `cornice()` e' quel che da' alla tela la sua misura sul vetro, e sulla
+     *   strada di WebCodecs la chiama `componi()`, cioe' il disegno.  ⛔ Su
+     *   questa strada il disegno non passa di li': la tela restava larga
+     *   sedici pixel, e il `<video>`, che le sta incollato dietro, la seguiva
+     *   fedelmente — in un francobollo invisibile.
+     * ⇒ La misura del fotogramma la sappiamo (e' la tela concessa), quindi si
+     *   scrive dove le due strade la tengono e si incornicia. */
+    this.f_l = l; this.f_a = a;
+    this.cornice();
+    this.mse_posiziona();
     this.riga("⚠ §7.18: si dipinge con MSE e un `<video>` (" + l + "×" + a
               + ", «" + stringa + "»), perche' questo browser non ha WebCodecs. "
               + "Il ritardo su questa strada e' piu' alto, ed e' dichiarato");
