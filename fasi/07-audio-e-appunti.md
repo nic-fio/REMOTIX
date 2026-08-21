@@ -1047,6 +1047,68 @@ PipeWire senza tempo reale — resta aperto ma **non è questo**.
 | la clipboard del desktop **persa al collegamento** | §9.6 — il figlio rende alla sessione il testo che aveva lei |
 
 
+## 8-bis · ⭐ 21 agosto 2026, notte — **il metro della distanza audio↔video esiste**, e le regressioni girano sul prodotto riunito
+
+*Dieci agenti in parallelo, il coordinatore alla fusione e al collaudo.*
+
+### ⭐⭐ `AV = aoff − voff`: la distanza si misura in continuo, su qualunque contenuto
+
+⛔ **Il difetto che l'utente ha confermato non aveva un metro**, ed è la ragione per cui quattro
+anelli verdi hanno convissuto con un'esperienza sbagliata: **nessun contatore guarda due flussi
+insieme**. Adesso c'è, e non è costato un banco nuovo — è costato **due numeri**:
+
+- `RCP.md` §6.2 e §6.3 mettono **lo stesso orologio del server** nell'intestazione del fotogramma e
+  nel datagram audio;
+- la pagina pubblica `aoff` (audio) e `voff` (video), presi **allo stesso confine**: `voff` subito
+  dopo `transferFromImageBitmap`, cioè **al vetro**, non alla decodifica;
+- ⇒ `aoff − voff` è la distanza, **e la costante fra i due orologi si elide**.
+
+`[M]` 90 s, 178 campioni, scena in movimento, 1588×914 H.264, carico 1,09→1,97:
+
+| | min | p05 | **mediana** | p95 | max |
+|---|---|---|---|---|---|
+| `AV` | 216 | 223 | **236 ms** | 245 | 247 |
+
+⭐ **Offset costante, non deriva**: 233 → 237 → 236 su 90 s. ⭐ E la premessa è stata **verificata,
+non creduta**: il marcatore che esce dal decodificatore **è** davvero l'`istante` del server
+(escursione 32 ms, deriva −0,02 ms/s).
+
+⚠ **E `AV` sovrastima, dichiarato**: `aoff` comprende `outputLatency` (22-28 ms `[M]`), `voff` non
+può comprendere l'equivalente perché fra il trasferimento e il pixel acceso ci sono `[?]` **16-40 ms
+che nessuna API espone**. ⇒ La distanza vera è **~200-220 ms**. ⛔ Non è stata sottratta: *sottrarre
+una stima è fabbricare una misura*.
+
+⭐⭐ **E il numero dice da sé dove sta**: nello stesso istante la coda audio vale **253 ms** e
+`AUDIO_CUSCINO_MS` vale **250**. ⇒ La distanza è **quasi tutta il cuscino più `outputLatency`**, non
+un ritardo che si accumula.
+
+⛔ **E non è il numero che l'utente ha provato**: questa è la pagina con l'orologio audio nuovo. I
+400 ms erano di prima, e **il confronto lo può fare solo lui**.
+
+### ⭐ Le regressioni, sul prodotto riunito — porta 7781, utente `provai6`
+
+| banco | esito |
+|---|---|
+| `07-b51` la tela e il clic, **due motori** | ⭐ **4 controlli su 4 per motore**, e il clic arriva al pixel esatto (scarto 0,0) |
+| `07-b54` gli appunti **nei due versi** | ⭐ sessione→client, client→sessione e **la tastiera dopo l'incolla**: verdi su tutt'e due i motori |
+| `07-b53` la corsa di §7.4 | ⚠ **«la corsa non si è prodotta, questo giro NON prova niente»** — il banco rifiuta di darsi verde, ed è il comportamento giusto |
+
+⇒ ⭐ **Quel che l'utente aveva giudicato il 17 agosto regge** a tutte le modifiche della notte: la
+clipboard nei due versi, la tela, il clic.
+
+### ⛔ E un difetto del banco che dava ROSSO AL PRODOTTO — colpa del coordinatore
+
+Rendendo parametrico l'utente dei banchi degli appunti (⛔ entravano come **`prova`**, che è
+dell'utente: con la sua sessione viva è la trappola del posto unico) ne ho parametrizzato **un lato
+solo** — l'accesso dal browser — lasciando fisso `id -u prova` sul **lato sessione**.
+
+`[M]` Il risultato non è stato un errore del banco: è stato **un verdetto rosso contro il prodotto**
+su tutt'e due i motori — *«il desktop remoto ha "Failed to connect to a Wayland server" invece del
+testo»* — con `XDG_RUNTIME_DIR` che puntava a `/run/user/1001`, l'utente dell'utente.
+
+⭐ **La lezione**: **un banco parametrico a metà è peggio di uno fisso** — quello fisso almeno si
+rifiuta di partire.
+
 ## 9 · Il giudizio dell'utente
 
 *La fase si chiude su una misura giudicata dall'utente, non su un documento completo.
