@@ -10,6 +10,11 @@
 #   bash 06-b33-risveglio.sh <file-parola-sudo> libero     3 risvegli, mano alzata
 #   bash 06-b33-risveglio.sh <file-parola-sudo> tenuto     ⛔ LA SCENA CATTIVA
 #   bash 06-b33-risveglio.sh <file-parola-sudo> confronto  la porta GIA' NOTA
+#   bash 06-b33-risveglio.sh <file-parola-sudo> guarigione ⭐ la cura «C»
+#   bash 06-b33-risveglio.sh <file-parola-sudo> applicazione ⭐ un GTK vero
+#
+#   ⛔ E il suo controllo positivo e' `06-b33-risveglio-certifica.sh`, che
+#      innesta tre guasti e pretende che cambino ESATTAMENTE i casi dichiarati.
 #
 # ===========================================================================
 # ⛔ L'ATTESO, DICHIARATO PRIMA — `CODER.md` §3.3
@@ -38,6 +43,19 @@
 #                  e' la porta gia' misurata da §4.6.  ⛔ Serve a distinguere
 #                  «il risveglio ricambia» da «ricambia tutto sempre»: senza
 #                  questo confronto il numero di S2 non significa niente
+# S4 · guarigione  si rompe apposta e si stacca il SOLO cliente EIS ⇒ i clic
+#                  devono tornare, con lo STESSO `gnome-shell` (verificato per
+#                  pid: se il pid cambia il verde direbbe solo «ho riavviato»)
+# S5 · applicazione ⭐ un `gnome-terminal` VERO deve continuare a ricevere gli
+#                  Invio DOPO la guarigione.  ⛔ Serve perche' il riattacco fa
+#                  passare la capacita' del posto da 3 a 0 e ritorno: un cliente
+#                  Wayland che non si riaggancia va SORDO — e uno c'era, ed era
+#                  il nostro testimone (curato il 21 ago)
+#
+# ⛔⛔ E DAL 21 AGOSTO GLI ATTESI DI S2/S3 SONO CAMBIATI, perche' il mondo e'
+#      cambiato: con le cure «A» e «C» dentro, T3 e T4 sono VERDI.  Col difetto
+#      vivo tornano `DIFETTO_VIVO`, ed e' quel che `06-b33-risveglio-certifica.sh`
+#      pretende togliendo le cure una per volta.
 #
 # ===========================================================================
 # ⛔⛔ IL LIMITE, IN TESTA PERCHE' NESSUNO CI CADA IN VERDE
@@ -281,9 +299,84 @@ guarigione)
 	carico
 	exit $ESITO ;;
 
+applicazione)
+	# ⛔⛔ IL PREZZO VERO DELLA CURA «C», SU UN'APPLICAZIONE VERA — 21 ago 2026.
+	#
+	# La guarigione fa cadere il canale EIS, e su una sessione senza monitor i
+	# nostri dispositivi virtuali sono gli UNICI del posto: `[M]` la capacita'
+	# del `wl_seat` passa **3 → 1 → 0 → 1 → 3**.  ⇒ **Ogni cliente Wayland deve
+	# mollare `wl_pointer`/`wl_keyboard` e riagganciarli.**
+	#
+	# ⛔ Il testimone NON lo faceva, ed e' rimasto muto per sempre (curato oggi,
+	#    vedi il riquadro in `06-b33-testimone.c`).  ⚠ Un cliente scritto male
+	#    va sordo dopo una guarigione, e questo banco lo deve dire prima che lo
+	#    scopra l'utente.
+	#
+	# ⇒ Qui l'applicazione e' un `gnome-terminal` VERO, con dentro una shell che
+	#   nessuno riavviera': se dopo la guarigione riceve gli Invio, un cliente
+	#   GTK regge il cambio di capacita'.  ⭐ E' un `[M]` su un toolkit che non
+	#   abbiamo scritto noi, che e' il tipo di prova che vale di piu'.
+	log "S5 · ⭐ UN'APPLICAZIONE VERA sopravvive alla guarigione?"
+	carico
+	terreno iniettore-spegni  > /dev/null 2>&1
+	terreno testimone-via     > /dev/null 2>&1
+	terreno spegni            > /dev/null 2>&1
+	sleep 2
+	terreno sessione > /dev/null 2>&1
+	terreno iniettore-accendi "$TELA" || exit 3
+	# ⛔ E il terminale si apre DOPO l'iniettore, come il testimone: e' lui che
+	#    monta il monitor.  ⚠ E NON insieme al testimone: la finestra a schermo
+	#    intero prende il fuoco e il terminale non riceverebbe un tasto.
+	terreno terminale || { ko "⛔ IL BANCO: il terminale non si apre"; exit 3; }
+	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
+	PRIMA=$(terreno invii | awk '{print $2}')
+	inf "Invio ricevuti PRIMA: $PRIMA"
+	# ⛔ Un Invio PRIMA della guarigione: se non arriva nemmeno questo, la scena
+	#    non regge e il rosso di dopo accuserebbe la cosa sbagliata.
+	di "posizione 28 1"; sleep 0.3
+	di "posizione 28 0"; sleep 0.8
+	MEZZO=$(terreno invii | awk '{print $2}')
+	if [ "$((MEZZO - PRIMA))" -ge 1 ]; then
+		ok "il terminale riceve gli Invio PRIMA della guarigione ($((MEZZO - PRIMA)))"
+	else
+		ko "⛔ IL BANCO: il terminale non riceve niente nemmeno prima, la scena non regge"
+		exit 3
+	fi
+	# la scena cattiva: pulsante giu' + risveglio ⇒ la cura «C» deve scattare
+	di "pulsante 272 1"; sleep 0.6
+	di "risveglia";      sleep 2.0
+	di "pulsante 272 0"; sleep 0.8
+	di "stato";          sleep 0.3
+	# ⛔ `iniettore-registro`, NON `iniettore-dice`: la riga della guarigione la
+	#    scrive `registro_dice()` dell'area «input», e `iniettore-dice` filtra
+	#    solo le righe `B33R:` dell'iniettore.  ⚠ Cercarla li' dava un rosso
+	#    falso mentre la cura era scattata davvero — difetto del banco, 21 ago.
+	if terreno iniettore-registro 400 | grep -q 'GUARIGIONE'; then
+		ok "⭐ la cura «C» e' scattata (la riga GUARIGIONE c'e')"
+	else
+		ko "⛔ la cura «C» NON e' scattata: quel che segue non misura la guarigione"
+	fi
+	di "posizione 28 1"; sleep 0.3
+	di "posizione 28 0"; sleep 0.8
+	di "posizione 28 1"; sleep 0.3
+	di "posizione 28 0"; sleep 1.0
+	DOPO=$(terreno invii | awk '{print $2}')
+	inf "Invio ricevuti DOPO la guarigione: $DOPO (erano $MEZZO)"
+	if [ "$((DOPO - MEZZO))" -ge 2 ]; then
+		ok "⭐ l'applicazione VERA ha ricevuto $((DOPO - MEZZO)) Invio DOPO la guarigione"
+	else
+		ko "⛔ ne ha ricevuti $((DOPO - MEZZO)) invece di 2: un cliente GTK NON regge il"
+		ko "   cambio di capacita' del posto ⇒ il prezzo della cura «C» e' molto piu'"
+		ko "   alto di quel che si e' dichiarato, e va riportato al coordinatore"
+	fi
+	terreno terminale-via > /dev/null 2>&1
+	carico
+	exit $ESITO ;;
+
 spegni)
 	terreno iniettore-spegni
 	terreno testimone-via
+	terreno terminale-via
 	exit 0 ;;
 
 tutto)

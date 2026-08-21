@@ -58,6 +58,13 @@ CDP = _mod("cdp", "02-pagina-misura-cdp.py")
 a = argparse.ArgumentParser()
 a.add_argument("--porta", type=int, default=7730)
 a.add_argument("--lavoro", default="/media/REMOTIX/tmp/07-appunti")
+a.add_argument("--utente", default="prova",
+               help="⛔ l'utente della sessione. Il predefinito «prova» e' quello "
+                    "dell'UTENTE: con la sua sessione viva, due server che "
+                    "aprono un desktop per lo stesso utente si contendono "
+                    "/run/user e il posto e' UNO. ⇒ Da un banco in parallelo "
+                    "si passa un utente proprio, come per la porta e il socket.")
+a.add_argument("--parola", default="prova2026")
 a.add_argument("--solo", default="", choices=["", "chrome", "firefox"])
 # ⭐ `--schermo :99` misura su browser VERI (Xvfb) invece che headless: e' la
 #   sola configurazione in cui il difetto della clipboard di Firefox si vede.
@@ -398,8 +405,8 @@ def firefox(n):
     try:
         m.chiama("WebDriver:NewSession", {"acceptInsecureCerts": True})
         m.misura(1400, 900); m.vai(URL)
-        m.js("""document.getElementById('utente').value='prova';
-                document.getElementById('parola').value='prova2026';
+        m.js(f"""document.getElementById('utente').value='{o.utente}';
+                document.getElementById('parola').value='{o.parola}';
                 document.getElementById('vai').click(); return true;""")
         t0 = time.time()
         while time.time() - t0 < 40:
@@ -463,8 +470,8 @@ def chrome(n):
         while time.time() - t0 < 25 and not c.valuta(
                 "!!document.getElementById('utente')", attendi=False):
             time.sleep(0.5)
-        c.valuta("""document.getElementById('utente').value='prova';
-                    document.getElementById('parola').value='prova2026';
+        c.valuta(f"""document.getElementById('utente').value='{o.utente}';
+                    document.getElementById('parola').value='{o.parola}';
                     document.getElementById('vai').click();""", attendi=False)
         t0 = time.time()
         while time.time() - t0 < 40:

@@ -158,6 +158,35 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione);
 int mutter_eis_fd(const MutterSessione *sessione);
 
 /*
+ * ⛔⛔ RIFA' IL CANALE EIS, LASCIANDO IN PIEDI LA SESSIONE — la cura «C» di
+ *      `fasi/06-la-tela-e-la-vista.md` §7.1.  🔸 Derivata, 21 agosto 2026.
+ *
+ * ⭐ E' l'UNICA cosa che guarisce il *clic che muore*: quando Mutter ricrea i
+ *    dispositivi assoluti mentre un pulsante e' premuto, quel pulsante resta
+ *    giu' nel posto e il desktop non prende piu' un clic (`[M]` banco
+ *    `06-b33-risveglio`).  `[R]` L'unico codice che lo rilascia e'
+ *    `drop_device()`, e gira solo alla **caduta del canale EIS**.
+ *
+ * ⛔ Il distacco vero lo manda `ei_disconnect()` in `input.c`, come messaggio
+ *    di protocollo — `[M]` 21 ago 2026, guasti `RG3` e `RG4`.  ⚠ **La prima
+ *    versione di questo commento diceva un'altra cosa** («finche' il
+ *    descrittore di `mutter.c` resta aperto Mutter non vede il distacco») ed
+ *    era falsa: si e' scoperto innestando il guasto.
+ *
+ * ⭐ Quel che serve DAVVERO da qui: dopo il distacco il descrittore messo da
+ *   parte e' morto, e uno nuovo lo chiede solo chi ha il bus e il percorso
+ *   della sessione.  ⚠ E il `close()` che c'e' dentro non e' la cura: evita di
+ *   perdere un descrittore a ogni guarigione.
+ *
+ * ⇒ Se la seconda `ConnectToEIS` fallisce, il canale non c'e' piu' e si ritorna
+ *   -1 dicendolo — `CODER.md` §4.2: si degrada dichiarando, non in silenzio.
+ *
+ * Ritorna il descrittore nuovo (che resta di questa sessione, come l'altro), o
+ * -1 con `sbaglio` riempito.
+ */
+int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio);
+
+/*
  * ⭐ Cerca il monitor che abbiamo montato noi, e dice se l'ha trovato.
  *
  * ⛔ VA CHIAMATA QUANDO LA CATTURA E' GIA' ATTIVA, e la ragione e' misurata —

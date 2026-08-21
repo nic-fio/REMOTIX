@@ -207,6 +207,19 @@ def controllo_nomi(pagina):
             globali.add(n)
     usati = sorted(globali)
     mancanti = sorted(n for n in usati if n not in dati and n not in ESENTI)
+
+    # ⛔⭐ E IL SECONDO CONTROLLO, ed e' costato un giro il 21 agosto 2026:
+    #    `GUSCIO_WORKER` e' un TEMPLATE LITERAL, quindi un apice inverso dentro
+    #    un COMMENTO lo chiude — e da li' in poi il codice del guscio diventa
+    #    testo dell'espressione, cioe' **tutta la pagina non si legge piu'**.
+    #    ⚠ Nella prosa di questo progetto gli apici inversi ci sono in ogni
+    #      riga: e' un errore che si rifa' ogni volta che si tocca il guscio.
+    # ⚠ La riga 1 e' `const GUSCIO_WORKER = \`` — l'apice che APRE, e non conta.
+    apici = [i + 1 for i, r in enumerate(guscio.splitlines())
+             if i > 0 and re.search(r'(?<!\\)`', r)]
+    if apici:
+        mancanti = mancanti + ["⛔ apice inverso non protetto nel guscio, righe "
+                               + ", ".join(str(x) for x in apici[:6])]
     return (not mancanti), mancanti, usati, sorted(dati)
 
 
@@ -513,8 +526,19 @@ def main():
         if g3 == t:
             ko("il guasto «nome nuovo» non si e' potuto innestare (⇒ NON certificato)")
             return 3
+        # ⛔ guasto 4 — un apice inverso in un COMMENTO del guscio: chiude il
+        #    template literal e la pagina INTERA non si legge piu'.  ⚠ Nella
+        #    prosa di questo progetto gli apici inversi sono in ogni riga, e
+        #    questo errore l'ho fatto stanotte scrivendo `voff`.
+        g4 = t.replace("function misura_vista() { return __vista.slice(); }",
+                       "/* un apice: `rotto` */\n"
+                       "function misura_vista() { return __vista.slice(); }")
+        if g4 == t:
+            ko("il guasto «apice inverso» non si e' potuto innestare (⇒ NON certificato)")
+            return 3
         for nome, testo in (("VIA_MSE tolto", g1), ("GIRO tolto", g2),
-                            ("un nome NUOVO in `Schermo` (DOMANI)", g3)):
+                            ("un nome NUOVO in `Schermo` (DOMANI)", g3),
+                            ("un apice inverso nel guscio", g4)):
             f = os.path.join(a.fuori, "copia-guasta.html")
             open(f, "w", encoding="utf-8").write(testo)
             e, manc, _, _ = controllo_nomi(f)

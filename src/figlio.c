@@ -50,8 +50,10 @@
 
 #include "registro.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sched.h>
 #include <stdatomic.h>
 #include <grp.h>
 #include <poll.h>
@@ -3338,6 +3340,11 @@ static uint64_t codif_attesa_ms[CODEC_MAX];
  *    ordini di grandezza e sopra al costo di un riavvio (`[M]` 41,6 ms). */
 static uint64_t risveglio_ms;
 #define RISVEGLIO_MS 400u
+/* ⛔ La cura «A» (21 ago 2026, 🔸 derivata) salta il risveglio quando qualcosa e'
+ *    tenuto giu'.  ⚠ Questa bandiera serve solo a NON ripetere la riga di
+ *    registro ogni 400 ms mentre l'utente trascina: una diagnostica che annega
+ *    quella che conta e' una diagnostica che tace (`LEZIONI.md` §2.7). */
+static int risveglio_zitto;
 static uint64_t ciclo_detto_ms;
 /* ⛔ La misura del punto 7, fatta e NON dedotta: il `pts` che Mutter attacca al
  *    fotogramma e' o non e' il nostro orologio monotono?  Si guarda una volta,
@@ -3488,6 +3495,158 @@ static uint64_t audio_detto_us;
  *    cui le applicazioni suonano appartiene alla sessione; il consumo del
  *    monitor appartiene a chi ascolta.
  */
+/*
+ * ⛔⛔⛔ LA POLITICA DI SCHEDULAZIONE **EFFETTIVA** DEL PERCORSO AUDIO — e non
+ *       il permesso di chiederla.  *Riscritta il 21 agosto 2026 su misura di
+ *       A8, e la riga di prima era un verde falso.*
+ *
+ * QUEL CHE C'ERA, e perche' era sbagliato: si leggeva `RLIMIT_RTPRIO` e, se non
+ * era zero, si scriveva *«⭐ priorita' di tempo reale concessa dall'unita'»*.
+ * ⛔ **Vero del rlimit, falso dell'effetto**: il rlimit dice soltanto «hai il
+ * permesso di CHIEDERE», non «l'hai ottenuta».
+ *
+ * `[M]` A8, 21 agosto 2026, su QUESTA macchina:
+ *   · il kernel rifiuta `SCHED_FIFO` a chiunque non stia nel cgroup **radice**
+ *     (`CONFIG_RT_GROUP_SCHED` con cgroup v2): `chrt -f 10 /bin/true` fallisce
+ *     **da root** dentro una slice e riesce nella radice.  ⇒ Ogni processo
+ *     governato da systemd e' escluso, e **`LimitRTPRIO=20` e' inerte**;
+ *   · fotografia dei thread del percorso audio nel figlio vivo — `remotix-suono`,
+ *     `remotix-cattura`, due `data-loop.0`, due `module-rt`: **tutti a politica
+ *     normale, nice 0**;
+ *   · `rtkit-daemon` inattivo, gruppo `pipewire` vuoto, e PipeWire chiede
+ *     `rt.prio` **88**, non 20.
+ *
+ * ⛔ E la ragione per cui non basta togliere la riga: senza, «non ho la
+ *    priorita'» e «non ho guardato» hanno lo stesso aspetto.  ⇒ Si **guarda**,
+ *    e si dichiara quel che si e' visto — `CODER.md` §4.6, *il verde non e'
+ *    vero*: una riga che afferma un privilegio che nessuno usa e' peggio del
+ *    silenzio, perche' e' un numero che nessuno confronta.
+ *
+ * ⚠ E LA CURA NON STA QUI, dichiarata per non farla cercare a nessuno: `[M]`
+ *   A8, la leva che funziona su questo kernel e' **`nice`** (scoppiettii da
+ *   10,4/s a 0,27/s a `nice -20`).  ⛔ Ma un arbitro indipendente — `pw-record`
+ *   sullo stesso monitor — vede **gli stessi scoppiettii negli stessi istanti,
+ *   e sempre un po' di piu'** ⇒ il difetto nasce **a monte di noi**, nel grafo
+ *   audio della sessione, e noi lo trasportiamo fedelmente.  ⇒ La priorita' va
+ *   data a **tutto il percorso audio della sessione** (`sessione.c`), non a
+ *   questo processo, ed e' una decisione di prodotto.
+ */
+static void dichiara_priorita_audio(void)
+{
+	/* ⛔ I nomi dei thread che formano il percorso audio.  ⚠ `data-loop` e
+	 *    `module-rt` sono di PipeWire e non nostri: e' proprio per questo che
+	 *    vanno guardati — la priorita' che conta e' la LORO. */
+	static const char *NOMI[] = { "data-loop", "pw-data", "pw-rt", "module-rt",
+		                          "remotix-suono", "remotix-cattura" };
+	struct rlimit rl;
+	unsigned long tetto = 0;
+	DIR *cartella;
+	struct dirent *voce;
+	int guardati = 0, in_tempo_reale = 0, peggior_nice = -100;
+	char elenco[512];
+	size_t usato = 0;
+
+	if (getrlimit(RLIMIT_RTPRIO, &rl) == 0)
+		tetto = (unsigned long) rl.rlim_cur;
+
+	elenco[0] = '\0';
+	cartella = opendir("/proc/self/task");
+	while (cartella && (voce = readdir(cartella)) != NULL) {
+		char percorso[128], nome[64];
+		FILE *f;
+		long tid;
+		int politica, gentilezza;
+		size_t l;
+
+		if (voce->d_name[0] < '0' || voce->d_name[0] > '9')
+			continue;
+		tid = strtol(voce->d_name, NULL, 10);
+		snprintf(percorso, sizeof percorso, "/proc/self/task/%ld/comm", tid);
+		f = fopen(percorso, "r");
+		if (!f)
+			continue;
+		if (!fgets(nome, sizeof nome, f)) {
+			fclose(f);
+			continue;
+		}
+		fclose(f);
+		l = strlen(nome);
+		while (l && (nome[l - 1] == '\n' || nome[l - 1] == ' '))
+			nome[--l] = '\0';
+
+		{
+			int nostro = 0;
+			for (size_t i = 0; i < sizeof NOMI / sizeof NOMI[0]; i++)
+				if (strstr(nome, NOMI[i])) {
+					nostro = 1;
+					break;
+				}
+			if (!nostro)
+				continue;
+		}
+
+		/* ⛔ `sched_getscheduler(tid)` e non una lettura di `/proc/.../stat`:
+		 *    e' la stessa domanda fatta al kernel invece che a un testo da
+		 *    scomporre, e non ha un indice di campo da sbagliare. */
+		politica = sched_getscheduler((pid_t) tid);
+		errno = 0;
+		gentilezza = getpriority(PRIO_PROCESS, (id_t) tid);
+		if (errno)
+			gentilezza = 0;
+
+		guardati++;
+		if (politica == SCHED_FIFO || politica == SCHED_RR)
+			in_tempo_reale++;
+		else if (gentilezza > peggior_nice)
+			peggior_nice = gentilezza;
+
+		if (usato < sizeof elenco - 48)
+			usato += (size_t) snprintf(elenco + usato, sizeof elenco - usato, "%s%s(%s,nice %d)",
+			                           usato ? " " : "", nome,
+			                           politica == SCHED_FIFO  ? "FIFO"
+			                           : politica == SCHED_RR  ? "RR"
+			                           : politica == SCHED_IDLE ? "idle"
+			                           : politica == SCHED_BATCH ? "batch"
+			                                                     : "normale",
+			                           gentilezza);
+	}
+	if (cartella)
+		closedir(cartella);
+
+	/* ⛔ «Non ho trovato nessun thread» NON e' «tutto a posto»: e' uno
+	 *    strumento cieco, e si dice con quelle parole (`CODER.md` §3.10). */
+	if (guardati == 0) {
+		registro_dice(REG_FIGLIO,
+		              "⚠ NON HO TROVATO nessun thread del percorso audio "
+		              "(cercavo data-loop, pw-data, pw-rt, module-rt, "
+		              "remotix-suono, remotix-cattura): ⛔ questa NON e' la "
+		              "misura «tutto a posto», e' «non ho guardato».  "
+		              "RLIMIT_RTPRIO = %lu",
+		              tetto);
+		return;
+	}
+
+	if (in_tempo_reale == guardati)
+		registro_dice(REG_FIGLIO,
+		              "⭐ priorita' di tempo reale OTTENUTA: %d thread su %d del "
+		              "percorso audio girano FIFO/RR (RLIMIT_RTPRIO = %lu).  %s",
+		              in_tempo_reale, guardati, tetto, elenco);
+	else
+		registro_dice(
+		    REG_FIGLIO,
+		    "⛔⛔ FIFO **NON** OTTENUTO: %d thread su %d del percorso audio girano a politica "
+		    "NORMALE (nice peggiore %d), e RLIMIT_RTPRIO = %lu — ⚠ il rlimit dice «puoi "
+		    "CHIEDERLA», non «ce l'hai».  `[M]` 21 ago 2026: su questo kernel "
+		    "`CONFIG_RT_GROUP_SCHED` con cgroup v2 rifiuta SCHED_FIFO a chiunque non stia nel "
+		    "cgroup RADICE ⇒ ogni processo governato da systemd e' escluso e `LimitRTPRIO=20` "
+		    "e' INERTE.  ⇒ L'audio scoppiettera' QUANDO IL DESKTOP LAVORA, e a desktop fermo "
+		    "non si riproduce.  ⚠ E la cura non e' qui: l'arbitro indipendente (`pw-record` "
+		    "sullo stesso monitor) sente gli stessi scoppiettii negli stessi istanti ⇒ il "
+		    "difetto nasce nel grafo audio della SESSIONE, non nel nostro trasporto.  %s",
+		    guardati - in_tempo_reale, guardati, peggior_nice == -100 ? 0 : peggior_nice, tetto,
+		    elenco);
+}
+
 static void audio_regola_figlio(uint8_t codec)
 {
 	if (codec == audio_codec)
@@ -3564,23 +3723,7 @@ static void audio_regola_figlio(uint8_t codec)
 	 *    Il sintomo non e' un errore: e' audio che scoppietta **quando il
 	 *    desktop lavora**, e che a desktop fermo non si riproduce — cioe'
 	 *    invisibile a ogni banco che guardi i byte invece del tempo. */
-	{
-		struct rlimit rl;
-		if (getrlimit(RLIMIT_RTPRIO, &rl) == 0 && rl.rlim_cur == 0)
-			registro_dice(REG_FIGLIO,
-			              "⛔⛔ RLIMIT_RTPRIO = 0: PipeWire NON potra' chiedere "
-			              "la priorita' di tempo reale, e l'audio scoppiettera' "
-			              "QUANDO IL DESKTOP LAVORA.  ⚠ Non e' un difetto del "
-			              "codice: manca `LimitRTPRIO=20` nell'unita' di "
-			              "sistema (R26 di v1).  ⭐ Con la priorita', quel che "
-			              "il client sente e quel che consegniamo coincidono "
-			              "campione per campione");
-		else if (getrlimit(RLIMIT_RTPRIO, &rl) == 0)
-			registro_dice(REG_FIGLIO,
-			              "⭐ priorita' di tempo reale concessa dall'unita': "
-			              "RLIMIT_RTPRIO = %lu (R26)",
-			              (unsigned long)rl.rlim_cur);
-	}
+	dichiara_priorita_audio();
 
 	audio_codec = codec;
 	audio_blocchi_spediti = audio_blocchi_persi = 0;
@@ -6354,15 +6497,80 @@ void figlio_vive(int argc, char **argv)
 			    && debito_chiave[codec_chiesto]) {
 				uint64_t adesso_ms = registro_ora_ms();
 				if (adesso_ms - risveglio_ms >= RISVEGLIO_MS) {
-					risveglio_ms = adesso_ms;
-					registro_dice(REG_FIGLIO,
-					              "⭐ una CHIAVE e' dovuta e la scena e' ferma da "
-					              "%u ms: riavvio il flusso per farmi consegnare "
-					              "un fotogramma.  ⚠ Senza, l'utente guarda una "
-					              "pagina bianca finche' qualcosa non si muove sul "
-					              "desktop (`[M]` 4,4 s il 14 agosto 2026)",
-					              (unsigned)RISVEGLIO_MS);
-					cattura_risveglia(cat);
+					/*
+					 * ⛔⛔⛔ LA CURA «A» — 21 agosto 2026.  🔸 DERIVATA dal
+					 *       coordinatore, e il prezzo qui sotto e' VISIBILE
+					 *       all'utente: quando lo vedra', il giudizio e' suo.
+					 *
+					 * IL FATTO, `[M]` (banco `banchi/06-b33-risveglio.*`):
+					 * `cattura_risveglia()` fa ricreare a Mutter i dispositivi
+					 * assoluti — **3 risvegli, 3 ricambi, con ZERO cambi di
+					 * tela** — e se in quel momento un pulsante e' premuto,
+					 * quel pulsante resta giu' **nel posto** e ⛔ **il desktop
+					 * non prende piu' un clic per tutta la sessione**.  E'
+					 * `fasi/06-la-tela-e-la-vista.md` §4.6, per la seconda
+					 * porta che §7.1 ha trovato.
+					 *
+					 * ⛔ E questa riga sta nel posto peggiore possibile: ci si
+					 *    arriva quando **la scena e' ferma**, cioe' esattamente
+					 *    quando l'utente puo' tenere premuto il mouse su un
+					 *    desktop immobile.
+					 *
+					 * ⛔ La cura ovvia — rilasciare prima, come si fa a `:3964`
+					 *    prima di `cattura_ridimensiona()` — QUI E' VIETATA:
+					 *    li' e' il client che ha chiesto il cambio di tela, qui
+					 *    non ha chiesto niente nessuno, e rilasciare
+					 *    distruggerebbe **ogni trascinamento**.
+					 *
+					 * ⇒ Non ci si risveglia: si aspetta che l'utente molli.
+					 *
+					 * 🔸 IL PREZZO, e l'utente lo vedra': su un desktop fermo,
+					 *    con un tasto o un pulsante tenuto giu', la chiave non
+					 *    parte — e un client appena attaccato puo' restare con
+					 *    la **pagina bianca** finche' non si rilascia.
+					 *    ⚠ E' limitato e si sana da se': `risveglio_ms` NON si
+					 *      tocca, quindi al primo rilascio il fondo e' gia'
+					 *      scaduto e il giro dopo risveglia.
+					 *    ⚠ E la scena e' rara: un trascinamento **muove** il
+					 *      desktop, e allora la presa non e' ZERO e qui non ci
+					 *      si arriva nemmeno.
+					 *
+					 * ⚠ Quel che questa guardia NON copre lo ripara la cura «C»
+					 *   in `input.c` (`guarisci()`): le porte che non
+					 *   controlliamo — `monitors-changed`, il cambio di keymap,
+					 *   e quelle che GNOME aggiungera'.
+					 */
+					unsigned giu = palco_input ? input_premuti(palco_input) : 0;
+
+					if (giu) {
+						/* ⛔ E si dice UNA VOLTA per attesa, non a ogni giro: a
+						 *    400 ms l'una queste righe annegherebbero il
+						 *    registro proprio mentre l'utente trascina. */
+						if (!risveglio_zitto) {
+							risveglio_zitto = 1;
+							registro_dice(
+							    REG_FIGLIO,
+							    "⛔ una CHIAVE e' dovuta e la scena e' ferma, ma %u "
+							    "fra tasti e pulsanti sono TENUTI GIU': NON risveglio "
+							    "il flusso.  ⭐ Il risveglio fa ricreare i dispositivi "
+							    "di libei (`[M]` §7.1) e un pulsante premuto durante "
+							    "il ricambio resta giu' NEL POSTO per sempre.  🔸 Il "
+							    "prezzo, dichiarato: chi si e' appena attaccato puo' "
+							    "vedere la pagina bianca finche' l'utente non molla",
+							    giu);
+						}
+					} else {
+						risveglio_zitto = 0;
+						risveglio_ms = adesso_ms;
+						registro_dice(REG_FIGLIO,
+						              "⭐ una CHIAVE e' dovuta e la scena e' ferma da "
+						              "%u ms: riavvio il flusso per farmi consegnare "
+						              "un fotogramma.  ⚠ Senza, l'utente guarda una "
+						              "pagina bianca finche' qualcosa non si muove sul "
+						              "desktop (`[M]` 4,4 s il 14 agosto 2026)",
+						              (unsigned)RISVEGLIO_MS);
+						cattura_risveglia(cat);
+					}
 				}
 			}
 

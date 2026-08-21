@@ -2547,6 +2547,15 @@ class Schermo {
      *   sotto il rumore di quel che misurano. */
     this.bmp_ms = [];                          /* createImageBitmap: chiamata → immagine */
     this.vetro_ms = [];                        /* immagine in mano → tela trasferita */
+    /* ⭐⭐ LA META' VIDEO DEL METRO DELLA DISTANZA AUDIO↔VIDEO (§9.7-bis).
+     *
+     * L'ultimo fotogramma arrivato al vetro: il suo `istante` (l'orologio del
+     * SERVER, §6.2) e l'ora del CLIENT in cui e' stato trasferito alla tela.
+     * ⛔ Sono gli stessi due campi che il percorso audio tiene in
+     *    `ult_ist_us`/`ult_quando_perf` — stesso nome, stessa unita', stessa
+     *    convenzione: due grandezze quasi uguali con due convenzioni diverse
+     *    sarebbero la forma **E2**. */
+    this.ult_ist_us = 0; this.ult_vetro_perf = 0;
     this.ultimo_consegnato = null;             /* §6.2: «l'ultimo GIA' CONSEGNATO» */
     this.atteso = null;
     this.sospeso = false;                      /* c'e' un buco aperto (§5.2) */
@@ -2628,6 +2637,11 @@ class Schermo {
        sessione nuova, che e' peggio del nero perche' sembra vivo.
        ⚠ `transferFromImageBitmap(null)` e' il modo dichiarato di svuotarla. */
     this.f_l = 0; this.f_a = 0; this.serie = 0; this.mostrata = 0;
+    /* ⛔ E il metro della distanza si azzera con la sessione: `voff` di un
+       tentativo morto, letto sotto una sessione nuova, sarebbe un numero che
+       sembra vivo — la stessa ragione per cui si svuota la tela, un piano piu'
+       sotto.  ⚠ `0` vuol dire «non lo so», e `voff_ms()` risponde `null`. */
+    this.ult_ist_us = 0; this.ult_vetro_perf = 0;
     this.epoca++;
     if (this.bm) { try { this.bm.transferFromImageBitmap(null); } catch (e) { /* gia' vuota */ } }
     this.codec = null; this.stringa = null;
@@ -2951,6 +2965,15 @@ class Schermo {
   mostra(f, fl, fa) {
     const n = ++this.serie, e0 = this.epoca;
     const t_bmp = performance.now();
+    /* ⛔ L'`istante` del server si prende ADESSO, non nel `.then`: la' il
+     *    `VideoFrame` e' gia' chiuso, e `f.timestamp` su un fotogramma chiuso
+     *    e' un accesso a niente.  ⭐ E il valore e' quello che `dipingi()` ha
+     *    messo nel chunk (`timestamp: i.istante`, §6.2): WebCodecs lo riporta
+     *    identico sul fotogramma che esce, quindi qui c'e' l'orologio del
+     *    SERVER — non il nostro.  ⚠ Che ci arrivi davvero non si crede: lo
+     *    controlla `07-b63-distanza.py`, che pretende un `voff` STABILE (se il
+     *    motore ci mettesse un indice di presentazione, `voff` scapperebbe). */
+    const ist_us = f.timestamp;
 
     createImageBitmap(f).then((bmp) => {
       /* ⛔ Si segna PRIMA di qualunque scarto: un'immagine buttata perche'
@@ -3005,8 +3028,19 @@ class Schermo {
       if (cambia) { this.tela.width = fl; this.tela.height = fa; }
       const t_vetro = performance.now();
       this.bm.transferFromImageBitmap(bmp);
-      this.vetro_ms.push(performance.now() - t_vetro);
+      const t_dopo = performance.now();
+      this.vetro_ms.push(t_dopo - t_vetro);
       if (this.vetro_ms.length > 200) this.vetro_ms.shift();
+      /* ⭐⭐ IL VETRO, ed e' QUI che nasce `voff` — non alla decodifica.
+       * ⛔ Il confine si sposta nella direzione scomoda: `t_dopo` e' DOPO il
+       *    trasferimento, cioe' il piu' tardi che questa pagina sappia dire.
+       * ⚠ E quel che resta fuori si dichiara invece di tacerlo: fra questa
+       *   riga e il pixel acceso passano i `[?]` 16-40 ms del compositore che
+       *   nessuna API espone (`CODER.md` §1-bis).  ⇒ `aoff` ci mette dentro
+       *   `outputLatency` e `voff` NON puo' metterci l'equivalente: la
+       *   distanza che ne esce **sovrastima** di quel tanto il ritardo
+       *   dell'audio, e va letta cosi'. */
+      if (ist_us) { this.ult_ist_us = ist_us; this.ult_vetro_perf = t_dopo; }
       this.conti.dipinti++;
       /* ⭐ E l'immagine e' nuova davvero solo qui — la stessa ragione della
          strada vecchia: `SCENA` non deve ringiovanire per un ridimensionamento. */
@@ -3025,6 +3059,33 @@ class Schermo {
       this.errori.push("createImageBitmap: " + e);
       this.riga("⛔ il fotogramma non e' diventato un'immagine: " + e);
     });
+  }
+
+  /* ⭐⭐ `voff` — LA META' VIDEO DEL METRO DELLA DISTANZA, §9.7-bis.
+   *
+   * `voff` = (ora del client in cui il fotogramma e' arrivato AL VETRO)
+   *        − (`istante` del server di quel fotogramma).
+   *
+   * ⛔ E' la gemella esatta di `AUDIO.aoff_ms()`: stessa unita' (ms), stesso
+   *    arrotondamento, stesso `null` per «non lo so», e dentro tutte e due c'e'
+   *    lo stesso scarto ignoto fra l'orologio del server e quello del client.
+   * ⭐ ⇒ **`aoff − voff` e' la distanza fra quel che si sente e quel che si
+   *      vede**, perche' quella costante si elide.  Positivo = l'audio esce
+   *      DOPO l'immagine, cioe' il suono e' indietro.
+   *
+   * ⛔ E non serve ne' microfono ne' scena preparata: i due orologi sono gia'
+   *    nel protocollo — §6.2 nell'intestazione del fotogramma, §6.3 nel
+   *    datagram dell'audio.  Il metro mancava, non il dato.
+   *
+   * ⚠ E LE DUE META' NON SONO SIMMETRICHE, e va letto sull'etichetta:
+   *   `aoff` include `outputLatency` (il suono esce dal dispositivo DOPO che
+   *   noi l'abbiamo programmato); `voff` non puo' includere l'equivalente,
+   *   perche' fra `transferFromImageBitmap` e il pixel acceso non c'e' nessuna
+   *   API.  ⇒ La distanza SOVRASTIMA il ritardo dell'audio dei `[?]` 16-40 ms
+   *   del compositore. */
+  voff_ms() {
+    if (!this.ult_ist_us) return null;
+    return Math.round(this.ult_vetro_perf - this.ult_ist_us / 1000);
   }
 
   /* ⛔⭐ `TELA(ADATTATA)` — §7.1, e QUI NON SI RICONFIGURA NIENTE.
@@ -5903,6 +5964,32 @@ function avvia_audio(wt) {
               + " tard " + schermo.conti.tardive
               + " err " + (schermo.errori ? schermo.errori.length : "?")
             : " video ?")
+       /* ⭐⭐⭐ IL METRO DELLA DISTANZA AUDIO↔VIDEO — §9.7-bis, 21 agosto 2026.
+        *
+        * ⛔ E' l'unica riga di questa pagina che guarda DUE flussi insieme.
+        *    Tutte le altre ne guardano uno per volta, ed e' per questo che
+        *    quattro anelli verdi hanno convissuto con l'utente che diceva
+        *    «c'e' mezzo secondo fra quel che sento e quel che vedo»: nessun
+        *    contatore poteva vederlo, perche' il difetto non sta in nessuno
+        *    dei due — sta **fra** i due.
+        *
+        * ⭐ `AV = aoff − voff`, in millisecondi.  Positivo = il suono esce
+        *    DOPO l'immagine (l'audio e' indietro), negativo = il contrario.
+        *    Lo scarto ignoto fra l'orologio del server e il nostro sta dentro
+        *    tutte e due e **si elide**: e' il motivo per cui questo numero non
+        *    ha bisogno ne' di un microfono ne' di una scena preparata.
+        *
+        * ⚠ E si stampano anche i due addendi, non solo la differenza: con la
+        *   sola differenza, «l'audio e' in ritardo» e «il video e' in
+        *   anticipo» avrebbero la stessa faccia — e sono due cure diverse. */
+       + (function () {
+            const v = (schermo && typeof schermo.voff_ms === "function")
+                        ? schermo.voff_ms() : null;
+            const av = (v === null || c.aoff_ms === null || c.aoff_ms === undefined)
+                        ? null : c.aoff_ms - v;
+            return " voff " + (v === null ? "?" : v)
+                 + " AV " + (av === null ? "?" : (av > 0 ? "+" : "") + av) + "ms";
+          })()
        + " fuoco " + (document.hasFocus() ? "si" : "NO");
     nota(riga);
     /* ⛔ E si manda anche AL SERVER, che e' l'unico posto dove i numeri dei
@@ -7250,6 +7337,20 @@ function specchia() {
                 misura con la cosa misurata. */
              bmp: __riassunto(schermo.bmp_ms),
              vetro: __riassunto(schermo.vetro_ms),
+             /* ⭐⭐ \`voff\` NON si manda gia' fatto, e non e' pignoleria: e' la
+                differenza fra un'ora del CLIENT e una del server, e l'ora del
+                client di QUI parte dalla nascita del worker.  Un \`voff\`
+                calcolato di qua e confrontato con l'\`aoff\` di la' darebbe una
+                distanza sbagliata di tutta la vita del documento — un numero
+                grande, stabile e credibile, cioe' il peggiore.
+                ⇒ Attraversa una DURATA (l'eta' del vetro) piu' l'\`istante\`
+                  del server, e l'ora si ricostruisce nell'orologio di la'.
+                ⚠ Il prezzo e' il salto del \`postMessage\`, non i 100 ms dello
+                  specchio: l'eta' e' presa NELL'ISTANTE in cui si manda. */
+             voff: schermo.ult_ist_us
+                     ? { eta: performance.now() - schermo.ult_vetro_perf,
+                         ist_us: schermo.ult_ist_us }
+                     : null,
              tela: __oc ? [__oc.width, __oc.height] : null } });
 }
 
@@ -7436,6 +7537,16 @@ function accendi_worker() {
         if (s.scena.eta !== null && s.scena.eta >= 0)
           SCENA.ultimo = performance.now() - s.scena.eta;
         SCENA.fotogrammi = s.scena.fotogrammi;
+      }
+      /* ⭐⭐ E `voff` si RICOSTRUISCE nell'orologio di qua, che e' l'unico in
+         cui `aoff` ha senso.  ⛔ Se il worker non ha ancora dipinto niente si
+         AZZERA: un `voff` ereditato da prima del riattacco sarebbe un numero
+         che sembra vivo. */
+      if (s.voff) {
+        schermo.ult_ist_us = s.voff.ist_us;
+        schermo.ult_vetro_perf = performance.now() - s.voff.eta;
+      } else {
+        schermo.ult_ist_us = 0; schermo.ult_vetro_perf = 0;
       }
       V.tela = s.tela || null;
       V.trattenuti = s.trattenuti;

@@ -213,18 +213,60 @@ static const struct wl_keyboard_listener ascolto_tastiera = {
 	.repeat_info = t_ripetizione,
 };
 
+/*
+ * ⛔⛔⛔ E LA CAPACITA' SE NE VA E TORNA — difetto del TESTIMONE trovato il 21
+ *       agosto 2026, e ha reso muto lo strumento senza dire una parola.
+ *
+ * Questa funzione agganciava `wl_pointer` **una volta sola** (`&& !puntatore`) e
+ * non lo mollava mai.  ⇒ Quando il posto perde la capacita' e la riprende, il
+ * compositore ha distrutto il suo puntatore: il nostro oggetto resta li',
+ * ⛔ **non riceve piu' niente e non da' nessun errore**, e al ritorno il
+ * `!puntatore` e' falso quindi non ci si riaggancia mai piu'.
+ *
+ * ⚠ E' **lo stesso difetto** che `STUDI.md` §gnome §9 descrive per `libei` —
+ *   *«il puntatore al dispositivo vecchio smette di funzionare senza errore»* —
+ *   ma dal lato Wayland, e nello strumento invece che nel prodotto.  ⭐ E' il
+ *   modo peggiore in cui un banco puo' rompersi: il testimone dice «non ho
+ *   visto niente», e chi legge accusa il prodotto.
+ *
+ * `[M]` Si e' visto curando la cura «C»: al riattacco del canale EIS il posto
+ *       passa **3 → 1 → 0 → 1 → 3** (sulla sessione senza monitor i nostri
+ *       dispositivi virtuali sono gli UNICI del posto), e da li' in poi il
+ *       testimone non ha piu' visto un solo evento.
+ *
+ * ⇒ Si molla quando la capacita' cade, e ci si riaggancia quando torna.  E'
+ *   anche quel che un cliente Wayland scritto bene deve fare.
+ */
 static void posto_capacita(void *d, struct wl_seat *s, uint32_t cap)
 {
 	riga("\"tipo\":\"POSTO\",\"capacita\":%u", cap);
+
 	if ((cap & WL_SEAT_CAPABILITY_POINTER) && !puntatore)
 	{
 		puntatore = wl_seat_get_pointer(s);
 		wl_pointer_add_listener(puntatore, &ascolto_puntatore, NULL);
+		riga("\"tipo\":\"POSTO_PUNTATORE\",\"stato\":\"agganciato\"");
 	}
+	else if (!(cap & WL_SEAT_CAPABILITY_POINTER) && puntatore)
+	{
+		wl_pointer_release(puntatore);
+		puntatore = NULL;
+		/* ⛔ E si SCRIVE: senza questa riga «il posto ha perso il puntatore» e
+		 *    «non e' arrivato niente» hanno lo stesso aspetto nel file. */
+		riga("\"tipo\":\"POSTO_PUNTATORE\",\"stato\":\"mollato\"");
+	}
+
 	if ((cap & WL_SEAT_CAPABILITY_KEYBOARD) && !tastiera)
 	{
 		tastiera = wl_seat_get_keyboard(s);
 		wl_keyboard_add_listener(tastiera, &ascolto_tastiera, NULL);
+		riga("\"tipo\":\"POSTO_TASTIERA\",\"stato\":\"agganciata\"");
+	}
+	else if (!(cap & WL_SEAT_CAPABILITY_KEYBOARD) && tastiera)
+	{
+		wl_keyboard_release(tastiera);
+		tastiera = NULL;
+		riga("\"tipo\":\"POSTO_TASTIERA\",\"stato\":\"mollata\"");
 	}
 }
 static void posto_nome(void *d, struct wl_seat *s, const char *nome) {}

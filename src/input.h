@@ -203,6 +203,32 @@ int input_posizione(Input *, uint16_t codice, int premuto);
  */
 int input_rilascia_tutto(Input *);
 
+/*
+ * ⛔⛔ QUANTO C'E' GIU' ADESSO — fra tasti e pulsanti, in un numero solo.
+ *      Aggiunta il 21 agosto 2026 per la cura «A».  🔸 Derivata.
+ *
+ * ⚠ NON e' una statistica per il registro: e' una **guardia**, e chi la chiama
+ *   deve sapere che cosa evita.
+ *
+ * ⛔ IL FATTO, `[M]` 21 agosto 2026 (banco `banchi/06-b33-risveglio.*`): ogni
+ *    `cattura_risveglia()` fa ricreare a Mutter i dispositivi assoluti — **3
+ *    risvegli, 3 ricambi, con ZERO cambi di tela**.  E se in quel momento un
+ *    pulsante e' premuto, quel pulsante resta giu' **nel posto** e ⛔ **il
+ *    desktop non prende piu' un clic per tutta la sessione**.
+ *
+ * ⛔ E il momento in cui `figlio.c` chiama `cattura_risveglia()` e' *«la scena
+ *    e' ferma e una chiave e' dovuta»*, cioe' **esattamente** il momento in cui
+ *    l'utente puo' tenere giu' il mouse su un desktop che non si muove.
+ *
+ * ⇒ Chi sta per fare qualcosa che ricrea i dispositivi guarda prima di qui.
+ *
+ * ⚠ E la cura di `figlio.c:3964` — rilasciare prima di `cattura_ridimensiona()`
+ *   — **non copre questa strada**: li' il rilascio si puo' fare perche' e' il
+ *   client ad aver chiesto il cambio; qui no, perche' l'utente sta
+ *   trascinando e nessuno gli ha chiesto niente.
+ */
+unsigned input_premuti(const Input *);
+
 void input_chiudi(Input *);
 
 #endif /* REMOTIX_INPUT_H */

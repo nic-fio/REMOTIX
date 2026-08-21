@@ -737,6 +737,136 @@ int mutter_eis_fd(const MutterSessione *sessione)
 }
 
 /*
+ * ⛔⛔⛔ LA CURA «C» — si rifa' il canale EIS lasciando in piedi TUTTO il resto.
+ *       Aggiunta il 21 agosto 2026, e il documento di fase la chiama «C».
+ *       🔸 DERIVATA: la decisione e' del coordinatore, non dell'utente.
+ *
+ * IL DANNO CHE CURA, `[M]` 21 agosto 2026 (`banchi/06-b33-risveglio.sh`): quando
+ * Mutter ricrea i dispositivi assoluti mentre un pulsante e' premuto, quel
+ * pulsante resta giu' **nel posto** e da li' in poi **il desktop non prende piu'
+ * un clic** — per sempre, e senza un errore da nessuna parte.
+ *
+ * ⛔ E dal lato del cliente non si recupera: `handle_button`
+ *    (`meta-eis-client.c:612-621`) guarda `device->button_state`, che sul
+ *    dispositivo NUOVO e' pulito, e ingoia il rilascio **prima** che il posto lo
+ *    veda.  `[M]` press+release sul nuovo fa `count` 1→2→1 (giornale di Mutter
+ *    con `MUTTER_DEBUG=input`: *«Dropping repeated press … count 2»* e
+ *    *«Dropping repeated release … count 1»*).
+ *
+ * ⭐ L'UNICO codice che riporta il conto a zero e' `drop_device()`
+ *    (`meta-eis-client.c:144-168`), e il suo unico chiamante e'
+ *    `meta_eis_client_disconnect()` (`:1075`) — cioe' **la caduta del canale
+ *    EIS**.  `[M]` Nel giornale si vedono le sei righe *«Releasing pressed
+ *    buttons while destroying virtual input device»* proprio li'.
+ *
+ * ⛔⛔ E PERCHE' QUESTA FUNZIONE STA IN `mutter.c` E NON IN `input.c` — e la
+ *      ragione NON e' quella che avevo scritto il 21 agosto la prima volta.
+ *
+ *      Avevo scritto: *«chiudere il `dup` di libei non basta, perche' il socket
+ *      ha ancora aperto il descrittore di `mutter.c`»*.  ⛔ `[M]` **Smentita**
+ *      dal guasto innestato `RG3`: togliendo il `close()` la guarigione
+ *      funziona lo stesso.  Il distacco lo manda `ei_disconnect()` come
+ *      messaggio di protocollo (`[M]`, guasto `RG4`).
+ *
+ *      ⭐ La ragione vera, che regge: **dopo il distacco il descrittore messo
+ *        da parte e' morto**, e per averne uno NUOVO serve una `ConnectToEIS`
+ *        — cioe' il bus, il nome e il percorso della sessione.  `input.c` non
+ *        li ha e non li deve avere: conosce `libei`, non D-Bus.
+ *
+ * ⭐ E che una seconda `ConnectToEIS` sia lecita non e' una speranza: `[R]`
+ *    `meta-remote-desktop-session.c:1943-1969` — `session->eis` si **riusa** se
+ *    c'e' gia', e ogni chiamata aggiunge un cliente col suo socket.  ⇒ La
+ *    sessione `RemoteDesktop`, il monitor virtuale e il flusso PipeWire **non si
+ *    toccano**: e' questa la differenza fra la cura e «riaccendere il server».
+ *
+ * ⚠ E le opzioni restano assenti come alla prima chiamata: la `MetaEis` esiste
+ *   gia' e le ignorerebbe (vedi il riquadro dentro `mutter_apri`).  Metterle
+ *   qui darebbe l'impressione di poter cambiare le capacita' a caldo.
+ *
+ *   ritorna  il descrittore NUOVO (>= 0), gia' messo da parte in questa
+ *            sessione: chi lo usa ne fa un `dup`, come sempre;
+ *   ritorna  -1 e riempie `sbaglio`: ⛔ e allora il canale EIS **non c'e'
+ *            piu'** — il vecchio e' stato chiuso comunque, perche' e' quella
+ *            chiusura a guarire il posto.  Chi chiama lo deve dichiarare.
+ */
+int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
+{
+	g_autoptr(GUnixFDList) descrittori = NULL;
+	g_autoptr(GVariant) risposta = NULL;
+	GVariantBuilder senza_opzioni;
+	gint32 indice = -1;
+
+	if (!sessione || !sessione->bus || !sessione->controllo)
+	{
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
+		            "nessuna sessione RemoteDesktap aperta: non c'e' nessun canale EIS da rifare");
+		return -1;
+	}
+
+	/*
+	 * ⛔⛔ E QUI C'ERA UNA SPIEGAZIONE SBAGLIATA, SMENTITA DALLA MISURA — 21
+	 *      agosto 2026, guasto innestato `RG3` di
+	 *      `banchi/06-b33-risveglio-guasti.py`.
+	 *
+	 * Diceva: *«si chiude prima e si chiede dopo, e l'ordine E' la cura: finche'
+	 * questo descrittore e' aperto il socket resta connesso e Mutter non vede
+	 * nessun distacco»*.  ⛔ `[M]` **Falso**: tolto questo `close()`, la
+	 * guarigione funziona **esattamente come prima** e nessun caso del banco
+	 * cambia colore.
+	 *
+	 * ⭐ Il distacco lo manda `ei_disconnect()` (in `input.c`) come **messaggio
+	 *   di protocollo**: Mutter esegue `meta_eis_client_disconnect()` — e quindi
+	 *   `drop_device()` — senza aspettare l'EOF del socket.  `[M]` Lo prova il
+	 *   guasto `RG4`, che toglie proprio quella riga e rompe la guarigione.
+	 *
+	 * ⚠ E il `close()` resta, per una ragione piu' modesta e vera: **senza, si
+	 *   perde un descrittore a ogni guarigione**.  ⛔ Un difetto che non fa
+	 *   rumore per ore e poi esaurisce la tavola dei descrittori.
+	 *
+	 * ⚠ Questa funzione resta comunque necessaria, e non e' cambiato: dopo il
+	 *   distacco il descrittore messo da parte e' morto, e uno NUOVO lo puo'
+	 *   chiedere solo chi ha il bus e il percorso della sessione — cioe' qui.
+	 */
+	if (sessione->eis >= 0)
+	{
+		close(sessione->eis);
+		registro_dice(AREA,
+		              "⭐ canale EIS vecchio chiuso (descrittore %d).  ⚠ Non e' QUESTA la cosa "
+		              "che guarisce il posto — `[M]` 21 ago 2026, guasto RG3: togliendo la "
+		              "chiusura la guarigione funziona lo stesso.  Il distacco lo manda "
+		              "`ei_disconnect()`; questa riga serve a non perdere un descrittore a "
+		              "ogni guarigione",
+		              sessione->eis);
+		sessione->eis = -1;
+	}
+
+	g_variant_builder_init(&senza_opzioni, G_VARIANT_TYPE("a{sv}"));
+	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
+	    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
+	    g_variant_new("(a{sv})", &senza_opzioni), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
+	    ATTESA_CHIAMATA_MS, NULL, &descrittori, NULL, sbaglio);
+	if (!risposta)
+	{
+		registro_dice(AREA,
+		              "⛔ la seconda ConnectToEIS e' stata rifiutata: da adesso NESSUN input "
+		              "arriva al desktop, e la sessione resta viva solo per guardare");
+		return -1;
+	}
+	g_variant_get(risposta, "(h)", &indice);
+	sessione->eis = g_unix_fd_list_get(descrittori, indice, sbaglio);
+	if (sessione->eis < 0)
+	{
+		registro_dice(AREA, "⛔ ConnectToEIS ha risposto ma il descrittore non si legge: da "
+		                    "adesso NESSUN input arriva al desktop");
+		return -1;
+	}
+	registro_dice(AREA, "⭐ canale EIS RIAPERTO: descrittore %d.  ⚠ La sessione, il monitor e il "
+	                    "flusso NON sono stati toccati",
+	              sessione->eis);
+	return sessione->eis;
+}
+
+/*
  * ⛔⛔ IL `mapping-id` VIENE DA MUTTER, NON DA NOI — e il verso conta.
  *
  * `reference-gnome/rapporti/06-mutter-input.md` §7.2 `[≠]`, riletto nel codice

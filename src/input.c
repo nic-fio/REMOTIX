@@ -165,12 +165,21 @@
  *     era premuto; e nel giornale si vedono le sei righe *«Releasing pressed
  *     buttons while destroying virtual input device»* proprio li'.
  *
- * ⚠ E per attuare quella guarigione **non basta questo file**: `input_apri()`
- *   riusa il descrittore che `mutter.c` tiene da parte, e finche' QUELLO resta
- *   aperto Mutter non vede nessun distacco.  ⇒ Servirebbe una `ConnectToEIS`
- *   nuova, cioe' una riga in `mutter.c`.  `[R]`
+ * ⚠ E per attuare quella guarigione **non basta questo file**: dopo il distacco
+ *   il descrittore che `mutter.c` tiene da parte e' morto, e uno NUOVO lo puo'
+ *   chiedere solo chi ha il bus e il percorso della sessione.  ⇒ Serve una
+ *   `ConnectToEIS` nuova, cioe' `mutter_eis_riattacca()`.  `[R]`
  *   `meta-remote-desktop-session.c:1943-1969`: `session->eis` si riusa, e ogni
  *   chiamata aggiunge un cliente ⇒ la sessione e il palco NON si toccano.
+ *
+ * ⛔⛔ E QUI AVEVO SCRITTO UNA RAGIONE SBAGLIATA, smentita da un guasto
+ *      innestato il 21 agosto 2026 (`06-b33-risveglio-guasti.py`, `RG3`).
+ *      Diceva: *«finche' il descrittore di `mutter.c` resta aperto il socket e'
+ *      ancora connesso e Mutter non vede nessun distacco»*.  ⛔ `[M]` Togliendo
+ *      quel `close()` la guarigione funziona **identica**.
+ *      ⭐ Il distacco lo manda **`ei_disconnect()`**, come messaggio di
+ *        protocollo: `[M]` togliendo QUELLA riga (`RG4`) la guarigione smette.
+ *      ⚠ Il `close()` resta per non perdere un descrittore a ogni guarigione.
  */
 #include "input.h"
 
@@ -262,7 +271,22 @@ struct input
 	unsigned ricambi_tastiera;
 
 	gboolean caduto; /* il compositore ha chiuso il canale */
+
+	/* ⛔⛔ LA CURA «C» — il riattacco che guarisce il posto.  🔸 Derivata, 21
+	 *     agosto 2026, e il riquadro in testa al file dice perche' non ce n'e'
+	 *     un'altra: dal lato del cliente il conto del posto e' irrecuperabile,
+	 *     e l'unico codice che lo azzera e' `drop_device()` di Mutter, che gira
+	 *     solo alla caduta del canale EIS. */
+	gboolean guarigione_dovuta;
+	unsigned guarigioni;
+	gint64 ultima_guarigione_us;
 };
+
+/* ⛔ Il fondo fra due guarigioni.  Non e' prudenza: e' che una guarigione che
+ *    fallisse in modo ripetibile girerebbe a ogni giro del ciclo del figlio,
+ *    cioe' sessanta chiamate D-Bus al secondo su un canale gia' rotto.  ⚠ La
+ *    bandiera NON si spegne: si riprova al giro dopo il fondo. */
+#define GUARIGIONE_FONDO_US (1000 * 1000)
 
 /* ------------------------------------------------------------------ *
  *  Le mappe di bit — «segnato» e «mandato» non devono poter divergere
@@ -725,6 +749,24 @@ static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint3
 	              "adesso quel che passa da loro e' rotto finche' non cade il canale EIS.  La cura "
 	              "e' rilasciare PRIMA di chiedere il ridimensionamento (`figlio.c:3964`)",
 	              quanti, cosa);
+
+	/*
+	 * ⛔⛔ E QUI SI CHIEDE LA GUARIGIONE — la cura «C».  🔸 Derivata, 21 ago 2026.
+	 *
+	 * ⭐ Questo e' l'istante esatto in cui il danno si produce, ed e' l'unico
+	 *    posto del programma che lo sa.  ⚠ Non si guarisce ADESSO: siamo dentro
+	 *    `ei_dispatch()`, e distruggere il contesto `libei` mentre lui ci sta
+	 *    consegnando eventi e' un difetto che non da' errore.  ⇒ Si segna, e
+	 *    `input_gira()` guarisce quando la coda e' vuota.
+	 *
+	 * ⛔ E si segna per QUALUNQUE porta: il ridimensionamento, il risveglio
+	 *    della cattura (§7.1), un `monitors-changed` di Mutter, un cambio di
+	 *    keymap.  ⚠ E' la ragione per cui la cura «C» esiste accanto alla «A»:
+	 *    «A» chiude la porta che controlliamo noi, «C» ripara quelle che non
+	 *    controlliamo — e `meta_eis_viewport_notify_changed()` e' entrata in
+	 *    GNOME 48.5, cioe' e' NUOVA: ne arriveranno altre.
+	 */
+	in->guarigione_dovuta = TRUE;
 }
 
 static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
@@ -940,6 +982,133 @@ int input_descrittore(Input *in)
 	return ei_get_fd(in->ei);
 }
 
+/*
+ * ⛔⛔⛔ LA CURA «C», ATTUATA — si rifa' il canale EIS e il posto si sblocca.
+ *       🔸 Derivata dal coordinatore il 21 agosto 2026 (non decisa dall'utente).
+ *
+ * ⚠ SI CHIAMA SOLO DA `input_gira()`, a coda vuota: distruggere il contesto
+ *   `libei` dentro `ei_dispatch()` e' un difetto che non da' errore.
+ *
+ * ⛔ IL PREZZO, DICHIARATO: **il trascinamento in corso viene tagliato** —
+ *    `drop_device()` manda un rilascio pulito per tutto quel che era premuto.
+ *    ⭐ Ma quel trascinamento **era gia' morto** (`[M]` 21 ago 2026, banco
+ *    `06-b33-risveglio.sh tenuto`: dopo il ricambio il rilascio non arriva e
+ *    nemmeno il clic successivo).  ⇒ Si taglia una cosa rotta e la si fa
+ *    ripartire, che e' un guadagno netto.
+ *    ⚠ Costa anche un giro di D-Bus e la ricreazione dei dispositivi, e in
+ *      quella finestra non arriva nessun input.
+ *
+ * ⛔ Quel che NON si perde: la sessione `RemoteDesktop`, il monitor virtuale e
+ *    il flusso PipeWire.  `[R]` `meta-remote-desktop-session.c:1943-1969`: la
+ *    seconda `ConnectToEIS` riusa `session->eis` e aggiunge un cliente.
+ */
+static void guarisci(Input *in)
+{
+	g_autoptr(GError) sbaglio = NULL;
+	gint64 adesso = g_get_monotonic_time();
+	int fd, nuovo;
+
+	if (in->ultima_guarigione_us && adesso - in->ultima_guarigione_us < GUARIGIONE_FONDO_US)
+		return; /* ⚠ e la bandiera RESTA accesa: si riprova dopo il fondo */
+	in->ultima_guarigione_us = adesso;
+
+	registro_dice(AREA,
+	              "⭐⭐ GUARIGIONE (n. %u): rifaccio il canale EIS.  Il posto conta ancora giu' "
+	              "%u fra tasti e pulsanti orfani, e dal lato del cliente NON si recupera "
+	              "(`meta-eis-client.c:612-621` ingoia il rilascio sul dispositivo nuovo).  "
+	              "⛔ Il prezzo: il trascinamento in corso viene TAGLIATO — ma era gia' morto",
+	              in->guarigioni + 1, in->quanti_orfani);
+
+	/* ⛔ I dispositivi si mollano PRIMA del contesto: tengono un riferimento a
+	 *    `struct ei`, e un contesto liberato sotto un dispositivo vivo e' un
+	 *    difetto che si manifesta altrove. */
+	if (in->puntatore)
+		ei_device_unref(in->puntatore);
+	if (in->tastiera_dev)
+		ei_device_unref(in->tastiera_dev);
+	in->puntatore = NULL;
+	in->tastiera_dev = NULL;
+	in->puntatore_attivo = FALSE;
+	in->tastiera_attiva = FALSE;
+	in->regione_nota = FALSE;
+	in->regione_scalata_lamentata = FALSE;
+	g_clear_pointer(&in->reg_per, g_free);
+	g_clear_pointer(&in->keymap_nome, g_free);
+
+	ei_disconnect(in->ei);
+	ei_unref(in->ei);
+	in->ei = NULL;
+
+	/* ⛔ E IL DISTACCO L'HA GIA' MANDATO `ei_disconnect()` qui sopra — `[M]` 21
+	 *    ago 2026, guasti `RG3`/`RG4`: e' quel messaggio di protocollo a far
+	 *    girare `drop_device()` in Mutter, non la chiusura del socket.
+	 * ⇒ Quel che serve da `mutter.c` e' un descrittore NUOVO: dopo il distacco
+	 *   quello messo da parte e' morto, e una `ConnectToEIS` vuole il bus e il
+	 *   percorso della sessione, che questo file non ha (e non deve avere). */
+	nuovo = mutter_eis_riattacca(in->sessione, &sbaglio);
+	if (nuovo < 0)
+	{
+		registro_dice(AREA,
+		              "⛔⛔ la guarigione NON e' riuscita (%s): il canale di input non c'e' piu'. "
+		              "⚠ Il posto e' comunque sbloccato — la chiusura l'ha gia' fatto — ma da "
+		              "adesso l'utente GUARDA e non comanda",
+		              sbaglio ? sbaglio->message : "senza motivo dichiarato");
+		in->caduto = TRUE;
+		in->guarigione_dovuta = FALSE;
+		return;
+	}
+
+	in->ei = ei_new_sender(in);
+	if (!in->ei)
+	{
+		registro_dice(AREA, "⛔⛔ contesto libei non ricreato: il canale di input e' finito");
+		in->caduto = TRUE;
+		in->guarigione_dovuta = FALSE;
+		return;
+	}
+	ei_configure_name(in->ei, "remotix");
+	/* ⛔ Un `dup`, come in `input_apri()`: `ei_setup_backend_fd` se ne appropria
+	 *    e chiuderlo in due posti e' un difetto che si manifesta a distanza. */
+	fd = dup(nuovo);
+	if (fd < 0 || ei_setup_backend_fd(in->ei, fd) != 0)
+	{
+		if (fd >= 0)
+			close(fd);
+		ei_unref(in->ei);
+		in->ei = NULL;
+		registro_dice(AREA, "⛔⛔ il descrittore nuovo non e' stato accettato da libei: il canale "
+		                    "di input e' finito");
+		in->caduto = TRUE;
+		in->guarigione_dovuta = FALSE;
+		return;
+	}
+
+	/*
+	 * ⛔⛔ E IL CONTO SI AZZERA, ORFANI COMPRESI, perche' adesso e' VERO:
+	 *     `drop_device()` ha appena mandato al posto il rilascio di tutto quel
+	 *     che risultava premuto.  ⚠ Tenerli segnati farebbe rilasciare al
+	 *     distacco cose che nessuno tiene giu', e terrebbe accesa in eterno la
+	 *     riga «NON PARTE» su un canale che invece funziona.
+	 */
+	memset(in->tasti, 0, sizeof in->tasti);
+	memset(in->bottoni, 0, sizeof in->bottoni);
+	memset(in->tasti_orfani, 0, sizeof in->tasti_orfani);
+	memset(in->bottoni_orfani, 0, sizeof in->bottoni_orfani);
+	in->quanti_tasti = 0;
+	in->quanti_bottoni = 0;
+	in->quanti_orfani = 0;
+	in->sequenza = 0;
+
+	in->guarigioni++;
+	in->guarigione_dovuta = FALSE;
+	registro_dice(AREA,
+	              "⭐⭐ canale EIS RIFATTO (guarigione n. %u): i dispositivi rinascono e il conto "
+	              "del posto e' tornato a zero.  ⚠ Keymap e regione si rileggono al prossimo "
+	              "`DEVICE_ADDED`, come sempre.  ⛔ La sessione, il monitor e il flusso NON sono "
+	              "stati toccati",
+	              in->guarigioni);
+}
+
 int input_gira(Input *in)
 {
 	struct ei_event *evento;
@@ -957,6 +1126,10 @@ int input_gira(Input *in)
 		ei_event_unref(evento);
 		quanti++;
 	}
+	/* ⛔ La guarigione sta QUI e non dentro `tratta_evento`: a coda vuota, e
+	 *    dopo che `dispositivo_tolto()` ha gia' segnato gli orfani. */
+	if (in->guarigione_dovuta && !in->caduto)
+		guarisci(in);
 	return in->caduto ? -1 : quanti;
 }
 
@@ -1403,6 +1576,16 @@ int input_rilascia_tutto(Input *in)
 		              "e li' restano finche' non cade il canale EIS",
 		              orfani);
 	return quanti;
+}
+
+unsigned input_premuti(const Input *in)
+{
+	/* ⛔ Gli ORFANI non si contano qui, ed e' voluto: un orfano NON e' «l'utente
+	 *    tiene giu' qualcosa», e' «il danno e' gia' fatto».  Contarlo
+	 *    impedirebbe per sempre il risveglio su una sessione gia' rotta — cioe'
+	 *    proprio quando l'utente guarda una pagina bianca e aspetta un
+	 *    fotogramma.  ⚠ Di quel caso si occupa la cura «C», che lo ripara. */
+	return in ? in->quanti_tasti + in->quanti_bottoni : 0;
 }
 
 void input_chiudi(Input *in)

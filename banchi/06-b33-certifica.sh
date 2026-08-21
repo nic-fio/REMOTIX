@@ -38,6 +38,15 @@
 #      visto nemmeno una riga, o se non c'e' stato nessun `RITELA`, il giudice
 #      dice «IL BANCO, NON IL PRODOTTO» e il caso e' rosso per colpa della
 #      scena.  Senza quella distinzione un banco senza scena resta verde.
+#   4. ⛔⛔ **G3 NON E' PIU' CERTIFICABILE QUI** — 21 agosto 2026, e sta scritto
+#      anche in `06-b33-guasti.py`.  La cura di `figlio.c:3964` rilascia tutto
+#      **prima** di `cattura_ridimensiona()`: al ricambio non c'e' piu' niente
+#      di premuto, `segna_orfani()` non gira **nemmeno nel prodotto sano**, e
+#      togliere quella chiamata non cambia una virgola.  `[M]` G3 innestato
+#      accende **zero** casi.  ⇒ Il controllo positivo di G3 vive adesso in
+#      `06-b33-risveglio-certifica.sh`, guasto **RG2**: la' il pulsante e'
+#      tenuto giu' durante un `cattura_risveglia()`, che la cura di `:3964` non
+#      copre (§7.1), e gli orfani nascono davvero.
 #   3. ⚠ **Una sola sessione grafica per utente** (`SPECIFICHE.md` §5.1): i
 #      guasti si provano **in sequenza** sullo stesso utente, spegnendo e
 #      riaccendendo il server.  ⭐ E il riavvio serve anche a un'altra cosa: e'
