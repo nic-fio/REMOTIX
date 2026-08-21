@@ -1398,15 +1398,36 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 * primari (quattro zeri, cioe' UNKNOWN), e i pixel alla cattura sono RGB —
 	 * *«la matrice la sceglie F2.3»*.  Sceglie **BT.709 a range limitato**:
 	 *
-	 *   - 709 perche' e' quel che un desktop sRGB si aspetta, ed e' quel che i
-	 *     due browser applicano di difetto quando il flusso non dice niente:
-	 *     scrivere una cosa diversa dal difetto senza necessita' vorrebbe dire
-	 *     scommettere che tutti leggano la VUI;
-	 *   - range limitato perche' e' il difetto che ogni decodificatore azzecca,
-	 *     ⛔ e **non costa precisione qui**: 8 bit pieni sono 256 livelli, e
-	 *     l'intervallo limitato a 10 bit ne ha 877.  Il range pieno comprerebbe
-	 *     un margine che questa sorgente non ha, al prezzo di una VUI che
-	 *     qualcuno potrebbe ignorare.
+	 *   - 709 perche' e' quel che un desktop sRGB si aspetta.
+	 *
+	 *     ⛔⛔ E LA RAGIONE CHE C'ERA SCRITTA QUI ERA FALSA, misurata il 21
+	 *     agosto 2026.  Diceva: *«e' quel che i due browser applicano di
+	 *     difetto quando il flusso non dice niente, quindi dichiararlo e'
+	 *     prudenza»*.  ⚠ A 1280x720 e' vero; **a 768x480 — il MINIMO di §2.1 —
+	 *     e' falso**: con la VUI a «non specificato» il decodificatore
+	 *     **hardware indovina BT.601**, e letto come 709 sbaglia fino a
+	 *     `[M]` **32,41 livelli**.  Con la VUI dichiarata: 0,42.
+	 *
+	 *     ⇒ La riga era giusta e la sua ragione no, ⭐ e la ragione vera e'
+	 *     **piu' forte**: sotto le 576 righe la dichiarazione non e' prudenza,
+	 *     e' **portante**.  Chi un giorno volesse togliere queste quattro righe
+	 *     «perche' tanto e' il difetto» romperebbe l'immagine solo alle misure
+	 *     piccole, cioe' proprio dove nessuno guarda.
+	 *
+	 *   - range limitato ⛔ e **non e' prudenza nemmeno questo**: `[M]` Firefox
+	 *     **IGNORA `video_full_range_flag` per H.264** — dichiarare il range
+	 *     pieno dara' numeri identici al limitato, cioe' un'immagine sbagliata
+	 *     **senza un errore da nessuna parte**.  ⇒ Il limitato non e' una
+	 *     scelta fra due strade: e' l'unica che il decodificatore rispetti.
+	 *     ⚠ E non costa precisione: 8 bit pieni sono 256 livelli, l'intervallo
+	 *     limitato a 10 bit ne ha 877.
+	 *
+	 *     `[M]` E la conversione nostra a monte e' esatta: BGRx pieno → YUV 709
+	 *     limitato su 259 riquadri da' Y 0,000 · U 0,000 · V 0,004 di
+	 *     scostamento, con un controllo negativo che vede 20 livelli.
+	 *     ⭐ E il decodificatore in **hardware** e' la strada piu' fedele delle
+	 *     due: 0,51 livelli di peggio su 847 canali, contro 9,41 del software.
+	 *     ⇒ 📖 `fasi/06-la-tela-e-la-vista.md`, banco `07-b62`.
 	 *
 	 * ⚠ E si scrive nel flusso (non solo nel nostro registro), perche' F2.5
 	 *   converte YUV→RGB per la tela e F2.6 confronta: due matrici diverse ai

@@ -1106,11 +1106,43 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > ⚠ **Due misure dello stesso banco che serviranno scrivendo il codificatore:**
 > - il fotogramma che WebCodecs consegna su Firefox è **`BGRX`**, non planare: la conversione di
 >   colore la fa già il decodificatore;
-> - ⛔ il decodificatore H.264 **in hardware** su questa macchina converte con una **scala di
->   colore diversa da `ffmpeg`**: **+8 livelli sulle zone chiare**, liscio e uniforme (peggio
->   **30,3** livelli su 126 fotogrammi). Non è un guasto a blocchi, **ma è un colore sbagliato per
->   l'utente**, e va ripreso: è `[?]` se sia il pieno/limitato (`16-235` contro `0-255`) o la
->   matrice.
+> - ✅ ~~il decodificatore H.264 **in hardware** converte con **+8 livelli sulle zone chiare**~~
+>   ⛔ **FALSO, misurato il 21 agosto 2026 — e la `[?]` si chiude con «non è vero»** (banco
+>   `07-b62`, scena di verità scritta a mano nei piani Y/U/V, 343 riquadri con tutti e 256 i livelli
+>   di Y, atteso = la **formula** BT.709 applicata ai campioni **decodificati**):
+>
+>   | strada, stessi byte | rampa grigia | peggio su 847 canali |
+>   |---|---|---|
+>   | ⭐ **hardware** (`IsHardwareAccelerated=1`, 199 tracce VA-API) | guadagno 1,0002 · scostamento −0,03 | **0,51 livelli** |
+>   | software | 0,9998 · −0,02 | 9,41 livelli |
+>
+>   ⇒ Sul decodificatore hardware **non c'è nemmeno un livello di scarto**, e ⭐ **le luci sono la
+>   banda MENO sbagliata** (−0,08). Lo scarto vero sta sulla strada **software**, solo sul canale
+>   **B** e proporzionale a `|U−128|` (~5 % sul guadagno B←U): **zero sul grigio, a qualunque
+>   livello**.
+>
+>   ⛔ **E da dove veniva il «+8»**: dal banco `07-b48`, che **sottrae la mediana dello scarto prima
+>   di giudicare** — cioè cancella la forma stessa del difetto che riportava. Il «+8» era quel che
+>   restava *fuori* dalla mediana, letto a occhio dalle prime righe di una tabella. ⚠ I suoi 27 MB
+>   di dati non esistono più: il «5 000 superblocchi / 30,3 livelli» **non è riproducibile**.
+>
+> - ⭐⭐ **E al suo posto entra una misura che conta molto di più: la VUI dichiarata è PORTANTE
+>   sotto le 576 righe.** `[M]` stessi campioni codificati bit per bit, cambiati **solo** i quattro
+>   numeri della VUI:
+>
+>   | | 1280×720 | ⛔ **768×480** (il minimo di §2.1) |
+>   |---|---|---|
+>   | VUI **dichiarata** bt709/tv | hardware 709 a **0,42** | hardware 709 a **0,42** |
+>   | VUI **«non specificato»** | 709 lo stesso | ⛔ l'hardware legge **BT.601**: 709 sbagliato fino a **32,41 livelli** |
+>
+>   ⇒ `src/codificatore.c` le quattro righe le scrive già, e `[M]` **arrivano davvero nel flusso**
+>   (ffprobe su un flusso del binario vero: `bt709 / tv / bt709 / bt709`). ⛔ Ma il **commento** che
+>   le motivava era falso — diceva *«709 è quel che i browser applicano di difetto»*, e a 480p non
+>   è vero. Corretto il 21 agosto: **sotto le 576 righe dichiarare non è prudenza, è portante**.
+>
+> - ⛔ **E Firefox IGNORA `video_full_range_flag` per H.264** `[M]`: dichiarare il range pieno dà
+>   numeri **identici** al limitato ⇒ un'immagine sbagliata **senza un errore da nessuna parte**.
+>   Il range limitato non è una scelta fra due strade: è l'unica che il decodificatore rispetti.
 >
 > ⛔⛔⭐ **E IL 20 AGOSTO 2026 SE N'È AGGIUNTA UNA TERZA, MISURATA SUL PRODOTTO**: con AV1,
 > **Firefox dipinge blocchi rettangolari** dove Chrome e `ffmpeg/dav1d` — **sugli stessi byte e
