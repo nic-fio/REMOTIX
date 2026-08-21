@@ -966,3 +966,34 @@ ritardo di un'altra classe, oppure dichiararlo non supportato finché Mozilla no
 Android. ⚠ La misura definitiva è sul telefono, che l'hardware ce l'ha; il banco si serve alla rete
 di casa con `banchi/07-b57-servi-al-telefono.py`.
 
+## ⭐⭐ 21 agosto 2026 — **la prima sessione Android**, e l'utente: «Chrome è un missile»
+
+*Chrome per Android, Samsung DeX, 2560×1080. Tre minuti e mezzo di sessione vera, `[M]` dal registro
+del server e dal diario della pagina.*
+
+| | |
+|---|---|
+| codec negoziato | ⭐ **HEVC** (codec 1) — **non** il ripiego H.264 |
+| tela | 2558×926 |
+| fotogrammi | **3 178 arrivati, 3 178 dipinti** |
+| saltati · buchi · fuori ordine · tardivi · errori del decodificatore | ⭐ **0 · 0 · 0 · 0 · 0** |
+| input | 45 tasti, tutti arrivati |
+| audio | 8 935 blocchi ricevuti, 8 933 suonati, **2 buchi** in 3 min 30 |
+
+⭐ **Zero perdite su ogni riga che il diario conta.** È la prima volta che questo codice tocca un
+telefono, e il verso video → schermo non ha un difetto da nominare.
+
+⭐ **E la sorpresa è il codec**: il telefono ha negoziato **HEVC in hardware**, cioè la prima scelta
+di `PREFERENZA` — non il ripiego. ⚠ L'H.264 di §1.13-ter resta necessario (Firefox desktop non fa
+HEVC), ma su questo telefono non è servito.
+
+### ⚠ E l'unico numero che non è buono: **la coda dell'audio, 401 → 421 ms**
+
+Il diario la riporta a ogni giro e **cresce**: 401 ms a 10:37:39, 421 ms a 10:37:49, e lì resta.
+⛔ Quattro decimi di secondo di ritardo dell'audio si sentono — e il video, nella stessa sessione,
+non ha un fotogramma tardivo. ⇒ Non è la rete: è la coda del percorso audio.
+
+⏳ **Non è diagnosticato**, e va guardato prima di dire che l'audio su Android funziona: `2 buchi`
+in tre minuti e mezzo sono pochi, ma una coda che si assesta a 420 ms non è un caso — è una scelta
+di qualcuno, e va trovata.
+
