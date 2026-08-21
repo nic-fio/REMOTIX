@@ -180,7 +180,59 @@ def main():
     for riga in testo.strip().splitlines():
         print(f"   | {riga}")
 
-    print("\n== 4. Esito")
+    # ── 4. ⭐⛔ E L'ALTRO VERSO: UN VALIDATORE **VECCHIO** DAVANTI AL FILE
+    #        NUOVO — 21 agosto 2026, con il passaggio a `RCPREG 0x00 0x03`.
+    #
+    #  §11.1: *«un validatore vecchio deve RIFIUTARE il formato nuovo, non
+    #  leggerlo di traverso»*.  ⛔ Il caso 46 di `01-b4-registrazioni.py` prova
+    #  il verso facile — l'arbitro di OGGI davanti a un file di ieri.  Questo
+    #  prova il verso che nessuno puo' provare senza costruirselo: **l'arbitro
+    #  di IERI davanti al file di oggi**.
+    #
+    #  ⚠ E l'arbitro di ieri non esiste piu' in nessun albero: si FABBRICA, da
+    #    una copia dell'arbitro di oggi rimessa alla magia `0x02` e al blocco da
+    #    17 byte.  ⛔ Se non lo si fabbricasse, questa meta' della frase di
+    #    §11.1 resterebbe una promessa — e la prima volta che serve, il 12
+    #    agosto, e' costata quattro giorni.
+    print("\n== 4. ⛔ e un validatore VECCHIO davanti a questo file NUOVO?")
+    print("   ⛔ atteso, dichiarato PRIMA: uscita 2 (registrazione rotta) —")
+    print("      ⚠ NON 0 e NON 1: leggerlo di traverso e dare un giudizio")
+    print("      sarebbe la cosa peggiore delle tre")
+    vecchio = os.path.join(dove, "01-b4-validatore-di-ieri.py")
+    sorgente = open(VALIDATORE, encoding="utf-8").read()
+    ancore = [('MAGIA = b"RCPREG\\x00\\x03"', 'MAGIA = b"RCPREG\\x00\\x02"'),
+              ('BLOCCO = "!BBBIQIH"', 'BLOCCO = "!BBBQIH"'),
+              ('MAGIA_V2 = b"RCPREG\\x00\\x02"', 'MAGIA_V2 = b"RCPREG\\x00\\x99"'),
+              ("verso, canale, fine, istante, stream, lung, nosc = struct.unpack(",
+               "istante = 0\n        verso, canale, fine, stream, lung, nosc = struct.unpack(")]
+    # ⛔ L'ANCORA SI VERIFICA — la lezione di `04-b31` (G8, l'ancora scaduta):
+    #    un guasto che non si innesta e' un verde che non vale niente, e va
+    #    detto con la sua faccia invece di passare per un OK.
+    for a, _ in ancore:
+        if sorgente.count(a) != 1:
+            print(f"   ?? l'ancora «{a[:40]}…» compare {sorgente.count(a)} volte:")
+            print("      il validatore di ieri NON si fabbrica, e questo caso")
+            print("      non prova niente.  ⛔ Non e' un verde: e' un banco rotto.")
+            return 1
+    for a, b_ in ancore:
+        sorgente = sorgente.replace(a, b_, 1)
+    open(vecchio, "w", encoding="utf-8").write(sorgente)
+    pv = subprocess.run([sys.executable, vecchio, traccia],
+                        capture_output=True, text=True)
+    testo_v = (pv.stdout + pv.stderr).strip()
+    for riga in testo_v.splitlines()[-4:]:
+        print(f"   | {riga}")
+    print(f"   l'arbitro di ieri esce {pv.returncode}")
+    if pv.returncode != 2:
+        print("   ⛔ UN VALIDATORE VECCHIO NON RIFIUTA IL FORMATO NUOVO.")
+        print(f"      Esce {pv.returncode} invece di 2: se e' 0 o 1 sta")
+        print("      GIUDICANDO byte scivolati di quattro, e il verdetto e' su")
+        print("      un filo che nessuno ha scritto (§11.1).")
+        return 1
+    print("   ⭐ rifiutato con uscita 2, come §11.1 pretende: e' «un file di")
+    print("      un'altra versione», non «un filo non conforme».")
+
+    print("\n== 5. Esito")
     if p.returncode == 2 and "formato VECCHIO" in testo:
         print("   ⛔ E' TORNATO IL DIFETTO DEL 12-16 AGOSTO 2026: il")
         print("      registratore di B3 scrive un formato che l'arbitro di B4")

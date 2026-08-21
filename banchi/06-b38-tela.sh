@@ -2,31 +2,49 @@
 #
 # 06-b38-tela.sh — ⭐ la strada della TELA contro il PRODOTTO, giudicata dall'arbitro.
 #
-#   gira SUL SERVER, come nicfio:
-#     bash /media/REMOTIX/src/06-a-src/banchi/06-b38-tela.sh
+#   gira SUL SERVER, come nicfio.  ⭐ E l'utente, la porta e l'albero si
+#   passano dall'ambiente — non sono piu' cablati:
+#
+#     PORTA=7721 UTENTE=provat6 UID_B=1007 \
+#     PAROLA_DA_FILE=/home/nicfio/.pa10-provat6 \
+#     PAROLA_SUDO=/home/nicfio/.pa10-sudo \
+#     ALB=/media/REMOTIX/src/06-a10-src LAV=/media/REMOTIX/tmp/06-a10 \
+#     DENTRO_ALB=/srv/src/06-a10-src DENTRO_LAV=/srv/remotix/tmp/06-a10 \
+#     bash $ALB/banchi/06-b38-tela.sh
 #
 # ---------------------------------------------------------------------------
 # ⛔ CHE COSA PROVA, E CHE COSA **NON** PROVA
 #
-# Sottofase 6.6.  `01-b4-validatore.py` e' stato certificato sul portatile su 49
+# Sottofase 6.6.  `01-b4-validatore.py` e' certificato sul portatile su **56**
 # registrazioni **costruite**, ciascuna accusata sul byte dichiarato prima, e su
-# 19 mutazioni dell'arbitro.  ⭐ Quella meta' vale di piu' e sta in piedi da
+# **23** mutazioni dell'arbitro.  ⭐ Quella meta' vale di piu' e sta in piedi da
 # sola: non le serve nessun server.
 #
 # ⛔ **Questa meta' e' l'altra, e «conforme» qui NON vuol dire «funziona»**:
 #
 #   · dice che i **byte** che il prodotto mette sul filo rispettano `RCP.md`
 #     §7.1, §4.5, §6.2 e §11.1 nei casi che questi giri esercitano;
-#   · ⛔ **NON dice che il desktop si sia ridimensionato davvero**: il palco, il
-#     compositore e i pixel non passano di qui.  Un server che rispondesse
-#     `TELA(ADATTATA, 1264x800)` **senza toccare il palco** uscirebbe conforme
-#     da questo banco, e la scena dell'utente sarebbe rotta.  Chi guarda i
-#     pixel e' la sottofase 6.3 col compositore vero, e il testimone e'
-#     l'utente;
-#   · ⛔ **NON dice niente sulle coordinate in volo** di §7.1 — «per un secondo»
-#     dopo un `TELA(ADATTATA)` — perche' il formato di §11.1 **non registra il
-#     tempo**: nessun `.rcpreg` puo' arbitrare una regola con un orologio
-#     dentro.  E' un buco della specifica, non di questo banco;
+#   · ⛔ **NON dice che i PIXEL siano cambiati**: il palco, il compositore e
+#     l'immagine non passano di qui.  Chi guarda i pixel e' la sottofase 6.3 col
+#     compositore vero, e il testimone e' l'utente;
+#   · ⭐⛔ **MA «senza toccare il palco» adesso si vede** — 21 agosto 2026.  La
+#     frase che stava qui — *«un server che rispondesse `TELA(ADATTATA,
+#     1264x800)` senza toccare il palco uscirebbe conforme da questo banco»* —
+#     era vera fino a stamattina.  Con `RCPREG 0x00 0x03` la traccia porta
+#     l'**istante** e i **28 byte di §6.2** di ogni fotogramma, e l'arbitro ha
+#     **T4**: dopo un `TELA(ADATTATA, LxA)`, se passano fotogrammi per piu' di
+#     tre secondi e nessuno dichiara `LxA`, la tela e' stata detta e non fatta.
+#     ⚠ Resta una prova sui BYTE: dice che il flusso e' cambiato di misura, non
+#       che l'immagine sia giusta;
+#   · ⭐ **e le coordinate in volo di §7.1 sono arbitrabili, in UN VERSO SOLO**.
+#     Anche questa riga diceva il contrario, e la ragione era vera: §11.1 non
+#     registrava il tempo.  Adesso lo registra, e l'arbitro conclude **solo**
+#     quando l'intervallo misurato al client supera il secondo — perche' quello
+#     del server e' piu' lungo, mai piu' corto.  ⛔ Sotto il secondo **dice** che
+#     non si giudica, invece di tacere;
+#   · ⚠ e questi cinque giri **non mandano nessun `PUNTATORE`**: la regola del
+#     secondo di grazia e' arbitrabile ma qui non e' esercitata, ed e' la
+#     prossima cosa da aggiungere — dichiarata invece che sottintesa;
 #   · ⚠ e i tempi qui dentro sono presi **sotto carico**, con gli altri banchi
 #     della fase 6 accesi.  Si dichiarano col carico accanto, e non si
 #     confrontano con numeri presi a macchina ferma.
@@ -34,10 +52,13 @@
 # ---------------------------------------------------------------------------
 # ⛔ L'ISOLAMENTO — le cinque regole di `fasi/06-la-tela-e-la-vista.md` §0-bis
 #
-#   porta 7761 · utente `prova2` · albero `/media/REMOTIX/src/06-a-src`
-#   lavoro `/media/REMOTIX/tmp/06-a` · ban, socket del comando e certificati PROPRI
+#   di serie: porta 7761 · utente `prova2` · albero `/media/REMOTIX/src/06-a-src`
+#   ⭐ il 21 agosto 2026 il giro vero e' stato fatto su **7721 · `provat6` (uid
+#   1007) · `/media/REMOTIX/src/06-a10-src`**, con ban, socket del comando e
+#   certificati propri.
 #
-# ⛔⛔ `prova` e la porta 7700 NON SI TOCCANO: sono il banco dell'utente.
+# ⛔⛔ `prova`, la porta **7700** e la **7730** NON SI TOCCANO: sono dell'utente.
+# ⛔ E la **7771** e' di un altro agente: non si spegne.
 # ⛔ E non si chiama mai `06-b35-terreno.sh pulisci`: fa `userdel -r`, e `prova2`
 #    e' un utente di sistema che altri banchi usano.
 set -uo pipefail
@@ -49,6 +70,7 @@ LAV=${LAV:-/media/REMOTIX/tmp/06-a}
 DENTRO_LAV=${DENTRO_LAV:-/srv/remotix/tmp/06-a}
 DENTRO_ALB=${DENTRO_ALB:-/srv/src/06-a-src}
 IND=${IND:-192.168.0.2}
+UID_B=${UID_B:-1002}     # ⛔ l'uid dell'utente del banco: cambia con l'utente
 PAROLA_SUDO=${PAROLA_SUDO:-/home/nicfio/.p6a-sudo}
 
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -95,9 +117,21 @@ ok "binario, porta $PORTA libera, PAM a posto"
 #    ⚠ E il rosso sembrava del prodotto: cinque tracce **conformi** in cui la
 #      tela non veniva esercitata affatto.  A dirlo e' stato il denominatore —
 #      *«0 coppie ADATTA_TELA/TELA chiuse»* — non il colore del verdetto.
-P=$(grep 'chpasswd' "$ALB/src/provisiona.sh" \
-    | grep -o "prova2:[A-Za-z0-9._-]*" | head -1 | cut -d: -f2)
-[ -n "$P" ] || { ko "non ho trovato la parola di $UTENTE in src/provisiona.sh"; exit 2; }
+# ⭐ E DAL 21 AGOSTO 2026 LA PAROLA SI PUO' PASSARE, invece di dedurla soltanto.
+#    ⚠ `provisiona.sh` conosce `prova` e `prova2` e basta: gli utenti dei banchi
+#    di fase 6 (`provat6`, `provap6`, …) nascono dai loro terreni e in quel file
+#    NON ci sono.  ⇒ Con un utente diverso il `grep` tornava vuoto e il banco
+#    usciva 2 dicendo «non ho trovato la parola» — vero e inutile.
+#    ⛔ E resta un FILE, mai un argv (difetto D12).
+if [ -n "${PAROLA_DA_FILE:-}" ]; then
+	[ -r "$PAROLA_DA_FILE" ] || { ko "PAROLA_DA_FILE non si legge"; exit 2; }
+	P=$(cat "$PAROLA_DA_FILE")
+	inf "la parola di $UTENTE viene da PAROLA_DA_FILE, non da provisiona.sh"
+else
+	P=$(grep 'chpasswd' "$ALB/src/provisiona.sh" \
+	    | grep -o "$UTENTE:[A-Za-z0-9._-]*" | head -1 | cut -d: -f2)
+fi
+[ -n "$P" ] || { ko "non ho trovato la parola di $UTENTE"; exit 2; }
 mkdir -p "$LAV"
 ( umask 077; : > "$PAROLA_FILE" ) && chmod 600 "$PAROLA_FILE" \
   || { ko "non si scrive $PAROLA_FILE"; exit 2; }
@@ -107,7 +141,7 @@ ok "la parola di $UTENTE sta in un file 0600 — mai in un argv (D12)"
 
 # ---------------------------------------------------------------------------
 log "1. Si accende il server — porta $PORTA, tutto suo"
-sudo_mio env PORTA="$PORTA" UTENTE="$UTENTE" UID_B=1002 \
+sudo_mio env PORTA="$PORTA" UTENTE="$UTENTE" UID_B="$UID_B" \
      D="$ALB/src" LAV="$LAV" \
      bash "$ALB/banchi/06-b35-terreno.sh" accendi
 A=$?
@@ -155,12 +189,28 @@ trap spegni EXIT
 #    del protocollo: sono il **denominatore**, cioe' la prova che la scena e'
 #    stata esercitata.  «Conforme» senza denominatore vuol dire «non ho
 #    guardato», ed e' la differenza fra `LEZIONI.md` §1.3 e una misura.
-giro() # nome · uscita-cliente-attesa · coppie-attese · tela-finale-attesa · atteso · -- · opzioni
+#
+# ⛔⛔ E IL QUARTO NUMERO E' LA **PROVENIENZA** DELLA TELA, non un altro valore —
+#     21 agosto 2026, e a chiederlo e' stato il primo giro vero.
+#
+# `[M]` Il giro 3 pretendeva *«tela alla fine = 1920x1080»* e ha misurato
+# **1600x900**: ⭐ non e' un difetto del prodotto, e' un fatto che nessuno aveva
+# scritto — **la tela sopravvive alla sessione**.  Il palco resta dove il client
+# precedente l'ha lasciato, e il `SESSIONE` del giro dopo concede QUELLA misura,
+# non i 1920x1080 che l'`ATTACCA` chiedeva.
+#
+# ⇒ Un atteso scritto come numero assoluto lega il giro 3 all'ordine dei giri, e
+#   un banco che cambia verdetto se lo lanci da solo non e' un banco.  ⛔ Quel
+#   che il giro 3 vuole davvero dire e' *«la tela NON e' cambiata»*, cioe' **da
+#   dove viene** la tela in vigore alla fine: da `SESSIONE` (nessun
+#   `TELA(ADATTATA)` l'ha toccata) o da `TELA(ADATTATA)`.  Quella e' la regola;
+#   il numero era un modo indiretto e fragile di dirla.
+giro() # nome · uscita-cliente · coppie · tela-finale · da · atteso · -- · opzioni
 {
-	local nome=$1 uc=$2 coppie=$3 telafine=$4 atteso=$5; shift 6
+	local nome=$1 uc=$2 coppie=$3 telafine=$4 daatteso=$5 atteso=$6; shift 7
 	log "$nome"
 	inf "⛔ ATTESO, dichiarato prima: $atteso"
-	inf "   e i tre numeri: cliente=$uc · coppie chiuse=$coppie · tela alla fine=$telafine"
+	inf "   e i quattro: cliente=$uc · coppie chiuse=$coppie · tela alla fine=$telafine · viene da=$daatteso"
 	rm -f "$LAV/$nome.rcpreg" "$LAV/$nome.txt" "$LAV/$nome-arbitro.txt"
 	dentro "python3 -u $DENTRO_ALB/banchi/01-b3-cliente.py \
 --indirizzo $IND --porta $PORTA --utente $UTENTE \
@@ -202,6 +252,20 @@ $* > $DENTRO_LAV/$nome.txt 2>&1"
 		ko "⛔ coppie chiuse: $c, l'atteso era $coppie — ⚠ la scena NON e' stata esercitata"
 		BENE=1
 	fi
+	# ⭐ LA PROVENIENZA — «la tela e' cambiata?» in una parola, e senza dipendere
+	#    dal giro di prima.
+	local da
+	da=$(sed -n 's/.*tela in vigore alla fine: [0-9]*x[0-9]* da \([A-Z_()]*\).*/\1/p' \
+	    "$LAV/$nome-arbitro.txt" | tail -1)
+	[ -n "$da" ] || da="(l'arbitro non l'ha detto)"
+	if [ "$daatteso" = "?" ]; then
+		inf "la tela in vigore alla fine viene da $da   (NON pretesa)"
+	elif [ "$da" = "$daatteso" ]; then
+		inf "la tela in vigore alla fine viene da $da — come dichiarato"
+	else
+		ko "⛔ la tela alla fine viene da «$da», e l'atteso era «$daatteso»"
+		BENE=1
+	fi
 	if [ "$telafine" = "?" ]; then
 		# ⛔ «?» NON e' «va bene qualunque cosa»: e' «l'atteso e' due, e si
 		#    dichiara invece di sceglierne uno».  Il numero si stampa e resta
@@ -216,17 +280,25 @@ $* > $DENTRO_LAV/$nome.txt 2>&1"
 	return "$g"
 }
 
-# ⛔ E la tela di partenza e' quella del `SESSIONE`: `--larghezza/--altezza` del
-#    cliente valgono 1920x1080, e i giri che NON la cambiano finiscono li'.
-giro "1-tela-all-attacco" 0 1 "1264x800" \
+# ⛔⛔ E LA TELA DI PARTENZA **NON E' 1920x1080**: e' quella che il giro prima ha
+#     lasciato al palco.  `[M]` 21 agosto 2026, primo giro vero: il `SESSIONE`
+#     del giro 2 concede **1264x800** — la misura del giro 1 — a un `ATTACCA`
+#     che ne chiedeva 1920x1080.  ⇒ La tela **sopravvive alla sessione**, e
+#     nessun documento lo diceva.  Per questo qui si pretende la PROVENIENZA e
+#     non il numero, dove il numero dipende dall'ordine.
+giro "1-tela-all-attacco" 0 1 "1264x800" "TELA(ADATTATA)" \
      "TELA(ADATTATA, 1264x800) — e' la scena di DECISIONI.md §5.0-sexies" -- \
      --adatta 1264x800 --resta 3
 
-giro "2-tela-a-caldo" 0 2 "1600x900" \
+giro "2-tela-a-caldo" 0 2 "1600x900" "TELA(ADATTATA)" \
      "due coppie ADATTA_TELA/TELA in ordine, la seconda a sessione viva" -- \
      --adatta 1264x800 --adatta 1600x900@2 --resta 3
 
-giro "3-fuori-limiti" 0 1 "1920x1080" \
+# ⛔ Qui il numero NON si pretende — dipende da quel che il giro 2 ha lasciato —
+#    ma la REGOLA sì, ed è tutta nella provenienza: se la tela alla fine viene
+#    ancora da `SESSIONE`, nessun `TELA(ADATTATA)` l'ha toccata, che è
+#    esattamente «la tela INVARIATA» di §7.1 dopo un rifiuto.
+giro "3-fuori-limiti" 0 1 "?" "SESSIONE" \
      "TELA(RIFIUTATA, MISURA_FUORI_LIMITI) e la tela INVARIATA — §4.5, §7.1" -- \
      --adatta 8000x4320 --resta 2
 
@@ -235,12 +307,16 @@ giro "3-fuori-limiti" 0 1 "1920x1080" \
 #   con una stringa sola, e fingere che ce ne sia uno solo sarebbe scegliere al
 #   posto del prodotto — quindi qui il numero si DICHIARA e non si pretende, e
 #   la riga lo dice invece di lasciarlo credere.
-giro "4-lato-dispari" 0 1 "?" \
-     "⭐ o TELA(RIFIUTATA, MISURA_FUORI_LIMITI) con 1920x1080, o una tela concessa PARI: §4.5 vieta il dispari.  ⚠ La tela finale qui NON si pretende: sono due strade tutt'e due legali" -- \
+# ⚠ Qui non si pretende NE' il numero NE' la provenienza: §4.5 lascia al server
+#   due strade tutt'e due legali — rifiutare il dispari (la tela resta, viene da
+#   SESSIONE) o concedere il pari piu' vicino (viene da TELA(ADATTATA)).  ⛔ E
+#   sceglierne una al posto del prodotto sarebbe scrivere la specifica qui.
+giro "4-lato-dispari" 0 1 "?" "?" \
+     "⭐ o TELA(RIFIUTATA, MISURA_FUORI_LIMITI), o una tela concessa PARI: §4.5 vieta il dispari.  ⚠ Ne' il numero ne' la provenienza si pretendono: sono due strade tutt'e due legali" -- \
      --adatta 1281x800 --resta 2
 
-giro "5-vista-non-tocca-la-tela" 0 1 "1264x800" \
-     "nessun TELA dopo la VISTA — §7.1: «VISTA NON DEVE far cambiare la tela».  ⛔ E la tela alla fine DEVE essere ancora 1264x800: se la VISTA l'avesse cambiata, questo numero lo direbbe" -- \
+giro "5-vista-non-tocca-la-tela" 0 1 "1264x800" "TELA(ADATTATA)" \
+     "nessun TELA dopo la VISTA — §7.1: «VISTA NON DEVE far cambiare la tela».  ⛔ E la tela alla fine DEVE essere ancora 1264x800, quella dell'ADATTA_TELA: se la VISTA l'avesse cambiata, questo numero lo direbbe" -- \
      --adatta 1264x800 --vista 640x401 --resta 3
 
 # ---------------------------------------------------------------------------

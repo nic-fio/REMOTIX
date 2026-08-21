@@ -153,7 +153,7 @@ nessuno:
      bocciasse renderebbe irraggiungibile un ramo che la specifica nomina.
 
 ---------------------------------------------------------------------------
-⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x02`, E IL VECCHIO SI RIFIUTA
+⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x03`, E I VECCHI SI RIFIUTANO
 
 §11.1, 12 agosto 2026: il blocco porta `fine` — *0 continua · 1 FIN · 2
 RESET_STREAM* — e passa da **16 a 17 byte**.  ⛔ *«La magia passa a 0x00 0x02
@@ -162,6 +162,24 @@ formato nuovo, non leggerlo di traverso»*, e vale nei due versi: un `.rcpreg`
 del 10 agosto letto con questo lettore avrebbe il `canale` dentro lo `stream` e
 ogni blocco scivolato di un byte — ne uscirebbe un **giudizio** su byte che
 nessuno ha scritto.
+
+⭐⭐ E DAL **21 AGOSTO 2026** LA MAGIA E' `0x00 0x03`: il blocco porta
+`istante_ms` (u32, monotono, dal PRIMO blocco) e passa da **17 a 21 byte**;
+l'intestazione porta `orologio` — 1 = i tempi sono del client, 2 = del server.
+⛔ Le magie `0x01` e `0x02` si rifiutano tutt'e due, **con due frasi diverse**:
+mandano a guardare due posti diversi (un file del 10 agosto e uno del 12).
+
+⛔⛔ E IL TEMPO NON RENDE L'ARBITRO ONNISCIENTE: la conclusione e' **in un verso
+solo**.  La regola del secondo di grazia (§7.1) e' del **server** — misura da
+quando LUI ha spedito `TELA(ADATTATA)` a quando LUI ha ricevuto il `PUNTATORE`.
+Una registrazione presa al **client** vede *«quando e' arrivato il TELA»* e
+*«quando e' partito il PUNTATORE»*, cioe' un intervallo **piu' corto** di quello
+del server: mezzo giro di rete per lato.  ⇒
+  · se l'intervallo del client e' **> 1000 ms**, quello del server lo era **a
+    maggior ragione** ⇒ il server DOVEVA rifiutare, e se ha continuato a servire
+    e' `NON CONFORME`;
+  · se e' **<= 1000 ms**, ⛔ **non si conclude niente**, e il validatore lo
+    **DICE**.  Un arbitro che tace su quel che non sa e' un arbitro che assolve.
 """
 import hashlib
 import importlib.util
@@ -171,18 +189,35 @@ import sys
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-MAGIA = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = b"RCPREG\x00\x01"
+MAGIA = b"RCPREG\x00\x03"
+# ⛔ Le vecchie si tengono TUTTE, ciascuna con la sua frase: «non e' del
+#    formato» e «e' di un'altra versione» mandano a cercare in due posti, e due
+#    versioni vecchie diverse pure.
+MAGIA_V1 = b"RCPREG\x00\x01"
+MAGIA_V2 = b"RCPREG\x00\x02"
+MAGIA_VECCHIA = MAGIA_V1        # ⚠ il nome vecchio resta: lo importa 01-b12
 RIEMPIMENTO = 0x2A  # il byte degli intervalli oscurati (RCP.md §11.1)
 
-# Il blocco di §11.1: verso, canale, fine, stream, lunghezza, quanti_oscurati.
-BLOCCO = "!BBBQIH"
+# Il blocco di §11.1: verso, canale, fine, istante_ms, stream, lunghezza,
+# quanti_oscurati.  ⭐ `istante_ms` dal 21 agosto 2026: 21 byte, non piu' 17.
+BLOCCO = "!BBBIQIH"
 BLOCCO_BYTE = struct.calcsize(BLOCCO)
 CONTINUA, FIN, RESET = 0, 1, 2
 FINE = {CONTINUA: "continua", FIN: "FIN", RESET: "RESET_STREAM"}
 
 VIDEO = 0x03
 CONTROLLO = 0x00
+INPUT = 0x01
+T_PUNTATORE = 0x0101            # §7.3
+OROLOGIO = {1: "client", 2: "server"}
+# §7.1: «per un secondo».  Lo stesso numero di `rcp.c` (`TELA_GRAZIA`).
+GRAZIA_MS = 1000
+# ⛔ Il tetto di T4, e da dove viene: §7.1 concede al server `RCP_TELA_ATTESA_MS`
+#    = 3000 ms per farsi consegnare un fotogramma alla misura nuova **prima** di
+#    rispondere.  ⇒ Dopo un `TELA(ADATTATA)` quel fotogramma esiste gia', e tre
+#    secondi sono larghi.  ⚠ E' una LETTURA, non una riga di RCP.md: se e'
+#    sbagliata il posto da correggere e' §7.1, non questo file.
+T4_TETTO_MS = 3000
 
 
 def cerca_in_su(nome, da):
@@ -753,6 +788,11 @@ def corpo(tipo, nome, le, lato, stato=None):
             stato.tela = (lar, alt)
             if es == 1:
                 stato.tela_da = "TELA(ADATTATA) (§7.1)"
+                # ⭐ L'istante del `TELA(ADATTATA)`: e' la data d'inizio del
+                #    secondo di grazia (§7.1) e il punto da cui si conta T4.
+                stato.tela_adattata_ms = stato.istante
+                stato.adattate.append((le.base + off_lar, (lar, alt),
+                                       stato.istante))
     else:
         # I corpi che RCP/1 definisce e questo validatore non serve ancora
         # (CURSORE_FORMA, BANCO_*): si dichiara di non giudicarli.
@@ -828,6 +868,14 @@ class Stato:
         self.ultima_consumata = None  # l'ADATTA_TELA che l'ultimo TELA ha chiuso
         self.ultimo_dal_client = None  # per distinguere «ha risposto a VISTA»
         self.congedo = None         # (nb, ass) del CONGEDO, se e' passato
+        # ⭐⛔ QUEL CHE IL TEMPO RENDE POSSIBILE — 21 agosto 2026, magia 0x03.
+        self.istante = 0            # l'`istante_ms` del blocco in lettura
+        self.orologio = 1           # 1 = client, 2 = server (§11.1)
+        self.tela_adattata_ms = None   # quando e' passato l'ultimo TELA(ADATTATA)
+        self.adattate = []          # [(ass, (L,A), istante)] — serve a T4
+        self.tardi = []             # [(nb, ass, dt)] i PUNTATORE oltre la grazia
+        self.serve_ancora = None    # il server ha parlato DOPO un PUNTATORE tardo?
+        self.congedo_motivo = None
 
     def chiede_tela(self, nb, ass, rel, misura):
         self.in_volo.append((nb, ass, rel, misura))
@@ -984,20 +1032,42 @@ def valida(percorso):
     #    due cure diverse: il primo manda a cercare chi ha rotto il file, il
     #    secondo a rigenerarlo.  ⛔ E leggerlo di traverso non e' un'opzione: il
     #    blocco vecchio e' di 16 byte, questo lettore ne vuole 17.
-    if len(d) >= 8 and d[:8] == MAGIA_VECCHIA:
+    if len(d) >= 8 and d[:8] == MAGIA_V1:
         raise Malformata(
             "e' una registrazione nel formato VECCHIO, «RCPREG 0x00 0x01»: il "
-            "blocco non porta il campo `fine` e misura 16 byte invece di 17.  "
-            "⛔ Non si legge di traverso — §11.1, 12 agosto 2026 — e non e' un "
-            "file rotto: si RIGENERA con `01-b4-registrazioni.py`")
+            "blocco non porta ne' `fine` ne' `istante_ms`, e misura 16 byte "
+            "invece di 21.  ⛔ Non si legge di traverso — §11.1, 12 agosto "
+            "2026 — e non e' un file rotto: si RIGENERA con "
+            "`01-b4-registrazioni.py`")
+    if len(d) >= 8 and d[:8] == MAGIA_V2:
+        raise Malformata(
+            "e' una registrazione nel formato del 12 agosto, «RCPREG 0x00 "
+            "0x02»: il blocco non porta `istante_ms` e misura 17 byte invece "
+            "di 21, e l'intestazione non dichiara di CHI sia l'orologio.  ⛔ "
+            "§11.1: «un validatore vecchio deve RIFIUTARE il formato nuovo, "
+            "non leggerlo di traverso», e vale nei due versi — letto di "
+            "traverso, ogni blocco scivolerebbe di quattro byte e ne uscirebbe "
+            "un GIUDIZIO su byte che nessuno ha scritto.  Si RIGENERA con "
+            "`01-b4-registrazioni.py`")
     if len(d) < 16 or d[:8] != MAGIA:
         raise Malformata("non comincia con la magia di RCP.md §11.1")
-    quanti, riservato = struct.unpack("!II", d[8:16])
-    if riservato != 0:
-        raise Malformata(f"il campo riservato vale {riservato}, DEVE essere 0")
+    quanti, orologio, r1, r2, r3 = struct.unpack("!IBBBB", d[8:16])
+    if (r1, r2, r3) != (0, 0, 0):
+        raise Malformata(
+            f"i tre byte riservati valgono {r1},{r2},{r3}: §11.1 li vuole 0")
+    # ⛔ E «di chi e' l'orologio» NON si indovina: senza quel byte la
+    #    conclusione «in un verso solo» non si puo' nemmeno formulare, e un
+    #    arbitro che supponesse «sara' del client» starebbe assolvendo un
+    #    server sulla base di un'ipotesi propria.
+    if orologio not in OROLOGIO:
+        raise Malformata(
+            f"il campo `orologio` vale {orologio}: §11.1 ne definisce due — "
+            f"1 = i tempi sono del client, 2 = del server.  ⛔ Senza, la regola "
+            f"del secondo di grazia (§7.1) non e' giudicabile affatto")
 
     print(f"== il validatore del filo — {percorso}")
-    print(f"   blocchi dichiarati: {quanti}   byte: {len(d)}")
+    print(f"   blocchi dichiarati: {quanti}   byte: {len(d)}   "
+          f"orologio: {OROLOGIO[orologio]}")
 
     p = 16
     stato = Stato()
@@ -1019,12 +1089,28 @@ def valida(percorso):
     controllo_chiuso_dal_server = None   # T3 — §7.1
     controllo_chiuso_dal_client = None   # T3 — §4.2, e la contraddizione
     flussi, ordine = {}, []
+    ultimo_istante = 0
+    # ⭐ I due elenchi che il tempo rende possibili — vedi in fondo.
+    stato.orologio = orologio
     for nb in range(quanti):
         if p + BLOCCO_BYTE > len(d):
             raise Malformata(f"il blocco {nb} comincia oltre la fine del file")
-        verso, canale, fine, stream, lung, nosc = struct.unpack(
+        verso, canale, fine, istante, stream, lung, nosc = struct.unpack(
             BLOCCO, d[p:p + BLOCCO_BYTE])
         p += BLOCCO_BYTE
+        # ⛔ Il tempo non torna indietro: §11.1 dice «millisecondi dal PRIMO
+        #    blocco», e i blocchi stanno nell'ordine del filo.  Un istante che
+        #    scende vuol dire un orologio NON monotono (`time.time()` invece di
+        #    `time.monotonic()`), e su un file cosi' nessuna regola col tempo
+        #    dentro si puo' giudicare — si dice, e non si prosegue a indovinare.
+        if istante < ultimo_istante:
+            raise Malformata(
+                f"blocco {nb}: `istante_ms` = {istante}, e il blocco prima "
+                f"diceva {ultimo_istante}.  ⛔ §11.1 vuole un orologio "
+                f"MONOTONO: qui e' tornato indietro di "
+                f"{ultimo_istante - istante} ms")
+        ultimo_istante = istante
+        stato.istante = istante
         if fine not in FINE:
             raise Malformata(
                 f"blocco {nb}: `fine` vale {fine}, e §11.1 ne definisce tre — "
@@ -1076,6 +1162,14 @@ def valida(percorso):
             di_video += 1
             if stream not in flussi:
                 flussi[stream] = {"pezzi": [], "base": base,
+                                  # ⭐ quando il flusso si apre: e' meta' di T4
+                                  "istante": istante,
+                                  # ⛔ QUANTI cambi di tela erano passati quando
+                                  #    questo flusso si e' aperto.  Serve a NON
+                                  #    rigiocare lo stesso cambio per ogni
+                                  #    fotogramma che segue — vedi il riquadro
+                                  #    nel ciclo di giudizio.
+                                  "tela_n": len(stato.adattate),
                                   "dopo_sessione": sessione_vista,
                                   "sul_controllo": stream in stream_di_controllo,
                                   # ⛔ la tela IN VIGORE quando il flusso si
@@ -1140,11 +1234,64 @@ def valida(percorso):
                         f"tornano, e un blocco dichiarato di un canale che il "
                         f"validatore non giudica e' filo che sparisce dal "
                         f"giudizio")
+            # ═══════════════════════════════════════════════════════════
+            # ⭐⛔ IL SECONDO DI GRAZIA DI §7.1 — la `[?]` che il campo
+            #     `istante_ms` esiste per chiudere, e **in un verso solo**.
+            #
+            # §7.1: dopo un `TELA(ADATTATA)` il server DEVE accettare **per un
+            # secondo** le coordinate valide sulla tela PRECEDENTE, saturarle e
+            # scriverlo nel registro; ⛔ passato quel secondo sono
+            # `ERRORE_PROTOCOLLO`.
+            #
+            # ⛔ E l'unica meta' arbitrabile e' quella dell'INDULGENZA: un
+            #    server che continua ad accettare le coordinate vecchie per
+            #    sempre.  L'altra — un server troppo severo — resta fuori,
+            #    perche' l'intervallo del client e' piu' CORTO di quello del
+            #    server e un `<= 1000` qui potrebbe essere un `> 1000` la'.
+            # ═══════════════════════════════════════════════════════════
+            if (canale == INPUT and verso == CLIENT and lung >= 26
+                    and stato.tela is not None and stato.tela_prec is not None
+                    and stato.tela_adattata_ms is not None):
+                tipo_i = struct.unpack("!H", carico[:2])[0]
+                if tipo_i == T_PUNTATORE:
+                    x, y = struct.unpack("!II", carico[18:26])
+                    fuori = x >= stato.tela[0] or y >= stato.tela[1]
+                    dentro_prima = (x < stato.tela_prec[0]
+                                    and y < stato.tela_prec[1])
+                    dt = istante - stato.tela_adattata_ms
+                    if fuori and dentro_prima:
+                        if stato.orologio == CLIENT and dt > GRAZIA_MS:
+                            stato.tardi.append((nb, base, dt, x, y))
+                            stato.serve_ancora = False
+                        else:
+                            # ⛔ NON GIUDICABILE, e si DICE.  Un arbitro che
+                            #    tace su quel che non sa e' un arbitro che
+                            #    assolve.
+                            print(f"   blocco {nb}: ⚠ PUNTATORE a ({x},{y}) "
+                                  f"{dt} ms dopo il TELA(ADATTATA), dentro la "
+                                  f"tela precedente e fuori da quella in "
+                                  f"vigore — ⛔ il secondo di grazia di §7.1 "
+                                  f"NON e' giudicabile da questa "
+                                  f"registrazione: "
+                                  + (f"i tempi sono del "
+                                     f"{OROLOGIO[stato.orologio]} e "
+                                     f"{dt} <= {GRAZIA_MS} ms, e l'intervallo "
+                                     f"vero del server e' PIU' LUNGO di questo"
+                                     if stato.orologio == CLIENT else
+                                     f"l'orologio e' del server e questo "
+                                     f"validatore conclude solo dai tempi del "
+                                     f"client"))
             print(f"   blocco {nb}: canale {CANALI[canale]} dal {chi}, "
                   f"{lung} byte — non giudicato da questo validatore")
             continue
         di_controllo += 1
         stream_di_controllo.add(stream)
+        # ⛔ «Il server ha continuato a servire» si misura QUI: un blocco di
+        #    controllo dal server dopo un `PUNTATORE` oltre la grazia.  ⚠ Un
+        #    `CONGEDO` non conta — quello e' il rifiuto — e si toglie piu'
+        #    sotto, quando il tipo e' letto.
+        if stato.tardi and verso == SERVER:
+            stato.serve_ancora = (nb, base)
 
         # Il canale di controllo vive solo sullo stream 0 della sessione (§2.5).
         le = Lettore(carico, base, oscurati)
@@ -1212,6 +1359,14 @@ def valida(percorso):
             if nome == "CONGEDO":
                 stato.congedo = (nb, base + inizio_msg)
                 stato.congedato_da.add(verso)   # §8.1: da qui in poi tace
+                # ⛔ Un CONGEDO NON e' «il server ha continuato a servire»: e'
+                #    il rifiuto.  ⇒ si toglie la marca messa qui sopra, o il
+                #    server verrebbe accusato proprio per aver fatto la cosa
+                #    giusta — un rosso all'imputato opposto.
+                if verso == SERVER and stato.tardi:
+                    stato.serve_ancora = False
+                    stato.congedo_motivo = (carico[le.i] if lung_msg >= 1
+                                            else None)
             le.i += lung_msg
         # ⛔ COME SI E' CHIUSO IL CANALE DI CONTROLLO, E DA QUALE LATO.
         #
@@ -1374,12 +1529,34 @@ def valida(percorso):
         ctx = f24.Contesto(tela=stato.tela or (1920, 1080),
                            codec_negoziato=stato.codec or 1,
                            sessione_aperta=True)
+        # ⛔⛔⛔ IL CAMBIO DI TELA SI RIGIOCA UNA VOLTA SOLA — 21 agosto 2026,
+        #      e a trovarlo e' stato il primo giro con il VIDEO nella traccia.
+        #
+        #  Fino a stamattina il ramo qui sotto rimetteva il contesto alla tela
+        #  PRECEDENTE e richiamava `adatta_tela()` **per ogni flusso** aperto
+        #  mentre la tela in vigore veniva da un `TELA(ADATTATA)`.  ⇒ Il debito
+        #  della chiave di §5.2 si riapriva a ogni fotogramma, e il **secondo**
+        #  fotogramma dopo un ridimensionamento — un delta perfettamente legale
+        #  — veniva accusato come *«il primo alla misura nuova e' un DELTA»*.
+        #
+        #  `[M]` 21 agosto 2026, porta 7721, prodotto vero: `TELA(ADATTATA,
+        #  1600x900)` · flusso 19 **chiave** 1600x900 (il debito e' pagato) ·
+        #  flusso 23 delta 1600x900 ⇒ ⛔ NON CONFORME.  **Il server aveva fatto
+        #  esattamente quel che §5.2 chiede.**
+        #
+        # ⚠ E nessuno poteva accorgersene: nessuna registrazione del deposito
+        #   portava DUE flussi video dopo lo stesso `TELA`, e il cliente di
+        #   prova non registrava il canale video affatto.  ⛔ L'arbitro avrebbe
+        #   dichiarato non conforme **ogni sessione vera** appena la traccia
+        #   avesse contenuto il video — cioe' al primo giro utile.
+        ultima_tela_n = None
         for sid in ordine:
             fl = flussi[sid]
             flussi_video += 1
             # ⛔ P5 — la tela IN VIGORE all'apertura di QUESTO flusso.
             if fl["tela"] is not None:
-                if fl["tela_da"].startswith("TELA"):
+                if (fl["tela_da"].startswith("TELA")
+                        and fl["tela_n"] != ultima_tela_n):
                     # ⛔⛔ SI PARTE DALLA TELA **PRECEDENTE** E POI SI SALTA, e
                     #     non e' un giro di parole: `adatta_tela` ha un ritorno
                     #     anticipato quando la misura non cambia — scritto
@@ -1398,8 +1575,12 @@ def valida(percorso):
                     if fl["tela_prec"] is not None:
                         ctx.tela_larghezza, ctx.tela_altezza = fl["tela_prec"]
                     ctx.adatta_tela(*fl["tela"], precedente=fl["tela_prec"])
-                else:
+                elif not fl["tela_da"].startswith("TELA"):
                     ctx.tela_larghezza, ctx.tela_altezza = fl["tela"]
+                # ⚠ e se e' un TELA gia' rigiocato non si tocca NIENTE: il
+                #   contesto e' gia' alla misura nuova, e il debito della chiave
+                #   l'ha gia' pagato il flusso di prima.
+                ultima_tela_n = fl["tela_n"]
             # ⛔ E le richieste in volo, che sono l'altra meta' di §6.2: il
             #    fotogramma alla misura nuova arrivato PRIMA del suo `TELA` si
             #    trattiene, e trattenerlo «non e' un numero: e' una condizione».
@@ -1473,6 +1654,91 @@ def valida(percorso):
                 raise NonConforme(v.regola, f"flusso {sid}: {v.dice}",
                                   base0 + rel, rel)
             print(f"   flusso {sid}: {v.esito:<18s} {v.dice}")
+
+    # =======================================================================
+    # ⭐⛔ IL VERDETTO SUL SECONDO DI GRAZIA — §7.1, e in UN VERSO SOLO
+    # =======================================================================
+    if stato.tardi:
+        nb_t, ass_t, dt_t, x_t, y_t = stato.tardi[0]
+        if stato.serve_ancora:
+            nb_s, ass_s = stato.serve_ancora
+            raise NonConforme(
+                "RCP.md §7.1",
+                f"il blocco {nb_t} porta un PUNTATORE a ({x_t},{y_t}) — valido "
+                f"sulla tela PRECEDENTE, fuori da quella in vigore — "
+                f"{dt_t} ms dopo il TELA(ADATTATA), cioe' oltre il secondo di "
+                f"grazia; e al blocco {nb_s} il server sta ancora servendo la "
+                f"sessione invece di averla chiusa.  ⛔ §7.1: «passato quel "
+                f"secondo, sono ERRORE_PROTOCOLLO».  ⚠ E i {dt_t} ms sono "
+                f"misurati sull'orologio del CLIENT: l'intervallo del SERVER e' "
+                f"stato piu' lungo di questo, non piu' corto — per questo la "
+                f"conclusione regge",
+                ass_t, 0)
+        if stato.congedo is not None and stato.serve_ancora is False:
+            m = stato.congedo_motivo
+            print(f"   ⭐ §7.1: il PUNTATORE del blocco {nb_t} era {dt_t} ms "
+                  f"dopo il TELA(ADATTATA) — oltre il secondo — e il server ha "
+                  f"CONGEDATO"
+                  + (f" con motivo {m:#04x}" if m is not None else "")
+                  + ".  E' la strada giusta.")
+        elif stato.serve_ancora is False:
+            print(f"   ⚠ §7.1: il PUNTATORE del blocco {nb_t} era {dt_t} ms "
+                  f"dopo il TELA(ADATTATA), oltre il secondo — ⛔ ma dopo di "
+                  f"lui il server non dice piu' niente e la registrazione "
+                  f"finisce: NON si giudica se abbia chiuso o taciuto")
+
+    # =======================================================================
+    # ⭐⛔ T4 — «CONFORME NON E' FUNZIONA», e adesso l'arbitro ci ha una presa
+    #
+    # `fasi/06-la-tela-e-la-vista.md` §7.2: *«un server che rispondesse
+    # `TELA(ADATTATA)` senza toccare il palco passerebbe tutti e cinque i
+    # giri»*.  ⭐ Non piu', se la registrazione porta anche il VIDEO: §5.2 vuole
+    # che il primo fotogramma alla misura nuova sia una CHIAVE, e §6.2 lega i 28
+    # byte alla tela in vigore.  ⇒ Se dopo un `TELA(ADATTATA, LxA)` passano
+    # fotogrammi per piu' di `T4_TETTO_MS` e **nessuno** dichiara `LxA`, il
+    # server ha risposto senza toccare il palco.
+    #
+    # ⛔ E NON «il primo»: §6.2 ammette esplicitamente il fotogramma **gia' in
+    #    volo** alla misura vecchia (`01-b4-registrazioni.py` caso 44, la scena
+    #    in cui «nessuno ha sbagliato»).  ⇒ serve un tetto in TEMPO, e non un
+    #    conteggio — ed e' la ragione per cui T4 non era scrivibile prima di
+    #    `istante_ms`.
+    # =======================================================================
+    misure_video = []
+    for sid in ordine:
+        fl = flussi[sid]
+        car0 = fl["pezzi"][0][2]
+        if len(car0) >= 12:
+            misure_video.append((fl["istante"],
+                                 struct.unpack("!II", car0[4:12]), fl["base"]))
+    for ass_a, misura_a, ist_a in stato.adattate:
+        dopo = [m for m in misure_video if m[0] >= ist_a]
+        if any(m[1] == misura_a for m in dopo):
+            continue
+        if not dopo:
+            print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) "
+                  f"al byte {ass_a} — ⛔ dopo di lui la registrazione non porta "
+                  f"NESSUN fotogramma: «il palco e' stato toccato?» NON si "
+                  f"giudica su questa traccia")
+            continue
+        finestra = max(m[0] for m in dopo) - ist_a
+        if finestra > T4_TETTO_MS:
+            viste = ", ".join(f"{m[1][0]}x{m[1][1]}" for m in dopo[:5])
+            raise NonConforme(
+                "RCP.md §7.1",
+                f"T4 — TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) e poi "
+                f"{len(dopo)} fotogrammi in {finestra} ms, NESSUNO alla misura "
+                f"concessa (viste: {viste}).  ⛔ §5.2 vuole una CHIAVE alla "
+                f"misura nuova e §6.2 lega i 28 byte alla tela in vigore: un "
+                f"server che risponde ADATTATA e non tocca il palco e' "
+                f"conforme su ogni altra regola, e questa e' l'unica che lo "
+                f"vede.  ⚠ Il tetto di {T4_TETTO_MS} ms e' una LETTURA di §7.1 "
+                f"(il fondo dell'ADATTA_TELA), non una riga di RCP.md",
+                ass_a, 0)
+        print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) e "
+              f"{len(dopo)} fotogrammi in {finestra} ms, nessuno alla misura "
+              f"concessa — ⛔ sotto il tetto di {T4_TETTO_MS} ms: NON si "
+              f"giudica, la registrazione e' troppo corta")
 
     # ⛔ E «CONFORME» SI DICE CON IL DENOMINATORE, O NON SI DICE.
     print(f"\n   guardati: {visti} blocchi, di cui {di_controllo} sul canale di "

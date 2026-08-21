@@ -2374,15 +2374,21 @@ parola non c'è.
 
 ```
 intestazione (16 byte)
- ├── 8 byte   magia          "RCPREG" 0x00 0x02
+ ├── 8 byte   magia          "RCPREG" 0x00 0x03
  ├── u32      quanti_blocchi
- └── u32      riservato      DEVE essere 0
+ ├── u8       orologio       1 = i tempi sono del CLIENT, 2 = del SERVER
+ └── u8[3]    riservato      DEVE essere 0
 
 poi `quanti_blocchi` blocchi, ciascuno:
  ├── u8       verso          1 = client → server, 2 = server → client
  ├── u8       canale         il byte alto di `tipo` (§2.5)
  ├── u8       fine           ⛔ come si è chiuso lo stream DOPO questo blocco:
  │                             0 = continua · 1 = FIN · 2 = RESET_STREAM
+ ├── u32      istante_ms     ⛔ millisecondi dal PRIMO blocco, dall'orologio
+ │                             MONOTONO di chi registra. Il primo blocco vale 0.
+ │                             ⛔ Mai un'ora del mondo: §4.4 vieta i segreti nel
+ │                             file, e una data assoluta dice QUANDO e DA DOVE
+ │                             un utente si è collegato
  ├── u64      stream         l'identificatore dello stream QUIC
  ├── u32      lunghezza      quanti byte di carico seguono — ⛔ la lunghezza VERA
  ├── u16      quanti_oscurati
@@ -2392,6 +2398,53 @@ poi `quanti_blocchi` blocchi, ciascuno:
  │       └── 32 B  impronta      SHA-256 dei byte veri
  └── `lunghezza` byte di carico
 ```
+
+### ⛔ Il tempo registrato è di CHI REGISTRA, e la regola del secondo è del SERVER
+
+*Il campo `istante_ms` è entrato il 21 agosto 2026 con la magia `0x03`, e senza questo capoverso
+farebbe più danno del buco che chiude.*
+
+Una registrazione presa **al client** vede *«quando è arrivato il `TELA`»* e *«quando è partito il
+`PUNTATORE`»*: un intervallo **più corto** di quello che il server ha misurato, di mezzo giro di rete
+per lato. ⇒ Il validatore può concludere **in un verso solo**:
+
+- se `istante_ms(PUNTATORE) − istante_ms(TELA) > 1000` con `orologio = 1`, l'intervallo del server
+  era **anche più lungo** ⇒ il server **DEVE** aver rifiutato, e se non l'ha fatto è `NON CONFORME`;
+- se è `≤ 1000`, **non si conclude niente**, e il validatore lo **DICE**: *«non giudicabile da questa
+  registrazione»*.
+
+⭐ Il verso che si guadagna è quello che conta: **un server indulgente**, che accetta per sempre le
+coordinate vecchie. ⚠ E un arbitro che tace su quel che non sa è un arbitro che **assolve**: la
+frase «non giudicabile» è obbligatoria, non gentile.
+
+⛔ **E la magia cambia perché il blocco cresce**: un validatore vecchio davanti a un file nuovo
+**DEVE rifiutare**, non leggere di traverso. `[M]` 21 agosto, nei due sensi: l'arbitro di oggi
+davanti al file del 12 agosto esce **2**; l'arbitro di ieri — fabbricato apposta rimettendo una copia
+a `0x02` — davanti al file di oggi esce **2**. ⚠ È il difetto `0x01`/`0x02` del 12 agosto, che
+**nessuno dei due file mostrava da solo**: qui il cambio si è fatto in **un commit solo**, con tutti
+e quattro i lettori e scrittori insieme.
+
+⚠ **Tre banchi sono in ritardo dichiarato** su questo formato — `banchi/02-filo-cliente.py`,
+`banchi/02-filo-validatore.py`, `banchi/04-b20-desktop-vero.py`. Oggi sono un'**isola coerente**
+(scrivono e leggono fra loro), ⛔ ma finché restano a `0x02` l'albero porta **due formati vivi sotto
+una specifica sola**, che è la condizione del difetto del 12 agosto in grande.
+
+### T4 — un `TELA(ADATTATA)` a cui nessun fotogramma obbedisce
+
+*È la presa dell'arbitro su «conforme non è funziona», e senza `istante_ms` non esisteva.*
+
+Dopo un `TELA(ADATTATA, LxA)`, §5.2 vuole che il primo fotogramma alla misura nuova sia una
+**chiave**, e §6.2 lega i 28 byte alla tela in vigore. ⇒ Se passano fotogrammi per più di un tetto in
+**tempo** e **nessuno** porta la misura concessa, il server ha risposto **senza toccare il palco**.
+
+⛔ **Non «il primo»**: §6.2 ammette il fotogramma già in volo alla misura vecchia. ⇒ Serve un tetto in
+tempo, non un conteggio — ⭐ e la differenza è **provata, non affermata**: la mutazione
+*«conta invece di cronometrare»* sopravviveva finché il caso che doveva ucciderla aveva la finestra
+troppo corta.
+
+⭐ `[M]` 21 agosto, sul **prodotto vero** (porta 7721, cinque giri su cinque): dopo
+`TELA(ADATTATA, 1264x800)` il fotogramma **dichiara 1264x800**. Il palco è stato toccato, e adesso lo
+dice un arbitro invece di un ragionamento.
 
 > ### ⛔ Il campo `fine` non è un lusso — aggiunto il **12 agosto 2026**, proposta **P7** di F2.4
 >

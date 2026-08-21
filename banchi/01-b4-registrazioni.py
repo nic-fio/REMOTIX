@@ -122,13 +122,15 @@ import sys
 #      perche' `Registrazione.scostamento()` li calcola da `BLOCCO_BYTE`.  Un
 #      atteso scritto a mano avrebbe richiesto tredici correzioni, e sarebbe
 #      stata la volta in cui una si dimentica.
-MAGIA = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = b"RCPREG\x00\x01"
+MAGIA = b"RCPREG\x00\x03"
+MAGIA_V1 = b"RCPREG\x00\x01"
+MAGIA_V2 = b"RCPREG\x00\x02"
+MAGIA_VECCHIA = MAGIA_V1        # ⚠ il nome vecchio resta per chi lo importa
 RIEMPIMENTO = 0x2A
 CLIENT, SERVER = 1, 2
 
 # Il blocco di §11.1: verso, canale, fine, stream, lunghezza, quanti_oscurati.
-BLOCCO = "!BBBQIH"
+BLOCCO = "!BBBIQIH"        # ⭐ +`istante_ms` dal 21 agosto 2026: 21 byte
 BLOCCO_BYTE = struct.calcsize(BLOCCO)
 
 # ⛔ `fine` — «come si e' chiuso lo stream DOPO questo blocco» (§11.1).
@@ -219,9 +221,16 @@ class Registrazione:
         #    ⚠ Un formato che sa scrivere solo la propria versione non puo'
         #      certificare di saper rifiutare le altre.
         self.magia = MAGIA
+        # ⛔ `orologio` di §11.1: 1 = i tempi sono del client.  Le
+        #    registrazioni COSTRUITE lo dichiarano client perche' e' il verso
+        #    in cui l'arbitro sa concludere — dichiararlo «server» renderebbe
+        #    inaccusabile la regola del secondo, e un banco che si toglie da
+        #    solo la possibilita' di fallire non e' un banco.
+        self.orologio = 1
+        self.orologio_falso = None   # per la registrazione malformata apposta
 
     def blocco(self, verso, carico, canale=0x00, stream=0, oscurati=(),
-               fine=CONTINUA):
+               fine=CONTINUA, istante=0):
         """⛔ `fine` e' predefinito a CONTINUA, e non e' pigrizia.
 
         Il canale di controllo vive su **un solo stream per tutta la sessione**
@@ -231,7 +240,7 @@ class Registrazione:
           chiusa a ogni messaggio.
         """
         self.blocchi.append((verso, canale, stream, carico, list(oscurati),
-                             fine))
+                             fine, istante))
         return self
 
     def scostamento(self, indice_blocco, dentro):
@@ -253,16 +262,22 @@ class Registrazione:
     def byte(self):
         quanti = (len(self.blocchi) if self.dichiara_quanti is None
                   else self.dichiara_quanti)
-        out = bytearray(self.magia + struct.pack("!II", quanti, 0))
-        for i, (verso, canale, stream, carico, osc, fine) in enumerate(
+        oro = (self.orologio if self.orologio_falso is None
+               else self.orologio_falso)
+        out = bytearray(self.magia
+                        + struct.pack("!IBBBB", quanti, oro, 0, 0, 0))
+        for i, (verso, canale, stream, carico, osc, fine, ist) in enumerate(
                 self.blocchi):
             lung = self.dichiarate.get(i, len(carico))
-            if self.magia == MAGIA_VECCHIA:
+            if self.magia == MAGIA_V1:
                 out += struct.pack("!BBQIH", verso, canale, stream, lung,
                                    len(osc))
+            elif self.magia == MAGIA_V2:
+                out += struct.pack("!BBBQIH", verso, canale, fine, stream,
+                                   lung, len(osc))
             else:
-                out += struct.pack(BLOCCO, verso, canale, fine, stream, lung,
-                                   len(osc))
+                out += struct.pack(BLOCCO, verso, canale, fine, ist, stream,
+                                   lung, len(osc))
             for ini, qua, imp in osc:
                 out += struct.pack("!II", ini, qua) + imp
             out += carico
@@ -309,7 +324,7 @@ def costruisci():
     corpo_a = struct.pack("!IIII", 1920, 1080, 1920, 1080) + s("it")
     r = conforme()
     r.blocchi[4] = (CLIENT, 0x00, 0, msg(0x0006, corpo_a[:-6],
-                                        len(corpo_a) - 6), [], CONTINUA)
+                                        len(corpo_a) - 6), [], CONTINUA, 0)
     # ⛔ Il byte offensivo e' dove il campo MANCANTE sarebbe cominciato — qui
     #    `vista_altezza`, dopo i primi tre u32 — non la fine del corpo.
     #    ⚠ Il primo atteso scritto il 10 agosto diceva «la fine del corpo», e
@@ -341,7 +356,7 @@ def costruisci():
             scost = len(corpo_c) + 2 + len(n) + 2 + 7  # fino al byte 0xC3
         corpo_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA)
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA, 0)
     casi.append(("2-utf8-non-valido", r, 1,
                  ("RCP.md §6.0", r.scostamento(0, 6 + scost)),
                  "client.nome contiene una sequenza UTF-8 rotta"))
@@ -356,7 +371,7 @@ def costruisci():
             scost = len(corpo_c)
         corpo_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA)
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA, 0)
     casi.append(("3-capacita-ripetuta", r, 1,
                  ("RCP.md §4.3", r.scostamento(0, 6 + scost)),
                  "video.codec compare due volte"))
@@ -364,7 +379,7 @@ def costruisci():
     # ── 4. byte alto fuori dai cinque canali (§2.5) ─────────────────────────
     #    Un tipo 0x0701: il byte alto vale 7, e i canali sono cinque.
     r = conforme()
-    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0701, b""), [], CONTINUA)
+    r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0701, b""), [], CONTINUA, 0)
     casi.append(("4-canale-sconosciuto", r, 1,
                  ("RCP.md §2.5", r.scostamento(3, 0)),
                  "un tipo il cui byte alto non e' uno dei cinque canali"))
@@ -386,7 +401,7 @@ def costruisci():
     #       leggerebbe di traverso QUELLO, e darebbe rosso sul byte sbagliato.
     r = conforme()
     r.blocchi[3] = (SERVER, 0x00, 0, msg(0x0004, b"\x00\x00\x00\x00"), [],
-                    CONTINUA)
+                    CONTINUA, 0)
     casi.append(("6-riempimento", r, 1,
                  ("RCP.md §6.0", r.scostamento(3, 6)),
                  "AMMESSO con quattro byte di riempimento, e un messaggio dopo"))
@@ -401,7 +416,7 @@ def costruisci():
     r = conforme()
     r.blocchi[4] = (CLIENT, 0x00, 0,
                     msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
-                        + s("it")), [], CONTINUA)
+                        + s("it")), [], CONTINUA, 0)
     casi.append(("7-tela-dispari", r, 1,
                  ("RCP.md §4.5", r.scostamento(4, 6)),
                  "ATTACCA con tela_larghezza = 1921, dispari"))
@@ -420,11 +435,11 @@ def costruisci():
     # ── 9. ⛔ due intervalli oscurati che SI SOVRAPPONGONO — §11.1 lo nomina
     #        per esteso, e nessuna registrazione lo esercitava.
     r = conforme()
-    v, c, st, carico, osc, fine = r.blocchi[2]
+    v, c, st, carico, osc, fine, ist = r.blocchi[2]
     ini_osc = osc[0][0]
     r.blocchi[2] = (v, c, st, carico,
                     [(ini_osc, 4, osc[0][2]), (ini_osc + 2, 4, osc[0][2])],
-                    fine)
+                    fine, ist)
     casi.append(("9-oscurati-sovrapposti", r, 2, None,
                  "due intervalli oscurati che si accavallano di due byte"))
 
@@ -442,7 +457,7 @@ def costruisci():
     r = conforme()
     r.blocchi[4] = (CLIENT, 0x00, 0,
                     msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
-                        + s("it")), [], CONTINUA)
+                        + s("it")), [], CONTINUA, 0)
     r.dichiara_quanti = 4
     casi.append(("11-quanti-sotto-dichiarato", r, 2, None,
                  "quanti_blocchi dice 4 e i blocchi sono 6: la violazione "
@@ -490,7 +505,10 @@ def costruisci():
         """
         r = conforme() if base is None else base
         for b in blocchi_video:
-            r.blocco(*b[:2], canale=VIDEO, stream=b[2], fine=b[3])
+            # ⭐ il quinto elemento, facoltativo, e' l'`istante_ms` del blocco:
+            #    serve a T4, e senza di lui «quanto tempo e' passato» non c'e'.
+            r.blocco(*b[:2], canale=VIDEO, stream=b[2], fine=b[3],
+                     istante=(b[4] if len(b) > 4 else 0))
         return r
 
     def intestazione(tipo=CHIAVE, codec=1, lar=1920, alt=1080, num=1, ist=0,
@@ -921,7 +939,7 @@ def costruisci():
     r.blocchi[5] = (SERVER, 0x00, 0,
                     msg(0x0007, struct.pack("!B", 1)
                         + struct.pack("!II", 7680, 4320) + s("gnome")),
-                    [], CONTINUA)
+                    [], CONTINUA, 0)
     casi.append(("38-sessione-oltre-misura-massima", r, 1,
                  ("RCP.md §4.5", r.scostamento(5, 7)),
                  "⛔ SESSIONE concede 7680x4320 a un client che ha dichiarato "
@@ -1034,6 +1052,143 @@ def costruisci():
     casi.append(("45-adatta-poi-fin-del-client", r, 0, None,
                  "⭐ ADATTA_TELA e poi il FIN del CLIENT: §7.1 e §4.2 si "
                  "contraddicono, e l'arbitro lo dice invece di scegliere"))
+
+    # =======================================================================
+    # ⭐⛔ 46-52 — QUEL CHE `RCPREG 0x00 0x03` RENDE ARBITRABILE — 21 agosto 2026
+    #
+    # Il campo `istante_ms` non e' stato aggiunto per completezza: e' stato
+    # aggiunto per DUE regole che nessuna registrazione poteva far scattare —
+    # il secondo di grazia di §7.1 e T4.  ⛔ E se non ci fossero questi casi,
+    # il campo sarebbe un costo pagato e mai riscosso.
+    # =======================================================================
+
+    # ── 46. ⛔ il formato del 12 agosto, `0x00 0x02`: si RIFIUTA ────────────
+    #    ⚠ Non basta rifiutare `0x01`: quello e' il caso 21, e la riga che
+    #      rifiuta `0x02` e' un'ALTRA riga.  Senza questo caso si potrebbe
+    #      cancellarla e il banco resterebbe verde — ed e' esattamente la
+    #      forma con cui il difetto del 12 agosto e' vissuto quattro giorni.
+    r = conforme()
+    r.magia = MAGIA_V2
+    casi.append(("46-formato-del-12-agosto", r, 2, None,
+                 "⛔ «RCPREG 0x00 0x02», conforme in tutto il resto: il blocco "
+                 "misura 17 byte invece di 21 e si RIFIUTA — letto di traverso "
+                 "ogni blocco scivolerebbe di quattro byte"))
+
+    # ── 47. ⛔ `orologio` non dichiarato ────────────────────────────────────
+    r = conforme()
+    r.orologio_falso = 0
+    casi.append(("47-orologio-non-dichiarato", r, 2, None,
+                 "⛔ `orologio` = 0: §11.1 ne definisce due (1 client, 2 "
+                 "server), e senza sapere DI CHI sono i tempi la regola del "
+                 "secondo di grazia non e' giudicabile affatto"))
+
+    # ── 48. ⛔ l'orologio che torna indietro ────────────────────────────────
+    r = conforme()
+    r.blocchi[3] = r.blocchi[3][:6] + (5000,)
+    r.blocchi[4] = r.blocchi[4][:6] + (200,)
+    casi.append(("48-istante-che-torna-indietro", r, 2, None,
+                 "⛔ un `istante_ms` piu' piccolo del blocco precedente: §11.1 "
+                 "vuole un orologio MONOTONO, e con `time.time()` al posto di "
+                 "`time.monotonic()` un aggiustamento di NTP fa arrivare un "
+                 "PUNTATORE «prima» del TELA che lo precede sul filo"))
+
+    # ── 49-50. ⭐⛔ IL SECONDO DI GRAZIA DI §7.1, i due versi ────────────────
+    def con_grazia(dt_ms):
+        """La tela scende a 1280x720, e poi un PUNTATORE valido sulla VECCHIA.
+
+        ⛔ (1900,1000) sta dentro 1920x1080 e fuori da 1280x720: e' esattamente
+           la coordinata che §7.1 fa saturare **per un secondo** e rifiutare
+           dopo.
+        """
+        r = conforme()
+        r.blocco(CLIENT, adatta(1280, 720), istante=500)
+        r.blocco(SERVER, tela(1, 0, 1280, 720), istante=1000)
+        corpo_p = struct.pack("!IQII", 1, 0, 1900, 1000)
+        r.blocco(CLIENT, msg(0x0101, corpo_p), canale=0x01, stream=9,
+                 istante=1000 + dt_ms)
+        # ⛔ E il server DEVE aver chiuso: qui invece continua a servire, e la
+        #    prova e' che risponde a un'altra richiesta.  ⚠ Senza questo blocco
+        #    la registrazione finirebbe «a sessione viva» e l'arbitro direbbe
+        #    — giustamente — che non si giudica.
+        r.blocco(CLIENT, adatta(1600, 900), istante=1000 + dt_ms + 100)
+        r.blocco(SERVER, tela(1, 0, 1600, 900), istante=1000 + dt_ms + 150)
+        return r
+
+    r = con_grazia(1500)
+    casi.append(("49-grazia-scaduta", r, 1,
+                 ("RCP.md §7.1", r.scostamento(8, 0)),
+                 "⛔ un PUNTATORE sulla tela VECCHIA 1500 ms dopo il "
+                 "TELA(ADATTATA) — oltre il secondo di §7.1 — e il server che "
+                 "continua a servire invece di chiudere.  ⭐ E' la [?] che "
+                 "`istante_ms` esiste per chiudere"))
+
+    r = con_grazia(800)
+    casi.append(("50-grazia-dentro-il-secondo", r, 0, None,
+                 "⭐ lo stesso filo a 800 ms: l'arbitro NON accusa, e ⛔ DICE "
+                 "che non e' giudicabile — i tempi sono del client, e "
+                 "l'intervallo vero del server e' piu' lungo di questo"))
+
+    # ── 51-52. ⭐⛔ T4 — «CONFORME NON E' FUNZIONA» ──────────────────────────
+    def con_t4(misura_fotogrammi):
+        r = conforme()
+        r.blocco(CLIENT, adatta(1264, 800), istante=50)
+        r.blocco(SERVER, tela(1, 0, 1264, 800), istante=100)
+        for i, (l, a, ist, sid) in enumerate(misura_fotogrammi):
+            r.blocco(SERVER, intestazione(lar=l, alt=a, num=i + 1) + b"\x00" * 64,
+                     canale=VIDEO, stream=sid, fine=FIN, istante=ist)
+        return r
+
+    r = con_t4([(1920, 1080, 500, 7), (1920, 1080, 2000, 11),
+                (1920, 1080, 4000, 15)])
+    # ⛔ Il byte accusato e' `tela_larghezza` del `TELA(ADATTATA)`, cioe' 8 byte
+    #    dentro il messaggio (6 d'inquadratura + esito + motivo): e' il campo che
+    #    dichiara la misura che il palco non ha mai avuto.
+    casi.append(("51-t4-tela-finta", r, 1, ("RCP.md §7.1", r.scostamento(7, 8)),
+                 "⛔⛔ T4 — il server risponde TELA(ADATTATA, 1264x800) e per "
+                 "quattro secondi manda fotogrammi 1920x1080: la tela l'ha "
+                 "detta e il palco NON l'ha toccato.  ⭐ E' la crepa dichiarata "
+                 "di tutta la 6.6, e prima di `istante_ms` nessun arbitro la "
+                 "vedeva"))
+
+    # ⛔ E IL SECONDO FOTOGRAMMA ARRIVA A 3500 ms, NON A 900 — 21 agosto 2026,
+    #    e a dirlo e' stata la mutazione `t4-conta-invece-di-cronometrare`.
+    #
+    #    Con la coppia (500, 900) la finestra e' 800 ms, cioe' SOTTO il tetto:
+    #    un T4 che guardasse il PRIMO fotogramma invece della finestra usciva
+    #    lo stesso «non giudicabile», e questa registrazione **non distingueva
+    #    il conteggio dal cronometro** — cioe' non provava la cosa che la sua
+    #    stessa riga dichiara di provare.  ⚠ E' la terza volta stasera che un
+    #    guasto scritto apposta trova un caso che si credeva.
+    r = con_t4([(1920, 1080, 500, 7), (1264, 800, 3500, 11)])
+    casi.append(("52-t4-il-palco-e-stato-toccato", r, 0, None,
+                 "⭐ lo stesso filo, ma il secondo fotogramma dichiara 1264x800 "
+                 "OLTRE il tetto: il palco e' stato toccato davvero.  ⛔ E il "
+                 "PRIMO resta 1920x1080 ed e' LEGALE — §6.2, il fotogramma gia' "
+                 "in volo — che e' la ragione per cui T4 vuole un tetto in "
+                 "TEMPO e non un conteggio"))
+
+    # ── 53. ⭐⛔ DUE FOTOGRAMMI DOPO LO STESSO `TELA` — la scena che
+    #        l'arbitro dichiarava NON CONFORME fino al 21 agosto 2026.
+    #
+    #    ⛔ E' la scena piu' banale che esista: la tela cambia, arriva la
+    #       chiave alla misura nuova (§5.2 pagata), arriva il delta dopo.
+    #    ⚠ Nessuna registrazione del deposito portava DUE flussi video dopo lo
+    #      stesso `TELA`, e il cliente di prova non registrava il video: ⇒ il
+    #      difetto ha aspettato il primo giro vero col video dentro, e allora
+    #      ha accusato **il prodotto** di una cosa che il prodotto faceva bene.
+    r = conforme()
+    r.blocco(CLIENT, adatta(1264, 800), istante=50)
+    r.blocco(SERVER, tela(1, 0, 1264, 800), istante=100)
+    r.blocco(SERVER, intestazione(lar=1264, alt=800, num=1) + b"\x00" * 64,
+             canale=VIDEO, stream=7, fine=FIN, istante=200)
+    r.blocco(SERVER, intestazione(tipo=DELTA, lar=1264, alt=800, num=2)
+             + b"\x00" * 64, canale=VIDEO, stream=11, fine=FIN, istante=300)
+    casi.append(("53-due-fotogrammi-dopo-il-tela", r, 0, None,
+                 "⭐ TELA(ADATTATA, 1264x800), poi la CHIAVE alla misura nuova "
+                 "e poi un DELTA: §5.2 e' pagata dalla chiave, e il delta e' "
+                 "legale.  ⛔ L'arbitro rigiocava il cambio di tela a OGNI "
+                 "flusso e accusava il secondo — avrebbe dichiarato non "
+                 "conforme ogni sessione vera"))
 
     return casi
 

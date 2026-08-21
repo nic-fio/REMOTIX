@@ -171,7 +171,56 @@ MUTAZIONI = [
      "                    if fl[\"tela_prec\"] is not None:\n"
      "                        ctx.tela_larghezza, ctx.tela_altezza = fl[\"tela_prec\"]",
      "                    pass",
-     ["44-fotogramma-vecchio-dopo-il-tela"]),
+     # ⚠ E dal 21 agosto anche le due di T4: poggiano sulla STESSA grazia di
+     #   D14 — il fotogramma vecchio subito dopo il TELA — e togliere la coda
+     #   le muove per costruzione.  ⛔ Elencarle e' obbligatorio: una mutazione
+     #   che muove piu' registrazioni di quelle dichiarate non sta provando la
+     #   regola che dice di provare.
+     ["44-fotogramma-vecchio-dopo-il-tela", "51-t4-tela-finta",
+      "52-t4-il-palco-e-stato-toccato"]),
+
+    # ── ⭐⛔ LE TRE MUTAZIONI DEL 21 AGOSTO — il codice che `istante_ms` ha
+    #    portato dentro l'arbitro.  ⛔ Senza, sarebbe codice nuovo che nessun
+    #    guasto tocca: la lezione del rilievo 2 di stasera, applicata subito.
+    ("grazia-senza-tetto",
+     "⛔ il secondo di grazia di §7.1 non scade mai: qualunque ritardo passa, "
+     "ed e' l'indulgenza che §3 esiste per togliere",
+     "                        if stato.orologio == CLIENT and dt > GRAZIA_MS:",
+     "                        if False:",
+     ["49-grazia-scaduta"]),
+
+    ("grazia-anche-a-orologio-ignoto",
+     "⛔ si conclude anche quando i tempi sono TROPPO CORTI per concludere: e' "
+     "il verso che §11.1 vieta, perche' l'intervallo del client e' piu' breve "
+     "di quello del server ⇒ un server corretto verrebbe accusato",
+     "                        if stato.orologio == CLIENT and dt > GRAZIA_MS:",
+     "                        if True:",
+     ["50-grazia-dentro-il-secondo"]),
+
+    ("t4-senza-tetto",
+     "⛔ T4 accusa solo se la finestra e' infinita, cioe' mai: il server che "
+     "risponde TELA(ADATTATA) senza toccare il palco torna invisibile",
+     "        if finestra > T4_TETTO_MS:",
+     "        if False:",
+     ["51-t4-tela-finta"]),
+
+    ("cambio-di-tela-rigiocato-a-ogni-flusso",
+     "⛔ il cambio di tela si rigioca per OGNI flusso video invece che una volta "
+     "sola: il debito della chiave di §5.2 si riapre a ogni fotogramma, e il "
+     "SECONDO dopo un ridimensionamento — un delta legale — viene accusato.  "
+     "⚠ E' il difetto vero che l'arbitro aveva fino al 21 agosto 2026, trovato "
+     "dal primo giro col video nella traccia",
+     '                        and fl["tela_n"] != ultima_tela_n):',
+     '                        and True):',
+     ["53-due-fotogrammi-dopo-il-tela"]),
+
+    ("t4-conta-invece-di-cronometrare",
+     "⛔ T4 guarda il PRIMO fotogramma invece della finestra: §6.2 ammette il "
+     "fotogramma gia' in volo alla misura vecchia, quindi un conteggio accusa "
+     "una registrazione in cui nessuno ha sbagliato",
+     "        if any(m[1] == misura_a for m in dopo):",
+     "        if dopo and dopo[0][1] == misura_a:",
+     ["52-t4-il-palco-e-stato-toccato"]),
 
     # ── ⭐ e il verso opposto: aggiungere SEVERITA' ────────────────────────
     #    Qui la registrazione che deve accorgersene e' una **conforme**, ed e'

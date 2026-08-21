@@ -169,14 +169,45 @@ class Registratore:
     rete e il protocollo.  ⭐ Il banco che tiene chiusa questa porta e'
     `06-b38-registratore.py`, e non prova il filo: prova che i due banchi
     parlano la stessa lingua.
+
+    ⭐⭐ **E DAL 21 AGOSTO 2026 LA MAGIA E' `0x00 0x03`: il blocco porta
+       `istante_ms`.**
+
+    §11.1 non registrava il **tempo**, e senza il tempo la regola del *«secondo
+    di grazia dopo `TELA(ADATTATA)`»* di §7.1 non era collaudabile da nessun
+    `.rcpreg` — era la `[?]` di `fasi/06-la-tela-e-la-vista.md` §7.2.
+
+    ⛔ **E l'istante e' MONOTONO e RELATIVO al primo blocco, mai un'ora del
+       mondo.**  §4.4 vieta i segreti nel file, e una data assoluta non e' un
+    segreto per caso: dice **quando** e — insieme all'indirizzo che la
+    registrazione gia' porta — **da dove** un utente si e' collegato.  Il primo
+    blocco vale 0, e chi legge non impara niente su chi ha registrato.
+
+    ⛔ **E il campo `orologio` nell'intestazione dice DI CHI sono i tempi**
+       (1 = client, 2 = server), perche' la regola del secondo e' del **server**
+    e una traccia presa al client misura un intervallo **piu' corto**: mezzo
+    giro di rete per lato.  ⇒ Da qui l'arbitro conclude **in un verso solo**, e
+    lo dichiara.  La riga sta in `01-b4-validatore.py`.
     """
 
-    MAGIA = b"RCPREG\x00\x02"
+    MAGIA = b"RCPREG\x00\x03"
+    # ⛔ Le due magie di ieri si conservano QUI e non solo nell'arbitro: il
+    #    banco che le rifiuta (`01-b4-registrazioni.py`) le scrive, e due
+    #    elenchi di versioni in due file sono due elenchi che divergono.
+    MAGIA_V1 = b"RCPREG\x00\x01"
+    MAGIA_V2 = b"RCPREG\x00\x02"
     CONTINUA, FIN, RESET = 0, 1, 2
+    OROLOGIO_CLIENT, OROLOGIO_SERVER = 1, 2
 
     def __init__(self):
         self.blocchi = []
         self.scritta = False
+        # ⛔ Questo programma e' il CLIENT: i tempi sono i suoi, e lo dichiara.
+        #    ⚠ Scrivere `2` qui vorrebbe dire far credere all'arbitro di avere
+        #      l'orologio del server, e allora la conclusione «in un verso solo»
+        #      diventerebbe una conclusione in due versi — sbagliata.
+        self.orologio = self.OROLOGIO_CLIENT
+        self.t0 = None
         # ⛔ Lo stream del canale di controllo, quello VERO.  §4.2: e' il primo
         #    stream bidirezionale della sessione, e ⚠ **non e' lo 0** — in
         #    HTTP/3 lo 0 e' gia' quello della CONNECT (rilievo R1.5).  Qui si
@@ -185,11 +216,28 @@ class Registratore:
         #    di controllo»).
         self.stream = 0
 
+    def istante(self):
+        """⛔ Millisecondi dal PRIMO blocco, da un orologio monotono — §11.1.
+
+        ⚠ `time.monotonic()` e non `time.time()`, e non e' pignoleria: un
+          aggiustamento di NTP nel mezzo di una sessione farebbe **tornare
+          indietro** gli istanti, e l'arbitro leggerebbe un `PUNTATORE`
+          arrivato *prima* del `TELA` che lo precede sul filo.
+        """
+        adesso = time.monotonic()
+        if self.t0 is None:
+            self.t0 = adesso
+        ms = int((adesso - self.t0) * 1000.0)
+        # ⛔ Il campo e' u32: 49 giorni.  Si satura invece di avvolgersi, perche'
+        #    un istante che riparte da zero e' peggio di un istante fermo.
+        return min(ms, 0xFFFFFFFF)
+
     def aggiungi(self, verso, carico, oscurati=(), canale=0x00, stream=None,
-                 fine=CONTINUA):
+                 fine=CONTINUA, istante=None):
         self.blocchi.append([verso, canale, fine,
                              self.stream if stream is None else stream,
-                             carico, list(oscurati)])
+                             carico, list(oscurati),
+                             self.istante() if istante is None else istante])
 
     def segna_fine(self, verso, fine, stream=None):
         """⛔ Come si e' chiuso lo stream, e da QUALE lato — §11.1.
@@ -212,9 +260,12 @@ class Registratore:
         self.aggiungi(verso, b"", stream=stream, fine=fine)
 
     def scrivi(self, percorso):
-        out = bytearray(self.MAGIA + struct.pack("!II", len(self.blocchi), 0))
-        for verso, canale, fine, stream, carico, osc in self.blocchi:
-            out += struct.pack("!BBBQIH", verso, canale, fine, stream,
+        # ⛔ L'intestazione di §11.1: magia · u32 quanti_blocchi · u8 orologio ·
+        #    3 byte riservati che DEVONO essere 0.
+        out = bytearray(self.MAGIA + struct.pack("!IBBBB", len(self.blocchi),
+                                                 self.orologio, 0, 0, 0))
+        for verso, canale, fine, stream, carico, osc, ist in self.blocchi:
+            out += struct.pack("!BBBIQIH", verso, canale, fine, ist, stream,
                                len(carico), len(osc))
             for ini, qua, imp in osc:
                 out += struct.pack("!II", ini, qua) + imp
@@ -340,6 +391,10 @@ class Cliente(QuicConnectionProtocol):
         #   codificatore e il browser c'e' tutto il trasporto, e un difetto li'
         #   in mezzo il rilievo non lo vedrebbe.
         self.v_in = {}          # stream_id -> bytearray in montaggio
+        # ⛔ Gli stream gia' registrati: l'intestazione di §6.2 si scrive UNA
+        #    volta per stream, o una tela sola comparirebbe dieci volte e il
+        #    denominatore di T4 conterebbe fotogrammi che non ci sono.
+        self.v_reg = set()
         self.v_fotogrammi = []  # [(numero, chiave, larghezza, altezza, dati)]
 
     def _cade(self, perche: str) -> None:
@@ -507,6 +562,42 @@ class Cliente(QuicConnectionProtocol):
         """
         b = self.v_in.setdefault(sid, bytearray())
         b += dati
+        # ⛔⛔ E DAL 21 AGOSTO 2026 I 28 BYTE DI §6.2 FINISCONO NELLA TRACCIA.
+        #
+        #    Fino a stamattina la registrazione portava **solo il canale di
+        #    controllo**, e su una traccia senza video l'arbitro non puo'
+        #    concludere niente su **T4** — *«un server che risponde
+        #    `TELA(ADATTATA)` senza toccare il palco»*, che e' la crepa
+        #    dichiarata di tutta la 6.6.  ⚠ `[M]` il primo giro vero contro il
+        #    prodotto, 21 agosto: cinque tracce, e su tutte l'arbitro ha
+        #    scritto *«dopo di lui la registrazione non porta NESSUN
+        #    fotogramma: NON si giudica»*.  Una regola che non ha mai un
+        #    ingresso e' una regola che non c'e'.
+        #
+        # ⛔⛔ E SI REGISTRA IL FLUSSO **INTERO**, non i soli 28 byte —
+        #     e la prima stesura faceva l'altra cosa, per un'ora.
+        #
+        #  Sembrava furba: l'arbitro giudica misura, numero e codec, che stanno
+        #  tutti nell'intestazione, e i pixel sono megabyte che nessuno legge.
+        #  ⛔ **Ma un blocco di 28 byte marcato `fine = 0` dice all'arbitro una
+        #  cosa falsa**: dice «di questo stream ho registrato tutto quel che e'
+        #  passato, e non era finito».  ⇒ Il giudice del fotogramma non ha mai
+        #  consumato quei flussi, e il fotogramma dopo — un delta legittimo —
+        #  gli e' arrivato come **il primo della sessione**.
+        #
+        #  `[M]` 21 agosto 2026, giro vero sulla 7721: *«flusso 23: il primo
+        #  fotogramma della sessione e' un DELTA — §5.2»*.  ⛔ **Un'accusa al
+        #  PRODOTTO nata da una registrazione mia incompleta**, ed e' la cosa
+        #  peggiore che un banco possa fare: §11.1 vuole i byte, e una traccia
+        #  che ne porta un pezzo dichiarandosi intera non e' piu' un arbitro.
+        #
+        # ⚠ Il prezzo e' la misura del file, e si paga: chi vuole tracce
+        #   piccole accorcia `--resta`, non il filo.
+        if self.reg is not None:
+            self.v_reg.add(sid)
+            self.reg.aggiungi(SERVER, bytes(dati), canale=0x03, stream=sid,
+                              fine=Registratore.FIN if fine
+                              else Registratore.CONTINUA)
         if not fine:
             return
         del self.v_in[sid]
