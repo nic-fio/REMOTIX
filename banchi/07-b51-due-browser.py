@@ -160,6 +160,22 @@ def esamina(nome, leggi, clicca, tela_png):
                          "rimpicciolita e l'input si converte sbagliato"
                          % (r["buffer"], r["tela"]))
     # 2. i CONTATORI
+    # ⛔⛔ E SI RILEGGONO DOPO UNA PAUSA — `[M]` 21 agosto 2026.
+    #
+    # ⚠ Il disegno e' ASINCRONO (`createImageBitmap` e poi la consegna alla
+    #   tela): l'ultimo fotogramma consegnato e' legittimamente ancora in volo
+    #   quando si guarda.  ⛔ Pretendere `dipinti == consegnati` da una lettura
+    #   sola vuol dire chiedere che il volo sia finito nell'istante scelto dal
+    #   banco: `[M]` due giri di fila fuori di ESATTAMENTE uno, su tutt'e due i
+    #   motori, su un prodotto che prima passava — cioe' prima passava per
+    #   fortuna di tempismo.
+    # ⇒ Si lascia atterrare e si rilegge.  Se restano diversi ANCHE dopo, il
+    #   difetto e' vero e la riga rossa vale.
+    time.sleep(0.8)
+    r2 = leggi()
+    if r2 and r2.get("conti"):
+        r["conti"] = r2["conti"]
+        v.update(r2)
     c = r["conti"]
     if c["dipinti"] != c["consegnati"]:
         v["guai"].append("⛔ dipinti %d != consegnati %d"

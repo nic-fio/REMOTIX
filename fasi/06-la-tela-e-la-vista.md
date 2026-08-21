@@ -1187,3 +1187,47 @@ distinti:
 `[M]` Adesso: `tela [1270, 704] · video [1270, 704] · finestra [1270, 705]`, 6 eventi di input al
 server, 499 fotogrammi consegnati e 123 presentati, 0 buchi.
 
+## ⭐⭐⭐ 21 agosto 2026, sera — **REMOTIX gira su Firefox per Android**
+
+*L'utente, dopo sei giri di prove sul suo telefono: «non sei in grado di far funzionare Firefox per
+android con remotix». Poi: **«Installa la suite android sdk, usa quella»**. ⭐ Aveva ragione due
+volte — sul risultato e sul metodo.*
+
+⭐ **La fotografia dell'emulatore**: dentro Firefox 154 per Android — la stessa versione del suo
+telefono — c'è lo sfondo di GNOME, la barra in alto con l'ora `Aug 21 16:01`, e i due terminali
+`REMOTIX-SCENA` che scorrono timestamp **vivi**. Desktop remoto, in movimento, su un browser senza
+WebCodecs.
+
+### ⛔ I tre difetti che solo Android poteva mostrare
+
+`07-b58` (Firefox da tavolo con `dom.media.webcodecs.enabled=false`) prende quasi tutto, ma **non**
+prende quel che è proprio del motore mobile. Questi tre sono usciti solo qui:
+
+1. ⛔⛔ **La ricerca che non finisce mai.** L'inseguimento del bordo vivo scriveva `currentTime`,
+   cioè una **ricerca** — e una ricerca vuole un punto di accesso casuale, cioè una chiave, che lì
+   non c'è. `[M]` `cerca=true · pronto=1 · tempo=34,41 · buffer=0,00→40,34 · errore=no`, e
+   **19 fotogrammi dipinti su 727**. ⇒ Non si salta più: si insegue con la **velocità**
+   (`playbackRate` 1,25 finché la coda rientra). Costa un filo di accelerazione invece di uno
+   scatto, e non chiede una chiave a nessuno.
+2. ⛔ **La potatura del passato svuotava tutto.** `sb.remove()` per non tenere in memoria il già
+   visto lasciava `buffer=nessuno` con 817 fotogrammi consegnati. ⇒ Tolta: qualche secondo di video
+   in memoria è un prezzo che si paga volentieri, una pagina nera no.
+3. ⛔⛔ **E `dipinti` non è «quanti se ne vedono».** `requestVideoFrameCallback` sui motori mobili è
+   **strozzato**: `[M]` 46 scatti in 35 secondi mentre il desktop si muoveva. ⇒ Per due volte quel
+   numero mi ha fatto credere che l'immagine fosse ferma. Il giudice, lì, è **lo schermo** — una
+   fotografia — non il contatore.
+
+### ⭐ E lo strumento resta: `banchi/07-b59-firefox-android.py`
+
+Emulatore Android 14 con KVM, Firefox **154.0** per Android, e il giro completo da solo: accetta il
+certificato, entra come «prova», lascia girare, e legge nel registro del **server** la riga che la
+pagina racconta di sé — `MISURA §7.18 MSE: consegnati … dipinti … fermo= cerca= pronto= buffer=`.
+
+⚠ E quel che **non** riproduce si dichiara: l'emulatore non ha la decodifica in hardware. ⇒ I
+**numeri** del ritardo non valgono; vale il **comportamento** — dipinge o no, si ferma o no, e
+perché.
+
+⛔ **La lezione di metodo, e l'ha insegnata l'utente**: quando una prova richiede sei giri di una
+persona, lo strumento sbagliato non è il prodotto — è il banco. Sei ore prima avrei potuto
+installarlo.
+

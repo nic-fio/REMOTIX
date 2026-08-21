@@ -884,6 +884,9 @@ const TELA_2D = new URLSearchParams(location.search).get("tela") === "2d";
  * si salterebbe di continuo e l'immagine scatterebbe piu' di quanto guadagni. */
 const MSE_SOGLIA_S = 0.25;
 const MSE_BORDO_S = 0.05;
+/* Quanto piu' in fretta si va quando la coda cresce.  ⚠ 1,25 e' abbastanza da
+ * recuperare mezzo secondo in due, e abbastanza poco da non sentirsi. */
+const MSE_FRETTA = 1.25;
 
 const VIA_MSE = (typeof VideoDecoder === "undefined")
              || new URLSearchParams(location.search).get("disegno") === "mse";
@@ -3403,8 +3406,15 @@ class Schermo {
       this.tela.style.position = "relative";
       this.tela.style.zIndex = "1";
       this.video = v;
-      /* ⭐ E i fotogrammi si contano dove arrivano DAVVERO allo schermo: e'
-       *   l'unico posto, su questa strada, in cui si sappia che un pixel c'e'. */
+      /* ⭐ E i fotogrammi si contano dove arrivano allo schermo: e' l'unico
+       *   posto, su questa strada, in cui si sappia che un pixel c'e'.
+       * ⛔⛔ MA `dipinti` QUI NON E' «quanti se ne vedono» — 21 agosto 2026.
+       *    `requestVideoFrameCallback` sui motori mobili e' **strozzato**:
+       *    `[M]` su Firefox per Android ha scattato 46 volte in 35 secondi
+       *    mentre il desktop si vedeva muoversi, e per due volte questo numero
+       *    mi ha fatto credere che l'immagine fosse ferma.  ⇒ Il giudice qui e'
+       *    lo SCHERMO (una fotografia dell'emulatore, `07-b59`), non il
+       *    contatore. */
       if (v.requestVideoFrameCallback) {
         const conta = (adesso, meta) => {
           this.conti.dipinti++;
@@ -3472,6 +3482,7 @@ class Schermo {
     this.f_l = l; this.f_a = a;
     this.cornice();
     this.mse_posiziona();
+    this.mse_racconta();
     this.riga("⚠ §7.18: si dipinge con MSE e un `<video>` (" + l + "×" + a
               + ", «" + stringa + "»), perche' questo browser non ha WebCodecs. "
               + "Il ritardo su questa strada e' piu' alto, ed e' dichiarato");
@@ -3586,12 +3597,77 @@ class Schermo {
       const bordo = b.end(b.length - 1);
       const dietro = bordo - v.currentTime;
       this.mse_ritardo = Math.round(dietro * 1000);
-      if (dietro > MSE_SOGLIA_S) {
-        v.currentTime = Math.max(0, bordo - MSE_BORDO_S);
-        this.conti.salti_mse = (this.conti.salti_mse || 0) + 1;
+      /* ⛔⛔⭐ NON SI SALTA MENTRE STA GIA' CERCANDO — 21 agosto 2026, e questo
+       *      difetto ha fatto vedere una tela NERA su Firefox per Android.
+       *
+       * ⚠ Ogni fotogramma nuovo chiamava questa funzione, e ogni chiamata
+       *   riscriveva `currentTime`: il `<video>` non finiva mai una ricerca
+       *   prima che ne cominciasse un'altra.  `[M]` Sull'emulatore Android:
+       *   **670 fotogrammi consegnati, UNO dipinto**, zero errori del
+       *   decodificatore — l'immagine si fermava sul primo e non ripartiva.
+       * ⇒ Si salta solo se non c'e' gia' una ricerca in corso, e non piu' di
+       *   una volta al secondo.  ⚠ Il ritardo si misura lo stesso: quel numero
+       *   non costa niente ed e' come si vede che questa strada e' in affanno. */
+      /* ⛔⛔⭐ NON SI SALTA. MAI. — 21 agosto 2026, e il difetto e' quello che
+       *      ha tenuto NERA la pagina su Firefox per Android.
+       *
+       * ⚠ Saltare al bordo vivo vuol dire scrivere `currentTime`, cioe' una
+       *   RICERCA — e una ricerca ha bisogno di un punto di accesso casuale,
+       *   cioe' di una chiave.  Qui le chiavi arrivano quando le chiede §5.2,
+       *   non dove capita il bordo.  ⛔ `[M]` Sull'emulatore Android il
+       *   `<video>` restava in ricerca **per sempre**, con i dati in mano:
+       *   `cerca=true · pronto=1 · tempo=34,41 · buffer=0,00→40,34 · errore=no`
+       *   — e i fotogrammi dipinti erano 19 su 727.
+       *
+       * ⭐ Si insegue con la VELOCITA' invece che con la posizione: se la coda
+       *    cresce si va un po' piu' in fretta, e quando e' rientrata si torna a
+       *    uno.  ⚠ Costa un filo di accelerazione, non uno scatto — e
+       *    soprattutto non chiede nessuna chiave a nessuno.
+       * ⚠ E il passato si butta: quel che e' gia' passato non serve a nessuno su
+       *   un desktop remoto, e tenerlo e' memoria che cresce e basta. */
+      const veloce = dietro > MSE_SOGLIA_S ? MSE_FRETTA : 1;
+      if (v.playbackRate !== veloce) {
+        v.playbackRate = veloce;
+        if (veloce !== 1) this.conti.fretta_mse = (this.conti.fretta_mse || 0) + 1;
       }
+      /* ⛔⛔ E IL PASSATO NON SI POTA — provato e tolto, 21 agosto 2026.
+       *
+       * ⚠ Qui c'era un `sb.remove()` per non tenere in memoria quel che e' gia'
+       *   passato.  `[M]` Sull'emulatore Android il risultato era
+       *   `buffer=nessuno` con 817 fotogrammi consegnati: la potatura svuotava
+       *   **tutto** e il `<video>` restava senza dati.  ⇒ Tolta.  La memoria di
+       *   qualche secondo di video e' un prezzo che si paga volentieri; una
+       *   pagina nera no. */
       if (v.paused) v.play().catch(() => {});
     } catch (e) { /* niente */ }
+  }
+
+  /* ⛔⭐ E LO STATO DI QUESTA STRADA SI RACCONTA, ogni cinque secondi.
+   *
+   * ⚠ Su MSE i contatori dei fotogrammi non bastano: «consegnati 670, dipinti
+   *   1» dice che qualcosa non va, ⛔ ma non dice **che cosa** — fermo? in
+   *   ricerca? senza dati?  ⇒ Le quattro cose che lo distinguono si scrivono,
+   *   e chi diagnostica non deve piu' indovinare. */
+  mse_racconta() {
+    if (this.mse_racconto) return;
+    this.mse_racconto = setInterval(() => {
+      const v = this.video;
+      if (!v) return;
+      let b = "nessuno";
+      try {
+        if (v.buffered.length)
+          b = (+v.buffered.start(0)).toFixed(2) + "→"
+            + (+v.buffered.end(v.buffered.length - 1)).toFixed(2);
+      } catch (e) { /* niente */ }
+      /* ⚠ «MISURA» non e' un vezzo: `nota()` manda al server solo le righe
+       *   marcate, e questa **e'** una misura.  ⛔ Metterci un `⛔` per farla
+       *   partire sarebbe barare col filtro (vedi il riquadro di `nota`). */
+      nota("MISURA §7.18 MSE: consegnati " + this.conti.consegnati + " · dipinti "
+         + this.conti.dipinti + " · fermo=" + v.paused + " cerca=" + v.seeking
+         + " pronto=" + v.readyState + " tempo=" + (+v.currentTime).toFixed(2)
+         + " buffer=" + b + " salti=" + (this.conti.salti_mse || 0)
+         + " errore=" + (v.error ? v.error.code : "no"));
+    }, 5000);
   }
 
   riconfigura(l, a) {
