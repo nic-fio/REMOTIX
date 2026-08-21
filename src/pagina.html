@@ -5266,7 +5266,16 @@ async function appunti_ricevuti(byte, completo) {
  *    NON tocca l'input, e non e' un caso — quel che l'utente sta facendo e'
  *    incollare **nel desktop remoto**, e senza i tasti non incollerebbe niente.
  */
-const APPUNTI_ATTESA_PASTE = 180;
+/* ⛔⭐ 1 800 ms E NON 180 — 21 agosto 2026.
+ *
+ * ⚠ Il ripiego `readText()` su Firefox apre il bottoncino «Incolla» e ASPETTA:
+ *   e' il prezzo dichiarato da §9, ma se lo si paga troppo presto lo si paga
+ *   **anche quando non serviva**, perche' la strada del campo stava per
+ *   consegnare (l'incolla di Wayland e' asincrona, e i byte arrivano dopo
+ *   l'evento).  ⇒ Si aspetta che le cinque letture del campo abbiano finito.
+ * ⚠ E non e' un ritardo per l'utente: e' un ritardo del RIPIEGO, che scatta
+ *   solo quando le due strade gratis non hanno consegnato niente. */
+const APPUNTI_ATTESA_PASTE = 1800;
 
 /* ⛔⭐⭐⭐ IL CAMPO NASCOSTO CHE FA NASCERE L'EVENTO `paste` — 20 agosto 2026.
  *
@@ -5326,22 +5335,59 @@ function incolla_campo_prendi() {
    *    del browser lo ha scritto li' senza chiedere niente a nessuno.
    * ⚠ E non e' un doppione: `appunti_annuncia` non annuncia due volte lo stesso
    *   testo (salta gli identici), quindi le due strade insieme costano zero. */
-  setTimeout(() => {
-    const t = incolla_campo ? incolla_campo.value : "";
-    if (t) {
-      app_diario("il campo dell'incolla porta " + t.length + " caratteri: "
-                 + "strada del CAMPO (l'evento `paste` non e' bastato)");
+  /* ⛔⛔⭐ E IL CAMPO SI GUARDA PIU' VOLTE, NON UNA — 21 agosto 2026, e la
+   *      misura viene dalla sessione VERA dell'utente.
+   *
+   * ⚠ `[M]` Firefox su Wayland: l'evento `paste` arriva **con zero caratteri**,
+   *   perche' la lettura degli appunti su Wayland e' ASINCRONA — il browser
+   *   annuncia l'incolla subito e i byte arrivano dopo.  ⇒ Guardare il campo
+   *   una volta sola a 120 ms vuol dire guardarlo **prima** che il testo ci
+   *   sia, e concludere che non arrivera' mai.
+   * ⛔ Il conto e' tutto qui: un `setTimeout` contro cinque.  E cinque letture
+   *    di un campo vuoto costano quanto niente. */
+  APPUNTI.campo_visto = false;
+  [100, 250, 500, 900, 1500].forEach((quando) => {
+    setTimeout(() => {
+      if (APPUNTI.campo_visto) return;
+      const t = incolla_campo ? incolla_campo.value : "";
+      if (!t) return;
+      APPUNTI.campo_visto = true;
+      app_diario("MARCA il campo dell'incolla porta " + t.length
+                 + " caratteri dopo " + quando + " ms: strada del CAMPO");
       APPUNTI.ultimo_paste_ms = Date.now();
       appunti_annuncia(t);
-    }
-  }, 120);
+    }, quando);
+  });
   incolla_restituisci = setTimeout(() => {
     incolla_campo.value = "";
-    /* ⛔ Il fuoco torna al corpo: da li' i tasti riprendono la loro strada
-     *    normale verso il desktop remoto (§7.3). */
-    try { incolla_campo.blur(); } catch (e) { /* niente */ }
-    try { document.body.focus(); } catch (e) { /* niente */ }
+    /* ⚠ Il campo NON si sfuoca piu' (vedi `incolla_campo_tieni`): si svuota e
+     *   basta.  Sfuocandolo, l'incolla seguente tornerebbe a essere un incolla
+     *   su una pagina non modificabile — cioe' il difetto curato. */
   }, INCOLLA_FUOCO_MS);
+}
+
+/* ⛔⭐⭐ E IL CAMPO SI TIENE A FUOCO SEMPRE, non solo durante il `Ctrl+V` —
+ *      21 agosto 2026, ed e' la strada di tutti i client web.
+ *
+ * ⚠ `[M]` Sessione VERA dell'utente, Firefox su Wayland: col fuoco preso solo
+ *   al `Ctrl+V` l'evento `paste` arrivava lo stesso **con zero caratteri**, e
+ *   il ripiego `readText()` restava appeso al bottoncino «Incolla».  ⇒ Con il
+ *   campo gia' a fuoco, quel `Ctrl+V` e' un incolla NORMALE dentro un campo di
+ *   testo: il browser non chiede niente a nessuno, e nemmeno su Wayland.
+ *
+ * ⛔ E costa zero all'utente: il campo e' 1x1, trasparente, senza eventi del
+ *    puntatore, e `cl_nel_modulo()` lo esenta per nome — i tasti continuano ad
+ *    andare al desktop remoto.  ⚠ Quel che si scrivesse dentro non si vede e
+ *    si butta: si svuota a ogni incolla e a ogni ripresa del fuoco. */
+function incolla_campo_tieni() {
+  if (!APPUNTI.acceso) return;
+  if (document.activeElement === incolla_campo) return;
+  /* ⛔ Se il fuoco e' su un campo VERO (il modulo d'accesso), non si tocca. */
+  const a = document.activeElement;
+  if (a && a.tagName && a.id !== "incolla-nascosto"
+      && ["INPUT", "TEXTAREA", "SELECT"].indexOf(a.tagName.toUpperCase()) >= 0)
+    return;
+  incolla_campo_prendi();
 }
 
 function appunti_su_incolla() {
@@ -5390,7 +5436,10 @@ function appunti_su_incolla() {
     let risposto = false;
     setTimeout(() => {
       if (risposto) return;
-      nota("⚠ §9: Firefox chiede il PERMESSO per leggere i tuoi appunti e "
+      /* ⚠ «MARCA» perche' questa riga DEVE arrivare al registro del server:
+       *   e' l'unica traccia di un difetto che altrimenti e' invisibile, e
+       *   `nota()` inoltra solo le righe marcate (`MISURA`, `MARCA`, `⛔`). */
+      nota("MARCA ⚠ §9: Firefox chiede il PERMESSO per leggere i tuoi appunti e "
          + "aspetta: cerca il bottoncino «Incolla» comparso vicino al "
          + "puntatore e cliccalo.  ⭐ Finche' non lo fai, quel che hai copiato "
          + "qui NON arriva al desktop remoto — e non e' un guasto nostro");
@@ -5548,6 +5597,12 @@ function avvia_appunti(negoziato) {
   /* ⛔ §9: «si dichiara quel che non si puo' fare».  Questa riga e' quella
    *    dichiarazione, ed e' diversa su ogni motore — quindi si scrive quel che
    *    si e' TROVATO, non quel che ci si aspettava di trovare. */
+  /* ⭐ Il campo prende il fuoco appena gli appunti sono accesi, e se lo
+   *    riprende dopo ogni clic e ogni ritorno di fuoco alla finestra. */
+  incolla_campo_tieni();
+  document.addEventListener("pointerdown", () => setTimeout(incolla_campo_tieni, 0), true);
+  window.addEventListener("focus", () => setTimeout(incolla_campo_tieni, 0));
+
   nota("⭐ appunti accesi, solo testo, nei due versi (§7.4).  "
      + (sorvegliata
           ? "⭐ Questo browser sorveglia la clipboard: `clipboardchange` sta su "
