@@ -152,6 +152,39 @@ def main():
                 "type": "pointer", "id": "mouse",
                 "parameters": {"pointerType": "mouse"}, "actions": passi}]})
             time.sleep(0.6)
+        # ⛔⭐ E L'INPUT DEVE ARRIVARE, non basta che l'immagine ci sia.
+        #    `[M]` 21 agosto 2026, l'utente: «vedo il desktop ma non funziona
+        #    l'input» — su questa strada la tela era nascosta, e tutti i gesti
+        #    sono agganciati a LEI.  ⇒ Si batte una lettera e si guardano le
+        #    righe NUOVE del registro del server.
+        # ⛔ Il clic si mira al CENTRO DELLA TELA, letto dalla pagina: una
+        #    coordinata scelta a occhio puo' cadere fuori, e il banco
+        #    direbbe «il clic non arriva» di un clic mai dato.
+        centro = m.js("""
+          const t = document.getElementById('schermo');
+          const r = t.getBoundingClientRect();
+          return [r.left + r.width / 2, r.top + r.height / 2];""")["value"]
+        prima = registro(400)
+        m.chiama("WebDriver:PerformActions", {"actions": [{
+            "type": "key", "id": "t",
+            "actions": [{"type": "keyDown", "value": "q"},
+                        {"type": "pause", "duration": 60},
+                        {"type": "keyUp", "value": "q"}]}]})
+        # ⭐ E un clic VERO sulla tela, che e' il gesto che era morto.
+        m.chiama("WebDriver:PerformActions", {"actions": [{
+            "type": "pointer", "id": "mouse",
+            "parameters": {"pointerType": "mouse"},
+            "actions": [{"type": "pointerMove", "duration": 40,
+                         "x": int(centro[0]), "y": int(centro[1])},
+                        {"type": "pointerDown", "button": 0},
+                        {"type": "pause", "duration": 60},
+                        {"type": "pointerUp", "button": 0}]}]})
+        time.sleep(2.5)
+        viste = set(prima.splitlines())
+        nuove = [r for r in registro(600).splitlines()
+                 if r not in viste and "input id=" in r]
+        v["input_nuovi"] = len(nuove)
+        v["input_esempio"] = nuove[-1][:140] if nuove else None
         v["stato"] = m.js(STATO)["value"]
         v["righe"] = m.js(RIGHE)["value"]
     finally:
@@ -162,6 +195,10 @@ def main():
     if not c.get("consegnati"):
         v["guai"].append("⛔ nessun fotogramma consegnato: la sessione non ha "
                          "portato video")
+    elif not v.get("input_nuovi"):
+        v["guai"].append("⛔ L'INPUT NON ARRIVA: un tasto e un clic non hanno "
+                         "prodotto nessuna riga `input id=` nel registro del "
+                         "server")
     elif not c.get("dipinti"):
         v["guai"].append("⛔ %d fotogrammi consegnati e ZERO presentati dal "
                          "`<video>`: la strada MSE non dipinge"
@@ -177,6 +214,8 @@ print("\n══════════ VERDETTO ══════════"
 st = v.get("stato") or {}
 c = st.get("conti") or {}
 print("WebCodecs: %s · schermo acceso: %s" % (st.get("webcodecs"), v.get("schermo_acceso")))
+print("input arrivati al server: %s (%s)"
+      % (v.get("input_nuovi"), (v.get("input_esempio") or "nessuno")[:90]))
 print("consegnati %s · dipinti %s · buchi %s · ritardo %s ms · video %s"
       % (c.get("consegnati"), c.get("dipinti"), c.get("buchi"),
          st.get("ritardo"), st.get("video")))

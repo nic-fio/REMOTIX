@@ -2746,6 +2746,9 @@ class Schermo {
      *   non sa ridimensionare (`TELA(RIFIUTATA)`), e i millisecondi fra la
      *   richiesta e il primo fotogramma nuovo. */
     this.tela.style.imageRendering = (s === 1) ? "pixelated" : "auto";
+    /* ⭐ E il `<video>` di §7.18, se c'e', segue la tela: la geometria e' una
+     *    sola, e la decide questa funzione. */
+    if (this.video) this.mse_posiziona();
     return { scala: s, larghezza: wl, altezza: wa };
   }
 
@@ -3378,16 +3381,34 @@ class Schermo {
       v.id = "tela-video";
       v.muted = true; v.playsInline = true; v.autoplay = true;
       v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
-      v.className = this.tela.className;
-      v.style.cssText = this.tela.style.cssText;
-      this.tela.parentNode.insertBefore(v, this.tela.nextSibling);
-      this.tela.style.display = "none";
+      /* ⛔⛔⭐ LA TELA NON SI NASCONDE — 21 agosto 2026, difetto riferito
+       *      dall'utente: *«sono dentro, vedo il desktop ma non funziona
+       *      l'input»*.
+       *
+       * ⚠ **Tutto** l'input di questa pagina e' agganciato alla `<canvas>` —
+       *   `pointermove`, `mousedown`, `wheel`, `contextmenu`, i quattro eventi
+       *   del tocco — e le coordinate escono dal suo
+       *   `getBoundingClientRect()`.  ⛔ Nascondendola con `display:none` gli
+       *   eventi non arrivano a nessuno e il rettangolo vale zero: il desktop
+       *   si vede e non si comanda.
+       *
+       * ⭐ Allora la tela resta **dov'e' e com'e'** — e' la superficie che
+       *   riceve i gesti — e diventa **trasparente**; il `<video>` le sta
+       *   DIETRO, incollato al suo rettangolo.  ⇒ Su questa strada non cambia
+       *   niente per chi tocca lo schermo: tocca la stessa cosa di sempre. */
+      v.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;"
+                      + "object-fit:fill;background:#000;z-index:0";
+      document.body.insertBefore(v, document.body.firstChild);
+      this.tela.style.background = "transparent";
+      this.tela.style.position = "relative";
+      this.tela.style.zIndex = "1";
       this.video = v;
       /* ⭐ E i fotogrammi si contano dove arrivano DAVVERO allo schermo: e'
        *   l'unico posto, su questa strada, in cui si sappia che un pixel c'e'. */
       if (v.requestVideoFrameCallback) {
         const conta = (adesso, meta) => {
           this.conti.dipinti++;
+          this.mse_posiziona();
           /* ⭐ E qui si dichiara che lo schermo c'e': su questa strada non passa
            *    da `dipingi()`, e senza questa riga la pagina resterebbe per
            *    sempre «in attesa del primo fotogramma» mentre il desktop e' gia'
@@ -3467,6 +3488,17 @@ class Schermo {
          + ".  ⚠ Questo browser accetta il flusso e non lo mostra: e' il caso "
          + "che la sonda di questa strada non puo' prevedere");
     }, 4000);
+  }
+
+  /* Il `<video>` sta incollato al rettangolo della tela: e' lei che comanda la
+   * geometria (`cornice()`), e lui la segue. */
+  mse_posiziona() {
+    if (!this.video) return;
+    const r = this.tela.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const v = this.video.style;
+    v.left = r.left + "px"; v.top = r.top + "px";
+    v.width = r.width + "px"; v.height = r.height + "px";
   }
 
   mse_spegni_sorgente() {

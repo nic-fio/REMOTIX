@@ -1130,3 +1130,34 @@ fotogramma. ⚠ La tela nera resta **spiegata**, che è l'unica cosa che la rego
 **un** fotogramma, e stava per dichiarare «non dipinge» di una strada che dipingeva quel che c'era.
 ⇒ Adesso apre un terminale che scorre.
 
+#### ⛔ «Vedo il desktop ma non funziona l'input» — la tela non si nasconde
+
+*L'utente, 21 agosto 2026, ed è la prima volta che su Firefox per Android il desktop **si vede**.*
+
+⛔ **Tutto** l'input di questa pagina è agganciato alla `<canvas>` — `pointermove`, `mousedown`,
+`wheel`, `contextmenu` e i quattro eventi del tocco — e le coordinate escono dal suo
+`getBoundingClientRect()`. ⇒ Nascondendola con `display:none` per far posto al `<video>`, gli
+eventi non arrivavano a nessuno e il rettangolo valeva zero: **il desktop si vede e non si
+comanda**.
+
+⭐ **La cura**: la tela resta **dov'è e com'è** — è la superficie che riceve i gesti — e diventa
+**trasparente**; il `<video>` le sta **dietro**, incollato al suo rettangolo (`mse_posiziona()`, che
+segue `cornice()`). ⇒ Su questa strada, per chi tocca lo schermo, non cambia niente: tocca la stessa
+cosa di sempre.
+
+⚠ E il banco ha avuto il suo difetto anche qui: cliccava a una coordinata scelta a occhio, che
+cadeva fuori dalla tela — e avrebbe detto «il clic non arriva» di un clic mai dato. ⇒ Adesso il
+centro della tela lo **chiede alla pagina**.
+
+#### La misura finale, browser senza WebCodecs, desktop vivo
+
+| | |
+|---|---|
+| immagine | ⭐ 351 consegnati → **196 dipinti**, **0 buchi**, tela 1270×704 |
+| input | ⭐ **4 eventi al server**: la lettera, il movimento, e `PULSANTE evdev 272` premuto e rilasciato |
+| coda | 50 ms |
+
+⚠ Un fotogramma su due non viene presentato: è il `<video>` che scarta sotto un terminale che
+scorre, **in software e senza GPU**. Sul telefono, che decodifica H.264 in hardware, il rapporto è
+un'altra cosa — e lì la misura la fa l'utente.
+

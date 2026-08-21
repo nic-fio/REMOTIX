@@ -1,14 +1,16 @@
 {
  "guai": [],
  "schermo_acceso": true,
+ "input_nuovi": 4,
+ "input_esempio": "15:18:07.176 rcp     input id=4 (era 3) PULSANTE codice evdev 272 (0x110) rilasciato · istante del client 20578000 us ⚠ grana ingrossata, §7",
  "stato": {
   "webcodecs": false,
   "conti": {
-   "stream": 291,
-   "completi": 291,
+   "stream": 351,
+   "completi": 351,
    "azzerati": 0,
-   "consegnati": 291,
-   "dipinti": 250,
+   "consegnati": 351,
+   "dipinti": 196,
    "scartati_ordine": 0,
    "scartati_misura": 0,
    "tollerati": 0,
@@ -21,13 +23,13 @@
    "tardive": 0,
    "ricomposizioni": 0,
    "viste": 1,
-   "salti_mse": 18
+   "salti_mse": 31
   },
-  "ritardo": 212,
+  "ritardo": 50,
   "video": {
    "l": 1270,
    "a": 704,
-   "t": 25.14,
+   "t": 18.63,
    "fermo": false,
    "pronto": 1,
    "errore": null
