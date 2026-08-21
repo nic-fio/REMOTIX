@@ -50,3 +50,7 @@ banchi/03-palco-profili/
 #   d'uscita fra una funzione e l'altra: e' derivato, e a ogni giro cambia.
 banchi/.03-solo-ultimo
 banchi/07-b48-dati/
+
+# ⛔ Le copie di lavoro degli agenti: sono depositi git a se stanti, e un
+#    `git add -A` distratto le infila nell indice come sotto-moduli.
+.claude/worktrees/

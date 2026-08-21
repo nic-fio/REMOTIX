@@ -821,12 +821,100 @@ la vista in pixel CSS). ⇒ *Un allarme sbagliato che lascia dietro uno strument
 | | |
 |---|---|
 | ⛔⛔ **il ricambio dei dispositivi che NON dipende dalla tela** | `[M]` ogni `cattura_risveglia()` (400 ms, scena ferma, chiave dovuta) ricrea i dispositivi di `libei`: **3 risvegli, 3 ricambi**, con **zero `ADATTA_TELA`**. ⇒ Il clic che muore ha una **seconda porta**, aperta proprio quando l'utente tiene premuto il mouse su un desktop fermo, e la cura ovvia distruggerebbe ogni trascinamento. ⏳ **La forma giusta va decisa**, e non è di una sottofase sola |
-| ⛔ **il difetto è a monte, in Mutter** | `remove_viewport_devices()` dovrebbe passare da `drop_device()`. `[?]` se sia già noto o corretto a monte: **nessuno ha guardato**, e nessuno ha aperto niente |
+| ✅ ~~⛔ **il difetto è a monte, in Mutter**~~ · ⛔ **e la risposta è peggio della domanda** | **CHIUSA il 21 agosto 2026** `[R]`: il difetto è vero, **nessuno l'ha mai aperto**, e **non è corretto nemmeno nel `main` di oggi** — `remove_viewport_devices()` è identica carattere per carattere fra la 48.7 che gira qui e il ramo principale di agosto 2026. ⇒ Non c'è versione da aspettare: **la cura è nostra, su ogni Mutter**. Il seguito sta in §7.1-bis |
 | ✅ ~~**le richieste incatenate, da rimisurare**~~ · ⛔ **e resta un buco peggiore** | rimisurate il 17 agosto: **0 rotti su 18** (§4.8). ⛔⛔ **Ma il controllo positivo non ha reso**: togliendo la cura sospetta escono **ancora 0/18** ⇒ *non si sa che cosa tenga questa scena*, e i **4/18** della 6.3 **non sono riproducibili** a macchina ferma. ⚠ L'unica differenza rimasta è la **contesa sulla GPU** (cinque codificatori sullo stesso iGPU): finché non si ricrea, ⛔ **il verde vale «sotto carico CPU», non «sotto contesa GPU»** |
 | ✅ ~~**la cura del clic non è mai stata verificata dove vive**~~ | verificata il 17 agosto su un albero solo: il rilascio è dichiarato nel registro e **tutti i clic del secondo giro arrivano**, ⭐ col controllo positivo che riproduce il difetto **a comando** |
 | ✅ ~~**tutti i millisecondi sono sotto carico**~~ | ripresi a macchina ferma (load 0,07-0,13): §4.8 |
 | ⛔ **tre attesi di `06-b33` sono scritti per il mondo COL DIFETTO VIVO** | T3, R1 e R2 restano **rossi con la cura** e erano **verdi senza**: con il tasto già rilasciato prima del ricambio, le righe di dichiarazione non si scrivono perché non c'è più niente di premuto. ⇒ **Va corretto l'atteso del banco, non il prodotto** — ed è un banco nato ieri, quindi il difetto è di ieri |
 | ⚠ **due attrezzi del banco 6.3 si rompono** | `06-b35-lancia.sh tempi` (`ValueError`) e `06-b35-terreno.sh:395` (`integer expression expected`): i tempi della verifica sono stati calcolati **a mano dal registro** |
+
+### 7.1-bis · ⭐⭐ 21 agosto 2026 — **la catena completa del clic che muore**, letta nel sorgente di Mutter
+
+*Tutto `[R]`, dal sorgente di `reference-gnome/mutter` (tag **48.7**, commit `f4abb824`) — ⭐ e
+`[M]` la macchina di prova monta **esattamente quella**: GNOME Shell 48.7, `libmutter-16-0`
+48.7-0+deb13u1, `libei1`/`libeis1` 1.3.901-1. Nessuno scarto di versione da scontare.*
+
+#### ⭐ PERCHÉ i dispositivi si ricreano anche senza `ADATTA_TELA` — il `[?]` del §4.6 ha una causa
+
+`meta_screen_cast_virtual_stream_src_enable()`
+(`src/backends/meta-screen-cast-virtual-stream-src.c:283`) chiama
+`meta_eis_viewport_notify_changed()`. ⇒ **Ogni riabilitazione dello stream ricrea i dispositivi**,
+cioè **ogni `cattura_risveglia()`** — ed è il «3 risvegli, 3 ricambi, zero `ADATTA_TELA`» di §7.1,
+che non era un mistero ma quella riga. ⚠ Viene dalla **MR !4622**, entrata in **Mutter 48.5**: è
+recente, e noi siamo dentro la finestra.
+
+⚠ **E c'è un secondo moltiplicatore**: `add_logical_monitor_viewports()`
+(`meta-remote-desktop-session.c:388`) fa `remove_all_viewports` **poi** `take_viewports`, e
+**tutt'e due** emettono `viewports-changed` ⇒ **due giri di ricambio per ogni cambio di monitor**.
+
+#### ⛔ Il difetto è PERMANENTE, non una corsa — e Mutter ha una rete che qui NON si può raggiungere
+
+⚠ **Questa è la parte che rende la riga di §7.1 refutabile, e per cui prima non reggeva.** Chi legge
+solo *«`remove_viewport_devices()` non passa da `drop_device()`»* può rispondere: *«ma Mutter
+rilascia lo stesso in `dispose`»* — e ha l'aria di avere ragione, perché
+`meta_virtual_input_device_native_dispose()` chiama `release_device_in_impl()`, che rilascia **tutti**
+i bottoni e i tasti tenuti giù, con tanto di riga di diagnostica.
+
+⛔ **Su questo cammino quella rete è irraggiungibile**, e la catena è di tre anelli:
+
+1. il `ClutterVirtualInputDevice` muore **solo** con `meta_eis_device_free()`, distruttore della
+   tabella `client->eis_devices`;
+2. fuori dal disconnect, l'unico che toglie una voce da quella tabella è il ramo
+   **`EIS_EVENT_DEVICE_CLOSED`** (`meta-eis-client.c:987`);
+3. ⭐ `[R]` **su libei 1.3.901-1, che è la versione installata**: quell'evento lo genera **soltanto**
+   una `release` mandata **dal client** (`eis_device_closed_by_client()` ← `client_msg_release()`).
+   `eis_device_remove()` non lo genera **mai**: mette lo stato a `DEAD` e manda `destroyed`. E il
+   client non deve nemmeno chiamare `ei_device_close()` su un dispositivo rimosso dal server — lo
+   dice l'intestazione pubblica di libei, e il client di prova di Mutter infatti non la chiama.
+
+⇒ ⛔⛔ **La voce resta nella tabella per sempre**, `release_device_in_impl()` non gira mai, e
+`seat_impl->button_count[BTN_LEFT]` resta **1 per sempre**. Si sana **solo al disconnect**, che è
+l'unico posto da cui passa `drop_device()` — ⭐ ed è esattamente il *«si guarisce solo riaccendendo
+il server»* che §4.6 aveva misurato senza sapere perché.
+
+⚠ **E `button_count[]` è del POSTO, non del dispositivo**: è la ragione per cui la cura potrebbe
+essere molto più piccola di quanto sembri — un rilascio mandato da un dispositivo **nuovo** può
+ancora far scendere il conto. ⏳ Da misurare, non da dedurre.
+
+#### ⛔ La nostra cura di oggi copre l'altro cammino
+
+`input_rilascia_tutto()` prima di `cattura_ridimensiona()` (`figlio.c:3964`) copre il **cambio di
+geometria**. ⛔ **Non** copre `cattura_risveglia()`. ⇒ La «seconda porta» di §7.1 è aperta proprio
+dove la cura non arriva.
+
+#### ⛔ A monte: nessuno l'ha mai aperto, e non è corretto nel `main` di oggi
+
+`[R]` cercato il 21 agosto 2026 sull'API di `gitlab.gnome.org/GNOME/mutter`: le issue con `eis` e
+`libei`, le **15** merge request con `eis` nel titolo dal 2023 a oggi, e una ricerca su
+`remove_viewport_devices` ⇒ **niente**. Idem `gnome-remote-desktop`.
+
+⭐ **L'unico precedente è la prova migliore che l'asimmetria non è voluta**: la MR **!3809**,
+*«backends/eis-client: Release buttons on device remove»*, fusa il 14 giugno 2024, corregge una riga
+sola **dentro `drop_device` e solo lì**. ⇒ L'intento a monte è dichiarato nel titolo, e il cammino
+del viewport lo viola.
+
+⛔ **E non è corretto oggi**: scaricato `meta-eis-client.c` dal ramo **`main`** (agosto 2026, serie
+50/51), `remove_viewport_devices()`, `drop_device()`, `update_viewports()` e `remove_device()` sono
+**identici carattere per carattere** alla 48.7. ⇒ Non c'è una versione da aspettare né una
+distribuzione già a posto: **la nostra cura serve su tutte**.
+
+⭐ *(In più, a carico di Mutter e non nostro: è anche una **perdita di memoria** — la tabella tiene
+un `eis_device_unref` come distruttore, quindi `struct eis_device` e `MetaEisDevice` restano vivi a
+ogni ricambio, per tutta la sessione. Lo stesso vizio ce l'hanno `remove_abs_devices()` e
+`remove_touch_devices()`.)*
+
+#### ⏳ Che cosa resta, e costa poco
+
+⛔ **Tutta questa catena è `[R]`, non `[M]`**: è codice letto, non misurato. La conferma decisiva è
+una riga di diagnostica: con `MUTTER_DEBUG=eis,input`, dopo un ricambio di viewport **a bottone
+premuto**, ci si aspetta `Dropping repeated press of button 0x110, count 2` **e l'assenza** di
+`Releasing pressed buttons while destroying virtual input device`. ⚠ **Se comparisse la seconda
+riga, tutta la lettura cade** — ed è per questo che sta scritta qui: una catena che non sa come
+essere smentita non è una diagnosi.
+
+`[?]` Se i manutentori lo considerino un difetto di Mutter o «cosa che deve gestire il client»: non
+è deducibile dal codice. ⛔ **E non è stato aperto niente a monte**: è un'azione verso l'esterno, e
+la decide l'utente.
 
 ### 7.2 · Le `[?]` di misura, dichiarate invece che estrapolate
 
