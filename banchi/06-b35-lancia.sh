@@ -14,6 +14,8 @@
 #   sudo bash .../06-b35-lancia.sh ricambi       ⭐ i ricambi dei dispositivi
 #   sudo bash .../06-b35-lancia.sh registro      le righe della tela del giro
 #   sudo bash .../06-b35-lancia.sh tempi         ⭐ le latenze, dal registro
+#   bash .../06-b35-lancia.sh controllo-tempi    ⭐ il controllo positivo
+#                                                dell'ATTREZZO delle latenze
 #   sudo bash .../06-b35-lancia.sh pulisci
 #
 # ⚠ Ogni misura di tempo stampa il CARICO accanto: cinque banchi girano sulla
@@ -48,7 +50,12 @@ ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-[ "$(id -u)" -eq 0 ] || { printf '⛔ va lanciato DA ROOT\n'; exit 2; }
+# ⚠ `controllo-tempi` non tocca ne' il server ne' il registro: e' il controllo
+#   positivo dello STRUMENTO, e pretendere root lo renderebbe scomodo proprio
+#   dove serve — prima di credere a un numero.
+if [ "${1:-stato}" != "controllo-tempi" ]; then
+	[ "$(id -u)" -eq 0 ] || { printf '⛔ va lanciato DA ROOT\n'; exit 2; }
+fi
 
 P="$LAV/parola"
 trap 'rm -f "$P"' EXIT
@@ -202,56 +209,45 @@ ricambi)
 	exit 0 ;;
 
 tempi)
-	# ⭐⭐ LE TRE LATENZE, e sono TRE cose diverse.  ⛔ Metterle sotto una
-	#     etichetta sola e' la forma E2: due misure diverse con lo stesso nome.
+	# ⭐⭐ LE QUATTRO LATENZE, e sono QUATTRO cose diverse.  ⛔ Metterle sotto
+	#     una etichetta sola e' la forma E2: due misure diverse con lo stesso
+	#     nome.  ⚠ E il conto NON sta piu' qui dentro: sta in
+	#     `06-b35-tempi.py`, perche' cosi' lo si puo' rilanciare su un
+	#     registro salvato — a macchina ferma, senza riaccendere niente.
+	#
+	# ⛔⛔ LA VERSIONE DI PRIMA MORIVA (`ValueError`), e non era colpa di
+	#     python: il registro porta righe **senza marca temporale**, nate
+	#     dall'intreccio delle write() di padre e figlio sullo stesso file.
+	#     `[M]` 21 agosto 2026: 23 righe orfane su 28 035 in `06-p`.
+	#     Tutto il racconto sta in testa a `06-b35-tempi.py`.
 	log "Le latenze, dal registro del giro (dalla marca in poi)"
 	bash "$T" carico
-	M=$(cat "$LAV/registro.marca" 2>/dev/null || echo 0)
+	M=$(cat "$LAV/registro.marca" 2>/dev/null); [ -n "$M" ] || M=0
+	B=$(stat -c %s "$LAV/registro.log" 2>/dev/null); [ -n "$B" ] || B=0
+	if [ "$M" -gt "$B" ]; then
+		printf '    ⛔ MARCA SCADUTA: marca %s byte, registro %s byte.\n' "$M" "$B"
+		printf '       Il registro e stato azzerato dopo la marca (un «accendi»):\n'
+		printf '       quel che segue sarebbe uno ZERO PER COSTRUZIONE.\n'
+		exit 3
+	fi
 	tail -c "+$((M + 1))" "$LAV/registro.log" > "$LAV/giro.log" 2>/dev/null
-	python3 - "$LAV/giro.log" <<-'PY'
-	import re, sys, statistics
-	L = [l.rstrip() for l in open(sys.argv[1], errors="replace")]
-	def ms(t):
-	    h, m, s = t.split(":")
-	    return (int(h) * 3600 + int(m) * 60 + float(s)) * 1000
-	def quando(sub):
-	    return [(ms(l.split()[0]), l) for l in L if sub in l]
-	girata = quando("GIRATA al palco")
-	chiesta = quando("tela CHIESTA al produttore")
-	nuova = quando("TELA NUOVA DAL PALCO")
-	spedita = quando("TELA spedita")
-	def accoppia(a, b):
-	    """Per ogni riga di `a`, la PRIMA di `b` che viene dopo.
+	# ⚠ Gli argomenti in piu' (`--tetto 500`, `--dettaglio`) passano interi;
+	#   senza nessuno, si stampa il dettaglio — perche' un numero che non si
+	#   puo' ricalcolare a mano non e' verificabile da nessuno.
+	if [ $# -gt 1 ]; then
+		python3 "$SANO/banchi/06-b35-tempi.py" "$LAV/giro.log" "${@:2}"
+	else
+		python3 "$SANO/banchi/06-b35-tempi.py" "$LAV/giro.log" --dettaglio
+	fi
+	u=$?
+	bash "$T" carico
+	exit $u ;;
 
-	    ⛔ E non si accoppia per indice: se una delle due liste ha un elemento
-	       in piu' — e ne ha, ogni volta che il palco si muove da se' — gli
-	       indici slittano e si misura la distanza fra eventi di due giri
-	       diversi.  ⚠ Un numero plausibile e falso.
-	    """
-	    fuori, j = [], 0
-	    for t, _ in a:
-	        while j < len(b) and b[j][0] < t:
-	            j += 1
-	        if j < len(b):
-	            fuori.append(b[j][0] - t)
-	    return fuori
-	def dillo(nome, v, regola):
-	    if not v:
-	        print(f"    {nome}: NESSUN CAMPIONE ⛔ (e «nessuno» non e' «zero»)")
-	        return
-	    print(f"    {nome}: n={len(v)} mediana={statistics.median(v):.1f} ms "
-	          f"min={min(v):.1f} max={max(v):.1f}   [{regola}]")
-	print()
-	dillo("ADATTA_TELA girata → richiesta al produttore",
-	      accoppia(girata, chiesta), "rcp.c → figlio.c → cattura.c")
-	dillo("richiesta al produttore → fotogramma alla misura nuova",
-	      accoppia(chiesta, nuova), "il COMPOSITORE: [M] 41,6 ms su Mutter, 14 ago")
-	dillo("⭐ risposta del palco → TELA spedita al client",
-	      accoppia(nuova, spedita), "e' il «6 ms» del 15 agosto 2026")
-	dillo("ADATTA_TELA girata → TELA spedita (tutto il server)",
-	      accoppia(girata, spedita), "il giro intero, lato server")
-	PY
-	exit 0 ;;
+controllo-tempi)
+	# ⭐ Il controllo positivo dell'ATTREZZO, prima di credergli — e non
+	#    serve ne' server ne' sessione: gira ovunque, in mezzo secondo.
+	python3 "$SANO/banchi/06-b35-tempi.py" --controllo
+	exit $? ;;
 
 registro)
 	bash "$T" registro-tela

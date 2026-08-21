@@ -92,15 +92,109 @@ cp -a "$SANO" "$GUASTO" || { ko "⛔ la copia non e' riuscita"; exit 2; }
 chmod -R a+rX "$GUASTO"
 ok "copiato, e leggibile dall'utente del banco"
 
-giro() {   # $1 = etichetta
+giro() {   # $1 = etichetta · $2 = albero da cui prendere il client (difetto: guasto)
+	local albero=${2:-$C_GUASTO}
 	bash /media/REMOTIX/enter.sh \
-		"python3 $C_GUASTO/banchi/06-b35-tela.py --porta $PORTA \
+		"python3 $albero/banchi/06-b35-tela.py --porta $PORTA \
 		 --utente $UTENTE --parola-file $C_LAV/parola-certifica --lavoro $C_LAV \
 		 --giro dieci --coda 3 --etichetta $1 \
 		 --scena 'controllo positivo: gnome-terminal a 50 ms'" \
 		> "$LAV/certifica-$1.txt" 2>&1
 	echo $?
 }
+
+# ⛔⛔ IL CONTROLLO POSITIVO DELLO STRUMENTO CHE CONTA — rilievo della revisione
+#     avversariale, 21 agosto 2026.
+#
+#     `bash "$T" registro-tela 2>/dev/null | grep -ac ...` valeva **0** in due
+#     casi che non si somigliano per niente:
+#       · il registro c'e', e quella riga non c'e'   ⇒ una MISURA
+#       · il registro non si legge, o la marca e' scaduta, o `D` e' sbagliato
+#         ⇒ uno STRUMENTO CIECO
+#     ⚠ E lo `2>/dev/null` cancellava proprio il messaggio che li distingue.
+#     ⛔ Il guaio non e' teorico: «0» e' **esattamente** il valore che la regola
+#     di G3 (`tela_nuova_dal_palco == 0`) pretende.  Un banco cieco avrebbe
+#     scritto `ATTESO-CONFERMATO` senza aver guardato niente.
+#
+# ⇒ Qui il registro si legge UNA volta in un file, si guarda lo stato d'uscita,
+#   e si pretende che lo strumento veda **qualcosa che c'e' di sicuro**: un
+#   giro che ha parlato col server lascia SEMPRE righe della tela.  Se non ne
+#   trova nemmeno una, lo strumento e' cieco e il caso NON si misura.
+leggi_registro() {   # $1 = D (albero dei sorgenti) · $2 = file in cui scrivere
+	local d=$1 fuori=$2 u n
+	D="$d" bash "$T" registro-tela > "$fuori" 2> "$fuori.errori"
+	u=$?
+	if [ $u -ne 0 ]; then
+		ko "⛔ «registro-tela» e' uscito con $u:"
+		sed 's/^/            /' < "$fuori.errori"
+		return 1
+	fi
+	n=$(wc -l < "$fuori"); [ -n "$n" ] || n=0
+	if [ "$n" -eq 0 ]; then
+		ko "⛔ ZERO righe della tela nel registro del giro."
+		ko "   ⚠ Un giro che ha parlato col server ne lascia SEMPRE: questo"
+		ko "     non e' uno zero, e' uno strumento che non vede."
+		[ -s "$fuori.errori" ] && sed 's/^/            /' < "$fuori.errori"
+		inf "marca: $(cat "$LAV/registro.marca" 2>/dev/null) byte · registro: \
+$(stat -c %s "$LAV/registro.log" 2>/dev/null) byte"
+		return 1
+	fi
+	inf "⭐ lo strumento vede: $n righe della tela nel giro"
+	return 0
+}
+
+# ===========================================================================
+# ⭐⭐ IL GIRO SANO, PRIMA DI TUTTI I GUASTI — e senza di lui il resto non prova
+#     niente.  Rilievo della revisione avversariale, 21 agosto 2026:
+#     *«Non c'e' NESSUN giro sano, in tutto il certificatore.»*
+#
+# ⛔ `fasi/06 §5.1`: il codice **sano** produce gia' 4 giri su 18 col desktop
+#    non adattato e `NON_ORA` al fondo dei 3 s.  ⇒ La regola di G1
+#    (`non_ora >= 6 and ms_mediano > 2500 and fotogrammi < 100`) puo' tornare
+#    vera **sul sano**, sotto contesa GPU.  Senza un giro sano preso nella
+#    STESSA ora e sotto lo STESSO carico, il certificatore certificherebbe il
+#    carico credendo di certificare il guasto.
+# ===========================================================================
+SANO_AMB="$LAV/06-b35-ambiente-sano.json"
+rm -f "$SANO_AMB"
+log "IL GIRO SANO — il metro contro cui si leggono i cinque guasti"
+bash "$T" spegni > /dev/null 2>&1
+if ! D="$SANO/src" bash "$T" accendi > "$LAV/certifica-SANO-accendi.log" 2>&1; then
+	ko "⛔ il server SANO non si accende: i guasti restano SENZA METRO"
+	printf 'SANO NON-ACCENDE\n' >> "$ESITI"
+else
+	sleep 6
+	D="$SANO/src" bash "$T" registro-da | sed 's/^/        /'
+	US=$(giro "gSANO" "/srv/src/$(basename "$SANO")")
+	inf "il client sano e' uscito con $US"
+	cp -f "$LAV/registro.log" "$LAV/certifica-SANO-registro.log" 2>/dev/null
+	# ⛔ Un giro sano che non ha misurato NON e' un metro: 2 = la stretta di
+	#    mano non e' arrivata, 5 = «IL PALCO, NON IL PRODOTTO».  Usarlo come
+	#    riferimento vorrebbe dire misurare i guasti contro un guasto.
+	if [ "$US" = "2" ] || [ "$US" = "5" ]; then
+		ko "⛔ il giro SANO e' uscito con $US: NON e' un metro, e non lo uso"
+	elif leggi_registro "$SANO/src" "$LAV/certifica-SANO-tela.txt"; then
+		NSs=$(grep -ac 'NON lo spedisco' "$LAV/certifica-SANO-tela.txt"); [ -n "$NSs" ] || NSs=0
+		Ns=$(grep -ac 'TELA NUOVA DAL PALCO' "$LAV/certifica-SANO-tela.txt"); [ -n "$Ns" ] || Ns=0
+		if python3 "$SANO/banchi/06-b35-regola.py" ambiente \
+			"$LAV/06-b35-gSANO.json" "$Ns" "$NSs" > "$SANO_AMB" 2>/dev/null; then
+			ok "metro sano: $(cat "$SANO_AMB")"
+			printf 'SANO %s\n' "$(cat "$SANO_AMB")" >> "$ESITI"
+		else
+			ko "⛔ il giro sano non ha lasciato numeri leggibili"
+			rm -f "$SANO_AMB"
+		fi
+	else
+		ko "⛔ registro cieco sul giro SANO"
+		rm -f "$SANO_AMB"
+	fi
+fi
+bash "$T" spegni > /dev/null 2>&1
+if [ ! -s "$SANO_AMB" ]; then
+	ko "⚠ NESSUN METRO SANO: i cinque casi si misurano lo stesso, ma ogni"
+	ko "  «ATTESO-CONFERMATO» qui sotto va letto come «non messo a confronto»."
+	printf 'SANO MANCANTE — nessun confronto possibile\n' >> "$ESITI"
+fi
 
 for Q in $QUALI; do
 	log "GUASTO $Q"
@@ -112,11 +206,38 @@ for Q in $QUALI; do
 		ko "⛔ l'innesto non e' riuscito: il caso non si misura"; continue; }
 	python3 "$G" elenca | grep -A2 "^$Q " | sed 's/^/        /'
 
-	bash /media/REMOTIX/enter.sh --root "bash $C_GUASTO/src/costruisci.sh" \
-		> "$LAV/certifica-$Q-costruisci.log" 2>&1
-	if [ ! -x "$GUASTO/src/remotix" ]; then
-		ko "⛔ $Q non compila: vedi $LAV/certifica-$Q-costruisci.log"
+	# ⛔⛔ SI GUARDA L'ESITO DEL COSTRUTTORE, NON LA PRESENZA DEL BINARIO —
+	#     rilievo della revisione avversariale, 21 agosto 2026.
+	#     `$GUASTO` nasce da un `cp -a` fatto **una volta sola**, e si porta
+	#     dentro il binario del giro precedente: `[ -x .../remotix ]` diceva
+	#     «si'» anche quando la compilazione era fallita.  ⇒ Il giro misurava
+	#     **codice non guasto**, e per G4 — che ha l'atteso VERDE — usciva un
+	#     `ATTESO-CONFERMATO` senza che il guasto fosse mai stato dentro.
+	#     ⚠ E' l'idioma che `06-b33-certifica.sh:144-146` gia' condannava per
+	#     esteso: *«un binario di ieri risponde si' a esiste? come uno di
+	#     adesso»*.
+	# ⇒ Tre difese, e la prima da sola non basterebbe:
+	#    1. il binario si TOGLIE prima di costruire;
+	#    2. si guarda lo STATO D'USCITA di `costruisci.sh`;
+	#    3. si guarda che il binario sia PIU' NUOVO del sorgente guasto.
+	rm -f "$GUASTO/src/remotix"
+	if ! bash /media/REMOTIX/enter.sh --root "bash $C_GUASTO/src/costruisci.sh" \
+		> "$LAV/certifica-$Q-costruisci.log" 2>&1; then
+		ko "⛔ $Q non compila (costruisci.sh e' uscito rosso):"
+		tail -5 "$LAV/certifica-$Q-costruisci.log" | sed 's/^/        /'
 		printf '%s NON-COMPILA\n' "$Q" >> "$ESITI"
+		continue
+	fi
+	if [ ! -x "$GUASTO/src/remotix" ]; then
+		ko "⛔ $Q: costruisci.sh e' uscito verde ma il binario NON C'E'"
+		printf '%s NON-COMPILA (binario assente)\n' "$Q" >> "$ESITI"
+		continue
+	fi
+	if [ "$GUASTO/src/remotix" -ot "$GUASTO/src/figlio.c" ] ||
+	   [ "$GUASTO/src/remotix" -ot "$GUASTO/src/cattura.c" ]; then
+		ko "⛔ $Q: il binario e' PIU' VECCHIO del sorgente guasto ⇒ il guasto"
+		ko "   non e' dentro, e il giro misurerebbe il codice di prima"
+		printf '%s BINARIO-VECCHIO\n' "$Q" >> "$ESITI"
 		continue
 	fi
 	# ⛔ Anche il binario APPENA COSTRUITO: `costruisci.sh` gira da root, e i
@@ -133,7 +254,22 @@ for Q in $QUALI; do
 	fi
 
 	bash "$T" spegni > /dev/null 2>&1
-	D="$GUASTO/src" bash "$T" registro-da > /dev/null
+	# ⛔⛔ LA MARCA SI PRENDE **DOPO** L'ACCENSIONE, e prima era il contrario
+	#     — rilievo della revisione avversariale, 21 agosto 2026.
+	#     `registro-da` salvava `stat -c %s` del registro, e la riga dopo
+	#     `accendi` faceva `: > "$LOG"`: il registro ripartiva da zero mentre
+	#     la marca restava quella di prima.  ⇒ `registro-tela` faceva
+	#     `tail -c "+$((M+1))"` su un file piu' corto della marca e non
+	#     prendeva **niente**.
+	#     ⛔ E le due conseguenze erano proprio i due guasti del mandato:
+	#       · `tela_nuova_dal_palco == 0` — terza clausola di **G3** — era vera
+	#         GRATIS, cioe' senza guardare;
+	#       · `non_spediti > 0` di **G5** era IRRAGGIUNGIBILE, e G5 finiva in
+	#         `NON-MISURATO: il compositore non ha consegnato` — cioe' proprio
+	#         l'attribuzione sbagliata che il riquadro qui sotto dichiara di
+	#         aver curato.
+	#     ⚠ `06-b35-lancia.sh` aveva l'ordine giusto: il difetto stava **solo**
+	#       qui, ed era qui dal primo giorno del banco.
 	if ! D="$GUASTO/src" bash "$T" accendi > "$LAV/certifica-$Q-accendi.log" 2>&1; then
 		ko "⛔ il server guasto non si accende"
 		printf '%s NON-ACCENDE\n' "$Q" >> "$ESITI"
@@ -147,6 +283,8 @@ for Q in $QUALI; do
 	#     di accensione: e' `CODER.md` §2.3 — *una prova che boccia il codice
 	#     giusto costa quanto una che promuove quello sbagliato*.
 	sleep 6
+	# ⭐ Adesso, a server acceso e pronto: da qui in poi e' il giro che misuro.
+	D="$GUASTO/src" bash "$T" registro-da | sed 's/^/        /'
 	U=$(giro "g$Q")
 	if [ "$U" = "2" ]; then
 		# ⚠ Il ritentativo si DICHIARA, e uno solo: se il caso si misura solo
@@ -177,7 +315,16 @@ for Q in $QUALI; do
 	# rosso all'imputato sbagliato, al contrario.
 	# ⇒ La distinzione sta nel REGISTRO, che il client non puo' leggere (gira
 	#   nel contenitore, il registro e' di root): la fa qui il certificatore.
-	NS=$(D="$GUASTO/src" bash "$T" registro-tela 2>/dev/null 		| grep -ac 'NON lo spedisco'); [ -n "$NS" ] || NS=0
+	if ! leggi_registro "$GUASTO/src" "$LAV/certifica-$Q-tela.txt"; then
+		ko "⛔ $Q NON MISURATO: lo STRUMENTO che conta le righe del registro"
+		ko "   e' cieco (vedi sopra).  ⚠ Un «0» adesso sarebbe lo zero di"
+		ko "   `LEZIONI.md` §1.9: vuoto e giusto con la stessa faccia — e"
+		ko "   proprio «0» e' quel che la regola di G3 pretende."
+		printf '%s NON-MISURATO (strumento cieco sul registro)\n' "$Q" >> "$ESITI"
+		bash "$T" spegni > /dev/null 2>&1
+		continue
+	fi
+	NS=$(grep -ac 'NON lo spedisco' "$LAV/certifica-$Q-tela.txt"); [ -n "$NS" ] || NS=0
 	if [ "$U" = "5" ] && [ "$NS" -eq 0 ]; then
 		ko "⚠ $Q NON MISURATO: il compositore non ha consegnato (e il registro"
 		ko "   lo conferma: ZERO fotogrammi scartati per misura)"
@@ -188,47 +335,32 @@ scartati per misura: il palco CONSEGNAVA, e il caso SI MISURA"
 		# ⭐ Il verdetto lo legge il JSON del client, e le righe del registro
 		#    le conta qui: due fonti, perche' «il palco non ha obbedito» e
 		#    «non gli e' stato chiesto» si distinguono solo dal registro.
-		N=$(D="$GUASTO/src" bash "$T" registro-tela 2>/dev/null \
-			| grep -ac 'TELA NUOVA DAL PALCO')
 		# ⛔ `grep -c` stampa 0 ED ESCE 1: un `|| echo 0` in coda aggiungerebbe
 		#    un SECONDO zero, e il conto diventerebbe la stringa «0\n0».  ⚠ E'
 		#    la forma di `LEZIONI.md` §1.9 punto 1 — lo zero e il fallimento
 		#    hanno lo stesso aspetto — dentro l'attrezzo che serve a contarli.
+		# ⭐ E il file lo ha gia' prodotto `leggi_registro`, che si e' fatto
+		#    carico del controllo positivo: qui si conta e basta.
+		N=$(grep -ac 'TELA NUOVA DAL PALCO' "$LAV/certifica-$Q-tela.txt")
 		[ -n "$N" ] || N=0
-		python3 - "$LAV/06-b35-g$Q.json" "$Q" "$N" "$G" "$NS" >> "$ESITI" <<-'PY'
-		import json, sys, statistics, importlib.util, os
-		p, q, n_palco, gpath = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
-		s = importlib.util.spec_from_file_location("g", gpath)
-		m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
-		try:
-		    d = json.load(open(p))
-		except Exception as e:
-		    print(f"{q} SENZA-JSON ({e})"); raise SystemExit
-		tele = [v for v in d["controllo_dopo_sessione"] if v["tipo"] == "TELA"]
-		adattate = sum(1 for v in tele if v["esito"] == "ADATTATA")
-		non_ora = sum(1 for v in tele if v["motivo"] == "NON_ORA")
-		msl = [t["ms"] for t in d["tentativi"] if t.get("ms") is not None]
-		ms_mediano = statistics.median(msl) if msl else -1
-		# ⛔ «fotogrammi» sono quelli COMPLETI arrivati al client: uno
-		#    spedito e non completato non e' un pixel.
-		amb = {"adattate": adattate, "non_ora": non_ora,
-		       "ms_mediano": ms_mediano, "fotogrammi": d["fotogrammi_totali"],
-		       "tela_nuova_dal_palco": n_palco,
-		       "non_spediti": int(sys.argv[5])}
-		reg = m.GUASTI[q]["regola"]
-		try:
-		    visto = bool(eval(reg, {"__builtins__": {}}, amb))
-		except Exception as e:
-		    print(f"{q} REGOLA-ROTTA {e}"); raise SystemExit
-		# ⛔ «CONFERMATO» vuol dire che l'ATTESO DICHIARATO PRIMA si e'
-		#    avverato — non «e' diventato rosso»: l'atteso di G4 e' VERDE, e
-		#    chiamarlo «visto» direbbe il falso su meta' dei casi.
-		print(f"{q} {'ATTESO-CONFERMATO' if visto else 'ATTESO-SMENTITO'} "
-		      f"adattate={adattate} non_ora={non_ora} "
-		      f"ms_mediano={ms_mediano} fotogrammi={d['fotogrammi_totali']} "
-		      f"tela_nuova_dal_palco={n_palco} non_spediti={sys.argv[5]}  "
-		      f"[regola: {reg}]")
-		PY
+		# ⭐ I sei numeri e il giudizio stanno in `06-b35-regola.py`, separati
+		#    apposta: cosi' la regola si applica DUE volte — al guasto e al
+		#    giro SANO — e un caso che non distingue lo dice.
+		AMB="$LAV/06-b35-ambiente-$Q.json"
+		if ! python3 "$SANO/banchi/06-b35-regola.py" ambiente \
+			"$LAV/06-b35-g$Q.json" "$N" "$NS" > "$AMB" 2> "$AMB.errori"; then
+			ko "⛔ $Q SENZA-JSON: $(head -3 "$AMB.errori" | tr '\n' ' ')"
+			printf '%s SENZA-JSON\n' "$Q" >> "$ESITI"
+			bash "$T" spegni > /dev/null 2>&1
+			continue
+		fi
+		if [ -s "$SANO_AMB" ]; then
+			python3 "$SANO/banchi/06-b35-regola.py" giudica \
+				"$AMB" "$Q" "$G" "$SANO_AMB" >> "$ESITI"
+		else
+			python3 "$SANO/banchi/06-b35-regola.py" giudica \
+				"$AMB" "$Q" "$G" >> "$ESITI"
+		fi
 		tail -1 "$ESITI" | sed 's/^/        /'
 	fi
 	bash "$T" spegni > /dev/null 2>&1
@@ -236,9 +368,25 @@ done
 
 log "GLI ESITI"
 cat "$ESITI" | sed 's/^/    /'
-V=$(grep -c ' ATTESO-CONFERMATO' "$ESITI" 2>/dev/null); [ -n "$V" ] || V=0
-N=$(grep -c ' ATTESO-SMENTITO' "$ESITI" 2>/dev/null); [ -n "$N" ] || N=0
-printf '\n    attesi CONFERMATI: %s · SMENTITI: %s (su %s guasti)\n' "$V" "$N" "$(wc -l < "$ESITI")"
+V=$(grep -c ' ATTESO-CONFERMATO' "$ESITI"); [ -n "$V" ] || V=0
+N=$(grep -c ' ATTESO-SMENTITO' "$ESITI"); [ -n "$N" ] || N=0
+# ⛔ Il terzo conto, che prima non esisteva: i casi in cui la regola torna vera
+#    ANCHE sul codice sano.  ⚠ Non sono ne' verdi ne' rossi: NON DISTINGUONO,
+#    e sommarli ai confermati sarebbe la bugia peggiore di questo banco.
+ND=$(grep -c ' NON-DISCRIMINANTE' "$ESITI"); [ -n "$ND" ] || ND=0
+# ⚠ E il denominatore e' il numero di GUASTI chiesti, non le righe del file:
+#   le righe portano dentro anche il metro sano e le diagnosi.
+QN=0; for _q in $QUALI; do QN=$((QN + 1)); done
+printf '\n    attesi CONFERMATI: %s · SMENTITI: %s · ⛔ NON DISCRIMINANTI: %s   (su %s guasti chiesti)\n' \
+	"$V" "$N" "$ND" "$QN"
+if [ "$ND" -gt 0 ]; then
+	ko "⛔ $ND caso/i torna vero anche sul codice SANO misurato nella stessa"
+	ko "   ora: quei casi NON certificano niente, e vanno letti come tali."
+fi
+if [ ! -s "$SANO_AMB" ]; then
+	ko "⛔ E non c'e' stato metro sano: nessuno dei «CONFERMATI» qui sopra e'"
+	ko "   stato messo a confronto con il codice sano."
+fi
 # ⚠ E «non visto» non e' sempre un difetto del banco: G4 ha l'atteso VERDE, e
 #   la sua riga qui sopra e' la dichiarazione di quel che questo banco NON copre.
 inf "⚠ G4 ha l'atteso VERDE per costruzione: leggi il suo «atteso» in 06-b35-guasti.py"

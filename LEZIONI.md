@@ -894,6 +894,35 @@ l'uscita **vede il numero giusto stampato** e conclude che è stato controllato.
 d'uscita che valga qualcosa non è un banco.** Tre dei sei uscivano `0` in ogni caso — anche a casi
 tutti rossi.
 
+### 1.21 ⛔⛔⭐ **Uno strumento di diagnosi che si rompe sotto carico mente proprio quando serve**
+
+*21 agosto 2026, `fasi/06-la-tela-e-la-vista.md` §5.6.*
+
+`registro.c` componeva ogni riga con **tre chiamate** su uno `stderr` non bufferizzato. Padre e
+figlio appendono allo stesso file ⇒ sotto concorrenza le scritture si intrecciano e nascono righe
+**senza marca temporale**. `[M]` con sei processi che scrivono insieme: **2 464 righe orfane su
+4 800**, e un conto che cercava una famiglia di righe ne perdeva **il 42 %**. Con una sola `write(2)`
+per riga: **zero**.
+
+⛔ **Perché è una lezione e non un difetto qualunque**, e sono tre cose:
+
+1. **il registro è il nostro strumento di diagnosi principale** (§2.7: *«non c'è miglior strumento di
+   diagnosi che monitorare una sessione vera, byte per byte»*) — e si rompeva **sotto carico**, cioè
+   nella sola scena in cui lo si interroga davvero. A macchina ferma non si riproduce;
+2. **il sintomo era lontanissimo dalla causa**: un attrezzo di banco che moriva con `ValueError`. Si
+   è cercato il difetto in Python per un giro intero. ⚠ Quando un attrezzo che legge dati muore su
+   dati veri, **il primo imputato sono i dati**, non il lettore;
+3. ⛔ **e il caso che non fa morire niente è il peggiore**: un conto che perde il 3,8 % delle righe —
+   la quota misurata su un registro vero — **resta plausibile**. Nessuno lo guarda due volte.
+
+⭐ **La regola pratica**: un canale di diagnosi scritto da **più processi** vuole una scrittura
+**atomica** — una `write(2)` sola, sotto `PIPE_BUF` — e chi supera il buffer va **troncato con un
+segno**: *una riga tagliata si vede, una riga intrecciata no*.
+
+⚠ E il corollario per chi legge: **ogni attrezzo che conta righe di registro deve dichiarare quante
+ne ha scartate**. Un lettore che salta in silenzio le righe che non capisce è la stessa famiglia di
+[[1.20]] — un numero che nessuno confronta.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

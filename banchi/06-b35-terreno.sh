@@ -356,6 +356,14 @@ accendi)
 	# ⛔ Il registro si azzera a ogni accensione: una misura di crescita su un
 	#    file che porta dentro la corsa di ieri non e' una misura.
 	: > "$LOG"
+	# ⛔⛔ E LA MARCA VA AZZERATA CON LUI — difetto trovato il 21 agosto 2026,
+	#     con la prova in mano: `06-i/registro.marca` valeva **825 758** su un
+	#     `registro.log` da **45 373 byte**.  ⇒ Ogni `tail -c "+$((M+1))"` dopo
+	#     un riavvio non prendeva NIENTE, e `registro-tela`, `tempi` e
+	#     `ricambi_dalla_marca` restituivano **zero** su un giro vero.
+	#     ⚠ Uno zero che nessuno metteva in dubbio, perche' e' il numero che
+	#     rassicura: e' `fasi/06 §5.2` un'altra volta.
+	echo 0 > "$MARCA"
 	export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 	ldd "$D/remotix" | grep -q 'not found' && {
 		ko "⛔ manca una libreria:"; ldd "$D/remotix" | grep 'not found' | sed 's/^/        /'
@@ -389,14 +397,41 @@ parlantina-c-e)
 	#     scrivere; se non c'e', tutto quel che segue e' un'assenza che non
 	#     dimostra niente (`CODER.md` §3.10).
 	log "⛔ Il figlio parla?  (senza --parlantina i rami TACCIONO in silenzio)"
-	n=$(grep -c 'dettaglio\|DETTAGLIO' "$LOG" 2>/dev/null || echo 0)
-	m=$(grep -cE 'senza palco e QUALCUNO GUARDA|ridimensionamento a .* e. la misura che il flusso HA|input [0-9]+ \(azione' "$LOG" 2>/dev/null || echo 0)
+	# ⛔⛔ DIFETTO DEL BANCO, TROVATO IL 21 AGOSTO 2026 E RIPRODOTTO:
+	#     `m=$(grep -c ... || echo 0)` non vale zero, vale **«0\n0»**.
+	#     `grep -c` stampa gia' «0» E ESCE CON 1 quando non trova niente ⇒ il
+	#     `|| echo 0` ne aggiunge un secondo.  Poi `[ "$m" -gt 0 ]` moriva con
+	#     *«integer expression expected»* — ⚠ e moriva **solo quando il conto
+	#     era zero**, cioe' nell'unico caso per cui questa guardia esiste.
+	#     ⛔ E `PARLANTINA_RIGHE` usciva su DUE righe: chi lo leggesse a
+	#     macchina leggerebbe un numero che non c'e'.
+	#     ⚠ `n` era per giunta calcolato e mai usato: tolto.
+	#
+	# ⛔ E lo zero si distingue dal fallimento (`LEZIONI.md` §1.9): un registro
+	#    che non si legge NON e' «zero righe di dettaglio».
+	if [ ! -r "$LOG" ]; then
+		ko "⛔ il registro «$LOG» non si legge: non e' uno ZERO, e' un GUASTO"
+		exit 3
+	fi
+	# `-a`: il registro puo' portarsi dentro byte non testuali, e senza questo
+	# `grep` lo dichiarerebbe binario invece di contare.
+	m=$(grep -acE 'senza palco e QUALCUNO GUARDA|ridimensionamento a .* e. la misura che il flusso HA|input [0-9]+ \(azione' "$LOG")
+	u=$?
+	case $u in
+	0|1) : ;;
+	*) ko "⛔ grep e' uscito con $u: il conto NON e' una misura"; exit 3 ;;
+	esac
+	[ -n "$m" ] || m=0
 	printf 'PARLANTINA_RIGHE %s\n' "$m"
 	if [ "$m" -gt 0 ]; then
 		ok "⭐ trovate $m righe di registro_dettaglio(): il figlio PARLA"
 	else
 		ko "⛔ ZERO righe di dettaglio: o il ramo non scatta, o il figlio TACE"
 		ko "   ⚠ e i due casi hanno la stessa faccia — non si va avanti"
+		# ⛔ E si esce ROSSO: un verdetto rosso che esce 0 e' una trappola —
+		#    chi incatena i comandi tira dritto sopra la riga che dice di
+		#    fermarsi.
+		exit 4
 	fi
 	exit 0 ;;
 
@@ -412,7 +447,17 @@ registro-tela)
 	# ⭐⭐ LA MISURA VERA DI QUESTO BANCO sta qui: le righe che la catena scrive.
 	#    ⚠ Si stampano TUTTE, in ordine, con l'ora: il giudizio lo da' il
 	#    programma che le legge, non questo `grep`.
-	M=$(cat "$MARCA" 2>/dev/null || echo 0)
+	M=$(cat "$MARCA" 2>/dev/null); [ -n "$M" ] || M=0
+	# ⛔ LA MARCA SCADUTA: se il registro e' stato azzerato da un `accendi` e la
+	#    marca no, `tail -c` non prende niente e il banco conta ZERO su un giro
+	#    che c'e' stato.  ⚠ Si dichiara, non si tace.
+	B=$(stat -c %s "$LOG" 2>/dev/null); [ -n "$B" ] || B=0
+	if [ "$M" -gt "$B" ]; then
+		ko "⛔ MARCA SCADUTA: marca $M byte, registro $B byte."
+		ko "   ⚠ Il registro e' stato azzerato dopo la marca: quel che segue"
+		ko "     sarebbe uno ZERO PER COSTRUZIONE.  Rifai «registro-da»."
+		exit 3
+	fi
 	tail -c "+$((M + 1))" "$LOG" 2>/dev/null | grep -aE \
 		'TELA|tela|palco|MISURA DIVERGENTE|fotogramma SCARTATO|geometria|ridimensionament|CONCESSO DIVERSO|disaccordo|NON lo spedisco'
 	exit 0 ;;
@@ -426,10 +471,26 @@ carico)
 	#   stessa macchina e cinque codificatori sullo stesso iGPU SPOSTANO i
 	#   millisecondi.  ⛔ Un numero preso sotto carico e non dichiarato tale e'
 	#   un numero falso.
+	# ⛔ E lo stesso difetto di `parlantina-c-e`: `pgrep -c` stampa «0» e ESCE
+	#    CON 1, quindi `|| echo 0` faceva uscire **due righe** — `REMOTIX_VIVI
+	#    0` seguito da un `0` orfano.  Chi legge a macchina prende il numero
+	#    sbagliato o si perde la riga dopo.
+	conta_processi() {
+		local c
+		c=$(pgrep -c -x "$1")
+		case $? in 0|1) : ;; *) printf '??'; return ;; esac
+		printf '%s' "${c:-0}"
+	}
 	printf 'CARICO %s\n' "$(uptime | sed 's/.*load average: //')"
 	printf 'ORA %s\n' "$(date +%Y-%m-%dT%H:%M:%S.%3N)"
-	printf 'REMOTIX_VIVI %s\n' "$(pgrep -c -x remotix 2>/dev/null || echo 0)"
-	printf 'GNOME_SHELL_VIVI %s\n' "$(pgrep -c -x gnome-shell 2>/dev/null || echo 0)"
+	printf 'REMOTIX_VIVI %s\n' "$(conta_processi remotix)"
+	printf 'GNOME_SHELL_VIVI %s\n' "$(conta_processi gnome-shell)"
+	# ⚠ E il ferro, accanto a ogni numero: e' una **Intel UHD 730 integrata**,
+	#   non una scheda potente (`LEZIONI.md` §1.1 — «quale scheda» accanto al
+	#   millisecondo).  Qui si conta chi tiene APERTO il nodo di render: e' il
+	#   denominatore della contesa sulla GPU.
+	printf 'GPU_RENDERD128_APERTI %s\n' \
+		"$(ls -l /proc/*/fd 2>/dev/null | grep -c 'renderD128')"
 	exit 0 ;;
 
 figlio)

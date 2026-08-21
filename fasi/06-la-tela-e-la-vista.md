@@ -456,7 +456,7 @@ e cinque codificatori** sullo stesso iGPU.*
 | ⭐ **A · il trascinamento del bordo** | **0 rotti su 18** | ⭐ **0 su 18** — la 1ª richiesta `NON_ORA` **subito**, la 2ª `ADATTATA`, tela finale = quella della **seconda** in **31,7 ms** di mediana (23,8-45,3) · **0** fuori misura · **0** scartati · ⛔ **nessuna attesa dei 3 s**. E **0 su 10** anche a 5 ms di distanza, e **0 su 10** sotto carico CPU **10,9** |
 | ⭐ **B · il clic tenuto giù** | il rilascio arriva, e i clic del **secondo giro** arrivano tutti | ⭐ registro: *«RILASCIATI 2 fra tasti e pulsanti PRIMA di ridimensionare»* · e nel secondo giro, **senza riaccendere il server**, il testimone vede **tutti e nove gli atti, clic compreso** |
 | ⭐ **C · la tastiera che comanda** | **`1a`** | ⭐ **`1a`**, con la catena intera nel registro: `§5-bis.7 «de» chiesta` → `tastiera TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
-| **D · i millisecondi, a macchina ferma** | riprendere i cinque numeri | ridimensionamento a caldo **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
+| ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | ridimensionamento a caldo **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
 
 ⭐ **E il controllo positivo ha reso dove contava**: spenta la riga di `figlio.c:3964` e ricompilato,
 il caso del clic torna **DIFETTO_VIVO** — nel secondo giro **non arriva più nessun bottone**, solo i
@@ -883,6 +883,83 @@ invece che con `ko` (`b34`), un `case` di appartenenza invece che di uguaglianza
 
 ⇒ **La caccia della prossima volta non è alle ancore: è a ogni numero che un banco stampa e non
 confronta.** 📖 `LEZIONI.md` §1.20.
+
+### 5.6 · ⛔⭐ 21 agosto 2026 — **il registro mentiva sotto carico**, e ci sono voluti un attrezzo morto e un giro di banco per scoprirlo
+
+*Nato dalla riparazione dei due attrezzi di `06-b35` chiesta da §7.1. ⭐ Il sintomo dichiarato era
+«`06-b35-lancia.sh tempi` muore con `ValueError`». La causa non era nell'attrezzo.*
+
+#### ⛔ Il difetto di PRODOTTO: tre `write()` per riga, e padre e figlio scrivono sullo stesso file
+
+`src/registro.c` componeva ogni riga con **tre chiamate distinte** su uno `stderr` non bufferizzato
+— intestazione, corpo, a-capo. ⚠ Il padre e il figlio appendono allo **stesso** registro: quando le
+scritture si accavallano, un corpo finisce dopo l'a-capo altrui e nasce **una riga senza marca
+temporale**.
+
+`[M]` su un registro vero da 3,0 MB (28 035 righe): **23 righe orfane**, di cui **3 su 80** delle
+«tela CHIESTA al produttore» — il **3,8 %** di una famiglia di righe su cui un attrezzo contava.
+
+⭐ **E il controllo positivo della cura, `[M]` il 21 agosto**: sei processi che appendono allo stesso
+registro, 800 righe ciascuno.
+
+| | righe | orfane | «tela CHIESTA» trovate su 4 800 |
+|---|---|---|---|
+| ⛔ prima | 4 800 | **2 464** | **2 789** — cioè **il 42 % del conto era perduto** |
+| ⭐ dopo | 4 800 | **0** | **4 800** |
+
+⇒ **La cura**: la riga si compone in un buffer e si scrive con **una sola `write(2)`**. Sotto
+`PIPE_BUF` (4096 byte) una `write` su un file in append è atomica rispetto alle altre; chi supera il
+buffer viene **troncato con un segno**, perché *una riga tagliata si vede, una riga intrecciata no*.
+⭐ In più `write(2)` è async-signal-safe, che `fprintf` non è, e il `fflush` non serve più.
+
+⛔⛔ **E la lezione non è sul registro**: è che **lo strumento di diagnosi principale di questo
+progetto si rompeva proprio sotto carico** — cioè esattamente nella scena in cui lo si interroga.
+📖 `LEZIONI.md` §1.21.
+
+#### ⛔ Un ottavo difetto del banco, e questo faceva peggio che rompere
+
+`accendi` fa `: > "$LOG"` e **non azzera la marca** da cui gli attrezzi contano. `[M]` trovata una
+marca da **825 758 byte** su un registro da **45 373**. ⚠ Non dava «zero sistematico» — dava **una
+finestra arbitraria**, che è peggio: un conto plausibile e falso. L'unico esito superstite dichiara
+`tela_nuova_dal_palco = 258` per un giro che cambia tela **9** volte.
+
+#### ⛔ I numeri **D** di §4.8 non sono ricalcolabili — la finestra è perduta
+
+⚠ Va scritto invece di essere aggirato: **4 ms · 39,5 · 44,5 · n=10** vennero da una finestra di
+registro che **è stata cancellata**, e nessun file superstite la contiene. ⇒ Quel che si ricava oggi
+dai registri che restano, **a macchina ferma**, con gli attrezzi riparati:
+
+| | `[M]` 21 agosto, dagli attrezzi riparati |
+|---|---|
+| ridimensionamento a caldo | **4,0 ms** (0-18, n=30) |
+| Mutter | **35,0 ms** (29-45, n=20) |
+| giro intero lato server, `ADATTATA` | **43,5 ms** (38-57, n=20) — contro i 44,5 scritti: **finestra vicina, non la stessa** |
+| `NON_ORA` | **6,0 ms** (5-7, n=10) — ⛔ e prima stava sotto la stessa etichetta dell'`ADATTATA`, che è la forma E2 |
+
+⭐ **E un numero del documento torna esatto**: §4.2, *«4 ms di mediana su 9 cambi (3-13)»*, esce
+identico dagli attrezzi nuovi sullo stesso registro. ⇒ Non è tutto da rifare: è **quel** riquadro.
+
+#### ⭐⭐ E un indizio NUOVO, a favore della tesi della contesa
+
+`[M]` sul registro del **16 agosto**, con cinque banchi accesi: `NON_ORA` ha mediana **22 ms** e
+**due casi a 3 000 ms** — la scadenza intera di §7.1. Sul **17**, a macchina ferma: **6 ms**, e
+nessuno arriva al fondo. ⇒ ⭐ **La contesa muove davvero questa scena**, e il *«il verde vale sotto
+carico CPU, non sotto contesa GPU»* di §7.1 ha adesso un secondo appoggio prima ancora che la scena
+di contesa venga lanciata.
+
+#### ⭐ E come sono stati certificati gli attrezzi riparati
+
+Il calcolo a mano **riscritto in `awk`** — altro linguaggio, altro algoritmo — e confrontato
+**campione per campione** su tre registri veri: **235 campioni, tutte e cinque le misure coincidono
+esattamente**. ⚠ Una divergenza c'è stata, ed era **l'`awk` a sbagliare**: consumava una risposta
+oltre il tetto. ⭐ Il controllo positivo di `06-b35-tempi.py` verifica anche che **l'attrezzo
+vecchio, sullo stesso ingresso, muoia o sbagli** — altrimenti non controllerebbe niente.
+
+⏳ **E il «5 guasti su 5» di §2 resta sospeso**: i cinque rilievi della revisione sul certificatore
+sono chiusi (il giro sano come metro, la marca dopo l'accensione, lo stato d'uscita di
+`costruisci.sh`, lo strumento che dichiara «cieco» invece di dire zero), ⛔ ma **il giro non è ancora
+stato rifatto**. La scena di contesa (`06-b39-*`) è **pronta e non lanciata**: aspetta la finestra,
+perché sposterebbe i millisecondi di tutti gli altri banchi accesi.
 
 ## 6 · Le decisioni prodotte
 
