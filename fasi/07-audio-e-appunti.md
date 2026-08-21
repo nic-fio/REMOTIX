@@ -1091,6 +1091,7 @@ un ritardo che si accumula.
 |---|---|
 | `07-b51` la tela e il clic, **due motori** | ⭐ **4 controlli su 4 per motore**, e il clic arriva al pixel esatto (scarto 0,0) |
 | `07-b54` gli appunti **nei due versi** | ⭐ sessione→client, client→sessione e **la tastiera dopo l'incolla**: verdi su tutt'e due i motori |
+| `07-b56` l'incolla **col mouse** | ⭐ **3 su 3 per motore**, e ⭐ **la clipboard del desktop sopravvive al collegamento**. ⚠ Firefox ha chiesto il bottoncino «Incolla» **3 volte su 4**: è il prezzo di §9.5, e questo è il numero |
 | `07-b53` la corsa di §7.4 | ⚠ **«la corsa non si è prodotta, questo giro NON prova niente»** — il banco rifiuta di darsi verde, ed è il comportamento giusto |
 
 ⇒ ⭐ **Quel che l'utente aveva giudicato il 17 agosto regge** a tutte le modifiche della notte: la
