@@ -56,6 +56,18 @@ a.add_argument("--utente", default="prova",
                     "si passa un utente proprio, come per la porta e il socket.")
 a.add_argument("--parola", default="prova2026")
 a.add_argument("--solo", default="", choices=["", "chrome", "firefox"])
+# ⛔⛔ E L'UTENTE DELLA SESSIONE ATTRAVERSA ANCHE IL LATO SESSIONE — 21 ago 2026.
+#
+#     Questo banco era parametrico da un lato (l'accesso dal browser) e FISSO
+#     su «prova» dall'altro (`id -u prova`, `runuser -u prova`).  ⚠ Il sintomo
+#     non era un errore del banco: era **«il desktop remoto ha "Failed to
+#     connect to a Wayland server" invece del testo»**, cioe' un VERDETTO
+#     ROSSO CONTRO IL PRODOTTO, per un difetto del banco.
+#     ⇒ `[M]` 21 agosto: girato con `--utente provai6`, i due versi davano
+#       rossi su tutt'e due i motori, e `XDG_RUNTIME_DIR` puntava a
+#       `/run/user/1001`, cioe' all'utente dell'UTENTE.
+#     ⭐ Un banco parametrico a meta' e' peggio di uno fisso: quello fisso
+#       almeno rifiuta di partire.
 o = a.parse_args()
 URL = "https://%s:%d/" % (MACCHINA, o.porta)
 
@@ -141,7 +153,7 @@ def copia_due_volte_nella_sessione(uno, due):
       smette di misurare quel che crede."""
     copione = (
         "#!/bin/sh\n"
-        "U=$(id -u prova)\n"
+        "U=$(id -u " + o.utente + ")\n"
         "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
         # ⛔ `wl-copy` RESTA VIVO per servire la selezione: e' il suo mestiere.
         #    ⚠ Lasciandolo attaccato al canale di `ssh`, `ssh` aspetta che
@@ -174,7 +186,7 @@ def copia_due_volte_nella_sessione(uno, due):
     #    consumata dal primo, e il secondo la chiedeva di nuovo leggendo
     #    /dev/null — «sudo: a password is required» dentro un banco che
     #    sembrava misurare.
-    c = ("printf 'nicfio\\n' | sudo -S -p '' runuser -u prova -- "
+    c = ("printf 'nicfio\\n' | sudo -S -p '' runuser -u " + o.utente + " -- "
          "/tmp/b53-copia.sh %s %s > /tmp/b53.log 2>&1; cat /tmp/b53.log"
          % (json.dumps(uno), json.dumps(due)))
     r = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
@@ -192,8 +204,8 @@ def incolla_nella_sessione():
       «prova» — e il ritorno e' il testo che il desktop remoto ha ricevuto,
       cioe' il controllo che la catena abbia funzionato e non solo retto."""
     c = ("printf 'nicfio\\n' | sudo -S -p '' bash -c '"
-         "U=$(id -u prova); "
-         "sudo -u prova XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0 "
+         "U=$(id -u " + o.utente + "); "
+         "sudo -u " + o.utente + " XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0 "
          "timeout 8 wl-paste -n 2>&1'")
     r = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
                        capture_output=True, text=True)

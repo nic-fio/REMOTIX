@@ -73,6 +73,18 @@ a.add_argument("--schermo", default="")
 #   annidato, es. `cage`): e' l'ambiente dell'utente, e la clipboard di Wayland
 #   non si comporta come quella di X11.
 a.add_argument("--wayland", default="")
+# ⛔⛔ E L'UTENTE DELLA SESSIONE ATTRAVERSA ANCHE IL LATO SESSIONE — 21 ago 2026.
+#
+#     Questo banco era parametrico da un lato (l'accesso dal browser) e FISSO
+#     su «prova» dall'altro (`id -u prova`, `runuser -u prova`).  ⚠ Il sintomo
+#     non era un errore del banco: era **«il desktop remoto ha "Failed to
+#     connect to a Wayland server" invece del testo»**, cioe' un VERDETTO
+#     ROSSO CONTRO IL PRODOTTO, per un difetto del banco.
+#     ⇒ `[M]` 21 agosto: girato con `--utente provai6`, i due versi davano
+#       rossi su tutt'e due i motori, e `XDG_RUNTIME_DIR` puntava a
+#       `/run/user/1001`, cioe' all'utente dell'UTENTE.
+#     ⭐ Un banco parametrico a meta' e' peggio di uno fisso: quello fisso
+#       almeno rifiuta di partire.
 o = a.parse_args()
 URL = "https://%s:%d/" % (MACCHINA, o.porta)
 
@@ -136,7 +148,7 @@ def nella_sessione(copione, *argomenti, riprove=1):
     subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
                     "cat > /tmp/b54.sh && chmod +x /tmp/b54.sh"],
                    input=copione, text=True, capture_output=True)
-    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u prova -- "
+    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u " + o.utente + " -- "
          "/tmp/b54.sh " + " ".join(json.dumps(x) for x in argomenti)
          # ⛔ NIENTE `< /dev/null` qui: quello stdin E' la parola d'ordine di
          #    `sudo -S`, e togliendolo il banco riceveva «sudo: a password is
@@ -154,12 +166,12 @@ def nella_sessione(copione, *argomenti, riprove=1):
 
 
 COPIA = ("#!/bin/sh\n"
-         "U=$(id -u prova)\n"
+         "U=$(id -u " + o.utente + ")\n"
          "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
          # ⛔ I `wl-copy` dei giri precedenti restano vivi a servire la vecchia
          #    selezione: si tolgono di mezzo prima, o il banco misura la
          #    clipboard di due minuti fa.
-         "pkill -u prova -x wl-copy 2>/dev/null\n"
+         "pkill -u " + o.utente + " -x wl-copy 2>/dev/null\n"
          "sleep 0.2\n"
          # ⚠ `wl-copy` si biforca per servire la selezione: le uscite si
          #   chiudono, ma non lo si manda in fondo con `&` o muore prima di
@@ -168,7 +180,7 @@ COPIA = ("#!/bin/sh\n"
          "echo copiato\n")
 
 INCOLLA = ("#!/bin/sh\n"
-           "U=$(id -u prova)\n"
+           "U=$(id -u " + o.utente + ")\n"
            "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
            "timeout 8 wl-paste -n 2>&1\n")
 

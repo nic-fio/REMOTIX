@@ -77,6 +77,18 @@ a.add_argument("--schermo", default=":96")
 a.add_argument("--giri", type=int, default=2,
                help="quante incollate col mouse di seguito: il secondo giro "
                     "dice se il bottoncino di Firefox torna OGNI VOLTA")
+# ⛔⛔ E L'UTENTE DELLA SESSIONE ATTRAVERSA ANCHE IL LATO SESSIONE — 21 ago 2026.
+#
+#     Questo banco era parametrico da un lato (l'accesso dal browser) e FISSO
+#     su «prova» dall'altro (`id -u prova`, `runuser -u prova`).  ⚠ Il sintomo
+#     non era un errore del banco: era **«il desktop remoto ha "Failed to
+#     connect to a Wayland server" invece del testo»**, cioe' un VERDETTO
+#     ROSSO CONTRO IL PRODOTTO, per un difetto del banco.
+#     ⇒ `[M]` 21 agosto: girato con `--utente provai6`, i due versi davano
+#       rossi su tutt'e due i motori, e `XDG_RUNTIME_DIR` puntava a
+#       `/run/user/1001`, cioe' all'utente dell'UTENTE.
+#     ⭐ Un banco parametrico a meta' e' peggio di uno fisso: quello fisso
+#       almeno rifiuta di partire.
 o = a.parse_args()
 URL = "https://%s:%d/" % (MACCHINA, o.porta)
 
@@ -131,7 +143,7 @@ def righe_nuove_di(prima, dopo):
 #   `wl-paste` parte un secondo e mezzo dopo.  Cosi' l'ordine dei fatti e'
 #   quello vero, e la misura riguarda il prodotto.
 INCOLLA = ("#!/bin/sh\n"
-           "U=$(id -u prova)\n"
+           "U=$(id -u " + o.utente + ")\n"
            "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
            "echo PRONTO\n"
            "sleep 1.5\n"
@@ -146,9 +158,9 @@ INCOLLA = ("#!/bin/sh\n"
 TESTO_SESSIONE = "TESTO-CHE-ERA-GIA-NEL-DESKTOP-%d"
 
 COPIA_SESSIONE = ("#!/bin/sh\n"
-                  "U=$(id -u prova)\n"
+                  "U=$(id -u " + o.utente + ")\n"
                   "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
-                  "pkill -u prova -x wl-copy 2>/dev/null\n"
+                  "pkill -u " + o.utente + " -x wl-copy 2>/dev/null\n"
                   "sleep 0.2\n"
                   # ⛔⛔ `setsid`, E NON E' UN VEZZO: `wl-copy` resta vivo per
                   #     SERVIRE la selezione, e il `timeout 12` che avvolge
@@ -186,7 +198,7 @@ def _copia_una_volta(testo):
     subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
                     "cat > /tmp/b56c.sh && chmod +x /tmp/b56c.sh"],
                    input=COPIA_SESSIONE, text=True, capture_output=True)
-    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u prova -- "
+    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u " + o.utente + " -- "
          "/tmp/b56c.sh " + json.dumps(testo)
          + " > /tmp/b56c.log 2>&1; cat /tmp/b56c.log")
     return ssh(c, timeout=30).strip()
@@ -202,7 +214,7 @@ class Incollatore:
                        input=INCOLLA, text=True, capture_output=True)
 
     def parti(self):
-        c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 20 runuser -u prova "
+        c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 20 runuser -u " + o.utente + " "
              "-- /tmp/b56.sh")
         self.p = subprocess.Popen(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
                                   stdout=subprocess.PIPE,
