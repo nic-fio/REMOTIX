@@ -235,8 +235,10 @@ _spec.loader.exec_module(f24)
 #       cadrebbe nel ramo «non comincia con la magia», che manda a cercare un
 #       file corrotto — e il file non e' corrotto, e' di **un'altra versione**.
 #       Sono due cure diverse: rigenerarlo, o andare a vedere chi lo ha rotto.
-MAGIA = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = b"RCPREG\x00\x01"
+MAGIA = b"RCPREG\x00\x03"
+MAGIA_V1 = b"RCPREG\x00\x01"
+MAGIA_V2 = b"RCPREG\x00\x02"
+MAGIA_VECCHIA = MAGIA_V1     # ⚠ il nome vecchio resta: lo usano le prove qui sotto
 RIEMPIMENTO = 0x2A          # §11.1
 CLIENT, SERVER = 1, 2
 CANALI = {0x00: "controllo", 0x01: "input", 0x02: "appunti",
@@ -248,10 +250,15 @@ CONTROLLO = 0x00
 CONTINUA, FIN, RESET = 0, 1, 2
 FINE = {CONTINUA: "continua", FIN: "FIN", RESET: "RESET_STREAM"}
 
-# Il blocco di §11.1: verso, canale, fine, stream, lunghezza, quanti_oscurati.
-# ⛔ Diciassette byte, non sedici: e' `fine` che li ha cambiati, ed e' la
-#    ragione per cui la magia e' passata a `0x00 0x02`.
-BLOCCO = "!BBBQIH"
+# Il blocco di §11.1: verso, canale, fine, istante_ms, stream, lunghezza,
+# quanti_oscurati.
+# ⛔ Ventuno byte.  Sedici erano quelli del 10 agosto; `fine` li ha portati a
+#    diciassette (magia `0x00 0x02`); ⭐ `istante_ms` li porta a ventuno il **21
+#    agosto 2026** (magia `0x00 0x03`), e l'intestazione guadagna `orologio`.
+# ⛔ Ogni volta la magia cambia perche' cambia la MISURA: un lettore che non lo
+#    sapesse leggerebbe ogni blocco scivolato, e darebbe un giudizio su byte che
+#    nessuno ha scritto.
+BLOCCO = "!BBBIQIH"
 BLOCCO_BYTE = struct.calcsize(BLOCCO)
 
 SESSIONE = 0x0007           # §7.1, dal server
@@ -292,24 +299,51 @@ def leggi_blocchi(d):
     #    scivolerebbe di uno.  ⛔ Ne uscirebbe un GIUDIZIO — un rosso su un byte
     #    che nessuno ha scritto, o un verde peggiore — invece di «questo file e'
     #    di un'altra versione».
-    if len(d) >= 8 and d[:8] == MAGIA_VECCHIA:
+    if len(d) >= 8 and d[:8] == MAGIA_V1:
         raise Malformata(
             "e' una registrazione nel formato VECCHIO, «RCPREG 0x00 0x01»: il "
-            "blocco non porta il campo `fine` e misura 16 byte invece di 17.  "
-            "⛔ Non si legge di traverso — §11.1, 12 agosto 2026 — e non e' un "
-            "file rotto: si RIGENERA con il registratore di oggi")
+            "blocco non porta ne' `fine` ne' `istante_ms`, e misura 16 byte "
+            "invece di 21.  ⛔ Non si legge di traverso — §11.1, 12 agosto "
+            "2026 — e non e' un file rotto: si RIGENERA con il registratore di "
+            "oggi")
+    if len(d) >= 8 and d[:8] == MAGIA_V2:
+        raise Malformata(
+            "e' una registrazione nel formato del 12 agosto, «RCPREG 0x00 "
+            "0x02»: il blocco non porta `istante_ms` e misura 17 byte invece "
+            "di 21, e l'intestazione non dichiara di CHI sia l'orologio.  ⛔ "
+            "Letto di traverso, ogni blocco scivolerebbe di quattro byte.  Si "
+            "RIGENERA con `02-filo-cliente.py`")
     if len(d) < 16 or d[:8] != MAGIA:
         raise Malformata("non comincia con la magia di RCP.md §11.1")
-    quanti, riservato = struct.unpack("!II", d[8:16])
-    if riservato != 0:
-        raise Malformata(f"il campo riservato vale {riservato}, DEVE essere 0")
+    quanti, orologio, r1, r2, r3 = struct.unpack("!IBBBB", d[8:16])
+    if (r1, r2, r3) != (0, 0, 0):
+        raise Malformata(
+            f"i tre byte riservati valgono {r1},{r2},{r3}: §11.1 li vuole 0")
+    # ⛔ «Di chi e' l'orologio» non si indovina — §11.1.  ⚠ Questo arbitro non
+    #    giudica nessuna regola col tempo dentro (quella e'
+    #    `01-b4-validatore.py`), ⛔ ma il campo si CONTROLLA lo stesso: un file
+    #    che non lo dichiara e' malformato per chiunque, e lasciarlo passare
+    #    qui vorrebbe dire che i due arbitri del progetto danno due verdetti
+    #    diversi sullo stesso file — che e' la cosa che §0 vieta.
+    if orologio not in (1, 2):
+        raise Malformata(
+            f"il campo `orologio` vale {orologio}: §11.1 ne definisce due — "
+            f"1 = i tempi sono del client, 2 = del server")
     p, fuori = 16, []
+    ultimo_istante = 0
     for nb in range(quanti):
         if p + BLOCCO_BYTE > len(d):
             raise Malformata(f"il blocco {nb} comincia oltre la fine del file")
-        verso, canale, fine, stream, lung, nosc = struct.unpack(
+        verso, canale, fine, istante, stream, lung, nosc = struct.unpack(
             BLOCCO, d[p:p + BLOCCO_BYTE])
         p += BLOCCO_BYTE
+        # ⛔ L'orologio non torna indietro: §11.1 vuole i millisecondi dal PRIMO
+        #    blocco, e i blocchi stanno nell'ordine del filo.
+        if istante < ultimo_istante:
+            raise Malformata(
+                f"blocco {nb}: `istante_ms` = {istante}, e il blocco prima "
+                f"diceva {ultimo_istante}: §11.1 vuole un orologio MONOTONO")
+        ultimo_istante = istante
         if fine not in FINE:
             raise Malformata(
                 f"blocco {nb}: `fine` vale {fine}, e §11.1 ne definisce tre — "
@@ -754,17 +788,32 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
 #    una registrazione CON UN ERRORE DENTRO e si verifica che lo veda.  Uno
 #    strumento che non ha mai trovato niente non e' uno strumento pulito: e'
 #    uno strumento non certificato»*.
-def scrivi_reg(percorso, blocchi, magia=MAGIA):
+def scrivi_reg(percorso, blocchi, magia=MAGIA, orologio=1):
     """⛔ `magia` e' un parametro per UNA sola ragione: la prova che deve essere
        rifiutata.  Un formato che sa scrivere solo la propria versione non puo'
        certificare di saper rifiutare le altre."""
-    out = bytearray(magia + struct.pack("!II", len(blocchi), 0))
-    for verso, canale, fine, stream, carico in blocchi:
-        if magia == MAGIA_VECCHIA:
-            # il blocco di ieri: 16 byte, senza `fine`
+    # ⛔ `orologio = 1`: queste prove sono scritte dal lato client, come le
+    #    tracce vere di `02-filo-cliente.py`.  ⚠ Dichiararne un altro renderebbe
+    #    le prove diverse dalle tracce che l'arbitro giudica davvero.
+    if magia == MAGIA_V1 or magia == MAGIA_V2:
+        out = bytearray(magia + struct.pack("!II", len(blocchi), 0))
+    else:
+        out = bytearray(magia + struct.pack("!IBBBB", len(blocchi), orologio,
+                                            0, 0, 0))
+    for i, (verso, canale, fine, stream, carico) in enumerate(blocchi):
+        if magia == MAGIA_V1:
+            # il blocco del 10 agosto: 16 byte, senza `fine` e senza istante
             out += struct.pack("!BBQIH", verso, canale, stream, len(carico), 0)
+        elif magia == MAGIA_V2:
+            # il blocco del 12 agosto: 17 byte, con `fine` e senza istante
+            out += struct.pack("!BBBQIH", verso, canale, fine, stream,
+                               len(carico), 0)
         else:
-            out += struct.pack(BLOCCO, verso, canale, fine, stream,
+            # ⚠ L'istante di una prova COSTRUITA e' zero per tutti i blocchi, e
+            #   va detto: qui non si misura nessun tempo — si prova la forma del
+            #   file.  Zero e' monotono, quindi legale, e non fa scattare
+            #   nessuna regola col tempo dentro.
+            out += struct.pack(BLOCCO, verso, canale, fine, 0, stream,
                                len(carico), 0)
         out += carico
     with open(percorso, "wb") as f:
@@ -851,6 +900,28 @@ PROVE = {
                   "e la cura e' rigenerarlo",
         "uscita": 2,
         "magia": MAGIA_VECCHIA,
+        "blocchi": lambda: chiave(),
+    },
+    "formato-del-12-agosto": {
+        "spiega": "⛔⛔ una registrazione «RCPREG 0x00 0x02»: il blocco porta "
+                  "`fine` ma NON `istante_ms`, e misura 17 byte invece di 21.  "
+                  "⚠ Non basta rifiutare la `0x01`: quella e' un'altra riga, e "
+                  "senza questa prova si potrebbe cancellarla e il banco "
+                  "resterebbe verde.  ⛔ E' esattamente la forma con cui il "
+                  "difetto del 12 agosto e' vissuto quattro giorni",
+        "uscita": 2,
+        "magia": MAGIA_V2,
+        "blocchi": lambda: chiave(),
+    },
+    "orologio-non-dichiarato": {
+        "spiega": "⛔ `orologio` = 0 nell'intestazione: §11.1 ne definisce due "
+                  "(1 = i tempi sono del client, 2 = del server).  ⚠ Questo "
+                  "arbitro non giudica il tempo, ma un file che non dichiara "
+                  "di CHI sia l'orologio e' malformato per chiunque — e i due "
+                  "arbitri del progetto non devono dare due verdetti diversi "
+                  "sullo stesso file",
+        "uscita": 2,
+        "orologio": 0,
         "blocchi": lambda: chiave(),
     },
     "tipo-storto": {
@@ -1305,7 +1376,8 @@ def fabbrica(cartella):
             with open(p, "ab") as fh:
                 fh.write(b"spazzatura")
         else:
-            scrivi_reg(p, v["blocchi"](), magia=magia)
+            scrivi_reg(p, v["blocchi"](), magia=magia,
+                       orologio=v.get("orologio", 1))
         fatti.append((nome, p, v["uscita"], v["spiega"],
                       v.get("tela", (1920, 1080))))
         print(f"   {os.path.basename(p):50s} atteso uscita {v['uscita']}")

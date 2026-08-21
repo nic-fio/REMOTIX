@@ -103,8 +103,19 @@ import sys
 import time
 
 # --- il formato §11.1, letto da `banchi/02-filo-cliente.py` (non riscritto) ---
-MAGIA = b"RCPREG\x00\x02"
-BLOCCO = "!BBBQIH"
+#
+# ⭐ `RCPREG 0x00 0x03` dal **21 agosto 2026**: il blocco porta `istante_ms` e
+#    passa da 17 a 21 byte, l'intestazione dichiara `orologio`.
+# ⛔ E questo file era il terzo dell'ISOLA `0x02` — con `02-filo-cliente.py` che
+#    scriveva e `02-filo-validatore.py` che leggeva.  I tre andavano d'accordo
+#    fra loro mentre `01-b3`/`01-b4` erano gia' a `0x03`: ⚠ **nessuno dei tre
+#    era rotto da solo**, e la miccia era posata — `04-b20-lancia.sh:105` copia
+#    `01-b3-cliente.py` nello stesso albero, quindi bastava che qualcuno
+#    passasse di qui una traccia di B3.  E' la forma del difetto del 12 agosto.
+MAGIA = b"RCPREG\x00\x03"
+MAGIA_V1 = b"RCPREG\x00\x01"
+MAGIA_V2 = b"RCPREG\x00\x02"
+BLOCCO = "!BBBIQIH"
 BLOCCO_BYTE = struct.calcsize(BLOCCO)
 CANALE_VIDEO = 0x03
 INTESTAZIONE = 28          # §6.2, «28 byte esatti, senza riempimento»
@@ -138,15 +149,31 @@ def blocchi_video(percorso):
        leggere» esce 2, e non diventa «non c'era la shell»."""
     with open(percorso, "rb") as f:
         d = f.read()
+    # ⛔ E LE VERSIONI VECCHIE SI NOMINANO, invece di finire in «magia strana».
+    #    §11.1: *«un validatore vecchio deve RIFIUTARE il formato nuovo, non
+    #    leggerlo di traverso»*, e vale nei due versi.  ⚠ «Non e' una
+    #    registrazione» manda a cercare chi ha rotto il file; «e' di
+    #    un'altra versione» manda a rigenerarlo.  Sono due cure diverse.
+    if len(d) >= 8 and d[:8] in (MAGIA_V1, MAGIA_V2):
+        raise ValueError(
+            f"«{percorso}» e' una registrazione di una versione VECCHIA di "
+            f"§11.1 ({d[:8]!r}): il blocco misura "
+            f"{16 if d[:8] == MAGIA_V1 else 17} byte invece di 21.  ⛔ Non si "
+            f"legge di traverso — ogni blocco scivolerebbe — e non e' un file "
+            f"rotto: si RIGENERA con `02-filo-cliente.py`")
     if len(d) < 16 or d[:8] != MAGIA:
         raise ValueError(f"«{percorso}» non e' una registrazione §11.1 "
                          f"(magia: {d[:8]!r})")
-    n, _ = struct.unpack("!II", d[8:16])
+    n, orologio, r1, r2, r3 = struct.unpack("!IBBBB", d[8:16])
+    if (r1, r2, r3) != (0, 0, 0) or orologio not in (1, 2):
+        raise ValueError(
+            f"«{percorso}»: intestazione §11.1 malformata — orologio "
+            f"{orologio} (attesi 1 o 2), riservati {r1},{r2},{r3} (attesi 0)")
     p, flussi, ordine = 16, {}, []
     for _ in range(n):
         if p + BLOCCO_BYTE > len(d):
             raise ValueError("registrazione troncata nell'intestazione di un blocco")
-        verso, canale, fine, stream, lung, nosc = struct.unpack(
+        verso, canale, fine, istante, stream, lung, nosc = struct.unpack(
             BLOCCO, d[p:p + BLOCCO_BYTE])
         p += BLOCCO_BYTE
         for _ in range(nosc):

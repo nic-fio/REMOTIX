@@ -1020,6 +1020,24 @@ SESSIONE
 < 6.8 (`SPECIFICHE.md` §6.3): la sessione era già viva con un'altra misura e non può cambiarla. Il
 client **DEVE** adattarsi riscalando, e il server **DEVE** aver scritto il ripiego nel registro.
 
+⛔⛔ **E la seconda ragione è quella comune, non l'eccezione: la tela SOPRAVVIVE alla sessione.**
+Il palco resta alla misura in cui l'ha lasciato il client precedente, e `SESSIONE` concede
+**quella**, non quella chiesta in `ATTACCA`. ⇒ Un client che si attacca dopo un altro riceve una tela
+che non ha chiesto e di cui **non conosce l'origine**, e non ha nessun modo di distinguerla da un
+ripiego.
+
+⚠ **Chiedere una tela in `ATTACCA` non la ottiene**: `tela_larghezza`/`tela_altezza` sono una
+**preferenza**, e l'unico messaggio che cambia la tela è `ADATTA_TELA` (§7.1). ⇒ Un client che vuole
+la propria misura **DEVE** mandare un `ADATTA_TELA` dopo `SESSIONE` — ed è quel che
+`DECISIONI.md` §5.0-sexies gli fa già fare a ogni attacco.
+
+`[M]` 21 agosto 2026, prodotto vero: tre attacchi di fila con `ATTACCA(1920×1080)` hanno ricevuto
+`SESSIONE` con **1920×1080**, **1264×800** e **1600×900** — cioè, ogni volta, **quel che il giro
+prima aveva lasciato**.
+
+⛔ **E questa riga non allenta niente**: la tela concessa resta soggetta ai limiti, alla parità e a
+`video.misura_massima`. Dice soltanto **da dove viene** quando il client non l'ha chiesta.
+
 ⚠ La tela concessa **DEVE** rispettare `video.misura_massima` se il client l'ha dichiarata, e
 rispettare comunque i limiti e la parità di sopra. Il campo `desktop` è per la diagnosi: il client
 **NON DEVE** cambiare comportamento in base al suo valore, o si scrive una compatibilità per

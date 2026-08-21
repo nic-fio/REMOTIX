@@ -147,16 +147,46 @@ def carica_b3():
 
 CLIENT, SERVER = 1, 2
 
-# ⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x02` — §11.1, 12 agosto
-#    2026, proposta P7 (che questo banco stesso aveva trovato).  Il blocco
-#    porta `fine`, e passa da 16 a 17 byte.
+# ⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x03` — §11.1.
+#
+#    `0x02`, 12 agosto 2026, proposta P7 (che questo banco stesso aveva
+#    trovato): il blocco porta `fine`, e passa da 16 a 17 byte.
 #    ⚠ Senza quel campo, quel che questo cliente registra e quel che ha visto
 #      sul filo non sono la stessa cosa: **lui** sa se lo stream e' finito con
 #      FIN o e' stato azzerato — glielo dice QUIC — e la registrazione non
 #      sapeva scriverlo.  L'arbitro che la legge doveva indovinare.
-MAGIA = b"RCPREG\x00\x02"
-BLOCCO = "!BBBQIH"
+#
+# ⭐⭐ `0x03`, **21 agosto 2026**: il blocco porta `istante_ms` e passa a 21
+#    byte, l'intestazione dichiara `orologio` (1 = i tempi sono del client).
+#    Senza il tempo, §7.1 — il secondo di grazia — non era collaudabile da
+#    nessun `.rcpreg`, e T4 («un server che dice `TELA(ADATTATA)` e non tocca
+#    il palco») non era scrivibile affatto.
+#
+# ⛔⛔ E QUESTO FILE ERA IL SECONDO DELL'ISOLA `0x02`: `02-filo-validatore.py`
+#    lo leggeva, `04-b20-desktop-vero.py` pure, e i tre andavano d'accordo fra
+#    loro mentre `01-b3`/`01-b4` erano passati a `0x03`.  ⚠ Due formati vivi
+#    sotto una specifica sola sono la condizione esatta del difetto del 12
+#    agosto, solo piu' grande — e nessuno dei tre file era rotto da solo.
+MAGIA = b"RCPREG\x00\x03"
+BLOCCO = "!BBBIQIH"
 CONTINUA, FIN, RESET = 0, 1, 2
+OROLOGIO_CLIENT = 1        # §11.1: questo programma e' il client
+
+# ⛔ L'istante e' MONOTONO e RELATIVO al primo blocco, mai un'ora del mondo:
+#    §4.4 vieta i segreti nel file, e una data assoluta dice **quando** e —
+#    con l'indirizzo che la traccia gia' porta — **da dove** un utente si e'
+#    collegato.  ⚠ `time.monotonic()` e non `time.time()`: un aggiustamento di
+#    NTP nel mezzo farebbe tornare indietro gli istanti, e l'arbitro
+#    leggerebbe un fotogramma arrivato «prima» del `TELA` che lo precede.
+_t0 = None
+
+
+def istante():
+    global _t0
+    adesso = time.monotonic()
+    if _t0 is None:
+        _t0 = adesso
+    return min(int((adesso - _t0) * 1000.0), 0xFFFFFFFF)
 
 T_RICHIEDI_CHIAVE = 0x000D
 T_CONGEDO = 0x000C
@@ -347,7 +377,7 @@ def fabbrica_cliente():
                     self.primo_byte = time.monotonic()
             f.byte += len(dati)
             self.reg_video.append([SERVER, 0x03, sid, bytes(dati), [],
-                                   FIN if fine else CONTINUA])
+                                   FIN if fine else CONTINUA, istante()])
             f.giudice.arrivano(dati)
             if fine:
                 f.chiuso = "fin"
@@ -366,7 +396,8 @@ def fabbrica_cliente():
                 if b[2] == sid:
                     ultimo = b
             if ultimo is None:
-                self.reg_video.append([SERVER, 0x03, sid, b"", [], RESET])
+                self.reg_video.append([SERVER, 0x03, sid, b"", [], RESET,
+                                       istante()])
             else:
                 ultimo[5] = RESET
             f = self.flussi.get(sid)
@@ -453,12 +484,31 @@ def scrivi_registrazione(percorso, blocchi):
        stream non si chiude.  ⚠ Scrivere `FIN` a ogni messaggio direbbe che la
        sessione si chiude e riapre a ogni riga.
     """
-    out = bytearray(MAGIA + struct.pack("!II", len(blocchi), 0))
+    # ⛔⛔ E I BLOCCHI SI RIMETTONO IN ORDINE DI TEMPO, e non e' cosmetica.
+    #
+    #    Chi chiama passa `blocchi + cli.reg_video`: i blocchi di CONTROLLO
+    #    tutti prima, quelli VIDEO tutti dopo.  ⚠ Ma un `RICHIEDI_CHIAVE`
+    #    spedito a meta' sessione finiva **davanti** al primo fotogramma, che
+    #    sul filo era passato molto prima.  ⛔ Con `0x02` non si vedeva: senza
+    #    il tempo, un ordine sbagliato e uno giusto hanno la stessa faccia.
+    #    Con `0x03` l'arbitro pretende un orologio monotono e lo direbbe —
+    #    «registrazione rotta» — su una traccia di un filo sanissimo.
+    #
+    # ⭐ `sorted` e' STABILE: due blocchi con lo stesso millisecondo restano
+    #    nell'ordine in cui sono stati registrati, che e' quel che si sa di
+    #    loro.  Inventare un ordine fra pari sarebbe peggio di non averlo.
+    def _quando(b):
+        return b[6] if len(b) > 6 else 0
+
+    blocchi = sorted(blocchi, key=_quando)
+    out = bytearray(MAGIA + struct.pack("!IBBBB", len(blocchi),
+                                        OROLOGIO_CLIENT, 0, 0, 0))
     for verso, canale, stream, carico, *resto in blocchi:
         oscurati = resto[0] if resto else []
         fine = resto[1] if len(resto) > 1 else CONTINUA
-        out += struct.pack(BLOCCO, verso, canale, fine, stream, len(carico),
-                           len(oscurati))
+        ist = resto[2] if len(resto) > 2 else 0
+        out += struct.pack(BLOCCO, verso, canale, fine, ist, stream,
+                           len(carico), len(oscurati))
         for ini, qua, imp in oscurati:
             out += struct.pack("!II", ini, qua) + imp
         out += carico
@@ -510,9 +560,9 @@ async def principale(a):
         try:
             b = b3.inquadra(b3.T["CIAO"], b3.corpo_ciao())
             cli.manda(b)
-            blocchi.append((CLIENT, 0x00, 0, b))
+            blocchi.append((CLIENT, 0x00, 0, b, [], CONTINUA, istante()))
             _, corpo, grezzo = await b3.attendi(cli, "ECCOMI")
-            blocchi.append((SERVER, 0x00, 0, grezzo))
+            blocchi.append((SERVER, 0x00, 0, grezzo, [], CONTINUA, istante()))
 
             corpo_c = b3.s(a.utente) + b3.s(a.parola)
             b = b3.inquadra(b3.T["CREDENZIALI"], corpo_c)
@@ -521,18 +571,19 @@ async def principale(a):
             cli.manda(b)
             blocchi.append((CLIENT, 0x00, 0,
                             b[:ini] + bytes([0x2A]) * qua + b[ini + qua:],
-                            [(ini, qua, hashlib.sha256(a.parola.encode()).digest())]))
+                            [(ini, qua, hashlib.sha256(a.parola.encode()).digest())],
+                            CONTINUA, istante()))
             _, corpo, grezzo = await b3.attendi(cli, "AMMESSO", attesa=20)
-            blocchi.append((SERVER, 0x00, 0, grezzo))
+            blocchi.append((SERVER, 0x00, 0, grezzo, [], CONTINUA, istante()))
 
             b = b3.inquadra(b3.T["ATTACCA"],
                             struct.pack("!IIII", a.larghezza, a.altezza,
                                         a.larghezza, a.altezza)
                             + b3.s(a.disposizione))
             cli.manda(b)
-            blocchi.append((CLIENT, 0x00, 0, b))
+            blocchi.append((CLIENT, 0x00, 0, b, [], CONTINUA, istante()))
             _, corpo, grezzo = await b3.attendi(cli, "SESSIONE")
-            blocchi.append((SERVER, 0x00, 0, grezzo))
+            blocchi.append((SERVER, 0x00, 0, grezzo, [], CONTINUA, istante()))
         except Exception as e:      # noqa: BLE001 — il tipo dell'errore E' la misura
             print(f"   ⛔ la stretta di mano non e' arrivata a SESSIONE: "
                   f"{type(e).__name__}: {e}")
