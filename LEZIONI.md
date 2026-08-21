@@ -856,6 +856,44 @@ file*.
 
 ---
 
+### 1.20 ⛔⛔⭐ **Un banco stampa un numero e non lo confronta** — la forma di difetto più comune che abbiamo
+
+*Nata dalla revisione avversariale dei sei banchi della fase 6, 21 agosto 2026: ventidue rilievi su
+sei banchi, e **ventuno hanno la stessa forma**. 📖 `fasi/06-la-tela-e-la-vista.md` §5.5.*
+
+⛔ **Cercavamo la cosa sbagliata.** Da `04-b31` in poi la caccia era all'**ancora scaduta**: il
+guasto che non si innesta più perché il sorgente sotto è cambiato. È una forma vera — e in sei
+banchi si è ripresentata **una volta sola**. Le altre ventuno erano tutte questa:
+
+> **la misura è giusta, il numero è lì, e nessuno lo confronta con niente.**
+
+Le facce che ha preso, tutte `[R]` sul sorgente:
+
+| la faccia | l'esempio |
+|---|---|
+| l'**esito d'uscita** catturato e stampato | `local e=$?` … `echo "$e"`, e mai un `if` |
+| l'**atteso dichiarato prima** e stampato | `giro()` riceve l'atteso, lo scrive a schermo, non lo usa più |
+| il **denominatore** che l'arbitro stampa | *«0 coppie chiuse»* è nell'uscita, e chi la legge non la guarda |
+| il **contatore** stampato con `inf` invece che con `ko` | il numero c'è, il verdetto no |
+| l'**appartenenza** al posto dell'uguaglianza | `case " $R " in *" $CASO "*` — un giro tutto rosso «conferma» qualunque guasto |
+| il **blocco che muore** e il ciclo che non entra | `while … done < elenco.tsv` su un file mai scritto: zero giri, `stato` 0, *«tutti i guasti diventano rossi»* |
+| la **normalizzazione che cancella il fenomeno** | si sottrae lo scostamento *prima* di misurare lo scostamento |
+
+⚠ **E perché è più insidiosa dell'ancora scaduta**: un'ancora morta lascia una traccia — il
+certificatore stampa `??`, il conto dei guasti cala. ⛔ Un numero non confrontato **non lascia
+niente**: il banco fa tutto il lavoro giusto, raccoglie il dato vero, e poi lo butta. Chi legge
+l'uscita **vede il numero giusto stampato** e conclude che è stato controllato.
+
+⭐ **Le due domande che la trovano**, e costano una rilettura:
+1. per ogni numero che il banco **stampa**: quale riga lo **confronta**? Se nessuna, o diventa un
+   verdetto o si toglie dall'uscita — perché stampato sembra controllato;
+2. per ogni `$?`, ogni `return`, ogni conteggio: **esiste un caso in cui vale zero e il banco resta
+   verde?** Se sì, quello è il difetto.
+
+⛔ E il corollario, che vale per chi scrive il banco prima del prodotto: **un banco senza un bit
+d'uscita che valga qualcosa non è un banco.** Tre dei sei uscivano `0` in ogni caso — anche a casi
+tutti rossi.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

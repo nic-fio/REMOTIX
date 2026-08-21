@@ -186,6 +186,13 @@ rapporti arrivano: quel che sopravvive a questa fase sono i banchi, non le misur
 
 ## 2 · Il banco
 
+> ## ⛔⛔ I NUMERI DI QUESTA SEZIONE SONO STATI REVISIONATI IL 21 AGOSTO 2026, E MOLTI NON REGGONO
+>
+> *«Chi scrive un banco lo certifica nello stesso giro»* non basta: **chi lo certifica da solo si
+> assolve**. La revisione avversariale — il momento che `PIANO.md` §0.4 chiedeva e che questa fase
+> non aveva avuto — dice che **cinque banchi su sei non reggono come certificazione**, e quali
+> misure cadono con loro. ⇒ **Leggi §5.5 prima di fidarti di un numero qui sotto.**
+
 *Sei banchi nuovi, uno per sottofase, ciascuno **certificato dal suo autore nello stesso giro** con
 guasti innestati in una **copia** — la regola nata l'11 agosto (*«chi scrive un banco lo certifica
 nello stesso giro, o il conto non cala mai»*).*
@@ -790,6 +797,92 @@ non stava producendo quel che il banco credeva (4 `resize` su 6, per passi da 1 
 la vista in pixel CSS). ⇒ *Un allarme sbagliato che lascia dietro uno strumento giusto.*
 
 ---
+
+### 5.5 · ⛔⛔⛔ LA REVISIONE AVVERSARIALE DEI SEI BANCHI — 21 agosto 2026, e **cinque su sei non reggono**
+
+*È il momento che `PIANO.md` §0.4 chiedeva e che questa fase non aveva mai avuto: il revisore **sul
+banco**. I sei agenti avevano scritto il proprio banco e **certificato se stessi**. ⛔ Adesso li ha
+letti qualcuno che non li aveva scritti — sola lettura, nessun banco lanciato — e il conto è questo.*
+
+| banco | verdetto | perché |
+|---|---|---|
+| `06-b33` riattacco | ⛔ **non regge come certificazione** | il giro `tenuto` — l'unico che porta il difetto vero — **non ha una riga sana di riferimento**, e il suo unico guasto si certifica da solo |
+| `06-b34` tastiera | ⛔⛔ **non regge** | 3 casi su 7 non possono fallire, 2 calcolano il verdetto e lo buttano, e l'ancora del guasto principale **è nata scaduta** |
+| `06-b35` palco | ⛔ **non regge come certificazione** | il marcatore del registro si prende **prima** che `accendi` azzeri il registro ⇒ i due conti che vengono dal registro sono **zero per costruzione** |
+| `06-b36` tela sul filo | ⚠ **il banco regge, il certificatore no** | ⭐ è il migliore dei sei: orologio iniettato, registro troncato, attesi esterni, confine 1000/1001 ms. Ma il certificatore esce **0** anche se non innesta niente, e 3 casi su 23 non hanno guasto |
+| `06-b37` pagina | ⛔⛔ **non regge** | ⛔ **l'unico dei sei senza NESSUN guasto innestato**, e quattro falsi verdi indipendenti |
+| `06-b38` arbitro | ⚠ **le 49 e le 19 reggono, i cinque giri vivi no** | ⭐ la metà offline è la meglio costruita del deposito. `06-b38-tela.sh` è verde **contro un server che non risponde mai** |
+
+⭐ **E il rifiuto motivato vale quanto le accuse**: di **43 ancore di guasto** verificate materialmente
+sui sorgenti di oggi, **42 sono vive con molteplicità esattamente 1**. Il caso `04-b31` G8 — l'ancora
+scaduta — **non si è ripetuto**, tranne una volta in `06-b34`.
+
+#### ⛔ I quattro rilievi che tolgono il pavimento
+
+1. **`06-b33`: il controllo positivo è morto e dichiara successo.** Il certificatore manda in modo
+   `tenuto` **solo** il guasto G3; il giro sano e il risanato girano solo in modo `comanda`. ⇒ R1
+   oggi è rosso perché col tasto già rilasciato non c'è più niente di premuto — non per il guasto — e
+   lo script stampa lo stesso *«⭐ G3 ha acceso il caso dichiarato»*;
+2. **`06-b33`: un giro completamente fallito certifica OGNI guasto.** Il confronto è
+   un'**appartenenza** (`case " $R " in *" $CASO "*`), non un'uguaglianza d'insieme: se il client non
+   regge la stretta di mano, tutti i casi vanno rossi, l'insieme contiene quello dichiarato, e il
+   guasto risulta confermato. ⚠ Il giudice **sa** dire *«IL BANCO, NON IL PRODOTTO»*, e quel testo
+   **non lo legge nessuno**;
+3. **`06-b35`: il marcatore del registro precede la troncatura di UNA RIGA.** `registro-da` salva la
+   lunghezza del registro, e la riga dopo `accendi` fa `: > "$LOG"`. ⇒ La regione dove stanno le
+   righe della tela **viene saltata sistematicamente**: `tela_nuova_dal_palco == 0` è vero **gratis**
+   (ed è la clausola che *«distingue il palco non ha obbedito da non gli è stato chiesto»*), e
+   `non_spediti > 0` è **irraggiungibile** — cioè proprio l'attribuzione sbagliata che il banco
+   dichiara di aver curato;
+4. **`06-b34`: l'ancora del guasto B è nata scaduta**, e il ramo verde del caso 4b **è la firma della
+   scena mancata**: se il ricambio avviene davvero, il contatore che il banco pretende `>= 1` vale
+   **sempre 0** ⇒ il verde si ottiene **solo se la scena non è successa**. ⚠ La cura e il guasto che
+   doveva provarla sono entrati **nello stesso commit**, e il guasto non è mai stato rilanciato.
+
+#### ⛔⛔ E `06-b37`, che è un caso a sé: quattro falsi verdi, ciascuno sufficiente da solo
+
+- **nessuna scena ha un limite INFERIORE sulla tela**: una tela 30 px più stretta della finestra —
+  banda nera permanente, 30 colonne perse — lascia **12 combinazioni su 12 verdi**;
+- **il ramo che attua «la voce spenta» non viene mai eseguito**: la spia sostituisce `chiedi_tela`
+  **prima** di misurare, e la guardia vera sta **dentro** la funzione sostituita ⇒ il banco prova che
+  *un booleano cambia valore*;
+- **la «domanda vera» è un'identità algebrica**: il banco ricostruisce l'ingresso e lo confronta con
+  l'uscita della funzione che quell'ingresso l'ha prodotto — scarto 0 in 93 righe su 126, per
+  costruzione;
+- ⛔⛔ **le coordinate: l'origine è cancellata per costruzione.** Lo scostamento fra dove l'immagine
+  sta e dove la pagina crede che stia viene **sottratto** prima del confronto. ⇒ Il difetto del DeX —
+  la tela dipinta 50 px a destra di dove `getBoundingClientRect()` la dichiara — **dà scarto 0 su 20
+  punti su due motori**. È esattamente il difetto che quella scena nomina come propria ragione d'essere.
+
+#### ⛔ Le misure di questa fase che CADONO, e vanno rifatte o riscritte
+
+| dichiarazione | stato |
+|---|---|
+| §2 · `06-b33` «5 guasti: G2→C2 · G3→R1,R2 · G4→C6 · G5→C3,C4» | ⛔ **G3 non è certificato**; gli altri restano condizionati al rilievo 2 |
+| §2 · `06-b35` «**5 guasti su 5 confermati**» | ⛔ **da rifare** dopo che la riga del marcatore è al suo posto |
+| §2 · `06-b34` «6 casi · 2 guasti» | ⛔ **cade quasi tutta**: reggono il caso 1 e il caso 6. *«Un cambio di keymap distrugge e ricrea il dispositivo, e il tasto non resta giù»* **non è misurata** |
+| §2 · `06-b36` «**23** casi · 19 guasti su 19» | ⛔ da riscrivere in **«20 casi su 23 certificati da 19 guasti»** |
+| §2 · `06-b37` «7 scene», «20 punti · 2 523 colonne · 4 resize» | ⛔ **le scene eseguite sono 6**; il 2 523 viene da una scena mai girata sui due motori; **i 20 punti sono zeri per costruzione** |
+| §2 · `06-b38` «49 accusate sul byte» | ⛔ **28 sul byte e sulla regola, 49 sull'esito**. ⭐ «19 mutazioni su 19» **regge** |
+| §4.3-bis · «12 combinazioni su 12 verdi» | ⛔ **non conservata**: gli esiti nel deposito precedono di un giorno il codice di banco che l'avrebbe prodotta |
+| §4.3 e §0 punto 7 · «le tre `[?]` di §6.1-bis, chiuse» | ⛔ **nessuna delle tre è chiusa**: lo zoom è assolto da una tolleranza di 2 px mentre lo scarto peggiore misurato è **esattamente 2**; il lato dispari è reso impossibile per costruzione e mai provocato; il mezzo pixel è osservato e non incrementa nessun conto |
+| §0 punto 4 · «il ripiego su KWin dichiarato nel registro» | ⭐ **regge** (`06-b36` casi 1-2, ancora viva) |
+| §0 punto 5 · «le coordinate in volo del secondo dopo `TELA(ADATTATA)`» | ⭐ **regge, ed è la parte più solida dei sei banchi** |
+| §2 · `06-b34` «l'atteso lo calcola il prodotto» | ⛔ **non è implementato**: `06-b34-tabella.c` non è costruito né eseguito da nessuno script. ⭐ Ma l'accusa «la prova certifica se stessa» **cade lo stesso**, perché l'atteso vero è una **stringa di caratteri arbitrata da xkbcommon dentro la sessione** |
+
+#### ⭐⭐ E la lettura che vale più dell'elenco
+
+⚠ Dei ventidue rilievi, **uno solo** è un'ancora scaduta — la forma che §5.2 temeva e che tutti
+cercavano. **Tutti gli altri hanno la stessa forma nuova, e nessuno l'aveva mai nominata:**
+
+> ⛔ **la misura è buona, e il giudizio è staccato da lei.**
+
+Un esito d'uscita catturato e non guardato (`b34`, `b35`, `b36`, `b38`), un atteso stampato e mai
+confrontato (`b38`), un denominatore stampato e mai letto (`b38`), un contatore stampato con `inf`
+invece che con `ko` (`b34`), un `case` di appartenenza invece che di uguaglianza (`b33`).
+
+⇒ **La caccia della prossima volta non è alle ancore: è a ogni numero che un banco stampa e non
+confronta.** 📖 `LEZIONI.md` §1.20.
 
 ## 6 · Le decisioni prodotte
 
