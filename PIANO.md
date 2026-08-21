@@ -1377,51 +1377,83 @@ non ci rallenterà più».*
 | ⭐ **Chrome per Android** | **esperienza completa, audio e video perfetti** — giudizio dell'utente, 21 agosto sera: ogni flusso è pulito, `[M]` zero perdite su ogni anello. ⛔ **Non** chiude il ritardo fra audio e video, che l'utente ha confermato un'ora dopo ed è il punto 1 qui sotto |
 | **come una sessione locale** | `DECISIONI.md` §5-ter.8: niente trucchi, niente pulsanti nostri. Su Firefox l'incolla col mouse costa un clic **di Firefox**, e §5-ter.9 lo accetta |
 
-## I punti aperti, con che cosa li chiude
+## I punti aperti — **riscritti la notte del 21 agosto**, dopo il giro dei dieci agenti
 
-### Fase 7 — audio e appunti
+> ⚠ **Dieci agenti in parallelo, io coordinatore.** Quel che segue è lo stato **dopo** i loro
+> rapporti: molte voci sono cadute, alcune si sono rivelate false, e ne sono nate di nuove che
+> nessuno aveva mai guardato. ⛔ **Tre voci di questa lista erano sbagliate**, e stanno qui sotto
+> con la loro correzione invece che cancellate.
 
-1. ⛔⛔ **IL RITARDO DELL'AUDIO SUL VIDEO — ~400 ms, confermato dall'orecchio e DIAGNOSTICATO.**
-   *«Il ritardo di 400 ms tra audio e video in generale te lo confermo»* — l'utente, 21 agosto sera,
-   dal PC Windows. ⭐ **La causa è nostra e ha un nome**: `AUDIO_CUSCINO_MS = 250` in `pagina.html`,
-   alzato da 60 il 17 agosto per togliere i buchi, col prezzo scritto nel commento. Il resto della
-   catena aggiunge il poco che manca ai 400.
-   ⭐ **E la misura c'è**, su una sessione vera di Windows (`07-b60`): produttore 50 blocchi/s con
-   0 persi, pagina 10 621 ricevuti / 10 617 suonati / 4 buchi tutti dell'avvio, video 5 334→5 334
-   senza un tardivo, coda **239–270 ms** — cioè esattamente il cuscino. ⇒ **Nessun anello perde
-   niente: il ritardo è accumulato apposta, in un punto solo.**
-   ⛔ **La cura non è abbassare il numero** (ripaga in buchi quel che dà in sincronia): è
-   **togliere l'audio dal thread principale** — `AudioWorklet` con un anello — ed è già nominata nel
-   codice. ⏳ `[?]` Prima però va capito perché nella seconda metà della sessione la coda **scende a
-   70–110 ms e ci resta**: se a regime bastano quelli, il lavoro è un altro.
-   ⇒ 📖 `fasi/07-audio-e-appunti.md` §8 e §9.7-bis.
-2. ⏳ Il datagram su rete **non locale** (i byte sono presi su cavo, e il giudizio è su rete di casa);
-   la **priorità in tempo reale** dentro il figlio (**R26**) — ⚠ sospettata per l'audio a scatti di
-   Windows e **scagionata**: quello era il PC dell'utente.
+### ⛔ I difetti veri, aperti
 
-⭐ **E quel che il giudizio dell'utente CHIUDE davvero**: «nessuno ha ascoltato l'audio da un
-telefono» (adesso sì) e «il bitrate di Opus mai giudicato» (96 kbit/s suonano puliti). ⛔ Il cuscino
-no: quello è il punto 1.
+1. ⛔⛔ **Il ritardo dell'audio sul video, ~400 ms** — confermato dall'orecchio dell'utente.
+   ⭐ **Diagnosticato, e la prima diagnosi era sbagliata**: non è (solo) il cuscino di 250 ms.
+   `[M]` **la coda della pagina non è un cuscino, è un serbatoio a senso unico** — l'orologio
+   avanzava per ogni blocco *arrivato*, mai col tempo che passa, quindi **ogni datagram perduto
+   toglieva 20 ms di cuscino per sempre**. ⇒ Curato con l'**ancora all'`istante` del server**.
+   ⏳ Restano: la **finestra di riordino** di §6.3 (si scarta quel che è più vecchio di quel che è
+   *arrivato*, invece che di quel che è *suonato*: a ±2 ms di jitter la purezza crolla a 0,175), la
+   **deriva fra gli orologi** (0,7-1,4 ms/s, porta al tetto dei 600), e ⛔ **la misura vera della
+   distanza audio↔video**, che nessun banco sapeva prendere e che adesso è a metà (`aoff` c'è,
+   `voff` in scrittura).
+2. ⛔⛔ **Il server butta i datagram dell'audio mentre gli stream del video non perdono niente** —
+   `[M]` **2 200 scartati** in una sessione, con la causa scritta nel registro (il quanto del pacer,
+   poi `cwnd_left = 0`), e la pagina che perde **il 9,43 %** dell'audio, il **47 %** in una finestra
+   di 25 s. ⏳ Nessuno l'aveva mai guardato: è del trasporto.
+3. ⛔ **Il clic che muore ha una seconda porta**, e adesso è misurata: con un pulsante giù e **un**
+   risveglio, il rilascio non arriva mai **e nemmeno il clic fresco successivo**. ⭐ La catena è
+   letta nel sorgente di Mutter e confermata sul giornale: il difetto è **permanente**, non una
+   corsa, e si sana solo staccando il canale. ⏳ Cura scelta **A + C** (prevenzione + recupero), in
+   scrittura. 🔸 Il prezzo di A è visibile all'utente e **aspetta il suo giudizio**.
+4. ⛔ **`figlio.c` vanta una priorità di tempo reale che non ha**: `[M]` su questo kernel
+   `SCHED_FIFO` **non è ottenibile da nessuno** dentro una slice di systemd ⇒ `LimitRTPRIO=20` è
+   **inerte**. ⏳ La riga va resa onesta (assegnata); ⏳ e la cura vera — `nice` a **tutto** il
+   percorso audio della sessione, non solo al nostro processo — è una decisione di prodotto aperta:
+   `[M]` `nice −20` porta la purezza da 0,24 a **1,000**.
+5. ⛔ **Cinque banchi su sei della fase 6 non reggono come certificazione**, e con loro cadono
+   misure già dichiarate. ⏳ `06-b33` e `06-b35` sono stati rifatti; ⛔ **`06-b37` no** — è l'unico
+   dei sei **senza nessun guasto innestato**, e le sue coordinate **cancellano per costruzione** il
+   difetto che cercano. 📖 `fasi/06` §5.5.
 
-### Fase 6 — la tela e la vista
+### ⭐ Chiusi nella notte del 21 agosto
 
-3. ⏳ **Il colore del decodificatore H.264 in hardware**: `[?]` +8 livelli sulle zone chiare.
-4. ⏳ **`?video=worker` non esercitato** (il credito degli stream unidirezionali di QUIC si esaurisce).
-5. ⏳ Il costo di `createImageBitmap`, mai misurato.
-6. ⏳ Il DeX e la GPU vera: il mezzo pixel non arriva su Xvfb.
+| era | com'è finita |
+|---|---|
+| «il difetto di Mutter è noto a monte?» | ⛔ **nessuno l'ha mai aperto**, e non è corretto nemmeno nel `main` di agosto 2026 ⇒ la cura è nostra su ogni versione |
+| «il colore dell'H.264 in hardware: +8 livelli sulle chiare» | ⛔ **falso** — 0,51 livelli, e le luci sono la banda *meno* sbagliata. ⭐ Al suo posto: **la VUI dichiarata è portante sotto le 576 righe** (32 livelli se taciuta) |
+| «`?video=worker` non esercitato» | ⭐ **funziona** (tre nomi non attraversavano il confine del worker) e **non rende**: abbassa il tetto del 19 %. Resta spento |
+| «il costo di `createImageBitmap`» | `[M]` **3,8 ms** mediani — l'8 % del tetto, e **nove volte meno** del vecchio disegno 2D |
+| «i tre difetti della disposizione di tastiera» | ⭐ **erano già chiusi dal 16 agosto**: il documento mentiva. ⛔ Ma ce n'era uno vero al loro posto — l'alfabeto del nome rifiutava **9 disposizioni su 589 che la macchina ha**, con `ERRORE_PROTOCOLLO` |
+| «`aioquic` non installato, il cliente si prova coi surrogati» | ⭐ installato e provato. ⛔ E dentro c'era un difetto grosso: il cliente **registrava i messaggi solo quando qualcuno li tirava dalla coda** ⇒ tre regole dell'arbitro non potevano uscire da **nessuna** traccia |
+| «i due rami mai esercitati su Mutter» | ⭐ chiusa **con l'esito opposto**: `cattura.c:543` **non si raggiunge dall'esterno**, e i «due rami» non sono rami |
+| «il secondo di grazia, non misurabile» | ⭐ **misurato**: `06-b36` è 24 casi, 22 guasti su 22 |
+| «gli attrezzi rotti di `06-b35`» | ⭐ riparati e **certificati contro un calcolo a mano in `awk`**, 235 campioni |
+| ⛔ *(nuovo, trovato per caso)* «il registro mentiva sotto carico» | tre `write()` per riga ⇒ **2 464 righe orfane su 4 800** in prova. Curato: una sola `write`, **zero** |
 
-### Il ferro e le prove
+### ⏳ Aperti, e nessuno li ha ancora misurati
 
-7. ⭐ **Windows: provato il 21 agosto sera, su Chrome, con l'audio e gli appunti addosso** — ed è
-   la prima volta dopo il «100 %» del 16 agosto, che era di prima della fase 7. `[M]` sessione di
-   ~4 minuti, zero perdite su ogni anello (`07-b60`). ⏳ Resta da provare **Firefox su Windows**, e
-   resta il ritardo del punto 1, che è di tutte le piattaforme.
-8. ⭐ **E gli strumenti per non disturbare l'utente ci sono**: `07-b58` (browser senza WebCodecs,
-    da tavolo), `07-b59` (**Firefox per Android vero, in un emulatore**, giro completo da solo),
-    `07-b56` (incolla col mouse), `07-b51`/`07-b53`/`07-b54` (le regressioni), ⭐ e **`07-b60`
-    (sorveglia una sessione VERA: tutti gli anelli, i thread e il tempo reale sulla stessa
-    riga)** — è quello che ha scagionato REMOTIX dall'audio a scatti di Windows. ⚠ E `LEZIONI.md`
-    §1.19: **chi apre chiude** — i banchi lavorano sul desktop di una persona.
+6. **Il datagram su rete non locale**: ⭐ su WiFi vero è pulito (0 vecchi, purezza 1,000); ⏳ resta
+   `[?]` **quanti byte** ne porta uno sul browser vero, e il fatto che a **10 % di perdita la
+   sessione non si apra affatto**.
+7. **Il DeX e la GPU vera**: il mezzo pixel non arriva ai pixel su Xvfb. ⛔ Il telefono è dell'utente.
+8. **La contesa GPU**: la scena è **pronta e non lanciata** (sposterebbe i millisecondi di tutti);
+   ⭐ e un indizio nuovo la sostiene già — il 16 agosto, con cinque banchi accesi, `NON_ORA` aveva
+   mediana **22 ms e due casi a 3 000**; il 17 a macchina ferma, **6 ms**.
+9. **Firefox su Windows**, e i numeri **D** di §4.8 che **non sono più ricalcolabili** (la finestra
+   di registro è stata cancellata).
+10. Le proposte in attesa di un proprietario: l'accessore di `cattura.h`, `cattura_ridimensiona()`
+    che **dichiara successo su un flusso che muore**, e `03-b19-dipinti-worker.py` che dà **verde a
+    zero contro zero**.
+
+### Decisioni che aspettano l'utente
+
+11. 🔸 **Il prezzo della cura A del clic**: su desktop fermo con un tasto giù, un client appena
+    attaccato **può restare bianco finché non si rilascia**. Si sana da sé, la scena è rara.
+12. **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi.
+13. **Il percorso `?video=worker` e quello `?disegno=mse`**: misurati, non rendono. Si buttano alla
+    fase 13 o restano?
+14. ⏳ **E le fasi si chiudono sul suo giudizio**: restano da giudicare il **trascinamento del
+    bordo**, il **clic tenuto giù**, e — quando la cura dell'audio è dentro — **il ritardo**.
 
 ## Come si riparte, in due comandi
 
