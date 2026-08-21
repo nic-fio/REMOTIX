@@ -62,6 +62,38 @@ le due devono restare in coppia, altrimenti è una regola non verificata.*
 
 ---
 
+### 0.1-bis ✅ REMOTIX non rincorre i difetti dei browser — 21 agosto 2026
+
+> *«REMOTIX non può rincorrere i bug dei software. Se Firefox offre performance scadenti (ma
+> comunque REMOTIX funziona) c'è poco da fare, l'utente Android deve accettare le scarse
+> performance di Firefox o passare a Chrome.»* — l'utente.
+
+⭐ **È il gemello di §0.1, spostato di un piano**: là si dice quale pezzo di sistema si insegue e
+quale no; qui si dice fin dove ci si spinge per un **motore** che fa peggio degli altri.
+
+| | |
+|---|---|
+| **si fa** | il prodotto usa la strada migliore che quel browser offre, e **dichiara** che cosa ha trovato |
+| **non si fa** | ⛔ non si costruiscono percorsi paralleli per compensare quel che manca a un motore, e non si sacrifica il ritardo degli altri per pareggiarlo |
+
+⇒ **Il ritardo non è uguale su tutti i motori, e va bene così.** Se su un browser REMOTIX rende meno,
+l'utente ha davanti una scelta — accettarlo, o usare l'altro browser — e quella scelta è **sua**,
+non nostra.
+
+⛔ **E la conseguenza scomoda si scrive**: «pienamente supportato» smette di voler dire «uguale
+dappertutto». Vuol dire *funziona, e sai in che condizioni*. ⇒ Quel che il prodotto deve garantire
+su ogni motore è **dire la verità su se stesso** (§0, e la riga della pagina che nomina WebCodecs
+quando manca), non rendere allo stesso modo.
+
+⚠ **Il fatto che l'ha prodotta**: `[M]` Firefox per Android non ha WebCodecs — né `VideoDecoder` né
+`AudioDecoder` — e l'unica alternativa, MSE, costa **+225 ms su Firefox e +415 ms su Chrome** sulla
+mediana (`fasi/06`, banco `07-b57`), contro un tetto dichiarato di 50 ms.
+
+⏳ **E una cosa questa decisione NON la stabilisce**, quindi resta aperta invece di essere dedotta:
+se il percorso MSE vada **scritto** oppure no. La frase presuppone *«ma comunque REMOTIX funziona»*,
+e oggi su Firefox Android non funziona affatto; ma «non rincorrere i difetti dei browser» taglia
+proprio contro il costruirlo. ⇒ Vedi §7, la domanda aperta.
+
 ### 0.2 ✅ Sviluppo agentico, con revisione avversariale a tre momenti
 
 *9 agosto 2026. «Ricorda inoltre il metodo di lavoro: sviluppo agentico e review avversariali».*
@@ -4346,6 +4378,28 @@ la domanda è *se l'hai detta*.
 
 **Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
 *«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
+
+### 7.18 ❓ Il percorso MSE per Firefox Android: si scrive o no?
+
+*Aperta il 21 agosto 2026, e discende da §0.1-bis senza esserne risolta.*
+
+⛔ **I fatti, misurati**: Firefox per Android non ha WebCodecs — né `VideoDecoder` né
+`AudioDecoder` — quindi oggi REMOTIX lì **non disegna un pixel**, e non è una questione di codec
+(la strada verso i pixel è una sola in `pagina.html`). ⭐ Ha però WebTransport e decodifica H.264
+**in hardware** via MSE: la capacità c'è, manca il modo di darle i byte.
+
+⛔ **Il prezzo, misurato** (`fasi/06`, banco `07-b57`): MSE costa **+225 ms** su Firefox e
+**+415 ms** su Chrome sulla mediana, con una coda di riproduzione di 310–715 ms, contro il tetto
+dichiarato di **50 ms**. ⚠ E l'inseguimento non salva: 40 salti su 150 fotogrammi.
+
+| la lettura | che lavoro produce |
+|---|---|
+| *«l'utente Android deve accettare le scarse performance di Firefox»* presuppone che lì REMOTIX funzioni | ⇒ **si scrive** il percorso MSE (muxer fMP4 nel client, percorso audio a parte), e si dichiara il ritardo di un'altra classe |
+| *«REMOTIX non può rincorrere i bug dei software»* | ⇒ **non si scrive niente**: Firefox Android è dichiarato non supportato finché Mozilla non porta WebCodecs, e lì si usa Chrome |
+
+⇒ **Le due letture della stessa frase portano a lavori opposti**, quindi non si deduce: si chiede.
+⚠ E c'è un fatto che pesa sulla scelta: Mozilla dichiara il supporto mobile *«still missing, which
+we're currently working on»* — cioè il problema potrebbe scadere da solo.
 
 ### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
 
