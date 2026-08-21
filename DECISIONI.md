@@ -4379,7 +4379,7 @@ la domanda è *se l'hai detta*.
 **Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
 *«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
 
-### 7.18 ❓ Il percorso MSE per Firefox Android: si scrive o no?
+### 7.18 ✅ **SI SCRIVE** — il percorso MSE per Firefox Android
 
 *Aperta il 21 agosto 2026, e discende da §0.1-bis senza esserne risolta.*
 
@@ -4397,9 +4397,23 @@ dichiarato di **50 ms**. ⚠ E l'inseguimento non salva: 40 salti su 150 fotogra
 | *«l'utente Android deve accettare le scarse performance di Firefox»* presuppone che lì REMOTIX funzioni | ⇒ **si scrive** il percorso MSE (muxer fMP4 nel client, percorso audio a parte), e si dichiara il ritardo di un'altra classe |
 | *«REMOTIX non può rincorrere i bug dei software»* | ⇒ **non si scrive niente**: Firefox Android è dichiarato non supportato finché Mozilla non porta WebCodecs, e lì si usa Chrome |
 
-⇒ **Le due letture della stessa frase portano a lavori opposti**, quindi non si deduce: si chiede.
-⚠ E c'è un fatto che pesa sulla scelta: Mozilla dichiara il supporto mobile *«still missing, which
-we're currently working on»* — cioè il problema potrebbe scadere da solo.
+⇒ **Le due letture della stessa frase portavano a lavori opposti**, quindi non si è dedotto: si è
+chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il supporto mobile
+*«still missing, which we're currently working on»*, cioè il problema potrebbe scadere da solo.
+
+> ### ✅ **21 agosto 2026, dall'utente: si costruisce il percorso MSE.**
+>
+> ⚠ E la ragione per cui §0.1-bis non lo vieta sta nella differenza fra i due casi: quel principio
+> parla di un motore che **rende peggio**. Qui il motore non rende peggio, ⛔ **non apre affatto** —
+> l'utente lo ha detto con parole sue: *«su Android Chrome funziona bene, è Firefox a non
+> funzionare per nulla (non apre il desktop remoto)»*. ⇒ Non è rincorrere un difetto di
+> prestazioni: è dare al prodotto una strada dove non ne ha nessuna.
+>
+> ⭐ **E l'audio non è da scrivere**: la pagina ripiega già su `pcm` quando `AudioDecoder` manca
+> (§4.3 lo impone a entrambi ed è la base sempre disponibile). ⇒ Il lavoro è **solo il video**.
+>
+> ⭐ **E il protocollo non si tocca**: sul filo passano gli stessi fotogrammi Annex-B di sempre.
+> Quel che cambia è **come il client li disegna**, e il server non se ne accorge.
 
 ### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
 

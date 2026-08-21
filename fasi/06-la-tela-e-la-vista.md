@@ -997,3 +997,48 @@ non ha un fotogramma tardivo. ⇒ Non è la rete: è la coda del percorso audio.
 in tre minuti e mezzo sono pochi, ma una coda che si assesta a 420 ms non è un caso — è una scelta
 di qualcuno, e va trovata.
 
+## ⭐⭐ 21 agosto 2026 — **il secondo percorso di disegno**: MP4 frammentato su MSE
+
+*`DECISIONI.md` §7.18, dall'utente: «si costruisce». ⛔ E la ragione per cui §0.1-bis non lo vieta:
+quel principio parla di un motore che **rende peggio**; qui il motore **non apre affatto**.*
+
+⭐ **Il protocollo non si tocca**: sul filo passano gli stessi fotogrammi Annex-B di §6.2. Cambia
+solo **come il client li disegna**, e il server non se ne accorge.
+
+⭐ **E l'audio non è stato scritto**: la pagina ripiegava già su `pcm` quando manca `AudioDecoder`
+(§4.3 lo impone a entrambi ed è la base sempre disponibile). ⇒ Il lavoro era **solo il video**.
+
+### I tre pezzi
+
+| pezzo | che cosa fa |
+|---|---|
+| `MuxMP4` | i fotogrammi Annex-B diventano un segmento d'inizio (`ftyp`+`moov` con l'`avcC` costruito dall'SPS/PPS visti) e un `moof`+`mdat` per fotogramma |
+| `sonda_mse_una()` | la sonda **dipinge anche su questa strada** e si giudicano i pixel — ⭐ non si crede a `isTypeSupported` (`LEZIONI.md` §1.9) |
+| `Schermo.mse_*` | il `<video>` prende il posto della tela, eredita classe e stile, e i fotogrammi si contano con `requestVideoFrameCallback` — l'unico posto, lì, in cui si sappia che un pixel è arrivato |
+
+⚠ **La durata di ogni fotogramma è quella VERA**, misurata all'arrivo: un desktop non ha un ritmo
+fisso — sta fermo per secondi e poi si muove — e dichiarare 60/s a un `<video>` che ne riceve tre al
+secondo lo manderebbe a secco a ogni pausa. `[M]` È esattamente l'errore che il banco `07-b57` ha
+fatto per primo, con `ffmpeg -framerate` che per il demuxer H.264 non vale.
+
+### ⛔ Due errori di byte, trovati rileggendo prima di provare
+
+1. **`trun`: versione (1 byte) e poi bandiere (3)**, non il contrario. Scritte al rovescio il
+   `<video>` legge `flags = 0x030500`, cioè campi che non ci sono: ⚠ **non dà errore e non
+   dipinge**.
+2. **`tkhd`: mancavano quattro byte** (volume + riservato) prima della matrice, e tutto quel che
+   segue scivolava.
+
+⭐ E il muxer è stato **verificato da fuori prima di collegarlo**: i nostri 150 fotogrammi passati
+dal muxer e dati a `ffprobe` → `h264, High, 2560×962, level 50, 2,372 s`, e `ffmpeg` li decodifica.
+⚠ Un muxer provato solo dentro il browser avrebbe confuso «il mio MP4 è sbagliato» con «questo
+motore non lo accetta».
+
+### Lo stato misurato
+
+| | |
+|---|---|
+| la strada si accende e dipinge (Firefox, `?disegno=mse`) | ⭐ sì — `<video>` 1190×704, 4 dipinti, **0 buchi**, ritardo 50 ms, 1 salto |
+| la strada normale (WebCodecs) | ⭐ intatta: `07-b51` 4 controlli su 4 per motore |
+| Firefox per Android | ⏳ **da provare sul telefono** — è il motore per cui esiste |
+

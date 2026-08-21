@@ -868,6 +868,26 @@ const DESINCRONIZZATA =
  *   e la riga del registro lo dice ogni volta. */
 const TELA_2D = new URLSearchParams(location.search).get("tela") === "2d";
 
+/* ⛔⭐⭐ QUALE DELLE DUE STRADE VERSO I PIXEL — `DECISIONI.md` §7.18.
+ *
+ *   WebCodecs   la strada del prodotto: `VideoDecoder` e la tela.  Ritardo
+ *               dentro il tetto di §3.2.
+ *   MSE         `MediaSource` e un `<video>`, con i fotogrammi impacchettati in
+ *               MP4 frammentato da questa stessa pagina.  ⛔ Ritardo di
+ *               un'altra classe — `[M]` centinaia di millisecondi, banco
+ *               `07-b57` — e si prende **solo quando l'altra non c'e'**.
+ *
+ * ⚠ `?disegno=mse` la forza, e serve ai banchi: senza, la strada di MSE si
+ *   potrebbe misurare solo su un telefono con Firefox. */
+/* Quanto si lascia crescere la coda del `<video>` prima di saltare avanti, e
+ * dove si atterra.  ⚠ 250 ms e' gia' cinque volte il tetto di §3.2: sotto,
+ * si salterebbe di continuo e l'immagine scatterebbe piu' di quanto guadagni. */
+const MSE_SOGLIA_S = 0.25;
+const MSE_BORDO_S = 0.05;
+
+const VIA_MSE = (typeof VideoDecoder === "undefined")
+             || new URLSearchParams(location.search).get("disegno") === "mse";
+
 /* ⛔⭐ IL WORKER DEDICATO DI `STUDI.md` §web §6.1 — «WebTransport, decodifica e canvas
  * tutti in un worker dedicato».  Era una decisione SCRITTA E MAI ATTUATA: fino
  * al 13 agosto 2026 questa pagina aveva un solo `<script>` e faceva tutto sul
@@ -1252,6 +1272,88 @@ function dipingi_sonda(config, sonda) {
   });
 }
 
+/*
+ * ⭐⭐ LA SONDA DELL'ALTRA STRADA — si dipinge con MSE, e si giudicano i PIXEL.
+ *
+ * ⛔ `DECISIONI.md` §1.13 e `LEZIONI.md` §1.9: una capacita' dichiarata non e'
+ *    un pixel.  ⇒ Anche qui la sonda **dipinge davvero** e si guardano i colori
+ *    che escono, invece di credere a `MediaSource.isTypeSupported`.
+ *
+ * ⭐ E NON SERVE FARLO SUONARE: un `<video>` che ha ricevuto un fotogramma lo
+ *    mostra senza che nessuno prema play.  ⇒ Si aspetta `loadeddata` e si
+ *    copia sulla tela — cosi' la sonda non dipende dalle regole di riproduzione
+ *    automatica, che cambiano da motore a motore e da telefono a telefono.
+ */
+function sonda_mse_una(sonda, stringa, rl, ra, p) {
+  return new Promise((risolvi) => {
+    if (typeof MediaSource === "undefined")
+      return risolvi({ arriva: false, perche: "questo browser non ha MediaSource" });
+    const tipo = 'video/mp4; codecs="' + stringa + '"';
+    if (!MediaSource.isTypeSupported(tipo))
+      return risolvi({ arriva: false, perche: "MSE non accetta «" + tipo + "»" });
+
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true;
+    v.style.cssText = "position:fixed;left:-9999px;top:0;width:64px;height:64px";
+    document.body.appendChild(v);
+    let finito = false;
+    const orologio = setTimeout(
+      () => chiudi({ arriva: false, perche: "MSE non ha dipinto in 5 s" }), 5000);
+    function chiudi(esito) {
+      if (finito) return;
+      finito = true;
+      clearTimeout(orologio);
+      try { v.remove(); } catch (e) { /* niente */ }
+      risolvi(esito);
+    }
+    try {
+      const ms = new MediaSource();
+      v.src = URL.createObjectURL(ms);
+      ms.addEventListener("sourceopen", () => {
+        try {
+          const sb = ms.addSourceBuffer(tipo);
+          const mux = new MuxMP4();
+          const dati = base64ABytes(sonda.dati);
+          const f = mux.fotogramma(dati, true, 0);
+          if (!f) return chiudi({ arriva: false,
+            perche: "la sonda non porta un SPS e un PPS: non si puo' costruire "
+                  + "l'inizio del MP4" });
+          const inizio = mux.inizio(sonda.l || rl, sonda.a || ra);
+          const rifai = mux.fotogramma(dati, true, 0);
+          sb.addEventListener("updateend", () => {
+            if (!sb.updating && sb.buffered.length === 0 && rifai) {
+              sb.appendBuffer(rifai.pezzo);
+            }
+          }, { once: true });
+          sb.appendBuffer(inizio);
+        } catch (e) { chiudi({ arriva: false, perche: "MSE: " + String(e) }); }
+      }, { once: true });
+      v.addEventListener("loadeddata", () => {
+        try {
+          p.drawImage(v, 0, 0, rl, ra);
+          const dati = p.getImageData(0, 0, rl, ra).data;
+          const b = 4;
+          const sx = colore_medio(dati, rl, b, b, rl / 2 - b, ra - b);
+          const dx = colore_medio(dati, rl, rl / 2 + b, b, rl - b, ra - b);
+          const bene = sx && dx &&
+            lontananza(sx, sonda.sinistra) < lontananza(sx, sonda.destra) &&
+            lontananza(dx, sonda.destra) < lontananza(dx, sonda.sinistra);
+          chiudi({ arriva: !!bene, formato: "mse",
+                   misura: [v.videoWidth, v.videoHeight],
+                   letture: { sinistra: sx, destra: dx },
+                   perche: bene ? null : "il `<video>` ha caricato ma i pixel "
+                          + "non sono quelli della sonda (sinistra " + sx
+                          + ", destra " + dx + ")" });
+        } catch (e) { chiudi({ arriva: false, perche: "lettura: " + String(e) }); }
+      }, { once: true });
+      v.addEventListener("error", () => chiudi({ arriva: false,
+        perche: "il `<video>` ha rifiutato il flusso" }), { once: true });
+    } catch (e) {
+      chiudi({ arriva: false, perche: String(e) });
+    }
+  });
+}
+
 /* Sonda UN codec a UNA profondita', e ritorna che cosa ha detto ciascuno dei
    due testimoni: l'API e il pixel. */
 async function sonda_una(nome, profondita) {
@@ -1261,8 +1363,30 @@ async function sonda_una(nome, profondita) {
   const sonda = SONDE[nome + "-" + profondita];
   if (!sonda) { esito.perche = "questa pagina non porta una sonda per "
                              + nome + " a " + profondita + " bit"; return esito; }
-  if (typeof VideoDecoder === "undefined") {
-    esito.perche = "questo browser non ha WebCodecs"; return esito;
+  /* ⛔⭐ E SE WebCodecs NON C'E', SI PROVA L'ALTRA STRADA invece di arrendersi
+   *     — `DECISIONI.md` §7.18, 21 agosto 2026.  `[M]` Firefox per Android non
+   *     ha `VideoDecoder`, e senza questo ramo la pagina dichiarava «nessun
+   *     codec arriva al pixel» su un telefono che H.264 lo decodifica **in
+   *     hardware**.  ⚠ Solo H.264: il muxer di questa pagina fabbrica `avc1`,
+   *     e HEVC dentro MP4 vorrebbe un'altra scatola. */
+  if (typeof VideoDecoder === "undefined" || VIA_MSE) {
+    if (nome !== "h264") {
+      esito.perche = (typeof VideoDecoder === "undefined")
+        ? "questo browser non ha WebCodecs, e l'altra strada (MSE) porta il solo H.264"
+        : "si sta misurando la strada MSE, che porta il solo H.264";
+      return esito;
+    }
+    const tela = document.createElement("canvas");
+    tela.width = 64; tela.height = 64;
+    const p2 = tela.getContext("2d", { willReadFrequently: true });
+    const s2 = SONDE[nome + "-" + profondita];
+    esito.stringa = stringhe_codec(nome, profondita)[0];
+    const r2 = await sonda_mse_una(s2, esito.stringa, 64, 64, p2);
+    esito.arriva = r2.arriva; esito.perche = r2.perche;
+    esito.formato = r2.formato || null; esito.letture = r2.letture || null;
+    esito.misura = r2.misura || null;
+    esito.via = "mse";
+    return esito;
   }
   for (const stringa of stringhe_codec(nome, profondita, LIVELLO_DICHIARATO)) {
     const config = { codec: stringa, codedWidth: sonda.l, codedHeight: sonda.a,
@@ -1913,6 +2037,235 @@ const GIRO = {
       **quel disaccordo e' il regalo** — e copiare il lettore lo farebbe sparire
       senza che nessuno se ne accorga.
    ══════════════════════════════════════════════════════════════════════════ */
+/*
+ * ⭐⭐⭐ IL SECONDO PERCORSO DI DISEGNO — MP4 FRAMMENTATO SU MSE
+ *      `DECISIONI.md` §7.18, 21 agosto 2026, dall'utente: «si costruisce».
+ *
+ * ⛔ PERCHE' ESISTE, e non e' una comodita': **Firefox per Android non ha
+ *    WebCodecs** — ne' `VideoDecoder` ne' `AudioDecoder` — e senza questo
+ *    percorso su quel motore REMOTIX **non disegna un pixel**.  ⚠ Non e' una
+ *    questione di codec: `[M]` lo stesso telefono dichiara H.264 **in
+ *    hardware** attraverso MSE.  La capacita' c'e'; mancava il modo di darle i
+ *    byte.
+ *
+ * ⛔ E NON E' UN'ECCEZIONE PER MOTORE (`DECISIONI.md` §0.1-bis): quel principio
+ *    parla di un browser che **rende peggio**, e qui il browser **non apre
+ *    affatto**.  ⚠ Il prezzo e' misurato e dichiarato — `fasi/06`, banco
+ *    `07-b57`: MSE costa **centinaia di millisecondi** contro un tetto di 50, e
+ *    su questa strada il ritardo e' di un'altra classe.  Chi la prende lo legge.
+ *
+ * ⭐ E IL PROTOCOLLO NON SI TOCCA: sul filo passano gli stessi fotogrammi
+ *    Annex-B di §6.2.  Quel che cambia e' **come il client li disegna**, e il
+ *    server non se ne accorge.
+ *
+ * ⚠ L'audio non passa di qui: quando manca `AudioDecoder` la pagina dichiara
+ *   `pcm` e basta (§4.3 lo impone a entrambi ed e' la base sempre disponibile).
+ */
+
+/* Le scatole di un MP4: lunghezza (4) · tipo (4) · contenuto. */
+function mp4_scatola(tipo, ...pezzi) {
+  let n = 8;
+  for (const p of pezzi) n += p.length;
+  const u = new Uint8Array(n);
+  new DataView(u.buffer).setUint32(0, n);
+  for (let i = 0; i < 4; i++) u[4 + i] = tipo.charCodeAt(i);
+  let o = 8;
+  for (const p of pezzi) { u.set(p, o); o += p.length; }
+  return u;
+}
+const mp4_b = (...v) => new Uint8Array(v);
+function mp4_u32(v) {
+  const u = new Uint8Array(4); new DataView(u.buffer).setUint32(0, v >>> 0); return u;
+}
+function mp4_u16(v) {
+  const u = new Uint8Array(2); new DataView(u.buffer).setUint16(0, v & 0xFFFF); return u;
+}
+
+/* ⛔ Annex-B → la fila dei NAL.  §6.2 non promette quale delle due marche di
+ *    avvio usi il codificatore, e le usa tutt'e due: si accettano sia
+ *    `00 00 01` sia `00 00 00 01`. */
+function annexb_nal(u) {
+  const fuori = [];
+  let i = 0, inizio = -1;
+  while (i + 3 <= u.length) {
+    if (u[i] === 0 && u[i + 1] === 0 &&
+        (u[i + 2] === 1 || (u[i + 2] === 0 && u[i + 3] === 1))) {
+      const salto = u[i + 2] === 1 ? 3 : 4;
+      if (inizio >= 0) fuori.push(u.subarray(inizio, i));
+      inizio = i + salto;
+      i += salto;
+      continue;
+    }
+    i++;
+  }
+  if (inizio >= 0 && inizio < u.length) fuori.push(u.subarray(inizio, u.length));
+  return fuori;
+}
+
+/*
+ * ⭐ IL MUXER.  Tiene l'SPS e il PPS visti per ultimi (§5.2 li fa ripetere su
+ *    ogni chiave, e `codificatore.c` lo chiede con `repeat-headers=1`), e da
+ *    quelli sa fabbricare il **segmento d'inizio**; poi ogni fotogramma diventa
+ *    un `moof`+`mdat`.
+ *
+ * ⚠ La scala dei tempi e' in millisecondi e la durata di ogni fotogramma e'
+ *   quella VERA, misurata all'arrivo: un desktop non ha un ritmo fisso — sta
+ *   fermo per secondi e poi si muove — e dichiarare 60/s a un `<video>` che
+ *   riceve 3 fotogrammi al secondo lo manderebbe a secco a ogni pausa.
+ */
+const MP4_SCALA = 1000;
+const MP4_DURATA_MIN = 4;      /* ms: sotto, i tempi non crescono piu' */
+const MP4_DURATA_MAX = 500;    /* ms: una pausa lunga non diventa un buco */
+
+class MuxMP4 {
+  constructor() {
+    this.sps = null; this.pps = null;
+    this.decodifica = 0;       /* il `tfdt` che cresce, in millisecondi */
+    this.sequenza = 1;
+    this.ultimo_ms = null;
+    this.l = 0; this.a = 0;
+  }
+
+  /* Il `avcC` di §5.2: la carta d'identita' del flusso per il `<video>`. */
+  avcc() {
+    return mp4_scatola("avcC",
+      mp4_b(1, this.sps[1], this.sps[2], this.sps[3], 0xFF, 0xE1),
+      mp4_u16(this.sps.length), this.sps,
+      mp4_b(1), mp4_u16(this.pps.length), this.pps);
+  }
+
+  /* Il segmento d'inizio: `ftyp` + `moov`.  Si rifa' a ogni misura nuova — MSE
+   * accetta un inizio nuovo in mezzo al flusso, ed e' cosi' che si cambia tela
+   * senza buttare la sessione. */
+  inizio(l, a) {
+    this.l = l; this.a = a;
+    const nome = new Uint8Array(32);            /* compressorname, vuoto */
+    const avc1 = mp4_scatola("avc1",
+      mp4_b(0, 0, 0, 0, 0, 0), mp4_u16(1),      /* riservati · data_reference_index */
+      new Uint8Array(16),                        /* pre_defined + reserved */
+      mp4_u16(l), mp4_u16(a),
+      mp4_u32(0x00480000), mp4_u32(0x00480000), /* 72 dpi */
+      mp4_u32(0), mp4_u16(1),                    /* reserved · frame_count */
+      nome, mp4_u16(0x0018), mp4_b(0xFF, 0xFF), /* profondita' · pre_defined */
+      this.avcc());
+    const stbl = mp4_scatola("stbl",
+      mp4_scatola("stsd", mp4_u32(0), mp4_u32(1), avc1),
+      mp4_scatola("stts", mp4_u32(0), mp4_u32(0)),
+      mp4_scatola("stsc", mp4_u32(0), mp4_u32(0)),
+      mp4_scatola("stsz", mp4_u32(0), mp4_u32(0), mp4_u32(0)),
+      mp4_scatola("stco", mp4_u32(0), mp4_u32(0)));
+    const minf = mp4_scatola("minf",
+      mp4_scatola("vmhd", mp4_u32(1), mp4_u32(0), mp4_u32(0)),
+      mp4_scatola("dinf", mp4_scatola("dref", mp4_u32(0), mp4_u32(1),
+        mp4_scatola("url ", mp4_u32(1)))),
+      stbl);
+    const mdia = mp4_scatola("mdia",
+      mp4_scatola("mdhd", mp4_u32(0), mp4_u32(0), mp4_u32(0),
+                  mp4_u32(MP4_SCALA), mp4_u32(0), mp4_u32(0x55C40000)),
+      mp4_scatola("hdlr", mp4_u32(0), mp4_u32(0),
+                  mp4_b(0x76, 0x69, 0x64, 0x65),   /* «vide» */
+                  new Uint8Array(12), mp4_b(0)),
+      minf);
+    const tkhd = mp4_scatola("tkhd",
+      mp4_u32(0x00000007),                        /* abilitata, in film, in anteprima */
+      mp4_u32(0), mp4_u32(0), mp4_u32(1), mp4_u32(0), mp4_u32(0),
+      /* riservati (8) · strato + gruppo (4) · volume + riservato (4) */
+      mp4_u32(0), mp4_u32(0), mp4_u32(0), mp4_u32(0),
+      mp4_u32(0x00010000), mp4_u32(0), mp4_u32(0),
+      mp4_u32(0), mp4_u32(0x00010000), mp4_u32(0),
+      mp4_u32(0), mp4_u32(0), mp4_u32(0x40000000),
+      mp4_u32(l << 16), mp4_u32(a << 16));
+    const moov = mp4_scatola("moov",
+      mp4_scatola("mvhd", mp4_u32(0), mp4_u32(0), mp4_u32(0),
+                  mp4_u32(MP4_SCALA), mp4_u32(0), mp4_u32(0x00010000),
+                  mp4_u16(0x0100), mp4_u16(0), mp4_u32(0), mp4_u32(0),
+                  mp4_u32(0x00010000), mp4_u32(0), mp4_u32(0),
+                  mp4_u32(0), mp4_u32(0x00010000), mp4_u32(0),
+                  mp4_u32(0), mp4_u32(0), mp4_u32(0x40000000),
+                  new Uint8Array(24), mp4_u32(2)),
+      mp4_scatola("trak", tkhd, mdia),
+      mp4_scatola("mvex", mp4_scatola("trex", mp4_u32(0), mp4_u32(1),
+                  mp4_u32(1), mp4_u32(0), mp4_u32(0), mp4_u32(0))));
+    const ftyp = mp4_scatola("ftyp",
+      mp4_b(0x69, 0x73, 0x6F, 0x6D), mp4_u32(0x200),
+      mp4_b(0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32,
+            0x61, 0x76, 0x63, 0x31, 0x6D, 0x70, 0x34, 0x31));
+    const u = new Uint8Array(ftyp.length + moov.length);
+    u.set(ftyp, 0); u.set(moov, ftyp.length);
+    this.decodifica = 0; this.sequenza = 1; this.ultimo_ms = null;
+    return u;
+  }
+
+  /* Un fotogramma Annex-B → un `moof`+`mdat`.  ⛔ `null` se l'SPS non e'
+   * ancora arrivato: non si inventa un inizio che non si e' visto. */
+  fotogramma(dati, chiave, adesso_ms) {
+    const nal = annexb_nal(dati);
+    let nuovo_inizio = false;
+    const carne = [];
+    for (const n of nal) {
+      const tipo = n[0] & 0x1F;
+      if (tipo === 7) {
+        if (!this.sps || this.sps.length !== n.length ||
+            !this.sps.every((v, i) => v === n[i])) nuovo_inizio = true;
+        this.sps = n.slice();
+        continue;
+      }
+      if (tipo === 8) { this.pps = n.slice(); continue; }
+      /* ⚠ Delimitatori e riempimenti non vanno nel campione: il `<video>` non
+       *   li vuole e alcuni motori li rifiutano. */
+      if (tipo === 9 || tipo === 12) continue;
+      carne.push(n);
+    }
+    if (!this.sps || !this.pps || !carne.length) return null;
+
+    let byte = 0;
+    for (const n of carne) byte += 4 + n.length;
+    const campione = new Uint8Array(byte);
+    const vc = new DataView(campione.buffer);
+    let o = 0;
+    for (const n of carne) {
+      vc.setUint32(o, n.length); o += 4;
+      campione.set(n, o); o += n.length;
+    }
+
+    let durata = MP4_DURATA_MIN;
+    if (this.ultimo_ms !== null)
+      durata = Math.min(MP4_DURATA_MAX,
+                        Math.max(MP4_DURATA_MIN, Math.round(adesso_ms - this.ultimo_ms)));
+    this.ultimo_ms = adesso_ms;
+
+    const tfdt = mp4_scatola("tfdt", mp4_b(1, 0, 0, 0),
+                             mp4_u32(Math.floor(this.decodifica / 4294967296)),
+                             mp4_u32(this.decodifica >>> 0));
+    /* ⛔ VERSIONE (1 byte) e poi BANDIERE (3), non il contrario: 0x000305 =
+     *    scarto dei dati · bandiere del primo campione · durata · misura.
+     * ⚠ Scrivendole al rovescio il `<video>` legge una versione 0x00 e bandiere
+     *   0x030500, cioe' campi che non ci sono: non da' errore, non dipinge. */
+    const trun = mp4_scatola("trun",
+      mp4_b(0, 0x00, 0x03, 0x05),
+      mp4_u32(1), mp4_u32(0),                   /* quanti · scarto (si scrive dopo) */
+      mp4_u32(chiave ? 0x02000000 : 0x01010000),
+      mp4_u32(durata), mp4_u32(campione.length));
+    const traf = mp4_scatola("traf",
+      mp4_scatola("tfhd", mp4_b(0, 0x02, 0x00, 0x00), mp4_u32(1)),
+      tfdt, trun);
+    const moof = mp4_scatola("moof",
+      mp4_scatola("mfhd", mp4_u32(0), mp4_u32(this.sequenza++)), traf);
+    /* ⛔ Lo scarto dei dati si scrive DOPO aver saputo quanto e' lungo il
+     *    `moof`: e' relativo all'inizio del `moof` (`default-base-is-moof`).
+     * ⚠ E sta a 16 byte dall'inizio del `trun`, che e' l'ultima scatola del
+     *   `moof` ed e' lunga 32: misura(4) tipo(4) versione+bandiere(4) quanti(4)
+     *   **scarto(4)** bandiere-del-primo(4) durata(4) misura-campione(4). */
+    new DataView(moof.buffer, moof.byteOffset)
+      .setUint32(moof.length - 16, moof.length + 8);
+    const mdat = mp4_scatola("mdat", campione);
+    const u = new Uint8Array(moof.length + mdat.length);
+    u.set(moof, 0); u.set(mdat, moof.length);
+    this.decodifica += durata;
+    return { pezzo: u, nuovo_inizio, durata };
+  }
+}
+
 class Schermo {
   constructor(tela) {
     this.tela = tela;
@@ -1980,6 +2333,11 @@ class Schermo {
     this.storiche = new Set();
     this.finestra = false;                     /* la finestra del cambio di tela */
     this.dec = null; this.dec_l = 0; this.dec_a = 0;
+    /* ⭐ L'altra strada (§7.18): il `<video>`, il muxer e la coda dei pezzi.
+     *    Restano nulli quando si dipinge con WebCodecs. */
+    this.video = null; this.sorgente = null; this.sb = null;
+    this.mux = null; this.coda_mse = []; this.mse_inizio = false;
+    this.mse_ritardo = null;
     this.vista_l = 0; this.vista_a = 0;        /* §4.5: la misura in cui si disegna */
     /* ⛔⭐ IL DEPOSITO — l'ultimo fotogramma dipinto, tenuto alla sua misura
      * nativa.  Nasce con la cura del 13 agosto 2026, e non e' un'ottimizzazione:
@@ -2718,9 +3076,12 @@ class Schermo {
       return;
     }
 
-    /* 8. la misura per cui il decodificatore E' configurato. */
+    /* 8. la misura per cui il decodificatore E' configurato.
+     * ⚠ Sull'altra strada il decodificatore non c'e': quel che deve essere
+     *   pronto e' il `<video>` e la sua sorgente (§7.18). */
     const dec_m = this.dec_l + "x" + this.dec_a;
-    if (!this.dec || m !== dec_m) {
+    const pronto = VIA_MSE ? !!this.sb : !!this.dec;
+    if (!pronto || m !== dec_m) {
       if (chiave && m === in_vigore) {
         if (!this.riconfigura(i.larghezza, i.altezza)) return;
       } else {
@@ -2739,6 +3100,20 @@ class Schermo {
     }
 
     /* 9. la consegna. */
+    if (VIA_MSE) {
+      if (!this.mse_consegna(dati, chiave)) return;
+      this.conti.consegnati++;
+      this.ultimo_consegnato = i.numero;
+      this.atteso = dopo(i.numero);
+      if (chiave) {
+        this.sospeso = false;
+        if (this.finestra && m === in_vigore) {
+          this.finestra = false;
+          this.tollerate.clear();
+        }
+      }
+      return;
+    }
     try {
       this.dec.decode(new EncodedVideoChunk({
         type: chiave ? "key" : "delta", timestamp: i.istante, data: dati }));
@@ -2891,7 +3266,156 @@ class Schermo {
     for (const t of in_attesa) this.consegna(t.i, t.dati);
   }
 
+  /*
+   * ⭐⭐ L'ALTRA STRADA — `MediaSource` e un `<video>` (`DECISIONI.md` §7.18).
+   *
+   * ⛔ Si prende SOLO quando WebCodecs non c'e', e il prezzo e' misurato:
+   *    `[M]` centinaia di millisecondi di ritardo in piu' (banco `07-b57`),
+   *    contro il tetto di 50 ms di `SPECIFICHE.md` §3.2.  ⇒ Chi ci finisce lo
+   *    legge, e la riga sta nel riquadro delle dichiarazioni.
+   */
+  mse_riconfigura(l, a) {
+    if (!this.video) {
+      /* ⛔ Il `<video>` prende il posto della tela e ne eredita l'aspetto: la
+       *    pagina intorno non deve sapere quale delle due strade sta girando. */
+      const v = document.createElement("video");
+      v.id = "tela-video";
+      v.muted = true; v.playsInline = true; v.autoplay = true;
+      v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
+      v.className = this.tela.className;
+      v.style.cssText = this.tela.style.cssText;
+      this.tela.parentNode.insertBefore(v, this.tela.nextSibling);
+      this.tela.style.display = "none";
+      this.video = v;
+      /* ⭐ E i fotogrammi si contano dove arrivano DAVVERO allo schermo: e'
+       *   l'unico posto, su questa strada, in cui si sappia che un pixel c'e'. */
+      if (v.requestVideoFrameCallback) {
+        const conta = (adesso, meta) => {
+          this.conti.dipinti++;
+          this.mostrata = meta && meta.mediaTime;
+          this.mse_insegui();
+          v.requestVideoFrameCallback(conta);
+        };
+        v.requestVideoFrameCallback(conta);
+      } else {
+        this.riga("⚠ questo motore non ha `requestVideoFrameCallback`: i "
+                  + "fotogrammi dipinti non si possono contare su questa strada");
+      }
+    }
+    /* ⛔ Sorgente e buffer si rifanno da capo a ogni misura nuova: si potrebbe
+     *    mandare solo un inizio nuovo, ma un `<video>` che cambia misura in
+     *    mezzo al flusso e' terreno dove i motori divergono — e §5.2 garantisce
+     *    una chiave subito dopo, quindi rifarli non costa un buco. */
+    this.mse_spegni_sorgente();
+    this.mux = new MuxMP4();
+    this.coda_mse = [];
+    this.mse_inizio = false;
+    const stringa = this.stringa || "avc1.640028";
+    const tipo = 'video/mp4; codecs="' + stringa + '"';
+    try {
+      if (typeof MediaSource === "undefined" || !MediaSource.isTypeSupported(tipo)) {
+        this.riga("⛔ MSE non accetta «" + tipo + "»: su questa strada non si "
+                  + "puo' dipingere");
+        return false;
+      }
+      const ms = new MediaSource();
+      this.sorgente = ms;
+      this.video.src = URL.createObjectURL(ms);
+      ms.addEventListener("sourceopen", () => {
+        try {
+          this.sb = ms.addSourceBuffer(tipo);
+          this.sb.mode = "segments";
+          this.sb.addEventListener("updateend", () => this.mse_scarica());
+          this.mse_scarica();
+        } catch (e) {
+          this.riga("⛔ la sorgente non ha accettato «" + tipo + "»: " + e);
+        }
+      }, { once: true });
+    } catch (e) {
+      this.riga("⛔ MSE non si e' aperta: " + e);
+      return false;
+    }
+    this.conti.riconfigurazioni++;
+    this.dec_l = l; this.dec_a = a;
+    this.riga("⚠ §7.18: si dipinge con MSE e un `<video>` (" + l + "×" + a
+              + ", «" + stringa + "»), perche' questo browser non ha WebCodecs. "
+              + "Il ritardo su questa strada e' piu' alto, ed e' dichiarato");
+    return true;
+  }
+
+  mse_spegni_sorgente() {
+    try {
+      if (this.sorgente && this.sorgente.readyState === "open")
+        this.sorgente.endOfStream();
+    } catch (e) { /* niente */ }
+    this.sb = null; this.sorgente = null;
+  }
+
+  /* Un fotogramma di §6.2 → un pezzo di MP4 in coda.  `false` = non e' entrato,
+   * e chi chiama non lo conta come consegnato. */
+  mse_consegna(dati, chiave) {
+    if (!this.mux) return false;
+    const f = this.mux.fotogramma(dati, chiave, performance.now());
+    if (!f) {
+      /* ⚠ Prima della prima chiave non c'e' un SPS: non e' un guasto, e §5.2
+       *   garantisce che la chiave arrivi. */
+      return false;
+    }
+    if (!this.mse_inizio || f.nuovo_inizio) {
+      this.coda_mse.push(this.mux.inizio(this.dec_l, this.dec_a));
+      this.mse_inizio = true;
+    }
+    this.coda_mse.push(f.pezzo);
+    this.mse_scarica();
+    return true;
+  }
+
+  mse_scarica() {
+    if (!this.sb || this.sb.updating || !this.coda_mse.length) return;
+    try {
+      this.sb.appendBuffer(this.coda_mse.shift());
+    } catch (e) {
+      /* ⛔ `QuotaExceededError` vuol dire che il buffer e' pieno: si butta il
+       *    passato, che su un desktop remoto non serve a nessuno. */
+      this.riga("⚠ il buffer del `<video>` ha rifiutato un pezzo (" + e
+                + "): butto quel che e' gia' passato");
+      try {
+        const b = this.sb.buffered;
+        if (b.length) this.sb.remove(b.start(0),
+          Math.max(b.start(0), this.video.currentTime - 0.5));
+      } catch (e2) { /* niente */ }
+    }
+  }
+
+  /* ⛔⭐ L'INSEGUIMENTO DEL BORDO VIVO, e il suo prezzo dichiarato.
+   *
+   * ⚠ Un `<video>` riproduce alla velocita' del suo orologio, non a quella con
+   *   cui arrivano i byte: se resta indietro, la coda cresce e non torna piu'.
+   *   `[M]` banco `07-b57`: fino a 4,7 secondi.
+   * ⛔ Saltare avanti costa uno SCATTO, e si contano — su un desktop remoto uno
+   *   scatto ogni tanto e' meglio di un secondo di ritardo fisso, ma la scelta
+   *   va vista nei conti invece che indovinata. */
+  mse_insegui() {
+    const v = this.video;
+    if (!v) return;
+    try {
+      const b = v.buffered;
+      if (!b.length) return;
+      const bordo = b.end(b.length - 1);
+      const dietro = bordo - v.currentTime;
+      this.mse_ritardo = Math.round(dietro * 1000);
+      if (dietro > MSE_SOGLIA_S) {
+        v.currentTime = Math.max(0, bordo - MSE_BORDO_S);
+        this.conti.salti_mse = (this.conti.salti_mse || 0) + 1;
+      }
+      if (v.paused) v.play().catch(() => {});
+    } catch (e) { /* niente */ }
+  }
+
   riconfigura(l, a) {
+    /* ⭐ L'altra strada non ha un decodificatore da configurare: ha un
+     *    `<video>` a cui si manda un inizio nuovo (§7.18). */
+    if (VIA_MSE) return this.mse_riconfigura(l, a);
     const config = { codec: this.stringa, codedWidth: l, codedHeight: a,
                      optimizeForLatency: true };
     try {
@@ -2974,7 +3498,7 @@ class Schermo {
      * ⛔ E il conto si tiene: un fotogramma buttato in silenzio e' un ritmo che
      *   cala senza che nessuno sappia perche' (`I1` vuole che ogni discesa sia
      *   dichiarata). */
-    if (this.dec && this.dec.decodeQueueSize > 2) {
+    if (!VIA_MSE && this.dec && this.dec.decodeQueueSize > 2) {
       this.conti.saltati_coda++;
       try { f.close(); } catch (e) { /* gia' chiuso */ }
       return;
