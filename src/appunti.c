@@ -396,6 +396,62 @@ static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
 	g_mutex_unlock(&appunti->lucchetto);
 }
 
+/*
+ * ⛔⛔⭐ LA CLIPBOARD CHE C'ERA GIA', E CHE VA **CHIESTA** — 21 agosto 2026.
+ *
+ * ⚠ Qui accanto c'era scritto che `EnableClipboard` con opzioni vuote fa
+ *   arrivare un `SelectionOwnerChanged` **subito**, «ed e' proprio l'annuncio
+ *   che fa ritrovare gli appunti a chi si ricollega».  ⛔ **Non e' vero**, e la
+ *   misura e' del 21 agosto: `wl-copy` vivo e proprietario nella sessione,
+ *   `wl-paste` che legge il suo testo prima e dopo — e nel registro del figlio
+ *   **nessuna** riga di lettura.  Mutter non racconta a una sessione nuova chi
+ *   possiede la selezione: racconta solo i CAMBI da li' in poi.
+ *
+ * ⇒ E la conseguenza era grossa: il client, per farsi trovare quando qualcuno
+ *   di la' incolla col mouse, annuncia i suoi appunti appena si collega — e
+ *   non sapendo che cosa c'era nella sessione ci prendeva sopra la selezione.
+ *   `[M]` `wl-paste` diceva «TESTO-CHE-ERA-GIA-NEL-DESKTOP» prima del
+ *   collegamento e «» dopo: **collegandosi si perdeva la clipboard del
+ *   desktop**.  ⛔ In una sessione locale la clipboard non sparisce perche' e'
+ *   entrato qualcuno, e qui non deve sparire nemmeno.
+ *
+ * ⭐ Allora la si chiede, una volta, appena la clipboard e' accesa: se c'e' un
+ *    proprietario si legge il suo testo e lo si annuncia al client come
+ *    qualunque altra copia; se non c'e' nessuno, `leggi_il_testo` lo dice nel
+ *    registro e non succede niente.
+ */
+void appunti_leggi_adesso(Appunti *appunti)
+{
+	g_autofree char *testo = NULL;
+	size_t byte = 0;
+
+	if (!appunti)
+		return;
+
+	testo = leggi_il_testo(appunti, &byte);
+	if (!testo)
+	{
+		registro_dettaglio(REG_APPUNTI,
+		                   "la sessione non aveva appunti da darci al momento "
+		                   "dell'accensione: non e' un guasto");
+		return;
+	}
+
+	registro_dice(REG_APPUNTI,
+	              "⭐ la clipboard che c'era GIA' nella sessione: %zu byte, "
+	              "letti all'accensione.  ⚠ Chi si collega non deve perdere "
+	              "quel che aveva copiato",
+	              byte);
+
+	g_mutex_lock(&appunti->lucchetto);
+	g_free(appunti->ultimo);
+	appunti->ultimo = g_strdup(testo);
+	appunti->ultimo_byte = byte;
+	if (appunti->su_testo)
+		appunti->su_testo(testo, byte, appunti->dati);
+	g_mutex_unlock(&appunti->lucchetto);
+}
+
 static void su_trasferimento(GDBusConnection *bus, const char *mittente,
                              const char *percorso, const char *interfaccia,
                              const char *segnale, GVariant *parametri,
@@ -484,9 +540,13 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 
 	/*
 	 * ⛔ Il ciclo e il thread partono PRIMA di `EnableClipboard`, e l'ordine non
-	 *    e' indifferente: quella chiamata con opzioni vuote fa arrivare un
-	 *    `SelectionOwnerChanged` **subito**, ed e' proprio l'annuncio che fa
-	 *    ritrovare gli appunti a chi si ricollega.  Accendendo prima la
+	 *    e' indifferente: quella chiamata puo' far arrivare un
+	 *    `SelectionOwnerChanged` **subito**.
+	 * ⚠ Qui c'era scritto che quel segnale «e' proprio l'annuncio che fa
+	 *   ritrovare gli appunti a chi si ricollega»: **e' falso**, misurato il 21
+	 *   agosto 2026 — Mutter racconta i CAMBI, non il proprietario che c'era.
+	 *   Gli appunti che c'erano gia' si chiedono, e lo fa
+	 *   `appunti_leggi_adesso()`.  Accendendo prima la
 	 *    clipboard e poi il thread, quel segnale cadrebbe nella finestra in cui
 	 *    nessuno fa girare il contesto — ⚠ e il sintomo sarebbe «gli appunti
 	 *    funzionano solo dalla seconda copia in poi», che nessuno collega
@@ -622,11 +682,49 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
                       size_t byte)
 {
 	g_autoptr(GError) sbaglio = NULL;
+	g_autofree char *ripiego = NULL;
 	gboolean riuscito = FALSE;
 	int fd;
 
 	if (!appunti)
 		return;
+
+	/* ⛔⛔⭐ SE IL CLIENT NON HA NIENTE, SI RENDE AL DESKTOP QUEL CHE AVEVA —
+	 *      21 agosto 2026, e nasce dalla direttiva dell'utente: «l'esperienza
+	 *      dev'essere quanto piu' vicina possibile a una sessione grafica
+	 *      locale».
+	 *
+	 * ⚠ Per farsi trovare quando qualcuno di qua incolla col mouse, il client
+	 *   si annuncia appena si collega — e annunciarsi vuol dire prendersi la
+	 *   selezione, che e' UNA.  ⛔ Da quel momento chi incolla nel desktop
+	 *   chiede a NOI, e se il client non ha niente da dare l'incollata usciva
+	 *   vuota: `[M]` `wl-paste` diceva «TESTO-CHE-ERA-GIA-NEL-DESKTOP» prima
+	 *   del collegamento e «» dopo.  Cioe' collegarsi CANCELLAVA la clipboard
+	 *   del desktop.
+	 *
+	 * ⭐ La cura sta qui e non tocca il protocollo: la selezione cambia di
+	 *    mano, il CONTENUTO no.  Se il client non consegna niente, si consegna
+	 *    l'ultimo testo che la sessione ci aveva dato — che e' esattamente quel
+	 *    che l'utente aveva copiato di qua.
+	 * ⚠ E si dichiara nel registro: un ripiego silenzioso avrebbe la faccia di
+	 *   una consegna riuscita. */
+	if (!testo || byte == 0)
+	{
+		size_t quanti = 0;
+
+		ripiego = appunti_ultimo_testo(appunti, &quanti);
+		if (ripiego && quanti > 0)
+		{
+			registro_dice(REG_APPUNTI,
+			              "⭐ il client non ha appunti da dare per la richiesta "
+			              "%u: rendo alla sessione i %zu byte che aveva LEI.  "
+			              "⚠ Collegarsi non deve cancellare la clipboard del "
+			              "desktop",
+			              serial, quanti);
+			testo = ripiego;
+			byte = quanti;
+		}
+	}
 
 	if (!testo || byte == 0)
 	{
@@ -656,6 +754,17 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 		              serial, sbaglio->message);
 		return;
 	}
+
+	/* ⭐ E la cache diventa quel che la sessione ha DAVVERO in mano: da qui in
+	 *    poi il ripiego qui sopra rende questo, non un testo di prima. */
+	g_mutex_lock(&appunti->lucchetto);
+	if (!ripiego)
+	{
+		g_free(appunti->ultimo);
+		appunti->ultimo = g_strndup(testo, byte);
+		appunti->ultimo_byte = byte;
+	}
+	g_mutex_unlock(&appunti->lucchetto);
 
 	{
 		size_t scritti = 0;

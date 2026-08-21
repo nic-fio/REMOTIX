@@ -4880,6 +4880,8 @@ const APPUNTI = {
      chiedere il permesso quando la strada gratis ha gia' funzionato: vedi
      `appunti_su_incolla`. */
   ultimo_paste_ms: 0,
+  /* ⛔ L'annuncio d'apertura e' gia' partito?  Vedi `appunti_apri_la_domanda`. */
+  aperta: false,
 };
 
 /* ⛔ Uno stream per messaggio, come fa il server: a legare i messaggi di un
@@ -4999,7 +5001,7 @@ async function scrivi_negli_appunti(testo) {
  *         tasto: il server METTE IN CODA la richiesta di incolla e la serve
  *         quando l'annuncio arriva (`rcp.c`, `rcp_appunti_chiedi`).
  */
-async function appunti_annuncia(testo) {
+async function appunti_annuncia(testo, forza) {
   if (!APPUNTI.acceso || typeof testo !== "string") {
     app_diario("annuncio saltato: "
                + (APPUNTI.acceso ? "non e' testo" : "appunti spenti"));
@@ -5008,7 +5010,7 @@ async function appunti_annuncia(testo) {
   /* ⚠ E questo NON e' un difetto: e' l'eco, o una copia gia' annunciata.  ⛔ Ma
      va detto lo stesso, o «l'ho gia' mandato» e «non l'ho mai mandato» hanno la
      stessa faccia dal server — che e' proprio il caso che stiamo cercando. */
-  if (testo === APPUNTI.ultimo_letto) {
+  if (!forza && testo === APPUNTI.ultimo_letto) {
     app_diario("annuncio saltato: identico all'ultimo (eco o copia ripetuta)");
     return;
   }
@@ -5306,6 +5308,14 @@ async function appunti_ricevuti(byte, completo) {
       return;
     }
     APPUNTI.conti.ricevuti++;
+    /* ⚠ E si scrive SEMPRE, anche il primo: qui c'era una regola che il primo
+     *   testo della sessione lo imparava senza scriverlo, per non sovrascrivere
+     *   gli appunti del dispositivo al collegamento.  ⛔ Non distingueva «lo
+     *   stato iniziale» da «la prima copia fatta nella sessione», e mandava a
+     *   monte il verso sessione → client (`07-b54`, verso A rosso su tutt'e
+     *   due i motori).  ⇒ La protezione della clipboard del desktop sta nel
+     *   figlio, dove si sa che cosa c'e' davvero (`appunti.c`,
+     *   `appunti_rispondi`). */
     await scrivi_negli_appunti(testo);
     return;
   }
@@ -5570,8 +5580,16 @@ function appunti_prepara(wt, congeda) {
 /* ⭐ L'ANNUNCIO D'APERTURA, e parte quando la sessione c'e' (vedi il riquadro
  *    dentro `avvia_appunti`: prima di `SESSIONE` sarebbe §4.2 violata). */
 function appunti_apri_la_domanda() {
-  if (!APPUNTI.acceso || APPUNTI.mio_id !== 0) return;
-  appunti_annuncia("");
+  if (!APPUNTI.acceso || APPUNTI.aperta) return;
+  APPUNTI.aperta = true;
+  /* ⚠ Un annuncio da zero byte: dice il vero — in questo istante di appunti
+   *   letti non ce n'e' — e serve a farsi TROVARE.
+   * ⛔ E porta via la selezione a chi ce l'aveva, quindi la clipboard del
+   *   desktop passa di mano.  ⭐ Ma non si perde: se poi il desktop chiede e
+   *   noi non abbiamo niente, il figlio gli rende il testo che aveva LUI
+   *   (`appunti.c`, `appunti_rispondi`).  ⇒ Chi si collega non perde niente, e
+   *   l'incolla col mouse ha la strada aperta. */
+  appunti_annuncia("", true);
 }
 
 function avvia_appunti(negoziato) {

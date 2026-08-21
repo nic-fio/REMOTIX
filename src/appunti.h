@@ -181,6 +181,12 @@ char *appunti_ultimo_testo(Appunti *appunti, size_t *byte);
  *    tira» di §7.4 applicato di qua.  Chi copia un documento intero sul
  *    telefono non lo spedisce a nessuno finche' qualcuno non incolla.
  */
+/* ⭐ Legge ADESSO la selezione della sessione e la consegna alla richiamata:
+ *    Mutter non racconta a una sessione nuova chi possiede la selezione, e
+ *    senza questa chiamata la clipboard del desktop si perde al collegamento.
+ *    Vedi il riquadro in `appunti.c`. */
+void appunti_leggi_adesso(Appunti *appunti);
+
 gboolean appunti_offri(Appunti *appunti, GError **sbaglio);
 
 /*

@@ -1280,3 +1280,72 @@ motori.
 `dom.events.testing.asyncClipboard`, che spegnerebbe proprio la cosa da misurare. Il banco paga il
 prezzo davanti a tutti e **riferisce quante volte**.
 
+### 9.6 · ⛔⛔⭐ «COME UNA SESSIONE LOCALE» — la direttiva, e il difetto che ha fatto emergere
+
+> *«L'esperienza dell'utente con REMOTIX dev'essere quanto più vicina possibile all'esperienza con
+> una sessione grafica locale. […] niente trucchi, pulsanti strani o soluzioni tecniche che si
+> allontanino da questa direttiva»* — l'utente, 21 agosto 2026. `DECISIONI.md` §5-ter.8.
+
+⭐ Verificando la cura di §9.5 alla luce di quella frase è saltata fuori una domanda che nessun banco
+aveva mai fatto: **se nel desktop avevo già copiato qualcosa e poi mi collego, quel testo c'è
+ancora?**
+
+⛔ `[M]` **No, e la colpa era della cura del mattino.** `wl-paste` dentro la sessione diceva
+`TESTO-CHE-ERA-GIA-NEL-DESKTOP` prima del collegamento e **`«»`** dopo.
+
+⇒ La catena: per farsi trovare quando qualcuno incolla col mouse, la pagina si annuncia appena entra
+— e annunciarsi vuol dire **prendersi la selezione**, che è una sola. Prendendola a mani vuote si
+cancellava quel che l'utente aveva copiato di là. ⛔ È esattamente il contrario di una sessione
+locale, dove la clipboard non sparisce perché è entrato qualcuno.
+
+#### E la diagnosi ha corretto una riga di codice che affermava il falso
+
+`appunti.c` diceva che `EnableClipboard` con opzioni vuote fa arrivare un `SelectionOwnerChanged`
+**subito**, *«ed è proprio l'annuncio che fa ritrovare gli appunti a chi si ricollega»*.
+⛔ **Falso, misurato**: `wl-copy` vivo e proprietario, `wl-paste` che rilegge il suo testo prima e
+dopo, e nel registro del figlio **nessuna riga di lettura**. Mutter racconta i **cambi** di
+proprietario, non chi lo è già. ⇒ La clipboard che c'è si **chiede** (`appunti_leggi_adesso()`), e
+si richiede **a ogni riattacco** — il figlio sopravvive fra un collegamento e l'altro, quindi la
+lettura fatta all'accensione vale una volta sola (`MSG_RIMANDA_PALCO`, che vuol dire esattamente
+«un client si è riattaccato»).
+
+#### La cura definitiva sta dove il testo c'è davvero
+
+⭐ **Se il client non ha appunti da dare, il figlio rende alla sessione l'ultimo testo che la
+sessione stessa gli aveva dato** (`appunti_rispondi`). La selezione cambia di mano, **il contenuto
+no**. ⇒ Chi si collega non perde niente, e la strada dell'incolla col mouse resta aperta.
+
+⚠ **E due cure intermedie sono state buttate, con la loro ragione**:
+
+| cura provata | perché è caduta |
+|---|---|
+| «un annuncio vuoto non porta via la selezione a chi ha qualcosa» (in `rcp.c`) | proteggeva la clipboard **chiudendo la strada del mouse**: senza la selezione, il desktop non ci chiede niente |
+| «il primo testo della sessione si impara ma non si scrive negli appunti del dispositivo» (nella pagina) | non sapeva distinguere *lo stato iniziale* dalla *prima copia fatta nella sessione*, e ha mandato rosso il verso sessione → client su tutti e due i motori (`07-b54`) |
+
+⇒ ⭐ La lezione, ed è la stessa di sempre: **la cura va messa dove l'informazione c'è**. Né la pagina
+né il protocollo sanno che cosa contiene la clipboard del desktop; il figlio sì.
+
+#### ⛔ E tre altri difetti del banco, tutti che dichiaravano rotto un prodotto sano
+
+1. **`wl-copy` ucciso dal `timeout` del banco**: si biforca per *servire* la selezione, e il
+   `timeout 12` che avvolge il copione se lo portava via insieme al gruppo. ⇒ `setsid`, e la copia
+   **si verifica rileggendola**.
+2. **La clipboard del browser non era vuota**: il banco chiedeva «il desktop ha perso il suo testo?»
+   mentre il dispositivo aveva del testo suo — e allora il desktop riceve **quello**, ed è giusto.
+   ⇒ La domanda si fa solo a clipboard del dispositivo vuota, e la si svuota con un proprietario che
+   dichiara zero byte (⛔ non rileggendola con `readText()`: su Firefox quella lettura vuole un
+   gesto, e si finirebbe per misurare il permesso).
+3. **Dal secondo browser in poi non si misura un collegamento, si misura una coda**: il figlio
+   sopravvive e si porta dietro lo stato della prova precedente. ⇒ La prova «sopravvive?» si fa col
+   **primo** browser del giro, e per l'altro motore si rilancia il banco a server appena acceso.
+
+#### Lo stato misurato — 21 agosto 2026
+
+| | Firefox | Chrome |
+|---|---|---|
+| incolla col mouse (`07-b56`) | ⭐ 3 su 3 | ⭐ 3 su 3 |
+| la clipboard del desktop sopravvive al collegamento | ⭐ sì | ⚠ non misurabile da solo *(vedi difetto 3; la cura è nel figlio, non nel motore)* |
+| `Ctrl+V` nei due versi (`07-b54`) | ⭐ | ⭐ |
+| la corsa di §7.4 (`07-b53`) · la tela e il clic (`07-b51`) | ⭐ · ⭐ 4/4 | ⭐ · ⭐ 4/4 |
+| il bottoncino «Incolla» di Firefox | ⚠ **ogni volta** | mai |
+

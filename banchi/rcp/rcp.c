@@ -574,6 +574,10 @@ struct rcp_sessione {
 	 *   cominciano da 1.  Non e' un sentinella implicito (§6.0), e' quello
 	 *   dichiarato dal protocollo. */
 	uint32_t app_mio_id;  /* l'ultimo che ho annunciato IO */
+	/* ⛔ Quanti byte aveva l'ultimo testo che la SESSIONE ci ha dato: serve a
+	 *    sapere se la sessione ha qualcosa da perdere.  Vedi la regola
+	 *    dell'annuncio vuoto, piu' sotto. */
+	size_t app_mio_len;
 	uint32_t app_suo_id;  /* l'ultimo che ha annunciato il CLIENT */
 	uint32_t app_suo_len; /* quanti byte diceva quell'annuncio */
 
@@ -4719,6 +4723,7 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 	 *    quindi al giro del contatore si salta, come fa il `numero` dei
 	 *    fotogrammi di §6.2 per la stessa ragione. */
 	s->app_mio_id = s->app_mio_id == 0xFFFFFFFFu ? 1u : s->app_mio_id + 1u;
+	s->app_mio_len = byte;
 
 	if (!s->sessione_spedita || s->stato == S_FINITA)
 		return false;
@@ -4949,6 +4954,21 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			       "server che non ha quel canale");
 			return true;
 		}
+		/* ⛔⛔⭐ E UN ANNUNCIO VUOTO SI OFFRE LO STESSO, ed e' una scelta.
+		 *
+		 * ⚠ Il client manda un annuncio da zero byte appena la sessione nasce,
+		 *   per farsi trovare quando qualcuno di qua incolla col mouse: senza,
+		 *   il server non gli chiederebbe mai niente (vedi `rcp_appunti_chiedi`).
+		 *   ⛔ E offrire vuol dire prendersi la selezione, che e' UNA: la
+		 *     clipboard del desktop passa di mano.
+		 * ⭐ Passa di mano ma NON si perde: se il client non ha niente da dare,
+		 *   `appunti.c` rende alla sessione l'ultimo testo che la sessione
+		 *   stessa ci aveva dato.  ⇒ Il contenuto e' salvo, e la strada
+		 *   dell'incolla col mouse resta aperta.
+		 * ⚠ Qui c'era una regola che NON offriva sugli annunci vuoti: proteggeva
+		 *   la clipboard ma chiudeva la strada del mouse, e la protezione sta
+		 *   meglio dov'e' adesso — dove il testo c'e' davvero. */
+
 		/* ⛔ Ma NON mentre qualcuno sta incollando: vedi `app_offri_dopo`. */
 		if (s->app_serial_n > 0) {
 			s->app_offri_dopo = true;

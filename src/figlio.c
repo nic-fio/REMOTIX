@@ -4880,6 +4880,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "⭐⭐ GLI APPUNTI SONO APERTI, nei due versi e solo "
 			              "testo: da adesso quel che si copia nel desktop si "
 			              "puo' incollare sul dispositivo, e viceversa (§7.4)");
+			/* ⭐ E PRIMA DI TUTTO: la clipboard che c'era gia' nel desktop
+			 *    si CHIEDE, o collegandosi la si perde (vedi il riquadro in
+			 *    `appunti.c`).  ⛔ E si chiede PRIMA dell'offerta arretrata:
+			 *    offrendo per primi si leggerebbe il nostro testo invece del
+			 *    suo. */
+			appunti_leggi_adesso(palco_appunti);
+
 			/* ⭐ E l'offerta arrivata mentre non c'erano si rifa' ADESSO. */
 			if (appunti_offerta_arretrata) {
 				GError *sb = NULL;
@@ -5985,6 +5992,25 @@ void figlio_vive(int argc, char **argv)
 				 *    delta che seguono sono figli di un'altra catena. */
 				if (codec_chiesto)
 					debito_chiave[codec_chiesto] = true;
+
+				/* ⛔⛔⭐ E SI RIMANDA ANCHE LA CLIPBOARD — 21 agosto 2026.
+				 *
+				 * ⚠ Questo messaggio vuol dire «un client si e' RIATTACCATO a
+				 *   un figlio che c'era gia'» (`main.c`, il ramo `c_era`).  Il
+				 *   figlio sopravvive fra un collegamento e l'altro, quindi la
+				 *   lettura fatta all'accensione degli appunti e' avvenuta UNA
+				 *   volta sola: il client nuovo non sa che cosa c'e' nella
+				 *   clipboard del desktop.
+				 * ⛔ E allora, appena si annuncia per farsi trovare, si
+				 *   prendeva la selezione a mani vuote e **cancellava** quel
+				 *   che l'utente aveva copiato di la'.  `[M]` misurato il 21
+				 *   agosto: `wl-paste` diceva «TESTO-CHE-ERA-GIA-NEL-DESKTOP»
+				 *   prima e «» dopo il collegamento.
+				 * ⇒ Chi rientra riceve la clipboard del desktop come riceve
+				 *   l'ultimo fotogramma: e' la stessa idea, applicata all'altra
+				 *   cosa che il palco ha da dare. */
+				if (palco_appunti)
+					appunti_leggi_adesso(palco_appunti);
 				continue;
 			}
 			if (t.tipo == MSG_CHI_SEI) {

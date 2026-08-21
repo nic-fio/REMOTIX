@@ -3268,6 +3268,52 @@ concede al server un numero finito di stream.
 `trasferimento` (rilievo R1.11). ⭐ E il cliente di prova, leggendo **solo `RCP.md`**, ha fatto la
 stessa scelta — la riga è ambigua, ma l'ambiguità non morde.
 
+### 5-ter.8 ✅ Come una sessione locale — e il prezzo che Firefox impone
+
+*21 agosto 2026, dall'utente, dopo la cura dell'incolla col mouse:*
+
+> *«Voglio che sia chiara una cosa: l'esperienza dell'utente con REMOTIX dev'essere quanto più
+> vicina possibile all'esperienza con una sessione grafica locale. Questo vale anche per la gestione
+> della clipboard: niente trucchi, pulsanti strani o soluzioni tecniche che si allontanino da questa
+> direttiva, quindi ctrl+v o usare il mouse per incollare i contenuti dev'essere assolutamente
+> allineata al comportamento reale.»*
+
+⛔ **È una direttiva, non una preferenza**, e vale oltre gli appunti: dove una cura richiede
+all'utente di imparare qualcosa, la cura è sbagliata.
+
+⇒ Da lì discendono tre cose, tutte misurate e tutte in vigore:
+
+1. ⭐ **Incollare col mouse funziona**, cioè tasto destro dentro il desktop remoto e voce «Incolla»
+   del menu dell'applicazione remota. `[M]` `banchi/07-b56`, 3 incollate su 3 per motore.
+2. ⭐ **Collegarsi non cancella la clipboard del desktop.** `[M]` Prima la cancellava: `wl-paste`
+   diceva `TESTO-CHE-ERA-GIA-NEL-DESKTOP` prima e `«»` dopo.
+3. ⭐ **Non esiste nessun pulsante nostro**, nessun interruttore, niente da spiegare.
+
+### 5-ter.9 🔸 E su Firefox l'incolla col mouse costa **un clic in più** — accettato
+
+*21 agosto 2026: «ok, va bene così».*
+
+⛔ Quando si incolla col menu del desktop remoto, sulla pagina non nasce nessun evento: quel menu è
+dipinto nel video e a incollare è un'applicazione dall'altra parte del filo. ⇒ L'unico modo che la
+pagina ha di sapere che cosa hai copiato è **leggere la clipboard in quell'istante**, e lì decide il
+browser:
+
+| | Chrome | Firefox |
+|---|---|---|
+| che cosa chiede | la concessione della clipboard **una volta sola**, come per il microfono | ⛔ il suo bottoncino **«Incolla», ogni volta** — `[M]` anche reincollando lo stesso testo |
+
+⚠ **Quel bottoncino è di Firefox, non nostro**, e dalla pagina non si può togliere: l'unica cosa che
+lo spegne è una preferenza di prova, che in un prodotto non entra.
+
+⇒ **Si accetta e si dichiara**, invece di rinunciare all'incolla col mouse su Firefox. ⏳ E resta
+aperta la sola strada che lo toglierebbe davvero — **un componente aggiuntivo per Firefox** — da
+decidere alla fase 13, quando si decide come REMOTIX si installa. ⚠ Non si fa prima: cambia *che
+cosa si installa*, e REMOTIX smetterebbe di essere «apri il browser e vai».
+
+⭐ **Il `Ctrl+V` non costa niente su nessun motore**, ed è la strada che la maggioranza userà.
+
+---
+
 ---
 
 ## 5-quater. L'audio

@@ -131,6 +131,60 @@ INCOLLA = ("#!/bin/sh\n"
            "timeout 8 wl-paste -n 2>&1\n")
 
 
+# ⛔⛔⭐ E LA DOMANDA CHE VIENE PRIMA DI TUTTE: chi si collega perde quel che
+#      aveva copiato nel desktop?  `[M]` 21 agosto 2026: SI', e la colpa era
+#      dell'annuncio d'apertura da zero byte — prendeva la selezione al
+#      compositore con le mani vuote.  ⇒ In una sessione locale la clipboard non
+#      sparisce perche' e' entrato qualcuno, e qui non deve sparire nemmeno.
+TESTO_SESSIONE = "TESTO-CHE-ERA-GIA-NEL-DESKTOP-%d"
+
+COPIA_SESSIONE = ("#!/bin/sh\n"
+                  "U=$(id -u prova)\n"
+                  "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
+                  "pkill -u prova -x wl-copy 2>/dev/null\n"
+                  "sleep 0.2\n"
+                  # ⛔⛔ `setsid`, E NON E' UN VEZZO: `wl-copy` resta vivo per
+                  #     SERVIRE la selezione, e il `timeout 12` che avvolge
+                  #     questo copione lo ammazzerebbe insieme a tutto il gruppo
+                  #     — portandosi via la clipboard del desktop.  `[M]` 21
+                  #     agosto 2026: il banco ha dichiarato «collegandosi si e'
+                  #     persa la clipboard» di una clipboard uccisa da lui.
+                  "printf %s \"$1\" | setsid wl-copy >/dev/null 2>&1\n"
+                  "sleep 0.5\n"
+                  # ⛔ E SI VERIFICA CHE LA COPIA SIA ANDATA: un banco che
+                  #    prepara la scena senza guardarla misura un'altra scena.
+                  #    `[M]` 21 ago 2026: il banco credeva di aver copiato e
+                  #    nella sessione c'era ancora il testo di due prove prima.
+                  "timeout 5 wl-paste -n 2>&1\n")
+
+
+def copia_nella_sessione(testo, riprove=3):
+    """⚠ E SI RIPROVA, dichiarandolo: `[M]` 21 agosto 2026 `wl-copy` ha
+    risposto «This seat has no keyboard» — succede quando nella sessione non
+    c'e' nessun client attaccato e il posto e' senza tastiera virtuale.  ⛔ Non
+    e' un difetto del prodotto ed e' la scena del banco che non si prepara: se
+    non si riprova, il banco dichiara rosso un prodotto che non ha nemmeno
+    misurato."""
+    for i in range(riprove):
+        visto = _copia_una_volta(testo)
+        if visto == testo:
+            return visto
+        print("   ⚠ la sessione non ha preso la copia (%s): riprovo (%d/%d)"
+              % (visto[:40], i + 1, riprove))
+        time.sleep(2)
+    return visto
+
+
+def _copia_una_volta(testo):
+    subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                    "cat > /tmp/b56c.sh && chmod +x /tmp/b56c.sh"],
+                   input=COPIA_SESSIONE, text=True, capture_output=True)
+    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u prova -- "
+         "/tmp/b56c.sh " + json.dumps(testo)
+         + " > /tmp/b56c.log 2>&1; cat /tmp/b56c.log")
+    return ssh(c, timeout=30).strip()
+
+
 class Incollatore:
     """`wl-paste` nella sessione, ma con il momento della partenza in mano al
     banco: `aspetta_pronto()` torna quando manca un secondo e mezzo."""
@@ -317,16 +371,55 @@ def giro(nome, g, n, schermo, testo=None):
     return v
 
 
-def giri_di(nome, g, quanti):
+def giri_di(nome, g, quanti, era_nel_desktop=None):
     """I giri con testo NUOVO, e poi UNO che ripete lo stesso senza ricopiare."""
-    v = [giro(nome, g, n + 1, o.schermo) for n in range(quanti)]
+    v = []
+    if era_nel_desktop:
+        # ⛔⛔ E LA CLIPBOARD DEL BROWSER DEV'ESSERE VUOTA, o la domanda e'
+        #     un'altra.  ⚠ Se il dispositivo ha del testo suo, il desktop lo
+        #     riceve — ed e' GIUSTO: e' quel che vuole chi incolla.  `[M]` 21
+        #     agosto 2026: il banco ha gridato «si e' persa la clipboard del
+        #     desktop» mentre il prodotto consegnava, correttamente, il testo
+        #     che il browser aveva ancora dalla prova precedente.
+        # ⇒ «Sopravvive?» si chiede solo quando il dispositivo NON ha niente da
+        #   dare: allora il desktop deve ritrovare quel che aveva lui.
+        # ⛔⛔ E LA CLIPBOARD DEL BROWSER SI SVUOTA DAVVERO, con un
+        #     proprietario che dichiara ZERO byte.  ⚠ Non basta uccidere
+        #     `xclip`: la domanda «sopravvive?» ha senso solo se il dispositivo
+        #     NON ha niente da dare — se ha del testo suo il desktop riceve
+        #     QUELLO, ed e' giusto.  `[M]` 21 agosto 2026: il banco ha
+        #     dichiarato rosso un prodotto che consegnava correttamente il
+        #     testo rimasto nel browser dalla prova precedente.
+        # ⛔ E non si rilegge con `readText()` per verificarlo: su Firefox
+        #    quella lettura vuole un gesto, e il banco finirebbe per misurare il
+        #    permesso invece della clipboard.
+        subprocess.run(["pkill", "-x", "xclip"], capture_output=True)
+        time.sleep(0.3)
+        pv = subprocess.Popen(["xclip", "-selection", "clipboard"],
+                              stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL,
+                              env=dict(os.environ, DISPLAY=o.schermo))
+        pv.stdin.write(b""); pv.stdin.close()
+        time.sleep(0.8)
+        # ⛔ PRIMA DI TUTTO: quel che c'era nel desktop c'e' ancora?
+        tira = Incollatore(); tira.parti(); tira.aspetta_pronto()
+        resta = tira.raccogli()
+        v.append({"giro": 0, "ricopiato": False, "interpellata": None,
+                  "prova": "la clipboard del desktop sopravvive al collegamento",
+                  "copiato_nel_browser": era_nel_desktop,
+                  "arrivato_nella_sessione": resta,
+                  "guai": ([] if resta == era_nel_desktop else
+                           ["⛔ C0 — COLLEGANDOSI SI E' PERSA la clipboard del "
+                            "desktop: c'era «%s», adesso c'e' «%s»"
+                            % (era_nel_desktop[:40], resta[:40])])})
+    v += [giro(nome, g, n + 1, o.schermo) for n in range(quanti)]
     if v and not v[-1]["guai"]:
         v.append(giro(nome, g, quanti + 1, o.schermo,
                       testo=v[-1]["copiato_nel_browser"]))
     return v
 
 
-def firefox(giri):
+def firefox(giri, era=None):
     p, m, prof = M.accendi(porta=2896, headless=False, largo=1400, alto=900,
                            schermo=o.schermo)
     try:
@@ -342,13 +435,13 @@ def firefox(giri):
             time.sleep(0.5)
         time.sleep(3)
         g = GuidaFirefox(m)
-        v = giri_di("firefox", g, giri)
+        v = giri_di("firefox", g, giri, era)
         return {"browser": "firefox", "giri": v, "bottoncini": g.bottoncini}
     finally:
         M.spegni(p, prof)
 
 
-def chrome(giri):
+def chrome(giri, era=None):
     t = tempfile.mkdtemp(prefix="b56-")
     amb = dict(os.environ, DISPLAY=o.schermo)
     amb.pop("WAYLAND_DISPLAY", None)
@@ -417,7 +510,7 @@ def chrome(giri):
         except Exception:
             pass
         g = GuidaChrome(c)
-        v = giri_di("chrome", g, giri)
+        v = giri_di("chrome", g, giri, era)
         return {"browser": "chrome", "giri": v, "bottoncini": 0}
     finally:
         br.terminate()
@@ -444,12 +537,31 @@ def main():
                 continue
             print("\n⏳ %s — %d incollate COL MOUSE, nessun `Ctrl+V`"
                   % (nome.upper(), o.giri))
+            # ⛔ La prova «sopravvive?» si fa col PRIMO browser del giro, e la
+            #    ragione e' misurata: il figlio sopravvive fra un collegamento e
+            #    l'altro e si porta dietro lo stato della prova precedente —
+            #    dal secondo browser in poi non si sta piu' misurando un
+            #    collegamento, si sta misurando una coda.  ⚠ Per l'altro motore
+            #    si rilancia il banco con `--solo`, a server appena riacceso.
+            era = (TESTO_SESSIONE % (os.getpid() % 1000)) if not esiti else None
+            visto = copia_nella_sessione(era) if era else None
+            if era and visto != era:
+                print("   ⛔ BANCO: la clipboard del desktop NON si e' "
+                      "preparata: volevo «%s», la sessione rilegge «%s»"
+                      % (era, visto[:60]))
+                era = None
             try:
-                e = f(o.giri)
+                e = f(o.giri, era)
             except Exception as ex:
                 e = {"browser": nome, "guai_di_banco": repr(ex), "giri": []}
             esiti.append(e)
             for gg in e.get("giri", []):
+                if gg["giro"] == 0:
+                    print("   prima di tutto · %s"
+                          % (gg["guai"][0] if gg["guai"] else
+                             ("⚠ " + gg["prova"]) if "NON FATTA" in gg["prova"]
+                             else "⭐ la clipboard del desktop e' SOPRAVVISSUTA"))
+                    continue
                 print("   giro %d (%s) · interpellata=%s · bottoncino=%s · %s"
                       % (gg["giro"],
                          "testo NUOVO" if gg["ricopiato"] else "STESSO testo",
