@@ -874,3 +874,40 @@ dispari su tutt'e due i lati (§4.1 e §4.1-bis).
 
 ⏳ **Quel che aspetta il suo giudizio**: la scena del **trascinamento del bordo** e quella del
 **clic tenuto giù** — le due che questa fase ha aperto — dopo la verifica congiunta a banchi fermi.
+
+## ⛔⛔ 21 agosto 2026 — **Firefox per Android non ha WebCodecs**, e il messaggio nostro mentiva
+
+*Prima prova su un telefono vero (Samsung DeX, Android 16). L'utente: «credo che abbiamo introdotto
+una regressione per quanto riguarda Firefox su Android».*
+
+⛔ **Non era una regressione.** `[M]` Dal registro del server, parole della pagina:
+
+```
+browser: Mozilla/5.0 (Android 16; Mobile; rv:154.0) Firefox/154.0
+         · schermo 2560x1080 · dpr 1 · WebCodecs NON c'e'
+sonda video · ⛔ HEVC: NON arriva al pixel — questo browser non ha WebCodecs
+sonda video · ⛔ H264: NON arriva al pixel — questo browser non ha WebCodecs
+congedo motivo=0x09 dettaglio=nessun codec condiviso
+```
+
+⇒ `VideoDecoder` **non esiste** su quel browser, e in `pagina.html` la strada verso i pixel è
+**una sola**: zero occorrenze di `MediaSource` in tutto il file. ⚠ Con AV1 sarebbe finita identica —
+il passaggio a H.264 (§1.13-ter) non c'entra, e la riga di `DECISIONI.md` che diceva «così Firefox
+Android funziona» era una **premessa sbagliata**, corretta qui.
+
+### ⛔ E la cosa nostra c'era: la scritta mandava a cercare nel posto sbagliato
+
+Il riquadro diceva *«questo browser non porta nessuno dei due codec video fino ai pixel: né HEVC né
+H.264 … su Linux il decodificatore HEVC di Chrome è quello della scheda grafica»* — una spiegazione
+su codec e schede grafiche, mentre la causa vera stava una riga più su ed era di un'altra specie.
+
+⇒ Adesso la casella **«WebCodecs non c'è»** viene **prima** e si nomina: *«questo browser non ha
+WebCodecs, cioè l'unico modo che REMOTIX ha di disegnare il desktop: non è una questione di codec»*.
+⭐ Una scritta che manda nel posto sbagliato è peggio di nessuna scritta.
+
+### ⏳ Che cosa resta aperto
+
+⚠ Se Firefox per Android deve essere un motore supportato, serve un **secondo percorso di disegno**
+(MSE con un `<video>`): è lavoro vero, cambia le proprietà di ritardo, e va deciso — non è un
+interruttore. ⭐ Chrome per Android ha WebCodecs, e lì la strada c'è.
+

@@ -1443,13 +1443,29 @@ function dichiara(sondaggio, scelto) {
   const h264 = sondaggio.codec.h264 || {};
   const hevc_c = !!(hevc[8] && hevc[8].arriva) || !!(hevc[10] && hevc[10].arriva);
   const h264_c = !!(h264[8] && h264[8].arriva) || !!(h264[10] && h264[10].arriva);
-  if (!hevc_c && !h264_c) {
-    DICHIARAZIONI.codec = "Questo browser non porta nessuno dei due codec video "
-      + "fino ai pixel: né HEVC né H.264. La sessione può aprirsi, ma non ci "
-      + "sarà immagine. Su Linux il decodificatore HEVC di Chrome è quello "
-      + "della scheda grafica, e senza scheda grafica non c'è; Firefox non fa "
-      + "HEVC affatto — e H.264, che dovrebbe esserci ovunque, qui non è "
-      + "arrivato al pixel.";
+  if (!hevc_c && !h264_c && typeof VideoDecoder === "undefined") {
+    /* ⛔⛔⭐ E QUESTA CASELLA VIENE PRIMA DELL'ALTRA — 21 agosto 2026, e il
+     *      difetto l'ha visto l'utente su **Firefox per Android**.
+     *
+     * ⚠ Il messaggio che stava qui sotto gli ha parlato di HEVC, di H.264 e di
+     *   schede grafiche, mentre la causa vera era un'altra e stava una riga
+     *   piu' su: `VideoDecoder` **non esiste** su quel browser.  ⇒ Una scritta
+     *   che manda a cercare nel posto sbagliato e' peggio di nessuna scritta.
+     * ⛔ E non e' un ripiego che manca: in questa pagina la strada verso i
+     *   pixel e' UNA — WebCodecs — e non ce n'e' un'altra da provare.  `[M]`
+     *   Firefox 154 su Android 16: «WebCodecs NON c'e'». */
+    DICHIARAZIONI.codec = "Questo browser non ha WebCodecs, cioè l'unico modo "
+      + "che REMOTIX ha di disegnare il desktop: non è una questione di codec — "
+      + "né HEVC né H.264 c'entrano — ed è per questo che la sessione non si "
+      + "apre. Oggi succede su Firefox per Android, dove Mozilla non lo ha "
+      + "ancora acceso; Chrome per Android ce l'ha.";
+  } else if (!hevc_c && !h264_c) {
+    DICHIARAZIONI.codec = "Questo browser ha WebCodecs ma non porta nessuno dei "
+      + "due codec video fino ai pixel: né HEVC né H.264. La sessione può "
+      + "aprirsi, ma non ci sarà immagine. Su Linux il decodificatore HEVC di "
+      + "Chrome è quello della scheda grafica, e senza scheda grafica non c'è; "
+      + "Firefox non fa HEVC affatto — e H.264, che dovrebbe esserci ovunque, "
+      + "qui non è arrivato al pixel.";
   } else if (!hevc_c && h264_c) {
     /* ⭐ Il ripiego universale di §1.13-ter, dichiarato all'utente.  ⚠ E non si
      *   promette che sia in hardware: da JavaScript non è osservabile. */
