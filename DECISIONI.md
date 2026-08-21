@@ -4379,7 +4379,7 @@ la domanda è *se l'hai detta*.
 **Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
 *«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
 
-### 7.18 ✅ **SI SCRIVE** — il percorso MSE per Firefox Android
+### 7.18 ✅ **Firefox per Android è NON SUPPORTATO** — e il percorso MSE resta come prova
 
 *Aperta il 21 agosto 2026, e discende da §0.1-bis senza esserne risolta.*
 
@@ -4414,6 +4414,31 @@ chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il s
 >
 > ⭐ **E il protocollo non si tocca**: sul filo passano gli stessi fotogrammi Annex-B di sempre.
 > Quel che cambia è **come il client li disegna**, e il server non se ne accorge.
+
+> ### ⛔⛔ E LA SERA STESSA LA DECISIONE È CAMBIATA — ✅ 21 agosto 2026, dopo averla provata
+>
+> *L'utente: «Niente da fare, troppi problemi: **disegno del desktop irregolare, input
+> imprevedibile**, dichiaro Firefox per Android incompatibile con REMOTIX».*
+>
+> ⚠ **E la strada funziona**, misurato: il desktop si vede vivo e i tocchi arrivano al server
+> (`fasi/06`, banco `07-b59` su un emulatore con Firefox 154 per Android). ⛔ Ma *«funziona»* non
+> era il traguardo. Il traguardo è **§0.1-bis**: un'esperienza vicina a quella di una sessione
+> locale. A un `<video>` che riproduce un flusso non si può chiedere di reagire come un
+> decodificatore comandato a mano — il ritardo è di un'altra classe e il ritmo non è il nostro.
+>
+> ⇒ **Che cosa cambia nel prodotto**: su un browser senza WebCodecs la pagina **dichiara che non si
+> può** invece di dare mezza esperienza. `VIA_MSE` non si accende più da sola: solo con
+> `?disegno=mse`, che è un interruttore da banco.
+>
+> ⭐ **Perché il codice resta**: è misurabile, e finché Mozilla non porta WebCodecs su Android è
+> **l'unica prova che il problema non era nostro**. ⛔ Alla fase 13 si decide se buttarlo — §7.16,
+> «nel prodotto finale si fa pulizia».
+>
+> ⚠ **E resta scritto quanto è costata**: sei giri di prove sul telefono dell'utente e una giornata
+> di lavoro, per una strada che non entra nel prodotto. ⭐ Non è tempo buttato del tutto — ne sono
+> usciti `07-b58`, `07-b59` e §1.19 di `LEZIONI.md` — ma la lezione vera è che **la domanda «quanto
+> renderà?» andava misurata prima di costruire**, e il numero c'era già: `07-b57`, centinaia di
+> millisecondi contro un tetto di 50.
 
 ### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
 

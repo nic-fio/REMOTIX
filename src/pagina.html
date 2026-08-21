@@ -888,8 +888,26 @@ const MSE_BORDO_S = 0.05;
  * recuperare mezzo secondo in due, e abbastanza poco da non sentirsi. */
 const MSE_FRETTA = 1.25;
 
-const VIA_MSE = (typeof VideoDecoder === "undefined")
-             || new URLSearchParams(location.search).get("disegno") === "mse";
+/* ⛔⛔⭐ E IL PRODOTTO NON LA PRENDE PIU' DA SOLO — 21 agosto 2026, decisione
+ *      dell'utente dopo averla provata: *«Niente da fare, troppi problemi:
+ *      disegno del desktop irregolare, input imprevedibile, dichiaro Firefox
+ *      per Android incompatibile con REMOTIX»* (`DECISIONI.md` §7.18).
+ *
+ * ⚠ La strada FUNZIONA — il desktop si vede e i tocchi arrivano, misurato — ma
+ *   «funziona» non era il traguardo: il traguardo e' §0.1-bis, cioe'
+ *   un'esperienza vicina a quella di una sessione locale.  ⛔ A un `<video>`
+ *   che riproduce un flusso non si puo' chiedere di reagire come un
+ *   decodificatore comandato a mano: il ritardo e' di un'altra classe e il
+ *   ritmo non e' il nostro.
+ *
+ * ⇒ Su un browser senza WebCodecs la pagina **dichiara che non si puo'** invece
+ *   di dare mezza esperienza.  ⭐ E il codice resta, dietro `?disegno=mse`,
+ *   perche' e' misurabile e perche' il giorno in cui Mozilla porta WebCodecs su
+ *   Android questa strada non servira' piu' a nessuno — ma finche' non lo fa,
+ *   e' l'unica prova che il problema non era nostro.
+ * ⛔ E alla fase 13 si decide se buttarla: `DECISIONI.md` §7.16 — «nel prodotto
+ *   finale si fa pulizia». */
+const VIA_MSE = new URLSearchParams(location.search).get("disegno") === "mse";
 
 /* ⛔⭐ IL WORKER DEDICATO DI `STUDI.md` §web §6.1 — «WebTransport, decodifica e canvas
  * tutti in un worker dedicato».  Era una decisione SCRITTA E MAI ATTUATA: fino
@@ -1732,9 +1750,12 @@ function dichiara(sondaggio, scelto) {
      *   Firefox 154 su Android 16: «WebCodecs NON c'e'». */
     DICHIARAZIONI.codec = "Questo browser non ha WebCodecs, cioè l'unico modo "
       + "che REMOTIX ha di disegnare il desktop: non è una questione di codec — "
-      + "né HEVC né H.264 c'entrano — ed è per questo che la sessione non si "
-      + "apre. Oggi succede su Firefox per Android, dove Mozilla non lo ha "
-      + "ancora acceso; Chrome per Android ce l'ha.";
+      + "né HEVC né H.264 c'entrano. Oggi succede su **Firefox per Android**, "
+      + "dove Mozilla non lo ha ancora acceso, e su quel browser REMOTIX è "
+      + "dichiarato NON SUPPORTATO: una strada alternativa esiste, è stata "
+      + "provata, e dà un desktop dal disegno irregolare e dall'input "
+      + "imprevedibile — meno di quel che questo prodotto promette. "
+      + "⇒ Su quel telefono si usa Chrome, che ha tutto quel che serve.";
   } else if (!hevc_c && !h264_c) {
     DICHIARAZIONI.codec = "Questo browser ha WebCodecs ma non porta nessuno dei "
       + "due codec video fino ai pixel: né HEVC né H.264. La sessione può "

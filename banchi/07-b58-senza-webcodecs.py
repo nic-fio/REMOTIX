@@ -37,7 +37,11 @@ a.add_argument("--lavoro", default="/media/REMOTIX/tmp/07-appunti")
 a.add_argument("--schermo", default=":96")
 a.add_argument("--secondi", type=int, default=25)
 o = a.parse_args()
-URL = "https://%s:%d/" % (MACCHINA, o.porta)
+# ⛔ `?disegno=mse` E' OBBLIGATORIO da quando l'utente ha dichiarato Firefox per
+#    Android non supportato (`DECISIONI.md` §7.18): il prodotto **non prende
+#    piu' da solo** quella strada, e senza questo interruttore la pagina
+#    dichiarerebbe — giustamente — che non si puo' fare.
+URL = "https://%s:%d/?disegno=mse" % (MACCHINA, o.porta)
 
 STATO = """
   const S = window.REMOTIX && window.REMOTIX.schermo;

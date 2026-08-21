@@ -1248,3 +1248,34 @@ installarlo.
 `<video>` — *sta suonando? sta cercando? ha dati? quanto è indietro?* — e ⭐ **confronta due
 letture**, perché un'immagine che avanza e una ferma hanno lo stesso aspetto in una fotografia sola.
 
+## ⛔ 21 agosto 2026, sera — **il giudizio dell'utente: Firefox per Android è incompatibile**
+
+> *«Niente da fare, troppi problemi: disegno del desktop irregolare, input imprevedibile, dichiaro
+> Firefox per Android incompatibile con REMOTIX.»*
+
+⚠ **E la strada funziona**: il desktop si vede vivo e i tocchi arrivano — misurato poche ore prima
+sullo stesso emulatore. ⛔ Ma *«funziona»* non era il traguardo: il traguardo è §0.1-bis, cioè
+un'esperienza vicina a una sessione locale. A un `<video>` che **riproduce** non si può chiedere di
+reagire come un decodificatore comandato a mano.
+
+⇒ **Nel prodotto**: `VIA_MSE` non si accende più da sola. Su un browser senza WebCodecs la pagina
+**dichiara che non si può**, e nomina l'alternativa (Chrome per Android). ⭐ Mezza esperienza è
+peggio di un rifiuto spiegato.
+
+⇒ **Il codice resta dietro `?disegno=mse`**, perché finché Mozilla non porta WebCodecs su Android è
+l'unica prova che il problema non è nostro. Alla fase 13 si decide se buttarlo.
+
+### ⭐ Che cosa resta di buono, e non è poco
+
+| | |
+|---|---|
+| `07-b58` | REMOTIX su un browser **senza WebCodecs**, riprodotto da tavolo con una preferenza |
+| `07-b59` | **Firefox per Android vero**, in un emulatore: certificato, accesso, misura e fotografia — da solo |
+| `LEZIONI.md` §1.19 | chi apre chiude: i banchi lavorano sul desktop di una persona |
+| la sonda che riconosce il nero, la cornice, l'input agganciato alla tela | difetti veri, curati, che valgono anche fuori da questa strada |
+
+⛔ **E il costo si scrive**: sei giri di prove sul telefono dell'utente e una giornata, per una
+strada che non entra nel prodotto. ⚠ La lezione non è «non andava fatto»: è che **la domanda "quanto
+renderà?" andava misurata prima di costruire** — e il numero c'era già, dal banco `07-b57`:
+centinaia di millisecondi contro un tetto di 50.
+

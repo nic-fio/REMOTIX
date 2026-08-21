@@ -189,7 +189,9 @@ def main():
     adb("shell", "am", "force-stop", "org.mozilla.firefox")
     time.sleep(2)
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW",
-        "-d", "https://%s:%d/?v=%d" % (MACCHINA, o.porta, int(time.time())),
+        # ⛔ `disegno=mse`: il prodotto non prende piu' questa strada da solo
+        #    (§7.18, Firefox per Android dichiarato non supportato).
+        "-d", "https://%s:%d/?disegno=mse&v=%d" % (MACCHINA, o.porta, int(time.time())),
         "-n", "org.mozilla.firefox/org.mozilla.fenix.IntentReceiverActivity")
     time.sleep(12)
     # ⚠ Il certificato e' autofirmato: la prima volta va accettato, e dopo
