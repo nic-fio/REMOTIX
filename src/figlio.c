@@ -2512,6 +2512,23 @@ static uint32_t input_non_producibili;
  *     compositore parla questo processo (`src/appunti.h`). */
 static Appunti *palco_appunti;
 
+/* ⛔⛔⭐ L'OFFERTA CHE E' ARRIVATA TROPPO PRESTO, E CHE SI RIFA' — 21 agosto
+ *      2026, difetto misurato col banco `07-b56`.
+ *
+ * ⚠ Il client annuncia i suoi appunti appena la `SESSIONE` e' nata; gli appunti
+ *   della sessione grafica si aprono qualche decina di millisecondi DOPO,
+ *   quando Mutter ha risposto.  `[M]` Registro delle 06:00:15 — l'annuncio alle
+ *   .868, l'apertura alle .982: 114 ms.
+ *   ⛔ In mezzo l'offerta cadeva («gli appunti della sessione non ci sono») e
+ *     nessuno la rifaceva mai: il compositore non diventava proprietario della
+ *     selezione, e dentro il desktop la voce «Incolla» del menu non aveva
+ *     niente da dare.  ⇒ Da fuori: «col mouse non funziona».
+ *
+ * ⭐ Si ricorda che e' caduta, e si rifa' appena il canale c'e'.  E' la stessa
+ *    forma della domanda arretrata di `rcp.c` (`appunti_chiedi_l_arretrato`):
+ *    invece di ritardare qualcosa per tutti, si tiene UN bit e si ricuce. */
+static bool appunti_offerta_arretrata;
+
 /*
  * ⛔⛔ IL FONDO DI TEMPO DI CHI INCOLLA, E STA NEL FIGLIO — non nel padre.
  *
@@ -4863,6 +4880,26 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "⭐⭐ GLI APPUNTI SONO APERTI, nei due versi e solo "
 			              "testo: da adesso quel che si copia nel desktop si "
 			              "puo' incollare sul dispositivo, e viceversa (§7.4)");
+			/* ⭐ E l'offerta arrivata mentre non c'erano si rifa' ADESSO. */
+			if (appunti_offerta_arretrata) {
+				GError *sb = NULL;
+
+				appunti_offerta_arretrata = false;
+				if (appunti_offri(palco_appunti, &sb))
+					registro_dice(REG_APPUNTI,
+					              "⭐ APPUNTI: il client aveva annunciato PRIMA "
+					              "che gli appunti si aprissero, e l'offerta e' "
+					              "stata RIFATTA adesso: dentro il desktop la "
+					              "voce «Incolla» ha di nuovo qualcosa da dare");
+				else
+					registro_dice(REG_APPUNTI,
+					              "⛔ APPUNTI: l'offerta arretrata non e' "
+					              "riuscita (%s): dentro il desktop non si "
+					              "potra' incollare quel che il client ha "
+					              "copiato",
+					              sb ? sb->message : "nessun dettaglio");
+				g_clear_error(&sb);
+			}
 		} else {
 			/* ⛔ E se non si aprono NON si muore: `CODER.md` §4.2 — degradare,
 			 *    non fallire.  Un utente senza appunti ha meno di quel che gli
@@ -5496,10 +5533,12 @@ void figlio_vive(int argc, char **argv)
 					/* ⚠ Non e' un guasto: e' il palco che non c'e' ancora, o
 					 *   gli appunti che non si sono aperti (il ripiego
 					 *   dichiarato piu' su).  Si dice, e si va avanti. */
+					appunti_offerta_arretrata = true;
 					registro_dettaglio(REG_APPUNTI,
 					                   "il client ha copiato del testo e gli "
-					                   "appunti della sessione non ci sono: "
-					                   "l'offerta cade");
+					                   "appunti della sessione non ci sono "
+					                   "ANCORA: l'offerta si RIFA' appena si "
+					                   "aprono, invece di cadere");
 					continue;
 				}
 				if (!appunti_offri(palco_appunti, &sb))

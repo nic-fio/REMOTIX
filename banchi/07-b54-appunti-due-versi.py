@@ -324,11 +324,18 @@ def giro(nome, g, n):
         #    riceve l'incolla e' lo stesso che ha copiato, e il motore puo'
         #    comportarsi diversamente.  Sul difetto riferito il 20 agosto 2026
         #    la differenza fra le due strade e' proprio quel che si cerca.
-        subprocess.run(["xclip", "-selection", "clipboard"],
-                       input=testo_b, text=True,
-                       env=dict(os.environ, DISPLAY=o.schermo),
-                       capture_output=True, timeout=10)
-        time.sleep(0.5)
+        # ⛔ `xclip` NON si aspetta: si biforca per SERVIRE la selezione e tiene
+        #    aperte le sue uscite finche' qualcuno non gliela porta via.  ⚠ Con
+        #    `capture_output` il banco moriva di timeout su una copia riuscita —
+        #    la stessa trappola di `wl-copy` nella sessione.
+        subprocess.run(["pkill", "-x", "xclip"], capture_output=True)
+        time.sleep(0.2)
+        px = subprocess.Popen(["xclip", "-selection", "clipboard"],
+                              stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL,
+                              env=dict(os.environ, DISPLAY=o.schermo))
+        px.stdin.write(testo_b.encode()); px.stdin.close()
+        time.sleep(0.6)
     else:
         if o.schermo:
             print("   ⚠ `xclip` non c'e': copio DENTRO la pagina invece "
@@ -364,7 +371,7 @@ def giro(nome, g, n):
     if not nuove_input:
         v["guai"].append("⛔ LA TASTIERA E' MORTA dopo il Ctrl+V: la lettera "
                          "battuta dopo l'incolla non e' arrivata al server "
-                         "(righe di input ferme a %d)" % tasti_dopo)
+                         "(zero righe `input id=` nuove dopo la lettera)")
     ricevuto = nella_sessione(INCOLLA)
     v["verso_B"] = {"copiato_nel_browser": testo_b,
                     "incollato_nella_sessione": ricevuto,
@@ -413,7 +420,11 @@ def chrome(n):
         amb.pop("WAYLAND_DISPLAY", None)
     br = subprocess.Popen(
         ([] if o.schermo else ["google-chrome", "--headless=new"])
-        + (["google-chrome"] if o.schermo else []) + ["--no-sandbox",
+        + (["google-chrome"] if o.schermo else [])
+        # ⛔ `--ozone-platform=x11` quando c'e' uno schermo del banco: senza,
+        #    Chrome prende Ozone/Wayland e si attacca alla sessione grafica
+        #    VERA, cioe' legge un'ALTRA clipboard (`[M]` 21 ago 2026, `07-b56`).
+        + (["--ozone-platform=x11"] if o.schermo else []) + ["--no-sandbox",
          "--user-data-dir=%s/p" % t, "--no-first-run",
          "--no-default-browser-check", "--remote-debugging-port=9717",
          "--remote-allow-origins=*", "--window-size=1400,900", "about:blank"],

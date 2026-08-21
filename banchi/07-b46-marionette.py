@@ -86,8 +86,12 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     with open(os.path.join(profilo, "user.js"), "w") as f:
         for k, v in prefs.items():
             f.write('user_pref("%s", %s);\n' % (k, json.dumps(v)))
-    cmd = ["firefox", "--marionette", "--no-remote", "--profile", profilo,
-           "--width", str(largo), "--height", str(alto)]
+    # ⭐ `-remote-allow-system-access` apre il contesto **chrome** a Marionette:
+    #   serve a chi deve guardare — o cliccare — quel che Firefox disegna FUORI
+    #   dal documento, per esempio il bottoncino «Incolla» di §9 (`07-b56`).
+    #   ⚠ E' una bandiera del BANCO: nessun Firefox di utente parte cosi'.
+    cmd = ["firefox", "--marionette", "--no-remote", "-remote-allow-system-access",
+           "--profile", profilo, "--width", str(largo), "--height", str(alto)]
     if headless:
         cmd.append("--headless")
     log = open(os.path.join(profilo, "uscita.log"), "wb")

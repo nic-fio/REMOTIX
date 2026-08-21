@@ -1841,6 +1841,30 @@ per quello servono le quindici domande della sezione 3.
 
 ---
 
+## 9-bis. ⛔⛔⭐ §1.18 — Quattro banchi verdi che misuravano **la stessa strada**
+
+⛔ Il 20 agosto quattro banchi dichiaravano verde la clipboard nei due versi, su tutti e due i
+motori. Il 21 agosto l'utente ha scritto: *«funziona l'incolla con ctrl+v, ma non con il mouse e
+scegliendo dal menu la voce "incolla"»*. ⇒ Tutti e quattro battevano **`Ctrl+V`**.
+
+⚠ Non erano banchi sbagliati: erano **quattro copie dello stesso banco**, con quattro nomi diversi.
+La ridondanza dava l'impressione della copertura e non ne aggiungeva un millimetro.
+
+⭐ **La domanda che li avrebbe smascherati in un minuto**: *«qual è il GESTO che fa partire questa
+strada, e ce n'è più d'uno?»* Per gli appunti i gesti sono due — un tasto sul browser e una voce di
+menu **dentro il video** — e sono due strade **che non si incontrano mai**: la prima nasce nel
+browser, la seconda nasce dall'altra parte del filo e torna indietro come una domanda del server.
+
+⇒ Un banco per **strada d'ingresso**, non un banco per funzione. E quando un banco nuovo diventa
+verde al primo colpo, il sospetto giusto non è «bravi noi»: è *«sto rifacendo un banco che c'è
+già?»*.
+
+⚠ E lo stesso giorno, sullo stesso difetto, **due difetti del banco avrebbero dichiarato rotto un
+prodotto sano**: Chrome che si attacca alla sessione grafica vera invece che allo schermo del banco
+(`--ozone-platform=x11`), e un clic dato secondi prima della misura, quando l'attivazione
+transitoria del browser era già scaduta. ⇒ §1.2 di nuovo, e non è un caso: il banco che scopre una
+strada nuova è **giovane**, e va certificato prima di credergli — in tutt'e due i versi.
+
 ## 10. E una lezione sola su tutto il resto
 
 Il progetto non si è mai fermato su un problema difficile.

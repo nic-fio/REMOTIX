@@ -614,6 +614,22 @@ struct rcp_sessione {
 	 *   e' bloccato con la clipboard». */
 	uint32_t app_chiesto_id;
 
+	/* ⛔⛔⭐ L'OFFERTA CHE ASPETTA LA FINE DEL TRASFERIMENTO — 21 agosto 2026,
+	 *      e il difetto l'ha detto Mutter con parole sue: *«Transfer serial 2
+	 *      doesn't match any transfer request»* (banco `07-b56`).
+	 *
+	 * ⚠ Offrire la selezione al compositore (`SetSelection`) ANNULLA i
+	 *   trasferimenti in volo: e' il compositore che, vedendo una selezione
+	 *   nuova, butta le richieste aperte sulla vecchia.  ⛔ E noi ri-offrivamo
+	 *   proprio mentre servivamo — il client rilegge la clipboard quando gli si
+	 *   chiede, annuncia il testo nuovo, e quell'annuncio uccideva l'incollata
+	 *   che lo aveva provocato.  ⇒ Chi incollava vedeva **vuoto**.
+	 *
+	 * ⭐ Allora l'offerta si RIMANDA: finche' c'e' qualcuno in attesa, il
+	 *    compositore resta proprietario di quel che ha, e l'offerta nuova parte
+	 *    quando la risposta e' partita. */
+	bool app_offri_dopo;
+
 	/* Gli stream in arrivo, uno per trasferimento (§2.5).  ⛔ L'accumulo e'
 	 * allocato a richiesta e **dopo** aver convalidato la lunghezza dichiarata:
 	 * §6.1 — «un ricevente che alloca `lunghezza` byte e poi verifica ha gia'
@@ -4866,6 +4882,19 @@ static void appunti_servi_in_attesa(rcp_sessione *s, const char *testo,
 		reg(s, "⭐ APPUNTI: %zu byte dal client consegnati a %d richieste di "
 		       "incolla",
 		    byte, quanti);
+
+	/* ⭐ E ADESSO l'offerta che era stata rimandata: il trasferimento e'
+	 *    finito, e il compositore puo' prendere la selezione nuova senza
+	 *    buttare niente. */
+	if (s->app_offri_dopo && s->g.appunti_offri) {
+		s->app_offri_dopo = false;
+		if (!s->g.appunti_offri(s->g.ctx))
+			reg(s, "⛔ APPUNTI: l'offerta rimandata non e' riuscita: dentro il "
+			       "desktop la prossima incollata non trovera' il testo nuovo");
+		else
+			reg(s, "⭐ APPUNTI: servita l'incollata, l'offerta rimandata e' "
+			       "partita: il desktop ha il testo NUOVO del client");
+	}
 }
 
 /* Un messaggio intero del canale appunti.  `false` = la sessione e' finita. */
@@ -4918,6 +4947,17 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			       "client ha copiato del testo e dentro il desktop non si "
 			       "potra' incollare.  ⛔ Non e' un errore del client: e' questo "
 			       "server che non ha quel canale");
+			return true;
+		}
+		/* ⛔ Ma NON mentre qualcuno sta incollando: vedi `app_offri_dopo`. */
+		if (s->app_serial_n > 0) {
+			s->app_offri_dopo = true;
+			reg(s, "⚠ APPUNTI: l'annuncio %u arriva mentre %d richieste di "
+			       "incolla aspettano il testo: l'offerta alla sessione si "
+			       "RIMANDA, o il compositore butterebbe proprio "
+			       "l'incollata in corso",
+			    trasf, s->app_serial_n);
+			appunti_chiedi_l_arretrato(s);
 			return true;
 		}
 		if (!s->g.appunti_offri(s->g.ctx))

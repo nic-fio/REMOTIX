@@ -3903,6 +3903,11 @@ async function collega(utente, parola) {
      *   la mano.  ⛔ E `manda` NON aspetta la rete: un puntatore che aspetta e'
      *   esattamente il ritardo che il puntatore disegnato dalla pagina esiste
      *   per togliere (`SPECIFICHE.md` §7.1). */
+    /* ⭐⭐ FASE 7 — L'ANNUNCIO D'APERTURA DEGLI APPUNTI, e sta QUI perche' qui
+     *     la `SESSIONE` e' arrivata: e' quel che permette al desktop remoto di
+     *     chiederci gli appunti quando qualcuno incolla di la' col mouse. */
+    appunti_apri_la_domanda();
+
     try {
       const flusso_input = await wt.createUnidirectionalStream();
       const scrittore_input = flusso_input.getWriter();
@@ -5034,6 +5039,90 @@ async function appunti_annuncia(testo) {
   }
 }
 
+/*
+ * ⛔⛔⭐ RILEGGERE LA CLIPBOARD **NELL'ISTANTE IN CUI IL DESKTOP REMOTO CHIEDE**
+ *      — 21 agosto 2026, e il difetto l'ha trovato l'utente con una frase
+ *      sola: *«funziona l'incolla con `Ctrl+V`, ma non con il mouse e
+ *      scegliendo dal menu la voce "incolla"»*.
+ *
+ * ⚠ Le due strade gratis di §9 hanno lo STESSO innesco: un gesto **su questa
+ *   pagina**.  L'evento `paste` nasce dal `Ctrl+V`; `clipboardchange` esiste
+ *   solo su Chrome.  ⇒ Quando l'utente incolla DENTRO il desktop remoto — tasto
+ *   destro, voce «Incolla» del menu dell'applicazione di la' — sulla pagina non
+ *   succede niente che ci dica di leggere: quel che parte e' l'incolla di
+ *   un'applicazione REMOTA, e l'unica notizia che ne arriva qui e'
+ *   l'`APPUNTI_CHIEDI` del server.
+ *   ⛔ E allora si serviva `mio_testo`, cioe' **il testo dell'ultimo `Ctrl+V`**:
+ *     da fuori, «incolla la roba di prima» — oppure niente affatto.
+ *
+ * ⭐ LA CURA E' LEGGERE LI', quando la domanda arriva.  E il permesso c'e': il
+ *    clic sulla voce «Incolla» del menu remoto e' un clic **su questa pagina**,
+ *    quindi l'attivazione transitoria e' fresca di pochi millisecondi.
+ *
+ * ⛔ IL PREZZO, DICHIARATO: su Firefox `readText()` apre il bottoncino
+ *    «Incolla» e aspetta un clic (`SPECIFICHE.md` §9).  ⚠ Ma stavolta compare
+ *    mentre l'utente sta gia' cliccando li' — non e' piu' «un bottone che
+ *    nessuno sta guardando».  Su Chrome il permesso si chiede una volta sola.
+ *    ⭐ E il `Ctrl+V` resta la strada che non costa niente su nessun motore.
+ *
+ * ⛔ E NON SI ASPETTA PIU' DEL FONDO DEL SERVER: `figlio.c` risponde «non ce
+ *    l'ho» a chi incolla dopo `APPUNTI_ATTESA_MS` (4 000 ms), e una risposta
+ *    che arriva dopo non serve piu' a nessuno.  ⇒ Si serve quel che si ha, e la
+ *    lettura in ritardo ANNUNCIA lo stesso: l'incollata DOPO parte gia' pronta.
+ */
+const APPUNTI_RILETTURA_MS = 3000;
+
+async function appunti_rileggi_prima_di_servire() {
+  /* ⛔⛔⭐ E NON SI RILEGGE SE LA STRADA GRATIS HA APPENA CONSEGNATO.
+   *
+   * ⚠ Se l'utente ha appena battuto `Ctrl+V`, il testo di adesso ce l'abbiamo
+   *   gia' — e' arrivato con l'evento `paste`, senza chiedere niente a nessuno.
+   *   ⛔ Rileggere li' aprirebbe il bottoncino «Incolla» di Firefox **sulla
+   *     strada che non costava niente**: si curerebbe l'incolla col mouse
+   *     rompendo l'incolla con la tastiera, che e' un pessimo affare.
+   * ⇒ La finestra e' il fondo del server (4 000 ms): dentro quel tempo, la
+   *   domanda che arriva e' quella nata da QUEL `Ctrl+V`. */
+  const da_paste = Date.now() - APPUNTI.ultimo_paste_ms;
+  if (APPUNTI.ultimo_paste_ms && da_paste < 4000) {
+    app_diario("rilettura saltata: l'evento `paste` ha consegnato " + da_paste
+               + " ms fa — la strada gratis basta, e niente bottoncino");
+    return;
+  }
+  if (!navigator.clipboard || !navigator.clipboard.readText) {
+    app_diario("rilettura saltata: questo browser non ha `readText`");
+    return;
+  }
+  /* ⚠ L'annuncio parte comunque, anche fuori tempo massimo: e' quel che rende
+   *   istantanea la prossima incollata. */
+  const letta = navigator.clipboard.readText().then((t) => {
+    if (typeof t !== "string") return;
+    if (t === APPUNTI.mio_testo) {
+      app_diario("rilettura: gli appunti sono quelli che avevo gia'");
+      return;
+    }
+    app_diario("rilettura: " + t.length + " caratteri, diversi da quelli che "
+               + "avevo — annuncio e servo i NUOVI");
+    return appunti_annuncia(t);
+  }).catch((e) => {
+    /* ⛔ E SI DICE SE L'ATTIVAZIONE C'ERA: «negato» da solo non distingue «il
+     *    browser non vuole» da «l'utente non aveva toccato niente», e sono due
+     *    diagnosi opposte.  §9 pretende che `readText()` abbia un gesto vivo. */
+    app_diario("⚠ rilettura negata (" + e + ") · attivazione="
+               + (navigator.userActivation
+                  ? navigator.userActivation.isActive : "sconosciuta")
+               + ": servo quel che ho");
+  });
+
+  let scaduta = false;
+  await Promise.race([letta, new Promise((finito) => setTimeout(() => {
+    scaduta = true; finito();
+  }, APPUNTI_RILETTURA_MS))]);
+  if (scaduta)
+    nota("⚠ §9: il desktop remoto sta incollando e il browser non ha ancora "
+       + "dato gli appunti — su Firefox il bottoncino «Incolla» aspetta un "
+       + "clic.  Servo quel che ho, e il resto arriva alla prossima incollata");
+}
+
 /* I messaggi del canale appunti che arrivano dal server. */
 async function appunti_ricevuti(byte, completo) {
   if (!completo) {
@@ -5125,6 +5214,11 @@ async function appunti_ricevuti(byte, completo) {
         + "(§7.4)");
       return;
     }
+    /* ⛔ PRIMA di servire si rilegge la clipboard del dispositivo: questa
+     *    domanda puo' essere nata da un incolla fatto col MOUSE, e allora
+     *    nessun `Ctrl+V` ha mai portato qui il testo di adesso. */
+    await appunti_rileggi_prima_di_servire();
+
     if (chiesto !== APPUNTI.mio_id)
       nota("⚠ §7.4: il desktop remoto chiede il trasferimento " + chiesto
          + ", superato dal " + APPUNTI.mio_id + ": lo servo col testo ATTUALE");
@@ -5473,6 +5567,13 @@ function appunti_prepara(wt, congeda) {
   APPUNTI.congeda = congeda;
 }
 
+/* ⭐ L'ANNUNCIO D'APERTURA, e parte quando la sessione c'e' (vedi il riquadro
+ *    dentro `avvia_appunti`: prima di `SESSIONE` sarebbe §4.2 violata). */
+function appunti_apri_la_domanda() {
+  if (!APPUNTI.acceso || APPUNTI.mio_id !== 0) return;
+  appunti_annuncia("");
+}
+
 function avvia_appunti(negoziato) {
   APPUNTI.acceso = negoziato;
 
@@ -5481,6 +5582,32 @@ function avvia_appunti(negoziato) {
     return;
   }
   app_diario("ACCESI (§4.3 negoziata)");
+
+  /* ⛔⛔⭐ E SI ANNUNCIA SUBITO, PRIMA CHE L'UTENTE ABBIA COPIATO QUALUNQUE
+   *      COSA — 21 agosto 2026, ed e' l'ALTRA meta' della cura dell'incolla
+   *      col mouse.
+   *
+   * ⚠ Il server non chiede niente a chi non ha mai annunciato: `rcp.c`
+   *   (`rcp_appunti_chiedi`) mette la richiesta in coda — «la domanda ASPETTA
+   *   l'annuncio» — e il fondo di tempo del figlio la chiude a mani vuote dopo
+   *   quattro secondi.  ⇒ Finche' l'utente non aveva battuto almeno un
+   *   `Ctrl+V`, un incolla fatto col menu del desktop remoto non arrivava
+   *   **nemmeno a farci una domanda**: nessuna riga, da nessuna parte, e da
+   *   fuori «la clipboard non funziona».
+   *
+   * ⭐ Un annuncio da zero byte costa otto byte una volta per sessione e apre
+   *   il canale della domanda: da qui in poi ogni incollata di la' ci arriva, e
+   *   la si serve rileggendo (`appunti_rileggi_prima_di_servire`).
+   * ⚠ E dice il vero: in questo istante la pagina di appunti letti NON NE HA.
+   *   ⛔ Non e' un `APPUNTI_TESTO` spinto — quello §7.4 lo vieta — e' un
+   *     annuncio, cioe' esattamente «ho del testo disponibile: zero byte».
+   *
+   * ⛔⛔ E NON PARTE DA QUI — `[M]` 21 agosto 2026, registro del server:
+   *     *«congedo motivo=0x0b — byte sullo stream di appunti (14) prima che
+   *     `SESSIONE` sia partita (stato: attesa-verdetto)»*.  ⚠ Questa funzione
+   *     gira all'ECCOMI, cioe' PRIMA delle credenziali: un annuncio spedito
+   *     qui viola §4.2 e la sessione si chiude.  ⇒ L'annuncio d'apertura parte
+   *     dopo `SESSIONE`, e sta scritto la' (`appunti_apri_la_domanda`). */
 
   /* ── Verso dispositivo → sessione, strada 1: la sorveglianza ───────────── */
   /* ⛔⭐ DOVE STIA `clipboardchange` E' `[?]`, E SI PROVANO TUTT'E DUE I POSTI.

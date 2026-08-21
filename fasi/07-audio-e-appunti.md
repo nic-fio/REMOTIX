@@ -1183,3 +1183,100 @@ finto non ha. ⇒ Su quel percorso l'ultima parola è di una tastiera vera — c
 
 ---
 
+### 9.5 · ⛔⛔⭐ «FUNZIONA CON `Ctrl+V`, MA NON COL MOUSE» — 21 agosto 2026, e gli anelli rotti erano **quattro**
+
+> *«Ecco perche'! Funziona l'incolla con ctrl+v, ma non con il mouse e scegliendo dal menu la voce
+> "incolla"»* — l'utente, la mattina del 21 agosto, subito dopo aver verificato la cura di §9.4.
+
+⭐ **Una frase che vale una giornata di diagnosi**: dice che la cura del giorno prima è entrata (il
+`Ctrl+V` consegna) e nomina esattamente la strada rimasta scoperta.
+
+#### La differenza, e perché nessuno dei quattro banchi verdi poteva vederla
+
+| l'utente fa | chi tocca | che cosa nasce sulla pagina |
+|---|---|---|
+| `Ctrl+V` sulla pagina | **il browser** | l'evento `paste`, con dentro il testo — gratis |
+| tasto destro → «Incolla» **dentro il desktop remoto** | **il desktop remoto** | ⛔ **niente** |
+
+⇒ Quel menu è dipinto nel video, e la voce «Incolla» la esegue un'applicazione che sta dall'altra
+parte del filo. L'unica notizia che ne arriva alla pagina è l'`APPUNTI_CHIEDI` del server.
+⛔ **E i quattro banchi verdi di §9.4 battevano tutti `Ctrl+V`**: misuravano l'unica strada che già
+funzionava. Il banco che mancava è `banchi/07-b56-incolla-col-mouse.py`, che non batte mai un tasto.
+
+#### I quattro anelli, in ordine di scoperta — e **tre erano miei**
+
+**1 · La pagina non veniva nemmeno interpellata.** `rcp.c` non chiede niente a un client che non ha
+mai annunciato: mette la richiesta in coda («*la domanda ASPETTA l'annuncio*») e il fondo del figlio
+la chiude a mani vuote dopo quattro secondi. ⇒ Finché l'utente non aveva battuto **almeno un**
+`Ctrl+V`, un incolla col mouse non arrivava a fare **nemmeno una domanda**: nessuna riga, da nessuna
+parte.
+⭐ **Cura**: la pagina manda un **annuncio d'apertura da zero byte** appena la sessione è nata.
+Costa otto byte una volta, apre il canale della domanda, e dice il vero — in quell'istante di
+appunti letti non ne ha.
+
+**2 · ⛔ E quell'annuncio partiva TROPPO PRESTO, e chiudeva la sessione.** `[M]` Registro delle
+05:55:42: *«congedo motivo=0x0b — byte sullo stream di appunti (14) prima che `SESSIONE` sia partita
+(stato: attesa-verdetto)»*. `avvia_appunti()` gira all'ECCOMI, cioè **prima delle credenziali**.
+⇒ L'annuncio d'apertura è stato spostato dopo `SESSIONE` (`appunti_apri_la_domanda`).
+
+**3 · ⛔ L'offerta alla sessione cadeva nel vuoto, e nessuno la rifaceva.** `[M]` 06:00:15 —
+l'annuncio alle `.868`, l'apertura degli appunti della sessione alle `.982`: **114 ms** in mezzo, e
+in quei 114 ms il figlio scriveva *«gli appunti della sessione non ci sono: l'offerta cade»*.
+⇒ Il compositore non diventava mai proprietario della selezione, e dentro il desktop la voce
+«Incolla» **non aveva niente da dare**.
+⭐ **Cura**: `figlio.c` tiene **un bit** (`appunti_offerta_arretrata`) e rifà l'offerta appena gli
+appunti si aprono. È la stessa forma della domanda arretrata di `rcp.c`: invece di ritardare
+qualcosa per tutti, si ricuce.
+
+**4 · ⛔⛔ E l'annuncio nuovo UCCIDEVA l'incollata che lo aveva provocato.** Il difetto l'ha detto
+Mutter con parole sue: `[M]` *«SelectionWrite per la richiesta 2 è stata rifiutata — Transfer serial
+2 doesn't match any transfer request»*.
+⚠ Offrire la selezione al compositore (`SetSelection`) **annulla i trasferimenti in volo**: è il
+compositore che, vedendo una selezione nuova, butta le richieste aperte sulla vecchia. E noi
+ri-offrivamo *proprio mentre servivamo* — la pagina rilegge la clipboard, annuncia il testo nuovo, e
+quell'annuncio buttava l'incollata in corso. ⇒ **Chi incollava vedeva vuoto**, che è il sintomo da
+cui eravamo partiti.
+⭐ **Cura**: finché ci sono richieste in attesa l'offerta si **rimanda** (`app_offri_dopo`), e parte
+quando la risposta è partita.
+
+#### E la cura che sta al centro: **si rilegge quando il desktop chiede**
+
+`appunti_rileggi_prima_di_servire()` — sull'`APPUNTI_CHIEDI`, prima di servire, la pagina rilegge la
+clipboard del dispositivo. ⭐ Il permesso c'è: **il clic sulla voce «Incolla» del menu remoto è un
+clic su questa pagina**, quindi l'attivazione transitoria è fresca di millisecondi.
+
+⛔ **E non si rilegge se la strada gratis ha appena consegnato** (`paste` da meno di 4 000 ms):
+senza questa riga si curava l'incolla col mouse **rompendo quello con la tastiera**, perché su
+Firefox ogni rilettura costa il bottoncino «Incolla».
+
+#### Il prezzo, misurato — `banchi/07-b56`, 3 incollate per browser
+
+| | Chrome | Firefox |
+|---|---|---|
+| l'incolla col mouse arriva | ⭐ **3 su 3** | ⭐ **3 su 3** |
+| il bottoncino «Incolla» compare | **mai** | ⚠ **3 volte su 3** |
+| incollando lo **stesso** testo una seconda volta | — | ⚠ compare **di nuovo** |
+
+⚠ **Su Firefox l'incolla col mouse costa un clic in più, ogni volta.** Non è una scelta nostra:
+`readText()` lì apre sempre il bottoncino di conferma, anche a clipboard immutata (`SPECIFICHE.md`
+§9 — «*ogni lettura costa il menu Incolla*»). ⭐ Ma stavolta compare **dove l'utente sta già
+cliccando**, non in un angolo che nessuno guarda. E il `Ctrl+V` resta gratis su tutti e due i
+motori.
+
+#### ⛔ Tre difetti del banco, e due avrebbero dichiarato rotto un prodotto sano
+
+1. **Chrome non andava sullo schermo del banco.** Senza `--ozone-platform=x11` prende Ozone/Wayland
+   e si attacca alla sessione grafica **vera**: leggeva un'**altra** clipboard, e `readText()`
+   tornava vuoto mentre `xclip -o` sullo schermo del banco mostrava il testo.
+2. **Il banco cliccava troppo presto.** Fra il clic e `wl-paste` ci sono `ssh`, `sudo` e `runuser`:
+   `[M]` secondi interi, e l'attivazione transitoria dura cinque secondi. ⇒ *«lack of user
+   activation»* era il banco, non il prodotto. Cura: il copione remoto dice **`PRONTO`** e aspetta
+   un secondo e mezzo, così l'ordine dei fatti è quello vero.
+3. **`xclip` appendeva il banco**, come `wl-copy` nella sessione: si biforca per *servire* la
+   selezione e tiene aperte le sue uscite. ⇒ Non si aspetta.
+
+⭐ E per cliccare il bottoncino di Firefox il banco entra nel **contesto chrome**
+(`clipboardReadPasteMenuPopup`), con `-remote-allow-system-access`: ⛔ **non** si accende
+`dom.events.testing.asyncClipboard`, che spegnerebbe proprio la cosa da misurare. Il banco paga il
+prezzo davanti a tutti e **riferisce quante volte**.
+

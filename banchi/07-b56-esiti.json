@@ -1,0 +1,239 @@
+[
+ {
+  "browser": "firefox",
+  "giri": [
+   {
+    "giro": 1,
+    "guai": [],
+    "ricopiato": true,
+    "bottoncino_comparso": true,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-1",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-1",
+    "diario": [
+     "ECCOMI: versione 1 — video.codec=hevc,h264 · video.profondita=8,10 · audio.codec=opus,pcm · appunti.testo=si · banco.marca=no",
+     "appunti · ACCESI (§4.3 negoziata)",
+     "⭐ appunti accesi, solo testo, nei due versi (§7.4).  ⚠ Questo browser NON sorveglia la clipboard: quel che copi qui arriva al desktop remoto quando batti `Ctrl+V` su questa pagina (§9 — su Firefox e Safari `clipboardchange` non esiste)",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 1 — 0 byte",
+     "appunti · ⚠ rilettura negata (NotAllowedError: Clipboard read request was blocked due to lack of user activation.) · attivazione=false: servo quel che ho",
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: 37 caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 2 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "nessuna",
+     "conti": {
+      "annunciati": 2,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 2,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 2,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-1"
+    }
+   },
+   {
+    "giro": 2,
+    "guai": [],
+    "ricopiato": true,
+    "bottoncino_comparso": true,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "diario": [
+     "⭐ appunti accesi, solo testo, nei due versi (§7.4).  ⚠ Questo browser NON sorveglia la clipboard: quel che copi qui arriva al desktop remoto quando batti `Ctrl+V` su questa pagina (§9 — su Firefox e Safari `clipboardchange` non esiste)",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 1 — 0 byte",
+     "appunti · ⚠ rilettura negata (NotAllowedError: Clipboard read request was blocked due to lack of user activation.) · attivazione=false: servo quel che ho",
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: 37 caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 2 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: 37 caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 3 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 2) — qualcuno di la' sta incollando",
+     "⚠ §9: il desktop remoto sta incollando e il browser non ha ancora dato gli appunti — su Firefox il bottoncino «Incolla» aspetta un clic.  Servo quel che ho, e il resto arriva alla prossima incollata",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 3) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "nessuna",
+     "conti": {
+      "annunciati": 3,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 4,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 3,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-2"
+    }
+   },
+   {
+    "giro": 3,
+    "guai": [],
+    "ricopiato": false,
+    "bottoncino_comparso": true,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "diario": [
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: 37 caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 2 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: 37 caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 3 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 2) — qualcuno di la' sta incollando",
+     "⚠ §9: il desktop remoto sta incollando e il browser non ha ancora dato gli appunti — su Firefox il bottoncino «Incolla» aspetta un clic.  Servo quel che ho, e il resto arriva alla prossima incollata",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 3) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⚠ §9: il desktop remoto sta incollando e il browser non ha ancora dato gli appunti — su Firefox il bottoncino «Incolla» aspetta un clic.  Servo quel che ho, e il resto arriva alla prossima incollata",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 3) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "nessuna",
+     "conti": {
+      "annunciati": 3,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 5,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 3,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-2"
+    }
+   }
+  ],
+  "bottoncini": 3
+ },
+ {
+  "browser": "chrome",
+  "giri": [
+   {
+    "giro": 1,
+    "guai": [],
+    "ricopiato": true,
+    "bottoncino_comparso": false,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-1",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-1",
+    "diario": [
+     "appunti · ⭐ ANNUNCIATO il trasferimento 2 — 37 byte",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 1) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 2) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 3 — 0 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 3) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 4 — 37 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 4) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 4) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "navigator.clipboard",
+     "conti": {
+      "annunciati": 4,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 5,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 4,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-1"
+    }
+   },
+   {
+    "giro": 2,
+    "guai": [],
+    "ricopiato": true,
+    "bottoncino_comparso": false,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "diario": [
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 4) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 4) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 5 — 0 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 5) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 6 — 37 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 6) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 6) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "navigator.clipboard",
+     "conti": {
+      "annunciati": 6,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 8,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 6,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-2"
+    }
+   },
+   {
+    "giro": 3,
+    "guai": [],
+    "ricopiato": false,
+    "bottoncino_comparso": false,
+    "interpellata": true,
+    "aspettava_l_annuncio": false,
+    "copiato_nel_browser": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "arrivato_nella_sessione": "COL-MOUSE-dal-browser-al-desktop-61-2",
+    "diario": [
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 4) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 5 — 0 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 0 byte spediti al desktop remoto (trasferimento 5) — qualcuno di la' sta incollando",
+     "appunti · ⭐ ANNUNCIATO il trasferimento 6 — 37 byte",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 6) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 6) — qualcuno di la' sta incollando",
+     "appunti · rilettura: gli appunti sono quelli che avevo gia'",
+     "⭐ appunti: 37 byte spediti al desktop remoto (trasferimento 6) — qualcuno di la' sta incollando"
+    ],
+    "stato": {
+     "acceso": true,
+     "sorvegliata": "navigator.clipboard",
+     "conti": {
+      "annunciati": 6,
+      "chiesti": 0,
+      "ricevuti": 0,
+      "serviti": 9,
+      "scritti": 0,
+      "non_scritti": 0
+     },
+     "mio_id": 6,
+     "mio_testo": "COL-MOUSE-dal-browser-al-desktop-61-2"
+    }
+   }
+  ],
+  "bottoncini": 0
+ }
+]
