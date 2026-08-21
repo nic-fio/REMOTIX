@@ -1865,6 +1865,27 @@ prodotto sano**: Chrome che si attacca alla sessione grafica vera invece che all
 transitoria del browser era già scaduta. ⇒ §1.2 di nuovo, e non è un caso: il banco che scopre una
 strada nuova è **giovane**, e va certificato prima di credergli — in tutt'e due i versi.
 
+## 9-ter. ⛔ §1.19 — **Chi apre, chiude**: i banchi lavorano sul desktop di una persona
+
+*21 agosto 2026, dall'utente, guardando il suo schermo: «Che diavolo succede? È come se si
+aprissero terminali infiniti».*
+
+⛔ Erano i banchi. Un desktop fermo non manda fotogrammi, quindi per misurare il video serve
+qualcosa che si muova: un terminale che scorre. ⚠ Lo accendevo **a mano** a ogni giro, e nessuno lo
+spegneva — dopo dieci giri, **dieci terminali e dieci cicli infiniti sul desktop di qualcuno**.
+
+⇒ La regola, e vale per ogni banco che tocchi la sessione di prova:
+
+| | |
+|---|---|
+| **chi apre chiude** | la scena la accende il banco e la spegne il banco, in un `finally` — anche se il banco è caduto |
+| **si spegne quel che si VEDE, non solo quel che gira** | ⛔ `pkill` sul processo che scriveva lasciava in piedi la finestra che lo mostrava |
+| **il posto si libera** | la sessione del banco tiene occupato l'unico posto, e il banco dopo misurerebbe una pagina che non si è potuta collegare |
+
+⚠ E c'è una ragione in più perché questa non è pignoleria: la sessione di prova è **la stessa** che
+l'utente guarda. Un banco che lascia rifiuti lì dentro non sporca un ambiente di prova — sporca il
+posto di lavoro di una persona, e le fa perdere tempo a capire che cosa sia stato.
+
 ## 10. E una lezione sola su tutto il resto
 
 Il progetto non si è mai fermato su un problema difficile.

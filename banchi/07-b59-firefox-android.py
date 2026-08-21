@@ -92,6 +92,48 @@ def tocca(chiave):
     return False
 
 
+# ⛔⛔⭐ LA SCENA SI ACCENDE E SI SPEGNE **QUI DENTRO** — 21 agosto 2026, e il
+#      difetto l'ha visto l'utente sul suo desktop: *«che diavolo succede?  E'
+#      come se si aprissero terminali infiniti»*.
+#
+# ⚠ Un desktop fermo non manda fotogrammi, quindi il banco ha bisogno di
+#   qualcosa che si muova: un terminale che scorre.  ⛔ Ma lo accendevo A MANO a
+#   ogni giro, e nessuno lo spegneva — dopo dieci giri, dieci terminali e dieci
+#   cicli infiniti **sul desktop di una persona**.
+# ⇒ La accende il banco e la spegne il banco, in un `finally`: chi apre chiude.
+SCENA = ("#!/bin/sh\n"
+         "U=$(id -u prova)\n"
+         "export XDG_RUNTIME_DIR=/run/user/$U WAYLAND_DISPLAY=wayland-0\n"
+         "export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus\n"
+         # ⛔ Prima si spegne quel che c'era: due scene sono gia' troppe.
+         "pkill -u prova -f 'REMOTIX-SCENA' 2>/dev/null\n"
+         "sleep 0.5\n"
+         "setsid gnome-terminal --title=REMOTIX-SCENA -- "
+         "sh -c 'while :; do date +%H:%M:%S.%N; sleep 0.1; done' "
+         ">/dev/null 2>&1 &\n"
+         "sleep 2\n"
+         "echo scena-accesa\n")
+
+
+def nella_sessione(comando, t=40):
+    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 25 " + comando)
+    return subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
+                          capture_output=True, text=True, timeout=t).stdout.strip()
+
+
+def scena_accendi():
+    subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                    "cat > /tmp/b59-scena.sh && chmod +x /tmp/b59-scena.sh"],
+                   input=SCENA, text=True, capture_output=True)
+    return "scena-accesa" in nella_sessione("runuser -u prova -- /tmp/b59-scena.sh")
+
+
+def scena_spegni():
+    """⛔ Si chiama SEMPRE, anche se il banco e' caduto: quel che si apre sul
+    desktop di qualcuno si chiude."""
+    nella_sessione("pkill -u prova -f 'REMOTIX-SCENA|gnome-terminal' || true")
+
+
 def registro(n=400):
     c = ("printf 'nicfio\\n' | sudo -S -p '' tail -n %d %s/registro.log"
          % (n, o.lavoro))
@@ -140,6 +182,9 @@ def main():
              (adb("shell", "dumpsys", "package", "org.mozilla.firefox") or "")
              else "?"))
 
+    if not scena_accendi():
+        print("   ⚠ la scena non si e' accesa: il desktop restera' fermo e il "
+              "banco misurerebbe il silenzio")
     posto_libero()
     adb("shell", "am", "force-stop", "org.mozilla.firefox")
     time.sleep(2)
@@ -248,4 +293,15 @@ def main():
     return 1 if guai else 0
 
 
-sys.exit(main())
+try:
+    _esito = main()
+finally:
+    # ⛔ E il posto si libera anche lui: la sessione dell'emulatore terrebbe
+    #    occupato l'unico posto, e il banco dopo misurerebbe una pagina che non
+    #    si e' potuta collegare.
+    try:
+        adb("shell", "am", "force-stop", "org.mozilla.firefox")
+    except Exception:
+        pass
+    scena_spegni()
+sys.exit(_esito)

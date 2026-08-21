@@ -103,7 +103,11 @@ def accendi_la_scena():
 
 
 def spegni_la_scena():
-    c = ("printf 'nicfio\\n' | sudo -S -p '' pkill -u prova -f REMOTIX-SCENA")
+    # ⛔ Anche le FINESTRE, non solo il ciclo: `[M]` 21 agosto 2026 l'utente si
+    #    e' trovato il desktop pieno di terminali aperti dai banchi, perche' si
+    #    spegneva il processo che scriveva e non quello che lo mostrava.
+    c = ("printf 'nicfio\\n' | sudo -S -p '' pkill -u prova -f "
+         "'REMOTIX-SCENA|gnome-terminal'")
     subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
                    capture_output=True, text=True)
 
