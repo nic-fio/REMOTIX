@@ -1294,7 +1294,15 @@ function sonda_mse_una(sonda, stringa, rl, ra, p) {
 
     const v = document.createElement("video");
     v.muted = true; v.playsInline = true;
-    v.style.cssText = "position:fixed;left:-9999px;top:0;width:64px;height:64px";
+    /* ⛔⛔ VISIBILE, ANCHE SE PICCOLISSIMO — 21 agosto 2026.
+     * ⚠ Un `<video>` fuori dallo schermo (`left:-9999px`) sui motori mobili
+     *   **non viene presentato**: risparmiano batteria su quel che nessuno
+     *   guarda.  `[M]` Su Firefox per Android la sonda leggeva nero dopo dodici
+     *   riletture in un secondo e mezzo.  ⇒ Sta dentro la vista, un pixel per
+     *   un pixel e quasi trasparente: si vede quanto basta al motore, e non
+     *   quanto basta all'utente. */
+    v.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;"
+                    + "opacity:0.01;pointer-events:none;z-index:0";
     document.body.appendChild(v);
     let finito = false;
     const orologio = setTimeout(
@@ -1575,7 +1583,18 @@ async function misura_massima(sondaggio) {
    ⭐ E da qui passa anche la scala delle misure: e' la stessa domanda — «che
    cosa arriva al pixel su QUESTO dispositivo» — posta un'altra volta, e il suo
    costo si legge in `sondaggio.misura.ms`, che il registro scrive. */
-const SONDAGGIO = (async function () {
+/* ⛔⛔⭐ E SU MSE IL SONDAGGIO NON PARTE AL CARICAMENTO — 21 agosto 2026.
+ *
+ * ⚠ La sonda dell'altra strada deve far PRESENTARE un fotogramma, e presentare
+ *   vuol dire suonare: al caricamento della pagina nessuno ha ancora toccato
+ *   niente, e i motori mobili non fanno partire da soli quel che nessuno ha
+ *   chiesto.  `[M]` Firefox per Android: dodici riletture, tela nera ogni
+ *   volta.
+ * ⇒ Su questa strada il sondaggio si fa quando serve — nel `CIAO`, che gira
+ *   **dopo che l'utente ha premuto «Collegati»** — e li' il gesto c'e'.
+ * ⚠ Sulla strada di WebCodecs resta com'era: partire presto fa risparmiare il
+ *   tempo della sonda a chi si collega. */
+async function sonda_tutto() {
   const fuori = { codec: {}, webcodecs: typeof VideoDecoder !== "undefined",
                   misura: null };
   for (const nome of PREFERENZA) {
@@ -1585,7 +1604,9 @@ const SONDAGGIO = (async function () {
   }
   fuori.misura = await misura_massima(fuori);
   return fuori;
-})();
+}
+
+const SONDAGGIO = VIA_MSE ? null : sonda_tutto();
 
 /* ⛔ LA DEGRADAZIONE SI DICHIARA — `CODER.md` §4.2.  Questa funzione e' il posto
  *    in cui il ripiego smette di essere silenzioso, e scrive DUE cose diverse:
@@ -4207,7 +4228,7 @@ async function collega(utente, parola) {
    * ⚠ Dichiarare un codec che non si dipinge non darebbe un errore: darebbe una
    *   TELA NERA, cioe' il sintomo che non nomina la causa.  `[M]` su Firefox
    *   140 ESR le tre API di supporto dicono si' a HEVC e il pixel non arriva. */
-  const sondaggio = await SONDAGGIO;
+  const sondaggio = await (SONDAGGIO || sonda_tutto());
   const codec_buoni = PREFERENZA.filter((n) =>
     (sondaggio.codec[n][8] && sondaggio.codec[n][8].arriva) ||
     (sondaggio.codec[n][10] && sondaggio.codec[n][10].arriva));

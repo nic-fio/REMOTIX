@@ -1064,3 +1064,17 @@ e ⭐ **riconosce il nero** invece di trasformarlo in un verdetto.
 
 ⚠ È la stessa famiglia dei cinque difetti del banco `07-b57`: *lo strumento misurava se stesso*.
 
+#### ⛔ E la seconda volta la tela era ancora nera — **due cause, tutte e due dei motori mobili**
+
+`[M]` La riga nuova della sonda: *«il `<video>` non aveva ancora presentato niente: la tela è
+tornata nera»* — dopo **dodici** riletture in un secondo e mezzo. ⇒ Non era lentezza: quel
+`<video>` non presentava **mai**.
+
+| causa | perché |
+|---|---|
+| il `<video>` della sonda stava **fuori dallo schermo** (`left:-9999px`) | i motori mobili non presentano quel che nessuno guarda: risparmiano batteria. ⇒ Adesso sta dentro la vista, **due pixel per due**, quasi trasparente — visibile quanto basta al motore, non all'utente |
+| la sonda partiva **al caricamento della pagina** | presentare vuol dire suonare, e nessuno aveva ancora toccato niente. ⇒ Su questa strada il sondaggio si fa nel `CIAO`, cioè **dopo che l'utente ha premuto «Collegati»** |
+
+⚠ E la seconda cura ha un effetto laterale dichiarato: su MSE la sonda costa il suo tempo **a chi si
+collega** invece che al caricamento. Sulla strada di WebCodecs non cambia niente.
+
