@@ -1420,16 +1420,36 @@ async function sonda_una(nome, profondita) {
         : "si sta misurando la strada MSE, che porta il solo H.264";
       return esito;
     }
-    const tela = document.createElement("canvas");
-    tela.width = 64; tela.height = 64;
-    const p2 = tela.getContext("2d", { willReadFrequently: true });
-    const s2 = SONDE[nome + "-" + profondita];
+    /* ⛔⛔⭐ E QUI LA REGOLA «SI DICHIARA SOLO QUEL CHE DIPINGE» HA
+     *      UN'ECCEZIONE, DICHIARATA — 21 agosto 2026, e l'ha pagata l'utente
+     *      con tre giri di prove.
+     *
+     * ⚠ La regola (`DECISIONI.md` §1.13, `LEZIONI.md` §1.9) esiste perche' una
+     *   capacita' dichiarata e non vera da' una **tela nera senza spiegazione**.
+     *   ⛔ Ma per verificarla su questa strada bisogna far PRESENTARE un
+     *   fotogramma a un `<video>` di prova, e sui motori mobili un `<video>` di
+     *   prova non presenta: e' piccolo, e' quasi trasparente, e nessuno lo sta
+     *   guardando.  `[M]` Tre giri su Firefox per Android, tela nera ogni
+     *   volta — mentre lo stesso motore dichiara H.264 **in hardware** e il
+     *   `<video>` il nostro MP4 **lo aveva caricato**.
+     *   ⇒ La sonda misurava le regole di risparmio energetico del telefono, non
+     *     il flusso.  E il prezzo era il peggiore: la sessione non si apriva.
+     *
+     * ⭐ ALLORA SI DICHIARA SULLA PAROLA DEL MOTORE, e il controllo si sposta
+     *    **dove il `<video>` e' vero**: grande, visibile, e quello che l'utente
+     *    sta guardando.  Se li' non presenta, `Schermo` lo scrive in chiaro
+     *    (`mse_veglia`) — quindi la tela nera **non resta senza spiegazione**,
+     *    che era l'unica cosa che la regola serviva a impedire. */
     esito.stringa = stringhe_codec(nome, profondita)[0];
-    const r2 = await sonda_mse_una(s2, esito.stringa, 64, 64, p2);
-    esito.arriva = r2.arriva; esito.perche = r2.perche;
-    esito.formato = r2.formato || null; esito.letture = r2.letture || null;
-    esito.misura = r2.misura || null;
+    const tipo = 'video/mp4; codecs="' + esito.stringa + '"';
     esito.via = "mse";
+    esito.arriva = (typeof MediaSource !== "undefined")
+                && MediaSource.isTypeSupported(tipo);
+    esito.perche = esito.arriva
+      ? "DICHIARATO, non dipinto: su questa strada la sonda non puo' far "
+        + "presentare un fotogramma (vedi il riquadro).  Il controllo e' sul "
+        + "`<video>` vero, e se non presenta lo si legge nel registro"
+      : "MSE non accetta «" + tipo + "»";
     return esito;
   }
   for (const stringa of stringhe_codec(nome, profondita, LIVELLO_DICHIARATO)) {
@@ -1546,6 +1566,25 @@ async function scala_di(nome, stringa) {
  *   e il caso non ha ancora un numero che lo giustifichi. */
 async function misura_massima(sondaggio) {
   const fuori = { per_codec: {}, massima: null, ms: 0, perche: null };
+  /* ⛔⛔⭐ SULLA STRADA DI MSE LA SCALA NON SI MISURA — 21 agosto 2026, e il
+   *      difetto era grosso.
+   *
+   * ⚠ Questa scala prova sei gradini con `VideoDecoder.isConfigSupported`, che
+   *   li' **non esiste**: ogni gradino lanciava `ReferenceError`, il primo
+   *   compreso, e la misura usciva **320x240** — la tela minima di §4.5.  ⛔ Il
+   *   server concedeva una tela di 320x240 e l'utente si trovava il desktop in
+   *   un francobollo, senza che una sola riga dicesse perche'.
+   * ⇒ §4.3 permette di OMETTERE una capacita' che non si sa dichiarare, e
+   *   questo e' esattamente quel caso: non si sa, quindi non si dice.
+   * ⚠ E si dichiara qui invece di lasciare un `null` muto. */
+  if (VIA_MSE) {
+    fuori.perche = "⚠ §4.3: `video.misura_massima` si OMETTE — su questa "
+                 + "strada la scala non si puo' misurare (la sonda dei gradini "
+                 + "vuole WebCodecs, che qui non c'e').  Il tetto vero lo pone "
+                 + "il decodificatore del sistema, e non si dichiara quel che "
+                 + "non si e' misurato";
+    return fuori;
+  }
   const t0 = performance.now();
   for (const nome of PREFERENZA) {
     const c = sondaggio.codec[nome] || {};
@@ -3349,6 +3388,11 @@ class Schermo {
       if (v.requestVideoFrameCallback) {
         const conta = (adesso, meta) => {
           this.conti.dipinti++;
+          /* ⭐ E qui si dichiara che lo schermo c'e': su questa strada non passa
+           *    da `dipingi()`, e senza questa riga la pagina resterebbe per
+           *    sempre «in attesa del primo fotogramma» mentre il desktop e' gia'
+           *    sullo schermo. */
+          document.body.dataset.schermo = "acceso";
           this.mostrata = meta && meta.mediaTime;
           this.mse_insegui();
           v.requestVideoFrameCallback(conta);
@@ -3400,6 +3444,31 @@ class Schermo {
     return true;
   }
 
+  /* ⛔⭐ LA VEGLIA — il controllo che la sonda non poteva fare.
+   *
+   * ⚠ Su questa strada si dichiara H.264 sulla parola del motore, quindi il
+   *   caso «accetta il flusso e non lo mostra» resta possibile.  ⇒ Lo si guarda
+   *   dove il `<video>` e' vero, e se dopo qualche secondo di fotogrammi
+   *   consegnati non ne e' stato presentato NEMMENO UNO, lo si dice in chiaro:
+   *   una tela nera senza spiegazione e' la cosa che questo progetto non
+   *   ammette (`LEZIONI.md` §1.9). */
+  mse_veglia() {
+    if (this.mse_vegliato) return;
+    this.mse_vegliato = true;
+    setTimeout(() => {
+      if (this.conti.dipinti > 0) return;
+      const v = this.video;
+      nota("⛔ §7.18: sono arrivati " + this.conti.consegnati + " fotogrammi e "
+         + "il `<video>` non ne ha presentato NEMMENO UNO"
+         + (v ? " (misura " + v.videoWidth + "×" + v.videoHeight
+              + ", fermo=" + v.paused + ", pronto=" + v.readyState
+              + ", errore=" + (v.error ? v.error.code : "nessuno")
+              + ", tempo=" + (+v.currentTime).toFixed(2) + ")" : "")
+         + ".  ⚠ Questo browser accetta il flusso e non lo mostra: e' il caso "
+         + "che la sonda di questa strada non puo' prevedere");
+    }, 4000);
+  }
+
   mse_spegni_sorgente() {
     try {
       if (this.sorgente && this.sorgente.readyState === "open")
@@ -3424,6 +3493,17 @@ class Schermo {
     }
     this.coda_mse.push(f.pezzo);
     this.mse_scarica();
+    this.mse_veglia();
+    /* ⛔⛔⭐ E IL RISVEGLIO STA QUI, non solo nella richiamata del `<video>`.
+     *
+     * ⚠ Un desktop sta fermo per secondi: il `<video>` finisce i dati, si mette
+     *   in pausa, e `requestVideoFrameCallback` **smette di scattare** — perche'
+     *   scatta sui fotogrammi presentati, e non ne presenta piu' nessuno.
+     * ⛔ Se il risveglio vivesse solo li', la prima pausa del desktop
+     *   fermerebbe l'immagine PER SEMPRE, e da fuori sarebbe «si e' aperto e
+     *   poi si e' bloccato».  ⇒ Si insegue anche quando arrivano dati nuovi,
+     *   che e' l'altro momento in cui puo' esserci qualcosa da fare. */
+    this.mse_insegui();
     return true;
   }
 

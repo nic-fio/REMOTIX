@@ -1078,3 +1078,55 @@ tornata nera»* — dopo **dodici** riletture in un secondo e mezzo. ⇒ Non era
 ⚠ E la seconda cura ha un effetto laterale dichiarato: su MSE la sonda costa il suo tempo **a chi si
 collega** invece che al caricamento. Sulla strada di WebCodecs non cambia niente.
 
+#### ⛔⛔ E al terzo «non è cambiato nulla» il difetto era **altrove** — banco `07-b58`
+
+*L'utente, 21 agosto 2026: «Non è cambiato assolutamente nulla, e mi stai facendo perdere tempo con
+test inutili». ⭐ Aveva ragione su tutta la riga: gli ho fatto provare tre volte **la mia sonda**,
+non il prodotto — e per tre volte quel che si rompeva non era quel che gli chiedevo di guardare.*
+
+⭐ **La cura del metodo, prima di quella del codice**: `dom.media.webcodecs.enabled = false` toglie
+`VideoDecoder` **e** `AudioDecoder` a un Firefox da tavolo. `[M]` `typeof VideoDecoder ===
+"undefined"` — esattamente quel che dichiara Firefox per Android. ⇒ La strada si prova **qui**, e
+sul telefono ci si va una volta sola, alla fine. È il banco `07-b58`.
+
+⚠ E quel che quel banco NON riproduce si dichiara: le regole di risparmio dei motori mobili — un
+`<video>` piccolo o fuori dalla vista che non viene presentato. Per quelle l'ultima parola resta del
+telefono.
+
+**Alla prima esecuzione ha trovato in un colpo tre difetti che nessun giro sul telefono aveva
+nominato:**
+
+1. ⛔⛔ **La scala delle misure chiamava `VideoDecoder` e lanciava `ReferenceError` su ogni
+   gradino** — il primo compreso — e `video.misura_massima` usciva **320×240**, la tela minima di
+   §4.5. ⇒ Il server concedeva 320×240 e il desktop sarebbe apparso **in un francobollo**, senza una
+   riga che lo spiegasse. Adesso su questa strada la capacità si **omette** (§4.3 lo permette): non
+   si dichiara quel che non si è misurato.
+2. ⛔ **`document.body.dataset.schermo = "acceso"` non veniva mai scritto**, perché su questa strada
+   non si passa da `dipingi()`: la pagina sarebbe rimasta «in attesa del primo fotogramma» con il
+   desktop già sullo schermo.
+3. ⛔⛔ **Il risveglio del `<video>` era appeso ai fotogrammi presentati.** Un desktop sta fermo per
+   secondi; il `<video>` finisce i dati, si mette in pausa, e `requestVideoFrameCallback` **smette
+   di scattare** — perché scatta sui fotogrammi presentati. ⇒ La prima pausa del desktop avrebbe
+   fermato l'immagine **per sempre**. Adesso si insegue anche quando arrivano dati nuovi.
+
+⭐ **E la regola «si dichiara solo quel che dipinge» ha qui la sua prima eccezione dichiarata**
+(`DECISIONI.md` §1.13, `LEZIONI.md` §1.9): su questa strada la sonda dovrebbe far *presentare* un
+fotogramma a un `<video>` di prova, e sui motori mobili un `<video>` di prova **non presenta**.
+⇒ Si dichiara sulla parola del motore, e il controllo si sposta dove il `<video>` è **vero**:
+`Schermo.mse_veglia()` scrive in chiaro se dopo quattro secondi non è stato presentato nemmeno un
+fotogramma. ⚠ La tela nera resta **spiegata**, che è l'unica cosa che la regola serviva a impedire.
+
+#### La misura, su un browser senza WebCodecs — 25 secondi di desktop vivo
+
+| | |
+|---|---|
+| fotogrammi consegnati → **dipinti** | 291 → ⭐ **250** |
+| buchi | ⭐ **0** |
+| coda del `<video>` | ⚠ 212 ms — coerente con il prezzo misurato in `07-b57` |
+| tela | ⭐ 1270×704, **non** i 320×240 di prima |
+
+⚠ E il banco ha avuto anche il suo difetto, dichiarato: muovere il puntatore **non fa fotogrammi**
+— il cursore viaggia su un canale suo e i pixel del desktop non cambiano. `[M]` Un giro intero con
+**un** fotogramma, e stava per dichiarare «non dipinge» di una strada che dipingeva quel che c'era.
+⇒ Adesso apre un terminale che scorre.
+
