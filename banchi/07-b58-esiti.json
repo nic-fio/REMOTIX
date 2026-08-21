@@ -2,20 +2,20 @@
  "guai": [],
  "schermo_acceso": true,
  "input_nuovi": 6,
- "input_esempio": "15:23:05.889 rcp     input id=306 (era 305) PULSANTE codice evdev 272 (0x110) rilasciato · istante del client 20869000 us ⚠ grana ingrossata",
+ "input_esempio": "16:56:05.707 rcp     input id=406 (era 405) PULSANTE codice evdev 272 (0x110) rilasciato · istante del client 25718000 us ⚠ grana ingrossata",
  "stato": {
   "webcodecs": false,
   "conti": {
-   "stream": 499,
-   "completi": 499,
+   "stream": 530,
+   "completi": 530,
    "azzerati": 0,
-   "consegnati": 499,
-   "dipinti": 123,
+   "consegnati": 529,
+   "dipinti": 308,
    "scartati_ordine": 0,
-   "scartati_misura": 0,
-   "tollerati": 0,
-   "buchi": 0,
-   "chiavi_chieste": 0,
+   "scartati_misura": 1,
+   "tollerati": 1,
+   "buchi": 1,
+   "chiavi_chieste": 1,
    "riconfigurazioni": 1,
    "trattenuti": 0,
    "corti": 0,
@@ -23,9 +23,9 @@
    "tardive": 0,
    "ricomposizioni": 0,
    "viste": 1,
-   "salti_mse": 58
+   "fretta_mse": 41
   },
-  "ritardo": 235,
+  "ritardo": 301,
   "vetro": {
    "tela": [
     1270,
@@ -43,9 +43,9 @@
   "video": {
    "l": 1270,
    "a": 704,
-   "t": 18.79,
+   "t": 23.57,
    "fermo": false,
-   "pronto": 1,
+   "pronto": 3,
    "errore": null
   }
  },
@@ -53,10 +53,10 @@
   "sonda video · H264: arriva al pixel (8 bit, «avc1.640032»)",
   "sonda video · ⭐ video.misura_massima MISURATA: nessuna — la capacita' si OMETTE (§4.3 vieta il valore vuoto) — e' il tetto del DECODIFICATORE (§4.3), non la misura dello schermo, che vale 1400x900 e viaggia in ATTACCA come «vista» · scala in 0 ms",
   "sonda video · ⚠ §4.3: `video.misura_massima` si OMETTE — su questa strada la scala non si puo' misurare (la sonda dei gradini vuole WebCodecs, che qui non c'e').  Il tetto vero lo pone il decodificatore del sistema, e non si dichiara quel che non si e' misurato",
-  "sonda video · ⛔ HEVC: NON arriva al pixel su questo browser — questo browser non ha WebCodecs, e l'altra strada (MSE) porta il solo H.264",
-  "sonda video · H264: arriva al pixel (8 bit, «avc1.640032»)",
-  "sonda video · ⭐ video.misura_massima MISURATA: nessuna — la capacita' si OMETTE (§4.3 vieta il valore vuoto) — e' il tetto del DECODIFICATORE (§4.3), non la misura dello schermo, che vale 1400x900 e viaggia in ATTACCA come «vista» · scala in 0 ms",
-  "sonda video · ⚠ §4.3: `video.misura_massima` si OMETTE — su questa strada la scala non si puo' misurare (la sonda dei gradini vuole WebCodecs, che qui non c'e').  Il tetto vero lo pone il decodificatore del sistema, e non si dichiara quel che non si e' misurato",
-  "video · ⚠ §7.18: si dipinge con MSE e un `<video>` (1270×704, «avc1.640032»), perche' questo browser non ha WebCodecs. Il ritardo su questa strada e' piu' alto, ed e' dichiarato"
+  "video · ⚠ §7.18: si dipinge con MSE e un `<video>` (1270×704, «avc1.640032»), perche' questo browser non ha WebCodecs. Il ritardo su questa strada e' piu' alto, ed e' dichiarato",
+  "MISURA §7.18 MSE: consegnati 117 · dipinti 94 · fermo=false cerca=false pronto=2 tempo=4.80 buffer=0.00→5.00 salti=0 errore=no",
+  "MISURA §7.18 MSE: consegnati 224 · dipinti 180 · fermo=false cerca=false pronto=3 tempo=9.77 buffer=0.00→9.98 salti=0 errore=no",
+  "MISURA §7.18 MSE: consegnati 333 · dipinti 242 · fermo=false cerca=false pronto=3 tempo=14.65 buffer=0.00→14.96 salti=0 errore=no",
+  "MISURA §7.18 MSE: consegnati 444 · dipinti 277 · fermo=false cerca=false pronto=3 tempo=19.78 buffer=0.00→19.99 salti=0 errore=no"
  ]
 }

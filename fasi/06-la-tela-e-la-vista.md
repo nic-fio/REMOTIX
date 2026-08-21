@@ -1231,3 +1231,20 @@ perché.
 persona, lo strumento sbagliato non è il prodotto — è il banco. Sei ore prima avrei potuto
 installarlo.
 
+### ⭐ Il giro completo, fatto da me — 21 agosto 2026, sera
+
+*L'utente: «prova tu».*
+
+| prova | esito |
+|---|---|
+| **Firefox 154 per Android** (emulatore, `07-b59`) | ⭐ desktop **vivo** — orologio `16:52`, terminali che scorrono; `fermo=false cerca=false pronto=3`, il tempo del video **avanza di 4,43 s in 5** |
+| input da Android | ⭐ il tocco arriva: `PULSANTE codice evdev 272 rilasciato` nel registro del server |
+| ritardo su Android (emulatore) | ⚠ **2,3 s** dal bordo vivo — ⛔ e il numero **non vale**: decodifica in software, scena pesante, tela 1080×2040 |
+| **senza WebCodecs, da tavolo** (`07-b58`) | ⭐ **0,21 s** dal bordo vivo, 277 dipinti su 444, input e geometria verdi |
+| **strada normale**, WebCodecs (`07-b51`) | ⭐ 4 controlli su 4 per motore, **intatta** |
+
+⛔ **E il giudizio del banco è stato riscritto**, perché sbagliava: dava rosso sul contatore
+`dipinti`, che su mobile è strozzato. ⇒ Adesso guarda quel che descrive davvero lo stato del
+`<video>` — *sta suonando? sta cercando? ha dati? quanto è indietro?* — e ⭐ **confronta due
+letture**, perché un'immagine che avanza e una ferma hanno lo stesso aspetto in una fotografia sola.
+

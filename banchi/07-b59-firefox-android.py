@@ -168,7 +168,26 @@ def main():
     print("⏳ lascio girare %d s…" % o.secondi)
     time.sleep(o.secondi)
 
-    adb("exec-out", "screencap", "-p", testo=False)
+    # ⛔⭐ E L'INPUT SI PROVA, non si suppone: `[M]` 21 agosto 2026 il desktop
+    #    si vedeva e non si comandava, perche' la tela — che riceve TUTTI i
+    #    gesti — era stata nascosta per far posto al `<video>`.  ⇒ Si tocca lo
+    #    schermo e si guardano le righe NUOVE del registro del server.
+    prima = registro(500)
+    adb("shell", "input", "tap", "540", "900")
+    time.sleep(1)
+    adb("shell", "input", "tap", "540", "700")
+    time.sleep(3)
+    viste = set(prima.splitlines())
+    nuove = [r for r in registro(800).splitlines()
+             if r not in viste and ("input id=" in r or "PUNTATORE" in r)]
+    print("\n⭐ input: %d righe nuove nel registro del server" % len(nuove))
+    if nuove:
+        print("   ", nuove[-1][:150])
+
+    with open(os.path.join(QUI, "07-b59-schermo.png"), "wb") as f:
+        f.write(subprocess.run([ADB, "exec-out", "screencap", "-p"],
+                               capture_output=True, timeout=60).stdout)
+    print("   fotografia: %s" % os.path.join(QUI, "07-b59-schermo.png"))
     stato = righe_pagina("MSE: consegnati")
     conti = righe_pagina("dipinti ")
     print("\n══════════ CHE COSA HA DETTO LA PAGINA ══════════")
@@ -180,16 +199,51 @@ def main():
         for t, d in conti[-2:]:
             print("   ", t, d[:180])
     guai = []
-    if stato:
-        ultima = stato[-1][1]
-        n = dict(x.split("=") for x in ultima.split() if "=" in x)
-        cons = int(ultima.split("consegnati")[1].split("·")[0].strip())
-        dip = int(ultima.split("dipinti")[1].split("·")[0].strip())
-        if cons > 20 and dip < cons * 0.2:
-            guai.append("⛔ %d consegnati e solo %d dipinti — fermo=%s cerca=%s "
-                        "pronto=%s buffer=%s"
-                        % (cons, dip, n.get("fermo"), n.get("cerca"),
-                           n.get("pronto"), n.get("buffer")))
+    if not nuove:
+        guai.append("⛔ L'INPUT NON ARRIVA: due tocchi non hanno prodotto "
+                    "nessuna riga nel registro del server")
+    # ⛔⛔⭐ E IL GIUDIZIO NON SI DA' SUL CONTATORE `dipinti` — 21 agosto 2026.
+    #
+    # ⚠ Quel numero conta i richiami di `requestVideoFrameCallback`, che sui
+    #   motori mobili sono **strozzati**: `[M]` 24 scatti in 40 secondi mentre
+    #   il desktop si muoveva sotto gli occhi.  ⛔ Giudicando li', il banco
+    #   dichiarava rosso un prodotto che dipingeva — due volte.
+    # ⇒ Si giudica su quel che descrive DAVVERO lo stato del `<video>`: sta
+    #   suonando?  sta cercando?  ha dati?  quanto e' indietro?  E il ritardo si
+    #   guarda fra DUE letture, perche' un'immagine che avanza e una ferma hanno
+    #   lo stesso aspetto in una fotografia sola.
+    if len(stato) >= 2:
+        def leggi(d):
+            n = dict(x.split("=") for x in d.split() if "=" in x and "→" not in x)
+            b = d.split("buffer=")[1].split()[0]
+            fine = float(b.split("→")[1]) if "→" in b else None
+            return {"fermo": n.get("fermo") == "true",
+                    "cerca": n.get("cerca") == "true",
+                    "pronto": int(n.get("pronto", 0)),
+                    "tempo": float(n.get("tempo", 0)),
+                    "buffer": fine,
+                    "dipinti": int(d.split("dipinti")[1].split("·")[0])}
+        a1, a2 = leggi(stato[-2][1]), leggi(stato[-1][1])
+        if a2["fermo"]:
+            guai.append("⛔ il `<video>` e' FERMO")
+        if a2["cerca"]:
+            guai.append("⛔ il `<video>` e' bloccato in una RICERCA")
+        if a2["buffer"] is None:
+            guai.append("⛔ il `<video>` non ha dati (buffer vuoto)")
+        elif a2["buffer"] - a2["tempo"] > 3:
+            guai.append("⛔ il `<video>` e' indietro di %.1f s dal bordo vivo"
+                        % (a2["buffer"] - a2["tempo"]))
+        if a2["tempo"] <= a1["tempo"] + 0.2:
+            guai.append("⛔ il tempo del `<video>` NON AVANZA fra due letture "
+                        "(%.2f → %.2f): l'immagine e' ferma"
+                        % (a1["tempo"], a2["tempo"]))
+        print("\n   indietro dal bordo vivo: %.2f s · avanzato di %.2f s fra "
+              "due letture" % (a2["buffer"] - a2["tempo"] if a2["buffer"] else 0,
+                               a2["tempo"] - a1["tempo"]))
+    elif not stato:
+        guai.append("⛔ la pagina non ha raccontato niente: sessione non aperta, "
+                    "o pagina vecchia in cache")
+
     print("\n%s" % ("⛔ ROSSO: " + guai[0] if guai else "⭐ VERDE"))
     return 1 if guai else 0
 
