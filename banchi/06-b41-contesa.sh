@@ -1,23 +1,23 @@
 #!/bin/bash
 #
-# 06-b39-contesa.sh — ⭐⭐ LA CONTESA SULLA GPU, ricreata a comando.
+# 06-b41-contesa.sh — ⭐⭐ LA CONTESA SULLA GPU, ricreata a comando.
 #
 # ⛔⛔ QUESTO BANCO SPOSTA I MILLISECONDI DI TUTTA LA MACCHINA.  Non si lancia
 #     senza la finestra del coordinatore: ogni comando che accende carico
 #     pretende `B39_FINESTRA=si` nell'ambiente, e senza si ferma.
 #
-#   bash .../06-b39-contesa.sh finestra     ⭐ quanto dura e chi disturba — e
+#   bash .../06-b41-contesa.sh finestra     ⭐ quanto dura e chi disturba — e
 #                                             NON accende niente
-#   sudo bash .../06-b39-contesa.sh clip    la clip cruda in /dev/shm
-#   sudo B39_FINESTRA=si .../06-b39-contesa.sh certifica [N]
+#   sudo bash .../06-b41-contesa.sh clip    la clip cruda in /dev/shm
+#   sudo B39_FINESTRA=si .../06-b41-contesa.sh certifica [N]
 #                                           ⭐⭐ IL CONTROLLO POSITIVO DELLA
 #                                              SCENA: la contesa c'e' davvero?
-#   sudo B39_FINESTRA=si .../06-b39-contesa.sh carico [N]     accende N codificatori
-#   sudo bash .../06-b39-contesa.sh scarico  li spegne tutti, e lo verifica
-#   sudo bash .../06-b39-contesa.sh stato    chi tiene aperto renderD128
-#   sudo B39_FINESTRA=si .../06-b39-contesa.sh misura [N] [giri]
+#   sudo B39_FINESTRA=si .../06-b41-contesa.sh carico [N]     accende N codificatori
+#   sudo bash .../06-b41-contesa.sh scarico  li spegne tutti, e lo verifica
+#   sudo bash .../06-b41-contesa.sh stato    chi tiene aperto renderD128
+#   sudo B39_FINESTRA=si .../06-b41-contesa.sh misura [N] [giri]
 #                                           la scena intera, col verdetto
-#   sudo bash .../06-b39-contesa.sh pulisci
+#   sudo bash .../06-b41-contesa.sh pulisci
 #
 # ===========================================================================
 # ⛔ PERCHE' ESISTE — `fasi/06-la-tela-e-la-vista.md` §4.8 e §7.1
@@ -341,28 +341,75 @@ misura)
 	B39_FINESTRA=si bash "$0" certifica "$N" || {
 		ko "⛔ scena non certificata: non si misura"; exit 4; }
 
+	# ⛔⛔ IL DIFETTO CHE QUESTO BANCO HA GIA' COMMESSO — 21 agosto 2026, primo
+	#     giro della finestra, e l'ho visto perche' le due meta' erano
+	#     IDENTICHE byte per byte.
+	#
+	#     Il client era rotto (gli mancava una dipendenza) ed e' uscito con 1
+	#     tutte e 18 le volte, in tutt'e due le meta'.  ⛔ Ma in `$LAV` c'erano
+	#     ancora i `06-b35-c30r*.json` del **16 agosto**, e questo ciclo li ha
+	#     copiati: `06-b41-contesa-r1..3` e `06-b39-riposo-r1..3` sono nati
+	#     **dagli stessi tre file di cinque giorni prima**, con dentro un
+	#     ritmo di 31,6 ms perfettamente plausibile.
+	#     ⚠ Il verdetto si e' salvato per caso — le due meta' erano uguali.
+	#       Se una sola delle due avesse girato, avrei confrontato numeri di
+	#       adesso con numeri del 16 e non me ne sarei accorto.
+	# ⇒ Due difese, e la seconda e' quella che regge:
+	#    1. i file si CANCELLANO prima di ogni meta';
+	#    2. si prende solo quel che e' PIU' NUOVO della marca temporale presa
+	#       un istante prima della meta'.  Un file piu' vecchio non e' un
+	#       giro: e' un ricordo.
+	raccogli() {   # $1 = prefisso · $2 = marca (file di riferimento)
+		local pref=$1 marca=$2 r presi=0 vecchi=0 assenti=0
+		for r in $(seq 1 "$GIRI"); do
+			local f="$LAV/06-b35-c30r$r.json"
+			if [ ! -f "$f" ]; then assenti=$((assenti + 1)); continue; fi
+			if [ ! "$f" -nt "$marca" ]; then vecchi=$((vecchi + 1)); continue; fi
+			cp -f "$f" "$LAV/06-b39-$pref-r$r.json"; presi=$((presi + 1))
+		done
+		inf "$pref: $presi giri presi · $assenti senza file · ⛔ $vecchi PIU' VECCHI della marca (scartati)"
+		[ "$vecchi" -eq 0 ] || ko "⛔ $vecchi file erano di un giro precedente: NON entrano nella misura"
+		if [ "$presi" -eq 0 ]; then
+			ko "⛔ ZERO giri raccolti per «$pref»: il client non ha misurato niente."
+			ko "   ⚠ Guarda $LAV/inc-30-*.txt — e NON e' «zero rotti»."
+			return 1
+		fi
+		return 0
+	}
+
 	# 3 · i giri SOTTO contesa
 	log "I $GIRI giri SOTTO contesa"
+	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b41-contesa-r*.json
+	touch "$LAV/06-b39-marca-contesa"
 	B39_FINESTRA=si bash "$0" carico "$N" || exit $?
 	carico_stampa
 	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
-	for r in $(seq 1 "$GIRI"); do
-		cp -f "$LAV/06-b35-c30r$r.json" "$LAV/06-b39-contesa-r$r.json" 2>/dev/null
-	done
+	raccogli contesa "$LAV/06-b39-marca-contesa" || { bash "$0" scarico; exit 4; }
 	carico_stampa
+	# ⛔ E si verifica che i codificatori fossero vivi ALLA FINE, non solo
+	#    all'inizio: se sono morti a meta' giro, meta' misura e' «a riposo»
+	#    con l'etichetta «sotto contesa».
+	VIVI=$(quanti_carichi)
+	if [ "$VIVI" != "$N" ]; then
+		ko "⛔ a fine giro erano vivi $VIVI codificatori su $N: la contesa NON"
+		ko "   e' durata tutta la misura, e l'etichetta sarebbe falsa"
+		bash "$0" scarico
+		exit 4
+	fi
+	ok "i $N codificatori erano ancora vivi a fine giro"
 	bash "$0" scarico || exit $?
 
 	# 4 · gli stessi giri A RIPOSO, nella stessa ora — e' il paragone
 	log "Gli stessi $GIRI giri A RIPOSO (stessa ora, stesso albero)"
+	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b39-riposo-r*.json
+	touch "$LAV/06-b39-marca-riposo"
 	carico_stampa
 	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
-	for r in $(seq 1 "$GIRI"); do
-		cp -f "$LAV/06-b35-c30r$r.json" "$LAV/06-b39-riposo-r$r.json" 2>/dev/null
-	done
+	raccogli riposo "$LAV/06-b39-marca-riposo" || exit 4
 	carico_stampa
 
 	log "IL VERDETTO"
-	python3 "$SANO/banchi/06-b39-verdetto.py" "$LAV" --giri "$GIRI"
+	python3 "$SANO/banchi/06-b41-verdetto.py" "$LAV" --giri "$GIRI"
 	exit $? ;;
 
 pulisci)

@@ -21,7 +21,7 @@
     gia' 4 giri su 18 col desktop non adattato e `NON_ORA` al fondo dei 3 s.
     ⇒ La regola di **G1** — `non_ora >= 6 and ms_mediano > 2500 and
     fotogrammi < 100` — e' **soddisfacibile da codice sano sotto contesa
-    GPU**, cioe' proprio la scena di `06-b39-contesa.sh`.  Un certificatore
+    GPU**, cioe' proprio la scena di `06-b41-contesa.sh`.  Un certificatore
     che guarda solo il guasto scriverebbe `ATTESO-CONFERMATO` e starebbe
     certificando **il carico**, non il guasto.
 

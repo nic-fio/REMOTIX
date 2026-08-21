@@ -201,16 +201,35 @@ def conta(giro, tetto, dettaglio):
     spedita = giro.eventi(SPEDITA)
 
     print()
+    # ⛔ DIFETTO DEL MIO ATTREZZO, TROVATO MISURANDO — 21 agosto 2026, sera.
+    #    Qui c'era scritto «orfane (intestazione persa nell'intreccio)», cioe'
+    #    una CAUSA, su un conto che sa vedere solo un EFFETTO: «questa riga non
+    #    comincia con la marca».  ⚠ Sul giro sotto contesa il conto diceva 18,
+    #    e tutte e 18 erano `[libopus @ 0x...] 1 frames left in the queue on
+    #    closing` — di ffmpeg, non nostre.  ⇒ Il numero accusava `registro.c`
+    #    di un intreccio che non c'era piu': e' il rosso all'imputato
+    #    sbagliato, dentro l'attrezzo che dovrebbe smascherarlo.
+    # ⇒ Adesso si dichiara l'effetto, e si separa quel che conta davvero: le
+    #   righe senza marca **che diventano un evento**.  Solo quelle influenzano
+    #   una latenza; le altre sono rumore di terzi nello stesso file.
+    orf = sum(1 for _, _, o in girata + chiesta + nuova + spedita if o)
     print(f"    righe lette: {len(giro.righe)}"
-          f"  ·  ⛔ orfane (intestazione persa nell'intreccio): {giro.orfane}"
-          + (f"  ⛔ NON recuperabili: {giro.senza_ora}" if giro.senza_ora else "")
+          f"  ·  righe senza marca temporale: {giro.orfane}"
+          + (f"  (⛔ {giro.senza_ora} prima di qualunque riga buona)"
+             if giro.senza_ora else "")
           + f"  ·  tetto {tetto} ms")
     print(f"    eventi: GIRATA {len(girata)} · CHIESTA {len(chiesta)} · "
           f"NUOVA {len(nuova)} · SPEDITA {len(spedita)}")
-    if giro.orfane:
-        orf = sum(1 for _, _, o in girata + chiesta + nuova + spedita if o)
-        print(f"    ⚠ di cui {orf} eventi arrivano da righe RECUPERATE: "
-              f"l'ora e' quella della riga precedente, non e' letta")
+    if orf:
+        print(f"    ⛔ {orf} EVENTI arrivano da righe senza marca: l'ora e'"
+              f" quella della riga precedente, non e' letta.")
+        print(f"       ⚠ E' il segno che una riga NOSTRA e' stata spezzata"
+              f" (tre `write()` per riga, padre e figlio sullo stesso file):"
+              f" quelle latenze valgono meno.")
+    elif giro.orfane:
+        print(f"    ⚠ nessun evento arriva da righe senza marca: quelle"
+              f" {giro.orfane} righe sono di ALTRI programmi che scrivono nello"
+              f" stesso file (ffmpeg, libva, GLib), non righe nostre spezzate.")
     print()
 
     # 1 · il ridimensionamento a caldo, dentro il nostro server.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""06-b39-guasto.py — innesta in una COPIA il guasto «senza la cura di 6.4».
+"""06-b41-guasto.py — innesta in una COPIA il guasto «senza la cura di 6.4».
 
-    python3 06-b39-guasto.py <rcp.c sano> <rcp.c da scrivere>
-    python3 06-b39-guasto.py --controllo     ⭐ prova l'innesto su un finto
+    python3 06-b41-guasto.py <rcp.c sano> <rcp.c da scrivere>
+    python3 06-b41-guasto.py --controllo     ⭐ prova l'innesto su un finto
 
 ⛔ IL CONTROLLO POSITIVO DELLA MISURA, e il 17 agosto NON HA RESO.
    `fasi/06 §4.8`: togliendo la cura di 6.4 le richieste incatenate danno
@@ -29,7 +29,7 @@ import sys
 ANCORA = """	uint32_t verso_l = s->tela_volo ? s->tela_volo_l : s->tela_l;
 	uint32_t verso_a = s->tela_volo ? s->tela_volo_a : s->tela_a;"""
 
-GUASTO = """	/* ⛔ GUASTO INNESTATO DA 06-b39-guasto.py — la cura di 6.4 TOLTA.
+GUASTO = """	/* ⛔ GUASTO INNESTATO DA 06-b41-guasto.py — la cura di 6.4 TOLTA.
 	 *    Si richiama sempre la tela in vigore, come prima della cura: una
 	 *    `ADATTA_TELA` in volo viene condannata al `NON_ORA`. */
 	uint32_t verso_l = s->tela_l;

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""06-b39-verdetto.py — il verdetto delle richieste incatenate, SOTTO CONTESA
+"""06-b41-verdetto.py — il verdetto delle richieste incatenate, SOTTO CONTESA
 GPU e a riposo, letti insieme.
 
-    python3 06-b39-verdetto.py <cartella di lavoro> [--giri 18]
-    python3 06-b39-verdetto.py --controllo      ⭐ il controllo positivo dello
+    python3 06-b41-verdetto.py <cartella di lavoro> [--giri 18]
+    python3 06-b41-verdetto.py --controllo      ⭐ il controllo positivo dello
                                                 STRUMENTO, su misure finte
 
 ⛔⛔ IL PUNTO DI QUESTO PROGRAMMA NON E' CONTARE I ROTTI: quello lo sapeva fare
@@ -23,7 +23,7 @@ GPU e a riposo, letti insieme.
       GPU» sarebbe **un verde per costruzione**.
 
 ⚠ Il ferro: **Intel UHD 730 integrata**, non una scheda potente.  Ogni numero
-  va letto col carico accanto (`06-b39-contesa.sh stato`).
+  va letto col carico accanto (`06-b41-contesa.sh stato`).
 """
 import argparse
 import json
@@ -137,7 +137,7 @@ def confronta(c, s):
         print("    costruzione, e §5.2 racconta di sei banchi finiti cosi'.")
         print("    ⚠ Che cosa guardare: l'utente della sessione e' nel gruppo")
         print("      `render`?  I codificatori del carico erano vivi per tutto")
-        print("      il giro (`06-b39-contesa.sh stato`)?")
+        print("      il giro (`06-b41-contesa.sh stato`)?")
         return 4
     print(f"\n⭐ La contesa E' arrivata al prodotto: i fotogrammi si sono"
           f" diradati di {(rc / rs - 1) * 100:.0f} %.")
@@ -197,10 +197,10 @@ def controllo():
         for r in range(1, 7):
             tela = (1600, 900) if r <= 3 else TELA_ATTESA
             json.dump(_finta(tela, 40.0),
-                      open(os.path.join(d, f"06-b39-contesa-r{r}.json"), "w"))
+                      open(os.path.join(d, f"06-b41-contesa-r{r}.json"), "w"))
             json.dump(_finta(TELA_ATTESA, 16.7),
                       open(os.path.join(d, f"06-b39-riposo-r{r}.json"), "w"))
-        c = raccogli(d, "06-b39-contesa", 6)
+        c = raccogli(d, "06-b41-contesa", 6)
         s = raccogli(d, "06-b39-riposo", 6)
         prova("A · rotti sotto contesa", 3, lambda: c["rotti"])
         prova("A · rotti a riposo", 0, lambda: s["rotti"])
@@ -214,10 +214,10 @@ def controllo():
         #           rotti sono zero e tutto sembra verde.
         for r in range(1, 7):
             json.dump(_finta(TELA_ATTESA, 16.7),
-                      open(os.path.join(d, f"06-b39-contesa-r{r}.json"), "w"))
+                      open(os.path.join(d, f"06-b41-contesa-r{r}.json"), "w"))
             json.dump(_finta(TELA_ATTESA, 16.7),
                       open(os.path.join(d, f"06-b39-riposo-r{r}.json"), "w"))
-        c = raccogli(d, "06-b39-contesa", 6)
+        c = raccogli(d, "06-b41-contesa", 6)
         s = raccogli(d, "06-b39-riposo", 6)
         prova("B · rotti (tutto verde in apparenza)", 0, lambda: c["rotti"])
         prova("B · ⭐ il verdetto viene RIFIUTATO (4)", 4, lambda: confronta(c, s))
@@ -227,8 +227,8 @@ def controllo():
         #           deve dirlo, non migliorare da solo.
         for r in range(1, 6):
             json.dump(_finta(TELA_ATTESA, 16.7),
-                      open(os.path.join(d, f"06-b39-contesa-r{r}.json"), "w"))
-        c = raccogli(d, "06-b39-contesa", 6)
+                      open(os.path.join(d, f"06-b41-contesa-r{r}.json"), "w"))
+        c = raccogli(d, "06-b41-contesa", 6)
         prova("C · giri mancanti dichiarati", [6], lambda: c["mancanti"])
         prova("C · denominatore vero", 5, lambda: c["tot"])
 
@@ -255,7 +255,7 @@ def main():
     if not os.path.isdir(a.lavoro):
         print(f"⛔ «{a.lavoro}» non e' una cartella")
         return 3
-    c = raccogli(a.lavoro, "06-b39-contesa", a.giri)
+    c = raccogli(a.lavoro, "06-b41-contesa", a.giri)
     s = raccogli(a.lavoro, "06-b39-riposo", a.giri)
     stampa("SOTTO CONTESA GPU (5 codificatori sullo stesso iGPU)", c, a.dettaglio)
     stampa("A RIPOSO (stessa ora, stesso albero)", s, a.dettaglio)

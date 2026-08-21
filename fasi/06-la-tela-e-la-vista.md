@@ -201,7 +201,7 @@ nello stesso giro, o il conto non cala mai»*).*
 |---|---|---|---|
 | `06-b33-*` (6.1) | terreno `provai6`/7781 · **testimone Wayland** e `gnome-terminal` **aperti prima** dello stacco · cliente che stacca, riattacca a misura diversa e **solo allora** batte, punta e clicca | 7 | **5 guasti** in copia di `input.c`: G2→C2 · G3→R1,R2 · G4→C6 · G5→C3,C4 · ⭐ **G1 non accende niente**, e vedi §5 |
 | `06-b34-*` (6.2) | terreno `provat6`/7721 · ⭐ **l'atteso lo calcola il prodotto** (`tastiera_posizioni_per()` chiamata da fuori) · testimone che registra **il carattere**, non il conteggio | 6 | **2 guasti**: «la keymap si legge una volta sola» → rosso sul caso dichiarato · «i tasti se ne vanno col dispositivo» → ⛔ **verde lo stesso**, e vedi §5 |
-| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | **5 guasti su 5** confermati, ⭐ **compreso uno dichiarato VERDE prima del giro** (G4) e la ragione per cui lo è |
+| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | ⛔ ~~5 guasti su 5~~ → **3 confermati · 1 SMENTITO (G3) · 1 NON DISCRIMINANTE (G4)**, rifatto il 21 agosto col **metro sano** e la marca al posto giusto. 📖 §5.8 |
 | `06-b36-*` (6.4) | `rcp.c` **nudo** con palco finto **più** il canale di input e **il registro catturato** — la metà che `04-b31` non guarda | **23** | **19 guasti su 19**, ciascuno rosso **nel caso dichiarato prima** |
 | `06-b37-*` (6.5) | raccoglitore HTTP con sonda dentro la pagina, **sui due motori** (niente CDP, che è solo Chrome) · verità esterna `xwininfo` · verdetti **sui pixel** (`ffmpeg x11grab`) | 7 scene | lo zoom verificato su `devicePixelRatio` **e non sul tasto premuto**; ogni zero col suo denominatore (20 punti · 2 523 colonne · 4 resize) |
 | `06-b38-*` (6.6) | il cliente di prova e **l'arbitro** che esercitano la tela; mutazioni dell'arbitro stesso | **49** registrazioni | **49 accusate sul byte dichiarato prima** · 4 esiti coperti · **19 mutazioni su 19** viste |
@@ -1041,6 +1041,91 @@ il vecchio avrebbe stampato *«⭐ G3 ha acceso R1»*.
 pulsante tenuto e quello del clic fresco **non si distinguono** per posizione rispetto al `RITELA` —
 l'ordine con cui Wayland consegna `configure` e `button` è **una corsa**. Il confine giusto è il
 **press fresco**. Prima della correzione, T4 usciva giallo su un giro sano.
+
+### 5.8 · ⭐⭐ 21 agosto 2026, notte — **la contesa GPU misurata, e il verdetto RIFIUTATO dal banco stesso**
+
+*La scena che §7.1 chiedeva da giorni, girata in una finestra dedicata con tutti gli altri banchi
+fermi. `[M]` Impronte dei sorgenti nel rapporto; ferro: **Intel UHD 730 integrata**.*
+
+#### La scena è vera — certificata prima di misurare
+
+`[M]` Un codificatore da solo fa **382 fotogrammi/s** a 1920×1080; **cinque insieme, 184 ciascuno**
+⇒ la contesa sull'iGPU **c'è**, ed è **2,08×**.
+
+#### ⛔ Ma il prodotto non se n'è accorto, e il banco **si è rifiutato di dare il verdetto**
+
+`[M]` 18 giri sotto contesa (carico **2,57**) contro 18 a riposo (**0,41**), nella stessa ora:
+
+| | sotto contesa | a riposo |
+|---|---|---|
+| **rotti** | **0 su 18** | **0 su 18** |
+| ritmo fotogrammi | 51,2 ms | 55,3 ms |
+| ① girata→chiesta | 4,0 ms | 5,5 ms |
+| ② **Mutter** | 28,0 (22-48), ⛔ **13 oltre il tetto** | 32,0 (18-47), ⛔ **17 oltre il tetto** |
+| ③ palco→spedita | 4,0 | 4,0 |
+| ④ `ADATTATA` | 37,0 | 40,0 |
+
+⇒ **Niente si è mosso**: ogni latenza è uguale o **più veloce** sotto contesa. Il testimone (che
+pretende una dilatazione ≥ 15 % del ritmo visto dal client) **non è scattato**, e
+`06-b41-verdetto.py` **ha rifiutato il verdetto**. ⭐ *«Non scrivo "0/18 sotto contesa GPU": sarebbe
+l'etichetta senza la cosa»* — ed è esattamente il motivo per cui quel testimone è stato scritto.
+
+⭐ **E si sa perché**: a riposo il ritmo è 55 ms ≈ **18 fotogrammi/s**, e lo detta **la scena** (un
+terminale che scrive l'ora ogni 50 ms), non il codificatore. A 18/s di 1280×800 il prodotto chiede
+all'iGPU circa **un cinquantesimo** di quel che chiedono i cinque carichi. ⇒ **La contesa è vera
+sull'iGPU, ma in questa scena il prodotto l'iGPU quasi non lo usa.**
+
+#### ⛔ Che cosa cambia per §7.1: **una causa è ESCLUSA con la misura**
+
+Il **4/18 del 16 agosto** resta **non riprodotto**, ⛔ e adesso si sa che **non è la sola contesa
+sull'iGPU**. Non si promuove a «curato», e non si promuove a «spiegato».
+
+⭐ **E dove il segnale c'è, indica un altro imputato**: la latenza ② ha **13 e 17 campioni oltre il
+tetto** su ~57 in **tutt'e due** le metà — cioè un quarto delle richieste al produttore **senza
+risposta da Mutter entro un secondo**. È la stessa firma del 16 agosto (`NON_ORA` mediana 22 ms e due
+casi a 3 000). ⇒ ⏳ **La prossima ipotesi è la contesa sul COMPOSITORE e su PipeWire — cinque
+sessioni — non sull'iGPU.** Quella scena non è stata costruita.
+
+#### ⛔ E col metro sano, il «5 guasti su 5» non regge
+
+`[M]` Certificatore rifatto sotto contesa, carico 2,78, col **giro sano come metro** e la marca dopo
+l'accensione:
+
+```
+SANO   adattate=10 non_ora=0 ms_mediano=47,45 fotogrammi=169 tela_nuova=10 non_spediti=0
+G1 · G2 · G5   ATTESO-CONFERMATO      (regola sul sano = False)
+G3  ⛔ ATTESO-SMENTITO      tela_nuova_dal_palco = 1, e la regola ne pretende 0
+G4  ⛔ NON-DISCRIMINANTE    la regola è vera ANCHE sul sano
+⇒ CONFERMATI 3 · SMENTITI 1 · NON DISCRIMINANTI 1
+```
+
+- **G3** è il difetto previsto: la terza clausola era vera **gratis** perché la marca scaduta rendeva
+  vuota la finestra del registro. Con la finestra giusta esce **1**. ⏳ **Va deciso se correggere
+  l'atteso o completare il guasto** — e non lo decide chi ha trovato il difetto;
+- **G4**: §5.2 lo diceva già a parole («atteso verde per costruzione»); ⭐ adesso **lo dice il banco**,
+  invece di contarlo fra i confermati;
+- ⭐ **e G1 distingue ancora** col carico acceso (`regola sul sano = False`), che era il dubbio del
+  coordinatore. ⚠ Col limite dichiarato: **questa** contesa al prodotto non arriva.
+
+#### ⭐ E il rimedio a `registro.c` è verificato da un terzo
+
+`[M]` sul giro sotto contesa: **18 righe senza marca su 12 882**, e **tutte e 18 sono di `libopus`**,
+cioè di ffmpeg — **zero righe nostre spezzate**. Contro **23 su 28 035** (di cui 3 diventavano eventi)
+sul registro del 16 col codice vecchio.
+
+⛔ **E ha smascherato un difetto dell'attrezzo che conta**: chiamava quel numero *«intestazione persa
+nell'intreccio»* — una **causa**, su un attrezzo che vede solo un **effetto**. ⇒ Avrebbe accusato
+`registro.c` di un intreccio che non c'è più: **il rosso all'imputato sbagliato, dentro l'attrezzo
+che dovrebbe smascherarlo.** Adesso separa «righe senza marca» da «**eventi** che ne arrivano», che è
+l'unico numero che sposta una latenza.
+
+#### ⛔ E il difetto peggiore della finestra è dell'autore, che l'ha dichiarato per primo
+
+`misura` copiava i file JSON **del 16 agosto** come se fossero il giro appena fatto: sei giri nati da
+**tre file di cinque giorni prima**, con dentro un ritmo perfettamente plausibile. ⭐ È stato visto
+**solo** perché le due metà erano identiche **byte per byte**. ⇒ Curato: si cancella prima, si
+raccoglie solo quel che è **più nuovo di una marca presa un istante prima**, e **zero giri raccolti
+= ci si ferma**.
 
 ## 6 · Le decisioni prodotte
 
