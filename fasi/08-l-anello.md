@@ -199,6 +199,525 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-F1 · ⭐⭐⭐ AGENTE F1 — **la contesa misurata**, e il prodotto che si cronometra da sé · *22 agosto 2026, sera*
+
+> ### ⭐⭐ DUE AGENTI CI SONO ARRIVATI PER DUE STRADE DIVERSE, E CONCORDANO
+>
+> F3 aveva smentito i 17,48 ms del tratto 9 con tre banchi indipendenti. F1 non lo sapeva e ci è
+> arrivato da solo: `[M]` **tratto 9 = 0,71 ms**, con **tre lettori** che si controllano a vicenda:
+>
+> | lettore | ms |
+> |---|---|
+> | il banco `04-b30` | **0,715** · **0,835** |
+> | ⭐ **il PRODOTTO da sé** (`REMOTIX.tratti()`, `bmp_ms`) | **0,710** · **0,830** |
+> | i tre banchi di F3 | 0,39 – 1,18 |
+>
+> ⇒ ⭐⭐ **Banco e prodotto si accordano entro 0,005 ms, due volte su due.** È il primo numero di
+> questa fase che due strumenti indipendenti confermano.
+>
+> ### ⛔⛔⭐ E LA CONTESA NON È PIÙ UN SOSPETTO: È MISURATA
+>
+> `[M]` Quattro giri, **stesso banco, stesso palco, stessa scena, stesso binario** — cambia una cosa
+> sola, chi altro sta lavorando sul portatile:
+>
+> | | `input → vetro` |
+> |---|---|
+> | ⭐ **solo lui sulla macchina** | **74,08** e **75,81 ms** |
+> | ⛔ **col banco di un altro agente sopra** | **84,22** e **90,87 ms** |
+>
+> ⇒ ⛔ **Da 8 a 17 ms sullo stesso anello, per un banco che non c'entra niente.** ⭐ E la soglia è
+> più bassa di quanto sembri: `[M]` **un giro solo tiene già ~3,7 nuclei su 4 e ~29 processi
+> Chrome** — l'agente A ne aveva **56 e cinque Xvfb** sopra.
+>
+> ### ⛔⛔⛔ DA CUI: **L'ACCORDO FRA L'OCCHIO DELL'UTENTE E LO STRUMENTO VA RITIRATO**
+>
+> Era la riga più citata di questo documento: *99,07 ms × 3 400 px/s = 337 px, contro i 360 riferiti
+> a occhio dall'utente, accordo entro il 7 %*.
+>
+> `[M]` **A macchina scarica l'anello vale 74,9 ms** ⇒ **255 px**, cioè **0,35 barre del titolo**.
+> ⛔ **255 contro 360 è uno scarto del 30 %, e nel verso scomodo**: l'utente vede **più** distacco di
+> quanto lo strumento ne misuri.
+>
+> ⇒ ⭐ **Lo stato vero, stasera**, ed è più onesto di stamattina:
+>
+> | | barre del titolo |
+> |---|---|
+> | il locale (`08-b67`) | **0,13** |
+> | il banco `08-b67` | **0,28** |
+> | il banco `04-b30`, a macchina scarica | **0,35** |
+> | ⛔ **l'utente, a occhio, sul suo 2560** | **0,50** |
+>
+> ⇒ ⭐ **I due banchi nostri si sono avvicinati** (0,28 e 0,35, erano 0,28 e 0,47) ⛔ **ma l'utente
+> resta fuori da tutt'e due**, ed è l'unico giudizio che chiude la fase. È il mandato di **F2**.
+>
+> ### ⭐⭐⭐ E il controllo positivo che nessuna smentita tocca
+>
+> Gli era stato chiesto di dimostrare che il confine **non si chiude troppo presto**. `[M]` Otto
+> millisecondi innestati fra «pronto» e «vetro» compaiono come **+8,005 / +8,015 / +7,995** nella
+> distanza appaiata fra confine vero e confine falso, con minimo ≥ 8,04 su **1 779 sonde su 1 779**,
+> **e solo nel tratto 10**. ⛔ *«La mia prima stesura del controllo era falsa, e l'ha bocciata il
+> mondo, non il finto.»*
+>
+> ⭐ **E contro sé stesso**: sulla strada vera i due confini distano `[M]` **0,09 ms** ⇒ il
+> meccanismo che A temeva **è reale** (gli 8 ms innestati lo attraversano tutti) **ma la quantità è
+> un decimo di millisecondo**.
+>
+> ### ⛔ Due difetti nuovi, e il secondo riguarda chiunque legga il diario
+>
+> 1. ⭐ **Il banco dichiarava nove voci di palco e non una sul carico.** Curato:
+>    `carico_della_macchina()` legge ai due capi, due volte, scrive nuclei/carico/Chrome/Xvfb **e
+>    quali altri banchi girano su quali porte**, e **va in rosso se la macchina non è scarica**;
+> 2. ⛔ **Il cronometro `vetro_ms` del prodotto AVVOLGE il banco**: finché `04-b30` è attaccato, il
+>    campo `vetro` del blocco diagnostico dice **8-10 ms** per un trasferimento che ne costa
+>    **0,06**. ⇒ Chiunque abbia letto quel campo in una sessione con un banco attaccato ha letto il
+>    banco, non il prodotto.
+>
+> ⭐ **Banco: 57 controlli su 57, e 18 guasti innestati accusati su 18**; il prologo provato anche
+> in `node` senza browser, 16 su 16. E i tre difetti minori di A sono curati.
+
+> ### ⛔⛔⛔ QUEL CHE VA DETTO PER PRIMO: **sono arrivato allo stesso posto di F3, per un'altra strada**
+>
+> Il mio mandato era rifare `input → vetro` sulla strada vera e affiancarlo ai **99,07 ms** di A.
+> ⛔ **L'affiancamento non si può fare**, e non perché il banco non ci arrivi: perché il numero di A
+> **porta dentro la contesa**. F3 l'ha dimostrato con tre banchi; io ci sono arrivato senza cercarlo,
+> e le due strade si incontrano sullo stesso numero.
+>
+> `[M]` **Il tratto 9 — «l'attesa che il fotogramma sia utilizzabile», i 17,48 ms su cui §A.2 punto 2
+> fonda la sua conclusione più citata — vale 0,71 ms.** E non lo dico solo io:
+>
+> | chi lo misura | quanto | come |
+> |---|---|---|
+> | il **banco** (il mio prologo) | **0,715** e **0,835 ms** | dal richiamo del decodificatore alla risoluzione di `createImageBitmap` |
+> | ⭐⭐ il **PRODOTTO**, da sé | **0,710** e **0,830 ms** | `src/pagina.html`, `bmp_ms` — un lettore scritto da un'altra persona, in un altro posto, che non sa che il banco esiste |
+> | F3, tre banchi indipendenti | **0,39 – 1,18 ms** | fra cui **sulla stessa strada 2D di A** |
+>
+> ⇒ ⭐⭐⭐ **Scarto fra il banco e il prodotto: `[M]` +0,005 ms. Due giri, due volte lo stesso scarto.**
+>
+> ⛔ **E la mia misura dice anche PERCHÉ, senza che io lo cercassi.** Quattro giri, stesso banco,
+> stesso palco, stessa sera, stessa scena, stesso binario del prodotto:
+>
+> | giro | `input → vetro` | `[R]` sul portatile c'era anche… |
+> |---|---|---|
+> | `08f1-strada-vera-prova` | **74,08 ms** | solo il mio banco |
+> | `08f1-fase-del-quadro` | **75,81 ms** | solo il mio banco |
+> | `08f1-strada-vera-4` | **84,22 ms** | ⛔ **il banco di un altro agente** (porte 7765-67) |
+> | `08f1-strada-vera-3` | **90,87 ms** | ⛔ **il banco di un altro agente** |
+>
+> ⇒ ⛔⛔ **Da 8 a 17 ms di differenza sullo stesso anello, e a cambiare non era il prodotto: era chi
+> altro girava sul portatile.** ⚠ È `[R]` e non `[M]`, perché il banco quel carico **non lo scriveva
+> da nessuna parte** — ed è esattamente il difetto che ho poi curato.
+>
+> ⭐ **Quel che invece regge intero è il BANCO**: da oggi legge la strada che il prodotto usa davvero,
+> e il suo confine di chiusura **non è più una promessa** (F1.2).
+
+### ⛔⛔ E la lezione che porto io è diversa da quella di F3
+
+F3 dice: *il numero era la contesa*. ⭐ Io aggiungo la cosa che l'ha resa invisibile, e che è del
+banco, non della macchina:
+
+> **Il banco dichiarava NOVE voci di palco — codec, profondità, GPU, tela, monitor, WebCodecs,
+> isolamento, scena, `wl_surface.enter` — e NON UNA sul carico.**
+
+⇒ `LEZIONI.md` §2.0 lo chiedeva già: *il palco si dichiara accanto al numero*. ⛔ Ma un palco
+descritto voce per voce e un carico mai nominato fanno un numero che **sembra** completamente
+dichiarato. È `LEZIONI.md` §1.20 dalla parte di chi legge: nove numeri stampati fanno credere che il
+decimo sia stato guardato.
+
+⇒ ⭐ **Curato, e sta nel banco**: `carico_della_macchina()` legge ai **due capi** (il portatile, dove
+stanno Chrome e il banco; il server, dove sta il prodotto), **due volte** — prima e dopo il giro — e
+scrive nuclei, carico, processi Chrome, Xvfb, **quanti altri banchi `04-b30` stanno girando e su
+quali porte**. Se non è scarica **lo dice in rosso**, con la misura che lo giustifica accanto, e la
+riga finisce nell'`esiti.jsonl`.
+
+⛔ **E la soglia guarda il carico DEGLI ALTRI, non il mio**, perché `[M]` un giro solo di questo banco
+tiene già **~3,7 nuclei su 4 e ~29 processi Chrome**: una soglia sul carico assoluto sarebbe rossa
+sempre, e una bandiera sempre rossa non la guarda più nessuno. ⇒ Si accusa quel che non è mio: un
+secondo banco, un secondo Xvfb, o un numero di Chrome che un banco solo non può spiegare — soglia
+**40**, e ⚠ `[M]` quando A misurava ce n'erano **56**, con **5 Xvfb**.
+
+---
+
+## F1.0 ⭐ Il banco si è ricertificato, e la certificazione è cresciuta
+
+`[M]` `--certifica` ⇒ **PROMOSSO, 57 controlli su 57, 18 guasti innestati accusati su 18**
+(A ne aveva 53 e 16). I controlli e i due guasti nuovi sono tutti di **Q11**, il controllo del
+confine.
+
+⭐ E prima di quello, una prova che il banco non aveva mai avuto: **il prologo provato senza
+browser**. Il prologo è una stringa che vive dentro Chrome e non si può esercitare a pezzi; l'ho
+estratto e fatto girare in `node` contro un finto browser che imita la pagina vera —
+`createImageBitmap` asincrona, `ImageBitmapRenderingContext`, `VideoDecoder`, una tela:
+`[M]` **16 controlli su 16** (`f1-prova-prologo.js`). ⛔ E il quarto blocco pretende che **la strada
+2D non si sia rotta**: 5 fotogrammi, 2 `drawImage` ciascuno, `t_dip == t_dip_vecchio`.
+
+---
+
+## F1.1 ⭐⭐ COME IL BANCO LEGGE LA STRADA VERA
+
+⛔ Il difetto di §A.4 punto 1 era **doppio**, e le due metà si curano insieme o non si curano:
+
+| | il difetto | la cura, e dov'è |
+|---|---|---|
+| **1** | il prologo legge i pixel dal **deposito 2D**, che su `bitmaprenderer` **non esiste** ⇒ `[M]` 0 marche lette su 304 | ⭐ **si leggono dal VETRO**. Il contesto `bitmaprenderer` non ha `getImageData` — non dà nessun accesso ai pixel — ⛔ **ma la tela sì**: un `<canvas>` è una sorgente valida per `drawImage` qualunque sia il contesto che lo dipinge. ⇒ Il banco ricopia la **sola regione della marca** (480×240) su una tela di servizio 2D e la rilegge di lì (prologo §6, `leggi_marca_vetro`) |
+| **2** | ⛔⛔ `createImageBitmap` è **asincrona**: il richiamo del prodotto **ritorna prima** che sia stato dipinto qualunque cosa ⇒ il confine «scomodo» era diventato **più comodo del comodo**, e nessuno l'aveva deciso | ⭐ il campione **non si chiude più nel richiamo del decodificatore**: si apre lì e si chiude in **`transferFromImageBitmap`**, cioè quando lo schermo cambia |
+
+⭐ **Funziona, e il denominatore lo dice**: `[M]` **555 sonde chiuse su 555** al primo giro sulla
+strada vera (A ne aveva chiuse **0 su 304**), **1424 marche lette su 1424 guardate** (Q3), e Q4(a)
+`[M]` **251 fotogrammi guardati dove la marca dell'eco non c'è → 0 falsi positivi**: la lettura dal
+vetro **discrimina**, non dice sempre sì.
+
+### ⭐ I tre dettagli che fanno la differenza fra una cura e un'approssimazione
+
+1. ⛔ **`createImageBitmap` si avvolge SENZA incatenare.** Il banco registra il proprio gestore sulla
+   promessa e restituisce **quella originale**, non `p.then(...)`: incatenarla infilerebbe un
+   microtask del banco fra la risoluzione e il gestore del prodotto — cioè **il banco ritarderebbe
+   quel che misura**.
+2. ⛔ **L'immagine si lega al fotogramma col `pts` ANNUNCIATO**, non con l'ordine di risoluzione:
+   l'ordine è una grandezza sostitutiva (`LEZIONI.md` §1.13), e `createImageBitmap` non promette di
+   risolvere in ordine — è la ragione per cui il prodotto stesso conta le `tardive`.
+3. ⛔ **I pixel si leggono DOPO il trasferimento**, non dall'`ImageBitmap` prima: leggere prima
+   vorrebbe dire leggere qualcosa che sullo schermo non c'è ancora — e per giunta ritardarlo.
+
+### ⭐ E la strada non si dichiara: si DEDUCE
+
+Ogni campione porta un campo `strada`, riempito da quel che è **successo**. `coda_url` è
+l'intenzione, `strade` è il fatto — e adesso stanno **tutt'e due nella riga depositata** in
+`04-b30-esiti.jsonl` (era il difetto minore n. 5 di §A.4: `[M]` tutte le 11 righe depositate prima di
+oggi, comprese le cinque di A, hanno `coda_url: null`).
+
+⛔ **E la prima stesura di quel campo aveva un difetto che ho trovato e curato**: marcavo «2d» ogni
+fotogramma su cui non avevo visto una chiamata a `createImageBitmap`. `[M]` In un giro ne sono usciti
+**235 su 2022** — con la strada 2D mai usata. ⇒ Erano fotogrammi che il prodotto ha **decodificato e
+mai dipinto** (scartati perché tardivi). ⚠ **Non sporcano nessun numero** — l'ho verificato: zero
+`drawImage`, zero celle, e **nessuno di loro ha chiuso una sonda** — ⛔ ma chiamarli «2d» era
+scambiare *«non è successo»* con *«è successa l'altra cosa»*, la stessa forma di «non arrivato» ≠
+«non guardato». ⇒ Adesso lo stato è **terzo e si chiama `non dipinto`**, e contato per quel che è
+dice una cosa del prodotto: `[M]` **l'11,6 % dei fotogrammi decodificati non è arrivato al vetro**
+in quel giro.
+
+---
+
+## F1.2 ⭐⭐⭐ IL CONTROLLO POSITIVO — e ha corretto ME
+
+⛔ **Un banco riadattato che dà un numero plausibile non è un banco che funziona.** Il banco innesta
+`--ritardo-vetro N`: N ms **dentro la pagina**, fra «il fotogramma è pronto» e «il fotogramma è al
+vetro». Se il confine si chiudesse prima del disegno, quel ritardo sarebbe **invisibile**.
+
+### ⛔⛔ La prima stesura del controllo era SBAGLIATA, e a bocciarla è stata la misura
+
+Avevo scritto la pretesa così: *«il confine VECCHIO — il ritorno del richiamo — NON deve salire»*.
+⛔ **È falsa, e il mondo vero l'ha rifiutata al primo giro**: `[M]` con 8 ms innestati il confine
+vecchio è salito di **6,82 ms** e il totale di **14,81** invece che di 8.
+
+`[R]` **E la ragione è fisica, non è un difetto del metro**: il ritardo si innesta **occupando il
+filo della pagina** — che è quel che fa un disegno costoso — e quel tempo ritarda anche la consegna
+degli **eventi di input**, che stanno sullo stesso filo. ⇒ Si sposta tutto il condotto, e su una
+mediana sola quello spostamento è **indistinguibile** dal ritardo innestato.
+
+⇒ ⭐⭐ **La grandezza giusta è APPAIATA**: la distanza fra il confine vero e quello sbagliato presa
+**sulla stessa sonda, sullo stesso fotogramma**. Lo spostamento del condotto colpisce i due capi in
+modo identico e **si elide**; resta solo il ritardo innestato.
+
+### ⭐⭐⭐ E il numero, ripetuto TRE volte in tre giri diversi
+
+| giro | distanza a ritardo 0 | col ritardo di **8,000** | **salita** | ⛔ **il MINIMO** | sonde |
+|---|---|---|---|---|---|
+| `08f1-fase-del-quadro` | 0,085 ms | 8,090 | **+8,005** | **8,045** | 476 |
+| `08f1-strada-vera-3` | 0,080 | 8,095 | **+8,015** | **8,045** | 470 |
+| `08f1-strada-vera-4` | 0,100 | 8,095 | **+7,995** | **8,040** | 833 |
+
+⇒ ⭐⭐⭐ **Scarto massimo dal ritardo innestato: 0,015 ms.** E il **minimo** della distribuzione è
+sopra 8,04 in tutt'e tre: su **1 779 sonde su 1 779** non ce n'è **una sola** che non veda il
+ritardo. ⛔ Un banco che chiudesse al ritorno del richiamo darebbe **0,09 in ogni riga**, e la sua
+mediana salirebbe lo stesso: è per questo che la riga appaiata è la prova e la mediana no.
+
+⭐ E le altre due pretese reggono da sole: `[M]` la salita sta **nel tratto 10 (+7,995 / +8,005 /
++8,015 su 8,0) e in nessun altro tratto** (`e_anche_altrove: []`), e il totale sale **di almeno N**.
+
+### ⛔⛔ E LA COSA CHE VA DETTA CONTRO ME STESSO: la catastrofe che A temeva **non c'era**
+
+`[M]` Sulla strada vera i due confini distano **0,08 – 0,10 ms**. `createImageBitmap` risolve in
+`[M]` **0,71 ms** e `transferFromImageBitmap` costa `[M]` **0,06**. ⇒ Il banco vecchio, se avesse
+potuto leggere i pixel, avrebbe consegnato un numero **più corto di un decimo di millisecondo**, non
+di venti.
+
+⇒ ⭐ **La seconda metà del difetto di §A.4 era vera come MECCANISMO e piccola come QUANTITÀ**, e le
+due cose si dicono insieme: il meccanismo è dimostrato (gli 8 ms innestati stanno per intero dentro
+quel divario, e il confine sbagliato ne perde 8 su 8); la quantità su *questo* palco è 0,09 ms.
+⛔ Non è una ragione per lasciare il confine dov'era — è la ragione per cui **si misura invece di
+stimare**. E nessuno dei due numeri era deducibile prima.
+
+### ⭐⭐ IL CONTROLLO INCROCIATO — e porta un avvertimento per tutti
+
+Il prodotto misura da sé le stesse due grandezze dei tratti 9 e 10 (`bmp_ms`, `vetro_ms`). Il banco
+adesso le porta fuori accanto alle proprie:
+
+| | il PRODOTTO | il BANCO | |
+|---|---|---|---|
+| **tratto 9** (`createImageBitmap`) | **0,710** · **0,830** ms | **0,715** · **0,835** | ⭐⭐ scarto **+0,005** due volte su due |
+| tratto 10 (`transferFromImageBitmap`) | 8,04 · 9,86 ms | 0,05 · 0,065 | ⛔ **NON è un disaccordo** |
+
+⛔⛔ **E il tratto 10 è la scoperta involontaria più importante che lascio.** `vetro_ms` del prodotto
+cronometra `this.bm.transferFromImageBitmap(bmp)` — ma **il banco avvolge proprio quel metodo**, e
+dentro l'involucro legge i pixel. ⇒ Il cronometro del prodotto **contiene il banco**.
+
+⇒ ⛔⛔ **Finché questo banco è attaccato, il campo `vetro` del blocco diagnostico di `pagina.html`
+non è il prodotto: è il prodotto più il banco.** Chi lo leggesse in un altro rapporto scriverebbe
+`[M]` 8-10 ms per un trasferimento che ne costa 0,06. ⭐ Il banco adesso lo dichiara invece di
+giudicarlo, e la differenza (**7,99** e **9,80**) è un **terzo parere sul costo del banco**, preso
+dal prodotto e accostato a Q9 (**7,61** e **8,79**).
+
+---
+
+## F1.3 ⭐⭐ IL NUMERO DELLA STRADA VERA, E I SEI TRATTI AFFIANCATI A QUELLI DI A
+
+⛔⛔ **Si legge con l'avvertenza in testa, non dopo**: la colonna di A **non è un «prima»
+affidabile** (F3, e i miei quattro giri). Le due colonne stanno accanto perché il mandato le chiede
+e perché il **profilo** — dove sta il tempo — è quel che serve a chi cura; ⛔ **le differenze non si
+attribuiscono al prodotto.**
+
+| | il tratto | A · 2D (5 giri) | ⭐ F1 · `bitmaprenderer` (4 giri) | Δ |
+|---|---|---|---|---|
+| **A** | **la pagina** — `event.timeStamp` → i byte escono | 7,65 ms | **5,14 ms** | −2,51 |
+| **B** | **l'andata** — byte usciti → la scena riceve l'input | 7,25 ms | **8,58 ms** | +1,33 |
+| **C** | **l'attesa del quadro nella scena** | 23,25 ms | **20,57 ms** | −2,67 |
+| **D** | **il quadro di Mutter** | 16,36 ms | **16,40 ms** | **+0,04** |
+| **E** | **codifica e ritorno** | 24,45 ms | **22,58 ms** | −1,86 |
+| **F** | ⛔ **il cliente** — `decode()` → disegno finito | **18,83 ms** | ⭐ **2,43 ms** | ⛔ **−16,40** |
+| | somma delle mediane | 97,79 | **75,71** | |
+| | **T, mediana delle mediane** | **99,07** | **80,02** | −19,05 |
+
+| tratto | A · 2D [min–max] | ⭐ F1 · `bitmaprenderer` [min–max] |
+|---|---|---|
+| 1a evento → il prodotto lo vede | 7,53 [7,04 – 15,04] | **4,95** [4,83 – 6,33] |
+| 1b il prodotto lo vede → i byte escono | 0,12 | **0,19** |
+| 2 byte usciti → la scena riceve | 7,25 [6,84 – 7,93] | **8,58** [8,16 – 8,90] |
+| 3 la scena riceve → la scena disegna | 23,25 [13,86 – 28,28] | **20,57** [13,57 – 23,98] |
+| 4 la scena disegna → cattura | 16,36 [16,23 – 16,39] | **16,40** [16,37 – 16,45] |
+| 5 cattura → primo byte in pagina | 24,19 [20,05 – 26,17] | **22,25** [19,03 – 26,44] |
+| 6 primo byte → ultimo byte | 0,24 | **0,34** |
+| 7 stream completo → `decode()` | 0,10 | **0,15** |
+| 8 `decode()` → richiamo del decodificatore | 1,09 | **1,53** |
+| 9 ⛔ richiamo → **il fotogramma è pronto** | **17,48** [14,90 – 18,72] | ⭐ **0,71** [0,69 – 0,83] |
+| 10 pronto → **il disegno è finito** | 0,10 | **0,06** |
+
+### ⛔ Le quattro cose che questa tabella dice
+
+1. ⛔⛔ **Il tratto 9 non è un bersaglio: `[M]` vale 0,71 ms**, e la conclusione di §A.2 punto 2 —
+   *«il 1° `drawImage` costa 17,48 ms e il 2° 0,10: 163 volte»* — **va ritirata**. ⇒ **Chi stava per
+   curare il tratto F stava per curare un tratto che pesa `[M]` 2,43 ms su ~80**, cioè il 3 %.
+   ⭐ §A.5 lo temeva con parole sue: *«se il numero cambia, lo deve sapere prima di curarlo»*.
+2. ⭐ **Il tratto D non si è mosso di quattro centesimi** (16,36 → 16,40), con la dispersione più
+   stretta di tutte [16,37 – 16,45]. ⇒ Un tratto che resta identico quando cambia tutto il resto è
+   la prova che la scomposizione separa cose diverse davvero — **e resta il muro**: un quadro di
+   compositore esatto, `[M]` il 20 % dell'anello.
+3. ⛔ **Le altre cinque differenze NON si attribuiscono**: stanno dentro la dispersione che A stesso
+   aveva misurato (C fra 13,86 e 28,28) e dentro quella che la contesa produce sui miei stessi giri
+   (8-17 ms sul totale). `[?]`
+4. ⭐ **Il denominatore è migliore del suo**: `[M]` 463-829 sonde chiuse per giro contro 224-417, e
+   la chiusura è del 99-100 % in tutti e quattro.
+
+### ⛔ Il numero, e va letto col carico accanto
+
+| | |
+|---|---|
+| ⭐ i due giri in cui `[R]` **ero solo sul portatile** | **74,08** e **75,81 ms** |
+| ⛔ i due giri con il banco di un altro agente sopra | **84,22** e **90,87 ms** |
+| ⛔⛔ **il numero che consegno** | `[M]` **74-76 ms** a macchina scarica, `[?]` **da riconfermare con il carico SCRITTO nel verbale**: la lettura del carico è entrata nel banco **dopo** questi quattro giri |
+| contro `SPECIFICHE.md` §3.2 | **SFORA** i 50 ms e i 40, alla mediana e al p95 |
+
+### ⚠ E il palco, accanto al numero
+
+`[M]` codec **HEVC** `hev1.1.6.L120.B0`, **8 bit**, promozione 8→10 no · codifica **IN HARDWARE**
+(`hevc_vaapi`, `/dev/dri/renderD128`, ⚠ **EncSliceLP**, confermato oggi) · tela **1460 × 888** ·
+GPU della pagina `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` · WebCodecs sì · pagina isolata sì ·
+scena su **Meta-0**, confermato da `wl_surface.enter`.
+⇒ **È il palco di §A.1 voce per voce**, ed è voluto: stesso albero del prodotto
+(`/media/REMOTIX/src/08-a-src`, `md5sum` di `pagina.html` verificato), **stesso binario della scena**
+(`md5sum` identico), stesso utente. ⛔ Non ho ricostruito niente: ricostruire avrebbe cambiato un
+capo del confronto senza dirlo.
+⚠ ⭐ **E quindi il mio albero NON ha `REMOTIX.tratti()` di F3**, che è arrivato dopo (`md5sum` di
+`src/pagina.html` a HEAD: `d387c166…`, il mio: `2fdf13a9…`). ⇒ Chi rifà questi giri col prodotto di
+oggi ha uno strumento migliore del mio prologo, e deve saperlo.
+
+### ⛔ I due pezzi ciechi
+
+`[?]` **4-12 ms** in ingresso (mano → `event.timeStamp`) · `[?]` **16-40 ms** in uscita (disegno
+finito → pixel acceso). ⛔ **E quelli in uscita ci sono**: `clienti_sull_xvfb: 0` ⇒ il browser sta sul
+desktop vero del portatile, dove un compositore c'è. ⇒ Sullo schermo di un utente:
+`[M]` 74-76 + `[?]` 20-52 = **94-128 ms**, **più la rete**.
+
+### ⭐⭐ E il conto dell'elastico di §1.2 va rifatto
+
+Il riquadro di §4-A moltiplicava `99,07 × 3 400 px/s = 337 px` contro i **360** che l'utente vede,
+«entro il 7 %». ⛔ Col numero della strada vera quel prodotto fa **74,9 × 3 400 = 255 px**: **lontano
+dai 360**. ⇒ ⭐ **Non è un difetto: è un'informazione.** O il distacco che l'utente vede contiene i
+pezzi ciechi e la rete — e allora il conto giusto è `94-128 ms × 3 400 = 320-435 px`, che sui 360
+torna — oppure guardava più veloce della sua mediana.
+⛔⛔ **E l'accordo «entro il 7 %» di §4-A era un accordo con un numero gonfiato dalla contesa: va
+tolto dal riquadro**, o resta a certificare il modello con la misura sbagliata.
+
+---
+
+## F1.4 ⭐⭐ I DUE DIFETTI CHE A HA LASCIATO SCRITTI
+
+### 1. ⭐⭐ Q5 e Q6: **è curabile, e la cura è nella SCELTA DEL RITARDO** — non nel metro
+
+§A.4 punto 2 dava l'ipotesi `[?]`: *«ritardare l'input ne cambia la FASE rispetto al quadro del
+compositore»*, e chiudeva: *«chi la vuole `[M]` la prova innestando ritardi non multipli di 16,7»*.
+
+⭐ L'ho provata **al contrario**, che è più forte: ritardi **multipli esatti** del quadro. Se
+l'ipotesi è giusta la fase non cambia, e il tratto 3 **non si deve muovere**.
+
+`[M]` **Stesso banco, stesso palco, stessa sera:**
+
+| ritardo innestato | Q5 | Q6 | ⭐ dove va il surplus | ⛔ e il **tratto 3**? |
+|---|---|---|---|---|
+| **25 / 30 ms** (non multipli del quadro) | **rosso** | **rosso** | tratto 5: **+23,12** su 25 · tratto 2: **+29,62** su 30 | ⛔ **−6,18** e **−5,66 ms** |
+| ⭐ **33,4 / 33,4** (= **due quadri esatti**) | rosso di **0,22** | ⭐ **VERDE** | tratto 5: **+32,94** su 33,4 · tratto 2: **+33,34** su 33,4 | ⭐ **non si muove**: `e_anche_altrove: []` |
+
+⇒ ⭐⭐⭐ **L'ipotesi di A è confermata e diventa `[M]`.** Il tratto 3 **si compensa** quando il
+ritardo sposta la fase dell'input rispetto al quadro: non è contaminazione del metro, è il condotto
+che si comporta davvero diversamente. E il surplus **sta nel tratto giusto in tutt'e quattro i casi,
+entro 0,46 ms**.
+
+⇒ ⭐ **La cura**: i ritardi da innestare vanno messi a **multipli del quadro** (16,7 ms).
+⛔ **Non ho cambiato i valori di partenza del banco**, e la ragione è che **un altro agente aveva un
+giro in volo su questo stesso file**: cambiargli sotto una taratura a metà esperimento gli avrebbe
+cambiato il verdetto senza che lo sapesse. ⇒ **È una riga sola, e la passo al direttore.**
+
+### 2. ⛔⛔ Il fatto sul 139,40 — riletto dalla FONTE, e ne esce di più
+
+§A.4 punto 2 lo dichiarava. Io l'ho riletto da `04-b30-esiti.jsonl` (campo `controlli`) e ne esce
+**il MODO del rosso**, che cambia la lettura:
+
+| giro | Q5 | Q6 | ⛔ **come** falliva |
+|---|---|---|---|
+| 14 ago `b30-o2-finale` — ⛔ **il 139,40** | **rosso** | **rosso** | Q5: salita **15,79 su 25** (−9,21) e **il tratto 2 va −14,19**; Q6: tratto giusto, totale +6,29 |
+| 14 ago `b30-o2-finale2` — il 141,60 | **rosso** | verde | salita 20,78 su 25, tratto 2 **−7,17** |
+| 22 ago `08a-tela2d-adattano-1` | verde | verde | ⭐ l'unico con tutt'e due verdi |
+| 22 ago `08a-tela2d-5` — **il 99,07** | **rosso** | verde | tratto giusto, salita 30,59 su 25 |
+
+⇒ ⛔⛔ **Il 139,40 non è solo «consegnato con due tarature rosse»: è consegnato da un giro in cui il
+tratto 2 si muoveva di −14,19 ms sotto un ritardo iniettato altrove.** Su 139 è il 10 %.
+⚠ Il totale resta quel che è — misurato ai due capi con lo stesso orologio — ⛔ ma **la sua
+scomposizione del 14 agosto va letta con questo accanto**, e nessun documento lo diceva.
+
+### 3. ⚠ I tre difetti minori di §A.4 punto 5 — **curati, tutt'e tre**
+
+| | |
+|---|---|
+| ⭐ **`coda_url` non arrivava nell'`esiti.jsonl`** | curato, e con **due** campi: `coda_url` (l'intenzione) e `strade` (il **fatto**). ⛔ Verificato che il difetto c'era: `[M]` tutte le 11 righe depositate prima di oggi hanno `coda_url: null` |
+| ⭐ **`scena-costruisci` di `04-b30-lancia.sh` rotto** | curato: la costruzione sta in un **file** (`banchi/04-b30-scena-costruisci.sh`), non in una riga che attraversa `ssh → enter.sh → bash -c`. ⭐ La regola era **già scritta** nell'intestazione dello stesso file — *«un file non ha livelli di virgolette»* — solo che il codice non la seguiva. Il file nuovo verifica anche che il binario non sia vuoto prima di rinominarlo |
+| ⭐ **la scena vecchia non lascia il fuoco** | curato **dentro il banco**: `giro_vero()` chiama `scena-ferma` **prima** di `scena-avvia`. ⚠ Prima il rimedio stava «nella testa di chi lo lancia», ed è così che A ha perso il suo primo giro |
+
+### 4. ⭐ E un contributo a `LEZIONI.md` §1.24, che F3 ha pagato oggi
+
+Ho verificato le mie risorse su **ogni** asse, non solo la porta:
+
+| | mie | altrui, contate |
+|---|---|---|
+| porte | **7760 · 7761 · 7762** | 7730/7731 (l'utente) · 7746 · 7752 · 7765-67 |
+| utente / uid | **provaa8 / 1041** | provaf8/1044 · provaf48/1046 · provaf3/1047 · provac8 · provab8 |
+| shm | **remotix-08-f1** | remotix-08-f · -08-f3 · -08-f4 · -08-a/b/c |
+| dir di lavoro | **/media/REMOTIX/tmp/08-f1** | 08-f · 08-f4 · 08-a/b/c |
+| Xvfb / CDP | **:96 / 9660** | l'unico Xvfb vivo era il mio |
+
+⛔ **E ne è uscita una forma che la lezione non copre ancora**: `08-f1` e `08-f` sono nomi diversi,
+⛔ **ma uno è PREFISSO dell'altro**. Un `rm -rf /media/REMOTIX/src/08-f*` di chi possiede `08-f`
+porterebbe via anche i miei, e nessuno dei due avrebbe sbagliato niente.
+⇒ ⭐ **Non basta che i nomi siano diversi: devono essere non-prefissi l'uno dell'altro.** È una riga
+per §1.24.
+⚠ **E una sovrapposizione vera la dichiaro**: uso `provaa8`, l'utente di **A**, apposta — è l'unico
+modo di avere il suo stesso palco. A è rientrato, quindi nessuno lo contende; ⛔ ma se qualcuno ne
+riavviasse la sessione mentre misuro, la mia scena morirebbe. ⭐ Il banco lo direbbe («la scena non
+prende il fuoco») invece di produrre un numero falso — l'ho verificato leggendo quel ramo.
+
+---
+
+## F1.5 ⛔⛔ CHE COSA NON HA FUNZIONATO
+
+### 1. ⛔⛔ La prima stesura di Q11 era SBAGLIATA, e a bocciarla è stata la misura
+⚠ **E il finto non l'avrebbe mai bocciata**: nel finto il ritardo al vetro non occupa nessun filo,
+quindi il condotto non si sposta. ⇒ Un banco consegnato dopo la sola certificazione sarebbe uscito
+**verde sul finto e falso sul mondo**. È la ragione per cui la certificazione non basta.
+
+### 2. ⛔ Il banco costa **5,5 volte più di prima**
+`[M]` la lettura dei pixel: **1,59 ms** dal deposito 2D (giro di A) contro **7,61 – 8,79 ms** dal
+vetro. ⇒ Leggere dal vetro è una **lettura dalla GPU**, e si paga.
+⭐ Q9 resta verde e non è una concessione: `[M]` il ritmo **non cala** (29,88 senza contro 30,46 con;
+A: 30,67 contro 30,25) ⇒ il filo non è saturo a 30 fps. ⛔ Ma «non satura» non è «gratis»: resta in
+F1.6.
+⭐ **E la cura per chi viene dopo è trovata e non applicata, apposta**: le due marche stanno **una
+sopra l'altra**, quindi si leggerebbero con **una sola** `drawImage` sul riquadro che le contiene
+tutt'e due. ⛔ Non l'ho fatto perché i giri erano cominciati: **cambiare il metro a metà della
+misura** è il difetto che questa fase sta curando.
+
+### 3. ⛔ La TASTIERA non chiude **niente**
+`[M]` **276 messaggi sul filo, 276 sonde, 0 CHIUSE.** §A.4 punto 3 dava 0/208 · 0/212 · 8/196 ·
+5/202 · 16/198. ⇒ Sulla strada vera è **0 su 276**. ⛔ **Nessun documento deve citare un ritardo di
+tastiera preso da questo banco.** `[?]` Se sia la scena, l'eco o la finestra di 500 ms **non l'ho
+aperto**.
+
+### 4. ⛔ Q5 resta rosso anche coi ritardi a quadro intero, di **0,22 ms**
+La diagnosi è giusta (il surplus è nel tratto 5, +32,94 su 33,4, e in nessun altro); è la mediana del
+**totale** a salire di 37,62. `[?]` Non ho separato rumore e contesa.
+
+### 5. ⛔ Il palco NON era isolato, e va detto perché è il cuore di tutto
+⚠ **E c'è una conseguenza che non è solo rumore**: le mie modifiche a `04-b30-anello-input.py` sono
+entrate in vigore **mentre un giro di un altro agente era in volo** — in particolare
+`--ritardo-vetro`, che aggiunge una **quarta condizione** a ogni giro. ⇒ Il suo giro è durato un
+quarto in più di quel che si aspettava, e il suo Q11 può comparire in un verbale che non lo
+prevedeva. **La colpa è mia e la dichiaro**; il file del banco è di tutti e non c'era modo di curarlo
+senza toccarlo.
+
+### 6. ⛔ Un solo valore di ritardo al vetro, non due
+Ho provato **8 ms**, tre volte in tre giri (scarto 0,005 · 0,015 · 0,005). ⛔ **Non ho fatto la
+linearità** con un secondo valore. ⚠ Sopra ~16 ms il filo si satura e i fotogrammi si **buttano**
+invece di ritardare — cioè si misurerebbe un'altra cosa. `[?]` Fra 4 e 12 ms lo spazio c'era.
+
+### 7. ⛔ Il quinto giro **l'ho ammazzato io, a metà**
+Su richiesta del direttore, per liberare il portatile a F4. ⇒ Ho quattro giri e non cinque, e i due a
+macchina scarica sono **due**. ⭐ È la scelta giusta — un giro in più preso sotto contesa avrebbe
+peggiorato la mediana invece di migliorarla — ⛔ ma il denominatore è quello che è.
+
+---
+
+## F1.6 ⛔ Che cosa resta `[?]` dopo di me
+
+| | |
+|---|---|
+| ⏳ ⛔⛔ **il numero a macchina scarica, col carico SCRITTO** | i quattro giri sono stati presi **prima** che la lettura del carico entrasse nel banco. ⇒ Il 74-76 ms è `[M]` ma il suo carico è `[R]` (l'ho guardato io, non il verbale). **Bastano due giri quando il portatile è libero**, e adesso il banco li scrive da sé |
+| ⏳ ⛔ **quanto del numero è il banco stesso** | `[M]` **7,6-8,8 ms per fotogramma** di lettura. Il ritmo non cala (Q9) ⇒ il filo non è saturo, **ma su ~75 ms non è trascurabile**. ⚠ E non si separa con la fetta «senza lettura» di Q9: senza pixel **nessuna sonda chiude**. ⇒ Serve un giro con la lettura **dimezzata** (una `drawImage` sola): se `T` non cambia, il costo non entra |
+| ⏳ ⭐⭐ **il conto dell'elastico** | 255 px contro i 360 che l'utente vede. Si decide **rimisurando il distacco oggi**, col video, sulla strada vera. ⛔ E intanto **l'accordo «entro il 7 %» di §4-A va tolto** |
+| ⏳ **la TASTIERA** | 0 su 276 |
+| ⏳ **Q5 a 0,22 ms dalla tolleranza** · **la linearità del confine** | F1.5 punti 4 e 6 |
+| ⏳ `[?]` **i valori di partenza dei ritardi** | vanno messi a **multipli del quadro**: una riga, passata al direttore |
+| ⏳ **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza**: confermato oggi sul mio giro |
+
+---
+
+## F1.7 Che cosa ho lasciato sulla macchina
+
+⭐ Porte **7760 · 7761 · 7762**, utente **`provaa8`** (quello di A), directory
+**`/media/REMOTIX/tmp/08-f1`**, shm `/dev/shm/remotix-08-f1`, scena
+`/media/REMOTIX/src/08-f1-scena-lav/08-f1-scena` (copia bit per bit di quella di A), terreno
+`/media/REMOTIX/src/08-f1-terreno.sh`, ponte `/media/REMOTIX/src/08-f1-ponte.py`.
+⛔ **Le porte 7730 e 7731 e le directory dell'utente non sono mai state toccate.**
+⛔ **E non ho toccato nessun file di `src/`.**
+⭐ **Il portatile è libero**: Xvfb e Chrome miei spenti, scena ferma.
+
+I file del banco che ho cambiato, tutti in `banchi/`:
+- `04-b30-anello-input.py` — il prologo §4-bis (`createImageBitmap` + `transferFromImageBitmap`) e
+  §6 (`leggi_marca_vetro`), **Q11** e i suoi due guasti, `--ritardo-vetro`,
+  **`carico_della_macchina()`** ai due capi e due volte, il controllo incrociato col prodotto,
+  `scena-ferma` prima di `scena-avvia`, `coda_url` + `strade` + il carico nella riga depositata;
+- `04-b30-lancia.sh` — `scena-costruisci`;
+- **nuovo** `04-b30-scena-costruisci.sh`.
+
+
+---
+
 ## 4-F3 · ⛔⛔⭐ AGENTE F3 — **i diciassette millisecondi non esistono**, e a mentire era la macchina · *22 agosto 2026*
 
 > ### ⛔⛔⛔ E IL COLPEVOLE È IL DIRETTORE, NON IL PRODOTTO
@@ -560,10 +1079,16 @@ prodotto, in una giornata, **due bersagli cancellati** — che è lavoro risparm
 > 99,07 ms × 3 400 px/s  =  337 px
 > ```
 >
-> ⇒ ⭐⭐ **337 contro 360: si accordano entro il 7 %**, per due strade che non si sono mai parlate —
-> un occhio su un desktop e un cronometro su un banco. ⛔ **E non è una coincidenza fortunata: è la
-> prova che l'elastico di §1.2 è il modello giusto.** `distacco = velocità × ritardo` regge sui
-> numeri veri.
+> ⛔⛔ **QUESTO ACCORDO È STATO RITIRATO IL 22 AGOSTO, LA SERA — 📖 §4-F1.** I 99,07 ms erano
+> gonfiati dalla contesa fra i miei stessi agenti: `[M]` a macchina scarica l'anello vale **74,9 ms**,
+> che a 3 400 px/s fanno **255 px**, non 337. ⇒ **255 contro 360 non è un accordo entro il 7 %: è uno
+> scarto del 30 %, e nel verso sbagliato** — l'utente vede **più** distacco di quanto lo strumento
+> ne misuri.
+>
+> ⚠ **Quel che resta in piedi**, e non è poco: l'elastico di §1.2 — `distacco = velocità × ritardo` —
+> **non è smentito**, è la sua taratura che era falsa. Ma ⛔ **l'accordo fra l'occhio e lo strumento
+> era la riga più citata di questo documento, ed era un artefatto della mia orchestrazione.** Resta
+> scritta com'era, sbarrata, perché la forma dell'errore vale più della conclusione.
 >
 > ⭐ **E dice anche a quale velocità l'utente guardava**: alla sua **mediana**, non ai picchi. ⇒ Il
 > bersaglio della fase è il trascinamento **normale**, non quello estremo.

@@ -1018,6 +1018,22 @@ PROLOGO = r"""
               B.attesa.delete(primo);
               B.conti.mai_arrivati_al_vetro++;
             }
+          } else if (disegni.length === 0) {
+            /* ⛔⛔ E QUESTO E' IL TERZO STATO, che la prima stesura non aveva —
+               `[M]` 22 agosto 2026: **235 campioni su 2022** finivano marcati
+               «2d» in un giro in cui la strada 2D non era stata usata mai.
+               ⇒ Erano fotogrammi che il prodotto ha DECODIFICATO e non ha mai
+               dipinto (scartati perche' tardivi, §5.4).  Chiamarli «2d» era
+               scambiare «non e' successo» con «e' successa l'altra cosa» —
+               `LEZIONI.md` §2.0, la stessa forma di «non arrivato» ≠ «non
+               guardato».
+               ⚠ Non sporcano nessun numero (senza pixel non chiudono nessuna
+                 sonda), ⭐ ma contati per quel che sono dicono **quanti
+                 fotogrammi non arrivano al vetro**, che e' un fatto del
+                 prodotto e non del banco. */
+            base.strada = "non dipinto";
+            B.conti.mai_arrivati_al_vetro++;
+            deposita_campione(base, t_dip_v, t_dip_v, null, null, null, disegni);
           } else {
             /* ─── LA STRADA 2D: e SOLO ADESSO si leggono i pixel, DUE regioni ─ */
             base.strada = "2d";
@@ -3080,22 +3096,49 @@ def carico_della_macchina(a):
     # ⛔ Gli ALTRI banchi di questo stesso file, contati per porta: e' il
     #    conteggio che dice «non ero solo», e senza di lui «non lo so» e «ero
     #    solo» hanno lo stesso aspetto.
-    q["banchi_b30_in_corso"] = _n(
-        "pgrep -fc 'b30-anello-input.py --misura'")
+    #    ⛔ Si contano le PORTE distinte, non i processi: `pgrep -f` conta anche
+    #       la shell che avvolge il comando, e «2» direbbe «c'e' un altro» quando
+    #       l'altro sono io.  Un conteggio che si sbaglia da solo e' peggio di
+    #       nessun conteggio.
+    try:
+        u = subprocess.run("pgrep -af 'b30-anello-input.py --misura'",
+                           shell=True, capture_output=True, text=True, timeout=30)
+        porte = set()
+        for riga in (u.stdout or "").splitlines():
+            pezzi = riga.split()
+            for i, x in enumerate(pezzi):
+                if x == "--porta" and i + 1 < len(pezzi):
+                    porte.add(pezzi[i + 1])
+        q["banchi_b30_in_corso"] = len(porte)
+        q["porte_dei_banchi"] = sorted(porte)
+    except Exception:                                           # noqa: BLE001
+        q["banchi_b30_in_corso"] = None
     q["⛔"] = ("il carico del PORTATILE, dove stanno Chrome e il banco.  ⚠ Se "
                "«banchi_b30_in_corso» e' > 1 o «xvfb» e' > 1, questo numero "
                "porta dentro la contesa di qualcun altro e NON e' il prodotto")
     r = {"chuwi": q}
     rs = _sshpw("nproc; cat /proc/loadavg; pgrep -c remotix; pgrep -c gnome-shell",
                 silenzioso=True, attesa=60)
-    righe = (rs.stdout or "").strip().splitlines()
-    s = {"grezzo": righe}
-    try:
-        s["nuclei"] = int(righe[0])
-        s["carico_1_5_15"] = [float(x) for x in righe[1].split()[:3]]
-        s["processi_remotix"] = int(righe[2])
-        s["sessioni_gnome"] = int(righe[3])
-    except Exception:                                           # noqa: BLE001
+    # ⛔ Le righe si RICONOSCONO, non si contano: `sshpw` ci mette in mezzo la
+    #    richiesta della parola e un avvertimento di `tput`, e prendere «la
+    #    riga 1» darebbe un numero sbagliato senza lamentarsi di niente.
+    righe = [x.strip() for x in (rs.stdout or "").splitlines() if x.strip()]
+    s = {}
+    numeri = []
+    for x in righe:
+        pezzi = x.split()
+        if len(pezzi) >= 5 and "/" in pezzi[3]:
+            try:
+                s["carico_1_5_15"] = [float(y) for y in pezzi[:3]]
+                continue
+            except ValueError:
+                pass
+        if x.isdigit():
+            numeri.append(int(x))
+    if len(numeri) >= 3:
+        s["nuclei"], s["processi_remotix"], s["sessioni_gnome"] = numeri[:3]
+    if "carico_1_5_15" not in s or "nuclei" not in s:
+        s["grezzo"] = righe
         s["perche"] = ("⛔ non ho potuto leggere il carico del server: «non lo "
                        "so» non e' «era scarico»")
     r["server"] = s
@@ -3105,9 +3148,18 @@ def carico_della_macchina(a):
 def stampa_carico(c, quando):
     q = c.get("chuwi") or {}
     s = c.get("server") or {}
+    # ⛔⛔ LA SOGLIA GUARDA IL CARICO DEGLI ALTRI, NON IL MIO — e la ragione è
+    #     `[M]`: un giro solo di questo banco tiene gia' **~3,7 nuclei su 4** e
+    #     **~29 processi Chrome**.  Una soglia sul carico assoluto sarebbe rossa
+    #     sempre, e una bandiera sempre rossa non la guarda piu' nessuno
+    #     (`LEZIONI.md` §1.20 dalla parte di chi legge).
+    # ⇒ Si accusa quel che **non è mio**: un secondo banco, un secondo Xvfb, o
+    #   un numero di processi Chrome che un banco solo non può spiegare.
+    #   ⚠ `[M]` 22 agosto, quando A misurava: **56 Chrome e 5 Xvfb** — cioè due
+    #     banchi buoni.  La soglia sta in mezzo, a 40.
     stretto = ((q.get("banchi_b30_in_corso") or 0) > 1
                or (q.get("xvfb") or 0) > 1
-               or ((q.get("carico_1_5_15") or [0])[0] > (q.get("nuclei") or 4)))
+               or (q.get("processi_chrome") or 0) > 40)
     (dub if stretto else inf)(
         "%s · CHUWI: %s nuclei, carico %s, Chrome %s, Xvfb %s, altri banchi b30 %s"
         % (quando, q.get("nuclei"), q.get("carico_1_5_15"),
@@ -4016,26 +4068,62 @@ def giro_vero(a, precondizioni):
                 return x["mediana"]
 
     v["incrocio"] = {}
-    for nome, chiave, pfx in (("9 (l'attesa: `createImageBitmap`)", "bmp_ms", "9 "),
-                              ("10 (il disegno: `transferFromImageBitmap`)",
-                               "vetro_ms", "10 ")):
-        p = _d(pd.get(chiave) or [])
-        b = _tratto(pfx)
-        if not p.get("n") or b is None:
-            dub("⚠ tratto %s: NON CONFRONTATO (prodotto n=%s, banco %s).  ⛔ Non "
-                "e' «sono d'accordo»" % (nome, p.get("n"), b))
-            v["incrocio"][chiave] = {"prodotto": p, "banco": b, "esito": None}
-            continue
-        scarto = b - p["mediana"]
-        # ⚠ Il prodotto tiene 200 campioni recenti e il banco tutto il giro: il
-        #   confronto e' fra due CAMPIONI diversi della stessa grandezza, e la
-        #   soglia lo riflette invece di fingere che siano la stessa lista.
-        d_ok = abs(scarto) <= max(1.0, 0.30 * p["mediana"])
-        v["incrocio"][chiave] = {"prodotto": p, "banco": b,
-                                 "scarto_ms": round(scarto, 3), "esito": d_ok}
+    # ── Il tratto 9: un CONFRONTO vero, e i due lettori sono indipendenti ──
+    p9 = _d(pd.get("bmp_ms") or [])
+    b9 = _tratto("9 ")
+    if not p9.get("n") or b9 is None:
+        dub("⚠ tratto 9: NON CONFRONTATO (prodotto n=%s, banco %s).  ⛔ Non e' "
+            "«sono d'accordo»" % (p9.get("n"), b9))
+        v["incrocio"]["bmp_ms"] = {"prodotto": p9, "banco": b9, "esito": None}
+    else:
+        s9 = b9 - p9["mediana"]
+        # ⚠ Il prodotto tiene 200 campioni recenti e il banco tutto il giro: e'
+        #   un confronto fra due CAMPIONI della stessa grandezza, non fra due
+        #   liste identiche, e la soglia lo riflette.
+        d_ok = abs(s9) <= max(1.0, 0.30 * p9["mediana"])
+        v["incrocio"]["bmp_ms"] = {"prodotto": p9, "banco": b9,
+                                   "scarto_ms": round(s9, 3), "esito": d_ok}
         (ok if d_ok else ko)(
-            "tratto %s: il PRODOTTO dice %.3f ms (n=%d), il BANCO %.3f  ⇒ "
-            "scarto %+.3f ms" % (nome, p["mediana"], p["n"], b, scarto))
+            "⭐⭐ tratto 9 (l'attesa: `createImageBitmap`): il PRODOTTO dice "
+            "%.3f ms (n=%d), il BANCO %.3f  ⇒ scarto %+.3f ms — e sono due "
+            "lettori scritti da due persone diverse"
+            % (p9["mediana"], p9["n"], b9, s9))
+
+    # ── ⛔⛔ Il tratto 10 NON si confronta, e la ragione e' MISURATA ────────
+    #
+    # `vetro_ms` del prodotto cronometra `this.bm.transferFromImageBitmap(bmp)`.
+    # ⛔ Ma il banco AVVOLGE proprio quel metodo, e dentro l'involucro ci legge
+    #    i pixel.  ⇒ Il cronometro del prodotto **contiene il banco**, e i due
+    #    numeri non misurano la stessa cosa: confrontarli darebbe un rosso che
+    #    non accusa nessuno.
+    # ⭐ Quel che invece dice, ed e' una misura che nessun altro sa dare: la
+    #    DIFFERENZA fra i due e' **quanto pesa il banco**, letta dal prodotto —
+    #    cioe' un terzo parere su `costo_lettura_us`, preso da fuori.
+    # ⛔⛔ E porta con se' un AVVERTIMENTO per chiunque altro: finche' questo
+    #     banco e' attaccato, il campo `vetro` del blocco diagnostico della
+    #     pagina **non e' il prodotto**.
+    p10 = _d(pd.get("vetro_ms") or [])
+    b10 = _tratto("10 ")
+    costo = _d([x * 0.001 for x in (v.get("costo_lettura_us") or [])])
+    v["incrocio"]["vetro_ms"] = {
+        "prodotto": p10, "banco": b10,
+        "differenza_ms": (round(p10["mediana"] - b10, 3)
+                          if p10.get("n") and b10 is not None else None),
+        "costo_della_lettura_secondo_Q9_ms": costo.get("mediana"),
+        "esito": None,
+        "⛔": "NON e' un confronto: il cronometro del prodotto AVVOLGE il banco "
+             "(l'involucro di `transferFromImageBitmap` legge i pixel dentro la "
+             "parentesi che il prodotto cronometra).  ⇒ La differenza e' il "
+             "COSTO DEL BANCO letto dal prodotto, e va accostata a Q9",
+        "⛔⛔ avvertimento": "finche' questo banco e' attaccato, il campo "
+                            "`vetro` del blocco diagnostico di `pagina.html` "
+                            "NON e' il prodotto: e' il prodotto piu' il banco"}
+    if p10.get("n") and b10 is not None:
+        dub("⚠ tratto 10: il prodotto dice %.3f ms e il banco %.3f — ⛔ e NON e' "
+            "un disaccordo: il cronometro del prodotto AVVOLGE il banco.  ⭐ La "
+            "differenza (%.3f) e' il costo del banco letto DAL PRODOTTO, e Q9 "
+            "dice %s" % (p10["mediana"], b10, p10["mediana"] - b10,
+                         costo.get("mediana")))
 
     log("12-bis. ⭐⭐ LA TASTIERA — lo stesso metro, la stessa scena, l'altro tasto")
     # ⛔ Stesso strumento, stessa scena, stesso giro: i due numeri si possono
