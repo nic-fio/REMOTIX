@@ -3394,4 +3394,34 @@ progetto · il **multi-tenant** → fase 10, ⚠ ma aspetta il numero vero che e
 
 ⚠ Giudizio, **non misura** — e §2.5 spiega perché vale lo stesso, e perché **non chiude la fase**.
 
-*(il resto si riempie quando avrà qualcosa da guardare)*
+### 8.3 ⭐⭐⭐ **«È ok»** — 22 agosto 2026, sera, sul prodotto con la copia zero accesa
+
+*Il server della porta **7790**, ramo `fase-1` con tutto il lavoro della giornata dentro, tela
+2560×1080 (passo 10240, multiplo di 64 ⇒ **la copia zero è accesa**, non ripiega). L'utente si
+collega, trascina una finestra veloce come nel suo video del mattino, e giudica:*
+
+> ### ⭐⭐⭐ *«è ok»*
+
+⇒ ⭐ **È il mandato della fase, chiuso dall'unico giudizio che lo poteva chiudere.** Il mandato era
+suo — *«l'unico piccolo appunto è un'ottimizzazione sulle performance grafiche»* (§8.1) — e la
+specifica pure: *«un'esperienza utente il più vicina possibile a una situazione locale»* (§1.1).
+
+**Il cammino della giornata, nella sua unità:**
+
+| | barre del titolo | |
+|---|---|---|
+| il **locale** — il pavimento, misurato (n=254, alla sua tela) | **0,142** | |
+| REMOTIX **al mattino** | 0,27 · 0,26 | 2,1 × il locale |
+| ⭐ REMOTIX **a sera** | **0,16 · 0,16** | **1,23 × il locale** |
+| *quel che l'utente riferiva a occhio, al mattino* | *0,50* | |
+
+⚠ **Che cosa questo giudizio dice e che cosa NON dice**, e la distinzione va tenuta:
+- ⭐ **dice** che la cura ha funzionato dove conta — sull'occhio dell'utente, sul suo ferro, sulla
+  sua scena;
+- ⛔ **non dice** se la **previsione falsificabile** di §4-F2 abbia retto. Quella prevedeva
+  **0,31-0,46 barre** sul suo schermo, e *«è ok»* è un'accettazione, **non una frazione**. ⏳ Finché
+  non c'è la frazione, la spiegazione dello scarto resta **plausibile e non confermata**.
+
+⛔ **E non si scriva che la previsione è confermata**: sarebbe la forma di `LEZIONI.md` §1.20 — *il
+giudizio staccato dalla misura* — con l'aggravante di farlo nel documento che quella lezione la
+cita.

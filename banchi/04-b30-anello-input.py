@@ -3876,20 +3876,37 @@ def giro_vero(a, precondizioni):
         #      numero esce plausibile e sbagliato.  ⇒ Si legge l'impronta del
         #      file che sta girando DAVVERO, dal `/proc` del processo.
         log("5-sexies. ⛔⛔ IL BINARIO CHE STA GIRANDO — impronta, non intenzione")
-        rb = _sshpw("p=$(pgrep -f 'remotix .*--porta %d' | head -1); "
-                    "[ -n \"$p\" ] && readlink -f /proc/$p/exe && "
-                    "md5sum $(readlink -f /proc/$p/exe)" % a.porta_dentro,
-                    silenzioso=True, attesa=60)
-        pezzi = [x.strip() for x in (rb.stdout or "").splitlines()
-                 if x.strip().startswith("/") or " /" in x]
-        v["binario_del_prodotto"] = {"righe": pezzi}
-        for x in pezzi:
-            if len(x.split()) == 2 and len(x.split()[0]) == 32:
-                v["binario_del_prodotto"]["md5"] = x.split()[0]
-                v["binario_del_prodotto"]["percorso"] = x.split()[1]
+        # ⛔ IN DUE PASSI, e ciascuno per la sua ragione:
+        #    · il `pid` si prende SENZA sudo (`pgrep` basta) e SENZA `$(...)`
+        #      annidati — il comando attraversa `ssh` e i livelli di virgolette
+        #      se lo mangiano (`[M]` visto stasera, la trappola di
+        #      `scena-costruisci`);
+        #    · l'impronta si prende CON sudo, perche' il prodotto gira da root e
+        #      `/proc/PID/exe` non si legge da `nicfio` (`[M]` «Permission
+        #      denied»), ⛔ e **fuori da ogni pipe**: dentro una pipe `sudo`
+        #      resta appeso perche' la richiesta della parola non arriva a
+        #      nessuno.
+        v["binario_del_prodotto"] = {}
+        rp = _sshpw("pgrep -f 'remotix .*--porta %d' | head -1"
+                    % a.porta_dentro, silenzioso=True, attesa=60)
+        pid = "".join(c for c in (rp.stdout or "") if c.isdigit())
+        if pid:
+            rb = _sudo("md5sum /proc/%s/exe" % pid, silenzioso=True, attesa=60)
+            for x in (rb.stdout or "").splitlines():
+                p = x.split()
+                if len(p) == 2 and len(p[0]) == 32:
+                    v["binario_del_prodotto"]["md5"] = p[0]
+                    v["binario_del_prodotto"]["percorso"] = p[1]
+            rl = _sudo("readlink -f /proc/%s/exe" % pid, silenzioso=True,
+                       attesa=60)
+            for x in (rl.stdout or "").splitlines():
+                if x.strip().startswith("/") and "remotix" in x:
+                    v["binario_del_prodotto"]["albero"] = x.strip()
+        v["binario_del_prodotto"]["pid"] = pid or None
         if v["binario_del_prodotto"].get("md5"):
-            ok("il prodotto sulla porta %d e' %s  ·  md5 **%s**"
-               % (a.porta_dentro, v["binario_del_prodotto"]["percorso"],
+            ok("il prodotto sulla porta %d (pid %s) e' **%s**  ·  md5 **%s**"
+               % (a.porta_dentro, pid,
+                  v["binario_del_prodotto"].get("albero", "?"),
                   v["binario_del_prodotto"]["md5"]))
         else:
             ko("⛔ NON HO POTUTO GUARDARE quale binario sta girando: «non lo so» "
