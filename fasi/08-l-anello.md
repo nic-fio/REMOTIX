@@ -490,6 +490,307 @@ toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del te
 
 ---
 
+## 4-B · ⭐⭐⭐ AGENTE B — il banco del trascinamento, e **il locale ha un numero** · *22 agosto 2026*
+
+> ### ⭐⭐⭐ LA SPECIFICA DELL'UTENTE SMETTE DI ESSERE UN DESIDERIO: adesso il «locale» è misurato
+>
+> *«La mia specifica è avere un'esperienza utente il più vicina possibile a una situazione locale,
+> ma non identica: quello è impossibile.»* — §1.1. ⛔ **Finché il locale non aveva un numero, quella
+> frase non era collaudabile da nessuno.** Adesso ce l'ha.
+>
+> | | ritardo | distacco | **in barre del titolo** |
+> |---|---|---|---|
+> | ⭐ **il locale**, stesso banco stessa scena | **27,58 ms** | 94 px | **0,13** |
+> | **REMOTIX**, tre giri concordi entro l'1 % | **69,8 · 70,2 · 67,1 ms** | 201 · 206 · 194 px | **0,28 · 0,29 · 0,27** |
+> | *(l'utente, a occhio, sul suo 2560)* | *~106 ms* | *~360 px* | *0,50* |
+>
+> ⇒ ⭐⭐ **Siamo a 2,4 volte il locale, e i 42 ms di differenza sono esattamente quel che aggiungiamo
+> noi sopra al compositore.** Il mandato della fase si riscrive in una riga: **accorciare quei 42.**
+>
+> ⭐ **E l'utente aveva ragione anche sul limite**: il locale **non è zero** — è 27,58 ms, perché
+> anche lì c'è un compositore e uno schermo. *«Ma non identica: quello è impossibile»* è confermato
+> dalla misura, non concesso per cortesia.
+>
+> ⚠ **E lo scarto fra 0,28 e 0,50 si dichiara invece di limarlo a parole**: il banco gira a
+> **1560 px** di larghezza, l'utente a **2560** — più pixel, più lavoro per fotogramma. `[?]` La
+> differenza non è spiegata, ed è la prima cosa da rifare alla sua misura.
+
+*22 agosto 2026. Da inserire in `fasi/08-l-anello.md` §3 (sviluppo), §4 (misure), §5 (non ha
+funzionato) e §7 (resta `[?]`).*
+
+---
+
+## 1 · Che cosa è stato costruito
+
+| file | che cos'è |
+|---|---|
+| `banchi/08-b67-elastico.py` | ⭐⭐ **il banco**: la mano dell'utente, la lettura dell'eco nei pixel, le tre unità, la separazione della rete, i buchi, i tredici guasti innestati |
+| `banchi/08-b67-lancia.sh` | il lanciatore: porte, albero, contenitore, terreno, scena, misura |
+| `banchi/08-b67-locale.py` | ⭐⭐ **il termine di paragone locale**, misurato sul ferro dal blocco condiviso della scena |
+| `banchi/08-b67-esiti.jsonl` | i verbali dei giri |
+
+⛔ **Non è stata toccata una riga di `src/`.**
+
+⭐ **E niente è stato ricopiato che si potesse importare**: il palco, la distribuzione, il regime e
+il **lettore certificato della marca** vengono da `03-b17-ritardo.py`; l'eco e il lettore del blocco
+condiviso da `04-b30-anello-input.py`; **la scena è `04-b30-scena.c` senza una riga cambiata**; il
+terreno è `04-b32-terreno.sh` **guidato dall'ambiente**, non una sua copia. L'unico pezzo ricopiato
+è `batti()` (il `thisisunsafe`), e la ragione sta scritta accanto: il modulo che lo contiene fa
+`argparse` a livello di modulo, e importarlo lancerebbe un altro banco.
+
+---
+
+## 2 · ⛔⛔ La porta 7741 **non era libera**, ed era di un altro agente della fase
+
+`[M]` `ss -tulnp` prima di toccarla:
+
+```
+udp 0.0.0.0:7741  users:(("remotix",pid=3446627))
+    /media/REMOTIX/src/08-a-src/src/remotix --porta 7741
+      --ban-file /media/REMOTIX/tmp/08-a/ban-7741
+udp 0.0.0.0:7740 / 7742  ("python3")  → il PONTE di 08-a
+```
+
+⇒ ⛔ **Il mandato mi assegnava una porta che l'agente A stava già usando.** Non l'ho presa e non
+l'ho spenta: `LEZIONI.md` §1.24 — *due banchi sulla stessa porta si ammazzano in silenzio, e il
+rosso compare sul terzo* — e il ban-file era il suo, quindi un mio errore avrebbe bannato lui.
+
+⭐ **Il mio terreno, tutto separato**: porta **7746** · utente **`provab8`** (uid 1043) · albero
+`/media/REMOTIX/src/08-b-src` · lavoro `/media/REMOTIX/tmp/08-b` (ban-file e socket propri) ·
+scena `/dev/shm/remotix-08-b`. ⛔ **7730 e 7731 — i due server dell'utente — non sono mai state
+toccate**, e si contano prima e dopo ogni passo.
+
+⚠ **Per il coordinatore**: se il piano assegnava 7741 a due agenti, la tabella delle porte della
+fase 8 va corretta prima del prossimo giro.
+
+---
+
+## 3 · Che cosa misura, e come si chiude l'anello
+
+**La grandezza è il distacco fra la freccia e la finestra che la insegue**, e non è un ritardo:
+
+```
+distacco = velocità della mano × ritardo dell'anello
+```
+
+`[R]` La freccia la muove il **browser**, alla velocità della mano (`pagina.html`: il cursore di
+sistema *e* la freccia disegnata, tutt'e due locali). La finestra insegue con **tutto** il ritardo.
+⇒ Il distacco si apre quando la mano accelera e si richiude quando rallenta.
+
+### L'anello si chiude **due volte**, e le due si guardano in faccia
+
+1. ⭐⭐ **L'ECO NEI PIXEL** — `04-b30-scena.c` dipinge in una seconda marca **le coordinate stesse
+   dell'evento che il compositore le ha consegnato**. Il banco legge quella marca **dalla tela
+   dipinta** e sa *dove sta la finestra che l'utente vede in questo istante*. È il confine
+   **SCOMODO**, ed è **l'unico dei due che sa dare i pixel**: l'eco *è* una posizione.
+2. **IL CAMPO `input` DEI 28 BYTE** — `RCP.md` §6.2, che la pagina raccoglie già in `REMOTIX.giro`.
+   Il banco avvolge `GIRO.torna`. È il confine **COMODO**: il fotogramma è *arrivato*, non ancora
+   decodificato né dipinto.
+
+⭐ **L'accoppiamento è per COORDINATE**, non per tempo: la traiettoria non ripassa mai sullo stesso
+pixel, quindi un eco individua **un** evento. ⛔ E quando non lo individua (mano ripassata, evento
+mai partito) il campione **si butta e si conta**.
+
+### ⛔ Il prologo è nuovo, e la ragione è una misura
+
+Quello di A10 legge i pixel dal **deposito**. `[R]` Dal 21 agosto la strada del disegno è
+`bitmaprenderer` (`DECISIONI.md` §5.4) e **il deposito non esiste più** (`this.deposito = null`).
+Un prologo copiato avrebbe letto `null` a ogni fotogramma. ⇒ Qui i pixel si leggono dalla **vista**,
+e il confine del disegno è l'avvolgimento di **`transferFromImageBitmap`** — non di
+`VideoDecoder.output`, che su questa strada ritorna **prima** che la tela sia cambiata (il
+`createImageBitmap` è asincrono) e regalerebbe un fotogramma intero.
+
+### Le TRE unità, e nessuna esce da sola (Q6)
+
+millisecondi (per noi) · **pixel di distacco** (per l'utente) · ⭐⭐ **frazioni della barra del
+titolo** (invariante di scala — è l'unità che ha già retto al confronto con xrdp a risoluzione
+diversa).
+
+---
+
+## 4 · ⭐⭐ I PRIMI NUMERI — `[M]` 22 agosto 2026
+
+**Palco dichiarato**: server `192.168.0.2:7746`, utente `provab8`, sessione GNOME headless, monitor
+virtuale **1560 × 888 @ 60 Hz**, scena `04-b30-scena.c` a schermo intero. Client: Chrome su Xvfb
+**sul portatile**, `bitmaprenderer`, formato **BGRX**. Rete **WiFi vera** (`wlo1`) in mezzo.
+⛔ Prestazioni **su Intel UHD 730 integrata**, non su una scheda potente.
+
+**Tre giri indipendenti, e concordano entro l'1 %:**
+
+| | giro 1 | giro 2 | giro 3 |
+|---|---|---|---|
+| campioni | 793 su 829 fotogrammi | 776 | 818 |
+| ⏱ **ritardo, confine SCOMODO** (input → **disegno finito**) | **69,8 ms** | **70,2** | **67,1** |
+| ⏱ ritardo, confine COMODO (fotogramma *arrivato*, §6.2) | 35,7 | 36,0 | 35,0 |
+| ⭐ **quanto si regala il comodo** | **34,1 ms** | 34,2 | 32,1 |
+| 📏 **distacco** | **201 px** (p95 497, max 838) | 206 | 194 |
+| ⭐ **distacco in barre del titolo** | **0,28** | 0,29 | 0,27 |
+| 🌐 rete misurata **nello stesso giro** | 2,7 ms (3,9 %) | 2,8 (3,9 %) | 2,7 (4,1 %) |
+| ⭐ **il pezzo NOSTRO** | **67,0 ms** | 67,5 | 64,3 |
+| la mano | 3 185 px/s | 3 178 | 3 226 |
+| ritmo dei fotogrammi visti | 33,2 ms fra due (≈ **30/s**) | 33,3 | 33,3 |
+
+### ⭐⭐ E il termine di paragone locale, misurato — non supposto
+
+`[M]` `08-b67-locale.py`, **la stessa scena, sulla stessa macchina, senza di noi**, letto dal blocco
+condiviso col seqlock verificato:
+
+| tratto | mediana | p95 |
+|---|---|---|
+| 1. la **scena** (eco ricevuto → dipinto) | 7,29 ms | 16,00 |
+| 2. il **compositore** (dipinto → **presentato**, `wp_presentation`) | 20,01 ms | 25,07 |
+| 3. ⭐⭐ **L'ANELLO LOCALE** (eco → sullo schermo) | **27,58 ms** | 32,30 |
+
+⇒ 📏 alla mediana dell'utente (3 400 px/s): **94 px**, cioè **0,13 barre del titolo**.
+⚠ `n = 29` su 83 chiusi (54 buttati dal setaccio): **è un primo numero con un denominatore
+piccolo**, e va rifatto più lungo.
+
+### ⭐⭐ La riga che conta, e sta in una unità sola
+
+| | barre del titolo | ms |
+|---|---|---|
+| **locale** (lo stesso compositore, senza di noi) | **0,13** | 27,6 |
+| **REMOTIX**, banco, monitor 1560 | **0,28** | 69,8 |
+| **REMOTIX**, giudizio dell'utente sulla sua sessione | **0,50** | — |
+
+⇒ ⭐ **Siamo a ~2,4 volte il locale, non a dieci.** E la differenza `69,8 − 27,6 = 42 ms` è
+**quel che aggiungiamo noi** sopra al compositore: è il pezzo su cui questa fase può lavorare.
+
+⚠ **E lo scarto fra 0,28 (banco) e 0,50 (utente) NON si spiega da qui**, ed è una `[?]` aperta:
+il banco gira a **1560 px**, l'utente a **2560** — più pixel da catturare, codificare e spedire per
+ogni fotogramma — e la sua sessione ha un desktop vero addosso invece di una scena.
+
+### ⭐ E un fatto che nessuno cercava: **il confine comodo si regala metà del numero**
+
+`[M]` 35,7 ms contro 69,8. ⇒ ⛔ Chi misurasse l'anello col solo campo `input` dei 28 byte —
+cioè con `REMOTIX.giro`, che è quel che la pagina mostra all'utente in diagnostica —
+**direbbe la metà del vero**. Il numero della pagina è un limite inferiore, ed è dichiarato tale
+nel suo commento; ma ora c'è la misura di **quanto** vale quel limite.
+
+---
+
+## 5 · La certificazione: **13 guasti innestati su 13 accusati**
+
+`python3 banchi/08-b67-elastico.py --certifica` — gira sul portatile, senza rete e senza server,
+e finisce **0**. Ogni verde è messo alla prova con un guasto che **deve** far diventare rosso il
+banco:
+
+| | guasto innestato | preso da |
+|---|---|---|
+| G1 | l'eco è **fermo** (la finestra non insegue) | Q4 |
+| G2 | l'eco è **illeggibile** (rumore nei pixel) | Q0, Q3 |
+| G3 | ⛔ **niente da giudicare** (zero marche) | Q0, Q3 → **uscita 3** |
+| G4 | la mano è **lenta** (300 px/s invece di 3 400) | Q1 |
+| G5 | le due marche sono di **due fotogrammi diversi** | Q2 |
+| G6 | le celle in 0-1 invece che 0-255 (il difetto del 13 agosto) | Q13 |
+| G7 | ⛔ la **rete non è misurata** in questo giro | Q9 |
+| G8 | ritardo **negativo** (fotogramma prima dell'evento) | Q0 |
+| G9 | ⛔ il server **trasforma** le coordinate (§7.3 violata) | Q0, Q5 |
+| G10 | la traiettoria **ripassa** sugli stessi pixel (accoppiamento ambiguo) | Q0, Q5 |
+| G11 | ⭐ un **buco di 300 ms** innestato nel mezzo | il rilevatore dei buchi lo trova |
+| G12 | il **costo del banco** non è misurato | Q12 |
+| G13 | si consegnano **solo i millisecondi** | Q6 |
+
+### ⭐⭐ E la taratura è **doppia**, ed è il pezzo che vale di più
+
+Si innesta un ritardo **noto** e si pretende che salgano **tutt'e due** le unità:
+
+| innesto | il **tempo** sale di | atteso | il **distacco** sale di | atteso |
+|---|---|---|---|---|
+| +30 ms | 30,0 ms | 30 | 94 px | 96 |
+| +60 ms | 60,0 ms | 60 | 164 px | 192 |
+
+⛔ **Perché conta**: se il banco ricavasse il distacco dividendo il ritardo per una costante, questa
+prova passerebbe **per costruzione**. Qui il distacco viene dai **pixel** (l'eco) e il ritardo dai
+**tempi**: le due si muovono insieme nel rapporto della velocità **solo se tutt'e due sono vere**.
+
+### ⭐ Il controllo positivo, e ha corretto **me**
+
+Su una traccia in cui la finestra insegue la mano **senza nessun ritardo** il banco trova
+**0 px** e **4,0 ms**. ⛔ La prima stesura di Q11 pretendeva 0,0 ms e **si accusava da sola**:
+i 4 ms sono **la grana della mano** (un evento ogni 8 ms, i fotogrammi cadono in mezzo ⇒ mezzo
+passo), e nemmeno un anello perfetto potrebbe scendere sotto. ⇒ La soglia è **un passo della mano**,
+ed è scritta col perché.
+
+⛔ **Il controllo negativo**: 3 000 sonde di rumore attraverso il lettore certificato → **0 falsi su
+3 000**.
+
+---
+
+## 6 · ⛔ Che cosa NON ha funzionato — quattro rossi, tutti del banco
+
+⭐ **Nessuno dei quattro era del prodotto**, e tutti e quattro sono stati trovati dal banco stesso.
+
+1. ⛔⛔ **`[M]` 0 eco su 826 — e la causa era la PANORAMICA di GNOME.**
+   Quando la sessione si apre senza finestre, GNOME mostra «Activities» e la scena ci compare dentro
+   come **miniatura ridotta e spostata**: la marca c'è nei pixel ma non è né a (0,0) né in scala
+   1:1, e ogni CRC salta. ⭐ **L'ho vista solo fotografando la tela** — un contrasto di 0,65 con
+   sync 0x00 non lo dice. ⇒ Cura: il banco **batte `Escape` sul desktop remoto** e riprova, fino a
+   tre volte; e il verde arriva solo quando la marca si legge con `scorrimento [0,0]` e
+   `contrasto 1,0`.
+   ⚠ **E prima ancora avevo saltato il passo dello SCORRIMENTO**, che `04-b30` documenta come
+   costato *«0 marche su 966»*. Ho ripreso lo stesso rosso pari pari credendolo un dettaglio di
+   A10: **la lezione di un altro banco vale solo se la si esegue.**
+
+2. ⛔ **`[M]` un picco di 531 079 px/s** — cioè una mano che non è di nessuno.
+   Il pilota consegnava **tutti** i punti scaduti nello stesso giro: quando il filo principale era
+   occupato a decodificare restava indietro e poi sparava cinque movimenti nello stesso
+   millisecondo. ⇒ Cura: **un solo movimento per giro**, i vecchi si saltano e **si contano** —
+   che è quel che fa un mouse vero quando il browser fonde gli eventi.
+
+3. ⛔ **`[M]` 450 000 px/s e poi 26 132 px/s** — due gradini nella traiettoria.
+   La serpentina **ripartiva dall'alto** arrivata in fondo (un teletrasporto), e poi **scendeva a
+   scalini** di una riga intera al rimbalzo (245 px in 8 ms su uno schermo largo). ⇒ Cura: si
+   rimbalza sfasando di mezza riga, e **la discesa è continua** (una diagonale). `[M]` Verificato:
+   0 punti ripetuti su 3 125, mediana 3 500 px/s, p90 7 250, picco 13 500.
+
+4. ⛔ **`[M]` l'anello locale diceva 11,71 ms mentre le sue due parti facevano 7,29 + 20,01 = 27,3**
+   — cioè un totale **più piccolo delle sue parti**, che è impossibile.
+   Il setaccio («un disegno non può precedere l'evento che lo causa») era applicato **solo al primo
+   tratto**: tre denominatori diversi sotto la stessa tabella. ⇒ Cura: un setaccio solo, applicato
+   una volta, e i buttati si contano (54 su 83). Il numero vero è **27,58 ms**.
+
+⚠ **E una cosa che non ho fatto**: il costo della lettura dei pixel è `[M]` **7,6 ms mediani per
+fotogramma** (Q12), sul **filo principale**, cioè lo stesso che decodifica e dipinge. L'ho dimezzato
+(una sola riconsegna dalla GPU invece di due) **ma non tolto**: è un errore sistematico dentro ogni
+numero di questo banco, e sta dichiarato invece che sperato piccolo.
+
+---
+
+## 7 · Che cosa resta `[?]`
+
+| | |
+|---|---|
+| ⏳ **lo scarto 0,28 contro 0,50** | il banco misura **meno** elastico di quel che l'utente riferisce. Candidati: la **risoluzione** (1560 contro 2560 — più pixel per fotogramma), il **desktop vero** contro una scena sola, e la velocità a cui lui guarda. ⛔ Non è deducibile: si rifà il giro a 2560 |
+| ⏳ **i sei buchi** | `[M]` **0 buchi in 24,9 s** su tre giri, contro i **6 in 17,5 s** dell'utente. ⛔ Il rilevatore FUNZIONA (G11 lo prova su un buco innestato), quindi *su questa scena e su questa rete i buchi non ci sono*. ⇒ Sono della sua scena, della sua risoluzione, o del suo momento di WiFi — e restano `[?]` |
+| ⏳ **la mano è SINTETICA** | i `PointerEvent` nascono dentro la pagina: ⛔ il pezzo cieco in ingresso **non c'è affatto**, e per questo non si somma. ⚠ E gli eventi non vengono **fusi** dal browser come quelli veri. La strada `--mano cdp` (eventi *fidati*, consegnati da Chrome) è prevista e **non è ancora stata girata** |
+| ⏳ **l'anello locale ha n = 29** | il numero c'è, il denominatore è piccolo: va rifatto su un giro lungo |
+| ⏳ **il ritmo è 30/s, non 60** | `[M]` 33,3 ms fra due fotogrammi visti, con una scena che ne disegna 61/s. ⇒ **metà si perdono per strada**, e questo banco lo *vede* ma non lo *spiega* |
+| ⏳ **la taratura sul FERRO** | Q7/Q8 girano sul sintetico. Il ponte di A10 (`04-b30-ponte.py`) sa innestare un ritardo noto sul filo vero, e il terreno lo prevede: **non è stato girato** |
+| `[?]` **il codificatore e la sua scheda** | il banco **non** verifica che la codifica sia in hardware. `provab8` è nel gruppo `render` (verificato), ma «ha aperto un render node» non prova niente (`LEZIONI.md` §1.11) |
+| ⏳⏳ **69,8 contro i 99,07 ms dell'agente A** | ⛔ **I due numeri vanno riconciliati prima che uno dei due entri in un documento come «l'anello».** Non si sommano e non si sottraggono finché non è scritto, per ciascuno, *quale confine* e *quale scena*: il mio chiude al **disegno finito** su una scena di prova a **1560 px**, e la sua mano è **sintetica**. ⚠ Finché la riconciliazione non c'è, il mio numero vale come **misura dell'elastico su questa scena**, non come «l'anello di REMOTIX» |
+
+---
+
+## 8 · Come si rigira
+
+```bash
+bash banchi/08-b67-lancia.sh certifica          # qui, senza server: 13 guasti su 13
+bash banchi/08-b67-lancia.sh porta costruisci   # albero e contenitore
+bash banchi/08-b67-lancia.sh scena-costruisci
+bash banchi/08-b67-lancia.sh terreno accendi
+bash banchi/08-b67-lancia.sh aggancia           # il monitor virtuale nasce col figlio
+bash banchi/08-b67-lancia.sh scena-avvia
+bash banchi/08-b67-lancia.sh misura 25
+```
+
+⚠ **Il server sulla 7746 e la scena sono rimasti ACCESI**, così il coordinatore può rigirare senza
+rimontare il terreno. Si spengono con `bash banchi/08-b67-lancia.sh spegni` — ⛔ che tocca **solo**
+le mie cose.
+
+
+---
+
 ## 4-D · ⭐⭐ AGENTE D — `EncSliceLP` e il peso delle chiavi · **rientrato il 22 agosto 2026**
 
 *Due `[?]` che stavano nei documenti da settimane, chiuse tutte e due con la misura. ⛔ E due

@@ -142,6 +142,7 @@ porta()
 		banchi/04-b32-terreno.sh banchi/04-b30-ponte.py \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/03-marca.py banchi/03-b17-ritardo.py banchi/03-solo.py \
+		banchi/04-b30-anello-input.py banchi/04-b30-scena.c \
 		banchi/08-b67-elastico.py banchi/08-b67-locale.py \
 	| ssh -o BatchMode=yes "$MACCHINA" "mkdir -p $ALBERO && tar -C $ALBERO -xzf -" \
 	|| { ko "⛔ i sorgenti non sono arrivati"; return 1; }

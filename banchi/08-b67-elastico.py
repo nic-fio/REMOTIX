@@ -506,7 +506,8 @@ PROLOGO = r"""
     fotogrammi: [], eventi: [], giri: [], violazioni: [], crudi: [],
     conti: { dipinti: 0, letture: 0, senza_tela: 0, tela_piccola: 0,
              buttati: 0, eventi_visti: 0, mandati: 0, non_puntatore: 0,
-             mosse_generate: 0, strada_bm: 0, strada_2d: 0, giri_visti: 0 },
+             mosse_generate: 0, mosse_saltate: 0, strada_bm: 0,
+             strada_2d: 0, giri_visti: 0 },
     leggi: true, scorrimento: [0, 0], crudi_voluti: 0,
     t_origine: performance.timeOrigin, grana: null, isolata: null,
     costo_lettura_us: [], t0_corrente: null, mano: null, versione: 1,
@@ -761,6 +762,22 @@ PROLOGO = r"""
     return true;
   };
 
+  /* ⭐ Un TASTO, e serve per una ragione che nessuno aveva previsto: quando la
+     sessione si apre senza finestre GNOME mostra la PANORAMICA («Activities»),
+     e la scena ci compare dentro come **miniatura ridotta e spostata**.
+     ⇒ La marca c'e' nei pixel ma non e' ne' a (0,0) ne' in scala 1:1, e ogni
+     CRC salta.  ⛔ E' quel che ha prodotto `[M]` **0 eco su 826** il 22 agosto
+     2026, con la catena perfettamente sana.  Un `Escape` chiude la panoramica,
+     e la scena torna a schermo intero. */
+  B.tasto = function (key, code) {
+    for (const nome of ["keydown", "keyup"]) {
+      window.dispatchEvent(new KeyboardEvent(nome, {
+        bubbles: true, cancelable: true, composed: true,
+        key: key, code: code, keyCode: 27, which: 27 }));
+    }
+    return true;
+  };
+
   B.bottone = function (giu) {
     const t = document.getElementById("schermo");
     if (!t) return false;
@@ -783,25 +800,43 @@ PROLOGO = r"""
        filo che deve DIPINGERE, e il banco misurerebbe se stesso. */
   B.parti = function (punti, bottone) {
     if (B.mano) return false;
-    B.mano = { i: 0, t0: performance.now(), punti: punti, finita: false };
+    B.mano = { i: 0, ultimo_mandato: -1, t0: performance.now(),
+                punti: punti, finita: false };
     if (bottone) { B.muovi(punti[0][1], punti[0][2], false); B.bottone(true); }
     const passo = function () {
       const M = B.mano;
       if (!M || M.finita) return;
       const ora = performance.now() - M.t0;
-      while (M.i < M.punti.length && M.punti[M.i][0] <= ora) {
-        const p = M.punti[M.i];
+      /* ⛔⛔ UN SOLO MOVIMENTO PER GIRO, e i sorpassati SI CONTANO.
+       *
+       *   `[M]` 22 agosto 2026, primo giro vero: la prima stesura consegnava
+       *   TUTTI i punti scaduti dentro lo stesso giro.  Quando il filo
+       *   principale era occupato a decodificare, il pilota restava indietro e
+       *   poi sparava cinque movimenti nello stesso millisecondo ⇒ Q1 ha letto
+       *   un picco di **531 079 px/s** e un p90 di **16 295**, cioe' una mano
+       *   che non e' quella dell'utente e nemmeno quella di nessuno.
+       *
+       * ⇒ ⭐ Si consegna SOLO il punto dovuto adesso e si saltano i vecchi,
+       *   che e' quel che fa un mouse vero quando il browser fonde gli eventi.
+       *   ⚠ La velocita' resta giusta (si copre piu' strada in piu' tempo); a
+       *     cambiare e' solo la finezza del campionamento, e si dichiara. */
+      let dovuto = -1;
+      while (M.i < M.punti.length && M.punti[M.i][0] <= ora) { dovuto = M.i; M.i++; }
+      if (dovuto >= 0) {
+        if (dovuto > M.ultimo_mandato + 1)
+          B.conti.mosse_saltate += dovuto - M.ultimo_mandato - 1;
+        M.ultimo_mandato = dovuto;
+        const p = M.punti[dovuto];
         B.muovi(p[1], p[2], bottone);
-        M.i++;
       }
       if (M.i >= M.punti.length) {
         if (bottone) B.bottone(false);
         M.finita = true;
         return;
       }
-      setTimeout(passo, 0);
+      setTimeout(passo, 1);
     };
-    setTimeout(passo, 0);
+    setTimeout(passo, 1);
     return true;
   };
   B.finita = function () { return !!(B.mano && B.mano.finita); };
@@ -2164,6 +2199,81 @@ def misura(a):
         verbale["fattore_vetro"] = [round(kx, 4), round(ky, 4)]
         inf("il vetro e' %.3f× la tela: la mano si genera in TELA e si "
             "converte, o si misurerebbe la velocita' sbagliata" % kx)
+
+        # ── ⛔⛔ LO SCORRIMENTO DELLA MARCA, misurato sui PIXEL VERI ──────
+        #
+        # ⛔⛔ SENZA QUESTO PASSO NON SI LEGGE UNA MARCA, e non e' un'ipotesi:
+        #     `[M]` 14 agosto 2026, `04-b30`, primo giro vero: **0 marche su
+        #     966** con la catena, la scena e il lettore tutti sani.
+        #     `[M]` 22 agosto 2026, QUESTO banco, primo giro vero: **0 eco su
+        #     820** — lo stesso rosso, ripreso pari pari perche' avevo saltato
+        #     il passo credendolo un dettaglio di A10.
+        #
+        #     `leggi_celle` gira con `ricerca=0` **apposta**: le 144 celle sono
+        #     gia' campionate, e cercare uno scorrimento su un'immagine
+        #     sintetica non vorrebbe dire niente.  ⇒ Lo scorrimento vero si
+        #     misura UNA VOLTA, sui pixel veri, e si passa al campionatore.
+        # ⭐ E la stessa regione cruda paga un secondo controllo: le celle di
+        #    JavaScript contro quelle di numpy.  Se differiscono, il lettore
+        #    certificato sta leggendo un'immagine che il banco non ha
+        #    campionato come lui, e ogni «marca letta» sarebbe un caso.
+        log("LO SCORRIMENTO DELLA MARCA — ⛔ misurato sui pixel VERI")
+        mm = carica("marca", os.path.join(QUI, "03-marca.py"))
+        verbale["scorrimento"] = [0, 0]
+        verbale["campionamento"] = []
+        np = mm.np_o_muori("08-b67: lo scorrimento sui pixel veri")
+        rc = {}
+        for tentativo in range(3):
+            palco.valuta("window.__B67.crudi_voluti = 4, "
+                         "window.__B67.crudi = [], true", attendi=False)
+            time.sleep(2.0)
+            rc = _ritira(palco) or {}
+            crudi = rc.get("crudi") or []
+            trovata = any(mm.leggi_marca(
+                np.frombuffer(base64.b64decode(c["b64"]),
+                              dtype=np.uint8).reshape(c["a"], c["l"], 3),
+                ricerca=3).get("c_e") for c in crudi)
+            if trovata or tentativo == 2:
+                break
+            # ⛔ NON si insiste a leggere: si toglie la CAUSA e si ridichiara.
+            dub("⚠ la marca non e' a (0,0) in scala 1:1 — di solito e' la "
+                "PANORAMICA di GNOME, che mostra la scena come miniatura.  "
+                "Batto «Escape» sul desktop remoto e riprovo (%d/3)"
+                % (tentativo + 1))
+            palco.valuta("window.__B67.tasto('Escape','Escape')", attendi=False)
+            time.sleep(3.0)
+        for cr in (rc.get("crudi") or []):
+            grezzo = base64.b64decode(cr["b64"])
+            img = np.frombuffer(grezzo, dtype=np.uint8).reshape(cr["a"], cr["l"], 3)
+            vero = mm.leggi_marca(img, ricerca=3)
+            yl = (img[:, :, :3].astype(np.float64) @ mm.PESI_LUMA) / 255.0
+            celle_np = mm._celle(yl, mm.GEOMETRIA, 0, 0) * 255.0
+            scarto = max(abs(float(u) - float(z))
+                         for u, z in zip(celle_np, cr["celle"]))
+            verbale["campionamento"].append(
+                {"regione": [cr.get("ox"), cr.get("oy")],
+                 "letta": vero.get("c_e"), "perche": vero.get("perche"),
+                 "contrasto": vero.get("contrasto"),
+                 "scorrimento_provato": vero.get("scorrimento_provato"),
+                 "scarto_celle_su_255": round(scarto, 4)})
+            if vero.get("c_e") and cr.get("oy") == 0:
+                verbale["scorrimento"] = vero["scorrimento_provato"]
+        for x in verbale["campionamento"]:
+            (ok if x["letta"] else ko)(
+                "regione %s: marca %s · scorrimento %s · contrasto %s · JS "
+                "contro numpy %.3f su 255%s"
+                % (x["regione"], "LETTA" if x["letta"] else "NO",
+                   x["scorrimento_provato"], x["contrasto"],
+                   x["scarto_celle_su_255"],
+                   "" if x["letta"] else " — %s" % str(x["perche"])[:160]))
+        if not verbale["campionamento"]:
+            ko("⛔ NESSUNA regione cruda e' uscita dalla pagina: non ho potuto "
+               "misurare lo scorrimento, e senza si leggono ZERO marche")
+        palco.valuta("window.__B67.crudi_voluti = 0, window.__B67.scorrimento = "
+                     "%s, true" % json.dumps(verbale["scorrimento"]),
+                     attendi=False)
+        inf("scorrimento in vigore per il campionamento: %s"
+            % verbale["scorrimento"])
 
         punti = traiettoria(a.secondi, a.passo_ms, tela, seme=a.seme)
         verbale["punti_previsti"] = len(punti)

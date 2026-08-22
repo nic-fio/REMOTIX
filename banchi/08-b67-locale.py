@@ -207,13 +207,37 @@ def giudica(r, velocita_px_s, barra_px):
            "saltati): NON HO NIENTE DA GIUDICARE.  ⚠ Non e' «l'anello locale "
            "e' zero»" % (len(c), r["letture"], r["rifiuti"], r["saltati"]))
         return USCITA_NIENTE_DA_GIUDICARE
-    scena = [(x["eco_disegnato_us"] - x["eco_us"]) / 1000.0 for x in c
-             if x["eco_disegnato_us"] >= x["eco_us"]]
+    # ⛔⛔ I TRE TRATTI SI CALCOLANO SUGLI STESSI CAMPIONI, e la prima stesura
+    #     NO — trovato il 22 agosto 2026, primo giro vero.
+    #
+    #     Filtrava `eco_disegnato_us >= eco_us` **solo** per il tratto 1 e
+    #     lasciava passare tutto agli altri due.  ⇒ `[M]` la scena diceva 7,29
+    #     ms, il compositore 20,78 e l'anello **11,71** — cioe' un totale piu'
+    #     PICCOLO delle sue due parti, che e' impossibile.  ⛔ Non era il
+    #     prodotto: erano tre denominatori diversi sotto la stessa tabella, ed
+    #     e' la forma di `LEZIONI.md` §1.9 (una lettura negata non e' una
+    #     lettura che dice zero).
+    #
+    # ⇒ ⭐ Un solo setaccio, applicato una volta, e i buttati SI CONTANO.
+    buoni = [x for x in c
+             if x["eco_disegnato_us"] >= x["eco_us"]
+             and x["presentato_us"] >= x["eco_disegnato_us"]]
+    buttati = len(c) - len(buoni)
+    if len(buoni) < 10:
+        ko("⛔ %d eco chiusi su %d passano il setaccio (un disegno non puo' "
+           "precedere l'evento che lo causa, ne' una presentazione il suo "
+           "disegno): NON HO NIENTE DA GIUDICARE" % (len(buoni), len(c)))
+        return USCITA_NIENTE_DA_GIUDICARE
+    c = buoni
+    scena = [(x["eco_disegnato_us"] - x["eco_us"]) / 1000.0 for x in c]
     comp = [(x["presentato_us"] - x["eco_disegnato_us"]) / 1000.0 for x in c]
     anello = [(x["presentato_us"] - x["eco_us"]) / 1000.0 for x in c]
-    inf("n = %d eco chiusi (su %d letture · %d rifiutate dal seqlock · %d "
-        "saltati fra due letture)"
-        % (len(c), r["letture"], r["rifiuti"], r["saltati"]))
+    inf("n = %d eco chiusi e BUONI (su %d chiusi · %d buttati dal setaccio · "
+        "%d letture · %d rifiutate dal seqlock · %d saltati fra due letture)"
+        % (len(c), len(c) + buttati, buttati, r["letture"], r["rifiuti"],
+           r["saltati"]))
+    inf("  ⛔ e i tre tratti qui sotto sono sugli STESSI %d campioni: 1 + 2 = 3 "
+        "campione per campione" % len(c))
     inf("  1. la SCENA        eco ricevuto → dipinto        %.2f ms mediani "
         "(p95 %.2f)" % (q(scena, .5) or 0, q(scena, .95) or 0))
     inf("  2. il COMPOSITORE  dipinto → PRESENTATO          %.2f ms mediani "
@@ -250,7 +274,13 @@ def main():
                    help="la velocita' della mano dell'utente, [M] 3 400 px/s")
     p.add_argument("--barra", type=int, default=720)
     p.add_argument("--fuori", default="")
+    p.add_argument("--verbale", default="",
+                   help="rigiudica un verbale gia' raccolto, "
+                        "senza toccare la macchina")
     a = p.parse_args()
+    if a.verbale:
+        with open(a.verbale) as f:
+            return giudica(json.load(f), a.velocita, a.barra)
     percorso = a.shm if a.shm.startswith("/") else "/dev/shm/" + a.shm
     if not os.path.exists(percorso):
         ko("⛔ «%s» non esiste: la scena non e' mai partita, o ha un altro "
