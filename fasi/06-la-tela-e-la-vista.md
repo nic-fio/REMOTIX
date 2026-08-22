@@ -118,7 +118,7 @@ utente**, e ogni sottofase che tocca un desktop vero se ne porta uno suo.*
 
 ⛔ Cinque sessioni grafiche e cinque codificatori sullo stesso iGPU **spostano i millisecondi**. ⇒
 Ogni misura di tempo porta accanto il **carico** (`uptime`), e i numeri che contano — il
-ridimensionamento a caldo, clic → fotogramma, l'accesso — **si ripetono a banchi fermi** prima di
+la tela girata al palco, clic → fotogramma, l'accesso — **si ripetono a banchi fermi** prima di
 essere dichiarati. Un numero preso sotto carico e non dichiarato tale è un numero falso.
 
 ### Le trappole già pagate, che non si ripagano
@@ -314,7 +314,7 @@ banchi fermi** prima di diventare i numeri della fase.
 | tela concordata all'attacco | la misura chiesta, lati pari | **1264×800**, tre giri su tre | 6.1 |
 | riattacco a misura diversa | `SESSIONE` concede **quella del palco** (I4) | **1264×800** + riga `RIPIEGO DICHIARATO (§4.5)` | 6.1 |
 | fotogrammi scartati per misura | **0** | **0** in tutti i giri di tutte le sottofasi | 6.1 · 6.3 |
-| ridimensionamento a caldo | ~6 ms (`[M]` 15 ago) | **5 ms** · **4 ms** di mediana su 9 cambi (3-13) | 6.1 · 6.3 |
+| **la tela girata al palco** *(⛔ era etichettata «ridimensionamento a caldo»: vedi §5.14)* | ~6 ms (`[M]` 15 ago) | **5 ms** · **4 ms** di mediana su 9 cambi (3-13) | 6.1 · 6.3 |
 | `SESSIONE` → primo fotogramma, palco **da montare** | ~311 ms (`[M]` 15 ago) | **335 ms** | 6.3 |
 | ⭐ idem, palco **già in piedi** (I4) | — | **11 · 13 · 17 · 24 · 28 · 37 · 106 ms** | 6.3 |
 | giro intero `ADATTA_TELA`→`TELA` lato server | — | **40 ms** (31-60); Mutter ne prende **32** | 6.3 |
@@ -456,7 +456,7 @@ e cinque codificatori** sullo stesso iGPU.*
 | ⭐ **A · il trascinamento del bordo** | **0 rotti su 18** | ⭐ **0 su 18** — la 1ª richiesta `NON_ORA` **subito**, la 2ª `ADATTATA`, tela finale = quella della **seconda** in **31,7 ms** di mediana (23,8-45,3) · **0** fuori misura · **0** scartati · ⛔ **nessuna attesa dei 3 s**. E **0 su 10** anche a 5 ms di distanza, e **0 su 10** sotto carico CPU **10,9** |
 | ⭐ **B · il clic tenuto giù** | il rilascio arriva, e i clic del **secondo giro** arrivano tutti | ⭐ registro: *«RILASCIATI 2 fra tasti e pulsanti PRIMA di ridimensionare»* · e nel secondo giro, **senza riaccendere il server**, il testimone vede **tutti e nove gli atti, clic compreso** |
 | ⭐ **C · la tastiera che comanda** | **`1a`** | ⭐ **`1a`**, con la catena intera nel registro: `§5-bis.7 «de» chiesta` → `tastiera TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
-| ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | ridimensionamento a caldo **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
+| ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | la tela girata al palco **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
 
 ⭐ **E il controllo positivo ha reso dove contava**: spenta la riga di `figlio.c:3964` e ricompilato,
 il caso del clic torna **DIFETTO_VIVO** — nel secondo giro **non arriva più nessun bottone**, solo i
@@ -931,7 +931,7 @@ dai registri che restano, **a macchina ferma**, con gli attrezzi riparati:
 
 | | `[M]` 21 agosto, dagli attrezzi riparati |
 |---|---|
-| ridimensionamento a caldo | **4,0 ms** (0-18, n=30) |
+| **la tela girata al palco** | **4,0 ms** (0-18, n=30) |
 | Mutter | **35,0 ms** (29-45, n=20) |
 | giro intero lato server, `ADATTATA` | **43,5 ms** (38-57, n=20) — contro i 44,5 scritti: **finestra vicina, non la stessa** |
 | `NON_ORA` | **6,0 ms** (5-7, n=10) — ⛔ e prima stava sotto la stessa etichetta dell'`ADATTATA`, che è la forma E2 |
@@ -1170,7 +1170,7 @@ prima. Carico 0,30-0,48.
 
 | | §4.8 (17 ago) | §5.6 (dai superstiti) | ⭐ **giro nuovo, 22 ago** |
 |---|---|---|---|
-| ① ridimensionamento a caldo | 4 ms (n=10) | 4,0 (n=30) | **6,0 ms** (0-21, **n=27**) |
+| ① **la tela girata al palco** | 4 ms (n=10) | 4,0 (n=30) | **6,0 ms** (0-21, **n=27**) |
 | ② Mutter | 39,5 ms | 35,0 (n=20) | **32,0 ms** (15-49, n=27) |
 | ③ palco → spedita | — | — | **4,0 ms** (3-39, n=28) |
 | ④ giro intero, `ADATTATA` | 44,5 · 10/10 | 43,5 (n=20) | **42,0 ms** (25-59, n=27) · **27/27** |
@@ -1460,6 +1460,48 @@ un browser in mano.
 | ⛔ le **due strade** con lo stesso numero | sopra: due righe e due stati sotto lo stesso fatto, in gara |
 | ⛔ il **client vivo tiene il posto** | fino alla mezz'ora dell'inattività — misurato ≥ 745 s |
 | ⏳ `[?]` **il desktop immortale** | `presenza_segna()` è chiamata **da un posto solo**, quello che riceve l'input ⇒ chi si attacca e **non tocca niente** non entra fra i presenti e **l'orologio dell'abbandono non parte**. Se è vero, ogni banco che si attacca senza digitare lascia un desktop da **477 MB** che non muore mai — ed è così che una macchina con otto banchi si riempie. ⛔ **È una lettura del codice, non una misura**: il giro che doveva provarla è saltato |
+
+### 5.14 · ⛔ 22 agosto — **un'etichetta sbagliata ha fatto credere all'utente che una funzione tolta fosse tornata**
+
+> *«Avevo già detto che il ridimensionamento dinamico era fuori dal progetto, e tu lo hai
+> reintrodotto.»* — l'utente, leggendo un rapporto del coordinatore.
+
+⭐ **Nel prodotto non è tornato**, verificato: il codice lo dichiara uscito in **otto punti**
+(*«uscito»*, *«il fondo non c'è più»*, *«qui non parte»*), e il pezzo è stato **tolto**, non messo
+dietro un interruttore. L'unica cosa che accade ridimensionando la finestra è che **l'immagine si
+riscala**, che è il comportamento approvato.
+
+⛔ **Ma il NOME è tornato**, e nei rapporti al posto peggiore: la prima delle quattro latenze di §5.6
+e §5.9 era etichettata **«ridimensionamento a caldo»** e misura tutt'altro — il tempo fra la
+richiesta **girata al palco** e la richiesta **arrivata al produttore**, sul cammino di `ADATTA_TELA`,
+cioè quello che ogni client percorre **attaccandosi**. Una cosa che c'è, e deve esserci.
+
+⇒ Chi leggeva *«ridimensionamento a caldo: 6 ms»* concludeva che la funzione fosse tornata.
+
+⚠ **Ed è la stessa forma di difetto che questa notte ha corretto sei volte nei banchi** — *un nome
+che promette una cosa e ne dice un'altra* — commessa dal coordinatore **nei documenti**. ⛔ Che sia
+un'etichetta e non del codice non la rende meno grave: **i documenti sono quel che resta**, e un
+nome sbagliato in una tabella di misure sopravvive a tutti noi.
+
+⭐ **E a trovarla è stato l'utente leggendo, non un banco.** Nessuno dei controlli automatici poteva
+vederla: nessun banco confronta il **nome** di una misura con quel che la misura fa.
+
+⇒ **Corretta ovunque**: nel banco (`06-b35-tempi.py`, col racconto accanto) e nelle tre tabelle di
+questo documento. La misura si chiama adesso **«la tela girata al palco»**.
+
+#### ⭐ E il vocabolario, dato dall'utente
+
+> *«Si chiama **re-scaling**.»*
+
+⇒ **Sono due cose diverse e vanno chiamate con due nomi diversi**, sempre:
+
+| | |
+|---|---|
+| ⛔ **ridimensionamento dinamico** | il desktop remoto **cambia misura** mentre l'utente trascina il bordo. **Fuori dal progetto dal 17 agosto**, e non si riapre |
+| ⭐ **re-scaling** | l'immagine si **riscala** dentro la finestra, e **le finestre del desktop non si muovono**. È quel che il prodotto fa, ed è approvato |
+
+⚠ Chiunque scriva «ridimensionamento» senza specificare quale dei due **sta per rifare questo
+errore**.
 
 ## 6 · Le decisioni prodotte
 

@@ -303,7 +303,27 @@ def conta(giro, tetto, dettaglio):
     #    `LEZIONI.md` §1.20 alla lettera, dentro l'attrezzo delle latenze.
     vuote = []
 
-    # 1 · il ridimensionamento a caldo, dentro il nostro server.
+    # 1 · LA TELA GIRATA AL PALCO, dentro il nostro server.
+    #
+    # ⛔⛔ E QUESTA MISURA SI CHIAMAVA «IL RIDIMENSIONAMENTO A CALDO» — 22 agosto
+    #     2026, e il nome era falso da cinque giorni.
+    #
+    #     Il ridimensionamento a caldo e' USCITO dal prodotto il 17 agosto
+    #     (`DECISIONI.md` §5.1-bis, decisione dell'utente: «non voglio mettere
+    #     delle eccezioni nel progetto»).  ⚠ Questa misura pero' e' rimasta, con
+    #     il nome di prima — perche' misura un'ALTRA cosa che c'e' ancora e deve
+    #     esserci: il tempo fra la richiesta girata al palco e la richiesta
+    #     arrivata al produttore, sul cammino di `ADATTA_TELA` (§7.1), cioe'
+    #     quello che ogni client percorre quando si attacca.
+    #
+    # ⛔ Chi leggeva la tabella dei tempi vedeva «ridimensionamento a caldo: 6 ms»
+    #    e concludeva che la funzione fosse tornata.  ⭐ E' stato l'UTENTE ad
+    #    accorgersene, leggendo un rapporto — non un banco.
+    #
+    # ⇒ E' la stessa forma di difetto che questo banco ha trovato tre volte in
+    #   una notte: UN NOME CHE PROMETTE UNA COSA E NE DICE UN'ALTRA.  Che sia
+    #   toccata a un'etichetta dei nostri documenti, e non al codice, non la
+    #   rende meno grave: i documenti sono quel che resta.
     # ⛔⛔ ACCOPPIATO PER CHIAVE, NON PER ORDINE — rilievo R14, 22 agosto 2026.
     #     Una `GIRATA` che non arriva mai al produttore (il palco caduto, o la
     #     richiesta rifiutata da `cattura_ridimensiona()`) consumava la `CHIESTA`
