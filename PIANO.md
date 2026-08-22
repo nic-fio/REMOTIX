@@ -1436,16 +1436,17 @@ non ci rallenterà più».*
 
 ### ⛔ I difetti veri, aperti
 
-1. ⛔⛔ **Il ritardo dell'audio sul video, ~400 ms** — confermato dall'orecchio dell'utente.
-   ⭐ **Diagnosticato, e la prima diagnosi era sbagliata**: non è (solo) il cuscino di 250 ms.
-   `[M]` **la coda della pagina non è un cuscino, è un serbatoio a senso unico** — l'orologio
-   avanzava per ogni blocco *arrivato*, mai col tempo che passa, quindi **ogni datagram perduto
-   toglieva 20 ms di cuscino per sempre**. ⇒ Curato con l'**ancora all'`istante` del server**.
-   ⏳ Restano: la **finestra di riordino** di §6.3 (si scarta quel che è più vecchio di quel che è
-   *arrivato*, invece che di quel che è *suonato*: a ±2 ms di jitter la purezza crolla a 0,175), la
-   **deriva fra gli orologi** (0,7-1,4 ms/s, porta al tetto dei 600), e ⛔ **la misura vera della
-   distanza audio↔video**, che nessun banco sapeva prendere e che adesso è a metà (`aoff` c'è,
-   `voff` in scrittura).
+1. ✅ **IL RITARDO DELL'AUDIO SUL VIDEO — CHIUSO il 22 agosto dal giudizio dell'utente.**
+   *«Le 4 prove che ho eseguito prima davano un audio OK»* (Linux Chrome, Linux Firefox, Windows
+   Chrome, Android Chrome) e, alla domanda diretta, *«ho già scritto prima che il ritardo
+   audio/video è ok»*. ⇒ 📖 `fasi/07-audio-e-appunti.md` §9.8.
+   ⭐ **Che cosa c'è stato in mezzo**, fra il *«te lo confermo»* del 21 sera e questo: l'**ancora
+   all'`istante` del server** (la coda non è più un serbatoio a senso unico), la **tirata che si
+   riapre a ogni riancoraggio** (la coda non si gonfia più a metà sessione), la cura della **spirale
+   delle chiavi** (l'audio non muore più quando la linea stringe), e il **primo clic** che adesso
+   accende davvero il suono.
+   ⚠ **Resta da riprendere la misura `AV`** — non per decidere se il difetto c'è, che l'ha deciso
+   l'orecchio, ma per **accorgersi se un giorno torna**.
 2. ⛔⛔ **Il server butta i datagram dell'audio mentre gli stream del video non perdono niente** —
    `[M]` **2 200 scartati** in una sessione, con la causa scritta nel registro (il quanto del pacer,
    poi `cwnd_left = 0`), e la pagina che perde **il 9,43 %** dell'audio, il **47 %** in una finestra
