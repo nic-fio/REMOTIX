@@ -201,7 +201,7 @@ nello stesso giro, o il conto non cala mai»*).*
 |---|---|---|---|
 | `06-b33-*` (6.1) | terreno `provai6`/7781 · **testimone Wayland** e `gnome-terminal` **aperti prima** dello stacco · cliente che stacca, riattacca a misura diversa e **solo allora** batte, punta e clicca | 7 | **5 guasti** in copia di `input.c`: G2→C2 · G3→R1,R2 · G4→C6 · G5→C3,C4 · ⭐ **G1 non accende niente**, e vedi §5 |
 | `06-b34-*` (6.2) | terreno `provat6`/7721 · ⭐ **l'atteso lo calcola il prodotto** (`tastiera_posizioni_per()` chiamata da fuori) · testimone che registra **il carattere**, non il conteggio | 6 | **2 guasti**: «la keymap si legge una volta sola» → rosso sul caso dichiarato · «i tasti se ne vanno col dispositivo» → ⛔ **verde lo stesso**, e vedi §5 |
-| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | ⛔ ~~5 guasti su 5~~ → **3 confermati · 1 SMENTITO (G3) · 1 NON DISCRIMINANTE (G4)**, rifatto il 21 agosto col **metro sano** e la marca al posto giusto. 📖 §5.8 |
+| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | ⛔ ~~5 guasti su 5~~ → ⭐ **4 confermati · 0 smentiti · 1 NON DISCRIMINANTE (G4)**, `[M]` 22 agosto, carico 0,49-1,12, col **metro sano**, la marca al posto giusto e la regola di G3 corretta. 📖 §5.8 e §5.9 |
 | `06-b36-*` (6.4) | `rcp.c` **nudo** con palco finto **più** il canale di input e **il registro catturato** — la metà che `04-b31` non guarda | **23** | **19 guasti su 19**, ciascuno rosso **nel caso dichiarato prima** |
 | `06-b37-*` (6.5) | raccoglitore HTTP con sonda dentro la pagina, **sui due motori** (niente CDP, che è solo Chrome) · verità esterna `xwininfo` · verdetti **sui pixel** (`ffmpeg x11grab`) | 7 scene | lo zoom verificato su `devicePixelRatio` **e non sul tasto premuto**; ogni zero col suo denominatore (20 punti · 2 523 colonne · 4 resize) |
 | `06-b38-*` (6.6) | il cliente di prova e **l'arbitro** che esercitano la tela; mutazioni dell'arbitro stesso | **49** registrazioni | **49 accusate sul byte dichiarato prima** · 4 esiti coperti · **19 mutazioni su 19** viste |
@@ -1099,9 +1099,9 @@ G4  ⛔ NON-DISCRIMINANTE    la regola è vera ANCHE sul sano
 ⇒ CONFERMATI 3 · SMENTITI 1 · NON DISCRIMINANTI 1
 ```
 
-- **G3** è il difetto previsto: la terza clausola era vera **gratis** perché la marca scaduta rendeva
-  vuota la finestra del registro. Con la finestra giusta esce **1**. ⏳ **Va deciso se correggere
-  l'atteso o completare il guasto** — e non lo decide chi ha trovato il difetto;
+- **G3** è il difetto previsto: la terza clausola era vera **gratis** perché la marca scaduta
+  rendeva vuota la finestra del registro. ✅ **Chiuso il 22 agosto, e la strada era una sola**: vedi
+  §5.9;
 - **G4**: §5.2 lo diceva già a parole («atteso verde per costruzione»); ⭐ adesso **lo dice il banco**,
   invece di contarlo fra i confermati;
 - ⭐ **e G1 distingue ancora** col carico acceso (`regola sul sano = False`), che era il dubbio del
@@ -1126,6 +1126,70 @@ l'unico numero che sposta una latenza.
 **solo** perché le due metà erano identiche **byte per byte**. ⇒ Curato: si cancella prima, si
 raccoglie solo quel che è **più nuovo di una marca presa un istante prima**, e **zero giri raccolti
 = ci si ferma**.
+
+### 5.9 · ⭐⭐ 22 agosto 2026 — **G3 chiuso, e i numeri «non ricalcolabili» rifatti da capo**
+
+#### ⛔ La terza clausola di G3 non era sbagliata di uno: **era irraggiungibile da un giro che misura**
+
+`tela_nuova_dal_palco == 0` poteva diventare vero **solo se lo strumento non aveva guardato** — un
+giro senza fotogrammi non si misura affatto (esce 5), e un giro con almeno un fotogramma ha
+**sempre** la riga di nascita. ⇒ ⛔ **Era la macchina del falso verde scritta dentro l'atteso**, e
+c'era **dal primo giorno del banco**: il difetto della marca scaduta (§5.6) non la creava, la
+**realizzava**.
+
+`[M]` La riga «TELA NUOVA DAL PALCO» del giro di G3 è la **riconciliazione di nascita**, e **precede**
+il primo `ADATTA_TELA` — riprodotto due volte, a otto ore e a carichi diversi: **476 ms prima** il
+21 agosto (carico 2,78), **461 ms prima** il 22 (carico ~0,7). Il figlio nasce al ripiego
+1920×1080 e il palco **nasce** — non si ridimensiona — a 1280×800.
+
+⭐ **E «completare il guasto» è ESCLUSO con la prova, non scartato a gusto**: quella riga non passa da
+`cattura_ridimensiona()`, quindi spegnerla vorrebbe dire un secondo guasto sotto un nome solo (che
+l'innestatore **vieta**), nel punto che è già di G5, e toglierebbe a G3 la scena. ⇒ **Le due strade
+non portavano a lavori diversi: una delle due non esisteva.**
+
+⭐⭐ **E la distinzione che la clausola serve REGGE**, che era la domanda vera: senza di essa G3 e G1
+avrebbero la **stessa** regola, e il controllo positivo direbbe che il banco vede *un* problema
+invece di *quel* problema. `[M]` stessa ora: **G1 = 8** (il palco obbedisce, la risposta si perde) ·
+**G3 = 1** (al palco non arriva niente) · **SANO = 10**.
+
+⭐ **E il `== 1` cade dalla parte giusta**: uno strumento cieco conta 0 ⇒ regola **falsa** ⇒ **rosso**.
+Il vecchio `== 0` cadeva dalla parte del verde. ⇒ **Ogni modo di fallire della regola nuova è rosso**
+— ed è la forma che `LEZIONI.md` §1.20 chiede.
+
+#### ⭐ Il numero vero: **4 confermati · 0 smentiti · 1 non discriminante**
+
+`[M]` 22 agosto, carico **0,49-1,12** (⚠ **la contesa non c'è più**: il 2,78 di ieri notte era in
+buona parte del banco stesso — va letto come *«a macchina quasi ferma»*), sorgenti di prodotto
+**identici byte per byte** al deposito.
+
+#### ⭐⭐ E i numeri **D** di §4.8, dichiarati «non ricalcolabili», sono stati **RIFATTI**
+
+⛔ Non ricostruiti dai file vecchi — *quelli sono la trappola da cui nasce il problema* — ma presi da
+**tre giri nuovi** sul codice sano, con gli attrezzi riparati e il loro controllo positivo superato
+prima. Carico 0,30-0,48.
+
+| | §4.8 (17 ago) | §5.6 (dai superstiti) | ⭐ **giro nuovo, 22 ago** |
+|---|---|---|---|
+| ① ridimensionamento a caldo | 4 ms (n=10) | 4,0 (n=30) | **6,0 ms** (0-21, **n=27**) |
+| ② Mutter | 39,5 ms | 35,0 (n=20) | **32,0 ms** (15-49, n=27) |
+| ③ palco → spedita | — | — | **4,0 ms** (3-39, n=28) |
+| ④ giro intero, `ADATTATA` | 44,5 · 10/10 | 43,5 (n=20) | **42,0 ms** (25-59, n=27) · **27/27** |
+| `SESSIONE` → 1° fotogramma | 25 ms · 203-220 da montare | — | **14 e 26 ms** · **141 ms** da montare |
+| scartati · fuori misura | 0 · 0 | — | **0 · 0** (30/30 `ADATTATA`, 9/9 primo alla misura nuova = chiave) |
+
+⇒ ⭐ **Le tre latenze del riquadro D si riconfermano tutte entro pochi millisecondi, con n quasi
+triplo.** Il buco di §4.8 si chiude: quel riquadro non è più un numero perduto.
+
+⭐ **E la cura di `registro.c` regge anche qui**: 3 righe senza marca su 3 242, **nessuna nostra**.
+
+#### ⏳ E due cose dichiarate invece che curate
+
+- ⚠ **il valore «1» è legato alla scena, e nessuno l'aveva detto**: esiste perché il figlio nasce al
+  ripiego 1920×1080 mentre la sessione del giro è 1280×800. Una scena che aprisse **proprio** a
+  1920×1080 non avrebbe la riga di nascita, e l'atteso non varrebbe. ⇒ Adesso l'atteso **nomina il
+  giro e la ragione**, invece di portare un numero nudo;
+- ⚠ `parlantina-c-e` dà un **falso rosso sul primo giro dopo un `accendi`**: legge il registro intero,
+  che `accendi` azzera. ⛔ Falso rosso, quindi direzione sicura — **dichiarato, non curato**.
 
 ## 6 · Le decisioni prodotte
 
@@ -1162,7 +1226,7 @@ raccoglie solo quel che è **più nuovo di una marca presa un istante prima**, e
 | ✅ ~~**la cura del clic non è mai stata verificata dove vive**~~ | verificata il 17 agosto su un albero solo: il rilascio è dichiarato nel registro e **tutti i clic del secondo giro arrivano**, ⭐ col controllo positivo che riproduce il difetto **a comando** |
 | ✅ ~~**tutti i millisecondi sono sotto carico**~~ | ripresi a macchina ferma (load 0,07-0,13): §4.8 |
 | ⛔ **tre attesi di `06-b33` sono scritti per il mondo COL DIFETTO VIVO** | T3, R1 e R2 restano **rossi con la cura** e erano **verdi senza**: con il tasto già rilasciato prima del ricambio, le righe di dichiarazione non si scrivono perché non c'è più niente di premuto. ⇒ **Va corretto l'atteso del banco, non il prodotto** — ed è un banco nato ieri, quindi il difetto è di ieri |
-| ⚠ **due attrezzi del banco 6.3 si rompono** | `06-b35-lancia.sh tempi` (`ValueError`) e `06-b35-terreno.sh:395` (`integer expression expected`): i tempi della verifica sono stati calcolati **a mano dal registro** |
+| ✅ ~~⚠ **due attrezzi del banco 6.3 si rompono**~~ | **CURATI il 21 agosto** e certificati contro un calcolo a mano in `awk` (235 campioni, tutti coincidenti). ⭐ La causa non era negli attrezzi: era il **registro che si intrecciava** fra padre e figlio. 📖 §5.6 |
 
 ### 7.1-bis · ⭐⭐ 21 agosto 2026 — **la catena completa del clic che muore**, letta nel sorgente di Mutter
 

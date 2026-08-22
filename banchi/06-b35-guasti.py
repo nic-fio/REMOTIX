@@ -51,6 +51,58 @@ import sys
 #   distinguono un guasto dall'altro.  ⛔ Un banco corretto in silenzio dopo
 #   aver visto il risultato non e' piu' un controllo: e' una conferma.
 #
+# ===========================================================================
+# ⛔⭐ E LA TERZA CLAUSOLA DI G3 E' STATA CORRETTA DALLA MISURA — 22 agosto
+#     2026, dopo il primo giro col metro sano e la marca al posto giusto
+#     (`fasi/06` §5.8).
+# ===========================================================================
+#
+#     Pretendeva `tela_nuova_dal_palco == 0`.  ⛔ Col registro finalmente
+#     leggibile ne esce **1** — e quell'uno non e' un residuo del guasto: e' la
+#     RICONCILIAZIONE DI NASCITA.
+#
+#     `[M]` 21 agosto, giro G3, `certifica-G3-tela.txt` — la riga e' UNA sola:
+#         21:07:18.262 figlio ⭐⭐ TELA NUOVA DAL PALCO: 1920x1080 → 1280x800
+#     e il PRIMO `ADATTA_TELA` del giro parte alle **21:07:18.738**, mezzo
+#     secondo DOPO.  ⇒ Quella riga non puo' venire da `cattura_ridimensiona()`:
+#     viene dal figlio che nasce al ripiego `TELA_L x TELA_A` = 1920x1080
+#     (`src/main.c:112`, e `src/figlio.c:3239` lo dichiara come RIPIEGO) e che
+#     riceve il primo fotogramma alla tela di sessione, 1280x800.  La riga la
+#     scrive `figlio.c:6706` per QUALUNQUE fotogramma di misura diversa da
+#     `tela_l`/`tela_a` — richiesto o no.
+#
+# ⛔⛔ E il vecchio `== 0` era PEGGIO che sbagliato: era **irraggiungibile da un
+#      giro che misura davvero**.  Un giro senza nemmeno un fotogramma non si
+#      misura (esce 5, «IL PALCO, NON IL PRODOTTO»); un giro con almeno un
+#      fotogramma ha SEMPRE la riga di nascita.  ⇒ Quello zero poteva diventare
+#      vero **solo con lo strumento cieco** — cioe' era esattamente la macchina
+#      del falso verde smontata in §5.6, scritta dentro l'atteso.
+#      ⭐ Il `== 1` invece cade dalla parte giusta: uno strumento cieco conta 0,
+#      la regola diventa FALSA, e il caso esce ROSSO invece che verde.
+#
+# ⛔ E L'ALTRA STRADA E' ESCLUSA CON LA PROVA, non scartata a gusto.
+#    «Completare il guasto» perche' produca lo zero vorrebbe dire spegnere anche
+#    la riconciliazione di nascita — ma quella non passa da
+#    `cattura_ridimensiona()`: e' il palco che NASCE alla misura nuova.  ⇒ (a)
+#    sarebbe un secondo guasto sotto un nome solo, che le righe qui sotto
+#    vietano; (b) starebbe nel punto che e' gia' G5; (c) e toglierebbe a G3 la
+#    scena, perche' un giro senza fotogrammi non si misura affatto.
+#
+# ⭐ E LA DISTINZIONE CHE LA CLAUSOLA SERVE **RESTA IN PIEDI** — che era la
+#    domanda vera, non «quale numero scriviamo».  Senza terza clausola G3 e G1
+#    avrebbero la STESSA regola (`non_ora >= 6 and ms_mediano > 2500`), e il
+#    controllo positivo direbbe che il banco vede *un* problema invece di *quel*
+#    problema.  `[M]` 21 agosto, i tre giri della stessa ora:
+#        G1   tela_nuova_dal_palco = 8   il palco OBBEDISCE, la risposta si perde
+#        G3   tela_nuova_dal_palco = 1   al palco non arriva niente: solo la nascita
+#        SANO tela_nuova_dal_palco = 10  1 di nascita + 9 cambi su 10 richieste
+#    ⇒ Il numero separa G3 da G1 di sette unita' e dal sano di nove.
+#
+# ⚠ E il valore 1 e' legato ALLA SCENA, e va detto: vale per il giro «dieci», la
+#   cui tela di sessione e' 1280x800 ≠ 1920x1080.  Una scena che aprisse la
+#   sessione **proprio** a 1920x1080 non avrebbe riga di nascita e questo atteso
+#   non varrebbe: e' per questo che l'atteso di G3 nomina il giro.
+#
 # Ogni guasto: file · quel che si cerca · quel che si mette · l'ATTESO.
 # ⛔ La ricerca e' una stringa ESATTA e deve comparire **una volta sola**: una
 #    sostituzione che colpisce due punti innesta due guasti sotto un nome solo,
@@ -107,9 +159,18 @@ GUASTI = {
                  "\t\tregistro_dice(AREA, \"⛔ `pw_stream_update_params()` a %ux%u ha risposto %d (%s)\",",
         "atteso": "giro «dieci»: i 9 cambi ricevono TELA(RIFIUTATA, NON_ORA) al "
                   "fondo, ⭐ e nel registro NON compare **nessuna** riga «TELA "
-                  "NUOVA DAL PALCO» — che e' quel che distingue «il palco non ha "
-                  "obbedito» da «non gli e' stato chiesto»",
-        "regola": "non_ora >= 6 and ms_mediano > 2500 and tela_nuova_dal_palco == 0",
+                  "NUOVA DAL PALCO» **dopo il primo `ADATTA_TELA`** — che e' "
+                  "quel che distingue «il palco non ha obbedito» da «non gli e' "
+                  "stato chiesto».  ⛔⭐ ATTESO CORRETTO DALLA MISURA, 22 agosto "
+                  "2026: il conto giusto e' **1, non 0**, perche' ogni giro che "
+                  "misura porta la RICONCILIAZIONE DI NASCITA (il figlio nasce "
+                  "al ripiego 1920x1080 e il primo fotogramma arriva alla tela "
+                  "di sessione 1280x800), e quella riga precede di mezzo secondo "
+                  "il primo `ADATTA_TELA`.  ⇒ Lo zero era irraggiungibile da un "
+                  "giro vero e raggiungibile SOLO da uno strumento cieco.  Il "
+                  "blocco di commento in cima a questo file porta la misura, e "
+                  "il confronto: G1 = 8, G3 = 1, SANO = 10",
+        "regola": "non_ora >= 6 and ms_mediano > 2500 and tela_nuova_dal_palco == 1",
     },
     "G4": {
         "file": "cattura.c",

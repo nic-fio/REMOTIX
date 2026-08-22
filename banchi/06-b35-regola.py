@@ -159,6 +159,52 @@ def controllo():
         riga, _ = giudica(amb_g, "G1", pgu, amb_s)
         prova("regola rotta dichiarata", True, "REGOLA-ROTTA" in riga)
 
+        # ===================================================================
+        # ⛔⭐ LA REGOLA VERA DI G3 CADE DALLA PARTE GIUSTA — 22 agosto 2026.
+        #
+        #     La terza clausola era `tela_nuova_dal_palco == 0`, ed era **vera
+        #     esattamente quando lo strumento non aveva guardato**: uno zero e'
+        #     quel che lascia un registro illeggibile.  Adesso e' `== 1` — il
+        #     conto della sola riconciliazione di nascita — e questo controllo
+        #     pretende che i due casi si separino, invece di crederlo.
+        #     ⚠ Il file dei guasti e' QUELLO VERO, non un finto: se qualcuno
+        #     rimettesse lo `0`, questo controllo diventa rosso.
+        # ===================================================================
+        import pathlib
+        vero = str(pathlib.Path(__file__).with_name("06-b35-guasti.py"))
+        if os.path.exists(vero):
+            # il giro G3 come e' stato misurato il 21 agosto
+            g3 = {"adattate": 3, "non_ora": 7, "ms_mediano": 3003.35,
+                  "fotogrammi": 586, "tela_nuova_dal_palco": 1,
+                  "non_spediti": 0}
+            # lo STESSO giro, ma con lo strumento che non ha visto niente
+            cieco = dict(g3, tela_nuova_dal_palco=0)
+            # e il metro sano della stessa ora
+            sano21 = {"adattate": 10, "non_ora": 0, "ms_mediano": 47.45,
+                      "fotogrammi": 169, "tela_nuova_dal_palco": 10,
+                      "non_spediti": 0}
+            riga, _ = giudica(g3, "G3", vero, sano21)
+            prova("G3 sul giro VERO del 21 ago ⇒ CONFERMATO",
+                  True, "ATTESO-CONFERMATO" in riga)
+            riga, _ = giudica(cieco, "G3", vero, sano21)
+            prova("G3 con lo strumento CIECO (0) ⇒ NON confermato",
+                  False, "ATTESO-CONFERMATO" in riga)
+            # ⭐ e la terza clausola deve DISTINGUERE G3 da G1, se no i due
+            #    guasti hanno la stessa regola e il banco vede «un» problema.
+            g1 = {"adattate": 3, "non_ora": 7, "ms_mediano": 3014.15,
+                  "fotogrammi": 11, "tela_nuova_dal_palco": 8,
+                  "non_spediti": 7}
+            riga, _ = giudica(g1, "G3", vero, sano21)
+            prova("la regola di G3 sul giro di G1 ⇒ NON confermato",
+                  False, "ATTESO-CONFERMATO" in riga)
+            riga, _ = giudica(g3, "G1", vero, sano21)
+            prova("la regola di G1 sul giro di G3 ⇒ NON confermato",
+                  False, "ATTESO-CONFERMATO" in riga)
+        else:
+            print(f"    ⛔  06-b35-guasti.py non e' accanto a me ({vero}): "
+                  f"i quattro controlli su G3 NON sono stati fatti")
+            guai.append("guasti.py assente")
+
     print()
     if guai:
         print(f"⛔ CONTROLLO POSITIVO FALLITO su {len(guai)}: {guai}")
