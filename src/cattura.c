@@ -10,6 +10,7 @@
 #include <spa/utils/result.h>
 #include <drm_fourcc.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <time.h>
 
 #include "cursore.h"
@@ -195,6 +196,47 @@ struct Cattura
 	 *    ne serva uno. */
 	uint64_t misura_ultima_us;
 	guint64 misura_fatte, misura_saltate;
+	/* ⚠ Sulla scheda i pixel si guardano solo se il buffer si sa mappare: si
+	 *   dice una volta se non si e' potuto, e poi si tace. */
+	gboolean detta_misura_impossibile;
+
+	/* ------------------------------------------------------------------ *
+	 * ⭐⭐ LA RITENUTA — la cura del RILASCIO di `LEZIONI.md` §8
+	 * ------------------------------------------------------------------ *
+	 *
+	 * ⛔ IL FATTO: `can_reuse_pw_buffer` (dentro Mutter) si arrende quando manca
+	 *    `SPA_META_SyncTimeline`, e allora il produttore **riusa il buffer
+	 *    mentre VA-API lo sta ancora leggendo** `[R]`.  Il sintomo non e' un
+	 *    errore: sono **due schermate che si alternano**, ed e' il difetto da
+	 *    cui la caccia della fase 8 era partita dalla parte sbagliata.
+	 *
+	 * ⭐ LA CURA SCELTA, e la ragione sta scritta perche' le strade erano due:
+	 *    si **trattiene il `pw_buffer`** fino a lettura finita, e **non** si
+	 *    chiede la timeline.  Trattenere e' **nostro** e vale su ogni
+	 *    produttore — Mutter, KWin, wlroots — senza chiedere niente a nessuno
+	 *    (`LEZIONI.md` §1.25: *una cura si cerca dovunque valga*); la timeline
+	 *    dipende da quel che il produttore offre, e quando non c'e' **non c'e'
+	 *    nessun errore**: c'e' la schermata che si alterna.  ⇒ Sarebbe una cura
+	 *    che sparisce in silenzio, cioe' `LEZIONI.md` §1.8.
+	 *
+	 * ⚠ IL PREZZO, e si conta invece di sperarlo piccolo: **due buffer in meno**
+	 *   di quelli che il produttore ricicla — uno fermo nel posto e uno in mano
+	 *   a chi legge.  Per questo sulla strada della scheda se ne chiedono SEI e
+	 *   non quattro (`parametri_di_consumo`).
+	 *
+	 * ⛔ E il buffer si restituisce col lucchetto del ciclo di PipeWire preso,
+	 *    perche' chi lo rende sta su un ALTRO thread (quello di chi consuma) —
+	 *    mentre `su_processo` gira su quello di tempo reale, che il lucchetto ce
+	 *    l'ha gia'.  L'ordine e' sempre `ciclo → lucchetto`, mai il contrario.
+	 */
+	guint64 ritenuti;      /* quanti buffer sono stati trattenuti in tutto     */
+	guint64 ritenuti_resi; /* quanti sono tornati: la differenza e' quanti     */
+	                       /* ne abbiamo in mano adesso                        */
+	/* ⛔ Cambia ogni volta che PipeWire alloca o libera i buffer.  ⚠ Chi mette
+	 *    in cache l'importazione di un `fd` la deve guardare: i numeri di
+	 *    descrittore si riciclano, e una cache cieca punterebbe a un buffer
+	 *    morto senza nessun errore. */
+	uint64_t generazione_buffer;
 
 	/* --- ⭐ IL CANALE DEL CURSORE ---------------------------------------- *
 	 *
@@ -238,6 +280,35 @@ static CatturaBuffer buffer_da_spa(uint32_t tipo)
 	case SPA_DATA_MemId: return CATTURA_BUFFER_MEMID;
 	case SPA_DATA_DmaBuf: return CATTURA_BUFFER_DMABUF;
 	default: return CATTURA_BUFFER_IGNOTO;
+	}
+}
+
+/*
+ * ⭐ Il fourcc DRM che corrisponde al formato SPA — e serve **solo** sulla
+ *    strada della scheda, perche' un DMA-BUF si importa nominando il formato in
+ *    quel vocabolario e non in questo.
+ *
+ * ⛔ E LA CORRISPONDENZA SI SCRIVE PER ESTESO, invece di dire «tanto sono
+ *    quattro byte»: SPA nomina i formati **nell'ordine dei byte in memoria**
+ *    (`BGRx` = B, G, R, ignorato) e DRM li nomina come un intero **little
+ *    endian** (`XRGB8888` = 0xXXRRGGBB, che in memoria e' B, G, R, X).  ⇒ I due
+ *    nomi sono **rovesciati l'uno rispetto all'altro**, e chi li accoppia «a
+ *    occhio» scambia rosso e blu senza nessun errore — l'immagine c'e', ed e'
+ *    sbagliata.
+ *
+ * ⚠ Si dichiarano solo i quattro che questo modulo sa negoziare: uno zero di
+ *   ritorno vuol dire **«questo formato non lo so nominare»**, e chi chiama
+ *   scarta il fotogramma invece di passare a VA-API un fourcc inventato.
+ */
+static uint32_t drm_da_spa(uint32_t formato_spa)
+{
+	switch (formato_spa)
+	{
+	case SPA_VIDEO_FORMAT_BGRx: return DRM_FORMAT_XRGB8888;
+	case SPA_VIDEO_FORMAT_BGRA: return DRM_FORMAT_ARGB8888;
+	case SPA_VIDEO_FORMAT_RGBx: return DRM_FORMAT_XBGR8888;
+	case SPA_VIDEO_FORMAT_RGBA: return DRM_FORMAT_ABGR8888;
+	default: return 0;
 	}
 }
 
@@ -500,9 +571,24 @@ static uint32_t parametri_di_consumo(Cattura *cattura, struct spa_pod_builder *c
 	if (cattura->strada == CATTURA_STRADA_SCHEDA)
 		tipi = (1 << SPA_DATA_DmaBuf);
 
+	/* ⛔⭐ SEI BUFFER SULLA SCHEDA E QUATTRO IN MEMORIA, e la differenza e' il
+	 *     PREZZO DELLA RITENUTA, contato invece che sperato piccolo.
+	 *
+	 * Sulla strada della scheda noi **tratteniamo** i buffer finche' VA-API non
+	 * ha finito di leggerli (vedi il riquadro della RITENUTA): al massimo DUE
+	 * per volta — uno fermo nel posto e uno in mano a chi legge.  ⇒ Con quattro
+	 * il produttore ne avrebbe due, e su una raffica si fermerebbe ad aspettarci.
+	 * ⚠ In memoria invece si copia e si rende subito: quattro bastano, e sono
+	 *   quelli che Mutter usa da se' (`DECISIONI.md` §2.3-ter).
+	 * ⛔ E il numero e' un MINIMO chiesto, non un ordine: il produttore risponde
+	 *    quel che puo', e quanti ne abbia dati davvero lo dice
+	 *    `buffer_distinti` — che si conta, non si suppone. */
+	int quanti = cattura->strada == CATTURA_STRADA_SCHEDA ? 6 : 4;
+	int minimo = cattura->strada == CATTURA_STRADA_SCHEDA ? 4 : 2;
+
 	parametri[0] = spa_pod_builder_add_object(
 	    costruttore, SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_buffers,
-	    SPA_POD_CHOICE_RANGE_Int(4, 2, 8), SPA_PARAM_BUFFERS_dataType,
+	    SPA_POD_CHOICE_RANGE_Int(quanti, minimo, 8), SPA_PARAM_BUFFERS_dataType,
 	    SPA_POD_CHOICE_FLAGS_Int(tipi));
 
 	/*
@@ -801,6 +887,10 @@ static void su_processo(void *dati)
 	guint64 disponibili, byte;
 	guint i;
 	gboolean noto;
+	/* ⭐ La RITENUTA: quando questo diventa TRUE il buffer NON torna a PipeWire
+	 *    in fondo alla funzione — lo rendera' `cattura_fermo_libera()`, cioe' chi
+	 *    consuma, quando avra' finito di leggerlo.  Vedi il riquadro in cima. */
+	gboolean trattenuto = FALSE;
 
 	pacco = pw_stream_dequeue_buffer(cattura->flusso);
 	if (!pacco)
@@ -998,6 +1088,27 @@ static void su_processo(void *dati)
 		}
 		info.pixel = (const uint8_t *) piano->data + offset;
 	}
+	/* ⛔ E SULLA SCHEDA I DUE FATTI CHE SERVONO SONO IL DESCRITTORE E IL NOME
+	 *    DEL FORMATO: senza l'uno non c'e' niente da importare, senza l'altro si
+	 *    passerebbe a VA-API un fourcc inventato — e VA-API accetta e sbaglia
+	 *    (`LEZIONI.md` §1.8).  ⇒ Si scarta e SI CONTA, come per lo `stride == 0`.
+	 * ⚠ Un piano solo: il DMA-BUF di Mutter e' LINEAR e BGRx `[M]`, cioe' un
+	 *   piano.  Se un giorno ne arrivassero due, questo modulo non li sa
+	 *   descrivere e deve dirlo invece di consegnarne mezzo. */
+	else if (info.fd < 0 || drm_da_spa(cattura->formato.format) == 0
+	         || pacco->buffer->n_datas != 1)
+	{
+		cattura->conto.senza_pixel++;
+		if (cattura->conto.senza_pixel == 1)
+			registro_dice(AREA,
+			              "⛔ DMA-BUF SCARTATO: fd %d, formato «%s» (%u), %u piani.  Sulla "
+			              "strada della scheda servono un descrittore, un formato che si "
+			              "sappia NOMINARE in DRM, e un piano solo — ⚠ e questo NON e' «il "
+			              "produttore non consegna»: e' «non lo so descrivere»",
+			              info.fd, cattura_colore_nome(cattura->formato.format),
+			              cattura->formato.format, pacco->buffer->n_datas);
+		goto restituisci;
+	}
 
 	if (cattura->su_fotogramma)
 		cattura->su_fotogramma(&info, cattura->dati);
@@ -1039,12 +1150,60 @@ static void su_processo(void *dati)
 		if (cattura->posto_pieno)
 			cattura->sovrascritti++;
 
+		/* ⛔⭐ E IL BUFFER CHE STAVA NEL POSTO SI RENDE **ADESSO**, prima di
+		 *     sovrascriverlo: e' un buffer che nessuno ha consumato — vince il
+		 *     piu' recente — e se non tornasse indietro il produttore ne
+		 *     perderebbe uno a ogni fotogramma saltato.  ⚠ Siamo gia' sul thread
+		 *     di tempo reale, che il ciclo ce l'ha preso: qui si chiama la
+		 *     `pw_stream_queue_buffer` nuda e non `rendi_ritenuta`, che
+		 *     riprenderebbe un lucchetto gia' nostro. */
+		if (f->ritenuta)
+		{
+			pw_stream_queue_buffer(cattura->flusso, (struct pw_buffer *) f->ritenuta);
+			cattura->ritenuti_resi++;
+			f->ritenuta = NULL;
+			f->padrone = NULL;
+		}
+
 		f->byte = info.pixel ? byte : 0;
 		f->us_allocazione = 0;
 		f->us_copia = 0;
 		f->us_nel_posto = 0;
 		f->us_misura = 0;
-		if (info.pixel)
+		f->sulla_scheda = FALSE;
+		f->fd = -1;
+		f->offset = 0;
+		f->formato_drm = 0;
+		f->modificatore = 0;
+		f->generazione = cattura->generazione_buffer;
+
+		/* ═══════════════════════════════════════════════════════════════════
+		 * ⭐⭐⭐ LA COPIA ZERO — e qui non si fa NIENTE, che e' il punto.
+		 *
+		 * Sulla strada della scheda il fotogramma **e' gia' dove serve**: sulla
+		 * GPU.  ⛔ Non c'e' `memcpy`, non c'e' `g_malloc`, e le due voci del
+		 * tratto restano a zero — uno zero che vuol dire **«non c'e' questo
+		 * lavoro»**, non «e' gratis», e chi legge la tabella lo deve sapere.
+		 *
+		 * ⇒ Si trattiene il `pw_buffer` e si consegna il DESCRITTORE.  Il
+		 *   descrittore non e' una copia: e' un `fd` che punta alla memoria
+		 *   della scheda, e finche' lo teniamo il produttore non ci ridipinge
+		 *   dentro.
+		 * ═══════════════════════════════════════════════════════════════════ */
+		if (cattura->strada == CATTURA_STRADA_SCHEDA)
+		{
+			f->sulla_scheda = TRUE;
+			f->fd = info.fd;
+			f->offset = offset;
+			f->formato_drm = drm_da_spa(cattura->formato.format);
+			f->modificatore = cattura->formato.modifier;
+			f->byte = (guint64) passo * cattura->formato.size.height;
+			f->ritenuta = pacco;
+			f->padrone = cattura;
+			trattenuto = TRUE;
+			cattura->ritenuti++;
+		}
+		else if (info.pixel)
 		{
 			/* ⛔ SI COPIA, NON SI TIENE IL PUNTATORE: al giro dopo il produttore
 			 *    ci riscrive dentro, e il fotogramma consegnato sarebbe un altro
@@ -1110,13 +1269,105 @@ static void su_processo(void *dati)
 		                   cattura->conto.solo_cursore, cattura->sovrascritti);
 
 restituisci:
-	pw_stream_queue_buffer(cattura->flusso, pacco);
+	/* ⛔ E QUI STA LA CURA DEL RILASCIO, in una riga: un buffer TRATTENUTO non
+	 *    torna al produttore adesso.  ⚠ Senza questa guardia il DMA-BUF
+	 *    tornerebbe a Mutter nell'istante stesso in cui lo consegniamo a chi
+	 *    legge, e sarebbe **esattamente** il difetto delle due schermate che si
+	 *    alternano (`LEZIONI.md` §8) — con la differenza che stavolta lo
+	 *    avremmo scritto noi. */
+	if (!trattenuto)
+		pw_stream_queue_buffer(cattura->flusso, pacco);
+}
+
+/*
+ * ⭐⭐ QUANDO IL PRODUTTORE RIFA' I BUFFER — e il numero che ne esce serve a
+ *     valle, non qui.
+ *
+ * ⛔ IL FATTO che le fa esistere: un `fd` di DMA-BUF e' un numero di
+ *    descrittore, e i numeri di descrittore **si riciclano**.  Dopo una
+ *    rinegoziazione (`cattura_ridimensiona`) o un risveglio
+ *    (`cattura_risveglia`) PipeWire libera i buffer vecchi e ne alloca di
+ *    nuovi: il kernel puo' riassegnare gli **stessi numeri**.  ⇒ Chi mette in
+ *    cache «fd 42 → superficie VA-API» si ritroverebbe una superficie che punta
+ *    a memoria di un'altra generazione, e il sintomo sarebbe **un'immagine
+ *    vecchia**, senza nessun errore.
+ *
+ * ⇒ Qui si conta soltanto, e il numero viaggia nel `CatturaFermo`.  ⚠ Non si
+ *   tenta di invalidare niente da questa parte: il modulo che importa e' quello
+ *   che sa che cosa ha importato, e una invalidazione fatta da qui sarebbe una
+ *   decisione presa dove non si hanno i fatti.
+ */
+static void su_buffer_aggiunto(void *dati, struct pw_buffer *pacco)
+{
+	Cattura *cattura = dati;
+	(void) pacco;
+	cattura->generazione_buffer++;
+}
+
+/*
+ * ⛔⛔ E QUESTA E' L'ALTRA META' DELLA RITENUTA, ed e' quella che senza un
+ *      riquadro nessuno rimetterebbe: **PipeWire libera i buffer anche quando
+ *      siamo noi ad averli in mano.**  `remove_buffer` non chiede il permesso.
+ *
+ * ⇒ Due cose, e sono in due posti perche' i buffer trattenuti possono essere
+ *   due (uno fermo nel posto, uno in mano a chi legge):
+ *
+ *   1. quello NEL POSTO si lascia andare qui, sotto il lucchetto: il puntatore
+ *      sta in una struttura che possediamo, quindi si azzera;
+ *   2. quello IN MANO A CHI LEGGE non si raggiunge da qui — e non serve.  Il
+ *      `CatturaFermo` porta la **generazione** con cui e' nato, e
+ *      `cattura_fermo_libera()` confronta: se non e' piu' quella, il buffer non
+ *      si rende, perche' non esiste piu'.  ⛔ Renderlo sarebbe scrivere dentro
+ *      un `pw_buffer` liberato — un difetto che si presenta al
+ *      ridimensionamento, cioe' nel posto in cui nessuno guarda.
+ */
+static void su_buffer_tolto(void *dati, struct pw_buffer *pacco)
+{
+	Cattura *cattura = dati;
+
+	g_mutex_lock(&cattura->lucchetto);
+	if (cattura->posto.ritenuta == pacco)
+	{
+		cattura->posto.ritenuta = NULL;
+		cattura->posto.padrone = NULL;
+		cattura->posto_pieno = FALSE;
+		cattura->ritenuti_resi++;
+	}
+	cattura->generazione_buffer++;
+	g_mutex_unlock(&cattura->lucchetto);
+}
+
+/*
+ * Rende un buffer trattenuto.  ⛔ Gira sul thread di CHI CONSUMA, non su quello
+ * di tempo reale: per questo prende il lucchetto del ciclo di PipeWire.
+ *
+ * ⚠ L'ordine dei due lucchetti e' sempre `ciclo → lucchetto`, mai il contrario:
+ *   `su_processo` e `su_buffer_tolto` girano col ciclo gia' preso e prendono il
+ *   lucchetto dentro.  Invertirlo qui sarebbe un abbraccio mortale che si
+ *   presenta una volta ogni tanto, sotto carico.
+ */
+static void rendi_ritenuta(Cattura *cattura, struct pw_buffer *pacco, uint64_t generazione)
+{
+	if (!cattura || !pacco || !cattura->ciclo || !cattura->flusso)
+		return;
+	pw_thread_loop_lock(cattura->ciclo);
+	/* ⛔ Il confronto e' il punto: se il produttore ha rifatto i buffer, questo
+	 *    `pw_buffer` non c'e' piu' e renderlo scriverebbe in memoria liberata. */
+	if (cattura->generazione_buffer == generazione)
+		pw_stream_queue_buffer(cattura->flusso, pacco);
+	cattura->ritenuti_resi++;
+	pw_thread_loop_unlock(cattura->ciclo);
 }
 
 static const struct pw_stream_events eventi = {
 	PW_VERSION_STREAM_EVENTS,
 	.state_changed = su_stato,
 	.param_changed = su_parametri,
+	/* ⭐ I due che contano la GENERAZIONE dei buffer: senza, una cache di
+	 *    importazioni a valle punterebbe a buffer morti dopo ogni
+	 *    rinegoziazione.  Vedi il riquadro sopra `su_buffer_tolto`. */
+	.add_buffer = su_buffer_aggiunto,
+	.remove_buffer = su_buffer_tolto,
 	.process = su_processo,
 };
 
@@ -1685,6 +1936,72 @@ static void misura_i_pixel(CatturaFermo *fermo)
 		c->range_misurato = CATTURA_RANGE_NON_CONCLUSIVO;
 }
 
+/*
+ * ⭐⭐ IL FOTOGRAMMA DELLA SCHEDA GUARDATO **UNA VOLTA SOLA**, e la ragione per
+ *     cui e' una volta sola e' un costo, non una pigrizia.
+ *
+ * ⛔ IL FATTO CHE LA RENDE NECESSARIA: la riga «⛔ il fotogramma consegnato e'
+ *    NERO» e' il testimone di `STUDI.md` §gnome §3.1 guasto M9 — *una sessione
+ *    senza monitor virtuale consegna fotogrammi validi e neri*.  Sulla strada
+ *    della memoria si legge dai pixel copiati; sulla scheda i pixel copiati non
+ *    esistono.  ⇒ O si mappa il DMA-BUF, o quella diagnosi **sparisce senza che
+ *    nessuna riga lo dica**, che e' la forma peggiore di tutte.
+ *
+ * ⚠ E PERCHE' NON A CADENZA, come sulla memoria: la mappatura di un DMA-BUF non
+ *   e' memoria di sistema — si legge attraverso il bus della scheda, e leggerci
+ *   otto megabyte **non costa quanto una `memcpy`**.  ⛔ Quanto costi non e'
+ *   dedotto: la riga che accompagna questa chiamata **lo stampa**, e chi legge
+ *   il registro vede il numero vero di questa macchina.  ⇒ Si paga una volta,
+ *   sul primo fotogramma, che e' esattamente quello di cui `figlio.c` scrive la
+ *   riga del palco.
+ *
+ * ⛔ E SUI FOTOGRAMMI SUCCESSIVI `pixel_misurati` RESTA FALSE, che vuol dire
+ *    «non ho guardato» e **non** «non e' nero» — la stessa regola del campo, e
+ *    la stessa ragione (`LEZIONI.md` §1.9).  ⚠ Quel che si perde rispetto alla
+ *    memoria e' la sorveglianza continua: un desktop che diventasse nero a
+ *    meta' sessione, su questa strada, non ha piu' chi lo dica.  Sta dichiarato
+ *    qui invece che scoperto dopo.
+ */
+static void guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo)
+{
+	void *mappa;
+	size_t quanti;
+
+	if (fermo->fd < 0 || fermo->byte == 0)
+		return;
+	quanti = (size_t) fermo->offset + (size_t) fermo->byte;
+	mappa = mmap(NULL, quanti, PROT_READ, MAP_SHARED, fermo->fd, 0);
+	if (mappa == MAP_FAILED)
+	{
+		/* ⛔ NON e' «il fotogramma non e' nero»: e' «non ho potuto guardare», e
+		 *    si dice una volta invece di lasciare un silenzio che somiglia a un
+		 *    verde.  ⚠ Capita per esempio con un modificatore non lineare: li'
+		 *    i byte in memoria non sono le righe dell'immagine, e leggerli
+		 *    darebbe una risposta sbagliata invece di nessuna risposta. */
+		if (!cattura->detta_misura_impossibile)
+		{
+			cattura->detta_misura_impossibile = TRUE;
+			registro_dice(AREA,
+			              "⚠ il DMA-BUF non si e' lasciato mappare (fd %d, %zu byte, "
+			              "modificatore 0x%" G_GINT64_MODIFIER "x): ⛔ NON si conclude che "
+			              "il fotogramma non sia nero — si conclude che NON L'HO "
+			              "GUARDATO, e `pixel_misurati` resta FALSE",
+			              fermo->fd, quanti, (guint64) fermo->modificatore);
+		}
+		return;
+	}
+	/* ⚠ `misura_i_pixel` legge da `fermo->pixel`: glielo si presta per la durata
+	 *   della misura e glielo si toglie subito dopo.  ⛔ Lasciarlo li' vorrebbe
+	 *   dire consegnare a valle un puntatore a una mappatura che stiamo per
+	 *   smontare — e a valle nessuno se lo aspetta, perche' `sulla_scheda` dice
+	 *   il contrario. */
+	fermo->pixel = (uint8_t *) mappa + fermo->offset;
+	misura_i_pixel(fermo);
+	fermo->consegna.pixel_misurati = TRUE;
+	fermo->pixel = NULL;
+	munmap(mappa, quanti);
+}
+
 CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
                             GError **sbaglio)
 {
@@ -1788,7 +2105,32 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	if (!fuori->pixel)
 	{
 		/* Strada della scheda: il tipo e' dichiarato, i pixel vivono altrove.
-		 * ⛔ Non e' un guasto e non e' uno zero, ed e' la terza uscita. */
+		 * ⛔ Non e' un guasto e non e' uno zero, ed e' la terza uscita.
+		 *
+		 * ⭐ Ma PRIMA di tornare si guarda **una volta sola** dentro il buffer:
+		 *    vedi `guarda_i_pixel_del_dmabuf`. */
+		if (fuori->sulla_scheda && cattura->misura_ultima_us == 0)
+		{
+			uint64_t tm = adesso_us();
+			guarda_i_pixel_del_dmabuf(cattura, fuori);
+			cattura->misura_ultima_us = tm;
+			fuori->us_misura = adesso_us() - tm;
+			if (fuori->consegna.pixel_misurati)
+			{
+				cattura->misura_fatte++;
+				registro_dice(AREA,
+				              "⭐ il PRIMO fotogramma della scheda e' stato guardato "
+				              "mappando il DMA-BUF: %s (%.2f ms).  ⛔ E' l'UNICO che si "
+				              "guarda su questa strada — vedi il riquadro: i successivi "
+				              "portano `pixel_misurati` FALSE, che vuol dire «non ho "
+				              "guardato» e NON «non e' nero»",
+				              fuori->consegna.nero ? "⛔ NERO"
+				                                   : (fuori->consegna.uniforme
+				                                          ? "⚠ UNIFORME"
+				                                          : "non nero"),
+				              fuori->us_misura / 1000.0);
+			}
+		}
 		return CATTURA_PRESA_PIXEL_ALTROVE;
 	}
 
@@ -1847,6 +2189,14 @@ void cattura_fermo_libera(CatturaFermo *fermo)
 {
 	if (!fermo)
 		return;
+	/* ⭐⭐ IL RILASCIO — e sta qui perche' qui e' l'unico posto in cui si sa che
+	 *     chi leggeva ha finito.  ⛔ Prima di questa riga il `pw_buffer` e'
+	 *     nostro e Mutter non ci ridipinge dentro; dopo, e' suo.
+	 * ⚠ E si rende PRIMA di azzerare il fermo, perche' l'azzeramento cancella
+	 *   proprio i due campi che dicono a chi renderlo. */
+	if (fermo->ritenuta && fermo->padrone)
+		rendi_ritenuta((Cattura *) fermo->padrone, (struct pw_buffer *) fermo->ritenuta,
+		               fermo->generazione);
 	g_free(fermo->pixel);
 	memset(fermo, 0, sizeof *fermo);
 }
@@ -1933,6 +2283,40 @@ void cattura_ferma(Cattura *cattura)
 	 * soprattutto non si rischia di distruggere il flusso mentre una richiamata
 	 * lo sta usando.
 	 */
+	/* ⛔⭐ E PRIMA DI TUTTO SI RENDE QUEL CHE E' RIMASTO IN MANO — il buffer
+	 *     fermo nel posto, che nessuno ha consumato.  ⚠ Renderlo dopo
+	 *     `pw_stream_destroy` sarebbe scrivere in memoria liberata; non renderlo
+	 *     affatto e' innocuo qui (il flusso muore comunque) ma lascerebbe il
+	 *     conto dei trattenuti sbilanciato, e quel conto e' la sola cosa che
+	 *     dice se la ritenuta perde buffer.
+	 *
+	 * ⛔⛔ E CHI CHIAMA DEVE AVER GIA' LIBERATO IL SUO `CatturaFermo`: un fermo
+	 *      liberato DOPO questa funzione rende un buffer a una `Cattura` che non
+	 *      esiste piu'.  `figlio.c` lo fa nell'ordine giusto in tutt'e tre i
+	 *      punti in cui smonta il palco, e questa riga e' il perche'. */
+	if (cattura->ciclo && cattura->flusso)
+	{
+		pw_thread_loop_lock(cattura->ciclo);
+		if (cattura->posto.ritenuta)
+		{
+			pw_stream_queue_buffer(cattura->flusso,
+			                       (struct pw_buffer *) cattura->posto.ritenuta);
+			cattura->posto.ritenuta = NULL;
+			cattura->posto.padrone = NULL;
+			cattura->posto_pieno = FALSE;
+			cattura->ritenuti_resi++;
+		}
+		pw_thread_loop_unlock(cattura->ciclo);
+	}
+	if (cattura->ritenuti)
+		registro_dice(AREA,
+		              "la ritenuta si chiude: %" G_GUINT64_FORMAT " buffer trattenuti, %"
+		              G_GUINT64_FORMAT " resi.  ⛔ La differenza (%lld) e' quanti ne "
+		              "restavano in mano, e se non e' zero qualcuno non ha liberato il suo "
+		              "`CatturaFermo`",
+		              cattura->ritenuti, cattura->ritenuti_resi,
+		              (long long) cattura->ritenuti - (long long) cattura->ritenuti_resi);
+
 	if (cattura->ciclo)
 		pw_thread_loop_stop(cattura->ciclo);
 	if (cattura->flusso)

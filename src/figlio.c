@@ -3092,6 +3092,80 @@ static uint32_t tenuto_input;
 /*    misura della macchina.                                                    */
 #define MOVIMENTO_FPS 60
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ LA STRADA DEI PIXEL — e dal 22 agosto 2026 il difetto e' LA SCHEDA
+ *
+ * ⛔ FINO A OGGI IL FOTOGRAMMA FACEVA QUESTO GIRO: usciva dalla GPU (dove Mutter
+ *    l'aveva composto), veniva COPIATO in memoria di sistema, CONVERTITO in CPU
+ *    da `sws_scale`, e RICARICATO sulla GPU per essere codificato.  `[M]` 22
+ *    agosto 2026, agente C, dentro il prodotto: copia 1,65 · conversione 8,15 ·
+ *    caricamento 1,16 = **10,96 ms su 18,86, il 58 % del tratto**.
+ *
+ * ⭐ La strada della scheda — il DMA-BUF consegnato da Mutter e importato come
+ *    superficie VA-API — toglie tutt'e tre i passaggi: il fotogramma **sulla
+ *    GPU ci stava gia'**.  `[M]` Mutter il DMA-BUF lo consegna davvero: 388
+ *    fotogrammi, 4 buffer, modificatore LINEAR, stride 7680 letto dal chunk
+ *    (`DECISIONI.md` §2.3-ter).
+ *
+ * ⛔⛔ E VALE **SOLO SE IL CODIFICATORE E' IN HARDWARE**: in software non c'e'
+ *      nessun pixel da leggere.  ⇒ La strada si sceglie prima, e se il
+ *      codificatore ripiega in CPU il palco si RIMONTA sulla memoria,
+ *      dichiarandolo — vedi `scheda_da_abbandonare`.
+ *
+ * ⚠ E i DIECI BIT non tornano da questa porta: Mutter consegna BGRx, otto bit
+ *   per canale, sulla scheda come in memoria (`cattura.h`).  Questa strada
+ *   cambia dove sta il fotogramma, non che cosa c'e' dentro.
+ *
+ * ⭐ Si puo' scavalcare da riga di compilazione (`-DCOPIA_ZERO=0`), e serve a
+ *    UNA cosa sola: ricostruire il **prima** con lo stesso sorgente del dopo,
+ *    per il confronto A/B alternato.  ⛔ Non e' un interruttore di prodotto e
+ *    non ne diventa uno: il prodotto ha un valore solo, quello qui sotto
+ *    (`CODER.md` invariante I7).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#ifndef COPIA_ZERO
+#define COPIA_ZERO 1
+#endif
+
+/* La strada che si chiede al produttore al prossimo montaggio del palco.
+ * ⛔ E' una variabile e non una costante perche' puo' RETROCEDERE una volta:
+ *    quando si scopre che il codificatore di questa macchina e' in software.
+ *    ⚠ Non torna mai avanti da se': tornare avanti vorrebbe dire riprovare una
+ *    strada gia' misurata impossibile, a ogni rimontaggio. */
+static CatturaStrada strada_del_palco =
+    COPIA_ZERO ? CATTURA_STRADA_SCHEDA : CATTURA_STRADA_MEMORIA;
+/* ⛔ I TRE STATI DEL RIMONTAGGIO, e sono tre perche' rispondono a tre domande
+ *    diverse.  ⚠ Nessuno di loro rimonta niente da se': il palco lo tiene il
+ *    ciclo, e `codifica_e_manda` non puo' smontarlo mentre ci sta leggendo
+ *    dentro.
+ *
+ *   `scheda_da_abbandonare`  ⇒ rimonta in MEMORIA: questo fotogramma sulla
+ *                              scheda non si puo' usare;
+ *   `scheda_da_riprovare`    ⇒ rimonta sulla SCHEDA: la tela e' cambiata e la
+ *                              negazione di prima non vale piu';
+ *   `scheda_mai_piu`         ⛔ il codificatore di questa macchina e' in
+ *                              SOFTWARE: non e' una questione di tela, e
+ *                              riprovare a ogni ridimensionamento sarebbe
+ *                              rimontare il palco per niente, all'infinito.
+ */
+static bool scheda_da_abbandonare;
+static bool scheda_da_riprovare;
+static bool scheda_mai_piu;
+/* ⛔⛔ E QUESTA E' LA GUARDIA CHE EVITA IL GIRO A VUOTO — e vale una riga di
+ *     spiegazione, perche' sembra la stessa cosa e non lo e'.
+ *
+ * Il passo del DMA-BUF si conosce **solo dopo il primo fotogramma**
+ * (`cattura.h` regola 1: lo stride si LEGGE dal chunk, mai si calcola).  ⇒ Con
+ * una tela il cui passo non e' importabile il palco nasce sulla scheda,
+ * consegna un fotogramma, lo si rifiuta, e si rimonta sulla memoria.  Senza
+ * memoria di quel verdetto lo si rifarebbe a ogni giro.
+ *
+ * ⭐ Qui si tiene la tela per cui la scheda e' stata negata, e non la si
+ *    riprova finche' la tela non cambia.  ⛔ E il verdetto resta quello
+ *    MISURATO sul passo vero: questa e' la memoria di quel verdetto, non una
+ *    previsione che lo sostituisce.
+ */
+static uint32_t scheda_negata_l, scheda_negata_a;
+
 /* ⛔ Quanto si aspetta un fotogramma dalla cattura dentro un giro del ciclo.
  *
  * ⚠ Non e' un tetto di cadenza: e' quanto si resta fermi PRIMA di tornare a
@@ -4423,7 +4497,84 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		debito_chiave[numero] = false;
 	}
 
-	if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
+	/* ⛔⛔ E QUI SI GUARDA SE IL CODIFICATORE E' DAVVERO IN HARDWARE — chiesto al
+	 *     COMPONENTE (`componente_e_hardware`: accetta un formato di superficie,
+	 *     non di pixel), non letto nel nome e non dedotto dall'aver aperto un
+	 *     render node (`LEZIONI.md` §1.11).
+	 *
+	 * ⚠ Il caso esiste: `codificatore_di()` prova prima l'hardware e ripiega in
+	 *   software dichiarandolo — per esempio H.264 oltre i 4096 px, che `[M]` il
+	 *   driver rifiuta.  ⇒ Su quella strada un descrittore non serve a niente, e
+	 *   il palco va rimontato sulla memoria: si segna, e a smontare ci pensa il
+	 *   ciclo, che e' l'unico che tiene il palco. */
+	if (fo->sulla_scheda && !codificatore_in_hardware(cod)) {
+		if (!scheda_da_abbandonare) {
+			scheda_da_abbandonare = true;
+			scheda_mai_piu = true;
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ i pixel sono SULLA SCHEDA e «%s» codifica in "
+			              "SOFTWARE: la copia zero non e' percorribile con questo "
+			              "codificatore.  ⇒ Rimonto il palco sulla MEMORIA e non "
+			              "ci riprovo — ⚠ e questa riga e' la dichiarazione, "
+			              "perche' da qui in poi i numeri del tratto sono quelli "
+			              "dell'altra strada",
+			              codificatore_nome(cod));
+		}
+		return false;
+	}
+
+	/* ⛔⛔⛔ E QUI SI GUARDA IL PASSO **MISURATO**, prima di comprimere — vedi il
+	 *      riquadro in `codificatore.h`.
+	 *
+	 * ⚠ E' l'unico posto in cui il passo vero si conosce: `cattura.h` regola 1
+	 *   dice che lo stride si LEGGE dal chunk e non si calcola, quindi prima del
+	 *   primo fotogramma non c'era niente da guardare.
+	 * ⛔ E il fotogramma NON si spedisce: il difetto che ferma non da' nessun
+	 *   errore — da' un desktop inclinato di qualche pixel per riga, che passa
+	 *   ogni controllo sui millisecondi e ogni controllo sul colore.  Meglio
+	 *   qualche fotogramma non spedito e un rimontaggio, che un'immagine
+	 *   sbagliata per tutta la sessione. */
+	if (fo->sulla_scheda && !codificatore_stride_importabile(fo->stride)) {
+		if (!scheda_da_abbandonare) {
+			scheda_da_abbandonare = true;
+			scheda_negata_l = fo->larghezza;
+			scheda_negata_a = fo->altezza;
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ il passo del DMA-BUF e' %u su una tela %ux%u, e "
+			              "NON e' multiplo di %u: il driver leggerebbe le righe a "
+			              "un passo suo e il desktop uscirebbe INCLINATO, senza "
+			              "nessun errore.  `[M]` 22 agosto 2026: a 1552 px la "
+			              "marca si legge (contrasto 1,000), a 1544 no — otto "
+			              "pixel di differenza e verdetti opposti.  ⇒ Rimonto il "
+			              "palco sulla MEMORIA per questa tela, e la copia zero "
+			              "tornera' da se' su una tela col passo buono",
+			              fo->stride, fo->larghezza, fo->altezza,
+			              codificatore_allineamento_scheda());
+		}
+		return false;
+	}
+
+	if (fo->sulla_scheda) {
+		CodificatoreSuperficie sup = {
+			.fd = fo->fd,
+			.offset = fo->offset,
+			.stride = fo->stride,
+			.larghezza = fo->larghezza,
+			.altezza = fo->altezza,
+			.formato_drm = fo->formato_drm,
+			.modificatore = fo->modificatore,
+			.generazione = fo->generazione,
+		};
+		if (!codificatore_comprimi_scheda(cod, &sup, &fg)) {
+			registro_dice(REG_FIGLIO,
+			              "⛔ il codec %d non ha consegnato il fotogramma dalla "
+			              "SCHEDA: `false` NON e' «un fotogramma vuoto», e' "
+			              "«questo non si spedisce»",
+			              (int)codec);
+			ciclo_guasti++;
+			return false;
+		}
+	} else if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ il codec %d non ha consegnato il fotogramma: `false` "
 		              "NON e' «un fotogramma vuoto», e' «questo non si "
@@ -4926,8 +5077,20 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	/* ⛔ La cadenza si chiede UNA volta e con UN nome: `MOVIMENTO_FPS`.  Qui
 	 *    c'era il letterale 60 e la richiesta di codifica ne dichiarava 30 —
 	 *    due numeri diversi per la stessa grandezza. */
+	/* ⛔ La strada si DICHIARA nel registro al montaggio, perche' e' il fatto
+	 *    che spiega tutti i numeri del tratto che verranno dopo: un «conversione
+	 *    0,9 ms» sulla scheda e uno sulla memoria non sono la stessa grandezza. */
+	registro_dice(REG_FIGLIO,
+	              "⭐ il palco si monta sulla strada «%s»%s",
+	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	                  ? "SCHEDA (DMA-BUF, copia zero)"
+	                  : "MEMORIA (i pixel si copiano)",
+	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	                  ? " — ⚠ vale solo se il codificatore e' in hardware, e se non "
+	                    "lo e' questo palco si rimonta sulla memoria dichiarandolo"
+	                  : "");
 	cat = cattura_avvia(mutter_nodo(mut), tela_l, tela_a, MOVIMENTO_FPS,
-	                    CATTURA_STRADA_MEMORIA, CATTURA_COLORE_BGRX, NULL, NULL,
+	                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 	                    NULL, &sbaglio);
 	if (!cat) {
 		snprintf(p.guasto, sizeof p.guasto, "cattura: %s",
@@ -4945,7 +5108,11 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	presa = cattura_prendi(cat, 5.0, &fo, &sbaglio);
 	istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
 	p.presa = (uint32_t)presa;
-	if (presa != CATTURA_PRESA_FATTA) {
+	/* ⛔ `PIXEL_ALTROVE` E' UN FOTOGRAMMA CONSEGNATO, non un nulla di fatto:
+	 *    sulla strada della scheda i pixel non sono in memoria, e il fotogramma
+	 *    c'e' lo stesso (`cattura.h`).  ⚠ Trattarlo come guasto qui vorrebbe
+	 *    dire smontare il palco a ogni montaggio riuscito. */
+	if (presa != CATTURA_PRESA_FATTA && presa != CATTURA_PRESA_PIXEL_ALTROVE) {
 		snprintf(p.guasto, sizeof p.guasto, "presa %u: %s", (unsigned)presa,
 		         sbaglio ? sbaglio->message : "nessun fotogramma");
 		registro_dice(REG_FIGLIO,
@@ -6820,7 +6987,8 @@ void figlio_vive(int argc, char **argv)
 				g_clear_error(&sbaglio);
 				continue;
 			}
-			if (presa != CATTURA_PRESA_FATTA) {
+			if (presa != CATTURA_PRESA_FATTA
+			    && presa != CATTURA_PRESA_PIXEL_ALTROVE) {
 				/* ⛔⛔ E QUI STAVANO I 30,8 GB DI REGISTRO.
 				 *
 				 * `[M]` 14 agosto 2026, sessione vera dell'utente: la
@@ -6914,6 +7082,12 @@ void figlio_vive(int argc, char **argv)
 			 * ⚠ `larghezza`/`altezza` a zero rendevano la vecchia guardia VUOTA
 			 *   (`byte < 0` e' sempre falso): si nominano, invece di fidarsi che
 			 *   i numeri tornino. */
+			/* ⚠ E vale su tutt'e due le strade, con la stessa aritmetica: sulla
+			 *   scheda `byte` non e' una copia da leggere ma `passo x altezza`
+			 *   letto dal chunk, e chi importa il DMA-BUF descrive esattamente
+			 *   quella regione.  ⛔ Un passo piu' corto della larghezza
+			 *   dichiarata farebbe leggere alla GPU oltre l'oggetto, che e' lo
+			 *   stesso difetto di prima con un altro lettore. */
 			if (!fo.larghezza || !fo.altezza || !fo.stride
 			    || fo.stride < (guint64) fo.larghezza * 4u
 			    || fo.byte < (guint64) fo.stride * fo.altezza) {
@@ -7031,6 +7205,29 @@ void figlio_vive(int argc, char **argv)
 				tela_l = fo.larghezza;
 				tela_a = fo.altezza;
 
+				/* ⭐ 4-bis.  E LA COPIA ZERO SI RIPROVA, perche' la tela e'
+				 *    cambiata: era stata negata per la tela di PRIMA, e su
+				 *    questa il passo puo' essere buono.  ⛔ Senza questa riga
+				 *    una sola tela storta spegnerebbe la copia zero per tutta
+				 *    la sessione, comprese le tele che andrebbero benissimo —
+				 *    cioe' una cura permanente per un difetto temporaneo.
+				 * ⚠ Qui non si rimonta niente: si segna, e il palco lo rimonta
+				 *   il ciclo poco piu' sotto.  ⛔ E il verdetto lo dara' di
+				 *   nuovo il passo MISURATO, non un conto sulla larghezza. */
+				if (COPIA_ZERO && !scheda_mai_piu && scheda_negata_l != 0
+				    && strada_del_palco == CATTURA_STRADA_MEMORIA
+				    && (fo.larghezza != scheda_negata_l
+				        || fo.altezza != scheda_negata_a)) {
+					scheda_negata_l = 0;
+					scheda_negata_a = 0;
+					scheda_da_riprovare = true;
+					registro_dice(REG_FIGLIO,
+					              "⭐ tela nuova %ux%u: la copia zero era stata "
+					              "negata per la tela di prima, e su questa si "
+					              "riprova",
+					              fo.larghezza, fo.altezza);
+				}
+
 				/* 5. ⭐⭐ E SI RISPONDE AL PADRE, che sta aspettando questo
 				 *    numero: senza, lui dovrebbe INDOVINARE dai fotogrammi a
 				 *    quale richiesta risponde questa misura — e con due richieste
@@ -7056,7 +7253,31 @@ void figlio_vive(int argc, char **argv)
 			codifica_e_manda(&fo, codec_del_numero(codec_chiesto),
 			                 codec_chiesto, NULL, NULL, istante_us, tela_l,
 			                 tela_a, input_iniettato);
+			/* ⛔⭐ IL RILASCIO — e sulla strada della scheda questa riga NON e'
+			 *     una pulizia: e' la cura di `LEZIONI.md` §8.  Finche' non si
+			 *     chiama, il buffer di Mutter e' nostro; e si chiama DOPO la
+			 *     codifica, cioe' dopo che la GPU ha finito di leggerlo
+			 *     (`codificatore_comprimi_scheda` aspetta davvero prima di
+			 *     tornare).  ⚠ Spostarla di due righe piu' in su rimetterebbe in
+			 *     piedi le due schermate che si alternano. */
 			cattura_fermo_libera(&fo);
+
+			/* ⛔ E se la scheda si e' rivelata impercorribile — codificatore in
+			 *    software — il palco si rimonta sulla memoria.  ⚠ Si fa QUI e non
+			 *    dentro `codifica_e_manda`: il fermo e' gia' rilasciato, e
+			 *    smontare con un buffer ancora in mano renderebbe un `pw_buffer`
+			 *    a una cattura che non c'e' piu'. */
+			if (scheda_da_abbandonare || scheda_da_riprovare) {
+				strada_del_palco = scheda_da_riprovare
+				                       ? CATTURA_STRADA_SCHEDA
+				                       : CATTURA_STRADA_MEMORIA;
+				scheda_da_abbandonare = false;
+				scheda_da_riprovare = false;
+				smonta_il_palco(&mut, &cat);
+				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
+				continue;
+			}
 		}
 	}
 

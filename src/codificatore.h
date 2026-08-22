@@ -470,6 +470,118 @@ const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod)
  */
 bool codificatore_comprimi(Codificatore *cod, const uint8_t *pixel, uint32_t passo,
                            CodificatoreFotogramma *fuori);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ LA COPIA ZERO — il fotogramma che sulla GPU ci stava GIA'
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * ⛔ IL FATTO CHE LA FA NASCERE, `[M]` 22 agosto 2026 (agente C), dentro il
+ *    prodotto, dieci voci in fila, resto 0,02 ms su 2 450 fotogrammi:
+ *
+ *      la copia (`memcpy` nel posto)        1,65 ms
+ *      la conversione (`sws_scale`)         8,15 ms
+ *      il caricamento (memoria → GPU)       1,16 ms
+ *      ────────────────────────────────────────────
+ *                                          10,96 ms su 18,86 — il 58 % del tratto
+ *
+ *    ⇒ Il fotogramma **usciva dalla GPU, si convertiva in CPU e risaliva sulla
+ *      GPU**.  Da questa strada non esce mai.
+ *
+ * ⛔⛔ E QUEL 10,96 E' UN BUDGET, NON UNA PROMESSA — la lezione la ha pagata C
+ *      lo stesso giorno: ha tolto 7,28 ms e ne ha guadagnati 2,33, perche'
+ *      `sws_scale` si e' ripreso 3,84 ms che la scansione dei pixel gli
+ *      **scaldava in cache**.  ⇒ In questo tratto **le voci non sono
+ *      indipendenti**, e i tratti tolti non si sommano.  Chi legge questa
+ *      intestazione non sottragga: misuri.
+ *
+ * ⚠ E NON E' «zero lavoro»: e' **zero copie in memoria di sistema**.  La
+ *   conversione da RGB a NV12 la fa la GPU (VA-API VPP), e il suo costo finisce
+ *   in `us_conversione` come prima — cambia chi la fa, non il fatto che vada
+ *   fatta.  ⛔ `us_caricamento` invece resta **0**, e li' lo zero vuol dire
+ *   «questo tratto NON C'E' PIU'», non «e' gratis».
+ */
+typedef struct {
+	/* ⛔ Il descrittore non e' nostro e non si chiude: lo possiede il
+	 *    produttore, e chi lo chiudesse toglierebbe l'immagine a se stesso. */
+	int fd;
+	uint32_t offset;
+	uint32_t stride;              /* ⛔ LETTO dal chunk, mai `larghezza × 4` */
+	uint32_t larghezza, altezza;
+	uint32_t formato_drm;         /* `DRM_FORMAT_XRGB8888` … */
+	uint64_t modificatore;
+	/*
+	 * ⛔ La GENERAZIONE dei buffer del produttore.  ⚠ Serve **qui** e non
+	 *    altrove: l'importazione di un `fd` in VA-API costa, quindi si mette in
+	 *    cache — e una cache sui soli numeri di descrittore darebbe
+	 *    un'immagine vecchia dopo ogni rinegoziazione, perche' i numeri di
+	 *    descrittore si riciclano.  Quando questo cambia, la cache si butta.
+	 */
+	uint64_t generazione;
+} CodificatoreSuperficie;
+
+/*
+ * Comprime un fotogramma che sta GIA' sulla scheda.
+ *
+ * ⛔ Vale **solo** in hardware: in software non ci sono pixel da leggere, e
+ *    questa chiamata fallisce dicendolo invece di produrre un'immagine vuota.
+ *    Chi chiama guarda `codificatore_in_hardware()` **prima** di chiedere la
+ *    strada della scheda al produttore.
+ *
+ * ⛔⛔ E IL DESCRITTORE DEVE RESTARE VALIDO PER TUTTA LA CHIAMATA, non un
+ *      microsecondo di meno: quando questa funzione torna, la GPU ha **finito**
+ *      di leggere (c'e' una sincronizzazione esplicita dentro), e solo allora
+ *      chi ha catturato puo' rendere il buffer al produttore.  ⚠ Rilasciarlo
+ *      prima e' precisamente il difetto di `LEZIONI.md` §8: due schermate che si
+ *      alternano, e nessun errore.
+ */
+bool codificatore_comprimi_scheda(Codificatore *cod, const CodificatoreSuperficie *superficie,
+                                  CodificatoreFotogramma *fuori);
+
+/* ⛔ «E' in hardware?» — la risposta viene da `componente_e_hardware()`, cioe'
+ *    da quel che il COMPONENTE dichiara di accettare (una superficie, non dei
+ *    pixel).  ⚠ Non dal nome, e non da «ha aperto un render node»
+ *    (`LEZIONI.md` §1.11).  Chi sceglie la strada della cattura la chiede qui. */
+bool codificatore_in_hardware(const Codificatore *cod);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔⛔ IL PASSO DEL DMA-BUF DEVE ESSERE MULTIPLO DI 64 — e senza questa
+ *       guardia il difetto NON DA' NESSUN ERRORE: da' un desktop **sfocato e
+ *       stirato di sbieco**, e i millisecondi restano bellissimi.
+ *
+ * ⭐⭐ IL FATTO, `[M]` 22 agosto 2026, quattro misure scelte apposta dalle due
+ *     parti della soglia, lette col LETTORE CERTIFICATO della marca
+ *     (`banchi/03-marca.py`, controllo negativo 0 falsi su 3 000):
+ *
+ *       | tela      | passo | passo % 64 | la marca si legge? | contrasto |
+ *       |-----------|-------|-----------|--------------------|-----------|
+ *       | 1920x1080 |  7680 |     0     | ⭐ SI (disegno 65)  |   1,000   |
+ *       | 1552x888  |  6208 |     0     | ⭐ SI (disegno 70)  |   1,000   |
+ *       | 1544x888  |  6176 |    32     | ⛔ NO               |   0,617   |
+ *       | 1560x888  |  6240 |    32     | ⛔ NO               |   0,510   |
+ *
+ *     ⭐ 1552 e 1544 distano OTTO pixel e danno verdetti opposti: non e' una
+ *        soglia scelta dopo aver visto il risultato, e' un confine al pixel.
+ *
+ * `[R]` Il driver iHD, importando un DMA-BUF, **non onora un passo che non sia
+ *       multiplo di 64 byte**: legge le righe a un passo suo, e l'immagine esce
+ *       inclinata di qualche pixel per riga.
+ *
+ * ⛔ E IL COLORE NON LO VEDE: `[M]` le statistiche per canale dei due flussi
+ *    combaciavano entro **0,17 livelli su 255** mentre la marca non si leggeva
+ *    su **0 fotogrammi di 869**.  ⇒ Uno strumento che guarda le medie dice
+ *    verde su questo difetto.  Il numero da guardare e' la STRUTTURA.
+ *
+ * ⚠ E la cura NON e' nostra da fare fino in fondo: il passo lo decide il
+ *   produttore, e il produttore lo fa uguale a `larghezza × 4` `[M]` (4 misure
+ *   su 4, modificatore LINEAR).  ⇒ Una tela multipla di 16 avrebbe sempre il
+ *   passo buono, ma la regola della tela vive in `rcp_misura_ammessa()`, che
+ *   non e' di questo file.  Qui si **rifiuta la strada e si dichiara**, che e'
+ *   quel che `LEZIONI.md` §1.8 pretende: meglio la copia che un'immagine
+ *   sbagliata in silenzio.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+bool codificatore_stride_importabile(uint32_t stride);
+uint32_t codificatore_allineamento_scheda(void);
+
 void codificatore_rilascia(Codificatore *cod);
 
 /*

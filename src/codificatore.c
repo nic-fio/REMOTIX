@@ -28,6 +28,15 @@
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <va/va.h>
+/* ⭐ I tre che nascono con la COPIA ZERO: `va_drmcommon.h` porta il descrittore
+ *    con cui si importa un DMA-BUF (`VADRMPRIMESurfaceDescriptor`), `va_vpp.h`
+ *    la conversione di colore fatta dalla GPU (`VAProcPipelineParameterBuffer`),
+ *    e `drm_fourcc.h` i due soli nomi di formato che questo modulo riconosce.
+ * ⚠ `drm_fourcc.h` sono SOLO intestazioni: nessuna libreria da collegare — la
+ *   stessa nota che il Makefile ha gia' per `cattura.c`. */
+#include <drm_fourcc.h>
+#include <va/va_drmcommon.h>
+#include <va/va_vpp.h>
 
 /* ⚠ Area propria invece di una delle sei di `registro.h`: quel file non e' di
  *   questa sotto-fase e non si tocca.  La riga per centralizzarla — `#define
@@ -786,6 +795,20 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ⛔ Quante importazioni di DMA-BUF si tengono in cache.  ⚠ Il numero non e' di
+ *    comodo: il produttore ricicla `[M]` **quattro** buffer (`DECISIONI.md`
+ *    §2.3-ter) e sulla strada della scheda gliene chiediamo **sei**, perche' la
+ *    ritenuta ne toglie due.  Otto tiene tutti i casi con margine, e quando la
+ *    cache e' piena si ricomincia da capo invece di sfrattare a caso: una
+ *    politica sbagliata su otto voci costerebbe piu' righe di quel che rende. */
+#define IMPORTATE_MAX 8
+
+/* ⛔ Il numero sta in UN posto solo, con la misura accanto in `codificatore.h`.
+ *    ⚠ Non e' un multiplo scelto per prudenza: e' il confine misurato al pixel
+ *    fra 1552 (che legge) e 1544 (che non legge). */
+#define ALLINEAMENTO_SCHEDA 64u
+
+
 struct Codificatore {
 	CodificatoreRichiesta richiesta;
 	const AVCodec *componente;
@@ -812,6 +835,38 @@ struct Codificatore {
 	enum AVPixelFormat formato_gpu; /* P010LE a 10 bit, NV12 a 8 */
 	AVFrame *appoggio;            /* il fotogramma in memoria di sistema */
 
+	/* ───────────────────────────────────────────────────────────────────────
+	 * ⭐⭐⭐ LA COPIA ZERO — le tre cose che servono, e nient'altro
+	 *
+	 *   1. il CONTESTO VPP: la conversione RGB → NV12 fatta dalla GPU, che
+	 *      prende il posto di `sws_scale` **e** di `av_hwframe_transfer_data`
+	 *      insieme.  ⛔ Vive sul DISPOSITIVO e non sul contesto del
+	 *      codificatore: `abbassa_qualita()` richiude e riapre il codificatore
+	 *      tre volte di fila per una chiave sopra il tetto, e rifare il VPP a
+	 *      ogni giro sarebbe lavoro fatto per niente;
+	 *   2. la CACHE delle importazioni: `vaCreateSurfaces` su un DMA-BUF non e'
+	 *      gratis, e il produttore ricicla sempre gli stessi pochi buffer.  ⇒ Si
+	 *      importa una volta per buffer, non una volta per fotogramma;
+	 *   3. la GENERAZIONE con cui la cache e' nata.  ⛔ Senza, dopo una
+	 *      rinegoziazione si darebbe a VA-API una superficie che punta a un
+	 *      buffer liberato: i numeri di descrittore si riciclano, e il sintomo
+	 *      sarebbe **un'immagine vecchia** senza nessun errore.
+	 */
+	VAConfigID vpp_configurazione;
+	VAContextID vpp_contesto;
+	bool vpp_aperto;
+	uint32_t vpp_l, vpp_a;        /* la misura per cui il VPP e' stato aperto */
+	struct {
+		int fd;
+		uint32_t l, a, stride, offset, formato_drm;
+		uint64_t modificatore;
+		VASurfaceID superficie;
+	} importate[IMPORTATE_MAX];
+	unsigned quante_importate;
+	uint64_t generazione_cache;
+	bool cache_nata;
+	bool detto_copia_zero;        /* la riga della prima volta, una volta sola */
+
 	bool prossimo_chiave;         /* ⛔ la prossima e' una chiave VERA */
 	bool prima_codifica_fatta;
 	bool svuotato;                /* ⚠ e' stato messo in scarico: va riaperto */
@@ -820,6 +875,13 @@ struct Codificatore {
 	int64_t numero;               /* il pts, che qui e' il contatore dei fotogrammi */
 	bool pacchetto_in_mano;
 };
+
+/* ⚠ Dichiarate qui e definite col resto della copia zero, molto piu' sotto:
+ *   `codificatore_libera()` sta in mezzo e le deve chiamare.  ⛔ Spostare la
+ *   loro definizione qui sopra separerebbe la conversione sulla GPU dal suo
+ *   riquadro, che e' il posto in cui e' spiegata. */
+static void butta_le_importate(Codificatore *c, const char *perche);
+static void chiudi_vpp(Codificatore *c);
 
 static uint64_t adesso_us(void)
 {
@@ -1910,6 +1972,11 @@ void codificatore_libera(Codificatore *c)
 		av_frame_free(&c->fotogramma);
 	if (c->appoggio)
 		av_frame_free(&c->appoggio);
+	/* ⛔ Prima del dispositivo, e in quest'ordine: le superfici importate e il
+	 *    contesto della conversione vivono SUL dispositivo, e liberarli dopo
+	 *    vorrebbe dire chiederlo a un display che non c'e' piu'. */
+	butta_le_importate(c, "il codificatore si chiude");
+	chiudi_vpp(c);
 	chiudi_contesto(c);
 	/* ⚠ Il dispositivo si chiude per ULTIMO: il magazzino e le superfici ne
 	 *   tengono un riferimento, e chiuderlo prima lascerebbe il driver a
@@ -1974,6 +2041,404 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	registro_dice(REG_CODIFICA,
 	              "tela nuova %ux%u: riaperto, e il prossimo fotogramma e' una chiave "
 	              "(RCP.md §5.2)", larghezza, altezza);
+	return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ LA COPIA ZERO — dal DMA-BUF del compositore alla superficie del
+ *      codificatore, senza passare dalla memoria di sistema
+ *
+ * ⛔ QUEL CHE QUESTA STRADA TOGLIE, e sono tre tratti misurati `[M]` il 22
+ *    agosto 2026 dentro il prodotto (agente C, mediane su 512 fotogrammi):
+ *
+ *      la copia (`memcpy` nel posto della cattura)   1,65 ms
+ *      la conversione (`sws_scale`, in CPU)          8,15 ms
+ *      il caricamento (memoria → GPU)                1,16 ms
+ *
+ * ⛔⛔ E QUEL CHE **NON** TOGLIE, ed e' la meta' che nessuno si aspetta: la
+ *      conversione di colore **va fatta lo stesso**.  Il compositore consegna
+ *      BGRx; il codificatore in hardware vuole NV12.  ⇒ La differenza non e'
+ *      «non si converte»: e' **chi converte** — la GPU invece della CPU, sulla
+ *      memoria che ha gia' sotto invece che su otto megabyte fatti passare due
+ *      volte per il bus.
+ *
+ * ⇒ Il costo della conversione sulla GPU finisce in `us_conversione`, sotto la
+ *   stessa etichetta di prima, **apposta**: e' la stessa grandezza fatta in un
+ *   altro posto, e metterla in una voce nuova renderebbe impossibile il
+ *   confronto col «prima».  ⛔ `us_caricamento` invece va a **0**, e li' lo zero
+ *   vuol dire «questo tratto non c'e' piu'», non «e' gratis».
+ *
+ * ⚠ E C'E' UNA SINCRONIZZAZIONE ESPLICITA (`vaSyncSurface`) dopo la
+ *   conversione, che si potrebbe togliere: senza, la chiamata tornerebbe prima
+ *   che la GPU abbia finito e il numero sarebbe piu' bello.  ⛔ Sta li' per due
+ *   ragioni, e la seconda vale piu' della prima:
+ *     1. il tempo misurato e' quello VERO, non quello dell'ordine impartito;
+ *     2. ⭐⭐ **e' il rilascio**: quando questa funzione torna, la GPU ha finito
+ *        di leggere il DMA-BUF del compositore, e solo allora chi ha catturato
+ *        puo' renderlo.  Togliere la sincronizzazione qui rimetterebbe in piedi
+ *        il difetto di `LEZIONI.md` §8 — due schermate che si alternano, e
+ *        nessun errore.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+static VADisplay display_di(Codificatore *c)
+{
+	AVHWDeviceContext *dc;
+	AVVAAPIDeviceContext *va;
+
+	if (!c->dispositivo)
+		return NULL;
+	dc = (AVHWDeviceContext *) c->dispositivo->data;
+	va = dc->hwctx;
+	return va ? va->display : NULL;
+}
+
+/* Butta tutte le superfici importate.  ⛔ Si chiama quando la generazione dei
+ * buffer del produttore cambia, e alla chiusura: una superficie che sopravvive
+ * al `pw_buffer` che descriveva punta a memoria di qualcun altro. */
+static void butta_le_importate(Codificatore *c, const char *perche)
+{
+	VADisplay dpy = display_di(c);
+
+	if (!c->quante_importate)
+		return;
+	if (dpy)
+		for (unsigned i = 0; i < c->quante_importate; i++)
+			vaDestroySurfaces(dpy, &c->importate[i].superficie, 1);
+	registro_dice(REG_CODIFICA,
+	              "⭐ butto le %u superfici importate: %s.  ⛔ Tenerle sarebbe dare a "
+	              "VA-API un descrittore che non descrive piu' niente — e il sintomo "
+	              "sarebbe un'immagine VECCHIA, senza nessun errore",
+	              c->quante_importate, perche);
+	c->quante_importate = 0;
+}
+
+/*
+ * Importa il DMA-BUF come superficie VA-API, o rende quella gia' importata.
+ *
+ * ⛔ La cache si confronta su TUTTO quel che descrive il buffer — descrittore,
+ *    misura, passo, scostamento, formato e modificatore — e non sul solo `fd`.
+ *    ⚠ Due buffer diversi con lo stesso numero di descrittore esistono (i numeri
+ *    si riciclano), e la generazione li separa; ma se anche il resto non
+ *    combaciasse, importare di nuovo costa una volta e sbagliare costa tutta la
+ *    sessione.
+ */
+static VASurfaceID importa_dmabuf(Codificatore *c, const CodificatoreSuperficie *s)
+{
+	VADisplay dpy = display_di(c);
+	VADRMPRIMESurfaceDescriptor d;
+	VASurfaceAttrib attributi[2];
+	VASurfaceID superficie = VA_INVALID_ID;
+	VAStatus stato;
+	unsigned i;
+
+	if (!dpy)
+		return VA_INVALID_ID;
+
+	/* ⛔ La generazione PRIMA di tutto: se il produttore ha rifatto i buffer,
+	 *    quel che c'e' in cache non descrive piu' niente. */
+	if (c->cache_nata && c->generazione_cache != s->generazione)
+		butta_le_importate(c, "il produttore ha rifatto i suoi buffer");
+	c->generazione_cache = s->generazione;
+	c->cache_nata = true;
+
+	for (i = 0; i < c->quante_importate; i++)
+		if (c->importate[i].fd == s->fd && c->importate[i].l == s->larghezza
+		    && c->importate[i].a == s->altezza && c->importate[i].stride == s->stride
+		    && c->importate[i].offset == s->offset
+		    && c->importate[i].formato_drm == s->formato_drm
+		    && c->importate[i].modificatore == s->modificatore)
+			return c->importate[i].superficie;
+
+	memset(&d, 0, sizeof d);
+	/*
+	 * ⛔ IL FOURCC DI VA-API NON E' QUELLO DI DRM, e i due si somigliano
+	 *    abbastanza da farsi scambiare.  ⚠ `VA_FOURCC_BGRX` e' quel che ffmpeg
+	 *    accoppia a `AV_PIX_FMT_BGR0` e a `DRM_FORMAT_XRGB8888`
+	 *    (`hwcontext_vaapi.c`), cioe' B,G,R,ignorato **nell'ordine dei byte in
+	 *    memoria** — lo stesso che `cattura.c` negozia come `BGRx`.  ⛔ Sbagliarlo
+	 *    non da' nessun errore: da' rosso e blu scambiati.
+	 * ⚠ Qui si dichiarano i due che questo modulo sa ricevere; per gli altri si
+	 *   rifiuta invece di indovinare.
+	 */
+	if (s->formato_drm == DRM_FORMAT_XRGB8888)
+		d.fourcc = VA_FOURCC_BGRX;
+	else if (s->formato_drm == DRM_FORMAT_ARGB8888)
+		d.fourcc = VA_FOURCC_BGRA;
+	else {
+		registro_dice(REG_CODIFICA,
+		              "⛔ formato DRM 0x%08x non importabile: questa strada sa BGRx e "
+		              "BGRA.  ⚠ NON si indovina un fourcc — un fourcc sbagliato non da' "
+		              "errore, da' i colori scambiati",
+		              s->formato_drm);
+		return VA_INVALID_ID;
+	}
+	d.width = s->larghezza;
+	d.height = s->altezza;
+	d.num_objects = 1;
+	d.objects[0].fd = s->fd;
+	d.objects[0].size = s->offset + s->stride * s->altezza;
+	d.objects[0].drm_format_modifier = s->modificatore;
+	d.num_layers = 1;
+	d.layers[0].drm_format = s->formato_drm;
+	d.layers[0].num_planes = 1;
+	d.layers[0].object_index[0] = 0;
+	d.layers[0].offset[0] = s->offset;
+	d.layers[0].pitch[0] = s->stride;
+
+	attributi[0].type = VASurfaceAttribMemoryType;
+	attributi[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
+	attributi[0].value.type = VAGenericValueTypeInteger;
+	attributi[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2;
+	attributi[1].type = VASurfaceAttribExternalBufferDescriptor;
+	attributi[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
+	attributi[1].value.type = VAGenericValueTypePointer;
+	attributi[1].value.value.p = &d;
+
+	stato = vaCreateSurfaces(dpy, VA_RT_FORMAT_RGB32, s->larghezza, s->altezza, &superficie, 1,
+	                         attributi, 2);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ il DMA-BUF non si e' importato (vaCreateSurfaces: %s) — fd %d, "
+		              "%ux%u, passo %u, scostamento %u, modificatore 0x%llx.  ⚠ NON si "
+		              "ripiega sulla copia in silenzio: chi chiama lo scrive",
+		              vaErrorStr(stato), s->fd, s->larghezza, s->altezza, s->stride,
+		              s->offset, (unsigned long long) s->modificatore);
+		return VA_INVALID_ID;
+	}
+
+	if (c->quante_importate >= IMPORTATE_MAX)
+		butta_le_importate(c, "la cache e' piena e si ricomincia");
+	i = c->quante_importate++;
+	c->importate[i].fd = s->fd;
+	c->importate[i].l = s->larghezza;
+	c->importate[i].a = s->altezza;
+	c->importate[i].stride = s->stride;
+	c->importate[i].offset = s->offset;
+	c->importate[i].formato_drm = s->formato_drm;
+	c->importate[i].modificatore = s->modificatore;
+	c->importate[i].superficie = superficie;
+	return superficie;
+}
+
+/* Apre il contesto della conversione sulla GPU, alla misura in vigore.
+ * ⛔ Si riapre quando la misura cambia: un contesto VPP porta la misura dentro,
+ *    esattamente come il magazzino delle superfici. */
+static bool apri_vpp(Codificatore *c, uint32_t larghezza, uint32_t altezza)
+{
+	VADisplay dpy = display_di(c);
+	VAStatus stato;
+
+	if (!dpy)
+		return false;
+	if (c->vpp_aperto && c->vpp_l == larghezza && c->vpp_a == altezza)
+		return true;
+	if (c->vpp_aperto) {
+		vaDestroyContext(dpy, c->vpp_contesto);
+		vaDestroyConfig(dpy, c->vpp_configurazione);
+		c->vpp_aperto = false;
+	}
+	/*
+	 * ⛔ E QUI SI CHIEDE AL DRIVER, non a ffmpeg: `VAEntrypointVideoProc` c'e' o
+	 *    non c'e', e se non c'e' questa strada **non esiste su questa macchina**.
+	 *    ⚠ E' la stessa regola con cui `apri_dispositivo()` chiede gli entrypoint
+	 *    di codifica: «gliel'ho chiesto» e «ce l'ha» hanno lo stesso aspetto
+	 *    finche' non si guarda (`LEZIONI.md` §1.11).
+	 */
+	stato = vaCreateConfig(dpy, VAProfileNone, VAEntrypointVideoProc, NULL, 0,
+	                       &c->vpp_configurazione);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ questa scheda non ha la conversione sulla GPU (VAProfileNone / "
+		              "VAEntrypointVideoProc: %s): la copia zero NON e' percorribile qui, "
+		              "e si dichiara invece di ripiegare in silenzio",
+		              vaErrorStr(stato));
+		return false;
+	}
+	stato = vaCreateContext(dpy, c->vpp_configurazione, (int) larghezza, (int) altezza,
+	                        VA_PROGRESSIVE, NULL, 0, &c->vpp_contesto);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ il contesto della conversione %ux%u non si e' aperto: %s",
+		              larghezza, altezza, vaErrorStr(stato));
+		vaDestroyConfig(dpy, c->vpp_configurazione);
+		return false;
+	}
+	c->vpp_aperto = true;
+	c->vpp_l = larghezza;
+	c->vpp_a = altezza;
+	return true;
+}
+
+static void chiudi_vpp(Codificatore *c)
+{
+	VADisplay dpy = display_di(c);
+
+	if (!c->vpp_aperto || !dpy)
+		return;
+	vaDestroyContext(dpy, c->vpp_contesto);
+	vaDestroyConfig(dpy, c->vpp_configurazione);
+	c->vpp_aperto = false;
+}
+
+/*
+ * La conversione RGB → NV12 sulla GPU, e ⛔ **la matrice si IMPONE**, come la
+ * imponeva `sws_setColorspaceDetails` sulla strada della memoria.
+ *
+ * ⛔ Senza queste quattro righe il driver userebbe il suo difetto, che non e'
+ *    scritto da nessuna parte nel nostro codice: due versioni di iHD potrebbero
+ *    convertire diversamente e nessuno se ne accorgerebbe guardando l'immagine.
+ *    ⚠ E la coppia giusta e' quella che la strada vecchia dichiarava:
+ *    **sorgente RGB a intervallo PIENO, destinazione BT.709 a intervallo
+ *    LIMITATO**.  Sbagliare il verso non da' errore: da' un'immagine slavata o
+ *    contrastata, cioe' un difetto che nessuna riga di registro nomina.
+ */
+static bool converti_sulla_gpu(Codificatore *c, VASurfaceID sorgente, VASurfaceID destinazione)
+{
+	VADisplay dpy = display_di(c);
+	VAProcPipelineParameterBuffer p;
+	VABufferID buffer = VA_INVALID_ID;
+	VAStatus stato, fine;
+	VARectangle regione;
+
+	if (!dpy || !c->vpp_aperto)
+		return false;
+
+	memset(&p, 0, sizeof p);
+	p.surface = sorgente;
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔⛔ LE DUE REGIONI SI DICHIARANO, E LASCIARLE A `NULL` E' UN DIFETTO
+	 *       VERO — trovato refutando, il 22 agosto 2026, e i millisecondi erano
+	 *       gia' bellissimi.
+	 *
+	 * `NULL` non vuol dire «1:1»: vuol dire **tutta la superficie**.  ⛔ E la
+	 * superficie di destinazione **non e' 1920x1080**: `av_hwframe_ctx` la
+	 * alloca allineata, e su iHD a 1920x1080 esce **1920x1088**.  ⇒ Con le
+	 * regioni a `NULL` il VPP **SCALA** l'immagine da 1080 a 1088 righe — un
+	 * ingrandimento dello 0,74 %, che a occhio non si vede e che
+	 * **distrugge ogni struttura a livello di pixel**.
+	 *
+	 * ⭐⭐ E IL BANCO L'HA VISTO E IL COLORE NO: `[M]` le statistiche di colore
+	 *     dei due flussi combaciavano entro **0,17 livelli su 255** (una scala
+	 *     dello 0,7 % non sposta una media), mentre il banco del trascinamento
+	 *     leggeva **0 marche su 903** contro 870 su 870 dell'altra strada, con
+	 *     il contrasto fra le celle sceso a 0,245 sotto il minimo di 0,25.
+	 *     ⇒ Due strumenti, e solo uno dei due sapeva vedere questo difetto.
+	 *
+	 * ⚠ E il sintomo per l'utente sarebbe stato **un desktop leggermente
+	 *   sfocato e leggermente stirato**, senza nessuna riga di registro.
+	 * ═══════════════════════════════════════════════════════════════════════ */
+	regione.x = 0;
+	regione.y = 0;
+	regione.width = (unsigned short) c->vpp_l;
+	regione.height = (unsigned short) c->vpp_a;
+	p.surface_region = &regione;
+	p.output_region = &regione;
+	p.output_background_color = 0xff000000;
+	p.filter_flags = VA_FRAME_PICTURE;
+	p.filters = NULL;
+	p.num_filters = 0;
+	p.surface_color_standard = VAProcColorStandardNone; /* la sorgente e' RGB */
+	p.output_color_standard = VAProcColorStandardBT709;
+	p.input_color_properties.color_range = VA_SOURCE_RANGE_FULL;
+	p.output_color_properties.color_range = VA_SOURCE_RANGE_REDUCED;
+
+	stato = vaBeginPicture(dpy, c->vpp_contesto, destinazione);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA, "⛔ vaBeginPicture: %s", vaErrorStr(stato));
+		return false;
+	}
+	stato = vaCreateBuffer(dpy, c->vpp_contesto, VAProcPipelineParameterBufferType, sizeof p, 1,
+	                       &p, &buffer);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA, "⛔ vaCreateBuffer: %s", vaErrorStr(stato));
+		vaEndPicture(dpy, c->vpp_contesto);
+		return false;
+	}
+	stato = vaRenderPicture(dpy, c->vpp_contesto, &buffer, 1);
+	if (stato != VA_STATUS_SUCCESS)
+		registro_dice(REG_CODIFICA, "⛔ vaRenderPicture: %s", vaErrorStr(stato));
+	fine = vaEndPicture(dpy, c->vpp_contesto);
+	vaDestroyBuffer(dpy, buffer);
+	if (stato != VA_STATUS_SUCCESS || fine != VA_STATUS_SUCCESS) {
+		if (fine != VA_STATUS_SUCCESS)
+			registro_dice(REG_CODIFICA, "⛔ vaEndPicture: %s", vaErrorStr(fine));
+		return false;
+	}
+	/* ⛔⭐ E QUI SI ASPETTA DAVVERO — vedi il riquadro in cima: questa riga E' il
+	 *     rilascio.  Quando torna, la GPU ha finito di leggere il buffer del
+	 *     compositore, e chi ha catturato lo puo' rendere. */
+	stato = vaSyncSurface(dpy, destinazione);
+	if (stato != VA_STATUS_SUCCESS) {
+		registro_dice(REG_CODIFICA, "⛔ vaSyncSurface: %s", vaErrorStr(stato));
+		return false;
+	}
+	return true;
+}
+
+/*
+ * Prepara il fotogramma del codificatore a partire dal DMA-BUF — la meta' della
+ * copia zero che sta dentro il ciclo dei tentativi.
+ *
+ * ⛔ Si rifa' a ogni tentativo, e non e' spreco: se il fotogramma sfonda il
+ *    tetto dei 16 MiB, `abbassa_qualita()` **richiude e riapre il contesto e il
+ *    magazzino**, quindi la superficie di destinazione del giro prima non esiste
+ *    piu'.  ⚠ La superficie SORGENTE invece resta: e' importata sul dispositivo,
+ *    che nessuno chiude.
+ */
+static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *s, uint64_t *us,
+                                 uint64_t *us_carico)
+{
+	uint64_t t0 = adesso_us();
+	VASurfaceID sorgente, destinazione;
+	int esito;
+
+	/* ⛔ Il caricamento sulla GPU NON C'E' su questa strada, e lo zero lo dice.
+	 *    ⚠ Chi legge la tabella dei tratti deve poter distinguere «gratis» da
+	 *    «non esiste», e qui la riga di registro della prima volta lo scrive. */
+	*us_carico = 0;
+
+	if (!apri_vpp(c, c->richiesta.larghezza, c->richiesta.altezza))
+		return false;
+	sorgente = importa_dmabuf(c, s);
+	if (sorgente == VA_INVALID_ID)
+		return false;
+
+	av_frame_unref(c->fotogramma);
+	esito = av_hwframe_get_buffer(c->magazzino, c->fotogramma, 0);
+	if (esito < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(esito, testo, sizeof(testo));
+		registro_dice(REG_CODIFICA, "⛔ nessuna superficie libera nel magazzino (%d pronte): %s",
+		              SUPERFICI_PRONTE, testo);
+		return false;
+	}
+	destinazione = (VASurfaceID) (uintptr_t) c->fotogramma->data[3];
+	if (!converti_sulla_gpu(c, sorgente, destinazione))
+		return false;
+
+	c->fotogramma->colorspace = c->ctx->colorspace;
+	c->fotogramma->color_range = c->ctx->color_range;
+	*us = adesso_us() - t0;
+
+	c->fotogramma->pts = c->numero;
+	c->fotogramma->pict_type = c->prossimo_chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+	if (c->prossimo_chiave)
+		c->fotogramma->flags |= AV_FRAME_FLAG_KEY;
+	else
+		c->fotogramma->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
+
+	if (!c->detto_copia_zero) {
+		c->detto_copia_zero = true;
+		registro_dice(REG_CODIFICA,
+		              "⭐⭐ COPIA ZERO in vigore: il DMA-BUF del compositore (fd %d, %ux%u, "
+		              "passo %u, modificatore 0x%llx) e' importato come superficie VA-API e "
+		              "convertito in %s DALLA GPU — nessuna `memcpy`, nessun `sws_scale`, "
+		              "nessun `av_hwframe_transfer_data`.  ⚠ La conversione resta e costa "
+		              "%llu us: e' cambiato CHI la fa, non che vada fatta",
+		              s->fd, s->larghezza, s->altezza, s->stride,
+		              (unsigned long long) s->modificatore,
+		              av_get_pix_fmt_name(c->formato_gpu), (unsigned long long) *us);
+	}
 	return true;
 }
 
@@ -2211,11 +2676,34 @@ static bool abbassa_qualita(Codificatore *c)
 	return true;
 }
 
-bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                           CodificatoreFotogramma *fuori)
+/*
+ * ⭐ IL CORPO COMUNE ALLE DUE STRADE — e ce n'e' UNO perche' quel che viene dopo
+ *    il fotogramma preparato e' identico: la codifica, il tetto dei 16 MiB, le
+ *    ricodifiche, la forma dei byte, la chiave che deve essere una chiave.
+ *
+ * ⛔ Averlo in due copie sarebbe la forma peggiore di tutte: il giorno in cui
+ *    una regola cambia — e in questo file sono cambiate tutte, almeno una volta
+ *    — una delle due copie resta indietro **e nessun banco lo vede**, perche'
+ *    ciascuna e' verde per conto suo.  ⇒ Cambia SOLO come si riempie
+ *    `c->fotogramma`, e quello e' l'unico `if` che le distingue.
+ *
+ * ⚠ Uno solo fra `pixel` e `superficie` e' non-NULL, e non e' una convenzione
+ *   implicita: la guardia lo pretende e lo scrive.
+ */
+static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t passo,
+                            const CodificatoreSuperficie *superficie,
+                            CodificatoreFotogramma *fuori)
 {
-	if (!c || !pixel || !fuori)
+	if (!c || !fuori)
 		return false;
+	if ((pixel == NULL) == (superficie == NULL)) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ si comprime O dai pixel O dalla superficie, e qui ne sono "
+		              "arrivati %s: non si indovina quale delle due strade voleva chi "
+		              "chiama",
+		              pixel ? "tutt'e due" : "nessuno");
+		return false;
+	}
 	if (!c->conf.ha_obbedito) {
 		registro_dice(REG_CODIFICA, "⛔ non ha obbedito (%s): non si spedisce niente",
 		              c->conf.perche_no);
@@ -2246,7 +2734,10 @@ bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo
 
 	for (uint32_t tentativo = 0;; tentativo++) {
 		uint64_t us_conv = 0, us_carico = 0;
-		if (!prepara_fotogramma(c, pixel, passo, &us_conv, &us_carico))
+		bool pronto = superficie
+		                  ? prepara_dalla_scheda(c, superficie, &us_conv, &us_carico)
+		                  : prepara_fotogramma(c, pixel, passo, &us_conv, &us_carico);
+		if (!pronto)
 			return false;
 		fuori->us_conversione = us_conv;
 		fuori->us_caricamento = us_carico;
@@ -2430,6 +2921,92 @@ bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo
 	c->prossimo_chiave = false;
 	c->numero++;
 	return true;
+}
+
+bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo,
+                           CodificatoreFotogramma *fuori)
+{
+	if (!pixel) {
+		registro_dice(REG_CODIFICA, "⛔ nessun pixel da comprimere");
+		return false;
+	}
+	return comprimi_comune(c, pixel, passo, NULL, fuori);
+}
+
+bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie *superficie,
+                                  CodificatoreFotogramma *fuori)
+{
+	if (!c || !superficie)
+		return false;
+	/* ⛔ IN SOFTWARE QUESTA STRADA NON ESISTE, e lo si dice invece di produrre
+	 *    un'immagine vuota: non c'e' nessun puntatore da leggere, e un
+	 *    codificatore in CPU non sa che farsene di un descrittore.  ⚠ Chi chiama
+	 *    deve aver guardato `codificatore_in_hardware()` PRIMA di chiedere la
+	 *    scheda al produttore — qui e' gia' tardi, e questa riga serve solo a
+	 *    non far passare il difetto in silenzio. */
+	if (!c->hardware) {
+		registro_dice(REG_CODIFICA,
+		              "⛔⛔ chiesta la COPIA ZERO su «%s», che codifica in SOFTWARE: non "
+		              "c'e' nessun pixel da leggere.  ⚠ Chi cattura deve chiedere la "
+		              "MEMORIA quando il codificatore non e' in hardware — la strada si "
+		              "sceglie prima, non qui",
+		              c->componente ? c->componente->name : "(nessuno)");
+		return false;
+	}
+	if (superficie->fd < 0 || !superficie->larghezza || !superficie->altezza
+	    || !superficie->stride || !superficie->formato_drm) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ descrittore incompleto (fd %d, %ux%u, passo %u, formato 0x%08x): "
+		              "non si importa a meta'",
+		              superficie->fd, superficie->larghezza, superficie->altezza,
+		              superficie->stride, superficie->formato_drm);
+		return false;
+	}
+	/* ⛔⛔ E IL PASSO DEVE ESSERE IMPORTABILE — vedi il riquadro in
+	 *      `codificatore.h`.  ⚠ Chi chiama lo sa gia' e sceglie la strada
+	 *      prima: questa e' l'ULTIMA linea di difesa, e serve perche' il difetto
+	 *      che ferma **non da' nessun errore** — da' un'immagine inclinata che
+	 *      passa ogni controllo sui millisecondi e ogni controllo sul colore. */
+	if (!codificatore_stride_importabile(superficie->stride)) {
+		registro_dice(REG_CODIFICA,
+		              "⛔⛔ passo %u: NON e' multiplo di %u, e il driver importando il "
+		              "DMA-BUF leggerebbe le righe a un passo suo — `[M]` 22 agosto 2026 "
+		              "la marca non si legge piu' su 0 fotogrammi di 869, mentre le medie "
+		              "di colore restano identiche entro 0,17 livelli su 255.  ⇒ NON si "
+		              "comprime: meglio la copia che un'immagine sbagliata in silenzio",
+		              superficie->stride, ALLINEAMENTO_SCHEDA);
+		return false;
+	}
+	/* ⛔ E la misura del descrittore deve essere quella per cui il codificatore
+	 *    e' aperto: `comprimi_comune` non la guarda — riceve una superficie e si
+	 *    fida.  ⚠ Alimentare un codificatore aperto a 1920 con una superficie da
+	 *    2560 non protesta: taglia o riempie, e il difetto si vede solo
+	 *    nell'immagine (e' la stessa nota di `codificatore_ridimensiona`). */
+	if (superficie->larghezza != c->richiesta.larghezza
+	    || superficie->altezza != c->richiesta.altezza) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ la superficie e' %ux%u e il codificatore e' aperto a %ux%u: non "
+		              "si comprime un'immagine che non e' la sua",
+		              superficie->larghezza, superficie->altezza, c->richiesta.larghezza,
+		              c->richiesta.altezza);
+		return false;
+	}
+	return comprimi_comune(c, NULL, 0, superficie, fuori);
+}
+
+bool codificatore_in_hardware(const Codificatore *c)
+{
+	return c ? c->hardware : false;
+}
+
+uint32_t codificatore_allineamento_scheda(void)
+{
+	return ALLINEAMENTO_SCHEDA;
+}
+
+bool codificatore_stride_importabile(uint32_t stride)
+{
+	return stride != 0 && (stride % ALLINEAMENTO_SCHEDA) == 0;
 }
 
 void codificatore_rilascia(Codificatore *c)

@@ -199,6 +199,410 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-F4 · ⭐⭐⭐ AGENTE F4 — **LA COPIA ZERO È FATTA**, e siamo a 1,23 volte il locale · *22 agosto 2026, sera*
+
+> ### ⭐⭐⭐ IL NUMERO CHE CHIUDE IL MANDATO, NELL'UNITÀ DELL'UTENTE
+>
+> | | barre del titolo | |
+> |---|---|---|
+> | il **locale** — il pavimento, misurato da B | **0,13** | |
+> | ⭐ **REMOTIX, dopo la copia zero** | **0,16 · 0,16** | **1,23 × il locale** |
+> | REMOTIX, prima | 0,27 · 0,26 | 2,1 × il locale |
+>
+> ⇒ ⭐⭐ **Da 2,1 volte il locale a 1,23.** La specifica dell'utente era *«il più vicino possibile a
+> una situazione locale, ma non identica: quello è impossibile»* (§1.1): **il divario si è chiuso
+> per due terzi.**
+>
+> ⛔⭐ **E la regola che poteva far cadere tutto è rispettata**: `LEZIONI.md` §6.2 dice che un
+> guadagno di millisecondi che non diventa fotogrammi **non è un guadagno**, e in questa stessa fase
+> era già successo due volte (C tolse 7,28 ms senza far salire i fotogrammi). ⇒ `[M]` **I fotogrammi
+> DIPINTI dalla pagina salgono: 834 → 942 e 870 → 926, il +9 %.** Non è una vittoria di millisecondi.
+>
+> ### Il tratto, e i sotto-tratti affiancati
+>
+> `[M]` `cattura → byte fuori`: **22,82 → 6,41 ms**, il **−72 %**. Tre giri **alternati** (A-B-A-B
+> sullo stesso albero), md5 verificati diversi, tela 1920×1080, **copia zero verificata accesa a
+> ogni giro**. Macchina: 20 nuclei, carico 1,31-1,65, 0 Chrome, 0 Xvfb — **il carico è dichiarato**,
+> come §4-F1 pretende.
+>
+> | | prima | dopo |
+> |---|---|---|
+> | la copia | 2,11 | **0,00** |
+> | la conversione (`sws_scale`) | 11,23 | **2,98** |
+> | il caricamento sulla GPU | 1,24 | **0,00** |
+> | ⭐ **il produttore** | 5,44 | **0,64** |
+>
+> ### ⭐⭐ E i «5,79 ms di Mutter» erano quasi tutti NOSTRI — smentito C
+>
+> §4-C aveva scritto: *«5,79 ms sono di Mutter: più di un terzo del margine non è nostro»*. ⛔ `[M]`
+> **Il produttore cala di 4,80 ms** togliendo **il nostro lavoro** dal thread di tempo reale di
+> PipeWire. ⇒ Non era il compositore: **eravamo noi, dentro casa sua.**
+>
+> ### ⛔⛔ E il difetto vero trovato **coi millisecondi già perfetti**
+>
+> `[M]` Il driver **iHD non onora un passo che non sia multiplo di 64 byte**: legge le righe a passo
+> suo e il desktop esce **inclinato di qualche pixel per riga, senza nessun errore**.
+>
+> | tela | passo | %64 | marca |
+> |---|---|---|---|
+> | 1920×1080 | 7680 | 0 | ⭐ letta, contrasto 1,000 |
+> | 1552×888 | 6208 | 0 | ⭐ letta, contrasto 1,000 |
+> | 1544×888 | 6176 | 32 | ⛔ **NON letta** |
+> | 1560×888 | 6240 | 32 | ⛔ **NON letta** |
+>
+> ⛔ **1552 e 1544 distano otto pixel e danno verdetti opposti.**
+>
+> ### ⭐⭐⭐ E la cosa da mettere in `LEZIONI.md`: **il controllo sul colore è CIECO a questo difetto**
+>
+> `[M]` Le medie per canale dei due flussi combaciano entro **0,17 livelli su 255** mentre la marca
+> **non si legge su 0 fotogrammi di 903**. Controllo negativo (R↔B scambiati): scarto **33**, cioè
+> lo strumento funziona.
+>
+> ⇒ ⛔⛔ **Un banco che guarda le medie dice VERDE su un'immagine sbagliata.** È la forma di
+> `LEZIONI.md` §1.20 applicata ai **pixel** invece che ai giudizi: *la misura è buona e non guarda
+> la cosa che conta*.
+>
+> **La cura**: il passo si guarda **misurato**, mai calcolato, prima di comprimere; se non è
+> importabile il palco si rimonta sulla memoria **dichiarandolo**; al cambio di tela la copia zero si
+> riprova da sé. `[M]` Stessa tela 1560: **0 eco su 903 → 831 su 831**.
+>
+> ### ⭐ E il rilascio: la cura è attuata, **ma il guasto innestato NON l'ha confermata**
+>
+> La ritenuta del `pw_buffer` è in vigore (6 buffer contro 4, **0 sostituiti su 1 800**). ⛔ Ma il
+> controllo positivo **non ha riprodotto il danno**: 10 marche su 10 anche **senza** attesa GPU.
+> ⇒ ⚠ **Resta prudenza, non necessità misurata**, e sta scritto così.
+>
+> ⭐ **Il guasto è servito lo stesso**: senza `vaSyncSurface` la conversione scende 2,86 → 0,38 e la
+> codifica sale 2,43 → 4,67, totale 6,19 → 6,05. ⇒ **L'attesa costa zero** e dice dov'è il punto di
+> rilascio giusto.
+
+> ### ⭐⭐ IL RISULTATO IN DUE RIGHE, e la seconda vale più della prima
+>
+> `[M]` Il tratto `cattura → primo byte` passa da **22,82 a 6,41 ms (−72 %)**, tre giri
+> **alternati**, e ⭐ **stavolta i fotogrammi SALGONO anche al metro dell'utente**: il distacco
+> misurato col banco di B va da **0,27 a 0,16 barre del titolo**, con **834→942** fotogrammi
+> dipinti in 25 s.  Il pavimento locale misurato da B è **0,13**: eravamo a **2,1 volte** il locale,
+> siamo a **1,23**.
+>
+> ⛔⛔ **E il difetto vero l'ho trovato dopo aver visto quei numeri.** La copia zero funzionava, il
+> tratto era sceso del 72 %, e **il desktop usciva inclinato di qualche pixel per riga** — senza
+> nessun errore, su nessuna riga di registro. Il driver iHD, importando il DMA-BUF, **non onora un
+> passo che non sia multiplo di 64 byte**.
+>
+> ⭐⭐⭐ **E la parte che è metodo, non aneddoto**: `[M]` il controllo sul COLORE **non lo vede**.
+> Le medie per canale dei due flussi combaciavano entro **0,17 livelli su 255** — R 96,90 contro
+> 96,97, B 130,11 contro 130,17 — mentre il lettore certificato della marca leggeva **0 marche su
+> 903**. ⇒ *Un banco che guarda le medie dice verde su un'immagine sbagliata.* Il numero che
+> discrimina è la **struttura**, non l'intensità.
+
+*22 agosto 2026. Macchina di prova NIC-OS (Intel i5-13500T, **iGPU Intel UHD 730 integrata** su
+`/dev/dri/renderD128`, iHD 25.2.3), utente `provaf48` (uid 1046), porta **7775**, albero
+`/media/REMOTIX/src/08-f4-src`, lavoro `/media/REMOTIX/tmp/08-f4`.*
+
+> ### ⛔ E LA PRIMA COSA È LA PORTA, di nuovo — «08-f» non era libero
+>
+> `[M]` `pgrep -ax remotix` prima di toccare qualunque cosa: un **altro agente della fase 8** girava
+> in quel momento con utente **`provaf8`**, albero `/media/REMOTIX/src/08-f-src`, lavoro
+> `/media/REMOTIX/tmp/08-f` e porta **7765**. ⇒ Il mio si chiama **`08-f4`** dappertutto, l'utente è
+> **`provaf48`** (uid 1046), e le porte **7775 · 7776 · 7777** sono state **contate con `ss`** prima
+> di prenderle. ⛔ 7730 e 7731 — i server dell'utente — non sono mai state toccate, e si contano
+> prima e dopo ogni passo.
+
+---
+
+## F4.1 · Che cosa è stato cambiato, e perché
+
+| file | che cosa |
+|---|---|
+| `src/cattura.h` · `src/cattura.c` | ⭐ la **ritenuta** del `pw_buffer`, il descrittore DMA-BUF dentro `CatturaFermo`, la **generazione** dei buffer, la misura dei pixel del primo fotogramma via `mmap` |
+| `src/codificatore.h` · `src/codificatore.c` | ⭐ l'importazione del DMA-BUF come superficie VA-API, la **conversione sulla GPU** (VPP) al posto di `sws_scale` + `av_hwframe_transfer_data`, la cache delle importazioni, ⛔ **la guardia sul passo** |
+| `src/figlio.c` | ⭐ la strada si chiede **SCHEDA**, e si retrocede sulla **MEMORIA dichiarandolo** quando il fotogramma non è usabile |
+
+⛔ **Non è stata toccata una riga** di `src/pagina.html` né dei banchi `04-b30-*` e `08-b67-*`.
+
+### Che cosa fa la copia zero, in una riga
+
+Il fotogramma **non esce più dalla GPU**. Il DMA-BUF che Mutter consegna si importa come superficie
+VA-API (`vaCreateSurfaces` con `VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2`) e si converte in NV12 con
+la **VPP della scheda** (`VAEntrypointVideoProc`), direttamente dentro la superficie che il
+codificatore consuma.
+
+⚠ **E quel che NON toglie, ed è la metà che nessuno si aspetta**: la conversione di colore **va
+fatta lo stesso**. Mutter consegna BGRx, `hevc_vaapi` vuole NV12. ⇒ Non è «non si converte»: è
+**chi converte** — la GPU invece della CPU, sulla memoria che ha già sotto invece che su otto
+megabyte fatti passare due volte per il bus. Per questo il suo costo resta nella voce
+`conversione`, sotto la **stessa etichetta di prima**: metterlo in una voce nuova avrebbe reso
+impossibile il confronto col «prima». ⛔ `caricamento` invece va a **0**, e lì lo zero vuol dire
+**«questo tratto non c'è più»**, non «è gratis».
+
+---
+
+## F4.2 · ⛔⛔ IL DIFETTO VERO — il passo del DMA-BUF, e otto pixel che cambiano verdetto
+
+`[R]` Il driver iHD, importando un DMA-BUF, **non onora un passo che non sia multiplo di 64 byte**:
+legge le righe a un passo suo, e l'immagine esce **inclinata di qualche pixel per riga**.
+
+⭐ **Quattro tele scelte apposta dalle due parti della soglia**, lette col **lettore certificato**
+della marca (`banchi/03-marca.py`, controllo negativo `[M]` 0 falsi su 3 000 sonde di rumore):
+
+| tela | passo | passo % 64 | la marca si legge? | contrasto |
+|---|---|---|---|---|
+| 1920×1080 | 7680 | **0** | ⭐ SÌ (disegno 65) | **1,000** |
+| 1552×888 | 6208 | **0** | ⭐ SÌ (disegno 70) | **1,000** |
+| 1544×888 | 6176 | 32 | ⛔ **NO** | 0,617 |
+| 1560×888 | 6240 | 32 | ⛔ **NO** | 0,510 |
+
+⭐ **1552 e 1544 distano OTTO pixel e danno verdetti opposti**: non è una soglia scelta dopo aver
+visto il risultato, è un confine al pixel. ⚠ E il passo è `larghezza × 4` esatto in tutte e quattro,
+modificatore **LINEAR**, **letto dal chunk** e mai calcolato.
+
+### ⭐⭐⭐ E la cosa che va in `LEZIONI.md`, non in nota a piè di pagina
+
+⛔ **Il controllo sul colore non vede questo difetto.** Sullo stesso paio di flussi, 40 fotogrammi
+ciascuno, 2 241 760 campioni:
+
+| | media R | media G | media B | min/max | a zero | a 255 |
+|---|---|---|---|---|---|---|
+| memoria (`sws_scale`) | 96,902 | 114,055 | 130,110 | 0 / 255 | 6,39 % | 1,98 % |
+| scheda (GPU, VPP) | 96,969 | 113,891 | 130,170 | 0 / 255 | 6,41 % | 1,79 % |
+| **scarto** | **0,067** | **0,165** | **0,061** | — | — | — |
+
+⭐ E il **controllo negativo** dello stesso banco — lo stesso flusso con R e B **scambiati a mano** —
+dà scarti di **33,27 e 33,14**: il banco *sa* dire di no, e quel verde non è per costruzione.
+
+⇒ ⛔⛔ **Le medie combaciavano entro 0,17 livelli su 255 mentre la marca non si leggeva su 0
+fotogrammi di 903.** Uno strumento che guarda le intensità è cieco a un difetto **geometrico**.
+⭐ Chi certifica una catena di immagini deve avere almeno un controllo che guardi la **struttura**.
+
+### La cura, e perché è questa
+
+⛔ **Il passo si guarda MISURATO, mai calcolato** (`cattura.h` regola 1), **prima di comprimere**. Se
+non è multiplo di 64 il fotogramma **non si spedisce** e il palco si **rimonta sulla MEMORIA
+dichiarandolo**; al cambio di tela la copia zero **si riprova da sé**, perché una sola tela storta
+non deve spegnerla per tutta la sessione.
+
+`[M]` La cura provata dal vivo, e **il verdetto lo dà il banco, non l'occhio**: stessa tela **1560**,
+stesso binario «scheda», **prima** della cura **0 eco letti su 903** — **dopo** la cura **831 su 831
+(100 %)**, perché ripiega sulla memoria e l'immagine è giusta. La riga di registro dice quale dei
+due casi è.
+
+⚠ **E la cura piena NON è mia da fare**: il passo lo decide il produttore e lo fa uguale a
+`larghezza × 4` `[M]`. ⇒ Una tela **multipla di 16** avrebbe sempre il passo buono, ma la regola
+della tela vive in `rcp_misura_ammessa()` (oggi: solo «pari»), che è **normativa** in `RCP.md` §4.5
+e non è di questo file. 🔸 **Girata al direttore per l'utente**, non curata di nascosto.
+
+---
+
+## F4.3 · La cura del RILASCIO, e ⛔ **il guasto innestato NON l'ha confermata**
+
+⭐ **Attuata quella decisa da C**: si **trattiene il `pw_buffer`** fino a lettura finita, e **non**
+si chiede `SPA_META_SyncTimeline`. La ritenuta è **nostra** e vale su ogni produttore; la timeline
+dipende da quel che il produttore offre, e quando non c'è **non c'è nessun errore** — c'è la
+schermata che si alterna (`LEZIONI.md` §8, §1.25).
+
+**Come è fatta**: `cattura_fermo_libera()` **è** il rilascio; il buffer torna a PipeWire solo lì.
+Il momento in cui «la GPU ha finito» è la `vaSyncSurface()` dentro la conversione: quando
+`codificatore_comprimi_scheda()` torna, la scheda ha **finito di leggere**, e solo allora
+`figlio.c` rende il buffer. ⛔ E due cose che il riquadro impone: il buffer che era nel posto si
+rende **prima** di sovrascriverlo, e un buffer che PipeWire ha **tolto** (`remove_buffer`) non si
+rende affatto — il `CatturaFermo` porta la **generazione** con cui è nato e il confronto decide.
+
+**Il prezzo, contato**: `[M]` sulla strada della scheda si chiedono **sei** buffer invece di
+quattro, perché ne tratteniamo al più due (uno nel posto, uno in mano a chi legge). Mutter li
+concede: `[M]` **«6 buffer distinti»** contro **«4»** sulla memoria, e **«sostituiti nel posto 0»**
+su 1 800 fotogrammi ⇒ la ritenuta non affama il produttore.
+
+### ⛔ IL GUASTO INNESTATO, e il risultato è un NO
+
+Tolta **la sola riga dell'attesa** (`vaSyncSurface`) lasciando tutto il resto — il buffer torna a
+Mutter mentre VA-API lo sta ancora leggendo, che è **esattamente** il meccanismo di §8. Binari
+verificati diversi per md5.
+
+⭐ **Il guasto è stato davvero percorso, e lo dicono i tratti**:
+
+| | conversione | codifica | totale |
+|---|---|---|---|
+| sano (con l'attesa) | **2,86 ms** | 2,43 | 6,19 |
+| guasto (senza l'attesa) | **0,38 ms** | **4,67** | 6,05 |
+
+⇒ ⭐⭐ **Togliere l'attesa non compra niente**: il tempo si sposta da `conversione` a `codifica`,
+perché il codificatore aspetta lo stesso la VPP da cui dipende. **6,19 → 6,05 ms**, dentro la
+dispersione. ⇒ La sincronizzazione esplicita **costa zero** e in cambio dà il punto di rilascio
+giusto: è una riga che si tiene senza pagarla.
+
+⛔ **Ma la corruzione NON si è presentata**: `[M]` **10 marche lette su 10** col guasto addosso,
+contrasto **1,000** su tutti e dieci, contro **10 su 10** del sano. ⇒ **Su questa scena e su questa
+macchina la ritenuta non è dimostrata necessaria.** Il meccanismo di §8 resta `[R]` (letto in
+Mutter), non `[M]`. ⚠ La spiegazione plausibile è che con sei buffer riciclati la finestra non si
+apre mai: la VPP finisce in ~3 ms e un buffer torna in giro dopo ~100 ms. ⇒ La ritenuta resta
+**prudenza con un meccanismo documentato e un prezzo misurato (due buffer)**, non una cura con una
+misura sotto. **Va detto così.**
+
+⛔ E **non** è stata rifatta la superficie di accumulo: il DMA-BUF di Mutter non è un diff.
+
+---
+
+## F4.4 · ⭐⭐ IL PRIMA E IL DOPO — tre giri **ALTERNATI**, i tratti affiancati, i fotogrammi accanto
+
+⛔ **Il palco, accanto al numero** (`LEZIONI.md` §2.0), e oggi vale doppio: `[M]` un tratto dato a
+17,48 ms si è rivelato fra 0,39 e 2,80 quando la macchina non era martellata da altri banchi.
+
+*Macchina di prova, **20 nuclei**, carico **1,31-1,65**, **17** processi `remotix` e **5**
+`gnome-shell` di altri banchi vivi, **0** Chrome e **0** Xvfb. Tela **1920×1080** — ⭐ **passo 7680,
+multiplo di 64: la copia zero era DAVVERO accesa**, e la riga di registro «il palco si monta sulla
+strada SCHEDA» è stata verificata a ogni giro. Codec **HEVC in hardware** — `[M]` dal registro:
+«hevc_vaapi (in HARDWARE · /dev/dri/renderD128 · Intel iHD 25.2.3 · ⚠ EncSliceLP, bassa potenza)»,
+chiesto al **componente** (`componente_e_hardware()`: accetta un formato di superficie) e
+l'entrypoint **letto dal driver**, non da ffmpeg.*
+
+⛔ **Alternati e non in fila** (A-B-A-B sullo stesso albero): i due binari nascono dallo **stesso
+sorgente**, cambia **una costante** (`COPIA_ZERO`), e il banco **verifica che gli md5 differiscano**
+prima di misurare.
+
+| tratto | **prima** *(memoria)* | **dopo** *(scheda)* | Δ |
+|---|---|---|---|
+| ⛔ **produttore** *(pts di Mutter → la nostra richiamata)* | **5,44** | **0,64** | ⭐ **−4,80** |
+| allocazione | 0,00 | 0,00 | — |
+| ⭐ **copia** | **2,11** | **0,00** | **−2,11** |
+| nel posto | 0,09 | 0,08 | −0,01 |
+| misura | 0,00 | 0,00 | — |
+| ⭐ **conversione** | **11,23** | **2,98** | **−8,25** |
+| ⭐ **caricamento** | **1,24** | **0,00** | **−1,24** |
+| codifica | 2,21 | 2,47 | +0,26 |
+| spedizione | 0,02 | 0,05 | +0,03 |
+| resto | 0,05 | 0,17 | +0,12 |
+| **TOTALE** | **22,82** | **6,41** | ⭐⭐ **−16,41 ms (−72 %)** |
+| **fotogrammi in 45 s** | 1 487 · 1 468 · 1 521 | 1 519 · 1 506 · 1 454 | ⚠ **fermi** |
+
+*(mediana dei tre giri per riga; i tre concordano — `conversione` 11,23/12,06/10,72 prima,
+2,91/2,99/2,98 dopo; `totale` 22,82/23,46/22,52 prima, 6,34/6,48/6,41 dopo.)*
+
+### ⛔ Che cosa questa tabella dice, e che cosa NON dice
+
+1. ⭐⭐ **I 5,79 ms «di Mutter» non erano tutti di Mutter.** C aveva scritto *«più di un terzo del
+   margine non è nostro: non c'è niente da limare, è il compositore»*. `[M]` La voce `produttore`
+   passa da **5,44 a 0,64 ms** togliendo **il nostro** lavoro dal thread di tempo reale e dalla
+   banda di memoria. ⇒ **Erano nostri quasi tutti**, ed è la smentita più grossa di oggi;
+2. ⛔ **I fotogrammi consegnati dal figlio NON sono saliti** (1 487 → 1 506, dentro la dispersione):
+   a **33/s** su una scena che ne disegna 61 il collo di bottiglia non è la nostra CPU. È la forma
+   mite di `LEZIONI.md` §6.2, e va detta;
+3. ⛔ **Il budget di C — 10,96 ms — è stato superato, e non perché la stima fosse timida**: le tre
+   voci previste ne valgono 11,60, ma il totale scende di **16,41** perché ne è caduta una quarta
+   che nessuno contava (`produttore`). ⇒ **In questo tratto le voci non sono indipendenti in
+   tutt'e due i versi**: si passano la cache (C), e si passano il thread di tempo reale (io).
+
+---
+
+## F4.5 · ⭐⭐⭐ IL METRO DELL'UTENTE — il distacco in barre del titolo
+
+⛔ Il banco è **quello di B** (`banchi/08-b67-elastico.py`, **13 guasti innestati su 13 accusati**,
+ricertificato oggi prima dell'uso): non ne è stato inventato un altro e non ne è stata toccata una
+riga.
+
+*Portatile **4 nuclei**, carico **0,21-0,76**, **0 Xvfb** e **1** Chrome di altri (finestra
+tranquilla concessa dal direttore). Macchina di prova 20 nuclei. Rete **WiFi vera** in mezzo.
+⭐ Finestra **1608** ⇒ tela **1568×888**, **passo 6272, multiplo di 64: la copia zero era accesa in
+tutt'e due i giri «scheda»**, verificato sul registro giro per giro.*
+
+| | **prima** *(memoria)* | **dopo** *(scheda)* |
+|---|---|---|
+| ⏱ ritardo, confine SCOMODO | **68,2** · **64,1** ms | **39,0** · **38,7** ms |
+| 📏 distacco | 195 · 188 px | 117 · 116 px |
+| ⭐⭐ **distacco in barre del titolo** | **0,27 · 0,26** | ⭐ **0,16 · 0,16** |
+| 🖼 **fotogrammi dipinti in 25 s** | 834 · 870 | ⭐ **942 · 926** |
+| eco letti (Q3) | 834/834 · 870/870 (100 %) | 942/942 · 926/926 (100 %) |
+| verdetto del banco | CONFORME | CONFORME |
+
+⇒ ⭐⭐ **E QUI I FOTOGRAMMI SALGONO INSIEME AI MILLISECONDI** (+9 %, 834→942 e 870→926): per la
+regola di §2.2 punto 1 **questa è una vittoria vera**, e non lo era quella di C.
+
+### ⭐⭐ La riga che conta, in una unità sola
+
+| | barre del titolo | ms |
+|---|---|---|
+| **locale** (lo stesso compositore, senza di noi — misurato da B) | **0,13** | 27,6 |
+| REMOTIX **prima** della copia zero | **0,27** | 68,2 |
+| ⭐ REMOTIX **dopo** | **0,16** | 39,0 |
+| *(l'utente, a occhio, sulla sua sessione)* | *0,50* | — |
+
+⇒ ⭐⭐ **Da 2,1 volte il locale a 1,23 volte.** Dei **42 ms** che B aveva misurato come «quel che
+aggiungiamo noi sopra al compositore», ne restano **~11**.
+
+⚠ **E il confronto col giudizio dell'utente NON si fa da qui**: lui guarda a **2560** px e su un
+desktop vero, il banco a **1568** e su una scena. Lo scarto 0,27 contro 0,50 resta la `[?]` che B ha
+aperto.
+
+### ⛔ E su una tela «storta» il dopo È IL PRIMA — dichiarato, non nascosto
+
+`[M]` Stesso banco, finestra **1600** ⇒ tela **1560×888** (passo 6240, **non** multiplo di 64):
+il registro scrive la riga del rifiuto e il palco si rimonta sulla **MEMORIA**. ⇒ Su quella tela il
+«dopo» **è il vecchio percorso**, e chi confrontasse i due numeri confronterebbe due volte la stessa
+cosa. ⭐ L'immagine però è **giusta** (831 eco su 831, 100 %), che è precisamente quel che la cura
+esiste per garantire.
+
+---
+
+## ⛔ Che cosa NON ha funzionato
+
+1. ⛔⛔ **La copia zero ha prodotto un'immagine sbagliata per tre giri di banco, e i millisecondi
+   erano perfetti.** Il passo non allineato a 64. Trovato solo perché il banco di B legge una marca
+   **strutturata**: il mio banco del colore diceva verde.
+2. ⛔ **La mia prima diagnosi di quel difetto era sbagliata.** Avevo incolpato le regioni della VPP
+   lasciate a `NULL` (che scalano da 1080 a 1088 righe). Le ho fissate — ed era una cura giusta e
+   necessaria — **ma il rosso è rimasto identico**. La causa era un'altra.
+3. ⛔ **E prima ancora avevo sospettato l'ORDINE dei giri** (la scheda girava sempre per seconda).
+   `[M]` Rifatto con la scheda per prima: stesso rosso. ⇒ Un confondente escluso con una misura
+   invece che con un ragionamento — ed era escludibile in tre minuti.
+4. ⛔ **Il guasto innestato sul rilascio non ha riprodotto il difetto di §8**: 10 marche su 10 lette
+   anche senza aspettare la GPU. La ritenuta resta prudenza, non necessità misurata. Vedi F4.3.
+5. ⚠ **La diagnosi del «fotogramma NERO» è più povera sulla strada della scheda.** In memoria si
+   guardava a cadenza (500 ms); sulla scheda si guarda **una volta sola**, mappando il DMA-BUF —
+   `[M]` **4,76 ms** il primo fotogramma. ⛔ Un desktop che diventasse nero a metà sessione, su
+   questa strada, **non ha più chi lo dica**. È dichiarato nel codice e qui, non scoperto dopo.
+6. ⚠ **Non ero solo sulla macchina** in nessun giro (17 `remotix` e 5 `gnome-shell` di altri
+   banchi). ⇒ ⛔ **I valori assoluti vanno letti come un tetto.** Il prima/dopo regge perché è
+   **alternato**, e il carico è dichiarato accanto a ogni giro.
+7. ⚠ **`banchi/08-b67-esiti.jsonl` si è allungato con i miei verbali**: è il banco di B che ci
+   scrive da sé a ogni giro. Non ho toccato il file a mano; lo dico perché il proprietario non lo
+   scopra da un `git status`.
+
+---
+
+## Che cosa resta `[?]`
+
+| | |
+|---|---|
+| ⏳⏳ **la tela multipla di 16** | ⛔ È una **modifica del protocollo** (`RCP.md` §4.5 dichiara normativo «pari»), quindi è dell'utente. Finché non c'è, la copia zero **non vale su tutte le tele** — e una delle tele scoperte è proprio la **1560** del banco di B |
+| ⏳ **la ritenuta serve davvero?** | `[R]` il meccanismo di §8 è letto in Mutter; `[M]` il guasto innestato **non lo riproduce** su questa scena. Servirebbe una scena che tenga la GPU occupata più a lungo dei sei buffer |
+| `[?]` **i 0,64 ms di `produttore`** | quel che resta dopo aver tolto il nostro lavoro dal thread di tempo reale. **Quello** sì che sembra di Mutter, ma è dieci volte meno di quanto si credeva |
+| `[?]` **i fotogrammi del figlio fermi a 33/s** | la scena ne disegna 61. Con il tratto a 6,41 ms il collo non è più la nostra CPU: `[?]` è la cadenza di Mutter, o il ciclo del figlio (`MOVIMENTO_ATTESA_S`) |
+| `[?]` **altri driver e altri compositori** | il vincolo dei 64 byte è `[M]` **su iHD**. Su AMD (radeonsi, `renderD129`) e su KWin/wlroots **non è stato guardato**. ⚠ La guardia però è sul **passo misurato**, quindi non è una regola su iHD: è una regola sul passo |
+| `[?]` **i 10 bit** | ⛔ non tornano da questa porta e non erano di questa fase: Mutter consegna BGRx sulla scheda come in memoria |
+
+---
+
+## Come si rifà
+
+Tutto in `/media/REMOTIX/src/`, e il server è rimasto **acceso sulla 7775** col binario sano
+(`remotix-scheda`, md5 `c11d200f…`) perché il coordinatore possa rigirare.
+
+| | |
+|---|---|
+| `08-f4-derivami.sh` | il terreno **derivato** da quello di C, non riscritto — porte, utente e albero miei |
+| `08-f4-due-binari.sh` | i due binari dallo **stesso albero**, con la verifica che gli md5 differiscano |
+| `08-f4-ab.sh` | ⭐ il prima/dopo **alternato** dei tratti |
+| `08-f4-elastico.sh` *(sul portatile)* | ⭐ il metro dell'utente, alternato, che **guida** il banco di B senza toccarlo |
+| `08-f4-misure.sh` | ⭐ le quattro tele dalle due parti della soglia dei 64 byte |
+| `08-f4-colore.sh` · `08-f4-colore.py` | il confronto di colore, **col controllo negativo R↔B** |
+| `08-f4-guasto-rilascio.sh` · `08-f4-prova-guasto.sh` | ⭐ il guasto innestato sul rilascio |
+
+⚠ Le copie stanno anche in `…/scratchpad/`. ⛔ Nessuno sta in `banchi/`: sono banchi di questo
+punto, e i rapporti degli agenti non si conservano — se il coordinatore li vuole, il posto è
+`banchi/` con un nome `08-…`.
+
+
+---
+
 ## 4-F1 · ⭐⭐⭐ AGENTE F1 — **la contesa misurata**, e il prodotto che si cronometra da sé · *22 agosto 2026, sera*
 
 > ### ⭐⭐ DUE AGENTI CI SONO ARRIVATI PER DUE STRADE DIVERSE, E CONCORDANO

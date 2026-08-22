@@ -299,6 +299,45 @@ typedef struct
 	uint64_t seq;
 	int64_t pts;
 	gboolean seq_nota;
+
+	/* ------------------------------------------------------------------ *
+	 * ⭐⭐ LA COPIA ZERO — il fotogramma che NON e' stato copiato
+	 * ------------------------------------------------------------------ *
+	 *
+	 * ⛔ Sulla strada della SCHEDA `pixel` resta **NULL** e questi campi sono
+	 *    l'unico modo di arrivare all'immagine: non e' un puntatore, e' un
+	 *    descrittore che vive sulla GPU.  Chi legge deve guardare
+	 *    `sulla_scheda` PRIMA di `pixel`, o scartera' ogni fotogramma della
+	 *    scheda in silenzio (`[M]` 6 agosto 2026, ed e' costato un giro di
+	 *    prove).
+	 *
+	 * ⛔⛔ E IL BUFFER E' **TRATTENUTO** FINCHE' NON SI CHIAMA
+	 *      `cattura_fermo_libera()` — vedi il riquadro della RITENUTA in
+	 *      `cattura.c`.  Chi tiene questo `CatturaFermo` piu' a lungo del
+	 *      necessario toglie un buffer al produttore; chi lo libera prima di
+	 *      aver finito di leggere si fa riscrivere l'immagine sotto gli occhi
+	 *      (`LEZIONI.md` §8: le due schermate che si alternavano non erano un
+	 *      problema di *acquire*, erano di *release*).
+	 */
+	gboolean sulla_scheda;
+	int fd;              /* ⛔ NON e' nostro: lo possiede PipeWire, non si chiude */
+	uint32_t offset;
+	uint32_t formato_drm; /* `DRM_FORMAT_XRGB8888` … — quel che VA-API vuole  */
+	uint64_t modificatore;
+	/* ⛔ La GENERAZIONE dei buffer del produttore: cambia ogni volta che
+	 *    PipeWire li rialloca (una rinegoziazione, un risveglio).  ⚠ Serve a
+	 *    chi mette in cache l'importazione di un `fd`: **i numeri di
+	 *    descrittore si riciclano**, e una cache che guardasse il solo `fd`
+	 *    darebbe a VA-API una superficie che punta a un buffer liberato — cioe'
+	 *    un'immagine di prima, o peggio.  Due misure sotto la stessa etichetta,
+	 *    nella forma che non da' nessun errore. */
+	uint64_t generazione;
+	/* ⛔ Opachi: il `pw_buffer` trattenuto e chi lo restituira'.  Non si
+	 *    leggono da fuori — esistono perche' `cattura_fermo_libera()` sappia a
+	 *    chi rendere il buffer senza che il chiamante debba tenersi la
+	 *    `Cattura` accanto al fotogramma. */
+	void *ritenuta;
+	void *padrone;
 	gboolean danno_dichiarato, danno_copre_tutto;
 	guint64 indice;          /* quale fotogramma era fra gli arrivati */
 	CatturaConsegna consegna; /* i quattro fatti, congelati con lui   */
@@ -361,7 +400,16 @@ typedef enum
 	 *    da leggere, e nessuno zero da scrivere in una tabella. */
 	CATTURA_PRESA_GUASTO,
 	/* ⛔ Strada della scheda: il tipo di buffer e' DICHIARATO, ma i pixel non
-	 *    sono qui.  Non e' un guasto e non e' uno zero. */
+	 *    sono qui.  Non e' un guasto e non e' uno zero.
+	 *
+	 * ⭐⭐ E DAL 22 AGOSTO 2026 QUESTO E' **UN FOTOGRAMMA CONSEGNATO**, non un
+	 *     nulla di fatto: dentro `CatturaFermo` ci sono `fd`, `offset`,
+	 *     `stride`, `modificatore` e `formato_drm`, e il `pw_buffer` e'
+	 *     TRATTENUTO fino a `cattura_fermo_libera()`.  ⇒ Chi chiama lo tratta
+	 *     come `FATTA` **cambiando strada di lettura**, non lo butta.
+	 * ⚠ Ed e' rimasto un esito a parte invece di diventare `FATTA` proprio
+	 *   perche' la strada di lettura E' diversa: un chiamante che non sa della
+	 *   scheda deve inciampare qui, non leggere un `pixel` NULL. */
 	CATTURA_PRESA_PIXEL_ALTROVE
 } CatturaPresa;
 
@@ -576,6 +624,17 @@ gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_
 CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
                             GError **sbaglio);
 
+/*
+ * Rende il fotogramma.
+ *
+ * ⛔⛔ E SULLA STRADA DELLA SCHEDA QUESTA CHIAMATA E' **IL RILASCIO**, cioe' la
+ *      cura di `LEZIONI.md` §8: finche' non si chiama, il `pw_buffer` e'
+ *      nostro e il produttore non ci puo' ridipingere dentro.  ⇒ Si chiama
+ *      **dopo** che l'ultimo lettore ha finito — dopo la conversione sulla GPU,
+ *      non dopo averla ordinata — e **non prima**.
+ * ⚠ Chiamarla due volte e' innocuo (il fermo si azzera); non chiamarla affatto
+ *   toglie un buffer al produttore per sempre.
+ */
 void cattura_fermo_libera(CatturaFermo *fermo);
 
 /* I quattro fatti, quando sono noti.  FALSE ⇒ il formato non e' stato ancora
