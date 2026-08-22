@@ -1413,106 +1413,66 @@ codice che poi si butta.
 
 ---
 
-# ⏳ PUNTO DI RIPRESA — 21 agosto 2026, sera
+# ⏳ PUNTO DI RIPRESA — 22 agosto 2026, mattina
 
-*Dall'utente: «nella prossima sessione chiudiamo tutti i punti ancora aperti. Firefox per Android
-non ci rallenterà più».*
+*La notte del 21-22 agosto: **dieci agenti in parallelo**, il coordinatore alla fusione e al
+collaudo. 40 commit. ⭐ E il giudizio dell'utente su tutte e tre le scene che mancavano.*
 
-## Quel che è deciso e non si riapre
+## ⭐ Quel che è chiuso, e non si riapre
 
 | | |
 |---|---|
-| **Firefox per Android** | ⛔ **NON SUPPORTATO** — `DECISIONI.md` §7.18. Il prodotto non prende più la strada MSE da solo; resta dietro `?disegno=mse` come prova, e la fase 13 decide se buttarla |
-| **REMOTIX non rincorre i difetti dei browser** | `DECISIONI.md` §0.1-bis. «Pienamente supportato» vuol dire *funziona, e sai in che condizioni* — non *uguale dappertutto* |
-| ⭐ **Chrome per Android** | **esperienza completa, audio e video perfetti** — giudizio dell'utente, 21 agosto sera: ogni flusso è pulito, `[M]` zero perdite su ogni anello. ⛔ **Non** chiude il ritardo fra audio e video, che l'utente ha confermato un'ora dopo ed è il punto 1 qui sotto |
-| **come una sessione locale** | `DECISIONI.md` §5-ter.8: niente trucchi, niente pulsanti nostri. Su Firefox l'incolla col mouse costa un clic **di Firefox**, e §5-ter.9 lo accetta |
+| **i difetti veri delle fasi 6 e 7** | ⭐ **nessuno aperto.** Il ritardo audio/video, il clic tenuto giù e il trascinamento del bordo sono **giudicati a posto dall'utente** il 22 agosto |
+| **i motori supportati** | Linux Chrome ✅ · Linux Firefox ✅ · Windows Chrome ✅ · Android Chrome ✅ · ⛔ Android Firefox **fuori**. ⚠ **Firefox su Windows: NON PROVATO** — né dentro né fuori (`DECISIONI.md` §7.20) |
+| **ridimensionamento dinamico** | ⛔ fuori dal progetto dal 17 agosto, e ⚠ **non si confonde col re-scaling**, che è quel che il prodotto fa ed è approvato (§5.14) |
+| **le prestazioni grafiche** | ⏳ **fase 8**, indirizzata dall'utente, e ci arriva con due misure già fatte |
+| **la degradazione su rete stretta** | ⏳ **fase 9**, spostata lì dall'utente: *«i problemi di rete non rientrano in questa fase»* |
 
-## I punti aperti — **riscritti la notte del 21 agosto**, dopo il giro dei dieci agenti
+## ⭐ Le sei cure entrate nel prodotto
 
-> ⚠ **Dieci agenti in parallelo, io coordinatore.** Quel che segue è lo stato **dopo** i loro
-> rapporti: molte voci sono cadute, alcune si sono rivelate false, e ne sono nate di nuove che
-> nessuno aveva mai guardato. ⛔ **Tre voci di questa lista erano sbagliate**, e stanno qui sotto
-> con la loro correzione invece che cancellate.
+l'ancora dell'orologio audio · la tirata che si riapre a ogni riancoraggio · la spirale delle chiavi
+(a 1 Mbit l'audio consegnato fa **×38**) · le cure **A+C** del clic che muore · l'alfabeto delle
+disposizioni di tastiera · il registro che non si intreccia più · il primo clic che accende davvero
+il suono · e il conto dei fotogrammi non spediti, che nessuno leggeva.
 
-### ⛔ I difetti veri, aperti
+## ⛔ E la cosa che questa notte ha insegnato
 
-1. ✅ **IL RITARDO DELL'AUDIO SUL VIDEO — CHIUSO il 22 agosto dal giudizio dell'utente.**
-   *«Le 4 prove che ho eseguito prima davano un audio OK»* (Linux Chrome, Linux Firefox, Windows
-   Chrome, Android Chrome) e, alla domanda diretta, *«ho già scritto prima che il ritardo
-   audio/video è ok»*. ⇒ 📖 `fasi/07-audio-e-appunti.md` §9.8.
-   ⭐ **Che cosa c'è stato in mezzo**, fra il *«te lo confermo»* del 21 sera e questo: l'**ancora
-   all'`istante` del server** (la coda non è più un serbatoio a senso unico), la **tirata che si
-   riapre a ogni riancoraggio** (la coda non si gonfia più a metà sessione), la cura della **spirale
-   delle chiavi** (l'audio non muore più quando la linea stringe), e il **primo clic** che adesso
-   accende davvero il suono.
-   ⚠ **Resta da riprendere la misura `AV`** — non per decidere se il difetto c'è, che l'ha deciso
-   l'orecchio, ma per **accorgersi se un giorno torna**.
-2. ⛔⛔ **Il server butta i datagram dell'audio mentre gli stream del video non perdono niente** —
-   `[M]` **2 200 scartati** in una sessione, con la causa scritta nel registro (il quanto del pacer,
-   poi `cwnd_left = 0`), e la pagina che perde **il 9,43 %** dell'audio, il **47 %** in una finestra
-   di 25 s. ⏳ Nessuno l'aveva mai guardato: è del trasporto.
-3. ⛔ **Il clic che muore ha una seconda porta**, e adesso è misurata: con un pulsante giù e **un**
-   risveglio, il rilascio non arriva mai **e nemmeno il clic fresco successivo**. ⭐ La catena è
-   letta nel sorgente di Mutter e confermata sul giornale: il difetto è **permanente**, non una
-   corsa, e si sana solo staccando il canale. ⏳ Cura scelta **A + C** (prevenzione + recupero), in
-   scrittura. 🔸 Il prezzo di A è visibile all'utente e **aspetta il suo giudizio**.
-4. ⛔ **`figlio.c` vanta una priorità di tempo reale che non ha**: `[M]` su questo kernel
-   `SCHED_FIFO` **non è ottenibile da nessuno** dentro una slice di systemd ⇒ `LimitRTPRIO=20` è
-   **inerte**. ⏳ La riga va resa onesta (assegnata); ⏳ e la cura vera — `nice` a **tutto** il
-   percorso audio della sessione, non solo al nostro processo — è una decisione di prodotto aperta:
-   `[M]` `nice −20` porta la purezza da 0,24 a **1,000**.
-5. ⛔ **Cinque banchi su sei della fase 6 non reggono come certificazione**, e con loro cadono
-   misure già dichiarate. ⏳ `06-b33` e `06-b35` sono stati rifatti; ⛔ **`06-b37` no** — è l'unico
-   dei sei **senza nessun guasto innestato**, e le sue coordinate **cancellano per costruzione** il
-   difetto che cercano. 📖 `fasi/06` §5.5.
+**Su diciassette controlli automatici, quattordici non reggevano** — dicevano «a posto» senza aver
+guardato niente. La forma comune è nuova e sta in `LEZIONI.md` **§1.20**: *la misura è buona e il
+giudizio è staccato da lei*. Poi §1.21 (uno strumento che si rompe sotto carico mente quando serve),
+§1.22 (un drop-in vince per nome), §1.23 (una scena si spegne contando a zero), §1.24 (due banchi
+sulla stessa porta si ammazzano in silenzio) e §1.25 (**una cura si cerca dovunque valga, non dove è
+stata trovata**).
 
-### ⭐ Chiusi nella notte del 21 agosto
+⭐ **E c'è un attrezzo nuovo che se ne accorge da solo**: `banchi/00-ancore.py` — 146 ancore, 128
+vive, e la prossima volta lo dice una macchina invece di una revisione.
 
-| era | com'è finita |
-|---|---|
-| «il difetto di Mutter è noto a monte?» | ⛔ **nessuno l'ha mai aperto**, e non è corretto nemmeno nel `main` di agosto 2026 ⇒ la cura è nostra su ogni versione |
-| «il colore dell'H.264 in hardware: +8 livelli sulle chiare» | ⛔ **falso** — 0,51 livelli, e le luci sono la banda *meno* sbagliata. ⭐ Al suo posto: **la VUI dichiarata è portante sotto le 576 righe** (32 livelli se taciuta) |
-| «`?video=worker` non esercitato» | ⭐ **funziona** (tre nomi non attraversavano il confine del worker) e **non rende**: abbassa il tetto del 19 %. Resta spento |
-| «il costo di `createImageBitmap`» | `[M]` **3,8 ms** mediani — l'8 % del tetto, e **nove volte meno** del vecchio disegno 2D |
-| «i tre difetti della disposizione di tastiera» | ⭐ **erano già chiusi dal 16 agosto**: il documento mentiva. ⛔ Ma ce n'era uno vero al loro posto — l'alfabeto del nome rifiutava **9 disposizioni su 589 che la macchina ha**, con `ERRORE_PROTOCOLLO` |
-| «`aioquic` non installato, il cliente si prova coi surrogati» | ⭐ installato e provato. ⛔ E dentro c'era un difetto grosso: il cliente **registrava i messaggi solo quando qualcuno li tirava dalla coda** ⇒ tre regole dell'arbitro non potevano uscire da **nessuna** traccia |
-| «i due rami mai esercitati su Mutter» | ⭐ chiusa **con l'esito opposto**: `cattura.c:543` **non si raggiunge dall'esterno**, e i «due rami» non sono rami |
-| «il secondo di grazia, non misurabile» | ⭐ **misurato**: `06-b36` è 24 casi, 22 guasti su 22 |
-| «gli attrezzi rotti di `06-b35`» | ⭐ riparati e **certificati contro un calcolo a mano in `awk`**, 235 campioni |
-| ⛔ *(nuovo, trovato per caso)* «il registro mentiva sotto carico» | tre `write()` per riga ⇒ **2 464 righe orfane su 4 800** in prova. Curato: una sola `write`, **zero** |
+## ⏳ I punti aperti — nessuno è un difetto
 
-### ⏳ Aperti, e nessuno li ha ancora misurati
+1. **Il datagram su rete non locale** (i byte sono presi su cavo) e la **priorità del percorso audio**
+   dentro la sessione: `[M]` `SCHED_FIFO` non è ottenibile su questo kernel, la leva è `nice`, e va
+   data a **tutto** il percorso audio — è una decisione di prodotto, non fatta;
+2. **La misura `AV`** va ripresa con l'`aoff` curato: non per decidere se il ritardo c'è — l'ha deciso
+   l'orecchio — ma per **accorgersi se torna**;
+3. **La guardia della cura A** non è mai stata vista scattare (la riga «TENUTI GIU'»): `[?]` di
+   diagnosi, non di prodotto;
+4. **Il 4/18 del 16 agosto** resta non riprodotto, ⭐ e **due cause sono escluse con la misura**: non
+   è la contesa sull'iGPU (§5.8) e non è quella sul compositore (§5.11). ⏳ La strada che resta è
+   setacciare l'intervallo fra le due richieste — è **una corsa che si misura in millisecondi**;
+5. **G5** di `06-b35` è intermittente per costruzione (7 giri su 9): il conto onesto porta sempre il
+   denominatore accanto;
+6. `[?]` **il desktop immortale**: chi si attacca e non tocca niente forse non fa partire l'orologio
+   dell'abbandono. **Letto nel codice, non misurato** — e se è vero spiega perché la macchina si
+   riempie;
+7. `[?]` **su DeX lo schermo risponde col monitor esterno o col telefono?** — la domanda vera di
+   §6.1-bis, che era stata **sostituita in silenzio** da un'altra. Serve il telefono dell'utente;
+8. **Firefox su Windows**, mai provato.
 
-6. **Il datagram su rete non locale**: ⭐ su WiFi vero è pulito (0 vecchi, purezza 1,000); ⏳ resta
-   `[?]` **quanti byte** ne porta uno sul browser vero, e il fatto che a **10 % di perdita la
-   sessione non si apra affatto**.
-7. **Il DeX e la GPU vera**: il mezzo pixel non arriva ai pixel su Xvfb. ⛔ Il telefono è dell'utente.
-8. **La contesa GPU**: la scena è **pronta e non lanciata** (sposterebbe i millisecondi di tutti);
-   ⭐ e un indizio nuovo la sostiene già — il 16 agosto, con cinque banchi accesi, `NON_ORA` aveva
-   mediana **22 ms e due casi a 3 000**; il 17 a macchina ferma, **6 ms**.
-9. ⏳ **Firefox su Windows: non provato.** ⚠ L'utente ha dichiarato l'elenco dei motori il 22 agosto
-   (`DECISIONI.md` §7.20) — Linux Chrome e Firefox, Windows Chrome, Android Chrome: **OK**; Android
-   Firefox: **fuori**. ⛔ Firefox su Windows **non è nominato**: non è supportato e non è escluso,
-   è **non provato**, e va tenuto così finché qualcuno non lo apre.
-   ✅ *(E i numeri **D** di §4.8 **sono stati rifatti** il 22 agosto — non sono più un buco:
-   `fasi/06` §5.9.)*
-10. Le proposte in attesa di un proprietario: l'accessore di `cattura.h`, `cattura_ridimensiona()`
-    che **dichiara successo su un flusso che muore**, e `03-b19-dipinti-worker.py` che dà **verde a
-    zero contro zero**.
+## 🔸 E due decisioni che aspettano l'utente
 
-### Decisioni che aspettano l'utente
-
-11. 🔸 **Il prezzo della cura A del clic**: su desktop fermo con un tasto giù, un client appena
-    attaccato **può restare bianco finché non si rilascia**. Si sana da sé, la scena è rara.
-12. **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi.
-13. **Il percorso `?video=worker` e quello `?disegno=mse`**: misurati, non rendono. Si buttano alla
-    fase 13 o restano?
-14. ✅ **I giudizi dell'utente sono arrivati tutti e tre** — 22 agosto 2026: il **ritardo
-    audio/video** («è ok»), il **clic tenuto giù** («sto tenendo il clic premuto ed è tutto ok») e
-    il **trascinamento del bordo** («riscala con le bande nere, ma immagino sia normale»).
-    ⇒ 📖 `fasi/06` §8 e `fasi/07` §9.8. ⛔ **Restano `[?]` di diagnosi, non difetti**: la guardia
-    della cura A non è mai stata vista scattare, e la misura `AV` va ripresa per accorgersi se il
-    ritardo torna.
+- **al congedo il palco va rimesso a una misura di riposo?** Oggi chi si collega **eredita la
+  finestra di chi c'era prima** (`RCP.md` §4.5, scritto il 22 agosto);
+- **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi.
 
 ## Come si riparte, in due comandi
 
