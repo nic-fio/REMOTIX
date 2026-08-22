@@ -408,23 +408,50 @@ def traiettoria(secondi, passo_ms, tela, base_px_s=None, seme=0, margine=80):
     lung = sum(profilo_velocita(i * passo_s, base, seme) * passo_s for i in range(n))
     righe = max(2, int(lung / max(1.0, (x1 - x0))) + 1)
     dy = max(1.0, (A - 2 * margine) / righe)
-    punti, s, x, y, verso = [], 0.0, float(x0), float(y0), 1
+    span = float(max(1.0, x1 - x0))
+    punti, x, y, verso, dyv = [], float(x0), float(y0), 1, dy
+    y_alto, y_basso = float(y0), float(A - margine)
     for i in range(n):
         t = i * passo_s
         v = profilo_velocita(t, base, seme)
         d = v * passo_s
-        s += d
         x += verso * d
+        # ⭐ La discesa e' CONTINUA, non a scalini: `y` avanza in proporzione a
+        #   quanto la mano ha percorso in orizzontale.
+        # ⛔ Il secondo rosso dello stesso giro: aggiungendo una riga intera
+        #    (`y += dyv`) al momento del rimbalzo, quel singolo passo valeva
+        #    `[M]` **26 132 px/s** su uno schermo largo — dove le righe sono
+        #    poche e alte 245 px.  ⇒ Un gradino verticale e' un salto quanto un
+        #    teletrasporto, solo piu' piccolo.  Qui la mano fa una diagonale.
+        y += dyv * d / span
         if x > x1:
             x = x1 - (x - x1)
             verso = -1
-            y += dy
         elif x < x0:
             x = x0 + (x0 - x)
             verso = 1
-            y += dy
-        if y > A - margine:
-            y = float(y0)          # si ricomincia dall'alto: la riga e' diversa
+        # ⛔⛔ LA RIGA CHE E' STATA UN ROSSO, il 22 agosto 2026, primo giro vero.
+        #
+        #    La prima stesura, arrivata in fondo allo schermo, RIPARTIVA
+        #    dall'alto: `y = y0`.  ⇒ `[M]` Q1 ha letto un picco di **450 000
+        #    px/s** — un salto di 1 800 px in 4 ms — che non e' una mano: e'
+        #    un TELETRASPORTO, e falsava il quantile con cui il banco decide se
+        #    la scena e' quella dell'utente.
+        #
+        # ⇒ ⭐ Si RIMBALZA invece di ripartire, e si sfasa di mezza riga: cosi'
+        #   (a) la mano resta continua — nessun salto — e (b) la passata di
+        #   ritorno NON ricalca le righe dell'andata, che e' quel che tiene
+        #   l'accoppiamento eco→evento non ambiguo.
+        if y > y_basso:
+            y = y_basso - (y - y_basso) - dy / 2.0
+            dyv = -dy
+        elif y < y_alto:
+            y = y_alto + (y_alto - y) + dy / 2.0
+            dyv = dy
+        if y > y_basso or y < y_alto:          # ⛔ mai fuori dallo schermo: la
+            y = min(max(y, y_alto), y_basso)   #    pagina saturerebbe, e due
+                                               #    istanti diversi darebbero
+                                               #    lo STESSO punto
         punti.append((round(t * 1000.0, 3), int(x), int(y)))
     return punti
 
@@ -524,29 +551,50 @@ PROLOGO = r"""
     return (t && t.width > 0 && t.height > 0) ? t : null;
   }
 
-  function leggi_marca_celle(ox, oy) {
+  /* ⛔⛔ UNA LETTURA SOLA PER DUE MARCHE, e la ragione e' un numero.
+   *
+   *   `[M]` 22 agosto 2026, primo giro vero: leggendo le due regioni in due
+   *   `getImageData` separati, Q12 ha misurato **9,43 ms mediani per
+   *   fotogramma** di sola lettura.  ⛔ Non e' «tanto»: e' lavoro sul FILO
+   *   PRINCIPALE, cioe' lo stesso filo che deve decodificare e dipingere —
+   *   il banco stava misurando anche se stesso.
+   *
+   *   La spesa non e' nel campionamento (41 000 pixel), e' nel **rientro dei
+   *   pixel dalla tela accelerata**: ogni `getImageData` e' una sincronia con
+   *   la GPU.  ⇒ Due sincronie diventano una: si copia UNA regione alta il
+   *   doppio (480×480), che tiene tutt'e due le marche, e si campiona da li'
+   *   con uno scostamento di riga.
+   * ⚠ E il costo resta MISURATO e dichiarato (Q12): dimezzarlo non e'
+   *   toglierlo. */
+  const REG_2A = REG_A * 2;
+
+  function leggi_le_due_marche() {
     const t = tela_prodotto();
-    if (!t) { B.conti.senza_tela++; return null; }
-    if (t.width < ox + REG_L || t.height < oy + REG_A) {
-      B.conti.tela_piccola++; return null;
+    if (!t) { B.conti.senza_tela++; return [null, null]; }
+    if (t.width < REG_L || t.height < REG_2A) {
+      B.conti.tela_piccola++; return [null, null];
     }
     if (!specchio) {
       specchio = document.createElement("canvas");
-      specchio.width = REG_L; specchio.height = REG_A;
+      specchio.width = REG_L; specchio.height = REG_2A;
       specchio_p = specchio.getContext("2d", { willReadFrequently: true });
     }
     let d;
     try {
-      specchio_p.drawImage(t, ox, oy, REG_L, REG_A, 0, 0, REG_L, REG_A);
-      d = specchio_p.getImageData(0, 0, REG_L, REG_A).data;
-    } catch (e) { B.conti.buttati++; return null; }
+      specchio_p.drawImage(t, 0, 0, REG_L, REG_2A, 0, 0, REG_L, REG_2A);
+      d = specchio_p.getImageData(0, 0, REG_L, REG_2A).data;
+    } catch (e) { B.conti.buttati++; return [null, null]; }
     B.conti.letture++;
+    return [campiona(d, 0), campiona(d, REG_A)];
+  }
+
+  function campiona(d, oy) {
     const sx = B.scorrimento[0], sy = B.scorrimento[1];
     const v = new Array(BIT);
     for (let i = 0; i < BIT; i++) {
       const r = (i / COLONNE) | 0, k = i % COLONNE;
       const xa = MARGINE + k * CELLA + DENTRO + sx;
-      const ya = MARGINE + r * CELLA + DENTRO + sy;
+      const ya = oy + MARGINE + r * CELLA + DENTRO + sy;
       let somma = 0;
       for (let y = ya; y < ya + LATO; y++) {
         let o = (y * REG_L + xa) * 4;
@@ -557,9 +605,12 @@ PROLOGO = r"""
     }
     if (B.crudi.length < B.crudi_voluti) {
       let s = "";
-      for (let i = 0; i < d.length; i += 4)
-        s += String.fromCharCode(d[i], d[i + 1], d[i + 2]);
-      B.crudi.push({ l: REG_L, a: REG_A, ox: ox, oy: oy, b64: btoa(s),
+      for (let y = oy; y < oy + REG_A; y++)
+        for (let x = 0; x < REG_L; x++) {
+          const o = (y * REG_L + x) * 4;
+          s += String.fromCharCode(d[o], d[o + 1], d[o + 2]);
+        }
+      B.crudi.push({ l: REG_L, a: REG_A, ox: 0, oy: oy, b64: btoa(s),
                      celle: v.slice(), scorrimento: [sx, sy] });
     }
     return v;
@@ -572,8 +623,8 @@ PROLOGO = r"""
     let c1 = null, c2 = null, t_let = t_dip;
     if (B.leggi) {
       const a = performance.now();
-      c1 = leggi_marca_celle(FIN1[0], FIN1[1]);
-      c2 = leggi_marca_celle(FIN2[0], FIN2[1]);
+      const due = leggi_le_due_marche();
+      c1 = due[0]; c2 = due[1];
       t_let = performance.now();
       if (B.costo_lettura_us.length < 40000)
         B.costo_lettura_us.push((t_let - a) * 1000);
@@ -1957,6 +2008,48 @@ def finto():
 # ═══════════════════════════════════════════════════════════════════════════
 # §13  LA MISURA VERA
 # ═══════════════════════════════════════════════════════════════════════════
+def batti(palco, testo):
+    """⛔ «thisisunsafe» SI BATTE, non si aggira con un flag.
+
+    ⭐ E' la scelta gia' presa da `02-pagina-misura-prova.py` e da
+      `01-p5-lancia.sh`, con la ragione scritta li': `--ignore-certificate-errors`
+      *«sarebbe il modo piu' rapido di far aprire la pagina e il modo piu'
+      sicuro di non misurare piu' niente»* — toglierebbe dalla misura proprio
+      la cosa che l'utente fa la prima volta.
+
+    ⚠ E' l'unico pezzo che questo banco RICOPIA invece di importare, e si
+      dichiara perche': il modulo che lo contiene (`02-pagina-misura-prova.py`)
+      fa `argparse` a livello di modulo e importarlo lancerebbe un banco.
+    """
+    for ch in testo:
+        for tipo in ("keyDown", "char", "keyUp"):
+            p = {"type": tipo, "text": ch} if tipo == "char" else {"type": tipo}
+            if tipo != "char":
+                p["key"] = ch
+            palco.chiama("Input.dispatchKeyEvent", **p)
+        time.sleep(0.03)
+
+
+def supera_l_avviso(palco, url):
+    """⛔ Il certificato e' nostro e non e' firmato da nessuno: l'avviso c'e', ed
+    e' ATTESO (`RCP.md` §4.1-bis).  ⇒ Si supera dalla stessa porta dell'utente e
+    si VERIFICA che si sia superato, invece di presumerlo."""
+    for _ in range(3):
+        r = palco.valuta(
+            "(function(){return document.title + '|' + "
+            "(document.getElementById('modulo') ? 'modulo' : 'niente');})()",
+            attendi=False) or ""
+        if "modulo" in str(r):
+            return True
+        dub("⚠ c'e' l'interstiziale del certificato (titolo «%s»): batto "
+            "«thisisunsafe», come farebbe l'utente" % str(r).split("|")[0][:40])
+        batti(palco, "thisisunsafe")
+        time.sleep(4.0)
+        palco.chiama("Page.navigate", url=url)
+        time.sleep(3.0)
+    return False
+
+
 def _ritira(palco):
     r = palco.valuta("window.__B67 ? JSON.stringify(window.__B67.prendi()) : null",
                      attendi=False)
@@ -1998,6 +2091,13 @@ def misura(a):
         time.sleep(3.0)
         if not palco.valuta("!!window.__B67", attendi=False):
             ko("⛔ il PROLOGO non e' entrato: senza, non c'e' nessun `t0`")
+            return USCITA_NON_CONFORME
+        if not supera_l_avviso(palco, url):
+            ko("⛔ l'avviso del certificato NON si e' superato: la pagina non "
+               "e' mai stata caricata.  ⚠ Non e' «il prodotto non disegna»")
+            return USCITA_NIENTE_DA_GIUDICARE
+        if not palco.valuta("!!window.__B67", attendi=False):
+            ko("⛔ il PROLOGO non e' entrato dopo il superamento dell'avviso")
             return USCITA_NON_CONFORME
         ok("pagina aperta e prologo dentro")
 

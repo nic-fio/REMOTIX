@@ -199,6 +199,297 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-A · ⭐⭐⭐ AGENTE A — il «prima» dell'anello · **rientrato il 22 agosto 2026**
+
+> ### ⭐⭐⭐ E LA COSA PIÙ IMPORTANTE STA IN UNA MOLTIPLICAZIONE: **l'occhio dell'utente e lo strumento dicono la stessa cosa**
+>
+> L'utente, guardando lo schermo e senza strumenti: il distacco fra la freccia e la finestra è
+> **«metà della barra del titolo»** ⇒ ≈ **360 px**. Il suo trascinamento, misurato dal video, ha
+> velocità mediana **3 400 px/s**.
+>
+> Il banco, che non sa niente di tutto questo: `input → vetro` = **99,07 ms**.
+>
+> ```
+> 99,07 ms × 3 400 px/s  =  337 px
+> ```
+>
+> ⇒ ⭐⭐ **337 contro 360: si accordano entro il 7 %**, per due strade che non si sono mai parlate —
+> un occhio su un desktop e un cronometro su un banco. ⛔ **E non è una coincidenza fortunata: è la
+> prova che l'elastico di §1.2 è il modello giusto.** `distacco = velocità × ritardo` regge sui
+> numeri veri.
+>
+> ⭐ **E dice anche a quale velocità l'utente guardava**: alla sua **mediana**, non ai picchi. ⇒ Il
+> bersaglio della fase è il trascinamento **normale**, non quello estremo.
+>
+> ⚠ **Il conto non chiude del tutto, e si dichiara**: 99,07 è il **pezzo nostro**; sullo schermo
+> vero ci vanno sopra i due pezzi ciechi (`[?]` 4-12 ms in ingresso, 16-40 in uscita) e la rete
+> (2,85 ms mediani) ⇒ **119-151 ms**, che a 3 400 px/s farebbero 405-513 px. L'utente ne vede 360.
+> `[?]` O guarda un po' più veloce della sua mediana, o i pezzi ciechi stanno al minimo. **Non è
+> risolto, ed è il genere di scarto che si scrive invece di limarlo a parole.**
+
+*Agente A. Banco `banchi/04-b30-anello-input.py`, risorse tutte mie: porte **7740** (ponte) ·
+**7741** (prodotto) · **7742** (ancora), utente **`provaa8`** (uid 1041), `/media/REMOTIX/tmp/08-a`,
+`/dev/shm/remotix-08-a`, ban-file e socket dentro la mia directory. ⛔ Le due porte dell'utente —
+**7730** e **7731** — non sono state toccate, e il conteggio dei vicini lo dichiara a ogni passo.*
+
+---
+
+## A.0 ⭐ Il banco si è ricertificato, e la certificazione conta i guasti
+
+`[M]` `python3 banchi/04-b30-anello-input.py --certifica` ⇒ **PROMOSSO, 53 controlli su 53, e 16
+guasti innestati accusati su 16.** Rifatto due volte: prima di toccare il file e dopo (§A.4).
+⇒ Il banco sa come fallire.
+
+---
+
+## A.1 ⭐⭐ IL NUMERO DI OGGI
+
+`[M]` **22 agosto 2026** — `input → vetro`, confine **scomodo** ai due capi
+(`event.timeStamp` in fase di cattura → **disegno finito**), **cinque giri**:
+
+| | |
+|---|---|
+| **la mediana delle cinque mediane** | `[M]` **99,07 ms** |
+| le cinque mediane | **88,39** · **96,68** · **99,07** · **109,07** · **111,03** ms |
+| **n** (sonde CHIUSE, il denominatore vero) | **228** · **234** · **224** · **413** · **417** — ⭐ e le sonde *tentate* erano 228/234/224/417/418: **nessun giro sotto il 99 % di chiusura** |
+| il confine **comodo** (per confronto, NON è il numero) | mediana delle mediane **70,15 ms** ⇒ il comodo si regala `[M]` **30,89 ms** |
+| contro `SPECIFICHE.md` §3.2 | **SFORA** i 50 ms e i 40, alla mediana e al p95 |
+
+### ⛔ E i DUE pezzi ciechi, che l'intestazione pretende accanto al numero
+
+| | |
+|---|---|
+| **in INGRESSO** | `[?]` **4-12 ms**: mano → `event.timeStamp` — dispositivo, nucleo e compositore **del client**. Nessuna API della pagina lo vede: `event.timeStamp` è già il dopo |
+| **in USCITA** | `[?]` **16-40 ms**: disegno finito → pixel acceso (`STUDI.md` §web §6.2). ⛔ **E qui ci sono davvero**: il banco ha letto `clienti_sull_xvfb: 0` ⇒ il browser misurato **non sta sull'Xvfb del banco** ma sul desktop vero del portatile, dove un compositore c'è |
+
+⇒ ⛔ **Sullo schermo di un utente**: `[M]` 99,1 + `[?]` 4-12 + `[?]` 16-40 = **119,1 - 151,1 ms**,
+**più la rete**. `SPECIFICHE.md` §3.2 misura «solo il pezzo che è nostro»: i pezzi ciechi si
+**dichiarano**, non si promettono.
+
+### ⛔ Il palco, accanto al numero (`LEZIONI.md` §2.0)
+
+`[M]` codec negoziato **HEVC** · stringa `hev1.1.6.L120.B0`, **8 bit**, promozione 8→10 **no** ·
+codifica **IN HARDWARE** (`hevc_vaapi`, `/dev/dri/renderD128`, iHD 25.2.3, ⚠ **EncSliceLP**, bassa
+potenza — non è la codifica piena) · tela **1460 × 888** · GPU della pagina
+`ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` · WebCodecs sì · pagina isolata sì ·
+scena sul monitor **Meta-0**, confermato da `wl_surface.enter`, cioè **dal compositore**.
+⚠ E sulla macchina giravano contemporaneamente i **due server dell'utente** (7730, 7731): è un
+palco condiviso, e la dispersione di §A.4 lo riflette.
+
+---
+
+## A.2 ⭐⭐ LA SCOMPOSIZIONE — e i tratti sono SEI davvero
+
+Il banco produce **11 tratti misurati** (più T, T-comodo, Δ e i due pezzi ciechi = i «16 tratti» che
+la certificazione conta). ⭐ **Raggruppati per anello fisico sono esattamente SEI**, ed è la tabella
+che la fase 4 aveva promesso senza scriverla:
+
+| | il tratto | 14 ago | **22 ago** | Δ |
+|---|---|---|---|---|
+| **A** | **la pagina** — `event.timeStamp` → i byte escono (1a + 1b) | 12,75 ms (9,1 %) | **7,65 ms (7,7 %)** | −5,10 |
+| **B** | **l'andata** — byte usciti → la scena riceve l'input (filo + server + `libei` + compositore) (2) | 25,35 ms (18,0 %) | **7,25 ms (7,3 %)** | **−18,09** |
+| **C** | **l'attesa del quadro nella scena** — la scena riceve → la scena disegna (3) | 26,51 ms (18,9 %) | **23,25 ms (23,5 %)** | −3,27 |
+| **D** | **il quadro di Mutter** — la scena disegna → cattura (`pts`) (4) | 16,23 ms (11,5 %) | **16,36 ms (16,5 %)** | +0,13 |
+| **E** | **codifica e ritorno** — cattura → ultimo byte in pagina (5 + 6) | 31,06 ms (22,1 %) | **24,45 ms (24,7 %)** | −6,61 |
+| **F** | **il cliente** — `decode()` → disegno finito (7 + 8 + 9 + 10) | 27,25 ms (19,4 %) | **18,83 ms (19,0 %)** | −8,42 |
+| | **somma delle mediane** | 139,14 | **97,79** | |
+| | **T, mediana del totale** | **140,50** | **99,07** | −41,43 |
+
+⭐ **I tratti non perdono niente per strada**, e non è un'impressione: sulle **medie** (che sono
+additive, a differenza delle mediane) la somma dei tratti 1a…10 contro la media di T fa
+`[M]` 141,718 contro 141,719 · 142,726 contro 142,725 · 115,769 contro 115,769 · 110,142 contro
+110,140. **Scarto ≤ 0,002 ms su quattro giri.**
+
+### I sotto-tratti, quando servono a chi deve curare
+
+| tratto | 14 ago | **22 ago** (mediana di 5 giri, [min-max]) |
+|---|---|---|
+| 1a evento → il prodotto lo vede (fase di cattura) | 12,68 | **7,53** [7,04 – 15,04] |
+| 1b il prodotto lo vede → i byte escono | 0,07 | **0,12** |
+| 2 byte usciti → la scena riceve l'input | 25,35 | **7,25** [6,84 – 7,93] |
+| 3 la scena riceve → la scena DISEGNA | 26,51 | **23,25** [13,86 – 28,28] |
+| 4 la scena disegna → cattura (`pts` di Mutter) | 16,23 | **16,36** [16,23 – 16,39] |
+| 5 cattura → PRIMO byte in pagina | 30,87 | **24,19** [20,05 – 26,17] |
+| 6 primo byte → ULTIMO byte (lo stream sul filo) | 0,20 | **0,24** |
+| 7 stream completo → richiamo di `decode()` | 0,09 | **0,10** |
+| 8 `decode()` → richiamo del decodificatore | 0,75 | **1,09** |
+| 9 ⭐ richiamo → **1° `drawImage`** (l'ATTESA del fotogramma) | 26,34 | **17,48** [14,90 – 18,72] |
+| 10 ⭐ 1° → 2° `drawImage` (**il disegno VERO**) | 0,08 | **0,10** |
+
+### ⭐⭐ Le tre cose che questa tabella dice, e che nessun documento diceva
+
+1. ⛔⛔ **«sei tratti da ~25 ms, nessuno dominante» NON è più vero.** Oggi i sei valgono
+   **7,7 / 7,3 / 23,5 / 16,5 / 24,7 / 19,0** ms. ⇒ **Quattro tratti su sei** (C, D, E, F) fanno
+   **83 %** dell'anello; i due dell'andata (A e B) ne fanno **15 %** insieme. La fase 8 ha
+   **quattro** bersagli, non sei.
+2. ⭐ **Q8 conferma di nuovo, e più forte di prima**: `[M]` il **1° `drawImage` costa 17,48 ms e il
+   2° ne costa 0,10 — 163 volte**. ⇒ Il tratto 9 **non è il disegno**: è l'**attesa** che il
+   fotogramma decodificato sia utilizzabile. La riga «il collo di bottiglia è il disegno» resta
+   falsa, e adesso lo è con `[M]`.
+3. ⛔ **Il tratto D è un muro, non un margine**: 16,36 ms con dispersione [16,23 – 16,39] su cinque
+   giri — è **un quadro a 60 Hz**, esatto. Non si lima: si toglie solo cambiando il modo in cui
+   Mutter consegna. ⇒ **Un sesto dell'anello è il ritmo del compositore.**
+
+### ⭐ Quanto AGGIUNGE il canale di input (la sola cosa nuova che questo banco sa dire)
+
+`[M]` i tratti che il metro della fase 3 non attraversava (A + B + C) valgono **41,74 ms**
+(mediana dei cinque giri; 14 agosto: **64,6**). ⛔ E i due numeri **non si sommano e non si
+sottraggono**: `input → vetro` **contiene** `disegno della scena → vetro`.
+
+---
+
+## A.3 ⛔⛔ IL CONFRONTO COL 139,40 — regge in parte, e la parte che NON regge va detta per prima
+
+### Il file del banco: sì, è lo stesso
+
+`[M]` `git log -- banchi/04-b30-anello-input.py`: l'ultima modifica al banco è del **16 agosto**
+(`0c85e5c`), ed è la **rinomina dei documenti** (`web.md` → `STUDI.md` §web) — si vede confrontando
+il verbale del 14 agosto, che cita `web.md §6.2`, con quello di oggi, che cita `STUDI.md §web §6.2`.
+⇒ **Nessuna modifica al metro fra le due date.** L'unica modifica *mia* è §A.4, additiva, e il banco
+è stato ricertificato dopo.
+
+### ⛔ Ma il palco è cambiato in DUE modi, e tutt'e due tirano dalla nostra parte
+
+| | 14 agosto | 22 agosto | che effetto ha |
+|---|---|---|---|
+| ⛔⛔ **la tela** | **1920 × 1080** = 2 073 600 px | **1460 × 888** = 1 296 480 px | **il 62,5 % dei pixel**: meno da convertire, codificare, spedire, decodificare e disegnare ⇒ tira giù **E** e **F**, e forse **D** |
+| ⛔ **la profondità** | `hev1.**2.4**` — HEVC **10 bit**, promozione 8→10 **dichiarata** (conversione 6214 µs + caricamento 2916 + codifica 5187 = **14,3 ms**) | `hev1.**1.6**` — HEVC **8 bit**, nessuna promozione (2735 + 1606 + 7199 = **11,5 ms**) | tira giù **E** |
+
+⚠ **Ho provato a rimettere la tela di allora e NON ci sono riuscito**: `?adatta=no` è la leva
+dichiarata («la pagina di prima del 15 agosto»), il giro con quella coda ha girato, ⛔ **e la tela è
+rimasta 1460 × 888**. `[R]` Il registro del server dice perché: `cattura formato negoziato:
+1460x888` e `input regione 0: 0,0 1460x888` — **il monitor virtuale NASCE a quella misura**, quindi
+`ADATTA_TELA` non c'entra e dall'indirizzo non si torna indietro. ⇒ **Resta `[?]`** quanto dei 41 ms
+sia prodotto e quanto siano pixel in meno.
+
+### ⭐ Quel che regge lo stesso, e regge bene
+
+1. ⭐⭐ **Il miglioramento è più grande della dispersione, e di molto.** Il **peggiore** dei cinque
+   giri di oggi (**111,03**) è **28,4 ms sotto il migliore** dei due del 14 agosto (**139,40**). Non
+   c'è sovrapposizione fra i due gruppi.
+2. ⭐⭐ **Il tratto B non può essere spiegato dai pixel**: `25,35 → 7,25 ms`, **−18,1 ms**, ed è il
+   tratto dell'**input che va verso il desktop** — dove non passa nessun fotogramma. ⇒ Quei 18 ms
+   sono **prodotto**, e sono la firma della cura del clic delle fasi 6 e 7.
+   ⭐ E l'attribuzione non è un'opinione: **Q6** innesta 30 ms sul ramo d'andata e il banco li ritrova
+   `[M]` **+31,57 · +31,68 · +32,36 ms proprio nel tratto 2** su tre giri su tre.
+3. ⭐ **Il tratto D non si è mosso**: 16,23 → 16,36 ms. Un tratto che *non* cambia quando cambiano
+   tela, codec e prodotto è la prova che la scomposizione sta separando cose diverse davvero.
+4. ⛔ **E i due numeri sono presi allo stesso confine**: la strada di disegno di oggi è la stessa del
+   14 agosto (§A.4), non quella nuova.
+
+⇒ ⭐ **Conclusione onesta**: l'anello è passato da `[M]` **139,40 / 141,60** a `[M]` **88,4 – 111,0**
+(mediana **99,07**). Di questi ~41 ms, **almeno 18 sono prodotto e dimostrati** (tratto B);
+il resto è **`[?]` fra prodotto e una tela più piccola del 37,5 %**.
+
+---
+
+## A.4 ⛔⛔ CHE COSA NON HA FUNZIONATO
+
+### 1. ⛔⛔ Il banco NON misura la strada di disegno che il prodotto usa oggi — ed è il difetto più grosso
+
+`[M]` **Giro `08a-strada-normale-bitmaprenderer`, 22 agosto, senza coda d'indirizzo:**
+**304 input spediti**, **1249 eventi ricevuti dalla scena**, **0 sonde CHIUSE su 304** ⇒ **codice
+d'uscita 3**, «non ho niente da giudicare». Q2, Q3, Q4, Q5, Q6, Q7, Q8 tutti **NON ESEGUITI**.
+Il resto della catena era sano: codifica in hardware, scena su `Meta-0`, input arrivato al desktop.
+
+`[R]` **La causa, letta nel codice e non dedotta.** Dal 20 agosto (`DECISIONI.md` §5.4,
+`src/pagina.html:2432`) la strada normale è `bitmaprenderer` + `createImageBitmap`. Su quella strada:
+
+- **il deposito 2D non esiste** (`src/pagina.html:2518`: `this.deposito = null; this.deposito_p =
+  null;`), e il prologo del banco legge i pixel **esattamente da lì** ⇒ zero marche lette;
+- **`drawImage` non viene mai chiamato** ⇒ i tratti 9 e 10 non esistono e Q8 non gira;
+- ⛔⛔ **e c'è di peggio, ed è la trappola vera**: il banco prende `t_dip` — il confine **scomodo**,
+  «disegno finito» — subito dopo aver chiamato il richiamo del prodotto. Ma `createImageBitmap(f)`
+  è **asincrona**: quel richiamo ritorna **prima** che qualcosa sia dipinto. ⇒ Se il deposito ci
+  fosse, il banco consegnerebbe un numero **più basso del vero** chiamandolo «scomodo». È la forma
+  di `LEZIONI.md` §1.20 in persona.
+
+**La cura che ho applicato (l'unica modifica al banco):** `--coda-url`, un argomento nuovo che
+appende una coda all'indirizzo. Con `--coda-url "?tela=2d"` la pagina prende la strada 2D — che è
+**esattamente quella del 14 agosto** — e il banco misura di nuovo. Il banco è stato **ricertificato
+dopo**: `[M]` 53 su 53, 16 guasti su 16. E la coda finisce nel verbale (`coda_url`).
+
+⛔ **Che cosa questo NON risolve, e va scritto in fase 8**: il numero di §A.1 è **la strada 2D**, non
+la strada che l'utente usa. `[?]` La differenza fra le due non è deducibile dai numeri che ci sono:
+`SPECIFICHE.md`/§7.1 dice `createImageBitmap` **3,8 ms** mediani, ma il tratto 9 di questo banco
+(17,48 ms) **non è il disegno**, è l'attesa del fotogramma — le due grandezze non si sottraggono.
+⇒ **Chi vuole il numero della strada vera deve prima rifare il prologo del banco** (chiudere su
+`transferFromImageBitmap` invece che su `drawImage`, e leggere i pixel dalla tela invece che dal
+deposito). **È lavoro di mezza giornata, e senza di lui la fase 8 misura una strada morta.**
+
+### 2. ⛔ Q5 e Q6 non stanno verdi insieme, e già il 14 agosto non ci stavano
+
+| giro | Q5 (ritardo al ritorno) | Q6 (ritardo all'andata) |
+|---|---|---|
+| 14 ago `b30-o2-finale` (**il 139,40**) | **rosso** | **rosso** |
+| 14 ago `b30-o2-finale2` (**il 141,60**) | **rosso** | verde |
+| 22 ago `-2` | verde | **rosso** |
+| 22 ago `-3` | **rosso** | verde |
+| 22 ago `-adattano-1`, `-4`, `-5` | verde | verde |
+
+⇒ ⛔ **Il 139,40 della fase 4 è stato consegnato da un giro con TUTT'E DUE le tarature rosse.**
+Non lo dice nessun documento. Oggi le tarature stanno verdi **3 giri su 5**, cioè meglio di allora,
+ma non sempre.
+`[R]` **Il modo in cui falliscono è sempre lo stesso e non è casuale**: il surplus finisce nel
+tratto giusto (`il_surplus_sta_in` lo nomina, `nel_tratto_giusto` a parte), **ma se ne vede un pezzo
+anche altrove** — quasi sempre nel tratto 3, «l'attesa del quadro». ⚠ Ha una spiegazione fisica
+plausibile: ritardare l'input ne cambia la **fase** rispetto al quadro del compositore, quindi
+l'attesa del quadro cambia per costruzione. `[?]` **Ipotesi, non misura** — chi la vuole `[M]` la
+prova innestando ritardi non multipli di 16,7 ms.
+
+### 3. ⛔ La TASTIERA non chiude quasi mai — e non era buona nemmeno prima
+
+`[M]` sonde di tastiera chiuse: oggi **0 su 208** · **0 su 212** · **8 su 196** · **5 su 202** ·
+**16 su 198**. Il 14 agosto: **27 su ~486** · **35 su ~744**, con mediane di **1007 ms** e **152 ms**
+— cioè numeri che non vogliono dire niente.
+⇒ ⛔ **Nessun documento deve citare un ritardo di tastiera preso da questo banco**, né oggi né dal
+14 agosto. `[?]` Se sia la scena, l'eco o il prodotto **non l'ho aperto**: è fuori dal mio punto.
+
+### 4. ⛔ La scena vecchia non lascia il posto, e il primo giro l'ho perso così
+
+`[M]` primo tentativo con `?tela=2d`: **«la scena non prende il fuoco del puntatore»**, sei
+tentativi, e il banco ha rifiutato di misurare — correttamente: un numero preso lì sarebbe preso su
+una **miniatura dentro la Panoramica di GNOME**, scala 0,79, senza CRC e senza eco.
+`[R]` La causa: `scena-avvia` dice «la scena è già viva» e riusa quella del giro precedente, che il
+fuoco l'ha perso. ⇒ **Rimedio: `scena-ferma` fra un giro e l'altro.** Fatto per tutti i giri
+successivi. ⚠ Va scritto nel banco: oggi il rimedio è nella testa di chi lo lancia.
+
+### 5. ⚠ Due difetti minori, dichiarati e non curati
+
+- ⛔ **`coda_url` non arriva nell'`esiti.jsonl`**: sta nel verbale su disco ma non nella riga
+  depositata. ⇒ Chi rilegge `04-b30-esiti.jsonl` **non può sapere su quale strada di disegno** è
+  stato preso un numero. Il mio l'ho messo nel nome del giro (`08a-tela2d-*`); non basta come regola.
+- ⛔ **`scena-costruisci` di `04-b30-lancia.sh` non funziona**: `ssh → enter.sh → bash -c` ha tre
+  livelli di virgolette e `$L`/`$P` si perdono per strada ⇒ `gcc -o /scena.nuovo`. `[M]` visto oggi.
+  Rimedio: la costruzione sta in un **file** (`08-a-scena-costruisci.sh`), non in una riga.
+
+---
+
+## A.5 ⛔ Che cosa resta `[?]` dopo di me
+
+| | |
+|---|---|
+| ⏳ **quanto dei 41 ms è prodotto** | la tela è passata da 1920×1080 a 1460×888 (**62,5 % dei pixel**) e il flusso da 10 a 8 bit, e non ho trovato il modo di rimettere la tela di allora (`?adatta=no` non basta: il monitor virtuale nasce già a quella misura). **Almeno 18 ms sono prodotto** (tratto B, dimostrato da Q6); il resto è aperto |
+| ⏳ **la strada `bitmaprenderer`** | il numero che l'utente vive **non è mai stato misurato da questo banco**. Serve il prologo rifatto (§A.4 punto 1) |
+| ⏳ **il tratto C, 23,25 ms e la dispersione più larga di tutte** ([13,86 – 28,28]) | è «la scena riceve l'input → la scena disegna». ⚠ È in parte **la scena del banco**, non il prodotto: prima di curarlo bisogna sapere quanto sia suo |
+| ⏳ **i ~16 ms non spiegati dentro il tratto 5** | oggi il tratto 5 vale 24,19 e il primo fotogramma dichiara conversione 2,7 + caricamento 1,6 + codifica 7,2 = **11,5 ms** ⇒ ne restano **~12,7** che nessuno dei tre spiega. Il margine c'è ancora, ed è più piccolo di prima |
+| ⏳ **i sei buchi del video dell'utente** | ⛔ **non li ho separati**: il mio giro non ha una traccia di rete abbastanza fine per attribuirli. Resta il punto §2.4 della fase |
+| `[?]` **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza, non la codifica piena** — riga letta oggi, e la fase 9 la deve sapere |
+| ⚠ **il palco era condiviso** | i due server dell'utente (7730, 7731) giravano durante tutti i giri. È la spiegazione più economica della dispersione 88 – 111 ms, e non l'ho isolata |
+
+---
+
+## A.6 Che cosa ho lasciato sulla macchina
+
+⭐ Utente **`provaa8`** (uid 1041) con sessione GNOME, albero `/media/REMOTIX/src/08-a-src`, scena
+`/media/REMOTIX/src/08-a-scena-lav/08-a-scena`, terreno `/media/REMOTIX/src/08-a-terreno.sh`,
+directory di lavoro `/media/REMOTIX/tmp/08-a`. Prodotto, ponte e scena **spenti**; si riaccendono
+con `08-a-lancia.sh accendi`. ⛔ **Le porte 7730 e 7731 e le directory dell'utente non sono mai state
+toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del terreno.
+
+
+---
+
 ## 4-D · ⭐⭐ AGENTE D — `EncSliceLP` e il peso delle chiavi · **rientrato il 22 agosto 2026**
 
 *Due `[?]` che stavano nei documenti da settimane, chiuse tutte e due con la misura. ⛔ E due
