@@ -33,6 +33,12 @@ banco dell'invariante I2 non consegnerebbe niente all'arbitro (rilievo R8.9).
 ⛔ **E il codice d'uscita dice CHE COSA e' successo alla connessione**: `0` sono
 rimasto attaccato per tutto il tempo chiesto, `4` la connessione o la sessione
 sono cadute prima — e il registro dice quale delle due (rilievi R8.2, R8.4).
+`5` nessun `TELA` e' arrivato (§7.1, il silenzio).  ⭐ `6` — 22 agosto 2026 —
+**la scena chiesta non e' esercitabile**: e' il caso di `--puntatore-vecchia`
+quando non c'e' nessuna tela precedente, o quando la tela nuova non e' piu'
+piccola.  ⛔ Non e' `1` e non e' `0`: un banco che leggesse «tutto bene» da una
+scena che non e' avvenuta sarebbe verde per costruzione, e un banco che
+leggesse «il prodotto ha sbagliato» darebbe il rosso all'imputato sbagliato.
 """
 import argparse
 import asyncio
@@ -58,9 +64,17 @@ T = {"CIAO": 0x0001, "ECCOMI": 0x0002, "CREDENZIALI": 0x0003, "AMMESSO": 0x0004,
      #    ⛔ `fasi/06-la-tela-e-la-vista.md` §0 punto 6: erano nel protocollo da
      #    una settimana e questo cliente **non ne mandava nemmeno uno**.
      "VISTA": 0x0008, "DISPOSIZIONE": 0x0009, "CURSORE_FORMA": 0x000A,
-     "ADATTA_TELA": 0x000B, "CONGEDO": 0x000C, "TELA": 0x000E,
-     "TERMINA_SESSIONE": 0x0011}
+     "ADATTA_TELA": 0x000B, "CONGEDO": 0x000C, "RICHIEDI_CHIAVE": 0x000D,
+     "TELA": 0x000E, "TERMINA_SESSIONE": 0x0011}
 NOME = {v: k for k, v in T.items()}
+# ⛔ IL CANALE DI INPUT STA IN UN DIZIONARIO SUO, e non e' pignoleria: `NOME`
+#    e' la mappa inversa di `T` e la usa `_sfoglia()` per dare un nome ai
+#    messaggi che arrivano **sul canale di controllo**.  Un `0x0101` la' dentro
+#    farebbe comparire la parola «PUNTATORE» nel registro di un messaggio di
+#    controllo malformato — cioe' una diagnosi che manda a guardare il canale
+#    sbagliato.  ⚠ E i canali sono due davvero: §2.5, byte alto `0x00` contro
+#    `0x01`.
+T_PUNTATORE = 0x0101            # §7.3
 # I due esiti e i tre motivi di `TELA` — §7.1.
 TELA_ESITO = {1: "ADATTATA", 2: "RIFIUTATA"}
 TELA_MOTIVO = {0: "-", 1: "COMPOSITORE_INCAPACE", 2: "MISURA_FUORI_LIMITI",
@@ -396,6 +410,21 @@ class Cliente(QuicConnectionProtocol):
         #    denominatore di T4 conterebbe fotogrammi che non ci sono.
         self.v_reg = set()
         self.v_fotogrammi = []  # [(numero, chiave, larghezza, altezza, dati)]
+        # ═══ IL CANALE DI INPUT — §2.5, §7.3, e il 22 agosto 2026 ═════════
+        # ⛔ `RCP.md` §2.5: «**uno solo**, aperto dopo aver ricevuto `SESSIONE`
+        #    e tenuto aperto».  ⚠ NON e' come gli appunti, dove ogni
+        #    trasferimento ha il suo stream: qui uno stream per messaggio
+        #    sarebbe **un altro protocollo**, e il server che conta gli `id`
+        #    «su tutto il canale» (§7.3) non avrebbe piu' un canale su cui
+        #    contarli.
+        self.inp_stream = None
+        # §7.3: «crescente, comincia da 1.  ⛔ 0 e' riservato».
+        self.inp_id = 0
+        # ⭐ L'ISTANTE **REGISTRATO** DELL'ULTIMO `TELA`, e non l'ora di
+        #    adesso: il secondo di grazia lo arbitra §11.1 su `istante_ms`, e
+        #    un ritardo contato su un orologio diverso da quello che finisce
+        #    nel file darebbe un `dt` che non e' quello che l'arbitro legge.
+        self.ultimo_tela_ms = None
 
     def _cade(self, perche: str) -> None:
         """La prima causa vince: le successive sono conseguenze, non cause."""
@@ -426,6 +455,52 @@ class Cliente(QuicConnectionProtocol):
     def manda(self, dati):
         self._quic.send_stream_data(self.controllo, dati, end_stream=False)
         self.transmit()
+
+    # ══════════════════════════════════════════════════════════════════════
+    # L'INPUT — §7.3, e il canale unico di §2.5
+    # ══════════════════════════════════════════════════════════════════════
+
+    def apri_input(self):
+        """Lo stream del canale di input: **uno solo**, e si tiene aperto.
+
+        ⛔ Si apre alla prima volta che serve, e non ad ogni messaggio: §2.5
+           dice «uno solo … e tenuto aperto», e §7.3 conta gli `id` «su tutto
+           il canale».  ⚠ Aprirlo e non chiuderlo non e' una svista: chiuderlo
+           con FIN direbbe al server «il client non manda piu' input», che e'
+           un'altra cosa da quella che questo banco vuole dire.
+        """
+        if self.inp_stream is None:
+            self.inp_stream = self._http.create_webtransport_stream(
+                self.sessione, is_unidirectional=True)
+        return self.inp_stream
+
+    def manda_puntatore(self, x, y):
+        """⭐ `PUNTATORE(x, y)` — §7.3, coordinate sulla **tela**.
+
+        ⛔ E si registra col canale `0x01` e con lo stream VERO: §11.1
+           definisce il campo `canale` come «il byte alto di `tipo`», e
+           l'arbitro **rifiuta** un blocco in cui i due non tornano — una
+           registrazione che dichiarasse `0x00` farebbe leggere questi byte
+           come se fossero controllo, e la regola del secondo non uscirebbe
+           mai da questa traccia.
+        """
+        sid = self.apri_input()
+        self.inp_id += 1
+        # ⛔ §7.3: «microsecondi dell'orologio monotono del CLIENT», e «il
+        #    client scrive microsecondi VERI e NON DEVE far credere a una
+        #    precisione che non ha» (rilievo R1.27).  ⚠ Qui la grana e' quella
+        #    di `time.monotonic()` di CPython — nanosecondi sul kernel Linux —
+        #    quindi non si moltiplica niente per mille.
+        ist_us = int(time.monotonic() * 1_000_000)
+        b = inquadra(T_PUNTATORE,
+                     struct.pack("!IQII", self.inp_id, ist_us, x, y))
+        self._quic.send_stream_data(sid, b, end_stream=False)
+        self.transmit()
+        ms = None
+        if self.reg is not None:
+            self.reg.aggiungi(CLIENT, b, canale=0x01, stream=sid)
+            ms = self.reg.blocchi[-1][6]
+        return self.inp_id, ms
 
     # ══════════════════════════════════════════════════════════════════════
     # GLI APPUNTI — §7.4, e i tre messaggi letti da `RCP.md` e non dal C
@@ -863,6 +938,15 @@ class Cliente(QuicConnectionProtocol):
             # ⛔ SI REGISTRA QUI, all'arrivo: vedi il riquadro su `self.reg`.
             if self.reg is not None:
                 self.reg.aggiungi(SERVER, grezzo)
+                # ⭐ L'istante che l'arbitro leggera' nel file, preso dove il
+                #    file lo prende.  ⛔ Non `time.monotonic()` di adesso: il
+                #    `dt` del secondo di grazia si conta fra DUE `istante_ms`
+                #    di §11.1, e contarlo su un orologio diverso vorrebbe dire
+                #    che il ritardo dichiarato dal banco e quello letto
+                #    dall'arbitro sono due numeri diversi — cioe' esattamente
+                #    l'errore che il confine del secondo non perdona.
+                if NOME.get(tipo) == "TELA":
+                    self.ultimo_tela_ms = self.reg.blocchi[-1][6]
                 if NOME.get(tipo) in ("TELA", "CURSORE_FORMA") \
                         and self.messaggi.qsize() > 0:
                     # ⚠ «E' arrivato mentre ce n'erano gia' altri in coda» non
@@ -1209,6 +1293,12 @@ async def principale(a) -> int:
         #   cliente di prova che non lo tenesse non potrebbe accorgersi di un
         #   `TELA` che non ha chiesto.
         tela_viva = (lar, alt)
+        # ⭐ La tela in vigore **PRIMA** dell'ultimo `TELA(ADATTATA)`: e' quella
+        #    su cui le coordinate in volo di §7.1 sono ancora valide, ed e'
+        #    l'unico numero da cui si puo' costruire il caso del secondo di
+        #    grazia senza inventarselo.  ⛔ `None` finche' nessun adattamento e'
+        #    riuscito: allora la scena non esiste, e si dice invece di fingerla.
+        tela_prec_adattata = None
         esiti_tela = []
         if a.adatta:
             for al, aa, quando in a.adatta:
@@ -1228,8 +1318,11 @@ async def principale(a) -> int:
                         return 4
                     except asyncio.TimeoutError:
                         pass
+                prima_di_questo = tela_viva
                 r = await chiedi_tela(cli, reg, al, aa, a.attesa_tela)
                 esiti_tela.append(r)
+                if r is not None and r[0] == 1:
+                    tela_prec_adattata = prima_di_questo
                 if r is None:
                     # ⛔ Il silenzio si REGISTRA e si esce con un codice suo: e'
                     #    la scena di §7.1, e va distinta da «la sessione e'
@@ -1237,6 +1330,152 @@ async def principale(a) -> int:
                     scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                     return 5
                 tela_viva = (r[2], r[3])
+        # ═══════════════════════════════════════════════════════════════════
+        # ⭐⛔ IL SECONDO DI GRAZIA DI §7.1, PUNTATO CONTRO IL SERVER
+        #     — 22 agosto 2026, e fino a stamattina non era mai stato fatto.
+        #
+        # §7.1: *«Dopo aver mandato `TELA(ADATTATA)` il server DEVE accettare
+        # per **un secondo** coordinate di input valide sulla tela
+        # **precedente**, saturandole alla nuova e scrivendolo nel registro;
+        # passato quel secondo, sono `ERRORE_PROTOCOLLO`»*.
+        #
+        # ⛔⛔ LA TRAPPOLA, E VA DISINNESCATA PRIMA DI SCEGLIERE IL RITARDO.
+        #
+        #     La regola e' del **SERVER**; la registrazione la prende il
+        #     **CLIENT**.  L'intervallo visto qui e' piu' CORTO di quello vero
+        #     di mezzo giro di rete per lato (§11.1, *«il tempo registrato e'
+        #     di CHI REGISTRA»*).  ⇒ Un caso «dentro il secondo» messo a 0,95 s
+        #     potrebbe essere 1,02 s per il server, e il banco accuserebbe il
+        #     prodotto di un difetto che non ha — o, peggio, si assolverebbe da
+        #     solo.
+        #
+        # ⭐ La cura non e' un calcolo: e' **stare lontani dal confine**, e
+        #    dichiarare perche'.  Chi chiama questo cliente sceglie il ritardo;
+        #    qui si stampa il margine, cosi' un ritardo scelto male si vede
+        #    invece di produrre un verdetto.
+        #
+        # ⛔ E LA COORDINATA NON SI INVENTA: e' **l'ultimo pixel della tela
+        #    precedente**, `(prec_l - 1, prec_a - 1)`.  Due ragioni, e la
+        #    seconda vale piu' della prima:
+        #      · e' valida sulla tela di prima **per definizione** (§7.3: «0 <=
+        #        x < tela_larghezza»), quindi il caso e' quello di §7.1 e non
+        #        «una coordinata sbagliata» — che §7.1 NON copre, e il server
+        #        ha una riga apposta per dirlo;
+        #      · saturata, deve finire **esattamente** su `(nuova_l - 1,
+        #        nuova_a - 1)`, cioe' su un punto NOTO.  ⭐ E' il controllo che
+        #        attraversa la conversione: un server che rifiutasse la
+        #        coordinata *dicendolo nel registro* ma la applicasse lo stesso
+        #        passerebbe l'arbitro, e non passerebbe questo.
+        if a.puntatore_vecchia is not None:
+            if tela_prec_adattata is None:
+                print("   ⛔ --puntatore-vecchia, ma nessun TELA(ADATTATA) e' "
+                      "riuscito: non esiste nessuna «tela precedente», e una "
+                      "coordinata scelta a caso proverebbe un'ALTRA regola "
+                      "(§7.3 «fuori dalla tela»), non il secondo di grazia")
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
+                return 6
+            px = tela_prec_adattata[0] - 1
+            py = tela_prec_adattata[1] - 1
+            if px < tela_viva[0] and py < tela_viva[1]:
+                print(f"   ⛔ ({px},{py}) e' DENTRO la tela in vigore "
+                      f"{tela_viva[0]}x{tela_viva[1]}: la scena di §7.1 non e' "
+                      f"esercitata affatto — serve una tela nuova piu' piccola "
+                      f"della precedente {tela_prec_adattata[0]}x"
+                      f"{tela_prec_adattata[1]}")
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
+                return 6
+            # La saturazione attesa, calcolata come §7.1 la descrive: «all'ultimo
+            # pixel valido».
+            sx = px if px < tela_viva[0] else tela_viva[0] - 1
+            sy = py if py < tela_viva[1] else tela_viva[1] - 1
+            rit_ms = int(round(a.puntatore_vecchia * 1000))
+            print(f"   ⛔ ATTESO, dichiarato PRIMA: PUNTATORE ({px},{py}) — "
+                  f"valido sulla tela precedente {tela_prec_adattata[0]}x"
+                  f"{tela_prec_adattata[1]}, fuori da quella in vigore "
+                  f"{tela_viva[0]}x{tela_viva[1]} — a {rit_ms} ms dal "
+                  f"TELA(ADATTATA)")
+            if rit_ms > 1000:
+                print(f"      ⇒ oltre il secondo di grazia, e il margine e' "
+                      f"{rit_ms - 1000} ms.  ⛔ Il server DEVE rifiutare: il "
+                      f"SUO intervallo e' ancora piu' lungo di questo")
+            else:
+                print(f"      ⇒ dentro il secondo, e il margine e' "
+                      f"{1000 - rit_ms} ms — cioe' quanto giro di rete ci "
+                      f"vorrebbe per portarlo oltre.  ⛔ Il server DEVE "
+                      f"saturare a ({sx},{sy}) e scriverlo nel registro")
+            if cli.ultimo_tela_ms is None:
+                print("   ⛔ nessun istante registrato per il TELA: non so da "
+                      "quando contare")
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
+                return 6
+            bersaglio = cli.ultimo_tela_ms + rit_ms
+            # ⛔ SI ASPETTA CON GLI OCCHI APERTI — rilievi R8.2/R8.4.  Un
+            #    `sleep` non si accorgerebbe che la sessione e' morta nel
+            #    frattempo, e il `PUNTATORE` partirebbe su una connessione gia'
+            #    chiusa: il banco misurerebbe se stesso.
+            caduto_prima = False
+            while True:
+                resta = (bersaglio - reg.istante()) / 1000.0
+                if resta <= 0:
+                    break
+                try:
+                    await asyncio.wait_for(cli.caduto.wait(), timeout=resta)
+                    caduto_prima = True
+                    break
+                except asyncio.TimeoutError:
+                    pass
+            if caduto_prima:
+                print(f"   ⛔ la sessione e' caduta PRIMA del PUNTATORE: "
+                      f"{cli.caduta} — la regola del secondo non e' stata "
+                      f"esercitata")
+                scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
+                return 4
+            pid, pms = cli.manda_puntatore(px, py)
+            dt = None if pms is None else pms - cli.ultimo_tela_ms
+            print(f"   → PUNTATORE id={pid} ({px},{py}) — dt registrato "
+                  f"{dt} ms dal TELA(ADATTATA).  ⚠ E' il numero che l'arbitro "
+                  f"leggera': l'intervallo del SERVER e' piu' lungo di questo")
+
+            # ═══════════════════════════════════════════════════════════════
+            # ⭐⛔ IL TERZO TESTIMONE: SI CHIEDE UN FOTOGRAMMA, PERCHE' UN
+            #     DESKTOP FERMO NON NE MANDA.
+            #
+            # `[M]` 22 agosto 2026, primo giro vero su 7721: dopo il
+            # `PUNTATORE` la traccia porta **zero** fotogrammi — la sessione
+            # GNOME senza monitor non ha niente che si muova, e il server
+            # spedisce solo quel che cambia.  ⇒ Il campo `input` di §6.2 —
+            # *«l'identificatore dell'ultimo input INIETTATO»*, l'unico
+            # testimone dell'iniezione che vive **sul filo** — non poteva dire
+            # niente, e «non ha iniettato» e «non e' passato nessun
+            # fotogramma» avevano la stessa faccia (`LEZIONI.md` §1.9).
+            #
+            # ⛔ E lo si chiede DOPO il puntatore, con un ritardo: il canale di
+            #    input e quello di controllo sono **due stream indipendenti**
+            #    (§2.5) e niente ne ordina la consegna.  Senza attesa la chiave
+            #    potrebbe essere catturata PRIMA che l'input sia iniettato, e
+            #    un `input = 0` significherebbe «non so», non «non iniettato».
+            #
+            # ⚠ E se la sessione e' gia' caduta non si manda niente: nel giro
+            #   «oltre il secondo» quella e' la strada GIUSTA, e insistere su
+            #   una connessione morta produrrebbe un errore del banco al posto
+            #   di una misura.
+            if a.chiave_dopo:
+                try:
+                    await asyncio.wait_for(cli.caduto.wait(),
+                                           timeout=a.chiave_dopo)
+                    print(f"   ·  niente RICHIEDI_CHIAVE: la sessione e' gia' "
+                          f"caduta ({cli.caduta}) — ⭐ dopo un PUNTATORE oltre "
+                          f"il secondo e' quel che §7.1 vuole")
+                except asyncio.TimeoutError:
+                    ultimo = max((f[0] for f in cli.v_fotogrammi), default=0)
+                    b = inquadra(T["RICHIEDI_CHIAVE"],
+                                 struct.pack("!I", ultimo))
+                    cli.manda(b)
+                    reg.aggiungi(CLIENT, b)
+                    print(f"   → RICHIEDI_CHIAVE({ultimo}) — ⚠ non e' la scena "
+                          f"di §5.2: serve a far passare UN fotogramma, cosi' "
+                          f"il campo `input` di §6.2 puo' testimoniare")
+
         if a.vista:
             # ⚠ `VISTA` NON DEVE far cambiare la tela (§7.1).  Se dopo questa
             #   arriva un `TELA`, il filo lo dice e l'arbitro lo accusa: qui non
@@ -1482,6 +1721,24 @@ if __name__ == "__main__":
     p.add_argument("--vista", metavar="LxH",
                    help="VISTA (0x0008) dopo l'attacco — ⚠ §7.1: NON deve far "
                         "cambiare la tela")
+    # ⭐⛔ IL SECONDO DI GRAZIA DI §7.1 — 22 agosto 2026.
+    #
+    # ⛔ Il ritardo si passa in SECONDI e non ha predefinito: la regola vive su
+    #    un confine, e un valore scelto dal programma invece che dal banco
+    #    sarebbe un confine scelto da chi non dichiara perche'.
+    p.add_argument("--puntatore-vecchia", type=float, default=None,
+                   metavar="RITARDO",
+                   help="§7.1: manda un PUNTATORE all'ULTIMO PIXEL della tela "
+                        "PRECEDENTE, RITARDO secondi dopo il TELA(ADATTATA).  "
+                        "⚠ Il tempo e' quello del CLIENT: l'intervallo del "
+                        "SERVER e' piu' LUNGO, quindi si sta lontani dal "
+                        "secondo dai due lati")
+    p.add_argument("--chiave-dopo", type=float, default=0, metavar="SECONDI",
+                   help="dopo il PUNTATORE, aspetta SECONDI e manda una "
+                        "RICHIEDI_CHIAVE: serve a far passare un fotogramma "
+                        "su un desktop fermo, perche' il campo `input` di §6.2 "
+                        "possa dire se l'input e' stato INIETTATO.  ⚠ Non si "
+                        "manda se la sessione e' gia' caduta")
     # ⚠ Il tetto NON e' una regola di RCP: §7.1 impone la risposta, non un
     #   tempo.  Serve a non riprodurre il sintomo che si vuole misurare.
     p.add_argument("--attesa-tela", type=float, default=5.0,

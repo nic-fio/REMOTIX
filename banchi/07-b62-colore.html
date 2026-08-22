@@ -34,6 +34,16 @@
                                 ESATTAMENTE il difetto sospettato («+8 sulle
                                 zone chiare»).  Se il banco non lo accusa,
                                 ogni suo verde è un verde che non ha guardato.
+    ?tinta=0                    ⛔ il TERZO controllo positivo, e serve alla
+                                catena DENTRO la sessione: moltiplica R per
+                                (1+t) e B per (1−t), cioè imita un filtro tipo
+                                **Night Light** o un profilo di colore del
+                                compositore.  ⭐ Nessuna delle tre conversioni
+                                note lo spiega ⇒ il verdetto deve dire
+                                «nessuna conversione nota spiega i dati», non
+                                «scarto grande su 709tv».  Senza questo
+                                controllo, quella diagnosi non è mai stata
+                                provata e non si può spendere.
     ?guadagno=1                 ⛔ il SECONDO controllo positivo, e cura un
                                 difetto diverso: moltiplica ogni campione per
                                 G.  Un intervallo sbagliato è esattamente
@@ -63,6 +73,7 @@ const LETTURA   = P.get("lettura") || "entrambi";
 const QUALE     = P.has("fotogramma") ? Number(P.get("fotogramma")) : -1;
 const GUASTO    = P.has("guasto") ? Number(P.get("guasto")) : 0;
 const GUADAGNO  = P.has("guadagno") ? Number(P.get("guadagno")) : 1;
+const TINTA     = P.has("tinta") ? Number(P.get("tinta")) : 0;
 const CODEC     = P.get("codec") || "avc1.640032";
 
 const stato = document.getElementById("stato");
@@ -78,9 +89,18 @@ function dice(t){ stato.textContent = t; }
  *    comune: un metro che lo toglie prima di giudicare cerca proprio quel che
  *    ha appena cancellato.  ⚠ È il difetto per cui la scena delle coordinate
  *    di `06-b37` dà zero su un errore vero. */
-function sporca(v){
+function sporca(v, canale){
   let x = v * GUADAGNO;
   if (GUASTO && x > 180) x += GUASTO;
+  /* ⛔ La tinta agisce PER CANALE — è la sola differenza con gli altri due
+   *    guasti, ed è il punto: un filtro del compositore non sposta i livelli,
+   *    sposta i CANALI uno rispetto all'altro, e nessuna matrice YUV→RGB lo
+   *    può imitare.  ⇒ È il guasto che certifica la diagnosi «nessuna
+   *    conversione nota spiega i dati». */
+  if (TINTA){
+    if (canale === 0) x *= (1 + TINTA);
+    else if (canale === 2) x *= (1 - TINTA);
+  }
   return Math.max(0, Math.min(255, x));
 }
 
@@ -92,7 +112,7 @@ function medie_riquadri(dati, stride_px, riquadri, ir, ig, ib){
     for (let r=q.y; r<q.y+q.h; r++){
       let p = (r*stride_px + q.x)*4;
       for (let c=0; c<q.w; c++, p+=4){
-        sr += sporca(dati[p+ir]); sg += sporca(dati[p+ig]); sb += sporca(dati[p+ib]);
+        sr += sporca(dati[p+ir], 0); sg += sporca(dati[p+ig], 1); sb += sporca(dati[p+ib], 2);
       }
     }
     const n = q.w*q.h;
@@ -192,7 +212,8 @@ function medie_riquadri(dati, stride_px, riquadri, ir, ig, ib){
     formato_fotogramma: formato,
     fotogrammi_dati: N, fotogrammi_usciti: usciti,
     fotogramma_misurato: BERSAGLIO, misurato: misurato,
-    errori: errori, guasto: GUASTO, guadagno: GUADAGNO, nota_copyto: nota_copyto,
+    errori: errori, guasto: GUASTO, guadagno: GUADAGNO, tinta: TINTA,
+    nota_copyto: nota_copyto,
     copyto: medie_copyto, tela: medie_tela,
   };
   dice("finito: "+usciti+"/"+N+" fotogrammi · formato «"+formato+"» · "

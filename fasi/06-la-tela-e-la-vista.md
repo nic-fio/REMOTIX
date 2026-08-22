@@ -1191,6 +1191,120 @@ triplo.** Il buco di §4.8 si chiude: quel riquadro non è più un numero perdut
 - ⚠ `parlantina-c-e` dà un **falso rosso sul primo giro dopo un `accendi`**: legge il registro intero,
   che `accendi` azzera. ⛔ Falso rosso, quindi direzione sicura — **dichiarato, non curato**.
 
+### 5.10 · ⛔⛔⭐ 22 agosto — **il secondo di grazia contro il prodotto, e l'arbitro da solo NON vede l'indulgenza**
+
+*I giri 6 e 7 di `06-b38-tela.sh`, mai puntati contro il server. `[M]` porta 7721, **quattro giri
+interi 7/7 verdi**, carichi 1,16 · 1,51 · 1,57 · 2,58.*
+
+| | giro 6 — **oltre** | giro 7 — **dentro** |
+|---|---|---|
+| `dt` registrato | **1 501 ms** | **251 ms** |
+| il server | `CONGEDO 0x0b ERRORE_PROTOCOLLO` | ⭐ la sessione **regge** |
+| l'arbitro | «oltre il secondo — e il server ha **congedato**» | ⭐ «**NON è giudicabile** da questa registrazione» |
+| ⭐ **dove è finito il puntatore** | **da nessuna parte** | **(799,599)**, l'ultimo pixel della tela nuova |
+| il filo | — | **`input = 1`** nel fotogramma (§6.2) |
+
+⭐ La coordinata **non è scelta a mano**: si manda l'ultimo pixel della tela *precedente*, che **deve**
+saturare esattamente su `(799,599)`.
+
+#### ⭐ L'asimmetria degli orologi non è più un ragionamento: è una tabella
+
+> **9 coppie su 9: il server misura di più, fra +11 e +25 ms** (LAN, carico 1,0-1,6).
+
+⇒ Un caso «dentro» a 0,99 s sarebbe stato **1,01 s per il server**: rosso su un prodotto che ha
+ragione. ⛔ La tabella sta nel banco **col divieto di usarla per avvicinarsi al confine**.
+
+#### ⛔⛔ «L'arbitro dice conforme» non è una misura
+
+Con un **server guasto apposta** (`TELA_GRAZIA` 1 000 → **60 000 ms**): il puntatore a 1 501 ms viene
+**iniettato**, e ⛔⛔ **il validatore esce 0 e dichiara CONFORME** — onestamente, perché §7.1 lo fa
+concludere **solo** se il server parla ancora sul canale di controllo, e **un server indulgente che
+tace non gliene dà l'occasione**. ⭐ Il banco invece esce **1 su cinque righe rosse**, e il settimo
+giro contro lo stesso server guasto resta **verde**, com'è giusto: **specifico, non paranoico**.
+
+⇒ È la forma più forte di *«conforme non è funziona»* che questa fase abbia prodotto.
+
+⛔ **E un difetto del banco della specie peggiore**: confrontava il puntatore con l'**ultimo**
+`TELA(ADATTATA)` del file invece che con **quello che lo precede** ⇒ `dt` **negativo**, che cade sotto
+il secondo, cioè nel ramo «non giudicabile». **Un puntatore oltre la grazia sarebbe stato dichiarato
+dentro.** L'ha trovato il controllo positivo.
+
+### 5.11 · ⛔⛔⭐ 22 agosto — **la «firma di Mutter» di §5.8 era un artefatto della scena**
+
+*Il seguito della contesa: costruita la scena a cinque sessioni, ⛔ e la premessa è caduta prima della
+finestra.*
+
+`[M]` **18 giri incatenati, ZERO contesa**, carico 1,57 → 2,91: la latenza ② dà **17 campioni oltre il
+tetto su 62**. ⛔ §5.8 ne aveva **13 e 17 su ~57** e li leggeva come *«un quarto delle richieste senza
+risposta da Mutter entro un secondo, la stessa firma del 16 agosto»*.
+
+⭐ **Il meccanismo, e chiude il caso**: ② accoppia **per misura chiesta**; la prima di due richieste
+incatenate riceve `NON_ORA` (§7.1), quindi **il produttore non consegna mai una tela a quella
+misura**, e la richiesta si accoppia con quella di un giro **successivo** — oltre il secondo. **Una
+per giro.** ⭐ Controprova su 5 giri: **15 richieste, esattamente 5 spaiate ed esattamente 5
+`NON_ORA`**. ⇒ Ed è anche il motivo per cui §5.8 la trovava **identica nelle due metà**: è quel che la
+scena fa **per costruzione**.
+
+#### ⭐⭐ E gli stessi 18 giri quieti danno **0 rotti su 18 — a carico PIÙ ALTO del 16 agosto**
+
+Carico **1,57-2,91** contro lo **0,90** che §4.8 registra per il giorno del 4/18. ⇒ Si misura
+«quieto» **sopra** il carico del giorno che produsse il difetto, e si ottiene **0/18**.
+
+#### ⭐ E un contendente rende il compositore **più veloce**, non più lento
+
+`[M]` sonda indipendente sul ciclo principale di Mutter, con client attaccato in tutt'e due i casi:
+mediana **1,47 → 0,64 ms (0,44×)**, p95 **5,56 → 2,59**. ⇒ La certificazione a cinque sessioni
+**fallirebbe**, e il banco rifiuterebbe il verdetto — come ha già fatto quello della GPU.
+
+⇒ 🔸 **Scelta del coordinatore: la finestra a cinque sessioni NON si spende.** Su raccomandazione
+avversariale dell'autore stesso: il 4/18 è una differenza di **esito**, e `NON_ORA` è **una corsa con
+`cattura_ridimensiona()`** — la finestra in cui si ribalta si misura in **millisecondi, non in
+carico**, e i 18 giri erano **tutti a 30 ms**. ⏳ La strada che resta è **setacciare l'intervallo**
+(10-60 ms, molti giri per punto): costa la CPU di una sessione sola e **non disturba nessuno**.
+
+⭐ **E la sonda del compositore è certificata**: `SIGSTOP` di 300 ms a `gnome-shell` ⇒ la sonda
+registra **290,6 ms**. Prova che guarda **il compositore** e non altro.
+
+### 5.12 · ⭐⭐ 22 agosto — **il colore dentro la sessione: sono gli STESSI PIXEL, byte per byte**
+
+*L'ultimo anello che mancava al colore: non dal flusso al vetro, ma **dal desktop al vetro**.*
+
+⭐⭐ **Zero canali diversi su 2 704 104**, confronto **byte per byte** fra quel che l'applicazione
+dipinge e quel che il codificatore riceve.
+
+| punto | che cosa aggiunge | medio | peggiore |
+|---|---|---|---|
+| dipinto → **catturato** | la cattura di Mutter | **0,000** | ⭐ **0,000** |
+| dipinto → **flusso** | + conversione nostra + H.264 QP 26 + 4:2:0 | 0,334 | 3,005 |
+| dipinto → **vetro** | + decodificatore hardware di Firefox | 0,342 | 2,981 |
+
+⭐ `vetro − flusso ≤ 0,03`: **il decodificatore del browser non aggiunge nulla di misurabile** —
+conferma indipendente dello 0,51 di §1.13-ter, presa **dall'altro capo**. E il residuo di ~3 livelli
+non è nelle luci: **17 canali su 1 029 oltre 2,0, tutti sulle rampe di croma**, cioè il giro
+RGB→YUV 4:2:0→RGB.
+
+#### ⭐ E le tre trasformazioni sospettate, separate una per una
+
+| | esito |
+|---|---|
+| **Night Light** a 1700 K, verificato attivo dal demone | ⭐ `[M]` **non entra**: 0 byte diversi |
+| **effetti dello shell** | ⛔ **entrano eccome**: la *lente* dà **255 livelli**, e ⛔⛔ **la panoramica delle attività** ne dà **221,75** — un banco meno attento l'avrebbe messa in tabella come «difetto di colore» |
+| **profilo ICC del compositore** | ⏳ `[?]` **non misurato**: `colord` non parte su questa macchina, quindi non c'è niente da accendere. `[R]` viaggia sulla stessa strada di Night Light, ma è **deduzione** |
+
+⭐⭐ **E lo zero di Night Light vale perché la lente è passata**: senza quel controllo, uno zero sarebbe
+indistinguibile da un banco cieco.
+
+⭐ **E per il prodotto la questione è chiusa strutturalmente**: `sessione.c` toglie `--virtual-monitor`
+e l'unico monitor della sessione è quello che monta la nostra cattura ⇒ non c'è scanout, non c'è
+monitor fisico, non c'è dispositivo colore: **lo «schermo» della sessione È lo stage composto, e lo
+stage composto è quel che catturiamo.**
+
+⛔ **E il difetto del banco, dichiarato per primo**: il controllo positivo della lente **non si
+accendeva** — un `echo` con apici dentro rompeva il comando remoto e **nessun `gsettings` girava**. Il
+giro ha misurato «nessuna differenza» **credendo di avere l'ingranditore acceso**, cioè esattamente la
+cecità che quel controllo doveva escludere. ⇒ Adesso il banco **muore** se la rilettura dal dconf non
+dice quel che ha chiesto.
+
 ## 6 · Le decisioni prodotte
 
 - ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
@@ -1323,15 +1437,16 @@ la decide l'utente.
 - ⛔ **«conforme» non è «funziona»**: l'arbitro certifica i byte — *«un server che rispondesse
   `TELA(ADATTATA)` senza toccare il palco passerebbe tutti e cinque i giri»*. I pixel li misura
   un altro banco, e la distinzione va tenuta;
-- **il secondo di grazia curato e non misurato** (la data zero): per provarlo servirebbe un orologio
-  che parte sotto il secondo, e la stretta di mano ne consuma già 1500. ⛔ **Nessun caso cieco
-  scritto apposta**: un verde per costruzione è peggio di nessun caso;
+- ✅ ~~**il secondo di grazia curato e non misurato**~~ — **CHIUSO il 22 agosto**, e ⛔ **la ragione
+  per cui sembrava impossibile era sbagliata**: la grazia parte dal `TELA`, **non dalla connessione**,
+  quindi i 1500 ms della stretta di mano non c'entrano. 📖 §5.10;
 - **codice mai esercitato su Mutter**: il ramo *«concesso diverso da chiesto»* (`figlio.c:4585`) e
   `MISURA DIVERGENTE` (`cattura.c:543`) — 17 richieste su 17 concesse esatte. Provabili **solo col
   palco finto**;
 - **il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3: `[?]` quale sia il tetto vero;
-- **le coordinate in volo sono inarbitrabili da una registrazione**: `RCP.md` §11.1 non registra il
-  **tempo**, e la regola del secondo non è collaudabile da un `.rcpreg`;
+- ✅ ~~**le coordinate in volo sono inarbitrabili da una registrazione**~~: dal 21 agosto `RCP.md`
+  §11.1 registra il **tempo**, e la regola è collaudabile — ⛔ **in un verso solo**, e §5.10 racconta
+  perché quel verso non basta;
 - **`?video=worker` non esercitato**; **`aioquic` non è installato sul portatile** (il cliente si
   prova in locale solo con surrogati, e il banco lo dichiara);
 - ⛔ **il ripiego su KWin resta non verificabile sul vero**: KDE è la fase 11. Il percorso di codice

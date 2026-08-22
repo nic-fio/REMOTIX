@@ -284,6 +284,7 @@ async function gira(src, scena) {
   const PASSO = 0.020;                        // 20 ms per blocco
   const N = scena.blocchi;
   const code = [];
+  const aoffs = [];
   const IST0 = scena.ist0 || 1000000;         // µs
   const ist_di = (k) => IST0 + k * 20000;
 
@@ -311,9 +312,26 @@ async function gira(src, scena) {
    *     quando il thread principale e' occupato — e poi il mucchio arriva
    *     TUTTO INSIEME.  ⛔ E' quel che `[M]` e' successo sul ferro il 22
    *     agosto: la coda e' saltata da 266 a 519 ms e non e' piu' scesa. */
+  /* ⭐⭐ IL RITARDO CHE CAMBIA — la scena che il metro `aoff` non aveva, e
+   *     senza la quale «aoff non si muove mai» e «aoff e' giusto» hanno la
+   *     stessa faccia.  Da `ritardo_a` in poi ogni blocco arriva `ritardo_n`
+   *     passi piu' tardi: e' un aumento PURO della latenza, senza perdite. */
   let trattenuti = [];
+  const RIT = scena.ritardo_n || 0;
   for (let k = 0; k < ordine.length; k++) {
-    const i = ordine[k];
+    let i = ordine[k];
+    if (scena.ritardo_a !== undefined && k >= scena.ritardo_a) {
+      if (k < scena.ritardo_a + RIT) {
+        /* la pausa del transitorio: il tempo passa, non arriva niente */
+        amb.avanza(PASSO);
+        if (k % 5 === 4) {
+          code.push(Math.round(A.coda_ms()));
+          aoffs.push(M.audio_conti() ? M.audio_conti().aoff_ms : null);
+        }
+        continue;
+      }
+      i = ordine[k - RIT];
+    }
     const in_stallo = scena.stallo_a !== undefined
       && k >= scena.stallo_a && k < scena.stallo_a + (scena.stallo_n || 0);
     if (in_stallo) {
@@ -330,6 +348,18 @@ async function gira(src, scena) {
       }
       trattenuti = [];
     }
+    /* ⭐ L'AUDIO CHE SI FERMA DEL TUTTO: da `tace_da` in poi non arriva piu'
+       niente, ma il tempo passa.  ⛔ E' la scena in cui un metro senza
+       scadenza continua a raccontare l'ultimo valore su una sessione muta. */
+    if (scena.tace_da !== undefined && k >= scena.tace_da) {
+      amb.avanza(PASSO);
+      if (k % 5 === 4) {
+        code.push(Math.round(A.coda_ms()));
+        const cz = M.audio_conti();
+        aoffs.push(cz ? cz.aoff_ms : null);
+      }
+      continue;
+    }
     if (!scena.perde(i)) {
       f.spingi(datagram(ist_di(i), 960));
       await new Promise((r) => setImmediate(r));   // lascia girare il lettore
@@ -345,7 +375,11 @@ async function gira(src, scena) {
     // ⭐ IL TEMPO PASSA: e' la cosa che il codice vecchio non guardava.  ⛔ In
     //    una raffica NON passa — i blocchi arrivano tutti insieme.
     amb.avanza(scena.raffica && k < scena.raffica ? 0 : PASSO);
-    if (k % 5 === 4) code.push(Math.round(A.coda_ms()));
+    if (k % 5 === 4) {
+      code.push(Math.round(A.coda_ms()));
+      const cc = M.audio_conti();
+      aoffs.push(cc ? cc.aoff_ms : null);
+    }
   }
   const c = M.audio_conti();
   const esito = {
@@ -357,6 +391,8 @@ async function gira(src, scena) {
     sospesi: c.sospesi, risvegli: c.risvegli,
     ascoltatori: amb.ascoltatori.length,
     vecchi: c.scartati_vecchi,
+    aoff: c.aoff_ms, aoff_prima: aoffs.length ? aoffs[Math.floor(aoffs.length / 4)] : null,
+    aoff_dopo: aoffs.length ? aoffs[aoffs.length - 1] : null,
     registro
   };
   M.audio_ferma();
@@ -404,6 +440,32 @@ const SCENE = [
     scena: { blocchi: 500, raffica: 20, perde: () => false },
     ancora: { coda: [245, 275], buchi: 0, mancati: 0 },
     discrimina: { campo: "coda_fine", ancora: [245, 275], vecchio: [500, null] } },
+
+  /* ⭐⭐ IL METRO `aoff` MESSO ALLA PROVA — 22 agosto 2026, dal rilievo R1 del
+   *     coordinatore: *«aoff e' una costante, il termine `ist` si elide»*.
+   *
+   *   ⭐ L'algebra e' giusta e la conclusione no, e questa scena lo decide con
+   *   un numero invece che con un ragionamento: se a meta' sessione la
+   *   latenza del filo cresce di **800 ms**, `aoff` DEVE crescere di 800.
+   *   ⛔ Se non si muove, il metro non misura e la distanza di 236 ms non vale
+   *   niente.  ⚠ E se si muovesse anche quando la latenza NON cambia, sarebbe
+   *   rumore: per questo la prima scena pretende che stia ferma. */
+  { nome: "la latenza del filo cresce di 800 ms: `aoff` deve accorgersene",
+    scena: { blocchi: 1200, perde: () => false, ritardo_a: 500, ritardo_n: 40 },
+    ancora: { coda: [245, 290], buchi: [1, null], mancati: 0 },
+    riordino: { aoff_salto: [700, 900] },
+    discrimina: null },
+
+  /* ⭐⭐ L'AUDIO SI FERMA E IL METRO DEVE DIRLO — rilievo R1.2, 22 agosto 2026.
+   *     ⛔ Senza scadenza `aoff` restava all'ultimo valore per sempre, e `AV`
+   *     sembrava sano su una sessione dove non usciva piu' un suono: e' la
+   *     forma «vuoto e giusto con la stessa faccia».  ⭐ L'atteso e' `null`,
+   *     cioe' «non lo so» — che e' un esito, non un guasto. */
+  { nome: "l'audio si ferma: `aoff` deve dire «non lo so», non l'ultimo valore",
+    scena: { blocchi: 900, perde: () => false, tace_da: 400 },
+    ancora: { coda: [0, 20], buchi: 0, mancati: 0 },
+    riordino: { aoff_scaduto: true },
+    discrimina: null },
 
   /* ⭐⭐ LO STALLO DI META' SESSIONE — `[M]` sul ferro, 22 agosto 2026.
    *
@@ -497,6 +559,25 @@ function dentro(v, [lo, hi]) {
               + "dell'attacco, buttata apposta)", non_taglia ? "⭐" : "⛔",
       a.tagliati, tagliati_max);
 
+    if (s.riordino && s.riordino.aoff_scaduto) {
+      tot += 1;
+      const bene = a.aoff === null;
+      ok += bene;
+      console.log("      %s `aoff` dopo il silenzio: %s, atteso «null» "
+                + "(non lo so)", bene ? "⭐" : "⛔", a.aoff);
+      delete s.riordino.aoff_scaduto;
+    }
+    if (s.riordino && s.riordino.aoff_salto) {
+      tot += 1;
+      const salto = (a.aoff_dopo !== null && a.aoff_prima !== null)
+        ? a.aoff_dopo - a.aoff_prima : null;
+      const bene = salto !== null && dentro(salto, s.riordino.aoff_salto);
+      ok += bene;
+      console.log("      %s `aoff` e' passato da %s a %s: salto %s, atteso in "
+                + "[%s, %s]", bene ? "⭐" : "⛔", a.aoff_prima, a.aoff_dopo,
+        salto, s.riordino.aoff_salto[0], s.riordino.aoff_salto[1]);
+      delete s.riordino.aoff_salto;
+    }
     if (s.riordino) {
       for (const campo of Object.keys(s.riordino)) {
         tot += 1;

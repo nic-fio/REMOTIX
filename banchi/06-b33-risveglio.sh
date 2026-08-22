@@ -87,7 +87,12 @@ SRC=${SRC:-/media/REMOTIX/src/06-i-src}
 LAV=${LAV:-/media/REMOTIX/tmp/06-i}
 T=$SRC/banchi/06-b33-terreno.sh
 G=$SRC/banchi/06-b33-risveglio-giudice.py
-ESITI=$LAV/06-b33-risveglio-esiti.jsonl
+# ⛔ Il file degli esiti si puo' DIRIGERE, e non e' una comodita': il giudice lo
+#    apre in **append** e nessuno lo tronca.  ⇒ Chi confronta due giri — cioe'
+#    `06-b33-risveglio-certifica.sh` — deve poter dare a ciascun giro un file
+#    suo, o rischia di leggere la riga di IERI credendola di adesso.
+#    *Rilievo R3 della revisione avversariale, 22 agosto 2026.*
+ESITI=${ESITI:-$LAV/06-b33-risveglio-esiti.jsonl}
 TELA=${TELA:-1264x800}
 TELA2=${TELA2:-1000x640}
 TL=${TELA%x*}
@@ -351,7 +356,10 @@ applicazione)
 	#    scrive `registro_dice()` dell'area «input», e `iniettore-dice` filtra
 	#    solo le righe `B33R:` dell'iniettore.  ⚠ Cercarla li' dava un rosso
 	#    falso mentre la cura era scattata davvero — difetto del banco, 21 ago.
-	if terreno iniettore-registro 400 | grep -q 'GUARIGIONE'; then
+	# ⛔ E la forma LUNGA, non la parola sola: «GUARIGIONE» da sola comparirebbe
+	#    anche in un commento o in una riga futura di un altro modulo.  ⚠ E' la
+	#    stessa disciplina del rilievo sul `%s`: si cerca la forma completa.
+	if terreno iniettore-registro 400 | grep -q 'GUARIGIONE (n\.'; then
 		ok "⭐ la cura «C» e' scattata (la riga GUARIGIONE c'e')"
 	else
 		ko "⛔ la cura «C» NON e' scattata: quel che segue non misura la guarigione"

@@ -4,6 +4,21 @@
     python3 banchi/07-b61-conto-audio.py <registro.log> [--cuscino 250]
     python3 banchi/07-b61-conto-audio.py --certifica     # i controlli positivi
 
+⛔⛔ E IL SERVER DEVE GIRARE CON `--parlantina`, O IL CONTO NON SI PUO' FARE.
+
+    La riga del figlio «audio: N blocchi spediti» esce da `registro_dettaglio()`
+    (`src/registro.c`), e quella funzione **torna subito** se `--parlantina` non
+    c'e'.  ⇒ Su un giro normale il registro non ha nessuna riga del produttore,
+    e il confronto che questo banco esiste per fare — spediti contro ricevuti —
+    non ha uno dei due termini.
+
+    ⚠ Rilievo R8 del 22 agosto 2026, ed era mezzo giusto: il banco NON diventava
+    verde in silenzio (ogni sessione diceva gia' `NIENTE DA GIUDICARE` sul
+    conto), ⛔ ma il **verdetto finale** non lo riportava: stampava «0 rilievi»
+    e usciva con 0, cioe' la faccia di un giro andato bene.  ⇒ Adesso il
+    verdetto finale porta anche i controlli che NON hanno potuto girare, e
+    l'esito 3 li distingue dal verde.
+
 ⛔ PERCHE' ESISTE — 21 agosto 2026, e la ragione e' una riga di `fasi/07` §8
    che questo banco ha smentito con i numeri del registro che quella riga
    citava:
@@ -524,8 +539,23 @@ def main():
     for i, e in enumerate(esiti):
         stampa(e, i)
     rossi = sum(len(e["rossi"]) for e in esiti)
+    # ⛔ E IL VERDETTO FINALE PORTA ANCHE QUEL CHE NON HA POTUTO GIRARE.
+    #    ⚠ «Nessun rilievo» e «non ho potuto guardare» hanno la stessa faccia
+    #    solo se qualcuno li somma insieme — `CODER.md` §3.10 al livello del
+    #    verdetto, che e' dove faceva piu' danno.
+    ciechi = [i for i, e in enumerate(esiti)
+              if e["conto"] == "NIENTE DA GIUDICARE"
+              or e["modello"] == "NIENTE DA GIUDICARE"]
     print("\n%s in tutto: %d rilievi su %d sessioni"
           % ("⛔" if rossi else "⭐", rossi, len(esiti)))
+    if ciechi:
+        print("⚠ ⛔ E SU %d SESSIONI SU %d IL CONTO NON SI E' POTUTO FARE "
+              "(sessioni %s): manca la riga «audio: N blocchi spediti» del "
+              "figlio.\n   ⇒ Il server girava senza `--parlantina`, e il "
+              "controllo piu' importante di questo banco NON HA GIRATO.\n"
+              "   ⛔ Questo NON e' un verde." % (len(ciechi), len(esiti),
+              ", ".join(str(i) for i in ciechi)))
+        return 3
     return 1 if rossi else 0
 
 

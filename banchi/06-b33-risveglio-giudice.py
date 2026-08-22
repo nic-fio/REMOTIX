@@ -45,6 +45,42 @@ VERDE, ROSSO, GIALLO, BLU, GRIGIO = ("\033[1;32m", "\033[1;31m", "\033[1;33m",
                                      "\033[1;34m", "\033[0m")
 BTN_LEFT, KEY_ENTER, KEY_CTRL = 272, 28, 29
 
+# ---------------------------------------------------------------------------
+# ⛔⛔⛔ LE RIGHE DEL PRODOTTO CHE IL GIUDICE CERCA — e **una riga scritta con
+#       `%s` NON E' UNA RIGA, sono N righe**.
+#
+# *Rilievo della revisione avversariale del 22 agosto 2026, ed era una
+# regressione MIA: il banco vecchio (`06-b33-giudice.py:86-88`) la distinzione
+# ce l'aveva, e scrivendo questo banco nuovo l'ho persa.*
+#
+# `src/input.c` `segna_orfani()` ha **una sola** stringa di formato —
+# `«%u %s erano PREMUTI sul dispositivo che il compositore ha appena tolto»` —
+# con `%s` = `"pulsanti"` **oppure** `"tasti"`.  ⇒ Cercare la parte comune
+# significa non distinguere il puntatore dalla tastiera.
+#
+# ⛔ Il caso concreto che sarebbe passato in verde: il rilascio del PULSANTE non
+#    arriva e il suo percorso tace — cioe' il difetto che T7 esiste per prendere
+#    — ma un cambio di keymap ha prodotto la riga della TASTIERA ⇒ T7 verde.
+#    E in modo `libero`, L4 rosso contro `input.c` per una riga di tastiera
+#    legittima.
+#
+# ⇒ Ogni marcatore porta la parte **variabile** dentro di se', e sta in un posto
+#   solo con accanto chi lo scrive.  ⚠ E lo spazio davanti a «pulsanti»/«tasti»
+#   ci sta apposta: e' il `%u %s`, e ancora il marcatore alla parola intera.
+#
+# ⚠ Lo stesso vale per `«NON PARTE: era premuto su un…»`, che senza il seguito
+#   combacia sia con *«su UN DISPOSITIVO»* (il puntatore) sia con *«su UNA
+#   TASTIERA»*.
+# ---------------------------------------------------------------------------
+M_ORFANI_PULSANTI = " pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
+M_ORFANI_TASTI = " tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
+M_NON_PARTE_PULSANTE = "NON PARTE: era premuto su un dispositivo"
+M_NON_PARTE_TASTO = "NON PARTE: era premuto su una tastiera"
+# la cura «C», `src/input.c` `guarisci()` — ⚠ forma lunga: «GUARIGIONE» da solo
+# comparirebbe anche in un commento o in una riga futura di un altro modulo
+M_GUARIGIONE = "GUARIGIONE (n."
+M_GUARITO = "canale EIS RIFATTO"
+
 
 def leggi_visto(percorso, da):
     """Le righe del testimone con `n` > `da`.  ⛔ E si tiene il numero: e' il
@@ -183,12 +219,22 @@ def main():
              f"e' la meta' della tesi che rende §7.1 una porta NUOVA")
         # ⚠ A mano alzata non c'e' niente di premuto: la riga degli orfani NON
         #   deve esserci.  Se ci fosse, il conto di `input.c` sarebbe sporco.
+        #
+        # ⛔ E si guardano SEPARATAMENTE pulsanti e tasti, e si DICE quale dei
+        #    due e' comparso: sono due difetti diversi (il puntatore ricambia al
+        #    viewport, la tastiera solo al cambio di keymap) e un rosso che non
+        #    li distingue manda a cercare nel posto sbagliato.
+        orf_p = M_ORFANI_PULSANTI in ini
+        orf_t = M_ORFANI_TASTI in ini
+        quali = ("pulsanti" if orf_p and not orf_t
+                 else "tasti" if orf_t and not orf_p
+                 else "pulsanti E tasti" if orf_p else "")
         caso("L4 a mano alzata NON ci sono orfani",
-             "OK" if "erano PREMUTI sul dispositivo" not in ini else "NO",
-             "nessuna riga di orfani, com'e' giusto"
-             if "erano PREMUTI sul dispositivo" not in ini
-             else "⛔ c'e' una riga di orfani senza che nulla fosse premuto: il "
-                  "conto di input.c e' sporco")
+             "OK" if not (orf_p or orf_t) else "NO",
+             "nessuna riga di orfani, ne' di pulsanti ne' di tasti, com'e' giusto"
+             if not (orf_p or orf_t)
+             else f"⛔ c'e' la riga degli orfani ({quali}) senza che nulla fosse "
+                  f"premuto: il conto di input.c e' sporco")
         return stampa(a, casi)
 
     # ------------------------------------------------------------------ #
@@ -203,15 +249,28 @@ def main():
          f"⛔ Se fosse 0 il difetto NON e' stato riprodotto, e quel che segue "
          f"non misura niente")
 
-    # ⛔ Il pulsante era GIU' PRIMA della porta?  Senza, non c'e' orfano da
+    # ⛔ Il PULSANTE era GIU' PRIMA della porta?  Senza, non c'e' orfano da
     #    misurare e il rosso accuserebbe la cosa sbagliata.
-    caso("T1 qualcosa era PREMUTO al momento del ricambio",
-         "OK" if "erano PREMUTI sul dispositivo che il compositore ha appena tolto" in ini
-         else "NO",
-         "`input.c` dichiara gli orfani, dunque c'era qualcosa di premuto"
-         if "erano PREMUTI sul dispositivo che il compositore ha appena tolto" in ini
-         else "⛔ IL BANCO: nessun orfano dichiarato — o non si e' premuto "
-              "niente, o il ricambio e' arrivato prima della pressione")
+    #
+    # ⛔⛔ E si cerca la forma **dei pulsanti**, non la parte comune: la scena
+    #      tiene giu' anche il Ctrl, e la riga dei TASTI la scrive la stessa
+    #      `printf` (`%u %s erano PREMUTI…`).  ⚠ Con la parte comune, T1 sarebbe
+    #      verde per una riga di tastiera anche se il pulsante non fosse mai
+    #      diventato orfano — cioe' proprio quando la scena non regge.
+    #      *Regressione trovata dalla revisione avversariale il 22 ago 2026: il
+    #      banco vecchio la distinzione ce l'aveva.*
+    orf_p = M_ORFANI_PULSANTI in ini
+    orf_t = M_ORFANI_TASTI in ini
+    caso("T1 il PULSANTE era premuto al momento del ricambio",
+         "OK" if orf_p else "NO",
+         "`input.c` dichiara gli orfani dei PULSANTI, dunque il pulsante c'era"
+         if orf_p
+         else "⛔ IL BANCO: nessun orfano di PULSANTI dichiarato"
+              + (" — c'e' solo quello dei TASTI, che e' un'altra cosa: al "
+                 "cambio di viewport la tastiera non ricambia, quindi questa "
+                 "scena non ha fatto quel che credeva" if orf_t
+                 else " — o non si e' premuto niente, o il ricambio e' arrivato "
+                      "prima della pressione"))
 
     g = bottone(righe, 1)
     caso("T2 il testimone ha visto il pulsante SCENDERE",
@@ -293,22 +352,33 @@ def main():
              else "⛔ nemmeno la tastiera funziona piu': il danno e' piu' largo "
                   "di quel che §4.6 descrive")
 
-    # ---- T7: la riga che dichiara il ripiego -------------------------------
+    # ---- T7: la riga che dichiara il ripiego DEL PULSANTE -------------------
     # ⛔ E l'atteso dipende dal MONDO, non e' fisso: se il rilascio e' arrivato
     #    (cura presente) non c'e' nessun ripiego da dichiarare, e pretendere la
     #    riga sarebbe scrivere l'atteso del mondo col difetto vivo.
-    if "NON PARTE: era premuto su un" in ini:
-        caso("T7 il rilascio impossibile e' DICHIARATO nel registro", "OK",
+    #
+    # ⛔⛔ E si cerca la forma **del pulsante**: `«NON PARTE: era premuto su
+    #      un…»` senza il seguito combacia sia con *«su UN DISPOSITIVO»* (il
+    #      puntatore) sia con *«su UNA TASTIERA»*.  ⚠ Il difetto che T7 esiste
+    #      per prendere e' il rilascio del PULSANTE che non arriva mentre il suo
+    #      percorso tace: una riga di tastiera lo avrebbe fatto passare in verde.
+    #      *Regressione trovata dalla revisione avversariale il 22 ago 2026.*
+    np_pulsante = M_NON_PARTE_PULSANTE in ini
+    np_tasto = M_NON_PARTE_TASTO in ini
+    if np_pulsante:
+        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "OK",
              "la riga c'e': il registro NON dice «fatto» mentre il desktop "
              "resta bloccato")
     elif s >= 0:
-        caso("T7 il rilascio impossibile e' DICHIARATO nel registro", "OK",
+        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "OK",
              "⭐ la riga non c'e' — ed e' giusto: il rilascio e' ARRIVATO, "
              "quindi non c'era nessun ripiego da dichiarare")
     else:
-        caso("T7 il rilascio impossibile e' DICHIARATO nel registro", "NO",
-             "⛔ il rilascio non e' arrivato E il registro tace: e' il verde "
-             "che non e' vero (`CODER.md` §4.6)")
+        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "NO",
+             "⛔ il rilascio del pulsante non e' arrivato E il suo percorso "
+             "tace: e' il verde che non e' vero (`CODER.md` §4.6)"
+             + (".  ⚠ C'e' la riga della TASTIERA, che e' un'altra cosa e non "
+                "vale per il pulsante" if np_tasto else ""))
 
     return stampa(a, casi)
 

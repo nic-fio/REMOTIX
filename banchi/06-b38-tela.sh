@@ -42,9 +42,53 @@
 #     quando l'intervallo misurato al client supera il secondo — perche' quello
 #     del server e' piu' lungo, mai piu' corto.  ⛔ Sotto il secondo **dice** che
 #     non si giudica, invece di tacere;
-#   · ⚠ e questi cinque giri **non mandano nessun `PUNTATORE`**: la regola del
-#     secondo di grazia e' arbitrabile ma qui non e' esercitata, ed e' la
-#     prossima cosa da aggiungere — dichiarata invece che sottintesa;
+#   · ⭐⛔ **E DAL 22 AGOSTO 2026 LA REGOLA DEL SECONDO E' ESERCITATA, non
+#     solo arbitrabile.**  Qui c'era scritto: *«questi cinque giri non mandano
+#     nessun `PUNTATORE`: la regola del secondo di grazia e' arbitrabile ma qui
+#     non e' esercitata»*.  ⇒ Adesso ci sono il **sesto** e il **settimo**
+#     giro: una coordinata della tela vecchia a **1,5 s** (oltre il secondo:
+#     il server DEVE rifiutare) e a **0,25 s** (dentro: il server DEVE saturare
+#     e l'arbitro DEVE dire «non giudicabile»);
+#   · ⛔⛔ **E IL METRO FINALE NON E' L'ARBITRO: E' DOVE E' FINITO IL
+#     PUNTATORE.**  Un server che rifiutasse la coordinata *dicendolo nel
+#     registro* e la applicasse lo stesso passerebbe l'arbitro — §7.1 giudica
+#     byte, e i byte non sanno niente del compositore.  ⇒ I giri 6 e 7 leggono
+#     **due testimoni in piu'**, e nessuno dei due e' il filo di controllo:
+#       · il **registro del server**, dove c'e' la riga con le coordinate
+#         **iniettate** — cioe' il punto d'arrivo, dopo la saturazione;
+#       · il campo **`input` di §6.2** nelle intestazioni dei fotogrammi, che
+#         porta *«l'identificatore dell'ultimo input INIETTATO»*: e' il filo
+#         che contraddice il filo, e lo legge `06-b38-puntatore.py`;
+#   · ⭐⛔⛔ **E IL BANCO SA VEDERE IL DIFETTO — `[M]` 22 agosto 2026, e il
+#     numero che conta e' che l'ARBITRO DA SOLO NON LO VEDE.**
+#
+#     Controllo positivo (`PIANO.md` §0.3 punto 4), su un server **guasto
+#     apposta**: una copia dell'albero con `#define TELA_GRAZIA 60000` al posto
+#     di `1000` in `src/rcp.c` **e** in `banchi/rcp/rcp.c` (il gemello, o il
+#     Makefile si rifiuta di compilare), costruita e accesa sulla 7722 con un
+#     `LAV` suo.  ⇒ Un server che **perdona per un minuto** invece che per un
+#     secondo.
+#
+#     `[M]` Il sesto giro contro quel server:
+#       · il `PUNTATORE` a 1501 ms viene **INIETTATO**: il registro dice
+#         *«SATURATA a (799,599) … sono passati 1521 ms su 60000»*;
+#       · ⛔⛔ **l'arbitro esce 0 e dichiara ⭐ CONFORME.**  Dice *«oltre il
+#         secondo — ma dopo di lui il server non dice piu' niente e la
+#         registrazione finisce: NON si giudica se abbia chiuso o taciuto»* —
+#         onesto, e verde.  ⚠ Perche' §7.1 lo fa concludere **solo** se il
+#         server parla ancora sul canale di CONTROLLO dopo il puntatore tardo,
+#         e un server indulgente che tace non gliene da' l'occasione;
+#       · ⭐ e il banco esce **1**, su **cinque** righe rosse: l'uscita del
+#         cliente (0 invece di 4), la frase che l'arbitro NON ha detto, la riga
+#         di rifiuto che il registro NON porta, il campo `input = 1` di §6.2,
+#         e `DOVE_E_FINITO 799,599`;
+#       · ⚠ e il **settimo** giro contro lo stesso server guasto resta
+#         **verde**, com'e' giusto: 250 ms stanno dentro tutt'e due le grazie.
+#         Un banco che diventasse rosso dappertutto non starebbe misurando.
+#
+#     ⇒ ⛔ **La riga da ricordare**: su questa regola «l'arbitro dice conforme»
+#        NON e' una misura.  Quel che tiene sono i due testimoni qui sopra, e
+#        vanno letti tutt'e due.
 #   · ⚠ e i tempi qui dentro sono presi **sotto carico**, con gli altri banchi
 #     della fase 6 accesi.  Si dichiarano col carico accanto, e non si
 #     confrontano con numeri presi a macchina ferma.
@@ -218,7 +262,8 @@ giro() # nome · uscita-cliente · coppie · tela-finale · da · atteso · -- �
 $* > $DENTRO_LAV/$nome.txt 2>&1"
 	local e=$?
 	sed 's/^/    | /' "$LAV/$nome.txt" 2>/dev/null
-	inf "il cliente esce $e   (0 = a posto · 4 = caduta · 5 = ⛔ nessun TELA)"
+	inf "il cliente esce $e   (0 = a posto · 4 = caduta · 5 = ⛔ nessun TELA · 6 = ⛔ scena non esercitabile)"
+	[ "$e" = 6 ] && ko "   ⛔ 6 = la scena chiesta NON e' esercitabile: il giro non ha misurato niente"
 	if [ "$e" != "$uc" ]; then
 		ko "⛔ il cliente esce $e e l'atteso era $uc"
 		[ "$e" = 5 ] && ko "   ⛔⛔ 5 = NESSUN TELA: il server non risponde ad ADATTA_TELA"
@@ -319,11 +364,242 @@ giro "5-vista-non-tocca-la-tela" 0 1 "1264x800" "TELA(ADATTATA)" \
      "nessun TELA dopo la VISTA — §7.1: «VISTA NON DEVE far cambiare la tela».  ⛔ E la tela alla fine DEVE essere ancora 1264x800, quella dell'ADATTA_TELA: se la VISTA l'avesse cambiata, questo numero lo direbbe" -- \
      --adatta 1264x800 --vista 640x401 --resta 3
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⛔⛔ IL SESTO E IL SETTIMO GIRO — IL SECONDO DI GRAZIA DI §7.1, PUNTATO
+#       CONTRO IL SERVER.  22 agosto 2026.
+#
+# §7.1: *«Dopo aver mandato `TELA(ADATTATA)` il server DEVE accettare per **un
+# secondo** coordinate di input valide sulla tela **precedente**, saturandole
+# alla nuova e scrivendolo nel registro; passato quel secondo, sono
+# `ERRORE_PROTOCOLLO`»*.
+#
+# ⛔⛔ LA TRAPPOLA, DISINNESCATA PRIMA DI SCEGLIERE I DUE ISTANTI.
+#
+#      La regola e' del **SERVER**; la registrazione la prende il **CLIENT**.
+#      §11.1: *«Una registrazione presa al client vede quando e' ARRIVATO il
+#      `TELA` e quando e' PARTITO il `PUNTATORE`: un intervallo piu' CORTO di
+#      quello che il server ha misurato, di mezzo giro di rete per lato»*.
+#
+#      ⇒ Il confine e' asimmetrico, e i due errori non si somigliano:
+#        · un caso «oltre» a 1,5 s e' **sicuro**, perche' l'intervallo del
+#          server e' ancora piu' lungo: 1,5 s qui non puo' essere 0,9 s la';
+#        · un caso «dentro» a 0,95 s **non lo e'**: con 60 ms di giro di rete
+#          il server ne misura 1,01 e rifiuta — e il banco darebbe il rosso a
+#          un prodotto che ha ragione.
+#
+# ⭐ ⇒ I DUE ISTANTI SONO SCELTI LONTANI DAL CONFINE, E SI DICHIARA QUANTO:
+#      **1500 ms** (margine +500 ms) e **250 ms** (margine −750 ms, cioe' ci
+#      vorrebbe un giro di rete di 750 ms su una LAN per portarlo oltre).
+#
+# ⭐⭐ E L'ASIMMETRIA NON E' PIU' UN RAGIONAMENTO: E' MISURATA — 22 agosto 2026.
+#
+#    §11.1 dice che l'intervallo del server e' **piu' lungo**; qui si vede di
+#    quanto, perche' i due numeri esistono tutt'e due — il `dt` della traccia e
+#    quello che il server scrive di suo nel registro (*«sono passati N ms su
+#    1000»*, *«scaduto da N ms»*).  ⛔ Nove coppie, carico 1,0-1,6 (otto agenti
+#    sulla macchina), su LAN:
+#
+#      | client |  server | differenza |
+#      |   251  |    262  |    +11     |
+#      |   252  |    265  |    +13     |
+#      |  1502  |   1516  |    +14     |
+#      |  1501  |   1515  |    +14     |
+#      |   252  |    270  |    +18     |
+#      |  1501  |   1521  |    +20     |
+#      |  1501  |   1521  |    +20     |
+#      |   251  |    272  |    +21     |
+#      |  1501  |   1526  |    +25     |
+#
+#    ⇒ **Il segno e' sempre lo stesso** (9 su 9: il server misura di piu'), e la
+#      grandezza sta fra **11 e 25 ms**.  ⚠ E il numero non si estrapola: e' di
+#      QUESTA rete e di QUESTO carico.  Vale a giustificare i margini scelti —
+#      500 e 750 ms sono venti volte il peggiore — **non** a spostarli piu'
+#      vicino al confine.  ⛔ Un caso «dentro» a 0,99 s sarebbe a 1,01 s per il
+#      server nel giro peggiore di questi nove: rosso su un prodotto che ha
+#      ragione.
+#      ⚠ Il margine lo stampa `06-b38-puntatore.py` a ogni giro, letto dagli
+#        `istante_ms` VERI: se un giorno la rete o il carico lo mangiassero, si
+#        vedrebbe **prima** del verdetto invece di dopo.
+#
+# ⛔ E LA COORDINATA NON E' SCELTA QUI: la calcola il cliente, ed e' l'ULTIMO
+#    PIXEL della tela precedente — `(1264-1, 800-1)` = `(1263,799)`.  Due
+#    ragioni:
+#      · e' valida sulla tela di prima **per definizione** (§7.3), quindi la
+#        scena e' quella di §7.1 e non «una coordinata sbagliata», che §7.1
+#        NON copre e per cui il server ha una riga di registro diversa;
+#      · saturata, deve finire **esattamente** su `(800-1, 600-1)` =
+#        `(799,599)` — un punto NOTO.  ⭐ E' il controllo che attraversa la
+#        conversione delle coordinate, come in `banchi/07-b51-due-browser.py`.
+# ═══════════════════════════════════════════════════════════════════════════
+
+REGISTRO=$LAV/registro.log
+marca_log() { sudo_mio stat -c %s "$REGISTRO" 2>/dev/null || echo 0; }
+log_da()    { sudo_mio tail -c "+$(( ${1:-0} + 1 ))" "$REGISTRO" 2>/dev/null; }
+
+# ⛔ La riga di registro che dice **dove e' finito il puntatore**: `rcp.c`
+#    scrive «input id=N (era M) PUNTATORE (x,y)» con le coordinate GIA'
+#    saturate, e questa e' la sola grandezza che attraversa la conversione.
+#    ⚠ L'ancora e' `input id=`, non la sola parola `PUNTATORE`: nel registro
+#      quella parola compare anche nelle righe di RIFIUTO, e cercarla nuda
+#      darebbe un «e' arrivato» su un input che e' stato buttato.  E' la
+#      trappola dello `strstr` nudo, gia' pagata su questi file.
+dove_e_finito() {
+	sed -n 's/.*input id=[0-9]* (era [0-9]*) PUNTATORE (\([0-9]*,[0-9]*\)).*/\1/p' \
+	    | tail -1
+}
+
+# ── il denominatore del filo, e i due testimoni in piu' ────────────────────
+# ⛔ Non e' un secondo giudice: il verdetto su §7.1 resta dell'arbitro.  Questi
+#    numeri dicono **se la scena e' avvenuta** e **dove e' finito il
+#    puntatore** — le due domande che «conforme» non risponde.
+grazia() # nome · dt-atteso · punto-atteso · frase-dell-arbitro · marca · riga-del-registro-attesa · input-nei-fotogrammi
+{
+	local nome=$1 dtatteso=$2 puntoatteso=$3 frase=$4 marca=$5 rigattesa=$6
+	local inpatteso=$7
+	local T=$LAV/$nome.rcpreg
+	log "   ⤷ i due testimoni del giro «$nome»"
+	if [ ! -f "$T" ]; then
+		ko "⛔ nessuna traccia: non si giudica niente"; BENE=1; return 1
+	fi
+	python3 "$ALB/banchi/06-b38-puntatore.py" "$T" 2>&1 \
+	    | tee "$LAV/$nome-puntatore.txt" | sed 's/^/    | /'
+
+	# 1. la scena e' avvenuta?
+	local scena dt sat
+	scena=$(sed -n 's/^PUNT_SCENA \(.*\)/\1/p' "$LAV/$nome-puntatore.txt" | tail -1)
+	dt=$(sed -n 's/^PUNT_DT \(.*\)/\1/p' "$LAV/$nome-puntatore.txt" | tail -1)
+	sat=$(sed -n 's/^PUNT_SATURAZIONE_ATTESA \(.*\)/\1/p' "$LAV/$nome-puntatore.txt" | tail -1)
+	if [ "$scena" != "si" ]; then
+		ko "⛔ la scena di §7.1 NON e' avvenuta: nessun PUNTATORE nella traccia"
+		BENE=1; return 1
+	fi
+	ok "la scena c'e': un PUNTATORE dopo il TELA(ADATTATA)"
+	# ⛔ Il `dt` si CONFRONTA, e con una tolleranza dichiarata: fra il momento
+	#    in cui il cliente decide e quello in cui il byte parte passa del
+	#    tempo, e sotto carico ne passa di piu'.  ⚠ 200 ms e' largo di
+	#    proposito — serve a vedere un ritardo *sbagliato di scala*, non a
+	#    misurare la latenza: quel che tiene la regola e' il margine dal
+	#    confine (500 e 750 ms), non la precisione di questo confronto.
+	local basso=$((dtatteso - 200)) alto=$((dtatteso + 200))
+	if [ "$dt" -ge "$basso" ] && [ "$dt" -le "$alto" ]; then
+		inf "dt registrato $dt ms (atteso $dtatteso ± 200) — e il margine dal secondo sta qui sopra"
+	else
+		ko "⛔ dt registrato $dt ms, e l'atteso era $dtatteso ± 200: il giro NON ha esercitato l'istante che dichiarava"
+		BENE=1
+	fi
+	if [ "$sat" != "$puntoatteso" ]; then
+		ko "⛔ la saturazione attesa e' ($sat) e il giro dichiarava ($puntoatteso): le tele non sono quelle che credevo"
+		BENE=1
+	fi
+
+	# 2. che cosa dice l'ARBITRO su §7.1 — ⛔ e NON basta che esca 0.
+	#    `[M]` 22 agosto 2026, su registrazioni costruite: un PUNTATORE oltre
+	#    il secondo dopo cui il server **tace** fa uscire l'arbitro **0**
+	#    esattamente come uno dopo cui il server **congeda**.  ⇒ Leggere solo
+	#    il codice d'uscita darebbe verde a «non si giudica».
+	if grep -aqF "$frase" "$LAV/$nome-arbitro.txt"; then
+		ok "⭐ l'arbitro dice quel che il giro pretendeva: «$frase»"
+	else
+		ko "⛔ l'arbitro NON dice «$frase» — e senza quella frase l'uscita 0 vuol dire «non ho giudicato»"
+		BENE=1
+	fi
+
+	# 3. ⭐⛔ IL REGISTRO DEL SERVER — dove e' finito il puntatore
+	local coda arrivo
+	coda=$(log_da "$marca")
+	printf '%s\n' "$coda" | grep -aE 'grazia|GRAZIA|PUNTATORE|congedo motivo|input id=' \
+	    | sed 's/^/    | /' | tail -20
+	if printf '%s\n' "$coda" | grep -aqE "$rigattesa"; then
+		ok "⭐ il registro del server porta la riga attesa"
+	else
+		ko "⛔ il registro del server NON porta «$rigattesa»"
+		BENE=1
+	fi
+	arrivo=$(printf '%s\n' "$coda" | dove_e_finito)
+	printf 'DOVE_E_FINITO %s\n' "${arrivo:-nessuna-iniezione}"
+
+	# 4. ⭐⛔ IL TERZO TESTIMONE, E STA SUL FILO: il campo `input` di §6.2.
+	#    *«L'identificatore dell'ultimo input INIETTATO prima della cattura»*.
+	#    ⇒ E' il filo che contraddice il filo: un server che rifiutasse a
+	#      parole e iniettasse nei fatti lo direbbe QUI, in un campo che
+	#      nessun altro controllo guarda.
+	local fi fd
+	fi=$(sed -n 's/^FOT_INPUT \(.*\)/\1/p' "$LAV/$nome-puntatore.txt" | tail -1)
+	fd=$(sed -n 's/^FOT_DOPO \(.*\)/\1/p' "$LAV/$nome-puntatore.txt" | tail -1)
+	# ⛔ L'uno si cerca come ELEMENTO dell'elenco, non come sottostringa: con un
+	#    `grep 1` nudo il valore «10» o «21» direbbe di si'.  E' la trappola
+	#    dello `strstr` nudo — gia' pagata su questi file con «scaduto da 1500
+	#    ms» che combaciava con «500».
+	case "$inpatteso" in
+	"1")
+		if printf '%s' "$fi" | grep -qE '(^|,)1(,|$)'; then
+			ok "⭐ §6.2: un fotogramma dopo il PUNTATORE dichiara «input = 1» — l'iniezione e' scritta sul FILO, non solo nel registro del server"
+		else
+			ko "⛔ nessun fotogramma dichiara «input = 1» ($fd fotogrammi dopo, campo «input» = $fi): o non e' stato iniettato, o non e' passato niente"
+			BENE=1
+		fi ;;
+	"no-1")
+		if [ "$fd" = 0 ]; then
+			inf "⚠ zero fotogrammi dopo il PUNTATORE: il campo «input» NON puo' dire niente — e si dichiara, invece di leggerlo come un no"
+		elif printf '%s' "$fi" | grep -qE '(^|,)1(,|$)'; then
+			ko "⛔⛔ un fotogramma dichiara «input = 1» DOPO un PUNTATORE che il server dice di aver rifiutato: §7.1 detta e non fatta"
+			BENE=1
+		else
+			ok "⭐ nessun fotogramma dichiara «input = 1» ($fd dopo il PUNTATORE): il rifiuto e' vero anche sul filo"
+		fi ;;
+	esac
+	return 0
+}
+
+M6=$(marca_log)
+# ⛔ ATTESO DEL CLIENTE = **4**, e non 0: §7.1 dice «passato quel secondo, sono
+#    ERRORE_PROTOCOLLO», e §3 dice che un errore di protocollo CHIUDE.  ⇒ Un
+#    cliente che restasse attaccato sarebbe la prova che il server ha
+#    perdonato.  ⚠ E l'atteso si dichiara qui, prima di guardare.
+giro "6-grazia-scaduta" 4 2 "?" "TELA(ADATTATA)" \
+     "⭐ un PUNTATORE (1263,799) — valido sulla tela vecchia 1264x800, fuori dalla nuova — a 1500 ms dal TELA(ADATTATA): OLTRE il secondo di §7.1, e il server DEVE chiudere con ERRORE_PROTOCOLLO.  ⛔ E NIENTE DEVE ESSERE INIETTATO" -- \
+     --adatta 1264x800 --adatta 800x600@1 --puntatore-vecchia 1.5 \
+     --chiave-dopo 1 --resta 5
+grazia "6-grazia-scaduta" 1500 "799,599" \
+       "oltre il secondo — e il server ha CONGEDATO" "$M6" \
+       "PUNTATORE id=[0-9]+ a \(1263,799\).*secondo di grazia di §7\.1 e' scaduto" \
+       "no-1"
+# ⛔ E IL CONTROLLO CHE L'ARBITRO NON PUO' FARE: nessuna iniezione.  Un server
+#    che scrivesse il rifiuto e iniettasse lo stesso uscirebbe conforme.
+A6=$(log_da "$M6" | dove_e_finito)
+if [ -z "$A6" ]; then
+	ok "⭐ NESSUNA iniezione dopo il rifiuto: il puntatore non e' finito da nessuna parte"
+else
+	ko "⛔⛔ il server ha RIFIUTATO a parole e INIETTATO in ($A6): §7.1 detta e non fatta"
+	BENE=1
+fi
+
+M7=$(marca_log)
+giro "7-grazia-dentro-il-secondo" 0 2 "?" "TELA(ADATTATA)" \
+     "⭐ lo stesso PUNTATORE (1263,799) a 250 ms: DENTRO il secondo.  Il server DEVE saturarlo a (799,599) e scriverlo nel registro, la sessione DEVE reggere, e ⛔ l'arbitro DEVE dire «NON e' giudicabile» invece di assolvere" -- \
+     --adatta 1264x800 --adatta 800x600@1 --puntatore-vecchia 0.25 \
+     --chiave-dopo 1 --resta 5
+grazia "7-grazia-dentro-il-secondo" 250 "799,599" \
+       "NON e' giudicabile da questa registrazione" "$M7" \
+       "§7\.1 SECONDO DI GRAZIA \([0-9]+-esima volta\): input id=[0-9]+ porta \(1263,799\).*SATURATA a \(799,599\)" \
+       "1"
+# ⭐⛔ E QUESTO E' IL METRO FINALE: dove e' finito il puntatore.
+A7=$(log_da "$M7" | dove_e_finito)
+if [ "$A7" = "799,599" ]; then
+	ok "⭐⭐ IL PUNTATORE E' FINITO IN ($A7) — l'ultimo pixel della tela nuova, come §7.1 vuole"
+elif [ -z "$A7" ]; then
+	ko "⛔ nessuna iniezione: la grazia e' stata scritta nel registro e NON fatta"
+	BENE=1
+else
+	ko "⛔⛔ il puntatore e' finito in ($A7) invece che in (799,599): la saturazione di §7.1 e' sbagliata"
+	BENE=1
+fi
+
 # ---------------------------------------------------------------------------
 # ⛔ IL BAN SI SBLOCCA, E SI DICHIARA — regola B0.3.  Questo banco autentica,
 #    quindi puo' bannare: senza lo sblocco dichiarato, «il ban non e' scattato»
 #    e «qualcuno l'ha tolto» hanno la stessa faccia.
-log "6. Lo sblocco dell'indirizzo — §4.4-bis, e si DICHIARA"
+log "8. Lo sblocco dell'indirizzo — §4.4-bis, e si DICHIARA"
 dentro "python3 $DENTRO_ALB/banchi/01-b8-sblocca.py --socket $DENTRO_LAV/comando.sock --ping"
 inf "ping al socket del comando: uscita $?"
 dentro "python3 $DENTRO_ALB/banchi/01-b8-sblocca.py --socket $DENTRO_LAV/comando.sock $IND"

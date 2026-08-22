@@ -83,12 +83,22 @@ BTN_LEFT, KEY_ENTER, KEY_A, KEY_CTRL = 272, 28, 30, 29
 #      (`%u %s erano PREMUTI…`), e il guasto G3 toglie la chiamata **solo sui
 #      pulsanti**: cercando la frase generica, con il Ctrl giu' la riga dei
 #      TASTI si scrive lo stesso e R1 restava verde col guasto innestato.
-M_ORFANI_PULSANTI = "pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
-M_ORFANI_TASTI = "tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
+#
+# ⚠ E lo spazio davanti a «pulsanti»/«tasti» ci sta apposta: e' il `%u %s`, e
+#   ancora il marcatore alla parola intera invece che a una sua coda.
+M_ORFANI_PULSANTI = " pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
+M_ORFANI_TASTI = " tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
+# ⛔ E col SEGUITO: «era premuto su un…» da solo combacia sia con «su UN
+#    DISPOSITIVO» (il puntatore) sia con «su UNA TASTIERA».
 M_NON_PARTE_PULSANTE = "NON PARTE: era premuto su un dispositivo"
-# la riga della CURA, `figlio.c` — e' lei che dichiara in quale mondo siamo
-M_CURA = "RILASCIATI"
-M_CURA2 = "PRIMA di ridimensionare"
+M_NON_PARTE_TASTO = "NON PARTE: era premuto su una tastiera"
+# ⛔⛔ La riga della CURA, `figlio.c` — ed e' UNA riga, non due sottostringhe
+#      indipendenti.  *Corretta il 22 agosto 2026: erano `"RILASCIATI"` e
+#      `"PRIMA di ridimensionare"` cercate separatamente, e due frammenti presi
+#      da DUE righe diverse del registro avrebbero dichiarato «mondo curato»
+#      senza che la cura fosse mai scattata.*  ⚠ E' la stessa forma del rilievo
+#      sul `%s`: chi conta deve cercare la forma COMPLETA.
+M_CURA = "fra tasti e pulsanti PRIMA di ridimensionare"
 # `cattura_ridimensiona()` — e SOLO lei: il risveglio scrive un'altra frase
 M_TELA_CHIESTA = "tela CHIESTA al produttore"
 M_RISVEGLIO = "flusso RIAVVIATO alla stessa misura"
@@ -241,7 +251,7 @@ def main():
         #      rilascia PRIMA di ridimensionare: se c'e', al ricambio non c'era
         #      piu' niente di premuto, e pretendere le righe dei ripieghi
         #      sarebbe scrivere l'atteso di un mondo che non e' questo.
-        curato = M_CURA in reg and M_CURA2 in reg
+        curato = M_CURA in reg
         caso("T0 in quale mondo siamo — e si LEGGE, non si assume",
              "OK",
              ("⭐ CURATO: `figlio.c` dichiara di aver rilasciato PRIMA di "
@@ -352,9 +362,18 @@ def main():
                      "dichiarare.  ⛔ Pretenderla qui era l'atteso del mondo col "
                      "difetto vivo (§7.1)")
             else:
+                # ⚠ E si dice se c'e' la riga dell'ALTRO dispositivo: e' la
+                #   forma d'errore che la revisione del 22 agosto ha trovato nel
+                #   banco gemello, e qui non deve nascere.
+                altro = ""
+                if pezzo == M_ORFANI_PULSANTI and M_ORFANI_TASTI in reg:
+                    altro = ".  ⚠ C'e' quella dei TASTI, che e' un'altra cosa"
+                elif pezzo == M_NON_PARTE_PULSANTE and M_NON_PARTE_TASTO in reg:
+                    altro = ".  ⚠ C'e' quella della TASTIERA, che e' un'altra cosa"
                 caso(nome, "NO",
                      "⛔ la riga NON c'e' e la cura nemmeno: il registro dice "
-                     "«fatto» mentre il desktop resta bloccato — `CODER.md` §4.6")
+                     "«fatto» mentre il desktop resta bloccato — `CODER.md` §4.6"
+                     + altro)
 
     # ---- i ricambi, LETTI e non dedotti -----------------------------------
     #

@@ -5537,7 +5537,7 @@ function avvia_audio(wt) {
     salti_suono: 0,
     /* L'ultimo blocco messo in scaletta: il suo `istante` e l'ora in cui
        suonera', per il metro della distanza fra audio e video. */
-    ult_ist_us: 0, ult_quando_perf: 0,
+    ult_ist_us: 0, ult_quando_perf: 0, ult_aoff_perf: 0,
     coda_ms() { return this.ctx ? Math.max(0, (this.prossimo - this.ctx.currentTime) * 1000) : 0; },
     /* ⭐ LA META' AUDIO DEL METRO DI §9.7-bis, e non serve ne' microfono ne'
      *    scena: `RCP.md` §6.2 e §6.3 mettono **lo stesso orologio del server**
@@ -5561,8 +5561,49 @@ function avvia_audio(wt) {
                   ? c.outputLatency : (c.baseLatency || 0);
       return u * 1000;
     },
+    /* ⛔⛔⛔ E QUI VA LETTA L'ETICHETTA, perche' il rilievo R1 del 22 agosto
+     *       2026 aveva ragione sull'algebra e la conclusione era un'altra.
+     *
+     *   ⭐ L'ALGEBRA, ed e' giusta: con l'ancora `quando = base + ist`, quindi
+     *      `aoff = perf_prog + (base + ist − ora)·1000 + u − ist/1000`, e il
+     *      termine `ist` **si elide**.  Resta
+     *      `aoff = (perf − ora·1000) + base·1000 + u`.
+     *
+     *   ⛔ LA CONCLUSIONE «e' una costante che non misura niente» NON regge, e
+     *      la differenza sta tutta dentro `base`.  Al riancoraggio
+     *      `base = ora + CUSCINO − ist/1e6`, quindi
+     *      `aoff = (perf − ist/1000) + CUSCINO + u`
+     *      e `perf − ist/1000` **e' la latenza vera del filo** — cattura,
+     *      codifica, rete, decodifica — piu' lo scarto fra i due orologi.
+     *
+     *   ⇒ `aoff` **misura**, ma con una zona morta larga un cuscino: una
+     *     latenza che cambia meno del cuscino residuo viene ASSORBITA, e allora
+     *     `aoff` non si muove **perche' il suono esce davvero alla stessa ora**
+     *     — che e' il mestiere del cuscino, non un difetto del metro.
+     *
+     *   ⭐ `[M]` `banchi/07-b61-ancora.js`, scena «la latenza cresce di
+     *     800 ms»: `aoff` passa da **−750 a 50, salto 800**.  ⇒ Il metro vede.
+     *
+     * ⛔ E QUEL CHE INVECE ERA ROTTO, e il rilievo l'ha centrato:
+     *   1. `aoff` si aggiornava su ogni blocco **PROGRAMMATO**, compresi
+     *      quelli poi tagliati, che non si sono mai sentiti.  ⇒ Adesso lo
+     *      aggiorna solo `onended`, e solo il ramo `usciti`;
+     *   2. non SCADEVA: se l'audio si ferma del tutto, l'ultimo valore restava
+     *      li' e `AV` sembrava sano su una sessione muta.  ⇒ Adesso scade.
+     *
+     * ⚠ E NON E' «LA GEMELLA ESATTA» DI `voff`, come diceva il commento di la':
+     *   `voff` **osserva** un `performance.now()` al vetro, `aoff` lo **deriva**
+     *   dalla scaletta.  ⛔ Sono confrontabili — stessa unita', stesso
+     *   riferimento, stesso scarto d'orologio che si elide nella differenza —
+     *   ma non sono la stessa specie di misura, e chi legge `AV` deve saperlo. */
     aoff_ms() {
       if (!this.ult_ist_us) return null;
+      /* ⛔ SCADE, e la scadenza non e' una costante nuova: e' il tetto della
+         coda.  Se in un tetto intero non e' uscito un solo blocco, quel che
+         sapevo non vale piu' — e dirlo «non lo so» e' l'unico modo perche'
+         «muto» e «in orario» non abbiano la stessa faccia. */
+      if (performance.now() - this.ult_aoff_perf > AUDIO_CUSCINO_MAX_MS)
+        return null;
       const u = this.uscita_ms();
       return Math.round(this.ult_quando_perf + (u || 0) - this.ult_ist_us / 1000);
     }
@@ -5906,11 +5947,12 @@ function avvia_audio(wt) {
          + "l'ancora vale quanto la scaletta di prima, e il cuscino torna a "
          + "essere un serbatoio a senso unico");
     }
-    /* La meta' audio del metro: l'`istante` del server e l'ora del client in
-       cui quel campione suonera', nello stesso orologio di `performance.now()`
-       che il percorso video usa per i suoi tempi. */
-    a.ult_ist_us = ist_us;
-    a.ult_quando_perf = performance.now() + (quando - ora) * 1000;
+    /* La meta' audio del metro: l'ora del client in cui questo blocco
+       comincera' a suonare, nello stesso orologio di `performance.now()` che
+       il percorso video usa per i suoi tempi.  ⛔ Si CALCOLA qui e si
+       PUBBLICA a `onended`: un blocco programmato e poi tagliato non si e'
+       sentito, e non deve entrare in una misura di quel che si sente. */
+    const inizio_perf = performance.now() + (quando - ora) * 1000;
     /* ⛔ Si tiene il riferimento finche' non ha finito, e non un istante di
        piu': `onended` lo toglie da se', o questo elenco crescerebbe per tutta
        la sessione — che sarebbe la perdita curata dal rilievo 2 in un'altra
@@ -5931,7 +5973,13 @@ function avvia_audio(wt) {
     const fine = quando + fotogrammi / AUDIO_FREQUENZA;
     s.onended = () => {
       const i = a.in_volo.indexOf(s); if (i >= 0) a.in_volo.splice(i, 1);
-      if (ctx.currentTime + 0.005 < fine) a.tagliati++; else a.usciti++;
+      if (ctx.currentTime + 0.005 < fine) { a.tagliati++; return; }
+      a.usciti++;
+      /* ⭐ E SOLO QUI il metro si aggiorna: questo blocco e' arrivato in fondo,
+         cioe' si e' sentito davvero. */
+      a.ult_ist_us = ist_us;
+      a.ult_quando_perf = inizio_perf;
+      a.ult_aoff_perf = performance.now();
     };
     /* ⚠ `a.prossimo` non governa piu' la scaletta: resta perche' `coda_ms()`
        la legge, ed e' la fine dell'ultimo blocco messo in scaletta.  ⛔ E si

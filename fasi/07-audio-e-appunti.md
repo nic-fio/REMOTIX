@@ -1085,6 +1085,34 @@ un ritardo che si accumula.
 ⛔ **E non è il numero che l'utente ha provato**: questa è la pagina con l'orologio audio nuovo. I
 400 ms erano di prima, e **il confronto lo può fare solo lui**.
 
+> ### ⛔⭐ 22 agosto — **il metro è stato accusato di essere una tautologia, e si è difeso con un numero**
+>
+> Una revisione avversariale ha mostrato **algebricamente** che in `aoff_ms()` il termine dell'istante
+> **si elide**: `aoff = (perf − ora·1000) + base·1000 + u`. Sembrava una costante, e il coordinatore
+> aveva **ritirato la misura**.
+>
+> ⛔ **La conclusione non regge, ed è stata smentita con una misura invece che con un ragionamento.**
+> `base` non è arbitraria: al riancoraggio vale `ora + CUSCINO − ist/1e6`, quindi
+> `aoff = (perf − ist/1000) + CUSCINO + u` — e **`perf − ist/1000` è la latenza vera del filo**.
+> ⭐ `[M]` scena nuova: la latenza del filo cresce di **800 ms** a metà sessione ⇒ **`aoff` passa da
+> −750 a 50, salto di 800 esatti**. Il metro vede.
+>
+> ⚠ **Ma ha una zona morta larga un cuscino, e va sull'etichetta**: un aumento **più piccolo del
+> cuscino residuo** non muove `aoff` — ⭐ e non è un difetto del metro: è che **il suono esce davvero
+> alla stessa ora**.
+>
+> ⇒ E *«coda 253, cuscino 250»*: ⛔ **non è una conferma** — è il cuscino letto due volte. Il termine
+> che rende `AV` informativo è **`voff`**, che osserva al vetro.
+>
+> ⭐ **E il rilievo aveva centrato tre difetti veri, tutti curati**: `aoff` si aggiornava sui blocchi
+> **programmati** anche se poi tagliati (⇒ ora solo su `onended`, cioè su quel che **si è sentito**);
+> **non scadeva** — audio fermo, ultimo valore per sempre, `AV` sano su una sessione muta (⇒ scade
+> dopo il tetto della coda e risponde `null`, **senza costanti nuove**); e *«è la gemella esatta di
+> `voff`»* era **falso**.
+>
+> ⏳ Il **236** resta da riprendere con l'`aoff` curato: non è invalidato, è **non riconfermato**.
+> ⭐ E si sa una cosa che mancava: `outputLatency` su quel Firefox vale **50 ms**, ed entra in `AV`.
+
 ### ⭐ Le regressioni, sul prodotto riunito — porta 7781, utente `provai6`
 
 | banco | esito |

@@ -51,6 +51,12 @@ a = argparse.ArgumentParser()
 a.add_argument("--nuova", type=int, default=7791)
 a.add_argument("--vecchia", type=int, default=7792)
 a.add_argument("--durata", type=int, default=150)
+# ⛔ Una colonna sola, e il reperto lo DICE.  ⚠ Rilievo R9 del 22 agosto 2026:
+#    il file degli esiti diceva «nuova» e «vecchia» anche quando le due porte
+#    erano la stessa, e un reperto committato e' una prova — se mente, mente
+#    a chi lo legge fra un mese.
+a.add_argument("--sola", action="store_true",
+               help="una porta sola: niente colonna di confronto")
 a.add_argument("--utente", default="provaa7")
 a.add_argument("--parola", default="provaa7")
 # ⛔ Una porta di Marionette SUA: 2828 e 2861 sono di altri banchi, e due
@@ -216,7 +222,20 @@ def carico():
 
 def main():
     print("⛔ 07-b61 — la cura su una sessione vera.  carico: %s" % carico())
-    nuova = una(o.nuova, "pagina NUOVA (ancora sull'istante)")
+    nuova = una(o.nuova, "pagina in albero")
+    if o.sola:
+        print("\n══ IL REPERTO ═════════════════════════════════════════")
+        print("   carico alla fine: %s" % carico())
+        a1 = riassunto("in albero", nuova)
+        fuori = os.path.join(QUI, "07-b61-esiti.json")
+        json.dump({"quando": time.strftime("%Y-%m-%d %H:%M"),
+                   "colonne": "una sola: --sola",
+                   "porta": o.nuova, "durata_s": o.durata,
+                   "carico": carico(), "campioni": nuova,
+                   "riassunto": {"in albero": a1}},
+                  open(fuori, "w"), indent=1)
+        print("\n   esiti in %s" % fuori)
+        return 0 if a1 else 3
     vecchia = una(o.vecchia, "pagina di PRIMA (scaletta per successione)")
     print("\n══ IL CONFRONTO ═══════════════════════════════════════")
     print("   carico alla fine: %s" % carico())

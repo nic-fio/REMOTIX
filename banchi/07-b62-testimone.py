@@ -27,6 +27,20 @@ Le tre domande, e ciascuna ha la sua leva:
      obbedisce lì, allora legge la VUI, e il suo comportamento sul `dichiarato`
      è una scelta e non un'ignoranza.
 
+⛔⛔ IL VERDETTO NON È INCHIODATO A UNA CONVERSIONE — rilievo R12a, 22 ago 2026.
+   Il banco **sceglie** fra `709tv`, `601tv` e `709pc` quella che spiega i dati,
+   la **dichiara**, e poi la confronta con quella che il flusso DICHIARA nella
+   VUI.  ⇒ Tre esiti distinti invece di uno: *coerente e conforme* (⭐),
+   *coerente ma con la conversione di un altro* (⛔ matrice/intervallo sbagliati),
+   *nessuna conversione nota spiega i dati* (⛔ qualcuno ha toccato i pixel dopo
+   il decodificatore — è la forma che prenderebbe un filtro del compositore).
+
+⛔⛔ E IL CODICE D'USCITA VALE QUALCOSA — rilievo R12b, `LEZIONI.md` §1.20:
+     0 = tutto conforme **e** i guasti innestati sono stati visti
+     1 = c'è almeno una cosa da guardare (l'elenco è stampato in fondo)
+     2 = il giro è INCOMPLETO (senza `--certifica`, o senza browser): nessuno
+         ha dimostrato che il banco veda, quindi il suo verde non si spende.
+
 ⛔ E IL BANCO SI CERTIFICA PRIMA DI ESSERE CREDUTO (`PIANO.md` §0.3.4):
    `--certifica` rifà un giro con `?guasto=8`, cioè **innesta esattamente il
    difetto sospettato** — +8 livelli sui soli campioni sopra 180 — e pretende
@@ -52,6 +66,66 @@ _spec.loader.exec_module(M)
 BANDE = [("sotto il nero", 0, 15), ("ombre", 16, 63), ("mezzitoni bassi", 64, 127),
          ("mezzitoni alti", 128, 191), ("luci", 192, 234), ("sopra il bianco", 235, 255)]
 CANALI = ("R", "G", "B")
+IPOTESI = ("709tv", "601tv", "709pc")
+# ⭐ Come è fatta la scena: i campioni Y/U/V sono stati scritti applicando
+#    BT.709 a intervallo limitato (`07-b62-prepara.py`).  Serve al caso in cui
+#    il flusso NON dichiari niente: lì non si può dire «il decodificatore
+#    disobbedisce», ma si può dire «ha indovinato una conversione diversa da
+#    quella con cui il quadro è stato fatto», che per l'utente è un colore
+#    sbagliato lo stesso.
+COME_E_FATTA = "709tv"
+
+
+def ipotesi_dichiarata(ffprobe):
+    """⛔ Che cosa il FLUSSO dichiara, letto dai bit e non dal nome della
+    variante.  ⚠ `None` vuol dire «non lo dice»: e allora nessuno può essere
+    accusato di disobbedienza — si dice che ha indovinato, e che cosa."""
+    if not ffprobe:
+        return None
+    m = (ffprobe.get("color_space") or "").lower()
+    r = (ffprobe.get("color_range") or "").lower()
+    if m in ("unknown", "", "reserved") or r in ("unknown", ""):
+        return None
+    if m in ("smpte170m", "bt470bg", "smpte240m"):
+        return "601tv" if r != "pc" else None
+    if m in ("bt709",):
+        return "709pc" if r == "pc" else "709tv"
+    return None
+
+
+def scegli(medie, attesi):
+    """⛔⛔ QUALE CONVERSIONE SPIEGA I DATI — e perché il verdetto NON può
+    restare inchiodato a una sola ipotesi (rilievo R12a, 22 agosto 2026).
+
+    Il banco raccoglieva tre ipotesi e ne giudicava **una**.  ⇒ Il giorno in cui
+    il codificatore passasse a 601 — o qualcuno cambiasse le quattro righe della
+    VUI di `codificatore.c` — sarebbero usciti scarti enormi, stampati, e il
+    verdetto avrebbe detto esattamente quel che diceva prima.  «Parametrico a
+    metà» è la forma peggiore: sembra generale e non lo è.
+
+    ⚠ E qui c'è la trappola gemella, che va nominata perché sceglierla da soli
+      è comodo: **scegliere l'ipotesi che meglio spiega i dati può NASCONDERE
+      il difetto**.  Se il decodificatore convertisse con la matrice sbagliata,
+      il residuo contro QUELLA matrice sarebbe minuscolo e il banco sembrerebbe
+      verde.  ⇒ Per questo la scelta da sola non è mai un verdetto: il verdetto
+      è **la scelta CONFRONTATA con quel che il flusso dichiara** (`verdetto`).
+
+    Si giudica su TUTTI i riquadri, non solo sulle barre: la rampa di grigio
+    discrimina l'INTERVALLO (una matrice sul grigio non si vede), le barre
+    discriminano la MATRICE.  Una sola delle due famiglie lascerebbe cieco
+    metà del banco."""
+    fuori = {}
+    for ip in IPOTESI:
+        s, saltati = scarti(medie, attesi, ip, None)
+        if not s:
+            continue
+        fuori[ip] = {"medio": sum(abs(x[4]) for x in s) / len(s),
+                     "peggio": max(abs(x[4]) for x in s),
+                     "n": len(s), "saltati": saltati}
+    if not fuori:
+        return None, {}
+    ordine = sorted(fuori, key=lambda k: fuori[k]["medio"])
+    return ordine[0], fuori
 
 
 # ---------------------------------------------------------------------------
@@ -113,21 +187,7 @@ def scarti(medie, attesi, ipotesi="709tv", prefissi=None):
     return out, saltati
 
 
-def aderenza(medie, attesi, prefissi):
-    """Quale ipotesi di colore spiega quel che si è letto.  ⭐ È la domanda
-    «matrice o intervallo?» ridotta a tre numeri confrontabili."""
-    fuori = {}
-    for ip in ("709tv", "601tv", "709pc"):
-        s, saltati = scarti(medie, attesi, ip, prefissi)
-        if not s:
-            return {}
-        fuori[ip] = {"medio": sum(abs(x[4]) for x in s) / len(s),
-                     "peggio": max(abs(x[4]) for x in s),
-                     "n": len(s), "saltati": saltati}
-    return fuori
-
-
-def per_livello(medie, riquadri, attesi):
+def per_livello(medie, riquadri, attesi, ip=COME_E_FATTA):
     """Lo scarto sulla rampa di grigio, ⛔ per canale e per banda di livello —
     che è la forma in cui la `[?]` è scritta («+8 sulle zone chiare»)."""
     righe = []
@@ -136,7 +196,7 @@ def per_livello(medie, riquadri, attesi):
                   if q["nome"].startswith("rampa-Y") and lo <= q["Y"] <= hi]
         voce = {"banda": nome, "da": lo, "a": hi, "riquadri": len(dentro)}
         for k, can in enumerate(CANALI):
-            v = [medie[q["nome"]][k] - attesi[q["nome"]]["709tv"][k]
+            v = [medie[q["nome"]][k] - attesi[q["nome"]][ip][k]
                  for q in dentro if q["nome"] in medie]
             if not v:
                 continue
@@ -145,7 +205,7 @@ def per_livello(medie, riquadri, attesi):
     return righe
 
 
-def retta(medie, riquadri, attesi):
+def retta(medie, riquadri, attesi, ip=COME_E_FATTA):
     """⭐ Guadagno e scostamento della rampa, sui livelli DENTRO l'intervallo
     legale (16-235).  ⚠ Distingue le due malattie che una media confonde: un
     intervallo sbagliato è un GUADAGNO diverso da 1; una matrice sbagliata sul
@@ -157,7 +217,7 @@ def retta(medie, riquadri, attesi):
         m = medie.get(q["nome"])
         if not m:
             continue
-        x.append(attesi[q["nome"]]["709tv"][0])
+        x.append(attesi[q["nome"]][ip][0])
         y.append(sum(m) / 3.0)
     if len(x) < 10:
         return None
@@ -169,28 +229,35 @@ def retta(medie, riquadri, attesi):
     return {"guadagno": g, "scostamento": my - g * mx, "punti": n}
 
 
-def stampa_giudizio(titolo, medie, riquadri, attesi):
+def stampa_giudizio(titolo, medie, riquadri, attesi, ip=None):
+    """⛔ `ip=None` ⇒ l'ipotesi la SCEGLIE la misura, e la si stampa: nessuna
+    tabella di questo banco è più intestata a una conversione decisa a priori
+    (R12a)."""
     print("\n──── %s" % titolo)
-    ad = aderenza(medie, attesi, ("barra100", "barra75"))
-    if ad:
-        u = list(ad.values())[0]
-        print("  quale conversione spiega le BARRE (%d canali giudicati, "
-              "%d saltati perché al fondoscala):" % (u["n"], u["saltati"]))
-        for ip, v in sorted(ad.items(), key=lambda t: t[1]["medio"]):
-            print("     %-8s scarto medio %6.2f · peggiore %6.2f" % (ip, v["medio"], v["peggio"]))
-    r = retta(medie, riquadri, attesi)
+    scelta, tutte = scegli(medie, attesi)
+    ip = ip or scelta or COME_E_FATTA
+    if tutte:
+        u = tutte[list(tutte)[0]]
+        print("  quale conversione spiega i dati (%d canali giudicati, %d saltati "
+              "al fondoscala) — %s **%s**:"
+              % (u["n"], u["saltati"],
+                 "⭐ scelta dalla misura:" if ip == scelta else "⚠ IMPOSTA da chi chiama:", ip))
+        for k, v in sorted(tutte.items(), key=lambda t: t[1]["medio"]):
+            print("     %-8s scarto medio %6.2f · peggiore %6.2f%s"
+                  % (k, v["medio"], v["peggio"], "   ← la scelta" if k == ip else ""))
+    r = retta(medie, riquadri, attesi, ip)
     if r:
         print("  la rampa di grigio (Y 16-235, %d livelli): guadagno %.4f · scostamento %+.2f"
               % (r["punti"], r["guadagno"], r["scostamento"]))
-    print("  lo scarto per livello e per canale (letto − formula BT.709 limitata):")
+    print("  lo scarto per livello e per canale (letto − formula %s):" % ip)
     print("     %-26s %4s   %15s %15s %15s"
           % ("banda", "n", "R medio/peggio", "G medio/peggio", "B medio/peggio"))
-    for v in per_livello(medie, riquadri, attesi):
+    for v in per_livello(medie, riquadri, attesi, ip):
         c = "".join("  %+6.2f/%+6.2f" % (v[k]["medio"], v[k]["peggio"])
                     if k in v else "         —     " for k in CANALI)
         print("     %-26s %4d %s" % ("%s (%d-%d)" % (v["banda"], v["da"], v["a"]),
                                      v["riquadri"], c))
-    print("  i valori limite (Y del sorgente, U=V=128) — atteso / letto, per canale:")
+    print("  i valori limite (Y del sorgente, U=V=128) — atteso %s / letto, per canale:" % ip)
     for q in riquadri:
         if not q["nome"].startswith("limite"):
             continue
@@ -198,9 +265,13 @@ def stampa_giudizio(titolo, medie, riquadri, attesi):
         if m:
             print("     Y=%3d (decodificato %6.2f)  atteso %6.1f %6.1f %6.1f  "
                   "letto %6.1f %6.1f %6.1f  scarto %+6.2f %+6.2f %+6.2f"
-                  % (q["Y"], a["Y"], *a["709tv"], *m,
-                     *[m[k] - a["709tv"][k] for k in range(3)]))
-    print("  le barre 100 %% — scarto per canale contro BT.709 e contro BT.601:")
+                  % (q["Y"], a["Y"], *a[ip], *m,
+                     *[m[k] - a[ip][k] for k in range(3)]))
+    # ⚠ Le barre si stampano contro TUTTE le ipotesi, non solo contro la
+    #   scelta: è la tabella che permette a chi legge di rifare la scelta con
+    #   gli occhi invece di fidarsi della riga qui sopra.
+    print("  le barre 100 %% — scarto per canale contro ciascuna ipotesi:")
+    print("     %-10s %s" % ("", "   ".join("%-21s" % k for k in IPOTESI)))
     for q in riquadri:
         if not q["nome"].startswith("barra100"):
             continue
@@ -211,10 +282,9 @@ def stampa_giudizio(titolo, medie, riquadri, attesi):
         #   scarto è quello del taglio, non della conversione (`al_fondoscala`).
         def cella(atteso, letto):
             return "     ·" if al_fondoscala(atteso) else "%+6.1f" % (letto - atteso)
-        print("     %-10s 709: %s %s %s    601: %s %s %s"
-              % (q["nome"].split("-", 1)[1],
-                 *[cella(a["709tv"][k], m[k]) for k in range(3)],
-                 *[cella(a["601tv"][k], m[k]) for k in range(3)]))
+        colonne = ["".join(cella(a[k][j], m[j]) + " " for j in range(3)) for k in IPOTESI]
+        print("     %-10s %s" % (q["nome"].split("-", 1)[1], "  ".join(colonne)))
+    return ip
 
 
 # ---------------------------------------------------------------------------
@@ -366,46 +436,134 @@ def chi_ha_decodificato(percorso):
 
 
 # ---------------------------------------------------------------------------
-def verdetto(medie, riquadri, attesi, soglia=2.0):
-    """⛔⭐ IL VERDETTO ESPLICITO, CON I DUE ESTREMI E COL DENOMINATORE.
+def verdetto(medie, riquadri, attesi, dichiarata, soglia=2.0, soglia_grossa=6.0,
+             stacco=2.0):
+    """⛔⭐ IL VERDETTO ESPLICITO: L'IPOTESI SCELTA, CONFRONTATA CON QUELLA
+    DICHIARATA, COI DUE ESTREMI E COL DENOMINATORE.
 
     Non basta una tabella: una tabella la si legge come si vuole.  E non basta
     un limite superiore — ⚠ un banco che chiede solo «non più di X» dà verde
-    anche quando NON HA GUARDATO NIENTE.  ⇒ qui si dichiarano tre cose insieme:
-    quanti riquadri sono stati giudicati (**il denominatore**), quanti canali,
-    e lo scarto peggiore contro la formula.  Un denominatore troppo piccolo è
-    esso stesso un rosso."""
-    s, saltati = scarti(medie, attesi, "709tv", None)
-    if not s:
-        return {"esito": "⛔ NIENTE GIUDICATO", "n": 0}
-    peggio = max(abs(x[4]) for x in s)
-    medio = sum(abs(x[4]) for x in s) / len(s)
+    anche quando NON HA GUARDATO NIENTE.
+
+    ⛔⛔ E soprattutto non basta il residuo: da quando l'ipotesi la sceglie la
+        misura (R12a), **un residuo piccolo non vuol più dire «giusto»** — vuol
+        dire «coerente con QUALCHE conversione».  Un decodificatore che
+        convertisse con la matrice sbagliata darebbe un residuo minuscolo
+        contro quella matrice.  ⇒ Le condizioni sono TRE, e devono valere
+        insieme:
+
+      1. il denominatore è pieno (quanti canali e quanti riquadri, sul totale
+         giudicabile al netto del fondoscala) — trappola 1 di `CODER.md`;
+      2. **una** ipotesi spiega davvero i dati (residuo peggiore ≤ soglia); se
+         nessuna ci arriva, non è «scarto grande su 709tv»: è ⭐ *«nessuna
+         conversione nota spiega quel che si legge»*, ed è la forma che
+         prenderebbe un filtro del compositore o un profilo di colore;
+      3. l'ipotesi scelta **è quella che il flusso DICHIARA**.  Se il flusso non
+         dichiara niente, non si può parlare di disobbedienza: si confronta con
+         `COME_E_FATTA` — la conversione con cui la scena è stata scritta — e si
+         dice che il decodificatore ha **indovinato**, giusto o sbagliato.
+
+    ⚠ E le soglie sono TRE, perché «non torna» ha tre facce diverse e chiamarle
+      con lo stesso nome è quel che il primo giro di questo verdetto faceva:
+      `[M]` 22 agosto 2026, ffmpeg chiamato come lo si chiama lasciava **2,64**
+      livelli di residuo (è il suo scalatore predefinito, non una conversione
+      diversa: chiedendo la matrice per nome scende a 0,48) e il banco lo
+      annunciava come *«nessuna conversione nota spiega i dati — qualcuno ha
+      toccato i pixel»*.  Vero il numero, ⛔ falsa la diagnosi.
+
+        · `soglia`        oltre = c'è uno scarto, e va nominato;
+        · `soglia_grossa` oltre = **nessuna** conversione nota regge, ed è la
+                          forma che prenderebbe un filtro del compositore;
+        · `stacco`        quanto la scelta deve staccare la seconda per essere
+                          una scelta e non un pareggio.  ⛔ Senza, il banco
+                          nominerebbe una conversione anche quando i dati non
+                          ne distinguono due, e chi legge lo prenderebbe per un
+                          fatto.
+
+    ⚠ E i tre numeri non sono scelti a naso, sono presi FRA due misure di questa
+      stessa scena: le tre ipotesi distano fra loro **fino a 32 livelli** (601
+      contro 709) e **fino a 20** (limitato contro pieno), mentre il residuo del
+      decodificatore in hardware è **0,51**.  ⇒ `soglia` 2 sta sopra il rumore e
+      sotto qualunque cosa conti; `soglia_grossa` 6 sta molto sotto la distanza
+      fra due conversioni ⇒ superarla vuol dire davvero che nessuna delle tre
+      regge, non che una è imprecisa.  ⛔ Chi cambia la scena ricontrolli questi
+      due numeri: sono relativi a quanto le sue ipotesi si separano.
+    """
+    scelta, tutte = scegli(medie, attesi)
+    if not scelta:
+        return {"esito": "⛔ NIENTE GIUDICATO", "n": 0, "guasto": True}
+    s, saltati = scarti(medie, attesi, scelta, None)
+    peggio = tutte[scelta]["peggio"]
     nomi = {x[0] for x in s}
-    # ⛔ IL DENOMINATORE HA DUE PARTI, ed è la trappola 1 di `CODER.md`: quanti
-    #    canali sono stati giudicati sul totale giudicabile (cioè al netto di
-    #    quelli al fondoscala) E quanti riquadri hanno portato almeno un canale.
-    #    ⚠ Un riquadro tutto tagliato — il bianco, il nero — non ha niente da
-    #      dire, e pretendere che ci sia falserebbe il conto.
     atteso_n = len(riquadri) * 3 - saltati
     con_qualcosa = sum(1 for q in riquadri
-                       if any(not al_fondoscala(attesi[q["nome"]]["709tv"][k])
+                       if any(not al_fondoscala(attesi[q["nome"]][scelta][k])
                               for k in range(3)))
     abbastanza = len(s) >= atteso_n and len(nomi) >= con_qualcosa
-    dentro = peggio <= soglia
-    return {"riquadri": len(nomi), "riquadri_giudicabili": con_qualcosa,
-            "canali": len(s), "saltati_fondoscala": saltati,
-            "canali_attesi": atteso_n, "medio": medio, "peggio": peggio,
-            "soglia": soglia, "denominatore_pieno": abbastanza,
-            "esito": ("⭐ NESSUNO SCARTO OLTRE %.1f LIVELLI (peggiore %.2f)" % (soglia, peggio))
-            if (dentro and abbastanza)
-            else ("⛔ SCARTO fino a %.2f livelli" % peggio) if abbastanza
-            else "⛔ DENOMINATORE INCOMPLETO: %d canali su %d, %d riquadri su %d "
-                 "— il verde non vale" % (len(s), atteso_n, len(nomi), con_qualcosa)}
+    preciso = peggio <= soglia
+    regge = peggio <= soglia_grossa
+    secondi = sorted(v["medio"] for k, v in tutte.items() if k != scelta)
+    # ⚠ Lo stacco si misura sullo scarto MEDIO, non sul peggiore: il peggiore è
+    #   un singolo canale e basta un riquadro sfortunato a farlo saltare.
+    margine = (secondi[0] / tutte[scelta]["medio"]) if secondi and tutte[scelta]["medio"] > 0.01 \
+        else float("inf")
+    distinta = margine >= stacco
+    atteso_ip = dichiarata or COME_E_FATTA
+    conforme = (scelta == atteso_ip)
+    fuori = {"scelta": scelta, "dichiarata": dichiarata, "confrontata_con": atteso_ip,
+             "indovinata": dichiarata is None, "conforme": conforme,
+             "riquadri": len(nomi), "riquadri_giudicabili": con_qualcosa,
+             "canali": len(s), "saltati_fondoscala": saltati,
+             "canali_attesi": atteso_n, "medio": tutte[scelta]["medio"],
+             "peggio": peggio, "soglia": soglia, "soglia_grossa": soglia_grossa,
+             "stacco": round(margine, 2), "scelta_distinta": distinta,
+             "denominatore_pieno": abbastanza,
+             "tutte": {k: round(v["medio"], 3) for k, v in tutte.items()}}
+    if not abbastanza:
+        fuori["esito"] = ("⛔ DENOMINATORE INCOMPLETO: %d canali su %d, %d riquadri su "
+                          "%d — il verde non vale" % (len(s), atteso_n, len(nomi), con_qualcosa))
+    elif not regge:
+        # ⛔ Si dice l'OSSERVAZIONE e si elencano le cause, senza sceglierne
+        #    una: `[M]` 22 agosto 2026 questa riga accusava «qualcuno ha
+        #    toccato i pixel dopo il decodificatore» anche quando nessuno li
+        #    aveva toccati — era il decodificatore software, che converte con
+        #    un asse del blu che non è né 601 né 709.  ⚠ Una diagnosi in più
+        #    di quel che la misura porta è una diagnosi sbagliata.
+        fuori["esito"] = ("⛔ NESSUNA CONVERSIONE NOTA SPIEGA I DATI: la migliore è "
+                          "%s e sbaglia fino a %.2f livelli (oltre %.1f) ⇒ o il "
+                          "decodificatore converte con una matrice che non è nessuna "
+                          "delle tre, o qualcuno ha toccato i pixel dopo di lui — "
+                          "la tabella per canale dice quale delle due"
+                          % (scelta, peggio, soglia_grossa))
+    elif not distinta:
+        fuori["esito"] = ("⛔ LA SCELTA NON È UNA SCELTA: «%s» stacca la seconda solo di "
+                          "×%.2f (serve ×%.1f) — i dati non distinguono le conversioni, "
+                          "e nominarne una sarebbe inventare" % (scelta, margine, stacco))
+    elif not conforme:
+        fuori["esito"] = ("⛔ CONVERSIONE SBAGLIATA: si legge **%s** (a %.2f livelli) "
+                          "ma il flusso %s **%s** — l'immagine è coerente, e ha il "
+                          "colore di un altro" % (scelta, peggio,
+                          "dichiara" if dichiarata else "non dichiara niente e la scena è fatta in",
+                          atteso_ip))
+    elif not preciso:
+        fuori["esito"] = ("⛔ %s%s — la conversione è quella giusta, ⚠ ma resta uno "
+                          "scarto fino a %.2f livelli (soglia %.1f) che la conversione "
+                          "non giustifica" % (scelta, " (indovinata)" if dichiarata is None
+                                              else " come dichiarato", peggio, soglia))
+    else:
+        fuori["esito"] = ("⭐ %s%s, staccata ×%.1f, e nessuno scarto oltre %.1f livelli "
+                          "(peggiore %.2f)"
+                          % (scelta, " (indovinata: il flusso non dichiara niente)"
+                             if dichiarata is None else " come dichiarato",
+                             margine, soglia, peggio))
+    fuori["guasto"] = not (abbastanza and preciso and conforme and distinta)
+    return fuori
 
 
-def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, strada):
-    """⛔ IL BANCO SI CERTIFICA PRIMA DI ESSERE CREDUTO — e con DUE guasti, non
-    uno, perché i due numeri che questo banco pronuncia sono due:
+def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, strada,
+              ip=COME_E_FATTA, dichiarata=None):
+    """⛔ IL BANCO SI CERTIFICA PRIMA DI ESSERE CREDUTO — e con TRE guasti, non
+    uno, perché le cose che questo banco pronuncia sono tre:
 
       1. **+8 livelli sulle sole luci** — è la `[?]` di §1.13-ter alla lettera.
          Deve comparire nella banda «luci» e NON nelle «ombre»: un banco che lo
@@ -414,12 +572,24 @@ def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, stra
          Serve a certificare il DISCRIMINATORE «matrice o intervallo?»: senza,
          la riga «guadagno» del giudizio non è mai stata messa alla prova, e
          sarebbe una riga creduta invece che provata.
+      3. ⭐ **una tinta per canale** (R×1,06 · B×0,94) — è la forma che ha un
+         filtro del compositore o un profilo di colore, e nessuna matrice
+         YUV→RGB la può imitare.  ⇒ Certifica la terza diagnosi del verdetto,
+         *«nessuna conversione nota spiega i dati»*: senza, quella riga
+         esisterebbe senza che nessuno l'abbia mai vista scattare.
 
     ⚠ E il terzo controllo non è innestato, è VERO: la variante
       `601-dichiarato` cambia la matrice **nel flusso**, e il giudizio deve
-      passare da «709tv spiega tutto» a «601tv spiega tutto» da sé."""
+      passare da «709tv spiega tutto» a «601tv spiega tutto» da sé.
+
+    ⛔ L'ipotesi qui si PASSA e non si sceglie: il guasto è innestato sopra un
+      flusso già giudicato, e i due giri (sano e guasto) vanno letti nello
+      stesso sistema di riferimento.  ⚠ Se la lasciassi scegliere, un guasto
+      abbastanza grande potrebbe far vincere un'altra ipotesi e il delta
+      sarebbe misurato fra due metri diversi — cioè non sarebbe un delta."""
     out = {}
-    print("\n════ CERTIFICAZIONE del banco (%s · %s)" % (strada, variante))
+    print("\n════ CERTIFICAZIONE del banco (%s · %s, ipotesi fissata a %s)"
+          % (strada, variante, ip))
 
     def leggi(r):
         return "copyto" if r.get("copyto") else ("tela" if r.get("tela") else None)
@@ -432,12 +602,12 @@ def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, stra
         print("  ⛔ guasto «+8 sulle luci»: nessuna lettura — non eseguibile")
         out["piu8"] = None
     else:
-        liv = per_livello(r[punto], riquadri, attesi)
+        liv = per_livello(r[punto], riquadri, attesi, ip)
         luci = [x for x in liv if x["banda"] == "luci"][0]["R"]["medio"]
         ombre = [x for x in liv if x["banda"] == "ombre"][0]["R"]["medio"]
         b_luci = b_ombre = 0.0
         if sano.get(punto):
-            bl = per_livello(sano[punto], riquadri, attesi)
+            bl = per_livello(sano[punto], riquadri, attesi, ip)
             b_luci = [x for x in bl if x["banda"] == "luci"][0]["R"]["medio"]
             b_ombre = [x for x in bl if x["banda"] == "ombre"][0]["R"]["medio"]
         d_luci, d_ombre = luci - b_luci, ombre - b_ombre
@@ -460,8 +630,8 @@ def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, stra
         print("  ⛔ guasto «guadagno 1,05»: nessuna lettura — non eseguibile")
         out["guadagno"] = None
     else:
-        g = retta(r[punto], riquadri, attesi)
-        gb = retta(sano[punto], riquadri, attesi) if sano.get(punto) else None
+        g = retta(r[punto], riquadri, attesi, ip)
+        gb = retta(sano[punto], riquadri, attesi, ip) if sano.get(punto) else None
         base_g = gb["guadagno"] if gb else 1.0
         ok = g and 1.03 <= g["guadagno"] / base_g <= 1.07
         print("  guasto «guadagno 1,05»          guadagno letto %.4f (era %.4f) "
@@ -471,12 +641,41 @@ def certifica(m, base, variante, hw, attesa, riquadri, attesi, sano, esiti, stra
                  else "⛔ NON VISTO — il banco non saprebbe accorgersi di un "
                       "intervallo sbagliato"))
         out["guadagno"] = {"letto": g["guadagno"], "base": base_g, "ok": bool(ok)}
+
+    # --- 3 · una TINTA, cioè un filtro del compositore -----------------------
+    # ⛔⭐ È il controllo che tiene in piedi la diagnosi «nessuna conversione
+    #     nota spiega i dati» — la sola forma in cui questo banco può accorgersi
+    #     di un profilo di colore o di Night Light lungo la catena vera.  Senza,
+    #     quella riga del verdetto non sarebbe mai stata messa alla prova.
+    #     ⚠ La tinta agisce PER CANALE: nessuna matrice YUV→RGB la può imitare
+    #       ⇒ il verdetto deve rifiutare TUTTE e tre le ipotesi, non sceglierne
+    #       una peggiore.
+    r = un_giro(m, base, variante, hw, attesa, tinta=0.06)
+    esiti["%s/%s/tinta006" % (strada, variante)] = r
+    punto = leggi(r)
+    if not punto:
+        print("  ⛔ guasto «tinta 6 %»: nessuna lettura — non eseguibile")
+        out["tinta"] = None
+    else:
+        g = verdetto(r[punto], riquadri, attesi, dichiarata)
+        # ⛔ Due estremi anche qui: deve rifiutare, e deve rifiutare PER LA
+        #    RAGIONE GIUSTA — «nessuna conversione nota», non «conversione
+        #    sbagliata».  Un banco che desse la diagnosi sbagliata su un guasto
+        #    noto darebbe la diagnosi sbagliata anche su uno vero.
+        ok = bool(g["guasto"]) and g["peggio"] > g["soglia_grossa"]
+        print("  guasto «tinta 6 %% (R×1,06 · B×0,94)»  ⇒ %s\n     ⇒ %s"
+              % (g["esito"][:150],
+                 "⭐ VISTO, e con la diagnosi giusta" if ok
+                 else "⛔ NON VISTO come atteso — il banco non saprebbe accorgersi "
+                      "di un filtro del compositore"))
+        out["tinta"] = {"peggio": g["peggio"], "esito": g["esito"], "ok": bool(ok)}
     return out
 
 
-def un_giro(m, base, variante, hw, attesa, guasto=0, guadagno=1, lettura="entrambi"):
-    url = "%s?variante=%s&hw=%s&guasto=%s&guadagno=%s&lettura=%s" % (
-        base, variante, hw, guasto, guadagno, lettura)
+def un_giro(m, base, variante, hw, attesa, guasto=0, guadagno=1, tinta=0,
+            lettura="entrambi"):
+    url = "%s?variante=%s&hw=%s&guasto=%s&guadagno=%s&tinta=%s&lettura=%s" % (
+        base, variante, hw, guasto, guadagno, tinta, lettura)
     m.vai(url)
     scaduto = time.time() + attesa
     while time.time() < scaduto:
@@ -490,9 +689,9 @@ def un_giro(m, base, variante, hw, attesa, guasto=0, guadagno=1, lettura="entram
             #     VISTO» ⇒ il banco accusava se stesso di essere cieco quando
             #     era il servitore a essere stantio.  ⚠ Un rosso non spiegato
             #     costa quanto un verde non guardato.
-            if "guadagno" not in r:
+            if "guadagno" not in r or "tinta" not in r:
                 return {"errore": "⛔ la pagina servita è VECCHIA (non conosce "
-                                  "«guadagno»): ricopiala accanto ai dati",
+                                  "«guadagno»/«tinta»): ricopiala accanto ai dati",
                         "variante": variante, "hw": hw}
             return r
         time.sleep(0.5)
@@ -531,6 +730,14 @@ def main():
     attesi = {v: costruisci_attesi(
         riquadri, (rif.get(v) or {}).get("atteso_dai_campioni_decodificati"))
         for v in varianti}
+    # ⛔ Che cosa DICHIARA ogni flusso, letto da `ffprobe` e non dal nome della
+    #    variante: è il metro con cui il verdetto giudica la conversione scelta.
+    dichiarate = {v: ipotesi_dichiarata((rif.get(v) or {}).get("ffprobe"))
+                  for v in varianti}
+    # ⛔⛔ IL BIT D'USCITA (rilievo R12b): si raccolgono i guasti e `main` NON
+    #     torna 0 se ce n'è uno.  Un banco che esce verde qualunque cosa trovi
+    #     non è un banco — `LEZIONI.md` §1.20.
+    guasti = []
 
     # --- 0 · quel che ffmpeg legge dagli stessi byte ------------------------
     print("\n════ IL RIFERIMENTO — `ffmpeg`, sulla riga di comando, sugli STESSI byte")
@@ -539,13 +746,17 @@ def main():
         if not r or not r["ffmpeg_rgb"]:
             print("  ⛔ %-24s niente" % v)
             continue
-        print("  %-24s ffprobe: %s / %s" % (v, r["ffprobe"].get("color_space", "—"),
-                                            r["ffprobe"].get("color_range", "—")))
+        print("  %-24s ffprobe: %s / %s  ⇒ dichiara «%s»"
+              % (v, r["ffprobe"].get("color_space", "—"),
+                 r["ffprobe"].get("color_range", "—"),
+                 dichiarate[v] or "NIENTE"))
         stampa_giudizio("ffmpeg (come lo si chiama) · " + v,
                         r["ffmpeg_rgb"], riquadri, attesi[v])
+        g = verdetto(r["ffmpeg_rgb"], riquadri, attesi[v], dichiarate[v])
+        print("  ⇒ VERDETTO ffmpeg: %s" % g["esito"])
         if r.get("ffmpeg_rgb_709_chiesta"):
             stampa_giudizio("ffmpeg CHIEDENDO bt709/tv · " + v,
-                            r["ffmpeg_rgb_709_chiesta"], riquadri, attesi[v])
+                            r["ffmpeg_rgb_709_chiesta"], riquadri, attesi[v], "709tv")
 
     # --- 1 · il browser -----------------------------------------------------
     strade = [x for x in o.strade.split(",") if x]
@@ -553,7 +764,7 @@ def main():
     if not strade:
         print("\n⚠ nessuna strada del browser chiesta (`--strade ''`): "
               "questo giro ha guardato SOLO `ffmpeg`, e non dice niente del browser.")
-        return 0
+        return 1 if guasti else 2
     # ⛔ La pagina si RICOPIA a ogni giro: la copia accanto ai dati è quella
     #    che il browser vede, e una copia stantia è un banco che misura il
     #    codice di ieri.  È la forma D5 di `LEZIONI.md`, applicata all'HTML.
@@ -610,6 +821,7 @@ def main():
                     esiti["%s/%s" % (strada, v)] = r
                     if r.get("errore"):
                         print("  ⛔ %-24s %s" % (v, r["errore"]))
+                        guasti.append("%s/%s: %s" % (strada, v, r["errore"]))
                         continue
                     print("  %-24s formato «%s» · %d/%d fotogrammi · errori %d%s"
                           % (v, r["formato_fotogramma"], r["fotogrammi_usciti"],
@@ -619,19 +831,31 @@ def main():
                         if r.get(punto):
                             stampa_giudizio("%s · %s · %s" % (strada, v, punto),
                                             r[punto], riquadri, attesi[v])
-                            g = verdetto(r[punto], riquadri, attesi[v])
-                            print("  ⇒ VERDETTO: %s  (%d riquadri, %d canali su %d "
-                                  "attesi, %d al fondoscala; medio %.2f)"
-                                  % (g["esito"], g.get("riquadri", 0), g.get("canali", 0),
+                            g = verdetto(r[punto], riquadri, attesi[v], dichiarate[v])
+                            print("  ⇒ VERDETTO: %s\n     (%d riquadri su %d, %d canali "
+                                  "su %d, %d al fondoscala; medio %.2f; le tre ipotesi %s)"
+                                  % (g["esito"], g.get("riquadri", 0),
+                                     g.get("riquadri_giudicabili", 0), g.get("canali", 0),
                                      g.get("canali_attesi", 0), g.get("saltati_fondoscala", 0),
-                                     g.get("medio", 0)))
+                                     g.get("medio", 0), g.get("tutte", {})))
                             esiti["%s/%s/%s/verdetto" % (strada, v, punto)] = g
+                            if g.get("guasto"):
+                                guasti.append("%s/%s/%s: %s" % (strada, v, punto, g["esito"]))
                 if o.certifica:
                     v = varianti[0]
                     hw = "prefer-hardware" if strada == "hardware" else "prefer-software"
                     sano = esiti.get("%s/%s" % (strada, v), {})
-                    esiti.setdefault("certificazioni", {})[strada] = certifica(
-                        m, base, v, hw, o.attesa, riquadri, attesi[v], sano, esiti, strada)
+                    # ⛔ La certificazione si fa nel sistema di riferimento del
+                    #    giro SANO, non in uno scelto da capo sul giro guasto.
+                    ip_cert = (esiti.get("%s/%s/copyto/verdetto" % (strada, v), {})
+                               .get("scelta") or COME_E_FATTA)
+                    c = certifica(m, base, v, hw, o.attesa, riquadri, attesi[v],
+                                  sano, esiti, strada, ip_cert, dichiarate[v])
+                    esiti.setdefault("certificazioni", {})[strada] = c
+                    for nome, esito in c.items():
+                        if not esito or not esito.get("ok"):
+                            guasti.append("certificazione %s/%s: il banco NON vede "
+                                          "il guasto innestato" % (strada, nome))
                 reg = chi_ha_decodificato(reg_file)
                 print("\n  ⚠ chi ha decodificato davvero (dal registro di Firefox): "
                       "tracce VA-API %d su %d byte" % (reg["tracce_vaapi"], reg["byte_registro"]))
@@ -643,6 +867,7 @@ def main():
                           "nemmeno un `IsHardwareAccelerated=1`.\n"
                           "      ⇒ Le righe qui sopra dicono che cosa fa il decodificatore "
                           "SOFTWARE, e la `[?]` dei «+8 livelli» resta aperta.")
+                    guasti.append("la strada «hardware» non era l'hardware")
                 esiti["%s/registro" % strada] = reg
                 esiti["%s/hardware_davvero" % strada] = bool(acc)
             finally:
@@ -667,9 +892,27 @@ def main():
         s.shutdown()
 
     dove = o.esiti or os.path.join(o.dati, "07-b62-esiti.json")
+    esiti["guasti"] = guasti
     json.dump(esiti, open(dove, "w"), indent=1)
     print("\nesiti in %s" % dove)
-    return 0
+
+    # ⛔⛔ IL BIT D'USCITA (R12b).  ⚠ E si stampa l'ELENCO, non solo il numero:
+    #     un banco che esce 1 senza dire su che cosa costringe a rileggere
+    #     tutto, e chi rilegge tutto finisce per fidarsi del colpo d'occhio.
+    print("\n════ ESITO DEL GIRO")
+    if guasti:
+        print("⛔ %d cose da guardare:" % len(guasti))
+        for g in guasti:
+            print("   · %s" % g)
+        return 1
+    print("⭐ niente da segnalare: %d strade × %d varianti, ogni verdetto conforme "
+          "alla conversione dichiarata%s"
+          % (len(strade), len(varianti),
+             ", e i guasti innestati sono stati visti" if o.certifica
+             else " ⚠ (SENZA `--certifica`: nessuno ha provato che il banco veda)"))
+    # ⚠ Un giro senza certificazione non è un verde pieno, e lo dice il codice
+    #   d'uscita: 0 solo quando qualcuno ha dimostrato che il banco sa vedere.
+    return 0 if o.certifica else 2
 
 
 if __name__ == "__main__":
