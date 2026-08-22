@@ -989,6 +989,23 @@ degli appunti tiene **un solo tipo MIME**.
 
 ## Fase 8 — La copia zero
 
+> ## ⭐ E IL 22 AGOSTO 2026 L'UTENTE LE HA INDIRIZZATO **L'UNICO APPUNTO CHE GLI RESTAVA**
+>
+> *Dopo aver dichiarato OK l'audio su tutti e quattro i motori supportati:* **«l'unico piccolo
+> appunto è un'ottimizzazione sulle performance grafiche, che credo sia lo scopo della fase 8»**.
+>
+> ⭐ **Non sbaglia**, ed è la seconda volta che indirizza una cosa a questa fase leggendo il piano.
+> ⚠ **E vale come mandato**: quando questa fase si apre, il suo metro non è «la copia zero è
+> scritta», è **quel che lui vede muoversi meglio**.
+>
+> ⏳ **E ci arriva con due misure già in mano**, prese la notte del 21-22 agosto:
+> - `[M]` **`createImageBitmap` costa 3,8 ms mediani per fotogramma**, l'8 % del tetto di 50 —
+>   accanto ai ~4,8 ms del codificatore in hardware. ⭐ E il percorso attuale costa **nove volte
+>   meno** del disegno 2D che c'era prima;
+> - `[M]` **il percorso `?video=worker` funziona e NON rende**: abbassa il tetto del **19 %**. ⇒ La
+>   strada «spostare il disegno su un altro thread» è **già stata provata e non paga**: chi apre
+>   questa fase non la rifaccia.
+
 > ## ⭐⭐ IL TITOLO È CAMBIATO, E DUE TERZI DELLA FASE SONO GIÀ FATTI — *16 agosto 2026*
 >
 > *Rilievo dell'utente all'apertura della fase 6: «gli ultimi test sono stati eseguiti con l'ausilio

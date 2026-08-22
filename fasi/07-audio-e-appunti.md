@@ -1394,6 +1394,30 @@ solo l'altra gamba, il file che non cresceva.
 
 ## 9 · Il giudizio dell'utente
 
+### 9.8 · ⭐⭐⭐ **«Le quattro prove che ho eseguito davano un audio OK»** — 22 agosto 2026
+
+> *«Le 4 prove che ho eseguito prima davano un audio OK. L'unico piccolo appunto è
+> un'ottimizzazione sulle performance grafiche, che credo sia lo scopo della fase 8.»* — l'utente.
+
+⭐ **Le quattro prove sono i quattro motori dichiarati la stessa mattina** (`DECISIONI.md` §7.20):
+Linux Chrome, Linux Firefox, Windows Chrome, Android Chrome. ⇒ Non è un giudizio su una
+piattaforma: è **su tutte quelle che il prodotto dichiara di servire**.
+
+⭐⭐ **E con questo l'audio della fase 7 ha il giudizio che le mancava.** Il metro è sempre stato
+**I8** — quel che l'utente sente — e adesso quel metro ha parlato su quattro motori invece che su
+uno.
+
+⚠ **E quel che NON dice**: l'utente non nomina più il ritardo fra audio e video che aveva confermato
+il 21 sera. ⛔ **Non lo si dà per chiuso su questa base**: *«audio OK»* e *«audio e video sincroni»*
+sono due frasi diverse, e il 21 lo aveva già insegnato — la prima volta disse «audio e video
+perfetti» e un'ora dopo precisò il ritardo. ⇒ La voce resta aperta finché non la nomina lui, e la
+misura `AV` (§8-bis) resta da riprendere con l'`aoff` curato.
+
+⇒ ⭐ **E l'unico appunto che resta è di un'altra fase**: le prestazioni grafiche, che sono la
+**fase 8** — e l'utente l'ha indirizzata da sé.
+
+
+
 *La fase si chiude su una misura giudicata dall'utente, non su un documento completo.
 ⛔ Non si scrive un verdetto che l'utente non ha dato.*
 
