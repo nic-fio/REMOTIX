@@ -204,7 +204,28 @@ def innesca_sessione(secondi=8):
 
 
 # ── il tono, che deve suonare per TUTTO il giro ────────────────────────────
+def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
+    """⛔ Il tono si fabbrica QUI se manca, e l'ampiezza e' NOTA: l'RMS atteso
+       e' un conto (A/sqrt2), non una stima.  ⚠ E il file dev'essere leggibile
+       dall'utente della sessione, che non e' root."""
+    f = "%s/tono-%d.wav" % (LAV, hz)
+    rc, out, _ = root("test -s %s && stat -c %%s %s || echo 0" % (f, f))
+    if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
+        return f
+    root("mkdir -p %s && chmod 755 %s" % (LAV, LAV))
+    copione = (
+        "import math,struct,wave;"
+        "w=wave.open('%s','wb');w.setnchannels(2);w.setsampwidth(2);"
+        "w.setframerate(48000);d=bytearray();"
+        "[d.extend(struct.pack('<hh',v,v)) for v in "
+        "[int(%f*math.sin(2*math.pi*%d*n/48000)*32767) for n in range(48000*%d)]];"
+        "w.writeframes(bytes(d));w.close()" % (f, ampiezza, hz, secondi))
+    root("python3 -c \"%s\" && chmod 644 %s" % (copione, f), 300)
+    return f
+
+
 def tono_accendi():
+    tono_fabbrica()
     root("setsid nohup setpriv --reuid=%d --regid=%d --init-groups env -i "
          "HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
          "XDG_RUNTIME_DIR=/run/user/%d DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus "

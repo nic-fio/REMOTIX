@@ -1344,6 +1344,54 @@ Era scritta e certificata (`vecchi 0 / riord 400` contro `vecchi 400` con la reg
 l'utente ha corretto lo scopo: *«i problemi di rete non rientrano in questa fase»*. ⇒ Tolta dal
 prodotto **invece di lasciarla dentro spenta**, e il lavoro è descritto in `PIANO.md` fase 9.
 
+## 8-quinquies · ⛔⭐ 22 agosto — **il giudice dell'orecchio dava il voto massimo al silenzio**, e c'era un buco cieco esatto
+
+*Rilievo della revisione, confermato **riproducendolo** invece che leggendolo.*
+
+`[M]` `picco = max(abs(x)…) or 1.0` ⇒ a campioni **tutti zero** il picco diventa 1.0, la soglia si
+abbassa con lui, i residui sono 0 ⇒ **`scoppiettii 0`, `resa 1,000`**: il giudice dell'audio **dà il
+massimo al silenzio**. Quattro secondi di zeri, verificati.
+
+⛔⛔ **E il buco cieco è aritmetico, non statistico**: il blocco PCM è 240 campioni = 5,0 ms, quindi
+**5 blocchi = 1 200 campioni = esattamente 11,000 cicli di 440 Hz**. `[M]` tagli di **1 200 e 2 400
+campioni** ⇒ `scoppiettii 0`; tagli di 240 e **1 201** ⇒ si vedono. ⇒ Una perdita a raffiche di
+cinque blocchi **si ricuce continua e in fase**, e nessun algoritmo può sentirla.
+
+⭐ **La cura ha due gambe, e la seconda è la parte che conta**: il silenzio non prende più il massimo
+(sotto un picco di 400 il giudice risponde **`SILENZIO O QUASI — NON GIUDICO`**, che è un esito suo);
+e ⭐ **il buco cieco si cura contando, non ascoltando** — il giudice riceve ora i campioni **attesi** e
+riporta l'ammanco, *«perché su un seno perfetto un taglio di 11 cicli non lascia traccia nei campioni
+e nessun algoritmo può vederlo»*.
+
+⭐ Certificazione da 4 a **7 casi**, e un ottavo chiude la diagnosi: **lo stesso taglio a 443 Hz si
+vede** (11,075 cicli) ⇒ **il buco è del tono, non del rivelatore**. ⏳ Proposto 443 Hz per le scene
+future — non cambiato oggi, perché renderebbe incomparabili i numeri di ieri.
+
+#### ⭐⭐ E la domanda che conta: **quante misure ne erano affette?**
+
+Rigiudicate **tutte le 31 prese conservate** col giudice curato:
+
+- ⛔ **sei cambiano esito**, tutte del primo giro con la rete guastata: adesso dicono *«silenzio o
+  quasi — non giudico»* dove dicevano `scoppiettii 0`. ⚠ **R7a stava mordendo per davvero in una
+  misura nostra** — erano già state annullate e rifatte, ma **leggendole a occhio**; adesso è il
+  giudice a **rifiutarsi da solo**;
+- ⭐⭐ **nessun numero riportato cambia**: l'A/B di R26 è identico riga per riga, e la seconda gamba
+  conferma che **non c'erano perdite a raffica nascoste** (`campioni_mancanti` 0 o 240 in tutte le
+  prese). Reggono anche la tabella della rete e i numeri della spirale.
+
+#### ⛔ E il sorvegliante stampava «acceso» senza aver acceso niente
+
+*(Il difetto era del coordinatore, che aveva scritto quel file; la cura è dell'agente.)* `& echo
+acceso` riesce **sempre**, il registro d'avvio **non lo leggeva nessuno**, e il file di sorveglianza
+era un percorso **fisso**. ⇒ Il sorvegliante non parte, l'utente fa la sessione, e si legge **la
+sorveglianza di ieri**.
+⭐ Curato con quattro gambe — si uccide il precedente, il file porta **l'ora nel nome**, si verifica
+che il processo sia vivo **e che il file cresca** — e provato **nei due versi**: *«NON È PARTITA, e
+non lo dico da una parola stampata, lo dico da tre fatti»*, uscita 2.
+⚠ E la cura ne ha scoperto un secondo dentro di sé: `pgrep -f <copione>` trovava il sorvegliante di
+**un giro precedente** ⇒ *«è vivo?»* rispondeva sì **guardando il processo sbagliato**. L'ha visto
+solo l'altra gamba, il file che non cresceva.
+
 ## 9 · Il giudizio dell'utente
 
 *La fase si chiude su una misura giudicata dall'utente, non su un documento completo.

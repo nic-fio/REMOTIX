@@ -298,23 +298,112 @@ def principale():
     p.add_argument("--porta", type=int, default=7730)
     p.add_argument("--lav", default="/media/REMOTIX/tmp/07-appunti")
     p.add_argument("--secondi", type=int, default=420)
+    p.add_argument("--fuori", default="",
+                   help="dove scrive il sorvegliante (predefinito: un nome con "
+                        "l'ora dentro, cosi' non si rilegge quello di ieri)")
     a = p.parse_args()
 
-    # ⛔ SI ACCENDE PRIMA di dire «vai»: un difetto che dura trenta secondi non
-    #    si riprende (LEZIONI.md §2.7).
+    # ⛔⛔⛔ R11 — «ACCESO» ERA STAMPATO DA UN COMANDO CHE NON ACCENDEVA NIENTE,
+    #       e il commento qui sotto nominava esattamente questo difetto mentre
+    #       il codice lo commetteva.  Tre buchi, uno dentro l'altro:
+    #
+    #         1. il comando remoto finiva con `& echo acceso`, e `echo` riesce
+    #            **sempre**: `check=True` verificava soltanto che `ssh` fosse
+    #            andato a buon fine, non che il sorvegliante fosse partito;
+    #         2. `/tmp/07-b60-avvio.log` — dove finiscono gli errori, compreso
+    #            «sudo: no password was provided» — **non lo leggeva nessuno**;
+    #         3. il file della sorveglianza era un percorso **fisso**, azzerato
+    #            solo dal processo remoto: se quello non partiva, chi andava a
+    #            leggerlo trovava **la sorveglianza del giorno prima** e la
+    #            prendeva per quella di adesso.
+    #
+    #       ⇒ Lo scenario intero: il sorvegliante non parte, l'utente fa la sua
+    #       sessione, e si diagnostica su numeri vecchi.  ⚠ E il file non aveva
+    #       **nessun** `sys.exit`: non c'era modo che un chiamante se ne
+    #       accorgesse.
+    #
+    # ⭐ Le quattro cure, e la terza e' quella che conta: si VERIFICA che il
+    #    processo sia vivo, invece di credere a una parola stampata.
+    fuori = a.fuori or ("/tmp/07-b60-sorveglianza-%s.log"
+                        % time.strftime("%Y%m%d-%H%M%S"))
     copione = "/tmp/07-b60-remoto.py"
-    subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
-                    "cat > %s" % copione], input=REMOTO.encode(), check=True)
+
+    # ⛔⭐ E PRIMA SI TOGLIE DI MEZZO IL SORVEGLIANTE DI PRIMA — trovato dal
+    #     controllo negativo di questa stessa cura, 22 agosto 2026: `pgrep -f
+    #     <copione>` trova **qualunque** processo che giri quel file, compreso
+    #     quello di un giro precedente ancora vivo.  ⇒ Il controllo «e' vivo?»
+    #     rispondeva **si'** guardando il sorvegliante sbagliato.
+    #     ⚠ Se ne accorse solo l'altra gamba (il file che non cresceva): un
+    #     controllo con due gambe ha trovato un difetto nella prima.
+    vecchi = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                             "printf '%%s\\n' '%s' | sudo -S -p '' "
+                             "pkill -f '%s'; echo fine" % (PAROLA, copione)],
+                            capture_output=True)
+    del vecchi
+
+    testa = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                            "cat > %s" % copione],
+                           input=REMOTO.replace("/tmp/07-b60-sorveglianza.log",
+                                                fuori).encode())
+    if testa.returncode != 0:
+        print("⛔ il copione non e' arrivato sulla macchina: NON e' acceso niente")
+        return 2
+
     # ⛔⛔ NIENTE `</dev/null`, ed e' la trappola gia' pagata due volte in
-    #    `07-b41`: quel redirect vale per `sudo`, che allora NON legge piu' la
-    #    parola d'ordine dal `printf` — «sudo: no password was provided», e il
-    #    sorvegliante non parte.  ⚠ La faccia del difetto e' «acceso» stampato
-    #    da un comando che non ha acceso niente.
+    #     `07-b41`: quel redirect vale per `sudo`, che allora NON legge piu' la
+    #     parola d'ordine dal `printf` — «sudo: no password was provided».
     comando = ("printf '%%s\\n' '%s' | sudo -S -p '' setsid python3 %s %d %s %d "
-               ">/tmp/07-b60-avvio.log 2>&1 & echo acceso"
+               ">/tmp/07-b60-avvio.log 2>&1 & echo lanciato"
                % (PAROLA, copione, a.porta, a.lav, a.secondi))
     subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, comando], check=True)
-    print("⭐ sorveglianza accesa su %s — /tmp/07-b60-sorveglianza.log" % MACCHINA)
+
+    # ⭐ 1 · IL PROCESSO DEV'ESSERE VIVO.  «Lanciato» e «vivo» sono due fatti
+    #        diversi, e solo il secondo serve a chi misura.
+    vivo = ""
+    for _ in range(20):
+        time.sleep(0.5)
+        r = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                            "pgrep -f '%s' | head -1" % copione],
+                           capture_output=True)
+        vivo = r.stdout.decode().strip()
+        if vivo:
+            break
+
+    # ⭐ 2 · E IL LOG DELL'AVVIO SI LEGGE, SEMPRE: e' dove finisce il motivo.
+    avvio = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                            "cat /tmp/07-b60-avvio.log 2>/dev/null | head -5"],
+                           capture_output=True).stdout.decode().strip()
+
+    # ⭐ 3 · E IL FILE DEVE ESSERE DI ADESSO: si guarda che esista e CRESCA.
+    def misura():
+        r = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
+                            "printf '%%s\\n' '%s' | sudo -S -p '' "
+                            "stat -c %%s %s 2>/dev/null || echo -1"
+                            % (PAROLA, fuori)], capture_output=True)
+        try:
+            return int(r.stdout.decode().split()[-1])
+        except Exception:
+            return -1
+
+    a1 = misura()
+    time.sleep(2.0)
+    a2 = misura()
+
+    if not vivo or a2 <= a1 or a2 < 0:
+        print("⛔ LA SORVEGLIANZA NON E' PARTITA — e non lo dico da una parola "
+              "stampata, lo dico da tre fatti:")
+        print("   · processo vivo:      %s" % (vivo or "NESSUNO"))
+        print("   · il file cresce:     %s → %s byte" % (a1, a2))
+        print("   · log dell'avvio:     %s" % (avvio or "(vuoto)"))
+        print("   ⚠ NON leggere %s: o non c'e', o e' di un giro precedente." % fuori)
+        return 2
+
+    print("⭐ sorveglianza VIVA su %s — pid %s, %s (%s → %s byte in 2 s)"
+          % (MACCHINA, vivo, fuori, a1, a2))
+    if avvio:
+        print("   ⚠ il log dell'avvio non e' vuoto: %s" % avvio)
+    return 0
+
 
 if __name__ == "__main__":
-    principale()
+    sys.exit(principale())

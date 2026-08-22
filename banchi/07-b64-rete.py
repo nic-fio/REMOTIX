@@ -59,23 +59,84 @@ VIETATA = "enp7s0"          # ci passano l'ssh e la 7730 dell'utente
 DEV = "lo"                  # ci passa solo il traffico locale, cioe' il mio
 
 # I gradini, dal piu' mite al piu' cattivo.  ⭐ L'atteso e' scritto PRIMA.
+# ⛔⛔ R13 — GLI «ATTESO» ERANO PROSA: stampati, archiviati, MAI confrontati.
+#      Nove frasi che descrivevano quel che sarebbe dovuto succedere, e nessuna
+#      riga che verificasse se era successo.  ⚠ Un banco cosi' non puo' dare
+#      rosso: qualunque numero esca, la frase accanto resta vera «a leggerla».
+#
+# ⭐ Adesso ogni gradino porta un PREDICATO — una funzione che riceve i numeri
+#    e torna `(passa, perche)` — e il verdetto del banco e' la loro somma.
+#    L'uscita del copione e' 0 solo se tutti passano.
+#
+# ⛔ E i predicati sono scritti PRIMA di girare, come gli attesi di `07-b43`:
+#    sono la predizione, e quando sbagliano si vede (`LEZIONI.md` §1.11).
+
+
+def _p(cond, perche):
+    return (bool(cond), perche)
+
+
+def a_pulito(n):
+    """Il denominatore: quasi tutto arriva, niente si scarta, il tono e' puro."""
+    return _p(n["resa"] is not None and n["resa"] >= 0.99
+              and n["vecchi"] == 0 and (n["purezza"] or 0) >= 0.80,
+              "resa >= 0,99 · vecchi 0 · purezza >= 0,80")
+
+
+def a_come_pulito(n):
+    """Il ritardo fisso non riordina: dev'essere indistinguibile dal liscio."""
+    return a_pulito(n)
+
+
+def a_sorpassi(minimo):
+    """Il jitter fa sorpassare i datagram, e §6.3 li butta: «vecchi» DEVE salire."""
+    def f(n):
+        return _p(n["vecchi"] >= minimo,
+                  "vecchi >= %d (il jitter riordina e §6.3 scarta)" % minimo)
+    return f
+
+
+def a_perdita(frazione, tolleranza=0.5):
+    """La perdita si vede nella resa, e in proporzione a quel che netem toglie."""
+    def f(n):
+        if n["resa"] is None:
+            return _p(False, "nessuna resa da confrontare")
+        atteso = 1.0 - frazione
+        return _p(abs(n["resa"] - atteso) <= tolleranza * frazione + 0.02,
+                  "resa ~ %.3f (perdita %.0f%%), vista %.3f"
+                  % (atteso, frazione * 100, n["resa"]))
+    return f
+
+
+def a_non_si_apre(n):
+    """A questa perdita la sessione non si apre: e' un esito, non un guasto."""
+    return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
+
+
 PROFILI = [
-    ("0-liscio", [], "nessun guasto: e' il denominatore, e deve essere pulito"),
+    ("0-liscio", [], "nessun guasto: e' il denominatore, e deve essere pulito",
+     a_pulito),
     ("1-ritardo-30", ["delay", "30ms"],
-     "30 ms fissi, senza jitter: arrivano tardi ma in ordine -- non deve cambiare niente"),
+     "30 ms fissi, senza jitter: arrivano tardi ma in ordine -- non deve cambiare niente",
+     a_come_pulito),
     ("2-jitter-2", ["delay", "20ms", "2ms", "distribution", "normal"],
-     "jitter 2 ms, meno di un blocco PCM (5 ms): i sorpassi devono essere pochi"),
+     "jitter 2 ms, meno di un blocco PCM (5 ms): i sorpassi devono gia' esserci",
+     a_sorpassi(100)),
     ("3-jitter-5", ["delay", "20ms", "5ms", "distribution", "normal"],
-     "jitter 5 ms = un blocco: e' il gradino in cui i sorpassi cominciano"),
+     "jitter 5 ms = un blocco: i sorpassi crescono",
+     a_sorpassi(500)),
     ("4-jitter-10", ["delay", "20ms", "10ms", "distribution", "normal"],
-     "jitter 10 ms = due blocchi"),
+     "jitter 10 ms = due blocchi", a_sorpassi(1000)),
     ("5-jitter-15", ["delay", "30ms", "15ms", "distribution", "normal"],
-     "jitter 15 ms = tre blocchi: qui l ascolto deve essere gia' rotto"),
-    ("6-perdita-1", ["loss", "1%"], "1 datagram su 100 perso: ~2 buchi al secondo"),
-    ("7-perdita-10", ["loss", "10%"], "10 %: ~20 buchi al secondo"),
+     "jitter 15 ms = tre blocchi: qui l ascolto e' gia' rotto",
+     a_sorpassi(1500)),
+    ("6-perdita-1", ["loss", "1%"], "1 datagram su 100 perso",
+     a_perdita(0.01)),
+    ("7-perdita-10", ["loss", "10%"],
+     "10 %: `[M]` la sessione non si apre affatto in 25 s", a_non_si_apre),
     ("8-casa-cattiva", ["delay", "40ms", "20ms", "distribution", "normal",
                         "loss", "2%"],
-     "il misto che somiglia a una casa col WiFi lontano"),
+     "il misto che somiglia a una casa col WiFi lontano", a_sorpassi(500)),
 ]
 
 
@@ -136,7 +197,41 @@ def guasta(regole):
     return True, qdisc()
 
 
+def innesca_sessione(secondi=8):
+    """⛔ Il sink «remotix» lo crea il FIGLIO, e il figlio nasce quando un
+       cliente entra: su un server appena acceso `pw-play --target remotix` non
+       si lega a niente.  ⇒ Si apre una sessione corta apposta; il palco e il
+       sink le sopravvivono (I4)."""
+    dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
+              "--utente %s --parola-file %s/parola --audio-codec pcm --resta %d"
+              % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, secondi))
+    rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % dentro,
+                        secondi + 180)
+    return "SESSIONE" in (out + err)
+
+
+def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
+    """⛔ Il tono si fabbrica QUI se manca, e l'ampiezza e' NOTA: l'RMS atteso
+       e' un conto (A/sqrt2), non una stima.  ⚠ E il file dev'essere leggibile
+       dall'utente della sessione, che non e' root."""
+    f = "%s/tono-%d.wav" % (LAV, hz)
+    rc, out, _ = root("test -s %s && stat -c %%s %s || echo 0" % (f, f))
+    if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
+        return f
+    root("mkdir -p %s && chmod 755 %s" % (LAV, LAV))
+    copione = (
+        "import math,struct,wave;"
+        "w=wave.open('%s','wb');w.setnchannels(2);w.setsampwidth(2);"
+        "w.setframerate(48000);d=bytearray();"
+        "[d.extend(struct.pack('<hh',v,v)) for v in "
+        "[int(%f*math.sin(2*math.pi*%d*n/48000)*32767) for n in range(48000*%d)]];"
+        "w.writeframes(bytes(d));w.close()" % (f, ampiezza, hz, secondi))
+    root("python3 -c \"%s\" && chmod 644 %s" % (copione, f), 300)
+    return f
+
+
 def tono_accendi():
+    tono_fabbrica()
     """⛔ Il tono deve suonare DENTRO la sessione, o il giudice misura silenzio
        e il banco riferisce «rms 0» come se fosse un guasto della rete.
        ⚠ E' successo al primo giro di «casa»: 5993 datagram perfetti e rms 0,0.
@@ -217,6 +312,42 @@ def cliente(nome, dove, secondi):
             "jsonl": j, "byte_jsonl": os.path.getsize(j) if os.path.exists(j) else 0}
 
 
+def conti_del_server(riga0):
+    """⛔⛔ R13 — SENZA QUESTO IL BANCO ERA CIECO PER COSTRUZIONE.
+
+       Il cliente sa dire quanti datagram ha ricevuto; **non** sa dire quanti
+       ne sono partiti.  ⇒ «la rete l ha perso» e «il server non l ha mai
+       spedito» davano lo stesso numero, e in un banco che guasta la RETE
+       apposta e' la distinzione che serve piu' di ogni altra:
+       senza, un difetto del server verrebbe attribuito al `netem`.
+
+       ⭐ Il conto ce l ha gia' il prodotto, alla chiusura della sessione:
+       «N blocchi spediti, N buttati, N rifiutati da ngtcp2, N rimandati».
+       Qui si legge, e si legge SOLO da `riga0` in poi, cosi' e' di questo
+       giro e non di quello prima."""
+    rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'conto finale' | tail -1"
+                      % (riga0 + 1, LAV))
+    r = out.strip()
+    if not r:
+        # ⛔ `CODER.md` §3.10: «non ho letto» non e' «zero».
+        return {"esito": "NIENTE DA LEGGERE — nessun «conto finale» in questo giro"}
+    import re as _re
+    m = _re.search(r"(\d+) blocchi spediti, (\d+) buttati.*?(\d+) rifiutati.*?"
+                   r"(\d+) RIMANDATI", r)
+    if not m:
+        return {"esito": "riga trovata ma illeggibile", "riga": r[:160]}
+    return {"spediti": int(m.group(1)), "buttati": int(m.group(2)),
+            "rifiutati": int(m.group(3)), "rimandati": int(m.group(4))}
+
+
+def righe_registro():
+    rc, out, _ = root("wc -l < %s/registro.log" % LAV)
+    try:
+        return int(out.strip())
+    except Exception:
+        return 0
+
+
 def giudica(nome):
     j = os.path.join(FUORI, nome + ".jsonl")
     if not os.path.exists(j) or os.path.getsize(j) == 0:
@@ -238,6 +369,12 @@ def principale():
     p.add_argument("passo", choices=["casa", "netem", "rimetti", "stato"])
     p.add_argument("--secondi", type=int, default=25)
     p.add_argument("--solo", default="", help="un profilo solo, per nome")
+    p.add_argument("--controllo-rosso", action="store_true",
+                   help="⭐ il controllo positivo DEL VERDETTO: al gradino "
+                        "«0-liscio» (rete perfetta) si appiccica l'atteso del "
+                        "jitter, che su una linea pulita NON puo' passare.  "
+                        "⛔ Se il banco resta verde, il banco e' cieco e non si "
+                        "crede a nessun altro suo verde")
     a = p.parse_args()
     os.makedirs(FUORI, exist_ok=True)
 
@@ -283,18 +420,38 @@ def principale():
          ">/dev/null 2>&1 & echo guardiano-acceso-per-%ds" % (totale, DEV, totale))
     print("   OK  guardiano armato: fra %d s la rete torna com era ANCHE se muoio" % totale)
     esiti = []
+    if a.controllo_rosso:
+        # ⛔ Si sostituisce l'atteso del primo gradino con uno che su rete
+        #    pulita e' impossibile: «almeno 100 datagram scartati perche'
+        #    sorpassati» dove non c'e' nessun guasto.
+        for i, (nome, regole, testo, _pred) in enumerate(PROFILI):
+            if nome.startswith("0-"):
+                PROFILI[i] = (nome, regole,
+                              "⛔ CONTROLLO ROSSO: atteso impossibile apposta "
+                              "(100 sorpassi su una rete senza guasti)",
+                              a_sorpassi(100))
+        print("   ⛔ CONTROLLO ROSSO acceso: il gradino «0-liscio» DEVE fallire")
+    print("   --  apro una sessione corta per far nascere il palco e il sink")
+    if not innesca_sessione():
+        print("   NO  la sessione non si apre: non misuro")
+        rimetti(); return 2
     if not tono_accendi():
         print("   NO  il tono non suona: non misuro")
         tono_spegni(); rimetti(); return 2
     print("   OK  il tono suona dentro la sessione")
     try:
-        for nome, regole, atteso in PROFILI:
+        for nome, regole, atteso, predicato in PROFILI:
             if a.solo and a.solo not in nome:
                 continue
             print("\n-- %s · %s" % (nome, atteso))
+            riga0 = righe_registro()
             ok, q = guasta(regole)
             if not ok:
-                print("   ", q); break
+                # ⛔ R13: il `break` usciva e il copione tornava 0 lo stesso.
+                print("   ", q)
+                esiti.append({"profilo": nome, "passa": False,
+                              "perche": "tc ha rifiutato la regola"})
+                break
             # ⛔ M3 si riverifica a OGNI profilo.  "Il tono suonava
             #   all'inizio" non e' "il tono sta suonando adesso".
             rc, out, _ = root("env UTENTE=%s UID_B=%d LAV=%s python3 %s/banchi/"
@@ -306,16 +463,49 @@ def principale():
             print("    M3: legami in ingresso al sink = %s" % leg)
             if leg <= 0:
                 print("   NO  il tono non suona piu': NON giudico questo profilo")
-                esiti.append({"profilo": nome, "esito": "NIENTE DA GIUDICARE, il tono taceva"})
+                esiti.append({"profilo": nome, "passa": None,
+                              "esito": "NIENTE DA GIUDICARE, il tono taceva"})
                 continue
             print("    tc:", " ".join(q.split("\n")[:2])[:160])
             c = cliente(nome, "contenitore", a.secondi)
             g = giudica(nome)
+            sv = conti_del_server(riga0)
             for r in (c or {}).get("conti", {}).values():
                 print("   ", r)
+            print("    SERVER:", json.dumps(sv, ensure_ascii=False))
             print("    giudizio:", json.dumps(g, ensure_ascii=False))
+
+            # ⭐ E QUI L'ATTESO SMETTE DI ESSERE PROSA: si confronta.
+            #    ⚠ I numeri che il predicato guarda vengono da DUE lati — il
+            #    cliente e il server — cosi' «perso sul filo» e «mai spedito»
+            #    non si confondono.
+            conti = (c or {}).get("conti", {})
+            import re as _re
+
+            def daconti(chiave, testo):
+                for x in conti.values():
+                    if chiave in x:
+                        m = _re.search(testo, x)
+                        return int(m.group(1)) if m else None
+                return None
+
+            numeri = {
+                "ricevuti": daconti("ricevuti", r"ricevuti (\d+)"),
+                "vecchi": daconti("scartati", r"vecchi (\d+)"),
+                "resa": g.get("resa_campioni"),
+                "purezza": (g.get("tono") or {}).get("purezza"),
+                "spediti_dal_server": sv.get("spediti"),
+            }
+            # ⛔ E se il server non ha spedito, il rosso NON e' della rete.
+            if numeri["spediti_dal_server"] == 0:
+                passa, perche = False, ("il SERVER non ha spedito niente: il rosso "
+                                        "non e' della rete guastata, e' nostro")
+            else:
+                passa, perche = predicato(numeri)
+            print("    %s ATTESO: %s" % ("OK " if passa else "⛔ NO", perche))
             esiti.append({"profilo": nome, "regole": regole, "atteso": atteso,
-                          "conti": (c or {}).get("conti"), "giudizio": g})
+                          "conti": conti, "server": sv, "giudizio": g,
+                          "numeri": numeri, "passa": passa, "perche": perche})
     finally:
         tono_spegni()
         print("\n== ⛔ LA RETE SI RIMETTE COM'ERA")
@@ -323,6 +513,23 @@ def principale():
         rimetti()
     json.dump(esiti, open(os.path.join(FUORI, "rete-esiti.json"), "w"),
               ensure_ascii=False, indent=1)
+
+    # ⛔⛔ R13 — E L'ESITO SI PROPAGA.  Prima `principale()` tornava 0 in ogni
+    #      caso, `break` compreso: un banco che non puo' dare rosso non e' un
+    #      banco, e' un rapporto.
+    rossi = [e for e in esiti if e.get("passa") is False]
+    muti = [e for e in esiti if e.get("passa") is None]
+    print("\n== IL VERDETTO — %d gradini, %d rossi, %d non giudicati"
+          % (len(esiti), len(rossi), len(muti)))
+    for e in rossi:
+        print("   ⛔ %s: %s" % (e["profilo"], e.get("perche")))
+    for e in muti:
+        print("   ⚠  %s: %s" % (e["profilo"], e.get("esito")))
+    if rossi:
+        return 1
+    if muti:
+        return 2      # ⚠ «non ho misurato» e' un esito SUO, non un verde
+    print("   ⭐ tutti i gradini hanno fatto quel che era scritto prima")
     return 0
 
 

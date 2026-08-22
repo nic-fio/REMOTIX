@@ -43,6 +43,48 @@ CANALI = 2
 PASSO_PCM_US = 5000          # §5.3: il blocco PCM e' di 5 ms
 SOGLIA = 0.02                # frazione dell'ampiezza di picco
 
+# ⛔⛔ IL PICCO MINIMO, ED E' LA CURA DEL RILIEVO R7 — 22 agosto 2026.
+#
+#      La riga era `picco = max(abs(x) ...) or 1.0`, e su campioni **tutti
+#      zero** il picco diventava **1,0**: la soglia scendeva a 0,02, i residui
+#      erano zero, e il giudice rispondeva `scoppiettii 0`.
+#      ⇒ **Il giudice dell'orecchio dava il voto massimo al silenzio**, che e'
+#      la forma d'errore che questa fase esiste per non commettere
+#      (`LEZIONI.md` §2.2: il banco restava verde mentre l'audio era rotto).
+#
+# ⭐ La cura non e' un `or` piu' furbo: e' che sotto un certo segnale il giudice
+#    **rifiuta di giudicare**.  Il residuo di quantizzazione di un segnale a 16
+#    bit vale ~4 LSB; perche' la soglia (2 % del picco) stia sopra quel rumore
+#    serve un picco di almeno ~400.  Sotto, il rivelatore non distingue piu'
+#    niente da niente, e dirlo e' l'unica risposta onesta (`CODER.md` §3.10).
+PICCO_MINIMO = 400           # ~1,2 % del fondo scala a 16 bit
+
+# ⛔⛔⛔ IL BUCO CIECO, E SI DICHIARA QUI PERCHE' NON SI PUO' TOGLIERE.
+#
+#       Un taglio di N campioni si ricuce **in fase** — cioe' invisibile al
+#       residuo — quando N x f / 48000 e' un numero intero di cicli.  Con il
+#       tono a **440 Hz** e i blocchi PCM da **240 campioni** (5 ms):
+#
+#           1200 campioni = 5 blocchi = **11,000 cicli esatti** → invisibile
+#           2400 campioni = 10 blocchi = 22,000 cicli          → invisibile
+#           1201 campioni                = 11,009 cicli        → visto
+#
+#       `[M]` 22 agosto 2026, riprodotto sul giudice di ieri: 25 ms e 50 ms di
+#       audio spariti danno **scoppiettii 0**.
+#
+# ⭐ Non si cura dentro il rivelatore — su un seno perfetto quel taglio **non
+#    lascia traccia nei campioni**, e nessun algoritmo puo' vederlo.  Si cura
+#    con una SECONDA GAMBA che non guarda la forma d'onda ma il **conto**: i
+#    campioni arrivati contro quelli attesi.  ⇒ `scoppiettii()` accetta
+#    `attesi`, e il verdetto composto guarda tutt'e due.
+#
+# ⭐⭐ E PER LE SCENE FUTURE C'E' UNA CURA CHE COSTA UNA CIFRA: un tono che con
+#     il blocco non va mai a numero intero.  A **443 Hz** un taglio di k blocchi
+#     vale 2,215 k cicli, e il primo intero arriva a **200 blocchi = 1 secondo**
+#     invece che a cinque.  ⚠ Il 440 resta finche' le misure vecchie servono a
+#     confronto: cambiarlo adesso renderebbe incomparabili i numeri di ieri.
+BLOCCO_PCM_CAMPIONI = 240    # 5 ms su un canale
+
 
 # ══════════════════════════════════════════════════════════════════════════
 def residui(campioni, hz):
@@ -54,12 +96,25 @@ def residui(campioni, hz):
     return fuori
 
 
-def scoppiettii(campioni, hz, soglia=SOGLIA):
+def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
     """⛔ Gli eventi, non i campioni: uno strappo dura qualche campione e
-       conterebbe per tre o quattro.  Si raggruppa quel che sta entro 5 ms."""
+       conterebbe per tre o quattro.  Si raggruppa quel che sta entro 5 ms.
+
+    ⛔ `attesi` e' la SECONDA GAMBA (R7): quanti campioni avrebbero dovuto
+       esserci.  Il residuo non vede un taglio multiplo di 1200 campioni; il
+       conto si'.  ⚠ Se non lo si passa, il giudizio vale solo per quel che la
+       forma d'onda sa dire, e questo esito lo dichiara."""
     if len(campioni) < 64:
         return {"esito": "NIENTE DA GIUDICARE", "campioni": len(campioni)}
-    picco = max(abs(x) for x in campioni) or 1.0
+    picco = max(abs(x) for x in campioni)
+    if picco < PICCO_MINIMO:
+        # ⛔ R7: qui prima usciva `scoppiettii 0`, cioe' il massimo dei voti.
+        return {"esito": "SILENZIO O QUASI — NON GIUDICO",
+                "perche": "picco %d sotto il minimo di %d: la soglia del "
+                          "rivelatore finirebbe sotto il rumore di "
+                          "quantizzazione, e ogni risposta sarebbe inventata"
+                          % (picco, PICCO_MINIMO),
+                "campioni": len(campioni), "picco": picco}
     r = residui(campioni, hz)
     lim = soglia * picco
     eventi, ultimo = [], None
@@ -77,7 +132,21 @@ def scoppiettii(campioni, hz, soglia=SOGLIA):
         del e["fine"]
     # ⭐ Il residuo tipico, che dice se la soglia e' lontana o appiccicata
     ordinati = sorted(abs(v) for v in r)
+    # ⭐ LA SECONDA GAMBA: il conto, che vede quel che il residuo non puo'.
+    manca = None
+    cieco = None
+    if attesi:
+        manca = int(attesi) - len(campioni)
+        if manca > 0:
+            # ⚠ E si dice se quel buco sarebbe stato invisibile al residuo: e'
+            #   l'informazione che spiega un «zero scoppiettii» accanto a un
+            #   ammanco vero, invece di lasciarli contraddirsi in silenzio.
+            cieco = abs(manca * hz / FREQUENZA
+                        - round(manca * hz / FREQUENZA)) < 0.01
     return {"esito": "GIUDICATO", "campioni": len(campioni),
+            "campioni_attesi": attesi,
+            "campioni_mancanti": manca,
+            "ammanco_invisibile_al_residuo": cieco,
             "picco": round(picco, 1),
             "residuo_mediano_rel": round(ordinati[len(ordinati) // 2] / picco, 6),
             "residuo_99_rel": round(ordinati[int(len(ordinati) * 0.99)] / picco, 6),
@@ -142,7 +211,11 @@ def giudizio_completo(dati, hz, finestra_s):
         atteso = dati["durata_dichiarata_s"] * FREQUENZA
         r["campioni_mancanti"] = int(atteso - len(c))
         r["resa_campioni"] = round(len(c) / atteso, 5) if atteso else None
-    r.update({"scoppiettii": scoppiettii(c, hz)})
+    # ⛔ `attesi` viene dagli `istante` del server (§6.3), non dal nostro
+    #    orologio: e' l'unico numero che dica quanti campioni ci dovevano essere.
+    attesi = (int(round(dati["durata_dichiarata_s"] * FREQUENZA))
+              if dati["durata_dichiarata_s"] else None)
+    r.update({"scoppiettii": scoppiettii(c, hz, attesi=attesi)})
     # Il giudice certificato di 07-b42, su una finestra intera nel mezzo.
     n = finestra_s * FREQUENZA
     if len(c) >= n:
@@ -162,34 +235,43 @@ def giudizio_completo(dati, hz, finestra_s):
 
 # ══════════════════════════════════════════════════════════════════════════
 def certifica(hz=440):
-    """⛔ Il controllo positivo, e sono quattro casi: il giudice e' credibile
-       solo se il caso sano da' ZERO e i tre guasti si vedono."""
+    """⛔ Il controllo positivo, e adesso sono SETTE casi.
+
+    ⛔⛔ I due che mancavano li ha trovati il revisore (R7), non io, e sono
+         proprio i due che rendevano credibile un verde falso:
+
+           · **il silenzio**, che prendeva il voto massimo;
+           · **il taglio da 1200 campioni**, invisibile al residuo perche' e'
+             un numero intero di cicli (11,000 esatti a 440 Hz).
+
+    ⭐ E il caso cieco NON si dichiara verde perche' il residuo tace: si
+       dichiara verde solo se la SECONDA GAMBA — il conto dei campioni — lo
+       vede.  Un banco che non sa vedere il difetto che cerca non ha diritto al
+       verde (`PIANO.md` §0.3.4), e un banco che lo sa vedere solo con un altro
+       strumento deve dire quale.
+    """
     import random
     amp = 0.5 * 32767
-    def seno(n0, n):
-        return [int(amp * math.sin(2 * math.pi * hz * (n0 + k) / FREQUENZA)) for k in range(n)]
+
+    def seno(n0, n, f=hz):
+        return [int(amp * math.sin(2 * math.pi * f * (n0 + k) / FREQUENZA))
+                for k in range(n)]
+
     sano = seno(0, FREQUENZA * 4)
     casi = []
 
-    casi.append(("0-sano — un tono perfetto di 4 s", sano, 0))
+    def taglia(quanti):
+        return sano[:FREQUENZA * 2] + seno(FREQUENZA * 2 + quanti,
+                                           FREQUENZA * 2 - quanti)
 
-    # 1 · 137 campioni tolti nel mezzo, e ricuciti: e' il BUCO di R26
-    tagliato = sano[:FREQUENZA * 2] + seno(FREQUENZA * 2 + 137, FREQUENZA * 2 - 137)
-    casi.append(("1-buco — 137 campioni (2,9 ms) tolti e ricuciti", tagliato, 1))
+    #  (nome, campioni, attesi, scoppiettii attesi, chi lo deve vedere)
+    casi.append(("0-sano — un tono perfetto di 4 s", sano, None, 0, "nessuno: e' sano"))
+    casi.append(("1-buco — 137 campioni (2,9 ms) tolti e ricuciti",
+                 taglia(137), None, 1, "il residuo"))
+    casi.append(("2-silenzio in mezzo — 10 ms di zeri",
+                 sano[:FREQUENZA * 2] + [0] * 480 + sano[FREQUENZA * 2 + 480:],
+                 None, 2, "il residuo"))
 
-    # 2 · 10 ms di silenzio nel mezzo (il ripieno a zero di chi si e' svuotato)
-    muto = sano[:FREQUENZA * 2] + [0] * 480 + sano[FREQUENZA * 2 + 480:]
-    casi.append(("2-silenzio in mezzo — 10 ms di zeri", muto, 2))
-
-    # 3 · dieci strappi sparsi
-    #
-    # ⛔ E la prima stesura di questo caso era SBAGLIATA, e il giudice l'ha
-    #    denunciata: costruiva i tagli dal fondo (`for p in reversed(...)`)
-    #    rigenerando ogni volta tutta la coda, cosi' ogni taglio cancellava
-    #    quelli dopo di lui — ne restava **uno**, e il banco diceva «giudice
-    #    cieco» su un giudice sano.  ⇒ Il difetto era nella SCENA, non nello
-    #    strumento, ed e' la ragione per cui l'atteso si scrive prima: qui il
-    #    disaccordo fra 10 e 1 ha trovato un difetto mio (`LEZIONI.md` §1.11).
     random.seed(7)
     posti = sorted(random.sample(range(FREQUENZA // 2, FREQUENZA * 7 // 2), 10))
     tanti, prima, salto = [], 0, 0
@@ -197,23 +279,65 @@ def certifica(hz=440):
         tanti += seno(prima + salto, p - prima)
         prima, salto = p, salto + 61
     tanti += seno(prima + salto, len(sano) - prima)
-    casi.append(("3-dieci strappi da 61 campioni", tanti, 10))
+    casi.append(("3-dieci strappi da 61 campioni", tanti, None, 10, "il residuo"))
+
+    # ⛔ R7a — IL SILENZIO.  Prima dava `scoppiettii 0`, cioe' il massimo.
+    casi.append(("4-⛔ R7a: quattro secondi di ZERI", [0] * (FREQUENZA * 4),
+                 None, "SILENZIO O QUASI — NON GIUDICO", "il rifiuto"))
+
+    # ⛔ R7b — IL BUCO CIECO.  Il residuo non lo vede e non puo' vederlo: 1200
+    #    campioni sono 11,000 cicli esatti.  Lo deve vedere IL CONTO.
+    casi.append(("5-⛔ R7b: 1200 campioni tolti (25 ms = 11,000 cicli)",
+                 taglia(1200), FREQUENZA * 4, 0, "⭐ il CONTO (1200 mancanti)"))
+    casi.append(("6-⛔ R7b: 2400 campioni tolti (50 ms = 22,000 cicli)",
+                 taglia(2400), FREQUENZA * 4, 0, "⭐ il CONTO (2400 mancanti)"))
 
     print("⭐ CERTIFICAZIONE DEL GIUDICE — l'atteso e' scritto PRIMA\n")
     verde = True
-    for nome, c, atteso in casi:
-        e = scoppiettii(c, hz)
-        visti = e["scoppiettii"]
-        buono = (visti == atteso)
+    for nome, c, attesi, atteso, chi in casi:
+        e = scoppiettii(c, hz, attesi=attesi)
+        if isinstance(atteso, str):
+            visto = e.get("esito")
+            buono = visto.startswith(atteso[:12])
+        else:
+            visto = e.get("scoppiettii")
+            buono = (visto == atteso)
+            # ⛔ E per i due casi ciechi il verde non basta che il residuo
+            #    taccia: il conto DEVE dire quanto manca, o il banco e' cieco.
+            if attesi is not None:
+                manca = e.get("campioni_mancanti")
+                if not manca or manca != attesi - len(c):
+                    buono = False
+                    visto = "%s (conto: %s)" % (visto, manca)
+                else:
+                    visto = "%s, e il conto vede %d mancanti (invisibile al "\
+                            "residuo: %s)" % (visto, manca,
+                                              e.get("ammanco_invisibile_al_residuo"))
         verde = verde and buono
-        print("  %-52s atteso %2d · visti %2d · residuo mediano %.6f  %s"
-              % (nome, atteso, visti, e["residuo_mediano_rel"],
-                 "OK" if buono else "⛔ NO"))
+        print("  %-52s atteso %-6s · %s\n      %s  chi lo vede: %s"
+              % (nome, atteso, visto, "OK" if buono else "⛔ NO", chi))
+    print()
+    # ⭐ E il controllo del CONTROLLO: a 443 Hz il buco cieco non c'e' piu'.
+    #    ⚠ Non e' una cura da applicare oggi (renderebbe incomparabili le misure
+    #    di ieri): e' la prova che la diagnosi del buco cieco e' giusta.
+    rotto443 = ([int(amp * math.sin(2 * math.pi * 443 * k / FREQUENZA))
+                 for k in range(FREQUENZA * 2)]
+                + [int(amp * math.sin(2 * math.pi * 443 * (k + FREQUENZA * 2 + 1200)
+                                      / FREQUENZA))
+                   for k in range(FREQUENZA * 2 - 1200)])
+    e443 = scoppiettii(rotto443, 443)
+    ok443 = e443.get("scoppiettii") == 1
+    verde = verde and ok443
+    print("  %-52s atteso %-6s · %s  %s"
+          % ("7-⭐ lo stesso taglio a 443 Hz (11,075 cicli)", 1,
+             e443.get("scoppiettii"), "OK" if ok443 else "⛔ NO"))
+    print("      ⇒ il buco cieco e' del TONO, non del rivelatore: a 443 Hz sparisce")
     print()
     if verde:
-        print("⭐ quattro casi su quattro: il giudice sa vedere il difetto che cerca.")
+        print("⭐ sette casi su sette: il giudice sa vedere il difetto che cerca,")
+        print("   e dove NON puo' vederlo dice quale altro strumento lo vede.")
     else:
-        print("⛔ IL GIUDICE E' CIECO (o troppo sensibile): non si crede a un suo verde.")
+        print("⛔ IL GIUDICE E' CIECO: non si crede a un suo verde.")
     return 0 if verde else 3
 
 
