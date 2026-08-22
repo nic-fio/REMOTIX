@@ -1112,6 +1112,39 @@ solo *«no»*; con la scala sa dire *«sì, più piccolo»* — ed è la fase 10
 a parità di banda. **Non è mai stata misurata**, e il punto di lavoro fra qualità e banda è di
 questa fase.
 
+> ### ⭐⭐ E LA NOTTE DEL 21 AGOSTO QUESTA FASE HA RICEVUTO DUE COSE GIÀ MISURATE
+>
+> *Arrivano dalla chiusura dei buchi delle fasi 6 e 7, ⛔ e sono state **spostate qui dall'utente**:
+> «i problemi di rete non rientrano in questa fase, qui stiamo chiudendo i buchi delle fasi 6 e 7».
+> ⚠ Il coordinatore aveva portato la decisione nella stanza sbagliata.*
+>
+> **1 · ⛔ Il motore della spirale: `video_sgombra()` abbandona i delta a OGNI fotogramma.**
+> `[M]` Su linea larga non abbandona quasi mai; su linea stretta un delta non esce in 33 ms, quindi
+> viene abbandonato **sempre**, e ogni abbandono riaccende il debito di §5.2 — il registro lo dice
+> **28 volte al secondo**. ⇒ Il video degenera in **un flusso di sole chiavi**, che è la forma
+> peggiore di degradazione: pesante, a scatti, e affama l'audio.
+> ⭐ **La cura è nominata e §5.1 la permette senza imporla**: abbandonare un delta solo quando è
+> *davvero senza speranza* (una soglia sulla coda) invece che a ogni fotogramma più recente. Così
+> sotto congestione il video calerebbe di **ritmo** restando fatto di delta.
+> ⚠ **Il prezzo va giudicato dall'utente**, ed è esattamente il mestiere di questa fase: per una
+> frazione di secondo si vedrebbe qualcosa di leggermente vecchio. ⛔ In v1 una fase come questa fu
+> azzerata perché validata con PSNR invece che con l'occhio: **non si decide senza di lui**.
+>
+> **2 · ⛔ La finestra di riordino dell'audio.** `src/pagina.html` scarta un datagram *«più vecchio
+> di quel che è già ARRIVATO»*, mentre `RCP.md` §6.3 dice *«già consumati»*. ⇒ Si butta un blocco
+> arrivato **un millisecondo** fuori ordine **mentre si tengono 250 ms di cuscino**.
+> `[M]` con `netem`: ritardo di 30 ms fissi ⇒ purezza **1,000**; **jitter di ±2 ms ⇒ 0,175**, con
+> 1 004 datagram scartati su 4 989. ⭐ Su WiFi vero, invece, i «vecchi» sono **zero** — ed è la
+> ragione per cui è di questa fase e non della 7.
+> ⚠ Due avvertenze già pagate: `netem delay X Y` **riordina davvero**, una coda di casa di solito
+> no; e la misura è in **PCM da 5 ms** — con Opus (20 ms) la soglia sarebbe ~4 volte più alta.
+>
+> ⭐ **E la strumentazione per giudicarle è già scritta**: `banchi/07-b65-datagram.py` (la rete
+> strozzata coi byte veri presi dal qdisc, il controllo scena accesa/spenta che decide),
+> `banchi/07-b64-rete.py` e `banchi/07-b64-orecchio.py` (il giudice del tono, certificato 4 su 4).
+> ⇒ Questa fase non parte da zero: parte da un banco che sa già dire quando **non** ha misurato
+> niente.
+
 ---
 
 ## Fase 10 — Multi-tenant e il budget
