@@ -143,6 +143,26 @@ per due giorni nessuno aveva contato.
 ⇒ Lo stesso trascinamento, la stessa finestra, la stessa unità: **quanti pixel di distacco fa xrdp?**
 ⭐ È l'unico numero di questa fase che l'utente può giudicare **guardando**, senza fidarsi di me.
 
+#### ⭐⭐ FATTO, dall'utente, il 22 agosto 2026 — e REMOTIX è avanti
+
+> *«Confermo: siamo avanti, e di non poco. Non posso darti i numeri ma già si vede molto bene
+> ad occhio.»*
+
+⚠ **È un giudizio, non una misura**, e sta scritto così di proposito: l'utente ha dichiarato lui
+stesso di non avere numeri. ⛔ Non si citi come `[M]`.
+
+⭐ **E risponde di rimbalzo alla domanda che gli era stata posta e che non ha avuto bisogno di
+rispondere**: *«su xrdp la freccia ti risponde istantanea o un filo indietro?»* — la domanda serviva
+a sapere se xrdp disegna il puntatore in locale (come noi) o dentro l'immagine. ⇒ **Se lo disegnasse
+dentro l'immagine il suo distacco sarebbe ZERO per costruzione, e avrebbe vinto lui.** Essendo
+indietro, lo disegna in locale: **il confronto era alla pari.**
+
+⛔⛔ **E adesso la trappola, perché questo risultato è il tipo di cosa che ferma le
+ottimizzazioni.** «Siamo avanti al concorrente» **non è la specifica**. La specifica di §1.1 è *«il
+più vicino possibile a una situazione locale»*, e il termine di paragone che l'utente ha nominato
+per primo è **il locale**, non xrdp. ⇒ Il mandato resta quello che ha dato aprendo: *«se possiamo
+limare ancora qualcosa allora ok»*.
+
 ### 2.6 ⛔ Lo strumento del 22 agosto NON basta, e va detto perché
 
 Il registratore di GNOME gira a **30 fotogrammi al secondo** e **non riprende il puntatore**
@@ -236,7 +256,15 @@ progetto · il **multi-tenant** → fase 10, ⚠ ma aspetta il numero vero che e
 
 > *«Di sicuro siamo avanti a xrdp, ma se possiamo limare ancora qualcosa allora ok.»*
 
-⇒ ⭐ **Il via libera, e il metro**: non «raggiungere un numero», ma **limare**. ⚠ E il confronto con
-xrdp che lui dà per scontato è §2.5: **si misura**, perché nessuno l'ha mai fatto.
+⇒ ⭐ **Il via libera, e il metro**: non «raggiungere un numero», ma **limare**.
+
+### 8.2 ⭐⭐ E il confronto con xrdp l'ha fatto lui, subito — 22 agosto 2026
+
+*Si è collegato dal notebook al tablet con l'altro utente e ha rifatto la stessa prova.*
+
+> *«Confermo: siamo avanti, e di non poco. Non posso darti i numeri ma già si vede molto bene
+> ad occhio.»*
+
+⚠ Giudizio, **non misura** — e §2.5 spiega perché vale lo stesso, e perché **non chiude la fase**.
 
 *(il resto si riempie quando avrà qualcosa da guardare)*
