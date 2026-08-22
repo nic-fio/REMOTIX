@@ -2547,6 +2547,32 @@ class Schermo {
      *   sotto il rumore di quel che misurano. */
     this.bmp_ms = [];                          /* createImageBitmap: chiamata → immagine */
     this.vetro_ms = [];                        /* immagine in mano → tela trasferita */
+    /* ⛔⭐⭐ I QUATTRO TRATTI DEL CLIENTE, MISURATI DAL PRODOTTO — 22 agosto 2026.
+     *
+     * ⛔⛔ E LA RAGIONE PER CUI STANNO QUI E NON IN UN BANCO.  L'agente A ha
+     *     scomposto l'anello e ha trovato **17,48 ms** in *«richiamo del
+     *     decodificatore → 1° `drawImage` finito»*, contro **0,10** del disegno
+     *     vero.  ⇒ La riga «il collo di bottiglia e' il disegno» e' falsa, e lo
+     *     e' con la misura.  ⚠ Ma quel numero e' della strada **`?tela=2d`**,
+     *     cioe' quella del 14 agosto: il banco che l'ha preso non sa leggere
+     *     `bitmaprenderer`, e dal 20 agosto e' quella la strada del prodotto.
+     *
+     * ⇒ ⭐ Il prodotto misura da se' i quattro tratti che gli appartengono, e
+     *   chiunque puo' leggerli da fuori con `REMOTIX.tratti()`.  ⛔ Non e' una
+     *   comodita' di diagnosi: e' il modo di non avere piu' un numero della
+     *   strada morta al posto di quello della strada viva.
+     *
+     * ⚠ E IL COSTO SI DICHIARA: due `performance.now()` in piu' per fotogramma
+     *   (~4 µs a 60/s, `[M]` sotto il passo dell'orologio del browser che e'
+     *   100 µs) piu' una voce di mappa che si cancella nel richiamo.  ⛔ La
+     *   mappa e' LIMITATA: senza il tetto, un decodificatore che smette di
+     *   consegnare farebbe crescere la pagina per sempre. */
+    this.dec_ms = [];      /* 8 · `decode()` → richiamo del decodificatore     */
+    this.pre_ms = [];      /*   · richiamo → chiamata di `createImageBitmap`   */
+    this.tot_ms = [];      /* ⭐ 9+10 · richiamo → VETRO CAMBIATO             */
+    this.quadro_ms = [];   /* ⭐ vetro → prossimo quadro (il limite inferiore
+                                 del pezzo cieco di `STUDI.md` §web §6.2)     */
+    this.t_dec = new Map();                    /* `istante` → ora di `decode()` */
     /* ⭐⭐ LA META' VIDEO DEL METRO DELLA DISTANZA AUDIO↔VIDEO (§9.7-bis).
      *
      * L'ultimo fotogramma arrivato al vetro: il suo `istante` (l'orologio del
@@ -2962,9 +2988,17 @@ class Schermo {
    *   3. ⚠ **e il ritardo che aggiunge non e' ancora misurato**: `[?]` finche'
    *      non c'e' il numero.  Il conto vecchio da battere e' `[M]` 34,03 ms del
    *      `drawImage` nel deposito, che questa strada NON fa piu'. */
-  mostra(f, fl, fa) {
+  mostra(f, fl, fa, t_out) {
     const n = ++this.serie, e0 = this.epoca;
     const t_bmp = performance.now();
+    /* ⭐ `pre_ms` — richiamo → chiamata della conversione.  ⚠ DEVE valere ~0:
+     *   se un giorno non valesse zero, vorrebbe dire che fra il richiamo e la
+     *   conversione qualcuno ha infilato del lavoro, ed e' esattamente il
+     *   genere di cosa che nessun conto oggi vedrebbe. */
+    if (t_out !== undefined) {
+      this.pre_ms.push(t_bmp - t_out);
+      if (this.pre_ms.length > 200) this.pre_ms.shift();
+    }
     /* ⛔ L'`istante` del server si prende ADESSO, non nel `.then`: la' il
      *    `VideoFrame` e' gia' chiuso, e `f.timestamp` su un fotogramma chiuso
      *    e' un accesso a niente.  ⭐ E il valore e' quello che `dipingi()` ha
@@ -3031,6 +3065,30 @@ class Schermo {
       const t_dopo = performance.now();
       this.vetro_ms.push(t_dopo - t_vetro);
       if (this.vetro_ms.length > 200) this.vetro_ms.shift();
+      /* ⭐⭐ `tot_ms` — RICHIAMO → VETRO CAMBIATO, ed e' l'UNICO numero di
+       *    questa pagina che si confronta con i tratti 9+10 dell'agente A
+       *    (`[M]` 17,48 + 0,10 = 17,58 ms sulla strada `?tela=2d`).
+       * ⛔ Non e' `bmp_ms + vetro_ms`: quella somma salterebbe il tempo fra il
+       *    richiamo e la chiamata, e sarebbe un totale che non chiude. */
+      if (t_out !== undefined) {
+        this.tot_ms.push(t_dopo - t_out);
+        if (this.tot_ms.length > 200) this.tot_ms.shift();
+        /* ⭐⭐ E IL PEZZO CIECO PRENDE UN LIMITE INFERIORE — `STUDI.md` §web §6.2
+         *    lo lascia `[?]` 16-40 ms perche' «nessuna API JavaScript lo vede».
+         *    ⚠ Vero per il PIXEL ACCESO; ma il prossimo quadro del browser si
+         *    vede, ed e' il primo istante in cui quel pixel PUO' accendersi.
+         * ⛔ UNO OGNI 16, e non a ogni fotogramma: un `requestAnimationFrame`
+         *    per fotogramma dentro il percorso che §6.1 tiene corto sarebbe
+         *    pagare la misura con la cosa misurata — e su un motore che frena
+         *    i quadri terrebbe la pagina sveglia per misurarla.
+         * ⛔ E NON gaterebbe niente: si OSSERVA il quadro, non ci si consegna
+         *    sopra.  Consegnare sul quadro e' il meccanismo che §6.1 vieta. */
+        if ((this.conti.dipinti & 15) === 0 && typeof requestAnimationFrame === "function")
+          requestAnimationFrame(() => {
+            this.quadro_ms.push(performance.now() - t_dopo);
+            if (this.quadro_ms.length > 60) this.quadro_ms.shift();
+          });
+      }
       /* ⭐⭐ IL VETRO, ed e' QUI che nasce `voff` — non alla decodifica.
        * ⛔ Il confine si sposta nella direzione scomoda: `t_dopo` e' DOPO il
        *    trasferimento, cioe' il piu' tardi che questa pagina sappia dire.
@@ -3321,6 +3379,15 @@ class Schermo {
       return;
     }
     try {
+      /* ⭐ IL TRATTO 8 DEL CLIENTE — `decode()` → richiamo del decodificatore.
+       * ⛔ La chiave e' `i.istante`: WebCodecs riporta lo stesso `timestamp`
+       *    sul fotogramma che esce (§6.2), quindi il richiamo ritrova la sua
+       *    riga senza che serva un contatore nostro.  ⚠ E la mappa e' limitata
+       *    a 240 voci: un decodificatore che smettesse di consegnare farebbe
+       *    crescere questa pagina per sempre, e sarebbe una perdita di memoria
+       *    che nessun registro nomina. */
+      if (this.t_dec.size > 240) this.t_dec.clear();
+      this.t_dec.set(i.istante, performance.now());
       this.dec.decode(new EncodedVideoChunk({
         type: chiave ? "key" : "delta", timestamp: i.istante, data: dati }));
     } catch (e) {
@@ -3821,6 +3888,15 @@ class Schermo {
      `requestAnimationFrame`: `STUDI.md` §web §6.1.  Un giro di rAF in mezzo aggiunge
      fino a un intervallo di quadro a un tetto che ne vale due e mezzo. */
   dipingi(f) {
+    /* ⭐ IL TRATTO 8 SI CHIUDE QUI, ed e' la prima riga: qualunque cosa venga
+     *   dopo e' gia' tempo del cliente, non del decodificatore. */
+    const t_out = performance.now();
+    const t_d = this.t_dec.get(f.timestamp);
+    if (t_d !== undefined) {
+      this.t_dec.delete(f.timestamp);
+      this.dec_ms.push(t_out - t_d);
+      if (this.dec_ms.length > 200) this.dec_ms.shift();
+    }
     /* ⛔⭐⭐ ANCORA `F4-CODA-DEL-DECODIFICATORE` — INIZIO.
      *
      * ⛔⛔ IL DIFETTO, MISURATO: **niente butta il di piu', e il ritardo cresce
@@ -3908,7 +3984,7 @@ class Schermo {
     /* ⭐ IL BIVIO: sulla strada di §5.4 il fotogramma non entra in nessuna tela
      *    2D — va dritto a `createImageBitmap`.  Il resto di questa funzione e'
      *    il RIPIEGO, e resta identico a com'era. */
-    if (this.bm) { this.mostra(f, fl, fa); return; }
+    if (this.bm) { this.mostra(f, fl, fa, t_out); return; }
     try {
       if (!this.deposito) this.deposito = document.createElement("canvas");
       if (this.deposito.width !== fl || this.deposito.height !== fa) {
@@ -3937,6 +4013,11 @@ class Schermo {
        la cambia: il ridimensionamento della finestra, in fondo al file. */
     if (this.sessione && !this.vista_l) this.adatta_vista();
     if (this.componi()) this.conti.dipinti++;
+    /* ⭐ E il RIPIEGO si misura con lo STESSO metro della strada vera, o le due
+     *   non si confrontano: `tot_ms` qui e' `richiamo → i due drawImage
+     *   finiti`, cioe' esattamente i tratti 9+10 dell'agente A. */
+    this.tot_ms.push(performance.now() - t_out);
+    if (this.tot_ms.length > 200) this.tot_ms.shift();
   }
 }
 
@@ -4261,7 +4342,61 @@ let tela_spenta = false;
  * ⛔ Scrivere l'osservatore lo stesso «tanto costa poco» sarebbe la forma E5 di
  *    `REVIEWER.md`: un fatto che era una deduzione mai misurata. */
 
+/* ⛔⭐⭐ `REMOTIX.tratti()` — I QUATTRO TRATTI DEL CLIENTE, LEGGIBILI DA FUORI.
+ *
+ * ⛔⛔ LA RAGIONE PER CUI ESISTE, e non e' una comodita'.  Il 22 agosto 2026
+ *     l'anello e' stato scomposto e il tratto piu' grosso del cliente valeva
+ *     `[M]` **17,48 ms** — ma il banco che l'ha misurato **non sa leggere la
+ *     strada che questa pagina usa**: legge i pixel dal deposito 2D, e dal 20
+ *     agosto il deposito non esiste (`DECISIONI.md` §5.4).  ⇒ Il numero della
+ *     strada VIVA non era misurabile da nessuno, e per averlo bisognava
+ *     riscrivere il prologo di un banco.
+ *
+ * ⇒ ⭐ **Adesso i tratti li dichiara il prodotto**, e ogni banco li legge con
+ *   una riga sola, su qualunque strada di disegno — la 2D, `bitmaprenderer` e
+ *   il ripiego — perche' i nomi sono gli stessi.
+ *
+ * ⛔ E NON E' UN INTERRUTTORE: qui dentro non c'e' niente che possa cambiare
+ *    quel che la pagina fa (`CODER.md` §2, invariante I6).  Si legge.
+ *
+ * ⚠ E il denominatore viaggia con ogni riga (`n`): un tratto con `n` piccolo
+ *   e' «non ho potuto guardare», non «vale zero» — ed e' la differenza che
+ *   `LEZIONI.md` §1.9 chiede di non schiacciare.
+ */
+function __tratto(a) {
+  if (!a || !a.length) return null;
+  const b = a.slice().sort(function (x, y) { return x - y; });
+  const q = function (p) {
+    return b[Math.min(b.length - 1, Math.max(0, Math.floor(p * b.length)))];
+  };
+  return { n: b.length, min: +b[0].toFixed(3), p05: +q(0.05).toFixed(3),
+           med: +q(0.5).toFixed(3), p95: +q(0.95).toFixed(3),
+           max: +b[b.length - 1].toFixed(3) };
+}
+function tratti() {
+  const s = schermo;
+  if (!s) return null;
+  return {
+    /* ⭐ quale strada, o i numeri non si sanno di che cosa sono */
+    strada: s.bm ? "bitmaprenderer" : (TELA_2D ? "tela2d-a-richiesta"
+                                               : "tela2d-ripiego"),
+    tela: [s.tela_l, s.tela_a],
+    dipinti: s.conti ? s.conti.dipinti : null,
+    saltati_coda: s.conti ? s.conti.saltati_coda : null,
+    tardive: s.conti ? s.conti.tardive : null,
+    "8_decode_richiamo": __tratto(s.dec_ms),
+    "9a_richiamo_chiamata": __tratto(s.pre_ms),
+    "9b_conversione": __tratto(s.bmp_ms),
+    "10_vetro": __tratto(s.vetro_ms),
+    "9_10_richiamo_vetro": __tratto(s.tot_ms),
+    /* ⚠ Non e' il pixel acceso: e' il primo istante in cui PUO' accendersi */
+    "11_vetro_prossimo_quadro": __tratto(s.quadro_ms),
+  };
+}
+
 window.REMOTIX = { schermo: schermo, sondaggio: SONDAGGIO,
+                   /* ⭐ i quattro tratti del cliente, §4-F3 della fase 8 */
+                   tratti: tratti,
                    stringhe_codec: stringhe_codec, versione: VERSIONE,
                    /* ⭐ La diagnostica in fondo alla pagina: spenta di suo dal
                       16 agosto 2026, si riaccende da qui o con `?registro`. */
@@ -7487,6 +7622,11 @@ function specchia() {
                 misura con la cosa misurata. */
              bmp: __riassunto(schermo.bmp_ms),
              vetro: __riassunto(schermo.vetro_ms),
+             /* ⭐ e i tratti nuovi passano di qua con la stessa regola: mai a
+                campioni, sempre riassunti (§4-F3 della fase 8) */
+             dec: __riassunto(schermo.dec_ms),
+             pre: __riassunto(schermo.pre_ms),
+             tot: __riassunto(schermo.tot_ms),
              /* ⭐⭐ \`voff\` NON si manda gia' fatto, e non e' pignoleria: e' la
                 differenza fra un'ora del CLIENT e una del server, e l'ora del
                 client di QUI parte dalla nascita del worker.  Un \`voff\`

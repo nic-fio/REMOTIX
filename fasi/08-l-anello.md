@@ -199,6 +199,353 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-F3 · ⛔⛔⭐ AGENTE F3 — **i diciassette millisecondi non esistono**, e a mentire era la macchina · *22 agosto 2026*
+
+> ### ⛔⛔⛔ E IL COLPEVOLE È IL DIRETTORE, NON IL PRODOTTO
+>
+> Il tratto 9 dell'agente A — *«richiamo del decodificatore → 1° `drawImage`»* — valeva `[M]`
+> **17,48 ms**, il **19 %** dell'anello, ed era stato promosso a bersaglio della fase con un agente
+> dedicato. ⭐ **Quell'agente è tornato dicendo che non c'era niente da curare.**
+>
+> `[M]` Lo stesso tratto, tre banchi indipendenti:
+>
+> | come | ms |
+> |---|---|
+> | strada **vera** (`bitmaprenderer`), sessione vera, HEVC in hardware, n=200 ×2 | **1,18** e **0,49** |
+> | ⛔ **la stessa strada `?tela=2d` di A** | **0,39** e **0,97** |
+> | senza server né rete, stream HEVC vero a 60/s | **1,00** (2D) · **2,80** (`bitmaprenderer`) |
+>
+> ⇒ **Da 15 a 45 volte meno, e su tutt'e due le strade** ⇒ ⛔ **la strada di disegno non era la
+> spiegazione**: quella non c'entrava niente.
+>
+> ⭐⭐ **La causa, misurata**: `[M]` il portatile ha **4 nuclei**, e mentre A misurava ci giravano
+> sopra **56 processi Chrome e 5 Xvfb** — perché **tre o quattro agenti facevano banchi da browser
+> nello stesso momento**. ⇒ **Li avevo lanciati in parallelo io.**
+>
+> ⛔ **Che cosa cade con quel numero**: il tratto F non vale 18,83 ms (19 %) ma **~3,5 (3,5 %)**; il
+> **99,07 ms** di §4-A **sovrastima di ~15 ms**; e la frase *«quattro tratti su sei fanno l'83 %»*
+> va rifatta. ⚠ **E il sospetto si estende a tutta la prima ondata**, B compreso: i suoi 0,28 barre
+> sono stati presi nelle stesse condizioni, solo in un verso che nessuno conosce.
+>
+> ⭐ **La lezione, e non è «misurate meglio»**: `LEZIONI.md` §1.24 diceva *due banchi sulla stessa
+> porta si ammazzano in silenzio*. ⛔ **È più larga di così**: due banchi sulla stessa **macchina**
+> si falsano in silenzio — e il secondo caso non dà nessun rosso, dà un **numero plausibile**.
+> ⇒ **Il carico va dichiarato accanto a ogni numero**, come il palco (§2.0).
+>
+> ### ⭐ E l'agente ha consegnato uno strumento invece di una cura
+>
+> **`REMOTIX.tratti()`, dentro `src/pagina.html`**: il prodotto **dichiara da sé** i quattro tratti
+> del cliente, **con gli stessi nomi su tutte e tre le strade di disegno**, a `[M]` ~4 µs per
+> fotogramma. ⇒ ⛔ **Non serve più riscrivere il prologo di un banco ogni volta che la pagina cambia
+> modo di dipingere** — che è esattamente il difetto che aveva bloccato A (0 sonde su 304).
+>
+> ⚠ **E due numeri del documento vanno buttati**: `[M]` `createImageBitmap` costa **1,05 / 0,41 ms**,
+> non i **3,8** di §7.1; e il tratto F vale ~3,5 ms, non 18,83.
+
+> ### ⭐⭐⭐ IL PUNTO STA IN DUE NUMERI PRESI SULLA **STESSA** STRADA CHE HA DATO IL PRIMO
+>
+> L'agente A, sulla strada `?tela=2d`: `[M]` il tratto *«richiamo del decodificatore → 1°
+> `drawImage` finito»* vale **17,48 ms**, contro **0,10** del disegno vero. ⇒ *«il collo di
+> bottiglia è il disegno»* è falso — e su questo non c'è niente da correggere: è giusto.
+>
+> ⛔⛔ **Ma il tratto stesso non c'è.** Rimisurato oggi, in una sessione vera, sulla **stessa
+> strada `?tela=2d`**, con lo stesso ferro e lo stesso codec:
+>
+> | | `richiamo → vetro` (i tratti 9+10 di A) | fotogrammi dipinti |
+> |---|---|---|
+> | `[M]` **A, 22 agosto, `?tela=2d`** | **17,58 ms** | — |
+> | `[M]` **F3, `?tela=2d`** — la strada di A · giro 1 · giro 2 | ⭐ **0,39** · **0,97 ms** (n=200 ×2) | 33,7 · 39,9/s |
+> | `[M]` **F3, la strada VERA (`bitmaprenderer`)** · giro 1 · giro 2 | ⭐⭐ **1,18** · **0,49 ms** (n=200 ×2) | 34,0 · 34,7/s |
+>
+> ⇒ ⭐⭐ **Da quindici a quarantacinque volte meno, sulla strada identica**, e **quattro giri su
+> quattro** in **due sessioni indipendenti** stanno fra **0,39 e 1,18 ms**. E non è solo la
+> sessione: un
+> secondo banco, **senza server e senza rete**, che decodifica in hardware uno stream HEVC vero
+> di 1460×888 a 60/s sullo stesso portatile, trova `[M]` **1,00 ms** sulla strada 2D e **2,80**
+> su `bitmaprenderer`. ⛔ **I 17,48 ms non si riproducono da nessuna delle due parti.**
+>
+> ⇒ ⛔⛔ **Non c'è nessuna cura da fare nel disegno del cliente, perché non c'è niente da
+> curare.** Il mandato diceva *«prima capire, poi curare»*: capito, e la risposta è che il
+> bersaglio non esiste. ⭐ **Il risultato di questo giro è una riga cancellata, non una riga
+> aggiunta** — ed è il genere di esito per cui si strumenta prima.
+>
+> ⚠ **E la conseguenza è più grossa del tratto**: se il tratto 9 vale 0,39 e non 17,48, allora
+> il tratto **F, «il cliente»** non vale **18,83 ms (il 19 % dell'anello)** ma `[M]` **~3,5 ms
+> (il 3,5 %)** — e i **~15 ms** di differenza **erano nell'anello di A per davvero** (la somma
+> dei suoi tratti chiude con il suo totale entro 0,002 ms). ⇒ Sono **dello strumento**, non del
+> prodotto, e il **99,07 ms** di §4-A **sovrastima l'anello vero di circa quel tanto**.
+
+*Agente F3. Risorse tutte mie: porta **7770** · utente **`provaf3`** (uid 1047) · albero
+`/media/REMOTIX/src/08-f-src` · lavoro `/media/REMOTIX/tmp/08-f` · scena
+`/dev/shm/remotix-08-f3`. ⛔ Le porte **7730 e 7731** dell'utente non sono mai state toccate, e la
+7770 è stata **contata** con `ss -tulnp` prima di prenderla.*
+
+---
+
+## F3.1 · Che cosa è stato costruito
+
+| file | che cos'è |
+|---|---|
+| `src/pagina.html` | ⭐⭐ **i quattro tratti del cliente li dichiara il PRODOTTO**: `REMOTIX.tratti()` |
+| `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ il banco **senza server**: la stessa catena `decode() → richiamo → immagine → vetro` su uno stream vero, con i controlli che separano le tre ipotesi |
+| `banchi/08-f3-lancia.py` | il lanciatore del banco: lo stream con `ffmpeg`, i quattordici giri, i confronti |
+| `banchi/08-f3-tratti.py` | ⭐ legge `REMOTIX.tratti()` da una **sessione vera**, su tutt'e due le strade nella stessa seduta |
+| `banchi/08-f3-sessione.sh` | il terreno mio (porta, utente, albero, scena) |
+| `banchi/08-f3-esiti.json` · `08-f3-esiti.jsonl` | i verbali |
+
+⛔ **Non è stata toccata una riga di `src/*.c`, né un banco di un altro agente.**
+
+### ⭐⭐ E la cosa che vale più del banco: **adesso i tratti li dichiara il prodotto**
+
+⛔ **La ragione è il difetto che ha generato questo giro.** Il numero di A è della strada `?tela=2d`
+perché il prologo di `04-b30` **legge i pixel dal deposito**, e dal 20 agosto il deposito non
+esiste (`DECISIONI.md` §5.4). ⇒ Il numero della strada **viva** non era misurabile da nessuno senza
+riscrivere il prologo di un banco — «mezza giornata», dice §A.4.
+
+⇒ ⭐ `src/pagina.html` misura da sé i quattro tratti che gli appartengono e li espone:
+
+```
+REMOTIX.tratti()  →  strada · tela · dipinti · saltati_coda · tardive
+                     8_decode_richiamo · 9a_richiamo_chiamata · 9b_conversione
+                     10_vetro · 9_10_richiamo_vetro · 11_vetro_prossimo_quadro
+```
+
+⭐ **Gli stessi nomi su tutt'e tre le strade** (`bitmaprenderer`, `?tela=2d`, il ripiego): un banco
+li legge con una riga e non deve più sapere come è fatto il disegno di dentro.
+⛔ **E non è un interruttore** (invariante I6): non c'è niente lì dentro che possa cambiare quel che
+la pagina fa.
+
+**Il costo, dichiarato**: due `performance.now()` in più per fotogramma (~4 µs a 60/s, `[M]` sotto
+il passo dell'orologio del browser, che è 100 µs) più una voce di mappa che si cancella nel
+richiamo — e la mappa ha un **tetto di 240**, perché un decodificatore che smettesse di consegnare
+farebbe crescere la pagina per sempre.
+
+---
+
+## F3.2 · ⛔ CHE COSA SONO, QUEI MILLISECONDI — e la risposta è «non ci sono»
+
+**Le tre ipotesi del mandato, e come apparirebbe ciascuna** (`LEZIONI.md` §1.11 regola 1: per ogni
+prova indiretta si scrive prima come apparirebbe il caso opposto):
+
+| | l'ipotesi | come apparirebbe |
+|---|---|---|
+| **a** | il **decodificatore hardware** macina | l'attesa sta dentro la conversione del fotogramma **e solo lì**; i gemelli (microtask, macrotask, immagine piccola) restano a ~0 |
+| **b** | si aspetta un **quadro del browser** (16,7 ms a 60 Hz — un numero sospettosamente vicino) | ⛔ **è il muro**: l'attesa è incollata al quadro, e **sparisce dove non c'è scanout** |
+| **c** | la **promessa si risolve tardi** perché il thread è occupato | i gemelli salgono **insieme** all'attesa, e in assoluto |
+
+### ⭐ E il banco ha risposto a una domanda che veniva prima: **si aspetta?**
+
+`[M]` **Banco senza server**, portatile, Chrome, GPU `ANGLE (Intel, Mesa Intel(R) Graphics
+(ADL-N))`, HEVC **in hardware** (⚠ `[M]` Chrome **rifiuta** `prefer-software` su HEVC: su questo
+motore HEVC è **solo** hardware), stream vero 1460×888 consegnato a 60/s, 400 fotogrammi per giro:
+
+| giro | tratto 9 | 9+10 | contro i 17,58 di A |
+|---|---|---|---|
+| `2d-hw-pulito` — la strada di A, **senza strumento addosso** | **0,80 ms** | **1,00** | **−94 %** |
+| `bitmap-hw-pulito` — la strada vera | **2,70** | **2,80** | **−84 %** |
+| `2d-hw-letto` — **con la lettura dei pixel dentro il richiamo, come fa il banco di A** | **2,40** | 2,60 | −85 % |
+| `2d-h264-hw` (hardware) | 2,80 | 3,00 | −83 % |
+| `2d-h264-sw` (**software**) | 1,50 | 1,60 | −91 % |
+
+⇒ ⭐⭐ **Sotto i 5 ms non c'è nessuna attesa da diagnosticare**, e il banco lo dice con un verdetto
+invece di scegliere una delle tre ipotesi sul rumore. ⛔ **Un banco che partisse dalle tre ipotesi
+ne sceglierebbe una anche su mezzo millisecondo.**
+
+⇒ E le tre ipotesi restano **tutte e tre smentite come spiegazione dei 17 ms**:
+- **(a) il decodificatore**: lo stesso stream in **software** costa **meno** (1,50 contro 2,80). Il
+  decodificatore hardware non sta facendo aspettare nessuno;
+- **(c) la coda**: `[M]` la **netta** — quel che il fotogramma aggiunge sopra a una continuazione
+  qualunque dello stesso richiamo — vale **0,00 ms**. Tutto quel che si misura è il confine del
+  compito, e il confine del compito è ~1 ms;
+- **(b) il quadro**: ⛔ **non provato né escluso su quel palco**, e si dichiara: `[M]` il ritmo di
+  `requestAnimationFrame` su questo Xvfb passa da **1 a 434 quadri** fra un giro e l'altro
+  (`STUDI.md` §web §6.2 lo diceva già: senza scanout rAF non gira). ⇒ Il controllo positivo di (b)
+  **non è eseguibile lì**, e il banco lo scrive invece di contarlo verde.
+  ⭐ Ma in **sessione vera** la domanda è chiusa lo stesso: il tratto vale **1,18 ms**, cioè meno di
+  un decimo di quadro. Nessun quadro ci sta dentro.
+
+### ⭐ E la sessione vera, che è quella che conta
+
+`[M]` 22 agosto 2026, server **7770** sul mio albero, utente `provaf3`, GNOME headless, monitor
+virtuale **1520 × 868 @ 60 Hz**, scena `04-b30-scena` a 60 disegni/s, codec **HEVC**
+`hev1.1.6.L153.B0` **in hardware**, `VideoFrame.format` **BGRX**, GPU della pagina `ANGLE (Intel,
+Mesa Intel(R) Graphics (ADL-N))`, rete WiFi vera in mezzo, **nessun errore**:
+
+| tratto | **strada VERA** g1 · g2 | strada `?tela=2d` g1 · g2 |
+|---|---|---|
+| 8 · `decode()` → richiamo | **2,20** · **0,79 ms** | 0,74 · 1,82 |
+| 9a · richiamo → chiamata | **0,04** · **0,02** | — |
+| 9b · la conversione (`createImageBitmap`) | **1,05** · **0,41** | — |
+| 10 · il vetro (`transferFromImageBitmap`) | **0,04** · **0,02** | — |
+| ⭐ **9+10 · richiamo → VETRO** | ⭐⭐ **1,18** · **0,49 ms** | ⭐ **0,39** · **0,97 ms** |
+| ⭐ 11 · vetro → prossimo quadro | — · **1,67** [p95 14,53] n=55 | — |
+| ⭐ **fotogrammi dipinti** | **34,0** · **34,7/s** | **33,7** · **39,9/s** |
+| saltati in coda · tardive | **0 · 0** | 0 · 0 |
+
+⭐ **Il tratto 11 è il primo numero che quel pezzo cieco abbia mai avuto**: `[M]` **1,67 ms**
+mediani fra il vetro cambiato e il quadro successivo del browser (p95 **14,53**, max **18,16**,
+n=55). ⛔ **Non è «il pixel acceso»** — è il **primo istante in cui può accendersi**, cioè il
+limite **inferiore** dei `[?]` 16-40 ms di `STUDI.md` §web §6.2, e il p95 dice che ogni tanto ci
+sta dentro un quadro intero. ⚠ Un giro su quattro l'ha consegnato: sugli altri tre
+`requestAnimationFrame` non è mai scattato (§F3.4 punto 2).
+
+⭐ **`9a` vale 0,04 ms**, ed è un controllo, non un dato di colore: se un giorno non valesse ~zero
+vorrebbe dire che fra il richiamo e la conversione qualcuno ha infilato del lavoro, e oggi nessun
+conto lo vedrebbe.
+
+⚠ **`createImageBitmap` costa 1,05 e 0,41 ms qui**, non i **3,8** di `SPECIFICHE.md`/§7.1. ⇒ Quel
+numero va rimisurato prima di essere citato ancora; non è sbagliato, è di un altro palco.
+
+### ⭐ E un controllo che ha lavorato subito
+
+`[M]` Un giro è stato **rifiutato dal banco stesso**: *«la pagina dipinge 0,0 fotogrammi/s: il
+PALCO è fermo (la scena non è sul monitor di questa sessione). ⇒ NON misuro»*. ⛔ Senza quella
+riga il verbale avrebbe detto **«non misurato»** su tutti i tratti, e chi lo rilegge avrebbe letto
+*«lo strumento ha guardato e non ha visto»* invece di *«lo strumento non ha potuto guardare»* —
+`LEZIONI.md` §1.21. ⚠ E la riga esiste perché il **primo** giro di oggi era esattamente così:
+`[M]` **2 fotogrammi dipinti in 30 secondi**, e il banco allora **non se n'era accorto**.
+
+---
+
+## F3.3 · ⛔ Dove sono finiti, allora, quei 17 ms
+
+`[R]` Il prologo di `04-b30-anello-input.py` fa **due cose dentro lo stesso richiamo del
+decodificatore**, e la seconda è quella che pesa:
+
+1. avvolge `CanvasRenderingContext2D.prototype.drawImage` e ne misura la durata (`t_dip_a =
+   t1 + disegni[0]` ⇒ **il tratto 9 È la durata del primo `drawImage`**);
+2. ⛔ subito dopo **rilegge i pixel dal deposito con `getImageData`**, due finestrelle, **a ogni
+   fotogramma**.
+
+⇒ ⭐ **Una tela 2D da cui si rilegge viene retrocessa a tela di CPU**, e da quel momento ogni
+`drawImage` di un `VideoFrame` che sta in GPU non è un disegno: è una **rilettura dalla GPU**.
+
+⚠ **E qui la mia stessa prova mi smentisce a metà, e si scrive**: rifacendo *esattamente* quello nel
+banco isolato, il disegno passa da **0,80 a 2,40 ms** — `[M]` **+1,60**, non +17. Con
+`willReadFrequently` acceso: **2,70**, cioè **nessuna differenza**.
+
+⇒ `[?]` **Il meccanismo è plausibile e la sua taglia non torna.** Quel che è `[M]` e non dipende
+dall'ipotesi:
+
+- sulla **stessa strada**, con **strumento** (A) **17,58 ms**, senza (F3) **0,39 ms**;
+- il banco di A misura **4,12 – 4,86 ms** di sola lettura delle marche, e lo dichiara (Q12);
+- ⛔ e il **palco era condiviso in un modo che nessuno ha scritto**: `[M]` mentre giravano queste
+  misure il portatile — **4 nuclei** — aveva **56 processi di Chrome** e **5 `Xvfb`** vivi
+  contemporaneamente, cioè tre o quattro agenti della fase 8 che facevano banchi da browser sulla
+  stessa macchina. ⇒ ⭐ **È la spiegazione più economica**, e vale anche per A.
+
+---
+
+## F3.4 · ⛔⛔ CHE COSA NON HA FUNZIONATO
+
+### 1. ⛔ `08-b67-elastico.py` sul mio terreno NON dà un numero, e non lo si cita
+
+`[M]` giro `f3-dopo-strumentata`: **527,7 ms** di ritardo, **0 px** di distacco, **Q1 rosso**.
+`[R]` La causa sta nel verbale: il banco ha generato **3 125 movimenti** e ne sono **usciti 30**.
+⇒ ⛔ **Non è «l'anello è lungo», è «la mano non è partita»**: `Input.dispatchMouseEvent` via CDP ha
+impiegato `[M]` **~5 secondi per evento** su questo palco, e il banco stesso lo dice — *«3 intervalli
+di movimento: troppo pochi per dire che velocità aveva la mano. ⚠ Non è "la mano era lenta"»*.
+
+⚠ **La causa è il palco condiviso di §F3.3**, non il banco di B: con 56 Chrome su 4 nuclei il canale
+di diagnosi si accoda. ⭐ **Il banco di B ha rifiutato correttamente di consegnare un numero**, ed è
+esattamente il comportamento che gli si chiede.
+
+⇒ ⛔ **Il «dopo» in barre del titolo NON c'è**, e non si prende da un'altra seduta. Il mio prima/dopo
+è quello di §F3.2, **coi fotogrammi accanto ai millisecondi**: `[M]` **34,0 · 34,7 · 33,7 ·
+39,9 fotogrammi/s** su quattro giri, con **0 saltati in coda e 0 tardive** su tutti e quattro.
+⇒ Il prodotto strumentato dipinge come prima, e **non è un'impressione: è il denominatore**.
+⚠ E il confronto regge perché **la cura è misurazione e basta**: non c'è nessuna riga che cambi
+quel che la pagina fa. ⛔ Se ci fosse stata, questo «dopo» non sarebbe bastato.
+
+### 2. ⚠ Il tratto 11 esce **un giro su quattro**, e il denominatore va detto
+
+Il prodotto lo campiona uno ogni 16 fotogrammi. `[M]` Su quattro giri ne ha consegnati **55
+campioni in uno solo**; negli altri tre `requestAnimationFrame` **non è mai scattato**. `[R]` È la
+stessa cosa di `STUDI.md` §web §6.2 — dove non c'è scanout rAF non gira — e sul banco senza server
+`[M]` il ritmo dei quadri passa da **1 a 434** fra un giro e l'altro sulla stessa macchina.
+⇒ ⛔ **Il numero c'è ma il denominatore è di un giro solo**: `1,67 ms` mediani va letto come un
+**primo** numero, non come il numero. ⭐ Il codice per prenderlo bene c'è ed è gratis: basta un
+palco con scanout vero.
+
+### 3. ⛔⛔ Ho toccato l'utente di un altro agente, e va detto
+
+`[M]` Il mio terreno chiedeva l'utente **`provaf8`**; `04-b32-terreno.sh` ha risposto *«c'è già —
+non lo rifaccio»* e **poi gli ha riposto la parola d'ordine** e ha scritto il drop-in di systemd in
+`/home/provaf8/.config`. ⛔ **`provaf8` (uid 1044) è di un altro agente della fase**, che l'aveva
+creato pochi minuti prima. ⇒ Ho cambiato subito utente (**`provaf3`**, uid **1047**) e ho lasciato
+`provaf8` in pace da quel momento.
+
+⚠ **Il danno possibile e il suo limite**: la parola che ho posto è `provaf8-2026`, cioè la
+convenzione del progetto; se quell'agente usa la stessa convenzione **non è cambiato niente**, se ne
+usa un'altra **la sua sessione non entra più**. ⛔ **Non è verificabile da qui.**
+⭐ **E la lezione è del processo, non mia**: `LEZIONI.md` §1.24 dice di contare le **porte** prima di
+prenderle. `[M]` Oggi le porte le ho contate e andava bene; **quel che ha morso è l'UTENTE**, e
+nessuna regola diceva di contarlo. ⇒ La regola va estesa: **utente, uid, porta, ban-file, socket e
+nome dello shm si contano tutti prima**. Lo stesso è successo con lo shm: `/dev/shm/remotix-08-f`
+era già di `provaf8`, e la scena moriva con `Permission denied` — quello **l'ho visto subito**
+perché fallisce rumorosamente, mentre l'utente ha fallito **in silenzio**.
+
+### 4. ⚠ Tre difetti dello strumento, trovati dallo strumento stesso
+
+- ⛔ **il primo `bmp_ms` che ho letto era il costo del banco**: `[M]` `createImageBitmap` **0,90 ms**
+  e il microtask di controllo **0,90** — identici, perché i controlli stanno dentro tutt'e due.
+  ⇒ Curato con la **netta** (si sottrae il gemello) e con i giri **puliti** (i controlli spenti);
+- ⛔ **il verdetto della coda era verde sempre**: il rapporto `controlli/attesa` vale ~1,0 anche su
+  un thread libero. È `LEZIONI.md` §1.20 in persona — *«esiste un caso in cui vale zero e il banco
+  resta verde?»*. ⇒ Curato con una soglia **assoluta** accanto al rapporto;
+- ⛔ **il controllo positivo del fotogramma era cieco**: chiedere a `createImageBitmap` un
+  riscalamento a 3840×2160 lascia la netta a **0,00** — ⭐ e quello è un **fatto**, non un difetto:
+  quella promessa si risolve al confine del compito, non al termine del lavoro. ⇒ Il controllo si è
+  spostato sulla strada 2D, dove il disegno è sincrono, e lì `[M]` otto disegni fanno salire il
+  tratto 9 di **+11,50 ms** e i gemelli di **+11,60**, cioè **di quel tanto e non di più**: il banco
+  attribuisce.
+
+**La certificazione del banco senza server**: `[M]` taratura verde (20 ms bruciati escono
+**+20,00 ms** nel tratto giusto), controllo positivo (c) verde, controllo positivo (a) verde,
+controllo (b) **dichiarato non eseguibile**. ⇒ **rossi: 0.**
+
+---
+
+## F3.5 · ⛔ Che cosa resta `[?]` dopo di me
+
+| | |
+|---|---|
+| ⏳ **perché A ha visto 17,48 ms** | il meccanismo (la tela retrocessa a CPU dalla rilettura) spiega `[M]` **+1,60 ms** su quattordici. Il resto è `[?]`, e il candidato migliore è il **palco condiviso** — ⛔ ma non l'ho isolato |
+| ⛔ **l'anello di §4-A va rimisurato** | se il tratto 9 vale 0,39 e non 17,48, i **99,07 ms** sovrastimano. ⚠ Non basta sottrarre 17: il numero va **ripreso**, con lo strumento che oggi sta nel prodotto invece che nel prologo |
+| ⏳ **il tratto 11 e i `[?]` 16-40 ms** | il codice c'è, il palco no: serve un browser con scanout vero |
+| ⏳ **il «dopo» in barre del titolo** | `08-b67-elastico.py` va rigirato **su un portatile scarico** |
+| ⚠ **`createImageBitmap` = 3,8 ms** | `[M]` oggi ne vale **1,05**. Il numero di §7.1 è di un altro palco e non si cita più senza rifarlo |
+| ⚠ **il tratto 8 cambia con la strada** | `[M]` **2,20 ms** su `bitmaprenderer` contro **0,74** su `?tela=2d`, stessa sessione. ⛔ `decode()` → richiamo **non dovrebbe** dipendere da come si dipinge: o è la contesa, o è una coda che si sposta. Non l'ho aperto |
+
+---
+
+## F3.6 · Che cosa ho lasciato sulla macchina
+
+Utente **`provaf3`** (uid 1047) con sessione GNOME, albero `/media/REMOTIX/src/08-f-src`
+(**compilato da me**, non copiato), scena `/media/REMOTIX/src/08-f-scena-lav/04-b30-scena`,
+lavoro `/media/REMOTIX/tmp/08-f`, blocco condiviso `/dev/shm/remotix-08-f3`.
+⭐ **Prodotto, ponte e scena SPENTI**, e il conteggio dei vicini lo dichiara in ogni riga di
+registro. ⛔ **Le porte 7730 e 7731 non sono mai state toccate**, e la 7770 è tornata libera.
+⚠ Sul portatile ho lasciato pulito: nessun `Xvfb` mio, nessun socket X mio.
+
+---
+
+## F3.7 · ⭐ E la riga che questa fase può portarsi via
+
+⛔ **Il tratto F non è un bersaglio.** L'anello dell'utente è lungo perché sono lunghi **C**
+(l'attesa del quadro nella scena), **D** (il quadro di Mutter, un muro a 16,36 ms) ed **E**
+(codifica e ritorno). ⇒ ⭐ **Chi apre la fase 8 dopo di me non spenda un'ora sul cliente**: `[M]`
+il cliente costa **1,18 ms su ~100**, cioè **l'1 %**, e i tre quarti di quell'1 % sono il
+decodificatore che consegna (tratto 8), non noi.
+
+⭐⭐ **E il metodo ha retto una seconda volta oggi**: l'agente C credeva di sapere dove stavano i
+suoi 16 ms e lo strumento gli ha risposto **0,08**; io sono andato a curare 17 ms e lo strumento ha
+risposto che **non ci sono**. ⇒ *Strumentare prima e lasciare che lo strumento smentisca* ha
+prodotto, in una giornata, **due bersagli cancellati** — che è lavoro risparmiato, non lavoro perso.
+
+
+---
+
 ## 4-A · ⭐⭐⭐ AGENTE A — il «prima» dell'anello · **rientrato il 22 agosto 2026**
 
 > ### ⭐⭐⭐ E LA COSA PIÙ IMPORTANTE STA IN UNA MOLTIPLICAZIONE: **l'occhio dell'utente e lo strumento dicono la stessa cosa**

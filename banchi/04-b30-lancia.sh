@@ -141,29 +141,16 @@ costruisci()
 scena_costruisci()
 {
 	log "Costruisco LA SCENA CHE RISPONDE ALL'INPUT (04-b30-scena.c)"
-	# ⛔ Si compila su un nome nuovo e poi si rinomina: il nucleo rifiuta di
-	#    scrivere su un eseguibile in esecuzione (ETXTBSY) e `gcc -o` lascia
-	#    un binario TRONCATO — cioe' un banco che parte e non si sa che cosa
-	#    esegue.  E' la lezione di `03-scena-accendi.sh`.
-	# ⛔ E la cartella sta sotto `$DENTRO`, non sotto `$LAV`: dentro il
-	#    contenitore `/media/REMOTIX/tmp` NON ESISTE (e' montato solo
-	#    `/media/REMOTIX/src` su `/srv/src`), e un `mkdir` li' dentro
-	#    fallirebbe in silenzio.
-	dentro "set -u
-	P=/usr/share/wayland-protocols
-	L=$DENTRO/04-b30-scena-lav
-	mkdir -p \$L
-	cd \$L
-	wayland-scanner client-header \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
-	wayland-scanner private-code  \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
-	wayland-scanner client-header \$P/stable/presentation-time/presentation-time.xml presentation-time-client-protocol.h
-	wayland-scanner private-code  \$P/stable/presentation-time/presentation-time.xml presentation-time-protocol.c
-	gcc -O2 -Wall -Wextra -o \$L/scena.nuovo $DENTRO/04-b30-scena.c \\
-	    \$L/xdg-shell-protocol.c \$L/presentation-time-protocol.c \\
-	    -I\$L \$(pkg-config --cflags --libs wayland-client) -lrt
-	mv -f \$L/scena.nuovo \$L/04-b30-scena
-	chmod 755 \$L \$L/04-b30-scena
-	echo COSTRUITA"
+	# ⛔⛔ 22 agosto 2026 — LA COSTRUZIONE STA IN UN FILE, e non e' una
+	#     preferenza: `[M]` la versione a riga sola NON funzionava.  `ssh` →
+	#     `enter.sh` → `bash -c` sono TRE livelli di virgolette, `$L` e `$P` si
+	#     perdevano per strada e a `gcc` arrivava `-o /scena.nuovo`.
+	#     ⚠ E falliva in SILENZIO: il banco partiva con la scena di ieri.
+	# ⭐ La regola era gia' scritta nell'intestazione di questo file — «un file
+	#    non ha livelli di virgolette» — e adesso il codice la segue.
+	metti "$QUI/04-b30-scena-costruisci.sh" "$FUORI/04-b30-scena-costruisci.sh" \
+		|| return 1
+	dentro "bash $DENTRO/04-b30-scena-costruisci.sh"
 	return $?
 }
 

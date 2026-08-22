@@ -1,0 +1,2503 @@
+{
+ "2d-hw-pulito": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:02.117Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 425,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 0,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 0.9,
+    "med": 1.8,
+    "p95": 3.2,
+    "max": 17.2,
+    "med_meno_min": 1.2
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.2,
+    "p05": 0.3,
+    "med": 0.8,
+    "p95": 1.7,
+    "max": 8.7,
+    "med_meno_min": 0.6
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.9,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 0.5,
+    "p05": 4.6,
+    "med": 6.6,
+    "p95": 8,
+    "max": 85.4,
+    "med_meno_min": 6.1
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.2,
+    "p05": 0.4,
+    "med": 1,
+    "p95": 1.8,
+    "max": 9.8,
+    "med_meno_min": 0.8
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    386,
+    11,
+    2,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 0.8,
+    "soglia_ms": 5,
+    "tot_ms": 1,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 0.8 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-hw-pulito",
+  "perche": "⭐⭐ IL «PRIMA» DI A, rifatto SENZA strumento addosso: la strada `?tela=2d`, quella dei 17,48 ms"
+ },
+ "bitmap-hw-pulito": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:09.665Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 427,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 2700,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 1.4,
+    "med": 2.3,
+    "p95": 3.7,
+    "max": 7.1,
+    "med_meno_min": 1.5
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 1.4,
+    "p05": 2,
+    "med": 2.7,
+    "p95": 4,
+    "max": 6,
+    "med_meno_min": 1.3
+   },
+   "vetro": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": {
+    "n": 400,
+    "min": 2.4,
+    "p05": 3.9,
+    "med": 9.8,
+    "p95": 11.7,
+    "max": 20.1,
+    "med_meno_min": 7.4
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 1.5,
+    "p05": 2.1,
+    "med": 2.8,
+    "p95": 4,
+    "max": 6.1,
+    "med_meno_min": 1.3
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    17,
+    362,
+    20,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.7,
+    "soglia_ms": 5,
+    "tot_ms": 2.8,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.7 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "bitmap-hw-pulito",
+  "perche": "⭐⭐ LA STRADA VERA del prodotto (`bitmaprenderer`), senza strumento"
+ },
+ "2d-hw-letto": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:17.265Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 427,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 4000,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.7,
+    "p05": 1.1,
+    "med": 1.5,
+    "p95": 2.1,
+    "max": 7.6,
+    "med_meno_min": 0.8
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 1.1,
+    "p05": 1.8,
+    "med": 2.4,
+    "p95": 3.3,
+    "max": 5.3,
+    "med_meno_min": 1.3
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.4,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 2.8,
+    "p05": 3.2,
+    "med": 4.4,
+    "p95": 7.1,
+    "max": 15.4,
+    "med_meno_min": 1.6
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 1.1,
+    "p05": 1.9,
+    "med": 2.6,
+    "p95": 3.5,
+    "max": 5.4,
+    "med_meno_min": 1.5
+   },
+   "letto": {
+    "n": 400,
+    "min": 1.9,
+    "p05": 2.8,
+    "med": 3.9,
+    "p95": 6.5,
+    "max": 8.9,
+    "med_meno_min": 2
+   }
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    33,
+    359,
+    8,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.4,
+    "soglia_ms": 5,
+    "tot_ms": 2.6,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.4 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-hw-letto",
+  "perche": "⭐⭐⭐ LA STRADA VECCHIA **CON LA LETTURA DEI PIXEL DENTRO IL RICHIAMO**, cioe' esattamente quel che fa il prologo di `04-b30`.  ⛔ Se i 17,48 ms compaiono qui e non nel giro pulito, sono dello STRUMENTO"
+ },
+ "2d-hw-letto-freq": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:24.872Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 426,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 5700,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.7,
+    "p05": 1.5,
+    "med": 2.3,
+    "p95": 3.5,
+    "max": 5.9,
+    "med_meno_min": 1.6
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.4,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2.1,
+    "med": 2.7,
+    "p95": 4.1,
+    "max": 8.1,
+    "med_meno_min": 1.5
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.8,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 3.8,
+    "p05": 5.1,
+    "med": 10.1,
+    "p95": 12.1,
+    "max": 21,
+    "med_meno_min": 6.3
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 1.3,
+    "p05": 2.2,
+    "med": 2.8,
+    "p95": 4.3,
+    "max": 8.5,
+    "med_meno_min": 1.5
+   },
+   "letto": {
+    "n": 400,
+    "min": 1.8,
+    "p05": 3.1,
+    "med": 5.6,
+    "p95": 9.8,
+    "max": 13.2,
+    "med_meno_min": 3.8
+   }
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    15,
+    361,
+    19,
+    4,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.7,
+    "soglia_ms": 5,
+    "tot_ms": 2.8,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.7 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-hw-letto-freq",
+  "perche": "⭐ LA CONTRO-PROVA del meccanismo: la stessa lettura ma con `willReadFrequently`.  Se e' la retrocessione della tela, qui cambia"
+ },
+ "bitmap-hw-letto": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:32.516Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 426,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 2500,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 1.2,
+    "med": 1.6,
+    "p95": 2,
+    "max": 5.8,
+    "med_meno_min": 1
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1.8,
+    "med": 2.5,
+    "p95": 3.9,
+    "max": 8.9,
+    "med_meno_min": 1.6
+   },
+   "vetro": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": {
+    "n": 400,
+    "min": 2,
+    "p05": 2.8,
+    "med": 4.8,
+    "p95": 10.5,
+    "max": 26.1,
+    "med_meno_min": 2.8
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1.8,
+    "med": 2.6,
+    "p95": 4,
+    "max": 8.9,
+    "med_meno_min": 1.7
+   },
+   "letto": {
+    "n": 400,
+    "min": 1.8,
+    "p05": 2.5,
+    "med": 3.8,
+    "p95": 6.8,
+    "max": 7.7,
+    "med_meno_min": 2
+   }
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    36,
+    347,
+    14,
+    1,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.5,
+    "soglia_ms": 5,
+    "tot_ms": 2.6,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.5 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "bitmap-hw-letto",
+  "perche": "⭐⭐ e lo stesso sulla strada vera, come lo fa il prologo di `08-b67`"
+ },
+ "2d-hw": {
+  "ok": true,
+  "quando": "2026-08-22T18:36:49.635Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 424,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 100,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.5,
+    "p05": 0.6,
+    "med": 0.7,
+    "p95": 1,
+    "max": 10.7,
+    "med_meno_min": 0.2
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.1,
+    "p05": 0.2,
+    "med": 0.3,
+    "p95": 0.9,
+    "max": 4.4,
+    "med_meno_min": 0.2
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.7,
+    "med_meno_min": 0
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 0.2,
+    "p05": 1.5,
+    "med": 2.6,
+    "p95": 3.9,
+    "max": 96.4,
+    "med_meno_min": 2.4
+   },
+   "micro": {
+    "n": 400,
+    "min": 0.3,
+    "p05": 0.3,
+    "med": 0.4,
+    "p95": 1.1,
+    "max": 5.8,
+    "med_meno_min": 0.1
+   },
+   "macro": {
+    "n": 400,
+    "min": 0.4,
+    "p05": 0.4,
+    "med": 0.5,
+    "p95": 1.2,
+    "max": 6.7,
+    "med_meno_min": 0.1
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 0.3,
+    "p05": 0.3,
+    "med": 0.5,
+    "p95": 1.1,
+    "max": 5.8,
+    "med_meno_min": 0.2
+   },
+   "raf": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2.4,
+    "med": 3.1,
+    "p95": 4.3,
+    "max": 96.8,
+    "med_meno_min": 1.9
+   },
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.3,
+    "p05": 0.3,
+    "med": 0.4,
+    "p95": 1.1,
+    "max": 5.7,
+    "med_meno_min": 0.1
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    396,
+    3,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 0.3,
+    "soglia_ms": 5,
+    "tot_ms": 0.4,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 0.3 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-hw",
+  "perche": "la strada vecchia CON i controlli"
+ },
+ "bitmap-hw": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:47.748Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 427,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 2700,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 1.2,
+    "med": 1.8,
+    "p95": 2.8,
+    "max": 8.2,
+    "med_meno_min": 1.2
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2,
+    "med": 2.7,
+    "p95": 4,
+    "max": 11.1,
+    "med_meno_min": 1.5
+   },
+   "vetro": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": {
+    "n": 400,
+    "min": 0.4,
+    "p05": 4.2,
+    "med": 6.1,
+    "p95": 7.3,
+    "max": 8.9,
+    "med_meno_min": 5.7
+   },
+   "micro": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2,
+    "med": 2.7,
+    "p95": 3.9,
+    "max": 11.1,
+    "med_meno_min": 1.5
+   },
+   "macro": {
+    "n": 400,
+    "min": 1.3,
+    "p05": 2.2,
+    "med": 2.9,
+    "p95": 4.2,
+    "max": 11.3,
+    "med_meno_min": 1.6
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2,
+    "med": 2.7,
+    "p95": 3.9,
+    "max": 11.1,
+    "med_meno_min": 1.5
+   },
+   "raf": {
+    "n": 400,
+    "min": 3.4,
+    "p05": 7.6,
+    "med": 8.9,
+    "p95": 9.6,
+    "max": 11.5,
+    "med_meno_min": 5.5
+   },
+   "bmp_netta": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1
+   },
+   "bmp_su_piccola": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1
+   },
+   "tot": {
+    "n": 400,
+    "min": 1.2,
+    "p05": 2.1,
+    "med": 2.7,
+    "p95": 4,
+    "max": 11.1,
+    "med_meno_min": 1.5
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    15,
+    365,
+    18,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.7,
+    "soglia_ms": 5,
+    "tot_ms": 2.7,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.7 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "bitmap-hw",
+  "perche": "la strada vera con i controlli"
+ },
+ "2d-hw-letto-c": {
+  "ok": true,
+  "quando": "2026-08-22T18:34:55.353Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 427,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 3900,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 1.2,
+    "med": 1.9,
+    "p95": 3.4,
+    "max": 19.8,
+    "med_meno_min": 1.3
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1.6,
+    "med": 2.5,
+    "p95": 3.8,
+    "max": 9.3,
+    "med_meno_min": 1.6
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.4,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 2.5,
+    "p05": 3.8,
+    "med": 4.6,
+    "p95": 6.9,
+    "max": 25.8,
+    "med_meno_min": 2.1
+   },
+   "micro": {
+    "n": 400,
+    "min": 3.2,
+    "p05": 4.4,
+    "med": 6.5,
+    "p95": 9.8,
+    "max": 21.2,
+    "med_meno_min": 3.3
+   },
+   "macro": {
+    "n": 399,
+    "min": 3.3,
+    "p05": 4.6,
+    "med": 6.8,
+    "p95": 10.1,
+    "max": 21.7,
+    "med_meno_min": 3.5
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 3.2,
+    "p05": 4.4,
+    "med": 6.5,
+    "p95": 9.8,
+    "max": 21.2,
+    "med_meno_min": 3.3
+   },
+   "raf": {
+    "n": 400,
+    "min": 3.7,
+    "p05": 6.4,
+    "med": 7.4,
+    "p95": 10.7,
+    "max": 27.7,
+    "med_meno_min": 3.7
+   },
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 1.1,
+    "p05": 1.9,
+    "med": 2.8,
+    "p95": 4.3,
+    "max": 9.7,
+    "med_meno_min": 1.7
+   },
+   "letto": {
+    "n": 400,
+    "min": 1.7,
+    "p05": 2.4,
+    "med": 3.6,
+    "p95": 5.6,
+    "max": 16.9,
+    "med_meno_min": 1.9
+   }
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    37,
+    346,
+    14,
+    2,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.5,
+    "soglia_ms": 5,
+    "tot_ms": 2.8,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.5 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-hw-letto-c",
+  "perche": "⭐⭐ la strada vecchia con la lettura E i controlli: e' il giro che attribuisce l'attesa quando l'attesa c'e'"
+ },
+ "2d-h264-hw": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:03.004Z",
+  "strada": "2d",
+  "codec_chiesto": "avc1.640033",
+  "codec": "h264",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "avc1.640033",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "avc1.640033",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 255,
+   "quadro_med_ms": 16.7,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 100,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.5,
+    "p05": 0.8,
+    "med": 2.2,
+    "p95": 5.2,
+    "max": 13.3,
+    "med_meno_min": 1.7
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 1,
+    "med": 2.8,
+    "p95": 5.6,
+    "max": 13.2,
+    "med_meno_min": 2
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.4,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 249,
+    "min": 0.2,
+    "p05": 2.6,
+    "med": 10.4,
+    "p95": 14.1,
+    "max": 22.3,
+    "med_meno_min": 10.2
+   },
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1,
+    "med": 3,
+    "p95": 5.8,
+    "max": 13.3,
+    "med_meno_min": 2.1
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    86,
+    256,
+    44,
+    7,
+    4,
+    1,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.8,
+    "soglia_ms": 5,
+    "tot_ms": 3,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.8 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-h264-hw",
+  "perche": "⚠ un ALTRO decodificatore hardware sullo stesso palco"
+ },
+ "2d-h264-sw": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:10.628Z",
+  "strada": "2d",
+  "codec_chiesto": "avc1.640033",
+  "codec": "h264",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "avc1.640033",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-software"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "avc1.640033",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-software",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 1,
+   "quadro_med_ms": null,
+   "scanout": false
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 0,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 1.8,
+    "p05": 2.2,
+    "med": 5.3,
+    "p95": 9,
+    "max": 16.3,
+    "med_meno_min": 3.5
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 0.7,
+    "med": 1.5,
+    "p95": 4.4,
+    "max": 6.8,
+    "med_meno_min": 0.9
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 1.1,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": null,
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.7,
+    "p05": 0.8,
+    "med": 1.6,
+    "p95": 4.5,
+    "max": 7,
+    "med_meno_min": 0.9
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    275,
+    99,
+    24,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 1.5,
+    "soglia_ms": 5,
+    "tot_ms": 1.6,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 1.5 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-h264-sw",
+  "perche": "⛔ IL CONTROLLO DELL'IPOTESI (a): lo stesso stream in SOFTWARE.  ⚠ HEVC non si puo' usare per questo confronto — `[M]` Chrome rifiuta `prefer-software` su HEVC, cioe' su questo motore HEVC e' SOLO hardware"
+ },
+ "2d-h264-sw-letto": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:18.273Z",
+  "strada": "2d",
+  "codec_chiesto": "avc1.640033",
+  "codec": "h264",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": null,
+  "campione": 999999,
+  "config": {
+   "codec": "avc1.640033",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-software"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "avc1.640033",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-software",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 1,
+   "quadro_med_ms": null,
+   "scanout": false
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 7900,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 2,
+    "p05": 3.2,
+    "med": 8.5,
+    "p95": 71.7,
+    "max": 93.7,
+    "med_meno_min": 6.5
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 0.8,
+    "med": 1.7,
+    "p95": 3.3,
+    "max": 7.6,
+    "med_meno_min": 1.1
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 1,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": null,
+   "micro": null,
+   "macro": null,
+   "piccolo": null,
+   "raf": null,
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 0.7,
+    "p05": 0.8,
+    "med": 1.8,
+    "p95": 3.5,
+    "max": 7.8,
+    "med_meno_min": 1.1
+   },
+   "letto": {
+    "n": 400,
+    "min": 3.7,
+    "p05": 4.8,
+    "med": 7.9,
+    "p95": 12.3,
+    "max": 16.9,
+    "med_meno_min": 4.2
+   }
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    242,
+    150,
+    7,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 1.7,
+    "soglia_ms": 5,
+    "tot_ms": 1.8,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 1.7 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "2d-h264-sw-letto",
+  "perche": "⭐⭐ e la lettura su un fotogramma che NON viene dalla GPU: se il costo e' la rilettura di una superficie di GPU, qui NON deve comparire"
+ },
+ "bitmap-hw-brucia": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:27.881Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": "g1-brucia-nel-richiamo",
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 1,
+   "quadro_med_ms": null,
+   "scanout": false
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 21200,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 45.7,
+    "med": 934.2,
+    "p95": 1815.3,
+    "max": 1988.5,
+    "med_meno_min": 933.3
+   },
+   "pre": {
+    "n": 400,
+    "min": 20,
+    "p05": 20,
+    "med": 20,
+    "p95": 20.1,
+    "max": 20.1,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 0.9,
+    "med": 1.2,
+    "p95": 2.5,
+    "max": 6.1,
+    "med_meno_min": 0.4
+   },
+   "vetro": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": null,
+   "micro": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 0.9,
+    "med": 1.2,
+    "p95": 2.4,
+    "max": 6.1,
+    "med_meno_min": 0.4
+   },
+   "macro": {
+    "n": 59,
+    "min": 1.6,
+    "p05": 23.1,
+    "med": 133.1,
+    "p95": 154.9,
+    "max": 157.4,
+    "med_meno_min": 131.5
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 0.9,
+    "med": 1.2,
+    "p95": 2.4,
+    "max": 6.1,
+    "med_meno_min": 0.4
+   },
+   "raf": null,
+   "bmp_netta": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1
+   },
+   "bmp_su_piccola": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1
+   },
+   "tot": {
+    "n": 400,
+    "min": 20.8,
+    "p05": 21,
+    "med": 21.2,
+    "p95": 22.5,
+    "max": 26.2,
+    "med_meno_min": 0.4
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    350,
+    46,
+    3,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 1.2,
+    "soglia_ms": 5,
+    "tot_ms": 21.2,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 1.2 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "bitmap-hw-brucia",
+  "perche": "⭐ LA TARATURA: 20 ms bruciati fra il richiamo e la chiamata devono uscire NEL TRATTO GIUSTO (`pre`), e non altrove"
+ },
+ "bitmap-hw-coda": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:37.378Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": "g5-brucia-dopo-i-controlli",
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 1,
+   "quadro_med_ms": null,
+   "scanout": false
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 21300,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.8,
+    "p05": 44.1,
+    "med": 903.9,
+    "p95": 1824.7,
+    "max": 1957.3,
+    "med_meno_min": 903.1
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 20.8,
+    "p05": 20.9,
+    "med": 21.3,
+    "p95": 22.3,
+    "max": 24.1,
+    "med_meno_min": 0.5
+   },
+   "vetro": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.1,
+    "med_meno_min": 0
+   },
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": null,
+   "micro": {
+    "n": 400,
+    "min": 20.7,
+    "p05": 20.9,
+    "med": 21.3,
+    "p95": 22.3,
+    "max": 24.1,
+    "med_meno_min": 0.6
+   },
+   "macro": {
+    "n": 82,
+    "min": 21.1,
+    "p05": 21.4,
+    "med": 109.2,
+    "p95": 152.3,
+    "max": 175.6,
+    "med_meno_min": 88.1
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 20.7,
+    "p05": 20.9,
+    "med": 21.3,
+    "p95": 22.3,
+    "max": 24.1,
+    "med_meno_min": 0.6
+   },
+   "raf": null,
+   "bmp_netta": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 1.2
+   },
+   "bmp_su_piccola": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 1.2
+   },
+   "tot": {
+    "n": 400,
+    "min": 20.8,
+    "p05": 20.9,
+    "med": 21.3,
+    "p95": 22.4,
+    "max": 24.2,
+    "med_meno_min": 0.5
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    336,
+    62,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "c_coda": {
+    "controlli_ms": 21.3,
+    "attesa_ms": 21.3,
+    "quota": 1,
+    "spiega": true
+   },
+   "a_fotogramma": {
+    "netta_ms": 0,
+    "attesa_ms": 21.3,
+    "quota_del_fotogramma": 0,
+    "spiega": false
+   },
+   "b_quadro": {
+    "spiega": null,
+    "quadri": 1,
+    "perche": "⛔ `requestAnimationFrame` ha girato 1 volte: questo palco NON ha scanout (`STUDI.md` §web §6.2, Xvfb). L'ipotesi del quadro qui non si prova NE' si esclude."
+   }
+  },
+  "giro": "bitmap-hw-coda",
+  "perche": "⭐⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (c): 20 ms bruciati DOPO che i controlli sono partiti.  ⇒ Tutti e quattro devono salire di 20 insieme e la NETTA restare a zero"
+ },
+ "2d-hw-grande": {
+  "ok": true,
+  "quando": "2026-08-22T18:37:03.268Z",
+  "strada": "2d",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": "g6-disegno-grande",
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 139,
+   "quadro_med_ms": 109.8,
+   "scanout": true
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 400,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 200,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 3.1,
+    "p05": 236.3,
+    "med": 2930.1,
+    "p95": 5636.8,
+    "max": 6022.7,
+    "med_meno_min": 2927
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 0.2,
+    "med_meno_min": 0
+   },
+   "bmp": null,
+   "vetro": null,
+   "draw1": {
+    "n": 400,
+    "min": 6.1,
+    "p05": 7.3,
+    "med": 11.8,
+    "p95": 24.8,
+    "max": 31.9,
+    "med_meno_min": 5.7
+   },
+   "draw2": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0.1,
+    "p95": 0.2,
+    "max": 0.7,
+    "med_meno_min": 0.1
+   },
+   "dopo_raf": {
+    "n": 400,
+    "min": 0.1,
+    "p05": 0.3,
+    "med": 88.2,
+    "p95": 135.5,
+    "max": 161.2,
+    "med_meno_min": 88.1
+   },
+   "micro": {
+    "n": 400,
+    "min": 6.2,
+    "p05": 7.5,
+    "med": 12,
+    "p95": 25,
+    "max": 32.3,
+    "med_meno_min": 5.8
+   },
+   "macro": {
+    "n": 77,
+    "min": 11.9,
+    "p05": 16.5,
+    "med": 173.4,
+    "p95": 247.6,
+    "max": 297.8,
+    "med_meno_min": 161.5
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 6.3,
+    "p05": 7.5,
+    "med": 12,
+    "p95": 25,
+    "max": 32.3,
+    "med_meno_min": 5.7
+   },
+   "raf": {
+    "n": 400,
+    "min": 8.3,
+    "p05": 13,
+    "med": 98.9,
+    "p95": 157.2,
+    "max": 174.7,
+    "med_meno_min": 90.6
+   },
+   "bmp_netta": null,
+   "bmp_su_piccola": null,
+   "tot": {
+    "n": 400,
+    "min": 6.2,
+    "p05": 7.5,
+    "med": 12,
+    "p95": 25,
+    "max": 32.4,
+    "med_meno_min": 5.8
+   },
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    0,
+    0,
+    0,
+    36,
+    81,
+    90,
+    54,
+    29,
+    19,
+    15,
+    17,
+    33,
+    16,
+    5,
+    4,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "c_coda": {
+    "controlli_ms": 12,
+    "attesa_ms": 11.8,
+    "quota": 1.017,
+    "spiega": true
+   },
+   "a_fotogramma": {
+    "netta_ms": -0.2,
+    "attesa_ms": 11.8,
+    "quota_del_fotogramma": -0.017,
+    "spiega": false
+   },
+   "b_quadro": {
+    "quadro_ms": 109.8,
+    "attesa_ms": 11.8,
+    "prossimo_quadro_ms": 98.9,
+    "quadri": 139,
+    "spiega": false,
+    "vicino_al_quadro": false,
+    "coincide_col_prossimo": false
+   }
+  },
+  "giro": "2d-hw-grande",
+  "perche": "⭐⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (a): si da' al DISEGNO lavoro vero sul fotogramma (3840×2160).  ⇒ Il tratto 9 deve salire e i controlli NO"
+ },
+ "bitmap-hw-quadro": {
+  "ok": true,
+  "quando": "2026-08-22T18:35:56.990Z",
+  "strada": "bitmap",
+  "codec_chiesto": "hev1.1.6.L153.B0",
+  "codec": "hevc",
+  "ritmo": 60,
+  "salta": false,
+  "guasto": "g7-vetro-sul-quadro",
+  "campione": 1,
+  "config": {
+   "codec": "hev1.1.6.L153.B0",
+   "codedWidth": 1460,
+   "codedHeight": 888,
+   "optimizeForLatency": true,
+   "hardwareAcceleration": "prefer-hardware"
+  },
+  "sostegno": {
+   "config": {
+    "codec": "hev1.1.6.L153.B0",
+    "codedHeight": 888,
+    "codedWidth": 1460,
+    "flip": false,
+    "hardwareAcceleration": "prefer-hardware",
+    "optimizeForLatency": true,
+    "rotation": 0
+   },
+   "supported": true
+  },
+  "palco": {
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+   "dpr": 1,
+   "gpu": "ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N), OpenGL ES 3.2)",
+   "quadri": 0,
+   "quadro_med_ms": null,
+   "scanout": false
+  },
+  "conti": {
+   "consegnati": 400,
+   "usciti": 400,
+   "dipinti": 0,
+   "saltati": 0,
+   "senza_attesa": 0,
+   "errori": []
+  },
+  "costo_strumento_us": 2400,
+  "serie": {
+   "out": {
+    "n": 400,
+    "min": 0.6,
+    "p05": 0.7,
+    "med": 1.6,
+    "p95": 4546.1,
+    "max": 4791.9,
+    "med_meno_min": 1
+   },
+   "pre": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 20.6,
+    "med_meno_min": 0
+   },
+   "bmp": {
+    "n": 400,
+    "min": 1,
+    "p05": 1.1,
+    "med": 2.4,
+    "p95": 5.1,
+    "max": 619.8,
+    "med_meno_min": 1.4
+   },
+   "vetro": null,
+   "draw1": null,
+   "draw2": null,
+   "dopo_raf": null,
+   "micro": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1.1,
+    "med": 2.4,
+    "p95": 5,
+    "max": 617.5,
+    "med_meno_min": 1.5
+   },
+   "macro": {
+    "n": 378,
+    "min": 1,
+    "p05": 1.2,
+    "med": 2.6,
+    "p95": 5.7,
+    "max": 669.7,
+    "med_meno_min": 1.6
+   },
+   "piccolo": {
+    "n": 400,
+    "min": 0.9,
+    "p05": 1.1,
+    "med": 2.4,
+    "p95": 5,
+    "max": 617.5,
+    "med_meno_min": 1.5
+   },
+   "raf": null,
+   "bmp_netta": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 5.2
+   },
+   "bmp_su_piccola": {
+    "n": 400,
+    "min": 0,
+    "p05": 0,
+    "med": 0,
+    "p95": 0.1,
+    "max": 5.2
+   },
+   "tot": null,
+   "letto": null
+  },
+  "istogramma_attesa": {
+   "larghezza": 2,
+   "celle": [
+    163,
+    201,
+    23,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    8
+   ],
+   "n": 400
+  },
+  "verdetti": {
+   "giudicabile": true,
+   "nessuna_attesa": {
+    "attesa_ms": 2.4,
+    "soglia_ms": 5,
+    "tot_ms": null,
+    "perche": "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: il disegno costa 2.4 ms, sotto la soglia di 5. ⇒ I 17,48 ms di A NON sono un costo intrinseco di questa chiamata su questo ferro."
+   }
+  },
+  "giro": "bitmap-hw-quadro",
+  "perche": "⭐⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (b): il vetro si consegna SUL QUADRO.  ⇒ `tot` deve salire di ~un quadro e `bmp` non muoversi"
+ }
+}

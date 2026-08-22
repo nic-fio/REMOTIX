@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>08-F3 · quanto si aspetta, e ASPETTANDO CHE COSA</title>
+<style>
+  body { background:#111; color:#ddd; font:13px/1.45 monospace; margin:12px; }
+  #tela { border:1px solid #333; width:365px; height:222px; image-rendering:pixelated; }
+  pre { white-space:pre-wrap; }
+</style>
+<h1>08-F3 · i millisecondi in cui non succede niente</h1>
+<canvas id="tela" width="16" height="16"></canvas>
+<pre id="stato">…</pre>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 08-F3 — ⛔ CHE COSA SONO I 17 MILLISECONDI, E NON «QUANTO VALGONO».
+ *
+ * ⛔⛔ IL PUNTO DI PARTENZA, E VA LETTO PRIMA DEL CODICE.
+ *
+ *   L'agente A ha scomposto l'anello e ha trovato, sulla strada di disegno
+ *   `?tela=2d`:
+ *
+ *       9 · richiamo del decodificatore → 1° `drawImage`   17,48 ms
+ *      10 · 1° → 2° `drawImage` (il disegno VERO)           0,10 ms
+ *
+ *   ⇒ ⭐ Il disegno costa 0,10.  L'attesa ne costa 17,48 — 163 volte tanto.
+ *     La riga «il collo di bottiglia e' il disegno» e' FALSA con la misura.
+ *
+ * ⛔ Ma «e' un'attesa» non e' una diagnosi: e' l'assenza di una diagnosi.  Le
+ *    attese che possono valere 17 ms qui dentro sono TRE, hanno cure diverse,
+ *    e UNA E' UN MURO:
+ *
+ *   ┌───┬──────────────────────────────────┬──────────────────────────────────┐
+ *   │   │ l'ipotesi                        │ ⭐ COME APPARIREBBE (`LEZIONI.md`│
+ *   │   │                                  │    §1.11 regola 1)               │
+ *   ├───┼──────────────────────────────────┼──────────────────────────────────┤
+ *   │ a │ il DECODIFICATORE hardware       │ l'attesa e' dentro la conversione│
+ *   │   │ macina                           │ del fotogramma e SOLO li'; i     │
+ *   │   │                                  │ controlli (microtask, macrotask, │
+ *   │   │                                  │ immagine piccola) restano a ~0;  │
+ *   │   │                                  │ ⭐ e CAMBIA se si decodifica in  │
+ *   │   │                                  │ software, o se il fotogramma     │
+ *   │   │                                  │ cambia misura                    │
+ *   ├───┼──────────────────────────────────┼──────────────────────────────────┤
+ *   │ b │ si aspetta un QUADRO del browser │ ⛔ E' IL MURO.  L'attesa sta     │
+ *   │   │ (16,7 ms a 60 Hz — un numero     │ incollata al quadro: mediana ~16,7│
+ *   │   │ sospettosamente vicino)          │ e dispersione stretta, oppure    │
+ *   │   │                                  │ uniforme su [0, 16,7] con la     │
+ *   │   │                                  │ FASE che la spiega; ⭐ e SPARISCE│
+ *   │   │                                  │ dove non c'e' scanout (Xvfb:     │
+ *   │   │                                  │ `[M]` 13 ago, rAF non gira mai)  │
+ *   ├───┼──────────────────────────────────┼──────────────────────────────────┤
+ *   │ c │ la PROMESSA si risolve tardi     │ i controlli salgono INSIEME      │
+ *   │   │ perche' il thread e' occupato    │ all'attesa: microtask e macrotask│
+ *   │   │ (coda di compiti)                │ misurati NELLO STESSO ISTANTE    │
+ *   │   │                                  │ valgono anche loro ~17           │
+ *   └───┴──────────────────────────────────┴──────────────────────────────────┘
+ *
+ * ⛔⛔ E LA TRAPPOLA CHE HA GIA' MORSO: il numero di A e' della strada
+ *     `?tela=2d`, cioe' quella del 14 agosto.  Dal 20 agosto il prodotto
+ *     dipinge con `bitmaprenderer` + `createImageBitmap` (`DECISIONI.md` §5.4).
+ *     ⇒ Questo banco misura **tutt'e due le strade sullo stesso stream**, o il
+ *       confronto non si potrebbe fare.
+ *
+ * ⛔ PERCHE' SENZA SERVER.  Il tratto da diagnosticare sta INTERAMENTE dentro
+ *    il browser: `decode()` → richiamo → immagine → vetro.  Un server in mezzo
+ *    aggiunge cinque tratti che non c'entrano e una rete che disperde.  ⭐ E la
+ *    conferma sulla strada vera si fa dopo, in sessione, con lo strumento che
+ *    sta dentro `src/pagina.html`.
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+const Q = new URLSearchParams(location.search);
+const STRADA   = Q.get("strada")   || "bitmap";   /* bitmap | 2d */
+const CODEC    = Q.get("codec")    || "hevc";     /* hevc | h264 */
+const RITMO    = +(Q.get("ritmo")  || 60);        /* fotogrammi/s consegnati; 0 = a raffica */
+const QUANTI   = +(Q.get("quanti") || 400);
+const CAMPIONE = +(Q.get("campione") || 1);       /* 1 = i controlli a OGNI fotogramma */
+const GUASTO   = Q.get("guasto")   || "";
+/* ⭐⭐ `?leggi=1` — ⛔ E NON E' UN GUASTO INNESTATO: E' QUEL CHE FA IL BANCO.
+ *
+ * `banchi/04-b30-anello-input.py` (l'agente A) legge la marca DAL DEPOSITO
+ * con `getImageData`, **a ogni fotogramma**, dentro lo stesso richiamo.  ⛔ E
+ * una tela 2D da cui si rilegge viene retrocessa a tela di CPU: da quel
+ * momento ogni `drawImage` di un `VideoFrame` che sta in GPU e' una
+ * RILETTURA DALLA GPU, non un disegno.
+ * ⇒ ⭐ Se i 17,48 ms fossero questo, sarebbero **dello strumento**, non del
+ *   prodotto — e l'unico modo di saperlo e' rifare quel che lo strumento fa. */
+const LEGGI    = Q.get("leggi") === "1";
+const FREQ     = Q.get("freq") === "1";   /* `willReadFrequently`: la contro-prova */
+const SALTA    = Q.get("salta") === "1";          /* la regola del prodotto: coda > 2 ⇒ si butta */
+
+const tela = document.getElementById("tela");
+const stato = document.getElementById("stato");
+function dice(t) { stato.textContent = t; }
+
+/* ⛔ IL COSTO DELLO STRUMENTO SI MISURA, NON SI SUPPONE (Q12 di 08-b67).
+ *   Un banco che aggiunge piu' di quel che misura misura se stesso. */
+let costo_us = [];
+function ora() { return performance.now(); }
+
+/* ── il guasto innestato, e sta QUI perche' si veda insieme a quel che
+ *    dovrebbe muovere ─────────────────────────────────────────────────── */
+function brucia(ms) { const f = ora() + ms; while (ora() < f) { /* apposta */ } }
+
+/* ⛔ LA LETTURA DEI PIXEL, COME LA FA IL BANCO DI A — due finestrelle di
+ *    marca, `getImageData`, dentro il richiamo.  ⚠ Sulla strada
+ *    `bitmaprenderer` la tela non ha `getImageData`: il banco di B ci
+ *    ridisegna sopra una tela 2D di servizio, e qui si fa lo stesso. */
+let letto = null, letto_p = null;
+function leggi_come_il_banco(sorgente, l, a) {
+  if (STRADA === "2d") {
+    /* la tela del deposito e' gia' 2D: si legge da li', come A */
+    deposito_p.getImageData(0, 0, Math.min(160, l), Math.min(16, a));
+    deposito_p.getImageData(0, Math.max(0, a - 16), Math.min(160, l), 16);
+    return;
+  }
+  if (!letto) {
+    letto = document.createElement("canvas");
+    letto.width = 160; letto.height = 32;
+    letto_p = letto.getContext("2d", { alpha: false, willReadFrequently: FREQ });
+  }
+  letto_p.drawImage(sorgente, 0, 0, 160, 16, 0, 0, 160, 16);
+  letto_p.getImageData(0, 0, 160, 16);
+}
+
+let occupatore = null;
+function accendi_occupatore(ms, ogni) {
+  occupatore = setInterval(() => brucia(ms), ogni);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * I CONTROLLI — ⛔ partono TUTTI nello stesso istante della conversione.
+ *
+ * ⛔ E' l'unico modo in cui distinguono: un microtask misurato mezzo
+ *    millisecondo dopo misurerebbe un'altra coda.
+ * ═════════════════════════════════════════════════════════════════════════ */
+let img_piccola = null;                 /* 2×2, gia' in CPU: niente da decodificare */
+let canale = null, in_attesa_macro = null;
+
+function prepara_controlli() {
+  img_piccola = new ImageData(new Uint8ClampedArray([
+    255,0,0,255, 0,255,0,255, 0,0,255,255, 255,255,255,255]), 2, 2);
+  canale = new MessageChannel();
+  canale.port1.onmessage = () => {
+    if (in_attesa_macro) { in_attesa_macro(ora()); in_attesa_macro = null; }
+  };
+}
+
+function controlli(rec, t0) {
+  /* 1 · microtask: la coda delle promesse, e basta quella */
+  Promise.resolve().then(() => { rec.micro_ms = ora() - t0; });
+  /* 2 · macrotask: la coda dei compiti del thread.  ⛔ `MessageChannel` e non
+   *     `setTimeout(0)`: il secondo ha un minimo imposto dal browser (≥1 ms,
+   *     4 ms annidato) e direbbe «occupato» su un thread libero. */
+  if (!in_attesa_macro) {
+    in_attesa_macro = (t) => { rec.macro_ms = t - t0; };
+    canale.port2.postMessage(0);
+  }
+  /* 3 ⭐⭐ IL CONTROLLO CHE DECIDE: la STESSA chiamata `createImageBitmap`, su
+   *    una sorgente che NON ha niente da decodificare e non sta in GPU.
+   *    ⇒ Se anche questa costa 17 ms, l'attesa e' della coda (ipotesi c).
+   *      Se costa 0,2 mentre quella del fotogramma ne costa 17, l'attesa e'
+   *      del FOTOGRAMMA (ipotesi a o b), e i controlli 4 e 5 le separano. */
+  createImageBitmap(img_piccola).then((b) => {
+    rec.piccolo_ms = ora() - t0; try { b.close(); } catch (e) { /* ok */ }
+  });
+  /* 4 · il prossimo quadro del browser, dallo stesso istante.  ⛔ Se
+   *     l'ipotesi (b) fosse vera, l'attesa e questo numero coinciderebbero. */
+  requestAnimationFrame(() => { rec.raf_ms = ora() - t0; });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * IL QUADRO DEL BROWSER, misurato a parte e SEMPRE
+ *
+ * ⛔ `[M]` 13 agosto 2026 (`STUDI.md` §web §6.2): **su Xvfb `requestAnimationFrame`
+ *    non gira mai** — 0 quadri in 3 secondi.  ⇒ Se questo contatore resta a
+ *    zero, il palco NON ha scanout e l'ipotesi (b) qui **non si puo' provare
+ *    ne' escludere**: si dichiara, non si conclude.
+ * ═════════════════════════════════════════════════════════════════════════ */
+let quadri = 0, quadro_t = [], quadro_ult = null;
+function batti_quadro() {
+  requestAnimationFrame(() => {
+    const t = ora();
+    quadri++;
+    if (quadro_ult !== null) quadro_t.push(t - quadro_ult);
+    quadro_ult = t;
+    batti_quadro();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LE DUE STRADE DI DISEGNO — le STESSE due di `src/pagina.html`
+ * ═══════════════════════════════════════════════════════════════════════════ */
+let bm = null, deposito = null, deposito_p = null, pennello = null;
+function prepara_strada() {
+  if (STRADA === "bitmap") {
+    bm = tela.getContext("bitmaprenderer");
+    if (!bm) throw new Error("questo motore non ha `bitmaprenderer`");
+  } else {
+    pennello = tela.getContext("2d", { alpha: false });
+    if (!pennello) throw new Error("questo motore non ha la tela 2D");
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * IL VERBALE — una riga per fotogramma, e nessun numero si perde per strada
+ * ═══════════════════════════════════════════════════════════════════════════ */
+const righe = [];
+const per_istante = new Map();          /* `timestamp` → riga (la chiave e' unica) */
+
+let dec = null, uscite = 0, dipinti = 0, errori = [];
+let finito = null;
+
+function nuova(ist, t_dec) {
+  const r = { ist: ist, t_dec: t_dec, out_ms: null, pre_ms: null,
+              bmp_ms: null, vetro_ms: null, draw1_ms: null, draw2_ms: null,
+              micro_ms: null, macro_ms: null, piccolo_ms: null, raf_ms: null,
+              dopo_raf_ms: null, coda: null, saltato: false, misura: null,
+              /* ⭐ `tot_ms` = richiamo → vetro cambiato.  ⛔ E' l'UNICO numero
+                 che si confronta con i tratti 9+10 di A senza aggiustamenti:
+                 la' vale 17,48 + 0,10 = 17,58 ms. */
+              tot_ms: null, letto_ms: null };
+  per_istante.set(ist, r);
+  righe.push(r);
+  return r;
+}
+
+function al_vetro(r, t_fine) {
+  dipinti++;
+  /* ⭐ IL PEZZO CHE NESSUN BANCO DI QUESTA FASE MISURA: dal vetro cambiato al
+   *   prossimo quadro del browser.  ⛔ Non e' «il pixel acceso» — quello resta
+   *   cieco (`STUDI.md` §web §6.2, 16-40 ms) — ma e' il suo LIMITE INFERIORE, ed
+   *   e' l'unico pezzo di quei 16-40 che una pagina sappia vedere. */
+  requestAnimationFrame(() => { r.dopo_raf_ms = ora() - t_fine; });
+}
+
+function dipingi(f) {
+  const t_out = ora();
+  uscite++;
+  const r = per_istante.get(f.timestamp);
+  if (!r) { try { f.close(); } catch (e) { /* ok */ } return; }
+  r.out_ms = t_out - r.t_dec;
+  r.coda = dec ? dec.decodeQueueSize : null;
+  r.misura = (f.displayWidth || f.codedWidth) + "x" + (f.displayHeight || f.codedHeight);
+
+  /* ⭐ La stessa regola del prodotto (ancora `F4-CODA-DEL-DECODIFICATORE`), e
+   *   si accende a richiesta: `?salta=1`.  Spenta per difetto perche' un
+   *   fotogramma buttato non ha ne' `bmp_ms` ne' `vetro_ms`, e il banco
+   *   misurerebbe meno fotogrammi dei suoi. */
+  if (SALTA && dec && dec.decodeQueueSize > 2) {
+    r.saltato = true; try { f.close(); } catch (e) { /* ok */ } return;
+  }
+
+  if (GUASTO === "g1-brucia-nel-richiamo") brucia(20);
+
+  const t0 = ora();
+  r.pre_ms = t0 - t_out;
+  if ((righe.length % CAMPIONE) === 0) controlli(r, t0);
+  /* ⭐⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (c), ed e' QUI che va messo: si
+   *    brucia il thread DOPO che i controlli sono partiti e PRIMA che il
+   *    richiamo finisca.  ⇒ Tutti e quattro i numeri devono salire di 20
+   *    INSIEME, e la NETTA deve restare a ZERO.  ⛔ Senza questo giro, «la
+   *    netta e' zero» non distinguerebbe un thread libero da un banco cieco. */
+  if (GUASTO === "g5-brucia-dopo-i-controlli") brucia(20);
+
+  if (STRADA === "bitmap") {
+    /* ⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (a): si da' alla conversione del
+     *   lavoro VERO da fare sul fotogramma (un riscalamento a 3840x2160).
+     *   ⇒ La NETTA deve salire, e i controlli NO. */
+    const opz = (GUASTO === "g6-bmp-riscalata")
+      ? { resizeWidth: 3840, resizeHeight: 2160, resizeQuality: "high" } : undefined;
+    createImageBitmap(f, opz).then((bmp) => {
+      /* ⛔ Si segna PRIMA di qualunque scarto: un'immagine buttata e' costata
+         comunque il suo tempo. */
+      r.bmp_ms = ora() - t0;
+      try { f.close(); } catch (e) { /* ok */ }
+      /* ⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (b): si consegna il vetro SUL
+       *   QUADRO invece che subito.  ⇒ `tot_ms` deve salire di ~un quadro, e
+       *   ne' `bmp` ne' i controlli si devono muovere.  ⛔ E' anche la forma
+       *   che `STUDI.md` §web §6.1 vieta «al meccanismo, non alla parola». */
+      if (GUASTO === "g7-vetro-sul-quadro")
+        requestAnimationFrame(() => al_vetro_bitmap(r, t_out, bmp));
+      else
+        al_vetro_bitmap(r, t_out, bmp);
+    }).catch((e) => {
+      errori.push("createImageBitmap: " + e);
+      try { f.close(); } catch (e2) { /* ok */ }
+    });
+  } else {
+    disegna_2d(r, f, t_out);
+  }
+  costo_us.push((ora() - t_out) * 1000 - (r.draw1_ms || 0) * 1000
+                - (r.draw2_ms || 0) * 1000);
+}
+
+function al_vetro_bitmap(r, t_out, bmp) {
+  const t_v = ora();
+  /* ⛔ La misura si SCRIVE e non si spera: `src/pagina.html` lo paga con due
+   *    sintomi (l'immagine in un buffer 16x16 e l'input morto) su Chrome. */
+  if (tela.width !== bmp.width || tela.height !== bmp.height) {
+    tela.width = bmp.width; tela.height = bmp.height;
+  }
+  bm.transferFromImageBitmap(bmp);
+  const t_f = ora();
+  r.vetro_ms = t_f - t_v;
+  r.tot_ms = t_f - t_out;
+  if (LEGGI) {
+    const t_l = ora();
+    leggi_come_il_banco(tela, tela.width, tela.height);
+    r.letto_ms = ora() - t_l;
+  }
+  al_vetro(r, t_f);
+}
+
+/* ⛔ LA STRADA DEL 14 AGOSTO, riprodotta come sta in `src/pagina.html`:
+ *   `drawImage` del `VideoFrame` in un deposito, e poi deposito -> vista.
+ *   ⭐ E' esattamente la coppia che A chiama tratto 9 e tratto 10. */
+function disegna_2d(r, f, t_out) {
+  let fl = f.displayWidth || f.codedWidth, fa = f.displayHeight || f.codedHeight;
+  /* ⭐⭐ IL CONTROLLO POSITIVO DELL'IPOTESI (a), e sta sulla strada 2D perche'
+   *    e' l'unica in cui il disegno e' SINCRONO — quindi l'unica in cui il
+   *    lavoro sul fotogramma si puo' vedere nel tratto 9.
+   * ⛔ Sulla strada `bitmaprenderer` non si puo' costruire: `[M]` chiedendo a
+   *   `createImageBitmap` un riscalamento a 3840×2160 la NETTA resta **0,00**.
+   *   ⇒ Quella promessa si risolve al confine del compito, non al termine del
+   *     lavoro — ed e' un fatto, non un difetto del controllo. */
+  const grande = (GUASTO === "g6-disegno-grande");
+  if (grande) { fl = 3840; fa = 2160; }
+  if (!deposito) deposito = document.createElement("canvas");
+  if (deposito.width !== fl || deposito.height !== fa) {
+    deposito.width = fl; deposito.height = fa;
+    deposito_p = deposito.getContext("2d", { alpha: false,
+                                             willReadFrequently: FREQ });
+  }
+  const t_d1 = ora();
+  /* ⛔ E il lavoro dev'essere lavoro DAVVERO: `[M]` il solo riscalamento a
+   *   3840×2160 e' costato **−1,40 ms** (cioe' niente: la GPU riscala gratis)
+   *   e il controllo era cieco.  ⇒ Otto disegni, che nessuna scheda regala. */
+  if (grande) { for (let i = 0; i < 8; i++) deposito_p.drawImage(f, 0, 0, fl, fa); }
+  else deposito_p.drawImage(f, 0, 0);
+  const t_d2 = ora();
+  r.draw1_ms = t_d2 - t_d1;            /* ⭐ il tratto 9 di A */
+  try { f.close(); } catch (e) { /* ok */ }
+  if (tela.width !== fl || tela.height !== fa) { tela.width = fl; tela.height = fa; }
+  pennello.drawImage(deposito, 0, 0);
+  const t_d3 = ora();
+  r.draw2_ms = t_d3 - t_d2;            /* ⭐ il tratto 10 di A */
+  r.tot_ms = t_d3 - t_out;
+  if (LEGGI) {
+    const t_l = ora();
+    leggi_come_il_banco(deposito, fl, fa);
+    r.letto_ms = ora() - t_l;
+  }
+  al_vetro(r, t_d3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LA CONSEGNA — al ritmo, non a raffica
+ *
+ * ⛔ A raffica il decodificatore accumula coda, e l'attesa che si misura
+ *    sarebbe LA CODA, non il decodificatore: la stessa forma per cui
+ *    `LEZIONI.md` §6.2 pretende i fotogrammi accanto ai millisecondi.
+ *    ⇒ Per difetto si consegna a 60/s, come fa il server.
+ * ═════════════════════════════════════════════════════════════════════════ */
+async function gira() {
+  prepara_controlli();
+  prepara_strada();
+  batti_quadro();
+  if (GUASTO === "g3-thread-occupato") accendi_occupatore(14, 20);
+
+  dice("scarico lo stream…");
+  const nome = CODEC === "h264" ? "stream.h264" : "stream.h265";
+  const [bin, idx] = await Promise.all([
+    fetch(nome).then((r) => r.arrayBuffer()),
+    fetch(nome + ".json").then((r) => r.json()),
+  ]);
+  const dati = new Uint8Array(bin);
+
+  const config = {
+    codec: idx.codec,
+    codedWidth: idx.larghezza, codedHeight: idx.altezza,
+    optimizeForLatency: true,                     /* ⭐ come il prodotto */
+    hardwareAcceleration: Q.get("hw") === "no" ? "prefer-software"
+                        : (Q.get("hw") === "si" ? "prefer-hardware" : "no-preference"),
+  };
+  let sostegno = null;
+  try { sostegno = await VideoDecoder.isConfigSupported(config); }
+  catch (e) { sostegno = { supported: false, motivo: String(e) }; }
+  if (!sostegno || !sostegno.supported) {
+    dice("⛔ RISULTATO=" + JSON.stringify({ ok: false,
+      perche: "il motore non accetta «" + idx.codec + "»: "
+              + JSON.stringify(sostegno) }));
+    return;
+  }
+
+  dec = new VideoDecoder({
+    output: dipingi,
+    error: (e) => { errori.push(String(e)); },
+  });
+  dec.configure(config);
+
+  const n = Math.min(QUANTI, idx.pacchetti.length);
+  const passo = RITMO > 0 ? 1000 / RITMO : 0;
+  const t_avvio = ora();
+  for (let i = 0; i < n; i++) {
+    const p = idx.pacchetti[i];
+    if (passo) {
+      const dovuto = t_avvio + i * passo;
+      const manca = dovuto - ora();
+      if (manca > 0) await new Promise((r) => setTimeout(r, manca));
+    }
+    const t_dec = ora();
+    const ist = i * 16667;                        /* µs, come il prodotto */
+    nuova(ist, t_dec);
+    try {
+      dec.decode(new EncodedVideoChunk({
+        type: p.chiave ? "key" : "delta", timestamp: ist,
+        data: dati.subarray(p.da, p.da + p.quanti) }));
+    } catch (e) { errori.push("decode: " + e); break; }
+    if ((i % 60) === 0) dice("consegnati " + (i + 1) + "/" + n
+                             + " · usciti " + uscite + " · dipinti " + dipinti);
+  }
+  try { await dec.flush(); } catch (e) { errori.push("flush: " + e); }
+  /* ⛔ Due quadri di grazia: `dopo_raf_ms` dell'ultimo fotogramma arriva dopo
+   *    il `flush`, e senza questa attesa il denominatore mentirebbe. */
+  await new Promise((r) => setTimeout(r, 400));
+  if (occupatore) clearInterval(occupatore);
+  consegna(idx, sostegno, config);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * IL VERDETTO — ⛔ e i numeri non si stampano soltanto: si CONFRONTANO
+ *    (`LEZIONI.md` §1.20: la forma di difetto piu' comune che abbiamo)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+function serie(campo) {
+  const v = righe.map((r) => r[campo]).filter((x) => x !== null && x !== undefined
+                                                     && isFinite(x));
+  if (!v.length) return null;
+  v.sort((a, b) => a - b);
+  const q = (p) => v[Math.min(v.length - 1, Math.max(0, Math.floor(p * v.length)))];
+  return { n: v.length, min: +v[0].toFixed(3), p05: +q(0.05).toFixed(3),
+           med: +q(0.5).toFixed(3), p95: +q(0.95).toFixed(3),
+           max: +v[v.length - 1].toFixed(3),
+           med_meno_min: +(q(0.5) - v[0]).toFixed(3) };
+}
+/* ⭐⭐ L'ATTESA NETTA — ⛔ e nasce da un ROSSO dello strumento stesso.
+ *
+ * `[M]` primo giro: `bmp_ms` mediana **0,90 ms** e il microtask di controllo
+ * **0,90** — identici.  ⇒ Non era il fotogramma: era il costo del RESTO del
+ * richiamo (i controlli stessi), che sta dentro tutt'e due i numeri perche'
+ * tutt'e due partono dallo stesso `t0`.
+ * ⛔ Un banco che avesse consegnato quello 0,90 come «la conversione costa
+ *   0,90» avrebbe misurato SE STESSO — `LEZIONI.md` §1.21 al contrario.
+ * ⇒ ⭐ La NETTA sottrae il gemello: quel che il FOTOGRAMMA aggiunge sopra a
+ *   una continuazione qualunque dello stesso richiamo. */
+function serie_diff(a, b) {
+  const v = [];
+  for (const r of righe) {
+    if (r[a] === null || r[b] === null || r[a] === undefined || r[b] === undefined)
+      continue;
+    v.push(r[a] - r[b]);
+  }
+  if (v.length < 5) return null;
+  v.sort((x, y) => x - y);
+  const q = (p) => v[Math.min(v.length - 1, Math.max(0, Math.floor(p * v.length)))];
+  return { n: v.length, min: +v[0].toFixed(3), p05: +q(0.05).toFixed(3),
+           med: +q(0.5).toFixed(3), p95: +q(0.95).toFixed(3),
+           max: +v[v.length - 1].toFixed(3) };
+}
+function istogramma(campo, larghezza, quante) {
+  const v = righe.map((r) => r[campo]).filter((x) => x !== null && isFinite(x));
+  const c = new Array(quante).fill(0);
+  for (const x of v) c[Math.min(quante - 1, Math.max(0, Math.floor(x / larghezza)))]++;
+  return { larghezza: larghezza, celle: c, n: v.length };
+}
+
+function consegna(idx, sostegno, config) {
+  const S = {
+    /* i tratti */
+    out: serie("out_ms"),                 /* `decode()` → richiamo (tratto 8) */
+    pre: serie("pre_ms"),                 /* richiamo → chiamata (dev'essere ~0) */
+    bmp: serie("bmp_ms"),                 /* ⭐ l'ATTESA, strada `bitmaprenderer` */
+    vetro: serie("vetro_ms"),             /* `transferFromImageBitmap` */
+    draw1: serie("draw1_ms"),             /* ⭐ l'ATTESA, strada 2D (tratto 9 di A) */
+    draw2: serie("draw2_ms"),             /* il disegno VERO (tratto 10 di A) */
+    dopo_raf: serie("dopo_raf_ms"),       /* vetro → prossimo quadro */
+    /* i controlli, nello stesso istante */
+    micro: serie("micro_ms"), macro: serie("macro_ms"),
+    piccolo: serie("piccolo_ms"), raf: serie("raf_ms"),
+    /* ⭐ le NETTE: quel che il FOTOGRAMMA aggiunge sopra al gemello */
+    bmp_netta: serie_diff("bmp_ms", "micro_ms"),
+    bmp_su_piccola: serie_diff("bmp_ms", "piccolo_ms"),
+    /* ⭐⭐ `tot` = richiamo → vetro cambiato: il solo numero confrontabile
+       con i tratti 9+10 di A (17,48 + 0,10 = 17,58 ms) */
+    tot: serie("tot_ms"),
+    letto: serie("letto_ms"),
+  };
+  const attesa = (STRADA === "bitmap") ? S.bmp : S.draw1;
+  const quadro = quadro_t.length
+    ? (quadro_t.slice().sort((a, b) => a - b))[Math.floor(quadro_t.length / 2)] : null;
+
+  /* ── LE TRE IPOTESI, e ciascuna ha un VERDETTO, non una stampa ──────────
+   * ⛔ `LEZIONI.md` §1.11 regola 1: per ogni prova indiretta si e' scritto
+   *    sopra come apparirebbe il caso opposto.  Qui si CONFRONTA. */
+  const verdetti = {};
+  const ok = (x) => x && x.n >= 30;
+
+  /* ⛔⛔ E LA PRIMA DOMANDA NON E' «CHI ASPETTA», E' «SI ASPETTA?».
+   *
+   *   Un banco che partisse dalle tre ipotesi ne sceglierebbe una anche su
+   *   un'attesa di mezzo millisecondo, e la sceglierebbe sul rumore.  ⇒ Sotto
+   *   questa soglia il verdetto e' **«qui non c'e' niente da spiegare»**, e i
+   *   17,48 di A vanno cercati ALTROVE — nel palco o nello strumento, non nel
+   *   disegno.  ⚠ 5 ms = meno di un terzo di un quadro, e trenta volte il
+   *   passo dell'orologio del browser. */
+  const SOGLIA_MS = 5.0;
+
+  if (!ok(attesa)) {
+    verdetti.giudicabile = false;
+    verdetti.perche = "meno di 30 fotogrammi con l'attesa misurata: non ho "
+                    + "niente da giudicare";
+  } else if (attesa.med < SOGLIA_MS) {
+    verdetti.giudicabile = true;
+    verdetti.nessuna_attesa = {
+      attesa_ms: attesa.med, soglia_ms: SOGLIA_MS,
+      tot_ms: S.tot ? S.tot.med : null,
+      perche: "⭐ su questo palco NON c'e' nessuna attesa da diagnosticare: "
+            + "il disegno costa " + attesa.med + " ms, sotto la soglia di "
+            + SOGLIA_MS + ". ⇒ I 17,48 ms di A NON sono un costo intrinseco "
+            + "di questa chiamata su questo ferro.",
+    };
+  } else {
+    verdetti.giudicabile = true;
+    const A = attesa.med;
+    /* (c) la coda: i controlli salgono INSIEME, e in ASSOLUTO.
+     * ⛔ Il rapporto da solo non basta e il primo giro l'ha dimostrato: su un
+     *    thread libero microtask e conversione valgono tutt'e due ~1 ms e il
+     *    rapporto fa 1,0 — cioe' il controllo sarebbe verde SEMPRE
+     *    (`LEZIONI.md` §1.20: «esiste un caso in cui vale zero e il banco resta
+     *    verde?»).  ⇒ Si pretende ANCHE che i controlli superino la soglia. */
+    const coda = Math.min(ok(S.micro) ? S.micro.med : 0,
+                          ok(S.macro) ? S.macro.med : 0);
+    verdetti.c_coda = {
+      controlli_ms: +coda.toFixed(3), attesa_ms: A,
+      quota: +(coda / A).toFixed(3),
+      spiega: coda >= SOGLIA_MS && coda >= 0.5 * A,
+    };
+    /* (a) il fotogramma: la conversione dell'immagine PICCOLA e' il gemello
+     *     esatto della chiamata, meno il fotogramma.  ⇒ La differenza e' quel
+     *     che il FOTOGRAMMA costa, e nient'altro. */
+    const netta = S.bmp_su_piccola ? S.bmp_su_piccola.med
+                : (ok(S.piccolo) ? A - S.piccolo.med : null);
+    verdetti.a_fotogramma = (netta === null) ? {
+      spiega: null, perche: "il controllo dell'immagine piccola non c'e'"
+    } : {
+      netta_ms: +netta.toFixed(3), attesa_ms: A,
+      quota_del_fotogramma: +(netta / A).toFixed(3),
+      spiega: netta >= SOGLIA_MS && netta >= 0.5 * A,
+    };
+    /* (b) il quadro: ⛔ e senza scanout NON si conclude — si dichiara. */
+    if (quadri < 10) {
+      verdetti.b_quadro = { spiega: null, quadri: quadri,
+        perche: "⛔ `requestAnimationFrame` ha girato " + quadri + " volte: "
+              + "questo palco NON ha scanout (`STUDI.md` §web §6.2, Xvfb). "
+              + "L'ipotesi del quadro qui non si prova NE' si esclude." };
+    } else {
+      /* incollata al quadro = la mediana sta a un quadro, oppure l'attesa e
+       * il prossimo quadro coincidono */
+      const vicino_al_quadro = quadro ? Math.abs(A - quadro) / quadro < 0.20 : false;
+      const coincide = ok(S.raf) ? Math.abs(A - S.raf.med) < 2.0 : false;
+      verdetti.b_quadro = {
+        quadro_ms: quadro ? +quadro.toFixed(3) : null, attesa_ms: A,
+        prossimo_quadro_ms: ok(S.raf) ? S.raf.med : null,
+        quadri: quadri,
+        spiega: !!(vicino_al_quadro || coincide),
+        vicino_al_quadro: vicino_al_quadro, coincide_col_prossimo: coincide,
+      };
+    }
+  }
+
+  const fuori = {
+    ok: true, quando: new Date().toISOString(),
+    strada: STRADA, codec_chiesto: idx.codec, codec: CODEC,
+    ritmo: RITMO, salta: SALTA, guasto: GUASTO || null, campione: CAMPIONE,
+    config: config, sostegno: sostegno,
+    palco: {
+      ua: navigator.userAgent,
+      dpr: devicePixelRatio,
+      gpu: (function () {
+        try {
+          const g = document.createElement("canvas").getContext("webgl");
+          const d = g && g.getExtension("WEBGL_debug_renderer_info");
+          return d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : null;
+        } catch (e) { return null; }
+      })(),
+      quadri: quadri, quadro_med_ms: quadro ? +quadro.toFixed(3) : null,
+      /* ⛔ Senza questa riga il numero non si sa su che palco e' preso
+       *    (`LEZIONI.md` §2.0). */
+      scanout: quadri >= 10,
+    },
+    conti: {
+      consegnati: righe.length, usciti: uscite, dipinti: dipinti,
+      saltati: righe.filter((r) => r.saltato).length,
+      senza_attesa: righe.filter((r) => (STRADA === "bitmap" ? r.bmp_ms
+                                                             : r.draw1_ms) === null).length,
+      errori: errori.slice(0, 8),
+    },
+    /* ⭐ il costo dello strumento, o non si sa se misura se stesso */
+    costo_strumento_us: (function () {
+      if (!costo_us.length) return null;
+      const v = costo_us.slice().sort((a, b) => a - b);
+      return +v[Math.floor(v.length / 2)].toFixed(1);
+    })(),
+    serie: S,
+    istogramma_attesa: istogramma(STRADA === "bitmap" ? "bmp_ms" : "draw1_ms", 2, 20),
+    verdetti: verdetti,
+  };
+  window.__F3 = fuori;
+  dice("⭐ RISULTATO=" + JSON.stringify(fuori));
+}
+
+gira().catch((e) => {
+  dice("⛔ RISULTATO=" + JSON.stringify({ ok: false, perche: String(e),
+                                          pila: e && e.stack }));
+});
+</script>

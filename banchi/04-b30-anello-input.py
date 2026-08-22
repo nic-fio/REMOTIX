@@ -86,6 +86,37 @@ si spostano nella direzione scomoda:
   E' la scelta gia' presa dalla fase 3, che ha fatto salire il numero da 63,8 a
   74,6 ms — **11 ms su 50 che la prima stesura si regalava**.  Qui si eredita.
 
+  ⛔⛔⛔ E IL 22 AGOSTO 2026 QUEL CONFINE SI ERA SPOSTATO **DA SOLO**, perche' e'
+       cambiato il prodotto e non il banco (fase 8, punto F1).
+
+    Dal 20 agosto (`DECISIONI.md` §5.4) la pagina dipinge con `bitmaprenderer` +
+    `createImageBitmap`, che e' **asincrona**: il richiamo del prodotto ritorna
+    **prima** che sia stato dipinto qualunque cosa.  ⇒ «prendere `t_dip` dopo il
+    richiamo» — che sulla strada 2D voleva dire *«il disegno e' finito»* — su
+    questa strada vuol dire *«il disegno non e' ancora cominciato»*: il confine
+    scomodo era diventato **piu' comodo del comodo**, senza che nessuno lo
+    decidesse — e il banco avrebbe continuato a chiamarlo «scomodo».
+    ⛔ `LEZIONI.md` §1.20: il numero c'era ed era stampato, e **nessuna riga lo
+       confrontava con niente** che potesse accorgersene.
+
+    ⇒ ⭐ Oggi il confine si chiude **dopo `transferFromImageBitmap`** (§4-bis del
+      prologo), e ⛔ **non si crede: si PROVA**.  `--ritardo-vetro N` innesta N
+      ms fra «il fotogramma e' pronto» e «il fotogramma e' al vetro», e **Q11**
+      pretende tre cose insieme: la DISTANZA fra il confine vero e quello
+      sbagliato — presa sulla stessa sonda — sale di esattamente N, la salita
+      sta nel tratto 10 e in nessun altro, e il totale sale di almeno N.
+
+    ⛔⛔ E la ragione per cui Q11 esiste e' `LEZIONI.md` §1.20, la prima delle
+        sue due domande: *«per ogni numero che il banco stampa: quale riga lo
+        CONFRONTA?»*  Prima di oggi la risposta, per il confine di chiusura,
+        era **nessuna**: il banco stampava un ritardo e niente lo metteva
+        davanti a una quantita' nota.  ⇒ Un banco riadattato che desse un
+        numero plausibile sarebbe stato indistinguibile da uno rotto.
+
+  ⭐ E i tre punti si consegnano tutt'e tre, cosi' si guardano in faccia:
+      **T** (scomodo, il numero) · **T-comodo** (il campo `input` dei 28 byte)
+      · **T-vecchio** (il ritorno del richiamo — ⛔ quanto MENTE, non un numero).
+
 ── ⭐⭐ IL CONFINE DI APERTURA (a monte) — E QUESTO E' NUOVO ────────────────────
 
   Tre posizioni, e tutt'e tre difendibili:
@@ -757,10 +788,14 @@ PROLOGO = r"""
         piccolo, quel che si misurava era l'ATTESA del fotogramma.
      ⚠ E il costo dell'involucro entra in Q9 come tutto il resto. */
   B.disegni = [];
+  /* ⭐ `veroDI` sta FUORI dal blocco perche' serve anche a §4-bis: le letture
+     del banco NON devono finire in `B.disegni`, o il banco conterebbe i propri
+     disegni fra quelli del prodotto. */
+  let veroDI = null;
   const proto = window.CanvasRenderingContext2D
               && window.CanvasRenderingContext2D.prototype;
   if (proto && proto.drawImage) {
-    const veroDI = proto.drawImage;
+    veroDI = proto.drawImage;
     proto.drawImage = function () {
       const a = performance.now();
       const r = veroDI.apply(this, arguments);
@@ -768,6 +803,162 @@ PROLOGO = r"""
       if (B.disegni.length < 64) B.disegni.push(b - a);
       return r;
     };
+  }
+
+  /* ══ 4-bis. ⭐⭐⭐ LA STRADA VERA — `bitmaprenderer`, E IL CONFINE RESTA
+     ═══════════════════════════════════════ SCOMODO ══════════════════════════
+
+     ⛔⛔ IL DIFETTO CHE QUESTO PEZZO CURA, e va detto prima della cura.
+
+     Dal 20 agosto 2026 (`DECISIONI.md` §5.4) la pagina dipinge con
+     `bitmaprenderer` + `createImageBitmap`.  Su quella strada:
+       · il deposito 2D **non esiste** ⇒ §6 non ha da dove leggere i pixel;
+       · `drawImage` **non viene mai chiamato** ⇒ i tratti 9 e 10 spariscono;
+       · ⛔⛔ e soprattutto **`createImageBitmap` e' ASINCRONA**: il richiamo
+         del prodotto (`mostra()`) ritorna PRIMA che sia stato dipinto
+         qualunque cosa.  ⇒ Un banco che prendesse `t_dip` al ritorno del
+         richiamo — cioe' quel che questo file faceva — consegnerebbe un numero
+         **piu' piccolo del vero** chiamandolo «scomodo».  E' `LEZIONI.md`
+         §1.20 in persona: il confine comodo si sceglie da se' se nessuno lo
+         nomina, e qui si era spostato **da solo** quando e' cambiato il
+         prodotto.
+
+     ⭐⭐ LA CURA, e sono due mosse che vanno insieme:
+
+       1. **il confine si chiude dove lo schermo cambia davvero**, cioe' DOPO
+          `transferFromImageBitmap`.  ⛔ Non quando la promessa si risolve
+          (li' l'immagine e' in mano ma non e' al vetro) e non quando il
+          richiamo ritorna (li' non c'e' niente).
+       2. **i pixel si leggono dal vetro**.  Il contesto `bitmaprenderer` non
+          ha `getImageData` — non ha nessun accesso ai pixel — ⭐ ma la TELA
+          si': un `<canvas>` e' una sorgente valida per `drawImage` qualunque
+          sia il contesto che lo dipinge.  ⇒ Si ricopia la sola REGIONE della
+          marca (480x240) su una tela di servizio 2D e la si rilegge di li'.
+          ⛔ E la si legge DOPO il trasferimento, non dall'`ImageBitmap` prima:
+          leggere prima vorrebbe dire leggere qualcosa che sullo schermo non
+          c'e' ancora — e per giunta ritardarlo.
+
+     ⛔⛔ E LA CURA NON SI CREDE, SI PROVA: `B.ritardo_vetro_ms` innesta un
+         ritardo NOTO fra «il fotogramma e' pronto» e «il fotogramma e' al
+         vetro».  Se il confine e' al posto giusto, il numero sale di quel
+         tanto (Q11); se si chiudesse prima, il ritardo sarebbe **invisibile**
+         e il banco avrebbe l'aria di funzionare.
+     ⭐ E accanto si consegna `t_dip_vecchio` — l'istante in cui il richiamo del
+        prodotto e' RITORNATO, cioe' il confine sbagliato — cosi' i due si
+        guardano in faccia dentro lo STESSO giro. */
+  B.strada = null;               /* "2d" | "bitmaprenderer" — DEDOTTA dai fatti */
+  B.attesa = new Map();          /* pts → il campione a meta', in attesa del vetro */
+  B.pts_in_corso = null;
+  B.cib_per_pts = 0;
+  B.ritardo_vetro_ms = 0;        /* ⭐⭐ il guasto innestato di Q11 */
+  B.bmp_pts = (typeof WeakMap === "function") ? new WeakMap() : null;
+  B.bmp_pronta = (typeof WeakMap === "function") ? new WeakMap() : null;
+  B.conti.trasferimenti = 0;
+  B.conti.trasferimenti_senza_pts = 0;
+  B.conti.mai_arrivati_al_vetro = 0;
+  B.conti.senza_tela = 0;
+  B.conti.cib = 0;
+
+  /* ⛔ `createImageBitmap` si avvolge SENZA incatenare: si torna la promessa
+     ORIGINALE, non `p.then(...)`.  Incatenarla metterebbe un microtask del
+     banco fra la risoluzione e il gestore del prodotto — cioe' il banco
+     ritarderebbe quel che misura.  ⭐ Il nostro gestore e' registrato per
+     PRIMO, quindi gira prima di quello del prodotto e l'istante che segna e'
+     quello della risoluzione. */
+  const VeroCIB = window.createImageBitmap;
+  if (VeroCIB && B.bmp_pts) {
+    window.createImageBitmap = function (sorgente) {
+      let pts = null;
+      try {
+        if (B.pts_in_corso !== null && sorgente
+            && sorgente.timestamp === B.pts_in_corso) pts = B.pts_in_corso;
+      } catch (e) { /* una sorgente che non e' un `VideoFrame` */ }
+      const p = VeroCIB.apply(window, arguments);
+      if (pts !== null) { B.cib_per_pts++; B.conti.cib++; }
+      try {
+        p.then(function (bmp) {
+          if (pts !== null && bmp) {
+            B.bmp_pts.set(bmp, pts);
+            B.bmp_pronta.set(bmp, performance.now());
+          }
+        }, function () { /* il fallimento lo conta il prodotto */ });
+      } catch (e) {}
+      return p;
+    };
+  }
+
+  const protoBM = window.ImageBitmapRenderingContext
+                && window.ImageBitmapRenderingContext.prototype;
+  if (protoBM && protoBM.transferFromImageBitmap) {
+    const veroTF = protoBM.transferFromImageBitmap;
+    protoBM.transferFromImageBitmap = function (bmp) {
+      /* ⚠ `transferFromImageBitmap(null)` e' il modo dichiarato di SVUOTARE la
+         tela (`src/pagina.html`, `spegni()`): non e' un disegno e non chiude
+         nessuna sonda. */
+      if (!bmp) return veroTF.call(this, bmp);
+      let pts = null, t_pronta = null;
+      try { pts = B.bmp_pts.get(bmp); t_pronta = B.bmp_pronta.get(bmp); }
+      catch (e) {}
+      /* ⭐⭐ IL RITARDO NOTO, innestato ESATTAMENTE fra «pronto» e «al vetro».
+         ⛔ Si occupa il filo invece di dormire: un `await` cederebbe il turno e
+            sposterebbe il fotogramma in un altro compito, che e' un'altra cosa
+            da quella che si vuole imitare (un disegno davvero costoso). */
+      if (B.ritardo_vetro_ms > 0) {
+        const fino = performance.now() + B.ritardo_vetro_ms;
+        while (performance.now() < fino) { /* apposta */ }
+      }
+      const r = veroTF.call(this, bmp);
+      /* ⭐⭐⭐ QUI, e non un'istruzione prima: e' il piu' tardi che questa
+         pagina sappia dire.  Da qui al pixel acceso restano i `[?]` 16-40 ms
+         del compositore, che si DICHIARANO (C2) e non si misurano. */
+      const t_dip = performance.now();
+      B.conti.trasferimenti++;
+      if (pts === undefined || pts === null) {
+        B.conti.trasferimenti_senza_pts++;
+        return r;
+      }
+      const base = B.attesa.get(pts);
+      B.attesa.delete(pts);
+      if (!base) return r;
+      let celle = null, celle_eco = null, t_let = t_dip;
+      if (B.leggi) {
+        const c0 = performance.now();
+        const tela = this.canvas || null;
+        celle = leggi_marca_vetro(tela, B.finestra[0], B.finestra[1]);
+        celle_eco = leggi_marca_vetro(tela, B.finestra_eco[0], B.finestra_eco[1]);
+        t_let = performance.now();
+        if (B.costo_lettura_us.length < 20000)
+          B.costo_lettura_us.push((t_let - c0) * 1000);
+      }
+      deposita_campione(base, t_dip, t_let,
+                        (t_pronta === undefined ? null : t_pronta),
+                        celle, celle_eco, []);
+      return r;
+    };
+  }
+
+  function deposita_campione(base, t_dip, t_let, t_dip_a, celle, celle_eco,
+                             disegni) {
+    if (B.campioni.length >= 400000) return;
+    B.campioni.push({
+      t1: base.t1, t_dip: t_dip, t_let: t_let, pts: base.pts,
+      l: base.l, a: base.a,
+      celle: celle, celle_eco: celle_eco, guaio: base.guaio,
+      strada: base.strada,
+      /* ⭐ i due tempi del disegno, separati.  ⛔ `null` e non 0 quando non
+         ce ne sono stati: «non ho potuto guardare» non e' «zero». */
+      disegni_ms: disegni,
+      t_dip_a: t_dip_a,
+      /* ⛔⛔ IL CONFINE SBAGLIATO, consegnato ACCANTO e mai al posto del vero:
+         l'istante in cui il richiamo del prodotto e' RITORNATO.  Sulla strada
+         2D vuol dire «dipinto»; su `bitmaprenderer` non vuol dire niente. */
+      t_dip_vecchio: base.t_dip_vecchio,
+      visto: celle !== null, visto_eco: celle_eco !== null,
+      finestra: base.finestra,
+      t_primo: base.t_primo, t_ultimo: base.t_ultimo, byte: base.byte,
+      tipo: base.tipo, numero: base.numero, input: base.input,
+      t_dec: base.t_dec,
+    });
   }
 
   /* ══ 5. VIDEODECODER: t1, il disegno del prodotto, poi i pixel ══════════ */
@@ -785,38 +976,64 @@ PROLOGO = r"""
           B.conti.richiami++;
           /* ─── RIGA 2: SI DISEGNA — e a disegnare e' il PRODOTTO. ───────── */
           B.disegni.length = 0;
+          B.cib_per_pts = 0;
+          /* ⭐ Si annuncia il `pts`: `createImageBitmap` non riceve nessuna
+             etichetta, e la sua chiamata avviene DENTRO `suo(f)`.  ⇒ E' l'unico
+             momento in cui l'immagine si puo' legare al fotogramma senza
+             affidarsi all'ORDINE di risoluzione, che e' una grandezza
+             sostitutiva (`LEZIONI.md` §1.13). */
+          B.pts_in_corso = pts;
           let guaio = null;
           try { suo(f); } catch (e) { guaio = "" + e; }
-          const t_dip = performance.now();
+          B.pts_in_corso = null;
+          /* ⛔⛔ QUI il richiamo del prodotto e' RITORNATO — e questo NON e'
+             «il disegno finito» su tutt'e due le strade.  Vedi §4-bis. */
+          const t_dip_v = performance.now();
           const disegni = B.disegni.slice();
-          /* ─── RIGA 3: e SOLO ADESSO si leggono i pixel, DUE regioni. ──── */
-          let celle = null, celle_eco = null, t_let = t_dip;
-          if (B.leggi) {
-            const c0 = performance.now();
-            celle = leggi_marca_celle(B.finestra[0], B.finestra[1]);
-            celle_eco = leggi_marca_celle(B.finestra_eco[0], B.finestra_eco[1]);
-            t_let = performance.now();
-            if (B.costo_lettura_us.length < 20000)
-              B.costo_lettura_us.push((t_let - c0) * 1000);
-          }
           const s = B.intestazioni.get(pts) || null;
           if (!s) B.conti.senza_intestazione++;
-          if (B.campioni.length < 400000) {
-            B.campioni.push({
-              t1: t1, t_dip: t_dip, t_let: t_let, pts: pts, l: l, a: a,
-              celle: celle, celle_eco: celle_eco, guaio: guaio,
-              /* ⭐ i due `drawImage`, separati.  ⛔ `null` e non 0 quando non
-                 ce ne sono stati: «non ho potuto guardare» non e' «zero». */
-              disegni_ms: disegni,
-              t_dip_a: disegni.length ? (t1 + disegni[0]) : null,
-              visto: celle !== null, visto_eco: celle_eco !== null,
-              finestra: B.finestra.slice(),
-              t_primo: s ? s.t_primo : null, t_ultimo: s ? s.t_ultimo : null,
-              byte: s ? s.byte : null, tipo: s && s.i ? s.i.tipo : null,
-              numero: s && s.i ? s.i.numero : null,
-              input: s && s.i ? s.i.input : null,
-              t_dec: B.t_dec.get(pts) || null,
-            });
+          const base = {
+            t1: t1, pts: pts, l: l, a: a, guaio: guaio,
+            t_dip_vecchio: t_dip_v, finestra: B.finestra.slice(),
+            t_primo: s ? s.t_primo : null, t_ultimo: s ? s.t_ultimo : null,
+            byte: s ? s.byte : null, tipo: s && s.i ? s.i.tipo : null,
+            numero: s && s.i ? s.i.numero : null,
+            input: s && s.i ? s.i.input : null,
+            t_dec: B.t_dec.get(pts) || null,
+          };
+          if (B.cib_per_pts > 0) {
+            /* ⭐⭐ LA STRADA VERA: il prodotto ha CHIESTO l'immagine e se n'e'
+               andato.  Il campione si chiude in `transferFromImageBitmap`,
+               cioe' quando lo schermo cambia davvero. */
+            base.strada = "bitmaprenderer";
+            B.strada = "bitmaprenderer";
+            B.attesa.set(pts, base);
+            /* ⛔ I fotogrammi che al vetro non arrivano MAI — scartati perche'
+               tardivi (`conti.tardive` di §5.4) o perche' la sessione e'
+               cambiata — non devono far crescere la mappa senza fine.  ⚠ E si
+               CONTANO: buttarli in silenzio sarebbe un denominatore che cala
+               senza che nessuno sappia perche'. */
+            if (B.attesa.size > 240) {
+              const primo = B.attesa.keys().next().value;
+              B.attesa.delete(primo);
+              B.conti.mai_arrivati_al_vetro++;
+            }
+          } else {
+            /* ─── LA STRADA 2D: e SOLO ADESSO si leggono i pixel, DUE regioni ─ */
+            base.strada = "2d";
+            if (B.strada === null) B.strada = "2d";
+            let celle = null, celle_eco = null, t_let = t_dip_v;
+            if (B.leggi) {
+              const c0 = performance.now();
+              celle = leggi_marca_celle(B.finestra[0], B.finestra[1]);
+              celle_eco = leggi_marca_celle(B.finestra_eco[0], B.finestra_eco[1]);
+              t_let = performance.now();
+              if (B.costo_lettura_us.length < 20000)
+                B.costo_lettura_us.push((t_let - c0) * 1000);
+            }
+            deposita_campione(base, t_dip_v, t_let,
+                              disegni.length ? (t1 + disegni[0]) : null,
+                              celle, celle_eco, disegni);
           }
           B.t_dec.delete(pts);
           B.intestazioni.delete(pts);
@@ -836,7 +1053,10 @@ PROLOGO = r"""
     window.VideoDecoder = Avvolto;
   }
 
-  /* ══ 6. LA LETTURA DEI PIXEL — dal DEPOSITO, non dalla vista ════════════ */
+  /* ══ 6. LA LETTURA DEI PIXEL — DUE strade, e il campionatore e' UNO ══════
+     ⛔ Il campionamento delle 144 celle sta in `celle_da()` e non e' scritto
+        due volte: due copie divergerebbero, e la divergenza si vedrebbe come
+        «la strada nuova legge marche un po' diverse» invece che come un baco. */
   function leggi_marca_celle(ox, oy) {
     const S = window.REMOTIX && window.REMOTIX.schermo;
     if (!S || !S.deposito || !S.deposito_p) { B.conti.senza_deposito++; return null; }
@@ -847,6 +1067,44 @@ PROLOGO = r"""
     try { d = S.deposito_p.getImageData(ox, oy, REG_L, REG_A).data; }
     catch (e) { B.conti.buttati++; return null; }
     B.conti.letture++;
+    return celle_da(d, ox, oy);
+  }
+
+  /* ⭐⭐ LA LETTURA DELLA STRADA VERA — dalla TELA, cioe' dal vetro.
+     ⛔ Il contesto `bitmaprenderer` non ha `getImageData`: non da' nessun
+        accesso ai pixel.  ⭐ Ma la tela si', perche' un `<canvas>` e' una
+        sorgente valida per `drawImage` qualunque sia il contesto che lo
+        dipinge.  ⇒ Si ricopia la sola REGIONE della marca su una tela di
+        servizio 2D di 480x240 e la si rilegge di li'.
+     ⚠ Costa una copia in piu' della strada 2D, e il costo NON si stima: entra
+       in `costo_lettura_us` come tutto il resto, e Q9 lo giudica. */
+  let spec = null, spec_p = null;
+  function leggi_marca_vetro(tela, ox, oy) {
+    if (!tela) { B.conti.senza_tela++; return null; }
+    if (tela.width < ox + REG_L || tela.height < oy + REG_A) {
+      B.conti.sonda++; return null;
+    }
+    if (!spec_p) {
+      try {
+        spec = document.createElement("canvas");
+        spec.width = REG_L; spec.height = REG_A;
+        spec_p = spec.getContext("2d", { willReadFrequently: true });
+      } catch (e) { spec_p = null; }
+      if (!spec_p) { B.conti.buttati++; return null; }
+    }
+    let d;
+    try {
+      /* ⛔ `veroDI` e non `spec_p.drawImage`: l'involucro del §4 conta i
+         disegni DEL PRODOTTO, e i miei non sono suoi. */
+      (veroDI || spec_p.drawImage).call(spec_p, tela, ox, oy, REG_L, REG_A,
+                                        0, 0, REG_L, REG_A);
+      d = spec_p.getImageData(0, 0, REG_L, REG_A).data;
+    } catch (e) { B.conti.buttati++; return null; }
+    B.conti.letture++;
+    return celle_da(d, ox, oy);
+  }
+
+  function celle_da(d, ox, oy) {
     const sx = B.scorrimento[0], sy = B.scorrimento[1];
     const v = new Array(BIT);
     for (let i = 0; i < BIT; i++) {
@@ -895,9 +1153,26 @@ PROLOGO = r"""
              conti: Object.assign({}, B.conti), grana: B.grana,
              isolata: B.isolata, t_origine: B.t_origine,
              ora_pagina: performance.now(),
+             /* ⭐ LA STRADA DI DISEGNO, DEDOTTA DAI FATTI e non dall'indirizzo:
+                due giri su strade diverse non sono lo stesso banco (§4-bis). */
+             strada: B.strada, in_attesa_del_vetro: B.attesa.size,
+             ritardo_vetro_ms: B.ritardo_vetro_ms,
              ora_reale: performance.timeOrigin + performance.now(),
              pagina: window.REMOTIX && window.REMOTIX.schermo
-                     ? Object.assign({}, window.REMOTIX.schermo.conti) : null };
+                     ? Object.assign({}, window.REMOTIX.schermo.conti) : null,
+             /* ⭐⭐ IL CONTROLLO INCROCIATO — e non e' una comodita'.
+                Il PRODOTTO misura da se' le stesse due grandezze dei tratti 9
+                e 10 (`src/pagina.html`: `bmp_ms` = chiamata → immagine in
+                mano; `vetro_ms` = il trasferimento).  ⛔ Sono due lettori
+                scritti da due persone diverse in due posti diversi: se un
+                giorno divergono, quel disaccordo e' il regalo — e senza
+                portarli fuori insieme non lo vedrebbe nessuno.
+                ⚠ Il prodotto ne tiene 200: e' un campione recente, non tutto
+                  il giro, e va letto cosi'. */
+             pagina_disegno: window.REMOTIX && window.REMOTIX.schermo
+                     ? { bmp_ms: (window.REMOTIX.schermo.bmp_ms || []).slice(),
+                         vetro_ms: (window.REMOTIX.schermo.vetro_ms || []).slice() }
+                     : null };
   };
 })();
 """
@@ -1021,6 +1296,16 @@ def accoppia(campioni, spediti, eventi, finestra_ms=1500.0):
             c = sonda.get(nome)
             if c is not None and c.get("t_dip") is not None:
                 sonda["ritardo_%s_ms" % nome] = c["t_dip"] - sonda["t_evento"]
+        # ⛔⛔ IL TERZO NUMERO, e non e' un terzo confine: e' il confine
+        #     SBAGLIATO, consegnato apposta perche' si possa vedere quanto
+        #     mente.  Chiude quando il richiamo del prodotto RITORNA — che
+        #     sulla strada `bitmaprenderer` e' PRIMA che sia stato dipinto
+        #     qualunque cosa (`LEZIONI.md` §1.20, §4-bis del prologo).
+        #     ⚠ Non entra mai in `ritardo_scomodo_ms`, e Q11 lo usa per
+        #       DIMOSTRARE che il confine vero non si chiude li'.
+        cv = sonda.get("scomodo")
+        if cv is not None and cv.get("t_dip_vecchio") is not None:
+            sonda["ritardo_vecchio_ms"] = cv["t_dip_vecchio"] - sonda["t_evento"]
         sonde.append(sonda)
     return sonde
 
@@ -1131,6 +1416,16 @@ def accoppia_tasti(campioni, spediti, eventi, mappa, finestra_ms=500.0):
             c = sonda.get(nome)
             if c is not None and c.get("t_dip") is not None:
                 sonda["ritardo_%s_ms" % nome] = c["t_dip"] - sonda["t_evento"]
+        # ⛔⛔ IL TERZO NUMERO, e non e' un terzo confine: e' il confine
+        #     SBAGLIATO, consegnato apposta perche' si possa vedere quanto
+        #     mente.  Chiude quando il richiamo del prodotto RITORNA — che
+        #     sulla strada `bitmaprenderer` e' PRIMA che sia stato dipinto
+        #     qualunque cosa (`LEZIONI.md` §1.20, §4-bis del prologo).
+        #     ⚠ Non entra mai in `ritardo_scomodo_ms`, e Q11 lo usa per
+        #       DIMOSTRARE che il confine vero non si chiude li'.
+        cv = sonda.get("scomodo")
+        if cv is not None and cv.get("t_dip_vecchio") is not None:
+            sonda["ritardo_vecchio_ms"] = cv["t_dip_vecchio"] - sonda["t_evento"]
         sonde.append(sonda)
     return sonde
 
@@ -1155,8 +1450,18 @@ TRATTI = [
     ("6", "primo byte → ULTIMO byte (lo stream sul filo)", "pagina"),
     ("7", "stream completo → richiamo di `decode()`", "pagina"),
     ("8", "`decode()` → richiamo del decodificatore (la decodifica)", "pagina"),
-    ("9", "⭐ richiamo → 1° `drawImage` finito (⛔ l'ATTESA del fotogramma)", "pagina"),
-    ("10", "⭐ 1° → 2° `drawImage` finito (⛔ il disegno VERO)", "pagina"),
+    # ⛔⛔ I DUE ULTIMI TRATTI HANNO DUE FACCE, UNA PER STRADA — §4-bis.
+    #     La grandezza e' la stessa: «quanto si ASPETTA che il fotogramma sia
+    #     utilizzabile» contro «quanto costa metterlo al vetro».  ⭐ Cambia
+    #     l'evento che la marca, e cambia perche' e' cambiato il PRODOTTO:
+    #       · strada 2D          9 = richiamo → 1° `drawImage`
+    #                           10 = 1° → 2° `drawImage`
+    #       · `bitmaprenderer`   9 = richiamo → `createImageBitmap` RISOLTA
+    #                           10 = risolta → `transferFromImageBitmap` finito
+    ("9", "⭐ richiamo → il FOTOGRAMMA E' PRONTO (⛔ l'ATTESA: 1° `drawImage` "
+          "sulla 2D · `createImageBitmap` risolta su `bitmaprenderer`)", "pagina"),
+    ("10", "⭐ pronto → IL DISEGNO E' FINITO (2° `drawImage` sulla 2D · "
+           "`transferFromImageBitmap` su `bitmaprenderer`)", "pagina"),
 ]
 
 
@@ -1231,6 +1536,16 @@ def scomponi(sonde, scarto_ancora_us=0):
         **{"⭐": "⛔ NON porta dentro l'errore dell'ancora: `t0` e `t1` sono "
                 "tutt'e due `performance.now()` della stessa pagina.  ⭐ E' un "
                 "vantaggio che il numero della fase 3 NON aveva"})
+    r["T-vecchio ⛔ il confine che si chiude al RITORNO DEL RICHIAMO "
+      "(NON e' un numero: e' quanto MENTE)"] = dict(
+        p(lambda s: s.get("ritardo_vecchio_ms")),
+        orologio="pagina",
+        **{"⛔": "sulla strada `bitmaprenderer` il richiamo del prodotto "
+                "ritorna PRIMA che `createImageBitmap` abbia consegnato "
+                "l'immagine: chiudere qui darebbe un numero piu' piccolo del "
+                "vero con l'aria di funzionare (`LEZIONI.md` §1.20).  ⭐ Sulla "
+                "strada 2D coincide col confine scomodo, e la differenza fra i "
+                "due lo dice"})
     r["T-comodo  input → primo fotogramma con `input >= id` → vetro"] = dict(
         p(lambda s: s.get("ritardo_comodo_ms")),
         orologio="pagina",
@@ -1256,7 +1571,8 @@ def scomponi(sonde, scarto_ancora_us=0):
 # ═══════════════════════════════════════════════════════════════════════════
 # §6  I CONTROLLI
 # ═══════════════════════════════════════════════════════════════════════════
-TUTTI = ["Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"]
+TUTTI = ["Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10",
+         "Q11"]
 
 
 def q0_c_e_qualcosa_da_giudicare(v):
@@ -1582,6 +1898,115 @@ def q6_ritardo_noto_andata(giri):
     return _p1(giri, "ritardo_andata_ms", "2 ")
 
 
+def q11_il_confine_non_si_chiude_prima_del_disegno(giri):
+    """⭐⭐⭐ IL CONTROLLO POSITIVO CHE VALE PIU' DI TUTTI — fase 8, punto F1.2.
+
+    ⛔⛔ LA TESI DA REFUTARE: *«il banco adesso legge la strada `bitmaprenderer`
+        e da' un numero plausibile, quindi funziona»*.  **Non basta, ed e' il
+        genere di verde che costa piu' caro di un rosso.**
+
+    Su quella strada il disegno e' ASINCRONO: fra «il richiamo del prodotto e'
+    ritornato» e «il fotogramma e' sullo schermo» ci sono la risoluzione di
+    `createImageBitmap` e il trasferimento.  ⇒ Un banco che chiudesse al
+    ritorno del richiamo darebbe un numero **piu' piccolo del vero** e avrebbe
+    l'aria di funzionare (`LEZIONI.md` §1.20).
+
+    ⇒ ⭐ LA PROVA: si innesta un ritardo NOTO di N ms **fra il fotogramma
+      pronto e il vetro** (`B.ritardo_vetro_ms`, §4-bis del prologo), e si
+      pretendono TRE cose insieme:
+
+        1. ⭐⭐⭐ **la DISTANZA fra il confine vero e quello sbagliato — presa
+           sulla STESSA sonda — sale di esattamente N.**  E' la pretesa
+           decisiva, e appaiata apposta;
+        2. ⭐ la salita compare **nel tratto 10** e in nessun altro — cioe' il
+           banco sa DOVE l'ha messa, non solo che c'e';
+        3. il totale sale di **ALMENO N**.  ⛔ «Almeno» e non «esattamente», e
+           la ragione e' `[M]`, non una comodita': vedi qui sotto.
+
+    ⛔⛔ PERCHE' LA PRETESA 1 E' APPAIATA, E PERCHE' LA 3 DICE «ALMENO».
+
+    Il ritardo si innesta occupando il filo della pagina — che e' quel che fa
+    un disegno davvero costoso.  ⇒ Quel tempo non ritarda solo IL FOTOGRAMMA:
+    ritarda anche la consegna degli eventi di input, che stanno sullo stesso
+    filo.  `[M]` 22 agosto 2026, 8 ms innestati: il totale e' salito di **14,81
+    ms**, e di quei 14,81 **7,995 stanno nel tratto 10** (dove devono) e il
+    resto e' lo spostamento di tutto il condotto — che si vede anche sul
+    confine vecchio, salito di **6,82**.
+
+    ⇒ ⭐⭐ Su una mediana sola quello spostamento e' indistinguibile dal
+      ritardo innestato.  **Sulla differenza appaiata no**: i due confini
+      stanno sullo stesso fotogramma e lo spostamento li colpisce identici,
+      quindi si elide.  `[M]` la distanza e' passata da **0,090 ms** (base) a
+      **8,075** (8 innestati), col **minimo a 8,035 su 545 sonde su 545** —
+      cioe' non c'e' una sola sonda che non lo veda.
+
+    ⛔ E pretendere «il totale sale di ESATTAMENTE N» renderebbe questo
+       controllo rosso per un fatto fisico vero, che e' il modo piu' rapido di
+       insegnare a chi legge che i rossi si ignorano.
+
+    ⛔ E se il giro col ritardo non c'e', il controllo dice **NON ESEGUITO**,
+       che non e' «passato».
+    """
+    r = _p1(giri, "ritardo_vetro_ms", "10 ")
+    base = next((g for g in giri if not g.get("ritardo_vetro_ms")), None)
+    d0 = (base or {}).get("distanza_fra_i_confini") or {}
+    v0 = (base or {}).get("distribuzione_vecchio") or {}
+    righe, distanza_ok = [], True
+    for g in giri:
+        n = g.get("ritardo_vetro_ms")
+        if not n:
+            continue
+        dn = g.get("distanza_fra_i_confini") or {}
+        vn = g.get("distribuzione_vecchio") or {}
+        if not (d0.get("n") and dn.get("n")):
+            righe.append({"n_ms": n, "salita_della_distanza_ms": None,
+                          "perche": "⛔ NON ESEGUITO: non ho le due misure "
+                                    "sulla stessa sonda, quindi non posso dire "
+                                    "che il confine stia dopo il disegno"})
+            distanza_ok = False
+            continue
+        salita = dn["mediana"] - d0["mediana"]
+        buona = abs(salita - n) <= TOLLERANZA_MS
+        distanza_ok = distanza_ok and buona
+        righe.append({"n_ms": n,
+                      "distanza_base_ms": d0["mediana"],
+                      "distanza_col_ritardo_ms": dn["mediana"],
+                      "salita_della_distanza_ms": round(salita, 3),
+                      "scarto_ms": round(salita - n, 3),
+                      # ⛔ Il MINIMO, non solo la mediana: se una sola sonda
+                      #    non vedesse il ritardo, li' il confine si chiude nel
+                      #    posto sbagliato — e una mediana non lo direbbe.
+                      "minimo_ms": dn.get("min"),
+                      "sonde": dn["n"],
+                      "e_dopo_il_disegno": buona,
+                      # ⚠ dichiarato accanto, e NON e' un rosso: e' lo
+                      #   spostamento di tutto il condotto (vedi la docstring)
+                      "⚠ e il confine vecchio intanto sale di":
+                          round(vn["mediana"] - v0["mediana"], 2)
+                          if (vn.get("n") and v0.get("n")) else None})
+    r["⭐⭐⭐ la DISTANZA fra i due confini sale del ritardo innestato"] = {
+        "esito": distanza_ok, "righe": righe,
+        "⭐": "⛔ QUESTA e' la prova che il confine non si chiude prima del "
+             "disegno, ed e' APPAIATA: se il banco chiudesse al ritorno del "
+             "richiamo, la distanza resterebbe quella di sempre qualunque "
+             "ritardo si innesti"}
+    righe_p1 = r.get("righe") or []
+    nel_posto = bool(righe_p1) and all(x.get("nel_tratto_giusto")
+                                       for x in righe_p1)
+    almeno = bool(righe_p1) and all(
+        x.get("salita_ms") is not None
+        and x["salita_ms"] >= x["n_ms"] - TOLLERANZA_MS for x in righe_p1)
+    r["il_totale_sale_di_ALMENO_N"] = almeno
+    r["la_salita_sta_nel_tratto_10_e_in_nessun_altro"] = nel_posto
+    r["⚠ il totale puo' salire di PIU' di N"] = (
+        "e non e' un rosso: il ritardo si innesta occupando il filo della "
+        "pagina, e quel tempo ritarda anche la consegna degli eventi di input. "
+        "⇒ Si pretende «almeno N» sul totale, «esattamente N» sulla distanza "
+        "appaiata e sul tratto 10")
+    r["esito"] = bool(distanza_ok and nel_posto and almeno)
+    return r
+
+
 def q7_due_confini(sonde):
     """⛔ I DUE CONFINI SI DICHIARANO TUTT'E DUE, e il consegnato e' lo SCOMODO."""
     a = [s["ritardo_scomodo_ms"] for s in sonde if s.get("ritardo_scomodo_ms") is not None]
@@ -1703,7 +2128,8 @@ def giudica(v):
     """Tutti i controlli, su un verbale.  ⛔ Funzione PURA."""
     giri = v.get("giri", [])
     base = next((g for g in giri if not g.get("ritardo_ritorno_ms")
-                 and not g.get("ritardo_andata_ms")), None) or (giri[0] if giri else {})
+                 and not g.get("ritardo_andata_ms")
+                 and not g.get("ritardo_vetro_ms")), None) or (giri[0] if giri else {})
     campioni = base.get("campioni", [])
     sonde = base.get("sonde", [])
     v2 = dict(v, sonde=sonde, spediti=base.get("spediti", []))
@@ -1722,6 +2148,7 @@ def giudica(v):
                                  v.get("fps_senza_lettura"),
                                  v.get("fps_con_lettura")),
         "Q10": q10_grana(v.get("grana"), v.get("isolata")),
+        "Q11": q11_il_confine_non_si_chiude_prima_del_disegno(giri),
     }
 
 
@@ -1792,12 +2219,23 @@ FINTO = {
     "8":  0.73,    # [M] fase 3, la decodifica: 0,730
     "9":  26.50,   # [?] la parte del 27,995 della fase 3 che e' ATTESA
     "10": 1.50,    # [?] e la parte che e' DISEGNO — vedi il riquadro in testa
+    # ⛔⛔ E QUESTO NON E' UN TRATTO: e' quanto il richiamo del prodotto ci mette
+    #     a RITORNARE.  Sulla strada `bitmaprenderer` ritorna subito — chiama
+    #     `createImageBitmap` e se ne va — cioe' PRIMA che i 26,50 + 1,50 siano
+    #     passati.  ⇒ Nel finto vale 0,30 ms, ed e' il confine SBAGLIATO che Q11
+    #     deve dimostrare cieco (§4-bis).
+    "9v": 0.30,
 }
-FINTO_TOTALE = sum(FINTO.values())
+FINTO_RITORNO_DEL_RICHIAMO = "9v"
+# ⛔ `9v` NON e' un tratto della catena e non entra nel totale: sommarlo
+#    darebbe un totale atteso sbagliato di 0,30 ms, e il controllo B del finto
+#    diventerebbe rosso per un motivo che non c'entra niente.
+FINTO_TOTALE = sum(x for k, x in FINTO.items()
+                   if k != FINTO_RITORNO_DEL_RICHIAMO)
 
 
 def verbale_sintetico(seme=7, quanti=240, ritardi_ritorno=(25,),
-                      ritardi_andata=(30,), passo_ms=16.7):
+                      ritardi_andata=(30,), ritardi_vetro=(20,), passo_ms=16.7):
     """⭐ IL FINTO: un verbale della forma vera, con l'anello che si chiude.
 
     ⛔ `CODER.md` §3.3: *«certificalo con un FINTO che sappia produrre il
@@ -1821,7 +2259,7 @@ def verbale_sintetico(seme=7, quanti=240, ritardi_ritorno=(25,),
     #    nascondersi dentro un millisecondo.
     scarto_us = 500_000_000
 
-    def fai_giro(rit_ritorno=0.0, rit_andata=0.0):
+    def fai_giro(rit_ritorno=0.0, rit_andata=0.0, rit_vetro=0.0):
         campioni, spediti, eventi = [], [], []
         disegno, id_input = 5000, 100
         for i in range(quanti):
@@ -1844,10 +2282,19 @@ def verbale_sintetico(seme=7, quanti=240, ritardi_ritorno=(25,),
             t_dec = t_ultimo + FINTO["7"]
             t1 = t_dec + FINTO["8"]
             t_dip_a = t1 + FINTO["9"]
-            t_dip = t_dip_a + FINTO["10"]
+            # ⭐⭐ IL RITARDO INNESTATO AL VETRO sta QUI e in nessun altro
+            #     posto: fra «il fotogramma e' pronto» e «il fotogramma e' sullo
+            #     schermo».  ⇒ Il totale sale di N, il tratto 10 sale di N, e
+            #     `t_dip_vecchio` NON si muove — che e' la forma esatta di quel
+            #     che Q11 pretende dal mondo vero.
+            t_dip = t_dip_a + FINTO["10"] + rit_vetro
+            # ⛔ Il richiamo del prodotto ritorna SUBITO: `createImageBitmap` e'
+            #    asincrona, e li' non e' stato dipinto niente.
+            t_dip_vecchio = t1 + FINTO[FINTO_RITORNO_DEL_RICHIAMO]
             eco = eco_puntatore(x, y)
             campioni.append({
                 "t1": t1, "t_dip": t_dip, "t_dip_a": t_dip_a, "t_let": t_dip + 0.9,
+                "t_dip_vecchio": t_dip_vecchio, "strada": "bitmaprenderer",
                 "pts": pts, "numero": i + 1,
                 "tipo": 0x0301 if i == 0 else 0x0302,
                 "byte": 4000 + rnd.randint(0, 2000),
@@ -1878,14 +2325,23 @@ def verbale_sintetico(seme=7, quanti=240, ritardi_ritorno=(25,),
                 "sonde": sonde,
                 "ritardo_ritorno_ms": rit_ritorno,
                 "ritardo_andata_ms": rit_andata,
+                "ritardo_vetro_ms": rit_vetro,
                 "distribuzione": _d([s["ritardo_scomodo_ms"] for s in buone]),
+                "distribuzione_vecchio": _d(
+                    [s["ritardo_vecchio_ms"] for s in buone
+                     if s.get("ritardo_vecchio_ms") is not None]),
+                "distanza_fra_i_confini": _d(
+                    [s["ritardo_scomodo_ms"] - s["ritardo_vecchio_ms"]
+                     for s in buone if s.get("ritardo_vecchio_ms") is not None]),
                 "scomposizione": scomponi(sonde, scarto_us)}
 
-    giri = [fai_giro(0.0, 0.0)]
+    giri = [fai_giro(0.0, 0.0, 0.0)]
     for n in ritardi_ritorno:
-        giri.append(fai_giro(float(n), 0.0))
+        giri.append(fai_giro(float(n), 0.0, 0.0))
     for n in ritardi_andata:
-        giri.append(fai_giro(0.0, float(n)))
+        giri.append(fai_giro(0.0, float(n), 0.0))
+    for n in ritardi_vetro:
+        giri.append(fai_giro(0.0, 0.0, float(n)))
     senza = [{"celle_eco": [rnd.random() * 255.0 for _ in range(144)],
               "visto_eco": True,
               "eco_marca": {"c_e": False, "perche": "rumore"}} for _ in range(120)]
@@ -1999,13 +2455,63 @@ def _g_p1_andata_non_ritarda(v):
     return v
 
 
+def _g_confine_si_chiude_prima_del_disegno(v):
+    """⛔⛔⛔ IL GUASTO CHE IL MONDO VERO AVEVA GIA' INNESTATO DA SOLO — fase 8.
+
+    Il banco chiude il confine quando il richiamo del prodotto RITORNA.  Sulla
+    strada `bitmaprenderer` `createImageBitmap` e' asincrona: li' non e' stato
+    dipinto niente.  ⇒ Un ritardo innestato **fra il fotogramma pronto e il
+    vetro** diventa **invisibile**, e il banco consegna un numero piu' piccolo
+    del vero con l'aria di funzionare.
+
+    ⭐ E' `LEZIONI.md` §1.20: il confine si e' spostato nella direzione comoda
+       **da solo**, quando e' cambiato il prodotto, senza che nessuno lo
+       decidesse.  ⛔ Il banco DEVE diventare rosso qui, o quel numero uscirebbe
+       in un documento con la marca `[M]`.
+    """
+    for g in v["giri"]:
+        if g.get("ritardo_vetro_ms"):
+            g["distribuzione"] = dict(v["giri"][0]["distribuzione"])
+            g["scomposizione"] = dict(v["giri"][0]["scomposizione"])
+            g["distanza_fra_i_confini"] = dict(
+                v["giri"][0]["distanza_fra_i_confini"])
+            g["distribuzione_vecchio"] = dict(
+                v["giri"][0]["distribuzione_vecchio"])
+    return v
+
+
+def _g_i_due_confini_sono_lo_stesso_punto(v):
+    """⛔⛔ IL GUASTO PIU' SUBDOLO DEI DUE: il numero SALE di N — quindi la
+    pretesa 1 di Q11 passa, e il banco sembra tarato — ⛔ ma sale anche il
+    confine VECCHIO, cioe' i due punti coincidono.
+
+    ⚠ Se coincidessero davvero, l'intera cura di §4-bis non servirebbe a
+      niente e il difetto che la fase 8 dichiara di aver curato non
+      esisterebbe.  ⇒ E' la pretesa 1, e senza di lei un banco che chiudesse
+      «un po' piu' in la'» passerebbe lo stesso.
+    """
+    for g in v["giri"]:
+        n = g.get("ritardo_vetro_ms")
+        if not n:
+            continue
+        # il totale sale (la pretesa 3 passa)...
+        d = dict(g.get("distribuzione_vecchio") or {})
+        if d.get("mediana") is not None:
+            d["mediana"] = d["mediana"] + n
+            g["distribuzione_vecchio"] = d
+        # ...⛔ ma la DISTANZA fra i due confini resta quella di sempre
+        g["distanza_fra_i_confini"] = dict(v["giri"][0]["distanza_fra_i_confini"])
+    return v
+
+
 def _g_p1_nel_tratto_sbagliato(v):
     """⛔⛔ IL GUASTO CHE UN P1 DELLA FASE 3 NON VEDE: la mediana sale di N —
     quindi «la mediana e' salita di N» passa — ⛔ ma il surplus e' finito nel
     tratto SBAGLIATO della scomposizione.  Un metro cosi' non diventa mai
     rosso: dice solo bugie sulla diagnosi."""
     for g in v["giri"]:
-        n = g.get("ritardo_andata_ms") or g.get("ritardo_ritorno_ms")
+        n = (g.get("ritardo_andata_ms") or g.get("ritardo_ritorno_ms")
+             or g.get("ritardo_vetro_ms"))
         if not n:
             continue
         s = dict(v["giri"][0]["scomposizione"])
@@ -2082,9 +2588,15 @@ GUASTI = [
      _g_coordinate_storte, ["Q4"]),
     ("Q5 il ponte non ritarda il RITORNO", _g_p1_ritorno_non_ritarda, ["Q5"]),
     ("Q6 ⭐ il ponte non ritarda l'ANDATA", _g_p1_andata_non_ritarda, ["Q6"]),
-    ("Q5/Q6 ⛔⛔ la mediana sale di N ma NEL TRATTO SBAGLIATO",
-     _g_p1_nel_tratto_sbagliato, ["Q5", "Q6"]),
+    ("Q5/Q6/Q11 ⛔⛔ la mediana sale di N ma NEL TRATTO SBAGLIATO",
+     _g_p1_nel_tratto_sbagliato, ["Q5", "Q6", "Q11"]),
     ("Q7 ⛔⛔ il metro chiude sul confine COMODO", _g_confine_comodo, ["Q7"]),
+    ("Q11 ⛔⛔⛔ il confine SI CHIUDE PRIMA DEL DISEGNO (il ritardo al vetro "
+     "e' invisibile) — il difetto che `bitmaprenderer` aveva innestato da solo",
+     _g_confine_si_chiude_prima_del_disegno, ["Q11"]),
+    ("Q11 ⛔⛔ il numero sale di N ma sale ANCHE il confine vecchio: i due "
+     "punti coincidono e la cura non serve a niente",
+     _g_i_due_confini_sono_lo_stesso_punto, ["Q11"]),
     ("Q8 il banco non separa i due `drawImage`", _g_un_drawImage_solo, ["Q8"]),
     ("Q10 la pagina non e' isolata", _g_grana_grossa, ["Q10"]),
     ("Q9 il banco costa mezzo ritmo", _g_banco_caro, ["Q9"]),
@@ -2527,6 +3039,91 @@ def scena_uscite(a):
             "callback_in_volo_massimo": campi[38], "fidato": campi[40]}
 
 
+def carico_della_macchina(a):
+    """⛔⛔⛔ IL CARICO, ACCANTO AL NUMERO — e questa funzione è nata da una
+    misura che ha SMENTITO un rapporto, il 22 agosto 2026.
+
+    ⛔ L'agente A aveva consegnato `[M]` **17,48 ms** per il tratto 9 e ci aveva
+       costruito sopra la conclusione più citata della fase.  L'agente F3 ha
+       rimisurato lo stesso tratto con **tre banchi indipendenti**, sulla stessa
+       strada di disegno, e ha trovato `[M]` **0,39 - 1,18 ms**: da **15 a 45
+       volte meno**.  ⇒ I 17,48 **non si riproducono da nessuna parte**.
+
+    `[R]` E la causa non era il prodotto: mentre A misurava, sul portatile
+       c'erano **4 nuclei, 56 processi Chrome e 5 Xvfb**, perché tre o quattro
+       agenti facevano banchi da browser nello stesso momento.
+
+    ⇒ ⭐⭐ **Un anello misurato su un portatile a quattro nuclei con cinque
+      Xvfb sopra non è il prodotto: è la contesa.**  E la differenza fra le due
+      cose non si vede nel numero — si vede solo se qualcuno ha scritto il
+      carico accanto.  Nessuno l'aveva scritto.
+
+    ⛔ Si guarda ai DUE capi (il portatile, dove stanno Chrome e il banco; e il
+       server, dove sta il prodotto), e si guarda **due volte** — prima e dopo —
+       perché un carico che cambia a metà giro produce un numero che sembra
+       buono.  `LEZIONI.md` §2.0: il palco si dichiara accanto al numero.
+    """
+    def _n(c):
+        try:
+            return int(subprocess.run(c, shell=True, capture_output=True,
+                                      text=True, timeout=30).stdout.strip() or 0)
+        except Exception:                                       # noqa: BLE001
+            return None
+
+    q = {"nuclei": os.cpu_count()}
+    try:
+        q["carico_1_5_15"] = [round(x, 2) for x in os.getloadavg()]
+    except Exception:                                           # noqa: BLE001
+        q["carico_1_5_15"] = None
+    q["processi_chrome"] = _n("pgrep -c chrome")
+    q["xvfb"] = _n("pgrep -c Xvfb")
+    # ⛔ Gli ALTRI banchi di questo stesso file, contati per porta: e' il
+    #    conteggio che dice «non ero solo», e senza di lui «non lo so» e «ero
+    #    solo» hanno lo stesso aspetto.
+    q["banchi_b30_in_corso"] = _n(
+        "pgrep -fc 'b30-anello-input.py --misura'")
+    q["⛔"] = ("il carico del PORTATILE, dove stanno Chrome e il banco.  ⚠ Se "
+               "«banchi_b30_in_corso» e' > 1 o «xvfb» e' > 1, questo numero "
+               "porta dentro la contesa di qualcun altro e NON e' il prodotto")
+    r = {"chuwi": q}
+    rs = _sshpw("nproc; cat /proc/loadavg; pgrep -c remotix; pgrep -c gnome-shell",
+                silenzioso=True, attesa=60)
+    righe = (rs.stdout or "").strip().splitlines()
+    s = {"grezzo": righe}
+    try:
+        s["nuclei"] = int(righe[0])
+        s["carico_1_5_15"] = [float(x) for x in righe[1].split()[:3]]
+        s["processi_remotix"] = int(righe[2])
+        s["sessioni_gnome"] = int(righe[3])
+    except Exception:                                           # noqa: BLE001
+        s["perche"] = ("⛔ non ho potuto leggere il carico del server: «non lo "
+                       "so» non e' «era scarico»")
+    r["server"] = s
+    return r
+
+
+def stampa_carico(c, quando):
+    q = c.get("chuwi") or {}
+    s = c.get("server") or {}
+    stretto = ((q.get("banchi_b30_in_corso") or 0) > 1
+               or (q.get("xvfb") or 0) > 1
+               or ((q.get("carico_1_5_15") or [0])[0] > (q.get("nuclei") or 4)))
+    (dub if stretto else inf)(
+        "%s · CHUWI: %s nuclei, carico %s, Chrome %s, Xvfb %s, altri banchi b30 %s"
+        % (quando, q.get("nuclei"), q.get("carico_1_5_15"),
+           q.get("processi_chrome"), q.get("xvfb"),
+           q.get("banchi_b30_in_corso")))
+    inf("%s · SERVER: %s nuclei, carico %s, processi remotix %s, sessioni GNOME %s"
+        % (quando, s.get("nuclei"), s.get("carico_1_5_15"),
+           s.get("processi_remotix"), s.get("sessioni_gnome")))
+    if stretto:
+        dub("⛔⛔ LA MACCHINA NON E' SCARICA: questo numero porta dentro la "
+            "contesa.  ⚠ `[M]` 22 agosto 2026: con 56 Chrome e 5 Xvfb sopra, "
+            "lo stesso tratto e' uscito **da 15 a 45 volte** piu' grande del "
+            "vero.  ⇒ Il numero si scrive col carico ACCANTO, o non si scrive")
+    return stretto
+
+
 def monitor_del_prodotto(a):
     """⛔ Quale monitor il prodotto sta catturando — LETTO DAL SUO REGISTRO.
 
@@ -2793,7 +3390,7 @@ def _vuoto():
             "violazioni": [], "ultimo": None}
 
 
-def prepara_giro(d, vista, nome, ritorno_ms, andata_ms):
+def prepara_giro(d, vista, nome, ritorno_ms, andata_ms, vetro_ms=0.0):
     """Da un mucchio grezzo a un giro giudicabile: marche, mappa, sonde."""
     for c in d["campioni"]:
         leggi_due_marche(c)
@@ -2811,13 +3408,38 @@ def prepara_giro(d, vista, nome, ritorno_ms, andata_ms):
     tot = sum(1 for s in d["spediti"] if s.get("tipo") == RCP_PUNTATORE)
     sonde = accoppia(d["campioni"], d["spediti"], eventi)
     buone = [s for s in sonde if s.get("scomodo")]
+    # ⭐ La strada di disegno si DEDUCE dai campioni, non dall'indirizzo: la
+    #    coda `?tela=2d` e' un'intenzione, il campo `strada` e' un fatto.
+    strade = {}
+    for c in d["campioni"]:
+        s = c.get("strada")
+        strade[s] = strade.get(s, 0) + 1
     return {"nome": nome,
             "ritardo_ritorno_ms": ritorno_ms, "ritardo_andata_ms": andata_ms,
+            "ritardo_vetro_ms": vetro_ms,
+            "strade": strade,
             "campioni": d["campioni"], "spediti": d["spediti"],
             "eventi": eventi, "sonde": sonde,
             "mappa_coperti": coperti, "mappa_denominatore": tot,
             "distribuzione": _d([s["ritardo_scomodo_ms"] for s in buone
                                  if s.get("ritardo_scomodo_ms") is not None]),
+            # ⛔ Il confine SBAGLIATO, accanto e mai al posto del vero: Q11 lo
+            #    usa per dimostrare che il confine buono non si chiude li'.
+            "distribuzione_vecchio": _d([s["ritardo_vecchio_ms"] for s in buone
+                                         if s.get("ritardo_vecchio_ms") is not None]),
+            # ⭐⭐⭐ LA GRANDEZZA CHE VALE PIU' DI TUTTE, ed e' APPAIATA: quanto
+            #     dista il confine vero da quello sbagliato **sulla stessa
+            #     sonda, sullo stesso fotogramma**.
+            # ⛔ Appaiata e non fra due mediane, e la ragione e' misurata: un
+            #    ritardo innestato nel disegno occupa il filo della pagina e
+            #    sposta TUTTO il condotto (`[M]` 22 ago: col ritardo al vetro
+            #    anche il confine vecchio sale di 6,82 ms).  Sulla differenza
+            #    appaiata quello spostamento si elide, perche' colpisce i due
+            #    capi allo stesso modo — e resta solo il ritardo innestato.
+            "distanza_fra_i_confini": _d(
+                [s["ritardo_scomodo_ms"] - s["ritardo_vecchio_ms"] for s in buone
+                 if s.get("ritardo_vecchio_ms") is not None
+                 and s.get("ritardo_scomodo_ms") is not None]),
             "scomposizione": None}
 
 
@@ -2920,6 +3542,19 @@ def giro_vero(a, precondizioni):
         #    Aspettare un fotogramma prima della scena e' un'attesa che non
         #    finisce mai — su un desktop fermo Mutter non consegna niente
         #    (`LEZIONI.md` §1.1 travestita da ordine delle operazioni).
+        # ⛔⛔ SI FERMA PRIMA DI ACCENDERE, E IL RIMEDIO E' MISURATO — `[M]` 22
+        #     agosto 2026, agente A, primo giro perso proprio qui.
+        #
+        #     `scena-avvia` dice «la scena e' gia' viva» e RIUSA quella del giro
+        #     precedente.  ⛔ Ma quella ha perso il fuoco del puntatore (fra un
+        #     giro e l'altro la Panoramica di GNOME se l'e' ripreso), e il banco
+        #     si ferma sei tentativi dopo con «la scena non prende il fuoco».
+        #     ⚠ Il sintomo accusa il compositore; il colpevole e' l'ordine delle
+        #       operazioni.
+        # ⇒ Il rimedio stava «nella testa di chi lo lancia» (§A.4 punto 4).
+        #   Adesso sta nel banco: una scena nuova a ogni giro, sempre.
+        _sudo("bash %s scena-ferma" % a.terreno, silenzioso=True, attesa=120)
+        time.sleep(1.0)
         acceso = False
         for tentativo in range(8):
             rs = _sudo("bash %s scena-avvia" % a.terreno, silenzioso=True,
@@ -3088,6 +3723,11 @@ def giro_vero(a, precondizioni):
                  " true" % json.dumps(v["scorrimento"]), attendi=False)
         inf("scorrimento in vigore per il campionamento: %s" % v["scorrimento"])
 
+        log("5-quater. ⛔⛔⛔ IL CARICO DELLE DUE MACCHINE — e senza questo il "
+            "numero non vale")
+        v["carico_prima"] = carico_della_macchina(a)
+        v["macchina_carica_prima"] = stampa_carico(v["carico_prima"], "PRIMA")
+
         log("5-bis. ⛔ IL PALCO, dai due capi — si DICHIARA prima del numero")
         v["palco_prima"] = B.palco_dichiarato(palco, a, a.registro_prodotto)
         # ⛔ E il palco del SERVER si rilegge dal MIO albero: quello di `03-b17`
@@ -3124,10 +3764,17 @@ def giro_vero(a, precondizioni):
         #     la cadenza non stanno fermi per due minuti), e la salita misurata
         #     ne porta dentro la deriva.  Fette corte, alternate, tante volte:
         #     cosi' la deriva colpisce tutti i valori allo stesso modo.
-        condizioni = [("base", 0.0, 0.0),
-                      ("ritorno", float(a.ritardo_ritorno), 0.0),
-                      ("andata", 0.0, float(a.ritardo_andata))]
-        mucchio = {n: _vuoto() for n, _, _ in condizioni}
+        condizioni = [("base", 0.0, 0.0, 0.0),
+                      ("ritorno", float(a.ritardo_ritorno), 0.0, 0.0),
+                      ("andata", 0.0, float(a.ritardo_andata), 0.0)]
+        # ⭐⭐ LA QUARTA CONDIZIONE — il controllo positivo del confine (Q11).
+        # ⛔ Sta QUI dentro, intrecciata con le altre, e non in un giro a parte:
+        #    fra due giri ci si mette in mezzo la deriva, il palco e la contesa,
+        #    e la salita misurata ne porterebbe dentro un pezzo che non e' il
+        #    ritardo innestato (`LEZIONI.md` §1.13).
+        if a.ritardo_vetro > 0:
+            condizioni.append(("vetro", 0.0, 0.0, float(a.ritardo_vetro)))
+        mucchio = {n: _vuoto() for n, _, _, _ in condizioni}
         mani = max(2, a.mani)
         durata = max(4.0, a.secondi / mani)
         k = 0
@@ -3136,9 +3783,19 @@ def giro_vero(a, precondizioni):
             % (mani, durata, len(condizioni), mani * durata * len(condizioni),
                a.passo_ms))
         for mano in range(mani):
-            for nome, rr, ra in condizioni:
+            for nome, rr, ra, rv in condizioni:
                 if not metti_ritardo(a, rr, ra, "%s-m%d-%s" % (a.giro, mano, nome)):
                     dub("⚠ non ho potuto scrivere il comando del ponte (%s)" % nome)
+                # ⭐⭐ Il ritardo AL VETRO non passa dal ponte: sta dentro la
+                #     pagina, fra «il fotogramma e' pronto» e il trasferimento.
+                #     ⛔ Se non si riesce a scriverlo, NON si misura al buio.
+                sc = c.valuta("window.__B30 ? (window.__B30.ritardo_vetro_ms "
+                              "= %g, window.__B30.ritardo_vetro_ms) : null" % rv,
+                              attendi=False)
+                if sc != rv:
+                    dub("⚠ il ritardo al vetro non e' stato scritto (chiesto "
+                        "%g, letto %s): la condizione «%s» NON e' quella che "
+                        "dice di essere" % (rv, sc, nome))
                 # ⛔ Si BUTTA l'assestamento: i fotogrammi in volo subito dopo un
                 #    cambio di N portano ancora il N di prima.
                 time.sleep(1.5)
@@ -3151,6 +3808,8 @@ def giro_vero(a, precondizioni):
                 ritira(c, mucchio[nome])
             inf("mano %d/%d fatta" % (mano + 1, mani))
         metti_ritardo(a, 0.0, 0.0, a.giro)
+        c.valuta("window.__B30 ? (window.__B30.ritardo_vetro_ms = 0, true) "
+                 ": false", attendi=False)
         # ⛔ Il ponte si legge MENTRE ha ritardato, non a zero: uno scarto
         #    misurato a ritardo zero non dice niente su come consegna quando
         #    ritarda.  ⚠ Qui la lettura e' l'ultima scritta dal ponte.
@@ -3298,6 +3957,11 @@ def giro_vero(a, precondizioni):
                   scena_in["eventi_rotella"], scena_in["eventi_tasto"],
                   scena_in["ho_il_fuoco_puntatore"], scena_in["seat_visto"]))
 
+        log("11-bis. ⛔⛔ IL CARICO, RILETTO — un carico che cambia a meta' giro "
+            "fa uscire un numero che sembra buono")
+        v["carico_dopo"] = carico_della_macchina(a)
+        v["macchina_carica_dopo"] = stampa_carico(v["carico_dopo"], "DOPO")
+
         log("11. IL PALCO, RILETTO — un palco che cambia a meta' giro fa uscire "
             "un numero che sembra buono")
         v["palco_dopo"] = B.palco_dichiarato(palco, a, a.registro_prodotto)
@@ -3306,6 +3970,14 @@ def giro_vero(a, precondizioni):
             "il palco e' lo stesso ai due estremi" if v["palco_regge"]["regge"]
             else "⛔ IL PALCO E' CAMBIATO DURANTE LA MISURA: "
                  + " · ".join(v["palco_regge"]["perche"]))
+        # ⭐⭐ IL CONTROLLO INCROCIATO — il PRODOTTO contro il BANCO sui tratti
+        #    9 e 10.  ⛔ Due lettori indipendenti della stessa grandezza: se
+        #    divergono, uno dei due sbaglia, e finche' non li si mette accanto
+        #    non lo sa nessuno.
+        v["pagina_disegno"] = (mucchio["base"].get("ultimo") or {}).get(
+            "pagina_disegno")
+        v["strada_dichiarata_dal_prologo"] = (
+            mucchio["base"].get("ultimo") or {}).get("strada")
         v["grana"] = (mucchio["base"].get("ultimo") or {}).get("grana")
         v["isolata"] = (mucchio["base"].get("ultimo") or {}).get("isolata")
         v["costo_lettura_us"] = mucchio["base"]["costo_lettura_us"]
@@ -3313,17 +3985,57 @@ def giro_vero(a, precondizioni):
         palco.spegni()
 
     log("12. LE SONDE — si accoppia e si scompone")
-    for nome, rr, ra in condizioni:
-        g = prepara_giro(mucchio[nome], vista, nome, rr, ra)
+    for nome, rr, ra, rv in condizioni:
+        g = prepara_giro(mucchio[nome], vista, nome, rr, ra, rv)
         g["scomposizione"] = scomponi(g["sonde"], v["scarto_ancora_us"])
         v["giri"].append(g)
         chiuse = sum(1 for s in g["sonde"] if s.get("scomodo"))
         (ok if chiuse else ko)(
-            "%-8s ritorno %+5.1f · andata %+5.1f  ⇒  %4d spediti, %4d sonde, "
-            "%4d CHIUSE, mediana %s ms  (mappa: %d/%d)"
-            % (nome, rr, ra, len(g["spediti"]), len(g["sonde"]), chiuse,
-               g["distribuzione"].get("mediana"), g["mappa_coperti"],
-               g["mappa_denominatore"]))
+            "%-8s ritorno %+5.1f · andata %+5.1f · vetro %+5.1f  ⇒  %4d "
+            "spediti, %4d sonde, %4d CHIUSE, mediana %s ms  (⛔ confine vecchio "
+            "%s ms · strade %s · mappa: %d/%d)"
+            % (nome, rr, ra, rv, len(g["spediti"]), len(g["sonde"]), chiuse,
+               g["distribuzione"].get("mediana"),
+               (g.get("distribuzione_vecchio") or {}).get("mediana"),
+               json.dumps(g.get("strade"), ensure_ascii=False),
+               g["mappa_coperti"], g["mappa_denominatore"]))
+
+    log("12-ter. ⭐⭐ IL CONTROLLO INCROCIATO — il PRODOTTO contro il BANCO")
+    # ⛔ `src/pagina.html` misura da se' le stesse due grandezze dei tratti 9 e
+    #    10.  Se il banco e il prodotto dicono numeri diversi, uno dei due
+    #    sbaglia — e finche' non li si mette accanto non lo sa nessuno.
+    pd = v.get("pagina_disegno") or {}
+    base_g = next((x for x in v["giri"] if not x.get("ritardo_ritorno_ms")
+                   and not x.get("ritardo_andata_ms")
+                   and not x.get("ritardo_vetro_ms")), None) or {}
+    sc_b = base_g.get("scomposizione") or {}
+
+    def _tratto(pfx):
+        for k, x in sc_b.items():
+            if k.startswith(pfx) and isinstance(x, dict) and "mediana" in x:
+                return x["mediana"]
+
+    v["incrocio"] = {}
+    for nome, chiave, pfx in (("9 (l'attesa: `createImageBitmap`)", "bmp_ms", "9 "),
+                              ("10 (il disegno: `transferFromImageBitmap`)",
+                               "vetro_ms", "10 ")):
+        p = _d(pd.get(chiave) or [])
+        b = _tratto(pfx)
+        if not p.get("n") or b is None:
+            dub("⚠ tratto %s: NON CONFRONTATO (prodotto n=%s, banco %s).  ⛔ Non "
+                "e' «sono d'accordo»" % (nome, p.get("n"), b))
+            v["incrocio"][chiave] = {"prodotto": p, "banco": b, "esito": None}
+            continue
+        scarto = b - p["mediana"]
+        # ⚠ Il prodotto tiene 200 campioni recenti e il banco tutto il giro: il
+        #   confronto e' fra due CAMPIONI diversi della stessa grandezza, e la
+        #   soglia lo riflette invece di fingere che siano la stessa lista.
+        d_ok = abs(scarto) <= max(1.0, 0.30 * p["mediana"])
+        v["incrocio"][chiave] = {"prodotto": p, "banco": b,
+                                 "scarto_ms": round(scarto, 3), "esito": d_ok}
+        (ok if d_ok else ko)(
+            "tratto %s: il PRODOTTO dice %.3f ms (n=%d), il BANCO %.3f  ⇒ "
+            "scarto %+.3f ms" % (nome, p["mediana"], p["n"], b, scarto))
 
     log("12-bis. ⭐⭐ LA TASTIERA — lo stesso metro, la stessa scena, l'altro tasto")
     # ⛔ Stesso strumento, stessa scena, stesso giro: i due numeri si possono
@@ -3364,13 +4076,28 @@ def giro_vero(a, precondizioni):
 
     g = stampa_verdetto(v)
     base = next((x for x in v["giri"] if not x.get("ritardo_ritorno_ms")
-                 and not x.get("ritardo_andata_ms")), None) or {}
+                 and not x.get("ritardo_andata_ms")
+                 and not x.get("ritardo_vetro_ms")), None) or {}
     d = _d([s["ritardo_scomodo_ms"] for s in base.get("sonde", [])
             if s.get("ritardo_scomodo_ms") is not None])
     deposita({"banco": "B30", "tipo": "MISURA", "giro": a.giro,
               "host": a.host, "porta": a.porta, "utente": a.utente,
+              # ⛔⛔ LA STRADA DI DISEGNO NELLA RIGA DEPOSITATA — difetto
+              #     dichiarato dall'agente A e curato qui: chi rilegge
+              #     `04-b30-esiti.jsonl` DEVE poter sapere su quale strada e'
+              #     stato preso un numero, o confronterebbe due mondi diversi
+              #     credendoli uno.  ⭐ `coda_url` e' l'intenzione, `strade` e'
+              #     il FATTO (contato sui campioni).
+              "coda_url": v.get("coda_url", ""),
+              "strade": base.get("strade"),
               "controlli": {k: bool(g[k].get("esito")) for k in TUTTI},
               "distribuzione_ms": d,
+              # ⛔ Il confine SBAGLIATO, accanto e mai al posto del vero
+              "distribuzione_vecchio_ms": base.get("distribuzione_vecchio"),
+              "distanza_fra_i_confini_ms": base.get("distanza_fra_i_confini"),
+              # ⭐⭐ il PRODOTTO contro il BANCO sugli stessi due tratti
+              "incrocio_prodotto_banco": v.get("incrocio"),
+              "Q11": g["Q11"],
               "verdetto": verdetto(d, v.get("su_xvfb", False)),
               "scomposizione": scomponi(base.get("sonde", []),
                                         v.get("scarto_ancora_us", 0)),
@@ -3391,6 +4118,14 @@ def giro_vero(a, precondizioni):
                   "scomposizione": (v.get("tastiera") or {}).get("scomposizione"),
                   "mappa": (v.get("mappa_tasti") or {}).get("mappa"),
               },
+              # ⛔⛔⛔ IL CARICO ACCANTO AL NUMERO — 22 agosto 2026.  Senza, un
+              #     anello misurato con cinque Xvfb sopra e' indistinguibile da
+              #     uno misurato sul prodotto, e `[M]` fra i due ci sono da 15 a
+              #     45 volte sullo stesso tratto.
+              "carico_prima": v.get("carico_prima"),
+              "carico_dopo": v.get("carico_dopo"),
+              "⛔ macchina carica": bool(v.get("macchina_carica_prima")
+                                        or v.get("macchina_carica_dopo")),
               "palco": v.get("palco_prima"), "palco_regge": v.get("palco_regge"),
               "ponte": v.get("ponte"), "verbale": dove,
               "codice_uscita": codice_uscita(g)})
@@ -3542,6 +4277,16 @@ def principale():
     p.add_argument("--ritardo-andata", type=float, default=30.0,
                    help="⭐ N ms sul ramo cliente → prodotto (Q6, tratto 2) — "
                         "la meta' che alla fase 3 non esisteva")
+    p.add_argument("--ritardo-vetro", type=float, default=8.0,
+                   help="⭐⭐ N ms innestati DENTRO LA PAGINA fra «il fotogramma "
+                        "e' pronto» e «il fotogramma e' al vetro» (Q11, tratto "
+                        "10).  ⛔ E' il controllo positivo del CONFINE: se il "
+                        "numero non sale di N, il confine si chiude prima del "
+                        "disegno e quel che esce e' piu' piccolo del vero.  "
+                        "⚠ Tenerlo sotto un intervallo di quadro (16,7 ms), o "
+                        "il filo si satura e i fotogrammi si buttano invece di "
+                        "ritardare.  0 = non fare il controllo (⛔ e allora Q11 "
+                        "dice NON ESEGUITO, che non e' «passato»)")
     p.add_argument("--mani", type=int, default=3,
                    help="⛔ le condizioni si INTRECCIANO: a blocchi il ritardo "
                         "iniettato si confonde con la deriva")
