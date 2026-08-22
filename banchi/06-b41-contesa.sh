@@ -383,7 +383,17 @@ misura)
 	touch "$LAV/06-b41-marca-contesa"
 	B39_FINESTRA=si bash "$0" carico "$N" || exit $?
 	carico_stampa
-	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
+	# ⛔ E L'USCITA SI GUARDA — 22 agosto 2026, rilievo R14 applicato a questo file.
+	#    `06-b35-lancia.sh incatenate` adesso porta un bit che vale qualcosa:
+	#    5 = l'attrezzo delle latenze e' CIECO · 4 = una misura senza campioni ·
+	#    6 = eventi da righe senza marca.  ⚠ Buttarlo vorrebbe dire misurare la
+	#    contesa con un cronometro che non ha guardato — cioe' il difetto che
+	#    questo banco esiste per non commettere.
+	if ! bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"; then
+		echo "⛔ i giri incatenati non hanno prodotto una misura (uscita $?):"
+		echo "   NON e' «la contesa non muove niente», e' «non ho misurato»."
+		return 4
+	fi
 	raccogli contesa "$LAV/06-b41-marca-contesa" || { bash "$0" scarico; exit 4; }
 	carico_stampa
 	# ⛔ E si verifica che i codificatori fossero vivi ALLA FINE, non solo
@@ -404,7 +414,17 @@ misura)
 	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b41-riposo-r*.json
 	touch "$LAV/06-b41-marca-riposo"
 	carico_stampa
-	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
+	# ⛔ E L'USCITA SI GUARDA — 22 agosto 2026, rilievo R14 applicato a questo file.
+	#    `06-b35-lancia.sh incatenate` adesso porta un bit che vale qualcosa:
+	#    5 = l'attrezzo delle latenze e' CIECO · 4 = una misura senza campioni ·
+	#    6 = eventi da righe senza marca.  ⚠ Buttarlo vorrebbe dire misurare la
+	#    contesa con un cronometro che non ha guardato — cioe' il difetto che
+	#    questo banco esiste per non commettere.
+	if ! bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"; then
+		echo "⛔ i giri incatenati non hanno prodotto una misura (uscita $?):"
+		echo "   NON e' «la contesa non muove niente», e' «non ho misurato»."
+		return 4
+	fi
 	raccogli riposo "$LAV/06-b41-marca-riposo" || exit 4
 	carico_stampa
 

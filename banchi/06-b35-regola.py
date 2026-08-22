@@ -39,22 +39,47 @@ import statistics
 import sys
 
 NOMI = ("adattate", "non_ora", "ms_mediano", "fotogrammi",
-        "tela_nuova_dal_palco", "non_spediti")
+        "tela_nuova_dal_palco", "non_spediti",
+        "tentativi_con_risposta", "tentativi_senza_risposta")
 
 
 def ambiente(percorso_json, tela_nuova, non_spediti):
     d = json.load(open(percorso_json, encoding="utf-8"))
     tele = [v for v in d["controllo_dopo_sessione"] if v["tipo"] == "TELA"]
     msl = [t["ms"] for t in d["tentativi"] if t.get("ms") is not None]
+    # ⛔⛔ E I TENTATIVI SCADUTI SI CONTANO — rilievo R5 della revisione
+    #     avversariale, 22 agosto 2026.  Prima sparivano nella comprensione qui
+    #     sopra: un tentativo senza risposta non entrava in NESSUN numero.
+    #     ⚠ E lo scarto era sempre **dalla parte dei lenti**, cioe' proprio la
+    #     coda che le regole di questo banco cercano.
+    senza = sum(1 for t in d["tentativi"] if t.get("ms") is None)
     return {
         "adattate": sum(1 for v in tele if v["esito"] == "ADATTATA"),
         "non_ora": sum(1 for v in tele if v["motivo"] == "NON_ORA"),
-        "ms_mediano": statistics.median(msl) if msl else -1,
+        # ⛔⛔ IL SENTINELLA CADEVA DALLA PARTE DEL VERDE — rilievo R5, e vale
+        #     da solo tutta questa riga.
+        #
+        #     Qui c'era `-1`.  Se NESSUN tentativo riceve risposta — la scena
+        #     sotto contesa, dove tutte e nove le richieste superano l'attesa —
+        #     `msl` e' vuota, `ms_mediano` valeva **-1**, e la regola di **G2**
+        #     (`non_ora >= 6 and ms_mediano < 200`) diventava **vera**: il
+        #     certificatore scriveva «G2 ATTESO-CONFERMATO — le risposte
+        #     arrivano SUBITO» **mentre non ne era arrivata nemmeno una**.
+        #
+        # ⇒ Adesso e' `None`, che NON si confronta: `None < 200` solleva
+        #   `TypeError`, e `giudica()` (piu' sotto) se ne accorge PRIMA e
+        #   dichiara «NON-MISURATO» invece di far cadere la moneta.
+        # ⭐ E' la stessa forma della cura di G3: **il sentinella deve cadere
+        #   dalla parte del rosso**.  Un numero che passa un confronto per caso
+        #   e' un falso verde travestito da misura.
+        "ms_mediano": statistics.median(msl) if msl else None,
         # ⛔ «fotogrammi» sono quelli COMPLETI arrivati al client: uno spedito
         #    e non completato non e' un pixel.
         "fotogrammi": d["fotogrammi_totali"],
         "tela_nuova_dal_palco": int(tela_nuova),
         "non_spediti": int(non_spediti),
+        "tentativi_con_risposta": len(msl),
+        "tentativi_senza_risposta": senza,
     }
 
 
@@ -68,18 +93,42 @@ def giudica(amb, q, guasti_py, amb_sano=None):
     m = importlib.util.module_from_spec(s)
     s.loader.exec_module(m)
     regola = m.GUASTI[q]["regola"]
+    numeri = " ".join(f"{k}={amb.get(k)}" for k in NOMI)
+
+    # ⛔⛔ IL RIFIUTO DICHIARATO, PRIMA DEL CONFRONTO — rilievo R5, 22 agosto
+    #     2026.  Se la regola NOMINA `ms_mediano` e quel numero non esiste (zero
+    #     tentativi con risposta), non si giudica: si dichiara di NON aver
+    #     misurato.
+    # ⚠ E la guardia e' sul NOME dentro la regola, non sul caso: G5 gira
+    #   legittimamente senza `ms_mediano` (la sua regola non lo nomina), e
+    #   rifiutarlo sarebbe un rosso all'imputato sbagliato.
+    if "ms_mediano" in regola and amb.get("ms_mediano") is None:
+        return (f"{q} NON-MISURATO (ZERO tentativi con risposta: «ms_mediano» "
+                f"non esiste, e la regola lo nomina) {numeri}  "
+                f"[regola: {regola}]  ⛔ un sentinella qui avrebbe passato il "
+                f"confronto per caso", 1)
+
     try:
         visto = applica(regola, amb)
     except Exception as e:  # noqa: BLE001
-        return f"{q} REGOLA-ROTTA {e}", 1
-    numeri = " ".join(f"{k}={amb[k]}" for k in NOMI)
+        return f"{q} REGOLA-ROTTA {e}  {numeri}  [regola: {regola}]", 1
 
     anche_sano = None
+    sano_dice = "non calcolata"
     if amb_sano is not None:
-        try:
-            anche_sano = applica(regola, amb_sano)
-        except Exception:  # noqa: BLE001
-            anche_sano = None
+        # ⚠ E anche qui: se il giro SANO non ha `ms_mediano`, non e' un metro
+        #   per una regola che lo nomina — e si scrive, invece di stampare un
+        #   `None` che si legge come «falso».
+        if "ms_mediano" in regola and amb_sano.get("ms_mediano") is None:
+            sano_dice = ("⛔ NON CONFRONTABILE (il giro sano non ha "
+                         "«ms_mediano»: zero tentativi con risposta)")
+        else:
+            try:
+                anche_sano = applica(regola, amb_sano)
+                sano_dice = str(anche_sano)
+            except Exception as e:  # noqa: BLE001
+                anche_sano = None
+                sano_dice = f"⛔ NON CONFRONTABILE ({e})"
 
     # ⛔ «CONFERMATO» vuol dire che l'ATTESO DICHIARATO PRIMA si e' avverato —
     #    non «e' diventato rosso»: l'atteso di G4 e' VERDE, e chiamarlo
@@ -92,19 +141,21 @@ def giudica(amb, q, guasti_py, amb_sano=None):
         esito = "NON-DISCRIMINANTE (vera anche sul SANO)"
     coda = ""
     if amb_sano is not None:
-        coda = ("  | sano: " + " ".join(f"{k}={amb_sano[k]}" for k in NOMI)
-                + f" · regola sul sano = {anche_sano}")
+        coda = ("  | sano: " + " ".join(f"{k}={amb_sano.get(k)}" for k in NOMI)
+                + f" · regola sul sano = {sano_dice}")
     else:
         coda = "  | ⚠ NESSUN GIRO SANO: la regola non e' stata messa a confronto"
     return f"{q} {esito} {numeri}  [regola: {regola}]{coda}", 0
 
 
 # ===========================================================================
-def _finto(adattate, non_ora, ms, fotogrammi):
+def _finto(adattate, non_ora, ms, fotogrammi, scaduti=0):
+    """⚠ `ms=None` + `scaduti=N`: il giro in cui NESSUNA risposta e' arrivata."""
     tele = ([{"tipo": "TELA", "esito": "ADATTATA", "motivo": 0}] * adattate
             + [{"tipo": "TELA", "esito": "RIFIUTATA", "motivo": "NON_ORA"}] * non_ora)
+    tent = ([] if ms is None else [{"ms": ms}]) + [{"ms": None}] * scaduti
     return {"controllo_dopo_sessione": tele,
-            "tentativi": [{"ms": ms}],
+            "tentativi": tent,
             "fotogrammi_totali": fotogrammi}
 
 
@@ -124,9 +175,10 @@ def controllo():
         pg = os.path.join(d, "g.json")
         json.dump(_finto(0, 9, 3000.0, 12), open(pg, "w"))
         amb_g = ambiente(pg, 0, 0)
-        prova("i sei numeri del guasto",
+        prova("gli otto numeri del guasto",
               {"adattate": 0, "non_ora": 9, "ms_mediano": 3000.0,
-               "fotogrammi": 12, "tela_nuova_dal_palco": 0, "non_spediti": 0},
+               "fotogrammi": 12, "tela_nuova_dal_palco": 0, "non_spediti": 0,
+               "tentativi_con_risposta": 1, "tentativi_senza_risposta": 0},
               amb_g)
 
         ps = os.path.join(d, "s.json")
@@ -200,6 +252,49 @@ def controllo():
             riga, _ = giudica(g3, "G1", vero, sano21)
             prova("la regola di G1 sul giro di G3 ⇒ NON confermato",
                   False, "ATTESO-CONFERMATO" in riga)
+
+            # ===============================================================
+            # ⛔⛔ R5 — IL SENTINELLA CHE PASSAVA IL CONFRONTO, 22 agosto 2026.
+            #
+            #     La scena: sotto contesa NESSUNA delle nove richieste riceve
+            #     risposta entro l'attesa del client.  ⇒ `ms_mediano` non
+            #     esiste.  Col vecchio `-1`, la regola di G2 (`non_ora >= 6 and
+            #     ms_mediano < 200`) diventava VERA e il banco scriveva
+            #     «le risposte arrivano SUBITO» su un giro **senza risposte**.
+            # ⚠ E la prova e' fatta sul giro VERO passato per `ambiente()`, non
+            #   su un dizionario scritto a mano: cosi' controlla anche la riga
+            #   che costruisce i numeri, non solo quella che li giudica.
+            # ===============================================================
+            pmuto = os.path.join(d, "muto.json")
+            json.dump(_finto(0, 9, None, 0, scaduti=9), open(pmuto, "w"))
+            amb_muto = ambiente(pmuto, 1, 0)
+            prova("giro MUTO: ms_mediano e' None, non un numero",
+                  True, amb_muto["ms_mediano"] is None)
+            prova("  ...e i 9 scaduti sono CONTATI, non scartati",
+                  (0, 9), (amb_muto["tentativi_con_risposta"],
+                           amb_muto["tentativi_senza_risposta"]))
+            riga, u = giudica(amb_muto, "G2", vero, sano21)
+            prova("G2 sul giro MUTO ⇒ NON confermato",
+                  False, "ATTESO-CONFERMATO" in riga)
+            prova("  ...e lo DICHIARA: «NON-MISURATO»",
+                  True, "NON-MISURATO" in riga)
+            prova("  ...e l'uscita e' rossa", 1, u)
+            # ⛔ Il veleno vero: col sentinella VECCHIO la stessa scena passava.
+            #    Se qualcuno rimettesse un numero al posto del `None`, questa
+            #    riga diventa rossa.
+            vecchio = dict(amb_muto, ms_mediano=-1)
+            riga, _ = giudica(vecchio, "G2", vero, sano21)
+            prova("⛔ col sentinella VECCHIO (-1) sarebbe passato",
+                  True, "ATTESO-CONFERMATO" in riga)
+            # ⭐ E G5 — che NON nomina `ms_mediano` — non dev'essere rifiutato:
+            #    il rifiuto e' sulla regola, non sul caso.
+            g5 = {"adattate": 0, "non_ora": 0, "ms_mediano": None,
+                  "fotogrammi": 0, "tela_nuova_dal_palco": 157,
+                  "non_spediti": 1, "tentativi_con_risposta": 0,
+                  "tentativi_senza_risposta": 0}
+            riga, _ = giudica(g5, "G5", vero, sano21)
+            prova("⭐ G5 (che non nomina ms_mediano) NON viene rifiutato",
+                  True, "ATTESO-CONFERMATO" in riga)
         else:
             print(f"    ⛔  06-b35-guasti.py non e' accanto a me ({vero}): "
                   f"i quattro controlli su G3 NON sono stati fatti")

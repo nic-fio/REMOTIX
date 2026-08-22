@@ -138,8 +138,12 @@ incatenate)
 		printf '.'
 	done
 	printf '\n'
+	# ⛔ E LO STATO D'USCITA DI «tempi» SI PASSA — lo stesso rilievo R14, un
+	#    piano piu' su: `06-b35-tempi.py` adesso sa dire «cieco» (5),
+	#    «incompleto» (4) e «sporco» (6), e un `exit 0` qui butterebbe via
+	#    proprio il bit che e' appena stato scritto.
 	bash "$0" tempi
-	exit 0 ;;
+	exit $? ;;
 
 sweep)
 	log "La FINESTRA ROTTA: intervalli 10..35 ms, 3 giri ciascuno"

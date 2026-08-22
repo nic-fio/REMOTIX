@@ -55,6 +55,7 @@ import os
 import re
 import statistics
 import sys
+import tempfile
 
 # ⛔ La marca temporale di `src/registro.c`: "%H:%M:%S.%03ld " e poi l'area.
 #    Si pretende ESATTA: un `split()[0]` accettava qualunque cosa e moriva sul
@@ -140,6 +141,57 @@ def misura_chiesta_al_produttore(testo):
     return (int(tutte[0][0]), int(tutte[0][1])) if tutte else None
 
 
+# ⛔⛔ LE «TELA spedita» CHE NON RISPONDONO A NESSUNA GIRATA — rilievo R14 della
+#     revisione avversariale, 22 agosto 2026.
+#
+# `rcp.c:2993` scrive «TELA(ADATTATA) alla misura che c'era gia'» quando la
+# richiesta chiede la misura **gia' in vigore**: risponde da se', e al palco non
+# gira niente.  ⇒ Quella `TELA spedita` **non ha una GIRATA davanti**, e in un
+# accoppiamento per ORDINE si prenderebbe la GIRATA della richiesta successiva:
+# la latenza ④ di quella richiesta nascerebbe **negativa o assurda**, e tutte le
+# altre slitterebbero di uno.
+# ⚠ Qui non e' teorico: nel giro «dieci» la richiesta #1 chiede 1280x800, che e'
+#   gia' la tela di sessione — `[M]` GIRATA 9, SPEDITA 10, ogni volta.
+GIA_COSI = "alla misura che c'era gia'"
+# ⚠ Quanto puo' distare la «TELA spedita» dalla riga «c'era gia'» che la
+#   spiega.  `[M]` sui registri veri: **0 ms**, sempre — le due righe le scrive
+#   la stessa funzione di fila.  50 e' cinquanta volte tanto: largo abbastanza
+#   da non perdere una coppia vera, stretto abbastanza da non rubare a ④ una
+#   risposta che non c'entra.
+LEGAME_MS = 50
+
+
+def spedite_vere(righe):
+    """Le «TELA spedita», separate in (con_girata, gia_cosi).
+
+    ⛔ Si legge quel che il registro DICE — la riga `GIA_COSI` che precede — non
+       si deduce dall'ordine.  E il legame e' stretto: la riga sta subito prima,
+       nello stesso millisecondo, e una GIRATA in mezzo lo rompe.
+    """
+    con, gia = [], []
+    attesa_da = None
+    for t, testo, orfana in righe:
+        if GIA_COSI in testo:
+            attesa_da = t
+            continue
+        if GIRATA in testo:
+            # ⚠ Una GIRATA fra la riga e la sua spedita vorrebbe dire che la
+            #   lettura e' sbagliata: si lascia cadere invece di tirare a
+            #   indovinare.
+            attesa_da = None
+            continue
+        if SPEDITA in testo:
+            # ⛔ E ANCHE IL TEMPO, non solo l'ordine: `rcp.c` scrive le due
+            #    righe di fila, senza I/O in mezzo — `[M]` cadono nello STESSO
+            #    millisecondo, sempre.  ⇒ Oltre `LEGAME_MS` il legame non c'e'
+            #    piu', e attribuire quella `TELA spedita` alla riga «c'era
+            #    gia'» vorrebbe dire toglierla a ④ per una deduzione.
+            vicina = attesa_da is not None and (t - attesa_da) <= LEGAME_MS
+            (gia if vicina else con).append((t, testo, orfana))
+            attesa_da = None
+    return con, gia
+
+
 def accoppia(a, b, tetto, chiave_a=None, chiave_b=None):
     """Per ogni `a`, la prima `b` **non ancora consumata** che viene dopo.
 
@@ -199,6 +251,7 @@ def conta(giro, tetto, dettaglio):
     chiesta = giro.eventi(CHIESTA)
     nuova = giro.eventi(NUOVA)
     spedita = giro.eventi(SPEDITA)
+    spedita_con, spedita_gia = spedite_vere(giro.righe)
 
     print()
     # ⛔ DIFETTO DEL MIO ATTREZZO, TROVATO MISURANDO — 21 agosto 2026, sera.
@@ -219,7 +272,19 @@ def conta(giro, tetto, dettaglio):
              if giro.senza_ora else "")
           + f"  ·  tetto {tetto} ms")
     print(f"    eventi: GIRATA {len(girata)} · CHIESTA {len(chiesta)} · "
-          f"NUOVA {len(nuova)} · SPEDITA {len(spedita)}")
+          f"NUOVA {len(nuova)} · SPEDITA {len(spedita)}"
+          + (f"  (di cui {len(spedita_gia)} «misura che c'era gia'», SENZA"
+             f" girata ⇒ fuori da ④)" if spedita_gia else ""))
+    # ⛔ E se il conto non torna, lo si dice: `GIRATA + gia_cosi` dovrebbe fare
+    #    `SPEDITA`.  Uno scarto vuol dire che c'e' una risposta che questo
+    #    attrezzo non sa a chi attribuire — e ④ ne risentirebbe in silenzio.
+    if len(spedita_con) + len(spedita_gia) != len(spedita):
+        print(f"    ⛔ le «TELA spedita» non si spartiscono: {len(spedita_con)}"
+              f" + {len(spedita_gia)} ≠ {len(spedita)}")
+    elif len(girata) != len(spedita_con):
+        print(f"    ⚠ GIRATA {len(girata)} ≠ spedite con girata"
+              f" {len(spedita_con)}: ④ accoppia per ORDINE, e uno scarto qui"
+              f" e' proprio la scena in cui l'ordine sbaglia.")
     if orf:
         print(f"    ⛔ {orf} EVENTI arrivano da righe senza marca: l'ora e'"
               f" quella della riga precedente, non e' letta.")
@@ -232,11 +297,30 @@ def conta(giro, tetto, dettaglio):
               f" stesso file (ffmpeg, libva, GLib), non righe nostre spezzate.")
     print()
 
+    # ⛔ Le misure che non hanno prodotto nemmeno un campione: si RACCOLGONO,
+    #    perche' e' con loro che `main()` decide il proprio stato d'uscita.
+    #    ⚠ Prima `conta()` li stampava e `main()` tornava 0 comunque —
+    #    `LEZIONI.md` §1.20 alla lettera, dentro l'attrezzo delle latenze.
+    vuote = []
+
     # 1 · il ridimensionamento a caldo, dentro il nostro server.
-    c, sp, ol, _ = accoppia(girata, chiesta, tetto)
+    # ⛔⛔ ACCOPPIATO PER CHIAVE, NON PER ORDINE — rilievo R14, 22 agosto 2026.
+    #     Una `GIRATA` che non arriva mai al produttore (il palco caduto, o la
+    #     richiesta rifiutata da `cattura_ridimensiona()`) consumava la `CHIESTA`
+    #     della richiesta SUCCESSIVA: nasceva una latenza fatta di due richieste
+    #     diverse, e tutte le altre slittavano.  ⚠ E il registro la chiave ce
+    #     l'ha gia': la GIRATA dice la misura **buona** girata al palco, e la
+    #     CHIESTA dice la misura chiesta al produttore.  Sono la stessa cosa.
+    c, sp, ol, _ = accoppia(girata, chiesta, tetto,
+                            chiave_a=misura_chiesta,
+                            chiave_b=misura_chiesta_al_produttore)
+    if not c:
+        vuote.append("①")
     dillo("① ADATTA_TELA girata → tela chiesta al produttore  "
           "(il RIDIMENSIONAMENTO A CALDO, tutto nostro)",
-          c, len(girata), sp, ol, "rcp.c → figlio.c → cattura.c", dettaglio)
+          c, len(girata), sp, ol,
+          "rcp.c → figlio.c → cattura.c · accoppiate per MISURA, non per ordine",
+          dettaglio)
 
     # 2 · il compositore.  ⛔ per chiave: la richiesta rifiutata non ha risposta.
     c, sp, ol, _ = accoppia(
@@ -245,6 +329,8 @@ def conta(giro, tetto, dettaglio):
         chiave_b=lambda t: ((int(RE_CHIESTI.search(t)[1]),
                              int(RE_CHIESTI.search(t)[2]))
                             if RE_CHIESTI.search(t) else None))
+    if not c:
+        vuote.append("②")
     dillo("② tela chiesta al produttore → TELA NUOVA DAL PALCO  "
           "(il COMPOSITORE, non noi)",
           c, len(chiesta), sp, ol,
@@ -253,12 +339,24 @@ def conta(giro, tetto, dettaglio):
 
     # 3 · da quando il palco risponde a quando il client lo sa.
     c, sp, ol, _ = accoppia(nuova, spedita, tetto)
+    if not c:
+        vuote.append("③")
     dillo("③ TELA NUOVA DAL PALCO → TELA spedita al client",
           c, len(nuova), sp, ol, "e' il «6 ms» del 15 agosto 2026", dettaglio)
 
     # 4 · il giro intero, SPACCATO PER ESITO.  ⛔ E2: `ADATTATA` e `NON_ORA`
     #     sotto la stessa etichetta sono due misure con un nome solo.
-    c, sp, ol, coppie = accoppia(girata, spedita, tetto)
+    #
+    # ⛔⭐ E QUESTA RESTA PER ORDINE, ED E' UNA SCELTA DICHIARATA — rilievo R14.
+    #     Per ① e ② la chiave c'e' (la misura); qui **non c'e'**: la riga «TELA
+    #     spedita» porta la *tela in vigore*, che su un `NON_ORA` e' quella
+    #     VECCHIA — accoppiare per misura butterebbe via tutti i `NON_ORA`,
+    #     cioe' proprio i casi che le regole di G1 e G3 cercano.
+    # ⇒ La protezione e' un'altra, e sta a monte: si tolgono le «TELA spedita»
+    #   che rispondono da se' (`GIA_COSI`), che sono l'unico modo in cui una
+    #   risposta puo' non avere una GIRATA davanti.  §7.1 garantisce **una TELA
+    #   per ADATTA_TELA e in ordine**: tolte quelle, l'ordine e' la chiave.
+    c, sp, ol, coppie = accoppia(girata, spedita_con, tetto)
     famiglie = {}
     for (ta, tb, testo) in coppie:
         m = RE_ESITO.search(testo)
@@ -270,6 +368,7 @@ def conta(giro, tetto, dettaglio):
           + (f"  ⛔ oltre il tetto {ol}" if ol else ""))
     if not famiglie:
         print("        NESSUN CAMPIONE ⛔")
+        vuote.append("④")
     for nome in sorted(famiglie):
         v = sorted(famiglie[nome])
         print(f"        {nome:<10s} n={len(v)}  mediana={statistics.median(v):.1f} ms"
@@ -279,7 +378,11 @@ def conta(giro, tetto, dettaglio):
     print()
     return {"girata": len(girata), "chiesta": len(chiesta),
             "nuova": len(nuova), "spedita": len(spedita),
+            "spedita_gia_cosi": len(spedita_gia),
             "orfane": giro.orfane,
+            # ⛔ I DUE BIT CHE `main()` DEVE GUARDARE — rilievo R14.
+            "vuote": vuote,
+            "eventi_orfani": orf,
             "famiglie": {k: sorted(v) for k, v in famiglie.items()}}
 
 
@@ -306,6 +409,44 @@ FINTO = """\
 10:00:01.039 figlio  ⭐⭐ TELA NUOVA DAL PALCO: 1280x800 → 1024x640 (chiesti al produttore 1024x640)
 10:00:01.045 rcp     TELA spedita: esito 1, motivo 0, tela in vigore 1024x640 (§7.1)
 """
+
+# ===========================================================================
+# ⛔⛔ IL SECONDO REGISTRO FINTO — il veleno di R14, 22 agosto 2026
+# ===========================================================================
+#
+# ⚠ Sta a parte apposta: aggiungere righe a `FINTO` avrebbe cambiato tutti gli
+#   attesi contati a mano qui sopra, e un controllo positivo riscritto per far
+#   tornare i conti non controlla piu' niente.
+#
+# Due veleni in nove righe, e nessuno dei due e' inventato:
+#
+#   1. la richiesta **1600x900 non arriva mai al produttore** (nessuna riga
+#      `tela CHIESTA`) ⇒ accoppiando ① per ORDINE, quella GIRATA si prende la
+#      `CHIESTA` della richiesta **successiva**: 720 ms invece di 20;
+#   2. in mezzo alle due, una `TELA` che **risponde da se'** (la misura era gia'
+#      in vigore) ⇒ accoppiando ④ per ordine senza toglierla, la richiesta
+#      1600x900 si prende QUELLA come risposta: 102 ms invece di 500, ⛔ e
+#      finisce nella famiglia **ADATTATA** mentre il suo esito vero e' NON_ORA.
+#      ⇒ La famiglia `NON_ORA` sparisce del tutto: zero campioni, e nessuno
+#      stamperebbe un avviso.
+FINTO_R14 = """\
+11:00:00.000 rcp     ⭐ ADATTA_TELA 1600x900 → 1600x900 GIRATA al palco
+11:00:00.100 rcp     TELA(ADATTATA) alla misura che c'era gia' (1280x800): la tela in vigore non cambia
+11:00:00.102 rcp     TELA spedita: esito 1, motivo 0, tela in vigore 1280x800 (§7.1)
+11:00:00.500 rcp     TELA spedita: esito 2, motivo 3, tela in vigore 1280x800 (§7.1)
+11:00:00.700 rcp     ⭐ ADATTA_TELA 1024x640 → 1024x640 GIRATA al palco
+11:00:00.720 cattura ⭐ tela CHIESTA al produttore: 1024x640 (`pw_stream_update_params`)
+11:00:00.760 figlio  ⭐⭐ TELA NUOVA DAL PALCO: 1280x800 → 1024x640 (chiesti al produttore 1024x640)
+11:00:00.780 rcp     TELA spedita: esito 1, motivo 0, tela in vigore 1024x640 (§7.1)
+"""
+
+ATTESO_R14 = {
+    "spedita": 3, "gia_cosi": 1, "con_girata": 2,
+    "uno_per_chiave": [20], "uno_spaiate": 1,
+    "uno_per_ordine_SBAGLIATO": [720],
+    "adattata": [80], "non_ora": [500],
+    "adattata_senza_filtro_SBAGLIATA": [80, 102],
+}
 
 # Quel che DEVE uscire, contato a mano sul registro qui sopra.
 ATTESO = {
@@ -344,8 +485,10 @@ def controllo():
     verifica("eventi NUOVA", len(nuova), ATTESO["nuova"])
     verifica("eventi SPEDITA", len(spedita), ATTESO["spedita"])
 
-    c, sp, ol, _ = accoppia(girata, chiesta, 1000)
-    verifica("① girata → chiesta", sorted(c), sorted(ATTESO["uno"]))
+    c, sp, ol, _ = accoppia(girata, chiesta, 1000,
+                            chiave_a=misura_chiesta,
+                            chiave_b=misura_chiesta_al_produttore)
+    verifica("① girata → chiesta (per chiave)", sorted(c), sorted(ATTESO["uno"]))
 
     c, sp, ol, _ = accoppia(
         chiesta, nuova, 1000,
@@ -359,7 +502,10 @@ def controllo():
     c, sp, ol, _ = accoppia(nuova, spedita, 1000)
     verifica("③ nuova → spedita", sorted(c), sorted(ATTESO["tre"]))
 
-    c, sp, ol, coppie = accoppia(girata, spedita, 1000)
+    sp_con, sp_gia = spedite_vere(giro.righe)
+    verifica("④ nessuna «misura che c'era gia'» in questo registro",
+             len(sp_gia), 0)
+    c, sp, ol, coppie = accoppia(girata, sp_con, 1000)
     fam = {}
     for (ta, tb, testo) in coppie:
         m = RE_ESITO.search(testo)
@@ -368,6 +514,93 @@ def controllo():
              sorted(fam.get("ADATTATA", [])), ATTESO["adattata"])
     verifica("④ giro intero · NON_ORA",
              sorted(fam.get("NON_ORA", [])), ATTESO["non_ora"])
+
+    # =======================================================================
+    # ⛔⛔ IL SECONDO REGISTRO: i due veleni di R14 — e per ciascuno si pretende
+    #     che il modo VECCHIO sbagli.  Un controllo che verifica solo il modo
+    #     nuovo non dimostra che il difetto ci fosse.
+    # =======================================================================
+    print()
+    print("    ⛔ R14 — il registro col veleno dell'accoppiamento:")
+    g2 = Registro().leggi(FINTO_R14.splitlines())
+    gir2 = g2.eventi(GIRATA)
+    chi2 = g2.eventi(CHIESTA)
+    spe2 = g2.eventi(SPEDITA)
+    con2, gia2 = spedite_vere(g2.righe)
+    verifica("  «TELA spedita» totali", len(spe2), ATTESO_R14["spedita"])
+    verifica("  ...di cui «misura che c'era gia'»", len(gia2),
+             ATTESO_R14["gia_cosi"])
+    verifica("  ...e quelle con una GIRATA davanti", len(con2),
+             ATTESO_R14["con_girata"])
+    # ⭐ E il legame e' anche nel TEMPO: la stessa riga «c'era gia'», ma con la
+    #   sua spedita LONTANA, non deve piu' rubarla a ④.
+    lontano = FINTO_R14.replace(
+        "11:00:00.102 rcp     TELA spedita: esito 1, motivo 0, tela in vigore 1280x800",
+        "11:00:00.402 rcp     TELA spedita: esito 1, motivo 0, tela in vigore 1280x800")
+    _, gia_l = spedite_vere(Registro().leggi(lontano.splitlines()).righe)
+    verifica("  ⚠ «c'era gia'» a 302 ms di distanza ⇒ NON e' sua", len(gia_l), 0)
+
+    c, sp, _, _ = accoppia(gir2, chi2, 1000,
+                           chiave_a=misura_chiesta,
+                           chiave_b=misura_chiesta_al_produttore)
+    verifica("  ① PER CHIAVE (giusto)", sorted(c), ATTESO_R14["uno_per_chiave"])
+    verifica("  ① la richiesta mai arrivata al produttore e' SPAIATA", sp,
+             ATTESO_R14["uno_spaiate"])
+    c, _, _, _ = accoppia(gir2, chi2, 1000)
+    verifica("  ⛔ ① per ORDINE (com'era) sbaglia", sorted(c),
+             ATTESO_R14["uno_per_ordine_SBAGLIATO"])
+
+    def famiglie_di(coppie):
+        f = {}
+        for (ta, tb, testo) in coppie:
+            m = RE_ESITO.search(testo)
+            f.setdefault(nome_esito(int(m[1]), int(m[2])), []).append(tb - ta)
+        return f
+
+    _, _, _, cp = accoppia(gir2, con2, 1000)
+    f = famiglie_di(cp)
+    verifica("  ④ senza le «c'era gia'» · ADATTATA",
+             sorted(f.get("ADATTATA", [])), ATTESO_R14["adattata"])
+    verifica("  ④ senza le «c'era gia'» · NON_ORA",
+             sorted(f.get("NON_ORA", [])), ATTESO_R14["non_ora"])
+    _, _, _, cp = accoppia(gir2, spe2, 1000)
+    f = famiglie_di(cp)
+    verifica("  ⛔ ④ com'era: la NON_ORA SPARISCE",
+             sorted(f.get("NON_ORA", [])), [])
+    verifica("  ⛔ ...e finisce fra le ADATTATA, col tempo sbagliato",
+             sorted(f.get("ADATTATA", [])),
+             ATTESO_R14["adattata_senza_filtro_SBAGLIATA"])
+
+    # =======================================================================
+    # ⛔⛔ E LO STATO D'USCITA — R14, seconda meta': `main()` buttava i conti.
+    # =======================================================================
+    import contextlib
+    import io
+
+    def uscita_su(testo):
+        """Che cosa torna `main()` su questo registro?  Senza scrivere file."""
+        with tempfile.NamedTemporaryFile("w", suffix=".log",
+                                         delete=False) as fh:
+            fh.write(testo)
+            p = fh.name
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                return main(["prog", p])
+        finally:
+            os.unlink(p)
+
+    print()
+    print("    ⛔ E lo STATO D'USCITA, che prima era 0 sempre:")
+    verifica("  registro buono ⇒ 0", uscita_su(FINTO_R14), 0)
+    verifica("  ⛔ registro CIECO (niente di nostro) ⇒ 5",
+             uscita_su("10:00:00.000 rcp     una riga qualunque\n"), 5)
+    verifica("  ⛔ registro INCOMPLETO (nessuna CHIESTA) ⇒ 4",
+             uscita_su("10:00:00.000 rcp     ⭐ ADATTA_TELA 800x600 → 800x600 "
+                       "GIRATA al palco\n"
+                       "10:00:00.050 rcp     TELA spedita: esito 2, motivo 3, "
+                       "tela in vigore 1280x800 (§7.1)\n"), 4)
+    verifica("  ⚠ registro SPORCO (un evento da riga senza marca) ⇒ 6",
+             uscita_su(FINTO), 6)
 
     # ⭐⭐ E IL CONTROLLO CHE CONTA DAVVERO: lo strumento vecchio, sullo stesso
     #     registro, sbagliava.  Se non sbaglia piu', il registro finto non
@@ -426,7 +659,7 @@ def controllo():
     return 0
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="06-b35 — le latenze, dal registro")
     p.add_argument("registro", nargs="?", help="il giro.log da leggere")
     p.add_argument("--tetto", type=int, default=1000,
@@ -435,7 +668,10 @@ def main():
                    help="stampa ogni campione, per il ricalcolo a mano")
     p.add_argument("--controllo", action="store_true",
                    help="⭐ il controllo positivo dello STRUMENTO")
-    a = p.parse_args()
+    # ⚠ `argv` si passa dall'esterno perche' il CONTROLLO POSITIVO deve
+    #   poter chiedere a `main()` il suo stato d'uscita, che e' la cosa
+    #   che R14 dice essere stata buttata via.
+    a = p.parse_args(None if argv is None else argv[1:])
 
     if a.controllo:
         return controllo()
@@ -455,7 +691,40 @@ def main():
         return 3
     with open(a.registro, errors="replace") as f:
         giro = Registro().leggi(f)
-    conta(giro, a.tetto, a.dettaglio)
+    esito = conta(giro, a.tetto, a.dettaglio)
+
+    # ⛔⛔ LO STATO D'USCITA — rilievo R14 della revisione avversariale, 22
+    #     agosto 2026.  Qui c'era `return 0` in ogni caso: su un registro vero
+    #     l'attrezzo usciva **verde** anche stampando `NESSUN CAMPIONE ⛔` su
+    #     tutte e quattro le misure.  ⚠ E' `LEZIONI.md` §1.20 alla lettera —
+    #     *la misura e' buona, e il giudizio e' staccato da lei* — dentro
+    #     l'attrezzo che questo banco usa per credere ai propri millisecondi.
+    #
+    #   5 · CIECO      nessun evento delle quattro famiglie: la finestra non
+    #                  contiene niente di nostro (marca sbagliata, giro vuoto).
+    #                  ⛔ E' il caso in cui uno «zero» NON e' una misura.
+    #   4 · INCOMPLETO almeno una delle quattro misure non ha campioni.
+    #   6 · SPORCO     ci sono campioni, ma alcuni nascono da righe SENZA MARCA:
+    #                  l'ora e' quella della riga precedente, e quelle latenze
+    #                  valgono meno.
+    #   0 · quattro misure con campioni, e nessun evento da righe orfane.
+    if not (esito["girata"] or esito["chiesta"]
+            or esito["nuova"] or esito["spedita"]):
+        print("⛔ USCITA 5 — CIECO: zero eventi delle quattro famiglie in questa"
+              "\n   finestra.  ⚠ Non e' «nessuna latenza»: e' «non ho guardato»."
+              "\n   Il caso tipico e' la marca sbagliata (LEZIONI.md §1.9).")
+        return 5
+    if esito["vuote"]:
+        print(f"⛔ USCITA 4 — INCOMPLETO: {len(esito['vuote'])} misura/e senza"
+              f" nemmeno un campione: {' '.join(esito['vuote'])}."
+              f"\n   ⚠ «NESSUN CAMPIONE» stampato e uscita 0 sarebbero un verde"
+              f" che nessuno ha visto.")
+        return 4
+    if esito["eventi_orfani"]:
+        print(f"⚠ USCITA 6 — SPORCO: {esito['eventi_orfani']} eventi vengono da"
+              f" righe senza marca.\n   Le quattro misure ci sono, ma quelle"
+              f" latenze portano l'ora della riga precedente.")
+        return 6
     return 0
 
 

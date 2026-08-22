@@ -377,8 +377,30 @@ ND=$(grep -c ' NON-DISCRIMINANTE' "$ESITI"); [ -n "$ND" ] || ND=0
 # ⚠ E il denominatore e' il numero di GUASTI chiesti, non le righe del file:
 #   le righe portano dentro anche il metro sano e le diagnosi.
 QN=0; for _q in $QUALI; do QN=$((QN + 1)); done
-printf '\n    attesi CONFERMATI: %s · SMENTITI: %s · ⛔ NON DISCRIMINANTI: %s   (su %s guasti chiesti)\n' \
-	"$V" "$N" "$ND" "$QN"
+# ⛔⛔ LA QUARTA COLONNA, E LA RICONCILIAZIONE — rilievo R5, 22 agosto 2026.
+#
+#     Le tre colonne non hanno mai sommato a `QN`: un caso che NON COMPILA, che
+#     non accende, che ha lo strumento cieco, o che adesso esce «NON-MISURATO»
+#     (zero tentativi con risposta) spariva da tutte e tre **senza che nessuna
+#     riga lo dicesse**.  ⚠ Chi leggeva «CONFERMATI 3» su 5 guasti doveva
+#     dedurre da solo dove fossero finiti gli altri due.
+# ⇒ Qui si conta il resto per DIFFERENZA e si pretende che il conto torni: se
+#   non torna, c'e' un esito che questo riepilogo non sa leggere, ed e'
+#   esattamente la forma di `LEZIONI.md` §1.20 — un numero stampato e mai
+#   confrontato.
+ALTRI=$((QN - V - N - ND))
+printf '\n    attesi CONFERMATI: %s · SMENTITI: %s · ⛔ NON DISCRIMINANTI: %s · ⛔ NON GIUDICATI: %s   (su %s guasti chiesti)\n' \
+	"$V" "$N" "$ND" "$ALTRI" "$QN"
+if [ "$ALTRI" -gt 0 ]; then
+	ko "⛔ $ALTRI guasto/i NON e' stato giudicato: non compila, non accende,"
+	ko "   strumento cieco, o «NON-MISURATO» (zero tentativi con risposta)."
+	ko "   ⚠ NON sono verdi: cercali per nome qui sopra."
+	grep -Ev ' ATTESO-CONFERMATO| ATTESO-SMENTITO| NON-DISCRIMINANTE|^SANO ' \
+		"$ESITI" | sed 's/^/        /'
+elif [ "$ALTRI" -lt 0 ]; then
+	ko "⛔⛔ IL CONTO NON TORNA: $V+$N+$ND supera i $QN guasti chiesti — questo"
+	ko "    riepilogo sta leggendo righe che non sono esiti.  Non fidarti."
+fi
 if [ "$ND" -gt 0 ]; then
 	ko "⛔ $ND caso/i torna vero anche sul codice SANO misurato nella stessa"
 	ko "   ora: quei casi NON certificano niente, e vanno letti come tali."

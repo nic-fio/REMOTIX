@@ -201,7 +201,7 @@ nello stesso giro, o il conto non cala mai»*).*
 |---|---|---|---|
 | `06-b33-*` (6.1) | terreno `provai6`/7781 · **testimone Wayland** e `gnome-terminal` **aperti prima** dello stacco · cliente che stacca, riattacca a misura diversa e **solo allora** batte, punta e clicca | 7 | **5 guasti** in copia di `input.c`: G2→C2 · G3→R1,R2 · G4→C6 · G5→C3,C4 · ⭐ **G1 non accende niente**, e vedi §5 |
 | `06-b34-*` (6.2) | terreno `provat6`/7721 · ⭐ **l'atteso lo calcola il prodotto** (`tastiera_posizioni_per()` chiamata da fuori) · testimone che registra **il carattere**, non il conteggio | 6 | **2 guasti**: «la keymap si legge una volta sola» → rosso sul caso dichiarato · «i tasti se ne vanno col dispositivo» → ⛔ **verde lo stesso**, e vedi §5 |
-| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | ⛔ ~~5 guasti su 5~~ → ⭐ **4 confermati · 0 smentiti · 1 NON DISCRIMINANTE (G4)**, `[M]` 22 agosto, carico 0,49-1,12, col **metro sano**, la marca al posto giusto e la regola di G3 corretta. 📖 §5.8 e §5.9 |
+| `06-b35-*` (6.3) | terreno `provap6`/7731 · scena che si muove a **50 ms** · cliente che manda `ADATTA_TELA` e conta i `TELA` | 5 giri | ⛔ ~~5 guasti su 5~~ → **3 confermati stabili (G1 G2 G3, 3 giri su 3) · 1 non discriminante (G4) · 1 INTERMITTENTE (G5, 2 su 3)**, `[M]` 22 agosto. ⭐ E il quarto conto — «non giudicati» — esiste apposta: prima G5 sarebbe **sparito da tutte e tre le colonne** senza una riga che lo dicesse. 📖 §5.9 |
 | `06-b36-*` (6.4) | `rcp.c` **nudo** con palco finto **più** il canale di input e **il registro catturato** — la metà che `04-b31` non guarda | **23** | **19 guasti su 19**, ciascuno rosso **nel caso dichiarato prima** |
 | `06-b37-*` (6.5) | raccoglitore HTTP con sonda dentro la pagina, **sui due motori** (niente CDP, che è solo Chrome) · verità esterna `xwininfo` · verdetti **sui pixel** (`ffmpeg x11grab`) | 7 scene | lo zoom verificato su `devicePixelRatio` **e non sul tasto premuto**; ogni zero col suo denominatore (20 punti · 2 523 colonne · 4 resize) |
 | `06-b38-*` (6.6) | il cliente di prova e **l'arbitro** che esercitano la tela; mutazioni dell'arbitro stesso | **49** registrazioni | **49 accusate sul byte dichiarato prima** · 4 esiti coperti · **19 mutazioni su 19** viste |
@@ -1181,6 +1181,55 @@ prima. Carico 0,30-0,48.
 triplo.** Il buco di §4.8 si chiude: quel riquadro non è più un numero perduto.
 
 ⭐ **E la cura di `registro.c` regge anche qui**: 3 righe senza marca su 3 242, **nessuna nostra**.
+
+#### ⛔ E il 22 agosto sera il numero è sceso ancora: **3, non 4** — e l'ha abbassato chi l'aveva scritto
+
+*Chiusi anche i due rilievi della revisione (`R5` il sentinella, `R14` l'attrezzo che butta i conti),
+e con la colonna nuova è saltato fuori un fatto che prima non si vedeva.*
+
+⛔ **G5 è intermittente**: la sua regola vuole `non_spediti > 0`, e quel numero vale **1** — un solo
+fotogramma scartato. Nel terzo giro è uscito **0** con lo strumento **non** cieco (67 righe della tela
+viste) ⇒ `NON MISURATO`. ⚠ Prima sarebbe **sparito da tutte e tre le colonne senza una riga che lo
+dicesse**: è la ragione per cui esiste la **quarta** colonna e la riconciliazione
+`CONFERMATI + SMENTITI + ND + NON GIUDICATI = guasti chiesti`.
+
+| | 05:44 | 06:16 | 06:21, scena verificata **singola** |
+|---|---|---|---|
+| G1 · G2 · G3 | confermati | confermati | **confermati** |
+| G4 | non discriminante | non discriminante | **non discriminante** |
+| G5 | confermato | confermato | ⛔ **NON MISURATO** |
+| ⇒ | 4 · 0 · 1 · 0 | 4 · 0 · 1 · 0 | **3 · 0 · 1 · 1** |
+
+⭐ *«Non scrivo 4: sarebbe scegliere i due giri che mi piacciono.»*
+
+> 🔸 **Decisione del coordinatore su G5: si allunga il giro, NON si riscrive l'atteso.** L'atteso non
+> è sbagliato — è **la scena a essere sotto-potenza**: una scena che produce *esattamente un* evento
+> non prova niente in modo ripetibile. ⛔ Riscrivere l'atteso sarebbe **adattare il metro al
+> risultato**, che è la strada che questa notte ha insegnato a non prendere.
+
+#### ⛔⛔ E la scena si raddoppiava in silenzio — **per la seconda volta stanotte, la stessa forma**
+
+`pkill -f 'banco-P6-scena'` uccide **il terminale**, non il ciclo che scrive l'ora: il titolo **non è
+nella riga di comando** del processo che sopravvive. ⇒ Ogni `scena-via` lasciava un ciclo vivo e ogni
+`scena` ne aggiungeva uno — `[M]` **due cicli** dopo un solo spegni/riaccendi. ⚠ Su un banco che
+misura millisecondi, **una scena doppia non è la scena dichiarata**.
+
+⭐ Curato con la guardia giusta: `scena-via` pretende **zero** superstiti e `scena` pretende
+**esattamente uno** — la guardia vecchia era `> 0`, **che lasciava passare il due**. E i numeri D
+erano su **un** ciclo: verificato, non sperato.
+
+⚠ **La stessa forma è stata trovata indipendentemente in `06-b42`**: è un modo di sbagliare del
+deposito, non di un banco.
+
+#### ⭐ E i numeri D **non cambiano** dopo la cura dell'accoppiamento
+
+① accoppia ora **per chiave**; ④ resta per ordine, ⭐ **ed è una scelta dichiarata**: la chiave non
+esiste (la riga della risposta porta la tela *in vigore*, che su un `NON_ORA` è quella **vecchia**, e
+accoppiare per misura butterebbe via proprio i `NON_ORA` che i guasti cercano). ⇒ La protezione è a
+monte. `[M]` Ricalcolati sugli stessi registri: **identici campione per campione**, e si sa **perché**
+— in quel giro `GIRATA 27 = CHIESTA 27`, zero spaiate, quindi chiave e ordine coincidevano.
+⛔ **Ma è una proprietà di quella scena, non del codice vecchio**: gli altri due giri non hanno quella
+garanzia.
 
 #### ⏳ E due cose dichiarate invece che curate
 

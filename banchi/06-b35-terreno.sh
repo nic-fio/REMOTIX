@@ -99,6 +99,18 @@ come_utente() {
 		"$@"
 }
 
+# ⛔ SPEGNE LA SCENA **INTERA** — il terminale E il ciclo che scrive l'ora.
+#    Sono due processi, e la riga di comando del secondo non porta il titolo:
+#    per due mesi `pkill -f 'banco-P6-scena'` ne ha ucciso uno solo.
+#    ⚠ E l'ordine conta: prima il ciclo, poi il terminale — al contrario, il
+#    terminale morente puo' portarsi via il figlio prima che lo si conti, e
+#    «zero» tornerebbe a voler dire due cose.
+scena_via() {
+	come_utente pkill -f 'while true; do date' >/dev/null 2>&1
+	come_utente pkill -f 'banco-P6-scena' >/dev/null 2>&1
+	sleep 1
+}
+
 mio_pid() {
 	local p
 	if [ -f "$PIDF" ]; then
@@ -309,8 +321,22 @@ scena)
 	#   tela a cambiare, e la risoluzione della misura non puo' essere piu'
 	#   grossa del passo della scena.  Con 200 ms un ridimensionamento «a 41 ms»
 	#   si leggerebbe come «a 200».
+	# ⛔⛔ E LA SCENA SI RADDOPPIAVA IN SILENZIO — difetto del BANCO trovato
+	#     misurando, 22 agosto 2026.
+	#
+	#     `pkill -f 'banco-P6-scena'` uccide il **terminale** (il titolo sta
+	#     nella sua riga di comando), ⛔ ma NON il ciclo che scrive l'ora: la
+	#     riga di quel processo e' `bash -c while true; do date ...`, e il
+	#     titolo non c'e'.  ⇒ Ogni `scena-via` lasciava un ciclo vivo, e ogni
+	#     `scena` successiva ne aggiungeva un altro.
+	#     `[M]` dopo un solo giro di spegni/riaccendi: **2 cicli**.
+	# ⚠ E il guaio non e' lo spreco: e' che questo banco misura MILLISECONDI, e
+	#   una scena doppia non e' la scena dichiarata.  Il numero uscirebbe
+	#   plausibile e preso su un'altra scena — la forma peggiore.
+	# ⇒ Si uccide anche il ciclo, e poi si pretende **ESATTAMENTE UNO**: «piu'
+	#   di zero» era la guardia che lasciava passare il due.
 	log "La scena: una finestra che scrive l'ora ogni 50 ms, su $UTENTE"
-	come_utente pkill -f 'banco-P6-scena' >/dev/null 2>&1
+	scena_via
 	come_utente setsid --fork gnome-terminal --title=banco-P6-scena -- \
 		bash -c 'while true; do date +%H:%M:%S.%N; sleep 0.05; done' \
 		>/dev/null 2>&1
@@ -318,8 +344,12 @@ scena)
 	n=$(pgrep -u "$UID_B" -f 'while true; do date' 2>/dev/null | wc -l)
 	m=$(pgrep -u "$UID_B" -f 'gnome-terminal-server' 2>/dev/null | wc -l)
 	inf "cicli che scrivono l'ora: $n · gnome-terminal-server: $m"
-	if [ "$n" -gt 0 ] && [ "$m" -gt 0 ]; then
-		ok "la scena e' accesa, e si muove"
+	if [ "$n" -eq 1 ] && [ "$m" -gt 0 ]; then
+		ok "la scena e' accesa, si muove, ed e' UNA sola"
+	elif [ "$n" -gt 1 ]; then
+		ko "⛔ $n cicli invece di UNO: la scena e' piu' veloce di quella"
+		ko "   dichiarata, e i millisecondi che seguono non sono suoi."
+		exit 3
 	else
 		ko "⛔ la scena NON si e' accesa: quel che segue misurerebbe un fermo"
 		exit 3
@@ -327,8 +357,16 @@ scena)
 	exit 0 ;;
 
 scena-via)
-	come_utente pkill -f 'banco-P6-scena' 2>/dev/null
-	ok "scena spenta"
+	scena_via
+	n=$(pgrep -u "$UID_B" -f 'while true; do date' 2>/dev/null | wc -l)
+	if [ "$n" -eq 0 ]; then
+		ok "scena spenta, e nessun ciclo e' rimasto vivo"
+	else
+		ko "⛔ $n ciclo/i che scrive l'ora e' SOPRAVVISSUTO allo spegnimento:"
+		ko "   la prossima misura sarebbe su una scena che nessuno ha dichiarato"
+		pgrep -u "$UID_B" -af 'while true; do date' | sed 's/^/        /'
+		exit 3
+	fi
 	exit 0 ;;
 
 monitor)
