@@ -1507,8 +1507,12 @@ non ci rallenterà più».*
 12. **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi.
 13. **Il percorso `?video=worker` e quello `?disegno=mse`**: misurati, non rendono. Si buttano alla
     fase 13 o restano?
-14. ⏳ **E le fasi si chiudono sul suo giudizio**: restano da giudicare il **trascinamento del
-    bordo**, il **clic tenuto giù**, e — quando la cura dell'audio è dentro — **il ritardo**.
+14. ✅ **I giudizi dell'utente sono arrivati tutti e tre** — 22 agosto 2026: il **ritardo
+    audio/video** («è ok»), il **clic tenuto giù** («sto tenendo il clic premuto ed è tutto ok») e
+    il **trascinamento del bordo** («riscala con le bande nere, ma immagino sia normale»).
+    ⇒ 📖 `fasi/06` §8 e `fasi/07` §9.8. ⛔ **Restano `[?]` di diagnosi, non difetti**: la guardia
+    della cura A non è mai stata vista scattare, e la misura `AV` va ripresa per accorgersi se il
+    ritardo torna.
 
 ## Come si riparte, in due comandi
 

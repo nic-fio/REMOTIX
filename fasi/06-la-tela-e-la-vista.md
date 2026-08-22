@@ -1843,8 +1843,24 @@ prima → **17 su 17** col curato; e quattro guasti innestati che accendono il c
 — dato sul prodotto vivo, da un terzo sistema client mai provato prima, con `dpr 1,25` e la finestra
 dispari su tutt'e due i lati (§4.1 e §4.1-bis).
 
-⏳ **Quel che aspetta il suo giudizio**: la scena del **trascinamento del bordo** e quella del
-**clic tenuto giù** — le due che questa fase ha aperto — dopo la verifica congiunta a banchi fermi.
+✅ **E il 22 agosto 2026 sono arrivati anche gli altri due**, cioè le due scene che questa fase
+aveva aperto:
+
+| la scena | il giudizio |
+|---|---|
+| ⭐ **il clic tenuto giù** | *«Sto tenendo il clic premuto ed è tutto ok.»* ⇒ **La seconda porta del clic che muore non si sente più.** Era il difetto che questa fase ha inseguito per tre giorni: da §4.6 (*«il clic che muore»*) a §7.1-bis (la catena letta nel sorgente di Mutter) a §5.7 (le cure A+C) |
+| ⭐ **il trascinamento del bordo** | *«Riscala con la comparsa di bande nere, ma immagino sia normale per mantenere le proporzioni.»* ⇒ **Il re-scaling è accettato**, bande comprese: è il prezzo dichiarato quando il ridimensionamento dinamico è uscito (`DECISIONI.md` §5.1-bis) |
+
+⚠ **E una precisazione dell'utente che è entrata nel vocabolario**: *«lo scaling è opera del browser,
+non di REMOTIX»* — ⭐ ed è esatto: noi scriviamo **due misure in CSS**, il riscalamento lo fa il
+browser con la sua accelerazione. L'unica cosa che gli imponiamo è **come** riscalare
+(`image-rendering: pixelated`), perché il testo resti netto invece di essere impastato. 📖 §5.14.
+
+⛔ **E quel che il giudizio NON copre, scritto perché non lo si deduca**: la **guardia della cura A**
+(la riga «TENUTI GIU'») **non è ancora scattata in nessuna misura**. ⇒ L'utente dice che il difetto
+non si sente più — e questo chiude il **difetto**. ⚠ Ma *«non si sente»* non è *«la guardia ha
+funzionato»*: potrebbe essere la cura **C** a coprire tutto, e la **A** a non essere mai stata
+esercitata. Resta una `[?]` di diagnosi, non di prodotto.
 
 ## ⛔⛔ 21 agosto 2026 — **Firefox per Android non ha WebCodecs**, e il messaggio nostro mentiva
 
