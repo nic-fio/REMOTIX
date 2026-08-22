@@ -166,20 +166,36 @@ scena_costruisci()
 	# ⛔ Si compila su un nome nuovo e poi si rinomina: il nucleo rifiuta di
 	#    scrivere su un eseguibile in esecuzione (ETXTBSY) e `gcc -o` lascia un
 	#    binario TRONCATO, cioe' un banco che parte e non si sa che cosa esegue.
-	dentro "set -u
-	P=/usr/share/wayland-protocols
-	L=$DENTRO/08-b-scena-lav
-	mkdir -p \$L && cd \$L
-	wayland-scanner client-header \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
-	wayland-scanner private-code  \$P/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
-	wayland-scanner client-header \$P/stable/presentation-time/presentation-time.xml presentation-time-client-protocol.h
-	wayland-scanner private-code  \$P/stable/presentation-time/presentation-time.xml presentation-time-protocol.c
-	gcc -O2 -Wall -Wextra -o \$L/scena.nuovo $DENTRO/04-b30-scena.c \\
-	    \$L/xdg-shell-protocol.c \$L/presentation-time-protocol.c \\
-	    -I\$L \$(pkg-config --cflags --libs wayland-client) -lrt
-	mv -f \$L/scena.nuovo \$L/04-b30-scena
-	chmod 755 \$L \$L/04-b30-scena
-	echo COSTRUITA"
+	# ⛔⛔ NIENTE VARIABILI DI SHELL DENTRO QUESTA STRINGA, e la ragione e' un
+	#    rosso gia' pagato oggi: il comando attraversa `ssh` → `sudo` →
+	#    `enter.sh --root "…"`, cioe' **tre** livelli di virgolette.  `\$L`
+	#    sopravvive al primo e muore al secondo, e `gcc` finisce a cercare
+	#    `/xdg-shell-protocol.c`.  ⇒ ⭐ Il copione si SCRIVE su un file sulla
+	#    macchina e li' dentro le variabili sono al sicuro (`04-b30-lancia.sh`:
+	#    *«un file non ha livelli di virgolette»*).
+	cat > /tmp/08-b67-scena.sh <<'FINE'
+set -u
+P=/usr/share/wayland-protocols
+L=/srv/src/08-b-scena-lav
+mkdir -p "$L" && cd "$L" || exit 2
+wayland-scanner client-header "$P/stable/xdg-shell/xdg-shell.xml" xdg-shell-client-protocol.h || exit 2
+wayland-scanner private-code  "$P/stable/xdg-shell/xdg-shell.xml" xdg-shell-protocol.c || exit 2
+wayland-scanner client-header "$P/stable/presentation-time/presentation-time.xml" presentation-time-client-protocol.h || exit 2
+wayland-scanner private-code  "$P/stable/presentation-time/presentation-time.xml" presentation-time-protocol.c || exit 2
+# ⛔ Si compila su un nome NUOVO e poi si rinomina: `gcc -o` su un eseguibile in
+#    esecuzione lascia un binario TRONCATO (ETXTBSY), cioe' un banco che parte e
+#    non si sa che cosa esegue.
+gcc -O2 -Wall -Wextra -o "$L/scena.nuovo" /srv/src/04-b30-scena.c \
+    "$L/xdg-shell-protocol.c" "$L/presentation-time-protocol.c" \
+    -I"$L" $(pkg-config --cflags --libs wayland-client) -lrt || exit 2
+mv -f "$L/scena.nuovo" "$L/04-b30-scena" || exit 2
+chmod 755 "$L" "$L/04-b30-scena"
+ls -l "$L/04-b30-scena"
+echo COSTRUITA
+FINE
+	scp -q -o BatchMode=yes /tmp/08-b67-scena.sh "$MACCHINA:$FUORI/08-b67-scena.sh" \
+		|| { ko "⛔ il copione non e' arrivato"; return 1; }
+	dentro "bash /srv/src/08-b67-scena.sh"
 }
 
 terreno()

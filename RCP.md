@@ -1260,8 +1260,16 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   il decodificatore **non solleva nessun errore**, si limita a produrre immagini via via più
   sfasciate fino alla chiave successiva. `[?]` L'alternativa vera sarebbero i **sotto-livelli
   temporali**, che permettono di buttare certi fotogrammi senza rompere niente: se `EncSliceLP`
-  dell'Intel li sappia produrre **non lo sa nessuno**, ed è una misura della fase 8. Finché non lo
-  si sa, **ogni abbandono costa una chiave**;
+  dell'Intel li sappia produrre — ✅ **MISURATO il 22 agosto 2026, ed è NO**: `[M]` il driver non
+  dichiara `EncRateControlExt` su **7 profili su 7**, mentre lo dichiara per **VP9 sullo stesso
+  entrypoint** e per H.264/HEVC su **AMD `EncSlice`** — ⭐ due controlli positivi; e nei byte che
+  escono **6 celle su 6** danno `sps_max_sub_layers = 1` con tutti i `temporal_id = 0`.
+  ⇒ ⭐ **«Ogni abbandono costa una chiave» resta in vigore, e adesso ha una misura sotto invece di
+  una `[?]`.** ⚠ E la strada vicina è chiusa dal **ritardo**, non dalla banda: `[M]` con `-bf 1`
+  escono **59 figure buttabili su 120** a qualità invariata (−0,065 dB) e **−16 % di banda**, ⛔ ma
+  **67 ms di riordino** — da solo oltre i 50 ms dati a *tutto* il pezzo nostro. `[?]` Resta aperto
+  se un codificatore VA-API scritto da noi potrebbe costruirli lo stesso: `EncPackedHeaders = 0x1f`
+  dice che le intestazioni le impacchetta **l'applicazione**. 📖 `fasi/08-l-anello.md` §4-D;
 - ⛔ il client **DEVE** mandare `RICHIEDI_CHIAVE` quando si accorge di un **buco** nella successione
   dei `numero`, o quando il decodificatore rifiuta un fotogramma;
 - ⛔ finché non arriva una chiave, il client **NON DEVE** mostrare fotogrammi che sa incompleti:
@@ -1463,8 +1471,20 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
 > 16 MiB. Il client avrebbe staccato la sessione perché il server ha fatto una cosa che §4.5 gli
 > permette — e §5.2 gli vieta pure di abbandonare le chiavi, quindi non aveva vie d'uscita.
 >
-> `[?]` **Quanto pesi davvero una chiave 8K a 10 bit va misurato**, ed è una riga del banco della
-> fase 8. Se stesse sempre sotto i 16 MiB il difetto di forma resterebbe comunque.
+> ✅ **MISURATO il 22 agosto 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D:
+> - ⭐ **alla tela dell'utente il tetto è irraggiungibile**: 2560×1080, **404 chiavi vere**, massimo
+>   **21 433 byte = 0,13 %**, margine **782×**. Nemmeno il rumore uniforme ci arriva (15,1 %);
+> - ⛔ **a 7680×4320 si sfonda davvero**: rumore uniforme **28,9 MiB, 8 su 8** sopra il tetto, e la
+>   grana forte arriva al **94,9 %**. ⛔⛔ E il **ripiego in software sfonda prima e con contenuto
+>   plausibile**: un filmato molto granuloso a schermo intero fa **18,7 MiB**;
+> - ⚠ e i **10 bit qui sono otto promossi** — `DECISIONI.md` §2.3-ter. Infatti `[M]` l'etichetta
+>   `main10` a 8K costa **933 byte in MENO** di `main`: non porta informazione che non ci sia;
+> - ⛔⛔ **il difetto di forma però non è quello che si credeva.** La **scala delle ricodifiche è
+>   corta di uno scalino** — l'ultimo tentativo lascia **16,654 MiB**, il quarto ce l'avrebbe fatta,
+>   e si perde per il **4 %** — e quando si arrende il codificatore **butta il fotogramma anche se è
+>   una chiave**, che **§5.2 vieta**. ⇒ È la spirale: il client resta rotto, e ogni
+>   `RICHIEDI_CHIAVE` costa tre ricodifiche che non producono niente. ⭐ La cura ha già il suo
+>   numero: `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi una chiave **entra sempre**.
 
 ⛔ **L'ordine, e chi lo rimette a posto.** Gli stream sono indipendenti, quindi i fotogrammi
 **possono arrivare fuori ordine**. Il client:
