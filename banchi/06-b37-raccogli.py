@@ -46,8 +46,29 @@ _pronto = threading.Condition(_lock)
 _carichi = [0]         # quante volte la pagina si e' annunciata
 
 
+# ⛔⭐ LE MARCHE DEL GIRO, anche sulle righe che arrivano DALLA PAGINA — 22
+#    agosto 2026.  Le righe che la sonda posta qui (`carico`, `resize`,
+#    `cursore`) uscivano con il solo `giro` dell'indirizzo e un orologio: chi
+#    apriva il deposito **non sapeva di quale giro fossero**, ne' su quale
+#    sorgente — il prodotto o una copia con un guasto dentro (`fasi/06` §5.5).
+GIRO = os.environ.get("B37_GIRO") or "senza-giro"
+SORGENTE_ETICHETTA = os.environ.get("B37_SORGENTE") or "?"
+SORGENTE_SHA = os.environ.get("B37_SORGENTE_SHA") or "?"
+GUASTO = os.environ.get("B37_GUASTO") or "nessuno"
+
+
 def scrivi_esito(d):
-    d.setdefault("orologio", time.time())
+    # ⚠ Il `giro` della pagina (quello nell'indirizzo) si tiene, ma sotto un
+    #   altro nome: il numero di giro del BANCO e' uno solo, e lo mette il
+    #   lanciatore.
+    if "giro" in d:
+        d["giro_pagina"] = d.pop("giro")
+    d["giro"] = GIRO
+    d["sorgente"] = SORGENTE_ETICHETTA
+    d["sorgente_sha"] = SORGENTE_SHA
+    d["guasto"] = GUASTO
+    d.setdefault("orologio", round(time.time(), 3))
+    d.setdefault("ora", time.strftime("%Y-%m-%dT%H:%M:%S"))
     with open(ESITI, "a", encoding="utf-8") as f:
         f.write(json.dumps(d, ensure_ascii=False) + "\n")
 
@@ -85,6 +106,27 @@ class Gestore(BaseHTTPRequestHandler):
             with _lock:
                 fuori = [c for c in _comandi if c["n"] >= da]
             self._manda(json.dumps(fuori))
+            return
+        if u.path == "/b37/azzera":
+            # ⛔⭐ 22 agosto 2026 — E QUESTO E' IL DIFETTO CHE DAVA I «DODICI
+            #    ROSSI FINTI» di `fasi/06` §4.3-bis, e non era lo spegnimento
+            #    del browser.
+            #
+            #    `carichi` conta i caricamenti dall'avvio del raccoglitore, che
+            #    vive per TUTTO il lancio.  ⇒ Dalla SECONDA scena in poi
+            #    `Banco.aspetta_pagina()` — che aspetta `carichi > 0` — trovava
+            #    il conto gia' positivo e **tornava subito, senza aspettare
+            #    niente**: la scena cercava la finestra X di un browser che
+            #    stava ancora aprendosi, non la trovava, e diceva «nessuna
+            #    finestra X per il pid …».
+            #
+            # ⚠ Un'attesa che non aspetta e' la stessa famiglia dei rilievi del
+            #   21 agosto: un numero c'e', e nessuno lo confronta con quel che
+            #   dovrebbe.  ⇒ Il lanciatore azzera il conto PRIMA di ogni
+            #   browser, e cosi' l'attesa torna a essere un'attesa.
+            with _lock:
+                _carichi[0] = 0
+            self._manda(json.dumps({"azzerato": True}))
             return
         if u.path == "/b37/stato":
             with _lock:

@@ -15,14 +15,40 @@ di questa fase per pieno diritto.*
 
 ⭐ COME SI CHIUDE IL CERCHIO, e non passa da nessuna variabile della pagina:
 
-   1. si dipinge un fotogramma con quattro marcatori e lo si mette nella pagina;
-   2. si FOTOGRAFA lo schermo X e si trova il rettangolo DIPINTO — cioe' dove
+   1. si dipinge un fotogramma con quattro marcatori e lo si mette nella pagina
+      per la STRADA DEL PRODOTTO (`schermo.mostra()`);
+   2. si CALIBRA la vista sui pixel: dove sta il pixel CSS (0,0) sullo schermo X,
+      e quanto e' grande la vista.  ⛔ E non lo si chiede alla tela;
+   3. si FOTOGRAFA lo schermo X e si trova il rettangolo DIPINTO — cioe' dove
       l'immagine sta davvero, bande comprese;
-   3. da li' si calcola il punto dello SCHERMO che sta sopra un pixel scelto del
+   4. da li' si calcola il punto dello SCHERMO che sta sopra un pixel scelto del
       FOTOGRAMMA (angolo alto-sinistro, centro, angolo basso-destro);
-   4. si manda li' un `pointermove` vero, e si legge la coordinata che la pagina
+   5. si manda li' un `pointermove` vero, e si legge la coordinata che la pagina
       **spedirebbe sul filo** — `cl_spedisci()` sostituito da una spia.
-   5. lo scarto e' la differenza fra il pixel scelto e quello spedito.
+   6. lo scarto e' la differenza fra il pixel scelto e quello spedito.
+
+═══════════════════════════════════════════════════════════════════════════
+⛔⛔⭐ 22 AGOSTO 2026 — L'ORIGINE NON SI SOTTRAE PIU', E PRIMA SI SOTTRAEVA.
+
+   `fasi/06` §5.5, quarto falso verde.  Il passo 4 si faceva cosi':
+
+       ox = x0 − rect.left · dpr        ← lo scostamento fra DOVE L'IMMAGINE STA
+                                          e DOVE LA PAGINA CREDE CHE STIA
+       cx = (sx − ox) / dpr
+
+   ⛔ Ma `sx = x0 + …`: `x0` si semplifica, e quel che resta e'
+   `cx = rect.left + …`, cioe' un'algebra fra `rect.left` e la conversione della
+   pagina, **con l'origine vera cancellata**.  ⇒ Una tela dipinta 50 px fuori
+   posto — il difetto del DeX, quello che questa scena nomina come propria
+   ragione d'essere — dava **scarto 0 su 20 punti su due motori**.
+
+⇒ Adesso `ox`/`oy` vengono dalla CALIBRAZIONE (l'origine della VISTA, che non
+  dipende dalla tela), e c'e' una verifica in piu' che prima non esisteva:
+
+   ⭐ **C0 · L'ORIGINE**: il bordo sinistro DIPINTO deve cadere dove
+     `getBoundingClientRect()` dice, cioe' `ox + rect.left · dpr`, entro 1 px.
+     ⛔ Se non ci cade, la pagina crede che l'immagine sia altrove, e ogni clic
+     e' spostato di quella distanza — anche se il resto dei conti torna.
 
 ⛔ L'ATTESO, DICHIARATO PRIMA: scarto **0 pixel** su tutti i punti quando la
    scala vale 1; e **≤ 1 pixel** quando la scala e' 0,7 e ci sono le bande — un
@@ -70,28 +96,7 @@ PREPARA = """(function () {
   return "pronto";
 })()"""
 
-INIETTA = """(function (L, A) {
-  const c = document.createElement("canvas");
-  c.width = L; c.height = A;
-  const g = c.getContext("2d");
-  g.fillStyle = "#202020"; g.fillRect(0, 0, L, A);
-  g.fillStyle = "#ff0000"; g.fillRect(0, 0, 4, A);
-  g.fillStyle = "#00ff00"; g.fillRect(L - 4, 0, 4, A);
-  g.fillStyle = "#0000ff"; g.fillRect(0, 0, L, 4);
-  g.fillStyle = "#ffff00"; g.fillRect(0, A - 4, L, 4);
-  schermo.deposito = c;
-  schermo.tela_l = L; schermo.tela_a = A;
-  schermo.adatta_vista();
-  schermo.componi();
-  const el = $("schermo");
-  const r = el.getBoundingClientRect();
-  return JSON.stringify({ dpr: devicePixelRatio,
-                          rect: [r.left, r.top, r.width, r.height],
-                          tela: [schermo.tela_l, schermo.tela_a],
-                          vista: [schermo.vista_l, schermo.vista_a],
-                          stile: getComputedStyle(el).imageRendering });
-})(%d, %d)"""
-
+# ⛔ Il fotogramma lo mette `Banco.mostra()`, per la strada del prodotto.
 MUOVI = """(function (x, y) {
   window.__b37_spediti = [];
   /* ⛔ Si azzera l'ULTIMO SPEDITO prima di ogni misura, ed e' un'iniezione
@@ -110,13 +115,11 @@ MUOVI = """(function (x, y) {
 })(%r, %r)"""
 
 
-def fotografa(nome):
-    dim = [r for r in B.x("xdpyinfo").stdout.splitlines() if "dimensions:" in r]
-    l, a = (int(v) for v in dim[0].split()[1].split("x"))
-    ok, err = B.fotografa(nome, l, a)
-    if not ok:
-        raise RuntimeError("ffmpeg: " + err[:300])
-    return np.fromfile(nome, dtype=np.uint8).reshape((a, l, 3))
+def fotografa(nome_file):
+    """⛔ I pixel, dalla PIPE: il file si scrive solo con `B37_FOTO=tieni`
+       (`06-b37-comune.py` `_grezza`).  ⚠ Un giro intero scriveva 1,5 GB di
+       fotogrammi grezzi in un `/tmp` condiviso con altri otto agenti."""
+    return B.immagine(nome_file)
 
 
 def estremi(img):
@@ -138,8 +141,15 @@ def scena(nome, fl, fa, finestra=(1000, 760)):
     B.ridimensiona(*finestra)
     time.sleep(0.7)
     B.val(PREPARA)
-    d = json.loads(B.val(INIETTA % (fl, fa)))
-    time.sleep(0.5)
+    d = B.mostra(fl, fa, "grigio orizzontali")
+    time.sleep(0.4)
+    # ⛔⭐ L'ORIGINE DELLA VISTA, letta sui pixel e INDIPENDENTE dalla tela.
+    cal = B.calibra(os.path.join(CARTELLA, "06-b37-coord-cal-%s-%s.rgb24"
+                                 % (B.nome, nome)))
+    if not cal:
+        print("        ⛔ calibrazione fallita: scena %s NON misurata" % nome,
+              flush=True)
+        return None
     img = fotografa(os.path.join(CARTELLA, "06-b37-coord-%s-%s.rgb24"
                                  % (B.nome, nome)))
     e = estremi(img)
@@ -151,21 +161,41 @@ def scena(nome, fl, fa, finestra=(1000, 760)):
     ldis, adis = x1 - x0 + 1, y1 - y0 + 1
     scala = ldis / float(fl)
     dpr = d["dpr"]
-    # ⛔ Il ponte fra i due sistemi di riferimento: il rettangolo dipinto e' noto
-    #    nei pixel dello SCHERMO (fotografia) e nei pixel CSS del DOCUMENTO
-    #    (`getBoundingClientRect`).  La differenza e' l'origine del contenuto.
-    ox = x0 - d["rect"][0] * dpr
-    oy = y0 - d["rect"][1] * dpr
+    # ⛔⭐⭐ L'ORIGINE NON SI SOTTRAE: viene dalla calibrazione.  ⚠ Prima qui
+    #    c'era `ox = x0 − rect.left·dpr`, cioe' proprio lo scostamento che
+    #    questa scena deve trovare, e sottrarlo lo cancellava.
+    ox, oy = cal["ox"], cal["oy"]
+    # ⭐ C0 — L'ORIGINE: dove la pagina crede che stia l'immagine, e dove sta.
+    atteso_x0 = ox + d["rect"][0] * dpr
+    atteso_y0 = oy + d["rect"][1] * dpr
+    origine = [round(x0 - atteso_x0, 2), round(y0 - atteso_y0, 2)]
     punti = [("alto-sinistro", 0, 0), ("centro", fl // 2, fa // 2),
              ("basso-destro", fl - 1, fa - 1)]
     righe = []
-    print("        disegno %dx%d px su fotogramma %dx%d ⇒ scala %.4f · %s"
-          % (ldis, adis, fl, fa, scala, d["stile"]), flush=True)
+    print("        disegno %dx%d px su fotogramma %dx%d ⇒ scala %.4f · %s · "
+          "strada «%s»" % (ldis, adis, fl, fa, scala, d["image_rendering"],
+                           d["strada"]), flush=True)
+    print("        C0 origine: dipinta a x=%d,y=%d · la pagina la dichiara a "
+          "x=%.1f,y=%.1f ⇒ scarto (%+.1f,%+.1f) %s"
+          % (x0, y0, atteso_x0, atteso_y0, origine[0], origine[1],
+             "" if max(abs(v) for v in origine) <= 1
+             else "⛔⛔ L'IMMAGINE NON STA DOVE LA PAGINA CREDE"), flush=True)
+    # ⛔⭐ LA CONTROPROVA, e sta qui apposta: `ox_v` e' la formula di PRIMA del 22
+    #    agosto 2026 (`ox = x0 − rect.left·dpr`).  Ogni punto si misura DUE
+    #    volte, con l'origine vera e con quella vecchia, e i due scarti si
+    #    stampano accanto.  ⇒ Quando c'e' un errore di origine si vede in una
+    #    riga sola che il metodo vecchio lo cancellava; quando non c'e', i due
+    #    numeri coincidono e la controprova non costa niente.
+    ox_v = x0 - d["rect"][0] * dpr
+    oy_v = y0 - d["rect"][1] * dpr
     for etichetta, fx, fy in punti:
         sx = x0 + (fx + 0.5) * ldis / fl
         sy = y0 + (fy + 0.5) * adis / fa
         cx = (sx - ox) / dpr
         cy = (sy - oy) / dpr
+        rv = json.loads(B.val(MUOVI % ((sx - ox_v) / dpr, (sy - oy_v) / dpr)))
+        spv = rv["spediti"]
+        vecchio = ([spv[-1]["x"] - fx, spv[-1]["y"] - fy] if spv else None)
         r = json.loads(B.val(MUOVI % (cx, cy)))
         sp = r["spediti"]
         if not sp:
@@ -178,15 +208,24 @@ def scena(nome, fl, fa, finestra=(1000, 760)):
         ult = sp[-1]
         dx, dy = ult["x"] - fx, ult["y"] - fy
         print("        %-14s atteso (%4d,%4d) → spedito (%4d,%4d)  scarto "
-              "(%+d,%+d)" % (etichetta, fx, fy, ult["x"], ult["y"], dx, dy),
+              "(%+d,%+d)   [col metodo vecchio, che sottraeva l'origine: %s]"
+              % (etichetta, fx, fy, ult["x"], ult["y"], dx, dy,
+                 ("(%+d,%+d)" % tuple(vecchio)) if vecchio else "niente"),
               flush=True)
         righe.append({"punto": etichetta, "atteso": [fx, fy],
-                      "spedito": [ult["x"], ult["y"]], "scarto": [dx, dy]})
+                      "spedito": [ult["x"], ult["y"]], "scarto": [dx, dy],
+                      "scarto_metodo_vecchio": vecchio})
     B.scrivi({"tipo": "coordinate", "scena": nome, "fotogramma": [fl, fa],
               "finestra": list(finestra), "scala_pixel": round(scala, 4),
-              "disegno_pixel": [ldis, adis], "image_rendering": d["stile"],
-              "vista": d["vista"], "punti": righe}, iniezione="si")
-    return righe
+              "disegno_pixel": [ldis, adis],
+              "image_rendering": d["image_rendering"], "strada": d["strada"],
+              "vista": d["vista"], "vista_pixel": [cal["l"], cal["a"]],
+              "origine_vista_pixel": [ox, oy],
+              "origine_disegno_pixel": [x0, y0],
+              "origine_dichiarata": [round(atteso_x0, 2), round(atteso_y0, 2)],
+              "scarto_origine": origine,
+              "punti": righe}, iniezione="si")
+    return {"punti": righe, "origine": origine}
 
 
 print("== 06-b37 · %s — le coordinate quando la scala non vale 1" % B.nome,
@@ -214,23 +253,26 @@ print("\n    --  C3 · fotogramma 640×480 piu' PICCOLO della finestra: bande a 
       flush=True)
 tutte.append(("C3 bande laterali", scena("c3-bande", 640, 480)))
 
+
 print("\n    --  C4 · la finestra cambia SOTTO il dito: si muove il puntatore "
       "SUBITO dopo il ridimensionamento, senza aspettare il quadro", flush=True)
 B.ridimensiona(1000, 760)
 time.sleep(0.7)
 B.val(PREPARA)
-d = json.loads(B.val(INIETTA % (1400, 900)))
+d = B.mostra(1400, 900, "grigio orizzontali")
 time.sleep(0.4)
+cal4 = B.calibra(os.path.join(CARTELLA, "06-b37-coord-cal-%s-c4.rgb24" % B.nome))
 img = fotografa(os.path.join(CARTELLA, "06-b37-coord-%s-c4.rgb24" % B.nome))
 e = estremi(img)
-if not e:
-    print("        ⛔ marcatori non trovati: C4 NON misurata", flush=True)
+if not e or not cal4:
+    print("        ⛔ marcatori o calibrazione assenti: C4 NON misurata",
+          flush=True)
 else:
     x0, x1, y0, y1 = e
     ldis, adis = x1 - x0 + 1, y1 - y0 + 1
     dpr = d["dpr"]
-    ox = x0 - d["rect"][0] * dpr
-    oy = y0 - d["rect"][1] * dpr
+    # ⛔ L'origine viene dalla CALIBRAZIONE, non dal disegno: vedi il cappello.
+    ox, oy = cal4["ox"], cal4["oy"]
     fx, fy = 700, 450
     sx = x0 + (fx + 0.5) * ldis / 1400.0
     sy = y0 + (fy + 0.5) * adis / 900.0
@@ -252,14 +294,16 @@ else:
         else:
             prec, fermo = w, 0
         time.sleep(0.2)
+    cal4b = B.calibra(os.path.join(CARTELLA,
+                                   "06-b37-coord-cal-%s-c4b.rgb24" % B.nome))
     img2 = fotografa(os.path.join(CARTELLA,
                                   "06-b37-coord-%s-c4b.rgb24" % B.nome))
     e2 = estremi(img2)
-    if not e2:
-        print("        ⛔ a cornice assestata i marcatori NON si trovano nella "
-              "fotografia (larghezza del disegno %s CSS): la seconda meta' di "
+    if not e2 or not cal4b:
+        print("        ⛔ a cornice assestata i marcatori o la calibrazione NON "
+              "si trovano (larghezza del disegno %s CSS): la seconda meta' di "
               "C4 e' NON MISURATA, e si dice" % prec, flush=True)
-    if e2:
+    if e2 and cal4b:
         x0b, x1b, y0b, y1b = e2
         d2 = json.loads(B.val(
             "JSON.stringify({rect: (function(){const r=$('schermo')"
@@ -267,8 +311,15 @@ else:
             "})(), dpr: devicePixelRatio})"))
         ldis2 = x1b - x0b + 1
         adis2 = y1b - y0b + 1
-        ox2 = x0b - d2["rect"][0] * d2["dpr"]
-        oy2 = y0b - d2["rect"][1] * d2["dpr"]
+        ox2, oy2 = cal4b["ox"], cal4b["oy"]
+        # ⭐ C0 anche qui: dopo un ridimensionamento l'origine e' il posto in cui
+        #    la cornice puo' restare indietro senza che nessun conto se ne accorga.
+        orig4 = [round(x0b - (ox2 + d2["rect"][0] * d2["dpr"]), 2),
+                 round(y0b - (oy2 + d2["rect"][1] * d2["dpr"]), 2)]
+        print("        C0 a cornice assestata: dipinta a x=%d · dichiarata a "
+              "%.1f ⇒ scarto (%+.1f,%+.1f)"
+              % (x0b, ox2 + d2["rect"][0] * d2["dpr"], orig4[0], orig4[1]),
+              flush=True)
         sx2 = x0b + (fx + 0.5) * ldis2 / 1400.0
         sy2 = y0b + (fy + 0.5) * adis2 / 900.0
         r2 = json.loads(B.val(MUOVI % ((sx2 - ox2) / d2["dpr"],
@@ -285,22 +336,46 @@ else:
                      u["y"] - fy), flush=True)
             B.scrivi({"tipo": "coordinate", "scena": "c4-ridimensiona",
                       "prima": sp[-1] if sp else None, "dopo": u,
-                      "atteso": [fx, fy],
+                      "atteso": [fx, fy], "scarto_origine": orig4,
+                      "origine_vista_pixel": [ox2, oy2],
                       "scarto": [u["x"] - fx, u["y"] - fy]}, iniezione="si")
             tutte.append(("C4 sotto il dito",
-                          [{"punto": "centro", "atteso": [fx, fy],
-                            "spedito": [u["x"], u["y"]],
-                            "scarto": [u["x"] - fx, u["y"] - fy]}]))
+                          {"origine": orig4,
+                           "punti": [{"punto": "centro", "atteso": [fx, fy],
+                                      "spedito": [u["x"], u["y"]],
+                                      "scarto": [u["x"] - fx,
+                                                 u["y"] - fy]}]}))
 
 # ---------------------------------------------------------------------------
 print("\n== 06-b37 · %s — il verdetto sulle coordinate" % B.nome, flush=True)
 guasti = 0
 punti_totali = 0
-for nome, righe in tutte:
-    if not righe:
+origini = []
+for nome, d_sc in tutte:
+    if not d_sc or not d_sc.get("punti"):
         print("    NO  %s: scena non misurata" % nome, flush=True)
         guasti += 1
         continue
+    righe = d_sc["punti"]
+    # ⛔⭐ C0 — L'ORIGINE, e si giudica PRIMA degli scarti: se l'immagine non sta
+    #    dove la pagina crede, gli scarti dei punti possono tornare a zero lo
+    #    stesso (e per due giorni sono tornati a zero: `fasi/06` §5.5).
+    org = d_sc.get("origine")
+    origini.append((nome, org))
+    if org is None:
+        print("    NO  %s: l'origine non e' stata misurata" % nome, flush=True)
+        guasti += 1
+    elif max(abs(v) for v in org) <= 1:
+        print("    OK  %s · C0: l'immagine sta dove `getBoundingClientRect()` "
+              "dice, scarto (%+.1f,%+.1f) px" % (nome, org[0], org[1]),
+              flush=True)
+    else:
+        print("    NO  %s · C0: ⛔⛔ L'IMMAGINE NON STA DOVE LA PAGINA CREDE — "
+              "scarto (%+.1f,%+.1f) px.  E' il difetto del DeX: ogni clic "
+              "finisce spostato di tanto, e nessuno scarto sui punti se ne "
+              "accorge se l'origine viene sottratta"
+              % (nome, org[0], org[1]), flush=True)
+        guasti += 1
     peggio = 0
     buchi = 0
     for r in righe:
@@ -320,6 +395,11 @@ for nome, righe in tutte:
         print("    NO  %s: scarto peggiore %d px su %d punti"
               % (nome, peggio, len(righe)), flush=True)
         guasti += 1
-print("    --  punti misurati in tutto: %d (il denominatore dello zero)"
-      % punti_totali, flush=True)
+print("    --  punti misurati in tutto: %d su %d scene (il denominatore dello "
+      "zero) · origini misurate: %s"
+      % (punti_totali, len(tutte), [(n, o) for n, o in origini]), flush=True)
+B.scrivi({"tipo": "coordinate-verdetto", "scene": len(tutte),
+          "punti": punti_totali, "guasti": guasti,
+          "origini": [{"scena": n, "scarto": o} for n, o in origini]},
+         iniezione="si")
 sys.exit(1 if guasti else 0)

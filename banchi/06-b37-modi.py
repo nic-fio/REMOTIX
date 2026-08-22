@@ -53,14 +53,35 @@ _s.loader.exec_module(_m)
 
 B = _m.Banco(*sys.argv[1:6])
 
+# ⛔⭐ 22 agosto 2026: anche qui la spia non SOSTITUISCE piu' la funzione, la
+#    AVVOLGE — dentro c'e' il TESTO VERO di `chiedi_tela` estratto dal prodotto
+#    (`06-b37-strumenta.py`), con un canale finto nello scope.  ⇒ Ai due zeri
+#    («0 arrivi», «0 messaggi») corrispondono due domande diverse, e la seconda
+#    e' quella che conta: se il ridimensionamento a caldo rientrasse, sul canale
+#    finito arriverebbe un `ADATTA_TELA` VERO.
 PREPARA = """(function () {
   schermo.tela_l = 1000; schermo.tela_a = 700;
   schermo.sessione = true;
   window.__b37_chieste = [];
+  window.__b37_mandati = [];
   window.__b37_r = 0;
   addEventListener("resize", function () { window.__b37_r++; });
+  if (typeof window.__b37_chiedi_tela_sorgente !== "string")
+    return "⛔ manca il testo vero di chiedi_tela";
+  const canale = {
+    manda: async function (tipo, corpo) {
+      window.__b37_mandati.push({ tipo: tipo, byte: corpo.length });
+      return true;
+    }
+  };
+  tela_spenta = false;
+  tela_richiesta_ripetuta = false;
+  tela_chiesta_l = 0; tela_chiesta_a = 0;
+  eval(window.__b37_chiedi_tela_sorgente);
+  window.__b37_vera_chiedi_tela = chiedi_tela;
   chiedi_tela = function (perche) {
     window.__b37_chieste.push({ perche: perche, spenta: tela_spenta });
+    return window.__b37_vera_chiedi_tela(perche);
   };
   return ADATTA;
 })()"""
@@ -85,6 +106,7 @@ def giro(modo):
         time.sleep(0.55)
     time.sleep(1.0)
     chieste = B.js("window.__b37_chieste")
+    mandati = B.js("window.__b37_mandati")
     resize = B.js("window.__b37_r")
     # ⛔⭐⭐ IL CONTROLLO POSITIVO DELLA SPIA, e senza di lui questo banco NON SA
     #      FALLIRE — difetto suo, trovato il 17 agosto 2026 rileggendo la
@@ -102,15 +124,21 @@ def giro(modo):
     #   fondo, e chiamarla darebbe un `ReferenceError` che il banco leggerebbe
     #   come «zero richieste» — un verde per il motivo sbagliato, di nuovo.
     B.val("chiedi_tela('controllo positivo del banco')")
-    time.sleep(0.5)
+    time.sleep(0.7)
     positivo = len(B.js("window.__b37_chieste")) - len(chieste)
+    # ⛔⭐ E IL CONTROLLO POSITIVO VERO: la funzione del prodotto, a voce accesa,
+    #    DEVE mandare un `ADATTA_TELA` sul canale finto.  Senza questo, «zero
+    #    messaggi» direbbe la stessa cosa se il canale fosse rotto.
+    positivo_filo = len(B.js("window.__b37_mandati")) - len(mandati)
     # ⭐ E la prova DIRETTA che la funzione e' uscita, che non dipende da nessuna
     #   spia: il fondo non deve nemmeno esistere nella pagina.
     fondo = B.js("typeof tela_forse_chiedi")
     B.ridimensiona(g["l"], g["a"])
     time.sleep(0.5)
     return {"modo": modo or "(niente)", "ADATTA": vero, "chieste": chieste,
-            "resize_arrivati": resize, "positivo": positivo, "fondo": fondo}
+            "mandati": mandati, "resize_arrivati": resize,
+            "positivo": positivo, "positivo_filo": positivo_filo,
+            "fondo": fondo}
 
 
 print("== 06-b37 · %s — la tela non si tocca a sessione viva (§5.1-bis)"
@@ -131,11 +159,14 @@ for modo in ("no", "", "segui"):
         guasti += 1
         continue
     n = len(r["chieste"])
+    m = len(r["mandati"])
     B.scrivi({"tipo": "modi", **r}, iniezione="si")
     print("    --  `?adatta=%-6s` ⇒ ADATTA=«%s» · %d resize arrivati · %d "
-          "richieste di tela (atteso %d) · spia %s · tela_forse_chiedi «%s»"
-          % (r["modo"], r["ADATTA"], r["resize_arrivati"], n, atteso[modo],
-             "VEDE" if r["positivo"] >= 1 else "CIECA", r["fondo"]),
+          "arrivi a `chiedi_tela` (atteso %d) · %d ADATTA_TELA sul canale "
+          "(atteso 0) · spia %s · canale %s · tela_forse_chiedi «%s»"
+          % (r["modo"], r["ADATTA"], r["resize_arrivati"], n, atteso[modo], m,
+             "VEDE" if r["positivo"] >= 1 else "CIECA",
+             "VIVO" if r["positivo_filo"] >= 1 else "MUTO", r["fondo"]),
           flush=True)
     if r["resize_arrivati"] < 4:
         print("    NO  solo %d resize su 4 sono arrivati: il conto delle "
@@ -150,6 +181,18 @@ for modo in ("no", "", "segui"):
         print("    NO  ⛔ la spia NON vede una richiesta chiamata a mano ⇒ lo "
               "zero e' del BANCO, non del prodotto: non si giudica niente",
               flush=True)
+        guasti += 1
+        continue
+    if r["positivo_filo"] < 1:
+        print("    NO  ⛔ la funzione VERA del prodotto, chiamata a voce accesa, "
+              "non ha mandato niente sul canale finto ⇒ lo zero degli "
+              "`ADATTA_TELA` e' del BANCO: non si giudica niente", flush=True)
+        guasti += 1
+        continue
+    if m:
+        print("    NO  ⛔⛔ IL RIDIMENSIONAMENTO A CALDO E' RIENTRATO: %d "
+              "`ADATTA_TELA` sono partiti sul canale dopo 4 ridimensionamenti"
+              % m, flush=True)
         guasti += 1
         continue
     if r["fondo"] != "undefined":

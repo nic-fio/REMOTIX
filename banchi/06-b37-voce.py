@@ -55,36 +55,67 @@ _s.loader.exec_module(_m)
 B = _m.Banco(*sys.argv[1:6])
 
 # ---------------------------------------------------------------------------
+# ⛔⭐⭐ LA GUARDIA SI PROVA DOVE VIVE — 22 agosto 2026, `fasi/06` §5.5, secondo
+#      falso verde.  Qui c'era una SPIA che SOSTITUIVA `chiedi_tela`, e la
+#      guardia (`if (tela_spenta) { … return; }`) sta DENTRO la funzione
+#      sostituita: il banco provava che **un booleano cambia valore**.
+#
+#  ⇒ Adesso si installa il TESTO VERO della funzione del prodotto — estratto da
+#    `src/pagina.html` da `06-b37-strumenta.py` e messo nella pagina come
+#    `window.__b37_chiedi_tela_sorgente` — dentro una `eval` diretta che ha nello
+#    scope un **canale finto**.  ⭐ Quel che gira e' l'assegnazione del prodotto,
+#    carattere per carattere, guardia compresa; e l'osservabile non e' piu' «la
+#    spia e' stata chiamata», e' **`canale.manda(TIPO.ADATTA_TELA, …)`**, cioe' il
+#    messaggio che sarebbe partito sul filo.
+#
+#  ⚠ E la spia resta, ma SOPRA: conta gli ARRIVI alla funzione e poi chiama
+#    quella vera.  Due numeri distinti, e servono tutt'e due — «non e' stata
+#    chiamata» e «e' stata chiamata e non ha mandato niente» sono due esiti
+#    diversi, e prima erano lo stesso.
 PREPARA = """(function () {
   /* la sessione, quanto basta perche' il ramo del `TELA` abbia senso */
   schermo.tela_l = 1000; schermo.tela_a = 700;
   schermo.sessione = true;
   window.__b37_chieste = [];
+  window.__b37_mandati = [];
   window.__b37_coda = [];
   window.__b37_congedi = 0;
-  /* ⛔ La SPIA su `chiedi_tela`: si conta quante `ADATTA_TELA` la pagina
-     vorrebbe mandare.  Sostituirla e' lecito perche' e' un `let` globale — ed e'
-     l'unico modo di contarle senza un server. */
+  if (typeof window.__b37_chiedi_tela_sorgente !== "string")
+    return "⛔ manca il testo vero di chiedi_tela: la strumentazione non l'ha "
+         + "messo, e questo banco NON si arrangia con un'imitazione";
+  /* il canale finto: consegna quel che gli si mette in coda, e REGISTRA quel
+     che gli si manda.  ⛔ E' l'unico osservabile che conta: senza server non
+     c'e' nessun filo, ma `canale.manda` e' esattamente la riga che lo userebbe. */
+  const canale = {
+    ricevi: async function () {
+      for (;;) {
+        if (window.__b37_coda.length) return window.__b37_coda.shift();
+        await new Promise(function (r) { setTimeout(r, 20); });
+      }
+    },
+    manda: async function (tipo, corpo) {
+      window.__b37_mandati.push({ tipo: tipo, byte: corpo.length,
+                                  t: Date.now() });
+      return true;
+    }
+  };
+  /* ⛔ Lo stato di partenza e' quello che il prodotto mette due righe SOPRA
+     l'assegnazione («la voce riparte ACCESA a ogni sessione»): si dichiara,
+     perche' non fa parte del testo estratto. */
+  tela_spenta = false;
+  tela_richiesta_ripetuta = false;
+  tela_chiesta_l = 0; tela_chiesta_a = 0;
+  /* ⭐ L'EVAL DIRETTA: installa il testo del PRODOTTO, con `canale` nello scope. */
+  eval(window.__b37_chiedi_tela_sorgente);
+  if (typeof chiedi_tela !== "function")
+    return "⛔ il testo vero non ha installato niente";
+  window.__b37_vera_chiedi_tela = chiedi_tela;
   chiedi_tela = function (perche) {
-    /* ⛔⚠ IL LIMITE DI QUESTA SPIA, DICHIARATO: sostituendo `chiedi_tela` NON
-       si attraversa la sua guardia — la riga `if (tela_spenta) return` sta
-       DENTRO la funzione vera, che qui non c'e' perche' senza server non c'e'
-       nessun canale su cui mandare.  ⇒ Si registra il valore della guardia a
-       ogni tentativo: `spenta: true` vuol dire che la funzione vera sarebbe
-       uscita subito.  ⭐ La prova che il messaggio non parte davvero si fa sul
-       filo (6.4 / 6.6), e questo banco NON la sostituisce. */
     window.__b37_chieste.push({ perche: perche, t: Date.now(),
                                 spenta: tela_spenta,
                                 misura: tela_da_chiedere() });
+    return window.__b37_vera_chiedi_tela(perche);
   };
-  tela_richiesta_ripetuta = false;
-  /* il canale finto: consegna quel che gli si mette in coda */
-  const canale = { ricevi: async function () {
-    for (;;) {
-      if (window.__b37_coda.length) return window.__b37_coda.shift();
-      await new Promise(function (r) { setTimeout(r, 20); });
-    }
-  } };
   ascolta_controllo(canale, function () { window.__b37_congedi++; });
   window.__b37_righe0 = righe.length;
   return "pronto";
@@ -201,8 +232,61 @@ if ripetute:
 else:
     print("    OK  V3: nessuna ripetizione su COMPOSITORE_INCAPACE — la "
           "ripetizione resta solo per NON_ORA (motivo 3)", flush=True)
+
+# --- ⛔⭐⭐ V5: LA GUARDIA, PROVATA DENTRO LA FUNZIONE VERA ------------------
+# `fasi/06` §5.5, secondo falso verde.  Fino al 21 agosto 2026 questa scena
+# provava che `tela_spenta` **cambia valore**.  ⇒ Adesso si chiama la funzione
+# del prodotto e si guarda l'unico osservabile che conta: e' partito un
+# `ADATTA_TELA` sul canale, si' o no?
+print("\n    --  V5 · la guardia, ESERCITATA dentro `chiedi_tela` (il testo "
+      "vero del prodotto, installato con una eval diretta)", flush=True)
+mandati_prima = B.js("window.__b37_mandati")
+B.val("chiedi_tela('V5: la prova della guardia')")
+time.sleep(0.8)
+mandati_dopo = B.js("window.__b37_mandati")
+chieste5 = B.js("window.__b37_chieste")
+nuovi = len(mandati_dopo) - len(mandati_prima)
+print("    --  V5: arrivi a `chiedi_tela` %d · messaggi sul canale prima %d, "
+      "dopo %d ⇒ %d nuovi · `tela_spenta` = %s"
+      % (len(chieste5), len(mandati_prima), len(mandati_dopo), nuovi,
+         B.js("tela_spenta")), flush=True)
+if not chieste5:
+    print("    NO  ⛔ V5: la funzione non e' stata nemmeno chiamata: lo zero "
+          "sui messaggi e' del BANCO, non del prodotto", flush=True)
+    guasti += 1
+elif nuovi == 0:
+    print("    OK  V5: chiamata a voce SPENTA, la funzione VERA non ha mandato "
+          "nessun `ADATTA_TELA` — la guardia e' stata attraversata, non "
+          "aggirata", flush=True)
+else:
+    print("    NO  ⛔⛔ V5: a voce spenta la funzione VERA ha mandato %d "
+          "`ADATTA_TELA` sul canale: la guardia di §7.1 NON tiene, e la pagina "
+          "insiste con un compositore che ha gia' detto di non saperlo fare"
+          % nuovi, flush=True)
+    guasti += 1
+
+# ⛔ E IL CONTROLLO POSITIVO DI V5, senza cui quello zero non vale niente: a
+#    voce ACCESA la stessa funzione DEVE mandare.  Se non manda, a tacere non e'
+#    la guardia — e' il banco.
+B.val("tela_spenta = false; tela_chiesta_l = 0; tela_chiesta_a = 0;"
+      " schermo.tela_l = 640; schermo.tela_a = 480; 'riacceso'")
+mandati_prima = B.js("window.__b37_mandati")
+B.val("chiedi_tela('V5: il controllo positivo, a voce ACCESA')")
+time.sleep(0.8)
+nuovi_acceso = len(B.js("window.__b37_mandati")) - len(mandati_prima)
+if nuovi_acceso >= 1:
+    print("    OK  V5 · controllo positivo: a voce ACCESA la stessa funzione "
+          "manda %d `ADATTA_TELA` ⇒ lo zero di sopra e' della GUARDIA, non del "
+          "canale finto" % nuovi_acceso, flush=True)
+else:
+    print("    NO  ⛔ V5 · controllo positivo: a voce ACCESA non e' partito "
+          "NIENTE ⇒ lo zero di sopra e' del BANCO, e V5 non giudica", flush=True)
+    guasti += 1
+
 B.scrivi({"tipo": "voce-rifiuto", "motivo": 1, "righe": righe1,
-          "richieste_dopo": chieste2, "congedi": B.js("window.__b37_congedi")},
+          "richieste_dopo": chieste2, "congedi": B.js("window.__b37_congedi"),
+          "v5_mandati_a_voce_spenta": nuovi,
+          "v5_mandati_a_voce_accesa": nuovi_acceso},
          iniezione="si")
 
 # --- V4: la scena del 16 agosto NON ESISTE PIU' -----------------------------

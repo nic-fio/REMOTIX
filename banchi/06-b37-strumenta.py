@@ -18,7 +18,31 @@
   documento, non scrive su `body`.  Se lo facesse misurerebbe se stessa —
   ⛔ e in un banco che misura `clientWidth` un solo elemento in piu' sposta il
   numero (basta una barra di scorrimento: 15 px, `src/pagina.html:1397`).
+
+═══════════════════════════════════════════════════════════════════════════
+⛔⭐⭐ E UNA TERZA COSA, DAL 22 AGOSTO 2026: IL TESTO VERO DI `chiedi_tela`.
+
+`fasi/06` §5.5, secondo falso verde: *«il ramo che attua la voce spenta non
+viene mai eseguito»*.  `06-b37-voce.py` e `06-b37-modi.py` sostituivano
+`chiedi_tela` con una spia **prima** di misurare, ⛔ e la guardia vera —
+`if (tela_spenta) { … return; }` — sta **DENTRO la funzione sostituita**.
+⇒ Quei banchi provavano che **un booleano cambia valore**, non che la pagina
+smetta di chiedere.
+
+⚠ E la funzione vera non si puo' semplicemente chiamare: e' una CHIUSURA creata
+dentro `collega()` sopra il canale della stretta di mano, e senza server quella
+stretta non avviene.
+
+⇒ Qui si estrae dal prodotto **il testo esatto** dell'assegnazione
+`chiedi_tela = function (perche) { … };` e lo si mette nella pagina come
+stringa (`window.__b37_chiedi_tela_sorgente`).  Il banco lo passa a una `eval`
+diretta con un **canale finto** nello scope: quel che viene installato non e'
+un'imitazione, sono **gli stessi caratteri che gira il prodotto** — guardia
+compresa.  ⛔ Se il testo cambia, cambia anche quel che il banco esercita; se
+l'ancora non si trova piu', la strumentazione **fallisce rumorosamente** invece
+di lasciare un banco verde che non prova niente.
 """
+import json
 import sys
 
 SONDA = r"""
@@ -111,22 +135,62 @@ SONDA = r"""
 """
 
 
+ANCORA_INIZIO = "      chiedi_tela = function (perche) {"
+ANCORA_FINE = "      };"
+
+
+def estrai_chiedi_tela(testo):
+    """⛔ Il testo ESATTO dell'assegnazione di `chiedi_tela` nel prodotto.
+       Alza se l'ancora non c'e' o non e' unica: un'ancora scaduta e' la forma
+       d'errore che `fasi/06` §5.2 ha gia' pagato una volta."""
+    righe = testo.split("\n")
+    inizi = [i for i, r in enumerate(righe) if r == ANCORA_INIZIO]
+    if len(inizi) != 1:
+        raise SystemExit(
+            "06-b37: l'ancora «%s» compare %d volte invece di 1: la "
+            "strumentazione NON procede (ancora scaduta o duplicata)"
+            % (ANCORA_INIZIO.strip(), len(inizi)))
+    i = inizi[0]
+    fine = None
+    for j in range(i + 1, len(righe)):
+        if righe[j] == ANCORA_FINE:
+            fine = j
+            break
+    if fine is None:
+        raise SystemExit("06-b37: non trovo la fine di `chiedi_tela`")
+    blocco = "\n".join(righe[i:fine + 1])
+    for atteso in ("tela_spenta", "canale.manda(TIPO.ADATTA_TELA",
+                   "tela_da_chiedere()"):
+        if atteso not in blocco:
+            raise SystemExit(
+                "06-b37: il testo estratto di `chiedi_tela` non contiene «%s»: "
+                "non e' la funzione che credo, e non la si usa" % atteso)
+    return blocco
+
+
 def strumenta(dentro, fuori):
     with open(dentro, encoding="utf-8") as f:
         t = f.read()
     i = t.rfind("</body>")
     if i < 0:
         raise SystemExit("06-b37: nessun </body> in %s" % dentro)
-    n = t[:i] + SONDA + t[i:]
+    sorgente_ct = estrai_chiedi_tela(t)
+    ponte = ("\n<script>\n/* 06-b37: il TESTO VERO di `chiedi_tela`, estratto "
+             "dal prodotto — non e' prodotto */\nwindow.__b37_chiedi_tela_"
+             "sorgente = %s;\n</script>\n" % json.dumps(sorgente_ct))
+    n = t[:i] + ponte + SONDA + t[i:]
     # ⛔ IL CONTROLLO: il prodotto deve stare INTATTO dentro la copia, nei due
     #    pezzi in cui la sonda lo taglia.  Senza, «ho misurato la pagina» e «ho
     #    misurato una pagina che le somiglia» hanno lo stesso aspetto.
-    if t[:i] not in n or t[i:] not in n or len(n) != len(t) + len(SONDA):
+    if (t[:i] not in n or t[i:] not in n
+            or len(n) != len(t) + len(SONDA) + len(ponte)):
         raise SystemExit("06-b37: la strumentazione ha cambiato il prodotto")
     with open(fuori, "w", encoding="utf-8") as f:
         f.write(n)
-    print("06-b37: %s → %s (+%d byte di sonda, prodotto intatto)"
-          % (dentro, fuori, len(SONDA)))
+    print("06-b37: %s → %s (+%d byte di sonda, +%d byte col testo vero di "
+          "`chiedi_tela` (%d righe), prodotto intatto)"
+          % (dentro, fuori, len(SONDA), len(ponte),
+             sorgente_ct.count("\n") + 1))
 
 
 if __name__ == "__main__":

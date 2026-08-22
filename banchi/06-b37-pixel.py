@@ -11,10 +11,14 @@
 ⛔ CHE COSA E' INIEZIONE, E SI DICHIARA IN OGNI RIGA (`iniezione: si`):
    il fotogramma non arriva dal filo.  Si costruisce una `<canvas>` con un
    disegno noto — righe verticali spesse **UN pixel**, che e' il caso peggiore
-   del ricampionamento e insieme il caso vero (un terminale) — la si mette in
-   `schermo.deposito` e si chiama `schermo.componi()`, cioe' la **stessa**
-   funzione che dipinge i fotogrammi veri.  ⚠ Quel che NON e' provato cosi': la
-   decodifica, il filo, e la misura che il server concede davvero.
+   del ricampionamento e insieme il caso vero (un terminale) — e la si consegna
+   a `schermo.mostra()`, cioe' la **stessa** funzione che riceve i fotogrammi
+   veri.  ⚠ Quel che NON e' provato cosi': la decodifica, il filo, e la misura
+   che il server concede davvero.
+   ⛔ E la strada si SCEGLIE COME LA SCEGLIE IL PRODOTTO, e si scrive in ogni
+      riga (`strada`): fino al 22 agosto 2026 qui c'era `schermo.deposito = c;
+      schermo.componi()`, che dal passaggio a `bitmaprenderer` **non dipingeva
+      piu' niente** — `[M]` quel giorno, marcatori assenti in 12 fotografie su 12.
 
 ⛔ CHE COSA SU QUESTO PALCO NON E' MISURABILE PER COSTRUZIONE:
    · i tempi fra «disegno finito» e «pixel acceso» (`STUDI.md` §web §6.2);
@@ -29,6 +33,13 @@
   X1 con la tela della misura della finestra (larghezza PARI) la scala vale
      **1,000**, `image-rendering` e' `pixelated`, e le righe da un pixel escono
      **nette**: nessuna colonna grigia.
+  X1-bis ⛔⭐ **AGGIUNTA IL 22 AGOSTO 2026** (`fasi/06` §5.5, primo falso verde):
+     il disegno **RIEMPIE** la finestra.  ⚠ «Il disegno misura esattamente il
+     fotogramma» e' vero anche quando il fotogramma e' **30 px piu' stretto
+     della finestra**, perche' e' il banco stesso a iniettare un fotogramma
+     della misura che la pagina ha chiesto.  ⇒ Il disegno si confronta con la
+     **vista letta sui PIXEL** (le strisce di `06-b37-comune.py`), che non viene
+     ne' dalla pagina ne' dal fotogramma: `W − ceil(dpr) ≤ disegno ≤ W`.
   X2 ⭐ IL MEZZO PIXEL, e qui parto dall'ipotesi che il giudizio «tutto perfetto»
      sia FALSO: con la larghezza della finestra DISPARI la tela perde un pixel
      per la parita' (§4.5), avanza **1 pixel** che `margin: 0 auto` divide in
@@ -40,6 +51,7 @@
      quello del fotogramma entro lo 0,5 %.
 """
 import importlib.util
+import math
 import os
 import sys
 import time
@@ -55,43 +67,10 @@ _s.loader.exec_module(_m)
 B = _m.Banco(*sys.argv[1:6])
 
 # ---------------------------------------------------------------------------
-# ⛔ Il disegno di prova, e ogni sua parte serve a una domanda.
-INIETTA = """(function (L, A) {
-  const c = document.createElement("canvas");
-  c.width = L; c.height = A;
-  const g = c.getContext("2d");
-  g.fillStyle = "#000"; g.fillRect(0, 0, L, A);
-  /* righe verticali da UN pixel: il caso peggiore del ricampionamento, ed e'
-     esattamente il testo di un terminale (il giudizio dell'utente del 14 ago) */
-  g.fillStyle = "#fff";
-  for (let xx = 0; xx < L; xx += 2) g.fillRect(xx, 0, 1, A);
-  /* i quattro marcatori: servono a trovare il rettangolo DIPINTO nella
-     fotografia dello schermo, senza dedurlo da nessun numero della pagina */
-  g.fillStyle = "#ff0000"; g.fillRect(0, 0, 4, A);
-  g.fillStyle = "#00ff00"; g.fillRect(L - 4, 0, 4, A);
-  g.fillStyle = "#0000ff"; g.fillRect(0, 0, L, 4);
-  g.fillStyle = "#ffff00"; g.fillRect(0, A - 4, L, 4);
-  schermo.deposito = c;
-  schermo.tela_l = L; schermo.tela_a = A;
-  schermo.adatta_vista();
-  schermo.componi();
-  const el = $("schermo");
-  const r = el.getBoundingClientRect();
-  const st = getComputedStyle(el);
-  const mr = el.parentElement.getBoundingClientRect();
-  return JSON.stringify({
-    genitore: [mr.left, mr.top, mr.width, mr.height],
-    dpr: devicePixelRatio,
-    buffer: [el.width, el.height],
-    stile: [st.width, st.height, st.imageRendering],
-    rect: [r.left, r.top, r.width, r.height],
-    rect_fisico: [r.left * devicePixelRatio, r.top * devicePixelRatio,
-                  r.width * devicePixelRatio, r.height * devicePixelRatio],
-    vista: [schermo.vista_l, schermo.vista_a],
-    tela: [schermo.tela_l, schermo.tela_a],
-    dipinta: schermo.dipinta
-  });
-})(%d, %d)"""
+# ⛔ Il disegno di prova (righe da un pixel + i quattro marcatori) e la strada
+#    per metterlo nella pagina stanno in `06-b37-comune.py`: `Banco.mostra()`.
+#    ⚠ Qui c'era un `schermo.deposito = c; schermo.componi()` che dal passaggio a
+#      `bitmaprenderer` non dipingeva piu' NIENTE.
 
 
 def trova(img, prova):
@@ -134,12 +113,12 @@ def misura_scena(etichetta, larghezza_finestra, altezza_finestra, fl, fa,
     B.ridimensiona(larghezza_finestra, altezza_finestra)
     time.sleep(0.8)
     s = B.js("stato()")
-    # ⛔ `INIETTA` restituisce gia' una stringa JSON: si legge UNA volta sola.
-    #    Incartarla in un secondo `JSON.stringify` dava una stringa dentro una
-    #    stringa — e l'errore usciva 40 righe dopo, dove non si capiva.
-    import json as _j
-    d = _j.loads(B.val(INIETTA % (fl, fa)))
+    d = B.mostra(fl, fa, "righe orizzontali")
     time.sleep(0.6)
+    # ⛔⭐ LA VISTA VERA, letta sui pixel: e' l'unico numero di questa scena che
+    #    non viene ne' dalla pagina ne' dal fotogramma che il banco ha iniettato.
+    cal = B.calibra(os.path.join(cartella, "06-b37-cal-%s-%s.rgb24"
+                                 % (B.nome, etichetta)))
     percorso = os.path.join(cartella, "06-b37-%s-%s.rgb24" % (B.nome, etichetta))
     img = fotografa(percorso)
 
@@ -150,7 +129,10 @@ def misura_scena(etichetta, larghezza_finestra, altezza_finestra, fl, fa,
     esito = {"tipo": "pixel", "scena": etichetta,
              "finestra_chiesta": [larghezza_finestra, altezza_finestra],
              "fotogramma": [fl, fa], "pagina": d, "cw": s["cw"], "ch": s["ch"],
-             "dpr": s["dpr"], "fotografia": percorso}
+             "dpr": s["dpr"], "fotografia": B.percorso_foto(percorso),
+             "strada": d["strada"],
+             "vista_pixel": ([cal["l"], cal["a"]] if cal else None),
+             "vista_origine_pixel": ([cal["ox"], cal["oy"]] if cal else None)}
 
     if not (r and v and b and gi):
         esito["trovato"] = False
@@ -212,6 +194,12 @@ def misura_scena(etichetta, larghezza_finestra, altezza_finestra, fl, fa,
     esito["rapporto_fotogramma"] = round(rap_fot, 4)
     esito["stira_per_cento"] = round(100 * abs(rap_dis - rap_fot) / rap_fot, 2)
     esito["image_rendering"] = d["stile"][2]
+    # ⛔⭐ IL LIMITE INFERIORE: il disegno RIEMPIE la finestra?  `W` non viene
+    #    dalla pagina, e senza questa riga una tela 30 px piu' stretta era verde.
+    if cal:
+        esito["avanzo_pixel"] = cal["l"] - larg
+        esito["avanzo_minimo"] = cal["l_max"] - larg
+        esito["avanzo_massimo"] = int(math.ceil(d["dpr"]))
     esito["rect_sinistro_fisico"] = round(d["rect_fisico"][0], 3)
     esito["mezzo_pixel"] = abs(d["rect_fisico"][0]
                                - round(d["rect_fisico"][0])) > 0.01
@@ -324,11 +312,40 @@ for e, nome, atteso_scala1 in ((e1, "X1 pari", True), (e2, "X2 dispari", True)):
     fl = e["fotogramma"][0]
     if larg == fl:
         print("    OK  %s: il disegno misura %d px, esattamente il fotogramma "
-              "⇒ scala 1,000 SUI PIXEL" % (nome, larg), flush=True)
+              "⇒ scala 1,000 SUI PIXEL (strada «%s»)"
+              % (nome, larg, e["strada"]), flush=True)
     else:
         print("    NO  %s: disegno %d px contro un fotogramma di %d ⇒ scala %.4f"
               % (nome, larg, fl, larg / float(fl)), flush=True)
         guasti += 1
+    # ⛔⭐ X1-bis — E RIEMPIE LA FINESTRA?  Senza questa domanda «il disegno e'
+    #    esattamente il fotogramma» resta vero anche con una tela 30 px piu'
+    #    stretta della finestra: il fotogramma lo sceglie il banco a partire
+    #    dalla tela, quindi combacia sempre con se' stesso.
+    if e.get("vista_pixel") is None:
+        print("    NO  ⛔ %s: nessuna calibrazione sui pixel ⇒ il limite "
+              "INFERIORE non e' stato giudicato, e non e' uno zero" % nome,
+              flush=True)
+        guasti += 1
+    else:
+        av, amm = e["avanzo_pixel"], e["avanzo_massimo"]
+        if e["avanzo_minimo"] < 0:
+            av = e["avanzo_minimo"]     # deborda oltre la maschera permissiva
+        if -1 <= av <= amm:
+            print("    OK  %s: e RIEMPIE la finestra — vista vera %d px, "
+                  "disegno %d px ⇒ avanzo %d px (massimo legale %d)"
+                  % (nome, e["vista_pixel"][0], larg, av, amm), flush=True)
+        elif av > amm:
+            print("    NO  ⛔⛔ %s: BANDA NERA PERMANENTE — vista vera %d px, "
+                  "disegno %d px ⇒ %d colonne di desktop che l'utente non vede "
+                  "mai (massimo legale %d)"
+                  % (nome, e["vista_pixel"][0], larg, av, amm), flush=True)
+            guasti += 1
+        else:
+            print("    NO  ⛔⛔ %s: il disegno DEBORDA dalla finestra — vista "
+                  "vera %d px, disegno %d px (%+d)"
+                  % (nome, e["vista_pixel"][0], larg, -av), flush=True)
+            guasti += 1
     if e["image_rendering"] != "pixelated":
         print("    ⚠   %s: `image-rendering` vale «%s», non «pixelated»"
               % (nome, e["image_rendering"]), flush=True)
@@ -413,6 +430,34 @@ if e5 and e5.get("disegno_pixel"):
         print("    OK  X5: anche sotto il minimo si impagina, non si stira "
               "(%.2f %%)" % e5["stira_per_cento"], flush=True)
 
+# ---------------------------------------------------------------------------
+# ⛔⭐ IL MEZZO PIXEL, CONTATO — e non solo osservato.  `fasi/06` §5.5: *«il mezzo
+#    pixel e' osservato e non incrementa nessun conto»*.  ⇒ Qui i due conti che
+#    chiudono (o lasciano aperta) la terza `[?]` di `SPECIFICHE.md` §6.1-bis.
+# ⚠ Il conto si fa SOLO sulle scene a scala 1 (`pixelated`): dove la scala non
+#   vale 1 il grigio c'e' per il ricampionamento dichiarato — X5, sotto il minimo
+#   di §4.5, ne fa 118 su 222 ed e' giusto cosi'.  Mescolarle direbbe «il mezzo
+#   pixel arriva ai pixel» a proposito di tutt'altro.
+a_uno = [e for e in scene if e.get("disegno_pixel")
+         and e.get("image_rendering") == "pixelated"]
+mezzi = [e for e in a_uno if e.get("mezzo_pixel")]
+arrivati = [e for e in mezzi if e.get("colonne_grigie", 0) > 0]
+colonne_tot = sum(e.get("colonne", 0) for e in a_uno)
+grigie_tot = sum(e.get("colonne_grigie", 0) for e in a_uno)
+print("\n    ⭐ IL MEZZO PIXEL, COL DENOMINATORE (solo le %d scene a scala 1, "
+      "`pixelated`): scene con un `rect.left` frazionario **%d** · di queste, "
+      "quelle in cui il mezzo pixel ARRIVA ai pixel: **%d** · colonne grigie in "
+      "tutto: **%d su %d**"
+      % (len(a_uno), len(mezzi), len(arrivati), grigie_tot, colonne_tot),
+      flush=True)
+print("    ⚠  E QUEL CHE RESTA `[?]`: qui rasterizza il software di Xvfb.  Uno "
+      "zero qui NON promette lo stesso su GPU vera ne' su DeX — la `[?]` 3 di "
+      "§6.1-bis resta APERTA su quei due terreni, e chiusa su questo",
+      flush=True)
+B.scrivi({"tipo": "pixel-verdetto", "scene": len(scene), "guasti": guasti,
+          "mezzo_pixel_scene": len(mezzi), "mezzo_pixel_ai_pixel": len(arrivati),
+          "colonne_grigie": grigie_tot, "colonne": colonne_tot,
+          "strada": e1.get("strada")}, iniezione="si")
 print("\n    --  le fotografie grezze (rgb24) stanno in %s" % CARTELLA,
       flush=True)
 sys.exit(1 if guasti else 0)

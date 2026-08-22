@@ -49,40 +49,16 @@ B = _m.Banco(*sys.argv[1:6])
 BERSAGLIO_TELA = (2540, 868)
 BERSAGLIO_VISTA = (2541, 869)
 
-INIETTA = """(function (L, A) {
-  const c = document.createElement("canvas");
-  c.width = L; c.height = A;
-  const g = c.getContext("2d");
-  g.fillStyle = "#000"; g.fillRect(0, 0, L, A);
-  g.fillStyle = "#fff";
-  for (let xx = 0; xx < L; xx += 2) g.fillRect(xx, 0, 1, A);
-  g.fillStyle = "#ff0000"; g.fillRect(0, 0, 4, A);
-  g.fillStyle = "#00ff00"; g.fillRect(L - 4, 0, 4, A);
-  schermo.deposito = c;
-  schermo.tela_l = L; schermo.tela_a = A;
-  schermo.sessione = true;
-  schermo.adatta_vista();
-  schermo.componi();
-  const el = $("schermo"), r = el.getBoundingClientRect();
-  return JSON.stringify({
-    dpr: devicePixelRatio, rect: [r.left, r.top, r.width, r.height],
-    rect_fisico: [r.left * devicePixelRatio, r.width * devicePixelRatio],
-    stile: getComputedStyle(el).imageRendering,
-    stile_larghezza: getComputedStyle(el).width,
-    vista: [schermo.vista_l, schermo.vista_a],
-    scala: Math.min(schermo.vista_l / L, schermo.vista_a / A, 1),
-    buffer: [el.width, el.height]
-  });
-})(%d, %d)"""
+# ⛔ Il fotogramma lo mette `Banco.mostra()`, per la strada del prodotto: il
+#    `schermo.deposito` che c'era qui non dipingeva piu' niente da quando la tela
+#    e' passata a `bitmaprenderer` (vedi il cappello di `06-b37-comune.py`).
 
 
-def fotografa(nome):
-    dim = [r for r in B.x("xdpyinfo").stdout.splitlines() if "dimensions:" in r]
-    l, a = (int(v) for v in dim[0].split()[1].split("x"))
-    ok, err = B.fotografa(nome, l, a)
-    if not ok:
-        raise RuntimeError("ffmpeg: " + err[:300])
-    return np.fromfile(nome, dtype=np.uint8).reshape((a, l, 3))
+def fotografa(nome_file):
+    """⛔ I pixel, dalla PIPE: il file si scrive solo con `B37_FOTO=tieni`
+       (`06-b37-comune.py` `_grezza`).  ⚠ Un giro intero scriveva 1,5 GB di
+       fotogrammi grezzi in un `/tmp` condiviso con altri otto agenti."""
+    return B.immagine(nome_file)
 
 
 print("== 06-b37 · %s — la finestra 2541×869 a dpr 1,25 (il caso dell'utente)"
@@ -169,10 +145,14 @@ if tuple(s["vista"]) != BERSAGLIO_VISTA:
              s["vista"][0] - BERSAGLIO_VISTA[0],
              s["vista"][1] - BERSAGLIO_VISTA[1]), flush=True)
 
-d = json.loads(B.val(INIETTA % tuple(BERSAGLIO_TELA)))
+B.val("schermo.sessione = true; 'sessione finta'")
+d = B.mostra(BERSAGLIO_TELA[0], BERSAGLIO_TELA[1], "righe")
 time.sleep(0.8)
 CARTELLA = os.environ.get("PIXEL_DIR", "/tmp/06-b37-pixel")
 os.makedirs(CARTELLA, exist_ok=True)
+# ⛔⭐ LA VISTA VERA, SUI PIXEL: e' l'unico numero che non viene dalla pagina, ed
+#    e' quello che dice se il disegno RIEMPIE la finestra o le lascia una banda.
+cal = B.calibra(os.path.join(CARTELLA, "06-b37-windows-cal-%s.rgb24" % B.nome))
 f = os.path.join(CARTELLA, "06-b37-windows-%s.rgb24" % B.nome)
 img = fotografa(f)
 r = (img[:, :, 0] > 170) & (img[:, :, 1] < 90) & (img[:, :, 2] < 90)
@@ -189,7 +169,7 @@ grigi = int(((riga > 60) & (riga < 195)).sum())
 frazione = abs(d["rect_fisico"][0] - round(d["rect_fisico"][0]))
 
 print("\n    --  scala che la pagina si e' calcolata: %.6f · image-rendering "
-      "«%s» · style.width «%s»" % (d["scala"], d["stile"], d["stile_larghezza"]),
+      "«%s» · style.width «%s»" % (d["scala_pagina"], d["image_rendering"], d["stile"][0]),
       flush=True)
 print("    --  `getBoundingClientRect().left` in pixel fisici: %.3f ⇒ %s"
       % (d["rect_fisico"][0],
@@ -198,21 +178,22 @@ print("    --  disegno misurato SUI PIXEL: %d px (tela %d) · colonne grigie "
       "%d su %d" % (larg, BERSAGLIO_TELA[0], grigi, len(riga)), flush=True)
 
 B.scrivi({"tipo": "windows", "finestra_x": [L, A], "vista": s["vista"],
-          "tela": s["tela"], "scala_pagina": d["scala"],
-          "image_rendering": d["stile"], "rect_sinistro_fisico":
+          "tela": s["tela"], "scala_pagina": d["scala_pagina"],
+          "image_rendering": d["image_rendering"], "strada": d["strada"],
+          "rect_sinistro_fisico":
           round(d["rect_fisico"][0], 3), "mezzo_pixel": frazione > 0.01,
           "disegno_pixel": larg, "colonne": len(riga), "colonne_grigie": grigi,
-          "fotografia": f}, iniezione="si")
+          "fotografia": B.percorso_foto(f)}, iniezione="si")
 
 guasti = 0
-if abs(d["scala"] - 1.0) < 1e-9:
+if abs(d["scala_pagina"] - 1.0) < 1e-9:
     print("    OK  la scala vale ESATTAMENTE 1: nel Math.min vince il tappo, "
           "non i rapporti %.6f e %.6f — la derivazione REGGE"
           % (s["vista"][0] / float(BERSAGLIO_TELA[0]),
              s["vista"][1] / float(BERSAGLIO_TELA[1])), flush=True)
 else:
     print("    NO  la scala vale %.6f e non 1: la derivazione NON regge"
-          % d["scala"], flush=True)
+          % d["scala_pagina"], flush=True)
     guasti += 1
 if larg == BERSAGLIO_TELA[0]:
     print("    OK  e sui PIXEL il disegno e' largo %d, cioe' la tela esatta: "
@@ -229,6 +210,27 @@ else:
     print("    NO  %d colonne grigie su %d: il mezzo pixel ARRIVA ai pixel"
           % (grigi, len(riga)), flush=True)
     guasti += 1
+# ⛔⭐ IL LIMITE INFERIORE, dal 22 agosto 2026: il disegno RIEMPIE la finestra?
+#    ⚠ «larg == 2540» e' vero anche se la finestra ne avesse 2570: il fotogramma
+#      lo sceglie il banco.  La vista VERA la dicono i pixel.
+if cal is None:
+    print("    NO  ⛔ nessuna calibrazione sui pixel: il limite INFERIORE non "
+          "e' stato giudicato, e non e' uno zero", flush=True)
+    guasti += 1
+else:
+    avanzo = cal["l"] - larg
+    if -1 <= avanzo <= 2:
+        print("    OK  e RIEMPIE la finestra: vista vera %d px sui pixel, "
+              "disegno %d px ⇒ avanzo %d px (a dpr 1,25 il massimo legale e' 2)"
+              % (cal["l"], larg, avanzo), flush=True)
+    else:
+        print("    NO  ⛔⛔ vista vera %d px sui pixel contro un disegno di %d "
+              "⇒ avanzo %d px: %s"
+              % (cal["l"], larg, avanzo,
+                 "BANDA NERA PERMANENTE" if avanzo > 0 else "IL DISEGNO DEBORDA"),
+              flush=True)
+        guasti += 1
+
 print("\n    ⭐ IL NUMERO DI GUARDIA: `image-rendering` deve leggersi "
       "«pixelated» e la scala deve valere 1,000000.  Se `vista < tela` anche "
       "di UN pixel, il tappo del Math.min non serve piu' e si passa a «auto»: "

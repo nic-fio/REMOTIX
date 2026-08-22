@@ -1503,6 +1503,99 @@ questo documento. La misura si chiama adesso **«la tela girata al palco»**.
 ⚠ Chiunque scriva «ridimensionamento» senza specificare quale dei due **sta per rifare questo
 errore**.
 
+### 5.15 · ⛔⛔⭐ 22 agosto 2026 — **`06-b37` rifatto: i quattro falsi verdi curati, e cinque guasti che li accendono**
+
+*Il banco della sottofase 6.5 era l'unico dei sei **senza nessun guasto innestato** (§5.5). ⇒ Adesso
+ce l'ha: `banchi/06-b37-guasti.py` + `banchi/06-b37-guasti.sh`, **7 casi su 7 su Chrome 151 e 7 su 7
+su Firefox 140esr — 14 su 14** — ogni guasto rosso **nel caso dichiarato prima**, e la stessa scena
+verde sul prodotto. Carico della macchina durante le certificazioni: `load average` **0,34 → 2,10**,
+un giro intero **9 min 52 s** (Chrome) e **12 min 40 s** (Firefox).*
+
+#### ⭐ I cinque guasti, e che cosa accendono
+
+| | il guasto, in una copia di `src/pagina.html` | la scena che lo accusa | il falso verde che smaschera |
+|---|---|---|---|
+| **G1** | la tela chiesta è **30 px più stretta** della finestra | `numeri` A5 · `sfora` · `pixel` X1-bis | ⛔ nessuna scena aveva un **limite inferiore**: 12 combinazioni su 12 restavano verdi |
+| **G2** | la guardia `if (tela_spenta)` è **aggirata** | `voce` **V5** | ⛔ la spia **sostituiva** `chiedi_tela`, e la guardia sta **dentro** la funzione sostituita |
+| **G3** | `misura_vista()` torna al **`Math.round`** di prima della cura | `sfora` a dpr 1,5 (**«TAGLIATO 979 px su 980»**) | ⛔ A6 era un'**identità**: la «verità esterna» si semplificava in `round(cw·dpr)`, cioè nello stesso arrotondamento del guasto ⇒ **il difetto vero che questa fase ha curato passava sotto A6 senza toccarlo** |
+| **G4** | l'immagine è dipinta **50 px fuori posto** nel buffer, e `dipinta.x` dice ancora 0 | `coordinate` **C0** | ⛔ l'origine era **sottratta per costruzione** |
+| **G5** | la **parità** di `tela_da_chiedere()` è tolta | `numeri` A3 (63 tele su 63) | ⛔ il lato dispari era impossibile **per costruzione** e non veniva mai provocato |
+
+#### ⭐⭐ E la controprova di G4 sta dentro il banco, per sempre
+
+`06-b37-coordinate.py` misura **ogni punto due volte** — con l'origine vera e con la formula
+vecchia — e stampa i due scarti accanto. `[M]` con G4 innestato, Chrome, 9 punti su 3 scene:
+
+| | alto-sinistro | centro | basso-destro |
+|---|---|---|---|
+| **metodo nuovo** | **+51** · **+50** · **+51** | **+50** · **+50** · **+51** | +0 · +0 · +0 *(satura al bordo)* |
+| ⛔ **metodo vecchio** (che sottraeva l'origine) | **+0** · +0 · +0 | **−1** · +0 · +0 | −1 · −1 · +0 |
+
+⇒ ⛔ **Il metodo vecchio, con l'immagine spostata di 50 pixel, sarebbe stato VERDE su tutti e nove i
+punti.** Non è più un'ipotesi della revisione: è misurato.
+
+#### ⛔⛔ E TRE DIFETTI NUOVI DEL BANCO, che nessuno aveva ancora nominato
+
+1. ⛔⛔ **Le quattro scene sui pixel non misuravano più NIENTE.** Mettevano il fotogramma con
+   `schermo.deposito = c; schermo.componi()`, ⛔ ma `componi()` comincia con
+   `if (this.bm) { … return false; }` e `this.bm` c'è su tutt'e due i motori da quando la tela è
+   passata a **`bitmaprenderer`** (`DECISIONI.md` §5.4). ⇒ `[M]` 22 agosto: `sfora` su Chrome,
+   **12 fotografie su 12 senza nessun marcatore**. ⭐ I banchi si sono comportati bene — dicevano «i
+   marcatori non si trovano» invece di uno zero — ⚠ ma **gli esiti del 16 agosto nel deposito sono di
+   prima di quel cambiamento**, e §4.3-bis li dichiarava ancora buoni. ⇒ Curato: il fotogramma passa
+   da **`schermo.mostra()`**, la funzione che riceve i fotogrammi veri, e ogni riga di esito dichiara
+   la **`strada`**;
+2. ⛔ **`numeri` era ROSSO PER SEMPRE con un fattore del dispositivo forzato**: A1 confronta due
+   zoom, con `FATTORE=` ce n'è uno solo, e quel caso faceva `guasti += 1`. ⇒ Per questo la scena non
+   l'aveva mai lanciata nessuno a dpr 1,25 o 1,5. Una domanda **non posta** adesso si dichiara e non
+   conta come risposta sbagliata;
+3. ⛔⛔ **il banco riempiva il disco della macchina — e il disco è di tutti.** `[M]` un giro intero
+   scriveva **1,5 GB** di fotogrammi grezzi (1600×1000×3 = 4,8 MB l'uno, **63 calibrazioni nella sola
+   scena `numeri`**) in `/tmp`, che qui è un **tmpfs da 3,8 GB condiviso con altri otto agenti**.
+   L'ha portato al **100 %**, e il giro dopo è morto con *«No space left on device»* — ⚠ su un banco
+   altrui sarebbe morto **senza che nessuno capisse perché**. ⇒ Curato: i pixel si leggono da una
+   **pipe**, su disco ci finiscono solo con `B37_FOTO=tieni`, e la riga di esito porta `null` invece
+   di un percorso che non esiste;
+4. ⚠ **e una quarta cosa, che non era un difetto ma una flaky, e valeva tre guasti**: `voce` su
+   Firefox lanciata subito dopo un'altra scena moriva perché **il primo comando scadeva a 20 s** —
+   la pagina si era annunciata, ⛔ ma il ciclo che chiede i comandi non era ancora partito. Il
+   certificatore l'ha letta come *«il giro SANO è rosso»* e ha **rifiutato di certificare tre
+   guasti**: `[M]` primo giro su Firefox **4 confermati su 7**, secondo giro **7 su 7**.
+   ⇒ Curato: `aspetta_canale()` — la pagina che si annuncia e il ciclo che risponde sono **due cose
+   diverse**, e adesso si aspetta la seconda. ⭐ E il certificatore si è comportato bene: ha detto
+   «non certifico» invece di contare quei tre come confermati.
+
+#### ⭐⭐ E adesso `bash banchi/06-b37-lancia.sh tutti tutte` gira davvero
+
+`[M]` 22 agosto 2026, 09:48, carico `0,57 → 0,64`: **14 giri di scena in una sola invocazione**
+(sette scene × due motori), **80 verdetti verdi e zero rossi**, `windows` compresa — che si porta
+dietro il suo schermo 2600×1000 e il suo fattore 1,25 senza toccare le altre sei.
+⇒ ⛔ Cade la riga *«finché non è curato, si lancia una scena per volta»*.
+
+#### ⚠ E su Gecko c'è una riga in più da scartare, dichiarata invece che scartata in silenzio
+
+Sotto il suo minimo **Firefox non stringe il riquadro di impaginazione**: `clientWidth` resta
+grande, la finestra X si stringe lo stesso, e quel che c'è dentro **lo taglia il bordo della
+finestra**. `[M]` la striscia di calibrazione esce fino a **210 px** più corta di
+`clientWidth × dpr`. ⇒ **12 righe su 63** non sono una scena e si scartano — ⛔ ma il confronto che
+le scarta è fra **due numeri del browser** (`clientWidth × dpr` e i pixel), non fra il banco e il
+prodotto: nessun difetto della pagina può nascondersi lì, perché `misura_vista()` non entra in
+nessuno dei due membri. ⇒ Su Firefox il denominatore di `numeri` è **48 righe su 63**, e le 12
+scartate si stampano una per una.
+
+#### ⚙ Che cosa è cambiato nel banco, file per file
+
+| | |
+|---|---|
+| ⭐ `06-b37-guasti.py` · `.sh` | **nuovi**: i cinque guasti con l'ancora verificata (7 ancore su 7 vive, molteplicità 1) e il certificatore, che pretende **il sano verde**, **il guasto rosso** e **la frase dichiarata prima** — ⛔ non un rosso qualunque (è il rilievo 2 di §5.5 su `06-b33`) |
+| `06-b37-comune.py` | la **calibrazione sui pixel** (due strisce a posizione fissa, `ox`/`oy` e la vista in pixel del dispositivo, con **due maschere** perché a dpr non intero il bordo cade a mezzo pixel) · `mostra()` per la strada del prodotto · la **marca del giro** su ogni riga di esito |
+| `06-b37-numeri.py` | A2 e A6 **riscritte** su quella verità esterna, A5 **bidirezionale**, la tolleranza di A1 **derivata** invece che scelta |
+| `06-b37-sfora.py` · `-pixel.py` · `-windows.py` | il **limite inferiore** (`W − ceil(dpr) ≤ disegno`), la strada del prodotto, il mezzo pixel **contato** |
+| `06-b37-coordinate.py` | **C0 · l'origine** e la controprova col metodo vecchio |
+| `06-b37-voce.py` · `-modi.py` | il **testo vero** di `chiedi_tela` estratto dal prodotto e installato con una `eval` diretta su un canale finto ⇒ la guardia si attraversa, e l'osservabile è `canale.manda(TIPO.ADATTA_TELA, …)` |
+| `06-b37-lancia.sh` | la **settima scena** in «tutte» (con il suo schermo 2600×1000 e il suo fattore 1,25) · il difetto dichiarato in §4.3-bis — *«dopo la prima scena il browser non si riapre»* — **curato**: si aspetta che tutto quel che tiene il profilo sia morto |
+| `06-b37-strumenta.py` | estrae e verifica il testo di `chiedi_tela` (58 righe), e **fallisce rumorosamente** se l'ancora non c'è |
+
 ## 6 · Le decisioni prodotte
 
 - ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
@@ -1632,6 +1725,12 @@ la decide l'utente.
 
 - **il DeX e la GPU vera**: il mezzo pixel non arriva ai pixel su Xvfb ⇒ `[?]` **su GPU vera e su
   Samsung DeX**. ⛔ Il telefono ce l'ha l'utente: si chiede a lui, non si aggira;
+- ⛔⛔ **E una delle tre `[?]` di `SPECIFICHE.md` §6.1-bis era stata SOSTITUITA in silenzio.** Le tre
+  vere sono lo **zoom** (✅ chiusa il 22 agosto, con la tolleranza *derivata* invece che scelta), il
+  **lato dispari** (✅ chiusa, con un guasto innestato come controllo positivo) e ⛔⛔ **«su DeX
+  `screen` risponde con lo schermo esterno o col telefono?»** — che **non l'ha mai toccata nessuno**,
+  perché il telefono è dell'utente. ⚠ Al suo posto il documento aveva messo **«il mezzo pixel»**, che
+  è un'altra domanda: ⇒ una `[?]` sparita e una comparsa, senza che nessuno se ne accorgesse. 📖 §5.15;
 - ⛔ **«conforme» non è «funziona»**: l'arbitro certifica i byte — *«un server che rispondesse
   `TELA(ADATTATA)` senza toccare il palco passerebbe tutti e cinque i giri»*. I pixel li misura
   un altro banco, e la distinzione va tenuta;
