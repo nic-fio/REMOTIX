@@ -987,7 +987,52 @@ degli appunti tiene **un solo tipo MIME**.
 
 ---
 
-## Fase 8 — La copia zero
+## Fase 8 — La copia zero ✅ **CHIUSA il 22 agosto 2026**
+
+> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»*, e *«per me è ok»*
+>
+> *Il titolo del piano dice ancora «la copia zero»; il documento di fase si chiama
+> [`fasi/08-l-anello.md`](fasi/08-l-anello.md) perché il mandato vero — dettato dall'utente il
+> 22 agosto — era **l'anello**, di cui la copia zero è un tratto.*
+>
+> | | |
+> |---|---|
+> | ⭐⭐ **che cosa vede** | trascina una finestra veloce e **la finestra segue la freccia**. Al mattino restava indietro di **mezza barra del titolo** |
+> | ⭐ **il numero della fase** | `input → vetro` **89,86 → 55,20 ms** (−39 %), **appaiato**: due giri che condividono tutto tranne il binario, `macchina carica: false` scritto dal banco in tutt'e due |
+> | ⭐ **nell'unità dell'utente** | distacco **0,27 → 0,16 barre** ⇒ da **2,1** a **1,23 volte il locale** — e ⭐ il **locale** adesso è misurato: **0,142 barre** (n=254) |
+> | ⭐⭐ **e non è una vittoria di cronometro** | `[M]` i fotogrammi **dipinti** salgono del **+9 %**. `LEZIONI.md` §6.2 rispettata, dopo che in questa stessa fase era stata sfiorata **due volte** |
+> | ⛔ **il tetto dei 50 ms** | **non è verificato**, e non perché manchi poco: **55,20 sta su un confine diverso** da quello dei 50 (`SPECIFICHE.md` §3.2 misura fino al *fotogramma che parte*). ⇒ I due numeri **non si confrontano** — è `LEZIONI.md` §1.28 applicata a noi stessi |
+>
+> **⭐ Le tre eredità, tutte e tre risposte**: `EncSliceLP` **non** sa fare i sotto-livelli temporali
+> (7 profili su 7, due controlli positivi) · la chiave alla tela dell'utente sta allo **0,13 %** del
+> tetto, margine **782×** · la scheda del codificatore adesso si **dichiara** invece di ripiegare in
+> silenzio. E `RCP.md` §5.2 e §6.2 passano da `[?]` a ✅.
+>
+> **⭐⭐ E i difetti trovati per strada, nessuno dei quali era il bersaglio**: la **chiave abbandonata**
+> (§5.2 la vieta, ed era la spirale) · la **scala delle ricodifiche corta di uno scalino** · il
+> **passo non multiplo di 64** che dava un desktop **inclinato senza errori** · e il **cronometro del
+> prodotto che misurava il banco**.
+>
+> **⛔⛔ E le due lezioni che sopravvivono alla fase**, `LEZIONI.md` **§1.26**, **§1.27** e **§1.28**:
+> due banchi sulla stessa **macchina** si falsano in silenzio (e danno **un numero plausibile**, non
+> un rosso) · il **colore medio è cieco** a un'immagine sbagliata a ogni riga · e **due banchi che
+> non concordano possono avere ragione tutti e due**: misurano due grandezze diverse.
+>
+> ⏳ **Che cosa NON è stato fatto, e si porta avanti:**
+> - ⛔ **il muro di Mutter**: `[M]` **16,0 ms**, un quadro a 60 Hz esatto, **un sesto dell'anello** —
+>   non si è mosso di tre decimi in tutta la giornata, e **non l'ha toccato nessuno**;
+> - ⛔ **metà del guadagno non è spiegato**: **15,9 dei 34,7 ms** stanno in un tratto che la copia
+>   zero **non attraversa**. `[?]` L'ipotesi — il produttore fuori dal thread di tempo reale — è
+>   **dichiarata, non misurata**;
+> - ⚠ **la ritenuta del `pw_buffer` è in vigore senza prova**: il controllo positivo **non ha
+>   riprodotto il danno**. Prudenza, non necessità misurata;
+> - `[?]` **il modello del distacco ha predetto male due volte, in versi opposti** — prima meno del
+>   vero, poi più. ⛔ **È un fatto sul modello, non sull'utente**, ed è lavoro nostro;
+> - 🔸 **la tela multipla di 16** (`rcp_misura_ammessa()`): renderebbe la copia zero valida su **ogni**
+>   schermo, ⛔ ma è una **modifica al protocollo** — `RCP.md` §4.5 oggi pretende solo che i lati siano
+>   pari. **Decide l'utente.**
+
+## ~~Fase 8 — La copia zero~~
 
 > ## ⭐ E IL 22 AGOSTO 2026 L'UTENTE LE HA INDIRIZZATO **L'UNICO APPUNTO CHE GLI RESTAVA**
 >
