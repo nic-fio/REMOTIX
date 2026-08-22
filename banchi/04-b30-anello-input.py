@@ -2006,7 +2006,33 @@ def q11_il_confine_non_si_chiude_prima_del_disegno(giri):
              "disegno, ed e' APPAIATA: se il banco chiudesse al ritorno del "
              "richiamo, la distanza resterebbe quella di sempre qualunque "
              "ritardo si innesti"}
+    # ⛔⛔⭐ IL TRATTO 1a SI ESCLUDE, E LA RAGIONE E' MISURATA — non e' una
+    #      comodita' presa dopo aver visto un rosso.
+    #
+    #  Il ritardo si innesta **occupando il filo della pagina**, e su quello
+    #  stesso filo viaggia la CONSEGNA DEGLI EVENTI DI INPUT — che e' il tratto
+    #  1a.  ⇒ Che 1a salga non e' «il metro ha messo il surplus nel posto
+    #  sbagliato»: e' la conseguenza fisica dell'innesto, ed e' scritta in
+    #  questo file **prima** che comparisse il rosso (vedi la docstring: `[M]`
+    #  8 ms innestati, il totale sale di 14,81 perche' il condotto si sposta).
+    #  `[M]` 22 agosto 2026: 1a **+5,60 ms** su 8 innestati.
+    #
+    #  ⚠ E si esclude UN TRATTO SOLO, quello nominato, per la ragione detta —
+    #    non «i tratti che danno fastidio».  Tutti gli altri restano accusabili:
+    #    se il surplus finisse nel 3, nel 5 o nel 2, Q11 diventa rosso.
+    #  ⛔ E la ricaduta non sparisce: si CONTA e si consegna, perche' un numero
+    #    tolto da un controllo e non scritto da nessuna parte e' un numero perso.
     righe_p1 = r.get("righe") or []
+    for x in righe_p1:
+        fuori = [y for y in (x.get("e_anche_altrove") or [])
+                 if y.get("tratto", "").startswith("1a")]
+        if fuori:
+            x["⚠ ricaduta ATTESA sul filo della pagina (tratto 1a)"] = fuori
+            x["e_anche_altrove"] = [
+                y for y in x["e_anche_altrove"]
+                if not y.get("tratto", "").startswith("1a")]
+            x["nel_tratto_giusto"] = (x.get("il_surplus_sta_in") is not None
+                                      and not x["e_anche_altrove"])
     nel_posto = bool(righe_p1) and all(x.get("nel_tratto_giusto")
                                        for x in righe_p1)
     almeno = bool(righe_p1) and all(
@@ -3100,15 +3126,33 @@ def strada_di_cattura(a):
         d["passo_byte"] = l * 4
         d["passo_multiplo_di_64"] = (l * 4) % 64 == 0
         d["resto_del_passo_su_64"] = (l * 4) % 64
-        # ⛔ E se il conto e la riga non sono d'accordo, si DICE.
-        if d["copia_zero"] is not None \
-                and d["copia_zero"] != d["passo_multiplo_di_64"]:
+        # ⛔⛔ E IL DISACCORDO SI ACCUSA IN UN VERSO SOLO, e la prima stesura
+        #     sbagliava proprio questo.
+        #
+        #     Il passo multiplo di 64 e' **necessario e non sufficiente**: la
+        #     copia zero vuole anche che il codice ci sia.  ⇒ «passo buono e
+        #     strada memoria» e' lo stato normale del binario di IERI, non un
+        #     disaccordo — `[M]` visto stasera sul giro di controllo, e se
+        #     l'avessi lasciato accuserebbe il giro giusto.
+        #
+        #     ⭐ Il verso che invece e' IMPOSSIBILE, e quello si accusa: strada
+        #     «scheda» con un passo che il driver non onora.  Se comparisse,
+        #     una delle due letture e' sbagliata e nessun numero di quel giro
+        #     dice quel che sembra dire.
+        if d["copia_zero"] and not d["passo_multiplo_di_64"]:
             d["⛔ disaccordo"] = (
-                "il registro dice strada «%s» ma il passo %d %s multiplo di 64: "
-                "una delle due letture e' sbagliata, e finche' non si sa quale "
-                "nessun numero di questo giro dice quel che sembra dire"
-                % (d["strada"], d["passo_byte"],
-                   "E'" if d["passo_multiplo_di_64"] else "NON e'"))
+                "il registro dice strada «scheda» ma il passo %d NON e' "
+                "multiplo di 64, e `[M]` il driver iHD non lo onora: una delle "
+                "due letture e' sbagliata, e finche' non si sa quale nessun "
+                "numero di questo giro dice quel che sembra dire"
+                % d["passo_byte"])
+        elif not d["copia_zero"] and d["passo_multiplo_di_64"]:
+            d["⚠ nota"] = (
+                "il passo va bene (%d, multiplo di 64) e la strada e' comunque "
+                "«memoria» ⇒ non e' la tela: e' il PRODOTTO che non ha la copia "
+                "zero.  ⭐ E' lo stato atteso del binario di prima della cura, "
+                "e per un giro di controllo e' esattamente quel che deve dire"
+                % d["passo_byte"])
     return d
 
 
@@ -3124,6 +3168,8 @@ def stampa_strada_di_cattura(d):
            d.get("resto_del_passo_su_64")))
     if d.get("⛔ disaccordo"):
         ko("⛔ " + d["⛔ disaccordo"])
+    if d.get("⚠ nota"):
+        inf("⚠ " + d["⚠ nota"])
     if not d["copia_zero"]:
         dub("⛔⛔ Il numero di questo giro **non dice niente sulla copia zero**: "
             "il codice nuovo sta percorrendo la strada vecchia.  ⚠ `[M]` il "
@@ -3889,14 +3935,37 @@ def giro_vero(a, precondizioni):
         v["binario_del_prodotto"] = {}
         rp = _sshpw("pgrep -f 'remotix .*--porta %d' | head -1"
                     % a.porta_dentro, silenzioso=True, attesa=60)
-        pid = "".join(c for c in (rp.stdout or "") if c.isdigit())
+        # ⛔⛔ SI PRENDE LA RIGA CHE E' TUTTA CIFRE, non «le cifre che ci sono».
+        #     `[M]` 22 agosto 2026: la prima stesura faceva
+        #     `"".join(c for c in stdout if c.isdigit())`, e nello `stdout` di
+        #     `sshpw` c'e' anche la richiesta della parola —
+        #     «nicfio@**192.168.0.2**'s password:».  ⇒ Il pid usciva
+        #     `1921680` + quello vero, e `md5sum /proc/<spazzatura>/exe`
+        #     falliva.  ⭐ Il banco l'ha detto («NON HO POTUTO GUARDARE») invece
+        #     di inventare un'impronta, ed e' l'unica ragione per cui il difetto
+        #     e' costato una riga e non un numero sbagliato in un documento.
+        pid = ""
+        for riga in (rp.stdout or "").splitlines():
+            if riga.strip().isdigit():
+                pid = riga.strip()
         if pid:
             rb = _sudo("md5sum /proc/%s/exe" % pid, silenzioso=True, attesa=60)
+            # ⛔⛔ IL NOME DELLA VARIABILE NON E' UN DETTAGLIO — `[M]` 22 agosto
+            #     2026, e mi e' costato un giro intero di venti minuti.
+            #     La prima stesura scriveva `p = x.split()`, e in questa
+            #     funzione `p` e' gia' **il modulo del ponte**: sette passi piu'
+            #     giu' `p.orologio_chiedi(...)` trovava una lista e il giro
+            #     moriva ad ancora chiusa, dopo aver misurato tutto.
+            #     ⭐ E il difetto era INVISIBILE nel giro precedente, perche' li'
+            #     la lettura dell'`md5` falliva e il ciclo non girava mai: una
+            #     riga curata ne ha rotta un'altra a distanza.
+            #     ⚠ Il banco pero' e' MORTO invece di consegnare un numero, ed
+            #       e' l'unica cosa che ha funzionato come doveva.
             for x in (rb.stdout or "").splitlines():
-                p = x.split()
-                if len(p) == 2 and len(p[0]) == 32:
-                    v["binario_del_prodotto"]["md5"] = p[0]
-                    v["binario_del_prodotto"]["percorso"] = p[1]
+                pezzi_md5 = x.split()
+                if len(pezzi_md5) == 2 and len(pezzi_md5[0]) == 32:
+                    v["binario_del_prodotto"]["md5"] = pezzi_md5[0]
+                    v["binario_del_prodotto"]["percorso"] = pezzi_md5[1]
             rl = _sudo("readlink -f /proc/%s/exe" % pid, silenzioso=True,
                        attesa=60)
             for x in (rl.stdout or "").splitlines():

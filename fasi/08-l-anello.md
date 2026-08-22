@@ -1073,83 +1073,99 @@ punto, e i rapporti degli agenti non si conservano — se il coordinatore li vuo
 
 ---
 
-## 4-F1 · ⭐⭐⭐ AGENTE F1 — **la contesa misurata**, e il prodotto che si cronometra da sé · *22 agosto 2026, sera*
+## 4-F1 · ⭐⭐⭐ AGENTE F1 — **l'anello intero: 89,86 → 55,20 ms**, appaiato · *22 agosto 2026, notte*
 
-> ### ⭐⭐ DUE AGENTI CI SONO ARRIVATI PER DUE STRADE DIVERSE, E CONCORDANO
+> ### ⭐⭐⭐ IL NUMERO CHE MANCAVA A TUTTA LA FASE
 >
-> F3 aveva smentito i 17,48 ms del tratto 9 con tre banchi indipendenti. F1 non lo sapeva e ci è
-> arrivato da solo: `[M]` **tratto 9 = 0,71 ms**, con **tre lettori** che si controllano a vicenda:
+> `[M]` **`input → vetro` = 55,20 ms** con la copia zero accesa, contro **89,86** senza:
+> **−34,66 ms, il 39 %.**
 >
-> | lettore | ms |
-> |---|---|
-> | il banco `04-b30` | **0,715** · **0,835** |
-> | ⭐ **il PRODOTTO da sé** (`REMOTIX.tratti()`, `bmp_ms`) | **0,710** · **0,830** |
-> | i tre banchi di F3 | 0,39 – 1,18 |
+> ⭐⭐ **Due giri di seguito che condividono TUTTO tranne il binario** — stessa tela 1456×888, stesso
+> passo 5824, stessa finestra, stessa scena, e `macchina carica: false` **scritto dal banco** in
+> tutt'e due (carico 1,10 e 0,40 su 4 nuclei, un solo banco `b30`). Md5 letti a mano da
+> `/proc/PID/exe`: `f45e9f78…` contro `73ce3a1f…`.
 >
-> ⇒ ⭐⭐ **Banco e prodotto si accordano entro 0,005 ms, due volte su due.** È il primo numero di
-> questa fase che due strumenti indipendenti confermano.
+> ⭐ **Ed era accesa davvero**: il prodotto dichiara **«strada scheda»** oggi e **«strada memoria»**
+> ieri, **col passo identico** ⇒ si ribalta perché cambia il **binario**, non la tela.
 >
-> ### ⛔⛔⭐ E LA CONTESA NON È PIÙ UN SOSPETTO: È MISURATA
+> | | il tratto | ieri | ⭐ **oggi** | Δ |
+> |---|---|---|---|---|
+> | **E** | codifica e ritorno | 26,56 | **10,27** | **−16,30** |
+> | **C** | l'attesa del quadro nella scena | 27,67 | **11,78** | **−15,89** |
+> | **D** | il quadro di Mutter | 16,33 | 16,01 | −0,32 |
+> | | **T — l'anello intero** | **89,86** | **55,20** | **−34,66** |
+> | | p95 · n | 157,25 · 476/476 | **122,50** · 721/727 | −34,75 |
 >
-> `[M]` Quattro giri, **stesso banco, stesso palco, stessa scena, stesso binario** — cambia una cosa
-> sola, chi altro sta lavorando sul portatile:
+> ### ⭐⭐⭐ E la cosa che nessuno aveva previsto: **la cura rende dove non è sua**
 >
-> | | `input → vetro` |
-> |---|---|
-> | ⭐ **solo lui sulla macchina** | **74,08** e **75,81 ms** |
-> | ⛔ **col banco di un altro agente sopra** | **84,22** e **90,87 ms** |
+> ⛔ **Metà del guadagno — 15,89 dei 34,66 — sta nel tratto C**, che è **sul server** e che la copia
+> zero **non attraversa**. ⇒ `[?]` L'ipotesi economica è la smentita di F4 a §4-C: **il produttore
+> tolto dal thread di tempo reale** di PipeWire. ⚠ **Dichiarata, non misurata**, e sta scritta così.
 >
-> ⇒ ⛔ **Da 8 a 17 ms sullo stesso anello, per un banco che non c'entra niente.** ⭐ E la soglia è
-> più bassa di quanto sembri: `[M]` **un giro solo tiene già ~3,7 nuclei su 4 e ~29 processi
-> Chrome** — l'agente A ne aveva **56 e cinque Xvfb** sopra.
+> ⭐⭐ **E il conto torna con F4 per un'altra strada**: `[M]` tratto 5 **−62 %** (26,27 → 9,89);
+> F4, senza browser e su un altro palco, **−72 %**. Due banchi, due palchi, **stessa forma**.
 >
-> ### ⛔⛔⛔ DA CUI: **L'ACCORDO FRA L'OCCHIO DELL'UTENTE E LO STRUMENTO VA RITIRATO**
+> ⭐ **Ed è il primo giro interamente verde** che questo banco abbia mai prodotto: **12 su 12, Q5 e
+> Q6 compresi** — i due che il 14 agosto erano **rossi tutti e due** quando fu consegnato il 139,40,
+> e nessun documento lo diceva.
 >
-> Era la riga più citata di questo documento: *99,07 ms × 3 400 px/s = 337 px, contro i 360 riferiti
-> a occhio dall'utente, accordo entro il 7 %*.
+> ### ⛔ I limiti, scritti accanto al numero
+> - ⛔ **NON si sottrae il 55,20 dai 74-76 ms**: altra tela (dove la copia zero **non si accende
+>   nemmeno**) e carico `[R]` invece che `[M]`. **Il «prima» buono è quello appaiato di stanotte**;
+> - ⚠ **Un giro per parte**, e sullo stesso binario di ieri ci sono `[M]` **74,08 · 75,81 · 89,86**
+>   ⇒ **~15 ms di dispersione**. ⇒ ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
 >
-> `[M]` **A macchina scarica l'anello vale 74,9 ms** ⇒ **255 px**, cioè **0,35 barre del titolo**.
-> ⛔ **255 contro 360 è uno scarto del 30 %, e nel verso scomodo**: l'utente vede **più** distacco di
-> quanto lo strumento ne misuri.
+> ### ⛔⛔ E la lezione della sera: **quattro falsi rossi, e accusavano tutti lo stato NORMALE**
 >
-> ⇒ ⭐ **Lo stato vero, stasera**, ed è più onesto di stamattina:
+> Il confine vecchio · il disaccordo passo/strada · il tratto 1a in Q11 · `None == None` nello script
+> di confronto. **Ogni volta il banco accusava il giro di controllo.**
 >
-> | | barre del titolo |
-> |---|---|
-> | il locale (`08-b67`) | **0,13** |
-> | il banco `08-b67` | **0,28** |
-> | il banco `04-b30`, a macchina scarica | **0,35** |
-> | ⛔ **l'utente, a occhio, sul suo 2560** | **0,50** |
+> ⇒ ⭐ **Un falso rosso costa quanto un falso verde**: tutt'e due scollegano il colore dal fatto. La
+> domanda gemella di `LEZIONI.md` §1.20 è *«e quando è NORMALE che quel confronto non torni?»*.
+> ⚠ E uno dei quattro è stato curato **dopo** aver visto il rosso: l'agente lo **dichiara**, e dice
+> che la ragione fisica era già scritta prima e che ha escluso **un tratto solo e nominato**.
 >
-> ⇒ ⭐ **I due banchi nostri si sono avvicinati** (0,28 e 0,35, erano 0,28 e 0,47) ⛔ **ma l'utente
-> resta fuori da tutt'e due**, ed è l'unico giudizio che chiude la fase. È il mandato di **F2**.
->
-> ### ⭐⭐⭐ E il controllo positivo che nessuna smentita tocca
->
-> Gli era stato chiesto di dimostrare che il confine **non si chiude troppo presto**. `[M]` Otto
-> millisecondi innestati fra «pronto» e «vetro» compaiono come **+8,005 / +8,015 / +7,995** nella
-> distanza appaiata fra confine vero e confine falso, con minimo ≥ 8,04 su **1 779 sonde su 1 779**,
-> **e solo nel tratto 10**. ⛔ *«La mia prima stesura del controllo era falsa, e l'ha bocciata il
-> mondo, non il finto.»*
->
-> ⭐ **E contro sé stesso**: sulla strada vera i due confini distano `[M]` **0,09 ms** ⇒ il
-> meccanismo che A temeva **è reale** (gli 8 ms innestati lo attraversano tutti) **ma la quantità è
-> un decimo di millisecondo**.
->
-> ### ⛔ Due difetti nuovi, e il secondo riguarda chiunque legga il diario
->
-> 1. ⭐ **Il banco dichiarava nove voci di palco e non una sul carico.** Curato:
->    `carico_della_macchina()` legge ai due capi, due volte, scrive nuclei/carico/Chrome/Xvfb **e
->    quali altri banchi girano su quali porte**, e **va in rosso se la macchina non è scarica**;
-> 2. ⛔ **Il cronometro `vetro_ms` del prodotto AVVOLGE il banco**: finché `04-b30` è attaccato, il
->    campo `vetro` del blocco diagnostico dice **8-10 ms** per un trasferimento che ne costa
->    **0,06**. ⇒ Chiunque abbia letto quel campo in una sessione con un banco attaccato ha letto il
->    banco, non il prodotto.
->
-> ⭐ **Banco: 57 controlli su 57, e 18 guasti innestati accusati su 18**; il prologo provato anche
-> in `node` senza browser, 16 su 16. E i tre difetti minori di A sono curati.
+> ⛔ **E due difetti veri, suoi**: ha **rotto il banco con una sua cura** (una variabile che
+> ombreggiava un modulo — un giro intero perso), e il pid raccolto dalle cifre dell'indirizzo IP.
+> ⭐ **In tutt'e due i casi il banco è MORTO o ha detto «non ho potuto guardare»** invece di
+> consegnare numeri falsi.
 
-> ### ⛔⛔⛔ QUEL CHE VA DETTO PER PRIMO: **sono arrivato allo stesso posto di F3, per un'altra strada**
+> ### ⭐⭐⭐ IL NUMERO CHE MANCAVA: `input → vetro` = `[M]` **55,20 ms**, contro **89,86** senza la copia zero
+>
+> **−34,66 ms, il 39 %**, su due giri di seguito nella stessa mezz'ora tranquilla che condividono
+> **tutto** tranne il binario: stessa tela (1456×888), stesso passo (5824), stessa finestra, stessa
+> scena, stesso utente, e `macchina carica: false` **scritto dal banco** in tutt'e due.
+> ⭐ E la copia zero **era accesa davvero**: il prodotto dichiara «strada **scheda**» oggi e «strada
+> **memoria**» ieri, **col passo identico** — la strada si ribalta perché cambia il binario, non la
+> tela.
+>
+> | | il tratto | IERI | ⭐ OGGI | Δ |
+> |---|---|---|---|---|
+> | **E** | ⭐⭐ codifica e ritorno | 26,56 | **10,27** | **−16,30** |
+> | **C** | l'attesa del quadro nella scena | 27,67 | **11,78** | **−15,89** |
+> | **D** | il quadro di Mutter | 16,33 | 16,01 | −0,32 |
+> | | **T — l'anello intero** | **89,86** | ⭐ **55,20** | ⭐⭐⭐ **−34,66** |
+>
+> ⭐⭐ **E il conto torna con quello di F4 per un'altra strada**: il tratto 5 fa `[M]` **−62 %**
+> (26,27 → 9,89); lui, sul suo tratto e **senza browser**, aveva `[M]` −72 %. Due banchi, due
+> palchi, la stessa forma.
+>
+> ⭐⭐⭐ **E rende anche dove non è suo**: metà del guadagno — **15,89 dei 34,66 ms** — sta nel tratto
+> **3**, che è **sul server** e che la copia zero non attraversa nemmeno. `[?]` La spiegazione più
+> economica è la smentita di F4 a §4-C: il produttore tolto dal thread di tempo reale di PipeWire
+> (`[M]` 5,44 → 0,64 ms). **Ipotesi dichiarata, non misurata.**
+>
+> ⭐ **E il giro di oggi è il primo interamente verde che questo banco abbia mai prodotto**: 12
+> controlli su 12, **Q5 e Q6 compresi**.
+>
+> ⚠ **Il resto del rapporto (F1.1-F1.4) resta com'è scritto** e dice altre due cose che non vanno
+> confuse con questa: come il banco è arrivato a leggere la strada vera, e **quanto la contesa
+> sposta un anello**. ⛔ I 74-76 ms che ci si trovano **non sono il «prima» della copia zero** —
+> vedi l'avvertenza in F1.5.
+
+### ⭐⭐ E LA SECONDA COSA CHE HO TROVATO STASERA — arrivandoci per un'altra strada che F3
+
+> ### ⛔⛔⛔ **Il «prima» di A non è un termine di paragone**, e il perché è il carico
 >
 > Il mio mandato era rifare `input → vetro` sulla strada vera e affiancarlo ai **99,07 ms** di A.
 > ⛔ **L'affiancamento non si può fare**, e non perché il banco non ci arrivi: perché il numero di A
@@ -1509,7 +1525,167 @@ prende il fuoco») invece di produrre un numero falso — l'ho verificato leggen
 
 ---
 
-## F1.5 ⛔⛔ CHE COSA NON HA FUNZIONATO
+## F1.5 ⭐⭐⭐ L'ANELLO INTERO CON LA COPIA ZERO — il prima/dopo **appaiato**
+
+> ### ⭐⭐⭐ `input → vetro` passa da `[M]` **89,86 ms** a `[M]` **55,20 ms** — **−34,66 ms, il 39 %**
+>
+> Due giri di seguito, nella stessa mezz'ora tranquilla, che condividono **tutto** tranne il binario.
+
+### ⛔ Prima del numero: era la copia zero, ed era accesa?
+
+⛔⛔ La trappola peggiore sarebbe misurare il codice nuovo mentre percorre la strada vecchia, e non è
+teorica: `[M]` (F4) il driver iHD **non onora un passo che non sia multiplo di 64 byte**. Il passo è
+`larghezza × 4`, quindi la condizione è **larghezza multipla di 16 px**:
+
+| tela | passo | resto su 64 | |
+|---|---|---|---|
+| **1460×888** — ⛔ il palco di **tutti** i giri precedenti | 5840 | **16** | ⛔ copia zero **spenta** |
+| 1544×888 · 1560×888 (le tele storte di F4) | 6176 · 6240 | 32 · 32 | ⛔ spenta |
+| ⭐ **1456×888** — il palco di stasera | **5824** | **0** | ⭐ **accesa** |
+| 1920×1080 | 7680 | 0 | ⭐ accesa |
+
+⇒ ⭐⭐ **1456 e non 1920, e la ragione è il confronto**: è il multiplo di 16 più vicino a 1460, cioè
+**quattro pixel** dal palco di sempre invece dei **+63 % di pixel** che 1920×1080 avrebbe portato
+dentro. ⭐ E il conto riproduce i casi che F4 ha misurato: 1544 e 1560 → resto 32 (storte), 1920 → 0
+(buona). Due strade, stesso risultato.
+⭐ La leva è **la finestra del browser** (`--finestra 1496x1000`, argomento nuovo): la pagina chiede
+al server una tela grande quanto la sua vista.
+
+### ⭐ E che i due giri siano confrontabili non si spera: **il banco lo verifica**
+
+| | **IERI** (senza) | ⭐ **OGGI** (copia zero) |
+|---|---|---|
+| albero | `/media/REMOTIX/src/08-a-src/src/remotix` | `/media/REMOTIX/src/08-f1-src/src/remotix` |
+| **md5 del binario CHE GIRA** (da `/proc/PID/exe`) | **`73ce3a1f19028c8e7436db9d2125ded2`** | **`f45e9f789782e316da6efc7e409e4625`** |
+| sorgenti | il tronco del 22 agosto mattina | HEAD `6f5f418`, `cattura.c` `c17a7838…` verificato |
+| **copia zero**, letta dal registro del PRODOTTO | ⛔ **SPENTA** — «strada **memoria**» | ⭐ **ACCESA** — «strada **scheda**» |
+| tela · passo · resto su 64 | 1456×888 · 5824 · **0** | **identici** |
+| finestra | 1496×1000 | **identica** |
+| carico del portatile, `[M]` **nel verbale** | carico **0,40** · Chrome 13 · Xvfb 1 · **un solo banco** | carico **1,10** · Chrome 13 · Xvfb 1 · **un solo banco** |
+| `macchina carica` | **false** | **false** |
+
+⇒ ⭐⭐ **Il passo è identico e buono in tutt'e due**: la strada si ribalta da `memoria` a `scheda`
+**perché cambia il binario**, non perché cambi la tela. È il controllo più pulito che potessi
+costruire.
+⚠ **L'impronta l'ho letta a mano** (`sudo md5sum /proc/PID/exe`): nel verbale non c'è, perché la
+lettura automatica si è rotta due volte stasera (F1.6). ⇒ `[M]` ma per mano mia, non per mano del
+banco — e la distinzione la scrivo invece di nasconderla.
+
+### ⭐⭐ I SEI TRATTI AFFIANCATI — è la sola cosa che dice **quale pezzo ha reso**
+
+| | il tratto | IERI (senza) | ⭐ OGGI (copia zero) | Δ |
+|---|---|---|---|---|
+| **A** | la pagina — `event.timeStamp` → i byte escono | 2,08 ms | 5,68 ms | ⚠ **+3,60** |
+| **B** | l'andata — byte usciti → la scena riceve | 9,19 ms | 6,68 ms | −2,51 |
+| **C** | l'attesa del quadro nella scena | 27,67 ms | **11,78 ms** | ⭐ **−15,89** |
+| **D** | il quadro di Mutter | 16,33 ms | 16,01 ms | **−0,32** |
+| **E** | ⭐⭐ **codifica e ritorno** | 26,56 ms | **10,27 ms** | ⭐⭐ **−16,30** |
+| **F** | il cliente | 2,11 ms | 2,48 ms | +0,38 |
+| | **T — L'ANELLO INTERO** | **89,86 ms** | ⭐ **55,20 ms** | ⭐⭐⭐ **−34,66** |
+| | **p95** | 157,25 | **122,50** | **−34,75** |
+| | n (sonde chiuse / tentate) | **476 / 476** | **721 / 727** | |
+
+| tratto | IERI | OGGI | Δ |
+|---|---|---|---|
+| 1a evento → il prodotto lo vede | 1,90 | 5,53 | ⚠ +3,63 |
+| 1b · 6 · 7 · 8 · 9 · 10 | 0,19 · 0,29 · 0,12 · 1,31 · 0,62 · 0,05 | 0,15 · 0,38 · 0,16 · 1,55 · 0,72 · 0,06 | ≈ 0 |
+| 2 byte usciti → la scena riceve | 9,19 | 6,68 | −2,51 |
+| 3 la scena riceve → la scena disegna | 27,67 | **11,78** | ⭐ **−15,89** |
+| 4 la scena disegna → cattura | 16,33 | 16,01 | −0,32 |
+| **5 cattura → PRIMO byte in pagina** | **26,27** | ⭐⭐ **9,89** | ⭐⭐ **−16,38** |
+
+### ⭐⭐⭐ Le quattro cose che questa tabella dice
+
+1. ⭐⭐ **Il tratto 5 è la firma della copia zero, e il conto torna con quello di F4.**
+   `[M]` **26,27 → 9,89 ms, −62 %**. F4, sul suo tratto `cattura → byte fuori` e senza browser,
+   aveva `[M]` **22,82 → 6,41, −72 %**. ⇒ **Due banchi diversi, due palchi diversi, la stessa cura,
+   la stessa forma.** È la conferma incrociata che al numero di F4 mancava.
+2. ⭐⭐⭐ **E rende ANCHE nel tratto 3, che non è suo** — `[M]` **27,67 → 11,78, −15,89 ms**. Il
+   tratto 3 è *«la scena riceve l'input → la scena disegna»*, cioè **l'attesa del quadro sul
+   server**: la copia zero non ci passa nemmeno. ⇒ `[?]` **La spiegazione più economica è la
+   smentita di F4 a §4-C**: togliendo il nostro lavoro dal thread di **tempo reale di PipeWire** il
+   produttore cala `[M]` 5,44 → 0,64 ms, e il compositore torna a servire la scena in tempo. ⛔ È
+   un'**ipotesi**, non una misura: la prova sarebbe rifarlo con la copia zero accesa e il produttore
+   riportato a mano sul thread di tempo reale. **Non l'ho fatto.**
+   ⚠ E metà del guadagno dell'anello sta lì: **15,89 dei 34,66 ms**.
+3. ⭐ **Il tratto D non si muove** (16,33 → 16,01, −0,32): il quadro del compositore resta il muro, e
+   un tratto che non cambia quando tutto il resto cambia è la prova che la scomposizione separa cose
+   diverse davvero.
+4. ⚠ **Il tratto 1a peggiora di 3,6 ms**, ed è l'unico. `[?]` Il giro di oggi aveva il carico a
+   **1,10** contro **0,40** di ieri — il tratto 1a è la consegna degli eventi sul filo della pagina,
+   ed è il primo a soffrire il carico. ⛔ Non lo attribuisco alla copia zero e non lo nascondo.
+
+### ⛔⛔ COME SI LEGGE QUESTO CONFRONTO, E COME NON SI LEGGE
+
+⚠ **Il confronto buono è questo, e solo questo.** ⛔ **NON si sottrae il 55,20 dai 74-76 ms** dei miei
+giri precedenti, e la tentazione è forte perché i numeri stanno nello stesso documento. Quei giri
+erano su un'**altra tela** (1460×888, dove la copia zero **non si accende nemmeno**), col carico
+`[R]` invece che `[M]`, e due dei quattro sotto la contesa di un altro banco.
+⇒ ⭐ **Il «prima» buono è `08f1-copiazero-IERI-2`, non i 74-76.** Quelli restano scritti perché
+dicono un'altra cosa — quanto la contesa sposta un anello — e quella la dicono bene.
+
+⛔⛔ **E c'è un limite del mio stesso confronto che va detto**: `[M]` sullo **stesso** binario di ieri
+ho tre giri — **74,08 · 75,81 · 89,86** — cioè **~15 ms di dispersione da giro a giro**. ⇒ Con
+**un solo giro per parte**, i −34,66 ms sono più grandi della dispersione ma **non di un fattore
+comodo**. ⭐ **A rendere credibile l'attribuzione non è il totale: sono i tratti.** Il tratto 5 cala
+del 62 % e concorda con F4 misurato per un'altra strada; gli altri nove non si muovono. ⛔ Chi vuole
+il totale `[M]` con la dispersione dentro deve fare **tre giri per parte, alternati**, ed è mezz'ora.
+
+⚠ E oltre a questo: `[?]` non ho fatto una prova che la copia zero **spenta sulla stessa tela storta**
+desse il numero di ieri — cioè la controprova del meccanismo dal lato del driver.
+
+---
+
+## F1.6 ⛔⛔⭐ QUATTRO FALSI ROSSI IN UNA SERA — e **un falso rosso costa quanto un falso verde**
+
+⭐ Il pezzo di questa serata che vale più del numero, e non è un aneddoto: **quattro volte** ho
+scritto un controllo che accusava uno **stato normale**, e ogni volta la cura è stata la stessa —
+distinguere *«non è successo»* da *«è successo il contrario»*, e *«non ho guardato»* da *«ho
+guardato e va male»*.
+
+| | il controllo | perché accusava lo stato NORMALE | la cura |
+|---|---|---|---|
+| **1** | Q11: *«il confine vecchio non deve salire»* | il ritardo si innesta **occupando il filo della pagina**, quindi sposta **tutto** il condotto: `[M]` +6,82 ms sul confine vecchio | la grandezza giusta è **appaiata** (distanza fra i due confini sulla **stessa sonda**): lo spostamento comune si elide |
+| **2** | passo/strada: *«copia zero spenta con passo buono = disaccordo»* | il passo multiplo di 64 è **necessario e non sufficiente** — serve anche il codice. ⇒ «passo buono + strada memoria» è lo stato **corretto** del binario di prima della cura, cioè **del giro di controllo** | si accusa **un verso solo**, quello impossibile (strada «scheda» con passo storto); l'altro si **dichiara** con una nota |
+| **3** | Q11: *«la salita sta nel tratto 10 e in nessun altro»* | `[M]` il tratto **1a** sale di **5,60 ms**, perché 1a è la consegna degli eventi **sullo stesso filo** in cui innesto il ritardo | si esclude **un tratto solo, nominato, per la ragione detta** — e la ricaduta si **conta e si consegna**, non sparisce |
+| **4** | il mio script di confronto: *«stesso md5 ⇒ nessun prima/dopo»* | `None == None` è vero: con l'impronta non letta diceva **«stesso binario»** invece di **«non ho potuto guardare»** | «non l'ho letta» diventa un `⚠` distinto dal rosso |
+
+⇒ ⭐⭐ **Il danno non è che sbagliano: è che accusano il caso che deve andare bene.** Il giro di
+controllo — quello che *deve* uscire senza copia zero, perché è il termine di paragone — sarebbe
+uscito rosso ogni volta. ⛔ **E un rosso che compare quando tutto va come deve è il modo più rapido
+di insegnare a chi legge che i rossi di questo banco si ignorano.**
+
+⇒ ⛔⛔ **Un falso rosso costa esattamente quanto un falso verde, e per la stessa via**: tutt'e due
+scollegano il colore dal fatto. `LEZIONI.md` §1.20 chiede *«per ogni numero che il banco stampa:
+quale riga lo confronta?»* — ⭐ **e la domanda gemella, che stasera mi è costata quattro volte, è
+«e quando è NORMALE che quel confronto non torni?»**.
+
+⚠ **E il numero 3 l'ho curato DOPO aver visto il rosso**, che è il momento più pericoloso per
+toccare un criterio. ⇒ Lo dichiaro: la ragione fisica era scritta in questo stesso file **prima**
+che il rosso comparisse (F1.2, sul totale), e ho escluso **un tratto solo e nominato**, non «i
+tratti che davano fastidio». Tutti gli altri restano accusabili: se il surplus finisse nel 2, nel 3
+o nel 5, Q11 diventa rosso.
+
+### ⛔ E due difetti veri del banco, trovati mentre lo curavo
+
+1. ⛔⛔ **Ho rotto il banco con una mia stessa cura, e mi è costato un giro intero.** Curando la
+   lettura dell'`md5` ho scritto `p = x.split()` — e in quella funzione **`p` è già il modulo del
+   ponte**. Sette passi più giù `p.orologio_chiedi(...)` trovava una lista, e il giro moriva **ad
+   ancora chiusa, dopo aver misurato tutto**.
+   ⭐ E il difetto era **invisibile** nel giro precedente, perché lì la lettura dell'`md5` falliva e
+   il ciclo non girava mai: **una riga curata ne ha rotta un'altra a distanza**.
+   ⚠ L'unica cosa che ha funzionato come doveva: il banco è **morto** invece di consegnare un numero.
+2. ⛔ **`"".join(c for c in stdout if c.isdigit())`** per prendere il `pid`: nello `stdout` di `sshpw`
+   c'è anche *«nicfio@**192.168.0.2**'s password:»*, e il pid usciva `1921680`+quello vero.
+   ⭐ Anche qui il banco ha detto **«NON HO POTUTO GUARDARE: "non lo so" non è "è quello giusto"»**
+   invece di inventare un'impronta — ed è l'unica ragione per cui il difetto è costato una riga e non
+   un numero falso in un documento.
+   ⚠ ⛔ **È la terza volta in una sera** che un comando muore attraversando `ssh → sudo → pipe`: la
+   regola di casa *«un file non ha livelli di virgolette»* vale anche per le righe brevi.
+
+---
+
+## F1.7 ⛔⛔ CHE COSA NON HA FUNZIONATO (il resto)
 
 ### 1. ⛔⛔ La prima stesura di Q11 era SBAGLIATA, e a bocciarla è stata la misura
 ⚠ **E il finto non l'avrebbe mai bocciata**: nel finto il ritardo al vetro non occupa nessun filo,
@@ -1521,7 +1697,7 @@ quindi il condotto non si sposta. ⇒ Un banco consegnato dopo la sola certifica
 vetro. ⇒ Leggere dal vetro è una **lettura dalla GPU**, e si paga.
 ⭐ Q9 resta verde e non è una concessione: `[M]` il ritmo **non cala** (29,88 senza contro 30,46 con;
 A: 30,67 contro 30,25) ⇒ il filo non è saturo a 30 fps. ⛔ Ma «non satura» non è «gratis»: resta in
-F1.6.
+F1.8.
 ⭐ **E la cura per chi viene dopo è trovata e non applicata, apposta**: le due marche stanno **una
 sopra l'altra**, quindi si leggerebbero con **una sola** `drawImage` sul riquadro che le contiene
 tutt'e due. ⛔ Non l'ho fatto perché i giri erano cominciati: **cambiare il metro a metà della
@@ -1557,21 +1733,25 @@ peggiorato la mediana invece di migliorarla — ⛔ ma il denominatore è quello
 
 ---
 
-## F1.6 ⛔ Che cosa resta `[?]` dopo di me
+## F1.8 ⛔ Che cosa resta `[?]` dopo di me
 
 | | |
 |---|---|
-| ⏳ ⛔⛔ **il numero a macchina scarica, col carico SCRITTO** | i quattro giri sono stati presi **prima** che la lettura del carico entrasse nel banco. ⇒ Il 74-76 ms è `[M]` ma il suo carico è `[R]` (l'ho guardato io, non il verbale). **Bastano due giri quando il portatile è libero**, e adesso il banco li scrive da sé |
+| ✅ ~~**il numero a macchina scarica, col carico SCRITTO**~~ | **FATTO** (F1.5): i due giri appaiati di stasera hanno `macchina carica: false` **scritto dal banco**, carico 0,40 e 1,10 su 4 nuclei, un solo banco b30. ⚠ **E la voce vecchia resta vera com'era scritta**: i quattro giri da 74-91 ms sono anteriori alla cura, il loro numero è `[M]` e il loro carico `[R]` |
 | ⏳ ⛔ **quanto del numero è il banco stesso** | `[M]` **7,6-8,8 ms per fotogramma** di lettura. Il ritmo non cala (Q9) ⇒ il filo non è saturo, **ma su ~75 ms non è trascurabile**. ⚠ E non si separa con la fetta «senza lettura» di Q9: senza pixel **nessuna sonda chiude**. ⇒ Serve un giro con la lettura **dimezzata** (una `drawImage` sola): se `T` non cambia, il costo non entra |
 | ⏳ ⭐⭐ **il conto dell'elastico** | 255 px contro i 360 che l'utente vede. Si decide **rimisurando il distacco oggi**, col video, sulla strada vera. ⛔ E intanto **l'accordo «entro il 7 %» di §4-A va tolto** |
 | ⏳ **la TASTIERA** | 0 su 276 |
-| ⏳ **Q5 a 0,22 ms dalla tolleranza** · **la linearità del confine** | F1.5 punti 4 e 6 |
+| ⏳ **Q5 a 0,22 ms dalla tolleranza** · **la linearità del confine** | F1.7 punti 4 e 6 |
 | ⏳ `[?]` **i valori di partenza dei ritardi** | vanno messi a **multipli del quadro**: una riga, passata al direttore |
+| ⏳ ⭐⭐ **il tratto 3, metà del guadagno, non è attribuito** | `[M]` −15,89 ms su un tratto che sta **sul server** e che la copia zero non attraversa. `[?]` L'ipotesi (il produttore fuori dal thread di tempo reale di PipeWire, F4) è plausibile e **non misurata**. ⇒ Si prova rimettendo il produttore a mano su quel thread con la copia zero accesa |
+| ⏳ ⛔ **un solo giro per parte** | sullo stesso binario di ieri ho `[M]` 74,08 · 75,81 · 89,86 ⇒ **~15 ms di dispersione**. I −34,66 sono più grandi, ma **non di un fattore comodo**. ⇒ Tre giri per parte, alternati: mezz'ora |
+| ⏳ **la controprova dal lato del driver** | `[?]` non ho provato che il binario NUOVO su una tela **storta** (1460×888) dia il numero di ieri — sarebbe la conferma del meccanismo del passo |
+| ⏳ **l'impronta del binario nel verbale** | l'ho letta **a mano**; la lettura automatica è stata curata **dopo** i due giri, quindi nei loro verbali `md5` è `null` |
 | ⏳ **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza**: confermato oggi sul mio giro |
 
 ---
 
-## F1.7 Che cosa ho lasciato sulla macchina
+## F1.9 Che cosa ho lasciato sulla macchina
 
 ⭐ Porte **7760 · 7761 · 7762**, utente **`provaa8`** (quello di A), directory
 **`/media/REMOTIX/tmp/08-f1`**, shm `/dev/shm/remotix-08-f1`, scena
@@ -1581,11 +1761,19 @@ peggiorato la mediana invece di migliorarla — ⛔ ma il denominatore è quello
 ⛔ **E non ho toccato nessun file di `src/`.**
 ⭐ **Il portatile è libero**: Xvfb e Chrome miei spenti, scena ferma.
 
+⭐ **E l'albero del prodotto di oggi resta**: `/media/REMOTIX/src/08-f1-src` (HEAD `6f5f418`,
+binario `f45e9f78…`), accanto a quello di ieri `08-a-src` (`73ce3a1f…`) che **non ho toccato**.
+⇒ Chiunque può rifare il prima/dopo senza ricostruire niente, e i due terreni ci sono già:
+`08-f1-terreno-OGGI.sh` e `08-f1-terreno-IERI.sh`.
+
 I file del banco che ho cambiato, tutti in `banchi/`:
 - `04-b30-anello-input.py` — il prologo §4-bis (`createImageBitmap` + `transferFromImageBitmap`) e
   §6 (`leggi_marca_vetro`), **Q11** e i suoi due guasti, `--ritardo-vetro`,
   **`carico_della_macchina()`** ai due capi e due volte, il controllo incrociato col prodotto,
-  `scena-ferma` prima di `scena-avvia`, `coda_url` + `strade` + il carico nella riga depositata;
+  `scena-ferma` prima di `scena-avvia`, `coda_url` + `strade` + il carico nella riga depositata,
+  ⭐ **`--finestra`** (la misura della finestra comanda la tela, e la tela comanda se la copia zero
+  si accende), ⭐ **`strada_di_cattura()`** (la copia zero letta dal registro del PRODOTTO, col conto
+  del passo accanto), ⭐ **l'impronta del binario** letta da `/proc/PID/exe`;
 - `04-b30-lancia.sh` — `scena-costruisci`;
 - **nuovo** `04-b30-scena-costruisci.sh`.
 
