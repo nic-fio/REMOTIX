@@ -193,11 +193,57 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 ## 3 · Che cosa è stato sviluppato
 
-*(vuoto — la fase si apre oggi)*
+*Otto agenti in due ondate, il coordinatore alla fusione. ⛔ Un proprietario per ogni percorso di
+codice: due agenti sullo stesso file si accoltellano.*
+
+### 3.1 Nel prodotto
+
+| dove | che cosa |
+|---|---|
+| `cattura.c` · `cattura.h` · `figlio.c` | ⭐ **la copia zero**: il palco si monta sulla **strada scheda** (DMA-BUF) e il fotogramma non esce più dalla GPU. Il **passo si guarda misurato, mai calcolato**; se non è importabile si rimonta sulla memoria **dichiarandolo**; al cambio di tela la copia zero **si riprova da sé** |
+| `codificatore.c` | il DMA-BUF importato **come superficie VA-API** ⇒ spariscono `sws_scale` e `av_hwframe_transfer_data`. ⭐ **Una chiave non si abbandona più** (`RCP.md` §5.2). Scala delle ricodifiche allungata (`CRF_PASSO` 6→9). La misura massima **si chiede al driver prima di aprire**. La riga del ripiego **nominava il codificatore sbagliato**: curata |
+| `codificatore.c` · `cattura.c` | ⭐ la **strumentazione del tratto**, dieci voci in fila con il **resto** dichiarato: è lo strumento che ha smentito due ipotesi del coordinatore |
+| `pagina.html` | ⭐⭐ **`REMOTIX.tratti()`**: il prodotto **dichiara da sé** i quattro tratti del cliente, **stessi nomi su tutte e tre le strade di disegno**, a `[M]` ~4 µs per fotogramma. ⇒ Non serve più riscrivere il prologo di un banco quando la pagina cambia modo di dipingere |
+| `figlio.c` | il giro di diagnostica sui pixel passa a **cadenza** invece che a ogni fotogramma (costava `[M]` 5,34 ms/fotogramma per una riga di registro scritta **una volta sola**), col campo `pixel_misurati` perché `nero == FALSE` adesso può voler dire «non ho guardato» |
+
+### 3.2 Nei banchi
+
+`08-b67-elastico.py` (+ `-locale.py`, `-lancia.sh`) — **il metro dell'utente**: il distacco freccia↔finestra, in ms **e in barre del titolo**, col locale come termine di paragone. 13 guasti innestati su 13 · `08-D1-*` e `08-D2-*` (otto banchi) — i sotto-livelli temporali e il peso delle chiavi · `08-f3-*` — quanto aspetta il cliente, **senza server né rete** · `08-f4-*` — la copia zero e la marca nei pixel.
+
+⭐ E `04-b30-anello-input.py` **cresce**: legge la strada di disegno viva, e ⛔ **va in rosso se la macchina non è scarica** (`carico_della_macchina()`). 57 controlli su 57, 18 guasti su 18.
 
 ## 4 · Le misure
 
-*(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
+### ⭐⭐⭐ Il quadro, in una tabella
+
+| | ieri | ⭐ **oggi** | |
+|---|---|---|---|
+| **`input → vetro`** — l'anello intero, appaiato | **89,86 ms** | **55,20 ms** | **−39 %** |
+| ↳ E · codifica e ritorno | 26,56 | **10,27** | −16,30 |
+| ↳ C · l'attesa del quadro nella scena | 27,67 | **11,78** | −15,89 |
+| ↳ D · **il quadro di Mutter** | 16,33 | 16,01 | ⛔ **−0,32 — il muro** |
+| **il distacco, nell'unità dell'utente** | 0,27 · 0,26 barre | **0,16 · 0,16** | **2,1 → 1,23 × il locale** |
+| ⭐ **i fotogrammi DIPINTI dalla pagina** | 834 · 870 | **942 · 926** | **+9 %** |
+| ⭐ il **locale** — il pavimento, misurato (n=254) | — | **0,142 barre** · 30,05 ms | |
+
+⛔ **Il tetto dei 50 ms di `SPECIFICHE.md` §3.2 NON è verificato**, e non perché manchi poco:
+**55,20 sta su un confine diverso** — §3.2 misura fino al *fotogramma che parte*, questo fino al
+*vetro*. ⇒ **I due numeri non si confrontano**, ed è `LEZIONI.md` §1.28 applicata a noi stessi.
+
+⚠ **E la dispersione si dichiara**: sullo **stesso** binario ci sono `[M]` 74,08 · 75,81 · 89,86 ms
+⇒ **~15 ms**. ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
+
+### Le risposte alle domande che la fase aveva in carico
+
+| | |
+|---|---|
+| **`EncSliceLP` sa fare i sotto-livelli temporali?** | ⛔ **NO** — 7 profili su 7, con **due controlli positivi** (VP9 sullo stesso entrypoint li ha; AMD `EncSlice` pure) e 6 celle su 6 nei byte. ⇒ *«ogni abbandono costa una chiave»* resta, con la misura sotto |
+| **Quanto pesa una chiave?** | alla tela dell'utente **0,13 % del tetto**, margine **782×** (n=404 chiavi vere). A 8K si sfonda, e il ripiego software sfonda **prima e con contenuto plausibile** |
+| **Il codificatore va sulla scheda giusta?** | sì, e adesso **lo dichiara** invece di ripiegare in silenzio |
+| **I ~16 ms non spiegati** | ⭐ **trovati**: 5,34 di **diagnostica** (ogni pixel di ogni fotogramma, per una riga scritta una volta) e il resto nel produttore — ⛔ che **non era di Mutter**: era il nostro lavoro dentro il suo thread di tempo reale |
+| **I 17,48 ms del tratto 9** | ⛔ **non esistevano** — 0,39-2,80 ms con quattro banchi. ⚠ E la causa **non è ancora chiusa**: la contesa lo *abbassava* |
+
+*(I rapporti per esteso dei nove agenti stanno nelle sezioni **§4-A** … **§4-F4** qui sotto.)*
 
 ## 4-F2 · ⭐⭐⭐ AGENTE F2 — **l'occhio dell'utente aveva ragione**, e i due banchi non litigavano · *22 agosto 2026, sera*
 
@@ -3471,7 +3517,47 @@ scena (`scena-utente.webm`, il video del 22 agosto).
 
 ## 5 · ⛔ Che cosa NON ha funzionato
 
-*(vuoto)*
+*⭐ Nove agenti hanno dichiarato i propri errori invece di consegnare solo i risultati. È la parte
+del documento che vale di più, e si legge prima delle misure.*
+
+### 5.1 ⛔⛔ Gli errori del COORDINATORE, che sono i più cari
+
+| | |
+|---|---|
+| ⛔⛔ **ho lanciato le misure in parallelo** | `[M]` 8-17 ms di contesa sullo stesso anello. Ha prodotto un numero falso (17,48 ms) **promosso a bersaglio della fase**, con un agente dedicato che è tornato dicendo che non c'era niente da curare. 📖 `LEZIONI.md` §1.26 |
+| ⛔⛔ **ho scritto una riga che era un artefatto** | *«l'occhio dell'utente e lo strumento si accordano entro il 7 %»* — la riga più citata della giornata. Il conto tornava **per compensazione**: accostava il ritardo di una grandezza alla velocità di un'altra. 📖 §1.28 |
+| ⛔ **ho attribuito alla contesa un numero che non era suo** | e l'ho scritto **dentro una lezione**, che è il posto dove un errore dura di più. Smentito da un quarto agente **mentre la lezione veniva scritta** |
+| ⛔ **«tutta la prima ondata è contaminata»** | `[M]` falso: sul banco del distacco il carico non gonfia niente (70,7 contro 70,3). Crederlo avrebbe fatto **buttare misure buone** |
+| ⛔ **due collisioni di terreno** | una **porta** già presa (se n'è accorto l'agente, non io) e un **utente** già preso — al secondo il terreno ha **riposto la parola d'ordine** di un agente vivo. ⇒ §1.24 va estesa oltre la porta |
+| ⛔ **la stima del tempo** | ho ordinato «prima si strumenta, poi si cura» — **l'ordine era giusto** — ma ho stimato male il tempo, e alla fine della prima ondata **la copia zero non era stata fatta** |
+
+### 5.2 ⛔ Gli errori dei banchi, e ognuno avrebbe prodotto un numero falso
+
+- ⛔ **un denominatore finto**: 33 chiavi a 8K tutte identiche **al byte**, perché una conversione di cadenza duplicava la stessa immagine dodici volte. ⭐ Beccato perché **il massimo era uguale alla mediana** — *un risultato troppo bello è un allarme*;
+- ⛔ **una qualità priva di senso** (16,47 dB in tutte le celle): non era una qualità, era un **disallineamento** fra cadenza fissa e variabile;
+- ⛔ **quattro falsi rossi in una sera**, e accusavano tutti **lo stato normale**, cioè il giro di controllo. ⭐ *Un falso rosso costa quanto un falso verde: tutt'e due scollegano il colore dal fatto*;
+- ⛔ **la panoramica di GNOME** mostrava la scena come **miniatura**: 0 eco su 826, scoperto solo *fotografando* quel che il banco guardava;
+- ⛔ **il banco non sapeva leggere la strada di disegno viva**: 0 sonde su 304, e ⭐ **è uscito col codice «non ho niente da giudicare»** invece che con un verde;
+- ⛔ **`--window-size` di Chrome ignorato** (profilo `maximized`): tre giri buttati;
+- ⛔ **un agente ha rotto il proprio banco con una propria cura** — e il banco è **morto** invece di consegnare numeri falsi.
+
+### 5.3 ⛔ E i difetti del prodotto trovati per strada — **nessuno era il bersaglio**
+
+| | |
+|---|---|
+| ⛔⛔ **una chiave abbandonata** | dopo tre ricodifiche il codificatore rinunciava **anche a una chiave**, che `RCP.md` §5.2 vieta ⇒ il client resta rotto **per sempre** e ogni `RICHIEDI_CHIAVE` costa tre ricodifiche che non producono niente. **È la spirale** |
+| ⛔ **la scala corta di uno scalino** | l'ultimo tentativo lasciava 16,654 MiB contro un tetto di 16,777: **si perdeva per il 4 %** |
+| ⛔⛔ **il passo non multiplo di 64** | il desktop usciva **inclinato di qualche pixel per riga, senza nessun errore**, coi millisecondi già perfetti. 1552 e 1544 distano **otto pixel** e danno verdetti opposti |
+| ⛔ **un cronometro che misurava il banco** | `vetro_ms` **avvolgeva** il banco: diceva 8-10 ms per un trasferimento che ne costa 0,06 |
+| ⛔ **la diagnostica che costava un quarto del tratto** | ogni pixel di ogni fotogramma, per una riga di registro scritta **una volta sola** |
+| ⛔ **il ripiego nominava il codificatore sbagliato** | da quando quel ramo serve anche H.264 |
+
+### 5.4 ⛔ E una cura che non ha reso quel che aveva tolto
+
+Tolta la diagnostica dai pixel: `[M]` 21,19 → 18,86 ms. ⛔ **Ma tolti 7,28 e guadagnati 2,33**,
+perché `sws_scale` si è ripreso **+3,84 ms**: la scansione **gli scaldava la cache**. ⛔⛔ **E i
+fotogrammi consegnati non erano saliti** (1 271 → 1 242). ⇒ Per la regola di §2.2 punto 1 **non era
+ancora una vittoria**, e sta scritto così. ⭐ *(La vittoria è arrivata dopo, con la copia zero: +9 %.)*
 
 ## 6 · Le decisioni prodotte
 
@@ -3489,7 +3575,40 @@ vendendo il piatto.
 peggiorando il ritardo non si fa»*. ⇒ La riga era scritta **prima** che il difetto avesse un nome, e
 questa fase è la prova che serviva.
 
-### 6.2 ⏳ Sul tavolo, NON decisa: ritardare la freccia per chiudere l'elastico
+### 6.3 ✅ La cura del rilascio: **trattenere il `pw_buffer`**, non chiedere la timeline
+
+Le due schermate che si alternavano erano un problema di **release**, non di *acquire*. Due cure
+possibili; scelta la ritenuta, ⭐ **e la ragione è `LEZIONI.md` §1.25**: la ritenuta è **nostra e
+vale su ogni compositore**, la timeline dipende da quel che Mutter offre.
+
+⚠ **E il prezzo dell'onestà è dichiarato**: `[M]` il controllo positivo **non ha riprodotto il
+danno** (10 marche su 10 anche senza attesa GPU). ⇒ **Prudenza, non necessità misurata.** ⭐ Ma il
+guasto è servito lo stesso: senza `vaSyncSurface` la conversione scende 2,86 → 0,38 e la codifica
+sale 2,43 → 4,67, totale 6,19 → 6,05 ⇒ **l'attesa costa zero** e dice dov'è il punto giusto.
+
+### 6.4 ✅ Il passo si **misura**, non si calcola — e il ripiego si **dichiara**
+
+`[M]` iHD non onora un passo non multiplo di 64 byte ⇒ desktop **inclinato senza errori**. ⇒ Il
+passo si legge **dal chunk**, mai dedotto dalla larghezza; se non è importabile il palco **si
+rimonta sulla memoria dichiarandolo nel registro**; al cambio di tela la copia zero **si riprova**.
+
+⛔ **E non si aggiusta il problema restringendo le tele**: sarebbe curare il caso comodo. La cura
+vale su **ogni** tela e **ogni** driver (§1.25).
+
+### 6.5 ✅ Una **chiave** non si abbandona mai
+
+`RCP.md` §5.2 lo dice e il codice non lo faceva. ⇒ Per una chiave non ci si arrende: si scende
+finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si **scrive nel
+registro** che l'immagine è uscita brutta. ⭐ *Un'immagine brutta è recuperabile, un client rotto per
+sempre no* (invariante **I1**: brutta e viva).
+
+### 6.6 ✅ `max_b_frames = 0` **non si tocca** — e adesso ha il numero accanto
+
+`[M]` Metterlo a 1 darebbe 59 figure buttabili su 120 e **−16 % di banda a qualità invariata**
+(−0,065 dB) — sembra un affare. ⛔ **Costa 67 ms di riordino**, che da solo sfonda i 50 ms dati a
+*tutto* il pezzo nostro.
+
+### 6.7 ⏳ Sul tavolo, NON decisa: ritardare la freccia per chiudere l'elastico
 
 Se la freccia venisse disegnata **in ritardo**, alla posizione che il fotogramma sta portando invece
 che a quella della mano, il distacco **sparirebbe** — freccia e finestra si muoverebbero insieme.
@@ -3517,8 +3636,9 @@ gli input»* — non se ne perdeva nessuno, non si **vedeva** che arrivavano (`p
 
 ### 7.1 ⭐ Le due strade già provate — non si rifanno
 
-- `createImageBitmap`: **3,8 ms** mediani per fotogramma, l'8 % del tetto di 50, e già **nove volte
-  meglio** del disegno 2D di prima;
+- `createImageBitmap`: ⚠ **non 3,8 ms — sono 1,05 / 0,41**, rifatti il 22 agosto (📖 §4-F3 e §4-F1).
+  ⛔ Il 3,8 era di un altro palco e **non si cita più senza rifarlo**. Resta vero che è già **nove
+  volte meglio** del disegno 2D di prima;
 - ⛔ **`?video=worker` funziona e NON rende**: abbassa il tetto del **19 %**. Chi apre questa fase
   non la rifaccia.
 
