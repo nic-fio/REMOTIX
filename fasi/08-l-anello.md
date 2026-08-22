@@ -3613,3 +3613,49 @@ specifica pure: *«un'esperienza utente il più vicina possibile a una situazion
 ⛔ **E non si scriva che la previsione è confermata**: sarebbe la forma di `LEZIONI.md` §1.20 — *il
 giudizio staccato dalla misura* — con l'aggravante di farlo nel documento che quella lezione la
 cita.
+
+### 8.4 ⛔⭐ **La frazione è arrivata, ed è FUORI dalla previsione — dalla parte buona**
+
+*Chiesta con un righello concreto (la barra del titolo e i suoi tre punti riconoscibili), per non
+far stimare una frazione a mente. La risposta dell'utente, 22 agosto 2026:*
+
+> ### *«Il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»*
+>
+> *e, alla chiusura:* **«per me è ok»**
+
+⛔⛔ **La previsione di §4-F2 diceva 0,31-0,46 barre. L'utente ne riferisce ~0.** ⇒ **La previsione
+NON ha retto**, ed è caduta **dalla parte favorevole** — che è il verso in cui è più facile
+accettarla senza guardarla.
+
+⚠ **E i nostri numeri non prevedono lo zero nemmeno adesso**: `[M]` l'anello vale **55,20 ms**, e a
+`[M]` **3 400 px/s** — la velocità misurata dal video dell'utente — farebbero **188 px, cioè 0,26
+barre**. ⇒ ⛔ **«Fedelmente» non è quel che l'aritmetica dice**, e la differenza non è spiegata.
+
+#### ⭐ Una spiegazione è stata ESCLUSA, e va detto perché era la più pericolosa
+
+`[R]` **Il cammino del puntatore non è stato toccato oggi**: `git log` su `src/pagina.html` per il
+22 agosto dà un solo commit di questa fase (**F3**, `REMOTIX.tratti()`, **sola misura**), e il diff
+non contiene **nessuna riga** con `puntatore`, `cursor`, `freccia` o `agganciato`.
+
+⇒ ⭐ **Cade l'ipotesi peggiore**, che sarebbe stata invisibile a un giudizio positivo: che la freccia
+avesse smesso di essere **locale** e arrivasse ormai **in ritardo insieme al fotogramma**. In quel
+caso il distacco sparirebbe **senza che il ritardo sia sceso** — cioè il prodotto sembrerebbe curato
+esattamente nella misura in cui è peggiorato. ⛔ **Non è andata così**: la freccia è ancora locale, e
+il miglioramento è vero.
+
+#### ⏳ Che cosa resta `[?]`, e non si chiude con un giudizio
+
+Due spiegazioni in piedi, **nessuna misurata**:
+1. `[?]` **l'utente ha trascinato più piano** di quando ha girato il video (3 400 px/s mediani): il
+   distacco è `velocità × ritardo`, quindi a mano lenta lo zero è atteso;
+2. `[?]` **sotto una certa soglia il distacco smette di essere percepibile** e «fedelmente» vuol dire
+   «non ci faccio più caso», non «zero pixel».
+
+⚠ ⛔ **La differenza fra le due non è accademica**: la seconda direbbe che abbiamo una soglia di
+percezione da cui derivare un traguardo, la prima che la misura va rifatta. ⇒ **Nessuna delle due si
+scrive come conclusione**, e il modello di §1.28 resta `[?]`: **ha predetto male due volte di
+seguito, in versi opposti**, e questo è un fatto sul modello, non sull'utente.
+
+⭐⭐ **Quel che invece è chiuso, e lo chiude lui**: *«per me è ok»*. Il mandato della fase era suo, e
+il giudizio è suo. ⛔ Il modello che spiega *perché* resta un lavoro aperto — ⚠ **ed è lavoro nostro,
+non altro tempo dell'utente.**
