@@ -243,7 +243,7 @@ gli input»* — non se ne perdeva nessuno, non si **vedeva** che arrivavano (`p
 | `[?]` **il codificatore e la sua scheda** | VA-API sceglie da sé; se cercasse la discreta — chiusa da udev — ripiegherebbe in CPU **in silenzio** (`DECISIONI.md` §4.6-ter) |
 | `[?]` **`EncSliceLP` e i sotto-livelli temporali** | senza, ogni fotogramma abbandonato costa una chiave intera (`RCP.md` §5.2) |
 | `[?]` **quanto pesa una chiave 8K** | contro il tetto dei 16 MiB di `RCP.md` |
-| ⛔ **il puntatore doppio** | oggi se ne disegnano **due sovrapposti**, e il codice stesso lo chiama *«il DIFETTO»*. Fuori mandato qui, ma è nella stessa riga di codice che questa fase tocca |
+| ✅ ~~**il puntatore doppio**~~ | **SMENTITO dall'utente il 22 agosto 2026**: *«non ci sono doppi puntatori»*. 📖 §7.3 |
 
 ### 7.1 ⭐ Le due strade già provate — non si rifanno
 
@@ -251,6 +251,40 @@ gli input»* — non se ne perdeva nessuno, non si **vedeva** che arrivavano (`p
   meglio** del disegno 2D di prima;
 - ⛔ **`?video=worker` funziona e NON rende**: abbassa il tetto del **19 %**. Chi apre questa fase
   non la rifaccia.
+
+### 7.3 · ⛔⭐ **Il «puntatore doppio» non esiste** — e a smentirlo è stato l'occhio dell'utente
+
+*22 agosto 2026. Il punto era stato aperto e un agente ci stava già lavorando: **fermato dopo pochi
+minuti**, su una frase sola.*
+
+⛔ **Il codice lo dichiara come un difetto vivo.** `src/pagina.html`, nel commento del 14 agosto:
+*«Il cursore del browser resta VISIBILE, e la freccia la disegniamo lo stesso. ⚠ Se ne vedono **due
+sovrapposti** — brutto, e §7.1 lo chiama un difetto»*. Ed è la ragione per cui esiste l'interruttore
+`data-puntatore` a tre condizioni, con `due` come valore per difetto **chiamato «il DIFETTO» dal
+codice stesso**.
+
+⭐⭐ **E l'utente, guardando lo schermo vero, dice che non c'è**, due volte e la seconda più netta:
+*«non ci sono doppi puntatori»* e poi **«io vedo solo un puntatore»** — dopo aver già confermato,
+poche ore prima, che *«sì, la freccia si vede»*. ⇒ **Uno, e si vede.**
+
+⇒ ⛔ **Il difetto è dichiarato dal codice e non si manifesta.** È la forma di `LEZIONI.md` §1.20
+rovesciata: lì il giudizio era staccato dalla misura, qui **un commento è staccato dal prodotto** —
+e ha resistito otto giorni perché nessuno aveva chiesto all'unico arbitro che poteva vederlo.
+
+⚠ **Che cosa NON si conclude da qui**, e va scritto o la prossima lettura sbaglia: *«ne vedo uno»*
+non dice **quale**. Restano due mondi possibili — le due frecce **coincidono** esattamente (quindi
+sono indistinguibili e il difetto è cosmetico e nullo), **oppure la seconda non viene disegnata
+affatto** (e allora sul DeX potrebbe mancare proprio quella che serve). `[?]` La distinzione costa
+poco e **non è stata fatta**: l'utente ha chiuso il punto, e un punto chiuso dall'arbitro non si
+riapre per curiosità.
+
+⚠ **E l'una vale l'altra per il prodotto sul desktop**, che è quel che l'utente giudica. ⛔ Non
+sarebbe più vero sul **DeX**, dove la freccia disegnata esiste per una ragione misurata — a 1,1
+fotogrammi al secondo il desktop sembra morto se non la disegna il client. ⇒ Chi un giorno tocca il
+DeX **riapra la domanda lì**, non qui.
+
+⇒ ⭐ **Il commento del codice va corretto**, perché oggi manda a cercare un difetto che non c'è. ⏳
+Lo farà chi tocca quel file per un'altra ragione — **non si apre un giro per questo**.
 
 ### 7.2 ⛔ Che cosa NON è di questa fase
 
