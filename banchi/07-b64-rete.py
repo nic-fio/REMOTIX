@@ -157,8 +157,40 @@ def qdisc():
     return root("/usr/sbin/tc qdisc show dev %s" % DEV)[1].strip()
 
 
+
+# ── ⛔ IL GUARDIANO SI ARMA E SI DISARMA PER PID, NON PER MOTIVO ───────────
+GUARDIANO = LAV + "/.guardiano.pid"
+
+
+def guardiano_arma(secondi):
+    """Nasce con `setsid`: e' capo del suo gruppo, e il gruppo si uccide intero."""
+    guardiano_disarma()
+    # ⛔ Il `&` e l'`echo $!` devono girare DENTRO la shell di root, o il
+    #    redirect verso `$LAV` (che e' di root) fallisce e il pid non si scrive:
+    #    `[M]` il primo giro stampava «pid ?», cioe' un guardiano che non si
+    #    sarebbe potuto disarmare per pid — la cura senza la sua meta'.
+    root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
+         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
+    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
+    print("   OK  guardiano armato per %d s (pid %s): la rete torna com'era "
+          "ANCHE se muoio" % (secondi, out.strip() or "?"))
+
+
+def guardiano_disarma():
+    """⛔ Si uccide il GRUPPO, cosi' `sh` non arriva mai alla riga del `tc`."""
+    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
+    p = out.strip()
+    if p.isdigit():
+        root("kill -TERM -%s 2>/dev/null; kill -TERM %s 2>/dev/null; true" % (p, p))
+    root("rm -f %s; true" % GUARDIANO)
+
+
 def rimetti(dillo=True):
     """⛔ E si VERIFICA: «ho tolto» e «non c'e' piu'» sono due fatti diversi."""
+    # ⛔ Prima si disarma il guardiano, POI si toglie la disciplina: al
+    #    contrario resterebbe una finestra in cui il guardiano puo' scattare su
+    #    un `netem` che nel frattempo ha messo qualcun altro.
+    guardiano_disarma()
     root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
     q = qdisc()
     ok = "netem" not in q
@@ -325,8 +357,8 @@ def conti_del_server(riga0):
        «N blocchi spediti, N buttati, N rifiutati da ngtcp2, N rimandati».
        Qui si legge, e si legge SOLO da `riga0` in poi, cosi' e' di questo
        giro e non di quello prima."""
-    rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'conto finale' | tail -1"
-                      % (riga0 + 1, LAV))
+    rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio di .*conto finale' "
+                      "| tail -1" % (riga0 + 1, LAV))
     r = out.strip()
     if not r:
         # ⛔ `CODER.md` §3.10: «non ho letto» non e' «zero».
@@ -336,8 +368,23 @@ def conti_del_server(riga0):
                    r"(\d+) RIMANDATI", r)
     if not m:
         return {"esito": "riga trovata ma illeggibile", "riga": r[:160]}
-    return {"spediti": int(m.group(1)), "buttati": int(m.group(2)),
-            "rifiutati": int(m.group(3)), "rimandati": int(m.group(4))}
+    fuori = {"spediti": int(m.group(1)), "buttati": int(m.group(2)),
+             "rifiutati": int(m.group(3)), "rimandati": int(m.group(4))}
+    # ⭐ E gia' che il registro e' aperto, si legge anche il conto del VIDEO:
+    #    e' la riga che il prodotto ha imparato a scrivere il 22 agosto, e
+    #    porta i due numeri che prima si confondevano.
+    rc, out2, _ = root("tail -n +%d %s/registro.log | grep -a 'video di .*conto finale' "
+                       "| tail -1" % (riga0 + 1, LAV))
+    m2 = _re.search(r"(\d+) fotogrammi consegnati.*?(\d+) NON SPEDITI.*?"
+                    r"(\d+) spediti sul filo.*?(\d+) abbandonati.*?e (\d+) ANNUNCI",
+                    out2.strip())
+    if m2:
+        fuori["video"] = {"consegnati": int(m2.group(1)),
+                          "non_spediti": int(m2.group(2)),
+                          "spediti": int(m2.group(3)),
+                          "abbandonati": int(m2.group(4)),
+                          "annunci_tela": int(m2.group(5))}
+    return fuori
 
 
 def righe_registro():
@@ -415,10 +462,7 @@ def principale():
     #     ⚠ E' la forma peggiore di difetto di banco: fa apparire buono il
     #     prodotto.  Trovato rileggendo, prima di girare.
     totale = (a.secondi + 120) * len(PROFILI) + 300
-    root("pkill -f 'tc qdisc del dev %s root'; true" % DEV)
-    root("setsid nohup sh -c 'sleep %d; /usr/sbin/tc qdisc del dev %s root' "
-         ">/dev/null 2>&1 & echo guardiano-acceso-per-%ds" % (totale, DEV, totale))
-    print("   OK  guardiano armato: fra %d s la rete torna com era ANCHE se muoio" % totale)
+    guardiano_arma(totale)
     esiti = []
     if a.controllo_rosso:
         # ⛔ Si sostituisce l'atteso del primo gradino con uno che su rete
@@ -509,7 +553,7 @@ def principale():
     finally:
         tono_spegni()
         print("\n== ⛔ LA RETE SI RIMETTE COM'ERA")
-        root("pkill -f 'tc qdisc del dev %s root'; true" % DEV)
+        guardiano_disarma()
         rimetti()
     json.dump(esiti, open(os.path.join(FUORI, "rete-esiti.json"), "w"),
               ensure_ascii=False, indent=1)

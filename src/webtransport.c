@@ -328,6 +328,21 @@ struct wt {
 	 *    volta — ed e' un campo suo, perche' `video_detto` racconta un altro
 	 *    fatto e un flag per due fatti ne spegne uno. */
 	uint32_t tela_detta_l, tela_detta_a;
+	/* ⛔⭐ QUANTI ANNUNCI DI DISACCORDO SONO STATI SCRITTI — e non e' lo stesso
+	 *     numero dei fotogrammi non spediti, che e' precisamente il punto.
+	 *
+	 *     `[M]` B2, 22 agosto 2026: sotto un guasto che rende inammissibili
+	 *     TUTTI i fotogrammi, **799 scartati** e nel registro **un annuncio
+	 *     solo** — perche' il fondo qui sopra si riarma soltanto quando cambia
+	 *     la coppia (tela in vigore, misura del fotogramma), e sotto quel
+	 *     guasto non cambia mai.  ⇒ Chi contava le righe leggeva **1** e lo
+	 *     chiamava «non spediti»: il nome prometteva 799.  E' la forma **E2**,
+	 *     e non l'aveva vista nessuno **perche' 1 e' un numero che sembra sano**.
+	 *
+	 * ⛔ Il fondo NON si tocca — 799 righe identiche renderebbero il registro
+	 *    inutilizzabile.  Quel che mancava e' il CONTO accanto, e sono due
+	 *    numeri distinti perche' contano due cose distinte. */
+	uint32_t video_annunci_tela;
 	/* Quando si e' chiesta l'ultima chiave al figlio, per non chiederne una a
 	 * ogni battito mentre la prima e' ancora in viaggio.  ⛔ Non e' la grazia
 	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
@@ -2718,6 +2733,10 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 		if (w->tela_detta_l != l || w->tela_detta_a != a) {
 			w->tela_detta_l = l;
 			w->tela_detta_a = a;
+			/* ⭐ Si conta l'ANNUNCIO, non il fotogramma: il fotogramma l'ha
+			 *    gia' contato `video_saltati` tre righe sopra.  Due numeri per
+			 *    due fatti, e la riga di chiusura li scrive tutt'e due. */
+			w->video_annunci_tela++;
 			registro_dice(REG_RCP,
 			              "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
 			              "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
@@ -4583,6 +4602,75 @@ void wt_libera(wt *w)
 		              (unsigned long long)bu, (unsigned long long)ri,
 		              (unsigned long long)w->audio_rimandati, coda,
 		              w->audio_codec);
+	}
+	/* ⛔⛔⭐ E I CONTI DEL VIDEO, CHE NON LI LEGGEVA NESSUNO — 22 agosto 2026,
+	 *       trovato da B2, ed e' **lo stesso difetto del riquadro qui sopra sul
+	 *       gemello**: `wt_video_conti()` era definita, dichiarata in
+	 *       `webtransport.h`, e senza **un solo chiamante in tutto `src/`**.
+	 *
+	 *       ⚠ La cura dell'audio fu scritta il 17 agosto, cinque giorni prima,
+	 *       per la funzione gemella e con queste stesse parole.  ⇒ E' §1.20: la
+	 *       cura era stata applicata a **uno dei due gemelli**, e nessuno aveva
+	 *       guardato l'altro.  La lezione non e' sui contatori, e' che una cura
+	 *       si cerca **dovunque valga**, non dove e' stata trovata.
+	 *
+	 * ⛔⛔ E IL PREZZO DI QUEL SILENZIO ERA UN NUMERO CHE MENTIVA.  `[M]` B2:
+	 *      **799 fotogrammi scartati** e **un solo annuncio** nel registro; chi
+	 *      contava le righe leggeva **1** e lo chiamava «non spediti».  Il
+	 *      valore era 1, il nome prometteva 799: forma **E2**, e invisibile
+	 *      perche' **1 e' un numero che sembra sano**.
+	 *
+	 * ⇒ Qui escono TUTTI E CINQUE, e con dentro gli ZERO (`CODER.md` §3.10):
+	 *   uno zero scritto e un conto mai scritto devono avere due facce diverse.
+	 *
+	 * ⚠ `saltati` somma **tre** cause — la tela che non combacia, il credito di
+	 *   stream finito (§2.3) e il rifiuto di `rcp.c`.  ⏳ Spezzarlo in tre e'
+	 *   possibile e NON e' stato fatto: sarebbe una seconda cura, e questa
+	 *   riga esiste per farne uscire una.  Il nome pero' non mente: sono
+	 *   davvero i fotogrammi che non sono partiti.
+	 *
+	 * ⛔ E non si tocca niente del comportamento del video: qui si aggiunge
+	 *    un'uscita di diagnosi, non si sposta una politica.
+	 *
+	 * ───────────────────────────────────────────────────────────────────────
+	 * ⭐ LA PROVA CHE I DUE NUMERI SONO DAVVERO DUE — `[M]` 22 agosto 2026
+	 * ───────────────────────────────────────────────────────────────────────
+	 *
+	 * Stessa scena in tutt'e due i giri: sessione di `provar8` sulla 7802,
+	 * `04-b30-scena` in movimento sul monitor catturato, 16 s, tre `ADATTA_TELA`
+	 * (1264x800 → 1920x1080 → 1264x800).  ⛔ E il guasto e' INNESTATO apposta
+	 * nel solo albero di costruzione — la tela dichiarata discorde per ogni
+	 * fotogramma — perche' su un prodotto sano questa strada non si percorre:
+	 * il compositore riconfigura in 44-67 ms e nessun fotogramma fa in tempo a
+	 * portare la misura vecchia.
+	 *
+	 * | binario | consegnati | NON SPEDITI | spediti | ANNUNCI |
+	 * |---|---|---|---|---|
+	 * | sano                | 1016 | **0**    | 1016 | **0** |
+	 * | guasto innestato    | 0    | **1017** | 0    | **4** |
+	 *
+	 * ⇒ **1017 contro 4: un fattore 254.**  Prima della chiamata qui sotto il
+	 *   solo numero che un banco poteva leggere era quello degli annunci, e lo
+	 *   chiamava «non spediti».
+	 *
+	 * ⚠ E l'atteso scritto prima diceva «ANNUNCI = 1», come nel giro di B2: ne
+	 *   sono usciti **4**, ed e' giusto cosi' — il fondo si riarma a ogni
+	 *   coppia (tela, misura) nuova, e questa scena la cambia tre volte.  ⇒ Il
+	 *   numero degli annunci segue le MISURE DISTINTE, non i fotogrammi: che e'
+	 *   esattamente la ragione per cui non poteva fare da conto. */
+	if (w->video_acceso) {
+		uint32_t diffusi = 0, saltati = 0, spediti = 0, abbandonati = 0;
+		wt_video_conti(w, &diffusi, &saltati, &spediti, &abbandonati);
+		registro_dice(REG_RCP,
+		              "video di %s, conto finale: %u fotogrammi consegnati a "
+		              "RCP, %u NON SPEDITI (tela che non combacia + credito "
+		              "finito + rifiuto di rcp), %u spediti sul filo, %u "
+		              "abbandonati a valle (§5.1) — ⚠ e %u ANNUNCI di tela "
+		              "discorde, che e' un NUMERO DIVERSO dai non spediti: il "
+		              "registro ne scrive uno per ogni misura nuova, non uno "
+		              "per fotogramma (§E2, B2 22 ago 2026) — codec %u",
+		              w->provenienza, diffusi, saltati, spediti, abbandonati,
+		              w->video_annunci_tela, w->video_codec);
 	}
 	/* ⛔⛔ E SI SPEGNE LA CATTURA DELL'AUDIO SE NESSUNO ASCOLTA PIU'.
 	 *

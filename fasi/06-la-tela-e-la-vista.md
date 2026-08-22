@@ -1227,13 +1227,35 @@ dicesse**: è la ragione per cui esiste la **quarta** colonna e la riconciliazio
 > (verificato: zero chiamanti in tutto `src/`). ⇒ È `LEZIONI.md` §1.20 **dentro il prodotto**: un
 > contatore che nessuno confronta.
 >
-> 🔸 **Decisione: si fa uscire il conto vero** (assegnato a chi possiede `webtransport.c`). Le altre
-> due strade sono state scartate con la ragione: contare un'altra riga darebbe il numero giusto nel
-> giro buono ⛔ **e un falso rosso** nel giro in cui il palco non parte; lasciare com'è costa zero ⛔ e
-> lascia in giro **un nome che promette una cosa e ne dice un'altra**.
+> 🔸 **Decisione: si fa uscire il conto vero.** Le altre due strade sono state scartate con la
+> ragione: contare un'altra riga darebbe il numero giusto nel giro buono ⛔ **e un falso rosso** nel
+> giro in cui il palco non parte; lasciare com'è costa zero ⛔ e lascia in giro **un nome che promette
+> una cosa e ne dice un'altra**.
 >
-> ⇒ Finché non è fatto, il conto onesto è **G5 confermato 7 giri su 9, non misurato 2**, e il
-> denominatore va scritto **accanto** al «3 confermati», sempre.
+> ### ✅ **FATTO il 22 agosto — sedici righe di codice, e il fattore è 254**
+>
+> `wt_video_conti()` ha finalmente un chiamante, **accanto a quello dell'audio**. ⭐ E la scoperta che
+> vale più della cura sta nel commento che l'accompagna: la riga dell'audio fu scritta il **17
+> agosto** per la funzione **gemella**, **con queste stesse parole**. ⇒ La cura era stata applicata a
+> **uno dei due gemelli**, e nessuno aveva guardato l'altro. 📖 `LEZIONI.md` §1.25.
+>
+> `[M]` Stessa scena, due binari, il guasto innestato solo nell'albero di costruzione:
+>
+> | | consegnati | **NON SPEDITI** | **ANNUNCI** |
+> |---|---|---|---|
+> | sano | 1 016 | **0** | **0** |
+> | col guasto | 0 | **1 017** | **4** |
+>
+> ⇒ ⛔ **1 017 contro 4: un fattore 254.** Prima, il solo numero leggibile era quello degli annunci —
+> e lo si chiamava «non spediti».
+>
+> ⭐ **E l'atteso scritto prima era sbagliato, ed è rimasto scritto**: diceva «annunci = 1», come nel
+> giro che aveva aperto il caso. Ne sono usciti **4**, ed è giusto: il fondo si riarma a ogni coppia
+> (tela, misura) nuova, e quella scena la cambia tre volte. ⇒ **Il numero degli annunci segue le
+> misure distinte, non i fotogrammi** — che è esattamente la ragione per cui non poteva fare da conto.
+>
+> ⚠ Dichiarato e non fatto: «non spediti» somma **tre** cause. Spezzarlo sarebbe una seconda cura —
+> ⭐ ma il nome **non mente**: sono davvero i fotogrammi che non sono partiti.
 
 #### ⛔⛔ E la scena si raddoppiava in silenzio — **per la seconda volta stanotte, la stessa forma**
 

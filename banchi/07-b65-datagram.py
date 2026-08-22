@@ -151,8 +151,36 @@ def qdisc():
     return root("/usr/sbin/tc qdisc show dev %s" % DEV)[1].strip()
 
 
+
+# ── ⛔ IL GUARDIANO SI ARMA E SI DISARMA PER PID, NON PER MOTIVO ───────────
+GUARDIANO = LAV + "/.guardiano.pid"
+
+
+def guardiano_arma(secondi):
+    """Nasce con `setsid`: e' capo del suo gruppo, e il gruppo si uccide intero."""
+    guardiano_disarma()
+    # ⛔ Il `&` e l'`echo $!` devono girare DENTRO la shell di root, o il
+    #    redirect verso `$LAV` (che e' di root) fallisce e il pid non si scrive:
+    #    `[M]` il primo giro stampava «pid ?», cioe' un guardiano che non si
+    #    sarebbe potuto disarmare per pid — la cura senza la sua meta'.
+    root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
+         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
+    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
+    print("   OK  guardiano armato per %d s (pid %s): la rete torna com'era "
+          "ANCHE se muoio" % (secondi, out.strip() or "?"))
+
+
+def guardiano_disarma():
+    """⛔ Si uccide il GRUPPO, cosi' `sh` non arriva mai alla riga del `tc`."""
+    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
+    p = out.strip()
+    if p.isdigit():
+        root("kill -TERM -%s 2>/dev/null; kill -TERM %s 2>/dev/null; true" % (p, p))
+    root("rm -f %s; true" % GUARDIANO)
+
+
 def rimetti(dillo=True):
-    root("pkill -f 'tc qdisc del dev %s root'; true" % DEV)
+    guardiano_disarma()
     root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
     q = qdisc()
     ok = "netem" not in q and "tbf" not in q
@@ -385,9 +413,7 @@ def principale():
     print("   ⛔ «%s» (ssh + 7730 dell utente) NON si tocca" % VIETATA)
     print("   --  «%s» prima: %s" % (DEV, qdisc() or "(nessuna)"))
     totale = (a.secondi + 150) * len(GRADINI) + 300
-    root("pkill -f 'tc qdisc del dev %s root'; true" % DEV)
-    root("setsid nohup sh -c 'sleep %d; /usr/sbin/tc qdisc del dev %s root' "
-         ">/dev/null 2>&1 & echo guardiano" % (totale, DEV))
+    guardiano_arma(totale)
     print("   OK  guardiano armato per %d s" % totale)
 
     esiti = []

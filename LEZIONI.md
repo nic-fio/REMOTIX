@@ -991,6 +991,32 @@ del ban è l'indirizzo, e l'unità di lavoro è la porta**.
    errori di fila. ⚠ Il commento del file diceva *«questa sonda non può far scattare il ban»* — **era
    falso**, e a scoprirlo è stato il ban.
 
+### 1.25 ⭐⭐ **Una cura si cerca dovunque valga, non dove è stata trovata** — il gemello dimenticato
+
+*22 agosto 2026. La lezione non è sui contatori: è su come si applica una cura.*
+
+Il **17 agosto** fu scritta una riga di chiusura che fa uscire i contatori veri dell'**audio**, e la
+sua ragione era già `LEZIONI.md` §1.20: *un numero che nessuno legge non è un numero*. ⛔ **Cinque
+giorni dopo si è scoperto che la funzione gemella del video — `wt_video_conti()` — era definita,
+dichiarata, e non la chiamava nessuno.** Zero chiamanti in tutto il sorgente.
+
+⇒ La cura era stata applicata a **uno dei due gemelli**, e nessuno aveva guardato l'altro.
+
+⛔ **E il prezzo di quei cinque giorni si misura**: il solo numero leggibile dai banchi era quello
+degli **annunci** — e lo si chiamava «non spediti». `[M]` con un guasto innestato: **1 017 fotogrammi
+non spediti contro 4 annunci**, cioè **un fattore 254**. Un banco che credeva di contare fotogrammi
+contava righe di registro.
+
+⭐ **E la stessa lezione si è ripetuta un'ora dopo, in senso inverso**: la riga nuova ha **rotto un
+lettore** di banco, che cercava «conto finale» e da quel momento ne trovava **due** — l'audio e il
+video — prendendo l'ultimo e dichiarandolo illeggibile. ⚠ *Un lettore che cerca parole trova anche
+quelle di un altro* — è §1.20 di nuovo, dalla parte di chi legge.
+
+⇒ **La domanda da farsi ogni volta che si cura qualcosa**: *questa cosa ha un gemello?* Un contatore,
+un percorso, una funzione, un messaggio di registro. ⭐ E se ce l'ha, la cura vale per tutti e due
+**nello stesso commit** — che è già la regola scritta per il formato delle registrazioni, e vale
+uguale qui.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no
