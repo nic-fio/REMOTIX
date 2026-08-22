@@ -931,7 +931,16 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 > rifà lavoro già fatto, o cerca un guasto dove non c'è. ⇒ Qui c'è lo stato **vero**, e l'elenco
 > vecchio è stato tolto invece di essere lasciato accanto.
 
-### ⛔ Difetti veri, aperti — **uno, e adesso ha un nome** (riscritto la sera del 21 agosto)
+### ✅ Difetti veri, aperti: **NESSUNO** — chiuso il 22 agosto 2026 dal giudizio dell'utente
+
+> ⭐⭐ *«Le 4 prove che ho eseguito prima davano un audio OK»* (quattro motori: Linux Chrome, Linux
+> Firefox, Windows Chrome, Android Chrome), e alla domanda diretta sul ritardo: *«**ho già scritto
+> prima che il ritardo audio/video è ok**»*. ⇒ §9.8.
+>
+> ⚠ **Quel che segue resta scritto**, ed è la storia di come ci si è arrivati — dalla prima diagnosi
+> sbagliata alla cura. ⛔ Non si cancella: la forma dell'errore vale più della conclusione.
+
+#### ⛔ Com'era il 21 agosto sera — **uno, e adesso ha un nome**
 
 > ⛔ **Un'ora fa qui c'era scritto «difetti veri aperti: nessuno».** Era il giudizio *«audio e video
 > perfetti»* preso alla lettera, ⚠ e l'utente lo ha precisato subito dopo, sul PC Windows:
@@ -1407,11 +1416,20 @@ piattaforma: è **su tutte quelle che il prodotto dichiara di servire**.
 **I8** — quel che l'utente sente — e adesso quel metro ha parlato su quattro motori invece che su
 uno.
 
-⚠ **E quel che NON dice**: l'utente non nomina più il ritardo fra audio e video che aveva confermato
-il 21 sera. ⛔ **Non lo si dà per chiuso su questa base**: *«audio OK»* e *«audio e video sincroni»*
-sono due frasi diverse, e il 21 lo aveva già insegnato — la prima volta disse «audio e video
-perfetti» e un'ora dopo precisò il ritardo. ⇒ La voce resta aperta finché non la nomina lui, e la
-misura `AV` (§8-bis) resta da riprendere con l'`aoff` curato.
+⭐⭐ **E il ritardo fra audio e video È CHIUSO** — chiesto e confermato: *«ho già scritto prima che il
+ritardo audio/video è ok»*. ⇒ Il *«audio OK»* delle quattro prove comprendeva **la sincronia**, non
+solo la pulizia del flusso.
+
+⛔ **Era l'ultimo difetto vero della fase 7**, ed è quello che l'utente aveva confermato il 21 sera
+con *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Fra le due frasi ci
+sono: l'**ancora all'`istante` del server** (la coda non è più un serbatoio a senso unico), la
+**riapertura della tirata a ogni riancoraggio** (la coda non si gonfia più a metà sessione), la cura
+della **spirale delle chiavi** (l'audio non muore più quando la linea stringe) e il **primo clic**
+che adesso accende davvero il suono.
+
+⚠ **E la misura `AV` resta da riprendere lo stesso** (§8-bis, con l'`aoff` curato): non serve più a
+decidere se il difetto c'è — quello l'ha deciso l'orecchio — ⭐ serve a **accorgersi se un giorno
+torna**, che è un mestiere diverso e altrettanto utile.
 
 ⇒ ⭐ **E l'unico appunto che resta è di un'altra fase**: le prestazioni grafiche, che sono la
 **fase 8** — e l'utente l'ha indirizzata da sé.
