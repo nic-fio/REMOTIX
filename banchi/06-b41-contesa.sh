@@ -68,7 +68,7 @@
 #    tocca il prodotto.  ⇒ si verifica, non si suppone;
 # 3. ⛔ **il carico va spento anche se il giro si rompe a meta'**: `trap`
 #    sull'uscita, e `scarico` **conta** i processi rimasti invece di sperare;
-# 4. ⛔ **i processi si riconoscono da una marca propria** (`06-b39-carico`):
+# 4. ⛔ **i processi si riconoscono da una marca propria** (`06-b41-carico`):
 #    un `pkill ffmpeg` prenderebbe anche quel che stanno facendo gli altri
 #    nove agenti sulla stessa macchina.
 set -uo pipefail
@@ -78,8 +78,8 @@ LAV=${LAV:-/media/REMOTIX/tmp/06-p}
 PORTA=${PORTA:-7731}
 UTENTE=${UTENTE:-provap6}
 NODO=${NODO:-/dev/dri/renderD128}
-CLIP=${CLIP:-/dev/shm/06-b39-clip.nv12}
-MARCA=06-b39-carico              # ⛔ la marca che rende `pkill` sicuro
+CLIP=${CLIP:-/dev/shm/06-b41-clip.nv12}
+MARCA=06-b41-carico              # ⛔ la marca che rende `pkill` sicuro
 LARG=${LARG:-1920}
 ALT=${ALT:-1080}
 FOTO=${FOTO:-60}                 # fotogrammi nella clip
@@ -293,14 +293,14 @@ certifica)
 		ok "⭐ CONTESA CERTIFICATA: $TANTI < $SOGLIA (2/3 di $UNO)"
 		ok "   ⇒ i $N codificatori si contendono davvero lo stesso iGPU"
 		echo "CONTESA_CERTIFICATA uno=$UNO tanti=$TANTI n=$N $(date +%s)" \
-			> "$LAV/06-b39-certificato.txt"
+			> "$LAV/06-b41-certificato.txt"
 		exit 0
 	fi
 	ko "⛔ CONTESA NON CERTIFICATA: $TANTI non e' sotto $SOGLIA (2/3 di $UNO)"
 	ko "   ⇒ la scena NON contende la GPU.  Qualunque verdetto preso adesso"
 	ko "     con l'etichetta «sotto contesa GPU» sarebbe un verde per"
 	ko "     costruzione — ed e' peggio di nessun caso."
-	rm -f "$LAV/06-b39-certificato.txt"
+	rm -f "$LAV/06-b41-certificato.txt"
 	exit 4 ;;
 
 misura)
@@ -348,7 +348,7 @@ misura)
 	#     Il client era rotto (gli mancava una dipendenza) ed e' uscito con 1
 	#     tutte e 18 le volte, in tutt'e due le meta'.  ⛔ Ma in `$LAV` c'erano
 	#     ancora i `06-b35-c30r*.json` del **16 agosto**, e questo ciclo li ha
-	#     copiati: `06-b41-contesa-r1..3` e `06-b39-riposo-r1..3` sono nati
+	#     copiati: `06-b41-contesa-r1..3` e `06-b41-riposo-r1..3` sono nati
 	#     **dagli stessi tre file di cinque giorni prima**, con dentro un
 	#     ritmo di 31,6 ms perfettamente plausibile.
 	#     ⚠ Il verdetto si e' salvato per caso — le due meta' erano uguali.
@@ -365,7 +365,7 @@ misura)
 			local f="$LAV/06-b35-c30r$r.json"
 			if [ ! -f "$f" ]; then assenti=$((assenti + 1)); continue; fi
 			if [ ! "$f" -nt "$marca" ]; then vecchi=$((vecchi + 1)); continue; fi
-			cp -f "$f" "$LAV/06-b39-$pref-r$r.json"; presi=$((presi + 1))
+			cp -f "$f" "$LAV/06-b41-$pref-r$r.json"; presi=$((presi + 1))
 		done
 		inf "$pref: $presi giri presi · $assenti senza file · ⛔ $vecchi PIU' VECCHI della marca (scartati)"
 		[ "$vecchi" -eq 0 ] || ko "⛔ $vecchi file erano di un giro precedente: NON entrano nella misura"
@@ -380,11 +380,11 @@ misura)
 	# 3 · i giri SOTTO contesa
 	log "I $GIRI giri SOTTO contesa"
 	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b41-contesa-r*.json
-	touch "$LAV/06-b39-marca-contesa"
+	touch "$LAV/06-b41-marca-contesa"
 	B39_FINESTRA=si bash "$0" carico "$N" || exit $?
 	carico_stampa
 	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
-	raccogli contesa "$LAV/06-b39-marca-contesa" || { bash "$0" scarico; exit 4; }
+	raccogli contesa "$LAV/06-b41-marca-contesa" || { bash "$0" scarico; exit 4; }
 	carico_stampa
 	# ⛔ E si verifica che i codificatori fossero vivi ALLA FINE, non solo
 	#    all'inizio: se sono morti a meta' giro, meta' misura e' «a riposo»
@@ -401,11 +401,11 @@ misura)
 
 	# 4 · gli stessi giri A RIPOSO, nella stessa ora — e' il paragone
 	log "Gli stessi $GIRI giri A RIPOSO (stessa ora, stesso albero)"
-	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b39-riposo-r*.json
-	touch "$LAV/06-b39-marca-riposo"
+	rm -f "$LAV"/06-b35-c30r*.json "$LAV"/06-b41-riposo-r*.json
+	touch "$LAV/06-b41-marca-riposo"
 	carico_stampa
 	bash "$SANO/banchi/06-b35-lancia.sh" incatenate 30 "$GIRI"
-	raccogli riposo "$LAV/06-b39-marca-riposo" || exit 4
+	raccogli riposo "$LAV/06-b41-marca-riposo" || exit 4
 	carico_stampa
 
 	log "IL VERDETTO"
@@ -415,7 +415,7 @@ misura)
 pulisci)
 	spegni_carico
 	dentro "rm -f $CLIP" >/dev/null 2>&1
-	rm -f "$LAV"/06-b39-*.json "$LAV/06-b39-certificato.txt"
+	rm -f "$LAV"/06-b41-*.json "$LAV/06-b41-certificato.txt"
 	ok "pulito"
 	exit 0 ;;
 

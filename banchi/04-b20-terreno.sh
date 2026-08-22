@@ -80,12 +80,31 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ⛔ Le porte degli altri.  ⚠ 7700 e 7730 sono entrate il 22 agosto 2026: erano
+#    vive sulla macchina e questa riga non le contava — un elenco fermo al 14
+#    agosto e' un elenco che non protegge piu' niente.
+ALTRUI="7448 7501 7561 7571 7700 7730 7781"
+
 vicini() {
 	local r=""
-	for p in 7448 7501 7561 7571; do
+	for p in $ALTRUI; do
 		r="$r$p: $(ss -tuln 2>/dev/null | grep -c ":$p\b") · "
 	done
 	printf '%sascoltatori (NON miei)\n' "$r"
+}
+
+# ⛔⭐ E QUI SI CONFRONTA, invece di stampare e basta — `LEZIONI.md` §1.20.
+#     `vicini()` scriveva i conti prima e dopo ogni azione e **nessuna riga li
+#     guardava**: accendere il proprio server sulla porta di un altro sarebbe
+#     passato con un `NO` gia' stampato sopra.
+non_e_di_altri() {
+	local p
+	for p in $ALTRUI; do
+		[ "$PORTA" = "$p" ] && {
+			ko "⛔ la $PORTA e' di un ALTRO anello ($ALTRUI): non l'accendo"
+			exit 2; }
+	done
+	return 0
 }
 
 # ⛔ Tutto quel che va fatto DENTRO la sessione dell'utente passa di qui: uid,
@@ -102,6 +121,54 @@ come_utente() {
 		XDG_CURRENT_DESKTOP=GNOME XDG_SESSION_DESKTOP=gnome \
 		XDG_SESSION_TYPE=wayland \
 		"$@"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔⭐ LA CARTELLA DEI DROP-IN NON E' MIA DA SOLO — cura del 22 agosto 2026
+#
+# ⛔ IL DIFETTO, con la sua data.  `[M]` 22 agosto 2026, primo giro di questo
+#    banco con l'utente `provai6`: `sessione con` ha scritto il suo
+#    `zz-remotix-monitor.conf` con `--virtual-monitor`, ha riletto l'ExecStart
+#    in vigore e ci ha trovato **`--headless --no-x11` e basta**.
+#    In quella cartella c'era gia'
+#
+#        /run/user/1006/systemd/user.control/…/zz-senza-monitor.conf
+#
+#    lasciato li' da un ALTRO banco — `04-b31`, `04-b32`, `06-b33`, `06-b34` e
+#    `06-b35-terreno.sh` scrivono tutti quel nome.  ⛔ E **`zz-s` viene dopo
+#    `zz-r`**: vinceva lui.
+#
+# ⭐ IL BANCO NON HA MENTITO — e va detto, perche' e' la meta' buona: il
+#    controllo «scritto non e' in vigore» (forma E1) ha rifiutato di misurare
+#    ed e' uscito **3**.  ⚠ Senza quel controllo avrei misurato una sessione
+#    SENZA monitor virtuale credendola CON, e il giro «rosso-prima» sarebbe
+#    uscito verde — cioe' il banco avrebbe assolto il difetto che esiste per
+#    trovare.
+#
+# ⛔⛔ E LA STESSA TRAPPOLA STA SUL PRODOTTO: `src/sessione.c:735` scrive
+#     **`zz-remotix-monitor.conf`**, lo stesso nome che perde contro
+#     `zz-senza-monitor.conf`.  ⇒ Su un utente dove un altro banco e' passato,
+#     il drop-in del prodotto non entra in vigore e nessuno se ne accorge.
+#     ⚠ Non e' un difetto di prodotto — nessun utente vero ha quel file — ma e'
+#       una miccia posata fra banchi di anelli diversi, e va dichiarata.
+#
+# ⇒ La cartella si SPAZZA prima di scriverci, e si dice che cosa si e' tolto.
+#   ⛔ Non «si spera che sia vuota»: `/run/user/$UID_B` sopravvive al riavvio
+#     della sessione (c'e' il linger), quindi quel che c'e' e' di ieri.
+# ═══════════════════════════════════════════════════════════════════════════
+spazza_dropin() {
+	local dir="$1" tieni="${2:-}" f n=0
+	[ -d "$dir" ] || return 0
+	for f in "$dir"/*.conf; do
+		[ -e "$f" ] || continue
+		[ "$(basename "$f")" = "$tieni" ] && continue
+		inf "⚠ tolgo un drop-in che NON e' di questo banco: $(basename "$f")"
+		sed 's/^/            /' "$f"
+		rm -f "$f"
+		n=$((n+1))
+	done
+	[ "$n" -gt 0 ] && inf "spazzati $n drop-in estranei da $dir"
+	return 0
 }
 
 mio_pid() {
@@ -150,6 +217,9 @@ sessione)
 	DIR="/run/user/$UID_B/systemd/user.control/$UNITA.d"
 	FILE="$DIR/zz-remotix-monitor.conf"
 	install -d -o "$UID_B" -g "$UID_B" -m 700 "$DIR" || { ko "⛔ non ho fatto $DIR"; exit 2; }
+	# ⛔ Prima di scrivere: vedi il riquadro «la cartella dei drop-in non e' mia
+	#    da solo».  Il mio si riscrive comunque, quindi non si tiene niente.
+	spazza_dropin "$DIR"
 	if [ "$MODO" = con ]; then
 		# ⛔ E' la riga che `src/sessione.c:650` scrive OGGI, parola per parola.
 		printf '[Service]\nExecStart=\nExecStart=/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor %s\n' \
@@ -230,6 +300,51 @@ sessione)
 	done
 	exec bash "$0" monitor ;;
 
+congeda)
+	# ⛔⭐ IL PASSO CHE MANCAVA FRA «rosso-prima» E «nasci» — 22 agosto 2026.
+	#
+	#     `sessione.h:240`: `sessione_assicura()` **«si avvia solo da
+	#     SESSIONE_MORTA»**.  ⇒ Chiamandolo su una sessione gia' viva — quella
+	#     del giro rosso, con `--virtual-monitor` addosso — il prodotto fa la
+	#     cosa giusta e **non la tocca**: `[M]` 22 agosto, `assicura: 3 MONITOR
+	#     SCELTO DA SE (l'ho fatta nascere io: no)`.
+	#
+	# ⛔ Il banco leggeva quel 3 come un guasto e usciva 3, ⚠ mentre il difetto
+	#    era suo: il giro certificante scritto in testa a `04-b20-lancia.sh`
+	#    passava da `sessione con` a `nasci` **senza congedare in mezzo**, e
+	#    quindi non poteva mai arrivare al giro verde.  E' la forma «un
+	#    attrezzo che muore su dati veri accusa i dati».
+	#
+	# ⛔ E QUI NON SI SCRIVE NESSUN DROP-IN: la cartella si lascia VUOTA, cosi'
+	#    quel che entrera' in vigore dopo lo avra' scritto **il prodotto** e la
+	#    differenza fra i due giri resta una riga di prodotto (`CODER.md` §3.6).
+	log "Congedo la sessione di $UTENTE e lascio la cartella dei drop-in VUOTA"
+	inf "$(vicini)"
+	spazza_dropin "/run/user/$UID_B/systemd/user.control/$UNITA.d"
+	come_utente systemctl --user daemon-reload >/dev/null 2>&1
+	if pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1; then
+		come_utente gdbus call --session -d org.gnome.SessionManager \
+			-o /org/gnome/SessionManager \
+			-m org.gnome.SessionManager.Logout 2 >/dev/null 2>&1
+		g=0
+		while [ $g -lt 60 ] && pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1; do
+			sleep 0.5; g=$((g+1))
+		done
+		come_utente systemctl --user reset-failed >/dev/null 2>&1
+	fi
+	# ⛔ E si VERIFICA che se ne sia andata, invece di sperarlo: se restasse,
+	#    `nasci` direbbe di nuovo 3 e la colpa sembrerebbe del prodotto.
+	if pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1; then
+		ko "⛔ la sessione NON se n'e' andata: non chiamo `nasci`"
+		for p in $(pgrep -u "$UID_B" -x gnome-shell); do
+			inf "resta gnome-shell $p: $(tr '\0' ' ' < /proc/$p/cmdline)"
+		done
+		exit 3
+	fi
+	ok "nessun gnome-shell di $UTENTE, e nessun drop-in in $UNITA.d"
+	ls -la "/run/user/$UID_B/systemd/user.control/$UNITA.d" 2>&1 | sed 's/^/        /'
+	exit 0 ;;
+
 nasci)
 	# ⭐⛔ QUI LA SESSIONE LA FA NASCERE IL PRODOTTO — `CODER.md` §3.6.
 	#
@@ -245,12 +360,36 @@ nasci)
 	[ -x "$P" ] || { ko "⛔ $P non c'e': fai «costruisci»"; exit 2; }
 	# ⛔ Il drop-in del giro precedente si toglie: e' del BANCO, e lasciarlo
 	#    vorrebbe dire far vincere la scena sopra il prodotto.
+	# ⛔ E si spazza TUTTA la cartella, non solo il file del banco: il drop-in
+	#    che il prodotto sta per scrivere si chiama `zz-remotix-monitor.conf` e
+	#    PERDE contro un `zz-senza-monitor.conf` di un altro banco (riquadro
+	#    «la cartella dei drop-in non e' mia da solo»).  ⚠ Lasciandolo, il
+	#    prodotto scriverebbe e non entrerebbe in vigore — e il banco
+	#    misurerebbe la cura di qualcun altro credendola la sua.
+	spazza_dropin "/run/user/$UID_B/systemd/user.control/$UNITA.d"
 	rm -f "/run/user/$UID_B/systemd/user.control/$UNITA.d/zz-remotix-monitor.conf"
 	come_utente systemctl --user daemon-reload >/dev/null 2>&1
 	inf "ExecStart senza il mio drop-in: $(come_utente systemctl --user show -p ExecStart --value "$UNITA")"
 	come_utente env LD_LIBRARY_PATH="$LIBS" "$P" assicura "$MISURA"
 	n=$?
-	inf "sessione_assicura ha detto $n"
+	# ⛔⭐ L'ATTESO SCRITTO PRIMA, E CONFRONTATO — `LEZIONI.md` §1.20.
+	#     Questo numero veniva STAMPATO e passato all'uscita, e nessuna riga
+	#     diceva quale fosse quello giusto: chi legge «ha detto 1» non ha modo
+	#     di sapere che dopo la cura **1 NERA e' il caso sano** (lo dice
+	#     `04-b20-nasci.c`, e chi legge il registro non ha quel file davanti).
+	# ⚠ L'uscita resta `SessioneStato` grezzo: nessuno deve tradurre.  Qui si
+	#   aggiunge la FRASE, non una traduzione del numero.
+	ATTESO_NASCI=${ATTESO_NASCI:-1}
+	if [ "$n" = "$ATTESO_NASCI" ]; then
+		ok "sessione_assicura ha detto $n, ed e' l'atteso ($ATTESO_NASCI): dopo"\
+" la cura la sessione remota sana e' NERA — zero monitor propri, e il monitor"\
+" lo monta la cattura al primo client"
+	else
+		ko "⛔ sessione_assicura ha detto $n, atteso $ATTESO_NASCI"
+		[ "$n" = 3 ] && inf "⚠ 3 SCELTO DA SE quasi sempre vuol dire che c'era"\
+" gia' una sessione viva: `sessione_assicura()` si avvia solo da SESSIONE_MORTA"\
+" (src/sessione.h:240).  ⇒ e' il BANCO che ha saltato «congeda»."
+	fi
 	for p in $(pgrep -u "$UID_B" -x gnome-shell); do
 		inf "gnome-shell $p: $(tr '\0' ' ' < /proc/$p/cmdline)"
 	done
@@ -314,6 +453,7 @@ monitor)
 accendi)
 	log "Il server del banco A1, sulla $PORTA — DA ROOT"
 	inf "$(vicini)"
+	non_e_di_altri
 	[ -x "$D/remotix" ] || { ko "⛔ $D/remotix non c'e'"; exit 2; }
 	[ -f "$D/pagina.html" ] || { ko "⛔ $D/pagina.html non c'e'"; exit 2; }
 	n=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")

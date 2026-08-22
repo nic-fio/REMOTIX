@@ -923,6 +923,27 @@ segno**: *una riga tagliata si vede, una riga intrecciata no*.
 ne ha scartate**. Un lettore che salta in silenzio le righe che non capisce è la stessa famiglia di
 [[1.20]] — un numero che nessuno confronta.
 
+### 1.22 ⛔⛔⭐ **Un drop-in di systemd vince per NOME, e il nostro perde** — `zz-r` viene prima di `zz-s`
+
+*22 agosto 2026, trovato girando `04-b20` per intero. `fasi/04`, e riguarda `src/sessione.c:735`.*
+
+`[M]` Il prodotto scrive il suo drop-in in `zz-remotix-monitor.conf`. Nella stessa cartella cinque
+banchi di **altri anelli** (`04-b31`, `04-b32`, `06-b33`, `06-b34`, `06-b35`) lasciano
+`zz-senza-monitor.conf` — e ⛔ **`zz-s` viene dopo `zz-r`**, quindi vince l'altro: l'`ExecStart` in
+vigore resta `--headless --no-x11`, e la sessione nasce **senza** monitor virtuale.
+
+⭐ **Il banco non ha mentito**, ed è la parte che salva la storia: il controllo *«scritto non è in
+vigore»* (E1) ha **rifiutato di misurare**. ⛔ Senza quel controllo si sarebbe misurata una sessione
+*senza* monitor credendola *con*, e **il giro rosso sarebbe uscito verde**.
+
+⚠ **Non è un difetto per l'utente** — nessuno ha quel file su una macchina vera — **ma la miccia è
+nel prodotto**, non solo nei banchi: il nome che `sessione.c` sceglie perde contro un nome
+alfabeticamente successivo, e chiunque scriva `zz-z…` domani ci ricasca.
+
+⛔ **La regola**: un drop-in che deve **vincere** non si chiama `zz-<nome>` sperando; o si sceglie il
+nome per l'ordine (`zzz-`), o si **verifica dopo** che l'`ExecStart` in vigore sia il proprio. ⭐ E il
+verificare è la sola strada che non scade: la prossima volta il vicino si chiamerà `zzzz-`.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

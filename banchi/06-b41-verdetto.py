@@ -68,6 +68,22 @@ def ritmo(d):
 
 
 def raccogli(lavoro, prefisso, giri):
+    # ⛔⛔ E SE NON RACCOGLIE NIENTE, SI FERMA — 22 agosto 2026.
+    #
+    #    Il 21 agosto il coordinatore ha rinominato i quattro file di questo
+    #    banco da `06-b39-*` a `06-b41-*` (quel prefisso era gia' di un altro
+    #    anello) con un `sed` che ha cambiato CHI LEGGE e non CHI SCRIVE:
+    #    `contesa.sh` scriveva `06-b39-$pref-rN.json` e questa funzione
+    #    cercava `06-b41-contesa-rN`.
+    #
+    # ⚠ Il sintomo non sarebbe stato un errore: sarebbe stato IL RIFIUTO DEL
+    #   VERDETTO — cioe' esattamente l'esito di cui questo banco va fiero —
+    #   ma prodotto dal rifiuto di un INSIEME VUOTO, indistinguibile da un
+    #   rifiuto ragionato.  ⇒ «Non ho misurato» e «ho misurato e non si
+    #   muove» avevano la stessa faccia.
+    #
+    # ⭐ E' la forma peggiore di `LEZIONI.md` §1.20: il numero non e' staccato
+    #    dal giudizio, e' staccato dal MONDO.
     rotti = tot = 0
     ritmi = []
     mancanti = []
@@ -89,6 +105,13 @@ def raccogli(lavoro, prefisso, giri):
                      f"fuori misura {len(d.get('fotogrammi_fuori_misura', []))} · "
                      f"ritmo {('%.1f ms' % m) if m else '⛔ pochi fotogrammi'} "
                      f"su {n} intervalli")
+    if tot == 0:
+        print("⛔⛔ NESSUN GIRO RACCOLTO per «%s» in %s (mancanti: %s)"
+              % (prefisso, lavoro, mancanti))
+        print("    ⇒ Questo NON e' «la contesa non muove niente»: e' «non ho")
+        print("      misurato».  Le due cose non si confondono.")
+        sys.exit(4)
+
     return {"rotti": rotti, "tot": tot, "ritmi": ritmi,
             "mancanti": mancanti, "righe": righe}
 
@@ -199,9 +222,9 @@ def controllo():
             json.dump(_finta(tela, 40.0),
                       open(os.path.join(d, f"06-b41-contesa-r{r}.json"), "w"))
             json.dump(_finta(TELA_ATTESA, 16.7),
-                      open(os.path.join(d, f"06-b39-riposo-r{r}.json"), "w"))
+                      open(os.path.join(d, f"06-b41-riposo-r{r}.json"), "w"))
         c = raccogli(d, "06-b41-contesa", 6)
-        s = raccogli(d, "06-b39-riposo", 6)
+        s = raccogli(d, "06-b41-riposo", 6)
         prova("A · rotti sotto contesa", 3, lambda: c["rotti"])
         prova("A · rotti a riposo", 0, lambda: s["rotti"])
         prova("A · ritmo sotto contesa (ms)", 40.0,
@@ -216,9 +239,9 @@ def controllo():
             json.dump(_finta(TELA_ATTESA, 16.7),
                       open(os.path.join(d, f"06-b41-contesa-r{r}.json"), "w"))
             json.dump(_finta(TELA_ATTESA, 16.7),
-                      open(os.path.join(d, f"06-b39-riposo-r{r}.json"), "w"))
+                      open(os.path.join(d, f"06-b41-riposo-r{r}.json"), "w"))
         c = raccogli(d, "06-b41-contesa", 6)
-        s = raccogli(d, "06-b39-riposo", 6)
+        s = raccogli(d, "06-b41-riposo", 6)
         prova("B · rotti (tutto verde in apparenza)", 0, lambda: c["rotti"])
         prova("B · ⭐ il verdetto viene RIFIUTATO (4)", 4, lambda: confronta(c, s))
 
@@ -242,7 +265,7 @@ def controllo():
 
 
 def main():
-    p = argparse.ArgumentParser(description="06-b39 — il verdetto sotto contesa")
+    p = argparse.ArgumentParser(description="06-b41 — il verdetto sotto contesa")
     p.add_argument("lavoro", nargs="?", help="la cartella con i .json")
     p.add_argument("--giri", type=int, default=18)
     p.add_argument("--dettaglio", action="store_true", default=True)
@@ -256,7 +279,7 @@ def main():
         print(f"⛔ «{a.lavoro}» non e' una cartella")
         return 3
     c = raccogli(a.lavoro, "06-b41-contesa", a.giri)
-    s = raccogli(a.lavoro, "06-b39-riposo", a.giri)
+    s = raccogli(a.lavoro, "06-b41-riposo", a.giri)
     stampa("SOTTO CONTESA GPU (5 codificatori sullo stesso iGPU)", c, a.dettaglio)
     stampa("A RIPOSO (stessa ora, stesso albero)", s, a.dettaglio)
     return confronta(c, s)

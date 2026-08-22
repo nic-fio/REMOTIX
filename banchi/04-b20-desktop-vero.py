@@ -88,6 +88,64 @@ Le uscite sono distinte, e «non ho potuto guardare» non si travestira' mai da
       positivo**: lo stesso banco, lo stesso minuto, sulla sessione curata
       riceve fotogrammi e li giudica.
 
+===========================================================================
+⛔⛔ **B NON FUNZIONA IN PANORAMICA** — dichiarato il 22 agosto 2026, MISURATO,
+     e la soglia NON e' stata toccata
+===========================================================================
+
+`[M]` 22 agosto 2026, giro intero di `04-b20-lancia.sh` sulla porta 7711,
+utente `provai6`, prodotto CURATO, scena `banco-A1-scena` accesa:
+
+    rosso-prima (sessione CON --virtual-monitor)  ⇒ **VUOTO**   (uscita 1) ⭐ giusto
+    verde-dopo  (sessione fatta nascere da `nasci`) ⇒ **MEZZO** (uscita 3)
+        B  bordo:    salto **3,56** (soglia 4,0) alla riga 29   ⇒ False
+        T  orologio: **503** fronti (soglia 40)                 ⇒ True
+        D  dock:     centro 0,0191 contro 0,0 e 0,0             ⇒ True
+
+⛔ E l'immagine giudicata **ha il desktop vero**: barra in alto con «Aug 22
+   05:58», dock in basso con quattro icone, e in mezzo la finestra
+   `banco-A1-scena` che scrive l'ora.  ⇒ Il prodotto ha fatto il suo lavoro; il
+   **giudice** non se n'e' accorto per meta'.
+
+⛔ IL MOTIVO, misurato riga per riga sull'immagine (media di luminanza per riga,
+   un pixel ogni quattro):
+
+       riga  0  Y=33,10      ← il fondo SOPRA la barra
+       riga 15  Y=51,38      ← il testo della barra (l'ora, la lente)
+       riga 21  Y=44,17   |dY| 4,68   ← il massimo di tutta la finestra 20-48
+       riga 30  Y=35,08
+       riga 48  Y=32,89      ← il fondo SOTTO la barra
+
+   ⇒ Sopra la barra 33,10 e sotto 32,89: **la barra non ha un fondo suo**.  In
+     panoramica GNOME la disegna trasparente sopra lo stesso grigio scuro, e il
+     «bordo netto» che B cerca **non esiste in quell'immagine**.  Quel che B
+     misura li' non e' un bordo che vale poco: e' rumore fra 3 e 5, contro gli
+     **11,8** della calibrazione e gli **0,07** dello sfondo.
+
+⛔⛔ E LA SOGLIA NON SI E' SPOSTATA, che sarebbe stata la cosa facile e
+    sbagliata: portarla a 3 avrebbe fatto passare `verde-dopo` **e insieme
+    qualunque immagine con 3,5 di rumore** — cioe' avrebbe comprato un verde
+    vendendo la capacita' di dire di no.  E' la regola scritta sopra le soglie,
+    venti righe piu' in giu': «una soglia che si puo' spostare dopo aver visto
+    il risultato non giudica piu' niente».
+
+⚠ E PERCHE' LA CALIBRAZIONE DEL 14 AGOSTO NON L'AVEVA VISTO: quell'immagine
+  (`fasi/rapporti/F3-verbali/desktop-vero-14ago.png`) e' un desktop **fuori**
+  dalla panoramica, dove la barra ha il suo fondo nero.  ⛔ Ma dopo la cura la
+  sessione nasce **NERA** — zero monitor — e il monitor compare solo quando il
+  client si attacca: in quell'istante la Shell e' in panoramica, e il **primo
+  fotogramma chiave**, che e' proprio l'oggetto di questo banco, la ritrae
+  sempre cosi'.  ⇒ Non e' un caso raro: e' il caso NORMALE del giro verde.
+
+⏳ QUEL CHE RESTA, dichiarato invece che dimenticato: o la scena esce dalla
+   panoramica prima della misura (e allora la calibrazione di B torna valida),
+   oppure serve un indicatore geometrico che regga anche in panoramica — e va
+   **calibrato su immagini nuove**, non sull'immagine che deve giudicare.
+   ⛔ Fino ad allora `verde-dopo` resta **MEZZO**, che e' la risposta onesta:
+   T dice «c'e' scritto qualcosa», B non sa dire niente, e il banco NON decide.
+
+===========================================================================
+
 ⭐ E il controllo positivo dello STRUMENTO sta in `--certifica`: due immagini
    fabbricate qui, senza il prodotto e senza GNOME — una con la barra, il testo
    e le icone, una col solo sfondo — che il giudice deve chiamare SHELL e VUOTO.
