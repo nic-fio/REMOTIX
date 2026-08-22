@@ -79,6 +79,30 @@ mezzo.  ⚠ Un confronto «a modo mio» dichiarerebbe morte delle ancore vive.
   ⚠ Se la sua tabella cambia forma, l'estrattore **fallisce rumorosamente**
     (uscita 2) invece di dichiarare zero ancore: zero ancore trovate e' il
     modo in cui un attrezzo come questo mente.
+
+===========================================================================
+⛔ CHE COSA NON E' QUI DENTRO, E PERCHE' — il denominatore si dichiara
+===========================================================================
+
+Ci sono attrezzi che innestano guasti **senza ancore di testo**, e non hanno
+niente che possa scadere in silenzio.  Sono fuori apposta, non per svista:
+
+  · `04-b25-guasti.c` — tre implementazioni sbagliate INTERE, compilate al
+    posto del modulo.  Niente da cercare in un sorgente;
+  · `02-giudizio-guasti.py` — degrada i PIXEL di una scena (quantizza,
+    sfoca, sposta), non il codice;
+  · `02-pagina-certifica.sh`, `02-pagina-prodotto-certifica.sh`,
+    `02-pagina-tela-prodotto-certifica.sh`, `02-cattura-certifica.sh` — il
+    guasto viaggia in un parametro (`GUASTO=…`, `&guasta=…`) e vive nel
+    banco, non in un'ancora sul prodotto;
+  · `01-b11-guasto-innesta.py`, `01-b3-rcp-innesta.py`,
+    `01-b2-ngtcp2-wt-innesta.py`, `attrezzi-allinea-innesto.sh` — innestano
+    in `banchi/b2/ngtcp2/examples/`, l'albero di fase 1, che vive su
+    `/media/REMOTIX` e su questa macchina **non c'e'**.  ⚠ Sarebbero tutte
+    CIECHE: il catalogo `01-b12-guasti.py` gia' porta otto ancore su quello
+    stesso albero, e dice la stessa cosa senza raddoppiare il rumore.
+    ⇒ Il giorno che si lanciasse questo attrezzo **sulla macchina di
+      prova**, quei quattro vanno aggiunti.
 """
 import argparse
 import ast
@@ -369,8 +393,12 @@ def _e_pitone_rcp(banco, rel, marca):
     """04-b31 e 06-b36: un documento-qui che definisce
        GUASTI = [(nome, spiega, cerca, sost, rossi)], `cerca` stringa o lista.
     """
-    corpo = _documento_qui(_sorgente(rel), marca)[0]
-    g = _letterale(corpo, "GUASTI")
+    corpi = _documento_qui(_sorgente(rel), marca)
+    # ⛔ Se un giorno ne nascesse un secondo, prenderne solo il primo vorrebbe
+    #    dire perdere delle ancore **in silenzio**: ci si ferma.
+    if len(corpi) != 1:
+        raise Scaduto(f"{len(corpi)} documenti-qui «{marca}», ne aspettavo 1")
+    g = _letterale(corpi[0], "GUASTI")
     fuori = []
     for voce in g:
         nome, _spiega, cerca, _sost, rossi = voce
@@ -443,6 +471,25 @@ def e_b1(rel):
                             cerca, caso=f"casi attesi rossi {casi.strip()}",
                             tipo="regex-sed"))
     return fuori
+
+
+def e_b24(rel):
+    """04-b24-lancia.sh — due `sed -i` su una COPIA di `input.c`.
+
+    ⚠ La copia vive su `/media/REMOTIX/src/04-b24-src`, che qui non c'e': si
+      guarda `src/input.c`, che e' il file da cui quella copia nasce.  ⛔ Se
+      un giorno la copia smettesse di venire da li', questa nota e' il posto
+      dove accorgersene.
+    """
+    s = _sorgente(rel)
+    righe = re.findall(r"^\t(\w+)\)\n\t\tsed -i 's\|(.+?)\|(.*?)\|'", s,
+                       re.MULTILINE)
+    if not righe:
+        raise Scaduto("nessun ramo `nome)` con un `sed -i 's|…|…|'`")
+    return [Ancora("04-b24", nome, "src/input.c", cerca,
+                   caso=f"il giro GUASTO={nome} (rotella e rilascio)",
+                   tipo="regex-sed")
+            for nome, cerca, _metti in righe]
 
 
 def e_codifica(rel):
@@ -519,7 +566,10 @@ def e_b38(rel):
 
 def e_b40(rel):
     """06-b40-certifica.sh — un documento-qui con `a`, `b`, `c` sul cliente."""
-    corpo = _documento_qui(_sorgente(rel), "PYTHON")[0]
+    corpi = _documento_qui(_sorgente(rel), "PYTHON")
+    if len(corpi) != 1:
+        raise Scaduto(f"{len(corpi)} documenti-qui «PYTHON», ne aspettavo 1")
+    corpo = corpi[0]
     fuori = []
     for nome in ("a", "b", "c"):
         fuori.append(Ancora("06-b40", f"ancora-{nome.upper()}",
@@ -650,6 +700,7 @@ INNESTATORI = [
     ("banchi/06-b41-guasto.py", e_b41),
     ("banchi/05-b1-certifica.sh", e_b1),
     ("banchi/04-b23-guasti.py", e_b23),
+    ("banchi/04-b24-lancia.sh", e_b24),
     ("banchi/04-b31-certifica.sh", e_b31),
     ("banchi/03-b18-innesta.py", e_b18),
     ("banchi/02-codifica-guasti.py", e_codifica),
@@ -789,6 +840,17 @@ def main():
     print(f"\n{len(tutte)} ancore  ·  {conto['VIVA']} vive  ·  "
           f"{conto['MORTA']} morte  ·  {conto['AMBIGUA']} ambigue  ·  "
           f"{conto['CIECA']} cieche (file non su questa macchina)")
+    # ⚠ Due degli attrezzi qui dentro non innestano GUASTI: `06-b34-cucitura`
+    #   rimette una CURA nei file di altri, `01-p5-ff-strumenta` strumenta una
+    #   copia della pagina.  Le loro ancore scadono nello stesso modo, ma quel
+    #   che perdono quando scadono non e' un controllo positivo — si contano a
+    #   parte perche' non si confondano col numero che conta.
+    NON_GUASTI = ("06-b34-cucitura", "01-p5-ff-strumenta")
+    a_parte = [x for x in tutte if x.banco in NON_GUASTI]
+    if a_parte:
+        rotte = sum(1 for x in a_parte if x.esito in ("MORTA", "AMBIGUA"))
+        print(f"  ⚠ di cui {len(a_parte)} NON sono guasti (cucitura e "
+              f"strumentazione): {rotte} rotte")
 
     for rel, perche in rotti:
         print(f"  ⛔ {rel}: {perche}")

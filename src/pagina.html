@@ -5423,6 +5423,10 @@ function audio_ferma() {
   if (!a) return;
   AUDIO = null;
   if (a.dire) { clearInterval(a.dire); a.dire = null; }
+  /* ⛔ E l'ascoltatore del risveglio se ne va con la sessione: sta su
+     `window`, cioe' sopravvivrebbe al congedo e al riattacco, e al decimo giro
+     sarebbero dieci. */
+  if (a.smetti_risveglio) { try { a.smetti_risveglio(); } catch (e) {} }
   for (const s of a.in_volo) { try { s.stop(); } catch (e) {} }
   a.in_volo.length = 0;
   if (a.dec) { try { a.dec.close(); } catch (e) {} a.dec = null; }
@@ -5459,7 +5463,7 @@ function audio_conti() {
      *    ferma a 270» per salute quando poteva essere «si riarma a ogni
      *    blocco», che e' la stessa misura e il difetto peggiore. */
     riarmi: a.riarmi || 0, tirate: a.tirate || 0,
-    usciti: a.usciti, tagliati: a.tagliati, sospesi: a.sospesi, salti_suono: a.salti_suono,
+    usciti: a.usciti, tagliati: a.tagliati, sospesi: a.sospesi, salti_suono: a.salti_suono, risvegli: a.risvegli,
     uscita_ms: a.uscita_ms() === null ? null : Math.round(a.uscita_ms()),
     aoff_ms: a.aoff_ms(),
     codec: a.codec, in_coda_ms: Math.round(a.coda_ms()),
@@ -5524,6 +5528,8 @@ function avvia_audio(wt) {
     usciti: 0, tagliati: 0,
     /* Blocchi buttati perche' il contesto aveva l'orologio fermo. */
     sospesi: 0,
+    /* Quante volte un gesto dell'utente ha provato a svegliare il contesto. */
+    risvegli: 0, risveglio_messo: false,
     /* I salti visti sull'`istante` che ESCE dal decodificatore.  ⛔ Vanno
        confrontati con `mancati`, che li conta sul filo: se il filo perde e qui
        non si vede niente, il motore ricostruisce il timestamp e l'ancora non
@@ -5585,8 +5591,63 @@ function avvia_audio(wt) {
       a.ctx.resume().catch(() => {});
       nota("⚠ il contesto audio nasce sospeso (nessun gesto dell'utente "
          + "ancora): il suono parte al primo clic sulla pagina");
+      /* ⛔⛔⛔ E QUELLA FRASE ERA UNA PROMESSA VUOTA — trovata da A7 il 21
+       *       agosto 2026, e sotto non c'era una riga di codice.
+       *
+       *   «Il suono parte al primo clic» diceva all'utente una cosa che
+       *   **nessuno faceva**: c'era un solo `resume()`, qui, alla nascita del
+       *   contesto, e nessun gestore che ci riprovasse quando il gesto
+       *   arrivava davvero.  ⚠ `[M]` A7, in headless: il contesto e' rimasto
+       *   `suspended` per 90 s **anche dopo un clic vero**.
+       *
+       *   ⛔⛔ E DAL 21 AGOSTO IL PREZZO E' PIU' ALTO, per colpa mia: da quando
+       *   `suona()` butta i blocchi che arrivano a contesto fermo — e li butta
+       *   per una buona ragione, con l'orologio fermo ogni conto perde senso —
+       *   un contesto che non si sveglia non e' piu' «audio in ritardo»: e'
+       *   **una sessione muta per sempre**.  ⇒ La promessa vuota era
+       *   sopportabile prima e non lo e' piu' adesso.
+       *
+       * ⭐ Il gestore e' `passive` e in cattura: **non intercetta niente**.  Un
+       *   ascoltatore passivo non puo' chiamare `preventDefault()`, quindi il
+       *   clic arriva al desktop remoto esattamente come prima; la cattura
+       *   serve solo a vederlo anche se qualcuno piu' sotto lo ferma.  ⛔ E si
+       *   toglie da solo appena il contesto parte: un ascoltatore su `window`
+       *   che sopravvive alla sua ragione e' la perdita del rilievo 2 in
+       *   un'altra forma. */
+      risveglia_al_gesto();
     }
     return a.ctx;
+  }
+
+  /* ⭐ Il primo gesto dell'utente, qualunque sia, riprova a svegliare l'audio.
+   *
+   * ⚠ Quattro eventi e non uno: `pointerdown` non arriva su tutti i motori per
+   *   il tocco, `keydown` e' l'unico gesto di chi lavora da tastiera, e
+   *   `touchstart` serve al telefono.  ⛔ Uno solo avrebbe funzionato «quasi
+   *   sempre», che qui vuol dire «una sessione muta ogni tanto, senza motivo
+   *   apparente». */
+  function risveglia_al_gesto() {
+    if (a.risveglio_messo) return;
+    a.risveglio_messo = true;
+    const eventi = ["pointerdown", "mousedown", "keydown", "touchstart"];
+    const smetti = () => {
+      for (const e of eventi) window.removeEventListener(e, prova, true);
+    };
+    const prova = () => {
+      if (!a.ctx) { smetti(); return; }
+      if (a.ctx.state === "running") { smetti(); return; }
+      a.risvegli++;
+      a.ctx.resume().then(() => {
+        if (a.ctx && a.ctx.state === "running") {
+          nota("⭐ il contesto audio si e' svegliato al gesto numero "
+             + a.risvegli + ": da qui in poi si sente");
+          smetti();
+        }
+      }).catch(() => {});
+    };
+    for (const e of eventi)
+      window.addEventListener(e, prova, { capture: true, passive: true });
+    a.smetti_risveglio = smetti;
   }
 
   /* ⛔ `ist_us` NON e' facoltativo: e' l'`istante` di §6.3 del primo campione
@@ -5621,6 +5682,14 @@ function avvia_audio(wt) {
      *   a un orologio che non e' quello di adesso. */
     if (ctx.state !== "running") {
       a.sospesi++;
+      /* ⛔ E CI SI RIPROVA DA SOLI, ogni 5 s di blocchi buttati: il gesto
+         dell'utente e' la strada normale, ⚠ ma una sessione che guarda un
+         video senza toccare niente non ne produce nessuno, e il motore puo'
+         concedere il risveglio piu' tardi per conto suo — `[M]` in headless,
+         con l'avvio automatico permesso, e' passato a `running` da solo dopo
+         circa due secondi.  ⇒ Chiederlo costa niente e toglie l'unico modo in
+         cui questa strada resta muta per sempre. */
+      if (a.sospesi % 250 === 1) { try { ctx.resume().catch(() => {}); } catch (e) {} }
       a.base = null;
       a.primo_suono = null;
       if (a.sospesi === 1 || a.sospesi % 500 === 0)
@@ -5662,7 +5731,8 @@ function avvia_audio(wt) {
     let quando;
     if (ist_us > 0) {
       const t = ist_us / 1e6;
-      if (a.base === null) a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
+      if (a.base === null) { a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
+                             a.primo_suono = null; }
       quando = a.base + t;
       /* ⛔ QUESTO E' IL BUCO, e adesso si conta.  Il blocco e' arrivato
          talmente tardi che il suo posto nel tempo e' gia' passato: non si puo'
@@ -5672,6 +5742,36 @@ function avvia_audio(wt) {
         a.riarmi = (a.riarmi || 0) + 1;
         a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
         quando = a.base + t;
+        /* ⛔⛔⛔ E QUI IL RITARDO TORNAVA DA SOLO — `[M]` 22 agosto 2026, giro
+         *       di cinque minuti sul ferro: la coda saltava da **266 a 519 ms**
+         *       in una finestra sola, con `BUCHI 1` e `mancati 4`, e li'
+         *       restava per il resto della sessione.
+         *
+         *   Il meccanismo, e non e' la deriva fra gli orologi: quando il
+         *   thread principale si ferma per un momento, i datagram si
+         *   accumulano nel lettore e poi arrivano **tutti insieme**.  Il primo
+         *   del mucchio e' vecchio, il suo posto e' passato ⇒ riarmo, e
+         *   l'ancora si aggancia **a lui**.  ⛔ Ma dietro di lui ce ne sono
+         *   altri dodici, e ognuno ha il suo posto 20 ms piu' in la': il
+         *   mucchio intero finisce nel futuro, e il cuscino si gonfia di
+         *   quanto era lungo il mucchio.  ⇒ 250 + 13x20 = 510.
+         *
+         *   ⚠ E' la raffica dell'attacco, rifatta in mezzo alla sessione —
+         *   dove la tirata era CHIUSA, perche' `a.primo_suono` si scriveva una
+         *   volta sola nella vita della sessione.
+         *
+         * ⭐ La cura e' una riga, ed e' la stessa medicina alla dose giusta:
+         *   la finestra della tirata si riapre **a ogni riancoraggio**, non
+         *   una volta sola.  Dopo un riarmo la coda si e' appena svuotata:
+         *   quel che e' in scaletta e' tutto nel futuro e non ha ancora
+         *   suonato niente ⇒ tirare indietro l'ancora non taglia nessun suono.
+         *   E la finestra si richiude da se' dopo un cuscino.
+         *
+         * ⛔ E NON E' IL DIFETTO DEL 21 AGOSTO RIFATTO: quello aggiornava
+         *   `primo_suono` a OGNI blocco, e cosi' la finestra non si chiudeva
+         *   mai e ogni blocco annullava il precedente.  Qui si aggiorna solo
+         *   dove l'ancora si sposta — che nelle sessioni sane e' zero volte. */
+        a.primo_suono = null;
       }
       /* ⛔⭐ E QUI C'E' LA RAFFICA DELL'ATTACCO, che l'ancora DA SOLA non cura
        *     — `[M]` `banchi/07-b61-ancora.js`, 21 agosto 2026: con la sola
@@ -5772,8 +5872,10 @@ function avvia_audio(wt) {
          non camminano alla stessa velocita' — e la cura e' spostare l'ANCORA,
          non l'orologio.  ⚠ Spostare `a.prossimo` e basta non servirebbe a
          niente: il blocco dopo lo ricalcolerebbe dall'`istante`. */
-      if (ist_us > 0) a.base = ora + AUDIO_CUSCINO_MS / 1000 - ist_us / 1e6;
-      else a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
+      if (ist_us > 0) {
+        a.base = ora + AUDIO_CUSCINO_MS / 1000 - ist_us / 1e6;
+        a.primo_suono = null;   /* stessa ragione del riarmo, qui sopra */
+      } else a.prossimo = ora + AUDIO_CUSCINO_MS / 1000;
       return;
     }
     s.start(quando);
@@ -5926,7 +6028,7 @@ function avvia_audio(wt) {
        + " mancati " + c.mancati + " volte " + c.mancati_volte
        /* ⛔ `usciti` accanto a `suonati`, e la distanza fra i due e' la sola
           cosa che distingue una sessione che suona da una muta. */
-       + " usciti " + c.usciti + " tagliati " + c.tagliati + " sospesi " + c.sospesi + " salti " + c.salti_suono
+       + " usciti " + c.usciti + " tagliati " + c.tagliati + " sospesi " + c.sospesi + " salti " + c.salti_suono + " risv " + c.risvegli
        + " coda " + c.in_coda_ms + "ms"
        /* ⭐ La meta' audio del metro della distanza (§9.7-bis), e l'unico
           termine del ritardo che nessuno aveva mai guardato: `usc` e' quanto

@@ -63,7 +63,31 @@ function innesta_successione(src) {
   const j = src.indexOf(fine, i);
   if (j < 0) throw new Error("⛔ non trovo la fine del ramo dell'ancora");
   const vecchio = "    let quando;\n    if (false) {\n";
-  return src.slice(0, i) + vecchio + src.slice(j);
+  let fuori = src.slice(0, i) + vecchio + src.slice(j);
+  /* ⛔⛔ E NON BASTA SPEGNERE L'ANCORA — 21 agosto 2026, secondo giro.
+   *
+   *     Il codice curato tiene `a.prossimo` come **massimo** dei blocchi
+   *     programmati, e lo azzera quando l'ancora si sposta.  ⚠ Lasciando
+   *     quelle due righe dentro la copia «guasta», la copia non era piu' il
+   *     codice del 17 agosto: era un ibrido, e il banco confrontava la cura
+   *     con qualcosa che non e' mai esistito.  ⇒ Il discriminante della
+   *     raffica dava 270 invece di 590, cioe' **assolveva** lo scheduler
+   *     vecchio.
+   *
+   * ⭐ Un guasto innestato vale solo se e' il guasto VERO. */
+  /* ⚠ Il massimo c'e' solo se la pagina porta la finestra di riordino, che il
+     22 agosto 2026 e' uscita dal mandato (e' fase 9).  ⇒ Se non c'e' non e' un
+     guasto del banco: si innesta quel che c'e'.  ⛔ E si DICE, perche' un
+     innesto che salta in silenzio e' un guasto non innestato. */
+  const max = "    a.prossimo = Math.max(a.prossimo, quando + fotogrammi / AUDIO_FREQUENZA);";
+  if (fuori.includes(max))
+    fuori = fuori.replace(max, "    a.prossimo += fotogrammi / AUDIO_FREQUENZA;");
+  else
+    console.log("   ⚠ niente `Math.max` da togliere: la pagina non porta la "
+              + "finestra di riordino (fase 9)");
+  fuori = fuori.split("        a.prossimo = 0;\n").join("");
+  fuori = fuori.split("        a.prossimo = 0;          /* stessa ragione: il massimo si azzera */\n").join("");
+  return fuori;
 }
 
 /* ⛔⛔ IL GUASTO CHE HA FATTO TACERE UNA SESSIONE VERA, rimesso apposta.
@@ -76,6 +100,16 @@ function innesta_successione(src) {
  *
  * ⭐ Se il banco non diventa rosso qui, non sa vedere il silenzio — e un banco
  *    dell'audio che non sa vedere il silenzio non serve a niente. */
+/* ⛔ IL GUASTO DELLO STALLO: si richiude la finestra della tirata al riarmo,
+ *    cioe' si torna al codice del 21 agosto — `primo_suono` scritto una volta
+ *    sola nella vita della sessione.  ⭐ E' la differenza esatta fra «la coda
+ *    torna al cuscino» e «la coda resta gonfia per il resto della sessione». */
+function innesta_tirata_chiusa(src) {
+  const a = "        a.primo_suono = null;\n      }";
+  if (!src.includes(a)) throw new Error("⛔ non trovo la riapertura al riarmo");
+  return src.replace(a, "      }");
+}
+
 function innesta_silenzio(src) {
   let s = src;
   const a = "> AUDIO_CUSCINO_MS + AUDIO_ANCORA_MARGINE_MS";
@@ -90,6 +124,8 @@ function innesta_silenzio(src) {
 /* ── L'ambiente finto: un orologio che governo io ────────────────────────── */
 
 function ambiente(registro) {
+  registro.sospeso = registro.sospeso || false;
+  registro.svegliabile = false;
   let ora = 0;                       // secondi, l'orologio dell'AudioContext
   const partite = [];                // (quando, fotogrammi) di ogni sorgente
   const vive = [];                   // le sorgenti in scaletta non ancora finite
@@ -114,12 +150,29 @@ function ambiente(registro) {
       }
     }
   }
+  /* ⛔⛔ E IL CONTESTO FINTO DEVE SAPER NASCERE SOSPESO — 22 agosto 2026.
+   *
+   *     Nasceva sempre `running`, cioe' nello stato in cui un browser vero non
+   *     nasce **mai** prima di un gesto.  ⇒ Il banco non poteva vedere ne' che
+   *     `suona()` butta i blocchi a orologio fermo, ne' — peggio — che la
+   *     frase «il suono parte al primo clic» non aveva codice sotto.
+   *     ⚠ `[M]` A7: in headless il contesto e' rimasto sospeso 90 s **dopo un
+   *     clic vero**.
+   *
+   * ⭐ Qui `sospeso: true` lo fa nascere fermo, e `amb.gesto()` fa quel che fa
+   *    un dito sullo schermo: nient'altro.  Se il prodotto non ha un
+   *    ascoltatore, non succede niente — ed e' esattamente quel che il banco
+   *    deve poter vedere. */
+  const ascoltatori = [];
   class Contesto {
     constructor(o) {
-      this.sampleRate = o.sampleRate; this.state = "running";
+      this.sampleRate = o.sampleRate;
+      this.state = registro.sospeso ? "suspended" : "running";
       this.destination = {}; this._chiuso = false;
     }
-    get currentTime() { return ora; }
+    /* ⛔ Fermo vuol dire FERMO: e' il difetto che l'orologio finto nascondeva
+       quando avanzava comunque. */
+    get currentTime() { return this.state === "running" ? ora : 0; }
     createBuffer(ch, n) {
       const dati = [];
       for (let c = 0; c < ch; c++) dati.push(new Float32Array(n));
@@ -143,11 +196,22 @@ function ambiente(registro) {
       };
       return s;
     }
-    resume() { return Promise.resolve(); }
+    /* ⚠ `resume()` NON sveglia da solo: come nei motori veri, senza un gesto
+       la promessa puo' restare li'.  Si sveglia solo `amb.gesto()`. */
+    resume() {
+      if (registro.svegliabile) this.state = "running";
+      return Promise.resolve();
+    }
     close() { this._chiuso = true; }
   }
   const g = {
     AudioContext: Contesto, webkitAudioContext: Contesto,
+    /* Il `window` che il prodotto usa per l'ascoltatore del risveglio. */
+    addEventListener: (nome, f) => ascoltatori.push({ nome: nome, f: f }),
+    removeEventListener: (nome, f) => {
+      const i = ascoltatori.findIndex((x) => x.nome === nome && x.f === f);
+      if (i >= 0) ascoltatori.splice(i, 1);
+    },
     performance: { now: () => ora * 1000 },
     setInterval: () => 0, clearInterval: () => {},
     document: { body: { dataset: {} }, hasFocus: () => true },
@@ -156,8 +220,13 @@ function ambiente(registro) {
     TASTI_VISTI: 0, TASTI_ULTIMO: "", schermo: null,
     AudioDecoder: undefined, EncodedAudioChunk: undefined
   };
-  return { g, partite, ora: () => ora,
-           avanza: (s) => { ora += s; scadono(); } };
+  return { g, partite, ora: () => ora, ascoltatori: ascoltatori,
+           avanza: (s) => { ora += s; scadono(); },
+           /* ⭐ Un dito sullo schermo, e nient'altro. */
+           gesto: () => {
+             registro.svegliabile = true;
+             for (const x of ascoltatori.slice()) x.f();
+           } };
 }
 
 /* Un datagram audio di §6.3: tipo 0x0401, codec 2 (PCM), istante, campioni.
@@ -193,6 +262,7 @@ function filo() {
 
 async function gira(src, scena) {
   const registro = [];
+  registro.sospeso = !!scena.sospeso;
   const amb = ambiente(registro);
   const f = filo();
   // ⛔ Si esegue la regione RITAGLIATA dal prodotto, con l'ambiente finto
@@ -214,18 +284,68 @@ async function gira(src, scena) {
   const PASSO = 0.020;                        // 20 ms per blocco
   const N = scena.blocchi;
   const code = [];
-  let ist = scena.ist0 || 1000000;            // µs
-  for (let i = 0; i < N; i++) {
-    const perso = scena.perde(i);
-    if (!perso) {
-      f.spingi(datagram(ist, 960));
-      await new Promise((r) => setImmediate(r));   // lascia girare il lettore
+  const IST0 = scena.ist0 || 1000000;         // µs
+  const ist_di = (k) => IST0 + k * 20000;
+
+  /* ⭐ L'ORDINE DI CONSEGNA, che non e' per forza quello di produzione.
+   *    `scena.scambia(i)` vera vuol dire «il blocco i arriva DOPO l'i+1»:
+   *    e' quel che fa un jitter piu' corto del passo, ed e' la scena che il
+   *    banco non aveva.  ⚠ `scena.tardivo(i)` sposta il blocco molto piu' in
+   *    la', oltre il cuscino: quello si DEVE buttare. */
+  const ordine = [];
+  for (let i = 0; i < N; i++) ordine.push(i);
+  if (scena.scambia)
+    for (let i = 0; i + 1 < N; i++)
+      if (scena.scambia(i)) { const t = ordine[i]; ordine[i] = ordine[i + 1];
+                              ordine[i + 1] = t; i++; }
+  if (scena.tardivo)
+    for (let i = 0; i < N; i++)
+      if (scena.tardivo(i)) {
+        const j = ordine.indexOf(i);
+        if (j >= 0 && j + 40 < N) { ordine.splice(j, 1); ordine.splice(j + 40, 0, i); }
+      }
+
+  /* ⭐⭐ LO STALLO DEL THREAD PRINCIPALE, ed e' la scena che mancava.
+   *
+   *     Per `stallo_n` passi non si legge niente — il tempo pero' passa, come
+   *     quando il thread principale e' occupato — e poi il mucchio arriva
+   *     TUTTO INSIEME.  ⛔ E' quel che `[M]` e' successo sul ferro il 22
+   *     agosto: la coda e' saltata da 266 a 519 ms e non e' piu' scesa. */
+  let trattenuti = [];
+  for (let k = 0; k < ordine.length; k++) {
+    const i = ordine[k];
+    const in_stallo = scena.stallo_a !== undefined
+      && k >= scena.stallo_a && k < scena.stallo_a + (scena.stallo_n || 0);
+    if (in_stallo) {
+      if (!scena.perde(i)) trattenuti.push(ist_di(i));
+      amb.avanza(PASSO);
+      if (k % 5 === 4) code.push(Math.round(A.coda_ms()));
+      continue;
     }
-    ist += 20000;
+    if (trattenuti.length) {
+      /* il mucchio, tutto in un colpo e senza far passare il tempo */
+      for (const ist of trattenuti) {
+        f.spingi(datagram(ist, 960));
+        await new Promise((r) => setImmediate(r));
+      }
+      trattenuti = [];
+    }
+    if (!scena.perde(i)) {
+      f.spingi(datagram(ist_di(i), 960));
+      await new Promise((r) => setImmediate(r));   // lascia girare il lettore
+      // ⛔ E il doppione: la rete a volte consegna due volte, e la regola
+      //    vecchia lo scartava per un motivo sbagliato ma lo scartava.
+      if (scena.doppia && scena.doppia(i)) {
+        f.spingi(datagram(ist_di(i), 960));
+        await new Promise((r) => setImmediate(r));
+      }
+    }
+    // ⭐ IL GESTO DELL'UTENTE, se la scena ne prevede uno.
+    if (scena.gesto_a === k) amb.gesto();
     // ⭐ IL TEMPO PASSA: e' la cosa che il codice vecchio non guardava.  ⛔ In
     //    una raffica NON passa — i blocchi arrivano tutti insieme.
-    amb.avanza(scena.raffica && i < scena.raffica ? 0 : PASSO);
-    if (i % 5 === 4) code.push(Math.round(A.coda_ms()));
+    amb.avanza(scena.raffica && k < scena.raffica ? 0 : PASSO);
+    if (k % 5 === 4) code.push(Math.round(A.coda_ms()));
   }
   const c = M.audio_conti();
   const esito = {
@@ -234,6 +354,9 @@ async function gira(src, scena) {
     buchi: A.riarmi || 0, mancati: c.mancati, ricevuti: c.ricevuti,
     suonati: c.suonati, pieni: c.scartati_pieno, aoff: c.aoff_ms,
     usciti: c.usciti, tagliati: c.tagliati, tirate: c.tirate,
+    sospesi: c.sospesi, risvegli: c.risvegli,
+    ascoltatori: amb.ascoltatori.length,
+    vecchi: c.scartati_vecchi,
     registro
   };
   M.audio_ferma();
@@ -280,7 +403,46 @@ const SCENE = [
   { nome: "raffica all'attacco: 20 blocchi insieme (l'anello del figlio)",
     scena: { blocchi: 500, raffica: 20, perde: () => false },
     ancora: { coda: [245, 275], buchi: 0, mancati: 0 },
-    discrimina: { campo: "coda_fine", ancora: [245, 275], vecchio: [500, null] } }
+    discrimina: { campo: "coda_fine", ancora: [245, 275], vecchio: [500, null] } },
+
+  /* ⭐⭐ LO STALLO DI META' SESSIONE — `[M]` sul ferro, 22 agosto 2026.
+   *
+   *     ⛔ Senza la cura la coda si gonfia del mucchio e **non scende piu'**:
+   *     e' il ritardo che l'utente aveva confermato, che torna da solo.
+   *     ⭐ Con la cura la finestra della tirata si riapre al riarmo, il mucchio
+   *     vecchio si butta, e la coda torna al cuscino.
+   * ⚠ E l'atteso della coda ha una tolleranza larga in basso: dopo un riarmo
+   *   il primo campione puo' cadere prima che la scaletta si sia riempita. */
+  /* ⛔ TREDICI blocchi e non venti, e la differenza e' tutta la lezione: con
+   *    venti il mucchio porta la coda a 250+400 = 650, cioe' OLTRE il tetto dei
+   *    600, e il traboccamento la rimette a posto da se'.  ⚠ Con tredici sta a
+   *    510 — **sotto il tetto** — e li' non la salva nessuno.  ⇒ E' esattamente
+   *    la misura vista sul ferro (519), ed e' il motivo per cui il difetto era
+   *    invisibile: la rete di sicurezza esisteva e passava sopra. */
+  { nome: "stallo di 260 ms a meta' sessione, poi il mucchio tutto insieme",
+    scena: { blocchi: 900, perde: () => false, stallo_a: 400, stallo_n: 13 },
+    ancora: { coda: [245, 290], buchi: [1, null], mancati: 0 },
+    discrimina: { campo: "coda_fine", ancora: [245, 290], vecchio: [400, null] } },
+
+  /* ⭐⭐ IL CONTESTO CHE NASCE SOSPESO E SI SVEGLIA AL GESTO — la scena che
+   *     il banco non aveva, ed e' quella in cui il prodotto prometteva senza
+   *     mantenere.  ⛔ Prima del gesto: tutto buttato, zero usciti (ed e'
+   *     giusto).  ⭐ Dopo il gesto: si sente, e la coda si arma dal presente.
+   *     ⚠ E `ascoltatori 0` alla fine dice che il gestore si e' tolto da se'. */
+  { nome: "contesto sospeso, gesto dell'utente a 5 s: si sveglia",
+    scena: { blocchi: 800, perde: () => false, sospeso: true, gesto_a: 250 },
+    ancora: { coda: [245, 275], buchi: 0, mancati: 0 },
+    riordino: { sospesi: [240, 260], risvegli: [1, 3], ascoltatori: [0, 0] },
+    discrimina: null },
+
+  /* ⛔ E il rovescio, che e' il difetto vero: nessun gesto MAI.  ⚠ Qui non si
+   *    sente niente, ed e' inevitabile — ma deve essere DETTO dai contatori,
+   *    non scoperto dall'utente.  `sospesi` sale, `usciti` resta a zero. */
+  { nome: "contesto sospeso e nessun gesto: muto, e i conti lo dicono",
+    scena: { blocchi: 400, perde: () => false, sospeso: true },
+    ancora: { coda: [0, 0], buchi: 0, mancati: 0 },
+    riordino: { sospesi: [395, 400], risvegli: [0, 0] },
+    muto_atteso: true, discrimina: null }
 ];
 
 function dentro(v, [lo, hi]) {
@@ -301,9 +463,9 @@ function dentro(v, [lo, hi]) {
     console.log("── %s", s.nome);
     console.log("   ⭐ con l'ancora     coda %d→%d ms (fine %d) · BUCHI %d · "
               + "mancati %d · ricevuti %d · suonati %d · USCITI %d · "
-              + "tagliati %d · tirate %d",
+              + "tagliati %d · tirate %d · vecchi %d",
       a.coda_min, a.coda_max, a.coda_fine, a.buchi, a.mancati, a.ricevuti,
-      a.suonati, a.usciti, a.tagliati, a.tirate);
+      a.suonati, a.usciti, a.tagliati, a.tirate, a.vecchi);
     console.log("   ⛔ guasto innestato coda %d→%d ms (fine %d) · BUCHI %d · "
               + "mancati %d",
       v.coda_min, v.coda_max, v.coda_fine, v.buchi, v.mancati);
@@ -312,7 +474,11 @@ function dentro(v, [lo, hi]) {
     //     `start()`», ma quanti hanno SUONATO fino in fondo.  ⚠ Senza di lui
     //     questo banco ha dato 13 su 13 a un codice che faceva silenzio.
     tot += 2;
-    const suona_davvero = a.usciti >= 0.9 * a.suonati - 5;
+    /* ⚠ Una scena che DEVE essere muta si giudica al contrario: qui «zero
+       usciti» e' l'atteso, e trovarne sarebbe il difetto. */
+    const suona_davvero = s.muto_atteso
+      ? (a.usciti === 0 && a.suonati === 0)
+      : a.usciti >= 0.9 * a.suonati - 5;
     /* ⛔ E QUESTO ATTESO ERA SCRITTO SBAGLIATO — terzo di giornata, 21 agosto.
      *    Diceva «tagliati <= 2 sempre».  ⚠ Sulla scena della raffica ne taglia
      *    **20**, ed e' GIUSTO: sono i blocchi dell'anello del figlio, cioe'
@@ -320,7 +486,9 @@ function dentro(v, [lo, hi]) {
      *    Buttarli e' la cura; suonarli vorrebbe dire partire 400 ms indietro e
      *    restarci per tutta la sessione.  ⇒ L'atteso e' «quanti ne ha buttati
      *    la raffica, e non uno di piu'». */
-    const tagliati_max = (s.scena.raffica || 0) + 2;
+    /* ⚠ E il mucchio di uno stallo si butta come quello dell'attacco: sono la
+       stessa cosa, e buttarli e' la cura, non il difetto. */
+    const tagliati_max = (s.scena.raffica || 0) + (s.scena.stallo_n || 0) + 2;
     const non_taglia = a.tagliati <= tagliati_max;
     ok += suona_davvero + non_taglia;
     console.log("      %s HA SUONATO: usciti %d su %d messi in scaletta",
@@ -329,14 +497,29 @@ function dentro(v, [lo, hi]) {
               + "dell'attacco, buttata apposta)", non_taglia ? "⭐" : "⛔",
       a.tagliati, tagliati_max);
 
+    if (s.riordino) {
+      for (const campo of Object.keys(s.riordino)) {
+        tot += 1;
+        const bene = dentro(a[campo], s.riordino[campo]);
+        ok += bene;
+        console.log("      %s riordino «%s»: %s, atteso in [%s, %s]",
+          bene ? "⭐" : "⛔", campo, a[campo], s.riordino[campo][0],
+          s.riordino[campo][1]);
+      }
+    }
+
     tot += 3;
     const c1 = dentro(a.coda_fine, s.ancora.coda);
-    const c2 = a.buchi === s.ancora.buchi;
+    const c2 = Array.isArray(s.ancora.buchi)
+      ? dentro(a.buchi, s.ancora.buchi) : a.buchi === s.ancora.buchi;
     const c3 = a.mancati === s.ancora.mancati;
     ok += c1 + c2 + c3;
     console.log("      %s la coda finisce in [%s, %s]", c1 ? "⭐" : "⛔",
       s.ancora.coda[0], s.ancora.coda[1]);
-    console.log("      %s BUCHI attesi %d", c2 ? "⭐" : "⛔", s.ancora.buchi);
+    console.log("      %s BUCHI %d, attesi %s", c2 ? "⭐" : "⛔", a.buchi,
+      Array.isArray(s.ancora.buchi)
+        ? "in [" + s.ancora.buchi[0] + ", " + s.ancora.buchi[1] + "]"
+        : s.ancora.buchi);
     console.log("      %s mancati attesi %d", c3 ? "⭐" : "⛔", s.ancora.mancati);
 
     // ⛔ E IL CONTROLLO POSITIVO: la copia guasta DEVE comportarsi diversamente
@@ -344,21 +527,35 @@ function dentro(v, [lo, hi]) {
     //    il banco non sta provando niente.
     if (s.discrimina) {
       const d = s.discrimina;
+      /* ⛔ Il guasto giusto per la scena giusta: lo stallo si prova contro la
+         CURA TOLTA, non contro la scaletta per successione — provarlo con
+         quella direbbe di si' per la ragione sbagliata. */
+      const rotto_giusto = (s.scena.stallo_a !== undefined)
+        ? await gira(innesta_tirata_chiusa(src), s.scena) : v;
       tot += 2;
       const sana = dentro(a[d.campo], d.ancora);
-      const rotta = dentro(v[d.campo], d.vecchio);
+      const rotta = dentro(rotto_giusto[d.campo], d.vecchio);
       ok += sana + rotta;
       console.log("      %s discriminante «%s»: con l'ancora %s, atteso in "
                 + "[%s, %s]", sana ? "⭐" : "⛔", d.campo, a[d.campo],
         d.ancora[0], d.ancora[1]);
       console.log("      %s discriminante «%s»: col guasto %s, atteso in "
                 + "[%s, %s] ⇒ il banco VEDE il guasto", rotta ? "⭐" : "⛔",
-        d.campo, v[d.campo], d.vecchio[0], d.vecchio[1]);
+        d.campo, rotto_giusto[d.campo], d.vecchio[0], d.vecchio[1]);
     } else {
       console.log("      ⚠ nessun discriminante: qui le due strade devono "
                 + "coincidere, e coincidono");
     }
     // ⛔ E il guasto del SILENZIO: il banco deve vederlo su questa scena.
+    // ⚠ Tranne dove la scena e' gia' muta per costruzione — li' non c'e'
+    //   niente da far tacere, e pretenderlo sarebbe un controllo che non puo'
+    //   passare: un rosso del banco travestito da rosso del prodotto.
+    if (s.muto_atteso) {
+      console.log("      ⚠ guasto «silenzio»: non si prova qui, la scena e' "
+                + "gia' muta apposta");
+      console.log("");
+      continue;
+    }
     const muto = await gira(silenzioso, s.scena);
     tot += 1;
     const visto = muto.usciti < 0.5 * muto.suonati;

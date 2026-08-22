@@ -1244,6 +1244,78 @@ difetto non è.**
 ⏳ `[?]` **E resta una cosa non misurata**: la spirale è provata col **cliente di prova**, non contro
 un browser vero. Quella prova la fa il coordinatore sul prodotto riunito.
 
+## 8-quater · ⛔⛔ 22 agosto 2026 — **il ritardo tornava da solo**, e «il suono parte al primo clic» era una promessa vuota
+
+### ⛔⛔ Il difetto nuovo: la coda si gonfia a metà sessione, e resta gonfia
+
+`[M]` Giro di **cinque minuti sul ferro**, carico 2,25: la coda è saltata da **266 a 519 ms in una
+finestra sola** (`BUCHI 1`, `mancati 4`) e **lì è rimasta** per il resto della sessione.
+
+**Il meccanismo**, e non è la deriva: quando il thread principale si ferma un attimo, i datagram si
+accumulano nel lettore e **arrivano tutti insieme**. Il primo del mucchio è vecchio ⇒ riarmo, e
+l'ancora si aggancia **a lui**; ⛔ ma dietro ce ne sono altri dodici, ognuno col suo posto 20 ms più
+in là ⇒ **il mucchio finisce nel futuro e il cuscino si gonfia di quanto era lungo il mucchio**.
+`250 + 13×20 = 510`. ⚠ È **la raffica dell'attacco rifatta a metà sessione**, dove la tirata
+dell'ancora era già chiusa.
+
+⭐ **La cura è una riga**: la finestra della tirata si riapre a ogni **riancoraggio** — ⛔ non a ogni
+blocco, che era il difetto muto del 21 agosto (`tirate 4506 su 4508`, silenzio con tutti i contatori
+verdi). Nelle sessioni sane si riapre **zero volte**.
+
+| stessi 5 minuti, carico 2,25 | prima | dopo |
+|---|---|---|
+| coda | 266 → **519**, poi 585 | ⭐ **269-289, ferma** |
+| BUCHI | 1 | ⭐ **0** |
+| perdite | `mancati 4` → scatto e gonfiore | `mancati 7` → ⭐ **niente**, né scatto né gonfiore |
+
+### ⛔⛔ E il banco aveva dato **46 su 46** al codice che portava ancora il difetto
+
+La scena dello stallo era scritta con un mucchio di **20 blocchi**: `250 + 400 = 650 ms`, cioè
+**oltre il tetto dei 600**, e il **traboccamento rimetteva a posto da sé**. ⇒ Il banco assolveva. Con
+**13 blocchi** (510 ms, **sotto** il tetto) il guasto si vede.
+
+⭐⭐ **Ed è la ragione per cui il difetto era invisibile: la rete di sicurezza esisteva e ci passava
+sopra.** ⚠ Una scena scelta *oltre* il limite di guardia prova il limite di guardia, non il difetto —
+ed è una forma nuova, cugina di `LEZIONI.md` §1.20.
+
+### ⭐ «Il suono parte al primo clic sulla pagina» — era una promessa vuota
+
+*La pagina lo scriveva all'utente; nel file c'era **un solo `resume()`**, alla nascita del contesto.*
+
+`[M]` `banchi/07-b62-il-primo-clic.py`, **Firefox con schermo** (non headless), carico 1,44 — ⭐ e il
+controllo positivo **è la pagina di ieri**, non un guasto sintetico:
+
+| | pagina di prima | pagina curata |
+|---|---|---|
+| come nasce | `suspended` | `suspended` |
+| dopo 25 s senza toccare | `suspended`, **usciti 0** | `suspended`, **usciti 0** |
+| **dopo un clic vero** | ⛔ **`suspended`, usciti 0** | ⭐ **`running`, usciti 388**, coda 259 ms |
+
+⛔ **La risposta era la peggiore delle due**: non solo mancava il gestore, ma **non si svegliava da sé
+nemmeno su un browser con schermo**. ⇒ Curato con quattro eventi in `passive` + cattura (non
+intercettano niente: il clic arriva al desktop come prima), che si tolgono da soli al risveglio, più
+un `resume()` riprovato ogni 5 s di blocchi buttati.
+
+### ⭐ E la deriva fra gli orologi: **il numero era mio ed era sbagliato**
+
+⛔ I **0,7-1,4 ms/s** dichiarati in §8 erano **in gran parte il difetto qui sopra letto come deriva**.
+Tolto quello, su cinque minuti puliti: **~0,07 ms/s** (±0,05). ⇒ Dal cuscino al tetto dei 600
+ci vorrebbero **~80 minuti**, non quattro.
+
+⏳ **La forma della cura c'è, e la raccomandazione è di non scriverla adesso.** L'unica correzione
+*continua* è rendere l'ancora affine (`quando = base + istante/r`, ogni blocco a `playbackRate = r`):
+prezzo, uno scostamento d'intonazione **costante** ≤ 0,15 % = **2,6 cent**, sotto la soglia
+percettiva. ⛔ Le alternative sono peggiori, **e sono state scartate con un numero**: far scorrere
+l'ancora a passetti dà ~1,4 campioni di gradino per blocco = **un ronzio a 50 Hz**; inserire o
+togliere un blocco = **un tic**. ⚠ Ma a 0,07 ms/s **non vale il rischio dello stimatore**: resta
+aperta, e si rimisura su una sessione vera dell'utente, dove le due schede audio sono altre.
+
+### ⛔ E la finestra di riordino è USCITA — appartiene alla fase 9
+
+Era scritta e certificata (`vecchi 0 / riord 400` contro `vecchi 400` con la regola vecchia), ⛔ ma
+l'utente ha corretto lo scopo: *«i problemi di rete non rientrano in questa fase»*. ⇒ Tolta dal
+prodotto **invece di lasciarla dentro spenta**, e il lavoro è descritto in `PIANO.md` fase 9.
+
 ## 9 · Il giudizio dell'utente
 
 *La fase si chiude su una misura giudicata dall'utente, non su un documento completo.
