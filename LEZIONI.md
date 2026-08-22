@@ -944,6 +944,28 @@ alfabeticamente successivo, e chiunque scriva `zz-z…` domani ci ricasca.
 nome per l'ordine (`zzz-`), o si **verifica dopo** che l'`ExecStart` in vigore sia il proprio. ⭐ E il
 verificare è la sola strada che non scade: la prossima volta il vicino si chiamerà `zzzz-`.
 
+### 1.23 ⛔ **Una scena si spegne contando a zero, non uccidendo chi l'ha aperta**
+
+*22 agosto 2026, trovata **due volte nella stessa notte** da due agenti che non si parlavano —
+`06-b35` e `06-b42`. Non è la svista di uno: è un modo di sbagliare del deposito.*
+
+> `pkill -f <titolo>` non tocca il processo che **muove** la scena: nel suo `argv` il titolo **non
+> c'è** (sta nel terminale che l'ha aperto). ⇒ Sopravvive, la prossima accensione ne mette **una
+> seconda accanto**, e il banco misura una scena che nessuno ha dichiarato: **plausibile, invisibile,
+> e il doppio più veloce**.
+
+`[M]` **Due cicli** dopo un solo spegni/riaccendi. ⚠ Su un banco che misura millisecondi, una scena
+doppia **non è la scena dichiarata** — e non dà un errore: dà numeri migliori.
+
+⛔ **E la guardia che avrebbe dovuto vederlo chiedeva `> 0`**, cioè *«ce n'è almeno una»* — che
+**lascia passare il due**. ⇒ Le due regole giuste sono:
+
+- **spegnere**: si pretende **zero** superstiti, e si conta per verificarlo;
+- **accendere**: si pretende **esattamente uno**, non «almeno uno».
+
+⭐ La forma generale è quella di [[1.20]]: un conteggio che si guarda solo per dire *«c'è»* non è un
+conteggio, è un booleano travestito — e un booleano non sa distinguere **uno** da **due**.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

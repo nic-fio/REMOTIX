@@ -193,6 +193,32 @@ GUASTI = {
                   "finto che sa disobbedire",
         "regola": "adattate >= 9 and non_ora == 0",
     },
+    # ⛔⛔ E `non_spediti` NON E' «QUANTI FOTOGRAMMI NON SONO PARTITI» — misurato
+    #     il 22 agosto 2026, e chi tocca G5 deve leggere questo prima.
+    #
+    #     Il banco conta la riga «NON lo spedisco (§6.2)», e quella riga sta
+    #     dietro un fondo: `webtransport.c:2713-2727` la scrive solo quando
+    #     cambia la coppia (tela in vigore, misura del fotogramma catturato) —
+    #     `w->tela_detta_l`/`_a` si riarmano al CAMBIO, non a ogni fotogramma.
+    #     ⇒ Sotto G5 quella coppia non cambia MAI: la tela in vigore resta
+    #     1280x800 (tutti e nove i cambi vanno a NON_ORA) e i 28 byte dicono
+    #     sempre 1920x1080.  ⇒ **La riga esce UNA VOLTA per sessione.**
+    #
+    # `[M]` due giri della stessa scena, 22 agosto, allungando SOLO il tempo:
+    #     giro  durata   fotogrammi dal palco   «NON lo spedisco»
+    #     corto   ~9 s          159                    1
+    #     lungo   41,1 s        799                    1
+    #     ⇒ 799 fotogrammi tutti inammissibili, **un** annuncio.  Allungare il
+    #       giro moltiplica i fotogrammi (5x) e NON moltiplica l'evento.
+    #
+    # ⚠ Quindi `non_spediti > 0` puo' valere solo 1 o 0, e lo 0 non e' «il
+    #   guasto non c'e'»: e' «il palco non ha consegnato NIENTE in quel giro»
+    #   — `[M]` capitato 2 volte su 9 giri, ed e' l'intermittenza che il
+    #   certificatore dichiara come NON-MISURATO.
+    # ⛔ Il conto vero il PRODOTTO ce l'ha (`w->video_saltati`, e
+    #   `wt_video_conti()` lo saprebbe leggere) ma **nessuno chiama quella
+    #   funzione**: dal banco non e' raggiungibile.  ⏳ La scelta su che cosa
+    #   contare al posto suo NON e' stata presa qui.
     "G5": {
         "file": "figlio.c",
         "che_cosa": "la riconciliazione NON aggiorna `tela_l`/`tela_a`: i 28 "

@@ -92,12 +92,19 @@ cp -a "$SANO" "$GUASTO" || { ko "⛔ la copia non e' riuscita"; exit 2; }
 chmod -R a+rX "$GUASTO"
 ok "copiato, e leggibile dall'utente del banco"
 
+# ⚠ CODA e ATTESA_PRIMO si possono allungare dall'ambiente, e i valori di
+#   difetto sono quelli con cui i cinque casi sono stati certificati: si allunga
+#   per INDAGARE un caso (com'e' stato fatto per G5 il 22 agosto), non per far
+#   passare un giro che non passa.
+CODA=${CODA:-3}
+ATTESA_PRIMO=${ATTESA_PRIMO:-8}
+
 giro() {   # $1 = etichetta · $2 = albero da cui prendere il client (difetto: guasto)
 	local albero=${2:-$C_GUASTO}
 	bash /media/REMOTIX/enter.sh \
 		"python3 $albero/banchi/06-b35-tela.py --porta $PORTA \
 		 --utente $UTENTE --parola-file $C_LAV/parola-certifica --lavoro $C_LAV \
-		 --giro dieci --coda 3 --etichetta $1 \
+		 --giro dieci --coda $CODA --attesa-primo $ATTESA_PRIMO --etichetta $1 \
 		 --scena 'controllo positivo: gnome-terminal a 50 ms'" \
 		> "$LAV/certifica-$1.txt" 2>&1
 	echo $?

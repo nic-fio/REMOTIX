@@ -1206,6 +1206,34 @@ dicesse**: è la ragione per cui esiste la **quarta** colonna e la riconciliazio
 > è sbagliato — è **la scena a essere sotto-potenza**: una scena che produce *esattamente un* evento
 > non prova niente in modo ripetibile. ⛔ Riscrivere l'atteso sarebbe **adattare il metro al
 > risultato**, che è la strada che questa notte ha insegnato a non prendere.
+>
+> ### ⭐⭐ E allungando il giro è venuto fuori che **l'evento non si moltiplica**, e il perché vale più del guasto
+>
+> `[M]` Sei giri, dalla scena corta a una **cinque volte più lunga**: **799 fotogrammi, tutti
+> inammissibili, e un solo annuncio**. Cinque volte l'attività nel registro, **lo stesso identico 1**.
+>
+> ⭐ **E si sa perché, dal sorgente**: la riga sta dietro un fondo che si riarma **solo quando cambia
+> la coppia (tela in vigore, misura del fotogramma)** — e sotto quel guasto **non cambia mai**. Primo
+> fotogramma: la riga esce. Dal secondo al 799°: identici, fondo già armato, **silenzio**. ⇒ È **una
+> volta per sessione, per costruzione**.
+>
+> ⛔⛔ **Quindi il numero non è quel che il suo nome promette**: `non_spediti` non è *«quanti
+> fotogrammi non sono partiti»*, è *«quanti annunci distinti di disaccordo»*. Il nome dice 799, il
+> valore è **1** — la forma **E2**, e ⚠ **non l'aveva vista nessuno perché 1 è un numero che sembra
+> sano**.
+>
+> ⛔ **E il conto vero il prodotto ce l'ha e non lo dice**: `w->video_saltati` si incrementa a ogni
+> fotogramma, e `wt_video_conti()` saprebbe leggerlo — ⛔ ma **quella funzione non la chiama nessuno**
+> (verificato: zero chiamanti in tutto `src/`). ⇒ È `LEZIONI.md` §1.20 **dentro il prodotto**: un
+> contatore che nessuno confronta.
+>
+> 🔸 **Decisione: si fa uscire il conto vero** (assegnato a chi possiede `webtransport.c`). Le altre
+> due strade sono state scartate con la ragione: contare un'altra riga darebbe il numero giusto nel
+> giro buono ⛔ **e un falso rosso** nel giro in cui il palco non parte; lasciare com'è costa zero ⛔ e
+> lascia in giro **un nome che promette una cosa e ne dice un'altra**.
+>
+> ⇒ Finché non è fatto, il conto onesto è **G5 confermato 7 giri su 9, non misurato 2**, e il
+> denominatore va scritto **accanto** al «3 confermati», sempre.
 
 #### ⛔⛔ E la scena si raddoppiava in silenzio — **per la seconda volta stanotte, la stessa forma**
 
