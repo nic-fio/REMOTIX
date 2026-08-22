@@ -10,11 +10,22 @@
 #include <spa/utils/result.h>
 #include <drm_fourcc.h>
 #include <string.h>
+#include <time.h>
 
 #include "cursore.h"
 #include "registro.h"
 
 #define AREA "cattura"
+
+/* ⛔ Lo STESSO orologio di `figlio.c` (`ora_monotona_us`) e di `codificatore.c`
+ *    (`adesso_us`): i tratti della fase 8 si sottraggono fra file diversi, e due
+ *    orologi diversi darebbero differenze che non vogliono dire niente. */
+static uint64_t adesso_us(void)
+{
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return (uint64_t) t.tv_sec * 1000000u + (uint64_t) t.tv_nsec / 1000u;
+}
 
 /* Quanto si aspetta che il flusso arrivi a `paused`: e' il momento in cui la
  * negoziazione del formato e' avvenuta e si sa se il compositore ha accettato
@@ -34,6 +45,50 @@
 #define REGIONI_MAX 16
 
 #define FD_MAX 8
+
+/*
+ * ⭐⭐ OGNI QUANTO SI GUARDANO I PIXEL — la cura piu' grossa della fase 8 sul
+ *     tratto `cattura → primo byte`, e sta in una costante.
+ *
+ * ⛔ IL FATTO, `[M]` 22 agosto 2026, macchina di prova (i5-13500T), 2 450
+ *    fotogrammi a 1920x1080 con HEVC in hardware:
+ *
+ *      il tratto intero                       **21,61 ms**
+ *      di cui `misura_i_pixel()`              **5,34 ms — il 25 %**
+ *
+ *    e `[M]` su CPU pura (banco `08-c-scansione.c`) la stessa scansione costa
+ *    **5,36 ms** a 1920x1080 e **8,89** a 2560x1440: cresce coi pixel, quindi su
+ *    una tela grande sarebbe **peggio**.
+ *
+ * ⛔⛔ E A CHE COSA SERVIVA, contato riga per riga: nel prodotto quei tre valori
+ *      (`nero`, `uniforme`, il range) finiscono in **UNA** riga di registro,
+ *      scritta **UNA VOLTA**, al montaggio del palco (`figlio.c`, «fotogramma
+ *      catturato COME …, ⛔ NERO / non nero»), piu' le due righe qui sotto.
+ *      ⇒ Trenta-sessanta scansioni al secondo da 5,34 ms **per una riga sola**.
+ *
+ * ⚠ E LA DIAGNOSI NON SI PERDE, che era l'unica ragione per cui valeva la pena
+ *   pagarla: il PRIMO fotogramma si guarda sempre — ed e' quello della riga —
+ *   e poi si continua a guardare, ma a questa cadenza.  ⛔ Un desktop che
+ *   diventa nero a meta' sessione si vede ancora, al piu' mezzo secondo dopo.
+ *
+ * ⛔ E QUEL CHE **NON** SI E' FATTO, ed e' stato misurato prima di scartarlo:
+ *    guardare **un pixel ogni otto** costerebbe `[M]` **0,10 ms** invece di
+ *    5,36 — ancora meglio.  ⇒ Scartata lo stesso, e la ragione e' che
+ *    cambierebbe il SIGNIFICATO: un fotogramma nero tranne una regione saltata
+ *    verrebbe dichiarato **NERO**, e una riga di registro che accusa il nero
+ *    quando il nero non c'e' manda la caccia dalla parte sbagliata — che costa
+ *    piu' di 5 ms.  ⭐ Qui invece la risposta resta **esatta**: cambia solo
+ *    ogni quanto si da'.
+ */
+/* ⭐ Si puo' scavalcare da riga di compilazione (`-DMISURA_PIXEL_OGNI_MS=0`), e
+ *    serve a UNA cosa sola: ricostruire il **prima** con lo stesso sorgente del
+ *    dopo, per il confronto A/B.  ⛔ `0` vuol dire «su ogni fotogramma», cioe'
+ *    il comportamento fino al 22 agosto 2026.  ⚠ Non e' un interruttore di
+ *    prodotto e non ne diventa uno: il prodotto ha un valore solo, quello qui
+ *    sotto (`CODER.md` invariante I7). */
+#ifndef MISURA_PIXEL_OGNI_MS
+#define MISURA_PIXEL_OGNI_MS 500
+#endif
 
 /*
  * Quanti byte deve avere il metadato del cursore per portare una bitmap di
@@ -133,6 +188,13 @@ struct Cattura
 	 *    consumatore e' in ritardo, e prima del 15 agosto 2026 quei fotogrammi
 	 *    erano PERSI invece che sostituiti. */
 	uint64_t sovrascritti;
+
+	/* ⭐ La cadenza del giro sui pixel — vedi `MISURA_PIXEL_OGNI_MS`.  ⛔ Vivono
+	 *    sul thread di CHI CHIAMA (`cattura_prendi`), non su quello di tempo
+	 *    reale: non serve nessun lucchetto, e metterceli darebbe da pensare che
+	 *    ne serva uno. */
+	uint64_t misura_ultima_us;
+	guint64 misura_fatte, misura_saltate;
 
 	/* --- ⭐ IL CANALE DEL CURSORE ---------------------------------------- *
 	 *
@@ -978,6 +1040,10 @@ static void su_processo(void *dati)
 			cattura->sovrascritti++;
 
 		f->byte = info.pixel ? byte : 0;
+		f->us_allocazione = 0;
+		f->us_copia = 0;
+		f->us_nel_posto = 0;
+		f->us_misura = 0;
 		if (info.pixel)
 		{
 			/* ⛔ SI COPIA, NON SI TIENE IL PUNTATORE: al giro dopo il produttore
@@ -988,11 +1054,22 @@ static void su_processo(void *dati)
 			 *    tutta la sessione, tranne al cambio di tela. */
 			if (!f->pixel || cattura->posto_capienza < byte)
 			{
+				/* ⛔ La `g_malloc` si CRONOMETRA, e non e' pignoleria: quando il
+				 *    posto si svuota a ogni presa (vedi `cattura_prendi`) questa
+				 *    riga rialloca **a ogni fotogramma**, e una mappatura nuova
+				 *    da 10 MB si paga in guasti di pagina la prima volta che la
+				 *    si tocca — cioe' dentro la `memcpy` qui sotto. */
+				uint64_t ta = adesso_us();
 				g_free(f->pixel);
 				f->pixel = g_malloc(byte);
 				cattura->posto_capienza = byte;
+				f->us_allocazione = adesso_us() - ta;
 			}
-			memcpy(f->pixel, info.pixel, byte);
+			{
+				uint64_t tc = adesso_us();
+				memcpy(f->pixel, info.pixel, byte);
+				f->us_copia = adesso_us() - tc;
+			}
 		}
 		else if (f->pixel)
 		{
@@ -1010,6 +1087,10 @@ static void su_processo(void *dati)
 		f->danno_copre_tutto = copre_tutto;
 		f->indice = info.indice;
 		f->consegna = consegna;
+		/* ⛔ L'istante si prende QUI, dopo la copia: da questo momento il
+		 *    fotogramma e' pronto e chiunque lo prenda lo prende invecchiato di
+		 *    quel che passa da adesso. */
+		f->us_arrivo = adesso_us();
 		cattura->posto_pieno = TRUE;
 		g_cond_broadcast(&cattura->novita);
 	}
@@ -1646,6 +1727,14 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 * ⚠ E' il prezzo onesto del riuso: si riusa finche' nessuno consuma
 		 *   (la raffica), e si rialloca quando qualcuno consuma davvero. */
 		*fuori = cattura->posto;
+		/* ⭐⭐ E QUI SI LEGGE L'ETA' DEL FOTOGRAMMA — la voce del tratto che
+		 *     nessuno guardava.  ⛔ Non e' lavoro: e' il tempo in cui il
+		 *     fotogramma e' stato fermo ad aspettare che il ciclo tornasse a
+		 *     chiederlo, e invecchia il fotogramma senza che nessuno se ne
+		 *     accorga.  `[M]` fase 4: le attese a vuoto sono **0,00/s**, cioe'
+		 *     **c'era sempre gia' qualcosa di pronto** — che detto al contrario
+		 *     vuol dire che il fotogramma aspettava NOI. */
+		fuori->us_nel_posto = adesso_us() - fuori->us_arrivo;
 		memset(&cattura->posto, 0, sizeof cattura->posto);
 		cattura->posto_capienza = 0;
 		cattura->posto_pieno = FALSE;
@@ -1703,14 +1792,54 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		return CATTURA_PRESA_PIXEL_ALTROVE;
 	}
 
-	misura_i_pixel(fuori);
-	if (fuori->consegna.nero)
-		registro_dice(AREA, "⛔ il fotogramma consegnato e' NERO (massimo 0 su tutti e tre i "
-		                    "canali): e' quel che consegna una sessione senza monitor virtuale "
-		                    "— STUDI.md §gnome §3.1, guasto M9");
-	else if (fuori->consegna.uniforme)
-		registro_dice(AREA, "⚠ il fotogramma consegnato e' UNIFORME: tutti i pixel uguali, e "
-		                    "questo non e' nero — e' un buffer mai dipinto");
+	/* ⭐⭐ IL GIRO SUI PIXEL, A CADENZA — vedi `MISURA_PIXEL_OGNI_MS`.
+	 *
+	 * ⛔ Il PRIMO si guarda sempre (`misura_ultima_us == 0`): e' quello di cui
+	 *    `figlio.c` scrive la riga «⛔ NERO / non nero», ed e' anche l'unico
+	 *    fotogramma su cui il banco `banchi/02-cattura-prodotto.c` puo' contare
+	 *    a colpo sicuro. */
+	{
+		uint64_t tm = adesso_us();
+
+		if (cattura->misura_ultima_us == 0 ||
+		    tm - cattura->misura_ultima_us >= (uint64_t) MISURA_PIXEL_OGNI_MS * 1000u)
+		{
+			misura_i_pixel(fuori);
+			fuori->consegna.pixel_misurati = TRUE;
+			cattura->misura_ultima_us = tm;
+			cattura->misura_fatte++;
+			fuori->us_misura = adesso_us() - tm;
+
+			if (fuori->consegna.nero)
+				registro_dice(AREA,
+				              "⛔ il fotogramma consegnato e' NERO (massimo 0 su tutti e "
+				              "tre i canali): e' quel che consegna una sessione senza "
+				              "monitor virtuale — STUDI.md §gnome §3.1, guasto M9");
+			else if (fuori->consegna.uniforme)
+				registro_dice(AREA,
+				              "⚠ il fotogramma consegnato e' UNIFORME: tutti i pixel "
+				              "uguali, e questo non e' nero — e' un buffer mai dipinto");
+		}
+		else
+		{
+			/* ⛔ E QUI NON SI COPIA LA RISPOSTA DI PRIMA: `nero` e `uniforme`
+			 *    restano `FALSE` e `pixel_misurati` resta `FALSE`, che insieme
+			 *    dicono **«non ho guardato»**.  ⚠ Scriverci dentro l'ultimo
+			 *    valore noto sarebbe peggio del silenzio: chi legge crederebbe
+			 *    che quei tre fatti riguardino QUESTO fotogramma, e li'
+			 *    riguardano un altro (`LEZIONI.md` §1.11, due misure sotto la
+			 *    stessa etichetta). */
+			cattura->misura_saltate++;
+			if (cattura->misura_saltate == 1)
+				registro_dice(AREA,
+				              "⭐ da qui il giro sui pixel si fa al piu' ogni %d ms e non "
+				              "piu' su ogni fotogramma: `[M]` costava 5,34 ms su un tratto "
+				              "di 21,6 (il 25 %%) per riempire UNA riga di registro.  ⚠ Sui "
+				              "fotogrammi saltati `pixel_misurati` e' FALSE, e «non nero» "
+				              "NON si deduce da `nero == FALSE`",
+				              MISURA_PIXEL_OGNI_MS);
+		}
+	}
 	return CATTURA_PRESA_FATTA;
 }
 

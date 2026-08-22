@@ -370,6 +370,23 @@ typedef struct {
 	bool bassa_potenza;
 	bool bassa_potenza_verificata;
 	/*
+	 * ⭐ La misura massima che il DRIVER dichiara per (profilo, entrypoint),
+	 *    letta con `vaGetConfigAttributes` prima di aprire.
+	 *
+	 * ⛔ Serve perche' il limite NON e' lo stesso fra i codec: `[M]` 22 agosto
+	 *    2026 `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**
+	 *    (4096x2160 si', 4112x2160 no), mentre `hevc_vaapi` regge 16384x4320 —
+	 *    e la tela legale di `RCP.md` §4.5 arriva a **7680x4320**.  ⇒ Oltre i
+	 *    4096 px il ripiego in software per H.264 **e' la regola**, e costa
+	 *    `[M]` 309 ms per chiave a 8K.
+	 *
+	 * ⚠ `misura_massima_letta == false` vuol dire **«non l'ho saputa
+	 *   chiedere»**, che NON e' «non c'e' un limite»: i due valori allora non
+	 *   vogliono dire niente e non si leggono (`LEZIONI.md` §1.9).
+	 */
+	uint32_t misura_massima_l, misura_massima_a;
+	bool misura_massima_letta;
+	/*
 	 * ⛔ Quanti fotogrammi il codificatore in hardware ha il PERMESSO di tenere
 	 *    in canna: `async_depth`.  ⚠ `[M]` 13 agosto 2026 il difetto di
 	 *    `hevc_vaapi` e' **2**, e nessuno l'aveva chiesto — e' lo stesso difetto
@@ -423,6 +440,19 @@ void codificatore_libera(Codificatore *cod);
  * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
  * la riga che finisce nel registro accanto a ogni numero. */
 const char *codificatore_nome(const Codificatore *cod);
+
+/*
+ * Il nome del componente che si userebbe se non se ne chiedesse uno — cioe' il
+ * RIPIEGO in software di quel codec.
+ *
+ * ⛔ ESISTE PERCHE' CHI DICHIARA UN RIPIEGO DEVE NOMINARLO, E NOMINARLO GIUSTO.
+ *    `figlio.c` scriveva a mano «libx265» dentro la riga del ripiego; dal 20
+ *    agosto 2026 quel ramo serve anche H.264, e la riga nominava un componente
+ *    che non sarebbe stato aperto.  ⚠ Averlo in due posti sarebbe peggio di
+ *    tutt'e due: il giorno in cui il ripiego cambia, il registro racconta
+ *    quello vecchio e la caccia parte da li'.
+ */
+const char *codificatore_ripiego_software(CodecVideo codec);
 
 /* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);

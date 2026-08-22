@@ -490,6 +490,418 @@ toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del te
 
 ---
 
+## 4-C · ⭐⛔ AGENTE C — i ~16 ms hanno un nome, **e la copia zero NON è stata fatta** · *22 agosto 2026*
+
+> ### ⛔⛔ QUEL CHE MANCA SI DICE PRIMA DI QUEL CHE C'È — e la colpa è del direttore, non dell'agente
+>
+> **La copia zero — il titolo storico di questa fase — non è entrata.** Il tempo è andato nello
+> **strumentare**, che era l'ordine che gli ho dato io: *«prima si strumenta, poi si cura; una cura
+> misurata con uno strumento che non c'era prima non ha un prima»*. L'ordine era giusto e lo
+> rifarei; ⛔ **la stima del tempo era mia ed era sbagliata.**
+>
+> ⇒ Resta il budget `[M]`, **da misurare col banco e non da sottrarre a tavolino**: copia 1,65 +
+> conversione 8,15 + caricamento 1,16 = **10,96 ms su 18,86, il 58 % del tratto**.
+>
+> ### ⭐⭐ E i ~16 ms hanno un nome — due, e nessuno dei due era quello che cercavamo
+>
+> `[M]` Strumentato **dentro il prodotto**, dieci voci in fila, mediane su 512 fotogrammi, **resto
+> 0,02 ms** — la scomposizione non ha buchi. 1920×1080, HEVC in hardware, 2 450 fotogrammi:
+>
+> | voce | ms |
+> |---|---|
+> | ⛔ **il produttore (Mutter)** — dal suo `pts` alla nostra richiamata | **5,79** |
+> | ⛔ **`misura_i_pixel()`** — la diagnostica | **5,34** |
+> | la conversione (`sws_scale`) | 5,39 |
+> | la copia | 1,30 |
+> | la codifica, in hardware | 2,18 |
+> | il caricamento sulla GPU | 0,98 |
+> | il fotogramma che aspetta nel posto | **0,08** |
+> | **totale** | **21,61** |
+>
+> 1. ⛔ **5,79 ms sono di Mutter**: più di un terzo del margine **non è nostro**;
+> 2. ⛔⛔ **5,34 ms sono DIAGNOSTICA**: `misura_i_pixel()` legge **ogni pixel di ogni fotogramma**
+>    per riempire **una riga di registro che si scrive una volta sola**;
+> 3. ⭐⭐ **e l'ipotesi del coordinatore era sbagliata**, refutata dallo strumento costruito *prima*
+>    della cura: credevo fosse il fotogramma che invecchia nel posto, ⇒ `[M]` **0,08 ms**.
+>
+> ### ⛔⛔ E la cura non ha reso quel che aveva tolto — **i tratti non si sommano**
+>
+> Il giro sui pixel è passato a cadenza (500 ms). Prima/dopo **alternato**, tre giri, stesso albero,
+> md5 verificati diversi: `[M]` **21,19 → 18,86 ms (−11 %)**.
+>
+> ⛔ **Ma ha tolto 7,28 e guadagnato 2,33**: `sws_scale` si è ripreso **+3,84 ms** (3 giri su 3, in
+> tutt'e due i versi) perché la scansione dei pixel **gli scaldava la cache**.
+> ⛔⛔ **E i fotogrammi consegnati NON sono saliti**: 1 271 → 1 242.
+>
+> ⇒ ⭐ **Per la regola di §2.2 punto 1, questa non è ancora una vittoria** — «si contano i
+> fotogrammi che la pagina dipinge, non i millisecondi». La cura resta (una diagnostica che costa il
+> 25 % del tratto va tolta comunque), ma **il guadagno va rimisurato col banco di B**, sulla scena
+> vera, contando i fotogrammi.
+
+*22 agosto 2026. Macchina di prova NIC-OS (Intel i5-13500T, iGPU su `/dev/dri/renderD128`),
+utente `provac8`, porta **7752**, albero `/media/REMOTIX/src/08-c-src`, lavoro
+`/media/REMOTIX/tmp/08-c`.*
+
+> ### ⛔ E LA PRIMA COSA E' LA PORTA, perche' era assegnata a due
+>
+> Il mandato mi dava la **7742**. `[M]` La 7742 e' gia' l'**ancora dell'orologio del banco A**
+> (`/media/REMOTIX/src/08-a-terreno.sh`, `PORTA_ANCORA=${PORTA_ANCORA:-7742}`), e mentre A girava
+> `ss` la contava **occupata**. ⇒ Ho preso **7750 · 7752 · 7753** e l'ho scritto, invece di far
+> fallire il ponte di un altro banco a meta' misura (`LEZIONI.md` §1.24: *il ban di uno ferma
+> tutti*). ⚠ Chi assegna le porte alla prossima fase legga `08-a-terreno.sh` prima.
+
+---
+
+## C.1 · ⭐⭐ I ~16 ms hanno un nome — e **cinque non erano nostri**
+
+### Che cosa e' stato costruito
+
+`src/cattura.h` · `src/cattura.c` · `src/figlio.c`. Il tratto `cattura → primo byte` adesso si
+scompone **dentro il prodotto**, e la riga esce nel registro **una volta al secondo**:
+
+```
+⭐ TRATTO cattura → byte fuori: mediana 21.61 ms (max 32.87) su 512 fotogrammi del campione,
+   2450 in tutto — produttore 5.79 · allocazione 0.00 · copia 1.30 · nel posto 0.08 ·
+   misura 5.34 · conversione 5.39 · caricamento 0.98 · codifica 2.18 · spedizione 0.01 · resto 0.02
+```
+
+Dieci voci **disgiunte e in fila**, **mediane** (non medie) su un anello di 512 fotogrammi, col
+**massimo** accanto. ⭐ L'ultima voce e' il **`resto`**: quel che il totale ha in piu' della somma
+delle altre. `[M]` vale **0,02 ms** ⇒ **la scomposizione non ha buchi**, ed e' la stessa proprieta'
+che rendeva credibile quella della fase 4 (scarto 0,32 su 139).
+
+⚠ **Il confine si dichiara**: qui il tratto finisce **quando i byte partono verso il padre**, non
+quando arrivano in pagina. Il 30,37 ms della fase 4 e' misurato dal client; questo e' **il pezzo di
+quello che sta dentro il figlio**, ed e' l'unico che questo processo puo' vedere senza dedurre.
+⇒ ⛔ I due numeri **non si sottraggono fra loro**.
+
+### Il banco, e perche' **senza browser**
+
+`08-c-giro.sh` sulla macchina di prova: attacca `banchi/04-b31-cliente.py` (cliente RCP in Python,
+dentro il contenitore), aspetta il palco, **legge dal registro** su quale monitor sta — non lo
+indovina — e accende li' sopra la scena di `banchi/04-b30-scena.c`, pretendendo che il conto dei
+disegni **cresca** («vivo» non e' «disegna»).
+⭐ Cliente e prodotto stanno **sulla stessa macchina** ⇒ il `pts` di Mutter e il `time.monotonic()`
+del cliente sono lo **stesso `CLOCK_MONOTONIC`**: niente ancora d'orologio, niente Xvfb, niente CDP.
+
+### ⭐⭐ IL NUMERO — `[M]` 1920×1080, HEVC in hardware, 2 450 fotogrammi
+
+| voce | mediana | max | di chi e' |
+|---|---|---|---|
+| **produttore** *(pts di Mutter → la nostra richiamata)* | **5,79 ms** | 11,48 | ⛔ **di Mutter, non nostro** |
+| allocazione *(la `g_malloc` del posto)* | 0,00 | 0,02 | nostro — e non costa: il buffer si riusa |
+| **copia** *(la `memcpy` nella richiamata di tempo reale)* | **1,30** | 2,26 | nostro |
+| **nel posto** *(il fotogramma che invecchia aspettando)* | **0,08** | 6,52 | nostro |
+| **misura** *(`misura_i_pixel()`)* | **5,34** | 13,91 | ⛔ **nostro, e DIAGNOSTICA** |
+| conversione *(`sws_scale`)* | 5,39 | 7,89 | nostro |
+| caricamento *(→ GPU)* | 0,98 | 1,75 | nostro |
+| codifica | 2,18 | 2,65 | nostro |
+| spedizione | 0,01 | 0,03 | nostro |
+| **resto** | **0,02** | 1,41 | ⭐ **niente buchi** |
+| **TOTALE** | **21,61** | 32,87 | |
+
+### ⇒ Le due risposte, e la seconda e' una **smentita mia**
+
+1. ⛔⛔ **`5,79 ms su ~16 sono di Mutter.** E' il tempo fra l'istante che Mutter stesso timbra sul
+   fotogramma e l'istante in cui la nostra richiamata lo riceve. Non c'e' niente da limare: e' il
+   compositore. ⇒ **Piu' di un terzo del margine piu' grosso della fase non e' nostro.**
+2. ⛔ **`5,34 ms sono una diagnostica.** `misura_i_pixel()` legge **ogni pixel** di ogni fotogramma
+   per dire tre cose — il range, «e' nero», «e' uniforme». ⭐ E contando riga per riga chi le
+   consuma: nel prodotto finiscono in **UNA** riga di registro, scritta **UNA VOLTA**, al montaggio
+   del palco. ⇒ **Trenta-sessanta scansioni al secondo da 5,34 ms per una riga sola.**
+
+⭐ **E la mia ipotesi di partenza era un'altra, ed e' stata REFUTATA dal primo giro.** Credevo che i
+~16 ms fossero il fotogramma che **invecchia nel posto** aspettando che il ciclo tornasse a
+chiederlo — la fase 4 aveva scritto *«attese a vuoto 0,00/s: ce n'era sempre uno pronto»*, che letto
+al contrario suonava «allora aspettava noi». `[M]` **`nel posto` vale 0,08 ms**: il fotogramma **non
+invecchia**. L'ipotesi era verosimile e sbagliata, e a dirlo e' stato lo strumento che era stato
+costruito **prima** della cura.
+
+### ⚠ Il costo su CPU pura, che dice come cresce
+
+`[M]` banco `08-c-scansione.c`, CPU sola, un processo solo, mediana di 80 giri:
+
+| | 1920×1080 | 2560×1080 | 2560×1440 |
+|---|---|---|---|
+| **la scansione intera** | **5,36 ms** | 6,78 | **8,89** |
+| la stessa a campione 1/8 | 0,10 | 0,12 | 0,17 |
+| la `memcpy` del posto | 0,65 | 0,82 | 0,63 |
+| `malloc`+tocco+`free` (se il posto non si riusasse) | 0,48 | 0,60 | 0,32 |
+
+⇒ **Cresce coi pixel**: su una tela grande sarebbe **peggio**, non uguale.
+
+> #### ⛔ E LO STRUMENTO HA MENTITO AL PRIMO GIRO, nella direzione comoda
+> Il primo `08-c-scansione` diceva **0,000 ms** per una scansione di 14 MB. ⛔ Non era una scoperta:
+> il risultato non usciva dalla funzione e **`-O2` aveva cancellato l'intero ciclo**. E' `LEZIONI.md`
+> §1.21 dentro lo strumento — *uno strumento che si rompe sotto carico mente quando serve* — e
+> mentiva dicendo *«la scansione non costa niente»*, cioe' esattamente quel che avrebbe chiuso la
+> caccia. ⇒ Adesso c'e' una **sentinella `volatile`**, e il commento dice perche'.
+
+---
+
+## C.1-bis · La cura, e ⛔ **il conto NON torna come sperava**
+
+`src/cattura.c`: il giro sui pixel si fa sul **primo** fotogramma e poi **al piu' ogni 500 ms**
+(`MISURA_PIXEL_OGNI_MS`). La risposta resta **esatta** — cambia solo ogni quanto si da'.
+
+⛔ **E `nero == FALSE` adesso puo' voler dire «non ho guardato».** Per questo `CatturaConsegna` ha un
+campo nuovo, **`pixel_misurati`**, e chi legge `nero`/`uniforme` deve guardare prima quello —
+esattamente come `stride_letto` sta accanto a `stride` (`LEZIONI.md` §1.9). Sui fotogrammi saltati
+**non si copia il valore di prima**: sarebbe due misure sotto la stessa etichetta.
+
+⛔ **Quel che NON ho fatto, e la ragione**: guardare **un pixel ogni otto** costerebbe `[M]` 0,10 ms
+invece di 5,36 — meglio ancora. Scartata: cambierebbe il **significato**. Un fotogramma nero tranne
+una regione saltata verrebbe dichiarato **NERO**, e una riga che accusa il nero quando il nero non
+c'e' manda la caccia dalla parte sbagliata — che costa molto piu' di 5 ms.
+
+### ⭐⭐ IL PRIMA E IL DOPO — tre giri **ALTERNATI**, stesso banco, stessa scena, stessa compagnia
+
+*⛔ Alternati e non in fila: `banchi/03-solo.py` dice che un banco che misura un tempo deve essere
+solo, e **non lo ero** (due sessioni GNOME, nove processi `remotix`, carico 1,25-2,09). Alternare e'
+l'unico modo onesto di misurare su questa macchina oggi. I due binari nascono dallo **stesso
+albero**, cambia **una costante**, e il banco **verifica che gli md5 siano diversi** prima di
+misurare.*
+
+| tratto | **prima** *(scansione su ogni fotogramma)* | **dopo** *(a cadenza)* | Δ |
+|---|---|---|---|
+| produttore | 4,45 | 5,14 | +0,69 |
+| allocazione | 0,00 | 0,00 | — |
+| copia | 1,30 | 1,65 | +0,35 |
+| nel posto | 0,08 | 0,08 | — |
+| ⭐ **misura** | **7,28** | **0,00** | **−7,28** |
+| ⛔ **conversione** | **4,31** | **8,15** | **+3,84** |
+| caricamento | 0,90 | 1,16 | +0,26 |
+| codifica | 2,18 | 2,08 | −0,10 |
+| spedizione | 0,01 | 0,02 | — |
+| resto | 0,03 | 0,04 | — |
+| **TOTALE** | **21,19** | **18,86** | ⭐ **−2,33 ms (−11 %)** |
+| **fotogrammi in 40 s** | 1 268 · 1 271 · 1 276 | 1 240 · 1 242 · 1 340 | ⚠ **fermi** |
+
+*(mediana dei tre giri per riga; i tre giri concordano — `misura` 6,48/7,79/7,28 prima, 0,00 sempre
+dopo; `conversione` 4,17/4,18/4,31 prima, 8,40/7,95/8,15 dopo.)*
+
+### ⛔⛔ E QUI STA LA COSA CHE VA DETTA PRIMA DEL GUADAGNO
+
+**Ho tolto 7,28 ms e ne ho guadagnati 2,33.** Gli altri **~4 ms li ha ripresi `sws_scale`**, che nei
+tre giri passa da 4,3 a 8,2 — **in tutti e tre, in tutt'e due i versi**. Non e' rumore.
+
+⭐ **E il meccanismo si spiega, ed e' istruttivo**: la scansione leggeva gli **8 MB del fotogramma
+subito prima** che `sws_scale` leggesse gli stessi 8 MB. **Scaldava la cache per lui.** Tolta la
+scansione, il traffico verso la memoria lo paga swscale. ⇒ *Una parte di quei 5,34 ms non era spreco:
+era prefetch fatto per sbaglio.*
+
+⛔ **E i fotogrammi consegnati NON sono saliti** (1 271 → 1 242 di mediana, dentro la dispersione dei
+giri). ⇒ La cura **non compra fluidita'**: compra **2,33 ms di ritardo** e basta. Alla velocita'
+mediana dell'utente (3 400 px/s) valgono **−8 px** di distacco; ai suoi picchi (12 400 px/s),
+**−29 px** su ~360. ⚠ **E' una limatura vera e piccola, e va chiamata cosi'.**
+
+⭐ **Ma la lezione vale piu' del guadagno**: ⛔ **non si sommeranno mai i tratti tolti sperando che
+si sottraggano dal totale.** In questo tratto le voci **non sono indipendenti**: si passano la cache.
+Chi togliera' `conversione` e `caricamento` con la copia zero deve **rimisurare il totale**, non
+sottrarre 9,3.
+
+---
+
+## C.2 · ⛔ **LA COPIA ZERO NON E' STATA FATTA** — e questo e' il buco piu' grosso che lascio
+
+Non ho toccato `CATTURA_STRADA_SCHEDA` ne' l'importazione del DMA-BUF come superficie VA-API.
+`src/figlio.c` chiede ancora `CATTURA_STRADA_MEMORIA`.
+
+⛔ **La ragione e' il tempo, non un ostacolo tecnico**, e va detta cosi'. Il mandato metteva
+l'ordine — *«prima si strumenta, poi si cura»* — e strumentare e' costato: costruire il banco
+server-side, l'utente, la sessione, la scena, il cliente senza browser, e poi tre giri alternati per
+non consegnare un numero contaminato. ⇒ Ho consegnato **la misura** e **la cura piu' piccola**, e la
+copia zero resta intera per chi viene dopo.
+
+⭐ **E gli lascio il budget misurato**, che prima non c'era:
+
+| che cosa la copia zero cancella | `[M]` oggi |
+|---|---|
+| `copia` (la `memcpy` nel posto) | **1,65 ms** |
+| `conversione` (`sws_scale`) | **8,15 ms** |
+| `caricamento` (memoria → GPU) | **1,16 ms** |
+| **in tutto** | **10,96 ms su 18,86 — il 58 % del tratto** |
+
+⚠ **E il numero da NON credere e' proprio quello**: vedi C.1-bis. Le voci si passano la cache, e
+9,3 tolti hanno reso 2,3. ⇒ **La copia zero va misurata col banco, non stimata dalla tabella.**
+⭐ Il banco per farlo c'e' ed e' quello di qui: `08-c-giro.sh` + `08-c-ab.sh` (due binari dallo
+stesso albero, alternati, md5 verificati diversi).
+
+⭐ **E resta vero che e' la strada giusta**: la copia zero non **sposta** il traffico di memoria come
+ha fatto la mia cura — lo **toglie**. Il fotogramma non esce piu' dalla GPU.
+
+### ⏳ La cura del RILASCIO — la scelta, con la ragione
+
+⛔ Non l'ho scritta (non c'e' la copia zero da rilasciare), ma il mandato chiedeva **quale** e
+**perche'**, e la risposta la lascio decisa: **trattenere il `pw_buffer` fino a lettura finita**, non
+chiedere `SPA_META_SyncTimeline`.
+
+| | |
+|---|---|
+| ⭐ **trattenere il buffer** | e' **nostro** e vale su **ogni** produttore. `can_reuse_pw_buffer` si arrende quando la timeline manca, e allora Mutter riusa il buffer mentre VA-API legge `[R]`: trattenendolo il caso non esiste, qualunque cosa il produttore offra. ⚠ Il prezzo e' **un buffer in meno** dei quattro che Mutter ricicla (`DECISIONI.md` §2.3-ter), ed e' un prezzo che si conta |
+| ⛔ **chiedere la timeline** | dipende da **quel che il produttore offre**, ed e' la forma che questa fase ha gia' pagato: quando non c'e', non c'e' nessun errore — c'e' **la schermata che si alterna**, che e' il difetto da cui la caccia era partita dalla parte sbagliata (`LEZIONI.md` §8). ⇒ Una cura che sparisce in silenzio su un compositore che non la offre e' precisamente `LEZIONI.md` §1.8 |
+
+⭐ E c'e' un terzo argomento che decide: `LEZIONI.md` §1.25 — *una cura si cerca dovunque valga*.
+Trattenere il buffer vale su Mutter, su KWin e su wlroots senza chiedere niente a nessuno; la
+timeline va richiesta a ognuno e verificata su ognuno.
+
+⛔ **E non si rifa' la superficie di accumulo**: il DMA-BUF di Mutter **non e' un diff** — c'e'
+scritto in testa a `cattura.h`, `[M]` 12 agosto, danno parziale su **410 fotogrammi su 410** e le
+barre SMPTE **intere** nel buffer.
+
+---
+
+## C.3 · ⭐ La scheda del codificatore — **e c'era gia' quasi tutto**
+
+⛔ **Il timore del mandato — *«se il codificatore cercasse la discreta ripiegherebbe in CPU senza un
+errore»* — NON si applica**, e vale la pena scriverlo invece di curare due volte:
+
+| | |
+|---|---|
+| il nodo | ⭐ **dichiarato**, non scelto: `figlio.c` `NODO_RENDERING "/dev/dri/renderD128"`, passato a `av_hwdevice_ctx_create` |
+| il fornitore | ⭐ **letto** con `vaQueryVendorString` e messo **dentro il nome** del codificatore |
+| l'entrypoint | ⭐ **letto dal driver** con `vaQueryConfigEntrypoints` **prima** di aprire, e ⛔ **non si ripiega sull'altro** |
+| «e' in hardware?» | ⭐ **chiesto al componente** (`componente_e_hardware()`: accetta un formato di *superficie*), non letto nel nome |
+| il ripiego in software | ⭐ **dichiarato** nel registro |
+
+⇒ ⭐ `[M]` dal registro di oggi: *«HEVC 8 bit via hevc_vaapi (in HARDWARE · /dev/dri/renderD128 ·
+Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 · ⚠ EncSliceLP, bassa potenza — NON e' la
+codifica piena)»*.
+
+### Che cosa ho aggiunto
+
+**1. ⛔ La riga del ripiego nominava il codificatore SBAGLIATO** — difetto vero, trovato refutando.
+`figlio.c` scriveva **«hevc_vaapi»** e **«libx265»** dentro le virgolette; ⛔ ma dal 20 agosto quel
+ramo serve **anche H.264**, e quando a non aprirsi era `h264_vaapi` il registro accusava un
+codificatore che nessuno aveva chiesto e nominava un ripiego che non sarebbe stato usato. ⇒ *Il
+numero giusto e la parola sbagliata accanto* (`LEZIONI.md` §1.20). Adesso i due nomi si **stampano**,
+e il ripiego viene da **un posto solo** — `codificatore_ripiego_software()`, nuovo in
+`codificatore.h`, perche' averlo in due posti sarebbe peggio di tutt'e due.
+
+**2. ⭐⭐ La misura massima si chiede AL DRIVER, prima di aprire** — ed e' anche il punto 4 di D.
+`codificatore.c`, `vaGetConfigAttributes(VAConfigAttribMaxPictureWidth/Height)`. **Tre esiti e non
+due**: se il driver non risponde o non dichiara l'attributo, **non si conclude niente** e lo si
+scrive — non e' «non c'e' limite», e' «non ho guardato». ⇒ `[M]` dal registro di oggi:
+*«⭐ il driver dichiara al massimo 16384x12288 per «hevc_vaapi» su /dev/dri/renderD128, e 1920x1080
+ci sta — CHIESTO al driver, non dedotto dal nome»*.
+
+### ⭐ E il guasto innestato che rende quel verde credibile
+
+`[M]` banco `08-c-scheda.c`, che chiede al driver e **prova una misura oltre il limite**:
+
+| profilo | entrypoint | massimo dichiarato | 4096×2160 | **4112×2160** | 7680×4320 |
+|---|---|---|---|---|---|
+| H.264 High | EncSliceLP | **4096 × 4096** | si | ⛔ **NO** | ⛔ NO |
+| H.264 High | EncSlice *(piena)* | ⚠ il driver non risponde (13) — **non e' «nessun limite»** | | | |
+| HEVC Main | EncSliceLP | **16384 × 12288** | si | si | ⭐ si |
+| HEVC Main | EncSlice *(piena)* | ⚠ il driver non risponde (13) | | | |
+| HEVC Main10 | EncSliceLP | 16384 × 12288 | si | si | si |
+
+⇒ ⭐ **Il numero di D e' confermato al pixel**: 4096 si', 4112 no. E il controllo **sa dire di no** —
+la riga dei 4112 px cambia verdetto, quindi non e' verde per costruzione.
+⭐ **Due fatti in piu' che D non aveva**: il massimo di HEVC e' **16384 × 12288** (non 4320), e
+l'entrypoint **pieno non esiste affatto** su questa scheda per nessuno dei due codec — che e' la
+conferma indipendente del perche' `POTENZA_RENDERING` e' BASSA.
+
+⛔ **E la verifica NON passa da ffmpeg**, che e' il punto 5 di D: `[M]` `-low_power 0` sull'Intel
+apre lo stesso `EncSliceLP` **senza fallire**. Qui si parla al driver.
+
+---
+
+## I quattro punti dell'agente D
+
+| | che cosa ho fatto |
+|---|---|
+| **1 · ⛔ ci si arrende su una CHIAVE** | ⭐ **CURATO e PROVATO COL GUASTO.** Su una chiave non ci si arrende piu': si scende la scala finche' ha scalini, e la riga lo **dichiara** («l'immagine uscira' piu' brutta»). Il conto dei tentativi vale **solo per i delta**. L'unico caso in cui una chiave non parte e' il **fondo della scala**, e la riga dice **quale dei due** e' — «non c'e' piu' niente da abbassare» ≠ «mi sono arreso» |
+| **2 · ⛔ la scala e' corta di uno scalino** | ⭐ **CURATO**: `CRF_PASSO` 6 → **9** ⇒ 26 → 35 → 44 → 51, e comprende il QP 44 che `[M]` ce la faceva (11,056 MiB). ⭐ Alzato il **passo** e non i tentativi, con la ragione di D accanto: un tentativo a 8K costa 91-108 ms. ⚠ **Il valore esatto NON e' deciso qui**: c'e' scritto nel commento che il punto di lavoro fra qualita' e banda e' della **fase 9** |
+| **3 · ⭐ `max_b_frames = 0`** | ⭐ **NON TOCCATO**, e adesso il commento porta il numero: **59 figure buttabili su 120** e **−16 % di banda** (PSNR −0,065 dB) **contro +67 ms di riordino**, che da soli sfondano i 50 ms dati a *tutto* il pezzo nostro. ⇒ Comprerebbe banda vendendo risposta — lo stesso commercio per cui §6.1 ha chiuso l'anello in parallelo |
+| **4 · ⚠ i 4096 px di `h264_vaapi`** | ⭐ **CURATO**, e sta qui sopra in C.3: si chiede al driver **prima di aprire**, e il numero di D e' confermato al pixel |
+| **5 · ⚠ i due vicoli ciechi** | ⭐ **Rispettati**: non ho toccato `-max_frame_size` (`[M]` rifiutato in CQP), e la verifica dell'entrypoint **non passa da ffmpeg** |
+
+### ⭐⭐ Il guasto innestato del punto 1, perche' quel ramo non si percorre mai da solo
+
+⛔ Il tetto e' 16 MiB e `[M]` alla tela di prova la chiave piu' grossa vale ~21 KB — lo **0,13 %**.
+⇒ Sul banco quel ramo **non si tocca mai**, e una cura che non si percorre e' **verde per
+costruzione**. ⭐ Ho abbassato il **tetto** (`TETTO_FOTOGRAMMA` a **6000 byte**), non alzato il
+contenuto, e ricostruito un binario apposta.
+
+`[M]` 22 agosto 2026, con il guasto addosso:
+
+```
+⚠ CHIAVE sopra il tetto: scendo a QP 35 e RIPROVO (tentativo 2).  ⛔ Una chiave non si abbandona (§5.2)…
+⚠ CHIAVE sopra il tetto: scendo a QP 44 e RIPROVO (tentativo 3).  …
+```
+
+⭐⭐ **E la prova vera non e' il registro, e' il fotogramma**: `fotogramma 91 · t = 4,002 s · chiave ·
+4 728 byte · 1920×1080` — **sotto il tetto falso**, e **994 fotogrammi completi con 2 chiavi** nel
+giro. ⛔ Prima della cura quel giro avrebbe scritto *«nemmeno dopo 3 ricodifiche… il fotogramma NON
+parte»* e **nessuna chiave sarebbe uscita**.
+
+⚠ **Quel che il guasto NON ha esercitato**: il ramo «delta abbandonato» — a 1920×1080 i delta stanno
+sotto i 6 000 byte da soli. `[?]` Resta non percorso.
+
+---
+
+## ⛔ Che cosa NON ha funzionato
+
+1. ⛔⛔ **La mia ipotesi sui ~16 ms era sbagliata.** Credevo fosse il fotogramma che invecchia nel
+   posto: `[M]` **0,08 ms**. Refutata dal primo giro dello strumento.
+2. ⛔ **La cura ha reso un terzo di quel che toglieva** — 7,28 ms tolti, **2,33** guadagnati, perche'
+   `sws_scale` si e' ripreso ~4 ms che la scansione gli scaldava in cache. ⇒ ⛔ **In questo tratto le
+   voci non sono indipendenti**, e i tratti tolti **non si sommano**.
+3. ⛔ **I fotogrammi consegnati non sono saliti** (1 271 → 1 242 di mediana, dentro la dispersione).
+   La cura compra ritardo, non fluidita'. E' la forma mite di `LEZIONI.md` §6.2, e va detta.
+4. ⛔ **Il banco della scansione mentiva**: `-O2` aveva cancellato il ciclo e il banco diceva
+   **0,000 ms** — nella direzione che avrebbe chiuso la caccia.
+5. ⛔ **Il primo tentativo di costruire i due binari e' uscito con lo STESSO md5**:
+   `costruisci.sh:110` fa `rm -f remotix *.o`, quindi la `cattura.o` compilata col `-D` spariva.
+   ⚠ Senza il controllo degli md5 il confronto avrebbe detto *«la cura non cambia niente»* misurando
+   **due volte la stessa cosa**. ⇒ Il controllo resta nel banco.
+6. ⛔ **La copia zero non e' stata fatta.** Vedi C.2.
+7. ⚠ **Non ero solo sulla macchina** (`banchi/03-solo.py`): due sessioni GNOME, nove `remotix`,
+   carico 1,25-2,09. ⇒ ⛔ **I valori assoluti di questo rapporto vanno letti come un tetto.** Il
+   prima/dopo regge perche' e' **alternato**; i totali singoli no. Nell'ultimo giro della giornata,
+   con la macchina piu' carica, la stessa `conversione` e' salita da 8,15 a **11,9** senza che nulla
+   cambiasse nel codice — ed e' la misura di quanto la compagnia sposti i numeri.
+
+---
+
+## Che cosa resta `[?]`
+
+| | |
+|---|---|
+| ⏳ **la copia zero** | non fatta. Budget `[M]` **10,96 ms su 18,86 (58 %)** — ⛔ da **misurare**, non da sottrarre |
+| ⏳ **i 5,79 ms del produttore** | `[M]` sono di Mutter. `[?]` Non so **di che cosa siano fatti** (composizione? il ciclo di PipeWire? la cadenza del compositore?) e non e' detto che si possa sapere da qui |
+| ⏳ **`conversione` che si prende la cache** | `[M]` +3,84 ms quando la scansione sparisce. `[?]` Se `sws_scale` acceda alla memoria in modo migliorabile (piu' thread, flag diversi) non e' stato guardato — ⚠ e la copia zero lo cancella comunque |
+| `[?]` **il ramo «delta abbandonato»** | non percorso nemmeno col guasto innestato |
+| `[?]` **`banchi/02-cattura-prodotto.c` legge `nero`/`uniforme` senza `pixel_misurati`** | ⛔ **non e' mio e non l'ho toccato.** Prende pochi fotogrammi e il primo si misura sempre, quindi oggi non sbaglia; ma la riga giusta e' stamparlo. **Una riga, per chi lo possiede** |
+| `[?]` **il valore di `CRF_PASSO`** | 9 e' *sufficiente*, non *giusto*: il punto di lavoro e' della **fase 9** |
+| `[?]` **il distacco in pixel** | ⛔ non l'ho misurato: e' l'anello intero, ed e' del punto A |
+
+---
+
+## Come si rifa'
+
+Tutto sulla macchina di prova, `/media/REMOTIX/src/`:
+
+| | |
+|---|---|
+| `08-c-terreno.sh` | utente `provac8`, sessione GNOME **senza** `--virtual-monitor`, prodotto sulla **7752** — derivato da quello di A con `08-c-derivami.sh`, **non ricopiato** |
+| `08-c-giro.sh` | un giro: cliente senza browser + scena sul monitor **letto dal registro**, e le righe `⭐ TRATTO` |
+| `08-c-ab.sh` | ⭐ il prima/dopo **alternato** |
+| `08-c-due-binari.sh` | i due binari dallo stesso albero, **con la verifica che gli md5 differiscano** |
+| `08-c-scansione.c` | il costo del giro sui pixel, CPU pura, con la sentinella `volatile` |
+| `08-c-scheda.c` | i limiti chiesti al driver, **con la misura oltre il limite** |
+| `08-c-guasto-chiave.sh` · `08-c-prova-guasto.sh` | il guasto innestato di §5.2 |
+
+⚠ Le copie di questi file stanno anche in
+`…/scratchpad/fase8/`. ⛔ Nessuno di loro sta in `banchi/`: sono banchi di questo punto, e
+`documenti-si-accorpano` dice che i rapporti degli agenti non si conservano — se il coordinatore li
+vuole conservare, il posto e' `banchi/` con un nome `08-…`.
+
+
+---
+
 ## 4-B · ⭐⭐⭐ AGENTE B — il banco del trascinamento, e **il locale ha un numero** · *22 agosto 2026*
 
 > ### ⭐⭐⭐ LA SPECIFICA DELL'UTENTE SMETTE DI ESSERE UN DESIDERIO: adesso il «locale» è misurato

@@ -38,12 +38,41 @@
  * MiB.  Se la codifica ne producesse uno piu' grande, DEVE ricodificarlo a
  * qualita' inferiore e SCRIVERLO NEL REGISTRO — mai spedirlo.» */
 #define TETTO_FOTOGRAMMA (16u * 1024u * 1024u)
+
+/* ⛔ Quanti giri si concedono a un DELTA.  ⚠ A una CHIAVE non si applica, e la
+ *    ragione sta nel riquadro dentro `codificatore_comprimi()`: §5.2 vieta di
+ *    abbandonarla. */
 #define RICODIFICHE_MASSIME 3
 
-/* ⚠ Il primo scalino quando il tetto morde, e il passo dei successivi.  Sono
- *   numeri di comodo dichiarati: il punto di lavoro del bitrate e' la fase 9. */
+/* Il primo scalino quando il tetto morde, e il passo dei successivi.
+ *
+ * ⛔⛔ E IL PASSO ERA 6, CIOE' CORTO DI UNO SCALINO — `[M]` 22 agosto 2026,
+ *      misurato dall'agente D su 7680x4320 con contenuto quasi incomprimibile,
+ *      n=8 per riga:
+ *
+ *        l'ultimo scalino che c'era   QP 38 → **16,654 MiB**  ⛔ 8 volte su 8
+ *                                                                sopra il tetto
+ *        quello che NON c'era         QP 44 → 11,056 MiB      ⭐ ce l'avrebbe
+ *                                                                fatta
+ *
+ *      ⇒ Il tetto e' 16 777 216 byte e **QP 38 sta al 104,1 %: si perdeva per
+ *        il 4 %**.  Tre tentativi da 6 arrivavano a 38 e si fermavano li'.
+ *
+ * ⭐ E SI ALZA IL PASSO, NON IL NUMERO DI TENTATIVI: `[M]` ogni tentativo a 8K
+ *    costa **91-108 ms in hardware** (e 1,8-3,3 s in software), quindi un passo
+ *    piu' largo costa **una frazione** di un tentativo in piu'.  Con 9 la scala
+ *    e' 26 → 35 → 44 → 51, e comprende lo scalino che ce la faceva.
+ *
+ * ⚠ E IL VALORE ESATTO NON E' DECISO QUI: quanto in fretta scendere e' un punto
+ *   di lavoro fra qualita' e banda, cioe' **fase 9**.  Qui si dichiara soltanto
+ *   che **3 x 6 non bastava**, con il numero che lo dimostra.
+ *
+ * ⚠ E quanto sia raggiungibile va detto accanto, o il difetto sembra piu' grosso
+ *   di quel che e': `[M]` alla tela dell'utente (2560x1080) la chiave piu' grossa
+ *   su **404 chiavi vere** e' **21 433 byte**, cioe' lo **0,13 %** del tetto —
+ *   margine **782x**.  ⇒ Difetto vero e dimostrato, e **non urgente**. */
 #define CRF_DI_EMERGENZA 24
-#define CRF_PASSO 6
+#define CRF_PASSO 9
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * IL LETTORE DI BIT — serve a rileggere quel che abbiamo appena prodotto
@@ -1061,6 +1090,74 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		   r->nodo_rendering, (int) profilo);
 		return -1;
 	}
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⭐⭐ E LA MISURA MASSIMA SI CHIEDE **AL DRIVER**, non al primo fotogramma
+	 *
+	 * ⛔ IL FATTO, `[M]` 22 agosto 2026 (agente D): `h264_vaapi` su `EncSliceLP`
+	 *    accetta **32-4096 px per lato** — 4096x2160 si', **4112x2160 no**
+	 *    (*«Hardware does not support encoding at size…»*).  `hevc_vaapi` regge
+	 *    invece fino a 16384x4320.
+	 *    ⚠ E la tela legale di `RCP.md` §4.5 arriva a **7680x4320** ⇒ oltre i
+	 *      4096 px il ripiego `libx264` non e' un'eventualita', **e' la regola**,
+	 *      e a 8K costa `[M]` **309 ms per chiave**.
+	 *
+	 * ⇒ Senza questa domanda il rifiuto arriva **al primo fotogramma**, cioe'
+	 *   dopo che il palco e' montato e qualcuno sta gia' guardando: e' la forma
+	 *   di `LEZIONI.md` §1.8 — *si dichiara invece di subire*.  Qui invece
+	 *   `codificatore_nuovo()` fallisce **prima**, dicendo il numero del driver,
+	 *   e `figlio.c` scrive il ripiego con la sua riga.
+	 *
+	 * ⛔⛔ E SI CHIEDE AL DRIVER E NON A FFMPEG, che e' la stessa lezione presa
+	 *      dall'altro capo: `[M]` **`-low_power 0` sull'Intel apre lo stesso
+	 *      `EncSliceLP`, e ffmpeg NON fallisce** — prende quel che c'e'.  ⇒ Una
+	 *      verifica fatta passando dalla riga di comando darebbe due misure
+	 *      sotto la stessa etichetta (`LEZIONI.md` §1.11).
+	 *
+	 * ⚠ TRE ESITI E NON DUE, come per gli entrypoint: se il driver non dichiara
+	 *   l'attributo (`VA_ATTRIB_NOT_SUPPORTED`) **non si conclude niente** — non
+	 *   e' «non c'e' limite», e' «non l'ho saputo chiedere», e si va avanti
+	 *   scrivendolo.  ⛔ Rifiutare qui sarebbe decidere su un silenzio.
+	 * ═══════════════════════════════════════════════════════════════════════ */
+	{
+		VAConfigAttrib attr[2] = { { .type = VAConfigAttribMaxPictureWidth },
+			                   { .type = VAConfigAttribMaxPictureHeight } };
+		VAStatus st = vaGetConfigAttributes(va->display, profilo, voluto, attr, 2);
+
+		if (st != VA_STATUS_SUCCESS) {
+			registro_dice(REG_CODIFICA,
+			              "⚠ su «%s» NON ho potuto chiedere al driver la misura massima "
+			              "(vaGetConfigAttributes: %d): ⛔ NON e' «non c'e' limite», e' "
+			              "«non ho guardato».  Se %ux%u fosse troppo grande lo si "
+			              "scoprira' al primo fotogramma",
+			              r->nodo_rendering, (int) st, r->larghezza, r->altezza);
+		} else if (attr[0].value == VA_ATTRIB_NOT_SUPPORTED ||
+		           attr[1].value == VA_ATTRIB_NOT_SUPPORTED) {
+			registro_dice(REG_CODIFICA,
+			              "⚠ «%s» (%s) non DICHIARA una misura massima per il profilo %d: "
+			              "⛔ non si conclude che non ce ne sia una",
+			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo);
+		} else {
+			c->conf.misura_massima_l = attr[0].value;
+			c->conf.misura_massima_a = attr[1].value;
+			c->conf.misura_massima_letta = true;
+			if (r->larghezza > attr[0].value || r->altezza > attr[1].value) {
+				di(errore, errore_byte,
+				   "«%s» su «%s» (%s) codifica al massimo %ux%u — chiesto %ux%u.  ⛔ Il "
+				   "driver lo dice PRIMA, e si dichiara invece di scoprirlo al primo "
+				   "fotogramma: chi chiama scenda sul ripiego in software e SCRIVA che "
+				   "ci e' sceso",
+				   c->componente->name, r->nodo_rendering, c->conf.fornitore_va,
+				   attr[0].value, attr[1].value, r->larghezza, r->altezza);
+				return -1;
+			}
+			registro_dice(REG_CODIFICA,
+			              "⭐ il driver dichiara al massimo %ux%u per «%s» su %s, e "
+			              "%ux%u ci sta — CHIESTO al driver, non dedotto dal nome",
+			              attr[0].value, attr[1].value, c->componente->name,
+			              c->conf.nodo, r->larghezza, r->altezza);
+		}
+	}
 	return 0;
 }
 
@@ -1374,7 +1471,23 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	c->ctx->pix_fmt = formato;
 	c->ctx->time_base = (AVRational){ 1, (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30) };
 	c->ctx->framerate = (AVRational){ (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30), 1 };
-	c->ctx->max_b_frames = 0;   /* ⛔ deciso, non ereditato: vedi opzioni_hevc() */
+	/* ⛔⛔ ZERO, DECISO E NON EREDITATO — e dal 22 agosto 2026 col numero sotto,
+	 *      perche' senza il numero la riga era un'opinione e la tentazione
+	 *      resta viva.
+	 *
+	 * `[M]` (agente D, 22 agosto 2026) mettendolo a **1**:
+	 *
+	 *   ⭐ sembra un affare   **59 figure buttabili su 120**, e **−16 % di banda**
+	 *                         a qualita' invariata (PSNR −0,065 dB)
+	 *   ⛔ e invece no        **+67 ms di riordino**, che da soli sfondano i
+	 *                         **50 ms** che `SPECIFICHE.md` §3.2 da' a **tutto**
+	 *                         il pezzo nostro
+	 *
+	 * ⇒ Comprerebbe banda vendendo risposta, che e' il commercio che §3.2 vieta
+	 *   in una riga — *«una scelta che alza il ritmo peggiorando il ritardo non
+	 *   si fa»* — ed e' la stessa ragione per cui la fase 8 ha chiuso l'anello
+	 *   in parallelo prima di aprirlo.  ⚠ Vedi anche `opzioni_hevc()`. */
+	c->ctx->max_b_frames = 0;
 	c->ctx->gop_size = r->chiavi_ogni ? (int) r->chiavi_ogni : INT_MAX;
 	switch (r->codec) {
 	case CODIFICATORE_HEVC:
@@ -1810,6 +1923,11 @@ const char *codificatore_nome(const Codificatore *c)
 	return c ? c->nome : "(nessuno)";
 }
 
+const char *codificatore_ripiego_software(CodecVideo codec)
+{
+	return nome_predefinito(codec);
+}
+
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *c)
 {
 	return c ? &c->conf : NULL;
@@ -2200,12 +2318,67 @@ bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo
 			              c->pacchetto->size, TETTO_FOTOGRAMMA, tentativo + 1);
 			av_packet_unref(c->pacchetto);
 			c->pacchetto_in_mano = false;
-			if (tentativo + 1 >= RICODIFICHE_MASSIME || !abbassa_qualita(c)) {
+
+			/* ═══════════════════════════════════════════════════════════════
+			 * ⛔⛔ E SU UNA **CHIAVE** NON CI SI ARRENDE — `RCP.md` §5.2, e
+			 *      fino al 22 agosto 2026 questo ramo la abbandonava.
+			 *
+			 * §5.2 dice che il server **NON DEVE** abbandonare un fotogramma
+			 * chiave, e la ragione e' che un client senza chiave **non ha un
+			 * passato**: non puo' dipingere niente, ne' adesso ne' dopo.
+			 *
+			 * ⛔ E IL DIFETTO NON ERA «un fotogramma perso»: era una SPIRALE.
+			 *    Il client resta rotto ⇒ manda `RICHIEDI_CHIAVE` ⇒ noi rifacciamo
+			 *    le stesse tre ricodifiche ⇒ falliamo di nuovo ⇒ lui richiede.
+			 *    `[M]` (agente D, 22 agosto 2026) ogni tentativo a 8K costa
+			 *    **91-108 ms in hardware** e **1,8-3,3 s in software** ⇒
+			 *    **~300 ms** ovvero **~7,8 s** buttati per ogni richiesta, a
+			 *    ripetizione, e la sessione non guarisce da se'.
+			 *
+			 * ⭐ E LA CURA E' SICURA PERCHE' HA UN NUMERO SOTTO: `[M]` a 8K
+			 *    **QP 51 da' 1,771 MiB**, cioe' il **10,6 %** del tetto.  ⇒ In
+			 *    fondo alla scala una chiave **entra sempre**.
+			 *
+			 * ⇒ Per una chiave si continua a scendere finche' la scala ha
+			 *   scalini, e quando esce brutta **lo si scrive**.  ⚠ E' l'invariante
+			 *   I1 alla lettera: **brutta e viva** batte bella e morta.  Una
+			 *   immagine brutta dura un fotogramma; un client rotto dura tutta
+			 *   la sessione.
+			 * ═══════════════════════════════════════════════════════════════ */
+			if (!abbassa_qualita(c)) {
+				/* ⛔ Il fondo della scala: qui non e' «mi arrendo per un conto
+				 *    di tentativi», e' «non c'e' piu' niente da abbassare».  E'
+				 *    l'unico caso in cui una chiave non parte, e la riga dice
+				 *    QUALE dei due e'. */
 				registro_dice(REG_CODIFICA,
-				              "⛔ nemmeno dopo %u ricodifiche sta sotto i 16 MiB: il "
-				              "fotogramma NON parte", tentativo + 1);
+				              "⛔⛔ nemmeno in fondo alla scala (%s %d) il fotogramma sta "
+				              "sotto i %u byte: NON parte.  ⚠ E questo NON e' «mi sono "
+				              "arreso dopo %u tentativi»: e' «non c'e' piu' niente da "
+				              "abbassare»",
+				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
+				              c->qualita_corrente, TETTO_FOTOGRAMMA, tentativo + 1);
 				return false;
 			}
+			if (!c->prossimo_chiave && tentativo + 1 >= RICODIFICHE_MASSIME) {
+				/* ⚠ Un DELTA si abbandona, e va bene: chi lo perde ha ancora il
+				 *   suo passato e il prossimo delta lo raggiunge.  ⛔ Il conto
+				 *   dei tentativi vale QUI e solo qui. */
+				registro_dice(REG_CODIFICA,
+				              "⚠ delta abbandonato dopo %u ricodifiche: sta ancora sopra "
+				              "i %u byte.  ⭐ Non e' una chiave, quindi chi guarda ha "
+				              "ancora il suo passato",
+				              tentativo + 1, TETTO_FOTOGRAMMA);
+				return false;
+			}
+			if (c->prossimo_chiave)
+				registro_dice(REG_CODIFICA,
+				              "⚠ CHIAVE sopra il tetto: scendo a %s %d e RIPROVO "
+				              "(tentativo %u).  ⛔ Una chiave non si abbandona (§5.2): "
+				              "l'immagine uscira' piu' brutta, e questa riga e' la "
+				              "dichiarazione.  ⭐ `[M]` in fondo alla scala (51) una "
+				              "chiave 8K vale 1,771 MiB, cioe' il 10,6 %% del tetto",
+				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
+				              c->qualita_corrente, tentativo + 2);
 			fuori->ricodifiche = tentativo + 1;
 			continue;
 		}

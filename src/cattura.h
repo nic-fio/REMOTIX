@@ -219,6 +219,23 @@ typedef struct
 	CatturaRangeMisurato range_misurato;
 	gboolean nero;    /* ⛔ tutti i pixel a zero: il guasto peggiore di F2.2 */
 	gboolean uniforme; /* tutti i pixel uguali fra loro (nero compreso)      */
+	/* ⛔⛔ E QUESTO CAMPO E' LA RAGIONE PER CUI I TRE QUI SOPRA SI POSSONO
+	 *     ANCORA LEGGERE — `LEZIONI.md` §1.9, «vuoto» e «proibito» hanno lo
+	 *     stesso aspetto.
+	 *
+	 * Dal 22 agosto 2026 il giro sui pixel **non si fa su ogni fotogramma**: `[M]`
+	 * costava **5,34 ms** dentro un tratto di **21,6**, cioe' il **25 %**, per
+	 * riempire una riga di registro che si scrive **una volta sola**
+	 * (`figlio.c`, il montaggio del palco).  ⇒ Adesso si fa sul PRIMO fotogramma
+	 * e poi al piu' una volta ogni `MISURA_PIXEL_OGNI_MS`.
+	 *
+	 * ⛔ Su un fotogramma non misurato `nero` e `uniforme` valgono `FALSE` — e
+	 *    `FALSE` qui vorrebbe dire **«non e' nero»**, che e' una BUGIA: vuol dire
+	 *    «non ho guardato».  Chi legge quei tre campi **deve** guardare prima
+	 *    questo, esattamente come `stride_letto` sta accanto a `stride`.
+	 * ⚠ `range_misurato` sa gia' dirlo da se' (`CATTURA_RANGE_NON_MISURATO`);
+	 *   `nero` e `uniforme` no, ed e' per loro che questo campo esiste. */
+	gboolean pixel_misurati;
 } CatturaConsegna;
 
 /* ------------------------------------------------------------------ *
@@ -285,6 +302,49 @@ typedef struct
 	gboolean danno_dichiarato, danno_copre_tutto;
 	guint64 indice;          /* quale fotogramma era fra gli arrivati */
 	CatturaConsegna consegna; /* i quattro fatti, congelati con lui   */
+
+	/* ------------------------------------------------------------------ *
+	 * ⭐⭐ I TRATTI DELLA PRESA — la strumentazione della fase 8
+	 * ------------------------------------------------------------------ *
+	 *
+	 * ⛔ IL FATTO CHE LI FA NASCERE: `[M]` fase 4, il tratto `cattura → primo
+	 *    byte` vale **30,37 ms** e i tre tempi che il codificatore gia'
+	 *    dichiarava — conversione 5,6 · caricamento 2,9 · codifica 5,3 — ne
+	 *    spiegano **13,8**.  ⇒ **~16 ms non avevano un proprietario**, e un
+	 *    margine senza nome non si cura: si strumenta prima.
+	 *
+	 * ⛔ E QUESTI QUATTRO SONO IL PEZZO DI TRATTO CHE STA **PRIMA** DEL
+	 *    CODIFICATORE, cioe' l'unico che nessuno guardava.  Sono microsecondi, e
+	 *    sono quattro perche' rispondono a quattro domande diverse:
+	 *
+	 *      `us_arrivo`      l'istante (CLOCK_MONOTONIC) in cui il fotogramma e'
+	 *                       stato messo nel posto.  ⛔ Non e' un costo: e' il
+	 *                       riferimento da cui gli altri si sottraggono, e
+	 *                       accanto al `pts` di Mutter dice quanto ci mette il
+	 *                       produttore ad arrivare fino a noi;
+	 *      `us_copia`       la `memcpy` dentro la richiamata di tempo reale;
+	 *      `us_allocazione` la `g_malloc` del posto — ⛔ **0 quando il buffer si
+	 *                       e' riusato**, ed e' precisamente il numero che dice
+	 *                       se il riuso di `posto_capienza` sta funzionando o se
+	 *                       si rialloca a ogni giro;
+	 *      `us_nel_posto`   ⭐ **quanto il fotogramma e' rimasto FERMO nel posto**
+	 *                       prima che qualcuno lo prendesse.  ⛔ E' tempo in cui
+	 *                       nessuno lavora e il fotogramma invecchia: non e'
+	 *                       lavoro da ottimizzare, e' **attesa**, ed e' l'unica
+	 *                       voce del tratto che cala se il ciclo si accorcia;
+	 *      `us_misura`      il giro di `misura_i_pixel()` — ⛔ lavoro
+	 *                       DIAGNOSTICO, non di prodotto: legge ogni pixel del
+	 *                       fotogramma sul thread di chi chiama.
+	 *
+	 * ⚠ `us_nel_posto` e `us_misura` si riempiono in `cattura_prendi()`; gli
+	 *   altri due nella richiamata di tempo reale.  ⛔ Un fotogramma consegnato
+	 *   a `su_fotogramma` (la strada senza copia) NON li porta: li' non c'e'
+	 *   nessun posto e nessuna copia. */
+	uint64_t us_arrivo;
+	uint64_t us_copia;
+	uint64_t us_allocazione;
+	uint64_t us_nel_posto;
+	uint64_t us_misura;
 } CatturaFermo;
 
 /*

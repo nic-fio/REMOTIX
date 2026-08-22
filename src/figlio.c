@@ -4099,13 +4099,23 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		hw.qualita = QP_HARDWARE;
 		codif[indice] = codificatore_nuovo(&hw, errore, sizeof errore);
 		if (!codif[indice])
+			/* ⛔⭐ E I DUE NOMI SI STAMPANO, NON SI SCRIVONO A MANO — difetto
+			 *     trovato refutando, 22 agosto 2026 (fase 8).  Fino a qui la
+			 *     riga diceva **«hevc_vaapi»** e **«libx265»** scritti dentro le
+			 *     virgolette: dal 20 agosto questo ramo serve ANCHE H.264, e
+			 *     quando a non aprirsi era `h264_vaapi` il registro accusava un
+			 *     codificatore che nessuno aveva chiesto e nominava un ripiego
+			 *     che non sarebbe stato usato.  ⇒ Una riga col numero giusto e
+			 *     **la parola sbagliata accanto**, che e' la forma che manda la
+			 *     caccia dalla parte sbagliata (`LEZIONI.md` §1.20). */
 			registro_dice(REG_FIGLIO,
-			              "⚠ RIPIEGO DICHIARATO: «hevc_vaapi» su %s non si e' "
-			              "aperto (%s) ⇒ si scende su %s IN SOFTWARE, che sul "
+			              "⚠ RIPIEGO DICHIARATO: «%s» su %s non si e' "
+			              "aperto (%s) ⇒ si scende su «%s» IN SOFTWARE, che sul "
 			              "banco costa ~22 ms per fotogramma contro ~3.  ⛔ Non e' "
 			              "un dettaglio del registro: e' il tratto piu' grosso "
 			              "dei 39 ms della codifica",
-			              NODO_RENDERING, errore, "libx265");
+			              hw.componente, NODO_RENDERING, errore,
+			              codificatore_ripiego_software(codec));
 	}
 
 	if (!codif[indice])
@@ -4213,6 +4223,182 @@ static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_u
 	return pts_e_monotono ? pts_us : nostro_us;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ FASE 8 — LA SCOMPOSIZIONE DEL TRATTO `cattura → primo byte`
+ *
+ * ⛔ IL FATTO CHE LA FA NASCERE, e va detto perche' e' l'unica ragione per cui
+ *    questo codice esiste: `[M]` fase 4, quel tratto vale **30,37 ms**, e i tre
+ *    tempi che il codificatore gia' dichiarava — conversione **5,6**,
+ *    caricamento **2,9**, codifica **5,3** — ne spiegano **13,8**.
+ *    ⇒ **~16 ms non avevano un proprietario.**  Un margine senza nome non si
+ *    cura: **prima si strumenta, poi si cura**, o la cura nasce senza un «prima».
+ *
+ * ⛔⛔ E LA SCOMPOSIZIONE NON DEVE AVERE BUCHI, che e' precisamente la
+ *      proprieta' per cui quella della fase 4 valeva qualcosa (somma dei tratti
+ *      139,08 contro un totale di 139,40: scarto **0,32 ms**).  ⇒ Le voci sono
+ *      disgiunte e in fila, e l'ultima e' `resto`: quel che il totale ha in piu'
+ *      della somma delle altre.  Un `resto` che cresce e' un pezzo di tratto che
+ *      ancora nessuno guarda — e si vede subito, invece di sparire nella media.
+ *
+ *      pts di Mutter
+ *        │  produttore   Mutter+PipeWire fino alla nostra richiamata
+ *        │  allocazione  la g_malloc del posto (0 se il buffer si riusa)
+ *        │  copia        la memcpy dentro la richiamata di tempo reale
+ *      arrivo nel posto
+ *        │  nel posto    ⭐ ATTESA: il fotogramma invecchia finche' il ciclo
+ *        │               non torna a chiederlo.  ⛔ Non e' lavoro
+ *      presa
+ *        │  misura       `misura_i_pixel()`: DIAGNOSTICA, ogni pixel, ogni giro
+ *        │  conversione  swscale                       (dal codificatore)
+ *        │  caricamento  memoria di sistema → GPU      (dal codificatore)
+ *        │  codifica     la chiamata al codificatore   (dal codificatore)
+ *        │  spedizione   i pezzi verso il padre
+ *      primo byte fuori
+ *
+ * ⚠ E IL CONFINE VA DICHIARATO: qui il tratto finisce **quando i byte sono
+ *   partiti verso il padre**, non quando arrivano in pagina.  Il numero della
+ *   fase 4 e' misurato dal client; questo e' il pezzo di quello che sta dentro
+ *   il figlio, ed e' l'unico che questo processo puo' vedere senza dedurre.
+ *
+ * ⛔ E SI DICONO LE MEDIANE, non le medie: un fotogramma che prende un guasto di
+ *    pagina o una preemption sposta la media e non la mediana, e la fase 4 le
+ *    mediane le aveva.  ⚠ Il **massimo** si dice accanto, perche' e' l'unico
+ *    posto in cui quei colpi si vedono ancora.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+#define TRATTI_VOCI 10
+#define TRATTI_CAMPIONI 512
+
+/* L'ordine e' quello del riquadro: e' anche l'ordine in cui si stampano. */
+static const char *const tratti_nomi[TRATTI_VOCI] = {
+	"produttore", "allocazione", "copia",     "nel posto", "misura",
+	"conversione", "caricamento", "codifica", "spedizione", "resto"
+};
+static uint32_t tratti_campione[TRATTI_CAMPIONI][TRATTI_VOCI];
+static uint32_t tratti_totale[TRATTI_CAMPIONI];
+static unsigned tratti_quanti; /* quanti slot sono pieni (si ferma al tetto) */
+static unsigned tratti_prossimo;
+static uint64_t tratti_visti;  /* quanti fotogrammi in tutto */
+static uint64_t tratti_detto_us;
+/* ⛔ Quanti fotogrammi hanno dovuto rinunciare al `pts` di Mutter: senza questo
+ *    numero la voce «produttore» sarebbe una media fra due grandezze diverse. */
+static uint64_t tratti_senza_pts;
+
+static int tratti_confronta(const void *a, const void *b)
+{
+	uint32_t x = *(const uint32_t *)a, y = *(const uint32_t *)b;
+	return x < y ? -1 : (x > y ? 1 : 0);
+}
+
+/* La mediana di una voce sul campione tenuto.  ⚠ Si copia prima di ordinare: il
+ * campione e' un anello e ordinarlo sul posto lo distruggerebbe. */
+static uint32_t tratti_mediana(int voce, uint32_t *massimo)
+{
+	uint32_t copia[TRATTI_CAMPIONI];
+	unsigned i, n = tratti_quanti;
+
+	if (massimo)
+		*massimo = 0;
+	if (!n)
+		return 0;
+	for (i = 0; i < n; i++) {
+		copia[i] = voce < 0 ? tratti_totale[i] : tratti_campione[i][voce];
+		if (massimo && copia[i] > *massimo)
+			*massimo = copia[i];
+	}
+	qsort(copia, n, sizeof copia[0], tratti_confronta);
+	return copia[n / 2];
+}
+
+/*
+ * Registra un fotogramma nella scomposizione e, una volta al secondo, la dice.
+ *
+ * ⚠ Una riga per fotogramma renderebbe illeggibile il registro proprio mentre
+ *   serve — e' la stessa ragione per cui il resto del ciclo parla una volta al
+ *   secondo (`figlio.c`, il conto del ciclo).
+ */
+static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *fg,
+                         uint64_t us_spedizione, uint64_t us_fine)
+{
+	uint32_t *v = tratti_campione[tratti_prossimo];
+	uint64_t pts_us, inizio, somma = 0;
+	uint64_t totale;
+	int i;
+
+	/* ⛔ Senza il `pts` di Mutter il tratto non ha un inizio VERO: si parte
+	 *    dall'arrivo nel posto e la voce «produttore» resta a zero, che e' un
+	 *    vuoto dichiarato e non uno zero misurato. */
+	if (pts_e_monotono == 1 && fo->seq_nota && fo->pts > 0) {
+		pts_us = (uint64_t)fo->pts / 1000u;
+		inizio = pts_us;
+	} else {
+		tratti_senza_pts++;
+		inizio = fo->us_arrivo > (fo->us_copia + fo->us_allocazione)
+		             ? fo->us_arrivo - fo->us_copia - fo->us_allocazione
+		             : fo->us_arrivo;
+	}
+	if (us_fine <= inizio)
+		return; /* orologi che non si sottraggono: non si inventa un numero */
+	totale = us_fine - inizio;
+
+	memset(v, 0, sizeof tratti_campione[0]);
+	/* «produttore» = da quando Mutter dice di aver catturato a quando la nostra
+	 *  richiamata comincia a copiare.  ⛔ La copia e l'allocazione stanno DENTRO
+	 *  l'intervallo pts→arrivo, e si tolgono, o si conterebbero due volte. */
+	{
+		uint64_t fino_a_copia = fo->us_arrivo > (fo->us_copia + fo->us_allocazione)
+		                            ? fo->us_arrivo - fo->us_copia - fo->us_allocazione
+		                            : fo->us_arrivo;
+		v[0] = fino_a_copia > inizio ? (uint32_t)(fino_a_copia - inizio) : 0u;
+	}
+	v[1] = (uint32_t)fo->us_allocazione;
+	v[2] = (uint32_t)fo->us_copia;
+	v[3] = (uint32_t)fo->us_nel_posto;
+	v[4] = (uint32_t)fo->us_misura;
+	v[5] = (uint32_t)fg->us_conversione;
+	v[6] = (uint32_t)fg->us_caricamento;
+	v[7] = (uint32_t)fg->us_codifica;
+	v[8] = (uint32_t)us_spedizione;
+	for (i = 0; i < TRATTI_VOCI - 1; i++)
+		somma += v[i];
+	v[9] = somma < totale ? (uint32_t)(totale - somma) : 0u;
+	tratti_totale[tratti_prossimo] = totale > 0xffffffffu ? 0xffffffffu : (uint32_t)totale;
+
+	tratti_prossimo = (tratti_prossimo + 1) % TRATTI_CAMPIONI;
+	if (tratti_quanti < TRATTI_CAMPIONI)
+		tratti_quanti++;
+	tratti_visti++;
+
+	if (us_fine - tratti_detto_us < 1000000u)
+		return;
+	tratti_detto_us = us_fine;
+	{
+		char riga[512];
+		size_t off = 0;
+		uint32_t massimo_totale = 0;
+		uint32_t mediana_totale = tratti_mediana(-1, &massimo_totale);
+
+		for (i = 0; i < TRATTI_VOCI; i++) {
+			uint32_t mx = 0, md = tratti_mediana(i, &mx);
+			int scritto = snprintf(riga + off, sizeof riga - off, "%s%s %.2f (max %.2f)",
+			                       i ? " · " : "", tratti_nomi[i], md / 1000.0,
+			                       mx / 1000.0);
+			if (scritto < 0 || (size_t)scritto >= sizeof riga - off)
+				break;
+			off += (size_t)scritto;
+		}
+		registro_dice(REG_FIGLIO,
+		              "⭐ TRATTO cattura → byte fuori: mediana %.2f ms (max %.2f) su %u "
+		              "fotogrammi del campione, %llu in tutto — %s%s",
+		              mediana_totale / 1000.0, massimo_totale / 1000.0, tratti_quanti,
+		              (unsigned long long)tratti_visti, riga,
+		              tratti_senza_pts
+		                  ? "  ⚠ e qualche fotogramma e' senza `pts` di Mutter: "
+		                    "per quelli «produttore» e' un vuoto, non uno zero"
+		                  : "");
+	}
+}
+
 /* Codifica un fotogramma con il codificatore VIVO di quel codec e lo manda al
  * padre.  ⛔ `chiave` non si suppone: e' quel che il codificatore ha letto dal
  * flusso (`fg.chiave`), e §6.2 lo scrive nel campo `tipo`. */
@@ -4278,8 +4464,15 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	if (fg.chiave)
 		ciclo_chiavi++;
 
-	manda_fotogramma(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
-	                 fg.byte, input);
+	{
+		uint64_t t_spedizione = ora_monotona_us();
+		manda_fotogramma(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
+		                 fg.byte, input);
+		{
+			uint64_t t_fine = ora_monotona_us();
+			tratti_conta(fo, &fg, t_fine - t_spedizione, t_fine);
+		}
+	}
 	/* ⛔ Il fotogramma TENUTO e' ancora quello dell'accensione — «rimanda il
 	 *    palco» serve a chi rientra prima che il ciclo abbia consegnato il
 	 *    primo.  ⚠ E si tiene solo la CHIAVE: rimandare un delta a chi non ha
@@ -4861,7 +5054,17 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	              fo.altezza, fo.stride, (unsigned long long)fo.byte,
 	              fo.consegna.formato ? fo.consegna.formato : "(ignoto)",
 	              fo.consegna.bit_per_canale,
-	              fo.consegna.nero ? "⛔ NERO" : "non nero");
+	              /* ⛔ TRE risposte e non due: dal 22 agosto 2026 il giro sui
+	               *    pixel si fa a cadenza (`cattura.c`,
+	               *    `MISURA_PIXEL_OGNI_MS`), e su un fotogramma non guardato
+	               *    `nero == FALSE` vuol dire **«non ho guardato»**, non «non
+	               *    e' nero».  ⚠ Qui e' sempre il PRIMO fotogramma — che si
+	               *    guarda sempre — ma la riga si scrive giusta lo stesso:
+	               *    e' quella che un giorno verra' copiata altrove. */
+	              !fo.consegna.pixel_misurati ? "⚠ i pixel non sono stati guardati "
+	                                            "(cadenza): NON e' «non e' nero»"
+	              : fo.consegna.nero          ? "⛔ NERO"
+	                                          : "non nero");
 
 	rilievo_scrivi(dir_rilievo, "cattura.bgrx", fo.pixel, (size_t)fo.byte);
 
