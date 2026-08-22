@@ -4472,6 +4472,30 @@ chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il s
 > renderà?» andava misurata prima di costruire**, e il numero c'era già: `07-b57`, centinaia di
 > millisecondi contro un tetto di 50.
 
+### 7.20 ✅ **I motori supportati, dichiarati dall'utente** — 22 agosto 2026
+
+> *«Chrome e Firefox su Linux, e Chrome su Android sono OK. Firefox per Android è uscito dal
+> progetto.»* — e subito dopo: *«**Anche Chrome per Windows è OK**.»*
+
+⭐ **È l'elenco che il progetto non aveva ancora**, dato dall'utente sul prodotto vivo e non dedotto
+da una misura:
+
+| dove | motore | stato |
+|---|---|---|
+| **Linux** | Chrome | ✅ **OK** |
+| **Linux** | Firefox | ✅ **OK** |
+| **Windows** | Chrome | ✅ **OK** |
+| **Android** | Chrome | ✅ **OK** — e §7.19 lo dettaglia: *«esperienza completa, audio e video perfetti»* |
+| **Android** | Firefox | ⛔ **FUORI DAL PROGETTO** — §7.18 |
+
+⚠ **E quel che l'elenco NON dice, scritto perché non lo si deduca**: **Firefox su Windows** non è
+nominato, e nessuno l'ha mai provato. ⛔ Non è «supportato» e non è «escluso»: è **non provato**, e
+va scritto così finché qualcuno non lo apre.
+
+⭐ **E il confine di §0.1-bis regge**: *«pienamente supportato»* vuol dire **funziona, e sai in che
+condizioni** — non *uguale dappertutto*. Su Firefox l'incolla col mouse costa un clic **di Firefox**
+(§5-ter.9), e resta vero.
+
 ### 7.19 ✅ **Chrome per Android è PIENAMENTE SUPPORTATO** — giudizio dell'utente, 21 agosto 2026 sera
 
 *L'utente, dopo aver usato una sessione vera dal telefono: «**Chrome su Android offre un'esperienza
