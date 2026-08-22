@@ -199,6 +199,476 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-F2 · ⭐⭐⭐ AGENTE F2 — **l'occhio dell'utente aveva ragione**, e i due banchi non litigavano · *22 agosto 2026, sera*
+
+> ### ⭐⭐⭐ LO SCARTO È SPIEGATO **SENZA** USARE «L'UTENTE SI SARÀ SBAGLIATO»
+>
+> Tre candidate abbattute con la misura: ⛔ **i pixel** (`[M]` **0,301 · 0,294 · 0,301 barre** a
+> 1560 · 1920 · 2560 — **il doppio dei pixel, ZERO pendenza**), ⛔ **la mano** (3 169-3 358 px/s
+> contro 3 400: normalizzata non muove niente), ⛔ **la barra** (`barra_px = 720` in tutti e quindici
+> i verbali: è la finestra dell'utente).
+>
+> ⭐ Restava la quarta, quella che dà sempre ragione a chi misura. **Non è servita:**
+>
+> ```
+> 70,3 [M]  +  11,6 [M]  +  [?] 4-12  +  [?] 16-40  =  102-134 ms  ⇒  0,48-0,63 barre
+>              ↑ la coda eventi del browser: nel banco vale 0,165 ms
+>                perché la mano è SINTETICA
+> ```
+>
+> ⇒ ⭐⭐ **L'utente ne riferiva 0,50: il bordo basso dell'intervallo.** ⛔ **Il banco non sbagliava:
+> guardava un pezzo più corto dell'anello vero**, e il pezzo mancante era invisibile **proprio
+> perché la sua mano è finta**. Una mano sintetica non fa la fila nella coda eventi del browser.
+>
+> ### ⭐⭐ E i due banchi non litigavano: **misurano due grandezze diverse**
+>
+> | | | |
+> |---|---|---|
+> | `04-b30` | ⭐ **la RISPOSTA** | contiene **l'attesa** che un fotogramma venga prodotto |
+> | `08-b67` | ⭐ **la VECCHIAIA** di quel che è sullo schermo | non la contiene |
+>
+> `[M]` Stessa macchina, stesso giorno: tratto 1a **11,55** contro **0,165 ms**; tratto 3 **28,74**
+> contro **6,3-10,4** ⇒ **−30…−34 ms strutturali**, residuo `[?]` 6-10.
+>
+> ⛔ **E la moltiplicazione di §4-A tornava per COMPENSAZIONE**: accostava il ritardo di una
+> grandezza alla velocità dell'altra, e due errori si annullavano. 📖 `LEZIONI.md` §1.28.
+>
+> ### ⛔⛔ E DUE COSE CHE IL DIRETTORE AVEVA SCRITTO SONO SMENTITE
+>
+> 1. ⛔ **«I 17,48 ms erano contesa»** — `[M]` sul palco di F2, **a macchina scarica**, il tratto 9
+>    misura **17,64 ms** (n=241); **a macchina carica 15,37**. ⇒ **La contesa lo ABBASSAVA.** Il
+>    numero non era contesa: era **un'attesa** che l'altro banco non contiene (vedi sopra). ⚠ La
+>    contesa **esiste** ed è misurata (§4-F1, 8-17 ms sullo stesso anello) — **ma non era lei**;
+> 2. ⛔ **«Tutta la prima ondata è contaminata»** — `[M]` **falso**: sul banco del distacco il carico
+>    non gonfia niente (**70,7** carico contro **70,3** scarico). Crederlo farebbe **buttare misure
+>    buone**.
+>
+> ### ⭐ E lo stato alla risoluzione VERA dell'utente
+>
+> `[M]` 2560×1080, portatile scarico (carico 0,33, 0 Xvfb altrui), n=905/926, tutti i controlli
+> verdi, 13 guasti su 13 ricertificati: **70,5 · 70,0 ms · 214 · 213 px · 0,30 barre**.
+> Il **locale alla stessa tela**: **30,05 ms = 0,142 barre**, n=254 (B ne aveva 29). ⇒ **2,3 ×**.
+>
+> ### ⭐⭐⭐ E una previsione FALSIFICABILE, che tocca all'utente
+>
+> `[M]` Dopo la copia zero il banco dà **0,16 barre** ⇒ sullo schermo dell'utente la previsione è
+> **0,31-0,46 barre**. ⛔ **Se l'utente dicesse ancora «metà barra», questa spiegazione è sbagliata**
+> — e sta scritto qui perché si possa dirlo.
+>
+> ### ⚠ E i sei buchi non ricompaiono
+> `[M]` **3 in 244,6 s** a 2560 (uno ogni **82 s**) contro **uno ogni 2,9 s** dell'utente. ⇒ Resta la
+> **rete**: p99 **27,9-35,4 ms** ⇒ **+95…+120 px** che si aprono di colpo.
+
+> ### ⭐⭐⭐ TRE COSE, E LA PRIMA È CHE **L'OCCHIO DELL'UTENTE AVEVA RAGIONE**
+>
+> **1. `[M]` Alla tela vera dell'utente (2560×1080), a portatile scarico, il banco dà 0,30 barre —
+> e la risoluzione NON c'entra niente.** Girato a tre tele con **due volte** i pixel in mezzo, il
+> numero non si muove: **0,300 · 0,294 · 0,301 barre** a 1560×888, 1920×1080 e 2560×1080. ⛔ Per
+> arrivare da 0,28 a 0,50 servirebbe **+79 %**: la risoluzione ne dà **+0 %**.
+>
+> **2. ⭐⭐ Lo scarto sta tutto in quel che il banco NON misura**, e adesso è un conto:
+>
+> | | ms | ⇒ barre a 3 400 px/s |
+> |---|---|---|
+> | `[M]` il banco, 2560×1080, macchina scarica | **70,0 – 70,5** | **0,30** |
+> | `[M]` + la coda degli eventi del browser (tratto 1a, mouse **vero**) | + 11,6 | + 0,05 |
+> | `[?]` + il pezzo cieco in **ingresso** (mano → `event.timeStamp`) | + 4 … 12 | + 0,02 … 0,06 |
+> | `[?]` + il pezzo cieco in **uscita** (disegno finito → pixel acceso) | + 16 … 40 | + 0,08 … 0,19 |
+> | ⇒ **quel che l'utente guarda** | **102 … 134 ms** | ⭐⭐ **0,48 … 0,63 barre** |
+>
+> ⇒ ⭐⭐ **0,50 sta dentro l'intervallo che il banco stesso dichiara, sul bordo basso.** Non c'era
+> nessuno scarto: c'erano **due grandezze diverse chiamate con lo stesso nome**. ⛔ E la candidata
+> «l'utente ha stimato male» si chiude **senza usarla**: il suo occhio è stato lo strumento più
+> preciso dei tre di questa fase.
+>
+> **3. ⛔⛔ E i due banchi nostri non litigano: misurano due cose diverse, e la differenza è
+> misurata, non supposta.** A misura la **RISPOSTA** («ho mosso, quando lo vedo?»), B/F2 misura la
+> **VECCHIAIA** di quel che è sullo schermo durante un trascinamento continuo. `[M]` I due tratti
+> che li separano valgono **−30 … −34 ms**, e sono stati presi **oggi, sulla stessa macchina,
+> nella stessa ora**.
+>
+> ⚠ **E una smentita che riguarda una correzione già in corso**: `[M]` sul mio palco, a portatile
+> **scarico**, il tratto 9 di A misura **17,64 ms** — cioè **esattamente i 17,5 ms** che F3 dà per
+> gonfiati dalla contesa. ⇒ ⛔ Sul mio banco **quel numero non è contesa**, e la correzione di
+> −15 ms va rimessa in discussione prima di entrare in un documento.
+
+*Da inserire in `fasi/08-l-anello.md` §4 (misure), §5 (non ha funzionato) e §7 (resta `[?]`).
+⛔ Non è stata toccata una riga di `src/`, e nemmeno una dei banchi.*
+
+---
+
+## F2.0 · Le risorse, il palco e ⛔ **il carico, accanto a ogni numero**
+
+⭐ **Mie, tutte separate**: porta **7765** (prodotto) · **7766** (ponte) · **7767** (ancora) ·
+utente **`provaf8`** (uid 1044, nel gruppo `render`: verificato) · albero
+`/media/REMOTIX/src/08-f-src` · lavoro `/media/REMOTIX/tmp/08-f` (ban-file e socket propri) ·
+scena `/dev/shm/remotix-08-f` · schermo Xvfb `:92` (e `:94` per il banco di A).
+⛔ **7730 e 7731 — i due server dell'utente — non sono mai state toccate**, e la 7765 è stata
+**contata libera con `ss -tulnp` prima** di prenderla.
+
+**Palco**: server `192.168.0.2`, sessione GNOME headless, monitor virtuale letto **dal
+compositore** (`«Meta-0» 2560x1080 @ 60.000 Hz`), scena `04-b30-scena.c` a schermo intero,
+formato **BGRx 8 bit**. Client: Chrome su Xvfb **sul portatile**, strada **`bitmaprenderer`**
+(quella vera), rete **WiFi** (`wlo1`) in mezzo. ⛔ Prestazioni **su Intel UHD 730 integrata**.
+
+⛔⛔ **IL CARICO DEL PORTATILE VA ACCANTO AL NUMERO** — `LEZIONI.md` §2.0. ⚠ Il portatile ha
+**4 nuclei** ed è il **CLIENT**: è lì che gli agenti si pestano. Il server ne ha 20 e ha avuto
+`load 0,08` tutto il giorno.
+
+| | `load` (1 min) | Xvfb altrui | Chrome altrui |
+|---|---|---|---|
+| ⛔ **prima ondata** (i giri di F2.1 «carico») | **2,4 – 3,2** | 1 – 5 | fino a 56 |
+| ⭐ **finestra tranquilla** (i giri «PULITO») | **0,27 – 0,84** prima del giro | **0** | **0** |
+
+⇒ ⭐⭐ **E il risultato più utile di tutta la giornata sul carico è questo**: `[M]` a 2560×1080 il
+banco dell'elastico dà **70,5 · 71,2 · 71,7 · 70,7 · 70,7** a macchina carica e **70,5 · 70,0** a
+macchina scarica. ⛔ **La contesa NON gonfia questo banco.** Quel che gonfiava, se gonfiava, era
+un altro strumento — e va detto, perché «tutti i numeri della prima ondata sono contaminati» è
+falso e farebbe buttare misure buone.
+
+⭐⭐ **E la copia zero NON era accesa in nessuno dei miei giri**, verificato in due modi:
+`[M]` il mio albero è antecedente alla fusione (`src/codificatore.c` ha **2** occorrenze di
+«copia zero», quello fuso ne ha **10**), e `[M]` il registro del mio server ha **0** righe che
+nominino copia zero / DMA-BUF / ripiego. ⇒ ⭐ **I miei numeri sono sul codice ESATTO che l'utente
+guardava quando ha detto «mezza barra».** È la condizione perché la spiegazione valga.
+
+---
+
+## F2.1 · ⭐⭐ IL NUMERO ALLA TELA DELL'UTENTE — `[M]` 2560×1080, macchina scarica
+
+| | giro q1 | giro q3 |
+|---|---|---|
+| campioni | **905** su 941 fotogrammi | **926** su 963 |
+| ⏱ **ritardo, confine SCOMODO** (input → **disegno finito**) | **70,5 ms** | **70,0** |
+| ⏱ ritardo, confine COMODO (fotogramma *arrivato*, §6.2) | 37,6 | 36,9 |
+| ⭐ quanto si regala il comodo | 32,9 | 33,1 |
+| 📏 **distacco** | **214 px** (p95 600, max 1 149) | **213** (p95 600) |
+| ⭐ **distacco in barre del titolo** | **0,30** | **0,30** |
+| 🖐 la mano | 3 358 px/s | 3 356 |
+| 🌐 rete misurata **nello stesso giro** | 2,8 ms (4,0 %) | 2,8 (4,0 %) |
+| ⭐ **il pezzo NOSTRO** | **67,7 ms** | **67,2** |
+| carico prima del giro | load 0,33 · 0 Xvfb altrui | 0,84 · 0 |
+
+⇒ ⭐ Tutti i controlli verdi (Q0…Q13), **13 guasti su 13** alla ricertificazione fatta oggi sul
+mio portatile prima di cominciare.
+
+### ⭐⭐ Il termine di paragone LOCALE, rifatto alla stessa tela — con un denominatore vero
+
+| | n | la scena | il compositore | ⭐⭐ **l'anello locale** | ⇒ barre |
+|---|---|---|---|---|---|
+| `[M]` **2560×1080**, oggi | **254** | 10,43 ms | 20,52 | **30,05 ms** (p95 32,5) | **0,142** |
+| `[M]` 1560×888, agente B, 22 ago | 29 | 7,29 | 20,01 | 27,58 | 0,130 |
+
+⇒ ⭐ **Il pavimento si muove poco** (+9 % raddoppiando i pixel, con n che passa da 29 a 254), e il
+rapporto REMOTIX/locale resta **2,3×** — praticamente il 2,4× che B aveva trovato a 1560. ⛔ Il
+mandato della fase non cambia con la risoluzione: restano **~40 ms** da prendere sopra il
+compositore.
+
+⛔ **Un difetto vero, trovato e curato**: la copia di `08-b67-locale.py` **sulla macchina di prova
+era VECCHIA** (md5 `fe9ebcb…` contro `78ffc5a…` del deposito), cioè quella di *prima* della cura
+del setaccio unico che l'agente B descrive al suo §6 punto 4. `[M]` Con quella copia il primo
+giro ha detto **anello 13,51 ms con parti 10,92 + 20,68** — un totale **più piccolo delle sue
+parti**, che è impossibile: lo stesso rosso che B aveva già pagato, ricomparso perché la cura non
+era mai arrivata sulla macchina dove il banco gira. ⇒ **Una cura vale solo dove il banco gira.**
+
+---
+
+## F2.2 · ⭐⭐ LO SCARTO, CANDIDATA PER CANDIDATA — tre cadono con la misura, la quarta non serve
+
+### 1. ⛔⛔ **I PIXEL: refutata.** A macchina scarica il ritardo è **piatto**
+
+`[M]` Stesso banco, stessa scena, stesso palco, stessa ora, **macchina scarica**:
+
+| tela | Mpx | passo (byte) | `[M]` ritardo | distacco | barre | ⭐ **barre @ 3 400 px/s** |
+|---|---|---|---|---|---|---|
+| **1560 × 888** | 1,39 | 6 240 (**%64 = 32**) | **70,1 · 70,1 ms** | 203 · 201 px | 0,28 | **0,301 · 0,300** |
+| **1920 × 1080** | 2,07 | 7 680 (%64 = 0) | **69,4 ms** | 201 px | 0,28 | **0,294** |
+| **2560 × 1080** ⭐ *(l'utente)* | 2,76 | 10 240 (%64 = 0) | **70,5 · 70,0 ms** | 214 · 213 px | 0,30 | **0,301 · 0,300** |
+
+⇒ ⛔⛔ **Raddoppiando i pixel il numero non si muove di un centesimo di barra.** Nessuno dei due
+confini scala coi pixel, né lo scomodo né il comodo (35,4 – 37,6 ms su tutte e tre le tele).
+⭐ È la risposta diretta alla `[?]` che l'agente A aveva lasciato aperta («quanto dei 41 ms è
+prodotto e quanto sono pixel in meno»): **dei pixel non è quasi niente**.
+
+⚠ **E il contrario si dichiara**: nella **prima ondata**, a macchina carica, gli stessi giri
+davano una pendenza apparente (0,266 a 1560 contro 0,308 a 2560, **+16 %**). ⛔ **Quella pendenza
+non c'è**: era dispersione fra sessioni, e a macchina scarica sparisce. ⇒ Un banco che avesse
+girato una volta sola per tela avrebbe consegnato una legge dei pixel **che non esiste**.
+
+⭐ **E la trappola del passo di F4 è stata guardata**: la sola tela con passo non multiplo di 64 è
+la **1560×888** — ⛔ **ed è quella che va uguale alle altre**. Se il passo storto costasse
+qualcosa, si vedrebbe lì. E su tutte le tele la marca si legge `[M]` **al 100 %** (Q3) con
+**contrasto 1,0** e **scorrimento [0,0]**, e le coordinate si ritrovano **esatte al 100 %** (Q5).
+⚠ Nota di metodo, perché F4 avverte giustamente: **`08-b67` non guarda nessuna media**. Il lettore
+è quello certificato di `03-marca.py` (CRC, sync, contrasto), il controllo JS-contro-numpy è un
+**massimo per cella** (`0,000 su 255` in ogni giro) e Q5 pretende **le coordinate identiche**, non
+vicine. ⇒ Un'immagine inclinata farebbe saltare il CRC e il banco direbbe «0 eco letti», non un
+verde.
+
+### 2. ⛔ **LA VELOCITÀ DELLA MANO: refutata**, e togliendola il numero non si muove
+
+`[M]` La mano sintetica ha fatto **3 169 … 3 358 px/s** mediani nei giri puliti, contro i **3 400**
+dell'utente: **−7 % … −1 %**, dentro la dispersione della sua stessa mano (p90/mediana = 1,85).
+⭐ E il conto si può togliere del tutto: normalizzando ogni giro a **3 400 px/s esatti** si ottiene
+la colonna «barre @ 3 400» della tabella qui sopra — **0,294 … 0,301**, cioè la stessa cosa.
+
+⭐ **E c'è un fatto nuovo che nessuno cercava**, e va nel verso scomodo per noi: il distacco
+**misurato nei pixel** è `[M]` **0,90 – 0,94 volte** il prodotto `velocità × ritardo`, su tutti e
+quindici i giri. `[R]` La causa è la traiettoria del banco: il serpentino **rimbalza** a ogni riga,
+e attorno a un rimbalzo l'elastico si richiude perché la mano inverte. ⇒ Su un trascinamento
+**vero**, che non inverte, il fattore è **1,0**: ⛔ **il banco misura un elastico un po' più corto
+di quello dell'utente**, non più lungo.
+
+### 3. ⛔⛔ **LA BARRA DEL TITOLO: la più stupida e la più letale — controllata per prima, ed è a posto**
+
+`[M]` Letto nel verbale di **tutti e quindici i giri**: `barra_px = 720`, che è esattamente la
+larghezza della finestra dell'utente misurata sul suo video
+(`SCENA_UTENTE.finestra = [720, 433]`, «barra del titolo larga quanto la finestra»).
+⇒ **Il banco divide per la barra DELL'UTENTE**, non per una sua, e non c'è nessun fattore 1,8
+nascosto lì dentro.
+
+⭐ **E adesso l'unità è pulita anche nel secondo senso**: l'agente B girava a **1560 px** di
+larghezza dividendo per una barra di **720** misurata su uno schermo da **2560** — due schermi
+diversi sotto la stessa frazione. Alla tela dell'utente quel dubbio **non esiste più**: mano,
+barra e schermo sono i suoi tre. ⛔ E il numero **non cambia**: 0,30 di qua e 0,30 di là.
+
+### 4. ⭐⭐ **LA STIMA A OCCHIO: NON serve, e non si conclude per esclusione**
+
+⛔ Il mandato diceva: *«non si conclude questo per esclusione»*. **Non ce n'è stato bisogno**,
+perché il conto chiude da solo. Quel che il banco misura è **`t0` nella pagina → disegno finito**;
+quel che l'utente guarda ha **tre pezzi in più**:
+
+| | quanto | come si sa |
+|---|---|---|
+| ⭐ **la coda degli eventi del browser** (tratto 1a) | `[M]` **11,55 ms** mediani (p75 21,4) | misurato **oggi, sulla stessa macchina, a portatile scarico**, dal banco di A. ⛔ Nel banco dell'elastico vale `[M]` **0,165 ms**, perché la mano è **sintetica**: l'evento nasce già dentro il gestore, e la coda del browser non c'è |
+| `[?]` **il pezzo cieco in ingresso** | 4 – 12 ms | mano → `event.timeStamp`: dispositivo, nucleo e compositore **del client**. Nessuna API della pagina lo vede |
+| `[?]` **il pezzo cieco in uscita** | 16 – 40 ms | disegno finito → pixel acceso, `STUDI.md` §web §6.2. ⛔ E per l'utente **ci sono davvero**: sul suo schermo un compositore c'è |
+
+⇒ `[M]` 70,3 + `[M]` 11,6 + `[?]` 4-12 + `[?]` 16-40 = **102 – 134 ms** ⇒ a 3 400 px/s, col
+fattore **1,0** di un trascinamento che non inverte, **347 – 456 px** ⇒ ⭐⭐ **0,48 – 0,63 barre**.
+
+⇒ ⭐⭐ **L'utente ne riferisce 0,50: il bordo basso dell'intervallo che il banco stesso dichiara.**
+⛔ Non era un occhio impreciso: era un banco che si ferma **tre pezzi prima del vetro** e chiama
+«l'anello» quel che è la parte in mezzo.
+
+⚠ **E il pezzo che regge meno si dichiara**: anche mettendo il tratto 1a a **zero**, l'intervallo
+resta **0,43 – 0,58 barre** e **0,50 ci sta lo stesso**. La conclusione non dipende da quel numero.
+
+### 5. ⛔ **La quinta candidata, il CARICO: guardata, e su questo banco non morde**
+
+Vedi F2.0: `[M]` 70,7 ms mediani a macchina carica, 70,3 a macchina scarica. ⇒ ⛔ **Il banco
+`08-b67` è insensibile alla contesa**, e i suoi numeri della prima ondata **non vanno buttati**.
+`[R]` La ragione plausibile è che il grosso dell'anello sta **sul server** (che era scarico) e
+che il pezzo di client è dominato da attese, non da CPU. ⚠ È una spiegazione, non una misura.
+
+---
+
+## F2.3 · ⭐⭐ I DUE BANCHI NOSTRI — non è un disaccordo: sono **due grandezze**
+
+⛔ Il fatto duro del mandato: A dice **99,07 ms** (⇒ 0,47 barre), B dice **69,8** (⇒ 0,28).
+Rifatti **oggi, sulla stessa macchina, nella stessa ora, sullo stesso palco, a portatile scarico**:
+
+| | banco | tela | strada | `[M]` mediana | n | carico |
+|---|---|---|---|---|---|---|
+| **A** | `04-b30-anello-input.py` | 1460×888 | `?tela=2d` | **109,9 ms** | 241 | load 1,27 · 0 altrui |
+| **A** (macchina carica) | idem | 1460×888 | `?tela=2d` | 111,2 | 198 | load ~2,5 |
+| **F2** | `08-b67-elastico.py` | 1560×888 | `bitmaprenderer` | **70,1 ms** | 777 · 791 | load 0,66 · 0 altrui |
+
+⇒ ⛔ **Il disaccordo si riproduce, e a macchina scarica è persino più largo (40 ms).** E la tela di
+A è **più piccola**, quindi i pixel tirano nel verso sbagliato. ⭐⭐ **I due pezzi che lo spiegano
+sono misurati oggi, e sono tutti e due nella scomposizione di A:**
+
+| | A, oggi, pulito | F2, oggi, pulito | Δ |
+|---|---|---|---|
+| **tratto 1a** — `event.timeStamp` → i byte escono | `[M]` **11,55 ms** | `[M]` **0,165 ms** (`riassunto.tratto_1a_ms`) | **−11,4** |
+| **tratto 3** — la scena riceve → la scena **DISEGNA** | `[M]` **28,74 ms** | `[M]` **6,3 – 10,4 ms** (banco locale, stesso campo `eco_us → eco_disegnato_us`) | **−18,3 … −22,4** |
+| | | ⇒ **somma** | **−30 … −34 ms** |
+| | | ⇒ **residuo non spiegato** | `[?]` **6 – 10 ms** (strada 2D contro `bitmaprenderer`, e 100 px di tela) |
+
+⇒ ⭐⭐ **I due banchi misurano due cose diverse, e tutte e due sono vere:**
+
+- **A misura la RISPOSTA**: da *quell'* evento al primo fotogramma che lo mostra. Paga la coda del
+  browser **e** l'attesa intera del quadro della scena. È il numero giusto per *«ho cliccato,
+  quando lo vedo?»*.
+- ⭐ **F2/B misura la VECCHIAIA di quel che è sullo schermo** durante un trascinamento continuo:
+  `04-b30-scena.c` dipinge **l'ULTIMO input ricevuto**, quindi l'eco nomina sempre l'evento **più
+  fresco** e l'attesa del quadro **non la paga**. ⛔ **Ed è questa la grandezza che governa il
+  distacco**: la finestra che l'utente vede sta dove la mano era `vecchiaia` fa, non dove era
+  quando è partito un evento particolare.
+
+⇒ ⛔ **Nessuno dei due numeri va chiamato «l'anello di REMOTIX» senza dire quale dei due è.**
+`fasi/08-l-anello.md` §1.4 li mette in colonna come se fossero la stessa cosa: **non lo sono**, e
+la differenza è `[M]` **~30-34 ms**, cioè il 30 % del più grande.
+
+⚠ **E la moltiplicazione di §4-A va corretta**: `99,07 × 3 400 = 337 px = 0,47 barre` accostava un
+numero di **risposta** a un distacco di **vecchiaia**. ⭐ Che desse quasi il numero giusto è una
+**coincidenza**: i ~30 ms di troppo del confine di A compensavano i tre pezzi mancanti in coda.
+⛔ Due errori in versi opposti non fanno una prova, e §4-A la chiamava *«la prova che l'elastico è
+il modello giusto»*. **Il modello è giusto lo stesso** — lo dimostrano i quindici giri di qui —
+ma non per quella ragione.
+
+### ⛔⛔ E una smentita che riguarda una correzione già in corso: **il tratto 9 di A non è contesa**
+
+`[M]` F3 dà il tratto 9 di A (17,58 ms) per gonfiato dalla contesa e lo rimisura a **0,39 – 2,80 ms**.
+⛔ **Sul mio palco, a portatile scarico (load 0,37 all'inizio, 0 Xvfb e 0 Chrome altrui), il
+tratto 9 misura 17,64 ms** (n=241, min 10,98, p25 16,2, p75 19,x) — cioè **esattamente il numero
+di A**. E a macchina carica misurava **15,37**: ⛔ **la contesa lo abbassava, non lo alzava.**
+
+⇒ `[?]` **Le due misure non sono riconciliate**, e la spiegazione più economica è che non misurino
+la stessa cosa: il tratto 9 di A è *«richiamo del decodificatore → il fotogramma è PRONTO»*, cioè
+un'**attesa** (il primo `drawImage` di un `VideoFrame` blocca finché la GPU non l'ha consegnato) —
+`04-b30` lo dice già di suo: *«il tratto 9 non è il disegno, è l'attesa»*. ⛔ Un banco che misuri
+il **disegno** troverà 0,4-2,8 ms e avrà ragione; uno che misuri l'**attesa** troverà 17 e avrà
+ragione anche lui. ⇒ **Prima di togliere 15 ms da un numero della fase, va scritto quale delle due
+il numero conteneva.**
+
+---
+
+## F2.4 · I SEI BUCHI — `[M]` alla sua risoluzione **NON ricompaiono**
+
+| tela | secondi di trascinamento | buchi | uno ogni |
+|---|---|---|---|
+| 1280×720 | 25,0 | 0 | — |
+| 1560×888 | 111,5 | 0 | — |
+| 1920×1080 | 75,0 | 1 | 75 s |
+| ⭐ **2560×1080** | **244,6** | **3** | **82 s** |
+| *(l'utente)* | *17,5* | *6* | ⛔ *2,9 s* |
+
+⇒ ⛔ **La risoluzione non li fa ricomparire: sono 28 volte più radi dei suoi.** E il rilevatore
+funziona — G11 lo prova su un buco innestato, e qui ne ha trovati tre veri con la loro descrizione
+(*«5 disegni della scena NON sono arrivati al vetro: il buco è a VALLE di lei»*).
+
+⭐ **Resta la rete**, e nei miei giri è viva: `[M]` il `ping` che corre **nello stesso giro** ha
+p99 fra **27,9 e 35,4 ms** e il **3,8 – 4,1 %** dei colpi sopra 15 ms ⇒ `[M]` **+95 … +120 px di
+distacco che si aprono di colpo**, cioè un sesto di barra in più su un colpo su venticinque.
+
+⇒ `[?]` **I sei buchi dell'utente non sono né della risoluzione né della nostra scena.** Restano
+tre strade, nessuna chiusa: il **suo** momento di WiFi, il **suo desktop vero** (una scena di prova
+non ha né finestre, né ombre, né altre applicazioni), o il **registratore di GNOME** (§2.6: gira a
+30 fotogrammi al secondo e satura).
+
+---
+
+## F2.5 · ⭐ CHE COSA QUESTO DICE DELLA COPIA ZERO — una previsione che l'utente può smentire
+
+`[M]` F4 misura, **col mio stesso banco**, 0,27/0,26 barre prima e **0,16/0,16** dopo. ⛔ Quei
+numeri sono presi **allo stesso confine del mio**, quindi hanno **gli stessi tre pezzi mancanti**.
+⇒ Applicando lo stesso conto di F2.2 punto 4:
+
+| | barre |
+|---|---|
+| il banco, dopo la copia zero | **0,16** |
+| ⇒ **quel che l'utente vedrà**, con i tre pezzi rimessi | ⭐ **0,31 – 0,46** |
+
+⇒ ⭐⭐ **Previsione falsificabile, e la può falsificare lui guardando**: dove prima diceva «metà
+della barra del titolo», dovrebbe adesso dire **«un terzo, o poco meno»**. ⛔ Se dicesse ancora
+«metà», allora **la spiegazione di F2.2 è sbagliata** e va rifatta. È il modo giusto di chiudere
+questa fase: non con un numero nostro, ma con una previsione che il suo occhio può smentire.
+
+---
+
+## ⛔ CHE COSA NON HA FUNZIONATO
+
+1. ⛔⛔ **`--window-size` di Chrome NON è rispettato, e per tre giri ho misurato una tela sbagliata
+   credendola quella giusta.** `[M]` Chiedendo 2600×1192 la tela usciva **2544×960**; chiedendone
+   2616×1312 usciva **la stessa**. `[R]` La causa, letta nel profilo e non dedotta: Chrome salva in
+   `Preferences → browser.window_placement` una collocazione **`maximized: true`** con
+   `work_area 2560×1080`, e su Xvfb — **senza gestore di finestre** — si riapre massimizzato a
+   quell'area ignorando la bandiera. ⛔ **Il banco la bandiera la dichiarava** (`--window-size=2600,1192`
+   sta nel verbale) **ma nessuno la confrontava con la tela ottenuta**: è la forma di `LEZIONI.md`
+   §2.0 in persona — *un palco dichiarato e non verificato*.
+   ⇒ **Cura**: un pezzo a parte (`forza.py`) che dal di fuori chiama `Browser.setWindowBounds` via
+   CDP appena Chrome apre la porta di diagnosi, **rilegge i limiti ottenuti** e li stampa. E il
+   controllo vero è nel banco: la riga `tela 2560x1080` si legge **prima** di prendere il numero,
+   e i giri con la tela sbagliata **si buttano**. ⚠ Ne ho buttati tre.
+   ⭐ **Va messo dentro `08-b67`**: oggi il rimedio è nella testa di chi lancia.
+
+2. ⛔ **Il banco locale sulla macchina era una copia vecchia**, e diceva un totale più piccolo delle
+   sue parti (vedi F2.1). ⚠ Non l'ho preso per buono perché il conto non tornava — ma un lettore
+   distratto avrebbe scritto «l'anello locale è 13,5 ms» in un documento.
+
+3. ⛔ **L'anello locale a 1560×888 NON è uscito**: `[M]` **n = 12**, poi **1**, poi **1** su tre
+   tentativi. `[R]` La causa è la sincronia: il banco locale campiona `/dev/shm` **da fuori** e vede
+   l'eco cambiare solo mentre la mano si muove; farli partire a mano con uno `sleep` è un
+   accoppiamento fragile, e due volte su tre la finestra è caduta **prima** che la mano partisse
+   (l'ingresso e la misura dello scorrimento costano ~35 s). ⇒ **Il numero locale a 1560 in questo
+   rapporto (26,40 ms) ha n = 12 e si legge come indicazione, non come misura.** La cura è che il
+   banco locale lo lanci **il banco dell'elastico**, non l'agente.
+
+4. ⛔ **Cinque giri persi per uno `/tmp/.X11-unix/X92` orfano.** Quando un giro muore male il socket
+   dell'Xvfb resta, e il giro dopo si rifiuta di partire — giustamente (`03-b17` non condivide uno
+   schermo), ma **il rimedio (`rm -f`) è nella testa di chi lancia**, non nel banco.
+
+5. ⛔ **Il banco di A non si può girare alla tela dell'utente**, quindi il confronto A↔F2 è a
+   **1460/1560**, non a 2560. `[R]` `04-b30-anello-input.py:3381` costruisce il palco con
+   `finestra=(1500, 1000)` **scritto nel sorgente**, e l'Xvfb nasce di conseguenza a 1600×1200: una
+   finestra da 2600 non ci sta e `forza.py` non può allargare uno schermo. ⇒ `[?]` **Il numero di A
+   a 2560×1080 non esiste** — e visto che i pixel non contano (F2.2 punto 1) sarebbe **~110 ms**,
+   ma è una stima.
+   ⚠ **E lo stesso banco chiama il terreno SENZA ambiente** (`_sudo("bash %s scena-avvia")`): coi
+   difetti avvia la scena di `provao2`. Ho dovuto scrivergli attorno un terreno mio
+   (`/media/REMOTIX/src/08-f-terreno.sh`) che è solo `04-b32-terreno.sh` con le mie variabili.
+
+6. ⛔ **Due giri di A sono usciti ROSSI per un difetto del banco, non del prodotto**: `[M]` *«il
+   seqlock non si è fermato (seq 47482 e 47484)»* e Q4(a) senza fotogrammi da mostrare ⇒ verdetto
+   NON CONFORME **mentre la scomposizione dei tempi era completa e sana** (n = 241, somma dei tratti
+   108,9 contro T 109,9). ⇒ ⚠ **I numeri di A che cito vengono da un giro il cui verdetto è rosso**,
+   e lo dico invece di nasconderlo: sono buoni per il **confronto fra tratti**, non per essere
+   consegnati come «l'anello».
+
+7. ⚠ **Il costo del banco è dentro ogni numero**: `[M]` la lettura delle due marche costa
+   **7,5 – 10,5 ms mediani per fotogramma**, sul **filo principale**, cioè quello che decodifica e
+   dipinge. ⛔ È un errore sistematico che **allunga** i miei tempi (quindi non gonfia il nostro
+   vantaggio) e **cresce con la tela** (7,5 a 1560, 8,5 a 1920, 9,5-10,5 a 2560): ⇒ ⭐ la pendenza
+   vera dei pixel è **ancora più piatta** di quella che ho scritto — cioè **negativa** se si
+   togliesse il costo del banco.
+
+8. ⛔ **Ho scritto sul registro comune dei giri**: `banchi/08-b67-esiti.jsonl` ha i miei quindici
+   giri accanto a quelli di B. Si distinguono dal nome (`f2-*`), ⚠ ma **il nome del giro non è una
+   regola** — è lo stesso rilievo che l'agente A si era già fatto.
+
+9. ⛔ **Il mio albero è stato RICOSTRUITO alle 18:44 mentre lavoravo** (md5 diverso da quello di
+   partenza, `.o` nuovi), quasi certamente dal banco di A. ⇒ ⚠ **I giri prima e dopo le 18:44 non
+   girano sullo stesso binario.** Ho verificato che **le sorgenti sono le stesse** e che la copia
+   zero non c'è in nessuno dei due, e i numeri prima e dopo coincidono (70,7 contro 70,3) — ma
+   **la verifica l'ho fatta dopo, e poteva andare diversamente.**
+
+---
+
+## `[?]` CHE COSA RESTA APERTO
+
+| | |
+|---|---|
+| ⏳⏳ **il pezzo cieco in USCITA è la metà del mio intervallo** | `[?]` 16-40 ms è una **forbice di 24 ms** presa da `STUDI.md` §web §6.2, e da sola muove il risultato da 0,48 a 0,63 barre. ⛔ Finché non è misurata, «0,50» e «0,60» sono indistinguibili **per noi** e non per l'utente. ⭐ È la `[?]` che vale di più di tutta la fase |
+| ⏳ **il tratto 1a con un mouse VERO** | `[M]` 11,55 ms, ma è preso dal banco di A con la sua mano da 70 ms. ⭐ La strada `--mano cdp` di `08-b67` (eventi *fidati* consegnati da Chrome) è prevista e **non è ancora stata girata**: è la misura giusta, e chiuderebbe il pezzo più grosso che resta `[?]` nel mio conto |
+| ⏳ **il tratto 9 di A: 17,6 o 2,8 ms?** | ⛔ le due misure non sono riconciliate (F2.3). Prima di correggere un numero della fase va scritto **quale delle due** conteneva |
+| ⏳ **l'anello locale a 1560×888** | n = 12: da rifare col banco locale lanciato **dal** banco dell'elastico |
+| ⏳ **i sei buchi** | non sono della risoluzione. Restano il suo WiFi, il suo desktop vero, o il suo registratore |
+| ⏳⏳ **il desktop VERO contro la scena di prova** | ⛔ nessun banco di questa fase misura un desktop con finestre, ombre e compositing: misurano **una scena sola a schermo intero**. È l'ultima differenza fra il banco e l'utente che **non** è stata quantificata, e tira nel verso scomodo |
+| `[?]` **il codificatore** | `08-b67` **non** verifica che la codifica sia in hardware. `provaf8` è nel gruppo `render` (verificato: `groups=1044(provaf8),44(video),991(render)`), ⛔ ma «ha aperto un render node» non prova niente (`LEZIONI.md` §1.11) |
+
+---
+
+## Come si rigira
+
+```bash
+# sul portatile, dalla radice del deposito
+python3 banchi/08-b67-elastico.py --certifica          # 13 guasti su 13 (rifatto oggi)
+bash <scratch>/fase8/f2.sh utente ; sessione ; accendi ; ponte ; parola
+(python3 <scratch>/fase8/forza.py 2600 1192 9645 60 &)  # ⛔ senza, la tela esce 2544x960
+bash <scratch>/fase8/f2.sh scena-avvia
+bash <scratch>/fase8/f2.sh misura 2600 1192 25 nome     # ⛔ e si VERIFICA la riga «tela 2560x1080»
+bash <scratch>/fase8/carico.sh                          # ⛔ prima e dopo ogni giro
+```
+
+⚠ **Lasciato acceso sulla macchina**: prodotto sulla **7765**, ponte sulla **7766**, scena, e la
+sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **solo** le mie cose.
+⚠ **Nel deposito** restano modificati `banchi/08-b67-esiti.jsonl` e `banchi/04-b30-esiti.jsonl`
+(i registri dei giri) e **niente altro**: `src/` non è stato toccato.
+
+
+---
+
 ## 4-F4 · ⭐⭐⭐ AGENTE F4 — **LA COPIA ZERO È FATTA**, e siamo a 1,23 volte il locale · *22 agosto 2026, sera*
 
 > ### ⭐⭐⭐ IL NUMERO CHE CHIUDE IL MANDATO, NELL'UNITÀ DELL'UTENTE

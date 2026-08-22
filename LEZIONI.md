@@ -1033,6 +1033,26 @@ numero viene promosso a **bersaglio della fase**, con un agente dedicato.
 primo. Un terzo agente, che non sapeva niente dei primi due, ci arriva per conto suo: `[M]`
 **0,71 ms**, confermato da **tre lettori** che si accordano entro **0,005 ms**.
 
+> #### ⛔⛔ E QUI VA MESSA UNA CORREZIONE, PERCHÉ UN QUARTO AGENTE HA SMENTITO **QUESTA STESSA LEZIONE** MENTRE VENIVA SCRITTA
+>
+> `[M]` Sul **suo** palco, **a macchina scarica**, lo stesso tratto 9 misura **17,64 ms** (n=241) —
+> e **a macchina carica 15,37**. ⇒ ⛔ **La contesa lo ABBASSAVA.** Il 17,48 ms **non era contesa**.
+>
+> ⇒ ⭐ **Quel che resta in piedi di questa lezione, e regge da solo**: la contesa **esiste ed è
+> misurata direttamente** — i quattro giri qui sotto, stesso banco e stesso tutto, danno 8-17 ms di
+> differenza. ⛔ **Quel che cade è l'attribuzione**: che *quel* numero fosse *quel* difetto.
+>
+> ⛔ **E la ragione vera è più interessante, ed è §1.28**: i due banchi **non misuravano la stessa
+> grandezza**. Uno misura **la risposta** (quanto ci mette la conseguenza di un input ad arrivare),
+> l'altro **la vecchiaia di quel che è sullo schermo**. Il tratto 9 dell'uno contiene un'**attesa**
+> che nell'altro non esiste.
+>
+> ⚠ **La morale del secondo ordine, e vale più della prima**: *«è contesa»* è una spiegazione
+> comoda, e una volta misurata la contesa **diventa il candidato buono per ogni numero che non
+> torna**. ⛔ **Ho attribuito a lei un numero che non le apparteneva**, e l'ho scritto in una lezione
+> — che è il posto dove un errore dura di più. Un candidato misurato **non è una licenza di
+> attribuzione**: ogni numero va attribuito **da sé**.
+
 ⛔⛔ **La causa, misurata direttamente** — quattro giri, stesso banco, stesso palco, stessa scena,
 stesso binario, **cambia solo chi altro sta lavorando sulla macchina**:
 
@@ -1072,6 +1092,12 @@ che è stata la riga più citata della giornata **e che era un artefatto dell'or
    prendono a turno**, e chi orchestra deve **coordinare la finestra tranquilla** invece di sperarci.
    ⭐ Il modo che ha funzionato: un agente ha **ammazzato il proprio giro a metà** per liberare la
    macchina a un altro, su richiesta del coordinatore.
+
+⛔ **E una cosa che questa lezione NON autorizza a dire**: `[M]` sul banco del distacco
+(`08-b67`) il carico **non gonfia niente** — 70,7 ms mediani a macchina carica contro **70,3** a
+macchina scarica. ⇒ *«Tutta la prima ondata è contaminata»* è **falso**, e crederlo farebbe buttare
+misure buone. **La contesa colpisce alcuni banchi e non altri, e quali si misura invece di
+dedurlo.**
 
 ⚠ **E il prima/dopo ALTERNATO (A-B-A-B sullo stesso albero) sopravvive a tutto questo**, ed è la
 ragione per cui si pretende: il carico colpisce i due rami allo stesso modo, quindi **la differenza
@@ -1125,6 +1151,70 @@ negativo** che lo faccia cadere (qui: R↔B scambiati, scarto 33) — o non si s
 buona e il giudizio è staccato da lei* — qui la misura è buona (le medie sono giuste) **e non tocca
 la proprietà che ci interessa**. Prima di fidarsi di un controllo, si chiede: **quale guasto lo fa
 cadere?** Se non c'è risposta, non è un controllo.
+
+### 1.28 ⭐⭐⭐ **Due banchi che non concordano possono avere ragione tutti e due: stanno misurando due grandezze diverse**
+
+*22 agosto 2026, fase 8. Per una giornata intera due banchi nostri hanno dato numeri incompatibili
+sullo stesso fenomeno, e il coordinatore ha cercato **chi mentiva**. ⛔ Non mentiva nessuno.*
+
+⛔ **Il caso.** L'utente riferisce a occhio un distacco di **0,50 barre del titolo**. Il banco `A`
+dice **0,47**, il banco `B` **0,28**. Poi si scopre che il numero di `A` era gonfiato, lo si
+corregge, e `A` scende a **0,35**: ⇒ i due banchi si avvicinano **ma l'utente resta fuori da tutti e
+due**, e nel **verso scomodo** — vede più distacco di quanto gli strumenti ne misurino.
+
+⭐⭐ **La soluzione non era un difetto: era una definizione.**
+
+| | che cosa misura | |
+|---|---|---|
+| banco `A` | ⭐ **la RISPOSTA** — quanto ci mette la conseguenza di un input ad arrivare sullo schermo | contiene **l'attesa** che un fotogramma venga prodotto |
+| banco `B` | ⭐ **la VECCHIAIA** di quel che è sullo schermo — l'eco nomina sempre l'evento più fresco | non contiene quell'attesa |
+
+`[M]` Sulla stessa macchina, lo stesso giorno: tratto `1a` **11,55** contro **0,165 ms**; tratto `3`
+**28,74** contro **6,3-10,4** ⇒ **−30…−34 ms** di differenza **strutturale**, con un residuo `[?]`
+di 6-10 ms. ⇒ **I due numeri non si sottraggono e non si confrontano: rispondono a due domande.**
+
+⛔ **E la moltiplicazione che sembrava funzionare tornava per COMPENSAZIONE**: `99,07 ms × 3 400 px/s
+= 337 px = 0,47 barre` accostava **il ritardo di una grandezza alla velocità dell'altra**, e il
+risultato somigliava al vero perché **due errori si annullavano**. ⚠ Un conto che torna non è un
+conto giusto: **le unità vanno nominate prima del risultato.**
+
+## ⭐⭐⭐ E la parte che vale di più: **l'occhio dell'utente aveva ragione, e gli strumenti guardavano meno del vero**
+
+Escluse **con la misura** le tre spiegazioni comode — i pixel (`[M]` **0,301 · 0,294 · 0,301 barre**
+a 1560 · 1920 · 2560: **il doppio dei pixel, zero pendenza**), la velocità della mano, la larghezza
+della barra — restava la quarta, quella che dà sempre ragione a chi misura: *«l'utente ha stimato a
+occhio, si sarà sbagliato»*.
+
+⛔ **Non serviva.** Sommando quel che il banco **non vede**:
+
+```
+70,3 [M] + 11,6 [M] (la coda eventi del browser: nel banco vale 0,165 ms
+                     perché la mano è SINTETICA)
+       + [?] 4-12 (mano → evento)  + [?] 16-40 (disegno → pixel acceso)
+     = 102-134 ms  ⇒  0,48-0,63 barre
+```
+
+⭐ **L'utente ne riferiva 0,50: il bordo basso dell'intervallo.**
+
+⇒ ⛔⛔ **Il banco non sbagliava: guardava un pezzo più corto dell'anello vero**, e il pezzo mancante
+era invisibile **proprio perché la mano del banco è finta**. Una mano sintetica non fa la fila nella
+coda eventi del browser; una mano vera sì, `[M]` **per 11,6 ms**.
+
+## ⭐ Le tre regole
+
+1. ⛔ **Prima di chiedersi quale banco mente, si scrive che cosa misura ciascuno** — confine di
+   apertura, confine di chiusura, e **il nome della grandezza**. Due numeri con la stessa etichetta e
+   confini diversi non sono confrontabili, e nessuno se ne accorge finché non si sottraggono;
+2. ⛔⛔ **La spiegazione «l'utente si sarà sbagliato» si usa PER ULTIMA, e solo dopo aver escluso le
+   altre con la misura.** È la candidata che assolve chi misura, quindi si sceglie da sé se nessuno
+   la nomina (`CODER.md` §1-bis, il confine che si sposta nella direzione comoda);
+3. ⭐ **Quel che il banco non può vedere si SOMMA, non si ignora.** I pezzi ciechi dichiarati
+   servono a questo: qui la somma dei ciechi ha spiegato per intero uno scarto del 30 % che sembrava
+   un difetto.
+
+⚠ **E la spiegazione va lasciata falsificabile**: `[M]` dopo la copia zero il banco dà **0,16
+barre** ⇒ la previsione sullo schermo dell'utente è **0,31-0,46**. ⛔ **Se l'utente dicesse ancora
+«metà barra», questa lezione è sbagliata** — e sta scritto qui perché si possa dirlo.
 
 ## 2. Come si prova
 
