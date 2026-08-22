@@ -130,6 +130,65 @@ totale che l'utente sente è questo più la rete: si **dichiara**, non si promet
 uno scambio che si presenta di continuo, perché **ogni memoria intermedia compra fluidità e vende
 risposta**. (`DECISIONI.md` §2.4)
 
+### 3.2-bis ⭐⭐ LA SPECIFICA DELL'ESPERIENZA — dettata dall'utente il 22 agosto 2026
+
+> *«Non pretendo un comportamento allineato al nanosecondo rispetto a una situazione locale, ma che
+> gli si avvicini molto. La mia specifica è avere un'esperienza utente il più vicina possibile a una
+> situazione locale, ma non identica: quello è impossibile.»*
+
+⭐ **È il metro della fase 8**, e differisce dai tre numeri di §3 in una cosa sola ma decisiva: §3.2
+promette **il pezzo che è nostro** (input → fotogramma che parte), questa dice **che cosa deve
+sentire l'utente**. Le due non si sostituiscono: la prima è collaudabile da un banco, la seconda è
+il giudizio a cui la prima serve.
+
+#### ⭐ La scena su cui è stata dettata, e il numero che l'utente ha prodotto con l'occhio
+
+`[M]` 22 agosto 2026, dal video dell'utente (404 fotogrammi, registratore di GNOME a 30/s): una
+finestra di terminale **720×433** trascinata a mano dentro la sessione. Velocità **mediana
+3 400 px/s**, p90 **6 300**, picchi **12 400**.
+
+⭐ **E l'utente ha misurato a occhio la cosa che conta**: la distanza fra la freccia del mouse e la
+finestra che la insegue è **«la metà della larghezza della barra del titolo»** ⇒ la barra è larga
+quanto la finestra, quindi **≈ 360 px**.
+
+#### ⛔ Perché è un ELASTICO, e perché l'utente lo chiama «fluidità» invece che «ritardo»
+
+`[R]` Nel modo classico la freccia la muove **il browser**, alla velocità della mano (§7.1 e
+`pagina.html`: il cursore di sistema *e* la freccia disegnata, sovrapposti, tutt'e due locali). La
+finestra invece la insegue con **tutto** il ritardo dell'anello. ⇒
+
+```
+distacco = velocità della mano × ritardo dell'anello
+```
+
+⛔ **Il distacco non è costante: cresce quando si accelera e si richiude quando si rallenta.** In
+locale è **zero a qualunque velocità**. ⇒ La finestra *nuota* rispetto alla mano, e questo si
+percepisce come **mancanza di fluidità**, non come lentezza — che è esattamente la parola che
+l'utente ha usato per primo, prima che ne conoscessimo la causa.
+
+⭐⭐ **E il conto va nei due versi**: nota il distacco in pixel, si ricava il ritardo. 360 px danno
+**106 ms** se l'utente guarda alla velocità mediana, **57 ms** al suo p90, **29 ms** ai picchi. ⏳
+`[?]` **A quale delle tre stia guardando non è deducibile**: va misurato l'anello, non chiesto a lui.
+
+#### ⛔ E il limite si dichiara, perché la specifica dice «non identica»
+
+Un anello di rete **non può avere distacco zero**: c'è un fotogramma del compositore, uno della
+pagina, e il filo in mezzo. ⇒ Il distacco **si dimezza o meglio, non si toglie**. Chi promettesse
+di farlo sparire prometterebbe una cosa che non esiste — ed è precisamente la parte che l'utente ha
+messo nella specifica da sé: *«ma non identica: quello è impossibile»*.
+
+⏳ **Il traguardo in numeri non si scrive qui finché l'anello non è rimisurato** sulla scena vera. Va
+scritto **nell'unità dell'utente** — frazioni di barra del titolo a una velocità dichiarata — perché
+è quella che lui può giudicare senza strumenti.
+
+#### ⭐ E lo scambio che questa specifica vieta era GIÀ vietato qui sopra
+
+§3.2 lo dice dal principio: *«ogni memoria intermedia compra fluidità e vende risposta»*, e *«una
+scelta che alza il ritmo peggiorando il ritardo non si fa»*. ⇒ ⛔ **Mettere l'anello in parallelo**
+— codificare l'N mentre si cattura l'N+1 — comprerebbe fotogrammi al secondo pagandoli in ritardo:
+**peggiorerebbe l'elastico**, cioè proprio la cosa che l'utente vede. È **fuori**, e non per una
+misura nuova: per una riga che stava scritta da prima che il difetto avesse un nome.
+
 ### ⛔⛔ Il numero c'è, ed è misurato — e la causa NON era quella
 
 *13 agosto 2026, fase 3 step 5. Qui stava scritto, con la marca `[?]`: «il traguardo dei 40 ms

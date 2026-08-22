@@ -1042,10 +1042,35 @@ degli appunti tiene **un solo tipo MIME**.
 > codifica costa oggi. ⛔ E i ~16 ms non spiegati sono **nello stesso tratto**: è qui che si cercano,
 > e questa fase è l'unica che ha il motivo di guardarci dentro.
 
-**Produce**: la copia zero — il fotogramma va dalla cattura al codificatore **senza uscire dalla
-GPU**.
+> ## ⭐⭐⭐ E IL 22 AGOSTO L'UTENTE HA DETTATO LA SPECIFICA — `SPECIFICHE.md` §3.2-bis
+>
+> *«La mia specifica è avere un'esperienza utente **il più vicina possibile a una situazione
+> locale**, ma non identica: quello è impossibile.»*
+>
+> ⭐ **E ha precisato il sintomo con l'occhio, che è una misura**: trascinando veloce una finestra,
+> la distanza fra la freccia e la finestra che la insegue è **«metà della barra del titolo»** ⇒ su
+> una finestra di 720 px, **≈ 360 px**.
+>
+> ⛔⛔ **Da cui il vero mandato di questa fase, e NON è la copia zero**: quel distacco è
+> `velocità della mano × ritardo dell'anello`, la freccia è locale e la finestra no ⇒ **è un
+> ELASTICO** che si apre quando la mano accelera. La copia zero toglie **8,5 ms su ~139**: il **6 %**.
+> ⇒ Serve **l'anello intero**, ed è quel che la fase 4 aveva già scritto chiudendo: *«sei tratti da
+> ~25 ms ⇒ nessuna cura singola porta 140 a 50: è lavoro della fase 8»*.
+>
+> ⛔ **E una strada è chiusa prima di aprirsi**: mettere l'anello in parallelo comprerebbe
+> fotogrammi pagandoli in ritardo ⇒ **allargherebbe l'elastico**. §3.2 lo vietava già: *«una scelta
+> che alza il ritmo peggiorando il ritardo non si fa»*.
+>
+> ⏳ **Il primo numero del banco** non è più un tratto: è **`input → vetro` rimisurato sulla scena
+> vera** — finestra 720×433, velocità mediana **3 400 px/s**, picchi **12 400** (`[M]` dal video
+> dell'utente, 22 agosto). Il 139,40 ms della fase 4 ha otto giorni e due fasi di cure in mezzo.
 
-**L'utente vede**: **la stessa immagine di prima**, e giudica che non sia peggiorata.
+**Produce**: ⭐ **l'anello più corto**, di cui la copia zero è **un tratto su sei** — il fotogramma
+va dalla cattura al codificatore **senza uscire dalla GPU**.
+
+**L'utente vede**: ⭐ **la finestra che insegue la freccia più da vicino**, e giudica quanto ci si è
+avvicinati al locale. ⚠ *(Era: «la stessa immagine di prima, e giudica che non sia peggiorata» — il
+metro di quando questa fase era solo la copia zero.)*
 
 **Il banco**, ed è la lezione che è costata di più:
 - ⛔ **si misurano i fotogrammi consegnati, non i millisecondi di CPU.** La fase 9 di v1 ha portato
