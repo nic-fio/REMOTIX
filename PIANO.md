@@ -1468,11 +1468,21 @@ vive, e la prossima volta lo dice una macchina invece di una revisione.
    §6.1-bis, che era stata **sostituita in silenzio** da un'altra. Serve il telefono dell'utente;
 8. **Firefox su Windows**, mai provato.
 
-## 🔸 E due decisioni che aspettano l'utente
+## 🔸 E le decisioni che aspettano l'utente
 
-- **al congedo il palco va rimesso a una misura di riposo?** Oggi chi si collega **eredita la
-  finestra di chi c'era prima** (`RCP.md` §4.5, scritto il 22 agosto);
-- **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi.
+- 🔸 ~~**al congedo il palco va rimesso a una misura di riposo?**~~ — **decisa il 22 agosto, e
+  provvisoria**: si lascia com'è (`DECISIONI.md` §5.0-septies). ⛔ **La domanda gliel'avevo posta
+  con una premessa falsa** — «eredita la finestra di chi c'era prima» — e l'utente l'ha rilevato:
+  il **multi-tenant non esiste** (è la fase 10) e la sessione grafica è **una per utente** (I2). Chi
+  si riattacca eredita **la misura lasciata dalla propria connessione precedente**, non quella di un
+  altro. 🔸 *«per il momento accetto, ma poi ci penserò su»* ⇒ **non è chiusa**;
+- **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi;
+- **il `nice` a tutto il percorso audio** (punto aperto 1): `SCHED_FIFO` non è ottenibile su questo
+  kernel, la leva che resta è `nice`, ed è una decisione di prodotto;
+- **si apre o no un difetto a monte in Mutter?** (§7.1-bis della fase 6): la catena è letta nel
+  sorgente e non è corretta nemmeno nel loro ramo principale. È un'azione verso l'esterno;
+- **il DeX** (punto aperto 7): su monitor esterno la pagina legge lo schermo del monitor o quello del
+  telefono? ⛔ Il telefono è dell'utente: non si aggira.
 
 ## Come si riparte, in due comandi
 

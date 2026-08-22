@@ -2629,6 +2629,42 @@ invent.kde.org: **`Plasma/6.8` non esiste**, l'ultimo tag è **v6.7.4**, e il ri
 caldo è **solo su `master`**, senza una data. ⇒ Si legga «KDE ≤ 6.7.4, e la versione che lo porta
 non è ancora uscita».
 
+### 5.0-septies 🔸 Al congedo il palco **NON** si rimette a una misura di riposo — *provvisoria, 22 agosto 2026*
+
+*Portata all'utente come una delle due decisioni che aspettavano lui. ⛔ **E gliel'avevo posta con
+una premessa falsa**: «chi si collega eredita la finestra di chi c'era prima». Non c'è nessun «chi
+c'era prima» — il multi-tenant è la **fase 10** e non esiste, e la sessione grafica è **una per
+utente** (invariante **I2**, `sessione.c:1474`). ⭐ **L'ha rilevato l'utente**, e la voce sta qui
+anche per quello.*
+
+**Che cosa sopravvive davvero**: non la sessione di un altro, ma **la misura del palco** lasciata
+dalla **connessione precedente dello stesso utente**. `RCP.md` §4.5 lo dichiara — *«la tela
+SOPRAVVIVE alla sessione»* — e `[M]` il 21 agosto sul prodotto vero tre attacchi di fila con
+`ATTACCA(1920×1080)` hanno ricevuto `SESSIONE` con **1920×1080**, **1264×800** e **1600×900**: ogni
+volta quel che il giro prima aveva lasciato.
+
+**La decisione, per ora**: si lascia com'è. Tre ragioni, e la terza è quella che conta:
+
+1. ⭐ **si corregge già da sola**: la misura di `ATTACCA` è una **preferenza**, ma subito dopo
+   `SESSIONE` il client manda `ADATTA_TELA` con la sua misura vera (§5.0-sexies, dal 15 agosto). ⇒
+   Resta solo un **istante** all'attacco in cui la tela in vigore è quella vecchia;
+2. ⛔ **un riposo al congedo è un secondo riordino delle finestre** fatto mentre l'utente non
+   guarda: il desktop rimescola le finestre a **ogni** cambio di misura del monitor, e quel
+   rimescolo il server non lo può disfare;
+3. ⛔⛔ **e non curerebbe il problema vero.** Il costo che l'utente vedrebbe è lo scenario
+   PC → telefono → PC: dal telefono il palco si rimpicciolisce, GNOME **schiaccia le finestre** per
+   farcele stare, e al ritorno il palco torna grande **ma le finestre restano schiacciate**. Una
+   misura di riposo non le rimette dov'erano — ne aggiunge una terza.
+
+⏳ **`[?]` E la strada che curerebbe davvero quello scenario è un'altra**, ed è di **fase 9**: non
+far cambiare misura al palco quando ci si attacca da uno schermo piccolo, e lasciar **riscalare** il
+client — che è precisamente quel che il prodotto già sa fare per la vista (§5.1). ⚠ Non si anticipa
+qui: ha bisogno del punto di lavoro fra qualità e banda, che è la fase 9.
+
+🔸 **Perché è provvisoria e non chiusa**: *«per il momento accetto il tuo suggerimento, ma poi ci
+penserò su»* — l'utente, 22 agosto 2026. ⇒ La voce **non** va marcata ✅ finché non ci ritorna, e
+chi la riapre trova qui la ragione per cui era stata lasciata così.
+
 ### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
 
 *8 agosto 2026. «Tagliamo la testa al toro. Anziché correre dietro ai compositor, una scelta

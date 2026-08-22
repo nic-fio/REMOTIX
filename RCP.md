@@ -1022,9 +1022,11 @@ client **DEVE** adattarsi riscalando, e il server **DEVE** aver scritto il ripie
 
 ⛔⛔ **E la seconda ragione è quella comune, non l'eccezione: la tela SOPRAVVIVE alla sessione.**
 Il palco resta alla misura in cui l'ha lasciato il client precedente, e `SESSIONE` concede
-**quella**, non quella chiesta in `ATTACCA`. ⇒ Un client che si attacca dopo un altro riceve una tela
+**quella**, non quella chiesta in `ATTACCA`. ⇒ Un client che si attacca dopo un altro **dello stesso
+utente** — la sessione grafica è una per utente, e il multi-tenant non esiste — riceve una tela
 che non ha chiesto e di cui **non conosce l'origine**, e non ha nessun modo di distinguerla da un
-ripiego.
+ripiego. ⚠ **Non è «la finestra di un altro»**: è la misura che ha lasciato la propria connessione
+precedente (`DECISIONI.md` §5.0-septies, dove la frase sbagliata è raccontata).
 
 ⚠ **Chiedere una tela in `ATTACCA` non la ottiene**: `tela_larghezza`/`tela_altezza` sono una
 **preferenza**, e l'unico messaggio che cambia la tela è `ADATTA_TELA` (§7.1). ⇒ Un client che vuole
