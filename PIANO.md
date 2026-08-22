@@ -1472,8 +1472,12 @@ non ci rallenterà più».*
 8. **La contesa GPU**: la scena è **pronta e non lanciata** (sposterebbe i millisecondi di tutti);
    ⭐ e un indizio nuovo la sostiene già — il 16 agosto, con cinque banchi accesi, `NON_ORA` aveva
    mediana **22 ms e due casi a 3 000**; il 17 a macchina ferma, **6 ms**.
-9. **Firefox su Windows**, e i numeri **D** di §4.8 che **non sono più ricalcolabili** (la finestra
-   di registro è stata cancellata).
+9. ⏳ **Firefox su Windows: non provato.** ⚠ L'utente ha dichiarato l'elenco dei motori il 22 agosto
+   (`DECISIONI.md` §7.20) — Linux Chrome e Firefox, Windows Chrome, Android Chrome: **OK**; Android
+   Firefox: **fuori**. ⛔ Firefox su Windows **non è nominato**: non è supportato e non è escluso,
+   è **non provato**, e va tenuto così finché qualcuno non lo apre.
+   ✅ *(E i numeri **D** di §4.8 **sono stati rifatti** il 22 agosto — non sono più un buco:
+   `fasi/06` §5.9.)*
 10. Le proposte in attesa di un proprietario: l'accessore di `cattura.h`, `cattura_ridimensiona()`
     che **dichiara successo su un flusso che muore**, e `03-b19-dipinti-worker.py` che dà **verde a
     zero contro zero**.
