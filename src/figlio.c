@@ -5948,6 +5948,36 @@ void figlio_vive(int argc, char **argv)
 					}
 					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
 					if (r == CATTURA_RITELA_CHIESTA) {
+						/*
+						 * ⛔ «CHIESTA» NON E' «IL FLUSSO E' ANCORA VIVO» — `[M]`
+						 *    22 agosto 2026, banco
+						 *    `banchi/06-b5-esiti-cattura.c` caso 2: se il
+						 *    produttore non regge la misura, la rinegoziazione
+						 *    non lascia il flusso dov'era, lo **uccide** 2 ms
+						 *    dopo questo ritorno.
+						 *
+						 * ⭐ E qui non serve un esito nuovo, perche' la strada
+						 *    per saperlo e' gia' quella che questo ciclo
+						 *    percorre: `cattura_prendi()` guarda lo stato PRIMA
+						 *    di aspettare ⇒ `[M]` **8,1 ms**, un giro solo, e il
+						 *    messaggio nomina «error, no more input formats».
+						 *    Da li' si passa da `IL PALCO SE N'E' ANDATO SOTTO I
+						 *    PIEDI` e si rimonta.
+						 *
+						 * ⏳⛔ E IL DIFETTO CHE RESTA APERTO, dichiarato invece
+						 *     che taciuto: il rimontaggio chiede
+						 *     `prendi_il_palco(tela_voluta_*)`, cioe' **la stessa
+						 *     misura che ha appena ucciso il palco**, e con
+						 *     `codec_chiesto && tela_voluta_l` sceglie l'attesa
+						 *     CORTA.  `[M]` (banco 06-b5 caso 3) `cattura_avvia()`
+						 *     a quella misura **RIESCE 3 volte su 3** e il palco
+						 *     e' morto 300 ms dopo, 3 su 3 ⇒ il ciclo non ne esce
+						 *     da solo, e `attendi_tela()` a ogni giro impedisce
+						 *     anche al padre di scadere.  ⚠ Sul prodotto vero e'
+						 *     `[?]`: Mutter ha concesso 30 misure su 30 fino a
+						 *     7680x4320 e `rcp_misura_ammessa()` taglia li'.  La
+						 *     cura sta nella politica di rimontaggio, non qui.
+						 */
 						registro_dice(REG_FIGLIO,
 						              "⭐ §7.1: tela %ux%u CHIESTA al compositore.  "
 						              "La risposta al client parte quando arriva un "
@@ -6704,6 +6734,23 @@ void figlio_vive(int argc, char **argv)
 				uint32_t chiesta_l = 0, chiesta_a = 0;
 				char errore[256];
 
+				/* ⭐ E QUESTO E' IL POSTO IN CUI LA DIVERGENZA SI LEGGE DAVVERO,
+				 *    ed e' l'unico: `cattura.c` la vede sul FORMATO — dove non
+				 *    puo' sapere se quel `Format` risponde alla richiesta di
+				 *    adesso o a una superata — mentre qui la si vede sui PIXEL,
+				 *    che sono arrivati e non si disdicono.  E' la regola di
+				 *    §5.0-sexies: *«la verita' la dice il fotogramma»*.
+				 *
+				 * ⚠ `[M]` 22 agosto 2026, banco `banchi/06-b5-esiti-cattura.c`
+				 *   caso 4: anche qui i due numeri possono divergere per un
+				 *   motivo INNOCENTE — due `ADATTA_TELA` incatenate (l'utente che
+				 *   trascina il bordo), dove questo fotogramma risponde alla
+				 *   richiesta di prima e quello della nuova sta arrivando.  ⇒ La
+				 *   riga NOMINA tutt'e due i moventi invece di accusarne uno:
+				 *   un registro che attribuisce la causa sbagliata costa piu' di
+				 *   un registro muto.  ⛔ E in nessuno dei due casi si cambia
+				 *   condotta: la riconciliazione qui sotto guarda il fotogramma,
+				 *   che e' giusto in tutt'e due. */
 				cattura_misura_chiesta(cat, &chiesta_l, &chiesta_a);
 				registro_dice(REG_FIGLIO,
 				              "⭐⭐ TELA NUOVA DAL PALCO: %ux%u → %ux%u (chiesti al "
@@ -6714,9 +6761,12 @@ void figlio_vive(int argc, char **argv)
 				              chiesta_a,
 				              (chiesta_l == fo.larghezza && chiesta_a == fo.altezza)
 				                  ? ""
-				                  : " — ⛔ CONCESSO DIVERSO DA CHIESTO (§4.5 lo "
-				                    "permette, ma nessuno lo direbbe se non questa "
-				                    "riga)");
+				                  : " — ⛔ CONCESSO DIVERSO DA CHIESTO: o il "
+				                    "compositore ha concesso altro (§4.5 lo "
+				                    "permette), o questo fotogramma risponde a una "
+				                    "richiesta SUPERATA (`[M]` due ADATTA_TELA "
+				                    "incatenate, banco 06-b5 caso 4).  ⚠ Riconcilio "
+				                    "sul FOTOGRAMMA, che e' giusto in tutt'e due");
 
 				/* 1. il codificatore, ⛔ TUTTI quelli vivi: il debito della
 				 *    chiave e' per codec, e un codificatore aperto e non

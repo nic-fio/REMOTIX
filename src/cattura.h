@@ -346,6 +346,33 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
  * ⇒ Qui si dice soltanto se la RICHIESTA e' partita.  Che il compositore abbia
  *   obbedito lo dira' il formato negoziato (`cattura_consegna`) e, prima
  *   ancora, il primo fotogramma alla misura nuova.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔ E «PARTITA» INCLUDE «E PUO' AVER UCCISO IL FLUSSO» — `[M]` 22 agosto
+ *      2026, banco `banchi/06-b5-esiti-cattura.c` caso 2, PipeWire 1.4.2
+ *
+ * Chiedendo una misura che il produttore non regge, `cattura_ridimensiona()`
+ * torna `CHIESTA` e **due millisecondi dopo** il flusso va in
+ * `paused → error — no more input formats`: la trattativa fallita non lascia il
+ * flusso «fermo alla misura vecchia», lo **uccide**.
+ *
+ * ⭐ E NON SERVE UN ESITO NUOVO PER SAPERLO, perche' la strada c'e' gia' ed e'
+ *    quella che il chiamante percorre comunque: `cattura_prendi()` guarda lo
+ *    stato **prima** di aspettare, quindi torna `CATTURA_PRESA_GUASTO` **senza
+ *    spendere l'attesa**, e il `GError` nomina lo stato e il guasto del
+ *    produttore.  `[M]` col ciclo del figlio (`MOVIMENTO_ATTESA_S 0.008`) il
+ *    guasto arriva a **8,1 ms**, in **un** giro solo e con **zero** ZERO in
+ *    mezzo — cioe' un giro del ciclo, non un timeout.
+ *
+ * ⛔ Un esito «MORTO» restituito da qui sarebbe invece **verde per
+ *    costruzione**: la morte arriva 2 ms DOPO il ritorno, quindi leggerla
+ *    subito vorrebbe dire leggerla prima che accada, e la meta' delle volte
+ *    direbbe «viva».
+ *
+ * ⚠ `[?]` E questa scena, sul prodotto vero, non e' misurata: `[M]`
+ *   (§5.0-sexies) Mutter ha concesso 30 richieste su 30 da 1x1 a 7680x4320, e
+ *   `rcp_misura_ammessa()` taglia proprio a 7680x4320.  ⇒ Qui si dichiara che
+ *   cosa succede SE capita, non quanto spesso capiti.
  */
 typedef enum
 {
@@ -454,7 +481,16 @@ gboolean cattura_risveglia(Cattura *cattura);
 /* La misura CHIESTA al produttore adesso — ⛔ non quella concessa: quella sta in
  * `CatturaConsegna.larghezza/altezza` e vale solo dopo la negoziazione.  ⚠ Le due
  * si confrontano, e chi le confonde riscrive il difetto che la guardia «chiesto
- * contro concesso» esiste per vedere. */
+ * contro concesso» esiste per vedere.
+ *
+ * ⛔⛔ E QUESTI DUE SONO **TUTTO** QUEL CHE SI ESPORTA SULLA DIVERGENZA: non
+ *     c'e' — e non si aggiunge — un `cattura_divergente()`.  La ragione e'
+ *     misurata e sta accanto al campo `misura_divergente` in `cattura.c`: `[M]`
+ *     (banco `06-b5` caso 4) la sola scena che lo accende sono **due
+ *     ridimensionamenti incatenati**, dove il valore e' un **falso allarme** che
+ *     si spegne da se'; e `[M]` (caso 6) la divergenza vera si ricostruisce da
+ *     questi due accessori, che distinguono anche il «non ancora negoziato» —
+ *     cosa che un `gboolean` non saprebbe fare (`CODER.md` §3.10). */
 void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
 
 /* La misura NEGOZIATA, cioe' quella che i pixel hanno davvero.  ⛔ `FALSE` = il

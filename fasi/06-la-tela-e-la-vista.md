@@ -1596,6 +1596,35 @@ scartate si stampano una per una.
 | `06-b37-lancia.sh` | la **settima scena** in «tutte» (con il suo schermo 2600×1000 e il suo fattore 1,25) · il difetto dichiarato in §4.3-bis — *«dopo la prima scena il browser non si riapre»* — **curato**: si aspetta che tutto quel che tiene il profilo sia morto |
 | `06-b37-strumenta.py` | estrae e verifica il testo di `chiedi_tela` (58 righe), e **fallisce rumorosamente** se l'ancora non c'è |
 
+### 5.16 · ⭐⭐ 22 agosto — **tre proposte al prodotto: due RIFIUTATE con la misura, una smentita al contrario**
+
+*Le proposte venivano da chi aveva esercitato `cattura.c` col palco finto. ⭐ Tutte e tre sono state
+messe alla prova invece che attuate, e il risultato è più utile di tre cure.*
+
+| la proposta | l'esito |
+|---|---|
+| *«`cattura_ridimensiona()` dichiara successo su un flusso che muore, e `figlio.c` non ha modo di saperlo»* | ⛔ **RIFIUTATA**: la premessa è falsa. `[M]` col ciclo vero del figlio, il guasto arriva a **8,1 ms** con **stato e causa dal produttore** — non è un timeout. ⭐ E un esito «morto» restituito dalla funzione sarebbe **verde per costruzione**: la morte arriva 2 ms dopo il ritorno |
+| *«serve un accessore per la divergenza»* | ⛔ **RIFIUTATA**, e con tre misure: la sola scena che accende il campo dà un **falso allarme** (i «concessi» erano la richiesta di prima, non una concessione); i due accessori che esistono **bastano** e in più sanno dire «non ancora negoziato»; e la via del contatore **non regge** — due richieste incatenate producono **una sola** risposta, quindi i conti divergono per sempre |
+| *«il ramo "concesso diverso da chiesto" non si raggiunge»* | ⭐⭐ **SMENTITA AL CONTRARIO**: si raggiunge, **43 colpi su 480 catene** |
+
+⭐⭐ **E la smentita ha trovato un difetto di prodotto**: la riga di registro diceva *«la conversione
+delle coordinate nasce sbagliata e il puntatore andrà altrove»* — ⛔ e nella **sola** scena che la
+accende è **falso**. ⇒ *Un registro che attribuisce la causa sbagliata costa più di un registro
+muto.* Riscritta: dice il fatto, nomina i **due** moventi possibili, e manda dove il verdetto si dà
+davvero.
+
+⚠ **E la guardia della divergenza resta un commento con un `gboolean` attaccato — ma adesso il codice
+lo dice**, invece di lasciar credere che qualcuno la legga.
+
+⛔ **E un difetto del banco che l'autore ha dichiarato per primo**: il suo caso 6 *«stampava un numero
+che non aveva letto»* — due zeri scritti a mano nella riga al posto della misura. ⭐ *«È esattamente
+il difetto che avrei segnalato a un altro.»*
+
+⏳ **E un guasto vero lasciato aperto, non suo da curare**: `[M]` il rimontaggio chiede al palco **la
+misura che l'ha appena ucciso**, e la chiamata **riesce 3 volte su 3** mentre il palco muore 300 ms
+dopo — con l'attesa corta si sceglie un **cappio**, e nessuno se ne accorge. ⚠ Sul prodotto vero è
+`[?]`, perché Mutter concede tutto sotto il tetto. È **dichiarato nel codice** accanto al ramo.
+
 ## 6 · Le decisioni prodotte
 
 - ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
@@ -1737,9 +1766,14 @@ la decide l'utente.
 - ✅ ~~**il secondo di grazia curato e non misurato**~~ — **CHIUSO il 22 agosto**, e ⛔ **la ragione
   per cui sembrava impossibile era sbagliata**: la grazia parte dal `TELA`, **non dalla connessione**,
   quindi i 1500 ms della stretta di mano non c'entrano. 📖 §5.10;
-- **codice mai esercitato su Mutter**: il ramo *«concesso diverso da chiesto»* (`figlio.c:4585`) e
-  `MISURA DIVERGENTE` (`cattura.c:543`) — 17 richieste su 17 concesse esatte. Provabili **solo col
-  palco finto**;
+- ✅ ~~**codice mai esercitato su Mutter**: il ramo «concesso diverso da chiesto» e
+  `MISURA DIVERGENTE`~~ — **SMENTITO il 22 agosto**: ⭐ `MISURA DIVERGENTE` (oggi `cattura.c:608`)
+  **si raggiunge dall'esterno** — `[M]` **43 colpi su 480 catene**, tre spazzolate su tre. ⛔ La porta
+  non è il produttore, **è il tempo**: due ridimensionamenti incatenati — *l'utente che trascina il
+  bordo* — e la risposta del primo torna quando la richiesta porta già la seconda. Finestra: fra
+  **200 e 800 µs**. ⇒ È una corsa, ⭐ **ma una corsa che un banco programma**: si spazzola la distanza
+  fra le due chiamate. ⚠ Resta non esercitato quello di `figlio.c` (oggi `:6764`): servirebbe un
+  fotogramma vero, e il palco finto non ne accoda. 📖 §5.16;
 - ✅ ~~**il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3~~ — **MISURATO il 22 agosto:
   sono 30, e il «~75» non si riproduce.** 📖 §5.13;
 - ✅ ~~**le coordinate in volo sono inarbitrabili da una registrazione**~~: dal 21 agosto `RCP.md`

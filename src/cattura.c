@@ -77,7 +77,32 @@ struct Cattura
 	 *    volta sola e si tiene, perche' il richiamo del formato gira piu' volte.
 	 * ⚠ Vive perche' la tela sta per smettere di essere una costante
 	 *   (`DECISIONI.md` §5.0-sexies): finche' si chiedeva sempre 1920x1080 una
-	 *   divergenza non poteva capitare, e infatti nessuno la guardava. */
+	 *   divergenza non poteva capitare, e infatti nessuno la guardava.
+	 *
+	 * ⛔⛔ E NON C'E' UN ACCESSORE, ED E' UNA SCELTA MISURATA — 22 agosto 2026,
+	 *     banco `banchi/06-b5-esiti-cattura.c` caso 4 e caso 6.
+	 *
+	 *   · `[M]` L'unica scena che accende questo campo e' **due
+	 *     `cattura_ridimensiona()` incatenate**: il `Format` della PRIMA torna
+	 *     quando `chiesta_*` porta gia' la SECONDA.  Misurato **43 volte su 480
+	 *     catene** (tre spazzolate da 160), col grosso dei colpi fra **200 e 800
+	 *     us** di distanza fra le due chiamate e code fino a 0 e 3200 us — e la
+	 *     riga diceva *«chiesti 1602x1020, concessi 1202x806»*,
+	 *     cioe' «concesso» era **la richiesta di prima**, non una concessione
+	 *     diversa del produttore.  ⇒ In quella scena il campo e' un **falso
+	 *     allarme**, e si spegne da se' al `Format` successivo.
+	 *   · `[M]` La scena opposta — il produttore che IMPONE una misura sua — non
+	 *     esiste: `proposta()` dichiara un rettangolo FISSO, quindi
+	 *     l'intersezione e' o quel valore o l'insieme vuoto (caso 5: il palco
+	 *     pretende 1600x900, il flusso va in `error`, nessuna divergenza).
+	 *
+	 * ⇒ ⛔ Esportarlo vorrebbe dire dare al chiamante un `TRUE` che nella sola
+	 *   scena misurata e' **sbagliato**.  E non servirebbe: `cattura.h` espone
+	 *   gia' `cattura_misura_chiesta()` e `cattura_misura_negoziata()`, e la
+	 *   divergenza e' la loro disuguaglianza (caso 6).  ⭐ Il verdetto vero lo
+	 *   da' il FOTOGRAMMA, in `figlio.c`, ed e' la regola che §5.0-sexies aveva
+	 *   gia' scritto: *«la verita' la dice il fotogramma, non l'esito della
+	 *   richiesta»*. */
 	gboolean misura_divergente;
 
 	/* --- i conteggi, che girano sul thread di tempo reale --------------- *
@@ -533,16 +558,61 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	 *
 	 * ⚠ Si DICE e non si chiude la sessione: chi sceglie che farne e' il
 	 *   chiamante, che sa se puo' ancora servire il client (`CODER.md` §4.2 — un
-	 *   ripiego silenzioso produce due comportamenti sotto la stessa etichetta). */
+	 *   ripiego silenzioso produce due comportamenti sotto la stessa etichetta).
+	 *
+	 * ---------------------------------------------------------------------
+	 * ⛔⛔ 22 AGOSTO 2026 — LA RIGA SI RAGGIUNGE, E QUEL CHE DICEVA ERA FALSO
+	 *
+	 * `fasi/06` §7.2 teneva questa riga fra il *«codice mai esercitato»*, e
+	 * `banchi/06-b40` aveva concluso che il ramo **non si raggiunge
+	 * dall'esterno**: col rettangolo FISSO di `proposta()` l'intersezione e' o
+	 * il valore chiesto o l'insieme vuoto, quindi ogni `Format` che arriva
+	 * porta per forza la misura chiesta.
+	 *
+	 * ⭐ `[M]` `banchi/06-b5-esiti-cattura.c` caso 4: **si raggiunge**, 43 volte
+	 *    su 480, e la porta non e' il produttore — e' il TEMPO.  Due
+	 *    `cattura_ridimensiona()` incatenate (l'utente che TRASCINA il bordo
+	 *    della finestra, la scena che §5.0-sexies nomina) e il `Format` della
+	 *    PRIMA torna quando `chiesta_*` porta gia' la SECONDA.  ⚠ E' una CORSA —
+	 *    43 colpi su 480 catene, non uno su uno — ma una corsa **che un banco
+	 *    programma**: si spazzola la distanza fra le due chiamate e la finestra
+	 *    si trova (il grosso fra 200 e 800 us).  ⭐ 3 spazzolate su 3 l'hanno
+	 *    accesa.
+	 *
+	 * ⛔ ⇒ E percio' «concessi» qui NON vuol dire «il compositore ha concesso
+	 *    altro»: nella sola scena misurata vuol dire **«questa e' la risposta
+	 *    alla richiesta di prima»** — la riga vista era *«chiesti 1602x1020,
+	 *    concessi 1202x806»*, e 1202x806 era esattamente la richiesta
+	 *    precedente.  Il flusso e' sano e si rimette in pari da se' al `Format`
+	 *    successivo.
+	 *
+	 * ⛔⛔ La riga di prima diceva *«la conversione delle coordinate nasce
+	 *     sbagliata e il puntatore andra' altrove»*: in quella scena e' FALSO, e
+	 *     un registro che attribuisce una causa sbagliata costa piu' di un
+	 *     registro muto — e' il difetto che `LEZIONI.md` §1.9 chiama per nome.
+	 *     ⇒ Adesso la riga dice il FATTO e i due moventi possibili, e manda al
+	 *     posto in cui il verdetto si da' davvero.
+	 *
+	 * ⚠ E non si prova a distinguere i due moventi QUI: si e' provato con un
+	 *   contatore («quante rinegoziazioni ho chiesto, quante ne ho viste
+	 *   tornare») e ⛔ `[M]` non regge — una catena di due `update_params`
+	 *   produce **un solo** `Format`, quindi i due conti divergono per sempre e
+	 *   la guardia si spegnerebbe per sempre.  ⭐ Il posto che sa distinguere e'
+	 *   quello che vede i PIXEL. */
 	if (cattura->chiesta_larghezza && cattura->chiesta_altezza
 	    && (cattura->formato.size.width != cattura->chiesta_larghezza
 	        || cattura->formato.size.height != cattura->chiesta_altezza))
 	{
 		if (!cattura->misura_divergente)
 			registro_dice(AREA,
-			              "⛔ MISURA DIVERGENTE: chiesti %ux%u, concessi %ux%u — la "
-			              "conversione delle coordinate nasce sbagliata e il puntatore "
-			              "andra' altrove (`DECISIONI.md` §5.0-sexies)",
+			              "⛔ MISURA DIVERGENTE: chiesti %ux%u, concessi %ux%u.  ⚠ Due "
+			              "moventi, e da qui non si distinguono: o il compositore ha "
+			              "concesso altro (§4.5 lo permette, e allora la conversione "
+			              "delle coordinate nascerebbe sbagliata), o questa e' la "
+			              "risposta a una richiesta SUPERATA — `[M]` due "
+			              "ridimensionamenti incatenati, banco 06-b5 caso 4.  ⭐ Il "
+			              "verdetto lo da' il FOTOGRAMMA (`DECISIONI.md` §5.0-sexies), "
+			              "non questa riga",
 			              cattura->chiesta_larghezza, cattura->chiesta_altezza,
 			              cattura->formato.size.width, cattura->formato.size.height);
 		cattura->misura_divergente = TRUE;
