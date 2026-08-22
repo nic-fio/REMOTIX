@@ -966,6 +966,31 @@ doppia **non è la scena dichiarata** — e non dà un errore: dà numeri miglio
 ⭐ La forma generale è quella di [[1.20]]: un conteggio che si guarda solo per dire *«c'è»* non è un
 conteggio, è un booleano travestito — e un booleano non sa distinguere **uno** da **due**.
 
+### 1.24 ⛔⛔ **Due banchi sulla stessa porta si ammazzano in silenzio — e il ban colpisce l'innocente**
+
+*22 agosto 2026, e la colpa è del coordinatore: la stessa porta assegnata a due agenti.*
+
+Il nome dell'unità di sistema è derivato dalla **sola porta**, e il modello che tutti copiano faceva
+`systemctl stop remotix-<porta>` **senza guardare di chi fosse**. `[M]` Un banco ha fermato l'unità di
+un altro e ci ha messo la propria, **troncando una misura da trenta minuti a 745 secondi**.
+
+⛔⛔ **E il danno vero è venuto dopo**: la sonda del derubato ha continuato a bussare al server
+**sbagliato** con le proprie credenziali, e la difesa contro le parole d'ordine indovinate ha bannato
+**l'indirizzo** — che su una macchina di banchi **è lo stesso per tutti**. ⇒ **Dodici ore di ban
+addosso a chi non aveva sbagliato niente**, e il sintomo per lui sarebbe stato «troppi tentativi» su
+ogni suo banco.
+
+⭐ **La difesa ha funzionato esattamente come deve**: il difetto non è suo. È che **l'unità di misura
+del ban è l'indirizzo, e l'unità di lavoro è la porta**.
+
+⇒ Due regole, e la seconda vale più della prima:
+1. **si guarda di chi è l'unità prima di spegnerla** — la descrizione dice chi è, e chi vuole davvero
+   prendersi la porta lo dichiara (`RUBA_PORTA=si`). ⭐ Messo nel modello, e provato: **rifiuta di
+   spegnere la porta dell'utente**;
+2. ⭐ **una sonda che insiste è un'arma**: deve fermarsi da sé su credenziali rifiutate o su tre
+   errori di fila. ⚠ Il commento del file diceva *«questa sonda non può far scattare il ban»* — **era
+   falso**, e a scoprirlo è stato il ban.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

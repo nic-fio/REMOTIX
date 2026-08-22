@@ -64,6 +64,9 @@ ALBERO=${ALBERO:-/media/REMOTIX/src/07-audio-src}
 LAV=${LAV:-/media/REMOTIX/tmp/07-audio}
 UTENTE_SESSIONE=${UTENTE_SESSIONE:-}
 UNITA=remotix-$PORTA
+# ⭐ La descrizione dice CHI E', albero compreso: e' l'unica cosa che
+#    distingue due banchi sulla stessa porta.
+DESCRIZIONE_L="REMOTIX_V2, banco 07-b41 su $(basename "$ALBERO")"
 
 if [ "$SPEGNI" = 1 ]; then
 	ssh -o BatchMode=yes "$MACCHINA" \
@@ -141,6 +144,29 @@ if [ "\$MANCA" != "0" ]; then
 	exit 1
 fi
 
+# ⛔⛔ NON SI SPEGNE L'UNITA' DI UN ALTRO — 22 agosto 2026, e l'ha pagata
+#    un agente con mezz'ora di misura.
+#
+#    Il nome dell'unita' e' derivato dalla SOLA PORTA, quindi due banchi in
+#    disaccordo su una porta si ammazzano a vicenda IN SILENZIO: 'MISURATO:' alle
+#    06:17 un banco ha fermato 'remotix-7801' di un altro e ci ha messo il
+#    proprio, troncando una misura da trenta minuti a 745 secondi.
+#
+# ⛔⛔ E il danno vero e' venuto dopo: la sonda del derubato ha continuato a
+#    bussare al server SBAGLIATO con le proprie credenziali, e §4.4-bis ha
+#    bannato l'INDIRIZZO — che e' lo stesso per tutti i banchi della macchina.
+#    ⇒ Un ban di dodici ore addosso a chi non aveva sbagliato niente.
+#
+# ⭐ Si guarda la 'Description' e ci si RIFIUTA di spegnere quel che non e'
+#    nostro.  Chi vuole davvero prendersi la porta lo dica: 'RUBA_PORTA=si'.
+VECCHIA=\$(systemctl show -p Description --value $UNITA.service 2>/dev/null || echo "")
+if [ -n "\$VECCHIA" ] && [ "\${VECCHIA#REMOTIX}" != "\$VECCHIA" ] \\
+   && [ "\$VECCHIA" != "$DESCRIZIONE_L" ] && [ "${RUBA_PORTA:-no}" != "si" ]; then
+	echo "⛔ la porta $PORTA e' di un altro banco: «\$VECCHIA»" >&2
+	echo "   e io sarei «$DESCRIZIONE_L».  NON la spengo." >&2
+	echo "   ⇒ Prendi una porta tua, o RUBA_PORTA=si se sai che e' abbandonata." >&2
+	exit 3
+fi
 systemctl stop $UNITA.service 2>/dev/null || true
 systemctl reset-failed $UNITA.service 2>/dev/null || true
 i=0
@@ -150,7 +176,7 @@ mkdir -p $LAV
 : > $LAV/registro.log
 
 systemd-run \
-	--unit=$UNITA --collect --description="REMOTIX_V2, banco 07-b41 (audio)" \
+	--unit=$UNITA --collect --description="$DESCRIZIONE_L" \
 	--working-directory="\$SRC" \
 	--setenv=LD_LIBRARY_PATH="\$LD_LIBRARY_PATH" \
 	--property=StandardOutput=append:$LAV/registro.log \

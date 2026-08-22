@@ -1382,6 +1382,63 @@ giro ha misurato «nessuna differenza» **credendo di avere l'ingranditore acces
 cecità che quel controllo doveva escludere. ⇒ Adesso il banco **muore** se la rilettura dal dconf non
 dice quel che ha chiesto.
 
+### 5.13 · ⭐⭐ 22 agosto — **il tetto del posto è 30 secondi, non 75** — e la frase di §5.3 sulla scheda congelata è falsa
+
+*La `[?]` che mordeva tutti i giorni: «il posto della sessione è uno, e quello di prima resta
+attaccato per una ventina di secondi» era folklore. `[M]` porta 7801, `provar7`, GNOME headless vero,
+carico 0,23-1,40.*
+
+| il client se ne va… | posto lasciato | un altro client entra |
+|---|---|---|
+| **congedo pulito** | ⭐ **5 ms** | subito |
+| connessione chiusa senza congedo | **7 ms** | subito |
+| **ammazzato** (presa chiusa) ×4 | 30,0 · 30,5 · 30,0 · **31,1 s** | idem |
+| **congelato** (buco nero) ×3 | 31,1 · 31,2 · 30,0 s | idem |
+| ⛔ **vivo sul filo, muto su RCP** | ⛔ **mai** | ⛔ **26 bussate su 26 respinte in 745 s** |
+
+**Peggiore misurato: 31,2 s.** ⛔ E morire «male» non cambia niente: presa chiusa (con ICMP) e presa
+muta danno gli stessi numeri — **ngtcp2 non reagisce all'ICMP**.
+
+#### ⛔⛔ E la frase di `SPECIFICHE.md` §5.3 sulla scheda congelata è **falsa sul filo**
+
+*«Una scheda congelata tace, quindi si stacca»* — ⛔ no: il server accende un **PING ogni 10 s**, lo
+stack QUIC del client **risponde da solo** senza che la pagina esista, e ogni risposta rinnova la
+vita. ⇒ **Il posto non si libera mai.** `[M]` 26 su 26 in 745 s. ⚠ Il prodotto conta i **pacchetti**,
+non i byte di RCP — ed è una scelta giusta e documentata, ⛔ ma **non è quel che §5.3 racconta**.
+
+#### ⭐ La riga per chi scrive banchi — è la cosa che serviva a tutti
+
+> ⛔ **Dopo che un client se n'è andato male, prima di 35 secondi non riprovare.**
+> ⛔⛔ **E se il suo processo è ancora vivo, 35 s non bastano: il posto resta occupato fino a mezz'ora.**
+> Si verifica con `pgrep`, non con `pkill`.
+> ⭐ **Ma quasi mai serve aspettare**: se il server è tuo, **riaccendilo** — i posti stanno nella
+> memoria del processo, la sessione grafica vive fuori: `[M]` il primo attacco dopo un riavvio arriva
+> a `SESSIONE` in **1,03 s**. ⭐ E se il client è tuo, **fallo congedare**: **5-7 ms**.
+
+#### ⛔ E le strade sono DUE, con lo stesso numero — è il meccanismo dietro i falsi rossi
+
+In 4 distacchi su 7 il posto l'ha lasciato **l'orologio del silenzio**; negli altri 3 la **morte della
+connessione QUIC** (30,00 s esatti). ⚠ **Quale arrivi prima è testa o croce**, e lasciano **righe di
+registro e stati diversi**. ⇒ Un banco che aspetta la riga «staccato per silenzio» per sapere che il
+posto è libero **è rosso una volta su due**.
+
+⭐ **E il controllo positivo, senza cui i 30 s non varrebbero niente**: con l'orologio dell'inattività
+accorciato a 25 s lo stesso caso ha lasciato il posto a **19,8 s** con un congedo diverso ⇒ il banco
+**sa vedere** un rilascio a un'ora diversa da 30.
+
+⚠ **E quel che manca, dichiarato dall'autore**: nessun browser. L'ipotesi che lascia in eredità è che
+i «~75 s» fossero **~45 s di Firefox che non muore + 30 s del prodotto**. Si chiude in un minuto, con
+un browser in mano.
+
+#### ⏳ Quattro cose del prodotto trovate per strada, non curate
+
+| | |
+|---|---|
+| ⛔ `2 = RIPRESA` **non esce mai** | il byte è una **costante 1** nell'unico punto che costruisce il messaggio. `[M]` 12 riattacchi sullo stesso figlio: **stato 1, sempre**. È la forma **E1** ⇒ chi scrive banchi **non può** usarlo per sapere se ha un desktop nuovo |
+| ⛔ le **due strade** con lo stesso numero | sopra: due righe e due stati sotto lo stesso fatto, in gara |
+| ⛔ il **client vivo tiene il posto** | fino alla mezz'ora dell'inattività — misurato ≥ 745 s |
+| ⏳ `[?]` **il desktop immortale** | `presenza_segna()` è chiamata **da un posto solo**, quello che riceve l'input ⇒ chi si attacca e **non tocca niente** non entra fra i presenti e **l'orologio dell'abbandono non parte**. Se è vero, ogni banco che si attacca senza digitare lascia un desktop da **477 MB** che non muore mai — ed è così che una macchina con otto banchi si riempie. ⛔ **È una lettura del codice, non una misura**: il giro che doveva provarla è saltato |
+
 ## 6 · Le decisioni prodotte
 
 - ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
@@ -1520,7 +1577,8 @@ la decide l'utente.
 - **codice mai esercitato su Mutter**: il ramo *«concesso diverso da chiesto»* (`figlio.c:4585`) e
   `MISURA DIVERGENTE` (`cattura.c:543`) — 17 richieste su 17 concesse esatte. Provabili **solo col
   palco finto**;
-- **il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3: `[?]` quale sia il tetto vero;
+- ✅ ~~**il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3~~ — **MISURATO il 22 agosto:
+  sono 30, e il «~75» non si riproduce.** 📖 §5.13;
 - ✅ ~~**le coordinate in volo sono inarbitrabili da una registrazione**~~: dal 21 agosto `RCP.md`
   §11.1 registra il **tempo**, e la regola è collaudabile — ⛔ **in un verso solo**, e §5.10 racconta
   perché quel verso non basta;
