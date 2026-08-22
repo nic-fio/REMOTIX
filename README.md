@@ -4,49 +4,79 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **17 agosto 2026, sera**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **22 agosto 2026, sera**
 >
-> ## ⭐⭐ L'AUDIO SI SENTE. Il giudizio dell'utente: **«problema audio risolto»**
+> ## ⭐⭐⭐ LA FASE 8 È CHIUSA, e l'ha chiusa l'utente guardando lo schermo
 >
-> *Dato su un **video di YouTube** riprodotto nella sessione remota — non su un tono di banco.*
+> > *«Il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»* · **«per me è ok»**
+> >
+> > *Al mattino, sulla stessa scena, lo stesso utente:* *«la distanza fra la freccia e la finestra è
+> > la metà della larghezza della barra del titolo»*.
 >
-> | | |
-> |---|---|
-> | **la misura** | **49,95 blocchi/s ricevuti contro 50 prodotti** — perdita **zero**, **2 buchi** (dell'avvio), coda stabile a 311-341 ms |
-> | **che cosa è stato costruito** | il verso d'uscita dei **datagram** (non esisteva), il codificatore **Opus/PCM** senza dipendenze nuove, il **sink PipeWire** e la cattura del monitor, la cucitura padre↔figlio, e il ricevente nella pagina |
-> | ⭐ **e il volume GOVERNA** | `[M]` pieno 0,3536 · 25 % 0,0078 · muto 0,0 ⇒ chiusa la segnalazione dell'utente dell'8 agosto, *«se abbasso il volume l'audio resta sempre alto»* |
-> | ⏳ **e gli appunti NON sono cominciati** | è l'altra metà della fase, e si fa in una **sessione nuova** (deciso dall'utente) |
+> | | ieri | ⭐ **oggi** |
+> |---|---|---|
+> | l'anello **`input → vetro`**, appaiato | 89,86 ms | **55,20 ms** (−39 %) |
+> | il distacco, **nell'unità dell'utente** | 0,27 barre | **0,16** ⇒ da **2,1** a **1,23 × il locale** |
+> | ⭐ il **locale** — il pavimento, finalmente misurato | — | **0,142 barre** · 30,05 ms (n=254) |
+> | ⭐⭐ **i fotogrammi DIPINTI dalla pagina** | 834 · 870 | **942 · 926 (+9 %)** |
 >
-> 📖 **Il documento è `fasi/07-audio-e-appunti.md`**, e il suo riquadro di testa dice lo stato
-> della macchina, le porte occupate e le trappole degli appunti: da lì si riparte senza archeologia.
+> 📖 **Il documento è [`fasi/08-l-anello.md`](fasi/08-l-anello.md)**, e la sintesi sta in testa
+> (§3, §4, §5): i rapporti per esteso dei nove agenti stanno sotto, in §4-A … §4-F4.
 >
-> ## ⛔⛔ E LA COSA CHE VALE PIÙ DEL RISULTATO — sette «fa schifo» prima del «risolto»
+> ⭐ **La specifica era dell'utente**, e adesso è collaudabile: *«un'esperienza il più vicina
+> possibile a una situazione locale, ma non identica: quello è impossibile»* — `SPECIFICHE.md`
+> §3.2-bis. ⇒ **Il «locale» non è più un desiderio: è 0,142 barre.**
 >
-> Il banco `07-b43` era **verde su cinque giri su cinque** — 440 Hz esatti, ampiezza esatta, i due
-> difetti innestati visti tutti e due — **e l'utente sentiva «jitter pazzesco»**. ⇒ **I8 non è una
-> formalità**: cinque verdi non sostituiscono un orecchio.
+> ## ⛔⛔ E LA COSA CHE VALE PIÙ DEL RISULTATO — **l'occhio dell'utente ha battuto due nostri banchi**
 >
-> ⛔ **Sei cure su otto erano difetti VERI che non erano quello che l'utente sentiva** (§6.8 del
-> documento di fase): la coalescenza col video (i cui fotogrammi erano da **70-1300 byte**), la
-> priorità di tempo reale, il riempimento GSO, il pacchetto che buttavo con dentro i **riscontri**.
-> Ognuna sembrava confermata dal ragionamento e nessuna dalla misura.
+> Per tutta la giornata l'utente ha riferito **0,50 barre** mentre i banchi ne misuravano **0,28** e
+> **0,35**, e nel verso scomodo: **vedeva più distacco di quanto gli strumenti ne misurassero.**
 >
-> ⭐⭐ **La causa era in una riga**: si spediva **un solo datagram per passata di scrittura**, e le
-> passate sono ~25 al secondo contro **50** blocchi prodotti. Uno passava, uno moriva. ⚠ E la
-> **forma** del numero era l'indizio: *esattamente* la metà — una perdita di rete non è mai
-> esattamente la metà, un'aritmetica sì.
+> ⛔ La spiegazione comoda — *«avrà stimato male a occhio»* — **non è servita**. Tre candidate
+> abbattute con la misura (⛔ **i pixel: 0,301 · 0,294 · 0,301 barre a 1560 · 1920 · 2560 — il doppio
+> dei pixel, ZERO pendenza**; la velocità della mano; la larghezza della barra), e poi la somma di
+> quel che il banco **non può vedere**:
 >
-> ## ⭐⭐⭐ LA LEZIONE, e non è sull'audio: `LEZIONI.md` §2.6
+> ```
+> 70,3 [M] + 11,6 [M] + [?]4-12 + [?]16-40 = 102-134 ms ⇒ 0,48-0,63 barre
+>            ↑ la coda eventi del browser: nel banco vale 0,165 ms
+>              perché la mano è SINTETICA
+> ```
 >
-> Avevo i numeri di **tre anelli su quattro** — il figlio, il server, la sessione. ⛔ **Del lato che
-> ASCOLTA non si sapeva niente.** Il giorno in cui quei contatori sono esistiti la diagnosi è durata
-> **un passaggio**, e il conto ha chiuso al decimale assolvendo tre imputati in un colpo.
+> ⭐⭐ **L'utente ne riferiva 0,50: il bordo basso dell'intervallo.** ⇒ **Il banco non sbagliava:
+> guardava un pezzo più corto dell'anello vero**, e il pezzo mancante era invisibile **proprio perché
+> la sua mano è finta**.
 >
-> ⚠ **E tre passi su quattro li ha fatti l'utente**: l'intuizione sul datagram troppo piccolo, la
-> cartella di v1 dove **R26** aspettava scritta dal 5 agosto, e il video con la sessione monitorata
-> byte per byte — il giro che ha prodotto il numero.
+> ## ⛔ E i quattro difetti veri trovati in fase 8 — **nessuno era il bersaglio**
 >
-> ---
+> la **chiave abbandonata** (`RCP.md` §5.2 la vieta, ed era la spirale: ogni `RICHIEDI_CHIAVE` costa
+> tre ricodifiche che non producono niente) · la **scala delle ricodifiche corta di uno scalino** ·
+> il **passo non multiplo di 64**, che dava un desktop **inclinato senza nessun errore, coi
+> millisecondi già perfetti** · e il **cronometro del prodotto che misurava il banco**.
+>
+> ## ⛔⛔⛔ Le tre lezioni nuove — `LEZIONI.md` §1.26 · §1.27 · §1.28
+>
+> 1. **Due banchi sulla stessa MACCHINA si falsano in silenzio.** §1.24 parlava di quel che si
+>    *ammazza*; questa di quel che **non** si ammazza — e ⛔ **non dà un rosso, dà un numero
+>    plausibile.** `[M]` 8-17 ms sullo stesso anello, per un banco che non c'entra niente ⇒ ha fatto
+>    promuovere a bersaglio della fase **un tratto che valeva un ventesimo** di quel che diceva;
+> 2. **Il colore medio è cieco**: un'immagine sbagliata **a ogni riga** ha le **stesse statistiche**
+>    di quella giusta (`[M]` medie entro **0,17 livelli su 255**, mentre la marca non si legge su
+>    **0 fotogrammi di 903**). ⇒ *Un controllo deve leggere una cosa che si può **sbagliare**, non una
+>    che si può **mediare**.*
+> 3. ⭐⭐ **Due banchi che non concordano possono avere ragione tutti e due**: misurano due grandezze
+>    diverse. Uno la **risposta**, l'altro la **vecchiaia** di quel che è sullo schermo.
+>
+> ⚠ **E gli errori del coordinatore stanno scritti per primi** in §5.1 del documento di fase: ho
+> lanciato le misure in parallelo, ho scritto una riga che era un artefatto, e ho attribuito alla
+> contesa un numero che non era suo — **dentro una lezione**, che è il posto dove un errore dura di più.
+>
+> ## ⚠ Pulizia da fare PRIMA di misurare
+>
+> ⛔ Quattro server di prova degli agenti sono rimasti accesi (**7746, 7752, 7765-67, 7775**), e
+> girano da `root`. A riposo non danno fastidio, ⚠ **ma falserebbero la prossima misura** — che è
+> precisamente l'errore di §1.26.
+> ⭐ Vivi e voluti: **7730** (dell'utente) e **7790** (il prodotto con la fase 8 dentro, giudicato).
 >
 > # ⭐⭐⭐⭐ E IL PUNTO DI RIPRESA DEL MATTINO, che vale ancora — **17 agosto 2026**
 >

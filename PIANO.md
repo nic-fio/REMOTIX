@@ -1483,86 +1483,104 @@ codice che poi si butta.
 
 ---
 
-# ⏳ PUNTO DI RIPRESA — 22 agosto 2026, mattina
+# ⏳ PUNTO DI RIPRESA — 22 agosto 2026, **sera**
 
-*La notte del 21-22 agosto: **dieci agenti in parallelo**, il coordinatore alla fusione e al
-collaudo. 40 commit. ⭐ E il giudizio dell'utente su tutte e tre le scene che mancavano.*
+*La giornata del 22 agosto: **nove agenti in due ondate**, il coordinatore alla fusione e al
+collaudo. ⭐⭐ **La fase 8 aperta e chiusa in un giorno**, sul giudizio dell'utente. E le fasi 6 e 7
+restano senza nessun difetto vero aperto.*
+
+## ⭐⭐⭐ Che cosa è cambiato per l'utente
+
+> *«Il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»* · **«per me è ok»**
+>
+> *Al mattino, sulla stessa scena:* *«la distanza fra freccia e finestra è la metà della barra del titolo»*.
+
+| | |
+|---|---|
+| l'anello **`input → vetro`** | **89,86 → 55,20 ms** (−39 %), **appaiato** — due giri che condividono tutto tranne il binario |
+| il distacco, **nell'unità dell'utente** | **0,27 → 0,16 barre** ⇒ da **2,1** a **1,23 volte il locale** |
+| ⭐ e il **locale** adesso è misurato | **0,142 barre** · 30,05 ms (n=254). ⇒ *«non identica: quello è impossibile»* è confermato dalla misura |
+| ⭐⭐ **i fotogrammi DIPINTI** | **+9 %**. Non è una vittoria di cronometro |
 
 ## ⭐ Quel che è chiuso, e non si riapre
 
 | | |
 |---|---|
-| **i difetti veri delle fasi 6 e 7** | ⭐ **nessuno aperto.** Il ritardo audio/video, il clic tenuto giù e il trascinamento del bordo sono **giudicati a posto dall'utente** il 22 agosto |
-| **i motori supportati** | Linux Chrome ✅ · Linux Firefox ✅ · Windows Chrome ✅ · Android Chrome ✅ · ⛔ Android Firefox **fuori**. ⚠ **Firefox su Windows: NON PROVATO** — né dentro né fuori (`DECISIONI.md` §7.20) |
-| **ridimensionamento dinamico** | ⛔ fuori dal progetto dal 17 agosto, e ⚠ **non si confonde col re-scaling**, che è quel che il prodotto fa ed è approvato (§5.14) |
-| **le prestazioni grafiche** | ⏳ **fase 8**, indirizzata dall'utente, e ci arriva con due misure già fatte |
-| **la degradazione su rete stretta** | ⏳ **fase 9**, spostata lì dall'utente: *«i problemi di rete non rientrano in questa fase»* |
+| **fasi 6 e 7** | ⭐ nessun difetto vero aperto |
+| **fase 8** | ✅ **CHIUSA il 22 agosto**, `fasi/08-l-anello.md` |
+| **`RCP.md` §5.2 e §6.2** | ✅ le due `[?]` chiuse con la misura: `EncSliceLP` **non** sa fare i sotto-livelli temporali · la chiave alla tela dell'utente sta allo **0,13 %** del tetto |
+| **il «puntatore doppio»** | ✅ **non esiste** — smentito dall'occhio dell'utente, e l'agente fermato dopo pochi minuti |
+| **i motori** | Linux Chrome ✅ · Linux Firefox ✅ · Windows Chrome ✅ · Android Chrome ✅ · ⛔ Android Firefox fuori · ⚠ **Firefox su Windows: NON PROVATO** |
 
-## ⭐ Le sei cure entrate nel prodotto
+## ⛔ E i quattro difetti veri trovati in fase 8 — **nessuno era il bersaglio**
 
-l'ancora dell'orologio audio · la tirata che si riapre a ogni riancoraggio · la spirale delle chiavi
-(a 1 Mbit l'audio consegnato fa **×38**) · le cure **A+C** del clic che muore · l'alfabeto delle
-disposizioni di tastiera · il registro che non si intreccia più · il primo clic che accende davvero
-il suono · e il conto dei fotogrammi non spediti, che nessuno leggeva.
+la **chiave abbandonata** (§5.2 la vieta, ed era la spirale) · la **scala delle ricodifiche corta di
+uno scalino** · il **passo non multiplo di 64** che dava un desktop **inclinato senza errori, coi
+millisecondi già perfetti** · e il **cronometro del prodotto che misurava il banco**.
 
-## ⛔ E la cosa che questa notte ha insegnato
+## ⛔⛔ Le tre lezioni nuove — `LEZIONI.md` §1.26 · §1.27 · §1.28
 
-**Su diciassette controlli automatici, quattordici non reggevano** — dicevano «a posto» senza aver
-guardato niente. La forma comune è nuova e sta in `LEZIONI.md` **§1.20**: *la misura è buona e il
-giudizio è staccato da lei*. Poi §1.21 (uno strumento che si rompe sotto carico mente quando serve),
-§1.22 (un drop-in vince per nome), §1.23 (una scena si spegne contando a zero), §1.24 (due banchi
-sulla stessa porta si ammazzano in silenzio) e §1.25 (**una cura si cerca dovunque valga, non dove è
-stata trovata**).
-
-⭐ **E c'è un attrezzo nuovo che se ne accorge da solo**: `banchi/00-ancore.py` — 146 ancore, 128
-vive, e la prossima volta lo dice una macchina invece di una revisione.
+1. **Due banchi sulla stessa MACCHINA si falsano in silenzio.** §1.24 parlava di quel che si
+   *ammazza*; questa di quel che **non** si ammazza — e non dà un rosso, dà **un numero plausibile**;
+2. **Il colore medio è cieco**: un'immagine sbagliata a ogni riga ha **le stesse statistiche** di
+   quella giusta. *Un controllo deve leggere una cosa che si può sbagliare, non una che si può mediare*;
+3. ⭐⭐ **Due banchi che non concordano possono avere ragione tutti e due**: misurano due grandezze
+   diverse. ⇒ **E l'occhio dell'utente aveva ragione**: i banchi guardavano un pezzo più corto
+   dell'anello vero, e il pezzo mancante era invisibile **perché la loro mano è finta**.
 
 ## ⏳ I punti aperti — nessuno è un difetto
 
-1. **Il datagram su rete non locale** (i byte sono presi su cavo) e la **priorità del percorso audio**
-   dentro la sessione: `[M]` `SCHED_FIFO` non è ottenibile su questo kernel, la leva è `nice`, e va
-   data a **tutto** il percorso audio — è una decisione di prodotto, non fatta;
-2. **La misura `AV`** va ripresa con l'`aoff` curato: non per decidere se il ritardo c'è — l'ha deciso
-   l'orecchio — ma per **accorgersi se torna**;
-3. **La guardia della cura A** non è mai stata vista scattare (la riga «TENUTI GIU'»): `[?]` di
-   diagnosi, non di prodotto;
-4. **Il 4/18 del 16 agosto** resta non riprodotto, ⭐ e **due cause sono escluse con la misura**: non
-   è la contesa sull'iGPU (§5.8) e non è quella sul compositore (§5.11). ⏳ La strada che resta è
-   setacciare l'intervallo fra le due richieste — è **una corsa che si misura in millisecondi**;
-5. **G5** di `06-b35` è intermittente per costruzione (7 giri su 9): il conto onesto porta sempre il
-   denominatore accanto;
-6. `[?]` **il desktop immortale**: chi si attacca e non tocca niente forse non fa partire l'orologio
-   dell'abbandono. **Letto nel codice, non misurato** — e se è vero spiega perché la macchina si
-   riempie;
-7. `[?]` **su DeX lo schermo risponde col monitor esterno o col telefono?** — la domanda vera di
-   §6.1-bis, che era stata **sostituita in silenzio** da un'altra. Serve il telefono dell'utente;
-8. **Firefox su Windows**, mai provato.
+1. ⛔ **il muro di Mutter**: `[M]` **16,0 ms**, un quadro a 60 Hz esatto, **un sesto dell'anello** —
+   non si è mosso di tre decimi in tutta la fase, e **non l'ha toccato nessuno**;
+2. ⛔ **metà del guadagno della fase 8 non è spiegato**: 15,9 dei 34,7 ms stanno in un tratto che la
+   copia zero **non attraversa**. `[?]` Ipotesi dichiarata, non misurata;
+3. ⚠ **la ritenuta del `pw_buffer` è in vigore senza prova**: il controllo positivo non ha
+   riprodotto il danno. Prudenza, non necessità;
+4. `[?]` **il modello del distacco ha predetto male due volte, in versi opposti**. È un fatto sul
+   modello, **non sull'utente**, ed è lavoro nostro;
+5. **il datagram su rete non locale** e la **priorità del percorso audio** (`nice`);
+6. **la misura `AV`** da riprendere con l'`aoff` curato — per accorgersi se il ritardo torna;
+7. **il 4/18 del 16 agosto** non riprodotto: due cause escluse con la misura, resta una corsa da
+   setacciare;
+8. `[?]` **il desktop immortale** — letto nel codice, non misurato;
+9. `[?]` **su DeX lo schermo risponde col monitor esterno o col telefono?** Serve il telefono dell'utente;
+10. **Firefox su Windows**, mai provato;
+11. ⚠ **il tetto dei 50 ms non è verificato**, e non perché manchi poco: **55,20 sta su un confine
+    diverso**. I due numeri **non si confrontano** — §1.28 applicata a noi stessi.
 
-## 🔸 E le decisioni che aspettano l'utente
+## 🔸 Le decisioni che aspettano l'utente
 
-- 🔸 ~~**al congedo il palco va rimesso a una misura di riposo?**~~ — **decisa il 22 agosto, e
-  provvisoria**: si lascia com'è (`DECISIONI.md` §5.0-septies). ⛔ **La domanda gliel'avevo posta
-  con una premessa falsa** — «eredita la finestra di chi c'era prima» — e l'utente l'ha rilevato:
-  il **multi-tenant non esiste** (è la fase 10) e la sessione grafica è **una per utente** (I2). Chi
-  si riattacca eredita **la misura lasciata dalla propria connessione precedente**, non quella di un
-  altro. 🔸 *«per il momento accetto, ma poi ci penserò su»* ⇒ **non è chiusa**;
-- **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi;
-- **il `nice` a tutto il percorso audio** (punto aperto 1): `SCHED_FIFO` non è ottenibile su questo
-  kernel, la leva che resta è `nice`, ed è una decisione di prodotto;
-- **si apre o no un difetto a monte in Mutter?** (§7.1-bis della fase 6): la catena è letta nel
-  sorgente e non è corretta nemmeno nel loro ramo principale. È un'azione verso l'esterno;
-- **il DeX** (punto aperto 7): su monitor esterno la pagina legge lo schermo del monitor o quello del
-  telefono? ⛔ Il telefono è dell'utente: non si aggira.
+- 🔸 **la tela multipla di 16** (`rcp_misura_ammessa()`): renderebbe la copia zero valida su **ogni**
+  schermo, ⛔ ma è una **modifica al protocollo** — `RCP.md` §4.5 oggi pretende solo i lati pari;
+- 🔸 **il `nice` a tutto il percorso audio**;
+- 🔸 **si apre o no un difetto a monte in Mutter?** (fase 6 §7.1-bis) — azione verso l'esterno;
+- 🔸 **il DeX** col suo telefono;
+- 🔸 **`BANCO_MARCA`/`BANCO_ESITO`**: completare il ramo o togliere i due tipi;
+- 🔸 ~~**al congedo il palco a misura di riposo?**~~ — **provvisoria**, si lascia com'è
+  (`DECISIONI.md` §5.0-septies). *«Per il momento accetto, ma poi ci penserò su.»*
 
-## Come si riparte, in due comandi
+## ⚠ Pulizia da fare prima del prossimo giro
+
+⛔ **Quattro server di prova degli agenti sono rimasti accesi** sulla macchina (porte **7746, 7752,
+7765-67, 7775**), e girano da `root`. Non danno fastidio a riposo, ⚠ **ma falserebbero la prossima
+misura** — che è precisamente l'errore di §1.26. **Vanno spenti prima di misurare.**
+
+⭐ Vivi e voluti: **7730** (dell'utente) e **7790** (il prodotto con la fase 8 dentro, che l'utente
+ha giudicato).
+
+## Come si riparte
 
 ```
-ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti \
-  bash banchi/07-b41-accendi.sh --porta 7730 --hz 0
-python3 banchi/07-b51-due-browser.py        # la strada normale, 4 controlli per motore
+# il prodotto con la fase 8 dentro
+ALBERO=/media/REMOTIX/src/08-prova-src LAV=/media/REMOTIX/tmp/08-prova \
+  bash banchi/07-b41-accendi.sh --porta 7790 --hz 0
+
+# il metro dell'utente: il distacco freccia↔finestra, in barre del titolo
+python3 banchi/08-b67-elastico.py --certifica      # 13 guasti innestati su 13
+
+# l'anello intero, e ⛔ VA IN ROSSO se la macchina non e' scarica
+python3 banchi/04-b30-anello-input.py --certifica  # 57 su 57, 18 guasti su 18
 ```
 
-⚠ **Una trappola che ha morso più volte oggi**: il posto della sessione è **uno**, e quello di prima
-resta attaccato per una ventina di secondi. Due banchi di fila senza aspettare danno un rosso che
-non è del prodotto.
-
+⚠ **Due trappole che hanno morso oggi**: il posto della sessione è **uno** e quello di prima resta
+attaccato una ventina di secondi · e ⛔ **non si misura in due sulla stessa macchina** (§1.26).
