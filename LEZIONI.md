@@ -1017,6 +1017,115 @@ un percorso, una funzione, un messaggio di registro. ⭐ E se ce l'ha, la cura v
 **nello stesso commit** — che è già la regola scritta per il formato delle registrazioni, e vale
 uguale qui.
 
+### 1.26 ⛔⛔⛔ **Due banchi sulla stessa MACCHINA si falsano in silenzio** — e §1.24 era troppo stretta
+
+*22 agosto 2026, fase 8. Il coordinatore lancia cinque agenti in parallelo, ognuno col suo mandato,
+la sua porta, il suo ban-file e il suo socket — cioè applicando §1.24 alla lettera. ⛔ **E §1.24 non
+bastava**, perché parla di quel che si ammazza. Questa parla di quel che **non** si ammazza.*
+
+⛔ **Il caso, e il numero fa male.** Un agente misura l'anello `input → vetro` e scompone il tratto
+del cliente. Uno dei sotto-tratti esce `[M]` **17,48 ms** — il **19 %** dell'anello — con un
+denominatore onesto, i confini spostati nella direzione scomoda e un banco certificato 53 su 53. Il
+numero viene promosso a **bersaglio della fase**, con un agente dedicato.
+
+⭐ Quell'agente torna dicendo che **non c'era niente da curare**: `[M]` lo stesso tratto vale fra
+**0,39 e 2,80 ms**, con tre banchi indipendenti, **e anche sulla stessa strada di disegno** del
+primo. Un terzo agente, che non sapeva niente dei primi due, ci arriva per conto suo: `[M]`
+**0,71 ms**, confermato da **tre lettori** che si accordano entro **0,005 ms**.
+
+⛔⛔ **La causa, misurata direttamente** — quattro giri, stesso banco, stesso palco, stessa scena,
+stesso binario, **cambia solo chi altro sta lavorando sulla macchina**:
+
+| | `input → vetro` |
+|---|---|
+| ⭐ **da solo** | **74,08** e **75,81 ms** |
+| ⛔ **col banco di un altro agente sopra** | **84,22** e **90,87 ms** |
+
+⇒ `[M]` **Da 8 a 17 ms sullo stesso anello**, per un banco che non c'entra niente. E la soglia è più
+bassa di quanto sembri: `[M]` **un giro solo tiene già ~3,7 nuclei su 4 e ~29 processi Chrome**;
+quello che ha prodotto il 17,48 ne aveva **56, più cinque Xvfb**.
+
+## ⭐⭐ Perché è PEGGIO del difetto di §1.24, e va scritto in una riga
+
+| | §1.24 — la stessa porta | ⛔ **§1.26 — la stessa macchina** |
+|---|---|---|
+| che cosa succede | un banco **muore** o **bandisce** l'altro | tutti e due **finiscono** |
+| che cosa vedi | ⭐ **un rosso**, e vai a cercare | ⛔ **un numero plausibile** |
+| chi se ne accorge | chiunque | ⛔ **nessuno, finché un secondo agente non rifà la misura** |
+
+⇒ ⛔⛔ **Un difetto che si presenta come un rosso è un difetto fortunato.** Questo si presenta come
+una misura, con la sua marca `[M]`, il suo denominatore e il suo banco certificato — e ha portato a
+**promuovere a bersaglio della fase un tratto che valeva un ventesimo** di quel che diceva, e a
+scrivere nel documento una frase (*«l'occhio dell'utente e lo strumento si accordano entro il 7 %»*)
+che è stata la riga più citata della giornata **e che era un artefatto dell'orchestrazione**.
+
+## ⭐ Le tre regole che ne escono
+
+1. ⛔ **Il carico si dichiara accanto al numero, come il palco** (§2.0). Nuclei, carico, quanti
+   processi del browser, quanti schermi finti, **e quali altri banchi girano su quali porte**. Un
+   numero senza il carico accanto non è citabile;
+2. ⭐ **E il banco va in ROSSO se la macchina non è scarica**, invece di misurare lo stesso. È la
+   differenza fra dichiarare una condizione e **pretenderla**: la prima si legge nel verbale che
+   nessuno apre, la seconda ferma la misura;
+3. ⛔ **Le misure non si parallelizzano sullo stesso ferro.** Si può sviluppare in parallelo, si può
+   leggere in parallelo, si può **scrivere** un banco in parallelo — ⛔ **ma i giri finali si
+   prendono a turno**, e chi orchestra deve **coordinare la finestra tranquilla** invece di sperarci.
+   ⭐ Il modo che ha funzionato: un agente ha **ammazzato il proprio giro a metà** per liberare la
+   macchina a un altro, su richiesta del coordinatore.
+
+⚠ **E il prima/dopo ALTERNATO (A-B-A-B sullo stesso albero) sopravvive a tutto questo**, ed è la
+ragione per cui si pretende: il carico colpisce i due rami allo stesso modo, quindi **la differenza
+regge anche quando i valori assoluti sono un tetto**. ⛔ Chi fa «tre giri prima, poi tre giri dopo»
+per far prima perde esattamente questa protezione.
+
+## ⛔ E il conto non è solo delle porte: **utente, uid e nome dello shm**
+
+`[M]` Nella stessa giornata, due agenti hanno chiesto lo stesso utente di prova. Il terreno del
+secondo ha detto *«c'è già»* — ⛔ **e poi gli ha riposto la parola d'ordine e riscritto il drop-in
+di systemd**, cioè ha messo le mani nel terreno di un agente vivo. ⇒ §1.24 va letta così: **porta,
+ban-file, socket, directory di lavoro, albero, utente, uid e nome dello shm si contano prima, non
+solo la porta.**
+
+### 1.27 ⛔⛔⭐ **Il colore medio è cieco: un banco che guarda le medie dice verde su un'immagine sbagliata**
+
+*22 agosto 2026, fase 8, e la frase dell'agente vale quanto la misura: **«i millisecondi erano già
+bellissimi mentre l'immagine era sbagliata»**.*
+
+⛔ **Il caso.** Accesa la copia zero, il driver iHD **non onora un passo che non sia multiplo di 64
+byte**: legge le righe a un passo suo e il desktop esce **inclinato di qualche pixel per riga**,
+**senza sollevare nessun errore**. `[M]`
+
+| tela | passo | %64 | la marca si legge? |
+|---|---|---|---|
+| 1920×1080 | 7680 | 0 | ⭐ sì, contrasto 1,000 |
+| 1552×888 | 6208 | 0 | ⭐ sì, contrasto 1,000 |
+| 1544×888 | 6176 | 32 | ⛔ **no** |
+| 1560×888 | 6240 | 32 | ⛔ **no** |
+
+⛔ **1552 e 1544 distano OTTO pixel e danno verdetti opposti.**
+
+## ⭐⭐⭐ E la parte che vale più del difetto
+
+`[M]` **Le medie per canale dei due flussi combaciano entro 0,17 livelli su 255** — mentre la marca
+**non si legge su 0 fotogrammi di 903**. Controllo negativo (R↔B scambiati): scarto **33** ⇒ lo
+strumento delle medie **funziona**, semplicemente **non guarda la cosa che conta**.
+
+⇒ ⛔⛔ **Un'immagine può essere sbagliata a ogni riga e avere le stesse statistiche di quella
+giusta.** Le medie, gli istogrammi e la deviazione standard sono **invarianti allo scorrimento delle
+righe**: il difetto sposta i pixel senza cambiarne nessuno.
+
+## ⭐ La regola
+
+⛔ **Un controllo sull'immagine deve leggere una cosa che si può SBAGLIARE, non una che si può
+mediare.** Una marca posizionata, un contrasto fra due zone note, un'impronta per riga — qualcosa
+che **cade** se i pixel si spostano. ⭐ E come ogni controllo, va provato con un **controllo
+negativo** che lo faccia cadere (qui: R↔B scambiati, scarto 33) — o non si sa se stia guardando.
+
+⚠ **E c'è un corollario che vale oltre le immagini**: è §1.20 applicata ai pixel. *La misura è
+buona e il giudizio è staccato da lei* — qui la misura è buona (le medie sono giuste) **e non tocca
+la proprietà che ci interessa**. Prima di fidarsi di un controllo, si chiede: **quale guasto lo fa
+cadere?** Se non c'è risposta, non è un controllo.
+
 ## 2. Come si prova
 
 ### 2.0 ⛔⛔ Un banco che dice «no» deve dire CON CHE PALCO ha detto no

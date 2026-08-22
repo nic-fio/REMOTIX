@@ -3055,6 +3055,82 @@ def scena_uscite(a):
             "callback_in_volo_massimo": campi[38], "fidato": campi[40]}
 
 
+def strada_di_cattura(a):
+    """⛔⛔⭐ LA COPIA ZERO E' ACCESA DAVVERO? — si LEGGE, non si spera.
+
+    22 agosto 2026, agente F4: la copia zero consegna un **descrittore** invece
+    di copiare i pixel, e vale `[M]` −72 % sul tratto `cattura → byte fuori`.
+    ⛔ **Ma si accende solo sulla strada della SCHEDA (DMA-BUF)**, e `[M]` il
+    driver iHD **non onora un passo che non sia multiplo di 64 byte**: su una
+    tela «storta» la cattura **ripiega sulla memoria**.
+
+    ⇒ ⛔⛔ Misurare l'anello su una tela storta direbbe «la copia zero non serve
+      a niente» — e sarebbe falso, perche' non sarebbe nemmeno accesa.  E' la
+      trappola peggiore della serata: **il codice nuovo che percorre la strada
+      vecchia**.
+
+    ⭐ Il prodotto lo DICHIARA nel suo registro (`src/cattura.c`: *«cattura
+       avviata sul nodo %u: chiesti %ux%u, strada %s»*), e qui si legge di li'.
+       ⛔ Non si deduce dal passo: dedurlo vorrebbe dire rifare il conto del
+       driver e credergli.  ⚠ Il conto si fa lo stesso, ma **accanto**, come
+       controllo: se le due cose non tornano, il disaccordo e' il regalo.
+    """
+    r = _sshpw("grep -a 'cattura avviata sul nodo' %s | tail -3"
+               % a.registro_prodotto, silenzioso=True, attesa=60)
+    righe = [x.strip() for x in (r.stdout or "").splitlines()
+             if "cattura avviata" in x]
+    d = {"righe_del_registro": righe[-3:]}
+    if not righe:
+        d["strada"] = None
+        d["copia_zero"] = None
+        d["⛔"] = ("NON HO POTUTO GUARDARE: nel registro del prodotto non c'e' "
+                  "nessuna riga «cattura avviata».  ⚠ «non lo so» non e' «e' "
+                  "accesa» (`LEZIONI.md` §2.0)")
+        return d
+    ultima = righe[-1]
+    d["strada"] = ("scheda" if "strada scheda" in ultima
+                   else "memoria" if "strada memoria" in ultima else None)
+    d["copia_zero"] = (d["strada"] == "scheda")
+    # ⭐ Il conto del passo, ACCANTO e non al posto della riga letta.
+    import re as _re
+    m = _re.search(r"chiesti (\d+)x(\d+)", ultima)
+    if m:
+        l = int(m.group(1))
+        d["tela_chiesta"] = [l, int(m.group(2))]
+        d["passo_byte"] = l * 4
+        d["passo_multiplo_di_64"] = (l * 4) % 64 == 0
+        d["resto_del_passo_su_64"] = (l * 4) % 64
+        # ⛔ E se il conto e la riga non sono d'accordo, si DICE.
+        if d["copia_zero"] is not None \
+                and d["copia_zero"] != d["passo_multiplo_di_64"]:
+            d["⛔ disaccordo"] = (
+                "il registro dice strada «%s» ma il passo %d %s multiplo di 64: "
+                "una delle due letture e' sbagliata, e finche' non si sa quale "
+                "nessun numero di questo giro dice quel che sembra dire"
+                % (d["strada"], d["passo_byte"],
+                   "E'" if d["passo_multiplo_di_64"] else "NON e'"))
+    return d
+
+
+def stampa_strada_di_cattura(d):
+    if d.get("copia_zero") is None:
+        ko("⛔ COPIA ZERO: %s" % d.get("⛔", "non letta"))
+        return False
+    (ok if d["copia_zero"] else dub)(
+        "⭐ COPIA ZERO **%s** — il prodotto dichiara «strada %s», tela %s, "
+        "passo %s byte (resto su 64: %s)"
+        % ("ACCESA" if d["copia_zero"] else "SPENTA (ripiego sulla memoria)",
+           d.get("strada"), d.get("tela_chiesta"), d.get("passo_byte"),
+           d.get("resto_del_passo_su_64")))
+    if d.get("⛔ disaccordo"):
+        ko("⛔ " + d["⛔ disaccordo"])
+    if not d["copia_zero"]:
+        dub("⛔⛔ Il numero di questo giro **non dice niente sulla copia zero**: "
+            "il codice nuovo sta percorrendo la strada vecchia.  ⚠ `[M]` il "
+            "driver iHD non onora un passo che non sia multiplo di 64 byte")
+    return d["copia_zero"]
+
+
 def carico_della_macchina(a):
     """⛔⛔⛔ IL CARICO, ACCANTO AL NUMERO — e questa funzione è nata da una
     misura che ha SMENTITO un rapporto, il 22 agosto 2026.
@@ -3535,7 +3611,25 @@ def giro_vero(a, precondizioni):
           anc_a["campioni"]))
 
     log("2. IL PALCO — Xvfb, Chrome, CDP")
-    palco = B.Palco(a.schermo, a.diagnosi, (1500, 1000),
+    # ⛔⛔⭐ LA MISURA DELLA FINESTRA COMANDA LA TELA, e dal 22 agosto 2026
+    #      comanda anche **SE LA COPIA ZERO SI ACCENDE** — quindi non e' piu'
+    #      un dettaglio del palco.
+    #
+    # `[R]` `src/pagina.html` (`ADATTA` = «attacco»): la pagina chiede al server
+    #   una tela grande quanto la sua vista.  ⇒ Finestra 1500x1000 ⇒ tela
+    #   1460x888, che e' il palco di tutti i giri fino a oggi.
+    #
+    # ⛔⛔ E `[M]` (agente F4, 22 agosto): il driver **iHD non onora un passo che
+    #     non sia multiplo di 64 byte**, e su quelle tele la copia zero
+    #     **ripiega sulla memoria**.  Il passo e' `larghezza x 4`:
+    #
+    #       1460 x 4 = 5840  →  5840 % 64 = **16**   ⛔ copia zero SPENTA
+    #       1920 x 4 = 7680  →  7680 % 64 = **0**    ⭐ copia zero ACCESA
+    #
+    # ⇒ Misurare l'anello sulla tela di ieri direbbe «la copia zero non serve a
+    #   niente», e sarebbe falso: non sarebbe nemmeno accesa.  ⛔ E il banco non
+    #   se ne accorgerebbe da solo — e' `LEZIONI.md` §1.20 di nuovo.
+    palco = B.Palco(a.schermo, a.diagnosi, a.finestra,
                     os.path.join(a.lavoro, "palco"), gpu=True)
     try:
         inf("Xvfb: " + palco.accendi())
@@ -3774,6 +3868,37 @@ def giro_vero(a, precondizioni):
         c.valuta("window.__B30.crudi_voluti = 0, window.__B30.scorrimento = %s,"
                  " true" % json.dumps(v["scorrimento"]), attendi=False)
         inf("scorrimento in vigore per il campionamento: %s" % v["scorrimento"])
+
+        # ⛔⛔⛔ QUALE BINARIO STO MISURANDO — e l'`md5` non e' una cortesia.
+        #      La trappola peggiore della serata del 22 agosto sarebbe
+        #      **misurare il codice di ieri credendolo quello di oggi**: due
+        #      alberi, due binari, un `accendi` che riusa quello gia' vivo, e il
+        #      numero esce plausibile e sbagliato.  ⇒ Si legge l'impronta del
+        #      file che sta girando DAVVERO, dal `/proc` del processo.
+        log("5-sexies. ⛔⛔ IL BINARIO CHE STA GIRANDO — impronta, non intenzione")
+        rb = _sshpw("p=$(pgrep -f 'remotix .*--porta %d' | head -1); "
+                    "[ -n \"$p\" ] && readlink -f /proc/$p/exe && "
+                    "md5sum $(readlink -f /proc/$p/exe)" % a.porta_dentro,
+                    silenzioso=True, attesa=60)
+        pezzi = [x.strip() for x in (rb.stdout or "").splitlines()
+                 if x.strip().startswith("/") or " /" in x]
+        v["binario_del_prodotto"] = {"righe": pezzi}
+        for x in pezzi:
+            if len(x.split()) == 2 and len(x.split()[0]) == 32:
+                v["binario_del_prodotto"]["md5"] = x.split()[0]
+                v["binario_del_prodotto"]["percorso"] = x.split()[1]
+        if v["binario_del_prodotto"].get("md5"):
+            ok("il prodotto sulla porta %d e' %s  ·  md5 **%s**"
+               % (a.porta_dentro, v["binario_del_prodotto"]["percorso"],
+                  v["binario_del_prodotto"]["md5"]))
+        else:
+            ko("⛔ NON HO POTUTO GUARDARE quale binario sta girando: «non lo so» "
+               "non e' «e' quello giusto»")
+
+        log("5-quinquies. ⛔⛔⭐ LA COPIA ZERO E' ACCESA? — si legge dal registro "
+            "DEL PRODOTTO")
+        v["strada_di_cattura"] = strada_di_cattura(a)
+        v["copia_zero"] = stampa_strada_di_cattura(v["strada_di_cattura"])
 
         log("5-quater. ⛔⛔⛔ IL CARICO DELLE DUE MACCHINE — e senza questo il "
             "numero non vale")
@@ -4210,6 +4335,13 @@ def giro_vero(a, precondizioni):
               #     anello misurato con cinque Xvfb sopra e' indistinguibile da
               #     uno misurato sul prodotto, e `[M]` fra i due ci sono da 15 a
               #     45 volte sullo stesso tratto.
+              # ⛔⛔⭐ LA COPIA ZERO, ACCANTO AL NUMERO — 22 agosto 2026.  Senza,
+              #      un giro sul codice nuovo che ha ripiegato sulla strada
+              #      vecchia e' indistinguibile da uno con la cura accesa.
+              "copia_zero": v.get("copia_zero"),
+              "strada_di_cattura": v.get("strada_di_cattura"),
+              "binario_del_prodotto": v.get("binario_del_prodotto"),
+              "finestra_del_browser": list(a.finestra),
               "carico_prima": v.get("carico_prima"),
               "carico_dopo": v.get("carico_dopo"),
               "⛔ macchina carica": bool(v.get("macchina_carica_prima")
@@ -4324,6 +4456,19 @@ def misura(a):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+def _misura(s):
+    """«1920x1200» → (1920, 1200).  ⛔ Si rifiuta invece di indovinare: una
+    misura letta storta darebbe una tela diversa da quella che si crede, e la
+    tela decide se la copia zero si accende."""
+    try:
+        l, a = s.lower().split("x")
+        return (int(l), int(a))
+    except Exception:                                           # noqa: BLE001
+        raise argparse.ArgumentTypeError(
+            "⛔ «%s» non e' una misura: si scrive LARGHEZZAxALTEZZA, es. "
+            "1960x1200" % s)
+
+
 def principale():
     p = argparse.ArgumentParser()
     p.add_argument("--certifica", action="store_true")
@@ -4375,6 +4520,16 @@ def principale():
                         "il filo si satura e i fotogrammi si buttano invece di "
                         "ritardare.  0 = non fare il controllo (⛔ e allora Q11 "
                         "dice NON ESEGUITO, che non e' «passato»)")
+    p.add_argument("--finestra", default="1500x1000", type=_misura,
+                   help="⛔⛔ la misura della finestra del browser, e COMANDA LA "
+                        "TELA (`ADATTA=attacco`) — quindi comanda anche se la "
+                        "COPIA ZERO si accende.  `[M]` il driver iHD non onora "
+                        "un passo che non sia multiplo di 64 byte, e il passo e' "
+                        "`larghezza x 4`: 1460 → 5840, resto 16 ⇒ copia zero "
+                        "SPENTA; 1920 → 7680, resto 0 ⇒ ACCESA.  ⚠ 1500x1000 e' "
+                        "il palco di tutti i giri fino al 22 agosto 2026 (tela "
+                        "1460x888); per misurare la copia zero serve una "
+                        "finestra che dia una tela larga multiplo di 16 px")
     p.add_argument("--mani", type=int, default=3,
                    help="⛔ le condizioni si INTRECCIANO: a blocchi il ritardo "
                         "iniettato si confonde con la deriva")
