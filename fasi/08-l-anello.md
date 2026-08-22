@@ -199,6 +199,338 @@ l'indicatore di registrazione e il cursore di testo del terminale).
 
 *(si riempie strada facendo. ⛔ La prima riga è §2.3, e finché non c'è le altre non hanno un «prima».)*
 
+## 4-D · ⭐⭐ AGENTE D — `EncSliceLP` e il peso delle chiavi · **rientrato il 22 agosto 2026**
+
+*Due `[?]` che stavano nei documenti da settimane, chiuse tutte e due con la misura. ⛔ E due
+difetti veri trovati in `codificatore.c`, girati al suo proprietario invece che curati di nascosto.*
+
+*Misurato il 22 agosto 2026 sulla macchina di prova (`192.168.0.2`), dentro il contenitore
+(`enter.sh`). Ferro: **Intel UHD 730 integrata** — `/dev/dri/renderD128`, driver **iHD 25.2.3**,
+VA-API 1.22 — e, come solo controllo, la **Radeon RX 6800** su `renderD129` (Mesa 25.0.7,
+radeonsi navi21). ffmpeg 7.1.5, libavcodec 61.19.101.
+⛔ Nessuno dei due server dell'utente (7730, 7731) è stato toccato: questi banchi non aprono
+nessuna porta, sono codifiche fuori linea.*
+
+---
+
+## D.1 · ⛔ `EncSliceLP` **NON** sa produrre i sotto-livelli temporali
+
+⭐ **La risposta è NO, ed è misurata a tre porte diverse — che si chiudono tutte.**
+
+`RCP.md` §5.2 diceva: *«se `EncSliceLP` dell'Intel li sappia produrre non lo sa nessuno, ed è una
+misura della fase 8»*. Adesso lo si sa.
+
+### D.1.1 La prima porta: il driver **non li dichiara** — e i due controlli positivi lo inchiodano
+
+`[M]` `vaGetConfigAttributes` su `renderD128`, attributo `VAConfigAttribEncRateControlExt` (è quello
+che porta `max_num_temporal_layers_minus1`), banco `banchi/08-D1-attributi-va.c`:
+
+| profilo, entrypoint | nodo | `EncRateControlExt` | sotto-livelli |
+|---|---|---|---|
+| H264 ConstrainedBaseline · Main · High, **`EncSliceLP`** | Intel | ⛔ **NON SUPPORTATO** | — |
+| HEVC Main · Main10 · Main444 · Main444_10, **`EncSliceLP`** | Intel | ⛔ **NON SUPPORTATO** | — |
+| ⭐ **VP9** Profile0/1/2/3, **`EncSliceLP`** | Intel | `0x00000107` | **8** |
+| ⭐ H264 ×3 e HEVC Main/Main10, `EncSlice` | AMD | `0x00000103` | **4** |
+
+⛔ **7 profili su 7** dicono no sul percorso che ci riguarda. ⭐ **E i due controlli positivi sono
+la parte che vale**:
+
+- **stesso nodo, stesso driver, stesso entrypoint `EncSliceLP`**: su VP9 i sotto-livelli ci sono, e
+  sono otto ⇒ il «no» **non è del percorso a bassa potenza in quanto tale**, ed è del binomio
+  (codec, entrypoint);
+- **stessa libva, stesso banco, altro nodo**: su AMD `EncSlice` ci sono per H.264 *e* per HEVC ⇒ il
+  «no» **non è del codec in astratto**, e **non è della mia sonda**.
+
+⚠ Questa è la porta che si legge nel driver, e da sola non basterebbe: il mandato chiedeva una
+misura, non la documentazione. Le altre due sono nei byte.
+
+### D.1.2 La seconda porta: **nei byte che escono non c'è nessun sotto-livello**
+
+`[M]` `banchi/08-D1-struttura.py` e `08-D1-costo.py`. Sei configurazioni su `EncSliceLP`
+(`-bf` 0, 1, 2/d1, 2/d2, 4/d1, 4/d3), 120 fotogrammi della **scena vera dell'utente** ciascuna,
+QP 26 come il prodotto. Si legge `nuh_temporal_id_plus1` in **ogni** intestazione NAL e
+`sps_max_sub_layers_minus1` nell'SPS:
+
+⇒ ⛔ **6 celle su 6: `sps_max_sub_layers = 1`, e il 100 % dei NAL VCL porta `temporal_id = 0`.**
+E la stessa cosa sul controllo AMD `EncSlice` (1 cella su 1): **ffmpeg non li produce nemmeno dove
+l'hardware li dichiara**, perché nell'elenco completo delle opzioni di `hevc_vaapi` e `h264_vaapi`
+**non esiste nessuna opzione per chiederli** `[R]` (c'è `b_depth`, e basta).
+
+⇒ ⛔ **Le porte chiuse sono due e indipendenti**: il chip non li dichiara, e la nostra unica strada
+verso il chip non saprebbe chiederli comunque.
+
+### D.1.3 ⭐⭐ La terza porta: **prova a smentirti** — il lettore, e il guasto innestato
+
+⛔ *«Non ho visto sotto-livelli»* può voler dire *«il mio lettore è rotto»*. Due testimoni,
+`banchi/08-D1-testimone.py`:
+
+| testimone | `[M]` |
+|---|---|
+| **`libx265` con `temporal-layers=2:bframes=8`**, 48 fotogrammi | `temporal_id` **{0: 25, 1: 23}**, `sps_max_sub_layers = **2**` ⇒ ⭐ **il lettore li vede quando ci sono** |
+| **i bit alzati a mano** su un nostro flusso (59 intestazioni portate a `nuh_temporal_id_plus1 = 2`) | il lettore ne conta **59 su 59**, esatte |
+
+⭐ **E `LEZIONI.md` §1.8 si è presentata da sola, dalla parte buona**: chiesto
+`temporal-layers=**1**`, x265 **rifiuta a voce alta** — *«No support for temporal sublayers less
+than 2; Disabling temporal layers»* — e produce `temporal_id` tutti a zero. ⇒ Al primo giro il mio
+controllo positivo **è fallito**, e per un giro la misura è rimasta senza testimone (§«che cosa non
+ha funzionato», punto 4). Un banco che avesse guardato solo il codice di uscita avrebbe scritto
+«x265 non li fa» ed è **falso**.
+
+⇒ ⛔ **Lo zero su `EncSliceLP` è del codificatore, non del banco.**
+
+### D.1.4 ⭐ Però una **parte** di quel che i sotto-livelli servivano a fare si ottiene già oggi
+
+I sotto-livelli servivano a *«buttare certi fotogrammi senza rompere niente»*. **Quel risultato lì
+`EncSliceLP` lo dà**, per un'altra strada: le **figure non di riferimento** — in HEVC i NAL di tipo
+`TRAIL_N` — che compaiono appena si chiede `-bf ≥ 1` (nel prodotto è `c->ctx->max_b_frames`,
+`codificatore.c:1377`, oggi **0**).
+
+`[M]` `banchi/08-D1-costo.py`, sorgente **grezza NV12 a cadenza fissa**, 120 fotogrammi
+2560×1080 della scena dell'utente, `hevc_vaapi` `EncSliceLP` QP 26 (`entrypoint` **confessato da
+libavcodec**, non dedotto):
+
+| cella | byte (120 fot.) | buttabili | **ritardo di riordino** | PSNR | SSIM | buttandole |
+|---|---|---|---|---|---|---|
+| `-bf 0` — **il prodotto oggi** | 89 457 | **0**/120 | **0 ms** | 52,973 | 0,998174 | — |
+| `-bf 1` | 75 119 | 59/120 | **67 ms (2 fot.)** | 52,908 | 0,998155 | PULITA, −12 % byte |
+| `-bf 2 -b_depth 1` | 66 445 | 79/120 | 100 ms (3 fot.) | 52,852 | 0,998135 | PULITA, −21 % |
+| `-bf 2 -b_depth 2` | 66 683 | 39/120 | 133 ms (4 fot.) | 52,853 | 0,998135 | PULITA, −10 % |
+| `-bf 4 -b_depth 1` | 66 255 | 95/120 | 167 ms (5 fot.) | 52,796 | 0,998110 | PULITA, −36 % |
+| `-bf 4 -b_depth 3` | 62 055 | 23/120 | 234 ms (7 fot.) | 52,797 | 0,998109 | PULITA, −7 % |
+
+**Come si chiedono**: `-bf N` (in C: `ctx->max_b_frames = N`), niente altro. `-b_depth` sposta
+**quante** figure sono buttabili, non **se** lo sono.
+
+**Che cosa costano in qualità**: `[M]` **niente di misurabile** — da `-bf 0` a `-bf 1` il PSNR
+scende di **0,065 dB** e lo SSIM di **0,00002**.
+**Che cosa costano in banda**: `[M]` **la fanno risparmiare**: −16 % a `-bf 1`, fino a −31 %.
+⛔ **Che cosa costano davvero**: **il riordino**. Già `-bf 1` mette **due fotogrammi** fra la
+cattura e l'uscita — `[M]` **67 ms** a 30/s — cioè **da solo sfonda i 50 ms** che `DECISIONI.md`
+§2.4 dà a **tutto** il pezzo nostro.
+
+⇒ ⛔ **Su questo ferro non esiste un modo a ritardo zero di avere fotogrammi buttabili.**
+⇒ ⭐ **La riga di `RCP.md` §5.2 — «ogni abbandono costa una chiave» — resta in vigore, e adesso ha
+una misura sotto invece di una `[?]`.**
+
+⚠ *E il prodotto è già protetto se qualcuno provasse a toccare quel numero*: `codificatore.c:2182`
+guarda `dts ≠ pts` e **scrive nel registro** che il codificatore riordina. La riga
+`max_b_frames = 0` è giusta com'è: ⛔ **non si tocca.**
+
+### D.1.5 ⭐⭐ E il verde più importante di D.1 è stato **smentito su richiesta**
+
+⛔ *«Il flusso tagliato decodifica senza errori»* **non prova niente**, e §5.2 lo dice testualmente:
+a un delta mancante il decodificatore **non solleva nessun errore**. ⇒ La prova sono i **pixel**.
+`banchi/08-D1-smentita.py`, flusso `-bf 1`, 120 fotogrammi, impronta SHA-256 di **ogni** immagine
+decodificata, confrontata con le immagini del flusso **intero**:
+
+| | figure tolte | immagini | errori del decodificatore | **identiche al flusso intero** |
+|---|---|---|---|---|
+| **il verde**: buttate tutte le `TRAIL_N` | 59 | 61 | nessuno | ⭐ **61/61 — 100,0 %** |
+| ⭐ **guasto innestato**: buttata **1 `TRAIL_R` su 10** | 6 | 114 | *«Could not find ref with POC 20»* | ⛔ **19/114 — 16,7 %** |
+| ⭐ **guasto pesante**: buttate **tutte** le `TRAIL_R` | 60 | 60 | *«Could not find ref with POC 2»* | ⛔ **1/60 — 1,7 %** |
+
+⇒ Il verde **diventa rosso** quando si butta la cosa sbagliata, e di quanto: **100 % → 16,7 %**
+togliendo **sei** figure su 120. Il banco distingue.
+
+---
+
+## D.2 · Quanto pesa una chiave, contro il tetto dei 16 MiB
+
+**Il tetto è 16 777 216 byte** (`RCP.md` §6.2). Metodo: **ogni** fotogramma è una chiave (`-g 1`,
+`idr_interval 0`), e si misura l'**accesso intero** — VPS+SPS+PPS+SEI+IDR — cioè quel che il
+protocollo mette in un chunk `key`, non il solo slice. Regime del prodotto: `EncSliceLP`,
+`rc_mode=CQP`, **QP 26** (`figlio.c:3978`); ripiego in software **CRF 20** (`figlio.c:4065`).
+
+⛔ **I 10 bit qui sono OTTO PROMOSSI, e si dichiara**: `DECISIONI.md` §2.3-ter ha misurato che dalla
+cattura di Mutter i 10 bit veri non escono per nessuna strada. Le righe `main10` qui sotto misurano
+l'**etichetta**, non il contenuto — e infatti `[M]` a 8K costano **meno** di `main` (250 355 contro
+251 288 byte): la profondità dichiarata non porta informazione che non ci sia.
+
+### D.2.1 ⭐ Alla tela dell'utente il tetto **non si può sfondare**
+
+`[M]` `banchi/08-D2-misure.py`, il video vero girato dall'utente il 22 agosto (2560×1080, 404
+fotogrammi), **ogni fotogramma una chiave**:
+
+| | n | min | **mediana** | p90 | **massimo** | quota del tetto |
+|---|---|---|---|---|---|---|
+| `hevc_vaapi` `EncSliceLP` QP 26 | **404** | 20 328 | **20 817** | 21 070 | **21 433 byte** | **0,13 %** |
+| `h264_vaapi` `EncSliceLP` QP 26 | **404** | 24 160 | **24 956** | 25 282 | **25 621 byte** | **0,15 %** |
+
+⇒ ⭐ **Il margine è 782×.** E il tetto lì non si raggiunge **nemmeno di proposito**
+(`banchi/08-D2-scala.py`, n=8 per riga, sorgente grezza, codificatore isolato):
+
+| scena, 2560×1080 | massimo | quota |
+|---|---|---|
+| il desktop vero | 20 259 byte | 0,1 % |
+| il desktop + **grana forte** (`noise=alls=30`) | 758 513 byte | 4,5 % |
+| ⛔ **rumore uniforme** — il caso peggiore che esista | **2 529 464 byte (2,412 MiB)** | **15,1 %** |
+| ripiego `libx265` CRF 20 sul rumore | 3 065 178 byte | 18,3 % |
+| ripiego `libx264` CRF 20 sul rumore | 2 812 378 byte | 16,8 % |
+
+⇒ ⛔⭐ **Alla tela di 2560×1080 il difetto di forma di §6.2 è irraggiungibile**: perfino il rumore
+puro sta **6,6 volte** sotto.
+
+### D.2.2 ⛔ A 7680×4320 il tetto **si sfonda davvero**
+
+La scena 8K non si inventa e non si ingrandisce: ⛔ **ingrandire cancella il dettaglio e
+sottostima**. Si prende il desktop vero e lo si **affianca 3×4** — dodici immagini diverse — così la
+densità di dettaglio per pixel resta quella vera. `[M]` `banchi/08-D2-misure.py` e `08-D2-scala.py`,
+`hevc_vaapi` `EncSliceLP` QP 26:
+
+| scena, 7680×4320 | n | massimo | quota del tetto |
+|---|---|---|---|
+| ⚠ *il desktop **ingrandito** invece che affiancato — il caso comodo* | 6 | *76 520 byte* | *0,5 %* |
+| **il desktop affiancato** (dettaglio nativo) | 33 (27 distinte) | **251 288 byte (0,240 MiB)** | **1,5 %** |
+| lo stesso, etichetta `main10` (8 bit promossi) | 33 | 250 355 byte | 1,5 % |
+| il desktop + grana `alls=10` | 8 | 660 939 byte | 3,9 % |
+| il desktop + grana `alls=30` | 8 | 9 136 749 byte (8,713 MiB) | **54,5 %** |
+| il desktop + grana `alls=60` | 8 | 15 926 065 byte (15,188 MiB) | ⚠ **94,9 %** |
+| ⛔ **rumore uniforme** | 8 | **30 319 727 byte (28,915 MiB)** | ⛔ **180,7 % — sfonda 8/8** |
+
+⚠ **E l'ingrandimento sottostima di 3,3 volte**: è la ragione per cui il mosaico esiste.
+
+⇒ ⛔ **Risposta alla `[?]` di `RCP.md` §6.2: sì, il tetto si sfonda**, alla misura massima che §4.5
+dichiara legale, con contenuto quasi incomprimibile. **Ma con un desktop vero, no** — nemmeno a 8K,
+dove sta al **1,5 %**.
+
+### D.2.3 ⛔⛔ E il ripiego in software sfonda **prima**, con contenuto **plausibile**
+
+⛔ **`h264_vaapi` su questo chip si ferma a 4096 px per lato** — `[M]` *«Hardware does not support
+encoding at size 4112x2160 (constraints: width 32-4096 height 32-4096)»*, mentre 4096×2160 passa
+(41 566 byte, n=10). ⇒ **Oltre i 4096 px l'H.264 in hardware NON C'È**, e la tela legale arriva a
+7680: là si scende su `libx264`. `[M]` `hevc_vaapi` invece regge 7680×4320, 8192×4320 e perfino
+16384×4320 (6 chiavi su 6 ciascuno).
+
+`[M]` `banchi/08-D2-ripiego.py`, `libx264` **CRF 20**, 7680×4320, n=8:
+
+| scena | mediana | massimo | sopra il tetto |
+|---|---|---|---|
+| il desktop affiancato | 331 979 | 398 054 byte (0,380 MiB) | 0/8 |
+| + grana `alls=30` | 9 182 880 | **19 642 719 byte (18,733 MiB)** | ⛔ **1/8** |
+| + grana `alls=60` | 11 653 811 | **23 820 270 byte (22,717 MiB)** | ⛔ **1/8** |
+| rumore uniforme | 18 729 154 | 33 710 537 byte (32,149 MiB) | ⛔ 8/8 |
+
+⇒ ⛔ **Un filmato molto granuloso a schermo intero su una tela 8K è già oltre il tetto**, e non è
+rumore di laboratorio.
+
+### D.2.4 ⛔⛔ E qui c'è il difetto vero: **la scala delle ricodifiche è corta di UNO scalino**
+
+`[R]` `codificatore.c:41` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
+La scala è dunque **QP 26 → 32 → 38** (hardware) e **CRF 20 → 26 → 32** (software), e dopo il terzo
+tentativo `:2203` **restituisce `false`: il fotogramma NON parte.**
+
+`[M]` sul caso che sfonda, 7680×4320, n=8 per riga:
+
+| tentativo | hardware `hevc_vaapi` LP | esito | software `libx264` | esito |
+|---|---|---|---|---|
+| 0 | QP 26 → 28,915 MiB | ⛔ sopra 8/8 | CRF 20 → 32,149 MiB | ⛔ sopra 8/8 |
+| 1 | QP 32 → 22,442 MiB | ⛔ sopra 8/8 | CRF 26 → 25,602 MiB | ⛔ sopra 1/8 |
+| 2 | QP 38 → **16,654 MiB** | ⛔ **sopra 8/8** | CRF 32 → **19,895 MiB** | ⛔ **sopra 1/8** |
+| **3 — che non c'è** | *QP 44 → 11,056 MiB* | *0/8, ce l'avrebbe fatta* | *CRF 38 → 14,280 MiB* | *0/8, ce l'avrebbe fatta* |
+
+⇒ ⛔⛔ **Manca uno scalino solo**, su tutt'e due i percorsi, e il tentativo che manca è quello che
+sarebbe bastato. **QP 38 sta al 104,1 % del tetto**: si perde per il **4 %**.
+
+⛔ **E la conseguenza è quella che `RCP.md` §5.2 esiste per non avere.** Se il fotogramma che «non
+parte» è una **chiave**, §5.2 dice *«il server NON DEVE abbandonare un fotogramma chiave»*: il
+client resta rotto, manda `RICHIEDI_CHIAVE`, e ogni richiesta fa rifare **tre** ricodifiche che non
+producono niente. `[M]` **Ogni tentativo a 8K costa 91-108 ms in hardware e 1,8-3,3 s in
+software** ⇒ **~300 ms** ovvero **~7,8 s** buttati per fotogramma, a ripetizione. **È la spirale.**
+
+⚠ **Quanto è raggiungibile**: serve una tela vicina agli 8K **e** contenuto quasi incomprimibile.
+Alla tela dell'utente, mai (§D.2.1). ⇒ È un difetto **vero e dimostrato**, non **urgente**.
+
+---
+
+## ⛔ Che cosa NON ha funzionato — e sette cose sbagliate le ho fatte io
+
+1. ⛔⛔ **Il denominatore era finto, e me ne sono accorto perché era troppo bello.** Le prime 33
+   chiavi a 8K uscivano **tutte di 243 497 byte esatti**: impossibile su 33 immagini diverse. Causa:
+   `-fps_mode cfr -r 30` sta **dopo** il filtro `tile=3x4`, che consegna 2,5 immagini al secondo ⇒
+   la conversione di cadenza le **duplicava dodici volte**. Le immagini distinte erano **tre**, non
+   trentatré. ⇒ Rifatto senza conversione: **27 distinte su 33**, e le misure vanno da 243 496 a
+   251 288. ⭐ *La regola che ha salvato il numero: un massimo uguale alla mediana è un allarme, non
+   un bel risultato.*
+2. ⛔ **La prima misura di qualità era priva di senso** — PSNR **16,47 dB** in tutte le celle, e
+   identico a cinque decimali. Non era una qualità: era un **disallineamento**, perché confrontavo
+   una codifica a cadenza fissa con la sorgente **a cadenza variabile** del video dell'utente. Rifatto
+   da una sorgente **grezza NV12 già a cadenza fissa**: **52,9 dB**.
+3. ⛔ **`-max_frame_size` non è una via d'uscita**: `[M]` `hevc_vaapi` lo **rifiuta** in CQP, 3
+   tentativi su 3 — *«Max frame size is invalid in CQP rate control mode»*. Era il candidato più
+   comodo per il tetto e non esiste.
+4. ⛔ **Il mio primo controllo positivo è fallito**: `libx265` con `temporal-layers=**1**` non
+   produce sotto-livelli e **lo dichiara** (*«No support for temporal sublayers less than 2»*).
+   Per un giro la misura di D.1 è rimasta senza testimone. Con `=2` funziona.
+5. ⛔⛔ **`-low_power 0` sull'Intel apre lo stesso `VAEntrypointEncSliceLP`** `[M]`, e ffmpeg **non
+   fallisce**: prende quel che c'è. ⇒ Chiunque misuri «LP contro entrypoint pieno» su questo chip
+   passando da ffmpeg produce **due misure sotto la stessa etichetta**, che è `LEZIONI.md` §1.8 in
+   piena regola. ⚠ **Riga da consegnare alla fase 9**, che quella domanda ce l'ha in carico: sul
+   ferro di casa il confronto **non si può fare**, perché l'entrypoint pieno non c'è — si fa
+   sull'AMD, e allora cambiano insieme chip e driver.
+6. ⛔ Le opzioni di colore passate come opzioni **di uscita** su un ingresso grezzo fanno inserire a
+   ffmpeg un `auto_scale` che la catena VA-API rifiuta (*«Impossible to convert between the formats
+   supported by the filter Parsed_hwupload»*). Un giro perso; nei banchi definitivi il colore si
+   dichiara alla sorgente o non si dichiara, e **le misure di D.2 non ne dipendono**.
+7. ⚠ **La scena 8K non è un desktop 8K vero**, ed è dichiarato: è il desktop 2560×1080 dell'utente
+   affiancato 3×4. Nessuno ha un desktop 8K da fotografare.
+
+---
+
+## `[?]` Che cosa resta aperto
+
+1. `[?]` ⭐ **Un programma che facesse la codifica VA-API da sé — senza ffmpeg — potrebbe
+   costruire i sotto-livelli su `EncSliceLP`?** Non è escluso, e l'indizio è misurato:
+   `[M]` `VAConfigAttribEncPackedHeaders = 0x1f` su `EncSliceLP` vuol dire che **è l'applicazione a
+   impacchettare VPS/SPS/PPS e le intestazioni di slice** ⇒ `nuh_temporal_id_plus1` **lo scrive il
+   software, non il chip**; e `EncMaxRefFrames` dà **L0 = 3** riferimenti, cioè lo spazio per una
+   piramide di **P** (che **non riordina**, quindi **non costa ritardo**). ⛔ Nessuno l'ha provato.
+   Chiuderla vuol dire scrivere un codificatore VA-API nostro: giorni di lavoro, e la decisione è di
+   chi possiede `codificatore.c`. ⚠ Finché è aperta, `RCP.md` §5.2 **non cambia**.
+2. `[?]` **I 10 bit veri** restano non misurabili da qui: `DECISIONI.md` §2.3-ter, Mutter dà BGRx.
+   Tutto quel che qui porta l'etichetta `main10` è **otto bit promossi**, e alle 8K costa `[M]`
+   **933 byte in meno** di `main` — cioè l'etichetta non porta informazione.
+3. `[?]` **Se un desktop 8K vero somigli al mosaico o alla grana.** Il mosaico è un surrogato
+   dichiarato.
+4. `[?]` **Il regime senza perdita** (`CODIFICATORE_QUALITA_LOSSLESS`) non è nel percorso di
+   `figlio.c` e non l'ho misurato; a 8K un fotogramma senza perdita a 8 bit vale **47 MiB** di soli
+   pixel grezzi, quindi sfonderebbe per costruzione. Se un giorno si accende, va misurato.
+
+---
+
+## ⚠ Da girare al proprietario di `src/codificatore.c` — io **non l'ho toccato**
+
+| # | dove | che cosa, e perché |
+|---|---|---|
+| **1** | `codificatore.c:41` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware e **19,895 MiB** in software, e il quarto ce l'avrebbe fatta. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware e **1,8-3,3 s** in software, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
+| **2** | `codificatore.c:2203-2207` — la resa | ⛔⛔ Quando si arrende restituisce `false` **anche per una CHIAVE**, e `RCP.md` §5.2 vieta di abbandonare le chiavi. ⇒ Per una chiave non ci si può arrendere: si continua a scendere finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si scrive nel registro che l'immagine è uscita brutta. Abbandonarla lascia il client rotto **per sempre**, e ogni `RICHIEDI_CHIAVE` che segue costa tre ricodifiche **che non producono niente**: è la spirale di §5.2 |
+| **3** | `codificatore.c:1377` `c->ctx->max_b_frames = 0` | ⛔ **Non si tocca, e adesso c'è il numero accanto**: metterlo a 1 darebbe `[M]` 59 figure buttabili su 120 e −16 % di banda a qualità invariata, **ma 67 ms di riordino** — da solo oltre i 50 ms di `DECISIONI.md` §2.4. ⭐ Il commento «deciso, non ereditato» merita la misura sotto |
+| **4** | *nessuna riga: è una cosa che non esiste* | ⚠ `-max_frame_size` **non** è utilizzabile come tetto: `[M]` `hevc_vaapi` lo rifiuta in CQP, 3/3. Se qualcuno ci pensasse, è già misurato che non c'è |
+| **5** | ⚠ **fuori da `codificatore.c`** — riguarda `figlio.c` / la trattativa della tela | `[M]` `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**: **4096×2160 sì, 4112×2160 no**. La tela legale di `RCP.md` §4.5 arriva a **7680×4320** ⇒ oltre i 4096 il ripiego `libx264` non è un'eventualità, è **la regola**, e a 8K costa `[M]` **309 ms** per chiave sul desktop e **1,2-3,3 s** sul granuloso. `hevc_vaapi` invece regge fino a 16384×4320 `[M]`. ⇒ Vale la pena leggerlo dal driver invece di scoprirlo al primo fotogramma |
+
+---
+
+## I banchi
+
+Copiati nel worktree, ⚠ **con il prefisso `08-D` per non pestare i nomi degli altri agenti** — il
+coordinatore li rinumeri come vuole:
+
+| banco | che cosa risponde |
+|---|---|
+| `banchi/08-D1-attributi-va.c` | che cosa dichiara il driver su ogni (profilo, entrypoint) dei due nodi |
+| `banchi/08-D1-struttura.py` | `temporal_id` e `sps_max_sub_layers` nei byte che escono |
+| `banchi/08-D1-costo.py` | banda, PSNR/SSIM, riordino e figure buttabili per ogni `-bf` |
+| `banchi/08-D1-smentita.py` | ⭐ la prova a pixel + i due guasti innestati |
+| `banchi/08-D1-testimone.py` | ⭐ i due controlli positivi del lettore di `temporal_id` |
+| `banchi/08-D2-misure.py` | le chiavi in byte, con il denominatore vero |
+| `banchi/08-D2-scala.py` | dal desktop vero al rumore, codificatore isolato |
+| `banchi/08-D2-ripiego.py` | lo stesso in software, e la scala delle ricodifiche |
+
+Si girano sulla macchina di prova dentro il contenitore, da `/srv/src/08-D`, dove sta anche la
+scena (`scena-utente.webm`, il video del 22 agosto).
+
+
+---
+
 ## 5 · ⛔ Che cosa NON ha funzionato
 
 *(vuoto)*

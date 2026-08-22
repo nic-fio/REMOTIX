@@ -2827,6 +2827,9 @@ def prepara_giro(d, vista, nome, ritorno_ms, andata_ms):
 def giro_vero(a, precondizioni):
     B = b17()
     v = {"banco": "B30", "giro": a.giro, "host": a.host, "porta": a.porta,
+         # ⛔ La strada di disegno si DICHIARA nel verbale: due giri con code
+         #    diverse non sono lo stesso banco sulla stessa scena (§2.2 punto 3).
+         "coda_url": a.coda_url or "",
          "letto_nel_codice": {n: t for n, (_, t) in precondizioni.items()},
          "giri": [], "senza_eco": [], "note": []}
     os.makedirs(a.lavoro, exist_ok=True)
@@ -2867,7 +2870,19 @@ def giro_vero(a, precondizioni):
         #    puo' ascoltare in fase di cattura e avvolgere `WebTransport` senza
         #    toccare `pagina.html` — cioe' senza misurare la pagina strumentata.
         c.chiama("Page.addScriptToEvaluateOnNewDocument", source=PROLOGO)
-        url = "https://%s:%d/" % (a.host, a.porta)
+        # ⭐⭐ LA CODA DELL'INDIRIZZO — 22 agosto 2026, fase 8.
+        #
+        # ⛔ Questo banco legge i pixel dal DEPOSITO 2D della pagina
+        #    (`window.REMOTIX.schermo.deposito`) e spacca il tratto 6 avvolgendo
+        #    `drawImage`.  ⭐ Dal 20 agosto (`DECISIONI.md` §5.4) la strada
+        #    normale del prodotto e' `bitmaprenderer` + `createImageBitmap`:
+        #    **il deposito non esiste piu' e `drawImage` non viene mai chiamato**.
+        #    ⇒ Su quella strada questo banco esce 3 («non ho niente da
+        #    giudicare»), e va detto invece che scoperto ogni volta.
+        # ⇒ `--coda-url "?tela=2d"` chiede alla pagina la strada 2D, che e'
+        #    ESATTAMENTE quella su cui e' stato preso il 139,40 del 14 agosto:
+        #    e' l'unico modo di avere un «prima» e un «dopo» confrontabili.
+        url = "https://%s:%d/%s" % (a.host, a.porta, a.coda_url or "")
         inf("apro " + url)
         c.chiama("Page.navigate", url=url)
         time.sleep(2.5)
@@ -3502,6 +3517,11 @@ def principale():
     p.add_argument("--utente", default="nicfio")
     p.add_argument("--parola-file")
     p.add_argument("--secondi", type=float, default=25.0)
+    p.add_argument("--coda-url", default="",
+                   help="⭐ coda dell'indirizzo (es. «?tela=2d»).  ⛔ Serve "
+                        "perche' dal 20 agosto la strada normale della pagina "
+                        "e' `bitmaprenderer`, che NON ha il deposito 2D da cui "
+                        "questo banco legge i pixel: senza coda si esce 3")
     p.add_argument("--schermo", default=":90")
     p.add_argument("--diagnosi", type=int, default=9630)
     p.add_argument("--lavoro", default="/tmp/04-b30")
