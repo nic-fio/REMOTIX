@@ -60,6 +60,16 @@ indietro»*, e la fase fu **azzerata**.
 > ⛔⛔ **il 4K regge 41 fot/s, non 60**, e il livello prodotto **sfora** quello del client
 > (§13.6) · ⭐⭐⭐ **§10.2 è decisa: la spirale sul desktop vero non morde fino a 10 Mbit/s**
 > (§13.8).
+>
+> ⛔⛔⛔ **E LA NOTTE DEL 23 AGOSTO IL METRO È CAMBIATO: §14, e da lì in giù i numeri sono
+> H.264.** ⛔ Il cliente di prova negoziava HEVC per una riga rimasta indietro di tre giorni;
+> adesso negozia **quel che negozia Firefox**, verificato sulle righe di `pagina.html` (§14.1).
+> In due parole: ⛔⛔ **il caso duro in H.264 chiede ancora 44,6 Mbit/s = 223 % del pavimento** —
+> il tetto serve (§14.2, §14.3) · ⛔ **il rapporto HEVC/H.264 NON è una costante**: 0,36× sul
+> retinato, 0,76× sulla grana, ⛔ **1,7× in su** sul desktop vero (§14.2) · ⛔ **la soglia da sola
+> non mantiene la promessa a NESSUN valore**, e a 800 ms paga **1 321 ms** di coda; ⭐ la leva è la
+> **coppia** con `--ritmo-adattivo` (§14.4) · ⭐⭐⭐ **P8 è VERDE**, a coppie ferma/mossa nello
+> stesso giro (§14.5) · ⭐ **il 4K in H.264** e ⛔ **l'audio** in §14.6 e §14.7.
 
 ## S.1 · ⛔ Il fatto più grave della giornata: **il prodotto è morto, e la causa è provata**
 
@@ -2611,3 +2621,418 @@ che da spenta **non tocca niente**: i numeri del confronto appaiato di §3-bis l
 ⭐ **E il corpo del reato si conserva**: `/media/REMOTIX/tmp/09c/core.remotix.110832.1787493803`,
 **48 525 312 byte** — il core del binario malato. ⛔ **Non si cancella**: è la prova *vista* del
 crollo del 23 agosto. ⚠ **E non è quello di 13.1.1**: vedi 13.1.5 qui sotto, che racconta perché.
+
+---
+
+# §14 · ⛔⛔⛔ IL METRO CAMBIATO — *23 agosto 2026, sera tardi*
+
+> ⛔⛔ **HO CAMBIATO IL METRO, E LO DICO PRIMA DEI NUMERI.**
+> Fino alle 14:22 di oggi ogni giro di banco di questa fase ha misurato **HEVC**; da qui in giù
+> misura **H.264**, che è il codec che il browser dell'utente riceve davvero. ⇒ ⛔ **I numeri di
+> banda di §3.8, §3.15, §13.4 e §13.5 non si confrontano con quelli di §14.** Sono due scale.
+> ⭐ Il vecchio metro si rifà quando serve: `--video-codec hevc`.
+
+## 14.1 ⭐⭐ LA CURA DEL CLIENTE DI PROVA — e **come lo decide il browser vero**, verificato
+
+### La riga cambiata
+
+`banchi/01-b3-cliente.py` — il predefinito di `--video-codec` era **`hevc,av1`**, adesso è
+**`h264`**. ⛔ **La causa non è una svista di stasera: è una riga rimasta indietro di tre giorni.**
+Il 20 agosto AV1 è uscito dal prodotto (`DECISIONI.md` §1.13-ter) e il cliente di prova ha
+continuato a dichiarare `hevc,av1` — ⇒ il server sceglieva **HEVC** in ogni giro, per tre giorni.
+
+### ⛔ E LO DECIDE IL BROWSER? — verificato, non assunto
+
+⭐ `pagina.html` **non** chiede il codec alle API, e lo dichiara in testa al file: `[M]` 12 agosto,
+su tutte e sette le stringhe HEVC `mediaCapabilities.decodingInfo()` e `canPlayType()` dicono di
+**sì** e il pixel non arriva. ⇒ La pagina **dipinge una sonda vera e rilegge i pixel**, e nel `CIAO`
+ci finisce solo quel che ha dipinto:
+
+```
+pagina.html:818   const PREFERENZA = ["hevc", "h264"];        ⛔ AV1 non c'è più
+pagina.html:4672  const codec_buoni = PREFERENZA.filter((n) => …sondaggio…arriva);
+pagina.html:4725  ["video.codec", codec_buoni.join(",")]
+```
+
+⇒ **Su Firefox HEVC non dipinge ⇒ la pagina manda `video.codec=h264` e basta.** Il predefinito
+nuovo del cliente è **esattamente quello**, non un'approssimazione.
+
+### `[M]` LA PROVA CHE IL METRO È CAMBIATO — *14:22:06-07 UTC*, righe testuali dal registro
+
+```
+14:22:06.637 rcp     negoziato video.codec=h264 video.profondita=8 audio.codec=pcm
+14:22:07.782 video   primo fotogramma: (non letto) · 25450 byte · … livello 51, 2560x1080 ·
+                     conversione 6308 µs, … codifica 3815 µs · H.264 8 bit via h264_vaapi
+```
+
+⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
+`hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
+
+### 14.1.1 ⛔ LA STRINGA VUOTA — **è un difetto del PRODOTTO, non del banco**, e vale meno di quanto sembrava
+
+`[R]` di §13.5.2 verificato riga per riga sull'albero congelato `09c-src`:
+
+```
+codificatore.c:953   snprintf(c->stringa_codec, …, "hev1.%s%u.%X.%c%u%s", …)   ← HEVC
+codificatore.c:1152  snprintf(c->stringa_codec, …, "av01.%u.%02u%c.%02d", …)   ← AV1 (codice morto)
+                     ⛔ e per H.264 NON C'E' NESSUNA RIGA: `avc1.` non si compone da nessuna parte
+codificatore.c:4065  c->conf.stringa_codec[0] ? … : "(non letto)"
+```
+
+⇒ ⛔ **Difetto del prodotto**: `stringa_codec` non viene mai composta sotto H.264, e il registro
+scrive `(non letto)` e `«»`.
+
+⭐⭐ **Ma NON è la famiglia di R31, e questo cambia la sua gravità.** L'unico uso di
+`stringa_codec` fuori dal codificatore è `figlio.c:4735` e `:4780`, e sono **due righe di
+registro**: la stringa **non parte mai verso il browser**. Quella che il browser usa davvero se la
+compone la pagina da sé, dal livello che **lei** dichiara:
+
+```
+pagina.html:1182   return ["avc1.6400" + esa(idc), "avc1.64001f"];   /* idc da LIVELLO_DICHIARATO */
+```
+
+⇒ ⭐ **Il difetto è una CECITÀ DELLA DIAGNOSI, non uno schermo nero**: sotto H.264 il registro non
+sa dire quale stringa servirebbe, e chi legge non può confrontarla con quella che la pagina
+manda. ⛔ **E la cecità morde proprio dove serve**: a 4K il server produce il livello **5.2**
+(§13.6.2) mentre la pagina configura `avc1.640033`, cioè **5.1** — e la riga che avrebbe reso
+visibile lo scarto è quella vuota.
+
+## 14.2 ⭐⭐⭐ LE CINQUE SCENE A 2560×1080 IN H.264 — *14:23:08 → 14:26:26 UTC*
+
+**Il giro**: porta **7920**, binario `md5 162d2d10…` (`f90eb21`, nessun interruttore, trappola
+glibc spenta), utente **`prova2`**, tela **2560×1080**, **una sola sessione** per tutti e cinque i
+punti — così l'unica variabile è la scena. Tetto **spento**, `tc` **mai toccato** (`lo` verificata
+`noqueue` prima e dopo, `enp7s0` mai sfiorata). 30 s per punto.
+
+| scena | ora | fot/s | ⭐ **carico video H.264** | % di 20 | filo `lo` | byte/fotogramma | chiavi | abbandoni |
+|---|---|---|---|---|---|---|---|---|
+| **ferma** (nessuna scena) | 14:23:08 | 0,00 | **0,000** Mbit/s | 0 % | 2,427 | — | 0 | 0 |
+| ⭐ **desktop VERO** (`scena-utente.webm` a schermo intero) | 14:23:52 | 23,10 | **0,356** Mbit/s | **1,8 %** | 2,842 | 1 924 | 0 | 0 |
+| **tinta piatta** (`pieno`) | 14:24:31 | 41,03 | **1,190** Mbit/s | 5,9 % | 3,717 | 3 624 | 0 | 0 |
+| **gradiente retinato** (`barra`) | 14:25:10 | 40,77 | **7,728** Mbit/s | 38,6 % | 10,45 | 23 695 | 0 | 0 |
+| ⛔ **film con la GRANA** (il caso duro) | 14:25:55 | 23,30 | ⛔ **44,574** Mbit/s | ⛔ **222,9 %** | 48,42 | 239 129 | 0 | 0 |
+
+### ⛔⭐ LA RISPOSTA ALLA DOMANDA CHE DECIDE
+
+> **Il caso duro in H.264 supera i 20 Mbit/s?** ⇒ ⛔ **SÌ. 44,574 Mbit/s, cioè 2,2 volte il
+> pavimento.**
+
+### `[M]` I DUE METRI AFFIANCATI — e la distanza **non** è un fattore costante
+
+| a 2560×1080, tetto spento | HEVC (§3.8, mattina) | ⭐ **H.264** (14:2x) | rapporto |
+|---|---|---|---|
+| ferma | 0 | 0 | — |
+| desktop vero | 0,204 | ⚠ **0,356** | ⛔ **1,7× in SU** |
+| tinta piatta | 1,179 | 1,190 | 1,01× |
+| gradiente retinato | 21,36 | ⭐ **7,728** | **0,36×** |
+| film con la grana | 58,668 | **44,574** | **0,76×** |
+
+⛔⛔ **E questa riga è il fatto nuovo della tabella**: H.264 **non** costa «un terzo di HEVC», come
+§13.5.1 lasciava credere misurando una scena sola. Costa **il 36 %** sul gradiente retinato, il
+**76 %** sul film con la grana e ⛔ **il 170 %** — cioè **di più** — sul desktop vero.
+⇒ ⭐ **Il rapporto fra i due codec dipende dal CONTENUTO**, ed è la stessa lezione di §3.8 («quanti
+pixel cambiano non predice niente») applicata al codec. ⚠ Un fattore di conversione da HEVC a
+H.264 **non esiste**: i numeri vecchi non si convertono, si **rifanno**.
+
+### ⭐ Il controllo positivo, e sta dentro la tabella
+
+I cinque punti coprono **tre ordini di grandezza** (0 → 0,356 → 1,19 → 7,73 → 44,57): se il banco
+fosse cieco darebbero lo stesso numero. ⭐ E `barra` ritrovato a **7,728** contro i **7,920** di
+§13.5.1, preso trentacinque minuti prima con un'altra sessione: **2,4 % di scarto**, cioè la misura
+si ripete.
+⚠ **La riga `ferma` dice un'altra cosa che vale la pena leggere**: **zero** video e **2,427
+Mbit/s sul filo**. ⇒ A desktop fermo il **100 %** di quel che passa è QUIC + **l'audio PCM**, che da
+solo chiede 1,536 Mbit/s. `[?]` **A linea stretta è l'audio a mangiare il video, non il contrario** —
+vedi 14.4.1, dove a 3 Mbit/s il video scende a 5 fot/s e il filo resta a 2,4.
+
+## 14.3 ⭐⭐⭐ §10.1 RIFATTA COL NUMERO GIUSTO — la contraddizione **non cade, si dimezza**
+
+§10.1 metteva a confronto due frasi: lo studio diceva *«non serve nessun tetto»* sul contenuto vero,
+la misura diceva *«293 % del pavimento»* sul caso duro. ⛔ Erano tutt'e due **numeri HEVC**.
+
+| | HEVC (quel che diceva §10.1) | ⭐ **H.264** (quel che l'utente riceve) |
+|---|---|---|
+| il **contenuto vero** dell'utente | 0,204 Mbit/s = **1,0 %** | **0,356** Mbit/s = **1,8 %** |
+| il **caso duro** (film con la grana) | 58,668 = **293 %** | ⛔ **44,574** = **223 %** |
+| la distanza fra i due | **288×** | **125×** |
+
+### ⭐ LA CONCLUSIONE, col numero e non con l'opinione
+
+1. ⭐ **La prima frase regge, e regge meglio di prima**: sul desktop vero il prodotto chiede
+   **l'1,8 % del pavimento**. Un tetto a 20 Mbit/s lì **non ha niente da fare**, e §13.4 l'ha già
+   misurato (0,208 → 0,249, e la cura non è caduta);
+2. ⛔ **La seconda frase regge anche lei, e il cambio di codec NON la salva**: il caso duro chiede
+   **223 %** invece di 293 %. ⇒ ⛔ **Passare a H.264 toglie 70 punti percentuali e lascia il
+   problema in piedi**: 44,6 contro 20 è ancora **più del doppio**;
+3. ⇒ ⭐⭐ **LA CONTRADDIZIONE NON ERA UNA CONTRADDIZIONE, ed è deciso**: le due frasi parlano di due
+   contenuti diversi, e tutt'e due sono vere **sullo stesso codec**. **Il tetto serve, e serve solo
+   per il caso duro** — cioè è esattamente quel che §5.5 aveva progettato: un parapetto che sul
+   desktop vero non si accorge di esistere.
+   ⛔ **E chi volesse buttare il tetto adesso deve rispondere a questa riga**: *con quale numero il
+   film a schermo intero sta dentro i 20 Mbit/s senza di lui?*
+
+## 14.4 ⛔⭐⭐ LA SOGLIA SULLA CODA, tarata nel verso giusto — *14:27 → 14:35 UTC*
+
+### 14.4.1 ⛔⛔ IL BANCO CHIESTO NON HA UN CONTROLLO POSITIVO, e lo dico prima dei numeri
+
+Il mandato chiedeva lo spazzamento **sul desktop vero**, e ha ragione: `barra` è sintetico.
+⛔ **Ma sul desktop vero non c'è niente da tarare, e l'ho misurato invece di dedurlo.**
+
+`[M]` **14:27:48**, gradino sul desktop vero in H.264, soglia **spenta**, stretta a **3 Mbit/s** —
+cioè **un terzo** di quel che §13.8 aveva già provato a 10:
+
+| s | 5-7 (larga) | **8** | **9** | **10** | **11** | 13-25 (larga) |
+|---|---|---|---|---|---|---|
+| fotogrammi | 29 | 21 | 13 | **5** | 5 | 27-29 |
+| ⛔ **chiavi** | 0 | **0** | **0** | **0** | **0** | 0 |
+| ⛔ **abbandoni** | 0 | **0** | **0** | **0** | **0** | 0 |
+
+⇒ ⭐⭐ **A 3 Mbit/s — il 15 % del pavimento — sul desktop vero il ritmo crolla da 29 a 5 fot/s e
+la spirale NON PARTE LO STESSO: zero chiavi, zero abbandoni.** §13.8 si fermava a 5 Mbit/s e ne
+trovava 3; qui, più in basso ancora, ce ne sono **zero**.
+⇒ ⛔ **Uno spazzamento della soglia su questa scena misurerebbe zero contro zero contro zero**, cioè
+niente. Il banco non ha lo stimolo, e un banco senza stimolo dà *«la cura funziona»* per ogni
+valore. **Non l'ho fatto lì.**
+
+⭐ **E c'è un secondo motivo, e viene dal metro nuovo**: l'obiezione di §13.8 contro `barra`
+(*«a 2560×1080 costa 21 Mbit/s da sola, non è il desktop di nessuno»*) era un'obiezione **HEVC**.
+In H.264 `barra` costa **7,73 Mbit/s** (14.2), cioè il 39 % del pavimento. ⚠ Ma il caso che
+**chiede** la cura è un altro, ed è quello vero: il **film con la grana**, 44,6 Mbit/s.
+
+### 14.4.2 `[M]` LO SPAZZAMENTO, sul CASO DURO — film con la grana, 2560×1080, H.264
+
+**Il giro**, identico sei volte: 8 s larga → **3 s a 10 Mbit/s** → 17 s larga, `tc` solo su `lo`
+e solo sulla 7920, guardiano armato, `enp7s0` mai toccata (verificato dopo ogni braccio).
+Server riavviato a ogni braccio, `md5 162d2d10…`, trappola glibc spenta. Le righe qui sotto sono
+**i 3 secondi di stretta**, e i millisecondi sono quelli che il prodotto scrive da sé nella riga
+*«la coda del video passa SOPRA la soglia (… byte = N ms …)»*.
+
+| braccio | ora | fot/s nei 3 s | ⛔ chiavi | ⛔ abbandoni | kbyte | attrav. | ⚠ **ms di coda pagati** | `arretrato` max |
+|---|---|---|---|---|---|---|---|---|
+| **spenta** | 14:29 | 6,0 | **8** | **8** | 6 111 | — | — | 0-1 per costruzione |
+| **100 ms** | 14:30 | 6,7 | 8 | 10 | 6 507 | 8 | **136 – 397** | 3 |
+| **200 ms** | 14:31 | 7,7 | 8 | 14 | 7 216 | 8 | **222 – 942** | 6 |
+| **400 ms** | 14:32 | 5,7 | 6 | 8 | 5 930 | 7 | **414 – 643** | 8 |
+| **800 ms** | 14:33 | 7,3 | **5** | 14 | 6 738 | 6 | ⛔ **856 – 1 321** | 7 |
+| ⭐ **200 + `--ritmo-adattivo`** | 14:34 | 5,3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
+
+### ⭐ LA COPPIA CHE L'UTENTE DEVE GIUDICARE, e la risposta secca
+
+> **A quale valore la soglia mantiene la promessa di P3, e a che prezzo in ms?**
+> ⇒ ⛔ **NESSUNO. Da sola non ci arriva a nessun valore.** P3 chiedeva *chiavi ≤ 2/s*,
+> *abbandoni ≤ 2/s* e *fot ≥ 25/s*: ⭐ le chiavi scendono nella promessa a **400 ms** (2,0/s) e a
+> **800** (1,7/s), ⛔ gli **abbandoni non ci arrivano a nessun valore** (2,7 – 4,7/s), e ⛔ i
+> **fotogrammi non ci si avvicinano nemmeno** (5,3 – 7,7/s contro 25).
+> ⭐⭐ **L'unico braccio che porta gli abbandoni dentro la promessa è la COPPIA**
+> `--sgombra-soglia-ms 200 --ritmo-adattivo`: **6 abbandoni in 3 s = 2,0/s**, e li paga con
+> **209-323 ms** di coda, cioè **~264-378 ms dal gesto al pixel** sommando i 55 ms dell'anello di
+> fase 8.
+
+### ⛔⛔ E TRE COSE CHE SMENTISCONO QUEL CHE §13.2.4 AVEVA CONCLUSO
+
+1. ⛔ **«Il miglioramento è monòtono» NON regge sul caso duro.** Le chiavi calano piano
+   (8 · 8 · 8 · 6 · 5) ma gli **abbandoni ballano** (8 · 10 · 14 · 8 · 14) e i fotogrammi pure
+   (6,0 · 6,7 · 7,7 · 5,7 · 7,3). ⚠ Un solo giro per braccio: **una differenza di una o due chiavi
+   è dentro il rumore, e non la riporto come un effetto.** Quel che è **fuori** dal rumore è una
+   cosa sola, ed è il prezzo;
+2. ⛔⛔ **IL PREZZO CRESCE PIÙ IN FRETTA DI QUEL CHE COMPRA, e a 800 ms è fuori scala**:
+   397 → 942 → 643 → **1 321 ms**. ⭐ Il punto di lavoro di §13.2.4 è confermato una seconda volta e
+   su un'altra scena (la coda si assesta **appena sopra** la soglia, qualunque numero si scelga) —
+   ⛔ ma la conseguenza è che **alzare la soglia compra 3 chiavi e vende un secondo e tre decimi di
+   ritardo.** ⇒ **Il verso «alzala» di §13.2.3 è giusto solo fino a ~200-400 ms**: sopra, il
+   commercio è quello che `SPECIFICHE.md` §3.2 vieta in una riga;
+3. ⭐⭐⭐ **E IL REGOLATORE È LA LEVA, NON LA SOGLIA.** `arretrato` massimo: **3 · 6 · 8 · 7** con la
+   sola soglia, ⭐ **2** con la coppia — cioè `WT_RITMO_POSTI = 2` **tiene**, e la coda smette di
+   approfondirsi. ⇒ Alla stessa soglia di 200 ms, accendere il regolatore **dimezza gli abbandoni
+   (14 → 6)** e **taglia il ritardo di massimo da 942 a 323 ms**. ⛔ **La soglia da sola non è la
+   leva giusta; la coppia sì**, ed è quel che il mandato sospettava.
+
+⚠ **Il rosso di §2 del mandato resta in piedi e lo dichiaro**: se il ritardo dell'anello superasse
+55 ms + la soglia, la stima dello svuotamento sottostima. `[M]` qui la coda misurata arriva a
+**1 321 ms** contro una soglia di 800: ⇒ ⛔ **a 800 ms la stima È già fuori dal suo campo di
+validità**, ed è una ragione in più per non salire lì.
+
+## 14.5 ⭐⭐⭐ P8 — IL RITMO A SCENA FERMA, A COPPIE: **VERDE** — *14:40:00 → 14:41:00 UTC*
+
+**Il giro**: `banchi/09-b75-p8.py` (nuovo), porta 7920 con **tutt'e due gli interruttori**
+(`--sgombra-soglia-ms 100 --ritmo-adattivo`, letti dalla riga d'avvio del prodotto, non dedotti dal
+comando), tela 2560×1080, H.264, linea **larga**, **tre coppie** ferma/mossa da 8 s **alternate
+nello stesso giro**. Il verbale è la riga che `ritmo_ciclo()` scrive **col battito e non coi
+fotogrammi**, una al secondo.
+
+| | secondi | ⭐ **`arretrato` LETTO** | secondi con **ZERO** letture | massimo | ⛔ **discese** |
+|---|---|---|---|---|---|
+| ⛔ **metà FERMA** | 16 | **0 in tutto** | ⭐ **16 su 16** | 0 | ⭐ **0** |
+| ⭐ **metà MOSSA** | 27 | **1 072** = **39,7 al secondo** | ⭐ **0 su 27** | 0 | ⭐ **0** |
+
+⇒ ⭐⭐⭐ **VERDE, e sui due punti insieme**: nella metà ferma il ramo **non è stato percorso**
+(«LETTO 0 volte», 16 righe su 16) e il ritmo **non è sceso**; nella metà mossa l'anello è stato
+percorso **1 072 volte** e il ritmo **non è sceso lo stesso**.
+⛔ **E questo è quel che «il contatore è zero» non poteva dire**: le due metà danno lo stesso zero
+di discese, e le righe `LETTO` dicono che **una l'ha guadagnato e l'altra no**. Vuoto e proibito
+sono distinti, che è tutto il punto di P8.
+
+⭐ **E `massimo 0` nella metà mossa è il secondo fatto**: su linea larga `arretrato` non arriva
+neanche a 1. ⇒ Il regolatore è **un parapetto che non tocca niente**, com'era previsto (P7, S.5).
+
+### ⛔ DUE DIFETTI DEL BANCO TROVATI STRADA FACENDO — e tutt'e due davano «un numero plausibile»
+
+1. ⛔ **La tappa «mossa» era segnata DOPO l'accensione.** `09-b68-scena.sh` lancia la scena e poi
+   **dorme 2 s** per verificare che sia viva: quei 2,3 secondi, in cui la scena **dipinge già**,
+   finivano nella metà **ferma**. `[M]` 14:37 — la metà ferma usciva con **26 righe invece di 18** e
+   **147 letture**, e il banco diceva **GIALLO su un giro sano**;
+2. ⛔ **Il primo secondo dopo la morte della scena porta ancora 22-40 letture.** Non è il prodotto
+   che non si ferma: **uccidere il processo della scena non ferma Mutter**, e i fotogrammi già
+   composti continuano ad arrivare per circa un secondo. ⇒ Si butta **2,5 s di guardia** dopo ogni
+   cambio, **e si dichiara**: contarli da una parte o dall'altra sarebbe attribuire al prodotto un
+   transitorio del compositore. ⚠ **E la guardia non può nascondere il rosso che conta**: una
+   discesa a scena ferma cadrebbe nei secondi **centrali**, non sul bordo.
+
+## 14.6 ⭐⭐ IL 4K IN H.264 — *14:45:42 → 14:48:15 UTC*: **il numero che mancava, e il tetto SI MUOVE**
+
+**Il giro**: stessa 7920, stesso binario, **nessun interruttore**, tela **3840×2160** verificata nel
+registro del prodotto (`SESSIONE: stato=1 tela=3840x2160`), `tc` mai toccato, 30 s per punto,
+una sola sessione.
+
+| a **3840×2160**, H.264, tetto spento | fot/s | ⭐ **carico video** | % di 20 | filo | byte/fotogramma | chiavi | abb. |
+|---|---|---|---|---|---|---|---|
+| ⭐ **desktop VERO** | 23,10 | **0,852** Mbit/s | ⭐ **4,3 %** | 3,351 | 4 607 | 0 | 0 |
+| **tinta piatta** (`pieno`) | ⚠ **33,37** | 2,716 | 13,6 % | 5,259 | 10 174 | 0 | 0 |
+| **gradiente retinato** (`barra`) | **40,40** | 23,564 | **117,8 %** | 26,641 | 72 908 | 0 | 0 |
+| ⛔ **film con la GRANA** | 23,27 | ⛔ **74,699** | ⛔ **373,5 %** | 79,279 | 401 320 | ⛔ **2** | ⛔ **2** |
+
+### ⭐ 1. IL TETTO DEI 41 FOT/S **SI MUOVE CON LA SCENA** — e §13.6 non poteva vederlo
+
+§13.6 aveva misurato **41,25 fot/s** su `barra` e ne aveva concluso *«a 3840×2160 il prodotto regge
+~41/s»*. ⭐ Con quattro scene invece di una si vede che **non è un tetto, è un punto**: `barra`
+**40,40**, ⚠ `pieno` **33,37** — cioè **7 fotogrammi in meno su una scena che costa NOVE VOLTE
+MENO banda** (2,7 contro 23,6 Mbit/s).
+⇒ ⛔ **Non è la banda a decidere il ritmo a 4K**, e non è neanche il costo della codifica: è quel
+che **il compositore consegna**, ed è la stessa lezione di §3.1. ⚠ I due punti `video` (23,1 e
+23,27) **non dicono niente sul tetto**: è il filmato stesso che gira a ~23/s.
+⇒ **`DECISIONI.md` va corretto così**: a 3840×2160 il prodotto regge **33-41 fot/s a seconda della
+scena**, non 60 e nemmeno «41».
+
+### ⭐ 2. QUANTO COSTA IL 4K, e cresce **quasi coi pixel** (ma non sul caso duro)
+
+I pixel a 4K sono **3,0×** quelli di 2560×1080. `[M]` la banda:
+
+| scena | 2560×1080 | 3840×2160 | rapporto |
+|---|---|---|---|
+| desktop vero | 0,356 | 0,852 | **2,4×** |
+| tinta piatta | 1,190 | 2,716 | **2,3×** |
+| gradiente retinato | 7,728 | 23,564 | **3,05×** |
+| ⛔ film con la grana | 44,574 | 74,699 | ⚠ **1,68×** |
+
+⭐ **La riga che conta per l'utente**: a **4K** il suo desktop vero costa **0,852 Mbit/s, il 4,3 %
+del pavimento**. ⇒ ⛔ **Il 4K non è un problema di banda**: è un problema di **fotogrammi**.
+⚠ E il caso duro cresce **meno** degli altri (1,68× invece di 3×) perché a 2560 era **già** al
+limite di quel che la catena riesce a produrre.
+
+### ⛔ 3. IL PRIMO SEGNO DI CEDIMENTO SU LINEA LIBERA
+
+Il film con la grana a 4K è l'**unico** punto di tutta la sera che ha prodotto **chiavi e abbandoni
+con `tc` mai toccato**: 2 chiavi, 2 abbandoni, 1 chiave trattenuta da §5.2 in 30 s.
+⇒ ⭐ A **79,3 Mbit/s sul filo** la coda comincia a non svuotarsi **anche senza nessuna
+strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
+
+### ⛔⛔ 4. E P9 SI RIPRODUCE COL METRO NUOVO — *14:42:50-51*, due righe a un secondo di distanza
+
+```
+14:42:50.068 rcp     il client dichiara video.livello=5.1 … §4.3 vieta al server di emettere
+                     un flusso PIU' ALTO di questo
+14:42:51.328 figlio  §4.3 — LIVELLO PRODOTTO: 5.2 (nell'SPS e' 52) · stringa per il
+                     decodificatore «»
+```
+
+⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
+non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
+⚠ `[M]` conversione **11 941 µs** + codifica **8 924 µs** = **20,9 ms** per fotogramma ⇒ un tetto
+di **~48/s** prima di uscire di casa, e i 40,40 di `barra` ci stanno sotto.
+
+## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
+
+⭐ **§13.7 accusava il browser, e sbagliava imputato.** La riga che chiude il caso, `[M]` 23 agosto
+**14:49**, col registro creato **prima**, con l'uid giusto e i permessi giusti:
+
+```
+⛔ Marionette non ha aperto la 2829 in 40 s.
+   firefox vivo? ⛔ NESSUN PROCESSO
+   il suo registro (/tmp/b74-ff.log): ⛔ VUOTO
+```
+
+⇒ ⛔⛔ **Non era Marionette a non aprire la porta: era Firefox a non partire affatto.**
+
+### ⛔ 14.7.1 LA CAUSA, e sono TRE difetti in fila — due miei, uno del sistema
+
+1. ⛔⛔ **Il lanciatore era una riga di comando invece di un file.**
+   `root("bash -c \"setsid nohup setpriv … firefox … &\"")`: `bash -c` mette il lavoro in
+   sottofondo ed **esce nello stesso istante**, `sudo` esce dietro di lui e `ssh` chiude la
+   sessione — il processo **muore nella corsa** prima che `setsid` l'abbia staccato.
+   ⭐ **Curato**: `banchi/09-b74-ff.sh`, la stessa forma di `09-b72-video.sh` che funziona dal
+   mattino — un **FILE**, e il padre resta vivo mentre il figlio si stacca. ⚠ È la terza volta
+   oggi che la cura è *«un copione lungo si spedisce come file»*;
+2. ⛔ **`fs.protected_regular = 2`** (verificato con `sysctl`): in una cartella **sticky** come
+   `/tmp`, **nemmeno root** può aprire in scrittura un file **world-writable** che appartiene a un
+   altro utente — ed era esattamente quel che il tentativo precedente aveva lasciato lì.
+   `[M]` `cannot create /tmp/b74-ff.log: Permission denied` **da root**.
+   ⭐ **Curato**: si **cancella** e si ricrea (il permesso è della cartella, non del file);
+3. ⛔ **E adesso Firefox parte, resta vivo — e la prova NON si chiude lo stesso.** `[M]` 14:52:
+   `firefox-esr 140.14.0esr`, tre processi vivi con `--profile /tmp/b74-ff --marionette`,
+   `MOZ_MARIONETTE=1` **letto da `/proc/PID/environ`**, `marionette.port = 2829` in un `user.js`
+   di **487 byte** — e ⛔ **`ss -tlnp` non mostra NESSUN socket in ascolto del processo Firefox**,
+   né sulla 2829 né sulla 2828.
+
+### ⛔⛔ 14.7.2 E C'È UN SECONDO MURO DIETRO IL PRIMO, che il registro del prodotto dimostra
+
+Nel registro della 7920 **non c'è nessuna richiesta della pagina da parte del browser**: dopo
+`ascolto TCP su 0.0.0.0:7920` l'unica stretta di mano è quella del cliente di prova.
+⇒ ⛔ **Firefox non ha mai chiesto la pagina.** Il certificato è **autofirmato**, e senza
+`acceptInsecureCerts` — che è una funzione **di Marionette** — il browser si ferma
+all'avviso e non emette la richiesta.
+
+⇒ ⛔ **I due muri sono lo stesso muro**: senza Marionette non si accetta il certificato, e senza
+certificato accettato non c'è pagina. **Mi fermo qui e lo dichiaro**, come dice la regola: due
+tentativi, poi si passa.
+
+### ⭐ CHE COSA RESTA DA FARE, e la strada corta non ha bisogno di Marionette
+
+⭐ **La forma del banco è giusta e adesso è anche dimostrata**: il *prima* e il *dopo* sono **due
+file `pagina.html`** serviti dallo **stesso binario** (`md5 162d2d10…`), e il `md5` della pagina si
+legge nel registro (`d387c166…` per il vecchio, `e010d615…` per il nuovo). Il verbale lo manda la
+**pagina stessa** ogni 5 s.
+
+⇒ **Basta che la pagina si apra e si entri.** Due strade, in ordine di costo:
+
+1. ⭐⭐ **Nic apre la pagina col suo browser** (`https://192.168.0.2:7920/`, utente `prova2`),
+   accetta il certificato come fa sempre, e il registro del server porta i tre contatori
+   `vecchi` · `tardivi` · `fuori` da sé. ⛔ **Non serve nessuno strumento nuovo**;
+2. ⚠ Oppure si toglie il certificato di mezzo prima del browser: `cert_override.txt` nel profilo,
+   o un certificato che il profilo già conosce. `[?]` **Non provato.**
+
+⛔ **Finché non succede una delle due, la cura 4 (il riordino dell'audio) resta NON VERIFICATA**, ed
+è l'ultima delle sei cure del 23 agosto senza un numero.
+
+---
+
+# §15 · ⛔ COM'È RIMASTA LA MACCHINA — *verificato alle 14:56 UTC, non dichiarato a memoria*
+
+| | |
+|---|---|
+| `tc` su **`lo`** | ⭐ `qdisc noqueue 0: root` — **nessuna disciplina** |
+| `tc` su **`enp7s0`** | ⭐ `qdisc mq 0: root` — **mai toccata**, come da regola |
+| il **guardiano** di `tc` | ⭐ nessuno: `.b68-guardiano.pid` non c'è |
+| **scene, clienti, browser** | ⭐ **nessuno** — né `04-b30-scena`, né `01-b3-cliente`, né `firefox` |
+| **porte** | ⭐ **7900 · 7910 · 7920**, le tre di prima, nessuna in più |
+| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — **lasciato**, è la trappola armata di §4.7 |
+| ⭐ **il registro della sera** | salvato in `/media/REMOTIX/tmp/09c/registro-fase9-sera-PRIMA-DI-B74.log` (9 216 437 byte) ⛔ **prima** che `09-b74` cancellasse `registro.log`: senza quella copia i numeri di §14.2-§14.6 non sarebbero più rileggibili |
+
+⭐ **E la 7920 è tornata esattamente com'era**, verificato sulle righe che scrive lei stessa:
+binario `md5 162d2d10…` (`f90eb21`), pagina **`md5 e010d615…`** (quella del prodotto, non quella
+del *prima* dell'audio), **soglia della coda 0 ms (SPENTA)**, **regolatore SPENTO**, trappola glibc
+spenta, fuori da ogni sessione utente.
+
+⚠ **Quel che ho cambiato e non rimetto, perché è il lavoro**: `banchi/01-b3-cliente.py` adesso
+negozia **H.264** (§14.1). ⛔ È il metro nuovo, e chi rilegge un numero vecchio deve guardare
+**quale codec** dice il registro di quel giro.
+

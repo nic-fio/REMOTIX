@@ -1174,18 +1174,31 @@ def scrivi_traccia(a, reg, cli=None):
     print(f"   registrazione: {a.registra} ({len(reg.blocchi)} blocchi)")
 
 
-def corpo_ciao(audio="opus,pcm", video="hevc,av1", prof="8,10"):
+def corpo_ciao(audio="opus,pcm", video="h264", prof="8,10"):
     # ⛔ `audio` si puo' restringere dalla riga di comando, e NON e' un trucco:
     #    e' quel che dichiara un client che Opus non lo sa fare.  §4.3 impone
     #    `pcm` a entrambi proprio per questo — e' «la base sempre disponibile»,
     #    e il controllo positivo di Opus.  ⇒ `--audio-codec pcm` esercita la
     #    negoziazione, non la scavalca.
     # ⛔ E anche il VIDEO si puo' restringere, dal 17 agosto 2026: serve a
-    #    esercitare il ramo AV1 senza un browser di mezzo.  ⚠ Non e' un trucco —
-    #    e' quel che dichiara un client che l'HEVC non lo sa decodificare, cioe'
-    #    **esattamente Firefox**.  §4.3 fa scegliere al server dentro
-    #    l'intersezione, e restringere l'intersezione e' un uso del protocollo,
-    #    non un aggiramento.
+    #    esercitare il ramo del ripiego senza un browser di mezzo.  ⚠ Non e' un
+    #    trucco — e' quel che dichiara un client che l'HEVC non lo sa
+    #    decodificare, cioe' **esattamente Firefox**.  §4.3 fa scegliere al
+    #    server dentro l'intersezione, e restringere l'intersezione e' un uso
+    #    del protocollo, non un aggiramento.
+    #
+    # ⛔⛔⛔ HO CAMBIATO IL METRO — 23 agosto 2026, sera (`fasi/09` §14.1).
+    #    Il predefinito era **`hevc,av1`** ed e' rimasto tale quando AV1 e'
+    #    uscito dal prodotto (20 agosto, `DECISIONI.md` §1.13-ter): il server
+    #    sceglieva dunque **HEVC** in ogni giro di banco, mentre `pagina.html`
+    #    (`PREFERENZA = ["hevc", "h264"]`, riga 818) dichiara **solo i codec che
+    #    hanno davvero DIPINTO la sonda** — e su Firefox HEVC non dipinge.
+    #    ⇒ Il banco misurava un codec che l'utente non riceve mai.
+    #    `[M]` stessa scena, stessa tela, stesso QP 26: **21,18 Mbit/s in HEVC
+    #    contro 7,92 in H.264**, un fattore **2,7** (`fasi/09` §13.5.1).
+    #    ⇒ ⛔ **I numeri di banda presi prima di questa riga NON si confrontano
+    #      con quelli presi dopo.**  Il vecchio metro si rifa' con
+    #      `--video-codec hevc`, e va detto ogni volta che lo si usa.
     voci = [("video.codec", video), ("video.profondita", prof),
             ("audio.codec", audio), ("video.livello", "5.1"),
             ("video.misura_massima", "3840x2160"), ("appunti.testo", "si"),
@@ -1749,10 +1762,13 @@ if __name__ == "__main__":
                    help="dove scrivere i fotogrammi presi DAL FILO, cosi' come "
                         "sono — per darli a un decodificatore terzo e separare "
                         "il nostro flusso da quello del browser")
-    p.add_argument("--video-codec", default="hevc,av1",
+    p.add_argument("--video-codec", default="h264",
                    help="che cosa dichiarare in `video.codec` (§4.3).  "
-                        "⛔ `av1` da solo e' quel che dichiara Firefox, che "
-                        "l'HEVC non lo decodifica")
+                        "⭐ Il predefinito e' **quel che dichiara Firefox**: "
+                        "`pagina.html` manda solo i codec che hanno DIPINTO la "
+                        "sonda, e li' HEVC non dipinge.  ⛔ `hevc` rifa' il "
+                        "vecchio metro (fino al 23 agosto 2026), e i due "
+                        "insiemi di numeri NON si confrontano: `fasi/09` §14.1")
     p.add_argument("--video-profondita", default="8,10",
                    help="che cosa dichiarare in `video.profondita` (§4.3)")
     p.add_argument("--audio-codec", default="opus,pcm",

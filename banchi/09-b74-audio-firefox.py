@@ -125,17 +125,33 @@ def firefox(url):
     if not out.strip().startswith(tuple("123456789")):
         raise SystemExit("⛔ user.js e' vuoto: %s" % out.strip())
     print("   profilo: %s" % out.strip())
-    root("bash -c \"setsid nohup setpriv --reuid=%d --regid=%d --init-groups "
-         "env -i HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
-         "XDG_RUNTIME_DIR=/run/user/%d WAYLAND_DISPLAY=wayland-0 MOZ_ENABLE_WAYLAND=1 "
-         "GDK_BACKEND=wayland MOZ_MARIONETTE=1 firefox-esr --profile %s --marionette '%s' "
-         ">>%s/b74-ff.log 2>&1 &\"" % (UID_FF, UID_FF, UT_FF, UT_FF, UID_FF, prof, url, LAV))
-    for _ in range(40):
-        rc, out, _ = root("ss -tln | grep ':2829 ' || true")
-        if out.strip():
-            return True
-        time.sleep(1)
-    return False
+    # ⛔⛔ IL REGISTRO DI FIREFOX VA IN UN POSTO CHE FIREFOX PUO' SCRIVERE —
+    #    23 agosto 2026, sera.  Stava in `$LAV`, che e' di **root**, mentre
+    #    Firefox gira come `prova`: il file usciva di **ZERO byte** e alla
+    #    domanda «perche' non e' partito» non c'era niente da leggere.  ⚠ E' la
+    #    stessa famiglia del `user.js` vuoto delle 12:47, per la terza volta
+    #    oggi: **un file vuoto ha la faccia di un file scritto.**
+    #    ⇒ `/tmp`, creato PRIMA e con l'uid del browser, e si verifica che
+    #      cresca invece di crederci.
+    # ⛔⛔⛔ IL LANCIO PASSA DA UNO SCRIPT, E NON E' UN VEZZO — 23 ago 2026, 14:49.
+    #    Prima stava qui, come `sudo -S bash -c "setsid nohup setpriv … &"`.
+    #    ⇒ `bash -c` mette il lavoro in sottofondo ed **esce nello stesso
+    #      istante**, `sudo` esce dietro di lui e `ssh` chiude la sessione: il
+    #      processo muore nella corsa prima che `setsid` lo abbia staccato.
+    #    `[M]` col registro creato PRIMA, con l'uid e i permessi giusti, e' uscito
+    #    di **ZERO byte** e `pgrep firefox` non ha trovato **NESSUN PROCESSO**:
+    #    ⇒ ⛔ **non era Marionette a non aprire, era Firefox a non partire.**
+    #      Per due sere il banco ha accusato il browser del difetto del suo
+    #      lanciatore, e il sintomo era «un guasto plausibile».
+    #    ⭐ `09-b74-ff.sh` e' la stessa forma di `09-b72-video.sh`, che funziona
+    #      dal mattino: un FILE, e il padre resta vivo mentre il figlio si stacca.
+    b71.porta("09-b74-ff.sh")
+    rc, out, err = root("env UID_B=%d UTENTE=%s PROFILO=%s LOG=/tmp/b74-ff.log "
+                        "sh %s/09-b74-ff.sh '%s'" % (UID_FF, UT_FF, prof, LAV, url), 180)
+    for r in (out + err).splitlines():
+        if r.strip():
+            print("   %s" % r.strip()[:300])
+    return "FIREFOX ACCESO" in out
 
 
 def marionette(passi):
@@ -233,9 +249,9 @@ def giro(quale, secondi, ritardo):
 
     print("\n== Firefox nella sessione di «%s» (uid %d), collegato come «%s»"
           % (UT_FF, UID_FF, UT_SESS))
-    if not firefox("https://192.168.0.2:7920/"):
-        rc, log, _ = root("tail -20 %s/b74-ff.log" % LAV)
-        return {"guasto": "Marionette non ha aperto la porta 2829: %s" % log[-500:]}
+    if not firefox("https://192.168.0.2:%d/" % b68.PORTA):
+        return {"guasto": "Marionette non ha aperto la porta 2829 — la diagnosi "
+                          "e' stampata qui sopra"}
     rc, out, err = entra()
     print("   %s" % (out + err).strip()[:600])
 
