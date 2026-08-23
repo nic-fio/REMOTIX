@@ -3553,15 +3553,178 @@ documento dà i due numeri e **non sceglie**: la scelta fra immagine e ritardo �
 
 | dove | che cosa | esito |
 |---|---|---|
-| `07-b64-rete.py` | `a_non_si_apre` verde su qualunque modo di fallire | ⏳ cura scritta, **non applicata** (§17.4-bis) |
-| `07-b64-rete.py` | `0-liscio` disarma il guardiano per gli otto profili dopo | ⏳ cura scritta, **non applicata** |
-| `09-b70-ritmo.py` | `sudo -S` copre solo il **primo** comando della catena ⇒ il lettore §11.1 non si scriveva | aggirato a run-time da `09-b76`, **senza toccare il file** |
-| `09-b70-ritmo.py` | un `< file` in coda **ruba lo stdin a `sudo -S`** ⇒ `righe_registro()` torna 0 in silenzio, e `attese_a_vuoto` diventa cumulativo dall'accensione — cioè la colonna su cui I1 decide se rifiutarsi di giudicare | aggirato allo stesso modo |
+| `07-b64-rete.py` | `a_non_si_apre` verde su qualunque modo di fallire | ⭐ **curato** e rifatto girare (§17.4-bis, §17.9-bis) |
+| `07-b64-rete.py` | `0-liscio` disarma il guardiano per gli otto profili dopo | ⭐ **curato**, `[M]` guardiano ancora vivo dopo `guasta([])` |
+| `07-b64-rete.py` | `spediti_dal_server` a `None`: `None == 0` è falso ⇒ verde su un giro in cui il capo del server non era stato letto | ⭐ **curato**: adesso è muto (§17.9-bis) |
+| ⛔ `07-b64-rete.py` | la riga di «conto finale» arriva **29 s tardi** quando il pacer ha coda ⇒ il giro dopo legge **il conto del giro prima** — e il posto ancora occupato lo fa morire di `GIA_ATTIVA_REMOTA` | ⭐ **curato** con `registro_posato()` (§17.9-bis) |
+| `09-b70-ritmo.py` | `sudo -S` copre solo il **primo** comando della catena ⇒ il lettore §11.1 non si scriveva | ⭐ **curato** con `catena_root()` (§17.9-ter) |
+| `09-b70-ritmo.py` | un `< file` in coda **ruba lo stdin a `sudo -S`** ⇒ `righe_registro()` torna 0 in silenzio, e `attese_a_vuoto` diventa cumulativo dall'accensione — cioè la colonna su cui I1 decide se rifiutarsi di giudicare | ⭐ **curato**, `[M]` 1 604 del giro contro 4 041 cumulativi |
+| `09-b70-ritmo.py` | `01-b4-validatore.py` non viene spedito dal terreno ⇒ giornale vuoto ⇒ **rosso a «non stacca» su una sessione viva da 797 fotogrammi** | ⭐ **curato**: il terreno lo verifica, il banco si rifiuta |
+| `09-b76` | ⛔ `p_niente_stacco` misurava **la durata della consegna** e la chiamava **stacco** | ⭐ **spezzato in due** (§17.9-quater) |
+| `09-b79-cure.py` | l'avvolgimento di `root()` saltava la cura del sottostante | ⭐ **curato**, e `[M]` **nessun numero era sporcato** (§17.9-sexies) |
 | `09-b76` (in corso d'opera) | ⛔ **`tc qdisc change` è appiccicoso**: un `reorder` messo per un profilo restava acceso nei quattro dopo | curato: il banco **rilegge** la regola installata e dà rosso se porta un verbo non chiesto |
 | `09-b77` (in corso d'opera) | le regex cercavano i nomi **interni** dei contatori mentre il cliente stampa altri nomi ⇒ `None` su tutto, nessun errore | curato, e `--certifica` ora prova le regex sull'**uscita vera** del cliente |
 | `09-b77` (in corso d'opera) | `mancati` conta come perduti anche i blocchi **mai spediti** | curato: il predicato lavora **sui due capi** (§17.2-ter) |
 
-## 17.8 Che cosa resta aperto dopo questa sezione
+## 17.9 ⭐⭐ LA TORNATA DELLE CURE AI BANCHI — *23 agosto, notte*, e ne sono usciti altri quattro
+
+⛔ **Sette difetti di banco su nove trovati stasera, e tutti della stessa forma: «silenzio invece di
+rosso».** Le cure sono state applicate e **ogni banco è stato rifatto girare**. Quel che segue è il
+seguito, e vale la pena leggerlo perché **due dei quattro nuovi sono usciti facendo girare il banco
+curato**, non leggendolo.
+
+### 17.9-bis ⛔⛔ IL TERZO E IL QUARTO DI `07-b64-rete.py` — e il quarto è il più grosso
+
+**Terzo.** `spediti_dal_server` a `None`: `conti_del_server` torna `{"esito": "NIENTE DA LEGGERE"}`,
+e `None == 0` è **falso** ⇒ il gradino filava dritto al predicato. I predicati che non guardano il
+server (`a_pulito`, `a_sorpassi`) davano **verde su un giro in cui il capo del server non era stato
+letto affatto**. ⇒ Adesso è **muto**.
+
+**Quarto — ⛔ e questo sporca i numeri, non solo i verdetti.**
+`[M]` **la chiusura di una sessione è lenta quando il pacer ha coda**: il profilo al 10 % di perdita
+ha impiegato **29 secondi in più** degli altri a scrivere la sua riga di «conto finale». ⇒ Il giro
+**successivo** prendeva la sua `riga0` **prima** che quella riga esistesse, e `conti_del_server()`
+leggeva **il conto del giro precedente**.
+
+⭐ **La firma è inconfondibile**: `[M]` tre profili di fila hanno riferito gli **stessi identici
+numeri** («spediti 4999 · rifiutati 3 · rimandati 7410»), che erano il conto del **primo** dei tre.
+Il conto vero del secondo era **4 632**. ⇒ Il predicato nuovo ha dato **rosso su un denominatore
+altrui** (4 152/4 999 = 0,831), mentre col denominatore giusto era 4 152/4 632 = **0,896**, verde.
+
+⚠ **E lo stesso ritardo produce un secondo effetto, peggiore**: il gradino dopo è morto con
+`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — il posto del precedente era **ancora occupato**, ed è la
+serratura di 30 s di **§17.5**. ⇒ **Un giro può fallire per colpa del giro prima**, e l'`[audio]
+ricevuti 0` che ne usciva è **esattamente il numero che il vecchio `a_non_si_apre` avrebbe chiamato
+verde**. ⭐ I due difetti di §17.4-bis e il fantasma di §17.5 si nutrivano a vicenda.
+
+**La cura**: `registro_posato()` — si aspetta che il conto delle righe «conto finale» stia **fermo
+3 s** prima di cominciare un gradino — e `conti_del_server(riga0, n0)` **pretende una riga sua**,
+altrimenti resta muto.
+
+**Il giro nuovo di `07-b64`** `[M]` 23 agosto, porta 7801, 25 s per profilo: **9 gradini · 0 rossi ·
+0 muti**, e il controllo positivo (`--controllo-rosso`) dà rosso con uscita 1 — il verdetto sa
+ancora fallire. ⭐ Il gradino al 10 % conferma il conto dei due versi: **4 077/4 504 = 0,905** contro
+`1-p` = 0,901. **È `1-p`, non `1-(1-p)²`**: un datagram fa **un verso solo**.
+
+### 17.9-ter ⭐ LE TRE CURE DI `09-b70-ritmo.py`, e il numero che dimostra la seconda
+
+`sudo -S` che copre solo il primo anello ⇒ nuova `catena_root()`, un solo `sudo -S bash -c` con la
+catena dentro. `[M]` il lettore di §11.1 adesso **si scrive davvero** (4 130 byte) e riduce
+**794 fotogrammi** per giro; la forma vecchia sullo stesso comando dava `Permission denied`.
+
+Il `< file` che ruba lo stdin ⇒ `righe_registro()` torna **`None`**, non 0, e la guardia sta dove il
+numero **si consuma**. ⭐ **Il numero che dimostra la cura:**
+
+| | riga di partenza | righe `ciclo:` | `attese_a_vuoto` |
+|---|---|---|---|
+| giro mosso | 327 | 21 | **1 607** |
+| giro fermo | 3 711 | 21 | **1 604** |
+| ⛔ forma vecchia (`riga0` = 0) | 1 | 49 | **4 041** |
+
+⇒ Col difetto, il giro fermo avrebbe dichiarato **4 041 invece di 1 604** — **2,5 volte**, e in
+salita a ogni giro. ⛔ Ed è precisamente la colonna con cui `p_I1` decide **se rifiutarsi di
+giudicare**.
+
+**E la premessa falsa di I1**: la gamba «zero abbandoni a scena ferma» ora è **condizionata alla
+perdita letta dal `qdisc` installato**, non assunta zero. Con perdita > 0 il predicato **si rifiuta**
+invece di accusare il prodotto (era il falso rosso di `casa-cattiva`).
+
+**Quarta cura, trovata dal giro vero**: il lettore §11.1 non partiva perché `01-b4-validatore.py`
+non è fra i file che `07-b64-terreno.sh porta` spedisce ⇒ giornale vuoto ⇒ il banco dava **rosso a
+«non stacca» su una sessione viva da 797 fotogrammi**.
+
+### 17.9-quater ⭐⭐ `09-b76` — IL NOME GIUSTO, e la griglia rifatta
+
+`p_niente_stacco` è **spezzato in due**, perché sono due fatti con due cause:
+
+- **`p_connessione_viva()`** — vale su **tutti** i profili (§3.3/§8.3, anche sotto il pavimento) e
+  interroga i **testimoni della connessione**, non i fotogrammi: il cliente (*«ancora attaccato dopo
+  N s»*) e il registro (`congedo motivo=`, `posto NEGATO`, ban), **col motivo stampato**. ⚠ La terza
+  possibilità — *«non si è mai aperta»* — è **muta** per costruzione, non rossa.
+- **`p_consegna_non_si_ferma()`** — copertura ≥ 0,90 dei secondi che hanno visto almeno un
+  fotogramma, e ⛔ **nessun buco ≥ 1,0 s**, **coda compresa**. ⚠ La soglia 0,90 **non è nuova**: è la
+  stessa che usava il predicato vecchio. **Il numero non cambia: cambia la parola, ed è tutta la
+  cura.** Il buco di 1 s ha la sua ragione: §2.1 mette il pavimento a 25 fotogrammi/s, quindi un
+  secondo a **zero** è fuori scala, non «un ritmo basso».
+- ⚠ Prezzo dichiarato: `[M]` sui tredici profili sani il buco massimo va da **0,04 a 0,35 s**,
+  contro **14,26 s** a `raffica-forte` — più di un ordine di grandezza di margine, **zero falsi
+  rossi**, diagnosi compresi.
+
+⭐ E `--certifica` porta ora il caso che aveva ingannato il banco: **lo stesso giro dà rosso sulla
+consegna e verde sulla connessione**. 49 casi su 49.
+
+**`raffica-forte`, col nome giusto e i numeri** `[M]` (sonda: **11,10 %** di perdita in 197 raffiche,
+media 4,51, max 27): **nessuno ha staccato** — cliente attaccato per tutti i 25 s, zero congedi. A
+fermarsi è la **sola consegna**: **7 secondi su 25** hanno visto un fotogramma, **14,26 s di schermo
+fermo di fila**, 952 righe `FOTOGRAMMA NON SPEDITO`, `cwnd` mediana **8 948 B** contro **105 616 B**
+del riferimento (**12 volte meno**), `cwnd_left` mediana **0**. ⭐⭐ **E il server lo dice da sé**:
+`⚠ la finestra e' chiusa` su **10 righe `rete-quic` su 18** — è il testimone di §17.3 che dà la
+risposta senza che nessuno debba dedurla.
+
+### 17.9-quinquies ⛔⛔ E DUE GRIGLIE DELLO STESSO BANCO NON COINCIDONO — dichiarato, non lisciato
+
+Il giro di `09-b76` rifatto stanotte **non riproduce** quello di §17.1 su due profili:
+
+| profilo | §17.1 (binario `51b5994`) | giro nuovo (binario da HEAD) |
+|---|---|---|
+| `perdita-0,5` | 40,06 fps · 0 chiavi | ⛔ **19,27** fps · spirale rossa |
+| `jitter-5` | 39,30 fps | **31,45** fps |
+| `perdita-1` | 9,56 | 12,32 |
+| `raffica-1` | 23,94 | 29,47 |
+
+⛔ **Non lo liscio, e non scelgo quale sia buono.** Le differenze note fra i due giri sono almeno
+tre — binario diverso (HEAD porta le righe `rete-quic`, cioè **una `registro_dice` in più al
+secondo**), macchina **riavviata** in mezzo, e il terreno ricostruito. ⇒ `[?]` **Non so quale delle
+tre.**
+
+⭐ **Che cosa sopravvive comunque, perché non dipende dal punto esatto:** la forma è la stessa in
+tutt'e due i giri — una linea sana a ~40 fotogrammi/s, un **dirupo** entro il primo punto
+percentuale di perdita, la spirale di chiavi come meccanismo, e il jitter che morde **senza perdere
+un pacchetto**. ⛔ **Quel che NON si può più dire è dove stia il gradino**: §17.1 lo metteva fra lo
+0,36 % e lo 0,94 %; il giro nuovo lo mette **prima dello 0,36 %**. ⏳ Serve un terzo giro, a binario
+dichiarato e macchina ferma, per chiuderlo.
+
+### 17.9-sexies ⭐ LA RIVERIFICA DI `09-b79` — **nessun numero era sporcato**, e sono tre prove lette
+
+`09-b79-cure.py:379` avvolgeva `RETE.root` invece della catena curata. ⚠ E **non bastava scrivere
+`B70.root`**: quando b79 arriva, `B70.root` è **già** stato sostituito da `09-b76:416` con un
+avvolgimento che a sua volta chiama `RETE.root`. ⇒ La catena si ricostruisce dai pezzi
+(`RETE.rem(B70.catena_root(c))`), e se `catena_root` non c'è **il banco si ferma invece di
+misurare**.
+
+⛔ Ma i numeri di §17.6 **reggono**, e non per fiducia:
+
+1. `[R]` **il difetto era ancora da riscuotere**: alle 19:00 `09-b70.root()` faceva ancora
+   `return RETE.root(...)`; la cura è delle **19:41**, dopo. Avvolgere `RETE.root` era allora
+   *identico*. Il difetto era **prospettico**;
+2. `[R]` **la `riga0` c'era**: `09-b76` sostituiva già `righe_registro` con la sua, col redirect
+   **dentro** `bash -c`. `[M]` E la firma nei dati lo conferma: su tutte e **36** le caselle
+   `attese_a_vuoto` sta fra 1 973 e 2 156 — **costante, non in salita** (su `ritardo-30` A/B/C:
+   2 015 / 2 006 / 2 016). Il cumulativo di b70 era 4 041 contro 1 604, **in salita**: qui non c'è;
+3. `[R]` **il conto di un altro giro è strutturalmente impossibile**: `07-b64-terreno.sh:106` fa
+   `: > registro.log` a ogni `accendi`, e questo banco **riaccende il server a ogni braccio**.
+   `[M]` Controprova: nessuna coppia di caselle porta numeri identici dal registro, e tre caselle
+   hanno detto «NIENTE DA LEGGERE» invece del numero del vicino — ⭐ prova che **nella finestra non
+   c'era niente da rubare**.
+
+⭐⭐ **E la divisione che conta**: `[R]` i predicati sulla spirale, sul ritmo e sulla linea sana
+leggono **solo** dalla traccia §11.1 del cliente; dal registro vengono solo quattro numeri di
+**corroborazione**. ⇒ *«la spirale si spegne solo col braccio C: 51,7-88,1 % → 0,0-5,6 %»*
+**non passa dal registro**, e i cinque profili rossi non si rifanno.
+
+**Rimisurato `ritardo-30` a tre bracci** — il predicato che vale più di tutti:
+
+| braccio | fps | chiavi | deriva fine | deriva max |
+|---|---|---|---|---|
+| A | 39,94 | 0,0 % | 0,0 ms | 10,1 ms |
+| B | 39,94 | 0,0 % | 0,2 ms | 11,0 ms |
+| C | 39,32 | 0,0 % | −0,1 ms | 6,2 ms |
+
+**S′ verde**, e regge il confronto con le 19:00 (39,85 / 40,19 / 39,63). ⭐ E le righe della spirale
+del braccio A tornano **identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5,
+`abbandonato_in_coda` 1): **un numero cumulativo non si riproduce, questi sì.**
+
+## 17.10 Che cosa resta aperto dopo questa sezione
 
 1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
    l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha i due
@@ -3573,6 +3736,10 @@ documento dà i due numeri e **non sceglie**: la scelta fra immagine e ritardo �
    `cwnd` a ~10 KB e 860 fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le cure lo
    curano**, ma il nome era sbagliato e il predicato è in cura;
 4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
-5. ⏳ **le due cure a `07-b64-rete.py`**, da applicare a banchi fermi;
+5. ⭐ **le cure ai banchi sono applicate e i banchi rifatti girare** (§17.9): nove difetti in tutto,
+   ⛔ **tutti della forma «silenzio invece di rosso»**;
+5-bis. ⛔ **due griglie dello stesso banco non coincidono** (§17.9-quinquies): la **forma** del
+   fenomeno regge, ma **dove stia il dirupo non si può più dire**. Serve un terzo giro a binario
+   dichiarato e macchina ferma;
 6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
    sull'audio soltanto.

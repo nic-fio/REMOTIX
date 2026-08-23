@@ -220,6 +220,38 @@ verde educato (`CODER.md` §3.10).
     salvano il prodotto da un'accusa che non e' sua.
 
 ═══════════════════════════════════════════════════════════════════════════════
+⛔⛔ LE QUATTRO CURE DEL 23 AGOSTO 2026 — e sono tutte della stessa forma
+═══════════════════════════════════════════════════════════════════════════════
+
+Quattro difetti, un difetto solo: **silenzio invece di rosso**, cioe' uno zero
+che vuol dire *«non ho letto»* con la faccia di uno che vuol dire *«non e'
+successo niente»* (`LEZIONI.md` §1.9).  Si scrivono qui perche' il progetto le
+ha gia' pagate piu' volte, e la prossima volta si legga prima.
+
+ 1. ⛔ **`sudo -S` copre solo il PRIMO anello della catena** (vedi `catena_root()`
+    e `root()`).  `[M]` il lettore della traccia §11.1 **non si scriveva** sulla
+    macchina, e il banco non se ne accorgeva.  ⇒ Un solo `sudo`, e la catena
+    intera dentro `bash -c`.
+ 2. ⛔⛔ **Un `< file` in coda RUBA lo stdin a `sudo -S`** (stessa sede).  `[M]`
+    `righe_registro()` tornava **0** in silenzio, e allora `conti_del_server()`
+    leggeva il registro **dall'accensione del server**: `[M]` 23 ago, sul giro
+    a scena ferma sarebbero state **4 041** attese a vuoto invece delle **1 604**
+    del giro.  ⇒ Redirezione dentro la shell di root, `righe_registro()` che
+    torna `None` invece di 0, guardia in `conti_del_server()` e un predicato che
+    lo dice a voce alta (`p_registro_letto`).
+ 3. ⛔ **La premessa implicita di I1** (vedi `p_I1` e `RESA_FERMA`).  *«A scena
+    ferma non c'e' congestione che giustifichi un abbandono»* vale **solo su una
+    linea senza perdita**: `[M]` su `casa-cattiva` (2 %) la gamba degli abbandoni
+    ha dato un rosso che non era del prodotto.  ⇒ Gamba condizionata: si rifiuta
+    di giudicare dove la premessa manca, e da' rosso dove c'e'.
+ 4. ⛔ **Il giornale vuoto perche' non l'ho letto** (vedi `giro()` e
+    `p_niente_stacco`).  `[M]` 23 ago: il lettore §11.1 non partiva — mancava
+    `01-b4-validatore.py` nell'albero — e il banco ha dato ROSSO a «non stacca»
+    su una sessione viva da **797** fotogrammi.  ⇒ La traccia non letta si
+    dichiara, `terreno_controlla()` verifica l'arbitro prima di misurare, e i
+    predicati che vivono sul giornale si rifiutano invece di accusare.
+
+═══════════════════════════════════════════════════════════════════════════════
 I CODICI D'USCITA
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -236,7 +268,7 @@ Uso (dal portatile):
     python3 banchi/09-b70-ritmo.py sonda --controllo-testimone
     python3 banchi/09-b70-ritmo.py rimetti         ⛔ e si verifica
 """
-import argparse, base64, importlib.util, json, os, re, statistics, struct
+import argparse, base64, importlib.util, json, os, re, shlex, statistics, struct
 import subprocess, sys, time
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -417,7 +449,17 @@ DERIVA_FINE_MS = 250.0      # ⭐ ancorata a un numero misurato, non scelta: l'a
 DERIVA_MAX_MS = 400.0
 I1_TOLLERANZA = 0.05        # ⚠ il rumore fra due giri della stessa macchina
 I1_CONSEGNATI = 0.25        # oltre, la differenza e' A MONTE e non si giudica
-RESA_FERMA = 0.98           # a scena ferma non c'e' congestione che giustifichi
+RESA_FERMA = 0.98           # ⛔⛔ E LA SUA PREMESSA E' CONDIZIONATA, non generale:
+                            #   «a scena ferma non c'e' congestione che
+                            #   giustifichi un abbandono» vale **solo su una
+                            #   linea che non perde**.  `[M]` 23 ago 2026: sul
+                            #   profilo `casa-cattiva` (2 % di perdita) la
+                            #   premessa e' FALSA e questa gamba ha dato un rosso
+                            #   che non era un difetto del prodotto — mentre la
+                            #   gamba dei fotogrammi/s passava (ferma 10,13/s
+                            #   contro mossa 7,78/s: la ferma andava piu' VELOCE).
+                            #   ⇒ La gamba non si toglie: si condiziona al fatto
+                            #     che la giustifica (vedi `p_I1`).
 SCALDATA_S = 3.0            # ⛔ i primi secondi sono apertura di sessione e prima
                             #   chiave: si dichiarano e si tolgono, e il numero
                             #   intero si stampa lo stesso accanto
@@ -691,6 +733,34 @@ def _ha_misurato(n):
     return n.get("esito") == "misurato"
 
 
+def p_registro_letto(n):
+    """⛔⛔ IL PREDICATO CHE GUARDA LO STRUMENTO, NON IL PRODOTTO — e c'e' perche'
+       il difetto che copre e' MUTO.
+
+    `LEZIONI.md` §1.9: *«uno zero che vuol dire "non ho letto" e uno zero che
+    vuol dire "non e' successo niente" non devono avere la stessa faccia»*.
+    `[M]` 23 agosto 2026: `righe_registro()` tornava 0 perche' un `< file` in
+    coda rubava lo stdin a `sudo -S` (vedi `catena_root()`), e da li' in poi
+    **ogni** numero del lato server era cumulativo dall'accensione — compreso
+    `attese_a_vuoto`, che e' la colonna con cui `p_I1` decide se rifiutarsi.
+    ⇒ Un banco che tira dritto con quello zero non e' un banco: da' un verde a
+      una misura che non ha fatto.
+
+    ⚠ Vale a OGNI gradino, anche a quelli di diagnosi: non e' una promessa del
+      prodotto, e' la condizione perche' i numeri siano di questo giro.
+    """
+    s = n.get("server") or {}
+    if s.get("registro_non_letto"):
+        return _muto("%s ⇒ NON GIUDICO questo giro col lato server"
+                     % s["registro_non_letto"])
+    if not s:
+        return _muto("questo giro non porta i conti del lato server")
+    if "riga0" in s:
+        return _si("il registro e' stato letto da riga %d in poi: i conti del "
+                   "server sono DI QUESTO GIRO, non dall'accensione" % s["riga0"])
+    return _si("i conti del lato server ci sono")
+
+
 def p_niente_stacco(n):
     """⛔ L'UNICO obbligo che vale ANCHE sotto il pavimento — §3.1-bis:
        *«non e' un rifiuto: il divieto di staccare resta intero»*.
@@ -699,6 +769,15 @@ def p_niente_stacco(n):
       consegna dei fotogrammi buonissimi per meta' del tempo.  ⇒ Si guarda
       quanto e' DURATO contro quanto era stato chiesto.
     """
+    # ⛔⛔ PRIMA DI TUTTO: un giornale vuoto perche' NON L'HO LETTO non e' un
+    #     giornale vuoto perche' non e' arrivato niente (`LEZIONI.md` §1.9).
+    #     `[M]` 23 ago 2026: questo predicato ha dato rosso a una sessione viva
+    #     — 797 fotogrammi spediti e presi — solo perche' il lettore di §11.1
+    #     non era partito.  ⇒ Qui ci si rifiuta, e la ragione e' quella vera.
+    if n.get("traccia_non_letta"):
+        return _muto("%s — il giornale e' vuoto perche' NON L'HO LETTO, e non "
+                     "perche' la sessione sia morta: NON GIUDICO"
+                     % n["traccia_non_letta"])
     vissuto, chiesto = n.get("vissuto_s"), n.get("chiesto_s")
     if not chiesto:
         return _muto("non so quanto era stato chiesto")
@@ -786,7 +865,31 @@ def p_ritardo_non_scappa(n):
                % (fine, mas))
 
 
-def p_I1(ferma, mossa):
+def _perdita_dichiarata(*giri, **kw):
+    """La perdita della linea sotto questi giri, in %, oppure `None` se NON LO SO.
+
+    ⛔ Non si assume: si legge da quel che il giro porta con se' — e chi lo
+       scrive e' `giro()`, che se lo fa dire dal **qdisc installato** (vedi
+       `_linea_del_giro()`).  ⚠ Cosi' vale anche quando il giro l'ha girato
+       qualcun altro con un `netem` suo: `09-b76-rete-cattiva.py` chiama
+       `B70.giro()` con `loss` addosso, e questa funzione lo vede lo stesso.
+
+    ⭐ E `None` NON e' zero: se non so se la linea perde, la premessa della gamba
+       degli abbandoni non e' verificata, e una premessa non verificata non da'
+       il diritto di dare rosso.
+    """
+    esplicita = kw.get("perdita_pc")
+    if esplicita is not None:
+        return float(esplicita), "dichiarata da chi mi ha chiamato"
+    for g in giri:
+        for dove, chiave in (("linea", "perdita_pc"), ("sonda", "persi_pc")):
+            v = ((g or {}).get(dove) or {}).get(chiave)
+            if v is not None:
+                return float(v), "letta da «%s.%s» del giro" % (dove, chiave)
+    return None, ("nessun giro della coppia dichiara la perdita della linea")
+
+
+def p_I1(ferma, mossa, perdita_pc=None):
     """⛔⛔ L'INVARIANTE I1, ED E' IL PRIMO PREDICATO DELLA FASE.
 
     `SPECIFICHE.md` §8.2: *«Il ritmo non cala mai per prudenza, per risparmio o
@@ -802,11 +905,27 @@ def p_I1(ferma, mossa):
        causa sbagliata perche' la causa era comoda.
 
     ⭐ E poi sono DUE gambe, perche' nessuna delle due basta:
-       · **i fotogrammi al secondo** — la grandezza che l'utente sente;
+       · **i fotogrammi al secondo** — la grandezza che l'utente sente.  ⚠ Vale
+         sempre: e' un confronto fra due giri sulla **stessa** linea, quindi
+         qualunque guasto della linea c'e' in tutt'e due e si cancella;
        · **la resa `spediti/consegnati` e gli abbandoni** — perche' la cadenza
          puo' essere identica mentre noi buttiamo: a scena ferma non c'e'
          nessuna congestione che giustifichi un abbandono, quindi ne bastano
          **zero**.
+
+    ⛔⛔ E LA SECONDA GAMBA HA UNA PREMESSA, che fino al 23 agosto 2026 era
+        implicita e per questo **falsa senza dirlo**: *«a scena ferma non c'e'
+        congestione che giustifichi un abbandono»* vale su una linea che **non
+        perde**.  Su una linea che perde il 2 % (`casa-cattiva`, `[M]` 23 ago)
+        gli abbandoni li giustifica la perdita, e quella sera questa gamba ha
+        dato un rosso che non era un difetto del prodotto — con la gamba dei
+        fotogrammi/s che passava (ferma **10,13/s** contro mossa **7,78/s**: la
+        ferma andava piu' veloce).
+    ⇒ La gamba NON si toglie e non si allarga: si CONDIZIONA.  Su linea senza
+      perdita da' rosso come prima; su linea che perde — o su una linea di cui
+      non so se perde — **si rifiuta di giudicarla** e lo scrive.  ⚠ E se
+      intanto la prima gamba e' rossa, il rosso resta: la perdita spiega gli
+      abbandoni, non spiega un ritmo che cala quando la scena si ferma.
     """
     if not (_ha_misurato(ferma) and _ha_misurato(mossa)):
         return _muto("uno dei due giri della coppia non ha misurato: "
@@ -836,29 +955,56 @@ def p_I1(ferma, mossa):
                      "(contro %d a scena mossa): il fotogramma non c'era, e il "
                      "ritmo piu' basso e' del COMPOSITORE — non lo giudico "
                      "come I1" % (vf, vm))
+    # ── PRIMA GAMBA: il ritmo.  Vale su qualunque linea (vedi la docstring) ──
     guai = []
     if ferma["fps"] < mossa["fps"] * (1.0 - I1_TOLLERANZA):
         guai.append("il ritmo a scena FERMA e' %.2f/s contro %.2f/s a scena "
                     "mossa: cala quando non deve" % (ferma["fps"], mossa["fps"]))
+    # ── SECONDA GAMBA: gli abbandoni.  ⛔ E PRIMA la sua premessa ────────────
+    buttati = []
     ab = (ferma.get("server") or {}).get("abbandonati")
     if ab:
-        guai.append("a scena ferma il server ha abbandonato %d fotogrammi, e "
-                    "non c'e' congestione che li giustifichi" % ab)
+        buttati.append("a scena ferma il server ha abbandonato %d fotogrammi" % ab)
     sp = (ferma.get("server") or {}).get("spediti")
     if sp is not None and cf:
         resa = sp / float(cf)
         if resa < RESA_FERMA:
-            guai.append("a scena ferma sono usciti %d fotogrammi su %d consegnati "
-                        "a RCP (resa %.3f)" % (sp, cf, resa))
+            buttati.append("a scena ferma sono usciti %d fotogrammi su %d "
+                           "consegnati a RCP (resa %.3f, sotto %.2f)"
+                           % (sp, cf, resa, RESA_FERMA))
+    perdita, da_dove = _perdita_dichiarata(ferma, mossa, perdita_pc=perdita_pc)
+    premessa = (perdita == 0.0)
+    if buttati and not premessa:
+        motivo = ("la premessa di questa gamba — «a scena ferma non c'e' "
+                  "congestione che giustifichi un abbandono» — vale SOLO su una "
+                  "linea senza perdita, e qui %s (%s)"
+                  % ("la linea perde il %.2f %%" % perdita if perdita is not None
+                     else "NON SO se la linea perde", da_dove))
+        if guai:
+            # ⚠ Il rosso del ritmo resta: la perdita spiega gli abbandoni, non
+            #   spiega un ritmo che cala quando la scena si ferma.
+            return _no("%s · ⚠ e gli abbandoni NON li giudico (%s): %s"
+                       % (" · ".join(guai), motivo, "; ".join(buttati)))
+        return _muto("%s, ma %s ⇒ NON GIUDICO gli abbandoni. ⭐ La gamba dei "
+                     "fotogrammi/s ha retto: ferma %.2f/s contro mossa %.2f/s"
+                     % ("; ".join(buttati), motivo, ferma["fps"], mossa["fps"]))
+    guai += ["%s, e su una linea senza perdita non c'e' congestione che li "
+             "giustifichi" % b for b in buttati]
     if guai:
         return _no(" · ".join(guai))
     return _si("scena ferma %.2f/s contro mossa %.2f/s, consegnati %d contro %d, "
-               "zero abbandoni a scena ferma: I1 tiene"
-               % (ferma["fps"], mossa["fps"], cf, cm))
+               "zero abbandoni a scena ferma (linea %s): I1 tiene"
+               % (ferma["fps"], mossa["fps"], cf, cm,
+                  "senza perdita" if premessa else
+                  "con perdita %s — ma non c'era niente da giustificare"
+                  % ("%.2f %%" % perdita if perdita is not None else "ignota")))
 
 
 # I predicati che si applicano a un giro solo, in ordine.
 PREDICATI_GIRO = [
+    # ⛔ Per primo, perche' se questo si rifiuta i tre numeri del lato server
+    #    che seguono non sono di questo giro.  E vale ovunque (`False`).
+    ("il registro e' di QUESTO giro (§1.9)", p_registro_letto, False),
     ("non stacca (§3.1-bis, vale anche sotto il pavimento)", p_niente_stacco, False),
     ("il pavimento del ritmo (§2.1: 25/s)", p_pavimento_ritmo, True),
     ("degrada nel tempo, non in chiavi (§3.3)", p_degrada_nel_tempo, True),
@@ -924,6 +1070,14 @@ def _fab(tratti, byte=25000, chiave_ogni=0, deriva_ms_per_fotogramma=0.0,
     return g
 
 
+def _con_linea(n, perdita_pc):
+    """Appiccica a un giro finto la linea che `giro()` gli scriverebbe dal qdisc."""
+    n["linea"] = {"perdita_pc": perdita_pc,
+                  "come": "netem con «loss %s%%»" % perdita_pc if perdita_pc
+                          else "netem senza `loss`"}
+    return n
+
+
 def certifica():
     """⛔ L'atteso e' scritto PRIMA, e i casi 2, 4, 5 e 6 sono quelli che
        rendono credibile un verde falso."""
@@ -941,14 +1095,14 @@ def certifica():
     g = _fab([(60, 33)], chiave_ogni=0)
     casi.append(("0-sano — 60/s per 33 s, una chiave sola",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": True, "il pavimento": True,
+                 {"il registro": True, "non stacca": True, "il pavimento": True,
                   "degrada nel tempo": True, "il ritardo": True}))
 
     # 1 · IL DIFETTO NUDO: il ritmo sotto il pavimento.
     g = _fab([(18, 33)])
     casi.append(("1-⛔ ritmo 18/s uniforme: sotto il pavimento di 25",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": True, "il pavimento": False,
+                 {"il registro": True, "non stacca": True, "il pavimento": False,
                   "degrada nel tempo": True, "il ritardo": True}))
 
     # 2 · ⛔⛔ LA MEDIA CHE NASCONDE IL BUCO.
@@ -960,7 +1114,7 @@ def certifica():
     casi.append(("2-⛔⛔ la media che nasconde il buco: 45/s poi 17,5/s "
                  "(media sopra il pavimento)",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": True, "il pavimento": False,
+                 {"il registro": True, "non stacca": True, "il pavimento": False,
                   "degrada nel tempo": True, "il ritardo": True}))
 
     # 3 · ⛔ IL FLUSSO DI SOLE CHIAVI A RITMO BUONO.
@@ -969,7 +1123,7 @@ def certifica():
     g = _fab([(30, 33)], chiave_ogni=1)
     casi.append(("3-⛔ 30/s ma TUTTE CHIAVI: il ritmo assolve, §3.3 no",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": True, "il pavimento": True,
+                 {"il registro": True, "non stacca": True, "il pavimento": True,
                   "degrada nel tempo": False, "il ritardo": True}))
 
     # 4 · ⛔⛔ IL RITMO STA IN PIEDI E IL RITARDO E' DISTRUTTO.
@@ -981,7 +1135,7 @@ def certifica():
     casi.append(("4-⛔⛔ 30/s puntuali e la deriva che scappa (+4 ms a "
                  "fotogramma): il ritmo assolve, il ritardo no",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": True, "il pavimento": True,
+                 {"il registro": True, "non stacca": True, "il pavimento": True,
                   "degrada nel tempo": True, "il ritardo": False}))
 
     # 5 · ⛔ LO STACCO A META'.  Dodici secondi di fotogrammi ottimi su trenta
@@ -991,7 +1145,7 @@ def certifica():
     casi.append(("5-⛔ la sessione muore a 12 s su 33 chiesti: tutte le medie "
                  "sono buone",
                  misura(g, 33, SRV, FILO),
-                 {"non stacca": False, "il pavimento": True,
+                 {"il registro": True, "non stacca": False, "il pavimento": True,
                   "degrada nel tempo": True, "il ritardo": True}))
 
     # 6 · ⛔⛔ IL VUOTO.  E' il caso R7a dell'orecchio, trasportato: un banco che
@@ -1001,7 +1155,39 @@ def certifica():
     #       rosso vero: non e' arrivato niente.
     casi.append(("6-⛔⛔ il VUOTO: zero fotogrammi (il voto massimo al silenzio)",
                  misura([], 33, SRV, FILO),
-                 {"non stacca": False, "il pavimento": None,
+                 {"il registro": True, "non stacca": False, "il pavimento": None,
+                  "degrada nel tempo": None, "il ritardo": None}))
+
+    # 6b · ⛔⛔ LO ZERO CHE VUOL DIRE «NON HO LETTO» — `LEZIONI.md` §1.9, e la
+    #      cura 2 del 23 agosto 2026.  Se `righe_registro()` torna 0 (il `< file`
+    #      che rubava la parola a `sudo -S`), `conti_del_server()` leggerebbe il
+    #      registro DALL'ACCENSIONE del server: `attese_a_vuoto` diventerebbe
+    #      cumulativo, e con lui la colonna su cui `p_I1` decide se rifiutarsi.
+    #      ⇒ Il banco deve RIFIUTARSI, non tirare dritto.  ⭐ E il rifiuto si
+    #        prova sulla funzione VERA — `conti_del_server(0)` — non su un dizionario
+    #        scritto a mano: e' la guardia sul percorso che il giro vero fa.
+    casi.append(("6b-⛔⛔ il registro NON letto (righe_registro() → 0): i conti "
+                 "del server sarebbero cumulativi dall'accensione",
+                 misura(_fab([(30, 33)]), 33, conti_del_server(0), FILO),
+                 {"il registro": None, "non stacca": True, "il pavimento": True,
+                  "degrada nel tempo": True, "il ritardo": True}))
+
+    # 6c · ⛔⛔ LA TERZA FACCIA DELLO ZERO, e l'ha trovata il giro VERO del
+    #      23 agosto 2026: il lettore di §11.1 non parte (gli mancava
+    #      `01-b4-validatore.py` nell'albero), il giornale resta vuoto, e un
+    #      giornale vuoto e' identico a «la sessione non ha consegnato niente».
+    #      `[M]` quella sera il banco ha dato ROSSO a «non stacca» su un giro in
+    #      cui il server aveva spedito **797** fotogrammi e il cliente li aveva
+    #      presi.  ⇒ «Non l'ho letto» deve rifiutarsi, non accusare il prodotto.
+    #      ⚠ E il confronto con il caso 6 e' il punto: **stesso giornale vuoto**,
+    #        esiti opposti, perche' la ragione del vuoto e' diversa.
+    n_muta = misura([], 33, SRV, FILO)
+    n_muta["traccia_non_letta"] = "⛔ LA TRACCIA §11.1 NON SI E' LETTA: prova"
+    n_muta["esito"] = "NON HO NIENTE DA GIUDICARE — traccia non letta"
+    casi.append(("6c-⛔⛔ il giornale vuoto perche' NON L'HO LETTO (contro il "
+                 "caso 6, vuoto perche' non e' arrivato niente)",
+                 n_muta,
+                 {"il registro": True, "non stacca": None, "il pavimento": None,
                   "degrada nel tempo": None, "il ritardo": None}))
 
     verde = True
@@ -1009,7 +1195,8 @@ def certifica():
         print("  %s" % nome)
         for etichetta, f, _s in PREDICATI_GIRO:
             corto = etichetta.split(" (")[0]
-            chiave = ("non stacca" if corto.startswith("non stacca") else
+            chiave = ("il registro" if corto.startswith("il registro") else
+                      "non stacca" if corto.startswith("non stacca") else
                       "il pavimento" if corto.startswith("il pavimento") else
                       "degrada nel tempo" if corto.startswith("degrada") else
                       "il ritardo")
@@ -1066,6 +1253,43 @@ def certifica():
                 dict(srv(1010, 1010), cattura={"catturati": 1010, "chiavi": 1,
                                                "attese_a_vuoto": 3}), FILO),
          None),
+        # ══ LA CURA 3, e sono QUATTRO casi perche' una gamba condizionata si
+        #    prova in tutt'e due i versi: deve tacere dove la premessa manca, e
+        #    deve saper DARE ROSSO dove la premessa c'e'.
+        #
+        # 10c · ⛔ LA GAMBA CHE DEVE MORDERE.  Linea SENZA perdita, il ritmo a
+        #      scena ferma sta in piedi (anzi corre di piu'), e il server butta
+        #      lo stesso: e' I1 rotta nella forma che i fotogrammi/s non vedono.
+        ("10c-⛔ linea SENZA perdita e il server butta a scena ferma: la gamba "
+         "degli abbandoni deve dare ROSSO",
+         _con_linea(misura(_fab([(10.13, 33)]), 33, srv(1000, 960, 40), FILO), 0.0),
+         _con_linea(misura(_fab([(7.78, 33)]), 33, srv(1010, 1010), FILO), 0.0),
+         False),
+        # 10d · ⭐⭐ IL CASO MISURATO IL 23 AGOSTO 2026 su `casa-cattiva` (2 % di
+        #      perdita): **gli stessi identici numeri** del 10c.  La premessa
+        #      *«a scena ferma non c'e' congestione che li giustifichi»* qui e'
+        #      FALSA — gli abbandoni li giustifica la perdita.  ⇒ NON GIUDICO.
+        #      ⛔ E il rosso che questo caso toglie non e' un rosso del prodotto.
+        ("10d-⭐⭐ gli STESSI numeri su una linea che perde il 2 %: la premessa "
+         "e' falsa e il banco deve RIFIUTARSI, non dare rosso",
+         _con_linea(misura(_fab([(10.13, 33)]), 33, srv(1000, 960, 40), FILO), 2.0),
+         _con_linea(misura(_fab([(7.78, 33)]), 33, srv(1010, 1010), FILO), 2.0),
+         None),
+        # 10e · ⛔ E «non so se perde» NON e' «non perde»: una premessa non
+        #      verificata non da' il diritto di dare rosso (§1.9, di nuovo).
+        ("10e-⛔ gli stessi numeri su una linea di cui NON SO se perde: "
+         "una premessa non verificata non autorizza un rosso",
+         misura(_fab([(10.13, 33)]), 33, srv(1000, 960, 40), FILO),
+         misura(_fab([(7.78, 33)]), 33, srv(1010, 1010), FILO),
+         None),
+        # 10f · ⛔⛔ E LA CURA NON DEVE DIVENTARE UN'AMNISTIA.  Linea che perde il
+        #      2 %, ma stavolta il ritmo a scena ferma CALA (5,0/s contro 7,78):
+        #      la perdita spiega gli abbandoni, non spiega quello.  ⇒ ROSSO.
+        ("10f-⛔⛔ linea che perde il 2 % MA il ritmo a scena ferma cala "
+         "(5,00/s contro 7,78/s): la perdita non lo giustifica — ROSSO",
+         _con_linea(misura(_fab([(5.0, 33)]), 33, srv(1000, 960, 40), FILO), 2.0),
+         _con_linea(misura(_fab([(7.78, 33)]), 33, srv(1010, 1010), FILO), 2.0),
+         False),
     ]
     for nome, ferma, mossa, att in coppie:
         passa, perche = p_I1(ferma, mossa)
@@ -1106,11 +1330,135 @@ def certifica():
     print("  %s13-⭐⭐ dalla TRACCIA §11.1 al giornale, col lettore vero: %s"
           % ("OK  " if bene else "⛔  ", perche))
 
+    # 14-15 · ⛔⛔ LE DUE CURE DELLO STDIN DI `sudo -S`, provate DAVVERO.
+    verde = _certifica_stdin_di_sudo() and verde
+
     print("\n== %s" % ("⭐ IL BANCO SA VEDERE I DIFETTI CHE CERCA"
                        if verde else
                        "⛔⛔ IL BANCO NON SA VEDERE QUEL CHE CERCA: non si "
                        "creda a nessun suo verde"))
     return 0 if verde else 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔ LA PROVA DELLE CURE 1 E 2 — e NON e' un confronto di stringhe
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Un banco che si limitasse a confrontare la riga costruita con una riga attesa
+# proverebbe che la scrivo come l'ho pensata, non che FUNZIONA.  ⇒ Qui la catena
+# si fa girare per davvero, in locale, con un `sudo` **finto** che si comporta
+# come quello vero nell'unica cosa che conta: legge la parola dallo **stdin** e
+# poi esegue quel che gli resta.  Se la parola non gli arriva, fallisce
+# esattamente come sulla macchina di prova — *«3 incorrect password attempts»*.
+#
+# ⭐ E ogni cura si prova in DUE versi: la forma vecchia deve FALLIRE (una cura
+#    che non e' mai stata vista fallire non e' provata) e la nuova deve reggere.
+SUDO_FINTO = r'''#!/bin/sh
+# ⛔ Il `sudo` finto: non da' privilegi, imita il solo stdin di `-S`.
+while [ "$1" = "-S" ] || [ "$1" = "-p" ]; do
+  if [ "$1" = "-p" ]; then shift 2; else shift; fi
+done
+printf '%s\n' "$*" >> "$FINTO_CHIAMATE"
+IFS= read -r parola || parola=""
+if [ "$parola" != "$FINTO_PAROLA" ]; then
+  echo "sudo: 3 incorrect password attempts" >&2
+  exit 1
+fi
+exec "$@"
+'''
+
+
+def _certifica_stdin_di_sudo():
+    """I casi 14 e 15: le due forme in cui `sudo -S` perde la parola."""
+    import shutil, tempfile
+    d = tempfile.mkdtemp(prefix="09-b70-sudo-")
+    bidone = os.path.join(d, "bidone")
+    os.makedirs(bidone)
+    with open(os.path.join(bidone, "sudo"), "w") as f:
+        f.write(SUDO_FINTO)
+    os.chmod(os.path.join(bidone, "sudo"), 0o755)
+    chiamate = os.path.join(d, "chiamate")
+
+    def gira(riga):
+        open(chiamate, "w").close()
+        amb = dict(os.environ, PATH=bidone + ":" + os.environ.get("PATH", ""),
+                   FINTO_CHIAMATE=chiamate, FINTO_PAROLA=PAROLA_SUDO)
+        p = subprocess.run(["bash", "-c", riga], capture_output=True, env=amb)
+        return (p.returncode, p.stdout.decode("utf-8", "replace"),
+                open(chiamate).read().strip().splitlines())
+
+    def vecchia(comando):
+        """La forma di `07-b65-datagram.py:147`: un solo `sudo`, e la catena FUORI."""
+        return "printf '%%s\\n' '%s' | sudo -S -p '' %s" % (PAROLA_SUDO, comando)
+
+    verde = True
+
+    # ── 14 · LA CATENA — `sudo` copre solo il PRIMO anello ──────────────────
+    dentro = os.path.join(d, "dentro")
+    catena = ("mkdir -p %s && printf '%%s' 'CIAO' > %s/f && wc -c < %s/f"
+              % (dentro, dentro, dentro))
+    _rc, out_v, ch_v = gira(vecchia(catena))
+    shutil.rmtree(dentro, ignore_errors=True)
+    _rc, out_n, ch_n = gira(catena_root(catena))
+    # ⛔ La forma vecchia: `sudo` ha ricevuto SOLO il `mkdir`; il `printf`, il
+    #    `>` e il `wc` sono girati da utente normale — e sulla macchina, dove
+    #    `LAV` e' di root, e' li' che il lettore §11.1 non si scriveva.
+    rotta = (len(ch_v) == 1 and "mkdir" in ch_v[0] and "printf" not in ch_v[0])
+    # ⭐ La forma nuova: un solo `sudo`, e la catena INTERA dentro la sua shell.
+    curata = (len(ch_n) == 1 and ch_n[0].startswith("bash -c ")
+              and "mkdir" in ch_n[0] and "printf" in ch_n[0] and "wc" in ch_n[0]
+              and out_n.strip() == "4")
+    bene = rotta and curata
+    verde = verde and bene
+    print("  %s14-⛔ CURA 1 · la CATENA: la forma vecchia manda a root il solo "
+          "«%s…» (il resto gira da utente); la nuova ne manda uno solo, con "
+          "tutta la catena dentro — e stampa «%s» (atteso «4»)"
+          % ("OK  " if bene else "⛔  ",
+             (ch_v[0] if ch_v else "(niente)")[:24], out_n.strip()))
+
+    # ── 15 · IL `< file` IN CODA — ruba lo stdin a `sudo`, e TACE ───────────
+    reg = os.path.join(d, "registro.log")
+    with open(reg, "w") as f:
+        f.write("prima riga\nseconda\nterza\nquarta\n")
+    comando = "wc -l < %s 2>/dev/null || echo 0" % reg
+    rc_v, out_v, _ch = gira(vecchia(comando))
+    rc_n, out_n, _ch = gira(catena_root(comando))
+    # ⛔⛔ La forma vecchia stampa «0» — non «errore»: e' il difetto MUTO, ed e'
+    #     quello che rendeva `attese_a_vuoto` cumulativo dall'accensione.
+    rotta = (out_v.strip() == "0")
+    curata = (out_n.strip() == "4")
+    bene = rotta and curata
+    verde = verde and bene
+    print("  %s15-⛔⛔ CURA 2 · il «< file» in coda su un registro da 4 righe: "
+          "la forma vecchia risponde «%s» (lo stdin rubato a sudo, e TACE), la "
+          "nuova «%s»"
+          % ("OK  " if bene else "⛔  ", out_v.strip(), out_n.strip()))
+
+    # ── 15b · LA GUARDIA: uno zero non deve avere la faccia di una misura ───
+    vero_root = globals()["root"]
+    try:
+        prove = [
+            ("zero righe col server acceso", (0, "0\n", ""), None),
+            ("sudo che rifiuta la parola", (1, "", "sudo: 3 incorrect password "
+                                                   "attempts"), None),
+            ("una risposta che non e' un numero", (0, "boh\n", ""), None),
+            ("un registro vero da 12 345 righe", (0, "12345\n", ""), 12345),
+        ]
+        esiti = []
+        for etichetta, risposta, atteso in prove:
+            globals()["root"] = lambda c, tetto=300, r=risposta: r
+            visto = righe_registro()
+            esiti.append((etichetta, atteso, visto, visto == atteso))
+    finally:
+        globals()["root"] = vero_root
+    bene = all(e[3] for e in esiti)
+    verde = verde and bene
+    print("  %s15b-⭐ la guardia di `righe_registro()`: %s"
+          % ("OK  " if bene else "⛔  ",
+             " · ".join("%s → %s%s" % (e[0], e[2], "" if e[3] else
+                                       " ⛔ ATTESO %s" % e[1]) for e in esiti)))
+    shutil.rmtree(d, ignore_errors=True)
+    return verde
 
 
 def _certifica_lettore():
@@ -1233,17 +1581,81 @@ def _certifica_lettore():
 RETE = None       # il modulo 07-b65, importato in `principale()`
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔⛔ LA TRAPPOLA DELLO STDIN DI `sudo -S`, E QUESTO PROGETTO L'HA GIA' PAGATA
+#       TRE VOLTE — si scrive qui perche' la quarta non si paghi
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# `07-b65-datagram.py:147` costruisce, e va benissimo per UN comando solo:
+#
+#       printf '%s\n' 'PAROLA' | sudo -S -p '' <comando>
+#
+# ⛔ **PRIMA FORMA — la catena.**  Il comando che arriva li' dentro non e' un
+#    comando: e' una CATENA (`a && b | c > d`).  La shell remota la spezza
+#    **fuori** da `sudo`, e `sudo` copre soltanto il PRIMO anello.  Gli anelli
+#    successivi girano da utente normale — e se scrivono in `LAV`, che e' di
+#    root, falliscono.  ⚠ E falliscono **in silenzio**, perche' il `|| echo 0`
+#    o il `; true` che li accompagna trasforma l'errore in un numero plausibile.
+#    `[M]` 23 agosto 2026: `spedisci_lettore()` non scriveva `09-b70-leggi.py`
+#    sulla macchina, e §11.1 restava senza lettore.
+#
+# ⛔⛔ **SECONDA FORMA — e la peggiore, perche' e' MUTA.**  Un `< file` in coda
+#      non lo prende il comando: lo prende **`sudo`**, che e' l'ultimo comando
+#      della pipeline.  ⇒ Sullo stdin di `sudo` non arriva piu' la parola, ci
+#      arriva il file; `sudo` risponde *«3 incorrect password attempts»* sullo
+#      stderr, esce 1, e il `|| echo 0` in coda stampa **0**.
+#      ⚠ E' scritto nero su bianco in `07-b64-terreno.sh` (~riga 240) — *«niente
+#        `</dev/null` in coda: quel redirect vince su `sudo -S`»* — ed e' tornato
+#        qui lo stesso: `[M]` 23 agosto 2026, `righe_registro()` tornava **0** su
+#        un registro da migliaia di righe, e allora `conti_del_server()` leggeva
+#        **dall'accensione del server** invece che da questo giro.  I «conto
+#        finale» si salvavano (c'e' un `tail -1`), le righe `ciclo:` no:
+#        `catturati` e **`attese a vuoto`** diventavano CUMULATIVI — cioe' la
+#        colonna su cui `p_I1` decide se rifiutarsi di giudicare.
+#
+# ⇒ **LA CURA, ed e' una sola per tutt'e due**: un solo `sudo`, e la catena
+#   intera dentro la SUA shell.  `sudo` resta l'unico comando della pipeline del
+#   `printf`, quindi la parola gli arriva; e ogni `|`, `&&`, `<` e `>` della
+#   catena vive dentro `bash -c`, cioe' dentro root.
+#
+#       printf '%s\n' 'PAROLA' | sudo -S -p '' bash -c '<catena intera>'
+#
+# ⚠ E il prezzo si dichiara: dentro gli apici singoli di `shlex.quote` il `$`
+#   NON viene piu' espanso dalla shell remota.  Nessun comando di questo file
+#   si appoggia a quell'espansione, e chi ne aggiungesse uno deve saperlo.
+def catena_root(comando):
+    """La riga che parte sull'ssh: **un** `sudo`, e la catena dentro la sua shell."""
+    return ("printf '%%s\\n' '%s' | sudo -S -p '' bash -c %s"
+            % (PAROLA_SUDO, shlex.quote(comando)))
+
+
 def root(comando, tetto=300):
-    return RETE.root(comando, tetto)
+    """⛔ NON e' `RETE.root`: quella copre il solo primo anello della catena.
+
+    ⚠ E chi sostituisce questa funzione dall'esterno per trascrivere (lo fa
+      `09-b79-cure.py:415`) deve avvolgere **questa**, non `RETE.root`, o si
+      riporta dentro tutt'e due i difetti curati qui sopra.
+    """
+    return RETE.rem(catena_root(comando), tetto)
 
 
 def spedisci_lettore():
     """⛔ Il lettore si spedisce in base64: le virgolette di un heredoc dentro
        un `sudo -S` dentro un `ssh` sono tre livelli di quoting, e uno sbagliato
-       non da' un errore — da' un file troncato."""
+       non da' un errore — da' un file troncato.
+
+    ⛔⛔ E la catena e' UNA SOLA chiamata a `root()`: `mkdir`, `printf`,
+        `base64 -d` e il `>` vivono tutti dentro la stessa shell di root (vedi
+        la trappola scritta qui sopra).  `[M]` 23 ago 2026: nella forma vecchia
+        il `>` era della shell dell'utente e il file non si scriveva mai.
+    """
     b = base64.b64encode(LETTORE.encode("utf-8")).decode("ascii")
     root("mkdir -p %s && printf '%%s' '%s' | base64 -d > %s/09-b70-leggi.py"
          % (LAV, b, LAV))
+    # ⛔ `wc -c < file` va bene SOLO perche' adesso il redirect e' dentro la
+    #    shell di root: e' root che apre il file, e lo stdin di `sudo` resta la
+    #    parola.  Nella forma vecchia questo `<` rubava la parola e il banco
+    #    diceva «non si e' scritto» di un file che c'era (2 198 byte misurati).
     rc, out, _ = root("wc -c < %s/09-b70-leggi.py" % LAV)
     return out.strip().isdigit() and int(out.strip()) > 1000
 
@@ -1271,6 +1683,19 @@ def terreno_controlla():
     if "si" not in out:
         guai.append("l'albero «%s» non c'e': si allinea con "
                     "banchi/attrezzi-allinea-innesto.sh" % ALB)
+    # ⛔⛔ L'ARBITRO DI §11.1, e si controlla PRIMA di misurare.  `[M]` 23 agosto
+    #     2026: `07-b64-terreno.sh porta` porta solo una manciata di `banchi/`, e
+    #     `01-b4-validatore.py` non era fra quelli — il lettore della traccia
+    #     moriva a ogni giro, il giornale restava vuoto, e il banco dava ROSSO a
+    #     «non stacca» su una sessione viva da 797 fotogrammi.  ⇒ Un file che
+    #     manca si dice qui, dove costa una riga, non a giro finito.
+    rc, out, _ = root("test -s %s/banchi/01-b4-validatore.py && echo si || echo no"
+                      % ALB)
+    if "si" not in out:
+        guai.append("manca l'arbitro di §11.1 «%s/banchi/01-b4-validatore.py»: "
+                    "senza, il lettore della traccia non parte e ogni giro "
+                    "sembra una sessione morta — si copia con "
+                    "«scp banchi/01-b4-validatore.py» nell'albero" % ALB)
     rc, out, _ = root("test -x %s && echo si || echo no" % SCENA_BIN)
     if "si" not in out:
         guai.append("la scena «%s» non e' eseguibile: serve 04-b30-scena "
@@ -1300,19 +1725,69 @@ def terreno_controlla():
 
 
 def righe_registro():
-    rc, out, _ = root("wc -l < %s/registro.log 2>/dev/null || echo 0" % LAV)
-    try:
-        return int(out.strip())
-    except Exception:
-        return 0
+    """Quante righe ha il registro del server ADESSO — o `None` se non l'ho letto.
+
+    ⛔⛔ **UNO ZERO CHE VUOL DIRE «NON HO LETTO» E UNO ZERO CHE VUOL DIRE «NON E'
+        SUCCESSO NIENTE» NON DEVONO AVERE LA STESSA FACCIA** (`LEZIONI.md` §1.9).
+        Qui la faccia era la stessa e il prezzo e' stato quello scritto sopra
+        `catena_root()`: il numero tornava 0, `conti_del_server()` leggeva il
+        registro **dall'accensione del server**, e `attese_a_vuoto` — la colonna
+        con cui `p_I1` decide se rifiutarsi — diventava cumulativa.
+
+    ⇒ Tre esiti, non due:
+        · un intero > 0  — l'ho letto;
+        · `None`         — ⛔ NON L'HO LETTO (il comando e' fallito, o la
+          risposta non e' un numero);
+        · `None` anche a **zero righe**: il server e' acceso (`terreno_controlla()`
+          lo verifica prima di misurare) e un server acceso ha per forza gia'
+          scritto.  Uno zero, qui, e' una lettura fallita travestita da misura.
+
+    ⚠ E niente `|| echo 0` in coda: quel ripiego e' proprio il pezzo che
+      trasformava l'errore in un numero plausibile.  Se fallisce, deve vedersi.
+    """
+    rc, out, err = root("wc -l < %s/registro.log" % LAV)
+    t = out.strip()
+    if rc != 0 or not t.isdigit():
+        _dub("⛔ il registro del server NON si e' letto (rc=%s): «%s»"
+             % (rc, (t + " " + err.strip())[:120]))
+        return None
+    n = int(t)
+    if n <= 0:
+        _dub("⛔ il registro del server ha ZERO righe con il server acceso: e' "
+             "una lettura fallita, non una misura — NON la prendo per buona")
+        return None
+    return n
 
 
 def conti_del_server(riga0):
     """⛔ Il cliente sa dire quanti fotogrammi ha PRESO; non sa dire quanti ne
        sono partiti.  Senza questi numeri «la rete l'ha buttato» e «il server non
        l'ha mai spedito» darebbero lo stesso conto — e in un banco che strozza la
-       rete apposta e' la distinzione che serve piu' di ogni altra (R13)."""
-    fuori = {}
+       rete apposta e' la distinzione che serve piu' di ogni altra (R13).
+
+    ⛔⛔ E LA PRIMA COSA CHE FA E' RIFIUTARSI, se `riga0` non e' un numero buono.
+        Con `riga0` mancante il `tail -n +1` leggerebbe il registro **intero**:
+        i «conto finale» si salverebbero (c'e' un `tail -1`), le righe `ciclo:`
+        no, e `catturati`/`attese_a_vuoto` diventerebbero cumulativi
+        dall'accensione del server.  ⇒ Numeri veri dati al giro sbagliato, che
+        e' la ferita di `LEZIONI.md` §1.26 nella sua forma piu' invisibile.
+        ⚠ La guardia sta QUI, al punto in cui il numero si CONSUMA, e non dentro
+          `righe_registro()`: cosi' vale anche quando qualcun altro sostituisce
+          quella funzione con una che torna 0 invece di `None`
+          (`09-b76-rete-cattiva.py:1126` lo fa).
+    """
+    if riga0 is None or riga0 <= 0:
+        return {"registro_non_letto":
+                "⛔ il registro del server non si e' letto (riga di partenza "
+                "«%s»): senza la riga di partenza i conti sarebbero CUMULATIVI "
+                "dall'accensione, non di questo giro" % riga0}
+    # ⚠ Dal 23 agosto 2026 il server scrive anche una riga `rete-quic …
+    #   giudizio=…` una volta al secondo (`src/webtransport.c:3986`).  ⭐ Non
+    #   confonde nessuno dei `grep` qui sotto — non porta «conto finale», ne'
+    #   «figlio  ciclo:», ne' le quattro frasi della spirale — e siccome la
+    #   partenza e' un NUMERO DI RIGA, righe nuove nel registro non spostano
+    #   niente.  Chi aggiunge un `grep` qui lo controlli di nuovo.
+    fuori = {"riga0": riga0}
     rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'video di .*conto "
                       "finale' | tail -1" % (riga0 + 1, LAV))
     m = re.search(r"(\d+) fotogrammi consegnati.*?(\d+) NON SPEDITI.*?"
@@ -1421,10 +1896,42 @@ def innesca_sessione(secondi=8):
     return "SESSIONE" in (out + err)
 
 
+def _linea_del_giro():
+    """⭐ La perdita della linea si LEGGE dal qdisc installato, non si assume.
+
+    ⛔ Assumerla sarebbe peggio del difetto che cura: `09-b76-rete-cattiva.py`
+       chiama questa stessa `giro()` con un `netem` che **perde**, e un
+       «perdita 0» scritto a mano qui rimetterebbe in piedi esattamente il falso
+       rosso di `p_I1` che si sta togliendo.  ⇒ Si guarda quel che c'e' davvero.
+
+    ⚠ E se il qdisc non si legge, si scrive `None` — che vuol dire «non lo so»,
+      e `p_I1` allora si rifiuta invece di dare rosso.
+    """
+    try:
+        testo = RETE.qdisc() or ""
+    except Exception as e:
+        return {"perdita_pc": None, "come": "il qdisc non si e' letto: %s" % e}
+    if "netem" not in testo:
+        return {"perdita_pc": None, "come": "nessun netem sul dispositivo: la "
+                                            "linea non e' quella che credo",
+                "qdisc": testo[:200]}
+    # `loss 1%` (indipendente) oppure `loss gemodel p 0.2% r 20% …` (a raffica)
+    m = re.search(r"loss\s+(?:gemodel\s+p\s+)?([\d.]+)%", testo)
+    return {"perdita_pc": float(m.group(1)) if m else 0.0,
+            "come": ("netem con «%s»" % m.group(0)) if m else
+                    "netem senza `loss`: la sola perdita possibile e' la coda "
+                    "che trabocca",
+            "qdisc": testo[:200]}
+
+
 def giro(nome, movimento, tela, secondi, con_traccia=True):
     """Un giro: il cliente dentro il contenitore, la traccia ridotta sul posto."""
     root("rm -f %s/%s.rcpreg %s/%s.json; true" % (LAV, nome, LAV, nome))
+    # ⛔ `None` (o 0) qui vuol dire «il registro non l'ho letto», e da li' in poi
+    #    i conti del server sarebbero cumulativi dall'accensione: la guardia sta
+    #    dentro `conti_del_server()`, che si rifiuta invece di leggere tutto.
     riga0 = righe_registro()
+    linea = _linea_del_giro()
     prima = RETE.byte_sul_filo()
     t0 = time.time()
     dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
@@ -1451,7 +1958,7 @@ def giro(nome, movimento, tela, secondi, con_traccia=True):
         filo = {"byte": b, "pacchetti": pk, "secondi": vero,
                 "byte_per_pacchetto": round(b / pk, 1) if pk else None}
     server = conti_del_server(riga0)
-    giornale, letto = [], {"esito": "senza traccia"}
+    giornale, letto, muta = [], {"esito": "senza traccia"}, None
     if con_traccia:
         rc, out2, err2 = root("python3 %s/09-b70-leggi.py %s/%s.rcpreg "
                               "%s/banchi/01-b4-validatore.py"
@@ -1462,10 +1969,25 @@ def giro(nome, movimento, tela, secondi, con_traccia=True):
         except Exception as e:
             letto = {"esito": "il lettore non ha risposto: %s — %s"
                              % (e, (out2 + err2)[-200:])}
+            # ⛔⛔ E QUESTA E' LA TERZA FACCIA DELLO STESSO DIFETTO (§1.9), e
+            #     l'ha trovata il giro vero del 23 agosto 2026: se il lettore
+            #     non risponde, il giornale e' VUOTO — e un giornale vuoto ha la
+            #     faccia identica a *«la sessione non ha consegnato niente»*.
+            #     ⇒ `[M]` quella sera il banco ha dato ROSSO a «non stacca» su
+            #       un giro in cui il server aveva spedito **797** fotogrammi e
+            #       il cliente li aveva presi: un rosso sul prodotto per un file
+            #       che mancava nel MIO albero (`01-b4-validatore.py`).
+            #     ⇒ La traccia non letta si DICHIARA, e i predicati che vivono
+            #       sul giornale si rifiutano invece di accusare.
+            muta = ("⛔ LA TRACCIA §11.1 NON SI E' LETTA: %s" % letto["esito"])
     n = misura(giornale, secondi, server, filo,
                azzerati=letto.get("azzerati"))
+    if muta:
+        n["traccia_non_letta"] = muta
+        n["esito"] = "NON HO NIENTE DA GIUDICARE — " + muta
     n["nome"] = nome
     n["movimento"] = movimento
+    n["linea"] = linea          # ⭐ la premessa della seconda gamba di I1
     n["tela_chiesta"] = tela
     n["dal_cliente"] = dal_cliente
     n["lettore"] = letto
@@ -1497,11 +2019,19 @@ def stampa_giro(n):
     _inf("RITARDO deriva finale %s ms   massima %s ms   minima %s ms   "
          "⚠ e' la DERIVA, non l'anello"
          % (n["deriva_fine_ms"], n["deriva_max_ms"], n["deriva_min_ms"]))
+    if n.get("linea"):
+        _inf("LINEA   perdita dichiarata dal qdisc: %s   (%s)"
+             % ("%.2f %%" % n["linea"]["perdita_pc"]
+                if n["linea"].get("perdita_pc") is not None else "⛔ NON LO SO",
+                n["linea"].get("come")))
     s = n.get("server") or {}
+    if s.get("registro_non_letto"):
+        _dub("SERVER  %s" % s["registro_non_letto"])
+        return
     _inf("SERVER  consegnati %s · non spediti %s · spediti %s · ABBANDONATI %s "
-         "· annunci tela %s"
+         "· annunci tela %s   (registro da riga %s)"
          % (s.get("consegnati"), s.get("non_spediti"), s.get("spediti"),
-            s.get("abbandonati"), s.get("annunci_tela")))
+            s.get("abbandonati"), s.get("annunci_tela"), s.get("riga0")))
     _inf("CATTURA %s   ⭐ «attese a vuoto» = abbiamo chiesto e non c'era: e' la "
          "colonna che separa Mutter da noi"
          % json.dumps(s.get("cattura"), ensure_ascii=False))

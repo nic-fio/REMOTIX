@@ -32,6 +32,30 @@
    guardiano staccato che, dopo N secondi, toglie la disciplina **anche se
    questo copione muore o l'ssh cade**.  Una macchina lasciata con `netem` su
    `lo` e' un guasto che il prossimo banco attribuirebbe al prodotto.
+   ⚠ E per otto profili su nove **questo file non lo rispettava**: vedi il
+     riquadro di `rimetti`, cura del 23 agosto 2026.
+
+⛔⛔ QUATTRO DIFETTI CURATI IL 23 AGOSTO 2026, e sono tutti e quattro della
+    stessa forma — **silenzio invece di rosso**, cioe' un numero plausibile e
+    falso al posto di un «non ho letto» o di un rosso:
+      1. `rimetti()` disarmava il guardiano dal gradino `0-liscio`, il PRIMO
+         ⇒ gli otto dopo giravano scoperti.  ⇒ `rimetti(dillo, disarma)`.
+      2. `a_non_si_apre` (`ricevuti == 0`) non poteva dare rosso: il cliente
+         stampa `[audio] ricevuti 0` anche dal ramo `except`.  ⇒ sostituito da
+         `a_resa_sul_filo`, che guarda i DUE capi.  E il `[M]` che ci stava
+         appeso era falso (`banchi/09-b78-apertura.py`).
+      3. `spediti_dal_server` a `None` («non ho letto il registro») filava al
+         predicato come se fosse tutto a posto ⇒ adesso e' MUTO.
+      4. La chiusura di una sessione e' LENTA (`[M]` fino a 29 s in piu' col
+         pacer in coda) ⇒ il conto del server era **di un altro giro**, e il
+         posto di §4.4-bis era ancora occupato.  ⇒ `registro_posato()`.
+    ⚠ R13 era stato dichiarato chiuso su questo file, e ne sono usciti altri
+      quattro casi: la forma non e' un difetto, e' un'abitudine del banco.
+
+⭐ `[M]` 23 agosto 2026, giro intero dopo le cure — **9 gradini, 0 rossi, 0
+   muti**, e il gradino della perdita adesso misura il filo:
+   `7-perdita-10` ⇒ ricevuti **4 077** / spediti dal server **4 504** =
+   **0,905**, contro `1-p` = 0,901 con `p` = **9,91 %** letta da `tc -s qdisc`.
 
 Uso (dal portatile):
     python3 banchi/07-b64-rete.py casa   [--secondi 30]
@@ -108,9 +132,64 @@ def a_perdita(frazione, tolleranza=0.5):
     return f
 
 
-def a_non_si_apre(n):
-    """A questa perdita la sessione non si apre: e' un esito, non un guasto."""
-    return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
+def a_resa_sul_filo(frazione, tolleranza=0.35):
+    """LA RESA MISURATA SUI DUE CAPI: quanti ne ha spediti il SERVER, quanti ne
+    ha ricevuti il CLIENTE — e il confronto e' con la perdita che `netem` ha
+    **davvero** applicato, letta da `tc -s qdisc`, non con quella chiesta.
+
+    ⛔⛔ QUESTO PREDICATO SOSTITUISCE `a_non_si_apre`, CHE NON POTEVA DARE
+       ROSSO.  Era:
+
+           def a_non_si_apre(n): return _p(n["ricevuti"] == 0, ...)
+
+       e `banchi/01-b3-cliente.py:1466` (`scrivi_audio`) stampa
+       `[audio] ricevuti 0` **anche dal ramo `except`**, prima di rilanciare.
+       ⇒ **Ogni** modo di fallire — un `CONGEDO`, un tetto scaduto, un
+       `NameError` del banco — dava «ricevuti 0» e faceva passare il gradino di
+       **verde**.  Non misurava *«non si apre»*: misurava *«non ho ricevuto»*,
+       e le due cose hanno la stessa faccia (`LEZIONI.md` §1.9).
+    ⛔ E il `[M]` che ci stava appeso — *«la sessione non si apre affatto in
+       25 s»* — era **falso**.  `[M]` 23 agosto 2026, `banchi/09-b78-apertura.py`:
+       al 10 % di perdita la sessione si apre **10 volte su 10 in 1,1 s**
+       (mediana), al 25 % 10/10 in 1,3 s; la rete costa **285 ms** fra lo 0 e
+       il 25 %, e il secondo che si vedeva era il ritardo fisso di §4.4-bis.
+
+    ⚠⚠ E IL CONTO DELLA PERDITA ATTESA NON E' QUELLO CHE SEMBRA — chi lo
+       ritara senza questa nota lo ritara nel verso sbagliato.
+       I due filtri `u32` di `guasta()` prendono i **due versi** (`sport` e
+       `dport`), quindi:
+         · un **giro** di rete (andata + ritorno) paga `1-(1-p)²`
+           ⇒ il **19 %** quando `p` = 10 %;
+         · un **datagram**, che fa **un verso solo**, paga `p`
+           ⇒ il **10 %** quando `p` = 10 %.
+       Qui si guarda un datagram, non un giro: la resa attesa e' **`1-p`**.
+       `[M]` 23 agosto 2026 a `p` = 10 %: ricevuti **3 235**, spediti dal
+       server **3 607** ⇒ resa **0,897**, che e' `1-p` (0,90), **non**
+       `1-(1-p)²` (0,81).
+
+    ⚠ E questa resa NON e' `resa_campioni` del giudice: quella ci mette dentro
+      anche i blocchi che il server non ha **mai** spedito (finestra chiusa —
+      `[M]` 391 su 3 607 al 10 %), e cosi' somma «perso sul filo» e «mai
+      spedito», che sono due fatti.  Qui il denominatore e' `spediti`.
+    """
+    def f(n):
+        ric, sped = n.get("ricevuti"), n.get("spediti_dal_server")
+        # ⛔ `CODER.md` §3.10: «non ho letto» non e' «zero», ed e' rosso.
+        if ric is None or not sped:
+            return _p(False, "manca un capo del conto: ricevuti=%s · "
+                             "spediti dal server=%s" % (ric, sped))
+        resa = ric / float(sped)
+        vera = n.get("perdita_vera")
+        p = vera if vera is not None else frazione
+        atteso = 1.0 - p
+        larghezza = tolleranza * p + 0.02
+        return _p(abs(resa - atteso) <= larghezza,
+                  "resa sul filo %d/%d = %.3f · attesa 1-p = %.3f "
+                  "(p %s = %.3f, ±%.3f)"
+                  % (ric, sped, resa, atteso,
+                     "letta da tc" if vera is not None else "CHIESTA (tc muto)",
+                     p, larghezza))
+    return f
 
 
 PROFILI = [
@@ -132,8 +211,15 @@ PROFILI = [
      a_sorpassi(1500)),
     ("6-perdita-1", ["loss", "1%"], "1 datagram su 100 perso",
      a_perdita(0.01)),
+    # ⛔ LA PROSA DI QUESTO GRADINO ERA FALSA e va letta come un avvertimento:
+    #    diceva «10 %: `[M]` la sessione non si apre affatto in 25 s».
+    #    `[M]` 23 agosto 2026 (`banchi/09-b78-apertura.py`): la sessione si apre
+    #    **10 volte su 10, mediana 1,1 s**; al 25 % 10/10 in 1,3 s.  Il `[M]`
+    #    vecchio era il riflesso di un predicato che non poteva dare rosso.
     ("7-perdita-10", ["loss", "10%"],
-     "10 %: `[M]` la sessione non si apre affatto in 25 s", a_non_si_apre),
+     "10 %: `[M]` 23 ago 2026 la sessione SI APRE (10/10, mediana 1,1 s) e il "
+     "filo rende 1-p ~ 0,90 — ricevuti/spediti sui due capi, non 1-(1-p)²",
+     a_resa_sul_filo(0.10)),
     ("8-casa-cattiva", ["delay", "40ms", "20ms", "distribution", "normal",
                         "loss", "2%"],
      "il misto che somiglia a una casa col WiFi lontano", a_sorpassi(500)),
@@ -155,6 +241,38 @@ def root(comando, tetto=120):
 
 def qdisc():
     return root("/usr/sbin/tc qdisc show dev %s" % DEV)[1].strip()
+
+
+def perdita_vera():
+    """⛔ LA PERDITA CHE `netem` HA DAVVERO APPLICATO, **letta** e non dedotta.
+
+    ⚠ «Ho chiesto il 10 %» e «ne ha buttati il 10 %» sono due fatti diversi:
+      `netem` butta a caso, e su qualche migliaio di pacchetti la frazione vera
+      si scosta.  Il predicato si tara su QUESTA, o darebbe rosso alla rete
+      invece che al prodotto.
+    ⛔ Si legge PRIMA di passare al gradino dopo: il `tc qdisc del` con cui si
+       apre il profilo successivo azzera i contatori.
+    Torna `None` quando non c'e' nessun `netem` (gradino liscio) o quando la
+    riga non si legge — ⛔ e `None` NON e' zero.
+    """
+    rc, out, _ = root("/usr/sbin/tc -s qdisc show dev %s" % DEV)
+    import re as _re
+    dentro = False
+    for riga in out.split("\n"):
+        s = riga.strip()
+        if s.startswith("qdisc netem"):
+            dentro = True
+            continue
+        if dentro and s.startswith("qdisc"):
+            break
+        if dentro and "Sent" in s:
+            m = _re.search(r"Sent \d+ bytes (\d+) pkt \(dropped (\d+)", s)
+            if not m:
+                return None
+            passati, buttati = int(m.group(1)), int(m.group(2))
+            tot = passati + buttati
+            return round(buttati / float(tot), 4) if tot else None
+    return None
 
 
 
@@ -185,12 +303,31 @@ def guardiano_disarma():
     root("rm -f %s; true" % GUARDIANO)
 
 
-def rimetti(dillo=True):
-    """⛔ E si VERIFICA: «ho tolto» e «non c'e' piu'» sono due fatti diversi."""
+def rimetti(dillo=True, disarma=True):
+    """⛔ E si VERIFICA: «ho tolto» e «non c'e' piu'» sono due fatti diversi.
+
+    ⛔⭐ `disarma` NON E' UNA COMODITA', ED ECCO PERCHE' ESISTE — chi lo legge
+       senza la ragione lo toglie, e il difetto torna.
+       `[M]` 23 agosto 2026, rileggendo: il profilo `0-liscio` e' il **primo**
+       della griglia, e per «guastare con nessuna regola» chiamava
+       `rimetti(False)` — che disarmava il guardiano armato **due righe prima**
+       in `principale()`.  ⇒ Gli **otto profili successivi** giravano senza
+       rete di sicurezza: una morte del copione (o un ssh caduto) da li' in poi
+       lasciava la macchina col `netem` addosso, e il prossimo banco avrebbe
+       attribuito **al prodotto** un guasto mio.  E' scritto nell'intestazione
+       di questo stesso file (§«IL DISINNESCO E' AUTOMATICO»), e il file non lo
+       rispettava: silenzio invece di rosso, come i predicati di R13.
+       ⇒ Chi toglie la disciplina **dentro** un giro passa `disarma=False`;
+         solo chi chiude il giro (il `finally`, e il passo `rimetti` da riga di
+         comando) disarma davvero.
+    ⚠ La firma resta compatibile: `rimetti()` e `rimetti(dillo=False)` — le due
+      forme che usano `09-b70`, `09-b76` e `09-b79` — si comportano come prima.
+    """
     # ⛔ Prima si disarma il guardiano, POI si toglie la disciplina: al
     #    contrario resterebbe una finestra in cui il guardiano puo' scattare su
     #    un `netem` che nel frattempo ha messo qualcun altro.
-    guardiano_disarma()
+    if disarma:
+        guardiano_disarma()
     root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
     q = qdisc()
     ok = "netem" not in q
@@ -206,7 +343,10 @@ def rimetti(dillo=True):
 def guasta(regole):
     """Il guasto, e SOLO sul mio traffico."""
     if not regole:
-        rimetti(False)
+        # ⛔ `disarma=False`: siamo DENTRO il giro, e il guardiano e' di tutto
+        #    il giro (vedi il riquadro di `rimetti`).  Con `rimetti(False)` il
+        #    gradino `0-liscio` scopriva gli otto gradini dopo di se'.
+        rimetti(False, disarma=False)
         return True, "(nessun guasto)"
     passi = [
         "/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV,
@@ -344,7 +484,57 @@ def cliente(nome, dove, secondi):
             "jsonl": j, "byte_jsonl": os.path.getsize(j) if os.path.exists(j) else 0}
 
 
-def conti_del_server(riga0):
+def conta_conti_finali():
+    """Quante righe «audio di …, conto finale» ci sono ADESSO nel registro."""
+    rc, out, _ = root("grep -ac 'audio di .*conto finale' %s/registro.log || true"
+                      % LAV)
+    try:
+        return int(out.strip())
+    except Exception:
+        return -1
+
+
+def registro_posato(tetto=90.0, quiete=3.0):
+    """⛔⛔ SI ASPETTA CHE LA SESSIONE DI PRIMA ABBIA FINITO DI CHIUDERSI, e
+       sono due guasti in uno quelli che questo evita — `[M]` 23 agosto 2026,
+       trovati facendo girare il banco dopo le cure di stasera:
+
+       1. **IL CONTO DEL SERVER ERA DI UN ALTRO GIRO.**  La chiusura di una
+          sessione e' LENTA quando il pacer ha una coda (`[M]` il profilo
+          `7-perdita-10` ci ha messo **29 s** in piu' degli altri a scrivere il
+          suo «conto finale»).  ⇒ `riga0` del giro dopo veniva presa PRIMA che
+          la riga del giro prima fosse scritta, e `conti_del_server` — che
+          prende l'ULTIMA riga dopo `riga0` — leggeva quella **del giro
+          precedente**.  `[M]` i profili 6, 7 e 8 hanno riferito tutt'e tre
+          «spediti 4999 · rifiutati 3 · rimandati 7410», che era il conto del
+          **6**; il conto vero del 7 era 4632.  ⚠ E il predicato ci ha dato
+          rosso su un denominatore altrui: 4152/4999 = 0,831 (rosso) contro
+          4152/4632 = **0,896** (verde, ed e' `1-p`).  ⛔ E' la stessa forma
+          dei difetti curati stasera — un numero plausibile e falso al posto di
+          un «non ho letto».
+       2. **IL POSTO ERA ANCORA OCCUPATO.**  Finche' la sessione di prima non
+          si e' chiusa, §4.4-bis rifiuta la nuova con
+          `CONGEDO 0x0F GIA_ATTIVA_REMOTA` (`banchi/09-b78-apertura.py` §4:
+          la serratura dura fino a `SILENZIO` = 30 s).  `[M]` il profilo
+          `8-casa-cattiva` e' morto cosi', e l'`[audio] ricevuti 0` che ne
+          usciva e' esattamente il numero che il vecchio `a_non_si_apre`
+          avrebbe chiamato **verde**.
+
+    ⇒ Si aspetta che il conto delle righe «conto finale» stia FERMO per
+      `quiete` secondi, e si torna quel conto: e' il `n0` da cui il giro nuovo
+      pretende una riga **sua**.
+    """
+    n = conta_conti_finali()
+    fermo, scade = 0.0, time.time() + tetto
+    while time.time() < scade and fermo < quiete:
+        time.sleep(1.0)
+        m = conta_conti_finali()
+        fermo = (fermo + 1.0) if m == n else 0.0
+        n = m
+    return n
+
+
+def conti_del_server(riga0, n0=None, tetto=90.0):
     """⛔⛔ R13 — SENZA QUESTO IL BANCO ERA CIECO PER COSTRUZIONE.
 
        Il cliente sa dire quanti datagram ha ricevuto; **non** sa dire quanti
@@ -356,7 +546,23 @@ def conti_del_server(riga0):
        ⭐ Il conto ce l ha gia' il prodotto, alla chiusura della sessione:
        «N blocchi spediti, N buttati, N rifiutati da ngtcp2, N rimandati».
        Qui si legge, e si legge SOLO da `riga0` in poi, cosi' e' di questo
-       giro e non di quello prima."""
+       giro e non di quello prima.
+
+       ⛔⛔ E «DOPO `riga0`» NON BASTA: vedi il riquadro di `registro_posato`.
+          Se la sessione del giro PRIMA scrive il suo «conto finale» dopo che
+          `riga0` e' stata presa, quella riga cade dentro la finestra e viene
+          letta come se fosse mia.  ⇒ `n0` = quante righe di «conto finale»
+          c'erano quando questo giro e' cominciato, e qui si **aspetta** che ne
+          compaia una in piu'.  Se non compare, «NIENTE DA LEGGERE» — che ora
+          e' MUTO, non verde."""
+    if n0 is not None:
+        scade = time.time() + tetto
+        while conta_conti_finali() <= n0:
+            if time.time() >= scade:
+                return {"esito": "NIENTE DA LEGGERE — in %d s questo giro non ha "
+                                 "scritto nessun «conto finale» suo (sessione "
+                                 "rifiutata? ancora in chiusura?)" % int(tetto)}
+            time.sleep(1.0)
     rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio di .*conto finale' "
                       "| tail -1" % (riga0 + 1, LAV))
     r = out.strip()
@@ -488,6 +694,10 @@ def principale():
             if a.solo and a.solo not in nome:
                 continue
             print("\n-- %s · %s" % (nome, atteso))
+            # ⛔ PRIMA DI TUTTO: la sessione del giro prima dev'essere chiusa
+            #    davvero, o si legge il suo conto e si prende il suo posto in
+            #    faccia (`CONGEDO 0x0F`).  Vedi il riquadro di `registro_posato`.
+            n0 = registro_posato()
             riga0 = righe_registro()
             ok, q = guasta(regole)
             if not ok:
@@ -512,8 +722,11 @@ def principale():
                 continue
             print("    tc:", " ".join(q.split("\n")[:2])[:160])
             c = cliente(nome, "contenitore", a.secondi)
+            # ⛔ La perdita VERA si legge ADESSO: il gradino dopo azzera i
+            #    contatori del `netem` con il suo `tc qdisc del`.
+            pv = perdita_vera()
             g = giudica(nome)
-            sv = conti_del_server(riga0)
+            sv = conti_del_server(riga0, n0)
             for r in (c or {}).get("conti", {}).values():
                 print("   ", r)
             print("    SERVER:", json.dumps(sv, ensure_ascii=False))
@@ -539,17 +752,39 @@ def principale():
                 "resa": g.get("resa_campioni"),
                 "purezza": (g.get("tono") or {}).get("purezza"),
                 "spediti_dal_server": sv.get("spediti"),
+                # ⚠ La perdita LETTA da `tc -s qdisc`, non quella chiesta:
+                #   `a_resa_sul_filo` si tara su questa (vedi il suo riquadro).
+                "perdita_vera": pv,
             }
-            # ⛔ E se il server non ha spedito, il rosso NON e' della rete.
-            if numeri["spediti_dal_server"] == 0:
+            print("    netem: perdita davvero applicata = %s"
+                  % ("%.2f %%" % (pv * 100) if pv is not None
+                     else "(nessuna disciplina, o non letta)"))
+            # ⛔⛔ E SE IL CONTO DEL SERVER NON SI E' LETTO, IL GRADINO E' MUTO.
+            #     `[M]` 23 agosto 2026 — terzo caso della stessa forma dei due
+            #     curati stasera: `sv.get("spediti")` torna `None` quando il
+            #     «conto finale» non e' nel registro, `None == 0` e' **falso**,
+            #     e il gradino filava dritto al predicato.  ⇒ I predicati che
+            #     non guardano il server (`a_pulito`, `a_sorpassi`) davano
+            #     **verde** su un giro in cui il capo del server non era stato
+            #     letto affatto.  `CODER.md` §3.10: «non ho letto» non e'
+            #     «zero», e qui non e' nemmeno «verde».
+            if numeri["spediti_dal_server"] is None:
+                passa, perche = None, ("NIENTE DA GIUDICARE: il conto del SERVER "
+                                       "non si e' letto (%s)"
+                                       % sv.get("esito", "?"))
+            elif numeri["spediti_dal_server"] == 0:
+                # ⛔ E se il server non ha spedito, il rosso NON e' della rete.
                 passa, perche = False, ("il SERVER non ha spedito niente: il rosso "
                                         "non e' della rete guastata, e' nostro")
             else:
                 passa, perche = predicato(numeri)
-            print("    %s ATTESO: %s" % ("OK " if passa else "⛔ NO", perche))
+            print("    %s ATTESO: %s"
+                  % ("OK " if passa else ("⚠ MUTO" if passa is None else "⛔ NO"),
+                     perche))
             esiti.append({"profilo": nome, "regole": regole, "atteso": atteso,
                           "conti": conti, "server": sv, "giudizio": g,
-                          "numeri": numeri, "passa": passa, "perche": perche})
+                          "numeri": numeri, "passa": passa, "perche": perche,
+                          "esito": perche if passa is None else None})
     finally:
         tono_spegni()
         print("\n== ⛔ LA RETE SI RIMETTE COM'ERA")

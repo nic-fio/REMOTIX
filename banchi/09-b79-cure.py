@@ -97,6 +97,78 @@ a cambiare solo gli interruttori del server.  Tre bracci per ogni profilo:
     `giudizio=`), che nell'albero di lavoro ci sono e in HEAD no.
 
 ═══════════════════════════════════════════════════════════════════════════════
+⛔⛔ LA REVISIONE DEL 23 AGOSTO SERA — «quali numeri erano sporcati», VERIFICATO
+═══════════════════════════════════════════════════════════════════════════════
+
+La griglia a tre bracci di stasera e' girata mentre `_root_che_trascrive`
+avvolgeva `RETE.root` invece della `root` curata di b70 (⇒ il riquadro sopra
+quella funzione).  ⇒ Va detto quali numeri quella riga ha sporcato, e la risposta
+si LEGGE, non si suppone.  Sono tre verifiche, e nessuna e' un ragionamento:
+
+ 1. ⭐ **LA RIGA NON HA SPORCATO NIENTE SU QUESTA GRIGLIA — era un difetto ancora
+    da riscuotere.**  `[R]` alle 19:00 del 23 agosto `09-b70-ritmo.py` a HEAD
+    aveva ancora `def root(comando, tetto=300): return RETE.root(comando, tetto)`
+    (riga 1236): la cura di b70 e' delle 19:41, **dopo**.  ⇒ Avvolgere `RETE.root`
+    era allora identico ad avvolgere `B70.root`, e il difetto e' PROSPETTICO —
+    avrebbe morso il giro successivo, quello con b70 curato.  ⚠ E' esattamente il
+    motivo per cui va curato lo stesso: la sua faccia non cambia quando comincia
+    a mentire.
+ 2. ⭐ **LA `riga0` C'ERA, e i conti del server sono DI QUESTO GIRO.**  `[R]`
+    `09-b76-rete-cattiva.py` a HEAD (riga 297) sostituisce gia'
+    `B70.righe_registro` con la sua, che mette il redirect dentro un `bash -c`.
+    ⇒ Il difetto 2 di b70 (il `< file` che ruba lo stdin a `sudo -S`) **non ha
+    sparato**: b79 non passava nemmeno dalla funzione rotta.
+    `[M]` la controprova nei numeri, ed e' la firma opposta a quella cumulativa:
+    su tutte e 36 le caselle `righe_ciclo` sta fra **25 e 27** (un giro di 25 s) e
+    `attese_a_vuoto` fra **1 973 e 2 156** — costante, non in salita.  Su
+    `ritardo-30` A-B-C fa 2 015 / 2 006 / 2 016.  Il cumulativo si vede a occhio
+    (`[M]` b70: 4 041 contro 1 604, 2,5 volte, e in salita): qui non c'e'.
+ 3. ⭐ **IL CONTO DI UN ALTRO GIRO E' STRUTTURALMENTE IMPOSSIBILE QUI**, e non
+    per fortuna: `[R]` `07-b64-terreno.sh:106` fa `: > "$LAV/registro.log"` a ogni
+    `accendi`, e questo banco riaccende il server a **ogni braccio**.
+    `[M]` la controprova: nessuna coppia di caselle porta numeri identici dal
+    registro, e tre caselle (`perdita-3` A, `raffica-forte` A e B) hanno detto
+    **«NIENTE DA LEGGERE»** invece di riferire il numero del vicino — che e' la
+    prova che nella finestra non c'era nessun conto altrui da rubare.
+
+⭐⭐ E LA COSA CHE CONTA DI PIU', ed e' una divisione, non un'assoluzione:
+   **il verdetto non passa dal registro.**  `[R]` `p_spirale_spenta` (K′),
+   `p_ritmo_restituito` (F′) e `p_linea_sana` (S′) leggono solo `n["chiavi"]`,
+   `n["fotogrammi"]`, `n["quota_delta"]`, `n["fps"]`, `n["fps_finestra_min"]` e
+   `n["deriva_*"]` — tutti da `misura(giornale, …)`, cioe' dalla **traccia §11.1
+   del cliente**.  Dal registro del server vengono i quattro numeri che
+   CORROBORANO (`delta_non_spedito`, `chiave_aspetta`, `non_spediti`,
+   `abbandonati`) e nient'altro.
+   ⇒ «la spirale si spegne, ma solo col braccio C: chiavi da 51,7-88,1 % a
+     0,0-5,6 %» e «la linea sana non paga niente» non sono numeri del registro, e
+     non avevano nulla da cui essere sporcati.  ⚠ Rifare i cinque profili rossi
+     costa un'ora e non aggiunge niente (`LEZIONI.md`, processo proporzionato).
+
+⭐⭐ E UNA SOLA CASELLA SI E' RIFATTA LO STESSO — `ritardo-30` a tre bracci, che
+   e' il predicato che vale piu' di tutti («la linea sana non paga niente») e
+   costa otto minuti, non un'ora.  Non e' un dubbio sui numeri: e' la sola prova
+   che la catena CURATA gira davvero fino in fondo, e che le due guardie nuove
+   scattano.  `[M]` 23 agosto 2026 sera, stesso binario (md5 `eee17f40…`):
+
+     braccio    fps    peggior s   chiavi   deriva fine   deriva max
+        A     39,94/s     37,0      0,0 %      0,0 ms      10,1 ms
+        B     39,94/s     36,0      0,0 %      0,2 ms      11,0 ms
+        C     39,32/s     34,0      0,0 %     -0,1 ms       6,2 ms
+
+   ⇒ **S′ VERDE**: i tre bracci sono indistinguibili (B al 100 %, C al 98 %,
+     dentro il 5 % di rumore), zero chiavi ovunque, la deriva non si muove.
+     ⭐ E regge il confronto con le 19:00 (39,85 / 40,19 / 39,63): la stessa
+       risposta a otto minuti di distanza.
+   ⭐ La riprova nei conti del server, che e' quella che chiude la questione: le
+     righe della spirale del braccio A tornano **identiche** a quelle delle 19:00
+     (`chiave_aspetta` 1, `delta_non_spedito` 5, `abbandonato_in_coda` 1) e
+     `attese_a_vuoto` fa 2 019 / 2 016 / 2 025 contro 2 015 / 2 006 / 2 016.  Un
+     numero cumulativo non si riproduce; questi si riproducono.
+   ⭐ E le guardie nuove hanno parlato: `riga0` = 205 / 219 / 229, `p_registro_letto`
+     VERDE su tutt'e tre, `conti_finali` `[2, 4]` in ogni braccio — cioe' i due
+     conti dell'innesco erano gia' posati e il giro ne ha scritti due SUOI.
+
+═══════════════════════════════════════════════════════════════════════════════
 ⛔⛔ I PREDICATI DELLA COPPIA — SCRITTI PRIMA, e ne torna `(passa, perche)`
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -376,7 +448,7 @@ def importa(con_rete=True):
     B70 = B76.importa()          # ⭐ e' lui che aggancia la rete e il lucchetto
     RETE = B76.RETE
     LUC = B76.LUC
-    B70.root = _root_che_trascrive   # ⛔ vedi `_root_che_trascrive`
+    _aggancia_root()                 # ⛔ vedi `_root_che_trascrive`
     # ⛔⛔ E POI SI CONTROLLA CHE ABBIANO PRESO IL MIO AMBIENTE, non il loro.
     guai = []
     for nome, mio, suo in (("porta", PORTA, B76.PORTA), ("utente", UTENTE, B76.UTENTE),
@@ -394,6 +466,16 @@ def importa(con_rete=True):
 
 
 def root(comando, tetto=300):
+    """⛔ Anche la `root` di questo file passa dalla catena CURATA quando c'e'.
+
+    ⚠ I comandi di questo file si scrivono gia' tutti dentro un `bash -c "…"`
+      loro — e' la disciplina di `09-b76` — quindi qui non cambia un numero.
+      Ma la disciplina e' una convenzione, e una convenzione la dimentica il
+      prossimo che aggiunge una riga: `RETE.root` da sola gli darebbe uno `0`
+      plausibile invece di un errore (⇒ il riquadro sopra `_aggancia_root`).
+    """
+    if _ROOT_CURATA is not None:
+        return _ROOT_CURATA(comando, tetto)
     return RETE.root(comando, tetto)
 
 
@@ -409,11 +491,69 @@ def root(comando, tetto=300):
 # ⇒ Si registra qui l'uscita INTERA di ogni comando che lancia il cliente,
 #   **senza toccare il file di b70** (ci sono altri agenti): si sostituisce la
 #   sua `root` con una che passa la palla e trascrive.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔⛔ E QUEL «PASSA LA PALLA» E' IL POSTO PIU' PERICOLOSO DI QUESTO FILE:
+#      **A CHI** la passa decide se le cure del file sotto valgono ancora
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Fino al 23 agosto 2026 questa funzione chiamava **`RETE.root`**, cioe' saltava
+# `09-b70-ritmo.py:root()` e andava dritta al gradino di sotto.  ⛔ E' un difetto
+# che **non si vede leggendo nessuno dei due file**: qui la riga e' corretta (una
+# `root` che chiama una `root`), e li' la cura e' scritta e collaudata — solo che
+# nessuno la esegue piu'.  E' il secondo che questo progetto paga in una sera.
+#
+# ⛔ `RETE.root` (`07-b64-rete.py:238`) e' un solo `sudo` **davanti al comando
+#    nudo**:  `printf parola | sudo -S -p '' <comando>`.  Da li' vengono due
+#    difetti, e sono quelli che `09-b70` ha curato il 23 agosto:
+#      1. `sudo` copre **solo il primo anello** della catena: in `a && b > c` il
+#         `b` e il `>` girano da UTENTE, non da root.  `[M]` il lettore della
+#         traccia §11.1 non si scriveva, e §11.1 restava senza arbitro;
+#      2. un `< file` in coda **ruba lo stdin a `sudo -S`** (il redirect e' della
+#         shell e va all'ULTIMO comando della pipeline, che e' `sudo`): la parola
+#         non arriva, `sudo` esce 1, e il numero torna **0 in silenzio**.  `[M]`
+#         `righe_registro()` tornava 0, `conti_del_server()` leggeva il registro
+#         **dall'accensione del server** invece che dal giro, e `attese_a_vuoto`
+#         diventava cumulativo: 4 041 contro 1 604 su un giro fermo, 2,5 volte.
+#
+# ⭐ `09-b70.root()` cura tutt'e due con una riga sola — `catena_root()`, cioe'
+#    **un** `sudo` e la catena intera dentro la SUA `bash -c`.  ⇒ Chi avvolge per
+#    trascrivere deve avvolgere **quella**, o si riporta dentro i due difetti
+#    passando da una funzione che si chiama come la curata.
+#
+# ⛔⛔ E NON BASTA SCRIVERE `B70.root`: quando questo file arriva, `B70.root` **e'
+#     gia' stato sostituito** da `09-b76-rete-cattiva.py:416`, con un avvolgimento
+#     che a sua volta chiama `RETE.root`.  Avvolgere `B70.root` allora vorrebbe
+#     dire avvolgere il difetto di un altro e chiamarlo cura.  ⇒ Si ricostruisce
+#     la catena curata **dai suoi pezzi** — `B70.catena_root` + `RETE.rem` — che
+#     sono quello che `09-b70.root()` fa, e non passano da nessun sostituto.
+#
+# ⚠ E si aggancia UNA VOLTA SOLA: `appaia()` fa 21 caselle nello stesso processo
+#   e `importa()` puo' essere chiamata piu' di una volta.  Un avvolgimento
+#   ripetuto non sbaglia i numeri, ma annida 21 chiamate e la prima diagnosi
+#   diventa illeggibile.
 ULTIMO_CLIENTE = {"testo": ""}
+_ROOT_CURATA = None
+
+
+def _aggancia_root():
+    """Installa il trascrittore SOPRA la `root` curata di b70 — una volta sola."""
+    global _ROOT_CURATA
+    if _ROOT_CURATA is not None:
+        return
+    if not hasattr(B70, "catena_root"):
+        raise SystemExit(
+            "⛔ NON MISURO: «09-b70-ritmo.py» non ha `catena_root()`, cioe' e' la "
+            "versione con `sudo -S` davanti al comando nudo.  Su quella un "
+            "`< file` in coda ruba la parola a sudo e i conti del server "
+            "diventano cumulativi dall'accensione (2,5 volte, `[M]` 23 ago 2026). "
+            "Si allinea l'albero prima di misurare.")
+    _ROOT_CURATA = lambda c, tetto=300: RETE.rem(B70.catena_root(c), tetto)
+    B70.root = _root_che_trascrive
 
 
 def _root_che_trascrive(comando, tetto=300):
-    rc, out, err = RETE.root(comando, tetto)
+    rc, out, err = _ROOT_CURATA(comando, tetto)
     if "01-b3-cliente.py" in comando:
         ULTIMO_CLIENTE["testo"] = out + err
     return rc, out, err
@@ -497,6 +637,95 @@ def md5_binario():
     """⚠ Il binario che misuro dev'essere quello che credo, e si dichiara."""
     rc, out, _ = root("md5sum %s/src/remotix" % ALB)
     return out.strip().split()[0] if out.strip() else "?"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔ LA SESSIONE DI PRIMA DEV'ESSERE FINITA DI CHIUDERSI — e non e' ovvio
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# `[M]` 23 agosto 2026, trovato su `07-b64-rete.py` (`registro_posato()`, riga
+# 497) e portato qui **senza toccare quel file**: la chiusura di una sessione e'
+# LENTA quando il pacer ha una coda — il profilo al 10 % di perdita ci ha messo
+# **29 s in piu'** degli altri a scrivere il suo «conto finale».  ⇒ Due guasti,
+# e hanno la stessa radice:
+#
+#  1. **il conto letto e' di un altro giro.**  `riga0` del giro nuovo si prende
+#     PRIMA che la riga del giro vecchio sia scritta; quella riga cade dentro la
+#     finestra, e `conti_del_server()` — che prende l'ULTIMA dopo `riga0` — la
+#     legge come sua.  `[M]` tre profili di fila hanno riferito «spediti 4999 ·
+#     rifiutati 3 · rimandati 7410», che era il conto del PRIMO dei tre;
+#  2. **il posto e' ancora occupato.**  Finche' la sessione vecchia non si e'
+#     chiusa, §4.4-bis rifiuta la nuova con `CONGEDO 0x0F GIA_ATTIVA_REMOTA`, e
+#     la serratura dura fino a `SILENZIO` = 30 s (`09-b78-apertura.py` §4).
+#     ⇒ Un giro puo' fallire per colpa del giro PRIMA, e tre bracci misurati di
+#       fila smettono di essere confrontabili.
+#
+# ⭐⭐ E QUI DENTRO IL PRIMO E' STRUTTURALMENTE IMPOSSIBILE — si scrive perche'
+#     e' un fatto verificato, non una speranza: `07-b64-terreno.sh:106` fa
+#     `: > "$LAV/registro.log"` a OGNI `accendi`, e questo banco riaccende il
+#     server a **ogni braccio** (`riavvia()`).  ⇒ Nella finestra di un braccio non
+#     c'e' nessun conto del braccio prima da rubare, e il posto e' libero perche'
+#     il processo che lo teneva e' morto.  `[M]` la controprova sui 36 giri del
+#     23 agosto: nessuna coppia di caselle porta numeri identici dal registro, e
+#     tre caselle (`perdita-3` A, `raffica-forte` A e B) hanno detto «NIENTE DA
+#     LEGGERE» invece di riferire il numero del vicino.
+#
+# ⛔ Quel che RESTA scoperto, ed e' per questo che le due funzioni ci sono: dentro
+#    UN braccio prima del giro c'e' la **sessione d'innesco**, e il suo «conto
+#    finale» sta nello stesso registro.  Se arrivasse tardi cadrebbe nella
+#    finestra del giro.  ⇒ Si aspetta che il conto stia FERMO, e poi il giro
+#    PRETENDE una riga sua.
+def conta_conti_finali():
+    rc, out, _ = root("bash -c \"grep -ac 'conto finale' %s/registro.log "
+                      "2>/dev/null || true\"" % LAV)
+    t = out.strip()
+    return int(t) if t.isdigit() else None
+
+
+def registro_posato(tetto=60.0, quiete=3.0):
+    """Aspetta che il conto delle righe «conto finale» stia fermo `quiete` s.
+
+    Torna quel conto — e' l'`n0` da cui il giro nuovo pretende una riga SUA — o
+    `None` se il registro non si e' letto (⛔ e `None` non e' zero).
+    """
+    n = conta_conti_finali()
+    if n is None:
+        return None
+    fermo, scade = 0.0, time.time() + tetto
+    while time.time() < scade and fermo < quiete:
+        time.sleep(1.0)
+        m = conta_conti_finali()
+        if m is None:
+            return None
+        fermo = (fermo + 1.0) if m == n else 0.0
+        n = m
+    if fermo < quiete:
+        _dub("⚠ in %.0f s il registro non si e' posato: qualcuno sta ancora "
+             "chiudendo una sessione" % tetto)
+    return n
+
+
+def conto_e_mio(n0, n):
+    """⛔ Il «conto finale» dentro `n["server"]` e' di QUESTO giro, o no?
+
+    ⇒ Se il conto delle righe non e' cresciuto, la riga letta e' di prima (al
+      peggio dell'innesco) e i quattro numeri del lato server **non vanno
+      giudicati**.  Non si cancellano: si marcano, che e' la differenza fra
+      «non ho letto» e «non e' successo niente» (`LEZIONI.md` §1.9).
+    """
+    s = (n or {}).get("server") or {}
+    if n0 is None:
+        s["conto_dubbio"] = ("⛔ non so quanti «conto finale» c'erano prima del "
+                             "giro: non giudico i numeri del lato server")
+        return False
+    n1 = conta_conti_finali()
+    if n1 is None or n1 <= n0:
+        s["conto_dubbio"] = ("⛔ questo giro non ha scritto un «conto finale» SUO "
+                             "(erano %s, sono %s): la riga letta e' di prima — "
+                             "NON giudico i numeri del lato server" % (n0, n1))
+        return False
+    s["conti_finali"] = [n0, n1]
+    return True
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -973,9 +1202,14 @@ def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
         voce["esito"] = "LA SCENA NON E' PARTITA"
         return voce
     prima = B76.conti_qdisc()
+    # ⛔ La sessione d'innesco dev'essere FINITA di chiudersi, o il suo «conto
+    #    finale» cade nella finestra di questo giro (⇒ `registro_posato`).
+    n0 = registro_posato()
     riga0 = B76.righe_registro()
     n = B70.giro("%s-%s" % (nome_profilo, etichetta), "barra",
                  B70.TELA_PIENA, secondi)
+    if not conto_e_mio(n0, n):
+        _dub("⚠ %s" % (n.get("server") or {}).get("conto_dubbio"))
     B76.scena_spegni()
     dopo = B76.conti_qdisc()
     # 7 · i contatori attorno al giro e le righe `rete-quic`
@@ -984,6 +1218,19 @@ def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
     quic = leggi_rete_quic(riga0)
     voce["quic"] = quic
     B70.stampa_giro(n)
+    # ⛔⭐ LA RETE DI SICUREZZA DI `09-b70` SI USA, NON SI AGGIRA: e' il predicato
+    #    che si rifiuta di dire qualcosa sul lato server quando il registro non
+    #    e' di questo giro — cioe' l'unica cosa che avrebbe preso da sola il
+    #    difetto della `root` avvolta male.
+    # ⚠ E si dichiara che cosa protegge: K′ e F′ NON passano di qui (vivono sulla
+    #   traccia §11.1 del cliente), quindi un rosso suo non tocca il verdetto —
+    #   marca come non giudicabili i quattro numeri di CORROBORAZIONE
+    #   (`delta_non_spedito`, `chiave_aspetta`, `non_spediti`, `abbandonati`).
+    if hasattr(B70, "p_registro_letto"):
+        pr, perche_pr = B70.p_registro_letto(n)
+        (_ok if pr else (_dub if pr is None else _ko))(
+            "il registro e' di QUESTO giro (§1.9): %s" % perche_pr)
+        voce["registro_letto"] = {"passa": pr, "perche": perche_pr}
     _inf("QDISC   attorno al giro: %s" % json.dumps(delta))
     stampa_rete_quic(quic)
     # ⛔ La serratura di §8.2: se il posto era occupato, questa casella non e'
@@ -1193,9 +1440,12 @@ def stacco(a):
         if not usc:
             _ko("la scena non parte")
             return 2
+        n0 = registro_posato()      # ⛔ vedi `registro_posato`
         riga0 = B76.righe_registro()
         t0 = time.time()
         n = B70.giro("stacco-raffica-forte", "barra", B70.TELA_PIENA, a.secondi)
+        if not conto_e_mio(n0, n):
+            _dub("⚠ %s" % (n.get("server") or {}).get("conto_dubbio"))
         B76.scena_spegni()
         B70.stampa_giro(n)
         fuori["giro"] = n
