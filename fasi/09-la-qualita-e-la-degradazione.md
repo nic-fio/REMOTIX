@@ -48,6 +48,18 @@ indietro»*, e la fase fu **azzerata**.
 > domani.** I dettagli, con le ore e le scene, stanno sotto: §0 lo studio d'apertura, §1 il banco,
 > §3 e §3-bis le misure, §4 il crollo, §5 le cure, §6 il lavoro che resta, §7 le previsioni,
 > §8 quel che non ha funzionato, §10 le contraddizioni.
+>
+> ⛔⛔ **E LA SERA DEL 23 AGOSTO LE CURE SONO STATE MISURATE: sta in §13, e cambia sei righe di
+> questa sintesi.** In due parole, e i dettagli là:
+> ⭐⭐⭐ **la cura della memoria REGGE** e il crollo si riproduce **due volte su due**, con la pila
+> letta dal core (§13.1) · ⭐⭐⭐ **il regolatore del ritmo spegne la spirale**: zero chiavi e zero
+> abbandoni dove prima ce n'erano 18 e 24 (§13.3) · ⛔ **la soglia da sola NON mantiene quel che
+> P3 prometteva**, e va tarata **al contrario** di come P3 diceva (§13.2) · ⭐⭐ **il tetto di
+> banda sopravvive ai suoi due rossi** (§13.4) · ⛔⛔ **tutti i numeri di banda di §3.8 sono
+> HEVC, e il prodotto manda H.264**: stessa scena, **21,18 contro 7,92 Mbit/s** (§13.5) ·
+> ⛔⛔ **il 4K regge 41 fot/s, non 60**, e il livello prodotto **sfora** quello del client
+> (§13.6) · ⭐⭐⭐ **§10.2 è decisa: la spirale sul desktop vero non morde fino a 10 Mbit/s**
+> (§13.8).
 
 ## S.1 · ⛔ Il fatto più grave della giornata: **il prodotto è morto, e la causa è provata**
 
@@ -1911,3 +1923,691 @@ per rispondere ad A/B, e **col gradino** per misurare la cura: sono **due giri, 
 **soglia sulla coda** (`--sgombra-soglia-ms`) e il **tetto di banda** (`--tetto-banda-mbit`). ⚠ Tutte
 e due cambiano quel che si VEDE, tutte e due nascono spente, e ⛔ **quale sia il male minore non lo
 decide una misura**: è esattamente la lezione dell'azzeramento della fase 10 di v1.
+
+---
+
+# §13 · ⭐⭐ IL SECONDO GIRO DI MISURE — *23 agosto 2026, pomeriggio-sera*
+
+> ⛔ **Questa sezione si riempie strada facendo**, un numero alla volta con l'ora accanto.
+> Le previsioni sono quelle di **§7.4 (P1…P9)** e della sintesi **S.5**: qui, accanto a ogni
+> numero, c'è **l'atteso**.
+
+## 13.0 ⛔ DA CHE CODICE VENGONO QUESTI NUMERI — gli `md5`, e perché stanno in testa
+
+⛔ **Il primo fatto della sera è che l'albero della 7920 era VECCHIO.** `/media/REMOTIX/src/09c-src`
+portava un `webtransport.c` del 23 agosto **09:23** (`md5 958170e2…`) — cioè **senza il regolatore
+del ritmo** (cura 6): mancavano `video_ritmo_scesi`, `ritmo_frena()`, `ritmo_ciclo()`,
+`wt_ritmo_adattivo()`, **506 righe di diff**. ⇒ Ogni misura presa su quel binario con
+`--ritmo-adattivo` avrebbe dato *«zero discese»* **perché l'opzione non esisteva**, non perché il
+regolatore non scattava. ⚠ È esattamente il difetto D5 di questa fase, con un'altra faccia.
+
+⭐ **Rifatti tutt'e due gli alberi dal codice committato `f90eb21`**, alle **15:05-15:20 locali**:
+
+| albero | `webtransport.c` | che cos'è |
+|---|---|---|
+| `/media/REMOTIX/src/09c-src` | `md5 4785abf10e50bf4d86ce638a21bd685b` | ⭐ **il CURATO** — identico byte per byte a `src/webtransport.c` di `f90eb21` |
+| `/media/REMOTIX/src/09c-mal-src` | `md5 69e2d57fac73f48ce9e0ef6c0e628add` | ⛔ **il MALATO** — l'unica differenza è `coda_uccidi()` al posto di `coda_consegna()` (`:6421`), cioè il difetto delle 08:28:09 rimesso apposta: **è il controllo positivo** |
+
+Gli altri sorgenti sono identici nei due alberi e al commit:
+`codificatore.c md5 5a29b80787042b0c6511c74d159c1bd0` · `main.c md5 2aa34655c19e20b5f0acf35c9c0af484` ·
+`pagina.html md5 e010d615f10643d5c6e2a2c01ae5ff25`.
+
+⚠ **E `--pagina` adesso punta al PROPRIO albero**: il server acceso a metà pomeriggio serviva
+`/media/REMOTIX/src/09-src/src/pagina.html`, cioè la pagina **prima** della cura 4.
+
+## 13.0-bis ⛔ DUE INCIAMPI DELLA RICOSTRUZIONE — *15:05-15:20*, e il primo è **la trappola di questa fase**
+
+1. ⛔⛔ **`enter.sh` è rimasto appeso 13 minuti su `sudo`, e la causa non è quella che sembra.**
+   Il copione dava la parola **una volta** (`printf 'nicfio\n' | sudo -S -v`) e poi chiamava
+   `bash /media/REMOTIX/enter.sh --root '…'`, contando che la credenziale fosse in cassa.
+   ⛔ **Non lo è**: `enter.sh` fa il suo `sudo -n true`, che **fallisce**, e ricade su
+   `sudo -v -S -p 'Password sudo: '` — che si mette a leggere dal proprio standard input, cioè da
+   una pipe di `ssh` **aperta e vuota**. ⇒ processo in `do_wait`, **zero righe di registro, zero
+   figli, carico 0,08**: la faccia di un compilatore lento.
+   ⭐ **Perché la credenziale non si eredita**: `sudo` di serie tiene il segno **per terminale**
+   (`timestamp_type=tty`), e **senza tty ricade sul processo padre**. Due processi fratelli sono
+   due padri diversi ⇒ due casse diverse. ⛔ **La forma che funziona è quella scritta in `enter.sh`
+   stesso, riga 17**: `printf '%s\n' "$PASSWORD" | bash /media/REMOTIX/enter.sh "…"` — la parola va
+   data **a `enter.sh`**, non a un `sudo` di prima.
+   ⇒ Rifatto così, **i due alberi si sono costruiti in 7 secondi l'uno**, `make -j` e tutto
+   (`13:18:16 → 13:18:30` UTC), con `OK make e' uscito 0` e le dodici marche dentro il binario.
+2. ⚠ **Il `tar` del codice non basta a far girare un banco.** `src` + `banchi/rcp` costruisce, ma
+   la sessione di prova la apre `banchi/01-b3-cliente.py`, che non c'era ⇒
+   `SESSIONE MORTA prima di aprirsi — python3: can't open file …`. ⭐ Rosso **immediato e
+   onesto**, in 20 secondi: il banco ha detto *quale* file mancava. ⇒ copiato tutto `banchi/*.py`
+   `*.sh` in tutt'e due gli alberi (`01-b3-cliente.py md5 13e68d19ed44298b7926cded53affdda`,
+   **lo stesso** dei due alberi del mattino: il metro non è cambiato).
+
+## 13.1 ⛔⭐⭐ P1 — LA CURA DELLA MEMORIA: i due binari appaiati
+
+⛔ **La forma della prova**, e non è negoziabile: *«il curato non è morto»* non è un risultato — ha
+la stessa faccia di uno stimolo che non stimola. ⇒ **stessa porta, stessa cartella di lavoro,
+stessa scena, stessa perdita**, e l'unica variabile è la riga `webtransport.c:6421`.
+
+⭐ **La trappola di glibc è verificata nel processo VIVO**, non nel copione:
+`MALLOC_MMAP_THRESHOLD_=32768 MALLOC_PERTURB_=165` letti da `/proc/PID/environ`.
+
+### 13.1.1 ⛔⭐⭐⭐ IL MALATO È MORTO — *23 agosto 2026, 13:21:11 UTC*, e **il caso è chiuso senza margine**
+
+`[M]` **Braccio MALATO** (`09c-mal-src`, `remotix md5 53a7e3be82f2a1f43afe6ead4398012d`), scena
+**film con la grana a schermo intero, 2560×1080**, sessione di `prova2`, trappola glibc armata e
+verificata nel processo vivo.
+
+| | atteso (**P1**) | `[M]` misurato |
+|---|---|---|
+| muore? | ⛔ **sì, o la diagnosi di §4 è sbagliata** | ⭐ **SÌ**, alle **13:21:11** |
+| il segnale | `SEGV`, `error 4` | ⭐ `segfault at 7fc39818e4ca ip 00007fc39f338b49 **error 4** in libc.so.6[**162b49**…]` |
+| dove | sempre in `__memmove_avx_unaligned_erms` | ⭐ **lo stesso identico scostamento `162b49`** del crollo delle 08:28:10 |
+| il core | §4.7 punto 1 lo voleva **assoluto** | ⭐ **c'è**: `core.remotix.86418…`, **48 529 408 byte** |
+
+⭐⭐⭐ **E il core ha dato la pila, cioè quel che §4.8 dichiarava `[?]` — «la ritrasmissione non è
+stata vista con gli occhi».** Adesso lo è:
+
+```
+#0  __memmove_avx_unaligned_erms          ← libc, rip 0x…b49
+#1  ngtcp2_cpymem                          ← ngtcp2_pkt.c:1619
+#2  ngtcp2_pkt_encode_stream_frame
+#3  ngtcp2_ppe_encode_frame
+#4  conn_write_pkt
+#5  ngtcp2_conn_write_vmsg
+#6  ngtcp2_conn_writev_stream_versioned
+#7  wt_scrivi (…) at webtransport.c:6314   ← NOSTRO
+#9  scrivi_connessione at trasporto.c:422
+#12 main at main.c:1395
+```
+
+⛔ **È la catena scritta a mano in §4.8, riga per riga, adesso letta dal core.** ⇒ il `[?]` di §4.8
+**si chiude**: la causa non è più *«probabile con la riga»*, è **vista**.
+
+⭐⭐ **E c'è di più — e cambia la ricetta.** L'ultima riga del registro, 300 ms prima della morte:
+
+```
+13:21:10.776 rcp  fotogramma 27 SPEDITO: delta 0x0302, codec 1, 2560x1080, 516782 byte di dati, stream 119, FIN
+```
+
+⛔ **`516 782` byte — il gemello del `525 298` delle 08:28:09.** ⇒ **basta un fotogramma grosso: la
+perdita non serve.** Il server è morto **al fotogramma 27, in 13 secondi di sessione**, e
+⛔ **`netem loss 5%` non era ancora stato applicato** (arriva 13 s dopo, alle 13:21:24). ⚠ La
+ricetta **B** di §4.5 chiedeva la perdita vera; la **A** chiedeva il client congelato: `[M]`
+**non serve né l'una né l'altra**. Con `MALLOC_MMAP_THRESHOLD_=32768` bastano **un mezzo mega di
+delta e loopback pulito** — perché un fotogramma da 516 KB non entra in un pacchetto e ngtcp2
+rilegge **il nostro puntatore** al pacchetto dopo, che nel malato è già `munmap`-ato.
+⇒ **La ricetta più corta di tutte, e la più severa**: 27 fotogrammi contro **45 005**.
+
+### 13.1.2 ⭐⭐⭐ IL CURATO HA RETTO — *13:22:35 → 13:25:03*, e lo stimolo era **più duro**
+
+`[M]` **Braccio CURATO** (`09c-src`, `remotix md5 162d2d105cbe930e7921a7041053f5e7`), **identico in
+tutto** al braccio malato: stessa porta 7920, stessa cartella `tmp/09c`, stessa sessione di
+`prova2` a 2560×1080, stesso film con la grana, stessa trappola glibc verificata nel processo vivo.
+
+| | MALATO `09c-mal-src` | ⭐ CURATO `09c-src` |
+|---|---|---|
+| fotogrammi spediti | ⛔ **27**, poi morto | ⭐ **1 463** |
+| taglia mediana | — | **302 984** byte |
+| **taglia massima** | 516 782 (l'ultimo) | ⭐⭐ **537 063** byte — ⛔ **più grosso dei 525 298 che l'avevano ucciso stamattina** |
+| fotogrammi sopra i 32 KiB nei primi 6 s | 0 letti (morto prima) | ⭐ **173 su 173** — cioè **ogni** fotogramma passava dalla trappola |
+| `netem loss 5%` | ⛔ **non è nemmeno servito** | ⭐ **120 s interi** con la perdita addosso |
+| esito | ⛔ `SEGV` a 13:21:11 | ⭐ **VIVO**, nessun core, nessuna riga in `dmesg` |
+
+⛔⛔ **E lo stimolo del curato è stato PIÙ severo di quello che ha ucciso il malato**, non meno: più
+fotogrammi (1 463 contro 27), più grossi (fino a 537 063 byte), e per giunta **con il 5 % di
+perdita**. ⇒ *«il curato non è morto»* qui **non** ha la faccia di uno stimolo che non stimola.
+
+### 13.1.3 ⭐ LA GRANDEZZA CHE DICE SE LA CURA PERDE MEMORIA — e non ne perde
+
+La riga della chiusura, `13:25:35.869` (`webtransport.c:5789`):
+
+```
+⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di ngtcp2_conn_writev_stream):
+   punta 537063 byte, residuo alla chiusura 31, e 1185696 byte ancora da spedire in coda
+```
+
+| grandezza | atteso | `[M]` |
+|---|---|---|
+| `byte_in_volo_max` (la punta) | ⭐ **oscilla**, non cresce | **537 063** byte = **esattamente un fotogramma**, il più grosso della sessione. ⛔ In 1 463 fotogrammi sono passati **~443 MB**: se trattenesse senza liberare, la punta sarebbe quella. ⇒ **la cura libera** |
+| residuo alla chiusura | **zero** | ⚠ **31 byte** — non zero, ma **31**: la coda di uno stream ancora non riscontrato nell'istante di uno strappo brutale (il cliente ucciso, col 5 % di perdita addosso). ⛔ **Lo dichiaro invece di arrotondarlo**: è il verde, non il pieno verde |
+| byte ancora in coda | — | 1 185 696 — quel che non era ancora partito quando il cliente è sparito |
+
+⭐ **E la stessa riga di chiusura porta il numero che serve a P2**, con l'interruttore **spento**:
+
+```
+⭐ FASE 9, la soglia della coda video: spenta (I6) (0 ms) — delta TENUTI 0,
+   abbandonati per soglia 594, e NON ACCETTATI per credito mancato 0
+```
+
+⇒ ⛔ **594 delta abbandonati** in 178 s di film duro col 5 % di perdita, e **`credito mancato` = 0**:
+il debito **non** viene dalla causa 4 di §2.3.
+
+### 13.1.4 ⛔ VERDETTO SU P1 — **la previsione ha retto, e più di quanto chiedeva**
+
+| | |
+|---|---|
+| **il crollo si riproduce** | ⭐ **SÌ** — e con una ricetta **più corta** di tutt'e tre quelle di §4.5 |
+| **la cura regge** | ⭐ **SÌ**, appaiata, sullo stesso ferro e con lo stimolo più duro |
+| **la causa è vista, non dedotta** | ⭐ **SÌ** — la pila dal core chiude il `[?]` di §4.8 |
+| **la memoria non si perde** | ⭐ **SÌ** — la punta vale un fotogramma su ~443 MB passati |
+
+⚠ **E i due difetti del banco che vanno detti** (nessuno cambia l'esito, tutt'e due cambiano il
+banco):
+1. `09-b73-memoria.py` **legge la riga `byte TENUTI` troppo presto** — la cerca 3 s dopo la morte del
+   cliente, e il server la scrive quando smonta la sessione WebTransport. ⇒ il banco ha stampato
+   *«(nessuna riga «byte TENUTI»)»* mentre la riga **c'era**, scritta 3 secondi dopo. ⛔ È la forma
+   cattiva: **un'assenza che sembra un risultato**;
+2. `b71.pulizia()` **non guarda Firefox**. Il suo `pgrep` copre `04-b30-scena`, `01-b3-cliente`,
+   `b70-ritmo`, `b65-datagram` — ⛔ **non `firefox`**. ⇒ per tutt'e due i bracci è rimasto vivo un
+   Firefox orfano del banco `09-b74` nella sessione di `prova` (uid 1001), e il banco ha detto
+   *«altri banchi vivi: nessuno»*. ⚠ Non tocca l'esito (è la **stessa** sporcizia nei due bracci, ed
+   era su un'altra sessione), ma è **precisamente il difetto che ha già prodotto oggi numeri
+   plausibili e sbagliati**.
+
+### 13.1.5 ⭐⭐ IL CROLLO SI RIPRODUCE **DUE VOLTE SU DUE** — e il terzo inciampo del banco
+
+⛔ **Il core di 13.1.1 non c'è più, e l'ho cancellato io senza volerlo.** `09-b73-memoria.py`
+comincia ogni braccio con `rm -f registro.log core.*` — serve a non mescolare i due giri, ⛔ **ma
+butta anche la prova del braccio prima.** ⇒ Facendo girare il braccio *curato* ho distrutto il core
+del *malato*. ⭐ La **pila** era già stata letta e sta qui sopra: quel che si è perso è il file.
+
+⭐⭐ **E rifarlo è costato due minuti, con un guadagno**: il crollo si è riprodotto **una seconda
+volta, identico**.
+
+| | primo giro | ⭐ secondo giro |
+|---|---|---|
+| ora | **13:21:11** | **14:03:24** |
+| segnale | `segfault … error 4 in libc.so.6[**162b49**…]` | `segfault … error 4 in libc.so.6[**162b49**…]` |
+| tempo per morire | **0,3 s** dall'inizio dell'attesa | **0,3 s** |
+| core | (cancellato) | ⭐ `core.remotix.110832.1787493803`, **48 525 312 byte** |
+
+⇒ ⛔ **Due su due, stesso scostamento in libc, stesso codice d'errore.** Non è un caso raro da
+1 su 45 005: **con la trappola armata è deterministico.**
+
+⚠ **La correzione da fare al banco** (non l'ho fatta: `src/` e i banchi non si toccano stasera):
+`09-b73` deve cancellare **solo il registro**, e mettere i core in una cartella per braccio.
+
+## 13.2 ⭐⭐ P2/P3 — LA SOGLIA SULLA CODA, sul gradino, appaiata
+
+**Il giro**: 8 s larga → **3 s a 10 Mbit/s** → 17 s larga, scena `barra`, **1920×1080**, sessione di
+`prova2`, `netem` solo sulla 7920 di `lo` col guardiano armato. ⛔ Trappola glibc **spenta**
+(`MALLOC=no`) in tutt'e due i bracci: `MALLOC_MMAP_THRESHOLD_` è lenta, e lasciarla accesa
+avrebbe misurato **lei** invece della soglia.
+
+### 13.2.1 `[M]` IL BRACCIO A INTERRUTTORE SPENTO — *13:27:20 → 13:28:0x*, e serve da metro
+
+`⭐ FASE 9, la soglia della coda video: **spenta (I6) (0 ms)**` — letto dal registro del server.
+
+| s | fot | chiavi | abbandoni §5.1 | filo Mbit/s | fase |
+|---|---|---|---|---|---|
+| 5-7 | 40-41 | **0** | **0** | 21,1-21,5 | larga |
+| **8** | 21 | ⛔ **6** | ⛔ **6** | 9,87 | **stretta** |
+| **9** | 25 | ⛔ **6** | ⛔ **6** | 9,14 | **stretta** |
+| **10** | 22 | ⛔ **6** | ⛔ **7** | 9,87 | **stretta** |
+| 11 | 28 | 4 | 3 | 16,87 | (ritorno) |
+| 12-27 | 39-42 | **0** | **0** | 20,4-23,0 | larga |
+
+⭐ **`abbandoni` = `chiavi`, uno a uno, a ogni secondo** (6↔6, 6↔6, 7↔6): §3.10 si riproduce
+**identico**, ed è il meccanismo della spirale visto in diretta.
+⭐ **E il ritorno è immediato**: dal secondo 12 si è già a 40/s con **zero** chiavi — nessuna
+isteresi, nessuno strascico in 16 s.
+⚠ **Un numero che NON coincide col «prima» citato**: `[M]` di stamattina dava **13-14 fot/s** nei
+secondi 8-10; qui sono **21-25**. ⛔ Lo dichiaro invece di lisciarlo — il metro del *prima* e quello
+di adesso non sono lo stesso giro, e **il paragone che vale è quello appaiato di qui sotto**, preso
+a mezz'ora di distanza sulla stessa porta, stessa scena, stessa tela, stesso binario.
+
+### 13.2.2 ⛔⭐ IL BRACCIO CON `--sgombra-soglia-ms 100` — *13:28:26 → 13:29:1x*: **il meccanismo gira, l'effetto promesso NON arriva**
+
+`⭐ FASE 9, soglia della coda video (§5.1): **100 ms** … Impostata da: main.c, dalla riga di comando`
+— letto dal registro del server, non dedotto dal comando.
+
+| s | fot **spenta → 100 ms** | chiavi **spenta → 100** | abbandoni **spenta → 100** |
+|---|---|---|---|
+| 5-7 (larga) | 39-41 → **39-40** | 0 → **0** | 0 → **0** |
+| **8** | 21 → **29** | 6 → **4** | 6 → **6** |
+| **9** | 25 → **26** | 6 → **5** | 6 → ⛔ **9** |
+| **10** | 22 → **21** | 6 → **5** | 7 → **5** |
+| 11 (ritorno) | 28 → **34** | 4 → **3** | 3 → **3** |
+| 12-27 (larga) | 39-42 → **39-42** | 0 → **0** | 0 → **0** |
+
+| la previsione (**P3** e S.5) | `[M]` | esito |
+|---|---|---|
+| fot/s nei sec 8-10 **≥ 25** | **29 · 26 · 21** | ⚠ **due su tre** |
+| chiavi/s **≤ 2** | **4 · 5 · 5** | ⛔ **NO** |
+| abbandoni/s **≤ 2** | **6 · 9 · 5** | ⛔ **NO** — e al secondo 9 sono **saliti** |
+| secondi 7 e 12 **identici** a interruttore spento | 40/39 e 40/39, **0 chiavi** in tutt'e quattro | ⭐ **SÌ — la cura è INERTE sulla linea larga** |
+| ritorno **≥ 32/s** entro un secondo | sec 11 **34/s**, sec 12 **39/s** | ⭐ **SÌ**, e meglio del braccio spento (28) |
+| ⭐ **`arretrato` deve salire a 2-3** (oggi zero per costruzione) | **2 (14 volte) · 3 (19) · 4 (6)** | ⭐⭐ **SÌ, e arriva a 4** |
+
+⭐⭐ **E il meccanismo si vede lavorare, riga per riga**: **17 attraversamenti SOPRA** la soglia e
+**17 ritorni SOTTO** nei 3 secondi di stretta, con le righe che dicono da sé che cosa hanno fatto:
+
+```
+⛔ la coda del video passa SOPRA la soglia (135475 byte = 114 ms, soglia 100 ms,
+   dalla banda misurata (cwnd/rtt)), arretrato 2 delta: da qui i piu' vecchi si abbandonano
+⭐ la coda del video torna SOTTO la soglia (100369 byte = 84 ms, soglia 100 ms):
+   i 2 delta arretrati si TENGONO — §5.1 dice PUO', non DEVE
+```
+
+### 13.2.3 ⛔⛔ LA DIAGNOSI, E LA CURA VA TARATA NEL VERSO **OPPOSTO** A QUELLO PREVISTO
+
+⛔ **P3 aveva già scritto il rimedio per questo caso, e lo scriveva al contrario**: *«i fot/s non
+salgono ⇒ soglia troppo alta, **si scende a 50**»*. ⭐ **I byte dicono di salire.** Ecco perché — i
+**17** valori a cui la coda ha attraversato la soglia, in ms:
+
+```
+101 · 103 · 106 · 109 · 113 · 114 · 116 · 117 · 117 · 120 · 125 · 126 · 126 · 128 · 134 · 135 · 138
+```
+
+⛔ **Sono TUTTI fra 101 e 138.** Durante la stretta la coda del video **oscilla proprio attorno ai
+100 ms**: la soglia è piantata **in mezzo all'oscillazione**, e ogni mezzo respiro la fa
+attraversare. ⇒ La cura passa metà del tempo a **tenere** e metà ad **abbandonare**, e il totale
+degli abbandoni resta **23 contro 24** — cioè **nessuna differenza**.
+⛔ **Con la soglia a 50 ms l'attraversamento sarebbe sempre in corso e la cura tornerebbe a
+`sgombra` puro**, cioè peggio. ⇒ **il verso giusto è ALZARLA**, e la previsione da falsificare
+adesso è: *a 200 ms gli attraversamenti crollano, chiavi e abbandoni con loro*.
+
+### 13.2.4 ⭐⭐⭐ LA PROVA CHE DECIDE — *a 200 ms gli attraversamenti NON crollano: si spostano*
+
+`[M]` 13:30. Stesso giro, `--sgombra-soglia-ms 200`. I **14** valori a cui la coda ha attraversato:
+
+```
+204 · 206 · 209 · 211 · 211 · 212 · 219 · 221 · 222 · 222 · 224 · 225 · 227 · 236 ms
+```
+
+⛔⛔ **Di nuovo tutti appena SOPRA la soglia, come a 100 erano tutti fra 101 e 138.**
+
+⭐⭐⭐ **E questa è la scoperta della sera, e cambia il modo di leggere la cura 2**: la soglia
+**non è un filtro, è il PUNTO DI LAVORO della coda.** `video_sgombra()` abbandona non appena la
+coda supera la soglia ⇒ **la coda non può mai andare molto sopra**, qualunque numero si scelga: si
+assesta appena oltre. ⇒ Il numero degli abbandoni **non lo decide la soglia**: lo decide lo scarto
+fra quanto entra e quanto esce. La soglia decide **quanto in profondità si accumula prima di
+abbandonare**, cioè **quanto ritardo si paga**.
+
+| | spenta | **100 ms** | **200 ms** |
+|---|---|---|---|
+| fotogrammi nei 3 s | 68 | 76 | **79** |
+| ⛔ **chiavi** nei 3 s | **18** | 14 | **11** |
+| abbandoni §5.1, tutto il giro | 24 | 23 | **18** |
+| kbyte consegnati nei 3 s | 3 896 | 4 300 | **4 476** (+15 %) |
+| ⚠ **`arretrato`** (il prezzo) | 0-1 per costruzione | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
+| ⚠ **il ritardo pagato** | — | 101-138 ms | ⛔ **204-236 ms** |
+
+⭐ **C'è un miglioramento, ed è monotòno**: più alta la soglia, più fotogrammi e meno chiavi.
+⛔ **Ma è LONTANO da quel che P3 prometteva** — *chiavi ≤ 2/s* è uscito **3-5/s**, e *abbandoni
+≤ 2/s* è uscito **5-6/s**. ⇒ **P3 è SMENTITA sui due numeri che contavano**, e confermata su quelli
+di contorno (inerzia sulla linea larga, ritorno sotto il secondo).
+
+⛔⛔ **E il prezzo per l'utente va corretto verso l'alto.** S.5 dichiarava *«fino a ~150 ms di
+ritardo per un attimo (~205 ms dal gesto al pixel)»*. `[M]` a soglia 100 la coda arriva a **138 ms**
+(⇒ ~193 ms d'anello) e **a soglia 200 arriva a 236 ms** (⇒ **~291 ms d'anello**). ⚠ La stima di
+S.5 era **giusta per 100 ms e sbagliata per qualunque taratura più generosa**, e la taratura più
+generosa è proprio quella che dà l'immagine migliore. ⛔ **È il compromesso che decide lui, e adesso
+ha i due numeri.**
+
+⭐ **E una cosa la soglia l'ha fatta bene, ed è il suo prerequisito**: ha portato `arretrato` da
+**0-1 per costruzione** a **2-6**. ⇒ `WT_RITMO_POSTI = 2` è **superato di continuo**, e il
+regolatore del ritmo — che senza la soglia non scatterebbe mai — adesso **può** scattare.
+
+## 13.3 ⭐⭐⭐ P7 — IL REGOLATORE DEL RITMO: **la spirale si spegne, e i due contatori vanno a ZERO**
+
+**Il giro**: identico ai tre di sopra — 8 s larga → 3 s a 10 Mbit/s → 17 s larga, `barra`,
+1920×1080 — con `--sgombra-soglia-ms 100 --ritmo-adattivo`. Le due righe d'avvio, **testuali**:
+
+```
+⭐ FASE 9, soglia della coda video (§5.1): 100 ms … Impostata da: main.c, dalla riga di comando
+⭐ FASE 9: il regolatore del ritmo e' ACCESO (`--ritmo-adattivo`): un fotogramma NON parte
+   quando 2 delta in volo hanno ancora byte nella mia coda d'uscita
+```
+
+### 13.3.1 ⛔⭐⭐⭐ I QUATTRO BRACCI, AFFIANCATI — *e il quarto non somiglia agli altri tre*
+
+| nei 3 s di stretta | spenta | soglia 100 | soglia 200 | ⭐⭐ **100 + ritmo** |
+|---|---|---|---|---|
+| fotogrammi/s | 21 · 25 · 22 | 29 · 26 · 21 | 31 · 23 · 25 | 26 · 23 · **20** |
+| ⛔ **CHIAVI/s** | **6 · 6 · 6** | 4 · 5 · 5 | 3 · 5 · 3 | ⭐⭐⭐ **0 · 0 · 0** |
+| ⛔ **abbandoni §5.1/s** | **6 · 6 · 7** | 6 · 9 · 5 | 5 · 6 · 5 | ⭐⭐⭐ **0 · 0 · 0** |
+| chiavi in tutto il giro | 18 | 14 | 11 | ⭐ **0** |
+| abbandoni in tutto il giro | 24 | 23 | 18 | ⭐ **0** |
+| sulla linea larga (sec 0-7, 12-28) | 39-42 fot/s, 0 chiavi | idem | idem | ⭐ **idem: 37-41 fot/s, 0 chiavi** |
+
+⛔⛔ **La spirale non è stata attenuata: è stata SPENTA.** Zero chiavi e zero abbandoni in tutto il
+giro — e non perché la soglia abbia lavorato meglio, ⭐ **ma perché non ha dovuto lavorare affatto**:
+`passa SOPRA la soglia` **0 volte**, `torna SOTTO` **0 volte**. Il regolatore tiene `arretrato`
+inchiodato a **2**, e la coda non arriva mai ai 100 ms che sveglierebbero `video_sgombra()`.
+⇒ **Le due cure non si sommano: la 6 rende la 2 inutile sul gradino.**
+
+### 13.3.2 ⭐⭐ IL CONTROLLO DI §6.5, quello *«che invalida tutto il banco»* — **superato**
+
+`LEZIONI.md` §1.9: un contatore a zero su un ramo mai percorso non dimostra niente. La riga di
+`ritmo_ciclo()` risponde, **una al secondo**:
+
+| ora | `arretrato` LETTO | massimo | discese nel secondo | in tutto |
+|---|---|---|---|---|
+| 13:32:19-27 (larga) | ⭐ **36-42 volte/s** | **0** | **0** | 0 |
+| **13:32:28** | 40 | **2** | ⛔ **13** | 13 |
+| **13:32:29** | 40 | **2** | ⛔ **17** | 30 |
+| **13:32:30** | 38 | **2** | ⛔ **17** | 47 |
+| **13:32:31** (ritorno) | 38 | **2** | 10 | **57** |
+| 13:32:32-48 (larga) | ⭐ **38-42 volte/s** | **0** | **0** | ⭐ **57, e resta 57** |
+
+⭐⭐ **Le letture ci sono — 36-42 al secondo — e valgono ZERO.** ⇒ Non è *«un anello mai
+percorso»* (il rosso **d** di `ritmo_frena()`): è **percorso 40 volte al secondo, e la risposta è
+«non c'è niente da fare»**. È esattamente il comportamento che S.5 chiamava *parapetto*.
+
+### 13.3.3 ⭐ DUE RIGHE PER EPISODIO, non una per fotogramma — e il RISALE arriva
+
+`[M]` **5 discese e 5 risalite**, 10 righe in tutto per **57** fotogrammi trattenuti (il difetto dei
+30,8 GB di registro non si ripete):
+
+| episodio | durata | fotogrammi restati indietro | `cwnd_left` alla discesa |
+|---|---|---|---|
+| 1 | 158 ms | 4 | **0** |
+| 2 | 841 ms | 16 | 51 466 |
+| 3 | 607 ms | 10 | 12 117 |
+| 4 | ⚠ **1 385 ms** | 25 | **0** |
+| 5 | 68 ms | 2 | 264 318 |
+
+⭐ **Il RISALE dopo il ritorno della linea è dentro il secondo**: l'episodio 4 è cominciato alle
+`13:32:30.071`, **dentro** la stretta, e si è chiuso alle `13:32:31.455` — la linea si era riaperta
+a `13:32:31.1`, quindi **355 ms dopo**. ⚠ *«durato 1 385 ms»* **non** smentisce *«RISALE entro 1 s»*:
+il cronometro giusto parte dal ritorno della linea, non dall'inizio dell'episodio.
+
+⭐ **E il rosso (b) di `ritmo_frena()` — il più importante — NON è caduto**: `cwnd_left` è **0** in
+due discese su cinque e piccolo in una terza ⇒ **è la linea a frenare, non la finestra del
+browser**. ⚠ L'unica discesa con `cwnd_left` largo (264 318) è la **quinta**, quella da 68 ms,
+scattata quando la linea si era già riaperta e `cwnd` stava ricrescendo: coerente.
+
+### 13.3.4 ⚠ IL PREZZO, misurato — **e il numero da portare a lui**
+
+⛔ Il prezzo è quello dichiarato in S.5, e adesso ha una cifra: nei 3 secondi di stretta si vedono
+**20-26 fotogrammi/s invece di 21-25** — cioè **praticamente gli stessi**, ma **fatti tutti di
+delta**, senza le 18 chiavi. ⭐ In byte, la 100+ritmo consegna nei 3 s **4 349 kbyte** contro i
+**3 896** del braccio spento: **più immagine, non meno**.
+
+⚠ **E l'unico numero che si avvicina a un limite**: al secondo 10 si scende a **20 fot/s**, sotto i
+25 che `DECISIONI.md` §2.1 chiama pavimento. ⛔ **Non è il difetto che S.5 dichiarava**: quella riga
+parla di *«sotto 25/s su una linea da 20 Mbit/s»*, e qui la linea è **10 Mbit/s**, cioè **metà del
+pavimento**. ⇒ Va riguardato il giorno in cui si misura a 20.
+
+## 13.4 ⭐⭐⭐ P4 — IL TETTO DI BANDA: **i due rossi che chiudevano la cura NON sono caduti**
+
+**Il giro**: cinque scene a **2560×1080**, 30 s l'una, sessione di `prova2`, `tc` mai toccato.
+⛔ **E l'ordine delle scene è parte della misura, ed è stato corretto strada facendo** — vedi 13.4.3.
+
+### 13.4.1 `[M]` I DIECI NUMERI, appaiati — *tetto spento 13:38, tetto 20 alle 13:41*
+
+| scena | ⛔ **tetto SPENTO** | ⭐ **`--tetto-banda-mbit 20`** | |
+|---|---|---|---|
+| **ferma** (nessuna scena) | 0 fot/s · **0,000** Mbit/s · filo **2,427** | 0 fot/s · **0,000** · filo **2,427** | ⭐ identico al terzo decimale |
+| **tinta piatta** (`pieno`) | 41,10 fot/s · **1,151** Mbit/s | 41,23 fot/s · **1,219** | ⚠ **+5,9 %** |
+| ⛔⛔ **desktop VERO** (`video`) | 23,13 fot/s · **0,208** = **1,0 %** | 23,13 fot/s · ⭐⭐ **0,249** = **1,2 %** | ⭐⭐⭐ **SALE del 19,7 %, NON scende** |
+| ⛔⛔ **gradiente retinato** (`barra`) | 34,67 fot/s · **21,183** = **105,9 %** | ⭐⭐ **40,70** fot/s · ⭐⭐⭐ **8,287** = **41,4 %** | ⭐ **il driver HA obbedito** |
+| **film con la grana** | 23,17 fot/s · **54,302** = 271,5 % · filo **58,414 = 292,1 %** | 23,30 fot/s · ⭐ **4,794** = **24,0 %** · filo **7,419 = 37,1 %** | ⭐ da **293 %** a **37 %** |
+
+⭐ **E il metro è buono**: i cinque numeri a tetto spento riproducono §3.8 entro l'1-2 %
+(0,208 contro 0,204 · 1,151 contro 1,179 · 21,183 contro 21,36 · 58,414 contro 58,668).
+
+### 13.4.2 ⛔⛔ I DUE ROSSI CHE CHIUDEVANO LA CURA, uno per uno
+
+| il rosso di **P4** | che cosa sarebbe successo | `[M]` |
+|---|---|---|
+| ⭐⭐ **il desktop vero costa MENO di 0,204** ⇒ *«il tetto risparmia dove non deve, è v1 che si ripete, e questa cura si butta»* | 0,208 → qualcosa sotto 0,204 | ⭐⭐⭐ **NON è caduto**: 0,208 → **0,249**, cioè **+19,7 %**. ⚠ È il **prezzo del QVBR** già previsto (`[M]` sul portatile: *«spende il 13 % in più del CQP a scena ferma»*), misurato qui al **19,7 %** — ⇒ **la cura VIVE** |
+| ⭐⭐ **il retinato resta sopra 20** ⇒ *«il driver non ha obbedito, e lo coglie solo il terzo testimone»* | 21,18 → ancora ≥ 20 | ⭐⭐⭐ **NON è caduto**: **8,287** Mbit/s, cioè il **39 %** di prima |
+
+⚠ **E c'è uno scarto dalla previsione che va detto, ed è nel verso opposto a un rosso**: P4 diceva
+*«retinato 11-16 · grana 11-16, e MAI sopra 16»*. `[M]` sono usciti **8,287** e **4,794** —
+⛔ **sotto la forchetta, non sopra.** ⇒ Il tetto **stringe più del previsto**: il filo è
+**16 000 kbit/s** e il caso duro ne usa il **24-62 %**. ⚠ Vuol dire che sul caso duro l'immagine è
+più brutta di quanto il tetto obbligherebbe: `[?]` **da tarare**, non un difetto — e **non lo decide
+una misura, lo decide l'occhio**.
+
+⭐ **E i fotogrammi non li paga nessuno, anzi**: sul retinato il tetto acceso ne consegna **40,70/s
+contro 34,67** — perché fotogrammi più piccoli escono più in fretta.
+
+### 13.4.3 ⭐⭐ I TRE TESTIMONI, letti tutti e tre — *e sono le righe che il prodotto scrive da sé*
+
+| # | la riga, testuale |
+|---|---|
+| **1** · il driver | `controllo del bitrate su «/dev/dri/renderD128» (Intel iHD driver … 25.2.3), profilo 17, EncSliceLP: il driver DICHIARA [CBR\|VBR\|VCM\|CQP\|MB\|QVBR\|TCBRC] (0x149e) · chiesto QVBR (0x400) · c'e'` |
+| **2** · il contesto | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `codificatore 1 APERTO e TENUTO VIVO … 2560x1080 a 60/s` |
+| **3** ⭐⭐ · **i BYTE** | `banda del video: 5581 kbit/s su 10001 ms — 283 fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, **ne usa il 34 %**` — una riga ogni 10 s |
+
+⭐ **Il terzo è quello che decide, e dice che il tetto è in presa**: nei dieci intervalli letti il
+consumo va dall'**1 %** (desktop fermo) al **62 %** del filo, e **non lo supera mai**.
+
+### 13.4.4 ⛔ IL DIFETTO DEL BANCO CHE HO TROVATO E CORRETTO — *e avrebbe dato «un numero plausibile»*
+
+`09-b72-banda.py` `scena()`: quando il punto dopo **non** è un video, **non spegne il Firefox del
+punto prima**. ⇒ Col mio primo ordine (`ferma,video,pieno,barra,video-grana`) il punto `pieno` è
+stato misurato **col film ancora vivo sotto**. ⛔ È la famiglia di difetti di §8, quarta volta oggi.
+⭐ **Rifatto tutto con le scene video IN FONDO** (`ferma,pieno,barra,video,video-grana`): fra due
+video ci pensa `09-b72-video.sh`, che fa `pkill`.
+⚠ **E l'esito del controllo va detto**: il `pieno` contaminato aveva dato **1,162** Mbit/s, quello
+pulito **1,151** — cioè **lo stesso numero**. ⇒ In *questo* caso la contaminazione non ha morso
+(la finestra della scena copre il film e Mutter non consegna quel che è nascosto). ⛔ **Ma la misura
+buona è quella dell'ordine giusto**, e il banco va corretto: un difetto che non morde oggi morde
+domani.
+
+## 13.5 ⛔⛔⛔ IL FATTO CHE RIMETTE IN DISCUSSIONE §3.8, §10.1 E TUTTA LA BOLLETTA: **si stava misurando HEVC**
+
+⭐ Trovato **leggendo il registro del tetto**, non cercandolo. La riga che nessuno aveva guardato:
+
+```
+13:41:53.152 rcp   negoziato video.codec=hevc video.profondita=8 audio.codec=pcm
+13:41:54.365 video primo fotogramma: hev1.1.6.L150.B0 · … HEVC 8 bit via hevc_vaapi
+```
+
+⛔ **`banchi/01-b3-cliente.py:1752` dichiara `--video-codec` con predefinito `hevc,av1`**, e il
+server sceglie **HEVC**. ⇒ **Tutti i numeri di banda di §3.8 e della prima parte di questa sezione —
+0,204 · 1,179 · 21,36 · 58,668 Mbit/s — sono numeri HEVC.**
+
+⛔⛔ **E il prodotto a Firefox Android NON manda HEVC**: `MEMORY.md`, *«AV1 esce, entra H.264 —
+Firefox Android non ha né HEVC né AV1; `avc1.640032` è già verificato»*.
+
+### 13.5.1 `[M]` QUANTO CAMBIA — *stessa scena, stessa tela, stesso QP 26, 13:47*
+
+| `barra`, 2560×1080, tetto spento | HEVC | ⭐ **H.264** |
+|---|---|---|
+| fotogrammi/s | 34,67 | ⭐ **41,80** |
+| carico video | **21,183** Mbit/s = **105,9 %** | ⭐⭐ **7,920** Mbit/s = **39,6 %** |
+| filo | 24,052 = 120,3 % | ⭐ **10,511** = **52,6 %** |
+| byte medi per fotogramma | 61 100 | **23 683** |
+
+⛔⛔ **H.264 costa QUI un terzo di HEVC**, non di più. ⚠ Non è la teoria dei codec: è che **`QP 26`
+non vuol dire la stessa qualità nei due**, e sul `hevc_vaapi` di questo driver, a QP 26 e
+`EncSliceLP`, esce **molta più roba**. ⇒ ⛔ **La scala della degradazione (26 → 35 → 44 → 51) è
+tarata su un numero che nei due codec significa due cose diverse**, e finora è stata provata sul
+codec sbagliato.
+
+⇒ ⭐⭐ **La contraddizione §10.1 va riscritta.** *«Ne chiede il 293 %»* è HEVC. Sul codec che il
+prodotto manda davvero, la stessa scena dura chiede **il 39,6 %** del pavimento. ⛔ `[?]` **Il caso
+duro vero (film con la grana) sotto H.264 NON è stato misurato**: è il primo numero da prendere.
+
+### 13.5.2 ⛔ `[R]` E UN DIFETTO CHE ESCE DALLA STESSA RIGA: **sotto H.264 la stringa per il decodificatore è VUOTA**
+
+```
+HEVC   → primo fotogramma: hev1.1.6.L150.B0 …   stringa per il decodificatore «hev1.1.6.L150.B0»
+H.264  → primo fotogramma: (non letto)      …   stringa per il decodificatore «»
+```
+
+⛔ Sotto H.264 il server **non compone** la stringa `avc1.<profilo><vincoli><livello>` (il commento
+che la descrive sta in `codificatore.c:715`), e scrive `(non letto)`. ⚠ **Il livello lo legge lo
+stesso** (`livello 51`, poi `52`): manca la **stringa**. `[?]` Se è quella che va al browser, è la
+famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione»*.
+
+## 13.6 ⛔⛔⛔ IL 4K — *13:50-13:52*: **41 fotogrammi/s, non 60 — e il livello prodotto SFORA quello del client**
+
+**Il giro**: tela **3840×2160** verificata **nel registro del prodotto** (`TELA NUOVA DAL PALCO:
+1920x1080 → 3840x2160`), scena `barra`, 20 s, tetto spento, `tc` mai toccato.
+
+| a 3840×2160 | ⭐ **H.264** (quel che il browser riceve) | HEVC |
+|---|---|---|
+| **fotogrammi/s** | ⛔ **41,25** | 38,75 |
+| carico video | **24,055** Mbit/s = **120,3 %** del pavimento | ⛔ **74,390** = **372,0 %** |
+| filo | 26,711 = 133,6 % | ⛔ **78,018** = **390,1 %** |
+| byte medi per fotogramma | 72 895 | 239 968 |
+| chiavi / abbandoni in 20 s | ⭐ **0 / 0** | ⛔ **19 / 20** |
+| ⛔ **LIVELLO PRODOTTO** | ⛔⛔ **5.2** (`level_idc` 52 nell'SPS) | 5.0 (`general_level_idc` 150) |
+
+### 13.6.1 ⛔ LA RISPOSTA ALLA DOMANDA: **il 4K·60 che il prodotto promette non c'è, e il tetto non è la linea**
+
+⭐ **41,25 fot/s con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi).
+⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica.
+`[M]` la riga del primo fotogramma a 4K: **conversione 11 466 µs** + **codifica 8 895 µs** = **20,4
+ms per fotogramma**, cioè **un tetto di ~49/s** prima ancora di uscire di casa. ⚠ A 2560×1080 erano
+6 652 + 3 827 = 10,5 ms (⇒ ~95/s), e infatti lì si vedono 41,8/s perché comanda il compositore.
+⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto regge ~41/s, non 60.**
+
+### 13.6.2 ⛔⛔ E IL ROSSO DI **P9** È CADUTO, con un innesco concreto
+
+```
+rcp    il client dichiara video.livello=5.1 … §4.3 vieta al server di emettere un flusso PIU' ALTO
+figlio §4.3 — LIVELLO PRODOTTO: 5.2 (nell'SPS e' 52) … il confronto fra le due righe lo fa CHI
+       LEGGE — il programma NON lo fa
+```
+
+⛔⛔ **Il server ha emesso 5.2 dove il client ammetteva 5.1, e nessuno ha detto niente.** È
+esattamente il difetto che §5.5 aveva trovato leggendo il codice (`rcp.c:1823` non cattura il
+livello) e che **P9** prevedeva: *«un livello troppo basso non dà un errore di rete: fa rifiutare la
+configurazione, cioè schermo che non parte senza un rosso»*. ⭐ Adesso non è più una lettura del
+codice: **è successo, alle 13:50:48, e le due righe sono nel registro.**
+
+⚠ **E la stima di §5.5 era sbagliata in un altro modo ancora**: diceva *«a 4K serve il 5.1, che
+concede `[?]` 30,3 fot/s»*. `[M]` L'`h264_vaapi` non ha scelto 5.1: **ha scelto 5.2**. ⇒ il numero
+da mettere in `pagina.html:829` non è `avc1.640033` (5.1) ma `avc1.640034` (5.2) **se si vuole
+davvero il 4K** — ⛔ e va verificato che Firefox Android accetti il 5.2, perché altrimenti la scelta
+è **fra il 4K e quel browser**.
+
+## 13.7 ⛔ L'AUDIO — **saltata, e dichiaro perché**: il banco non riesce ad aprire Marionette
+
+⭐ Il banco `banchi/09-b74-audio-firefox.py` (scritto oggi) è **la forma giusta** e risolve il
+difetto di §3.16: il *prima* e il *dopo* sono **due file `pagina.html`**, serviti dallo **stesso
+binario**, e il verbale è la riga `/diario` che **la pagina manda da sola** al server ogni 5 s.
+⭐ E il servizio è partito bene: `pagina: /media/REMOTIX/src/09-src/src/pagina.html ·
+md5 d387c166…` per il *prima* — cioè **la pagina VECCHIA, e si vede dall'`md5`**, non dal nome.
+
+⛔ **Ma Firefox non apre mai la porta 2829 di Marionette.** Due tentativi (13:53 e 13:55), più una
+diagnosi: **80 s di attesa, la porta non compare mai**. ⇒ Il braccio non parte, e **senza il
+braccio «prima» non c'è controllo positivo**: un *dopo* pulito da solo non dimostrerebbe niente.
+
+⚠ **E la diagnosi si è fermata su un difetto del banco dentro il banco**: `b74-ff.log` è creato in
+`$LAV`, che è **di root**, mentre Firefox gira come `prova` ⇒ ⛔ **il registro di Firefox è di ZERO
+byte**, e quando si chiede *«perché non è partito»* non c'è niente da leggere. È lo **stesso difetto
+del `user.js` vuoto** che il commento del banco racconta di aver già pagato alle 12:47, in un altro
+punto dello stesso file.
+
+⇒ **La cura 4 (il riordino dell'audio) resta NON VERIFICATA.** ⛔ E resta *«il banco misura se
+stesso»* di §3.16, perché `01-b3-cliente.py` ha ancora la sua copia della regola vecchia
+(`md5 13e68d19ed44298b7926cded53affdda`, invariato). ⭐ **Ma la strada è corta**: la pagina il
+verbale lo manda da sola, quindi **basta che Nic apra la pagina col suo browser** e il registro del
+server porta i tre contatori (`vecchi` · `tardivi` · `fuori`). Non serve Marionette per il giudizio:
+serve per l'automazione.
+
+## 13.8 ⭐⭐⭐ §10.2 DECISA — **il confine della spirale sta fra 10 e 5 Mbit/s**, e sopra non morde
+
+⛔ La domanda di §10.2 era: *«sopra il pavimento la spirale morde o no?»*, con **due posizioni** in
+campo — §5.2 (*«il difetto vive sotto il pavimento, sopra la cura è inerte»*) contro §3.10
+(*«abbandoni e chiavi anche sulla linea larga, 3↔3 a 22-26 Mbit/s»*).
+
+**Il giro che la decide**: ⛔ **sul DESKTOP VERO**, non su `barra` — ⭐ e col **codec che il browser
+riceve davvero, H.264** (`negoziato video.codec=h264`, letto dal registro). Una **sola** sessione a
+2560×1080 per tutti i gradini, così l'unica variabile è la stretta. Soglia e regolatore **spenti**,
+cioè il prodotto com'è oggi. Gradino: 8 s larga → **3 s stretti** → 6 s larga.
+
+| la stretta | fotogrammi spediti | ⛔ **CHIAVI** | ⛔ **abbandoni §5.1** |
+|---|---|---|---|
+| **30 Mbit/s** (150 % del pavimento) | 421 | ⭐ **0** | ⭐ **0** |
+| **25 Mbit/s** (125 %) | 429 | ⭐ **0** | ⭐ **0** |
+| ⭐ **20 Mbit/s** (**il pavimento**) | 426 | ⭐ **0** | ⭐ **0** |
+| **15 Mbit/s** (75 %) | 406 | ⭐ **0** | ⭐ **0** |
+| **10 Mbit/s** (50 %) | 426 | ⭐ **0** | ⭐ **0** |
+| ⛔ **5 Mbit/s** (25 %) | 424 | ⛔ **3** | ⛔ **3** |
+
+### ⭐ IL VERDETTO, secco
+
+⛔⛔ **Sul contenuto vero la spirale NON esiste fino a 10 Mbit/s compresi**, cioè fino a **metà
+pavimento**. Il primo segno arriva a **5 Mbit/s**, ed è **3 chiavi su 424 fotogrammi = lo 0,7 %**.
+⇒ **§5.2 aveva ragione e §3.10 misurava un'altra cosa**: i suoi abbandoni a 22-26 Mbit/s erano su
+**`barra`**, il gradiente retinato — una scena **sintetica** che a 2560×1080 costa **21 Mbit/s da
+sola** (105,9 % del pavimento). ⛔ **Non è il desktop di nessuno**: è un caso di prova che vive
+*sopra* il pavimento anche a riposo, e sotto quel carico qualunque stretta produce coda.
+
+⇒ ⭐⭐ **La soglia sulla coda e il regolatore del ritmo sono ROBUSTEZZE, non correzioni di un
+difetto che l'utente vede.** Sul suo desktop, a 20 Mbit/s, **non hanno niente da fare** — ed è quel
+che P2 e P7 prevedevano. ⚠ Servono quando la linea cala **sotto la metà**, oppure quando il
+contenuto è un caso duro (video a schermo intero), e lì lavorano bene: §13.3.
+
+⚠ **Il difetto del mio copione, dichiarato**: la tabella per-secondo che avevo stampato dava
+`fot [0,0,0]` in tutt'e sei i giri — un errore mio nel raggruppare per secondo, **non una misura**.
+⛔ I numeri qui sopra **non vengono da quella tabella**: vengono dal **conto diretto sui registri
+salvati** (`grep -c SPEDITO`, `grep -c 'SPEDITO: CHIAVE'`, `grep -c ABBANDONATO`), che è la
+grandezza che il prodotto scrive. ⚠ Se avessi riportato la tabella, avrei detto *«zero fotogrammi»*
+dove ce n'erano **424**.
+
+## 13.9 ⭐⭐⭐ IL VERDETTO DELLA SERA — le nove previsioni, una per riga
+
+| # | la previsione | esito | dove |
+|---|---|---|---|
+| **P1** | il crollo si riproduce; con la cura regge | ⭐⭐⭐ **CONFERMATA, e oltre**: il malato muore al fotogramma **27** (516 782 byte), il curato regge **1 463** fotogrammi fino a **537 063** byte col 5 % di perdita. ⭐ **La pila dal core chiude il `[?]` di §4.8** | 13.1 |
+| **P2** | la soglia è **inerte** a 20 Mbit/s | ⭐ **CONFERMATA**, e non solo a 20: sul desktop vero **niente da fare fino a 10 Mbit/s** | 13.2.2 · 13.8 |
+| **P3** | sul gradino: chiavi ≤ 2/s, abbandoni ≤ 2/s, fot ≥ 25 | ⛔ **SMENTITA sui due numeri che contavano**: chiavi **4-5/s**, abbandoni **5-9/s**. ⭐ Confermata su inerzia e ritorno. ⛔ **E il rimedio scritto in P3 era nel verso sbagliato** | 13.2.2 · 13.2.3 |
+| **P4** | il tetto: desktop vero **non scende**, retinato **sotto il pavimento** | ⭐⭐⭐ **CONFERMATA — i due rossi che buttavano la cura NON sono caduti**: 0,208 → **0,249** (+19,7 %), retinato 21,18 → **8,29**. ⚠ Stringe **più** del previsto (fuori forchetta in basso) | 13.4 |
+| **P5** | la risalita della qualità | ⛔ **NON PROVATA** — vedi 13.10 | 13.10 |
+| **P6** | il riordino dell'audio | ⛔ **NON PROVATA**: Marionette non apre la porta | 13.7 |
+| **P7** | il regolatore: **zero discese** a desktop normale; discese sul gradino, RISALE entro 1 s | ⭐⭐⭐ **CONFERMATA IN PIENO**: `arretrato` **LETTO 36-42 volte/s** sulla linea larga con **massimo 0** e **zero discese**; **57** discese concentrate nei 3 s; RISALE **355 ms** dopo il ritorno. ⛔ E il rosso *«è la finestra del browser»* **non è caduto**: `cwnd_left` = 0 | 13.3 |
+| **P8** | a scena ferma il ritmo non cala | ⚠ **NON misurata a coppie** (mezza ferma / mezza mossa). ⭐ Ma la metà del controllo c'è: le righe `arretrato LETTO N volte` esistono e distinguono *vuoto* da *proibito* | 13.3.2 |
+| **P9** | il livello prodotto contro quello del client, e nessuno li confronta | ⛔⛔ **CADUTA, con l'innesco**: a 4K H.264 il server emette **5.2** mentre il client dichiara **5.1**, e **il programma non se ne accorge** | 13.6.2 |
+
+### ⭐⭐ E LE TRE COSE NUOVE, che nessuna previsione aveva previsto
+
+1. ⛔⛔⛔ **Si stava misurando HEVC.** Il cliente di prova negozia `hevc`, il prodotto manda H.264 a
+   Firefox. Stessa scena: **21,18** Mbit/s in HEVC contro **7,92** in H.264 — ⇒ **§10.1 va
+   riscritta e la bolletta rifatta** — 13.5;
+2. ⭐⭐⭐ **La soglia non è un filtro: è il punto di lavoro della coda.** A 100 ms la coda si assesta
+   a 101-138; a 200 ms a 204-236. ⇒ alzarla **compra immagine e paga ritardo**, e non cambia il
+   numero degli abbandoni — 13.2.3;
+3. ⭐⭐⭐ **Il regolatore rende la soglia inutile sul gradino**: tiene `arretrato` a 2, la coda non
+   arriva mai ai 100 ms, e `video_sgombra()` **non scatta nemmeno una volta** — 13.3.1.
+
+## 13.10 ⛔ `--qualita-risale` — **non l'ho fatta scattare, e dichiaro perché**
+
+⭐ **Non è un tentativo fallito: è un esito, e si legge nel codice prima che sul ferro.** La riga che
+il prodotto scrive da sé a ogni apertura del codificatore:
+
+```
+la risalita della qualita' e' SPENTA (invariante I6) … da spenta questi numeri
+(120 fotogrammi, 2097152 byte, scalino 9, punto di lavoro QP 26 costante, tetto d'attesa 3840)
+non hanno nessun effetto
+```
+
+⛔ **`2 097 152` byte = 2 MiB è la soglia che fa SCENDERE la qualità.** Perché la risalita abbia
+qualcosa da risalire, la qualità deve prima essere scesa, cioè serve un fotogramma **sopra i 2 MiB**.
+`[M]` di stasera, il fotogramma **più grosso mai visto in tutta la giornata**: **537 063 byte** — un
+**quarto** della soglia, e su un **film con la grana a schermo intero**, che è il caso più duro che
+questa fase abbia. A 4K HEVC la media è **239 968** byte, la punta resta lontana.
+⇒ ⛔ **Sulla tela dell'utente non succede mai**, ed è la stessa cosa che §5.3 aveva scritto.
+
+⚠ **La strada per farla scattare c'è ed è quella dichiarata nel mandato** — tela enorme + ripiego
+software (`h264_vaapi` si ferma a 4096 px per lato) — ⛔ **ma è un giro che non misura il prodotto**:
+misurerebbe il codificatore software su una tela che nessun utente ha. ⇒ **Non l'ho fatto**, e la
+cura 3 resta **non verificata sul ferro**. ⭐ Quel che è verificato è che **è spenta e lo dice**, e
+che da spenta **non tocca niente**: i numeri del confronto appaiato di §3-bis lo mostravano già.
+
+## 13.11 ⭐ COM'È RIMASTA LA MACCHINA — *verificato alle 14:01 UTC, non dichiarato a memoria*
+
+| | |
+|---|---|
+| `tc` su **`lo`** | ⭐ `qdisc noqueue 0: root` — **nessuna disciplina** |
+| `tc` su **`enp7s0`** | ⭐ `qdisc mq 0: root` — **mai toccata**, come da regola |
+| il **guardiano** di `tc` | ⭐ nessuno: `.b68-guardiano.pid` non c'è |
+| **scene, clienti, browser** | ⭐ **nessuno** — né `04-b30-scena`, né `01-b3-cliente`, né `firefox` |
+| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — ⚠ **era già così prima che cominciassi** (`core_pattern.prima` dice lo stesso), ed è quel che §4.7 punto 1 chiedeva: **assoluto**. ⛔ Non è il valore di fabbrica (`core`): **lo lascio**, perché è la trappola armata, ⚠ e lo dichiaro perché è uno stato della macchina, non del progetto |
+
+**Le tre porte che restano accese, e perché:**
+
+| porta | albero | perché resta |
+|---|---|---|
+| **7900** | `09-src` | ⭐ il **PRIMA** di stamattina — il termine di paragone di §3-bis. ⛔ Spegnerlo renderebbe non ripetibili tutte le misure appaiate già scritte |
+| **7910** | `09b-src` | le tre cure del mattino, l'altra metà dello stesso confronto |
+| **7920** | `09c-src` (`remotix md5 162d2d105cbe930e7921a7041053f5e7`) | ⭐ il **curato di stasera**, ricostruito da `f90eb21`, **senza nessun interruttore acceso** e con la **trappola glibc spenta** — cioè il prodotto com'è |
+
+⭐ **E il corpo del reato si conserva**: `/media/REMOTIX/tmp/09c/core.remotix.110832.1787493803`,
+**48 525 312 byte** — il core del binario malato. ⛔ **Non si cancella**: è la prova *vista* del
+crollo del 23 agosto. ⚠ **E non è quello di 13.1.1**: vedi 13.1.5 qui sotto, che racconta perché.

@@ -57,6 +57,13 @@ set -e
 LAV=/media/REMOTIX/tmp/09c
 ALBERO=${ALBERO:-/media/REMOTIX/src/09c-src}
 SRC="$ALBERO/src"
+# ⛔⭐ LA PAGINA SI SCEGLIE DA FUORI — serve alla cura 4 (il riordino
+#    dell'audio), che vive TUTTA in `pagina.html` e non tocca un byte del
+#    binario.  ⇒ il «prima» e il «dopo» sono due FILE, serviti dallo stesso
+#    identico server: cosi' l'unica variabile e' la pagina.
+#    ⚠ `main.c` la legge da disco all'avvio (`pagina.c:627`), quindi basta
+#      questo e un riavvio.
+PAGINA=${PAGINA:-$ALBERO/src/pagina.html}
 B2=/media/REMOTIX/src/b2
 UNITA=remotix-7920
 PORTA=7920
@@ -78,6 +85,8 @@ fi
 echo "albero:        $ALBERO"
 echo "md5 sorgente:  $(md5sum "$SRC/webtransport.c" | cut -d' ' -f1)  webtransport.c"
 echo "md5 binario:   $(md5sum "$SRC/remotix" | cut -d' ' -f1)"
+echo "pagina:        $PAGINA"
+echo "md5 pagina:    $(md5sum "$PAGINA" | cut -d' ' -f1)"
 
 # ── ⛔ IL CORE: `core_pattern` di serie vale `core`, cioe' un nome RELATIVO
 #    scritto nella cartella di lavoro del servizio (`/`), dove non c'e'.
@@ -127,7 +136,7 @@ systemd-run \
   "$SRC/remotix" \
   --indirizzo 0.0.0.0 --nome 192.168.0.2 --porta $PORTA \
   --certificati "$LAV/certificati" \
-  --pagina "$SRC/pagina.html" \
+  --pagina "$PAGINA" \
   --ban-file "$LAV/ban" \
   --comando-socket "$LAV/comando.sock" \
   --rilievo "$LAV/rilievo" \
