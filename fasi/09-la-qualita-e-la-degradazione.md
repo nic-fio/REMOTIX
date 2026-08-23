@@ -36,6 +36,30 @@ Aperta il **23 agosto 2026** · Chiusa il —
 
 Il **controllo del ritmo**, la **scala di degradazione**, il comportamento su **rete cattiva**.
 
+> ## ⛔⭐⭐⭐ IL BERSAGLIO È STATO CORRETTO DAL REGISTA — *23 agosto 2026, sera* → **§17**
+>
+> *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
+> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter».* — `DECISIONI.md`
+> **§3.1-ter**.
+>
+> ⛔ **La banda esce dal corpo della fase**, e la ragione è una misura di questa stessa fase: §16,
+> sul **percorso vero**, il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge **senza
+> degradare e con tutte le cure spente**. Un banco che non riesce a far cedere quel che misura non
+> sta misurando la grandezza giusta.
+>
+> ⭐⭐⭐ **E sulla grandezza giusta il prodotto cede, e cede prestissimo** (§17.1):
+> con lo **0,36 %** di perdita 40 fotogrammi/s, con lo **0,94 %** ne fa **9,6** — non una curva,
+> un **dirupo**; con **zero perdita** e ±15 ms di sfarfallio **16,6/s e il DOPPIO dei byte sul
+> filo**, che è la prova diretta che il disordine viene scambiato per perdita; al **13 %** a
+> raffiche ⛔⛔ **la sessione si stacca dopo 0,3 s**, e *«mai staccare»* è l'unico obbligo che vale
+> ovunque.
+>
+> ⭐ **La cura della spirale che produce tutto questo era già scritta e SPENTA** (I6): la griglia è
+> girata coi predefiniti. La prova appaiata è **§17.6**.
+>
+> ⭐⭐ **E la cura del riordino dell'audio MORDE** (§17.2): purezza da 0,40-0,80 a **1,0000** su
+> tutti e cinque i profili che riordinano, sei su sei verdi.
+
 **Che cosa l'utente vede e giudica alla fine**: ⛔ **l'immagine, e basta.** In v1 la fase omologa
 fu validata con PSNR e SSIM, il giudizio dell'utente sul desktop vero fu *«siamo tornati
 indietro»*, e la fase fu **azzerata**.
@@ -3024,6 +3048,7 @@ legge nel registro (`d387c166…` per il vecchio, `e010d615…` per il nuovo). I
 | il **guardiano** di `tc` | ⭐ nessuno: `.b68-guardiano.pid` non c'è |
 | **scene, clienti, browser** | ⭐ **nessuno** — né `04-b30-scena`, né `01-b3-cliente`, né `firefox` |
 | **porte** | ⭐ **7900 · 7910 · 7920**, le tre di prima, nessuna in più |
+| ⚠ **e alle 15:0x una QUARTA** | ⛔ **`7932` — NON è mia.** È comparsa **dopo** che avevo finito, insieme a `banchi/09-b78-apertura.py` sul portatile: è il banco di **un altro agente**. ⭐ Non l'ho toccata. ⚠ La scrivo perché «la macchina è rimasta così» invecchia male: ⛔ **i numeri di §14 non ne sono sporcati** — l'ultimo controllo `pulizia()` di ogni mio giro, fino alle 14:52:35, elencava **solo 7900 · 7910 · 7920** |
 | **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — **lasciato**, è la trappola armata di §4.7 |
 | ⭐ **il registro della sera** | salvato in `/media/REMOTIX/tmp/09c/registro-fase9-sera-PRIMA-DI-B74.log` (9 216 437 byte) ⛔ **prima** che `09-b74` cancellasse `registro.log`: senza quella copia i numeri di §14.2-§14.6 non sarebbero più rileggibili |
 
@@ -3126,3 +3151,340 @@ faceva **4,1 GB**. Cancellato subito.
 ⛔ **Firefox sulla macchina di prova NON parte** per l'utente `prova`: il profilo non viene mai
 creato (`~/.mozilla/firefox/` ha solo `Crash Reports` e `Pending Pings`). È lo stesso muro su cui si
 è fermato il banco dell'audio. ⏳ Non diagnosticato.
+
+---
+
+# §17 · ⭐⭐⭐ LA RETE CATTIVA — *23 agosto 2026, sera*, e **il bersaglio della fase è stato corretto dal regista**
+
+> *«Comunque voglio farti notare una cosa: 30 mbps sono una connessione da metà anni 90. La vera
+> sfida è misurare performance con reti che perdono pacchetti o pacchetti fuori sequenza, o
+> presentano fenomeni di jitter».*
+> — ⇒ `DECISIONI.md` **§3.1-ter**, `PIANO.md` fase 9.
+
+⛔ **E la correzione arriva a fase mezza misurata, con la prova che serviva.** §16 aveva appena
+mostrato che sul **percorso vero** il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge
+**senza degradare e con tutte le cure spente**: 7 125 consegnati → 7 125 dipinti, **una** chiave,
+zero abbandoni. ⇒ Un banco che non riesce a far cedere quel che misura **non sta misurando la
+grandezza giusta**. Le pagine che seguono sono la grandezza giusta.
+
+## 17.0 ⛔ Le tre grandezze non sono la stessa cosa — e confonderle è il modo facile di misurare male
+
+| | che cos'è | che cosa tocca da noi |
+|---|---|---|
+| **perdita** | il pacchetto non arriva | il **video** va su stream QUIC, che ritrasmettono ⇒ `[?]` si dovrebbe pagare in **ritardo**, non in fotogrammi. L'**audio** va su datagram ⇒ si paga in **buchi** |
+| **fuori sequenza** | arriva, ma dietro a uno più nuovo | ⭐ è la condizione mancante della **cura del riordino dell'audio** del 23 agosto, l'unica cura della giornata la cui metà utile non era mai stata verificata |
+| **jitter** | arriva a intervalli irregolari | `[?]` QUIC può **scambiarlo per perdita** e stringere la finestra senza motivo. Se succede, il calo è **nostro** |
+
+⭐ **E il `netem` su `lo` è diventato una risorsa unica con un lucchetto** (`banchi/09-lucchetto.py`):
+la disciplina si mette sulla **radice** dell'interfaccia, quindi due banchi che guastano insieme
+non si dividono il lavoro — **il secondo cancella il guasto del primo, e il primo continua a
+misurare credendo di averlo**. ⚠ Non darebbe rosso: darebbe un numero plausibile. Il possesso si
+prende con `mkdir` (atomico anche su ssh), porta una **scadenza scritta dentro**, e chi scassina un
+lucchetto scaduto **lo dichiara**.
+
+## 17.1 ⛔⛔⛔ IL VIDEO — la griglia, e **non è una degradazione: è un dirupo**
+
+`banchi/09-b76-rete-cattiva.py` · `[M]` 23 agosto 2026 · 25 s per profilo · 1920×1080 · h264 ·
+**banda libera** · ⛔ **tutte le cure ai predefiniti, cioè SPENTE** · binario `51b5994`.
+
+| profilo | persi % (sonda) | raffica | fuori ord. % | **fps** | peggior s | chiavi/tot | deriva max | Mbit/s sul filo |
+|---|---|---|---|---|---|---|---|---|
+| `liscio` | 0,00 | – | 0,0 | **39,97** | 38 | 0/878 | 6 ms | 3,18 |
+| `ritardo-30` ⭐**rif.** | 0,00 | – | 0,0 | **40,11** | 37 | 0/881 | 1 ms | 3,13 |
+| `perdita-0,5` | 0,36 | 1,00 | 0,0 | **40,06** | 37 | 0/881 | 46 ms | 3,14 |
+| ⛔ `perdita-1` | 0,94 | 1,01 | 0,0 | **9,56** | 4 | 117/209 | 142 ms | 4,00 |
+| ⛔ `perdita-3` | 2,96 | 1,03 | 0,0 | **4,03** | 2 | **87/87** | 180 ms | 2,56 |
+| ⚠ `perdita-5` | 4,78 | 1,04 | 0,0 | **3,35** | 2 | 73/73 | 157 ms | 2,01 |
+| ⭐ `raffica-1` | 1,07 | **6,14** | 0,0 | **23,94** | **0** | 38/526 | **3 707 ms** | 2,99 |
+| ⛔⛔ `raffica-forte` | 13,03 | 5,03 | 0,0 | **sessione STACCATA a 0,3 s su 25** | – | – | – | – |
+| ⭐ `riordino-25` | 0,00 | – | **68,0** | **40,03** | 38 | 0/880 | 11 ms | 3,27 |
+| `jitter-5` | 0,00 | – | 85,3 | **39,30** | 32 | 2/864 | 17 ms | 3,52 |
+| ⛔ `jitter-15` | 0,00 | – | 86,3 | **16,62** | 4 | 102/364 | 312 ms | **6,93** |
+| ⛔ `jitter-30` | 0,00 | – | 73,2 | **8,07** | 2 | 110/175 | 475 ms | **6,26** |
+| `duplicazione-1` | 0,00 (1,02 % dup) | – | 0,0 | **39,96** | 37 | 0/878 | 2 ms | 3,20 |
+| ⛔ `casa-cattiva` | 1,71 | 1,02 | 93,8 | **7,78** | **0** | 73/169 | 609 ms | 3,51 |
+
+⛔ **Tredici predicati rossi**, e nessuno muto. Il guasto è stato **verificato messo** su tutti e 14
+i profili, con **due gambe che concordano**: il `dropped` del qdisc e una sonda indipendente
+(`[M]` `loss 5%`: `dropped 101`, sonda 101 su 2000).
+
+### 17.1-bis ⭐⭐ Le tre cose che i numeri dicono, e nessuna era attesa
+
+1. ⛔⛔ **Il dirupo sta fra lo 0,36 % e lo 0,94 % di perdita**: dal 100 % del riferimento al **24 %**.
+   Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe mai trovato: a
+   `perdita-1` il filo porta **4,00 Mbit/s**, cioè il **20 % del pavimento dichiarato**. La linea è
+   vuota, e il prodotto è in ginocchio.
+2. ⭐⭐⭐ **A `jitter-15/30` il filo porta il DOPPIO dei byte (6,9 contro 3,1 Mbit/s) per UN QUINTO
+   dei fotogrammi, su una rete che non perde un pacchetto.** `[M]` perdita misurata **0,00**.
+   ⇒ È la prova diretta che **il disordine viene scambiato per perdita**: ritrasmissioni e chiavi
+   che nessuna perdita ha chiesto. Il calo **è nostro**, non della rete — e §3.1-ter lo aveva
+   scritto come `[?]` prima di misurarlo.
+3. ⚠ **La stessa perdita media fa MENO danno a grappoli che sparsa**: `raffica-1` (1,07 %, grappoli
+   da 6) tiene 23,94/s contro i 9,56/s di `perdita-1` (0,94 %, uno alla volta). ⛔ **Ma il prezzo si
+   sposta e peggiora**: un secondo intero a **zero fotogrammi**, e la deriva a **3,7 secondi**.
+
+### 17.1-ter ⭐⭐ IL MECCANISMO — letto nel registro del server, non dedotto
+
+`[M]` sugli stessi giri: `abbandonato_in_coda` = `abbandonati` = `chiave_aspetta` **a ogni profilo
+rosso** (129 · 102 · 116 · 125 · 83), con `delta_non_spedito` a 550-800. E i **buchi nella
+successione dei `numero`** — la seconda gamba, contata dal lato che riceve e indipendente dal
+registro del server — concordano: 116, 86, 102, 109, 72.
+
+⇒ **La catena è la spirale di §5.1→§5.2**, ed è la stessa faccia del difetto del 21 agosto:
+
+> il filo ritarda → la coda di spedizione cresce → §5.1 abbandona i delta → §5.2 accende il debito
+> → si chiede una **chiave** → la chiave riempie la finestra → **ricomincia**
+
+⛔ A `perdita-3` fa **87 chiavi su 87 fotogrammi**: identica al 144/144 del 21 agosto.
+
+⭐⭐ **E la cura di questa catena era già scritta, collaudata e SPENTA** — `--sgombra-soglia-ms` e
+`--ritmo-adattivo`, dietro interruttore per l'invariante I6. ⇒ La griglia qui sopra è girata **con
+gli interruttori spenti**, ed è la ragione per cui la prova appaiata delle cure (§17.6) è il
+seguito obbligato di questa pagina e non un di più.
+
+### 17.1-quater ⛔⛔ «MAI STACCARE» È VIOLATO — e non è una degradazione riuscita
+
+`raffica-forte` (13 % di perdita a grappoli): la sessione **muore dopo 0,3 s su 25**. ⛔ È l'unico
+obbligo che vale **ovunque, anche sotto il pavimento** (`DECISIONI.md` §3.3, §3.1-bis: *«il divieto
+di staccare resta intero»*). ⏳ **Chi** stacchi è in misura in §17.6: il server con un motivo di
+congedo, ngtcp2 per inattività, o il cliente di prova — e una terza possibilità da escludere è che
+la stretta di mano non si sia mai completata, perché *«non si è mai aperta»* e *«si è staccata»*
+hanno la stessa faccia.
+
+## 17.2 ⭐⭐⭐ L'AUDIO NEL RIORDINO — **la cura morde**, e adesso è misurato
+
+⛔ Era la sola cura del 23 agosto la cui metà utile fosse rimasta `[?]`, e per una ragione detta:
+*«per verificarla bisogna sporcare la rete e non l'ho fatto»*. La correzione del regista **è la
+condizione mancante di quella verifica**.
+
+⛔ **E prima è stato necessario portare la cura nel cliente dei banchi**: era stata scritta **solo
+in `src/pagina.html`**, mentre `banchi/01-b3-cliente.py` aveva ancora la regola vecchia. ⇒ Fino a
+stasera **nessun banco poteva misurarla**. Adesso c'è `--audio-regola vecchia|nuova`, ⛔ col
+predefinito **`vecchia`** e la verifica che con quello i contatori e la **lista** dei blocchi
+consegnati sono identici a una trascrizione letterale del codice del 22 agosto su cinque
+successioni: un cliente che cambia i numeri già scritti non è uno strumento, è una variabile.
+
+`banchi/09-b77-audio-riordino.py` · `[M]` 23 agosto 2026 · porta 7931 · 25 s per giro · **due giri
+identici in tutto tranne la regola**:
+
+| profilo | regola | **PUREZZA** | tono | copertura | sul filo | conseg. | vecchi | fuori | rec | dop | srv `dgram_falsi` |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `liscio` | vecchia | 1,0000 | 1,000 | 1,0000 | 4993 | 4993 | 0 | 0 | 0 | 0 | 0 |
+| `liscio` | **nuova** | 1,0000 | 1,000 | 1,0000 | 4992 | 4992 | 0 | 0 | 0 | 0 | 0 |
+| `jitter-2` | vecchia | 0,7992 | 0,804 | 0,7993 | 4989 | 3987 | **1002** | 0 | 0 | 0 | 1062 |
+| `jitter-2` | **nuova** | **1,0000** | 1,000 | 0,9982 | 4983 | 4983 | 0 | 1028 | 1028 | 0 | 115 |
+| `jitter-5` | vecchia | 0,6877 | 0,683 | 0,6854 | 4970 | 3418 | 1552 | 0 | 0 | 0 | 698 |
+| `jitter-5` | **nuova** | **1,0000** | 0,995 | 0,9954 | 4970 | 4970 | 0 | 1620 | 1620 | 0 | 732 |
+| `jitter-15` | vecchia | 0,4350 | 0,370 | 0,3670 | 4214 | 1833 | 2381 | 0 | 0 | 0 | 1458 |
+| `jitter-15` | **nuova** | **1,0000** | 0,846 | 0,8361 | 4177 | 4177 | 0 | 2392 | 2392 | 0 | 1458 |
+| `riordino-25` | vecchia | 0,8912 | 0,895 | 0,8912 | 4990 | 4447 | 543 | 0 | 0 | 0 | 1415 |
+| `riordino-25` | **nuova** | **1,0000** | 1,000 | 0,9982 | 4982 | 4982 | 0 | 550 | 550 | 0 | 450 |
+| `casa-cattiva` | vecchia | 0,4013 | 0,261 | 0,2585 | 3192 | 1281 | 1911 | 0 | 0 | 0 | 1190 |
+| `casa-cattiva` | **nuova** | **1,0000** | 0,648 | 0,6264 | 3120 | 3120 | 0 | 1837 | 1836 | 0 | 1190 |
+
+**Sei profili su sei verdi, zero rossi, zero non giudicati.** `doppioni` **0** dappertutto (un
+doppione qui vorrebbe dire che l'ha spedito il server); `scartati_tardivi` **0** dappertutto (la
+rete di sicurezza dopo il decodificatore non ha mai dovuto scattare); `recuperati` ripaga i
+`mancati` **uno a uno** (1028/1028, 1620/1620, 2392/2392) — cioè la cura **non si accusa da sola**
+di perdite che ha invece recuperato.
+
+⭐ **E la cura resta onesta**: `--certifica` porta due casi che le darebbero **rosso** se lo fosse —
+purezza 0,999 **con** `fuori_ordine` a zero (vorrebbe dire che il profilo non morde e il verde è un
+caso), e la controprova che la regola nuova **butta comunque** il blocco arrivato davvero troppo
+tardi. Una cura che tenesse tutto non sarebbe una cura: sarebbe la rimozione di un controllo.
+
+### 17.2-bis ⛔⛔ IL `[M]` DEL «0,175» — il conteggio regge, **la sua purezza no**
+
+`src/pagina.html:6474` portava: *«jitter ±2 ms ⇒ purezza 0,175, 1 004 scartati su 4 989»*.
+`[M]` stasera, stesso profilo: **1 002 buttati su 4 989 sul filo**. ⇒ Lo **stesso denominatore**,
+due blocchi di differenza: il **conteggio** di quel `[M]` è solido.
+
+⛔ **Ma la sua «purezza 0,175» non è confrontabile con niente**, ed è stato fermato prima che
+diventasse un trionfo. La frazione che usano i banchi della pagina è `suonati/ricevuti`
+(`09-b74:300`), e `a.ricevuti++` sta **dopo** i rami di scarto (`pagina.html:6574`): il denominatore
+conta **solo i sopravvissuti**, quindi quel rapporto vale ~1,000 **con tutt'e due le regole**, su
+una successione anche distrutta. ⚠ È vero nel codice **prima** e **dopo** la cura, verificato su
+`f90eb216^`: da dove venisse quello 0,175 **non si sa**, ed è un numero di cui non si conosce la
+definizione.
+
+⭐ ⇒ La grandezza del banco è **`purezza = consegnati / sul filo`**, col denominatore contato
+**prima** del vaglio, e l'atteso è un **confine dichiarato** (0,90 / 0,80 / 0,60), non quel punto.
+`purezza_pagina` si stampa accanto **solo per confronto**, con scritto che è cieca.
+
+### 17.2-ter ⛔⭐ IL ROSSO CHE ERA DEL BANCO — e la cura del predicato
+
+`casa-cattiva` dava rosso: il cliente contava **2 183 `mancati` su 4 996, il 43,7 %**, con `netem`
+al **2 %**. ⛔ Non era la rete: il registro del server diceva **1 823 blocchi RIFIUTATI da ngtcp2** —
+mai messi sul filo, finestra di congestione chiusa a 40 ms di ritardo. `mancati` si costruisce sui
+salti di `istante`, e **un blocco mai spedito lascia lo stesso salto di uno perso**.
+
+⇒ Il predicato è stato riscritto **sui due capi**: `spediti dal server − sul filo del cliente` =
+**67 perduti sulla rete, il 2,10 %**, contro il 2 % chiesto a `netem`. ⭐ È R13 in forma pura — un
+numero che sembrava misurare la rete e misurava noi.
+
+### 17.2-quater ⚠⚠ E DIETRO C'È UN FATTO DEL PRODOTTO CHE NON C'ENTRA CON LA CURA
+
+`[M]` i blocchi audio **rifiutati da ngtcp2**, cioè prodotti e mai messi sul filo: **4** su
+`jitter-2`, **819** su `jitter-15`, **1 823** su `casa-cattiva` — ⛔ **il 36 % dell'audio prodotto
+non raggiunge il filo**. ⇒ È anche il motivo per cui su `jitter-15` e `casa-cattiva` la *copertura*
+resta 0,84 e 0,63 **pur avendo purezza 1,0000**: il ricevente consegna tutto quel che gli arriva,
+ma **il trasporto non gli fa arrivare tutto**. ⏳ Aperto, e non è un difetto della cura: è la stessa
+finestra di congestione che nel video produce la spirale.
+
+## 17.3 ⭐⭐⭐ DUE TESTIMONI NUOVI NEL SERVER — e uno misura il RIORDINO
+
+⛔ Prima di stasera il registro **non sapeva dire di chi fosse la colpa**. Un fotogramma in ritardo
+poteva essere un pacchetto perso e rimandato, la finestra chiusa, noi che l'abbiamo tenuto o noi
+che l'abbiamo abbandonato: le ultime due si contavano, **le prime due no**.
+
+**1 · la riga `rete-quic`** (`src/webtransport.c`, `rete_ciclo()`) — al più una al secondo, e
+**tace se i contatori sono fermi e il giudizio non è cambiato**:
+
+```
+rete-quic 192.168.1.9:52344 da_ms=1002 persi=7 persi_d=3 byte_persi=9856 ... cwnd=48000
+cwnd_left=0 ssthresh=32000 involo=47180 srtt_us=41230 latest_us=52980 rttvar_us=11400
+min_rtt_us=22100 coda_rete_us=19130 pto_us=132000 dgram_persi=… giudizio=⛔ la linea perde
+```
+
+⚠ Tre scelte che un banco deve sapere: `giudizio=` è **l'ultimo campo** e il suo valore arriva a
+fine riga; l'rtt è in **microsecondi** (in rete locale `rttvar` arrotondato ai ms varrebbe 0, e
+nasconderebbe proprio il jitter che è il bersaglio); `da_ms` è l'intervallo **vero**, e i campi `_d`
+valgono su quello — chiamarli `_1s` sarebbe stato un numero che sembra misurato e non lo è.
+
+Il **giudizio** ha tre valori e la regola è scritta: `persi_d > 0` ⇒ `⛔ la linea perde` (per primo,
+perché la finestra chiusa è quasi sempre la **conseguenza** della perdita, e invertendo la causa si
+nasconderebbe dietro il suo effetto); altrimenti `cwnd_left == 0 && cwnd > 0` ⇒ `⚠ la finestra e'
+chiusa`; altrimenti `-- niente da segnalare`. ⛔ Il giudizio **non parla di jitter né di riordino**,
+apposta: quei numeri ngtcp2 non li dà, e dedurli da `rttvar` avrebbe voluto una **soglia**, cioè una
+decisione.
+
+**2 · ⭐⭐⭐ `dgram_falsi` — il riordino, misurato dal lato del server.**
+`[S]` `ngtcp2.h:3442`, sul callback `lost_datagram`: *«Note that the loss might be spurious, and
+DATAGRAM frame might be acknowledged later»*. ⇒ Stesso `dgram_id` visto prima come **perso** e poi
+come **riscontrato** = pacchetto **arrivato fuori sequenza**, dichiarato perduto dalla soglia dei
+tre pacchetti e riscontrato dopo.
+
+⛔ Fino a stasera `ngtcp2_callbacks` (`src/trasporto.c:498`) registrava `recv_datagram` **e basta**:
+i datagram in arrivo si contavano (rilievo B-10), quelli in **partenza** — cioè l'audio — sparivano
+nel filo senza lasciare traccia. *«L'audio non è arrivato»* e *«è arrivato e il cliente l'ha
+buttato»* avevano la stessa faccia, ed è lo stesso difetto di allora dall'altro verso.
+⛔ E si registrano **in coppia**: `lost_datagram` da sola conterebbe i riordini come **perdite**,
+cioè darebbe un numero **più alto del vero** e senza dirlo.
+
+⚠ **Il prezzo, dichiarato**: vale **sui datagram soltanto**, cioè sull'audio. Gli stream QUIC non
+hanno un identificativo per pezzo, e questa strada lì **non c'è** — sul video il riordino resta
+senza testimone diretto.
+
+### 17.3-bis ⛔ Quel che ngtcp2 1.25 NON dà, detto forte
+
+- **i ritrasmessi non esistono** `[S]`: QUIC non ritrasmette pacchetti, ritrasmette i *frame*
+  dentro pacchetti nuovi, e non c'è nessun contatore di rimandi. `pkt_lost` (i pacchetti
+  **dichiarati** perduti) è quanto ci si avvicina;
+- **il riordino sugli stream non si conta** `[S]`: nessun campo, nessun callback, e la soglia dei
+  tre pacchetti ngtcp2 la usa al suo interno senza esporla. ⇒ Lì `rttvar` resta l'unico indizio;
+- **`delivery_rate` non esiste** `[S]`: la banda resta stimata da `cwnd`/`smoothed_rtt`;
+- ⛔ **il contatore `reordered` di `tc` non esiste su questa macchina** `[M]`: iproute2 6.15.0, il
+  blocco `netem` stampa solo `Sent/dropped/overlimits/requeues/backlog`, e con `reorder 25% 50%`
+  acceso si muove solo `requeues`. ⇒ Il riordino è stato misurato con **tre testimoni concordi** —
+  una sonda UDP numerata attraverso lo stesso `netem`, i sorpassi contati sul JSONL del cliente, e
+  `dgram_falsi` dal server — non dedotto.
+
+## 17.4 ⭐⭐ LA STRETTA DI MANO SOTTO PERDITA — **il `[M]` del 10 % era un difetto del banco**
+
+`banchi/09-b78-apertura.py` · `[M]` 23 agosto 2026 · 10 giri per gradino · perdita **letta** da
+`tc -s qdisc` · fino ad `AMMESSO` (QUIC + CONNECT estesa + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`):
+
+| perdita chiesta | perdita vera | aperte | QUIC mediana | totale mediana | totale max |
+|---|---|---|---|---|---|
+| 0 % | – | **10/10** | 7,8 ms | 1 014 ms | 1 116 ms |
+| 5 % | 8,2 % | **10/10** | 7,8 ms | 1 078 ms | 1 318 ms |
+| 10 % | 9,5 % | **10/10** | 10,9 ms | 1 103 ms | 1 219 ms |
+| 15 % | 15,2 % | **10/10** | 111,5 ms | 1 281 ms | 1 708 ms |
+| 25 % | 24,3 % | **10/10** | 211,9 ms | 1 299 ms | 1 738 ms |
+
+⭐ **La sessione si apre sempre**, anche al 25 %. **La rete costa 285 ms fra lo 0 e il 25 %**; il
+secondo che si vede **non è la rete**, è il ritardo fisso di §4.4-bis contro chi prova le password.
+I massimi della stretta di mano stanno a 212 e 613 ms — **uno e due PTO**.
+
+Le cinque ipotesi, tutte smentite una per una: il cliente non si arrende (**0 giri su 70** hanno
+superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c:2605` conta solo verdetti PAM su
+`CREDENZIALI`, e una stretta di mano non ci arriva); ngtcp2 riprova (`handshake_timeout` resta
+`UINT64_MAX`, `trasporto.c:544`); il `netem` non è applicato due volte (i due filtri prendono i due
+**versi**, quindi un **giro** paga `1-(1-p)²` e un **datagram**, che fa un verso solo, paga `p` —
+`[M]` 3 235/3 607 = 89,7 %).
+
+### 17.4-bis ⛔ IL PREDICATO CHE NON POTEVA DARE ROSSO — R13 di nuovo, in `07-b64-rete.py`
+
+```python
+def a_non_si_apre(n):
+    return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
+```
+
+⛔ `01-b3-cliente.py:1286` stampa `[audio] ricevuti 0` **anche dal ramo `except`**, prima di
+rilanciare. ⇒ **Ogni** modo di fallire — un `CONGEDO`, un tetto scaduto, un `NameError` del banco —
+faceva passare quel gradino di **verde**. Il banco non misurava *«non si apre»*: misurava *«non ho
+ricevuto»*, e le due cose hanno la stessa faccia.
+
+⛔ **E un secondo difetto nello stesso file**: `guasta([])` chiama `rimetti(False)`, che chiama
+`guardiano_disarma()`. Il profilo `0-liscio` è **il primo**, quindi disarmava il guardiano armato
+due righe prima, e gli **otto profili successivi giravano senza rete di sicurezza**.
+
+⏳ **Le due cure sono scritte e NON applicate**: `07-b64-rete.py` è importato dai banchi che stanno
+girando in questo momento, e cambiargli una firma a metà misura sarebbe il difetto che questa
+sezione descrive.
+
+## 17.5 ⛔⛔ IL FANTASMA — *«hai già una sessione attiva altrove»*, e per l'utente è **falso**
+
+⭐ È il fatto di prodotto trovato dietro §17.4, e sul bersaglio della fase.
+
+L'unico modo in cui un'apertura fallisce davvero sotto perdita è `ATTACCA` → `CONGEDO(0x0F)
+GIA_ATTIVA_REMOTA` (`[M]` 5/10 al 10 % di perdita). Il registro dice: *«posto NEGATO … lo occupa un
+altro client di questo stesso utente»*.
+
+⛔ **Il conto si chiude senza `netem`**, perché un addio **perso** e un addio **mai detto** sono lo
+stesso fatto: ucciso il cliente con `-9`, `[M]` **11 rifiuti di fila, e il posto torna libero a
++30,5 s** — cioè `SILENZIO` (`src/rcp.c:263`, 30 000 ms).
+
+⚠ **La frase che il client costruisce è falsa per chi la legge**: quella sessione è **la sua**, ed è
+morta un attimo prima. E il riquadro di `src/rcp.c:229-233` dichiara che quell'orologio *«fa
+sparire il caso "il telefono è morto in galleria"»* — ⛔ non lo fa sparire: lo **dura trenta
+secondi**, e la perdita di pacchetti è precisamente quel che lo rende **normale** invece che raro.
+
+**La cura proposta, NON scritta — è un cambio di politica di §8.2 e la decide l'utente:** in
+`src/rcp.c`, ramo `POSTO_OCCUPATO` di `rcp_attacca()` (righe 2605-2616), prima di congedare con
+`0x0F` guardare l'`ultima_vita` dell'occupante: se tace da più di una soglia breve (~3 s) **mentre
+un altro client dello stesso utente sta chiedendo il posto**, sfrattarlo. §8.2 dice *«nessun client
+attaccato e **vivo** viene mai spodestato»* — l'occupante qui è attaccato ma **non vivo**, e oggi
+l'unico orologio che lo distingue è quello da 30 s. `torna_a_parlare()` (`rcp.c:6921`) gestisce già
+lo sfrattato che torna. ⛔ Non toccherebbe `SILENZIO`, che resta 30 s per tutto il resto.
+
+## 17.6 ⏳ IN MISURA — le cure contro la rete cattiva
+
+`banchi/09-b79-…` sta girando la griglia **appaiata a tre bracci** sui profili rossi: **A** spenti,
+**B** `--sgombra-soglia-ms 100`, **C** `--sgombra-soglia-ms 100 --ritmo-adattivo`. ⛔ Il braccio A si
+**rimisura**, non si riprende da §17.1: quei numeri vengono da un altro binario e da un'altra ora.
+⚠ E il banco riporta **la deriva accanto ai fotogrammi/s**: una cura che raddoppia il ritmo e
+triplica il ritardo **non è ovviamente un miglioramento**, ed è una scelta dell'utente.
+
+## 17.7 ⛔ I DIFETTI DI BANCO TROVATI STASERA — tutti della forma «silenzio invece di rosso»
+
+| dove | che cosa | esito |
+|---|---|---|
+| `07-b64-rete.py` | `a_non_si_apre` verde su qualunque modo di fallire | ⏳ cura scritta, **non applicata** (§17.4-bis) |
+| `07-b64-rete.py` | `0-liscio` disarma il guardiano per gli otto profili dopo | ⏳ cura scritta, **non applicata** |
+| `09-b70-ritmo.py` | `sudo -S` copre solo il **primo** comando della catena ⇒ il lettore §11.1 non si scriveva | aggirato a run-time da `09-b76`, **senza toccare il file** |
+| `09-b70-ritmo.py` | un `< file` in coda **ruba lo stdin a `sudo -S`** ⇒ `righe_registro()` torna 0 in silenzio, e `attese_a_vuoto` diventa cumulativo dall'accensione — cioè la colonna su cui I1 decide se rifiutarsi di giudicare | aggirato allo stesso modo |
+| `09-b76` (in corso d'opera) | ⛔ **`tc qdisc change` è appiccicoso**: un `reorder` messo per un profilo restava acceso nei quattro dopo | curato: il banco **rilegge** la regola installata e dà rosso se porta un verbo non chiesto |
+| `09-b77` (in corso d'opera) | le regex cercavano i nomi **interni** dei contatori mentre il cliente stampa altri nomi ⇒ `None` su tutto, nessun errore | curato, e `--certifica` ora prova le regex sull'**uscita vera** del cliente |
+| `09-b77` (in corso d'opera) | `mancati` conta come perduti anche i blocchi **mai spediti** | curato: il predicato lavora **sui due capi** (§17.2-ter) |
+
+## 17.8 Che cosa resta aperto dopo questa sezione
+
+1. ⏳ **le cure contro la spirale** — in misura, §17.6;
+2. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
+   congestione che nel video produce la spirale, e non è un difetto della cura del riordino;
+3. ⛔ **chi stacca a `raffica-forte`** (§17.1-quater): l'unico obbligo che vale ovunque è violato;
+4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
+5. ⏳ **le due cure a `07-b64-rete.py`**, da applicare a banchi fermi;
+6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
+   sull'audio soltanto.

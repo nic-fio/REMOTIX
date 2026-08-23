@@ -285,6 +285,11 @@ typedef struct {
 	bool usato;
 } richiesta;
 
+/* ⭐ Quante perdite di datagram si tengono a mente per riconoscere quelle
+ *    FALSE — cioe' il riordino.  Vedi il campo `dgram_anello` piu' sotto: e'
+ *    corto apposta, e la ragione sta li'. */
+#define WT_DGRAM_ANELLO 512
+
 struct wt {
 	ngtcp2_conn *conn;
 	ngtcp2_ccerr *ultimo_errore;
@@ -458,6 +463,62 @@ struct wt {
 	unsigned ritmo_max, ritmo_ultimo;
 	uint32_t ritmo_detti_n;
 	uint64_t ritmo_detto_ms;
+
+	/* ⛔⭐⭐ FASE 9 — LA FOTOGRAFIA DELLA RETE DEL SECONDO PRIMA, e serve a
+	 *      rispondere all'unica domanda che sotto perdita conta: **e' la linea
+	 *      o siamo noi?**
+	 *
+	 *      Fino a qui il registro sapeva contare solo la meta' NOSTRA del
+	 *      ritardo — `sgombra_tenuti` (l'abbiamo tenuto in coda),
+	 *      `sgombra_abbandoni` (l'abbiamo buttato), `video_ritmo_scesi` (non
+	 *      l'abbiamo nemmeno spedito).  ⛔ La meta' della RETE — un pacchetto
+	 *      perduto e rimandato da QUIC, la finestra di congestione che si e'
+	 *      chiusa — non la sapeva contare nessuno, e ogni misura sotto perdita
+	 *      finiva in una discussione invece che in un'attribuzione.
+	 *
+	 * ⚠ Questi campi NON DECIDONO NIENTE: sono la fotografia dell'ultima riga
+	 *   scritta, e servono solo a fare la differenza («quanti nell'intervallo»)
+	 *   e a tacere quando non e' cambiato niente.  Nessuna soglia, nessun
+	 *   ritmo, nessun interruttore: `rete_ciclo()` e' pura osservazione.
+	 *
+	 * ⛔ `rete_detto_ms` a 0 vuol dire «mai detta», e la prima riga esce
+	 *    comunque: «la sessione non ha ancora parlato» e «non e' cambiato
+	 *    niente» non devono avere la stessa faccia (`LEZIONI.md` §1.9). */
+	uint64_t rete_detto_ms;
+	uint64_t rete_pkt_lost, rete_bytes_lost;
+	uint64_t rete_pkt_sent, rete_pkt_recv, rete_pkt_discarded;
+	/* Il giudizio dell'ultima riga: se cambia, la riga esce anche a contatori
+	 * fermi — passare da «la finestra e' chiusa» a «niente da segnalare» e'
+	 * precisamente il fatto che si vuole vedere. */
+	int rete_giudizio;
+
+	/* ⭐⭐⭐ I DATAGRAM PERSI — E LA MISURA DEL RIORDINO CHE NGTCP2 NON DA'.
+	 *
+	 *     `ngtcp2.h:3442` dice una cosa che vale piu' del contatore che
+	 *     annuncia: *«Note that the loss might be spurious, and DATAGRAM frame
+	 *     might be acknowledged later»*.  ⇒ Se per lo stesso `dgram_id` arriva
+	 *     prima `lost_datagram` e POI `ack_datagram`, quella perdita **non era
+	 *     una perdita**: era un pacchetto arrivato FUORI SEQUENZA, dichiarato
+	 *     perduto dalla soglia dei tre pacchetti e riscontrato dopo.
+	 *
+	 * ⭐ E' la firma del riordino, presa dal lato del server, senza patch a
+	 *   ngtcp2 e senza dedurla dai numeri di sequenza dell'applicazione — che
+	 *   era l'unica strada che si vedeva prima di leggere quella riga.
+	 *   ⚠ E' parziale per costruzione: vale sui **datagram**, cioe' sull'audio;
+	 *   sugli stream QUIC non c'e' un identificativo per pezzo e questa strada
+	 *   non c'e'.  Il prezzo si dichiara invece di lasciar credere che il
+	 *   numero copra tutto il traffico.
+	 *
+	 * ⛔ L'anello e' corto APPOSTA: un riscontro che arriva dopo 512 perdite
+	 *    dichiarate non e' piu' un riordino, e contarlo tale gonfierebbe il
+	 *    numero proprio nel caso — la linea che perde davvero — in cui deve
+	 *    restare onesto.  ⇒ Quel che esce dall'anello resta perduto. */
+	uint64_t dgram_persi;        /* `lost_datagram` ha detto: perduto */
+	uint64_t dgram_riscontrati;  /* `ack_datagram` ha detto: arrivato */
+	uint64_t dgram_falsi;        /* perduto E POI riscontrato = RIORDINO */
+	uint64_t dgram_anello[WT_DGRAM_ANELLO];
+	unsigned dgram_anello_i;
+	uint64_t rete_dgram_persi, rete_dgram_falsi;
 
 	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
 	 *
@@ -3682,6 +3743,295 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 	w->ritmo_detti_n = w->video_ritmo_scesi;
 }
 
+/* ========================================================================== */
+/* ⛔⭐⭐ FASE 9 — LA RIGA CHE ATTRIBUISCE IL RITARDO A CHI SE L'E' PRESO.     */
+/*                                                                            */
+/*      IL BUCO CHE CHIUDE.  Un fotogramma che arriva tardi ha quattro padri  */
+/*      possibili, e fino a questa riga il registro ne sapeva riconoscere     */
+/*      solo due:                                                             */
+/*                                                                            */
+/*        (a) un pacchetto perduto e rimandato da QUIC   ⛔ NON SI VEDEVA     */
+/*        (b) la finestra di congestione che si e' chiusa ⛔ NON SI VEDEVA    */
+/*        (c) noi che l'abbiamo tenuto in coda            ✅ `sgombra_tenuti`  */
+/*        (d) noi che l'abbiamo abbandonato               ✅ `sgombra_abbandoni`*/
+/*                                                                            */
+/*      ⇒ Senza (a) e (b) ogni misura sotto perdita finisce in una discussione*/
+/*      — «e' la linea o siamo noi?» — invece che in un'attribuzione.  E il   */
+/*      progetto ha una regola: ogni numero va attribuito da se'.             */
+/*                                                                            */
+/* ⛔⛔ E' SOLO OSSERVAZIONE.  Questa funzione LEGGE e SCRIVE, e basta:       */
+/*      nessuna decisione, nessuna soglia, nessun ritmo, nessuno stato di     */
+/*      trasporto toccato.  ⇒ Non c'e' niente da mettere dietro un            */
+/*      interruttore (invariante I6), perche' non cambia niente di quel che   */
+/*      l'utente VEDE.  Se un giorno servisse cambiare qualcosa per poterla   */
+/*      scrivere, quella e' un'altra cura e va dietro un interruttore spento. */
+/*                                                                            */
+/* ⭐ LA RIGA D'ESEMPIO — ED E' UN CONTRATTO SUL TESTO, perche' e' quella che */
+/*    un banco cerchera' con un `grep` e spezzera' con uno `split`:           */
+/*                                                                            */
+/*      rete-quic 192.168.1.9:52344 da_ms=1002 persi=7 persi_d=3              */
+/*      byte_persi=9856 byte_persi_d=4224 spediti=48210 spediti_d=812         */
+/*      byte_spediti=59284410 ricevuti=3011 ricevuti_d=61 scartati=0          */
+/*      scartati_d=0 cwnd=48000 cwnd_left=0 ssthresh=32000 involo=47180       */
+/*      srtt_us=41230 latest_us=52980 rttvar_us=11400 min_rtt_us=22100        */
+/*      coda_rete_us=19130 pto_us=132000 dgram_persi=n/d                      */
+/*      giudizio=⛔ la linea perde                                            */
+/*                                                                            */
+/*    (nel registro e' TUTTA SU UNA RIGA: qui va a capo solo per starci nel   */
+/*    riquadro.)  Le regole del formato, e sono tre:                          */
+/*                                                                            */
+/*      1. il prefisso `rete-quic` e' STABILE ed e' la prima parola del corpo:*/
+/*         `grep 'rete-quic '` prende tutte le righe e nient'altro;           */
+/*      2. ogni campo e' `nome=valore` senza spazi nel valore, separato da UNO*/
+/*         spazio — `split()` e poi `split('=', 1)` bastano.  Il secondo campo*/
+/*         non ha `=` ed e' la provenienza (IND:PORTA), che di spazi non ne ha;*/
+/*      3. ⛔ `giudizio=` E' L'ULTIMO CAMPO, e il suo valore arriva a FINE     */
+/*         RIGA spazi compresi: e' l'unico che ne contiene, apposta, perche'  */
+/*         dev'essere leggibile da un umano senza trattini finti.  Un banco lo*/
+/*         prende con `riga.split('giudizio=', 1)[1]`.                        */
+/*                                                                            */
+/* ⚠ LE UNITA' STANNO NEI NOMI, e l'rtt e' in MICROsecondi mentre il resto    */
+/*   del file lo stampa in millisecondi.  Non e' distrazione: il bersaglio    */
+/*   della fase e' il jitter, e `rttvar` su una rete locale sta sotto il      */
+/*   millisecondo — arrotondato a ms varrebbe `0` e nasconderebbe proprio il  */
+/*   fatto che si sta cercando.  ⇒ `_us` sul nome, e chi legge non sbaglia.   */
+/*                                                                            */
+/* ⚠ `da_ms` E' L'INTERVALLO VERO, e i campi `_d` valgono SU QUELLO — non «al */
+/*   secondo».  La riga esce al piu' una volta al secondo, ma tace quando non */
+/*   e' cambiato niente: dopo un silenzio di 12 s il `da_ms` dice 12000 e le  */
+/*   differenze coprono 12 s.  ⛔ Chiamarli `_1s` sarebbe stato un numero che */
+/*   SEMBRA misurato e non lo e' — la forma E1.  Sulla PRIMA riga `da_ms=0` e */
+/*   le differenze valgono i totali, cioe' tutta la connessione.              */
+/*                                                                            */
+/* ⛔ CHE COSA NON C'E', e va detto qui perche' un campo assente si nota e un */
+/*    campo mancante no:                                                      */
+/*                                                                            */
+/*    · **i RITRASMESSI non esistono in ngtcp2 1.25** `[S]`.  QUIC non        */
+/*      ritrasmette pacchetti — ritrasmette i FRAME dentro pacchetti nuovi —  */
+/*      e `ngtcp2_conn_info` non ha nessun contatore di rimandi.  `pkt_lost`  */
+/*      (`persi`) e' quanto ci si avvicina: i pacchetti DICHIARATI perduti.   */
+/*    · **il riordino non si conta SUGLI STREAM** `[S]`: nessun campo,        */
+/*      nessun callback, e ngtcp2 usa la soglia dei 3 pacchetti al suo        */
+/*      interno senza esporla.  ⇒ Li' `rttvar_us` resta l'unico indizio di    */
+/*      jitter, e questa riga lo porta senza giudicarlo.                      */
+/*    · ⭐⭐⭐ **MA SUI DATAGRAM IL RIORDINO SI MISURA** — 23 agosto 2026.      */
+/*      `ngtcp2.h:3442`: *«the loss might be spurious, and DATAGRAM frame     */
+/*      might be acknowledged later»*.  ⇒ Stesso `dgram_id` prima in          */
+/*      `lost_datagram` e poi in `ack_datagram` = perdita FALSA = pacchetto   */
+/*      arrivato fuori sequenza.  E' `dgram_falsi`, ed e' il solo numero che  */
+/*      il server sappia dare sul bersaglio «fuori sequenza» della fase 9.    */
+/*      ⚠ Vale sull'AUDIO soltanto: gli stream non hanno un identificativo    */
+/*      per pezzo, e questa strada li' non c'e'.  Il prezzo si dichiara.      */
+/*    · **`delivery_rate` non esiste** `[S]` in ngtcp2 1.25: la banda si      */
+/*      stima da `cwnd`/`smoothed_rtt` come gia' fa `chiave_intervallo_ms()`. */
+/* ========================================================================== */
+
+/* ⭐ I TRE GIUDIZI, e la regola che li sceglie sta tutta in `rete_ciclo()`.
+ *    Sono numeri e non stringhe solo per poter dire «il giudizio e' cambiato»
+ *    a contatori fermi, che e' un fatto che merita una riga. */
+#define WT_RETE_NULLA    0
+#define WT_RETE_FINESTRA 1
+#define WT_RETE_PERDE    2
+
+/* ⭐⭐ I DUE ESITI DI UN DATAGRAM, E LI CHIAMA `trasporto.c` DA NGTCP2.
+ *
+ *    ⛔ Fino al 23 agosto 2026 `ngtcp2_callbacks` non registrava ne'
+ *       `lost_datagram` ne' `ack_datagram`: l'audio partiva e il suo destino
+ *       era **muto**.  «L'audio non arriva» e «l'audio arriva e il cliente lo
+ *       butta» avevano la stessa faccia — che e' lo stesso rilievo B-10 che
+ *       aveva gia' fatto contare i datagram in ENTRATA.
+ *
+ * ⚠ NON DECIDONO NIENTE: contano e basta.  Nessuna soglia, nessun ritmo,
+ *   nessun interruttore da tenere spento (I6), perche' non cambia niente di
+ *   quel che l'utente vede.
+ */
+void wt_dgram_perso(wt *w, uint64_t id)
+{
+	if (!w)
+		return;
+	w->dgram_persi++;
+	/* ⛔ Si scrive sempre, anche sopra un identificativo non ancora
+	 *    riscontrato: l'anello e' una memoria RECENTE, non un elenco. */
+	w->dgram_anello[w->dgram_anello_i] = id;
+	w->dgram_anello_i = (w->dgram_anello_i + 1) % WT_DGRAM_ANELLO;
+}
+
+void wt_dgram_riscontrato(wt *w, uint64_t id)
+{
+	unsigned i;
+
+	if (!w)
+		return;
+	w->dgram_riscontrati++;
+	/* ⭐ Il fatto che conta: era stato DICHIARATO perduto, ed eccolo.
+	 *    ⇒ Non era perduto: era in ritardo.  E' riordino, misurato. */
+	for (i = 0; i < WT_DGRAM_ANELLO; i++) {
+		if (w->dgram_anello[i] != id)
+			continue;
+		w->dgram_falsi++;
+		/* ⛔ Si consuma, o un secondo riscontro dello stesso
+		 *    identificativo lo conterebbe due volte. */
+		w->dgram_anello[i] = 0;
+		return;
+	}
+}
+
+static void rete_ciclo(wt *w, uint64_t ora_ms)
+{
+	ngtcp2_conn_info in;
+	uint64_t cwnd_left, da_ms;
+	char minimo[24], coda[24];
+	const char *detto;
+	int g;
+
+	if (!w->conn || w->chiusura >= 0)
+		return;
+	/* ⚠ Al piu' una al secondo.  ⛔ E la PRIMA esce sempre, senza aspettare:
+	 *   `rete_detto_ms == 0` vuol dire «mai parlato», che non e' «non e'
+	 *   cambiato niente» (`LEZIONI.md` §1.9). */
+	if (w->rete_detto_ms && ora_ms - w->rete_detto_ms < 1000)
+		return;
+
+	memset(&in, 0, sizeof in);
+	ngtcp2_conn_get_conn_info(w->conn, &in);
+	cwnd_left = ngtcp2_conn_get_cwnd_left(w->conn);
+
+	/* ⛔⭐ LA REGOLA DEL GIUDIZIO, e si legge dall'alto: il primo che scatta
+	 *     vince, e l'ordine NON e' arbitrario.
+	 *
+	 *  1. `persi_d > 0` — ngtcp2 ha DICHIARATO perduti dei pacchetti in questo
+	 *     intervallo ⇒ «⛔ la linea perde».  Viene prima di tutto perche' la
+	 *     finestra chiusa e' quasi sempre la CONSEGUENZA della perdita: con
+	 *     l'ordine invertito la causa si nasconderebbe dietro il suo effetto.
+	 *  2. `cwnd_left == 0` con una finestra che esiste (`cwnd > 0`) — non c'e'
+	 *     posto per spedire ⇒ «⚠ la finestra e' chiusa».  Senza perdite
+	 *     nell'intervallo e' l'eco di una perdita passata, oppure e' l'avvio
+	 *     lento che non ha ancora aperto: la riga porta `ssthresh` accanto e
+	 *     chi legge distingue i due (sotto soglia = avvio lento).
+	 *  3. altrimenti «-- niente da segnalare».
+	 *
+	 * ⚠ E IL GIUDIZIO NON PARLA DI JITTER NE' DI RIORDINO, apposta: quei due
+	 *   numeri ngtcp2 non li da' (vedi il riquadro sopra), e un giudizio
+	 *   dedotto da `rttvar` avrebbe voluto una SOGLIA — cioe' una decisione, e
+	 *   qui non se ne prende nessuna. */
+	if (in.pkt_lost > w->rete_pkt_lost)
+		g = WT_RETE_PERDE;
+	else if (in.cwnd > 0 && cwnd_left == 0)
+		g = WT_RETE_FINESTRA;
+	else
+		g = WT_RETE_NULLA;
+
+	/* ⛔⭐ SOLO QUANDO QUALCOSA E' CAMBIATO.  Una riga al secondo che ripete
+	 *     gli stessi numeri e' rumore che NASCONDE le righe che contano — ed e'
+	 *     la lezione dei 30,8 GB di registro, in una veste nuova: li' era una
+	 *     riga per fotogramma, qui sarebbe una riga per sessione ferma.
+	 *
+	 * ⚠ Il controllo e' sui CONTATORI (spediti, ricevuti, persi, scartati) e
+	 *   sul GIUDIZIO, non su `cwnd`/`rtt`: quelli oscillano sempre di un byte o
+	 *   di un microsecondo, e col loro confronto la riga non tacerebbe mai —
+	 *   cioe' il filtro sarebbe scritto e non funzionerebbe.  Se i quattro
+	 *   contatori sono FERMI, sul filo non e' passato niente: e allora anche
+	 *   `cwnd` e `rtt` sono quelli di prima, per costruzione. */
+	/* ⛔ E i datagram entrano nel confronto: una sessione che perde SOLO
+	 *    audio — i pacchetti con dentro i DATAGRAM sono pacchetti come gli
+	 *    altri, ma un riordino puo' non muovere `pkt_lost` — resterebbe muta
+	 *    proprio nel caso che la fase 9 va a cercare. */
+	if (w->rete_detto_ms
+	    && in.pkt_lost == w->rete_pkt_lost
+	    && in.pkt_sent == w->rete_pkt_sent
+	    && in.pkt_recv == w->rete_pkt_recv
+	    && in.pkt_discarded == w->rete_pkt_discarded
+	    && w->dgram_persi == w->rete_dgram_persi
+	    && w->dgram_falsi == w->rete_dgram_falsi
+	    && g == w->rete_giudizio)
+		return;
+
+	/* ⛔ `min_rtt` vale `UINT64_MAX` finche' non e' arrivato un campione, e la
+	 *    sottrazione darebbe un numero enorme che SEMBRA misurato — forma E1,
+	 *    la peggiore.  ⇒ Si dichiara `n/d` invece di stampare spazzatura.  E'
+	 *    la stessa guardia di `ritmo_frena()`, e vale per tutt'e due i campi
+	 *    che da `min_rtt` dipendono. */
+	if (in.min_rtt != UINT64_MAX && in.min_rtt != 0) {
+		snprintf(minimo, sizeof minimo, "%llu",
+		         (unsigned long long)(in.min_rtt / NGTCP2_MICROSECONDS));
+		/* ⭐ `smoothed_rtt - min_rtt` E' LA CODA DENTRO LA RETE: e' il numero
+		 *    con cui `SPECIFICHE.md:128` — «ogni memoria intermedia compra
+		 *    fluidita' e vende risposta» — si onora invece di citarlo. */
+		if (in.smoothed_rtt >= in.min_rtt)
+			snprintf(coda, sizeof coda, "%llu",
+			         (unsigned long long)((in.smoothed_rtt - in.min_rtt)
+			                              / NGTCP2_MICROSECONDS));
+		else
+			snprintf(coda, sizeof coda, "0");
+	} else {
+		snprintf(minimo, sizeof minimo, "n/d");
+		snprintf(coda, sizeof coda, "n/d");
+	}
+
+	switch (g) {
+	case WT_RETE_PERDE:
+		detto = "⛔ la linea perde";
+		break;
+	case WT_RETE_FINESTRA:
+		detto = "⚠ la finestra e' chiusa";
+		break;
+	default:
+		detto = "-- niente da segnalare";
+		break;
+	}
+
+	da_ms = w->rete_detto_ms ? ora_ms - w->rete_detto_ms : 0;
+
+	registro_dice(REG_WT,
+	              "rete-quic %s da_ms=%llu persi=%llu persi_d=%llu "
+	              "byte_persi=%llu byte_persi_d=%llu spediti=%llu spediti_d=%llu "
+	              "byte_spediti=%llu ricevuti=%llu ricevuti_d=%llu "
+	              "scartati=%llu scartati_d=%llu cwnd=%llu cwnd_left=%llu "
+	              "ssthresh=%llu involo=%llu srtt_us=%llu latest_us=%llu "
+	              "rttvar_us=%llu min_rtt_us=%s coda_rete_us=%s pto_us=%llu "
+	              "dgram_persi=%llu dgram_persi_d=%llu dgram_ok=%llu "
+	              "dgram_falsi=%llu dgram_falsi_d=%llu giudizio=%s",
+	              w->provenienza,
+	              (unsigned long long)da_ms,
+	              (unsigned long long)in.pkt_lost,
+	              (unsigned long long)(in.pkt_lost - w->rete_pkt_lost),
+	              (unsigned long long)in.bytes_lost,
+	              (unsigned long long)(in.bytes_lost - w->rete_bytes_lost),
+	              (unsigned long long)in.pkt_sent,
+	              (unsigned long long)(in.pkt_sent - w->rete_pkt_sent),
+	              (unsigned long long)in.bytes_sent,
+	              (unsigned long long)in.pkt_recv,
+	              (unsigned long long)(in.pkt_recv - w->rete_pkt_recv),
+	              (unsigned long long)in.pkt_discarded,
+	              (unsigned long long)(in.pkt_discarded - w->rete_pkt_discarded),
+	              (unsigned long long)in.cwnd,
+	              (unsigned long long)cwnd_left,
+	              (unsigned long long)in.ssthresh,
+	              (unsigned long long)in.bytes_in_flight,
+	              (unsigned long long)(in.smoothed_rtt / NGTCP2_MICROSECONDS),
+	              (unsigned long long)(in.latest_rtt / NGTCP2_MICROSECONDS),
+	              (unsigned long long)(in.rttvar / NGTCP2_MICROSECONDS),
+	              minimo, coda,
+	              (unsigned long long)(ngtcp2_conn_get_pto(w->conn)
+	                                   / NGTCP2_MICROSECONDS),
+	              (unsigned long long)w->dgram_persi,
+	              (unsigned long long)(w->dgram_persi - w->rete_dgram_persi),
+	              (unsigned long long)w->dgram_riscontrati,
+	              (unsigned long long)w->dgram_falsi,
+	              (unsigned long long)(w->dgram_falsi - w->rete_dgram_falsi),
+	              detto);
+
+	w->rete_detto_ms      = ora_ms;
+	w->rete_pkt_lost      = in.pkt_lost;
+	w->rete_bytes_lost    = in.bytes_lost;
+	w->rete_pkt_sent      = in.pkt_sent;
+	w->rete_pkt_recv      = in.pkt_recv;
+	w->rete_pkt_discarded = in.pkt_discarded;
+	w->rete_dgram_persi   = w->dgram_persi;
+	w->rete_dgram_falsi   = w->dgram_falsi;
+	w->rete_giudizio      = g;
+}
+
 /* ------------------------------------------------------------------------ */
 /* ⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, CONSEGNATO A UNA SESSIONE.          */
 
@@ -6124,6 +6474,13 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	 *     uscisse solo coi fotogrammi lascerebbe «l'anello non e' stato
 	 *     percorso» con la stessa faccia di «l'arretrato era zero». */
 	ritmo_ciclo(w, ts / NGTCP2_MILLISECONDS);
+
+	/* ⛔⭐ FASE 9 — e accanto a quella del ritmo, quella della RETE: le due
+	 *     meta' della stessa domanda.  `ritmo_ciclo()` dice quel che abbiamo
+	 *     fatto NOI, `rete_ciclo()` quel che ha fatto la LINEA — e girano tutte
+	 *     e due col battito, per la stessa ragione: a scena ferma i fotogrammi
+	 *     non arrivano, ma i pacchetti si possono perdere lo stesso. */
+	rete_ciclo(w, ts / NGTCP2_MILLISECONDS);
 
 	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
 	 *

@@ -485,6 +485,42 @@ static void raccogli_morte(trasporto *t)
 
 /* ------------------------------------------------------------------------ */
 
+/* ⭐⭐⭐ L'ESITO DEI DATAGRAM CHE MANDIAMO NOI — 23 agosto 2026.
+ *
+ *    ⛔ Fino a oggi `ngtcp2_callbacks` registrava `recv_datagram` e basta: i
+ *       datagram in ARRIVO si contavano (rilievo B-10), quelli in PARTENZA —
+ *       cioe' l'audio — sparivano nel filo senza lasciare traccia.  «L'audio
+ *       non e' arrivato» e «e' arrivato e il cliente l'ha buttato» avevano la
+ *       stessa faccia, ed e' lo stesso difetto di allora dall'altro verso.
+ *
+ * ⭐ E NON BASTA `lost_datagram`: `ngtcp2.h:3442` avverte che la perdita puo'
+ *   essere **spuria** — dichiarata e poi riscontrata.  Registrando solo le
+ *   perdite conteremmo i pacchetti FUORI SEQUENZA come persi, cioe' daremmo
+ *   un numero piu' alto del vero senza dirlo.  ⇒ Si registra anche
+ *   `ack_datagram`, e `webtransport.c` riconosce le perdite false: e' la
+ *   MISURA DEL RIORDINO, e sul riordino ngtcp2 non da' nient'altro.
+ *
+ * ⚠ Non decidono niente: contano.  Il `dgram_id` e' quello che
+ *   `dgram_scrivi_uno()` incrementa in `webtransport.c`.
+ */
+static int cb_lost_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
+                            void *user_data)
+{
+	connessione *c = user_data;
+	(void)conn;
+	wt_dgram_perso(c->w, dgram_id);
+	return 0;
+}
+
+static int cb_ack_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
+                           void *user_data)
+{
+	connessione *c = user_data;
+	(void)conn;
+	wt_dgram_riscontrato(c->w, dgram_id);
+	return 0;
+}
+
 static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
                             const struct sockaddr *locale, socklen_t localelen,
                             const struct sockaddr *remoto, socklen_t remotolen)
@@ -521,6 +557,12 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 		/* ⛔ §6.3: i datagram si annunciano, quindi arrivano — e quel che
 		 *    arriva o si serve o si scarta SCRIVENDOLO.  Rilievo B-10. */
 		.recv_datagram = cb_recv_datagram,
+		/* ⭐⭐ E l'esito di quelli che mandiamo NOI — in coppia, e la
+		 *    ragione per cui la coppia e' obbligatoria sta sopra le due
+		 *    funzioni: da sola, `lost_datagram` conterebbe il riordino
+		 *    come perdita. */
+		.lost_datagram = cb_lost_datagram,
+		.ack_datagram = cb_ack_datagram,
 	};
 
 	c = calloc(1, sizeof *c);

@@ -102,6 +102,19 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 int wt_stream_reset(wt *w, int64_t stream_id);
 int wt_stream_stop_sending(wt *w, int64_t stream_id);
 int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len);
+
+/* ⭐⭐ L'esito di un DATAGRAM, che fino al 23 agosto 2026 era muto.
+ *
+ *    `trasporto.c` le chiama dai callback `lost_datagram` e `ack_datagram` di
+ *    ngtcp2.  ⛔ E servono in COPPIA, non una sola: `ngtcp2.h:3442` avverte che
+ *    una perdita di datagram puo' essere **spuria** — dichiarata e poi
+ *    riscontrata.  ⇒ Lo stesso `id` visto prima come perso e poi come
+ *    riscontrato **non e' una perdita: e' un pacchetto fuori sequenza**, ed e'
+ *    il solo numero che il server sappia dare sul riordino (fase 9, §3.1-ter).
+ *    Registrare solo `lost_datagram` conterebbe quei riordini come perdite,
+ *    cioe' darebbe un numero **piu' alto del vero** e senza dirlo. */
+void wt_dgram_perso(wt *w, uint64_t id);
+void wt_dgram_riscontrato(wt *w, uint64_t id);
 int wt_estendi_max_stream_data(wt *w, int64_t stream_id);
 int wt_estendi_max_streams_bidi(wt *w, uint64_t max_streams);
 

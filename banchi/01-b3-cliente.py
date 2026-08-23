@@ -2,6 +2,27 @@
 """01-b3-cliente.py — il cliente di prova: la stretta di mano di RCP, scritta una seconda volta.
 
     python3 01-b3-cliente.py --utente prova --parola X [--registra t.rcpreg]
+    python3 01-b3-cliente.py --certifica     ⭐ QUI, senza rete e senza macchina
+
+---------------------------------------------------------------------------
+⭐⭐ FASE 9 — LE DUE REGOLE DELL'AUDIO, E L'INTERRUTTORE FRA LORO
+
+La cura del riordino — quella che smette di buttare i blocchi arrivati fuori
+sequenza — era scritta **solo in `src/pagina.html`**.  ⇒ Nessun banco poteva
+misurare se morde, perche' il cliente che i banchi usano non ce l'aveva.
+Adesso ce l'ha, dietro `--audio-regola vecchia|nuova`.
+
+⛔⛔ **Il predefinito e' `vecchia`, e si cambia solo per decisione dell'utente.**
+     Decine di banchi gia' misurati usano questo programma: con la regola nuova
+     per predefinito, ogni numero gia' scritto smetterebbe di essere
+     confrontabile — e il confronto «prima / dopo la cura» e' proprio quello
+     che si vuole poter fare.  ⭐ `--certifica` caso 6 lo verifica contro una
+     trascrizione LETTERALE del codice del 22 agosto, non contro un'opinione.
+
+⚠ La traduzione dalla pagina a qui NON e' identica, e le cinque differenze
+  stanno scritte per esteso sopra `class VaglioAudio` (T1..T5).  La piu'
+  importante: **qui la decodifica costa zero**, e con `--audio-decodifica-ms 0`
+  il contatore `scartati_tardivi` non e' una misura, e' uno zero cieco.
 
 ---------------------------------------------------------------------------
 ⛔ IL SUO MESTIERE, CHE NON E' «FUNZIONARE»
@@ -50,12 +71,42 @@ import struct
 import sys
 import time
 
-from aioquic.asyncio import connect
-from aioquic.asyncio.protocol import QuicConnectionProtocol
-from aioquic.h3.connection import H3_ALPN, H3Connection
-from aioquic.h3.events import HeadersReceived
-from aioquic.quic.configuration import QuicConfiguration
-from aioquic.quic.events import QuicEvent
+# ⛔⭐ E `aioquic` PUO' NON ESSERCI — 23 agosto 2026, fase 9.
+#
+#     `aioquic` sta DENTRO il contenitore, non sul portatile.  ⚠ Finche' questo
+#     programma sapeva fare una cosa sola — attaccarsi a un server — un
+#     `ModuleNotFoundError` in testa al file era la diagnosi giusta.  ⛔ Ma
+#     `--certifica` non tocca la rete: e' un'autoprova del vaglio dell'audio, e
+#     deve poter girare DOVE SI SCRIVE IL CODICE.  Con l'import in testa non
+#     partiva nemmeno.
+#
+# ⇒ Si prova a importare, e se manca si tira avanti con dei segnaposto: chi
+#   chiede la RETE lo scopre subito e con una riga che dice cosa fare, chi
+#   chiede `--certifica` gira lo stesso.  ⚠ E il segnaposto ALZA: un import
+#   silenziosamente finto che lasciasse partire un giro vero sarebbe la forma
+#   d'errore peggiore, «funziona e misura niente».
+try:
+    from aioquic.asyncio import connect
+    from aioquic.asyncio.protocol import QuicConnectionProtocol
+    from aioquic.h3.connection import H3_ALPN, H3Connection
+    from aioquic.h3.events import HeadersReceived
+    from aioquic.quic.configuration import QuicConfiguration
+    from aioquic.quic.events import QuicEvent
+    AIOQUIC = None
+except ModuleNotFoundError as _e:          # noqa: N816 — il nome dice il fatto
+    AIOQUIC = str(_e)
+
+    class QuicConnectionProtocol:          # segnaposto
+        def __init__(self, *a, **kw):
+            raise RuntimeError(f"⛔ senza `aioquic` non c'e' nessuna rete: {AIOQUIC}")
+
+    class QuicEvent:                       # segnaposto (serve all'annotazione)
+        pass
+
+    class HeadersReceived:                 # segnaposto (serve a `isinstance`)
+        pass
+
+    H3_ALPN = H3Connection = QuicConfiguration = connect = None
 
 CLIENT, SERVER = 1, 2
 T = {"CIAO": 0x0001, "ECCOMI": 0x0002, "CREDENZIALI": 0x0003, "AMMESSO": 0x0004,
@@ -288,6 +339,282 @@ class Registratore:
             f.write(bytes(out))
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ IL VAGLIO DELL'AUDIO — §6.3, e la cura del riordino della fase 9
+#
+# ⛔⛔ PERCHE' ESISTE QUESTA CLASSE, E IL BUCO CHE CHIUDE — 23 agosto 2026.
+#
+#      La cura del riordino e' stata scritta **solo in `src/pagina.html`**
+#      (`audio_posto_passato`, `scartati_tardivi`, `fuori_ordine`, `doppioni`,
+#      `recuperati`, `ist_max_us`).  Questo cliente — che e' il secondo lettore
+#      di `RCP.md` e quello che TUTTI i banchi usano — aveva ancora la regola di
+#      prima: `istante <= ultimo ⇒ butta`.  ⇒ **Nessun banco poteva misurare se
+#      la cura morde**, perche' il cliente che i banchi usano non ce l'ha.
+#
+# ⛔⛔ E IL PREDEFINITO RESTA `vecchia`, per decisione dell'utente.
+#      `01-b3-cliente.py` lo usano decine di banchi gia' misurati: cambiare il
+#      comportamento predefinito farebbe smettere di essere confrontabile ogni
+#      numero gia' scritto.  ⭐ Con `--audio-regola vecchia` i contatori
+#      `ricevuti` e `vecchi` e la lista dei blocchi consegnati sono IDENTICI a
+#      quelli di prima — e `--certifica` caso 6 lo verifica contro una
+#      trascrizione letterale del codice di prima, non contro un'opinione.
+#
+# ── LA REGOLA DELLA PAGINA, IN QUATTRO CASI ────────────────────────────────
+#   `[R]` src/pagina.html:6497-6572 (il filo) e 5889-6186 (`suona()`).
+#
+#   1. `istante == ultimo`  ⇒ **doppione**: si butta.  Suonarlo due volte
+#      raddoppierebbe il segnale, che e' il modo peggiore di fallire.
+#      ⛔ Zero e' il numero atteso: QUIC scarta da se' i pacchetti ripetuti.
+#   2. `istante < ultimo` (ARRETRATO) e il suo posto nel tempo e' GIA' PASSATO
+#      ⇒ `scartati_vecchi`: e' consumato davvero, §6.3 alla lettera.
+#   3. `istante < ultimo` ma il suo posto **c'e' ancora** ⇒ `fuori_ordine`:
+#      ⭐ SI TIENE, ed e' tutta la cura.  L'ancora gli da' un posto assoluto:
+#      non gli serve arrivare in ordine per finirci dentro.  E si ripaga il
+#      debito dei `mancati` (`recuperati`), o ogni sorpasso curato si
+#      presenterebbe come una perdita — la cura si accuserebbe da sola.
+#   4. `istante > ultimo` (IL PIU' NUOVO) ⇒ non si vaglia MAI, si conta il buco
+#      (`mancati`) e `ultimo` avanza.  ⛔ Vagliare anche il piu' nuovo
+#      lascerebbe l'ancora alla deriva senza riarmo possibile: sessione muta per
+#      sempre con tutti i contatori verdi (`LEZIONI.md` §2.2).
+#
+#   E poi c'e' la SECONDA PORTA, che nella pagina sta dentro `suona()`: un
+#   blocco che ha passato il filo puo' aver perso il suo posto **mentre lo
+#   decodificavamo**.  Li' i casi sono due e non uno:
+#     · e' il piu' nuovo che abbiamo ⇒ e' TUTTA la riproduzione in ritardo:
+#       l'ancora si riarma (`riarmi`), come ha sempre fatto;
+#     · e' un SORPASSATO (`ist_max_us > istante`) ⇒ in ritardo c'e' solo lui:
+#       `scartati_tardivi`, e l'ancora NON si tocca.  ⛔ Trattarli uguali
+#       costerebbe un riarmo per ogni sorpasso, cioe' 250 ms di ritardo
+#       regalato per un blocco da 5.
+#
+# ── ⚠ LA TRADUZIONE, E DOVE **NON** E' IDENTICA ALLA PAGINA ────────────────
+#
+#   La pagina misura «il posto e' passato» con `a.base + istante < ctx.currentTime`,
+#   cioe' con la testina di un `AudioContext` vero.  Qui non c'e' ne' un
+#   `AudioContext` ne' un decodificatore.  ⇒ Le differenze DICHIARATE sono
+#   cinque, e chi legge un numero di questo cliente deve conoscerle:
+#
+#   T1 · **L'orologio di riproduzione e' SIMULATO**: `ora` viene dal monotonico
+#        (o dall'orologio finto di `--certifica`), non da `ctx.currentTime`.
+#        ⚠ Un `AudioContext` vero puo' derivare dal monotonico di qualche parte
+#        per milione; qui i due orologi sono lo STESSO orologio, quindi questo
+#        cliente **non puo' vedere la deriva** fra scheda audio e sistema.
+#   T2 · **Non c'e' lo stato «sospeso»**: la pagina, con `ctx.state !== "running"`,
+#        risponde «no» al posto passato e butta in `sospesi`.  Qui l'orologio
+#        corre sempre ⇒ `sospesi` non esiste e non e' misurabile di qui.
+#   T3 · **La decodifica costa zero**: nella pagina fra il filo e `suona()` c'e'
+#        un `AudioDecoder` vero, e `scartati_tardivi` nasce PROPRIO da quel
+#        ritardo.  ⇒ Qui la seconda porta si apre allo stesso istante della
+#        prima e `scartati_tardivi` resterebbe **zero per costruzione** — che
+#        sarebbe un verde falso.  ⭐ Percio' c'e' `ritardo_decodifica_s`: il
+#        tempo che si finge di spendere a decodificare.  A zero (il predefinito
+#        in rete) `scartati_tardivi` **non e' una misura, e' uno zero cieco**.
+#   T4 · **`passo_us` non viene da un decodificatore**: per il PCM si CALCOLA
+#        dal carico — `[S]` `RCP.md`:1299, «480 campioni, 960 byte, 5 ms per
+#        datagram» — che e' esatto e non e' circolare.  ⚠ Per Opus non si sa
+#        decodificare: `passo_us` resta 0 (e allora, come nella pagina, il conto
+#        dei `mancati` E' SPENTO) finche' non lo si dichiara con
+#        `--audio-passo-us`.
+#   T5 · **`Math.round` contro `round()`**: JS arrotonda la meta' verso l'alto,
+#        Python verso il pari.  Qui si scrive `int(x + 0.5)` a mano, o su un
+#        salto di esattamente 1,5 passi i due programmi conterebbero `mancati`
+#        diversi — e sarebbe una differenza invisibile fino al giorno sbagliato.
+#
+# ── LA PUREZZA, E PERCHE' CE NE SONO DUE ───────────────────────────────────
+#
+#   `purezza` = **consegnati all'uscita / arrivati sul filo** — dove «arrivati
+#   sul filo» sono i datagram conformi (prefisso giusto, ≥12 byte, tipo 0x0401)
+#   e «consegnati» quelli che finiscono in `a_blocchi`, cioe' quel che il
+#   giudice del suono potra' ascoltare.  ⭐ E' la definizione che serve qui.
+#
+#   ⛔ E **NON** e' la formula che usano i banchi della pagina
+#   (`09-b74-audio-firefox.py`:300, `suonati / ricevuti`): li' `ricevuti` si
+#   incrementa **dopo** il vaglio (`src/pagina.html`:6574), quindi i datagram
+#   buttati sul filo **non stanno ne' al numeratore ne' al denominatore** — e
+#   quella frazione e' CIECA proprio al danno che questa cura ripara.  Si
+#   stampa lo stesso, come `purezza_pagina`, perche' e' il numero con cui i
+#   giri sulla pagina si confrontano; ⚠ in questo cliente vale 1,000 per
+#   costruzione con la regola vecchia, e chi lo leggesse da solo concluderebbe
+#   «tutto sano» da una successione distrutta.
+AUDIO_CUSCINO_MS = 250          # `[R]` src/pagina.html:5550
+# ⛔⛔ IL PREDEFINITO E' `vecchia`, e si cambia SOLO per decisione dell'utente.
+REGOLA_AUDIO = "vecchia"
+PASSO_AUDIO_US = 0              # 0 = lo si ricava dal PCM (T4)
+DECODIFICA_AUDIO_S = 0.0        # ⚠ T3: a zero `scartati_tardivi` e' cieco
+
+
+class VaglioAudio:
+    """§6.3 e la cura del riordino, con l'interruttore fra le due regole.
+
+    ⛔ `regola="vecchia"` e' il PREDEFINITO e non si cambia da qui: e' quel che
+       tiene confrontabili i numeri gia' misurati.
+    """
+
+    REGOLE = ("vecchia", "nuova")
+
+    def __init__(self, regola="vecchia", cuscino_ms=AUDIO_CUSCINO_MS,
+                 orologio=time.monotonic, passo_us=0,
+                 ritardo_decodifica_s=0.0):
+        if regola not in self.REGOLE:
+            raise ValueError(f"regola audio «{regola}»: sono {self.REGOLE}")
+        self.regola = regola
+        self.cuscino_s = cuscino_ms / 1000.0
+        self._orologio = orologio
+        self.ritardo_decodifica_s = ritardo_decodifica_s
+        # ⚠ T4: 0 = non lo so, e allora il conto dei `mancati` e' SPENTO —
+        #   come nella pagina, che scrive `if (a.passo_us > 0)`.
+        self.passo_us = passo_us
+        self.passo_dichiarato = passo_us > 0
+        # ── i contatori, con i nomi della pagina ──────────────────────────
+        self.sul_filo = 0            # datagram conformi arrivati (denominatore)
+        self.ricevuti = 0            # hanno passato il vaglio del filo
+        self.consegnati = 0          # `suonati` della pagina: usciti davvero
+        self.scartati_vecchi = 0     # arretrato, e il suo posto e' passato
+        self.scartati_tardivi = 0    # sorpassato, e il posto e' passato dopo
+        self.fuori_ordine = 0        # ⭐ arretrato E TENUTO: la cura
+        self.doppioni = 0            # lo stesso `istante` due volte
+        self.recuperati = 0          # `mancati` ripagati da un fuori ordine
+        self.mancati = 0             # mai arrivati: il buco sul filo
+        self.mancati_volte = 0
+        self.riarmi = 0              # l'ancora si e' spostata (i «BUCHI»)
+        self.ist_max_us = 0          # il massimo MESSO IN SCALETTA
+        self.ultimo_istante = None   # il massimo ACCETTATO SUL FILO
+        self.base = None             # l'ancora: secondi da sommare a `istante`
+
+    # ── la frontiera «il suo posto e' gia' passato» ────────────────────────
+    def _posto_passato(self, ist_us, ora):
+        """`[R]` `audio_posto_passato`, src/pagina.html:5889.
+
+        ⛔ Due casi in cui la risposta e' «no» e non «non lo so»: `istante`
+           nullo, e ancora non agganciata — li' non e' stato consumato NIENTE.
+        ⚠ T2: manca il terzo caso della pagina (contesto sospeso), perche' qui
+          l'orologio non si ferma mai.
+        """
+        if not ist_us > 0 or self.base is None:
+            return False
+        return self.base + ist_us / 1e6 < ora
+
+    def _conta_mancati(self, istante):
+        """`[R]` src/pagina.html:6550.  ⚠ T5: `int(x + 0.5)`, non `round()`."""
+        if self.ultimo_istante is None or self.passo_us <= 0:
+            return
+        salto = istante - self.ultimo_istante
+        quanti = int(salto / self.passo_us + 0.5) - 1
+        # ⚠ La soglia e' 1,5 passi e non «piu' di un passo»: l'`istante` viene
+        #   dalla cattura e non da un metronomo.
+        if quanti >= 1 and salto > self.passo_us * 1.5:
+            self.mancati += quanti
+            self.mancati_volte += 1
+
+    def arrivo(self, istante, codec=0, byte_carico=0):
+        """Un datagram conforme e' arrivato.  Torna `(consegnato, motivo)`.
+
+        ⛔ Il conto dei `sul_filo` e' QUI e non prima: i datagram scartati per
+           prefisso, lunghezza o tipo non sono blocchi d'audio, e metterli al
+           denominatore della purezza confonderebbe «la rete riordina» con «il
+           server manda spazzatura».
+        """
+        self.sul_filo += 1
+        nuova = self.regola == "nuova"
+
+        if self.ultimo_istante is not None and istante == self.ultimo_istante:
+            # ⚠ Con la regola VECCHIA `doppioni` e' un SOTTOCONTO di
+            #   `scartati_vecchi`, non una voce a parte: il codice di prima li
+            #   contava li' dentro (`istante <= ultimo`), e toglierli
+            #   cambierebbe ogni numero gia' misurato.  ⭐ Contarli comunque
+            #   costa zero e dice una cosa che prima non si sapeva.
+            self.doppioni += 1
+            if not nuova:
+                self.scartati_vecchi += 1
+            return (False, "doppione: lo stesso `istante` due volte")
+
+        if self.ultimo_istante is not None and istante < self.ultimo_istante:
+            if not nuova:
+                # La regola di prima, alla lettera: arretrato ⇒ si butta.
+                self.scartati_vecchi += 1
+                return (False, "istante non piu' recente (regola vecchia)")
+            ora = self._orologio()
+            if self._posto_passato(istante, ora):
+                self.scartati_vecchi += 1
+                return (False, "il suo posto nel tempo e' gia' passato (§6.3)")
+            # ⭐ FUORI ORDINE MA ANCORA SUONABILE: e' tutta la cura.
+            self.fuori_ordine += 1
+            if self.mancati > 0:
+                self.mancati -= 1
+                self.recuperati += 1
+        else:
+            self._conta_mancati(istante)
+            # ⛔ SOLO IN AVANTI: `ultimo_istante` e' un MASSIMO.  Riportarlo
+            #    indietro su un fuori ordine farebbe sembrare il datagram
+            #    successivo un salto enorme, e il conto dei `mancati` si
+            #    riempirebbe di perdite finte.
+            self.ultimo_istante = istante
+
+        self.ricevuti += 1
+        return self._consegna(istante, codec, byte_carico)
+
+    def _consegna(self, ist_us, codec, byte_carico):
+        """La seconda porta: nella pagina e' dentro `suona()`.
+
+        ⚠ T3: qui la decodifica costa `ritardo_decodifica_s`, che in rete e'
+          zero — e con zero `scartati_tardivi` non e' una misura, e' uno zero
+          cieco.  `--certifica` lo esercita con un ritardo dichiarato.
+        """
+        ora = self._orologio() + self.ritardo_decodifica_s
+        t = ist_us / 1e6
+        if self.base is None:
+            self.base = ora + self.cuscino_s - t
+        quando = self.base + t
+        if quando < ora + 0.001:
+            if self.regola == "nuova" and self.ist_max_us > ist_us:
+                # ⛔ E' UN SORPASSATO, e in ritardo c'e' solo lui: si butta lui
+                #    e l'ancora resta dov'e'.
+                self.scartati_tardivi += 1
+                return (False, "sorpassato, e il posto e' passato mentre lo "
+                               "decodificavamo")
+            # E' il piu' nuovo che abbiamo: e' TUTTA la riproduzione in
+            # ritardo ⇒ l'ancora si sposta.  ⚠ E' l'unica cosa che RIALZA la
+            # coda, ed e' udibile.
+            self.riarmi += 1
+            self.base = ora + self.cuscino_s - t
+        if ist_us > self.ist_max_us:
+            self.ist_max_us = ist_us
+        # ⚠ T4: il passo dal carico del PCM, non da un decodificatore.
+        if not self.passo_dichiarato and codec == 2 and byte_carico > 0:
+            self.passo_us = int(byte_carico * 5000 / 960 + 0.5)
+        self.consegnati += 1
+        return (True, "")
+
+    # ── i due numeri che si stampano ──────────────────────────────────────
+    @property
+    def purezza(self):
+        """Consegnati all'uscita / arrivati sul filo.  `None` = niente da dire."""
+        if self.sul_filo == 0:
+            return None
+        return self.consegnati / self.sul_filo
+
+    @property
+    def purezza_pagina(self):
+        """`suonati / ricevuti`, la formula di `09-b74`.  ⚠ Cieca al vaglio."""
+        if self.ricevuti == 0:
+            return None
+        return self.consegnati / self.ricevuti
+
+    def riga(self):
+        """I contatori, SEMPRE, con tutt'e due le regole e anche a zero."""
+        p, pp = self.purezza, self.purezza_pagina
+        return (f"regola {self.regola} · sul filo {self.sul_filo} · "
+                f"ricevuti {self.ricevuti} · consegnati {self.consegnati} · "
+                f"PUREZZA {'?' if p is None else format(p, '.4f')} "
+                f"(pagina {'?' if pp is None else format(pp, '.4f')})")
+
+    def riga_conti(self):
+        return (f"tardivi {self.scartati_tardivi} · fuori {self.fuori_ordine} · "
+                f"rec {self.recuperati} · dop {self.doppioni} · "
+                f"mancati {self.mancati} volte {self.mancati_volte} · "
+                f"riarmi {self.riarmi} · passo {self.passo_us}us")
+
+
 class Cliente(QuicConnectionProtocol):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -352,7 +679,12 @@ class Cliente(QuicConnectionProtocol):
         self.a_vecchi = 0        # `istante` non piu' recente: §6.3
         self.a_codec = None      # il codec dichiarato nei datagram
         self.a_byte = 0
-        self.a_ultimo_istante = None
+        # ⭐ IL VAGLIO — fase 9.  ⛔ La regola arriva da una variabile di
+        #    modulo e non dal costruttore perche' `create_protocol=Cliente`
+        #    non passa argomenti; il predefinito e' `vecchia` in due posti (qui
+        #    e in `--audio-regola`), e sono d'accordo apposta.
+        self.a_vaglio = VaglioAudio(regola=REGOLA_AUDIO, passo_us=PASSO_AUDIO_US,
+                                    ritardo_decodifica_s=DECODIFICA_AUDIO_S)
         # I blocchi come sono arrivati, per il giudice di `07-b42`.
         self.a_blocchi = []
         self.caduto = asyncio.Event()
@@ -739,12 +1071,14 @@ class Cliente(QuicConnectionProtocol):
         codec = int.from_bytes(c[2:4], "big")
         istante = int.from_bytes(c[4:12], "big")
         # §6.3: «chi riceve scarta i datagram arrivati in ritardo rispetto a
-        # quelli gia' consumati».
-        if self.a_ultimo_istante is not None and istante <= self.a_ultimo_istante:
-            self.a_vecchi += 1
+        # quelli gia' consumati» — e QUANTO valga «gia' consumati» lo decide
+        # `--audio-regola`.  ⛔ Il predefinito e' `vecchia`: con quella, queste
+        # righe fanno esattamente quel che facevano prima del 23 agosto 2026.
+        consegnato, _perche = self.a_vaglio.arrivo(istante, codec, len(c) - 12)
+        self.a_vecchi = self.a_vaglio.scartati_vecchi
+        self.a_ricevuti = self.a_vaglio.ricevuti
+        if not consegnato:
             return
-        self.a_ultimo_istante = istante
-        self.a_ricevuti += 1
         self.a_byte += len(c) - 12
         if self.a_codec is None:
             self.a_codec = codec
@@ -1131,8 +1465,18 @@ def scrivi_audio(a, cli):
         return
     print(f"   [audio] ricevuti {cli.a_ricevuti} · {cli.a_byte} byte di carico · "
           f"codec {cli.a_codec if cli.a_codec is not None else '(nessuno)'}")
+    # ⛔ `vecchi {n}` RESTA DOV'ERA E COME ERA: `07-b64-rete.py`:538 lo legge
+    #    con la regex `vecchi (\d+)` su questa riga.  I quattro della fase 9
+    #    si aggiungono IN CODA, dove nessuna regex di prima li incontra.
     print(f"   [audio] scartati — corti {cli.a_corti} · tipo {cli.a_tipo} · "
           f"prefisso {cli.a_prefisso} · vecchi {cli.a_vecchi}")
+    # ⛔ I contatori della fase 9 si stampano SEMPRE e con TUTT'E DUE le
+    #    regole, anche tutti a zero: «una lettura negata non e' una lettura che
+    #    dice zero» (`CODER.md` §3.10).  ⚠ Con la regola vecchia `tardivi`,
+    #    `fuori` e `rec` sono zero PER COSTRUZIONE — non e' salute, e' che
+    #    quella regola non li puo' produrre.
+    print(f"   [audio] riordino — {cli.a_vaglio.riga()}")
+    print(f"   [audio] riordino — {cli.a_vaglio.riga_conti()}")
     if not a.audio_scrivi:
         return
     import base64
@@ -1666,6 +2010,346 @@ async def principale(a) -> int:
 # ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
 #   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
 #   allarme che si impara a ignorare.
+# ══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ `--certifica` — L'AUTOPROVA DEL VAGLIO, SENZA RETE E SENZA MACCHINA
+#
+# ⛔⛔ R13 — OGNI ATTESO E' UN PREDICATO SCRITTO PRIMA.  Non una frase stampata
+#      accanto ai numeri (quella resta vera «a leggerla» qualunque cosa esca),
+#      ma una funzione `(numeri) -> (passa, perche)`.  `passa=None` e' il terzo
+#      esito: **il banco si rifiuta di giudicare**, e non e' un verde.
+#
+# ⛔ E l'orologio e' FINTO, per due ragioni che valgono tutt'e due:
+#    · il vaglio dipende dal tempo (il cuscino e' 250 ms), e con l'orologio
+#      vero questa prova durerebbe minuti e sarebbe diversa ogni volta;
+#    · un banco che dorme misura anche il carico della macchina che lo ospita.
+PCM_BYTE = 960                  # `[S]` RCP.md:1299 — 480 campioni, 5 ms
+PCM_PASSO_US = 5000
+
+
+class OrologioFinto:
+    """Il tempo lo muove il banco, non il sistema."""
+
+    def __init__(self, t=1000.0):
+        self.t = t
+
+    def __call__(self):
+        return self.t
+
+
+def _p(cond, perche):
+    return (bool(cond), perche)
+
+
+def _giro(regola, arrivi, ritardo_decodifica_s=0.0):
+    """`arrivi` = [(secondi dall'inizio, istante_us)].  Torna `(vaglio, usciti)`.
+
+    ⛔ `usciti` e' la LISTA degli `istante` consegnati, non il conto: serve a
+       verificare che nessuna delle due regole **fabbrichi** un blocco che sul
+       filo non c'era, e che un doppione non esca due volte.
+    """
+    orol = OrologioFinto()
+    t0 = orol.t
+    v = VaglioAudio(regola=regola, orologio=orol,
+                    ritardo_decodifica_s=ritardo_decodifica_s)
+    usciti = []
+    for quando, ist in arrivi:
+        orol.t = t0 + quando
+        ok, _perche = v.arrivo(ist, 2, PCM_BYTE)
+        if ok:
+            usciti.append(ist)
+    return v, usciti
+
+
+def _conti(v):
+    return {"sul_filo": v.sul_filo, "ricevuti": v.ricevuti,
+            "consegnati": v.consegnati, "vecchi": v.scartati_vecchi,
+            "tardivi": v.scartati_tardivi, "fuori": v.fuori_ordine,
+            "doppioni": v.doppioni, "recuperati": v.recuperati,
+            "mancati": v.mancati, "volte": v.mancati_volte,
+            "riarmi": v.riarmi,
+            "purezza": None if v.purezza is None else round(v.purezza, 4)}
+
+
+def _ordinata(n):
+    """n blocchi PCM da 5 ms, in ordine, senza perdite: il denominatore."""
+    return [(i * 0.005, i * PCM_PASSO_US) for i in range(n)]
+
+
+def _riordinata(n, k):
+    """Riordino di `k` posti: gruppi di `k+1` rovesciati.
+
+    ⭐ E' il riordino su cui la regola VECCHIA ha una purezza CALCOLABILE, non
+       misurata a posteriori: dentro ogni gruppo rovesciato solo il primo
+       arrivato e' il piu' nuovo, gli altri `k` sono arretrati e la regola
+       vecchia li butta tutti ⇒ **purezza attesa = 1/(k+1) esatta**.
+    ⛔ Questo e' l'atteso scritto prima, ed e' piu' forte di un numero magico:
+       se il conto non torna, o il riordino non e' quello che credo o la regola
+       vecchia non e' quella che credo.
+    """
+    fuori = []
+    for i in range(0, n, k + 1):
+        fuori += list(range(i, min(i + k + 1, n)))[::-1]
+    return [(p * 0.005, j * PCM_PASSO_US) for p, j in enumerate(fuori)]
+
+
+def _con_doppioni(n, ogni):
+    """In ordine, ma ogni `ogni`-esimo blocco arriva DUE volte.
+
+    ⚠ Il gemello arriva 1 ms dopo e **non consuma un posto**: se lo consumasse,
+      i blocchi veri slitterebbero di 5 ms a testa e dopo 50 doppioni il ritardo
+      accumulato supererebbe il cuscino ⇒ un riarmo dell'ancora, e il caso non
+      misurerebbe piu' i doppioni ma la deriva che il banco stesso ha fabbricato.
+    """
+    a = []
+    for i in range(n):
+        a.append((i * 0.005, i * PCM_PASSO_US))
+        if i and i % ogni == 0:
+            a.append((i * 0.005 + 0.001, i * PCM_PASSO_US))
+    return a
+
+
+def _con_buchi(n, ogni):
+    """Buchi VERI: i blocchi non arrivano affatto, e chi c'e' resta al suo posto.
+
+    ⛔ Il blocco 0 c'e' SEMPRE, ed e' una scelta del banco: un buco **in testa**
+       non e' contabile — non c'e' nessun `ultimo_istante` da cui misurare il
+       salto — e mescolarlo ai buchi in mezzo darebbe un atteso sbagliato di 1.
+       ⭐ Il punto cieco ha un caso suo (4-cieco).
+    """
+    return [(i * 0.005, i * PCM_PASSO_US)
+            for i in range(n) if i == 0 or i % ogni]
+
+
+def _vecchio_letterale(istanti):
+    """⛔ IL CODICE DI PRIMA, TRASCRITTO ALLA LETTERA da `_audio_datagram`
+       com'era fino al 22 agosto 2026.  Serve a una cosa sola: dimostrare che
+       `--audio-regola vecchia` non ha cambiato NIENTE.  Non si tocca."""
+    ric = vecchi = 0
+    ult = None
+    usciti = []
+    for ist in istanti:
+        if ult is not None and ist <= ult:
+            vecchi += 1
+            continue
+        ult = ist
+        ric += 1
+        usciti.append(ist)
+    return ric, vecchi, usciti
+
+
+def certifica():
+    esiti = []
+
+    def caso(nome, passa, perche, numeri=None):
+        esiti.append({"caso": nome, "passa": passa, "perche": perche,
+                      "numeri": numeri})
+        segno = "OK " if passa else ("-- " if passa is None else "⛔ NO")
+        print(f"  {segno} {nome}")
+        print(f"      atteso: {perche}")
+        if numeri:
+            print(f"      visto:  {numeri}")
+
+    print("== ⭐ `01-b3-cliente.py --certifica` — il vaglio dell'audio, "
+          "senza rete e senza macchina di prova")
+    print(f"   PCM da {PCM_BYTE} byte = {PCM_PASSO_US} us (RCP.md:1299), "
+          f"cuscino {AUDIO_CUSCINO_MS} ms, orologio finto")
+
+    # ── 1 · in ordine: le due regole devono essere INDISTINGUIBILI ─────────
+    print("\n  ── 1 · successione in ordine ──")
+    av, uv = _giro("vecchia", _ordinata(840))
+    an, un = _giro("nuova", _ordinata(840))
+    caso("1 · in ordine ⇒ le due regole danno lo STESSO risultato",
+         _conti(av) == _conti(an) and uv == un and av.purezza == 1.0,
+         "ogni contatore uguale, stessa lista di usciti, purezza 1,0000 "
+         "(⛔ se differiscono, la regola nuova ha un difetto sul caso facile)",
+         {"vecchia": _conti(av), "nuova": _conti(an)})
+
+    # ── 2 · riordino di 1, 2, 3 (e 7) posti ────────────────────────────────
+    print("\n  ── 2 · successione riordinata ──")
+    for k in (1, 2, 3, 7):
+        av, uv = _giro("vecchia", _riordinata(840, k))
+        an, un = _giro("nuova", _riordinata(840, k))
+        atteso_v = 1.0 / (k + 1)
+        arretrati = 840 - 840 // (k + 1)
+        passa = (abs(av.purezza - atteso_v) <= 0.005
+                 and an.purezza >= 0.95
+                 and an.fuori_ordine == arretrati
+                 and an.scartati_vecchi == 0 and an.doppioni == 0
+                 and sorted(un) == [i * PCM_PASSO_US for i in range(840)])
+        caso(f"2.{k} · riordino di {k} posti ⇒ la vecchia butta, la nuova tiene",
+             passa,
+             f"purezza vecchia = 1/(k+1) = {atteso_v:.4f} (±0,005) · "
+             f"purezza nuova ≥ 0,95 · fuori_ordine = {arretrati} · "
+             f"vecchi 0 · e l'uscita contiene TUTTI gli 840 `istante`",
+             {"purezza_vecchia": round(av.purezza, 4),
+              "purezza_nuova": round(an.purezza, 4),
+              "vecchia": _conti(av), "nuova": _conti(an)})
+
+    # ── 3 · doppioni: contati, e mai suonati due volte ─────────────────────
+    print("\n  ── 3 · doppioni ──")
+    arrivi = _con_doppioni(840, 10)
+    attesi_dop = len(arrivi) - 840
+    for regola in ("vecchia", "nuova"):
+        v, u = _giro(regola, arrivi)
+        passa = (v.doppioni == attesi_dop and len(u) == len(set(u))
+                 and len(u) == 840)
+        caso(f"3.{regola} · {attesi_dop} doppioni ⇒ contati, e mai due volte "
+             "all'uscita",
+             passa,
+             f"doppioni = {attesi_dop} · nessun `istante` ripetuto all'uscita · "
+             f"840 consegnati (⛔ un doppione suonato due volte raddoppia il "
+             "segnale, che §6.3 non ammette)",
+             _conti(v))
+
+    # ── 4 · buchi veri: nessuna delle due deve FABBRICARE audio ────────────
+    print("\n  ── 4 · buchi veri ──")
+    arrivi = _con_buchi(840, 7)
+    spediti = [ist for _q, ist in arrivi]
+    attesi_mancati = 840 - len(spediti)
+    for regola in ("vecchia", "nuova"):
+        v, u = _giro(regola, arrivi)
+        passa = (v.mancati == attesi_mancati and u == spediti
+                 and v.consegnati == len(spediti)
+                 and v.recuperati == 0)
+        caso(f"4.{regola} · {attesi_mancati} blocchi MAI arrivati ⇒ `mancati` "
+             "sale e non si fabbrica niente",
+             passa,
+             f"mancati = {attesi_mancati} · consegnati = {len(spediti)} · "
+             "all'uscita SOLO gli `istante` che erano sul filo · recuperati 0",
+             _conti(v))
+    # ⛔⭐ IL PUNTO CIECO, E SI DICHIARA INVECE DI NASCONDERLO — trovato da
+    #     questo banco il 23 agosto 2026, ed era un rosso che aveva ragione.
+    #     I datagram persi PRIMA del primo che arriva non si possono contare:
+    #     `mancati` misura la distanza fra due `istante`, e senza il primo non
+    #     c'e' nessuna distanza.  ⚠ E' un limite della PAGINA, non della
+    #     traduzione (`src/pagina.html`:6550, `a.ultimo_istante !== undefined`).
+    #     ⇒ Un banco che chiedesse «mancati == tutti i buchi» su una successione
+    #     che comincia con un buco darebbe rosso al prodotto per un difetto suo.
+    ceco = [(i * 0.005, i * PCM_PASSO_US) for i in range(3, 200)]
+    v, u = _giro("nuova", ceco)
+    caso("4-cieco · ⚠ i 3 buchi IN TESTA non si contano, e non e' un difetto",
+         v.mancati == 0 and v.consegnati == len(ceco),
+         "mancati 0 (⛔ non c'e' nessun `istante` di prima da cui misurare il "
+         "salto: e' un limite dichiarato, non un guasto) · tutti consegnati",
+         _conti(v))
+
+    # ── 5 · e il blocco arrivato DAVVERO troppo tardi ──────────────────────
+    #
+    # ⛔⛔ QUESTO E' IL CASO CHE DIMOSTRA CHE LA CURA NON E' «TENGO TUTTO».
+    #     Se la regola nuova tenesse anche questo, non sarebbe una cura: sarebbe
+    #     la rimozione di un controllo.
+    #
+    # ⚠ E i casi sono DUE, perche' nella pagina i contatori sono due e cadono
+    #   in punti diversi del percorso:
+    #     5a · il posto e' passato GIA' SUL FILO ⇒ `scartati_vecchi`
+    #          (`src/pagina.html`:5999-6001 sta in `suona()`; il gemello sul filo
+    #          e' :6514, e li' il contatore e' `scartati_vecchi`);
+    #     5b · il posto e' passato MENTRE LO DECODIFICAVAMO ⇒ `scartati_tardivi`.
+    #   ⛔ Chiamarli tutt'e due «tardivi» sarebbe comodo e sbagliato: il primo
+    #     e' §6.3 alla lettera, il secondo e' la rete di sicurezza dopo il
+    #     decodificatore, e se un giorno si confondessero nessuno saprebbe piu'
+    #     se a buttare e' il filo o la macchina.
+    # ⭐ E IL CONTO DEL MARGINE, scritto qui perche' senza si sbaglia il caso.
+    #    L'ancora si aggancia DENTRO `_consegna`, cioe' **dopo** la decodifica:
+    #    `base = ora + ritardo + cuscino - t`.  ⇒ Un blocco che arriva `Δ` in
+    #    ritardo sul proprio posto e' scartato
+    #      · SUL FILO   se  Δ > cuscino + ritardo   (il vaglio guarda `ora`);
+    #      · ALLA CONSEGNA se Δ > cuscino           (il vaglio guarda `ora + ritardo`).
+    #    ⇒ La finestra dei `scartati_tardivi` e' esattamente
+    #      `cuscino < Δ ≤ cuscino + ritardo`, e senza ritardo di decodifica e'
+    #      VUOTA — che e' T3 detto in numeri.
+    print("\n  ── 5 · il blocco davvero troppo tardi ──")
+    n, i_tardo = 200, 195
+    base = _ordinata(n)
+    suo_posto = i_tardo * 0.005          # quando sarebbe dovuto arrivare
+    ultimo_arrivo = base[-1][0]
+    cusc = AUDIO_CUSCINO_MS / 1000.0
+    # 5a · Δ = 300 ms > cuscino 250 e ritardo 0 ⇒ e' passato GIA' SUL FILO.
+    tardo = [(suo_posto + 0.300, i_tardo * PCM_PASSO_US)]
+    assert tardo[0][0] > ultimo_arrivo    # dev'essere l'ultimo ad arrivare
+    av, uv = _giro("vecchia", base + tardo)
+    an, un = _giro("nuova", base + tardo)
+    caso(f"5a · Δ = 300 ms > cuscino {AUDIO_CUSCINO_MS} ⇒ il posto e' passato "
+         "SUL FILO, e la nuova lo SCARTA",
+         (an.scartati_vecchi == 1 and an.fuori_ordine == 0
+          and an.consegnati == n and un == [i * PCM_PASSO_US for i in range(n)]
+          and av.scartati_vecchi == 1 and av.consegnati == n),
+         "nuova: vecchi 1 · fuori 0 · consegnati 200, e il tardivo NON e' "
+         "nell'uscita — vecchia: vecchi 1 · consegnati 200",
+         {"vecchia": _conti(av), "nuova": _conti(an)})
+    # 5b · Δ = 280 ms: sta nella finestra `250 < Δ ≤ 250+50` ⇒ passa il filo e
+    #      perde il posto durante i 50 ms di decodifica dichiarati.
+    dec = 0.050
+    delta = cusc + dec / 2                # 275 ms: in mezzo alla finestra
+    quasi = [(suo_posto + delta, i_tardo * PCM_PASSO_US)]
+    assert quasi[0][0] > ultimo_arrivo
+    an2, un2 = _giro("nuova", base + quasi, ritardo_decodifica_s=dec)
+    av2, uv2 = _giro("vecchia", base + quasi, ritardo_decodifica_s=dec)
+    caso(f"5b · Δ = {delta * 1000:.0f} ms, cioe' dentro la finestra "
+         f"({AUDIO_CUSCINO_MS} < Δ ≤ {AUDIO_CUSCINO_MS + dec * 1000:.0f}) ⇒ "
+         "`scartati_tardivi`",
+         (an2.scartati_tardivi == 1 and an2.fuori_ordine == 1
+          and an2.consegnati == n and an2.riarmi == 0
+          and av2.consegnati == n and av2.scartati_vecchi == 1),
+         "nuova: tardivi 1 · fuori 1 (il filo l'ha lasciato passare) · "
+         "consegnati 200 · riarmi 0 (⛔ l'ancora NON si tocca per un "
+         "sorpassato: un riarmo costerebbe 250 ms di ritardo per un blocco da "
+         "5) — vecchia: vecchi 1 · consegnati 200",
+         {"vecchia": _conti(av2), "nuova": _conti(an2)})
+    # 5c · e la controprova: la cura NON e' «tengo tutto».
+    an3, un3 = _giro("nuova", _riordinata(840, 3))
+    caso("5c · ⭐ la controprova: sul riordino la nuova tiene 840/840, sul "
+         "tardivo ne butta 1 ⇒ non e' «tengo tutto»",
+         an3.consegnati == 840 and an.consegnati == n and an.scartati_vecchi == 1,
+         "la stessa regola, due esiti opposti sui due casi (⛔ se buttasse zero "
+         "in tutt'e due sarebbe la rimozione di un controllo)",
+         {"riordino": an3.consegnati, "tardivo_scartati": an.scartati_vecchi})
+
+    # ── 6 · la regressione: il predefinito NON e' cambiato ─────────────────
+    print("\n  ── 6 · la regola vecchia contro il codice di prima ──")
+    banchi_prova = {
+        "in ordine": _ordinata(840),
+        "riordinata di 3": _riordinata(840, 3),
+        "con doppioni": _con_doppioni(840, 10),
+        "con buchi": _con_buchi(840, 7),
+        "mista": _riordinata(400, 2) + _con_doppioni(200, 5) + _con_buchi(200, 9),
+    }
+    guasti = []
+    for nome, arrivi in banchi_prova.items():
+        v, u = _giro("vecchia", arrivi)
+        ric, vecchi, usciti = _vecchio_letterale([i for _q, i in arrivi])
+        if (v.ricevuti, v.scartati_vecchi, u) != (ric, vecchi, usciti):
+            guasti.append(f"{nome}: nuovo ({v.ricevuti}, {v.scartati_vecchi}, "
+                          f"{len(u)} usciti) contro vecchio ({ric}, {vecchi}, "
+                          f"{len(usciti)} usciti)")
+    caso("6 · ⛔⛔ `--audio-regola vecchia` == il codice del 22 agosto, alla "
+         "lettera, su 5 successioni",
+         not guasti,
+         "ricevuti, vecchi e la LISTA degli usciti identici in tutt'e cinque "
+         "(⛔ se no, ogni numero gia' misurato dai banchi smette di essere "
+         "confrontabile)",
+         {"guasti": guasti or "nessuno",
+          "predefinito": REGOLA_AUDIO,
+          "predefinito_del_vaglio": VaglioAudio().regola})
+    caso("6-bis · il PREDEFINITO e' ancora `vecchia` in tutt'e due i posti",
+         REGOLA_AUDIO == "vecchia" and VaglioAudio().regola == "vecchia",
+         "la variabile di modulo e il costruttore dicono tutt'e due «vecchia»",
+         {"modulo": REGOLA_AUDIO, "costruttore": VaglioAudio().regola})
+
+    rossi = [e for e in esiti if e["passa"] is False]
+    muti = [e for e in esiti if e["passa"] is None]
+    print(f"\n== {len(esiti)} casi · {len(rossi)} rossi · {len(muti)} «non "
+          f"giudico»")
+    for e in rossi:
+        print(f"   ⛔ {e['caso']}")
+        print(f"      atteso {e['perche']}")
+        print(f"      visto  {e['numeri']}")
+    if not rossi:
+        print("== ⭐ IL VAGLIO FA QUEL CHE LA PAGINA FA, E IL PREDEFINITO NON "
+              "E' CAMBIATO")
+    return 1 if rossi else 0
+
+
 def parola_dagli_argomenti(a):
     """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
 
@@ -1775,6 +2459,29 @@ if __name__ == "__main__":
                    help="che cosa dichiarare in `audio.codec` (§4.3).  "
                         "⛔ `pcm` da solo e' legittimo ed e' il controllo "
                         "positivo di Opus, non un aggiramento")
+    # ⛔⛔ IL PREDEFINITO E' `vecchia`, E NON SI CAMBIA SENZA L'UTENTE.
+    #     `01-b3-cliente.py` lo usano decine di banchi gia' misurati: con la
+    #     regola nuova per predefinito, ogni numero gia' scritto smetterebbe di
+    #     essere confrontabile — e il confronto «prima / dopo la cura» sarebbe
+    #     proprio quello che si perde.
+    p.add_argument("--audio-regola", default="vecchia",
+                   choices=list(VaglioAudio.REGOLE),
+                   help="`vecchia` = §6.3 come la leggeva il codice fino al 22 "
+                        "agosto 2026 (arretrato ⇒ si butta); `nuova` = la cura "
+                        "del riordino di `src/pagina.html` (arretrato ⇒ si "
+                        "butta SOLO se il suo posto e' gia' passato).  "
+                        "⛔ Il predefinito e' `vecchia` apposta")
+    p.add_argument("--audio-passo-us", type=int, default=0,
+                   help="quanto dura un blocco, in us.  0 = lo ricavo dal "
+                        "carico del PCM (⚠ per Opus non so decodificare: senza "
+                        "questo il conto dei `mancati` resta SPENTO)")
+    p.add_argument("--audio-decodifica-ms", type=float, default=0.0,
+                   help="il tempo che si finge di spendere a decodificare.  "
+                        "⚠ A 0 `scartati_tardivi` non e' una misura: e' uno "
+                        "zero cieco (T3)")
+    p.add_argument("--certifica", action="store_true",
+                   help="⭐ l'autoprova del vaglio dell'audio: NON tocca la "
+                        "rete e non serve la macchina di prova")
     p.add_argument("--audio-scrivi", default="",
                    help="dove scrivere i blocchi d'audio ricevuti, in JSONL — "
                         "il giudice di `07-b42` legge questo")
@@ -1796,6 +2503,33 @@ if __name__ == "__main__":
     p.add_argument("--segnale",
                    help="file da scrivere quando la sessione e' aperta")
     a = p.parse_args()
+
+    # ⭐ `--certifica` esce QUI: non tocca la rete, non chiede la parola
+    #    d'ordine e non vuole la macchina di prova.
+    if a.certifica:
+        sys.exit(certifica())
+
+    if AIOQUIC:
+        print(f"   ⛔ senza `aioquic` questo cliente non puo' attaccarsi a "
+              f"niente: {AIOQUIC}")
+        print("      ⭐ gira DENTRO il contenitore (`enter.sh`), oppure chiedi "
+              "`--certifica`, che non tocca la rete.")
+        sys.exit(2)
+
+    # ⛔ Le tre scelte dell'audio diventano variabili di modulo perche'
+    #    `create_protocol=Cliente` non passa argomenti al costruttore.
+    #    ⚠ Questo blocco gira a livello di modulo: l'assegnamento e' gia'
+    #    globale, e `Cliente.__init__` legge queste tre righe.
+    REGOLA_AUDIO = a.audio_regola
+    PASSO_AUDIO_US = a.audio_passo_us
+    DECODIFICA_AUDIO_S = a.audio_decodifica_ms / 1000.0
+    if REGOLA_AUDIO != "vecchia":
+        # ⛔ E SI DICE, forte: un giro con la regola nuova NON e' confrontabile
+        #    con i numeri dei banchi di prima, e chi legge il registro dopo deve
+        #    saperlo senza dover ritrovare la riga di comando.
+        print(f"   ⚠ `--audio-regola {REGOLA_AUDIO}`: questo giro NON usa la "
+              "regola con cui sono stati misurati i banchi di prima")
+
     a.parola = parola_dagli_argomenti(a)
 
     def misura(testo, dove):

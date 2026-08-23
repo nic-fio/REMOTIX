@@ -1177,6 +1177,32 @@ porta.
 
 **Produce**: il controllo del ritmo, la scala di degradazione, il comportamento su rete cattiva.
 
+> ### ⛔⭐⭐⭐ IL BERSAGLIO È STATO CORRETTO — **23 agosto 2026, a fase aperta**
+>
+> *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti
+> che perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter».*
+> — ⇒ `DECISIONI.md` **§3.1-ter**.
+>
+> ⛔ **La banda esce dal corpo della fase.** La giornata era stata passata a stringere la linea, e
+> `[M]` §16: sul **percorso vero** il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge
+> **senza degradare e con tutte le cure spente** — 7 125 consegnati → 7 125 dipinti, **una** chiave.
+> Un banco che non riesce a far cedere quel che misura **non sta misurando la grandezza giusta**.
+>
+> ⭐ **Le tre grandezze nuove, e non sono la stessa cosa:**
+> **perdita** (il video ritrasmette ⇒ si paga in ritardo; l'audio no ⇒ si paga in buchi) ·
+> **fuori sequenza** (⭐ è la condizione mancante della cura del riordino dell'audio, l'unica cura
+> del 23 agosto la cui metà utile non è mai stata verificata) ·
+> **jitter** (`[?]` QUIC può scambiarlo per perdita e stringere la finestra **senza motivo**: se
+> succede il calo è **nostro**, non della rete).
+>
+> ⚠ **§3.1-bis non è annullata**: i 20 Mbit/s restano il pavimento dichiarato. Cambia il suo
+> mestiere — da **domanda** della fase a **premessa** su cui si misurano le altre tre.
+>
+> ⛔ E il `netem` su `lo` diventa **risorsa unica con lucchetto** (`banchi/09-lucchetto.py`): la
+> disciplina si mette sulla radice dell'interfaccia, quindi due banchi che guastano insieme non si
+> dividono il lavoro — il secondo **cancella il guasto del primo**, e il primo continua a misurare
+> credendo di averlo. ⚠ Non darebbe rosso: darebbe un numero plausibile.
+
 **L'utente vede e giudica**: l'immagine. ⛔ **Ed è l'unico giudizio che conta**: in v1 questa fase
 era stata validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio dell'utente sul
 desktop vero fu *«siamo tornati indietro»*. La fase fu azzerata.

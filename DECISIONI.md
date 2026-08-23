@@ -1719,6 +1719,60 @@ coincide col numero del prodotto **per caso**, non perché l'uno derivi dall'alt
 *Conseguenze fuori da qui, già applicate il 23 agosto:* `SPECIFICHE.md` §8.1 (la tabella gemella),
 `PIANO.md` fase 9 (il banco era scritto **«a 2 Mbit/s»**), `CODER.md` §1-bis (i numeri del progetto).
 
+### 3.1-ter ✅⭐⭐⭐ La banda **non è la sfida**: la sfida è la rete che **perde, riordina e sfarfalla**
+
+*23 agosto 2026, a fase 9 già aperta e mezza misurata. «Comunque voglio farti notare una cosa:
+30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
+perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter».*
+
+⛔⭐ **È una correzione di bersaglio, e arriva al momento giusto**: la fase 9 aveva passato la
+giornata a stringere la banda, e il prodotto **aveva retto il caso peggiore senza degradare e
+senza nessuna cura accesa** (§16 della fase: `[M]` 21,5-23,1 Mbit/s sul percorso vero, 7 125
+fotogrammi consegnati → 7 125 dipinti, **una** chiave, zero abbandoni). ⇒ Un banco che non riesce
+a far cedere quel che misura **non sta misurando la grandezza giusta**.
+
+| | |
+|---|---|
+| ⛔ **che cosa dice** | la banda è un **pavimento già superato dalla realtà**: nessuna linea moderna sta sotto. Il prodotto va misurato sulle **imperfezioni** della linea — perdita, fuori sequenza, jitter — non sulla sua **larghezza** |
+| ⭐ **perché è la grandezza giusta** | sono le tre cose che una linea vera fa **anche quando è larga**: il WiFi lontano, la radio mobile, la rete di casa la sera. Sono anche le tre a cui il nostro trasporto reagisce **da solo**, senza che noi lo si sappia |
+| ⚠ **che cosa NON annulla** | §3.1-bis resta: i 20 Mbit/s restano **il pavimento dichiarato**. ⭐ Cambia il suo mestiere — non è più la domanda della fase, è la **premessa** su cui si misurano le altre tre |
+| ⛔ **che cosa retrocede** | la griglia dei gradini di banda (`09-b70-ritmo.py`, 40 → 10 Mbit/s) resta come **contorno**, non come corpo della fase: la sua domanda è chiusa |
+
+**Le tre grandezze, e non sono la stessa cosa** — ⛔ e confonderle è il modo più facile di
+misurare male:
+
+| | che cos'è | che cosa tocca da noi |
+|---|---|---|
+| **perdita** | il pacchetto non arriva | il **video** va su stream QUIC, che ritrasmettono ⇒ si paga in **ritardo**, non in fotogrammi persi. L'**audio** va su datagram ⇒ si paga in **buchi** |
+| **fuori sequenza** | arriva, ma dopo uno più nuovo | ⭐ è la condizione della **cura del riordino dell'audio** del 23 agosto — l'unica cura della giornata la cui metà utile **non è mai stata verificata** |
+| **jitter** | arriva a intervalli irregolari | `[?]` QUIC può **scambiarlo per perdita** e stringere la finestra di congestione senza motivo. Se succede, il calo **è nostro** (o dell'algoritmo di congestione, che non abbiamo mai scelto — `webtransport.c` ~2730) |
+
+⭐⭐ **E c'è un'ironia che la voce deve registrare**: la cura del riordino era stata scritta e
+applicata **il giorno stesso**, e archiviata come `[?]` proprio perché *«per verificarla bisogna
+sporcare la rete e non l'ho fatto»*. La correzione dell'utente **è la condizione mancante** di
+quella verifica.
+
+**Che cosa comporta, e sono fatti operativi:**
+
+1. il banco della fase diventa **`09-b76-rete-cattiva.py`**: profili `netem` di perdita (anche a
+   **raffica**, che è la perdita vera di una radio), riordino **esplicito**, jitter, duplicazione,
+   e il misto «casa cattiva». ⛔ Con i predicati scritti **prima**, e col numero letto da
+   `tc -s qdisc show` che dimostra che **il guasto è stato messo davvero** — senza, si misura una
+   speranza;
+2. **`09-b77-audio-riordino.py`** chiude la cura del riordino, **appaiata**: stessa rete, stessa
+   durata, e a cambiare solo la regola. ⛔ Un giro solo con la cura accesa non dimostra niente;
+3. il registro del server impara a dire **di chi è la colpa** — pacchetti persi e ritrasmessi
+   letti da ngtcp2 accanto a `cwnd` e rtt. ⛔ Oggi «è la rete o siamo noi?» non ha risposta nei
+   numeri, e ogni misura sotto perdita finirebbe in una discussione;
+4. il `[M]` di `07-b64` — *«al 10 % di perdita la sessione non si apre in 25 s»* — **torna aperto**:
+   una stretta di mano QUIC ha il PTO apposta per rimandare quel che si perde, e venticinque
+   secondi **non somigliano alla perdita, somigliano a qualcosa che non riprova**.
+
+⛔ **E il `netem` su `lo` diventa una risorsa unica, con un lucchetto** (`banchi/09-lucchetto.py`):
+la disciplina si mette sulla **radice** dell'interfaccia, quindi due banchi che guastano insieme
+non si dividono il lavoro — **il secondo cancella il guasto del primo, e il primo continua a
+misurare credendo di averlo**. ⚠ Non darebbe rosso: darebbe un numero plausibile.
+
 ### 3.2 🔸 L'invariante I1, riscritta
 
 Il ritmo **non cala mai** per prudenza, per risparmio o perché la scena è ferma. Cala **solo**
