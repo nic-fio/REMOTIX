@@ -198,23 +198,34 @@ static void aiuto(const char *nome)
 	        "                    una sessione viene CHIUSA quando la linea non\n"
 	        "                    si puo' piu' servire — il filo cade e si\n"
 	        "                    rientra a mano (decisione dell'utente, 23 ago\n"
-	        "                    2026).  DUE cause: la PERDITA oltre soglia per\n"
-	        "                    due finestre di fila, e il SILENZIO del client.\n"
-	        "                    Ogni scatto scrive nel registro una riga\n"
-	        "                    `linea-morta` coi numeri su cui ha deciso (I1)\n"
-	        "  --linea-morta-permille N\n"
-	        "                    la soglia della perdita in MILLESIMI di\n"
-	        "                    pacchetti spediti.  Predefinito 50 (5,0 %%):\n"
-	        "                    2,9 volte sopra l'1,71 %% che REGGE e 2,2 volte\n"
-	        "                    sotto l'11,10 %% che non serve nessuno, `[M]`\n"
-	        "                    23 ago 2026.  0 = solo il silenzio\n"
+	        "                    2026).  DUE cause: lo STALLO dell'uscita e il\n"
+	        "                    SILENZIO del client.  Ogni scatto scrive nel\n"
+	        "                    registro una riga `linea-morta` coi numeri su\n"
+	        "                    cui ha deciso (I1)\n"
+	        "  --linea-morta-stallo-ms N\n"
+	        "                    da quanti ms non esce un fotogramma PUR\n"
+	        "                    AVENDONE da mandare.  ⛔ Le due meta' contano\n"
+	        "                    tutt'e due: a scena ferma non c'e' niente da\n"
+	        "                    mandare, e il conto non parte nemmeno.\n"
+	        "                    Predefinito 5000: 5,0 volte sopra il secondo\n"
+	        "                    intero vuoto di `raffica-1`, che REGGE e\n"
+	        "                    consegna 23,94 fotogrammi/s, e 2,9 volte sotto\n"
+	        "                    i 14,26 s di `raffica-forte`, che non serve\n"
+	        "                    nessuno — `[M]` 23 ago 2026.  0 = solo il\n"
+	        "                    silenzio.  ⛔⛔ E la PERDITA non e' piu' una\n"
+	        "                    causa: `--linea-morta-permille` non esiste\n"
+	        "                    piu'.  Su una linea che riordina quella\n"
+	        "                    frazione misura il RIORDINO — `casa-cattiva`\n"
+	        "                    ne dichiarava 512‰ e REGGEVA dieci minuti,\n"
+	        "                    `raffica-forte` 123‰ e non reggeva.  Il\n"
+	        "                    numero resta nel registro come TESTIMONE\n"
 	        "  --linea-morta-silenzio-s N\n"
 	        "                    i secondi senza un pacchetto dal client.\n"
 	        "                    Predefinito 10.  ⚠ Accende anche i PING del\n"
 	        "                    trasporto a META' di questo numero, o «non\n"
 	        "                    risponde» e «non gli abbiamo chiesto niente»\n"
-	        "                    avrebbero la stessa faccia.  0 = solo la\n"
-	        "                    perdita\n"
+	        "                    avrebbero la stessa faccia.  0 = solo lo\n"
+	        "                    stallo\n"
 	        "\n"
 	        "  ⛔ `--figlio-interno` NON si batte a mano: e' la riga con cui\n"
 	        "     questo stesso binario riparte come figlio di un utente\n"
@@ -587,7 +598,7 @@ static bool ritmo_adattivo;         /* --ritmo-adattivo, assente = spento */
  *    copia; le opzioni servono al banco, che deve poterli muovere senza
  *    ricompilare. */
 static bool linea_morta;            /* --linea-morta, assente = spenta   */
-static unsigned linea_morta_permille = WT_LM_PERMILLE;
+static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
@@ -1102,8 +1113,20 @@ int main(int argc, char **argv)
 		 *    `wt_sgombra_soglia()`: due strade sono due numeri che divergono). */
 		else if (strcmp(a, "--linea-morta") == 0)
 			linea_morta = true;
-		else if (strcmp(a, "--linea-morta-permille") == 0 && v)
-			linea_morta_permille = (unsigned)strtoul(argv[++i], NULL, 10);
+		/* ⛔⛔ E `--linea-morta-permille` NON C'E' PIU', ed e' un'opzione TOLTA
+		 *      apposta invece che lasciata a non fare niente — 23 agosto 2026.
+		 *      La frazione di perdita e' stata refutata dal suo banco
+		 *      (`casa-cattiva` dichiarava 512‰ e REGGEVA dieci minuti,
+		 *      `raffica-forte` 123‰ e non reggeva: la grandezza ordina i due
+		 *      casi al contrario).  ⇒ Il numero resta nel registro come
+		 *      TESTIMONE del riordino, ma non ha piu' una soglia da muovere, e
+		 *      un'opzione che accetta un numero senza usarlo e' peggio di
+		 *      un'opzione che non c'e': chi la batte crede di aver tarato
+		 *      qualcosa.  ⚠ Chi la usava — il banco `09-b81` — la vedra'
+		 *      rifiutata dalla riga qui sotto, che e' il modo giusto di
+		 *      accorgersene. */
+		else if (strcmp(a, "--linea-morta-stallo-ms") == 0 && v)
+			linea_morta_stallo_ms = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--linea-morta-silenzio-s") == 0 && v)
 			linea_morta_silenzio_s = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--sblocca") == 0) {
@@ -1242,7 +1265,7 @@ int main(int argc, char **argv)
 	 *       fa vedere l'immagine peggio, CHIUDE LA SESSIONE.  Una sessione che
 	 *       sparisce senza una riga che dica se la cura era accesa e con quali
 	 *       numeri e' indistinguibile da un difetto nostro. */
-	wt_linea_morta(linea_morta, linea_morta_permille, linea_morta_silenzio_s);
+	wt_linea_morta(linea_morta, linea_morta_stallo_ms, linea_morta_silenzio_s);
 
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di

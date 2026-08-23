@@ -506,43 +506,59 @@ void wt_ritmo_adattivo(bool acceso);
  *       mano — quando succede una di due cose, e ognuna si scrive nel registro
  *       coi numeri su cui ha deciso (I1):
  *
- *         · PERDITA: `pkt_lost / pkt_sent` ≥ `permille` per due finestre di
- *           fila da almeno un secondo e almeno 200 pacchetti spediti;
+ *         · STALLO: `stallo_ms` millisecondi senza che esca un byte di video
+ *           PUR AVENDONE da mandare;
  *         · SILENZIO: `silenzio_s` secondi senza un pacchetto dal client, con
  *           almeno due pacchetti nostri usciti nel frattempo.
  *
- * ⛔ LA GRANDEZZA E' UN FATTO OSSERVABILE, non un orologio: sono due contatori
- *    di `ngtcp2_conn_info`, locali a chi manda, ed e' la forma della famiglia
- *    P8→P20 (`RCP.md:398`).  Il tempo entra SOLO come finestra di osservazione.
+ * ⛔⛔ E LA PERDITA NON E' PIU' UNA CAUSA — 23 agosto 2026, refutata dal suo
+ *      banco.  `casa-cattiva` dichiarava **512‰** di perdita e REGGEVA dieci
+ *      minuti (9,60 fotogrammi/s, buco massimo 0,50 s); `raffica-forte` ne
+ *      dichiarava **123‰** e non reggeva (buco 30,06 s).  ⇒ La frazione ordina
+ *      i due casi AL CONTRARIO e nessuna soglia li separa: su una linea che
+ *      RIORDINA, `pkt_lost/pkt_sent` misura il riordino e non la perdita.
+ *      ⭐ Il numero resta nella riga dello scatto come `permille=`, TESTIMONE
+ *         del riordino e non piu' giudice — e `--linea-morta-permille` NON
+ *         ESISTE PIU', perche' un'opzione che non decide niente e' un
+ *         interruttore finto.  La refuta per intero sta nel riquadro sopra
+ *         `WT_LM_STALLO_MS` in `webtransport.c`.
+ *
+ * ⛔ LA GRANDEZZA E' UN FATTO OSSERVABILE, non un orologio: due contatori
+ *    monotoni e LOCALI — i byte di video consegnati a ngtcp2 e i fotogrammi che
+ *    il palco ci ha dato — ed e' la forma della famiglia P8→P20 (`RCP.md:398`),
+ *    la stessa di `arretrato`.  Il tempo entra SOLO come distanza fra due
+ *    campionamenti.  ⛔ E le due meta' contano tutt'e due: «non esce niente» da
+ *    solo e' anche la SCENA FERMA, che in questa fase e' normale — se non
+ *    abbiamo niente da mandare il conto non parte nemmeno.
  *
  * ⛔⛔ E' LA COSA PIU' VISIBILE CHE IL PRODOTTO SAPPIA FARE — butta fuori una
  *      sessione.  ⇒ I6 alla lettera: nasce spenta, l'utente la guarda sul
  *      desktop vero prima che diventi il comportamento normale, e il valore in
  *      vigore si scrive all'avvio in TUTT'E DUE i casi.
  *
- * ⚠ La derivazione del 5,0 % — i due margini, 2,9× sopra l'1,71 % che regge e
- *   2,2× sotto l'11,10 % che non serve nessuno — sta per intero nel riquadro
- *   sopra `WT_LM_PERMILLE` in `webtransport.c`, con le misure del 23 agosto
- *   2026 accanto.
+ * ⚠ La derivazione dei 5,0 s — i due margini, 5,0× sopra il secondo intero
+ *   vuoto di `raffica-1` (che REGGE, 23,94 fotogrammi/s) e 2,9× sotto i 14,26 s
+ *   di `raffica-forte` — sta per intero nel riquadro sopra `WT_LM_STALLO_MS` in
+ *   `webtransport.c`, con le misure del 23 agosto 2026 accanto.
  *
  * ⚠⚠ E ACCESA CAMBIA ANCHE I PING DEL TRASPORTO: passano da 10 s a meta' della
  *     soglia del silenzio (5 s coi predefiniti), o «il client non risponde» e
  *     «al client non abbiamo ancora chiesto niente» avrebbero la stessa faccia.
  *
  *   Le opzioni sono `--linea-morta` (senza argomento, assente = spenta),
- *   `--linea-morta-permille N` (predefinito 50 = 5,0 %; 0 = solo il silenzio) e
- *   `--linea-morta-silenzio-s N` (predefinito 10; 0 = solo la perdita).
+ *   `--linea-morta-stallo-ms N` (predefinito 5000; 0 = solo il silenzio) e
+ *   `--linea-morta-silenzio-s N` (predefinito 10; 0 = solo lo stallo).
  */
 /* ⛔ I DUE PREDEFINITI, E CE N'E' UNA COPIA SOLA: stanno qui perche' `main.c` ci
  *    inizializza le sue variabili e li passa a `wt_linea_morta()`.  Con un
  *    numero scritto due volte «il predefinito del server» e «il predefinito del
  *    trasporto» diventano due cose diverse il giorno che uno dei due si tara.
- * ⚠ La DERIVAZIONE del 50‰ — i due margini misurati — sta nel riquadro sopra
- *   `linea_morta_giudica()` in `webtransport.c`, e non si duplica qui. */
-#define WT_LM_PERMILLE 50u   /* 5,0 % dei pacchetti spediti */
-#define WT_LM_SILENZIO_S 10u /* i 10 s dell'utente          */
+ * ⚠ La DERIVAZIONE dei 5 000 ms — i due margini misurati — sta nel riquadro
+ *   sopra le costanti `WT_LM_*` in `webtransport.c`, e non si duplica qui. */
+#define WT_LM_STALLO_MS 5000u /* 5,0 s di immagine ferma con roba da mandare */
+#define WT_LM_SILENZIO_S 10u  /* i 10 s dell'utente                          */
 
-void wt_linea_morta(bool accesa, unsigned permille, uint64_t silenzio_s);
+void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s);
 
 /*
  * ⛔ «Questa connessione va staccata»: la chiede `trasporto.c` a ogni passata

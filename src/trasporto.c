@@ -58,7 +58,14 @@
  *   sono usciti senza che ne tornasse uno»* e il tempo e' solo la finestra in
  *   cui si guarda.  ⭐ Li' e' UNILATERALE — stacca noi, non insegna al client a
  *   mollare — sta dietro l'interruttore `--linea-morta` (I6), e scrive nel
- *   registro i numeri su cui ha deciso.  Il caso A5 del piano (la scheda in
+ *   registro i numeri su cui ha deciso.
+ *   ⚠ E l'ALTRA causa di quella cura non e' piu' la perdita di pacchetti: dal
+ *     23 agosto 2026 e' lo STALLO DELL'USCITA — «da quanto tempo non esce un
+ *     fotogramma pur avendone da mandare».  La frazione `pkt_lost/pkt_sent` e'
+ *     stata refutata dal suo banco (su una linea che riordina misura il
+ *     riordino) e resta solo come testimone nel registro; la refuta per intero
+ *     e' nel riquadro sopra `WT_LM_STALLO_MS` in `webtransport.c`.
+ *   Il caso A5 del piano (la scheda in
  *   secondo piano) resta servito: il browser risponde ai nostri PING dal
  *   processo di rete anche quando la pagina e' rallentata, e `[M]` l'11 agosto
  *   2026 sono stati misurati undici minuti in secondo piano con zero stacchi.

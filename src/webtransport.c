@@ -540,7 +540,35 @@ struct wt {
 	uint64_t lm_finestra_ms;    /* quando si e' aperta la finestra in corso   */
 	uint64_t lm_pkt_sent;       /* `pkt_sent` all'apertura della finestra     */
 	uint64_t lm_pkt_lost;       /* `pkt_lost` all'apertura della finestra     */
-	unsigned lm_male;           /* finestre CATTIVE DI FILA (mai giudicate=0) */
+	/* ⛔⛔⭐ LA FRAZIONE DI PERDITA E' UN TESTIMONE, NON PIU' UN GIUDICE — 23
+	 *      agosto 2026, e la ragione sta per intero nel riquadro sopra
+	 *      `WT_LM_STALLO_MS`.  Questi tre campi tengono la fotografia
+	 *      dell'ultima finestra CHIUSA, cosi' la riga dello scatto porta il
+	 *      numero anche quando a decidere e' stata un'altra causa. */
+	unsigned lm_permille;       /* la frazione dell'ultima finestra chiusa    */
+	uint64_t lm_persi_v, lm_spediti_v; /* i due conti di quella finestra      */
+	uint64_t lm_durata_v;       /* e quanto e' durata davvero, in ms          */
+	/* ⛔⭐⭐ LO STALLO DELL'USCITA — la grandezza su cui si DECIDE da oggi.
+	 *
+	 *      Sono due contatori monotoni piu' un istante, e ognuno dei tre porta
+	 *      una meta' della frase «da quanto tempo non esce un fotogramma pur
+	 *      avendone da mandare»:
+	 *
+	 *        · `lm_usciti`  — byte di VIDEO consegnati a ngtcp2 (`coda_consegna`):
+	 *                         se sale, il filo porta, e il conto riparte;
+	 *        · `lm_offerti` — fotogrammi che il palco ci ha dato per questa
+	 *                         sessione, contati PRIMA di ogni freno, sgombero o
+	 *                         rifiuto: se non sale e la coda e' vuota, non
+	 *                         c'era niente da mandare e il conto NON PARTE;
+	 *        · `lm_uscita_ms` — l'istante in cui il conto e' ripartito l'ultima
+	 *                         volta, per una delle due ragioni qui sopra.
+	 *
+	 * ⛔ I due `_visti` sono i valori all'ultimo giro di giudizio: la grandezza
+	 *    e' una DIFFERENZA fra due campionamenti, non un totale.  Un totale
+	 *    direbbe «da inizio sessione», che e' un'altra cosa. */
+	uint64_t lm_usciti, lm_usciti_visti;
+	uint64_t lm_offerti, lm_offerti_visti;
+	uint64_t lm_uscita_ms;
 	/* ⛔ Il silenzio non e' un orologio libero: e' «da quando il client non fa
 	 *    piu' vedere un pacchetto», e accanto ci sta il numero delle volte che
 	 *    NOI gliene abbiamo mandato uno da allora.  Senza il secondo, una
@@ -849,6 +877,32 @@ static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
 	}
 }
 
+/* ⛔⭐ FASE 9 — QUESTO STREAM PORTA UN FOTOGRAMMA?  Serve a UNA cosa sola: a
+ *     contare i byte di VIDEO che escono verso il filo, che e' la meta'
+ *     «e' uscito» della grandezza della linea morta (il riquadro sopra
+ *     `WT_LM_STALLO_MS`).
+ *
+ * ⛔ L'elenco `involo[]` e' l'unico posto in cui il fatto e' scritto: gli
+ *    stream del video li apriamo NOI e nessuno ce li dichiara altrove.
+ *    Distinguerli per esclusione — «tutto quel che non e' il canale di
+ *    controllo» — ci metterebbe dentro anche gli appunti, e un trasferimento di
+ *    appunti riuscito mentre il video e' fermo azzererebbe il conto dello
+ *    stallo proprio nel giro in cui deve correre.
+ *
+ * ⚠ IL PREZZO, DICHIARATO: un fotogramma che non e' entrato nell'elenco perche'
+ *   `WT_INVOLO_MAX` era pieno non viene contato, quindi i suoi byte non
+ *   azzerano lo stallo.  ⛔ Sbaglia dalla parte SEVERA — ma un elenco pieno
+ *   vuol dire trentadue fotogrammi in volo insieme, cioe' una coda che non si
+ *   svuota: e' gia' lo stallo, non un caso sano scambiato per rotto.  E la
+ *   riga di `involo_aggiungi()` lo dichiara quando succede. */
+static bool stream_di_un_fotogramma(const wt *w, int64_t id)
+{
+	for (size_t i = 0; i < w->ninvolo; i++)
+		if (w->involo[i].vivo && w->involo[i].stream == id)
+			return true;
+	return false;
+}
+
 /* ⛔ Un elemento muore qui e in nessun altro posto: e' l'unico punto in cui
  *    `byte_in_coda` (e adesso `byte_in_volo`) cala, e due punti che lo
  *    calassero divergerebbero.
@@ -928,6 +982,22 @@ static void coda_consegna(wt *w, size_t i)
 	w->byte_in_volo += u->dati.n;
 	if (w->byte_in_volo > w->byte_in_volo_max)
 		w->byte_in_volo_max = w->byte_in_volo;
+	/* ⛔⭐⭐ FASE 9 — ED E' QUI CHE «UN FOTOGRAMMA ESCE», nell'unico punto del
+	 *      file in cui il fatto avviene: `ndatalen` ha coperto tutto
+	 *      l'elemento, cioe' quei byte sono finiti DENTRO UN PACCHETTO.
+	 *
+	 *      ⚠ Non e' «il client li ha visti»: e' «sono partiti».  Ed e' voluto —
+	 *        la grandezza della linea morta dev'essere LOCALE e monotona (la
+	 *        forma P20 di `RCP.md:398`), o la decisione di buttare fuori una
+	 *        sessione dipenderebbe da quel che dice il pari.
+	 *
+	 * ⛔ Si contano i BYTE e non i fotogrammi interi, e la ragione e' la
+	 *    direzione dell'errore: una chiave da 60 000 byte su una linea stretta
+	 *    puo' metterci secondi a uscire tutta, e contando i fotogrammi quei
+	 *    secondi sarebbero uno «stallo» mentre il filo sta lavorando.  Un byte
+	 *    che parte e' un filo che porta. */
+	if (stream_di_un_fotogramma(w, u->id))
+		w->lm_usciti += u->dati.n;
 }
 
 /* ⛔⭐ FASE 9 — L'ACK LIBERA, e prima non lo faceva nessuno.
@@ -1034,6 +1104,27 @@ static size_t coda_byte_stream(const wt *w, int64_t id)
 	for (size_t i = w->testa; i < w->ncoda; i++)
 		if (!w->coda[i].morto && w->coda[i].id == id)
 			n += w->coda[i].dati.n - w->coda[i].off;
+	return n;
+}
+
+/* ⛔⭐ FASE 9 — I BYTE DI VIDEO CHE DEVONO ANCORA PARTIRE, e sono la meta'
+ *     «avevo da mandare» della grandezza della linea morta.
+ *
+ *     E' la stessa somma che fanno `video_sgombra()` e `ritmo_frena()`, con due
+ *     differenze dichiarate: qui entrano anche le CHIAVI (una chiave ferma in
+ *     coda e' roba da mandare quanto un delta — §5.2 vieta di abbandonarla, non
+ *     di contarla), e non si conta nessun `arretrato`, perche' qui la domanda
+ *     non e' «quanti fotogrammi» ma «c'e' qualcosa».
+ *
+ * ⚠ Zero NON vuol dire «e' arrivato»: vuol dire «non e' piu' roba nostra».
+ *   E' esattamente il significato che serve — se non abbiamo piu' niente in
+ *   casa, non c'e' niente che il filo ci stia trattenendo. */
+static size_t coda_byte_video(const wt *w)
+{
+	size_t n = 0;
+	for (size_t i = 0; i < w->ninvolo; i++)
+		if (w->involo[i].vivo)
+			n += coda_byte_stream(w, w->involo[i].stream);
 	return n;
 }
 
@@ -2441,71 +2532,142 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 /* scelto: **il filo cade e l'utente rientra a mano**.                        */
 /*                                                                            */
 /* ⛔ DA DOVE NASCE, e sono due comportamenti brutti tutt'e due — `[M]` 23     */
-/*    agosto, stessa macchina, profilo `raffica-forte` (11,10 % in 197         */
-/*    raffiche): SENZA le cure della fase l'immagine si congela fino a         */
+/*    agosto, stessa macchina, profilo `raffica-forte` (11,10 % INIETTATO in   */
+/*    197 raffiche): SENZA le cure della fase l'immagine si congela fino a     */
 /*    **14,26 s** (7 secondi su 25 hanno visto un fotogramma); CON le cure si  */
 /*    muove ma con **4,5 s di ritardo**.  ⇒ L'utente ha deciso che nessuno dei */
 /*    due va servito: una linea cosi' si DICHIARA morta.                      */
 /*                                                                            */
-/* ⛔⭐ LA GRANDEZZA, ed e' qui che sta il lavoro — «copiosa» e' una parola, e  */
-/*     una parola non e' una soglia.  E' `pkt_lost / pkt_sent` DENTRO UNA      */
-/*     FINESTRA, cioe' due contatori di `ngtcp2_conn_info` che sono fatti      */
-/*     osservabili sul filo e locali a chi manda: e' la forma della famiglia   */
-/*     P8→P20 (`RCP.md:398`) — mai un orologio, e la finestra e' l'INTERVALLO  */
-/*     DI OSSERVAZIONE, non una soglia sul tempo trascorso.                   */
+/* ⛔⛔⭐⭐ LA GRANDEZZA E' CAMBIATA IL 23 AGOSTO 2026, E LA VECCHIA E' STATA     */
+/*       REFUTATA DAL SUO STESSO BANCO.  Si scrive qui per intero, perche'    */
+/*       chi legge dopo deve trovare la RAGIONE e non l'assenza.              */
 /*                                                                            */
-/* ⛔⛔ E IL NUMERO, CON LE DUE MISURE CHE LO CHIUDONO DA TUTT'E DUE I LATI —   */
-/*     `[M]` 23 agosto 2026, stessa macchina, stesso banco:                   */
+/* ⛔ QUEL CHE C'ERA: `pkt_lost / pkt_sent` dentro una finestra, con soglia a  */
+/*    50‰.  ⛔⛔ E ORDINA I DUE CASI AL CONTRARIO — `[M]` 23 agosto 2026,       */
+/*    `banchi/09-b81-linea-morta.py`:                                         */
 /*                                                                            */
-/*      · **1,71 %** (`casa-cattiva`, + jitter 40±20 ms): 7,8-10,2 fotogrammi  */
-/*        al secondo, e **la sessione REGGE**.  ⇒ Questa NON si dichiara morta:*/
-/*        e' un utente che sta lavorando, e buttarlo fuori sarebbe peggio del  */
-/*        difetto che si cura.  ⚠ E 1,48 % dice la stessa cosa piu' forte:     */
-/*        5,5 fotogrammi/s, ma copertura 1,00 e buco massimo 0,37 s — niente   */
-/*        si stacca e la consegna non si ferma MAI.                           */
-/*      · **11,10 %** (`raffica-forte`): la consegna si ferma, `cwnd` mediana  */
-/*        8 948 B contro 105 616 del riferimento, `cwnd_left` mediana 0.       */
-/*        ⇒ Questa non serve nessuno.                                         */
+/*      · `casa-cattiva`  — perdita INIETTATA 1,86-2,15 %, perdita DICHIARATA */
+/*        da ngtcp2 **512‰** (51,2 %).  E la linea REGGE: dieci minuti, 9,60  */
+/*        fotogrammi/s, copertura 1,00, buco massimo 0,50 s, e il cliente e'  */
+/*        ancora attaccato a 599,99 s.                                        */
+/*      · `raffica-forte` — perdita INIETTATA 12,28-14,00 %, DICHIARATA       */
+/*        **123‰** (12,3 %).  E la linea NON regge: copertura 0,20, buco      */
+/*        massimo 30,06 s.                                                    */
 /*                                                                            */
-/*     ⇒ La soglia deve stare **fra 1,71 % e 11,10 %**.  Il centro geometrico  */
-/*       e' 4,36 % (√(1,71·11,10)); ⭐ si sceglie **5,0 %** — un pacchetto su   */
-/*       venti — e si sceglie SOPRA il centro apposta:                        */
+/*    ⇒ Quella che FUNZIONA dichiara QUATTRO VOLTE piu' perdita di quella     */
+/*      che non funziona.  ⛔ Nessun valore le separa: una soglia che lasci    */
+/*      passare `casa-cattiva` (≥512‰) lascia passare anche `raffica-forte`;  */
+/*      una che fermi `raffica-forte` (≤123‰) ferma prima `casa-cattiva`.     */
+/*      Non e' una taratura da rifare: e' la grandezza sbagliata.             */
 /*                                                                            */
-/*         margine sopra il peggiore che REGGE:  5,00 / 1,71 = **2,9×**        */
-/*         margine sotto quello che NON SERVE:  11,10 / 5,00 = **2,2×**        */
+/* ⭐ LA CAUSA, MISURATA: `casa-cattiva` porta `delay 40ms 20ms distribution   */
+/*    normal`, e la sonda ci misura il **93,5 % di pacchetti fuori ordine**   */
+/*    con l'1,9 % di perdita vera.  **ngtcp2 conta un pacchetto sorpassato    */
+/*    come perso.**  ⇒ Su una linea che RIORDINA, `pkt_lost/pkt_sent` misura  */
+/*    il RIORDINO e non la perdita — che e' il fatto centrale di questa       */
+/*    fase, e ci e' tornato addosso.  ⚠ E non e' la partenza della            */
+/*    connessione: tolte le prime dieci finestre, 399 su 399 restano sopra    */
+/*    soglia, mediana 524‰, ininterrotto per dieci minuti.                    */
 /*                                                                            */
-/*     ⚠ L'asimmetria e' voluta e si dichiara: i due errori NON costano        */
-/*       uguale.  Sbagliare in alto vuol dire che l'utente sopporta un'immagine*/
-/*       ferma qualche secondo in piu' e poi rientra a mano — sbagliare in     */
-/*       basso vuol dire **buttare fuori uno che stava lavorando**.  Fra i due,*/
-/*       il secondo e' quello che non si puo' rimediare.                      */
+/* ⭐⭐ E IL NUMERO NON SI BUTTA, CAMBIA MESTIERE: da GIUDICE a TESTIMONE.      */
+/*     Resta nella riga dello scatto come `permille=`, ed e' la miglior       */
+/*     misura di RIORDINO che il server abbia SUGLI STREAM — dove             */
+/*     `dgram_falsi` (§17.3) non arriva, perche' quello vale sui datagram,    */
+/*     cioe' sul solo audio.  ⇒ Un `permille=512` accanto a uno `stallo_ms=0` */
+/*     non e' un guasto: e' jitter, e adesso la riga lo fa VEDERE invece di   */
+/*     deciderlo.                                                             */
 /*                                                                            */
-/* ⛔⭐ E UNA FRAZIONE SU POCHI PACCHETTI NON E' UNA FRAZIONE, E' RUMORE.       */
-/*     Con 200 pacchetti nella finestra e perdita vera 1,71 % ce se ne         */
-/*     aspettano 3,4: perche' la frazione tocchi il 5 % ne servono **10**, che */
-/*     e' `[?]` una coda di Poisson da ~0,28 % per finestra.  Una finestra al  */
-/*     secondo vorrebbe dire un falso scatto ogni ~6 minuti su una linea che   */
-/*     FUNZIONA — cioe' la cura sarebbe peggio del difetto.                   */
-/*     ⇒ Due guardie, e sono tutt'e due dichiarate:                           */
-/*       1. sotto `WT_LM_MIN_PACCHETTI` spediti **non si decide niente** — la  */
-/*          finestra non si chiude, si ALLUNGA finche' i pacchetti bastano;   */
-/*       2. servono `WT_LM_FINESTRE` finestre cattive **DI FILA**: ~0,28 %     */
-/*          al quadrato = `[?]` un falso scatto ogni ~70 ore di linea all'1,71 */
-/*          % continuo.  ⭐ Ed e' anche il modo in cui l'«intervallo di 1-2     */
-/*          secondi» dell'utente entra nel codice: due finestre da un secondo. */
+/* ⛔⭐⭐⭐ LA GRANDEZZA NUOVA, E I DATI LA INDICANO DA SOLI: **DA QUANTO         */
+/*        TEMPO NON ESCE UN FOTOGRAMMA PUR AVENDONE DA MANDARE.**  Quel che   */
+/*        separa i due casi non e' quanto si perde, e' se i fotogrammi        */
+/*        ESCONO — `casa-cattiva` buco massimo 0,50 s, `raffica-forte`        */
+/*        30,06 s: sessanta volte, e nella direzione giusta.                  */
+/*                                                                            */
+/*   ⛔ E LE DUE META' CONTANO TUTT'E DUE.  «Non esce niente» da solo e'       */
+/*      anche la SCENA FERMA, che `[M]` in questa fase e' normale e non       */
+/*      costa niente: `RecordVirtual` di Mutter consegna solo sul             */
+/*      cambiamento, e il risveglio vale 13 ms.  ⇒ Se non abbiamo niente da   */
+/*      mandare non c'e' niente di rotto, e il conto non deve nemmeno         */
+/*      PARTIRE.                                                              */
+/*                                                                            */
+/*   ⭐ COME SI CALCOLA — due contatori LOCALI e MONOTONI, la forma P8→P20     */
+/*      di `RCP.md:398` (la stessa di `arretrato`), e non un orologio         */
+/*      libero: il tempo entra solo come distanza fra due campionamenti.      */
+/*                                                                            */
+/*        «e' uscito»   `lm_usciti` — i byte di VIDEO consegnati a ngtcp2     */
+/*                      (`coda_consegna()`).  Se sale, il conto RIPARTE.      */
+/*        «avevo da     `coda_byte_video() > 0` — byte di fotogrammi ancora   */
+/*         mandare»     in casa nostra — OPPURE `lm_offerti` salito, cioe'    */
+/*                      il palco ci ha dato un fotogramma.  Se nessuno dei    */
+/*                      due, il conto riparte lo stesso: non c'era niente     */
+/*                      da mandare, e non c'e' niente di rotto.               */
+/*                                                                            */
+/*      ⛔ IL SECONDO TERMINE NON E' UN DI PIU': senza `lm_offerti` il         */
+/*         REGOLATORE DEL RITMO nasconderebbe lo stallo.  Quello smette di    */
+/*         PRODURRE quando la coda non si svuota, `video_sgombra()`           */
+/*         abbandona i delta vecchi, e «non ho niente da mandare»             */
+/*         diventerebbe vero proprio mentre lo schermo e' fermo.  ⇒ Si        */
+/*         conta il fotogramma che il palco ci da', PRIMA di ogni freno,      */
+/*         sgombero o rifiuto.                                                */
+/*      ⛔ E SI CONTANO I BYTE, non i fotogrammi interi: una chiave da         */
+/*         ~60 000 byte su una linea stretta puo' metterci secondi a uscire   */
+/*         tutta, e a fotogrammi quei secondi sarebbero uno «stallo» mentre   */
+/*         il filo sta lavorando.  Un byte che parte e' un filo che porta.    */
+/*                                                                            */
+/* ⛔⛔ IL NUMERO, COI DUE MARGINI — `[M]` 23 agosto 2026, stesso banco.        */
+/*      ⛔ E i casi INTERMEDI contano quanto gli estremi:                      */
+/*                                                                            */
+/*        tredici profili sani    buco 0,04-0,35 s     reggono                */
+/*        `casa-cattiva`          buco **0,50 s**      REGGE, e non va        */
+/*                                                     dichiarata morta       */
+/*        `raffica-1` (1,07 %     ⚠ **1,00 s** pieno   regge, e consegna      */
+/*         a grappoli)              senza un fotogr.   23,94 fotogrammi/s     */
+/*        `raffica-forte`         **30,06 s**, e       NON regge              */
+/*                                 14,26 s in un                              */
+/*                                 altro giro                                 */
+/*                                                                            */
+/*     ⚠ `raffica-1` E' IL CASO CHE TIENE ONESTA LA SOGLIA: una linea che     */
+/*       consegna 24 fotogrammi al secondo ha comunque avuto **un secondo     */
+/*       intero vuoto**.  Una soglia sotto quello butterebbe fuori una        */
+/*       sessione perfettamente usabile.                                      */
+/*                                                                            */
+/*     ⇒ La soglia sta **fra 1,00 s e 14,26 s** — e il lato stretto e' il     */
+/*       piu' CORTO dei due stalli di `raffica-forte`, non il piu' lungo, o   */
+/*       il margine sarebbe scritto su un numero fortunato.  Il centro        */
+/*       geometrico e' 3,78 s (√(1,00·14,26)); ⭐ si sceglie **5,0 s**, e si   */
+/*       sceglie SOPRA il centro apposta:                                     */
+/*                                                                            */
+/*         margine sopra il peggiore che REGGE:   5,00 / 1,00 = **5,0×**      */
+/*         margine sotto quello che NON SERVE:   14,26 / 5,00 = **2,9×**      */
+/*         (e sopra `casa-cattiva`, che regge con 0,50 s, sono **10×**)       */
+/*                                                                            */
+/*     ⚠ L'ASIMMETRIA E' VOLUTA e si dichiara — ed e' l'unica cosa che la     */
+/*       cura vecchia aveva giusta: i due errori NON costano uguale.          */
+/*       Sbagliare in alto vuol dire qualche secondo di schermo fermo in      */
+/*       piu' e poi si rientra a mano; sbagliare in basso vuol dire           */
+/*       **buttare fuori uno che stava lavorando**, e quello non e'           */
+/*       rimediabile.                                                         */
+/*                                                                            */
+/* ⚠ E IL CAMPIONAMENTO SBAGLIA DALLA PARTE BUONA, che va detto perche' e'    */
+/*   un errore vero: il conto riparte dall'ISTANTE DEL GIRO in cui il         */
+/*   progresso si e' VISTO, non da quello in cui i byte sono usciti           */
+/*   davvero.  Il giro e' al piu' uno al secondo (`rete_ciclo()`), quindi     */
+/*   lo `stallo_ms` misurato puo' essere fino a ~1 s PIU' CORTO del vero.     */
+/*   ⇒ Si scatta piu' tardi, mai piu' presto — che e' il lato su cui          */
+/*   l'asimmetria qui sopra vuole sbagliare.                                  */
 /* ========================================================================== */
 
-/* ⛔ I DUE PREDEFINITI — `WT_LM_PERMILLE` (50‰ = 5,0 %) e `WT_LM_SILENZIO_S`
+/* ⛔ I DUE PREDEFINITI — `WT_LM_STALLO_MS` (5 000 ms) e `WT_LM_SILENZIO_S`
  *    (10 s) — stanno in `webtransport.h`, e ce n'e' UNA COPIA SOLA: `main.c` ci
  *    inizializza le sue variabili, cosi' «il predefinito del server» e «il
  *    predefinito del trasporto» non possono diventare due numeri diversi.
- *    ⚠ In MILLESIMI e non in percentuale: un intero non ha virgole da perdere
- *      fra la riga di comando, il registro e il banco. */
-/* ⚠ `[?]` I due numeri qui sotto li tara il banco, come `WT_RITMO_POSTI`: la
+ *    ⚠ Lo stallo in MILLISECONDI, come `--sgombra-soglia-ms`: e' un ritardo che
+ *      si VEDE, e chi lo tara sceglie quanti secondi di schermo fermo sopporta
+ *      prima che il filo cada. */
+/* ⚠ `[?]` I tre numeri qui sotto li tara il banco, come `WT_RITMO_POSTI`: la
  *   taratura e' falsificabile — a 20 Mbit/s con `casa-cattiva` acceso per
- *   dieci minuti gli scatti devono essere ZERO. */
-#define WT_LM_MIN_PACCHETTI 200u  /* sotto, la finestra si allunga            */
-#define WT_LM_FINESTRE 2u         /* cattive DI FILA                          */
+ *   dieci minuti gli scatti devono essere ZERO, e con `raffica-1` pure. */
+#define WT_LM_MIN_PACCHETTI 200u  /* sotto, la finestra del TESTIMONE si allunga*/
 #define WT_LM_FINESTRA_MS 1000u   /* la finestra minima: il ritmo di rete_ciclo*/
 /* ⛔ Le PROVE del silenzio: quanti pacchetti NOSTRI sono usciti da quando il
  *    client si e' fatto vedere l'ultima volta.  Due, non duecento: a desktop
@@ -2519,7 +2681,7 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
  *     predefiniti qui sopra — `main.c` chiama `wt_linea_morta()` SEMPRE, cosi'
  *     la riga d'avvio esce in tutt'e due i casi per costruzione. */
 static bool linea_morta_accesa;
-static unsigned linea_morta_permille = WT_LM_PERMILLE;
+static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
 
 /* ⛔⛔⭐⭐ QUANTO SPESSO SI CHIEDE AL CLIENT DI FARSI VEDERE — e con la linea
@@ -2556,14 +2718,32 @@ static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
  *   sul silenzio».  ⛔ Il confine non e' il periodo, e' la natura: sotto il
  *   secondo diventerebbe un'altra cosa, e li' non si va.
  *
- * ⚠ IL CONTO DEL TRAFFICO CHE AGGIUNGE, perche' un «costa poco» senza numeri e'
- *   un'opinione.  Un PING e' un pacchetto corto — intestazione corta + un frame
- *   PING + i 16 byte del sigillo, `[?]` ~40 byte di carico piu' 28 di IP/UDP —
- *   e la risposta e' un riscontro altrettanto corto: ~130 byte per giro.  A un
- *   giro ogni 5 s fanno **~26 byte/s**, cioe' **0,21 kbit/s** per sessione, e
- *   con sedici sessioni **~3,3 kbit/s** — contro il pavimento dichiarato di 20
- *   Mbit/s (`DECISIONI.md` §3.1-bis) e' **0,017 ‰**.  ⇒ Il costo non e' un
- *   argomento; il periodo lo sceglie la regola, non la banda.
+ * ⛔⛔ IL PREZZO CHE QUI ERA SCRITTO — «~26 byte/s, 0,21 kbit/s per sessione» —
+ *      DESCRIVEVA UN CASO IN CUI IL PRODOTTO NON ENTRA, e si corregge invece di
+ *      lasciarlo: un prezzo dichiarato per un caso che non esiste e' peggio di
+ *      nessun prezzo.  `[M]` 23 agosto 2026, banco `09-b81`:
+ *
+ *      1. ⛔ **Il keep-alive di ngtcp2 manda un PING solo dopo il suo intervallo
+ *         SENZA ALTRO TRAFFICO.**  E su una sessione viva il traffico non si
+ *         ferma mai: il contatore non sta fermo nemmeno **0,6 s**.  ⇒ Su una
+ *         sessione che sta lavorando questi PING **non hanno mai occasione di
+ *         scattare**, e il loro costo li' e' **zero**.  I ~26 byte/s sono un
+ *         TETTO che si tocca solo a traffico completamente fermo — cioe' dopo
+ *         che il client ha smesso di parlare, che e' il caso per cui esistono.
+ *      2. ⛔ **E il banco NON HA POTUTO ISOLARLO, e si e' rifiutato di dare un
+ *         verde vuoto.**  Una sessione «ferma» costa lo stesso **2 463 kbit/s**
+ *         di audio PCM (§4.3, che non si spegne): sono **11 727 volte** i 0,21
+ *         kbit/s che questa riga dichiarava.  La differenza misurata fra cura
+ *         accesa e cura spenta e' **+0,539 kbit/s** — dentro il rumore, cioe'
+ *         un numero che non dimostra niente in nessuna delle due direzioni.
+ *
+ *   ⇒ Quel che resta vero, e basta a decidere: un PING e' un pacchetto corto
+ *     (intestazione corta + un frame PING + i 16 byte del sigillo, `[?]` ~40
+ *     byte di carico piu' 28 di IP/UDP) e la risposta e' un riscontro
+ *     altrettanto corto.  A traffico fermo e un giro ogni 5 s e' un TETTO di
+ *     ~26 byte/s per sessione, contro il pavimento dichiarato di 20 Mbit/s
+ *     (`DECISIONI.md` §3.1-bis).  Il costo non e' un argomento; il periodo lo
+ *     sceglie la regola, non la banda.
  *
  * ⭐ E VALE ANCHE PER LO SFRATTO DEL FANTASMA (`rcp.c`, `--sfratto-ms`): quello
  *    e' tarato a 15 s perche' sotto i 15 s non si distingueva un client morto da
@@ -3040,9 +3220,9 @@ void wt_ritmo_adattivo(bool acceso)
  *      una fase intera.  ⇒ Nasce spenta, e l'utente la guarda sul desktop vero
  *      prima che diventi il comportamento normale.
  *
- * `permille`  la soglia della perdita in MILLESIMI di pacchetti spediti.
- *             `0` = spenta, e allora nessuna perdita, per grossa che sia,
- *             dichiara morta la linea (resta il solo silenzio).
+ * `stallo_ms`  i millisecondi senza che esca un byte di video PUR AVENDONE da
+ *              mandare.  `0` = spento, e allora nessuno stallo, per lungo che
+ *              sia, dichiara morta la linea (resta il solo silenzio).
  * `silenzio_s` i secondi senza un pacchetto dal client.  `0` = spento.
  *
  * ⚠ E NON C'E' NESSUNA VARIABILE D'AMBIENTE, apposta: il ponte
@@ -3051,15 +3231,15 @@ void wt_ritmo_adattivo(bool acceso)
  *   la stessa cura sono due numeri che possono divergere.  Il banco usa le
  *   opzioni, che sono l'unica strada.
  */
-void wt_linea_morta(bool accesa, unsigned permille, uint64_t silenzio_s)
+void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 {
 	linea_morta_accesa = accesa;
-	linea_morta_permille = permille;
+	linea_morta_stallo_ms = stallo_ms;
 	linea_morta_silenzio_ms = silenzio_s * 1000;
 	if (!accesa) {
 		registro_dice(REG_AVVIO,
 		              "la LINEA MORTA e' SPENTA (invariante I6, `--linea-morta`): "
-		              "nessuna sessione verra' mai chiusa per perdita di pacchetti "
+		              "nessuna sessione verra' mai chiusa per stallo dell'uscita "
 		              "ne' per silenzio del client prima dei 30 s di QUIC (§5.3).  "
 		              "⚠ E questa riga E' il perche' — non e' che non ha dovuto "
 		              "scattare");
@@ -3069,23 +3249,26 @@ void wt_linea_morta(bool accesa, unsigned permille, uint64_t silenzio_s)
 	              "⛔⭐ FASE 9: la LINEA MORTA e' ACCESA (`--linea-morta`) — il "
 	              "filo cade e l'utente rientra A MANO (decisione dell'utente, 23 "
 	              "agosto 2026).  DUE cause, e ognuna scrive la sua riga "
-	              "`linea-morta` col conto su cui ha deciso (I1):  (1) PERDITA: "
-	              "persi/spediti ≥ %u‰ (%u,%u %%) per %u finestre di fila da "
-	              "almeno %u ms e almeno %u pacchetti spediti — sotto quel minimo "
-	              "NON si decide niente, la finestra si allunga;  (2) SILENZIO: "
-	              "%llu s senza un pacchetto dal client con almeno %u pacchetti "
-	              "nostri usciti nel frattempo.  ⚠ Margini della soglia, `[M]` 23 "
-	              "ago: 2,9× sopra l'1,71 %% che REGGE, 2,2× sotto l'11,10 %% che "
-	              "non serve nessuno",
-	              linea_morta_permille, linea_morta_permille / 10,
-	              linea_morta_permille % 10, (unsigned)WT_LM_FINESTRE,
-	              (unsigned)WT_LM_FINESTRA_MS, (unsigned)WT_LM_MIN_PACCHETTI,
+	              "`linea-morta` col conto su cui ha deciso (I1):  (1) STALLO: "
+	              "%llu ms senza che esca un byte di video mentre ne avevamo da "
+	              "mandare — e «avevo da mandare» vuol dire byte di fotogrammi "
+	              "ancora in coda OPPURE un fotogramma nuovo dal palco: a scena "
+	              "ferma il conto non parte nemmeno;  (2) SILENZIO: %llu s senza "
+	              "un pacchetto dal client con almeno %u pacchetti nostri usciti "
+	              "nel frattempo.  ⚠ Margini della soglia dello stallo, `[M]` 23 "
+	              "ago: 5,0× sopra il secondo intero vuoto di `raffica-1` (che "
+	              "REGGE, 23,94 fotogrammi/s) e 2,9× sotto i 14,26 s di "
+	              "`raffica-forte` (che non serve nessuno).  ⛔⛔ E LA FRAZIONE DI "
+	              "PERDITA NON GIUDICA PIU': `permille=` resta nella riga come "
+	              "TESTIMONE del riordino — `casa-cattiva` ne dichiarava 512‰ e "
+	              "REGGEVA dieci minuti, `raffica-forte` 123‰ e non reggeva",
+	              (unsigned long long)linea_morta_stallo_ms,
 	              (unsigned long long)(linea_morta_silenzio_ms / 1000),
 	              (unsigned)WT_LM_MIN_PROVE);
-	if (!linea_morta_permille)
+	if (!linea_morta_stallo_ms)
 		registro_dice(REG_AVVIO,
-		              "⚠ ma la soglia della PERDITA e' a 0‰: resta il solo "
-		              "silenzio.  Una raffica non chiudera' niente");
+		              "⚠ ma la soglia dello STALLO e' a 0 ms: resta il solo "
+		              "silenzio.  Un'immagine ferma non chiudera' niente");
 	if (!linea_morta_silenzio_ms)
 		registro_dice(REG_AVVIO,
 		              "⚠ ma la soglia del SILENZIO e' a 0 s: resta la sola "
@@ -4137,7 +4320,7 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 
 /* ========================================================================== */
 /* ⛔⭐⭐ IL GIUDIZIO SULLA LINEA MORTA — la derivazione dei numeri sta sopra   */
-/*      `WT_LM_PERMILLE`, e qui c'e' solo il meccanismo.                      */
+/*      `WT_LM_STALLO_MS`, e qui c'e' solo il meccanismo.                     */
 /*                                                                            */
 /* ⛔ LA RIGA DEL REGISTRO E' UN CONTRATTO — invariante I1, «ogni discesa e'   */
 /*    dichiarata», e questa non e' una discesa: e' una sessione CHIUSA.  Una   */
@@ -4154,31 +4337,55 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 /*       usa: un banco che facesse `split('=')` su una riga a geometria        */
 /*       variabile leggerebbe il campo sbagliato senza accorgersene.  Quale    */
 /*       delle due cause ha deciso lo dice `causa=`, che e' il PRIMO campo.    */
+/*                                                                            */
+/* ⛔⛔ IL CONTRATTO E' CAMBIATO IL 23 AGOSTO 2026, e il banco `09-b81` va      */
+/*      rifatto su questo.  Due campi sono SPARITI e non si tace sul perche':  */
+/*                                                                            */
+/*      · `soglia_permille=` — non esiste piu' nessuna soglia sulla perdita.   */
+/*        `permille=` invece RESTA, ed e' l'osservazione del riordino.  Un     */
+/*        campo `soglia_` accanto a un numero che non giudica sarebbe una      */
+/*        decisione che nessuno prende, cioe' la forma E1.                     */
+/*      · `finestre=N/M` — non ci sono piu' finestre cattive da contare di     */
+/*        fila: lo stallo e' una durata continua, e la sua evidenza e' la      */
+/*        durata stessa, non la ripetizione.                                   */
+/*                                                                            */
+/*    ⭐ E ne sono entrati quattro: `stallo_ms=` `soglia_stallo_ms=`           */
+/*       `offerti=` `usciti_byte=` `coda_video=` `cwnd_left=`.  I tre di mezzo */
+/*       sono i tre numeri su cui lo stallo si dimostra o si smentisce: quanti */
+/*       fotogrammi il palco ci ha dato, quanti byte di video sono usciti      */
+/*       davvero, e quanti sono rimasti in casa nostra.                        */
 /* ========================================================================== */
 
 static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
-                               const char *causa, uint64_t finestra_ms,
-                               uint64_t persi, uint64_t spediti,
-                               unsigned permille, uint64_t silenzio_ms,
+                               const char *causa, uint64_t stallo_ms,
+                               uint64_t offerti, uint64_t usciti,
+                               uint64_t coda_video, uint64_t silenzio_ms,
                                uint64_t prove, const char *detto)
 {
 	static const uint8_t motivo[] = "linea morta";
 
 	w->lm_scattata = true;
 	registro_dice(REG_WT,
-	              "linea-morta %s causa=%s persi=%llu spediti=%llu permille=%u "
-	              "soglia_permille=%u finestra_ms=%llu finestre=%u/%u "
-	              "minimo_pacchetti=%u silenzio_ms=%llu soglia_silenzio_ms=%llu "
-	              "prove=%llu minimo_prove=%u cwnd=%llu srtt_us=%llu "
-	              "giudizio=%s",
-	              w->provenienza, causa, (unsigned long long)persi,
-	              (unsigned long long)spediti, permille, linea_morta_permille,
-	              (unsigned long long)finestra_ms, w->lm_male,
-	              (unsigned)WT_LM_FINESTRE, (unsigned)WT_LM_MIN_PACCHETTI,
+	              "linea-morta %s causa=%s stallo_ms=%llu soglia_stallo_ms=%llu "
+	              "offerti=%llu usciti_byte=%llu coda_video=%llu "
+	              "silenzio_ms=%llu soglia_silenzio_ms=%llu prove=%llu "
+	              "minimo_prove=%u persi=%llu spediti=%llu permille=%u "
+	              "finestra_ms=%llu minimo_pacchetti=%u cwnd=%llu "
+	              "cwnd_left=%llu srtt_us=%llu giudizio=%s",
+	              w->provenienza, causa,
+	              (unsigned long long)stallo_ms,
+	              (unsigned long long)linea_morta_stallo_ms,
+	              (unsigned long long)offerti, (unsigned long long)usciti,
+	              (unsigned long long)coda_video,
 	              (unsigned long long)silenzio_ms,
 	              (unsigned long long)linea_morta_silenzio_ms,
 	              (unsigned long long)prove, (unsigned)WT_LM_MIN_PROVE,
+	              (unsigned long long)w->lm_persi_v,
+	              (unsigned long long)w->lm_spediti_v, w->lm_permille,
+	              (unsigned long long)w->lm_durata_v,
+	              (unsigned)WT_LM_MIN_PACCHETTI,
 	              (unsigned long long)in->cwnd,
+	              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 	              (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
 	              detto);
 	/* ⛔⭐ IL MOTIVO SI SCRIVE NELL'ERRORE DELLA CONNESSIONE, e non si INVENTA
@@ -4201,8 +4408,9 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
                                 uint64_t ora_ms)
 {
-	uint64_t spediti, persi, prove, fermo_da, durata;
-	unsigned permille;
+	uint64_t spediti, persi, prove, fermo_da, stallo;
+	uint64_t coda_video, offerti, usciti;
+	bool avevo_da_mandare;
 
 	/* ⛔ Spenta = il prodotto di ieri byte per byte (I6).  E una volta scattata
 	 *    non si giudica piu': la connessione sta gia' cadendo, e una seconda
@@ -4215,8 +4423,8 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		return;
 
 	/* ⛔ Il primo giro FOTOGRAFA e non giudica: senza questa riga la prima
-	 *    finestra sarebbe lunga quanto tutta la connessione e la frazione
-	 *    sarebbe un'altra grandezza. */
+	 *    finestra sarebbe lunga quanto tutta la connessione, e lo stallo
+	 *    partirebbe da un istante che non e' mai stato guardato. */
 	if (!w->lm_finestra_ms) {
 		w->lm_finestra_ms = ora_ms;
 		w->lm_pkt_sent = in->pkt_sent;
@@ -4224,14 +4432,78 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		w->lm_vivo_ms = ora_ms;
 		w->lm_pkt_recv = in->pkt_recv;
 		w->lm_pkt_sent_vivo = in->pkt_sent;
+		w->lm_uscita_ms = ora_ms;
+		w->lm_usciti_visti = w->lm_usciti;
+		w->lm_offerti_visti = w->lm_offerti;
 		return;
 	}
 
-	/* ── 1. IL SILENZIO ──────────────────────────────────────────────────
+	/* ── 1. IL TESTIMONE: LA FRAZIONE DI PERDITA ─────────────────────────
+	 * ⛔⛔ E NON GIUDICA PIU' NIENTE — 23 agosto 2026, la refuta e' scritta per
+	 *      intero nel riquadro sopra `WT_LM_STALLO_MS`.  Il numero si CALCOLA
+	 *      ancora, con le stesse guardie di prima, e finisce nella riga dello
+	 *      scatto come `permille=`: su una linea che riordina e' la miglior
+	 *      misura di RIORDINO che il server abbia sugli stream, dove
+	 *      `dgram_falsi` (§17.3) non arriva.
+	 *
+	 * ⚠ Le guardie restano perche' un testimone che mente e' peggio di un
+	 *   testimone che tace: sotto `WT_LM_MIN_PACCHETTI` spediti la finestra
+	 *   NON si chiude, si allunga — una frazione su venti pacchetti non e' una
+	 *   frazione, e' rumore.  ⭐ E il minimo e' sui pacchetti che mandiamo NOI,
+	 *   che e' la direzione abbondante di questa sessione (video in giu', quasi
+	 *   niente in su). */
+	if (ora_ms - w->lm_finestra_ms >= WT_LM_FINESTRA_MS) {
+		spediti = in->pkt_sent - w->lm_pkt_sent;
+		if (spediti >= WT_LM_MIN_PACCHETTI) {
+			persi = in->pkt_lost - w->lm_pkt_lost;
+			/* ⛔ La durata VERA della finestra, presa prima di chiuderla: e' il
+			 *    numero che dice se il minimo dei pacchetti l'ha allungata, e
+			 *    con la costante al suo posto quella riga direbbe sempre 1000 —
+			 *    cioe' un numero che SEMBRA misurato (forma E1). */
+			w->lm_durata_v = ora_ms - w->lm_finestra_ms;
+			w->lm_persi_v = persi;
+			w->lm_spediti_v = spediti;
+			w->lm_permille = (unsigned)(persi * 1000 / spediti);
+			/* La finestra si chiude qui, e la prossima parte da adesso. */
+			w->lm_finestra_ms = ora_ms;
+			w->lm_pkt_sent = in->pkt_sent;
+			w->lm_pkt_lost = in->pkt_lost;
+		}
+	}
+
+	/* ── 2. LE DUE META' DELLO STALLO, LETTE UNA VOLTA SOLA ───────────────
+	 * ⛔ Si leggono PRIMA di qualunque scatto e prima del proprio azzeramento,
+	 *    perche' le porta anche la riga del SILENZIO: una sessione chiusa per
+	 *    silenzio con `offerti=` e `usciti_byte=` presi dopo l'azzeramento
+	 *    direbbe sempre zero, cioe' un numero che sembra misurato e non lo e'.
+	 *
+	 * ⭐ `offerti` e `usciti_byte` sono DIFFERENZE da quando il conto dello
+	 *    stallo e' ripartito l'ultima volta, non totali di sessione: la
+	 *    grandezza e' «da quanto tempo», e i totali risponderebbero a un'altra
+	 *    domanda. */
+	coda_video = coda_byte_video(w);
+	offerti = w->lm_offerti - w->lm_offerti_visti;
+	usciti = w->lm_usciti - w->lm_usciti_visti;
+	/* ⛔⭐ «AVEVO DA MANDARE» — ed e' la meta' che tiene in piedi l'altra.
+	 *     Due termini, e ognuno copre un buco dell'altro:
+	 *       · `coda_video > 0` — dei byte di fotogrammi sono ancora in casa
+	 *         nostra, quindi il filo li sta trattenendo;
+	 *       · `offerti > 0` — il palco ci ha dato un fotogramma da quando il
+	 *         conto e' ripartito.  ⛔ Senza questo, il REGOLATORE DEL RITMO
+	 *         nasconderebbe lo stallo: smette di produrre, `video_sgombra()`
+	 *         abbandona i delta vecchi, la coda si svuota, e «non ho niente da
+	 *         mandare» diventerebbe vero mentre lo schermo e' fermo. */
+	avevo_da_mandare = coda_video > 0 || offerti > 0;
+	stallo = ora_ms - w->lm_uscita_ms;
+
+	/* ── 3. IL SILENZIO ──────────────────────────────────────────────────
 	 * ⛔ La grandezza NON e' «quanto tempo e' passato»: e' «quanti pacchetti
 	 *    nostri sono usciti senza che ne tornasse UNO».  Il tempo e' solo la
 	 *    finestra in cui si guarda, e da solo non basterebbe — un desktop fermo
-	 *    in cui non parla nessuno dei due tace legittimamente. */
+	 *    in cui non parla nessuno dei due tace legittimamente.
+	 * ⚠ E questa cura NON si tocca: `[M]` 23 agosto 2026 ha passato la sua
+	 *   prova — `kill -9` sul cliente, scatto a `silenzio_ms=10002` con
+	 *   `prove=10`, 10,36 s dopo il colpo; a cura spenta, zero scatti. */
 	if (in->pkt_recv > w->lm_pkt_recv) {
 		w->lm_vivo_ms = ora_ms;
 		w->lm_pkt_recv = in->pkt_recv;
@@ -4241,8 +4513,7 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		prove = in->pkt_sent - w->lm_pkt_sent_vivo;
 		if (fermo_da >= linea_morta_silenzio_ms && prove >= WT_LM_MIN_PROVE) {
 			linea_morta_scatta(
-				w, in, "silenzio", ora_ms - w->lm_finestra_ms,
-				in->pkt_lost - w->lm_pkt_lost, in->pkt_sent - w->lm_pkt_sent, 0,
+				w, in, "silenzio", stallo, offerti, usciti, coda_video,
 				fermo_da, prove,
 				"⛔ la linea e' MORTA: il client non fa vedere un pacchetto da "
 				"troppo tempo e le domande che gli abbiamo fatto nel frattempo "
@@ -4253,55 +4524,34 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		}
 	}
 
-	/* ── 2. LA PERDITA ───────────────────────────────────────────────────── */
-	if (!linea_morta_permille)
+	/* ── 4. LO STALLO DELL'USCITA ────────────────────────────────────────
+	 * ⛔ Il conto RIPARTE per due ragioni diverse che vanno trattate uguale:
+	 *      1. e' uscito qualcosa (`usciti > 0`) — il filo porta;
+	 *      2. non c'era niente da mandare — e allora non c'e' niente di rotto.
+	 *    ⭐ La seconda e' il caso della SCENA FERMA, che in questa fase e'
+	 *       normale e non costa niente (`RecordVirtual` consegna solo sul
+	 *       cambiamento, il risveglio vale 13 ms).  Un conto che partisse
+	 *       comunque butterebbe fuori chi sta leggendo una pagina.
+	 * ⚠ E l'istante e' quello del GIRO, non quello in cui i byte sono usciti:
+	 *   lo `stallo_ms` misurato puo' essere fino a ~1 s piu' corto del vero.
+	 *   Si scatta piu' tardi, mai piu' presto — che e' il lato giusto. */
+	if (usciti > 0 || !avevo_da_mandare) {
+		w->lm_uscita_ms = ora_ms;
+		w->lm_usciti_visti = w->lm_usciti;
+		w->lm_offerti_visti = w->lm_offerti;
 		return;
-	if (ora_ms - w->lm_finestra_ms < WT_LM_FINESTRA_MS)
-		return;
-	spediti = in->pkt_sent - w->lm_pkt_sent;
-	/* ⛔⭐ SOTTO IL MINIMO NON SI DECIDE NIENTE, e la finestra NON si chiude:
-	 *     si allunga finche' i pacchetti bastano.  Una frazione su venti
-	 *     pacchetti non e' una frazione, e' rumore — e il rumore qui butta
-	 *     fuori un utente che stava lavorando.
-	 *
-	 * ⛔⭐ E IL MINIMO E' SUI PACCHETTI CHE MANDIAMO NOI, non su quelli che
-	 *     riceviamo, ed e' la scelta che regge la misura su una sessione che
-	 *     manda molto e riceve poco — cioe' la nostra, video in giu' e quasi
-	 *     niente in su.  `pkt_sent` e' la direzione ABBONDANTE (migliaia al
-	 *     secondo col video acceso); il numeratore `pkt_lost` lo alimentano i
-	 *     RISCONTRI, e un client conforme ne manda uno ogni due pacchetti che
-	 *     gli chiedono risposta `[S]` — non uno ogni tanto.  ⇒ La frazione non
-	 *     dipende dai PING: quelli servono al SILENZIO, non a questa.  ⚠ A
-	 *     desktop fermo mandiamo poco, la finestra si allunga e non si giudica:
-	 *     ed e' giusto cosi', perche' una linea che nessuno sta usando non ha
-	 *     ancora mostrato niente. */
-	if (spediti < WT_LM_MIN_PACCHETTI)
-		return;
-	persi = in->pkt_lost - w->lm_pkt_lost;
-	permille = (unsigned)(persi * 1000 / spediti);
-	if (permille >= linea_morta_permille)
-		w->lm_male++;
-	else
-		w->lm_male = 0;
-	/* ⛔ La durata VERA della finestra, presa prima di chiuderla: e' il numero
-	 *    che dice se il minimo dei pacchetti l'ha allungata, e con la costante
-	 *    al suo posto quella riga direbbe sempre 1000 — cioe' un numero che
-	 *    SEMBRA misurato (forma E1). */
-	durata = ora_ms - w->lm_finestra_ms;
-	/* La finestra si chiude qui, e la prossima parte da adesso. */
-	w->lm_finestra_ms = ora_ms;
-	w->lm_pkt_sent = in->pkt_sent;
-	w->lm_pkt_lost = in->pkt_lost;
-	if (w->lm_male < WT_LM_FINESTRE)
+	}
+	if (!linea_morta_stallo_ms || stallo < linea_morta_stallo_ms)
 		return;
 	linea_morta_scatta(
-		w, in, "perdita", durata, persi, spediti, permille,
+		w, in, "stallo", stallo, offerti, usciti, coda_video,
 		ora_ms - w->lm_vivo_ms, in->pkt_sent - w->lm_pkt_sent_vivo,
-		"⛔ la linea e' MORTA: la perdita ha superato la soglia per due "
-		"finestre di fila, e a questa perdita il prodotto o congela "
-		"l'immagine o la mostra con secondi di ritardo — `[M]` 23 agosto "
-		"2026, e nessuno dei due va servito.  Il filo cade, e per tornare "
-		"bisogna rientrare a mano (decisione dell'utente)");
+		"⛔ la linea e' MORTA: da troppo tempo non esce un fotogramma pur "
+		"avendone da mandare — l'immagine dell'utente e' FERMA, e a questo "
+		"punto il prodotto o la congela o la mostra con secondi di ritardo "
+		"(`[M]` 23 agosto 2026: fino a 30,06 s di buco su `raffica-forte`).  "
+		"Nessuno dei due va servito: il filo cade, e per tornare bisogna "
+		"rientrare a mano (decisione dell'utente)");
 }
 
 bool wt_linea_morta_scattata(const wt *w)
@@ -4541,6 +4791,25 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	w->tela_detta_l = w->tela_detta_a = 0;
 
 	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+
+	/* ⛔⭐⭐ FASE 9 — «AVEVO DA MANDARE», E SI CONTA QUI, PRIMA DI TUTTO.
+	 *
+	 *      Da questa riga in poi il fotogramma puo' essere frenato dal
+	 *      regolatore del ritmo, sgomberato da §5.1, rifiutato per mancanza di
+	 *      credito (§2.3) o non entrare nell'elenco dei fotogrammi in volo: in
+	 *      TUTTI quei casi il palco ce l'aveva dato lo stesso, e per la linea
+	 *      morta il fatto e' quello.
+	 *
+	 * ⛔ Contarlo piu' avanti — dopo il freno, per esempio — vorrebbe dire che
+	 *    il regolatore del ritmo NASCONDE lo stallo: smette di produrre, la
+	 *    coda si svuota di abbandoni, e «non ho niente da mandare» diventerebbe
+	 *    vero proprio mentre lo schermo dell'utente e' fermo.
+	 *
+	 * ⚠ E sta DOPO i tre controlli di sopra — codec, utente (I3), tela — che
+	 *   non sono passi della spedizione: sono la risposta alla domanda «questo
+	 *   fotogramma e' MIO?».  Un fotogramma di un altro utente non e' roba che
+	 *   avevamo da mandare. */
+	w->lm_offerti++;
 
 	/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e sta QUI per due ragioni che
 	 *      vanno tutt'e due scritte:
