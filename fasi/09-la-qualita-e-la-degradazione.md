@@ -47,9 +47,12 @@ Il **controllo del ritmo**, la **scala di degradazione**, il comportamento su **
 > degradare e con tutte le cure spente**. Un banco che non riesce a far cedere quel che misura non
 > sta misurando la grandezza giusta.
 >
-> ⭐⭐⭐ **E sulla grandezza giusta il prodotto cede, e cede prestissimo** (§17.1):
-> con lo **0,36 %** di perdita 40 fotogrammi/s, con lo **0,94 %** ne fa **9,6** — non una curva,
-> un **dirupo**; con **zero perdita** e ±15 ms di sfarfallio **16,6/s e il DOPPIO dei byte sul
+> ⭐⭐⭐ **E sulla grandezza giusta il prodotto cede, e cede prestissimo** (§17.1, §17.11):
+> ⛔⛔ **il gradino è DOPPIO** — la spirale di chiavi parte **al primo pacchetto perso**
+> (0,00-0,10 % di perdita vera), il calo che l'utente **vede** casca cinque volte più in là
+> (0,53-0,75 %): ⇒ fra i due c'è mezzo punto percentuale in cui il prodotto **sta già degenerando e
+> i fotogrammi al secondo dicono ancora che va tutto bene**. ⚠ E vicino al bordo è **bistabile**:
+> stesso ingresso, `0 chiavi · 40,16/s` **oppure** `24 chiavi · 33,84/s`; con **zero perdita** e ±15 ms di sfarfallio **16,6/s e il DOPPIO dei byte sul
 > filo**, che è la prova diretta che il disordine viene scambiato per perdita; al **13 %** a
 > raffiche ⛔⛔ **la sessione si stacca dopo 0,3 s**, e *«mai staccare»* è l'unico obbligo che vale
 > ovunque.
@@ -3216,10 +3219,12 @@ i profili, con **due gambe che concordano**: il `dropped` del qdisc e una sonda 
 
 ### 17.1-bis ⭐⭐ Le tre cose che i numeri dicono, e nessuna era attesa
 
-1. ⛔⛔ **Il dirupo sta fra lo 0,36 % e lo 0,94 % di perdita**: dal 100 % del riferimento al **24 %**.
-   Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe mai trovato: a
+1. ⛔⛔ **C'è un dirupo dentro il primo punto percentuale di perdita**: dal 100 % del riferimento al
+   **24 %**. Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe mai trovato: a
    `perdita-1` il filo porta **4,00 Mbit/s**, cioè il **20 % del pavimento dichiarato**. La linea è
    vuota, e il prodotto è in ginocchio.
+   ⛔ ⚠ **La forbice «0,36 %-0,94 %» che questa riga portava è SBAGLIATA, e §17.11 la ritira**:
+   nasceva da una casella (`perdita-0,5` a *40,06 · zero chiavi*) che **non si riproduce**.
 2. ⭐⭐⭐ **A `jitter-15/30` il filo porta il DOPPIO dei byte (6,9 contro 3,1 Mbit/s) per UN QUINTO
    dei fotogrammi, su una rete che non perde un pacchetto.** `[M]` perdita misurata **0,00**.
    ⇒ È la prova diretta che **il disordine viene scambiato per perdita**: ritrasmissioni e chiavi
@@ -3680,9 +3685,8 @@ tre.**
 ⭐ **Che cosa sopravvive comunque, perché non dipende dal punto esatto:** la forma è la stessa in
 tutt'e due i giri — una linea sana a ~40 fotogrammi/s, un **dirupo** entro il primo punto
 percentuale di perdita, la spirale di chiavi come meccanismo, e il jitter che morde **senza perdere
-un pacchetto**. ⛔ **Quel che NON si può più dire è dove stia il gradino**: §17.1 lo metteva fra lo
-0,36 % e lo 0,94 %; il giro nuovo lo mette **prima dello 0,36 %**. ⏳ Serve un terzo giro, a binario
-dichiarato e macchina ferma, per chiuderlo.
+un pacchetto**. ⛔ Quel che **non** si poteva più dire era **dove** stesse il gradino.
+⇒ ⭐ **Sciolta da §17.11**, e la risposta è più interessante della domanda.
 
 ### 17.9-sexies ⭐ LA RIVERIFICA DI `09-b79` — **nessun numero era sporcato**, e sono tre prove lette
 
@@ -3724,6 +3728,90 @@ leggono **solo** dalla traccia §11.1 del cliente; dal registro vengono solo qua
 del braccio A tornano **identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5,
 `abbandonato_in_coda` 1): **un numero cumulativo non si riproduce, questi sì.**
 
+## 17.11 ⭐⭐⭐ DOV'È IL DIRUPO — *23 agosto, notte fonda*: **il gradino è DOPPIO**, e il prodotto è **bistabile**
+
+`banchi/09-b80-dirupo.py` · **42 giri** · perdita **letta** da una sonda a **20 000 pacchetti** a
+ogni casella (⛔ a 0,1 % otto pacchetti non misurano un decimo di punto) · denominatore girato in
+**apertura e chiusura** (39,95 → 39,93, **0,1 %**: la macchina non è derivata) · macchina messa
+ferma per nome prima di cominciare · cure spente per tutti e 42 i giri.
+
+### 17.11-bis ⛔ Prima il metro, poi la misura — e il metro è grosso
+
+⛔ **Non ha senso confrontare due giri se non si sa quanto vale il rumore fra due giri identici.**
+
+| profilo | giri | escursione | semi-escursione |
+|---|---|---|---|
+| perdita **0,00 %** | 3 | 39,89-40,17 | **0,4 %** |
+| perdita **0,50 %** | 3 | 28,16-36,70 | **14,8 %** |
+| perdita **0,50 %** | 5 | 20,79-36,70 | **27,6 %** |
+| perdita **0,75 %** | — | — | **46,6 %** |
+
+⇒ La contraddizione di §17.9-quinquies vale il **35,0 %**: il rumore **non la spiega tutta, ma ne
+copre i quattro quinti**.
+
+⭐⭐ **E il fatto vero è qui**: la dispersione **cresce con la perdita** (0,2 → 8,5 → 23,8 → 46,6 %)
+e **non col carico**. `[M]` la CPU è stata **3,7-4,7 %** in *ognuno* dei 42 giri, il carico 0,3-0,8
+su 20 core. ⇒ L'ipotesi «macchina carica» è **esclusa**, e quel che resta è del prodotto:
+
+> ⛔⛔ **vicino al bordo la spirale è BISTABILE.** `[M]` a **0,20 %** di perdita, stesso binario,
+> stesso terreno, a venti minuti di distanza: **`0 chiavi · 40,16/s`** e **`24 chiavi · 33,84/s`**.
+
+⇒ Non è una soglia: è un **punto di biforcazione**. Lo stesso ingresso dà due uscite, e quale delle
+due dipende da come è andata la prima manciata di secondi.
+
+### 17.11-ter ⭐⭐⭐ IL GRADINO È DOPPIO, e le due metà stanno lontanissime
+
+| | dove casca | che cos'è |
+|---|---|---|
+| **il MECCANISMO** — la spirale di chiavi (§3.3) | ⛔ fra **0,00 % e 0,10 %** di perdita vera, **su tutt'e due i binari** | cioè **al primo pacchetto perso** |
+| **il SINTOMO** — sotto il pavimento di 25/s (§2.1) | fra **0,53 % e 0,75 %** (HEAD) · fra **0,27 % e 0,47 %** (`51b5994`) | cioè **cinque volte più in là** |
+
+⛔⛔ **Questa è la scoperta, e cambia il modo di leggere tutta §17.1**: il difetto **non comincia
+dove si vede**. Fra il primo pacchetto perso e il momento in cui l'utente se ne accorge c'è mezzo
+punto percentuale di perdita in cui **il prodotto sta già degenerando in chiavi** — e la degradazione
+è già *nello spazio e nel tempo insieme*, che §3.3 vieta — **mentre i fotogrammi al secondo dicono
+ancora che va tutto bene**.
+
+⇒ ⭐ **Un banco che avesse guardato solo i fotogrammi/s avrebbe dato verde fino allo 0,5 %.** La
+colonna che dà l'allarme cinque volte prima è **la quota di chiavi**, ed è la ragione per cui §17.1
+la porta accanto ai fotogrammi/s invece che al posto loro.
+
+**La griglia fine (HEAD)** `[M]`:
+
+| perdita vera | fps | chiavi | peggior secondo |
+|---|---|---|---|
+| 0,000 % | 39,95 | **0** | 37,5 |
+| 0,100 % | 39,44 | 2,5 | 23,5 |
+| 0,195 % | 37,00 | 12 | 21 |
+| 0,253 % | 34,83 | 20,5 | 5 |
+| 0,532 % | 27,29 | 48 | 4 |
+| **0,748 %** | ⛔ **13,50** | 101,5 | 4 |
+| 0,998 % | 7,23 | 119,5 | 3,5 |
+| 1,475 % | 5,52 | 112,5 | 3 |
+
+⭐ **E niente si è mai staccato, e la consegna non si è mai fermata** — copertura 1,00 e buco massimo
+≤ 0,37 s **ovunque**, nemmeno a 1,5 %. ⇒ Il divieto di §3.3 regge; a cedere è la scala, non il filo.
+
+### 17.11-quater ⛔ La forbice del primo giro è ritirata, e il binario non c'entra
+
+**La forbice «0,36-0,94 %» di §17.1-bis è sbagliata** e §17.11 la ritira. Nasceva da un
+`perdita-0,5` che aveva dato *40,06 fotogrammi/s con **zero** chiavi*. `[M]` **In 7 giri a ~0,5 % di
+perdita vera, su tutt'e due i binari, le chiavi sono state 11, 47, 44, 72, 24, 112, 129 — mai zero.**
+⇒ Quel numero **non si riproduce**: era il ramo fortunato della bistabilità, preso una volta e
+scambiato per la regola.
+
+**Il binario** — `HEAD` (`2954bf0`) md5 `dae98670…` contro `51b5994` md5 `760c6fd7…`, e fra i due
+`src/` cambia in **un commit solo** (+412 righe, 0 tolte):
+- ⛔ **sulla linea pulita non conta**: 39,95 contro 39,25 = **1,8 %**, dentro il metro.
+  ⇒ `[M]` **il sospetto «la riga `rete-quic` costa» è REFUTATO**: una `registro_dice` in più al
+  secondo non si misura;
+- conta **solo dove c'è perdita**, e ⭐ **si incrocia**: HEAD rende di più sotto lo 0,5 % (37,0 contro
+  29,1 a 0,2 %), meno sopra lo 0,75 %. ⚠ **Ma i rossi sopra lo 0,75 % poggiano su caselle la cui
+  dispersione interna (46,6 %) supera il metro**: sono **indizi, non numeri**. Quelli a 0,2/0,3/0,5 %
+  sono solidi e dicono tutti la stessa cosa;
+- ⭐ e `51b5994` è **già dentro la spirale a ogni casella** (55-142 chiavi): per questo è *stabile* —
+  **non ha un bordo su cui oscillare**.
+
 ## 17.10 Che cosa resta aperto dopo questa sezione
 
 1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
@@ -3738,8 +3826,12 @@ del braccio A tornano **identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5,
 4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
 5. ⭐ **le cure ai banchi sono applicate e i banchi rifatti girare** (§17.9): nove difetti in tutto,
    ⛔ **tutti della forma «silenzio invece di rosso»**;
-5-bis. ⛔ **due griglie dello stesso banco non coincidono** (§17.9-quinquies): la **forma** del
-   fenomeno regge, ma **dove stia il dirupo non si può più dire**. Serve un terzo giro a binario
-   dichiarato e macchina ferma;
+5-bis. ⭐ **la contraddizione fra le due griglie è sciolta** (§17.11): non erano due binari, era il
+   prodotto che **vicino al bordo è bistabile**. ⛔ E ne è uscito il fatto più importante della
+   sezione: **il gradino è doppio** — il meccanismo parte al **primo pacchetto perso**, il sintomo
+   si vede **cinque volte più in là**;
+5-ter. ⏳ **e la bistabilità non ha una spiegazione**: `[?]` perché lo stesso ingresso dia
+   `0 chiavi · 40,16/s` oppure `24 chiavi · 33,84/s` non è stato indagato. È la prima cosa da
+   guardare se si vuole curare il difetto **dove comincia** invece che dove si vede;
 6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
    sull'audio soltanto.
