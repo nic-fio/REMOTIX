@@ -54,8 +54,14 @@ Il **controllo del ritmo**, la **scala di degradazione**, il comportamento su **
 > raffiche ⛔⛔ **la sessione si stacca dopo 0,3 s**, e *«mai staccare»* è l'unico obbligo che vale
 > ovunque.
 >
-> ⭐ **La cura della spirale che produce tutto questo era già scritta e SPENTA** (I6): la griglia è
-> girata coi predefiniti. La prova appaiata è **§17.6**.
+> ⭐⭐⭐ **E LA CURA FUNZIONA** (§17.6, appaiata a tre bracci): la quota di chiavi passa da
+> **51,7-88,1 %** a **0,0-5,6 %**, il ritmo torna **da 1,7 a 2,8 volte**, e i byte sul filo
+> **salgono** — ⇒ la linea non era satura, **era sprecata**. ⛔ Ma servono **tutt'e due** le cure: la
+> sola soglia lascia il 12,8-33,6 % di chiavi. ⚠ **La linea sana non paga niente** (39,85 / 40,19 /
+> 39,63 fotogrammi/s, zero chiavi), e il prezzo è **da −38 a +161 ms** di ritardo sui profili
+> ordinari — **4,5 s** su `raffica-forte`, dove *«immagine che si muove con cinque secondi di
+> ritardo»* contro *«immagine ferma»* **non è una scelta che spetti a una misura**.
+> ⇒ ❓ **Le cure restano SPENTE**: I6, e la decisione è dell'utente.
 >
 > ⭐⭐ **E la cura del riordino dell'audio MORDE** (§17.2): purezza da 0,40-0,80 a **1,0000** su
 > tutti e cinque i profili che riordinano, sei su sei verdi.
@@ -3242,14 +3248,30 @@ registro del server — concordano: 116, 86, 102, 109, 72.
 gli interruttori spenti**, ed è la ragione per cui la prova appaiata delle cure (§17.6) è il
 seguito obbligato di questa pagina e non un di più.
 
-### 17.1-quater ⛔⛔ «MAI STACCARE» È VIOLATO — e non è una degradazione riuscita
+### 17.1-quater ⛔⛔ `raffica-forte` — **NESSUNO si stacca: si ferma la CONSEGNA**
 
-`raffica-forte` (13 % di perdita a grappoli): la sessione **muore dopo 0,3 s su 25**. ⛔ È l'unico
-obbligo che vale **ovunque, anche sotto il pavimento** (`DECISIONI.md` §3.3, §3.1-bis: *«il divieto
-di staccare resta intero»*). ⏳ **Chi** stacchi è in misura in §17.6: il server con un motivo di
-congedo, ngtcp2 per inattività, o il cliente di prova — e una terza possibilità da escludere è che
-la stretta di mano non si sia mai completata, perché *«non si è mai aperta»* e *«si è staccata»*
-hanno la stessa faccia.
+⚠ La prima lettura di questa casella diceva *«la sessione muore dopo 0,3 s su 25»*. ⛔ **La parola
+era sbagliata, e una parola sbagliata su un rosso è peggio di un rosso mancato**: manda a cercare la
+causa dove non è — qui, un congedo che non esiste.
+
+`[M]` 23 agosto, **quattro testimoni** (`banchi/09-b79-cure.py`): il cliente stampa *«ancora
+attaccato dopo 25,0 s: niente è caduto»* e chiude **lui** a fine finestra · l'audio arriva per tutto
+il giro (**696 datagram, purezza 1,0000**) · il registro del server non ha **nessun** `CONGEDO`,
+nessun `posto NEGATO`, nessun ban · la sessione si era aperta normalmente (`AMMESSO dopo 1 837 ms`),
+il che esclude anche *«la stretta di mano non si completa»* — coerente con §17.4. `IDLE_MS` è
+30 000 ms e infatti non c'entra.
+
+⇒ **A fermarsi è la sola consegna dei fotogrammi**: `[M]` **121 spediti su 981 catturati, 860 NON
+SPEDITI**, con `cwnd` inchiodata a **~10 KB** e il pacer che rifiuta.
+
+⛔ **Il fatto resta grave, e non va declassato**: una sessione **viva e muta** è uno schermo fermo, e
+per chi guarda è indistinguibile da un filo caduto. ⚠ Ma ha **un altro nome e un'altra causa** — non
+viola *«mai staccare»*, viola il pavimento della scala (`DECISIONI.md` §2.1: 25 fotogrammi/s).
+⇒ Il predicato `p_niente_stacco` di `09-b76` misurava **quanto è durata la consegna**, non **se la
+connessione è caduta**: il numero era giusto, la parola no. ⏳ In cura: il predicato si spezza in
+due, perché sono due fatti con due cause.
+
+⭐⭐ **E le cure lo cambiano**: in B e in C la consegna dura **tutti i 25 secondi** (§17.6).
 
 ## 17.2 ⭐⭐⭐ L'AUDIO NEL RIORDINO — **la cura morde**, e adesso è misurato
 
@@ -3458,13 +3480,74 @@ attaccato e **vivo** viene mai spodestato»* — l'occupante qui è attaccato ma
 l'unico orologio che lo distingue è quello da 30 s. `torna_a_parlare()` (`rcp.c:6921`) gestisce già
 lo sfrattato che torna. ⛔ Non toccherebbe `SILENZIO`, che resta 30 s per tutto il resto.
 
-## 17.6 ⏳ IN MISURA — le cure contro la rete cattiva
+## 17.6 ⭐⭐⭐ LE DUE CURE, APPAIATE — **la spirale si spegne, e solo con tutt'e due**
 
-`banchi/09-b79-…` sta girando la griglia **appaiata a tre bracci** sui profili rossi: **A** spenti,
-**B** `--sgombra-soglia-ms 100`, **C** `--sgombra-soglia-ms 100 --ritmo-adattivo`. ⛔ Il braccio A si
-**rimisura**, non si riprende da §17.1: quei numeri vengono da un altro binario e da un'altra ora.
-⚠ E il banco riporta **la deriva accanto ai fotogrammi/s**: una cura che raddoppia il ritmo e
-triplica il ritardo **non è ovviamente un miglioramento**, ed è una scelta dell'utente.
+`banchi/09-b79-cure.py` · `[M]` 23 agosto 2026 · binario `eee17f40…` dall'**albero di lavoro** ·
+25 s per casella · 1920×1080 · h264 · un giro per casella. ⛔ Ogni braccio verificato dalle **righe
+d'avvio del prodotto**, non dalla riga di comando (un interruttore che si crede acceso e non lo è
+darebbe un appaiamento senza differenza, cioè un verde). Il guasto verificato dalla sonda a **ogni**
+casella.
+
+- **A** = i predefiniti, cioè **cure spente**. ⛔ Rimisurato, non ripreso da §17.1: quei numeri
+  vengono da un altro binario e da un'altra ora.
+- **B** = `--sgombra-soglia-ms 100` — la sola soglia sulla coda.
+- **C** = `--sgombra-soglia-ms 100 --ritmo-adattivo` — soglia **più** regolatore del ritmo.
+
+| profilo | br | fps | peggior s | **chiavi %** | deriva fin. | **deriva max** | Mbit/s filo |
+|---|---|---|---|---|---|---|---|
+| `ritardo-30` ⭐**sana** | A | 39,85 | 36 | 0,0 | 0,1 | 8,9 | 7,55 |
+| | B | 40,19 | 37 | 0,0 | 0,2 | 5,8 | 7,60 |
+| | C | 39,63 | 36 | 0,0 | 0,9 | 6,1 | 7,53 |
+| `perdita-1` | A | 11,96 | 5 | **51,7** | −2,4 | 76,5 | 3,43 |
+| | B | 32,13 | 17 | 6,4 | 23,2 | 107,8 | 4,84 |
+| | **C** | **32,85** | 21 | **0,0** | −1,6 | 99,3 | 5,11 |
+| `perdita-3` | A | 7,34 | 5 | **88,1** | −40,0 | 53,4 | 2,17 |
+| | B | 20,63 | 11 | ⛔ 23,8 | 32,9 | 139,3 | 2,90 |
+| | **C** | 19,63 | 11 | **0,2** | −62,2 | 165,7 | 2,79 |
+| `jitter-15` | A | 10,76 | 6 | **59,2** | 11,7 | 102,1 | 3,48 |
+| | B | 25,88 | 9 | ⛔ 12,8 | −65,7 | 64,0 | 8,06 |
+| | **C** | 21,48 | 15 | **0,0** | 53,8 | 168,4 | 6,63 |
+| `jitter-30` | A | 8,56 | 5 | **73,1** | 6,7 | 115,6 | 2,55 |
+| | B | 20,25 | 10 | ⛔ 19,9 | −5,0 | 277,0 | 5,77 |
+| | **C** | 16,68 | 12 | **0,0** | −116,0 | 180,8 | 4,96 |
+| `casa-cattiva` | A | 8,28 | 3 | **72,0** | −71,5 | 295,3 | 2,21 |
+| | B | 14,37 | 6 | ⛔ 33,6 | 152,7 | 238,4 | 3,01 |
+| | **C** | 13,86 | 4 | **5,6** | 102,2 | 284,2 | 3,38 |
+| ⚠ `raffica-forte` | A | *la consegna muore a **4,4 s** su 25* | | | | | |
+| | B | 4,25 | **0** | 44,6 | 24,9 | **7 756** | 0,59 |
+| | C | 4,18 | **0** | 4,4 | 2,1 | **4 521** | 0,78 |
+
+### 17.6-bis ⭐⭐ I quattro fatti
+
+1. ⭐⭐⭐ **La spirale si spegne — ma solo col braccio C.** La quota di chiavi passa da **51,7-88,1 %**
+   a **0,0-5,6 %** su tutti e cinque i profili rossi. ⛔ **La sola soglia (B) non basta**: lascia
+   12,8-33,6 % di chiavi in quattro profili su cinque.
+   ⭐ **E il perché si legge nei contatori del server**: in C, su `raffica-forte`,
+   `delta_non_spedito` **988 → 6** e `chiave_aspetta` **32 → 0**. La soglia smette di *buttare*, ma
+   il debito di §5.2 continua ad **accendersi**; il regolatore lo previene perché il fotogramma
+   **non parte affatto**. ⇒ È la conferma sperimentale dell'ordine obbligato dichiarato in §6: la
+   soglia è il **prerequisito** del regolatore, non un'alternativa.
+2. ⛔⭐ **La linea sana non paga niente** — ed era il predicato che valeva più di tutti.
+   39,85 / 40,19 / 39,63 fps (un punto percentuale, dentro il rumore dichiarato del 5 %), **zero
+   chiavi** in tutt'e tre i bracci, deriva finale 0,1 / 0,2 / 0,9 ms. ⇒ Le cure **non hanno un
+   costo di regime**: sono mute finché non servono, che è precisamente quel che I1 pretende.
+3. ⭐ **Il ritmo torna da 1,7 a 2,8 volte** su ogni profilo rosso. ⚠ E B dà quasi sempre **più**
+   fotogrammi/s di C: ⛔ non sono «peggio e meglio», sono **più fotogrammi con più chiavi** contro
+   **meno fotogrammi tutti delta**. Chi confrontasse la sola colonna dei fotogrammi/s sceglierebbe B
+   e prenderebbe la spirale in casa.
+4. ⭐⭐ **E i byte sul filo SALGONO** (3,48 → 8,06 Mbit/s a `jitter-15`): ⇒ **la linea non era satura,
+   era sprecata.** È l'altra faccia di §17.1-bis punto 2 — lì il doppio dei byte per un quinto dei
+   fotogrammi, qui il doppio dei byte per **il doppio** dei fotogrammi.
+
+### 17.6-ter ⚠ IL PREZZO, e i due numeri si danno senza scegliere
+
+**Deriva massima**, sui cinque profili ordinari: da **−38 a +161 ms** rispetto ad A (⭐ su
+`casa-cattiva` e `jitter-15` il braccio B la fa perfino **calare**). **Zero sulla linea sana.**
+
+⛔ **Su `raffica-forte` il prezzo esplode: 4,5-7,8 secondi.** Lì C **non è ovviamente meglio di A**:
+è *un'immagine che si muove con cinque secondi di ritardo* contro *un'immagine ferma*. ⚠ Questo
+documento dà i due numeri e **non sceglie**: la scelta fra immagine e ritardo è dell'utente
+(`DECISIONI.md` §0.1, invariante I6), non di una misura.
 
 ## 17.7 ⛔ I DIFETTI DI BANCO TROVATI STASERA — tutti della forma «silenzio invece di rosso»
 
@@ -3480,10 +3563,15 @@ triplica il ritardo **non è ovviamente un miglioramento**, ed è una scelta del
 
 ## 17.8 Che cosa resta aperto dopo questa sezione
 
-1. ⏳ **le cure contro la spirale** — in misura, §17.6;
+1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
+   l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha i due
+   numeri che le servono — il ritmo guadagnato (1,7-2,8 volte) e il ritardo pagato (−38/+161 ms sui
+   profili ordinari, 4,5 s su `raffica-forte`);
 2. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
    congestione che nel video produce la spirale, e non è un difetto della cura del riordino;
-3. ⛔ **chi stacca a `raffica-forte`** (§17.1-quater): l'unico obbligo che vale ovunque è violato;
+3. ⭐ **`raffica-forte` è spiegato** (§17.1-quater): non si stacca nessuno, si ferma la consegna —
+   `cwnd` a ~10 KB e 860 fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le cure lo
+   curano**, ma il nome era sbagliato e il predicato è in cura;
 4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
 5. ⏳ **le due cure a `07-b64-rete.py`**, da applicare a banchi fermi;
 6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
