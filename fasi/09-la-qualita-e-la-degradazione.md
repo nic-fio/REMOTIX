@@ -3835,3 +3835,232 @@ scambiato per la regola.
    guardare se si vuole curare il difetto **dove comincia** invece che dove si vede;
 6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
    sull'audio soltanto.
+
+---
+
+# §18 · ⭐⭐⭐ LE DUE CURE DECISE DAL REGISTA — *23-24 agosto 2026, notte*
+
+> *«Ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps. Se in 10 secondi non
+> arrivano più pacchetti è chiaro che la connessione è morta. […] se all'interno di un intervallo di
+> 1-2 secondi c'è una perdita di pacchetti piuttosto copiosa direi di trattarla come il caso in cui
+> la connessione è caduta.»*
+> — ⇒ `DECISIONI.md` **§3.1-quater**, **§3.1-quinquies**, **§3.1-sexies**.
+
+⛔ **Da dove nasce**: la scelta fra **due mali misurati** (§17.1, §17.6). Con perdita a raffiche
+pesanti, **senza** le cure lo schermo si congela **14,26 s**; **con** le cure si muove ma con
+**4,5 s di ritardo**. ⇒ L'utente ha deciso che **nessuno dei due va servito**: una linea così non è
+lenta, è **rotta**. E alla domanda su che cosa veda, ha scelto fra tre: ✅ **il filo cade e si
+rientra a mano** — non un riattacco automatico, non un ripristino invisibile.
+
+⚠ **L'obiezione è stata fatta e superata**: *«su rete cattiva la diagnosi "è caduta la linea" è
+frequente, e farla pagare con un accesso a mano rende il prodotto inusabile proprio dove serve»*.
+⇒ Da lì nasce il prerequisito: **§18.3, il fantasma**.
+
+## 18.1 ⛔⛔⛔ LA PRIMA GRANDEZZA ERA SBAGLIATA — e il banco l'ha refutata prima che uscisse
+
+La cura fu scritta su `pkt_lost / pkt_sent` di ngtcp2 dentro una finestra: una frazione di perdita,
+soglia **50‰ (5,0 %)**, tarata con due margini apparentemente comodi — 2,9× sopra il peggiore che
+regge (`casa-cattiva`, 1,71 %) e 2,2× sotto quello che non serve nessuno (`raffica-forte`, 11,10 %).
+
+⛔ **`banchi/09-b81-linea-morta.py` l'ha uccisa in dieci minuti** `[M]`:
+
+| profilo | perdita **iniettata** (sonda) | perdita **DICHIARATA** da ngtcp2 | la linea |
+|---|---|---|---|
+| `casa-cattiva` | 1,86-2,15 % | ⛔ **512‰** (51,2 %) | **REGGE 10 minuti** — 9,60 fotogrammi/s, copertura 1,00, buco max 0,50 s, cliente attaccato a 599,99 s |
+| `raffica-forte` | 12,28-14,00 % | **123‰** (12,3 %) | **non regge** — copertura 0,20, buco 30,06 s |
+
+⛔⛔ **La grandezza ordina i due casi AL CONTRARIO**: la linea che **funziona** dichiara **quattro
+volte più perdita** di quella che non funziona. ⇒ **Nessuna soglia le separa** — qualunque valore
+lasci passare `casa-cattiva` (≥ 512‰) lascia passare anche `raffica-forte`; qualunque valore fermi
+`raffica-forte` (≤ 123‰) ferma **prima** `casa-cattiva`. **Non era una taratura da rifare: era la
+grandezza sbagliata.**
+
+⭐⭐ **E la causa è il fatto centrale di questa fase, tornato addosso a noi.** `casa-cattiva` porta
+`delay 40ms 20ms distribution normal`, e la sonda ci misura il **93,5 % di pacchetti fuori ordine**
+con l'1,9 % di perdita vera. **ngtcp2 conta un pacchetto sorpassato come perso.** ⇒ `pkt_lost` su
+una linea che riordina **misura il riordino**, non la perdita — ed è §3.1-ter che ci presenta il
+conto: *avevamo scritto che il disordine viene scambiato per perdita, e poi ci abbiamo costruito
+sopra una decisione*.
+
+⚠ E non era l'avvio della connessione: tolte le prime dieci finestre, **399 su 399** restano sopra
+soglia, mediana **524‰**, ininterrotto per dieci minuti.
+
+⭐ **Il falsificatore era stato dichiarato `[?]` da chi ha scritto la cura**, prima che il banco
+girasse: *«la soglia è sulla frazione **dichiarata**, mentre i due estremi sono la perdita
+**iniettata** — con jitter e riordino la dichiarata può essere più alta»*. ⇒ È servito: il banco
+sapeva **che cosa andare a rompere**, e l'ha rotto al primo giro.
+
+## 18.2 ⭐⭐⭐ LA GRANDEZZA GIUSTA — **lo stallo dell'uscita**
+
+⭐ **I dati la indicavano da soli**: `casa-cattiva` buco massimo **0,50 s**, `raffica-forte`
+**30,06 s** — **sessanta volte**. ⇒ Quel che separa i due casi non è **quanto si perde**: è **se i
+fotogrammi escono**.
+
+> **la grandezza è: da quanto tempo non esce un fotogramma pur avendone da mandare**
+
+Due contatori **locali e monotoni** (forma P8→P20 di `RCP.md`: un fatto osservabile, mai un
+orologio) più un istante:
+
+| | come si calcola |
+|---|---|
+| **«è uscito»** | i **byte di video consegnati a ngtcp2** in `coda_consegna()` — l'unico punto in cui i byte sono davvero dentro un pacchetto |
+| **«avevo da mandare»** | coda video non vuota **oppure** `lm_offerti` salito (in `video_a_una()`, **prima** di freno, sgombero e rifiuto) |
+
+⛔⭐ **Il secondo termine non è un di più, ed è la riga che rende la cura onesta**: senza
+`lm_offerti`, **il regolatore del ritmo nasconderebbe lo stallo** — smette di produrre,
+`video_sgombra()` abbandona i delta, la coda si svuota, e *«non ho niente da mandare»* diventa vero
+**mentre lo schermo è fermo**. La cura si assolverebbe da sola proprio nel caso che deve prendere.
+
+⛔ **E se non c'è niente da mandare il conto non parte nemmeno**: `[M]` in questa fase la scena ferma
+consegna **1 fotogramma in 30 s e poi zero** — e non è un difetto, è `RecordVirtual` di Mutter che
+consegna solo sul cambiamento (§13, il risveglio costa 13 ms). ⇒ Una cura che partisse lì
+**butterebbe fuori chi guarda un desktop fermo**, che è il modo peggiore in cui potrebbe fallire.
+
+⚠ **Si contano i byte, non i fotogrammi interi**, e la ragione è dichiarata: una chiave da ~60 000
+byte su linea stretta può metterci secondi a uscire tutta, e a fotogrammi quei secondi sarebbero uno
+«stallo» **mentre il filo lavora**. Un byte che parte è un filo che porta.
+
+### 18.2-bis La soglia — **5 000 ms**, e i due margini col caso intermedio
+
+| | stallo/buco più lungo | |
+|---|---|---|
+| tredici profili sani | 0,04-0,35 s | reggono |
+| `casa-cattiva` | **0,50 s** | ⛔ **REGGE — non va dichiarata morta** |
+| ⚠ `raffica-1` | **un secondo intero a zero** | ma consegna **23,94 fotogrammi/s**: regge benissimo |
+| `raffica-forte` | **14,26 s** (30,06 nell'altro giro) | non regge |
+
+⇒ intervallo **1,00-14,26 s**, centro geometrico **3,78 s**, scelta **5,0 s** — ⭐ **sopra** il
+centro, apposta. Margine **5,0×** sopra il peggiore che regge, **2,9×** sotto quello che non serve.
+
+⛔ **Il lato stretto usa il PIÙ CORTO dei due stalli di `raffica-forte`**, non il più lungo: un
+margine scritto sul numero fortunato non è un margine.
+⛔ **E l'asimmetria è voluta**: i due errori **non costano uguale**. Sbagliare in alto = qualche
+secondo di schermo fermo in più. Sbagliare in basso = **buttare fuori uno che stava lavorando**, e
+non si rimedia.
+⚠ **Anche il campionamento sbaglia dalla parte buona**: il conto riparte dall'istante del giro
+(≤ 1/s), non da quando i byte sono usciti davvero ⇒ lo `stallo_ms` misurato può essere fino a ~1 s
+**più corto** del vero. Si scatta più tardi, mai più presto.
+
+### 18.2-ter ⭐⭐ LA PROVA — *24 agosto 2026*, e il margine è **misurato**, non «non è scattato»
+
+⛔ La riga esce **solo allo scatto**. ⇒ Un «non è scattato» non dice **quanto ci è mancato**: il
+banco ribatte lo stesso profilo **con soglie sempre più basse** finché una scatta, e allora il
+prodotto stampa il suo `stallo_ms`.
+
+| profilo | stallo massimo | margine sulla soglia di 5 000 ms | buco al client |
+|---|---|---|---|
+| `ritardo-30` (sano) | < 500 ms | **> 10×** | 0,157-0,175 s |
+| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0,359-0,479 s |
+| ⚠ `raffica-1` | **1 001 ms** | **5,0×** | 0,52-3,73 s |
+| ⛔ scena **ferma** | *il conto non parte* | — | 1 e 3 fotogrammi in 90 s |
+
+⭐ **`raffica-1` conferma la derivazione con un numero indipendente**: il lato stretto vale
+**1,00 s**, esattamente quello del riquadro, e il margine sono i **5,0×** dichiarati.
+
+**`casa-cattiva`, dieci minuti, cura accesa: ZERO SCATTI** — 9,71 fotogrammi/s, copertura **1,00**
+(600 s su 600), buco massimo **0,479 s**, cliente attaccato a 599,88 s, nessun congedo.
+
+⭐⭐ **E il confronto che chiude la refuta**, nello **stesso** giro: il **testimone** dice `permille`
+mediana **529‰**, con **392 finestre su 392** sopra i vecchi 50‰. ⇒ **La cura vecchia avrebbe ucciso
+questa identica sessione; la nuova non la tocca.** Stesso profilo, stesso banco, stessi dieci
+minuti: cambia **solo la grandezza su cui si decide**. E dall'altro lato `raffica-forte` — quella
+che *non* regge — dichiara `permille=133`, cioè **meno**.
+
+**Lo scatto vero** `[M]`: `raffica-forte` (13,19 % iniettato) scatta a **18,95 s**, con
+`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **le due metà
+tutt'e due vere**: avevamo da mandare, e non è uscito niente. E il filo cade.
+
+**Il silenzio** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10,24 s** dopo il colpo, e
+nella stessa riga `stallo_ms=8 offerti=0` — ⭐ **le due cause restano separate**. A cura spenta,
+zero scatti.
+
+**La scena ferma** `[M]`: 90 s di desktop che non cambia, zero scatti alla soglia in vigore **e a
+1 000 ms**, cioè cinque volte più stretta. ⭐ E la scena era ferma **davvero, verificato e non
+sperato**: il conto del server dice 1 e 3 fotogrammi in 90 s, tutti spediti.
+
+**I predefiniti (I6)** `[M]`: senza `--linea-morta`, zero scatti e zero sfratti, e i due profili
+stanno nella griglia di §17.
+
+⚠ **Una cosa da dire, e va nel verso prudente**: lo **stallo** (server: byte usciti) e il **buco**
+(client: fotogrammi arrivati) **non sono la stessa grandezza**, e la soglia è derivata dal secondo
+mentre la cura misura il primo. `[M]` su `raffica-1` un giro ha dato buco **3,73 s** con lo stallo
+che non scattava nemmeno a 1 000 ms: **i byte partono, a mancare è la ritrasmissione**. ⇒ L'errore
+va dalla parte buona, ma il numero della derivazione è **prudente, non esatto**.
+
+### 18.2-quater ⛔ Che fine ha fatto il `permille` — da **giudice** a **testimone**
+
+`--linea-morta-permille` è **tolta**: un'opzione che accetta un numero **senza usarlo** è peggio di
+un'opzione che non c'è, perché chi la batte crede di aver tarato qualcosa. ⇒ Adesso si becca aiuto e
+uscita 2.
+⭐ Ma `permille=` **resta nella riga come testimone**: è la miglior misura di **riordino** che il
+server abbia **sugli stream**, dove `dgram_falsi` (§17.3) non arriva. ⚠ E il banco verifica
+l'**assenza** dell'opzione **battendola**, non con un `grep`: `[M]` la stringa nel binario c'è
+eccome — sta nel testo d'aiuto — e il primo giro di quel controllo **ha dato rosso su un binario
+giusto**.
+
+## 18.3 ⭐⭐ LO SFRATTO DEL FANTASMA — e abbassare `SILENZIO` è stato scartato **su una misura**
+
+⛔ La strada ovvia — portare `SILENZIO` da 30 s a 10 — **si rompe**, `[M]` 16 agosto: fra due
+pacchetti autenticati di un **browser fermo ma VIVO** passano **15 004 / 15 005 / 15 002 ms**. È il
+keep-alive del browser, non nostro. ⇒ A 10 s **ogni client che guarda e non tocca perde il posto a
+ogni giro di keep-alive** — è la regressione già pagata il 16 agosto (*«una seconda scheda è entrata
+e ha preso il desktop del primo»*).
+
+⚠ **E `SILENZIO` ne governa altri quattro**: l'avviso a `SILENZIO/2` (passerebbe da «mai su una
+sessione sana» a «su tutte»), il rilascio dei tasti premuti (⛔ un `Ctrl` tenuto giù durante una
+pausa di rete di 12 s verrebbe rilasciato **sotto le dita**), l'ordine silenzio→inattività, e **tre
+documenti** che dichiarano il numero all'utente.
+
+⇒ **La strada scelta è più stretta e più mirata**: `--sfratto-ms N` (**0 = spento**, predefinito;
+consigliato **15 000**). Scatta **solo quando qualcuno chiede quel posto**, mai da solo, e **solo fra
+client dello stesso utente**.
+
+⛔ **§8.2 non è violata, è applicata**: *«nessun client attaccato e **vivo** viene mai spodestato»* —
+l'occupante qui è attaccato ma **non vivo**, e finora l'unico orologio che li distinguesse era quello
+da 30 s. ⭐ `torna_a_parlare()` riparte **solo da `S_STACCATA`**: per questo lo sfratto cambia lo
+**stato** e non si limita a togliere il posto, o il fantasma resterebbe `S_ATTIVA` senza posto.
+
+`[M]` **Il fantasma scende del 48 %**: da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**. ⭐ E con
+la linea morta accesa scende a **~10 s con zero rifiuti** — il posto torna libero al primo tentativo.
+
+**Due utenti diversi** `[M]`: zero sfratti, il secondo utente entra sul **proprio** posto con zero
+rifiuti. ⚠ La riga `⛔ SFRATTO NEGATO` **non esce**, ed era previsto `[R]` prima di girare: il
+registro dei posti è indicizzato per nome, quindi `POSTO_OCCUPATO` implica già «stesso utente» e quel
+ramo non è raggiungibile. **La protezione la fa la struttura; il controllo esplicito resta come
+rete** — il giorno in cui `MAX_ATTACCATE` diventa la tabella di un server multi-tenant sarebbe
+l'unica cosa a reggere.
+
+## 18.4 ⛔ E LA FRASE CHE MENTIVA
+
+*«Quell'utente è già collegato da un altro dispositivo»* (`src/pagina.html`, `MOTIVO[0x0F]`) è una
+**diagnosi che il server non è in grado di fare**: non sa se l'altro client è un altro apparecchio o
+è lo stesso utente appena caduto. ⇒ Adesso dice **quel che sa** e dà il gesto:
+
+> *«il posto di questa sessione risulta occupato da un altro client — se eri tu e sei appena caduto,
+> riprova fra qualche secondo»*
+
+⚠ **E conta più di prima**: dopo §3.1-quater **si rientra a mano**, quindi è la **prima frase che
+l'utente incontra rientrando**.
+
+## 18.5 ⚠ E un prezzo dichiarato per un caso che non esiste — corretto
+
+I PING passano a metà della soglia quando la cura è accesa, e il costo era stato dichiarato in
+**0,21 kbit/s** per sessione. ⛔ Il banco **non ha potuto isolarlo, e si è rifiutato di dare un verde
+vuoto**: `[M]` una sessione «ferma» costa comunque **2 463 kbit/s** di audio PCM (§4.3, che non si
+spegne — un `CIAO` senza codec audio comune si becca `0x09 NIENTE_IN_COMUNE`), cioè **11 727 volte**
+quel numero; la differenza acceso−spento è **+0,539 kbit/s**, dentro il rumore.
+
+⭐ **E il fatto vero**: `[M]` su una sessione viva il contatore **non si ferma mai per 0,6 s** ⇒ il
+keep-alive **non ha mai occasione di scattare**, e quei 0,21 kbit/s descrivevano **un caso in cui il
+prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggio di nessun prezzo**.
+
+## 18.6 Che cosa resta, dopo §18
+
+1. ⭐ **le due cure sono provate e restano SPENTE** (I6): `--linea-morta` e `--sfratto-ms`.
+   ❓ **La decisione di accenderle è dell'utente**, e ora ha i numeri;
+2. ⏳ **le cure contro la spirale** (§17.6) restano spente e aspettano **i suoi occhi**, che è l'unica
+   cosa che non si può delegare a una misura;
+3. ⏳ **la bistabilità** di §17.11 non ha ancora una spiegazione;
+4. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
+5. ⚠ **lo stallo e il buco non sono la stessa grandezza** (§18.2-ter): la derivazione è prudente, non
+   esatta, e un giro che le misuri **insieme** la renderebbe esatta.

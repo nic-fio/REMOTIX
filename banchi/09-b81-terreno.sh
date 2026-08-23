@@ -149,7 +149,8 @@ porta)
 	log "3 · L'impronta del binario, e la MARCA delle due cure dentro"
 	ssh -o BatchMode=yes "$MACCHINA" "md5sum $ALBERO/src/remotix" | sed 's/^/        /'
 	for m in "linea-morta %s causa=" "LINEA MORTA — la connessione QUIC si chiude" \
-	         "SFRATTO per silenzio:" "SFRATTO NEGATO:" "--linea-morta-permille" \
+	         "causa=%s stallo_ms=" "soglia_stallo_ms=" "usciti_byte=" \
+	         "SFRATTO per silenzio:" "SFRATTO NEGATO:" "--linea-morta-stallo-ms" \
 	         "--sfratto-ms"; do
 		N=$(ssh -o BatchMode=yes "$MACCHINA" \
 			"grep -ac -- '$m' $ALBERO/src/remotix 2>/dev/null || echo 0")
@@ -159,6 +160,37 @@ porta)
 		fi
 		ok "marca presente: «$m»"
 	done
+
+	# ⛔⛔⭐ E L'OPZIONE TOLTA SI VERIFICA **BATTENDOLA**, non cercandola.
+	#
+	#      `--linea-morta-permille` e' stata tolta il 23 agosto 2026 dopo che
+	#      questo banco l'aveva refutata, e un binario che la accettasse ancora
+	#      sarebbe la cura VECCHIA — quella che dava rossi diversi sugli stessi
+	#      numeri.  ⇒ Va verificato.
+	#
+	# ⛔⛔ MA NON CON UN `grep` SUL BINARIO, e ci sono cascato: `[M]` 23 ago
+	#      2026, il primo giro di questo controllo ha dato ROSSO su un binario
+	#      GIUSTO.  La stringa c'e' eccome — sta nel **testo d'aiuto**, dove
+	#      `main.c` spiega perche' l'opzione non esiste piu'.  ⇒ Cercare
+	#      l'assenza di una stringa risponde a «e' scritta da qualche parte?»
+	#      e non a «viene ACCETTATA?», che e' l'unica domanda che conta.
+	#      ⚠ E' la forma di `LEZIONI.md` §1.9: un controllo che risponde a una
+	#        domanda diversa da quella che credi.
+	#
+	# ⇒ Si BATTE l'opzione e si guarda che il binario la RIFIUTI: aiuto in
+	#   uscita e codice diverso da zero.  ⚠ Porta 7999 e nessun certificato: il
+	#   rifiuto arriva nel giro degli argomenti, prima di aprire qualunque cosa.
+	B2LIB=/srv/src/b2/ngtcp2/build/lib:/srv/src/b2/prefisso/lib
+	RC=$(ssh -o BatchMode=yes "$MACCHINA" \
+		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
+		 'LD_LIBRARY_PATH=$B2LIB $DENTRO_ALB/src/remotix --linea-morta-permille 50 \
+		  --porta 7999 >/dev/null 2>&1; echo \$?'" | tail -1 | tr -d '\r')
+	if [ "${RC:-0}" = "0" ]; then
+		ko "⛔⛔ il binario ACCETTA «--linea-morta-permille» (uscita $RC): questa e'"
+		ko "     la cura VECCHIA, quella refutata.  NON misuro."
+		exit 2
+	fi
+	ok "⭐ «--linea-morta-permille» viene RIFIUTATA (uscita $RC): e' la cura NUOVA"
 	exit 0 ;;
 utente)
 	# ⛔ Prima il mio, con `07-b64-terreno.sh` (che sa gia' farlo)…

@@ -48,64 +48,87 @@
    leggere la frazione dichiarata senza rifarla a mano, e serve a controllare
    la ricostruzione contro il numero vero del prodotto.
 
-═══ `[M]` 23 AGOSTO 2026 — QUEL CHE E' USCITO, E IL FATTO CHE CHIUDE LA 1 ═══
+═══ `[M]` 24 AGOSTO 2026 — LA CURA RIFATTA: SI PUO' ACCENDERE ═══
 
-⛔⛔⛔ **LA FRAZIONE DICHIARATA ORDINA I DUE CASI AL CONTRARIO**, e questo non e'
-      una taratura da rifare: e' la grandezza che non separa quel che deve
-      separare.  `[M]` stessa macchina, stesso binario
-      (`md5 d8c2c4461df7319fb40f33d1f96df4de`, albero di lavoro = HEAD 2de961d):
+⭐ Binario `md5 0a6fc21a4719a8122980eb6f827820cf`, albero di lavoro = HEAD
+   `64db391`.  ⛔ E il terreno verifica anche un'ASSENZA: `--linea-morta-permille`
+   dev'essere RIFIUTATA dal binario (uscita 2).  ⚠ Non con un `grep`: la stringa
+   c'e' eccome, nel testo d'aiuto — e il primo giro di quel controllo ha dato
+   rosso su un binario giusto (⇒ `09-b81-terreno.sh`, passo 3).
+
+⛔⛔ **PROVA 1 — ZERO SCATTI IN DIECI MINUTI.**  `casa-cattiva`, `--linea-morta`
+     acceso: 9,71 fotogrammi/s, copertura **1,00** (600 s su 600), buco massimo
+     **0,479 s**, cliente ancora attaccato a 599,88 s, nessun congedo.
+     ⭐ E nello stesso giro il TESTIMONE dice `permille` mediana **529‰** con 392
+        finestre su 392 sopra i vecchi 50‰: **la cura vecchia avrebbe ucciso
+        questa identica sessione**, la nuova non la tocca.  E' il confronto piu'
+        pulito che questa fase abbia — stesso profilo, stesso banco, stessi
+        dieci minuti, e cambia solo la grandezza su cui si decide.
+
+⭐⭐ I QUATTRO STALLI MASSIMI CONTRO LA SOGLIA DI 5 000 ms — e sono MISURATI, non
+    «non e' scattato»: la riga esce solo allo scatto, quindi si ribatte lo stesso
+    profilo con soglie sempre piu' basse finche' una scatta (`scala_stallo()`).
+
+      profilo          stallo massimo        margine     buco al CLIENTE
+      `ritardo-30`     < 500 ms (non scatta)  > 10×       0,157-0,175 s
+       (sano)
+      `casa-cattiva`   < 500 ms (non scatta)  > 10×       0,359-0,479 s
+      `raffica-1`      **1 001 ms** MISURATO  **5,0×**    0,52-3,73 s
+      scena FERMA      il conto non parte     —           (1 e 3 fotogrammi
+                                                           in 90 s)
+
+    ⭐ `raffica-1` conferma la derivazione con un numero indipendente: il lato
+       stretto vale **1,00 s**, che e' esattamente quel che il riquadro di
+       `WT_LM_STALLO_MS` aveva usato — e il margine e' i 5,0× dichiarati.
+
+⚠ E UNA COSA DA DIRE: lo STALLO (server, byte di video usciti) e il BUCO (client,
+  fotogrammi arrivati) NON sono la stessa grandezza, e la soglia e' derivata dal
+  secondo mentre la cura misura il primo.  `[M]` su `raffica-1` un giro ha dato
+  buco 3,73 s con lo stallo che non scattava nemmeno a 1 000 ms: **lo stallo del
+  server e' piu' PICCOLO del buco del client**, perche' i byte partono e a
+  mancare e' la ritrasmissione.  ⇒ L'errore va dalla parte buona (si scatta piu'
+  tardi, mai piu' presto), ma il numero della derivazione e' prudente e non
+  esatto.
+
+⛔⛔ **LA SCENA FERMA — il modo peggiore in cui la cura poteva fallire — TIENE.**
+     90 s di desktop che non cambia, zero scatti alla soglia in vigore **e a
+     1 000 ms**, cioe' cinque volte piu' stretta; cliente attaccato fino in
+     fondo.  ⭐ E la scena era davvero ferma, verificato e non sperato: il conto
+     finale del server dice **1 e 3 fotogrammi in 90 s**, tutti spediti.
+     ⇒ Il conto dello stallo non parte quando non c'e' niente da mandare.
+
+⭐ LE ALTRE:
+    2 · `raffica-forte` (13,19 % iniettato): scatta a **18,95 s**,
+        `causa=stallo stallo_ms=5008 offerti=198 usciti_byte=0
+        coda_video=31146` — le due meta' tutt'e due vere — e il filo cade.
+        ⚠ Il testimone diceva `permille=133`: piu' BASSO di `casa-cattiva`, ed
+          e' la refuta di ieri vista dall'altro lato.
+    3 · silenzio: `silenzio_ms=10006`, `prove=12`, 10,24 s dopo il `kill -9`, e
+        nella riga `stallo_ms=8 offerti=0` — cioe' le due cause restano separate.
+        A cura spenta, zero scatti.  ⚠ Il prezzo dei PING resta NON GIUDICABILE:
+        una sessione «ferma» costa 2 463 kbit/s di audio PCM.
+    6 · I6: coi predefiniti zero scatti, e i due profili stanno nella griglia di
+        `09-b76`.
+    4 e 5 (sfratto, due utenti) NON sono state rigirate: `src/rcp.c` e
+        `src/rcp.h` hanno `md5` IDENTICO a ieri (`8a0e30d2…`, `439af0b8…`) e la
+        cura del fantasma vive li' — non c'e' niente che possa averle mosse.
+
+═══ `[M]` 23 AGOSTO 2026 — LA CURA VECCHIA, E PERCHE' E' STATA RITIRATA ═══
+
+⛔⛔⛔ **LA FRAZIONE DI PERDITA ORDINAVA I DUE CASI AL CONTRARIO.**  `[M]` stesso
+      banco, binario `md5 d8c2c4461df7319fb40f33d1f96df4de`:
 
         profilo         INIETTATA (sonda)   DICHIARATA (ngtcp2)   la linea…
-        casa-cattiva      1,86 - 2,15 %       **512‰** (51,2 %)   REGGE: 9,60
-                                                                  fotogrammi/s,
-                                                                  copertura 1,00,
-                                                                  buco max 0,50 s,
-                                                                  DIECI MINUTI interi
-        raffica-forte    12,28 - 14,00 %      **123‰** (12,3 %)   NON regge:
-                                                                  copertura 0,20,
-                                                                  buco 30,06 s
+        casa-cattiva      1,86 - 2,15 %       **512‰** (51,2 %)   REGGE 10 minuti
+        raffica-forte    12,28 - 14,00 %      **123‰** (12,3 %)   NON regge
 
-      ⇒ La linea che FUNZIONA dichiara **quattro volte piu' perdita** di quella
-        che non funziona.  ⛔ Nessun valore di `--linea-morta-permille` puo'
-        separarle: qualunque soglia che lasci passare `casa-cattiva` (≥ 512‰)
-        lascia passare anche `raffica-forte`, e qualunque soglia che fermi
-        `raffica-forte` (≤ 123‰) ferma prima `casa-cattiva`.
-
-⭐ LA CAUSA, misurata e non ipotizzata: `casa-cattiva` porta `delay 40ms 20ms
-   distribution normal`, e la sonda ci misura il **93,5 %** di pacchetti fuori
-   ordine (dispersione p95−min 73 ms) con l'1,9 % di perdita vera.  Il
-   rilevamento di perdita di ngtcp2 conta un pacchetto SORPASSATO come perso.
-   ⇒ `pkt_lost/pkt_sent` su una linea che riordina non misura la perdita:
-     misura il RIORDINO — che e' il fatto centrale di questa fase
-     (`09-b76`, «il disordine NON e' perdita»).
-
-⚠ E NON E' LA PARTENZA DELLA CONNESSIONE, che era l'altra spiegazione possibile:
-  tolte le prime dieci finestre, **399 finestre su 399** restano sopra la soglia,
-  con **398 coppie di fila** — cioe' la condizione di scatto, ininterrotta per
-  dieci minuti.  Mediana dopo la partenza **524‰**.
-
-⛔ IL GIRO ACCESO: la cura ha chiuso la sessione dopo **~4 s** (`persi=217
-   spediti=428 permille=507 finestre=2/2`), e il giro di CONTROLLO — stessa
-   linea, stessi dieci minuti, cure spente — ha retto tutto: fra i due cambia
-   **un interruttore**.
-
-⭐ E LE ALTRE CINQUE SONO VERDI, la cura del fantasma compresa:
-    2 · `raffica-forte`: scatta a **5,05 s**, `causa=perdita`, 137‰ contro 50‰,
-        e il filo cade (riga di `trasporto.c`).
-    3 · silenzio: scatta a **`silenzio_ms=10002`** (soglia 10 000), `prove=10`,
-        10,36 s dopo il `kill -9`; e dopo lo scatto il posto e' libero **al
-        primo tentativo**.  ⚠ Il prezzo dei PING NON si e' potuto isolare: una
-        sessione «ferma» costa **2 463 kbit/s** di audio PCM (§4.3, che non si
-        spegne: `[M]` un CIAO senza codec audio comune si becca `0x09`), cioe'
-        **11 727 volte** il costo dichiarato — e il contatore non si ferma mai
-        per 0,6 s, cioe' il keep-alive non ha MAI occasione di scattare su una
-        sessione viva.
-    4 · sfratto: **16,83 s e 7 rifiuti** contro **32,13 s e 14 rifiuti** senza —
-        il fantasma scende del **48 %**.
-    5 · due utenti: zero sfratti, `provanr6b` entra sul proprio posto con zero
-        rifiuti, e la riga `SFRATTO NEGATO` non esce (previsto `[R]`).
-    6 · I6: coi predefiniti zero scatti, zero sfratti, e i due profili stanno
-        nella griglia di `09-b76`.
+      ⇒ Quella che FUNZIONA dichiarava quattro volte piu' perdita di quella che
+        non funziona: nessuna soglia le separa.  ⭐ La causa: `casa-cattiva`
+        riordina il **93,5 %** dei pacchetti, e ngtcp2 conta un sorpasso come
+        una perdita.  ⚠ E non era la partenza della connessione: tolte le prime
+        dieci finestre, 399 su 399 restavano sopra soglia.
+      ⇒ La cura e' stata RIFATTA, non ritarata, e `--linea-morta-permille` e'
+        stata tolta.  `permille=` resta nella riga come TESTIMONE del riordino.
 
 ═══ CHE COSA SI MISURA, E CON CHE COSA ═══
 
@@ -222,12 +245,16 @@ def _carica(nome, percorso):
 # qui perche' i predicati ci si appoggiano; se il prodotto le cambia, il banco
 # deve dare rosso — e per questo il valore IN VIGORE si rilegge dalla riga
 # d'avvio (`stato_delle_cure()`) e si confronta con questi.
-LM_PERMILLE = 50            # `WT_LM_PERMILLE`   — 5,0 %
+LM_STALLO_MS = 5000         # `WT_LM_STALLO_MS`  — 5,0 s di immagine ferma
 LM_SILENZIO_S = 10          # `WT_LM_SILENZIO_S`
-LM_MIN_PACCHETTI = 200      # `WT_LM_MIN_PACCHETTI`
-LM_FINESTRE = 2             # `WT_LM_FINESTRE`
-LM_FINESTRA_MS = 1000       # `WT_LM_FINESTRA_MS`
+LM_MIN_PACCHETTI = 200      # `WT_LM_MIN_PACCHETTI` — guardia del TESTIMONE
+LM_FINESTRA_MS = 1000       # `WT_LM_FINESTRA_MS`   — idem
 LM_MIN_PROVE = 2            # `WT_LM_MIN_PROVE`
+# ⛔⛔ E `WT_LM_PERMILLE` NON ESISTE PIU', ne' la costante ne' l'opzione: la
+#     frazione di perdita e' stata refutata da questo stesso banco il 23 agosto
+#     2026 (⇒ il riquadro in testa) ed e' scesa da GIUDICE a TESTIMONE.
+#     ⚠ `permille=` resta nella riga dello scatto, ma non ha piu' una soglia:
+#       chi cercasse `soglia_permille=` non lo trova, ed e' giusto cosi'.
 SFRATTO_CONSIGLIATO_MS = 15000   # `SFRATTO_PREDEFINITO` = `SILENZIO / 2`
 SILENZIO_MS = 30000              # `SILENZIO` di `rcp.c` — l'orologio di §5.3
 
@@ -241,12 +268,42 @@ SILENZIO_MS = 30000              # `SILENZIO` di `rcp.c` — l'orologio di §5.3
 FPS_LINEA_CHE_REGGE = 5.0
 # ⛔ Sotto queste finestre valide la ricostruzione della frazione dichiarata non
 #    e' una misura: dieci minuti a una finestra al secondo ne danno ~600.
+#    ⚠ Adesso serve solo alla DIAGNOSI: la frazione non giudica piu' niente.
 MIN_FINESTRE_VALIDE = 60
+# ⛔⭐ IL MARGINE MINIMO DELLO STALLO — quanto deve stare la soglia sopra il
+#    peggior stallo osservato su una linea che REGGE.
+#    ⚠ *Sufficiente, non giusto*: la cura si dichiara 5,0× sopra il secondo
+#      vuoto di `raffica-1` e 10× sopra i 0,50 s di `casa-cattiva`.  Due e' la
+#      meta' del piu' stretto di quei due, ed e' il punto sotto il quale la
+#      soglia comincia a somigliare a un numero fortunato — e sbagliare in
+#      basso vuol dire buttare fuori uno che lavora, che non si rimedia.
+MARGINE_STALLO_MINIMO = 2.0
+# ⚠ E QUESTI DUE SERVONO SOLO ALLA DIAGNOSI, non a un giudizio: la ricostruzione
+#   della frazione DICHIARATA resta nel banco perche' e' il numero che ha
+#   REFUTATO la cura vecchia, e continuare a stamparlo accanto allo stallo e' il
+#   modo di far vedere che il riordino c'e' ancora e che adesso non decide piu'
+#   niente.  ⛔ Il 50‰ qui non e' piu' «la soglia»: e' il metro con cui si
+#   guarda lo stesso numero di allora, per poterlo confrontare con quel giro.
+PERMILLE_DIAGNOSI = 50
+FINESTRE_DIAGNOSI = 2
+# ⭐ La scala con cui si BRACCA lo stallo massimo quando la cura NON scatta:
+#    la riga `linea-morta` esce solo allo scatto, quindi «non e' scattata» da
+#    sola non dice DI QUANTO non e' scattata.  ⇒ Si riprova con soglie sempre
+#    piu' basse finche' una scatta, e il numero che esce e' un vero `stallo_ms`
+#    misurato dal prodotto.  ⛔ Fra la piu' bassa che NON scatta e la piu' alta
+#    che scatta, lo stallo massimo e' incastrato.
+SCALA_STALLO_MS = [2000, 1000, 500]
 # ⭐ Quante finestre contano come «la PARTENZA della connessione»: dieci, cioe'
 #   i primi ~10 s, che e' il tratto in cui `cwnd` si apre e ngtcp2 fa il grosso
 #   del suo rilevamento di perdita a finestra piccola.  ⚠ Il numero e' scelto,
 #   non misurato: serve a SEPARARE due tratti, non a giudicarne uno.
 PRIME_FINESTRE = 10
+# ⭐ Il profilo SANO su cui si misura lo stallo di riferimento: `ritardo-30` e'
+#   il denominatore di tutti i confronti di `09-b76` — tardi ma IN ORDINE, zero
+#   perdita, zero disordine.  ⚠ Non `liscio`: un profilo senza nemmeno un
+#   ritardo non ha un RTT, e senza RTT la finestra di congestione non si riempie
+#   e il pacer non ha niente da fare — cioe' non e' una linea, e' un cortocircuito.
+RIFERIMENTO_SANO = "ritardo-30"
 # ⚠ Il giudizio della linea morta si prende UNA VOLTA AL SECONDO (`rete_ciclo`),
 #   quindi uno scatto non puo' arrivare PRIMA della soglia e non deve arrivare
 #   molto dopo.  Tre secondi coprono il ciclo, la coda del pacer e lo `ssh`.
@@ -263,6 +320,13 @@ GRIGLIA_B76 = {
     "casa-cattiva": {"fps_min": 7.0, "fps_max": 11.0, "copertura_min": 0.90,
                      "perche": "`[M]` 7,8-10,2 fotogrammi/s, sessione viva, "
                                "consegna che non si ferma"},
+    # ⭐ `raffica-1` — la gemella esatta di `perdita-1`: stessa perdita media,
+    #   ma a GRAPPOLI.  `[M]` consegna 23,94 fotogrammi/s e ha comunque avuto un
+    #   SECONDO INTERO vuoto: e' il caso su cui poggia il lato stretto della
+    #   soglia dello stallo, e per questo va provato da solo.
+    "raffica-1": {"fps_min": 15.0, "fps_max": 45.0, "copertura_min": 0.90,
+                  "perche": "`[M]` 23,94 fotogrammi/s con un buco di 1,00 s "
+                            "pieno — regge, e NON va dichiarata morta"},
     "raffica-forte": {"consegna_si_ferma": True,
                       "perche": "`[M]` la consegna SI FERMA — 7 secondi su 25 "
                                 "hanno visto un fotogramma, buco 14,26 s"},
@@ -487,10 +551,19 @@ def riduci_linea_morta(righe, letto=True):
                 return None
 
         n["causa"] = p.get("causa")
+        # ⭐ I tre numeri su cui lo stallo si dimostra o si smentisce: quanti
+        #   fotogrammi il palco ci ha dato, quanti byte di video sono usciti
+        #   davvero, e quanti sono rimasti in casa nostra.
+        n["stallo_ms"] = num("stallo_ms")
+        n["soglia_stallo_ms"] = num("soglia_stallo_ms")
+        n["offerti"] = num("offerti")
+        n["usciti_byte"] = num("usciti_byte")
+        n["coda_video"] = num("coda_video")
+        n["cwnd_left"] = num("cwnd_left")
+        # ⚠ E il TESTIMONE, che non giudica piu': `permille` senza `soglia_`.
         n["persi"] = num("persi")
         n["spediti"] = num("spediti")
         n["permille"] = num("permille")
-        n["soglia_permille"] = num("soglia_permille")
         n["finestra_ms"] = num("finestra_ms")
         n["silenzio_ms"] = num("silenzio_ms")
         n["soglia_silenzio_ms"] = num("soglia_silenzio_ms")
@@ -580,7 +653,7 @@ def leggi_sfratto(riga0):
 #   ABBASSA il picco.  ⇒ Da sola non chiude la domanda: accanto ci va la
 #   taratura a `--linea-morta-permille 1`, che fa stampare al prodotto il
 #   `permille=` calcolato da lui.
-def finestre_dichiarate(righe, soglia_permille=LM_PERMILLE):
+def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
     """Dalle righe `rete-quic` alle finestre di giudizio della linea morta."""
     righe = [r for r in righe if "rete-quic " in r]
     if not righe:
@@ -616,14 +689,15 @@ def finestre_dichiarate(righe, soglia_permille=LM_PERMILLE):
     n["permille_mediano"] = ordinate[len(ordinate) // 2]
     n["permille_medio"] = round(sum(valide) / float(len(valide)), 2)
     n["sopra_soglia"] = len([x for x in valide if x >= soglia_permille])
-    # ⛔ `WT_LM_FINESTRE` = due DI FILA: e' quel che la cura pretende, e una
-    #    finestra sola sopra soglia non chiude niente.
+    # ⚠ Due DI FILA era la condizione di scatto della cura VECCHIA; qui resta
+    #    perche' e' il conto con cui la refuta e' stata scritta, e serve a
+    #    confrontarsi con quel giro.  ⛔ Non e' piu' la condizione di niente.
     fila, massima, coppie = 0, 0, 0
     for x in valide:
         if x >= soglia_permille:
             fila += 1
             massima = max(massima, fila)
-            if fila >= LM_FINESTRE:
+            if fila >= FINESTRE_DIAGNOSI:
                 coppie += 1
         else:
             fila = 0
@@ -649,7 +723,7 @@ def finestre_dichiarate(righe, soglia_permille=LM_PERMILLE):
         if x >= soglia_permille:
             fila += 1
             massima_d = max(massima_d, fila)
-            if fila >= LM_FINESTRE:
+            if fila >= FINESTRE_DIAGNOSI:
                 coppie_d += 1
         else:
             fila = 0
@@ -665,7 +739,7 @@ def finestre_dichiarate(righe, soglia_permille=LM_PERMILLE):
     return n
 
 
-def leggi_finestre(riga0, soglia_permille=LM_PERMILLE):
+def leggi_finestre(riga0, soglia_permille=PERMILLE_DIAGNOSI):
     righe = leggi_registro(riga0, ["rete-quic "], quante=2000)
     return finestre_dichiarate(righe, soglia_permille)
 
@@ -813,25 +887,25 @@ def stato_delle_cure():
     righe = [r for r in out.splitlines() if r.strip()]
     n = {"esito": "letto" if righe else "⛔ NON HO LETTO nessuna riga d'avvio "
                                         "delle due cure",
-         "linea_morta": None, "permille": None, "silenzio_s": None,
+         "linea_morta": None, "stallo_ms": None, "silenzio_s": None,
          "sfratto_ms": None, "righe": righe[-2:]}
     for r in righe:
         if "LINEA MORTA e' ACCESA" in r:
             n["linea_morta"] = "accesa"
-            m = re.search(r"persi/spediti ≥ (\d+)‰", r)
-            n["permille"] = int(m.group(1)) if m else None
+            m = re.search(r"\(1\) STALLO: (\d+) ms", r)
+            n["stallo_ms"] = int(m.group(1)) if m else None
             m = re.search(r"\(2\) SILENZIO: (\d+) s", r)
             n["silenzio_s"] = int(m.group(1)) if m else None
         elif "LINEA MORTA e' SPENTA" in r:
             n["linea_morta"] = "spenta"
-            n["permille"], n["silenzio_s"] = None, None
+            n["stallo_ms"], n["silenzio_s"] = None, None
         if "sfratto del fantasma: soglia" in r:
             m = re.search(r"soglia (\d+) ms", r)
             n["sfratto_ms"] = int(m.group(1)) if m else None
     return n
 
 
-def cure_come_voglio(stato, linea_morta=None, permille=None, silenzio_s=None,
+def cure_come_voglio(stato, linea_morta=None, stallo_ms=None, silenzio_s=None,
                      sfratto_ms=None):
     """(va_bene, perche') — il server e' configurato come questa prova pretende?
 
@@ -844,9 +918,9 @@ def cure_come_voglio(stato, linea_morta=None, permille=None, silenzio_s=None,
     if linea_morta is not None and stato["linea_morta"] != linea_morta:
         guai.append("la linea morta risulta «%s» e la volevo «%s»"
                     % (stato["linea_morta"], linea_morta))
-    if permille is not None and stato["permille"] != permille:
-        guai.append("la soglia della perdita e' %s‰ e la volevo %d‰"
-                    % (stato["permille"], permille))
+    if stallo_ms is not None and stato["stallo_ms"] != stallo_ms:
+        guai.append("la soglia dello STALLO e' %s ms e la volevo %d"
+                    % (stato["stallo_ms"], stallo_ms))
     if silenzio_s is not None and stato["silenzio_s"] != silenzio_s:
         guai.append("la soglia del silenzio e' %s s e la volevo %d"
                     % (stato["silenzio_s"], silenzio_s))
@@ -856,8 +930,9 @@ def cure_come_voglio(stato, linea_morta=None, permille=None, silenzio_s=None,
     if guai:
         return _muto("⛔ NON MISURO: il server non e' configurato come questa "
                      "prova pretende — " + " · ".join(guai))
-    return _si("il server dice di se': linea morta %s (%s‰, %s s) · sfratto %s ms"
-               % (stato["linea_morta"], stato["permille"], stato["silenzio_s"],
+    return _si("il server dice di se': linea morta %s (stallo %s ms, silenzio "
+               "%s s) · sfratto %s ms"
+               % (stato["linea_morta"], stato["stallo_ms"], stato["silenzio_s"],
                   stato["sfratto_ms"]))
 
 
@@ -889,12 +964,14 @@ def p1_niente_falso_positivo(lm, testimoni, n, minuti):
         p = lm["righe"][0]
         return _no("⛔⛔ FALSO POSITIVO: la linea morta e' scattata %d volta/e "
                    "in %g minuti su una linea che il prodotto stava servendo — "
-                   "causa=%s persi=%s spediti=%s permille=%s (soglia %s‰) "
-                   "finestra_ms=%s.  ⇒ Accenderla vorrebbe dire buttare fuori "
-                   "un utente al lavoro: LA CURA NON SI ACCENDE"
-                   % (lm["scatti"], minuti, p.get("causa"), p.get("persi"),
-                      p.get("spediti"), p.get("permille"),
-                      p.get("soglia_permille"), p.get("finestra_ms")))
+                   "causa=%s stallo_ms=%s (soglia %s) offerti=%s "
+                   "usciti_byte=%s coda_video=%s · testimone del riordino: "
+                   "permille=%s.  ⇒ Accenderla vorrebbe dire buttare fuori un "
+                   "utente al lavoro: LA CURA NON SI ACCENDE"
+                   % (lm["scatti"], minuti, p.get("causa"), p.get("stallo_ms"),
+                      p.get("soglia_stallo_ms"), p.get("offerti"),
+                      p.get("usciti_byte"), p.get("coda_video"),
+                      p.get("permille")))
     if not testimoni:
         return _muto("nessuno scatto, ma non ho interrogato i testimoni della "
                      "connessione: senza, non so se ci fosse un utente al "
@@ -919,8 +996,9 @@ def p1_niente_falso_positivo(lm, testimoni, n, minuti):
                      % (fps, FPS_LINEA_CHE_REGGE))
     c = (n or {}).get("consegna") or {}
     return _si("⭐ ZERO scatti in %g minuti su una linea che REGGE: %.2f "
-               "fotogrammi/s, copertura %s, buco piu' lungo %s s, cliente "
-               "ancora attaccato e nessun congedo nel registro"
+               "fotogrammi/s, copertura %s, ⭐ buco piu' lungo **%s s** "
+               "(la grandezza da cui la soglia e' derivata), cliente ancora "
+               "attaccato e nessun congedo nel registro"
                % (minuti, fps, c.get("copertura"), c.get("buco_max_s")))
 
 
@@ -974,49 +1052,170 @@ def p1c_la_linea_regge_a_cura_spenta(testimoni, n, minuti, scatti_accesa):
                "fuori e' un utente al lavoro" % (minuti, coda, scatti_accesa))
 
 
-def p1b_soglia_sopra_la_dichiarata(fin, sonda):
-    """⛔⭐ IL FALSIFICATORE DICHIARATO — ⇒ il riquadro in testa al file.
+def p1b_il_margine_dello_stallo(scala, soglia_ms, nome):
+    """⭐⭐ **IL MARGINE VERO, e non «non e' scattato».**
 
-    La soglia e' sulla frazione DICHIARATA da ngtcp2; l'1,71 %% che regge e' la
-    perdita INIETTATA.  Con jitter e riordino la dichiarata puo' essere piu'
-    alta, perche' un sorpasso viene scambiato per una perdita.  ⇒ Se sulla
-    linea che REGGE la dichiarata ha sfondato i %d‰ — e peggio, per due finestre
-    di fila — la soglia e' sbagliata, e va detto invece che aggirato.
-    """ % LM_PERMILLE
-    if not fin or fin.get("esito") != "letto":
-        return _muto((fin or {}).get("esito", "non ho ricostruito le finestre"))
-    if fin["finestre_valide"] < MIN_FINESTRE_VALIDE:
-        return _muto("solo %d finestre hanno superato le guardie della cura "
-                     "(ne volevo almeno %d): su cosi' poche, «non ha mai "
-                     "sfondato» non e' una misura"
-                     % (fin["finestre_valide"], MIN_FINESTRE_VALIDE))
-    coda = ("%d finestre valide · DICHIARATA max %d‰ · p95 %d‰ · mediana %d‰ · "
-            "media %.2f‰ · cumulativa %.2f‰ (%d persi su %d spediti)"
-            % (fin["finestre_valide"], fin["permille_max"], fin["permille_p95"],
-               fin["permille_mediano"], fin["permille_medio"],
-               fin["cumulativa_permille"], fin["persi_totali"],
-               fin["spediti_totali"]))
-    iniettata = ("INIETTATA %.2f %% (sonda)" % sonda["persi_pc"]) if (
-        sonda and sonda.get("esito") == "misurato") else "INIETTATA: non sondata"
-    if fin["coppie_sopra_soglia"] > 0:
-        return _no("⛔⛔ LA SOGLIA E' SBAGLIATA: su una linea che REGGE la "
-                   "frazione DICHIARATA ha sfondato i %d‰ per %d finestre di "
-                   "fila (fila massima %d) — cioe' la condizione esatta con cui "
-                   "la cura chiude la sessione.  %s · %s"
-                   % (fin["soglia_permille"], LM_FINESTRE,
-                      fin["fila_massima_sopra_soglia"], coda, iniettata))
-    if fin["permille_max"] >= fin["soglia_permille"]:
-        return _no("⛔ la frazione DICHIARATA ha toccato la soglia (%d‰ ≥ %d‰) "
-                   "in %d finestre su una linea che REGGE: non ha fatto due di "
-                   "fila e per questo la cura non e' scattata, ma il margine "
-                   "dichiarato (2,9× sopra l'1,71 %%) qui non c'e'.  %s · %s"
-                   % (fin["permille_max"], fin["soglia_permille"],
-                      fin["sopra_soglia"], coda, iniettata))
-    return _si("⭐ la DICHIARATA non ha mai toccato la soglia: %s ≤ %d‰ · %s · %s"
-               % (fin["permille_max"], fin["soglia_permille"], coda, iniettata))
+    ⛔ La riga `linea-morta` esce SOLO allo scatto: da un giro in cui la cura non
+       scatta non si legge **di quanto** non e' scattata — e un verde senza quel
+       numero non dice se il margine e' dieci volte o il tre per cento.
+       ⚠ E' la stessa forma del difetto che questo banco ha gia' pagato: «non e'
+         successo niente» che si spaccia per una misura.
+
+    ⇒ Si ribatte lo stesso profilo con soglie sempre piu' BASSE, finche' una
+      scatta.  Allora la riga esce e porta uno `stallo_ms` **misurato dal
+      prodotto**, sulla sua aritmetica.  Fra la soglia piu' bassa che NON scatta
+      e lo stallo che il prodotto ha stampato, il massimo e' incastrato.
+
+    Verde se il margine (soglia / stallo massimo osservato) sta sopra %.1f×.
+    ⛔ Rosso se scende sotto: sotto quel punto la soglia comincia a somigliare a
+       un numero fortunato, e sbagliare in basso vuol dire buttare fuori uno che
+       stava lavorando.
+    """ % MARGINE_STALLO_MINIMO
+    if not scala:
+        return _muto("non ho battuto nessuna soglia piu' bassa: senza la scala "
+                     "non ho il margine, solo «non e' scattato»")
+    scattate = [x for x in scala if x.get("scattata")]
+    non_scattate = [x for x in scala if x.get("scattata") is False]
+    if not scattate and not non_scattate:
+        return _muto("nessun gradino della scala ha dato un esito leggibile")
+    # ⛔ Uno scatto alla soglia VERA (o sopra) non e' un margine stretto: e' il
+    #    falso positivo, e lo giudica P1.  Qui si tace, o direi due volte la
+    #    stessa cosa con due parole diverse.
+    if any(x["soglia_ms"] >= soglia_ms for x in scattate):
+        return _muto("⚠ la cura e' scattata gia' alla soglia in vigore (%d ms): "
+                     "non c'e' nessun margine da misurare, e il fatto lo dice "
+                     "P1" % soglia_ms)
+    if not scattate:
+        piu_bassa = min(x["soglia_ms"] for x in non_scattate)
+        margine = soglia_ms / float(piu_bassa)
+        coda = ("nemmeno a %d ms — la scala battuta e' %s"
+                % (piu_bassa, [x["soglia_ms"] for x in scala]))
+        if margine < MARGINE_STALLO_MINIMO:
+            return _muto("⚠ non e' scattata a nessuna delle soglie battute, ma "
+                         "la piu' bassa (%d ms) da' solo %.1f× di margine: per "
+                         "dire che il margine e' ≥ %.1f× bisogna scendere piu' "
+                         "giu'" % (piu_bassa, margine, MARGINE_STALLO_MINIMO))
+        return _si("⭐ «%s»: lo stallo massimo sta SOTTO %d ms — la cura non "
+                   "scatta %s ⇒ il margine della soglia (%d ms) e' **piu' di "
+                   "%.1f×**" % (nome, piu_bassa, coda, soglia_ms, margine))
+    # ⭐ C'e' almeno uno scatto sotto la soglia vera: quello e' uno `stallo_ms`
+    #   MISURATO, ed e' il numero migliore che si possa avere.
+    peggiore = max(x.get("stallo_ms") or 0 for x in scattate)
+    if not peggiore:
+        return _muto("la cura e' scattata ma la riga non porta `stallo_ms`: il "
+                     "contratto sul testo non regge, e non ho il numero")
+    margine = soglia_ms / float(peggiore)
+    coda = ("stallo massimo MISURATO %d ms (a soglia %d ms) · soglia in vigore "
+            "%d ms · scala battuta %s"
+            % (peggiore, min(x["soglia_ms"] for x in scattate), soglia_ms,
+               [(x["soglia_ms"], x.get("stallo_ms")) for x in scala]))
+    if margine < MARGINE_STALLO_MINIMO:
+        return _no("⛔ IL MARGINE E' STRETTO su una linea che REGGE: %.2f× "
+                   "(minimo %.1f×) — %s.  ⇒ La soglia sta troppo vicino a uno "
+                   "stallo che una linea buona produce da sola, e sbagliare in "
+                   "basso vuol dire buttare fuori uno che lavora"
+                   % (margine, MARGINE_STALLO_MINIMO, coda))
+    return _si("⭐ «%s»: il margine e' **%.1f×** — %s" % (nome, margine, coda))
 
 
-def p2_scatta_sulla_raffica(lm, sonda, secondi_a_scatto):
+def p_non_deve_scattare(nome, lm, testimoni, n, minuti, atteso):
+    """⛔ **QUESTA LINEA REGGE, E NON VA DICHIARATA MORTA.**  E' la forma
+    generale della prova 1, applicata a un profilo qualunque della griglia di
+    `09-b76` — serve a `raffica-1`, che e' il caso su cui poggia il lato
+    stretto della soglia: `[M]` consegna 23,94 fotogrammi/s e ha comunque avuto
+    **un secondo intero vuoto**.
+
+    ⚠ Il verde vale solo se la linea ha davvero retto: fuori dalla griglia
+      questo predicato TACE, invece di dare un verde che non ha guadagnato.
+    """
+    if not lm or lm.get("esito") != "letto":
+        return _muto((lm or {}).get("esito", "non ho letto gli scatti"))
+    if lm["scatti"] > 0:
+        p = lm["righe"][0]
+        return _no("⛔⛔ «%s» e' stata dichiarata MORTA, e REGGE: causa=%s "
+                   "stallo_ms=%s (soglia %s) offerti=%s usciti_byte=%s "
+                   "coda_video=%s — %s"
+                   % (nome, p.get("causa"), p.get("stallo_ms"),
+                      p.get("soglia_stallo_ms"), p.get("offerti"),
+                      p.get("usciti_byte"), p.get("coda_video"),
+                      atteso.get("perche", "")))
+    if not testimoni or testimoni.get("aperta") is False:
+        return _muto("nessuno scatto, ma non ho testimoni che la sessione si "
+                     "sia aperta")
+    if testimoni.get("cliente_staccato"):
+        return _muto("⚠ nessuno scatto della linea morta, ma il cliente e' "
+                     "caduto lo stesso: «%s»"
+                     % (testimoni.get("caduta") or "")[:140])
+    fps = (n or {}).get("fps")
+    c = (n or {}).get("consegna") or {}
+    if fps is None or c.get("esito") != "misurato":
+        return _muto("nessuno scatto, ma non ho ritmo e consegna: senza, non so "
+                     "se la linea reggesse")
+    coda = ("%.2f fotogrammi/s · copertura %.2f · ⭐ buco piu' lungo **%.2f s**"
+            % (fps, c["copertura"], c["buco_max_s"]))
+    if not (atteso["fps_min"] <= fps <= atteso["fps_max"]):
+        return _muto("⚠ ZERO scatti, ma «%s» ha dato %.2f fotogrammi/s, fuori "
+                     "dalla griglia di 09-b76 (%.1f-%.1f): non e' il caso che "
+                     "credo di aver provato — %s"
+                     % (nome, fps, atteso["fps_min"], atteso["fps_max"], coda))
+    if c["copertura"] < atteso["copertura_min"]:
+        return _muto("⚠ ZERO scatti, ma la copertura e' %.2f contro %.2f della "
+                     "griglia: questa linea non stava servendo nessuno — %s"
+                     % (c["copertura"], atteso["copertura_min"], coda))
+    return _si("⭐ ZERO scatti in %g minuti su «%s», che REGGE: %s (griglia "
+               "09-b76: %s)" % (minuti, nome, coda, atteso["perche"]))
+
+
+def p_scena_ferma_non_scatta(lm, testimoni, secondi, soglia_ms):
+    """⛔⛔ **IL MODO PEGGIORE IN CUI QUESTA CURA POTREBBE FALLIRE.**
+
+    `[M]` in questa fase la scena ferma consegna **un fotogramma in 30 s e poi
+    zero**: `RecordVirtual` di Mutter da' solo sul CAMBIAMENTO, e il risveglio
+    costa 13 ms.  ⇒ Un desktop fermo e' un desktop che non manda niente **e non
+    ha niente da mandare**, ed e' esattamente il caso normale di chi sta
+    leggendo una pagina.
+
+    ⛔ Se il conto dello stallo partisse li', la cura butterebbe fuori **chi
+       guarda un desktop fermo** — e non con un ritardo, con la certezza: dopo
+       `soglia` secondi, ogni volta.  ⇒ Zero scatti, e va provato di proposito
+       invece che sperato.
+
+    ⭐ E si prova col coltello dalla parte del manico: la stessa scena ferma con
+       una soglia MOLTO piu' bassa di quella in vigore.  Se il conto non parte,
+       non parte a nessuna soglia; se partisse, con la soglia bassa si vede
+       subito invece che in cinque secondi.
+    """
+    if not lm or lm.get("esito") != "letto":
+        return _muto((lm or {}).get("esito", "non ho letto gli scatti"))
+    if lm["scatti"] > 0:
+        p = lm["righe"][0]
+        return _no("⛔⛔ LA SCENA FERMA E' STATA DICHIARATA MORTA — la cura "
+                   "butta fuori chi guarda un desktop che non cambia: causa=%s "
+                   "stallo_ms=%s (soglia %s) offerti=%s usciti_byte=%s "
+                   "coda_video=%s.  ⚠ Se `offerti` e `coda_video` sono ZERO, il "
+                   "conto e' partito senza che ci fosse niente da mandare, ed e' "
+                   "proprio la meta' che doveva impedirlo"
+                   % (p.get("causa"), p.get("stallo_ms"),
+                      p.get("soglia_stallo_ms"), p.get("offerti"),
+                      p.get("usciti_byte"), p.get("coda_video")))
+    if not testimoni or testimoni.get("aperta") is False:
+        return _muto("nessuno scatto, ma non risulta che la sessione si sia "
+                     "aperta: senza, non ho provato niente")
+    if testimoni.get("cliente_staccato"):
+        return _muto("⚠ nessuno scatto della linea morta, ma il cliente e' "
+                     "caduto lo stesso: «%s» — non e' il caso che volevo provare"
+                     % (testimoni.get("caduta") or "")[:140])
+    if testimoni.get("cliente_attaccato") is not True:
+        return _muto("il cliente non ha detto «ancora attaccato»: non ho il "
+                     "testimone che serve")
+    return _si("⭐ %g s di SCENA FERMA con la soglia dello stallo a **%d ms** "
+               "(cioe' %.1f volte piu' stretta di quella in vigore): ZERO "
+               "scatti, e il cliente e' rimasto attaccato fino in fondo.  ⇒ Il "
+               "conto non parte quando non c'e' niente da mandare"
+               % (secondi, soglia_ms, LM_STALLO_MS / float(soglia_ms or 1)))
+
+
+def p2_scatta_sullo_stallo(lm, sonda, secondi_a_scatto):
     """**Lo scatto vero.**  Su `raffica-forte` — `[M]` 11,10 % di perdita a
     raffiche, `cwnd` mediana 8 948 B contro 105 616 del riferimento, la consegna
     che si ferma — la cura DEVE scattare, e con `causa=perdita`.
@@ -1040,28 +1239,30 @@ def p2_scatta_sulla_raffica(lm, sonda, secondi_a_scatto):
                    "%.2f, e `[M]` a questa perdita l'immagine o si congela "
                    "(14,26 s su 25) o arriva con 4,5 s di ritardo"
                    % (sonda["persi_pc"], sonda["raffica_media"]))
-    if lm.get("causa") != "perdita":
+    if lm.get("causa") != "stallo":
         return _no("⛔ e' scattata, ma per il motivo SBAGLIATO: causa=%s su una "
-                   "linea che perde il %.2f %% — un silenzio non e' una "
-                   "raffica, e le due cause mandano a cercare la causa in due "
-                   "posti diversi" % (lm.get("causa"), sonda["persi_pc"]))
+                   "linea che perde il %.2f %% e in cui l'immagine si FERMA — "
+                   "un silenzio del client non e' uno stallo dell'uscita, e le "
+                   "due cause mandano a cercare la causa in due posti diversi"
+                   % (lm.get("causa"), sonda["persi_pc"]))
     if lm.get("chiuse_dal_trasporto", 0) < 1:
         return _no("⛔ la decisione e' stata presa (riga `linea-morta`) ma il "
                    "filo NON e' caduto: manca la riga di `trasporto.c` «LINEA "
                    "MORTA — la connessione QUIC si chiude».  ⚠ L'utente ha "
                    "scelto che il filo cada, non che il server lo scriva")
-    return _si("⭐ scattata dopo %s s dall'aggancio del posto: causa=perdita "
-               "persi=%s spediti=%s permille=%s‰ (soglia %s‰) finestra_ms=%s "
-               "finestre=%s cwnd=%s srtt_us=%s · il filo e' caduto (%d riga/e "
-               "di `trasporto.c`) · la sonda: %.2f %% in raffiche di %.2f"
+    return _si("⭐ scattata dopo %s s dall'aggancio del posto: causa=stallo "
+               "stallo_ms=%s (soglia %s) offerti=%s usciti_byte=%s "
+               "coda_video=%s cwnd=%s cwnd_left=%s srtt_us=%s · il filo e' "
+               "caduto (%d riga/e di `trasporto.c`) · la sonda: %.2f %% in "
+               "raffiche di %.2f · ⚠ il TESTIMONE del riordino diceva "
+               "permille=%s (e non ha deciso niente)"
                % (("%.2f" % secondi_a_scatto) if secondi_a_scatto is not None
-                  else "?", lm.get("persi"), lm.get("spediti"),
-                  lm.get("permille"), lm.get("soglia_permille"),
-                  lm.get("finestra_ms"),
-                  (lm["righe"][0].get("finestre") if lm.get("righe") else "?"),
-                  lm.get("cwnd"), lm.get("srtt_us"),
-                  lm.get("chiuse_dal_trasporto", 0), sonda["persi_pc"],
-                  sonda["raffica_media"]))
+                  else "?", lm.get("stallo_ms"), lm.get("soglia_stallo_ms"),
+                  lm.get("offerti"), lm.get("usciti_byte"),
+                  lm.get("coda_video"), lm.get("cwnd"), lm.get("cwnd_left"),
+                  lm.get("srtt_us"), lm.get("chiuse_dal_trasporto", 0),
+                  sonda["persi_pc"], sonda["raffica_media"],
+                  lm.get("permille")))
 
 
 def p3_scatta_sul_silenzio(lm, soglia_ms):
@@ -1084,8 +1285,8 @@ def p3_scatta_sul_silenzio(lm, soglia_ms):
                    "togliere")
     if lm.get("causa") != "silenzio":
         return _no("⛔ e' scattata con causa=%s e non «silenzio»: il cliente e' "
-                   "stato ucciso, non c'era nessuna raffica da vedere"
-                   % lm.get("causa"))
+                   "stato ucciso, e quel che il server deve vedere e' che non "
+                   "torna piu' un pacchetto" % lm.get("causa"))
     s = lm.get("silenzio_ms")
     if s is None:
         return _muto("la riga non porta `silenzio_ms`: il contratto sul testo "
@@ -1329,26 +1530,37 @@ def p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n, nome_profilo):
 #    per campo e NELL'ORDINE: `_certifica_contratto()` lo rilegge dal sorgente e
 #    confronta, cosi' il giorno che il prodotto cambia la riga il banco lo dice
 #    invece di leggere il campo sbagliato in silenzio.
-CAMPI_LM = ["causa", "persi", "spediti", "permille", "soglia_permille",
-            "finestra_ms", "finestre", "minimo_pacchetti", "silenzio_ms",
-            "soglia_silenzio_ms", "prove", "minimo_prove", "cwnd", "srtt_us",
-            "giudizio"]
+# ⛔⛔ IL CONTRATTO E' CAMBIATO IL 23 AGOSTO 2026, e i due campi spariti si
+#     dichiarano invece di sparire in silenzio:
+#       · `soglia_permille=` — non c'e' piu' nessuna soglia sulla perdita;
+#       · `finestre=N/M`     — non ci sono piu' finestre cattive da contare di
+#                              fila: lo stallo e' una durata continua.
+#     ⭐ E ne sono entrati cinque: `stallo_ms` `soglia_stallo_ms` `offerti`
+#        `usciti_byte` `coda_video` (piu' `cwnd_left`).
+CAMPI_LM = ["causa", "stallo_ms", "soglia_stallo_ms", "offerti", "usciti_byte",
+            "coda_video", "silenzio_ms", "soglia_silenzio_ms", "prove",
+            "minimo_prove", "persi", "spediti", "permille", "finestra_ms",
+            "minimo_pacchetti", "cwnd", "cwnd_left", "srtt_us", "giudizio"]
 
 
-def _fab_lm(ora="21:14:02.123", causa="perdita", persi=31, spediti=412,
-            permille=75, soglia=LM_PERMILLE, finestra_ms=1004, finestre=2,
-            silenzio_ms=1300, prove=9, cwnd=8948, srtt_us=61230,
-            giudizio="⛔ la linea e' MORTA: la perdita ha superato la soglia"):
-    """Una riga `linea-morta` come la scrive il prodotto, campo per campo."""
-    return ("%s wt      linea-morta [192.168.0.2]:50875 causa=%s persi=%d "
-            "spediti=%d permille=%d soglia_permille=%d finestra_ms=%d "
-            "finestre=%d/%d minimo_pacchetti=%d silenzio_ms=%d "
-            "soglia_silenzio_ms=%d prove=%d minimo_prove=%d cwnd=%d srtt_us=%d "
-            "giudizio=%s"
-            % (ora, causa, persi, spediti, permille, soglia, finestra_ms,
-               finestre, LM_FINESTRE, LM_MIN_PACCHETTI, silenzio_ms,
-               LM_SILENZIO_S * 1000, prove, LM_MIN_PROVE, cwnd, srtt_us,
-               giudizio))
+def _fab_lm(ora="21:14:02.123", causa="stallo", stallo_ms=5004,
+            soglia_stallo=LM_STALLO_MS, offerti=41, usciti=0, coda_video=61240,
+            silenzio_ms=1300, prove=9, persi=31, spediti=412, permille=75,
+            finestra_ms=1004, cwnd=8948, cwnd_left=0, srtt_us=61230,
+            giudizio="⛔ la linea e' MORTA: da troppo tempo non esce un "
+                     "fotogramma pur avendone da mandare"):
+    """Una riga `linea-morta` come la scrive il prodotto DA OGGI, campo per
+       campo e nell'ordine.  ⛔ `soglia_permille=` e `finestre=N/M` non ci sono
+       piu': se ricomparissero, `_certifica_contratto()` darebbe rosso."""
+    return ("%s wt      linea-morta [192.168.0.2]:50875 causa=%s stallo_ms=%d "
+            "soglia_stallo_ms=%d offerti=%d usciti_byte=%d coda_video=%d "
+            "silenzio_ms=%d soglia_silenzio_ms=%d prove=%d minimo_prove=%d "
+            "persi=%d spediti=%d permille=%d finestra_ms=%d "
+            "minimo_pacchetti=%d cwnd=%d cwnd_left=%d srtt_us=%d giudizio=%s"
+            % (ora, causa, stallo_ms, soglia_stallo, offerti, usciti,
+               coda_video, silenzio_ms, LM_SILENZIO_S * 1000, prove,
+               LM_MIN_PROVE, persi, spediti, permille, finestra_ms,
+               LM_MIN_PACCHETTI, cwnd, cwnd_left, srtt_us, giudizio))
 
 
 def _fab_chiusa(ora="21:14:02.124"):
@@ -1520,18 +1732,33 @@ def certifica():
          "giri veri")
     lm = riduci_linea_morta([_fab_lm()])
     ok = (lm["esito"] == "letto" and lm["scatti"] == 1
-          and lm["causa"] == "perdita" and lm["permille"] == 75
-          and lm["spediti"] == 412 and lm["persi"] == 31
-          and lm["soglia_permille"] == LM_PERMILLE
-          and lm["righe"][0]["finestre"] == "2/2"
+          and lm["causa"] == "stallo" and lm["stallo_ms"] == 5004
+          and lm["soglia_stallo_ms"] == LM_STALLO_MS and lm["offerti"] == 41
+          and lm["usciti_byte"] == 0 and lm["coda_video"] == 61240
+          and lm["permille"] == 75 and lm["spediti"] == 412
+          and lm["cwnd_left"] == 0
           and lm["giudizio"].startswith("⛔ la linea e' MORTA")
           and abs(lm["ora_primo"] - (21 * 3600 + 14 * 60 + 2.123)) < 1e-6)
     (_ok if ok else _ko)("la riga `linea-morta` si legge campo per campo, "
                          "`giudizio=` compreso (con gli spazi): %s"
                          % json.dumps({k: lm.get(k) for k in
-                                       ("causa", "persi", "spediti", "permille",
+                                       ("causa", "stallo_ms", "offerti",
+                                        "usciti_byte", "coda_video", "permille",
                                         "silenzio_ms", "prove")},
                                       ensure_ascii=False))
+    verde = verde and ok
+
+    # ⛔⛔ E I DUE CAMPI TOLTI DEVONO RESTARE TOLTI: un banco che continuasse a
+    #     leggere `soglia_permille=` su una riga che non ce l'ha piu' non
+    #     darebbe errore — leggerebbe `None` e ci giudicherebbe sopra.
+    ok = (lm.get("soglia_permille") is None
+          and (lm["righe"][0].get("finestre") is None))
+    (_ok if ok else _ko)("⛔ `soglia_permille=` e `finestre=N/M` NON ci sono "
+                         "piu' nella riga, e il banco non li cerca: la soglia "
+                         "sulla perdita non esiste (soglia_permille=%s, "
+                         "finestre=%s)"
+                         % (lm.get("soglia_permille"),
+                            lm["righe"][0].get("finestre")))
     verde = verde and ok
 
     lm0 = riduci_linea_morta([])
@@ -1679,47 +1906,100 @@ def certifica():
                   p1c_la_linea_regge_a_cura_spenta(testimone_vivo,
                                                    {"fps": None}, 10, 1))
 
-    _inf("P1b · ⛔ il falsificatore: la soglia contro la frazione DICHIARATA")
-    sonda_casa = {"esito": "misurato", "persi_pc": 1.71, "raffica_media": 1.02}
-    fin_buone = finestre_dichiarate([_fab_rq(persi_d=7, spediti_d=400)] * 200)
-    fin_toccata = finestre_dichiarate([_fab_rq(persi_d=7, spediti_d=400)] * 199
-                                      + [_fab_rq(persi_d=25, spediti_d=400)])
-    fin_sfondata = finestre_dichiarate([_fab_rq(persi_d=7, spediti_d=400)] * 198
-                                       + [_fab_rq(persi_d=25, spediti_d=400)] * 2)
-    verde &= caso("P1b verde · la dichiarata resta sotto soglia", True,
-                  p1b_soglia_sopra_la_dichiarata(fin_buone, sonda_casa))
-    verde &= caso("P1b ROSSO · due finestre di fila sopra soglia", False,
-                  p1b_soglia_sopra_la_dichiarata(fin_sfondata, sonda_casa))
-    verde &= caso("P1b ROSSO · una finestra sola tocca la soglia (il margine "
-                  "dichiarato non c'e')", False,
-                  p1b_soglia_sopra_la_dichiarata(fin_toccata, sonda_casa))
-    verde &= caso("P1b muto · troppe poche finestre valide", None,
-                  p1b_soglia_sopra_la_dichiarata(
-                      finestre_dichiarate([_fab_rq(persi_d=7, spediti_d=400)] * 5),
-                      sonda_casa))
+    _inf("P1b · ⭐⭐ il MARGINE VERO — la scala che bracca lo stallo massimo")
+    sonda_casa = {"esito": "misurato", "persi_pc": 1.86, "raffica_media": 1.02}
+    scala_larga = [{"soglia_ms": 2000, "scattata": False},
+                   {"soglia_ms": 1000, "scattata": False},
+                   {"soglia_ms": 500, "scattata": False}]
+    scala_stretta = [{"soglia_ms": 2000, "scattata": False},
+                     {"soglia_ms": 1000, "scattata": True, "stallo_ms": 1043}]
+    scala_strettissima = [{"soglia_ms": 3000, "scattata": True,
+                           "stallo_ms": 3120}]
+    scala_gia_scattata = [{"soglia_ms": LM_STALLO_MS, "scattata": True,
+                           "stallo_ms": 5300}]
+    scala_poco_giu = [{"soglia_ms": 4000, "scattata": False}]
+    verde &= caso("P1b verde · non scatta nemmeno a 500 ms ⇒ margine > 10×",
+                  True, p1b_il_margine_dello_stallo(scala_larga, LM_STALLO_MS,
+                                                    "casa-cattiva"))
+    verde &= caso("P1b verde · scatta a 1000 con stallo 1043 ms ⇒ margine 4,8×",
+                  True, p1b_il_margine_dello_stallo(scala_stretta, LM_STALLO_MS,
+                                                    "raffica-1"))
+    verde &= caso("P1b ROSSO · ⛔ stallo 3120 ms su una linea che regge: "
+                  "margine 1,6×", False,
+                  p1b_il_margine_dello_stallo(scala_strettissima, LM_STALLO_MS,
+                                              "casa-cattiva"))
+    verde &= caso("P1b muto · e' scattata gia' alla soglia in vigore: e' il "
+                  "falso positivo, e lo dice P1", None,
+                  p1b_il_margine_dello_stallo(scala_gia_scattata, LM_STALLO_MS,
+                                              "casa-cattiva"))
+    verde &= caso("P1b muto · la scala non e' scesa abbastanza per dare un "
+                  "margine", None,
+                  p1b_il_margine_dello_stallo(scala_poco_giu, LM_STALLO_MS,
+                                              "casa-cattiva"))
+    verde &= caso("P1b muto · nessuna scala battuta", None,
+                  p1b_il_margine_dello_stallo([], LM_STALLO_MS, "casa-cattiva"))
+
+    _inf("P-raffica1 · ⭐ la linea che consegna 24/s con un secondo vuoto")
+    att_r1 = GRIGLIA_B76["raffica-1"]
+    giro_r1 = {"fps": 23.94, "consegna": {"esito": "misurato", "copertura": 0.96,
+                                          "buco_max_s": 1.00}}
+    giro_r1_fuori = {"fps": 3.0, "consegna": {"esito": "misurato",
+                                              "copertura": 0.5,
+                                              "buco_max_s": 8.0}}
+    lm_stallo = riduci_linea_morta([_fab_lm(causa="stallo")])
+    lm_stallo["chiuse_dal_trasporto"] = 1
+    verde &= caso("P-raffica1 verde · zero scatti e la linea sta nella griglia",
+                  True, p_non_deve_scattare("raffica-1", lm0, testimone_vivo,
+                                            giro_r1, 1, att_r1))
+    verde &= caso("P-raffica1 ROSSO · ⛔⛔ dichiarata morta una linea che "
+                  "consegna 24 fotogrammi/s", False,
+                  p_non_deve_scattare("raffica-1", lm_stallo, testimone_vivo,
+                                      giro_r1, 1, att_r1))
+    verde &= caso("P-raffica1 muto · il giro non e' quello della griglia", None,
+                  p_non_deve_scattare("raffica-1", lm0, testimone_vivo,
+                                      giro_r1_fuori, 1, att_r1))
+    verde &= caso("P-raffica1 muto · il cliente e' caduto per altro", None,
+                  p_non_deve_scattare("raffica-1", lm0, testimone_caduto,
+                                      giro_r1, 1, att_r1))
+
+    _inf("P-scena-ferma · ⛔⛔ il modo peggiore in cui la cura potrebbe fallire")
+    lm_scena = riduci_linea_morta([_fab_lm(causa="stallo", stallo_ms=1004,
+                                           soglia_stallo=1000, offerti=0,
+                                           usciti=0, coda_video=0)])
+    lm_scena["chiuse_dal_trasporto"] = 1
+    verde &= caso("P-scena-ferma verde · 120 s di desktop fermo a soglia 1000, "
+                  "zero scatti", True,
+                  p_scena_ferma_non_scatta(lm0, testimone_vivo, 120, 1000))
+    verde &= caso("P-scena-ferma ROSSO · ⛔⛔ butta fuori chi guarda un desktop "
+                  "fermo (offerti=0, coda_video=0)", False,
+                  p_scena_ferma_non_scatta(lm_scena, testimone_vivo, 120, 1000))
+    verde &= caso("P-scena-ferma muto · il cliente e' caduto per altro", None,
+                  p_scena_ferma_non_scatta(lm0, testimone_caduto, 120, 1000))
+    verde &= caso("P-scena-ferma muto · non ho letto il registro", None,
+                  p_scena_ferma_non_scatta(lmx, testimone_vivo, 120, 1000))
 
     _inf("P2 · lo scatto vero")
     sonda_raffica = {"esito": "misurato", "persi_pc": 11.10, "raffica_media": 5.5}
-    lm_p = riduci_linea_morta([_fab_lm(causa="perdita")])
+    lm_p = riduci_linea_morta([_fab_lm(causa="stallo")])
     lm_p["chiuse_dal_trasporto"] = 1
-    lm_p_senza_filo = riduci_linea_morta([_fab_lm(causa="perdita")])
+    lm_p_senza_filo = riduci_linea_morta([_fab_lm(causa="stallo")])
     lm_p_senza_filo["chiuse_dal_trasporto"] = 0
-    lm_s = riduci_linea_morta([_fab_lm(causa="silenzio", permille=0,
+    lm_s = riduci_linea_morta([_fab_lm(causa="silenzio", stallo_ms=800,
                                        silenzio_ms=10004, prove=3)])
     lm_s["chiuse_dal_trasporto"] = 1
     lm0["chiuse_dal_trasporto"] = 0
-    verde &= caso("P2 verde · scattata con causa=perdita e il filo e' caduto", True,
-                  p2_scatta_sulla_raffica(lm_p, sonda_raffica, 18.4))
+    verde &= caso("P2 verde · scattata con causa=stallo e il filo e' caduto", True,
+                  p2_scatta_sullo_stallo(lm_p, sonda_raffica, 18.4))
     verde &= caso("P2 ROSSO · non e' scattata su una linea che non si sa servire",
-                  False, p2_scatta_sulla_raffica(lm0, sonda_raffica, None))
-    verde &= caso("P2 ROSSO · scattata per il motivo sbagliato", False,
-                  p2_scatta_sulla_raffica(lm_s, sonda_raffica, 12.0))
+                  False, p2_scatta_sullo_stallo(lm0, sonda_raffica, None))
+    verde &= caso("P2 ROSSO · scattata per silenzio invece che per stallo", False,
+                  p2_scatta_sullo_stallo(lm_s, sonda_raffica, 12.0))
     verde &= caso("P2 ROSSO · decisa ma il filo NON e' caduto", False,
-                  p2_scatta_sulla_raffica(lm_p_senza_filo, sonda_raffica, 18.4))
+                  p2_scatta_sullo_stallo(lm_p_senza_filo, sonda_raffica, 18.4))
     verde &= caso("P2 muto · il guasto non e' stato messo", None,
-                  p2_scatta_sulla_raffica(lm_p, sonda_casa, 18.4))
+                  p2_scatta_sullo_stallo(lm_p, sonda_casa, 18.4))
     verde &= caso("P2 muto · la sonda non ha misurato", None,
-                  p2_scatta_sulla_raffica(lm_p, None, 18.4))
+                  p2_scatta_sullo_stallo(lm_p, None, 18.4))
 
     _inf("P3 · il silenzio")
     lm_presto = riduci_linea_morta([_fab_lm(causa="silenzio", silenzio_ms=6100)])
@@ -1735,7 +2015,7 @@ def certifica():
                   p3_scatta_sul_silenzio(lm_presto, LM_SILENZIO_S * 1000))
     verde &= caso("P3 ROSSO · scattata molto dopo la soglia (forma E1)", False,
                   p3_scatta_sul_silenzio(lm_tardi, LM_SILENZIO_S * 1000))
-    verde &= caso("P3 ROSSO · scattata per perdita e non per silenzio", False,
+    verde &= caso("P3 ROSSO · scattata per stallo e non per silenzio", False,
                   p3_scatta_sul_silenzio(lm_p, LM_SILENZIO_S * 1000))
     verde &= caso("P3 muto · il registro non l'ho letto", None,
                   p3_scatta_sul_silenzio(lmx, LM_SILENZIO_S * 1000))
@@ -1801,9 +2081,9 @@ def certifica():
                   False, p5b_la_riga_del_negato(riduci_sfratto([_fab_negato()])))
 
     _inf("P6 · ⛔ i predefiniti non cambiano niente (I6)")
-    spento = {"esito": "letto", "linea_morta": "spenta", "permille": None,
+    spento = {"esito": "letto", "linea_morta": "spenta", "stallo_ms": None,
               "silenzio_s": None, "sfratto_ms": 0, "righe": []}
-    acceso = {"esito": "letto", "linea_morta": "accesa", "permille": LM_PERMILLE,
+    acceso = {"esito": "letto", "linea_morta": "accesa", "stallo_ms": LM_STALLO_MS,
               "silenzio_s": LM_SILENZIO_S, "sfratto_ms": SFRATTO_CONSIGLIATO_MS,
               "righe": []}
     sf_vuoto = riduci_sfratto([_fab_preso()])
@@ -1843,13 +2123,13 @@ def certifica():
     _log("3 · LA GUARDIA — «il server e' configurato come questa prova crede?»")
     verde &= caso("cure ACCESE come le voglio", True,
                   cure_come_voglio(acceso, linea_morta="accesa",
-                                   permille=LM_PERMILLE,
+                                   stallo_ms=LM_STALLO_MS,
                                    sfratto_ms=SFRATTO_CONSIGLIATO_MS))
     verde &= caso("⛔ muto se la linea morta risulta SPENTA quando la volevo "
                   "accesa", None,
                   cure_come_voglio(spento, linea_morta="accesa"))
-    verde &= caso("⛔ muto se la soglia in vigore non e' quella che credo", None,
-                  cure_come_voglio(acceso, linea_morta="accesa", permille=1))
+    verde &= caso("⛔ muto se la soglia dello STALLO non e' quella che credo", None,
+                  cure_come_voglio(acceso, linea_morta="accesa", stallo_ms=1))
     verde &= caso("⛔ muto se la riga d'avvio non l'ho letta", None,
                   cure_come_voglio({"esito": "⛔ NON HO LETTO nessuna riga"},
                                    linea_morta="accesa"))
@@ -1937,8 +2217,9 @@ def accendi_server(opzioni, perche):
         _ko("⛔ il server non e' ripartito: %s" % testo[-400:])
         return False
     stato = stato_delle_cure()
-    _inf("il server dice di se': linea morta %s (%s‰, %s s) · sfratto %s ms"
-         % (stato["linea_morta"], stato["permille"], stato["silenzio_s"],
+    _inf("il server dice di se': linea morta %s (stallo %s ms, silenzio %s s) · "
+         "sfratto %s ms"
+         % (stato["linea_morta"], stato["stallo_ms"], stato["silenzio_s"],
             stato["sfratto_ms"]))
     # ⛔ Il palco e il monitor nascono col PRIMO cliente: senza, la scena non
     #    saprebbe dove disegnare (`09-b70.innesca_sessione`).
@@ -2093,8 +2374,14 @@ def stampa_scatti(lm):
     if lm.get("esito") != "letto":
         _dub("SCATTI  %s" % lm.get("esito"))
         return
-    _inf("SCATTI  %d riga/e `linea-morta` · %d chiusure dal trasporto"
-         % (lm["scatti"], lm.get("chiuse_dal_trasporto", 0)))
+    _inf("SCATTI  %d riga/e `linea-morta` · %d chiusure dal trasporto%s"
+         % (lm["scatti"], lm.get("chiuse_dal_trasporto", 0),
+            ("  ⇒ causa=%s stallo_ms=%s (soglia %s) offerti=%s usciti_byte=%s "
+             "coda_video=%s · testimone permille=%s"
+             % (lm.get("causa"), lm.get("stallo_ms"),
+                lm.get("soglia_stallo_ms"), lm.get("offerti"),
+                lm.get("usciti_byte"), lm.get("coda_video"),
+                lm.get("permille"))) if lm["scatti"] else ""))
     for r in lm.get("righe", [])[:3]:
         _inf("        %s" % r["riga"][:240])
 
@@ -2191,7 +2478,8 @@ def prova1(a):
     stato = stato_delle_cure()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa",
-                                  permille=LM_PERMILLE, silenzio_s=LM_SILENZIO_S)
+                                  stallo_ms=LM_STALLO_MS,
+                                  silenzio_s=LM_SILENZIO_S)
     (_ok if va else _dub)(perche)
     if va is not True:
         return _predica(v, "P1 · ⛔⛔ nessun falso positivo", _muto(perche))
@@ -2233,8 +2521,10 @@ def prova1(a):
     salva("p1", v)
     _predica(v, "P1 · ⛔⛔ NESSUN FALSO POSITIVO in %g minuti" % (a.secondi / 60.0),
              p1_niente_falso_positivo(lm, n["testimoni"], n2, a.secondi / 60.0))
-    _predica(v, "P1b · ⛔ la soglia sta sopra la frazione DICHIARATA",
-             p1b_soglia_sopra_la_dichiarata(fin, s))
+    # ⚠ La frazione DICHIARATA resta stampata come DIAGNOSI: e' il testimone
+    #   del riordino, ed e' il numero che ha refutato la cura vecchia.  ⛔ Ma
+    #   non giudica piu' niente, e infatti qui non c'e' nessun predicato che la
+    #   guardi: il margine lo misura la SCALA, con `p1b`.
     return v
 
 
@@ -2301,9 +2591,224 @@ def prova1_controllo(a):
                                               a.secondi / 60.0, scatti_accesa))
     # ⛔ E QUI si giudica la soglia, non nel giro acceso: e' l'unico giro che
     #    abbia abbastanza finestre perche' «non ha mai sfondato» sia una misura.
-    _predica(v, "P1b · ⛔ la soglia sta sopra la frazione DICHIARATA "
-             "(su %g minuti di linea che regge)" % (a.secondi / 60.0),
-             p1b_soglia_sopra_la_dichiarata(fin, s))
+    return v
+
+
+def scala_stallo(a, nome, secondi, soglie=None):
+    """⭐⭐ LA SCALA CHE BRACCA LO STALLO MASSIMO — ⇒ il riquadro di `p1b`.
+
+    ⛔ La riga `linea-morta` esce SOLO allo scatto: «non e' scattata» non dice
+       **di quanto**.  ⇒ Si ribatte lo stesso profilo con soglie sempre piu'
+       basse finche' una scatta, e allora il prodotto STAMPA il suo `stallo_ms`.
+
+    ⭐ E si scende, non si sale: il primo gradino che scatta e' quello che da' lo
+       stallo PIU' GRANDE misurabile, e sotto non serve andare.  ⚠ Ogni gradino
+       costa una riaccensione del server, quindi la scala e' corta apposta.
+
+    ⚠ E LA FINESTRA E' PIU' CORTA DI QUELLA DELLA PROVA 1, e va detto: qui si
+      misura lo stallo massimo dentro %g s, non dentro dieci minuti.  Il massimo
+      su dieci minuti non puo' essere piu' PICCOLO di questo, quindi il margine
+      che ne esce e' un LIMITE SUPERIORE — e l'unico numero che chiude davvero
+      la prova 1 resta lo zero-scatti sui dieci minuti.
+    """ % secondi
+    soglie = soglie or SCALA_STALLO_MS
+    gradini = []
+    p = profilo(nome)
+    for soglia in soglie:
+        if not accendi_server("--linea-morta --linea-morta-stallo-ms %d" % soglia,
+                              "scala dello stallo su «%s» — soglia %d ms"
+                              % (nome, soglia)):
+            gradini.append({"soglia_ms": soglia, "scattata": None,
+                            "perche": "il server non e' ripartito"})
+            break
+        stato = stato_delle_cure()
+        va, perche = cure_come_voglio(stato, linea_morta="accesa",
+                                      stallo_ms=soglia)
+        if va is not True:
+            _dub(perche)
+            gradini.append({"soglia_ms": soglia, "scattata": None,
+                            "perche": perche})
+            continue
+        with rete_guasta(B76._regole(p[1]), secondi + 400):
+            s_sonda, (pg, perche_g) = sonda(nome)
+            usc = B76.scena_accendi("barra")
+            if not usc:
+                gradini.append({"soglia_ms": soglia, "scattata": None,
+                                "perche": "la scena non e' partita"})
+                continue
+            riga0 = riga0_pulita()
+            n = B70.giro("scala-%s-%d" % (nome, soglia), "barra",
+                         B70.TELA_PIENA, secondi)
+            n["testimoni"] = B76.testimoni_connessione(riga0, n)
+            lm = leggi_linea_morta(riga0)
+            B76.scena_spegni()
+        fps, da_dove = fps_del_giro(n)
+        c = (n.get("consegna") or {})
+        stampa_scatti(lm)
+        # ⛔⛔ E UN GRADINO IN CUI IL GUASTO NON E' STATO MESSO NON E' UNA
+        #     PROVA — `[M]` 24 agosto 2026, trovato girando: su `raffica-1` un
+        #     gradino ha avuto lo 0,28 % di perdita invece dell'1 %, e senza
+        #     questa riga sarebbe finito nella scala come *«a 2000 ms non
+        #     scatta»* — cioe' un margine dimostrato su un profilo PIU' MITE di
+        #     quello che credo.  ⚠ E' la stessa forma di `p_guasto_messo`: un
+        #     numero vero con una causa inventata.
+        #     ⇒ `scattata=None` — «non lo so» — e `p1b` lo salta.
+        g = {"soglia_ms": soglia,
+             "scattata": (lm["scatti"] > 0) if pg is True else None,
+             "stallo_ms": lm.get("stallo_ms"), "causa": lm.get("causa"),
+             "offerti": lm.get("offerti"), "usciti_byte": lm.get("usciti_byte"),
+             "coda_video": lm.get("coda_video"), "permille": lm.get("permille"),
+             "fps": fps, "buco_max_s": c.get("buco_max_s"),
+             "copertura": c.get("copertura"),
+             "sonda_persi_pc": (s_sonda or {}).get("persi_pc"),
+             "guasto": perche_g}
+        gradini.append(g)
+        _inf("GRADINO soglia %d ms → %s · stallo_ms=%s · %s fotogrammi/s · buco "
+             "cliente %s s"
+             % (soglia,
+                "SCATTATA" if g["scattata"] else
+                ("niente" if g["scattata"] is False else
+                 "⛔ NON CONTA (il guasto non e' stato messo)"),
+                g["stallo_ms"], fps, g["buco_max_s"]))
+        if g["scattata"]:
+            # ⭐ Trovato il gradino che scatta: il suo `stallo_ms` e' il numero
+            #   piu' grande misurabile, e scendere ancora darebbe solo numeri
+            #   piu' piccoli.
+            break
+    return gradini
+
+
+def prova_margine(a, nome, soglie=None, etichetta=None):
+    """⭐⭐ IL MARGINE VERO — e senza di lui il verde non dice quanto ci e'
+       mancato.  ⇒ Il riquadro sopra `p1b_il_margine_dello_stallo`."""
+    _log("IL MARGINE — la scala che bracca lo stallo di «%s»" % nome)
+    v = _voci("%s · lo stallo massimo di %s" % (etichetta or "margine", nome),
+              profilo=nome, finestra_s=a.scala_s)
+    v["scala"] = scala_stallo(a, nome, a.scala_s, soglie)
+    salva("margine-%s" % nome, v)
+    _predica(v, "P1b · ⭐⭐ il MARGINE della soglia dello stallo su «%s»" % nome,
+             p1b_il_margine_dello_stallo(v["scala"], LM_STALLO_MS, nome))
+    return v
+
+
+def prova1_margine(a):
+    return prova_margine(a, "casa-cattiva", etichetta="1-margine")
+
+
+def prova_raffica1(a):
+    """⭐ IL CASO CHE TIENE ONESTA LA SOGLIA — e prima non c'era.
+
+    `raffica-1` e' la gemella esatta di `perdita-1`: stessa perdita media, ma a
+    GRAPPOLI.  `[M]` consegna **23,94 fotogrammi/s** — cioe' e' una sessione
+    perfettamente usabile — e ha comunque avuto **un secondo intero vuoto**.
+    ⇒ E' il numero su cui poggia il lato stretto della soglia dello stallo, e
+      se la cura scattasse qui la soglia sarebbe scritta su niente.
+    """
+    _log("PROVA 3-nuova · ⭐ `raffica-1` — 24 fotogrammi/s con un secondo vuoto")
+    print("   ⛔ NON deve scattare.  E' il caso che tiene onesta la soglia: una")
+    print("      linea perfettamente usabile che ha comunque un secondo a zero.")
+    v = _voci("3-nuova · raffica-1, il caso che tiene onesta la soglia",
+              profilo="raffica-1", secondi=a.corti)
+    stato = stato_delle_cure()
+    v["stato_cure"] = stato
+    va, perche = cure_come_voglio(stato, linea_morta="accesa",
+                                  stallo_ms=LM_STALLO_MS)
+    (_ok if va else _dub)(perche)
+    if va is not True:
+        return _predica(v, "P-raffica1", _muto(perche))
+    p = profilo("raffica-1")
+    with rete_guasta(B76._regole(p[1]), a.corti + 400) as riletta:
+        v["regola"] = riletta
+        s_sonda, (pg, perche_g) = sonda("raffica-1")
+        v["sonda"], v["guasto"] = s_sonda, {"passa": pg, "perche": perche_g}
+        usc = B76.scena_accendi("barra")
+        _inf("scena «barra» sul monitor %s" % usc)
+        riga0 = riga0_pulita()
+        n = B70.giro("p3n-raffica-1", "barra", B70.TELA_PIENA, a.corti)
+        n["testimoni"] = B76.testimoni_connessione(riga0, n)
+        lm = leggi_linea_morta(riga0)
+        fin = leggi_finestre(riga0)
+        B76.scena_spegni()
+    B70.stampa_giro(n)
+    B76.stampa_consegna(n)
+    B76.stampa_testimoni(n["testimoni"])
+    stampa_scatti(lm)
+    stampa_finestre(fin)
+    fps, da_dove = fps_del_giro(n)
+    _inf("RITMO   %s fotogrammi/s (%s)" % (fps, da_dove))
+    n2 = dict(n)
+    n2["fps"] = fps
+    v["fps"], v["scatti"], v["dichiarata"] = fps, lm, fin
+    v["giro"] = {k: n.get(k) for k in ("fps", "esito", "dal_cliente",
+                                       "secondi_veri", "consegna")}
+    salva("p3n-raffica1", v)
+    _predica(v, "P-raffica1 · ⭐ «raffica-1» REGGE e non va dichiarata morta",
+             p_non_deve_scattare("raffica-1", lm, n["testimoni"], n2,
+                                 a.corti / 60.0, GRIGLIA_B76["raffica-1"]))
+    # ⭐ E il margine anche qui: e' il lato STRETTO della soglia, quindi e' il
+    #   posto in cui un margine sottile farebbe piu' male.
+    v["scala"] = scala_stallo(a, "raffica-1", a.corti)
+    salva("p3n-raffica1", v)
+    _predica(v, "P1b · ⭐⭐ il MARGINE della soglia su «raffica-1» (lato stretto)",
+             p1b_il_margine_dello_stallo(v["scala"], LM_STALLO_MS, "raffica-1"))
+    return v
+
+
+def prova_scena_ferma(a, soglia_ms):
+    """⛔⛔ LA SCENA FERMA CON LA CURA ACCESA — il modo peggiore in cui questa
+       cura potrebbe fallire.  ⇒ Il riquadro sopra `p_scena_ferma_non_scatta`.
+
+    ⛔ Niente `netem`: qui il guasto non c'entra: il caso e' un desktop che non
+       cambia, cioe' il caso NORMALE di chi sta leggendo una pagina.  ⇒ Non
+       serve il lucchetto, e non lo si prende: e' della macchina, non mio.
+    """
+    _log("PROVA 4-nuova · ⛔⛔ LA SCENA FERMA con la cura accesa (soglia %d ms)"
+         % soglia_ms)
+    print("   `[M]` la scena ferma consegna 1 fotogramma in 30 s e poi zero:")
+    print("   `RecordVirtual` di Mutter da' solo sul CAMBIAMENTO.  ⛔ Se il conto")
+    print("   dello stallo partisse li', la cura butterebbe fuori chi guarda un")
+    print("   desktop fermo — e non a volte: dopo la soglia, ogni volta.")
+    v = _voci("4-nuova · la scena ferma (soglia %d ms)" % soglia_ms,
+              soglia_stallo_ms=soglia_ms, secondi=a.scena_s)
+    stato = stato_delle_cure()
+    v["stato_cure"] = stato
+    va, perche = cure_come_voglio(stato, linea_morta="accesa",
+                                  stallo_ms=soglia_ms)
+    (_ok if va else _dub)(perche)
+    if va is not True:
+        return _predica(v, "P-scena-ferma", _muto(perche))
+    # ⛔ La scena si SPEGNE, e si verifica che sia spenta: una scena rimasta
+    #    accesa farebbe passare questa prova per il motivo sbagliato.
+    B76.scena_spegni()
+    rc, out, _ = root("bash -c \"pgrep -u %d -f '04-b30-scena --uscita' | wc -l\""
+                      % UID_B)
+    v["scene_vive"] = out.strip()
+    if out.strip() not in ("0", ""):
+        return _predica(v, "P-scena-ferma",
+                        _muto("⚠ c'e' ancora una scena viva (%s): questo giro "
+                              "non e' «scena ferma»" % out.strip()))
+    _ok("nessuna scena viva: il desktop non cambia")
+    riga0 = riga0_pulita()
+    _inf("⏳ %g s di sessione a SCENA FERMA" % a.scena_s)
+    # ⛔ Senza traccia: qui non c'e' niente da ridurre — il punto e' proprio che
+    #    non arrivano fotogrammi — e un lettore che si rifiuta darebbe alla
+    #    prova la faccia di un guasto.
+    n = B70.giro("p4n-scena-ferma-%d" % soglia_ms, "ferma", B70.TELA_PIENA,
+                 a.scena_s, con_traccia=False)
+    n["testimoni"] = B76.testimoni_connessione(riga0, n)
+    lm = leggi_linea_morta(riga0)
+    B76.stampa_testimoni(n["testimoni"])
+    stampa_scatti(lm)
+    _inf("CLIENTE %s · %s s veri"
+         % (json.dumps(n.get("dal_cliente"), ensure_ascii=False),
+            n.get("secondi_veri")))
+    v["scatti"] = lm
+    v["giro"] = {k: n.get(k) for k in ("dal_cliente", "secondi_veri",
+                                       "testimoni")}
+    salva("p4n-scena-ferma-%d" % soglia_ms, v)
+    _predica(v, "P-scena-ferma · ⛔⛔ %g s di desktop FERMO, soglia %d ms"
+             % (a.scena_s, soglia_ms),
+             p_scena_ferma_non_scatta(lm, n["testimoni"], a.scena_s, soglia_ms))
     return v
 
 
@@ -2323,7 +2828,7 @@ def prova1_taratura(a):
               profilo="casa-cattiva")
     stato = stato_delle_cure()
     v["stato_cure"] = stato
-    va, perche = cure_come_voglio(stato, linea_morta="accesa", permille=1)
+    va, perche = cure_come_voglio(stato, linea_morta="accesa", stallo_ms=1)
     (_ok if va else _dub)(perche)
     if va is not True:
         return _predica(v, "taratura", _muto(perche))
@@ -2365,11 +2870,12 @@ def prova2(a):
     _log("PROVA 2 · LO SCATTO VERO — `raffica-forte`, e DEVE scattare")
     print("   `[M]` 11,10 % di perdita a raffiche: a cura spenta lo schermo resta")
     print("   fermo 14,26 s su 25 (griglia di 09-b76).  ⇒ La cura deve scattare,")
-    print("   con causa=perdita, e il filo deve cadere.")
+    print("   con causa=stallo, e il filo deve cadere.")
     v = _voci("2 · lo scatto vero", profilo="raffica-forte", secondi=a.corti)
     stato = stato_delle_cure()
     v["stato_cure"] = stato
-    va, perche = cure_come_voglio(stato, linea_morta="accesa", permille=LM_PERMILLE)
+    va, perche = cure_come_voglio(stato, linea_morta="accesa",
+                                  stallo_ms=LM_STALLO_MS)
     (_ok if va else _dub)(perche)
     if va is not True:
         return _predica(v, "P2 · lo scatto vero", _muto(perche))
@@ -2403,8 +2909,8 @@ def prova2(a):
     v["giro"] = {k: n.get(k) for k in ("fps", "esito", "dal_cliente",
                                        "secondi_veri", "consegna")}
     salva("p2", v)
-    _predica(v, "P2 · la cura SCATTA sulla raffica, con causa=perdita",
-             p2_scatta_sulla_raffica(lm, s, secondi))
+    _predica(v, "P2 · la cura SCATTA sulla raffica, con causa=stallo",
+             p2_scatta_sullo_stallo(lm, s, secondi))
     return v
 
 
@@ -2711,11 +3217,8 @@ def prova6(a, nome):
 #    misura, e `cure_come_voglio()` si rifiuta se il server non e' quella.
 CONFIGURAZIONI = {
     "A": ("--linea-morta",
-          "la LINEA MORTA accesa coi predefiniti (50‰, 10 s) e lo sfratto SPENTO "
-          "— prove 1, 2 e 3"),
-    "B": ("--linea-morta --linea-morta-permille 1",
-          "la linea morta con la soglia a 1‰ — la TARATURA della prova 1: a "
-          "quella soglia la cura scatta e STAMPA la frazione che ha calcolato lei"),
+          "la LINEA MORTA accesa coi predefiniti (stallo 5 000 ms, silenzio 10 s) "
+          "e lo sfratto SPENTO — prove 1, 2, 3, raffica-1 e scena ferma"),
     "C": ("--sfratto-ms %d" % SFRATTO_CONSIGLIATO_MS,
           "lo SFRATTO acceso e la linea morta SPENTA — prove 4 e 5, e la linea "
           "morta dev'essere spenta o il fantasma sparirebbe a 10 s per l'altra "
@@ -2729,7 +3232,8 @@ CONFIGURAZIONI = {
 def principale():
     p = argparse.ArgumentParser()
     p.add_argument("passo", nargs="?",
-                   choices=["terreno", "p1", "p1c", "p1t", "p2", "p3", "p4", "p5", "p6",
+                   choices=["terreno", "p1", "p1m", "p1c", "p1t", "p2", "p3",
+                            "pr1", "psf", "psani", "p4", "p5", "p6",
                             "tutte", "rimetti", "stato"])
     p.add_argument("--certifica", action="store_true",
                    help="⭐ il controllo positivo: prova che il banco sa vedere "
@@ -2740,6 +3244,15 @@ def principale():
     p.add_argument("--corti", type=int, default=60,
                    help="la finestra dei giri corti (prove 2 e 6)")
     p.add_argument("--taratura-s", type=int, default=40)
+    p.add_argument("--scala-s", type=int, default=120,
+                   help="la finestra dei gradini della scala dello stallo — ⚠ "
+                        "piu' corta di quella della prova 1, e il rapporto va "
+                        "detto")
+    p.add_argument("--scena-s", type=float, default=90.0,
+                   help="quanto dura la sessione a SCENA FERMA")
+    p.add_argument("--scena-soglia-stretta-ms", type=int, default=1000,
+                   help="⭐ la soglia dello stallo con cui si riprova la scena "
+                        "ferma: se il conto non parte a 1 s, non parte mai")
     p.add_argument("--orologio-s", type=float, default=60.0,
                    help="quanto dura la misura del traffico a sessione ferma")
     p.add_argument("--attesa-scatto", type=float, default=45.0,
@@ -2784,6 +3297,18 @@ def principale():
         _ok("il terreno c'e', ed e' mio")
         return 0
 
+    def configura_stallo(ms):
+        """⛔ Una configurazione fuori catalogo, e per un caso solo: la scena
+           ferma con la soglia stretta.  ⚠ `cure_come_voglio()` la ricontrolla
+           dentro la prova, come tutte le altre."""
+        if a.salta_riaccensione:
+            _dub("⚠ NON riaccendo il server (--salta-riaccensione)")
+            return True
+        return accendi_server(
+            "--linea-morta --linea-morta-stallo-ms %d" % ms,
+            "la linea morta con la soglia dello stallo STRETTA a %d ms — la "
+            "scena ferma col coltello dalla parte del manico" % ms)
+
     def configura(chiave):
         if a.salta_riaccensione:
             _dub("⚠ NON riaccendo il server (--salta-riaccensione): mi fido di "
@@ -2802,17 +3327,36 @@ def principale():
         #       l'ordine e' un risparmio, non una garanzia.
         tutte = (a.passo == "tutte")
         # ── configurazione A: la linea morta accesa coi predefiniti ────────
-        if a.passo in ("p1", "p2", "p3", "tutte"):
+        if a.passo in ("p1", "p2", "p3", "pr1", "psf", "tutte"):
             if configura("A"):
                 if a.passo in ("p1", "tutte"):
                     esiti.append(prova1(a))
                 if a.passo in ("p2", "tutte"):
                     esiti.append(prova2(a))
+                if a.passo in ("pr1", "tutte"):
+                    esiti.append(prova_raffica1(a))
+                if a.passo in ("psf", "tutte"):
+                    # ⛔ La scena ferma alla soglia IN VIGORE…
+                    esiti.append(prova_scena_ferma(a, LM_STALLO_MS))
                 if a.passo in ("p3", "tutte"):
                     esiti.append(prova3(a, acceso=True))
-        # ── configurazione B: la taratura della frazione dichiarata ────────
-        if a.passo in ("p1t", "tutte"):
-            if configura("B"):
+        # ── e la scena ferma col coltello dalla parte del manico: la stessa
+        #    prova con una soglia MOLTO piu' stretta.  Se il conto non parte
+        #    li', non parte a nessuna soglia.
+        if a.passo in ("psf", "tutte"):
+            if configura_stallo(a.scena_soglia_stretta_ms):
+                esiti.append(prova_scena_ferma(a, a.scena_soglia_stretta_ms))
+        # ── il MARGINE della prova 1: la scala che bracca lo stallo massimo ─
+        if a.passo in ("p1m", "tutte"):
+            esiti.append(prova1_margine(a))
+        # ── ⭐ e il quarto numero del rapporto: lo stallo dei profili SANI.
+        #    ⛔ Non si deduce da `casa-cattiva`: «una linea sana non puo' fare
+        #    peggio» e' un ragionamento, e il rapporto chiede una misura.
+        if a.passo in ("psani", "tutte"):
+            esiti.append(prova_margine(a, RIFERIMENTO_SANO, [1000, 500],
+                                       etichetta="sani"))
+        if a.passo == "p1t":
+            if configura("A"):
                 esiti.append(prova1_taratura(a))
         # ── configurazione C: lo sfratto acceso, la linea morta SPENTA ─────
         if a.passo in ("p4", "p5", "tutte"):
