@@ -182,6 +182,39 @@ static void aiuto(const char *nome)
 	        "                    serbatoio si derivano da li'.  0 = spento, e\n"
 	        "                    allora nessuno dice di no alla banda.  ⛔ Vive\n"
 	        "                    nel FIGLIO, e vale solo in hardware\n"
+	        "  --sfratto-ms N    ⭐ il FANTASMA: se il posto di un utente e'\n"
+	        "                    occupato da un client che tace da piu' di N\n"
+	        "                    ms, e a chiedere quel posto e' un client\n"
+	        "                    dello STESSO utente, il posto gli viene tolto\n"
+	        "                    e va a chi arriva.  Senza, il posto si libera\n"
+	        "                    solo all'orologio del silenzio (30 s), e chi\n"
+	        "                    rientra dopo una caduta si sente dire «hai\n"
+	        "                    gia' una sessione attiva altrove» — che e'\n"
+	        "                    LUI.  0 = spento.  Consigliato quando si\n"
+	        "                    accende: 15000, cioe' meta' del silenzio (sotto\n"
+	        "                    si rischia di sfrattare un client vivo e fermo:\n"
+	        "                    il keep-alive del browser tace 15 s)\n"
+	        "  --linea-morta     ⛔⭐ LA LINEA MORTA, e nasce SPENTA: accesa,\n"
+	        "                    una sessione viene CHIUSA quando la linea non\n"
+	        "                    si puo' piu' servire — il filo cade e si\n"
+	        "                    rientra a mano (decisione dell'utente, 23 ago\n"
+	        "                    2026).  DUE cause: la PERDITA oltre soglia per\n"
+	        "                    due finestre di fila, e il SILENZIO del client.\n"
+	        "                    Ogni scatto scrive nel registro una riga\n"
+	        "                    `linea-morta` coi numeri su cui ha deciso (I1)\n"
+	        "  --linea-morta-permille N\n"
+	        "                    la soglia della perdita in MILLESIMI di\n"
+	        "                    pacchetti spediti.  Predefinito 50 (5,0 %%):\n"
+	        "                    2,9 volte sopra l'1,71 %% che REGGE e 2,2 volte\n"
+	        "                    sotto l'11,10 %% che non serve nessuno, `[M]`\n"
+	        "                    23 ago 2026.  0 = solo il silenzio\n"
+	        "  --linea-morta-silenzio-s N\n"
+	        "                    i secondi senza un pacchetto dal client.\n"
+	        "                    Predefinito 10.  ⚠ Accende anche i PING del\n"
+	        "                    trasporto a META' di questo numero, o «non\n"
+	        "                    risponde» e «non gli abbiamo chiesto niente»\n"
+	        "                    avrebbero la stessa faccia.  0 = solo la\n"
+	        "                    perdita\n"
 	        "\n"
 	        "  ⛔ `--figlio-interno` NON si batte a mano: e' la riga con cui\n"
 	        "     questo stesso binario riparte come figlio di un utente\n"
@@ -546,6 +579,16 @@ static uint32_t tetto_banda_mbit;   /* --tetto-banda-mbit, 0 = spento    */
  *     invece di lasciar misurare un anello morto (`webtransport.c`,
  *     `wt_ritmo_adattivo()`). */
 static bool ritmo_adattivo;         /* --ritmo-adattivo, assente = spento */
+/* ⛔⭐⭐ E LA QUINTA, che e' di un'altra specie: le altre quattro cambiano
+ *      QUANTO BENE si vede, questa decide se la sessione ESISTE ancora.
+ *      Decisione dell'utente del 23 agosto 2026: una linea che perde a raffiche
+ *      non si serve, si dichiara morta — il filo cade e si rientra a mano.
+ * ⛔ I due numeri partono dai predefiniti di `webtransport.h`, che sono l'unica
+ *    copia; le opzioni servono al banco, che deve poterli muovere senza
+ *    ricompilare. */
+static bool linea_morta;            /* --linea-morta, assente = spenta   */
+static unsigned linea_morta_permille = WT_LM_PERMILLE;
+static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
@@ -983,6 +1026,20 @@ int main(int argc, char **argv)
 		 *     ⚠ `0` = spento, e allora nessuna sessione viene mai chiusa da se'. */
 		else if (strcmp(a, "--abbandono-s") == 0 && v)
 			abbandono_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
+		/* ⛔⭐⭐ FASE 9 — LO SFRATTO DEL FANTASMA, e sta accanto agli orologi
+		 *      perche' e' della loro famiglia, ma NON e' un quarto orologio:
+		 *      non scatta da solo, scatta solo quando un client dello stesso
+		 *      utente sta chiedendo quel posto.
+		 *
+		 * ⚠ IN MILLISECONDI e non in secondi, e per la ragione opposta a
+		 *   `--inattivita-s`: qui i numeri che contano stanno sotto il secondo
+		 *   (quanto tace un client vivo fra due keep-alive) e un'unita' da un
+		 *   secondo non saprebbe dirli.
+		 *
+		 * ⛔ `0` = SPENTO, ed e' il predefinito: invariante I6, e senza questa
+		 *    opzione il comportamento e' quello di ieri byte per byte. */
+		else if (strcmp(a, "--sfratto-ms") == 0 && v)
+			rcp_sfratto_imposta((uint64_t)strtoull(argv[++i], NULL, 10));
 		/* ⛔⭐ FUNZIONE DI BANCO — fase 7: un tono di prova al posto dell'audio
 		 *     della sessione.  ⚠ Serve a mettere in prova il codificatore, il
 		 *     datagram e il browser con un segnale noto **campione per
@@ -1032,6 +1089,23 @@ int main(int argc, char **argv)
 		 *    cosi' nessuno misura un anello morto credendolo vivo. */
 		else if (strcmp(a, "--ritmo-adattivo") == 0)
 			ritmo_adattivo = true;
+		/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, decisione dell'utente del 23 agosto
+		 *      2026: una linea che perde a raffiche non si serve, si dichiara
+		 *      morta — il filo cade e l'utente rientra a mano.
+		 *
+		 * ⛔ E' l'interruttore piu' visibile del prodotto: BUTTA FUORI UNA
+		 *    SESSIONE.  Nasce spento (I6) e senza discussione: l'utente lo
+		 *    guarda sul desktop vero prima che diventi il comportamento
+		 *    normale.  ⚠ I due numeri hanno un'opzione ciascuno perche' il
+		 *    banco deve poterli muovere senza ricompilare — e sono l'UNICA
+		 *    strada, niente variabili d'ambiente (la ragione sta accanto a
+		 *    `wt_sgombra_soglia()`: due strade sono due numeri che divergono). */
+		else if (strcmp(a, "--linea-morta") == 0)
+			linea_morta = true;
+		else if (strcmp(a, "--linea-morta-permille") == 0 && v)
+			linea_morta_permille = (unsigned)strtoul(argv[++i], NULL, 10);
+		else if (strcmp(a, "--linea-morta-silenzio-s") == 0 && v)
+			linea_morta_silenzio_s = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -1119,6 +1193,20 @@ int main(int argc, char **argv)
 	              (unsigned long long)(abbandono_ms / 1000),
 	              abbandono_ms ? "" : " (SPENTO)");
 
+	/* ⛔⭐ E LO SFRATTO SI DICHIARA SEMPRE, acceso E spento — come la soglia
+	 *     della coda video e al contrario del tono di prova: qui «spento» non
+	 *     e' rumore, e' il fatto che chi legge il registro dopo un
+	 *     `GIA_ATTIVA_REMOTA` deve poter sapere subito. */
+	registro_dice(REG_AVVIO,
+	              "⭐ fase 9 — sfratto del fantasma: soglia %llu ms%s "
+	              "(--sfratto-ms; consigliato %llu, cioe' meta' dell'orologio "
+	              "del silenzio).  Quando e' acceso, il posto di un client che "
+	              "tace da piu' della soglia va a un client dello STESSO utente "
+	              "che lo chieda — ⛔ mai fra utenti diversi",
+	              (unsigned long long)rcp_sfratto(),
+	              rcp_sfratto() ? "" : " (SPENTO)",
+	              (unsigned long long)rcp_sfratto_consigliato());
+
 	/* ⛔ E il tono di prova si dichiara QUI, prima di ogni sessione: un server
 	 *    che suonasse un tono senza dirlo sarebbe un difetto travestito da
 	 *    funzione.  ⚠ `wt_audio_prova()` scrive la sua riga solo quando e'
@@ -1148,6 +1236,13 @@ int main(int argc, char **argv)
 	 *    stessa ragione: un regolatore spento e un regolatore che non ha mai
 	 *    dovuto scattare producono lo stesso registro, cioe' nessuna riga. */
 	wt_ritmo_adattivo(ritmo_adattivo);
+
+	/* ⛔⭐⭐⭐ E LA LINEA MORTA, e si chiama SEMPRE — accesa e spenta — per la
+	 *       stessa ragione delle due qui sopra, con un peso in piu': questa non
+	 *       fa vedere l'immagine peggio, CHIUDE LA SESSIONE.  Una sessione che
+	 *       sparisce senza una riga che dica se la cura era accesa e con quali
+	 *       numeri e' indistinguibile da un difetto nostro. */
+	wt_linea_morta(linea_morta, linea_morta_permille, linea_morta_silenzio_s);
 
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di

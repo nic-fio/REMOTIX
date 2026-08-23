@@ -27,7 +27,42 @@
 
 /* ⛔ 30 s, imposto dal server (`RCP.md` §2.2): «e' l'orologio del silenzio:
  *    scaduto, il client e' staccato».  ⚠ E' l'orologio del TRASPORTO — quello
- *    di `SPECIFICHE.md` §5.3 — non un battito applicativo, che §2.2 vieta. */
+ *    di `SPECIFICHE.md` §5.3 — non un battito applicativo, che §2.2 vieta.
+ *
+ * ⛔⛔⭐ E NON SCENDE A 10 s — 23 agosto 2026, e la domanda era dell'utente:
+ *      *«se in 10 secondi non arrivano piu' pacchetti la connessione e'
+ *      morta»*.  ⇒ La regola si fa, ma NON QUI.  Quattro ragioni, in ordine di
+ *      gravita', e la prima da sola basterebbe:
+ *
+ *      1. ⛔ QUESTO NUMERO NON E' NOSTRO: E' NEGOZIATO.  `max_idle_timeout` e'
+ *         un parametro di trasporto e RFC 9000 §10.1 dice che vale il MINIMO
+ *         fra i due annunciati `[S]`.  ⇒ Mettendo 10 qui, il tempo di
+ *         inattivita' scende a 10 s ANCHE PER IL CLIENT: sarebbe il browser a
+ *         mollare NOI dopo 10 s di nostro silenzio.  ⚠ E il nostro silenzio
+ *         esiste ed e' misurato — `[M]` 23 agosto, l'immagine ferma fino a
+ *         **14,26 s** sotto `raffica-forte`: il prodotto si ucciderebbe da
+ *         solo, in un caso in cui la linea magari regge ancora.
+ *      2. ⛔ E' NORMATIVO: §2.2 e §5.3 dicono 30 s, e su quel numero poggia una
+ *         decisione dell'utente — «chi tace e' staccato, chi arriva entra»
+ *         (`DECISIONI.md` §4.4), col prezzo dichiarato «dal telefono si entra
+ *         dopo trenta secondi».  A 10 s cambierebbe il PRODOTTO, non un tempo.
+ *      3. ⚠ NON SAREBBE NEMMENO 10 s: ngtcp2 fa scadere a `max(idle, 3·PTO)`
+ *         `[S]`, quindi il numero scritto e quello in vigore divergerebbero —
+ *         la forma E1.
+ *      4. ⚠ E i PING del trasporto di §4.6 escono ogni 10 s
+ *         (`webtransport.c`): un tetto di 10 s e la sveglia che lo rinnova
+ *         cadrebbero nello stesso istante, e chi vince e' il caso.
+ *
+ * ⇒ DOVE VANNO I 10 s DELL'UTENTE: in `webtransport.c`, dentro
+ *   `linea_morta_giudica()`, dove la grandezza e' *«quanti pacchetti NOSTRI
+ *   sono usciti senza che ne tornasse uno»* e il tempo e' solo la finestra in
+ *   cui si guarda.  ⭐ Li' e' UNILATERALE — stacca noi, non insegna al client a
+ *   mollare — sta dietro l'interruttore `--linea-morta` (I6), e scrive nel
+ *   registro i numeri su cui ha deciso.  Il caso A5 del piano (la scheda in
+ *   secondo piano) resta servito: il browser risponde ai nostri PING dal
+ *   processo di rete anche quando la pagina e' rallentata, e `[M]` l'11 agosto
+ *   2026 sono stati misurati undici minuti in secondo piano con zero stacchi.
+ */
 #define IDLE_MS 30000
 
 typedef struct connessione {
@@ -1022,6 +1057,44 @@ void trasporto_scaduti(trasporto *t)
 		 *    sul filo; qui non esce niente. */
 		if (wt_battito_ns(c->w) <= ora)
 			wt_batti(c->w, ora);
+
+		/* ⛔⭐⭐ FASE 9 — LA LINEA MORTA, e la fa cadere QUI perche' la
+		 *      connessione QUIC e' di questo file: `webtransport.c` ha i
+		 *      contatori e prende la decisione (con la sua riga di registro),
+		 *      questo pezzo la esegue.
+		 *
+		 * ⛔ Si manda UN `CONNECTION_CLOSE` e si chiude — lo stesso ripiego
+		 *    dichiarato della lettura fallita, cento righe piu' su: il prodotto
+		 *    dovrebbe entrare nel periodo di chiusura e ritrasmetterlo per tre
+		 *    RTT.  ⚠ Qui costa meno che altrove: per ipotesi la linea non
+		 *    porta, e quel pacchetto e' un tentativo, non una promessa.  Se non
+		 *    arriva, il client se ne accorge col SUO tempo di inattivita'.
+		 *
+		 * ⚠ E il motivo NON e' un codice RCP: `webtransport.c` ha gia' scritto
+		 *   `H3_NO_ERROR` con la ragione in chiaro dentro `c->ultimo_errore`,
+		 *   e §9 vieta di inventare un motivo nuovo di §8.2 dentro RCP/1. */
+		if (c->w && wt_linea_morta_scattata(c->w)) {
+			uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+			ngtcp2_pkt_info opi;
+			ngtcp2_path_storage ps;
+			ngtcp2_ssize n;
+			ngtcp2_path_storage_zero(&ps);
+			memset(&opi, 0, sizeof opi);
+			n = ngtcp2_conn_write_connection_close(
+				c->conn, &ps.path, &opi, buf, sizeof buf, &c->ultimo_errore,
+				ora);
+			if (n > 0)
+				manda(t, (const struct sockaddr *)&c->remoto, c->remotolen, buf,
+				      (size_t)n);
+			registro_dice(REG_QUIC,
+			              "⛔ %s: LINEA MORTA — la connessione QUIC si chiude "
+			              "(un solo CONNECTION_CLOSE, %s).  Il perche', coi "
+			              "numeri, e' nella riga `linea-morta` qui sopra",
+			              c->provenienza,
+			              n > 0 ? "spedito" : "⚠ nemmeno spedito");
+			c->morta = true;
+			continue;
+		}
 
 		if (ngtcp2_conn_get_expiry2(c->conn) <= ora) {
 			int rv = ngtcp2_conn_handle_expiry(c->conn, ora);

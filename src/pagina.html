@@ -707,7 +707,20 @@ const MOTIVO = {
   0x0C: "il server si sta spegnendo",
   0x0D: "tempo scaduto durante la stretta di mano",
   0x0E: "quella sessione non si puo' servire",
-  0x0F: "quell'utente e' gia' collegato da un altro dispositivo",
+  /* ⛔⭐ 23 agosto 2026 — LA FRASE DI PRIMA ERA UNA DIAGNOSI CHE IL SERVER NON
+     PUO' FARE.  Diceva «quell'utente e' gia' collegato da un altro
+     dispositivo», e `[M]` nel caso piu' frequente e' **falsa**: quella sessione
+     e' la SUA, ed e' morta un attimo prima — il filo e' caduto, il telefono e'
+     entrato in galleria.  Il posto resta occupato dal fantasma per 30,5 s
+     (`SILENZIO`), e in quei secondi all'utente si dice che la colpa e' di un
+     altro apparecchio (`fasi/09` §17.5, `DECISIONI.md` §3.1-quinquies).
+     ⛔ Il server non sa distinguere i due casi: non sa se l'altro client e' un
+     altro dispositivo o e' lo stesso utente appena caduto.  ⇒ La frase dice
+     quel che il server SA — il posto risulta occupato — e da' il gesto.
+     ⚠ E il gesto conta piu' della diagnosi: dopo la decisione del 23 agosto
+     (§3.1-quater) una linea che perde a raffiche fa cadere il filo e si rientra
+     A MANO, quindi questa e' la prima frase che l'utente incontra rientrando. */
+  0x0F: "il posto di questa sessione risulta occupato da un altro client — se eri tu e sei appena caduto, riprova fra qualche secondo",
   /* ⭐ §7.6 e `DECISIONI.md` §4.1-quater, 15 agosto 2026.  ⛔ La frase e' DIVERSA
      da quella di `0x01`, e la differenza e' tutta la decisione: `0x01` dice «ti
      sei staccato» e promette che riattaccando ritrovi tutto; questa dice che la

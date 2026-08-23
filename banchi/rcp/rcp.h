@@ -583,6 +583,28 @@ void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms);
 void rcp_inattivita_imposta(uint64_t ms);
 uint64_t rcp_inattivita(void);
 
+/* ⛔⭐⭐ LO SFRATTO DEL FANTASMA — fase 9, 23 agosto 2026.  ⚠ NON e' un quarto
+ *      orologio di §5.3: e' una scorciatoia dentro il primo, e scatta SOLO
+ *      quando un client dello stesso utente sta chiedendo quel posto.
+ *
+ * Se l'occupante di un posto tace da piu' di questa soglia, il posto gli viene
+ * tolto e va a chi arriva; l'occupante finisce nello stesso stato in cui lo
+ * mette il silenzio dei trenta secondi (`staccata`), e se torna a parlare se lo
+ * sente dire con `0x0F` — e quella volta la frase e' vera.
+ *
+ * ⛔ `0` = SPENTO, ed e' il predefinito (invariante I6): senza questa chiamata
+ *    il server si comporta come prima, byte per byte.
+ * ⚠ Il valore CONSIGLIATO lo da' `rcp_sfratto_consigliato()` — 15 000 ms, cioe'
+ *   meta' dell'orologio del silenzio — e la ragione (il keep-alive del browser,
+ *   `[M]` 15 s) sta nel riquadro sopra `SFRATTO_PREDEFINITO` in `rcp.c`.  Sotto
+ *   quel numero si rischia di sfrattare un client VIVO e fermo, cioe' di
+ *   spegnere l'invariante I2.
+ * ⛔ Chi cuce DEVE scrivere nel registro il valore in vigore, acceso o spento:
+ *   una soglia che nessuno puo' leggere e' la forma E1. */
+void rcp_sfratto_imposta(uint64_t ms);
+uint64_t rcp_sfratto(void);
+uint64_t rcp_sfratto_consigliato(void);
+
 /* ⛔ Azzera il registro delle sessioni attive.  Serve SOLO al banco, fra una
  * prova e l'altra: in un server vero non lo chiama nessuno. */
 void rcp_azzera_registro_sessioni(void);

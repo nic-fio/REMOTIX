@@ -500,6 +500,61 @@ uint64_t wt_sgombra_soglia_letta(void);
 void wt_ritmo_adattivo(bool acceso);
 
 /*
+ * ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e nasce SPENTA (invariante I6).
+ *
+ *       Accesa, una sessione viene CHIUSA — il filo cade e l'utente rientra a
+ *       mano — quando succede una di due cose, e ognuna si scrive nel registro
+ *       coi numeri su cui ha deciso (I1):
+ *
+ *         · PERDITA: `pkt_lost / pkt_sent` ≥ `permille` per due finestre di
+ *           fila da almeno un secondo e almeno 200 pacchetti spediti;
+ *         · SILENZIO: `silenzio_s` secondi senza un pacchetto dal client, con
+ *           almeno due pacchetti nostri usciti nel frattempo.
+ *
+ * ⛔ LA GRANDEZZA E' UN FATTO OSSERVABILE, non un orologio: sono due contatori
+ *    di `ngtcp2_conn_info`, locali a chi manda, ed e' la forma della famiglia
+ *    P8→P20 (`RCP.md:398`).  Il tempo entra SOLO come finestra di osservazione.
+ *
+ * ⛔⛔ E' LA COSA PIU' VISIBILE CHE IL PRODOTTO SAPPIA FARE — butta fuori una
+ *      sessione.  ⇒ I6 alla lettera: nasce spenta, l'utente la guarda sul
+ *      desktop vero prima che diventi il comportamento normale, e il valore in
+ *      vigore si scrive all'avvio in TUTT'E DUE i casi.
+ *
+ * ⚠ La derivazione del 5,0 % — i due margini, 2,9× sopra l'1,71 % che regge e
+ *   2,2× sotto l'11,10 % che non serve nessuno — sta per intero nel riquadro
+ *   sopra `WT_LM_PERMILLE` in `webtransport.c`, con le misure del 23 agosto
+ *   2026 accanto.
+ *
+ * ⚠⚠ E ACCESA CAMBIA ANCHE I PING DEL TRASPORTO: passano da 10 s a meta' della
+ *     soglia del silenzio (5 s coi predefiniti), o «il client non risponde» e
+ *     «al client non abbiamo ancora chiesto niente» avrebbero la stessa faccia.
+ *
+ *   Le opzioni sono `--linea-morta` (senza argomento, assente = spenta),
+ *   `--linea-morta-permille N` (predefinito 50 = 5,0 %; 0 = solo il silenzio) e
+ *   `--linea-morta-silenzio-s N` (predefinito 10; 0 = solo la perdita).
+ */
+/* ⛔ I DUE PREDEFINITI, E CE N'E' UNA COPIA SOLA: stanno qui perche' `main.c` ci
+ *    inizializza le sue variabili e li passa a `wt_linea_morta()`.  Con un
+ *    numero scritto due volte «il predefinito del server» e «il predefinito del
+ *    trasporto» diventano due cose diverse il giorno che uno dei due si tara.
+ * ⚠ La DERIVAZIONE del 50‰ — i due margini misurati — sta nel riquadro sopra
+ *   `linea_morta_giudica()` in `webtransport.c`, e non si duplica qui. */
+#define WT_LM_PERMILLE 50u   /* 5,0 % dei pacchetti spediti */
+#define WT_LM_SILENZIO_S 10u /* i 10 s dell'utente          */
+
+void wt_linea_morta(bool accesa, unsigned permille, uint64_t silenzio_s);
+
+/*
+ * ⛔ «Questa connessione va staccata»: la chiede `trasporto.c` a ogni passata
+ *    dei tempi scaduti.  ⚠ La decisione la prende `webtransport.c`, che ha i
+ *    contatori; a farla avvenire e' il trasporto, che e' l'unico che possieda
+ *    la connessione QUIC — la sessione WebTransport non c'entra, perche' la
+ *    strada di `RCP.md` §3.1 punto 3 aspetta che la coda si svuoti su una linea
+ *    che per ipotesi non porta piu'.
+ */
+bool wt_linea_morta_scattata(const wt *w);
+
+/*
  * ⭐⭐ LA CUCITURA DELL'AUDIO — la gemella di `wt_video_gancio`.
  *
  *     Chi sa che una sessione ha negoziato un codec audio: `rcp.c` (§4.3).

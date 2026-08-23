@@ -262,6 +262,90 @@ enum {
  *   punto in cui RCP.md ammette due letture. */
 #define SILENZIO 30000
 
+/* ⛔⛔⭐⭐ LO SFRATTO DEL FANTASMA — 23 agosto 2026, fase 9, e NON e' un
+ *        orologio nuovo di §5.3: e' una scorciatoia dentro il primo.
+ *
+ * ⛔ IL FATTO, misurato.  `[M]` 23 agosto (`banchi/09-b78-apertura.py`): l'unico
+ *    modo in cui un'apertura di sessione fallisce davvero sotto perdita e'
+ *    `ATTACCA` → `CONGEDO(0x0F)`.  Ucciso il client con `-9` — cioe' un addio
+ *    MAI DETTO, che per il server e' identico a un addio PERSO — si contano
+ *    **undici rifiuti di fila, e il posto torna libero a +30,5 s**: cioe'
+ *    `SILENZIO`.  ⛔ E il riquadro qui sopra DICHIARA che quell'orologio «fa
+ *    sparire il caso "il telefono e' morto in galleria"».  Non lo fa sparire:
+ *    lo **dura trenta secondi**, e in quei trenta secondi la frase che l'utente
+ *    legge — «hai gia' una sessione attiva altrove» — parla della SUA sessione,
+ *    morta un attimo prima.
+ *
+ * ⛔⛔ E LA DECISIONE DEL REGISTA DEL 23 AGOSTO LO RENDE IL CASO NORMALE, non
+ *      piu' l'incidente: su rete cattiva **il filo cade e l'utente rientra a
+ *      mano**.  Chi rientra a mano trova il proprio fantasma che gli nega il
+ *      posto, e su una linea che perde a raffiche lo trova ogni volta. ⇒ Questa
+ *      cura e' il prerequisito di quella decisione, non un di piu'.
+ *
+ * ⛔ PERCHE' NON SI E' ABBASSATO `SILENZIO` — la strada (a), scartata su una
+ *    misura e non su un'opinione.  A 10 s si romperebbe il caso che il 16
+ *    agosto 2026 e' costato la riparazione dei due orologi: `[M]` su una scena
+ *    ferma, fra due pacchetti autenticati del BROWSER passano **15004, 15005,
+ *    15002 ms** — il suo keep-alive, che non e' nostro.  Un tetto a 10 s
+ *    staccherebbe **ogni** client che guarda e non tocca, a ogni giro di
+ *    keep-alive, e la riga di `rcp_segno_di_vita()` che avverte a `SILENZIO/2`
+ *    passerebbe da 15 s a 5 s, cioe' urlerebbe su ogni sessione sana.  ⇒ Non e'
+ *    un numero con un mestiere solo: ne governa tre (il posto, il rilascio di
+ *    §7.3 al distacco, e la soglia dell'avviso).  Resta 30.
+ *
+ * ⭐ LA STRADA SCELTA, (b): il posto si puo' TOGLIERE PRIMA, ma solo a chi ha
+ *    tutt'e tre queste cose insieme —
+ *      1. e' il posto **dello stesso utente** che sta chiedendo di entrare
+ *         (⛔ fra utenti diversi sarebbe un buco di sicurezza, non una
+ *         comodita': vedi il controllo esplicito in `tratta_attacca()`);
+ *      2. tace da piu' di `sfratto_ms`;
+ *      3. e qualcuno **sta chiedendo** quel posto — non scatta da solo, cosi'
+ *         una sessione sola non viene mai toccata da questa regola.
+ *
+ * ⭐ E NON CONTRADDICE `RCP.md` §8.2 — *«nessun client attaccato e vivo viene
+ *    mai spodestato»* — la APPLICA: l'occupante qui e' attaccato ma **non
+ *    vivo**, e fino a oggi l'unico orologio che sapesse distinguere le due cose
+ *    era quello da trenta secondi.  ⚠ Va scritto qui, o il prossimo che legge
+ *    credera' che §8.2 sia stata violata.
+ *
+ * ⚠⚠ IL PREZZO, ED E' IL MOTIVO DEL VALORE PREDEFINITO.  L'unica cosa che
+ *    distingue «morto» da «vivo e fermo» e' quanto tace, e quanto tace un
+ *    client VIVO non lo decidiamo noi: lo decide il keep-alive del suo browser,
+ *    `[M]` 15 s.  ⇒ Una soglia sotto i 15 s farebbe vincere il secondo
+ *    dispositivo quasi sempre — cioe' spegnerebbe l'invariante I2 su ogni
+ *    scrivania ferma, e darebbe a chi ha rubato la parola d'ordine il modo di
+ *    buttare fuori l'utente vero, che oggi `0x0F` gli impedisce.  Per questo il
+ *    predefinito e' `SILENZIO / 2`: e' il punto oltre il quale non abbiamo MAI
+ *    misurato un client vivo, ed e' lo stesso numero a cui `rcp_segno_di_vita()`
+ *    scrive gia' «il margine si sta assottigliando».  Un numero, un significato.
+ *
+ * ⭐ LA CURA VERA STA ALTROVE, e va detta: se il server mandasse i PING anche a
+ *    sessione attiva (`FASI.md` §05-la-sessione §6-bis, `src/webtransport.c` —
+ *    NON questo file), `ultima_vita` di un client vivo non sarebbe mai piu'
+ *    vecchia di un paio di secondi, e questa soglia potrebbe scendere a 3.  Con
+ *    quella in casa il fantasma dura un respiro; senza, dura meta' di prima.
+ *
+ * ⛔ SPENTO DI SUO — invariante I6.  ⚠ E l'interruttore NON e' per la frase
+ *    falsa (quella si corregge sempre, piu' sotto): e' per lo SFRATTO, che e'
+ *    un modo nuovo in cui il server toglie qualcosa a una sessione, e
+ *    `DECISIONI.md` §4.1-bis dice che il server non butta fuori una sessione
+ *    sana.  Se la soglia fosse tarata male butterebbe fuori uno vivo, che e'
+ *    molto peggio di un messaggio sbagliato. ⇒ Lo accende chi ha guardato.
+ *
+ * ⛔ `0` = SPENTO, ed e' il predefinito: il comportamento e' quello di ieri
+ *    byte per byte.  Il valore in vigore si SCRIVE all'avvio, come i tre
+ *    orologi di §5.3 — un tetto che nessuno puo' leggere e' la forma E1. */
+#define SFRATTO_PREDEFINITO (SILENZIO / 2) /* 15 s: vedi il riquadro */
+static uint64_t sfratto_ms; /* 0 = spento */
+
+void rcp_sfratto_imposta(uint64_t ms)
+{
+	sfratto_ms = ms;
+}
+
+uint64_t rcp_sfratto(void) { return sfratto_ms; }
+uint64_t rcp_sfratto_consigliato(void) { return SFRATTO_PREDEFINITO; }
+
 /* ⛔⭐ IL SECONDO OROLOGIO DI §5.3 — «inattivita' dell'utente», e fino al 16
  *     agosto 2026 NON ESISTEVA.
  *
@@ -791,6 +875,18 @@ static void chiave_pagata(rcp_sessione *s);
 static struct {
 	char utente[257];
 	bool usato;
+	/* ⛔⭐ CHI occupa il posto, e non e' un doppione del nome — 23 agosto 2026,
+	 *    lo sfratto del fantasma.  Il nome dice CHE il posto e' occupato; per
+	 *    sapere se l'occupante e' ancora VIVO serve la sua `ultima_vita`, che
+	 *    sta nella sua sessione e da qui non si raggiungeva.
+	 *
+	 * ⚠ E non puo' restare appeso: TUTTE le strade che liberano il posto
+	 *   passano da `posto_lascia()` — `congeda()`, `rcp_libera()`,
+	 *   `rcp_chiusa_dal_client()`, `rcp_canale_chiuso()`, il `CONGEDO` del
+	 *   client e il silenzio di `rcp_tempo()` — e quella lo azzera.  ⛔ Chi
+	 *   aggiunge una sesta strada la fa passare di li', o questo puntatore
+	 *   diventa una lettura di memoria liberata. */
+	rcp_sessione *chi;
 } attaccate[MAX_ATTACCATE];
 
 static bool posto_occupato(const char *utente)
@@ -799,6 +895,15 @@ static bool posto_occupato(const char *utente)
 		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0)
 			return true;
 	return false;
+}
+
+/* La sessione che occupa il posto di quell'utente, o NULL. */
+static rcp_sessione *posto_chi(const char *utente)
+{
+	for (int i = 0; i < MAX_ATTACCATE; i++)
+		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0)
+			return attaccate[i].chi;
+	return NULL;
 }
 
 /* ⛔⭐ DUE FATTI DIVERSI NON POSSONO AVERE LO STESSO ESITO — rilievo R9.3.
@@ -825,13 +930,18 @@ enum esito_posto {
 	POSTO_NIENTE_PIU_POSTI /* il registro delle sessioni e' pieno */
 };
 
-static enum esito_posto posto_prendi(const char *utente)
+/* ⚠ Prende la SESSIONE e non piu' il solo nome: il registro deve sapere CHI
+ *   occupa, per lo sfratto del fantasma (vedi `SFRATTO_PREDEFINITO`). */
+static enum esito_posto posto_prendi(rcp_sessione *s)
 {
+	const char *utente = s->utente;
+
 	if (posto_occupato(utente))
 		return POSTO_OCCUPATO;
 	for (int i = 0; i < MAX_ATTACCATE; i++) {
 		if (!attaccate[i].usato) {
 			attaccate[i].usato = true;
+			attaccate[i].chi = s;
 			snprintf(attaccate[i].utente, sizeof attaccate[i].utente, "%s",
 			         utente);
 			return POSTO_PRESO;
@@ -852,8 +962,13 @@ static int posti_occupati(void)
 static void posto_lascia(const char *utente)
 {
 	for (int i = 0; i < MAX_ATTACCATE; i++)
-		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0)
+		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0) {
 			attaccate[i].usato = false;
+			/* ⛔ E il puntatore si azzera QUI, insieme al posto: e' l'unico
+			 * punto da cui si puo' garantire che non resti addosso al
+			 * registro una sessione che sta per essere liberata. */
+			attaccate[i].chi = NULL;
+		}
 }
 
 /* ------------------------------------------------------------------------ */
@@ -2496,7 +2611,83 @@ static void applica_disposizione(rcp_sessione *s, const char *perche)
 		    perche, s->disposizione);
 }
 
-static bool tratta_attacca(rcp_sessione *s, lettore *l)
+/* ⛔⭐⭐ LO SFRATTO DEL FANTASMA — la regola sta nel riquadro sopra
+ *      `SFRATTO_PREDEFINITO`, qui c'e' il come.
+ *
+ * Restituisce `true` se il posto e' stato liberato (e allora chi arriva lo puo'
+ * chiedere di nuovo), `false` se l'occupante resta dov'e'.  ⚠ `*muto` esce
+ * SEMPRE valorizzato con i millisecondi di silenzio dell'occupante — serve alla
+ * riga di registro e alla frase, anche quando lo sfratto e' spento.
+ *
+ * ⛔⛔ IL CONTROLLO CHE NON SI PUO' TOGLIERE E' QUELLO DELL'UTENTE.  La regola
+ *      vale **solo fra client dello stesso utente**: sfrattare il client di un
+ *      altro utente non sarebbe una comodita', sarebbe un buco di sicurezza —
+ *      chiunque potrebbe far cadere il desktop di un altro semplicemente
+ *      bussando.  ⚠ Oggi il registro dei posti e' indicizzato PER NOME, quindi
+ *      `POSTO_OCCUPATO` implica gia' «stesso utente»; il controllo qui sotto e'
+ *      ridondante **per costruzione, non per progetto**, e il giorno in cui il
+ *      registro diventasse la tabella delle sessioni di un server vero
+ *      (`MAX_ATTACCATE`, §4.6) sarebbe l'unica cosa a reggere.  Non si toglie.
+ *
+ * ⛔ E l'occupante NON viene congedato: lo si mette esattamente nello stato in
+ *    cui lo mette il silenzio di §5.3 in `rcp_tempo()` — posto lasciato,
+ *    `S_STACCATA`, e quel che era premuto rilasciato (§7.3).  ⭐ Da li'
+ *    `torna_a_parlare()` sa gia' che farne se il filo dovesse resuscitare: il
+ *    posto non e' piu' suo, e si becca `0x0F` con la frase «il posto di questa
+ *    sessione e' stato preso da un altro client mentre questa taceva» — che in
+ *    quel caso e' VERA.  ⚠ Verificato leggendolo, non dato per buono: quella
+ *    funzione riparte **solo** da `S_STACCATA`, e per questo lo stato si
+ *    cambia qui e non ci si limita a togliere il posto (rilievo R9.2). */
+static bool sfratta_il_fantasma(rcp_sessione *arrivo, uint64_t ora,
+                                uint64_t *muto)
+{
+	rcp_sessione *o = posto_chi(arrivo->utente);
+
+	*muto = 0;
+	/* ⚠ Un posto occupato senza padrone non dovrebbe esistere; se esistesse,
+	 *   non e' il caso di sfrattare al buio — si nega, e il registro dira' che
+	 *   il silenzio dell'occupante era zero. */
+	if (!o || o == arrivo)
+		return false;
+	*muto = ora > o->ultima_vita ? ora - o->ultima_vita : 0;
+	if (!sfratto_ms)
+		return false;
+	/* ⛔ Il controllo dell'utente — vedi il riquadro qui sopra. */
+	if (strcmp(o->utente, arrivo->utente) != 0) {
+		reg(arrivo, "⛔ SFRATTO NEGATO: il posto risulta di «%s» e a chiedere e' "
+		            "«%s» — fra utenti diversi non si sfratta MAI, e questo "
+		            "registro non dovrebbe nemmeno poterlo proporre",
+		    o->utente, arrivo->utente);
+		return false;
+	}
+	/* ⚠ Solo un occupante ATTIVO e col posto in mano si sfratta: chiunque
+	 *   altro non e' il caso che questa regola descrive. */
+	if (o->stato != S_ATTIVA || !o->attaccata)
+		return false;
+	if (*muto <= sfratto_ms)
+		return false;
+
+	reg(o, "⭐ SFRATTO per silenzio: %llu ms senza un PACCHETTO da %s (soglia "
+	       "%llu ms) — il posto di %s va al client che sta arrivando da %s "
+	       "(§4.4: chi tace e' staccato; §8.2 NON e' violata, questo occupante "
+	       "era attaccato ma non vivo) (posti occupati adesso: %d)",
+	    (unsigned long long)*muto, o->provenienza,
+	    (unsigned long long)sfratto_ms, o->utente, arrivo->provenienza,
+	    posti_occupati() - 1);
+	posto_lascia(o->utente);
+	o->attaccata = false;
+	o->stato = S_STACCATA;
+	/* ⛔ §7.3: al distacco si rilascia tutto.  Un Ctrl rimasto giu' nel
+	 * fantasma renderebbe inservibile il desktop a chi entra adesso — ed e'
+	 * proprio chi entra adesso a doverlo trovare pulito. */
+	rilascia_al_distacco(o, "sfratto per silenzio");
+	return true;
+}
+
+/* ⚠ `ora` serve allo sfratto del fantasma, che confronta l'`ultima_vita`
+ *   dell'occupante con adesso.  Arriva da `drena()`, come per
+ *   `tratta_credenziali()`: e' l'istante del pacchetto che porta l'`ATTACCA`. */
+static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 {
 	uint32_t tl = le_u32(l), ta = le_u32(l);
 	/* ⛔ §7.1: la vista NON ha i vincoli della tela — «qualunque misura da 1x1
@@ -2602,16 +2793,52 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 	 *   sono due difetti opposti, e senza questa riga danno lo stesso rosso. */
 	/* ⛔ E i due modi di non avere un posto NON hanno lo stesso motivo — vedi
 	 * il riquadro sopra `posto_prendi()`, rilievo R9.3. */
-	switch (posto_prendi(s->utente)) {
+	switch (posto_prendi(s)) {
 	case POSTO_PRESO:
 		break;
-	case POSTO_OCCUPATO:
+	case POSTO_OCCUPATO: {
+		/* ⭐ PRIMA DI NEGARE SI GUARDA SE L'OCCUPANTE E' VIVO — 23 agosto 2026,
+		 *    lo sfratto del fantasma (il riquadro sopra `SFRATTO_PREDEFINITO`).
+		 * ⚠ `muto` si calcola SEMPRE, anche a sfratto spento: e' il numero che
+		 *   mancava a chi legge il registro per sapere se quel posto era di un
+		 *   client vivo o di un cadavere. */
+		uint64_t muto = 0;
+		char dett[192];
+
+		if (sfratta_il_fantasma(s, ora, &muto) && posto_prendi(s) == POSTO_PRESO)
+			break;
 		reg(s, "posto NEGATO a %s da %s: lo occupa un altro client di questo "
-		       "stesso utente (occupati: %d)",
-		    s->utente, s->provenienza, posti_occupati());
-		congeda(s, RCP_GIA_ATTIVA_REMOTA,
-		        "c'e' gia' un client attaccato a questa sessione");
+		       "stesso utente (occupati: %d) — quell'occupante ha dato un segno "
+		       "di vita %llu ms fa, e lo sfratto %s",
+		    s->utente, s->provenienza, posti_occupati(),
+		    (unsigned long long)muto,
+		    sfratto_ms ? "NON e' scattato" : "e' SPENTO (--sfratto-ms)");
+		/* ⛔⛔ E LA FRASE NON DIAGNOSTICA PIU' — 23 agosto 2026.
+		 *
+		 * Diceva «c'e' gia' un client attaccato a questa sessione», e il client
+		 * ne costruiva **«hai gia' una sessione attiva altrove»**.  ⛔ Per chi
+		 * la legge dopo che gli e' caduto il filo quella frase e' FALSA: quella
+		 * sessione e' la sua, ed e' morta un attimo prima.  ⚠ E il server non
+		 * ha modo di sapere quale delle due sia: non distingue un secondo
+		 * dispositivo da lui stesso caduto un istante fa.
+		 *
+		 * ⇒ Si dice **solo quel che il server sa davvero**: che il posto
+		 *    risulta occupato, e da quanto quell'occupante tace.  Il numero
+		 *    porta con se' la risposta alla domanda vera di chi legge — «era
+		 *    io?» — senza affermarla: 300 ms vuol dire che c'e' davvero
+		 *    qualcun altro, 4000 ms che quasi certamente era lui.
+		 *
+		 * ⚠ La frase che l'utente VEDE non e' questa: la pagina non legge il
+		 *   dettaglio, ha la sua tabella (`src/pagina.html`, `MOTIVO[0x0F]`).
+		 *   Quella riga cambia solo se il regista sceglie la frase — e' la sola
+		 *   cosa di questa cura che non si decide da soli. */
+		snprintf(dett, sizeof dett,
+		         "il posto di questa sessione risulta occupato da un client che "
+		         "ha dato un segno di vita %llu ms fa",
+		         (unsigned long long)muto);
+		congeda(s, RCP_GIA_ATTIVA_REMOTA, dett);
 		return false;
+	}
 	case POSTO_NIENTE_PIU_POSTI:
 		/* ⛔ §8.2 `0x0E`: «ben formato ma non si puo' servire», e DEVE portare
 		 * il dettaglio nel corpo — che `congeda()` ci mette.  ⚠ Dire `0x0F` a
@@ -6267,7 +6494,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA nello stato sbagliato");
 				return false;
 			}
-			avanti = tratta_attacca(s, &l);
+			avanti = tratta_attacca(s, &l, ora);
 			break;
 		case T_BANCO_MARCA:
 			/* §7.5: la marca si dipinge su un fotogramma, e i fotogrammi
@@ -6923,7 +7150,7 @@ static bool torna_a_parlare(rcp_sessione *s)
 {
 	if (s->stato != S_STACCATA)
 		return true;
-	if (posto_prendi(s->utente) == POSTO_PRESO) {
+	if (posto_prendi(s) == POSTO_PRESO) {
 		s->attaccata = true;
 		s->stato = S_ATTIVA;
 		/* ⛔ §7.3: il rilascio del distacco e' gia' avvenuto (il silenzio l'ha
