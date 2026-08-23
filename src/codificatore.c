@@ -725,7 +725,7 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	uint8_t *rbsp;
 	size_t n;
 	LettoreBit l;
-	uint32_t profilo, livello, chroma = 1, largh_mb, alt_mapunit;
+	uint32_t profilo, livello, vincoli, chroma = 1, largh_mb, alt_mapunit;
 	uint32_t sotto_l = 2, sotto_a = 2;
 	uint32_t taglio_sx = 0, taglio_dx = 0, taglio_su = 0, taglio_giu = 0;
 	int solo_fotogrammi;
@@ -741,7 +741,12 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	lb_apri(&l, rbsp, n);
 
 	profilo = lb_bit(&l, 8);
-	(void) lb_bit(&l, 8);        /* i vincoli + i bit riservati */
+	/* ⛔⭐ I VINCOLI NON SI BUTTANO PIU' — 23 agosto 2026.  Qui c'era un
+	 *     `(void)`, e il byte finiva nel nulla: e' il **CC** di
+	 *     `avc1.PPCCLL`, cioe' un terzo esatto della stringa che il browser
+	 *     passa a `configure()`.  ⚠ Buttarlo era la ragione per cui quella
+	 *     stringa, sotto H.264, non si poteva nemmeno comporre. */
+	vincoli = lb_bit(&l, 8);     /* constraint_set*_flag + i bit riservati */
 	livello = lb_bit(&l, 8);
 	(void) lb_ue(&l);            /* seq_parameter_set_id */
 
@@ -804,6 +809,33 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 
 	c->profilo_flusso = (int) profilo;
 	c->livello_flusso = (int) livello;
+	/* ⛔⭐⭐ LA STRINGA PER IL DECODIFICATORE, E FINO AL 23 AGOSTO 2026 SOTTO
+	 *      H.264 QUESTO CAMPO RESTAVA VUOTO.
+	 *
+	 *      `leggi_sps_hevc()` la componeva (`hev1.1.6.L150.B0`), `leggi_sps_
+	 *      av1()` pure (`av01.0.04M.10`), questa funzione NO — leggeva profilo,
+	 *      vincoli e livello e non li scriveva mai insieme.  ⚠ Il registro
+	 *      diceva *«stringa per il decodificatore «»»* e la riga sembrava un
+	 *      campo che non serve, invece che un difetto.
+	 *
+	 * ⛔ IL FORMATO E' `avc1.PPCCLL`, TRE BYTE IN ESADECIMALE — e non e' una
+	 *    sfumatura: `PP` = `profile_idc` (100 = High ⇒ `64`), `CC` = il byte
+	 *    dei `constraint_set*_flag` (⇒ `00` senza vincoli), `LL` = `level_idc`
+	 *    (51 ⇒ `33`).  ⚠ Scriverlo in DECIMALE darebbe `avc1.100051`, che
+	 *    nessun motore accetta — e il sintomo sarebbe «H.264 non arriva al
+	 *    pixel» su un browser che lo decodifica benissimo.
+	 *
+	 * ⭐ E' la stessa forma che `src/pagina.html` compone dal suo lato
+	 *    (`stringhe_codec()`, `avc1.6400` + il livello in esadecimale): i due
+	 *    capi si mettono in colonna, e se divergono si vede qui.  `[M]` con
+	 *    `LIVELLO_DICHIARATO = "5.1"` la pagina chiede `avc1.640033`, e questo
+	 *    lettore deve dire la stessa cosa. */
+	/* ⚠ MINUSCOLE, e non e' gusto: `src/pagina.html` compone la sua con
+	 *   `toString(16)`, che minuscolo lo scrive.  Due stringhe che si devono
+	 *   poter confrontare a occhio nel registro non differiscono per il caso di
+	 *   una lettera. */
+	snprintf(c->stringa_codec, sizeof(c->stringa_codec), "avc1.%02x%02x%02x",
+	         profilo & 0xFFu, vincoli & 0xFFu, livello & 0xFFu);
 	{
 		uint32_t unita_l = (chroma == 0) ? 1 : sotto_l;
 		uint32_t unita_a = (uint32_t) ((chroma == 0 ? 1 : sotto_a) * (2 - solo_fotogrammi));
@@ -1746,6 +1778,58 @@ static int apri_magazzino(Codificatore *c, char *errore, size_t errore_byte)
 	return 0;
 }
 
+/* ------------------------------------------------------------------------ */
+/* ⛔⭐⭐ IL TETTO DI LIVELLO DI `RCP.md` §4.3 (riga 701), TRADOTTO NELL'ALFABETO
+ *      DI CIASCUN CODEC — 23 agosto 2026, e nasce da una misura.
+ *
+ *      `[M]` tela 3840x2160, H.264: il client dichiara `video.livello=5.1` e
+ *      questo modulo produceva un flusso di livello **5.2**.  ⛔ §4.3 e' un
+ *      DEVE — *«il server DEVE emettere un flusso di livello non superiore, e
+ *      non lo indovina»* — e il sintomo di un livello sforato NON e' un errore
+ *      di rete: e' il decodificatore del browser che RIFIUTA la
+ *      configurazione, cioe' «non si vede niente» senza una riga che dica
+ *      perche'.
+ *
+ * ⛔ E LA CURA E' CHIEDERE PRIMA, non accorgersene dopo.  Fino a stasera il
+ *    livello era **ereditato**: libavcodec lo calcolava da misura e cadenza e
+ *    nessuno gli aveva mai detto qual era il tetto.  E' la stessa forma di
+ *    `opzioni_hevc()` — *«le opzioni che si decidono invece di ereditarle»*.
+ *
+ * ⚠ I TRE ALFABETI, e sono la trappola:
+ *
+ *      H.264   `level_idc`         = maggiore*10 + minore   ⇒ 5.1 e' **51**
+ *      HEVC    `general_level_idc` = (maggiore*10+minore)*3 ⇒ 5.1 e' **153**
+ *      AV1     `seq_level_idx`     = (maggiore−2)*4+minore  ⇒ 5.1 e' **13**
+ *
+ *    ⛔ `[M]` letti in `ffmpeg -h encoder=h264_vaapi` e `hevc_vaapi`: l'opzione
+ *       `level` di `h264_vaapi` vuole 51, quella di `hevc_vaapi` vuole 153.
+ *       Passare l'una all'altra darebbe un livello sbagliato SENZA errore.
+ *    ⚠ AV1 e' fuori dal prodotto dal 20 agosto 2026 (`DECISIONI.md` §1.13-ter,
+ *      non si negozia piu'): la riga resta perche' il codec esiste ancora nel
+ *      programma, e un `0` qui vuol dire «non impongo niente», non «zero».
+ *
+ * ⇒ Restituisce **0** quando non c'e' tetto da imporre, e chi chiama non
+ *   chiede niente al componente.  ⛔ E il valore restituito NON e' la prova che
+ *   il componente abbia ubbidito: quella si legge dai byte dell'SPS
+ *   (`livello_flusso`), ed e' la seconda meta' di R31. */
+static int livello_imposto(const Codificatore *c)
+{
+	int x10 = c->richiesta.livello_x10;
+
+	if (x10 <= 0)
+		return 0; /* §4.3 non obbliga il client a dichiararlo: nessun tetto */
+	switch (c->richiesta.codec) {
+	case CODIFICATORE_H264:
+		return x10;
+	case CODIFICATORE_HEVC:
+		return x10 * 3;
+	case CODIFICATORE_AV1:
+		return (x10 / 10 - 2) * 4 + x10 % 10;
+	default:
+		return 0;
+	}
+}
+
 /*
  * ⛔ LE OPZIONI DEL CODIFICATORE IN HARDWARE, DECISE INVECE CHE EREDITATE — e
  *    sono la stessa regola di `opzioni_hevc()`, su un altro componente.
@@ -1855,6 +1939,39 @@ static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte, "«%s» ha rifiutato il profilo", c->componente->name);
 		return -1;
 	}
+	/* ⛔⭐⭐ E IL LIVELLO DI §4.3, CHIESTO PER NOME — 23 agosto 2026.
+	 *
+	 * ⚠ Si chiede in DUE posti, come il profilo qui sopra e per la stessa
+	 *   ragione: `ctx->level` e' il campo generico di `AVCodecContext`, `level`
+	 *   e' l'opzione del componente, e due posti che dicono la stessa cosa
+	 *   vanno detti tutti e due o nessuno.
+	 * ⛔ Un fallimento QUI e' un errore vero e ferma l'apertura: se il
+	 *    componente rifiuta il tetto, aprirlo lo stesso vorrebbe dire produrre
+	 *    di nuovo un flusso che sfora — cioe' il difetto di stasera, con una
+	 *    riga in piu' che dice che ci avevamo provato. */
+	{
+		int liv = livello_imposto(c);
+		if (liv > 0) {
+			c->ctx->level = liv;
+			if (av_opt_set_int(c->ctx->priv_data, "level", liv, 0) < 0) {
+				di(errore, errore_byte,
+				   "«%s» ha rifiutato level=%d (§4.3: il client dichiara "
+				   "video.livello=%d.%d, e il server DEVE non superarlo)",
+				   c->componente->name, liv, c->richiesta.livello_x10 / 10,
+				   c->richiesta.livello_x10 % 10);
+				return -1;
+			}
+			registro_dice(REG_CODIFICA,
+			              "⭐ §4.3: livello IMPOSTO a «%s» — %d.%d, cioe' %d in "
+			              "%s.  ⚠ Chiesto non vuol dire ubbidito: il verdetto "
+			              "arriva dall'SPS",
+			              c->componente->name, c->richiesta.livello_x10 / 10,
+			              c->richiesta.livello_x10 % 10, liv,
+			              c->richiesta.codec == CODIFICATORE_H264
+			                  ? "level_idc"
+			                  : "general_level_idc (il triplo)");
+		}
+	}
 	return 0;
 }
 
@@ -1870,13 +1987,38 @@ static int opzioni_hevc(Codificatore *c, char *errore, size_t errore_byte)
 {
 	char parametri[512];
 	char qualita[64] = "";
+	/* ⛔⭐ IL LIVELLO DI §4.3 (riga 701) — 23 agosto 2026.
+	 *
+	 * ⚠ x265 NON ha un'opzione `level` sul `priv_data`: `[M]` `ffmpeg -h
+	 *   encoder=libx265` non ne stampa nessuna.  Il nome e' `level-idc`, e vive
+	 *   dentro `x265-params`.
+	 * ⛔⛔ E VA DENTRO QUESTA STESSA STRINGA, non in una seconda `av_opt_set`:
+	 *     `x265-params` e' un **dizionario** (`[M]` `<dictionary>` nella riga
+	 *     dell'aiuto), e `set_string_dict()` di libavutil **sostituisce** il
+	 *     dizionario invece di aggiungerci dentro.  ⇒ Una seconda chiamata
+	 *     cancellerebbe `bframes=0`, `open-gop=0` e `repeat-headers=1` — cioe'
+	 *     comprerebbe la conformita' al livello vendendo il ritardo e le chiavi
+	 *     di §5.2, e non lo direbbe nessuno.  Vale identico per `x264-params`.
+	 * ⚠ In decimi separati (`5.1`): x265 accetta anche il `153`, e questa e' la
+	 *   forma che si legge. */
+	char livello[64] = "";
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS)
 		snprintf(qualita, sizeof(qualita), "lossless=1:");
 	else
 		snprintf(qualita, sizeof(qualita), "crf=%d:", c->qualita_corrente);
+	if (c->richiesta.livello_x10 > 0) {
+		snprintf(livello, sizeof(livello), "level-idc=%d.%d:",
+		         c->richiesta.livello_x10 / 10, c->richiesta.livello_x10 % 10);
+		c->ctx->level = livello_imposto(c);
+		registro_dice(REG_CODIFICA,
+		              "⭐ §4.3: livello IMPOSTO a libx265 — %d.%d (general_level_"
+		              "idc %d).  ⚠ Il verdetto arriva dall'SPS, non da qui",
+		              c->richiesta.livello_x10 / 10,
+		              c->richiesta.livello_x10 % 10, c->ctx->level);
+	}
 
 	snprintf(parametri, sizeof(parametri),
-	         "%s"
+	         "%s%s"
 	         /* ⛔ un fotogramma B costringe ad attendere il successivo: un
 	          *    fotogramma di ritardo in piu' contro un tetto di 50 ms
 	          *    (`SPECIFICHE.md` §3.2).  v1 lo vietava a mano, e la ragione
@@ -1901,7 +2043,7 @@ static int opzioni_hevc(Codificatore *c, char *errore, size_t errore_byte)
 	          *    che resta e' il lettore di SPS qui sopra — che non costa
 	          *    nemmeno un byte sul filo. */
 	         "info=1:log-level=error",
-	         qualita,
+	         qualita, livello,
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1,
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1);
 
@@ -1953,9 +2095,40 @@ static int opzioni_h264(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte, "libx264 ha rifiutato i parametri «%s»", parametri);
 		return -1;
 	}
+	/* ⛔⭐ E IL LIVELLO DI §4.3 — 23 agosto 2026.  ⚠ Qui l'opzione c'e' e si
+	 *     chiama `level`, ma e' una STRINGA (`[M]` `ffmpeg -h encoder=libx264`:
+	 *     *«-level <string> Specify level (as defined by Annex A)»*) — non un
+	 *     intero come in `h264_vaapi`.  ⛔ Passarci un `av_opt_set_int` non
+	 *     darebbe un errore utile: darebbe un livello letto male.
+	 * ⚠ x264 non ABBASSA la cadenza per stare nel livello: se il tetto e' piu'
+	 *   stretto della misura chiesta, alza il livello e lo dice nel suo
+	 *   registro — ed e' esattamente il caso che la riga «§4.3 — LIVELLO» del
+	 *   figlio deve pescare, rileggendo l'SPS. */
+	if (c->richiesta.livello_x10 > 0) {
+		char liv[32];
+		snprintf(liv, sizeof(liv), "%d.%d", c->richiesta.livello_x10 / 10,
+		         c->richiesta.livello_x10 % 10);
+		c->ctx->level = livello_imposto(c);
+		if (av_opt_set(c->ctx->priv_data, "level", liv, 0) < 0) {
+			di(errore, errore_byte, "libx264 ha rifiutato level=«%s» (§4.3)", liv);
+			return -1;
+		}
+		registro_dice(REG_CODIFICA,
+		              "⭐ §4.3: livello IMPOSTO a libx264 — «%s» (level_idc %d)."
+		              "  ⚠ Il verdetto arriva dall'SPS, non da qui",
+		              liv, c->ctx->level);
+	}
 	return 0;
 }
 
+/* ⚠ E QUI IL LIVELLO DI §4.3 NON SI IMPONE, e si dice perche' invece di
+ *   lasciare un buco: AV1 e' **uscito dal prodotto** il 20 agosto 2026
+ *   (`DECISIONI.md` §1.13-ter) e non si negozia piu' — questa funzione non ha
+ *   piu' un chiamante che venga da un `CIAO`.  ⛔ Il giorno in cui AV1
+ *   rientrasse, il tetto va messo qui: `livello_imposto()` la traduzione in
+ *   `seq_level_idx` ce l'ha gia', e il verdetto dall'SPS pure
+ *   (`livello_in_decimi()` in `figlio.c`).  ⚠ Metterlo oggi vorrebbe dire una
+ *   riga non misurata su una strada che nessuno percorre. */
 static int opzioni_av1(Codificatore *c, char *errore, size_t errore_byte)
 {
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
@@ -2074,9 +2247,22 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	case CODIFICATORE_HEVC:
 		c->ctx->profile = (r->profondita == 10) ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
 		break;
-	/* ⭐ High (100), che e' quel che dichiara la stringa gia' verificata sul
-	 *    browser: `avc1.640032` — `64` = profile_idc 100, `00` = nessun
-	 *    vincolo, `32` = livello 5.0 (`banchi/07-b48`, 300 su 300). */
+	/* ⭐ High (100), che e' quel che dichiara la stringa passata al browser:
+	 *    `avc1.PPCCLL` — `64` = profile_idc 100, `00` = nessun vincolo, `LL` =
+	 *    il livello.
+	 *
+	 * ⛔⭐ E IL LIVELLO IN QUESTA RIGA ERA VECCHIO DI SEI GIORNI — corretto il
+	 *     23 agosto 2026.  Diceva *«`avc1.640032`, `32` = livello 5.0
+	 *     (`banchi/07-b48`, 300 su 300)»*: quel banco misuro' il **5.0** il 17
+	 *     agosto, ma da allora `src/pagina.html:829` dichiara
+	 *     `LIVELLO_DICHIARATO = "5.1"` — la scala di `video.misura_massima`
+	 *     arriva a 3840x2160, e il 5.0 non ci arriva.  ⇒ La stringa in vigore
+	 *     e' **`avc1.640033`** (`0x33` = 51 = 5.1), e non piu' `…32`.
+	 *     ⚠ La stessa correzione sta in `DECISIONI.md` §1.13-ter, con la data:
+	 *       una regola in quattro copie non uguali e' la forma R12C.5.
+	 * ⭐ E il numero non si dichiara piu' a parola: `leggi_sps_h264()` compone
+	 *    la stringa dai byte dell'SPS, e la riga «§4.3 — LIVELLO» del figlio la
+	 *    scrive accanto al livello CHIESTO dal client. */
 	case CODIFICATORE_H264:
 		c->ctx->profile = AV_PROFILE_H264_HIGH;
 		break;

@@ -914,6 +914,19 @@ uint8_t rcp_codec_negoziato(const rcp_sessione *s);
  *    riquadro per esteso sta sull'attuazione in `rcp.c`. */
 uint8_t rcp_profondita_negoziata(const rcp_sessione *s);
 
+/* ⭐⭐ IL LIVELLO che il client ha dichiarato in §4.3 (`video.livello`), in
+ *     DECIMI: `5.1` ⇒ **51**.  `0` = non dichiarato, o dichiarato fuori forma.
+ *
+ * ⛔ E VA LETTO, o il server SFORA: `[M]` 23 agosto 2026, tela 3840x2160,
+ *    H.264, il client dichiara 5.1 e il flusso esce a **5.2**.  §4.3 riga 701
+ *    e' un DEVE, e il sintomo di un livello sbagliato non e' un errore — e'
+ *    il decodificatore del browser che rifiuta la configurazione, cioe'
+ *    «non si vede niente» senza una riga che dica perche'.
+ *
+ * ⚠ `0` NON vuol dire «basso»: vuol dire «nessun tetto», e chi riceve non deve
+ *   inventarne uno. */
+uint8_t rcp_livello_negoziato(const rcp_sessione *s);
+
 /*
  * §4.3/§6.3: 1 = Opus, 2 = PCM.  ⛔ `0` = non ancora negoziato.
  *

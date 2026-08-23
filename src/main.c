@@ -367,14 +367,20 @@ static void cursore_dal_palco(void *ctx, const char *utente, uid_t uid,
  * ⚠ Senza questa riga, `rcp_video_serve_chiave()` restava LETTA e inutile e
  *   `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel prodotto**:
  *   il sintomo era «il desktop si ferma e non riparte piu'», e non nominava ne'
- *   la chiave ne' il codificatore. */
+ *   la chiave ne' il codificatore.
+ *
+ * ⛔⭐ E DA QUI PASSANO TRE FATTI DELLA SESSIONE, non uno: il codec, la
+ *     PROFONDITA' (17 agosto 2026) e da stasera il LIVELLO (§4.3 riga 701).
+ *     ⚠ Tutti e tre sono del CLIENT e non del server — cambiano da sessione a
+ *     sessione — ed e' la ragione per cui viaggiano di qui e non sulla riga di
+ *     comando del figlio, che il figlio la legge una volta alla nascita. */
 static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
-                         uint8_t profondita, bool chiave)
+                         uint8_t profondita, uint8_t livello_x10, bool chiave)
 {
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return;
-	figli_video(p->f, utente, codec, profondita, chiave);
+	figli_video(p->f, utente, codec, profondita, livello_x10, chiave);
 }
 
 /* ⭐⭐ LA CUCITURA DELL'AUDIO — fase 7, ed e' la terza della stessa famiglia.

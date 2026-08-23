@@ -1168,12 +1168,19 @@ function stringhe_codec(nome, profondita, livello) {
   }
   if (nome === "h264") {
     /* ⛔ `avc1.PPCCLL` in ESADECIMALE, e non e' una sfumatura: `64` = profilo
-     *    100 (High), `00` = nessun vincolo, `32` = livello **50**, cioe' 5.0.
-     *    Scriverlo in decimale darebbe `avc1.100050`, che nessun motore
+     *    100 (High), `00` = nessun vincolo, `33` = livello **51**, cioe' 5.1.
+     *    Scriverlo in decimale darebbe `avc1.100051`, che nessun motore
      *    accetta — e il sintomo sarebbe «H.264 non arriva al pixel» su un
      *    browser che lo decodifica in hardware.
-     * ⭐ La prima stringa e' quella gia' verificata sul Firefox dell'utente:
-     *    `avc1.640032`, 300 fotogrammi su 300 senza errori (`banchi/07-b48`).
+     * ⭐ Con `LIVELLO_DICHIARATO = "5.1"` questa riga produce `avc1.640033`, e
+     *    dal 23 agosto 2026 **anche il server dice la stessa cosa**: `leggi_
+     *    sps_h264()` di `codificatore.c` compone la sua dai byte dell'SPS, e
+     *    fino a quella data la lasciava VUOTA.  `[M]` SPS letto byte per byte
+     *    a 3840x2160 con 5.1 imposto: `profile_idc=100 · constraints=0x00 ·
+     *    level_idc=51` ⇒ `avc1.640033`.
+     * ⚠ `banchi/07-b48` (17 agosto) verifico' `avc1.640032`, cioe' il **5.0**:
+     *   resta vero come misura di quel giorno, e NON e' il valore di oggi —
+     *   il 5.0 non arriva a 3840x2160, che e' l'ultimo gradino della scala.
      * ⚠ E la profondita' non entra nella stringa: High e' 8 bit.  Un H.264 a
      *   10 bit sarebbe High10 (`6e`), che questo prodotto non produce — vedi
      *   `profilo_va()` in `codificatore.c`. */

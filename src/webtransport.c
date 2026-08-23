@@ -3358,7 +3358,8 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		              utente, w->provenienza, codec, l, a);
 		if (gancio_palco)
 			gancio_palco(gancio_palco_ctx, utente, codec,
-			             rcp_profondita_negoziata(w->rcp), true);
+			             rcp_profondita_negoziata(w->rcp),
+			             rcp_livello_negoziato(w->rcp), true);
 		return;
 	}
 
@@ -3372,7 +3373,8 @@ static void video_regola(wt *w, uint64_t ora_ms)
 			w->chiave_chiesta_ms = ora_ms;
 			if (gancio_palco)
 				gancio_palco(gancio_palco_ctx, utente, codec,
-				             rcp_profondita_negoziata(w->rcp), true);
+				             rcp_profondita_negoziata(w->rcp),
+				             rcp_livello_negoziato(w->rcp), true);
 			registro_dettaglio(REG_RCP,
 			                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
 			                   "palco di «%s» (codec %u), dopo %llu ms di attesa "
@@ -5850,7 +5852,7 @@ void wt_libera(wt *w)
 			              mio);
 			/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
 			 *   lui non vuol dire niente. */
-			gancio_palco(gancio_palco_ctx, mio, 0, 0, false);
+			gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
 		}
 	}
 	if (w->rcp)

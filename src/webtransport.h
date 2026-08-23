@@ -210,8 +210,16 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
  *      dichiarava 8.  ⚠ Su Chrome+HEVC non si vedeva (il decodificatore si
  *      riconfigura dal flusso); su Firefox+AV1 il desktop si INCHIODAVA.
  * ⚠ `0` = non negoziata: chi riceve NON deve sceglierne una per conto suo. */
+/* ⛔⭐⭐ `livello_x10` E' ARRIVATO IL 23 AGOSTO 2026, e per la stessa ragione
+ *      esatta della profondita': `[M]` a 3840x2160 il client dichiarava
+ *      `video.livello=5.1` e il server produceva **5.2** — §4.3 riga 701 e' un
+ *      DEVE, e il sintomo di un livello sforato non e' un errore ma un
+ *      decodificatore che RIFIUTA la configurazione.  ⚠ In decimi (`5.1` ⇒
+ *      51); `0` = il client non l'ha dichiarato, cioe' NESSUN TETTO — e non
+ *      vuol dire «basso». */
 typedef void (*wt_video_richiesta)(void *ctx, const char *utente, uint8_t codec,
-                                   uint8_t profondita, bool chiave);
+                                   uint8_t profondita, uint8_t livello_x10,
+                                   bool chiave);
 void wt_video_gancio(wt_video_richiesta f, void *ctx);
 
 /* ⭐⭐ FASE 4 — IL PONTE DELL'INPUT, e attraversa un confine di PROCESSO.

@@ -2057,22 +2057,22 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 *    il numero CHIESTO compare, e senza di loro non c'e' niente da
 	 *    confrontare con quello prodotto.
 	 *
-	 * ⛔⚠ E IL CONFRONTO NON SI FA QUI, e non e' una dimenticanza: si dice
-	 *     dov'e' l'altra meta'.  Il livello PRODOTTO si legge dall'SPS
-	 *     (`codificatore.c`, `leggi_sps_h264`/`leggi_sps_hevc`) e vive nel
-	 *     FIGLIO, che e' un altro processo; questo modulo non vede un byte di
-	 *     flusso — `rcp_video_spedisci()` riceve dati opachi, e §4.3 e' l'unico
-	 *     documento che rcp.c conosce (vedi il riquadro di `rcp.h`).  ⇒ Il
-	 *     numero prodotto sta nella riga «PRIMO fotogramma codificato» del
-	 *     figlio, nello stesso registro, e le due righe si leggono in colonna.
-	 *     ⚠ Perche' il confronto DENTRO il programma non c'e' ancora: il
-	 *       livello chiesto dovrebbe attraversare il confine di processo, e la
-	 *       catena e' `rcp.h` (il gancio `video_chiedi`) → `rcp.c` → `main.c`
-	 *       → `figlio.h` (`figli_video`) → `figlio.c` (`struct corpo_video`,
-	 *       che ha ancora il suo byte `riempi` libero apposta).  E' la stessa
-	 *       catena che la PROFONDITA' negoziata ha percorso il 17 agosto 2026 —
-	 *       e quel giorno il difetto era identico: due numeri veri in due
-	 *       processi, e nessuno che li mettesse vicini.
+	 * ⛔⚠ E IL CONFRONTO NON SI FA QUI, ma da stasera SI FA — nel figlio.
+	 *     Questo modulo non vede un byte di flusso: `rcp_video_spedisci()`
+	 *     riceve dati opachi, e §4.3 e' l'unico documento che rcp.c conosce
+	 *     (vedi il riquadro di `rcp.h`).  ⇒ Qui il numero chiesto si legge e si
+	 *     CONSEGNA (`rcp_livello_negoziato()`); il livello prodotto si legge
+	 *     dall'SPS (`codificatore.c`, `leggi_sps_h264`/`leggi_sps_hevc`) e il
+	 *     confronto lo fa chi ha tutt'e due i numeri in mano, cioe' il figlio.
+	 *     ⛔ Fino al 23 agosto 2026 la catena non c'era, e il difetto era
+	 *       MISURATO: `video.livello=5.1` chiesto, **5.2** prodotto a
+	 *       3840x2160.  La catena e' `rcp.h` → `webtransport.c` (il gancio
+	 *       `wt_video_richiesta`) → `main.c` → `figlio.h` (`figli_video`) →
+	 *       `figlio.c` (`struct corpo_video`, che il suo byte `riempi` lo
+	 *       teneva libero apposta).  E' la stessa catena che la PROFONDITA'
+	 *       negoziata ha percorso il 17 agosto 2026 — e quel giorno il difetto
+	 *       era identico: due numeri veri in due processi, e nessuno che li
+	 *       mettesse vicini.
 	 *
 	 * ⛔ Un valore FUORI FORMA non si prende per buono e non si butta in
 	 *    silenzio, come per `video.misura_massima`: §3 eccezione 1 permette di
@@ -2084,10 +2084,12 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			       "di emettere un flusso PIU' ALTO di questo",
 			    c_livello, s->livello_x10 / 10u, s->livello_x10 % 10u,
 			    s->livello_x10, s->livello_x10 * 3u);
-			reg(s, "⚠ e il livello PRODOTTO non si legge da qui: sta nella riga "
-			       "«PRIMO fotogramma codificato» del figlio, campo «livello» "
-			       "(§4.3 riga 701) — il confronto lo fa chi legge il registro, "
-			       "il programma NON lo fa ancora");
+			reg(s, "⭐ e da stasera questo numero ATTRAVERSA il confine di "
+			       "processo: `rcp_livello_negoziato()` → `webtransport` → "
+			       "`main` → `figli_video()` → il figlio, che lo IMPONE al "
+			       "codificatore e poi lo rilegge dall'SPS (R31).  ⚠ Il "
+			       "verdetto sta nella riga «§4.3 — LIVELLO» del figlio, non "
+			       "qui: qui c'e' solo il numero chiesto");
 		} else {
 			s->livello_x10 = 0;
 			reg(s, "⚠ TOLLERANZA (§3 eccezione 1): video.livello=«%s» non ha la "
@@ -3003,6 +3005,35 @@ uint8_t rcp_profondita_negoziata(const rcp_sessione *s)
 	if (strcmp(s->profondita, "10") == 0)
 		return 10;
 	return 0;
+}
+
+uint8_t rcp_livello_negoziato(const rcp_sessione *s)
+{
+	/* ⛔⭐⭐ E QUESTO LETTORE E' DEL 23 AGOSTO 2026, e nasce da una MISURA:
+	 *      tela 3840x2160, H.264, il client dichiara `video.livello=5.1` e il
+	 *      server produce un flusso di livello **5.2**.  §4.3 riga 701 e' un
+	 *      DEVE — *«il server DEVE emettere un flusso di livello non
+	 *      superiore, e non lo indovina»* — e il server sforava.
+	 *
+	 * ⛔ Fino a stasera il numero CHIESTO si fermava qui dentro: si scriveva
+	 *    nel registro e non lo leggeva nessuno.  Il numero PRODOTTO vive nel
+	 *    figlio (`codificatore.c`, dall'SPS), che e' un altro processo — due
+	 *    verita' sullo stesso fatto, `LEZIONI.md` §7.5, esattamente la forma
+	 *    della profondita' del 17 agosto.  ⇒ Adesso attraversa il confine per
+	 *    la stessa strada di quella: `rcp.h` → `webtransport.c` → `main.c` →
+	 *    `figli_video()` → `struct corpo_video`.
+	 *
+	 * ⚠ In DECIMI, che e' l'alfabeto di §4.3 (`5.1` ⇒ `51`) e quello in cui il
+	 *   figlio riconverte per ciascun codec — H.264 lo usa tale e quale
+	 *   (`level_idc`), HEVC lo triplica (`general_level_idc`).  ⛔ Un `uint8_t`
+	 *   basta e avanza: `6.2` e' 62, e §4.3 non definisce niente sopra.
+	 *
+	 * ⚠ `0` = il client non l'ha dichiarato (§4.3 non lo obbliga) o l'ha
+	 *   scritto fuori forma, e NON vuol dire «basso»: vuol dire «nessun
+	 *   tetto», e chi riceve non deve inventarne uno. */
+	if (!s || !s->livello_x10 || s->livello_x10 > 255u)
+		return 0;
+	return (uint8_t) s->livello_x10;
 }
 
 uint8_t rcp_codec_negoziato(const rcp_sessione *s)

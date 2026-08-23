@@ -436,8 +436,12 @@ bool figli_chiedi_palco(figli *f, const char *utente);
  *     senza, il figlio se la scriveva da se' e il flusso usciva a una
  *     profondita' DIVERSA da quella dichiarata in `ECCOMI` (§4.3).  Il riquadro
  *     per esteso sta su `struct corpo_video` in `figlio.c`. */
+/* ⛔⭐ `livello_x10` (in decimi: `5.1` ⇒ 51, `0` = non dichiarato) e' arrivato
+ *     il 23 agosto 2026 per la ragione gemella: `[M]` a 3840x2160 il client
+ *     dichiarava 5.1 e il server produceva **5.2** — §4.3 riga 701 e' un DEVE.
+ *     ⚠ `0` vuol dire «nessun tetto», non «basso». */
 bool figli_video(figli *f, const char *utente, uint8_t codec,
-                 uint8_t profondita, bool chiave);
+                 uint8_t profondita, uint8_t livello_x10, bool chiave);
 
 /* ⭐⭐ FASE 4 — L'INPUT ATTRAVERSA IL CONFINE DI PROCESSO.
  *

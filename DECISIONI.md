@@ -1103,6 +1103,23 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > Firefox l'accetta e ne decodifica **300 fotogrammi su 300 con zero errori** (`banchi/07-b48`,
 > 17 agosto 2026).
 >
+> > ⛔⭐ **AGGIORNAMENTO 23 agosto 2026 — la stringa in vigore NON è più quella: è
+> > `avc1.640033`.** `banchi/07-b48` misurò il **5.0** (`32`); da allora
+> > `src/pagina.html:829` dichiara `LIVELLO_DICHIARATO = "5.1"`, perché la scala di
+> > `video.misura_massima` arriva a **3840×2160** e il 5.0 non ci arriva. ⇒ La pagina compone
+> > `avc1.6400` + il livello in esadecimale = **`avc1.640033`** (`0x33` = 51 = 5.1), ed è quella
+> > che passa a `configure()`.
+> >
+> > ⭐ **E adesso la dice anche il server**, che fino a stasera sotto H.264 lasciava la stringa
+> > **VUOTA**: `leggi_sps_h264()` leggeva profilo e livello e non li scriveva mai insieme
+> > (`src/codificatore.c`). `[M]` 23 agosto 2026, x264 a 3840×2160 con livello 5.1 imposto, SPS
+> > letto byte per byte: `profile_idc=100 · constraints=0x00 · level_idc=51` ⇒ **`avc1.640033`**,
+> > cioè **i due capi dicono la stessa cosa**.
+> >
+> > ⚠ Il **5.0** resta vero come misura di quel giorno e non si cancella: è la ragione per cui
+> > `07-b48` non è la prova del valore di oggi. E il valore di oggi ha una prova sua: la riga
+> > «§4.3 — LIVELLO» del figlio, che mette prodotto e chiesto sulla stessa riga.
+>
 > ⚠ **Due misure dello stesso banco che serviranno scrivendo il codificatore:**
 > - il fotogramma che WebCodecs consegna su Firefox è **`BGRX`**, non planare: la conversione di
 >   colore la fa già il decodificatore;

@@ -294,6 +294,23 @@ typedef struct {
 	ModoQualita modo;
 	int qualita;                 /* CRF (software) o QP (hardware) */
 	int profondita;              /* 8 o 10 — quel che si CHIEDE al codificatore */
+	/*
+	 * ⛔⭐⭐ IL TETTO DI LIVELLO DI `RCP.md` §4.3 (riga 701), IN DECIMI:
+	 *      `5.1` ⇒ **51**.  `0` = nessun tetto, il componente sceglie.
+	 *
+	 * ⛔ E si CHIEDE invece di scoprirlo dopo: `[M]` 23 agosto 2026, tela
+	 *    3840x2160, H.264 — il client dichiarava `video.livello=5.1` e questo
+	 *    modulo produceva un flusso di livello **5.2**, perche' nessuno gli
+	 *    aveva mai detto qual era il tetto.  §4.3 e' un DEVE, e il sintomo di
+	 *    un livello sforato non e' un errore: e' il decodificatore del browser
+	 *    che rifiuta la configurazione.
+	 *
+	 * ⚠ La traduzione nell'alfabeto di ciascun codec sta in `livello_imposto()`
+	 *   e in nessun altro posto: H.264 usa i decimi tali e quali (`level_idc`),
+	 *   HEVC li triplica (`general_level_idc`).  ⛔ E l'obbedienza NON si
+	 *   presume: si rilegge in `livello_flusso` dai byte dell'SPS.
+	 */
+	int livello_x10;
 	FormatoPixel formato;
 	/*
 	 * Chiavi periodiche ogni N fotogrammi; **0 = solo su richiesta**.
@@ -341,7 +358,20 @@ typedef struct {
 	 */
 	uint32_t larghezza_codificata, altezza_codificata;
 	int croma_flusso;             /* 1 = 4:2:0 */
-	char stringa_codec[64];       /* `hev1.2.4.L93.B0` / `av01.0.04M.10` */
+	/*
+	 * La stringa che il browser passa al decodificatore: `hev1.2.4.L93.B0` /
+	 * `avc1.640033` / `av01.0.04M.10`.
+	 *
+	 * ⛔⭐ E SOTTO H.264 QUESTO CAMPO E' RESTATO VUOTO fino al 23 agosto 2026:
+	 *     `leggi_sps_hevc()` e `leggi_sps_av1()` la componevano, `leggi_sps_
+	 *     h264()` no — leggeva profilo e livello e non li scriveva mai insieme.
+	 *     ⚠ Il registro diceva *«stringa per il decodificatore «»»* e nessuno
+	 *     ci leggeva un difetto, perche' una stringa vuota assomiglia a un
+	 *     campo che non serve.  ⛔ Serve: e' l'unico posto in cui il SERVER
+	 *     dichiara che cosa il client dovrebbe passare a `configure()`, ed e'
+	 *     il testimone che dice se la pagina e il flusso vanno d'accordo.
+	 */
+	char stringa_codec[64];       /* `hev1.2.4.L93.B0` / `avc1.640033` */
 
 	/* ⚠ la promozione, dichiarata invece che subita */
 	bool promozione_8_a_10;

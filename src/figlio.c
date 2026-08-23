@@ -314,7 +314,26 @@ struct corpo_video {
 	 * ⚠ `0` = non negoziata, e NON vuol dire 8: chi riceve NON deve sceglierne
 	 *   una per conto suo — sarebbe rifare a mano il difetto appena tolto. */
 	uint8_t profondita;
-	uint8_t riempi;
+	/* ⛔⭐⭐ IL LIVELLO CHIESTO DAL CLIENT — 23 agosto 2026, e questo campo era
+	 *      il byte `riempi`, tenuto libero apposta e nominato in DUE riquadri
+	 *      (`rcp.c` §4.3 e «LIVELLO PRODOTTO» piu' giu') come il posto dove il
+	 *      livello sarebbe passato il giorno in cui fosse servito.
+	 *
+	 *      Serve, ed e' MISURATO: `[M]` 23 agosto 2026, tela 3840x2160, H.264 —
+	 *      il client dichiara `video.livello=5.1` e il server produce un flusso
+	 *      di livello **5.2**.  `RCP.md` §4.3 riga 701 e' un DEVE, e il sintomo
+	 *      di un livello sforato NON e' un errore: e' il decodificatore del
+	 *      browser che rifiuta la configurazione — «non si vede niente» senza
+	 *      una riga che dica perche'.
+	 *
+	 * ⚠ In DECIMI, l'alfabeto di §4.3: `5.1` ⇒ **51**.  Chi apre il
+	 *   codificatore lo riconverte codec per codec (H.264 tale e quale, HEVC
+	 *   per tre): la traduzione sta in `codificatore.c` e in nessun altro
+	 *   posto.
+	 * ⛔ `0` = il client non l'ha dichiarato — §4.3 non lo obbliga — e vuol
+	 *   dire NESSUN TETTO, non «basso»: chi riceve non ne inventa uno, che e'
+	 *   la stessa regola scritta sopra per `profondita`. */
+	uint8_t livello_x10;
 };
 
 /* ⛔ Che cosa il padre chiede al desktop.  Le azioni sono quelle di `RCP.md`
@@ -477,6 +496,11 @@ struct figlio {
 	uint8_t video_codec_chiesto;
 	/* ⛔ E la profondita' con lui: vedi `corpo_video`.  ⚠ `0` = mai chiesta. */
 	uint8_t video_prof_chiesta;
+	/* ⛔ E il LIVELLO con loro (§4.3, 23 agosto 2026), per la stessa ragione:
+	 *    e' della SESSIONE, cambia da client a client, e un secondo client che
+	 *    dichiarasse 4.1 dove il primo aveva 5.1 e' «qualcosa di nuovo da
+	 *    dire» anche a codec e profondita' invariati.  ⚠ `0` = mai chiesto. */
+	uint8_t video_liv_chiesto;
 	/* ⛔ L'ultimo codec d'audio chiesto a questo figlio, per non ripetere la
 	 *    stessa richiesta a ogni battito — e per scrivere la riga di registro
 	 *    solo quando il fatto CAMBIA.  ⚠ `0` = spento, ed e' lo stato iniziale
@@ -2464,7 +2488,7 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec)
 }
 
 bool figli_video(figli *f, const char *utente, uint8_t codec,
-                 uint8_t profondita, bool chiave)
+                 uint8_t profondita, uint8_t livello_x10, bool chiave)
 {
 	struct figlio *g;
 	struct testa t;
@@ -2481,8 +2505,13 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 	 *    il codec e' lo stesso.  ⚠ Senza questa riga il messaggio non
 	 *    partirebbe, e il flusso resterebbe alla profondita' del PRIMO — cioe'
 	 *    esattamente la bugia che questo campo esiste per togliere. */
+	/* ⛔ E il LIVELLO entra nel confronto per la stessa ragione della
+	 *    profondita' (§4.3, 23 agosto 2026): un secondo client che dichiara 4.1
+	 *    dove il primo aveva 5.1 non cambia ne' codec ne' profondita', e senza
+	 *    questa riga il messaggio non partirebbe — il flusso resterebbe al
+	 *    tetto del PRIMO e il secondo vedrebbe uno schermo nero muto. */
 	if (codec == g->video_codec_chiesto && profondita == g->video_prof_chiesta
-	    && !chiave)
+	    && livello_x10 == g->video_liv_chiesto && !chiave)
 		return true; /* niente di nuovo da dire */
 
 	memset(&t, 0, sizeof t);
@@ -2496,6 +2525,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 	c.codec = codec;
 	c.chiave = chiave ? 1u : 0u;
 	c.profondita = profondita;
+	c.livello_x10 = livello_x10;
 	memcpy(busta, &t, sizeof t);
 	memcpy(busta + sizeof t, &c, sizeof c);
 	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
@@ -2517,6 +2547,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 		                                      "CHIAVE (§5.2)" : "");
 	g->video_codec_chiesto = codec;
 	g->video_prof_chiesta = profondita;
+	g->video_liv_chiesto = livello_x10;
 	return true;
 }
 
@@ -3436,6 +3467,20 @@ static uint8_t codec_chiesto;
  *   non si apre nessun codificatore — «non lo so» e «e' otto» sono due fatti
  *   diversi, ed e' proprio la loro confusione che ha prodotto il difetto. */
 static uint8_t profondita_chiesta;
+/* ⛔⭐⭐ E IL LIVELLO CHE IL CLIENT HA DICHIARATO (§4.3 riga 701) — 23 agosto
+ *      2026, e nasce dalla stessa famiglia di difetto della riga qui sopra.
+ *
+ *      `[M]` tela 3840x2160, H.264: il client dichiara `video.livello=5.1` e il
+ *      server produce **5.2**.  Il numero chiesto viveva nel PADRE, il prodotto
+ *      nel FIGLIO, e nessuno li metteva vicini — `LEZIONI.md` §7.5.
+ *
+ * ⚠ In decimi (`5.1` ⇒ 51).  ⛔ `0` = il client non l'ha dichiarato, e §4.3 non
+ *   lo obbliga: allora NESSUN TETTO, si apre lo stesso e si SCRIVE che cosa e'
+ *   uscito.  ⚠ E qui lo zero non blocca l'apertura come fa la profondita': la
+ *   profondita' e' sempre negoziata (§4.3 la impone a tutti e due), il livello
+ *   no.  Sono due «zeri» diversi, e trattarli uguali sarebbe inventare un
+ *   obbligo che il documento non ha. */
+static uint8_t livello_chiesto_x10;
 /* ⛔ §5.2 — il debito della chiave, uno per codec: chiederla per l'HEVC non la
  *    produce sull'AV1, e trattarli insieme darebbe una chiave a chi non l'ha
  *    chiesta e un delta a chi si'. */
@@ -3446,13 +3491,20 @@ static uint8_t profondita_chiesta;
  *      chiave, cioe' un difetto di memoria travestito da difetto di
  *      negoziazione.  ⇒ Zero fotogrammi, e nessuna riga che nominasse la causa.
  * ⚠ L'indice E' il numero di §6.2: chi aggiunge un codec allarga QUESTI array,
- *   e sono quattro.  Cercarli si cerca cosi': `grep "\[CODEC_MAX\]"`. */
+ *   e sono CINQUE dal 23 agosto 2026 (`codif_liv[]` e' l'ultimo arrivato).
+ *   Cercarli si cerca cosi': `grep "\[CODEC_MAX\]"`. */
 static bool debito_chiave[CODEC_MAX];
 /* ⛔ Con quale profondita' ciascun codificatore e' stato APERTO.  ⚠ Si tiene qui
  *    e non si chiede a `codificatore.h`: quel modulo non ha un lettore per la
  *    profondita', e aggiungerne uno per una domanda che si puo' ricordare
  *    sarebbe allargare un'interfaccia per pigrizia di chi chiama. */
 static uint8_t codif_prof[CODEC_MAX];
+/* ⛔ E con quale LIVELLO IMPOSTO (§4.3, in decimi; `0` = nessun tetto).  ⚠ Sta
+ *    accanto a `codif_prof[]` e per la stessa ragione: il palco sopravvive al
+ *    client (I4), e il secondo che si collega puo' dichiarare un livello
+ *    diverso dal primo — senza questa memoria il codificatore resterebbe al
+ *    tetto del PRIMO, che e' esattamente il difetto che si sta curando. */
+static uint8_t codif_liv[CODEC_MAX];
 static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
 /* ⛔ CONTATO A PARTE da `ciclo_guasti`, e non e' pignoleria: quel contatore
  *    entra nel criterio «il ciclo non ha nemmeno provato a catturare» della riga
@@ -4256,6 +4308,26 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		codif_prof[indice] = 0;
 		debito_chiave[indice] = true;
 	}
+	/* ⛔⭐ E LO STESSO PER IL LIVELLO (§4.3 riga 701) — 23 agosto 2026.  Il
+	 *     livello si imposta all'APERTURA del codificatore e finisce nell'SPS:
+	 *     cambiarlo a codificatore aperto non lo cambia nel flusso.  ⇒ Il
+	 *     secondo client che dichiara un tetto diverso dal primo si porta
+	 *     dietro un codificatore nuovo, o vedrebbe il tetto del PRIMO — e il
+	 *     sintomo, di nuovo, sarebbe uno schermo nero senza una riga. */
+	if (codif[indice] && codif_liv[indice] != livello_chiesto_x10) {
+		registro_dice(REG_FIGLIO,
+		              "⭐ §4.3: il tetto di livello e' cambiato (%u.%u → %u.%u, "
+		              "0.0 = nessun tetto): rifaccio il codificatore %u, e il "
+		              "prossimo fotogramma sara' una CHIAVE (§5.2)",
+		              codif_liv[indice] / 10u, codif_liv[indice] % 10u,
+		              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+		              indice);
+		codificatore_libera(codif[indice]);
+		codif[indice] = NULL;
+		codif_prof[indice] = 0;
+		codif_liv[indice] = 0;
+		debito_chiave[indice] = true;
+	}
 	if (codif[indice])
 		return codif[indice];
 
@@ -4280,6 +4352,38 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *      mandavano 10 sul filo.  ⇒ Adesso e' quel che il padre ha negoziato,
 	 *      e la riga sopra rifiuta di aprire se non lo sa. */
 	r.profondita = prof;
+	/* ⛔⭐⭐ IL TETTO DI §4.3, E SI CHIEDE PRIMA INVECE DI SCOPRIRLO DOPO — 23
+	 *      agosto 2026.  Fino a stasera nessuno lo chiedeva: il codificatore
+	 *      sceglieva il livello da misura e cadenza, e a 3840x2160 a 60/s
+	 *      sceglieva **5.2** mentre il client aveva dichiarato 5.1.
+	 *
+	 * ⛔ LA PREVISIONE FALSIFICABILE, che e' il punto di tutta la cura:
+	 *      a 3840x2160 con `video.livello=5.1` imposto, l'SPS DEVE portare
+	 *      `level_idc = 51` (H.264) / `general_level_idc = 153` (HEVC), e la
+	 *      riga «§4.3 — LIVELLO» qui sotto deve dire **5.1 ≤ 5.1 ✓**.
+	 *      ⚠ Se il codificatore NON avesse ubbidito, quella riga direbbe
+	 *      **5.2 > 5.1** con un ⛔ davanti — cioe' il difetto di stasera,
+	 *      identico, ma nominato da una riga invece che da uno schermo nero.
+	 *      ⭐ E' R31 nella sua forma piu' pura: si chiede per nome, e si
+	 *      verifica rileggendo i byte prodotti.
+	 *
+	 * ⚠⚠ E CHE COSA COSTA, detto e non nascosto: un livello e' anche un tetto
+	 *     su PIXEL e CADENZA.  H.264 5.1 concede `MaxMBPS = 983 040`; a
+	 *     3840x2160 un fotogramma sono 32 400 macroblocchi ⇒ **~30 fot/s** di
+	 *     tetto, mentre `MOVIMENTO_FPS` ne chiede 60 (5.2 ne concederebbe 64).
+	 *     ⛔ Imporre il livello NON abbassa la cadenza — il codificatore
+	 *     stampa 51 nell'SPS e continua a 60 — quindi quel che si vede non
+	 *     cambia (e per questo la cura non e' sotto I6).  ⚠ Ma il flusso
+	 *     dichiara un livello i cui limiti di cadenza NON rispetta: e'
+	 *     esattamente quel che il client ha CHIESTO dichiarando 5.1 a 4K, ed e'
+	 *     una cosa da scrivere, non da nascondere.  ⇒ L'alternativa —
+	 *     dimezzare la cadenza a 30 — cambierebbe quel che si vede, e quella
+	 *     sì sarebbe da interruttore: non si fa qui.
+	 *
+	 * ⚠ `0` = il client non ha dichiarato niente (§4.3 non lo obbliga): nessun
+	 *   tetto, il codificatore sceglie, e il livello scelto si SCRIVE lo
+	 *   stesso — chi legge il registro deve sapere che cosa e' uscito. */
+	r.livello_x10 = (int) livello_chiesto_x10;
 	r.formato = CODIFICATORE_PIXEL_BGRX;
 	r.chiavi_ogni = 0;
 
@@ -4332,8 +4436,10 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 
 	if (!codif[indice])
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
-	if (codif[indice])
+	if (codif[indice]) {
 		codif_prof[indice] = prof;
+		codif_liv[indice] = livello_chiesto_x10;
+	}
 	if (!codif[indice]) {
 		/* ⛔ L'attesa cresce, e la riga lo DICE: senza, questo ramo scriveva il
 		 *    registro a raffica e bruciava un nucleo — la stessa forma dei 30,8
@@ -4747,44 +4853,73 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 *      (`video.livello=5.1`), che e' l'unica in cui i due numeri si possono
 	 *      mettere in colonna.
 	 *
-	 * ⛔ L'ALTRA META' DEL CONFRONTO STA IN UN ALTRO PROCESSO, e si dice dove:
-	 *    il livello CHIESTO arriva nel `CIAO` (§4.3) e lo scrive `rcp.c`, che
-	 *    vive nel PADRE — «il client dichiara video.livello=…».  ⇒ Oggi il
-	 *    confronto lo fa **chi legge il registro**, mettendo insieme le due
-	 *    righe; il programma non lo fa, e questa riga lo dice invece di
-	 *    lasciarlo credere.  ⚠ Un livello prodotto piu' alto del chiesto non
-	 *    da' nessun errore: da' uno schermo nero, ed e' la ragione per cui il
-	 *    numero deve stare scritto da qualche parte.
-	 * ⚠ Perche' il confronto non e' dentro il programma: il numero chiesto
-	 *   dovrebbe attraversare il confine di processo, e la catena e' `rcp.h`
-	 *   (il gancio `video_chiedi`) → `rcp.c` → `main.c` → `figlio.h`
-	 *   (`figli_video`) → `struct corpo_video`, che ha ancora il byte `riempi`
-	 *   libero apposta.  E' la stessa catena che la PROFONDITA' negoziata ha
-	 *   percorso il 17 agosto 2026, per un difetto della stessa famiglia. */
+	 * ⛔⭐⭐ E DAL 23 AGOSTO 2026 IL CONFRONTO LO FA IL PROGRAMMA, perche' il
+	 *      numero CHIESTO ha attraversato il confine di processo: il `CIAO`
+	 *      (§4.3) → `rcp_livello_negoziato()` → `webtransport.c` → `main.c` →
+	 *      `figli_video()` → `struct corpo_video.livello_x10` → qui.  E' la
+	 *      stessa catena che la PROFONDITA' negoziata ha percorso il 17 agosto
+	 *      2026, per un difetto della stessa famiglia — e prima di stasera
+	 *      questo riquadro diceva *«il confronto lo fa chi legge il registro»*,
+	 *      che era onesto e non bastava: `[M]` a 3840x2160 il client dichiarava
+	 *      5.1 e il server produceva **5.2**, per settimane, e nessuno se ne
+	 *      accorgeva.
+	 *
+	 * ⛔ E IL CONFRONTO NON E' LA CURA: la cura e' **non sforare**, e sta
+	 *    all'apertura del codificatore (`codificatore_di()`, `r.livello_x10`).
+	 *    Questa riga e' la VERIFICA — R31, *«si chiede per nome e si
+	 *    verifica»* — e legge i byte PRODOTTI, non l'opzione passata: un
+	 *    componente che ignorasse `level` senza dirlo si vede solo qui.
+	 *
+	 * ⚠ Un livello prodotto piu' alto del chiesto non da' nessun errore: da'
+	 *   uno schermo nero, ed e' la ragione per cui il verdetto si scrive in
+	 *   chiaro invece di restare un confronto in testa a chi legge. */
 	if (ciclo_fotogrammi == 0) {
 		unsigned decimi = livello_in_decimi(codec, c->livello_flusso);
-		if (decimi)
-			registro_dice(REG_FIGLIO,
-			              "⭐⛔ §4.3 — LIVELLO PRODOTTO: %u.%u (nell'SPS e' %d, "
-			              "cioe' %s) · stringa per il decodificatore «%s».  ⛔ "
-			              "§4.3 vieta di superare il `video.livello` del "
-			              "client: il numero CHIESTO sta nella riga «il client "
-			              "dichiara video.livello=…» di `rcp`, e il confronto "
-			              "fra le due righe lo fa CHI LEGGE — il programma NON "
-			              "lo fa",
-			              decimi / 10u, decimi % 10u, c->livello_flusso,
-			              codec == CODIFICATORE_H264   ? "level_idc"
-			              : codec == CODIFICATORE_HEVC ? "general_level_idc, "
-			                                             "che e' il triplo"
-			                                           : "seq_level_idx",
-			              c->stringa_codec);
-		else
+		const char *alfabeto = codec == CODIFICATORE_H264   ? "level_idc"
+		                       : codec == CODIFICATORE_HEVC ? "general_level_idc, "
+		                                                      "che e' il triplo"
+		                                                    : "seq_level_idx";
+		if (!decimi)
 			registro_dice(REG_FIGLIO,
 			              "⚠ §4.3 — LIVELLO PRODOTTO: NON LO SO (nell'SPS c'e' "
 			              "%d, e non so tradurlo per questo codec) — ⛔ e «non "
 			              "lo so» NON vuol dire «basso»: vuol dire che il tetto "
 			              "di `video.livello` oggi non e' verificabile",
 			              c->livello_flusso);
+		else if (!livello_chiesto_x10)
+			registro_dice(REG_FIGLIO,
+			              "⭐ §4.3 — LIVELLO: prodotto %u.%u (nell'SPS %d, cioe' "
+			              "%s) · stringa per il decodificatore «%s» · CHIESTO: "
+			              "niente.  ⚠ §4.3 non obbliga il client a dichiarare "
+			              "`video.livello`: nessun tetto da far rispettare — ma "
+			              "un livello il server lo produce comunque, ed e' "
+			              "questo",
+			              decimi / 10u, decimi % 10u, c->livello_flusso,
+			              alfabeto, c->stringa_codec);
+		else if (decimi <= livello_chiesto_x10)
+			registro_dice(REG_FIGLIO,
+			              "⭐ §4.3 — LIVELLO: prodotto %u.%u ≤ chiesto %u.%u ✓ "
+			              "(nell'SPS %d, cioe' %s) · stringa per il "
+			              "decodificatore «%s».  ⭐ Il tetto e' stato IMPOSTO "
+			              "all'apertura e RILETTO dai byte: e' R31",
+			              decimi / 10u, decimi % 10u,
+			              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+			              c->livello_flusso, alfabeto, c->stringa_codec);
+		else
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ §4.3 VIOLATA (riga 701) — LIVELLO: prodotto "
+			              "%u.%u > chiesto %u.%u (nell'SPS %d, cioe' %s) · "
+			              "stringa per il decodificatore «%s».  ⛔ Il "
+			              "codificatore NON ha ubbidito al livello imposto: il "
+			              "decodificatore del browser puo' RIFIUTARE la "
+			              "configurazione, e il sintomo sara' «non si vede "
+			              "niente» SENZA nessun altro errore.  ⚠ §4.3 non "
+			              "elenca il livello fra i congedi: la sessione resta "
+			              "in piedi, e questa riga e' l'unico posto in cui il "
+			              "fatto e' scritto",
+			              decimi / 10u, decimi % 10u,
+			              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+			              c->livello_flusso, alfabeto, c->stringa_codec);
 	}
 	if (ciclo_fotogrammi != 0)
 		registro_dettaglio(REG_FIGLIO,
@@ -6275,6 +6410,38 @@ void figlio_vive(int argc, char **argv)
 					              "(prima %u)",
 					              cv.profondita, profondita_chiesta);
 					profondita_chiesta = cv.profondita;
+				}
+				/* ⛔⭐ E IL LIVELLO CON LORO — §4.3 riga 701, 23 agosto 2026.
+				 *
+				 * ⚠ La condizione NON e' `cv.livello_x10 && ...` come per la
+				 *   profondita': qui lo ZERO E' UN VALORE — vuol dire «questo
+				 *   client non dichiara nessun livello», e passare da 5.1 a
+				 *   «nessun tetto» e' un cambiamento vero che va registrato e
+				 *   ubbidito.  ⛔ Trattarlo come «non me l'ha detto» terrebbe
+				 *   in vigore il tetto del client precedente, cioe' l'errore
+				 *   che I4 (il palco sopravvive al client) rende possibile.
+				 * ⚠ `cv.codec &&` c'e' perche' «spegni» (codec 0) porta zeri in
+				 *   tutti i campi: non e' un client che dichiara «nessun
+				 *   livello», e' nessun client. */
+				if (cv.codec && cv.livello_x10 != livello_chiesto_x10) {
+					if (cv.livello_x10)
+						registro_dice(REG_FIGLIO,
+						              "⭐ §4.3: il client dichiara "
+						              "video.livello=%u.%u (prima %s) — lo "
+						              "IMPORRO' al codificatore, e poi lo "
+						              "rileggo dall'SPS",
+						              cv.livello_x10 / 10u,
+						              cv.livello_x10 % 10u,
+						              livello_chiesto_x10 ? "un altro" : "nessuno");
+					else
+						registro_dice(REG_FIGLIO,
+						              "⚠ §4.3: nessun video.livello dichiarato "
+						              "(prima %u.%u) — NESSUN TETTO, e non ne "
+						              "invento uno: il livello prodotto si "
+						              "scrive lo stesso",
+						              livello_chiesto_x10 / 10u,
+						              livello_chiesto_x10 % 10u);
+					livello_chiesto_x10 = cv.livello_x10;
 				}
 				codec_chiesto = cv.codec;
 				/* ⛔ §5.2: il debito si segna sul codec CHIESTO, non su tutti.
